@@ -7,13 +7,13 @@
 package main
 
 import (
-	"bytes"
 	"flag"
 	"fmt"
 	"go/build"
 	"io"
 	"log"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -26,7 +26,8 @@ import (
 )
 
 var (
-	config tomlConfig
+	config  tomlConfig
+	appPath string // Application path.
 )
 
 type tomlConfig struct {
@@ -83,7 +84,9 @@ func (c *Command) Runnable() bool {
 
 // Commands lists the available commands and help topics.
 // The order here is the order in which they are printed by 'go help'.
-var commands = []*Command{}
+var commands = []*Command{
+	cmdBuild,
+}
 
 var exitStatus = 0
 var exitMu sync.Mutex
@@ -97,14 +100,18 @@ func setExitStatus(n int) {
 }
 
 func main() {
+	// Get application path.
+	appPath, _ := exec.LookPath("gpm")
+	appPath = strings.Replace(filepath.Dir(appPath), "\\", "/", -1) + "/"
+
 	// Load configuration.
-	if _, err := toml.DecodeFile("i18n/gpm.toml", &config); err != nil {
+	if _, err := toml.DecodeFile(appPath+"i18n/gpm.toml", &config); err != nil {
 		fmt.Println(err)
 		return
 	}
 
 	// Load usage template by language.
-	f, err := os.Open("i18n/usage_" + config.Lang + ".tpl")
+	f, err := os.Open(appPath + "i18n/usage_" + config.Lang + ".tpl")
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -155,13 +162,7 @@ func main() {
 	for _, cmd := range commands {
 		if cmd.Name() == args[0] && cmd.Run != nil {
 			cmd.Flag.Usage = func() { cmd.Usage() }
-			if cmd.CustomFlags {
-				args = args[1:]
-			} else {
-				cmd.Flag.Parse(args[1:])
-				args = cmd.Flag.Args()
-			}
-			cmd.Run(cmd, args)
+			cmd.Run(cmd, args[1:])
 			exit()
 			return
 		}
