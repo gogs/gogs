@@ -53,11 +53,7 @@ type Command struct {
 	Long string
 
 	// Flag is a set of flags specific to this command.
-	Flag flag.FlagSet
-
-	// CustomFlags indicates that the command will do its own
-	// flag parsing.
-	CustomFlags bool
+	Flags []string
 }
 
 // Name returns the command's name: the first word in the usage line.
@@ -99,6 +95,44 @@ func setExitStatus(n int) {
 	exitMu.Unlock()
 }
 
+func loadUsage(lang string) bool {
+	// Load main usage.
+	f, err := os.Open(appPath + "i18n/usage_" + lang + ".tpl")
+	if err != nil {
+		fmt.Println(err)
+		return false
+	}
+	defer f.Close()
+	// Read usage.
+	fi, _ := f.Stat()
+	usageBytes := make([]byte, fi.Size())
+	f.Read(usageBytes)
+	usageTemplate = string(usageBytes)
+
+	// Load command usage.
+	for _, cmd := range commands {
+		f, err := os.Open(appPath + "i18n/usage_" + cmd.Name() + "_" + lang + ".txt")
+		if err != nil {
+			fmt.Println(err)
+			return false
+		}
+		defer f.Close()
+		// Read usage.
+		fi, _ := f.Stat()
+		usageBytes := make([]byte, fi.Size())
+		f.Read(usageBytes)
+		usages := strings.Split(string(usageBytes), "|||")
+		if len(usages) < 2 {
+			fmt.Println("Unacceptable usage file: ", cmd.Name())
+			return false
+		}
+		cmd.Short = usages[0]
+		cmd.Long = usages[1]
+	}
+
+	return true
+}
+
 func main() {
 	// Get application path.
 	appPath, _ := exec.LookPath("gpm")
@@ -111,17 +145,9 @@ func main() {
 	}
 
 	// Load usage template by language.
-	f, err := os.Open(appPath + "i18n/usage_" + config.Lang + ".tpl")
-	if err != nil {
-		fmt.Println(err)
+	if !loadUsage(config.Lang) {
 		return
 	}
-	defer f.Close()
-	// Read usage.
-	fi, _ := f.Stat()
-	usageBytes := make([]byte, fi.Size())
-	f.Read(usageBytes)
-	usageTemplate = string(usageBytes)
 
 	// Initialization.
 	flag.Usage = usage
@@ -161,7 +187,6 @@ func main() {
 
 	for _, cmd := range commands {
 		if cmd.Name() == args[0] && cmd.Run != nil {
-			cmd.Flag.Usage = func() { cmd.Usage() }
 			cmd.Run(cmd, args[1:])
 			exit()
 			return
