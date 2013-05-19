@@ -5,17 +5,16 @@
 package doc
 
 import (
-	/*"archive/zip"
+	"archive/zip"
 	"bytes"
-	"fmt"
-	"io"*/
+	"io"
 	"net/http"
-	/*"os"
-	"path"*/
+	"os"
+	"path"
 	"regexp"
-	//"strings"
+	"strings"
 
-	//"github.com/GPMGo/gpm/utils"
+	"github.com/GPMGo/gpm/utils"
 )
 
 var (
@@ -33,113 +32,127 @@ func GetGithubDoc(client *http.Client, match map[string]string, commit string) (
 	SetGithubCredentials("1862bcb265171f37f36c", "308d71ab53ccd858416cfceaed52d5d5b7d53c5f")
 	match["cred"] = githubCred
 
-	/*
-		var refs []*struct {
-			Object struct {
-				Type string
-				Sha  string
-				Url  string
-			}
-			Ref string
-			Url string
+	// JSON struct for github.com.
+	var refs []*struct {
+		Ref    string
+		Url    string
+		Object struct {
+			Sha  string
+			Type string
+			Url  string
 		}
+	}
 
-		// Check if has specific commit.
-		if len(commit) == 0 {
-			// Get up-to-date version.
-			err := httpGetJSON(client, expand("https://api.github.com/repos/{owner}/{repo}/git/refs?{cred}", match), &refs)
-			if err != nil {
-				return nil, err
-			}
+	// bundle and snapshot will have commit 'B' and 'S',
+	// but does not need to download dependencies.
+	isCheckImport := len(commit) == 0
 
-			tags := make(map[string]string)
-			for _, ref := range refs {
-				switch {
-				case strings.HasPrefix(ref.Ref, "refs/heads/"):
-					tags[ref.Ref[len("refs/heads/"):]] = ref.Object.Sha
-				case strings.HasPrefix(ref.Ref, "refs/tags/"):
-					tags[ref.Ref[len("refs/tags/"):]] = ref.Object.Sha
-				}
-			}
-
-			// Check revision tag.
-			match["tag"], commit, err = bestTag(tags, "master")
-			if err != nil {
-				return nil, err
-			}
-		}
-
-		match["sha"] = commit
-		// Download zip.
-		p, err := httpGetBytes(client, expand("https://github.com/{owner}/{repo}/archive/{sha}.zip", match), nil)
+	// Check if download with specific revision.
+	if isCheckImport || len(commit) == 1 {
+		// Get up-to-date version.
+		err := httpGetJSON(client, expand("https://api.github.com/repos/{owner}/{repo}/git/refs?{cred}", match), &refs)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
-		r, err := zip.NewReader(bytes.NewReader(p), int64(len(p)))
+		tags := make(map[string]string)
+		for _, ref := range refs {
+			switch {
+			case strings.HasPrefix(ref.Ref, "refs/heads/"):
+				tags[ref.Ref[len("refs/heads/"):]] = ref.Object.Sha
+			case strings.HasPrefix(ref.Ref, "refs/tags/"):
+				tags[ref.Ref[len("refs/tags/"):]] = ref.Object.Sha
+			}
+		}
+
+		// Check revision tag.
+		match["tag"], commit, err = bestTag(tags, "master")
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
-		//defer r.Close()
+	}
 
-		shaName := expand("{repo}-{sha}", match)
-		paths := utils.GetGOPATH()
-		importPath := "github.com/" + expand("{owner}/{repo}", match)
-		installPath := paths[0] + "/src/" + importPath
-		// Create destination directory
-		os.Mkdir(installPath, os.ModePerm)
+	// We use .zip here.
+	// zip : https://github.com/{owner}/{repo}/archive/{sha}.zip
+	// tarball : https://github.com/{owner}/{repo}/tarball/{sha}
 
-		dirs := make([]string, 0, 5)
-		for _, f := range r.File {
-			absPath := strings.Replace(f.FileInfo().Name(), shaName, installPath, 1)
-			fmt.Printf("Unzipping %s...", absPath)
+	match["sha"] = commit
+	// Downlaod archive.
+	p, err := httpGetBytes(client, expand("https://github.com/{owner}/{repo}/archive/{sha}.zip", match), nil)
+	if err != nil {
+		return nil, nil, err
+	}
 
-			// Check if it is directory or not.
-			if strings.HasSuffix(absPath, "/") {
-				// Directory.
-				dirs = append(dirs, absPath)
-				continue
-			}
+	r, err := zip.NewReader(bytes.NewReader(p), int64(len(p)))
+	if err != nil {
+		return nil, nil, err
+	}
 
-			// Get files from archive
-			rc, err := f.Open()
-			if err != nil {
-				return nil, err
-			}
+	shaName := expand("{repo}-{sha}", match)
+	paths := utils.GetGOPATH()
+	importPath := "github.com/" + expand("{owner}/{repo}", match)
+	installPath := paths[0] + "/src/" + importPath
 
-			// Create diretory before create file
-			os.MkdirAll(path.Dir(absPath), os.ModePerm)
-			// Write data to file
-			fw, _ := os.Create(absPath)
-			if err != nil {
-				return nil, err
-			}
+	// Remove old files.
+	os.RemoveAll(installPath)
+	// Create destination directory.
+	os.Mkdir(installPath, os.ModePerm)
 
-			n, err := io.Copy(fw, rc)
-			if err != nil {
-				return nil, err
-			}
-			fmt.Println(n)
+	dirs := make([]string, 0, 5)
+	for _, f := range r.File {
+		absPath := strings.Replace(f.FileInfo().Name(), shaName, installPath, 1)
 
-			/*localF, _ := os.Open(absPath)
-			fbytes := make([]byte, f.FileInfo().Size())
-			n, _ := localF.Read(fbytes)
+		// Check if it is directory or not.
+		if strings.HasSuffix(absPath, "/") {
+			// Directory.
+			dirs = append(dirs, absPath)
+			continue
+		}
 
-			// Check if Go source file.
-			if n > 0 && strings.HasSuffix(absPath, ".go") {
-				files = append(files, &source{
-					name: srcName,
-					data: fbytes,
-				})
-			}*/
-	/*	}
+		// Get files from archive.
+		rc, err := f.Open()
+		if err != nil {
+			return nil, nil, err
+		}
 
-		pkg := &Package{
-			ImportPath: importPath,
-			AbsPath:    installPath,
-			Commit:     commit,
-			Dirs:       dirs,
+		// Create diretory before create file
+		os.MkdirAll(path.Dir(absPath), os.ModePerm)
+		// Write data to file
+		fw, _ := os.Create(absPath)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		_, err = io.Copy(fw, rc)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		/*localF, _ := os.Open(absPath)
+		fbytes := make([]byte, f.FileInfo().Size())
+		n, _ := localF.Read(fbytes)
+
+		// Check if Go source file.
+		if n > 0 && strings.HasSuffix(absPath, ".go") {
+			files = append(files, &source{
+				name: srcName,
+				data: fbytes,
+			})
 		}*/
+	}
+
+	// Check if need to check imports.
+	if isCheckImport {
+
+	} else {
+
+	}
+	/*pkg := &Package{
+		ImportPath: importPath,
+		AbsPath:    installPath,
+		Commit:     commit,
+		Dirs:       dirs,
+	}*/
 
 	return nil, nil, nil
 }
