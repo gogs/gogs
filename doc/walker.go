@@ -28,13 +28,8 @@ import (
 	"path"
 	"runtime"
 	"strings"
-	/*
-		"fmt"
-			"regexp"
-			"time"*/
 
-	//"github.com/GPMGo/gpm/models"
-	//"github.com/GPMGo/gpm/utils"
+	"github.com/GPMGo/gpm/utils"
 )
 
 type sliceWriter struct{ p *[]byte }
@@ -139,9 +134,11 @@ func (w *walker) build(srcs []*source) ([]string, error) {
 	}
 
 	var imports []string
-	/*	for _, v := range bpkg.Imports {
+	for _, v := range bpkg.Imports {
 		// Skip strandard library.
-
-	}*/
+		if !utils.IsGoRepoPath(v) {
+			imports = append(imports, v)
+		}
+	}
 	return imports, err
 }
