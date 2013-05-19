@@ -98,6 +98,7 @@ func GetGithubDoc(client *http.Client, match map[string]string, commit string) (
 	// Create destination directory.
 	os.Mkdir(installPath, os.ModePerm)
 
+	//dirMap := make(map[string][]*source)
 	dirs := make([]string, 0, 5)
 	for _, f := range r.File {
 		absPath := strings.Replace(f.FileInfo().Name(), shaName, installPath, 1)
@@ -124,6 +125,8 @@ func GetGithubDoc(client *http.Client, match map[string]string, commit string) (
 		}
 
 		_, err = io.Copy(fw, rc)
+		rc.Close()
+		fw.Close()
 		if err != nil {
 			return nil, nil, err
 		}
@@ -156,20 +159,21 @@ func GetGithubDoc(client *http.Client, match map[string]string, commit string) (
 			for _, fi := range fis {
 				// Only handle files.
 				if strings.HasSuffix(fi.Name(), ".go") {
-					f, err := os.Open(d + "/" + fi.Name())
+					f, err := os.Open(d + fi.Name())
 					if err != nil {
 						return nil, nil, err
 					}
-					defer f.Close()
 
 					fbytes := make([]byte, fi.Size())
 					_, err = f.Read(fbytes)
+					f.Close()
+					//fmt.Println(d+fi.Name(), fi.Size(), n)
 					if err != nil {
 						return nil, nil, err
 					}
 
 					files = append(files, &source{
-						name: importPath + "/" + fi.Name(),
+						name: fi.Name(),
 						data: fbytes,
 					})
 				}

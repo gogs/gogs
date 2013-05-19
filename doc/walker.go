@@ -136,9 +136,10 @@ func (w *walker) build(srcs []*source) ([]string, error) {
 	var imports []string
 	for _, v := range bpkg.Imports {
 		// Skip strandard library.
-		if !utils.IsGoRepoPath(v) {
+		if !utils.IsGoRepoPath(v) && v != w.ImportPath {
 			imports = append(imports, v)
 		}
 	}
+
 	return imports, err
 }

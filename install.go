@@ -105,7 +105,7 @@ func runInstall(cmd *Command, args []string) {
 	commits := make([]string, len(args))
 	downloadPackages(args, commits)
 
-	if !cmdInstall.Flags["d"] {
+	if !cmdInstall.Flags["d"] && cmdInstall.Flags["-p"] {
 		// Install packages all together.
 		fmt.Printf("Installing package: %s.\n")
 	}
@@ -125,20 +125,24 @@ func downloadPackages(pkgs, commits []string) {
 			// TODO: api.GetBundleInfo()
 		case p[0] == 'S':
 			// TODO: api.GetSnapshotInfo()
-		case utils.IsValidRemotePath(p) && !downloadCache[p]:
-			// Download package.
-			pkg, imports := downloadPackage(p, commits[i])
-			if len(imports) > 0 {
-				// Need to download dependencies.
-				tags := make([]string, len(imports))
-				downloadPackages(imports, tags)
-				continue
-			}
+		case utils.IsValidRemotePath(p):
+			if !downloadCache[p] {
+				// Download package.
+				pkg, imports := downloadPackage(p, commits[i])
+				if len(imports) > 0 {
+					// Need to download dependencies.
+					tags := make([]string, len(imports))
+					downloadPackages(imports, tags)
+					continue
+				}
 
-			// Only save package information with specific commit.
-			if pkg != nil {
-				// Save record in local database.
-				fmt.Printf("Saved information: %s:%s.\n", pkg.ImportPath, pkg.Commit)
+				// Only save package information with specific commit.
+				if pkg != nil {
+					// Save record in local database.
+					//fmt.Printf("Saved information: %s:%s.\n", pkg.ImportPath, pkg.Commit)
+				}
+			} else {
+				fmt.Printf("Skipped downloaded package: %s.\n", p)
 			}
 		default:
 			// Invalid import path.
@@ -173,11 +177,11 @@ func downloadPackage(path, commit string) (pkg *doc.Package, imports []string) {
 		if err != nil {
 			fmt.Printf("Fail to download package(%s) with error: %s.\n", path, err)
 			return nil, nil
-		} else {
-			fmt.Println(pkg)
-			fmt.Printf("Downloaded package: %s.\n", path)
-			return pkg, imports
 		}
+
+		//fmt.Println(pkg)
+		//fmt.Printf("Downloaded package: %s.\n", path)
+		return pkg, imports
 	}
 }
 
