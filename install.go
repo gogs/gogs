@@ -105,7 +105,11 @@ func runInstall(cmd *Command, args []string) {
 	commits := make([]string, len(args))
 	downloadPackages(args, commits)
 
-	// Install packages all together.
+	if !cmdInstall.Flags["d"] {
+		// Install packages all together.
+		fmt.Printf("Installing package: %s.\n")
+	}
+
 	fmt.Println("Well done.")
 }
 
