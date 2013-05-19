@@ -5,17 +5,17 @@
 package doc
 
 import (
-	"archive/zip"
+	/*"archive/zip"
 	"bytes"
 	"fmt"
-	"io"
+	"io"*/
 	"net/http"
-	"os"
-	"path"
+	/*"os"
+	"path"*/
 	"regexp"
-	"strings"
+	//"strings"
 
-	"github.com/GPMGo/gpm/utils"
+	//"github.com/GPMGo/gpm/utils"
 )
 
 var (
@@ -28,8 +28,8 @@ func SetGithubCredentials(id, secret string) {
 	githubCred = "client_id=" + id + "&client_secret=" + secret
 }
 
-func GetGithubDoc(client *http.Client, match map[string]string, commit string) (*Package, error) {
-	SetGithubCredentials("1862bcb265171f37f36c", "308d71ab53ccd858416cfceaed52d5d5b7d53c5f")
+func GetGithubDoc(client *http.Client, match map[string]string, commit string) (*Package, []string, error) {
+	/*SetGithubCredentials("1862bcb265171f37f36c", "308d71ab53ccd858416cfceaed52d5d5b7d53c5f")
 	match["cred"] = githubCred
 
 	var refs []*struct {
@@ -130,14 +130,14 @@ func GetGithubDoc(client *http.Client, match map[string]string, commit string) (
 				data: fbytes,
 			})
 		}*/
-	}
+	/*	}
 
-	pkg := &Package{
-		ImportPath: importPath,
-		AbsPath:    installPath,
-		Commit:     commit,
-		Dirs:       dirs,
-	}
+		pkg := &Package{
+			ImportPath: importPath,
+			AbsPath:    installPath,
+			Commit:     commit,
+			Dirs:       dirs,
+		}*/
 
-	return pkg, nil
+	return nil, nil, nil
 }

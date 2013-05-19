@@ -21,7 +21,7 @@ var (
 )
 
 var cmdInstall = &Command{
-	UsageLine: "install [install flags] <packages|hash>",
+	UsageLine: "install [install flags] <packages|bundles|snapshots>",
 }
 
 func init() {
@@ -34,88 +34,145 @@ func init() {
 	}
 }
 
-func runInstall(cmd *Command, args []string) {
-	// Check if has flags.
-	num := 0
-	for i, f := range args {
-		if strings.Index(f, "-") > -1 {
-			// Deal with flags.
-			if _, ok := cmdInstall.Flags[f]; ok {
-				cmdInstall.Flags[f] = true
-				printPrompt(f)
-			} else {
-				fmt.Printf("Unknown flag: %s.\n", f)
-				return
-			}
-			num = i + 1
-		}
+// printPrompt prints prompt information to users to
+// let them know what's going on.
+func printPrompt(flag string) {
+	switch flag {
+	case "-p":
+		fmt.Printf("You enabled pure download.\n")
+	case "-d":
+		fmt.Printf("You enabled download without installing.\n")
 	}
-	// Cut out flag.
+}
+
+// checkFlags checks if the flag exists with correct format.
+func checkFlags(args []string) int {
+	num := 0 // Number of valid flags, use to cut out.
+	for i, f := range args {
+		// Check flag prefix '-'.
+		if !strings.HasPrefix(f, "-") {
+			// Not a flag, finish check process.
+			break
+		}
+
+		// Check if it a valid flag.
+		/* Here we use ok pattern to check it because
+		this way can avoid same flag appears multiple times.*/
+		if _, ok := cmdInstall.Flags[f]; ok {
+			cmdInstall.Flags[f] = true
+			printPrompt(f)
+		} else {
+			fmt.Printf("Unknown flag: %s.\n", f)
+			return -1
+		}
+		num = i + 1
+	}
+
+	return num
+}
+
+// checkVCSTool checks if users have installed version control tools.
+func checkVCSTool() {
+	// git.
+	if _, err := exec.LookPath("git"); err == nil {
+		isHasGit = true
+	}
+	// hg.
+	if _, err := exec.LookPath("hg"); err == nil {
+		isHasHg = true
+	}
+	// svn.
+}
+
+func runInstall(cmd *Command, args []string) {
+	// Check flags.
+	num := checkFlags(args)
+	if num == -1 {
+		return
+	}
 	args = args[num:]
 
 	// Check length of arguments.
 	if len(args) < 1 {
-		fmt.Printf("Please list at least one package.\n")
+		fmt.Printf("Please list at least one package/bundle/snapshot.\n")
 		return
 	}
 
 	// Check version control tools.
-	_, err := exec.LookPath("git")
-	if err == nil {
-		isHasGit = true
-	}
-	_, err = exec.LookPath("hg")
-	if err == nil {
-		isHasHg = true
-	}
+	checkVCSTool()
 
-	// Install package(s).
-	for _, p := range args {
-		// Check if it is a hash string.
-		// TODO
+	// Download packages.
+	commits := make([]string, len(args))
+	downloadPackages(args, commits)
 
-		// Check if it is vaild remote path.
-		if !utils.IsValidRemotePath(p) {
-			fmt.Printf("Invalid remote path: %s.\n", p)
-		} else {
-			downloadPackage(p, "")
-		}
-	}
+	// Install packages all together.
+	fmt.Println("Well done.")
 }
 
-func printPrompt(flag string) {
-	switch flag {
-	case "-p":
-		fmt.Println("You enabled pure download.")
-	case "-d":
-		fmt.Println("You enabled download without installing.")
+// downloadPackages downloads packages with certain commit,
+// if the commit is empty string, then it downloads all dependencies,
+// otherwise, it only downloada package with specific commit only.
+func downloadPackages(pkgs, commits []string) {
+	// Check all packages, they may be bundles, snapshots or raw packages path.
+	for i, p := range pkgs {
+		// Check if it is a bundle or snapshot.
+		switch {
+		case p[0] == 'B':
+			// TODO: api.GetBundleInfo()
+		case p[0] == 'S':
+			// TODO: api.GetSnapshotInfo()
+		case utils.IsValidRemotePath(p) && !downloadCache[p]:
+			// Download package.
+			pkg, imports := downloadPackage(p, commits[i])
+			if imports != nil {
+				// Need to download dependencies.
+				tags := make([]string, len(imports))
+				downloadPackages(imports, tags)
+				continue
+			}
+
+			// Only save package information with specific commit.
+			if pkg != nil {
+				// Save record in local database.
+				fmt.Printf("Saved information: %s:%s.\n", pkg.ImportPath, pkg.Commit)
+			}
+		default:
+			// Invalid import path.
+			fmt.Printf("Skipped invalid import path: %s.\n", p)
+		}
 	}
 }
 
 // downloadPackage download package either use version control tools or not.
-func downloadPackage(path, commit string) {
+func downloadPackage(path, commit string) (pkg *doc.Package, imports []string) {
 	// Check if use version control tools.
 	switch {
 	case !cmdInstall.Flags["-p"] &&
 		((path[0] == 'g' && isHasGit) || (path[0] == 'c' && isHasHg)): // github.com, code.google.com
+		fmt.Printf("Installing package(%s) through 'go get'.\n", path)
 		args := checkGoGetFlags()
 		args = append(args, path)
-		fmt.Printf("Installing package: %s.\n", path)
 		executeGoCommand(args)
+		return nil, nil
 	default: // Pure download.
 		if !cmdInstall.Flags["-p"] {
-			fmt.Printf("No version control tool available, pure download enabled!\n")
+			cmdInstall.Flags["-p"] = true
+			fmt.Printf("No version control tool is available, pure download enabled!\n")
 		}
 
 		fmt.Printf("Downloading package: %s.\n", path)
-		pkg, err := pureDownload(path, commit)
+		// Mark as donwloaded.
+		downloadCache[path] = true
+
+		var err error
+		pkg, imports, err = pureDownload(path, commit)
 		if err != nil {
 			fmt.Printf("Fail to download package(%s) with error: %s.\n", path, err)
+			return nil, nil
 		} else {
 			fmt.Println(pkg)
-			fmt.Printf("Checking imports(%s).\n", path)
-
-			fmt.Printf("Installing package: %s.\n", path)
+			fmt.Printf("Downloaded package: %s.\n", path)
+			return pkg, imports
 		}
 	}
 }
@@ -137,7 +194,7 @@ func checkGoGetFlags() (args []string) {
 type service struct {
 	pattern *regexp.Regexp
 	prefix  string
-	get     func(*http.Client, map[string]string, string) (*doc.Package, error)
+	get     func(*http.Client, map[string]string, string) (*doc.Package, []string, error)
 }
 
 // services is the list of source code control services handled by gopkgdoc.
@@ -148,8 +205,8 @@ var services = []*service{
 	//{launchpadPattern, "launchpad.net/", getLaunchpadDoc},
 }
 
-// pureDownload downloads package without control control.
-func pureDownload(path, commit string) (pinfo *doc.Package, err error) {
+// pureDownload downloads package without version control.
+func pureDownload(path, commit string) (pinfo *doc.Package, imports []string, err error) {
 	for _, s := range services {
 		if s.get == nil || !strings.HasPrefix(path, s.prefix) {
 			continue
@@ -157,7 +214,8 @@ func pureDownload(path, commit string) (pinfo *doc.Package, err error) {
 		m := s.pattern.FindStringSubmatch(path)
 		if m == nil {
 			if s.prefix != "" {
-				return nil, doc.NotFoundError{"Import path prefix matches known service, but regexp does not."}
+				return nil, nil,
+					doc.NotFoundError{"Import path prefix matches known service, but regexp does not."}
 			}
 			continue
 		}
@@ -169,5 +227,5 @@ func pureDownload(path, commit string) (pinfo *doc.Package, err error) {
 		}
 		return s.get(doc.HttpClient, match, commit)
 	}
-	return nil, doc.ErrNoMatch
+	return nil, nil, doc.ErrNoMatch
 }

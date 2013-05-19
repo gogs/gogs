@@ -18,6 +18,7 @@ The list flags accept a space-separated list of strings. To embed spaces
 in an element in the list, surround it with either single or double quotes.
 
 For more about specifying packages, see 'go help packages'.
-For more about hash, see 'gpm help hash'.
+For more about bundle, see 'gpm help bundle'.
+For more about snapshot, see 'gpm help snapshot'.
 
 See also: gpm build.

@@ -23,9 +23,8 @@ import (
 )
 
 var (
-	config    tomlConfig
-	appPath   string // Application path.
-	isWindows bool   // Indicates if current system is windows.
+	config  tomlConfig
+	appPath string // Application path.
 )
 
 type tomlConfig struct {
@@ -93,7 +92,6 @@ func getAppPath() bool {
 	}
 
 	if runtime.GOOS == "windows" {
-		isWindows = true
 		// Replace all '\' to '/'.
 		appPath = strings.Replace(filepath.Dir(appPath), "\\", "/", -1) + "/"
 	}

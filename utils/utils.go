@@ -369,7 +369,7 @@ func IsValidRemotePath(importPath string) bool {
 	return true
 }
 
-// GetGOPATHs return all GOPATH in system.
+// GetGOPATH return all GOPATH in system.
 func GetGOPATH() []string {
 	gopath := os.Getenv("GOPATH")
 	var paths []string
