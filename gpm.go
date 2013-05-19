@@ -7,11 +7,8 @@
 package main
 
 import (
-	"flag"
 	"fmt"
-	"go/build"
 	"io"
-	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -26,8 +23,9 @@ import (
 )
 
 var (
-	config  tomlConfig
-	appPath string // Application path.
+	config    tomlConfig
+	appPath   string // Application path.
+	isWindows bool   // Indicates if current system is windows.
 )
 
 type tomlConfig struct {
@@ -85,26 +83,34 @@ var commands = []*Command{
 	cmdInstall,
 }
 
-var exitStatus = 0
-var exitMu sync.Mutex
-
-func setExitStatus(n int) {
-	exitMu.Lock()
-	if exitStatus < n {
-		exitStatus = n
+// getAppPath returns application execute path for current process.
+func getAppPath() bool {
+	// Look up executable in PATH variable.
+	appPath, _ = exec.LookPath("gpm")
+	if len(appPath) == 0 {
+		fmt.Printf("getAppPath(): Unable to indicate current execute path.")
+		return false
 	}
-	exitMu.Unlock()
+
+	if runtime.GOOS == "windows" {
+		isWindows = true
+		// Replace all '\' to '/'.
+		appPath = strings.Replace(filepath.Dir(appPath), "\\", "/", -1) + "/"
+	}
+	return true
 }
 
+// loadUsage loads usage according to user language.
 func loadUsage(lang, appPath string) bool {
 	// Load main usage.
 	f, err := os.Open(appPath + "i18n/" + lang + "/usage.tpl")
 	if err != nil {
-		fmt.Println("Load usage:", err)
+		fmt.Printf("loadUsage(): Fail to load main usage: %s.\n", err)
 		return false
 	}
 	defer f.Close()
-	// Read usage.
+
+	// Read command usages.
 	fi, _ := f.Stat()
 	usageBytes := make([]byte, fi.Size())
 	f.Read(usageBytes)
@@ -114,7 +120,7 @@ func loadUsage(lang, appPath string) bool {
 	for _, cmd := range commands {
 		f, err := os.Open(appPath + "i18n/" + lang + "/usage_" + cmd.Name() + ".txt")
 		if err != nil {
-			fmt.Println("Load usage:", err)
+			fmt.Printf("loadUsage(): Fail to load usage(%s): %s.\n", cmd.Name(), err)
 			return false
 		}
 		defer f.Close()
@@ -124,7 +130,7 @@ func loadUsage(lang, appPath string) bool {
 		f.Read(usageBytes)
 		usages := strings.Split(string(usageBytes), "|||")
 		if len(usages) < 2 {
-			fmt.Println("Unacceptable usage file: ", cmd.Name())
+			fmt.Printf("loadUsage(): nacceptable usage file: %s.\n", cmd.Name())
 			return false
 		}
 		cmd.Short = usages[0]
@@ -135,9 +141,10 @@ func loadUsage(lang, appPath string) bool {
 }
 
 func main() {
-	// Get application path.
-	appPath, _ := exec.LookPath("gpm")
-	appPath = strings.Replace(filepath.Dir(appPath), "\\", "/", -1) + "/"
+	// Get application execute path.
+	if !getAppPath() {
+		return
+	}
 
 	// Load configuration.
 	if _, err := toml.DecodeFile(appPath+"conf/gpm.toml", &config); err != nil {
@@ -145,47 +152,25 @@ func main() {
 		return
 	}
 
-	// Load usage template by language.
+	// Load usages by language.
 	if !loadUsage(config.Lang, appPath) {
 		return
 	}
 
-	// Initialization.
-	flag.Usage = usage
-	flag.Parse()
-	log.SetFlags(0)
-
-	args := flag.Args()
+	// Check length of arguments.
+	args := os.Args[1:]
 	if len(args) < 1 {
 		usage()
+		return
 	}
 
+	// Show help documentation.
 	if args[0] == "help" {
 		help(args[1:])
 		return
 	}
 
-	// Diagnose common mistake: GOPATH==GOROOT.
-	// This setting is equivalent to not setting GOPATH at all,
-	// which is not what most people want when they do it.
-	if gopath := os.Getenv("GOPATH"); gopath == runtime.GOROOT() {
-		fmt.Fprintf(os.Stderr, "warning: GOPATH set to GOROOT (%s) has no effect\n", gopath)
-	} else {
-		for _, p := range filepath.SplitList(gopath) {
-			// Note: using HasPrefix instead of Contains because a ~ can appear
-			// in the middle of directory elements, such as /tmp/git-1.8.2~rc3
-			// or C:\PROGRA~1. Only ~ as a path prefix has meaning to the shell.
-			if strings.HasPrefix(p, "~") {
-				fmt.Fprintf(os.Stderr, "gpm: GOPATH entry cannot start with shell metacharacter '~': %q\n", p)
-				os.Exit(2)
-			}
-			if build.IsLocalImport(p) {
-				fmt.Fprintf(os.Stderr, "gpm: GOPATH entry is relative; must be absolute path: %q.\nRun 'gpm help gopath' for usage.\n", p)
-				os.Exit(2)
-			}
-		}
-	}
-
+	// Check commands and run.
 	for _, cmd := range commands {
 		if cmd.Name() == args[0] && cmd.Run != nil {
 			cmd.Run(cmd, args[1:])
@@ -194,9 +179,21 @@ func main() {
 		}
 	}
 
+	// Uknown commands.
 	fmt.Fprintf(os.Stderr, "gpm: unknown subcommand %q\nRun 'gpm help' for usage.\n", args[0])
 	setExitStatus(2)
 	exit()
+}
+
+var exitStatus = 0
+var exitMu sync.Mutex
+
+func setExitStatus(n int) {
+	exitMu.Lock()
+	if exitStatus < n {
+		exitStatus = n
+	}
+	exitMu.Unlock()
 }
 
 var usageTemplate string
