@@ -6,9 +6,7 @@ package main
 
 import (
 	"fmt"
-	"io"
 	"os"
-	"os/exec"
 	"path"
 	"runtime"
 	"strings"
@@ -22,7 +20,6 @@ var cmdBuild = &Command{
 
 func init() {
 	cmdBuild.Run = runBuild
-	cmdBuild.Flags = []string{"-v"}
 }
 
 func runBuild(cmd *Command, args []string) {
@@ -37,40 +34,24 @@ func runBuild(cmd *Command, args []string) {
 		proName += ".exe"
 	}
 
-	cmdExec := exec.Command("go", cmdArgs...)
-	stdout, err := cmdExec.StdoutPipe()
-	if err != nil {
-		fmt.Println(err)
-	}
-	stderr, err := cmdExec.StderrPipe()
-	if err != nil {
-		fmt.Println(err)
-	}
-	err = cmdExec.Start()
-	if err != nil {
-		fmt.Println(err)
-	}
-	go io.Copy(os.Stdout, stdout)
-	go io.Copy(os.Stderr, stderr)
-	cmdExec.Wait()
+	executeGoCommand(cmdArgs)
 
 	// Find executable in GOPATH and copy to current directory.
-	gopath := strings.Replace(os.Getenv("GOPATH"), ";", ":", -1)
-	gopath = strings.Replace(gopath, "\\", "/", -1)
-	paths := strings.Split(gopath, ":")
+	paths := utils.GetGOPATH()
+
 	for _, v := range paths {
 		if utils.IsExist(v + "/bin/" + proName) {
-			err = os.Remove(wd + "/" + proName)
+			err := os.Remove(wd + "/" + proName)
 			if err != nil {
-				fmt.Println("Fail to remove file in current directory :", err)
+				fmt.Printf("Fail to remove file in current directory: %s.\n", err)
 				return
 			}
 			err = os.Rename(v+"/bin/"+proName, wd+"/"+proName)
 			if err == nil {
-				fmt.Println("Moved file from $GOPATH to current directory.")
+				fmt.Printf("Moved file from $GOPATH(%s) to current directory(%s).\n", v, wd)
 				return
 			} else {
-				fmt.Println("Fail to move file from $GOPATH to current directory :", err)
+				fmt.Printf("Fail to move file from $GOPATH(%s) to current directory: %s.\n", v, err)
 			}
 			break
 		}

@@ -53,7 +53,7 @@ type Command struct {
 	Long string
 
 	// Flag is a set of flags specific to this command.
-	Flags []string
+	Flags map[string]bool
 }
 
 // Name returns the command's name: the first word in the usage line.
@@ -79,9 +79,10 @@ func (c *Command) Runnable() bool {
 }
 
 // Commands lists the available commands and help topics.
-// The order here is the order in which they are printed by 'go help'.
+// The order here is the order in which they are printed by 'gpm help'.
 var commands = []*Command{
 	cmdBuild,
+	cmdInstall,
 }
 
 var exitStatus = 0
@@ -95,11 +96,11 @@ func setExitStatus(n int) {
 	exitMu.Unlock()
 }
 
-func loadUsage(lang string) bool {
+func loadUsage(lang, appPath string) bool {
 	// Load main usage.
-	f, err := os.Open(appPath + "i18n/usage_" + lang + ".tpl")
+	f, err := os.Open(appPath + "i18n/" + lang + "/usage.tpl")
 	if err != nil {
-		fmt.Println(err)
+		fmt.Println("Load usage:", err)
 		return false
 	}
 	defer f.Close()
@@ -111,9 +112,9 @@ func loadUsage(lang string) bool {
 
 	// Load command usage.
 	for _, cmd := range commands {
-		f, err := os.Open(appPath + "i18n/usage_" + cmd.Name() + "_" + lang + ".txt")
+		f, err := os.Open(appPath + "i18n/" + lang + "/usage_" + cmd.Name() + ".txt")
 		if err != nil {
-			fmt.Println(err)
+			fmt.Println("Load usage:", err)
 			return false
 		}
 		defer f.Close()
@@ -139,13 +140,13 @@ func main() {
 	appPath = strings.Replace(filepath.Dir(appPath), "\\", "/", -1) + "/"
 
 	// Load configuration.
-	if _, err := toml.DecodeFile(appPath+"i18n/gpm.toml", &config); err != nil {
+	if _, err := toml.DecodeFile(appPath+"conf/gpm.toml", &config); err != nil {
 		fmt.Println(err)
 		return
 	}
 
 	// Load usage template by language.
-	if !loadUsage(config.Lang) {
+	if !loadUsage(config.Lang, appPath) {
 		return
 	}
 
@@ -268,4 +269,24 @@ func exit() {
 		f()
 	}
 	os.Exit(exitStatus)
+}
+
+// executeGoCommand executes go commands.
+func executeGoCommand(args []string) {
+	cmdExec := exec.Command("go", args...)
+	stdout, err := cmdExec.StdoutPipe()
+	if err != nil {
+		fmt.Println(err)
+	}
+	stderr, err := cmdExec.StderrPipe()
+	if err != nil {
+		fmt.Println(err)
+	}
+	err = cmdExec.Start()
+	if err != nil {
+		fmt.Println(err)
+	}
+	go io.Copy(os.Stdout, stdout)
+	go io.Copy(os.Stderr, stderr)
+	cmdExec.Wait()
 }
