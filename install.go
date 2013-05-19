@@ -128,7 +128,7 @@ func downloadPackages(pkgs, commits []string) {
 		case utils.IsValidRemotePath(p) && !downloadCache[p]:
 			// Download package.
 			pkg, imports := downloadPackage(p, commits[i])
-			if imports != nil {
+			if len(imports) > 0 {
 				// Need to download dependencies.
 				tags := make([]string, len(imports))
 				downloadPackages(imports, tags)

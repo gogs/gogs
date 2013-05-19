@@ -21,17 +21,13 @@ type Package struct {
 
 	// Imports.
 	Imports []string
-
-	// Directories.
-	Dirs []string
 }
 
 // source is source code file.
 type source struct {
-	name      string
-	browseURL string
-	rawURL    string
-	data      []byte
+	rawURL string
+	name   string
+	data   []byte
 }
 
 func (s *source) Name() string       { return s.name }
@@ -43,7 +39,7 @@ func (s *source) Sys() interface{}   { return nil }
 
 // walker holds the state used when building the documentation.
 type walker struct {
-	pkg  *Package
-	srcs map[string]*source // Source files.
-	fset *token.FileSet
+	ImportPath string
+	srcs       map[string]*source // Source files.
+	fset       *token.FileSet
 }

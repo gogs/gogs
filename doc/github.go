@@ -127,32 +127,65 @@ func GetGithubDoc(client *http.Client, match map[string]string, commit string) (
 		if err != nil {
 			return nil, nil, err
 		}
-
-		/*localF, _ := os.Open(absPath)
-		fbytes := make([]byte, f.FileInfo().Size())
-		n, _ := localF.Read(fbytes)
-
-		// Check if Go source file.
-		if n > 0 && strings.HasSuffix(absPath, ".go") {
-			files = append(files, &source{
-				name: srcName,
-				data: fbytes,
-			})
-		}*/
 	}
 
-	// Check if need to check imports.
-	if isCheckImport {
-
-	} else {
-
-	}
-	/*pkg := &Package{
+	pkg := &Package{
 		ImportPath: importPath,
 		AbsPath:    installPath,
 		Commit:     commit,
-		Dirs:       dirs,
-	}*/
+	}
 
-	return nil, nil, nil
+	var imports []string
+
+	// Check if need to check imports.
+	if isCheckImport {
+		for _, d := range dirs {
+			dir, err := os.Open(d)
+			if err != nil {
+				return nil, nil, err
+			}
+			defer dir.Close()
+
+			// Get file info slice.
+			fis, err := dir.Readdir(0)
+			if err != nil {
+				return nil, nil, err
+			}
+
+			files := make([]*source, 0, 10)
+			for _, fi := range fis {
+				// Only handle files.
+				if strings.HasSuffix(fi.Name(), ".go") {
+					f, err := os.Open(d + "/" + fi.Name())
+					if err != nil {
+						return nil, nil, err
+					}
+					defer f.Close()
+
+					fbytes := make([]byte, fi.Size())
+					_, err = f.Read(fbytes)
+					if err != nil {
+						return nil, nil, err
+					}
+
+					files = append(files, &source{
+						name: importPath + "/" + fi.Name(),
+						data: fbytes,
+					})
+				}
+			}
+
+			// Check if has Go source files.
+			if len(files) > 0 {
+				w := &walker{ImportPath: importPath}
+				importPkgs, err := w.build(files)
+				if err != nil {
+					return nil, nil, err
+				}
+				imports = append(imports, importPkgs...)
+			}
+		}
+	}
+
+	return pkg, imports, err
 }
