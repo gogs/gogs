@@ -27,6 +27,7 @@ const (
 type PkgInfo struct {
 	Id      int64
 	Path    string `qbs:"index"` // Import path of package.
+	AbsPath string
 	Imports []string
 	Note    string
 	Created time.Time `qbs:"index"` // Time when information last updated.

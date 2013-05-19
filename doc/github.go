@@ -15,7 +15,6 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/GPMGo/gpm/models"
 	"github.com/GPMGo/gpm/utils"
 )
 
@@ -29,7 +28,7 @@ func SetGithubCredentials(id, secret string) {
 	githubCred = "client_id=" + id + "&client_secret=" + secret
 }
 
-func GetGithubDoc(client *http.Client, match map[string]string, commit string) (*models.PkgInfo, error) {
+func GetGithubDoc(client *http.Client, match map[string]string, commit string) (*Package, error) {
 	SetGithubCredentials("1862bcb265171f37f36c", "308d71ab53ccd858416cfceaed52d5d5b7d53c5f")
 	match["cred"] = githubCred
 
@@ -88,11 +87,17 @@ func GetGithubDoc(client *http.Client, match map[string]string, commit string) (
 	// Create destination directory
 	os.Mkdir(installPath, os.ModePerm)
 
-	files := make([]*source, 0, len(r.File))
+	dirs := make([]string, 0, 5)
 	for _, f := range r.File {
-		srcName := f.FileInfo().Name()[strings.Index(f.FileInfo().Name(), "/")+1:]
-		fmt.Printf("Unzipping %s...", srcName)
-		fn := strings.Replace(f.FileInfo().Name(), shaName, installPath, 1)
+		absPath := strings.Replace(f.FileInfo().Name(), shaName, installPath, 1)
+		fmt.Printf("Unzipping %s...", absPath)
+
+		// Check if it is directory or not.
+		if strings.HasSuffix(absPath, "/") {
+			// Directory.
+			dirs = append(dirs, absPath)
+			continue
+		}
 
 		// Get files from archive
 		rc, err := f.Open()
@@ -101,38 +106,38 @@ func GetGithubDoc(client *http.Client, match map[string]string, commit string) (
 		}
 
 		// Create diretory before create file
-		os.MkdirAll(path.Dir(fn), os.ModePerm)
+		os.MkdirAll(path.Dir(absPath), os.ModePerm)
 		// Write data to file
-		fw, _ := os.Create(fn)
+		fw, _ := os.Create(absPath)
 		if err != nil {
 			return nil, err
 		}
 
-		_, err = io.Copy(fw, rc)
+		n, err := io.Copy(fw, rc)
 		if err != nil {
 			return nil, err
 		}
-
-		localF, _ := os.Open(fn)
-		fbytes := make([]byte, f.FileInfo().Size())
-		n, _ := localF.Read(fbytes)
 		fmt.Println(n)
 
+		/*localF, _ := os.Open(absPath)
+		fbytes := make([]byte, f.FileInfo().Size())
+		n, _ := localF.Read(fbytes)
+
 		// Check if Go source file.
-		if n > 0 && strings.HasSuffix(fn, ".go") {
+		if n > 0 && strings.HasSuffix(absPath, ".go") {
 			files = append(files, &source{
 				name: srcName,
 				data: fbytes,
 			})
-		}
+		}*/
 	}
 
-	w := &walker{
-		pinfo: &models.PkgInfo{
-			Path:   importPath,
-			Commit: commit,
-		},
+	pkg := &Package{
+		ImportPath: importPath,
+		AbsPath:    installPath,
+		Commit:     commit,
+		Dirs:       dirs,
 	}
 
-	return w.build(files)
+	return pkg, nil
 }

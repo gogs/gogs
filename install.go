@@ -12,12 +12,12 @@ import (
 	"strings"
 
 	"github.com/GPMGo/gpm/doc"
-	"github.com/GPMGo/gpm/models"
 	"github.com/GPMGo/gpm/utils"
 )
 
 var (
 	isHasGit, isHasHg bool
+	downloadCache     map[string]bool // Saves packages that have downloaded.
 )
 
 var cmdInstall = &Command{
@@ -25,6 +25,7 @@ var cmdInstall = &Command{
 }
 
 func init() {
+	downloadCache = make(map[string]bool)
 	cmdInstall.Run = runInstall
 	cmdInstall.Flags = map[string]bool{
 		"-p": false,
@@ -107,10 +108,13 @@ func downloadPackage(path, commit string) {
 		}
 
 		fmt.Printf("Downloading package: %s.\n", path)
-		_, err := pureDownload(path, commit)
+		pkg, err := pureDownload(path, commit)
 		if err != nil {
 			fmt.Printf("Fail to download package(%s) with error: %s.\n", path, err)
 		} else {
+			fmt.Println(pkg)
+			fmt.Printf("Checking imports(%s).\n", path)
+
 			fmt.Printf("Installing package: %s.\n", path)
 		}
 	}
@@ -133,7 +137,7 @@ func checkGoGetFlags() (args []string) {
 type service struct {
 	pattern *regexp.Regexp
 	prefix  string
-	get     func(*http.Client, map[string]string, string) (*models.PkgInfo, error)
+	get     func(*http.Client, map[string]string, string) (*doc.Package, error)
 }
 
 // services is the list of source code control services handled by gopkgdoc.
@@ -145,7 +149,7 @@ var services = []*service{
 }
 
 // pureDownload downloads package without control control.
-func pureDownload(path, commit string) (pinfo *models.PkgInfo, err error) {
+func pureDownload(path, commit string) (pinfo *doc.Package, err error) {
 	for _, s := range services {
 		if s.get == nil || !strings.HasPrefix(path, s.prefix) {
 			continue

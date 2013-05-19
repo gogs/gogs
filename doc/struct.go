@@ -8,9 +8,23 @@ import (
 	"go/token"
 	"os"
 	"time"
-
-	"github.com/GPMGo/gpm/models"
 )
+
+// Package represents a package.
+type Package struct {
+	// Package import path.
+	ImportPath string
+	AbsPath    string
+
+	// Revision tag and project tags.
+	Commit string
+
+	// Imports.
+	Imports []string
+
+	// Directories.
+	Dirs []string
+}
 
 // source is source code file.
 type source struct {
@@ -29,7 +43,7 @@ func (s *source) Sys() interface{}   { return nil }
 
 // walker holds the state used when building the documentation.
 type walker struct {
-	pinfo *models.PkgInfo
-	srcs  map[string]*source // Source files.
-	fset  *token.FileSet
+	pkg  *Package
+	srcs map[string]*source // Source files.
+	fset *token.FileSet
 }

@@ -91,7 +91,7 @@ func simpleImporter(imports map[string]*ast.Object, path string) (*ast.Object, e
 var buildPicPattern = regexp.MustCompile(`\[+!+\[+([a-zA-Z ]*)+\]+\(+[a-zA-z]+://[^\s]*`)
 
 // build generates data from source files.
-func (w *walker) build(srcs []*source) (*models.PkgInfo, error) {
+/*func (w *walker) build(srcs []*source) (*models.PkgInfo, error) {
 	// Set created time.
 	w.pinfo.Created = time.Now().UTC()
 
@@ -125,7 +125,6 @@ func (w *walker) build(srcs []*source) (*models.PkgInfo, error) {
 		if nogo {
 			err = nil
 		} else {
-			fmt.Println(w.pinfo)
 			return w.pinfo, errors.New("doc.walker.build(): " + err.Error())
 		}
 	}
@@ -147,3 +146,4 @@ func (w *walker) build(srcs []*source) (*models.PkgInfo, error) {
 	//	beego.Info("doc.walker.build(", pdoc.ImportPath, "), Goroutine #", runtime.NumGoroutine())
 	return w.pinfo, err
 }
+*/
