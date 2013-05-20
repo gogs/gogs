@@ -1,7 +1,7 @@
 gpm - Go Package Manager
 ===
 
-![GPMGo_Logo](https://raw.github.com/GPMGo/gpm-site/master/static/img/gpmgo2.png?raw=true)
+![GPMGo_Logo](https://raw.github.com/GPMGo/gpm-site/master/static/img/gpmgo.png?raw=true)
 
 gpm(Go Package Manager) is a Go package manage tool for search, install, update and share packages in Go.
 
@@ -13,3 +13,4 @@ gpm(Go Package Manager) is a Go package manage tool for search, install, update 
 - Add bundle and snapshot parser code for downloading by bundle or snapshot id.
 - Add user system to create, edit, upload, and download bundles or snapshots through gpm client program.
 - Add option for whether download dependencies packages in example code or not.
+- Add gpm working principle design.
