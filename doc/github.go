@@ -28,7 +28,7 @@ func SetGithubCredentials(id, secret string) {
 }
 
 // GetGithubDoc downloads tarball from github.com.
-func GetGithubDoc(client *http.Client, match map[string]string, commit string) (*Package, []string, error) {
+func GetGithubDoc(client *http.Client, match map[string]string, commit string, isDownloadEx bool) (*Package, []string, error) {
 	SetGithubCredentials("1862bcb265171f37f36c", "308d71ab53ccd858416cfceaed52d5d5b7d53c5f")
 	match["cred"] = githubCred
 
@@ -143,6 +143,11 @@ func GetGithubDoc(client *http.Client, match map[string]string, commit string) (
 	// Check if need to check imports.
 	if isCheckImport {
 		for _, d := range dirs {
+			// Check if current directory is example.
+			if !isDownloadEx && strings.Contains(d, "example") {
+				continue
+			}
+
 			dir, err := os.Open(d)
 			if err != nil {
 				return nil, nil, err

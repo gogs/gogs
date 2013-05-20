@@ -13,6 +13,8 @@ The install flags are:
 		download without installing packages.
 	-u
 		force to update pakcages.
+	-e
+		download dependencies for examples.
 
 The list flags accept a space-separated list of strings. To embed spaces
 in an element in the list, surround it with either single or double quotes.

@@ -28,8 +28,9 @@ var (
 )
 
 type tomlConfig struct {
-	Title, Version string
-	Lang           string `toml:"user_language"`
+	Title, Version     string
+	Username, Password string
+	Lang               string `toml:"user_language"`
 }
 
 // A Command is an implementation of a go command
@@ -138,20 +139,35 @@ func loadUsage(lang, appPath string) bool {
 	return true
 }
 
-func main() {
+// We don't use init() to initialize
+// bacause we need to get execute path in runtime.
+func initialize() bool {
 	// Get application execute path.
 	if !getAppPath() {
-		return
+		return false
 	}
 
 	// Load configuration.
 	if _, err := toml.DecodeFile(appPath+"conf/gpm.toml", &config); err != nil {
 		fmt.Println(err)
-		return
+		return false
 	}
 
 	// Load usages by language.
 	if !loadUsage(config.Lang, appPath) {
+		return false
+	}
+
+	// Create bundle and snapshot directories.
+	os.MkdirAll(appPath+"bundles", os.ModePerm)
+	os.MkdirAll(appPath+"snapshots", os.ModePerm)
+
+	return true
+}
+
+func main() {
+	// Initialization.
+	if !initialize() {
 		return
 	}
 

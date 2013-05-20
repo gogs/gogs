@@ -30,7 +30,8 @@ func init() {
 	cmdInstall.Flags = map[string]bool{
 		"-p": false,
 		"-d": false,
-		"-u": false,
+		"-u": false, // Flag for 'go get'.
+		"-e": false,
 	}
 }
 
@@ -42,6 +43,8 @@ func printPrompt(flag string) {
 		fmt.Printf("You enabled pure download.\n")
 	case "-d":
 		fmt.Printf("You enabled download without installing.\n")
+	case "-e":
+		fmt.Printf("You enabled download dependencies in exmaple.\n")
 	}
 }
 
@@ -103,7 +106,7 @@ func runInstall(cmd *Command, args []string) {
 
 	// Download packages.
 	commits := make([]string, len(args))
-	downloadPackages(args, commits)
+	downloadPackages(args, commits, cmdInstall.Flags["-e"])
 
 	if !cmdInstall.Flags["d"] && cmdInstall.Flags["-p"] {
 		// Install packages all together.
@@ -116,7 +119,7 @@ func runInstall(cmd *Command, args []string) {
 // downloadPackages downloads packages with certain commit,
 // if the commit is empty string, then it downloads all dependencies,
 // otherwise, it only downloada package with specific commit only.
-func downloadPackages(pkgs, commits []string) {
+func downloadPackages(pkgs, commits []string, isDownloadEx bool) {
 	// Check all packages, they may be bundles, snapshots or raw packages path.
 	for i, p := range pkgs {
 		// Check if it is a bundle or snapshot.
@@ -128,11 +131,11 @@ func downloadPackages(pkgs, commits []string) {
 		case utils.IsValidRemotePath(p):
 			if !downloadCache[p] {
 				// Download package.
-				pkg, imports := downloadPackage(p, commits[i])
+				pkg, imports := downloadPackage(p, commits[i], isDownloadEx)
 				if len(imports) > 0 {
 					// Need to download dependencies.
 					tags := make([]string, len(imports))
-					downloadPackages(imports, tags)
+					downloadPackages(imports, tags, isDownloadEx)
 					continue
 				}
 
@@ -152,7 +155,7 @@ func downloadPackages(pkgs, commits []string) {
 }
 
 // downloadPackage download package either use version control tools or not.
-func downloadPackage(path, commit string) (pkg *doc.Package, imports []string) {
+func downloadPackage(path, commit string, isDownloadEx bool) (pkg *doc.Package, imports []string) {
 	// Check if use version control tools.
 	switch {
 	case !cmdInstall.Flags["-p"] &&
@@ -173,14 +176,13 @@ func downloadPackage(path, commit string) (pkg *doc.Package, imports []string) {
 		downloadCache[path] = true
 
 		var err error
-		pkg, imports, err = pureDownload(path, commit)
+		pkg, imports, err = pureDownload(path, commit, isDownloadEx)
 		if err != nil {
 			fmt.Printf("Fail to download package(%s) with error: %s.\n", path, err)
 			return nil, nil
 		}
 
 		//fmt.Println(pkg)
-		//fmt.Printf("Downloaded package: %s.\n", path)
 		return pkg, imports
 	}
 }
@@ -202,7 +204,7 @@ func checkGoGetFlags() (args []string) {
 type service struct {
 	pattern *regexp.Regexp
 	prefix  string
-	get     func(*http.Client, map[string]string, string) (*doc.Package, []string, error)
+	get     func(*http.Client, map[string]string, string, bool) (*doc.Package, []string, error)
 }
 
 // services is the list of source code control services handled by gopkgdoc.
@@ -214,7 +216,7 @@ var services = []*service{
 }
 
 // pureDownload downloads package without version control.
-func pureDownload(path, commit string) (pinfo *doc.Package, imports []string, err error) {
+func pureDownload(path, commit string, isDownloadEx bool) (pinfo *doc.Package, imports []string, err error) {
 	for _, s := range services {
 		if s.get == nil || !strings.HasPrefix(path, s.prefix) {
 			continue
@@ -233,7 +235,7 @@ func pureDownload(path, commit string) (pinfo *doc.Package, imports []string, er
 				match[n] = m[i]
 			}
 		}
-		return s.get(doc.HttpClient, match, commit)
+		return s.get(doc.HttpClient, match, commit, isDownloadEx)
 	}
 	return nil, nil, doc.ErrNoMatch
 }
