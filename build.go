@@ -41,12 +41,14 @@ func runBuild(cmd *Command, args []string) {
 
 	for _, v := range paths {
 		if utils.IsExist(v + "/bin/" + proName) {
-			err := os.Remove(wd + "/" + proName)
-			if err != nil {
-				fmt.Printf("Fail to remove file in current directory: %s.\n", err)
-				return
+			if utils.IsExist(wd + "/" + proName) {
+				err := os.Remove(wd + "/" + proName)
+				if err != nil {
+					fmt.Printf("Fail to remove file in current directory: %s.\n", err)
+					return
+				}
 			}
-			err = os.Rename(v+"/bin/"+proName, wd+"/"+proName)
+			err := os.Rename(v+"/bin/"+proName, wd+"/"+proName)
 			if err == nil {
 				fmt.Printf("Moved file from $GOPATH(%s) to current directory(%s).\n", v, wd)
 				return
