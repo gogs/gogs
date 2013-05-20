@@ -12,3 +12,4 @@ gpm(Go Package Manager) is a Go package manage tool for search, install, update 
 - Develop user source API server template application to support user sources in bundles.
 - Add bundle and snapshot parser code for downloading by bundle or snapshot id.
 - Add user system to create, edit, upload, and download bundles or snapshots through gpm client program.
+- Add option for whether download dependencies packages in example code or not.
