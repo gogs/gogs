@@ -106,7 +106,10 @@ func GetGithubDoc(client *http.Client, match map[string]string, commit string, i
 		// Check if it is directory or not.
 		if strings.HasSuffix(absPath, "/") {
 			// Directory.
-			dirs = append(dirs, absPath)
+			// Check if current directory is example.
+			if !(!isDownloadEx && strings.Contains(absPath, "example")) {
+				dirs = append(dirs, absPath)
+			}
 			continue
 		}
 
@@ -143,11 +146,6 @@ func GetGithubDoc(client *http.Client, match map[string]string, commit string, i
 	// Check if need to check imports.
 	if isCheckImport {
 		for _, d := range dirs {
-			// Check if current directory is example.
-			if !isDownloadEx && strings.Contains(d, "example") {
-				continue
-			}
-
 			dir, err := os.Open(d)
 			if err != nil {
 				return nil, nil, err

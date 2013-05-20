@@ -159,8 +159,8 @@ func initialize() bool {
 	}
 
 	// Create bundle and snapshot directories.
-	os.MkdirAll(appPath+"bundles", os.ModePerm)
-	os.MkdirAll(appPath+"snapshots", os.ModePerm)
+	os.MkdirAll(appPath+"repo/bundles/", os.ModePerm)
+	os.MkdirAll(appPath+"repo/snapshots/", os.ModePerm)
 
 	return true
 }
