@@ -44,7 +44,7 @@ func printPrompt(flag string) {
 	case "-d":
 		fmt.Printf("You enabled download without installing.\n")
 	case "-e":
-		fmt.Printf("You enabled download dependencies in exmaple.\n")
+		fmt.Printf("You enabled download dependencies in example.\n")
 	}
 }
 
