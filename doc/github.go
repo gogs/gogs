@@ -28,7 +28,7 @@ func SetGithubCredentials(id, secret string) {
 }
 
 // GetGithubDoc downloads tarball from github.com.
-func GetGithubDoc(client *http.Client, match map[string]string, commit string, isDownloadEx bool) (*Package, []string, error) {
+func GetGithubDoc(client *http.Client, match map[string]string, commit string, cmdFlags map[string]bool) (*Package, []string, error) {
 	SetGithubCredentials("1862bcb265171f37f36c", "308d71ab53ccd858416cfceaed52d5d5b7d53c5f")
 	match["cred"] = githubCred
 
@@ -94,11 +94,10 @@ func GetGithubDoc(client *http.Client, match map[string]string, commit string, i
 	installPath := paths[0] + "/src/" + importPath
 
 	// Remove old files.
-	os.RemoveAll(installPath)
+	os.RemoveAll(installPath + "/")
 	// Create destination directory.
-	os.Mkdir(installPath, os.ModePerm)
+	os.MkdirAll(installPath+"/", os.ModePerm)
 
-	//dirMap := make(map[string][]*source)
 	dirs := make([]string, 0, 5)
 	for _, f := range r.File {
 		absPath := strings.Replace(f.FileInfo().Name(), shaName, installPath, 1)
@@ -107,7 +106,7 @@ func GetGithubDoc(client *http.Client, match map[string]string, commit string, i
 		if strings.HasSuffix(absPath, "/") {
 			// Directory.
 			// Check if current directory is example.
-			if !(!isDownloadEx && strings.Contains(absPath, "example")) {
+			if !(!cmdFlags["-e"] && strings.Contains(absPath, "example")) {
 				dirs = append(dirs, absPath)
 			}
 			continue
@@ -119,8 +118,9 @@ func GetGithubDoc(client *http.Client, match map[string]string, commit string, i
 			return nil, nil, err
 		}
 
-		// Create diretory before create file
+		// Create diretory before create file.
 		os.MkdirAll(path.Dir(absPath), os.ModePerm)
+
 		// Write data to file
 		fw, _ := os.Create(absPath)
 		if err != nil {
