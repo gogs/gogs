@@ -87,8 +87,7 @@ func GetGithubDoc(client *http.Client, match map[string]string, installGOPATH, c
 	}
 
 	shaName := expand("{repo}-{sha}", match)
-	importPath := "github.com/" + expand("{owner}/{repo}", match)
-	installPath := installGOPATH + "/src/" + importPath
+	installPath := installGOPATH + "/src/" + match["importPath"]
 
 	// Remove old files.
 	os.RemoveAll(installPath + "/")
@@ -99,7 +98,7 @@ func GetGithubDoc(client *http.Client, match map[string]string, installGOPATH, c
 	for _, f := range r.File {
 		absPath := strings.Replace(f.FileInfo().Name(), shaName, installPath, 1)
 
-		// Check if it is directory or not.
+		// Check if it is a directory.
 		if strings.HasSuffix(absPath, "/") {
 			// Directory.
 			// Check if current directory is example.
@@ -116,7 +115,7 @@ func GetGithubDoc(client *http.Client, match map[string]string, installGOPATH, c
 		}
 
 		// Create diretory before create file.
-		os.MkdirAll(path.Dir(absPath), os.ModePerm)
+		os.MkdirAll(path.Dir(absPath)+"/", os.ModePerm)
 
 		// Write data to file
 		fw, _ := os.Create(absPath)
@@ -133,7 +132,7 @@ func GetGithubDoc(client *http.Client, match map[string]string, installGOPATH, c
 	}
 
 	pkg := &Package{
-		ImportPath: importPath,
+		ImportPath: match["importPath"],
 		AbsPath:    installPath,
 		Commit:     commit,
 	}
@@ -143,7 +142,7 @@ func GetGithubDoc(client *http.Client, match map[string]string, installGOPATH, c
 	// Check if need to check imports.
 	if isCheckImport {
 		for _, d := range dirs {
-			imports, err = checkImports(d, importPath)
+			imports, err = checkImports(d, match["importPath"])
 			if err != nil {
 				return nil, nil, err
 			}

@@ -1,17 +1,6 @@
-// Copyright 2011 Gary Burd
-// Copyright 2013 Unknown
-//
-// Licensed under the Apache License, Version 2.0 (the "License"): you may
-// not use this file except in compliance with the License. You may obtain
-// a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-// WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
-// License for the specific language governing permissions and limitations
-// under the License.
+// Copyright (c) 2013 GPMGo Members. All rights reserved.
+// Use of this source code is governed by a MIT-style
+// license that can be found in the LICENSE file.
 
 package doc
 
@@ -86,8 +75,7 @@ func GetBitbucketDoc(client *http.Client, match map[string]string, installGOPATH
 		return nil, nil, err
 	}
 
-	importPath := "bitbucket.org/" + expand("{owner}/{repo}", match)
-	installPath := installGOPATH + "/src/" + importPath
+	installPath := installGOPATH + "/src/" + match["importPath"]
 
 	// Remove old files.
 	os.RemoveAll(installPath + "/")
@@ -116,42 +104,44 @@ func GetBitbucketDoc(client *http.Client, match map[string]string, installGOPATH
 		fn := h.FileInfo().Name()
 
 		// In case that we find directory, usually we should not.
-		if !strings.HasSuffix(fn, "/") {
-			// Check root path.
-			if len(autoPath) == 0 {
-				autoPath = fn[:strings.Index(fn, "/")]
-			}
-			absPath := strings.Replace(fn, autoPath, installPath, 1)
+		if strings.HasSuffix(fn, "/") {
+			continue
+		}
 
-			// Create diretory before create file.
-			dir := path.Dir(absPath)
-			if !checkDir(dir, dirs) {
-				dirs = append(dirs, dir)
-				os.MkdirAll(dir+"/", os.ModePerm)
-			}
+		// Check root path.
+		if len(autoPath) == 0 {
+			autoPath = fn[:strings.Index(fn, "/")]
+		}
+		absPath := strings.Replace(fn, autoPath, installPath, 1)
 
-			// Get data from archive.
-			fbytes := make([]byte, h.Size)
-			if _, err := io.ReadFull(tr, fbytes); err != nil {
-				return nil, nil, err
-			}
+		// Create diretory before create file.
+		dir := path.Dir(absPath)
+		if !checkDir(dir, dirs) && !(!cmdFlags["-e"] && strings.Contains(absPath, "example")) {
+			dirs = append(dirs, dir)
+			os.MkdirAll(dir+"/", os.ModePerm)
+		}
 
-			// Write data to file
-			fw, err := os.Create(absPath)
-			if err != nil {
-				return nil, nil, err
-			}
+		// Get data from archive.
+		fbytes := make([]byte, h.Size)
+		if _, err := io.ReadFull(tr, fbytes); err != nil {
+			return nil, nil, err
+		}
 
-			_, err = fw.Write(fbytes)
-			fw.Close()
-			if err != nil {
-				return nil, nil, err
-			}
+		// Write data to file
+		fw, err := os.Create(absPath)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		_, err = fw.Write(fbytes)
+		fw.Close()
+		if err != nil {
+			return nil, nil, err
 		}
 	}
 
 	pkg := &Package{
-		ImportPath: importPath,
+		ImportPath: match["importPath"],
 		AbsPath:    installPath,
 		Commit:     commit,
 	}
@@ -160,24 +150,10 @@ func GetBitbucketDoc(client *http.Client, match map[string]string, installGOPATH
 
 	// Check if need to check imports.
 	if isCheckImport {
-		rootdir, err := os.Open(installPath + "/")
-		if err != nil {
-			return nil, nil, err
-		}
-		defer rootdir.Close()
-
-		dirs, err := rootdir.Readdir(0)
-		if err != nil {
-			return nil, nil, err
-		}
-
 		for _, d := range dirs {
-			if d.IsDir() {
-				absPath := installPath + "/" + d.Name() + "/"
-				imports, err = checkImports(absPath, importPath)
-				if err != nil {
-					return nil, nil, err
-				}
+			imports, err = checkImports(d+"/", match["importPath"])
+			if err != nil {
+				return nil, nil, err
 			}
 		}
 	}
