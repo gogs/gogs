@@ -32,6 +32,7 @@ func init() {
 		"-d": false,
 		"-u": false, // Flag for 'go get'.
 		"-e": false,
+		"-s": false,
 	}
 }
 
@@ -45,6 +46,10 @@ func printPrompt(flag string) {
 		fmt.Printf("You enabled download without installing.\n")
 	case "-e":
 		fmt.Printf("You enabled download dependencies in example.\n")
+	case "-e":
+		fmt.Printf("You enabled download dependencies in example.\n")
+	case "-s":
+		fmt.Printf("You enabled download from sources.\n")
 	}
 }
 
