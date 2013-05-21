@@ -1,7 +1,7 @@
 # This is a configuration file for gpm with toml format.
 
 title = "gpm(Go Package Manager)"
-version = "v0.0.5 Build 0521"
+version = "v0.0.6 Build 0521"
 username = ""
 password = ""
 user_language = "en-US"
