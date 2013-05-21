@@ -19,4 +19,5 @@ gpm(Go Package Manager) is a Go package manage tool for search, install, update 
 - Add i18n support for all strings.
 - Add feature for downloading through version control tools, and use `checkout` to switch to specific revision; this feature only be enabled when users use bundle or snapshot id.
 - When choose which `GOPATH` to install, match with current path first, if it doesn't match any `GOPATH`, then install to the first path in the `GOPATH` variable.
-- Add support that download by tag for packages in github.com.
+- Add support for downloading by tag for packages in github.com.
+- Get author commit time and save in node.
