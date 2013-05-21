@@ -18,6 +18,7 @@ import (
 var (
 	isHasGit, isHasHg bool
 	downloadCache     map[string]bool // Saves packages that have downloaded.
+	installGOPATH     string          // The GOPATH that packages are downloaded to.
 )
 
 var cmdInstall = &Command{
@@ -44,8 +45,6 @@ func printPrompt(flag string) {
 		fmt.Printf("You enabled pure download.\n")
 	case "-d":
 		fmt.Printf("You enabled download without installing.\n")
-	case "-e":
-		fmt.Printf("You enabled download dependencies in example.\n")
 	case "-e":
 		fmt.Printf("You enabled download dependencies in example.\n")
 	case "-s":
@@ -108,6 +107,9 @@ func runInstall(cmd *Command, args []string) {
 
 	// Check version control tools.
 	checkVCSTool()
+
+	installGOPATH = utils.GetBestMatchGOPATH(appPath)
+	fmt.Printf("Packages will be downloaded to GOPATH(%s).\n", installGOPATH)
 
 	// Download packages.
 	commits := make([]string, len(args))
@@ -209,14 +211,14 @@ func checkGoGetFlags() (args []string) {
 type service struct {
 	pattern *regexp.Regexp
 	prefix  string
-	get     func(*http.Client, map[string]string, string, map[string]bool) (*doc.Package, []string, error)
+	get     func(*http.Client, map[string]string, string, string, map[string]bool) (*doc.Package, []string, error)
 }
 
 // services is the list of source code control services handled by gopkgdoc.
 var services = []*service{
 	{doc.GithubPattern, "github.com/", doc.GetGithubDoc},
 	{doc.GooglePattern, "code.google.com/", doc.GetGoogleDoc},
-	//{bitbucketPattern, "bitbucket.org/", getBitbucketDoc},
+	{doc.BitbucketPattern, "bitbucket.org/", doc.GetBitbucketDoc},
 	//{launchpadPattern, "launchpad.net/", getLaunchpadDoc},
 }
 
@@ -240,7 +242,7 @@ func pureDownload(path, commit string) (pinfo *doc.Package, imports []string, er
 				match[n] = m[i]
 			}
 		}
-		return s.get(doc.HttpClient, match, commit, cmdInstall.Flags)
+		return s.get(doc.HttpClient, match, installGOPATH, commit, cmdInstall.Flags)
 	}
 	return nil, nil, doc.ErrNoMatch
 }

@@ -176,3 +176,54 @@ func expand(template string, match map[string]string, subs ...string) string {
 	p = append(p, template...)
 	return string(p)
 }
+
+// checkImports checks package denpendencies.
+func checkImports(absPath, importPath string) (imports []string, err error) {
+	dir, err := os.Open(absPath)
+	if err != nil {
+		return nil, err
+	}
+	defer dir.Close()
+
+	// Get file info slice.
+	fis, err := dir.Readdir(0)
+	if err != nil {
+		return nil, err
+	}
+
+	files := make([]*source, 0, 10)
+	for _, fi := range fis {
+		// Only handle files.
+		if strings.HasSuffix(fi.Name(), ".go") {
+			f, err := os.Open(absPath + fi.Name())
+			if err != nil {
+				return nil, err
+			}
+
+			fbytes := make([]byte, fi.Size())
+			_, err = f.Read(fbytes)
+			f.Close()
+			//fmt.Println(d+fi.Name(), fi.Size(), n)
+			if err != nil {
+				return nil, err
+			}
+
+			files = append(files, &source{
+				name: fi.Name(),
+				data: fbytes,
+			})
+		}
+	}
+
+	// Check if has Go source files.
+	if len(files) > 0 {
+		w := &walker{ImportPath: importPath}
+		importPkgs, err := w.build(files)
+		if err != nil {
+			return nil, err
+		}
+		imports = append(imports, importPkgs...)
+	}
+
+	return imports, nil
+}

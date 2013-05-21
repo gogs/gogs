@@ -11,8 +11,6 @@ import (
 	"path"
 	"regexp"
 	"strings"
-
-	"github.com/GPMGo/gpm/utils"
 )
 
 var (
@@ -50,8 +48,9 @@ func getGoogleVCS(client *http.Client, match map[string]string) error {
 }
 
 // GetGoogleDoc downloads raw files from code.google.com.
-func GetGoogleDoc(client *http.Client, match map[string]string, commit string, cmdFlags map[string]bool) (*Package, []string, error) {
+func GetGoogleDoc(client *http.Client, match map[string]string, installGOPATH, commit string, cmdFlags map[string]bool) (*Package, []string, error) {
 	setupGoogleMatch(match)
+	// Check version control.
 	if m := googleEtagRe.FindStringSubmatch(commit); m != nil {
 		match["vcs"] = m[1]
 	} else if err := getGoogleVCS(client, match); err != nil {
@@ -76,9 +75,8 @@ func GetGoogleDoc(client *http.Client, match map[string]string, commit string, c
 			errors.New("doc.GetGoogleDoc(): Could not find revision for " + match["importPath"])
 	}
 
-	paths := utils.GetGOPATH()
 	importPath := "code.google.com/p/" + expand("{repo}{dir}", match)
-	installPath := paths[0] + "/src/" + importPath
+	installPath := installGOPATH + "/src/" + importPath
 
 	// Remove old files.
 	os.RemoveAll(installPath + "/")
@@ -157,50 +155,9 @@ func GetGoogleDoc(client *http.Client, match map[string]string, commit string, c
 		for _, d := range dirs {
 			if d.IsDir() {
 				absPath := installPath + "/" + d.Name() + "/"
-				dir, err := os.Open(absPath)
+				imports, err = checkImports(absPath, importPath)
 				if err != nil {
 					return nil, nil, err
-				}
-				defer dir.Close()
-
-				// Get file info slice.
-				fis, err := dir.Readdir(0)
-				if err != nil {
-					return nil, nil, err
-				}
-
-				files := make([]*source, 0, 10)
-				for _, fi := range fis {
-					// Only handle files.
-					if strings.HasSuffix(fi.Name(), ".go") {
-						f, err := os.Open(absPath + fi.Name())
-						if err != nil {
-							return nil, nil, err
-						}
-
-						fbytes := make([]byte, fi.Size())
-						_, err = f.Read(fbytes)
-						f.Close()
-						//fmt.Println(d+fi.Name(), fi.Size(), n)
-						if err != nil {
-							return nil, nil, err
-						}
-
-						files = append(files, &source{
-							name: fi.Name(),
-							data: fbytes,
-						})
-					}
-				}
-
-				// Check if has Go source files.
-				if len(files) > 0 {
-					w := &walker{ImportPath: importPath}
-					importPkgs, err := w.build(files)
-					if err != nil {
-						return nil, nil, err
-					}
-					imports = append(imports, importPkgs...)
 				}
 			}
 		}

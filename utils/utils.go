@@ -369,7 +369,7 @@ func IsValidRemotePath(importPath string) bool {
 	return true
 }
 
-// GetGOPATH return all GOPATH in system.
+// GetGOPATH returns all paths in GOPATH variable.
 func GetGOPATH() []string {
 	gopath := os.Getenv("GOPATH")
 	var paths []string
@@ -380,6 +380,17 @@ func GetGOPATH() []string {
 		paths = strings.Split(gopath, ":")
 	}
 	return paths
+}
+
+// GetGOPATH returns best matched GOPATH.
+func GetBestMatchGOPATH(appPath string) string {
+	paths := GetGOPATH()
+	for _, p := range paths {
+		if strings.HasPrefix(p, appPath) {
+			return p
+		}
+	}
+	return paths[0]
 }
 
 var standardPath = map[string]bool{
