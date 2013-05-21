@@ -7,7 +7,7 @@ gpm(Go Package Manager) is a Go package manage tool for search, install, update 
 
 ## Todo
 
-- Command `install` add support for downloading code from launchpad.net, bitbucket.org; hopefully, support user sources for downloading tarballs.
+- Command `install` add support for downloading code from launchpad.net, bitbucket.org; probably, git.oschina.net, gitcafe.com, *.codeplex.com; hopefully, support user sources for downloading tarballs.
 - Command `install` installs all packages after downloaded.
 - After downloaded all packages in bundles or snapshots, need to check if all dependencies have been downloaded as well.
 - Develop user source API server template application to support user sources in bundles.
