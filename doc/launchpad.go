@@ -19,7 +19,7 @@ import (
 var LaunchpadPattern = regexp.MustCompile(`^launchpad\.net/(?P<repo>(?P<project>[a-z0-9A-Z_.\-]+)(?P<series>/[a-z0-9A-Z_.\-]+)?|~[a-z0-9A-Z_.\-]+/(\+junk|[a-z0-9A-Z_.\-]+)/[a-z0-9A-Z_.\-]+)(?P<dir>/[a-z0-9A-Z_.\-/]+)*$`)
 
 // GetLaunchpadDoc downloads tarball from launchpad.net.
-func GetLaunchpadDoc(client *http.Client, match map[string]string, installGOPATH, commit string, cmdFlags map[string]bool) (*Package, []string, error) {
+func GetLaunchpadDoc(client *http.Client, match map[string]string, installGOPATH, commit string, cmdFlags map[string]bool) (*Node, []string, error) {
 
 	if match["project"] != "" && match["series"] != "" {
 		rc, err := httpGet(client, expand("https://code.launchpad.net/{project}{series}/.bzr/branch-format", match), nil)
@@ -120,9 +120,8 @@ func GetLaunchpadDoc(client *http.Client, match map[string]string, installGOPATH
 		}
 	}
 
-	pkg := &Package{
-		ImportPath: match["importPath"],
-		AbsPath:    installPath,
+	node := &Node{
+		ImportPath: projectPath,
 		Commit:     commit,
 	}
 
@@ -139,5 +138,5 @@ func GetLaunchpadDoc(client *http.Client, match map[string]string, installGOPATH
 		}
 	}
 
-	return pkg, imports, err
+	return node, imports, err
 }

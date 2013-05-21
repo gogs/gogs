@@ -22,7 +22,7 @@ var (
 )
 
 // GetBitbucketDoc downloads tarball from bitbucket.org.
-func GetBitbucketDoc(client *http.Client, match map[string]string, installGOPATH, commit string, cmdFlags map[string]bool) (*Package, []string, error) {
+func GetBitbucketDoc(client *http.Client, match map[string]string, installGOPATH, commit string, cmdFlags map[string]bool) (*Node, []string, error) {
 	// Check version control.
 	if m := bitbucketEtagRe.FindStringSubmatch(commit); m != nil {
 		match["vcs"] = m[1]
@@ -141,9 +141,8 @@ func GetBitbucketDoc(client *http.Client, match map[string]string, installGOPATH
 		}
 	}
 
-	pkg := &Package{
-		ImportPath: match["importPath"],
-		AbsPath:    installPath,
+	node := &Node{
+		ImportPath: projectPath,
 		Commit:     commit,
 	}
 
@@ -160,7 +159,7 @@ func GetBitbucketDoc(client *http.Client, match map[string]string, installGOPATH
 		}
 	}
 
-	return pkg, imports, err
+	return node, imports, err
 }
 
 // checkDir checks if current directory has been saved.

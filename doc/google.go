@@ -48,7 +48,7 @@ func getGoogleVCS(client *http.Client, match map[string]string) error {
 }
 
 // GetGoogleDoc downloads raw files from code.google.com.
-func GetGoogleDoc(client *http.Client, match map[string]string, installGOPATH, commit string, cmdFlags map[string]bool) (*Package, []string, error) {
+func GetGoogleDoc(client *http.Client, match map[string]string, installGOPATH, commit string, cmdFlags map[string]bool) (*Node, []string, error) {
 	setupGoogleMatch(match)
 	// Check version control.
 	if m := googleEtagRe.FindStringSubmatch(commit); m != nil {
@@ -132,9 +132,8 @@ func GetGoogleDoc(client *http.Client, match map[string]string, installGOPATH, c
 		return nil, nil, err
 	}
 
-	pkg := &Package{
-		ImportPath: match["importPath"],
-		AbsPath:    installPath,
+	node := &Node{
+		ImportPath: projectPath,
 		Commit:     commit,
 	}
 	var imports []string
@@ -164,7 +163,7 @@ func GetGoogleDoc(client *http.Client, match map[string]string, installGOPATH, c
 		}
 	}
 
-	return pkg, imports, err
+	return node, imports, err
 }
 
 func downloadFiles(client *http.Client, match map[string]string, rootPath, installPath, commit string, dirs []string) error {

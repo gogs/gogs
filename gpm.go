@@ -7,6 +7,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -20,11 +21,14 @@ import (
 	"unicode/utf8"
 
 	"github.com/BurntSushi/toml"
+	"github.com/GPMGo/gpm/doc"
+	"github.com/GPMGo/gpm/utils"
 )
 
 var (
-	config  tomlConfig
-	appPath string // Application path.
+	config     tomlConfig
+	appPath    string // Application path.
+	localNodes []*doc.Node
 )
 
 type tomlConfig struct {
@@ -100,7 +104,7 @@ func getAppPath() bool {
 }
 
 // loadUsage loads usage according to user language.
-func loadUsage(lang, appPath string) bool {
+func loadUsage(lang string) bool {
 	// Load main usage.
 	f, err := os.Open(appPath + "i18n/" + lang + "/usage.tpl")
 	if err != nil {
@@ -139,6 +143,27 @@ func loadUsage(lang, appPath string) bool {
 	return true
 }
 
+// loadLocalNodes loads nodes information from local file system.
+func loadLocalNodes() bool {
+	if !utils.IsExist(appPath + "data/nodes.json") {
+		os.MkdirAll(appPath+"data/", os.ModePerm)
+	} else {
+		fr, err := os.Open(appPath + "data/nodes.json")
+		if err != nil {
+			fmt.Println(err)
+			return false
+		}
+		defer fr.Close()
+
+		err = json.NewDecoder(fr).Decode(&localNodes)
+		if err != nil && err != io.EOF {
+			fmt.Println(err)
+			return false
+		}
+	}
+	return true
+}
+
 // We don't use init() to initialize
 // bacause we need to get execute path in runtime.
 func initialize() bool {
@@ -154,13 +179,18 @@ func initialize() bool {
 	}
 
 	// Load usages by language.
-	if !loadUsage(config.Lang, appPath) {
+	if !loadUsage(config.Lang) {
 		return false
 	}
 
 	// Create bundle and snapshot directories.
 	os.MkdirAll(appPath+"repo/bundles/", os.ModePerm)
 	os.MkdirAll(appPath+"repo/snapshots/", os.ModePerm)
+
+	// Initialize local nodes.
+	if !loadLocalNodes() {
+		return false
+	}
 
 	return true
 }

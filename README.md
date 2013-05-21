@@ -12,7 +12,6 @@ gpm(Go Package Manager) is a Go package manage tool for search, install, update 
 
 ## Todo
 
-- Save node information after downloaded, and check for next time, reduce download times.
 - All errors should have specific title for exactly where were created.
 - Add i18n support for all strings.
 - Add gpm working principle design.

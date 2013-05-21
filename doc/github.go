@@ -26,7 +26,7 @@ func SetGithubCredentials(id, secret string) {
 }
 
 // GetGithubDoc downloads tarball from github.com.
-func GetGithubDoc(client *http.Client, match map[string]string, installGOPATH, commit string, cmdFlags map[string]bool) (*Package, []string, error) {
+func GetGithubDoc(client *http.Client, match map[string]string, installGOPATH, commit string, cmdFlags map[string]bool) (*Node, []string, error) {
 	SetGithubCredentials("1862bcb265171f37f36c", "308d71ab53ccd858416cfceaed52d5d5b7d53c5f")
 	match["cred"] = githubCred
 
@@ -134,9 +134,8 @@ func GetGithubDoc(client *http.Client, match map[string]string, installGOPATH, c
 		}
 	}
 
-	pkg := &Package{
-		ImportPath: match["importPath"],
-		AbsPath:    installPath,
+	node := &Node{
+		ImportPath: projectPath,
 		Commit:     commit,
 	}
 
@@ -153,5 +152,5 @@ func GetGithubDoc(client *http.Client, match map[string]string, installGOPATH, c
 		}
 	}
 
-	return pkg, imports, err
+	return node, imports, err
 }

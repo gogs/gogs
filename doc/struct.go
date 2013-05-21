@@ -10,17 +10,11 @@ import (
 	"time"
 )
 
-// Package represents a package.
-type Package struct {
-	// Package import path.
-	ImportPath string
-	AbsPath    string
-
-	// Revision tag and project tags.
-	Commit string
-
-	// Imports.
-	Imports []string
+// Node represents a node structure.
+type Node struct {
+	ImportPath string `json:"import_path"`
+	Commit     string
+	Date       string
 }
 
 // source is source code file.

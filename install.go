@@ -5,8 +5,10 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"os/exec"
 	"regexp"
 	"strings"
@@ -126,6 +128,16 @@ func runInstall(cmd *Command, args []string) {
 			cmdArgs[1] = k
 			executeGoCommand(cmdArgs)
 		}
+
+		// Save local nodes to file.
+		fw, err := os.Create(appPath + "data/nodes.json")
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		defer fw.Close()
+		fbytes, _ := json.MarshalIndent(&localNodes, "", "\t")
+		fw.Write(fbytes)
 	}
 
 	fmt.Println("Well done.")
@@ -146,17 +158,17 @@ func downloadPackages(pkgs, commits []string) {
 		case utils.IsValidRemotePath(p):
 			if !downloadCache[p] {
 				// Download package.
-				pkg, imports := downloadPackage(p, commits[i])
+				node, imports := downloadPackage(p, commits[i])
 				if len(imports) > 0 {
 					// Need to download dependencies.
 					tags := make([]string, len(imports))
 					downloadPackages(imports, tags)
-					continue
 				}
 
 				// Only save package information with specific commit.
-				if pkg != nil {
-					// Save record in local database.
+				if node != nil {
+					// Save record in local nodes.
+					saveNode(node)
 					//fmt.Printf("Saved information: %s:%s.\n", pkg.ImportPath, pkg.Commit)
 				}
 			} else {
@@ -169,8 +181,22 @@ func downloadPackages(pkgs, commits []string) {
 	}
 }
 
+// saveNode saves node into local nodes.
+func saveNode(n *doc.Node) {
+	// Check if this node exists.
+	for _, v := range localNodes {
+		if n.ImportPath == v.ImportPath {
+			v = n
+			return
+		}
+	}
+
+	// Add new node.
+	localNodes = append(localNodes, n)
+}
+
 // downloadPackage download package either use version control tools or not.
-func downloadPackage(path, commit string) (pkg *doc.Package, imports []string) {
+func downloadPackage(path, commit string) (node *doc.Node, imports []string) {
 	// Check if use version control tools.
 	switch {
 	case !cmdInstall.Flags["-p"] &&
@@ -191,13 +217,13 @@ func downloadPackage(path, commit string) (pkg *doc.Package, imports []string) {
 		downloadCache[path] = true
 
 		var err error
-		pkg, imports, err = pureDownload(path, commit)
+		node, imports, err = pureDownload(path, commit)
 		if err != nil {
 			fmt.Printf("Fail to download package(%s) with error: %s.\n", path, err)
 			return nil, nil
 		}
 
-		return pkg, imports
+		return node, imports
 	}
 }
 
@@ -218,7 +244,7 @@ func checkGoGetFlags() (args []string) {
 type service struct {
 	pattern *regexp.Regexp
 	prefix  string
-	get     func(*http.Client, map[string]string, string, string, map[string]bool) (*doc.Package, []string, error)
+	get     func(*http.Client, map[string]string, string, string, map[string]bool) (*doc.Node, []string, error)
 }
 
 // services is the list of source code control services handled by gopkgdoc.
@@ -230,7 +256,7 @@ var services = []*service{
 }
 
 // pureDownload downloads package without version control.
-func pureDownload(path, commit string) (pinfo *doc.Package, imports []string, err error) {
+func pureDownload(path, commit string) (*doc.Node, []string, error) {
 	for _, s := range services {
 		if s.get == nil || !strings.HasPrefix(path, s.prefix) {
 			continue
