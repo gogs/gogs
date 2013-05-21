@@ -21,3 +21,4 @@ gpm(Go Package Manager) is a Go package manage tool for search, install, update 
 - When choose which `GOPATH` to install, match with current path first, if it doesn't match any `GOPATH`, then install to the first path in the `GOPATH` variable.
 - Add support for downloading by tag for packages in github.com.
 - Get author commit time and save in node.
+- Save node information after downloaded, and check for next time, reduce download times.
