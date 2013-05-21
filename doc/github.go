@@ -87,7 +87,8 @@ func GetGithubDoc(client *http.Client, match map[string]string, installGOPATH, c
 	}
 
 	shaName := expand("{repo}-{sha}", match)
-	installPath := installGOPATH + "/src/" + match["importPath"]
+	projectPath := expand("github.com/{owner}/{repo}", match)
+	installPath := installGOPATH + "/src/" + projectPath
 
 	// Remove old files.
 	os.RemoveAll(installPath + "/")
@@ -95,6 +96,8 @@ func GetGithubDoc(client *http.Client, match map[string]string, installGOPATH, c
 	os.MkdirAll(installPath+"/", os.ModePerm)
 
 	dirs := make([]string, 0, 5)
+	// Need to add root path because we cannot get from tarball.
+	dirs = append(dirs, installPath+"/")
 	for _, f := range r.File {
 		absPath := strings.Replace(f.FileInfo().Name(), shaName, installPath, 1)
 
@@ -142,10 +145,11 @@ func GetGithubDoc(client *http.Client, match map[string]string, installGOPATH, c
 	// Check if need to check imports.
 	if isCheckImport {
 		for _, d := range dirs {
-			imports, err = checkImports(d, match["importPath"])
+			importPkgs, err := checkImports(d, match["importPath"])
 			if err != nil {
 				return nil, nil, err
 			}
+			imports = append(imports, importPkgs...)
 		}
 	}
 

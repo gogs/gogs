@@ -9,7 +9,6 @@ gpm(Go Package Manager) is a Go package manage tool for search, install, update 
 
 - Command `install` add support for downloading code from git.oschina.net, gitcafe.com, *.codeplex.com;
 - Add support for downloading tarballs from user sources.
-- Command `install` installs all packages after downloaded.
 - After downloaded all packages in bundles or snapshots, need to check if all dependencies have been downloaded as well.
 - Develop user source API server template application to support user sources in bundles.
 - Add bundle and snapshot parser code for downloading by bundle or snapshot id.
@@ -22,3 +21,4 @@ gpm(Go Package Manager) is a Go package manage tool for search, install, update 
 - Add support for downloading by tag for packages in github.com, bitbucket.org.
 - Get author commit time and save in node.
 - Save node information after downloaded, and check for next time, reduce download times.
+- Collect download and installation results and report to users in the end.

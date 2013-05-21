@@ -75,7 +75,8 @@ func GetGoogleDoc(client *http.Client, match map[string]string, installGOPATH, c
 			errors.New("doc.GetGoogleDoc(): Could not find revision for " + match["importPath"])
 	}
 
-	installPath := installGOPATH + "/src/" + match["importPath"]
+	projectPath := expand("code.google.com/p/{repo}{dot}{subrepo}{dir}", match)
+	installPath := installGOPATH + "/src/" + projectPath
 
 	// Remove old files.
 	os.RemoveAll(installPath + "/")
@@ -154,10 +155,11 @@ func GetGoogleDoc(client *http.Client, match map[string]string, installGOPATH, c
 		for _, d := range dirs {
 			if d.IsDir() && !(!cmdFlags["-e"] && strings.Contains(d.Name(), "example")) {
 				absPath := installPath + "/" + d.Name() + "/"
-				imports, err = checkImports(absPath, match["importPath"])
+				importPkgs, err := checkImports(absPath, match["importPath"])
 				if err != nil {
 					return nil, nil, err
 				}
+				imports = append(imports, importPkgs...)
 			}
 		}
 	}

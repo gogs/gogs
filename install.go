@@ -115,9 +115,17 @@ func runInstall(cmd *Command, args []string) {
 	commits := make([]string, len(args))
 	downloadPackages(args, commits)
 
-	if !cmdInstall.Flags["d"] && cmdInstall.Flags["-p"] {
+	if !cmdInstall.Flags["-d"] && cmdInstall.Flags["-p"] {
 		// Install packages all together.
-		fmt.Printf("Installing package: %s.\n")
+		var cmdArgs []string
+		cmdArgs = append(cmdArgs, "install")
+		cmdArgs = append(cmdArgs, "<blank>")
+
+		for k := range downloadCache {
+			fmt.Printf("Installing package: %s.\n", k)
+			cmdArgs[1] = k
+			executeGoCommand(cmdArgs)
+		}
 	}
 
 	fmt.Println("Well done.")
@@ -189,7 +197,6 @@ func downloadPackage(path, commit string) (pkg *doc.Package, imports []string) {
 			return nil, nil
 		}
 
-		//fmt.Println(pkg)
 		return pkg, imports
 	}
 }

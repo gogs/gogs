@@ -75,7 +75,8 @@ func GetBitbucketDoc(client *http.Client, match map[string]string, installGOPATH
 		return nil, nil, err
 	}
 
-	installPath := installGOPATH + "/src/" + match["importPath"]
+	projectPath := expand("bitbucket.org/{owner}/{repo}", match)
+	installPath := installGOPATH + "/src/" + projectPath
 
 	// Remove old files.
 	os.RemoveAll(installPath + "/")
@@ -151,10 +152,11 @@ func GetBitbucketDoc(client *http.Client, match map[string]string, installGOPATH
 	// Check if need to check imports.
 	if isCheckImport {
 		for _, d := range dirs {
-			imports, err = checkImports(d+"/", match["importPath"])
+			importPkgs, err := checkImports(d+"/", match["importPath"])
 			if err != nil {
 				return nil, nil, err
 			}
+			imports = append(imports, importPkgs...)
 		}
 	}
 

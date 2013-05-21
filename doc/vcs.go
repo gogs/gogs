@@ -178,7 +178,7 @@ func expand(template string, match map[string]string, subs ...string) string {
 }
 
 // checkImports checks package denpendencies.
-func checkImports(absPath, importPath string) (imports []string, err error) {
+func checkImports(absPath, importPath string) (importPkgs []string, err error) {
 	dir, err := os.Open(absPath)
 	if err != nil {
 		return nil, err
@@ -218,12 +218,11 @@ func checkImports(absPath, importPath string) (imports []string, err error) {
 	// Check if has Go source files.
 	if len(files) > 0 {
 		w := &walker{ImportPath: importPath}
-		importPkgs, err := w.build(files)
+		importPkgs, err = w.build(files)
 		if err != nil {
 			return nil, err
 		}
-		imports = append(imports, importPkgs...)
 	}
 
-	return imports, nil
+	return importPkgs, err
 }
