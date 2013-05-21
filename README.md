@@ -16,4 +16,5 @@ gpm(Go Package Manager) is a Go package manage tool for search, install, update 
 - Add gpm working principle design.
 - Download package from code.google.com only support hg as version control system, probably support git and svn.
 - All errors should have specific title for exactly where were created.
-- i18n support for all strings.
+- Add i18n support for all strings.
+- Add feature for downloading through version control tools, and use checkout to switch to specific revision; this feature only be enabled when users use bundle or snapshot id.
