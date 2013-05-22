@@ -103,6 +103,7 @@ func GetGithubDoc(client *http.Client, match map[string]string, installGOPATH st
 
 	projectPath := expand("github.com/{owner}/{repo}", match)
 	installPath := installGOPATH + "/src/" + projectPath
+	node.ImportPath = projectPath
 
 	// Remove old files.
 	os.RemoveAll(installPath + "/")

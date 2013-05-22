@@ -50,9 +50,8 @@ func getGoogleVCS(client *http.Client, match map[string]string) error {
 // GetGoogleDoc downloads raw files from code.google.com.
 func GetGoogleDoc(client *http.Client, match map[string]string, installGOPATH string, node *Node, cmdFlags map[string]bool) ([]string, error) {
 	setupGoogleMatch(match)
-	commit := node.Value
 	// Check version control.
-	if m := googleEtagRe.FindStringSubmatch(commit); m != nil {
+	if m := googleEtagRe.FindStringSubmatch(node.Value); m != nil {
 		match["vcs"] = m[1]
 	} else if err := getGoogleVCS(client, match); err != nil {
 		return nil, err
@@ -60,12 +59,15 @@ func GetGoogleDoc(client *http.Client, match map[string]string, installGOPATH st
 
 	// bundle and snapshot will have commit 'B' and 'S',
 	// but does not need to download dependencies.
-	isCheckImport := len(commit) == 0
+	isCheckImport := len(node.Value) == 0
+	if len(node.Value) == 1 {
+		node.Value = ""
+	}
 
 	rootPath := expand("http://{subrepo}{dot}{repo}.googlecode.com/{vcs}{dir}/", match)
 
 	// Scrape the repo browser to find the project revision and individual Go files.
-	p, err := httpGetBytes(client, rootPath+"?r="+commit, nil)
+	p, err := httpGetBytes(client, rootPath+"?r="+node.Value, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -78,6 +80,7 @@ func GetGoogleDoc(client *http.Client, match map[string]string, installGOPATH st
 
 	projectPath := expand("code.google.com/p/{repo}{dot}{subrepo}{dir}", match)
 	installPath := installGOPATH + "/src/" + projectPath
+	node.ImportPath = projectPath
 
 	// Remove old files.
 	os.RemoveAll(installPath + "/")
@@ -90,7 +93,7 @@ func GetGoogleDoc(client *http.Client, match map[string]string, installGOPATH st
 		fname := strings.Split(string(m[1]), "?")[0]
 		files = append(files, &source{
 			name:   fname,
-			rawURL: expand("http://{subrepo}{dot}{repo}.googlecode.com/{vcs}{dir}/{0}", match, fname) + "?r=" + commit,
+			rawURL: expand("http://{subrepo}{dot}{repo}.googlecode.com/{vcs}{dir}/{0}", match, fname) + "?r=" + node.Value,
 		})
 	}
 
@@ -128,16 +131,10 @@ func GetGoogleDoc(client *http.Client, match map[string]string, installGOPATH st
 		}
 	}
 
-	err = downloadFiles(client, match, rootPath, installPath+"/", commit, dirs)
+	err = downloadFiles(client, match, rootPath, installPath+"/", node.Value, dirs)
 	if err != nil {
 		return nil, err
 	}
-
-	node.Value = commit
-	/*	node := &Node{
-		ImportPath: projectPath,
-		Commit:     commit,
-	}*/
 
 	var imports []string
 

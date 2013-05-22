@@ -35,17 +35,17 @@ func GetLaunchpadDoc(client *http.Client, match map[string]string, installGOPATH
 			return nil, err
 		}
 	}
-	commit := node.Value
+
 	// bundle and snapshot will have commit 'B' and 'S',
 	// but does not need to download dependencies.
-	isCheckImport := len(commit) == 0
+	isCheckImport := len(node.Value) == 0
 
 	var downloadPath string
 	// Check if download with specific revision.
-	if isCheckImport || len(commit) == 1 {
+	if isCheckImport || len(node.Value) == 1 {
 		downloadPath = expand("https://bazaar.launchpad.net/+branch/{repo}/tarball", match)
 	} else {
-		downloadPath = expand("https://bazaar.launchpad.net/+branch/{repo}/tarball/"+commit, match)
+		downloadPath = expand("https://bazaar.launchpad.net/+branch/{repo}/tarball/"+node.Value, match)
 	}
 
 	// Scrape the repo browser to find the project revision and individual Go files.
@@ -56,6 +56,7 @@ func GetLaunchpadDoc(client *http.Client, match map[string]string, installGOPATH
 
 	projectPath := expand("launchpad.net/{repo}", match)
 	installPath := installGOPATH + "/src/" + projectPath
+	node.ImportPath = projectPath
 
 	// Remove old files.
 	os.RemoveAll(installPath + "/")
@@ -119,12 +120,6 @@ func GetLaunchpadDoc(client *http.Client, match map[string]string, installGOPATH
 			return nil, err
 		}
 	}
-
-	node.Value = commit
-	/*	node := &Node{
-		ImportPath: projectPath,
-		Commit:     commit,
-	}*/
 
 	var imports []string
 

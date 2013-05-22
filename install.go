@@ -240,6 +240,9 @@ func downloadPackages(nodes []*doc.Node) {
 
 // saveNode saves node into local nodes.
 func saveNode(n *doc.Node) {
+	// Node dependencies list.
+	n.Deps = nil
+
 	// Check if this node exists.
 	for i, v := range localNodes {
 		if n.ImportPath == v.ImportPath {

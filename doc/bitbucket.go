@@ -23,9 +23,8 @@ var (
 
 // GetBitbucketDoc downloads tarball from bitbucket.org.
 func GetBitbucketDoc(client *http.Client, match map[string]string, installGOPATH string, node *Node, cmdFlags map[string]bool) ([]string, error) {
-	commit := node.Value
 	// Check version control.
-	if m := bitbucketEtagRe.FindStringSubmatch(commit); m != nil {
+	if m := bitbucketEtagRe.FindStringSubmatch(node.Value); m != nil {
 		match["vcs"] = m[1]
 	} else {
 		var repo struct {
@@ -39,10 +38,10 @@ func GetBitbucketDoc(client *http.Client, match map[string]string, installGOPATH
 
 	// bundle and snapshot will have commit 'B' and 'S',
 	// but does not need to download dependencies.
-	isCheckImport := len(commit) == 0
+	isCheckImport := len(node.Value) == 0
 
 	// Check if download with specific revision.
-	if isCheckImport || len(commit) == 1 {
+	if isCheckImport || len(node.Value) == 1 {
 		tags := make(map[string]string)
 		for _, nodeType := range []string{"branches", "tags"} {
 			var nodes map[string]struct {
@@ -63,7 +62,7 @@ func GetBitbucketDoc(client *http.Client, match map[string]string, installGOPATH
 			return nil, err
 		}
 	} else {
-		match["commit"] = commit
+		match["commit"] = node.Value
 	}
 
 	// We use .tar.gz here.
@@ -78,6 +77,7 @@ func GetBitbucketDoc(client *http.Client, match map[string]string, installGOPATH
 
 	projectPath := expand("bitbucket.org/{owner}/{repo}", match)
 	installPath := installGOPATH + "/src/" + projectPath
+	node.ImportPath = projectPath
 
 	// Remove old files.
 	os.RemoveAll(installPath + "/")
@@ -141,12 +141,6 @@ func GetBitbucketDoc(client *http.Client, match map[string]string, installGOPATH
 			return nil, err
 		}
 	}
-
-	node.Value = commit
-	/*	node := &Node{
-		ImportPath: projectPath,
-		Commit:     commit,
-	}*/
 
 	var imports []string
 

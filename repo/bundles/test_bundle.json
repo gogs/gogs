@@ -1,0 +1,58 @@
+{
+	"id": 0,
+    "user_id": 0,
+	"bundle_name": "bundle_test",
+	"comment": "just a test",
+	"timestamp": 0,
+	"nodes": [
+		{
+			"import_path": "github.com/astaxie/beego",
+			"type": "tag",
+			"value": "v0.6.0",
+			"deps":[
+				{
+					"import_path": "github.com/russross/blackfriday",
+					"type": "commit",
+					"value": "",
+					"deps": null
+				},
+				{
+					"import_path": "code.google.com/p/vitess/go/memcache",
+					"type": "commit",
+					"value": "",
+					"deps": null
+				},
+				{
+					"import_path": "github.com/garyburd/redigo/redis",
+					"type": "commit",
+					"value": "aa31b4b202d4ea44ca45b3c93d71575c02ba35dc",
+					"deps": null
+				},
+				{
+					"import_path": "github.com/go-sql-driver/mysql",
+					"type": "tag",
+					"value": "v1.0",
+					"deps": null
+				}
+			]
+		},
+		{
+			"import_path": "github.com/coocood/qbs",
+			"type": "branch",
+			"value": "master",
+			"deps": null
+		},
+		{
+			"import_path": "bitbucket.org/zombiezen/gopdf/pdf",
+			"type": "commit",
+			"value": "",
+			"deps": null
+		},
+		{
+			"import_path": "launchpad.net/goamz/aws",
+			"type": "commit",
+			"value": "",
+			"deps": null
+		}
+	]
+}

@@ -12,7 +12,7 @@ gpm(Go Package Manager) is a Go package manage tool for search, install, update 
 
 ## Todo
 
-- Command `build` add current path to GOPATH temporary.
+- Command `remove` is for removing packages.
 - Add gpm working principle design.
 - Add support for downloading tarballs from user sources.
 - After downloaded all packages in bundles or snapshots, need to check if all dependencies have been downloaded as well.
@@ -26,7 +26,7 @@ gpm(Go Package Manager) is a Go package manage tool for search, install, update 
 - Command `check` is for checking and downloading all missing dependencies.
 - Command `daemon` is for auto-compile web applications when debug it locally.
 - Command `update` is for checking updates.
-- Command `remove` is for removing packages.
 - Command `search` is for searching packages.
 - Add feature "struct generator".
 - i18n support for Chinese.
+- Add built-in application version in order to backup data when users update.
