@@ -7,6 +7,7 @@ package doc
 import (
 	"archive/zip"
 	"bytes"
+	"errors"
 	"io"
 	"net/http"
 	"os"
@@ -26,7 +27,7 @@ func SetGithubCredentials(id, secret string) {
 }
 
 // GetGithubDoc downloads tarball from github.com.
-func GetGithubDoc(client *http.Client, match map[string]string, installGOPATH, commit string, cmdFlags map[string]bool) (*Node, []string, error) {
+func GetGithubDoc(client *http.Client, match map[string]string, installGOPATH string, node *Node, cmdFlags map[string]bool) ([]string, error) {
 	SetGithubCredentials("1862bcb265171f37f36c", "308d71ab53ccd858416cfceaed52d5d5b7d53c5f")
 	match["cred"] = githubCred
 
@@ -43,14 +44,14 @@ func GetGithubDoc(client *http.Client, match map[string]string, installGOPATH, c
 
 	// bundle and snapshot will have commit 'B' and 'S',
 	// but does not need to download dependencies.
-	isCheckImport := len(commit) == 0
+	isCheckImport := len(node.Value) == 0
 
-	// Check if download with specific revision.
-	if isCheckImport || len(commit) == 1 {
+	switch {
+	case isCheckImport || len(node.Value) == 1:
 		// Get up-to-date version.
 		err := httpGetJSON(client, expand("https://api.github.com/repos/{owner}/{repo}/git/refs?{cred}", match), &refs)
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 
 		tags := make(map[string]string)
@@ -64,9 +65,19 @@ func GetGithubDoc(client *http.Client, match map[string]string, installGOPATH, c
 		}
 
 		// Check revision tag.
-		match["tag"], commit, err = bestTag(tags, "master")
+		match["tag"], match["sha"], err = bestTag(tags, "master")
 		if err != nil {
-			return nil, nil, err
+			return nil, err
+		}
+
+		node.Type = "commit"
+	case !isCheckImport: // Bundle or snapshot.
+		// Check downlaod type.
+		switch node.Type {
+		case "tag", "commit", "branch":
+			match["sha"] = node.Value
+		default:
+			return nil, errors.New("Unknown node type: " + node.Type)
 		}
 	}
 
@@ -74,19 +85,22 @@ func GetGithubDoc(client *http.Client, match map[string]string, installGOPATH, c
 	// zip : https://github.com/{owner}/{repo}/archive/{sha}.zip
 	// tarball : https://github.com/{owner}/{repo}/tarball/{sha}
 
-	match["sha"] = commit
 	// Downlaod archive.
 	p, err := httpGetBytes(client, expand("https://github.com/{owner}/{repo}/archive/{sha}.zip", match), nil)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	r, err := zip.NewReader(bytes.NewReader(p), int64(len(p)))
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	shaName := expand("{repo}-{sha}", match)
+	if node.Type == "tag" {
+		shaName = strings.Replace(shaName, "-v", "-", 1)
+	}
+
 	projectPath := expand("github.com/{owner}/{repo}", match)
 	installPath := installGOPATH + "/src/" + projectPath
 
@@ -114,7 +128,7 @@ func GetGithubDoc(client *http.Client, match map[string]string, installGOPATH, c
 		// Get file from archive.
 		rc, err := f.Open()
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 
 		// Create diretory before create file.
@@ -123,20 +137,19 @@ func GetGithubDoc(client *http.Client, match map[string]string, installGOPATH, c
 		// Write data to file
 		fw, _ := os.Create(absPath)
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 
 		_, err = io.Copy(fw, rc)
 		rc.Close()
 		fw.Close()
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 	}
 
-	node := &Node{
-		ImportPath: projectPath,
-		Commit:     commit,
+	if node.Type == "commit" {
+		node.Value = match["sha"]
 	}
 
 	var imports []string
@@ -146,11 +159,11 @@ func GetGithubDoc(client *http.Client, match map[string]string, installGOPATH, c
 		for _, d := range dirs {
 			importPkgs, err := checkImports(d, match["importPath"])
 			if err != nil {
-				return nil, nil, err
+				return nil, err
 			}
 			imports = append(imports, importPkgs...)
 		}
 	}
 
-	return node, imports, err
+	return imports, err
 }

@@ -19,7 +19,7 @@ import (
 var LaunchpadPattern = regexp.MustCompile(`^launchpad\.net/(?P<repo>(?P<project>[a-z0-9A-Z_.\-]+)(?P<series>/[a-z0-9A-Z_.\-]+)?|~[a-z0-9A-Z_.\-]+/(\+junk|[a-z0-9A-Z_.\-]+)/[a-z0-9A-Z_.\-]+)(?P<dir>/[a-z0-9A-Z_.\-/]+)*$`)
 
 // GetLaunchpadDoc downloads tarball from launchpad.net.
-func GetLaunchpadDoc(client *http.Client, match map[string]string, installGOPATH, commit string, cmdFlags map[string]bool) (*Node, []string, error) {
+func GetLaunchpadDoc(client *http.Client, match map[string]string, installGOPATH string, node *Node, cmdFlags map[string]bool) ([]string, error) {
 
 	if match["project"] != "" && match["series"] != "" {
 		rc, err := httpGet(client, expand("https://code.launchpad.net/{project}{series}/.bzr/branch-format", match), nil)
@@ -32,10 +32,10 @@ func GetLaunchpadDoc(client *http.Client, match map[string]string, installGOPATH
 			match["repo"] = match["project"]
 			match["dir"] = expand("{series}{dir}", match)
 		default:
-			return nil, nil, err
+			return nil, err
 		}
 	}
-
+	commit := node.Value
 	// bundle and snapshot will have commit 'B' and 'S',
 	// but does not need to download dependencies.
 	isCheckImport := len(commit) == 0
@@ -51,7 +51,7 @@ func GetLaunchpadDoc(client *http.Client, match map[string]string, installGOPATH
 	// Scrape the repo browser to find the project revision and individual Go files.
 	p, err := httpGetBytes(client, downloadPath, nil)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	projectPath := expand("launchpad.net/{repo}", match)
@@ -64,7 +64,7 @@ func GetLaunchpadDoc(client *http.Client, match map[string]string, installGOPATH
 
 	gzr, err := gzip.NewReader(bytes.NewReader(p))
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	defer gzr.Close()
 
@@ -78,7 +78,7 @@ func GetLaunchpadDoc(client *http.Client, match map[string]string, installGOPATH
 		if err == io.EOF {
 			break
 		} else if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 
 		fn := h.FileInfo().Name()
@@ -104,26 +104,27 @@ func GetLaunchpadDoc(client *http.Client, match map[string]string, installGOPATH
 		// Get data from archive.
 		fbytes := make([]byte, h.Size)
 		if _, err := io.ReadFull(tr, fbytes); err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 
 		// Write data to file
 		fw, err := os.Create(absPath)
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 
 		_, err = fw.Write(fbytes)
 		fw.Close()
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 	}
 
-	node := &Node{
+	node.Value = commit
+	/*	node := &Node{
 		ImportPath: projectPath,
 		Commit:     commit,
-	}
+	}*/
 
 	var imports []string
 
@@ -132,11 +133,11 @@ func GetLaunchpadDoc(client *http.Client, match map[string]string, installGOPATH
 		for _, d := range dirs {
 			importPkgs, err := checkImports(d+"/", match["importPath"])
 			if err != nil {
-				return nil, nil, err
+				return nil, err
 			}
 			imports = append(imports, importPkgs...)
 		}
 	}
 
-	return node, imports, err
+	return imports, err
 }

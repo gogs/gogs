@@ -183,7 +183,7 @@ func loadLocalBundles() bool {
 
 	for _, fi := range fis {
 		// In case this folder contains unexpected directories.
-		if !fi.IsDir() {
+		if !fi.IsDir() && strings.HasSuffix(fi.Name(), ".json") {
 			fr, err := os.Open(appPath + "repo/bundles/" + fi.Name())
 			if err != nil {
 				fmt.Println(err)
@@ -202,6 +202,7 @@ func loadLocalBundles() bool {
 			if len(bundle.Name) == 0 {
 				bundle.Name = fi.Name()[:strings.Index(fi.Name(), ".")]
 			}
+
 			localBundles = append(localBundles, bundle)
 		}
 	}

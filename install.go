@@ -113,9 +113,14 @@ func runInstall(cmd *Command, args []string) {
 	installGOPATH = utils.GetBestMatchGOPATH(appPath)
 	fmt.Printf("Packages will be downloaded to GOPATH(%s).\n", installGOPATH)
 
+	// Generate temporary nodes.
+	nodes := make([]*doc.Node, len(args))
+	for i := range nodes {
+		nodes[i] = new(doc.Node)
+		nodes[i].ImportPath = args[i]
+	}
 	// Download packages.
-	commits := make([]string, len(args))
-	downloadPackages(args, commits)
+	downloadPackages(nodes)
 
 	if !cmdInstall.Flags["-d"] && cmdInstall.Flags["-p"] {
 		// Install packages all together.
@@ -144,40 +149,48 @@ func runInstall(cmd *Command, args []string) {
 }
 
 // checkLocalBundles checks if the bundle is in local file system.
-func checkLocalBundles(bundle string) (pkgs, commits []string) {
+func checkLocalBundles(bundle string) (nodes []*doc.Node) {
 	for _, b := range localBundles {
 		if bundle == b.Name {
 			for _, n := range b.Nodes {
-				pkgs = append(pkgs, n.ImportPath)
 				// Make sure it will not download all dependencies automatically.
-				if len(n.Commit) == 0 {
-					commits = append(commits, "B")
-				} else {
-					commits = append(commits, n.Commit)
+				if len(n.Value) == 0 {
+					n.Value = "B"
+				}
+				nodes = append(nodes, n)
+
+				// Check dependencies.
+				for _, d := range n.Deps {
+					// Make sure it will not download all dependencies automatically.
+					if len(d.Value) == 0 {
+						d.Value = "B"
+					}
+					nodes = append(nodes, d)
 				}
 			}
-			return pkgs, commits
+			return nodes
 		}
 	}
-	return nil, nil
+	return nil
 }
 
 // downloadPackages downloads packages with certain commit,
 // if the commit is empty string, then it downloads all dependencies,
 // otherwise, it only downloada package with specific commit only.
-func downloadPackages(pkgs, commits []string) {
+func downloadPackages(nodes []*doc.Node) {
 	// Check all packages, they may be bundles, snapshots or raw packages path.
-	for i, p := range pkgs {
+	for _, n := range nodes {
 		// Check if it is a bundle or snapshot.
 		switch {
-		case p[0] == 'B':
+		case n.ImportPath[0] == 'B':
 			// Check local bundles.
-			bpkgs, bcommits := checkLocalBundles(p[1:])
-			if len(bpkgs) > 0 {
+			bnodes := checkLocalBundles(n.ImportPath[1:])
+			if len(nodes) > 0 {
 				// Check with users if continue.
-				fmt.Printf("Bundle(%s) contains following nodes:\n", p[1:])
-				for i := range bpkgs {
-					fmt.Printf("import path: %s, commit: %s.\n", bpkgs[i], bcommits[i])
+				fmt.Printf("Bundle(%s) contains following nodes:\n",
+					n.ImportPath[1:])
+				for _, bn := range bnodes {
+					fmt.Printf("[%s] -> %s: %s.\n", bn.ImportPath, bn.Type, bn.Value)
 				}
 				fmt.Print("Continue to download?(Y/n).")
 				var option string
@@ -185,36 +198,40 @@ func downloadPackages(pkgs, commits []string) {
 				if strings.ToLower(option) != "y" {
 					os.Exit(0)
 				}
-				downloadPackages(bpkgs, bcommits)
+				downloadPackages(bnodes)
 			} else {
 				// Check from server.
 				// TODO: api.GetBundleInfo()
 				fmt.Println("Unable to check with server right now.")
 			}
-		case p[0] == 'S':
+		case n.ImportPath[0] == 'S':
 			// TODO: api.GetSnapshotInfo()
-		case utils.IsValidRemotePath(p):
-			if !downloadCache[p] {
+		case utils.IsValidRemotePath(n.ImportPath):
+			if !downloadCache[n.ImportPath] {
 				// Download package.
-				node, imports := downloadPackage(p, commits[i])
+				node, imports := downloadPackage(n)
 				if len(imports) > 0 {
 					// Need to download dependencies.
-					tags := make([]string, len(imports))
-					downloadPackages(imports, tags)
+					// Generate temporary nodes.
+					nodes := make([]*doc.Node, len(imports))
+					for i := range nodes {
+						nodes[i] = new(doc.Node)
+						nodes[i].ImportPath = imports[i]
+					}
+					downloadPackages(nodes)
 				}
 
 				// Only save package information with specific commit.
 				if node != nil {
 					// Save record in local nodes.
 					saveNode(node)
-					//fmt.Printf("Saved information: %s:%s.\n", pkg.ImportPath, pkg.Commit)
 				}
 			} else {
-				fmt.Printf("Skipped downloaded package: %s.\n", p)
+				fmt.Printf("Skipped downloaded package: %s.\n", n.ImportPath)
 			}
 		default:
 			// Invalid import path.
-			fmt.Printf("Skipped invalid import path: %s.\n", p)
+			fmt.Printf("Skipped invalid import path: %s.\n", n.ImportPath)
 		}
 	}
 }
@@ -222,9 +239,9 @@ func downloadPackages(pkgs, commits []string) {
 // saveNode saves node into local nodes.
 func saveNode(n *doc.Node) {
 	// Check if this node exists.
-	for _, v := range localNodes {
+	for i, v := range localNodes {
 		if n.ImportPath == v.ImportPath {
-			v = n
+			localNodes[i] = n
 			return
 		}
 	}
@@ -234,14 +251,14 @@ func saveNode(n *doc.Node) {
 }
 
 // downloadPackage download package either use version control tools or not.
-func downloadPackage(path, commit string) (node *doc.Node, imports []string) {
+func downloadPackage(node *doc.Node) (*doc.Node, []string) {
 	// Check if use version control tools.
 	switch {
 	case !cmdInstall.Flags["-p"] &&
-		((path[0] == 'g' && isHasGit) || (path[0] == 'c' && isHasHg)): // github.com, code.google.com
-		fmt.Printf("Installing package(%s) through 'go get'.\n", path)
+		((node.ImportPath[0] == 'g' && isHasGit) || (node.ImportPath[0] == 'c' && isHasHg)): // github.com, code.google.com
+		fmt.Printf("Installing package(%s) through 'go get'.\n", node.ImportPath)
 		args := checkGoGetFlags()
-		args = append(args, path)
+		args = append(args, node.ImportPath)
 		executeGoCommand(args)
 		return nil, nil
 	default: // Pure download.
@@ -250,14 +267,13 @@ func downloadPackage(path, commit string) (node *doc.Node, imports []string) {
 			fmt.Printf("No version control tool is available, pure download enabled!\n")
 		}
 
-		fmt.Printf("Downloading package: %s.\n", path)
+		fmt.Printf("Downloading package: %s.\n", node.ImportPath)
 		// Mark as donwloaded.
-		downloadCache[path] = true
+		downloadCache[node.ImportPath] = true
 
-		var err error
-		node, imports, err = pureDownload(path, commit)
+		imports, err := pureDownload(node)
 		if err != nil {
-			fmt.Printf("Fail to download package(%s) with error: %s.\n", path, err)
+			fmt.Printf("Fail to download package(%s) with error: %s.\n", node.ImportPath, err)
 			return nil, nil
 		}
 
@@ -282,7 +298,7 @@ func checkGoGetFlags() (args []string) {
 type service struct {
 	pattern *regexp.Regexp
 	prefix  string
-	get     func(*http.Client, map[string]string, string, string, map[string]bool) (*doc.Node, []string, error)
+	get     func(*http.Client, map[string]string, string, *doc.Node, map[string]bool) ([]string, error)
 }
 
 // services is the list of source code control services handled by gopkgdoc.
@@ -294,26 +310,26 @@ var services = []*service{
 }
 
 // pureDownload downloads package without version control.
-func pureDownload(path, commit string) (*doc.Node, []string, error) {
+func pureDownload(node *doc.Node) ([]string, error) {
 	for _, s := range services {
-		if s.get == nil || !strings.HasPrefix(path, s.prefix) {
+		if s.get == nil || !strings.HasPrefix(node.ImportPath, s.prefix) {
 			continue
 		}
-		m := s.pattern.FindStringSubmatch(path)
+		m := s.pattern.FindStringSubmatch(node.ImportPath)
 		if m == nil {
 			if s.prefix != "" {
-				return nil, nil,
+				return nil,
 					doc.NotFoundError{"Import path prefix matches known service, but regexp does not."}
 			}
 			continue
 		}
-		match := map[string]string{"importPath": path}
+		match := map[string]string{"importPath": node.ImportPath}
 		for i, n := range s.pattern.SubexpNames() {
 			if n != "" {
 				match[n] = m[i]
 			}
 		}
-		return s.get(doc.HttpClient, match, installGOPATH, commit, cmdInstall.Flags)
+		return s.get(doc.HttpClient, match, installGOPATH, node, cmdInstall.Flags)
 	}
-	return nil, nil, doc.ErrNoMatch
+	return nil, doc.ErrNoMatch
 }

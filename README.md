@@ -1,7 +1,7 @@
 gpm - Go Package Manager
 ===
 
-![GPMGo_Logo](https://raw.github.com/GPMGo/gpm-site/master/static/img/gpmgo.png?raw=true)
+![GPMGo_Logo](https://raw.github.com/GPMGo/gpm-site/master/static/img/gpmgo2.png?raw=true)
 
 gpm(Go Package Manager) is a Go package manage tool for search, install, update and share packages in Go.
 
@@ -22,7 +22,7 @@ gpm(Go Package Manager) is a Go package manage tool for search, install, update 
 - Add bundle and snapshot parser code for downloading by bundle or snapshot id.
 - Add user system to create, edit, upload, and download bundles or snapshots through gpm client program.
 - Download package from code.google.com only support hg as version control system, probably support git and svn.
-- Add support for downloading by tag for packages in github.com, bitbucket.org, git.oschina.net, gitcafe.com.
+- Add support for downloading by tag and branch for packages in bitbucket.org, git.oschina.net, gitcafe.com.
 - Get author commit time and save in node.
 - Collect download and installation results and report to users in the end.
 - Command `install` add support for downloading code from git.oschina.net, gitcafe.com, *.codeplex.com;
@@ -30,3 +30,5 @@ gpm(Go Package Manager) is a Go package manage tool for search, install, update 
 - Command `daemon` is for auto-compile web applications when debug it locally.
 - Command `update` is for checking updates.
 - Command `remove` is for removing packages.
+- Command `search` is for searching packages.
+- Add feature "struct generator".

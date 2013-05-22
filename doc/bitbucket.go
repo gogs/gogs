@@ -22,7 +22,8 @@ var (
 )
 
 // GetBitbucketDoc downloads tarball from bitbucket.org.
-func GetBitbucketDoc(client *http.Client, match map[string]string, installGOPATH, commit string, cmdFlags map[string]bool) (*Node, []string, error) {
+func GetBitbucketDoc(client *http.Client, match map[string]string, installGOPATH string, node *Node, cmdFlags map[string]bool) ([]string, error) {
+	commit := node.Value
 	// Check version control.
 	if m := bitbucketEtagRe.FindStringSubmatch(commit); m != nil {
 		match["vcs"] = m[1]
@@ -31,7 +32,7 @@ func GetBitbucketDoc(client *http.Client, match map[string]string, installGOPATH
 			Scm string
 		}
 		if err := httpGetJSON(client, expand("https://api.bitbucket.org/1.0/repositories/{owner}/{repo}", match), &repo); err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 		match["vcs"] = repo.Scm
 	}
@@ -48,7 +49,7 @@ func GetBitbucketDoc(client *http.Client, match map[string]string, installGOPATH
 				Node string
 			}
 			if err := httpGetJSON(client, expand("https://api.bitbucket.org/1.0/repositories/{owner}/{repo}/{0}", match, nodeType), &nodes); err != nil {
-				return nil, nil, err
+				return nil, err
 			}
 			for t, n := range nodes {
 				tags[t] = n.Node
@@ -59,7 +60,7 @@ func GetBitbucketDoc(client *http.Client, match map[string]string, installGOPATH
 		var err error
 		match["tag"], match["commit"], err = bestTag(tags, defaultTags[match["vcs"]])
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 	} else {
 		match["commit"] = commit
@@ -72,7 +73,7 @@ func GetBitbucketDoc(client *http.Client, match map[string]string, installGOPATH
 	// Downlaod archive.
 	p, err := httpGetBytes(client, expand("https://bitbucket.org/{owner}/{repo}/get/{commit}.tar.gz", match), nil)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	projectPath := expand("bitbucket.org/{owner}/{repo}", match)
@@ -85,7 +86,7 @@ func GetBitbucketDoc(client *http.Client, match map[string]string, installGOPATH
 
 	gzr, err := gzip.NewReader(bytes.NewReader(p))
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	defer gzr.Close()
 
@@ -99,7 +100,7 @@ func GetBitbucketDoc(client *http.Client, match map[string]string, installGOPATH
 		if err == io.EOF {
 			break
 		} else if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 
 		fn := h.FileInfo().Name()
@@ -125,26 +126,27 @@ func GetBitbucketDoc(client *http.Client, match map[string]string, installGOPATH
 		// Get data from archive.
 		fbytes := make([]byte, h.Size)
 		if _, err := io.ReadFull(tr, fbytes); err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 
 		// Write data to file
 		fw, err := os.Create(absPath)
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 
 		_, err = fw.Write(fbytes)
 		fw.Close()
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 	}
 
-	node := &Node{
+	node.Value = commit
+	/*	node := &Node{
 		ImportPath: projectPath,
 		Commit:     commit,
-	}
+	}*/
 
 	var imports []string
 
@@ -153,13 +155,13 @@ func GetBitbucketDoc(client *http.Client, match map[string]string, installGOPATH
 		for _, d := range dirs {
 			importPkgs, err := checkImports(d+"/", match["importPath"])
 			if err != nil {
-				return nil, nil, err
+				return nil, err
 			}
 			imports = append(imports, importPkgs...)
 		}
 	}
 
-	return node, imports, err
+	return imports, err
 }
 
 // checkDir checks if current directory has been saved.

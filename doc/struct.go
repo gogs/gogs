@@ -12,9 +12,9 @@ import (
 
 // Node represents a node.
 type Node struct {
-	ImportPath string `json:"import_path"`
-	Commit     string
-	Date       string
+	ImportPath  string `json:"import_path"`
+	Type, Value string
+	Deps        []*Node `json:"-"` // Dependencies.
 }
 
 // Bundle represents a bundle.
