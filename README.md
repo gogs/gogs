@@ -21,7 +21,6 @@ gpm(Go Package Manager) is a Go package manage tool for search, install, update 
 - Add user system to create, edit, upload, and download bundles or snapshots through gpm client program.
 - Download package from code.google.com only support hg as version control system, probably support git and svn.
 - Add support for downloading by tag and branch for packages in bitbucket.org, git.oschina.net, gitcafe.com.
-- Get author commit time and save in node.
 - Collect download and installation results and report to users in the end.
 - Command `install` add support for downloading code from git.oschina.net, gitcafe.com, *.codeplex.com;
 - Command `check` is for checking and downloading all missing dependencies.
