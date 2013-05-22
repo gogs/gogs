@@ -143,6 +143,25 @@ func runInstall(cmd *Command, args []string) {
 	fmt.Println("Well done.")
 }
 
+// checkLocalBundles checks if the bundle is in local file system.
+func checkLocalBundles(bundle string) (pkgs, commits []string) {
+	for _, b := range localBundles {
+		if bundle == b.Name {
+			for _, n := range b.Nodes {
+				pkgs = append(pkgs, n.ImportPath)
+				// Make sure it will not download all dependencies automatically.
+				if len(n.Commit) == 0 {
+					commits = append(commits, "B")
+				} else {
+					commits = append(commits, n.Commit)
+				}
+			}
+			return pkgs, commits
+		}
+	}
+	return nil, nil
+}
+
 // downloadPackages downloads packages with certain commit,
 // if the commit is empty string, then it downloads all dependencies,
 // otherwise, it only downloada package with specific commit only.
@@ -152,7 +171,26 @@ func downloadPackages(pkgs, commits []string) {
 		// Check if it is a bundle or snapshot.
 		switch {
 		case p[0] == 'B':
-			// TODO: api.GetBundleInfo()
+			// Check local bundles.
+			bpkgs, bcommits := checkLocalBundles(p[1:])
+			if len(bpkgs) > 0 {
+				// Check with users if continue.
+				fmt.Printf("Bundle(%s) contains following nodes:\n", p[1:])
+				for i := range bpkgs {
+					fmt.Printf("import path: %s, commit: %s.\n", bpkgs[i], bcommits[i])
+				}
+				fmt.Print("Continue download?(Y/n).")
+				var option string
+				fmt.Fscan(os.Stdin, &option)
+				if strings.ToLower(option) != "y" {
+					os.Exit(0)
+				}
+				downloadPackages(bpkgs, bcommits)
+			} else {
+				// Check from server.
+				// TODO: api.GetBundleInfo()
+				fmt.Println("Unable to check with server right now.")
+			}
 		case p[0] == 'S':
 			// TODO: api.GetSnapshotInfo()
 		case utils.IsValidRemotePath(p):

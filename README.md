@@ -26,3 +26,7 @@ gpm(Go Package Manager) is a Go package manage tool for search, install, update 
 - Get author commit time and save in node.
 - Collect download and installation results and report to users in the end.
 - Command `install` add support for downloading code from git.oschina.net, gitcafe.com, *.codeplex.com;
+- Command `check` is for checking and downloading all missing dependencies.
+- Command `daemon` is for auto-compile web applications when debug it locally.
+- Command `update` is for checking updates.
+- Command `remove` is for removing packages.

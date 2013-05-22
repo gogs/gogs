@@ -10,11 +10,20 @@ import (
 	"time"
 )
 
-// Node represents a node structure.
+// Node represents a node.
 type Node struct {
 	ImportPath string `json:"import_path"`
 	Commit     string
 	Date       string
+}
+
+// Bundle represents a bundle.
+type Bundle struct {
+	Id      int64
+	UserId  int64  `json:"user_id"`
+	Name    string `json:"bundle_name"`
+	Comment string
+	Nodes   []*Node
 }
 
 // source is source code file.

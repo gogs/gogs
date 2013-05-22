@@ -26,9 +26,10 @@ import (
 )
 
 var (
-	config     tomlConfig
-	appPath    string // Application path.
-	localNodes []*doc.Node
+	config       tomlConfig
+	appPath      string // Application path.
+	localNodes   []*doc.Node
+	localBundles []*doc.Bundle
 )
 
 type tomlConfig struct {
@@ -164,6 +165,49 @@ func loadLocalNodes() bool {
 	return true
 }
 
+// loadLocalBundles loads bundles from local file system.
+func loadLocalBundles() bool {
+	// Find all bundles.
+	dir, err := os.Open(appPath + "repo/bundles/")
+	if err != nil {
+		fmt.Println(err)
+		return false
+	}
+	defer dir.Close()
+
+	fis, err := dir.Readdir(0)
+	if err != nil {
+		fmt.Println(err)
+		return false
+	}
+
+	for _, fi := range fis {
+		// In case this folder contains unexpected directories.
+		if !fi.IsDir() {
+			fr, err := os.Open(appPath + "repo/bundles/" + fi.Name())
+			if err != nil {
+				fmt.Println(err)
+				return false
+			}
+
+			bundle := new(doc.Bundle)
+			err = json.NewDecoder(fr).Decode(bundle)
+			fr.Close()
+			if err != nil && err != io.EOF {
+				fmt.Println(err)
+				return false
+			}
+
+			// Make sure bundle name is not empty.
+			if len(bundle.Name) == 0 {
+				bundle.Name = fi.Name()[:strings.Index(fi.Name(), ".")]
+			}
+			localBundles = append(localBundles, bundle)
+		}
+	}
+	return true
+}
+
 // We don't use init() to initialize
 // bacause we need to get execute path in runtime.
 func initialize() bool {
@@ -187,8 +231,8 @@ func initialize() bool {
 	os.MkdirAll(appPath+"repo/bundles/", os.ModePerm)
 	os.MkdirAll(appPath+"repo/snapshots/", os.ModePerm)
 
-	// Initialize local nodes.
-	if !loadLocalNodes() {
+	// Initialize local data.
+	if !loadLocalNodes() || !loadLocalBundles() {
 		return false
 	}
 
