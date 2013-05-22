@@ -269,7 +269,7 @@ func downloadPackage(node *doc.Node) (*doc.Node, []string) {
 			fmt.Printf(fmt.Sprintf("%s\n", promptMsg["NoVCSTool"]))
 		}
 
-		fmt.Printf(fmt.Sprintf("%s\n", promptMsg["InstallByGoGet"]), node.ImportPath)
+		fmt.Printf(fmt.Sprintf("%s\n", promptMsg["DownloadStatus"]), node.ImportPath)
 		// Mark as donwloaded.
 		downloadCache[node.ImportPath] = true
 
