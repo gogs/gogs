@@ -179,7 +179,7 @@ func downloadPackages(pkgs, commits []string) {
 				for i := range bpkgs {
 					fmt.Printf("import path: %s, commit: %s.\n", bpkgs[i], bcommits[i])
 				}
-				fmt.Print("Continue download?(Y/n).")
+				fmt.Print("Continue to download?(Y/n).")
 				var option string
 				fmt.Fscan(os.Stdin, &option)
 				if strings.ToLower(option) != "y" {

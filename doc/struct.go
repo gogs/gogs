@@ -19,11 +19,12 @@ type Node struct {
 
 // Bundle represents a bundle.
 type Bundle struct {
-	Id      int64
-	UserId  int64  `json:"user_id"`
-	Name    string `json:"bundle_name"`
-	Comment string
-	Nodes   []*Node
+	Id        int64
+	UserId    int64  `json:"user_id"`
+	Name      string `json:"bundle_name"`
+	Timestamp int64
+	Comment   string
+	Nodes     []*Node
 }
 
 // source is source code file.
