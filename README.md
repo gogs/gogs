@@ -30,3 +30,4 @@ gpm(Go Package Manager) is a Go package manage tool for search, install, update 
 - Command `remove` is for removing packages.
 - Command `search` is for searching packages.
 - Add feature "struct generator".
+- i18n support for Chinese.
