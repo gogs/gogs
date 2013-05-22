@@ -10,7 +10,6 @@ import (
 
 var (
 	errNotModified   = errors.New("package not modified")
-	ErrNoMatch       = errors.New("no match")
 	errUpdateTimeout = errors.New("update timeout")
 )
 

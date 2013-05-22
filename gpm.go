@@ -26,11 +26,17 @@ import (
 )
 
 var (
-	config       tomlConfig
-	appPath      string // Application path.
+	config  tomlConfig
+	appPath string // Application path.
+)
+
+var (
 	localNodes   []*doc.Node
 	localBundles []*doc.Bundle
 )
+
+// Use for i18n, key is prompt code, value is corresponding message.
+var promptMsg map[string]string
 
 type tomlConfig struct {
 	Title, Version     string
@@ -93,7 +99,7 @@ func getAppPath() bool {
 	// Look up executable in PATH variable.
 	appPath, _ = exec.LookPath("gpm")
 	if len(appPath) == 0 {
-		fmt.Printf("getAppPath(): Unable to indicate current execute path.")
+		fmt.Printf("ERROR: getAppPath -> Unable to indicate current execute path.\n")
 		return false
 	}
 
@@ -104,17 +110,47 @@ func getAppPath() bool {
 	return true
 }
 
-// loadUsage loads usage according to user language.
-func loadUsage(lang string) bool {
-	// Load main usage.
-	f, err := os.Open(appPath + "i18n/" + lang + "/usage.tpl")
+// loadPromptMsg loads prompt messages according to user language.
+func loadPromptMsg(lang string) bool {
+	promptMsg = make(map[string]string)
+
+	// Load prompt messages.
+	f, err := os.Open(appPath + "i18n/" + lang + "/prompt.txt")
 	if err != nil {
-		fmt.Printf("loadUsage(): Fail to load main usage: %s.\n", err)
+		fmt.Printf("ERROR: loadUsage -> Fail to load prompt messages[ %s ]\n", err)
 		return false
 	}
 	defer f.Close()
 
-	// Read command usages.
+	// Read prompt messages.
+	fi, _ := f.Stat()
+	promptBytes := make([]byte, fi.Size())
+	f.Read(promptBytes)
+	promptStrs := strings.Split(string(promptBytes), "\n")
+	for _, p := range promptStrs {
+		i := strings.Index(p, "=")
+		if i > -1 {
+			promptMsg[p[:i]] = p[i+1:]
+		}
+	}
+	return true
+}
+
+// loadUsage loads usage according to user language.
+func loadUsage(lang string) bool {
+	if !loadPromptMsg(lang) {
+		return false
+	}
+
+	// Load main usage.
+	f, err := os.Open(appPath + "i18n/" + lang + "/usage.tpl")
+	if err != nil {
+		fmt.Printf(fmt.Sprintf("ERROR: loadUsage -> %s\n", promptMsg["LoadCommandUsage"]), "main", err)
+		return false
+	}
+	defer f.Close()
+
+	// Read main usages.
 	fi, _ := f.Stat()
 	usageBytes := make([]byte, fi.Size())
 	f.Read(usageBytes)
@@ -124,17 +160,19 @@ func loadUsage(lang string) bool {
 	for _, cmd := range commands {
 		f, err := os.Open(appPath + "i18n/" + lang + "/usage_" + cmd.Name() + ".txt")
 		if err != nil {
-			fmt.Printf("loadUsage(): Fail to load usage(%s): %s.\n", cmd.Name(), err)
+			fmt.Printf(fmt.Sprintf("ERROR: loadUsage -> %s\n", promptMsg["LoadCommandUsage"]), cmd.Name(), err)
 			return false
 		}
 		defer f.Close()
+
 		// Read usage.
 		fi, _ := f.Stat()
 		usageBytes := make([]byte, fi.Size())
 		f.Read(usageBytes)
 		usages := strings.Split(string(usageBytes), "|||")
 		if len(usages) < 2 {
-			fmt.Printf("loadUsage(): nacceptable usage file: %s.\n", cmd.Name())
+			fmt.Printf(
+				fmt.Sprintf("ERROR: loadUsage -> %s\n", promptMsg["ReadCoammndUsage"]), cmd.Name())
 			return false
 		}
 		cmd.Short = usages[0]
@@ -151,14 +189,14 @@ func loadLocalNodes() bool {
 	} else {
 		fr, err := os.Open(appPath + "data/nodes.json")
 		if err != nil {
-			fmt.Println(err)
+			fmt.Printf(fmt.Sprintf("ERROR: loadLocalNodes -> %s\n", promptMsg["LoadLocalData"]), err)
 			return false
 		}
 		defer fr.Close()
 
 		err = json.NewDecoder(fr).Decode(&localNodes)
 		if err != nil && err != io.EOF {
-			fmt.Println(err)
+			fmt.Printf(fmt.Sprintf("ERROR: loadLocalNodes -> %s\n", promptMsg["ParseJSON"]), err)
 			return false
 		}
 	}
@@ -170,14 +208,14 @@ func loadLocalBundles() bool {
 	// Find all bundles.
 	dir, err := os.Open(appPath + "repo/bundles/")
 	if err != nil {
-		fmt.Println(err)
+		fmt.Printf(fmt.Sprintf("ERROR: loadLocalBundles -> %s\n", promptMsg["OpenFile"]), err)
 		return false
 	}
 	defer dir.Close()
 
 	fis, err := dir.Readdir(0)
 	if err != nil {
-		fmt.Println(err)
+		fmt.Printf(fmt.Sprintf("ERROR: loadLocalBundles -> %s\n", promptMsg["OpenFile"]), err)
 		return false
 	}
 
@@ -186,7 +224,7 @@ func loadLocalBundles() bool {
 		if !fi.IsDir() && strings.HasSuffix(fi.Name(), ".json") {
 			fr, err := os.Open(appPath + "repo/bundles/" + fi.Name())
 			if err != nil {
-				fmt.Println(err)
+				fmt.Printf(fmt.Sprintf("ERROR: loadLocalBundles -> %s\n", promptMsg["OpenFile"]), err)
 				return false
 			}
 
@@ -194,7 +232,7 @@ func loadLocalBundles() bool {
 			err = json.NewDecoder(fr).Decode(bundle)
 			fr.Close()
 			if err != nil && err != io.EOF {
-				fmt.Println(err)
+				fmt.Printf(fmt.Sprintf("ERROR: loadLocalBundles -> %s\n", promptMsg["ParseJSON"]), err)
 				return false
 			}
 
@@ -219,7 +257,7 @@ func initialize() bool {
 
 	// Load configuration.
 	if _, err := toml.DecodeFile(appPath+"conf/gpm.toml", &config); err != nil {
-		fmt.Println(err)
+		fmt.Printf("initialize -> Fail to load configuration[ %s ]\n", err)
 		return false
 	}
 
@@ -269,7 +307,7 @@ func main() {
 	}
 
 	// Uknown commands.
-	fmt.Fprintf(os.Stderr, "gpm: unknown subcommand %q\nRun 'gpm help' for usage.\n", args[0])
+	fmt.Fprintf(os.Stderr, fmt.Sprintf("%s\n", promptMsg["UnknownCommand"]), args[0])
 	setExitStatus(2)
 	exit()
 }

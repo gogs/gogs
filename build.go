@@ -44,17 +44,17 @@ func runBuild(cmd *Command, args []string) {
 			if utils.IsExist(wd + "/" + proName) {
 				err := os.Remove(wd + "/" + proName)
 				if err != nil {
-					fmt.Printf("Fail to remove file in current directory: %s.\n", err)
+					fmt.Printf(fmt.Sprintf("ERROR: %s\n", promptMsg["RemoveFile"]), err)
 					return
 				}
 			}
 			err := os.Rename(v+"/bin/"+proName, wd+"/"+proName)
 			if err == nil {
-				fmt.Printf("Moved file from $GOPATH(%s) to current directory(%s).\n", v, wd)
+				fmt.Printf(fmt.Sprintf("%s\n", promptMsg["MovedFile"]), v, wd)
 				return
-			} else {
-				fmt.Printf("Fail to move file from $GOPATH(%s) to current directory: %s.\n", v, err)
 			}
+
+			fmt.Printf(fmt.Sprintf("%s\n", promptMsg["MoveFile"]), v, wd)
 			break
 		}
 	}
