@@ -19,6 +19,7 @@ This application still in experiment, any change could happen, but it doesn't af
 
 ## Todo
 
+- Add support for downloading by tag and branch for packages in bitbucket.org, git.oschina.net, gitcafe.com.
 - Command `remove` is for removing packages.
 - Add gpm working principle design.
 - Add support for downloading tarballs from user sources.
@@ -27,7 +28,6 @@ This application still in experiment, any change could happen, but it doesn't af
 - Add bundle and snapshot parser code for downloading by bundle or snapshot id.
 - Add user system to create, edit, upload, and download bundles or snapshots through gpm client program.
 - Download package from code.google.com only support hg as version control system, probably support git and svn.
-- Add support for downloading by tag and branch for packages in bitbucket.org, git.oschina.net, gitcafe.com.
 - Collect download and installation results and report to users in the end.
 - Command `install` add support for downloading code from git.oschina.net, gitcafe.com, *.codeplex.com;
 - Command `check` is for checking and downloading all missing dependencies.
@@ -38,6 +38,8 @@ This application still in experiment, any change could happen, but it doesn't af
 - i18n support for Chinese.
 - Add built-in application version in order to backup data when users update.
 - Command `install` add flag `-n` which only downloads source files(including LICENSE and README).
+- Command `install` and `remove` and `update` backup data(up to 100 records) before executing.
+- Command `rollback` is for rolling back to certain operation.
 
 ## License
 
