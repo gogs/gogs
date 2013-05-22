@@ -14,7 +14,7 @@ import (
 type Node struct {
 	ImportPath  string `json:"import_path"`
 	Type, Value string
-	Deps        []*Node `json:"-"` // Dependencies.
+	Deps        []*Node // Dependencies.
 }
 
 // Bundle represents a bundle.

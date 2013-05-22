@@ -148,26 +148,24 @@ func runInstall(cmd *Command, args []string) {
 	fmt.Println("Well done.")
 }
 
+// chekcDeps checks dependencies of nodes.
+func chekcDeps(nodes []*doc.Node) (depnodes []*doc.Node) {
+	for _, n := range nodes {
+		// Make sure it will not download all dependencies automatically.
+		if len(n.Value) == 0 {
+			n.Value = "B"
+		}
+		depnodes = append(depnodes, n)
+		depnodes = append(depnodes, chekcDeps(n.Deps)...)
+	}
+	return depnodes
+}
+
 // checkLocalBundles checks if the bundle is in local file system.
 func checkLocalBundles(bundle string) (nodes []*doc.Node) {
 	for _, b := range localBundles {
 		if bundle == b.Name {
-			for _, n := range b.Nodes {
-				// Make sure it will not download all dependencies automatically.
-				if len(n.Value) == 0 {
-					n.Value = "B"
-				}
-				nodes = append(nodes, n)
-
-				// Check dependencies.
-				for _, d := range n.Deps {
-					// Make sure it will not download all dependencies automatically.
-					if len(d.Value) == 0 {
-						d.Value = "B"
-					}
-					nodes = append(nodes, d)
-				}
-			}
+			nodes = append(nodes, chekcDeps(b.Nodes)...)
 			return nodes
 		}
 	}
