@@ -10,7 +10,7 @@ This application still in experiment, any change could happen, but it doesn't af
 ## Main features
 
 - Download packages from popular project hosting with/without version control tools.
-- More specific examples, see [Quick Start](Quick_Start.md).
+- More specific examples, see [Quick Start](docs/Quick_Start.md).
 
 ## Main commands
 
