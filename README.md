@@ -5,6 +5,13 @@ gpm - Go Package Manager
 
 gpm(Go Package Manager) is a Go package manage tool for search, install, update and share packages in Go.
 
+This application still in experiment, any change could happen, but it doesn't affect download and install packages.
+
+## Main features
+
+- Download packages from popular project hosting with/without version control tools.
+- More specific examples, see [Quick Start](Quick_Start.md).
+
 ## Main commands
 
 - `build` compiles and installs packages and dependencies: basically, it calls `go install` and moves executable to current path from `GOPATH` if any, the executable name is the folder name which is default by `go install`.
@@ -30,3 +37,7 @@ gpm(Go Package Manager) is a Go package manage tool for search, install, update 
 - Add feature "struct generator".
 - i18n support for Chinese.
 - Add built-in application version in order to backup data when users update.
+
+## License
+
+[MIT-STYLE](LICENSE), source files that contain code that is from [gopkgdoc](https://github.com/garyburd/gopkgdoc) is honored in specific.

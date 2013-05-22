@@ -9,7 +9,7 @@ MoveFile=Fail to move file from $GOPATH(%s) to current directory(%s).
 UnknownFlag=Unknown flag: %s.
 DownloadError=Fail to download package(%s)[ %s ]
 NotFoundError=Import path prefix matches known service, but regexp does not.
-ErrNoMatch=Unsupported VCS platform.
+ErrNoMatch=Unsupported project hosting.
 
 MovedFile=Moved file from $GOPATH(%s) to current directory(%s).
 PureDownload=You enabled pure download.
