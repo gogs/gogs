@@ -3,7 +3,7 @@ gpm - Go Package Manager
 
 ![GPMGo_Logo](https://raw.github.com/GPMGo/gpm-site/master/static/img/gpmgo2.png?raw=true)
 
-gpm(Go Package Manager) is a Go package manage tool for search, install, update and share packages in Go.
+gpm(Go Package Manager) is a Go package manage tool for search, install, update, share and backup packages in Go.
 
 This application still in experiment, any change could happen, but it doesn't affect download and install packages.
 
