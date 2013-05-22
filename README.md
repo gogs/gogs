@@ -37,6 +37,7 @@ This application still in experiment, any change could happen, but it doesn't af
 - Add feature "struct generator".
 - i18n support for Chinese.
 - Add built-in application version in order to backup data when users update.
+- Command `install` add flag `-n` which only downloads source files(including LICENSE and README).
 
 ## License
 
