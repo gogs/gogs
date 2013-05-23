@@ -40,9 +40,9 @@ func init() {
 	}
 }
 
-// printPrompt prints prompt information to users to
+// printInstallPrompt prints prompt information to users to
 // let them know what's going on.
-func printPrompt(flag string) {
+func printInstallPrompt(flag string) {
 	switch flag {
 	case "-p":
 		fmt.Printf(fmt.Sprintf("%s\n", promptMsg["PureDownload"]))
@@ -56,7 +56,7 @@ func printPrompt(flag string) {
 }
 
 // checkFlags checks if the flag exists with correct format.
-func checkFlags(args []string) int {
+func checkFlags(flags map[string]bool, args []string, print func(string)) int {
 	num := 0 // Number of valid flags, use to cut out.
 	for i, f := range args {
 		// Check flag prefix '-'.
@@ -68,9 +68,9 @@ func checkFlags(args []string) int {
 		// Check if it a valid flag.
 		/* Here we use ok pattern to check it because
 		this way can avoid same flag appears multiple times.*/
-		if _, ok := cmdInstall.Flags[f]; ok {
-			cmdInstall.Flags[f] = true
-			printPrompt(f)
+		if _, ok := flags[f]; ok {
+			flags[f] = true
+			print(f)
 		} else {
 			fmt.Printf(fmt.Sprintf("%s\n", promptMsg["UnknownFlag"]), f)
 			return -1
@@ -96,7 +96,7 @@ func checkVCSTool() {
 
 func runInstall(cmd *Command, args []string) {
 	// Check flags.
-	num := checkFlags(args)
+	num := checkFlags(cmd.Flags, args, printInstallPrompt)
 	if num == -1 {
 		return
 	}

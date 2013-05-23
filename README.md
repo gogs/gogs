@@ -30,6 +30,7 @@ This application still in experiment, any change could happen, but it doesn't af
 ## Todo
 
 - Add template projects for testing commands.
+- Command `search` is for searching packages.
 - Add gpm working principle design.
 - Add support for downloading tarballs from user sources.
 - After downloaded all packages in bundles or snapshots, need to check if all dependencies have been downloaded as well.

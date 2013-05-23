@@ -20,12 +20,35 @@ var cmdBuild = &Command{
 
 func init() {
 	cmdBuild.Run = runBuild
+	cmdBuild.Flags = map[string]bool{
+		"-v": false,
+		"-r": false,
+	}
+}
+
+// printBuildPrompt prints prompt information to users to
+// let them know what's going on.
+func printBuildPrompt(flag string) {
+	switch flag {
+
+	}
 }
 
 func runBuild(cmd *Command, args []string) {
+	// Check flags.
+	num := checkFlags(cmd.Flags, args, printBuildPrompt)
+	if num == -1 {
+		return
+	}
+	args = args[num:]
+
 	var cmdArgs []string
 	cmdArgs = append(cmdArgs, "install")
-	cmdArgs = append(cmdArgs, args...)
+	if cmdBuild.Flags["-v"] {
+		cmdArgs = append(cmdArgs, "-v")
+	}
+
+	executeCommand("go", cmdArgs)
 
 	wd, _ := os.Getwd()
 	wd = strings.Replace(wd, "\\", "/", -1)
@@ -33,8 +56,6 @@ func runBuild(cmd *Command, args []string) {
 	if runtime.GOOS == "windows" {
 		proName += ".exe"
 	}
-
-	executeCommand("go", cmdArgs)
 
 	// Find executable in GOPATH and copy to current directory.
 	paths := utils.GetGOPATH()
@@ -51,6 +72,11 @@ func runBuild(cmd *Command, args []string) {
 			err := os.Rename(v+"/bin/"+proName, wd+"/"+proName)
 			if err == nil {
 				fmt.Printf(fmt.Sprintf("%s\n", promptMsg["MovedFile"]), v, wd)
+				// Check if need to run program.
+				if cmdBuild.Flags["-r"] {
+					cmdArgs = make([]string, 0)
+					executeCommand(proName, cmdArgs)
+				}
 				return
 			}
 
