@@ -81,7 +81,7 @@ func GetBitbucketDoc(client *http.Client, match map[string]string, installGOPATH
 	// tarball : https://bitbucket.org/{owner}/{repo}/get/{commit}.tar.gz
 
 	// Downlaod archive.
-	p, err := httpGetBytes(client, expand("https://bitbucket.org/{owner}/{repo}/get/{commit}.tar.gz", match), nil)
+	p, err := HttpGetBytes(client, expand("https://bitbucket.org/{owner}/{repo}/get/{commit}.tar.gz", match), nil)
 	if err != nil {
 		return nil, err
 	}

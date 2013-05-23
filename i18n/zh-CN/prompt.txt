@@ -12,7 +12,7 @@ NotFoundError=合法的源代码托管平台，但正则匹配失败.
 ErrNoMatch=不被支持的源代码托管平台.
 PackageNotFound=无法找到包: %s.
 
-MovedFile=成功将文件从 $GOPATH(%s) 移动至当前目录 (%s).
+MovedFile=SUCCESS: 成功将文件从 $GOPATH(%s) 移动至当前目录 (%s).
 PureDownload=已激活纯净下载模式.
 DownloadOnly=已激活无安装模式.
 DownloadExDeps=已激活下载示例代码依赖.
@@ -28,3 +28,4 @@ InstallByGoGet=正在通过 'go get' 安装包 (%s).
 NoVCSTool=未找到合适的版本控制工具，已激活纯净下载模式！
 DownloadStatus=正在下载包: %s.
 RemovePackage=正在删除包: %s.
+NoKeyword=没有关键字，无法搜索.

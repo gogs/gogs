@@ -50,7 +50,7 @@ func GetLaunchpadDoc(client *http.Client, match map[string]string, installGOPATH
 	}
 
 	// Scrape the repo browser to find the project revision and individual Go files.
-	p, err := httpGetBytes(client, downloadPath, nil)
+	p, err := HttpGetBytes(client, downloadPath, nil)
 	if err != nil {
 		return nil, err
 	}

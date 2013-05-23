@@ -92,7 +92,7 @@ func GetGithubDoc(client *http.Client, match map[string]string, installGOPATH st
 	// tarball : https://github.com/{owner}/{repo}/tarball/{sha}
 
 	// Downlaod archive.
-	p, err := httpGetBytes(client, expand("https://github.com/{owner}/{repo}/archive/{sha}.zip", match), nil)
+	p, err := HttpGetBytes(client, expand("https://github.com/{owner}/{repo}/archive/{sha}.zip", match), nil)
 	if err != nil {
 		return nil, err
 	}

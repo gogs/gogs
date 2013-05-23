@@ -46,7 +46,7 @@ type tomlConfig struct {
 }
 
 type flagEnable struct {
-	Build, Install []string
+	Build, Install, Search []string
 }
 
 type account struct {
@@ -101,6 +101,7 @@ func (c *Command) Runnable() bool {
 // The order here is the order in which they are printed by 'gpm help'.
 var commands = []*Command{
 	cmdBuild,
+	cmdSearch,
 	cmdInstall,
 	cmdRemove,
 }

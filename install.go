@@ -74,7 +74,7 @@ func checkFlags(flags map[string]bool, enable []string, args []string, print fun
 		// Check if it a valid flag.
 		if v, ok := flags[f]; ok {
 			flags[f] = !v
-			if v {
+			if !v {
 				print(f)
 			} else {
 				fmt.Println("DISABLE: " + f)

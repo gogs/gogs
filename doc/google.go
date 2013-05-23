@@ -34,7 +34,7 @@ func setupGoogleMatch(match map[string]string) {
 
 func getGoogleVCS(client *http.Client, match map[string]string) error {
 	// Scrape the HTML project page to find the VCS.
-	p, err := httpGetBytes(client, expand("http://code.google.com/p/{repo}/source/checkout", match), nil)
+	p, err := HttpGetBytes(client, expand("http://code.google.com/p/{repo}/source/checkout", match), nil)
 	if err != nil {
 		return err
 	}
@@ -67,7 +67,7 @@ func GetGoogleDoc(client *http.Client, match map[string]string, installGOPATH st
 	rootPath := expand("http://{subrepo}{dot}{repo}.googlecode.com/{vcs}{dir}/", match)
 
 	// Scrape the repo browser to find the project revision and individual Go files.
-	p, err := httpGetBytes(client, rootPath+"?r="+node.Value, nil)
+	p, err := HttpGetBytes(client, rootPath+"?r="+node.Value, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -171,7 +171,7 @@ func GetGoogleDoc(client *http.Client, match map[string]string, installGOPATH st
 
 func downloadFiles(client *http.Client, match map[string]string, rootPath, installPath, commit string, dirs []string) error {
 	for _, d := range dirs {
-		p, err := httpGetBytes(client, rootPath+d+"?r="+commit, nil)
+		p, err := HttpGetBytes(client, rootPath+d+"?r="+commit, nil)
 		if err != nil {
 			return err
 		}

@@ -31,7 +31,6 @@ This application still in experiment, any change could happen, but it doesn't af
 
 ### v0.2.*
 
-- Command `search` is for searching packages.
 - Add gpm working principle design.
 - Command `install` and `remove` Add bundle and snapshot parser code for downloading or removing by bundle or snapshot.
 - Command `check` is for checking and downloading all missing dependencies.
@@ -44,6 +43,7 @@ This application still in experiment, any change could happen, but it doesn't af
 
 ### Future
 
+- Command `search` add flags `-n` and `-o` for number of list items and offset.
 - Command `sync` is for sync packages in two computers, support client and server mode through ssh.
 - Command `init` is for auto-configuring Go develop environment.
 - Command `install` and `remove` and `update` backup data(up to 100 records) before executing.
