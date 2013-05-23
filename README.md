@@ -29,7 +29,7 @@ This application still in experiment, any change could happen, but it doesn't af
 
 ## Todo
 
-- Add support for downloading by tag and branch for packages in bitbucket.org, git.oschina.net, gitcafe.com.
+- Add support for downloading by tag and branch for packages in git.oschina.net, gitcafe.com.
 - Add template projects for testing commands.
 - Add gpm working principle design.
 - Add support for downloading tarballs from user sources.

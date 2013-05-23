@@ -44,8 +44,8 @@
 		},
 		{
 			"import_path": "bitbucket.org/zombiezen/gopdf/pdf",
-			"type": "commit",
-			"value": "",
+			"type": "branch",
+			"value": "default",
 			"deps": null
 		},
 		{

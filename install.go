@@ -194,7 +194,7 @@ func downloadPackages(nodes []*doc.Node) {
 				for _, bn := range bnodes {
 					fmt.Printf("[%s] -> %s: %s.\n", bn.ImportPath, bn.Type, bn.Value)
 				}
-				fmt.Printf(fmt.Sprintf("%s", promptMsg["ContinueDownload"]))
+				fmt.Printf(fmt.Sprintf("%s\n", promptMsg["ContinueDownload"]))
 				var option string
 				fmt.Fscan(os.Stdin, &option)
 				if strings.ToLower(option) != "y" {

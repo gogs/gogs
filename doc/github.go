@@ -76,6 +76,7 @@ func GetGithubDoc(client *http.Client, match map[string]string, installGOPATH st
 		}
 
 		node.Type = "commit"
+		node.Value = match["sha"]
 	case !isCheckImport: // Bundle or snapshot.
 		// Check downlaod type.
 		switch node.Type {
@@ -96,11 +97,6 @@ func GetGithubDoc(client *http.Client, match map[string]string, installGOPATH st
 		return nil, err
 	}
 
-	r, err := zip.NewReader(bytes.NewReader(p), int64(len(p)))
-	if err != nil {
-		return nil, err
-	}
-
 	shaName := expand("{repo}-{sha}", match)
 	if node.Type == "tag" {
 		shaName = strings.Replace(shaName, "-v", "-", 1)
@@ -114,6 +110,11 @@ func GetGithubDoc(client *http.Client, match map[string]string, installGOPATH st
 	os.RemoveAll(installPath + "/")
 	// Create destination directory.
 	os.MkdirAll(installPath+"/", os.ModePerm)
+
+	r, err := zip.NewReader(bytes.NewReader(p), int64(len(p)))
+	if err != nil {
+		return nil, err
+	}
 
 	dirs := make([]string, 0, 5)
 	// Need to add root path because we cannot get from tarball.
@@ -152,10 +153,6 @@ func GetGithubDoc(client *http.Client, match map[string]string, installGOPATH st
 		if err != nil {
 			return nil, err
 		}
-	}
-
-	if node.Type == "commit" {
-		node.Value = match["sha"]
 	}
 
 	var imports []string

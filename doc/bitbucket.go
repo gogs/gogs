@@ -8,6 +8,7 @@ import (
 	"archive/tar"
 	"bytes"
 	"compress/gzip"
+	"errors"
 	"io"
 	"net/http"
 	"os"
@@ -40,8 +41,9 @@ func GetBitbucketDoc(client *http.Client, match map[string]string, installGOPATH
 	// but does not need to download dependencies.
 	isCheckImport := len(node.Value) == 0
 
-	// Check if download with specific revision.
-	if isCheckImport || len(node.Value) == 1 {
+	switch {
+	case isCheckImport || len(node.Value) == 1:
+		// Get up-to-date version.
 		tags := make(map[string]string)
 		for _, nodeType := range []string{"branches", "tags"} {
 			var nodes map[string]struct {
@@ -61,10 +63,17 @@ func GetBitbucketDoc(client *http.Client, match map[string]string, installGOPATH
 		if err != nil {
 			return nil, err
 		}
+
 		node.Type = "commit"
 		node.Value = match["commit"]
-	} else {
-		match["commit"] = node.Value
+	case !isCheckImport: // Bundle or snapshot.
+		// Check downlaod type.
+		switch node.Type {
+		case "tag", "commit", "branch":
+			match["commit"] = node.Value
+		default:
+			return nil, errors.New("Unknown node type: " + node.Type)
+		}
 	}
 
 	// We use .tar.gz here.
