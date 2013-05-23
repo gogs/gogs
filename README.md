@@ -17,6 +17,10 @@ This application still in experiment, any change could happen, but it doesn't af
 - `build` compiles and installs packages and dependencies: basically, it calls `go install` and moves executable to current path from `GOPATH` if any, the executable name is the folder name which is default by `go install`.
 - `install` downloads and installs packages and dependencies: you can download packages without version control tools like git, hg, svn, etc. It downloads and installs all packages including all dependencies automatically(except when you use bundle or snapshot id). For now, this command supports `code.google.com`, `github.com`, `launchpad.net`, `bitbucket.org`. 
 
+## Known issues
+
+- When you use commands like `gpm install -p bitbucket.org/zombiezen/gopdf` where is project root path but the directory doesn't contain any source files, you will get error in the installation step, you have to use `gpm install -p bitbucket.org/zombiezen/gopdf/pdf` in order to go through all steps correctly.
+
 ## Todo
 
 - Add support for downloading by tag and branch for packages in bitbucket.org, git.oschina.net, gitcafe.com.
