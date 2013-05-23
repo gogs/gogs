@@ -104,7 +104,7 @@ func removePackage(node *doc.Node) (*doc.Node, []string) {
 	// Find package in GOPATH.
 	paths := utils.GetGOPATH()
 	for _, p := range paths {
-		absPath := p + "/src/" + node.ImportPath + "/"
+		absPath := p + "/src/" + utils.GetProjectPath(node.ImportPath) + "/"
 		if utils.IsExist(absPath) {
 			fmt.Printf(fmt.Sprintf("%s\n", promptMsg["RemovePackage"]), node.ImportPath)
 			// Remove files.

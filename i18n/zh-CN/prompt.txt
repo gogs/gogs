@@ -27,3 +27,4 @@ SkipInvalidPath=忽略无效的导入路径: %s.
 InstallByGoGet=正在通过 'go get' 安装包 (%s).
 NoVCSTool=未找到合适的版本控制工具，已激活纯净下载模式！
 DownloadStatus=正在下载包: %s.
+RemovePackage=正在删除包: %s.

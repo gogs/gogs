@@ -132,7 +132,7 @@ func runInstall(cmd *Command, args []string) {
 		for k := range downloadCache {
 			fmt.Printf(fmt.Sprintf("%s\n", promptMsg["InstallStatus"]), k)
 			cmdArgs[1] = k
-			executeGoCommand(cmdArgs)
+			executeCommand("go", cmdArgs)
 		}
 
 		// Save local nodes to file.
@@ -255,7 +255,7 @@ func saveNode(n *doc.Node) {
 	localNodes = append(localNodes, n)
 }
 
-// downloadPackage download package either use version control tools or not.
+// downloadPackage downloads package either use version control tools or not.
 func downloadPackage(node *doc.Node) (*doc.Node, []string) {
 	// Check if use version control tools.
 	switch {
@@ -264,7 +264,7 @@ func downloadPackage(node *doc.Node) (*doc.Node, []string) {
 		fmt.Printf(fmt.Sprintf("%s\n", promptMsg["InstallByGoGet"]), node.ImportPath)
 		args := checkGoGetFlags()
 		args = append(args, node.ImportPath)
-		executeGoCommand(args)
+		executeCommand("go", args)
 		return nil, nil
 	default: // Pure download.
 		if !cmdInstall.Flags["-p"] {

@@ -537,7 +537,34 @@ var standardPath = map[string]bool{
 	"unsafe":              true,
 }
 
-// IsGoRepoPath returns true if package is from standard library
+// IsGoRepoPath returns true if package is from standard library.
 func IsGoRepoPath(importPath string) bool {
 	return standardPath[importPath]
+}
+
+// GetProjectPath returns project path of import path.
+func GetProjectPath(importPath string) (projectPath string) {
+	projectPath = importPath
+
+	// Check project hosting.
+	switch {
+	case strings.HasPrefix(importPath, "github.com"):
+		projectPath = joinPath(importPath, 3)
+	case strings.HasPrefix(importPath, "code.google.com"):
+		projectPath = joinPath(importPath, 3)
+	case strings.HasPrefix(importPath, "bitbucket.org"):
+		projectPath = joinPath(importPath, 3)
+	case strings.HasPrefix(importPath, "launchpad.net"):
+		projectPath = joinPath(importPath, 2)
+	}
+
+	return projectPath
+}
+
+func joinPath(importPath string, num int) string {
+	subdirs := strings.Split(importPath, "/")
+	if len(subdirs) > num {
+		return strings.Join(subdirs[:num], "/")
+	}
+	return importPath
 }

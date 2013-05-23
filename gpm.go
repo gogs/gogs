@@ -396,9 +396,9 @@ func exit() {
 	os.Exit(exitStatus)
 }
 
-// executeGoCommand executes go commands.
-func executeGoCommand(args []string) {
-	cmdExec := exec.Command("go", args...)
+// executeCommand executes commands in command line.
+func executeCommand(cmd string, args []string) {
+	cmdExec := exec.Command(cmd, args...)
 	stdout, err := cmdExec.StdoutPipe()
 	if err != nil {
 		fmt.Println(err)

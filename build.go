@@ -34,7 +34,7 @@ func runBuild(cmd *Command, args []string) {
 		proName += ".exe"
 	}
 
-	executeGoCommand(cmdArgs)
+	executeCommand("go", cmdArgs)
 
 	// Find executable in GOPATH and copy to current directory.
 	paths := utils.GetGOPATH()

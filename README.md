@@ -14,12 +14,14 @@ This application still in experiment, any change could happen, but it doesn't af
 ## Main features
 
 - Download packages from popular project hosting with/without version control tools.
+- Remove packages from local file system.
 - More specific examples, see [Quick Start](docs/Quick_Start.md).
 
 ## Main commands
 
 - `build` compiles and installs packages and dependencies: basically, it calls `go install` and moves executable to current path from `GOPATH` if any, the executable name is the folder name which is default by `go install`.
 - `install` downloads and installs packages and dependencies: you can download packages without version control tools like git, hg, svn, etc. It downloads and installs all packages including all dependencies automatically(except when you use bundle or snapshot id). For now, this command supports `code.google.com`, `github.com`, `launchpad.net`, `bitbucket.org`. 
+- `remove` removes packages and dependencies: it removes all packages including all dependencies(except when you use bundle or snapshot id).
 
 ## Known issues
 
@@ -27,7 +29,6 @@ This application still in experiment, any change could happen, but it doesn't af
 
 ## Todo
 
-- Command `remove` is for removing packages.
 - Add support for downloading by tag and branch for packages in bitbucket.org, git.oschina.net, gitcafe.com.
 - Add gpm working principle design.
 - Add support for downloading tarballs from user sources.
