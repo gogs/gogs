@@ -1,0 +1,13 @@
+language: go
+
+notificaitons: 
+  email: 
+    recipients: gpmgo.com@gmail.com
+    on_success: change
+    on_failure: always
+
+install:
+- go get github.com/BurntSushi/toml
+
+script:
+ - go build -v
