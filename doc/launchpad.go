@@ -44,6 +44,7 @@ func GetLaunchpadDoc(client *http.Client, match map[string]string, installGOPATH
 	// Check if download with specific revision.
 	if isCheckImport || len(node.Value) == 1 {
 		downloadPath = expand("https://bazaar.launchpad.net/+branch/{repo}/tarball", match)
+		node.Type = "commit"
 	} else {
 		downloadPath = expand("https://bazaar.launchpad.net/+branch/{repo}/tarball/"+node.Value, match)
 	}

@@ -76,6 +76,9 @@ func GetGoogleDoc(client *http.Client, match map[string]string, installGOPATH st
 	if m := googleRevisionRe.FindSubmatch(p); m == nil {
 		return nil,
 			errors.New("doc.GetGoogleDoc(): Could not find revision for " + match["importPath"])
+	} else {
+		node.Type = "commit"
+		node.Value = string(m[1])
 	}
 
 	projectPath := expand("code.google.com/p/{repo}{dot}{subrepo}{dir}", match)

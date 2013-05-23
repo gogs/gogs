@@ -61,6 +61,8 @@ func GetBitbucketDoc(client *http.Client, match map[string]string, installGOPATH
 		if err != nil {
 			return nil, err
 		}
+		node.Type = "commit"
+		node.Value = match["commit"]
 	} else {
 		match["commit"] = node.Value
 	}

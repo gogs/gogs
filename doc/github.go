@@ -27,7 +27,9 @@ var (
 }*/
 
 func SetGithubCredentials(token string) {
-	githubCred = "access_token=" + token
+	if len(token) > 0 {
+		githubCred = "access_token=" + token
+	}
 }
 
 // GetGithubDoc downloads tarball from github.com.

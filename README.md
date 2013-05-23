@@ -54,6 +54,8 @@ This application still in experiment, any change could happen, but it doesn't af
 - Command `install` and `remove` and `update` backup data(up to 100 records) before executing.
 - Command `rollback` is for rolling back to certain operation.
 - Add configure option for auto-enable feature, like always using `-p` for downloading.
+- Command `install` add flag `-all` for re-installing everything in GOPATH, usually use this after upgrading Go version.
+- Command `clean` is for cleaning empty directories.
 
 ## License
 
