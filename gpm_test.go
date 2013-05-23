@@ -10,7 +10,7 @@ import (
 )
 
 func TestGPM(t *testing.T) {
-	fmt.Println("gpm v0.1.5 Build 0522")
+	fmt.Println("gpm v0.1.5 Build 0523")
 
 	// Build application.
 	var args []string

@@ -20,8 +20,8 @@ This application still in experiment, any change could happen, but it doesn't af
 ## Main commands
 
 - `build` compiles and installs packages and dependencies: basically, it calls `go install` and moves executable to current path from `GOPATH` if any, the executable name is the folder name which is default by `go install`.
-- `install` downloads and installs packages and dependencies: you can download packages without version control tools like git, hg, svn, etc. It downloads and installs all packages including all dependencies automatically(except when you use bundle or snapshot id). For now, this command supports `code.google.com`, `github.com`, `launchpad.net`, `bitbucket.org`. 
-- `remove` removes packages and dependencies: it removes all packages including all dependencies(except when you use bundle or snapshot id).
+- `install` downloads and installs packages and dependencies: you can download packages without version control tools like git, hg, svn, etc. It downloads and installs all packages including all dependencies automatically(except when you use bundle or snapshot). For now, this command supports `code.google.com`, `github.com`, `launchpad.net`, `bitbucket.org`. 
+- `remove` removes packages and dependencies: it removes all packages including all dependencies(except when you use bundle or snapshot).
 
 ## Known issues
 

@@ -22,13 +22,16 @@ var (
 	githubCred      string
 )
 
-func SetGithubCredentials(id, secret string) {
-	githubCred = "client_id=" + id + "&client_secret=" + secret
+/*func SetGithubCredentials(id, secret string) {
+	//githubCred = "client_id=" + id + "&client_secret=" + secret
+}*/
+
+func SetGithubCredentials(token string) {
+	githubCred = "access_token=" + token
 }
 
 // GetGithubDoc downloads tarball from github.com.
 func GetGithubDoc(client *http.Client, match map[string]string, installGOPATH string, node *Node, cmdFlags map[string]bool) ([]string, error) {
-	SetGithubCredentials("1862bcb265171f37f36c", "308d71ab53ccd858416cfceaed52d5d5b7d53c5f")
 	match["cred"] = githubCred
 
 	// JSON struct for github.com.

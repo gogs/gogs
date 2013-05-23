@@ -39,9 +39,14 @@ var (
 var promptMsg map[string]string
 
 type tomlConfig struct {
-	Title, Version     string
-	Username, Password string
-	Lang               string `toml:"user_language"`
+	Title, Version string
+	Lang           string `toml:"user_language"`
+	Account        account
+}
+
+type account struct {
+	Username, Password  string
+	Github_Access_Token string `toml:"github_access_token"`
 }
 
 // A Command is an implementation of a go command
@@ -251,6 +256,9 @@ func loadLocalBundles() bool {
 // We don't use init() to initialize
 // bacause we need to get execute path in runtime.
 func initialize() bool {
+	// Try to have highest performance.
+	runtime.GOMAXPROCS(runtime.NumCPU())
+
 	// Get application execute path.
 	if !getAppPath() {
 		return false
@@ -261,6 +269,9 @@ func initialize() bool {
 		fmt.Printf("initialize -> Fail to load configuration[ %s ]\n", err)
 		return false
 	}
+
+	// Set github.com access token.
+	doc.SetGithubCredentials(config.Account.Github_Access_Token)
 
 	// Load usages by language.
 	if !loadUsage(config.Lang) {
