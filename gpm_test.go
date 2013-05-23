@@ -6,8 +6,9 @@ package main
 
 import (
 	"fmt"
+	"testing"
 )
 
-func testGPM() {
+func TestGPM(t *testing.T) {
 	fmt.Println("gpm v0.1.4 Build 0522")
 }
