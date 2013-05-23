@@ -30,6 +30,7 @@ This application still in experiment, any change could happen, but it doesn't af
 ## Todo
 
 - Add support for downloading by tag and branch for packages in bitbucket.org, git.oschina.net, gitcafe.com.
+- Command `search` is for searching packages.
 - Add template projects for testing commands.
 - Add gpm working principle design.
 - Add support for downloading tarballs from user sources.
@@ -43,7 +44,6 @@ This application still in experiment, any change could happen, but it doesn't af
 - Command `check` is for checking and downloading all missing dependencies.
 - Command `daemon` is for auto-compile web applications when debug it locally.
 - Command `update` is for checking updates.
-- Command `search` is for searching packages.
 - Command `remove` add feature check for dependencies, make sure other packages don't import this one, and give choose for users.
 - Command `remove` also need to remove files in `GPPATH/bin` and `GOPATH/pkg`.
 - Command `remove` add flag `-d` for removing dependencies at the same time.
@@ -56,6 +56,9 @@ This application still in experiment, any change could happen, but it doesn't af
 - Add configure option for auto-enable feature, like always using `-p` for downloading.
 - Command `install` add flag `-all` for re-installing everything in GOPATH, usually use this after upgrading Go version.
 - Command `clean` is for cleaning empty directories.
+- Keep file modify time for packages from github.com.
+- Command `sync` is for sync packages in two computers, support client and server mode through ssh.
+- Command `init` is for auto-configuring Go develop environment.
 
 ## License
 
