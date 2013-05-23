@@ -5,6 +5,10 @@ gpm - Go 包管理工具
 
 gpm（Go 包管理工具） 是一款涵盖搜索、安装、更新、分享以及备份功能 Go 包的管理工具。
 
+[![Build Status](https://travis-ci.org/GPMGo/gpm.png)](https://travis-ci.org/GPMGo/gpm) [![Build Status](https://drone.io/github.com/GPMGo/gpm/status.png)](https://drone.io/github.com/GPMGo/gpm/latest) [![Coverage Status](https://coveralls.io/repos/GPMGo/gpm/badge.png)](https://coveralls.io/r/GPMGo/gpm)
+
+（Travis CI 暂未支持 Go 1.1）
+
 该应用目前扔处于实验阶段，任何改变都可能发生，但这不会影响到您下载和安装 Go 包。
 
 ## 主要功能
