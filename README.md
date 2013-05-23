@@ -5,6 +5,8 @@ gpm - Go Package Manager
 
 gpm(Go Package Manager) is a Go package manage tool for search, install, update, share and backup packages in Go.
 
+[![Build Status](https://travis-ci.org/GPMGo/gpm.png)](https://travis-ci.org/GPMGo/gpm)
+
 This application still in experiment, any change could happen, but it doesn't affect download and install packages.
 
 ## Main features

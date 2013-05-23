@@ -6,7 +6,7 @@ notificaitons:
     on_success: change
     on_failure: always
 
-install:
+before_script: 
 - go get github.com/BurntSushi/toml
 
 script:
