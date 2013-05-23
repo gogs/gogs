@@ -29,35 +29,39 @@ This application still in experiment, any change could happen, but it doesn't af
 
 ## Todo
 
-- Add template projects for testing commands.
+### v0.2.*
+
 - Command `search` is for searching packages.
 - Add gpm working principle design.
-- Add support for downloading tarballs from user sources.
-- After downloaded all packages in bundles or snapshots, need to check if all dependencies have been downloaded as well.
-- Develop user source API server template application to support user sources in bundles.
-- Command `install` and `remove` Add bundle and snapshot parser code for downloading or removing by bundle or snapshot id.
-- Add user system to create, edit, upload, and download bundles or snapshots through gpm client program.
-- Download package from code.google.com only support hg as version control system, probably support git and svn.
-- Collect download and installation results and report to users in the end.
-- Command `install` add support for downloading code from git.oschina.net, gitcafe.com, *.codeplex.com;
-- Command `install` add support for downloading by tag and branch for packages in git.oschina.net, gitcafe.com.
+- Command `install` and `remove` Add bundle and snapshot parser code for downloading or removing by bundle or snapshot.
 - Command `check` is for checking and downloading all missing dependencies.
-- Command `daemon` is for auto-compile web applications when debug it locally.
 - Command `update` is for checking updates.
-- Command `remove` add feature check for dependencies, make sure other packages don't import this one, and give choose for users.
 - Command `remove` also need to remove files in `GPPATH/bin` and `GOPATH/pkg`.
-- Command `remove` add flag `-d` for removing dependencies at the same time.
-- Add feature "struct generator".
 - i18n support for Chinese.
 - Add built-in application version in order to backup data when users update.
 - Command `install` add flag `-pc` which only downloads source files(including LICENSE and README).
-- Command `install` and `remove` and `update` backup data(up to 100 records) before executing.
-- Command `rollback` is for rolling back to certain operation.
-- Command `install` add flag `-all` for re-installing everything in GOPATH, usually use this after upgrading Go version.
-- Command `clean` is for cleaning empty directories.
-- Keep file modify time for packages from github.com.
+- Add template projects for testing commands.
+
+### Future
+
 - Command `sync` is for sync packages in two computers, support client and server mode through ssh.
 - Command `init` is for auto-configuring Go develop environment.
+- Command `install` and `remove` and `update` backup data(up to 100 records) before executing.
+- Command `rollback` is for rolling back to certain operation.
+- Add feature "struct generator".
+- Command `remove` add flag `-d` for removing dependencies at the same time.
+- Command `remove` add feature check for dependencies, make sure other packages don't import this one, and give choose for users.
+- Command `install` add flag `-all` for re-installing everything in GOPATH, usually use this after upgrading Go version.
+- Command `clean` is for cleaning empty directories.
+- Command `daemon` is for auto-compile web applications when debug it locally.
+- Collect download and installation results and report to users in the end.
+- Add user system to create, edit, upload, and download bundles or snapshots through gpm client program.
+- Develop user source API server template application to support user sources in bundles.
+- Add support for downloading tarballs from user sources.
+- After downloaded all packages in bundles or snapshots, need to check if all dependencies have been downloaded as well.
+- Download package from code.google.com only support hg as version control system, probably support git and svn.
+- Command `install` add support for downloading code from git.oschina.net, gitcafe.com, *.codeplex.com;
+- Command `install` add support for downloading by tag and branch for packages in git.oschina.net, gitcafe.com.
 
 ## License
 

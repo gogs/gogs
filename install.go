@@ -60,6 +60,7 @@ func checkFlags(flags map[string]bool, enable []string, args []string, print fun
 	// Check auto-enable.
 	for _, v := range enable {
 		flags["-"+v] = true
+		print("-" + v)
 	}
 
 	num := 0 // Number of valid flags, use to cut out.
@@ -75,6 +76,8 @@ func checkFlags(flags map[string]bool, enable []string, args []string, print fun
 			flags[f] = !v
 			if v {
 				print(f)
+			} else {
+				fmt.Println("DISABLE: " + f)
 			}
 		} else {
 			fmt.Printf(fmt.Sprintf("%s\n", promptMsg["UnknownFlag"]), f)

@@ -151,6 +151,9 @@ func GetBitbucketDoc(client *http.Client, match map[string]string, installGOPATH
 		if err != nil {
 			return nil, err
 		}
+
+		// Set modify time.
+		os.Chtimes(absPath, h.AccessTime, h.ModTime)
 	}
 
 	var imports []string

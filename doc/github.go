@@ -132,14 +132,14 @@ func GetGithubDoc(client *http.Client, match map[string]string, installGOPATH st
 			continue
 		}
 
+		// Create diretory before create file.
+		os.MkdirAll(path.Dir(absPath)+"/", os.ModePerm)
+
 		// Get file from archive.
 		rc, err := f.Open()
 		if err != nil {
 			return nil, err
 		}
-
-		// Create diretory before create file.
-		os.MkdirAll(path.Dir(absPath)+"/", os.ModePerm)
 
 		// Write data to file
 		fw, _ := os.Create(absPath)
@@ -148,11 +148,15 @@ func GetGithubDoc(client *http.Client, match map[string]string, installGOPATH st
 		}
 
 		_, err = io.Copy(fw, rc)
+		// Close files.
 		rc.Close()
 		fw.Close()
 		if err != nil {
 			return nil, err
 		}
+
+		// Set modify time.
+		os.Chtimes(absPath, f.ModTime(), f.ModTime())
 	}
 
 	var imports []string
