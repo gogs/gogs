@@ -10,6 +10,7 @@ UnknownFlag=Unknown flag: %s.
 DownloadError=Fail to download package(%s)[ %s ]
 NotFoundError=Import path prefix matches known service, but regexp does not.
 ErrNoMatch=Unsupported project hosting.
+PackageNotFound=Cannot find package: %s.
 
 MovedFile=Moved file from $GOPATH(%s) to current directory(%s).
 PureDownload=You enabled pure download.
@@ -26,3 +27,4 @@ SkipInvalidPath=Skipped invalid import path: %s.
 InstallByGoGet=Installing package(%s) through 'go get'.
 NoVCSTool=No version control tool is available, pure download enabled!
 DownloadStatus=Downloading package: %s.
+RemovePackage=Removing package: %s.

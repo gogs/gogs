@@ -92,6 +92,7 @@ func (c *Command) Runnable() bool {
 var commands = []*Command{
 	cmdBuild,
 	cmdInstall,
+	cmdRemove,
 }
 
 // getAppPath returns application execute path for current process.

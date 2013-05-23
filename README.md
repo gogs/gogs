@@ -27,13 +27,13 @@ This application still in experiment, any change could happen, but it doesn't af
 
 ## Todo
 
-- Add support for downloading by tag and branch for packages in bitbucket.org, git.oschina.net, gitcafe.com.
 - Command `remove` is for removing packages.
+- Add support for downloading by tag and branch for packages in bitbucket.org, git.oschina.net, gitcafe.com.
 - Add gpm working principle design.
 - Add support for downloading tarballs from user sources.
 - After downloaded all packages in bundles or snapshots, need to check if all dependencies have been downloaded as well.
 - Develop user source API server template application to support user sources in bundles.
-- Add bundle and snapshot parser code for downloading by bundle or snapshot id.
+- Command `install` and `remove` Add bundle and snapshot parser code for downloading or removing by bundle or snapshot id.
 - Add user system to create, edit, upload, and download bundles or snapshots through gpm client program.
 - Download package from code.google.com only support hg as version control system, probably support git and svn.
 - Collect download and installation results and report to users in the end.
@@ -42,6 +42,9 @@ This application still in experiment, any change could happen, but it doesn't af
 - Command `daemon` is for auto-compile web applications when debug it locally.
 - Command `update` is for checking updates.
 - Command `search` is for searching packages.
+- Command `remove` add feature check for dependencies, make sure other packages don't import this one, and give choose for users.
+- Command `remove` also need to remove files in `GPPATH/bin` and `GOPATH/pkg`.
+- Command `remove` add flag `-d` for removing dependencies at the same time.
 - Add feature "struct generator".
 - i18n support for Chinese.
 - Add built-in application version in order to backup data when users update.

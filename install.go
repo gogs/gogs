@@ -20,7 +20,7 @@ import (
 
 var (
 	isHasGit, isHasHg bool
-	downloadCache     map[string]bool // Saves packages that have downloaded.
+	downloadCache     map[string]bool // Saves packages that have been downloaded.
 	installGOPATH     string          // The GOPATH that packages are downloaded to.
 )
 

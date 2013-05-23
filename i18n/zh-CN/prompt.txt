@@ -10,6 +10,7 @@ UnknownFlag=未知参数: %s.
 DownloadError=下载包 (%s) 失败 [ %s ]
 NotFoundError=合法的源代码托管平台，但正则匹配失败.
 ErrNoMatch=不被支持的源代码托管平台.
+PackageNotFound=无法找到包: %s.
 
 MovedFile=成功将文件从 $GOPATH(%s) 移动至当前目录 (%s).
 PureDownload=已激活纯净下载模式.
