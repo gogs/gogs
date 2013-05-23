@@ -5,6 +5,7 @@
 package utils
 
 import (
+	"runtime"
 	"testing"
 )
 
@@ -15,19 +16,19 @@ var remotePaths = []string{
 	"bitbucket.org/gotamer/conv",
 }
 
-var importPaths = []string{
-	"github.com/coocood/qbs/test",
-	"code.google.com/p/draw2d/test",
-	"launchpad.net/goamz/test",
-	"bitbucket.org/gotamer/conv/test",
-}
-
 func TestIsValidRemotePath(t *testing.T) {
 	for _, p := range remotePaths {
 		if !IsValidRemotePath(p) {
 			t.Errorf("Invalid remote path: %s", p)
 		}
 	}
+}
+
+var importPaths = []string{
+	"github.com/coocood/qbs/test",
+	"code.google.com/p/draw2d/test",
+	"launchpad.net/goamz/test",
+	"bitbucket.org/gotamer/conv/test",
 }
 
 func TestGetProjectPath(t *testing.T) {
@@ -42,6 +43,35 @@ func TestGetProjectPath(t *testing.T) {
 	for i, p := range remotePaths {
 		if remotePaths[i] != GetProjectPath(p) {
 			t.Errorf("Fail to verify projet path: %s", p)
+		}
+	}
+}
+
+func TestGetExecuteName(t *testing.T) {
+	// Non-windows.
+	if runtime.GOOS != "windows" && GetExecuteName("gtihub.com/astaxie/beego") != "beego" {
+		t.Errorf("Fail to verify execute name in non-windows.")
+	}
+
+	// Windows.
+	if runtime.GOOS == "windows" && GetExecuteName("gtihub.com/astaxie/beego") != "beego.exe" {
+		t.Errorf("Fail to verify execute name in windows.")
+	}
+}
+
+var docFiles = []string{
+	"Readme",
+	"readme.md",
+	"README",
+	"README.MD",
+	"main.go",
+	"LICENse",
+}
+
+func TestIsDocFile(t *testing.T) {
+	for _, v := range docFiles {
+		if !IsDocFile(v) {
+			t.Errorf("Fail to verify doc file: %s", v)
 		}
 	}
 }

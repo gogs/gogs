@@ -33,6 +33,7 @@ func init() {
 	cmdInstall.Run = runInstall
 	cmdInstall.Flags = map[string]bool{
 		"-p": false,
+		"-c": false,
 		"-d": false,
 		"-u": false, // Flag for 'go get'.
 		"-e": false,
@@ -46,6 +47,8 @@ func printInstallPrompt(flag string) {
 	switch flag {
 	case "-p":
 		fmt.Printf(fmt.Sprintf("%s\n", promptMsg["PureDownload"]))
+	case "-c":
+		fmt.Printf(fmt.Sprintf("%s\n", promptMsg["PureCode"]))
 	case "-d":
 		fmt.Printf(fmt.Sprintf("%s\n", promptMsg["DownloadOnly"]))
 	case "-e":
@@ -193,12 +196,13 @@ func downloadPackages(nodes []*doc.Node) {
 	for _, n := range nodes {
 		// Check if it is a bundle or snapshot.
 		switch {
-		case n.ImportPath[0] == 'B':
+		case strings.HasSuffix(n.ImportPath, ".b"):
+			l := len(n.ImportPath)
 			// Check local bundles.
-			bnodes := checkLocalBundles(n.ImportPath[1:])
+			bnodes := checkLocalBundles(n.ImportPath[:l-2])
 			if len(bnodes) > 0 {
 				// Check with users if continue.
-				fmt.Printf(fmt.Sprintf("%s\n", promptMsg["BundleInfo"]), n.ImportPath[1:])
+				fmt.Printf(fmt.Sprintf("%s\n", promptMsg["BundleInfo"]), n.ImportPath[:l-2])
 				for _, bn := range bnodes {
 					fmt.Printf("[%s] -> %s: %s.\n", bn.ImportPath, bn.Type, bn.Value)
 				}
@@ -212,9 +216,9 @@ func downloadPackages(nodes []*doc.Node) {
 			} else {
 				// Check from server.
 				// TODO: api.GetBundleInfo()
-				fmt.Println("Unable to check with server right now.")
+				fmt.Println("Unable to find bundle, and we cannot check with server right now.")
 			}
-		case n.ImportPath[0] == 'S':
+		case strings.HasSuffix(n.ImportPath, ".s"):
 			// TODO: api.GetSnapshotInfo()
 		case utils.IsValidRemotePath(n.ImportPath):
 			if !downloadCache[n.ImportPath] {

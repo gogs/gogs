@@ -9,6 +9,8 @@ The install flags are:
 
 	-p
 		pure download packages without version control.
+	-c
+		download source code only.
 	-d
 		download without installing packages.
 	-u

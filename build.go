@@ -7,9 +7,6 @@ package main
 import (
 	"fmt"
 	"os"
-	"path"
-	"runtime"
-	"strings"
 
 	"github.com/GPMGo/gpm/utils"
 )
@@ -50,14 +47,9 @@ func runBuild(cmd *Command, args []string) {
 
 	executeCommand("go", cmdArgs)
 
-	wd, _ := os.Getwd()
-	wd = strings.Replace(wd, "\\", "/", -1)
-	proName := path.Base(wd)
-	if runtime.GOOS == "windows" {
-		proName += ".exe"
-	}
-
 	// Find executable in GOPATH and copy to current directory.
+	wd, _ := os.Getwd()
+	proName := utils.GetExecuteName(wd)
 	paths := utils.GetGOPATH()
 
 	for _, v := range paths {

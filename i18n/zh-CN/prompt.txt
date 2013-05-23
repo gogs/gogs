@@ -14,6 +14,7 @@ PackageNotFound=无法找到包: %s.
 
 MovedFile=SUCCESS: 成功将文件从 $GOPATH(%s) 移动至当前目录 (%s).
 PureDownload=已激活纯净下载模式.
+PureCode=已激活纯代码下载模式.
 DownloadOnly=已激活无安装模式.
 DownloadExDeps=已激活下载示例代码依赖.
 DownloadFromSrcs=已激活从用户源下载.
@@ -29,3 +30,4 @@ NoVCSTool=未找到合适的版本控制工具，已激活纯净下载模式！
 DownloadStatus=正在下载包: %s.
 RemovePackage=正在删除包: %s.
 NoKeyword=没有关键字，无法搜索.
+ContinueRemove=是否继续删除？(Y/n).

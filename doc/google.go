@@ -11,6 +11,8 @@ import (
 	"path"
 	"regexp"
 	"strings"
+
+	"github.com/GPMGo/gpm/utils"
 )
 
 var (
@@ -90,10 +92,15 @@ func GetGoogleDoc(client *http.Client, match map[string]string, installGOPATH st
 	// Create destination directory.
 	os.MkdirAll(installPath+"/", os.ModePerm)
 
+	isCodeOnly := cmdFlags["-c"]
 	// Get source files in root path.
 	files := make([]*source, 0, 5)
 	for _, m := range googleFileRe.FindAllSubmatch(p, -1) {
 		fname := strings.Split(string(m[1]), "?")[0]
+		if isCodeOnly && !utils.IsDocFile(fname) {
+			continue
+		}
+
 		files = append(files, &source{
 			name:   fname,
 			rawURL: expand("http://{subrepo}{dot}{repo}.googlecode.com/{vcs}{dir}/{0}", match, fname) + "?r=" + node.Value,
@@ -182,7 +189,7 @@ func downloadFiles(client *http.Client, match map[string]string, rootPath, insta
 		// Get source files in current path.
 		files := make([]*source, 0, 5)
 		for _, m := range googleFileRe.FindAllSubmatch(p, -1) {
-			fname := string(m[1])
+			fname := strings.Split(string(m[1]), "?")[0]
 			files = append(files, &source{
 				name:   fname,
 				rawURL: expand("http://{subrepo}{dot}{repo}.googlecode.com/{vcs}{dir}/", match) + d + fname + "?r=" + commit,

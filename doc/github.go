@@ -14,6 +14,8 @@ import (
 	"path"
 	"regexp"
 	"strings"
+
+	"github.com/GPMGo/gpm/utils"
 )
 
 var (
@@ -116,47 +118,47 @@ func GetGithubDoc(client *http.Client, match map[string]string, installGOPATH st
 		return nil, err
 	}
 
+	isCodeOnly := cmdFlags["-c"]
 	dirs := make([]string, 0, 5)
 	// Need to add root path because we cannot get from tarball.
 	dirs = append(dirs, installPath+"/")
 	for _, f := range r.File {
 		absPath := strings.Replace(f.FileInfo().Name(), shaName, installPath, 1)
+		// Create diretory before create file.
+		os.MkdirAll(path.Dir(absPath)+"/", os.ModePerm)
 
-		// Check if it is a directory.
-		if strings.HasSuffix(absPath, "/") {
-			// Directory.
+		switch {
+		case strings.HasSuffix(absPath, "/"): // Directory.
 			// Check if current directory is example.
 			if !(!cmdFlags["-e"] && strings.Contains(absPath, "example")) {
 				dirs = append(dirs, absPath)
 			}
+		case isCodeOnly && !utils.IsDocFile(path.Base(absPath)):
 			continue
+		default:
+			// Get file from archive.
+			rc, err := f.Open()
+			if err != nil {
+				return nil, err
+			}
+
+			// Write data to file
+			fw, _ := os.Create(absPath)
+			if err != nil {
+				return nil, err
+			}
+
+			_, err = io.Copy(fw, rc)
+			// Close files.
+			rc.Close()
+			fw.Close()
+			if err != nil {
+				return nil, err
+			}
+
+			// Set modify time.
+			os.Chtimes(absPath, f.ModTime(), f.ModTime())
 		}
-
-		// Create diretory before create file.
-		os.MkdirAll(path.Dir(absPath)+"/", os.ModePerm)
-
-		// Get file from archive.
-		rc, err := f.Open()
-		if err != nil {
-			return nil, err
-		}
-
-		// Write data to file
-		fw, _ := os.Create(absPath)
-		if err != nil {
-			return nil, err
-		}
-
-		_, err = io.Copy(fw, rc)
-		// Close files.
-		rc.Close()
-		fw.Close()
-		if err != nil {
-			return nil, err
-		}
-
-		// Set modify time.
-		os.Chtimes(absPath, f.ModTime(), f.ModTime())
 	}
 
 	var imports []string

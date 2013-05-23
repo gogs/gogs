@@ -568,3 +568,27 @@ func joinPath(importPath string, num int) string {
 	}
 	return importPath
 }
+
+// GetExecuteName returns work directory and possible execute name according work directory.
+func GetExecuteName(wd string) string {
+	wd = strings.Replace(wd, "\\", "/", -1)
+	execName := path.Base(wd)
+	if runtime.GOOS == "windows" {
+		execName += ".exe"
+	}
+	return execName
+}
+
+var (
+	readmePat  = regexp.MustCompile(`^[Rr][Ee][Aa][Dd][Mm][Ee](?:$|\.)`)
+	licensePat = regexp.MustCompile(`^[Ll][Ii][Cc][En][Nn][Ss][Ee]`)
+)
+
+func IsDocFile(n string) bool {
+	if (strings.HasSuffix(n, ".go") || strings.HasSuffix(n, ".h") || strings.HasSuffix(n, ".c")) &&
+		n[0] != '_' && n[0] != '.' {
+		return true
+	}
+
+	return readmePat.MatchString(n) || licensePat.MatchString(n)
+}

@@ -8,6 +8,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"runtime"
+	"strings"
 
 	"github.com/GPMGo/gpm/doc"
 	"github.com/GPMGo/gpm/utils"
@@ -66,8 +68,29 @@ func removePackages(nodes []*doc.Node) {
 	for _, n := range nodes {
 		// Check if it is a bundle or snapshot.
 		switch {
-		case n.ImportPath[0] == 'B':
-		case n.ImportPath[0] == 'S':
+		case strings.HasSuffix(n.ImportPath, ".b"):
+			l := len(n.ImportPath)
+			// Check local bundles.
+			bnodes := checkLocalBundles(n.ImportPath[:l-2])
+			if len(bnodes) > 0 {
+				// Check with users if continue.
+				fmt.Printf(fmt.Sprintf("%s\n", promptMsg["BundleInfo"]), n.ImportPath[:l-2])
+				for _, bn := range bnodes {
+					fmt.Printf("[%s] -> %s: %s.\n", bn.ImportPath, bn.Type, bn.Value)
+				}
+				fmt.Printf(fmt.Sprintf("%s\n", promptMsg["ContinueRemove"]))
+				var option string
+				fmt.Fscan(os.Stdin, &option)
+				if strings.ToLower(option) != "y" {
+					os.Exit(0)
+				}
+				removePackages(bnodes)
+			} else {
+				// Check from server.
+				// TODO: api.GetBundleInfo()
+				fmt.Println("Unable to find bundle, and we cannot check with server right now.")
+			}
+		case strings.HasSuffix(n.ImportPath, ".s"):
 		case utils.IsValidRemotePath(n.ImportPath):
 			if !removeCache[n.ImportPath] {
 				// Remove package.
@@ -109,6 +132,30 @@ func removePackage(node *doc.Node) (*doc.Node, []string) {
 			fmt.Printf(fmt.Sprintf("%s\n", promptMsg["RemovePackage"]), node.ImportPath)
 			// Remove files.
 			os.RemoveAll(absPath)
+			// Remove file in GOPATH/bin
+			proName := utils.GetExecuteName(node.ImportPath)
+			paths := utils.GetGOPATH()
+			var gopath string
+
+			for _, v := range paths {
+				if utils.IsExist(v + "/bin/" + proName) {
+					gopath = v // Don't need to find again.
+					os.Remove(v + "/bin/" + proName)
+				}
+			}
+
+			pkgPath := "/pkg/" + runtime.GOOS + "_" + runtime.GOARCH + "/" + node.ImportPath
+			// Remove file in GOPATH/pkg
+			if len(gopath) == 0 {
+				for _, v := range paths {
+					if utils.IsExist(v + pkgPath + "/") {
+						gopath = v
+					}
+				}
+			}
+
+			os.RemoveAll(gopath + pkgPath + "/")
+			os.Remove(gopath + pkgPath + ".a")
 			return node, nil
 		}
 	}

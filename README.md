@@ -20,6 +20,7 @@ This application still in experiment, any change could happen, but it doesn't af
 ## Main commands
 
 - `build` compiles and installs packages and dependencies: basically, it calls `go install` and moves executable to current path from `GOPATH` if any, the executable name is the folder name which is default by `go install`.
+- `search` searchs packages in [Go Walker](http://gowalker.org) database by keyword.
 - `install` downloads and installs packages and dependencies: you can download packages without version control tools like git, hg, svn, etc. It downloads and installs all packages including all dependencies automatically(except when you use bundle or snapshot). For now, this command supports `code.google.com`, `github.com`, `launchpad.net`, `bitbucket.org`. 
 - `remove` removes packages and dependencies: it removes all packages including all dependencies(except when you use bundle or snapshot).
 
@@ -31,19 +32,15 @@ This application still in experiment, any change could happen, but it doesn't af
 
 ### v0.2.*
 
-- Add gpm working principle design.
-- Command `install` and `remove` Add bundle and snapshot parser code for downloading or removing by bundle or snapshot.
 - Command `check` is for checking and downloading all missing dependencies.
-- Command `update` is for checking updates.
-- Command `remove` also need to remove files in `GPPATH/bin` and `GOPATH/pkg`.
 - i18n support for Chinese.
-- Add built-in application version in order to backup data when users update.
-- Command `install` add flag `-pc` which only downloads source files(including LICENSE and README).
 - Add template projects for testing commands.
+- Add feature auto-catch if run under GOPATH/bin.
 
 ### Future
 
 - Command `search` add flags `-n` and `-o` for number of list items and offset.
+- Command `update` is for checking updates.
 - Command `sync` is for sync packages in two computers, support client and server mode through ssh.
 - Command `init` is for auto-configuring Go develop environment.
 - Command `install` and `remove` and `update` backup data(up to 100 records) before executing.
@@ -62,6 +59,11 @@ This application still in experiment, any change could happen, but it doesn't af
 - Download package from code.google.com only support hg as version control system, probably support git and svn.
 - Command `install` add support for downloading code from git.oschina.net, gitcafe.com, *.codeplex.com;
 - Command `install` add support for downloading by tag and branch for packages in git.oschina.net, gitcafe.com.
+- Command `install` and `remove` add bundle parse code for getting data from server.
+- Command `install` and `remove` add snapshot parse code for downloading or removing snapshot.
+- Add built-in application version in order to backup data when users update.
+- Add gpm working principle design.
+- Command `install -c` add arguments for add more exts. 
 
 ## License
 
