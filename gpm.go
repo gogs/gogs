@@ -42,6 +42,11 @@ type tomlConfig struct {
 	Title, Version string
 	Lang           string `toml:"user_language"`
 	Account        account
+	AutoEnable     flagEnable `toml:"auto_enable"`
+}
+
+type flagEnable struct {
+	Build, Install []string
 }
 
 type account struct {

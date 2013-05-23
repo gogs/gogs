@@ -56,7 +56,12 @@ func printInstallPrompt(flag string) {
 }
 
 // checkFlags checks if the flag exists with correct format.
-func checkFlags(flags map[string]bool, args []string, print func(string)) int {
+func checkFlags(flags map[string]bool, enable []string, args []string, print func(string)) int {
+	// Check auto-enable.
+	for _, v := range enable {
+		flags["-"+v] = true
+	}
+
 	num := 0 // Number of valid flags, use to cut out.
 	for i, f := range args {
 		// Check flag prefix '-'.
@@ -66,11 +71,11 @@ func checkFlags(flags map[string]bool, args []string, print func(string)) int {
 		}
 
 		// Check if it a valid flag.
-		/* Here we use ok pattern to check it because
-		this way can avoid same flag appears multiple times.*/
-		if _, ok := flags[f]; ok {
-			flags[f] = true
-			print(f)
+		if v, ok := flags[f]; ok {
+			flags[f] = !v
+			if v {
+				print(f)
+			}
 		} else {
 			fmt.Printf(fmt.Sprintf("%s\n", promptMsg["UnknownFlag"]), f)
 			return -1
@@ -96,7 +101,7 @@ func checkVCSTool() {
 
 func runInstall(cmd *Command, args []string) {
 	// Check flags.
-	num := checkFlags(cmd.Flags, args, printInstallPrompt)
+	num := checkFlags(cmd.Flags, config.AutoEnable.Install, args, printInstallPrompt)
 	if num == -1 {
 		return
 	}

@@ -36,7 +36,7 @@ func printBuildPrompt(flag string) {
 
 func runBuild(cmd *Command, args []string) {
 	// Check flags.
-	num := checkFlags(cmd.Flags, args, printBuildPrompt)
+	num := checkFlags(cmd.Flags, config.AutoEnable.Build, args, printBuildPrompt)
 	if num == -1 {
 		return
 	}
