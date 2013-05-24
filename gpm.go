@@ -113,6 +113,7 @@ var commands = []*Command{
 func getAppPath() bool {
 	// Look up executable in PATH variable.
 	appPath, _ = exec.LookPath(path.Base(os.Args[0]))
+	// Check if run under $GOPATH/bin
 	if len(appPath) == 0 {
 		fmt.Printf("ERROR: getAppPath -> Unable to indicate current execute path.\n")
 		return false
