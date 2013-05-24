@@ -32,18 +32,21 @@ This application still in experiment, any change could happen, but it doesn't af
 
 ### v0.2.*
 
-- Command `check` is for checking and downloading all missing dependencies.
 - i18n support for Chinese.
 - Add template projects for testing commands.
 - Add feature auto-catch if run under GOPATH/bin.
 
 ### Future
 
+- Command `check` add feature to update or generate gopack.json.
+- Command `install` generates dependencies configuration file.
+- Command `build` use dependencies configuration file to build with specific versions of dependencies, if VCS tools are available, simply use `checkout`. 
+- Command `install` and `remove` give number to let user choose operate one package.
 - Command `search` add flags `-n` and `-o` for number of list items and offset.
 - Command `update` is for checking updates.
 - Command `sync` is for sync packages in two computers, support client and server mode through ssh.
 - Command `init` is for auto-configuring Go develop environment.
-- Command `install` and `remove` and `update` backup data(up to 100 records) before executing.
+- Command `install` and `remove` and `update` backup data(up to 50 records) before executing.
 - Command `rollback` is for rolling back to certain operation.
 - Add feature "struct generator".
 - Command `remove` add flag `-d` for removing dependencies at the same time.
@@ -57,14 +60,20 @@ This application still in experiment, any change could happen, but it doesn't af
 - Add support for downloading tarballs from user sources.
 - After downloaded all packages in bundles or snapshots, need to check if all dependencies have been downloaded as well.
 - Download package from code.google.com only support hg as version control system, probably support git and svn.
-- Command `install` add support for downloading code from git.oschina.net, gitcafe.com, *.codeplex.com;
+- Command `install` add support for downloading code from git.oschina.net, gitcafe.com, *.codeplex.com.
 - Command `install` add support for downloading by tag and branch for packages in git.oschina.net, gitcafe.com.
 - Command `install` and `remove` add bundle parse code for getting data from server.
 - Command `install` and `remove` add snapshot parse code for downloading or removing snapshot.
 - Add built-in application version in order to backup data when users update.
 - Add gpm working principle design.
 - Command `install -c` add arguments for add more exts. 
+- Command `install` save tarball add support for packages in code.google.com, bitbucket.org, launchpad.net, git.oschina.net, gitcafe.com, *.codeplex.com.
+
+## Credits
+
+- Source files that contain code that is from [gopkgdoc](https://github.com/garyburd/gopkgdoc) is honored in specific.
+- Idea that support packages build revision is inspired by [gopack](https://github.com/d2fn/gopack).
 
 ## License
 
-[MIT-STYLE](LICENSE), source files that contain code that is from [gopkgdoc](https://github.com/garyburd/gopkgdoc) is honored in specific.
+[MIT-STYLE](LICENSE). 

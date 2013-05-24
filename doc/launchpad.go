@@ -130,7 +130,7 @@ func GetLaunchpadDoc(client *http.Client, match map[string]string, installGOPATH
 	// Check if need to check imports.
 	if isCheckImport {
 		for _, d := range dirs {
-			importPkgs, err := checkImports(d+"/", match["importPath"])
+			importPkgs, err := CheckImports(d+"/", match["importPath"])
 			if err != nil {
 				return nil, err
 			}

@@ -164,7 +164,7 @@ func GetGoogleDoc(client *http.Client, match map[string]string, installGOPATH st
 		for _, d := range dirs {
 			if d.IsDir() && !(!cmdFlags["-e"] && strings.Contains(d.Name(), "example")) {
 				absPath := installPath + "/" + d.Name() + "/"
-				importPkgs, err := checkImports(absPath, match["importPath"])
+				importPkgs, err := CheckImports(absPath, match["importPath"])
 				if err != nil {
 					return nil, err
 				}

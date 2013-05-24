@@ -18,6 +18,16 @@ import (
 	"strings"
 )
 
+var (
+	appPath    string
+	autoBackup bool
+)
+
+func SetAppConfig(path string, backup bool) {
+	appPath = path
+	autoBackup = backup
+}
+
 // TODO: specify with command line flag
 const repoRoot = "/tmp/gddo"
 
@@ -178,7 +188,7 @@ func expand(template string, match map[string]string, subs ...string) string {
 }
 
 // checkImports checks package denpendencies.
-func checkImports(absPath, importPath string) (importPkgs []string, err error) {
+func CheckImports(absPath, importPath string) (importPkgs []string, err error) {
 	dir, err := os.Open(absPath)
 	if err != nil {
 		return nil, err
@@ -203,7 +213,7 @@ func checkImports(absPath, importPath string) (importPkgs []string, err error) {
 			fbytes := make([]byte, fi.Size())
 			_, err = f.Read(fbytes)
 			f.Close()
-			//fmt.Println(d+fi.Name(), fi.Size(), n)
+
 			if err != nil {
 				return nil, err
 			}

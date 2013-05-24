@@ -41,12 +41,13 @@ var promptMsg map[string]string
 type tomlConfig struct {
 	Title, Version string
 	Lang           string `toml:"user_language"`
+	AutoBackup     bool   `toml:"auto_backup"`
 	Account        account
 	AutoEnable     flagEnable `toml:"auto_enable"`
 }
 
 type flagEnable struct {
-	Build, Install, Search []string
+	Build, Install, Search, Check []string
 }
 
 type account struct {
@@ -104,6 +105,7 @@ var commands = []*Command{
 	cmdSearch,
 	cmdInstall,
 	cmdRemove,
+	cmdCheck,
 }
 
 // getAppPath returns application execute path for current process.
@@ -119,6 +121,8 @@ func getAppPath() bool {
 		// Replace all '\' to '/'.
 		appPath = strings.Replace(filepath.Dir(appPath), "\\", "/", -1) + "/"
 	}
+
+	doc.SetAppConfig(appPath, config.AutoBackup)
 	return true
 }
 
@@ -287,6 +291,8 @@ func initialize() bool {
 	// Create bundle and snapshot directories.
 	os.MkdirAll(appPath+"repo/bundles/", os.ModePerm)
 	os.MkdirAll(appPath+"repo/snapshots/", os.ModePerm)
+	// Create local tarball directories.
+	os.MkdirAll(appPath+"repo/tarballs/", os.ModePerm)
 
 	// Initialize local data.
 	if !loadLocalNodes() || !loadLocalBundles() {

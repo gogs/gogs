@@ -38,8 +38,8 @@
 		},
 		{
 			"import_path": "github.com/coocood/qbs",
-			"type": "branch",
-			"value": "master",
+			"type": "commit",
+			"value": "afbf6b7370d76dc479f8d3f9ce9e802ce2c34cf2",
 			"deps": null
 		},
 		{

@@ -166,13 +166,25 @@ func GetGithubDoc(client *http.Client, match map[string]string, installGOPATH st
 	// Check if need to check imports.
 	if isCheckImport {
 		for _, d := range dirs {
-			importPkgs, err := checkImports(d, match["importPath"])
+			importPkgs, err := CheckImports(d, match["importPath"])
 			if err != nil {
 				return nil, err
 			}
 			imports = append(imports, importPkgs...)
 		}
 	}
+
+	/*fpath := appPath + "repo/tarballs/" + node.ImportPath + "-" + node.Value + ".zip"
+	// Save tarball.
+	if autoBackup && !utils.IsExist(fpath) {
+		os.MkdirAll(path.Dir(fpath)+"/", os.ModePerm)
+		f, err := os.Create(fpath)
+		if err != nil {
+			return nil, err
+		}
+		defer f.Close()
+		_, err = f.Write(p)
+	}*/
 
 	return imports, err
 }

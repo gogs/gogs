@@ -11,6 +11,7 @@ DownloadError=下载包 (%s) 失败 [ %s ]
 NotFoundError=合法的源代码托管平台，但正则匹配失败.
 ErrNoMatch=不被支持的源代码托管平台.
 PackageNotFound=无法找到包: %s.
+CheckImports=一百遍检查失败 [ %s ]
 
 MovedFile=SUCCESS: 成功将文件从 $GOPATH(%s) 移动至当前目录 (%s).
 PureDownload=已激活纯净下载模式.
@@ -31,3 +32,5 @@ DownloadStatus=正在下载包: %s.
 RemovePackage=正在删除包: %s.
 NoKeyword=没有关键字，无法搜索.
 ContinueRemove=是否继续删除？(Y/n).
+InvalidPath=无法在当前目录中找到包.
+MissingImports=下列依赖包未找到:

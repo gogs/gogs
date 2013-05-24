@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"regexp"
+	"runtime"
 	"strings"
 
 	"github.com/GPMGo/gpm/doc"
@@ -140,6 +141,16 @@ func runInstall(cmd *Command, args []string) {
 		cmdArgs = append(cmdArgs, "install")
 		cmdArgs = append(cmdArgs, "<blank>")
 
+		paths := utils.GetGOPATH()
+		pkgPath := "/pkg/" + runtime.GOOS + "_" + runtime.GOARCH + "/"
+		for k := range downloadCache {
+			// Delete old packages.
+			for _, p := range paths {
+				os.RemoveAll(p + pkgPath + k + "/")
+				os.Remove(p + pkgPath + k + ".a")
+			}
+		}
+
 		for k := range downloadCache {
 			fmt.Printf(fmt.Sprintf("%s\n", promptMsg["InstallStatus"]), k)
 			cmdArgs[1] = k
@@ -160,8 +171,6 @@ func runInstall(cmd *Command, args []string) {
 		}
 		fw.Write(fbytes)
 	}
-
-	fmt.Println("Well done.")
 }
 
 // chekcDeps checks dependencies of nodes.
@@ -336,7 +345,7 @@ func pureDownload(node *doc.Node) ([]string, error) {
 		if m == nil {
 			if s.prefix != "" {
 				return nil,
-					doc.NotFoundError{fmt.Sprintf("%s\n", promptMsg["NotFoundError"])}
+					doc.NotFoundError{fmt.Sprintf("%s", promptMsg["NotFoundError"])}
 			}
 			continue
 		}
@@ -348,5 +357,5 @@ func pureDownload(node *doc.Node) ([]string, error) {
 		}
 		return s.get(doc.HttpClient, match, installGOPATH, node, cmdInstall.Flags)
 	}
-	return nil, errors.New(fmt.Sprintf("%s\n", promptMsg["NotFoundError"]))
+	return nil, errors.New(fmt.Sprintf("%s", promptMsg["NotFoundError"]))
 }

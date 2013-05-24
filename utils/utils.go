@@ -387,7 +387,7 @@ func GetBestMatchGOPATH(appPath string) string {
 	paths := GetGOPATH()
 	for _, p := range paths {
 		if strings.HasPrefix(p, appPath) {
-			return p
+			return strings.Replace(p, "\\", "/", -1)
 		}
 	}
 	return paths[0]

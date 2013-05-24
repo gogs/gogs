@@ -4,6 +4,7 @@ title = "gpm(Go Package Manager)"
 version = "v0.1.9 Build 0523"
 user_language = "en-US"
 #user_language = "zh-CN"
+auto_backup = true
 
 [account]
 username = ""
