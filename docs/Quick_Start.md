@@ -1,7 +1,5 @@
 # Quick Start
 
-**Attention** Features like bundle and snapshot have NOT been published for users.
-
 Full documentation please visit [GPMGo Documentation]()(Haven't done yet!).
 
 ## Index
@@ -12,6 +10,7 @@ Full documentation please visit [GPMGo Documentation]()(Haven't done yet!).
 - [ **Build** and run it](#build-and-run-it)
 - [ **Remove** package, or packages](#remove-package-or-packages)
 - [ Use **check** to check dependencies](#use-check-to-check-dependencies)
+- [ **Search** and find more](#search-and-find-more)
 
 ## When and why
 
@@ -25,7 +24,9 @@ With gpm, it's much easier to control dependencies version of your packages spec
 
 ### Killer feature over `go get`? 
 
-`go get` gives great advantages of package installation in Go, but the only thing it's missing is version control of dependencies.
+- `go get` gives great advantages of package installation in Go, but the only thing it's missing is version control of dependencies.
+- Every time you use `go get`, you may download unstable version of your package dependencies, and you may waste your time to find last version in almost unreadable commit history.
+- Not only main package, dependencies also have their dependencies, in a big project, small things like this should not waste your attention for building awesome applications.
 
 ### How's configuration file looks like?
 
@@ -43,6 +44,8 @@ You can install gpm either from source or download binary.
 
 ### Download binary
 
+At this time, we recommend you install from source.
+
 Because we don't have all kinds of operating systems, we need your help to complete following download list!(I'm just too lazy to cross compiling -_-|||)
 
 - darwin-386:
@@ -52,7 +55,7 @@ Because we don't have all kinds of operating systems, we need your help to compl
 - linux-386:
 - linux-amd64:
 - windows_386:
-- windows_amd64: [gpm0.1.5 Build 0523](https://docs.google.com/file/d/0B2GBHFyTK2N8Y241eUlKd01Ia1U/edit?usp=sharing)
+- windows_amd64: 
 
 **Attention** Because we use API to get information of packages that are hosted on github.com, but it limits 60 requests per hour, so you may get errors if you download too much(more than 50 packages per hour). We do not provider access token for security reason, but we do have configure option `github_access_token` in configuration file `conf/gpm.toml`, so you can go to [here](https://github.com/settings/applications) and create your personal access token(up to 5000 request per hour), and set it in `gpm.toml`.
 
@@ -75,6 +78,10 @@ Suppose you want to install package `github.com/GPMGoTest/install_test`, here tw
 - For `code.google.com`, `launchpad.net`, type is **ALWAYS** `commit`, and you can leave value blank which means up-to-date, or give it a certain value and you will download the same version of the package no matter how many times.
 - For `github.com`, `bitbucket.org`, type can be either `commit`, `branch` or `tag`, and give it corresponding value.
 - Now, you should have two packages which are `github.com/GPMGoTest/install_test` and `github.com/GPMGoTest/install_test2` in your computer.
+
+### Share?
+
+Copy and paste your bundle files to anyone else, nothing much!
 
 ## Build and run it
 
@@ -109,6 +116,14 @@ Suppose you want to check package `github.com/GPMGoTest/install_test`.
 
 - Switch work directory to package path.
 - Execute command `gpm check`.
+- That's it!
+
+## Search and find more
+
+Command `search` is for searching packages in [Go Walker](http://gowalker.org) database.
+
+- Execute command `gpm search mysql`.
+- Try it by yourself.
 
 ## Go further
 
