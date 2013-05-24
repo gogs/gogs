@@ -12,6 +12,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -111,7 +112,7 @@ var commands = []*Command{
 // getAppPath returns application execute path for current process.
 func getAppPath() bool {
 	// Look up executable in PATH variable.
-	appPath, _ = exec.LookPath("gpm")
+	appPath, _ = exec.LookPath(path.Base(os.Args[0]))
 	if len(appPath) == 0 {
 		fmt.Printf("ERROR: getAppPath -> Unable to indicate current execute path.\n")
 		return false

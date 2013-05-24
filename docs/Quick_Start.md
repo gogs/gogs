@@ -6,7 +6,7 @@ Full documentation please visit [GPMGo Documentation]()(Haven't done yet!).
 
 - [When and why](#when-and-why)
 - [Installation](#installation)
-- [ **install** package, or packages](#install-package-or-packages)
+- [ **Install** package, or packages](#install-package-or-packages)
 - [ **Build** and run it](#build-and-run-it)
 - [ **Remove** package, or packages](#remove-package-or-packages)
 - [ Use **check** to check dependencies](#use-check-to-check-dependencies)
@@ -59,7 +59,7 @@ Because we don't have all kinds of operating systems, we need your help to compl
 
 **Attention** Because we use API to get information of packages that are hosted on github.com, but it limits 60 requests per hour, so you may get errors if you download too much(more than 50 packages per hour). We do not provider access token for security reason, but we do have configure option `github_access_token` in configuration file `conf/gpm.toml`, so you can go to [here](https://github.com/settings/applications) and create your personal access token(up to 5000 request per hour), and set it in `gpm.toml`.
 
-## Download and install package, or packages
+## Install package, or packages
 
 Command `install` downloads and installs packages along with all dependencies(except when you use bundle or snapshot).
 
