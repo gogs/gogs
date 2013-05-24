@@ -1,15 +1,14 @@
-remove packages and dependencies|||
-Remove removes the packages named by the import paths,
-along with their dependencies.
+删除 Go 包及其依赖包|||
+Remove 命令删除 Go 包及其依赖包.
 
-The remove flags are:
+下列参数可用于 remove 命令:
 
 
-The list flags accept a space-separated list of strings. To embed spaces
-in an element in the list, surround it with either single or double quotes.
+多个参数通过空格来间隔.
 
-For more about specifying packages, see 'go help packages'.
-For more about bundle, see 'gpm help bundle'.
-For more about snapshot, see 'gpm help snapshot'.
 
-See also: gpm install.
+获取更多有关包的信息，参见 'go help packages'.
+获取更多有关集合的信息，参见 'gpm help bundle'.
+获取更多有关快照的信息，参见 'gpm help snapshot'.
+
+相关主题: gpm install.

@@ -1,9 +1,7 @@
-check packages dependencies|||
-Check checks packages dependencies if have been installed
-and generate configure file.
+检查安装依赖包|||
+Check 命令用于检查并安装缺失的依赖包，并生成依赖配置文件.
 
-The check flags are:
+下列参数可用于 check 命令:
 
 
-The list flags accept a space-separated list of strings. To embed spaces
-in an element in the list, surround it with either single or double quotes.
+多个参数通过空格来间隔.

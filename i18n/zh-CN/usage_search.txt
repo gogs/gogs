@@ -1,8 +1,7 @@
-search packages|||
-Search searchs packages by keyword.
+搜索 Go 包|||
+Search 命令通过关键字搜索 Go 包.
 
-The search flags are:
+下列参数可用于 search 命令:
 
 
-The list flags accept a space-separated list of strings. To embed spaces
-in an element in the list, surround it with either single or double quotes.
+多个参数通过空格来间隔.

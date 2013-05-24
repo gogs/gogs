@@ -4,5 +4,4 @@ Search searchs packages by keyword.
 The search flags are:
 
 
-The list flags accept a space-separated list of strings. To embed spaces
-in an element in the list, surround it with either single or double quotes.
+The list flags accept a space-separated list of strings.

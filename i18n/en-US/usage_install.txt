@@ -20,8 +20,7 @@ The install flags are:
 	-s
 		download from sources.
 
-The list flags accept a space-separated list of strings. To embed spaces
-in an element in the list, surround it with either single or double quotes.
+The list flags accept a space-separated list of strings.
 
 For more about specifying packages, see 'go help packages'.
 For more about bundle, see 'gpm help bundle'.

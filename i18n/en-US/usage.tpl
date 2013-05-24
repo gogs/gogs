@@ -1,4 +1,4 @@
-gpm is a Go package manage tool for search, install, update and share packages.
+gpm(Go Package Manager) is a Go package manage tool for search, install, update, share packages.
 
 Usage:
 

@@ -2,14 +2,6 @@ compile and install packages and dependencies|||
 Build compiles and installs the packages named by the import paths,
 along with their dependencies.
 
-If the arguments are a list of .go files, build treats them as a list
-of source files specifying a single package.
-
-When the command line specifies a single main package,
-build writes the resulting executable to output.
-Otherwise build compiles the packages but discards the results,
-serving only as a check that the packages can be built.
-
 If the package is main, the output file
 name is the base name of the containing directory.
 
@@ -20,8 +12,7 @@ The build flags are shared by the build and test commands:
 	-r
 		run program after built.
 
-The list flags accept a space-separated list of strings. To embed spaces
-in an element in the list, surround it with either single or double quotes.
+The list flags accept a space-separated list of strings.
 
 For more about specifying packages, see 'go help packages'.
 

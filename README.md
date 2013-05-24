@@ -23,6 +23,7 @@ This application still in experiment, any change could happen, but it doesn't af
 - `search` searchs packages in [Go Walker](http://gowalker.org) database by keyword.
 - `install` downloads and installs packages and dependencies: you can download packages without version control tools like git, hg, svn, etc. It downloads and installs all packages including all dependencies automatically(except when you use bundle or snapshot). For now, this command supports `code.google.com`, `github.com`, `launchpad.net`, `bitbucket.org`. 
 - `remove` removes packages and dependencies: it removes all packages including all dependencies(except when you use bundle or snapshot).
+- `check` checks dependencies of packages, and install all missing as a choose.
 
 ## Known issues
 
@@ -32,7 +33,6 @@ This application still in experiment, any change could happen, but it doesn't af
 
 ### v0.2.*
 
-- i18n support for Chinese.
 - Add template projects for testing commands.
 - Add feature auto-catch if run under GOPATH/bin.
 

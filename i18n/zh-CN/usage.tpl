@@ -1,18 +1,18 @@
-gpm is a Go package manage tool for search, install, update and share packages.
+gpm（Go 包管理工具） 是一款涵盖搜索、安装、更新、分享功能 Go 包的管理工具。
 
-Usage:
+用法:
 
-	gpm command [arguments]
+	gpm 命令 [参数]
 
-The commands are:
+命令列表:
 {{range .}}{{if .Runnable}}
     {{.Name | printf "%-11s"}} {{.Short}}{{end}}{{end}}
 
-Use "gpm help [command]" for more information about a command.
+使用 "gpm help [命令]" 来获取相关命令的更多信息.
 
-Additional help topics:
+其它帮助主题:
 {{range .}}{{if not .Runnable}}
     {{.Name | printf "%-11s"}} {{.Short}}{{end}}{{end}}
 
-Use "gpm help [topic]" for more information about that topic.
+使用 "gpm help [主题]" 来获取相关主题的更多信息.
 
