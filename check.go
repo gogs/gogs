@@ -64,7 +64,7 @@ func runCheck(cmd *Command, args []string) {
 
 	for _, v := range imports {
 		// Make sure it doesn't belong to same project.
-		if !strings.HasPrefix(v, importPath) {
+		if utils.GetProjectPath(v) != utils.GetProjectPath(importPath) {
 			for _, p := range paths {
 				if utils.IsExist(p + "/src/" + v + "/") {
 					isInstalled = true

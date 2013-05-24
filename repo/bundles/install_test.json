@@ -1,0 +1,22 @@
+{
+	"id": 0,
+    "user_id": 0,
+	"bundle_name": "test",
+	"comment": "just a test",
+	"timestamp": 0,
+	"nodes": [
+		{
+			"import_path": "github.com/GPMGoTest/install_test",
+			"type": "branch",
+			"value": "master",
+			"deps": [
+				{
+					"import_path": "github.com/GPMGoTest/install_test2",
+					"type": "branch",
+					"value": "master",
+					"deps": null
+				}
+			]
+		}
+	]
+}

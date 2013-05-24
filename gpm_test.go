@@ -7,26 +7,33 @@ package main
 import (
 	"fmt"
 	"testing"
+	"time"
 )
 
 func TestGPM(t *testing.T) {
-	fmt.Println("gpm v0.1.5 Build 0523")
+	fmt.Println("gpm v0.2.0 Build 0524")
 
+	fmt.Println("\nBuilding gpm application...")
 	// Build application.
 	var args []string
 	args = append(args, "build")
 	executeCommand("go", args)
 
-	fmt.Println("Start testing command Install...")
+	fmt.Println("\nStart testing command Install...")
+	fmt.Println("This package depends on `install_test2`.")
+	time.Sleep(2 * time.Second)
 	args = make([]string, 0)
 	args = append(args, "install")
 	args = append(args, "-p")
-	args = append(args, "bitbucket.org/zombiezen/gopdf/pdf")
+	args = append(args, "github.com/GPMGoTest/install_test")
 	executeCommand("gpm", args)
 
-	fmt.Println("Start testing command Remove...")
+	fmt.Println("\nStart testing command Remove...")
+	fmt.Println("Let's remove `install_test` and `install_test2`.")
+	time.Sleep(2 * time.Second)
 	args = make([]string, 0)
 	args = append(args, "remove")
-	args = append(args, "bitbucket.org/zombiezen/gopdf/pdf")
+	args = append(args, "github.com/GPMGoTest/install_test")
+	args = append(args, "github.com/GPMGoTest/install_test2")
 	executeCommand("gpm", args)
 }

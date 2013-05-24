@@ -127,15 +127,21 @@ func GetGithubDoc(client *http.Client, match map[string]string, installGOPATH st
 		// Create diretory before create file.
 		os.MkdirAll(path.Dir(absPath)+"/", os.ModePerm)
 
+	compareDir:
 		switch {
 		case strings.HasSuffix(absPath, "/"): // Directory.
 			// Check if current directory is example.
 			if !(!cmdFlags["-e"] && strings.Contains(absPath, "example")) {
+				for _, d := range dirs {
+					if d == absPath {
+						break compareDir
+					}
+				}
 				dirs = append(dirs, absPath)
 			}
 		case isCodeOnly && !utils.IsDocFile(path.Base(absPath)):
 			continue
-		default:
+		case !strings.HasPrefix(f.FileInfo().Name(), "."):
 			// Get file from archive.
 			rc, err := f.Open()
 			if err != nil {

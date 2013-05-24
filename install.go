@@ -298,6 +298,7 @@ func downloadPackage(node *doc.Node) (*doc.Node, []string) {
 		downloadCache[node.ImportPath] = true
 
 		imports, err := pureDownload(node)
+
 		if err != nil {
 			fmt.Printf(fmt.Sprintf("%s\n", promptMsg["DownloadError"]), node.ImportPath, err)
 			return nil, nil

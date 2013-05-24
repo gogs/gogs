@@ -99,6 +99,8 @@ func GetGoogleDoc(client *http.Client, match map[string]string, installGOPATH st
 		fname := strings.Split(string(m[1]), "?")[0]
 		if isCodeOnly && !utils.IsDocFile(fname) {
 			continue
+		} else if strings.HasPrefix(fname, ".") {
+			continue
 		}
 
 		files = append(files, &source{

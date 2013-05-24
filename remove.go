@@ -58,8 +58,6 @@ func runRemove(cmd *Command, args []string) {
 		return
 	}
 	fw.Write(fbytes)
-
-	fmt.Println("Well done.")
 }
 
 // removePackages removes packages from local file system.

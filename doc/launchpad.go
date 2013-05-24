@@ -101,7 +101,7 @@ func GetLaunchpadDoc(client *http.Client, match map[string]string, installGOPATH
 			}
 		case isCodeOnly && !utils.IsDocFile(path.Base(absPath)):
 			continue
-		default:
+		case !strings.HasPrefix(fn, "."):
 			// Create diretory before create file.
 			os.MkdirAll(path.Dir(absPath)+"/", os.ModePerm)
 

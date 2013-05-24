@@ -15,6 +15,7 @@ This application still in experiment, any change could happen, but it doesn't af
 
 - Download packages from popular project hosting with/without version control tools.
 - Remove packages from local file system.
+- Check package dependencies and download missing ones.
 - More specific examples, see [Quick Start](docs/Quick_Start.md).
 
 ## Main commands
@@ -28,12 +29,12 @@ This application still in experiment, any change could happen, but it doesn't af
 ## Known issues
 
 - When you use commands like `gpm install -p bitbucket.org/zombiezen/gopdf` where is project root path but the directory doesn't contain any source files, you will get error in the installation step, you have to use `gpm install -p bitbucket.org/zombiezen/gopdf/pdf` in order to go through all steps correctly.
+- Cannot remove `.git` with error `access is denied`.
 
 ## Todo
 
 ### v0.2.*
 
-- Add template projects for testing commands.
 - Add feature auto-catch if run under GOPATH/bin.
 
 ### Future

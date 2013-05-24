@@ -2,37 +2,44 @@
 
 **Attention** Features like bundle and snapshot have NOT been published for users.
 
-Full documentation please visit [GPMGo Documentation]().
+Full documentation please visit [GPMGo Documentation]()(Haven't done yet!).
 
 ## Index
 
 - [When and why](#when-and-why)
 - [Installation](#installation)
-- [ **Build** your first project](#build-your-first-project)
-- [ Download and **install** package, or packages](#download-and-install-package,-or-packages)
-- [ **Remove** package, or packages](#remove-package,-or-packages)
+- [ **install** package, or packages](#install-package-or-packages)
+- [ **Build** and run it](#build-and-run-it)
+- [ **Remove** package, or packages](#remove-package-or-packages)
+- [ Use **check** to check dependencies](#use-check-to-check-dependencies)
 
 ## When and why
 
-- No version control tool are installed, too lazy to have it? 
+### Lightweight version control
+
+Unlike large version control system like git, hg, or svn, you don't have to install any version control tool for using gpm; you are still able to download and install packages that you prefer to.
+
+### Not only project, but dependencies!
 	
-	Go get gpm!
+With gpm, it's much easier to control dependencies version of your packages specifically. All you need to do is that indicate version either by tag, branch or commit of your dependencies, and leave rest of work to gpm!
 
-- Killer feature over `go get`? 
+### Killer feature over `go get`? 
 
-	There is almost nothing better than `go get` until we make feature bundle and snapshot be available to you.
+`go get` gives great advantages of package installation in Go, but the only thing it's missing is version control of dependencies.
 
-	
+### How's configuration file looks like?
+
+In gpm, we call `bundle` for this kind of files, here is an example of a [bundle](https://github.com/GPMGo/gpm/blob/master/repo/bundles/test_bundle.json), don't get it? It's fine, we'll talk about it more just one second.
 
 ## Installation
 
-You can install either from source or download binary. 
+You can install gpm either from source or download binary. 
 
 ### Install from source
 
 - gpm is a `go get` able project: execute command `go get github.com/GPMGo/gpm` to download and install.
 - Run test: switch work directory to gpm project, and execute command `go test` to build and test commands automatically(for now, tested commands are `gpm install`, `gpm remove`).
-- Add gpm project path to your environment variable `PATH` in order to execute it from other directories.
+- Add gpm project path to your environment variable `PATH` in order to execute it in other directories.
 
 ### Download binary
 
@@ -49,37 +56,63 @@ Because we don't have all kinds of operating systems, we need your help to compl
 
 **Attention** Because we use API to get information of packages that are hosted on github.com, but it limits 60 requests per hour, so you may get errors if you download too much(more than 50 packages per hour). We do not provider access token for security reason, but we do have configure option `github_access_token` in configuration file `conf/gpm.toml`, so you can go to [here](https://github.com/settings/applications) and create your personal access token(up to 5000 request per hour), and set it in `gpm.toml`.
 
-## Build your first project
-
-Command `build` compiles and installs packages along with all dependencies.
-
-Suppose you have a project called `github.com/GPMGo/gpm`.
-
-- Switch to corresponding directory: `cd $GOPATH/src/github.com/GPMGo/gpm`.
-- Execute command `gpm build`.
-- Then, gpm calls `go install` in underlying, so you should have binary `$GOPATH/bin/gpm`.
-- gpm moves binary from corresponding GOPATH to current which is `$GOPATH/src/github.com/GPMGo/` in this case, now just run your application.
-
-### Why we do this?
-
-In some cases like building web applications, we use relative path to access static files, and `go build` compiles packages without saving, so it's a shortcut for `go install` + `go build`, and you don't need to compile packages which have not changed again.
-
-Also, you can use all flags that are used for `go install`.
-
 ## Download and install package, or packages
 
 Command `install` downloads and installs packages along with all dependencies(except when you use bundle or snapshot).
 
-Suppose you want to install package `bitbucket.org/zombiezen/gopdf/pdf`.
+Suppose you want to install package `github.com/GPMGoTest/install_test`, here two ways to do it:
 
-- Execute command `gpm install -p bitbucket.org/zombiezen/gopdf/pdf`, flag `-p` means **pure download** (download packages without version control), so you do not need to install version control tool. In case you want to, `gpm install bitbucket.org/zombiezen/gopdf/pdf` calls `go get` in underlying.
-- gpm tells your which GOPATH will be used for saving packages, and it checks your current execute path to get best matched path in your GOPATH environment variable.
+### Install like `go get`
+
+- Execute command `gpm install -p github.com/GPMGoTest/install_test`, flag `-p` means **pure download** (download packages without version control), so you do not need to install version control tool. In case you want to, `gpm install github.com/GPMGoTest/install_test` calls `go get` in underlying.
+
+### Install through bundle
+
+- It's still not cool enough to download and install packages with import path, let's try execute command `gpm install -p test.b`, see what happens? 
+- Where is the `test.b` comes from? We actually created a bundle for you in directory `repo/bundles/`, and all bundles should be put there. 
+- This is how bundle works, you can open it and see what's inside, it includes import path, type, value and dependencies.
+- The `test.b` means the bundle whose name is `test`, if you want to use bundle, you have to add suffix `.b`. You may notice that our file name is `install_test.json`, why is `test`? Because we use `bundle_name` inside file, file name doesn't mean anything unless you leave `bundle_name` blank, then the file name becomes bundle name automatically, but be sure that all bundle file name should use JSON and suffix `.json`.
+- For `code.google.com`, `launchpad.net`, type is **ALWAYS** `commit`, and you can leave value blank which means up-to-date, or give it a certain value and you will download the same version of the package no matter how many times.
+- For `github.com`, `bitbucket.org`, type can be either `commit`, `branch` or `tag`, and give it corresponding value.
+- Now, you should have two packages which are `github.com/GPMGoTest/install_test` and `github.com/GPMGoTest/install_test2` in your computer.
+
+## Build and run it
+
+Command `build` compiles and installs packages along with all dependencies.
+
+Let's switch work directory to package `github.com/GPMGoTest/install_test`.
+
+- Execute command `gpm build -r`.
+- After built, you should see string `Welcome to use gpm(Go Package Manager)!` was printed on the screen.
+- Then, gpm calls `go install` in underlying, so you should have binary `$GOPATH/bin/install_test`, then gpm moves it to current directory.
+- Flag `-r` means run after built, so you saw the string was printed.
+
+### Why we do this?
+
+In some cases like building web applications, we use relative path to access static files, and `go build` compiles packages without saving, so it's a shortcut for `go install` + `go build` + `go run`, and you don't need to compile packages again for those have not changed.
 
 ## Remove package, or packages
 
-Command `remove` removes packages from your local file system(except when you use bundle or snapshot).
+Command `remove` removes packages from your local file system.
 
-Suppose you want to remove package `bitbucket.org/zombiezen/gopdf/pdf`.
+Suppose you want to remove package `github.com/GPMGoTest/install_test2/subpkg`.
 
-- Execute command `gpm remove bitbucket.org/zombiezen/gopdf/pdf`, gpm finds this project in all paths in your GOPATH environment.
-- You may notice this is not project path, it's OK because gpm knows it, and deletes directory `$GOPATH/src/bitbucket.org/zombiezen/gopdf/`.
+- Execute command `gpm remove github.com/GPMGoTest/install_test2/subpkg`, gpm finds this project in all paths in your GOPATH environment.
+- You may notice this is not project path, it's OK because gpm knows it, and deletes directory `$GOPATH/src/github.com/GPMGoTest/install_test2/`, this command delete files in `$GOPATH/bin` and `$GOPATH/pkg` as well.
+- You can also use `gpm remove test.b` to remove all packages are included in bundle, but we don't need here because we have one more cool stuff to try.
+
+## Use check to check dependencies
+
+Command `check` checks package dependencies and installs missing ones.
+
+Suppose you want to check package `github.com/GPMGoTest/install_test`.
+
+- Switch work directory to package path.
+- Execute command `gpm check`.
+
+## Go further
+
+- Online full documentation is still working, I'm sorry about that. 
+- Give us your feedback, these things matters.
+- Join us and get better together.
+- Contact: [gpmgo.com@gmail.com](mailto:gpmgo.com@gmail.com).

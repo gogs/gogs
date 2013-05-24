@@ -139,6 +139,8 @@ func GetBitbucketDoc(client *http.Client, match map[string]string, installGOPATH
 
 		if isCodeOnly && !utils.IsDocFile(path.Base(absPath)) {
 			continue
+		} else if strings.HasPrefix(fn, ".") {
+			continue
 		}
 
 		// Get data from archive.
