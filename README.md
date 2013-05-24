@@ -35,8 +35,6 @@ This application still in experiment, any change could happen, but it doesn't af
 
 ### v0.2.*
 
-- Add feature auto-catch if run under GOPATH/bin.
-
 ### Future
 
 - Command `check` add feature to update or generate gopack.json.
