@@ -35,9 +35,7 @@ This application still in experiment, any change could happen, but it doesn't af
 
 ### v0.3.*
 
-- Command `search` add flag `-a` to show results of sub-packages, not just search by project name.
 - Command `install` and `remove` give number to let user choose operate one package.
-- Command `search` add flags `-n` and `-o` for number of list items and offset.
 - Command `check` add feature to update or generate gopack.json.
 - Command `install` generates dependencies configuration file.
 - Command `install` save tarball add support for packages in code.google.com, bitbucket.org, launchpad.net, git.oschina.net, gitcafe.com, *.codeplex.com.
@@ -48,7 +46,6 @@ This application still in experiment, any change could happen, but it doesn't af
 
 ### Future
 
-- Command `search` show installed prompt.
 - Command `home` and `doc`.
 - Command `remove` add flag `-d` for removing dependencies at the same time.
 - Command `remove` add feature check for dependencies, make sure other packages don't import this one, and give choose for users.

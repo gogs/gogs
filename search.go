@@ -52,19 +52,46 @@ func runSearch(cmd *Command, args []string) {
 
 	resultStr := string(results)
 
-	if runtime.GOOS != "windows" {
+	isWindws := runtime.GOOS == "windows"
+	if !isWindws {
 		// Set color highlight.
-		resultStr = strings.Replace(resultStr, args[0], fmt.Sprintf(utils.PureStartColor, utils.Yellow)+args[0]+utils.EndColor, -1)
+		resultStr = strings.Replace(resultStr, args[0],
+			fmt.Sprintf(utils.PureStartColor, utils.Yellow)+args[0]+utils.EndColor, -1)
 	}
 
+	pkgsCache := make(map[string]string)
+	paths := utils.GetGOPATH()
 	pkgs := strings.Split(resultStr, "|||")
 	for _, p := range pkgs {
 		i := strings.Index(p, "$")
 		if i > -1 {
-			fmt.Println("-> " + p[:i]) // Package import path.
-			if len(p) > (i + 1) {
-				fmt.Println("        " + p[i+1:]) // Synopsis。
+			// Do not display standard library.
+			if !utils.IsGoRepoPath(p[:i]) {
+				pkgsCache[utils.GetProjectPath(p[:i])] = p[i+1:]
 			}
+		}
+	}
+
+	for k, v := range pkgsCache {
+		fmt.Print("-> " + k) // Package import path.
+		// Check if has been installed.
+		for _, path := range paths {
+			if checkIsExistWithVCS(path + "/src/" + k + "/") {
+				installStr := " [Installed]"
+				if !isWindws {
+					installStr = strings.Replace(installStr, "[",
+						fmt.Sprintf("[\033[%dm", utils.Green), 1)
+					installStr = strings.Replace(installStr, "]",
+						utils.EndColor+"]", 1)
+				}
+				fmt.Print(installStr)
+				break
+			}
+		}
+		fmt.Print("\n")
+
+		if len(v) > 0 {
+			fmt.Println("        " + v) // Synopsis。
 		}
 	}
 }
