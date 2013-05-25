@@ -5,7 +5,7 @@ gopm - Go Package Manager
 
 gopm(Go Package Manager) is a Go package manage tool for search, install, update, share and backup packages in Go.
 
-[![Build Status](https://travis-ci.org/GPMGo/gpm.png)](https://travis-ci.org/GPMGo/gpm) [![Build Status](https://drone.io/github.com/GPMGo/gpm/status.png)](https://drone.io/github.com/GPMGo/gpm/latest) [![Coverage Status](https://coveralls.io/repos/GPMGo/gpm/badge.png)](https://coveralls.io/r/GPMGo/gpm)
+[![Build Status](https://travis-ci.org/GPMGo/gopm.png?branch=master)](https://travis-ci.org/GPMGo/gopm) [![Build Status](https://drone.io/github.com/GPMGo/gpm/status.png)](https://drone.io/github.com/GPMGo/gpm/latest) [![Coverage Status](https://coveralls.io/repos/GPMGo/gpm/badge.png)](https://coveralls.io/r/GPMGo/gpm)
 
 (Travis CI hasn't support Go 1.1 yet)
 
@@ -35,6 +35,7 @@ This application still in experiment, any change could happen, but it doesn't af
 
 ### v0.3.*
 
+- Command `search` result add keyword highlight.
 - Command `install` and `remove` give number to let user choose operate one package.
 - Command `search` add flags `-n` and `-o` for number of list items and offset.
 - Command `check` add feature to update or generate gopack.json.
@@ -47,6 +48,8 @@ This application still in experiment, any change could happen, but it doesn't af
 
 ### Future
 
+- Command `search` show installed prompt.
+- Command `home` and `doc`.
 - Command `remove` add flag `-d` for removing dependencies at the same time.
 - Command `remove` add feature check for dependencies, make sure other packages don't import this one, and give choose for users.
 - Command `update` is for checking updates.
