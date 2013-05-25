@@ -57,13 +57,13 @@ func runBuild(cmd *Command, args []string) {
 			if utils.IsExist(wd + "/" + proName) {
 				err := os.Remove(wd + "/" + proName)
 				if err != nil {
-					fmt.Printf(fmt.Sprintf("ERROR: %s\n", promptMsg["RemoveFile"]), err)
+					utils.ColorPrint(fmt.Sprintf(fmt.Sprintf("[ERROR] %s\n", promptMsg["RemoveFile"]), err))
 					return
 				}
 			}
 			err := os.Rename(v+"/bin/"+proName, wd+"/"+proName)
 			if err == nil {
-				fmt.Printf(fmt.Sprintf("%s\n", promptMsg["MovedFile"]), v, wd)
+				utils.ColorPrint(fmt.Sprintf(fmt.Sprintf("<SUCCESS>$ %s\n", promptMsg["MovedFile"]), v, wd))
 				// Check if need to run program.
 				if cmdBuild.Flags["-r"] {
 					cmdArgs = make([]string, 0)

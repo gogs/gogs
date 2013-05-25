@@ -120,7 +120,7 @@ func runInstall(cmd *Command, args []string) {
 	checkVCSTool()
 
 	installGOPATH = utils.GetBestMatchGOPATH(appPath)
-	fmt.Printf(fmt.Sprintf("%s\n", promptMsg["DownloadPath"]), installGOPATH)
+	utils.ColorPrint(fmt.Sprintf(fmt.Sprintf("%s\n", promptMsg["DownloadPath"]), installGOPATH))
 
 	// Generate temporary nodes.
 	nodes := make([]*doc.Node, len(args))
@@ -153,13 +153,13 @@ func runInstall(cmd *Command, args []string) {
 		// Save local nodes to file.
 		fw, err := os.Create(appPath + "data/nodes.json")
 		if err != nil {
-			fmt.Printf(fmt.Sprintf("ERROR: runInstall -> %s\n", promptMsg["OpenFile"]), err)
+			utils.ColorPrint(fmt.Sprintf(fmt.Sprintf("[ERROR] runInstall -> %s\n", promptMsg["OpenFile"]), err))
 			return
 		}
 		defer fw.Close()
 		fbytes, err := json.MarshalIndent(&localNodes, "", "\t")
 		if err != nil {
-			fmt.Printf(fmt.Sprintf("ERROR: runInstall -> %s\n", promptMsg["ParseJSON"]), err)
+			utils.ColorPrint(fmt.Sprintf(fmt.Sprintf("[ERROR] runInstall -> %s\n", promptMsg["ParseJSON"]), err))
 			return
 		}
 		fw.Write(fbytes)
@@ -204,7 +204,7 @@ func downloadPackages(nodes []*doc.Node) {
 			bnodes := checkLocalBundles(n.ImportPath[:l-2])
 			if len(bnodes) > 0 {
 				// Check with users if continue.
-				fmt.Printf(fmt.Sprintf("%s\n", promptMsg["BundleInfo"]), n.ImportPath[:l-2])
+				utils.ColorPrint(fmt.Sprintf(fmt.Sprintf("%s\n", promptMsg["BundleInfo"]), n.ImportPath[:l-2]))
 				for _, bn := range bnodes {
 					fmt.Printf("[%s] -> %s: %s.\n", bn.ImportPath, bn.Type, bn.Value)
 				}
@@ -293,7 +293,7 @@ func downloadPackage(node *doc.Node) (*doc.Node, []string) {
 		imports, err := pureDownload(node)
 
 		if err != nil {
-			fmt.Printf(fmt.Sprintf("%s\n", promptMsg["DownloadError"]), node.ImportPath, err)
+			utils.ColorPrint(fmt.Sprintf(fmt.Sprintf("[ERROR] %s\n", promptMsg["DownloadError"]), node.ImportPath, err))
 			return nil, nil
 		}
 

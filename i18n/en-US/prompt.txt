@@ -13,7 +13,7 @@ ErrNoMatch=Unsupported project hosting.
 PackageNotFound=Cannot find package: %s.
 CheckImports=Fail to check dependencies[ %s ]
 
-MovedFile=SUCCESS: Moved file from $GOPATH(%s) to current directory(%s).
+MovedFile=Moved file from $GOPATH(%s) to current directory(%s).
 PureDownload=You enabled download with version control.
 DownloadOnly=You enabled download without installing.
 DownloadExDeps=You enabled download dependencies in example.

@@ -52,7 +52,7 @@ func runCheck(cmd *Command, args []string) {
 	importPath := wd[len(gopath):]
 	imports, err := checkImportsByRoot(wd+"/", importPath)
 	if err != nil {
-		fmt.Printf(fmt.Sprintf("runCheck -> %s\n", promptMsg["CheckImports"]), err)
+		utils.ColorPrint(fmt.Sprintf(fmt.Sprintf("runCheck -> %s\n", promptMsg["CheckImports"]), err))
 		return
 	}
 
@@ -98,7 +98,7 @@ func runCheck(cmd *Command, args []string) {
 		}
 
 		installGOPATH = utils.GetBestMatchGOPATH(appPath)
-		fmt.Printf(fmt.Sprintf("%s\n", promptMsg["DownloadPath"]), installGOPATH)
+		utils.ColorPrint(fmt.Sprintf(fmt.Sprintf("%s\n", promptMsg["DownloadPath"]), installGOPATH))
 		// Generate temporary nodes.
 		nodes := make([]*doc.Node, len(uninstallList))
 		for i := range nodes {
@@ -166,7 +166,7 @@ func checkIsExistWithVCS(path string) bool {
 	// Check if only has VCS folder.
 	dirs, err := utils.GetDirsInfo(path)
 	if err != nil {
-		fmt.Printf("checkIsExistWithVCS -> [ %s ]", err)
+		utils.ColorPrint(fmt.Sprintf("[ERROR] checkIsExistWithVCS -> [ %s ]", err))
 		return false
 	}
 

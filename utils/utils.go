@@ -15,7 +15,6 @@ import (
 
 const (
 	PureStartColor = "\033[%dm"
-	StartColor     = "(\033[%dm"
 	Gray           = uint8(90)
 	Red            = uint8(91)
 	Green          = uint8(92)
@@ -31,10 +30,12 @@ const (
 func ColorPrint(log string) {
 	// Make sure it's not windows.
 	if runtime.GOOS != "windows" {
-		log = strings.Replace(log, "[", fmt.Sprintf(StartColor, Red), -1)
+		log = strings.Replace(log, "[", fmt.Sprintf("[\033[%dm", Red), -1)
 		log = strings.Replace(log, "]", EndColor+"]", -1)
-		log = strings.Replace(log, "(", fmt.Sprintf(StartColor, Green), -1)
+		log = strings.Replace(log, "(", fmt.Sprintf("(\033[%dm", Yellow), -1)
 		log = strings.Replace(log, ")", EndColor+")", -1)
+		log = strings.Replace(log, "<", fmt.Sprintf("[\033[%dm", Green), -1)
+		log = strings.Replace(log, ">$", EndColor+"]", -1)
 	}
 	fmt.Print(log)
 }

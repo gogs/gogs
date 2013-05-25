@@ -48,13 +48,13 @@ func runRemove(cmd *Command, args []string) {
 	// Save local nodes to file.
 	fw, err := os.Create(appPath + "data/nodes.json")
 	if err != nil {
-		fmt.Printf(fmt.Sprintf("ERROR: runRemove -> %s\n", promptMsg["OpenFile"]), err)
+		utils.ColorPrint(fmt.Sprintf(fmt.Sprintf("[ERROR] runRemove -> %s\n", promptMsg["OpenFile"]), err))
 		return
 	}
 	defer fw.Close()
 	fbytes, err := json.MarshalIndent(&localNodes, "", "\t")
 	if err != nil {
-		fmt.Printf(fmt.Sprintf("ERROR: runRemove -> %s\n", promptMsg["ParseJSON"]), err)
+		utils.ColorPrint(fmt.Sprintf(fmt.Sprintf("[ERROR] runRemove -> %s\n", promptMsg["ParseJSON"]), err))
 		return
 	}
 	fw.Write(fbytes)
@@ -72,7 +72,7 @@ func removePackages(nodes []*doc.Node) {
 			bnodes := checkLocalBundles(n.ImportPath[:l-2])
 			if len(bnodes) > 0 {
 				// Check with users if continue.
-				fmt.Printf(fmt.Sprintf("%s\n", promptMsg["BundleInfo"]), n.ImportPath[:l-2])
+				utils.ColorPrint(fmt.Sprintf(fmt.Sprintf("%s\n", promptMsg["BundleInfo"]), n.ImportPath[:l-2]))
 				for _, bn := range bnodes {
 					fmt.Printf("[%s] -> %s: %s.\n", bn.ImportPath, bn.Type, bn.Value)
 				}
