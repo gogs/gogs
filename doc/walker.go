@@ -20,7 +20,7 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/GPMGo/gpm/utils"
+	"github.com/GPMGo/gopm/utils"
 )
 
 type sliceWriter struct{ p *[]byte }

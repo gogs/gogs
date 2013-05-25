@@ -15,5 +15,5 @@ Build 命令编译并安装 Go 包以及其依赖包.
 
 获取更多有关包的信息，参见 'go help packages'.
 
-相关主题: gpm install.
+相关主题: gopm install.
 

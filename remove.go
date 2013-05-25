@@ -11,8 +11,8 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/GPMGo/gpm/doc"
-	"github.com/GPMGo/gpm/utils"
+	"github.com/GPMGo/gopm/doc"
+	"github.com/GPMGo/gopm/utils"
 )
 
 var (

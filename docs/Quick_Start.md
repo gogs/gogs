@@ -42,7 +42,7 @@ You can install gpm either from source or download binary.
 - Run test: switch work directory to gopm project, and execute command `go test` to build and test commands automatically(for now, tested commands are `gopm install`, `gopm remove`).
 - Add gopm project path to your environment variable `PATH` in order to execute it in other directories.
 
-**Attention** You can actually put binary in any path that has already existed in $PATH, so you don't need to add a new path to $PATH again.
+**Attention** If you install from source, you can actually put binary in any path that has already existed in $PATH, so you don't need to add a new path to $PATH again.
 
 ### Download binary
 

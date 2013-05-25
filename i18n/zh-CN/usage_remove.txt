@@ -8,7 +8,7 @@ Remove 命令删除 Go 包及其依赖包.
 
 
 获取更多有关包的信息，参见 'go help packages'.
-获取更多有关集合的信息，参见 'gpm help bundle'.
-获取更多有关快照的信息，参见 'gpm help snapshot'.
+获取更多有关集合的信息，参见 'gopm help bundle'.
+获取更多有关快照的信息，参见 'gopm help snapshot'.
 
-相关主题: gpm install.
+相关主题: gopm install.

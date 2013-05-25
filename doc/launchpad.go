@@ -15,7 +15,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/GPMGo/gpm/utils"
+	"github.com/GPMGo/gopm/utils"
 )
 
 var LaunchpadPattern = regexp.MustCompile(`^launchpad\.net/(?P<repo>(?P<project>[a-z0-9A-Z_.\-]+)(?P<series>/[a-z0-9A-Z_.\-]+)?|~[a-z0-9A-Z_.\-]+/(\+junk|[a-z0-9A-Z_.\-]+)/[a-z0-9A-Z_.\-]+)(?P<dir>/[a-z0-9A-Z_.\-/]+)*$`)

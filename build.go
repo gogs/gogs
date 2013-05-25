@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/GPMGo/gpm/utils"
+	"github.com/GPMGo/gopm/utils"
 )
 
 var cmdBuild = &Command{

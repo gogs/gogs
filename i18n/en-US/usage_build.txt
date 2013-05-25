@@ -16,4 +16,4 @@ The list flags accept a space-separated list of strings.
 
 For more about specifying packages, see 'go help packages'.
 
-See also: gpm install.
+See also: gopm install.

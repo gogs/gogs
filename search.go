@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/GPMGo/gpm/doc"
+	"github.com/GPMGo/gopm/doc"
 )
 
 var cmdSearch = &Command{

@@ -22,8 +22,8 @@ import (
 	"unicode/utf8"
 
 	"github.com/BurntSushi/toml"
-	"github.com/GPMGo/gpm/doc"
-	"github.com/GPMGo/gpm/utils"
+	"github.com/GPMGo/gopm/doc"
+	"github.com/GPMGo/gopm/utils"
 )
 
 var (
@@ -117,8 +117,8 @@ func getAppPath() bool {
 	if !utils.IsExist(appPath + "conf/") {
 		paths := utils.GetGOPATH()
 		for _, p := range paths {
-			if utils.IsExist(p + "/src/github.com/GPMGo/gpm/") {
-				appPath = p + "/src/github.com/GPMGo/gpm/"
+			if utils.IsExist(p + "/src/github.com/GPMGo/gopm/") {
+				appPath = p + "/src/github.com/GPMGo/gopm/"
 				break
 			}
 		}
@@ -288,7 +288,7 @@ func initialize() bool {
 	}
 
 	// Load configuration.
-	if _, err := toml.DecodeFile(appPath+"conf/gpm.toml", &config); err != nil {
+	if _, err := toml.DecodeFile(appPath+"conf/gopm.toml", &config); err != nil {
 		fmt.Printf("initialize -> Fail to load configuration[ %s ]\n", err)
 		return false
 	}
@@ -361,7 +361,7 @@ func setExitStatus(n int) {
 }
 
 var usageTemplate string
-var helpTemplate = `{{if .Runnable}}usage: gpm {{.UsageLine}}
+var helpTemplate = `{{if .Runnable}}usage: gopm {{.UsageLine}}
 
 {{end}}{{.Long | trim}}
 `
@@ -401,7 +401,7 @@ func help(args []string) {
 		return
 	}
 	if len(args) != 1 {
-		fmt.Fprintf(os.Stderr, "usage: gpm help command\n\nToo many arguments given.\n")
+		fmt.Fprintf(os.Stderr, "usage: gopm help command\n\nToo many arguments given.\n")
 		os.Exit(2) // failed at 'gpm help'
 	}
 
@@ -415,7 +415,7 @@ func help(args []string) {
 		}
 	}
 
-	fmt.Fprintf(os.Stderr, "Unknown help topic %#q.  Run 'gpm help'.\n", arg)
+	fmt.Fprintf(os.Stderr, "Unknown help topic %#q.  Run 'gopm help'.\n", arg)
 	os.Exit(2) // failed at 'go help cmd'
 }
 

@@ -12,7 +12,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/GPMGo/gpm/utils"
+	"github.com/GPMGo/gopm/utils"
 )
 
 var (
