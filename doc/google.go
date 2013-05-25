@@ -152,13 +152,7 @@ func GetGoogleDoc(client *http.Client, match map[string]string, installGOPATH st
 
 	// Check if need to check imports.
 	if isCheckImport {
-		rootdir, err := os.Open(installPath + "/")
-		if err != nil {
-			return nil, err
-		}
-		defer rootdir.Close()
-
-		dirs, err := rootdir.Readdir(0)
+		dirs, err := utils.GetDirsInfo(installPath + "/")
 		if err != nil {
 			return nil, err
 		}

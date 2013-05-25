@@ -124,6 +124,7 @@ func (w *walker) build(srcs []*source) ([]string, error) {
 		files[name] = file
 	}
 
+	w.ImportPath = strings.Replace(w.ImportPath, "\\", "/", -1)
 	var imports []string
 	for _, v := range bpkg.Imports {
 		// Skip strandard library.

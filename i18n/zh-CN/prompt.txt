@@ -34,3 +34,4 @@ NoKeyword=没有关键字，无法搜索.
 ContinueRemove=是否继续删除？(Y/n).
 InvalidPath=无法在当前目录中找到包.
 MissingImports=下列依赖包未找到:
+CheckExDeps=已激活示例代码依赖检查.

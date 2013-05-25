@@ -592,3 +592,19 @@ func IsDocFile(n string) bool {
 
 	return readmePat.MatchString(n) || licensePat.MatchString(n)
 }
+
+// GetDirsInfo returns os.FileInfo of all sub-directories in root path.
+func GetDirsInfo(rootPath string) ([]os.FileInfo, error) {
+	rootDir, err := os.Open(rootPath)
+	if err != nil {
+		return nil, err
+	}
+	defer rootDir.Close()
+
+	dirs, err := rootDir.Readdir(0)
+	if err != nil {
+		return nil, err
+	}
+
+	return dirs, err
+}

@@ -34,3 +34,4 @@ NoKeyword=Cannot search without a keyword.
 ContinueRemove=Continue to remove?(Y/n).
 InvalidPath=Cannot find package in current path.
 MissingImports=Following packages are missing:
+CheckExDeps=You enabled check dependencies in example.

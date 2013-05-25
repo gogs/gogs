@@ -142,18 +142,9 @@ func removePackage(node *doc.Node) (*doc.Node, []string) {
 				}
 			}
 
-			pkgPath := "/pkg/" + runtime.GOOS + "_" + runtime.GOARCH + "/" + node.ImportPath
-			// Remove file in GOPATH/pkg
-			if len(gopath) == 0 {
-				for _, v := range paths {
-					if utils.IsExist(v + pkgPath + "/") {
-						gopath = v
-					}
-				}
-			}
+			pkgList := []string{node.ImportPath}
+			removePackageFiles(gopath, pkgList)
 
-			os.RemoveAll(gopath + pkgPath + "/")
-			os.Remove(gopath + pkgPath + ".a")
 			return node, nil
 		}
 	}
@@ -161,4 +152,23 @@ func removePackage(node *doc.Node) (*doc.Node, []string) {
 	// Cannot find package.
 	fmt.Printf(fmt.Sprintf("%s\n", promptMsg["PackageNotFound"]), node.ImportPath)
 	return nil, nil
+}
+
+// removePackageFiles removes package files in $GOPATH/pkg.
+func removePackageFiles(gopath string, pkgList []string) {
+	var paths []string
+	// Check if need to find GOPATH.
+	if len(gopath) == 0 {
+		paths = utils.GetGOPATH()
+	} else {
+		paths = append(paths, gopath)
+	}
+
+	pkgPath := "/pkg/" + runtime.GOOS + "_" + runtime.GOARCH + "/"
+	for _, p := range pkgList {
+		for _, g := range paths {
+			os.RemoveAll(g + pkgPath + p + "/")
+			os.Remove(g + pkgPath + p + ".a")
+		}
+	}
 }

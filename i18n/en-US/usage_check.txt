@@ -4,5 +4,7 @@ and generate configure file.
 
 The check flags are:
 
+	-e
+		check dependencies for examples.
 
 The list flags accept a space-separated list of strings.

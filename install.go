@@ -12,7 +12,6 @@ import (
 	"os"
 	"os/exec"
 	"regexp"
-	"runtime"
 	"strings"
 
 	"github.com/GPMGo/gpm/doc"
@@ -136,20 +135,17 @@ func runInstall(cmd *Command, args []string) {
 	downloadPackages(nodes)
 
 	if !cmdInstall.Flags["-d"] && cmdInstall.Flags["-p"] {
+		// Remove old files.
+		uninstallList := make([]string, 0, len(downloadCache))
+		for k := range downloadCache {
+			uninstallList = append(uninstallList, k)
+		}
+		removePackageFiles("", uninstallList)
+
 		// Install packages all together.
 		var cmdArgs []string
 		cmdArgs = append(cmdArgs, "install")
 		cmdArgs = append(cmdArgs, "<blank>")
-
-		paths := utils.GetGOPATH()
-		pkgPath := "/pkg/" + runtime.GOOS + "_" + runtime.GOARCH + "/"
-		for k := range downloadCache {
-			// Delete old packages.
-			for _, p := range paths {
-				os.RemoveAll(p + pkgPath + k + "/")
-				os.Remove(p + pkgPath + k + ".a")
-			}
-		}
 
 		for k := range downloadCache {
 			fmt.Printf(fmt.Sprintf("%s\n", promptMsg["InstallStatus"]), k)
