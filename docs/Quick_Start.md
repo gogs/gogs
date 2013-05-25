@@ -59,7 +59,7 @@ Because we don't have all kinds of operating systems, we need your help to compl
 
 **Attention** Because we use API to get information of packages that are hosted on github.com, but it limits 60 requests per hour, so you may get errors if you download too much(more than 50 packages per hour). We do not provider access token for security reason, but we do have configure option `github_access_token` in configuration file `conf/gpm.toml`, so you can go to [here](https://github.com/settings/applications) and create your personal access token(up to 5000 request per hour), and set it in `gpm.toml`.
 
-**Attention** If your computer has been installed others software that called `gpm` also, you can change executable name to something else, for example `gpmgo`, and use `gpmgo` in all commands.
+**Attention** If your computer has been installed other software that called `gpm` also, you may want to change executable name to something else, for example `gpmgo`, and use `gpmgo` in all commands.
 
 ## Install package, or packages
 

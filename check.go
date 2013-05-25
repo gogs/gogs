@@ -170,8 +170,10 @@ func checkIsExistWithVCS(path string) bool {
 		return false
 	}
 
-	if len(dirs) != 1 {
+	if len(dirs) > 1 {
 		return true
+	} else if len(dirs) == 0 {
+		return false
 	}
 
 	switch dirs[0].Name() {

@@ -33,25 +33,29 @@ This application still in experiment, any change could happen, but it doesn't af
 
 ## Todo
 
-### v0.2.*
+### v0.3.*
+
+- Command `install` and `remove` give number to let user choose operate one package.
+- Command `search` add flags `-n` and `-o` for number of list items and offset.
+- Add gpm working principle design.
+- Complete documentation.
 
 ### Future
 
 - Command `check` add feature to update or generate gopack.json.
 - Command `install` generates dependencies configuration file.
 - Command `build` use dependencies configuration file to build with specific versions of dependencies, if VCS tools are available, simply use `checkout`. 
-- Command `install` and `remove` give number to let user choose operate one package.
-- Command `search` add flags `-n` and `-o` for number of list items and offset.
+- Command `remove` add flag `-d` for removing dependencies at the same time.
+- Command `remove` add feature check for dependencies, make sure other packages don't import this one, and give choose for users.
+- Command `install` save tarball add support for packages in code.google.com, bitbucket.org, launchpad.net, git.oschina.net, gitcafe.com, *.codeplex.com.
 - Command `update` is for checking updates.
 - Command `sync` is for sync packages in two computers, support client and server mode through ssh.
 - Command `init` is for auto-configuring Go develop environment.
 - Command `install` and `remove` and `update` backup data(up to 50 records) before executing.
 - Command `rollback` is for rolling back to certain operation.
 - Add feature "struct generator".
-- Command `remove` add flag `-d` for removing dependencies at the same time.
-- Command `remove` add feature check for dependencies, make sure other packages don't import this one, and give choose for users.
-- Command `install` add flag `-all` for re-installing everything in GOPATH, usually use this after upgrading Go version.
-- Command `clean` is for cleaning empty directories.
+- Command `install` add flag `-all` for re-installing everything in GOPATH, usually use this after upgraded Go version.
+- Command `clean` is for cleaning empty directories and backup.
 - Command `daemon` is for auto-compile web applications when debug it locally.
 - Collect download and installation results and report to users in the end.
 - Add user system to create, edit, upload, and download bundles or snapshots through gpm client program.
@@ -64,9 +68,6 @@ This application still in experiment, any change could happen, but it doesn't af
 - Command `install` and `remove` add bundle parse code for getting data from server.
 - Command `install` and `remove` add snapshot parse code for downloading or removing snapshot.
 - Add built-in application version in order to backup data when users update.
-- Add gpm working principle design.
-- Command `install -c` add arguments for add more exts. 
-- Command `install` save tarball add support for packages in code.google.com, bitbucket.org, launchpad.net, git.oschina.net, gitcafe.com, *.codeplex.com.
 
 ## Credits
 

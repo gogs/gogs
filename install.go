@@ -33,7 +33,6 @@ func init() {
 	cmdInstall.Run = runInstall
 	cmdInstall.Flags = map[string]bool{
 		"-p": false,
-		"-c": false,
 		"-d": false,
 		"-u": false, // Flag for 'go get'.
 		"-e": false,
@@ -47,8 +46,6 @@ func printInstallPrompt(flag string) {
 	switch flag {
 	case "-p":
 		fmt.Printf(fmt.Sprintf("%s\n", promptMsg["PureDownload"]))
-	case "-c":
-		fmt.Printf(fmt.Sprintf("%s\n", promptMsg["PureCode"]))
 	case "-d":
 		fmt.Printf(fmt.Sprintf("%s\n", promptMsg["DownloadOnly"]))
 	case "-e":
