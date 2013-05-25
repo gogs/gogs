@@ -35,7 +35,7 @@ This application still in experiment, any change could happen, but it doesn't af
 
 ### v0.3.*
 
-- Command `search` result add keyword highlight.
+- Command `search` add flag `-a` to show results of sub-packages, not just search by project name.
 - Command `install` and `remove` give number to let user choose operate one package.
 - Command `search` add flags `-n` and `-o` for number of list items and offset.
 - Command `check` add feature to update or generate gopack.json.

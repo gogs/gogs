@@ -125,7 +125,7 @@ func getAppPath() bool {
 	}
 
 	if len(appPath) == 0 {
-		fmt.Printf("ERROR: getAppPath -> Unable to indicate current execute path.\n")
+		utils.ColorPrint("[ERROR] getAppPath ->[ Unable to indicate current execute path. ]\n")
 		return false
 	}
 
@@ -146,7 +146,7 @@ func loadPromptMsg(lang string) bool {
 	// Load prompt messages.
 	f, err := os.Open(appPath + "i18n/" + lang + "/prompt.txt")
 	if err != nil {
-		fmt.Printf("ERROR: loadUsage -> Fail to load prompt messages[ %s ]\n", err)
+		utils.ColorPrint(fmt.Sprintf("[ERROR] loadUsage -> Fail to load prompt messages[ %s ]\n", err))
 		return false
 	}
 	defer f.Close()
@@ -174,7 +174,7 @@ func loadUsage(lang string) bool {
 	// Load main usage.
 	f, err := os.Open(appPath + "i18n/" + lang + "/usage.tpl")
 	if err != nil {
-		fmt.Printf(fmt.Sprintf("ERROR: loadUsage -> %s\n", promptMsg["LoadCommandUsage"]), "main", err)
+		utils.ColorPrint(fmt.Sprintf(fmt.Sprintf("[ERROR] loadUsage -> %s\n", promptMsg["LoadCommandUsage"]), "main", err))
 		return false
 	}
 	defer f.Close()
@@ -189,7 +189,7 @@ func loadUsage(lang string) bool {
 	for _, cmd := range commands {
 		f, err := os.Open(appPath + "i18n/" + lang + "/usage_" + cmd.Name() + ".txt")
 		if err != nil {
-			fmt.Printf(fmt.Sprintf("ERROR: loadUsage -> %s\n", promptMsg["LoadCommandUsage"]), cmd.Name(), err)
+			utils.ColorPrint(fmt.Sprintf(fmt.Sprintf("[ERROR] loadUsage -> %s\n", promptMsg["LoadCommandUsage"]), cmd.Name(), err))
 			return false
 		}
 		defer f.Close()
@@ -200,8 +200,8 @@ func loadUsage(lang string) bool {
 		f.Read(usageBytes)
 		usages := strings.Split(string(usageBytes), "|||")
 		if len(usages) < 2 {
-			fmt.Printf(
-				fmt.Sprintf("ERROR: loadUsage -> %s\n", promptMsg["ReadCoammndUsage"]), cmd.Name())
+			utils.ColorPrint(fmt.Sprintf(
+				fmt.Sprintf("[ERROR] loadUsage -> %s\n", promptMsg["ReadCoammndUsage"]), cmd.Name()))
 			return false
 		}
 		cmd.Short = usages[0]
@@ -218,14 +218,14 @@ func loadLocalNodes() bool {
 	} else {
 		fr, err := os.Open(appPath + "data/nodes.json")
 		if err != nil {
-			fmt.Printf(fmt.Sprintf("ERROR: loadLocalNodes -> %s\n", promptMsg["LoadLocalData"]), err)
+			utils.ColorPrint(fmt.Sprintf(fmt.Sprintf("[ERROR] loadLocalNodes -> %s\n", promptMsg["LoadLocalData"]), err))
 			return false
 		}
 		defer fr.Close()
 
 		err = json.NewDecoder(fr).Decode(&localNodes)
 		if err != nil && err != io.EOF {
-			fmt.Printf(fmt.Sprintf("ERROR: loadLocalNodes -> %s\n", promptMsg["ParseJSON"]), err)
+			utils.ColorPrint(fmt.Sprintf(fmt.Sprintf("[ERROR] loadLocalNodes -> %s\n", promptMsg["ParseJSON"]), err))
 			return false
 		}
 	}
@@ -237,14 +237,14 @@ func loadLocalBundles() bool {
 	// Find all bundles.
 	dir, err := os.Open(appPath + "repo/bundles/")
 	if err != nil {
-		fmt.Printf(fmt.Sprintf("ERROR: loadLocalBundles -> %s\n", promptMsg["OpenFile"]), err)
+		utils.ColorPrint(fmt.Sprintf(fmt.Sprintf("[ERROR] loadLocalBundles -> %s\n", promptMsg["OpenFile"]), err))
 		return false
 	}
 	defer dir.Close()
 
 	fis, err := dir.Readdir(0)
 	if err != nil {
-		fmt.Printf(fmt.Sprintf("ERROR: loadLocalBundles -> %s\n", promptMsg["OpenFile"]), err)
+		utils.ColorPrint(fmt.Sprintf(fmt.Sprintf("[ERROR] loadLocalBundles -> %s\n", promptMsg["OpenFile"]), err))
 		return false
 	}
 
@@ -253,7 +253,7 @@ func loadLocalBundles() bool {
 		if !fi.IsDir() && strings.HasSuffix(fi.Name(), ".json") {
 			fr, err := os.Open(appPath + "repo/bundles/" + fi.Name())
 			if err != nil {
-				fmt.Printf(fmt.Sprintf("ERROR: loadLocalBundles -> %s\n", promptMsg["OpenFile"]), err)
+				utils.ColorPrint(fmt.Sprintf(fmt.Sprintf("[ERROR] loadLocalBundles -> %s\n", promptMsg["OpenFile"]), err))
 				return false
 			}
 
@@ -261,7 +261,7 @@ func loadLocalBundles() bool {
 			err = json.NewDecoder(fr).Decode(bundle)
 			fr.Close()
 			if err != nil && err != io.EOF {
-				fmt.Printf(fmt.Sprintf("ERROR: loadLocalBundles -> %s\n", promptMsg["ParseJSON"]), err)
+				utils.ColorPrint(fmt.Sprintf(fmt.Sprintf("[ERROR] loadLocalBundles -> %s\n", promptMsg["ParseJSON"]), err))
 				return false
 			}
 

@@ -5,6 +5,7 @@
 package utils
 
 import (
+	"fmt"
 	"os"
 	"path"
 	"regexp"
@@ -12,10 +13,127 @@ import (
 	"strings"
 )
 
+const (
+	PureStartColor = "\033[%dm"
+	StartColor     = "(\033[%dm"
+	Gray           = uint8(90)
+	Red            = uint8(91)
+	Green          = uint8(92)
+	Yellow         = uint8(93)
+	Blue           = uint8(94)
+	Magenta        = uint8(95)
+	//NRed      = uint8(31) // Normal
+	EndColor = "\033[0m"
+)
+
+// ColorPrint prints colorful log print, doesn't work in windows.
+// content in () with yellow, content in [] with read.
+func ColorPrint(log string) {
+	// Make sure it's not windows.
+	if runtime.GOOS != "windows" {
+		log = strings.Replace(log, "[", fmt.Sprintf(StartColor, Red), -1)
+		log = strings.Replace(log, "]", EndColor+"]", -1)
+		log = strings.Replace(log, "(", fmt.Sprintf(StartColor, Green), -1)
+		log = strings.Replace(log, ")", EndColor+")", -1)
+	}
+	fmt.Print(log)
+}
+
 // IsExist returns if a file or directory exists
 func IsExist(path string) bool {
 	_, err := os.Stat(path)
 	return err == nil || os.IsExist(err)
+}
+
+// GetGOPATH returns all paths in GOPATH variable.
+func GetGOPATH() []string {
+	gopath := os.Getenv("GOPATH")
+	var paths []string
+	if runtime.GOOS == "windows" {
+		gopath = strings.Replace(gopath, "\\", "/", -1)
+		paths = strings.Split(gopath, ";")
+	} else {
+		paths = strings.Split(gopath, ":")
+	}
+	return paths
+}
+
+// GetGOPATH returns best matched GOPATH.
+func GetBestMatchGOPATH(appPath string) string {
+	paths := GetGOPATH()
+	for _, p := range paths {
+		if strings.HasPrefix(p, appPath) {
+			return strings.Replace(p, "\\", "/", -1)
+		}
+	}
+	return paths[0]
+}
+
+// GetProjectPath returns project path of import path.
+func GetProjectPath(importPath string) (projectPath string) {
+	projectPath = importPath
+
+	// Check project hosting.
+	switch {
+	case strings.HasPrefix(importPath, "github.com"):
+		projectPath = joinPath(importPath, 3)
+	case strings.HasPrefix(importPath, "code.google.com"):
+		projectPath = joinPath(importPath, 3)
+	case strings.HasPrefix(importPath, "bitbucket.org"):
+		projectPath = joinPath(importPath, 3)
+	case strings.HasPrefix(importPath, "launchpad.net"):
+		projectPath = joinPath(importPath, 2)
+	}
+
+	return projectPath
+}
+
+func joinPath(importPath string, num int) string {
+	subdirs := strings.Split(importPath, "/")
+	if len(subdirs) > num {
+		return strings.Join(subdirs[:num], "/")
+	}
+	return importPath
+}
+
+// GetExecuteName returns work directory and possible execute name according work directory.
+func GetExecuteName(wd string) string {
+	wd = strings.Replace(wd, "\\", "/", -1)
+	execName := path.Base(wd)
+	if runtime.GOOS == "windows" {
+		execName += ".exe"
+	}
+	return execName
+}
+
+var (
+	readmePat  = regexp.MustCompile(`^[Rr][Ee][Aa][Dd][Mm][Ee](?:$|\.)`)
+	licensePat = regexp.MustCompile(`^[Ll][Ii][Cc][En][Nn][Ss][Ee]`)
+)
+
+func IsDocFile(n string) bool {
+	if (strings.HasSuffix(n, ".go") || strings.HasSuffix(n, ".h") || strings.HasSuffix(n, ".c")) &&
+		n[0] != '_' && n[0] != '.' {
+		return true
+	}
+
+	return readmePat.MatchString(n) || licensePat.MatchString(n)
+}
+
+// GetDirsInfo returns os.FileInfo of all sub-directories in root path.
+func GetDirsInfo(rootPath string) ([]os.FileInfo, error) {
+	rootDir, err := os.Open(rootPath)
+	if err != nil {
+		return nil, err
+	}
+	defer rootDir.Close()
+
+	dirs, err := rootDir.Readdir(0)
+	if err != nil {
+		return nil, err
+	}
+
+	return dirs, err
 }
 
 var validTLD = map[string]bool{
@@ -369,30 +487,6 @@ func IsValidRemotePath(importPath string) bool {
 	return true
 }
 
-// GetGOPATH returns all paths in GOPATH variable.
-func GetGOPATH() []string {
-	gopath := os.Getenv("GOPATH")
-	var paths []string
-	if runtime.GOOS == "windows" {
-		gopath = strings.Replace(gopath, "\\", "/", -1)
-		paths = strings.Split(gopath, ";")
-	} else {
-		paths = strings.Split(gopath, ":")
-	}
-	return paths
-}
-
-// GetGOPATH returns best matched GOPATH.
-func GetBestMatchGOPATH(appPath string) string {
-	paths := GetGOPATH()
-	for _, p := range paths {
-		if strings.HasPrefix(p, appPath) {
-			return strings.Replace(p, "\\", "/", -1)
-		}
-	}
-	return paths[0]
-}
-
 var standardPath = map[string]bool{
 	"builtin": true,
 
@@ -540,71 +634,4 @@ var standardPath = map[string]bool{
 // IsGoRepoPath returns true if package is from standard library.
 func IsGoRepoPath(importPath string) bool {
 	return standardPath[importPath]
-}
-
-// GetProjectPath returns project path of import path.
-func GetProjectPath(importPath string) (projectPath string) {
-	projectPath = importPath
-
-	// Check project hosting.
-	switch {
-	case strings.HasPrefix(importPath, "github.com"):
-		projectPath = joinPath(importPath, 3)
-	case strings.HasPrefix(importPath, "code.google.com"):
-		projectPath = joinPath(importPath, 3)
-	case strings.HasPrefix(importPath, "bitbucket.org"):
-		projectPath = joinPath(importPath, 3)
-	case strings.HasPrefix(importPath, "launchpad.net"):
-		projectPath = joinPath(importPath, 2)
-	}
-
-	return projectPath
-}
-
-func joinPath(importPath string, num int) string {
-	subdirs := strings.Split(importPath, "/")
-	if len(subdirs) > num {
-		return strings.Join(subdirs[:num], "/")
-	}
-	return importPath
-}
-
-// GetExecuteName returns work directory and possible execute name according work directory.
-func GetExecuteName(wd string) string {
-	wd = strings.Replace(wd, "\\", "/", -1)
-	execName := path.Base(wd)
-	if runtime.GOOS == "windows" {
-		execName += ".exe"
-	}
-	return execName
-}
-
-var (
-	readmePat  = regexp.MustCompile(`^[Rr][Ee][Aa][Dd][Mm][Ee](?:$|\.)`)
-	licensePat = regexp.MustCompile(`^[Ll][Ii][Cc][En][Nn][Ss][Ee]`)
-)
-
-func IsDocFile(n string) bool {
-	if (strings.HasSuffix(n, ".go") || strings.HasSuffix(n, ".h") || strings.HasSuffix(n, ".c")) &&
-		n[0] != '_' && n[0] != '.' {
-		return true
-	}
-
-	return readmePat.MatchString(n) || licensePat.MatchString(n)
-}
-
-// GetDirsInfo returns os.FileInfo of all sub-directories in root path.
-func GetDirsInfo(rootPath string) ([]os.FileInfo, error) {
-	rootDir, err := os.Open(rootPath)
-	if err != nil {
-		return nil, err
-	}
-	defer rootDir.Close()
-
-	dirs, err := rootDir.Readdir(0)
-	if err != nil {
-		return nil, err
-	}
-
-	return dirs, err
 }

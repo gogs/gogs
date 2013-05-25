@@ -18,7 +18,7 @@ import (
 var userAgent = "go application"
 
 var (
-	dialTimeout  = flag.Duration("dial_timeout", 30*time.Second, "Timeout for dialing an HTTP connection.")
+	dialTimeout  = flag.Duration("dial_timeout", 10*time.Second, "Timeout for dialing an HTTP connection.")
 	readTimeout  = flag.Duration("read_timeout", 10*time.Second, "Timeoout for reading an HTTP response.")
 	writeTimeout = flag.Duration("write_timeout", 5*time.Second, "Timeout writing an HTTP request.")
 )

@@ -6,9 +6,11 @@ package main
 
 import (
 	"fmt"
+	"runtime"
 	"strings"
 
 	"github.com/GPMGo/gopm/doc"
+	"github.com/GPMGo/gopm/utils"
 )
 
 var cmdSearch = &Command{
@@ -42,8 +44,20 @@ func runSearch(cmd *Command, args []string) {
 	}
 
 	// Search from server, and list results.
-	results, _ := doc.HttpGetBytes(doc.HttpClient, "http://gowalker.org/search?raw=true&q="+args[0], nil)
-	pkgs := strings.Split(string(results), "|||")
+	results, err := doc.HttpGetBytes(doc.HttpClient, "http://gowalker.org/search?raw=true&q="+args[0], nil)
+	if err != nil {
+		utils.ColorPrint(fmt.Sprintf("[ERROR] runSearch -> [ %s ]\n", err))
+		return
+	}
+
+	resultStr := string(results)
+
+	if runtime.GOOS != "windows" {
+		// Set color highlight.
+		resultStr = strings.Replace(resultStr, args[0], fmt.Sprintf(utils.PureStartColor, utils.Yellow)+args[0]+utils.EndColor, -1)
+	}
+
+	pkgs := strings.Split(resultStr, "|||")
 	for _, p := range pkgs {
 		i := strings.Index(p, "$")
 		if i > -1 {
