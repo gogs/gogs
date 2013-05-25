@@ -5,7 +5,7 @@ gopm - Go Package Manager
 
 gopm(Go Package Manager) is a Go package manage tool for search, install, update, share and backup packages in Go.
 
-[![Build Status](https://travis-ci.org/GPMGo/gopm.png)](https://travis-ci.org/GPMGo/gopm) [![Build Status](https://drone.io/github.com/GPMGo/gopm/status.png)](https://drone.io/github.com/GPMGo/gopm/latest) [![Coverage Status](https://coveralls.io/repos/GPMGo/gopm/badge.png)](https://coveralls.io/r/GPMGo/gopm)
+[![Build Status](https://travis-ci.org/GPMGo/gpm.png)](https://travis-ci.org/GPMGo/gpm) [![Build Status](https://drone.io/github.com/GPMGo/gpm/status.png)](https://drone.io/github.com/GPMGo/gpm/latest) [![Coverage Status](https://coveralls.io/repos/GPMGo/gpm/badge.png)](https://coveralls.io/r/GPMGo/gpm)
 
 (Travis CI hasn't support Go 1.1 yet)
 
