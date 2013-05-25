@@ -38,9 +38,11 @@ You can install gpm either from source or download binary.
 
 ### Install from source
 
-- gpm is a `go get` able project: execute command `go get github.com/GPMGo/gpm` to download and install.
-- Run test: switch work directory to gpm project, and execute command `go test` to build and test commands automatically(for now, tested commands are `gpm install`, `gpm remove`).
-- Add gpm project path to your environment variable `PATH` in order to execute it in other directories.
+- gopm is a `go get` able project: execute command `go get github.com/GPMGo/gopm` to download and install.
+- Run test: switch work directory to gopm project, and execute command `go test` to build and test commands automatically(for now, tested commands are `gopm install`, `gopm remove`).
+- Add gopm project path to your environment variable `PATH` in order to execute it in other directories.
+
+**Attention** You can actually put binary in any path that has already existed in $PATH, so you don't need to add a new path to $PATH again.
 
 ### Download binary
 
@@ -57,9 +59,7 @@ Because we don't have all kinds of operating systems, we need your help to compl
 - windows_386:
 - windows_amd64: 
 
-**Attention** Because we use API to get information of packages that are hosted on github.com, but it limits 60 requests per hour, so you may get errors if you download too much(more than 50 packages per hour). We do not provider access token for security reason, but we do have configure option `github_access_token` in configuration file `conf/gpm.toml`, so you can go to [here](https://github.com/settings/applications) and create your personal access token(up to 5000 request per hour), and set it in `gpm.toml`.
-
-**Attention** If your computer has been installed other software that called `gpm` also, you may want to change executable name to something else, for example `gpmgo`, and use `gpmgo` in all commands.
+**Attention** Because we use API to get information of packages that are hosted on github.com, but it limits 60 requests per hour, so you may get errors if you download too much(more than 50 packages per hour). We do not provider access token for security reason, but we do have configure option `github_access_token` in configuration file `conf/gopm.toml`, so you can go to [here](https://github.com/settings/applications) and create your personal access token(up to 5000 request per hour), and set it in `gopm.toml`.
 
 ## Install package, or packages
 
@@ -69,11 +69,11 @@ Suppose you want to install package `github.com/GPMGoTest/install_test`, here tw
 
 ### Install like `go get`
 
-- Execute command `gpm install -p github.com/GPMGoTest/install_test`, flag `-p` means **pure download** (download packages without version control), so you do not need to install version control tool. In case you want to, `gpm install github.com/GPMGoTest/install_test` calls `go get` in underlying.
+- Execute command `gpm install github.com/GPMGoTest/install_test`, and you do not need to install version control tool. In case you want to, `gpm install -v github.com/GPMGoTest/install_test` calls `go get` in underlying.
 
 ### Install through bundle
 
-- It's still not cool enough to download and install packages with import path, let's try execute command `gpm install -p test.b`, see what happens? 
+- It's still not cool enough to download and install packages with import path, let's try execute command `gopm install test.b`, see what happens? 
 - Where is the `test.b` comes from? We actually created a bundle for you in directory `repo/bundles/`, and all bundles should be put there. 
 - This is how bundle works, you can open it and see what's inside, it includes import path, type, value and dependencies.
 - The `test.b` means the bundle whose name is `test`, if you want to use bundle, you have to add suffix `.b`. You may notice that our file name is `install_test.json`, why is `test`? Because we use `bundle_name` inside file, file name doesn't mean anything unless you leave `bundle_name` blank, then the file name becomes bundle name automatically, but be sure that all bundle file name should use JSON and suffix `.json`.
@@ -91,8 +91,8 @@ Command `build` compiles and installs packages along with all dependencies.
 
 Let's switch work directory to package `github.com/GPMGoTest/install_test`.
 
-- Execute command `gpm build -r`.
-- After built, you should see string `Welcome to use gpm(Go Package Manager)!` was printed on the screen.
+- Execute command `gopm build -r`.
+- After built, you should see string `Welcome to use gopm(Go Package Manager)!` was printed on the screen.
 - Then, gpm calls `go install` in underlying, so you should have binary `$GOPATH/bin/install_test`, then gpm moves it to current directory.
 - Flag `-r` means run after built, so you saw the string was printed.
 
@@ -106,9 +106,9 @@ Command `remove` removes packages from your local file system.
 
 Suppose you want to remove package `github.com/GPMGoTest/install_test2/subpkg`.
 
-- Execute command `gpm remove github.com/GPMGoTest/install_test2/subpkg`, gpm finds this project in all paths in your GOPATH environment.
+- Execute command `gopm remove github.com/GPMGoTest/install_test2/subpkg`, gopm finds this project in all paths in your GOPATH environment.
 - You may notice this is not project path, it's OK because gpm knows it, and deletes directory `$GOPATH/src/github.com/GPMGoTest/install_test2/`, this command delete files in `$GOPATH/bin` and `$GOPATH/pkg` as well.
-- You can also use `gpm remove test.b` to remove all packages are included in bundle, but we don't need here because we have one more cool stuff to try.
+- You can also use `gopm remove test.b` to remove all packages are included in bundle, but we don't need here because we have one more cool stuff to try.
 
 ## Use check to check dependencies
 
@@ -117,14 +117,14 @@ Command `check` checks package dependencies and installs missing ones.
 Suppose you want to check package `github.com/GPMGoTest/install_test`.
 
 - Switch work directory to package path.
-- Execute command `gpm check`.
+- Execute command `gopm check`.
 - That's it!
 
 ## Search and find more
 
 Command `search` is for searching packages in [Go Walker](http://gowalker.org) database.
 
-- Execute command `gpm search mysql`.
+- Execute command `gopm search mysql`.
 - Try it by yourself.
 
 ## Go further

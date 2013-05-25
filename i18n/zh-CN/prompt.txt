@@ -14,7 +14,7 @@ PackageNotFound=无法找到包: %s.
 CheckImports=一百遍检查失败 [ %s ]
 
 MovedFile=SUCCESS: 成功将文件从 $GOPATH(%s) 移动至当前目录 (%s).
-PureDownload=已激活纯净下载模式.
+PureDownload=已激活版本控制下载模式.
 DownloadOnly=已激活无安装模式.
 DownloadExDeps=已激活下载示例代码依赖.
 DownloadFromSrcs=已激活从用户源下载.

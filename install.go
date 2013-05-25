@@ -32,7 +32,7 @@ func init() {
 	downloadCache = make(map[string]bool)
 	cmdInstall.Run = runInstall
 	cmdInstall.Flags = map[string]bool{
-		"-p": false,
+		"-v": false,
 		"-d": false,
 		"-u": false, // Flag for 'go get'.
 		"-e": false,
@@ -44,7 +44,7 @@ func init() {
 // let them know what's going on.
 func printInstallPrompt(flag string) {
 	switch flag {
-	case "-p":
+	case "-v":
 		fmt.Printf(fmt.Sprintf("%s\n", promptMsg["PureDownload"]))
 	case "-d":
 		fmt.Printf(fmt.Sprintf("%s\n", promptMsg["DownloadOnly"]))
@@ -131,7 +131,7 @@ func runInstall(cmd *Command, args []string) {
 	// Download packages.
 	downloadPackages(nodes)
 
-	if !cmdInstall.Flags["-d"] && cmdInstall.Flags["-p"] {
+	if !cmdInstall.Flags["-d"] && !cmdInstall.Flags["-v"] {
 		// Remove old files.
 		uninstallList := make([]string, 0, len(downloadCache))
 		for k := range downloadCache {
@@ -273,7 +273,7 @@ func saveNode(n *doc.Node) {
 func downloadPackage(node *doc.Node) (*doc.Node, []string) {
 	// Check if use version control tools.
 	switch {
-	case !cmdInstall.Flags["-p"] &&
+	case cmdInstall.Flags["-v"] &&
 		((node.ImportPath[0] == 'g' && isHasGit) || (node.ImportPath[0] == 'c' && isHasHg)): // github.com, code.google.com
 		fmt.Printf(fmt.Sprintf("%s\n", promptMsg["InstallByGoGet"]), node.ImportPath)
 		args := checkGoGetFlags()
@@ -281,8 +281,8 @@ func downloadPackage(node *doc.Node) (*doc.Node, []string) {
 		executeCommand("go", args)
 		return nil, nil
 	default: // Pure download.
-		if !cmdInstall.Flags["-p"] {
-			cmdInstall.Flags["-p"] = true
+		if cmdInstall.Flags["-v"] {
+			cmdInstall.Flags["-v"] = false
 			fmt.Printf(fmt.Sprintf("%s\n", promptMsg["NoVCSTool"]))
 		}
 

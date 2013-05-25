@@ -11,9 +11,9 @@ import (
 )
 
 func TestGPM(t *testing.T) {
-	fmt.Println("gpm v0.2.0 Build 0524")
+	fmt.Println("gopm v0.2.2 Build 0524")
 
-	fmt.Println("\nBuilding gpm application...")
+	fmt.Println("\nBuilding gopm application...")
 	// Build application.
 	var args []string
 	args = append(args, "build")
@@ -24,9 +24,8 @@ func TestGPM(t *testing.T) {
 	time.Sleep(2 * time.Second)
 	args = make([]string, 0)
 	args = append(args, "install")
-	args = append(args, "-p")
 	args = append(args, "github.com/GPMGoTest/install_test")
-	executeCommand("gpm", args)
+	executeCommand("gopm", args)
 
 	fmt.Println("\nStart testing command Remove...")
 	fmt.Println("Let's remove `install_test` and `install_test2`.")
@@ -35,5 +34,5 @@ func TestGPM(t *testing.T) {
 	args = append(args, "remove")
 	args = append(args, "github.com/GPMGoTest/install_test")
 	args = append(args, "github.com/GPMGoTest/install_test2")
-	executeCommand("gpm", args)
+	executeCommand("gopm", args)
 }

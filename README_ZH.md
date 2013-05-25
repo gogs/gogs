@@ -1,9 +1,9 @@
-gpm - Go 包管理工具
+gopm - Go 包管理工具
 ===
 
 ![GPMGo_Logo](https://raw.github.com/GPMGo/gpm-site/master/static/img/gpmgo2.png?raw=true)
 
-gpm（Go 包管理工具） 是一款涵盖搜索、安装、更新、分享以及备份功能 Go 包的管理工具。
+gopm（Go 包管理工具） 是一款涵盖搜索、安装、更新、分享以及备份功能 Go 包的管理工具。
 
 [![Build Status](https://travis-ci.org/GPMGo/gpm.png)](https://travis-ci.org/GPMGo/gpm) [![Build Status](https://drone.io/github.com/GPMGo/gpm/status.png)](https://drone.io/github.com/GPMGo/gpm/latest) [![Coverage Status](https://coveralls.io/repos/GPMGo/gpm/badge.png)](https://coveralls.io/r/GPMGo/gpm)
 
@@ -28,7 +28,7 @@ gpm（Go 包管理工具） 是一款涵盖搜索、安装、更新、分享以�
 
 ## 已知问题
 
-- 当您使用命令例如 `gpm install -p bitbucket.org/zombiezen/gopdf` 时，你会在安装步骤时得到错误，虽然这是项目的根目录，但是并没有包含任何 Go 源代码，因此您必须使用 `gpm install -p bitbucket.org/zombiezen/gopdf/pdf` 才能正确完成安装。
+- 当您使用命令例如 `gopm install bitbucket.org/zombiezen/gopdf` 时，你会在安装步骤时得到错误，虽然这是项目的根目录，但是并没有包含任何 Go 源代码，因此您必须使用 `gopm install bitbucket.org/zombiezen/gopdf/pdf` 才能正确完成安装。
 - 删除目录 `.git` 会因为权限不足而失败。
 
 ## 授权许可

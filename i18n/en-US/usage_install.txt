@@ -7,8 +7,8 @@ such as git, hg, etc.
 
 The install flags are:
 
-	-p
-		pure download packages without version control.
+	-v
+		download packages with version control.
 	-d
 		download without installing packages.
 	-u
