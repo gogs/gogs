@@ -4,6 +4,10 @@ along with their dependencies.
 
 The remove flags are:
 
+	-b
+		remove bundle.
+	-s
+		remove snapshot.
 
 The list flags accept a space-separated list of strings.
 

@@ -72,7 +72,7 @@ func runSearch(cmd *Command, args []string) {
 	isWindws := runtime.GOOS == "windows"
 	var buf bytes.Buffer
 	// Print split line for more clear look.
-	splitLine := "<-----------------------------search results--------------------------->\n"
+	splitLine := fmt.Sprintf("<-----------------------------%s--------------------------->\n", PromptMsg["SearchResult"])
 	if !isWindws {
 		splitLine = strings.Replace(splitLine, "<", fmt.Sprintf(utils.PureStartColor, utils.Magenta)+"<", 1)
 		splitLine = strings.Replace(splitLine, ">", ">"+utils.EndColor, 1)

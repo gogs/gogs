@@ -6,6 +6,10 @@ Remove 命令删除 Go 包及其依赖包.
 
 多个参数通过空格来间隔.
 
+	-b
+		删除集合.
+	-s
+		删除快照.
 
 获取更多有关包的信息，参见 'go help packages'.
 获取更多有关集合的信息，参见 'gopm help bundle'.

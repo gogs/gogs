@@ -15,8 +15,10 @@ The install flags are:
 		force to update pakcages.
 	-e
 		download dependencies for examples.
+	-b
+		download and install bundle.
 	-s
-		download from sources.
+		download and install snapshot.
 
 The list flags accept a space-separated list of strings.
 

@@ -35,11 +35,41 @@ func runRemove(cmd *Command, args []string) {
 		return
 	}
 
-	// Generate temporary nodes.
-	nodes := make([]*node.Node, len(args))
-	for i := range nodes {
-		nodes[i] = new(node.Node)
-		nodes[i].ImportPath = args[i]
+	var nodes []*node.Node
+	// Check if it is a bundle or snapshot.
+	switch {
+	case CmdRemove.Flags["-b"]:
+		bundle := args[0]
+		// Check local bundles.
+		nodes = checkLocalBundles(bundle)
+		if len(nodes) > 0 {
+			// Check with users if continue.
+			utils.ColorPrint(fmt.Sprintf(fmt.Sprintf("%s\n", PromptMsg["BundleInfo"]), bundle))
+			for _, n := range nodes {
+				fmt.Printf("[%s] -> %s: %s.\n", n.ImportPath, n.Type, n.Value)
+			}
+			fmt.Printf(fmt.Sprintf("%s\n", PromptMsg["ContinueRemove"]))
+			var option string
+			fmt.Fscan(os.Stdin, &option)
+			if strings.ToLower(option) != "y" {
+				os.Exit(0)
+				return
+			}
+		} else {
+			// Check from server.
+			// TODO: api.GetBundleInfo()
+			fmt.Println("Unable to find bundle, and we cannot check with server right now.")
+		}
+	case CmdRemove.Flags["-s"]:
+		fmt.Println("gopm has not supported snapshot yet.")
+		// TODO: api.GetSnapshotInfo()
+	default:
+		// Generate temporary nodes.
+		nodes = make([]*node.Node, len(args))
+		for i := range nodes {
+			nodes[i] = new(node.Node)
+			nodes[i].ImportPath = args[i]
+		}
 	}
 
 	// Removes packages.
@@ -65,31 +95,7 @@ func removePackages(nodes []*node.Node) {
 	// Check all packages, they may be bundles, snapshots or raw packages path.
 	for _, n := range nodes {
 		// Check if it is a bundle or snapshot.
-		switch {
-		case strings.HasSuffix(n.ImportPath, ".b"):
-			l := len(n.ImportPath)
-			// Check local bundles.
-			bnodes := checkLocalBundles(n.ImportPath[:l-2])
-			if len(bnodes) > 0 {
-				// Check with users if continue.
-				utils.ColorPrint(fmt.Sprintf(fmt.Sprintf("%s\n", PromptMsg["BundleInfo"]), n.ImportPath[:l-2]))
-				for _, bn := range bnodes {
-					fmt.Printf("[%s] -> %s: %s.\n", bn.ImportPath, bn.Type, bn.Value)
-				}
-				fmt.Printf(fmt.Sprintf("%s\n", PromptMsg["ContinueRemove"]))
-				var option string
-				fmt.Fscan(os.Stdin, &option)
-				if strings.ToLower(option) != "y" {
-					os.Exit(0)
-				}
-				removePackages(bnodes)
-			} else {
-				// Check from server.
-				// TODO: api.GetBundleInfo()
-				fmt.Println("Unable to find bundle, and we cannot check with server right now.")
-			}
-		case strings.HasSuffix(n.ImportPath, ".s"):
-		case utils.IsValidRemotePath(n.ImportPath):
+		if utils.IsValidRemotePath(n.ImportPath) {
 			if !removeCache[n.ImportPath] {
 				// Remove package.
 				nod, imports := removePackage(n)
@@ -102,7 +108,7 @@ func removePackages(nodes []*node.Node) {
 					removeNode(nod)
 				}
 			}
-		default:
+		} else {
 			// Invalid import path.
 			fmt.Printf(fmt.Sprintf("%s\n", PromptMsg["SkipInvalidPath"]), n.ImportPath)
 		}
