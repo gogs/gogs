@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-package main
+package cmd
 
 import (
 	"encoding/json"
@@ -19,19 +19,19 @@ var (
 	removeCache map[string]bool // Saves packages that have been removed.
 )
 
-var cmdRemove = &Command{
+var CmdRemove = &Command{
 	UsageLine: "remove [remove flags] <packages|bundles|snapshots>",
 }
 
 func init() {
 	removeCache = make(map[string]bool)
-	cmdRemove.Run = runRemove
+	CmdRemove.Run = runRemove
 }
 
 func runRemove(cmd *Command, args []string) {
 	// Check length of arguments.
 	if len(args) < 1 {
-		fmt.Printf(fmt.Sprintf("%s\n", promptMsg["NoPackage"]))
+		fmt.Printf(fmt.Sprintf("%s\n", PromptMsg["NoPackage"]))
 		return
 	}
 
@@ -46,15 +46,15 @@ func runRemove(cmd *Command, args []string) {
 	removePackages(nodes)
 
 	// Save local nodes to file.
-	fw, err := os.Create(appPath + "data/nodes.json")
+	fw, err := os.Create(AppPath + "data/nodes.json")
 	if err != nil {
-		utils.ColorPrint(fmt.Sprintf(fmt.Sprintf("[ERROR] runRemove -> %s\n", promptMsg["OpenFile"]), err))
+		utils.ColorPrint(fmt.Sprintf(fmt.Sprintf("[ERROR] runRemove -> %s\n", PromptMsg["OpenFile"]), err))
 		return
 	}
 	defer fw.Close()
-	fbytes, err := json.MarshalIndent(&localNodes, "", "\t")
+	fbytes, err := json.MarshalIndent(&LocalNodes, "", "\t")
 	if err != nil {
-		utils.ColorPrint(fmt.Sprintf(fmt.Sprintf("[ERROR] runRemove -> %s\n", promptMsg["ParseJSON"]), err))
+		utils.ColorPrint(fmt.Sprintf(fmt.Sprintf("[ERROR] runRemove -> %s\n", PromptMsg["ParseJSON"]), err))
 		return
 	}
 	fw.Write(fbytes)
@@ -72,11 +72,11 @@ func removePackages(nodes []*doc.Node) {
 			bnodes := checkLocalBundles(n.ImportPath[:l-2])
 			if len(bnodes) > 0 {
 				// Check with users if continue.
-				utils.ColorPrint(fmt.Sprintf(fmt.Sprintf("%s\n", promptMsg["BundleInfo"]), n.ImportPath[:l-2]))
+				utils.ColorPrint(fmt.Sprintf(fmt.Sprintf("%s\n", PromptMsg["BundleInfo"]), n.ImportPath[:l-2]))
 				for _, bn := range bnodes {
 					fmt.Printf("[%s] -> %s: %s.\n", bn.ImportPath, bn.Type, bn.Value)
 				}
-				fmt.Printf(fmt.Sprintf("%s\n", promptMsg["ContinueRemove"]))
+				fmt.Printf(fmt.Sprintf("%s\n", PromptMsg["ContinueRemove"]))
 				var option string
 				fmt.Fscan(os.Stdin, &option)
 				if strings.ToLower(option) != "y" {
@@ -104,7 +104,7 @@ func removePackages(nodes []*doc.Node) {
 			}
 		default:
 			// Invalid import path.
-			fmt.Printf(fmt.Sprintf("%s\n", promptMsg["SkipInvalidPath"]), n.ImportPath)
+			fmt.Printf(fmt.Sprintf("%s\n", PromptMsg["SkipInvalidPath"]), n.ImportPath)
 		}
 	}
 }
@@ -112,9 +112,9 @@ func removePackages(nodes []*doc.Node) {
 // removeNode removes node from local nodes.
 func removeNode(n *doc.Node) {
 	// Check if this node exists.
-	for i, v := range localNodes {
+	for i, v := range LocalNodes {
 		if n.ImportPath == v.ImportPath {
-			localNodes = append(localNodes[:i], localNodes[i+1:]...)
+			LocalNodes = append(LocalNodes[:i], LocalNodes[i+1:]...)
 			return
 		}
 	}
@@ -127,7 +127,7 @@ func removePackage(node *doc.Node) (*doc.Node, []string) {
 	for _, p := range paths {
 		absPath := p + "/src/" + utils.GetProjectPath(node.ImportPath) + "/"
 		if utils.IsExist(absPath) {
-			fmt.Printf(fmt.Sprintf("%s\n", promptMsg["RemovePackage"]), node.ImportPath)
+			fmt.Printf(fmt.Sprintf("%s\n", PromptMsg["RemovePackage"]), node.ImportPath)
 			// Remove files.
 			os.RemoveAll(absPath)
 			// Remove file in GOPATH/bin
@@ -150,7 +150,7 @@ func removePackage(node *doc.Node) (*doc.Node, []string) {
 	}
 
 	// Cannot find package.
-	fmt.Printf(fmt.Sprintf("%s\n", promptMsg["PackageNotFound"]), node.ImportPath)
+	fmt.Printf(fmt.Sprintf("%s\n", PromptMsg["PackageNotFound"]), node.ImportPath)
 	return nil, nil
 }
 

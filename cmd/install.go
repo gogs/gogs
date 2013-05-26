@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-package main
+package cmd
 
 import (
 	"encoding/json"
@@ -24,14 +24,14 @@ var (
 	installGOPATH     string          // The GOPATH that packages are downloaded to.
 )
 
-var cmdInstall = &Command{
+var CmdInstall = &Command{
 	UsageLine: "install [install flags] <packages|bundles|snapshots>",
 }
 
 func init() {
 	downloadCache = make(map[string]bool)
-	cmdInstall.Run = runInstall
-	cmdInstall.Flags = map[string]bool{
+	CmdInstall.Run = runInstall
+	CmdInstall.Flags = map[string]bool{
 		"-v": false,
 		"-d": false,
 		"-u": false, // Flag for 'go get'.
@@ -45,13 +45,13 @@ func init() {
 func printInstallPrompt(flag string) {
 	switch flag {
 	case "-v":
-		fmt.Printf(fmt.Sprintf("%s\n", promptMsg["PureDownload"]))
+		fmt.Printf(fmt.Sprintf("%s\n", PromptMsg["PureDownload"]))
 	case "-d":
-		fmt.Printf(fmt.Sprintf("%s\n", promptMsg["DownloadOnly"]))
+		fmt.Printf(fmt.Sprintf("%s\n", PromptMsg["DownloadOnly"]))
 	case "-e":
-		fmt.Printf(fmt.Sprintf("%s\n", promptMsg["DownloadExDeps"]))
+		fmt.Printf(fmt.Sprintf("%s\n", PromptMsg["DownloadExDeps"]))
 	case "-s":
-		fmt.Printf(fmt.Sprintf("%s\n", promptMsg["DownloadFromSrcs"]))
+		fmt.Printf(fmt.Sprintf("%s\n", PromptMsg["DownloadFromSrcs"]))
 	}
 }
 
@@ -80,7 +80,7 @@ func checkFlags(flags map[string]bool, enable []string, args []string, print fun
 				fmt.Println("DISABLE: " + f)
 			}
 		} else {
-			fmt.Printf(fmt.Sprintf("%s\n", promptMsg["UnknownFlag"]), f)
+			fmt.Printf(fmt.Sprintf("%s\n", PromptMsg["UnknownFlag"]), f)
 			return -1
 		}
 		num = i + 1
@@ -104,7 +104,7 @@ func checkVCSTool() {
 
 func runInstall(cmd *Command, args []string) {
 	// Check flags.
-	num := checkFlags(cmd.Flags, config.AutoEnable.Install, args, printInstallPrompt)
+	num := checkFlags(cmd.Flags, Config.AutoEnable.Install, args, printInstallPrompt)
 	if num == -1 {
 		return
 	}
@@ -112,15 +112,15 @@ func runInstall(cmd *Command, args []string) {
 
 	// Check length of arguments.
 	if len(args) < 1 {
-		fmt.Printf(fmt.Sprintf("%s\n", promptMsg["NoPackage"]))
+		fmt.Printf(fmt.Sprintf("%s\n", PromptMsg["NoPackage"]))
 		return
 	}
 
 	// Check version control tools.
 	checkVCSTool()
 
-	installGOPATH = utils.GetBestMatchGOPATH(appPath)
-	utils.ColorPrint(fmt.Sprintf(fmt.Sprintf("%s\n", promptMsg["DownloadPath"]), installGOPATH))
+	installGOPATH = utils.GetBestMatchGOPATH(AppPath)
+	utils.ColorPrint(fmt.Sprintf(fmt.Sprintf("%s\n", PromptMsg["DownloadPath"]), installGOPATH))
 
 	// Generate temporary nodes.
 	nodes := make([]*doc.Node, len(args))
@@ -131,7 +131,7 @@ func runInstall(cmd *Command, args []string) {
 	// Download packages.
 	downloadPackages(nodes)
 
-	if !cmdInstall.Flags["-d"] && !cmdInstall.Flags["-v"] {
+	if !CmdInstall.Flags["-d"] && !CmdInstall.Flags["-v"] {
 		// Remove old files.
 		uninstallList := make([]string, 0, len(downloadCache))
 		for k := range downloadCache {
@@ -145,21 +145,21 @@ func runInstall(cmd *Command, args []string) {
 		cmdArgs = append(cmdArgs, "<blank>")
 
 		for k := range downloadCache {
-			fmt.Printf(fmt.Sprintf("%s\n", promptMsg["InstallStatus"]), k)
+			fmt.Printf(fmt.Sprintf("%s\n", PromptMsg["InstallStatus"]), k)
 			cmdArgs[1] = k
 			executeCommand("go", cmdArgs)
 		}
 
 		// Save local nodes to file.
-		fw, err := os.Create(appPath + "data/nodes.json")
+		fw, err := os.Create(AppPath + "data/nodes.json")
 		if err != nil {
-			utils.ColorPrint(fmt.Sprintf(fmt.Sprintf("[ERROR] runInstall -> %s\n", promptMsg["OpenFile"]), err))
+			utils.ColorPrint(fmt.Sprintf(fmt.Sprintf("[ERROR] runInstall -> %s\n", PromptMsg["OpenFile"]), err))
 			return
 		}
 		defer fw.Close()
-		fbytes, err := json.MarshalIndent(&localNodes, "", "\t")
+		fbytes, err := json.MarshalIndent(&LocalNodes, "", "\t")
 		if err != nil {
-			utils.ColorPrint(fmt.Sprintf(fmt.Sprintf("[ERROR] runInstall -> %s\n", promptMsg["ParseJSON"]), err))
+			utils.ColorPrint(fmt.Sprintf(fmt.Sprintf("[ERROR] runInstall -> %s\n", PromptMsg["ParseJSON"]), err))
 			return
 		}
 		fw.Write(fbytes)
@@ -181,7 +181,7 @@ func chekcDeps(nodes []*doc.Node) (depnodes []*doc.Node) {
 
 // checkLocalBundles checks if the bundle is in local file system.
 func checkLocalBundles(bundle string) (nodes []*doc.Node) {
-	for _, b := range localBundles {
+	for _, b := range LocalBundles {
 		if bundle == b.Name {
 			nodes = append(nodes, chekcDeps(b.Nodes)...)
 			return nodes
@@ -204,11 +204,11 @@ func downloadPackages(nodes []*doc.Node) {
 			bnodes := checkLocalBundles(n.ImportPath[:l-2])
 			if len(bnodes) > 0 {
 				// Check with users if continue.
-				utils.ColorPrint(fmt.Sprintf(fmt.Sprintf("%s\n", promptMsg["BundleInfo"]), n.ImportPath[:l-2]))
+				utils.ColorPrint(fmt.Sprintf(fmt.Sprintf("%s\n", PromptMsg["BundleInfo"]), n.ImportPath[:l-2]))
 				for _, bn := range bnodes {
 					fmt.Printf("[%s] -> %s: %s.\n", bn.ImportPath, bn.Type, bn.Value)
 				}
-				fmt.Printf(fmt.Sprintf("%s\n", promptMsg["ContinueDownload"]))
+				fmt.Printf(fmt.Sprintf("%s\n", PromptMsg["ContinueDownload"]))
 				var option string
 				fmt.Fscan(os.Stdin, &option)
 				if strings.ToLower(option) != "y" {
@@ -243,11 +243,11 @@ func downloadPackages(nodes []*doc.Node) {
 					saveNode(node)
 				}
 			} else {
-				fmt.Printf(fmt.Sprintf("%s\n", promptMsg["SkipDownloaded"]), n.ImportPath)
+				fmt.Printf(fmt.Sprintf("%s\n", PromptMsg["SkipDownloaded"]), n.ImportPath)
 			}
 		default:
 			// Invalid import path.
-			fmt.Printf(fmt.Sprintf("%s\n", promptMsg["SkipInvalidPath"]), n.ImportPath)
+			fmt.Printf(fmt.Sprintf("%s\n", PromptMsg["SkipInvalidPath"]), n.ImportPath)
 		}
 	}
 }
@@ -258,42 +258,42 @@ func saveNode(n *doc.Node) {
 	n.Deps = nil
 
 	// Check if this node exists.
-	for i, v := range localNodes {
+	for i, v := range LocalNodes {
 		if n.ImportPath == v.ImportPath {
-			localNodes[i] = n
+			LocalNodes[i] = n
 			return
 		}
 	}
 
 	// Add new node.
-	localNodes = append(localNodes, n)
+	LocalNodes = append(LocalNodes, n)
 }
 
 // downloadPackage downloads package either use version control tools or not.
 func downloadPackage(node *doc.Node) (*doc.Node, []string) {
 	// Check if use version control tools.
 	switch {
-	case cmdInstall.Flags["-v"] &&
+	case CmdInstall.Flags["-v"] &&
 		((node.ImportPath[0] == 'g' && isHasGit) || (node.ImportPath[0] == 'c' && isHasHg)): // github.com, code.google.com
-		fmt.Printf(fmt.Sprintf("%s\n", promptMsg["InstallByGoGet"]), node.ImportPath)
+		fmt.Printf(fmt.Sprintf("%s\n", PromptMsg["InstallByGoGet"]), node.ImportPath)
 		args := checkGoGetFlags()
 		args = append(args, node.ImportPath)
 		executeCommand("go", args)
 		return nil, nil
 	default: // Pure download.
-		if cmdInstall.Flags["-v"] {
-			cmdInstall.Flags["-v"] = false
-			fmt.Printf(fmt.Sprintf("%s\n", promptMsg["NoVCSTool"]))
+		if CmdInstall.Flags["-v"] {
+			CmdInstall.Flags["-v"] = false
+			fmt.Printf(fmt.Sprintf("%s\n", PromptMsg["NoVCSTool"]))
 		}
 
-		fmt.Printf(fmt.Sprintf("%s\n", promptMsg["DownloadStatus"]), node.ImportPath)
+		fmt.Printf(fmt.Sprintf("%s\n", PromptMsg["DownloadStatus"]), node.ImportPath)
 		// Mark as donwloaded.
 		downloadCache[node.ImportPath] = true
 
 		imports, err := pureDownload(node)
 
 		if err != nil {
-			utils.ColorPrint(fmt.Sprintf(fmt.Sprintf("[ERROR] %s\n", promptMsg["DownloadError"]), node.ImportPath, err))
+			utils.ColorPrint(fmt.Sprintf(fmt.Sprintf("[ERROR] %s\n", PromptMsg["DownloadError"]), node.ImportPath, err))
 			return nil, nil
 		}
 
@@ -304,10 +304,10 @@ func downloadPackage(node *doc.Node) (*doc.Node, []string) {
 func checkGoGetFlags() (args []string) {
 	args = append(args, "get")
 	switch {
-	case cmdInstall.Flags["-d"]:
+	case CmdInstall.Flags["-d"]:
 		args = append(args, "-d")
 		fallthrough
-	case cmdInstall.Flags["-u"]:
+	case CmdInstall.Flags["-u"]:
 		args = append(args, "-u")
 	}
 
@@ -339,7 +339,7 @@ func pureDownload(node *doc.Node) ([]string, error) {
 		if m == nil {
 			if s.prefix != "" {
 				return nil,
-					doc.NotFoundError{fmt.Sprintf("%s", promptMsg["NotFoundError"])}
+					doc.NotFoundError{fmt.Sprintf("%s", PromptMsg["NotFoundError"])}
 			}
 			continue
 		}
@@ -349,7 +349,7 @@ func pureDownload(node *doc.Node) ([]string, error) {
 				match[n] = m[i]
 			}
 		}
-		return s.get(doc.HttpClient, match, installGOPATH, node, cmdInstall.Flags)
+		return s.get(doc.HttpClient, match, installGOPATH, node, CmdInstall.Flags)
 	}
-	return nil, errors.New(fmt.Sprintf("%s", promptMsg["NotFoundError"]))
+	return nil, errors.New(fmt.Sprintf("%s", PromptMsg["NotFoundError"]))
 }

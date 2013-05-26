@@ -2,9 +2,10 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-package main
+package cmd
 
 import (
+	"bytes"
 	"fmt"
 	"runtime"
 	"strings"
@@ -13,12 +14,12 @@ import (
 	"github.com/GPMGo/gopm/utils"
 )
 
-var cmdSearch = &Command{
+var CmdSearch = &Command{
 	UsageLine: "search [search flags] <keyword>",
 }
 
 func init() {
-	cmdSearch.Run = runSearch
+	CmdSearch.Run = runSearch
 }
 
 // printSearchPrompt prints prompt information to users to
@@ -31,7 +32,7 @@ func printSearchPrompt(flag string) {
 
 func runSearch(cmd *Command, args []string) {
 	// Check flags.
-	num := checkFlags(cmd.Flags, config.AutoEnable.Search, args, printSearchPrompt)
+	num := checkFlags(cmd.Flags, Config.AutoEnable.Search, args, printSearchPrompt)
 	if num == -1 {
 		return
 	}
@@ -39,7 +40,7 @@ func runSearch(cmd *Command, args []string) {
 
 	// Check length of arguments.
 	if len(args) < 1 {
-		fmt.Printf(fmt.Sprintf("%s\n", promptMsg["NoKeyword"]))
+		fmt.Printf(fmt.Sprintf("%s\n", PromptMsg["NoKeyword"]))
 		return
 	}
 
@@ -50,18 +51,9 @@ func runSearch(cmd *Command, args []string) {
 		return
 	}
 
-	resultStr := string(results)
-
-	isWindws := runtime.GOOS == "windows"
-	if !isWindws {
-		// Set color highlight.
-		resultStr = strings.Replace(resultStr, args[0],
-			fmt.Sprintf(utils.PureStartColor, utils.Yellow)+args[0]+utils.EndColor, -1)
-	}
-
 	pkgsCache := make(map[string]string)
 	paths := utils.GetGOPATH()
-	pkgs := strings.Split(resultStr, "|||")
+	pkgs := strings.Split(string(results), "|||")
 	for _, p := range pkgs {
 		i := strings.Index(p, "$")
 		if i > -1 {
@@ -72,8 +64,11 @@ func runSearch(cmd *Command, args []string) {
 		}
 	}
 
+	isWindws := runtime.GOOS == "windows"
+	var buf bytes.Buffer
 	for k, v := range pkgsCache {
-		fmt.Print("-> " + k) // Package import path.
+		// Package import path.
+		buf.WriteString("-> " + k)
 		// Check if has been installed.
 		for _, path := range paths {
 			if checkIsExistWithVCS(path + "/src/" + k + "/") {
@@ -84,14 +79,24 @@ func runSearch(cmd *Command, args []string) {
 					installStr = strings.Replace(installStr, "]",
 						utils.EndColor+"]", 1)
 				}
-				fmt.Print(installStr)
+				buf.WriteString(installStr)
 				break
 			}
 		}
-		fmt.Print("\n")
+		buf.WriteString("\n")
 
 		if len(v) > 0 {
-			fmt.Println("        " + v) // Synopsis。
+			buf.WriteString("        " + v + "\n") // Synopsis。
 		}
 	}
+
+	resultStr := buf.String()
+
+	if !isWindws {
+		// Set color highlight.
+		resultStr = strings.Replace(resultStr, args[0],
+			fmt.Sprintf(utils.PureStartColor, utils.Yellow)+args[0]+utils.EndColor, -1)
+	}
+
+	fmt.Print(resultStr)
 }

@@ -22,129 +22,57 @@ import (
 	"unicode/utf8"
 
 	"github.com/BurntSushi/toml"
+	"github.com/GPMGo/gopm/cmd"
 	"github.com/GPMGo/gopm/doc"
 	"github.com/GPMGo/gopm/utils"
 )
 
-var (
-	config  tomlConfig
-	appPath string // Application path.
-)
-
-var (
-	localNodes   []*doc.Node
-	localBundles []*doc.Bundle
-)
-
-// Use for i18n, key is prompt code, value is corresponding message.
-var promptMsg map[string]string
-
-type tomlConfig struct {
-	Title, Version string
-	Lang           string `toml:"user_language"`
-	AutoBackup     bool   `toml:"auto_backup"`
-	Account        account
-	AutoEnable     flagEnable `toml:"auto_enable"`
-}
-
-type flagEnable struct {
-	Build, Install, Search, Check []string
-}
-
-type account struct {
-	Username, Password  string
-	Github_Access_Token string `toml:"github_access_token"`
-}
-
-// A Command is an implementation of a go command
-// like go build or go fix.
-type Command struct {
-	// Run runs the command.
-	// The args are the arguments after the command name.
-	Run func(cmd *Command, args []string)
-
-	// UsageLine is the one-line usage message.
-	// The first word in the line is taken to be the command name.
-	UsageLine string
-
-	// Short is the short description shown in the 'go help' output.
-	Short string
-
-	// Long is the long message shown in the 'go help <this-command>' output.
-	Long string
-
-	// Flag is a set of flags specific to this command.
-	Flags map[string]bool
-}
-
-// Name returns the command's name: the first word in the usage line.
-func (c *Command) Name() string {
-	name := c.UsageLine
-	i := strings.Index(name, " ")
-	if i >= 0 {
-		name = name[:i]
-	}
-	return name
-}
-
-func (c *Command) Usage() {
-	fmt.Fprintf(os.Stderr, "usage: %s\n\n", c.UsageLine)
-	fmt.Fprintf(os.Stderr, "%s\n", strings.TrimSpace(c.Long))
-	os.Exit(2)
-}
-
-// Runnable reports whether the command can be run; otherwise
-// it is a documentation pseudo-command such as importpath.
-func (c *Command) Runnable() bool {
-	return c.Run != nil
-}
-
 // Commands lists the available commands and help topics.
 // The order here is the order in which they are printed by 'gpm help'.
-var commands = []*Command{
-	cmdBuild,
-	cmdSearch,
-	cmdInstall,
-	cmdRemove,
-	cmdCheck,
+var commands = []*cmd.Command{
+	cmd.CmdBuild,
+	cmd.CmdSearch,
+	cmd.CmdInstall,
+	cmd.CmdRemove,
+	cmd.CmdCheck,
 }
 
 // getAppPath returns application execute path for current process.
 func getAppPath() bool {
 	// Look up executable in PATH variable.
-	appPath, _ = exec.LookPath(path.Base(os.Args[0]))
+	cmd.AppPath, _ = exec.LookPath(path.Base(os.Args[0]))
 	// Check if run under $GOPATH/bin
-	if !utils.IsExist(appPath + "conf/") {
+	if !utils.IsExist(cmd.AppPath + "conf/") {
 		paths := utils.GetGOPATH()
 		for _, p := range paths {
 			if utils.IsExist(p + "/src/github.com/GPMGo/gopm/") {
-				appPath = p + "/src/github.com/GPMGo/gopm/"
+				cmd.AppPath = p + "/src/github.com/GPMGo/gopm/"
 				break
 			}
 		}
 	}
 
-	if len(appPath) == 0 {
+	if len(cmd.AppPath) == 0 {
 		utils.ColorPrint("[ERROR] getAppPath ->[ Unable to indicate current execute path. ]\n")
 		return false
 	}
 
-	appPath = filepath.Dir(appPath) + "/"
+	cmd.AppPath = filepath.Dir(cmd.AppPath) + "/"
 	if runtime.GOOS == "windows" {
 		// Replace all '\' to '/'.
-		appPath = strings.Replace(appPath, "\\", "/", -1)
+		cmd.AppPath = strings.Replace(cmd.AppPath, "\\", "/", -1)
 	}
 
-	doc.SetAppConfig(appPath, config.AutoBackup)
+	doc.SetAppConfig(cmd.AppPath, cmd.Config.AutoBackup)
 	return true
 }
 
 // loadPromptMsg loads prompt messages according to user language.
 func loadPromptMsg(lang string) bool {
-	promptMsg = make(map[string]string)
+	cmd.PromptMsg = make(map[string]string)
 
 	// Load prompt messages.
-	f, err := os.Open(appPath + "i18n/" + lang + "/prompt.txt")
+	f, err := os.Open(cmd.AppPath + "i18n/" + lang + "/prompt.txt")
 	if err != nil {
 		utils.ColorPrint(fmt.Sprintf("[ERROR] loadUsage -> Fail to load prompt messages[ %s ]\n", err))
 		return false
@@ -159,7 +87,7 @@ func loadPromptMsg(lang string) bool {
 	for _, p := range promptStrs {
 		i := strings.Index(p, "=")
 		if i > -1 {
-			promptMsg[p[:i]] = p[i+1:]
+			cmd.PromptMsg[p[:i]] = p[i+1:]
 		}
 	}
 	return true
@@ -172,9 +100,9 @@ func loadUsage(lang string) bool {
 	}
 
 	// Load main usage.
-	f, err := os.Open(appPath + "i18n/" + lang + "/usage.tpl")
+	f, err := os.Open(cmd.AppPath + "i18n/" + lang + "/usage.tpl")
 	if err != nil {
-		utils.ColorPrint(fmt.Sprintf(fmt.Sprintf("[ERROR] loadUsage -> %s\n", promptMsg["LoadCommandUsage"]), "main", err))
+		utils.ColorPrint(fmt.Sprintf(fmt.Sprintf("[ERROR] loadUsage -> %s\n", cmd.PromptMsg["LoadCommandUsage"]), "main", err))
 		return false
 	}
 	defer f.Close()
@@ -186,10 +114,10 @@ func loadUsage(lang string) bool {
 	usageTemplate = string(usageBytes)
 
 	// Load command usage.
-	for _, cmd := range commands {
-		f, err := os.Open(appPath + "i18n/" + lang + "/usage_" + cmd.Name() + ".txt")
+	for _, command := range commands {
+		f, err := os.Open(cmd.AppPath + "i18n/" + lang + "/usage_" + command.Name() + ".txt")
 		if err != nil {
-			utils.ColorPrint(fmt.Sprintf(fmt.Sprintf("[ERROR] loadUsage -> %s\n", promptMsg["LoadCommandUsage"]), cmd.Name(), err))
+			utils.ColorPrint(fmt.Sprintf(fmt.Sprintf("[ERROR] loadUsage -> %s\n", cmd.PromptMsg["LoadCommandUsage"]), command.Name(), err))
 			return false
 		}
 		defer f.Close()
@@ -201,11 +129,11 @@ func loadUsage(lang string) bool {
 		usages := strings.Split(string(usageBytes), "|||")
 		if len(usages) < 2 {
 			utils.ColorPrint(fmt.Sprintf(
-				fmt.Sprintf("[ERROR] loadUsage -> %s\n", promptMsg["ReadCoammndUsage"]), cmd.Name()))
+				fmt.Sprintf("[ERROR] loadUsage -> %s\n", cmd.PromptMsg["ReadCoammndUsage"]), command.Name()))
 			return false
 		}
-		cmd.Short = usages[0]
-		cmd.Long = usages[1]
+		command.Short = usages[0]
+		command.Long = usages[1]
 	}
 
 	return true
@@ -213,19 +141,19 @@ func loadUsage(lang string) bool {
 
 // loadLocalNodes loads nodes information from local file system.
 func loadLocalNodes() bool {
-	if !utils.IsExist(appPath + "data/nodes.json") {
-		os.MkdirAll(appPath+"data/", os.ModePerm)
+	if !utils.IsExist(cmd.AppPath + "data/nodes.json") {
+		os.MkdirAll(cmd.AppPath+"data/", os.ModePerm)
 	} else {
-		fr, err := os.Open(appPath + "data/nodes.json")
+		fr, err := os.Open(cmd.AppPath + "data/nodes.json")
 		if err != nil {
-			utils.ColorPrint(fmt.Sprintf(fmt.Sprintf("[ERROR] loadLocalNodes -> %s\n", promptMsg["LoadLocalData"]), err))
+			utils.ColorPrint(fmt.Sprintf(fmt.Sprintf("[ERROR] loadLocalNodes -> %s\n", cmd.PromptMsg["LoadLocalData"]), err))
 			return false
 		}
 		defer fr.Close()
 
-		err = json.NewDecoder(fr).Decode(&localNodes)
+		err = json.NewDecoder(fr).Decode(&cmd.LocalNodes)
 		if err != nil && err != io.EOF {
-			utils.ColorPrint(fmt.Sprintf(fmt.Sprintf("[ERROR] loadLocalNodes -> %s\n", promptMsg["ParseJSON"]), err))
+			utils.ColorPrint(fmt.Sprintf(fmt.Sprintf("[ERROR] loadLocalNodes -> %s\n", cmd.PromptMsg["ParseJSON"]), err))
 			return false
 		}
 	}
@@ -235,25 +163,25 @@ func loadLocalNodes() bool {
 // loadLocalBundles loads bundles from local file system.
 func loadLocalBundles() bool {
 	// Find all bundles.
-	dir, err := os.Open(appPath + "repo/bundles/")
+	dir, err := os.Open(cmd.AppPath + "repo/bundles/")
 	if err != nil {
-		utils.ColorPrint(fmt.Sprintf(fmt.Sprintf("[ERROR] loadLocalBundles -> %s\n", promptMsg["OpenFile"]), err))
+		utils.ColorPrint(fmt.Sprintf(fmt.Sprintf("[ERROR] loadLocalBundles -> %s\n", cmd.PromptMsg["OpenFile"]), err))
 		return false
 	}
 	defer dir.Close()
 
 	fis, err := dir.Readdir(0)
 	if err != nil {
-		utils.ColorPrint(fmt.Sprintf(fmt.Sprintf("[ERROR] loadLocalBundles -> %s\n", promptMsg["OpenFile"]), err))
+		utils.ColorPrint(fmt.Sprintf(fmt.Sprintf("[ERROR] loadLocalBundles -> %s\n", cmd.PromptMsg["OpenFile"]), err))
 		return false
 	}
 
 	for _, fi := range fis {
 		// In case this folder contains unexpected directories.
 		if !fi.IsDir() && strings.HasSuffix(fi.Name(), ".json") {
-			fr, err := os.Open(appPath + "repo/bundles/" + fi.Name())
+			fr, err := os.Open(cmd.AppPath + "repo/bundles/" + fi.Name())
 			if err != nil {
-				utils.ColorPrint(fmt.Sprintf(fmt.Sprintf("[ERROR] loadLocalBundles -> %s\n", promptMsg["OpenFile"]), err))
+				utils.ColorPrint(fmt.Sprintf(fmt.Sprintf("[ERROR] loadLocalBundles -> %s\n", cmd.PromptMsg["OpenFile"]), err))
 				return false
 			}
 
@@ -261,7 +189,7 @@ func loadLocalBundles() bool {
 			err = json.NewDecoder(fr).Decode(bundle)
 			fr.Close()
 			if err != nil && err != io.EOF {
-				utils.ColorPrint(fmt.Sprintf(fmt.Sprintf("[ERROR] loadLocalBundles -> %s\n", promptMsg["ParseJSON"]), err))
+				utils.ColorPrint(fmt.Sprintf(fmt.Sprintf("[ERROR] loadLocalBundles -> %s\n", cmd.PromptMsg["ParseJSON"]), err))
 				return false
 			}
 
@@ -270,7 +198,7 @@ func loadLocalBundles() bool {
 				bundle.Name = fi.Name()[:strings.Index(fi.Name(), ".")]
 			}
 
-			localBundles = append(localBundles, bundle)
+			cmd.LocalBundles = append(cmd.LocalBundles, bundle)
 		}
 	}
 	return true
@@ -288,24 +216,24 @@ func initialize() bool {
 	}
 
 	// Load configuration.
-	if _, err := toml.DecodeFile(appPath+"conf/gopm.toml", &config); err != nil {
+	if _, err := toml.DecodeFile(cmd.AppPath+"conf/gopm.toml", &cmd.Config); err != nil {
 		fmt.Printf("initialize -> Fail to load configuration[ %s ]\n", err)
 		return false
 	}
 
 	// Set github.com access token.
-	doc.SetGithubCredentials(config.Account.Github_Access_Token)
+	doc.SetGithubCredentials(cmd.Config.Account.Github_Access_Token)
 
 	// Load usages by language.
-	if !loadUsage(config.Lang) {
+	if !loadUsage(cmd.Config.Lang) {
 		return false
 	}
 
 	// Create bundle and snapshot directories.
-	os.MkdirAll(appPath+"repo/bundles/", os.ModePerm)
-	os.MkdirAll(appPath+"repo/snapshots/", os.ModePerm)
+	os.MkdirAll(cmd.AppPath+"repo/bundles/", os.ModePerm)
+	os.MkdirAll(cmd.AppPath+"repo/snapshots/", os.ModePerm)
 	// Create local tarball directories.
-	os.MkdirAll(appPath+"repo/tarballs/", os.ModePerm)
+	os.MkdirAll(cmd.AppPath+"repo/tarballs/", os.ModePerm)
 
 	// Initialize local data.
 	if !loadLocalNodes() || !loadLocalBundles() {
@@ -344,7 +272,7 @@ func main() {
 	}
 
 	// Uknown commands.
-	fmt.Fprintf(os.Stderr, fmt.Sprintf("%s\n", promptMsg["UnknownCommand"]), args[0])
+	fmt.Fprintf(os.Stderr, fmt.Sprintf("%s\n", cmd.PromptMsg["UnknownCommand"]), args[0])
 	setExitStatus(2)
 	exit()
 }
@@ -430,24 +358,4 @@ func exit() {
 		f()
 	}
 	os.Exit(exitStatus)
-}
-
-// executeCommand executes commands in command line.
-func executeCommand(cmd string, args []string) {
-	cmdExec := exec.Command(cmd, args...)
-	stdout, err := cmdExec.StdoutPipe()
-	if err != nil {
-		fmt.Println(err)
-	}
-	stderr, err := cmdExec.StderrPipe()
-	if err != nil {
-		fmt.Println(err)
-	}
-	err = cmdExec.Start()
-	if err != nil {
-		fmt.Println(err)
-	}
-	go io.Copy(os.Stdout, stdout)
-	go io.Copy(os.Stderr, stderr)
-	cmdExec.Wait()
 }

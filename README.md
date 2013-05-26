@@ -46,6 +46,7 @@ This application still in experiment, any change could happen, but it doesn't af
 
 ### Future
 
+- Command `search` compares version.
 - Command `home` and `doc`.
 - Command `remove` add flag `-d` for removing dependencies at the same time.
 - Command `remove` add feature check for dependencies, make sure other packages don't import this one, and give choose for users.

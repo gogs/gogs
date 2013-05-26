@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-package main
+package cmd
 
 import (
 	"fmt"
@@ -13,13 +13,13 @@ import (
 	"github.com/GPMGo/gopm/utils"
 )
 
-var cmdCheck = &Command{
+var CmdCheck = &Command{
 	UsageLine: "check [check flags] [packages]",
 }
 
 func init() {
-	cmdCheck.Run = runCheck
-	cmdCheck.Flags = map[string]bool{
+	CmdCheck.Run = runCheck
+	CmdCheck.Flags = map[string]bool{
 		"-e": false,
 	}
 }
@@ -29,13 +29,13 @@ func init() {
 func printCheckPrompt(flag string) {
 	switch flag {
 	case "-e":
-		fmt.Printf(fmt.Sprintf("%s\n", promptMsg["CheckExDeps"]))
+		fmt.Printf(fmt.Sprintf("%s\n", PromptMsg["CheckExDeps"]))
 	}
 }
 
 func runCheck(cmd *Command, args []string) {
 	// Check flags.
-	num := checkFlags(cmd.Flags, config.AutoEnable.Check, args, printCheckPrompt)
+	num := checkFlags(cmd.Flags, Config.AutoEnable.Check, args, printCheckPrompt)
 	if num == -1 {
 		return
 	}
@@ -45,14 +45,14 @@ func runCheck(cmd *Command, args []string) {
 	// Guess import path.
 	gopath := utils.GetBestMatchGOPATH(wd) + "/src/"
 	if len(wd) <= len(gopath) {
-		fmt.Printf(fmt.Sprintf("runCheck -> %s\n", promptMsg["InvalidPath"]))
+		fmt.Printf(fmt.Sprintf("runCheck -> %s\n", PromptMsg["InvalidPath"]))
 		return
 	}
 
 	importPath := wd[len(gopath):]
 	imports, err := checkImportsByRoot(wd+"/", importPath)
 	if err != nil {
-		utils.ColorPrint(fmt.Sprintf(fmt.Sprintf("runCheck -> %s\n", promptMsg["CheckImports"]), err))
+		utils.ColorPrint(fmt.Sprintf(fmt.Sprintf("runCheck -> %s\n", PromptMsg["CheckImports"]), err))
 		return
 	}
 
@@ -86,19 +86,19 @@ func runCheck(cmd *Command, args []string) {
 
 	// Check if need to install packages.
 	if len(uninstallList) > 0 {
-		fmt.Printf(fmt.Sprintf("%s\n", promptMsg["MissingImports"]))
+		fmt.Printf(fmt.Sprintf("%s\n", PromptMsg["MissingImports"]))
 		for _, v := range uninstallList {
 			fmt.Printf("%s\n", v)
 		}
-		fmt.Printf(fmt.Sprintf("%s\n", promptMsg["ContinueDownload"]))
+		fmt.Printf(fmt.Sprintf("%s\n", PromptMsg["ContinueDownload"]))
 		var option string
 		fmt.Fscan(os.Stdin, &option)
 		if strings.ToLower(option) != "y" {
 			os.Exit(0)
 		}
 
-		installGOPATH = utils.GetBestMatchGOPATH(appPath)
-		utils.ColorPrint(fmt.Sprintf(fmt.Sprintf("%s\n", promptMsg["DownloadPath"]), installGOPATH))
+		installGOPATH = utils.GetBestMatchGOPATH(AppPath)
+		utils.ColorPrint(fmt.Sprintf(fmt.Sprintf("%s\n", PromptMsg["DownloadPath"]), installGOPATH))
 		// Generate temporary nodes.
 		nodes := make([]*doc.Node, len(uninstallList))
 		for i := range nodes {
@@ -116,7 +116,7 @@ func runCheck(cmd *Command, args []string) {
 		cmdArgs = append(cmdArgs, "<blank>")
 
 		for _, k := range uninstallList {
-			fmt.Printf(fmt.Sprintf("%s\n", promptMsg["InstallStatus"]), k)
+			fmt.Printf(fmt.Sprintf("%s\n", PromptMsg["InstallStatus"]), k)
 			cmdArgs[1] = k
 			executeCommand("go", cmdArgs)
 		}
@@ -143,7 +143,7 @@ func checkImportsByRoot(rootPath, importPath string) (imports []string, err erro
 
 	for _, d := range dirs {
 		if d.IsDir() &&
-			!(!cmdCheck.Flags["-e"] && strings.Contains(d.Name(), "example")) {
+			!(!CmdCheck.Flags["-e"] && strings.Contains(d.Name(), "example")) {
 			importPkgs, err := checkImportsByRoot(rootPath+d.Name()+"/", importPath)
 			if err != nil {
 				return nil, err

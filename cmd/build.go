@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-package main
+package cmd
 
 import (
 	"fmt"
@@ -11,13 +11,13 @@ import (
 	"github.com/GPMGo/gopm/utils"
 )
 
-var cmdBuild = &Command{
+var CmdBuild = &Command{
 	UsageLine: "build [build flags] [packages]",
 }
 
 func init() {
-	cmdBuild.Run = runBuild
-	cmdBuild.Flags = map[string]bool{
+	CmdBuild.Run = runBuild
+	CmdBuild.Flags = map[string]bool{
 		"-v": false,
 		"-r": false,
 	}
@@ -33,7 +33,7 @@ func printBuildPrompt(flag string) {
 
 func runBuild(cmd *Command, args []string) {
 	// Check flags.
-	num := checkFlags(cmd.Flags, config.AutoEnable.Build, args, printBuildPrompt)
+	num := checkFlags(cmd.Flags, Config.AutoEnable.Build, args, printBuildPrompt)
 	if num == -1 {
 		return
 	}
@@ -41,7 +41,7 @@ func runBuild(cmd *Command, args []string) {
 
 	var cmdArgs []string
 	cmdArgs = append(cmdArgs, "install")
-	if cmdBuild.Flags["-v"] {
+	if CmdBuild.Flags["-v"] {
 		cmdArgs = append(cmdArgs, "-v")
 	}
 
@@ -57,22 +57,22 @@ func runBuild(cmd *Command, args []string) {
 			if utils.IsExist(wd + "/" + proName) {
 				err := os.Remove(wd + "/" + proName)
 				if err != nil {
-					utils.ColorPrint(fmt.Sprintf(fmt.Sprintf("[ERROR] %s\n", promptMsg["RemoveFile"]), err))
+					utils.ColorPrint(fmt.Sprintf(fmt.Sprintf("[ERROR] %s\n", PromptMsg["RemoveFile"]), err))
 					return
 				}
 			}
 			err := os.Rename(v+"/bin/"+proName, wd+"/"+proName)
 			if err == nil {
-				utils.ColorPrint(fmt.Sprintf(fmt.Sprintf("<SUCCESS>$ %s\n", promptMsg["MovedFile"]), v, wd))
+				utils.ColorPrint(fmt.Sprintf(fmt.Sprintf("<SUCCESS>$ %s\n", PromptMsg["MovedFile"]), v, wd))
 				// Check if need to run program.
-				if cmdBuild.Flags["-r"] {
+				if CmdBuild.Flags["-r"] {
 					cmdArgs = make([]string, 0)
 					executeCommand(proName, cmdArgs)
 				}
 				return
 			}
 
-			fmt.Printf(fmt.Sprintf("%s\n", promptMsg["MoveFile"]), v, wd)
+			fmt.Printf(fmt.Sprintf("%s\n", PromptMsg["MoveFile"]), v, wd)
 			break
 		}
 	}
