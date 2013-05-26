@@ -64,8 +64,21 @@ func runSearch(cmd *Command, args []string) {
 		}
 	}
 
+	if len(pkgsCache) == 0 {
+		fmt.Printf("No result is available for keyword: %s.\n", args[0])
+		return
+	}
+
 	isWindws := runtime.GOOS == "windows"
 	var buf bytes.Buffer
+	// Print split line for more clear look.
+	splitLine := "<-----------------------------search results--------------------------->\n"
+	if !isWindws {
+		splitLine = strings.Replace(splitLine, "<", fmt.Sprintf(utils.PureStartColor, utils.Magenta)+"<", 1)
+		splitLine = strings.Replace(splitLine, ">", ">"+utils.EndColor, 1)
+	}
+	buf.WriteString(splitLine)
+
 	for k, v := range pkgsCache {
 		// Package import path.
 		buf.WriteString("-> " + k)
