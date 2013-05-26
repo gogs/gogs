@@ -1,7 +1,7 @@
 # This is a configuration file for gpm with toml format.
 
 title = "gpm(Go Package Manager)"
-version = "v0.2.3 Build 0525"
+version = "v0.2.4 Build 0525"
 user_language = "en-US"
 #user_language = "zh-CN"
 auto_backup = true
