@@ -11,6 +11,7 @@ import (
 
 	"github.com/GPMGo/gopm/doc"
 	"github.com/GPMGo/gopm/utils"
+	"github.com/GPMGo/node"
 )
 
 var CmdCheck = &Command{
@@ -100,9 +101,9 @@ func runCheck(cmd *Command, args []string) {
 		installGOPATH = utils.GetBestMatchGOPATH(AppPath)
 		utils.ColorPrint(fmt.Sprintf(fmt.Sprintf("%s\n", PromptMsg["DownloadPath"]), installGOPATH))
 		// Generate temporary nodes.
-		nodes := make([]*doc.Node, len(uninstallList))
+		nodes := make([]*node.Node, len(uninstallList))
 		for i := range nodes {
-			nodes[i] = new(doc.Node)
+			nodes[i] = new(node.Node)
 			nodes[i].ImportPath = uninstallList[i]
 		}
 		// Download packages.

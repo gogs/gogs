@@ -11,8 +11,8 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/GPMGo/gopm/doc"
 	"github.com/GPMGo/gopm/utils"
+	"github.com/GPMGo/node"
 )
 
 var (
@@ -36,9 +36,9 @@ func runRemove(cmd *Command, args []string) {
 	}
 
 	// Generate temporary nodes.
-	nodes := make([]*doc.Node, len(args))
+	nodes := make([]*node.Node, len(args))
 	for i := range nodes {
-		nodes[i] = new(doc.Node)
+		nodes[i] = new(node.Node)
 		nodes[i].ImportPath = args[i]
 	}
 
@@ -61,7 +61,7 @@ func runRemove(cmd *Command, args []string) {
 }
 
 // removePackages removes packages from local file system.
-func removePackages(nodes []*doc.Node) {
+func removePackages(nodes []*node.Node) {
 	// Check all packages, they may be bundles, snapshots or raw packages path.
 	for _, n := range nodes {
 		// Check if it is a bundle or snapshot.
@@ -92,14 +92,14 @@ func removePackages(nodes []*doc.Node) {
 		case utils.IsValidRemotePath(n.ImportPath):
 			if !removeCache[n.ImportPath] {
 				// Remove package.
-				node, imports := removePackage(n)
+				nod, imports := removePackage(n)
 				if len(imports) > 0 {
 					fmt.Println("Check denpendencies for removing package has not been supported.")
 				}
 
 				// Remove record in local nodes.
-				if node != nil {
-					removeNode(node)
+				if nod != nil {
+					removeNode(nod)
 				}
 			}
 		default:
@@ -110,7 +110,7 @@ func removePackages(nodes []*doc.Node) {
 }
 
 // removeNode removes node from local nodes.
-func removeNode(n *doc.Node) {
+func removeNode(n *node.Node) {
 	// Check if this node exists.
 	for i, v := range LocalNodes {
 		if n.ImportPath == v.ImportPath {
@@ -121,17 +121,17 @@ func removeNode(n *doc.Node) {
 }
 
 // removePackage removes package from local file system.
-func removePackage(node *doc.Node) (*doc.Node, []string) {
+func removePackage(nod *node.Node) (*node.Node, []string) {
 	// Find package in GOPATH.
 	paths := utils.GetGOPATH()
 	for _, p := range paths {
-		absPath := p + "/src/" + utils.GetProjectPath(node.ImportPath) + "/"
+		absPath := p + "/src/" + utils.GetProjectPath(nod.ImportPath) + "/"
 		if utils.IsExist(absPath) {
-			fmt.Printf(fmt.Sprintf("%s\n", PromptMsg["RemovePackage"]), node.ImportPath)
+			fmt.Printf(fmt.Sprintf("%s\n", PromptMsg["RemovePackage"]), nod.ImportPath)
 			// Remove files.
 			os.RemoveAll(absPath)
 			// Remove file in GOPATH/bin
-			proName := utils.GetExecuteName(node.ImportPath)
+			proName := utils.GetExecuteName(nod.ImportPath)
 			paths := utils.GetGOPATH()
 			var gopath string
 
@@ -142,15 +142,15 @@ func removePackage(node *doc.Node) (*doc.Node, []string) {
 				}
 			}
 
-			pkgList := []string{node.ImportPath}
+			pkgList := []string{nod.ImportPath}
 			removePackageFiles(gopath, pkgList)
 
-			return node, nil
+			return nod, nil
 		}
 	}
 
 	// Cannot find package.
-	fmt.Printf(fmt.Sprintf("%s\n", PromptMsg["PackageNotFound"]), node.ImportPath)
+	fmt.Printf(fmt.Sprintf("%s\n", PromptMsg["PackageNotFound"]), nod.ImportPath)
 	return nil, nil
 }
 

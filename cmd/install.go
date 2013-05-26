@@ -16,6 +16,7 @@ import (
 
 	"github.com/GPMGo/gopm/doc"
 	"github.com/GPMGo/gopm/utils"
+	"github.com/GPMGo/node"
 )
 
 var (
@@ -123,9 +124,9 @@ func runInstall(cmd *Command, args []string) {
 	utils.ColorPrint(fmt.Sprintf(fmt.Sprintf("%s\n", PromptMsg["DownloadPath"]), installGOPATH))
 
 	// Generate temporary nodes.
-	nodes := make([]*doc.Node, len(args))
+	nodes := make([]*node.Node, len(args))
 	for i := range nodes {
-		nodes[i] = new(doc.Node)
+		nodes[i] = new(node.Node)
 		nodes[i].ImportPath = args[i]
 	}
 	// Download packages.
@@ -167,7 +168,7 @@ func runInstall(cmd *Command, args []string) {
 }
 
 // chekcDeps checks dependencies of nodes.
-func chekcDeps(nodes []*doc.Node) (depnodes []*doc.Node) {
+func chekcDeps(nodes []*node.Node) (depnodes []*node.Node) {
 	for _, n := range nodes {
 		// Make sure it will not download all dependencies automatically.
 		if len(n.Value) == 0 {
@@ -180,7 +181,7 @@ func chekcDeps(nodes []*doc.Node) (depnodes []*doc.Node) {
 }
 
 // checkLocalBundles checks if the bundle is in local file system.
-func checkLocalBundles(bundle string) (nodes []*doc.Node) {
+func checkLocalBundles(bundle string) (nodes []*node.Node) {
 	for _, b := range LocalBundles {
 		if bundle == b.Name {
 			nodes = append(nodes, chekcDeps(b.Nodes)...)
@@ -193,7 +194,7 @@ func checkLocalBundles(bundle string) (nodes []*doc.Node) {
 // downloadPackages downloads packages with certain commit,
 // if the commit is empty string, then it downloads all dependencies,
 // otherwise, it only downloada package with specific commit only.
-func downloadPackages(nodes []*doc.Node) {
+func downloadPackages(nodes []*node.Node) {
 	// Check all packages, they may be bundles, snapshots or raw packages path.
 	for _, n := range nodes {
 		// Check if it is a bundle or snapshot.
@@ -225,22 +226,22 @@ func downloadPackages(nodes []*doc.Node) {
 		case utils.IsValidRemotePath(n.ImportPath):
 			if !downloadCache[n.ImportPath] {
 				// Download package.
-				node, imports := downloadPackage(n)
+				nod, imports := downloadPackage(n)
 				if len(imports) > 0 {
 					// Need to download dependencies.
 					// Generate temporary nodes.
-					nodes := make([]*doc.Node, len(imports))
+					nodes := make([]*node.Node, len(imports))
 					for i := range nodes {
-						nodes[i] = new(doc.Node)
+						nodes[i] = new(node.Node)
 						nodes[i].ImportPath = imports[i]
 					}
 					downloadPackages(nodes)
 				}
 
 				// Only save package information with specific commit.
-				if node != nil {
+				if nod != nil {
 					// Save record in local nodes.
-					saveNode(node)
+					saveNode(nod)
 				}
 			} else {
 				fmt.Printf(fmt.Sprintf("%s\n", PromptMsg["SkipDownloaded"]), n.ImportPath)
@@ -253,7 +254,7 @@ func downloadPackages(nodes []*doc.Node) {
 }
 
 // saveNode saves node into local nodes.
-func saveNode(n *doc.Node) {
+func saveNode(n *node.Node) {
 	// Node dependencies list.
 	n.Deps = nil
 
@@ -270,14 +271,14 @@ func saveNode(n *doc.Node) {
 }
 
 // downloadPackage downloads package either use version control tools or not.
-func downloadPackage(node *doc.Node) (*doc.Node, []string) {
+func downloadPackage(nod *node.Node) (*node.Node, []string) {
 	// Check if use version control tools.
 	switch {
 	case CmdInstall.Flags["-v"] &&
-		((node.ImportPath[0] == 'g' && isHasGit) || (node.ImportPath[0] == 'c' && isHasHg)): // github.com, code.google.com
-		fmt.Printf(fmt.Sprintf("%s\n", PromptMsg["InstallByGoGet"]), node.ImportPath)
+		((nod.ImportPath[0] == 'g' && isHasGit) || (nod.ImportPath[0] == 'c' && isHasHg)): // github.com, code.google.com
+		fmt.Printf(fmt.Sprintf("%s\n", PromptMsg["InstallByGoGet"]), nod.ImportPath)
 		args := checkGoGetFlags()
-		args = append(args, node.ImportPath)
+		args = append(args, nod.ImportPath)
 		executeCommand("go", args)
 		return nil, nil
 	default: // Pure download.
@@ -286,18 +287,18 @@ func downloadPackage(node *doc.Node) (*doc.Node, []string) {
 			fmt.Printf(fmt.Sprintf("%s\n", PromptMsg["NoVCSTool"]))
 		}
 
-		fmt.Printf(fmt.Sprintf("%s\n", PromptMsg["DownloadStatus"]), node.ImportPath)
+		fmt.Printf(fmt.Sprintf("%s\n", PromptMsg["DownloadStatus"]), nod.ImportPath)
 		// Mark as donwloaded.
-		downloadCache[node.ImportPath] = true
+		downloadCache[nod.ImportPath] = true
 
-		imports, err := pureDownload(node)
+		imports, err := pureDownload(nod)
 
 		if err != nil {
-			utils.ColorPrint(fmt.Sprintf(fmt.Sprintf("[ERROR] %s\n", PromptMsg["DownloadError"]), node.ImportPath, err))
+			utils.ColorPrint(fmt.Sprintf(fmt.Sprintf("[ERROR] %s\n", PromptMsg["DownloadError"]), nod.ImportPath, err))
 			return nil, nil
 		}
 
-		return node, imports
+		return nod, imports
 	}
 }
 
@@ -318,7 +319,7 @@ func checkGoGetFlags() (args []string) {
 type service struct {
 	pattern *regexp.Regexp
 	prefix  string
-	get     func(*http.Client, map[string]string, string, *doc.Node, map[string]bool) ([]string, error)
+	get     func(*http.Client, map[string]string, string, *node.Node, map[string]bool) ([]string, error)
 }
 
 // services is the list of source code control services handled by gopkgdoc.
@@ -330,12 +331,12 @@ var services = []*service{
 }
 
 // pureDownload downloads package without version control.
-func pureDownload(node *doc.Node) ([]string, error) {
+func pureDownload(nod *node.Node) ([]string, error) {
 	for _, s := range services {
-		if s.get == nil || !strings.HasPrefix(node.ImportPath, s.prefix) {
+		if s.get == nil || !strings.HasPrefix(nod.ImportPath, s.prefix) {
 			continue
 		}
-		m := s.pattern.FindStringSubmatch(node.ImportPath)
+		m := s.pattern.FindStringSubmatch(nod.ImportPath)
 		if m == nil {
 			if s.prefix != "" {
 				return nil,
@@ -343,13 +344,13 @@ func pureDownload(node *doc.Node) ([]string, error) {
 			}
 			continue
 		}
-		match := map[string]string{"importPath": node.ImportPath}
+		match := map[string]string{"importPath": nod.ImportPath}
 		for i, n := range s.pattern.SubexpNames() {
 			if n != "" {
 				match[n] = m[i]
 			}
 		}
-		return s.get(doc.HttpClient, match, installGOPATH, node, CmdInstall.Flags)
+		return s.get(doc.HttpClient, match, installGOPATH, nod, CmdInstall.Flags)
 	}
 	return nil, errors.New(fmt.Sprintf("%s", PromptMsg["NotFoundError"]))
 }

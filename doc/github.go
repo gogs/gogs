@@ -16,6 +16,7 @@ import (
 	"strings"
 
 	"github.com/GPMGo/gopm/utils"
+	"github.com/GPMGo/node"
 )
 
 var (
@@ -35,7 +36,7 @@ func SetGithubCredentials(token string) {
 }
 
 // GetGithubDoc downloads tarball from github.com.
-func GetGithubDoc(client *http.Client, match map[string]string, installGOPATH string, node *Node, cmdFlags map[string]bool) ([]string, error) {
+func GetGithubDoc(client *http.Client, match map[string]string, installGOPATH string, nod *node.Node, cmdFlags map[string]bool) ([]string, error) {
 	match["cred"] = githubCred
 
 	// JSON struct for github.com.
@@ -51,10 +52,10 @@ func GetGithubDoc(client *http.Client, match map[string]string, installGOPATH st
 
 	// bundle and snapshot will have commit 'B' and 'S',
 	// but does not need to download dependencies.
-	isCheckImport := len(node.Value) == 0
+	isCheckImport := len(nod.Value) == 0
 
 	switch {
-	case isCheckImport || len(node.Value) == 1:
+	case isCheckImport || len(nod.Value) == 1:
 		// Get up-to-date version.
 		err := httpGetJSON(client, expand("https://api.github.com/repos/{owner}/{repo}/git/refs?{cred}", match), &refs)
 		if err != nil {
@@ -77,15 +78,15 @@ func GetGithubDoc(client *http.Client, match map[string]string, installGOPATH st
 			return nil, err
 		}
 
-		node.Type = "commit"
-		node.Value = match["sha"]
+		nod.Type = "commit"
+		nod.Value = match["sha"]
 	case !isCheckImport: // Bundle or snapshot.
 		// Check downlaod type.
-		switch node.Type {
+		switch nod.Type {
 		case "tag", "commit", "branch":
-			match["sha"] = node.Value
+			match["sha"] = nod.Value
 		default:
-			return nil, errors.New("Unknown node type: " + node.Type)
+			return nil, errors.New("Unknown node type: " + nod.Type)
 		}
 	}
 
@@ -100,13 +101,13 @@ func GetGithubDoc(client *http.Client, match map[string]string, installGOPATH st
 	}
 
 	shaName := expand("{repo}-{sha}", match)
-	if node.Type == "tag" {
+	if nod.Type == "tag" {
 		shaName = strings.Replace(shaName, "-v", "-", 1)
 	}
 
 	projectPath := expand("github.com/{owner}/{repo}", match)
 	installPath := installGOPATH + "/src/" + projectPath
-	node.ImportPath = projectPath
+	nod.ImportPath = projectPath
 
 	// Remove old files.
 	os.RemoveAll(installPath + "/")

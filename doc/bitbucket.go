@@ -17,6 +17,7 @@ import (
 	"strings"
 
 	"github.com/GPMGo/gopm/utils"
+	"github.com/GPMGo/node"
 )
 
 var (
@@ -25,9 +26,9 @@ var (
 )
 
 // GetBitbucketDoc downloads tarball from bitbucket.org.
-func GetBitbucketDoc(client *http.Client, match map[string]string, installGOPATH string, node *Node, cmdFlags map[string]bool) ([]string, error) {
+func GetBitbucketDoc(client *http.Client, match map[string]string, installGOPATH string, nod *node.Node, cmdFlags map[string]bool) ([]string, error) {
 	// Check version control.
-	if m := bitbucketEtagRe.FindStringSubmatch(node.Value); m != nil {
+	if m := bitbucketEtagRe.FindStringSubmatch(nod.Value); m != nil {
 		match["vcs"] = m[1]
 	} else {
 		var repo struct {
@@ -41,10 +42,10 @@ func GetBitbucketDoc(client *http.Client, match map[string]string, installGOPATH
 
 	// bundle and snapshot will have commit 'B' and 'S',
 	// but does not need to download dependencies.
-	isCheckImport := len(node.Value) == 0
+	isCheckImport := len(nod.Value) == 0
 
 	switch {
-	case isCheckImport || len(node.Value) == 1:
+	case isCheckImport || len(nod.Value) == 1:
 		// Get up-to-date version.
 		tags := make(map[string]string)
 		for _, nodeType := range []string{"branches", "tags"} {
@@ -66,15 +67,15 @@ func GetBitbucketDoc(client *http.Client, match map[string]string, installGOPATH
 			return nil, err
 		}
 
-		node.Type = "commit"
-		node.Value = match["commit"]
+		nod.Type = "commit"
+		nod.Value = match["commit"]
 	case !isCheckImport: // Bundle or snapshot.
 		// Check downlaod type.
-		switch node.Type {
+		switch nod.Type {
 		case "tag", "commit", "branch":
-			match["commit"] = node.Value
+			match["commit"] = nod.Value
 		default:
-			return nil, errors.New("Unknown node type: " + node.Type)
+			return nil, errors.New("Unknown node type: " + nod.Type)
 		}
 	}
 
@@ -90,7 +91,7 @@ func GetBitbucketDoc(client *http.Client, match map[string]string, installGOPATH
 
 	projectPath := expand("bitbucket.org/{owner}/{repo}", match)
 	installPath := installGOPATH + "/src/" + projectPath
-	node.ImportPath = projectPath
+	nod.ImportPath = projectPath
 
 	// Remove old files.
 	os.RemoveAll(installPath + "/")

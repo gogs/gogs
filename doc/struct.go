@@ -8,14 +8,8 @@ import (
 	"go/token"
 	"os"
 	"time"
+	"github.com/GPMGo/node"
 )
-
-// Node represents a node.
-type Node struct {
-	ImportPath  string `json:"import_path"`
-	Type, Value string
-	Deps        []*Node // Dependencies.
-}
 
 // Bundle represents a bundle.
 type Bundle struct {
@@ -24,7 +18,7 @@ type Bundle struct {
 	Name      string `json:"bundle_name"`
 	Timestamp int64
 	Comment   string
-	Nodes     []*Node
+	Nodes     []*node.Node
 }
 
 // source is source code file.

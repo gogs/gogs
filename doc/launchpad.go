@@ -16,12 +16,13 @@ import (
 	"strings"
 
 	"github.com/GPMGo/gopm/utils"
+	"github.com/GPMGo/node"
 )
 
 var LaunchpadPattern = regexp.MustCompile(`^launchpad\.net/(?P<repo>(?P<project>[a-z0-9A-Z_.\-]+)(?P<series>/[a-z0-9A-Z_.\-]+)?|~[a-z0-9A-Z_.\-]+/(\+junk|[a-z0-9A-Z_.\-]+)/[a-z0-9A-Z_.\-]+)(?P<dir>/[a-z0-9A-Z_.\-/]+)*$`)
 
 // GetLaunchpadDoc downloads tarball from launchpad.net.
-func GetLaunchpadDoc(client *http.Client, match map[string]string, installGOPATH string, node *Node, cmdFlags map[string]bool) ([]string, error) {
+func GetLaunchpadDoc(client *http.Client, match map[string]string, installGOPATH string, nod *node.Node, cmdFlags map[string]bool) ([]string, error) {
 
 	if match["project"] != "" && match["series"] != "" {
 		rc, err := httpGet(client, expand("https://code.launchpad.net/{project}{series}/.bzr/branch-format", match), nil)
@@ -40,15 +41,15 @@ func GetLaunchpadDoc(client *http.Client, match map[string]string, installGOPATH
 
 	// bundle and snapshot will have commit 'B' and 'S',
 	// but does not need to download dependencies.
-	isCheckImport := len(node.Value) == 0
+	isCheckImport := len(nod.Value) == 0
 
 	var downloadPath string
 	// Check if download with specific revision.
-	if isCheckImport || len(node.Value) == 1 {
+	if isCheckImport || len(nod.Value) == 1 {
 		downloadPath = expand("https://bazaar.launchpad.net/+branch/{repo}/tarball", match)
-		node.Type = "commit"
+		nod.Type = "commit"
 	} else {
-		downloadPath = expand("https://bazaar.launchpad.net/+branch/{repo}/tarball/"+node.Value, match)
+		downloadPath = expand("https://bazaar.launchpad.net/+branch/{repo}/tarball/"+nod.Value, match)
 	}
 
 	// Scrape the repo browser to find the project revision and individual Go files.
@@ -59,7 +60,7 @@ func GetLaunchpadDoc(client *http.Client, match map[string]string, installGOPATH
 
 	projectPath := expand("launchpad.net/{repo}", match)
 	installPath := installGOPATH + "/src/" + projectPath
-	node.ImportPath = projectPath
+	nod.ImportPath = projectPath
 
 	// Remove old files.
 	os.RemoveAll(installPath + "/")

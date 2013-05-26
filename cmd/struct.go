@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/GPMGo/gopm/doc"
+	"github.com/GPMGo/node"
 )
 
 var (
@@ -20,7 +21,7 @@ var (
 )
 
 var (
-	LocalNodes   []*doc.Node
+	LocalNodes   []*node.Node
 	LocalBundles []*doc.Bundle
 )
 

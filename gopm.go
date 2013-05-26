@@ -263,9 +263,9 @@ func main() {
 	}
 
 	// Check commands and run.
-	for _, cmd := range commands {
-		if cmd.Name() == args[0] && cmd.Run != nil {
-			cmd.Run(cmd, args[1:])
+	for _, comm := range commands {
+		if comm.Name() == args[0] && comm.Run != nil {
+			comm.Run(comm, args[1:])
 			exit()
 			return
 		}
@@ -335,9 +335,9 @@ func help(args []string) {
 
 	arg := args[0]
 
-	for _, cmd := range commands {
-		if cmd.Name() == arg {
-			tmpl(os.Stdout, helpTemplate, cmd)
+	for _, comm := range commands {
+		if comm.Name() == arg {
+			tmpl(os.Stdout, helpTemplate, comm)
 			// not exit 2: succeeded at 'go help cmd'.
 			return
 		}
