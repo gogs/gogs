@@ -33,9 +33,8 @@ func init() {
 	downloadCache = make(map[string]bool)
 	CmdInstall.Run = runInstall
 	CmdInstall.Flags = map[string]bool{
-		"-v": false,
 		"-d": false,
-		"-u": false, // Flag for 'go get'.
+		"-u": false,
 		"-e": false,
 		"-b": false,
 		"-s": false,
@@ -46,10 +45,10 @@ func init() {
 // let them know what's going on.
 func printInstallPrompt(flag string) {
 	switch flag {
-	case "-v":
-		fmt.Printf(fmt.Sprintf("%s\n", PromptMsg["PureDownload"]))
 	case "-d":
 		fmt.Printf(fmt.Sprintf("%s\n", PromptMsg["DownloadOnly"]))
+	case "-u":
+		fmt.Printf(fmt.Sprintf("%s\n", PromptMsg["ForceUpdate"]))
 	case "-e":
 		fmt.Printf(fmt.Sprintf("%s\n", PromptMsg["DownloadExDeps"]))
 	}
@@ -117,7 +116,7 @@ func runInstall(cmd *Command, args []string) {
 	}
 
 	// Check version control tools.
-	checkVCSTool()
+	// checkVCSTool() // Since we don't user version control, we don't need to check this anymore.
 
 	installGOPATH = utils.GetBestMatchGOPATH(AppPath)
 	utils.ColorPrint(fmt.Sprintf(fmt.Sprintf("%s\n", PromptMsg["DownloadPath"]), installGOPATH))
@@ -162,7 +161,8 @@ func runInstall(cmd *Command, args []string) {
 	// Download packages.
 	downloadPackages(nodes)
 
-	if !CmdInstall.Flags["-d"] && !CmdInstall.Flags["-v"] {
+	// Check if need to install packages.
+	if !CmdInstall.Flags["-d"] {
 		// Remove old files.
 		uninstallList := make([]string, 0, len(downloadCache))
 		for k := range downloadCache {
@@ -277,47 +277,17 @@ func saveNode(n *node.Node) {
 
 // downloadPackage downloads package either use version control tools or not.
 func downloadPackage(nod *node.Node) (*node.Node, []string) {
-	// Check if use version control tools.
-	switch {
-	case CmdInstall.Flags["-v"] &&
-		((nod.ImportPath[0] == 'g' && isHasGit) || (nod.ImportPath[0] == 'c' && isHasHg)): // github.com, code.google.com
-		fmt.Printf(fmt.Sprintf("%s\n", PromptMsg["InstallByGoGet"]), nod.ImportPath)
-		args := checkGoGetFlags()
-		args = append(args, nod.ImportPath)
-		executeCommand("go", args)
+	fmt.Printf(fmt.Sprintf("%s\n", PromptMsg["DownloadStatus"]), nod.ImportPath)
+	// Mark as donwloaded.
+	downloadCache[nod.ImportPath] = true
+
+	imports, err := pureDownload(nod)
+
+	if err != nil {
+		utils.ColorPrint(fmt.Sprintf(fmt.Sprintf("[ERROR] %s\n", PromptMsg["DownloadError"]), nod.ImportPath, err))
 		return nil, nil
-	default: // Pure download.
-		if CmdInstall.Flags["-v"] {
-			CmdInstall.Flags["-v"] = false
-			fmt.Printf(fmt.Sprintf("%s\n", PromptMsg["NoVCSTool"]))
-		}
-
-		fmt.Printf(fmt.Sprintf("%s\n", PromptMsg["DownloadStatus"]), nod.ImportPath)
-		// Mark as donwloaded.
-		downloadCache[nod.ImportPath] = true
-
-		imports, err := pureDownload(nod)
-
-		if err != nil {
-			utils.ColorPrint(fmt.Sprintf(fmt.Sprintf("[ERROR] %s\n", PromptMsg["DownloadError"]), nod.ImportPath, err))
-			return nil, nil
-		}
-
-		return nod, imports
 	}
-}
-
-func checkGoGetFlags() (args []string) {
-	args = append(args, "get")
-	switch {
-	case CmdInstall.Flags["-d"]:
-		args = append(args, "-d")
-		fallthrough
-	case CmdInstall.Flags["-u"]:
-		args = append(args, "-u")
-	}
-
-	return args
+	return nod, imports
 }
 
 // service represents a source code control service.

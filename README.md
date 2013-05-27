@@ -35,6 +35,7 @@ This application still in experiment, any change could happen, but it doesn't af
 
 ### v0.3.*
 
+- Command `install` add flag `-u` for force update pakcages, and need to check if has downloaded same package with same version already.
 - Command `install` and `remove` give number to let user choose operate one package.
 - Command `check` add feature to update or generate gopack.json.
 - Command `install` generates dependencies configuration file.
