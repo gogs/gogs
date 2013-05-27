@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/GPMGo/gopm/doc"
@@ -131,12 +132,19 @@ func runInstall(cmd *Command, args []string) {
 		if len(nodes) > 0 {
 			// Check with users if continue.
 			utils.ColorPrint(fmt.Sprintf(fmt.Sprintf("%s\n", PromptMsg["BundleInfo"]), bundle))
-			for _, n := range nodes {
-				fmt.Printf("[%s] -> %s: %s.\n", n.ImportPath, n.Type, n.Value)
+			for i, n := range nodes {
+				fmt.Printf("%d.[%s] -> %s: %s.\n", i+1, n.ImportPath, n.Type, n.Value)
 			}
 			fmt.Printf(fmt.Sprintf("%s\n", PromptMsg["ContinueDownload"]))
 			var option string
 			fmt.Fscan(os.Stdin, &option)
+			// Chekc if it is a index.
+			num, err := strconv.Atoi(option)
+			if err == nil && num > 0 && num <= len(nodes) {
+				nodes = nodes[num-1 : num]
+				break
+			}
+
 			if strings.ToLower(option) != "y" {
 				os.Exit(0)
 				return
@@ -229,6 +237,14 @@ func downloadPackages(nodes []*node.Node) {
 	for _, n := range nodes {
 		// Check if it is a valid remote path.
 		if utils.IsValidRemotePath(n.ImportPath) {
+			if !CmdInstall.Flags["-u"] {
+				// Check if package has been downloaded.
+				if _, ok := utils.CheckIsExistInGOPATH(n.ImportPath); ok {
+					fmt.Printf(fmt.Sprintf("%s\n", PromptMsg["SkipInstalled"]), n.ImportPath)
+					continue
+				}
+			}
+
 			if !downloadCache[n.ImportPath] {
 				// Download package.
 				nod, imports := downloadPackage(n)

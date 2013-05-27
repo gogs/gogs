@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"runtime"
+	"strconv"
 	"strings"
 
 	"github.com/GPMGo/gopm/utils"
@@ -51,6 +52,13 @@ func runRemove(cmd *Command, args []string) {
 			fmt.Printf(fmt.Sprintf("%s\n", PromptMsg["ContinueRemove"]))
 			var option string
 			fmt.Fscan(os.Stdin, &option)
+			// Chekc if it is a index.
+			num, err := strconv.Atoi(option)
+			if err == nil && num > 0 && num <= len(nodes) {
+				nodes = nodes[num-1 : num]
+				break
+			}
+
 			if strings.ToLower(option) != "y" {
 				os.Exit(0)
 				return

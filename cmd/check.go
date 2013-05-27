@@ -5,6 +5,7 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
@@ -61,25 +62,28 @@ func runCheck(cmd *Command, args []string) {
 		return
 	}
 
+	pkgConf := new(gopmConfig)
 	importsCache := make(map[string]bool)
 	uninstallList := make([]string, 0)
 	isInstalled := false
 	// Check if dependencies have been installed.
-	paths := utils.GetGOPATH()
 
 	for _, v := range imports {
 		// Make sure it doesn't belong to same project.
 		if utils.GetProjectPath(v) != utils.GetProjectPath(importPath) {
-			for _, p := range paths {
-				if checkIsExistWithVCS(p + "/src/" + v + "/") {
-					isInstalled = true
-					break
-				}
-			}
-
-			if !isInstalled && !importsCache[v] {
+			if !importsCache[v] {
 				importsCache[v] = true
-				uninstallList = append(uninstallList, v)
+				pkgConf.Deps = append(pkgConf.Deps, &node.Node{
+					ImportPath: v,
+				})
+
+				if _, ok := utils.CheckIsExistInGOPATH(importPath); ok {
+					isInstalled = true
+				}
+
+				if !isInstalled {
+					uninstallList = append(uninstallList, v)
+				}
 			}
 		}
 		isInstalled = false
@@ -121,8 +125,24 @@ func runCheck(cmd *Command, args []string) {
 			cmdArgs[1] = k
 			executeCommand("go", cmdArgs)
 		}
+	}
 
-		// Generate configure file.
+	// Generate configure file.
+	if !utils.IsExist("gopm.json") {
+		fw, err := os.Create("gopm.json")
+		if err != nil {
+			utils.ColorPrint(fmt.Sprintf(fmt.Sprintf("[ERROR] runCheck -> %s\n", PromptMsg["OpenFile"]), err))
+			return
+		}
+		defer fw.Close()
+
+		fbytes, err := json.MarshalIndent(&pkgConf, "", "\t")
+		if err != nil {
+			utils.ColorPrint(fmt.Sprintf(fmt.Sprintf("[ERROR] runCheck -> %s\n", PromptMsg["ParseJSON"]), err))
+			return
+		}
+		fw.Write(fbytes)
+		utils.ColorPrint(fmt.Sprintf(fmt.Sprintf("<SUCCESS>$ %s\n", PromptMsg["GenerateConfig"]), importPath))
 	}
 }
 
@@ -154,33 +174,4 @@ func checkImportsByRoot(rootPath, importPath string) (imports []string, err erro
 	}
 
 	return imports, err
-}
-
-// checkIsExistWithVCS returns false if directory only has VCS folder,
-// or doesn't exist.
-func checkIsExistWithVCS(path string) bool {
-	// Check if directory exist.
-	if !utils.IsExist(path) {
-		return false
-	}
-
-	// Check if only has VCS folder.
-	dirs, err := utils.GetDirsInfo(path)
-	if err != nil {
-		utils.ColorPrint(fmt.Sprintf("[ERROR] checkIsExistWithVCS -> [ %s ]", err))
-		return false
-	}
-
-	if len(dirs) > 1 {
-		return true
-	} else if len(dirs) == 0 {
-		return false
-	}
-
-	switch dirs[0].Name() {
-	case ".git", ".hg", ".svn":
-		return false
-	}
-
-	return true
 }

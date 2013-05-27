@@ -35,18 +35,18 @@ This application still in experiment, any change could happen, but it doesn't af
 
 ### v0.3.*
 
-- Command `install` add flag `-u` for force update pakcages, and need to check if has downloaded same package with same version already.
-- Command `install` and `remove` give number to let user choose operate one package.
-- Command `check` add feature to update or generate gopack.json.
+- Command `check` add feature to update gopm.json.
 - Command `install` generates dependencies configuration file.
 - Command `install` save tarball add support for packages in code.google.com, bitbucket.org, launchpad.net, git.oschina.net, gitcafe.com, *.codeplex.com.
-- Command `build` use dependencies configuration file to build with specific versions of dependencies, if VCS tools are available, simply use `checkout`. 
+- Command `build` use dependencies configuration file to build with specific versions of dependencies. 
 - Command `clean` is for cleaning empty directories and backup.
 - Add gpm working principle design.
 - Complete documentation.
 
 ### Future
 
+- Command `install` and `remove` give number to let user choose operate one package when using snapshot.
+- Figure out how to use tool chian directly in order to compile only with `.a` files.
 - Command `search` compares version.
 - Command `home` and `doc`.
 - Command `remove` add flag `-d` for removing dependencies at the same time.

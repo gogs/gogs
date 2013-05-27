@@ -84,7 +84,7 @@ func runSearch(cmd *Command, args []string) {
 		buf.WriteString("-> " + k)
 		// Check if has been installed.
 		for _, path := range paths {
-			if checkIsExistWithVCS(path + "/src/" + k + "/") {
+			if utils.CheckIsExistWithVCS(path + "/src/" + k + "/") {
 				installStr := " [Installed]"
 				if !isWindws {
 					installStr = strings.Replace(installStr, "[",

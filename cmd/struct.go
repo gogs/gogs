@@ -25,6 +25,11 @@ var (
 	LocalBundles []*doc.Bundle
 )
 
+// gopmConfig represents the package config file in correspoding directory.
+type gopmConfig struct {
+	Deps []*node.Node
+}
+
 type tomlConfig struct {
 	Title, Version string
 	Lang           string `toml:"user_language"`

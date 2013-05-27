@@ -46,6 +46,47 @@ func IsExist(path string) bool {
 	return err == nil || os.IsExist(err)
 }
 
+// CheckIsExistWithVCS returns false if directory only has VCS folder,
+// or doesn't exist.
+func CheckIsExistWithVCS(path string) bool {
+	// Check if directory exist.
+	if !IsExist(path) {
+		return false
+	}
+
+	// Check if only has VCS folder.
+	dirs, err := GetDirsInfo(path)
+	if err != nil {
+		ColorPrint(fmt.Sprintf("[ERROR] CheckIsExistWithVCS -> [ %s ]", err))
+		return false
+	}
+
+	if len(dirs) > 1 {
+		return true
+	} else if len(dirs) == 0 {
+		return false
+	}
+
+	switch dirs[0].Name() {
+	case ".git", ".hg", ".svn":
+		return false
+	}
+
+	return true
+}
+
+// CheckIsExistInGOPATH checks if given package import path exists in any path in GOPATH/src,
+// and returns corresponding GOPATH.
+func CheckIsExistInGOPATH(importPath string) (string, bool) {
+	paths := GetGOPATH()
+	for _, p := range paths {
+		if CheckIsExistWithVCS(p + "/src/" + importPath + "/") {
+			return p, true
+		}
+	}
+	return "", false
+}
+
 // GetGOPATH returns all paths in GOPATH variable.
 func GetGOPATH() []string {
 	gopath := os.Getenv("GOPATH")
