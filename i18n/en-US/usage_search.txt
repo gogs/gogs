@@ -1,7 +1,0 @@
-search packages|||
-Search searchs packages by keyword.
-
-The search flags are:
-
-
-The list flags accept a space-separated list of strings.
