@@ -15,13 +15,16 @@ gopm search      search a package according keywords
 gopm doc         show a package's document on console or web browser
 gopm serve       run as a package source server
 gopm sync        sync all packages from first avilable source server to local
-gopm build       build project according to gopmfile
-gopm run         build project according to gopmfile and run
 gopm import      import a package into local
 gopm gen         generate a .gopmspec file according current dir's source codes
+gopm build       build project according to gopmfile
+gopm run         build project according to gopmfile and run
+gopm test        test project like go test
 
 
 .gopmspec file format:
-
+[production]
 beego = tag:0.1
 xorm >= branch:0.2
+
+[test]
