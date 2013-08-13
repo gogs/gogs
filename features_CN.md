@@ -40,6 +40,17 @@ gopm
 * tag:     表示的是某个tag
 * commit:  表示的是某个reversion
 
+#配置文件说明
+
+默认没有配置文件，当系统第一次启动时检测homedir/.gopm/config，看是否存在，如果不存在则自动创建此配置文件。
+配置文件内容如下：
+[sources]
+http://gopm.io
+
+[repos]
+~/.gopm/repos
+
+
 <a id="30" name="30"></a>
 #各命令的目标和作用
 

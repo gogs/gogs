@@ -21,10 +21,3 @@ gopm build       build project according to gopmfile
 gopm run         build project according to gopmfile and run
 gopm test        test project like go test
 
-
-.gopmspec file format:
-[production]
-beego = tag:0.1
-xorm >= branch:0.2
-
-[test]
