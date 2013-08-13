@@ -1,0 +1,9 @@
+{
+	"app_name": "Go Package Manager",
+	"http_port": 23456,
+	"watch_enabled": true,
+	"cmd_mode": true,
+	"skip_suspend": false,
+	"print_stack": true,
+	"print_source": true
+}

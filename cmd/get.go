@@ -1,3 +1,17 @@
+// Copyright 2013 gopm authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License"): you may
+// not use this file except in compliance with the License. You may obtain
+// a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+// WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+// License for the specific language governing permissions and limitations
+// under the License.
+
 package cmd
 
 import (
@@ -11,49 +25,108 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+
+	"../doc"
+)
+
+var (
+	installGOPATH string // The GOPATH that packages are downloaded to.
 )
 
 var CmdGet = &Command{
-	UsageLine: "get [-u] [packages]",
+	UsageLine: "get [flags] <package(s)>",
 	Short:     "download and install packages and dependencies",
 	Long: `
 Get downloads and installs the packages named by the import paths,
 along with their dependencies.
 
-The -u flag instructs get to use the network to update the named packages
-and their dependencies. By default, get uses the network to check out
-missing packages but does not use it to look for updates to existing packages.
+This command works even you haven't installed any version control tool
+such as git, hg, etc.
 
-Get also accepts all the flags in the 'go build' and 'go install' commands,
-to control the installation. See 'go help build'.
+The install flags are:
 
-When checking out or updating a package, get looks for a branch or tag
-that matches the locally installed version of Go. The most important
-rule is that if the local installation is running version "go1", get
-searches for a branch or tag named "go1". If no such version exists it
-retrieves the most recent version of the package.
+	-d
+		download without installing package(s).
+	-u
+		force to update pakcage(s).
+	-e
+		download dependencies for example(s).
+
+The list flags accept a space-separated list of strings.
 
 For more about specifying packages, see 'go help packages'.
-
-For more about how 'gopm get' finds source code to
-download, see 'gopm help'.
-
-See also: gopm build, gopm install, gopm clean.
 `,
 }
 
-var getD = CmdGet.Flag.Bool("f", false, "")
-var getU = CmdGet.Flag.Bool("u", false, "")
-
 func init() {
+	downloadCache = make(map[string]bool)
 	CmdGet.Run = runGet
+	CmdGet.Flags = map[string]bool{
+		"-d": false,
+		"-u": false,
+		"-e": false,
+	}
 }
 
 func isStandalone() bool {
 	return true
 }
 
+// printGetPrompt prints prompt information to users to
+// let them know what's going on.
+func printGetPrompt(flag string) {
+	switch flag {
+	case "-d":
+		doc.ColorLog("[INFO] You enabled download without installing.\n")
+	case "-u":
+		doc.ColorLog("[INFO] You enabled force update.\n")
+	case "-e":
+		doc.ColorLog("[INFO] You enabled download dependencies of example(s).\n")
+	}
+}
+
+// checkFlags checks if the flag exists with correct format.
+func checkFlags(flags map[string]bool, args []string, print func(string)) int {
+	num := 0 // Number of valid flags, use to cut out.
+	for i, f := range args {
+		// Check flag prefix '-'.
+		if !strings.HasPrefix(f, "-") {
+			// Not a flag, finish check process.
+			break
+		}
+
+		// Check if it a valid flag.
+		if v, ok := flags[f]; ok {
+			flags[f] = !v
+			if !v {
+				print(f)
+			} else {
+				fmt.Println("DISABLE: " + f)
+			}
+		} else {
+			doc.ColorLog("[ERRO] Unknown flag: %s.\n", f)
+			return -1
+		}
+		num = i + 1
+	}
+
+	return num
+}
+
 func runGet(cmd *Command, args []string) {
+	// Check flags.
+	num := checkFlags(cmd.Flags, args, printGetPrompt)
+	if num == -1 {
+		return
+	}
+	args = args[num:]
+
+	// Check length of arguments.
+	if len(args) < 1 {
+		doc.ColorLog("[ERRO] Please list the package that you want to install.\n")
+		return
+	}
+
 	if len(args) > 0 {
 		var ver string = TRUNK
 		if len(args) == 2 {
