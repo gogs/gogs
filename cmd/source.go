@@ -31,6 +31,7 @@ var (
 	downloadCache map[string]bool // Saves packages that have been downloaded.
 	sources       []Source        = []Source{
 		&GithubSource{},
+		&GitOscSource{},
 	}
 )
 
@@ -44,8 +45,9 @@ func getSource(pkgName string) Source {
 }
 
 type Source interface {
-	PkgUrl(pkgName string, ver string) string
+	PkgUrl(pkg *Pkg) string
 	HasPkg(pkgName string) bool
+	PkgExt() string
 }
 
 type Pkg struct {
@@ -69,6 +71,14 @@ func (p *Pkg) VerString() string {
 	return fmt.Sprintf("%v:%v", p.Ver, p.VerId)
 }
 
+func (p *Pkg) Url() string {
+	return p.Source.PkgUrl(p)
+}
+
+func (p *Pkg) FileName() string {
+	return fmt.Sprintf("%v.%v", p.VerSimpleString(), p.Source.PkgExt())
+}
+
 func NewPkg(pkgName string, ver string) *Pkg {
 	vers := strings.Split(ver, ":")
 	if len(vers) > 2 {
@@ -80,34 +90,61 @@ func NewPkg(pkgName string, ver string) *Pkg {
 		verId = vers[1]
 	}
 
-	return &Pkg{
-		getSource(pkgName), pkgName, vers[0], verId,
+	source := getSource(pkgName)
+	if source == nil {
+		return nil
 	}
+
+	return &Pkg{source, pkgName, vers[0], verId}
 }
 
+// github repository
 type GithubSource struct {
 }
 
-func (s *GithubSource) PkgUrl(pkgName string, ver string) string {
-	vers := strings.Split(ver, ":")
+func (s *GithubSource) PkgUrl(pkg *Pkg) string {
 	var verPath string
-	switch strings.ToLower(vers[0]) {
-	case TRUNK:
+	if pkg.Ver == TRUNK {
 		verPath = "master"
-	case TAG, COMMIT, BRANCH:
-		if len(vers) != 2 {
-			return ""
-		}
-		verPath = vers[1]
-	default:
-		return ""
+	} else {
+		verPath = pkg.VerId
 	}
-	return fmt.Sprintf("https://%v/archive/%v.zip", pkgName, verPath)
+	return fmt.Sprintf("https://%v/archive/%v.zip", pkg.Name, verPath)
 }
 
 func (s *GithubSource) HasPkg(pkgName string) bool {
 	return strings.HasPrefix(pkgName, "github.com")
 }
 
+func (s *GithubSource) PkgExt() string {
+	return "zip"
+}
+
+// git osc repos
+type GitOscSource struct {
+}
+
+func (s *GitOscSource) PkgUrl(pkg *Pkg) string {
+	var verPath string
+	if pkg.Ver == TRUNK {
+		verPath = "master"
+	} else {
+		verPath = pkg.VerId
+	}
+	return fmt.Sprintf("https://%v/repository/archive?ref=%v", pkg.Name, verPath)
+}
+
+func (s *GitOscSource) HasPkg(pkgName string) bool {
+	return strings.HasPrefix(pkgName, "git.oschina.net")
+}
+
+func (s *GitOscSource) PkgExt() string {
+	return "zip"
+}
+
 type GitLabSource struct {
+	IP         string
+	Username   string
+	Passwd     string
+	PrivateKey string
 }

@@ -16,7 +16,7 @@ package cmd
 
 import (
 	"archive/zip"
-	//"errors"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -123,7 +123,7 @@ func runGet(cmd *Command, args []string) {
 
 	// Check length of arguments.
 	if len(args) < 1 {
-		doc.ColorLog("[ERRO] Please list the package that you want to install.\n")
+		doc.ColorLog("[ERROR] Please list the package that you want to install.\n")
 		return
 	}
 
@@ -133,8 +133,18 @@ func runGet(cmd *Command, args []string) {
 			ver = args[1]
 		}
 		pkg := NewPkg(args[0], ver)
+		if pkg == nil {
+			doc.ColorLog("[ERROR] Unrecognized package %v.\n", args[0])
+			return
+		}
+
 		if isStandalone() {
-			getDirect(pkg)
+			err := getDirect(pkg)
+			if err != nil {
+				doc.ColorLog("[ERROR] %v\n", err)
+			} else {
+				fmt.Println("done.")
+			}
 		} else {
 			fmt.Println("Not implemented.")
 			//getSource(pkgName)
@@ -161,6 +171,17 @@ func fileExists(dir string) bool {
 	}
 
 	return !info.IsDir()
+}
+
+func joinPath(paths ...string) string {
+	if len(paths) < 1 {
+		return ""
+	}
+	res := ""
+	for _, p := range paths {
+		res = path.Join(res, p)
+	}
+	return res
 }
 
 func download(url string, localfile string) error {
@@ -192,51 +213,78 @@ func download(url string, localfile string) error {
 	return nil
 }
 
-/*func extractPkg(pkg *Pkg, update bool) error {
+func extractPkg(pkg *Pkg, localfile string, update bool) error {
+	fmt.Println("Extracting package", pkg.Name, "...")
+
 	gopath := os.Getenv("GOPATH")
 	var childDirs []string = strings.Split(pkg.Name, "/")
 
 	if pkg.Ver != TRUNK {
 		childDirs[len(childDirs)-1] = fmt.Sprintf("%v_%v_%v", childDirs[len(childDirs)-1], pkg.Ver, pkg.VerId)
 	}
-	srcDir = path.Join(gopath, childDir...)
-
+	dstDir := joinPath(gopath, "src", joinPath(childDirs...))
+	//fmt.Println(dstDir)
+	var err error
 	if !update {
-		if dirExists(srcDir) {
+		if dirExists(dstDir) {
 			return nil
 		}
-		err = os.MkdirAll(localdir, 0777)
-		if err != nil {
-			return err
-		}
+		err = os.MkdirAll(dstDir, 0777)
 	} else {
-		if dirExists(srcDir) {
-			os.Remove(localdir)
+		if dirExists(dstDir) {
+			err = os.Remove(dstDir)
 		} else {
-			err = os.MkdirAll(localdir, 0777)
-			if err != nil {
-				return err
-			}
+			err = os.MkdirAll(dstDir, 0777)
 		}
 	}
 
-	// Iterate through the files in the archive,
-	// printing some of their contents.
+	if err != nil {
+		return err
+	}
+
+	if path.Ext(localfile) != ".zip" {
+		return errors.New("Not implemented!")
+	}
+
+	r, err := zip.OpenReader(localfile)
+	if err != nil {
+		return err
+	}
+	defer r.Close()
+
 	for _, f := range r.File {
-		fmt.Printf("Contents of %s:\n", f.Name)
+		//fmt.Printf("Contents of %s:\n", f.Name)
+		paths := strings.Split(f.Name, "/")[1:]
+		//fmt.Println(paths)
+		if len(paths) < 1 {
+			continue
+		}
+
+		if f.FileInfo().IsDir() {
+			childDir := joinPath(dstDir, joinPath(paths...))
+			err = os.MkdirAll(childDir, 0777)
+			if err != nil {
+				return err
+			}
+			continue
+		}
+
 		rc, err := f.Open()
 		if err != nil {
 			return err
 		}
 
-		_, err = io.Copy(os.Stdout, rc)
+		newF, err := os.Create(path.Join(dstDir, joinPath(paths...)))
+		if err == nil {
+			_, err = io.Copy(newF, rc)
+		}
 		if err != nil {
 			return err
 		}
 		rc.Close()
 	}
 	return nil
-}*/
+}
 
 func getPackage(pkg *Pkg, url string) error {
 	curUser, err := user.Current()
@@ -251,31 +299,18 @@ func getPackage(pkg *Pkg, url string) error {
 		return err
 	}
 
-	urls := strings.Split(url, ".")
-
-	localfile := path.Join(localdir, fmt.Sprintf("%v.%v", pkg.VerSimpleString(), urls[len(urls)-1]))
+	localfile := path.Join(localdir, pkg.FileName())
 
 	err = download(url, localfile)
 	if err != nil {
 		return err
 	}
 
-	r, err := zip.OpenReader(localfile)
-	if err != nil {
-		return err
-	}
-	defer r.Close()
-
-	if pkg.Ver != TRUNK {
-		return nil
-	}
-
-	//return extractPkg(pkg)
-	return nil
+	return extractPkg(pkg, localfile, false)
 }
 
 func getDirect(pkg *Pkg) error {
-	return getPackage(pkg, pkg.Source.PkgUrl(pkg.Name, pkg.VerString()))
+	return getPackage(pkg, pkg.Url())
 }
 
 /*func getFromSource(pkgName string, ver string, source string) error {
