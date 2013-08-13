@@ -1,4 +1,4 @@
-package main
+package cmd
 
 type Repos interface {
 	Url(pkgName string, ver string) string
