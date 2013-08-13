@@ -1,4 +1,4 @@
-package main
+package cmd
 
 import (
 	"fmt"
@@ -11,7 +11,7 @@ import (
 	"strings"
 )
 
-var cmdGet = &Command{
+var CmdGet = &Command{
 	UsageLine: "get [-u] [packages]",
 	Short:     "download and install packages and dependencies",
 	Long: `
@@ -46,11 +46,11 @@ See also: go build, go install, go clean.
 `,
 }
 
-var getD = cmdGet.Flag.Bool("f", false, "")
-var getU = cmdGet.Flag.Bool("u", false, "")
+var getD = CmdGet.Flag.Bool("f", false, "")
+var getU = CmdGet.Flag.Bool("u", false, "")
 
 func init() {
-	cmdGet.Run = runGet
+	CmdGet.Run = runGet
 }
 
 func runGet(cmd *Command, args []string) {
