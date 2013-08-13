@@ -23,8 +23,14 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"github.com/gpmgo/gopm/cmd"
+	//"github.com/gpmgo/gopm/cmd"
+	"./cmd"
 )
+
+// +build go1.1
+
+// Test that go1.1 tag above is included in builds. main.go refers to this definition.
+const go11tag = true
 
 var (
 	config map[string]interface{}
@@ -33,14 +39,15 @@ var (
 // Commands lists the available commands and help topics.
 // The order here is the order in which they are printed by 'go help'.
 var commands = []*cmd.Command{
-	/*cmdBuild,
+	cmd.CmdGet,
+	/*cmd.CmdGen,
+	cmdBuild,
 	cmdClean,
 	cmdDoc,
 	cmdEnv,
 	cmdFix,
-	cmdFmt,*/
-	cmd.CmdGet,
-	/*cmdInstall,
+	cmdFmt,
+	cmdInstall,
 	cmdList,
 	cmdRun,
 	cmdTest,

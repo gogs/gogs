@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"archive/zip"
+	//"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -18,12 +20,6 @@ var CmdGet = &Command{
 Get downloads and installs the packages named by the import paths,
 along with their dependencies.
 
-The -d flag instructs get to stop after downloading the packages; that is,
-it instructs get not to install the packages.
-
-The -fix flag instructs get to run the fix tool on the downloaded packages
-before resolving dependencies or building the code.
-
 The -u flag instructs get to use the network to update the named packages
 and their dependencies. By default, get uses the network to check out
 missing packages but does not use it to look for updates to existing packages.
@@ -39,10 +35,10 @@ retrieves the most recent version of the package.
 
 For more about specifying packages, see 'go help packages'.
 
-For more about how 'go get' finds source code to
-download, see 'go help remote'.
+For more about how 'gopm get' finds source code to
+download, see 'gopm help'.
 
-See also: go build, go install, go clean.
+See also: gopm build, gopm install, gopm clean.
 `,
 }
 
@@ -53,9 +49,23 @@ func init() {
 	CmdGet.Run = runGet
 }
 
+func isStandalone() bool {
+	return true
+}
+
 func runGet(cmd *Command, args []string) {
 	if len(args) > 0 {
-		getDirect(args[0], "trunk")
+		var ver string = TRUNK
+		if len(args) == 2 {
+			ver = args[1]
+		}
+		pkg := NewPkg(args[0], ver)
+		if isStandalone() {
+			getDirect(pkg)
+		} else {
+			fmt.Println("Not implemented.")
+			//getSource(pkgName)
+		}
 	}
 }
 
@@ -81,6 +91,7 @@ func fileExists(dir string) bool {
 }
 
 func download(url string, localfile string) error {
+	fmt.Println("Downloading", url, "...")
 	resp, err := http.Get(url)
 	if err != nil {
 		return err
@@ -108,36 +119,96 @@ func download(url string, localfile string) error {
 	return nil
 }
 
-func getPackage(pkgName string, ver string, url string) error {
+/*func extractPkg(pkg *Pkg, update bool) error {
+	gopath := os.Getenv("GOPATH")
+	var childDirs []string = strings.Split(pkg.Name, "/")
+
+	if pkg.Ver != TRUNK {
+		childDirs[len(childDirs)-1] = fmt.Sprintf("%v_%v_%v", childDirs[len(childDirs)-1], pkg.Ver, pkg.VerId)
+	}
+	srcDir = path.Join(gopath, childDir...)
+
+	if !update {
+		if dirExists(srcDir) {
+			return nil
+		}
+		err = os.MkdirAll(localdir, 0777)
+		if err != nil {
+			return err
+		}
+	} else {
+		if dirExists(srcDir) {
+			os.Remove(localdir)
+		} else {
+			err = os.MkdirAll(localdir, 0777)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	// Iterate through the files in the archive,
+	// printing some of their contents.
+	for _, f := range r.File {
+		fmt.Printf("Contents of %s:\n", f.Name)
+		rc, err := f.Open()
+		if err != nil {
+			return err
+		}
+
+		_, err = io.Copy(os.Stdout, rc)
+		if err != nil {
+			return err
+		}
+		rc.Close()
+	}
+	return nil
+}*/
+
+func getPackage(pkg *Pkg, url string) error {
 	curUser, err := user.Current()
 	if err != nil {
 		return err
 	}
 
 	reposDir = strings.Replace(reposDir, "~", curUser.HomeDir, -1)
-	localdir := path.Join(reposDir, pkgName)
+	localdir := path.Join(reposDir, pkg.Name)
 	localdir, err = filepath.Abs(localdir)
 	if err != nil {
 		return err
 	}
 
-	localfile := path.Join(localdir, "trunk.zip")
+	urls := strings.Split(url, ".")
 
-	return download(url, localfile)
+	localfile := path.Join(localdir, fmt.Sprintf("%v.%v", pkg.VerSimpleString(), urls[len(urls)-1]))
+
+	err = download(url, localfile)
+	if err != nil {
+		return err
+	}
+
+	r, err := zip.OpenReader(localfile)
+	if err != nil {
+		return err
+	}
+	defer r.Close()
+
+	if pkg.Ver != TRUNK {
+		return nil
+	}
+
+	//return extractPkg(pkg)
+	return nil
 }
 
-func getDirect(pkgName string, ver string) error {
-	urlTempl := "https://codeload.%v/zip/master"
-	//urlTempl := "https://%v/archive/master.zip"
-	url := fmt.Sprintf(urlTempl, pkgName)
-
-	return getPackage(pkgName, ver, url)
+func getDirect(pkg *Pkg) error {
+	return getPackage(pkg, pkg.Source.PkgUrl(pkg.Name, pkg.VerString()))
 }
 
-func getFromSource(pkgName string, ver string, source string) error {
+/*func getFromSource(pkgName string, ver string, source string) error {
 	urlTempl := "https://%v/%v"
 	//urlTempl := "https://%v/archive/master.zip"
 	url := fmt.Sprintf(urlTempl, source, pkgName)
 
 	return getPackage(pkgName, ver, url)
-}
+}*/
