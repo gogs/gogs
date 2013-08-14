@@ -253,20 +253,24 @@ func extractPkg(pkg *Pkg, localfile string, update bool) error {
 	defer r.Close()
 
 	for _, f := range r.File {
-		//fmt.Printf("Contents of %s:\n", f.Name)
+		fmt.Printf("Contents of %s:\n", f.Name)
+		if f.FileInfo().IsDir() {
+			continue
+		}
+
 		paths := strings.Split(f.Name, "/")[1:]
 		//fmt.Println(paths)
 		if len(paths) < 1 {
 			continue
 		}
 
-		if f.FileInfo().IsDir() {
-			childDir := joinPath(dstDir, joinPath(paths...))
+		if len(paths) > 1 {
+			childDir := joinPath(dstDir, joinPath(paths[0:len(paths)-1]...))
+			//fmt.Println("creating", childDir)
 			err = os.MkdirAll(childDir, 0777)
 			if err != nil {
 				return err
 			}
-			continue
 		}
 
 		rc, err := f.Open()
