@@ -43,26 +43,28 @@ var (
 // The order here is the order in which they are printed by 'gopm help'.
 var commands = []*cmd.Command{
 	cmd.CmdGet,
-	/*cmd.CmdGen,
-	cmdBuild,
-	cmdClean,
-	cmdDoc,
-	cmdEnv,
-	cmdFix,
-	cmdFmt,
-	cmdInstall,
-	cmdList,
-	cmdRun,
-	cmdTest,
-	cmdTool,
-	cmdVersion,
-	cmdVet,
+	cmd.CmdSearch,
+	cmd.CmdServe,
+	/*
+		cmdBuild,
+		cmdClean,
+		cmdDoc,
+		cmdEnv,
+		cmdFix,
+		cmdFmt,
+		cmdInstall,
+		cmdList,
+		cmdRun,
+		cmdTest,
+		cmdTool,
+		cmdVersion,
+		cmdVet,
 
-	helpGopath,
-	helpPackages,
-	helpRemote,
-	helpTestflag,
-	helpTestfunc,*/
+		helpGopath,
+		helpPackages,
+		helpRemote,
+		helpTestflag,
+		helpTestfunc,*/
 }
 
 // We don't use init() to initialize

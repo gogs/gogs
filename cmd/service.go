@@ -93,6 +93,10 @@ func NewPkg(pkgName string, ver string) *Pkg {
 		verId = vers[1]
 	}
 
+	if len(vers) == 1 {
+		vers[0] = TRUNK
+	}
+
 	service := getService(pkgName)
 	if service == nil {
 		return nil

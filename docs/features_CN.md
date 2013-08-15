@@ -50,6 +50,15 @@ http://gopm.io
 [repos]
 ~/.gopm/repos
 
+#数据库说明
+包信息数据采用goleveldb，这是一个key/value数据库。数据存放规则如下：
+"lastId" : "{lastId}"   			lastId中存放最大的Id，Id为自增
+
+"index:{packageName}": "{id}"  index:中存放的是包名，value中存放的是这个包的不同版本的id，不同版本用逗号分隔
+
+“ver:{id}” : "{verString1}, {verString2}"  某个包版本对应的内容
+
+“key:{keyword}:{id}” : ""   关键词及其对应的版本
 
 <a id="30" name="30"></a>
 #各命令的目标和作用
