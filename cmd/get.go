@@ -262,7 +262,7 @@ type service struct {
 var services = []*service{
 	{doc.GithubPattern, "github.com/", doc.GetGithubDoc},
 	{doc.GooglePattern, "code.google.com/", doc.GetGoogleDoc},
-	// {doc.BitbucketPattern, "bitbucket.org/", doc.GetBitbucketDoc},
+	{doc.BitbucketPattern, "bitbucket.org/", doc.GetBitbucketDoc},
 	// {doc.LaunchpadPattern, "launchpad.net/", doc.GetLaunchpadDoc},
 }
 
