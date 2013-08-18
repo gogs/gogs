@@ -133,7 +133,7 @@ func runGet(cmd *Command, args []string) {
 
 	nodes := []*doc.Node{}
 	// ver describles branch, tag or commit.
-	var t, ver string = doc.BRANCH, doc.TRUNK
+	var t, ver string = doc.BRANCH, ""
 
 	if len(args) >= 2 {
 		t, ver, err = validPath(args[1])
@@ -166,7 +166,11 @@ func downloadPackages(nodes []*doc.Node) {
 		if doc.IsValidRemotePath(n.ImportPath) {
 			if !CmdGet.Flags["-u"] {
 				// Check if package has been downloaded.
-				if _, ok := doc.CheckIsExistInGOPATH(n.ImportPath); ok {
+				installPath := installRepoPath + "/" + n.ImportPath
+				if len(n.Value) > 0 {
+					installPath += "." + n.Value
+				}
+				if doc.IsExist(installPath) {
 					doc.ColorLog("[WARN] Skipped installed package( %s => %s:%s )\n",
 						n.ImportPath, n.Type, n.Value)
 					continue
@@ -181,8 +185,11 @@ func downloadPackages(nodes []*doc.Node) {
 					// Generate temporary nodes.
 					nodes := make([]*doc.Node, len(imports))
 					for i := range nodes {
-						nodes[i] = new(doc.Node)
-						nodes[i].ImportPath = imports[i]
+						nodes[i] = &doc.Node{
+							ImportPath: imports[i],
+							Type:       doc.BRANCH,
+							IsGetDeps:  true,
+						}
 					}
 					downloadPackages(nodes)
 				}
@@ -209,6 +216,8 @@ func downloadPackages(nodes []*doc.Node) {
 
 // downloadPackage downloads package either use version control tools or not.
 func downloadPackage(nod *doc.Node) (*doc.Node, []string) {
+	doc.ColorLog("[TRAC] Downloading package( %s => %s:%s )\n",
+		nod.ImportPath, nod.Type, nod.Value)
 	// Mark as donwloaded.
 	downloadCache[nod.ImportPath] = true
 
@@ -230,8 +239,12 @@ func validPath(info string) (string, string, error) {
 	case l > 2:
 		return "", "", errors.New("Invalid information of package")
 	case l == 1:
-		return doc.BRANCH, doc.TRUNK, nil
+		return doc.BRANCH, "", nil
 	case l == 2:
+		switch infos[1] {
+		case doc.TRUNK, doc.MASTER, doc.DEFAULT:
+			infos[1] = ""
+		}
 		return infos[0], infos[1], nil
 	default:
 		return "", "", errors.New("Cannot match any case")

@@ -21,11 +21,12 @@ import (
 )
 
 const (
-	TRUNK  = "trunk"
-	MASTER = "master"
-	TAG    = "tag"
-	BRANCH = "branch"
-	COMMIT = "commit"
+	TRUNK   = "trunk"
+	MASTER  = "master"
+	DEFAULT = "default"
+	TAG     = "tag"
+	BRANCH  = "branch"
+	COMMIT  = "commit"
 )
 
 type Node struct {

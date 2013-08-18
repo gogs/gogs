@@ -47,12 +47,12 @@ func GetGithubDoc(client *http.Client, match map[string]string, installRepoPath 
 	match["cred"] = githubCred
 
 	if nod.Type == BRANCH {
-		nod.Value = MASTER
-		match["sha"] = nod.Value
+		if len(nod.Value) == 0 {
+			match["sha"] = MASTER
+		} else {
+			match["sha"] = nod.Value
+		}
 	}
-
-	ColorLog("[TRAC] Downloading package( %s => %s:%s )\n",
-		nod.ImportPath, nod.Type, nod.Value)
 
 	// JSON struct for github.com.
 	var refs []*struct {
@@ -107,13 +107,17 @@ func GetGithubDoc(client *http.Client, match map[string]string, installRepoPath 
 		shaName = strings.Replace(shaName, "-v", "-", 1)
 	}
 
+	suf := "." + nod.Value
+	if len(suf) == 1 {
+		suf = ""
+	}
+
 	projectPath := expand("github.com/{owner}/{repo}", match)
-	installPath := installRepoPath + "/" + projectPath + "." + nod.Value
+	installPath := installRepoPath + "/" + projectPath + suf
 	nod.ImportPath = projectPath
 
 	// Remove old files.
 	os.RemoveAll(installPath + "/")
-	// Create destination directory.
 	os.MkdirAll(installPath+"/", os.ModePerm)
 
 	r, err := zip.NewReader(bytes.NewReader(p), int64(len(p)))
