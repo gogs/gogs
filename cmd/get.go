@@ -166,7 +166,7 @@ func downloadPackages(nodes []*doc.Node) {
 		if doc.IsValidRemotePath(n.ImportPath) {
 			if !CmdGet.Flags["-u"] {
 				// Check if package has been downloaded.
-				installPath := installRepoPath + "/" + n.ImportPath
+				installPath := installRepoPath + "/" + doc.GetProjectPath(n.ImportPath)
 				if len(n.Value) > 0 {
 					installPath += "." + n.Value
 				}
@@ -261,7 +261,7 @@ type service struct {
 // services is the list of source code control services handled by gopkgdoc.
 var services = []*service{
 	{doc.GithubPattern, "github.com/", doc.GetGithubDoc},
-	// {doc.GooglePattern, "code.google.com/", doc.GetGoogleDoc},
+	{doc.GooglePattern, "code.google.com/", doc.GetGoogleDoc},
 	// {doc.BitbucketPattern, "bitbucket.org/", doc.GetBitbucketDoc},
 	// {doc.LaunchpadPattern, "launchpad.net/", doc.GetLaunchpadDoc},
 }
@@ -289,46 +289,6 @@ func pureDownload(nod *doc.Node) ([]string, error) {
 	}
 	return nil, errors.New("Cannot match any package service by given path")
 }
-
-// func joinPath(paths ...string) string {
-// 	if len(paths) < 1 {
-// 		return ""
-// 	}
-// 	res := ""
-// 	for _, p := range paths {
-// 		res = path.Join(res, p)
-// 	}
-// 	return res
-// }
-
-// func download(url string, localfile string) error {
-// 	fmt.Println("Downloading", url, "...")
-// 	resp, err := http.Get(url)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	defer resp.Body.Close()
-
-// 	localdir := filepath.Dir(localfile)
-// 	if !dirExists(localdir) {
-// 		err = os.MkdirAll(localdir, 0777)
-// 		if err != nil {
-// 			return err
-// 		}
-// 	}
-
-// 	if !fileExists(localfile) {
-// 		f, err := os.Create(localfile)
-// 		if err == nil {
-// 			_, err = io.Copy(f, resp.Body)
-// 		}
-// 		if err != nil {
-// 			return err
-// 		}
-// 	}
-
-// 	return nil
-// }
 
 // func extractPkg(pkg *Pkg, localfile string, update bool) error {
 // 	fmt.Println("Extracting package", pkg.Name, "...")
@@ -406,38 +366,3 @@ func pureDownload(nod *doc.Node) ([]string, error) {
 // 	}
 // 	return nil
 // }
-
-// func getPackage(pkg *Pkg, url string) error {
-// 	curUser, err := user.Current()
-// 	if err != nil {
-// 		return err
-// 	}
-
-// 	reposDir = strings.Replace(reposDir, "~", curUser.HomeDir, -1)
-// 	localdir := path.Join(reposDir, pkg.Name)
-// 	localdir, err = filepath.Abs(localdir)
-// 	if err != nil {
-// 		return err
-// 	}
-
-// 	localfile := path.Join(localdir, pkg.FileName())
-
-// 	err = download(url, localfile)
-// 	if err != nil {
-// 		return err
-// 	}
-
-// 	return extractPkg(pkg, localfile, false)
-// }
-
-// func getDirect(pkg *Pkg) error {
-// 	return getPackage(pkg, pkg.Url())
-// }
-
-/*func getFromSource(pkgName string, ver string, source string) error {
-	urlTempl := "https://%v/%v"
-	//urlTempl := "https://%v/archive/master.zip"
-	url := fmt.Sprintf(urlTempl, source, pkgName)
-
-	return getPackage(pkgName, ver, url)
-}*/

@@ -59,7 +59,7 @@ var (
 
 // httpGet gets the specified resource. ErrNotFound is returned if the server
 // responds with status 404.
-func httpGetBytes(client *http.Client, url string, header http.Header) ([]byte, error) {
+func HttpGetBytes(client *http.Client, url string, header http.Header) ([]byte, error) {
 	rc, err := httpGet(client, url, header)
 	if err != nil {
 		return nil, err
