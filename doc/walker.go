@@ -16,7 +16,6 @@ package doc
 
 import (
 	"bytes"
-	"errors"
 	"go/ast"
 	"go/build"
 	"go/parser"
@@ -114,7 +113,8 @@ func (w *walker) build(srcs []*source) ([]string, error) {
 		if nogo {
 			err = nil
 		} else {
-			return nil, errors.New("doc.walker.build(): " + err.Error())
+			ColorLog("[WARN] Error occurs when check imports[ %s ]\n", err)
+			return nil, nil
 		}
 	}
 

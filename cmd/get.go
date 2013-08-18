@@ -17,10 +17,8 @@ package cmd
 import (
 	"errors"
 	"fmt"
-	"net/http"
 	"os/user"
 	//"path"
-	"regexp"
 	"strings"
 
 	"github.com/gpmgo/gopm/doc"
@@ -30,6 +28,7 @@ var (
 	installRepoPath string
 	downloadCache   map[string]bool // Saves packages that have been downloaded.
 	downloadCount   int
+	failConut       int
 )
 
 var CmdGet = &Command{
@@ -144,16 +143,18 @@ func runGet(cmd *Command, args []string) {
 	}
 
 	nodes = append(nodes, &doc.Node{
-		ImportPath: args[0],
-		Type:       t,
-		Value:      ver,
-		IsGetDeps:  true,
+		ImportPath:  args[0],
+		DownloadURL: args[0],
+		Type:        t,
+		Value:       ver,
+		IsGetDeps:   true,
 	})
 
 	// Download package(s).
 	downloadPackages(nodes)
 
-	doc.ColorLog("[INFO] %d package(s) downloaded.\n", downloadCount)
+	doc.ColorLog("[INFO] %d package(s) downloaded, %d failed.\n",
+		downloadCount, failConut)
 }
 
 // downloadPackages downloads packages with certain commit,
@@ -186,9 +187,10 @@ func downloadPackages(nodes []*doc.Node) {
 					nodes := make([]*doc.Node, len(imports))
 					for i := range nodes {
 						nodes[i] = &doc.Node{
-							ImportPath: imports[i],
-							Type:       doc.BRANCH,
-							IsGetDeps:  true,
+							ImportPath:  imports[i],
+							DownloadURL: imports[i],
+							Type:        doc.BRANCH,
+							IsGetDeps:   true,
 						}
 					}
 					downloadPackages(nodes)
@@ -221,10 +223,11 @@ func downloadPackage(nod *doc.Node) (*doc.Node, []string) {
 	// Mark as donwloaded.
 	downloadCache[nod.ImportPath] = true
 
-	imports, err := pureDownload(nod)
+	imports, err := doc.PureDownload(nod, installRepoPath, CmdGet.Flags)
 
 	if err != nil {
 		doc.ColorLog("[ERRO] Download falied[ %s ]\n", err)
+		failConut++
 		return nil, nil
 	}
 	return nod, imports
@@ -250,119 +253,3 @@ func validPath(info string) (string, string, error) {
 		return "", "", errors.New("Cannot match any case")
 	}
 }
-
-// service represents a source code control service.
-type service struct {
-	pattern *regexp.Regexp
-	prefix  string
-	get     func(*http.Client, map[string]string, string, *doc.Node, map[string]bool) ([]string, error)
-}
-
-// services is the list of source code control services handled by gopkgdoc.
-var services = []*service{
-	{doc.GithubPattern, "github.com/", doc.GetGithubDoc},
-	{doc.GooglePattern, "code.google.com/", doc.GetGoogleDoc},
-	{doc.BitbucketPattern, "bitbucket.org/", doc.GetBitbucketDoc},
-	// {doc.LaunchpadPattern, "launchpad.net/", doc.GetLaunchpadDoc},
-}
-
-// pureDownload downloads package without version control.
-func pureDownload(nod *doc.Node) ([]string, error) {
-	for _, s := range services {
-		if s.get == nil || !strings.HasPrefix(nod.ImportPath, s.prefix) {
-			continue
-		}
-		m := s.pattern.FindStringSubmatch(nod.ImportPath)
-		if m == nil {
-			if s.prefix != "" {
-				return nil, errors.New("Cannot match package service prefix by given path")
-			}
-			continue
-		}
-		match := map[string]string{"importPath": nod.ImportPath}
-		for i, n := range s.pattern.SubexpNames() {
-			if n != "" {
-				match[n] = m[i]
-			}
-		}
-		return s.get(doc.HttpClient, match, installRepoPath, nod, CmdGet.Flags)
-	}
-	return nil, errors.New("Cannot match any package service by given path")
-}
-
-// func extractPkg(pkg *Pkg, localfile string, update bool) error {
-// 	fmt.Println("Extracting package", pkg.Name, "...")
-
-// 	gopath := os.Getenv("GOPATH")
-// 	var childDirs []string = strings.Split(pkg.Name, "/")
-
-// 	if pkg.Ver != TRUNK {
-// 		childDirs[len(childDirs)-1] = fmt.Sprintf("%v_%v_%v", childDirs[len(childDirs)-1], pkg.Ver, pkg.VerId)
-// 	}
-// 	dstDir := joinPath(gopath, "src", joinPath(childDirs...))
-// 	//fmt.Println(dstDir)
-// 	var err error
-// 	if !update {
-// 		if dirExists(dstDir) {
-// 			return nil
-// 		}
-// 		err = os.MkdirAll(dstDir, 0777)
-// 	} else {
-// 		if dirExists(dstDir) {
-// 			err = os.Remove(dstDir)
-// 		} else {
-// 			err = os.MkdirAll(dstDir, 0777)
-// 		}
-// 	}
-
-// 	if err != nil {
-// 		return err
-// 	}
-
-// 	if path.Ext(localfile) != ".zip" {
-// 		return errors.New("Not implemented!")
-// 	}
-
-// 	r, err := zip.OpenReader(localfile)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	defer r.Close()
-
-// 	for _, f := range r.File {
-// 		fmt.Printf("Contents of %s:\n", f.Name)
-// 		if f.FileInfo().IsDir() {
-// 			continue
-// 		}
-
-// 		paths := strings.Split(f.Name, "/")[1:]
-// 		//fmt.Println(paths)
-// 		if len(paths) < 1 {
-// 			continue
-// 		}
-
-// 		if len(paths) > 1 {
-// 			childDir := joinPath(dstDir, joinPath(paths[0:len(paths)-1]...))
-// 			//fmt.Println("creating", childDir)
-// 			err = os.MkdirAll(childDir, 0777)
-// 			if err != nil {
-// 				return err
-// 			}
-// 		}
-
-// 		rc, err := f.Open()
-// 		if err != nil {
-// 			return err
-// 		}
-
-// 		newF, err := os.Create(path.Join(dstDir, joinPath(paths...)))
-// 		if err == nil {
-// 			_, err = io.Copy(newF, rc)
-// 		}
-// 		if err != nil {
-// 			return err
-// 		}
-// 		rc.Close()
-// 	}
-// 	return nil
-// }

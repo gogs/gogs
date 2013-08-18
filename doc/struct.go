@@ -16,7 +16,9 @@ package doc
 
 import (
 	"go/token"
+	"net/http"
 	"os"
+	"regexp"
 	"time"
 )
 
@@ -30,10 +32,11 @@ const (
 )
 
 type Node struct {
-	ImportPath string
-	Type       string
-	Value      string // Branch, tag or commit.
-	IsGetDeps  bool
+	ImportPath  string
+	DownloadURL string
+	Type        string
+	Value       string // Branch, tag or commit.
+	IsGetDeps   bool
 }
 
 // source is source code file.
@@ -55,4 +58,19 @@ type walker struct {
 	ImportPath string
 	srcs       map[string]*source // Source files.
 	fset       *token.FileSet
+}
+
+// service represents a source code control service.
+type service struct {
+	pattern *regexp.Regexp
+	prefix  string
+	get     func(*http.Client, map[string]string, string, *Node, map[string]bool) ([]string, error)
+}
+
+// services is the list of source code control services handled by gopkgdoc.
+var services = []*service{
+	{GithubPattern, "github.com/", GetGithubDoc},
+	{GooglePattern, "code.google.com/", GetGoogleDoc},
+	{BitbucketPattern, "bitbucket.org/", GetBitbucketDoc},
+	{LaunchpadPattern, "launchpad.net/", GetLaunchpadDoc},
 }
