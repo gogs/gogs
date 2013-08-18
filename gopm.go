@@ -19,6 +19,9 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
+	"path"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"sync"
@@ -26,14 +29,15 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"./cmd"
+	"github.com/gpmgo/gopm/cmd"
+	"github.com/gpmgo/gopm/doc"
 )
 
 // +build go1.1
 
 // Test that go1.1 tag above is included in builds. main.go refers to this definition.
 const go11tag = true
-const APP_VER = "0.1.0.0813"
+const APP_VER = "0.1.0.0818"
 
 var (
 	config map[string]interface{}
@@ -44,7 +48,7 @@ var (
 var commands = []*cmd.Command{
 	cmd.CmdGet,
 	cmd.CmdSearch,
-	cmd.CmdServe,
+	//cmd.CmdServe,
 	/*
 		cmdBuild,
 		cmdClean,
@@ -67,10 +71,46 @@ var commands = []*cmd.Command{
 		helpTestfunc,*/
 }
 
+// getAppPath returns application execute path for current process.
+func getAppPath() bool {
+	// Look up executable in PATH variable.
+	cmd.AppPath, _ = exec.LookPath(path.Base(os.Args[0]))
+	// Check if run under $GOPATH/bin.
+	if !doc.IsExist(cmd.AppPath + "docs/") {
+		paths := doc.GetGOPATH()
+		for _, p := range paths {
+			if doc.IsExist(p + "/src/github.com/gpmgoo/gopm/") {
+				cmd.AppPath = p + "/src/github.com/gpmgo/gopm/"
+				break
+			}
+		}
+	}
+
+	if len(cmd.AppPath) == 0 {
+		doc.ColorLog("[ERRO] Cannot assign 'AppPath'[ %s ]\n",
+			"Unable to indicate current execute path")
+		return false
+	}
+
+	cmd.AppPath = filepath.Dir(cmd.AppPath) + "/"
+	if runtime.GOOS == "windows" {
+		// Replace all '\' to '/'.
+		cmd.AppPath = strings.Replace(cmd.AppPath, "\\", "/", -1)
+	}
+
+	return true
+}
+
 // We don't use init() to initialize
 // bacause we need to get execute path in runtime.
 func initialize() bool {
 	runtime.GOMAXPROCS(runtime.NumCPU())
+
+	// Get application execute path.
+	if !getAppPath() {
+		return false
+	}
+
 	return true
 }
 
