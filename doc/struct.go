@@ -15,6 +15,7 @@
 package doc
 
 import (
+	"fmt"
 	"go/token"
 	"net/http"
 	"os"
@@ -37,6 +38,13 @@ type Node struct {
 	Type        string
 	Value       string // Branch, tag or commit.
 	IsGetDeps   bool
+}
+
+func (nod *Node) VerString() string {
+	if nod.Value == "" {
+		return nod.Type
+	}
+	return fmt.Sprintf("%v:%v", nod.Type, nod.Value)
 }
 
 // source is source code file.
