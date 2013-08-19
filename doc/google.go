@@ -28,7 +28,7 @@ var (
 	googleEtagRe     = regexp.MustCompile(`^(hg|git|svn)-`)
 	googleFileRe     = regexp.MustCompile(`<li><a href="([^"/]+)"`)
 	googleDirRe      = regexp.MustCompile(`<li><a href="([^".]+)"`)
-	GooglePattern    = regexp.MustCompile(`^code\.google\.com/p/(?P<repo>[a-z0-9\-]+)(:?\.(?P<subrepo>[a-z0-9\-]+))?(?P<dir>/[a-z0-9A-Z_.\-/]+)?$`)
+	googlePattern    = regexp.MustCompile(`^code\.google\.com/p/(?P<repo>[a-z0-9\-]+)(:?\.(?P<subrepo>[a-z0-9\-]+))?(?P<dir>/[a-z0-9A-Z_.\-/]+)?$`)
 )
 
 func setupGoogleMatch(match map[string]string) {
@@ -56,8 +56,8 @@ func getGoogleVCS(client *http.Client, match map[string]string) error {
 	return nil
 }
 
-// GetGoogleDoc downloads raw files from code.google.com.
-func GetGoogleDoc(client *http.Client, match map[string]string, installRepoPath string, nod *Node, cmdFlags map[string]bool) ([]string, error) {
+// getGoogleDoc downloads raw files from code.google.com.
+func getGoogleDoc(client *http.Client, match map[string]string, installRepoPath string, nod *Node, cmdFlags map[string]bool) ([]string, error) {
 	setupGoogleMatch(match)
 	// Check version control.
 	if m := googleEtagRe.FindStringSubmatch(nod.Value); m != nil {

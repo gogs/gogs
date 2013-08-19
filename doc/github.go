@@ -28,7 +28,7 @@ import (
 
 var (
 	githubRawHeader = http.Header{"Accept": {"application/vnd.github-blob.raw"}}
-	GithubPattern   = regexp.MustCompile(`^github\.com/(?P<owner>[a-z0-9A-Z_.\-]+)/(?P<repo>[a-z0-9A-Z_.\-]+)(?P<dir>/[a-z0-9A-Z_.\-/]*)?$`)
+	githubPattern   = regexp.MustCompile(`^github\.com/(?P<owner>[a-z0-9A-Z_.\-]+)/(?P<repo>[a-z0-9A-Z_.\-]+)(?P<dir>/[a-z0-9A-Z_.\-/]*)?$`)
 	githubCred      string
 )
 
@@ -42,64 +42,32 @@ func SetGithubCredentials(token string) {
 	}
 }
 
-// GetGithubDoc downloads tarball from github.com.
-func GetGithubDoc(client *http.Client, match map[string]string, installRepoPath string, nod *Node, cmdFlags map[string]bool) ([]string, error) {
+// getGithubDoc downloads tarball from github.com.
+func getGithubDoc(client *http.Client, match map[string]string, installRepoPath string, nod *Node, cmdFlags map[string]bool) ([]string, error) {
 	match["cred"] = githubCred
 
-	if nod.Type == BRANCH {
+	// Check downlaod type.
+	switch nod.Type {
+	case BRANCH:
 		if len(nod.Value) == 0 {
 			match["sha"] = MASTER
 		} else {
 			match["sha"] = nod.Value
 		}
-	}
-
-	// JSON struct for github.com.
-	var refs []*struct {
-		Ref    string
-		Url    string
-		Object struct {
-			Sha  string
-			Type string
-			Url  string
-		}
-	}
-
-	if nod.IsGetDeps {
-		if nod.Type == COMMIT {
-			// Get up-to-date version.
-			err := httpGetJSON(client, expand("https://api.github.com/repos/{owner}/{repo}/git/refs?{cred}", match), &refs)
-			if err != nil {
-				return nil, err
-			}
-
-			for _, ref := range refs {
-				if strings.HasPrefix(ref.Ref, "refs/heads/master") {
-					match["sha"] = ref.Object.Sha
-					break
-				}
-			}
-
-			nod.Value = match["sha"]
-		}
-	} else {
-		// Check downlaod type.
-		switch nod.Type {
-		case TAG, COMMIT, BRANCH:
-			match["sha"] = nod.Value
-		default:
-			return nil, errors.New("Unknown node type: " + nod.Type)
-		}
+	case TAG, COMMIT:
+		match["sha"] = nod.Value
+	default:
+		return nil, errors.New("Unknown node type: " + nod.Type)
 	}
 
 	// We use .zip here.
-	// zip : https://github.com/{owner}/{repo}/archive/{sha}.zip
-	// tarball : https://github.com/{owner}/{repo}/tarball/{sha}
+	// zip: https://github.com/{owner}/{repo}/archive/{sha}.zip
+	// tarball: https://github.com/{owner}/{repo}/tarball/{sha}
 
 	// Downlaod archive.
 	p, err := HttpGetBytes(client, expand("https://github.com/{owner}/{repo}/archive/{sha}.zip", match), nil)
 	if err != nil {
-		return nil, err
+		return nil, errors.New("Fail to donwload Github repo -> " + err.Error())
 	}
 
 	shaName := expand("{repo}-{sha}", match)

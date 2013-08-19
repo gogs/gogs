@@ -69,8 +69,9 @@ type service struct {
 
 // services is the list of source code control services handled by gopkgdoc.
 var services = []*service{
-	{GithubPattern, "github.com/", GetGithubDoc},
-	{GooglePattern, "code.google.com/", GetGoogleDoc},
-	{BitbucketPattern, "bitbucket.org/", GetBitbucketDoc},
-	{LaunchpadPattern, "launchpad.net/", GetLaunchpadDoc},
+	{githubPattern, "github.com/", getGithubDoc},
+	{googlePattern, "code.google.com/", getGoogleDoc},
+	{bitbucketPattern, "bitbucket.org/", getBitbucketDoc},
+	{launchpadPattern, "launchpad.net/", getLaunchpadDoc},
+	{oscPattern, "git.oschina.net/", getOSCDoc},
 }

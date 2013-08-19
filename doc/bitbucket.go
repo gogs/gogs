@@ -28,12 +28,12 @@ import (
 )
 
 var (
-	BitbucketPattern = regexp.MustCompile(`^bitbucket\.org/(?P<owner>[a-z0-9A-Z_.\-]+)/(?P<repo>[a-z0-9A-Z_.\-]+)(?P<dir>/[a-z0-9A-Z_.\-/]*)?$`)
+	bitbucketPattern = regexp.MustCompile(`^bitbucket\.org/(?P<owner>[a-z0-9A-Z_.\-]+)/(?P<repo>[a-z0-9A-Z_.\-]+)(?P<dir>/[a-z0-9A-Z_.\-/]*)?$`)
 	bitbucketEtagRe  = regexp.MustCompile(`^(hg|git)-`)
 )
 
-// GetBitbucketDoc downloads tarball from bitbucket.org.
-func GetBitbucketDoc(client *http.Client, match map[string]string, installRepoPath string, nod *Node, cmdFlags map[string]bool) ([]string, error) {
+// getBitbucketDoc downloads tarball from bitbucket.org.
+func getBitbucketDoc(client *http.Client, match map[string]string, installRepoPath string, nod *Node, cmdFlags map[string]bool) ([]string, error) {
 	// Check version control.
 	if m := bitbucketEtagRe.FindStringSubmatch(nod.Value); m != nil {
 		match["vcs"] = m[1]
