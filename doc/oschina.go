@@ -54,14 +54,18 @@ func getOSCDoc(client *http.Client, match map[string]string, installRepoPath str
 		return nil, errors.New("Fail to donwload OSChina repo -> " + err.Error())
 	}
 
-	suf := "." + nod.Value
-	if len(suf) == 1 {
-		suf = ""
+	var installPath string
+	if nod.ImportPath == nod.DownloadURL {
+		suf := "." + nod.Value
+		if len(suf) == 1 {
+			suf = ""
+		}
+		projectPath := expand("git.oschina.net/{owner}/{repo}", match)
+		installPath = installRepoPath + "/" + projectPath + suf
+		nod.ImportPath = projectPath
+	} else {
+		installPath = installRepoPath + "/" + nod.ImportPath
 	}
-
-	projectPath := expand("git.oschina.net/{owner}/{repo}", match)
-	installPath := installRepoPath + "/" + projectPath + suf
-	nod.ImportPath = projectPath
 
 	// Remove old files.
 	os.RemoveAll(installPath + "/")

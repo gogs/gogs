@@ -99,14 +99,18 @@ func getBitbucketDoc(client *http.Client, match map[string]string, installRepoPa
 		return nil, err
 	}
 
-	suf := "." + nod.Value
-	if len(suf) == 1 {
-		suf = ""
+	var installPath string
+	if nod.ImportPath == nod.DownloadURL {
+		suf := "." + nod.Value
+		if len(suf) == 1 {
+			suf = ""
+		}
+		projectPath := expand("bitbucket.org/{owner}/{repo}", match)
+		installPath = installRepoPath + "/" + projectPath + suf
+		nod.ImportPath = projectPath
+	} else {
+		installPath = installRepoPath + "/" + nod.ImportPath
 	}
-
-	projectPath := expand("bitbucket.org/{owner}/{repo}", match)
-	installPath := installRepoPath + "/" + projectPath + suf
-	nod.ImportPath = projectPath
 
 	// Remove old files.
 	os.RemoveAll(installPath + "/")

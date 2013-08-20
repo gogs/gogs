@@ -212,6 +212,7 @@ func downloadPackages(nodes []*doc.Node) {
 			// Invalid import path.
 			doc.ColorLog("[WARN] Skipped invalid package path( %s => %s:%s )\n",
 				n.ImportPath, n.Type, n.Value)
+			failConut++
 		}
 	}
 }

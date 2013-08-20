@@ -75,14 +75,18 @@ func getGithubDoc(client *http.Client, match map[string]string, installRepoPath 
 		shaName = strings.Replace(shaName, "-v", "-", 1)
 	}
 
-	suf := "." + nod.Value
-	if len(suf) == 1 {
-		suf = ""
+	var installPath string
+	if nod.ImportPath == nod.DownloadURL {
+		suf := "." + nod.Value
+		if len(suf) == 1 {
+			suf = ""
+		}
+		projectPath := expand("github.com/{owner}/{repo}", match)
+		installPath = installRepoPath + "/" + projectPath + suf
+		nod.ImportPath = projectPath
+	} else {
+		installPath = installRepoPath + "/" + nod.ImportPath
 	}
-
-	projectPath := expand("github.com/{owner}/{repo}", match)
-	installPath := installRepoPath + "/" + projectPath + suf
-	nod.ImportPath = projectPath
 
 	// Remove old files.
 	os.RemoveAll(installPath + "/")

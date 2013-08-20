@@ -21,6 +21,7 @@ import (
 	"regexp"
 	"runtime"
 	"strings"
+	"syscall"
 )
 
 // IsExist returns if a file or directory exists
@@ -29,6 +30,7 @@ func IsExist(path string) bool {
 	return err == nil || os.IsExist(err)
 }
 
+// Non-Windows.
 const (
 	Gray = uint8(iota + 90)
 	Red
@@ -38,6 +40,26 @@ const (
 	Magenta
 	//NRed      = uint8(31) // Normal
 	EndColor = "\033[0m"
+)
+
+// Windows.
+const (
+	WDefault = uintptr(iota)
+	WBlue
+	WGreen
+	WCyan
+	WRed
+	WPurple
+	WYellow
+	WGray
+	WSilver
+	WLightBlue
+	WLime
+	WLightCyan
+	WLightRed
+	WLightPurple
+	WLightYellow
+	WWhite
 )
 
 // ColorLog colors log and print to stdout.
@@ -74,6 +96,16 @@ func ColorLog(format string, a ...interface{}) {
 		log = strings.Replace(log, " #", EndColor, -1)
 
 		log = clog + log
+	} else {
+		// Level.
+		i := strings.Index(log, "]")
+		if log[0] == '[' && i > -1 {
+			fmt.Print("[")
+			printColorLevel(log[1:i])
+			fmt.Print("]")
+		}
+
+		log = log[i+1:]
 	}
 
 	fmt.Print(log)
@@ -94,6 +126,32 @@ func getColorLevel(level string) string {
 	default:
 		return level
 	}
+}
+
+// printColorLevel prints color level prompt, this is only for Windows.
+func printColorLevel(level string) {
+	cc := WDefault
+	level = strings.ToUpper(level)
+	switch level {
+	case "TRAC":
+		cc = WBlue
+	case "ERRO":
+		cc = WRed
+	case "WARN":
+		cc = WPurple
+	case "SUCC":
+		cc = WGreen
+	default:
+		cc = WWhite
+	}
+
+	kernel32 := syscall.NewLazyDLL("kernel32.dll")
+	proc := kernel32.NewProc("SetConsoleTextAttribute")
+	handle, _, _ := proc.Call(uintptr(syscall.Stdout), uintptr(cc))
+	fmt.Print(level)
+	handle, _, _ = proc.Call(uintptr(syscall.Stdout), uintptr(WSilver))
+	CloseHandle := kernel32.NewProc("CloseHandle")
+	CloseHandle.Call(handle)
 }
 
 // GetGOPATH returns all paths in GOPATH variable.
