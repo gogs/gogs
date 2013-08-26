@@ -21,9 +21,10 @@ import (
 	"io"
 	"net/http"
 	"os"
-	//"path"
 	"regexp"
 	"strings"
+
+	"github.com/Unknwon/com"
 )
 
 var launchpadPattern = regexp.MustCompile(`^launchpad\.net/(?P<repo>(?P<project>[a-z0-9A-Z_.\-]+)(?P<series>/[a-z0-9A-Z_.\-]+)?|~[a-z0-9A-Z_.\-]+/(\+junk|[a-z0-9A-Z_.\-]+)/[a-z0-9A-Z_.\-]+)(?P<dir>/[a-z0-9A-Z_.\-/]+)*$`)
@@ -32,12 +33,13 @@ var launchpadPattern = regexp.MustCompile(`^launchpad\.net/(?P<repo>(?P<project>
 func getLaunchpadDoc(client *http.Client, match map[string]string, installRepoPath string, nod *Node, cmdFlags map[string]bool) ([]string, error) {
 
 	if match["project"] != "" && match["series"] != "" {
-		rc, err := httpGet(client, expand("https://code.launchpad.net/{project}{series}/.bzr/branch-format", match), nil)
+		rc, err := com.HttpGet(client, expand("https://code.launchpad.net/{project}{series}/.bzr/branch-format", match), nil)
+		_, isNotFound := err.(com.NotFoundError)
 		switch {
 		case err == nil:
 			rc.Close()
 			// The structure of the import path is launchpad.net/{root}/{dir}.
-		case isNotFound(err):
+		case isNotFound:
 			// The structure of the import path is is launchpad.net/{project}/{dir}.
 			match["repo"] = match["project"]
 			match["dir"] = expand("{series}{dir}", match)
@@ -55,7 +57,7 @@ func getLaunchpadDoc(client *http.Client, match map[string]string, installRepoPa
 	}
 
 	// Scrape the repo browser to find the project revision and individual Go files.
-	p, err := HttpGetBytes(client, downloadPath, nil)
+	p, err := com.HttpGetBytes(client, downloadPath, nil)
 	if err != nil {
 		return nil, err
 	}

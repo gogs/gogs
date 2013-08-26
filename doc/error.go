@@ -23,25 +23,3 @@ var (
 	errNoMatch       = errors.New("no match")
 	errUpdateTimeout = errors.New("update timeout")
 )
-
-type NotFoundError struct {
-	Message string
-}
-
-func (e NotFoundError) Error() string {
-	return e.Message
-}
-
-func isNotFound(err error) bool {
-	_, ok := err.(NotFoundError)
-	return ok
-}
-
-type RemoteError struct {
-	Host string
-	err  error
-}
-
-func (e *RemoteError) Error() string {
-	return e.err.Error()
-}

@@ -23,6 +23,8 @@ import (
 	"os"
 	"regexp"
 	"strings"
+
+	"github.com/Unknwon/com"
 )
 
 var (
@@ -49,7 +51,7 @@ func getOSCDoc(client *http.Client, match map[string]string, installRepoPath str
 	// zip: http://{projectRoot}/repository/archive?ref={sha}
 
 	// Downlaod archive.
-	p, err := HttpGetBytes(client, expand("http://git.oschina.net/{owner}/{repo}/repository/archive?ref={sha}", match), nil)
+	p, err := com.HttpGetBytes(client, expand("http://git.oschina.net/{owner}/{repo}/repository/archive?ref={sha}", match), nil)
 	if err != nil {
 		return nil, errors.New("Fail to donwload OSChina repo -> " + err.Error())
 	}

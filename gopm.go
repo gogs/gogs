@@ -37,7 +37,7 @@ import (
 
 // Test that go1.1 tag above is included in builds. main.go refers to this definition.
 const go11tag = true
-const APP_VER = "0.2.2.0819"
+const APP_VER = "0.2.5.0827"
 
 var (
 	config map[string]interface{}

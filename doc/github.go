@@ -24,6 +24,8 @@ import (
 	"path"
 	"regexp"
 	"strings"
+
+	"github.com/Unknwon/com"
 )
 
 var (
@@ -65,7 +67,7 @@ func getGithubDoc(client *http.Client, match map[string]string, installRepoPath 
 	// tarball: https://github.com/{owner}/{repo}/tarball/{sha}
 
 	// Downlaod archive.
-	p, err := HttpGetBytes(client, expand("https://github.com/{owner}/{repo}/archive/{sha}.zip", match), nil)
+	p, err := com.HttpGetBytes(client, expand("https://github.com/{owner}/{repo}/archive/{sha}.zip", match), nil)
 	if err != nil {
 		return nil, errors.New("Fail to donwload Github repo -> " + err.Error())
 	}

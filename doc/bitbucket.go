@@ -25,6 +25,8 @@ import (
 	"path"
 	"regexp"
 	"strings"
+
+	"github.com/Unknwon/com"
 )
 
 var (
@@ -41,7 +43,7 @@ func getBitbucketDoc(client *http.Client, match map[string]string, installRepoPa
 		var repo struct {
 			Scm string
 		}
-		if err := httpGetJSON(client, expand("https://api.bitbucket.org/1.0/repositories/{owner}/{repo}", match), &repo); err != nil {
+		if err := com.HttpGetJSON(client, expand("https://api.bitbucket.org/1.0/repositories/{owner}/{repo}", match), &repo); err != nil {
 			return nil, err
 		}
 		match["vcs"] = repo.Scm
@@ -62,7 +64,7 @@ func getBitbucketDoc(client *http.Client, match map[string]string, installRepoPa
 				var nodes map[string]struct {
 					Node string
 				}
-				if err := httpGetJSON(client, expand("https://api.bitbucket.org/1.0/repositories/{owner}/{repo}/{0}", match, nodeType), &nodes); err != nil {
+				if err := com.HttpGetJSON(client, expand("https://api.bitbucket.org/1.0/repositories/{owner}/{repo}/{0}", match, nodeType), &nodes); err != nil {
 					return nil, err
 				}
 				for t, n := range nodes {
@@ -94,7 +96,7 @@ func getBitbucketDoc(client *http.Client, match map[string]string, installRepoPa
 	// tarball : https://bitbucket.org/{owner}/{repo}/get/{commit}.tar.gz
 
 	// Downlaod archive.
-	p, err := HttpGetBytes(client, expand("https://bitbucket.org/{owner}/{repo}/get/{commit}.tar.gz", match), nil)
+	p, err := com.HttpGetBytes(client, expand("https://bitbucket.org/{owner}/{repo}/get/{commit}.tar.gz", match), nil)
 	if err != nil {
 		return nil, err
 	}
