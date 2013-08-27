@@ -240,11 +240,26 @@ func rmPkg(pkg *Pkg) {
 var db *leveldb.DB
 
 // service should be run
-func autoRun() {
+func autoRun() error {
 	s, _, _ := runningStatus()
 	if s == STOP {
-		os.StartProcess("gopm", []string{"serve", "-l"}, nil)
+		attr := &os.ProcAttr{
+			Files: make([]*os.File, 0),
+		}
+		_, err := os.StartProcess("./gopm", []string{"serve", "-l"}, attr)
+		if err != nil {
+			return err
+		}
+
+		/*f, err := os.OpenFile("~/.gopm/var/pid", os.O_CREATE, 0700)
+		if err != nil {
+			return err
+		}
+		f.WriteString(fmt.Sprintf("%v,%v,%v", RUNNING, , ))
+
+		fmt.Println(p.Pid)*/
 	}
+	return nil
 }
 
 func runningStatus() (int, int, int) {

@@ -30,9 +30,6 @@ search packages
 
 The search flags are:
 
-	-s
-		start a search service. This must be run before search a package
-
 	-e
 		search extactly, you should input an exactly package name as keyword
 `,
@@ -41,14 +38,12 @@ The search flags are:
 func init() {
 	CmdSearch.Run = runSearch
 	CmdSearch.Flags = map[string]bool{
-		"-s": false,
+		"-e": false,
 	}
 }
 
 func printSearchPrompt(flag string) {
 	switch flag {
-	case "-s":
-		doc.ColorLog("[INFO] You enabled start a service.\n")
 	case "-e":
 		doc.ColorLog("[INFO] You enabled exactly search.\n")
 	}
@@ -69,22 +64,28 @@ func runSearch(cmd *Command, args []string) {
 		return
 	}
 
+	var host, port string
+	host = "localhost"
+	port = "8991"
+
+	autoRun()
+
 	if cmd.Flags["-e"] {
-		search(args[0], true)
+		search(host, port, args[0], true)
 	} else {
-		search(args[0], false)
+		search(host, port, args[0], false)
 	}
 }
 
 /*
 request local or remote search service to find packages according to keyword inputed
 */
-func search(keyword string, isExactly bool) {
-	url := "http://localhost:8991/search?"
+func search(host, port, keyword string, isExactly bool) {
+	url := fmt.Sprintf("http://%v:%v/search?%v", host, port, keyword)
 	if isExactly {
-		url = "http://localhost:8991/searche?"
+		url = fmt.Sprintf("http://%v:%v/searche?%v", host, port, keyword)
 	}
-	resp, err := http.Get(url + keyword)
+	resp, err := http.Get(url)
 	if err != nil {
 		doc.ColorLog(err.Error())
 		return
