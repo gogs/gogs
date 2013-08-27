@@ -17,11 +17,12 @@ package doc
 import (
 	"fmt"
 	"os"
+	"os/user"
 	"path"
 	"regexp"
 	"runtime"
 	"strings"
-	"syscall"
+	//"syscall"
 )
 
 // IsExist returns if a file or directory exists
@@ -144,14 +145,14 @@ func printColorLevel(level string) {
 	default:
 		cc = WWhite
 	}
-
-	kernel32 := syscall.NewLazyDLL("kernel32.dll")
+	fmt.Println(cc)
+	/*kernel32 := syscall.NewLazyDLL("kernel32.dll")
 	proc := kernel32.NewProc("SetConsoleTextAttribute")
 	handle, _, _ := proc.Call(uintptr(syscall.Stdout), uintptr(cc))
 	fmt.Print(level)
 	handle, _, _ = proc.Call(uintptr(syscall.Stdout), uintptr(WSilver))
 	CloseHandle := kernel32.NewProc("CloseHandle")
-	CloseHandle.Call(handle)
+	CloseHandle.Call(handle)*/
 }
 
 // GetGOPATH returns all paths in GOPATH variable.
@@ -760,4 +761,13 @@ var standardPath = map[string]bool{
 // IsGoRepoPath returns true if package is from standard library.
 func IsGoRepoPath(importPath string) bool {
 	return standardPath[importPath]
+}
+
+func HomeDir() (string, error) {
+	curUser, err := user.Current()
+	if err != nil {
+		return "", err
+	}
+
+	return curUser.HomeDir, nil
 }

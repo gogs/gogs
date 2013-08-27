@@ -15,18 +15,17 @@
 package cmd
 
 import (
+	serrors "errors"
 	"fmt"
+	"github.com/gpmgo/gopm/doc"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/errors"
 	"github.com/syndtr/goleveldb/leveldb/opt"
 	"io/ioutil"
 	"net/http"
 	"os"
-	"os/user"
 	"strconv"
 	"strings"
-
-	"github.com/gpmgo/gopm/doc"
 )
 
 var (
@@ -142,6 +141,21 @@ func batchPut(batch *leveldb.Batch, key string, value string) error {
 	fmt.Println("put ", key, ": ", value)
 	batch.Put([]byte(key), []byte(value))
 	return nil
+}
+
+func saveNode(nod *doc.Node) error {
+	url := fmt.Sprintf("http://%v:%v/add?%v", "localhost", "8991", nod.ImportPath)
+	resp, err := http.Get(url)
+	if err != nil {
+		doc.ColorLog(err.Error())
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == 200 {
+		return nil
+	}
+	return serrors.New("save node failed with " + resp.Status)
 }
 
 func addNode(nod *doc.Node) error {
@@ -316,14 +330,13 @@ func runningStatus() (int, int, int) {
 }
 
 func startService(listen string) {
-	// check the pre serve's type
-	curUser, err := user.Current()
+	homeDir, err := doc.HomeDir()
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
-	dbDir = strings.Replace(dbDir, "~", curUser.HomeDir, -1)
+	dbDir = strings.Replace(dbDir, "~", homeDir, -1)
 
 	db, err = leveldb.OpenFile(dbDir, &opt.Options{Flag: opt.OFCreateIfMissing})
 	if err != nil {

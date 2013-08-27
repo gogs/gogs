@@ -85,9 +85,9 @@ func initialize() bool {
 
 func main() {
 	// Initialization.
-	if !initialize() {
+	/*if !initialize() {
 		return
-	}
+	}*/
 
 	// Check length of arguments.
 	args := os.Args[1:]

@@ -201,7 +201,7 @@ func downloadPackages(nodes []*doc.Node) {
 					doc.ColorLog("[SUCC] Downloaded package( %s => %s:%s )\n",
 						n.ImportPath, n.Type, n.Value)
 					downloadCount++
-					//saveNode(nod)
+					saveNode(nod)
 				}
 			} else {
 				doc.ColorLog("[WARN] Skipped downloaded package( %s => %s:%s )\n",
