@@ -116,13 +116,13 @@ func runGet(cmd *Command, args []string) {
 
 	// Check length of arguments.
 	if len(args) < 1 {
-		com.ColorLog("[ERROR] Please list the package that you want to install.\n")
+		com.ColorLog("[ERRO] Please list the package that you want to install.\n")
 		return
 	}
 
 	hd, err := doc.GetHomeDir()
 	if err != nil {
-		com.ColorLog("[ERROR] Fail to get current user[ %s ]\n", err)
+		com.ColorLog("[ERRO] Fail to get current user[ %s ]\n", err)
 		return
 	}
 
