@@ -223,7 +223,7 @@ func PureDownload(nod *Node, installRepoPath string, flags map[string]bool) ([]s
 		return s.get(HttpClient, match, installRepoPath, nod, flags)
 	}
 
-	ColorLog("[TRAC] Cannot match any service, getting dynamic...\n")
+	com.ColorLog("[TRAC] Cannot match any service, getting dynamic...\n")
 	return getDynamic(HttpClient, nod, installRepoPath, flags)
 }
 
@@ -347,7 +347,7 @@ metaScan:
 	return match, nil
 }
 
-func getImports(rootPath string, match map[string]string, cmdFlags map[string]bool) (imports []string) {
+func getImports(rootPath string, match map[string]string, cmdFlags map[string]bool, nod *Node) (imports []string) {
 	dirs, err := GetDirsInfo(rootPath)
 	if err != nil {
 		return nil
@@ -356,7 +356,7 @@ func getImports(rootPath string, match map[string]string, cmdFlags map[string]bo
 	for _, d := range dirs {
 		if d.IsDir() && !(!cmdFlags["-e"] && strings.Contains(d.Name(), "example")) {
 			absPath := rootPath + d.Name() + "/"
-			importPkgs, err := CheckImports(absPath, match["importPath"])
+			importPkgs, err := CheckImports(absPath, match["importPath"], nod)
 			if err != nil {
 				return nil
 			}
@@ -367,7 +367,7 @@ func getImports(rootPath string, match map[string]string, cmdFlags map[string]bo
 }
 
 // checkImports checks package denpendencies.
-func CheckImports(absPath, importPath string) (importPkgs []string, err error) {
+func CheckImports(absPath, importPath string, nod *Node) (importPkgs []string, err error) {
 	dir, err := os.Open(absPath)
 	if err != nil {
 		return nil, err
@@ -407,7 +407,7 @@ func CheckImports(absPath, importPath string) (importPkgs []string, err error) {
 	// Check if has Go source files.
 	if len(files) > 0 {
 		w := &walker{ImportPath: importPath}
-		importPkgs, err = w.build(files)
+		importPkgs, err = w.build(files, nod)
 		if err != nil {
 			return nil, err
 		}

@@ -20,7 +20,7 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"github.com/gpmgo/gopm/doc"
+	"github.com/Unknwon/com"
 )
 
 var CmdSearch = &Command{
@@ -46,7 +46,7 @@ func init() {
 func printSearchPrompt(flag string) {
 	switch flag {
 	case "-e":
-		doc.ColorLog("[INFO] You enabled exactly search.\n")
+		com.ColorLog("[INFO] You enabled exactly search.\n")
 	}
 }
 
@@ -61,7 +61,7 @@ func runSearch(cmd *Command, args []string) {
 
 	// Check length of arguments.
 	if len(args) < 1 {
-		doc.ColorLog("[ERROR] Please input package's keyword.\n")
+		com.ColorLog("[ERROR] Please input package's keyword.\n")
 		return
 	}
 
@@ -88,7 +88,7 @@ func search(host, port, keyword string, isExactly bool) {
 	}
 	resp, err := http.Get(url)
 	if err != nil {
-		doc.ColorLog(err.Error())
+		com.ColorLog(err.Error())
 		return
 	}
 	defer resp.Body.Close()
@@ -96,20 +96,20 @@ func search(host, port, keyword string, isExactly bool) {
 	if resp.StatusCode == 200 {
 		contents, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
-			doc.ColorLog(err.Error())
+			com.ColorLog(err.Error())
 			return
 		}
 
 		pkgs := make([]string, 0)
 		err = json.Unmarshal(contents, &pkgs)
 		if err != nil {
-			doc.ColorLog(err.Error())
+			com.ColorLog(err.Error())
 			return
 		}
 		for i, pkg := range pkgs {
 			fmt.Println(i+1, pkg)
 		}
 	} else {
-		doc.ColorLog(resp.Status)
+		com.ColorLog(resp.Status)
 	}
 }

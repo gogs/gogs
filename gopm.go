@@ -26,7 +26,6 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"github.com/Unknwon/com"
 	"github.com/gpmgo/gopm/cmd"
 )
 
@@ -68,27 +67,11 @@ var commands = []*cmd.Command{
 		helpTestfunc,*/
 }
 
-// We don't use init() to initialize
-// bacause we need to get execute path in runtime.
-func initialize() bool {
+func init() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
-
-	// Get application execute path.
-	var err error
-	cmd.AppPath, err = com.GetSrcPath("github.com/gpmgoo/gopm")
-	if err != nil {
-		return false
-	}
-
-	return true
 }
 
 func main() {
-	// Initialization.
-	/*if !initialize() {
-		return
-	}*/
-
 	// Check length of arguments.
 	args := os.Args[1:]
 	if len(args) < 1 {

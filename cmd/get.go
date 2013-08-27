@@ -17,9 +17,9 @@ package cmd
 import (
 	"errors"
 	"fmt"
-	"os/user"
 	"strings"
 
+	"github.com/Unknwon/com"
 	"github.com/gpmgo/gopm/doc"
 )
 
@@ -70,11 +70,11 @@ func init() {
 func printGetPrompt(flag string) {
 	switch flag {
 	case "-d":
-		doc.ColorLog("[INFO] You enabled download without installing.\n")
+		com.ColorLog("[INFO] You enabled download without installing.\n")
 	case "-u":
-		doc.ColorLog("[INFO] You enabled force update.\n")
+		com.ColorLog("[INFO] You enabled force update.\n")
 	case "-e":
-		doc.ColorLog("[INFO] You enabled download dependencies of example(s).\n")
+		com.ColorLog("[INFO] You enabled download dependencies of example(s).\n")
 	}
 }
 
@@ -97,7 +97,7 @@ func checkFlags(flags map[string]bool, args []string, print func(string)) int {
 				fmt.Println("DISABLE: " + f)
 			}
 		} else {
-			doc.ColorLog("[ERRO] Unknown flag: %s.\n", f)
+			com.ColorLog("[ERRO] Unknown flag: %s.\n", f)
 			return -1
 		}
 		num = i + 1
@@ -116,18 +116,18 @@ func runGet(cmd *Command, args []string) {
 
 	// Check length of arguments.
 	if len(args) < 1 {
-		doc.ColorLog("[ERROR] Please list the package that you want to install.\n")
+		com.ColorLog("[ERROR] Please list the package that you want to install.\n")
 		return
 	}
 
-	curUser, err := user.Current()
+	hd, err := doc.GetHomeDir()
 	if err != nil {
-		doc.ColorLog("[ERROR] Fail to get current user[ %s ]\n", err)
+		com.ColorLog("[ERROR] Fail to get current user[ %s ]\n", err)
 		return
 	}
 
-	installRepoPath = strings.Replace(reposDir, "~", curUser.HomeDir, -1)
-	doc.ColorLog("[INFO] Packages will be installed into( %s )\n", installRepoPath)
+	installRepoPath = strings.Replace(reposDir, "~", hd, -1)
+	com.ColorLog("[INFO] Packages will be installed into( %s )\n", installRepoPath)
 
 	nodes := []*doc.Node{}
 	// ver describles branch, tag or commit.
@@ -136,7 +136,7 @@ func runGet(cmd *Command, args []string) {
 	if len(args) >= 2 {
 		t, ver, err = validPath(args[1])
 		if err != nil {
-			doc.ColorLog("[ERROR] Fail to parse 'args'[ %s ]\n", err)
+			com.ColorLog("[ERROR] Fail to parse 'args'[ %s ]\n", err)
 			return
 		}
 	}
@@ -152,7 +152,7 @@ func runGet(cmd *Command, args []string) {
 	// Download package(s).
 	downloadPackages(nodes)
 
-	doc.ColorLog("[INFO] %d package(s) downloaded, %d failed.\n",
+	com.ColorLog("[INFO] %d package(s) downloaded, %d failed.\n",
 		downloadCount, failConut)
 }
 
@@ -170,9 +170,9 @@ func downloadPackages(nodes []*doc.Node) {
 				if len(n.Value) > 0 {
 					installPath += "." + n.Value
 				}
-				if doc.IsExist(installPath) {
-					doc.ColorLog("[WARN] Skipped installed package( %s => %s:%s )\n",
-						n.ImportPath, n.Type, n.Value)
+				if com.IsExist(installPath) {
+					com.ColorLog("[WARN] Skipped installed package( %s => %s:%s )\n",
+						n.ImportPath, n.Type, doc.CheckNodeValue(n.Value))
 					continue
 				}
 			}
@@ -198,19 +198,19 @@ func downloadPackages(nodes []*doc.Node) {
 				// Only save package information with specific commit.
 				if nod != nil {
 					// Save record in local nodes.
-					doc.ColorLog("[SUCC] Downloaded package( %s => %s:%s )\n",
-						n.ImportPath, n.Type, n.Value)
+					com.ColorLog("[SUCC] Downloaded package( %s => %s:%s )\n",
+						n.ImportPath, n.Type, doc.CheckNodeValue(n.Value))
 					downloadCount++
 					saveNode(nod)
 				}
 			} else {
-				doc.ColorLog("[WARN] Skipped downloaded package( %s => %s:%s )\n",
-					n.ImportPath, n.Type, n.Value)
+				com.ColorLog("[WARN] Skipped downloaded package( %s => %s:%s )\n",
+					n.ImportPath, n.Type, doc.CheckNodeValue(n.Value))
 			}
 		} else {
 			// Invalid import path.
-			doc.ColorLog("[WARN] Skipped invalid package path( %s => %s:%s )\n",
-				n.ImportPath, n.Type, n.Value)
+			com.ColorLog("[WARN] Skipped invalid package path( %s => %s:%s )\n",
+				n.ImportPath, n.Type, doc.CheckNodeValue(n.Value))
 			failConut++
 		}
 	}
@@ -218,15 +218,15 @@ func downloadPackages(nodes []*doc.Node) {
 
 // downloadPackage downloads package either use version control tools or not.
 func downloadPackage(nod *doc.Node) (*doc.Node, []string) {
-	doc.ColorLog("[TRAC] Downloading package( %s => %s:%s )\n",
-		nod.ImportPath, nod.Type, nod.Value)
+	com.ColorLog("[TRAC] Downloading package( %s => %s:%s )\n",
+		nod.ImportPath, nod.Type, doc.CheckNodeValue(nod.Value))
 	// Mark as donwloaded.
 	downloadCache[nod.ImportPath] = true
 
 	imports, err := doc.PureDownload(nod, installRepoPath, CmdGet.Flags)
 
 	if err != nil {
-		doc.ColorLog("[ERRO] Download falied[ %s ]\n", err)
+		com.ColorLog("[ERRO] Download falied[ %s ]\n", err)
 		failConut++
 		return nil, nil
 	}

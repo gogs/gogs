@@ -78,7 +78,7 @@ func getGoogleDoc(client *http.Client, match map[string]string, installRepoPath 
 
 	// Check if need to check imports.
 	if nod.IsGetDeps {
-		imports := getImports(installPath+"/", match, cmdFlags)
+		imports := getImports(installPath+"/", match, cmdFlags, nod)
 		return imports, err
 	}
 

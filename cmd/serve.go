@@ -26,6 +26,8 @@ import (
 	"os"
 	"strconv"
 	"strings"
+
+	"github.com/Unknwon/com"
 )
 
 var (
@@ -61,7 +63,7 @@ func init() {
 func printServePrompt(flag string) {
 	switch flag {
 	case "-l":
-		doc.ColorLog("[INFO] You enabled start a service only localhost.\n")
+		com.ColorLog("[INFO] You enabled start a service only localhost.\n")
 	}
 }
 
@@ -147,7 +149,7 @@ func saveNode(nod *doc.Node) error {
 	url := fmt.Sprintf("http://%v:%v/add?%v", "localhost", "8991", nod.ImportPath)
 	resp, err := http.Get(url)
 	if err != nil {
-		doc.ColorLog(err.Error())
+		com.ColorLog("%v\n", err.Error())
 		return err
 	}
 	defer resp.Body.Close()
@@ -330,7 +332,7 @@ func runningStatus() (int, int, int) {
 }
 
 func startService(listen string) {
-	homeDir, err := doc.HomeDir()
+	homeDir, err := doc.GetHomeDir()
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -386,7 +388,7 @@ func searchHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Println(rId)
 		pkg, err := dbGet(fmt.Sprintf("pkg:%v", rId))
 		if err != nil {
-			doc.ColorLog(err.Error())
+			com.ColorLog(err.Error())
 			continue
 		}
 		pkgs = append(pkgs, pkg)
@@ -403,7 +405,7 @@ func searcheHandler(w http.ResponseWriter, r *http.Request) {
 		_, err := dbGet("index:" + key)
 
 		if err != nil {
-			doc.ColorLog(err.Error())
+			com.ColorLog(err.Error())
 			continue
 		}
 

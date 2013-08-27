@@ -188,7 +188,7 @@ func getBitbucketDoc(client *http.Client, match map[string]string, installRepoPa
 	// Check if need to check imports.
 	if nod.IsGetDeps {
 		for _, d := range dirs {
-			importPkgs, err := CheckImports(d+"/", match["importPath"])
+			importPkgs, err := CheckImports(d+"/", match["importPath"], nod)
 			if err != nil {
 				return nil, err
 			}

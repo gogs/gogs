@@ -9,7 +9,7 @@ gopm(Go Package Manager) is a Go package manage tool for search, install, update
 
 ## Credits
 
-- [garyburd/gddo](https://github.com/garyburd/gddo)
+- [Go Walker](https://github.com/Unknwon/gowalker)
 
 ## License
 

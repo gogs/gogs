@@ -37,6 +37,7 @@ type Node struct {
 	DownloadURL string
 	Type        string
 	Value       string // Branch, tag or commit.
+	Synopsis    string
 	IsGetDeps   bool
 }
 

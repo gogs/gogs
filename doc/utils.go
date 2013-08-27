@@ -15,162 +15,19 @@
 package doc
 
 import (
-	"fmt"
 	"os"
 	"os/user"
 	"path"
 	"regexp"
 	"runtime"
 	"strings"
-	//"syscall"
+
+	"github.com/Unknwon/com"
 )
-
-// IsExist returns if a file or directory exists
-func IsExist(path string) bool {
-	_, err := os.Stat(path)
-	return err == nil || os.IsExist(err)
-}
-
-// Non-Windows.
-const (
-	Gray = uint8(iota + 90)
-	Red
-	Green
-	Yellow
-	Blue
-	Magenta
-	//NRed      = uint8(31) // Normal
-	EndColor = "\033[0m"
-)
-
-// Windows.
-const (
-	WDefault = uintptr(iota)
-	WBlue
-	WGreen
-	WCyan
-	WRed
-	WPurple
-	WYellow
-	WGray
-	WSilver
-	WLightBlue
-	WLime
-	WLightCyan
-	WLightRed
-	WLightPurple
-	WLightYellow
-	WWhite
-)
-
-// ColorLog colors log and print to stdout.
-// Log format: <level> <content [highlight][path]> [ error ].
-// Level: TRAC -> blue; ERRO -> red; WARN -> Magenta; SUCC -> green; others -> default.
-// Content: default; path: yellow; error -> red.
-// Level has to be surrounded by "[" and "]".
-// Highlights have to be surrounded by "# " and " #"(space).
-// Paths have to be surrounded by "( " and " )"(sapce).
-// Errors have to be surrounded by "[ " and " ]"(space).
-func ColorLog(format string, a ...interface{}) {
-	log := fmt.Sprintf(format, a...)
-	if runtime.GOOS != "windows" {
-		var clog string
-
-		// Level.
-		i := strings.Index(log, "]")
-		if log[0] == '[' && i > -1 {
-			clog += "[" + getColorLevel(log[1:i]) + "]"
-		}
-
-		log = log[i+1:]
-
-		// Error.
-		log = strings.Replace(log, "[ ", fmt.Sprintf("[\033[%dm", Red), -1)
-		log = strings.Replace(log, " ]", EndColor+"]", -1)
-
-		// Path.
-		log = strings.Replace(log, "( ", fmt.Sprintf("(\033[%dm", Yellow), -1)
-		log = strings.Replace(log, " )", EndColor+")", -1)
-
-		// Highlights.
-		log = strings.Replace(log, "# ", fmt.Sprintf("\033[%dm", Gray), -1)
-		log = strings.Replace(log, " #", EndColor, -1)
-
-		log = clog + log
-	} else {
-		// Level.
-		i := strings.Index(log, "]")
-		if log[0] == '[' && i > -1 {
-			fmt.Print("[")
-			printColorLevel(log[1:i])
-			fmt.Print("]")
-		}
-
-		log = log[i+1:]
-	}
-
-	fmt.Print(log)
-}
-
-// getColorLevel returns colored level string by given level.
-func getColorLevel(level string) string {
-	level = strings.ToUpper(level)
-	switch level {
-	case "TRAC":
-		return fmt.Sprintf("\033[%dm%s\033[0m", Blue, level)
-	case "ERRO":
-		return fmt.Sprintf("\033[%dm%s\033[0m", Red, level)
-	case "WARN":
-		return fmt.Sprintf("\033[%dm%s\033[0m", Magenta, level)
-	case "SUCC":
-		return fmt.Sprintf("\033[%dm%s\033[0m", Green, level)
-	default:
-		return level
-	}
-}
-
-// printColorLevel prints color level prompt, this is only for Windows.
-func printColorLevel(level string) {
-	cc := WDefault
-	level = strings.ToUpper(level)
-	switch level {
-	case "TRAC":
-		cc = WBlue
-	case "ERRO":
-		cc = WRed
-	case "WARN":
-		cc = WPurple
-	case "SUCC":
-		cc = WGreen
-	default:
-		cc = WWhite
-	}
-	fmt.Println(cc)
-	/*kernel32 := syscall.NewLazyDLL("kernel32.dll")
-	proc := kernel32.NewProc("SetConsoleTextAttribute")
-	handle, _, _ := proc.Call(uintptr(syscall.Stdout), uintptr(cc))
-	fmt.Print(level)
-	handle, _, _ = proc.Call(uintptr(syscall.Stdout), uintptr(WSilver))
-	CloseHandle := kernel32.NewProc("CloseHandle")
-	CloseHandle.Call(handle)*/
-}
-
-// GetGOPATH returns all paths in GOPATH variable.
-func GetGOPATH() []string {
-	gopath := os.Getenv("GOPATH")
-	var paths []string
-	if runtime.GOOS == "windows" {
-		gopath = strings.Replace(gopath, "\\", "/", -1)
-		paths = strings.Split(gopath, ";")
-	} else {
-		paths = strings.Split(gopath, ":")
-	}
-	return paths
-}
 
 // GetGOPATH returns best matched GOPATH.
 func GetBestMatchGOPATH(appPath string) string {
-	paths := GetGOPATH()
+	paths := com.GetGOPATHs()
 	for _, p := range paths {
 		if strings.HasPrefix(p, appPath) {
 			return strings.Replace(p, "\\", "/", -1)
@@ -199,14 +56,14 @@ func GetDirsInfo(rootPath string) ([]os.FileInfo, error) {
 // or doesn't exist.
 func CheckIsExistWithVCS(path string) bool {
 	// Check if directory exist.
-	if !IsExist(path) {
+	if !com.IsExist(path) {
 		return false
 	}
 
 	// Check if only has VCS folder.
 	dirs, err := GetDirsInfo(path)
 	if err != nil {
-		ColorLog("[ERRO] CheckIsExistWithVCS -> [ %s ]\n", err)
+		com.ColorLog("[ERRO] CheckIsExistWithVCS -> [ %s ]\n", err)
 		return false
 	}
 
@@ -227,7 +84,7 @@ func CheckIsExistWithVCS(path string) bool {
 // CheckIsExistInGOPATH checks if given package import path exists in any path in GOPATH/src,
 // and returns corresponding GOPATH.
 func CheckIsExistInGOPATH(importPath string) (string, bool) {
-	paths := GetGOPATH()
+	paths := com.GetGOPATHs()
 	for _, p := range paths {
 		if CheckIsExistWithVCS(p + "/src/" + importPath + "/") {
 			return p, true
@@ -763,11 +620,25 @@ func IsGoRepoPath(importPath string) bool {
 	return standardPath[importPath]
 }
 
-func HomeDir() (string, error) {
-	curUser, err := user.Current()
-	if err != nil {
-		return "", err
+func GetHomeDir() (string, error) {
+	if runtime.GOOS != "windows" {
+		curUser, err := user.Current()
+		if err != nil {
+			return "", err
+		}
+		return curUser.HomeDir, nil
+	} else {
+		hd, err := com.HomeDir()
+		if err != nil {
+			return "", err
+		}
+		return hd, nil
 	}
+}
 
-	return curUser.HomeDir, nil
+func CheckNodeValue(v string) string {
+	if len(v) == 0 {
+		return "<UTD>"
+	}
+	return v
 }
