@@ -21,6 +21,7 @@ import (
 )
 
 var (
+	AppPath  string
 	reposDir string = "~/.gopm/repos"
 )
 

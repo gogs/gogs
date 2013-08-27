@@ -1,7 +1,20 @@
+// Copyright 2013 gopm authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License"): you may
+// not use this file except in compliance with the License. You may obtain
+// a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+// WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+// License for the specific language governing permissions and limitations
+// under the License.
+
 package cmd
 
 import (
-	"../doc"
 	"fmt"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/errors"
@@ -12,6 +25,8 @@ import (
 	"os/user"
 	"strconv"
 	"strings"
+
+	"github.com/gpmgo/gopm/doc"
 )
 
 var (
@@ -129,7 +144,7 @@ func batchPut(batch *leveldb.Batch, key string, value string) error {
 	return nil
 }
 
-func addPkg(pkg *Pkg) error {
+func addNode(nod *doc.Node) error {
 	batch := new(leveldb.Batch)
 	strLastId, err := dbGet("lastId")
 	if err != nil {
@@ -151,19 +166,19 @@ func addPkg(pkg *Pkg) error {
 		return err
 	}
 
-	pkgKey := fmt.Sprintf("index:%v", pkg.Name)
+	nodKey := fmt.Sprintf("index:%v", nod.ImportPath)
 
-	id, err := dbGet(pkgKey)
+	id, err := dbGet(nodKey)
 	if err != nil {
 		if err == errors.ErrNotFound {
 			id = fmt.Sprintf("%v", lastId+1)
 			fmt.Println(id)
 			err = batchPut(batch, "lastId", id)
 			if err == nil {
-				err = batchPut(batch, pkgKey, id)
+				err = batchPut(batch, nodKey, id)
 			}
 			if err == nil {
-				err = batchPut(batch, "pkg:"+id, pkg.Name)
+				err = batchPut(batch, "pkg:"+id, nod.ImportPath)
 			}
 			total, err := dbGet("total")
 			if err != nil {
@@ -202,11 +217,11 @@ func addPkg(pkg *Pkg) error {
 	}
 
 	if vers == "" {
-		fmt.Println(pkg)
-		vers = pkg.VerString()
+		fmt.Println(nod)
+		vers = nod.VerString()
 	} else {
-		if !strings.Contains(vers, pkg.VerString()) {
-			vers = vers + "," + pkg.VerString()
+		if !strings.Contains(vers, nod.VerString()) {
+			vers = vers + "," + nod.VerString()
 		} else {
 			return nil
 		}
@@ -221,7 +236,7 @@ func addPkg(pkg *Pkg) error {
 		return nil
 	}
 
-	keys := splitPkgName(pkg.Name)
+	keys := splitPkgName(nod.ImportPath)
 
 	for key, _ := range keys {
 		err = batchPut(batch, fmt.Sprintf("key:%v:%v", key, id), "")
@@ -233,7 +248,7 @@ func addPkg(pkg *Pkg) error {
 	return db.Write(batch, wo)
 }
 
-func rmPkg(pkg *Pkg) {
+func rmPkg(nod *doc.Node) {
 
 }
 
@@ -391,9 +406,14 @@ func addHandler(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	for key, _ := range r.Form {
 		fmt.Println(key)
-		pkg := NewPkg(key, "")
-		if pkg != nil {
-			err := addPkg(pkg)
+		// pkg := NewPkg(key, "")
+		nod := &doc.Node{
+			ImportPath:  key,
+			DownloadURL: key,
+			IsGetDeps:   true,
+		}
+		if nod != nil {
+			err := addNode(nod)
 			if err != nil {
 				fmt.Println(err)
 			}

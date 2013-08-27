@@ -26,14 +26,15 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"./cmd"
+	"github.com/Unknwon/com"
+	"github.com/gpmgo/gopm/cmd"
 )
 
 // +build go1.1
 
 // Test that go1.1 tag above is included in builds. main.go refers to this definition.
 const go11tag = true
-const APP_VER = "0.1.0.0813"
+const APP_VER = "0.2.5.0827"
 
 var (
 	config map[string]interface{}
@@ -71,6 +72,14 @@ var commands = []*cmd.Command{
 // bacause we need to get execute path in runtime.
 func initialize() bool {
 	runtime.GOMAXPROCS(runtime.NumCPU())
+
+	// Get application execute path.
+	var err error
+	cmd.AppPath, err = com.GetSrcPath("github.com/gpmgoo/gopm")
+	if err != nil {
+		return false
+	}
+
 	return true
 }
 

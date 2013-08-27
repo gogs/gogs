@@ -15,11 +15,12 @@
 package cmd
 
 import (
-	"../doc"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
+
+	"github.com/gpmgo/gopm/doc"
 )
 
 var CmdSearch = &Command{

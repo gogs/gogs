@@ -14,232 +14,200 @@
 
 package cmd
 
-import (
-	//"errors"
-	"fmt"
-	"strings"
-)
+// func getService(pkgName string) Service {
+// 	for _, service := range services {
+// 		if service.HasPkg(pkgName) {
+// 			return service
+// 		}
+// 	}
+// 	return nil
+// }
 
-const (
-	TRUNK  = "trunk"
-	TAG    = "tag"
-	BRANCH = "branch"
-	COMMIT = "commit"
-)
+// type Service interface {
+// 	PkgUrl(pkg *Pkg) string
+// 	HasPkg(pkgName string) bool
+// 	PkgExt() string
+// }
 
-var (
-	downloadCache map[string]bool // Saves packages that have been downloaded.
-	services      []Service       = []Service{
-		&GithubService{},
-		&GitOscService{},
-		&BitBucketService{},
-		//&GitCafeService{},
-		//&CodeCSDNSource{},
-	}
-)
+// type Pkg struct {
+// 	Name  string
+// 	Ver   string
+// 	VerId string
+// }
 
-func getService(pkgName string) Service {
-	for _, service := range services {
-		if service.HasPkg(pkgName) {
-			return service
-		}
-	}
-	return nil
-}
+// func NewPkg(pkgName string, ver string) *Pkg {
+// 	vers := strings.Split(ver, ":")
+// 	if len(vers) > 2 {
+// 		return nil
+// 	}
 
-type Service interface {
-	PkgUrl(pkg *Pkg) string
-	HasPkg(pkgName string) bool
-	PkgExt() string
-}
+// 	var verId string
+// 	if len(vers) == 2 {
+// 		verId = vers[1]
+// 	}
 
-type Pkg struct {
-	Service Service
-	Name    string
-	Ver     string
-	VerId   string
-}
+// 	if len(vers) == 1 {
+// 		vers[0] = TRUNK
+// 	}
 
-func (p *Pkg) VerSimpleString() string {
-	if p.VerId != "" {
-		return p.VerId
-	}
-	return p.Ver
-}
+// 	service := getService(pkgName)
+// 	if service == nil {
+// 		return nil
+// 	}
 
-func (p *Pkg) VerString() string {
-	if p.VerId == "" {
-		return p.Ver
-	}
-	return fmt.Sprintf("%v:%v", p.Ver, p.VerId)
-}
+// 	return &Pkg{service, pkgName, vers[0], verId}
+// }
 
-func (p *Pkg) Url() string {
-	return p.Service.PkgUrl(p)
-}
+// func (p *Pkg) VerSimpleString() string {
+// 	if p.VerId != "" {
+// 		return p.VerId
+// 	}
+// 	return p.Ver
+// }
 
-func (p *Pkg) FileName() string {
-	return fmt.Sprintf("%v.%v", p.VerSimpleString(), p.Service.PkgExt())
-}
+// func (p *Pkg) Url() string {
+// 	return p.Service.PkgUrl(p)
+// }
 
-func NewPkg(pkgName string, ver string) *Pkg {
-	vers := strings.Split(ver, ":")
-	if len(vers) > 2 {
-		return nil
-	}
+// func (p *Pkg) FileName() string {
+// 	return fmt.Sprintf("%v.%v", p.VerSimpleString(), p.Service.PkgExt())
+// }
 
-	var verId string
-	if len(vers) == 2 {
-		verId = vers[1]
-	}
+// // github repository
+// type GithubService struct {
+// }
 
-	if len(vers) == 1 {
-		vers[0] = TRUNK
-	}
+// func (s *GithubService) PkgUrl(pkg *Pkg) string {
+// 	var verPath string
+// 	if pkg.Ver == TRUNK {
+// 		verPath = "master"
+// 	} else {
+// 		verPath = pkg.VerId
+// 	}
+// 	return fmt.Sprintf("https://%v/archive/%v.zip", pkg.Name, verPath)
+// }
 
-	service := getService(pkgName)
-	if service == nil {
-		return nil
-	}
+// func (s *GithubService) HasPkg(pkgName string) bool {
+// 	return strings.HasPrefix(pkgName, "github.com")
+// }
 
-	return &Pkg{service, pkgName, vers[0], verId}
-}
+// func (s *GithubService) PkgExt() string {
+// 	return "zip"
+// }
 
-// github repository
-type GithubService struct {
-}
+// // git osc repos
+// type GitOscService struct {
+// }
 
-func (s *GithubService) PkgUrl(pkg *Pkg) string {
-	var verPath string
-	if pkg.Ver == TRUNK {
-		verPath = "master"
-	} else {
-		verPath = pkg.VerId
-	}
-	return fmt.Sprintf("https://%v/archive/%v.zip", pkg.Name, verPath)
-}
+// func (s *GitOscService) PkgUrl(pkg *Pkg) string {
+// 	var verPath string
+// 	if pkg.Ver == TRUNK {
+// 		verPath = "master"
+// 	} else {
+// 		verPath = pkg.VerId
+// 	}
+// 	return fmt.Sprintf("https://%v/repository/archive?ref=%v", pkg.Name, verPath)
+// }
 
-func (s *GithubService) HasPkg(pkgName string) bool {
-	return strings.HasPrefix(pkgName, "github.com")
-}
+// func (s *GitOscService) HasPkg(pkgName string) bool {
+// 	return strings.HasPrefix(pkgName, "git.oschina.net")
+// }
 
-func (s *GithubService) PkgExt() string {
-	return "zip"
-}
+// func (s *GitOscService) PkgExt() string {
+// 	return "zip"
+// }
 
-// git osc repos
-type GitOscService struct {
-}
+// // bitbucket.org
+// type BitBucketService struct {
+// }
 
-func (s *GitOscService) PkgUrl(pkg *Pkg) string {
-	var verPath string
-	if pkg.Ver == TRUNK {
-		verPath = "master"
-	} else {
-		verPath = pkg.VerId
-	}
-	return fmt.Sprintf("https://%v/repository/archive?ref=%v", pkg.Name, verPath)
-}
+// func (s *BitBucketService) PkgUrl(pkg *Pkg) string {
+// 	var verPath string
+// 	if pkg.Ver == TRUNK {
+// 		verPath = "default"
+// 	} else {
+// 		verPath = pkg.VerId
+// 	}
 
-func (s *GitOscService) HasPkg(pkgName string) bool {
-	return strings.HasPrefix(pkgName, "git.oschina.net")
-}
+// 	return fmt.Sprintf("https://%v/get/%v.zip", pkg.Name, verPath)
+// }
 
-func (s *GitOscService) PkgExt() string {
-	return "zip"
-}
+// func (s *BitBucketService) HasPkg(pkgName string) bool {
+// 	return strings.HasPrefix(pkgName, "bitbucket.org")
+// }
 
-// bitbucket.org
-type BitBucketService struct {
-}
+// func (s *BitBucketService) PkgExt() string {
+// 	return "zip"
+// }
 
-func (s *BitBucketService) PkgUrl(pkg *Pkg) string {
-	var verPath string
-	if pkg.Ver == TRUNK {
-		verPath = "default"
-	} else {
-		verPath = pkg.VerId
-	}
+// type GitCafeService struct {
+// }
 
-	return fmt.Sprintf("https://%v/get/%v.zip", pkg.Name, verPath)
-}
+// func (s *GitCafeService) PkgUrl(pkg *Pkg) string {
+// 	var verPath string
+// 	if pkg.Ver == TRUNK {
+// 		verPath = "master"
+// 	} else {
+// 		verPath = pkg.VerId
+// 	}
 
-func (s *BitBucketService) HasPkg(pkgName string) bool {
-	return strings.HasPrefix(pkgName, "bitbucket.org")
-}
+// 	return fmt.Sprintf("https://%v/tarball/%v", pkg.Name, verPath)
+// }
 
-func (s *BitBucketService) PkgExt() string {
-	return "zip"
-}
+// func (s *GitCafeService) HasPkg(pkgName string) bool {
+// 	return strings.HasPrefix(pkgName, "gitcafe.com")
+// }
 
-type GitCafeService struct {
-}
+// func (s *GitCafeService) PkgExt() string {
+// 	return "tar.gz"
+// }
 
-func (s *GitCafeService) PkgUrl(pkg *Pkg) string {
-	var verPath string
-	if pkg.Ver == TRUNK {
-		verPath = "master"
-	} else {
-		verPath = pkg.VerId
-	}
+// // git lab repos, not completed
+// type GitLabService struct {
+// 	DomainOrIp string
+// 	Username   string
+// 	Passwd     string
+// 	PrivateKey string
+// }
 
-	return fmt.Sprintf("https://%v/tarball/%v", pkg.Name, verPath)
-}
+// func (s *GitLabService) PkgUrl(pkg *Pkg) string {
+// 	var verPath string
+// 	if pkg.Ver == TRUNK {
+// 		verPath = "master"
+// 	} else {
+// 		verPath = pkg.VerId
+// 	}
 
-func (s *GitCafeService) HasPkg(pkgName string) bool {
-	return strings.HasPrefix(pkgName, "gitcafe.com")
-}
+// 	return fmt.Sprintf("https://%v/repository/archive/%v", pkg.Name, verPath)
+// }
 
-func (s *GitCafeService) PkgExt() string {
-	return "tar.gz"
-}
+// func (s *GitLabService) HasPkg(pkgName string) bool {
+// 	return strings.HasPrefix(pkgName, s.DomainOrIp)
+// }
 
-// git lab repos, not completed
-type GitLabService struct {
-	DomainOrIp string
-	Username   string
-	Passwd     string
-	PrivateKey string
-}
+// func (s *GitLabService) PkgExt() string {
+// 	return "tar.gz"
+// }
 
-func (s *GitLabService) PkgUrl(pkg *Pkg) string {
-	var verPath string
-	if pkg.Ver == TRUNK {
-		verPath = "master"
-	} else {
-		verPath = pkg.VerId
-	}
+// // code.csdn.net
+// type CodeCSDNService struct {
+// }
 
-	return fmt.Sprintf("https://%v/repository/archive/%v", pkg.Name, verPath)
-}
+// func (s *CodeCSDNService) PkgUrl(pkg *Pkg) string {
+// 	var verPath string
+// 	if pkg.Ver == TRUNK {
+// 		verPath = "master"
+// 	} else {
+// 		verPath = pkg.VerId
+// 	}
 
-func (s *GitLabService) HasPkg(pkgName string) bool {
-	return strings.HasPrefix(pkgName, s.DomainOrIp)
-}
+// 	return fmt.Sprintf("https://%v/repository/archive?ref=%v", pkg.Name, verPath)
+// }
 
-func (s *GitLabService) PkgExt() string {
-	return "tar.gz"
-}
+// func (s *CodeCSDNService) HasPkg(pkgName string) bool {
+// 	return strings.HasPrefix(pkgName, "code.csdn.net")
+// }
 
-// code.csdn.net
-type CodeCSDNService struct {
-}
-
-func (s *CodeCSDNService) PkgUrl(pkg *Pkg) string {
-	var verPath string
-	if pkg.Ver == TRUNK {
-		verPath = "master"
-	} else {
-		verPath = pkg.VerId
-	}
-
-	return fmt.Sprintf("https://%v/repository/archive?ref=%v", pkg.Name, verPath)
-}
-
-func (s *CodeCSDNService) HasPkg(pkgName string) bool {
-	return strings.HasPrefix(pkgName, "code.csdn.net")
-}
-
-func (s *CodeCSDNService) PkgExt() string {
-	return "zip"
-}
+// func (s *CodeCSDNService) PkgExt() string {
+// 	return "zip"
+// }
