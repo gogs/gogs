@@ -154,6 +154,9 @@ func (w *walker) build(srcs []*source, nod *Node) ([]string, error) {
 
 	pdoc := doc.New(apkg, w.ImportPath, mode)
 	nod.Synopsis = Synopsis(pdoc.Doc)
+	if i := strings.Index(nod.Synopsis, "\n"); i > -1 {
+		nod.Synopsis = nod.Synopsis[:i]
+	}
 	return imports, err
 }
 
