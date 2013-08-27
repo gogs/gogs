@@ -52,16 +52,28 @@ func getGoogleDoc(client *http.Client, match map[string]string, installRepoPath 
 	// Remove old files.
 	os.RemoveAll(installPath + "/")
 	match["tag"] = nod.Value
-	err := packer.PackToFile(match["importPath"], installPath+".zip", match)
+
+	ext := ".zip"
+	if match["vcs"] == "svn" {
+		ext = ".tar.gz"
+	}
+
+	err := packer.PackToFile(match["importPath"], installPath+ext, match)
 	if err != nil {
 		return nil, err
 	}
 
-	dirs, err := com.Unzip(installPath+".zip", path.Dir(installPath))
+	var dirs []string
+	if match["vcs"] != "svn" {
+		dirs, err = com.Unzip(installPath+ext, path.Dir(installPath))
+	} else {
+		dirs, err = com.UnTarGz(installPath+ext, path.Dir(installPath))
+	}
+
 	if err != nil {
 		return nil, err
 	}
-	os.Remove(installPath + ".zip")
+	os.Remove(installPath + ext)
 	os.Rename(path.Dir(installPath)+"/"+dirs[0], installPath)
 
 	// Check if need to check imports.

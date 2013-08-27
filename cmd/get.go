@@ -18,7 +18,6 @@ import (
 	"errors"
 	"fmt"
 	"os/user"
-	//"path"
 	"strings"
 
 	"github.com/gpmgo/gopm/doc"
