@@ -15,6 +15,7 @@
 package doc
 
 import (
+	"errors"
 	"net/http"
 	"os"
 	"path"
@@ -56,6 +57,7 @@ func getGoogleDoc(client *http.Client, match map[string]string, installRepoPath 
 	ext := ".zip"
 	if match["vcs"] == "svn" {
 		ext = ".tar.gz"
+		com.ColorLog("[WARN] SVN detected, may take very long time.\n")
 	}
 
 	err := packer.PackToFile(match["importPath"], installPath+ext, match)
@@ -68,6 +70,10 @@ func getGoogleDoc(client *http.Client, match map[string]string, installRepoPath 
 		dirs, err = com.Unzip(installPath+ext, path.Dir(installPath))
 	} else {
 		dirs, err = com.UnTarGz(installPath+ext, path.Dir(installPath))
+	}
+
+	if len(dirs) == 0 {
+		return nil, errors.New("No file in repository")
 	}
 
 	if err != nil {

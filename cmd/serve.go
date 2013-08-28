@@ -149,7 +149,7 @@ func saveNode(nod *doc.Node) error {
 	url := fmt.Sprintf("http://%v:%v/add?%v", "localhost", "8991", nod.ImportPath)
 	resp, err := http.Get(url)
 	if err != nil {
-		com.ColorLog("%v\n", err.Error())
+		com.ColorLog("[ERRO] Fail to save node[ %s ]\n", err)
 		return err
 	}
 	defer resp.Body.Close()
@@ -430,7 +430,7 @@ func addHandler(w http.ResponseWriter, r *http.Request) {
 		if nod != nil {
 			err := addNode(nod)
 			if err != nil {
-				fmt.Println(err)
+				com.ColorLog("[ERRO] SEVER: Cannot add node[ %s ]\n", err)
 			}
 		} else {
 			fmt.Println(key)
