@@ -332,7 +332,7 @@ func runningStatus() (int, int, int) {
 }
 
 func startService(listen string) {
-	homeDir, err := doc.GetHomeDir()
+	homeDir, err := com.HomeDir()
 	if err != nil {
 		fmt.Println(err)
 		return

@@ -120,7 +120,7 @@ func runGet(cmd *Command, args []string) {
 		return
 	}
 
-	hd, err := doc.GetHomeDir()
+	hd, err := com.HomeDir()
 	if err != nil {
 		com.ColorLog("[ERRO] Fail to get current user[ %s ]\n", err)
 		return

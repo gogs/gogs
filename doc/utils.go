@@ -16,10 +16,8 @@ package doc
 
 import (
 	"os"
-	"os/user"
 	"path"
 	"regexp"
-	"runtime"
 	"strings"
 
 	"github.com/Unknwon/com"
@@ -618,22 +616,6 @@ var standardPath = map[string]bool{
 // IsGoRepoPath returns true if package is from standard library.
 func IsGoRepoPath(importPath string) bool {
 	return standardPath[importPath]
-}
-
-func GetHomeDir() (string, error) {
-	if runtime.GOOS != "windows" {
-		curUser, err := user.Current()
-		if err != nil {
-			return "", err
-		}
-		return curUser.HomeDir, nil
-	} else {
-		hd, err := com.HomeDir()
-		if err != nil {
-			return "", err
-		}
-		return hd, nil
-	}
 }
 
 func CheckNodeValue(v string) string {
