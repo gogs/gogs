@@ -38,16 +38,15 @@ func getGoogleDoc(client *http.Client, match map[string]string, installRepoPath 
 	}
 
 	var installPath string
+	projectPath := GetProjectPath(nod.ImportPath)
 	if nod.ImportPath == nod.DownloadURL {
 		suf := "." + nod.Value
 		if len(suf) == 1 {
 			suf = ""
 		}
-		projectPath := expand("code.google.com/p/{repo}{dot}{subrepo}{dir}", match)
 		installPath = installRepoPath + "/" + projectPath + suf
-		nod.ImportPath = projectPath
 	} else {
-		installPath = installRepoPath + "/" + nod.ImportPath
+		installPath = installRepoPath + "/" + projectPath
 	}
 
 	// Remove old files.
