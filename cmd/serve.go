@@ -23,6 +23,7 @@ import (
 	"github.com/syndtr/goleveldb/leveldb/opt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -145,9 +146,39 @@ func batchPut(batch *leveldb.Batch, key string, value string) error {
 	return nil
 }
 
+func getServeHost() string {
+	return "localhost"
+}
+
+func getServePort() string {
+	return "8991"
+}
+
+func BoolStr(b bool) string {
+	if b {
+		return "true"
+	}
+	return "false"
+}
+
+func StrBool(bStr string) bool {
+	if bStr == "true" {
+		return true
+	}
+	return false
+}
+
+// for exernal of serve to add node to db
 func saveNode(nod *doc.Node) error {
-	url := fmt.Sprintf("http://%v:%v/add?%v", "localhost", "8991", nod.ImportPath)
-	resp, err := http.Get(url)
+	urlPath := fmt.Sprintf("http://%v:%v/add", getServeHost(), getServePort())
+	resp, err := http.PostForm(urlPath,
+		url.Values{"importPath": {nod.ImportPath},
+			"synopsis":    {nod.Synopsis},
+			"downloadURL": {nod.DownloadURL},
+			"isGetDeps":   {BoolStr(nod.IsGetDeps)},
+			"type":        {nod.Type},
+			"value":       {nod.Value}})
+
 	if err != nil {
 		com.ColorLog("%v\n", err.Error())
 		return err
@@ -160,6 +191,7 @@ func saveNode(nod *doc.Node) error {
 	return serrors.New("save node failed with " + resp.Status)
 }
 
+// for inetrnal of serve to add node to db
 func addNode(nod *doc.Node) error {
 	batch := new(leveldb.Batch)
 	strLastId, err := dbGet("lastId")
@@ -188,7 +220,6 @@ func addNode(nod *doc.Node) error {
 	if err != nil {
 		if err == errors.ErrNotFound {
 			id = fmt.Sprintf("%v", lastId+1)
-			fmt.Println(id)
 			err = batchPut(batch, "lastId", id)
 			if err == nil {
 				err = batchPut(batch, nodKey, id)
@@ -196,6 +227,17 @@ func addNode(nod *doc.Node) error {
 			if err == nil {
 				err = batchPut(batch, "pkg:"+id, nod.ImportPath)
 			}
+			if err == nil {
+				err = batchPut(batch, "desc:"+id, nod.Synopsis)
+			}
+			if err == nil {
+				err = batchPut(batch, "down:"+id, nod.DownloadURL)
+			}
+			if err == nil {
+				err = batchPut(batch, "deps:"+id, BoolStr(nod.IsGetDeps))
+			}
+
+			// save totals
 			total, err := dbGet("total")
 			if err != nil {
 				if err == errors.ErrNotFound {
@@ -222,6 +264,7 @@ func addNode(nod *doc.Node) error {
 		return err
 	}
 
+	// save vers
 	vers, err := dbGet("ver:" + id)
 	needSplit := (err == errors.ErrNotFound)
 	if err != nil {
@@ -252,8 +295,8 @@ func addNode(nod *doc.Node) error {
 		return nil
 	}
 
+	// indexing
 	keys := splitPkgName(nod.ImportPath)
-
 	for key, _ := range keys {
 		err = batchPut(batch, fmt.Sprintf("key:%v:%v", key, id), "")
 		if err != nil {
@@ -419,22 +462,18 @@ func searcheHandler(w http.ResponseWriter, r *http.Request) {
 func addHandler(w http.ResponseWriter, r *http.Request) {
 	//if r.Method == "POST" {
 	r.ParseForm()
-	for key, _ := range r.Form {
-		fmt.Println(key)
-		// pkg := NewPkg(key, "")
-		nod := &doc.Node{
-			ImportPath:  key,
-			DownloadURL: key,
-			IsGetDeps:   true,
-		}
-		if nod != nil {
-			err := addNode(nod)
-			if err != nil {
-				fmt.Println(err)
-			}
-		} else {
-			fmt.Println(key)
-		}
+
+	nod := new(doc.Node)
+	nod.ImportPath = r.FormValue("importPath")
+	nod.Synopsis = r.FormValue("synopsis")
+	nod.DownloadURL = r.FormValue("downloadURL")
+	nod.IsGetDeps = StrBool(r.FormValue("isGetDeps"))
+	nod.Type = r.FormValue("type")
+	nod.Value = r.FormValue("value")
+
+	err := addNode(nod)
+	if err != nil {
+		fmt.Println(err)
 	}
 	//}
 }
