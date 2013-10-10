@@ -156,7 +156,7 @@ http://gopm.io
 <a id="41" name="41"></a>
 ###gopm gen [{gopmfile}]
 
-扫描当前目录下的go工程，并自动生成一个.gopmspec的文件依赖文档，如果未指定，则文件名为.gopmspec，如果指定了，则为指定的文件名
+扫描当前目录下的go工程，并自动生成一个.gopmfile的文件依赖文档，如果未指定，则文件名为.gopmfile，如果指定了，则为指定的文件名
 
 <a id="42" name="42"></a>
 ###gopm build [-u]
