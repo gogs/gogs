@@ -76,6 +76,11 @@ func runSearch(cmd *Command, args []string) {
 	}
 }
 
+type searchRes struct {
+	Pkg  string
+	Desc string
+}
+
 /*
 request local or remote search service to find packages according to keyword inputed
 */
@@ -98,14 +103,14 @@ func search(host, port, keyword string, isExactly bool) {
 			return
 		}
 
-		pkgs := make([]string, 0)
+		pkgs := make([]searchRes, 0)
 		err = json.Unmarshal(contents, &pkgs)
 		if err != nil {
 			com.ColorLog(err.Error())
 			return
 		}
 		for i, pkg := range pkgs {
-			fmt.Println(i+1, pkg)
+			fmt.Println(i+1, pkg.Pkg, "\t", pkg.Desc)
 		}
 	} else {
 		com.ColorLog(resp.Status)

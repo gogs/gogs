@@ -29,6 +29,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 )
 
 var (
@@ -106,7 +107,10 @@ func runServe(cmd *Command, args []string) {
 		port = args[0]
 	}
 
-	startService(listen, port)
+	err := startService(listen, port)
+	if err != nil {
+		com.ColorLog("[ERRO] %v\n", err)
+	}
 }
 
 func splitWord(word string, res *map[string]bool) {
@@ -126,12 +130,21 @@ func splitPkgName(pkgName string) (res map[string]bool) {
 		ps = ps[1:]
 	}
 
-	res = make(map[string]bool, 0)
+	res = make(map[string]bool)
 	res[strings.Join(ps, "/")] = true
 	for _, w := range ps {
 		splitWord(w, &res)
 	}
 	return
+}
+
+func splitSynopsis(synopsis string) map[string]bool {
+	res := make(map[string]bool)
+	ss := strings.Fields(synopsis)
+	for _, s := range ss {
+		res[s] = true
+	}
+	return res
 }
 
 var (
@@ -145,12 +158,12 @@ func dbGet(key string) (string, error) {
 }
 
 func dbPut(key string, value string) error {
-	fmt.Println("put ", key, ": ", value)
+	//fmt.Println("put ", key, ": ", value)
 	return db.Put([]byte(key), []byte(value), wo)
 }
 
 func batchPut(batch *leveldb.Batch, key string, value string) error {
-	fmt.Println("put ", key, ": ", value)
+	//fmt.Println("put ", key, ": ", value)
 	batch.Put([]byte(key), []byte(value))
 	return nil
 }
@@ -269,7 +282,7 @@ func addNode(nod *doc.Node) error {
 	}
 
 	if vers == "" {
-		fmt.Println(nod)
+		//fmt.Println(nod)
 		vers = nod.VerString()
 	} else {
 		if !strings.Contains(vers, nod.VerString()) {
@@ -291,15 +304,20 @@ func addNode(nod *doc.Node) error {
 	// indexing package name
 	keys := splitPkgName(nod.ImportPath)
 	for key, _ := range keys {
-		err = batchPut(batch, fmt.Sprintf("key:%v:%v", key, id), "")
+		err = batchPut(batch, fmt.Sprintf("key:%v:%v", strings.ToLower(key), id), "")
 		if err != nil {
 			return err
 		}
 	}
 
-	// TODO: indexing desc
 	if nod.Synopsis != "" {
-		//fields := strings.FieldsFunc(nod.Synopsis, f)
+		fields := splitSynopsis(nod.Synopsis)
+		for field, _ := range fields {
+			err = batchPut(batch, fmt.Sprintf("key:%v:%v", strings.ToLower(field), id), "")
+			if err != nil {
+				return err
+			}
+		}
 	}
 
 	return db.Write(batch, wo)
@@ -322,9 +340,10 @@ func AutoRun() error {
 		}
 
 		attr := &os.ProcAttr{
-			Dir:   curPath,
-			Env:   os.Environ(),
-			Files: []*os.File{nil, nil, nil},
+			Dir: curPath,
+			Env: os.Environ(),
+			//Files: []*os.File{nil, nil, nil},
+			Files: []*os.File{os.Stdin, os.Stdout, os.Stderr},
 		}
 
 		p, err := exePath()
@@ -332,10 +351,12 @@ func AutoRun() error {
 			return err
 		}
 
+		//com.ColorLog("[INFO] now is starting search daemon ...\n")
 		_, err = os.StartProcess(p, []string{"gopm", "serve", "-l"}, attr)
 		if err != nil {
 			return err
 		}
+		time.Sleep(time.Second)
 	}
 	return nil
 }
@@ -405,12 +426,15 @@ func startService(listen, port string) error {
 		return err
 	}
 
-	f, err := os.OpenFile(pFile, os.O_CREATE, 0700)
+	f, err := os.OpenFile(pFile, os.O_RDWR|os.O_CREATE, 0700)
 	if err != nil {
 		return err
 	}
 	defer f.Close()
-	f.WriteString(fmt.Sprintf("%v,%v,%v", RUNNING, os.Getpid(), port))
+	_, err = f.WriteString(fmt.Sprintf("%v,%v,%v", RUNNING, os.Getpid(), port))
+	if err != nil {
+		return err
+	}
 
 	dbDir = strings.Replace(dbDir, "~", homeDir, -1)
 
@@ -436,7 +460,7 @@ func searchHandler(w http.ResponseWriter, r *http.Request) {
 	ids := make(map[string]bool)
 	for key, _ := range r.Form {
 		iter := db.NewIterator(ro)
-		rkey := fmt.Sprintf("key:%v:", key)
+		rkey := fmt.Sprintf("key:%v:", strings.ToLower(key))
 		if iter.Seek([]byte(rkey)) {
 			k := iter.Key()
 			if !strings.HasPrefix(string(k), rkey) {
@@ -459,16 +483,21 @@ func searchHandler(w http.ResponseWriter, r *http.Request) {
 	for id, _ := range ids {
 		idkeys := strings.SplitN(id, ":", -1)
 		rId := idkeys[len(idkeys)-1]
-		fmt.Println(rId)
+		//fmt.Println(rId)
 		pkg, err := dbGet(fmt.Sprintf("pkg:%v", rId))
 		if err != nil {
 			com.ColorLog(err.Error())
 			continue
 		}
-		pkgs = append(pkgs, pkg)
+		desc, err := dbGet(fmt.Sprintf("desc:%v", rId))
+		if err != nil {
+			com.ColorLog(err.Error())
+			continue
+		}
+		pkgs = append(pkgs, fmt.Sprintf(`{"pkg":"%v", "desc":"%v"}`, pkg, desc))
 	}
 
-	w.Write([]byte("[\"" + strings.Join(pkgs, "\", \"") + "\"]"))
+	w.Write([]byte("[" + strings.Join(pkgs, ", ") + "]"))
 }
 
 func searcheHandler(w http.ResponseWriter, r *http.Request) {
@@ -476,17 +505,22 @@ func searcheHandler(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	pkgs := make([]string, 0)
 	for key, _ := range r.Form {
-		_, err := dbGet("index:" + key)
-
+		rId, err := dbGet("index:" + key)
 		if err != nil {
 			com.ColorLog(err.Error())
 			continue
 		}
 
-		pkgs = append(pkgs, key)
+		desc, err := dbGet(fmt.Sprintf("desc:%v", rId))
+		if err != nil {
+			com.ColorLog(err.Error())
+			continue
+		}
+
+		pkgs = append(pkgs, fmt.Sprintf(`{"pkg":"%v", "desc":"%v"}`, key, desc))
 	}
 
-	w.Write([]byte("[\"" + strings.Join(pkgs, "\", \"") + "\"]"))
+	w.Write([]byte("[" + strings.Join(pkgs, ", ") + "]"))
 	//}
 }
 

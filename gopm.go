@@ -17,6 +17,8 @@ package main
 
 import (
 	"fmt"
+	"github.com/Unknwon/com"
+	"github.com/gpmgo/gopm/cmd"
 	"io"
 	"os"
 	"runtime"
@@ -25,9 +27,6 @@ import (
 	"text/template"
 	"unicode"
 	"unicode/utf8"
-
-	"github.com/Unknwon/com"
-	"github.com/gpmgo/gopm/cmd"
 )
 
 // +build go1.1
@@ -94,7 +93,7 @@ func main() {
 				if err == nil {
 					comm.Run(comm, args[1:])
 				} else {
-					com.ColorLog("[ERRO] %v", err)
+					com.ColorLog("[ERRO] %v\n", err)
 				}
 			} else {
 				comm.Run(comm, args[1:])
