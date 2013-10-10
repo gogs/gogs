@@ -45,6 +45,7 @@ var commands = []*cmd.Command{
 	cmd.CmdGet,
 	cmd.CmdSearch,
 	cmd.CmdServe,
+	cmd.CmdGen,
 	/*
 		cmdBuild,
 		cmdClean,

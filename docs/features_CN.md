@@ -22,7 +22,7 @@ gopm
 * [gopmspec文件格式](#50)
 
 <a id="10" name="10"></a>
-#总体设计目标
+# 总体设计目标
 
 1. 支持go语言的版本管理
 2. 支持文档管理
@@ -32,14 +32,23 @@ gopm
 6. 支持从github, code.google.com, gitLab, 等常见的源码托管服务下载 
 
 <a id="11" name="11"></a>
-#最终程序只有一个，但是通过配置，可以有三种模式：
+# 最终程序只有一个，但是通过配置，可以有三种模式：
+
 1 独立服务器
 2 子服务器
 3 客户端（默认）
 
-##独立服务器
+## 独立服务器
 
 独立服务器就是本身的包都是直接从源服务器中获取的。
+
+## 子服务器
+
+子服务器就是包是从所配置的独立服务器上获取的，而不是直接从github等源服务器获取，在一个局域网中，可以通过架设子服务器来加快包的分发。
+
+## 客户端
+
+默认下载即为客户端模式，客户端默认是从源服务器获取包，如果要从包服务器获取包，则可在配置文件中通过配置即可。
 
 <a id="20" name="20"></a>
 #Go包版本说明
@@ -62,14 +71,25 @@ http://gopm.io
 ~/.gopm/repos
 
 #数据库说明
-包信息数据采用goleveldb，这是一个key/value数据库。数据存放规则如下：
-"lastId" : "{lastId}"   			lastId中存放最大的Id，Id为自增
+包信息数据采用goleveldb，这是一个key/value数据库。数据库存默认放在~/.gopm/repos下。数据存放规则如下：
 
-"index:{packageName}": "{id}"  index:中存放的是包名，value中存放的是这个包的不同版本的id，不同版本用逗号分隔
+* "lastId" : "{lastId}"   			lastId中存放最大的Id，Id为自增
 
-“ver:{id}” : "{verString1}, {verString2}"  某个包版本对应的内容
+* "index:{packageName}": "{id}"  index:中存放的是包名，value中存放的是这个包的不同版本的id，不同版本用逗号分隔
 
-“key:{keyword}:{id}” : ""   关键词及其对应的版本
+* “pkg:{id}” : "{pkg}" 某个包的名称
+
+* “ver:{id}” : "{verString1}, {verString2}"  某个包版本对应的内容
+
+* "desc:{id}" : "{desc}"  某个包的最新版本的描述
+
+* "down:{id}" : "{down}"  某个包的下载url
+
+* "deps:{id}" : "{deps}"  某个包的最新版本的描述
+
+* “key:{keyword}:{id}” : ""   关键词及其对应的版本
+
+* “total” :"{total}" 包总数
 
 <a id="30" name="30"></a>
 #各命令的目标和作用
@@ -106,9 +126,9 @@ http://gopm.io
 去除一个包，如果不加版本标示，则删除该包的所有版本
 
 <a id="36" name="36"></a>
-###gopm search {keyword}
+###gopm search [-e] {keyword}
 
-根据关键词查找包
+根据关键词查找包名或者包的描述，如果有-e开关，则完全匹配包名
 
 <a id="37" name="37"></a>
 ###gopm doc [-b] {packagename}[:{version}]
