@@ -17,6 +17,7 @@ package cmd
 import (
 	serrors "errors"
 	"fmt"
+	"github.com/Unknwon/com"
 	"github.com/gpmgo/gopm/doc"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/errors"
@@ -25,10 +26,9 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path"
 	"strconv"
 	"strings"
-
-	"github.com/Unknwon/com"
 )
 
 var (
@@ -85,10 +85,10 @@ func runServe(cmd *Command, args []string) {
 	var listen string
 	var port string
 	if cmd.Flags["-l"] {
-		listen += "127.0.0.1:"
+		listen += "127.0.0.1"
 		port = autoPort()
 	} else {
-		listen += "0.0.0.0:"
+		listen += "0.0.0.0"
 		port = "8991"
 	}
 
@@ -97,7 +97,7 @@ func runServe(cmd *Command, args []string) {
 		port = args[0]
 	}
 
-	startService(listen + port)
+	startService(listen, port)
 }
 
 func splitWord(word string, res *map[string]bool) {
@@ -154,20 +154,6 @@ func getServePort() string {
 	return "8991"
 }
 
-func BoolStr(b bool) string {
-	if b {
-		return "true"
-	}
-	return "false"
-}
-
-func StrBool(bStr string) bool {
-	if bStr == "true" {
-		return true
-	}
-	return false
-}
-
 // for exernal of serve to add node to db
 func saveNode(nod *doc.Node) error {
 	urlPath := fmt.Sprintf("http://%v:%v/add", getServeHost(), getServePort())
@@ -175,12 +161,12 @@ func saveNode(nod *doc.Node) error {
 		url.Values{"importPath": {nod.ImportPath},
 			"synopsis":    {nod.Synopsis},
 			"downloadURL": {nod.DownloadURL},
-			"isGetDeps":   {BoolStr(nod.IsGetDeps)},
+			"isGetDeps":   {strconv.FormatBool(nod.IsGetDeps)},
 			"type":        {nod.Type},
 			"value":       {nod.Value}})
 
 	if err != nil {
-		com.ColorLog("%v\n", err.Error())
+		com.ColorLog("[ERRO] Fail to save node[ %s ]\n", err)
 		return err
 	}
 	defer resp.Body.Close()
@@ -207,8 +193,6 @@ func addNode(nod *doc.Node) error {
 		return err
 	}
 
-	fmt.Println("last id is ", strLastId)
-
 	lastId, err := strconv.ParseInt(strLastId, 0, 64)
 	if err != nil {
 		return err
@@ -234,7 +218,7 @@ func addNode(nod *doc.Node) error {
 				err = batchPut(batch, "down:"+id, nod.DownloadURL)
 			}
 			if err == nil {
-				err = batchPut(batch, "deps:"+id, BoolStr(nod.IsGetDeps))
+				err = batchPut(batch, "deps:"+id, strconv.FormatBool(nod.IsGetDeps))
 			}
 
 			// save totals
@@ -295,13 +279,18 @@ func addNode(nod *doc.Node) error {
 		return nil
 	}
 
-	// indexing
+	// indexing package name
 	keys := splitPkgName(nod.ImportPath)
 	for key, _ := range keys {
 		err = batchPut(batch, fmt.Sprintf("key:%v:%v", key, id), "")
 		if err != nil {
 			return err
 		}
+	}
+
+	// TODO: indexing desc
+	if nod.Synopsis != "" {
+		//fields := strings.FieldsFunc(nod.Synopsis, f)
 	}
 
 	return db.Write(batch, wo)
@@ -314,30 +303,37 @@ func rmPkg(nod *doc.Node) {
 var db *leveldb.DB
 
 // service should be run
-func autoRun() error {
+func AutoRun() error {
 	s, _, _ := runningStatus()
 	if s == STOP {
+		// current path
+		curPath, err := os.Getwd()
+		if err != nil {
+			return err
+		}
+
 		attr := &os.ProcAttr{
-			Files: make([]*os.File, 0),
+			Dir:   curPath,
+			Env:   os.Environ(),
+			Files: []*os.File{nil, nil, nil},
 		}
-		_, err := os.StartProcess("./gopm", []string{"serve", "-l"}, attr)
+
+		p := path.Join(curPath, "gopm")
+		_, err = os.StartProcess(p, []string{"gopm", "serve", "-l"}, attr)
 		if err != nil {
 			return err
 		}
-
-		/*f, err := os.OpenFile("~/.gopm/var/pid", os.O_CREATE, 0700)
-		if err != nil {
-			return err
-		}
-		f.WriteString(fmt.Sprintf("%v,%v,%v", RUNNING, , ))
-
-		fmt.Println(p.Pid)*/
 	}
 	return nil
 }
 
 func runningStatus() (int, int, int) {
-	contentByte, err := ioutil.ReadFile("~/.gopm/var/pid")
+	pFile, err := getPidPath()
+	if err != nil {
+		return STOP, 0, 0
+	}
+
+	contentByte, err := ioutil.ReadFile(pFile)
 	if err != nil {
 		return STOP, 0, 0
 	}
@@ -374,19 +370,39 @@ func runningStatus() (int, int, int) {
 	return status, pid, port
 }
 
-func startService(listen string) {
-	homeDir, err := doc.GetHomeDir()
+func getPidPath() (string, error) {
+	homeDir, err := com.HomeDir()
 	if err != nil {
-		fmt.Println(err)
-		return
+		return "", err
 	}
+
+	pFile := strings.Replace("~/.gopm/var/pid", "~", homeDir, -1)
+	return pFile, nil
+}
+
+func startService(listen, port string) error {
+	homeDir, err := com.HomeDir()
+	if err != nil {
+		return err
+	}
+
+	pFile, err := getPidPath()
+	if err != nil {
+		return err
+	}
+
+	f, err := os.OpenFile(pFile, os.O_CREATE, 0700)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	f.WriteString(fmt.Sprintf("%v,%v,%v", RUNNING, os.Getpid(), port))
 
 	dbDir = strings.Replace(dbDir, "~", homeDir, -1)
 
 	db, err = leveldb.OpenFile(dbDir, &opt.Options{Flag: opt.OFCreateIfMissing})
 	if err != nil {
-		fmt.Println(err)
-		return
+		return err
 	}
 	defer db.Close()
 
@@ -397,7 +413,8 @@ func startService(listen string) {
 	// these handlers can be accessed according listen's ip
 	http.HandleFunc("/search", searchHandler)
 	http.HandleFunc("/searche", searcheHandler)
-	http.ListenAndServe(listen, nil)
+	http.ListenAndServe(listen+":"+port, nil)
+	return nil
 }
 
 func searchHandler(w http.ResponseWriter, r *http.Request) {
@@ -467,13 +484,17 @@ func addHandler(w http.ResponseWriter, r *http.Request) {
 	nod.ImportPath = r.FormValue("importPath")
 	nod.Synopsis = r.FormValue("synopsis")
 	nod.DownloadURL = r.FormValue("downloadURL")
-	nod.IsGetDeps = StrBool(r.FormValue("isGetDeps"))
+	isGetDeps, err := strconv.ParseBool(r.FormValue("isGetDeps"))
+	if err != nil {
+		com.ColorLog("[ERRO] SEVER: Cannot get deps")
+	}
+	nod.IsGetDeps = isGetDeps
 	nod.Type = r.FormValue("type")
 	nod.Value = r.FormValue("value")
 
-	err := addNode(nod)
+	err = addNode(nod)
 	if err != nil {
-		fmt.Println(err)
+		com.ColorLog("[ERRO] SEVER: Cannot add node[ %s ]\n", err)
 	}
 	//}
 }

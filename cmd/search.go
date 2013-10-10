@@ -69,8 +69,6 @@ func runSearch(cmd *Command, args []string) {
 	host = "localhost"
 	port = "8991"
 
-	autoRun()
-
 	if cmd.Flags["-e"] {
 		search(host, port, args[0], true)
 	} else {

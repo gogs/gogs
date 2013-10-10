@@ -26,6 +26,7 @@ import (
 	"unicode"
 	"unicode/utf8"
 
+	"github.com/Unknwon/com"
 	"github.com/gpmgo/gopm/cmd"
 )
 
@@ -88,7 +89,16 @@ func main() {
 	// Check commands and run.
 	for _, comm := range commands {
 		if comm.Name() == args[0] && comm.Run != nil {
-			comm.Run(comm, args[1:])
+			if comm.Name() != "serve" {
+				err := cmd.AutoRun()
+				if err == nil {
+					comm.Run(comm, args[1:])
+				} else {
+					com.ColorLog("[ERRO] %v", err)
+				}
+			} else {
+				comm.Run(comm, args[1:])
+			}
 			exit()
 			return
 		}
