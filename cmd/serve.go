@@ -15,12 +15,11 @@
 package cmd
 
 import (
-	serrors "errors"
+	"errors"
 	"fmt"
 	"github.com/Unknwon/com"
 	"github.com/gpmgo/gopm/doc"
 	"github.com/syndtr/goleveldb/leveldb"
-	"github.com/syndtr/goleveldb/leveldb/errors"
 	"github.com/syndtr/goleveldb/leveldb/opt"
 	"io/ioutil"
 	"net/http"
@@ -184,7 +183,7 @@ func saveNode(nod *doc.Node) error {
 	if resp.StatusCode == 200 {
 		return nil
 	}
-	return serrors.New("save node failed with " + resp.Status)
+	return errors.New("save node failed with " + resp.Status)
 }
 
 // for inetrnal of serve to add node to db
@@ -192,7 +191,7 @@ func addNode(nod *doc.Node) error {
 	batch := new(leveldb.Batch)
 	strLastId, err := dbGet("lastId")
 	if err != nil {
-		if err == errors.ErrNotFound {
+		if err == leveldb.ErrNotFound {
 			strLastId = "0"
 			err = batchPut(batch, "lastId", strLastId)
 		} else {
@@ -212,7 +211,7 @@ func addNode(nod *doc.Node) error {
 
 	id, err := dbGet(nodKey)
 	if err != nil {
-		if err == errors.ErrNotFound {
+		if err == leveldb.ErrNotFound {
 			id = fmt.Sprintf("%v", lastId+1)
 			err = batchPut(batch, "lastId", id)
 			if err == nil {
@@ -234,7 +233,7 @@ func addNode(nod *doc.Node) error {
 			// save totals
 			total, err := dbGet("total")
 			if err != nil {
-				if err == errors.ErrNotFound {
+				if err == leveldb.ErrNotFound {
 					total = "1"
 				} else {
 					return err
@@ -260,9 +259,9 @@ func addNode(nod *doc.Node) error {
 
 	// save vers
 	vers, err := dbGet("ver:" + id)
-	needSplit := (err == errors.ErrNotFound)
+	needSplit := (err == leveldb.ErrNotFound)
 	if err != nil {
-		if err != errors.ErrNotFound {
+		if err != leveldb.ErrNotFound {
 			return err
 		}
 	} else {
