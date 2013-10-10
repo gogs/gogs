@@ -26,7 +26,8 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"path"
+	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 )
@@ -71,6 +72,15 @@ func printServePrompt(flag string) {
 // Not implemented
 func autoPort() string {
 	return "8991"
+}
+
+func exePath() (string, error) {
+	file, err := exec.LookPath(os.Args[0])
+	if err != nil {
+		return "", err
+	}
+
+	return filepath.Abs(file)
 }
 
 // search packages
@@ -318,7 +328,11 @@ func AutoRun() error {
 			Files: []*os.File{nil, nil, nil},
 		}
 
-		p := path.Join(curPath, "gopm")
+		p, err := exePath()
+		if err != nil {
+			return err
+		}
+
 		_, err = os.StartProcess(p, []string{"gopm", "serve", "-l"}, attr)
 		if err != nil {
 			return err
@@ -376,8 +390,9 @@ func getPidPath() (string, error) {
 		return "", err
 	}
 
-	pFile := strings.Replace("~/.gopm/var/pid", "~", homeDir, -1)
-	return pFile, nil
+	pFile := strings.Replace("~/.gopm/var/", "~", homeDir, -1)
+	os.MkdirAll(pFile, os.ModePerm)
+	return pFile + "pid", nil
 }
 
 func startService(listen, port string) error {

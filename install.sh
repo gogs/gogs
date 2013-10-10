@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-if [ ! -f build.sh ]; then
+if [ ! -f install.sh ]; then
 echo 'build.sh must be run within its container folder' 1>&2
 exit 1
 fi 
@@ -14,7 +14,7 @@ fi
 gofmt -w $CURDIR
 
 cd $NEWPATH
-go build
+go install
 cd $CURDIR
 
 echo 'Build successfully!'
