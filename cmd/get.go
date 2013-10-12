@@ -17,7 +17,7 @@ package cmd
 import (
 	"errors"
 	"fmt"
-	//"os"
+	"os"
 	"strings"
 
 	"github.com/Unknwon/com"
@@ -208,6 +208,8 @@ func downloadPackages(nodes []*doc.Node) {
 				com.ColorLog("[WARN] Skipped downloaded package( %s => %s:%s )\n",
 					n.ImportPath, n.Type, doc.CheckNodeValue(n.Value))
 			}
+		} else if n.ImportPath == "C" {
+			continue
 		} else {
 			// Invalid import path.
 			com.ColorLog("[WARN] Skipped invalid package path( %s => %s:%s )\n",
@@ -229,7 +231,7 @@ func downloadPackage(nod *doc.Node) (*doc.Node, []string) {
 	if err != nil {
 		com.ColorLog("[ERRO] Download falied( %s )[ %s ]\n", nod.ImportPath, err)
 		failConut++
-		//os.RemoveAll(installRepoPath + "/" + doc.GetProjectPath(nod.ImportPath) + "/")
+		os.RemoveAll(installRepoPath + "/" + doc.GetProjectPath(nod.ImportPath) + "/")
 		return nil, nil
 	}
 	return nod, imports

@@ -107,7 +107,7 @@ func getGoogleDoc(client *http.Client, match map[string]string, installRepoPath 
 		// Create diretory before create file.
 		dir := path.Dir(absPath)
 		if !checkDir(dir, dirs) && !(!cmdFlags["-e"] && strings.Contains(absPath, "example")) {
-			dirs = append(dirs, dir)
+			dirs = append(dirs, dir+"/")
 			os.MkdirAll(dir+"/", os.ModePerm)
 		}
 
