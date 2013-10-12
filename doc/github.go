@@ -107,21 +107,18 @@ func getGithubDoc(client *http.Client, match map[string]string, installRepoPath 
 			}
 		default:
 			// Get file from archive.
-			rc, err := f.Open()
+			r, err := f.Open()
 			if err != nil {
 				return nil, err
 			}
 
-			// Write data to file
-			fw, _ := os.Create(absPath)
+			fbytes := make([]byte, f.FileInfo().Size())
+			_, err = io.ReadFull(r, fbytes)
 			if err != nil {
 				return nil, err
 			}
 
-			_, err = io.Copy(fw, rc)
-			// Close files.
-			rc.Close()
-			fw.Close()
+			_, err = com.SaveFile(absPath, fbytes)
 			if err != nil {
 				return nil, err
 			}

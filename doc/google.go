@@ -40,7 +40,7 @@ func getGoogleDoc(client *http.Client, match map[string]string, installRepoPath 
 	setupGoogleMatch(match)
 	// Check version control.
 	if err := getGoogleVCS(client, match); err != nil {
-		return nil, err
+		return nil, errors.New("fail to get vcs " + nod.ImportPath + " : " + err.Error())
 	}
 
 	switch nod.Type {
@@ -112,33 +112,37 @@ func getGoogleDoc(client *http.Client, match map[string]string, installRepoPath 
 		}
 
 		// Get file from archive.
-		rc, err := f.Open()
+		r, err := f.Open()
 		if err != nil {
 			return nil, err
 		}
 
-		// Write data to file
-		fw, _ := os.Create(absPath)
+		fbytes := make([]byte, f.FileInfo().Size())
+		_, err = io.ReadFull(r, fbytes)
 		if err != nil {
 			return nil, err
 		}
 
-		_, err = io.Copy(fw, rc)
-		// Close files.
-		rc.Close()
-		fw.Close()
+		_, err = com.SaveFile(absPath, fbytes)
 		if err != nil {
 			return nil, err
 		}
 	}
+
+	var imports []string
 
 	// Check if need to check imports.
 	if nod.IsGetDeps {
-		imports := getImports(installPath+"/", match, cmdFlags, nod)
-		return imports, err
+		for _, d := range dirs {
+			importPkgs, err := CheckImports(d, match["importPath"], nod)
+			if err != nil {
+				return nil, err
+			}
+			imports = append(imports, importPkgs...)
+		}
 	}
 
-	return nil, err
+	return imports, err
 }
 
 type rawFile struct {

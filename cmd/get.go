@@ -17,6 +17,7 @@ package cmd
 import (
 	"errors"
 	"fmt"
+	//"os"
 	"strings"
 
 	"github.com/Unknwon/com"
@@ -226,8 +227,9 @@ func downloadPackage(nod *doc.Node) (*doc.Node, []string) {
 	imports, err := doc.PureDownload(nod, installRepoPath, CmdGet.Flags)
 
 	if err != nil {
-		com.ColorLog("[ERRO] Download falied[ %s ]\n", err)
+		com.ColorLog("[ERRO] Download falied( %s )[ %s ]\n", nod.ImportPath, err)
 		failConut++
+		//os.RemoveAll(installRepoPath + "/" + doc.GetProjectPath(nod.ImportPath) + "/")
 		return nil, nil
 	}
 	return nod, imports
