@@ -29,25 +29,11 @@ import (
 )
 
 var (
-	githubRawHeader = http.Header{"Accept": {"application/vnd.github-blob.raw"}}
-	githubPattern   = regexp.MustCompile(`^github\.com/(?P<owner>[a-z0-9A-Z_.\-]+)/(?P<repo>[a-z0-9A-Z_.\-]+)(?P<dir>/[a-z0-9A-Z_.\-/]*)?$`)
-	githubCred      string
+	githubPattern = regexp.MustCompile(`^github\.com/(?P<owner>[a-z0-9A-Z_.\-]+)/(?P<repo>[a-z0-9A-Z_.\-]+)(?P<dir>/[a-z0-9A-Z_.\-/]*)?$`)
 )
-
-/*func SetGithubCredentials(id, secret string) {
-	//githubCred = "client_id=" + id + "&client_secret=" + secret
-}*/
-
-func SetGithubCredentials(token string) {
-	if len(token) > 0 {
-		githubCred = "access_token=" + token
-	}
-}
 
 // getGithubDoc downloads tarball from github.com.
 func getGithubDoc(client *http.Client, match map[string]string, installRepoPath string, nod *Node, cmdFlags map[string]bool) ([]string, error) {
-	match["cred"] = githubCred
-
 	// Check downlaod type.
 	switch nod.Type {
 	case BRANCH:
@@ -67,12 +53,12 @@ func getGithubDoc(client *http.Client, match map[string]string, installRepoPath 
 	// tarball: https://github.com/{owner}/{repo}/tarball/{sha}
 
 	// Downlaod archive.
-	p, err := com.HttpGetBytes(client, expand("https://github.com/{owner}/{repo}/archive/{sha}.zip", match), nil)
+	p, err := com.HttpGetBytes(client, com.Expand("https://github.com/{owner}/{repo}/archive/{sha}.zip", match), nil)
 	if err != nil {
 		return nil, errors.New("Fail to donwload Github repo -> " + err.Error())
 	}
 
-	shaName := expand("{repo}-{sha}", match)
+	shaName := com.Expand("{repo}-{sha}", match)
 	if nod.Type == "tag" {
 		shaName = strings.Replace(shaName, "-v", "-", 1)
 	}
@@ -83,7 +69,7 @@ func getGithubDoc(client *http.Client, match map[string]string, installRepoPath 
 		if len(suf) == 1 {
 			suf = ""
 		}
-		projectPath := expand("github.com/{owner}/{repo}", match)
+		projectPath := com.Expand("github.com/{owner}/{repo}", match)
 		installPath = installRepoPath + "/" + projectPath + suf
 		nod.ImportPath = projectPath
 	} else {
@@ -96,14 +82,14 @@ func getGithubDoc(client *http.Client, match map[string]string, installRepoPath 
 
 	r, err := zip.NewReader(bytes.NewReader(p), int64(len(p)))
 	if err != nil {
-		return nil, err
+		return nil, errors.New(nod.ImportPath + " -> new zip: " + err.Error())
 	}
 
 	dirs := make([]string, 0, 5)
 	// Need to add root path because we cannot get from tarball.
 	dirs = append(dirs, installPath+"/")
 	for _, f := range r.File {
-		absPath := strings.Replace(f.FileInfo().Name(), shaName, installPath, 1)
+		absPath := strings.Replace(f.Name, shaName, installPath, 1)
 		// Create diretory before create file.
 		os.MkdirAll(path.Dir(absPath)+"/", os.ModePerm)
 
@@ -119,7 +105,7 @@ func getGithubDoc(client *http.Client, match map[string]string, installRepoPath 
 				}
 				dirs = append(dirs, absPath)
 			}
-		case !strings.HasPrefix(f.FileInfo().Name(), "."):
+		default:
 			// Get file from archive.
 			rc, err := f.Open()
 			if err != nil {
@@ -157,18 +143,5 @@ func getGithubDoc(client *http.Client, match map[string]string, installRepoPath 
 			imports = append(imports, importPkgs...)
 		}
 	}
-
-	/*fpath := appPath + "repo/tarballs/" + node.ImportPath + "-" + node.Value + ".zip"
-	// Save tarball.
-	if autoBackup && !utils.IsExist(fpath) {
-		os.MkdirAll(path.Dir(fpath)+"/", os.ModePerm)
-		f, err := os.Create(fpath)
-		if err != nil {
-			return nil, err
-		}
-		defer f.Close()
-		_, err = f.Write(p)
-	}*/
-
 	return imports, err
 }

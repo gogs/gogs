@@ -15,26 +15,45 @@
 package doc
 
 import (
+	"archive/zip"
+	"bytes"
 	"errors"
+	"io"
 	"net/http"
 	"os"
 	"path"
 	"regexp"
+	"strings"
 
 	"github.com/Unknwon/com"
-	"github.com/Unknwon/ctw/packer"
 )
 
 var (
+	googleRepoRe  = regexp.MustCompile(`id="checkoutcmd">(hg|git|svn)`)
+	googleFileRe  = regexp.MustCompile(`<li><a href="([^"/]+)"`)
+	googleDirRe   = regexp.MustCompile(`<li><a href="([^".]+)"`)
 	googlePattern = regexp.MustCompile(`^code\.google\.com/p/(?P<repo>[a-z0-9\-]+)(:?\.(?P<subrepo>[a-z0-9\-]+))?(?P<dir>/[a-z0-9A-Z_.\-/]+)?$`)
 )
 
 // getGoogleDoc downloads raw files from code.google.com.
 func getGoogleDoc(client *http.Client, match map[string]string, installRepoPath string, nod *Node, cmdFlags map[string]bool) ([]string, error) {
-	packer.SetupGoogleMatch(match)
+	setupGoogleMatch(match)
 	// Check version control.
-	if err := packer.GetGoogleVCS(client, match); err != nil {
+	if err := getGoogleVCS(client, match); err != nil {
 		return nil, err
+	}
+
+	switch nod.Type {
+	case BRANCH:
+		if len(nod.Value) == 0 {
+			match["tag"] = defaultTags[match["vcs"]]
+		} else {
+			match["tag"] = nod.Value
+		}
+	case TAG, COMMIT:
+		match["tag"] = nod.Value
+	default:
+		return nil, errors.New("Unknown node type: " + nod.Type)
 	}
 
 	var installPath string
@@ -51,35 +70,67 @@ func getGoogleDoc(client *http.Client, match map[string]string, installRepoPath 
 
 	// Remove old files.
 	os.RemoveAll(installPath + "/")
-	match["tag"] = nod.Value
+	os.MkdirAll(installPath+"/", os.ModePerm)
 
-	ext := ".zip"
 	if match["vcs"] == "svn" {
-		ext = ".tar.gz"
 		com.ColorLog("[WARN] SVN detected, may take very long time.\n")
+
+		rootPath := com.Expand("http://{subrepo}{dot}{repo}.googlecode.com/{vcs}", match)
+		d, f := path.Split(rootPath)
+		err := downloadFiles(client, match, d, installPath+"/", match["tag"],
+			[]string{f + "/"})
+		if err != nil {
+			return nil, errors.New("Fail to download " + nod.ImportPath + " : " + err.Error())
+		}
 	}
 
-	err := packer.PackToFile(match["importPath"], installPath+ext, match)
+	p, err := com.HttpGetBytes(client, com.Expand("http://{subrepo}{dot}{repo}.googlecode.com/archive/{tag}.zip", match), nil)
 	if err != nil {
-		return nil, err
+		return nil, errors.New("Fail to download " + nod.ImportPath + " : " + err.Error())
 	}
 
-	var dirs []string
-	if match["vcs"] != "svn" {
-		dirs, err = com.Unzip(installPath+ext, path.Dir(installPath))
-	} else {
-		dirs, err = com.UnTarGz(installPath+ext, path.Dir(installPath))
-	}
-
-	if len(dirs) == 0 {
-		return nil, errors.New("No file in repository")
-	}
-
+	r, err := zip.NewReader(bytes.NewReader(p), int64(len(p)))
 	if err != nil {
-		return nil, err
+		return nil, errors.New(nod.ImportPath + " -> new zip: " + err.Error())
 	}
-	os.Remove(installPath + ext)
-	os.Rename(path.Dir(installPath)+"/"+dirs[0], installPath)
+
+	nameLen := strings.Index(r.File[0].Name, "/")
+	dirPrefix := match["dir"]
+	if len(dirPrefix) != 0 {
+		dirPrefix = dirPrefix[1:] + "/"
+	}
+
+	dirs := make([]string, 0, 5)
+	for _, f := range r.File {
+		absPath := strings.Replace(f.Name, f.Name[:nameLen], installPath, 1)
+
+		// Create diretory before create file.
+		dir := path.Dir(absPath)
+		if !checkDir(dir, dirs) && !(!cmdFlags["-e"] && strings.Contains(absPath, "example")) {
+			dirs = append(dirs, dir)
+			os.MkdirAll(dir+"/", os.ModePerm)
+		}
+
+		// Get file from archive.
+		rc, err := f.Open()
+		if err != nil {
+			return nil, err
+		}
+
+		// Write data to file
+		fw, _ := os.Create(absPath)
+		if err != nil {
+			return nil, err
+		}
+
+		_, err = io.Copy(fw, rc)
+		// Close files.
+		rc.Close()
+		fw.Close()
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	// Check if need to check imports.
 	if nod.IsGetDeps {
@@ -88,4 +139,118 @@ func getGoogleDoc(client *http.Client, match map[string]string, installRepoPath 
 	}
 
 	return nil, err
+}
+
+type rawFile struct {
+	name   string
+	rawURL string
+	data   []byte
+}
+
+func (rf *rawFile) Name() string {
+	return rf.name
+}
+
+func (rf *rawFile) RawUrl() string {
+	return rf.rawURL
+}
+
+func (rf *rawFile) Data() []byte {
+	return rf.data
+}
+
+func (rf *rawFile) SetData(p []byte) {
+	rf.data = p
+}
+
+func downloadFiles(client *http.Client, match map[string]string, rootPath, installPath, commit string, dirs []string) error {
+	suf := "?r=" + commit
+	if len(commit) == 0 {
+		suf = ""
+	}
+
+	for _, d := range dirs {
+		p, err := com.HttpGetBytes(client, rootPath+d+suf, nil)
+		if err != nil {
+			return err
+		}
+
+		// Create destination directory.
+		os.MkdirAll(installPath+d, os.ModePerm)
+
+		// Get source files in current path.
+		files := make([]com.RawFile, 0, 5)
+		for _, m := range googleFileRe.FindAllSubmatch(p, -1) {
+			fname := strings.Split(string(m[1]), "?")[0]
+			files = append(files, &rawFile{
+				name:   fname,
+				rawURL: rootPath + d + fname + suf,
+			})
+		}
+
+		// Fetch files from VCS.
+		if err := com.FetchFilesCurl(files); err != nil {
+			return err
+		}
+
+		// Save files.
+		for _, f := range files {
+			absPath := installPath + d
+
+			// Create diretory before create file.
+			os.MkdirAll(path.Dir(absPath), os.ModePerm)
+
+			// Write data to file
+			fw, err := os.Create(absPath + f.Name())
+			if err != nil {
+				return err
+			}
+
+			_, err = fw.Write(f.Data())
+			fw.Close()
+			if err != nil {
+				return err
+			}
+		}
+		files = nil
+
+		subdirs := make([]string, 0, 3)
+		// Get subdirectories.
+		for _, m := range googleDirRe.FindAllSubmatch(p, -1) {
+			dirName := strings.Split(string(m[1]), "?")[0]
+			if strings.HasSuffix(dirName, "/") {
+				subdirs = append(subdirs, d+dirName)
+			}
+		}
+
+		err = downloadFiles(client, match, rootPath, installPath, commit, subdirs)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func setupGoogleMatch(match map[string]string) {
+	if s := match["subrepo"]; s != "" {
+		match["dot"] = "."
+		match["query"] = "?repo=" + s
+	} else {
+		match["dot"] = ""
+		match["query"] = ""
+	}
+}
+
+func getGoogleVCS(client *http.Client, match map[string]string) error {
+	// Scrape the HTML project page to find the VCS.
+	p, err := com.HttpGetBytes(client, com.Expand("http://code.google.com/p/{repo}/source/checkout", match), nil)
+	if err != nil {
+		return errors.New("doc.getGoogleVCS(" + match["importPath"] + ") -> " + err.Error())
+	}
+	m := googleRepoRe.FindSubmatch(p)
+	if m == nil {
+		return com.NotFoundError{"Could not VCS on Google Code project page."}
+	}
+	match["vcs"] = string(m[1])
+	return nil
 }

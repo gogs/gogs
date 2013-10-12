@@ -43,7 +43,7 @@ func getBitbucketDoc(client *http.Client, match map[string]string, installRepoPa
 		var repo struct {
 			Scm string
 		}
-		if err := com.HttpGetJSON(client, expand("https://api.bitbucket.org/1.0/repositories/{owner}/{repo}", match), &repo); err != nil {
+		if err := com.HttpGetJSON(client, com.Expand("https://api.bitbucket.org/1.0/repositories/{owner}/{repo}", match), &repo); err != nil {
 			return nil, err
 		}
 		match["vcs"] = repo.Scm
@@ -64,7 +64,7 @@ func getBitbucketDoc(client *http.Client, match map[string]string, installRepoPa
 				var nodes map[string]struct {
 					Node string
 				}
-				if err := com.HttpGetJSON(client, expand("https://api.bitbucket.org/1.0/repositories/{owner}/{repo}/{0}", match, nodeType), &nodes); err != nil {
+				if err := com.HttpGetJSON(client, com.Expand("https://api.bitbucket.org/1.0/repositories/{owner}/{repo}/{0}", match, nodeType), &nodes); err != nil {
 					return nil, err
 				}
 				for t, n := range nodes {
@@ -96,7 +96,7 @@ func getBitbucketDoc(client *http.Client, match map[string]string, installRepoPa
 	// tarball : https://bitbucket.org/{owner}/{repo}/get/{commit}.tar.gz
 
 	// Downlaod archive.
-	p, err := com.HttpGetBytes(client, expand("https://bitbucket.org/{owner}/{repo}/get/{commit}.tar.gz", match), nil)
+	p, err := com.HttpGetBytes(client, com.Expand("https://bitbucket.org/{owner}/{repo}/get/{commit}.tar.gz", match), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -107,7 +107,7 @@ func getBitbucketDoc(client *http.Client, match map[string]string, installRepoPa
 		if len(suf) == 1 {
 			suf = ""
 		}
-		projectPath := expand("bitbucket.org/{owner}/{repo}", match)
+		projectPath := com.Expand("bitbucket.org/{owner}/{repo}", match)
 		installPath = installRepoPath + "/" + projectPath + suf
 		nod.ImportPath = projectPath
 	} else {
@@ -137,7 +137,7 @@ func getBitbucketDoc(client *http.Client, match map[string]string, installRepoPa
 			return nil, err
 		}
 
-		fn := h.FileInfo().Name()
+		fn := h.Name
 
 		// In case that we find directory, usually we should not.
 		if strings.HasSuffix(fn, "/") {
@@ -157,24 +157,13 @@ func getBitbucketDoc(client *http.Client, match map[string]string, installRepoPa
 			os.MkdirAll(dir+"/", os.ModePerm)
 		}
 
-		if strings.HasPrefix(fn, ".") {
-			continue
-		}
-
 		// Get data from archive.
 		fbytes := make([]byte, h.Size)
 		if _, err := io.ReadFull(tr, fbytes); err != nil {
 			return nil, err
 		}
 
-		// Write data to file
-		fw, err := os.Create(absPath)
-		if err != nil {
-			return nil, err
-		}
-
-		_, err = fw.Write(fbytes)
-		fw.Close()
+		_, err = com.SaveFile(absPath, fbytes)
 		if err != nil {
 			return nil, err
 		}
