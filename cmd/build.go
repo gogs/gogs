@@ -153,7 +153,7 @@ func runBuild(cmd *Command, args []string) {
 	newGoPathSrc := filepath.Join(newGoPath, "src")
 	os.MkdirAll(newGoPathSrc, os.ModePerm)
 
-	for name, pkg := range cachePkgs {
+	for name, _ := range cachePkgs {
 		oldPath := filepath.Join(installRepoPath, name)
 		newPath := filepath.Join(newGoPathSrc, name)
 		paths := strings.Split(name, "/")
@@ -190,6 +190,8 @@ func runBuild(cmd *Command, args []string) {
 		com.ColorLog("[ERRO] %v\n", err)
 		return
 	}
+
+	com.ColorLog("[INFO] building ...\n")
 
 	cmdArgs := []string{"go", "build"}
 	cmdArgs = append(cmdArgs, args...)

@@ -97,7 +97,8 @@ func GetProjectPath(importPath string) (projectPath string) {
 
 	// Check project hosting.
 	switch {
-	case strings.HasPrefix(importPath, "github.com"):
+	case strings.HasPrefix(importPath, "github.com") ||
+		strings.HasPrefix(importPath, "git.oschina.net"):
 		projectPath = joinPath(importPath, 3)
 	case strings.HasPrefix(importPath, "code.google.com"):
 		projectPath = joinPath(importPath, 3)

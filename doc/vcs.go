@@ -15,18 +15,13 @@
 package doc
 
 import (
-	"bytes"
 	"encoding/xml"
 	"errors"
 	"io"
-	"io/ioutil"
-	"log"
 	"net/http"
 	"os"
-	"os/exec"
 	"path"
 	"regexp"
-	"strconv"
 	"strings"
 
 	"github.com/Unknwon/com"
@@ -90,115 +85,15 @@ type vcsCmd struct {
 	download func([]string, string, string) (string, string, error)
 }
 
-var vcsCmds = map[string]*vcsCmd{
-	"git": &vcsCmd{
-		schemes:  []string{"http", "https", "git"},
-		download: downloadGit,
-	},
-}
-
 var lsremoteRe = regexp.MustCompile(`(?m)^([0-9a-f]{40})\s+refs/(?:tags|heads)/(.+)$`)
-
-func downloadGit(schemes []string, repo, savedEtag string) (string, string, error) {
-	var p []byte
-	var scheme string
-	for i := range schemes {
-		cmd := exec.Command("git", "ls-remote", "--heads", "--tags", schemes[i]+"://"+repo+".git")
-		log.Println(strings.Join(cmd.Args, " "))
-		var err error
-		p, err = cmd.Output()
-		if err == nil {
-			scheme = schemes[i]
-			break
-		}
-	}
-
-	if scheme == "" {
-		return "", "", com.NotFoundError{"VCS not found"}
-	}
-
-	tags := make(map[string]string)
-	for _, m := range lsremoteRe.FindAllSubmatch(p, -1) {
-		tags[string(m[2])] = string(m[1])
-	}
-
-	tag, commit, err := bestTag(tags, "master")
-	if err != nil {
-		return "", "", err
-	}
-
-	etag := scheme + "-" + commit
-
-	if etag == savedEtag {
-		return "", "", errNotModified
-	}
-
-	dir := path.Join(repoRoot, repo+".git")
-	p, err = ioutil.ReadFile(path.Join(dir, ".git/HEAD"))
-	switch {
-	case err != nil:
-		if err := os.MkdirAll(dir, 0777); err != nil {
-			return "", "", err
-		}
-		cmd := exec.Command("git", "clone", scheme+"://"+repo, dir)
-		log.Println(strings.Join(cmd.Args, " "))
-		if err := cmd.Run(); err != nil {
-			return "", "", err
-		}
-	case string(bytes.TrimRight(p, "\n")) == commit:
-		return tag, etag, nil
-	default:
-		cmd := exec.Command("git", "fetch")
-		log.Println(strings.Join(cmd.Args, " "))
-		cmd.Dir = dir
-		if err := cmd.Run(); err != nil {
-			return "", "", err
-		}
-	}
-
-	cmd := exec.Command("git", "checkout", "--detach", "--force", commit)
-	cmd.Dir = dir
-	if err := cmd.Run(); err != nil {
-		return "", "", err
-	}
-
-	return tag, etag, nil
-}
 
 var defaultTags = map[string]string{"git": "master", "hg": "default"}
 
 func bestTag(tags map[string]string, defaultTag string) (string, string, error) {
-	if commit, ok := tags["go1"]; ok {
-		return "go1", commit, nil
-	}
 	if commit, ok := tags[defaultTag]; ok {
 		return defaultTag, commit, nil
 	}
 	return "", "", com.NotFoundError{"Tag or branch not found."}
-}
-
-// expand replaces {k} in template with match[k] or subs[atoi(k)] if k is not in match.
-func expand(template string, match map[string]string, subs ...string) string {
-	var p []byte
-	var i int
-	for {
-		i = strings.Index(template, "{")
-		if i < 0 {
-			break
-		}
-		p = append(p, template[:i]...)
-		template = template[i+1:]
-		i = strings.Index(template, "}")
-		if s, ok := match[template[:i]]; ok {
-			p = append(p, s...)
-		} else {
-			j, _ := strconv.Atoi(template[:i])
-			p = append(p, subs[j]...)
-		}
-		template = template[i+1:]
-	}
-	p = append(p, template...)
-	return string(p)
 }
 
 // PureDownload downloads package without version control.
@@ -243,7 +138,7 @@ func getDynamic(client *http.Client, nod *Node, installRepoPath string, flags ma
 		}
 	}
 
-	nod.DownloadURL = expand("{repo}{dir}", match)
+	nod.DownloadURL = com.Expand("{repo}{dir}", match)
 	return PureDownload(nod, installRepoPath, flags)
 }
 
@@ -384,22 +279,14 @@ func CheckImports(absPath, importPath string, nod *Node) (importPkgs []string, e
 	for _, fi := range fis {
 		// Only handle files.
 		if strings.HasSuffix(fi.Name(), ".go") {
-			f, err := os.Open(absPath + fi.Name())
-			if err != nil {
-				return nil, err
-			}
-
-			fbytes := make([]byte, fi.Size())
-			_, err = f.Read(fbytes)
-			f.Close()
-
+			data, err := com.ReadFile(absPath + fi.Name())
 			if err != nil {
 				return nil, err
 			}
 
 			files = append(files, &source{
 				name: fi.Name(),
-				data: fbytes,
+				data: data,
 			})
 		}
 	}

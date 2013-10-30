@@ -51,7 +51,7 @@ func getOSCDoc(client *http.Client, match map[string]string, installRepoPath str
 	// zip: http://{projectRoot}/repository/archive?ref={sha}
 
 	// Downlaod archive.
-	p, err := com.HttpGetBytes(client, expand("http://git.oschina.net/{owner}/{repo}/repository/archive?ref={sha}", match), nil)
+	p, err := com.HttpGetBytes(client, com.Expand("http://git.oschina.net/{owner}/{repo}/repository/archive?ref={sha}", match), nil)
 	if err != nil {
 		return nil, errors.New("Fail to donwload OSChina repo -> " + err.Error())
 	}
@@ -62,7 +62,7 @@ func getOSCDoc(client *http.Client, match map[string]string, installRepoPath str
 		if len(suf) == 1 {
 			suf = ""
 		}
-		projectPath := expand("git.oschina.net/{owner}/{repo}", match)
+		projectPath := com.Expand("git.oschina.net/{owner}/{repo}", match)
 		installPath = installRepoPath + "/" + projectPath + suf
 		nod.ImportPath = projectPath
 	} else {
@@ -83,7 +83,7 @@ func getOSCDoc(client *http.Client, match map[string]string, installRepoPath str
 	// Need to add root path because we cannot get from tarball.
 	dirs = append(dirs, installPath+"/")
 	for _, f := range r.File {
-		fileName := f.FileInfo().Name()[nameLen+1:]
+		fileName := f.Name[nameLen+1:]
 		absPath := installPath + "/" + fileName
 
 		if strings.HasSuffix(absPath, "/") {
@@ -91,28 +91,20 @@ func getOSCDoc(client *http.Client, match map[string]string, installRepoPath str
 			os.MkdirAll(absPath, os.ModePerm)
 			continue
 		}
-		// d, _ := path.Split(absPath)
-		// if !checkDir(d, dirs) {
-		// 	dirs = append(dirs, d)
-		// 	os.MkdirAll(d, os.ModePerm)
-		// }
 
 		// Get file from archive.
-		rc, err := f.Open()
+		r, err := f.Open()
 		if err != nil {
 			return nil, errors.New("Fail to open OSChina repo -> " + err.Error())
 		}
 
-		// Write data to file
-		fw, _ := os.Create(absPath)
+		fbytes := make([]byte, f.FileInfo().Size())
+		_, err = io.ReadFull(r, fbytes)
 		if err != nil {
 			return nil, err
 		}
 
-		_, err = io.Copy(fw, rc)
-		// Close files.
-		rc.Close()
-		fw.Close()
+		_, err = com.SaveFile(absPath, fbytes)
 		if err != nil {
 			return nil, err
 		}

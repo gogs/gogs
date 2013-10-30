@@ -33,7 +33,7 @@ var launchpadPattern = regexp.MustCompile(`^launchpad\.net/(?P<repo>(?P<project>
 func getLaunchpadDoc(client *http.Client, match map[string]string, installRepoPath string, nod *Node, cmdFlags map[string]bool) ([]string, error) {
 
 	if match["project"] != "" && match["series"] != "" {
-		rc, err := com.HttpGet(client, expand("https://code.launchpad.net/{project}{series}/.bzr/branch-format", match), nil)
+		rc, err := com.HttpGet(client, com.Expand("https://code.launchpad.net/{project}{series}/.bzr/branch-format", match), nil)
 		_, isNotFound := err.(com.NotFoundError)
 		switch {
 		case err == nil:
@@ -42,7 +42,7 @@ func getLaunchpadDoc(client *http.Client, match map[string]string, installRepoPa
 		case isNotFound:
 			// The structure of the import path is is launchpad.net/{project}/{dir}.
 			match["repo"] = match["project"]
-			match["dir"] = expand("{series}{dir}", match)
+			match["dir"] = com.Expand("{series}{dir}", match)
 		default:
 			return nil, err
 		}
@@ -51,9 +51,9 @@ func getLaunchpadDoc(client *http.Client, match map[string]string, installRepoPa
 	var downloadPath string
 	// Check if download with specific revision.
 	if len(nod.Value) == 0 {
-		downloadPath = expand("https://bazaar.launchpad.net/+branch/{repo}/tarball", match)
+		downloadPath = com.Expand("https://bazaar.launchpad.net/+branch/{repo}/tarball", match)
 	} else {
-		downloadPath = expand("https://bazaar.launchpad.net/+branch/{repo}/tarball/"+nod.Value, match)
+		downloadPath = com.Expand("https://bazaar.launchpad.net/+branch/{repo}/tarball/"+nod.Value, match)
 	}
 
 	// Scrape the repo browser to find the project revision and individual Go files.
@@ -87,7 +87,7 @@ func getLaunchpadDoc(client *http.Client, match map[string]string, installRepoPa
 			return nil, err
 		}
 
-		fn := h.FileInfo().Name()
+		fn := h.Name
 		// Check root path.
 		if len(autoPath) == 0 {
 			autoPath = fn[:strings.Index(fn, match["repo"])+len(match["repo"])]
@@ -109,14 +109,7 @@ func getLaunchpadDoc(client *http.Client, match map[string]string, installRepoPa
 				return nil, err
 			}
 
-			// Write data to file
-			fw, err := os.Create(absPath)
-			if err != nil {
-				return nil, err
-			}
-
-			_, err = fw.Write(fbytes)
-			fw.Close()
+			_, err = com.SaveFile(absPath, fbytes)
 			if err != nil {
 				return nil, err
 			}
