@@ -141,13 +141,8 @@ func runGet(cmd *Command, args []string) {
 		}
 	}
 
-	nodes = append(nodes, &doc.Node{
-		ImportPath:  args[0],
-		DownloadURL: args[0],
-		Type:        t,
-		Value:       ver,
-		IsGetDeps:   true,
-	})
+	node := doc.NewNode(args[0], args[0], t, ver, true)
+	nodes = append(nodes, node)
 
 	// Download package(s).
 	downloadPackages(nodes)
@@ -185,12 +180,7 @@ func downloadPackages(nodes []*doc.Node) {
 					// Generate temporary nodes.
 					nodes := make([]*doc.Node, len(imports))
 					for i := range nodes {
-						nodes[i] = &doc.Node{
-							ImportPath:  imports[i],
-							DownloadURL: imports[i],
-							Type:        doc.BRANCH,
-							IsGetDeps:   true,
-						}
+						nodes[i] = doc.NewNode(imports[i], imports[i], doc.BRANCH, "", true)
 					}
 					downloadPackages(nodes)
 				}

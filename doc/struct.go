@@ -32,20 +32,43 @@ const (
 	COMMIT  = "commit"
 )
 
+type Pkg struct {
+	ImportPath string
+	Type       string
+	Value      string // Branch, tag or commit.
+}
+
+func (pkg *Pkg) VerString() string {
+	if pkg.Value == "" {
+		return pkg.Type
+	}
+	return fmt.Sprintf("%v:%v", pkg.Type, pkg.Value)
+}
+
+func NewPkg(importPath, tp, value string) *Pkg {
+	return &Pkg{importPath, tp, value}
+}
+
+func NewDefaultPkg(importPath string) *Pkg {
+	return NewPkg(importPath, BRANCH, "")
+}
+
 type Node struct {
-	ImportPath  string
+	Pkg
 	DownloadURL string
-	Type        string
-	Value       string // Branch, tag or commit.
 	Synopsis    string
 	IsGetDeps   bool
 }
 
-func (nod *Node) VerString() string {
-	if nod.Value == "" {
-		return nod.Type
+func NewNode(importPath, downloadUrl, tp, value string, isGetDeps bool) *Node {
+	return &Node{
+		Pkg: Pkg{ImportPath: importPath,
+			Type:  tp,
+			Value: value,
+		},
+		DownloadURL: downloadUrl,
+		IsGetDeps:   isGetDeps,
 	}
-	return fmt.Sprintf("%v:%v", nod.Type, nod.Value)
 }
 
 // source is source code file.

@@ -29,11 +29,11 @@ package cmd
 // 	PkgExt() string
 // }
 
-// type Pkg struct {
-// 	Name  string
-// 	Ver   string
-// 	VerId string
-// }
+//type Pkg struct {
+//	Name  string
+//	Ver   string
+//	VerId string
+//}
 
 // func NewPkg(pkgName string, ver string) *Pkg {
 // 	vers := strings.Split(ver, ":")

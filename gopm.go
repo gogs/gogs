@@ -46,8 +46,8 @@ var commands = []*cmd.Command{
 	cmd.CmdSearch,
 	cmd.CmdServe,
 	cmd.CmdGen,
+	cmd.CmdBuild,
 	/*
-		cmdBuild,
 		cmdClean,
 		cmdDoc,
 		cmdEnv,
@@ -140,7 +140,7 @@ Use "gopm help [topic]" for more information about that topic.
 
 `
 
-var helpTemplate = `{{if .Runnable}}usage: go {{.UsageLine}}
+var helpTemplate = `{{if .Runnable}}usage: gopm {{.UsageLine}}
 
 {{end}}{{.Long | trim}}
 `
