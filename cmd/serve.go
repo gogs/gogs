@@ -438,7 +438,7 @@ func startService(listen, port string) error {
 
 	dbDir = strings.Replace(dbDir, "~", homeDir, -1)
 
-	db, err = leveldb.OpenFile(dbDir, &opt.Options{Flag: opt.OFCreateIfMissing})
+	db, err = leveldb.OpenFile(dbDir, nil)
 	if err != nil {
 		return err
 	}
