@@ -154,7 +154,7 @@ func runBuild(cmd *Command, args []string) {
 		paths := strings.Split(name, "/")
 		var isExistP bool
 		for i := 0; i < len(paths)-1; i++ {
-			pName := filepath.Join(paths[:len(paths)-1-i]...)
+			pName := strings.Join(paths[:len(paths)-1-i], "/")
 			if _, ok := cachePkgs[pName]; ok {
 				isExistP = true
 				break
@@ -166,7 +166,6 @@ func runBuild(cmd *Command, args []string) {
 			newPPath := filepath.Join(newGoPathSrc, pName)
 			com.ColorLog("[TRAC] create dirs %v\n", newPPath)
 			os.MkdirAll(newPPath, os.ModePerm)
-
 			com.ColorLog("[INFO] linked %v\n", name)
 
 			err = makeLink(oldPath, newPath)
