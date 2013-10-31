@@ -121,11 +121,6 @@ func getChildPkgs(cpath string, ppkg *doc.Pkg, cachePkgs map[string]*doc.Pkg) er
 	return nil
 }
 
-func makeLink(oldPath, newPath string) error {
-	cmd := exec.Command("ln", "-s", oldPath, newPath)
-	return cmd.Run()
-}
-
 func runBuild(cmd *Command, args []string) {
 	curPath, err := os.Getwd()
 	if err != nil {
