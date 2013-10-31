@@ -5,6 +5,6 @@ import (
 )
 
 func makeLink(oldPath, newPath string) error {
-	cmd := exec.Command("mklink", "/j", newPath, oldPath)
+	cmd := exec.Command("cmd", "/c", "mklink", "/j", newPath, oldPath)
 	return cmd.Run()
 }
