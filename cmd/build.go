@@ -98,16 +98,21 @@ func getChildPkgs(cpath string, ppkg *doc.Pkg, cachePkgs map[string]*doc.Pkg) er
 	}
 	for name, pkg := range pkgs {
 		if !pkgInCache(name, cachePkgs) {
-			newPath := filepath.Join(installRepoPath, pkg.ImportPath)
-			if !com.IsExist(newPath) {
-				var t, ver string = doc.BRANCH, ""
-				node := doc.NewNode(pkg.ImportPath, pkg.ImportPath, t, ver, true)
-				//node := new(doc.Node)
-				//node.Pkg = *pkg
-
-				nodes := []*doc.Node{node}
-				downloadPackages(nodes)
-				// should handler download failed
+			var newPath string
+			if !build.IsLocalImport(name) {
+				newPath = filepath.Join(installRepoPath, pkg.ImportPath)
+				if !com.IsExist(newPath) {
+					var t, ver string = doc.BRANCH, ""
+					node := doc.NewNode(pkg.ImportPath, pkg.ImportPath, t, ver, true)
+					nodes := []*doc.Node{node}
+					downloadPackages(nodes)
+					// should handler download failed
+				}
+			} else {
+				newPath, err = filepath.Abs(name)
+				if err != nil {
+					return err
+				}
 			}
 			err = getChildPkgs(newPath, pkg, cachePkgs)
 			if err != nil {
@@ -115,7 +120,7 @@ func getChildPkgs(cpath string, ppkg *doc.Pkg, cachePkgs map[string]*doc.Pkg) er
 			}
 		}
 	}
-	if ppkg != nil {
+	if ppkg != nil && !build.IsLocalImport(ppkg.ImportPath) {
 		cachePkgs[ppkg.ImportPath] = ppkg
 	}
 	return nil
@@ -164,7 +169,7 @@ func runBuild(cmd *Command, args []string) {
 		if !isExistP {
 			pName := filepath.Join(paths[:len(paths)-1]...)
 			newPPath := filepath.Join(newGoPathSrc, pName)
-			com.ColorLog("[TRAC] create dirs %v\n", newPPath)
+			//com.ColorLog("[TRAC] create dirs %v\n", newPPath)
 			os.MkdirAll(newPPath, os.ModePerm)
 			com.ColorLog("[INFO] linked %v\n", name)
 
