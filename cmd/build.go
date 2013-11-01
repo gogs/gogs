@@ -15,7 +15,7 @@
 package cmd
 
 import (
-	"errors"
+	//"errors"
 	"github.com/Unknwon/com"
 	"github.com/gpmgo/gopm/doc"
 	"go/build"
@@ -43,28 +43,23 @@ func printBuildPrompt(flag string) {
 }
 
 func getGopmPkgs(path string, inludeSys bool) (map[string]*doc.Pkg, error) {
-	abs, err := filepath.Abs(doc.GopmFileName)
+	abs, err := filepath.Abs(filepath.Join(path, doc.GopmFileName))
 	if err != nil {
 		return nil, err
 	}
 
 	// load import path
 	gf := doc.NewGopmfile()
+	var builds *doc.Section
 	if com.IsExist(abs) {
 		err := gf.Load(abs)
 		if err != nil {
 			return nil, err
 		}
-	} else {
-		sec := doc.NewSection()
-		sec.Name = "build"
-		gf.Sections[sec.Name] = sec
-	}
-
-	var builds *doc.Section
-	var ok bool
-	if builds, ok = gf.Sections["build"]; !ok {
-		return nil, errors.New("no found build section\n")
+		var ok bool
+		if builds, ok = gf.Sections["build"]; !ok {
+			builds = nil
+		}
 	}
 
 	pkg, err := build.ImportDir(path, build.AllowBinary)
@@ -75,11 +70,13 @@ func getGopmPkgs(path string, inludeSys bool) (map[string]*doc.Pkg, error) {
 	pkgs := make(map[string]*doc.Pkg)
 	for _, name := range pkg.Imports {
 		if inludeSys || !isStdPkg(name) {
-			if dep, ok := builds.Deps[name]; ok {
-				pkgs[name] = dep.Pkg
-			} else {
-				pkgs[name] = doc.NewDefaultPkg(name)
+			if builds != nil {
+				if dep, ok := builds.Deps[name]; ok {
+					pkgs[name] = dep.Pkg
+					continue
+				}
 			}
+			pkgs[name] = doc.NewDefaultPkg(name)
 		}
 	}
 	return pkgs, nil
@@ -89,6 +86,12 @@ func pkgInCache(name string, cachePkgs map[string]*doc.Pkg) bool {
 	//pkgs := strings.Split(name, "/")
 	_, ok := cachePkgs[name]
 	return ok
+}
+
+func autoLink(oldPath, newPath string) error {
+	newPPath, _ := filepath.Split(newPath)
+	os.MkdirAll(newPPath, os.ModePerm)
+	return makeLink(oldPath, newPath)
 }
 
 func getChildPkgs(cpath string, ppkg *doc.Pkg, cachePkgs map[string]*doc.Pkg) error {
@@ -139,6 +142,23 @@ func runBuild(cmd *Command, args []string) {
 		return
 	}
 
+	gf := doc.NewGopmfile()
+	var pkgName string
+	gpmPath := filepath.Join(curPath, doc.GopmFileName)
+	if com.IsExist(gpmPath) {
+		com.ColorLog("[INFO] loading .gopmfile ...\n")
+		err := gf.Load(gpmPath)
+		if err != nil {
+			com.ColorLog("[ERRO] load .gopmfile failed: %v\n", err)
+			return
+		}
+	}
+
+	if target, ok := gf.Sections["target"]; ok {
+		pkgName = target.Props["path"]
+		com.ColorLog("[INFO] target name is %v\n", pkgName)
+	}
+
 	installRepoPath = strings.Replace(reposDir, "~", hd, -1)
 
 	cachePkgs := make(map[string]*doc.Pkg)
@@ -158,27 +178,39 @@ func runBuild(cmd *Command, args []string) {
 		newPath := filepath.Join(newGoPathSrc, name)
 		paths := strings.Split(name, "/")
 		var isExistP bool
+		var isCurChild bool
 		for i := 0; i < len(paths)-1; i++ {
 			pName := strings.Join(paths[:len(paths)-1-i], "/")
 			if _, ok := cachePkgs[pName]; ok {
 				isExistP = true
 				break
 			}
+			if pkgName == pName {
+				isCurChild = true
+				break
+			}
+		}
+		if isCurChild {
+			continue
 		}
 
 		if !isExistP {
-			pName := filepath.Join(paths[:len(paths)-1]...)
-			newPPath := filepath.Join(newGoPathSrc, pName)
-			//com.ColorLog("[TRAC] create dirs %v\n", newPPath)
-			os.MkdirAll(newPPath, os.ModePerm)
 			com.ColorLog("[INFO] linked %v\n", name)
-
-			err = makeLink(oldPath, newPath)
-
+			err = autoLink(oldPath, newPath)
 			if err != nil {
 				com.ColorLog("[ERRO] make link error %v\n", err)
 				return
 			}
+		}
+	}
+
+	if pkgName != "" {
+		newPath := filepath.Join(newGoPathSrc, pkgName)
+		com.ColorLog("[INFO] linked %v\n", pkgName)
+		err = autoLink(curPath, newPath)
+		if err != nil {
+			com.ColorLog("[ERRO] make link error %v\n", err)
+			return
 		}
 	}
 
