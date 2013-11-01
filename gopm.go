@@ -47,25 +47,25 @@ var commands = []*cmd.Command{
 	cmd.CmdServe,
 	cmd.CmdGen,
 	cmd.CmdBuild,
-	/*
-		cmdClean,
-		cmdDoc,
-		cmdEnv,
-		cmdFix,
-		cmdFmt,
-		cmdInstall,
-		cmdList,
-		cmdRun,
-		cmdTest,
-		cmdTool,
-		cmdVersion,
-		cmdVet,
+	cmd.CmdRun,
+	/*cmd.CmdInstall,
 
-		helpGopath,
-		helpPackages,
-		helpRemote,
-		helpTestflag,
-		helpTestfunc,*/
+	cmdClean,
+	cmdDoc,
+	cmdEnv,
+	cmdFix,
+	cmdFmt,
+	cmdList,
+	cmdTest,
+	cmdTool,
+	cmdVersion,
+	cmdVet,
+
+	helpGopath,
+	helpPackages,
+	helpRemote,
+	helpTestflag,
+	helpTestfunc,*/
 }
 
 func init() {

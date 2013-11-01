@@ -21,37 +21,37 @@ import (
 	"os/exec"
 )
 
-var CmdBuild = &Command{
-	UsageLine: "build",
-	Short:     "build according a gopmfile",
+var CmdRun = &Command{
+	UsageLine: "run",
+	Short:     "run according a gopmfile",
 	Long: `
-build just like go build
+run just like go run
 `,
 }
 
 func init() {
-	CmdBuild.Run = runBuild
-	CmdBuild.Flags = map[string]bool{}
+	CmdRun.Run = runRun
+	CmdRun.Flags = map[string]bool{}
 }
 
-func printBuildPrompt(flag string) {
+func printRunPrompt(flag string) {
 }
 
-func runBuild(cmd *Command, args []string) {
+func runRun(cmd *Command, args []string) {
 	gopath := build.Default.GOPATH
 
 	genNewGoPath()
 
-	com.ColorLog("[INFO] building ...\n")
+	com.ColorLog("[INFO] running ...\n")
 
-	cmdArgs := []string{"go", "build"}
+	cmdArgs := []string{"go", "run"}
 	cmdArgs = append(cmdArgs, args...)
 	bCmd := exec.Command(cmdArgs[0], cmdArgs[1:]...)
 	bCmd.Stdout = os.Stdout
 	bCmd.Stderr = os.Stderr
 	err := bCmd.Run()
 	if err != nil {
-		com.ColorLog("[ERRO] build failed: %v\n", err)
+		com.ColorLog("[ERRO] run failed: %v\n", err)
 		return
 	}
 
@@ -62,5 +62,5 @@ func runBuild(cmd *Command, args []string) {
 		return
 	}
 
-	com.ColorLog("[SUCC] build successfully!\n")
+	com.ColorLog("[SUCC] run successfully!\n")
 }
