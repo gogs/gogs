@@ -3,7 +3,7 @@ gopm - Go Package Manager
 
 ![GPMGo_Logo](https://raw.github.com/gpmgo/gopmweb/master/static/img/gpmgo.png?raw=true)
 
-gopm(Go Package Manager) is a Go package manage tool for search, install, update and share packages in Go.
+Gopm(Go Package Manager) is a Go package manage tool for search, install, update and share packages in Go.
 
 **Attention** This application still in experiment, we'are working on new break version, you may use [old version](https://github.com/gpmgo/gopm/tree/v0.1.0) for now.
 
@@ -12,7 +12,7 @@ gopm(Go Package Manager) is a Go package manage tool for search, install, update
 Currently, gopm use soft symblink `ln -s` on Unix-like OS and `mklink -j` on Windows.
 Make sure that you have the command.
 
-# INSTALL
+# Install
 
 You should install Go and Go tool before install gopm currently.
 
@@ -24,9 +24,9 @@ This will install gopm on $GOPATH$/bin。Before using gopm, you should add this 
 
 # Features
 
-* Don't need to install git, svn, hg etct. for installing packages.
+* Don't need to install git, svn, hg etc. for installing packages.
 * Package has version
-* Every project has owner GOPATH
+* Every project has own GOPATH
 * Put your Go project on anywhere you want
 
 # Commands
