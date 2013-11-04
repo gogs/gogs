@@ -9,7 +9,8 @@ gopm(Go Package Manager) is a Go package manage tool for search, install, update
 
 # Requirement
 
-Currently, gopm use soft syb link
+Currently, gopm use soft symblink `ln -s` on Unix-like OS and `mklink -j` on Windows.
+Make sure that you have the command.
 
 # INSTALL
 
