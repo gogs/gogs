@@ -20,7 +20,7 @@ import (
 	"strings"
 )
 
-const APP_VER = "0.5.0.1103"
+const APP_VER = "0.5.1.1104"
 
 var (
 	AppPath  string

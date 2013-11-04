@@ -71,12 +71,16 @@ func getChildPkgs(cpath string, ppkg *doc.Pkg, cachePkgs map[string]*doc.Pkg) er
 			var newPath string
 			if !build.IsLocalImport(name) {
 				newPath = filepath.Join(installRepoPath, pkg.ImportPath)
-				if !com.IsExist(newPath) {
-					var t, ver string = doc.BRANCH, ""
-					node := doc.NewNode(pkg.ImportPath, pkg.ImportPath, t, ver, true)
-					nodes := []*doc.Node{node}
-					downloadPackages(nodes)
-					// should handler download failed
+				if pkgName != "" && strings.HasPrefix(pkg.ImportPath, pkgName) {
+					newPath = filepath.Join(curPath, pkg.ImportPath[len(pkgName)+1:])
+				} else {
+					if !com.IsExist(newPath) {
+						var t, ver string = doc.BRANCH, ""
+						node := doc.NewNode(pkg.ImportPath, pkg.ImportPath, t, ver, true)
+						nodes := []*doc.Node{node}
+						downloadPackages(nodes)
+						// should handler download failed
+					}
 				}
 			} else {
 				newPath, err = filepath.Abs(name)
@@ -96,8 +100,12 @@ func getChildPkgs(cpath string, ppkg *doc.Pkg, cachePkgs map[string]*doc.Pkg) er
 	return nil
 }
 
+var pkgName string
+var curPath string
+
 func genNewGoPath() {
-	curPath, err := os.Getwd()
+	var err error
+	curPath, err = os.Getwd()
 	if err != nil {
 		com.ColorLog("[ERRO] %v\n", err)
 		return
@@ -110,7 +118,6 @@ func genNewGoPath() {
 	}
 
 	gf := doc.NewGopmfile()
-	var pkgName string
 	gpmPath := filepath.Join(curPath, doc.GopmFileName)
 	if com.IsExist(gpmPath) {
 		com.ColorLog("[INFO] loading .gopmfile ...\n")
@@ -121,14 +128,14 @@ func genNewGoPath() {
 		}
 	}
 
+	installRepoPath = strings.Replace(reposDir, "~", hd, -1)
+
+	cachePkgs := make(map[string]*doc.Pkg)
 	if target, ok := gf.Sections["target"]; ok {
 		pkgName = target.Props["path"]
 		com.ColorLog("[INFO] target name is %v\n", pkgName)
 	}
 
-	installRepoPath = strings.Replace(reposDir, "~", hd, -1)
-
-	cachePkgs := make(map[string]*doc.Pkg)
 	err = getChildPkgs(curPath, nil, cachePkgs)
 	if err != nil {
 		com.ColorLog("[ERRO] %v\n", err)
