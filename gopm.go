@@ -33,7 +33,6 @@ import (
 
 // Test that go1.1 tag above is included in builds. main.go refers to this definition.
 const go11tag = true
-const APP_VER = "0.4.0.1012"
 
 var (
 	config map[string]interface{}
@@ -48,6 +47,7 @@ var commands = []*cmd.Command{
 	cmd.CmdGen,
 	cmd.CmdBuild,
 	cmd.CmdRun,
+	cmd.CmdVersion,
 	/*cmd.CmdInstall,
 
 	cmdClean,
@@ -58,7 +58,6 @@ var commands = []*cmd.Command{
 	cmdList,
 	cmdTest,
 	cmdTool,
-	cmdVersion,
 	cmdVet,
 
 	helpGopath,

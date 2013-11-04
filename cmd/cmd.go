@@ -20,6 +20,8 @@ import (
 	"strings"
 )
 
+const APP_VER = "0.5.0.1103"
+
 var (
 	AppPath  string
 	reposDir string = "~/.gopm/repos"
@@ -66,4 +68,21 @@ func (c *Command) Usage() {
 // it is a documentation pseudo-command such as importpath.
 func (c *Command) Runnable() bool {
 	return c.Run != nil
+}
+
+var CmdVersion = &Command{
+	UsageLine: "version",
+	Short:     "show version",
+	Long: `
+show version
+`,
+}
+
+func runVersion(cmd *Command, args []string) {
+	fmt.Println(APP_VER)
+}
+
+func init() {
+	CmdVersion.Run = runVersion
+	CmdVersion.Flags = map[string]bool{}
 }

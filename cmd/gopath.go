@@ -179,6 +179,12 @@ func genNewGoPath() {
 			com.ColorLog("[ERRO] make link error %v\n", err)
 			return
 		}
+		com.ColorLog("[INFO] change dir to %v\n", newPath)
+		err = os.Chdir(newPath)
+		if err != nil {
+			com.ColorLog("[ERRO] change current directory error %v\n", err)
+			return
+		}
 	}
 
 	com.ColorLog("[TRAC] set GOPATH=%v\n", newGoPath)
