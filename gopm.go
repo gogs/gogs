@@ -17,8 +17,6 @@ package main
 
 import (
 	"fmt"
-	"github.com/Unknwon/com"
-	"github.com/gpmgo/gopm/cmd"
 	"io"
 	"os"
 	"runtime"
@@ -27,6 +25,10 @@ import (
 	"text/template"
 	"unicode"
 	"unicode/utf8"
+
+	//"github.com/Unknwon/com"
+
+	"github.com/gpmgo/gopm/cmd"
 )
 
 // +build go1.1
@@ -34,37 +36,35 @@ import (
 // Test that go1.1 tag above is included in builds. main.go refers to this definition.
 const go11tag = true
 
-var (
-	config map[string]interface{}
-)
+const APP_VER = "0.5.1.1108"
 
 // Commands lists the available commands and help topics.
 // The order here is the order in which they are printed by 'gopm help'.
 var commands = []*cmd.Command{
 	cmd.CmdGet,
-	cmd.CmdSearch,
-	cmd.CmdServe,
+	//cmd.CmdSearch,
+	//cmd.CmdServe,
 	cmd.CmdGen,
-	cmd.CmdBuild,
 	cmd.CmdRun,
-	cmd.CmdVersion,
-	/*cmd.CmdInstall,
+	cmd.CmdBuild,
+	cmd.CmdInstall,
 
-	cmdClean,
-	cmdDoc,
-	cmdEnv,
-	cmdFix,
-	cmdFmt,
-	cmdList,
-	cmdTest,
-	cmdTool,
-	cmdVet,
+	/*
+		cmdClean,
+		cmdDoc,
+		cmdEnv,
+		cmdFix,
+		cmdFmt,
+		cmdList,
+		cmdTest,
+		cmdTool,
+		cmdVet,
 
-	helpGopath,
-	helpPackages,
-	helpRemote,
-	helpTestflag,
-	helpTestfunc,*/
+		helpGopath,
+		helpPackages,
+		helpRemote,
+		helpTestflag,
+		helpTestfunc,*/
 }
 
 func init() {
@@ -88,16 +88,16 @@ func main() {
 	// Check commands and run.
 	for _, comm := range commands {
 		if comm.Name() == args[0] && comm.Run != nil {
-			if comm.Name() != "serve" {
-				err := cmd.AutoRun()
-				if err == nil {
-					comm.Run(comm, args[1:])
-				} else {
-					com.ColorLog("[ERRO] %v\n", err)
-				}
-			} else {
-				comm.Run(comm, args[1:])
-			}
+			// if comm.Name() != "serve" {
+			// 	err := cmd.AutoRun()
+			// 	if err == nil {
+			// 		comm.Run(comm, args[1:])
+			// 	} else {
+			// 		com.ColorLog("[ERRO] %v\n", err)
+			// 	}
+			// } else {
+			comm.Run(comm, args[1:])
+			// }
 			exit()
 			return
 		}
@@ -119,11 +119,8 @@ func setExitStatus(n int) {
 	exitMu.Unlock()
 }
 
-var usageTemplate = `gopm is a package manage tool for Go programming language.
-
-Usage:
-
-	gopm command [arguments]
+var usageTemplate = `
+Usage: gopm <command> [args]
 
 The commands are:
 {{range .}}{{if .Runnable}}
@@ -137,7 +134,7 @@ Additional help topics:
 
 Use "gopm help [topic]" for more information about that topic.
 
-`
+` + `gopm@` + APP_VER + "\n"
 
 var helpTemplate = `{{if .Runnable}}usage: gopm {{.UsageLine}}
 
