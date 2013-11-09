@@ -1,2 +1,4 @@
 [target]
 path = github.com/gpmgo/gopm
+
+[deps]

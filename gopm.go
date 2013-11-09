@@ -16,17 +16,11 @@
 package main
 
 import (
-	"fmt"
-	"io"
 	"os"
 	"runtime"
-	"strings"
-	"sync"
-	"text/template"
-	"unicode"
-	"unicode/utf8"
 
 	//"github.com/Unknwon/com"
+	"github.com/codegangsta/cli"
 
 	"github.com/gpmgo/gopm/cmd"
 )
@@ -38,171 +32,33 @@ const go11tag = true
 
 const APP_VER = "0.5.1.1108"
 
-// Commands lists the available commands and help topics.
-// The order here is the order in which they are printed by 'gopm help'.
-var commands = []*cmd.Command{
-	cmd.CmdGet,
-	//cmd.CmdSearch,
-	//cmd.CmdServe,
-	cmd.CmdGen,
-	cmd.CmdRun,
-	cmd.CmdBuild,
-	cmd.CmdInstall,
+// 	//cmd.CmdSearch,
+// 	cmd.CmdGen,
+// 	cmd.CmdRun,
+// 	cmd.CmdBuild,
+// 	cmd.CmdInstall,
 
-	/*
-		cmdClean,
-		cmdDoc,
-		cmdEnv,
-		cmdFix,
-		cmdFmt,
-		cmdList,
-		cmdTest,
-		cmdTool,
-		cmdVet,
-
-		helpGopath,
-		helpPackages,
-		helpRemote,
-		helpTestflag,
-		helpTestfunc,*/
-}
+// 		cmdClean,
+// 		cmdDoc,
+// 		cmdEnv,
+// 		cmdFix,
+// 		cmdList,
+// 		cmdTest,
+// 		cmdTool,
+// 		cmdVet,
+// }
 
 func init() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 }
 
 func main() {
-	// Check length of arguments.
-	args := os.Args[1:]
-	if len(args) < 1 {
-		usage()
-		return
+	app := cli.NewApp()
+	app.Name = "gopm"
+	app.Usage = "Go Package Manager"
+	app.Version = APP_VER
+	app.Commands = []cli.Command{
+		cmd.CmdGet,
 	}
-
-	// Show help documentation.
-	if args[0] == "help" {
-		help(args[1:])
-		return
-	}
-
-	// Check commands and run.
-	for _, comm := range commands {
-		if comm.Name() == args[0] && comm.Run != nil {
-			// if comm.Name() != "serve" {
-			// 	err := cmd.AutoRun()
-			// 	if err == nil {
-			// 		comm.Run(comm, args[1:])
-			// 	} else {
-			// 		com.ColorLog("[ERRO] %v\n", err)
-			// 	}
-			// } else {
-			comm.Run(comm, args[1:])
-			// }
-			exit()
-			return
-		}
-	}
-
-	fmt.Fprintf(os.Stderr, "gopm: unknown subcommand %q\nRun 'gopm help' for usage.\n", args[0])
-	setExitStatus(2)
-	exit()
-}
-
-var exitStatus = 0
-var exitMu sync.Mutex
-
-func setExitStatus(n int) {
-	exitMu.Lock()
-	if exitStatus < n {
-		exitStatus = n
-	}
-	exitMu.Unlock()
-}
-
-var usageTemplate = `
-Usage: gopm <command> [args]
-
-The commands are:
-{{range .}}{{if .Runnable}}
-    {{.Name | printf "%-11s"}} {{.Short}}{{end}}{{end}}
-
-Use "gopm help [command]" for more information about a command.
-
-Additional help topics:
-{{range .}}{{if not .Runnable}}
-    {{.Name | printf "%-11s"}} {{.Short}}{{end}}{{end}}
-
-Use "gopm help [topic]" for more information about that topic.
-
-` + `gopm@` + APP_VER + "\n"
-
-var helpTemplate = `{{if .Runnable}}usage: gopm {{.UsageLine}}
-
-{{end}}{{.Long | trim}}
-`
-
-// tmpl executes the given template text on data, writing the result to w.
-func tmpl(w io.Writer, text string, data interface{}) {
-	t := template.New("top")
-	t.Funcs(template.FuncMap{"trim": strings.TrimSpace, "capitalize": capitalize})
-	template.Must(t.Parse(text))
-	if err := t.Execute(w, data); err != nil {
-		panic(err)
-	}
-}
-
-func capitalize(s string) string {
-	if s == "" {
-		return s
-	}
-	r, n := utf8.DecodeRuneInString(s)
-	return string(unicode.ToTitle(r)) + s[n:]
-}
-
-func printUsage(w io.Writer) {
-	tmpl(w, usageTemplate, commands)
-}
-
-func usage() {
-	printUsage(os.Stderr)
-	os.Exit(2)
-}
-
-// help implements the 'help' command.
-func help(args []string) {
-	if len(args) == 0 {
-		printUsage(os.Stdout)
-		// not exit 2: succeeded at 'gopm help'.
-		return
-	}
-	if len(args) != 1 {
-		fmt.Fprintf(os.Stderr, "usage: gopm help command\n\nToo many arguments given.\n")
-		os.Exit(2) // failed at 'gopm help'
-	}
-
-	arg := args[0]
-
-	for _, cmd := range commands {
-		if cmd.Name() == arg {
-			tmpl(os.Stdout, helpTemplate, cmd)
-			// not exit 2: succeeded at 'gopm help cmd'.
-			return
-		}
-	}
-
-	fmt.Fprintf(os.Stderr, "Unknown help topic %#q.  Run 'gopm help'.\n", arg)
-	os.Exit(2) // failed at 'gopm help cmd'
-}
-
-var atexitFuncs []func()
-
-func atexit(f func()) {
-	atexitFuncs = append(atexitFuncs, f)
-}
-
-func exit() {
-	for _, f := range atexitFuncs {
-		f()
-	}
-	os.Exit(exitStatus)
+	app.Run(os.Args)
 }
