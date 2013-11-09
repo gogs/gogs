@@ -5,6 +5,7 @@ import (
 	"github.com/gpmgo/gopm/doc"
 	"go/build"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 )
@@ -102,6 +103,51 @@ func getChildPkgs(cpath string, ppkg *doc.Pkg, cachePkgs map[string]*doc.Pkg) er
 
 var pkgName string
 var curPath string
+var newCurPath string
+var newGoPath string
+
+func execCmd(gopath, curPath string, args ...string) error {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+
+	com.ColorLog("[INFO] change current dir from %v to %v\n", cwd, curPath)
+	err = os.Chdir(filepath.Join(cwd, "vendor"))
+	if err != nil {
+		com.ColorLog("[ERRO] change current directory error %v\n", err)
+		return err
+	}
+	err = os.Chdir(curPath)
+	if err != nil {
+		com.ColorLog("[ERRO] change current directory error %v\n", err)
+		return err
+	}
+	defer os.Chdir(cwd)
+	ccmd := exec.Command("cd", curPath)
+	ccmd.Stdout = os.Stdout
+	ccmd.Stderr = os.Stderr
+	err = ccmd.Run()
+	if err != nil {
+		com.ColorLog("[ERRO] change current directory error %v\n", err)
+		return err
+	}
+
+	oldGoPath := os.Getenv("GOPATH")
+	com.ColorLog("[TRAC] set GOPATH from %v to %v\n", oldGoPath, gopath)
+
+	err = os.Setenv("GOPATH", gopath)
+	if err != nil {
+		com.ColorLog("[ERRO] %v\n", err)
+		return err
+	}
+	defer os.Setenv("GOPATH", oldGoPath)
+
+	cmd := exec.Command(args[0], args[1:]...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	return cmd.Run()
+}
 
 func genNewGoPath() {
 	var err error
@@ -136,15 +182,19 @@ func genNewGoPath() {
 		com.ColorLog("[INFO] target name is %v\n", pkgName)
 	}
 
+	if pkgName == "" {
+		_, pkgName = filepath.Split(curPath)
+	}
+
 	err = getChildPkgs(curPath, nil, cachePkgs)
 	if err != nil {
 		com.ColorLog("[ERRO] %v\n", err)
 		return
 	}
 
-	newGoPath := filepath.Join(curPath, "vendor")
-	os.RemoveAll(newGoPath)
+	newGoPath = filepath.Join(curPath, "vendor")
 	newGoPathSrc := filepath.Join(newGoPath, "src")
+	os.RemoveAll(newGoPathSrc)
 	os.MkdirAll(newGoPathSrc, os.ModePerm)
 
 	for name, _ := range cachePkgs {
@@ -178,26 +228,11 @@ func genNewGoPath() {
 		}
 	}
 
-	if pkgName != "" {
-		newPath := filepath.Join(newGoPathSrc, pkgName)
-		com.ColorLog("[INFO] linked %v\n", pkgName)
-		err = autoLink(curPath, newPath)
-		if err != nil {
-			com.ColorLog("[ERRO] make link error %v\n", err)
-			return
-		}
-		com.ColorLog("[INFO] change dir to %v\n", newPath)
-		err = os.Chdir(newPath)
-		if err != nil {
-			com.ColorLog("[ERRO] change current directory error %v\n", err)
-			return
-		}
-	}
-
-	com.ColorLog("[TRAC] set GOPATH=%v\n", newGoPath)
-	err = os.Setenv("GOPATH", newGoPath)
+	newCurPath = filepath.Join(newGoPathSrc, pkgName)
+	com.ColorLog("[INFO] linked %v\n", pkgName)
+	err = autoLink(curPath, newCurPath)
 	if err != nil {
-		com.ColorLog("[ERRO] %v\n", err)
+		com.ColorLog("[ERRO] make link error %v\n", err)
 		return
 	}
 }

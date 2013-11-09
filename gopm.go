@@ -48,9 +48,9 @@ var commands = []*cmd.Command{
 	cmd.CmdBuild,
 	cmd.CmdRun,
 	cmd.CmdVersion,
-	/*cmd.CmdInstall,
+	cmd.CmdInstall,
 
-	cmdClean,
+	/*cmdClean,
 	cmdDoc,
 	cmdEnv,
 	cmdFix,

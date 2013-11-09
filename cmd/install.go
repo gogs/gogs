@@ -16,9 +16,6 @@ package cmd
 
 import (
 	"github.com/Unknwon/com"
-	"go/build"
-	"os"
-	"os/exec"
 )
 
 var CmdInstall = &Command{
@@ -38,27 +35,15 @@ func printInstallPrompt(flag string) {
 }
 
 func runInstall(cmd *Command, args []string) {
-	gopath := build.Default.GOPATH
-
 	genNewGoPath()
 
 	com.ColorLog("[INFO] installing ...\n")
 
-	cmdArgs := []string{"go", "install"}
-	cmdArgs = append(cmdArgs, args...)
-	bCmd := exec.Command(cmdArgs[0], cmdArgs[1:]...)
-	bCmd.Stdout = os.Stdout
-	bCmd.Stderr = os.Stderr
-	err := bCmd.Run()
+	cmds := []string{"go", "install"}
+	cmds = append(cmds, args...)
+	err := execCmd(newGoPath, newCurPath, cmds...)
 	if err != nil {
 		com.ColorLog("[ERRO] install failed: %v\n", err)
-		return
-	}
-
-	com.ColorLog("[TRAC] set GOPATH=%v\n", gopath)
-	err = os.Setenv("GOPATH", gopath)
-	if err != nil {
-		com.ColorLog("[ERRO] %v\n", err)
 		return
 	}
 
