@@ -52,12 +52,6 @@ func printSearchPrompt(flag string) {
 
 // search packages
 func runSearch(cmd *Command, args []string) {
-	// Check flags.
-	num := checkFlags(cmd.Flags, args, printSearchPrompt)
-	if num == -1 {
-		return
-	}
-	args = args[num:]
 
 	// Check length of arguments.
 	if len(args) < 1 {

@@ -21,7 +21,86 @@ import (
 	"strings"
 
 	"github.com/Unknwon/com"
+
+	"github.com/gpmgo/gopm/log"
 )
+
+// GetDirsInfo returns os.FileInfo of all sub-directories in root path.
+func GetDirsInfo(rootPath string) []os.FileInfo {
+	rootDir, err := os.Open(rootPath)
+	if err != nil {
+		log.Error("", "Fail to open directory")
+		log.Fatal("", err.Error())
+	}
+	defer rootDir.Close()
+
+	dirs, err := rootDir.Readdir(0)
+	if err != nil {
+		log.Error("", "Fail to read directory")
+		log.Fatal("", err.Error())
+	}
+
+	return dirs
+}
+
+// GetImports returns package denpendencies.
+func GetImports(absPath, importPath string, example bool) (imports []string) {
+	fis := GetDirsInfo(absPath)
+	absPath += "/"
+
+	dirs := make([]string, 0)
+	files := make([]*source, 0, 10)
+	for _, fi := range fis {
+		if fi.IsDir() {
+			dirs = append(dirs, absPath+fi.Name())
+			continue
+		}
+
+		if strings.HasSuffix(fi.Name(), ".go") {
+			data, err := com.ReadFile(absPath + fi.Name())
+			if err != nil {
+				log.Error("", "Fail to read file")
+				log.Fatal("", err.Error())
+			}
+
+			files = append(files, &source{
+				name: fi.Name(),
+				data: data,
+			})
+		}
+	}
+
+	var err error
+	if len(files) > 0 {
+		w := &walker{ImportPath: importPath}
+		imports, err = w.build(files, nil)
+		if err != nil {
+			log.Error("", "Fail to get imports")
+			log.Fatal("", err.Error())
+		}
+	}
+
+	if len(dirs) > 0 {
+		imports = append(imports, GetAllImports(dirs, importPath, example)...)
+	}
+	return imports
+}
+
+func isVcsPath(dirPath string) bool {
+	return strings.Contains(dirPath, "/.git") ||
+		strings.Contains(dirPath, "/.hg") ||
+		strings.Contains(dirPath, "/.svn")
+}
+
+func GetAllImports(dirs []string, importPath string, example bool) (imports []string) {
+	for _, d := range dirs {
+		if !isVcsPath(d) &&
+			!(!example && strings.Contains(d, "example")) {
+			imports = append(imports, GetImports(d, importPath, example)...)
+		}
+	}
+	return imports
+}
 
 // GetGOPATH returns best matched GOPATH.
 func GetBestMatchGOPATH(appPath string) string {
@@ -34,22 +113,6 @@ func GetBestMatchGOPATH(appPath string) string {
 	return paths[0]
 }
 
-// GetDirsInfo returns os.FileInfo of all sub-directories in root path.
-func GetDirsInfo(rootPath string) ([]os.FileInfo, error) {
-	rootDir, err := os.Open(rootPath)
-	if err != nil {
-		return nil, err
-	}
-	defer rootDir.Close()
-
-	dirs, err := rootDir.Readdir(0)
-	if err != nil {
-		return nil, err
-	}
-
-	return dirs, err
-}
-
 // CheckIsExistWithVCS returns false if directory only has VCS folder,
 // or doesn't exist.
 func CheckIsExistWithVCS(path string) bool {
@@ -59,11 +122,7 @@ func CheckIsExistWithVCS(path string) bool {
 	}
 
 	// Check if only has VCS folder.
-	dirs, err := GetDirsInfo(path)
-	if err != nil {
-		com.ColorLog("[ERRO] CheckIsExistWithVCS -> [ %s ]\n", err)
-		return false
-	}
+	dirs := GetDirsInfo(path)
 
 	if len(dirs) > 1 {
 		return true
@@ -478,7 +537,6 @@ var standardPath = map[string]bool{
 	"cmd/cgo":             true,
 	"cmd/fix":             true,
 	"cmd/go":              true,
-	"cmd/godoc":           true,
 	"cmd/gofmt":           true,
 	"cmd/vet":             true,
 	"cmd/yacc":            true,
@@ -594,6 +652,7 @@ var standardPath = map[string]bool{
 	"runtime/cgo":         true,
 	"runtime/debug":       true,
 	"runtime/pprof":       true,
+	"runtime/race":        true,
 	"sort":                true,
 	"strconv":             true,
 	"strings":             true,

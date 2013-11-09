@@ -243,10 +243,7 @@ metaScan:
 }
 
 func getImports(rootPath string, match map[string]string, cmdFlags map[string]bool, nod *Node) (imports []string) {
-	dirs, err := GetDirsInfo(rootPath)
-	if err != nil {
-		return nil
-	}
+	dirs := GetDirsInfo(rootPath)
 
 	for _, d := range dirs {
 		if d.IsDir() && !(!cmdFlags["-e"] && strings.Contains(d.Name(), "example")) {

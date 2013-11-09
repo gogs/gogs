@@ -64,12 +64,6 @@ func getPkgs(path string, inludeSys bool) ([]string, error) {
 
 // scan a directory and gen a gopm file
 func runGen(cmd *Command, args []string) {
-	// Check flags.
-	num := checkFlags(cmd.Flags, args, printGenPrompt)
-	if num == -1 {
-		return
-	}
-	args = args[num:]
 
 	var gopmFile string = ".gopmfile"
 	if len(args) > 0 {

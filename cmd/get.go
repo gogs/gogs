@@ -18,6 +18,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/Unknwon/com"
@@ -59,145 +60,149 @@ func init() {
 }
 
 func runGet(ctx *cli.Context) {
-	// Check number of arguments.
-	switch len(ctx.Args()) {
-	case 0:
-		getByGopmfile(ctx)
-	}
-}
-
-func getByGopmfile(ctx *cli.Context) {
-	if !com.IsFile(".gopmfile") {
-		log.Fatal("install", "No argument is supplied and no gopmfile exist")
-	}
-
 	hd, err := com.HomeDir()
 	if err != nil {
-		log.Error("install", "Fail to get current user")
+		log.Error("get", "Fail to get current user")
 		log.Fatal("", err.Error())
 	}
 
 	installRepoPath = strings.Replace(reposDir, "~", hd, -1)
 	log.Log("Local repository path: %s", installRepoPath)
 
-	// TODO: 获取依赖包
-
-	log.Error("install", "command haven't done yet!")
+	// Check number of arguments.
+	switch len(ctx.Args()) {
+	case 0:
+		getByGopmfile(ctx)
+	default:
+		getByPath(ctx)
+	}
 }
 
-func processGet() {
-
-}
-
-func runGet1(cmd *Command, args []string) {
-	nodes := []*doc.Node{}
-	// ver describles branch, tag or commit.
-	var t, ver string = doc.BRANCH, ""
-
-	var err error
-	if len(args) >= 2 {
-		t, ver, err = validPath(args[1])
-		if err != nil {
-			com.ColorLog("[ERROR] Fail to parse 'args'[ %s ]\n", err)
-			return
-		}
+func getByGopmfile(ctx *cli.Context) {
+	if !com.IsFile(".gopmfile") {
+		log.Fatal("get", "No argument is supplied and no gopmfile exist")
 	}
 
-	node := doc.NewNode(args[0], args[0], t, ver, true)
-	nodes = append(nodes, node)
+	gf := doc.NewGopmfile(".")
 
-	// Download package(s).
-	downloadPackages(nodes)
+	absPath, err := filepath.Abs(".")
+	if err != nil {
+		log.Error("", "Fail to get absolute path of work directory")
+		log.Fatal("", err.Error())
+	}
 
-	com.ColorLog("[INFO] %d package(s) downloaded, %d failed.\n",
+	log.Log("Work directory: %s", absPath)
+
+	// Get dependencies.
+	imports := doc.GetAllImports([]string{absPath},
+		gf.MustValue("target", "path"), ctx.Bool("example"))
+
+	nodes := make([]*doc.Node, 0, len(imports))
+	for _, p := range imports {
+		node := doc.NewNode(p, p, doc.BRANCH, "", true)
+
+		// Check if user specified the version.
+		if v, err := gf.GetValue("deps", p); err == nil {
+			tp, ver, err := validPath(v)
+			if err != nil {
+				log.Error("", "Fail to parse version")
+				log.Fatal("", err.Error())
+			}
+			node.Type = tp
+			node.Value = ver
+		}
+		nodes = append(nodes, node)
+	}
+
+	downloadPackages(ctx, nodes)
+
+	log.Log("%d package(s) downloaded, %d failed",
 		downloadCount, failConut)
 }
 
-// printGetPrompt prints prompt information to users to
-// let them know what's going on.
-func printGetPrompt(flag string) {
-	switch flag {
-	case "-d":
-		com.ColorLog("[INFO] You enabled download without installing.\n")
-	case "-u":
-		com.ColorLog("[INFO] You enabled force update.\n")
-	case "-e":
-		com.ColorLog("[INFO] You enabled download dependencies of example(s).\n")
-	}
-}
+func getByPath(ctx *cli.Context) {
+	nodes := make([]*doc.Node, 0, len(ctx.Args()))
+	for _, info := range ctx.Args() {
+		pkg := info
+		node := doc.NewNode(pkg, pkg, doc.BRANCH, "", true)
 
-// checkFlags checks if the flag exists with correct format.
-func checkFlags(flags map[string]bool, args []string, print func(string)) int {
-	num := 0 // Number of valid flags, use to cut out.
-	for i, f := range args {
-		// Check flag prefix '-'.
-		if !strings.HasPrefix(f, "-") {
-			// Not a flag, finish check process.
-			break
-		}
-
-		// Check if it a valid flag.
-		if v, ok := flags[f]; ok {
-			flags[f] = !v
-			if !v {
-				print(f)
-			} else {
-				fmt.Println("DISABLE: " + f)
+		if i := strings.Index(info, "@"); i > -1 {
+			pkg = info[:i]
+			tp, ver, err := validPath(info[i+1:])
+			if err != nil {
+				log.Error("", "Fail to parse version")
+				log.Fatal("", err.Error())
 			}
-		} else {
-			com.ColorLog("[ERRO] Unknown flag: %s.\n", f)
-			return -1
+			node = doc.NewNode(pkg, pkg, tp, ver, true)
 		}
-		num = i + 1
+
+		// Cheeck package name.
+		if !strings.Contains(pkg, "/") {
+			name, ok := doc.PackageNameList[pkg]
+			if !ok {
+				log.Error("", "Invalid package name: "+pkg)
+				log.Fatal("", "No match in the package name list")
+			}
+			pkg = name
+		}
+
+		nodes = append(nodes, node)
 	}
 
-	return num
+	downloadPackages(ctx, nodes)
+
+	log.Log("%d package(s) downloaded, %d failed",
+		downloadCount, failConut)
 }
 
 // downloadPackages downloads packages with certain commit,
 // if the commit is empty string, then it downloads all dependencies,
 // otherwise, it only downloada package with specific commit only.
-func downloadPackages(nodes []*doc.Node) {
+func downloadPackages(ctx *cli.Context, nodes []*doc.Node) {
 	// Check all packages, they may be raw packages path.
 	for _, n := range nodes {
 		// Check if it is a valid remote path.
 		if doc.IsValidRemotePath(n.ImportPath) {
-			// if !CmdGet.Flags["-u"] {
-			// 	// Check if package has been downloaded.
-			// 	installPath := installRepoPath + "/" + doc.GetProjectPath(n.ImportPath)
-			// 	if len(n.Value) > 0 {
-			// 		installPath += "." + n.Value
-			// 	}
-			// 	if com.IsExist(installPath) {
-			// 		com.ColorLog("[WARN] Skipped installed package( %s => %s:%s )\n",
-			// 			n.ImportPath, n.Type, doc.CheckNodeValue(n.Value))
-			// 		continue
-			// 	}
-			// }
+			if !ctx.Bool("force") {
+				// Check if package has been downloaded.
+				installPath := installRepoPath + "/" + doc.GetProjectPath(n.ImportPath)
+				if len(n.Value) > 0 {
+					installPath += "." + n.Value
+				}
+				if com.IsExist(installPath) {
+					log.Trace("Skipped installed package: %s@%s:%s",
+						n.ImportPath, n.Type, doc.CheckNodeValue(n.Value))
+					continue
+				}
+			}
 
 			if !downloadCache[n.ImportPath] {
 				// Download package.
 				nod, imports := downloadPackage(n)
 				if len(imports) > 0 {
+					// TODO: 检查是否有 gopmfile
+
 					// Need to download dependencies.
 					// Generate temporary nodes.
 					nodes := make([]*doc.Node, len(imports))
 					for i := range nodes {
 						nodes[i] = doc.NewNode(imports[i], imports[i], doc.BRANCH, "", true)
 					}
-					downloadPackages(nodes)
+					downloadPackages(ctx, nodes)
 				}
 
 				// Only save package information with specific commit.
 				if nod != nil {
 					// Save record in local nodes.
-					com.ColorLog("[SUCC] Downloaded package( %s => %s:%s )\n",
-						n.ImportPath, n.Type, doc.CheckNodeValue(n.Value))
+					log.Success("SUCC", "GET", fmt.Sprintf("%s@%s:%s",
+						n.ImportPath, n.Type, doc.CheckNodeValue(n.Value)))
 					downloadCount++
+
+					// TODO: 保存包信息
 					//saveNode(nod)
 				}
 			} else {
-				com.ColorLog("[WARN] Skipped downloaded package( %s => %s:%s )\n",
+				log.Trace("Skipped downloaded package: %s@%s:%s",
 					n.ImportPath, n.Type, doc.CheckNodeValue(n.Value))
 			}
 		} else if n.ImportPath == "C" {
@@ -213,15 +218,16 @@ func downloadPackages(nodes []*doc.Node) {
 
 // downloadPackage downloads package either use version control tools or not.
 func downloadPackage(nod *doc.Node) (*doc.Node, []string) {
-	com.ColorLog("[TRAC] Downloading package( %s => %s:%s )\n",
-		nod.ImportPath, nod.Type, doc.CheckNodeValue(nod.Value))
+	log.Message("Downloading", fmt.Sprintf("package: %s@%s:%s",
+		nod.ImportPath, nod.Type, doc.CheckNodeValue(nod.Value)))
 	// Mark as donwloaded.
 	downloadCache[nod.ImportPath] = true
 
 	imports, err := doc.PureDownload(nod, installRepoPath, nil) //CmdGet.Flags)
 
 	if err != nil {
-		com.ColorLog("[ERRO] Download falied( %s )[ %s ]\n", nod.ImportPath, err)
+		log.Error("Get", "Fail to download pakage: "+nod.ImportPath)
+		log.Fatal("", err.Error())
 		failConut++
 		os.RemoveAll(installRepoPath + "/" + doc.GetProjectPath(nod.ImportPath) + "/")
 		return nil, nil
@@ -231,12 +237,10 @@ func downloadPackage(nod *doc.Node) (*doc.Node, []string) {
 
 // validPath checks if the information of the package is valid.
 func validPath(info string) (string, string, error) {
-	infos := strings.Split(info, ":")
+	infos := strings.SplitN(info, ":", 2)
 
 	l := len(infos)
 	switch {
-	case l > 2:
-		return "", "", errors.New("Invalid information of package")
 	case l == 1:
 		return doc.BRANCH, "", nil
 	case l == 2:
@@ -246,6 +250,6 @@ func validPath(info string) (string, string, error) {
 		}
 		return infos[0], infos[1], nil
 	default:
-		return "", "", errors.New("Cannot match any case")
+		return "", "", errors.New("Invalid version information")
 	}
 }

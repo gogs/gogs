@@ -17,15 +17,13 @@ package log
 import (
 	"fmt"
 	"os"
-
-	"github.com/aybabtme/color/brush"
 )
 
 func Error(hl, msg string) {
 	if len(hl) > 0 {
-		hl = " " + brush.Red(hl).String()
+		hl = " " + hl
 	}
-	fmt.Printf("gopm %s%s %s\n", brush.Red("ERR!"), hl, msg)
+	fmt.Printf("gopm ERR!%s %s\n", hl, msg)
 }
 
 func Fatal(hl, msg string) {
@@ -34,25 +32,25 @@ func Fatal(hl, msg string) {
 }
 
 func Log(format string, args ...interface{}) {
-	fmt.Printf("gopm %s %s\n", brush.White("INFO"),
+	fmt.Printf("gopm INFO %s\n",
 		fmt.Sprintf(format, args...))
 }
 
 func Trace(format string, args ...interface{}) {
-	fmt.Printf("gopm %s %s\n", brush.Blue("TRAC"),
+	fmt.Printf("gopm TRAC %s\n",
 		fmt.Sprintf(format, args...))
 }
 
 func Success(title, hl, msg string) {
 	if len(hl) > 0 {
-		hl = " " + brush.Green(hl).String()
+		hl = " " + hl
 	}
-	fmt.Printf("gopm %s%s %s\n", brush.Green(title), hl, msg)
+	fmt.Printf("gopm %s%s %s\n", title, hl, msg)
 }
 
 func Message(hl, msg string) {
 	if len(hl) > 0 {
-		hl = " " + brush.Yellow(hl).String()
+		hl = " " + hl
 	}
-	fmt.Printf("gopm %s%s %s\n", brush.Yellow("MSG!"), hl, msg)
+	fmt.Printf("gopm MSG!%s %s\n", hl, msg)
 }
