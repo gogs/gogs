@@ -21,8 +21,7 @@ import (
 )
 
 var (
-	AppPath  string
-	reposDir string = "~/.gopm/repos"
+	AppPath string
 )
 
 // A Command is an implementation of a go command

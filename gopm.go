@@ -19,7 +19,6 @@ import (
 	"os"
 	"runtime"
 
-	//"github.com/Unknwon/com"
 	"github.com/codegangsta/cli"
 
 	"github.com/gpmgo/gopm/cmd"
@@ -30,10 +29,9 @@ import (
 // Test that go1.1 tag above is included in builds. main.go refers to this definition.
 const go11tag = true
 
-const APP_VER = "0.5.1.1108"
+const APP_VER = "0.5.3.1109"
 
 // 	//cmd.CmdSearch,
-// 	cmd.CmdGen,
 // 	cmd.CmdRun,
 // 	cmd.CmdBuild,
 // 	cmd.CmdInstall,
@@ -59,6 +57,7 @@ func main() {
 	app.Version = APP_VER
 	app.Commands = []cli.Command{
 		cmd.CmdGet,
+		cmd.CmdGen,
 	}
 	app.Run(os.Args)
 }

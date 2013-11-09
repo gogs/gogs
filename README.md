@@ -30,51 +30,26 @@ The executable will be produced under `$GOPATH/bin` in your file system; for glo
 - When build program with `gopm build` or `gopm install`, everything just happen in its own GOPATH and do not bother anything you've done.
 * Put your Go project on anywhere you want.
 
-# Quick start
-
-1. Show the command help
+# Commands
 
 ```
-gopm help
-```
+NAME:
+   gopm - Go Package Manager
 
-2. Show gopm version
+USAGE:
+   gopm [global options] command [command options] [arguments...]
 
-```
-gopm version
-```
+VERSION:
+   0.5.2.1109
 
-3. Get a package
+COMMANDS:
+   get		fetch remote package(s) and dependencies to local repository
+   gen		generate a gopmfile according current go project
+   help, h	Shows a list of commands or help for one command
 
-```
-gopm get github.com/gpmgo/gopm
-```
-
-4. Search a package
-
-```
-gopm search gopm
-```
-
-5. Build a project, the build's arguments are the same as go build. But it will check all the dependencies and dowload them.
-
-```
-<change to project directory>
-gopm build
-```
-
-6. Run a go file
-
-```
-<change to project directory>
-gopm run main.go
-```
-
-7. Install 
-
-```
-<change to project directory>
-gopm install
+GLOBAL OPTIONS:
+   --version	print the version
+   --help, -h	show help
 ```
 
 

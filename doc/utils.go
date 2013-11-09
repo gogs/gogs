@@ -15,6 +15,7 @@
 package doc
 
 import (
+	"go/build"
 	"os"
 	"path"
 	"regexp"
@@ -44,42 +45,31 @@ func GetDirsInfo(rootPath string) []os.FileInfo {
 }
 
 // GetImports returns package denpendencies.
-func GetImports(absPath, importPath string, example bool) (imports []string) {
-	fis := GetDirsInfo(absPath)
-	absPath += "/"
-
-	dirs := make([]string, 0)
-	files := make([]*source, 0, 10)
-	for _, fi := range fis {
-		if fi.IsDir() {
-			dirs = append(dirs, absPath+fi.Name())
-			continue
-		}
-
-		if strings.HasSuffix(fi.Name(), ".go") {
-			data, err := com.ReadFile(absPath + fi.Name())
-			if err != nil {
-				log.Error("", "Fail to read file")
-				log.Fatal("", err.Error())
-			}
-
-			files = append(files, &source{
-				name: fi.Name(),
-				data: data,
-			})
-		}
-	}
-
-	var err error
-	if len(files) > 0 {
-		w := &walker{ImportPath: importPath}
-		imports, err = w.build(files, nil)
-		if err != nil {
+func GetImports(absPath, importPath string, example bool) []string {
+	pkg, err := build.ImportDir(absPath, build.AllowBinary)
+	if err != nil {
+		if _, ok := err.(*build.NoGoError); !ok {
 			log.Error("", "Fail to get imports")
 			log.Fatal("", err.Error())
 		}
 	}
 
+	fis := GetDirsInfo(absPath)
+	absPath += "/"
+
+	dirs := make([]string, 0)
+	for _, fi := range fis {
+		if fi.IsDir() {
+			dirs = append(dirs, absPath+fi.Name())
+		}
+	}
+
+	imports := make([]string, 0, len(pkg.Imports))
+	for _, p := range pkg.Imports {
+		if !IsGoRepoPath(p) && !strings.HasPrefix(p, importPath) {
+			imports = append(imports, p)
+		}
+	}
 	if len(dirs) > 0 {
 		imports = append(imports, GetAllImports(dirs, importPath, example)...)
 	}

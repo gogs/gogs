@@ -22,6 +22,7 @@ import (
 	"strings"
 
 	"github.com/Unknwon/com"
+	"github.com/Unknwon/goconfig"
 	"github.com/codegangsta/cli"
 
 	"github.com/gpmgo/gopm/doc"
@@ -66,7 +67,10 @@ func runGet(ctx *cli.Context) {
 		log.Fatal("", err.Error())
 	}
 
-	installRepoPath = strings.Replace(reposDir, "~", hd, -1)
+	doc.HomeDir = strings.Replace(doc.HomeDir, "~", hd, -1)
+	doc.LoadPkgNameList(doc.HomeDir + "/data/pkgname.list")
+
+	installRepoPath = doc.HomeDir + "/repos"
 	log.Log("Local repository path: %s", installRepoPath)
 
 	// Check number of arguments.
@@ -102,7 +106,7 @@ func getByGopmfile(ctx *cli.Context) {
 		node := doc.NewNode(p, p, doc.BRANCH, "", true)
 
 		// Check if user specified the version.
-		if v, err := gf.GetValue("deps", p); err == nil {
+		if v, err := gf.GetValue("deps", p); err == nil && len(v) > 0 {
 			tp, ver, err := validPath(v)
 			if err != nil {
 				log.Error("", "Fail to parse version")
@@ -115,6 +119,13 @@ func getByGopmfile(ctx *cli.Context) {
 	}
 
 	downloadPackages(ctx, nodes)
+
+	if doc.LocalNodes != nil {
+		if err := goconfig.SaveConfigFile(doc.LocalNodes,
+			doc.HomeDir+doc.LocalNodesFile); err != nil {
+			log.Error("Get", "Fail to save localnodes.list")
+		}
+	}
 
 	log.Log("%d package(s) downloaded, %d failed",
 		downloadCount, failConut)
@@ -151,6 +162,13 @@ func getByPath(ctx *cli.Context) {
 
 	downloadPackages(ctx, nodes)
 
+	if doc.LocalNodes != nil {
+		if err := goconfig.SaveConfigFile(doc.LocalNodes,
+			doc.HomeDir+doc.LocalNodesFile); err != nil {
+			log.Error("Get", "Fail to save localnodes.list")
+		}
+	}
+
 	log.Log("%d package(s) downloaded, %d failed",
 		downloadCount, failConut)
 }
@@ -163,12 +181,13 @@ func downloadPackages(ctx *cli.Context, nodes []*doc.Node) {
 	for _, n := range nodes {
 		// Check if it is a valid remote path.
 		if doc.IsValidRemotePath(n.ImportPath) {
+			installPath := installRepoPath + "/" + doc.GetProjectPath(n.ImportPath)
+			if len(n.Value) > 0 {
+				installPath += "." + n.Value
+			}
+
 			if !ctx.Bool("force") {
 				// Check if package has been downloaded.
-				installPath := installRepoPath + "/" + doc.GetProjectPath(n.ImportPath)
-				if len(n.Value) > 0 {
-					installPath += "." + n.Value
-				}
 				if com.IsExist(installPath) {
 					log.Trace("Skipped installed package: %s@%s:%s",
 						n.ImportPath, n.Type, doc.CheckNodeValue(n.Value))
@@ -180,13 +199,37 @@ func downloadPackages(ctx *cli.Context, nodes []*doc.Node) {
 				// Download package.
 				nod, imports := downloadPackage(n)
 				if len(imports) > 0 {
-					// TODO: 检查是否有 gopmfile
+					var gf *goconfig.ConfigFile
+
+					// Check if has gopmfile
+					if com.IsFile(installPath + "/.gopmfile") {
+						log.Log("Found gopmgile: %s@%s:%s",
+							n.ImportPath, n.Type, doc.CheckNodeValue(n.Value))
+
+						gf = doc.NewGopmfile(installPath + "/.gopmfile")
+					}
 
 					// Need to download dependencies.
 					// Generate temporary nodes.
 					nodes := make([]*doc.Node, len(imports))
 					for i := range nodes {
 						nodes[i] = doc.NewNode(imports[i], imports[i], doc.BRANCH, "", true)
+
+						if gf == nil {
+							continue
+						}
+
+						// Check if user specified the version.
+						if v, err := gf.GetValue("deps", imports[i]); err == nil &&
+							len(v) > 0 {
+							tp, ver, err := validPath(v)
+							if err != nil {
+								log.Error("Download", "Fail to parse version")
+								log.Fatal("", err.Error())
+							}
+							nodes[i].Type = tp
+							nodes[i].Value = ver
+						}
 					}
 					downloadPackages(ctx, nodes)
 				}
@@ -198,8 +241,10 @@ func downloadPackages(ctx *cli.Context, nodes []*doc.Node) {
 						n.ImportPath, n.Type, doc.CheckNodeValue(n.Value)))
 					downloadCount++
 
-					// TODO: 保存包信息
-					//saveNode(nod)
+					// Only save non-commit node.
+					if len(nod.Value) == 0 {
+						doc.SaveNode(nod)
+					}
 				}
 			} else {
 				log.Trace("Skipped downloaded package: %s@%s:%s",
