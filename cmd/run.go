@@ -28,9 +28,10 @@ import (
 var CmdRun = cli.Command{
 	Name:  "run",
 	Usage: "link dependencies and go run",
-	Description: `Command run links dependencies according to gopmfile
+	Description: `Command run links dependencies according to gopmfile,
+and execute 'go run'
 
-gopm run <file names>`,
+gopm run <go run commands>`,
 	Action: runRun,
 }
 

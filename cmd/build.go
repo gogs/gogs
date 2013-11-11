@@ -15,37 +15,33 @@
 package cmd
 
 import (
-	"github.com/Unknwon/com"
+	"github.com/codegangsta/cli"
+
+	"github.com/gpmgo/gopm/log"
 )
 
-var CmdBuild = &Command{
-	UsageLine: "build",
-	Short:     "build according a gopmfile",
-	Long: `
-build just like go build
-`,
+var CmdBuild = cli.Command{
+	Name:  "build",
+	Usage: "link dependencies and go build",
+	Description: `Command build links dependencies according to gopmfile,
+and execute 'go build'
+
+gopm build <go build commands>`,
+	Action: runBuild,
 }
 
-func init() {
-	CmdBuild.Run = runBuild
-	CmdBuild.Flags = map[string]bool{}
-}
+func runBuild(ctx *cli.Context) {
+	genNewGoPath(ctx)
 
-func printBuildPrompt(flag string) {
-}
+	log.Trace("Building...")
 
-func runBuild(cmd *Command, args []string) {
-	//genNewGoPath()
-
-	com.ColorLog("[INFO] building ...\n")
-
-	cmds := []string{"go", "build"}
-	cmds = append(cmds, args...)
-	err := execCmd(newGoPath, newCurPath, cmds...)
+	cmdArgs := []string{"go", "build"}
+	cmdArgs = append(cmdArgs, ctx.Args()...)
+	err := execCmd(newGoPath, newCurPath, cmdArgs...)
 	if err != nil {
-		com.ColorLog("[ERRO] build failed: %v\n", err)
-		return
+		log.Error("Build", "Fail to build program")
+		log.Fatal("", err.Error())
 	}
 
-	com.ColorLog("[SUCC] build successfully!\n")
+	log.Success("SUCC", "Build", "Command execute successfully!")
 }

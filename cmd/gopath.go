@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"go/build"
 	"os"
 	"os/exec"
@@ -110,44 +111,54 @@ var newGoPath string
 func execCmd(gopath, curPath string, args ...string) error {
 	cwd, err := os.Getwd()
 	if err != nil {
-		return err
+		log.Error("", "Fail to get work directory")
+		log.Fatal("", err.Error())
 	}
 
-	com.ColorLog("[INFO] change current dir from %v to %v\n", cwd, curPath)
-	err = os.Chdir(filepath.Join(cwd, "vendor"))
-	if err != nil {
-		com.ColorLog("[ERRO] change current directory error %v\n", err)
-		return err
-	}
+	log.Log("Changing work directory to %s", curPath)
 	err = os.Chdir(curPath)
 	if err != nil {
-		com.ColorLog("[ERRO] change current directory error %v\n", err)
-		return err
+		log.Error("", "Fail to change work directory")
+		log.Fatal("", err.Error())
 	}
-	defer os.Chdir(cwd)
+	defer func() {
+		log.Log("Changing work directory back to %s", cwd)
+		os.Chdir(cwd)
+	}()
+
 	ccmd := exec.Command("cd", curPath)
 	ccmd.Stdout = os.Stdout
 	ccmd.Stderr = os.Stderr
 	err = ccmd.Run()
 	if err != nil {
-		com.ColorLog("[ERRO] change current directory error %v\n", err)
-		return err
+		log.Error("", "Fail to change work directory")
+		log.Fatal("", err.Error())
 	}
 
 	oldGoPath := os.Getenv("GOPATH")
-	com.ColorLog("[TRAC] set GOPATH from %v to %v\n", oldGoPath, gopath)
+	log.Log("Setting GOPATH to %s", gopath)
 
 	err = os.Setenv("GOPATH", gopath)
 	if err != nil {
-		com.ColorLog("[ERRO] %v\n", err)
-		return err
+		log.Error("", "Fail to setting GOPATH")
+		log.Fatal("", err.Error())
 	}
-	defer os.Setenv("GOPATH", oldGoPath)
+	defer func() {
+		log.Log("Setting GOPATH back to %s", oldGoPath)
+		os.Setenv("GOPATH", oldGoPath)
+	}()
 
 	cmd := exec.Command(args[0], args[1:]...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	return cmd.Run()
+
+	log.Log("===== application outputs start =====\n")
+
+	err = cmd.Run()
+
+	fmt.Println()
+	log.Log("====== application outputs end ======")
+	return err
 }
 
 func genNewGoPath(ctx *cli.Context) {
