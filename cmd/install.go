@@ -35,7 +35,7 @@ func printInstallPrompt(flag string) {
 }
 
 func runInstall(cmd *Command, args []string) {
-	genNewGoPath()
+	//genNewGoPath()
 
 	com.ColorLog("[INFO] installing ...\n")
 

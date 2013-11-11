@@ -67,7 +67,7 @@ func runGet(ctx *cli.Context) {
 		log.Fatal("", err.Error())
 	}
 
-	doc.HomeDir = strings.Replace(doc.HomeDir, "~", hd, -1)
+	doc.HomeDir = strings.Replace(doc.RawHomeDir, "~", hd, -1)
 	doc.LoadPkgNameList(doc.HomeDir + "/data/pkgname.list")
 
 	installRepoPath = doc.HomeDir + "/repos"
@@ -84,14 +84,14 @@ func runGet(ctx *cli.Context) {
 
 func getByGopmfile(ctx *cli.Context) {
 	if !com.IsFile(".gopmfile") {
-		log.Fatal("get", "No argument is supplied and no gopmfile exist")
+		log.Fatal("Get", "No argument is supplied and no gopmfile exist")
 	}
 
 	gf := doc.NewGopmfile(".")
 
 	absPath, err := filepath.Abs(".")
 	if err != nil {
-		log.Error("", "Fail to get absolute path of work directory")
+		log.Error("Get", "Fail to get absolute path of work directory")
 		log.Fatal("", err.Error())
 	}
 
@@ -254,8 +254,8 @@ func downloadPackages(ctx *cli.Context, nodes []*doc.Node) {
 			continue
 		} else {
 			// Invalid import path.
-			com.ColorLog("[WARN] Skipped invalid package path( %s => %s:%s )\n",
-				n.ImportPath, n.Type, doc.CheckNodeValue(n.Value))
+			log.Error("", "Skipped invalid package: "+fmt.Sprintf("%s@%s:%s",
+				n.ImportPath, n.Type, doc.CheckNodeValue(n.Value)))
 			failConut++
 		}
 	}
@@ -272,7 +272,7 @@ func downloadPackage(nod *doc.Node) (*doc.Node, []string) {
 
 	if err != nil {
 		log.Error("Get", "Fail to download pakage: "+nod.ImportPath)
-		log.Fatal("", err.Error())
+		log.Error("", err.Error())
 		failConut++
 		os.RemoveAll(installRepoPath + "/" + doc.GetProjectPath(nod.ImportPath) + "/")
 		return nil, nil

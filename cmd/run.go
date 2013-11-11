@@ -15,52 +15,54 @@
 package cmd
 
 import (
-	"github.com/Unknwon/com"
+	"fmt"
 	"go/build"
 	"os"
 	"os/exec"
+
+	"github.com/codegangsta/cli"
+
+	"github.com/gpmgo/gopm/log"
 )
 
-var CmdRun = &Command{
-	UsageLine: "run",
-	Short:     "run according a gopmfile",
-	Long: `
-run just like go run
-`,
+var CmdRun = cli.Command{
+	Name:  "run",
+	Usage: "link dependencies and go run",
+	Description: `Command run links dependencies according to gopmfile
+
+gopm run <file names>`,
+	Action: runRun,
 }
 
-func init() {
-	CmdRun.Run = runRun
-	CmdRun.Flags = map[string]bool{}
-}
-
-func printRunPrompt(flag string) {
-}
-
-func runRun(cmd *Command, args []string) {
+func runRun(ctx *cli.Context) {
 	gopath := build.Default.GOPATH
 
-	genNewGoPath()
-
-	com.ColorLog("[INFO] running ...\n")
+	genNewGoPath(ctx)
 
 	cmdArgs := []string{"go", "run"}
-	cmdArgs = append(cmdArgs, args...)
+	cmdArgs = append(cmdArgs, ctx.Args()...)
 	bCmd := exec.Command(cmdArgs[0], cmdArgs[1:]...)
 	bCmd.Stdout = os.Stdout
 	bCmd.Stderr = os.Stderr
+
+	log.Log("===== application outputs start =====\n")
+
 	err := bCmd.Run()
+
+	fmt.Println()
+	log.Log("====== application outputs end ======")
+
 	if err != nil {
-		com.ColorLog("[ERRO] run failed: %v\n", err)
-		return
+		log.Error("Run", "Fail to execute")
+		log.Fatal("", err.Error())
 	}
 
-	com.ColorLog("[TRAC] set GOPATH=%v\n", gopath)
+	log.Trace("Set back GOPATH=%s", gopath)
 	err = os.Setenv("GOPATH", gopath)
 	if err != nil {
-		com.ColorLog("[ERRO] %v\n", err)
-		return
+		log.Error("Run", "Fail to set back GOPATH")
+		log.Fatal("", err.Error())
 	}
 
-	com.ColorLog("[SUCC] run successfully!\n")
+	log.Success("SUCC", "Run", "Command execute successfully!")
 }

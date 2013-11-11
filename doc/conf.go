@@ -26,6 +26,7 @@ import (
 
 const (
 	GopmFileName = ".gopmfile"
+	RawHomeDir   = "~/.gopm"
 )
 
 var (

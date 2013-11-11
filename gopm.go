@@ -29,10 +29,9 @@ import (
 // Test that go1.1 tag above is included in builds. main.go refers to this definition.
 const go11tag = true
 
-const APP_VER = "0.5.3.1109"
+const APP_VER = "0.5.4.1110"
 
 // 	//cmd.CmdSearch,
-// 	cmd.CmdRun,
 // 	cmd.CmdBuild,
 // 	cmd.CmdInstall,
 
@@ -58,6 +57,7 @@ func main() {
 	app.Commands = []cli.Command{
 		cmd.CmdGet,
 		cmd.CmdGen,
+		cmd.CmdRun,
 	}
 	app.Run(os.Args)
 }

@@ -35,7 +35,7 @@ func printBuildPrompt(flag string) {
 }
 
 func runBuild(cmd *Command, args []string) {
-	genNewGoPath()
+	//genNewGoPath()
 
 	com.ColorLog("[INFO] building ...\n")
 

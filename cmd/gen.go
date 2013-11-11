@@ -73,5 +73,5 @@ func runGen(ctx *cli.Context) {
 		log.Fatal("", err.Error())
 	}
 
-	log.Success("SUCC", "Gen", "Generate gopmfile successful!")
+	log.Success("SUCC", "Gen", "Generate gopmfile successfully!")
 }
