@@ -28,19 +28,34 @@ var CmdInstall = cli.Command{
 	Description: `Command install links dependencies according to gopmfile,
 and execute 'go install'
 
-gopm install`,
+gopm install
+gopm install <import path>
+
+If no argument is supplied, then gopmfile must be present`,
 	Action: runInstall,
+	Flags: []cli.Flag{
+		cli.BoolFlag{"verbose", "show process details"},
+	},
 }
 
 func runInstall(ctx *cli.Context) {
-	if !com.IsFile(".gopmfile") {
-		log.Fatal("Install", "No gopmfile exist in work directory")
-	}
+	var target string
 
-	gf := doc.NewGopmfile(".")
-	target := gf.MustValue("target", "path")
-	if len(target) == 0 {
-		log.Fatal("Install", "Cannot find target in gopmfile")
+	switch len(ctx.Args()) {
+	case 0:
+		if !com.IsFile(".gopmfile") {
+			log.Fatal("Install", "No gopmfile exist in work directory")
+		}
+
+		gf := doc.NewGopmfile(".")
+		target = gf.MustValue("target", "path")
+		if len(target) == 0 {
+			log.Fatal("Install", "Cannot find target in gopmfile")
+		}
+	case 1:
+		target = ctx.Args()[0]
+	default:
+		log.Fatal("Install", "Too many arguments")
 	}
 
 	genNewGoPath(ctx)
@@ -48,7 +63,10 @@ func runInstall(ctx *cli.Context) {
 	log.Trace("Installing...")
 
 	cmdArgs := []string{"go", "install"}
-	cmdArgs = append(cmdArgs, ctx.Args()...)
+
+	if ctx.Bool("verbose") {
+		cmdArgs = append(cmdArgs, "-v")
+	}
 	cmdArgs = append(cmdArgs, target)
 	err := execCmd(newGoPath, newCurPath, cmdArgs...)
 	if err != nil {
