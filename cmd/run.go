@@ -15,13 +15,7 @@
 package cmd
 
 import (
-	"fmt"
-	"go/build"
-	"os"
-	"os/exec"
-
 	"github.com/codegangsta/cli"
-
 	"github.com/gpmgo/gopm/log"
 )
 
@@ -36,32 +30,15 @@ gopm run <go run commands>`,
 }
 
 func runRun(ctx *cli.Context) {
-	gopath := build.Default.GOPATH
-
 	genNewGoPath(ctx)
+
+	log.Trace("Running...")
 
 	cmdArgs := []string{"go", "run"}
 	cmdArgs = append(cmdArgs, ctx.Args()...)
-	bCmd := exec.Command(cmdArgs[0], cmdArgs[1:]...)
-	bCmd.Stdout = os.Stdout
-	bCmd.Stderr = os.Stderr
-
-	log.Log("===== application outputs start =====\n")
-
-	err := bCmd.Run()
-
-	fmt.Println()
-	log.Log("====== application outputs end ======")
-
+	err := execCmd(newGoPath, newCurPath, cmdArgs...)
 	if err != nil {
-		log.Error("Run", "Fail to execute")
-		log.Fatal("", err.Error())
-	}
-
-	log.Trace("Set back GOPATH=%s", gopath)
-	err = os.Setenv("GOPATH", gopath)
-	if err != nil {
-		log.Error("Run", "Fail to set back GOPATH")
+		log.Error("Run", "Fail to run program")
 		log.Fatal("", err.Error())
 	}
 
