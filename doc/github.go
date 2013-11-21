@@ -26,6 +26,9 @@ import (
 	"strings"
 
 	"github.com/Unknwon/com"
+	"github.com/codegangsta/cli"
+
+	"github.com/gpmgo/gopm/log"
 )
 
 var (
@@ -33,12 +36,46 @@ var (
 )
 
 // getGithubDoc downloads tarball from github.com.
-func getGithubDoc(client *http.Client, match map[string]string, installRepoPath string, nod *Node, cmdFlags map[string]bool) ([]string, error) {
+func getGithubDoc(client *http.Client, match map[string]string, installRepoPath string, nod *Node, ctx *cli.Context) ([]string, error) {
 	// Check downlaod type.
 	switch nod.Type {
 	case BRANCH:
 		if len(nod.Value) == 0 {
 			match["sha"] = MASTER
+
+			// Only get and check revision with the latest version.
+			var refs []*struct {
+				Ref    string
+				Url    string
+				Object struct {
+					Sha  string
+					Type string
+					Url  string
+				}
+			}
+
+			err := com.HttpGetJSON(client, com.Expand("https://api.github.com/repos/{owner}/{repo}/git/refs?{cred}", match), &refs)
+			if err != nil {
+				log.Error("GET", "Fail to get revision")
+				log.Error("", err.Error())
+				break
+			}
+
+			var etag string
+		COMMIT_LOOP:
+			for _, ref := range refs {
+				switch {
+				case strings.HasPrefix(ref.Ref, "refs/heads/master"):
+					etag = ref.Object.Sha
+					break COMMIT_LOOP
+				}
+			}
+			if etag == nod.Revision {
+				log.Log("GET Package hasn't changed: %s", nod.ImportPath)
+				return nil, nil
+			}
+			nod.Revision = etag
+
 		} else {
 			match["sha"] = nod.Value
 		}
@@ -97,7 +134,7 @@ func getGithubDoc(client *http.Client, match map[string]string, installRepoPath 
 		switch {
 		case strings.HasSuffix(absPath, "/"): // Directory.
 			// Check if current directory is example.
-			if !(!cmdFlags["-e"] && strings.Contains(absPath, "example")) {
+			if !(!ctx.Bool("example") && strings.Contains(absPath, "example")) {
 				for _, d := range dirs {
 					if d == absPath {
 						break compareDir

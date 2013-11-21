@@ -21,6 +21,8 @@ import (
 	"os"
 	"regexp"
 	"time"
+
+	"github.com/codegangsta/cli"
 )
 
 const (
@@ -58,6 +60,7 @@ type Node struct {
 	DownloadURL string
 	Synopsis    string
 	IsGetDeps   bool
+	Revision    string
 }
 
 func NewNode(importPath, downloadUrl, tp, value string, isGetDeps bool) *Node {
@@ -96,7 +99,7 @@ type walker struct {
 type service struct {
 	pattern *regexp.Regexp
 	prefix  string
-	get     func(*http.Client, map[string]string, string, *Node, map[string]bool) ([]string, error)
+	get     func(*http.Client, map[string]string, string, *Node, *cli.Context) ([]string, error)
 }
 
 // services is the list of source code control services handled by gopkgdoc.

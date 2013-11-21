@@ -27,6 +27,9 @@ import (
 	"strings"
 
 	"github.com/Unknwon/com"
+	"github.com/codegangsta/cli"
+
+	"github.com/gpmgo/gopm/log"
 )
 
 var (
@@ -35,7 +38,7 @@ var (
 )
 
 // getBitbucketDoc downloads tarball from bitbucket.org.
-func getBitbucketDoc(client *http.Client, match map[string]string, installRepoPath string, nod *Node, cmdFlags map[string]bool) ([]string, error) {
+func getBitbucketDoc(client *http.Client, match map[string]string, installRepoPath string, nod *Node, ctx *cli.Context) ([]string, error) {
 	// Check version control.
 	if m := bitbucketEtagRe.FindStringSubmatch(nod.Value); m != nil {
 		match["vcs"] = m[1]
@@ -152,7 +155,7 @@ func getBitbucketDoc(client *http.Client, match map[string]string, installRepoPa
 
 		// Create diretory before create file.
 		dir := path.Dir(absPath)
-		if !checkDir(dir, dirs) && !(!cmdFlags["-e"] && strings.Contains(absPath, "example")) {
+		if !checkDir(dir, dirs) && !(!ctx.Bool("example") && strings.Contains(absPath, "example")) {
 			dirs = append(dirs, dir)
 			os.MkdirAll(dir+"/", os.ModePerm)
 		}
