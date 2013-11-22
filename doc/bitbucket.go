@@ -29,7 +29,7 @@ import (
 	"github.com/Unknwon/com"
 	"github.com/codegangsta/cli"
 
-	"github.com/gpmgo/gopm/log"
+	//"github.com/gpmgo/gopm/log"
 )
 
 var (
