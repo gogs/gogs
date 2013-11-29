@@ -160,6 +160,7 @@ func getByPath(ctx *cli.Context) {
 		nodes = append(nodes, node)
 	}
 
+	doc.LoadLocalNodes()
 	downloadPackages(ctx, nodes)
 
 	if doc.LocalNodes != nil {
@@ -197,12 +198,12 @@ func downloadPackages(ctx *cli.Context, nodes []*doc.Node) {
 
 			if !downloadCache[n.ImportPath] {
 				// Download package.
-				nod, imports := downloadPackage(n)
+				nod, imports := downloadPackage(ctx, n)
 				if len(imports) > 0 {
 					var gf *goconfig.ConfigFile
 
 					// Check if has gopmfile
-					if com.IsFile(installPath + "/" + GopmFileName) {
+					if com.IsFile(installPath + "/" + doc.GopmFileName) {
 						log.Log("Found gopmgile: %s@%s:%s",
 							n.ImportPath, n.Type, doc.CheckNodeValue(n.Value))
 
@@ -242,8 +243,8 @@ func downloadPackages(ctx *cli.Context, nodes []*doc.Node) {
 					downloadCount++
 
 					// Only save non-commit node.
-					if len(nod.Value) == 0 {
-						doc.SaveNode(nod)
+					if len(nod.Value) == 0 && len(nod.Revision) > 0 {
+						doc.LocalNodes.SetValue(nod.ImportPath, "value", nod.Revision)
 					}
 				}
 			} else {
@@ -262,13 +263,14 @@ func downloadPackages(ctx *cli.Context, nodes []*doc.Node) {
 }
 
 // downloadPackage downloads package either use version control tools or not.
-func downloadPackage(nod *doc.Node) (*doc.Node, []string) {
+func downloadPackage(ctx *cli.Context, nod *doc.Node) (*doc.Node, []string) {
 	log.Message("Downloading", fmt.Sprintf("package: %s@%s:%s",
 		nod.ImportPath, nod.Type, doc.CheckNodeValue(nod.Value)))
 	// Mark as donwloaded.
 	downloadCache[nod.ImportPath] = true
 
-	imports, err := doc.PureDownload(nod, installRepoPath, nil) //CmdGet.Flags)
+	nod.Revision = doc.LocalNodes.MustValue(nod.ImportPath, "value")
+	imports, err := doc.PureDownload(nod, installRepoPath, ctx) //CmdGet.Flags)
 
 	if err != nil {
 		log.Error("Get", "Fail to download pakage: "+nod.ImportPath)

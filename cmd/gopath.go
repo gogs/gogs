@@ -15,7 +15,7 @@ import (
 	"github.com/gpmgo/gopm/log"
 )
 
-func getGopmPkgs(dirPath string) (pkgs map[string]*doc.Pkg, err error) {
+func getGopmPkgs(dirPath string, isTest bool) (pkgs map[string]*doc.Pkg, err error) {
 	absPath, err := filepath.Abs(dirPath)
 	if err != nil {
 		log.Error("", "Fail to get absolute path of work directory")
@@ -38,10 +38,19 @@ func getGopmPkgs(dirPath string) (pkgs map[string]*doc.Pkg, err error) {
 	}
 
 	pkgs = make(map[string]*doc.Pkg)
-	for _, name := range pkg.Imports {
+	var imports []string = pkg.Imports
+	if isTest {
+		imports = append(imports, pkg.TestImports...)
+	}
+	for _, name := range imports {
+		if name == "C" {
+			//panic("nonono")
+			continue
+		}
 		if !doc.IsGoRepoPath(name) {
 			if builds != nil {
 				if dep, ok := builds[name]; ok {
+					// TODO: need version
 					pkgs[name] = &doc.Pkg{ImportPath: dep}
 					continue
 				}
@@ -64,8 +73,8 @@ func autoLink(oldPath, newPath string) error {
 	return makeLink(oldPath, newPath)
 }
 
-func getChildPkgs(ctx *cli.Context, cpath string, ppkg *doc.Pkg, cachePkgs map[string]*doc.Pkg) error {
-	pkgs, err := getGopmPkgs(cpath)
+func getChildPkgs(ctx *cli.Context, cpath string, ppkg *doc.Pkg, cachePkgs map[string]*doc.Pkg, isTest bool) error {
+	pkgs, err := getGopmPkgs(cpath, isTest)
 	if err != nil {
 		return err
 	}
@@ -91,7 +100,7 @@ func getChildPkgs(ctx *cli.Context, cpath string, ppkg *doc.Pkg, cachePkgs map[s
 					return err
 				}
 			}
-			err = getChildPkgs(ctx, newPath, pkg, cachePkgs)
+			err = getChildPkgs(ctx, newPath, pkg, cachePkgs, false)
 			if err != nil {
 				return err
 			}
@@ -161,7 +170,7 @@ func execCmd(gopath, curPath string, args ...string) error {
 	return err
 }
 
-func genNewGoPath(ctx *cli.Context) {
+func genNewGoPath(ctx *cli.Context, isTest bool) {
 	var err error
 	curPath, err = os.Getwd()
 	if err != nil {
@@ -194,7 +203,7 @@ func genNewGoPath(ctx *cli.Context) {
 	}
 
 	cachePkgs := make(map[string]*doc.Pkg)
-	err = getChildPkgs(ctx, curPath, nil, cachePkgs)
+	err = getChildPkgs(ctx, curPath, nil, cachePkgs, isTest)
 	if err != nil {
 		log.Error("", "Fail to get child pakcages")
 		log.Fatal("", err.Error())

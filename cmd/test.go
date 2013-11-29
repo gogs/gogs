@@ -16,32 +16,31 @@ package cmd
 
 import (
 	"github.com/codegangsta/cli"
-
 	"github.com/gpmgo/gopm/log"
 )
 
-var CmdBuild = cli.Command{
-	Name:  "build",
-	Usage: "link dependencies and go build",
-	Description: `Command build links dependencies according to gopmfile,
-and execute 'go build'
+var CmdTest = cli.Command{
+	Name:  "test",
+	Usage: "link dependencies and go test",
+	Description: `Command test links dependencies according to gopmfile,
+and execute 'go test'
 
-gopm build <go build commands>`,
-	Action: runBuild,
+gopm test <go test commands>`,
+	Action: runTest,
 }
 
-func runBuild(ctx *cli.Context) {
-	genNewGoPath(ctx, false)
+func runTest(ctx *cli.Context) {
+	genNewGoPath(ctx, true)
 
-	log.Trace("Building...")
+	log.Trace("Testing...")
 
-	cmdArgs := []string{"go", "build"}
+	cmdArgs := []string{"go", "test"}
 	cmdArgs = append(cmdArgs, ctx.Args()...)
 	err := execCmd(newGoPath, newCurPath, cmdArgs...)
 	if err != nil {
-		log.Error("Build", "Fail to build program")
+		log.Error("Test", "Fail to test program")
 		log.Fatal("", err.Error())
 	}
 
-	log.Success("SUCC", "Build", "Command execute successfully!")
+	log.Success("SUCC", "Test", "Command execute successfully!")
 }

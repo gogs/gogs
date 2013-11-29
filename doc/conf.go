@@ -72,23 +72,19 @@ func LoadPkgNameList(filePath string) {
 	}
 }
 
-func SaveNode(nod *Node) {
-	if LocalNodes == nil {
-		if !com.IsDir(HomeDir + "/data") {
-			os.Mkdir(HomeDir+"/data", os.ModePerm)
-		}
-
-		if !com.IsFile(HomeDir + LocalNodesFile) {
-			os.Create(HomeDir + LocalNodesFile)
-		}
-
-		var err error
-		LocalNodes, err = goconfig.LoadConfigFile(HomeDir + LocalNodesFile)
-		if err != nil {
-			log.Error("Save node", "Fail to load localnodes.list")
-			log.Fatal("", err.Error())
-		}
+func LoadLocalNodes() {
+	if !com.IsDir(HomeDir + "/data") {
+		os.MkdirAll(HomeDir+"/data", os.ModePerm)
 	}
 
-	LocalNodes.SetValue(nod.ImportPath, "value", nod.Value)
+	if !com.IsFile(HomeDir + LocalNodesFile) {
+		os.Create(HomeDir + LocalNodesFile)
+	}
+
+	var err error
+	LocalNodes, err = goconfig.LoadConfigFile(HomeDir + LocalNodesFile)
+	if err != nil {
+		log.Error("Load node", "Fail to load localnodes.list")
+		log.Fatal("", err.Error())
+	}
 }

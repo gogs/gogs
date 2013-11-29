@@ -25,6 +25,7 @@ import (
 	"strings"
 
 	"github.com/Unknwon/com"
+	"github.com/codegangsta/cli"
 )
 
 var (
@@ -33,7 +34,7 @@ var (
 )
 
 // getGithubDoc downloads tarball from git.oschina.com.
-func getOSCDoc(client *http.Client, match map[string]string, installRepoPath string, nod *Node, cmdFlags map[string]bool) ([]string, error) {
+func getOSCDoc(client *http.Client, match map[string]string, installRepoPath string, nod *Node, ctx *cli.Context) ([]string, error) {
 	// Check downlaod type.
 	switch nod.Type {
 	case BRANCH:

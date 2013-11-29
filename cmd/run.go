@@ -30,7 +30,7 @@ gopm run <go run commands>`,
 }
 
 func runRun(ctx *cli.Context) {
-	genNewGoPath(ctx)
+	genNewGoPath(ctx, false)
 
 	log.Trace("Running...")
 

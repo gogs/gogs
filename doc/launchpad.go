@@ -25,12 +25,13 @@ import (
 	"strings"
 
 	"github.com/Unknwon/com"
+	"github.com/codegangsta/cli"
 )
 
 var launchpadPattern = regexp.MustCompile(`^launchpad\.net/(?P<repo>(?P<project>[a-z0-9A-Z_.\-]+)(?P<series>/[a-z0-9A-Z_.\-]+)?|~[a-z0-9A-Z_.\-]+/(\+junk|[a-z0-9A-Z_.\-]+)/[a-z0-9A-Z_.\-]+)(?P<dir>/[a-z0-9A-Z_.\-/]+)*$`)
 
 // getLaunchpadDoc downloads tarball from launchpad.net.
-func getLaunchpadDoc(client *http.Client, match map[string]string, installRepoPath string, nod *Node, cmdFlags map[string]bool) ([]string, error) {
+func getLaunchpadDoc(client *http.Client, match map[string]string, installRepoPath string, nod *Node, ctx *cli.Context) ([]string, error) {
 
 	if match["project"] != "" && match["series"] != "" {
 		rc, err := com.HttpGet(client, com.Expand("https://code.launchpad.net/{project}{series}/.bzr/branch-format", match), nil)
@@ -99,7 +100,7 @@ func getLaunchpadDoc(client *http.Client, match map[string]string, installRepoPa
 			// Create diretory before create file.
 			os.MkdirAll(absPath+"/", os.ModePerm)
 			// Check if current directory is example.
-			if !(!cmdFlags["-e"] && strings.Contains(absPath, "example")) {
+			if !(!ctx.Bool("example") && strings.Contains(absPath, "example")) {
 				dirs = append(dirs, absPath)
 			}
 		case !strings.HasPrefix(fn, "."):
