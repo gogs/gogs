@@ -26,17 +26,21 @@ import (
 	"strings"
 
 	"github.com/Unknwon/com"
+	"github.com/codegangsta/cli"
+
+	"github.com/gpmgo/gopm/log"
 )
 
 var (
-	googleRepoRe  = regexp.MustCompile(`id="checkoutcmd">(hg|git|svn)`)
-	googleFileRe  = regexp.MustCompile(`<li><a href="([^"/]+)"`)
-	googleDirRe   = regexp.MustCompile(`<li><a href="([^".]+)"`)
-	googlePattern = regexp.MustCompile(`^code\.google\.com/p/(?P<repo>[a-z0-9\-]+)(:?\.(?P<subrepo>[a-z0-9\-]+))?(?P<dir>/[a-z0-9A-Z_.\-/]+)?$`)
+	googleRepoRe     = regexp.MustCompile(`id="checkoutcmd">(hg|git|svn)`)
+	googleRevisionRe = regexp.MustCompile(`<h2>(?:[^ ]+ - )?Revision *([^:]+):`)
+	googleFileRe     = regexp.MustCompile(`<li><a href="([^"/]+)"`)
+	googleDirRe      = regexp.MustCompile(`<li><a href="([^".]+)"`)
+	googlePattern    = regexp.MustCompile(`^code\.google\.com/p/(?P<repo>[a-z0-9\-]+)(:?\.(?P<subrepo>[a-z0-9\-]+))?(?P<dir>/[a-z0-9A-Z_.\-/]+)?$`)
 )
 
 // getGoogleDoc downloads raw files from code.google.com.
-func getGoogleDoc(client *http.Client, match map[string]string, installRepoPath string, nod *Node, cmdFlags map[string]bool) ([]string, error) {
+func getGoogleDoc(client *http.Client, match map[string]string, installRepoPath string, nod *Node, ctx *cli.Context) ([]string, error) {
 	setupGoogleMatch(match)
 	// Check version control.
 	if err := getGoogleVCS(client, match); err != nil {
@@ -47,6 +51,28 @@ func getGoogleDoc(client *http.Client, match map[string]string, installRepoPath 
 	case BRANCH:
 		if len(nod.Value) == 0 {
 			match["tag"] = defaultTags[match["vcs"]]
+
+			// Only get and check revision with the latest version.
+			p, err := com.HttpGetBytes(client,
+				com.Expand("http://{subrepo}{dot}{repo}.googlecode.com/{vcs}{dir}/?r={tag}", match), nil)
+			if err != nil {
+				log.Error("GET", "Fail to get revision")
+				log.Error("", err.Error())
+				break
+			}
+
+			if m := googleRevisionRe.FindSubmatch(p); m == nil {
+				log.Error("GET", "Fail to get revision")
+				log.Error("", err.Error())
+			} else {
+				etag := string(m[1])
+				if etag == nod.Revision {
+					log.Log("GET Package hasn't changed: %s", nod.ImportPath)
+					return nil, nil
+				}
+				nod.Revision = etag
+			}
+
 		} else {
 			match["tag"] = nod.Value
 		}
@@ -106,7 +132,7 @@ func getGoogleDoc(client *http.Client, match map[string]string, installRepoPath 
 
 		// Create diretory before create file.
 		dir := path.Dir(absPath)
-		if !checkDir(dir, dirs) && !(!cmdFlags["-e"] && strings.Contains(absPath, "example")) {
+		if !checkDir(dir, dirs) && !(!ctx.Bool("example") && strings.Contains(absPath, "example")) {
 			dirs = append(dirs, dir+"/")
 			os.MkdirAll(dir+"/", os.ModePerm)
 		}

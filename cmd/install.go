@@ -58,7 +58,7 @@ func runInstall(ctx *cli.Context) {
 		log.Fatal("Install", "Too many arguments")
 	}
 
-	genNewGoPath(ctx)
+	genNewGoPath(ctx, false)
 
 	log.Trace("Installing...")
 

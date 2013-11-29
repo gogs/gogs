@@ -25,6 +25,7 @@ import (
 	"strings"
 
 	"github.com/Unknwon/com"
+	"github.com/codegangsta/cli"
 )
 
 var (
@@ -97,7 +98,7 @@ func bestTag(tags map[string]string, defaultTag string) (string, string, error) 
 }
 
 // PureDownload downloads package without version control.
-func PureDownload(nod *Node, installRepoPath string, flags map[string]bool) ([]string, error) {
+func PureDownload(nod *Node, installRepoPath string, ctx *cli.Context) ([]string, error) {
 	for _, s := range services {
 		if s.get == nil || !strings.HasPrefix(nod.DownloadURL, s.prefix) {
 			continue
@@ -115,14 +116,14 @@ func PureDownload(nod *Node, installRepoPath string, flags map[string]bool) ([]s
 				match[n] = m[i]
 			}
 		}
-		return s.get(HttpClient, match, installRepoPath, nod, flags)
+		return s.get(HttpClient, match, installRepoPath, nod, ctx)
 	}
 
 	com.ColorLog("[TRAC] Cannot match any service, getting dynamic...\n")
-	return getDynamic(HttpClient, nod, installRepoPath, flags)
+	return getDynamic(HttpClient, nod, installRepoPath, ctx)
 }
 
-func getDynamic(client *http.Client, nod *Node, installRepoPath string, flags map[string]bool) ([]string, error) {
+func getDynamic(client *http.Client, nod *Node, installRepoPath string, ctx *cli.Context) ([]string, error) {
 	match, err := fetchMeta(client, nod.ImportPath)
 	if err != nil {
 		return nil, err
@@ -139,7 +140,7 @@ func getDynamic(client *http.Client, nod *Node, installRepoPath string, flags ma
 	}
 
 	nod.DownloadURL = com.Expand("{repo}{dir}", match)
-	return PureDownload(nod, installRepoPath, flags)
+	return PureDownload(nod, installRepoPath, ctx)
 }
 
 func fetchMeta(client *http.Client, importPath string) (map[string]string, error) {
