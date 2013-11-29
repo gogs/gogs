@@ -202,11 +202,11 @@ func downloadPackages(ctx *cli.Context, nodes []*doc.Node) {
 					var gf *goconfig.ConfigFile
 
 					// Check if has gopmfile
-					if com.IsFile(installPath + "/.gopmfile") {
+					if com.IsFile(installPath + "/" + GopmFileName) {
 						log.Log("Found gopmgile: %s@%s:%s",
 							n.ImportPath, n.Type, doc.CheckNodeValue(n.Value))
 
-						gf = doc.NewGopmfile(installPath + "/.gopmfile")
+						gf = doc.NewGopmfile(installPath /* + "/.gopmfile"*/)
 					}
 
 					// Need to download dependencies.
