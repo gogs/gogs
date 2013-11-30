@@ -63,7 +63,7 @@ func init() {
 func runGet(ctx *cli.Context) {
 	hd, err := com.HomeDir()
 	if err != nil {
-		log.Error("get", "Fail to get current user")
+		log.Error("Get", "Fail to get current user")
 		log.Fatal("", err.Error())
 	}
 
@@ -134,27 +134,27 @@ func getByGopmfile(ctx *cli.Context) {
 func getByPath(ctx *cli.Context) {
 	nodes := make([]*doc.Node, 0, len(ctx.Args()))
 	for _, info := range ctx.Args() {
-		pkg := info
-		node := doc.NewNode(pkg, pkg, doc.BRANCH, "", true)
+		pkgName := info
+		node := doc.NewNode(pkgName, pkgName, doc.BRANCH, "", true)
 
 		if i := strings.Index(info, "@"); i > -1 {
-			pkg = info[:i]
+			pkgName = info[:i]
 			tp, ver, err := validPath(info[i+1:])
 			if err != nil {
-				log.Error("", "Fail to parse version")
+				log.Error("Get", "Fail to parse version")
 				log.Fatal("", err.Error())
 			}
-			node = doc.NewNode(pkg, pkg, tp, ver, true)
+			node = doc.NewNode(pkgName, pkgName, tp, ver, true)
 		}
 
-		// Cheeck package name.
-		if !strings.Contains(pkg, "/") {
-			name, ok := doc.PackageNameList[pkg]
+		// Check package name.
+		if !strings.Contains(pkgName, "/") {
+			name, ok := doc.PackageNameList[pkgName]
 			if !ok {
-				log.Error("", "Invalid package name: "+pkg)
+				log.Error("Get", "Invalid package name: "+pkgName)
 				log.Fatal("", "No match in the package name list")
 			}
-			pkg = name
+			pkgName = name
 		}
 
 		nodes = append(nodes, node)

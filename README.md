@@ -5,7 +5,7 @@ gopm - Go Package Manager
 
 Gopm(Go Package Manager) is a Go package manage tool for search, install, update and share packages in Go.
 
-Current Version: **v0.5.5**
+Current Version: **v0.5.6**
 
 # Requirement
 
@@ -40,13 +40,14 @@ USAGE:
    gopm [global options] command [command options] [arguments...]
 
 VERSION:
-   0.5.5.1111
+   0.5.6.1130
 
 COMMANDS:
    get      fetch remote package(s) and dependencies to local repository
+   bin      download and link dependencies and build executable binary
    gen      generate a gopmfile according current go project
    run      link dependencies and go run
-   build    link dependencies and go build
+   build link dependencies and go build
    install  link dependencies and go install
    help, h  Shows a list of commands or help for one command
 
