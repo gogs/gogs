@@ -29,7 +29,7 @@ import (
 // Test that go1.1 tag above is included in builds. main.go refers to this definition.
 const go11tag = true
 
-const APP_VER = "0.5.6.1130"
+const APP_VER = "0.5.7.1130"
 
 // 	//cmd.CmdSearch,
 // 		cmdClean,

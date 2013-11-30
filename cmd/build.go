@@ -17,6 +17,7 @@ package cmd
 import (
 	"github.com/codegangsta/cli"
 
+	"github.com/gpmgo/gopm/doc"
 	"github.com/gpmgo/gopm/log"
 )
 
@@ -31,6 +32,7 @@ gopm build <go build commands>`,
 }
 
 func runBuild(ctx *cli.Context) {
+	doc.LoadLocalNodes()
 	genNewGoPath(ctx, false)
 
 	log.Trace("Building...")

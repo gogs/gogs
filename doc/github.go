@@ -70,7 +70,7 @@ func getGithubDoc(client *http.Client, match map[string]string, installRepoPath 
 					break COMMIT_LOOP
 				}
 			}
-			if etag == nod.Revision {
+			if etag == nod.Revision && !ctx.Bool("gopath") {
 				log.Log("GET Package hasn't changed: %s", nod.ImportPath)
 				return nil, nil
 			}

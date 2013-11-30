@@ -64,7 +64,7 @@ func getGoogleDoc(client *http.Client, match map[string]string, installRepoPath 
 			if m := googleRevisionRe.FindSubmatch(p); m == nil {
 				log.Error("GET", "Fail to get revision")
 				log.Error("", err.Error())
-			} else {
+			} else if !ctx.Bool("gopath") {
 				etag := string(m[1])
 				if etag == nod.Revision {
 					log.Log("GET Package hasn't changed: %s", nod.ImportPath)

@@ -51,6 +51,7 @@ Can specify one or more: gopm get beego@tag:v0.9.0 github.com/beego/bee
 If no argument is supplied, then gopmfile must be present`,
 	Action: runGet,
 	Flags: []cli.Flag{
+		cli.BoolFlag{"gopath", "download package(s) to GOPATH"},
 		cli.BoolFlag{"force", "force to update pakcage(s) and dependencies"},
 		cli.BoolFlag{"example", "download dependencies for example(s)"},
 	},
@@ -70,8 +71,19 @@ func runGet(ctx *cli.Context) {
 	doc.HomeDir = strings.Replace(doc.RawHomeDir, "~", hd, -1)
 	doc.LoadPkgNameList(doc.HomeDir + "/data/pkgname.list")
 
-	installRepoPath = doc.HomeDir + "/repos"
-	log.Log("Local repository path: %s", installRepoPath)
+	if ctx.Bool("gopath") {
+		installRepoPath = com.GetGOPATHs()[0]
+		if !com.IsDir(installRepoPath) {
+			log.Error("Get", "Fail to start command")
+			log.Fatal("", "GOPATH does not exist: "+installRepoPath)
+		}
+		log.Log("Indicate GOPATH: %s", installRepoPath)
+
+		installRepoPath += "/src"
+	} else {
+		installRepoPath = doc.HomeDir + "/repos"
+		log.Log("Local repository path: %s", installRepoPath)
+	}
 
 	// Check number of arguments.
 	switch len(ctx.Args()) {
@@ -80,6 +92,7 @@ func runGet(ctx *cli.Context) {
 	default:
 		getByPath(ctx)
 	}
+
 }
 
 func getByGopmfile(ctx *cli.Context) {
@@ -183,7 +196,7 @@ func downloadPackages(ctx *cli.Context, nodes []*doc.Node) {
 		// Check if it is a valid remote path.
 		if doc.IsValidRemotePath(n.ImportPath) {
 			installPath := installRepoPath + "/" + doc.GetProjectPath(n.ImportPath)
-			if len(n.Value) > 0 {
+			if len(n.Value) > 0 && !ctx.Bool("gopath") {
 				installPath += "." + n.Value
 			}
 
@@ -278,6 +291,15 @@ func downloadPackage(ctx *cli.Context, nod *doc.Node) (*doc.Node, []string) {
 		failConut++
 		os.RemoveAll(installRepoPath + "/" + doc.GetProjectPath(nod.ImportPath) + "/")
 		return nil, nil
+	}
+
+	suf := "." + nod.Value
+	if len(suf) == 1 {
+		suf = ""
+	}
+	if ctx.Bool("gopath") && len(suf) > 0 {
+		os.RemoveAll(installRepoPath + "/" + nod.ImportPath)
+		os.Rename(installRepoPath+"/"+nod.ImportPath+suf, installRepoPath+"/"+nod.ImportPath)
 	}
 	return nod, imports
 }
