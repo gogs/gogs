@@ -49,13 +49,6 @@ func runBin(ctx *cli.Context) {
 		log.Fatal("", "No package specified")
 	}
 
-	hd, err := com.HomeDir()
-	if err != nil {
-		log.Error("Bin", "Fail to get current user")
-		log.Fatal("", err.Error())
-	}
-
-	doc.HomeDir = strings.Replace(doc.RawHomeDir, "~", hd, -1)
 	doc.LoadPkgNameList(doc.HomeDir + "/data/pkgname.list")
 
 	installRepoPath = doc.HomeDir + "/repos"
@@ -80,6 +73,7 @@ func runBin(ctx *cli.Context) {
 	info := ctx.Args()[0]
 	pkgName := info
 	ver := ""
+	var err error
 	if i := strings.Index(info, "@"); i > -1 {
 		pkgName = info[:i]
 		_, ver, err = validPath(info[i+1:])

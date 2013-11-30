@@ -62,13 +62,6 @@ func init() {
 }
 
 func runGet(ctx *cli.Context) {
-	hd, err := com.HomeDir()
-	if err != nil {
-		log.Error("Get", "Fail to get current user")
-		log.Fatal("", err.Error())
-	}
-
-	doc.HomeDir = strings.Replace(doc.RawHomeDir, "~", hd, -1)
 	doc.LoadPkgNameList(doc.HomeDir + "/data/pkgname.list")
 
 	if ctx.Bool("gopath") {

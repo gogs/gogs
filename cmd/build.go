@@ -15,7 +15,7 @@
 package cmd
 
 import (
-	"os"
+	//"os"
 
 	"github.com/codegangsta/cli"
 
@@ -46,9 +46,6 @@ func runBuild(ctx *cli.Context) {
 		log.Error("Build", "Fail to build program")
 		log.Fatal("", err.Error())
 	}
-
-	// I don't know why, but there is a folder named "~".
-	os.RemoveAll("~")
 
 	log.Success("SUCC", "Build", "Command execute successfully!")
 }
