@@ -49,10 +49,16 @@ func getGopmPkgs(dirPath string, isTest bool) (pkgs map[string]*doc.Pkg, err err
 		}
 		if !doc.IsGoRepoPath(name) {
 			if builds != nil {
-				if dep, ok := builds[name]; ok {
-					// TODO: need version
-					pkgs[name] = &doc.Pkg{ImportPath: dep}
-					continue
+				if info, ok := builds[name]; ok {
+					// Check version.
+					if i := strings.Index(info, ":"); i > -1 {
+						pkgs[name] = &doc.Pkg{
+							ImportPath: name,
+							Type:       info[:i],
+							Value:      info[i+1:],
+						}
+						continue
+					}
 				}
 			}
 			pkgs[name] = doc.NewDefaultPkg(name)
@@ -82,16 +88,21 @@ func getChildPkgs(ctx *cli.Context, cpath string, ppkg *doc.Pkg, cachePkgs map[s
 		if !pkgInCache(name, cachePkgs) {
 			var newPath string
 			if !build.IsLocalImport(name) {
+
+				suf := "." + pkg.Value
+				if len(suf) == 1 {
+					suf = ""
+				}
 				newPath = filepath.Join(installRepoPath, pkg.ImportPath)
 				if pkgName != "" && strings.HasPrefix(pkg.ImportPath, pkgName) {
-					newPath = filepath.Join(curPath, pkg.ImportPath[len(pkgName)+1:])
+					newPath = filepath.Join(curPath, pkg.ImportPath[len(pkgName)+1:]+suf)
 				} else {
-					if !com.IsExist(newPath) {
-						var t, ver string = doc.BRANCH, ""
-						node := doc.NewNode(pkg.ImportPath, pkg.ImportPath, t, ver, true)
+					if !com.IsExist(newPath + suf) {
+						node := doc.NewNode(pkg.ImportPath, pkg.ImportPath,
+							pkg.Type, pkg.Value, true)
 						nodes := []*doc.Node{node}
 						downloadPackages(ctx, nodes)
-						// should handler download failed
+						// TODO: Should handler download failed
 					}
 				}
 			} else {
@@ -214,8 +225,13 @@ func genNewGoPath(ctx *cli.Context, isTest bool) {
 	os.RemoveAll(newGoPathSrc)
 	os.MkdirAll(newGoPathSrc, os.ModePerm)
 
-	for name, _ := range cachePkgs {
-		oldPath := filepath.Join(installRepoPath, name)
+	for name, pkg := range cachePkgs {
+		suf := "." + pkg.Value
+		if len(suf) == 1 {
+			suf = ""
+		}
+
+		oldPath := filepath.Join(installRepoPath, name) + suf
 		newPath := filepath.Join(newGoPathSrc, name)
 		paths := strings.Split(name, "/")
 		var isExistP bool
@@ -236,7 +252,7 @@ func genNewGoPath(ctx *cli.Context, isTest bool) {
 		}
 
 		if !isExistP {
-			log.Log("Linking %s", name)
+			log.Log("Linking %s", name+suf)
 			err = autoLink(oldPath, newPath)
 			if err != nil {
 				log.Error("", "Fail to make link")
