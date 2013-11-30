@@ -27,7 +27,7 @@ import (
 
 var CmdGen = cli.Command{
 	Name:  "gen",
-	Usage: "generate a gopmfile according current go project",
+	Usage: "generate a gopmfile according current Go project",
 	Description: `Command gen gets dependencies and generates a gopmfile
 
 gopm gen
@@ -35,7 +35,7 @@ gopm gen
 Make sure you run this command in the root path of a go project.`,
 	Action: runGen,
 	Flags: []cli.Flag{
-		cli.BoolFlag{"example", "download dependencies for example(s)"},
+		cli.BoolFlag{"example", "check dependencies for example(s)"},
 	},
 }
 
