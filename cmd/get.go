@@ -18,6 +18,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -31,6 +32,7 @@ import (
 
 var (
 	installRepoPath string
+	installGopath   string
 	downloadCache   map[string]bool // Saves packages that have been downloaded.
 	downloadCount   int
 	failConut       int
@@ -65,18 +67,18 @@ func runGet(ctx *cli.Context) {
 	doc.LoadPkgNameList(doc.HomeDir + "/data/pkgname.list")
 
 	if ctx.Bool("gopath") {
-		installRepoPath = com.GetGOPATHs()[0]
-		if !com.IsDir(installRepoPath) {
+		installGopath = com.GetGOPATHs()[0]
+		if !com.IsDir(installGopath) {
 			log.Error("Get", "Fail to start command")
-			log.Fatal("", "GOPATH does not exist: "+installRepoPath)
+			log.Fatal("", "GOPATH does not exist: "+installGopath)
 		}
-		log.Log("Indicate GOPATH: %s", installRepoPath)
+		log.Log("Indicate GOPATH: %s", installGopath)
 
-		installRepoPath += "/src"
-	} else {
-		installRepoPath = doc.HomeDir + "/repos"
-		log.Log("Local repository path: %s", installRepoPath)
+		installGopath += "/src"
 	}
+
+	installRepoPath = doc.HomeDir + "/repos"
+	log.Log("Local repository path: %s", installRepoPath)
 
 	// Check number of arguments.
 	switch len(ctx.Args()) {
@@ -180,6 +182,16 @@ func getByPath(ctx *cli.Context) {
 		downloadCount, failConut)
 }
 
+func copyToGopath(srcPath, destPath string) {
+	fmt.Println(destPath)
+	os.RemoveAll(destPath)
+	err := com.CopyDir(srcPath, destPath)
+	if err != nil {
+		log.Error("Download", "Fail to copy to GOPATH")
+		log.Fatal("", err.Error())
+	}
+}
+
 // downloadPackages downloads packages with certain commit,
 // if the commit is empty string, then it downloads all dependencies,
 // otherwise, it only downloada package with specific commit only.
@@ -188,8 +200,9 @@ func downloadPackages(ctx *cli.Context, nodes []*doc.Node) {
 	for _, n := range nodes {
 		// Check if it is a valid remote path.
 		if doc.IsValidRemotePath(n.ImportPath) {
-			installPath := installRepoPath + "/" + doc.GetProjectPath(n.ImportPath)
-			if len(n.Value) > 0 && !ctx.Bool("gopath") {
+			gopathDir := path.Join(installGopath, n.ImportPath)
+			installPath := path.Join(installRepoPath, doc.GetProjectPath(n.ImportPath))
+			if len(n.Value) > 0 {
 				installPath += "." + n.Value
 			}
 
@@ -198,8 +211,14 @@ func downloadPackages(ctx *cli.Context, nodes []*doc.Node) {
 				if com.IsExist(installPath) {
 					log.Trace("Skipped installed package: %s@%s:%s",
 						n.ImportPath, n.Type, doc.CheckNodeValue(n.Value))
+
+					if ctx.Bool("gopath") {
+						copyToGopath(installPath, gopathDir)
+					}
 					continue
 				}
+			} else if !com.IsExist(installPath) {
+				doc.LocalNodes.SetValue(doc.GetProjectPath(n.ImportPath), "value", "")
 			}
 
 			if !downloadCache[n.ImportPath] {
@@ -250,7 +269,11 @@ func downloadPackages(ctx *cli.Context, nodes []*doc.Node) {
 
 					// Only save non-commit node.
 					if len(nod.Value) == 0 && len(nod.Revision) > 0 {
-						doc.LocalNodes.SetValue(nod.ImportPath, "value", nod.Revision)
+						doc.LocalNodes.SetValue(doc.GetProjectPath(nod.ImportPath), "value", nod.Revision)
+					}
+
+					if ctx.Bool("gopath") {
+						copyToGopath(installPath, gopathDir)
 					}
 				}
 			} else {
@@ -275,7 +298,7 @@ func downloadPackage(ctx *cli.Context, nod *doc.Node) (*doc.Node, []string) {
 	// Mark as donwloaded.
 	downloadCache[nod.ImportPath] = true
 
-	nod.Revision = doc.LocalNodes.MustValue(nod.ImportPath, "value")
+	nod.Revision = doc.LocalNodes.MustValue(doc.GetProjectPath(nod.ImportPath), "value")
 	imports, err := doc.PureDownload(nod, installRepoPath, ctx) //CmdGet.Flags)
 
 	if err != nil {
@@ -284,15 +307,6 @@ func downloadPackage(ctx *cli.Context, nod *doc.Node) (*doc.Node, []string) {
 		failConut++
 		os.RemoveAll(installRepoPath + "/" + doc.GetProjectPath(nod.ImportPath) + "/")
 		return nil, nil
-	}
-
-	suf := "." + nod.Value
-	if len(suf) == 1 {
-		suf = ""
-	}
-	if ctx.Bool("gopath") && len(suf) > 0 {
-		os.RemoveAll(installRepoPath + "/" + nod.ImportPath)
-		os.Rename(installRepoPath+"/"+nod.ImportPath+suf, installRepoPath+"/"+nod.ImportPath)
 	}
 	return nod, imports
 }
