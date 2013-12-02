@@ -146,10 +146,7 @@ func execCmd(gopath, curPath string, args ...string) error {
 		os.Chdir(cwd)
 	}()
 
-	ccmd := exec.Command("cd", curPath)
-	ccmd.Stdout = os.Stdout
-	ccmd.Stderr = os.Stderr
-	err = ccmd.Run()
+	err = os.Chdir(curPath)
 	if err != nil {
 		log.Error("", "Fail to change work directory")
 		log.Fatal("", err.Error())
