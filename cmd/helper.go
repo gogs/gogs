@@ -7,7 +7,7 @@ import (
 	"os/exec"
 )
 
-func makeLink(oldPath, newPath string) error {
-	cmd := exec.Command("ln", "-s", oldPath, newPath)
+func makeLink(srcPath, destPath string) error {
+	cmd := exec.Command("ln", "-s", srcPath, destPath)
 	return cmd.Run()
 }
