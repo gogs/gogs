@@ -18,6 +18,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -31,6 +32,7 @@ import (
 
 var (
 	installRepoPath string
+	installGopath   string
 	downloadCache   map[string]bool // Saves packages that have been downloaded.
 	downloadCount   int
 	failConut       int
@@ -51,6 +53,7 @@ Can specify one or more: gopm get beego@tag:v0.9.0 github.com/beego/bee
 If no argument is supplied, then gopmfile must be present`,
 	Action: runGet,
 	Flags: []cli.Flag{
+		cli.BoolFlag{"gopath", "download package(s) to GOPATH"},
 		cli.BoolFlag{"force", "force to update pakcage(s) and dependencies"},
 		cli.BoolFlag{"example", "download dependencies for example(s)"},
 	},
@@ -61,14 +64,18 @@ func init() {
 }
 
 func runGet(ctx *cli.Context) {
-	hd, err := com.HomeDir()
-	if err != nil {
-		log.Error("get", "Fail to get current user")
-		log.Fatal("", err.Error())
-	}
-
-	doc.HomeDir = strings.Replace(doc.RawHomeDir, "~", hd, -1)
 	doc.LoadPkgNameList(doc.HomeDir + "/data/pkgname.list")
+
+	if ctx.Bool("gopath") {
+		installGopath = com.GetGOPATHs()[0]
+		if !com.IsDir(installGopath) {
+			log.Error("Get", "Fail to start command")
+			log.Fatal("", "GOPATH does not exist: "+installGopath)
+		}
+		log.Log("Indicate GOPATH: %s", installGopath)
+
+		installGopath += "/src"
+	}
 
 	installRepoPath = doc.HomeDir + "/repos"
 	log.Log("Local repository path: %s", installRepoPath)
@@ -80,6 +87,7 @@ func runGet(ctx *cli.Context) {
 	default:
 		getByPath(ctx)
 	}
+
 }
 
 func getByGopmfile(ctx *cli.Context) {
@@ -134,27 +142,27 @@ func getByGopmfile(ctx *cli.Context) {
 func getByPath(ctx *cli.Context) {
 	nodes := make([]*doc.Node, 0, len(ctx.Args()))
 	for _, info := range ctx.Args() {
-		pkg := info
-		node := doc.NewNode(pkg, pkg, doc.BRANCH, "", true)
+		pkgName := info
+		node := doc.NewNode(pkgName, pkgName, doc.BRANCH, "", true)
 
 		if i := strings.Index(info, "@"); i > -1 {
-			pkg = info[:i]
+			pkgName = info[:i]
 			tp, ver, err := validPath(info[i+1:])
 			if err != nil {
-				log.Error("", "Fail to parse version")
+				log.Error("Get", "Fail to parse version")
 				log.Fatal("", err.Error())
 			}
-			node = doc.NewNode(pkg, pkg, tp, ver, true)
+			node = doc.NewNode(pkgName, pkgName, tp, ver, true)
 		}
 
-		// Cheeck package name.
-		if !strings.Contains(pkg, "/") {
-			name, ok := doc.PackageNameList[pkg]
+		// Check package name.
+		if !strings.Contains(pkgName, "/") {
+			name, ok := doc.PackageNameList[pkgName]
 			if !ok {
-				log.Error("", "Invalid package name: "+pkg)
+				log.Error("Get", "Invalid package name: "+pkgName)
 				log.Fatal("", "No match in the package name list")
 			}
-			pkg = name
+			pkgName = name
 		}
 
 		nodes = append(nodes, node)
@@ -174,6 +182,16 @@ func getByPath(ctx *cli.Context) {
 		downloadCount, failConut)
 }
 
+func copyToGopath(srcPath, destPath string) {
+	fmt.Println(destPath)
+	os.RemoveAll(destPath)
+	err := com.CopyDir(srcPath, destPath)
+	if err != nil {
+		log.Error("Download", "Fail to copy to GOPATH")
+		log.Fatal("", err.Error())
+	}
+}
+
 // downloadPackages downloads packages with certain commit,
 // if the commit is empty string, then it downloads all dependencies,
 // otherwise, it only downloada package with specific commit only.
@@ -182,7 +200,8 @@ func downloadPackages(ctx *cli.Context, nodes []*doc.Node) {
 	for _, n := range nodes {
 		// Check if it is a valid remote path.
 		if doc.IsValidRemotePath(n.ImportPath) {
-			installPath := installRepoPath + "/" + doc.GetProjectPath(n.ImportPath)
+			gopathDir := path.Join(installGopath, n.ImportPath)
+			installPath := path.Join(installRepoPath, doc.GetProjectPath(n.ImportPath))
 			if len(n.Value) > 0 {
 				installPath += "." + n.Value
 			}
@@ -192,8 +211,14 @@ func downloadPackages(ctx *cli.Context, nodes []*doc.Node) {
 				if com.IsExist(installPath) {
 					log.Trace("Skipped installed package: %s@%s:%s",
 						n.ImportPath, n.Type, doc.CheckNodeValue(n.Value))
+
+					if ctx.Bool("gopath") {
+						copyToGopath(installPath, gopathDir)
+					}
 					continue
 				}
+			} else if !com.IsExist(installPath) {
+				doc.LocalNodes.SetValue(doc.GetProjectPath(n.ImportPath), "value", "")
 			}
 
 			if !downloadCache[n.ImportPath] {
@@ -244,7 +269,11 @@ func downloadPackages(ctx *cli.Context, nodes []*doc.Node) {
 
 					// Only save non-commit node.
 					if len(nod.Value) == 0 && len(nod.Revision) > 0 {
-						doc.LocalNodes.SetValue(nod.ImportPath, "value", nod.Revision)
+						doc.LocalNodes.SetValue(doc.GetProjectPath(nod.ImportPath), "value", nod.Revision)
+					}
+
+					if ctx.Bool("gopath") {
+						copyToGopath(installPath, gopathDir)
 					}
 				}
 			} else {
@@ -269,7 +298,7 @@ func downloadPackage(ctx *cli.Context, nod *doc.Node) (*doc.Node, []string) {
 	// Mark as donwloaded.
 	downloadCache[nod.ImportPath] = true
 
-	nod.Revision = doc.LocalNodes.MustValue(nod.ImportPath, "value")
+	nod.Revision = doc.LocalNodes.MustValue(doc.GetProjectPath(nod.ImportPath), "value")
 	imports, err := doc.PureDownload(nod, installRepoPath, ctx) //CmdGet.Flags)
 
 	if err != nil {

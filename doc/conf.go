@@ -35,6 +35,16 @@ var (
 	LocalNodes     *goconfig.ConfigFile
 )
 
+func init() {
+	hd, err := com.HomeDir()
+	if err != nil {
+		log.Error("", "Fail to get current user")
+		log.Fatal("", err.Error())
+	}
+
+	HomeDir = strings.Replace(RawHomeDir, "~", hd, -1)
+}
+
 func NewGopmfile(dirPath string) *goconfig.ConfigFile {
 	gf, err := goconfig.LoadConfigFile(dirPath + "/" + GopmFileName)
 	if err != nil {
