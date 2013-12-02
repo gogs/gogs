@@ -53,9 +53,9 @@ Can specify one or more: gopm get beego@tag:v0.9.0 github.com/beego/bee
 If no argument is supplied, then gopmfile must be present`,
 	Action: runGet,
 	Flags: []cli.Flag{
-		cli.BoolFlag{"gopath", "download package(s) to GOPATH"},
-		cli.BoolFlag{"force", "force to update pakcage(s) and dependencies"},
-		cli.BoolFlag{"example", "download dependencies for example(s)"},
+		cli.BoolFlag{"gopath, g", "download package(s) to GOPATH"},
+		cli.BoolFlag{"force, f", "force to update pakcage(s) and dependencies"},
+		cli.BoolFlag{"example, e", "download dependencies for example(s)"},
 	},
 }
 

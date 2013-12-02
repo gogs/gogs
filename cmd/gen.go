@@ -35,7 +35,7 @@ gopm gen
 Make sure you run this command in the root path of a go project.`,
 	Action: runGen,
 	Flags: []cli.Flag{
-		cli.BoolFlag{"example", "check dependencies for example(s)"},
+		cli.BoolFlag{"example, e", "check dependencies for example(s)"},
 	},
 }
 

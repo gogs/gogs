@@ -8,9 +8,6 @@ import (
 	"github.com/Unknwon/com"
 )
 
-func init() {
-}
-
 func makeLink(srcPath, destPath string) error {
 	// Check if Windows version is XP.
 	if getWindowsVersion() >= 6 {

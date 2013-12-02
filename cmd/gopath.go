@@ -217,7 +217,7 @@ func genNewGoPath(ctx *cli.Context, isTest bool) {
 		log.Fatal("", err.Error())
 	}
 
-	newGoPath = filepath.Join(curPath, "vendor")
+	newGoPath = filepath.Join(curPath, ".vendor")
 	newGoPathSrc := filepath.Join(newGoPath, "src")
 	os.RemoveAll(newGoPathSrc)
 	os.MkdirAll(newGoPathSrc, os.ModePerm)

@@ -18,7 +18,6 @@ package main
 import (
 	"os"
 	"runtime"
-	"time"
 
 	"github.com/codegangsta/cli"
 
@@ -61,6 +60,5 @@ func main() {
 		cmd.CmdInstall,
 		//cmd.CmdTest,
 	}
-	app.Compiled = time.Now()
 	app.Run(os.Args)
 }

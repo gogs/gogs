@@ -15,8 +15,10 @@
 package cmd
 
 import (
+	"fmt"
 	"os"
 	"path"
+	"runtime"
 	"strings"
 
 	"github.com/Unknwon/com"
@@ -39,7 +41,7 @@ Can only specify one each time, and only works for projects that
 contains main package`,
 	Action: runBin,
 	Flags: []cli.Flag{
-		cli.BoolFlag{"dir", "build binary to given directory(second argument)"},
+		cli.BoolFlag{"dir, d", "build binary to given directory(second argument)"},
 	},
 }
 
@@ -94,7 +96,10 @@ func runBin(ctx *cli.Context) {
 	}
 
 	// Get code.
-	com.ExecCmd("gopm", "get", ctx.Args()[0])
+	stdout, _, _ := com.ExecCmd("gopm", "get", ctx.Args()[0])
+	if len(stdout) > 0 {
+		fmt.Print(stdout)
+	}
 
 	// Check if previous steps were successful.
 	pkgPath := installRepoPath + "/" + pkgName
@@ -121,7 +126,10 @@ func runBin(ctx *cli.Context) {
 	}
 
 	// Build application.
-	com.ExecCmd("gopm", "build")
+	stdout, _, _ = com.ExecCmd("gopm", "build")
+	if len(stdout) > 0 {
+		fmt.Print(stdout)
+	}
 	defer func() {
 		// Clean files.
 		os.RemoveAll(pkgPath + "/vendor")
@@ -129,6 +137,9 @@ func runBin(ctx *cli.Context) {
 
 	// Check if previous steps were successful.
 	binName := path.Base(pkgName)
+	if runtime.GOOS == "windows" {
+		binName += ".exe"
+	}
 	if !com.IsFile(binName) {
 		log.Error("Bin", "Fail to continue command")
 		log.Fatal("", "Previous steps weren't successful or the project does not contain main package")
