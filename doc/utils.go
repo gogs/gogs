@@ -26,6 +26,8 @@ import (
 	"github.com/gpmgo/gopm/log"
 )
 
+const VENDOR = ".vendor"
+
 // GetDirsInfo returns os.FileInfo of all sub-directories in root path.
 func GetDirsInfo(rootPath string) []os.FileInfo {
 	rootDir, err := os.Open(rootPath)
@@ -59,7 +61,7 @@ func GetImports(absPath, importPath string, example bool) []string {
 
 	dirs := make([]string, 0)
 	for _, fi := range fis {
-		if fi.IsDir() {
+		if fi.IsDir() && !strings.Contains(fi.Name(), VENDOR) {
 			dirs = append(dirs, absPath+fi.Name())
 		}
 	}
