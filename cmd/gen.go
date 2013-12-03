@@ -58,8 +58,12 @@ func runGen(ctx *cli.Context) {
 	}
 
 	// Get dependencies.
+	importPath, err := gf.GetValue("target", "path")
+	if err != nil {
+		importPath = "."
+	}
 	imports := doc.GetAllImports([]string{curPath},
-		gf.MustValue("target", "path"), ctx.Bool("example"))
+		importPath, ctx.Bool("example"))
 
 	for _, p := range imports {
 		if _, err := gf.GetValue("deps", doc.GetProjectPath(p)); err != nil {
