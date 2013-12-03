@@ -35,7 +35,6 @@ gopm build <go build commands>`,
 }
 
 func runBuild(ctx *cli.Context) {
-	doc.LoadLocalNodes()
 	genNewGoPath(ctx, false)
 
 	log.Trace("Building...")

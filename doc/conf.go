@@ -43,6 +43,8 @@ func init() {
 	}
 
 	HomeDir = strings.Replace(RawHomeDir, "~", hd, -1)
+
+	LoadLocalNodes()
 }
 
 func NewGopmfile(dirPath string) *goconfig.ConfigFile {

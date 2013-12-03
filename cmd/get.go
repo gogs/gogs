@@ -80,8 +80,6 @@ func runGet(ctx *cli.Context) {
 	installRepoPath = doc.HomeDir + "/repos"
 	log.Log("Local repository path: %s", installRepoPath)
 
-	doc.LoadLocalNodes()
-
 	// Check number of arguments.
 	switch len(ctx.Args()) {
 	case 0:
