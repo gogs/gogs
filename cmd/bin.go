@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"path/filepath"
 	"runtime"
 	"strings"
 
@@ -136,12 +137,26 @@ func runBin(ctx *cli.Context) {
 	}()
 
 	// Check if previous steps were successful.
-	binName := path.Base(pkgPath)
-	binPath := path.Join(VENDOR, "src", binName)
+	if com.IsFile(doc.GopmFileName) {
+		log.Trace("Loading gopmfile...")
+		gf := doc.NewGopmfile(".")
+
+		var err error
+		pkgName, err = gf.GetValue("target", "path")
+		if err == nil {
+			log.Log("Target name: %s", pkgName)
+		}
+	}
+
+	if len(pkgName) == 0 {
+		_, pkgName = filepath.Split(pkgPath)
+	}
+
+	binName := path.Base(pkgName)
 	if runtime.GOOS == "windows" {
 		binName += ".exe"
 	}
-	binPath = path.Join(binPath, binName)
+	binPath := path.Join(VENDOR, "src", pkgPath, binName)
 	if !com.IsFile(binPath) {
 		log.Error("Bin", "Fail to continue command")
 		log.Fatal("", "Previous steps weren't successful or the project does not contain main package")

@@ -16,6 +16,7 @@ package doc
 
 import (
 	"os"
+	"path"
 	"strings"
 
 	"github.com/Unknwon/com"
@@ -48,7 +49,7 @@ func init() {
 }
 
 func NewGopmfile(dirPath string) *goconfig.ConfigFile {
-	gf, err := goconfig.LoadConfigFile(dirPath + "/" + GopmFileName)
+	gf, err := goconfig.LoadConfigFile(path.Join(dirPath, GopmFileName))
 	if err != nil {
 		log.Error("", "Fail to load gopmfile")
 		log.Fatal("", err.Error())

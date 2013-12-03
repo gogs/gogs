@@ -190,13 +190,6 @@ func genNewGoPath(ctx *cli.Context, isTest bool) {
 		log.Fatal("", err.Error())
 	}
 
-	hd, err := com.HomeDir()
-	if err != nil {
-		log.Error("", "Fail to get current user")
-		log.Fatal("", err.Error())
-	}
-
-	doc.HomeDir = strings.Replace(doc.RawHomeDir, "~", hd, -1)
 	installRepoPath = doc.HomeDir + "/repos"
 
 	if com.IsFile(curPath + "/" + doc.GopmFileName) {

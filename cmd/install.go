@@ -44,14 +44,11 @@ func runInstall(ctx *cli.Context) {
 	switch len(ctx.Args()) {
 	case 0:
 		if !com.IsFile(".gopmfile") {
-			log.Fatal("Install", "No gopmfile exist in work directory")
+			break
 		}
 
 		gf := doc.NewGopmfile(".")
 		target = gf.MustValue("target", "path")
-		if len(target) == 0 {
-			log.Fatal("Install", "Cannot find target in gopmfile")
-		}
 	case 1:
 		target = ctx.Args()[0]
 	default:
@@ -59,6 +56,10 @@ func runInstall(ctx *cli.Context) {
 	}
 
 	genNewGoPath(ctx, false)
+
+	if len(target) == 0 {
+		target = pkgName
+	}
 
 	log.Trace("Installing...")
 

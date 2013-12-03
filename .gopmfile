@@ -2,8 +2,8 @@
 path=github.com/gpmgo/gopm
 
 [deps]
-github.com/codegangsta/cli= 
-github.com/Unknwon/com= 
-github.com/Unknwon/goconfig= 
-github.com/aybabtme/color= 
+github.com/codegangsta/cli=
+github.com/Unknwon/com=
+github.com/Unknwon/goconfig=
+github.com/aybabtme/color=
 

@@ -215,9 +215,9 @@ func downloadPackages(ctx *cli.Context, nodes []*doc.Node) {
 						copyToGopath(installPath, gopathDir)
 					}
 					continue
+				} else {
+					doc.LocalNodes.SetValue(doc.GetProjectPath(n.ImportPath), "value", "")
 				}
-			} else if !com.IsExist(installPath) {
-				doc.LocalNodes.SetValue(doc.GetProjectPath(n.ImportPath), "value", "")
 			}
 
 			if !downloadCache[n.ImportPath] {
