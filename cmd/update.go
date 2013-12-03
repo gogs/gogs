@@ -170,8 +170,8 @@ func runUpdate(ctx *cli.Context) {
 			log.Error("Update", "Fail to generate bat file")
 			log.Fatal("", err.Error())
 		}
-		f.WriteString(fmt.Sprintf(`ping -n 1 127.0.0.1>nul\ncopy "%v" "%v"\ndel "%v"`,
-			binPath, movePath, binPath))
+		f.WriteString(fmt.Sprintf(`ping -n 1 127.0.0.1>nul\ncopy "%v" "%v"\ndel "%v"\ndel "%v"`,
+			binPath, movePath, binPath, batPath))
 		f.Close()
 
 		attr := &os.ProcAttr{
