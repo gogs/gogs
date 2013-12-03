@@ -58,6 +58,7 @@ func main() {
 		cmd.CmdRun,
 		cmd.CmdBuild,
 		cmd.CmdInstall,
+		//cmd.CmdUpdate,
 		//cmd.CmdTest,
 	}
 	app.Run(os.Args)

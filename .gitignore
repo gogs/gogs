@@ -4,3 +4,4 @@ gopm
 *.exe~
 repos/
 vendor/
+.vendor/
