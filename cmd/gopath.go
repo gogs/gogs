@@ -15,6 +15,8 @@ import (
 	"github.com/gpmgo/gopm/log"
 )
 
+const VENDOR = ".vendor"
+
 func getGopmPkgs(dirPath string, isTest bool) (pkgs map[string]*doc.Pkg, err error) {
 	absPath, err := filepath.Abs(dirPath)
 	if err != nil {
@@ -217,7 +219,7 @@ func genNewGoPath(ctx *cli.Context, isTest bool) {
 		log.Fatal("", err.Error())
 	}
 
-	newGoPath = filepath.Join(curPath, ".vendor")
+	newGoPath = filepath.Join(curPath, VENDOR)
 	newGoPathSrc := filepath.Join(newGoPath, "src")
 	os.RemoveAll(newGoPathSrc)
 	os.MkdirAll(newGoPathSrc, os.ModePerm)

@@ -73,11 +73,11 @@ func runBin(ctx *cli.Context) {
 
 	// Parse package version.
 	info := ctx.Args()[0]
-	pkgName := info
+	pkgPath := info
 	ver := ""
 	var err error
 	if i := strings.Index(info, "@"); i > -1 {
-		pkgName = info[:i]
+		pkgPath = info[:i]
 		_, ver, err = validPath(info[i+1:])
 		if err != nil {
 			log.Error("Bin", "Fail to parse version")
@@ -86,13 +86,13 @@ func runBin(ctx *cli.Context) {
 	}
 
 	// Check package name.
-	if !strings.Contains(pkgName, "/") {
-		name, ok := doc.PackageNameList[pkgName]
+	if !strings.Contains(pkgPath, "/") {
+		name, ok := doc.PackageNameList[pkgPath]
 		if !ok {
-			log.Error("Bin", "Invalid package name: "+pkgName)
+			log.Error("Bin", "Invalid package name: "+pkgPath)
 			log.Fatal("", "No match in the package name list")
 		}
-		pkgName = name
+		pkgPath = name
 	}
 
 	// Get code.
@@ -102,11 +102,11 @@ func runBin(ctx *cli.Context) {
 	}
 
 	// Check if previous steps were successful.
-	pkgPath := installRepoPath + "/" + pkgName
+	repoPath := installRepoPath + "/" + pkgPath
 	if len(ver) > 0 {
-		pkgPath += "." + ver
+		repoPath += "." + ver
 	}
-	if !com.IsDir(pkgPath) {
+	if !com.IsDir(repoPath) {
 		log.Error("Bin", "Fail to continue command")
 		log.Fatal("", "Previous steps weren't successful")
 	}
@@ -118,8 +118,8 @@ func runBin(ctx *cli.Context) {
 	}
 
 	// Change to repository path.
-	log.Log("Changing work directory to %s", pkgPath)
-	err = os.Chdir(pkgPath)
+	log.Log("Changing work directory to %s", repoPath)
+	err = os.Chdir(repoPath)
 	if err != nil {
 		log.Error("Bin", "Fail to change work directory")
 		log.Fatal("", err.Error())
@@ -132,14 +132,16 @@ func runBin(ctx *cli.Context) {
 	}
 	defer func() {
 		// Clean files.
-		os.RemoveAll(pkgPath + "/vendor")
+		os.RemoveAll(path.Join(repoPath, VENDOR))
 	}()
 
 	// Check if previous steps were successful.
-	binName := path.Base(pkgName)
+	binName := path.Base(pkgPath)
+	binPath := path.Join(VENDOR, "src", binName)
 	if runtime.GOOS == "windows" {
 		binName += ".exe"
 	}
+	binPath = path.Join(binPath, binName)
 	if !com.IsFile(binName) {
 		log.Error("Bin", "Fail to continue command")
 		log.Fatal("", "Previous steps weren't successful or the project does not contain main package")
