@@ -15,6 +15,8 @@
 package cmd
 
 import (
+	"path/filepath"
+
 	"github.com/Unknwon/com"
 	"github.com/codegangsta/cli"
 
@@ -35,6 +37,7 @@ If no argument is supplied, then gopmfile must be present`,
 	Action: runInstall,
 	Flags: []cli.Flag{
 		cli.BoolFlag{"verbose, v", "show process details"},
+		cli.BoolFlag{"pkg, p", "only install non-main packages"},
 	},
 }
 
@@ -57,22 +60,33 @@ func runInstall(ctx *cli.Context) {
 
 	genNewGoPath(ctx, false)
 
-	if len(target) == 0 {
-		target = pkgName
+	var installRepos []string
+	if ctx.Bool("pkg") {
+		curPath, _ := filepath.Abs(".")
+		installRepos = doc.GetAllImports([]string{curPath},
+			".", ctx.Bool("example"))
+	} else {
+		if len(target) == 0 {
+			target = pkgName
+		}
+
+		installRepos = []string{target}
 	}
 
 	log.Trace("Installing...")
 
-	cmdArgs := []string{"go", "install"}
+	for _, repo := range installRepos {
+		cmdArgs := []string{"go", "install"}
 
-	if ctx.Bool("verbose") {
-		cmdArgs = append(cmdArgs, "-v")
-	}
-	cmdArgs = append(cmdArgs, target)
-	err := execCmd(newGoPath, newCurPath, cmdArgs...)
-	if err != nil {
-		log.Error("Install", "Fail to install program")
-		log.Fatal("", err.Error())
+		if ctx.Bool("verbose") {
+			cmdArgs = append(cmdArgs, "-v")
+		}
+		cmdArgs = append(cmdArgs, repo)
+		err := execCmd(newGoPath, newCurPath, cmdArgs...)
+		if err != nil {
+			log.Error("Install", "Fail to install program")
+			log.Fatal("", err.Error())
+		}
 	}
 
 	log.Success("SUCC", "Install", "Command execute successfully!")

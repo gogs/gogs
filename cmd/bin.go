@@ -43,6 +43,7 @@ contains main package`,
 	Action: runBin,
 	Flags: []cli.Flag{
 		cli.BoolFlag{"dir, d", "build binary to given directory(second argument)"},
+		cli.BoolFlag{"force, f", "force to update pakcage(s) and dependencies"},
 	},
 }
 
@@ -133,7 +134,7 @@ func runBin(ctx *cli.Context) {
 	}
 	defer func() {
 		// Clean files.
-		os.RemoveAll(path.Join(repoPath, VENDOR))
+		os.RemoveAll(path.Join(repoPath, doc.VENDOR))
 	}()
 
 	// Check if previous steps were successful.
@@ -156,7 +157,7 @@ func runBin(ctx *cli.Context) {
 	if runtime.GOOS == "windows" {
 		binName += ".exe"
 	}
-	binPath := path.Join(VENDOR, "src", pkgPath, binName)
+	binPath := path.Join(doc.VENDOR, "src", pkgPath, binName)
 	if !com.IsFile(binPath) {
 		log.Error("Bin", "Fail to continue command")
 		log.Fatal("", "Previous steps weren't successful or the project does not contain main package")
