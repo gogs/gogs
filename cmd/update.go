@@ -123,7 +123,7 @@ func runUpdate(ctx *cli.Context) {
 	}
 	defer func() {
 		// Clean files.
-		os.RemoveAll(path.Join(repoPath, VENDOR))
+		os.RemoveAll(path.Join(repoPath, doc.VENDOR))
 	}()
 
 	// Check if previous steps were successful.
@@ -146,7 +146,7 @@ func runUpdate(ctx *cli.Context) {
 	if runtime.GOOS == "windows" {
 		binName += ".exe"
 	}
-	binPath := path.Join(VENDOR, "src", pkgPath, binName)
+	binPath := path.Join(doc.VENDOR, "src", pkgPath, binName)
 	if !com.IsFile(binPath) {
 		log.Error("Update", "Fail to continue command")
 		log.Fatal("", "Previous steps weren't successful or the project does not contain main package")
