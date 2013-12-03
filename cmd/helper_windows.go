@@ -1,11 +1,11 @@
 package cmd
 
 import (
+	"github.com/Unknwon/com"
 	"os"
 	"os/exec"
 	"syscall"
-
-	"github.com/Unknwon/com"
+	"unsafe"
 )
 
 func makeLink(srcPath, destPath string) error {
