@@ -142,7 +142,7 @@ func runBin(ctx *cli.Context) {
 		binName += ".exe"
 	}
 	binPath = path.Join(binPath, binName)
-	if !com.IsFile(binName) {
+	if !com.IsFile(binPath) {
 		log.Error("Bin", "Fail to continue command")
 		log.Fatal("", "Previous steps weren't successful or the project does not contain main package")
 	}
@@ -152,7 +152,7 @@ func runBin(ctx *cli.Context) {
 	if ctx.Bool("dir") {
 		movePath = ctx.Args()[1]
 	}
-	_, err = com.Move(binName, movePath+"/"+binName)
+	_, err = com.Move(binPath, movePath+"/"+binName)
 	if err != nil {
 		log.Error("Bin", "Fail to move binary")
 		log.Fatal("", err.Error())
