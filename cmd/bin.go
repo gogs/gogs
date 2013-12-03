@@ -152,7 +152,7 @@ func runBin(ctx *cli.Context) {
 	if ctx.Bool("dir") {
 		movePath = ctx.Args()[1]
 	}
-	_, err = com.Move(binPath, movePath+"/"+binName)
+	err = os.Rename(binPath, movePath+"/"+binName)
 	if err != nil {
 		log.Error("Bin", "Fail to move binary")
 		log.Fatal("", err.Error())

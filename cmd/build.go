@@ -15,7 +15,8 @@
 package cmd
 
 import (
-	//"os"
+	"os"
+	"path"
 
 	"github.com/codegangsta/cli"
 
@@ -45,6 +46,16 @@ func runBuild(ctx *cli.Context) {
 	if err != nil {
 		log.Error("Build", "Fail to build program")
 		log.Fatal("", err.Error())
+	}
+
+	if isWindowsXP {
+		binName := pkgName + ".exe"
+		os.Remove(binName)
+		err = os.Rename(path.Join(VENDOR, "src", pkgName, binName), binName)
+		if err != nil {
+			log.Error("Build", "Fail to move binary")
+			log.Fatal("", err.Error())
+		}
 	}
 
 	log.Success("SUCC", "Build", "Command execute successfully!")

@@ -16,6 +16,7 @@ func makeLink(srcPath, destPath string) error {
 	}
 
 	// XP.
+	isWindowsXP = true
 	os.RemoveAll(destPath)
 	return com.CopyDir(srcPath, destPath)
 }

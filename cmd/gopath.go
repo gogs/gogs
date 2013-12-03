@@ -17,6 +17,8 @@ import (
 
 const VENDOR = ".vendor"
 
+var isWindowsXP = false
+
 func getGopmPkgs(dirPath string, isTest bool) (pkgs map[string]*doc.Pkg, err error) {
 	absPath, err := filepath.Abs(dirPath)
 	if err != nil {
