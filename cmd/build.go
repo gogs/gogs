@@ -20,7 +20,6 @@ import (
 
 	"github.com/codegangsta/cli"
 
-	"github.com/gpmgo/gopm/doc"
 	"github.com/gpmgo/gopm/log"
 )
 
