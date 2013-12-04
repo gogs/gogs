@@ -26,7 +26,7 @@ func getGopmPkgs(dirPath string, isTest bool) (pkgs map[string]*doc.Pkg, err err
 
 	var builds map[string]string
 
-	if com.IsFile(absPath + "/" + doc.GopmFileName) {
+	if com.IsFile(absPath + "/" + doc.GOPM_FILE_NAME) {
 		gf := doc.NewGopmfile(absPath)
 
 		if builds, err = gf.GetSection("deps"); err != nil {
@@ -190,7 +190,7 @@ func genNewGoPath(ctx *cli.Context, isTest bool) {
 
 	installRepoPath = doc.HomeDir + "/repos"
 
-	if com.IsFile(curPath + "/" + doc.GopmFileName) {
+	if com.IsFile(curPath + "/" + doc.GOPM_FILE_NAME) {
 		log.Trace("Loading gopmfile...")
 		gf := doc.NewGopmfile(curPath)
 

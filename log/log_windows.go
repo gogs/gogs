@@ -12,6 +12,7 @@
 // License for the specific language governing permissions and limitations
 // under the License.
 
+// Package log provides npm-like style log output.
 package log
 
 import (

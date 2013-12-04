@@ -16,6 +16,7 @@ package cmd
 
 import (
 	"github.com/codegangsta/cli"
+
 	"github.com/gpmgo/gopm/log"
 )
 

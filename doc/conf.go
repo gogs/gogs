@@ -17,6 +17,7 @@ package doc
 import (
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 
 	"github.com/Unknwon/com"
@@ -26,8 +27,8 @@ import (
 )
 
 const (
-	GopmFileName = ".gopmfile"
-	RawHomeDir   = "~/.gopm"
+	GOPM_FILE_NAME = ".gopmfile"
+	RawHomeDir     = "~/.gopm"
 )
 
 var (
@@ -46,13 +47,16 @@ func init() {
 	HomeDir = strings.Replace(RawHomeDir, "~", hd, -1)
 
 	LoadLocalNodes()
+	LoadPkgNameList(HomeDir + "/data/pkgname.list")
 }
 
+// NewGopmfile loads gopmgile in given directory.
 func NewGopmfile(dirPath string) *goconfig.ConfigFile {
-	gf, err := goconfig.LoadConfigFile(path.Join(dirPath, GopmFileName))
+	dirPath, _ = filepath.Abs(dirPath)
+	gf, err := goconfig.LoadConfigFile(path.Join(dirPath, GOPM_FILE_NAME))
 	if err != nil {
-		log.Error("", "Fail to load gopmfile")
-		log.Fatal("", err.Error())
+		log.Error("", "Fail to load gopmfile:")
+		log.Fatal("", "\t"+err.Error())
 	}
 	return gf
 }
@@ -83,6 +87,16 @@ func LoadPkgNameList(filePath string) {
 		PackageNameList[strings.TrimSpace(infos[0])] =
 			strings.TrimSpace(infos[1])
 	}
+}
+
+func GetPkgFullPath(short string) string {
+	name, ok := PackageNameList[short]
+	if !ok {
+		log.Error("", "Invalid package name")
+		log.Error("", "No match in the package name list:")
+		log.Fatal("", "\t"+short)
+	}
+	return name
 }
 
 func LoadLocalNodes() {

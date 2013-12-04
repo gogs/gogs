@@ -31,8 +31,8 @@ import (
 )
 
 var (
-	installRepoPath string
-	installGopath   string
+	installRepoPath string          // The path of gopm local repository.
+	installGopath   string          // The first path in the GOPATH.
 	downloadCache   map[string]bool // Saves packages that have been downloaded.
 	downloadCount   int
 	failConut       int
@@ -41,7 +41,7 @@ var (
 var CmdGet = cli.Command{
 	Name:  "get",
 	Usage: "fetch remote package(s) and dependencies to local repository",
-	Description: `Command get fetches a package, and any pakcages that it depents on. 
+	Description: `Command get fetches a package, and any pakcage that it depents on. 
 If the package has a gopmfile, the fetch process will be driven by that.
 
 gopm get
@@ -50,12 +50,16 @@ gopm get <package name>@[<tag|commit|branch>:<value>]
 
 Can specify one or more: gopm get beego@tag:v0.9.0 github.com/beego/bee
 
-If no argument is supplied, then gopmfile must be present`,
+If no argument is supplied, then gopmfile must be present.
+If no version specified and package exists in GOPATH,
+it will be skipped unless user enabled '--remote, -r' option 
+then all the packages go into gopm local repository.`,
 	Action: runGet,
 	Flags: []cli.Flag{
-		cli.BoolFlag{"gopath, g", "download package(s) to GOPATH"},
+		cli.BoolFlag{"gopath, g", "download all pakcages to GOPATH"},
 		cli.BoolFlag{"force, f", "force to update pakcage(s) and dependencies"},
-		cli.BoolFlag{"example, e", "download dependencies for example(s)"},
+		cli.BoolFlag{"example, e", "download dependencies for example folder"},
+		cli.BoolFlag{"remote, r", "download all pakcages to gopm local repository"},
 	},
 }
 
@@ -64,19 +68,26 @@ func init() {
 }
 
 func runGet(ctx *cli.Context) {
-	doc.LoadPkgNameList(doc.HomeDir + "/data/pkgname.list")
-
-	if ctx.Bool("gopath") {
-		installGopath = com.GetGOPATHs()[0]
-		if !com.IsDir(installGopath) {
-			log.Error("Get", "Fail to start command")
-			log.Fatal("", "GOPATH does not exist: "+installGopath)
-		}
-		log.Log("Indicate GOPATH: %s", installGopath)
-
-		installGopath += "/src"
+	// Check conflicts.
+	if ctx.Bool("gopath") && ctx.Bool("remote") {
+		log.Error("get", "Command options have conflicts")
+		log.Error("", "Following options are not supposed to use at same time:")
+		log.Error("", "\t'--gopath, -g' '--remote, -r'")
+		log.Help("Try 'gopm help get' to get more information")
 	}
 
+	// Get GOPATH.
+	installGopath = com.GetGOPATHs()[0]
+	if !com.IsDir(installGopath) {
+		log.Error("get", "Invalid GOPATH path")
+		log.Error("", "GOPATH does not exist or is not a directory:")
+		log.Error("", "\t"+installGopath)
+		log.Help("Try 'go help gopath' to get more information")
+	}
+	log.Log("Indicated GOPATH: %s", installGopath)
+	installGopath += "/src"
+
+	// The gopm local repository.
 	installRepoPath = doc.HomeDir + "/repos"
 	log.Log("Local repository path: %s", installRepoPath)
 
@@ -92,15 +103,20 @@ func runGet(ctx *cli.Context) {
 
 func getByGopmfile(ctx *cli.Context) {
 	if !com.IsFile(".gopmfile") {
-		log.Fatal("Get", "No argument is supplied and no gopmfile exist")
+		log.Error("get", "Gopmfile not found")
+		log.Error("", "No argument is supplied and no gopmfile exists")
+		log.Help("\n%s\n%s\n%s",
+			"Work directory is supposed to have gopmfile when there is no argument supplied",
+			"Try 'gopm gen' to auto-generate gopmfile",
+			"Try 'gopm help gen' to get more information")
 	}
 
 	gf := doc.NewGopmfile(".")
 
 	absPath, err := filepath.Abs(".")
 	if err != nil {
-		log.Error("Get", "Fail to get absolute path of work directory")
-		log.Fatal("", err.Error())
+		log.Error("get", "Fail to get absolute path of work directory")
+		log.Fatal("", "\t"+err.Error())
 	}
 
 	log.Log("Work directory: %s", absPath)
@@ -117,8 +133,10 @@ func getByGopmfile(ctx *cli.Context) {
 		if v, err := gf.GetValue("deps", p); err == nil && len(v) > 0 {
 			tp, ver, err := validPath(v)
 			if err != nil {
-				log.Error("", "Fail to parse version")
-				log.Fatal("", err.Error())
+				log.Error("get", "Cannot parse dependency version")
+				log.Error("", err.Error()+":")
+				log.Error("", "\t"+v)
+				log.Help("Try 'gopm help get' to get more information")
 			}
 			node.Type = tp
 			node.Value = ver
@@ -131,7 +149,8 @@ func getByGopmfile(ctx *cli.Context) {
 	if doc.LocalNodes != nil {
 		if err := goconfig.SaveConfigFile(doc.LocalNodes,
 			doc.HomeDir+doc.LocalNodesFile); err != nil {
-			log.Error("Get", "Fail to save localnodes.list")
+			log.Error("get", "Fail to save localnodes.list:")
+			log.Error("", "\t"+err.Error())
 		}
 	}
 
@@ -142,27 +161,24 @@ func getByGopmfile(ctx *cli.Context) {
 func getByPath(ctx *cli.Context) {
 	nodes := make([]*doc.Node, 0, len(ctx.Args()))
 	for _, info := range ctx.Args() {
-		pkgName := info
-		node := doc.NewNode(pkgName, pkgName, doc.BRANCH, "", true)
+		pkgPath := info
+		node := doc.NewNode(pkgPath, pkgPath, doc.BRANCH, "", true)
 
 		if i := strings.Index(info, "@"); i > -1 {
-			pkgName = info[:i]
+			pkgPath = info[:i]
 			tp, ver, err := validPath(info[i+1:])
 			if err != nil {
-				log.Error("Get", "Fail to parse version")
-				log.Fatal("", err.Error())
+				log.Error("get", "Cannot parse dependency version")
+				log.Error("", err.Error()+":")
+				log.Error("", "\t"+info[i+1:])
+				log.Help("Try 'gopm help get' to get more information")
 			}
-			node = doc.NewNode(pkgName, pkgName, tp, ver, true)
+			node = doc.NewNode(pkgPath, pkgPath, tp, ver, true)
 		}
 
 		// Check package name.
-		if !strings.Contains(pkgName, "/") {
-			name, ok := doc.PackageNameList[pkgName]
-			if !ok {
-				log.Error("Get", "Invalid package name: "+pkgName)
-				log.Fatal("", "No match in the package name list")
-			}
-			pkgName = name
+		if !strings.Contains(pkgPath, "/") {
+			pkgPath = doc.GetPkgFullPath(pkgPath)
 		}
 
 		nodes = append(nodes, node)
@@ -173,7 +189,8 @@ func getByPath(ctx *cli.Context) {
 	if doc.LocalNodes != nil {
 		if err := goconfig.SaveConfigFile(doc.LocalNodes,
 			doc.HomeDir+doc.LocalNodesFile); err != nil {
-			log.Error("Get", "Fail to save localnodes.list")
+			log.Error("get", "Fail to save localnodes.list:")
+			log.Error("", "\t"+err.Error())
 		}
 	}
 
@@ -182,12 +199,11 @@ func getByPath(ctx *cli.Context) {
 }
 
 func copyToGopath(srcPath, destPath string) {
-	fmt.Println(destPath)
 	os.RemoveAll(destPath)
 	err := com.CopyDir(srcPath, destPath)
 	if err != nil {
-		log.Error("Download", "Fail to copy to GOPATH")
-		log.Fatal("", err.Error())
+		log.Error("download", "Fail to copy to GOPATH:")
+		log.Fatal("", "\t"+err.Error())
 	}
 }
 
@@ -200,14 +216,14 @@ func downloadPackages(ctx *cli.Context, nodes []*doc.Node) {
 		// Check if it is a valid remote path.
 		if doc.IsValidRemotePath(n.ImportPath) {
 			gopathDir := path.Join(installGopath, n.ImportPath)
-			installPath := path.Join(installRepoPath, doc.GetProjectPath(n.ImportPath))
-			if len(n.Value) > 0 {
-				installPath += "." + n.Value
-			}
+			n.RootPath = doc.GetProjectPath(n.ImportPath)
+			installPath := path.Join(installRepoPath, n.RootPath) +
+				versionSuffix(n.Value)
 
 			if !ctx.Bool("force") {
 				// Check if package has been downloaded.
-				if com.IsExist(installPath) {
+				if (len(n.Value) == 0 && !ctx.Bool("remote") && com.IsExist(gopathDir)) ||
+					com.IsExist(installPath) {
 					log.Trace("Skipped installed package: %s@%s:%s",
 						n.ImportPath, n.Type, doc.CheckNodeValue(n.Value))
 
@@ -216,22 +232,22 @@ func downloadPackages(ctx *cli.Context, nodes []*doc.Node) {
 					}
 					continue
 				} else {
-					doc.LocalNodes.SetValue(doc.GetProjectPath(n.ImportPath), "value", "")
+					doc.LocalNodes.SetValue(n.RootPath, "value", "")
 				}
 			}
 
-			if !downloadCache[n.ImportPath] {
+			if !downloadCache[n.RootPath] {
 				// Download package.
 				nod, imports := downloadPackage(ctx, n)
 				if len(imports) > 0 {
 					var gf *goconfig.ConfigFile
 
 					// Check if has gopmfile
-					if com.IsFile(installPath + "/" + doc.GopmFileName) {
+					if com.IsFile(installPath + "/" + doc.GOPM_FILE_NAME) {
 						log.Log("Found gopmgile: %s@%s:%s",
 							n.ImportPath, n.Type, doc.CheckNodeValue(n.Value))
 
-						gf = doc.NewGopmfile(installPath /* + "/.gopmfile"*/)
+						gf = doc.NewGopmfile(installPath)
 					}
 
 					// Need to download dependencies.
@@ -249,8 +265,10 @@ func downloadPackages(ctx *cli.Context, nodes []*doc.Node) {
 							len(v) > 0 {
 							tp, ver, err := validPath(v)
 							if err != nil {
-								log.Error("Download", "Fail to parse version")
-								log.Fatal("", err.Error())
+								log.Error("download", "Cannot parse dependency version")
+								log.Error("", err.Error()+":")
+								log.Error("", "\t"+v)
+								log.Help("Try 'gopm help get' to get more information")
 							}
 							nodes[i].Type = tp
 							nodes[i].Value = ver
@@ -268,7 +286,7 @@ func downloadPackages(ctx *cli.Context, nodes []*doc.Node) {
 
 					// Only save non-commit node.
 					if len(nod.Value) == 0 && len(nod.Revision) > 0 {
-						doc.LocalNodes.SetValue(doc.GetProjectPath(nod.ImportPath), "value", nod.Revision)
+						doc.LocalNodes.SetValue(nod.RootPath, "value", nod.Revision)
 					}
 
 					if ctx.Bool("gopath") {
@@ -283,7 +301,7 @@ func downloadPackages(ctx *cli.Context, nodes []*doc.Node) {
 			continue
 		} else {
 			// Invalid import path.
-			log.Error("", "Skipped invalid package: "+fmt.Sprintf("%s@%s:%s",
+			log.Error("download", "Skipped invalid package: "+fmt.Sprintf("%s@%s:%s",
 				n.ImportPath, n.Type, doc.CheckNodeValue(n.Value)))
 			failConut++
 		}
@@ -297,14 +315,14 @@ func downloadPackage(ctx *cli.Context, nod *doc.Node) (*doc.Node, []string) {
 	// Mark as donwloaded.
 	downloadCache[nod.ImportPath] = true
 
-	nod.Revision = doc.LocalNodes.MustValue(doc.GetProjectPath(nod.ImportPath), "value")
+	nod.Revision = doc.LocalNodes.MustValue(nod.RootPath, "value")
 	imports, err := doc.PureDownload(nod, installRepoPath, ctx) //CmdGet.Flags)
 
 	if err != nil {
-		log.Error("Get", "Fail to download pakage: "+nod.ImportPath)
-		log.Error("", err.Error())
+		log.Error("get", "Fail to download pakage: "+nod.ImportPath)
+		log.Error("", "\t"+err.Error())
 		failConut++
-		os.RemoveAll(installRepoPath + "/" + doc.GetProjectPath(nod.ImportPath) + "/")
+		os.RemoveAll(installRepoPath + "/" + nod.RootPath)
 		return nil, nil
 	}
 	return nod, imports
@@ -312,7 +330,7 @@ func downloadPackage(ctx *cli.Context, nod *doc.Node) (*doc.Node, []string) {
 
 // validPath checks if the information of the package is valid.
 func validPath(info string) (string, string, error) {
-	infos := strings.SplitN(info, ":", 2)
+	infos := strings.Split(info, ":")
 
 	l := len(infos)
 	switch {
@@ -327,4 +345,11 @@ func validPath(info string) (string, string, error) {
 	default:
 		return "", "", errors.New("Invalid version information")
 	}
+}
+
+func versionSuffix(value string) string {
+	if len(value) > 0 {
+		return "." + value
+	}
+	return ""
 }

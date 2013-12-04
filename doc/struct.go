@@ -36,6 +36,7 @@ const (
 
 type Pkg struct {
 	ImportPath string
+	RootPath   string
 	Type       string
 	Value      string // Branch, tag or commit.
 }
@@ -48,7 +49,7 @@ func (pkg *Pkg) VerString() string {
 }
 
 func NewPkg(importPath, tp, value string) *Pkg {
-	return &Pkg{importPath, tp, value}
+	return &Pkg{importPath, "", tp, value}
 }
 
 func NewDefaultPkg(importPath string) *Pkg {
@@ -65,9 +66,10 @@ type Node struct {
 
 func NewNode(importPath, downloadUrl, tp, value string, isGetDeps bool) *Node {
 	return &Node{
-		Pkg: Pkg{ImportPath: importPath,
-			Type:  tp,
-			Value: value,
+		Pkg: Pkg{
+			ImportPath: importPath,
+			Type:       tp,
+			Value:      value,
 		},
 		DownloadURL: downloadUrl,
 		IsGetDeps:   isGetDeps,

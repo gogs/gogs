@@ -5,5 +5,5 @@ path=github.com/gpmgo/gopm
 github.com/codegangsta/cli=
 github.com/Unknwon/com=
 github.com/Unknwon/goconfig=
-github.com/aybabtme/color=
+github.com/aybabtme/color= 
 

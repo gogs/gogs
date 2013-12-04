@@ -47,14 +47,14 @@ func runGen(ctx *cli.Context) {
 
 	gf, err := goconfig.LoadConfigFile(".gopmfile")
 	if err != nil {
-		log.Error("Gen", "Fail to load gopmfile")
-		log.Fatal("", err.Error())
+		log.Error("gen", "Cannot load gopmfile:")
+		log.Fatal("", "\t"+err.Error())
 	}
 
 	curPath, err := os.Getwd()
 	if err != nil {
-		log.Error("Gen", "Fail to get work directory")
-		log.Fatal("", err.Error())
+		log.Error("gen", "Cannot get work directory:")
+		log.Fatal("", "\t"+err.Error())
 	}
 
 	// Get dependencies.
@@ -73,9 +73,9 @@ func runGen(ctx *cli.Context) {
 
 	err = goconfig.SaveConfigFile(gf, ".gopmfile")
 	if err != nil {
-		log.Error("Gen", "Fail to save gopmfile")
-		log.Fatal("", err.Error())
+		log.Error("gen", "Fail to save gopmfile:")
+		log.Fatal("", "\t"+err.Error())
 	}
 
-	log.Success("SUCC", "Gen", "Generate gopmfile successfully!")
+	log.Success("SUCC", "gen", "Generate gopmfile successfully!")
 }

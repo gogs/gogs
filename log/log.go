@@ -14,6 +14,7 @@
 
 // +build !windows
 
+// Package log provides npm-like style log output.
 package log
 
 import (
@@ -57,4 +58,10 @@ func Message(hl, msg string) {
 		hl = " " + brush.Yellow(hl).String()
 	}
 	fmt.Printf("gopm %s%s %s\n", brush.Yellow("MSG!"), hl, msg)
+}
+
+func Help(format string, args ...interface{}) {
+	fmt.Printf("gopm %s %s\n", brush.Cyan("HELP"),
+		fmt.Sprintf(format, args...))
+	os.Exit(2)
 }

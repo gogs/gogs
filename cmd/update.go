@@ -127,7 +127,7 @@ func runUpdate(ctx *cli.Context) {
 	}()
 
 	// Check if previous steps were successful.
-	if com.IsFile(doc.GopmFileName) {
+	if com.IsFile(doc.GOPM_FILE_NAME) {
 		log.Trace("Loading gopmfile...")
 		gf := doc.NewGopmfile(".")
 

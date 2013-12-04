@@ -49,11 +49,9 @@ contains main package`,
 
 func runBin(ctx *cli.Context) {
 	if len(ctx.Args()) == 0 {
-		log.Error("Bin", "Fail to start command")
-		log.Fatal("", "No package specified")
+		log.Error("bin", "Cannot start command:")
+		log.Fatal("", "\tNo package specified")
 	}
-
-	doc.LoadPkgNameList(doc.HomeDir + "/data/pkgname.list")
 
 	installRepoPath = doc.HomeDir + "/repos"
 
@@ -63,14 +61,14 @@ func runBin(ctx *cli.Context) {
 		num = 2
 	}
 	if len(ctx.Args()) != num {
-		log.Error("Bin", "Fail to start command")
-		log.Fatal("", "Invalid argument number")
+		log.Error("bin", "Cannot start command:")
+		log.Fatal("", "\tMissing indicated path to build binary")
 	}
 
 	// Check if given directory exists.
 	if ctx.Bool("dir") && !com.IsDir(ctx.Args()[1]) {
-		log.Error("Bin", "Fail to start command")
-		log.Fatal("", "Given directory does not exist")
+		log.Error("bin", "Cannot start command:")
+		log.Fatal("", "\tIndicated path does not exist or is not a directory")
 	}
 
 	// Parse package version.
@@ -82,49 +80,43 @@ func runBin(ctx *cli.Context) {
 		pkgPath = info[:i]
 		_, ver, err = validPath(info[i+1:])
 		if err != nil {
-			log.Error("Bin", "Fail to parse version")
-			log.Fatal("", err.Error())
+			log.Error("bin", "Cannot parse package version")
+			log.Error("", err.Error()+":")
+			log.Error("", "\t"+info[i+1:])
+			log.Help("Try 'gopm help get' to get more information")
 		}
 	}
 
 	// Check package name.
 	if !strings.Contains(pkgPath, "/") {
-		name, ok := doc.PackageNameList[pkgPath]
-		if !ok {
-			log.Error("Bin", "Invalid package name: "+pkgPath)
-			log.Fatal("", "No match in the package name list")
-		}
-		pkgPath = name
+		pkgPath = doc.GetPkgFullPath(pkgPath)
 	}
 
 	// Get code.
-	stdout, _, _ := com.ExecCmd("gopm", "get", ctx.Args()[0])
+	stdout, _, _ := com.ExecCmd("gopm", "get", "-r", ctx.Args()[0])
 	if len(stdout) > 0 {
 		fmt.Print(stdout)
 	}
 
 	// Check if previous steps were successful.
-	repoPath := installRepoPath + "/" + pkgPath
-	if len(ver) > 0 {
-		repoPath += "." + ver
-	}
+	repoPath := installRepoPath + "/" + pkgPath + versionSuffix(ver)
 	if !com.IsDir(repoPath) {
-		log.Error("Bin", "Fail to continue command")
-		log.Fatal("", "Previous steps weren't successful")
+		log.Error("bin", "Cannot continue command:")
+		log.Fatal("", "\tPrevious steps weren't successful")
 	}
 
 	wd, err := os.Getwd()
 	if err != nil {
-		log.Error("Bin", "Fail to get work directory")
-		log.Fatal("", err.Error())
+		log.Error("bin", "Cannot get work directory:")
+		log.Fatal("", "\t"+err.Error())
 	}
 
 	// Change to repository path.
 	log.Log("Changing work directory to %s", repoPath)
 	err = os.Chdir(repoPath)
 	if err != nil {
-		log.Error("Bin", "Fail to change work directory")
-		log.Fatal("", err.Error())
+		log.Error("bin", "Fail to change work directory:")
+		log.Fatal("", "\t"+err.Error())
 	}
 
 	// Build application.
@@ -134,11 +126,11 @@ func runBin(ctx *cli.Context) {
 	}
 	defer func() {
 		// Clean files.
-		os.RemoveAll(path.Join(repoPath, doc.VENDOR))
+		//os.RemoveAll(path.Join(repoPath, doc.VENDOR))
 	}()
 
 	// Check if previous steps were successful.
-	if com.IsFile(doc.GopmFileName) {
+	if com.IsFile(doc.GOPM_FILE_NAME) {
 		log.Trace("Loading gopmfile...")
 		gf := doc.NewGopmfile(".")
 
@@ -157,10 +149,9 @@ func runBin(ctx *cli.Context) {
 	if runtime.GOOS == "windows" {
 		binName += ".exe"
 	}
-	binPath := path.Join(doc.VENDOR, "src", pkgPath, binName)
-	if !com.IsFile(binPath) {
-		log.Error("Bin", "Fail to continue command")
-		log.Fatal("", "Previous steps weren't successful or the project does not contain main package")
+	if !com.IsFile(binName) {
+		log.Error("bin", "Cannot continue command:")
+		log.Fatal("", "\tPrevious steps weren't successful or the project does not contain main package")
 	}
 
 	// Move binary to given directory.
@@ -168,15 +159,15 @@ func runBin(ctx *cli.Context) {
 	if ctx.Bool("dir") {
 		movePath = ctx.Args()[1]
 	}
-	err = os.Rename(binPath, movePath+"/"+binName)
+	err = os.Rename(binName, movePath+"/"+binName)
 	if err != nil {
-		log.Error("Bin", "Fail to move binary")
-		log.Fatal("", err.Error())
+		log.Error("bin", "Fail to move binary:")
+		log.Fatal("", "\t"+err.Error())
 	}
 	os.Chmod(movePath+"/"+binName, os.ModePerm)
 
 	log.Log("Changing work directory back to %s", wd)
 	os.Chdir(wd)
 
-	log.Success("SUCC", "Bin", "Command execute successfully!")
+	log.Success("SUCC", "bin", "Command execute successfully!")
 }
