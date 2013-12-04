@@ -64,10 +64,14 @@ func runBuild(ctx *cli.Context) {
 	if isWindowsXP {
 		binName := pkgName + ".exe"
 		os.Remove(binName)
-		err = os.Rename(path.Join(doc.VENDOR, "src", pkgName, binName), binName)
-		if err != nil {
-			log.Error("Build", "Fail to move binary")
-			log.Fatal("", err.Error())
+		if com.IsFile(path.Join(doc.VENDOR, "src", pkgName, binName)) {
+			err = os.Rename(path.Join(doc.VENDOR, "src", pkgName, binName), binName)
+			if err != nil {
+				log.Error("Build", "Fail to move binary")
+				log.Fatal("", err.Error())
+			}
+		} else {
+			log.Warn("No binary generated")
 		}
 	}
 

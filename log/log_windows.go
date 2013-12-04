@@ -32,6 +32,10 @@ func Fatal(hl, msg string) {
 	os.Exit(2)
 }
 
+func Warn(format string, args ...interface{}) {
+	fmt.Printf("gopm WARN %s\n", fmt.Sprintf(format, args...))
+}
+
 func Log(format string, args ...interface{}) {
 	fmt.Printf("gopm INFO %s\n", fmt.Sprintf(format, args...))
 }
