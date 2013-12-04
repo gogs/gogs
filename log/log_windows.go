@@ -33,13 +33,11 @@ func Fatal(hl, msg string) {
 }
 
 func Log(format string, args ...interface{}) {
-	fmt.Printf("gopm INFO %s\n",
-		fmt.Sprintf(format, args...))
+	fmt.Printf("gopm INFO %s\n", fmt.Sprintf(format, args...))
 }
 
 func Trace(format string, args ...interface{}) {
-	fmt.Printf("gopm TRAC %s\n",
-		fmt.Sprintf(format, args...))
+	fmt.Printf("gopm TRAC %s\n", fmt.Sprintf(format, args...))
 }
 
 func Success(title, hl, msg string) {
@@ -54,4 +52,9 @@ func Message(hl, msg string) {
 		hl = " " + hl
 	}
 	fmt.Printf("gopm MSG!%s %s\n", hl, msg)
+}
+
+func Help(format string, args ...interface{}) {
+	fmt.Printf("gopm HELP %s\n", fmt.Sprintf(format, args...))
+	os.Exit(2)
 }

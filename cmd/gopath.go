@@ -164,7 +164,7 @@ func execCmd(gopath, curPath string, args ...string) error {
 	log.Log("Setting GOPATH to %s", gopath)
 
 	sep := ":"
-	if runtime.GOOS == "windos" {
+	if runtime.GOOS == "windows" {
 		sep = ";"
 	}
 	err = os.Setenv("GOPATH", gopath+sep+oldGoPath)
