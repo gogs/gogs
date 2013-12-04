@@ -55,7 +55,20 @@ func runInstall(ctx *cli.Context) {
 	case 1:
 		target = ctx.Args()[0]
 	default:
-		log.Fatal("Install", "Too many arguments")
+		log.Fatal("install", "Too many arguments")
+	}
+
+	if !ctx.Bool("remote") {
+		// Get GOPATH.
+		installGopath = com.GetGOPATHs()[0]
+		if !com.IsDir(installGopath) {
+			log.Error("install", "Invalid GOPATH path")
+			log.Error("", "GOPATH does not exist or is not a directory:")
+			log.Error("", "\t"+installGopath)
+			log.Help("Try 'go help gopath' to get more information")
+		}
+		log.Log("Indicated GOPATH: %s", installGopath)
+		installGopath += "/src"
 	}
 
 	genNewGoPath(ctx, false)
@@ -84,10 +97,10 @@ func runInstall(ctx *cli.Context) {
 		cmdArgs = append(cmdArgs, repo)
 		err := execCmd(newGoPath, newCurPath, cmdArgs...)
 		if err != nil {
-			log.Error("Install", "Fail to install program")
-			log.Fatal("", err.Error())
+			log.Error("install", "Fail to install program:")
+			log.Fatal("", "\t"+err.Error())
 		}
 	}
 
-	log.Success("SUCC", "Install", "Command execute successfully!")
+	log.Success("SUCC", "install", "Command executed successfully!")
 }

@@ -15,6 +15,7 @@
 package cmd
 
 import (
+	"github.com/Unknwon/com"
 	"github.com/codegangsta/cli"
 
 	"github.com/gpmgo/gopm/log"
@@ -31,6 +32,19 @@ gopm run <go run commands>`,
 }
 
 func runRun(ctx *cli.Context) {
+	if !ctx.Bool("remote") {
+		// Get GOPATH.
+		installGopath = com.GetGOPATHs()[0]
+		if !com.IsDir(installGopath) {
+			log.Error("run", "Invalid GOPATH path")
+			log.Error("", "GOPATH does not exist or is not a directory:")
+			log.Error("", "\t"+installGopath)
+			log.Help("Try 'go help gopath' to get more information")
+		}
+		log.Log("Indicated GOPATH: %s", installGopath)
+		installGopath += "/src"
+	}
+
 	genNewGoPath(ctx, false)
 
 	log.Trace("Running...")
@@ -39,9 +53,9 @@ func runRun(ctx *cli.Context) {
 	cmdArgs = append(cmdArgs, ctx.Args()...)
 	err := execCmd(newGoPath, newCurPath, cmdArgs...)
 	if err != nil {
-		log.Error("Run", "Fail to run program")
-		log.Fatal("", err.Error())
+		log.Error("run", "Fail to run program:")
+		log.Fatal("", "\t"+err.Error())
 	}
 
-	log.Success("SUCC", "Run", "Command execute successfully!")
+	log.Success("SUCC", "run", "Command executed successfully!")
 }

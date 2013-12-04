@@ -76,16 +76,18 @@ func runGet(ctx *cli.Context) {
 		log.Help("Try 'gopm help get' to get more information")
 	}
 
-	// Get GOPATH.
-	installGopath = com.GetGOPATHs()[0]
-	if !com.IsDir(installGopath) {
-		log.Error("get", "Invalid GOPATH path")
-		log.Error("", "GOPATH does not exist or is not a directory:")
-		log.Error("", "\t"+installGopath)
-		log.Help("Try 'go help gopath' to get more information")
+	if !ctx.Bool("remote") {
+		// Get GOPATH.
+		installGopath = com.GetGOPATHs()[0]
+		if !com.IsDir(installGopath) {
+			log.Error("get", "Invalid GOPATH path")
+			log.Error("", "GOPATH does not exist or is not a directory:")
+			log.Error("", "\t"+installGopath)
+			log.Help("Try 'go help gopath' to get more information")
+		}
+		log.Log("Indicated GOPATH: %s", installGopath)
+		installGopath += "/src"
 	}
-	log.Log("Indicated GOPATH: %s", installGopath)
-	installGopath += "/src"
 
 	// The gopm local repository.
 	installRepoPath = doc.HomeDir + "/repos"
@@ -236,7 +238,7 @@ func downloadPackages(ctx *cli.Context, nodes []*doc.Node) {
 				}
 			}
 
-			if !downloadCache[n.RootPath] {
+			if !downloadCache[n.ImportPath] {
 				// Download package.
 				nod, imports := downloadPackage(ctx, n)
 				if len(imports) > 0 {

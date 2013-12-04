@@ -1,11 +1,13 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"go/build"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/Unknwon/com"
@@ -20,8 +22,8 @@ var isWindowsXP = false
 func getGopmPkgs(dirPath string, isTest bool) (pkgs map[string]*doc.Pkg, err error) {
 	absPath, err := filepath.Abs(dirPath)
 	if err != nil {
-		log.Error("", "Fail to get absolute path of work directory")
-		log.Fatal("", err.Error())
+		log.Error("", "Fail to get absolute path of work directory:")
+		log.Fatal("", "\t"+err.Error())
 	}
 
 	var builds map[string]string
@@ -36,7 +38,7 @@ func getGopmPkgs(dirPath string, isTest bool) (pkgs map[string]*doc.Pkg, err err
 
 	pkg, err := build.ImportDir(dirPath, build.AllowBinary)
 	if err != nil {
-		return map[string]*doc.Pkg{}, err
+		return map[string]*doc.Pkg{}, errors.New("Fail to get imports: " + err.Error())
 	}
 
 	pkgs = make(map[string]*doc.Pkg)
@@ -82,20 +84,24 @@ func autoLink(oldPath, newPath string) error {
 }
 
 func getChildPkgs(ctx *cli.Context, cpath string, ppkg *doc.Pkg, cachePkgs map[string]*doc.Pkg, isTest bool) error {
-	pkgs, err := getGopmPkgs(cpath, isTest)
+	var suf string
+	if ppkg != nil {
+		suf = versionSuffix(ppkg.Value)
+	}
+	pkgs, err := getGopmPkgs(cpath+suf, isTest)
 	if err != nil {
-		return err
+		return errors.New("Fail to get gopmfile deps: " + err.Error())
 	}
 	for name, pkg := range pkgs {
 		if !pkgInCache(name, cachePkgs) {
 			var newPath string
 			if !build.IsLocalImport(name) {
 
-				suf := "." + pkg.Value
-				if len(suf) == 1 {
-					suf = ""
-				}
+				suf := versionSuffix(pkg.Value)
 				newPath = filepath.Join(installRepoPath, pkg.ImportPath)
+				if len(pkg.Value) == 0 && !ctx.Bool("remote") {
+					newPath = filepath.Join(installGopath, pkg.ImportPath)
+				}
 				if pkgName != "" && strings.HasPrefix(pkg.ImportPath, pkgName) {
 					newPath = filepath.Join(curPath, pkg.ImportPath[len(pkgName)+1:]+suf)
 				} else {
@@ -133,15 +139,15 @@ var newGoPath string
 func execCmd(gopath, curPath string, args ...string) error {
 	cwd, err := os.Getwd()
 	if err != nil {
-		log.Error("", "Fail to get work directory")
-		log.Fatal("", err.Error())
+		log.Error("", "Fail to get work directory:")
+		log.Fatal("", "\t"+err.Error())
 	}
 
 	log.Log("Changing work directory to %s", curPath)
 	err = os.Chdir(curPath)
 	if err != nil {
-		log.Error("", "Fail to change work directory")
-		log.Fatal("", err.Error())
+		log.Error("", "Fail to change work directory:")
+		log.Fatal("", "\t"+err.Error())
 	}
 	defer func() {
 		log.Log("Changing work directory back to %s", cwd)
@@ -150,17 +156,21 @@ func execCmd(gopath, curPath string, args ...string) error {
 
 	err = os.Chdir(curPath)
 	if err != nil {
-		log.Error("", "Fail to change work directory")
-		log.Fatal("", err.Error())
+		log.Error("", "Fail to change work directory:")
+		log.Fatal("", "\t"+err.Error())
 	}
 
 	oldGoPath := os.Getenv("GOPATH")
 	log.Log("Setting GOPATH to %s", gopath)
 
-	err = os.Setenv("GOPATH", gopath)
+	sep := ":"
+	if runtime.GOOS == "windos" {
+		sep = ";"
+	}
+	err = os.Setenv("GOPATH", gopath+sep+oldGoPath)
 	if err != nil {
-		log.Error("", "Fail to setting GOPATH")
-		log.Fatal("", err.Error())
+		log.Error("", "Fail to setting GOPATH:")
+		log.Fatal("", "\t"+err.Error())
 	}
 	defer func() {
 		log.Log("Setting GOPATH back to %s", oldGoPath)
@@ -184,8 +194,8 @@ func genNewGoPath(ctx *cli.Context, isTest bool) {
 	var err error
 	curPath, err = os.Getwd()
 	if err != nil {
-		log.Error("", "Fail to get work directory")
-		log.Fatal("", err.Error())
+		log.Error("", "Fail to get work directory:")
+		log.Fatal("", "\t"+err.Error())
 	}
 
 	installRepoPath = doc.HomeDir + "/repos"
@@ -208,8 +218,8 @@ func genNewGoPath(ctx *cli.Context, isTest bool) {
 	cachePkgs := make(map[string]*doc.Pkg)
 	err = getChildPkgs(ctx, curPath, nil, cachePkgs, isTest)
 	if err != nil {
-		log.Error("", "Fail to get child pakcages")
-		log.Fatal("", err.Error())
+		log.Error("", "Fail to get child pakcages:")
+		log.Fatal("", "\t"+err.Error())
 	}
 
 	newGoPath = filepath.Join(curPath, doc.VENDOR)
@@ -218,10 +228,7 @@ func genNewGoPath(ctx *cli.Context, isTest bool) {
 	os.MkdirAll(newGoPathSrc, os.ModePerm)
 
 	for name, pkg := range cachePkgs {
-		suf := "." + pkg.Value
-		if len(suf) == 1 {
-			suf = ""
-		}
+		suf := versionSuffix(pkg.Value)
 
 		oldPath := filepath.Join(installRepoPath, name) + suf
 		newPath := filepath.Join(newGoPathSrc, name)
@@ -243,12 +250,12 @@ func genNewGoPath(ctx *cli.Context, isTest bool) {
 			continue
 		}
 
-		if !isExistP {
+		if !isExistP && (len(pkg.Value) > 0 || ctx.Bool("remote")) {
 			log.Log("Linking %s", name+suf)
 			err = autoLink(oldPath, newPath)
 			if err != nil {
-				log.Error("", "Fail to make link")
-				log.Fatal("", err.Error())
+				log.Error("", "Fail to make link:")
+				log.Fatal("", "\t"+err.Error())
 			}
 		}
 	}
@@ -257,7 +264,7 @@ func genNewGoPath(ctx *cli.Context, isTest bool) {
 	log.Log("Linking %s", pkgName)
 	err = autoLink(curPath, newCurPath)
 	if err != nil {
-		log.Error("", "Fail to make link")
-		log.Fatal("", err.Error())
+		log.Error("", "Fail to make link:")
+		log.Fatal("", "\t"+err.Error())
 	}
 }

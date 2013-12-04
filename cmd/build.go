@@ -18,6 +18,7 @@ import (
 	"os"
 	"path"
 
+	"github.com/Unknwon/com"
 	"github.com/codegangsta/cli"
 
 	"github.com/gpmgo/gopm/doc"
@@ -35,6 +36,19 @@ gopm build <go build commands>`,
 }
 
 func runBuild(ctx *cli.Context) {
+	if !ctx.Bool("remote") {
+		// Get GOPATH.
+		installGopath = com.GetGOPATHs()[0]
+		if !com.IsDir(installGopath) {
+			log.Error("build", "Invalid GOPATH path")
+			log.Error("", "GOPATH does not exist or is not a directory:")
+			log.Error("", "\t"+installGopath)
+			log.Help("Try 'go help gopath' to get more information")
+		}
+		log.Log("Indicated GOPATH: %s", installGopath)
+		installGopath += "/src"
+	}
+
 	genNewGoPath(ctx, false)
 
 	log.Trace("Building...")
