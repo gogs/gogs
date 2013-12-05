@@ -135,7 +135,12 @@ func runBin(ctx *cli.Context) {
 	}
 
 	// Build application.
-	stdout, stderr, err = com.ExecCmd("gopm", "build")
+	args = make([]string, 0, 2)
+	if log.PureMode {
+		args = append(args, "-ide")
+	}
+	args = append(args, "build")
+	stdout, stderr, err = com.ExecCmd("gopm", args...)
 	if err != nil {
 		log.Error("bin", "Error occurs when 'gopm build':")
 		log.Fatal("", "\r"+err.Error())
