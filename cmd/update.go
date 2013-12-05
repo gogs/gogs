@@ -69,11 +69,7 @@ func runUpdate(ctx *cli.Context) {
 	var err error
 	if i := strings.Index(info, "@"); i > -1 {
 		pkgPath = info[:i]
-		_, ver, err = validPath(info[i+1:])
-		if err != nil {
-			log.Error("Update", "Fail to parse version")
-			log.Fatal("", err.Error())
-		}
+		_, ver = validPath(info[i+1:])
 	}
 
 	// Check package name.

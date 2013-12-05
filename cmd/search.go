@@ -14,99 +14,99 @@
 
 package cmd
 
-import (
-	"encoding/json"
-	"fmt"
-	"io/ioutil"
-	"net/http"
+// import (
+// 	"encoding/json"
+// 	"fmt"
+// 	"io/ioutil"
+// 	"net/http"
 
-	"github.com/Unknwon/com"
-)
+// 	"github.com/Unknwon/com"
+// )
 
-var CmdSearch = &Command{
-	UsageLine: "search [keyword]",
-	Short:     "search for package",
-	Long: `
-search packages
-
-The search flags are:
-
-	-e
-		search extactly, you should input an exactly package name as keyword
-`,
-}
-
-func init() {
-	CmdSearch.Run = runSearch
-	CmdSearch.Flags = map[string]bool{
-		"-e": false,
-	}
-}
-
-func printSearchPrompt(flag string) {
-	switch flag {
-	case "-e":
-		com.ColorLog("[INFO] You enabled exactly search.\n")
-	}
-}
-
+// var CmdSearch = &Command{
+// 	UsageLine: "search [keyword]",
+// 	Short:     "search for package",
+// 	Long: `
 // search packages
-func runSearch(cmd *Command, args []string) {
 
-	// Check length of arguments.
-	if len(args) < 1 {
-		com.ColorLog("[ERROR] Please input package's keyword.\n")
-		return
-	}
+// The search flags are:
 
-	var host, port string
-	host = "localhost"
-	port = "8991"
+// 	-e
+// 		search extactly, you should input an exactly package name as keyword
+// `,
+// }
 
-	if cmd.Flags["-e"] {
-		search(host, port, args[0], true)
-	} else {
-		search(host, port, args[0], false)
-	}
-}
+// func init() {
+// 	CmdSearch.Run = runSearch
+// 	CmdSearch.Flags = map[string]bool{
+// 		"-e": false,
+// 	}
+// }
 
-type searchRes struct {
-	Pkg  string
-	Desc string
-}
+// func printSearchPrompt(flag string) {
+// 	switch flag {
+// 	case "-e":
+// 		com.ColorLog("[INFO] You enabled exactly search.\n")
+// 	}
+// }
 
-/*
-request local or remote search service to find packages according to keyword inputed
-*/
-func search(host, port, keyword string, isExactly bool) {
-	url := fmt.Sprintf("http://%v:%v/search?%v", host, port, keyword)
-	if isExactly {
-		url = fmt.Sprintf("http://%v:%v/searche?%v", host, port, keyword)
-	}
-	resp, err := http.Get(url)
-	if err != nil {
-		com.ColorLog(err.Error())
-		return
-	}
-	defer resp.Body.Close()
+// // search packages
+// func runSearch(cmd *Command, args []string) {
 
-	if resp.StatusCode == 200 {
-		contents, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			com.ColorLog(err.Error())
-			return
-		}
+// 	// Check length of arguments.
+// 	if len(args) < 1 {
+// 		com.ColorLog("[ERROR] Please input package's keyword.\n")
+// 		return
+// 	}
 
-		pkgs := make([]searchRes, 0)
-		err = json.Unmarshal(contents, &pkgs)
-		if err != nil {
-			com.ColorLog(err.Error())
-			return
-		}
-		for i, pkg := range pkgs {
-			fmt.Println(i+1, pkg.Pkg, "\t", pkg.Desc)
-		}
-	} else {
-		com.ColorLog(resp.Status)
-	}
-}
+// 	var host, port string
+// 	host = "localhost"
+// 	port = "8991"
+
+// 	if cmd.Flags["-e"] {
+// 		search(host, port, args[0], true)
+// 	} else {
+// 		search(host, port, args[0], false)
+// 	}
+// }
+
+// type searchRes struct {
+// 	Pkg  string
+// 	Desc string
+// }
+
+// /*
+// request local or remote search service to find packages according to keyword inputed
+// */
+// func search(host, port, keyword string, isExactly bool) {
+// 	url := fmt.Sprintf("http://%v:%v/search?%v", host, port, keyword)
+// 	if isExactly {
+// 		url = fmt.Sprintf("http://%v:%v/searche?%v", host, port, keyword)
+// 	}
+// 	resp, err := http.Get(url)
+// 	if err != nil {
+// 		com.ColorLog(err.Error())
+// 		return
+// 	}
+// 	defer resp.Body.Close()
+
+// 	if resp.StatusCode == 200 {
+// 		contents, err := ioutil.ReadAll(resp.Body)
+// 		if err != nil {
+// 			com.ColorLog(err.Error())
+// 			return
+// 		}
+
+// 		pkgs := make([]searchRes, 0)
+// 		err = json.Unmarshal(contents, &pkgs)
+// 		if err != nil {
+// 			com.ColorLog(err.Error())
+// 			return
+// 		}
+// 		for i, pkg := range pkgs {
+// 			fmt.Println(i+1, pkg.Pkg, "\t", pkg.Desc)
+// 		}
+// 	} else {
+// 		com.ColorLog(resp.Status)
+// 	}
+// }

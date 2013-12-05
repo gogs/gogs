@@ -93,7 +93,7 @@ func GetPkgFullPath(short string) string {
 	name, ok := PackageNameList[short]
 	if !ok {
 		log.Error("", "Invalid package name")
-		log.Error("", "No match in the package name list:")
+		log.Error("", "It's not a invalid import path and no match in the package name list:")
 		log.Fatal("", "\t"+short)
 	}
 	return name
@@ -109,9 +109,17 @@ func LoadLocalNodes() {
 	}
 
 	var err error
-	LocalNodes, err = goconfig.LoadConfigFile(HomeDir + LocalNodesFile)
+	LocalNodes, err = goconfig.LoadConfigFile(path.Join(HomeDir + LocalNodesFile))
 	if err != nil {
-		log.Error("Load node", "Fail to load localnodes.list")
+		log.Error("load node", "Fail to load localnodes.list")
 		log.Fatal("", err.Error())
+	}
+}
+
+func SaveLocalNodes() {
+	if err := goconfig.SaveConfigFile(LocalNodes,
+		path.Join(HomeDir+LocalNodesFile)); err != nil {
+		log.Error("", "Fail to save localnodes.list:")
+		log.Error("", "\t"+err.Error())
 	}
 }

@@ -15,54 +15,65 @@
 package cmd
 
 import (
-	"fmt"
 	"os"
 	"strings"
+
+	"github.com/codegangsta/cli"
+
+	"github.com/gpmgo/gopm/doc"
+	"github.com/gpmgo/gopm/log"
 )
 
 var (
-	AppPath string
+	workDir string // The path of gopm was executed.
 )
 
-// A Command is an implementation of a go command
-// like go build or go fix.
-type Command struct {
-	// Run runs the command.
-	// The args are the arguments after the command name.
-	Run func(cmd *Command, args []string)
-
-	// UsageLine is the one-line usage message.
-	// The first word in the line is taken to be the command name.
-	UsageLine string
-
-	// Short is the short description shown in the 'go help' output.
-	Short string
-
-	// Long is the long message shown in the 'go help <this-command>' output.
-	Long string
-
-	// Flag is a set of flags specific to this command.
-	Flags map[string]bool
-}
-
-// Name returns the command's name: the first word in the usage line.
-func (c *Command) Name() string {
-	name := c.UsageLine
-	i := strings.Index(name, " ")
-	if i >= 0 {
-		name = name[:i]
+// setup initialize common environment for commands.
+func setup(ctx *cli.Context) {
+	var err error
+	workDir, err = os.Getwd()
+	if err != nil {
+		log.Error("setup", "Fail to get work directory:")
+		log.Fatal("", "\t"+err.Error())
 	}
-	return name
+
+	log.PureMode = ctx.GlobalBool("noterm")
+	log.Verbose = ctx.Bool("verbose")
 }
 
-func (c *Command) Usage() {
-	fmt.Fprintf(os.Stderr, "usage: %s\n\n", c.UsageLine)
-	fmt.Fprintf(os.Stderr, "%s\n", strings.TrimSpace(c.Long))
-	os.Exit(2)
+// parseTarget returns "." when target is empty string.
+func parseTarget(target string) string {
+	if len(target) == 0 {
+		target = "."
+	}
+	return target
 }
 
-// Runnable reports whether the command can be run; otherwise
-// it is a documentation pseudo-command such as importpath.
-func (c *Command) Runnable() bool {
-	return c.Run != nil
+// validPath checks if the information of the package is valid.
+func validPath(info string) (string, string) {
+	infos := strings.Split(info, ":")
+
+	l := len(infos)
+	switch {
+	case l == 1:
+		return doc.BRANCH, ""
+	case l == 2:
+		switch infos[1] {
+		case doc.TRUNK, doc.MASTER, doc.DEFAULT:
+			infos[1] = ""
+		}
+		return infos[0], infos[1]
+	default:
+		log.Error("", "Cannot parse dependency version:")
+		log.Error("", "\t"+info)
+		log.Help("Try 'gopm help get' to get more information")
+		return "", ""
+	}
+}
+
+func versionSuffix(value string) string {
+	if len(value) > 0 {
+		return "." + value
+	}
+	return ""
 }

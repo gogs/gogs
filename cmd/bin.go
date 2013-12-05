@@ -81,13 +81,7 @@ func runBin(ctx *cli.Context) {
 	var err error
 	if i := strings.Index(info, "@"); i > -1 {
 		pkgPath = info[:i]
-		_, ver, err = validPath(info[i+1:])
-		if err != nil {
-			log.Error("bin", "Cannot parse package version")
-			log.Error("", err.Error()+":")
-			log.Error("", "\t"+info[i+1:])
-			log.Help("Try 'gopm help get' to get more information")
-		}
+		_, ver = validPath(info[i+1:])
 	}
 
 	// Check package name.

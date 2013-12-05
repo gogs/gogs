@@ -41,8 +41,7 @@ Make sure you run this command in the root path of a go project.`,
 
 // scan a directory and gen a gopm file
 func runGen(ctx *cli.Context) {
-	log.PureMode = ctx.GlobalBool("noterm")
-	log.Verbose = ctx.GlobalBool("verbose")
+	setup(ctx)
 
 	if !com.IsExist(".gopmfile") {
 		os.Create(".gopmfile")
@@ -54,19 +53,9 @@ func runGen(ctx *cli.Context) {
 		log.Fatal("", "\t"+err.Error())
 	}
 
-	curPath, err := os.Getwd()
-	if err != nil {
-		log.Error("gen", "Cannot get work directory:")
-		log.Fatal("", "\t"+err.Error())
-	}
-
 	// Get dependencies.
-	importPath, err := gf.GetValue("target", "path")
-	if err != nil {
-		importPath = "."
-	}
-	imports := doc.GetAllImports([]string{curPath},
-		importPath, ctx.Bool("example"))
+	imports := doc.GetAllImports([]string{workDir},
+		parseTarget(gf.MustValue("target", "path")), ctx.Bool("example"))
 
 	for _, p := range imports {
 		if _, err := gf.GetValue("deps", doc.GetProjectPath(p)); err != nil {

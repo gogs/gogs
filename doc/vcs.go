@@ -26,6 +26,7 @@ import (
 
 	"github.com/Unknwon/com"
 	"github.com/codegangsta/cli"
+	"github.com/gpmgo/gopm/log"
 )
 
 var (
@@ -119,7 +120,7 @@ func PureDownload(nod *Node, installRepoPath string, ctx *cli.Context) ([]string
 		return s.get(HttpClient, match, installRepoPath, nod, ctx)
 	}
 
-	com.ColorLog("[TRAC] Cannot match any service, getting dynamic...\n")
+	log.Log("Cannot match any service, getting dynamic...")
 	return getDynamic(HttpClient, nod, installRepoPath, ctx)
 }
 

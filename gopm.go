@@ -29,7 +29,7 @@ import (
 // Test that go1.1 tag above is included in builds. main.go refers to this definition.
 const go11tag = true
 
-const APP_VER = "0.5.7.1205"
+const APP_VER = "0.6.0.1206"
 
 // 	//cmd.CmdSearch,
 // 		cmdClean,
@@ -63,7 +63,6 @@ func main() {
 	}
 	app.Flags = append(app.Flags, []cli.Flag{
 		cli.BoolFlag{"noterm", "disable color output"},
-		cli.BoolFlag{"verbose", "show process details"},
 	}...)
 	app.Run(os.Args)
 }
