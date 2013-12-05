@@ -15,50 +15,34 @@
 // Package log provides npm-like style log output.
 package log
 
-import (
-	"fmt"
-	"os"
-)
-
 func Error(hl, msg string) {
-	if len(hl) > 0 {
-		hl = " " + hl
-	}
-	fmt.Printf("gopm ERR!%s %s\n", hl, msg)
+	errorP(hl, msg)
 }
 
 func Fatal(hl, msg string) {
-	Error(hl, msg)
-	os.Exit(2)
+	fatal(hl, msg)
 }
 
 func Warn(format string, args ...interface{}) {
-	fmt.Printf("gopm WARN %s\n", fmt.Sprintf(format, args...))
+	warn(format, args...)
 }
 
 func Log(format string, args ...interface{}) {
-	fmt.Printf("gopm INFO %s\n", fmt.Sprintf(format, args...))
+	log(format, args...)
 }
 
 func Trace(format string, args ...interface{}) {
-	fmt.Printf("gopm TRAC %s\n", fmt.Sprintf(format, args...))
+	trace(format, args...)
 }
 
 func Success(title, hl, msg string) {
-	if len(hl) > 0 {
-		hl = " " + hl
-	}
-	fmt.Printf("gopm %s%s %s\n", title, hl, msg)
+	success(title, hl, msg)
 }
 
 func Message(hl, msg string) {
-	if len(hl) > 0 {
-		hl = " " + hl
-	}
-	fmt.Printf("gopm MSG!%s %s\n", hl, msg)
+	message(hl, msg)
 }
 
 func Help(format string, args ...interface{}) {
-	fmt.Printf("gopm HELP %s\n", fmt.Sprintf(format, args...))
-	os.Exit(2)
+	help(format, args...)
 }

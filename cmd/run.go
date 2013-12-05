@@ -32,6 +32,8 @@ gopm run <go run commands>`,
 }
 
 func runRun(ctx *cli.Context) {
+	log.PureMode = ctx.GlobalBool("ide")
+
 	if !ctx.Bool("remote") {
 		// Get GOPATH.
 		installGopath = com.GetGOPATHs()[0]

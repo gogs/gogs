@@ -25,6 +25,10 @@ import (
 )
 
 func Error(hl, msg string) {
+	if PureMode {
+		errorP(hl, msg)
+	}
+
 	if len(hl) > 0 {
 		hl = " " + brush.Red(hl).String()
 	}
@@ -32,26 +36,50 @@ func Error(hl, msg string) {
 }
 
 func Fatal(hl, msg string) {
+	if PureMode {
+		fatal(hl, msg)
+	}
+
 	Error(hl, msg)
 	os.Exit(2)
 }
 
 func Warn(format string, args ...interface{}) {
+	if PureMode {
+		warn(format, args...)
+		return
+	}
+
 	fmt.Printf("gopm %s %s\n", brush.Purple("WARN"),
 		fmt.Sprintf(format, args...))
 }
 
 func Log(format string, args ...interface{}) {
+	if PureMode {
+		log(format, args...)
+		return
+	}
+
 	fmt.Printf("gopm %s %s\n", brush.White("INFO"),
 		fmt.Sprintf(format, args...))
 }
 
 func Trace(format string, args ...interface{}) {
+	if PureMode {
+		trace(format, args...)
+		return
+	}
+
 	fmt.Printf("gopm %s %s\n", brush.Blue("TRAC"),
 		fmt.Sprintf(format, args...))
 }
 
 func Success(title, hl, msg string) {
+	if PureMode {
+		success(title, hl, msg)
+		return
+	}
+
 	if len(hl) > 0 {
 		hl = " " + brush.Green(hl).String()
 	}
@@ -59,6 +87,11 @@ func Success(title, hl, msg string) {
 }
 
 func Message(hl, msg string) {
+	if PureMode {
+		message(hl, msg)
+		return
+	}
+
 	if len(hl) > 0 {
 		hl = " " + brush.Yellow(hl).String()
 	}
@@ -66,6 +99,10 @@ func Message(hl, msg string) {
 }
 
 func Help(format string, args ...interface{}) {
+	if PureMode {
+		help(format, atgs...)
+	}
+
 	fmt.Printf("gopm %s %s\n", brush.Cyan("HELP"),
 		fmt.Sprintf(format, args...))
 	os.Exit(2)

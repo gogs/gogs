@@ -68,6 +68,8 @@ func init() {
 }
 
 func runGet(ctx *cli.Context) {
+	log.PureMode = ctx.GlobalBool("ide")
+
 	// Check conflicts.
 	if ctx.Bool("gopath") && ctx.Bool("remote") {
 		log.Error("get", "Command options have conflicts")
