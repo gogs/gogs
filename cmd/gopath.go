@@ -38,7 +38,10 @@ func getGopmPkgs(dirPath string, isTest bool) (pkgs map[string]*doc.Pkg, err err
 
 	pkg, err := build.ImportDir(dirPath, build.AllowBinary)
 	if err != nil {
-		return map[string]*doc.Pkg{}, errors.New("Fail to get imports: " + err.Error())
+		pkg, err = build.ImportDir(newGoPath+dirPath[len(oldGoPath):], build.AllowBinary)
+		if err != nil {
+			return map[string]*doc.Pkg{}, errors.New("Fail to get imports: " + err.Error())
+		}
 	}
 
 	pkgs = make(map[string]*doc.Pkg)
@@ -135,6 +138,7 @@ var pkgName string
 var curPath string
 var newCurPath string
 var newGoPath string
+var oldGoPath string
 
 func execCmd(gopath, curPath string, args ...string) error {
 	cwd, err := os.Getwd()
@@ -160,7 +164,7 @@ func execCmd(gopath, curPath string, args ...string) error {
 		log.Fatal("", "\t"+err.Error())
 	}
 
-	oldGoPath := os.Getenv("GOPATH")
+	oldGoPath = os.Getenv("GOPATH")
 	log.Log("Setting GOPATH to %s", gopath)
 
 	sep := ":"
