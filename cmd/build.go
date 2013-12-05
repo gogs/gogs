@@ -57,8 +57,8 @@ func runBuild(ctx *cli.Context) {
 	cmdArgs = append(cmdArgs, ctx.Args()...)
 	err := execCmd(newGoPath, newCurPath, cmdArgs...)
 	if err != nil {
-		log.Error("Build", "Fail to build program")
-		log.Fatal("", err.Error())
+		log.Error("build", "fail to build program:")
+		log.Fatal("", "\t"+err.Error())
 	}
 
 	if isWindowsXP {
@@ -67,13 +67,13 @@ func runBuild(ctx *cli.Context) {
 		if com.IsFile(path.Join(doc.VENDOR, "src", pkgName, binName)) {
 			err = os.Rename(path.Join(doc.VENDOR, "src", pkgName, binName), binName)
 			if err != nil {
-				log.Error("Build", "Fail to move binary")
-				log.Fatal("", err.Error())
+				log.Error("build", "fail to move binary:")
+				log.Fatal("", "\t"+err.Error())
 			}
 		} else {
 			log.Warn("No binary generated")
 		}
 	}
 
-	log.Success("SUCC", "Build", "Command execute successfully!")
+	log.Success("SUCC", "build", "Command execute successfully!")
 }

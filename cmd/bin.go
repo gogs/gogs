@@ -149,8 +149,11 @@ func runBin(ctx *cli.Context) {
 	if runtime.GOOS == "windows" {
 		binName += ".exe"
 	}
-	if !com.IsFile(binName) {
-		log.Error("bin", "Cannot continue command:")
+	binPath := path.Join(doc.VENDOR, "src", pkgName, binName)
+	fmt.Println(binPath)
+	if !com.IsFile(binPath) {
+		log.Error("bin", "Binary does not exist:")
+		log.Error("", "\t"+binPath)
 		log.Fatal("", "\tPrevious steps weren't successful or the project does not contain main package")
 	}
 
@@ -159,7 +162,8 @@ func runBin(ctx *cli.Context) {
 	if ctx.Bool("dir") {
 		movePath = ctx.Args()[1]
 	}
-	err = os.Rename(binName, movePath+"/"+binName)
+	os.Remove(movePath + "/" + binName)
+	err = os.Rename(binPath, movePath+"/"+binName)
 	if err != nil {
 		log.Error("bin", "Fail to move binary:")
 		log.Fatal("", "\t"+err.Error())
