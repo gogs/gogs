@@ -93,13 +93,17 @@ func runBin(ctx *cli.Context) {
 	}
 
 	// Get code.
-	stdout, stderr, _ := com.ExecCmd("gopm", "get", "-r", ctx.Args()[0])
-	if len(stdout) > 0 {
-		fmt.Print(stdout)
+	stdout, stderr, err := com.ExecCmd("gopm", "get", "-r", ctx.Args()[0])
+	if err != nil {
+		log.Error("bin", "Error occurs when 'gopm get -r':")
+		log.Fatal("", "\r"+err.Error())
 	}
 	if len(stderr) > 0 {
 		log.Error("bin", "Fail to 'gopm get -r':")
 		log.Fatal("", "\r"+stderr)
+	}
+	if len(stdout) > 0 {
+		fmt.Print(stdout)
 	}
 
 	// Check if previous steps were successful.
@@ -124,13 +128,17 @@ func runBin(ctx *cli.Context) {
 	}
 
 	// Build application.
-	stdout, stderr, _ = com.ExecCmd("gopm", "build")
-	if len(stdout) > 0 {
-		fmt.Print(stdout)
+	stdout, stderr, err = com.ExecCmd("gopm", "build")
+	if err != nil {
+		log.Error("bin", "Error occurs when 'gopm build':")
+		log.Fatal("", "\r"+err.Error())
 	}
 	if len(stderr) > 0 {
 		log.Error("bin", "Fail to 'gopm build':")
 		log.Fatal("", "\r"+stderr)
+	}
+	if len(stdout) > 0 {
+		fmt.Print(stdout)
 	}
 	defer func() {
 		// Clean files.
