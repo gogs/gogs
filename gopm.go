@@ -63,7 +63,7 @@ func main() {
 	}
 	app.Flags = append(app.Flags, []cli.Flag{
 		cli.BoolFlag{"noterm", "Disable color output"},
-		cli.BoolFlag{"verbose, v", "show process details"},
+		cli.BoolFlag{"verbose", "show process details"},
 	}...)
 	app.Run(os.Args)
 }
