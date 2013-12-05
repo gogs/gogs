@@ -209,7 +209,6 @@ func runBin(ctx *cli.Context) {
 	log.Log("Changing work directory back to %s", wd)
 	os.Chdir(wd)
 
-	log.Verbose = true
-	log.Success("SUCC", "bin", "Binary has been built into:")
-	log.Success("SUCC", "", "\t"+movePath)
+	log.Success("SUCC", "bin", "Command executed successfully!")
+	fmt.Println("Binary has been built into: " + movePath)
 }

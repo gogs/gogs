@@ -78,6 +78,5 @@ func runBuild(ctx *cli.Context) {
 		}
 	}
 
-	log.Success("SUCC", "build", "Binary has been built into:")
-	log.Success("SUCC", "", "\t"+newCurPath)
+	log.Success("SUCC", "build", "Command executed successfully!")
 }
