@@ -60,6 +60,9 @@ func Log(format string, args ...interface{}) {
 		return
 	}
 
+	if !Verbose {
+		return
+	}
 	fmt.Printf("gopm %s %s\n", brush.White("INFO"),
 		fmt.Sprintf(format, args...))
 }
@@ -70,6 +73,9 @@ func Trace(format string, args ...interface{}) {
 		return
 	}
 
+	if !Verbose {
+		return
+	}
 	fmt.Printf("gopm %s %s\n", brush.Blue("TRAC"),
 		fmt.Sprintf(format, args...))
 }
@@ -80,6 +86,9 @@ func Success(title, hl, msg string) {
 		return
 	}
 
+	if !Verbose {
+		return
+	}
 	if len(hl) > 0 {
 		hl = " " + brush.Green(hl).String()
 	}
@@ -92,6 +101,9 @@ func Message(hl, msg string) {
 		return
 	}
 
+	if !Verbose {
+		return
+	}
 	if len(hl) > 0 {
 		hl = " " + brush.Yellow(hl).String()
 	}

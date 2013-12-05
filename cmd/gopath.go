@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"errors"
-	"fmt"
 	"go/build"
 	"os"
 	"os/exec"
@@ -189,8 +188,7 @@ func execCmd(gopath, curPath string, args ...string) error {
 
 	err = cmd.Run()
 
-	fmt.Println()
-	log.Log("====== application outputs end ======")
+	log.Log("\n====== application outputs end ======")
 	return err
 }
 

@@ -36,7 +36,8 @@ gopm build <go build commands>`,
 }
 
 func runBuild(ctx *cli.Context) {
-	log.PureMode = ctx.GlobalBool("ide")
+	log.PureMode = ctx.GlobalBool("noterm")
+	log.Verbose = ctx.GlobalBool("verbose")
 
 	if !ctx.Bool("remote") {
 		// Get GOPATH.
@@ -77,5 +78,6 @@ func runBuild(ctx *cli.Context) {
 		}
 	}
 
-	log.Success("SUCC", "build", "Command execute successfully!")
+	log.Success("SUCC", "build", "Binary has been built into:")
+	log.Success("SUCC", "", "\t"+newCurPath)
 }

@@ -19,7 +19,10 @@ import (
 	"os"
 )
 
-var PureMode = false
+var (
+	PureMode = false
+	Verbose  = false
+)
 
 func errorP(hl, msg string) {
 	if len(hl) > 0 {
@@ -38,14 +41,23 @@ func warn(format string, args ...interface{}) {
 }
 
 func log(format string, args ...interface{}) {
+	if !Verbose {
+		return
+	}
 	fmt.Printf("gopm INFO %s\n", fmt.Sprintf(format, args...))
 }
 
 func trace(format string, args ...interface{}) {
+	if !Verbose {
+		return
+	}
 	fmt.Printf("gopm TRAC %s\n", fmt.Sprintf(format, args...))
 }
 
 func success(title, hl, msg string) {
+	if !Verbose {
+		return
+	}
 	if len(hl) > 0 {
 		hl = " " + hl
 	}
@@ -53,6 +65,9 @@ func success(title, hl, msg string) {
 }
 
 func message(hl, msg string) {
+	if !Verbose {
+		return
+	}
 	if len(hl) > 0 {
 		hl = " " + hl
 	}

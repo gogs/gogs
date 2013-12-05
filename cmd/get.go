@@ -68,7 +68,8 @@ func init() {
 }
 
 func runGet(ctx *cli.Context) {
-	log.PureMode = ctx.GlobalBool("ide")
+	log.PureMode = ctx.GlobalBool("noterm")
+	log.Verbose = ctx.GlobalBool("verbose")
 
 	// Check conflicts.
 	if ctx.Bool("gopath") && ctx.Bool("remote") {

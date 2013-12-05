@@ -41,7 +41,8 @@ Make sure you run this command in the root path of a go project.`,
 
 // scan a directory and gen a gopm file
 func runGen(ctx *cli.Context) {
-	log.PureMode = ctx.GlobalBool("ide")
+	log.PureMode = ctx.GlobalBool("noterm")
+	log.Verbose = ctx.GlobalBool("verbose")
 
 	if !com.IsExist(".gopmfile") {
 		os.Create(".gopmfile")

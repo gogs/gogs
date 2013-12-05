@@ -42,7 +42,8 @@ If no argument is supplied, then gopmfile must be present`,
 }
 
 func runInstall(ctx *cli.Context) {
-	log.PureMode = ctx.GlobalBool("ide")
+	log.PureMode = ctx.GlobalBool("noterm")
+	log.Verbose = ctx.GlobalBool("verbose")
 
 	var target string
 

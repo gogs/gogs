@@ -32,7 +32,8 @@ gopm run <go run commands>`,
 }
 
 func runRun(ctx *cli.Context) {
-	log.PureMode = ctx.GlobalBool("ide")
+	log.PureMode = ctx.GlobalBool("noterm")
+	log.Verbose = ctx.GlobalBool("verbose")
 
 	if !ctx.Bool("remote") {
 		// Get GOPATH.

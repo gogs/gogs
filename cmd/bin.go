@@ -48,7 +48,8 @@ contains main package`,
 }
 
 func runBin(ctx *cli.Context) {
-	log.PureMode = ctx.GlobalBool("ide")
+	log.PureMode = ctx.GlobalBool("noterm")
+	log.Verbose = ctx.GlobalBool("verbose")
 
 	if len(ctx.Args()) == 0 {
 		log.Error("bin", "Cannot start command:")
@@ -97,7 +98,7 @@ func runBin(ctx *cli.Context) {
 	// Get code.
 	args := make([]string, 0, 4)
 	if log.PureMode {
-		args = append(args, "-ide")
+		args = append(args, "-noterm")
 	}
 	args = append(args, []string{"get", "-r", ctx.Args()[0]}...)
 	stdout, stderr, err := com.ExecCmd("gopm", args...)
@@ -137,7 +138,7 @@ func runBin(ctx *cli.Context) {
 	// Build application.
 	args = make([]string, 0, 2)
 	if log.PureMode {
-		args = append(args, "-ide")
+		args = append(args, "-noterm")
 	}
 	args = append(args, "build")
 	stdout, stderr, err = com.ExecCmd("gopm", args...)
@@ -208,5 +209,7 @@ func runBin(ctx *cli.Context) {
 	log.Log("Changing work directory back to %s", wd)
 	os.Chdir(wd)
 
-	log.Success("SUCC", "bin", "Command execute successfully!")
+	log.Verbose = true
+	log.Success("SUCC", "bin", "Binary has been built into:")
+	log.Success("SUCC", "", "\t"+movePath)
 }
