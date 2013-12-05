@@ -48,6 +48,8 @@ contains main package`,
 }
 
 func runBin(ctx *cli.Context) {
+	log.PureMode = ctx.GlobalBool("ide")
+
 	if len(ctx.Args()) == 0 {
 		log.Error("bin", "Cannot start command:")
 		log.Fatal("", "\tNo package specified")
@@ -93,7 +95,12 @@ func runBin(ctx *cli.Context) {
 	}
 
 	// Get code.
-	stdout, stderr, err := com.ExecCmd("gopm", "get", "-r", ctx.Args()[0])
+	args := make([]string, 0, 4)
+	if log.PureMode {
+		args = append(args, "-ide")
+	}
+	args = append(args, []string{"get", "-r", ctx.Args()[0]}...)
+	stdout, stderr, err := com.ExecCmd("gopm", args...)
 	if err != nil {
 		log.Error("bin", "Error occurs when 'gopm get -r':")
 		log.Fatal("", "\r"+err.Error())
