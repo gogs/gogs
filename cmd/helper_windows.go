@@ -2,8 +2,10 @@ package cmd
 
 import (
 	"github.com/Unknwon/com"
+	"github.com/gpmgo/gopm/doc"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"syscall"
 	"unsafe"
 )
