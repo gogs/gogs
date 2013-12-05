@@ -145,14 +145,14 @@ func runBin(ctx *cli.Context) {
 		_, pkgName = filepath.Split(pkgPath)
 	}
 
+	// Because build command moved binary to root path.
 	binName := path.Base(pkgName)
 	if runtime.GOOS == "windows" {
 		binName += ".exe"
 	}
-	binPath := path.Join(doc.VENDOR, "src", pkgName, binName)
-	if !com.IsFile(binPath) {
+	if !com.IsFile(binName) {
 		log.Error("bin", "Binary does not exist:")
-		log.Error("", "\t"+binPath)
+		log.Error("", "\t"+binName)
 		log.Fatal("", "\tPrevious steps weren't successful or the project does not contain main package")
 	}
 
@@ -161,8 +161,12 @@ func runBin(ctx *cli.Context) {
 	if ctx.Bool("dir") {
 		movePath = ctx.Args()[1]
 	}
-	os.Remove(movePath + "/" + binName)
-	err = os.Rename(binPath, movePath+"/"+binName)
+	err = os.Remove(movePath + "/" + binName)
+	if err != nil {
+		log.Warn("Cannot remove binary in work directory:")
+		log.Warn("\t %s", err)
+	}
+	err = os.Rename(binName, movePath+"/"+binName)
 	if err != nil {
 		log.Error("bin", "Fail to move binary:")
 		log.Fatal("", "\t"+err.Error())
