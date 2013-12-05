@@ -100,7 +100,7 @@ func Message(hl, msg string) {
 
 func Help(format string, args ...interface{}) {
 	if PureMode {
-		help(format, atgs...)
+		help(format, args...)
 	}
 
 	fmt.Printf("gopm %s %s\n", brush.Cyan("HELP"),
