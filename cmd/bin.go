@@ -150,7 +150,6 @@ func runBin(ctx *cli.Context) {
 		binName += ".exe"
 	}
 	binPath := path.Join(doc.VENDOR, "src", pkgName, binName)
-	fmt.Println(binPath)
 	if !com.IsFile(binPath) {
 		log.Error("bin", "Binary does not exist:")
 		log.Error("", "\t"+binPath)
