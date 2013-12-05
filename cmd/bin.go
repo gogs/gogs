@@ -93,14 +93,17 @@ func runBin(ctx *cli.Context) {
 	}
 
 	// Get code.
-	stdout, _, _ := com.ExecCmd("gopm", "get", "-r", ctx.Args()[0])
+	stdout, stderr, _ := com.ExecCmd("gopm", "get", "-r", ctx.Args()[0])
 	if len(stdout) > 0 {
 		fmt.Print(stdout)
 	}
+	if len(stderr) > 0 {
+		log.Error("bin", "Fail to 'gopm get -r':")
+		log.Fatal("", "\r"+stderr)
+	}
 
 	// Check if previous steps were successful.
-	repoPath := strings.Replace(installRepoPath+"/"+pkgPath+versionSuffix(ver),
-		"\\", "/", -1)
+	repoPath := installRepoPath + "/" + pkgPath + versionSuffix(ver)
 	if !com.IsDir(repoPath) {
 		log.Error("bin", "Cannot continue command:")
 		log.Fatal("", "\tPrevious steps weren't successful")
@@ -121,9 +124,13 @@ func runBin(ctx *cli.Context) {
 	}
 
 	// Build application.
-	stdout, _, _ = com.ExecCmd("gopm", "build")
+	stdout, stderr, _ = com.ExecCmd("gopm", "build")
 	if len(stdout) > 0 {
 		fmt.Print(stdout)
+	}
+	if len(stderr) > 0 {
+		log.Error("bin", "Fail to 'gopm build':")
+		log.Fatal("", "\r"+stderr)
 	}
 	defer func() {
 		// Clean files.
