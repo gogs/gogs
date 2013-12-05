@@ -99,7 +99,8 @@ func runBin(ctx *cli.Context) {
 	}
 
 	// Check if previous steps were successful.
-	repoPath := installRepoPath + "/" + pkgPath + versionSuffix(ver)
+	repoPath := strings.Replace(installRepoPath+"/"+pkgPath+versionSuffix(ver),
+		"\\", "/", -1)
 	if !com.IsDir(repoPath) {
 		log.Error("bin", "Cannot continue command:")
 		log.Fatal("", "\tPrevious steps weren't successful")
@@ -161,11 +162,15 @@ func runBin(ctx *cli.Context) {
 	if ctx.Bool("dir") {
 		movePath = ctx.Args()[1]
 	}
-	err = os.Remove(movePath + "/" + binName)
-	if err != nil {
-		log.Warn("Cannot remove binary in work directory:")
-		log.Warn("\t %s", err)
+
+	if com.IsExist(movePath + "/" + binName) {
+		err = os.Remove(movePath + "/" + binName)
+		if err != nil {
+			log.Warn("Cannot remove binary in work directory:")
+			log.Warn("\t %s", err)
+		}
 	}
+
 	err = os.Rename(binName, movePath+"/"+binName)
 	if err != nil {
 		log.Error("bin", "Fail to move binary:")
