@@ -20,12 +20,13 @@ func makeLink(srcPath, destPath string) error {
 	// XP.
 	isWindowsXP = true
 	os.RemoveAll(destPath)
-	_, dirName := filepath.Split(destPath)
-	// .vendor dir should not be copy
-	if dirName != doc.VENDOR {
-		return com.CopyDir(srcPath, destPath)
+
+	err := com.CopyDir(srcPath, destPath)
+	if err == nil {
+		// .vendor dir should not be copy
+		os.RemoveAll(filepath.Join(destPath, doc.VENDOR))
 	}
-	return nil
+	return err
 }
 
 func volumnType(dir string) string {
