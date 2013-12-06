@@ -31,6 +31,8 @@ import (
 	"unicode/utf8"
 
 	"github.com/Unknwon/com"
+
+	"github.com/gpmgo/gopm/log"
 )
 
 type sliceWriter struct{ p *[]byte }
@@ -118,7 +120,8 @@ func (w *walker) build(srcs []*source, nod *Node) ([]string, error) {
 		if nogo {
 			err = nil
 		} else {
-			com.ColorLog("[WARN] Error occurs when check imports[ %s ]\n", err)
+			log.Error("walker", "Error occurs when check imports:")
+			log.Error("", "\t"+err.Error())
 			return nil, nil
 		}
 	}
