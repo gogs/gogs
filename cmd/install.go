@@ -37,15 +37,14 @@ If no argument is supplied, then gopmfile must be present`,
 	Action: runInstall,
 	Flags: []cli.Flag{
 		cli.BoolFlag{"pkg, p", "only install non-main packages"},
+		cli.BoolFlag{"verbose, v", "show process details"},
 	},
 }
 
 func runInstall(ctx *cli.Context) {
-	log.PureMode = ctx.GlobalBool("noterm")
-	log.Verbose = ctx.GlobalBool("verbose")
+	setup(ctx)
 
 	var target string
-
 	switch len(ctx.Args()) {
 	case 0:
 		if !com.IsFile(".gopmfile") {

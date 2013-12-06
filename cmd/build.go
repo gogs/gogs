@@ -33,11 +33,13 @@ and execute 'go build'
 
 gopm build <go build commands>`,
 	Action: runBuild,
+	Flags: []cli.Flag{
+		cli.BoolFlag{"verbose, v", "show process details"},
+	},
 }
 
 func runBuild(ctx *cli.Context) {
-	log.PureMode = ctx.GlobalBool("noterm")
-	log.Verbose = ctx.GlobalBool("verbose")
+	setup(ctx)
 
 	if !ctx.Bool("remote") {
 		// Get GOPATH.

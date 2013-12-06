@@ -35,22 +35,10 @@ func getGopmPkgs(dirPath string, isTest bool) (pkgs map[string]*doc.Pkg, err err
 		}
 	}
 
-	pkg, err := build.ImportDir(dirPath, build.AllowBinary)
-	if err != nil {
-		pkg, err = build.ImportDir(newGoPath+dirPath[len(oldGoPath):], build.AllowBinary)
-		if err != nil {
-			return map[string]*doc.Pkg{}, errors.New("Fail to get imports: " + err.Error())
-		}
-	}
-
+	imports := doc.GetAllImports([]string{dirPath}, ".", false)
 	pkgs = make(map[string]*doc.Pkg)
-	var imports []string = pkg.Imports
-	if isTest {
-		imports = append(imports, pkg.TestImports...)
-	}
 	for _, name := range imports {
 		if name == "C" {
-			//panic("nonono")
 			continue
 		}
 		if !doc.IsGoRepoPath(name) {
@@ -74,7 +62,6 @@ func getGopmPkgs(dirPath string, isTest bool) (pkgs map[string]*doc.Pkg, err err
 }
 
 func pkgInCache(name string, cachePkgs map[string]*doc.Pkg) bool {
-	//pkgs := strings.Split(name, "/")
 	_, ok := cachePkgs[name]
 	return ok
 }
@@ -86,28 +73,27 @@ func autoLink(oldPath, newPath string) error {
 }
 
 func getChildPkgs(ctx *cli.Context, cpath string, ppkg *doc.Pkg, cachePkgs map[string]*doc.Pkg, isTest bool) error {
-	var suf string
-	if ppkg != nil {
-		suf = versionSuffix(ppkg.Value)
-	}
-	pkgs, err := getGopmPkgs(cpath+suf, isTest)
+	pkgs, err := getGopmPkgs(cpath, isTest)
 	if err != nil {
 		return errors.New("Fail to get gopmfile deps: " + err.Error())
 	}
 	for name, pkg := range pkgs {
-		if !pkgInCache(name, cachePkgs) {
+		pkg.RootPath = doc.GetProjectPath(pkg.ImportPath)
+		if !pkgInCache(pkg.RootPath, cachePkgs) {
 			var newPath string
 			if !build.IsLocalImport(name) {
-
 				suf := versionSuffix(pkg.Value)
-				newPath = filepath.Join(installRepoPath, pkg.ImportPath)
-				if len(pkg.Value) == 0 && !ctx.Bool("remote") {
-					newPath = filepath.Join(installGopath, pkg.ImportPath)
+				pkgPath := strings.Replace(
+					pkg.ImportPath, pkg.RootPath, pkg.RootPath+suf, 1)
+				newPath = filepath.Join(installRepoPath, pkgPath)
+				if len(suf) == 0 && !ctx.Bool("remote") &&
+					com.IsDir(filepath.Join(installGopath, pkgPath)) {
+					newPath = filepath.Join(installGopath, pkgPath)
 				}
 				if pkgName != "" && strings.HasPrefix(pkg.ImportPath, pkgName) {
-					newPath = filepath.Join(curPath, pkg.ImportPath[len(pkgName)+1:]+suf)
+					newPath = filepath.Join(curPath, pkgPath)
 				} else {
-					if !com.IsExist(newPath + suf) {
+					if !com.IsExist(newPath) {
 						node := doc.NewNode(pkg.ImportPath, pkg.ImportPath,
 							pkg.Type, pkg.Value, true)
 						nodes := []*doc.Node{node}
@@ -121,14 +107,12 @@ func getChildPkgs(ctx *cli.Context, cpath string, ppkg *doc.Pkg, cachePkgs map[s
 					return err
 				}
 			}
+			cachePkgs[pkg.RootPath] = pkg
 			err = getChildPkgs(ctx, newPath, pkg, cachePkgs, false)
 			if err != nil {
 				return err
 			}
 		}
-	}
-	if ppkg != nil && !build.IsLocalImport(ppkg.ImportPath) {
-		cachePkgs[ppkg.ImportPath] = ppkg
 	}
 	return nil
 }
@@ -188,7 +172,7 @@ func execCmd(gopath, curPath string, args ...string) error {
 
 	err = cmd.Run()
 
-	log.Log("\n====== application outputs end ======")
+	log.Log("====== application outputs end ======")
 	return err
 }
 
@@ -252,7 +236,8 @@ func genNewGoPath(ctx *cli.Context, isTest bool) {
 			continue
 		}
 
-		if !isExistP && (len(pkg.Value) > 0 || ctx.Bool("remote")) {
+		if (!isExistP && (len(pkg.Value) > 0 || ctx.Bool("remote"))) ||
+			!com.IsDir(filepath.Join(installGopath, pkg.ImportPath)) {
 			log.Log("Linking %s", name+suf)
 			err = autoLink(oldPath, newPath)
 			if err != nil {
