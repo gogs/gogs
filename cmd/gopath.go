@@ -91,7 +91,7 @@ func getChildPkgs(ctx *cli.Context, cpath string, ppkg *doc.Pkg, cachePkgs map[s
 					newPath = filepath.Join(installGopath, pkgPath)
 				}
 				if pkgName != "" && strings.HasPrefix(pkg.ImportPath, pkgName) {
-					newPath = filepath.Join(curPath, pkgPath)
+					newPath = filepath.Join(curPath, strings.TrimPrefix(pkg.ImportPath, pkgName))
 				} else {
 					if !com.IsExist(newPath) {
 						node := doc.NewNode(pkg.ImportPath, pkg.ImportPath,
