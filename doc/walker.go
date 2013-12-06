@@ -117,6 +117,8 @@ func (w *walker) build(srcs []*source, nod *Node) ([]string, error) {
 	if err != nil {
 		if nogo {
 			err = nil
+		} else if strings.Contains(err.Error(), "expected 'package'") {
+			log.Warn("walker: %s", err.Error())
 		} else {
 			log.Error("walker", "Error occurs when check imports:")
 			log.Error("", "\t"+err.Error())
