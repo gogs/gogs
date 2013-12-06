@@ -78,11 +78,13 @@ func runBin(ctx *cli.Context) {
 	// Parse package version.
 	info := ctx.Args()[0]
 	pkgPath := info
-	tp, ver := "", ""
+	node := doc.NewNode(pkgPath, pkgPath, doc.BRANCH, "", true)
 	var err error
 	if i := strings.Index(info, "@"); i > -1 {
 		pkgPath = info[:i]
-		tp, ver = validPath(info[i+1:])
+		node.ImportPath = pkgPath
+		node.DownloadURL = pkgPath
+		node.Type, node.Value = validPath(info[i+1:])
 	}
 
 	// Check package name.
@@ -90,13 +92,11 @@ func runBin(ctx *cli.Context) {
 		pkgPath = doc.GetPkgFullPath(pkgPath)
 	}
 
-	node := doc.NewNode(pkgPath, pkgPath, tp, ver, true)
-
 	// Get code.
 	downloadPackages(ctx, []*doc.Node{node})
 
 	// Check if previous steps were successful.
-	repoPath := installRepoPath + "/" + pkgPath + versionSuffix(ver)
+	repoPath := installRepoPath + "/" + pkgPath + versionSuffix(node.Value)
 	if !com.IsDir(repoPath) {
 		log.Error("bin", "Cannot continue command:")
 		log.Fatal("", "\tPrevious steps weren't successful")
