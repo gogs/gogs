@@ -54,12 +54,17 @@ func runBuild(ctx *cli.Context) {
 		installGopath += "/src"
 	}
 
+	buildBinary(ctx, ctx.Args()...)
+	log.Success("SUCC", "build", "Command executed successfully!")
+}
+
+func buildBinary(ctx *cli.Context, args ...string) {
 	genNewGoPath(ctx, false)
 
 	log.Trace("Building...")
 
 	cmdArgs := []string{"go", "build"}
-	cmdArgs = append(cmdArgs, ctx.Args()...)
+	cmdArgs = append(cmdArgs, args...)
 	err := execCmd(newGoPath, newCurPath, cmdArgs...)
 	if err != nil {
 		log.Error("build", "fail to build program:")
@@ -79,6 +84,4 @@ func runBuild(ctx *cli.Context) {
 			log.Warn("No binary generated")
 		}
 	}
-
-	log.Success("SUCC", "build", "Command executed successfully!")
 }

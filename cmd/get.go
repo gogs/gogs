@@ -187,7 +187,7 @@ func downloadPackages(ctx *cli.Context, nodes []*doc.Node) {
 			installPath := path.Join(installRepoPath, n.RootPath) +
 				versionSuffix(n.Value)
 
-			if !ctx.Bool("force") {
+			if !ctx.Bool("update") {
 				// Check if package has been downloaded.
 				if (len(n.Value) == 0 && !ctx.Bool("remote") && com.IsExist(gopathDir)) ||
 					com.IsExist(installPath) {

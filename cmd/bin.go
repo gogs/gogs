@@ -39,17 +39,17 @@ gopm bin <import path>@[<tag|commit|branch>:<value>]
 gopm bin <package name>@[<tag|commit|branch>:<value>]
 
 Can only specify one each time, and only works for projects that 
-contains main package`,
+contain main package`,
 	Action: runBin,
 	Flags: []cli.Flag{
 		cli.BoolFlag{"dir, d", "build binary to given directory(second argument)"},
-		cli.BoolFlag{"force, f", "force to update pakcage(s) and dependencies"},
+		cli.BoolFlag{"update, u", "update pakcage(s) and dependencies if any"},
+		cli.BoolFlag{"verbose, v", "show process details"},
 	},
 }
 
 func runBin(ctx *cli.Context) {
-	log.PureMode = ctx.GlobalBool("noterm")
-	log.Verbose = ctx.GlobalBool("verbose")
+	setup(ctx)
 
 	if len(ctx.Args()) == 0 {
 		log.Error("bin", "Cannot start command:")
@@ -57,6 +57,7 @@ func runBin(ctx *cli.Context) {
 	}
 
 	installRepoPath = doc.HomeDir + "/repos"
+	log.Log("Local repository path: %s", installRepoPath)
 
 	// Check arguments.
 	num := 1
@@ -77,11 +78,11 @@ func runBin(ctx *cli.Context) {
 	// Parse package version.
 	info := ctx.Args()[0]
 	pkgPath := info
-	ver := ""
+	tp, ver := "", ""
 	var err error
 	if i := strings.Index(info, "@"); i > -1 {
 		pkgPath = info[:i]
-		_, ver = validPath(info[i+1:])
+		tp, ver = validPath(info[i+1:])
 	}
 
 	// Check package name.
@@ -89,24 +90,10 @@ func runBin(ctx *cli.Context) {
 		pkgPath = doc.GetPkgFullPath(pkgPath)
 	}
 
+	node := doc.NewNode(pkgPath, pkgPath, tp, ver, true)
+
 	// Get code.
-	args := make([]string, 0, 4)
-	if log.PureMode {
-		args = append(args, "-noterm")
-	}
-	args = append(args, []string{"get", "-r", ctx.Args()[0]}...)
-	stdout, stderr, err := com.ExecCmd("gopm", args...)
-	if err != nil {
-		log.Error("bin", "Error occurs when 'gopm get -r':")
-		log.Fatal("", "\r"+err.Error())
-	}
-	if len(stderr) > 0 {
-		log.Error("bin", "Fail to 'gopm get -r':")
-		log.Fatal("", "\r"+stderr)
-	}
-	if len(stdout) > 0 {
-		fmt.Print(stdout)
-	}
+	downloadPackages(ctx, []*doc.Node{node})
 
 	// Check if previous steps were successful.
 	repoPath := installRepoPath + "/" + pkgPath + versionSuffix(ver)
@@ -130,26 +117,10 @@ func runBin(ctx *cli.Context) {
 	}
 
 	// Build application.
-	args = make([]string, 0, 2)
-	if log.PureMode {
-		args = append(args, "-noterm")
-	}
-	args = append(args, "build")
-	stdout, stderr, err = com.ExecCmd("gopm", args...)
-	if err != nil {
-		log.Error("bin", "Error occurs when 'gopm build':")
-		log.Fatal("", "\r"+err.Error())
-	}
-	if len(stderr) > 0 {
-		log.Error("bin", "Fail to 'gopm build':")
-		log.Fatal("", "\r"+stderr)
-	}
-	if len(stdout) > 0 {
-		fmt.Print(stdout)
-	}
+	buildBinary(ctx)
 	defer func() {
 		// Clean files.
-		//os.RemoveAll(path.Join(repoPath, doc.VENDOR))
+		os.RemoveAll(path.Join(repoPath, doc.VENDOR))
 	}()
 
 	// Check if previous steps were successful.
