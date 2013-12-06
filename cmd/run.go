@@ -32,18 +32,12 @@ gopm run <go run commands>`,
 }
 
 func runRun(ctx *cli.Context) {
-	log.PureMode = ctx.GlobalBool("noterm")
-	log.Verbose = ctx.GlobalBool("verbose")
+	setup(ctx)
 
-	if !ctx.Bool("remote") {
-		// Get GOPATH.
-		installGopath = com.GetGOPATHs()[0]
-		if !com.IsDir(installGopath) {
-			log.Error("run", "Invalid GOPATH path")
-			log.Error("", "GOPATH does not exist or is not a directory:")
-			log.Error("", "\t"+installGopath)
-			log.Help("Try 'go help gopath' to get more information")
-		}
+	// Get GOPATH.
+	installGopath = com.GetGOPATHs()[0]
+	if com.IsDir(installGopath) {
+		isHasGopath = true
 		log.Log("Indicated GOPATH: %s", installGopath)
 		installGopath += "/src"
 	}

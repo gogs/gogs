@@ -59,17 +59,23 @@ func runInstall(ctx *cli.Context) {
 		log.Fatal("install", "Too many arguments")
 	}
 
-	if !ctx.Bool("remote") {
-		// Get GOPATH.
-		installGopath = com.GetGOPATHs()[0]
-		if !com.IsDir(installGopath) {
-			log.Error("install", "Invalid GOPATH path")
+	// Get GOPATH.
+	installGopath = com.GetGOPATHs()[0]
+	if com.IsDir(installGopath) {
+		isHasGopath = true
+		log.Log("Indicated GOPATH: %s", installGopath)
+		installGopath += "/src"
+	} else {
+		if ctx.Bool("gopath") {
+			log.Error("get", "Invalid GOPATH path")
 			log.Error("", "GOPATH does not exist or is not a directory:")
 			log.Error("", "\t"+installGopath)
 			log.Help("Try 'go help gopath' to get more information")
+		} else {
+			// It's OK that no GOPATH setting
+			// when user does not specify to use.
+			log.Warn("No GOPATH setting available")
 		}
-		log.Log("Indicated GOPATH: %s", installGopath)
-		installGopath += "/src"
 	}
 
 	genNewGoPath(ctx, false)
