@@ -16,6 +16,7 @@ package cmd
 
 import (
 	"os"
+	"strings"
 
 	"github.com/Unknwon/com"
 	"github.com/Unknwon/goconfig"
@@ -36,6 +37,7 @@ Make sure you run this command in the root path of a go project.`,
 	Action: runGen,
 	Flags: []cli.Flag{
 		cli.BoolFlag{"example, e", "check dependencies for example(s)"},
+		cli.BoolFlag{"verbose, v", "show process details"},
 	},
 }
 
@@ -58,8 +60,12 @@ func runGen(ctx *cli.Context) {
 		parseTarget(gf.MustValue("target", "path")), ctx.Bool("example"))
 
 	for _, p := range imports {
-		if _, err := gf.GetValue("deps", doc.GetProjectPath(p)); err != nil {
-			gf.SetValue("deps", doc.GetProjectPath(p), " ")
+		p = doc.GetProjectPath(p)
+		if strings.HasSuffix(workDir, p) {
+			continue
+		}
+		if value := gf.MustValue("deps", p); len(value) == 0 {
+			gf.SetValue("deps", p, "")
 		}
 	}
 
