@@ -30,8 +30,6 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"github.com/Unknwon/com"
-
 	"github.com/gpmgo/gopm/log"
 )
 
