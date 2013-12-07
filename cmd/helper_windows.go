@@ -25,9 +25,10 @@ func makeLink(srcPath, destPath string) error {
 		file, err := exec.LookPath("junction")
 		if err == nil {
 			path, _ := filepath.Abs(file)
-
-			cmd := exec.Command("cmd", "/c", "junction", destPath, srcPath)
-			return cmd.Run()
+			if com.IsFile(path) {
+				cmd := exec.Command("cmd", "/c", "junction", destPath, srcPath)
+				return cmd.Run()
+			}
 		}
 	}
 	os.RemoveAll(destPath)
