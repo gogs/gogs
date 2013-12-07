@@ -19,6 +19,17 @@ func makeLink(srcPath, destPath string) error {
 
 	// XP.
 	isWindowsXP = true
+	// if both are ntfs file system
+	if volumnType(srcPath) == "NTFS" && volumnType(destPath) == "NTFS" {
+		// if has junction command installed
+		file, err := exec.LookPath("junction")
+		if err == nil {
+			path, _ := filepath.Abs(file)
+
+			cmd := exec.Command("cmd", "/c", "junction", destPath, srcPath)
+			return cmd.Run()
+		}
+	}
 	os.RemoveAll(destPath)
 
 	err := com.CopyDir(srcPath, destPath)

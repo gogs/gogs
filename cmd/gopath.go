@@ -219,8 +219,11 @@ func genNewGoPath(ctx *cli.Context, isTest bool) {
 		oldPath := filepath.Join(installRepoPath, name) + suf
 		newPath := filepath.Join(newGoPathSrc, name)
 		paths := strings.Split(name, "/")
-		var isExistP bool
-		var isCurChild bool
+		var isExistP, isCurChild bool
+		if name == pkgName {
+			continue
+		}
+
 		for i := 0; i < len(paths)-1; i++ {
 			pName := strings.Join(paths[:len(paths)-1-i], "/")
 			if _, ok := cachePkgs[pName]; ok {
