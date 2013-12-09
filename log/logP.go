@@ -32,7 +32,7 @@ func errorP(hl, msg string) {
 }
 
 func fatal(hl, msg string) {
-	Error(hl, msg)
+	errorP(hl, msg)
 	os.Exit(2)
 }
 
