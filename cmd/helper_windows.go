@@ -36,14 +36,9 @@ func makeLink(srcPath, destPath string) error {
 	}
 	os.RemoveAll(destPath)
 
-	err := com.CopyDir(srcPath, destPath, func(filePath string) bool {
+	return com.CopyDir(srcPath, destPath, func(filePath string) bool {
 		return strings.Contains(filePath, doc.VENDOR)
 	})
-	if err == nil {
-		// .vendor dir should not be copy
-		os.RemoveAll(filepath.Join(destPath, doc.VENDOR))
-	}
-	return err
 }
 
 func volumnType(dir string) string {
