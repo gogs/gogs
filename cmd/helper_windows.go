@@ -1,13 +1,16 @@
 package cmd
 
 import (
-	"github.com/Unknwon/com"
-	"github.com/gpmgo/gopm/doc"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"syscall"
 	"unsafe"
+
+	"github.com/Unknwon/com"
+
+	"github.com/gpmgo/gopm/doc"
 )
 
 func makeLink(srcPath, destPath string) error {
@@ -33,12 +36,9 @@ func makeLink(srcPath, destPath string) error {
 	}
 	os.RemoveAll(destPath)
 
-	err := com.CopyDir(srcPath, destPath)
-	if err == nil {
-		// .vendor dir should not be copy
-		os.RemoveAll(filepath.Join(destPath, doc.VENDOR))
-	}
-	return err
+	return com.CopyDir(srcPath, destPath, func(filePath string) bool {
+		return strings.Contains(filePath, doc.VENDOR)
+	})
 }
 
 func volumnType(dir string) string {
