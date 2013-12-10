@@ -194,7 +194,7 @@ func downloadPackages(ctx *cli.Context, nodes []*doc.Node) {
 					log.Trace("Skipped installed package: %s@%s:%s",
 						n.ImportPath, n.Type, doc.CheckNodeValue(n.Value))
 
-					if ctx.Bool("gopath") {
+					if ctx.Bool("gopath") && com.IsExist(installPath) {
 						copyToGopath(installPath, gopathDir)
 						log.Log("Package copied to GOPATH: %s", n.ImportPath)
 					}
@@ -249,7 +249,7 @@ func downloadPackages(ctx *cli.Context, nodes []*doc.Node) {
 						doc.LocalNodes.SetValue(nod.RootPath, "value", nod.Revision)
 					}
 
-					if ctx.Bool("gopath") {
+					if ctx.Bool("gopath") && com.IsExist(installPath) {
 						copyToGopath(installPath, gopathDir)
 						log.Log("Package copied to GOPATH: %s", n.ImportPath)
 					}
