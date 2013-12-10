@@ -44,19 +44,20 @@ func getGopmPkgs(dirPath string, isTest bool) (pkgs map[string]*doc.Pkg, err err
 		if !doc.IsGoRepoPath(name) {
 			if builds != nil {
 				if info, ok := builds[name]; ok {
-					// Check version.
-					if i := strings.Index(info, ":"); i > -1 {
-						pkgs[name] = &doc.Pkg{
-							ImportPath: name,
-							Type:       info[:i],
-							Value:      info[i+1:],
-						}
-						continue
-					} else if com.IsDir(info) {
+					// Check version. there should chek
+					// local first because d:\ contains :
+					if com.IsDir(info) {
 						pkgs[name] = &doc.Pkg{
 							ImportPath: name,
 							Type:       doc.LOCAL,
 							Value:      info,
+						}
+						continue
+					} else if i := strings.Index(info, ":"); i > -1 {
+						pkgs[name] = &doc.Pkg{
+							ImportPath: name,
+							Type:       info[:i],
+							Value:      info[i+1:],
 						}
 						continue
 					}
