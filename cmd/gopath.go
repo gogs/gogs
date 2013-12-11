@@ -44,8 +44,16 @@ func getGopmPkgs(dirPath string, isTest bool) (pkgs map[string]*doc.Pkg, err err
 		if !doc.IsGoRepoPath(name) {
 			if builds != nil {
 				if info, ok := builds[name]; ok {
-					// Check version.
-					if i := strings.Index(info, ":"); i > -1 {
+					// Check version. there should chek
+					// local first because d:\ contains :
+					if com.IsDir(info) {
+						pkgs[name] = &doc.Pkg{
+							ImportPath: name,
+							Type:       doc.LOCAL,
+							Value:      info,
+						}
+						continue
+					} else if i := strings.Index(info, ":"); i > -1 {
 						pkgs[name] = &doc.Pkg{
 							ImportPath: name,
 							Type:       info[:i],
@@ -81,7 +89,7 @@ func getChildPkgs(ctx *cli.Context, cpath string, ppkg *doc.Pkg, cachePkgs map[s
 		pkg.RootPath = doc.GetProjectPath(pkg.ImportPath)
 		if !pkgInCache(pkg.RootPath, cachePkgs) {
 			var newPath string
-			if !build.IsLocalImport(name) {
+			if !build.IsLocalImport(name) && pkg.Type != doc.LOCAL {
 				suf := versionSuffix(pkg.Value)
 				pkgPath := strings.Replace(
 					pkg.ImportPath, pkg.RootPath, pkg.RootPath+suf, 1)
@@ -102,7 +110,11 @@ func getChildPkgs(ctx *cli.Context, cpath string, ppkg *doc.Pkg, cachePkgs map[s
 					}
 				}
 			} else {
-				newPath, err = filepath.Abs(name)
+				if pkg.Type == doc.LOCAL {
+					newPath, err = filepath.Abs(pkg.Value)
+				} else {
+					newPath, err = filepath.Abs(name)
+				}
 				if err != nil {
 					return err
 				}
@@ -216,7 +228,13 @@ func genNewGoPath(ctx *cli.Context, isTest bool) {
 	for name, pkg := range cachePkgs {
 		suf := versionSuffix(pkg.Value)
 
-		oldPath := filepath.Join(installRepoPath, name) + suf
+		var oldPath string
+		if pkg.Type == doc.LOCAL {
+			oldPath, _ = filepath.Abs(pkg.Value)
+		} else {
+			oldPath = filepath.Join(installRepoPath, name) + suf
+		}
+
 		newPath := filepath.Join(newGoPathSrc, name)
 		paths := strings.Split(name, "/")
 		var isExistP, isCurChild bool

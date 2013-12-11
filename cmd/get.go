@@ -180,6 +180,10 @@ func copyToGopath(srcPath, destPath string) {
 func downloadPackages(ctx *cli.Context, nodes []*doc.Node) {
 	// Check all packages, they may be raw packages path.
 	for _, n := range nodes {
+		// Check if local reference
+		if n.Type == doc.LOCAL {
+			continue
+		}
 		// Check if it is a valid remote path.
 		if doc.IsValidRemotePath(n.ImportPath) {
 			gopathDir := path.Join(installGopath, n.ImportPath)

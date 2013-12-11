@@ -18,6 +18,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/Unknwon/com"
 	"github.com/codegangsta/cli"
 
 	"github.com/gpmgo/gopm/doc"
@@ -56,6 +57,11 @@ func validPath(info string) (string, string) {
 	l := len(infos)
 	switch {
 	case l == 1:
+		// for local imports
+		if com.IsFile(infos[0]) {
+			return doc.LOCAL, infos[0]
+		}
+
 		return doc.BRANCH, ""
 	case l == 2:
 		switch infos[1] {

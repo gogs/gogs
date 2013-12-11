@@ -32,13 +32,14 @@ const (
 	TAG     = "tag"
 	BRANCH  = "branch"
 	COMMIT  = "commit"
+	LOCAL   = "local"
 )
 
 type Pkg struct {
 	ImportPath string
 	RootPath   string
 	Type       string
-	Value      string // Branch, tag or commit.
+	Value      string // Branch, tag, commit or local.
 }
 
 func (pkg *Pkg) VerString() string {
