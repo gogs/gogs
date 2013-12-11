@@ -166,12 +166,20 @@ func getByPath(ctx *cli.Context) {
 }
 
 func copyToGopath(srcPath, destPath string) {
+	importPath := strings.TrimPrefix(destPath, installGopath+"/")
+	if len(getVcsName(destPath)) > 0 {
+		log.Warn("Package in GOPATH has version control: %s", importPath)
+		return
+	}
+
 	os.RemoveAll(destPath)
 	err := com.CopyDir(srcPath, destPath)
 	if err != nil {
 		log.Error("download", "Fail to copy to GOPATH:")
 		log.Fatal("", "\t"+err.Error())
 	}
+
+	log.Log("Package copied to GOPATH: %s", importPath)
 }
 
 // downloadPackages downloads packages with certain commit,
@@ -200,7 +208,6 @@ func downloadPackages(ctx *cli.Context, nodes []*doc.Node) {
 
 					if ctx.Bool("gopath") && com.IsExist(installPath) {
 						copyToGopath(installPath, gopathDir)
-						log.Log("Package copied to GOPATH: %s", n.ImportPath)
 					}
 					continue
 				} else {
@@ -253,9 +260,9 @@ func downloadPackages(ctx *cli.Context, nodes []*doc.Node) {
 						doc.LocalNodes.SetValue(nod.RootPath, "value", nod.Revision)
 					}
 
-					if ctx.Bool("gopath") && com.IsExist(installPath) {
+					if ctx.Bool("gopath") && com.IsExist(installPath) && !ctx.Bool("update") &&
+						len(getVcsName(path.Join(installGopath, nod.RootPath))) == 0 {
 						copyToGopath(installPath, gopathDir)
-						log.Log("Package copied to GOPATH: %s", n.ImportPath)
 					}
 				}
 			} else {
@@ -280,8 +287,18 @@ func downloadPackage(ctx *cli.Context, nod *doc.Node) (*doc.Node, []string) {
 	// Mark as donwloaded.
 	downloadCache[nod.RootPath] = true
 
-	nod.Revision = doc.LocalNodes.MustValue(nod.RootPath, "value")
-	imports, err := doc.PureDownload(nod, installRepoPath, ctx) //CmdGet.Flags)
+	// Check if only need to use VCS tools.
+	var imports []string
+	var err error
+	gopathDir := path.Join(installGopath, nod.RootPath)
+	vcs := getVcsName(gopathDir)
+	if ctx.Bool("update") && ctx.Bool("gopath") && len(vcs) > 0 {
+		err = updateByVcs(vcs, gopathDir)
+		imports = doc.GetAllImports([]string{gopathDir}, nod.RootPath, false)
+	} else {
+		nod.Revision = doc.LocalNodes.MustValue(nod.RootPath, "value")
+		imports, err = doc.PureDownload(nod, installRepoPath, ctx) //CmdGet.Flags)
+	}
 
 	if err != nil {
 		log.Error("get", "Fail to download pakage: "+nod.ImportPath)
@@ -291,4 +308,49 @@ func downloadPackage(ctx *cli.Context, nod *doc.Node) (*doc.Node, []string) {
 		return nil, nil
 	}
 	return nod, imports
+}
+
+func getVcsName(dirPath string) string {
+	switch {
+	case com.IsExist(path.Join(dirPath, ".git")):
+		return "git"
+	case com.IsExist(path.Join(dirPath, ".hg")):
+		return "hg"
+	case com.IsExist(path.Join(dirPath, ".svn")):
+		return "svn"
+	}
+	return ""
+}
+
+func updateByVcs(vcs, dirPath string) error {
+	err := os.Chdir(dirPath)
+	if err != nil {
+		log.Error("Update by VCS", "Fail to change work directory:")
+		log.Fatal("", "\t"+err.Error())
+	}
+	defer os.Chdir(workDir)
+
+	switch vcs {
+	case "git":
+		stdout, _, err := com.ExecCmd("git", "status")
+		if err != nil {
+			log.Error("", "Error occurs when 'git status'")
+			log.Error("", "\t"+err.Error())
+		}
+
+		i := strings.Index(stdout, "\n")
+		if i == -1 {
+			log.Error("", "Empty result for 'git status'")
+			return nil
+		}
+
+		branch := strings.TrimPrefix(stdout[:i], "# On branch ")
+		_, _, err = com.ExecCmd("git", "pull", "origin", branch)
+		if err != nil {
+			log.Error("", "Error occurs when 'git pull origin "+branch+"'")
+			log.Error("", "\t"+err.Error())
+		}
+
+	}
+	return nil
 }
