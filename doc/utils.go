@@ -68,6 +68,7 @@ func GetImports(absPath, importPath string, example bool) []string {
 
 	imports := make([]string, 0, len(pkg.Imports))
 	for _, p := range pkg.Imports {
+		println(p, IsGoRepoPath(p), importPath)
 		if !IsGoRepoPath(p) && !strings.HasPrefix(p, importPath) {
 			imports = append(imports, p)
 		}
