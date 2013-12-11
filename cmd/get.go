@@ -350,7 +350,24 @@ func updateByVcs(vcs, dirPath string) error {
 			log.Error("", "Error occurs when 'git pull origin "+branch+"'")
 			log.Error("", "\t"+err.Error())
 		}
+	case "hg":
+		stdout, stderr, err := com.ExecCmd("hg", "pull")
+		if err != nil {
+			log.Error("", "Error occurs when 'hg pull'")
+			log.Error("", "\t"+err.Error())
+		}
+		if len(stderr) > 0 {
+			log.Error("", "Error: "+stderr)
+		}
 
+		stdout, stderr, err = com.ExecCmd("hg", "up")
+		if err != nil {
+			log.Error("", "Error occurs when 'hg up'")
+			log.Error("", "\t"+err.Error())
+		}
+		if len(stderr) > 0 {
+			log.Error("", "Error: "+stderr)
+		}
 	}
 	return nil
 }
