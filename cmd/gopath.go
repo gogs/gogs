@@ -38,7 +38,6 @@ func getGopmPkgs(dirPath string, isTest bool) (pkgs map[string]*doc.Pkg, err err
 	imports := doc.GetAllImports([]string{dirPath}, ".", false)
 	pkgs = make(map[string]*doc.Pkg)
 	for _, name := range imports {
-		println(name)
 		if name == "C" {
 			continue
 		}
