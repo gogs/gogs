@@ -19,7 +19,7 @@ USAGE:
    gopm [global options] command [command options] [arguments...]
 
 VERSION:
-   0.6.0.1209
+   0.6.0.1211
 
 COMMANDS:
    get		fetch remote package(s) and dependencies to local repository
@@ -29,11 +29,11 @@ COMMANDS:
    build	link dependencies and go build
    install	link dependencies and go install
    help, h	Shows a list of commands or help for one command
-
+   
 GLOBAL OPTIONS:
-   --noterm		disable color output
-   --version, -v	print the version
-   --help, -h		show help
+   --noterm	disable color output
+   --version	print the version
+   --help, -h	show help
 ```
 
 

@@ -351,7 +351,7 @@ func updateByVcs(vcs, dirPath string) error {
 			log.Error("", "\t"+err.Error())
 		}
 	case "hg":
-		stdout, stderr, err := com.ExecCmd("hg", "pull")
+		_, stderr, err := com.ExecCmd("hg", "pull")
 		if err != nil {
 			log.Error("", "Error occurs when 'hg pull'")
 			log.Error("", "\t"+err.Error())
@@ -360,7 +360,7 @@ func updateByVcs(vcs, dirPath string) error {
 			log.Error("", "Error: "+stderr)
 		}
 
-		stdout, stderr, err = com.ExecCmd("hg", "up")
+		_, stderr, err = com.ExecCmd("hg", "up")
 		if err != nil {
 			log.Error("", "Error occurs when 'hg up'")
 			log.Error("", "\t"+err.Error())
