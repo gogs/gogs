@@ -1,4 +1,4 @@
-// Copyright 2013 gopm authors.
+// Copyright 2013-2014 gopm authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License"): you may
 // not use this file except in compliance with the License. You may obtain
@@ -12,7 +12,7 @@
 // License for the specific language governing permissions and limitations
 // under the License.
 
-// gopm(Go Package Manager) is a Go package manage tool for search, install, update and share packages in Go.
+// gopm(Go Package Manager) is a Go package manage tool for searching, installing, updating and sharing your packages in Go.
 package main
 
 import (
@@ -29,7 +29,7 @@ import (
 // Test that go1.1 tag above is included in builds. main.go refers to this definition.
 const go11tag = true
 
-const APP_VER = "0.6.0.1211"
+const APP_VER = "0.6.1.0110"
 
 // 	//cmd.CmdSearch,
 // 		cmdClean,
@@ -37,7 +37,6 @@ const APP_VER = "0.6.0.1211"
 // 		cmdEnv,
 // 		cmdFix,
 // 		cmdList,
-// 		cmdTest,
 // 		cmdTool,
 // 		cmdVet,
 // }
@@ -53,11 +52,11 @@ func main() {
 	app.Version = APP_VER
 	app.Commands = []cli.Command{
 		cmd.CmdGet,
-		cmd.CmdBin,
+		//cmd.CmdBin,
 		cmd.CmdGen,
-		cmd.CmdRun,
-		cmd.CmdBuild,
-		cmd.CmdInstall,
+		//cmd.CmdRun,
+		//cmd.CmdBuild,
+		//cmd.CmdInstall,
 		//cmd.CmdUpdate,
 		//cmd.CmdTest,
 	}

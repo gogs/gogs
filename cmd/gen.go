@@ -41,7 +41,6 @@ Make sure you run this command in the root path of a go project.`,
 	},
 }
 
-// scan a directory and gen a gopm file
 func runGen(ctx *cli.Context) {
 	setup(ctx)
 
@@ -55,15 +54,18 @@ func runGen(ctx *cli.Context) {
 		log.Fatal("", "\t"+err.Error())
 	}
 
+	targetPath := parseTarget(gf.MustValue("target", "path"))
 	// Get dependencies.
-	imports := doc.GetAllImports([]string{workDir},
-		parseTarget(gf.MustValue("target", "path")), ctx.Bool("example"))
+	imports := doc.GetAllImports([]string{workDir}, targetPath, ctx.Bool("example"))
 
 	for _, p := range imports {
 		p = doc.GetProjectPath(p)
-		if strings.HasSuffix(workDir, p) {
+		// Skip subpackage(s) of current project.
+		if strings.HasSuffix(workDir, p) || strings.HasPrefix(p, targetPath) {
 			continue
 		}
+
+		// Check if user specified the version.
 		if value := gf.MustValue("deps", p); len(value) == 0 {
 			gf.SetValue("deps", p, "")
 		}

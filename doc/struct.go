@@ -59,10 +59,11 @@ func NewDefaultPkg(importPath string) *Pkg {
 
 type Node struct {
 	Pkg
-	DownloadURL string
-	Synopsis    string
-	IsGetDeps   bool
-	Revision    string
+	DownloadURL   string
+	Synopsis      string
+	IsGetDeps     bool
+	IsGetDepsOnly bool
+	Revision      string
 }
 
 func NewNode(importPath, downloadUrl, tp, value string, isGetDeps bool) *Node {

@@ -1,4 +1,4 @@
-// Copyright 2013 gopm authors.
+// Copyright 2013-2014 gopm authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License"): you may
 // not use this file except in compliance with the License. You may obtain
@@ -69,7 +69,6 @@ func init() {
 
 func runGet(ctx *cli.Context) {
 	setup(ctx)
-
 	// Check conflicts.
 	if ctx.Bool("gopath") && ctx.Bool("remote") {
 		log.Error("get", "Command options have conflicts")
@@ -119,11 +118,17 @@ func getByGopmfile(ctx *cli.Context) {
 	}
 	gf := doc.NewGopmfile(".")
 
+	targetPath := parseTarget(gf.MustValue("target", "path"))
 	// Get dependencies.
-	imports := doc.GetAllImports([]string{workDir},
-		parseTarget(gf.MustValue("target", "path")), ctx.Bool("example"))
+	imports := doc.GetAllImports([]string{workDir}, targetPath, ctx.Bool("example"))
+
 	nodes := make([]*doc.Node, 0, len(imports))
 	for _, p := range imports {
+		p = doc.GetProjectPath(p)
+		// Skip subpackage(s) of current project.
+		if strings.HasSuffix(workDir, p) || strings.HasPrefix(p, targetPath) {
+			continue
+		}
 		node := doc.NewNode(p, p, doc.BRANCH, "", true)
 
 		// Check if user specified the version.
@@ -140,6 +145,7 @@ func getByGopmfile(ctx *cli.Context) {
 }
 
 func getByPath(ctx *cli.Context) {
+	return
 	nodes := make([]*doc.Node, 0, len(ctx.Args()))
 	for _, info := range ctx.Args() {
 		pkgPath := info
@@ -192,90 +198,99 @@ func downloadPackages(ctx *cli.Context, nodes []*doc.Node) {
 		if n.Type == doc.LOCAL {
 			continue
 		}
-		// Check if it is a valid remote path.
-		if doc.IsValidRemotePath(n.ImportPath) {
-			gopathDir := path.Join(installGopath, n.ImportPath)
-			n.RootPath = doc.GetProjectPath(n.ImportPath)
-			installPath := path.Join(installRepoPath, n.RootPath) +
-				versionSuffix(n.Value)
-
-			if !ctx.Bool("update") {
-				// Check if package has been downloaded.
-				if (len(n.Value) == 0 && !ctx.Bool("remote") && com.IsExist(gopathDir)) ||
-					com.IsExist(installPath) {
-					log.Trace("Skipped installed package: %s@%s:%s",
-						n.ImportPath, n.Type, doc.CheckNodeValue(n.Value))
-
-					if ctx.Bool("gopath") && com.IsExist(installPath) {
-						copyToGopath(installPath, gopathDir)
-					}
-					continue
-				} else {
-					doc.LocalNodes.SetValue(n.RootPath, "value", "")
-				}
-			}
-
-			if !downloadCache[n.RootPath] {
-				// Download package.
-				nod, imports := downloadPackage(ctx, n)
-				if len(imports) > 0 {
-					var gf *goconfig.ConfigFile
-
-					// Check if has gopmfile
-					if com.IsFile(installPath + "/" + doc.GOPM_FILE_NAME) {
-						log.Log("Found gopmfile: %s@%s:%s",
-							n.ImportPath, n.Type, doc.CheckNodeValue(n.Value))
-
-						gf = doc.NewGopmfile(installPath)
-					}
-
-					// Need to download dependencies.
-					// Generate temporary nodes.
-					nodes := make([]*doc.Node, len(imports))
-					for i := range nodes {
-						nodes[i] = doc.NewNode(imports[i], imports[i], doc.BRANCH, "", true)
-
-						if gf == nil {
-							continue
-						}
-
-						// Check if user specified the version.
-						if v, err := gf.GetValue("deps", imports[i]); err == nil &&
-							len(v) > 0 {
-							nodes[i].Type, nodes[i].Value = validPath(v)
-						}
-					}
-					downloadPackages(ctx, nodes)
-				}
-
-				// Only save package information with specific commit.
-				if nod != nil {
-					// Save record in local nodes.
-					log.Success("SUCC", "GET", fmt.Sprintf("%s@%s:%s",
-						n.ImportPath, n.Type, doc.CheckNodeValue(n.Value)))
-					downloadCount++
-
-					// Only save non-commit node.
-					if len(nod.Value) == 0 && len(nod.Revision) > 0 {
-						doc.LocalNodes.SetValue(nod.RootPath, "value", nod.Revision)
-					}
-
-					if ctx.Bool("gopath") && com.IsExist(installPath) && !ctx.Bool("update") &&
-						len(getVcsName(path.Join(installGopath, nod.RootPath))) == 0 {
-						copyToGopath(installPath, gopathDir)
-					}
-				}
-			} else {
-				log.Trace("Skipped downloaded package: %s@%s:%s",
-					n.ImportPath, n.Type, doc.CheckNodeValue(n.Value))
-			}
-		} else if n.ImportPath == "C" {
+		// Check if it is a valid remote path or C.
+		if n.ImportPath == "C" {
 			continue
-		} else {
+		} else if !doc.IsValidRemotePath(n.ImportPath) {
 			// Invalid import path.
 			log.Error("download", "Skipped invalid package: "+fmt.Sprintf("%s@%s:%s",
 				n.ImportPath, n.Type, doc.CheckNodeValue(n.Value)))
 			failConut++
+			continue
+		}
+
+		// Valid import path.
+		gopathDir := path.Join(installGopath, n.ImportPath)
+		n.RootPath = doc.GetProjectPath(n.ImportPath)
+		installPath := path.Join(installRepoPath, n.RootPath) + versionSuffix(n.Value)
+
+		// Indicates whether need to download package again.
+		if len(n.Value) > 0 && com.IsExist(installPath) {
+			n.IsGetDepsOnly = true
+		}
+
+		if !ctx.Bool("update") {
+			// Check if package has been downloaded.
+			if (len(n.Value) == 0 && !ctx.Bool("remote") && com.IsExist(gopathDir)) ||
+				com.IsExist(installPath) {
+				log.Trace("Skipped installed package: %s@%s:%s",
+					n.ImportPath, n.Type, doc.CheckNodeValue(n.Value))
+
+				// Only copy when no version control.
+				if ctx.Bool("gopath") && com.IsExist(installPath) ||
+					len(getVcsName(gopathDir)) == 0 {
+					copyToGopath(installPath, gopathDir)
+				}
+				continue
+			} else {
+				doc.LocalNodes.SetValue(n.RootPath, "value", "")
+			}
+		}
+
+		if downloadCache[n.RootPath] {
+			log.Trace("Skipped downloaded package: %s@%s:%s",
+				n.ImportPath, n.Type, doc.CheckNodeValue(n.Value))
+			continue
+		}
+
+		// Download package.
+		nod, imports := downloadPackage(ctx, n)
+		if len(imports) > 0 {
+			var gf *goconfig.ConfigFile
+
+			// Check if has gopmfile.
+			if com.IsFile(installPath + "/" + doc.GOPM_FILE_NAME) {
+				log.Log("Found gopmfile: %s@%s:%s",
+					n.ImportPath, n.Type, doc.CheckNodeValue(n.Value))
+				gf = doc.NewGopmfile(installPath)
+			}
+
+			// Need to download dependencies.
+			// Generate temporary nodes.
+			nodes := make([]*doc.Node, len(imports))
+			for i := range nodes {
+				nodes[i] = doc.NewNode(imports[i], imports[i], doc.BRANCH, "", true)
+
+				if gf == nil {
+					continue
+				}
+
+				// Check if user specified the version.
+				if v, err := gf.GetValue("deps", imports[i]); err == nil && len(v) > 0 {
+					nodes[i].Type, nodes[i].Value = validPath(v)
+				}
+			}
+			downloadPackages(ctx, nodes)
+		}
+
+		// Only save package information with specific commit.
+		if nod == nil {
+			continue
+		}
+
+		// Save record in local nodes.
+		log.Success("SUCC", "GET", fmt.Sprintf("%s@%s:%s",
+			n.ImportPath, n.Type, doc.CheckNodeValue(n.Value)))
+		downloadCount++
+
+		// Only save non-commit node.
+		if len(nod.Value) == 0 && len(nod.Revision) > 0 {
+			doc.LocalNodes.SetValue(nod.RootPath, "value", nod.Revision)
+		}
+
+		if ctx.Bool("gopath") && com.IsExist(installPath) && !ctx.Bool("update") &&
+			len(getVcsName(path.Join(installGopath, nod.RootPath))) == 0 {
+			copyToGopath(installPath, gopathDir)
 		}
 	}
 }
@@ -296,6 +311,11 @@ func downloadPackage(ctx *cli.Context, nod *doc.Node) (*doc.Node, []string) {
 		err = updateByVcs(vcs, gopathDir)
 		imports = doc.GetAllImports([]string{gopathDir}, nod.RootPath, false)
 	} else {
+		// If package has revision and exist, then just check dependencies.
+		if nod.IsGetDepsOnly {
+			return nod, doc.GetAllImports([]string{path.Join(installRepoPath, nod.RootPath) + versionSuffix(nod.Value)},
+				nod.RootPath, ctx.Bool("example"))
+		}
 		nod.Revision = doc.LocalNodes.MustValue(nod.RootPath, "value")
 		imports, err = doc.PureDownload(nod, installRepoPath, ctx) //CmdGet.Flags)
 	}
