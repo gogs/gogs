@@ -99,7 +99,7 @@ func runGet(ctx *cli.Context) {
 	}
 
 	// The gopm local repository.
-	installRepoPath = doc.HomeDir + "/repos"
+	installRepoPath = path.Join(doc.HomeDir, "repos")
 	log.Log("Local repository path: %s", installRepoPath)
 
 	// Check number of arguments to decide which function to call.
@@ -188,6 +188,18 @@ func copyToGopath(srcPath, destPath string) {
 	log.Log("Package copied to GOPATH: %s", importPath)
 }
 
+func isUnchangablePoint(nod *doc.Node) bool {
+	if len(nod.Value) == 0 {
+		return false
+	}
+
+	switch nod.Type {
+	case doc.COMMIT, doc.TAG:
+		return true
+	}
+	return false
+}
+
 // downloadPackages downloads packages with certain commit,
 // if the commit is empty string, then it downloads all dependencies,
 // otherwise, it only downloada package with specific commit only.
@@ -215,7 +227,7 @@ func downloadPackages(ctx *cli.Context, nodes []*doc.Node) {
 		installPath := path.Join(installRepoPath, n.RootPath) + versionSuffix(n.Value)
 
 		// Indicates whether need to download package again.
-		if len(n.Value) > 0 && com.IsExist(installPath) {
+		if isUnchangablePoint(n) && com.IsExist(installPath) {
 			n.IsGetDepsOnly = true
 		}
 
