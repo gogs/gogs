@@ -188,18 +188,6 @@ func copyToGopath(srcPath, destPath string) {
 	log.Log("Package copied to GOPATH: %s", importPath)
 }
 
-func isUnchangablePoint(nod *doc.Node) bool {
-	if len(nod.Value) == 0 {
-		return false
-	}
-
-	switch nod.Type {
-	case doc.COMMIT, doc.TAG:
-		return true
-	}
-	return false
-}
-
 // downloadPackages downloads packages with certain commit,
 // if the commit is empty string, then it downloads all dependencies,
 // otherwise, it only downloada package with specific commit only.
@@ -227,7 +215,7 @@ func downloadPackages(ctx *cli.Context, nodes []*doc.Node) {
 		installPath := path.Join(installRepoPath, n.RootPath) + versionSuffix(n.Value)
 
 		// Indicates whether need to download package again.
-		if isUnchangablePoint(n) && com.IsExist(installPath) {
+		if n.IsFixed() && com.IsExist(installPath) {
 			n.IsGetDepsOnly = true
 		}
 

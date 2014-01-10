@@ -42,6 +42,15 @@ type Pkg struct {
 	Value      string // Branch, tag, commit or local.
 }
 
+// If the package is fixed and no need to updated.
+// For commit, tag and local, it's fixed. For branch
+func (pkg *Pkg) IsFixed() bool {
+	if pkg.Type == BRANCH || len(pkg.Value) == 0 {
+		return false
+	}
+	return true
+}
+
 func (pkg *Pkg) VerString() string {
 	if pkg.Value == "" {
 		return pkg.Type
