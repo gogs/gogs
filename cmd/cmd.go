@@ -1,4 +1,4 @@
-// Copyright 2013 gopm authors.
+// Copyright 2013-2014 gopm authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License"): you may
 // not use this file except in compliance with the License. You may obtain
@@ -57,24 +57,22 @@ func validPath(info string) (string, string) {
 	l := len(infos)
 	switch {
 	case l == 1:
-		// for local imports
+		// For local imports.
 		if com.IsFile(infos[0]) {
 			return doc.LOCAL, infos[0]
 		}
-
-		return doc.BRANCH, ""
 	case l == 2:
 		switch infos[1] {
 		case doc.TRUNK, doc.MASTER, doc.DEFAULT:
 			infos[1] = ""
 		}
 		return infos[0], infos[1]
-	default:
-		log.Error("", "Cannot parse dependency version:")
-		log.Error("", "\t"+info)
-		log.Help("Try 'gopm help get' to get more information")
-		return "", ""
 	}
+
+	log.Error("", "Cannot parse dependency version:")
+	log.Error("", "\t"+info)
+	log.Help("Try 'gopm help get' to get more information")
+	return "", ""
 }
 
 func versionSuffix(value string) string {
@@ -82,4 +80,8 @@ func versionSuffix(value string) string {
 		return "." + value
 	}
 	return ""
+}
+
+func isSubpackage(rootPath, targetPath string) bool {
+	return strings.HasSuffix(workDir, rootPath) || strings.HasPrefix(rootPath, targetPath)
 }
