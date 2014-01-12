@@ -126,7 +126,7 @@ func getByGopmfile(ctx *cli.Context) {
 	for _, p := range imports {
 		p = doc.GetProjectPath(p)
 		// Skip subpackage(s) of current project.
-		if strings.HasSuffix(workDir, p) || strings.HasPrefix(p, targetPath) {
+		if isSubpackage(p, targetPath) {
 			continue
 		}
 		node := doc.NewNode(p, p, doc.BRANCH, "", true)
@@ -145,7 +145,6 @@ func getByGopmfile(ctx *cli.Context) {
 }
 
 func getByPath(ctx *cli.Context) {
-	return
 	nodes := make([]*doc.Node, 0, len(ctx.Args()))
 	for _, info := range ctx.Args() {
 		pkgPath := info
@@ -213,6 +212,10 @@ func downloadPackages(ctx *cli.Context, nodes []*doc.Node) {
 		gopathDir := path.Join(installGopath, n.ImportPath)
 		n.RootPath = doc.GetProjectPath(n.ImportPath)
 		installPath := path.Join(installRepoPath, n.RootPath) + versionSuffix(n.Value)
+
+		if isSubpackage(n.RootPath, ".") {
+			continue
+		}
 
 		// Indicates whether need to download package again.
 		if n.IsFixed() && com.IsExist(installPath) {
@@ -388,6 +391,8 @@ func updateByVcs(vcs, dirPath string) error {
 		if len(stderr) > 0 {
 			log.Error("", "Error: "+stderr)
 		}
+	case "svn":
+		log.Error("", "Error: not support svn yet")
 	}
 	return nil
 }

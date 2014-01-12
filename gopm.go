@@ -52,11 +52,11 @@ func main() {
 	app.Version = APP_VER
 	app.Commands = []cli.Command{
 		cmd.CmdGet,
-		//cmd.CmdBin,
+		cmd.CmdBin,
 		cmd.CmdGen,
-		//cmd.CmdRun,
-		//cmd.CmdBuild,
-		//cmd.CmdInstall,
+		cmd.CmdRun,
+		cmd.CmdBuild,
+		cmd.CmdInstall,
 		//cmd.CmdUpdate,
 		//cmd.CmdTest,
 	}

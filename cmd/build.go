@@ -34,6 +34,7 @@ and execute 'go build'
 gopm build <go build commands>`,
 	Action: runBuild,
 	Flags: []cli.Flag{
+		cli.BoolFlag{"update, u", "update pakcage(s) and dependencies if any"},
 		cli.BoolFlag{"verbose, v", "show process details"},
 	},
 }
