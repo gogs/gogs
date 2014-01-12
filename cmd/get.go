@@ -355,19 +355,12 @@ func updateByVcs(vcs, dirPath string) error {
 
 	switch vcs {
 	case "git":
-		stdout, _, err := com.ExecCmd("git", "status")
+		branch, _, err := com.ExecCmd("git", "rev-parse", "--abbrev-ref", "HEAD")
 		if err != nil {
-			log.Error("", "Error occurs when 'git status'")
+			log.Error("", "Error occurs when 'git rev-parse --abbrev-ref HEAD'")
 			log.Error("", "\t"+err.Error())
 		}
 
-		i := strings.Index(stdout, "\n")
-		if i == -1 {
-			log.Error("", "Empty result for 'git status'")
-			return nil
-		}
-
-		branch := strings.TrimPrefix(stdout[:i], "# On branch ")
 		_, _, err = com.ExecCmd("git", "pull", "origin", branch)
 		if err != nil {
 			log.Error("", "Error occurs when 'git pull origin "+branch+"'")
@@ -392,7 +385,14 @@ func updateByVcs(vcs, dirPath string) error {
 			log.Error("", "Error: "+stderr)
 		}
 	case "svn":
-		log.Error("", "Error: not support svn yet")
+		_, stderr, err := com.ExecCmd("svn", "update")
+		if err != nil {
+			log.Error("", "Error occurs when 'svn update'")
+			log.Error("", "\t"+err.Error())
+		}
+		if len(stderr) > 0 {
+			log.Error("", "Error: "+stderr)
+		}
 	}
 	return nil
 }
