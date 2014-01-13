@@ -15,13 +15,14 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
+	"net/http"
 	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
 	"runtime"
-	"strings"
 
 	"github.com/Unknwon/com"
 	"github.com/codegangsta/cli"
@@ -32,160 +33,175 @@ import (
 
 var CmdUpdate = cli.Command{
 	Name:  "update",
-	Usage: "update self",
-	Description: `Command bin downloads and links dependencies according to gopmfile,
-and build executable binary to work directory
+	Usage: "check and update gopm resources including itself",
+	Description: `Command update checks updates of resources and gopm itself.
 
 gopm update
 
-Can only specify one each time, and only works for projects that 
-contains main package`,
+Resources will be updated automatically after executed this command,
+but you have to confirm before updaing gopm itself.`,
 	Action: runUpdate,
+	Flags: []cli.Flag{
+		cli.BoolFlag{"verbose, v", "show process details"},
+	},
 }
 
 func exePath() string {
-	file, _ := exec.LookPath(os.Args[0])
-	path, _ := filepath.Abs(file)
+	file, err := exec.LookPath(os.Args[0])
+	if err != nil {
+		log.Error("Update", "Fail to execute exec.LookPath")
+		log.Fatal("", err.Error())
+	}
+	path, err := filepath.Abs(file)
+	if err != nil {
+		log.Error("Update", "Fail to get absolutely path")
+		log.Fatal("", err.Error())
+	}
 	return path
 }
 
+type version struct {
+	Gopm            int
+	PackageNameList int `json:"package_name_list"`
+}
+
 func runUpdate(ctx *cli.Context) {
-	doc.LoadPkgNameList(doc.HomeDir + "/data/pkgname.list")
+	setup(ctx)
 
-	installRepoPath = doc.HomeDir + "/repos"
+	isAnythingUpdated := false
+	// Load local version info.
+	localVerInfo := loadLocalVerInfo()
 
-	// Check arguments.
-	num := 0
-
-	if len(ctx.Args()) != num {
-		log.Error("Update", "Fail to start command")
-		log.Fatal("", "Invalid argument number")
-	}
-
-	// Parse package version.
-	info := "github.com/gpmgo/gopm"
-	pkgPath := info
-	ver := ""
-	var err error
-	if i := strings.Index(info, "@"); i > -1 {
-		pkgPath = info[:i]
-		_, ver = validPath(info[i+1:])
-	}
-
-	// Check package name.
-	if !strings.Contains(pkgPath, "/") {
-		name, ok := doc.PackageNameList[pkgPath]
-		if !ok {
-			log.Error("Update", "Invalid package name: "+pkgPath)
-			log.Fatal("", "No match in the package name list")
-		}
-		pkgPath = name
-	}
-
-	// Get code.
-	stdout, _, _ := com.ExecCmd("gopm", "get", info)
-	if len(stdout) > 0 {
-		fmt.Print(stdout)
-	}
-
-	// Check if previous steps were successful.
-	repoPath := installRepoPath + "/" + pkgPath
-	if len(ver) > 0 {
-		repoPath += "." + ver
-	}
-	if !com.IsDir(repoPath) {
-		log.Error("Bin", "Fail to continue command")
-		log.Fatal("", "Previous steps weren't successful")
-	}
-
-	wd, err := os.Getwd()
-	if err != nil {
-		log.Error("Bin", "Fail to get work directory")
+	// Get remote version info.
+	var remoteVerInfo version
+	if err := com.HttpGetJSON(http.DefaultClient, "http://gopm.io/VERSION.json", &remoteVerInfo); err != nil {
+		log.Error("Update", "Fail to fetch VERSION.json")
 		log.Fatal("", err.Error())
 	}
 
-	// Change to repository path.
-	log.Log("Changing work directory to %s", repoPath)
-	err = os.Chdir(repoPath)
+	// Package name list.
+	if remoteVerInfo.PackageNameList > localVerInfo.PackageNameList {
+		log.Log("Updating pkgname.list...%v > %v",
+			localVerInfo.PackageNameList, remoteVerInfo.PackageNameList)
+		data, err := com.HttpGetBytes(http.DefaultClient, "https://raw2.github.com/gpmgo/docs/master/pkgname.list", nil)
+		if err != nil {
+			log.Error("Update", "Fail to update pkgname.list")
+			log.Fatal("", err.Error())
+		}
+		_, err = com.SaveFile(path.Join(doc.HomeDir, doc.PKG_NAME_LIST_PATH), data)
+		if err != nil {
+			log.Error("Update", "Fail to save pkgname.list")
+			log.Fatal("", err.Error())
+		}
+		log.Log("Update pkgname.list to %v succeed!", remoteVerInfo.PackageNameList)
+		isAnythingUpdated = true
+	}
+
+	// Gopm.
+	if remoteVerInfo.Gopm > localVerInfo.Gopm {
+		log.Log("Updating gopm...%v > %v",
+			localVerInfo.Gopm, remoteVerInfo.Gopm)
+		installRepoPath = doc.HomeDir + "/repos"
+
+		tmpDirPath := path.Join(doc.HomeDir, "temp")
+		tmpBinPath := path.Join(tmpDirPath, "gopm")
+		if runtime.GOOS == "windows" {
+			tmpBinPath += ".exe"
+		}
+
+		os.MkdirAll(tmpDirPath, os.ModePerm)
+		os.Remove(tmpBinPath)
+		// Fetch code.
+		stdout, stderr, err := com.ExecCmd("gopm", "bin", "-u", "-d",
+			"github.com/gpmgo/gopm", tmpDirPath)
+		if err != nil {
+			log.Error("Update", "Fail to execute 'gopm bin -u -d github.com/gpmgo/gopm "+tmpDirPath+"'")
+			log.Fatal("", err.Error())
+		}
+		if len(stderr) > 0 {
+			fmt.Print(stderr)
+		}
+		if len(stdout) > 0 {
+			fmt.Print(stdout)
+		}
+
+		// Check if previous steps were successful.
+		if !com.IsExist(tmpBinPath) {
+			log.Error("Update", "Fail to continue command")
+			log.Fatal("", "Previous steps weren't successful, no binary produced")
+		}
+
+		movePath := exePath()
+		log.Log("New binary will be replaced for %s", movePath)
+		// Move binary to given directory.
+		if runtime.GOOS != "windows" {
+			err := os.Rename(tmpBinPath, movePath)
+			if err != nil {
+				log.Error("Update", "Fail to move binary")
+				log.Fatal("", err.Error())
+			}
+			os.Chmod(movePath+"/"+path.Base(tmpBinPath), os.ModePerm)
+		} else {
+			batPath := filepath.Join(workDir, "a.bat")
+			f, err := os.Create(batPath)
+			if err != nil {
+				log.Error("Update", "Fail to generate bat file")
+				log.Fatal("", err.Error())
+			}
+			f.WriteString(fmt.Sprintf(`ping -n 1 127.0.0.1>nul\ncopy "%v" "%v"\ndel "%v"\ndel "%v"`,
+				tmpBinPath, movePath, tmpBinPath, batPath))
+			f.Close()
+
+			attr := &os.ProcAttr{
+				Dir:   workDir,
+				Env:   os.Environ(),
+				Files: []*os.File{os.Stdin, os.Stdout, os.Stderr},
+			}
+
+			_, err = os.StartProcess(batPath, []string{"a.bat"}, attr)
+			if err != nil {
+				log.Error("Update", "Fail to start bat process")
+				log.Fatal("", err.Error())
+			}
+		}
+
+		log.Success("SUCC", "Update", "Command execute successfully!")
+		isAnythingUpdated = true
+	}
+
+	// Save JSON.
+	f, err := os.Create(path.Join(doc.HomeDir, doc.VER_PATH))
 	if err != nil {
-		log.Error("Bin", "Fail to change work directory")
+		log.Error("Update", "Fail to create VERSION.json")
+		log.Fatal("", err.Error())
+	}
+	if err := json.NewEncoder(f).Encode(&remoteVerInfo); err != nil {
+		log.Error("Update", "Fail to encode VERSION.json")
 		log.Fatal("", err.Error())
 	}
 
-	// Build application.
-	stdout, _, _ = com.ExecCmd("gopm", "build")
-	if len(stdout) > 0 {
-		fmt.Print(stdout)
+	if !isAnythingUpdated {
+		log.Log("Nothing need to be updated")
 	}
-	defer func() {
-		// Clean files.
-		os.RemoveAll(path.Join(repoPath, doc.VENDOR))
-	}()
+}
 
-	// Check if previous steps were successful.
-	if com.IsFile(doc.GOPM_FILE_NAME) {
-		log.Trace("Loading gopmfile...")
-		gf := doc.NewGopmfile(".")
+func loadLocalVerInfo() (ver version) {
+	verPath := path.Join(doc.HomeDir, doc.VER_PATH)
 
-		var err error
-		pkgName, err = gf.GetValue("target", "path")
-		if err == nil {
-			log.Log("Target name: %s", pkgName)
-		}
+	// First time run should not exist.
+	if !com.IsExist(verPath) {
+		return ver
 	}
 
-	if len(pkgName) == 0 {
-		_, pkgName = filepath.Split(pkgPath)
+	f, err := os.Open(verPath)
+	if err != nil {
+		log.Error("Update", "Fail to open VERSION.json")
+		log.Fatal("", err.Error())
 	}
 
-	binName := path.Base(pkgName)
-	if runtime.GOOS == "windows" {
-		binName += ".exe"
+	if err := json.NewDecoder(f).Decode(&ver); err != nil {
+		log.Error("Update", "Fail to decode VERSION.json")
+		log.Fatal("", err.Error())
 	}
-	binPath := path.Join(doc.VENDOR, "src", pkgPath, binName)
-	if !com.IsFile(binPath) {
-		log.Error("Update", "Fail to continue command")
-		log.Fatal("", "Previous steps weren't successful or the project does not contain main package")
-	}
-
-	movePath := exePath()
-	fmt.Print(movePath)
-
-	// Move binary to given directory.
-	if runtime.GOOS != "windows" {
-		err = os.Rename(binPath, movePath)
-		if err != nil {
-			log.Error("Update", "Fail to move binary")
-			log.Fatal("", err.Error())
-		}
-		os.Chmod(movePath+"/"+binName, os.ModePerm)
-	} else {
-		batPath := filepath.Join(wd, "a.bat")
-		f, err := os.Create(batPath)
-		if err != nil {
-			log.Error("Update", "Fail to generate bat file")
-			log.Fatal("", err.Error())
-		}
-		f.WriteString(fmt.Sprintf(`ping -n 1 127.0.0.1>nul\ncopy "%v" "%v"\ndel "%v"\ndel "%v"`,
-			binPath, movePath, binPath, batPath))
-		f.Close()
-
-		attr := &os.ProcAttr{
-			Dir: wd,
-			Env: os.Environ(),
-			//Files: []*os.File{nil, nil, nil},
-			Files: []*os.File{os.Stdin, os.Stdout, os.Stderr},
-		}
-
-		_, err = os.StartProcess(batPath, []string{"a.bat"}, attr)
-		if err != nil {
-			log.Error("Update", "Fail to start bat process")
-			log.Fatal("", err.Error())
-		}
-	}
-
-	log.Log("Changing work directory back to %s", wd)
-	os.Chdir(wd)
-
-	log.Success("SUCC", "Update", "Command execute successfully!")
+	return ver
 }
