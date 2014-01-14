@@ -27,8 +27,10 @@ import (
 )
 
 const (
-	GOPM_FILE_NAME = ".gopmfile"
-	RawHomeDir     = "~/.gopm"
+	GOPM_FILE_NAME     = ".gopmfile"
+	PKG_NAME_LIST_PATH = "data/pkgname.list"
+	VER_PATH           = "data/VERSION.json"
+	RawHomeDir         = "~/.gopm"
 )
 
 var (
@@ -47,7 +49,7 @@ func init() {
 	HomeDir = strings.Replace(RawHomeDir, "~", hd, -1)
 
 	LoadLocalNodes()
-	LoadPkgNameList(HomeDir + "/data/pkgname.list")
+	LoadPkgNameList(path.Join(HomeDir, PKG_NAME_LIST_PATH))
 }
 
 // NewGopmfile loads gopmgile in given directory.
@@ -78,9 +80,13 @@ func LoadPkgNameList(filePath string) {
 	}
 
 	pkgs := strings.Split(string(data), "\n")
-	for _, line := range pkgs {
+	for i, line := range pkgs {
 		infos := strings.Split(line, "=")
 		if len(infos) != 2 {
+			// Last item might be empty line.
+			if i == len(pkgs)-1 {
+				continue
+			}
 			log.Error("", "Fail to parse package name: "+line)
 			log.Fatal("", "Invalid package name information")
 		}
