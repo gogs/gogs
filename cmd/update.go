@@ -103,8 +103,8 @@ func runUpdate(ctx *cli.Context) {
 			localVerInfo.Gopm, remoteVerInfo.Gopm)
 		installRepoPath = doc.HomeDir + "/repos"
 
-		tmpDirPath := path.Join(doc.HomeDir, "temp")
-		tmpBinPath := path.Join(tmpDirPath, "gopm")
+		tmpDirPath := filepath.Join(doc.HomeDir, "temp")
+		tmpBinPath := filepath.Join(tmpDirPath, "gopm")
 		if runtime.GOOS == "windows" {
 			tmpBinPath += ".exe"
 		}
@@ -142,15 +142,16 @@ func runUpdate(ctx *cli.Context) {
 			}
 			os.Chmod(movePath+"/"+path.Base(tmpBinPath), os.ModePerm)
 		} else {
-			batPath := filepath.Join(workDir, "a.bat")
+			batPath := filepath.Join(tmpDirPath, "update.bat")
 			f, err := os.Create(batPath)
 			if err != nil {
 				log.Error("Update", "Fail to generate bat file")
 				log.Fatal("", err.Error())
 			}
-			//f.WriteString("@echo off\r\n")
-			f.WriteString(fmt.Sprintf("ping -n 1 127.0.0.1>nul\r\ncopy \"%v\" \"%v\"\r\ndel \"%v\"\r\ndel \"%v\"\r\n",
-				tmpBinPath, movePath, tmpBinPath, batPath))
+			f.WriteString("@echo off\r\n")
+			f.WriteString(fmt.Sprintf("ping -n 1 127.0.0.1>nul\r\ncopy \"%v\" \"%v\" >nul\r\ndel \"%v\" >nul\r\n\r\n",
+				tmpBinPath, movePath, tmpBinPath))
+			//f.WriteString(fmt.Sprintf("del \"%v\"\r\n", batPath))
 			f.Close()
 
 			attr := &os.ProcAttr{
@@ -159,7 +160,7 @@ func runUpdate(ctx *cli.Context) {
 				Files: []*os.File{os.Stdin, os.Stdout, os.Stderr},
 			}
 
-			_, err = os.StartProcess(batPath, []string{"a.bat"}, attr)
+			_, err = os.StartProcess(batPath, []string{batPath}, attr)
 			if err != nil {
 				log.Error("Update", "Fail to start bat process")
 				log.Fatal("", err.Error())
@@ -184,6 +185,7 @@ func runUpdate(ctx *cli.Context) {
 	if !isAnythingUpdated {
 		log.Log("Nothing need to be updated")
 	}
+	log.Log("Exit old gopm")
 }
 
 func loadLocalVerInfo() (ver version) {
