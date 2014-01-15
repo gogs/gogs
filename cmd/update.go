@@ -111,9 +111,14 @@ func runUpdate(ctx *cli.Context) {
 
 		os.MkdirAll(tmpDirPath, os.ModePerm)
 		os.Remove(tmpBinPath)
+
 		// Fetch code.
-		stdout, stderr, err := com.ExecCmd("gopm", "bin", "-u", "-d",
-			"github.com/gpmgo/gopm", tmpDirPath)
+		args := []string{"bin", "-u", "-d"}
+		if ctx.Bool("verbose") {
+			args = append(args, "-v")
+		}
+		args = append(args, []string{"github.com/gpmgo/gopm", tmpDirPath}...)
+		stdout, stderr, err := com.ExecCmd("gopm", args...)
 		if err != nil {
 			log.Error("Update", "Fail to execute 'gopm bin -u -d github.com/gpmgo/gopm "+tmpDirPath+"'")
 			log.Fatal("", err.Error())
