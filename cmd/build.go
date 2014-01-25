@@ -17,6 +17,7 @@ package cmd
 import (
 	"os"
 	"path"
+	"path/filepath"
 
 	"github.com/Unknwon/com"
 	"github.com/codegangsta/cli"
@@ -68,10 +69,12 @@ func buildBinary(ctx *cli.Context, args ...string) {
 	}
 
 	if isWindowsXP {
-		binName := pkgName + ".exe"
+		fName := path.Base(pkgName)
+		binName := fName + ".exe"
 		os.Remove(binName)
-		if com.IsFile(path.Join(doc.VENDOR, "src", pkgName, binName)) {
-			err = os.Rename(path.Join(doc.VENDOR, "src", pkgName, binName), binName)
+		exePath := filepath.Join(curPath, doc.VENDOR, "src", pkgName, binName)
+		if com.IsFile(exePath) {
+			err = os.Rename(exePath, filepath.Join(curPath, binName))
 			if err != nil {
 				log.Error("build", "fail to move binary:")
 				log.Fatal("", "\t"+err.Error())
