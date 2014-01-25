@@ -7,6 +7,8 @@ Gopm(Go Package Manager) is a Go package manage tool for search, install, update
 
 **News** The best IDE for Go development [LiteIDE](https://github.com/visualfc/liteide)(after X20) now has a simple integration of gopm!
 
+**News** Want online cross-platform compile service? Just try [gobuild](http://build.gopm.io) and it won't let you down!
+
 Please see **[Documentation](https://github.com/gpmgo/docs)** before you ever start.
 
 # Commands
