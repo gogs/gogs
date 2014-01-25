@@ -21,21 +21,22 @@ USAGE:
    gopm [global options] command [command options] [arguments...]
 
 VERSION:
-   0.6.1.0110
+   0.6.2.0125
 
 COMMANDS:
-   get      fetch remote package(s) and dependencies to local repository
-   bin      download and link dependencies and build executable binary
-   gen      generate a gopmfile according current Go project
-   run      link dependencies and go run
-   build link dependencies and go build
-   install  link dependencies and go install
-   help, h  Shows a list of commands or help for one command
+   get		fetch remote package(s) and dependencies to local repository
+   bin		download and link dependencies and build executable binary
+   gen		generate a gopmfile according current Go project
+   run		link dependencies and go run
+   build	link dependencies and go build
+   install	link dependencies and go install
+   update	check and update gopm resources including itself
+   help, h	Shows a list of commands or help for one command
 
 GLOBAL OPTIONS:
-   --noterm    disable color output
-   --version, -v  print the version
-   --help, -h     show help
+   --noterm		disable color output
+   --version, -v	print the version
+   --help, -h		show help
 ```
 
 
