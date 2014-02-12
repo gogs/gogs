@@ -1,0 +1,16 @@
+{
+	"version": 0,
+	"gopm": {
+		"enable": false,
+		"install": false
+	},
+	"go_install": true,
+	"watch_ext": [],
+	"dir_structure": {
+		"controllers": "routers",
+		"models": "",
+		"others": []
+	},
+	"cmd_args": [],
+	"envs": []
+}
