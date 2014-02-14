@@ -1,3 +1,7 @@
+// Copyright 2014 The Gogs Authors. All rights reserved.
+// Use of this source code is governed by a MIT-style
+// license that can be found in the LICENSE file.
+
 package models
 
 import (
@@ -33,7 +37,7 @@ func IsRepositoryExist(user *User, reposName string) (bool, error) {
 // create a repository for a user or orgnaziation
 //
 func CreateRepository(user *User, reposName string) (*Repo, error) {
-	p := filepath.Join(root, user.Name)
+	p := filepath.Join(repoRootPath, user.Name)
 	os.MkdirAll(p, os.ModePerm)
 	f := filepath.Join(p, reposName)
 	_, err := git.InitRepository(f, false)
@@ -89,29 +93,22 @@ func UnWatchRepository() {
 
 }
 
-//
-// delete a repository for a user or orgnaztion
-//
-func DeleteRepository(user *User, reposName string) error {
+// DeleteRepository deletes a repository for a user or orgnaztion.
+func DeleteRepository(user *User, reposName string) (err error) {
 	session := orm.NewSession()
-	_, err := session.Delete(&Repo{OwnerId: user.Id, Name: reposName})
-	if err != nil {
+	if _, err = session.Delete(&Repo{OwnerId: user.Id, Name: reposName}); err != nil {
 		session.Rollback()
 		return err
 	}
-	_, err = session.Exec("update user set num_repos = num_repos - 1 where id = ?", user.Id)
-	if err != nil {
+	if _, err = session.Exec("update user set num_repos = num_repos - 1 where id = ?", user.Id); err != nil {
 		session.Rollback()
 		return err
 	}
-	err = session.Commit()
-	if err != nil {
+	if err = session.Commit(); err != nil {
 		session.Rollback()
 		return err
 	}
-
-	err = os.RemoveAll(filepath.Join(root, user.Name, reposName))
-	if err != nil {
+	if err = os.RemoveAll(filepath.Join(repoRootPath, user.Name, reposName)); err != nil {
 		// TODO: log and delete manully
 		return err
 	}
