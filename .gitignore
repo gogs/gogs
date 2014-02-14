@@ -2,3 +2,4 @@ gogs
 *.exe
 *.exe~
 .DS_Store
+*.db
