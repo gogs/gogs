@@ -11,10 +11,8 @@ import (
 )
 
 var (
-	// orm
-	orm *xorm.Engine
-	// repository root path
-	root string
+	orm          *xorm.Engine
+	repoRootPath string
 )
 
 type PublicKey struct {
