@@ -1,2 +1,15 @@
-this is base.html
-Hello world!
+<!DOCTYPE html>
+<html>
+	<head>
+		{{template "base/head" .}}
+		{{template "head" .}}
+	</head>
+	<body>
+		<noscript>Please enable JavaScript in your browser!</noscript>
+		{{template "base/navbar" .}}
+		<div class="container">
+			{{template "body" .}}
+	    </div>
+		{{template "base/footer" .}}
+	</body>
+</html>

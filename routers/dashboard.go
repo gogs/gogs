@@ -8,6 +8,8 @@ import (
 	"github.com/martini-contrib/render"
 )
 
-func Home(r render.Render) {
-	r.HTML(200, "home", map[string]interface{}{})
+func Dashboard(r render.Render) {
+	r.HTML(200, "dashboard", map[string]interface{}{
+		"Title": "Dashboard",
+	})
 }

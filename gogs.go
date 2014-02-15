@@ -31,7 +31,7 @@ func main() {
 	m.Use(render.Renderer())
 
 	// Routers.
-	m.Get("/", routers.Home)
+	m.Get("/", routers.Dashboard)
 
 	listenAddr := fmt.Sprintf("%s:%s",
 		utils.Cfg.MustValue("server", "HTTP_ADDR"),

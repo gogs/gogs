@@ -1,0 +1,35 @@
+/*!
+ * Gogs - Go Git Service (http://gogits.org)
+ * Copyright 2014 Gogs.
+ * Licensed under MIT (https://github.com/gogits/gogs/blob/master/LICENSE)
+ */
+
+body {
+	padding-top: 60px;
+}
+.navbar {
+	min-height: 45px;
+}
+.navbar-brand {
+	height: 45px;
+	padding: 5px 10px 0px 10px;
+	border-left: 1px solid #e5e5e5;
+	border-right: 1px solid #e5e5e5;
+}
+.navbar-inverse .navbar-brand:focus, .navbar-inverse .navbar-brand:hover {
+	background-color: #f0f0f0;
+}
+.navbar-brand img {
+	width: 32px;
+}
+.navbar-nav > li > a {
+	font-size: 16px;
+	padding-top: 13px;
+}
+.navbar-inverse .navbar-nav > li > a:hover, .navbar-inverse .navbar-nav > li > a:focus {
+	color: rgb(153, 153, 153);
+}
+.navbar-btn, .navbar .btn {
+	padding: 5px 15px;
+	margin-top: 7px;
+}
