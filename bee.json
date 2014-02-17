@@ -7,9 +7,12 @@
 	"go_install": true,
 	"watch_ext": [],
 	"dir_structure": {
+		"watch_all": true,
 		"controllers": "routers",
 		"models": "",
-		"others": []
+		"others": [
+			"utils"
+		]
 	},
 	"cmd_args": [],
 	"envs": []

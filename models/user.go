@@ -98,6 +98,10 @@ func RegisterUser(user *User) (err error) {
 	if err = validateUser(user.Name); err != nil {
 		return err
 	}
+	user.LowerName = strings.ToLower(user.Name)
+	// TODO: generate Avatar address.
+	user.Created = time.Now()
+	user.Updated = time.Now()
 	_, err = orm.Insert(user)
 	return err
 }
