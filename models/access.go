@@ -1,3 +1,7 @@
+// Copyright 2014 The Gogs Authors. All rights reserved.
+// Use of this source code is governed by a MIT-style
+// license that can be found in the LICENSE file.
+
 package models
 
 import (
@@ -6,8 +10,8 @@ import (
 )
 
 const (
-	Readable = iota + 1
-	Writable
+	AU_READABLE = iota + 1
+	AU_WRITABLE
 )
 
 type Access struct {
@@ -24,6 +28,11 @@ func AddAccess(access *Access) error {
 }
 
 // if one user can read or write one repository
-func HasAccess(userName, repoName, mode string) (bool, error) {
-	return orm.Get(&Access{0, strings.ToLower(userName), strings.ToLower(repoName), mode})
+func HasAccess(userName, repoName string, mode int) (bool, error) {
+	return orm.Get(&Access{
+		Id:       0,
+		UserName: strings.ToLower(userName),
+		RepoName: strings.ToLower(repoName),
+		Mode:     mode,
+	})
 }

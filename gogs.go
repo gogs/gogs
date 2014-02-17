@@ -12,18 +12,19 @@ import (
 	"github.com/martini-contrib/render"
 
 	"github.com/gogits/gogs/routers"
+	"github.com/gogits/gogs/routers/user"
 	"github.com/gogits/gogs/utils"
 	"github.com/gogits/gogs/utils/log"
 )
 
-const APP_VER = "0.0.0.0212"
+const APP_VER = "0.0.0.0217"
 
 func init() {
 
 }
 
 func main() {
-	log.Info("App Name: %s", utils.Cfg.MustValue("", "APP_NAME"))
+	log.Info("%s %s", utils.Cfg.MustValue("", "APP_NAME"), APP_VER)
 
 	m := martini.Classic()
 
@@ -32,6 +33,8 @@ func main() {
 
 	// Routers.
 	m.Get("/", routers.Dashboard)
+	m.Get("/user/signin", user.SignIn)
+	m.Any("/user/signup", user.SignUp)
 
 	listenAddr := fmt.Sprintf("%s:%s",
 		utils.Cfg.MustValue("server", "HTTP_ADDR"),
