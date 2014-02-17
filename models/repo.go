@@ -39,7 +39,7 @@ func IsRepositoryExist(user *User, reposName string) (bool, error) {
 func CreateRepository(user *User, reposName string) (*Repo, error) {
 	p := filepath.Join(repoRootPath, user.Name)
 	os.MkdirAll(p, os.ModePerm)
-	f := filepath.Join(p, reposName)
+	f := filepath.Join(p, reposName+".git")
 	_, err := git.InitRepository(f, false)
 	if err != nil {
 		return nil, err
@@ -108,7 +108,7 @@ func DeleteRepository(user *User, reposName string) (err error) {
 		session.Rollback()
 		return err
 	}
-	if err = os.RemoveAll(filepath.Join(repoRootPath, user.Name, reposName)); err != nil {
+	if err = os.RemoveAll(filepath.Join(repoRootPath, user.Name, reposName+".git")); err != nil {
 		// TODO: log and delete manully
 		return err
 	}
