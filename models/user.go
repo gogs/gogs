@@ -11,6 +11,8 @@ import (
 	"time"
 
 	"github.com/dchest/scrypt"
+
+	"github.com/gogits/gogs/utils"
 )
 
 // User types.
@@ -29,9 +31,9 @@ const (
 type User struct {
 	Id            int64
 	LowerName     string `xorm:"unique not null"`
-	Name          string `xorm:"unique not null"`
-	Email         string `xorm:"unique not null"`
-	Passwd        string `xorm:"not null"`
+	Name          string `xorm:"unique not null" valid:"Required"`
+	Email         string `xorm:"unique not null" valid:"Email"`
+	Passwd        string `xorm:"not null" valid:"MinSize(8)"`
 	LoginType     int
 	Type          int
 	NumFollowers  int
@@ -82,24 +84,17 @@ func IsUserExist(name string) (bool, error) {
 	return orm.Get(&User{LowerName: strings.ToLower(name)})
 }
 
-// validateUser checks if user exist.
-func validateUser(name string) error {
-	isExist, err := IsUserExist(name)
+// RegisterUser creates record of a new user.
+func RegisterUser(user *User) (err error) {
+	isExist, err := IsUserExist(user.Name)
 	if err != nil {
 		return err
 	} else if isExist {
 		return ErrUserAlreadyExist
 	}
-	return nil
-}
 
-// RegisterUser creates record of a new user.
-func RegisterUser(user *User) (err error) {
-	if err = validateUser(user.Name); err != nil {
-		return err
-	}
 	user.LowerName = strings.ToLower(user.Name)
-	// TODO: generate Avatar address.
+	user.Avatar = utils.EncodeMd5(user.Email)
 	user.Created = time.Now()
 	user.Updated = time.Now()
 	_, err = orm.Insert(user)

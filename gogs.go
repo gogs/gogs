@@ -17,7 +17,7 @@ import (
 	"github.com/gogits/gogs/utils/log"
 )
 
-const APP_VER = "0.0.0.0217"
+const APP_VER = "0.0.0.0218"
 
 func init() {
 
