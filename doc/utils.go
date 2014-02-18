@@ -59,12 +59,13 @@ func GetImports(absPath, importPath string, example bool) []string {
 	fis := GetDirsInfo(absPath)
 	absPath += "/"
 
-	dirs := make([]string, 0)
-	for _, fi := range fis {
-		if fi.IsDir() && !strings.Contains(fi.Name(), VENDOR) {
-			dirs = append(dirs, absPath+fi.Name())
-		}
-	}
+	// Load too much, skip for now.
+	// dirs := make([]string, 0)
+	// for _, fi := range fis {
+	// 	if fi.IsDir() && !strings.Contains(fi.Name(), VENDOR) {
+	// 		dirs = append(dirs, absPath+fi.Name())
+	// 	}
+	// }
 
 	imports := make([]string, 0, len(pkg.Imports))
 	for _, p := range pkg.Imports {
