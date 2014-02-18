@@ -4,7 +4,16 @@
 
 package models
 
-import "github.com/lunny/xorm"
+import (
+	"fmt"
+	"os"
+
+	_ "github.com/go-sql-driver/mysql"
+	"github.com/lunny/xorm"
+
+	"github.com/gogits/gogs/utils"
+	"github.com/gogits/gogs/utils/log"
+)
 
 var (
 	orm          *xorm.Engine
@@ -29,4 +38,38 @@ type PullRequest struct {
 
 type Comment struct {
 	Id int64
+}
+
+func setEngine() {
+	dbType := utils.Cfg.MustValue("database", "DB_TYPE")
+	dbHost := utils.Cfg.MustValue("database", "HOST")
+	dbName := utils.Cfg.MustValue("database", "NAME")
+	dbUser := utils.Cfg.MustValue("database", "USER")
+	dbPwd := utils.Cfg.MustValue("database", "PASSWD")
+
+	var err error
+	switch dbType {
+	case "mysql":
+		orm, err = xorm.NewEngine("mysql", fmt.Sprintf("%v:%v@%v/%v?charset=utf8",
+			dbUser, dbPwd, dbHost, dbName))
+	default:
+		log.Critical("Unknown database type: %s", dbType)
+		os.Exit(2)
+	}
+
+	if err != nil {
+		log.Critical("models.init -> Conntect database: %s", dbType)
+		os.Exit(2)
+	}
+
+	//x.ShowDebug = true
+	orm.ShowErr = true
+	//x.ShowSQL = true
+
+	log.Trace("Initialized database -> %s", dbName)
+}
+
+func init() {
+	setEngine()
+	orm.Sync(new(User))
 }
