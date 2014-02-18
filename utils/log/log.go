@@ -19,3 +19,11 @@ func init() {
 func Info(format string, v ...interface{}) {
 	logger.Info(format, v...)
 }
+
+func Error(format string, v ...interface{}) {
+	logger.Error(format, v...)
+}
+
+func Warn(format string, v ...interface{}) {
+	logger.Warn(format, v...)
+}
