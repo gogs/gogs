@@ -97,6 +97,7 @@ func RegisterUser(user *User) (err error) {
 	user.Avatar = utils.EncodeMd5(user.Email)
 	user.Created = time.Now()
 	user.Updated = time.Now()
+	user.EncodePasswd()
 	_, err = orm.Insert(user)
 	return err
 }
@@ -116,7 +117,7 @@ func DeleteUser(user *User) error {
 }
 
 // EncodePasswd encodes password to safe format.
-func (user *User) EncodePasswd(pass string) error {
+func (user *User) EncodePasswd() error {
 	newPasswd, err := scrypt.Key([]byte(user.Passwd), []byte("!#@FDEWREWR&*("), 16384, 8, 1, 64)
 	user.Passwd = fmt.Sprintf("%x", newPasswd)
 	return err
@@ -124,8 +125,8 @@ func (user *User) EncodePasswd(pass string) error {
 
 // LoginUserPlain validates user by raw user name and password.
 func LoginUserPlain(name, passwd string) (*User, error) {
-	user := User{Name: name}
-	if err := user.EncodePasswd(passwd); err != nil {
+	user := User{Name: name, Passwd: passwd}
+	if err := user.EncodePasswd(); err != nil {
 		return nil, err
 	}
 
