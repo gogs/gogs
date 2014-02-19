@@ -123,6 +123,19 @@ func (user *User) EncodePasswd() error {
 	return err
 }
 
+func GetUserByKeyId(keyId int64) (*User, error) {
+	user := new(User)
+	has, err := orm.Sql("select a.* from user as a, public_key as b where a.id = b.owner_id and b.id=?", keyId).Get(user)
+	if err != nil {
+		return nil, err
+	}
+	if !has {
+		err = errors.New("not exist key owner")
+		return nil, err
+	}
+	return user, nil
+}
+
 // LoginUserPlain validates user by raw user name and password.
 func LoginUserPlain(name, passwd string) (*User, error) {
 	user := User{Name: name, Passwd: passwd}

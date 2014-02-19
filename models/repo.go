@@ -29,15 +29,22 @@ type Repo struct {
 // check if repository is exist
 func IsRepositoryExist(user *User, reposName string) (bool, error) {
 	repo := Repo{OwnerId: user.Id}
-	// TODO: get repository by nocase name
-	return orm.Where("lower_name = ?", strings.ToLower(reposName)).Get(&repo)
+	has, err := orm.Where("lower_name = ?", strings.ToLower(reposName)).Get(&repo)
+	if err != nil {
+		return has, err
+	}
+	s, err := os.Stat(filepath.Join(RepoRootPath, user.Name, reposName))
+	if err != nil {
+		return false, err
+	}
+	return s.IsDir(), nil
 }
 
 //
 // create a repository for a user or orgnaziation
 //
 func CreateRepository(user *User, reposName string) (*Repo, error) {
-	p := filepath.Join(repoRootPath, user.Name)
+	p := filepath.Join(RepoRootPath, user.Name)
 	os.MkdirAll(p, os.ModePerm)
 	f := filepath.Join(p, reposName+".git")
 	_, err := git.InitRepository(f, false)
@@ -108,7 +115,7 @@ func DeleteRepository(user *User, reposName string) (err error) {
 		session.Rollback()
 		return err
 	}
-	if err = os.RemoveAll(filepath.Join(repoRootPath, user.Name, reposName+".git")); err != nil {
+	if err = os.RemoveAll(filepath.Join(RepoRootPath, user.Name, reposName+".git")); err != nil {
 		// TODO: log and delete manully
 		return err
 	}
