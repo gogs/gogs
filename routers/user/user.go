@@ -51,3 +51,11 @@ func SignUp(req *http.Request, r render.Render) {
 		"Title": fmt.Sprintf("%v", err),
 	})
 }
+
+func Delete(r render.Render) {
+	u := &models.User{}
+	err := models.DeleteUser(u)
+	r.HTML(403, "status/403", map[string]interface{}{
+		"Title": fmt.Sprintf("%v", err),
+	})
+}
