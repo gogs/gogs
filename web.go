@@ -42,6 +42,7 @@ func runWeb(*cli.Context) {
 	m.Get("/", routers.Dashboard)
 	m.Get("/user/signin", user.SignIn)
 	m.Any("/user/signup", user.SignUp)
+	m.Any("/user/delete", user.Delete)
 
 	listenAddr := fmt.Sprintf("%s:%s",
 		utils.Cfg.MustValue("server", "HTTP_ADDR"),
