@@ -6,6 +6,7 @@ package main
 
 import (
 	"fmt"
+	"html/template"
 	"net/http"
 
 	"github.com/codegangsta/cli"
@@ -30,13 +31,19 @@ gogs web`,
 	},
 }
 
+var AppHelpers template.FuncMap = map[string]interface{}{
+	"AppName": func() string {
+		return utils.Cfg.MustValue("", "APP_NAME")
+	},
+}
+
 func runWeb(*cli.Context) {
 	log.Info("%s %s", utils.Cfg.MustValue("", "APP_NAME"), APP_VER)
 
 	m := martini.Classic()
 
 	// Middleware.
-	m.Use(render.Renderer())
+	m.Use(render.Renderer(render.Options{Funcs: []template.FuncMap{AppHelpers}}))
 
 	// Routers.
 	m.Get("/", routers.Dashboard)
