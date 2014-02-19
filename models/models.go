@@ -17,7 +17,7 @@ import (
 
 var (
 	orm          *xorm.Engine
-	repoRootPath string
+	RepoRootPath string
 )
 
 type Members struct {
@@ -71,5 +71,9 @@ func setEngine() {
 
 func init() {
 	setEngine()
-	orm.Sync(new(User))
+	err := orm.Sync(new(User), new(PublicKey), new(Repo), new(Access))
+	if err != nil {
+		log.Error("sync database struct error: %s", err)
+		os.Exit(1)
+	}
 }
