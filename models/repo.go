@@ -77,7 +77,7 @@ func CreateRepository(user *User, reposName string) (*Repo, error) {
 	return &repo, nil
 }
 
-// list one user's repository
+// GetRepositories returns the list of repositories of given user.
 func GetRepositories(user *User) ([]Repo, error) {
 	repos := make([]Repo, 0)
 	err := orm.Find(&repos, &Repo{OwnerId: user.Id})

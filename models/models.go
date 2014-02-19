@@ -7,6 +7,7 @@ package models
 import (
 	"fmt"
 	"os"
+	"os/user"
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/lunny/xorm"
@@ -47,18 +48,27 @@ func setEngine() {
 	dbUser := utils.Cfg.MustValue("database", "USER")
 	dbPwd := utils.Cfg.MustValue("database", "PASSWD")
 
-	var err error
+	uname, err := user.Current()
+	if err != nil {
+		fmt.Printf("models.init -> fail to get user: %s\n", err)
+		os.Exit(2)
+	}
+
+	if uname.Username == "jiahuachen" {
+		dbPwd = utils.Cfg.MustValue("database", "PASSWD_jiahua")
+	}
+
 	switch dbType {
 	case "mysql":
 		orm, err = xorm.NewEngine("mysql", fmt.Sprintf("%v:%v@%v/%v?charset=utf8",
 			dbUser, dbPwd, dbHost, dbName))
 	default:
-		log.Critical("Unknown database type: %s", dbType)
+		fmt.Printf("Unknown database type: %s\n", dbType)
 		os.Exit(2)
 	}
 
 	if err != nil {
-		log.Critical("models.init -> Conntect database: %s", dbType)
+		fmt.Printf("models.init -> fail to conntect database: %s\n", dbType)
 		os.Exit(2)
 	}
 
@@ -73,7 +83,7 @@ func init() {
 	setEngine()
 	err := orm.Sync(new(User), new(PublicKey), new(Repo), new(Access))
 	if err != nil {
-		log.Error("sync database struct error: %s", err)
-		os.Exit(1)
+		fmt.Printf("sync database struct error: %s\n", err)
+		os.Exit(2)
 	}
 }

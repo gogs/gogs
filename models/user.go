@@ -74,6 +74,7 @@ type Action struct {
 }
 
 var (
+	ErrUserOwnRepos     = errors.New("User still have ownership of repositories")
 	ErrUserAlreadyExist = errors.New("User already exist")
 	ErrUserNotExist     = errors.New("User does not exist")
 )
@@ -95,7 +96,6 @@ func RegisterUser(user *User) (err error) {
 
 	user.LowerName = strings.ToLower(user.Name)
 	user.Avatar = utils.EncodeMd5(user.Email)
-	user.Created = time.Now()
 	user.Updated = time.Now()
 	user.EncodePasswd()
 	_, err = orm.Insert(user)
@@ -110,8 +110,14 @@ func UpdateUser(user *User) (err error) {
 
 // DeleteUser completely deletes everything of the user.
 func DeleteUser(user *User) error {
-	// TODO: check if has ownership of any repository.
-	_, err := orm.Delete(user)
+	repos, err := GetRepositories(user)
+	if err != nil {
+		return errors.New("modesl.GetRepositories: " + err.Error())
+	} else if len(repos) > 0 {
+		return ErrUserOwnRepos
+	}
+
+	_, err = orm.Delete(user)
 	// TODO: delete and update follower information.
 	return err
 }

@@ -14,6 +14,8 @@
 			"utils"
 		]
 	},
-	"cmd_args": [],
+	"cmd_args": [
+		"web"
+	],
 	"envs": []
 }
