@@ -56,7 +56,7 @@ func GetImports(absPath, importPath string, example bool) []string {
 		}
 	}
 
-	fis := GetDirsInfo(absPath)
+	//fis := GetDirsInfo(absPath)
 	absPath += "/"
 
 	// Load too much, skip for now.
@@ -73,9 +73,9 @@ func GetImports(absPath, importPath string, example bool) []string {
 			imports = append(imports, p)
 		}
 	}
-	if len(dirs) > 0 {
-		imports = append(imports, GetAllImports(dirs, importPath, example)...)
-	}
+	// if len(dirs) > 0 {
+	// 	imports = append(imports, GetAllImports(dirs, importPath, example)...)
+	// }
 	return imports
 }
 

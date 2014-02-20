@@ -14,14 +14,11 @@ Please see **[Documentation](https://github.com/gpmgo/docs)** before you ever st
 # Commands
 
 ```
-NAME:
-   gopm - Go Package Manager
-
 USAGE:
    gopm [global options] command [command options] [arguments...]
 
 VERSION:
-   0.6.2.0125
+   0.6.3.0220
 
 COMMANDS:
    get		fetch remote package(s) and dependencies to local repository
@@ -31,6 +28,7 @@ COMMANDS:
    build	link dependencies and go build
    install	link dependencies and go install
    update	check and update gopm resources including itself
+   config	configurate gopm global settings
    help, h	Shows a list of commands or help for one command
 
 GLOBAL OPTIONS:

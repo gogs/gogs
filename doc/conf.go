@@ -28,6 +28,7 @@ import (
 
 const (
 	GOPM_FILE_NAME     = ".gopmfile"
+	GOPM_CONFIG_FILE   = "data/gopm.ini"
 	PKG_NAME_LIST_PATH = "data/pkgname.list"
 	VER_PATH           = "data/VERSION.json"
 	RawHomeDir         = "~/.gopm"
@@ -37,6 +38,7 @@ var (
 	HomeDir        = "~/.gopm"
 	LocalNodesFile = "/data/localnodes.list"
 	LocalNodes     *goconfig.ConfigFile
+	Cfg            *goconfig.ConfigFile
 )
 
 func init() {
@@ -47,6 +49,19 @@ func init() {
 	}
 
 	HomeDir = strings.Replace(RawHomeDir, "~", hd, -1)
+
+	cfgPath := path.Join(HomeDir, GOPM_CONFIG_FILE)
+	if !com.IsExist(cfgPath) {
+		if _, err = os.Create(cfgPath); err != nil {
+			log.Error("", "Fail to create gopm config file")
+			log.Fatal("", err.Error())
+		}
+	}
+	Cfg, err = goconfig.LoadConfigFile(cfgPath)
+	if _, err = os.Create(cfgPath); err != nil {
+		log.Error("", "Fail to load gopm config file")
+		log.Fatal("", err.Error())
+	}
 
 	LoadLocalNodes()
 	LoadPkgNameList(path.Join(HomeDir, PKG_NAME_LIST_PATH))
