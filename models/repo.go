@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gogits/gogs/utils/log"
 	git "github.com/libgit2/git2go"
-	"github.com/qiniu/log"
 )
 
 type Repo struct {
