@@ -11,6 +11,7 @@ import (
 	"time"
 
 	git "github.com/libgit2/git2go"
+	"github.com/qiniu/log"
 )
 
 type Repo struct {
@@ -35,7 +36,7 @@ func IsRepositoryExist(user *User, reposName string) (bool, error) {
 	}
 	s, err := os.Stat(filepath.Join(RepoRootPath, user.Name, reposName))
 	if err != nil {
-		return false, err
+		return false, nil
 	}
 	return s.IsDir(), nil
 }
@@ -44,9 +45,7 @@ func IsRepositoryExist(user *User, reposName string) (bool, error) {
 // create a repository for a user or orgnaziation
 //
 func CreateRepository(user *User, reposName string) (*Repo, error) {
-	p := filepath.Join(RepoRootPath, user.Name)
-	os.MkdirAll(p, os.ModePerm)
-	f := filepath.Join(p, reposName+".git")
+	f := RepoPath(user.Name, reposName)
 	_, err := git.InitRepository(f, false)
 	if err != nil {
 		return nil, err
@@ -58,19 +57,28 @@ func CreateRepository(user *User, reposName string) (*Repo, error) {
 	session.Begin()
 	_, err = session.Insert(&repo)
 	if err != nil {
-		os.RemoveAll(f)
+		err2 := os.RemoveAll(f)
+		if err2 != nil {
+			log.Error("delete repo directory %s/%s failed", user.Name, reposName)
+		}
 		session.Rollback()
 		return nil, err
 	}
 	_, err = session.Exec("update user set num_repos = num_repos + 1 where id = ?", user.Id)
 	if err != nil {
-		os.RemoveAll(f)
+		err2 := os.RemoveAll(f)
+		if err2 != nil {
+			log.Error("delete repo directory %s/%s failed", user.Name, reposName)
+		}
 		session.Rollback()
 		return nil, err
 	}
 	err = session.Commit()
 	if err != nil {
-		os.RemoveAll(f)
+		err2 := os.RemoveAll(f)
+		if err2 != nil {
+			log.Error("delete repo directory %s/%s failed", user.Name, reposName)
+		}
 		session.Rollback()
 		return nil, err
 	}
@@ -100,6 +108,10 @@ func UnWatchRepository() {
 
 }
 
+func RepoPath(userName, repoName string) string {
+	return filepath.Join(UserPath(userName), repoName+".git")
+}
+
 // DeleteRepository deletes a repository for a user or orgnaztion.
 func DeleteRepository(user *User, reposName string) (err error) {
 	session := orm.NewSession()
@@ -115,8 +127,9 @@ func DeleteRepository(user *User, reposName string) (err error) {
 		session.Rollback()
 		return err
 	}
-	if err = os.RemoveAll(filepath.Join(RepoRootPath, user.Name, reposName+".git")); err != nil {
+	if err = os.RemoveAll(RepoPath(user.Name, reposName)); err != nil {
 		// TODO: log and delete manully
+		log.Error("delete repo %s/%s failed", user.Name, reposName)
 		return err
 	}
 	return nil

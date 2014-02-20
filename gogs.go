@@ -17,7 +17,7 @@ import (
 // Test that go1.1 tag above is included in builds. main.go refers to this definition.
 const go11tag = true
 
-const APP_VER = "0.0.0.0219"
+const APP_VER = "0.0.0.0220"
 
 func init() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
@@ -36,5 +36,4 @@ func main() {
 		cli.BoolFlag{"noterm", "disable color output"},
 	}...)
 	app.Run(os.Args)
-	println("wo cao???")
 }
