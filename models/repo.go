@@ -34,7 +34,7 @@ func IsRepositoryExist(user *User, reposName string) (bool, error) {
 	if err != nil {
 		return has, err
 	}
-	s, err := os.Stat(filepath.Join(RepoRootPath, user.Name, reposName))
+	s, err := os.Stat(RepoPath(user.Name, reposName))
 	if err != nil {
 		return false, nil
 	}

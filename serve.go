@@ -65,7 +65,7 @@ func runServ(*cli.Context) {
 		return
 	}
 
-	println(cmd)
+	//println(cmd)
 
 	verb, args := parseCmd(cmd)
 	rr := strings.SplitN(strings.Trim(args, "'"), "/", 2)
@@ -80,13 +80,13 @@ func runServ(*cli.Context) {
 	isWrite := In(verb, COMMANDS_WRITE)
 	isRead := In(verb, COMMANDS_READONLY)
 
-	println("repoPath:", models.RepoPath(user.Name, repoName))
+	//println("repoPath:", models.RepoPath(user.Name, repoName))
 
 	switch {
 	case isWrite:
 		has, err := models.HasAccess(user.Name, repoName, COMMANDS_WRITE[verb])
 		if err != nil {
-			fmt.Println("Inernel error")
+			fmt.Println("Inernel error:", err)
 			return
 		}
 		if !has {
@@ -136,7 +136,7 @@ func runServ(*cli.Context) {
 
 	fullPath := models.RepoPath(user.Name, repoName)
 	newcmd := fmt.Sprintf("%s '%s'", verb, fullPath)
-	println(newcmd)
+	//println(newcmd)
 	gitcmd := exec.Command("git", "shell", "-c", newcmd)
 	gitcmd.Stdout = os.Stdout
 	gitcmd.Stderr = os.Stderr
