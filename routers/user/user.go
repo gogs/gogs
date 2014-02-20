@@ -52,7 +52,14 @@ func SignUp(req *http.Request, r render.Render) {
 	})
 }
 
-func Delete(r render.Render) {
+func Delete(req *http.Request, r render.Render) {
+	if req.Method == "GET" {
+		r.HTML(200, "user/delete", map[string]interface{}{
+			"Title": "Delete user",
+		})
+		return
+	}
+
 	u := &models.User{}
 	err := models.DeleteUser(u)
 	r.HTML(403, "status/403", map[string]interface{}{
