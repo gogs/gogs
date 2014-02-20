@@ -14,6 +14,7 @@ import (
 	"github.com/martini-contrib/render"
 
 	"github.com/gogits/gogs/routers"
+	"github.com/gogits/gogs/routers/repo"
 	"github.com/gogits/gogs/routers/user"
 	"github.com/gogits/gogs/utils"
 	"github.com/gogits/gogs/utils/log"
@@ -50,6 +51,8 @@ func runWeb(*cli.Context) {
 	m.Get("/user/signin", user.SignIn)
 	m.Any("/user/signup", user.SignUp)
 	m.Any("/user/delete", user.Delete)
+	m.Any("/repo/create", repo.Create)
+	m.Any("/repo/delete", repo.Delete)
 
 	listenAddr := fmt.Sprintf("%s:%s",
 		utils.Cfg.MustValue("server", "HTTP_ADDR"),
