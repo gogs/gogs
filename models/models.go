@@ -77,6 +77,8 @@ func setEngine() {
 	//x.ShowSQL = true
 
 	log.Trace("Initialized database -> %s", dbName)
+
+	RepoRootPath = utils.Cfg.MustValue("repository", "ROOT")
 }
 
 func init() {

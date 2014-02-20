@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -66,16 +65,12 @@ func runServ(*cli.Context) {
 		return
 	}
 
-	f, _ := os.Create("test2.log")
-	f.WriteString(cmd)
-	f.Close()
-
-	log.Info("cmd is %s", cmd)
+	println(cmd)
 
 	verb, args := parseCmd(cmd)
-	rr := strings.SplitN(strings.Trim(args, "'"), "/", 1)
+	rr := strings.SplitN(strings.Trim(args, "'"), "/", 2)
 	if len(rr) != 2 {
-		fmt.Printf("Unavilable repository")
+		println("Unavilable repository", args)
 		return
 	}
 	repoName := rr[1]
@@ -84,6 +79,9 @@ func runServ(*cli.Context) {
 	}
 	isWrite := In(verb, COMMANDS_WRITE)
 	isRead := In(verb, COMMANDS_READONLY)
+
+	println("repoPath:", models.RepoPath(user.Name, repoName))
+
 	switch {
 	case isWrite:
 		has, err := models.HasAccess(user.Name, repoName, COMMANDS_WRITE[verb])
@@ -92,7 +90,7 @@ func runServ(*cli.Context) {
 			return
 		}
 		if !has {
-			fmt.Println("You have no right to access this repository")
+			println("You have no right to access this repository")
 			return
 		}
 	case isRead:
@@ -109,36 +107,36 @@ func runServ(*cli.Context) {
 			}
 		}
 		if !has {
-			fmt.Println("You have no right to access this repository")
+			println("You have no right to access this repository")
 			return
 		}
 	default:
-		fmt.Println("Unknown command")
+		println("Unknown command")
 		return
 	}
 
 	isExist, err := models.IsRepositoryExist(user, repoName)
 	if err != nil {
-		fmt.Println("Inernel error")
+		println("Inernel error:", err.Error())
 		return
 	}
 
 	if !isExist {
 		if isRead {
-			fmt.Println("Repository is not exist")
+			println("Repository", user.Name+"/"+repoName, "is not exist")
 			return
 		} else if isWrite {
 			_, err := models.CreateRepository(user, repoName)
 			if err != nil {
-				fmt.Println("Create repository failed")
+				println("Create repository failed")
 				return
 			}
 		}
 	}
 
-	fullPath := filepath.Join(models.RepoRootPath, user.Name, repoName+".git")
+	fullPath := models.RepoPath(user.Name, repoName)
 	newcmd := fmt.Sprintf("%s '%s'", verb, fullPath)
-	fmt.Println(newcmd)
+	println(newcmd)
 	gitcmd := exec.Command("git", "shell", "-c", newcmd)
 	gitcmd.Stdout = os.Stdout
 	gitcmd.Stderr = os.Stderr
@@ -150,13 +148,14 @@ func runServ(*cli.Context) {
 }
 
 func parseCmd(cmd string) (string, string) {
-	ss := strings.SplitN(cmd, " ", 1)
+	ss := strings.SplitN(cmd, " ", 2)
 	if len(ss) != 2 {
 		return "", ""
 	}
+
 	verb, args := ss[0], ss[1]
 	if verb == "git" {
-		ss = strings.SplitN(args, " ", 1)
+		ss = strings.SplitN(args, " ", 2)
 		args = ss[1]
 		verb = fmt.Sprintf("%s %s", verb, ss[0])
 	}

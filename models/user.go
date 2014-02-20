@@ -7,12 +7,15 @@ package models
 import (
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/dchest/scrypt"
 
 	"github.com/gogits/gogs/utils"
+	"github.com/gogits/gogs/utils/log"
 )
 
 // User types.
@@ -96,10 +99,22 @@ func RegisterUser(user *User) (err error) {
 
 	user.LowerName = strings.ToLower(user.Name)
 	user.Avatar = utils.EncodeMd5(user.Email)
-	user.Updated = time.Now()
 	user.EncodePasswd()
 	_, err = orm.Insert(user)
-	return err
+	if err != nil {
+		return err
+	}
+
+	err = os.MkdirAll(UserPath(user.Name), os.ModePerm)
+	if err != nil {
+		_, err2 := orm.Id(user.Id).Delete(&User{})
+		if err2 != nil {
+			log.Error("create userpath %s failed and delete table record faild",
+				user.Name)
+		}
+		return err
+	}
+	return nil
 }
 
 // UpdateUser updates user's information.
@@ -127,6 +142,10 @@ func (user *User) EncodePasswd() error {
 	newPasswd, err := scrypt.Key([]byte(user.Passwd), []byte("!#@FDEWREWR&*("), 16384, 8, 1, 64)
 	user.Passwd = fmt.Sprintf("%x", newPasswd)
 	return err
+}
+
+func UserPath(userName string) string {
+	return filepath.Join(RepoRootPath, userName)
 }
 
 func GetUserByKeyId(keyId int64) (*User, error) {
