@@ -35,8 +35,15 @@ var (
 	githubPattern = regexp.MustCompile(`^github\.com/(?P<owner>[a-z0-9A-Z_.\-]+)/(?P<repo>[a-z0-9A-Z_.\-]+)(?P<dir>/[a-z0-9A-Z_.\-/]*)?$`)
 )
 
+func GetGithubCredentials() string {
+	return "client_id=" + Cfg.MustValue("github", "client_id") +
+		"&client_secret=" + Cfg.MustValue("github", "client_secret")
+}
+
 // getGithubDoc downloads tarball from github.com.
 func getGithubDoc(client *http.Client, match map[string]string, installRepoPath string, nod *Node, ctx *cli.Context) ([]string, error) {
+	match["cred"] = GetGithubCredentials()
+
 	// Check downlaod type.
 	switch nod.Type {
 	case BRANCH:

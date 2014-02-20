@@ -191,6 +191,9 @@ func copyToGopath(srcPath, destPath string) {
 // if the commit is empty string, then it downloads all dependencies,
 // otherwise, it only downloada package with specific commit only.
 func downloadPackages(ctx *cli.Context, nodes []*doc.Node) {
+	for _, node := range nodes {
+		fmt.Println(node)
+	}
 	// Check all packages, they may be raw packages path.
 	for _, n := range nodes {
 		// Check if local reference
