@@ -7,6 +7,7 @@ package repo
 import (
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/martini-contrib/render"
 
@@ -21,11 +22,32 @@ func Create(req *http.Request, r render.Render) {
 		return
 	}
 
-	u := &models.User{}
-	_, err := models.CreateRepository(u, "")
-	r.HTML(403, "status/403", map[string]interface{}{
-		"Title": fmt.Sprintf("%v", err),
-	})
+	// TODO: access check
+	fmt.Println(req.FormValue("userId"), req.FormValue("name"))
+
+	id, err := strconv.ParseInt(req.FormValue("userId"), 10, 64)
+	if err == nil {
+		var user *models.User
+		user, err = models.GetUserById(id)
+		if user == nil {
+			err = models.ErrUserNotExist
+		}
+		if err == nil {
+			_, err = models.CreateRepository(user, req.FormValue("name"))
+		}
+		if err == nil {
+			r.HTML(200, "repo/created", map[string]interface{}{
+				"RepoName": user.Name + "/" + req.FormValue("name"),
+			})
+			return
+		}
+	}
+
+	if err != nil {
+		r.HTML(403, "status/403", map[string]interface{}{
+			"Title": fmt.Sprintf("%v", err),
+		})
+	}
 }
 
 func Delete(req *http.Request, r render.Render) {

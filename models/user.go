@@ -161,6 +161,18 @@ func GetUserByKeyId(keyId int64) (*User, error) {
 	return user, nil
 }
 
+func GetUserById(id int64) (*User, error) {
+	user := new(User)
+	has, err := orm.Id(id).Get(user)
+	if err != nil {
+		return nil, err
+	}
+	if !has {
+		return nil, ErrUserNotExist
+	}
+	return user, nil
+}
+
 // LoginUserPlain validates user by raw user name and password.
 func LoginUserPlain(name, passwd string) (*User, error) {
 	user := User{Name: name, Passwd: passwd}
