@@ -46,16 +46,29 @@ func IsRepositoryExist(user *User, reposName string) (bool, error) {
 //
 func CreateRepository(user *User, reposName string) (*Repo, error) {
 	f := RepoPath(user.Name, reposName)
-	_, err := git.InitRepository(f, false)
+	_, err := git.InitRepository(f, true)
 	if err != nil {
 		return nil, err
 	}
 
-	repo := Repo{OwnerId: user.Id, Name: reposName}
+	repo := Repo{OwnerId: user.Id, Name: reposName, LowerName: strings.ToLower(reposName)}
 	session := orm.NewSession()
 	defer session.Close()
 	session.Begin()
 	_, err = session.Insert(&repo)
+	if err != nil {
+		err2 := os.RemoveAll(f)
+		if err2 != nil {
+			log.Error("delete repo directory %s/%s failed", user.Name, reposName)
+		}
+		session.Rollback()
+		return nil, err
+	}
+	access := Access{UserName: user.Name,
+		RepoName: repo.Name,
+		Mode:     AU_WRITABLE,
+	}
+	_, err = session.Insert(&access)
 	if err != nil {
 		err2 := os.RemoveAll(f)
 		if err2 != nil {
