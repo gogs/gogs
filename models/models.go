@@ -13,7 +13,6 @@ import (
 	"github.com/lunny/xorm"
 
 	"github.com/gogits/gogs/utils"
-	"github.com/gogits/gogs/utils/log"
 )
 
 var (
@@ -72,11 +71,14 @@ func setEngine() {
 		os.Exit(2)
 	}
 
+	//TODO: for serv command, MUST remove the output to os.stdout, so
+	// use log file to instead print to stdout
+
 	//x.ShowDebug = true
-	orm.ShowErr = true
+	//orm.ShowErr = true
 	//x.ShowSQL = true
 
-	log.Trace("Initialized database -> %s", dbName)
+	//log.Trace("Initialized database -> %s", dbName)
 
 	RepoRootPath = utils.Cfg.MustValue("repository", "ROOT")
 }

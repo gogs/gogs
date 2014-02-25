@@ -9,13 +9,13 @@ import (
 
 	"github.com/codegangsta/cli"
 	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/utils/log"
 )
 
 var (
 	COMMANDS_READONLY = map[string]int{
-		"git-upload-pack": models.AU_WRITABLE,
-		"git upload-pack": models.AU_WRITABLE,
+		"git-upload-pack":    models.AU_WRITABLE,
+		"git upload-pack":    models.AU_WRITABLE,
+		"git-upload-archive": models.AU_WRITABLE,
 	}
 
 	COMMANDS_WRITE = map[string]int{
@@ -26,9 +26,9 @@ var (
 
 var CmdServ = cli.Command{
 	Name:  "serv",
-	Usage: "just run",
+	Usage: "This command just should be called by ssh shell",
 	Description: `
-gogs serv`,
+gogs serv provide access auth for repositories`,
 	Action: runServ,
 	Flags:  []cli.Flag{
 	//cli.BoolFlag{"update, u", "update pakcage(s) and dependencies if any"},
@@ -61,14 +61,13 @@ func runServ(*cli.Context) {
 
 	cmd := os.Getenv("SSH_ORIGINAL_COMMAND")
 	if cmd == "" {
-		fmt.Printf("Hi %s! You've successfully authenticated, but Gogits does not provide shell access.\n", user.Name)
+		println("Hi %s! You've successfully authenticated, but Gogits does not provide shell access.\n", user.Name)
 		return
 	}
 
-	//println(cmd)
-
 	verb, args := parseCmd(cmd)
-	rr := strings.SplitN(strings.Trim(args, "'"), "/", 2)
+	rRepo := strings.Trim(args, "'")
+	rr := strings.SplitN(rRepo, "/", 2)
 	if len(rr) != 2 {
 		println("Unavilable repository", args)
 		return
@@ -80,13 +79,11 @@ func runServ(*cli.Context) {
 	isWrite := In(verb, COMMANDS_WRITE)
 	isRead := In(verb, COMMANDS_READONLY)
 
-	//println("repoPath:", models.RepoPath(user.Name, repoName))
-
 	switch {
 	case isWrite:
 		has, err := models.HasAccess(user.Name, repoName, COMMANDS_WRITE[verb])
 		if err != nil {
-			fmt.Println("Inernel error:", err)
+			println("Inernel error:", err)
 			return
 		}
 		if !has {
@@ -96,13 +93,13 @@ func runServ(*cli.Context) {
 	case isRead:
 		has, err := models.HasAccess(user.Name, repoName, COMMANDS_READONLY[verb])
 		if err != nil {
-			fmt.Println("Inernel error")
+			println("Inernel error")
 			return
 		}
 		if !has {
 			has, err = models.HasAccess(user.Name, repoName, COMMANDS_WRITE[verb])
 			if err != nil {
-				fmt.Println("Inernel error")
+				println("Inernel error")
 				return
 			}
 		}
@@ -134,16 +131,15 @@ func runServ(*cli.Context) {
 		}
 	}
 
-	fullPath := models.RepoPath(user.Name, repoName)
-	newcmd := fmt.Sprintf("%s '%s'", verb, fullPath)
-	//println(newcmd)
-	gitcmd := exec.Command("git", "shell", "-c", newcmd)
+	gitcmd := exec.Command(verb, rRepo)
+	gitcmd.Dir = models.RepoRootPath
 	gitcmd.Stdout = os.Stdout
+	gitcmd.Stdin = os.Stdin
 	gitcmd.Stderr = os.Stderr
 
 	err = gitcmd.Run()
 	if err != nil {
-		log.Error("execute command error: %s", err)
+		println("execute command error:", err.Error())
 	}
 }
 
