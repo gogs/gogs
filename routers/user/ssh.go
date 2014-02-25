@@ -21,9 +21,16 @@ func AddPublickKey(req *http.Request, r render.Render) {
 		return
 	}
 
-	k := &models.PublicKey{}
-	err := models.AddPublicKey(k, "")
-	r.HTML(403, "status/403", map[string]interface{}{
-		"Title": fmt.Sprintf("%v", err),
-	})
+	k := &models.PublicKey{OwnerId: 1,
+		Name:    req.FormValue("keyname"),
+		Content: req.FormValue("key_content"),
+	}
+	err := models.AddPublicKey(k)
+	if err != nil {
+		r.HTML(403, "status/403", map[string]interface{}{
+			"Title": fmt.Sprintf("%v", err),
+		})
+	} else {
+		r.HTML(200, "user/publickey_added", map[string]interface{}{})
+	}
 }
