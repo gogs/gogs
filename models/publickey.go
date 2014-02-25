@@ -47,7 +47,7 @@ func GenAuthorizedKey(keyId int64, key string) string {
 	return fmt.Sprintf(tmplPublicKey, appPath, keyId, key)
 }
 
-func AddPublicKey(key *PublicKey, user string) error {
+func AddPublicKey(key *PublicKey) error {
 	_, err := orm.Insert(key)
 	if err != nil {
 		return err
@@ -67,11 +67,11 @@ func AddPublicKey(key *PublicKey, user string) error {
 
 func SaveAuthorizedKeyFile(key *PublicKey) error {
 	p := filepath.Join(sshPath, "authorized_keys")
-	f, err := os.Create(p)
+	f, err := os.OpenFile(p, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0600)
 	if err != nil {
 		return err
 	}
-	os.Chmod(p, 0600)
+	//os.Chmod(p, 0600)
 	_, err = f.WriteString(GenAuthorizedKey(key.Id, key.Content))
 	return err
 }
