@@ -23,7 +23,7 @@ func Create(req *http.Request, r render.Render) {
 	}
 
 	// TODO: access check
-	fmt.Println(req.FormValue("userId"), req.FormValue("name"))
+	//fmt.Println(req.FormValue("userId"), req.FormValue("name"))
 
 	id, err := strconv.ParseInt(req.FormValue("userId"), 10, 64)
 	if err == nil {

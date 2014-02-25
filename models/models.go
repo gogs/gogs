@@ -76,7 +76,9 @@ func setEngine() {
 
 	//x.ShowDebug = true
 	//orm.ShowErr = true
-	//x.ShowSQL = true
+	f, _ := os.Create("xorm.log")
+	orm.Logger = f
+	orm.ShowSQL = true
 
 	//log.Trace("Initialized database -> %s", dbName)
 
