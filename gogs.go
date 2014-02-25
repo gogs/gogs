@@ -7,9 +7,11 @@ package main
 
 import (
 	"os"
+	"os/user"
 	"runtime"
 
 	"github.com/codegangsta/cli"
+	"github.com/gogits/gogs/utils"
 )
 
 // +build go1.1
@@ -17,13 +19,27 @@ import (
 // Test that go1.1 tag above is included in builds. main.go refers to this definition.
 const go11tag = true
 
-const APP_VER = "0.0.0.0220"
+const APP_VER = "0.0.0.0225"
 
 func init() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 }
 
+func checkRunUser() bool {
+	user, err := user.Current()
+	if err != nil {
+		// TODO: log
+		return false
+	}
+	return user.Username == utils.Cfg.MustValue("", "RUN_USER")
+}
+
 func main() {
+	/*if !checkRunUser() {
+		println("The command should be run as", utils.Cfg.MustValue("", "RUN_USER"))
+		return
+	}*/
+
 	app := cli.NewApp()
 	app.Name = "Gogs"
 	app.Usage = "Go Git Service"

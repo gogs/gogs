@@ -66,7 +66,7 @@ const (
 	OP_PULL_REQUEST
 )
 
-// A Action represents
+// An Action represents
 type Action struct {
 	Id      int64
 	UserId  int64
