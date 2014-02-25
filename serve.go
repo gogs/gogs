@@ -81,23 +81,23 @@ func runServ(*cli.Context) {
 
 	switch {
 	case isWrite:
-		has, err := models.HasAccess(user.Name, repoName, COMMANDS_WRITE[verb])
+		has, err := models.HasAccess(user.Name, repoName, models.AU_WRITABLE)
 		if err != nil {
 			println("Inernel error:", err)
 			return
 		}
 		if !has {
-			println("You have no right to access this repository")
+			println("You have no right to write this repository")
 			return
 		}
 	case isRead:
-		has, err := models.HasAccess(user.Name, repoName, COMMANDS_READONLY[verb])
+		has, err := models.HasAccess(user.Name, repoName, models.AU_READABLE)
 		if err != nil {
 			println("Inernel error")
 			return
 		}
 		if !has {
-			has, err = models.HasAccess(user.Name, repoName, COMMANDS_WRITE[verb])
+			has, err = models.HasAccess(user.Name, repoName, models.AU_WRITABLE)
 			if err != nil {
 				println("Inernel error")
 				return
