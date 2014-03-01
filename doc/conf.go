@@ -52,6 +52,7 @@ func init() {
 
 	cfgPath := path.Join(HomeDir, GOPM_CONFIG_FILE)
 	if !com.IsExist(cfgPath) {
+		os.MkdirAll(path.Dir(cfgPath), os.ModePerm)
 		if _, err = os.Create(cfgPath); err != nil {
 			log.Error("", "Fail to create gopm config file")
 			log.Fatal("", err.Error())
