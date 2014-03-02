@@ -32,6 +32,14 @@ func SignIn(req *http.Request, r render.Render) {
 	}
 
 	// todo sign in
+	_, err := models.LoginUserPlain(req.FormValue("account"), req.FormValue("passwd"))
+	if err != nil {
+		r.HTML(200, "base/error", map[string]interface{}{
+			"Error": fmt.Sprintf("%v", err),
+		})
+		return
+	}
+	r.Redirect("/")
 }
 
 func SignUp(req *http.Request, r render.Render) {
@@ -61,9 +69,16 @@ func SignUp(req *http.Request, r render.Render) {
 	}
 
 	err = models.RegisterUser(u)
-	r.HTML(403, "status/403", map[string]interface{}{
-		"Title": fmt.Sprintf("%v", err),
-	})
+	if err != nil {
+		if err != nil {
+			r.HTML(200, "base/error", map[string]interface{}{
+				"Error": fmt.Sprintf("%v", err),
+			})
+			return
+		}
+	}
+
+	r.Redirect("/")
 }
 
 func Delete(req *http.Request, r render.Render) {
