@@ -8,6 +8,22 @@ body {
     background: #F6F6F6;
 }
 
+/* override bs3 */
+
+.tooltip-inner{
+    border-radius: 3px;
+    background: #333;
+    border: none;
+}
+
+.tooltip-arrow{
+    border-bottom-color: #333 !important;
+}
+
+.fa{
+    margin: 0 .5em;
+}
+
 /* gogits nav header */
 .gogs-masthead {
     background-color: #428bca;
@@ -110,4 +126,48 @@ body {
 #gogs-social-login .btn{
     float: none;
     margin: auto;
+}
+
+/* gogs-user-profile */
+
+#gogs-user-avatar{
+    width: 200px;
+    height: 200px;
+    border-radius: 6px;
+}
+
+#gogs-user-name{
+    margin-top: 20px;
+    font-size: 1.6em;
+    font-weight: bold;
+    margin-bottom: 20px;
+}
+
+#gogs-user-profile .profile-info .list-group-item{
+    background-color: transparent;
+    padding-top: 18px;
+    color: #666;
+}
+
+#gogs-user-profile .profile-info .list-group-item a{
+    margin: 0;
+    padding: 0;
+    display: inline;
+    color: #0093c4;
+}
+
+#gogs-user-profile .profile-info .list-group{
+    border-top: 1px solid #ccc;
+    padding-bottom: 18px;
+    border-bottom: 1px solid #ccc;
+    padding-left: 18px;
+    padding-right: 18px;
+}
+
+#gogs-user-activity .tab-pane{
+    padding: 20px;
+}
+
+#gogs-user-act-tabs li.active a{
+    border-bottom-color: #ddd;
 }
