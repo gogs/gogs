@@ -16,8 +16,15 @@ import (
 	"github.com/gogits/gogs/utils/log"
 )
 
-func SignIn(r render.Render) {
-	r.Redirect("/user/signup", 302)
+func SignIn(req *http.Request, r render.Render) {
+	if req.Method == "GET" {
+		r.HTML(200, "user/signin", map[string]interface{}{
+			"Title": "Log In",
+		})
+		return
+	}
+
+	// todo sign in
 }
 
 func SignUp(req *http.Request, r render.Render) {

@@ -48,10 +48,14 @@ func runWeb(*cli.Context) {
 
 	// Routers.
 	m.Get("/", routers.Dashboard)
-	m.Get("/user/signin", user.SignIn)
+	m.Any("/login", user.SignIn)
+	m.Any("/user/signin", user.SignIn)
+
+	m.Any("/sign-up", user.SignUp)
 	m.Any("/user/signup", user.SignUp)
+
 	m.Any("/user/delete", user.Delete)
-	m.Any("/user/publickey/add", user.AddPublickKey)
+	m.Any("/user/publickey/add", user.AddPublicKey)
 	m.Any("/repo/create", repo.Create)
 	m.Any("/repo/delete", repo.Delete)
 
