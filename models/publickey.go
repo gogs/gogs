@@ -4,9 +4,10 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"os/user"
 	"path/filepath"
 	"time"
+
+	"github.com/Unknwon/com"
 )
 
 var (
@@ -27,11 +28,11 @@ func exePath() (string, error) {
 }
 
 func homeDir() string {
-	user, err := user.Current()
+	home, err := com.HomeDir()
 	if err != nil {
 		return "/"
 	}
-	return user.HomeDir
+	return home
 }
 
 func init() {
@@ -68,7 +69,7 @@ func AddPublicKey(key *PublicKey) error {
 	if err != nil {
 		_, err2 := orm.Delete(key)
 		if err2 != nil {
-			// TODO: logo the error
+			// TODO: log the error
 		}
 		return err
 	}
