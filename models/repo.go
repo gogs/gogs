@@ -27,6 +27,13 @@ type Repo struct {
 	Updated   time.Time `xorm:"updated"`
 }
 
+type Star struct {
+	Id      int64
+	RepoId  int64
+	UserId  int64
+	Created time.Time `xorm:"created"`
+}
+
 // check if repository is exist
 func IsRepositoryExist(user *User, reposName string) (bool, error) {
 	repo := Repo{OwnerId: user.Id}
@@ -118,6 +125,10 @@ func WatchRepository() {
 }
 
 func UnWatchRepository() {
+
+}
+
+func ForkRepository(reposName string, userId int64) {
 
 }
 
