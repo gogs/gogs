@@ -1,0 +1,37 @@
+{{template "base/head" .}}
+{{template "base/navbar" .}}
+<div id="gogs-body" class="container">
+    <div id="gogs-user-profile" class="col-md-3">
+        <div class="profile-avatar text-center">
+            <a href="#" class="center-block" data-toggle="tooltip" data-placement="bottom" title="Change Avatar">
+                <img id="gogs-user-avatar" src="http://1.gravatar.com/avatar/x?s=200" alt="user-avatar" title="username"/>
+            </a>
+            <span id="gogs-user-name" class="center-block" href="#">Username</span>
+        </div>
+        <div class="profile-info">
+            <ul class="list-group">
+                <li class="list-group-item"><i class="fa fa-thumb-tack"></i>City, County, State, Nation</li>
+                <li class="list-group-item"><i class="fa fa-envelope"></i><a href="#">Email@EmailAddress.com</a></li>
+                <li class="list-group-item"><i class="fa fa-link"></i><a href="#">http://yousite/</a></li>
+                <li class="list-group-item"><i class="fa fa-clock-o"></i>Joined At 03.02, 2014</li>
+            </ul>
+        </div>
+    </div>
+    <div id="gogs-user-activity" class="col-md-9">
+        <ul class="nav nav-tabs" id="gogs-user-act-tabs">
+            <li class="active"><a href="#repo" data-toggle="tab"><i class="fa fa-gittip"></i>Repositories</a></li>
+            <li><a href="#activity" data-toggle="tab"><i class="fa fa-rss"></i>Activity</a></li>
+        </ul>
+        <div class="tab-content">
+            <div class="tab-pane active" id="repo">repo</div>
+            <div class="tab-pane" id="activity">activity</div>
+        </div>
+    </div>
+</div>
+<script>
+    $(function () {
+        Gogits.showTooltips();
+        Gogits.showTab("#gogs-user-act-tabs");
+    });
+</script>
+{{template "base/footer" .}}
