@@ -54,6 +54,7 @@ func runWeb(*cli.Context) {
 	m.Any("/sign-up", user.SignUp)
 	m.Any("/user/signup", user.SignUp)
 
+	m.Get("/user/profile", user.Profile) // should be /username
 	m.Any("/user/delete", user.Delete)
 	m.Any("/user/publickey/add", user.AddPublicKey)
 	m.Any("/repo/create", repo.Create)

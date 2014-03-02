@@ -16,6 +16,13 @@ import (
 	"github.com/gogits/gogs/utils/log"
 )
 
+func Profile(r render.Render) {
+	r.HTML(200, "user/profile", map[string]interface{}{
+		"Title": "Username",
+	})
+	return
+}
+
 func SignIn(req *http.Request, r render.Render) {
 	if req.Method == "GET" {
 		r.HTML(200, "user/signin", map[string]interface{}{
