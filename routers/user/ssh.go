@@ -13,7 +13,7 @@ import (
 	"github.com/gogits/gogs/models"
 )
 
-func AddPublickKey(req *http.Request, r render.Render) {
+func AddPublicKey(req *http.Request, r render.Render) {
 	if req.Method == "GET" {
 		r.HTML(200, "user/publickey_add", map[string]interface{}{
 			"Title": "Add Public Key",
