@@ -1,13 +1,18 @@
-<div class="gogs-masthead" id="masthead">
+<div class="gogs-masthead navbar navbar-fixed-top" id="masthead">
     <div class="container">
         <nav class="gogs-nav">
             <a class="gogs-nav-item active" href="/"><img src="/img/favicon.png" alt="Gogs Logo" id="gogs-logo"></a>
             <a class="gogs-nav-item" href="#">Dashboard</a>
             <a class="gogs-nav-item" href="#">Explore</a>
             <a class="gogs-nav-item" href="#">Help</a>
-            <a class="gogs-nav-item navbar-right navbar-btn btn btn-danger" href="/repo/create">Create a repository</a>
-            <a class="gogs-nav-item navbar-right navbar-btn btn btn-danger" href="/login/">Sign in</a>
-            <!--<a class="gogs-nav-item navbar-right" href="#">Profile</a>-->
+
+            <!--<a class="gogs-nav-item navbar-right navbar-btn btn btn-danger" href="/login/">Sign in</a>-->
+            <a id="gogs-nav-out" class="gogs-nav-item navbar-right navbar-btn btn btn-danger" href="/login/"><i class="fa fa-power-off fa-lg"></i></a>
+            <a id="gogs-nav-avatar" class="gogs-nav-item navbar-right" href="/user/profile" data-toggle="tooltip" data-placement="bottom" title="Username">
+                <img src="http://1.gravatar.com/avatar/x?s=28" alt="user-avatar" title="username"/>
+            </a>
+            <a class="navbar-right gogs-nav-item" href="/repo/create" data-toggle="tooltip" data-placement="bottom" title="New Repository"><i class="fa fa-plus fa-lg"></i></a>
+            <a class="navbar-right gogs-nav-item" href="#"  data-toggle="tooltip" data-placement="bottom" title="Setting"><i class="fa fa-cogs fa-lg"></i></a>
         </nav>
     </div>
 </div>
