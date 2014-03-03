@@ -85,8 +85,7 @@ body {
 }
 
 /* gogits login card */
-#gogs-login-card {
-    width: 600px;
+.gogs-card{
     margin: auto;
     padding: 30px;
     background: #fff;
@@ -95,11 +94,15 @@ body {
     box-sizing: border-box;
 }
 
-#gogs-login-card h3 {
+.gogs-card h3 {
     margin-top: 0;
     margin-bottom: 30px;
     padding-bottom: 20px;
     border-bottom: 1px solid #ccc;
+}
+
+#gogs-login-card{
+    width: 600px;
 }
 
 #gogs-login-card .form-control {
@@ -112,7 +115,7 @@ body {
     line-height: 30px;
 }
 
-#gogs-login-card .btn{
+.gogs-card .btn{
     cursor: pointer;
     margin-right: 1.2em;
 }
@@ -170,4 +173,14 @@ body {
 
 #gogs-user-act-tabs li.active a{
     border-bottom-color: #ddd;
+}
+
+/* gogits repo create */
+
+#gogs-repo-create{
+    width: 800px;
+}
+
+#gogs-repo-create textarea[name=desc]{
+    height: 8em;
 }
