@@ -44,8 +44,8 @@ func Create(req *http.Request, r render.Render) {
 	}
 
 	if err != nil {
-		r.HTML(403, "status/403", map[string]interface{}{
-			"Title": fmt.Sprintf("%v", err),
+		r.HTML(200, "base/error", map[string]interface{}{
+			"Error": fmt.Sprintf("%v", err),
 		})
 	}
 }
@@ -60,7 +60,9 @@ func Delete(req *http.Request, r render.Render) {
 
 	u := &models.User{}
 	err := models.DeleteRepository(u, "")
-	r.HTML(403, "status/403", map[string]interface{}{
-		"Title": fmt.Sprintf("%v", err),
-	})
+	if err != nil {
+		r.HTML(200, "base/error", map[string]interface{}{
+			"Error": fmt.Sprintf("%v", err),
+		})
+	}
 }
