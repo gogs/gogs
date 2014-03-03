@@ -10,17 +10,17 @@ body {
 
 /* override bs3 */
 
-.tooltip-inner{
+.tooltip-inner {
     border-radius: 3px;
     background: #333;
     border: none;
 }
 
-.tooltip-arrow{
+.tooltip-arrow {
     border-bottom-color: #333 !important;
 }
 
-.fa{
+.fa {
     margin: 0 .5em;
 }
 
@@ -28,8 +28,7 @@ body {
 .gogs-masthead {
     background-color: #428bca;
     box-shadow: inset 0 -2px 5px rgba(0, 0, 0, .1);
-    min-height: 45px;
-    padding: 2px 16px;
+    padding: 0 16px;
 }
 
 /* gogits nav item link */
@@ -54,6 +53,14 @@ body {
     padding: 5px 15px;
 }
 
+.gogs-nav-item.navbar-right {
+    margin-top: 3px;
+}
+
+.gogs-nav-item.navbar-right .fa{
+    margin: 0;
+}
+
 /* gogits nav item active status */
 .gogs-nav .active {
     color: #fff;
@@ -73,19 +80,41 @@ body {
     border-left: 5px solid transparent;
 }
 
+.gogs-nav .tooltip{
+    border: none;
+}
+
 /* gogits logo */
-#gogs-logo {
+#gogs-nav-avatar {
+    margin-top: 0;
+}
+
+#gogs-logo, #gogs-nav-avatar img {
     width: 28px;
+    height: 28px;
+}
+
+#gogs-nav-out {
+    margin-top: 10px;
+    padding: 5px 0;
+    margin-left: 10px;
+    height: 28px;
+}
+
+#gogs-nav-out .fa {
+    vertical-align: -10%;
+    margin: 0 .5em;
 }
 
 /* gogits body */
 #gogs-body {
     padding-top: 30px;
     padding-bottom: 60px;
+    margin-top: 50px;
 }
 
 /* gogits login card */
-.gogs-card{
+.gogs-card {
     margin: auto;
     padding: 30px;
     background: #fff;
@@ -101,7 +130,7 @@ body {
     border-bottom: 1px solid #ccc;
 }
 
-#gogs-login-card{
+#gogs-login-card {
     width: 600px;
 }
 
@@ -115,51 +144,51 @@ body {
     line-height: 30px;
 }
 
-.gogs-card .btn{
+.gogs-card .btn {
     cursor: pointer;
     margin-right: 1.2em;
 }
 
-#gogs-social-login{
+#gogs-social-login {
     margin-top: 30px;
     padding-top: 20px;
     border-top: 1px solid #ccc;
 }
 
-#gogs-social-login .btn{
+#gogs-social-login .btn {
     float: none;
     margin: auto;
 }
 
 /* gogs-user-profile */
 
-#gogs-user-avatar{
+#gogs-user-avatar {
     width: 200px;
     height: 200px;
     border-radius: 6px;
 }
 
-#gogs-user-name{
+#gogs-user-name {
     margin-top: 20px;
     font-size: 1.6em;
     font-weight: bold;
     margin-bottom: 20px;
 }
 
-#gogs-user-profile .profile-info .list-group-item{
+#gogs-user-profile .profile-info .list-group-item {
     background-color: transparent;
     padding-top: 18px;
     color: #666;
 }
 
-#gogs-user-profile .profile-info .list-group-item a{
+#gogs-user-profile .profile-info .list-group-item a {
     margin: 0;
     padding: 0;
     display: inline;
     color: #0093c4;
 }
 
-#gogs-user-profile .profile-info .list-group{
+#gogs-user-profile .profile-info .list-group {
     border-top: 1px solid #ccc;
     padding-bottom: 18px;
     border-bottom: 1px solid #ccc;
@@ -167,20 +196,20 @@ body {
     padding-right: 18px;
 }
 
-#gogs-user-activity .tab-pane{
+#gogs-user-activity .tab-pane {
     padding: 20px;
 }
 
-#gogs-user-act-tabs li.active a{
+#gogs-user-act-tabs li.active a {
     border-bottom-color: #ddd;
 }
 
 /* gogits repo create */
 
-#gogs-repo-create{
+#gogs-repo-create {
     width: 800px;
 }
 
-#gogs-repo-create textarea[name=desc]{
+#gogs-repo-create textarea[name=desc] {
     height: 8em;
 }

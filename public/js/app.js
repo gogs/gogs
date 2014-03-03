@@ -15,3 +15,8 @@ var Gogits = {};
         $(selector).find("li:eq(" + index + ") a").tab("show");
     }
 })(jQuery);
+
+
+function initCore(){
+    Gogits.showTooltips();
+}
