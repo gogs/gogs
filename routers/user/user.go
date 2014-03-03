@@ -25,24 +25,28 @@ func Profile(r render.Render) {
 }
 
 func SignIn(req *http.Request, r render.Render, session sessions.Session) {
-	if req.Method == "GET" {
-		r.HTML(200, "user/signin", map[string]interface{}{
-			"Title": "Log In",
-		})
-		return
+	var (
+		errString string
+		account   string
+	)
+	if req.Method == "POST" {
+		account = req.FormValue("account")
+		user, err := models.LoginUserPlain(account, req.FormValue("passwd"))
+		if err == nil {
+			// login success
+			session.Set("userId", user.Id)
+			session.Set("userName", user.Name)
+			r.Redirect("/")
+			return
+		}
+		// login fail
+		errString = fmt.Sprintf("%v", err)
 	}
-
-	// TODO: LDAP sign in
-	user, err := models.LoginUserPlain(req.FormValue("account"), req.FormValue("passwd"))
-	if err != nil {
-		r.HTML(200, "base/error", map[string]interface{}{
-			"Error": fmt.Sprintf("%v", err),
-		})
-		return
-	}
-	session.Set("userId", user.Id)
-	session.Set("userName", user.Name)
-	r.Redirect("/")
+	r.HTML(200, "user/signin", map[string]interface{}{
+		"Title":   "Log In",
+		"Error":   errString,
+		"Account": account,
+	})
 }
 
 func SignUp(req *http.Request, r render.Render) {
