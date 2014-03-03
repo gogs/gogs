@@ -24,22 +24,26 @@ func Profile(r render.Render) {
 }
 
 func SignIn(req *http.Request, r render.Render) {
-	if req.Method == "GET" {
-		r.HTML(200, "user/signin", map[string]interface{}{
-			"Title": "Log In",
-		})
-		return
+	var (
+		errString string
+		account   string
+	)
+	if req.Method == "POST" {
+		account = req.FormValue("account")
+		_, err := models.LoginUserPlain(account, req.FormValue("passwd"))
+		if err == nil {
+			// login success
+			r.Redirect("/")
+			return
+		}
+		// login fail
+		errString = fmt.Sprintf("%v", err)
 	}
-
-	// todo sign in
-	_, err := models.LoginUserPlain(req.FormValue("account"), req.FormValue("passwd"))
-	if err != nil {
-		r.HTML(200, "base/error", map[string]interface{}{
-			"Error": fmt.Sprintf("%v", err),
-		})
-		return
-	}
-	r.Redirect("/")
+	r.HTML(200, "user/signin", map[string]interface{}{
+		"Title":   "Log In",
+		"Error":   errString,
+		"Account": account,
+	})
 }
 
 func SignUp(req *http.Request, r render.Render) {
