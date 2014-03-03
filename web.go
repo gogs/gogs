@@ -12,6 +12,7 @@ import (
 	"github.com/codegangsta/cli"
 	"github.com/codegangsta/martini"
 	"github.com/martini-contrib/render"
+	"github.com/martini-contrib/sessions"
 
 	"github.com/gogits/gogs/routers"
 	"github.com/gogits/gogs/routers/repo"
@@ -45,6 +46,10 @@ func runWeb(*cli.Context) {
 
 	// Middleware.
 	m.Use(render.Renderer(render.Options{Funcs: []template.FuncMap{AppHelpers}}))
+
+	// TODO: should use other store because cookie store is not secure.
+	store := sessions.NewCookieStore([]byte("secret123"))
+	m.Use(sessions.Sessions("my_session", store))
 
 	// Routers.
 	m.Get("/", routers.Dashboard)

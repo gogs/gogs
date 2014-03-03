@@ -9,6 +9,7 @@ import (
 	"net/http"
 
 	"github.com/martini-contrib/render"
+	"github.com/martini-contrib/sessions"
 
 	"github.com/gogits/validation"
 
@@ -23,7 +24,7 @@ func Profile(r render.Render) {
 	return
 }
 
-func SignIn(req *http.Request, r render.Render) {
+func SignIn(req *http.Request, r render.Render, session sessions.Session) {
 	if req.Method == "GET" {
 		r.HTML(200, "user/signin", map[string]interface{}{
 			"Title": "Log In",
@@ -31,14 +32,16 @@ func SignIn(req *http.Request, r render.Render) {
 		return
 	}
 
-	// todo sign in
-	_, err := models.LoginUserPlain(req.FormValue("account"), req.FormValue("passwd"))
+	// TODO: LDAP sign in
+	user, err := models.LoginUserPlain(req.FormValue("account"), req.FormValue("passwd"))
 	if err != nil {
 		r.HTML(200, "base/error", map[string]interface{}{
 			"Error": fmt.Sprintf("%v", err),
 		})
 		return
 	}
+	session.Set("userId", user.Id)
+	session.Set("userName", user.Name)
 	r.Redirect("/")
 }
 
