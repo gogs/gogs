@@ -14,6 +14,7 @@ import (
 	"github.com/gogits/validation"
 
 	"github.com/gogits/gogs/models"
+	"github.com/gogits/gogs/utils/auth"
 	"github.com/gogits/gogs/utils/log"
 )
 
@@ -50,18 +51,19 @@ func SignIn(req *http.Request, r render.Render, session sessions.Session) {
 }
 
 func SignUp(req *http.Request, r render.Render) {
+	data := map[string]interface{}{"Title": "Sign Up"}
 	if req.Method == "GET" {
-		r.HTML(200, "user/signup", map[string]interface{}{
-			"Title": "Sign Up",
-		})
+		r.HTML(200, "user/signup", data)
 		return
 	}
 
+	// Front-end should do double check of password.
 	u := &models.User{
 		Name:   req.FormValue("username"),
 		Email:  req.FormValue("email"),
 		Passwd: req.FormValue("passwd"),
 	}
+
 	valid := validation.Validation{}
 	ok, err := valid.Valid(u)
 	if err != nil {
@@ -69,23 +71,21 @@ func SignUp(req *http.Request, r render.Render) {
 		return
 	}
 	if !ok {
-		for _, err := range valid.Errors {
-			log.Warn("user.SignUp -> valid user: %v", err)
-		}
+		data["HasError"] = true
+		data["ErrorMsg"] = auth.GenerateErrorMsg(valid.Errors[0])
+		r.HTML(200, "user/signup", data)
 		return
 	}
 
-	err = models.RegisterUser(u)
-	if err != nil {
-		if err != nil {
-			r.HTML(200, "base/error", map[string]interface{}{
-				"Error": fmt.Sprintf("%v", err),
-			})
-			return
-		}
-	}
+	// err = models.RegisterUser(u)
+	// if err != nil {
+	// 	r.HTML(200, "base/error", map[string]interface{}{
+	// 		"Error": fmt.Sprintf("%v", err),
+	// 	})
+	// 	return
+	// }
 
-	r.Redirect("/")
+	// r.Redirect("/")
 }
 
 func Delete(req *http.Request, r render.Render) {
