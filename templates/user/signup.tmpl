@@ -1,8 +1,11 @@
 {{template "base/head" .}}
 {{template "base/navbar" .}}
 <div class="container" id="gogs-body">
-	<form action="/user/signup" method="post" class="form-horizontal gogs-card" id="gogs-login-card">
+	<form action="/user/sign_up" method="post" class="form-horizontal gogs-card" id="gogs-login-card">
         <h3>Sign Up</h3>
+	{{if .HasError}}
+	<div class="alert alert-danger">{{.ErrorMsg}}</div>
+	{{end}}
 		<div class="form-group">
 			<label class="col-md-4 control-label">Username: </label>
 			<div class="col-md-6">
@@ -37,7 +40,7 @@
 
 	    <div class="form-group">
             <div class="col-md-offset-4 col-md-6">
-                <a href="/login/">Already have an account? Sign in now!</a>
+                <a href="/user/login">Already have an account? Sign in now!</a>
             </div>
 	    </div>
 	</form>

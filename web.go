@@ -53,11 +53,9 @@ func runWeb(*cli.Context) {
 
 	// Routers.
 	m.Get("/", routers.Dashboard)
-	m.Any("/login", user.SignIn)
-	m.Any("/user/signin", user.SignIn)
+	m.Any("/user/login", user.SignIn)
 
-	m.Any("/sign-up", user.SignUp)
-	m.Any("/user/signup", user.SignUp)
+	m.Any("/user/sign_up", user.SignUp)
 
 	m.Get("/user/profile", user.Profile) // should be /username
 	m.Any("/user/delete", user.Delete)

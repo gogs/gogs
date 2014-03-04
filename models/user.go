@@ -34,7 +34,7 @@ const (
 type User struct {
 	Id            int64
 	LowerName     string `xorm:"unique not null"`
-	Name          string `xorm:"unique not null" valid:"Required"`
+	Name          string `xorm:"unique not null" valid:"AlphaDash;MinSize(5);MaxSize(30)"`
 	Email         string `xorm:"unique not null" valid:"Email"`
 	Passwd        string `xorm:"not null" valid:"MinSize(8)"`
 	LoginType     int
