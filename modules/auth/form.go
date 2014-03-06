@@ -7,6 +7,7 @@ package auth
 import (
 	"net/http"
 	"reflect"
+	"strings"
 
 	"github.com/codegangsta/martini"
 
@@ -17,9 +18,57 @@ import (
 )
 
 type RegisterForm struct {
-	UserName string `form:"username" binding:"Required;AlphaDash;MinSize(5);MaxSize(30)"`
+	Username string `form:"username" binding:"Required;AlphaDash;MinSize(5);MaxSize(30)"`
 	Email    string `form:"email" binding:"Required;Email;MaxSize(50)"`
 	Password string `form:"passwd" binding:"Required;MinSize(6);MaxSize(30)"`
+}
+
+func getMinMaxSize(field reflect.StructField) string {
+	for _, rule := range strings.Split(field.Tag.Get("binding"), ";") {
+		if strings.HasPrefix(rule, "MinSize(") || strings.HasPrefix(rule, "MaxSize(") {
+			return rule[8 : len(rule)-1]
+		}
+	}
+	return ""
+}
+
+func validate(errors *binding.Errors, data base.TmplData, form interface{}) {
+	typ := reflect.TypeOf(form)
+	val := reflect.ValueOf(form)
+
+	if typ.Kind() == reflect.Ptr {
+		typ = typ.Elem()
+		val = val.Elem()
+	}
+
+	for i := 0; i < typ.NumField(); i++ {
+		field := typ.Field(i)
+
+		fieldName := field.Tag.Get("form")
+		// Allow ignored fields in the struct
+		if fieldName == "-" {
+			continue
+		}
+
+		if err, ok := errors.Fields[field.Name]; ok {
+			data["Err_"+field.Name] = true
+			switch err {
+			case binding.RequireError:
+				data["ErrorMsg"] = field.Name + " cannot be empty"
+			case binding.AlphaDashError:
+				data["ErrorMsg"] = field.Name + " must be valid alpha or numeric or dash(-_) characters"
+			case binding.MinSizeError:
+				data["ErrorMsg"] = field.Name + " must contain at least has " + getMinMaxSize(field) + " characters"
+			case binding.MaxSizeError:
+				data["ErrorMsg"] = field.Name + " must contain at most has " + getMinMaxSize(field) + " characters"
+			case binding.EmailError:
+				data["ErrorMsg"] = field.Name + " is not valid"
+			default:
+				data["ErrorMsg"] = "Unknown error: " + err
+			}
+			return
+		}
+	}
 }
 
 func (r *RegisterForm) Validate(errors *binding.Errors, req *http.Request, context martini.Context) {
@@ -38,53 +87,7 @@ func (r *RegisterForm) Validate(errors *binding.Errors, req *http.Request, conte
 		return
 	}
 
-	if err, ok := errors.Fields["UserName"]; ok {
-		data["Err_Username"] = true
-		switch err {
-		case binding.RequireError:
-			data["ErrorMsg"] = "Username cannot be empty"
-		case binding.AlphaDashError:
-			data["ErrorMsg"] = "Username must be valid alpha or numeric or dash(-_) characters"
-		case binding.MinSizeError:
-			data["ErrorMsg"] = "Username at least has 5 characters"
-		case binding.MaxSizeError:
-			data["ErrorMsg"] = "Username at most has 30 characters"
-		default:
-			data["ErrorMsg"] = "Unknown error: " + err
-		}
-		return
-	}
-
-	if err, ok := errors.Fields["Email"]; ok {
-		data["Err_Email"] = true
-		switch err {
-		case binding.RequireError:
-			data["ErrorMsg"] = "E-mail address cannot be empty"
-		case binding.EmailError:
-			data["ErrorMsg"] = "E-mail address is not valid"
-		case binding.MaxSizeError:
-			data["ErrorMsg"] = "E-mail address at most has 50 characters"
-		default:
-			data["ErrorMsg"] = "Unknown error: " + err
-		}
-		return
-	}
-
-	if err, ok := errors.Fields["Password"]; ok {
-		data["Err_Passwd"] = true
-		switch err {
-		case binding.RequireError:
-			data["ErrorMsg"] = "Password cannot be empty"
-		case binding.MinSizeError:
-			data["ErrorMsg"] = "Password at least has 6 characters"
-		case binding.MaxSizeError:
-			data["ErrorMsg"] = "Password at most has 30 characters"
-		default:
-			data["ErrorMsg"] = "Unknown error: " + err
-		}
-		return
-	}
-
+	validate(errors, data, r)
 }
 
 // AssignForm assign form values back to the template data.
