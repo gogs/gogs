@@ -28,7 +28,7 @@ type RegisterForm struct {
 	RetypePasswd string `form:"retypepasswd"`
 }
 
-func (r *RegisterForm) Name(field string) string {
+func (f *RegisterForm) Name(field string) string {
 	names := map[string]string{
 		"UserName":     "Username",
 		"Email":        "E-mail address",
@@ -36,6 +36,57 @@ func (r *RegisterForm) Name(field string) string {
 		"RetypePasswd": "Re-type password",
 	}
 	return names[field]
+}
+
+func (f *RegisterForm) Validate(errors *binding.Errors, req *http.Request, context martini.Context) {
+	if req.Method == "GET" || errors.Count() == 0 {
+		return
+	}
+
+	data := context.Get(reflect.TypeOf(base.TmplData{})).Interface().(base.TmplData)
+	data["HasError"] = true
+	AssignForm(f, data)
+
+	if len(errors.Overall) > 0 {
+		for _, err := range errors.Overall {
+			log.Error("RegisterForm.Validate: %v", err)
+		}
+		return
+	}
+
+	validate(errors, data, f)
+}
+
+type LogInForm struct {
+	UserName string `form:"username" binding:"Required;AlphaDash;MinSize(5);MaxSize(30)"`
+	Password string `form:"passwd" binding:"Required;MinSize(6);MaxSize(30)"`
+}
+
+func (f *LogInForm) Name(field string) string {
+	names := map[string]string{
+		"UserName": "Username",
+		"Password": "Password",
+	}
+	return names[field]
+}
+
+func (f *LogInForm) Validate(errors *binding.Errors, req *http.Request, context martini.Context) {
+	if req.Method == "GET" || errors.Count() == 0 {
+		return
+	}
+
+	data := context.Get(reflect.TypeOf(base.TmplData{})).Interface().(base.TmplData)
+	data["HasError"] = true
+	AssignForm(f, data)
+
+	if len(errors.Overall) > 0 {
+		for _, err := range errors.Overall {
+			log.Error("LogInForm.Validate: %v", err)
+		}
+		return
+	}
+
+	validate(errors, data, f)
 }
 
 func getMinMaxSize(field reflect.StructField) string {
@@ -84,25 +135,6 @@ func validate(errors *binding.Errors, data base.TmplData, form Form) {
 			return
 		}
 	}
-}
-
-func (r *RegisterForm) Validate(errors *binding.Errors, req *http.Request, context martini.Context) {
-	if req.Method == "GET" || errors.Count() == 0 {
-		return
-	}
-
-	data := context.Get(reflect.TypeOf(base.TmplData{})).Interface().(base.TmplData)
-	data["HasError"] = true
-	AssignForm(r, data)
-
-	if len(errors.Overall) > 0 {
-		for _, err := range errors.Overall {
-			log.Error("RegisterForm.Validate: %v", err)
-		}
-		return
-	}
-
-	validate(errors, data, r)
 }
 
 // AssignForm assign form values back to the template data.
