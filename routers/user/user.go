@@ -27,6 +27,7 @@ func Dashboard(r render.Render, data base.TmplData, session sessions.Session) {
 	data["IsSigned"] = true
 	data["SignedUserId"] = SignedInId(session)
 	data["SignedUserName"] = SignedInName(session)
+	data["PageIsUserDashboard"] = true
 
 	data["Title"] = "Dashboard"
 	r.HTML(200, "user/dashboard", data)

@@ -20,6 +20,10 @@ body {
     border-bottom-color: #333 !important;
 }
 
+.tooltip-arrow:before {
+    border-bottom-color: transparent !important;
+}
+
 .fa {
     margin: 0 .5em;
 }
@@ -39,6 +43,7 @@ body {
     font-weight: bold;
     color: #EEE;
     font-size: 100%;
+    height: 46px;
 }
 
 .gogs-nav-item:hover,
@@ -55,6 +60,7 @@ body {
     cursor: pointer;
     margin-top: 8px;
     padding: 5px 15px;
+    height: 30px;
 }
 
 .gogs-nav-item.navbar-right .fa {
@@ -68,7 +74,7 @@ body {
 
 .gogs-nav .active:after {
     position: absolute;
-    bottom: -2px;
+    bottom: -1px;
     left: 50%;
     width: 0;
     height: 0;
@@ -78,6 +84,10 @@ body {
     border-right: 5px solid transparent;
     border-bottom: 5px solid;
     border-left: 5px solid transparent;
+}
+
+#gogs-nav-logo:after {
+    bottom: -4px !important;
 }
 
 .gogs-nav .tooltip {
