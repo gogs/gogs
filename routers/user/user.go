@@ -18,6 +18,20 @@ import (
 	"github.com/gogits/gogs/utils/log"
 )
 
+func Dashboard(r render.Render, data base.TmplData, session sessions.Session) {
+	if !IsSignedIn(session) {
+		// todo : direct to logout
+		r.Redirect("/")
+		return
+	}
+	data["IsSigned"] = true
+	data["SignedUserId"] = SignedInId(session)
+	data["SignedUserName"] = SignedInName(session)
+
+	data["Title"] = "Dashboard"
+	r.HTML(200, "user/dashboard", data)
+}
+
 func Profile(r render.Render) {
 	r.HTML(200, "user/profile", map[string]interface{}{
 		"Title": "Username",
@@ -65,10 +79,16 @@ func SignedInUser(session sessions.Session) *models.User {
 }
 
 func SignIn(req *http.Request, r render.Render, session sessions.Session) {
+	// if logged, do not show login page
+	if IsSignedIn(session) {
+		r.Redirect("/")
+		return
+	}
 	var (
 		errString string
 		account   string
 	)
+	// if post, do login action
 	if req.Method == "POST" {
 		account = req.FormValue("account")
 		user, err := models.LoginUserPlain(account, req.FormValue("passwd"))
@@ -82,6 +102,7 @@ func SignIn(req *http.Request, r render.Render, session sessions.Session) {
 		// login fail
 		errString = fmt.Sprintf("%v", err)
 	}
+	// if get or error post, show login page
 	r.HTML(200, "user/signin", map[string]interface{}{
 		"Title":   "Log In",
 		"Error":   errString,

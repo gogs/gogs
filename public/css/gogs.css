@@ -47,17 +47,17 @@ body {
     text-decoration: none;
 }
 
+.gogs-nav-item.navbar-right {
+    margin-top: 3px;
+}
+
 .gogs-nav-item.navbar-btn {
     cursor: pointer;
     margin-top: 8px;
     padding: 5px 15px;
 }
 
-.gogs-nav-item.navbar-right {
-    margin-top: 3px;
-}
-
-.gogs-nav-item.navbar-right .fa{
+.gogs-nav-item.navbar-right .fa {
     margin: 0;
 }
 
@@ -80,7 +80,7 @@ body {
     border-left: 5px solid transparent;
 }
 
-.gogs-nav .tooltip{
+.gogs-nav .tooltip {
     border: none;
 }
 
