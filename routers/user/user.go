@@ -25,6 +25,28 @@ func Profile(r render.Render) {
 	return
 }
 
+func IsSignedIn(session sessions.Session) bool {
+	id := session.Get("userId")
+	if id == nil {
+		return false
+	}
+	if s, ok := id.(int64); ok && s > 0 {
+		return true
+	}
+	return false
+}
+
+func SignedInName(session sessions.Session) string {
+	userName := session.Get("userName")
+	if userName == nil {
+		return ""
+	}
+	if s, ok := userName.(string); ok {
+		return s
+	}
+	return ""
+}
+
 func SignIn(req *http.Request, r render.Render, session sessions.Session) {
 	var (
 		errString string
