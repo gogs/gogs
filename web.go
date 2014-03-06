@@ -59,6 +59,7 @@ func runWeb(*cli.Context) {
 	// Routers.
 	m.Get("/", routers.Home)
 	m.Any("/user/login", binding.BindIgnErr(auth.LogInForm{}), user.SignIn)
+	m.Any("/user/logout", user.SignOut)
 	m.Any("/user/sign_up", binding.BindIgnErr(auth.RegisterForm{}), user.SignUp)
 
 	m.Get("/user/profile", user.Profile) // should be /username

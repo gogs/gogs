@@ -24,20 +24,26 @@ func Dashboard(r render.Render, data base.TmplData, session sessions.Session) {
 		r.Redirect("/")
 		return
 	}
+
 	data["IsSigned"] = true
 	data["SignedUserId"] = SignedInId(session)
 	data["SignedUserName"] = SignedInName(session)
 	data["PageIsUserDashboard"] = true
+	data["Avatar"] = SignedInUser(session).Avatar
 
 	data["Title"] = "Dashboard"
 	r.HTML(200, "user/dashboard", data)
 }
 
-func Profile(r render.Render) {
-	r.HTML(200, "user/profile", map[string]interface{}{
-		"Title": "Username",
-	})
-	return
+func Profile(r render.Render, data base.TmplData, session sessions.Session) {
+	data["Title"] = "Profile"
+
+	data["IsSigned"] = IsSignedIn(session)
+	// TODO: Need to check view self or others.
+	user := SignedInUser(session)
+	data["Avatar"] = user.Avatar
+	data["Username"] = user.Name
+	r.HTML(200, "user/profile", data)
 }
 
 func IsSignedIn(session sessions.Session) bool {
@@ -74,6 +80,7 @@ func SignedInUser(session sessions.Session) *models.User {
 
 	user, err := models.GetUserById(id)
 	if err != nil {
+		log.Error("user.SignedInUser: %v", err)
 		return nil
 	}
 	return user
@@ -117,6 +124,17 @@ func SignIn(form auth.LogInForm, data base.TmplData, req *http.Request, r render
 	// login success
 	session.Set("userId", user.Id)
 	session.Set("userName", user.Name)
+	r.Redirect("/")
+}
+
+func SignOut(r render.Render, session sessions.Session) {
+	if !IsSignedIn(session) {
+		r.Redirect("/")
+		return
+	}
+
+	session.Delete("userId")
+	session.Delete("userName")
 	r.Redirect("/")
 }
 
