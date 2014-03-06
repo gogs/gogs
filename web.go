@@ -57,7 +57,7 @@ func runWeb(*cli.Context) {
 	m.Use(sessions.Sessions("my_session", store))
 
 	// Routers.
-	m.Get("/", routers.Dashboard)
+	m.Get("/", routers.Home)
 	m.Any("/user/login", user.SignIn)
 
 	m.Any("/user/sign_up", binding.BindIgnErr(auth.RegisterForm{}), user.SignUp)

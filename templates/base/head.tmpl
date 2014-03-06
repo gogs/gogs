@@ -16,7 +16,7 @@
 		<script src="/js/jquery-1.10.1.min.js"></script>
 		<script src="/js/bootstrap.min.js"></script>
         <script src="/js/app.js"></script>
-		<title>{{.Title}} - {{AppName}}</title>
+		<title>{{if .Title}}{{.Title}} - {{end}}{{AppName}}</title>
 	</head>
 	<body>
 		<noscript>Please enable JavaScript in your browser!</noscript>
