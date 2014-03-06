@@ -27,6 +27,7 @@ func Dashboard(r render.Render, data base.TmplData, session sessions.Session) {
 	data["IsSigned"] = true
 	data["SignedUserId"] = SignedInId(session)
 	data["SignedUserName"] = SignedInName(session)
+	data["PageIsUserDashboard"] = true
 
 	data["Title"] = "Dashboard"
 	r.HTML(200, "user/dashboard", data)
@@ -112,6 +113,7 @@ func SignIn(req *http.Request, r render.Render, session sessions.Session) {
 
 func SignUp(form auth.RegisterForm, data base.TmplData, req *http.Request, r render.Render) {
 	data["Title"] = "Sign Up"
+	data["PageIsSignUp"] = true
 
 	if req.Method == "GET" {
 		r.HTML(200, "user/signup", data)

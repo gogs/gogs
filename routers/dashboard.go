@@ -16,5 +16,6 @@ func Home(r render.Render, data base.TmplData, session sessions.Session) {
 		user.Dashboard(r, data, session)
 		return
 	}
-	r.HTML(200, "home", nil)
+	data["PageIsHome"] = true
+	r.HTML(200, "home", data)
 }
