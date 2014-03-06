@@ -192,7 +192,7 @@ func GetUserById(id int64) (*User, error) {
 
 // LoginUserPlain validates user by raw user name and password.
 func LoginUserPlain(name, passwd string) (*User, error) {
-	user := User{Name: name, Passwd: passwd}
+	user := User{LowerName: strings.ToLower(name), Passwd: passwd}
 	if err := user.EncodePasswd(); err != nil {
 		return nil, err
 	}

@@ -16,7 +16,7 @@ Please see [Wiki](https://github.com/gogits/gogs/wiki) for project design.
 ### Dependencies
 
 - [Go Programming Language](http://golang.org): Main develop language.
-- [libgit2](http://libgit2.github.com/): Git data manipulation.
+- [libgit2](http://libgit2.github.com/)(cgo): Git data manipulation.
 
 ## Acknowledgments
 
@@ -24,4 +24,4 @@ Please see [Wiki](https://github.com/gogits/gogs/wiki) for project design.
 
 ## Contributors
 
-This project was launched by [Unknown](https://github.com/Unknwon) and [lunny](https://github.com/lunny). See [contributors page](https://github.com/gogits/gogs/graphs/contributors) for full list of contributors.
+This project was launched by [Unknown](https://github.com/Unknwon), [lunny](https://github.com/lunny) and [fuxiaohei](https://github.com/fuxiaohei). See [contributors page](https://github.com/gogits/gogs/graphs/contributors) for full list of contributors.

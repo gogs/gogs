@@ -79,36 +79,45 @@ func SignedInUser(session sessions.Session) *models.User {
 	return user
 }
 
-func SignIn(req *http.Request, r render.Render, session sessions.Session) {
+func SignIn(form auth.LogInForm, data base.TmplData, req *http.Request, r render.Render, session sessions.Session) {
 	// if logged, do not show login page
 	if IsSignedIn(session) {
 		r.Redirect("/")
 		return
 	}
-	var (
-		errString string
-		account   string
-	)
-	// if post, do login action
-	if req.Method == "POST" {
-		account = req.FormValue("account")
-		user, err := models.LoginUserPlain(account, req.FormValue("passwd"))
-		if err == nil {
-			// login success
-			session.Set("userId", user.Id)
-			session.Set("userName", user.Name)
-			r.Redirect("/")
+
+	data["Title"] = "Log In"
+
+	if req.Method == "GET" {
+		r.HTML(200, "user/signin", data)
+		return
+	}
+
+	if hasErr, ok := data["HasError"]; ok && hasErr.(bool) {
+		r.HTML(200, "user/signin", data)
+		return
+	}
+
+	user, err := models.LoginUserPlain(form.UserName, form.Password)
+	if err != nil {
+		if err.Error() == models.ErrUserNotExist.Error() {
+			data["HasError"] = true
+			data["ErrorMsg"] = "Username or password is not correct"
+			auth.AssignForm(form, data)
+			r.HTML(200, "user/signin", data)
 			return
 		}
-		// login fail
-		errString = fmt.Sprintf("%v", err)
+
+		data["ErrorMsg"] = err
+		log.Error("user.SignIn: %v", data)
+		r.HTML(500, "base/error", nil)
+		return
 	}
-	// if get or error post, show login page
-	r.HTML(200, "user/signin", map[string]interface{}{
-		"Title":   "Log In",
-		"Error":   errString,
-		"Account": account,
-	})
+
+	// login success
+	session.Set("userId", user.Id)
+	session.Set("userName", user.Name)
+	r.Redirect("/")
 }
 
 func SignUp(form auth.RegisterForm, data base.TmplData, req *http.Request, r render.Render) {
