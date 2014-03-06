@@ -87,7 +87,7 @@ func SignUp(form auth.RegisterForm, data base.TmplData, req *http.Request, r ren
 
 	//Front-end should do double check of password.
 	u := &models.User{
-		Name:   form.UserName,
+		Name:   form.Username,
 		Email:  form.Email,
 		Passwd: form.Password,
 	}
