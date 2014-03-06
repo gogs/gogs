@@ -1,8 +1,8 @@
 <div class="gogs-masthead navbar navbar-fixed-top" id="masthead">
     <div class="container">
         <nav class="gogs-nav">
-            <a class="gogs-nav-item active" href="/"><img src="/img/favicon.png" alt="Gogs Logo" id="gogs-logo"></a>
-            <a class="gogs-nav-item" href="#">Dashboard</a>
+            <a id="gogs-nav-logo" class="gogs-nav-item{{if .PageIsHome}} active{{end}}" href="/"><img src="/img/favicon.png" alt="Gogs Logo" id="gogs-logo"></a>
+            <a class="gogs-nav-item{{if .PageIsUserDashboard}} active{{end}}" href="#">Dashboard</a>
             <a class="gogs-nav-item" href="#">Explore</a>
             <a class="gogs-nav-item" href="#">Help</a>{{if .IsSigned}}
             <a id="gogs-nav-out" class="gogs-nav-item navbar-right navbar-btn btn btn-danger" href="/user/login/"><i class="fa fa-power-off fa-lg"></i></a>

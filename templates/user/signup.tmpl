@@ -3,41 +3,37 @@
 <div class="container" id="gogs-body">
 	<form action="/user/sign_up" method="post" class="form-horizontal gogs-card" id="gogs-login-card">
         <h3>Sign Up</h3>
-	{{if .HasError}}
-	<div class="alert alert-danger">{{.ErrorMsg}}</div>
-	{{end}}
-		<div class="form-group {{if .Err_UserName}}has-error has-feedback{{end}}">
+	    <div class="alert alert-danger form-error{{if .HasError}}{{else}} hidden{{end}}">{{.ErrorMsg}}</div>
+		<div class="form-group {{if .Err_Username}}has-error has-feedback{{end}}">
 			<label class="col-md-4 control-label">Username: </label>
 			<div class="col-md-6">
-				<input name="username" class="form-control" placeholder="Type your username" value="{{.username}}">
+				<input name="username" class="form-control" placeholder="Type your username" value="{{.username}}" required="required" title="Username must contain at least has 5 characters">
 			</div>
 		</div>
 		<div class="form-group {{if .Err_Email}}has-error has-feedback{{end}}">
 			<label class="col-md-4 control-label">Email: </label>
 			<div class="col-md-6">
-				<input name="email" class="form-control" placeholder="Type your e-mail address" value="{{.email}}">
+				<input name="email" class="form-control" placeholder="Type your e-mail address" value="{{.email}}" required="required" title="Email is not valid">
 			</div>
 		</div>
 
 		<div class="form-group {{if .Err_Password}}has-error has-feedback{{end}}">
 			<label class="col-md-4 control-label">Password: </label>
 			<div class="col-md-6">
-				<input name="passwd" type="password" class="form-control" placeholder="Type your password">
+				<input name="passwd" type="password" class="form-control" placeholder="Type your password" required="required" title="Password must contain at least has 6 characters">
 			</div>
 		</div>
 		<div class="form-group {{if .Err_RetypePasswd}}has-error has-feedback{{end}}">
 			<label class="col-md-4 control-label">Re-type: </label>
 			<div class="col-md-6">
-				<input type="password" class="form-control" placeholder="Re-type your password">
+				<input name="re-passwd" type="password" class="form-control" placeholder="Re-type your password" required="required" title="Re-type Password must be same to Password">
 			</div>
 		</div>
-
 		<div class="form-group">
 		    <div class="col-md-offset-4 col-md-6">
 		    	<button type="submit" class="btn btn-lg btn-primary">Create an account</button>
 		    </div>
 		</div>
-
 	    <div class="form-group">
             <div class="col-md-offset-4 col-md-6">
                 <a href="/user/login">Already have an account? Sign in now!</a>
