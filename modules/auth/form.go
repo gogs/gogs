@@ -17,10 +17,25 @@ import (
 	"github.com/gogits/gogs/utils/log"
 )
 
+type Form interface {
+	Name(field string) string
+}
+
 type RegisterForm struct {
-	Username string `form:"username" binding:"Required;AlphaDash;MinSize(5);MaxSize(30)"`
-	Email    string `form:"email" binding:"Required;Email;MaxSize(50)"`
-	Password string `form:"passwd" binding:"Required;MinSize(6);MaxSize(30)"`
+	UserName     string `form:"username" binding:"Required;AlphaDash;MinSize(5);MaxSize(30)"`
+	Email        string `form:"email" binding:"Required;Email;MaxSize(50)"`
+	Password     string `form:"passwd" binding:"Required;MinSize(6);MaxSize(30)"`
+	RetypePasswd string `form:"retypepasswd"`
+}
+
+func (r *RegisterForm) Name(field string) string {
+	names := map[string]string{
+		"UserName":     "Username",
+		"Email":        "E-mail address",
+		"Password":     "Password",
+		"RetypePasswd": "Re-type password",
+	}
+	return names[field]
 }
 
 func getMinMaxSize(field reflect.StructField) string {
@@ -32,7 +47,7 @@ func getMinMaxSize(field reflect.StructField) string {
 	return ""
 }
 
-func validate(errors *binding.Errors, data base.TmplData, form interface{}) {
+func validate(errors *binding.Errors, data base.TmplData, form Form) {
 	typ := reflect.TypeOf(form)
 	val := reflect.ValueOf(form)
 
@@ -54,15 +69,15 @@ func validate(errors *binding.Errors, data base.TmplData, form interface{}) {
 			data["Err_"+field.Name] = true
 			switch err {
 			case binding.RequireError:
-				data["ErrorMsg"] = field.Name + " cannot be empty"
+				data["ErrorMsg"] = form.Name(field.Name) + " cannot be empty"
 			case binding.AlphaDashError:
-				data["ErrorMsg"] = field.Name + " must be valid alpha or numeric or dash(-_) characters"
+				data["ErrorMsg"] = form.Name(field.Name) + " must be valid alpha or numeric or dash(-_) characters"
 			case binding.MinSizeError:
-				data["ErrorMsg"] = field.Name + " must contain at least has " + getMinMaxSize(field) + " characters"
+				data["ErrorMsg"] = form.Name(field.Name) + " must contain at least " + getMinMaxSize(field) + " characters"
 			case binding.MaxSizeError:
-				data["ErrorMsg"] = field.Name + " must contain at most has " + getMinMaxSize(field) + " characters"
+				data["ErrorMsg"] = form.Name(field.Name) + " must contain at most " + getMinMaxSize(field) + " characters"
 			case binding.EmailError:
-				data["ErrorMsg"] = field.Name + " is not valid"
+				data["ErrorMsg"] = form.Name(field.Name) + " is not valid"
 			default:
 				data["ErrorMsg"] = "Unknown error: " + err
 			}

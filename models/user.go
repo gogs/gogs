@@ -17,6 +17,12 @@ import (
 	"github.com/gogits/gogs/utils"
 )
 
+var UserPasswdSalt string
+
+func init() {
+	UserPasswdSalt = utils.Cfg.MustValue("security", "USER_PASSWD_SALT")
+}
+
 // User types.
 const (
 	UT_INDIVIDUAL = iota + 1
@@ -33,9 +39,9 @@ const (
 type User struct {
 	Id            int64
 	LowerName     string `xorm:"unique not null"`
-	Name          string `xorm:"unique not null" valid:"AlphaDash;MinSize(5);MaxSize(30)"`
-	Email         string `xorm:"unique not null" valid:"Email"`
-	Passwd        string `xorm:"not null" valid:"MinSize(8)"`
+	Name          string `xorm:"unique not null"`
+	Email         string `xorm:"unique not null"`
+	Passwd        string `xorm:"not null"`
 	LoginType     int
 	Type          int
 	NumFollowers  int
@@ -79,12 +85,17 @@ var (
 	ErrUserOwnRepos     = errors.New("User still have ownership of repositories")
 	ErrUserAlreadyExist = errors.New("User already exist")
 	ErrUserNotExist     = errors.New("User does not exist")
+	ErrEmailAlreadyUsed = errors.New("E-mail already used")
 )
 
 // IsUserExist checks if given user name exist,
 // the user name should be noncased unique.
 func IsUserExist(name string) (bool, error) {
 	return orm.Get(&User{LowerName: strings.ToLower(name)})
+}
+
+func IsEmailUsed(email string) (bool, error) {
+	return orm.Get(&User{Email: email})
 }
 
 // RegisterUser creates record of a new user.
@@ -96,9 +107,18 @@ func RegisterUser(user *User) (err error) {
 		return ErrUserAlreadyExist
 	}
 
+	isExist, err = IsEmailUsed(user.Email)
+	if err != nil {
+		return err
+	} else if isExist {
+		return ErrEmailAlreadyUsed
+	}
+
 	user.LowerName = strings.ToLower(user.Name)
 	user.Avatar = utils.EncodeMd5(user.Email)
-	user.EncodePasswd()
+	if err = user.EncodePasswd(); err != nil {
+		return err
+	}
 	if _, err = orm.Insert(user); err != nil {
 		return err
 	}
@@ -136,7 +156,7 @@ func DeleteUser(user *User) error {
 
 // EncodePasswd encodes password to safe format.
 func (user *User) EncodePasswd() error {
-	newPasswd, err := scrypt.Key([]byte(user.Passwd), []byte("!#@FDEWREWR&*("), 16384, 8, 1, 64)
+	newPasswd, err := scrypt.Key([]byte(user.Passwd), []byte(UserPasswdSalt), 16384, 8, 1, 64)
 	user.Passwd = fmt.Sprintf("%x", newPasswd)
 	return err
 }

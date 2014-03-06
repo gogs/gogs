@@ -6,7 +6,7 @@
 	{{if .HasError}}
 	<div class="alert alert-danger">{{.ErrorMsg}}</div>
 	{{end}}
-		<div class="form-group {{if .Err_Username}}has-error has-feedback{{end}}">
+		<div class="form-group {{if .Err_UserName}}has-error has-feedback{{end}}">
 			<label class="col-md-4 control-label">Username: </label>
 			<div class="col-md-6">
 				<input name="username" class="form-control" placeholder="Type your username" value="{{.username}}">
@@ -25,7 +25,7 @@
 				<input name="passwd" type="password" class="form-control" placeholder="Type your password">
 			</div>
 		</div>
-		<div class="form-group">
+		<div class="form-group {{if .Err_RetypePasswd}}has-error has-feedback{{end}}">
 			<label class="col-md-4 control-label">Re-type: </label>
 			<div class="col-md-6">
 				<input type="password" class="form-control" placeholder="Re-type your password">
