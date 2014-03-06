@@ -14,6 +14,10 @@ import (
 	"github.com/martini-contrib/render"
 	"github.com/martini-contrib/sessions"
 
+	"github.com/gogits/binding"
+
+	"github.com/gogits/gogs/modules/auth"
+	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/routers"
 	"github.com/gogits/gogs/routers/repo"
 	"github.com/gogits/gogs/routers/user"
@@ -46,6 +50,7 @@ func runWeb(*cli.Context) {
 
 	// Middleware.
 	m.Use(render.Renderer(render.Options{Funcs: []template.FuncMap{AppHelpers}}))
+	m.Use(base.InitContext())
 
 	// TODO: should use other store because cookie store is not secure.
 	store := sessions.NewCookieStore([]byte("secret123"))
@@ -55,7 +60,7 @@ func runWeb(*cli.Context) {
 	m.Get("/", routers.Dashboard)
 	m.Any("/user/login", user.SignIn)
 
-	m.Any("/user/sign_up", user.SignUp)
+	m.Any("/user/sign_up", binding.BindIgnErr(auth.RegisterForm{}), user.SignUp)
 
 	m.Get("/user/profile", user.Profile) // should be /username
 	m.Any("/user/delete", user.Delete)

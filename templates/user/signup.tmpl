@@ -6,20 +6,20 @@
 	{{if .HasError}}
 	<div class="alert alert-danger">{{.ErrorMsg}}</div>
 	{{end}}
-		<div class="form-group">
+		<div class="form-group {{if .Err_Username}}has-error has-feedback{{end}}">
 			<label class="col-md-4 control-label">Username: </label>
 			<div class="col-md-6">
-				<input name="username" class="form-control" placeholder="Type your username">
+				<input name="username" class="form-control" placeholder="Type your username" value="{{.username}}">
 			</div>
 		</div>
-		<div class="form-group">
+		<div class="form-group {{if .Err_Email}}has-error has-feedback{{end}}">
 			<label class="col-md-4 control-label">Email: </label>
 			<div class="col-md-6">
-				<input name="email" class="form-control" placeholder="Type your e-mail address">
+				<input name="email" class="form-control" placeholder="Type your e-mail address" value="{{.email}}">
 			</div>
 		</div>
 
-		<div class="form-group">
+		<div class="form-group {{if .Err_Passwd}}has-error has-feedback{{end}}">
 			<label class="col-md-4 control-label">Password: </label>
 			<div class="col-md-6">
 				<input name="passwd" type="password" class="form-control" placeholder="Type your password">

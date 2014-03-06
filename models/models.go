@@ -83,6 +83,9 @@ func setEngine() {
 	//log.Trace("Initialized database -> %s", dbName)
 
 	RepoRootPath = utils.Cfg.MustValue("repository", "ROOT")
+	if uname.Username == "jiahuachen" {
+		RepoRootPath = utils.Cfg.MustValue("repository", "ROOT_jiahuachen")
+	}
 }
 
 func init() {
