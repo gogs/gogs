@@ -26,14 +26,18 @@ func Profile(r render.Render) {
 }
 
 func IsSignedIn(session sessions.Session) bool {
-	id := session.Get("userId")
-	if id == nil {
-		return false
+	return SignedInId(session) > 0
+}
+
+func SignedInId(session sessions.Session) int64 {
+	userId := session.Get("userId")
+	if userId == nil {
+		return 0
 	}
-	if s, ok := id.(int64); ok && s > 0 {
-		return true
+	if s, ok := userId.(int64); ok {
+		return s
 	}
-	return false
+	return 0
 }
 
 func SignedInName(session sessions.Session) string {
@@ -45,6 +49,19 @@ func SignedInName(session sessions.Session) string {
 		return s
 	}
 	return ""
+}
+
+func SignedInUser(session sessions.Session) *models.User {
+	id := SignedInId(session)
+	if id <= 0 {
+		return nil
+	}
+
+	user, err := models.GetUserById(id)
+	if err != nil {
+		return nil
+	}
+	return user
 }
 
 func SignIn(req *http.Request, r render.Render, session sessions.Session) {
