@@ -8,13 +8,13 @@ import (
 	"fmt"
 	"net/http"
 
+	//"github.com/martini-contrib/binding"
 	"github.com/martini-contrib/render"
 	"github.com/martini-contrib/sessions"
 
-	"github.com/gogits/validation"
-
 	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/utils/auth"
+	"github.com/gogits/gogs/modules/auth"
+	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/utils/log"
 )
 
@@ -50,42 +50,42 @@ func SignIn(req *http.Request, r render.Render, session sessions.Session) {
 	})
 }
 
-func SignUp(req *http.Request, r render.Render) {
-	data := map[string]interface{}{"Title": "Sign Up"}
+func SignUp(form auth.RegisterForm, data base.TmplData, req *http.Request, r render.Render) {
+	data["Title"] = "Sign Up"
+
 	if req.Method == "GET" {
 		r.HTML(200, "user/signup", data)
 		return
 	}
 
-	// Front-end should do double check of password.
-	u := &models.User{
-		Name:   req.FormValue("username"),
-		Email:  req.FormValue("email"),
-		Passwd: req.FormValue("passwd"),
-	}
-
-	valid := validation.Validation{}
-	ok, err := valid.Valid(u)
-	if err != nil {
-		log.Error("user.SignUp -> valid user: %v", err)
-		return
-	}
-	if !ok {
-		data["HasError"] = true
-		data["ErrorMsg"] = auth.GenerateErrorMsg(valid.Errors[0])
+	if hasErr, ok := data["HasError"]; ok && hasErr.(bool) {
 		r.HTML(200, "user/signup", data)
 		return
 	}
 
-	// err = models.RegisterUser(u)
-	// if err != nil {
-	// 	r.HTML(200, "base/error", map[string]interface{}{
-	// 		"Error": fmt.Sprintf("%v", err),
-	// 	})
-	// 	return
-	// }
+	//Front-end should do double check of password.
+	u := &models.User{
+		Name:   form.UserName,
+		Email:  form.Email,
+		Passwd: form.Password,
+	}
 
-	// r.Redirect("/")
+	if err := models.RegisterUser(u); err != nil {
+		if err.Error() == models.ErrUserAlreadyExist.Error() {
+			data["HasError"] = true
+			data["Err_Username"] = true
+			data["ErrorMsg"] = "Username has been already taken"
+			auth.AssignForm(form, data)
+			r.HTML(200, "user/signup", data)
+			return
+		}
+
+		log.Error("user.SignUp: %v", err)
+		r.HTML(500, "status/500", nil)
+		return
+	}
+
+	r.Redirect("/user/login")
 }
 
 func Delete(req *http.Request, r render.Render) {

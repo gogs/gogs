@@ -11,7 +11,8 @@
 		"controllers": "routers",
 		"models": "",
 		"others": [
-			"utils"
+			"utils", "modules",
+			"$GOPATH/src/github.com/gogits/binding"
 		]
 	},
 	"cmd_args": [

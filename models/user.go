@@ -15,7 +15,6 @@ import (
 	"github.com/dchest/scrypt"
 
 	"github.com/gogits/gogs/utils"
-	"github.com/gogits/gogs/utils/log"
 )
 
 // User types.
@@ -100,17 +99,15 @@ func RegisterUser(user *User) (err error) {
 	user.LowerName = strings.ToLower(user.Name)
 	user.Avatar = utils.EncodeMd5(user.Email)
 	user.EncodePasswd()
-	_, err = orm.Insert(user)
-	if err != nil {
+	if _, err = orm.Insert(user); err != nil {
 		return err
 	}
 
-	err = os.MkdirAll(UserPath(user.Name), os.ModePerm)
-	if err != nil {
-		_, err2 := orm.Id(user.Id).Delete(&User{})
-		if err2 != nil {
-			log.Error("create userpath %s failed and delete table record faild",
-				user.Name)
+	if err = os.MkdirAll(UserPath(user.Name), os.ModePerm); err != nil {
+
+		if _, err := orm.Id(user.Id).Delete(&User{}); err != nil {
+			return errors.New(fmt.Sprintf(
+				"both create userpath %s and delete table record faild", user.Name))
 		}
 		return err
 	}
