@@ -118,30 +118,43 @@ func SignUp(form auth.RegisterForm, data base.TmplData, req *http.Request, r ren
 		return
 	}
 
+	if form.Password != form.RetypePasswd {
+		data["HasError"] = true
+		data["Err_Password"] = true
+		data["Err_RetypePasswd"] = true
+		data["ErrorMsg"] = "Password and re-type password are not same"
+		auth.AssignForm(form, data)
+	}
+
 	if hasErr, ok := data["HasError"]; ok && hasErr.(bool) {
 		r.HTML(200, "user/signup", data)
 		return
 	}
 
-	//Front-end should do double check of password.
 	u := &models.User{
-		Name:   form.Username,
+		Name:   form.UserName,
 		Email:  form.Email,
 		Passwd: form.Password,
 	}
 
 	if err := models.RegisterUser(u); err != nil {
-		if err.Error() == models.ErrUserAlreadyExist.Error() {
-			data["HasError"] = true
+		data["HasError"] = true
+		auth.AssignForm(form, data)
+
+		switch err.Error() {
+		case models.ErrUserAlreadyExist.Error():
 			data["Err_Username"] = true
 			data["ErrorMsg"] = "Username has been already taken"
-			auth.AssignForm(form, data)
 			r.HTML(200, "user/signup", data)
-			return
+		case models.ErrEmailAlreadyUsed.Error():
+			data["Err_Email"] = true
+			data["ErrorMsg"] = "E-mail address has been already used"
+			r.HTML(200, "user/signup", data)
+		default:
+			data["ErrorMsg"] = err
+			log.Error("user.SignUp: %v", data)
+			r.HTML(500, "base/error", nil)
 		}
-
-		log.Error("user.SignUp: %v", err)
-		r.HTML(500, "status/500", nil)
 		return
 	}
 
