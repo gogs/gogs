@@ -6,15 +6,15 @@
         <div class="form-group">
             <label class="col-md-2 control-label">Owner<strong class="text-danger">*</strong></label>
             <div class="col-md-8">
-                <p class="form-control-static">{{.UserName}}</p>
-                <input type="hidden" value="{{.UserId}}" name="userId"/>
+                <p class="form-control-static">{{.SignedUserName}}</p>
+                <input type="hidden" value="{{.SignedUserId}}" name="userId"/>
             </div>
         </div>
 
         <div class="form-group">
             <label class="col-md-2 control-label">Repository<strong class="text-danger">*</strong></label>
             <div class="col-md-8">
-                <input name="repo" type="text" class="form-control" placeholder="Type your repository name">
+                <input name="repo" type="text" class="form-control" placeholder="Type your repository name" required="required">
                 <span class="help-block">Great repository names are short and memorable. </span>
             </div>
         </div>
