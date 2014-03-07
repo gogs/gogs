@@ -77,6 +77,12 @@ func AddPublicKey(key *PublicKey) error {
 	return nil
 }
 
+func ListPublicKey(userId int64) ([]PublicKey, error) {
+	keys := make([]PublicKey, 0)
+	err := orm.Find(&keys, &PublicKey{OwnerId: userId})
+	return keys, err
+}
+
 func SaveAuthorizedKeyFile(key *PublicKey) error {
 	p := filepath.Join(sshPath, "authorized_keys")
 	f, err := os.OpenFile(p, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0600)
