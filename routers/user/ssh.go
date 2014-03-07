@@ -9,21 +9,22 @@ import (
 	"net/http"
 
 	"github.com/martini-contrib/render"
+	"github.com/martini-contrib/sessions"
 
 	"github.com/gogits/gogs/models"
-	"github.com/martini-contrib/sessions"
+	"github.com/gogits/gogs/modules/auth"
 )
 
 func AddPublicKey(req *http.Request, r render.Render, session sessions.Session) {
 	if req.Method == "GET" {
 		r.HTML(200, "user/publickey_add", map[string]interface{}{
 			"Title":    "Add Public Key",
-			"IsSigned": IsSignedIn(session),
+			"IsSigned": auth.IsSignedIn(session),
 		})
 		return
 	}
 
-	k := &models.PublicKey{OwnerId: SignedInId(session),
+	k := &models.PublicKey{OwnerId: auth.SignedInId(session),
 		Name:    req.FormValue("keyname"),
 		Content: req.FormValue("key_content"),
 	}
@@ -31,7 +32,7 @@ func AddPublicKey(req *http.Request, r render.Render, session sessions.Session) 
 	if err != nil {
 		r.HTML(403, "status/403", map[string]interface{}{
 			"Title":    fmt.Sprintf("%v", err),
-			"IsSigned": IsSignedIn(session),
+			"IsSigned": auth.IsSignedIn(session),
 		})
 	} else {
 		r.HTML(200, "user/publickey_added", map[string]interface{}{})
@@ -39,11 +40,11 @@ func AddPublicKey(req *http.Request, r render.Render, session sessions.Session) 
 }
 
 func ListPublicKey(req *http.Request, r render.Render, session sessions.Session) {
-	keys, err := models.ListPublicKey(SignedInId(session))
+	keys, err := models.ListPublicKey(auth.SignedInId(session))
 	if err != nil {
 		r.HTML(200, "base/error", map[string]interface{}{
 			"Error":    fmt.Sprintf("%v", err),
-			"IsSigned": IsSignedIn(session),
+			"IsSigned": auth.IsSignedIn(session),
 		})
 		return
 	}
@@ -51,6 +52,6 @@ func ListPublicKey(req *http.Request, r render.Render, session sessions.Session)
 	r.HTML(200, "user/publickey_list", map[string]interface{}{
 		"Title":    "repositories",
 		"Keys":     keys,
-		"IsSigned": IsSignedIn(session),
+		"IsSigned": auth.IsSignedIn(session),
 	})
 }

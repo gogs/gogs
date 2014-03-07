@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"net/http"
 
-	//"github.com/martini-contrib/binding"
 	"github.com/martini-contrib/render"
 	"github.com/martini-contrib/sessions"
 
@@ -19,80 +18,23 @@ import (
 )
 
 func Dashboard(r render.Render, data base.TmplData, session sessions.Session) {
-	if !IsSignedIn(session) {
-		// todo : direct to logout
-		r.Redirect("/")
-		return
-	}
-
-	data["IsSigned"] = true
-	data["SignedUserId"] = SignedInId(session)
-	data["SignedUserName"] = SignedInName(session)
-	data["PageIsUserDashboard"] = true
-	data["Avatar"] = SignedInUser(session).Avatar
-
 	data["Title"] = "Dashboard"
+	data["PageIsUserDashboard"] = true
 	r.HTML(200, "user/dashboard", data)
 }
 
 func Profile(r render.Render, data base.TmplData, session sessions.Session) {
 	data["Title"] = "Profile"
 
-	data["IsSigned"] = IsSignedIn(session)
+	data["IsSigned"] = auth.IsSignedIn(session)
 	// TODO: Need to check view self or others.
-	user := SignedInUser(session)
+	user := auth.SignedInUser(session)
 	data["Avatar"] = user.Avatar
 	data["Username"] = user.Name
 	r.HTML(200, "user/profile", data)
 }
 
-func IsSignedIn(session sessions.Session) bool {
-	return SignedInId(session) > 0
-}
-
-func SignedInId(session sessions.Session) int64 {
-	userId := session.Get("userId")
-	if userId == nil {
-		return 0
-	}
-	if s, ok := userId.(int64); ok {
-		return s
-	}
-	return 0
-}
-
-func SignedInName(session sessions.Session) string {
-	userName := session.Get("userName")
-	if userName == nil {
-		return ""
-	}
-	if s, ok := userName.(string); ok {
-		return s
-	}
-	return ""
-}
-
-func SignedInUser(session sessions.Session) *models.User {
-	id := SignedInId(session)
-	if id <= 0 {
-		return nil
-	}
-
-	user, err := models.GetUserById(id)
-	if err != nil {
-		log.Error("user.SignedInUser: %v", err)
-		return nil
-	}
-	return user
-}
-
 func SignIn(form auth.LogInForm, data base.TmplData, req *http.Request, r render.Render, session sessions.Session) {
-	// if logged, do not show login page
-	if IsSignedIn(session) {
-		r.Redirect("/")
-		return
-	}
-
 	data["Title"] = "Log In"
 
 	if req.Method == "GET" {
@@ -128,11 +70,6 @@ func SignIn(form auth.LogInForm, data base.TmplData, req *http.Request, r render
 }
 
 func SignOut(r render.Render, session sessions.Session) {
-	if !IsSignedIn(session) {
-		r.Redirect("/")
-		return
-	}
-
 	session.Delete("userId")
 	session.Delete("userName")
 	r.Redirect("/")

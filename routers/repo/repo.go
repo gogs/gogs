@@ -10,19 +10,21 @@ import (
 	"strconv"
 
 	"github.com/martini-contrib/render"
+	"github.com/martini-contrib/sessions"
 
 	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/routers/user"
-	"github.com/martini-contrib/sessions"
+	"github.com/gogits/gogs/modules/auth"
+	"github.com/gogits/gogs/modules/base"
 )
 
-func Create(req *http.Request, r render.Render, session sessions.Session) {
+func Create(req *http.Request, r render.Render, data base.TmplData, session sessions.Session) {
+	data["Title"] = "Create repository"
+
 	if req.Method == "GET" {
 		r.HTML(200, "repo/create", map[string]interface{}{
-			"Title":    "Create repository",
-			"UserName": user.SignedInName(session),
-			"UserId":   user.SignedInId(session),
-			"IsSigned": user.IsSignedIn(session),
+			"UserName": auth.SignedInName(session),
+			"UserId":   auth.SignedInId(session),
+			"IsSigned": auth.IsSignedIn(session),
 		})
 		return
 	}
@@ -42,7 +44,7 @@ func Create(req *http.Request, r render.Render, session sessions.Session) {
 		if err == nil {
 			r.HTML(200, "repo/created", map[string]interface{}{
 				"RepoName": u.Name + "/" + req.FormValue("name"),
-				"IsSigned": user.IsSignedIn(session),
+				"IsSigned": auth.IsSignedIn(session),
 			})
 			return
 		}
@@ -51,7 +53,7 @@ func Create(req *http.Request, r render.Render, session sessions.Session) {
 	if err != nil {
 		r.HTML(200, "base/error", map[string]interface{}{
 			"Error":    fmt.Sprintf("%v", err),
-			"IsSigned": user.IsSignedIn(session),
+			"IsSigned": auth.IsSignedIn(session),
 		})
 	}
 }
@@ -60,7 +62,7 @@ func Delete(req *http.Request, r render.Render, session sessions.Session) {
 	if req.Method == "GET" {
 		r.HTML(200, "repo/delete", map[string]interface{}{
 			"Title":    "Delete repository",
-			"IsSigned": user.IsSignedIn(session),
+			"IsSigned": auth.IsSignedIn(session),
 		})
 		return
 	}
@@ -70,19 +72,19 @@ func Delete(req *http.Request, r render.Render, session sessions.Session) {
 	if err != nil {
 		r.HTML(200, "base/error", map[string]interface{}{
 			"Error":    fmt.Sprintf("%v", err),
-			"IsSigned": user.IsSignedIn(session),
+			"IsSigned": auth.IsSignedIn(session),
 		})
 	}
 }
 
 func List(req *http.Request, r render.Render, session sessions.Session) {
-	u := user.SignedInUser(session)
+	u := auth.SignedInUser(session)
 	repos, err := models.GetRepositories(u)
 	fmt.Println("repos", repos)
 	if err != nil {
 		r.HTML(200, "base/error", map[string]interface{}{
 			"Error":    fmt.Sprintf("%v", err),
-			"IsSigned": user.IsSignedIn(session),
+			"IsSigned": auth.IsSignedIn(session),
 		})
 		return
 	}
@@ -90,6 +92,6 @@ func List(req *http.Request, r render.Render, session sessions.Session) {
 	r.HTML(200, "repo/list", map[string]interface{}{
 		"Title":    "repositories",
 		"Repos":    repos,
-		"IsSigned": user.IsSignedIn(session),
+		"IsSigned": auth.IsSignedIn(session),
 	})
 }

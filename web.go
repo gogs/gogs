@@ -57,17 +57,17 @@ func runWeb(*cli.Context) {
 	m.Use(sessions.Sessions("my_session", store))
 
 	// Routers.
-	m.Get("/", routers.Home)
-	m.Any("/user/login", binding.BindIgnErr(auth.LogInForm{}), user.SignIn)
-	m.Any("/user/logout", user.SignOut)
-	m.Any("/user/sign_up", binding.BindIgnErr(auth.RegisterForm{}), user.SignUp)
-
+	m.Get("/", auth.SignInRequire(false), routers.Home)
+	m.Any("/user/login", auth.SignOutRequire(), binding.BindIgnErr(auth.LogInForm{}), user.SignIn)
+	m.Any("/user/logout", auth.SignInRequire(true), user.SignOut)
+	m.Any("/user/sign_up", auth.SignOutRequire(), binding.BindIgnErr(auth.RegisterForm{}), user.SignUp)
 	m.Get("/user/profile", user.Profile) // should be /username
-	m.Any("/user/delete", user.Delete)
+	m.Any("/user/delete", auth.SignInRequire(true), user.Delete)
 	m.Any("/user/publickey/add", user.AddPublicKey)
 	m.Any("/user/publickey/list", user.ListPublicKey)
-	m.Any("/repo/create", repo.Create)
-	m.Any("/repo/delete", repo.Delete)
+
+	m.Any("/repo/create", auth.SignInRequire(true), repo.Create)
+	m.Any("/repo/delete", auth.SignInRequire(true), repo.Delete)
 	m.Any("/repo/list", repo.List)
 
 	listenAddr := fmt.Sprintf("%s:%s",

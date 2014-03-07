@@ -5,14 +5,16 @@
 package routers
 
 import (
-	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/routers/user"
 	"github.com/martini-contrib/render"
 	"github.com/martini-contrib/sessions"
+
+	"github.com/gogits/gogs/modules/auth"
+	"github.com/gogits/gogs/modules/base"
+	"github.com/gogits/gogs/routers/user"
 )
 
 func Home(r render.Render, data base.TmplData, session sessions.Session) {
-	if user.IsSignedIn(session) {
+	if auth.IsSignedIn(session) {
 		user.Dashboard(r, data, session)
 		return
 	}
