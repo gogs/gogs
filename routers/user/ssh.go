@@ -13,7 +13,7 @@ import (
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/utils/log"
+	"github.com/gogits/gogs/modules/log"
 )
 
 func AddPublicKey(req *http.Request, data base.TmplData, r render.Render, session sessions.Session) {

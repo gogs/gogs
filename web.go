@@ -18,11 +18,10 @@ import (
 
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/base"
+	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/routers"
 	"github.com/gogits/gogs/routers/repo"
 	"github.com/gogits/gogs/routers/user"
-	"github.com/gogits/gogs/utils"
-	"github.com/gogits/gogs/utils/log"
 )
 
 var CmdWeb = cli.Command{
@@ -39,7 +38,7 @@ gogs web`,
 
 var AppHelpers template.FuncMap = map[string]interface{}{
 	"AppName": func() string {
-		return utils.Cfg.MustValue("", "APP_NAME")
+		return base.Cfg.MustValue("", "APP_NAME")
 	},
 	"AppVer": func() string {
 		return APP_VER
@@ -47,7 +46,7 @@ var AppHelpers template.FuncMap = map[string]interface{}{
 }
 
 func runWeb(*cli.Context) {
-	log.Info("%s %s", utils.Cfg.MustValue("", "APP_NAME"), APP_VER)
+	log.Info("%s %s", base.Cfg.MustValue("", "APP_NAME"), APP_VER)
 
 	m := martini.Classic()
 
@@ -75,8 +74,8 @@ func runWeb(*cli.Context) {
 	m.Any("/repo/list", auth.SignInRequire(false), repo.List)
 
 	listenAddr := fmt.Sprintf("%s:%s",
-		utils.Cfg.MustValue("server", "HTTP_ADDR"),
-		utils.Cfg.MustValue("server", "HTTP_PORT", "3000"))
+		base.Cfg.MustValue("server", "HTTP_ADDR"),
+		base.Cfg.MustValue("server", "HTTP_PORT", "3000"))
 	log.Info("Listen: %s", listenAddr)
 	http.ListenAndServe(listenAddr, m)
 }
