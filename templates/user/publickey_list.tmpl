@@ -1,0 +1,12 @@
+{{template "base/head" .}}
+{{template "base/navbar" .}}
+<div class="container" id="gogs-body">
+<div><a href="/user/publickey/add">Add publick key</a></div>
+	<ul>
+	{{range .Keys}}
+		<li>{{.Name}}</li>
+		<li>{{.Content}}</li>
+	{{end}}
+	</ul>
+</div>
+{{template "base/footer" .}}
