@@ -5,9 +5,9 @@
 package user
 
 import (
-	"fmt"
 	"net/http"
 
+	"github.com/codegangsta/martini"
 	"github.com/martini-contrib/render"
 	"github.com/martini-contrib/sessions"
 
@@ -23,12 +23,18 @@ func Dashboard(r render.Render, data base.TmplData, session sessions.Session) {
 	r.HTML(200, "user/dashboard", data)
 }
 
-func Profile(r render.Render, data base.TmplData, session sessions.Session) {
+func Profile(params martini.Params, r render.Render, data base.TmplData, session sessions.Session) {
 	data["Title"] = "Profile"
 
-	data["IsSigned"] = auth.IsSignedIn(session)
 	// TODO: Need to check view self or others.
-	user := auth.SignedInUser(session)
+	user, err := models.GetUserByName(params["username"])
+	if err != nil {
+		data["ErrorMsg"] = err
+		log.Error("user.Profile: %v", err)
+		r.HTML(200, "base/error", data)
+		return
+	}
+
 	data["Avatar"] = user.Avatar
 	data["Username"] = user.Name
 	r.HTML(200, "user/profile", data)
@@ -59,11 +65,10 @@ func SignIn(form auth.LogInForm, data base.TmplData, req *http.Request, r render
 
 		data["ErrorMsg"] = err
 		log.Error("user.SignIn: %v", data)
-		r.HTML(500, "base/error", nil)
+		r.HTML(200, "base/error", nil)
 		return
 	}
 
-	// login success
 	session.Set("userId", user.Id)
 	session.Set("userName", user.Name)
 	r.Redirect("/")
@@ -119,7 +124,7 @@ func SignUp(form auth.RegisterForm, data base.TmplData, req *http.Request, r ren
 		default:
 			data["ErrorMsg"] = err
 			log.Error("user.SignUp: %v", data)
-			r.HTML(500, "base/error", nil)
+			r.HTML(200, "base/error", nil)
 		}
 		return
 	}
@@ -127,17 +132,18 @@ func SignUp(form auth.RegisterForm, data base.TmplData, req *http.Request, r ren
 	r.Redirect("/user/login")
 }
 
-func Delete(req *http.Request, r render.Render) {
+// TODO: unfinished
+func Delete(data base.TmplData, req *http.Request, r render.Render) {
+	data["Title"] = "Delete user"
+
 	if req.Method == "GET" {
-		r.HTML(200, "user/delete", map[string]interface{}{
-			"Title": "Delete user",
-		})
+		r.HTML(200, "user/delete", data)
 		return
 	}
 
 	u := &models.User{}
 	err := models.DeleteUser(u)
-	r.HTML(403, "status/403", map[string]interface{}{
-		"Title": fmt.Sprintf("%v", err),
-	})
+	data["ErrorMsg"] = err
+	log.Error("user.Delete: %v", data)
+	r.HTML(200, "base/error", nil)
 }

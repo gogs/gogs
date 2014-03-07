@@ -48,9 +48,7 @@ func IsRepositoryExist(user *User, reposName string) (bool, error) {
 	return s.IsDir(), nil
 }
 
-//
-// create a repository for a user or orgnaziation
-//
+// CreateRepository creates a repository for given user or orgnaziation.
 func CreateRepository(user *User, reposName string) (*Repo, error) {
 	f := RepoPath(user.Name, reposName)
 	_, err := git.InitRepository(f, true)

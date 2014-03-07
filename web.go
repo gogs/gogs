@@ -41,6 +41,9 @@ var AppHelpers template.FuncMap = map[string]interface{}{
 	"AppName": func() string {
 		return utils.Cfg.MustValue("", "APP_NAME")
 	},
+	"AppVer": func() string {
+		return APP_VER
+	},
 }
 
 func runWeb(*cli.Context) {
@@ -48,7 +51,7 @@ func runWeb(*cli.Context) {
 
 	m := martini.Classic()
 
-	// Middleware.
+	// Middlewares.
 	m.Use(render.Renderer(render.Options{Funcs: []template.FuncMap{AppHelpers}}))
 	m.Use(base.InitContext())
 
@@ -61,14 +64,15 @@ func runWeb(*cli.Context) {
 	m.Any("/user/login", auth.SignOutRequire(), binding.BindIgnErr(auth.LogInForm{}), user.SignIn)
 	m.Any("/user/logout", auth.SignInRequire(true), user.SignOut)
 	m.Any("/user/sign_up", auth.SignOutRequire(), binding.BindIgnErr(auth.RegisterForm{}), user.SignUp)
-	m.Get("/user/profile", user.Profile) // should be /username
 	m.Any("/user/delete", auth.SignInRequire(true), user.Delete)
-	m.Any("/user/publickey/add", user.AddPublicKey)
-	m.Any("/user/publickey/list", user.ListPublicKey)
+	m.Get("/user/:username", auth.SignInRequire(false), user.Profile)
+
+	m.Any("/user/publickey/add", auth.SignInRequire(true), user.AddPublicKey)
+	m.Any("/user/publickey/list", auth.SignInRequire(true), user.ListPublicKey)
 
 	m.Any("/repo/create", auth.SignInRequire(true), repo.Create)
 	m.Any("/repo/delete", auth.SignInRequire(true), repo.Delete)
-	m.Any("/repo/list", repo.List)
+	m.Any("/repo/list", auth.SignInRequire(false), repo.List)
 
 	listenAddr := fmt.Sprintf("%s:%s",
 		utils.Cfg.MustValue("server", "HTTP_ADDR"),

@@ -5,7 +5,6 @@
 package user
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/martini-contrib/render"
@@ -13,14 +12,15 @@ import (
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
+	"github.com/gogits/gogs/modules/base"
+	"github.com/gogits/gogs/utils/log"
 )
 
-func AddPublicKey(req *http.Request, r render.Render, session sessions.Session) {
+func AddPublicKey(req *http.Request, data base.TmplData, r render.Render, session sessions.Session) {
+	data["Title"] = "Add Public Key"
+
 	if req.Method == "GET" {
-		r.HTML(200, "user/publickey_add", map[string]interface{}{
-			"Title":    "Add Public Key",
-			"IsSigned": auth.IsSignedIn(session),
-		})
+		r.HTML(200, "user/publickey_add", data)
 		return
 	}
 
@@ -30,28 +30,25 @@ func AddPublicKey(req *http.Request, r render.Render, session sessions.Session) 
 	}
 	err := models.AddPublicKey(k)
 	if err != nil {
-		r.HTML(403, "status/403", map[string]interface{}{
-			"Title":    fmt.Sprintf("%v", err),
-			"IsSigned": auth.IsSignedIn(session),
-		})
+		data["ErrorMsg"] = err
+		log.Error("ssh.AddPublicKey: %v", err)
+		r.HTML(200, "base/error", data)
 	} else {
-		r.HTML(200, "user/publickey_added", map[string]interface{}{})
+		r.HTML(200, "user/publickey_added", data)
 	}
 }
 
-func ListPublicKey(req *http.Request, r render.Render, session sessions.Session) {
+func ListPublicKey(req *http.Request, data base.TmplData, r render.Render, session sessions.Session) {
+	data["Title"] = "Public Keys"
+
 	keys, err := models.ListPublicKey(auth.SignedInId(session))
 	if err != nil {
-		r.HTML(200, "base/error", map[string]interface{}{
-			"Error":    fmt.Sprintf("%v", err),
-			"IsSigned": auth.IsSignedIn(session),
-		})
+		data["ErrorMsg"] = err
+		log.Error("ssh.ListPublicKey: %v", err)
+		r.HTML(200, "base/error", data)
 		return
 	}
 
-	r.HTML(200, "user/publickey_list", map[string]interface{}{
-		"Title":    "repositories",
-		"Keys":     keys,
-		"IsSigned": auth.IsSignedIn(session),
-	})
+	data["Keys"] = keys
+	r.HTML(200, "user/publickey_list", data)
 }

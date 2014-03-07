@@ -15,17 +15,14 @@ import (
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/base"
+	"github.com/gogits/gogs/utils/log"
 )
 
 func Create(req *http.Request, r render.Render, data base.TmplData, session sessions.Session) {
 	data["Title"] = "Create repository"
 
 	if req.Method == "GET" {
-		r.HTML(200, "repo/create", map[string]interface{}{
-			"UserName": auth.SignedInName(session),
-			"UserId":   auth.SignedInId(session),
-			"IsSigned": auth.IsSignedIn(session),
-		})
+		r.HTML(200, "repo/create", data)
 		return
 	}
 
@@ -42,56 +39,49 @@ func Create(req *http.Request, r render.Render, data base.TmplData, session sess
 			_, err = models.CreateRepository(u, req.FormValue("name"))
 		}
 		if err == nil {
-			r.HTML(200, "repo/created", map[string]interface{}{
-				"RepoName": u.Name + "/" + req.FormValue("name"),
-				"IsSigned": auth.IsSignedIn(session),
-			})
+			data["RepoName"] = u.Name + "/" + req.FormValue("name")
+			r.HTML(200, "repo/created", data)
 			return
 		}
 	}
 
 	if err != nil {
-		r.HTML(200, "base/error", map[string]interface{}{
-			"Error":    fmt.Sprintf("%v", err),
-			"IsSigned": auth.IsSignedIn(session),
-		})
+		data["ErrorMsg"] = err
+		log.Error("repo.Create: %v", err)
+		r.HTML(200, "base/error", data)
 	}
 }
 
-func Delete(req *http.Request, r render.Render, session sessions.Session) {
+func Delete(req *http.Request, r render.Render, data base.TmplData, session sessions.Session) {
+	data["Title"] = "Delete repository"
+
 	if req.Method == "GET" {
-		r.HTML(200, "repo/delete", map[string]interface{}{
-			"Title":    "Delete repository",
-			"IsSigned": auth.IsSignedIn(session),
-		})
+		r.HTML(200, "repo/delete", data)
 		return
 	}
 
 	u := &models.User{}
 	err := models.DeleteRepository(u, "")
 	if err != nil {
-		r.HTML(200, "base/error", map[string]interface{}{
-			"Error":    fmt.Sprintf("%v", err),
-			"IsSigned": auth.IsSignedIn(session),
-		})
+		data["ErrorMsg"] = err
+		log.Error("repo.Delete: %v", err)
+		r.HTML(200, "base/error", data)
 	}
 }
 
-func List(req *http.Request, r render.Render, session sessions.Session) {
+func List(req *http.Request, r render.Render, data base.TmplData, session sessions.Session) {
+	data["Title"] = "Repositories"
+
 	u := auth.SignedInUser(session)
 	repos, err := models.GetRepositories(u)
 	fmt.Println("repos", repos)
 	if err != nil {
-		r.HTML(200, "base/error", map[string]interface{}{
-			"Error":    fmt.Sprintf("%v", err),
-			"IsSigned": auth.IsSignedIn(session),
-		})
+		data["ErrorMsg"] = err
+		log.Error("repo.List: %v", err)
+		r.HTML(200, "base/error", data)
 		return
 	}
 
-	r.HTML(200, "repo/list", map[string]interface{}{
-		"Title":    "repositories",
-		"Repos":    repos,
-		"IsSigned": auth.IsSignedIn(session),
-	})
+	data["Repos"] = repos
+	r.HTML(200, "repo/list", data)
 }
