@@ -67,6 +67,7 @@ func runWeb(*cli.Context) {
 	m.Any("/user/publickey/add", user.AddPublicKey)
 	m.Any("/repo/create", repo.Create)
 	m.Any("/repo/delete", repo.Delete)
+	m.Any("/repo/list", repo.List)
 
 	listenAddr := fmt.Sprintf("%s:%s",
 		utils.Cfg.MustValue("server", "HTTP_ADDR"),

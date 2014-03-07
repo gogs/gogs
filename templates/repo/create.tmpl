@@ -6,8 +6,8 @@
         <div class="form-group">
             <label class="col-md-2 control-label">Owner<strong class="text-danger">*</strong></label>
             <div class="col-md-8">
-                <p class="form-control-static">Owner-name</p>
-                <input type="hidden" value="1" name="user-id"/>
+                <p class="form-control-static">{{.UserName}}</p>
+                <input type="hidden" value="{{.UserId}}" name="userId"/>
             </div>
         </div>
         <div class="form-group">
