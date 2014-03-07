@@ -14,13 +14,13 @@ import (
 
 	"github.com/dchest/scrypt"
 
-	"github.com/gogits/gogs/utils"
+	"github.com/gogits/gogs/modules/base"
 )
 
 var UserPasswdSalt string
 
 func init() {
-	UserPasswdSalt = utils.Cfg.MustValue("security", "USER_PASSWD_SALT")
+	UserPasswdSalt = base.Cfg.MustValue("security", "USER_PASSWD_SALT")
 }
 
 // User types.
@@ -115,7 +115,7 @@ func RegisterUser(user *User) (err error) {
 	}
 
 	user.LowerName = strings.ToLower(user.Name)
-	user.Avatar = utils.EncodeMd5(user.Email)
+	user.Avatar = base.EncodeMd5(user.Email)
 	if err = user.EncodePasswd(); err != nil {
 		return err
 	}

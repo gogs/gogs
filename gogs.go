@@ -11,7 +11,7 @@ import (
 	"runtime"
 
 	"github.com/codegangsta/cli"
-	"github.com/gogits/gogs/utils"
+	"github.com/gogits/gogs/modules/base"
 )
 
 // +build go1.1
@@ -31,12 +31,12 @@ func checkRunUser() bool {
 		// TODO: log
 		return false
 	}
-	return user.Username == utils.Cfg.MustValue("", "RUN_USER")
+	return user.Username == base.Cfg.MustValue("", "RUN_USER")
 }
 
 func main() {
 	/*if !checkRunUser() {
-		println("The command should be run as", utils.Cfg.MustValue("", "RUN_USER"))
+		println("The command should be run as", base.Cfg.MustValue("", "RUN_USER"))
 		return
 	}*/
 

@@ -14,7 +14,7 @@ import (
 	"github.com/gogits/binding"
 
 	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/utils/log"
+	"github.com/gogits/gogs/modules/log"
 )
 
 type Form interface {

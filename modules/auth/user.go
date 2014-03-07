@@ -11,7 +11,7 @@ import (
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/utils/log"
+	"github.com/gogits/gogs/modules/log"
 )
 
 func SignedInId(session sessions.Session) int64 {

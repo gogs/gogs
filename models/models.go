@@ -12,7 +12,7 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/lunny/xorm"
 
-	"github.com/gogits/gogs/utils"
+	"github.com/gogits/gogs/modules/base"
 )
 
 var (
@@ -41,11 +41,11 @@ type Comment struct {
 }
 
 func setEngine() {
-	dbType := utils.Cfg.MustValue("database", "DB_TYPE")
-	dbHost := utils.Cfg.MustValue("database", "HOST")
-	dbName := utils.Cfg.MustValue("database", "NAME")
-	dbUser := utils.Cfg.MustValue("database", "USER")
-	dbPwd := utils.Cfg.MustValue("database", "PASSWD")
+	dbType := base.Cfg.MustValue("database", "DB_TYPE")
+	dbHost := base.Cfg.MustValue("database", "HOST")
+	dbName := base.Cfg.MustValue("database", "NAME")
+	dbUser := base.Cfg.MustValue("database", "USER")
+	dbPwd := base.Cfg.MustValue("database", "PASSWD")
 
 	uname, err := user.Current()
 	if err != nil {
@@ -54,7 +54,7 @@ func setEngine() {
 	}
 
 	if uname.Username == "jiahuachen" {
-		dbPwd = utils.Cfg.MustValue("database", "PASSWD_jiahua")
+		dbPwd = base.Cfg.MustValue("database", "PASSWD_jiahua")
 	}
 
 	switch dbType {
@@ -82,9 +82,9 @@ func setEngine() {
 
 	//log.Trace("Initialized database -> %s", dbName)
 
-	RepoRootPath = utils.Cfg.MustValue("repository", "ROOT")
+	RepoRootPath = base.Cfg.MustValue("repository", "ROOT")
 	if uname.Username == "jiahuachen" {
-		RepoRootPath = utils.Cfg.MustValue("repository", "ROOT_jiahuachen")
+		RepoRootPath = base.Cfg.MustValue("repository", "ROOT_jiahuachen")
 	}
 }
 
