@@ -3,6 +3,7 @@
 <div class="container" id="gogs-body">
     <form action="/repo/create" method="post" class="form-horizontal gogs-card" id="gogs-repo-create">
         <h3>Create New Repository</h3>
+        <div class="alert alert-danger form-error{{if .HasError}}{{else}} hidden{{end}}">{{.ErrorMsg}}</div>
         <div class="form-group">
             <label class="col-md-2 control-label">Owner<strong class="text-danger">*</strong></label>
             <div class="col-md-8">
@@ -11,10 +12,10 @@
             </div>
         </div>
 
-        <div class="form-group">
+        <div class="form-group {{if .Err_RepoName}}has-error has-feedback{{end}}">
             <label class="col-md-2 control-label">Repository<strong class="text-danger">*</strong></label>
             <div class="col-md-8">
-                <input name="repo" type="text" class="form-control" placeholder="Type your repository name" required="required">
+                <input name="repo" type="text" class="form-control" placeholder="Type your repository name" value="{{.repo}}" required="required">
                 <span class="help-block">Great repository names are short and memorable. </span>
             </div>
         </div>
@@ -23,13 +24,14 @@
             <label class="col-md-2 control-label">Visibility<strong class="text-danger">*</strong></label>
             <div class="col-md-8">
                 <p class="form-control-static">Public</p>
+                <input type="hidden" value="public" name="visibility"/>
             </div>
         </div>
 
-        <div class="form-group">
+        <div class="form-group {{if .Err_Description}}has-error has-feedback{{end}}">
             <label class="col-md-2 control-label">Description</label>
             <div class="col-md-8">
-                <textarea name="desc" class="form-control" placeholder="Type your repository name"></textarea>
+                <textarea name="desc" class="form-control" placeholder="Type your repository description">{{.desc}}</textarea>
             </div>
         </div>
 
@@ -51,7 +53,7 @@
             <div class="col-md-8 col-md-offset-2">
                 <div class="checkbox">
                     <label>
-                        <input type="checkbox" value="true" name="init-md">
+                        <input type="checkbox" value="" name="initReadme">
                         <strong>Initialize this repository with a README</strong>
                     </label>
                 </div>
