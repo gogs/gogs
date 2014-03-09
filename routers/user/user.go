@@ -64,8 +64,8 @@ func SignIn(form auth.LogInForm, data base.TmplData, req *http.Request, r render
 		}
 
 		data["ErrorMsg"] = err
-		log.Error("user.SignIn: %v", data)
-		r.HTML(200, "base/error", nil)
+		log.Error("user.SignIn: %v", err)
+		r.HTML(200, "base/error", data)
 		return
 	}
 

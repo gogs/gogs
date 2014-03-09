@@ -17,6 +17,7 @@ import (
 	"github.com/gogits/gogs/modules/log"
 )
 
+// Web form interface.
 type Form interface {
 	Name(field string) string
 }

@@ -7,7 +7,6 @@ package repo
 import (
 	"fmt"
 	"net/http"
-	"strconv"
 
 	"github.com/martini-contrib/render"
 	"github.com/martini-contrib/sessions"
@@ -18,7 +17,7 @@ import (
 	"github.com/gogits/gogs/modules/log"
 )
 
-func Create(req *http.Request, r render.Render, data base.TmplData, session sessions.Session) {
+func Create(form auth.CreateRepoForm, req *http.Request, r render.Render, data base.TmplData, session sessions.Session) {
 	data["Title"] = "Create repository"
 
 	if req.Method == "GET" {
@@ -26,30 +25,37 @@ func Create(req *http.Request, r render.Render, data base.TmplData, session sess
 		return
 	}
 
+	if hasErr, ok := data["HasError"]; ok && hasErr.(bool) {
+		r.HTML(200, "repo/create", data)
+		return
+	}
+
 	// TODO: access check
 
-	id, err := strconv.ParseInt(req.FormValue("userId"), 10, 64)
-	if err == nil {
-		var u *models.User
-		u, err = models.GetUserById(id)
-		if u == nil {
-			err = models.ErrUserNotExist
-		}
-		if err == nil {
-			_, err = models.CreateRepository(u, req.FormValue("name"))
-		}
-		if err == nil {
-			data["RepoName"] = u.Name + "/" + req.FormValue("name")
-			r.HTML(200, "repo/created", data)
+	user, err := models.GetUserById(form.UserId)
+	if err != nil {
+		if err.Error() == models.ErrUserNotExist.Error() {
+			data["HasError"] = true
+			data["ErrorMsg"] = "User does not exist"
+			auth.AssignForm(form, data)
+			r.HTML(200, "repo/create", data)
 			return
 		}
 	}
 
-	if err != nil {
-		data["ErrorMsg"] = err
-		log.Error("repo.Create: %v", err)
-		r.HTML(200, "base/error", data)
+	if err == nil {
+		// TODO: init description and readme
+		if _, err = models.CreateRepository(user, form.RepoName); err == nil {
+			data["RepoName"] = user.Name + "/" + form.RepoName
+			r.HTML(200, "repo/created", data)
+			fmt.Println("good!!!!")
+			return
+		}
 	}
+
+	data["ErrorMsg"] = err
+	log.Error("repo.Create: %v", err)
+	r.HTML(200, "base/error", data)
 }
 
 func Delete(req *http.Request, r render.Render, data base.TmplData, session sessions.Session) {
