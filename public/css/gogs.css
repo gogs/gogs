@@ -32,6 +32,10 @@ body {
     background-color: transparent;
 }
 
+.btn{
+    cursor: pointer;
+}
+
 /* gogits nav header */
 .gogs-masthead {
     background-color: #428bca;
