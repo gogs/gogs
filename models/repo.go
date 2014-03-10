@@ -5,6 +5,7 @@
 package models
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -15,17 +16,19 @@ import (
 	"github.com/gogits/gogs/modules/log"
 )
 
-type Repo struct {
-	Id        int64
-	OwnerId   int64 `xorm:"unique(s)"`
-	ForkId    int64
-	LowerName string `xorm:"unique(s) index not null"`
-	Name      string `xorm:"index not null"`
-	NumWatchs int
-	NumStars  int
-	NumForks  int
-	Created   time.Time `xorm:"created"`
-	Updated   time.Time `xorm:"updated"`
+type Repository struct {
+	Id          int64
+	OwnerId     int64 `xorm:"unique(s)"`
+	ForkId      int64
+	LowerName   string `xorm:"unique(s) index not null"`
+	Name        string `xorm:"index not null"`
+	Description string
+	Private     bool
+	NumWatchs   int
+	NumStars    int
+	NumForks    int
+	Created     time.Time `xorm:"created"`
+	Updated     time.Time `xorm:"updated"`
 }
 
 type Star struct {
@@ -35,14 +38,18 @@ type Star struct {
 	Created time.Time `xorm:"created"`
 }
 
+var (
+	ErrRepoAlreadyExist = errors.New("Repository already exist")
+)
+
 // check if repository is exist
-func IsRepositoryExist(user *User, reposName string) (bool, error) {
-	repo := Repo{OwnerId: user.Id}
-	has, err := orm.Where("lower_name = ?", strings.ToLower(reposName)).Get(&repo)
+func IsRepositoryExist(user *User, repoName string) (bool, error) {
+	repo := Repository{OwnerId: user.Id}
+	has, err := orm.Where("lower_name = ?", strings.ToLower(repoName)).Get(&repo)
 	if err != nil {
 		return has, err
 	}
-	s, err := os.Stat(RepoPath(user.Name, reposName))
+	s, err := os.Stat(RepoPath(user.Name, repoName))
 	if err != nil {
 		return false, nil
 	}
@@ -50,64 +57,74 @@ func IsRepositoryExist(user *User, reposName string) (bool, error) {
 }
 
 // CreateRepository creates a repository for given user or orgnaziation.
-func CreateRepository(user *User, reposName string) (*Repo, error) {
-	f := RepoPath(user.Name, reposName)
-	_, err := git.InitRepository(f, true)
+func CreateRepository(user *User, repoName, desc string, private bool) (*Repository, error) {
+	isExist, err := IsRepositoryExist(user, repoName)
 	if err != nil {
+		return nil, err
+	} else if isExist {
+		return nil, ErrRepoAlreadyExist
+	}
+
+	f := RepoPath(user.Name, repoName)
+	if _, err = git.InitRepository(f, true); err != nil {
 		return nil, err
 	}
 
-	repo := Repo{OwnerId: user.Id, Name: reposName, LowerName: strings.ToLower(reposName)}
+	repo := &Repository{
+		OwnerId:     user.Id,
+		Name:        repoName,
+		LowerName:   strings.ToLower(repoName),
+		Description: desc,
+		Private:     private,
+	}
 	session := orm.NewSession()
 	defer session.Close()
 	session.Begin()
-	_, err = session.Insert(&repo)
-	if err != nil {
-		err2 := os.RemoveAll(f)
-		if err2 != nil {
-			log.Error("delete repo directory %s/%s failed", user.Name, reposName)
+
+	if _, err = session.Insert(repo); err != nil {
+		if err2 := os.RemoveAll(f); err2 != nil {
+			log.Error("delete repo directory %s/%s failed", user.Name, repoName)
 		}
 		session.Rollback()
 		return nil, err
 	}
-	access := Access{UserName: user.Name,
+
+	// TODO: RemoveAll may fail due to not root access.
+	access := Access{
+		UserName: user.Name,
 		RepoName: repo.Name,
 		Mode:     AU_WRITABLE,
 	}
-	_, err = session.Insert(&access)
-	if err != nil {
-		err2 := os.RemoveAll(f)
-		if err2 != nil {
-			log.Error("delete repo directory %s/%s failed", user.Name, reposName)
+	if _, err = session.Insert(&access); err != nil {
+		if err2 := os.RemoveAll(f); err2 != nil {
+			log.Error("delete repo directory %s/%s failed", user.Name, repoName)
 		}
 		session.Rollback()
 		return nil, err
 	}
-	_, err = session.Exec("update user set num_repos = num_repos + 1 where id = ?", user.Id)
-	if err != nil {
-		err2 := os.RemoveAll(f)
-		if err2 != nil {
-			log.Error("delete repo directory %s/%s failed", user.Name, reposName)
+
+	if _, err = session.Exec("update user set num_repos = num_repos + 1 where id = ?", user.Id); err != nil {
+		if err2 := os.RemoveAll(f); err2 != nil {
+			log.Error("delete repo directory %s/%s failed", user.Name, repoName)
 		}
 		session.Rollback()
 		return nil, err
 	}
-	err = session.Commit()
-	if err != nil {
-		err2 := os.RemoveAll(f)
-		if err2 != nil {
-			log.Error("delete repo directory %s/%s failed", user.Name, reposName)
+
+	if err = session.Commit(); err != nil {
+		if err2 := os.RemoveAll(f); err2 != nil {
+			log.Error("delete repo directory %s/%s failed", user.Name, repoName)
 		}
 		session.Rollback()
 		return nil, err
 	}
-	return &repo, nil
+	return repo, nil
 }
 
 // GetRepositories returns the list of repositories of given user.
-func GetRepositories(user *User) ([]Repo, error) {
-	repos := make([]Repo, 0)
-	err := orm.Find(&repos, &Repo{OwnerId: user.Id})
+func GetRepositories(user *User) ([]Repository, error) {
+	repos := make([]Repository, 0, 10)
+	err := orm.Find(&repos, &Repository{OwnerId: user.Id})
 	return repos, err
 }
 
@@ -138,7 +155,7 @@ func RepoPath(userName, repoName string) string {
 // DeleteRepository deletes a repository for a user or orgnaztion.
 func DeleteRepository(user *User, reposName string) (err error) {
 	session := orm.NewSession()
-	if _, err = session.Delete(&Repo{OwnerId: user.Id, Name: reposName}); err != nil {
+	if _, err = session.Delete(&Repository{OwnerId: user.Id, Name: reposName}); err != nil {
 		session.Rollback()
 		return err
 	}
