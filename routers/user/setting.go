@@ -12,6 +12,7 @@ import (
 	"github.com/martini-contrib/render"
 	"github.com/martini-contrib/sessions"
 	"net/http"
+	"strconv"
 )
 
 func Setting(r render.Render, data base.TmplData, session sessions.Session) {
@@ -21,6 +22,37 @@ func Setting(r render.Render, data base.TmplData, session sessions.Session) {
 }
 
 func SettingSSHKeys(r render.Render, data base.TmplData, req *http.Request, session sessions.Session) {
+	// del ssh ky
+	if req.Method == "DELETE" || req.FormValue("_method") == "DELETE" {
+		id, err := strconv.ParseInt(req.FormValue("id"), 10, 64)
+		if err != nil {
+			data["ErrorMsg"] = err
+			log.Error("ssh.DelPublicKey: %v", err)
+			r.JSON(200, map[string]interface{}{
+				"ok":  false,
+				"err": err.Error(),
+			})
+			return
+		}
+		k := &models.PublicKey{
+			Id:      id,
+			OwnerId: auth.SignedInId(session),
+		}
+		err = models.DeletePublicKey(k)
+		if err != nil {
+			data["ErrorMsg"] = err
+			log.Error("ssh.DelPublicKey: %v", err)
+			r.JSON(200, map[string]interface{}{
+				"ok":  false,
+				"err": err.Error(),
+			})
+		} else {
+			r.JSON(200, map[string]interface{}{
+				"ok": true,
+			})
+		}
+		return
+	}
 	// add ssh key
 	if req.Method == "POST" {
 		k := &models.PublicKey{OwnerId: auth.SignedInId(session),

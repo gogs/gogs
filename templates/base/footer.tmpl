@@ -1,7 +1,8 @@
 <script>
     $(function(){
-        initCore();
-        {{if .PageIsSignUp}}initRegister();{{end}}
+        initCore();{{if .PageIsSignUp}}
+        initRegister();{{end}}{{if .PageIsUserSetting}}
+        initUserSetting();{{end}}
     });
 </script>
 </body>

@@ -30,7 +30,8 @@ var Gogits = {
             return;
         }
         $.each(modals, function (i, item) {
-            $(item).modal("hide");
+            var hide = $(item).data('modal');
+            $(item).modal(hide ? hide : "hide");
         });
     };
     Gogits.initTooltips = function () {
@@ -39,6 +40,30 @@ var Gogits = {
             //container: "body"
         });
     };
+    Gogits.initTabs = function () {
+        var $tabs = $('[data-toggle=tab]');
+        $tabs.tab("show");
+        $tabs.find("li:eq(" + index + ") a").tab("show");
+    }
+})(jQuery);
+
+// ajax utils
+(function ($) {
+    Gogits.ajaxDelete = function (url, data, success) {
+        data = data || {};
+        data._method = "DELETE";
+        $.ajax({
+            url: url,
+            data: data,
+            method: "POST",
+            dataType: "json",
+            success: function (json) {
+                if (success) {
+                    success(json);
+                }
+            }
+        })
+    }
 })(jQuery);
 
 
@@ -71,5 +96,19 @@ function initRegister() {
                 }
             }
         });
+    });
+}
+
+function initUserSetting(){
+    $('#gogs-ssh-keys').on("click",".delete",function(){
+        var $this = $(this);
+        Gogits.ajaxDelete("",{"id":$this.data("del")},function(json){
+            if(json.ok){
+                $this.parent().remove();
+            }else{
+                alert(json.err);
+            }
+        });
+        return false;
     });
 }
