@@ -28,6 +28,10 @@ body {
     margin: 0 .5em;
 }
 
+.list-group .list-group-item {
+    background-color: transparent;
+}
+
 /* gogits nav header */
 .gogs-masthead {
     background-color: #428bca;
@@ -222,4 +226,74 @@ body {
 
 #gogs-repo-create textarea[name=desc] {
     height: 8em;
+}
+
+/* gogits user setting */
+
+#gogs-user-setting-nav > h4, #gogs-user-setting-container > h4 ,#gogs-ssh-keys > h4{
+    padding-bottom: 18px;
+    margin-bottom: 18px;
+    border-bottom: 1px solid #CCC;
+}
+
+#gogs-user-setting-nav .list-group .list-group-item a {
+    margin-left: 0;
+    padding: .6em;
+    font-size: 14px;
+    color: #3B73AF;
+}
+
+#gogs-user-setting-nav .list-group .list-group-item {
+    background-color: transparent;
+}
+
+#gogs-user-setting-nav .list-group .list-group-item-success a {
+    font-weight: bold;
+    color: #444;
+}
+
+/* gogits user ssh keys */
+
+#gogs-ssh-keys .list-group-item {
+    line-height: 48px;
+    border-bottom: 1px solid #DDD;
+}
+
+#gogs-ssh-keys .list-group-item:after{
+    clear: both;
+}
+
+#gogs-ssh-keys .list-group-item:hover a.delete{
+    display: block;
+}
+
+#gogs-ssh-keys .name {
+    font-size: 14px;
+    font-weight: bold;
+}
+
+#gogs-ssh-keys .list-group-item a.delete {
+    float: right;
+    color: white;
+    cursor: pointer;
+    margin-top: 10px;
+    border-radius: 3px;
+    display: none;
+}
+
+#gogs-ssh-keys .print {
+    padding-left: 1em;
+    color: #888;
+}
+
+#gogs-ssh-add {
+    display: inline-block;
+    color: white;
+    cursor: pointer;
+    margin-left: 0;
+    border-radius: 3px;
+}
+
+#gogs-ssh-form textarea{
+    height: 16em;
 }
