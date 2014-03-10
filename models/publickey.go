@@ -77,6 +77,11 @@ func AddPublicKey(key *PublicKey) error {
 	return nil
 }
 
+func DeletePublicKey(key *PublicKey) error {
+	_, err := orm.Delete(key)
+	return err
+}
+
 func ListPublicKey(userId int64) ([]PublicKey, error) {
 	keys := make([]PublicKey, 0)
 	err := orm.Find(&keys, &PublicKey{OwnerId: userId})
