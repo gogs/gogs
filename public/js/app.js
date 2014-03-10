@@ -3,12 +3,7 @@ var Gogits = {
 };
 
 (function ($) {
-    Gogits.showTooltips = function () {
-        $("body").tooltip({
-            selector: "[data-toggle=tooltip]"
-            //container: "body"
-        });
-    };
+
     Gogits.showTab = function (selector, index) {
         if (!index) {
             index = 0;
@@ -27,11 +22,29 @@ var Gogits = {
         };
         $form.validate(options);
     };
+
+    // ----- init elements
+    Gogits.initModals = function () {
+        var modals = $("[data-toggle=modal]");
+        if (modals.length < 1) {
+            return;
+        }
+        $.each(modals, function (i, item) {
+            $(item).modal("hide");
+        });
+    };
+    Gogits.initTooltips = function () {
+        $("body").tooltip({
+            selector: "[data-toggle=tooltip]"
+            //container: "body"
+        });
+    };
 })(jQuery);
 
 
 function initCore() {
-    Gogits.showTooltips();
+    Gogits.initTooltips();
+    Gogits.initModals();
 }
 
 function initRegister() {

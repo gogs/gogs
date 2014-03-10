@@ -1,0 +1,62 @@
+{{template "base/head" .}}
+{{template "base/navbar" .}}
+<div id="gogs-body" class="container">
+    <div id="gogs-user-setting-nav" class="col-md-3">
+        <h4>Account Setting</h4>
+        <ul class="list-group">
+            <li class="list-group-item"><a href="/user/setting">Account Profile</a></li>
+            <li class="list-group-item"><a href="#">Emails and Password</a></li>
+            <li class="list-group-item"><a href="#">Notifications</a></li>
+            <li class="list-group-item list-group-item-success"><a href="/user/setting/ssh/">SSH Keys</a></li>
+            <li class="list-group-item"><a href="#">Security</a></li>
+            <li class="list-group-item"><a href="#">Kill Myself</a></li>
+        </ul>
+    </div>
+    <div id="gogs-user-setting-container" class="col-md-9">
+        <div id="gogs-ssh-keys">
+            <h4>SSH Keys</h4>{{if .AddSSHKeySuccess}}
+            <p class="alert alert-success">New SSH Key is added !</p>{{end}}
+            <ul id="gogs-ssh-keys-list" class="list-group">
+                <li class="list-group-item"><span class="name">SSH Key's name</span></li>{{range .Keys}}
+                <li class="list-group-item">
+                    <span class="name">{{.Name}}</span>
+                    <span class="print">(print code)</span>
+                    <a href="#" class="btn btn-link btn-danger right delete" rel="{{.Id}}" data-del="{{.Id}}">Delete</a>
+                </li>{{end}}
+                <li class="list-group-item">
+                    <a class="btn btn-link btn-primary" href="#ssh-add-modal" id="gogs-ssh-add" data-toggle="modal">Add SSH Key</a>
+                </li>
+            </ul>
+            <div class="modal fade" id="ssh-add-modal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+                <div class="modal-dialog">
+                    <form class="modal-content form-horizontal" id="gogs-ssh-form" method="post" action="/user/setting/ssh/">
+                        <div class="modal-header">
+                            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                            <h4 class="modal-title" id="myModalLabel">Add SSH Key</h4>
+                        </div>
+                        <div class="modal-body">
+                            <div class="form-group">
+                                <label class="col-md-3 control-label">The name of key<strong class="text-danger">*</strong></label>
+                                <div class="col-md-8">
+                                    <input name="keyname" class="form-control" placeholder="Type your preferred name" required="required">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="col-md-3 control-label">SSH Key<strong class="text-danger">*</strong></label>
+                                <div class="col-md-8">
+                                    <textarea name="key_content" class="form-control" placeholder="Type your key content" required="required"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                            <button type="submit" class="btn btn-primary">Save changes</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            <p><strong>Need help?</strong> Check out our guide to <a href="https://help.github.com/articles/generating-ssh-keys" target="_blank">generating SSH keys</a> or troubleshoot <a href="https://help.github.com/ssh-issues/" target="_blank">common SSH Problems</a></p>
+        </div>
+    </div>
+</div>
+{{template "base/footer" .}}
