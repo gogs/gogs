@@ -90,7 +90,7 @@ func setEngine() {
 
 func init() {
 	setEngine()
-	err := orm.Sync(new(User), new(PublicKey), new(Repo), new(Access))
+	err := orm.Sync(new(User), new(PublicKey), new(Repository), new(Access))
 	if err != nil {
 		fmt.Printf("sync database struct error: %s\n", err)
 		os.Exit(2)

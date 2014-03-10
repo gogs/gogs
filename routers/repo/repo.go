@@ -42,15 +42,27 @@ func Create(form auth.CreateRepoForm, req *http.Request, r render.Render, data b
 			return
 		}
 	}
-
+	fmt.Println(models.RepoPath(user.Name, form.RepoName))
 	if err == nil {
-		// TODO: init description and readme
-		if _, err = models.CreateRepository(user, form.RepoName); err == nil {
+		if _, err = models.CreateRepository(user,
+			form.RepoName, form.Description, form.Visibility == "private"); err == nil {
+			// Initialize README.
+			if form.InitReadme == "true" {
+				// TODO
+			}
+			// TODO: init .gitignore file
 			data["RepoName"] = user.Name + "/" + form.RepoName
 			r.HTML(200, "repo/created", data)
-			fmt.Println("good!!!!")
 			return
 		}
+	}
+
+	if err.Error() == models.ErrRepoAlreadyExist.Error() {
+		data["HasError"] = true
+		data["ErrorMsg"] = "Repository name has already been used"
+		auth.AssignForm(form, data)
+		r.HTML(200, "repo/create", data)
+		return
 	}
 
 	data["ErrorMsg"] = err
