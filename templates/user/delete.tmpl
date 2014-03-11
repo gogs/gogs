@@ -1,12 +1,34 @@
 {{template "base/head" .}}
 {{template "base/navbar" .}}
-<div class="container" id="gogs-body">
-	<form action="/user/delete" method="post" class="form-horizontal">
-		<div class="form-group">
-		    <div class="col-md-offset-4 col-md-3">
-		    	<button type="submit" class="btn btn-danger">Delete user</button>
-		    </div>
-		</div>
-	</form>
+<div id="gogs-body" class="container">
+    <div id="gogs-user-setting-nav" class="col-md-3">
+        <h4>Account Setting</h4>
+        <ul class="list-group">
+            <li class="list-group-item"><a href="/user/setting">Account Profile</a></li>
+            <li class="list-group-item"><a href="#">Emails and Password</a></li>
+            <li class="list-group-item"><a href="#">Notifications</a></li>
+            <li class="list-group-item"><a href="/user/setting/ssh/">SSH Keys</a></li>
+            <li class="list-group-item"><a href="#">Security</a></li>
+            <li class="list-group-item list-group-item-success"><a href="/user/delete">Delete Account</a></li>
+        </ul>
+    </div>
+    <div id="gogs-user-setting-container" class="col-md-9">
+        <form action="/user/delete" method="post" class="form-horizontal" id="gogs-user-delete">
+            <h4>Delete Account</h4>
+            <p class="alert alert-danger">Deleting your account is permanent. Sorry to see you go, if you have any feedback you can contact us.</p>
+            <div class="form-group">
+                <div class="col-md-3">
+                    <button type="submit" class="btn btn-danger btn-lg">Delete Account</button>
+                </div>
+            </div>
+        </form>
+    </div>
 </div>
+<script>
+    $(function(){
+       $('#gogs-user-delete').on('submit',function(){
+           return confirm("Are you sure ?");
+       })
+    });
+</script>
 {{template "base/footer" .}}

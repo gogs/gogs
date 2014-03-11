@@ -7,7 +7,6 @@ package models
 import (
 	"fmt"
 	"os"
-	"os/user"
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/lunny/xorm"
@@ -47,16 +46,7 @@ func setEngine() {
 	dbUser := base.Cfg.MustValue("database", "USER")
 	dbPwd := base.Cfg.MustValue("database", "PASSWD")
 
-	uname, err := user.Current()
-	if err != nil {
-		fmt.Printf("models.init -> fail to get user: %s\n", err)
-		os.Exit(2)
-	}
-
-	if uname.Username == "jiahuachen" {
-		dbPwd = base.Cfg.MustValue("database", "PASSWD_jiahua")
-	}
-
+	var err error
 	switch dbType {
 	case "mysql":
 		orm, err = xorm.NewEngine("mysql", fmt.Sprintf("%v:%v@%v/%v?charset=utf8",
@@ -83,9 +73,6 @@ func setEngine() {
 	//log.Trace("Initialized database -> %s", dbName)
 
 	RepoRootPath = base.Cfg.MustValue("repository", "ROOT")
-	if uname.Username == "jiahuachen" {
-		RepoRootPath = base.Cfg.MustValue("repository", "ROOT_jiahuachen")
-	}
 }
 
 func init() {

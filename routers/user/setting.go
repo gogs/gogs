@@ -56,6 +56,7 @@ func SettingSSHKeys(form auth.AddSSHKeyForm, r render.Render, data base.TmplData
 				"ok": true,
 			})
 		}
+		return
 	}
 
 	// Add new SSH key.

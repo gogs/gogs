@@ -134,7 +134,7 @@ func SignUp(form auth.RegisterForm, data base.TmplData, req *http.Request, r ren
 
 // TODO: unfinished
 func Delete(data base.TmplData, req *http.Request, r render.Render) {
-	data["Title"] = "Delete user"
+	data["Title"] = "Delete Account"
 
 	if req.Method == "GET" {
 		r.HTML(200, "user/delete", data)
