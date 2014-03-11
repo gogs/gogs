@@ -36,7 +36,7 @@ body {
     cursor: pointer;
 }
 
-.panel-default .panel-heading{
+.panel-default .panel-heading {
     background-color: #FAFAFA;
     border-bottom: 1px solid #DDD;
     font-weight: bold;
@@ -137,7 +137,7 @@ body {
     margin-top: 50px;
 }
 
-#gogs-body-nav{
+#gogs-body-nav {
     margin-top: 52px;
     margin-bottom: -50px;
     background-color: #FFF;
@@ -145,23 +145,23 @@ body {
     height: 66px
 }
 
-#gogs-body-nav .nav{
+#gogs-body-nav .nav {
     font-size: 14px;
     margin-top: 12px;
 }
 
-#gogs-body-nav .nav-pills li a{
+#gogs-body-nav .nav-pills li a {
     color: #444;
 }
 
-#gogs-body-nav .nav-pills li.active a{
+#gogs-body-nav .nav-pills li.active a {
     font-weight: bold;
     border-bottom: 2px solid #d26911;
     background-color: transparent;
     color: #444;
 }
 
-#gogs-body-nav .nav-pills li:hover a{
+#gogs-body-nav .nav-pills li:hover a {
     background-color: transparent;
     text-decoration: underline;
 }
@@ -336,12 +336,44 @@ body {
 #gogs-ssh-form textarea {
     height: 16em;
 }
+
 /* #gogs-feed */
 
-#gogs-feed-left{
+#gogs-feed-left {
     padding-left: 0;
 }
 
-#gogs-feed-right .repo-panel .panel-heading .btn{
+#gogs-feed-right .repo-panel .panel-heading .btn {
     margin-top: -4px;
+}
+
+#gogs-feed-right .repo-panel .panel-body {
+    padding: 0;
+}
+
+#gogs-feed-right .repo-panel .list-group {
+    margin-bottom: 0;
+}
+
+#gogs-feed-right .repo-panel .list-group-item a {
+    display: inline-block;
+    margin-left: 0;
+    background-color: transparent;
+    padding-left: 0;
+    font-weight: bold;
+}
+
+#gogs-feed-right .repo-panel .list-group-item .fa {
+    color: #666;
+}
+
+#gogs-feed-right .repo-panel .list-group-item {
+    font-size: 14px;
+    line-height: 32px;
+    border-bottom: 1px solid #DDD;
+    padding-left: 15px;
+}
+
+#gogs-feed-right .repo-panel .list-group-item:hover {
+    background-color: rgba(65, 131, 196, 0.1);
 }
