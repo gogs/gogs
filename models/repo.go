@@ -7,6 +7,7 @@ package models
 import (
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -58,7 +59,7 @@ func IsRepositoryExist(user *User, repoName string) (bool, error) {
 }
 
 // CreateRepository creates a repository for given user or orgnaziation.
-func CreateRepository(user *User, repoName, desc string, private bool) (*Repository, error) {
+func CreateRepository(user *User, repoName, desc string, private bool, initReadme bool, repoLang string) (*Repository, error) {
 	isExist, err := IsRepositoryExist(user, repoName)
 	if err != nil {
 		return nil, err
@@ -67,10 +68,10 @@ func CreateRepository(user *User, repoName, desc string, private bool) (*Reposit
 	}
 
 	f := RepoPath(user.Name, repoName)
-	if _, err = git.InitRepository(f, true); err != nil {
+	err = initRepository(f, initReadme, repoLang)
+	if err != nil {
 		return nil, err
 	}
-
 	repo := &Repository{
 		OwnerId:     user.Id,
 		Name:        repoName,
@@ -98,39 +99,91 @@ func CreateRepository(user *User, repoName, desc string, private bool) (*Reposit
 		Mode:     AU_WRITABLE,
 	}
 	if _, err = session.Insert(&access); err != nil {
+		session.Rollback()
 		if err2 := os.RemoveAll(f); err2 != nil {
 			return nil, errors.New(fmt.Sprintf(
 				"delete repo directory %s/%s failed", user.Name, repoName))
 		}
-		session.Rollback()
 		return nil, err
 	}
 
 	if _, err = session.Exec("update user set num_repos = num_repos + 1 where id = ?", user.Id); err != nil {
+		session.Rollback()
 		if err2 := os.RemoveAll(f); err2 != nil {
 			return nil, errors.New(fmt.Sprintf(
 				"delete repo directory %s/%s failed", user.Name, repoName))
 		}
-		session.Rollback()
 		return nil, err
 	}
 
 	if err = session.Commit(); err != nil {
+		session.Rollback()
 		if err2 := os.RemoveAll(f); err2 != nil {
 			return nil, errors.New(fmt.Sprintf(
 				"delete repo directory %s/%s failed", user.Name, repoName))
 		}
-		session.Rollback()
 		return nil, err
 	}
 	return repo, nil
 }
 
+var (
+	defaultREADME = "readme first"
+)
+
 // InitRepository initializes README and .gitignore if needed.
-func InitRepository(repo *Repository, initReadme bool, repoLang string) error {
-	// README.
+func initRepository(f string, initReadme bool, repoLang string) error {
+	readme := "README"
+	workdir := os.TempDir()
+
+	sig := &git.Signature{
+		Name:  "Rand Om Hacker",
+		Email: "random@hacker.com",
+		When:  time.Now(),
+	}
+
+	// README
+	err := ioutil.WriteFile(filepath.Join(workdir, readme),
+		[]byte(defaultREADME), 0644)
+	if err != nil {
+		return err
+	}
 
 	// .gitignore
+	// TODO:
+
+	rp, err := git.InitRepository(f, true)
+	if err != nil {
+		return err
+	}
+	rp.SetWorkdir(workdir, false)
+
+	idx, err := rp.Index()
+	if err != nil {
+		return err
+	}
+
+	err = idx.AddByPath(readme)
+	if err != nil {
+		return err
+	}
+
+	treeId, err := idx.WriteTree()
+	if err != nil {
+		return err
+	}
+
+	message := "add readme"
+	tree, err := rp.LookupTree(treeId)
+	if err != nil {
+		return err
+	}
+
+	_, err = rp.CreateCommit("HEAD", sig, sig, message, tree)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 

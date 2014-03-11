@@ -44,9 +44,9 @@ func Create(form auth.CreateRepoForm, req *http.Request, r render.Render, data b
 	}
 	fmt.Println(models.RepoPath(user.Name, form.RepoName))
 	if err == nil {
-		if repo, err := models.CreateRepository(user,
-			form.RepoName, form.Description, form.Visibility == "private"); err == nil {
-			err = models.InitRepository(repo, form.InitReadme == "true", form.Language)
+		if _, err = models.CreateRepository(user,
+			form.RepoName, form.Description, form.Visibility == "private",
+			form.InitReadme == "true", form.Language); err == nil {
 			if err == nil {
 				data["RepoName"] = user.Name + "/" + form.RepoName
 				r.HTML(200, "repo/created", data)
