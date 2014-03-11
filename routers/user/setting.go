@@ -5,14 +5,16 @@
 package user
 
 import (
+	"net/http"
+	"strconv"
+
+	"github.com/martini-contrib/render"
+	"github.com/martini-contrib/sessions"
+
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
-	"github.com/martini-contrib/render"
-	"github.com/martini-contrib/sessions"
-	"net/http"
-	"strconv"
 )
 
 func Setting(r render.Render, data base.TmplData, session sessions.Session) {
@@ -21,9 +23,12 @@ func Setting(r render.Render, data base.TmplData, session sessions.Session) {
 	r.HTML(200, "user/setting", data)
 }
 
-func SettingSSHKeys(r render.Render, data base.TmplData, req *http.Request, session sessions.Session) {
-	// del ssh ky
+func SettingSSHKeys(form auth.AddSSHKeyForm, r render.Render, data base.TmplData, req *http.Request, session sessions.Session) {
+	data["Title"] = "SSH Keys"
+
+	// Delete SSH key.
 	if req.Method == "DELETE" || req.FormValue("_method") == "DELETE" {
+		println(1)
 		id, err := strconv.ParseInt(req.FormValue("id"), 10, 64)
 		if err != nil {
 			data["ErrorMsg"] = err
@@ -38,8 +43,8 @@ func SettingSSHKeys(r render.Render, data base.TmplData, req *http.Request, sess
 			Id:      id,
 			OwnerId: auth.SignedInId(session),
 		}
-		err = models.DeletePublicKey(k)
-		if err != nil {
+
+		if err = models.DeletePublicKey(k); err != nil {
 			data["ErrorMsg"] = err
 			log.Error("ssh.DelPublicKey: %v", err)
 			r.JSON(200, map[string]interface{}{
@@ -51,16 +56,21 @@ func SettingSSHKeys(r render.Render, data base.TmplData, req *http.Request, sess
 				"ok": true,
 			})
 		}
-		return
 	}
-	// add ssh key
+
+	// Add new SSH key.
 	if req.Method == "POST" {
-		k := &models.PublicKey{OwnerId: auth.SignedInId(session),
-			Name:    req.FormValue("keyname"),
-			Content: req.FormValue("key_content"),
+		if hasErr, ok := data["HasError"]; ok && hasErr.(bool) {
+			r.HTML(200, "user/publickey", data)
+			return
 		}
-		err := models.AddPublicKey(k)
-		if err != nil {
+
+		k := &models.PublicKey{OwnerId: auth.SignedInId(session),
+			Name:    form.KeyName,
+			Content: form.KeyContent,
+		}
+
+		if err := models.AddPublicKey(k); err != nil {
 			data["ErrorMsg"] = err
 			log.Error("ssh.AddPublicKey: %v", err)
 			r.HTML(200, "base/error", data)
@@ -69,7 +79,8 @@ func SettingSSHKeys(r render.Render, data base.TmplData, req *http.Request, sess
 			data["AddSSHKeySuccess"] = true
 		}
 	}
-	// get keys
+
+	// List existed SSH keys.
 	keys, err := models.ListPublicKey(auth.SignedInId(session))
 	if err != nil {
 		data["ErrorMsg"] = err
@@ -78,8 +89,6 @@ func SettingSSHKeys(r render.Render, data base.TmplData, req *http.Request, sess
 		return
 	}
 
-	// set to template
-	data["Title"] = "SSH Keys"
 	data["PageIsUserSetting"] = true
 	data["Keys"] = keys
 	r.HTML(200, "user/publickey", data)

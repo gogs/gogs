@@ -65,13 +65,10 @@ func runWeb(*cli.Context) {
 	m.Any("/user/sign_up", auth.SignOutRequire(), binding.BindIgnErr(auth.RegisterForm{}), user.SignUp)
 	m.Any("/user/delete", auth.SignInRequire(true), user.Delete)
 
-	m.Any("/user/setting",auth.SignInRequire(true),user.Setting)
-	m.Any("/user/setting/ssh",auth.SignInRequire(true),user.SettingSSHKeys)
+	m.Any("/user/setting", auth.SignInRequire(true), user.Setting)
+	m.Any("/user/setting/ssh", auth.SignInRequire(true), binding.BindIgnErr(auth.AddSSHKeyForm{}), user.SettingSSHKeys)
 
 	m.Get("/user/:username", auth.SignInRequire(false), user.Profile)
-
-	//m.Any("/user/publickey/add", auth.SignInRequire(true), user.AddPublicKey)
-	//m.Any("/user/publickey/list", auth.SignInRequire(true), user.ListPublicKey)
 
 	m.Any("/repo/create", auth.SignInRequire(true), binding.BindIgnErr(auth.CreateRepoForm{}), repo.Create)
 	m.Any("/repo/delete", auth.SignInRequire(true), repo.Delete)

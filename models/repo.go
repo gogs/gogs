@@ -6,6 +6,7 @@ package models
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -83,7 +84,8 @@ func CreateRepository(user *User, repoName, desc string, private bool) (*Reposit
 
 	if _, err = session.Insert(repo); err != nil {
 		if err2 := os.RemoveAll(f); err2 != nil {
-			log.Error("delete repo directory %s/%s failed", user.Name, repoName)
+			return nil, errors.New(fmt.Sprintf(
+				"delete repo directory %s/%s failed", user.Name, repoName))
 		}
 		session.Rollback()
 		return nil, err
@@ -97,7 +99,8 @@ func CreateRepository(user *User, repoName, desc string, private bool) (*Reposit
 	}
 	if _, err = session.Insert(&access); err != nil {
 		if err2 := os.RemoveAll(f); err2 != nil {
-			log.Error("delete repo directory %s/%s failed", user.Name, repoName)
+			return nil, errors.New(fmt.Sprintf(
+				"delete repo directory %s/%s failed", user.Name, repoName))
 		}
 		session.Rollback()
 		return nil, err
@@ -105,7 +108,8 @@ func CreateRepository(user *User, repoName, desc string, private bool) (*Reposit
 
 	if _, err = session.Exec("update user set num_repos = num_repos + 1 where id = ?", user.Id); err != nil {
 		if err2 := os.RemoveAll(f); err2 != nil {
-			log.Error("delete repo directory %s/%s failed", user.Name, repoName)
+			return nil, errors.New(fmt.Sprintf(
+				"delete repo directory %s/%s failed", user.Name, repoName))
 		}
 		session.Rollback()
 		return nil, err
@@ -113,12 +117,21 @@ func CreateRepository(user *User, repoName, desc string, private bool) (*Reposit
 
 	if err = session.Commit(); err != nil {
 		if err2 := os.RemoveAll(f); err2 != nil {
-			log.Error("delete repo directory %s/%s failed", user.Name, repoName)
+			return nil, errors.New(fmt.Sprintf(
+				"delete repo directory %s/%s failed", user.Name, repoName))
 		}
 		session.Rollback()
 		return nil, err
 	}
 	return repo, nil
+}
+
+// InitRepository initializes README and .gitignore if needed.
+func InitRepository(repo *Repository, initReadme bool, repoLang string) error {
+	// README.
+
+	// .gitignore
+	return nil
 }
 
 // GetRepositories returns the list of repositories of given user.
