@@ -142,12 +142,14 @@ func UpdateUser(user *User) (err error) {
 
 // DeleteUser completely deletes everything of the user.
 func DeleteUser(user *User) error {
-	repos, err := GetRepositories(user)
+	cnt, err := GetRepositoryCount(user)
 	if err != nil {
 		return errors.New("modesl.GetRepositories: " + err.Error())
-	} else if len(repos) > 0 {
+	} else if cnt > 0 {
 		return ErrUserOwnRepos
 	}
+
+	// TODO: check issues, other repos' commits
 
 	_, err = orm.Delete(user)
 	// TODO: delete and update follower information.
