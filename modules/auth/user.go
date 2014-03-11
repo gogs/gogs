@@ -20,6 +20,9 @@ func SignedInId(session sessions.Session) int64 {
 		return 0
 	}
 	if s, ok := userId.(int64); ok {
+		if _, err := models.GetUserById(s); err != nil {
+			return 0
+		}
 		return s
 	}
 	return 0
