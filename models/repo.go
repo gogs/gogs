@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	git "github.com/libgit2/git2go"
 
@@ -59,7 +60,7 @@ func IsRepositoryExist(user *User, repoName string) (bool, error) {
 }
 
 // CreateRepository creates a repository for given user or orgnaziation.
-func CreateRepository(user *User, repoName, desc string, private bool, initReadme bool, repoLang string) (*Repository, error) {
+func CreateRepository(user *User, repoName, desc, repoLang string, private bool, initReadme bool) (*Repository, error) {
 	isExist, err := IsRepositoryExist(user, repoName)
 	if err != nil {
 		return nil, err
@@ -67,17 +68,17 @@ func CreateRepository(user *User, repoName, desc string, private bool, initReadm
 		return nil, ErrRepoAlreadyExist
 	}
 
-	f := RepoPath(user.Name, repoName)
-	err = initRepository(f, initReadme, repoLang)
-	if err != nil {
-		return nil, err
-	}
 	repo := &Repository{
 		OwnerId:     user.Id,
 		Name:        repoName,
 		LowerName:   strings.ToLower(repoName),
 		Description: desc,
 		Private:     private,
+	}
+
+	f := RepoPath(user.Name, repoName)
+	if err = initRepository(f, user, repo, initReadme, repoLang); err != nil {
+		return nil, err
 	}
 	session := orm.NewSession()
 	defer session.Close()
@@ -127,30 +128,35 @@ func CreateRepository(user *User, repoName, desc string, private bool, initReadm
 	return repo, nil
 }
 
-var (
-	defaultREADME = "readme first"
-)
-
 // InitRepository initializes README and .gitignore if needed.
-func initRepository(f string, initReadme bool, repoLang string) error {
-	readme := "README"
-	workdir := os.TempDir()
+func initRepository(f string, user *User, repo *Repository, initReadme bool, repoLang string) error {
+	fileName := map[string]string{
+		"readme": "README.md",
+		"gitign": ".gitignore",
+	}
+	workdir := os.TempDir() + fmt.Sprintf("%d", time.Now().Nanosecond())
 
 	sig := &git.Signature{
-		Name:  "Rand Om Hacker",
-		Email: "random@hacker.com",
+		Name:  user.Name,
+		Email: user.Email,
 		When:  time.Now(),
 	}
 
 	// README
-	err := ioutil.WriteFile(filepath.Join(workdir, readme),
-		[]byte(defaultREADME), 0644)
-	if err != nil {
+	defaultReadme := repo.Name + "\n" + strings.Repeat("=",
+		utf8.RuneCountInString(repo.Name)) + "\n\n" + repo.Description
+	if err := ioutil.WriteFile(filepath.Join(workdir, fileName["readme"]),
+		[]byte(defaultReadme), 0644); err != nil {
 		return err
 	}
 
 	// .gitignore
-	// TODO:
+	// if err := ioutil.WriteFile(filepath.Join(workdir, gitIgn),
+	// 	[]byte(defaultREADME), 0644); err != nil {
+	// 	return err
+	// }
+
+	// LICENSE
 
 	rp, err := git.InitRepository(f, true)
 	if err != nil {
@@ -163,8 +169,7 @@ func initRepository(f string, initReadme bool, repoLang string) error {
 		return err
 	}
 
-	err = idx.AddByPath(readme)
-	if err != nil {
+	if err = idx.AddByPath(fileName["readme"]); err != nil {
 		return err
 	}
 
@@ -173,14 +178,13 @@ func initRepository(f string, initReadme bool, repoLang string) error {
 		return err
 	}
 
-	message := "add readme"
+	message := "Init commit"
 	tree, err := rp.LookupTree(treeId)
 	if err != nil {
 		return err
 	}
 
-	_, err = rp.CreateCommit("HEAD", sig, sig, message, tree)
-	if err != nil {
+	if _, err = rp.CreateCommit("HEAD", sig, sig, message, tree); err != nil {
 		return err
 	}
 

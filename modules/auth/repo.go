@@ -18,7 +18,7 @@ import (
 
 type CreateRepoForm struct {
 	UserId      int64  `form:"userId"`
-	RepoName    string `form:"repo" binding:"Required"`
+	RepoName    string `form:"repo" binding:"Required;AlphaDash"`
 	Visibility  string `form:"visibility"`
 	Description string `form:"desc" binding:"MaxSize(100)"`
 	Language    string `form:"language"`
