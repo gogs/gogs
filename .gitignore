@@ -4,3 +4,4 @@ gogs
 .DS_Store
 *.db
 *.log
+conf/custom.ini
