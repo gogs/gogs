@@ -24,10 +24,11 @@
         </form>
     </div>
 </div>
-{{template "base/footer" .}}
-{{template "base/head" .}}
-{{template "base/navbar" .}}
-<div class="container" id="gogs-body">
-
-</div>
+<script>
+    $(function(){
+       $('#gogs-user-delete').on('submit',function(){
+           return confirm("Are you sure ?");
+       })
+    });
+</script>
 {{template "base/footer" .}}
