@@ -123,7 +123,7 @@ func runServ(*cli.Context) {
 			println("Repository", user.Name+"/"+repoName, "is not exist")
 			return
 		} else if isWrite {
-			_, err := models.CreateRepository(user, repoName, "", false)
+			_, err := models.CreateRepository(user, repoName, "", false, true, "")
 			if err != nil {
 				println("Create repository failed")
 				return
