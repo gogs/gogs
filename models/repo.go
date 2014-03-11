@@ -141,43 +141,52 @@ func CreateRepository(user *User, repoName, desc, repoLang, license string, priv
 
 // InitRepository initializes README and .gitignore if needed.
 func initRepository(f string, user *User, repo *Repository, initReadme bool, repoLang, license string) error {
-	fileName := map[string]string{
-		"readme":  "README.md",
-		"gitign":  ".gitignore",
-		"license": "LICENSE",
+	fileName := map[string]string{}
+
+	if initReadme {
+		fileName["readme"] = "README.md"
 	}
+	if repoLang != "" {
+		fileName["gitign"] = ".gitignore"
+	}
+	if license != "" {
+		fileName["license"] = "LICENSE"
+	}
+
 	workdir := os.TempDir() + fmt.Sprintf("%d", time.Now().Nanosecond())
 	os.MkdirAll(workdir, os.ModePerm)
 
-	sig := &git.Signature{
-		Name:  user.Name,
-		Email: user.Email,
-		When:  time.Now(),
-	}
+	sig := user.NewGitSig()
 
 	// README
-	defaultReadme := repo.Name + "\n" + strings.Repeat("=",
-		utf8.RuneCountInString(repo.Name)) + "\n\n" + repo.Description
-	if err := ioutil.WriteFile(filepath.Join(workdir, fileName["readme"]),
-		[]byte(defaultReadme), 0644); err != nil {
-		return err
-	}
-
-	// .gitignore
-	filePath := "conf/gitignore/" + repoLang
-	if com.IsFile(filePath) {
-		if _, err := com.Copy(filePath,
-			filepath.Join(workdir, fileName["gitign"])); err != nil {
+	if initReadme {
+		defaultReadme := repo.Name + "\n" + strings.Repeat("=",
+			utf8.RuneCountInString(repo.Name)) + "\n\n" + repo.Description
+		if err := ioutil.WriteFile(filepath.Join(workdir, fileName["readme"]),
+			[]byte(defaultReadme), 0644); err != nil {
 			return err
 		}
 	}
 
-	// LICENSE
-	filePath = "conf/license/" + license
-	if com.IsFile(filePath) {
-		if _, err := com.Copy(filePath,
-			filepath.Join(workdir, fileName["license"])); err != nil {
-			return err
+	if repoLang != "" {
+		// .gitignore
+		filePath := "conf/gitignore/" + repoLang
+		if com.IsFile(filePath) {
+			if _, err := com.Copy(filePath,
+				filepath.Join(workdir, fileName["gitign"])); err != nil {
+				return err
+			}
+		}
+	}
+
+	if license != "" {
+		// LICENSE
+		filePath := "conf/license/" + license
+		if com.IsFile(filePath) {
+			if _, err := com.Copy(filePath,
+				filepath.Join(workdir, fileName["license"])); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -225,6 +234,48 @@ func GetRepositories(user *User) ([]Repository, error) {
 
 func GetRepositoryCount(user *User) (int64, error) {
 	return orm.Count(&Repository{OwnerId: user.Id})
+}
+
+const (
+	RFile = iota + 1
+	RDir
+)
+
+type RepoFile struct {
+	Type int
+	Name string
+
+	Created time.Time
+}
+
+func GetReposFiles(userName, reposName, treeName, rpath string) ([]RepoFile, error) {
+	f := RepoPath(userName, reposName)
+	repo, err := git.OpenRepository(f)
+	if err != nil {
+		return nil, err
+	}
+
+	obj, err := repo.RevparseSingle("HEAD")
+	if err != nil {
+		return nil, err
+	}
+	lastCommit := obj.(*git.Commit)
+	var repofiles []RepoFile
+	tree, err := lastCommit.Tree()
+	if err != nil {
+		return nil, err
+	}
+	var i uint64 = 0
+	for ; i < tree.EntryCount(); i++ {
+		entry := tree.EntryByIndex(i)
+		repofiles = append(repofiles, RepoFile{
+			entry.Filemode,
+			entry.Name,
+			time.Now(),
+		})
+	}
+
+	return repofiles, nil
 }
 
 func StarReposiory(user *User, repoName string) error {
