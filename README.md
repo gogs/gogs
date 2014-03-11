@@ -11,6 +11,12 @@ There are some very good products in this category such as [gitlab](http://gitla
 
 Please see [Wiki](https://github.com/gogits/gogs/wiki) for project design, develop specification, change log and road map.
 
+## Features
+
+- SSH protocal support.
+- Register/delete account.
+- Create public repository.
+
 ## Installation
 
 There are two ways to install Gogs:
