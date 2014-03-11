@@ -104,7 +104,7 @@ function initUserSetting(){
         var $this = $(this);
         Gogits.ajaxDelete("",{"id":$this.data("del")},function(json){
             if(json.ok){
-                $this.parent().remove();
+                window.location.reload();
             }else{
                 alert(json.err);
             }
