@@ -15,7 +15,7 @@
     <div id="gogs-user-setting-container" class="col-md-9">
         <form action="/user/delete" method="post" class="form-horizontal" id="gogs-user-delete">
             <h4>Delete Account</h4>
-            <p class="alert alert-danger">Deleting your account is permanent. Sorry to see you go, if you have any feedback you can contact us.</p>
+            <p class="alert alert-danger">{{if not .HasError}}The operation will delete your account permanently. Sorry to see you go, but we know you'll back soon.{{else}}{{.ErrorMsg}}{{end}}</p>
             <div class="form-group">
                 <div class="col-md-3">
                     <button type="submit" class="btn btn-danger btn-lg">Delete Account</button>

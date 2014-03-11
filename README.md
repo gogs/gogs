@@ -1,7 +1,7 @@
-Gogs - Go Git Service [![Go Walker](http://gowalker.org/api/v1/badge)](https://gowalker.org/github.com/gogits/gogs)
+Gogs - Go Git Service [![wercker status](https://app.wercker.com/status/ad0bdb0bc450ac6f09bc56b9640a50aa/s/ "wercker status")](https://app.wercker.com/project/bykey/ad0bdb0bc450ac6f09bc56b9640a50aa) [![Go Walker](http://gowalker.org/api/v1/badge)](https://gowalker.org/github.com/gogits/gogs)
 =====================
 
-Gogs(Go Git Service) is a GitHub-like clone in the Go Programming Language.
+Gogs(Go Git Service) is a GitHub-like clone in the Go Programming Language, it currently supports Linux and Max OS X, but Windows has **NOT** supported yet due to installation problem with [libgit2](http://libgit2.github.com/) in Windows.
 
 ## Purpose
 
@@ -9,14 +9,14 @@ There are some very good products in this category such as [gitlab](http://gitla
 
 ## Overview
 
-Please see [Wiki](https://github.com/gogits/gogs/wiki) for project design.
+Please see [Wiki](https://github.com/gogits/gogs/wiki) for project design, develop specification, change log and road map.
 
 ## Installation
 
-### Dependencies
+There are two ways to install Gogs:
 
-- [Go Programming Language](http://golang.org): Main develop language.
-- [libgit2](http://libgit2.github.com/)(cgo): Git data manipulation.
+- [Install from binary](https://github.com/gogits/gogs/wiki/Install-from-binary)
+- [Install from source](https://github.com/gogits/gogs/wiki/Install-from-source)
 
 ## Acknowledgments
 

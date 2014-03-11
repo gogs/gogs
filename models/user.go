@@ -150,10 +150,10 @@ func UpdateUser(user *User) (err error) {
 
 // DeleteUser completely deletes everything of the user.
 func DeleteUser(user *User) error {
-	cnt, err := GetRepositoryCount(user)
+	count, err := GetRepositoryCount(user)
 	if err != nil {
 		return errors.New("modesl.GetRepositories: " + err.Error())
-	} else if cnt > 0 {
+	} else if count > 0 {
 		return ErrUserOwnRepos
 	}
 
