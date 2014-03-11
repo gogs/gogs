@@ -13,8 +13,8 @@ import (
 	"time"
 
 	"github.com/dchest/scrypt"
-
 	"github.com/gogits/gogs/modules/base"
+	git "github.com/libgit2/git2go"
 )
 
 var UserPasswdSalt string
@@ -96,6 +96,14 @@ func IsUserExist(name string) (bool, error) {
 
 func IsEmailUsed(email string) (bool, error) {
 	return orm.Get(&User{Email: email})
+}
+
+func (user *User) NewGitSig() *git.Signature {
+	return &git.Signature{
+		Name:  user.Name,
+		Email: user.Email,
+		When:  time.Now(),
+	}
 }
 
 // RegisterUser creates record of a new user.
