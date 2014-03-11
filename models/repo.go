@@ -14,8 +14,10 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/Unknwon/com"
 	git "github.com/libgit2/git2go"
 
+	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
 )
 
@@ -42,8 +44,17 @@ type Star struct {
 }
 
 var (
+	LanguageIgns, Licenses []string
+)
+
+var (
 	ErrRepoAlreadyExist = errors.New("Repository already exist")
 )
+
+func init() {
+	LanguageIgns = strings.Split(base.Cfg.MustValue("repository", "LANG_IGNS"), "|")
+	Licenses = strings.Split(base.Cfg.MustValue("repository", "LICENSES"), "|")
+}
 
 // check if repository is exist
 func IsRepositoryExist(user *User, repoName string) (bool, error) {
@@ -60,7 +71,7 @@ func IsRepositoryExist(user *User, repoName string) (bool, error) {
 }
 
 // CreateRepository creates a repository for given user or orgnaziation.
-func CreateRepository(user *User, repoName, desc, repoLang string, private bool, initReadme bool) (*Repository, error) {
+func CreateRepository(user *User, repoName, desc, repoLang, license string, private bool, initReadme bool) (*Repository, error) {
 	isExist, err := IsRepositoryExist(user, repoName)
 	if err != nil {
 		return nil, err
@@ -77,7 +88,7 @@ func CreateRepository(user *User, repoName, desc, repoLang string, private bool,
 	}
 
 	f := RepoPath(user.Name, repoName)
-	if err = initRepository(f, user, repo, initReadme, repoLang); err != nil {
+	if err = initRepository(f, user, repo, initReadme, repoLang, license); err != nil {
 		return nil, err
 	}
 	session := orm.NewSession()
@@ -129,12 +140,14 @@ func CreateRepository(user *User, repoName, desc, repoLang string, private bool,
 }
 
 // InitRepository initializes README and .gitignore if needed.
-func initRepository(f string, user *User, repo *Repository, initReadme bool, repoLang string) error {
+func initRepository(f string, user *User, repo *Repository, initReadme bool, repoLang, license string) error {
 	fileName := map[string]string{
-		"readme": "README.md",
-		"gitign": ".gitignore",
+		"readme":  "README.md",
+		"gitign":  ".gitignore",
+		"license": "LICENSE",
 	}
 	workdir := os.TempDir() + fmt.Sprintf("%d", time.Now().Nanosecond())
+	os.MkdirAll(workdir, os.ModePerm)
 
 	sig := &git.Signature{
 		Name:  user.Name,
@@ -151,12 +164,22 @@ func initRepository(f string, user *User, repo *Repository, initReadme bool, rep
 	}
 
 	// .gitignore
-	// if err := ioutil.WriteFile(filepath.Join(workdir, gitIgn),
-	// 	[]byte(defaultREADME), 0644); err != nil {
-	// 	return err
-	// }
+	filePath := "conf/gitignore/" + repoLang
+	if com.IsFile(filePath) {
+		if _, err := com.Copy(filePath,
+			filepath.Join(workdir, fileName["gitign"])); err != nil {
+			return err
+		}
+	}
 
 	// LICENSE
+	filePath = "conf/license/" + license
+	if com.IsFile(filePath) {
+		if _, err := com.Copy(filePath,
+			filepath.Join(workdir, fileName["license"])); err != nil {
+			return err
+		}
+	}
 
 	rp, err := git.InitRepository(f, true)
 	if err != nil {
@@ -169,8 +192,10 @@ func initRepository(f string, user *User, repo *Repository, initReadme bool, rep
 		return err
 	}
 
-	if err = idx.AddByPath(fileName["readme"]); err != nil {
-		return err
+	for _, name := range fileName {
+		if err = idx.AddByPath(name); err != nil {
+			return err
+		}
 	}
 
 	treeId, err := idx.WriteTree()
