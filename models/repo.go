@@ -223,6 +223,10 @@ func GetRepositories(user *User) ([]Repository, error) {
 	return repos, err
 }
 
+func GetRepositoryCount(user *User) (int64, error) {
+	return orm.Count(&Repository{OwnerId: user.Id})
+}
+
 func StarReposiory(user *User, repoName string) error {
 	return nil
 }

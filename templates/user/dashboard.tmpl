@@ -21,7 +21,11 @@
                 <a class="btn btn-success pull-right btn-sm" href="/repo/create/"><i class="fa fa-plus-square"></i>New Repo</a>
             </div>
             <div class="panel-body">
-                repo-list
+                <ul>
+                {{range .MyRepos}}
+                <li><a href="#">{{.Name}}</a></li>
+                {{end}}
+                </ul>
             </div>
         </div>
     </div>

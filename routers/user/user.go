@@ -20,6 +20,14 @@ import (
 func Dashboard(r render.Render, data base.TmplData, session sessions.Session) {
 	data["Title"] = "Dashboard"
 	data["PageIsUserDashboard"] = true
+	repos, err := models.GetRepositories(&models.User{Id: auth.SignedInId(session)})
+	if err != nil {
+		data["ErrorMsg"] = err
+		log.Error("dashboard: %v", err)
+		r.HTML(200, "base/error", data)
+		return
+	}
+	data["MyRepos"] = repos
 	r.HTML(200, "user/dashboard", data)
 }
 
@@ -133,7 +141,7 @@ func SignUp(form auth.RegisterForm, data base.TmplData, req *http.Request, r ren
 }
 
 // TODO: unfinished
-func Delete(data base.TmplData, req *http.Request, r render.Render) {
+func Delete(data base.TmplData, req *http.Request, session sessions.Session, r render.Render) {
 	data["Title"] = "Delete Account"
 
 	if req.Method == "GET" {
@@ -141,7 +149,8 @@ func Delete(data base.TmplData, req *http.Request, r render.Render) {
 		return
 	}
 
-	u := &models.User{}
+	id := auth.SignedInId(session)
+	u := &models.User{Id: id}
 	err := models.DeleteUser(u)
 	data["ErrorMsg"] = err
 	log.Error("user.Delete: %v", data)
