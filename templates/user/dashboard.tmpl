@@ -1,6 +1,29 @@
 {{template "base/head" .}}
 {{template "base/navbar" .}}
+<div id="gogs-body-nav">
+    <div class="container">
+        <ul class="nav nav-pills pull-right">
+            <li class="active"><a href="/">Feed</a></li>
+            <li><a href="/issues/">Issues</a></li>
+            <li><a href="/pulls/">Pull Requests</a></li>
+            <li><a href="/stars/">Stars</a></li>
+        </ul>
+        <h3>New Feed</h3>
+    </div>
+</div>
 <div id="gogs-body" class="container">
-	Website is still in the progress of building...please come back later! <strong>{{.SignedUserName}}</strong> is logged!
+    <div id="gogs-feed-left" class="col-md-8">
+        Website is still in the progress of building...please come back later! <strong>{{.SignedUserName}}</strong> is logged!
+    </div>
+    <div id="gogs-feed-right" class="col-md-4">
+        <div class="panel panel-default repo-panel">
+            <div class="panel-heading">Your Repositories
+                <a class="btn btn-success pull-right btn-sm" href="/repo/create/"><i class="fa fa-plus-square"></i>New Repo</a>
+            </div>
+            <div class="panel-body">
+                repo-list
+            </div>
+        </div>
+    </div>
 </div>
 {{template "base/footer" .}}
