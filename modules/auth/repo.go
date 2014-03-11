@@ -22,6 +22,7 @@ type CreateRepoForm struct {
 	Visibility  string `form:"visibility"`
 	Description string `form:"desc" binding:"MaxSize(100)"`
 	Language    string `form:"language"`
+	License     string `form:"license"`
 	InitReadme  string `form:"initReadme"`
 }
 

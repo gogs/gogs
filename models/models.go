@@ -70,8 +70,6 @@ func setEngine() {
 	orm.Logger = f
 	orm.ShowSQL = true
 
-	//log.Trace("Initialized database -> %s", dbName)
-
 	RepoRootPath = base.Cfg.MustValue("repository", "ROOT")
 }
 

@@ -21,6 +21,8 @@ func Create(form auth.CreateRepoForm, req *http.Request, r render.Render, data b
 	data["Title"] = "Create repository"
 
 	if req.Method == "GET" {
+		data["LanguageIgns"] = models.LanguageIgns
+		data["Licenses"] = models.Licenses
 		r.HTML(200, "repo/create", data)
 		return
 	}
@@ -45,7 +47,7 @@ func Create(form auth.CreateRepoForm, req *http.Request, r render.Render, data b
 
 	if err == nil {
 		if _, err = models.CreateRepository(user,
-			form.RepoName, form.Description, form.Language,
+			form.RepoName, form.Description, form.Language, form.License,
 			form.Visibility == "private", form.InitReadme == "true"); err == nil {
 			if err == nil {
 				data["RepoName"] = user.Name + "/" + form.RepoName

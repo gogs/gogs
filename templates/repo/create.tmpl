@@ -40,11 +40,7 @@
             <div class="col-md-8">
                 <select class="form-control" name="language">
                     <option value="">Select a language</option>
-                    <option value="ActionScript">ActionScript</option>
-                    <option value="C#">C#</option>
-                    <option value="Google Go">Google Go</option>
-                    <option value="Java">Java</option>
-                    <option value="PHP">PHP</option>
+                    {{range .LanguageIgns}}<option value="{{.}}">{{.}}</option>{{end}}
                 </select>
             </div>
         </div>
@@ -54,10 +50,7 @@
             <div class="col-md-8">
                 <select class="form-control" name="license">
                     <option value="">Select a license</option>
-                    <option value="mit">MIT</option>
-                    <option value="gpl">GPL</option>
-                    <option value="apache">Apache License</option>
-                    <option value="bsd">BSD</option>go
+                    {{range .Licenses}}<option value="{{.}}">{{.}}</option>{{end}}
                 </select>
             </div>
         </div>
@@ -66,7 +59,7 @@
             <div class="col-md-8 col-md-offset-2">
                 <div class="checkbox">
                     <label>
-                        <input type="checkbox" value="" name="initReadme">
+                        <input type="checkbox" name="initReadme">
                         <strong>Initialize this repository with a README</strong>
                     </label>
                 </div>
