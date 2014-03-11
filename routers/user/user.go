@@ -151,8 +151,18 @@ func Delete(data base.TmplData, req *http.Request, session sessions.Session, r r
 
 	id := auth.SignedInId(session)
 	u := &models.User{Id: id}
-	err := models.DeleteUser(u)
-	data["ErrorMsg"] = err
-	log.Error("user.Delete: %v", data)
-	r.HTML(200, "base/error", nil)
+	if err := models.DeleteUser(u); err != nil {
+		data["HasError"] = true
+		switch err.Error() {
+		case models.ErrUserOwnRepos.Error():
+			data["ErrorMsg"] = "Your account still have ownership of repository, you have to delete or transfer them first."
+		default:
+			data["ErrorMsg"] = err
+			log.Error("user.Delete: %v", data)
+			r.HTML(200, "base/error", nil)
+			return
+		}
+	}
+
+	r.HTML(200, "user/delete", data)
 }
