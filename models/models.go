@@ -7,7 +7,9 @@ package models
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
+	"github.com/Unknwon/com"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/lunny/xorm"
 
@@ -71,6 +73,21 @@ func setEngine() {
 	orm.ShowSQL = true
 
 	RepoRootPath = base.Cfg.MustValue("repository", "ROOT")
+	if err = os.MkdirAll(RepoRootPath, os.ModePerm); err != nil {
+		fmt.Printf("models.init -> fail to create RepoRootPath(%s): %v\n", RepoRootPath, err)
+		os.Exit(2)
+	}
+
+	homeDir, err := com.HomeDir()
+	if err != nil {
+		fmt.Printf("models.init -> fail to get homeDir: %v\n", err)
+		os.Exit(2)
+	}
+	sshPath := filepath.Join(homeDir, ".ssh")
+	if err = os.MkdirAll(sshPath, os.ModePerm); err != nil {
+		fmt.Printf("models.init -> fail to create sshPath(%s): %v\n", sshPath, err)
+		os.Exit(2)
+	}
 }
 
 func init() {
