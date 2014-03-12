@@ -30,10 +30,7 @@ var CmdServ = cli.Command{
 	Description: `
 gogs serv provide access auth for repositories`,
 	Action: runServ,
-	Flags:  []cli.Flag{
-	//cli.BoolFlag{"update, u", "update pakcage(s) and dependencies if any"},
-	//cli.BoolFlag{"verbose, v", "show process details"},
-	},
+	Flags:  []cli.Flag{},
 }
 
 func In(b string, sl map[string]int) bool {
@@ -61,7 +58,7 @@ func runServ(*cli.Context) {
 
 	cmd := os.Getenv("SSH_ORIGINAL_COMMAND")
 	if cmd == "" {
-		println("Hi %s! You've successfully authenticated, but Gogits does not provide shell access.\n", user.Name)
+		printf("Hi %s! You've successfully authenticated, but Gogs does not provide shell access.\n", user.Name)
 		return
 	}
 

@@ -16,8 +16,11 @@ Please see [Wiki](https://github.com/gogits/gogs/wiki) for project design, devel
 - SSH protocal support.
 - Register/delete account.
 - Create public repository.
+- Git repository manipulation.
 
 ## Installation
+
+Make sure you install [Prerequirements](https://github.com/gogits/gogs/wiki/Prerequirements) first.
 
 There are two ways to install Gogs:
 
