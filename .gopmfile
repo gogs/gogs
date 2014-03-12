@@ -1,7 +1,17 @@
+[target]
+path=github.com/gogits/gogs
+
 [deps]
 github.com/codegangsta/cli=
 github.com/codegangsta/martini=
 github.com/gogits/binding=
 github.com/martini-contrib/render=
 github.com/martini-contrib/sessions=
+github.com/Unknwon/com=
+github.com/dchest/scrypt=
+github.com/go-sql-driver/mysql=
 github.com/libgit2/git2go=commit:054268a63418b03892bfd4c6a509a0294660074b
+github.com/lunny/xorm=
+github.com/Unknwon/goconfig=
+github.com/gogits/logs=
+
