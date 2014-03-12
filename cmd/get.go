@@ -233,8 +233,8 @@ func downloadPackages(ctx *cli.Context, nodes []*doc.Node) {
 					n.ImportPath, n.Type, doc.CheckNodeValue(n.Value))
 
 				// Only copy when no version control.
-				if ctx.Bool("gopath") && com.IsExist(installPath) ||
-					len(getVcsName(gopathDir)) == 0 {
+				if ctx.Bool("gopath") && (com.IsExist(installPath) ||
+					len(getVcsName(gopathDir)) == 0) {
 					copyToGopath(installPath, gopathDir)
 				}
 				continue
