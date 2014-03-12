@@ -191,9 +191,6 @@ func copyToGopath(srcPath, destPath string) {
 // if the commit is empty string, then it downloads all dependencies,
 // otherwise, it only downloada package with specific commit only.
 func downloadPackages(ctx *cli.Context, nodes []*doc.Node) {
-	for _, node := range nodes {
-		fmt.Println(node)
-	}
 	// Check all packages, they may be raw packages path.
 	for _, n := range nodes {
 		// Check if local reference
@@ -233,8 +230,8 @@ func downloadPackages(ctx *cli.Context, nodes []*doc.Node) {
 					n.ImportPath, n.Type, doc.CheckNodeValue(n.Value))
 
 				// Only copy when no version control.
-				if ctx.Bool("gopath") && com.IsExist(installPath) ||
-					len(getVcsName(gopathDir)) == 0 {
+				if ctx.Bool("gopath") && (com.IsExist(installPath) ||
+					len(getVcsName(gopathDir)) == 0) {
 					copyToGopath(installPath, gopathDir)
 				}
 				continue
