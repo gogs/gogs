@@ -153,7 +153,7 @@ func initRepository(f string, user *User, repo *Repository, initReadme bool, rep
 		fileName["license"] = "LICENSE"
 	}
 
-	workdir := os.TempDir() + fmt.Sprintf("%d", time.Now().Nanosecond())
+	workdir := filepath.Join(os.TempDir(), fmt.Sprintf("%d", time.Now().Nanosecond()))
 	os.MkdirAll(workdir, os.ModePerm)
 
 	sig := user.NewGitSig()
