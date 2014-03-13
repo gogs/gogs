@@ -70,6 +70,8 @@ func runWeb(*cli.Context) {
 
 	m.Get("/user/:username", auth.SignInRequire(false), user.Profile)
 
+	m.Get("/:username/:reponame", repo.Repo)
+
 	m.Any("/repo/create", auth.SignInRequire(true), binding.BindIgnErr(auth.CreateRepoForm{}), repo.Create)
 	m.Any("/repo/delete", auth.SignInRequire(true), repo.Delete)
 	m.Any("/repo/list", auth.SignInRequire(false), repo.List)
