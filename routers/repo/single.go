@@ -28,3 +28,14 @@ func Single(params martini.Params, r render.Render, data base.TmplData) {
 
 	r.HTML(200, "repo/single", data)
 }
+
+func Setting(r render.Render, data base.TmplData) {
+	if !data["IsRepositoryValid"].(bool) {
+		return
+	}
+
+	data["Title"] = data["Title"].(string) + " - settings"
+	data["IsRepoToolbarSetting"] = true
+
+	r.HTML(200, "repo/setting", data)
+}
