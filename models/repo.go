@@ -49,6 +49,7 @@ var (
 
 var (
 	ErrRepoAlreadyExist = errors.New("Repository already exist")
+	ErrRepoNotExist     = errors.New("Repository does not exist")
 )
 
 func init() {
@@ -223,6 +224,30 @@ func initRepository(f string, user *User, repo *Repository, initReadme bool, rep
 	}
 
 	return nil
+}
+
+func GetRepositoryByName(user *User, repoName string) (*Repository, error) {
+	repo := &Repository{
+		OwnerId:   user.Id,
+		LowerName: strings.ToLower(repoName),
+	}
+	has, err := orm.Get(repo)
+	if err != nil {
+		return nil, err
+	} else if !has {
+		return nil, ErrRepoNotExist
+	}
+	return repo, err
+}
+
+func GetRepositoryById(id int64) (repo *Repository, err error) {
+	has, err := orm.Id(id).Get(repo)
+	if err != nil {
+		return nil, err
+	} else if !has {
+		return nil, ErrRepoNotExist
+	}
+	return repo, err
 }
 
 // GetRepositories returns the list of repositories of given user.
