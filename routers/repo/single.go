@@ -4,12 +4,13 @@ import (
 	"net/http"
 
 	"github.com/codegangsta/martini"
+	"github.com/martini-contrib/render"
+	"github.com/martini-contrib/sessions"
+
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/base"
-	"github.com/martini-contrib/render"
-	"github.com/martini-contrib/sessions"
-	"github.com/qiniu/log"
+	"github.com/gogits/gogs/modules/log"
 )
 
 func Single(params martini.Params, req *http.Request, r render.Render, data base.TmplData, session sessions.Session) {
