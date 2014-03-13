@@ -58,7 +58,7 @@ func runServ(*cli.Context) {
 
 	cmd := os.Getenv("SSH_ORIGINAL_COMMAND")
 	if cmd == "" {
-		fmt.Printf("Hi %s! You've successfully authenticated, but Gogs does not provide shell access.\n", user.Name)
+		println("Hi ", user.Name, "! You've successfully authenticated, but Gogs does not provide shell access.")
 		return
 	}
 
