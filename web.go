@@ -63,7 +63,7 @@ func runWeb(*cli.Context) {
 	m.Any("/user/delete", auth.SignInRequire(true), user.Delete)
 	m.Get("/user/feeds", binding.Bind(auth.FeedsForm{}), user.Feeds)
 
-	m.Any("/user/setting", auth.SignInRequire(true), user.Setting)
+	m.Any("/user/setting", auth.SignInRequire(true), binding.BindIgnErr(auth.UpdateProfileForm{}), user.Setting)
 	m.Any("/user/setting/ssh", auth.SignInRequire(true), binding.BindIgnErr(auth.AddSSHKeyForm{}), user.SettingSSHKeys)
 
 	m.Get("/user/:username", auth.SignInRequire(false), user.Profile)

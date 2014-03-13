@@ -4,16 +4,16 @@
     <div id="gogs-user-profile" class="col-md-3">
         <div class="profile-avatar text-center">
             <a href="#" class="center-block" data-toggle="tooltip" data-placement="bottom" title="Change Avatar">
-                <img id="gogs-user-avatar" src="http://1.gravatar.com/avatar/{{.Avatar}}?s=200" alt="user-avatar" title="username"/>
+                <img id="gogs-user-avatar" src="http://1.gravatar.com/avatar/{{.Owner.Avatar}}?s=200" alt="user-avatar" title="username"/>
             </a>
-            <span id="gogs-user-name" class="center-block" href="#">{{.Username}}</span>
+            <span id="gogs-user-name" class="center-block" href="#">{{.Owner.Name}}</span>
         </div>
         <div class="profile-info">
             <ul class="list-group">
-                <li class="list-group-item"><i class="fa fa-thumb-tack"></i>City, County, State, Nation</li>
-                <li class="list-group-item"><i class="fa fa-envelope"></i><a href="#">Email@EmailAddress.com</a></li>
-                <li class="list-group-item"><i class="fa fa-link"></i><a href="#">http://yousite/</a></li>
-                <li class="list-group-item"><i class="fa fa-clock-o"></i>Joined At 03.02, 2014</li>
+                <li class="list-group-item"><i class="fa fa-thumb-tack"></i>{{.Owner.Location}}</li>
+                <li class="list-group-item"><i class="fa fa-envelope"></i><a href="#">{{.Owner.Email}}</a></li>
+                <li class="list-group-item"><i class="fa fa-link"></i><a href="#">{{.Owner.Website}}</a></li>
+                <li class="list-group-item"><i class="fa fa-clock-o"></i>{{.Owner.Created}}</li>
             </ul>
         </div>
     </div>

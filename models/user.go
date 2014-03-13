@@ -48,7 +48,9 @@ type User struct {
 	NumFollowings int
 	NumStars      int
 	NumRepos      int
-	Avatar        string    `xorm:"varchar(2048) not null"`
+	Avatar        string `xorm:"varchar(2048) not null"`
+	Location      string
+	Website       string
 	Created       time.Time `xorm:"created"`
 	Updated       time.Time `xorm:"updated"`
 }
