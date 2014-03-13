@@ -1,0 +1,33 @@
+{{template "base/head" .}}
+{{template "base/navbar" .}}
+{{template "repo/nav" .}}
+{{template "repo/toolbar" .}}
+<div id="gogs-body" class="container">
+    <div id="gogs-user-setting-nav" class="col-md-3">
+        <h4>Repository Settings</h4>
+        <ul class="list-group" data-init="tabs">
+            <li class="list-group-item"><a href="#options" data-toggle="tab">Options</a></li>
+            <!--<li class="list-group-item" data-toggle="tab"><a href="#">Collaborators</a></li>
+            <li class="list-group-item" data-toggle="tab"><a href="#">Notifications</a></li>-->
+            <li class="list-group-item"><a href="#delete" data-toggle="tab">Delete</a></li>
+        </ul>
+    </div>
+    <div id="gogs-repo-setting-container" class="col-md-9 tab-content">
+        <div id="options" class="tab-pane">
+            repo-options
+        </div>
+        <div id="delete" class="tab-pane">
+            <h4>Delete Repository</h4>
+            <p class="alert alert-warning">Unexpected bad things will happen if you don't read this!</p>
+            <p>This action <strong>CANNOT</strong> be undone. This will delete the repository, wiki, issues, and comments permanently. </p>
+
+            <form action="/repo/delete" method="post">
+                <input type="hidden" name="reponame" value="{{.Repository.Name}}"/>
+                <input type="hidden" name="username" value="{{.Owner.Name}}"/>
+                <hr/>
+                <button class="btn btn-danger btn-lg">I understand the consequences, delete this repository</button>
+            </form>
+        </div>
+    </div>
+</div>
+{{template "base/footer" .}}
