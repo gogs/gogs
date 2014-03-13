@@ -269,7 +269,7 @@ body {
 
 /* gogits user setting */
 
-#gogs-user-setting-nav > h4, #gogs-user-setting-container > h4, #gogs-ssh-keys > h4, #gogs-user-delete > h4 {
+#gogs-user-setting-nav > h4, #gogs-user-setting-container > h4, #gogs-ssh-keys > h4, #gogs-user-delete > h4 ,#gogs-repo-setting-container .tab-pane > h4{
     padding-bottom: 18px;
     margin-bottom: 18px;
     border-bottom: 1px solid #CCC;

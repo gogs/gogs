@@ -11,7 +11,7 @@
                                 <li><a href="#">develop</a></li>
                             </ul>
                         </li>
-                        <li class="{{if .IsRepoToolbarSource}}active{{end}}"><a href="#">Source</a></li>
+                        <li class="{{if .IsRepoToolbarSource}}active{{end}}"><a href="/{{.RepositoryLink}}">Source</a></li>
                         <li><a href="#">Commits</a></li>
                         <li><a href="#">Issues <span class="badge">42</span></a></li>
                         <li><a href="#">Pull Requests</a></li>
@@ -32,7 +32,7 @@
                                 <li><a href="#">Network</a></li>
                             </ul>
                         </li>{{if .IsRepositoryOwner}}
-                        <li class="{{if .IsRepoToolbarSetting}}active{{end}}"><a href="/{{.RepositoryLink}}/settings/">Settings</a></li>{{end}}
+                        <li class="{{if .IsRepoToolbarSetting}}active{{end}}"><a href="/{{.RepositoryLink}}/settings">Settings</a></li>{{end}}
                     </ul>
                 </div>
             </div>

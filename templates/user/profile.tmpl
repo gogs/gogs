@@ -18,7 +18,7 @@
         </div>
     </div>
     <div id="gogs-user-activity" class="col-md-9">
-        <ul class="nav nav-tabs" id="gogs-user-act-tabs">
+        <ul class="nav nav-tabs" id="gogs-user-act-tabs" data-init="tabs">
             <li class="active"><a href="#repo" data-toggle="tab"><i class="fa fa-gittip"></i>Repositories</a></li>
             <li><a href="#activity" data-toggle="tab"><i class="fa fa-rss"></i>Activity</a></li>
         </ul>
@@ -28,9 +28,4 @@
         </div>
     </div>
 </div>
-<script>
-    $(function () {
-        Gogits.showTab("#gogs-user-act-tabs");
-    });
-</script>
 {{template "base/footer" .}}

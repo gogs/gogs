@@ -22,7 +22,7 @@
             </div>
             <div class="panel-body">
                 <ul class="list-group">{{range .MyRepos}}
-                    <li class="list-group-item"><i class="fa fa-book"></i><a href="/{{$.SignedUserName}}/{{.Name}}/">{{.Name}}</a>
+                    <li class="list-group-item"><i class="fa fa-book"></i><a href="/{{$.SignedUserName}}/{{.Name}}">{{.Name}}</a>
                         <span class="stars pull-right"><i class="fa fa-star"></i>{{.NumStars}}</span>
                     </li>{{end}}
                 </ul>
