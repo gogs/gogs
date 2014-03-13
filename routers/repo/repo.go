@@ -46,7 +46,7 @@ func Create(form auth.CreateRepoForm, req *http.Request, r render.Render, data b
 	if err == nil {
 		if _, err = models.CreateRepository(user,
 			form.RepoName, form.Description, form.Language, form.License,
-			form.Visibility == "private", form.InitReadme == "true"); err == nil {
+			form.Visibility == "private", form.InitReadme == "on"); err == nil {
 			if err == nil {
 				data["RepoName"] = user.Name + "/" + form.RepoName
 				r.HTML(200, "repo/created", data)
@@ -83,7 +83,7 @@ func Delete(form auth.DeleteRepoForm, req *http.Request, r render.Render, data b
 		return
 	}
 
-	r.Redirect("/", 200)
+	r.Redirect("/", 302)
 }
 
 func List(req *http.Request, r render.Render, data base.TmplData, session sessions.Session) {

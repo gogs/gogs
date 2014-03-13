@@ -352,6 +352,10 @@ func DeleteRepository(userId, repoId int64, userName string) (err error) {
 		session.Rollback()
 		return err
 	}
+	if _, err := session.Delete(&Access{UserName: userName, RepoName: repo.Name}); err != nil {
+		session.Rollback()
+		return err
+	}
 	if _, err = session.Exec("update user set num_repos = num_repos - 1 where id = ?", userId); err != nil {
 		session.Rollback()
 		return err

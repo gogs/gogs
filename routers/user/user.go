@@ -43,8 +43,7 @@ func Profile(params martini.Params, r render.Render, data base.TmplData, session
 		return
 	}
 
-	data["Avatar"] = user.Avatar
-	data["Username"] = user.Name
+	data["Owner"] = user
 	r.HTML(200, "user/profile", data)
 }
 
