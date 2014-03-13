@@ -76,7 +76,7 @@ func runWeb(*cli.Context) {
 	m.Any("/repo/list", auth.SignInRequire(false), repo.List)
 	m.Get("/:username/:reponame", auth.SignInRequire(false), repo.Single)
 
-	m.Get("/:username/:reponame", repo.Repo)
+	//m.Get("/:username/:reponame", repo.Repo)
 
 	listenAddr := fmt.Sprintf("%s:%s",
 		base.Cfg.MustValue("server", "HTTP_ADDR"),
