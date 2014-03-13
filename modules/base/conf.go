@@ -37,15 +37,14 @@ func init() {
 		os.Exit(2)
 	}
 
-	cfgPathPrefix := filepath.Join(workDir, "conf")
-	cfgPath := filepath.Join(cfgPathPrefix, "app.ini")
+	cfgPath := filepath.Join(workDir, "conf/app.ini")
 	Cfg, err = goconfig.LoadConfigFile(cfgPath)
 	if err != nil {
 		fmt.Printf("Cannot load config file '%s'\n", cfgPath)
 		os.Exit(2)
 	}
 
-	cfgPath = filepath.Join(cfgPathPrefix, "custom.ini")
+	cfgPath = filepath.Join(workDir, "custom/conf/app.ini")
 	if com.IsFile(cfgPath) {
 		if err = Cfg.AppendFiles(cfgPath); err != nil {
 			fmt.Printf("Cannot load config file '%s'\n", cfgPath)
