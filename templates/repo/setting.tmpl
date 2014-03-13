@@ -22,8 +22,9 @@
             <p>This action <strong>CANNOT</strong> be undone. This will delete the repository, wiki, issues, and comments permanently. </p>
 
             <form action="/repo/delete" method="post">
-                <input type="hidden" name="reponame" value="{{.Repository.Name}}"/>
-                <input type="hidden" name="username" value="{{.Owner.Name}}"/>
+                <input type="hidden" name="userId" value="{{.Owner.Id}}"/>
+                <input type="hidden" name="userName" value="{{.Owner.Name}}"/>
+                <input type="hidden" name="repoId" value="{{.Repository.Id}}"/>
                 <hr/>
                 <button class="btn btn-danger btn-lg">I understand the consequences, delete this repository</button>
             </form>

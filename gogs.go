@@ -20,7 +20,7 @@ import (
 // Test that go1.1 tag above is included in builds. main.go refers to this definition.
 const go11tag = true
 
-const APP_VER = "0.0.5.0313"
+const APP_VER = "0.0.6.0313"
 
 func init() {
 	runtime.GOMAXPROCS(runtime.NumCPU())

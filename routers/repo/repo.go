@@ -5,9 +5,9 @@
 package repo
 
 import (
-	"net/http"
 	"github.com/martini-contrib/render"
 	"github.com/martini-contrib/sessions"
+	"net/http"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
@@ -68,7 +68,7 @@ func Create(form auth.CreateRepoForm, req *http.Request, r render.Render, data b
 	r.HTML(200, "base/error", data)
 }
 
-func Delete(req *http.Request, r render.Render, data base.TmplData, session sessions.Session) {
+func Delete(form auth.DeleteRepoForm, req *http.Request, r render.Render, data base.TmplData, session sessions.Session) {
 	data["Title"] = "Delete repository"
 
 	if req.Method == "GET" {
@@ -76,13 +76,14 @@ func Delete(req *http.Request, r render.Render, data base.TmplData, session sess
 		return
 	}
 
-	u := &models.User{}
-	err := models.DeleteRepository(u, "")
-	if err != nil {
+	if err := models.DeleteRepository(form.UserId, form.RepoId, form.UserName); err != nil {
 		data["ErrorMsg"] = err
 		log.Error("repo.Delete: %v", err)
 		r.HTML(200, "base/error", data)
+		return
 	}
+
+	r.Redirect("/", 200)
 }
 
 func List(req *http.Request, r render.Render, data base.TmplData, session sessions.Session) {

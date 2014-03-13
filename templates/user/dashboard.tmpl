@@ -12,6 +12,7 @@
     </div>
 </div>
 <div id="gogs-body" class="container">
+    {{if .HasInfo}}<div class="alert alert-info">{{.InfoMsg}}</div>{{end}}
     <div id="gogs-feed-left" class="col-md-8">
         Website is still in the progress of building...please come back later! <strong>{{.SignedUserName}}</strong> is logged!
     </div>

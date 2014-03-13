@@ -56,6 +56,12 @@ func (f *CreateRepoForm) Validate(errors *binding.Errors, req *http.Request, con
 	validate(errors, data, f)
 }
 
+type DeleteRepoForm struct {
+	UserId   int64  `form:"userId" binding:"Required"`
+	UserName string `form:"userName" binding:"Required"`
+	RepoId   int64  `form:"repoId" binding:"Required"`
+}
+
 func RepoAssignment(redirect bool) martini.Handler {
 	return func(params martini.Params, r render.Render, data base.TmplData, session sessions.Session) {
 		// assign false first
