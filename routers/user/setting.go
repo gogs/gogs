@@ -47,6 +47,39 @@ func Setting(form auth.UpdateProfileForm, r render.Render, data base.TmplData, r
 	r.HTML(200, "user/setting", data)
 }
 
+func UpdatePasswd(form auth.UpdatePasswdForm, r render.Render, data base.TmplData, req *http.Request, session sessions.Session) {
+	data["Title"] = "Setting"
+	data["PageIsUserSetting"] = true
+
+	user := auth.SignedInUser(session)
+	newUser := &models.User{Passwd: form.OldPasswd}
+	if err := newUser.EncodePasswd(); err != nil {
+		data["ErrorMsg"] = err
+		log.Error("setting.UpdatePasswd: %v", err)
+		r.HTML(200, "base/error", data)
+		return
+	}
+
+	if user.Passwd != newUser.Passwd {
+		data["HasError"] = true
+		data["ErrorMsg"] = "Old password is not correct"
+	} else if form.NewPasswd != form.RetypePasswd {
+		data["HasError"] = true
+		data["ErrorMsg"] = "New password and re-type password are not same"
+	} else {
+		user.Passwd = newUser.Passwd
+		if err := models.UpdateUser(user); err != nil {
+			data["ErrorMsg"] = err
+			log.Error("setting.Setting: %v", err)
+			r.HTML(200, "base/error", data)
+			return
+		}
+	}
+
+	data["Owner"] = user
+	r.HTML(200, "user/setting", data)
+}
+
 func SettingSSHKeys(form auth.AddSSHKeyForm, r render.Render, data base.TmplData, req *http.Request, session sessions.Session) {
 	data["Title"] = "SSH Keys"
 

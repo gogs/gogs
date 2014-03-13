@@ -128,3 +128,36 @@ func (f *UpdateProfileForm) Validate(errors *binding.Errors, req *http.Request, 
 
 	validate(errors, data, f)
 }
+
+type UpdatePasswdForm struct {
+	OldPasswd    string `form:"oldpasswd" binding:"Required;MinSize(6);MaxSize(30)"`
+	NewPasswd    string `form:"newpasswd" binding:"Required;MinSize(6);MaxSize(30)"`
+	RetypePasswd string `form:"retypepasswd"`
+}
+
+func (f *UpdatePasswdForm) Name(field string) string {
+	names := map[string]string{
+		"OldPasswd":    "Old password",
+		"NewPasswd":    "New password",
+		"RetypePasswd": "Re-type password",
+	}
+	return names[field]
+}
+
+func (f *UpdatePasswdForm) Validate(errors *binding.Errors, req *http.Request, context martini.Context) {
+	if req.Method == "GET" || errors.Count() == 0 {
+		return
+	}
+
+	data := context.Get(reflect.TypeOf(base.TmplData{})).Interface().(base.TmplData)
+	data["HasError"] = true
+
+	if len(errors.Overall) > 0 {
+		for _, err := range errors.Overall {
+			log.Error("UpdatePasswdForm.Validate: %v", err)
+		}
+		return
+	}
+
+	validate(errors, data, f)
+}
