@@ -137,7 +137,8 @@ func CreateRepository(user *User, repoName, desc, repoLang, license string, priv
 		}
 		return nil, err
 	}
-	return repo, nil
+
+	return repo, NewRepoAction(user, repo)
 }
 
 // InitRepository initializes README and .gitignore if needed.

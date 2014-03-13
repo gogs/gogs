@@ -2,10 +2,11 @@ package repo
 
 import (
 	"github.com/codegangsta/martini"
+	"github.com/martini-contrib/render"
+
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
-	"github.com/martini-contrib/render"
 )
 
 func Single(params martini.Params, r render.Render, data base.TmplData) {
@@ -20,7 +21,10 @@ func Single(params martini.Params, r render.Render, data base.TmplData) {
 		r.HTML(200, "base/error", data)
 		return
 	}
-	data["Files"] = files
+
 	data["IsRepoToolbarSource"] = true
+
+	data["Files"] = files
+
 	r.HTML(200, "repo/single", data)
 }
