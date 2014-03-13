@@ -78,6 +78,8 @@ func runWeb(*cli.Context) {
 
 	//m.Get("/:username/:reponame", repo.Repo)
 
+	//m.Get("/:username/:reponame", repo.Repo)
+
 	listenAddr := fmt.Sprintf("%s:%s",
 		base.Cfg.MustValue("server", "HTTP_ADDR"),
 		base.Cfg.MustValue("server", "HTTP_PORT", "3000"))
