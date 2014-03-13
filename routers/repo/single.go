@@ -23,7 +23,6 @@ func Single(params martini.Params, r render.Render, data base.TmplData) {
 	}
 
 	data["IsRepoToolbarSource"] = true
-
 	data["Files"] = files
 
 	r.HTML(200, "repo/single", data)

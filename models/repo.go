@@ -267,13 +267,21 @@ const (
 )
 
 type RepoFile struct {
-	Type int
-	Name string
-
+	Type    int
+	Name    string
+	Message string
 	Created time.Time
 }
 
-func GetReposFiles(userName, reposName, treeName, rpath string) ([]RepoFile, error) {
+func (f *RepoFile) IsFile() bool {
+	return f.Type == git.FilemodeBlob || f.Type == git.FilemodeBlobExecutable
+}
+
+func (f *RepoFile) IsDir() bool {
+	return f.Type == git.FilemodeTree
+}
+
+func GetReposFiles(userName, reposName, treeName, rpath string) ([]*RepoFile, error) {
 	f := RepoPath(userName, reposName)
 	repo, err := git.OpenRepository(f)
 	if err != nil {
@@ -285,7 +293,7 @@ func GetReposFiles(userName, reposName, treeName, rpath string) ([]RepoFile, err
 		return nil, err
 	}
 	lastCommit := obj.(*git.Commit)
-	var repofiles []RepoFile
+	var repofiles []*RepoFile
 	tree, err := lastCommit.Tree()
 	if err != nil {
 		return nil, err
@@ -293,10 +301,12 @@ func GetReposFiles(userName, reposName, treeName, rpath string) ([]RepoFile, err
 	var i uint64 = 0
 	for ; i < tree.EntryCount(); i++ {
 		entry := tree.EntryByIndex(i)
-		repofiles = append(repofiles, RepoFile{
+
+		repofiles = append(repofiles, &RepoFile{
 			entry.Filemode,
 			entry.Name,
-			time.Now(),
+			lastCommit.Message(),
+			lastCommit.Committer().When,
 		})
 	}
 
