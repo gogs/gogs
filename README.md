@@ -3,6 +3,8 @@ Gogs - Go Git Service [![wercker status](https://app.wercker.com/status/ad0bdb0b
 
 Gogs(Go Git Service) is a GitHub-like clone in the Go Programming Language, it currently supports Linux and Max OS X, but Windows has **NOT** supported yet due to installation problem with [libgit2](http://libgit2.github.com/) in Windows.
 
+##### Current version: 0.0.6 Alpha
+
 ## Purpose
 
 There are some very good products in this category such as [gitlab](http://gitlab.com), but the environment setup steps often make us crazy. So our goal of Gogs is to build a GitHub-like clone with very easy setup steps, which take advantages of the Go Programming Language.
@@ -15,7 +17,7 @@ Please see [Wiki](https://github.com/gogits/gogs/wiki) for project design, devel
 
 - SSH protocal support.
 - Register/delete account.
-- Create public repository.
+- Create/delete public repository.
 - Git repository manipulation.
 
 ## Installation
