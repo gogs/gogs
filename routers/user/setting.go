@@ -24,6 +24,8 @@ func Setting(form auth.UpdateProfileForm, r render.Render, data base.TmplData, r
 	user := auth.SignedInUser(session)
 	if req.Method == "GET" {
 		data["Owner"] = user
+		r.HTML(200, "user/setting", data)
+		return
 	}
 
 	if hasErr, ok := data["HasError"]; ok && hasErr.(bool) {
