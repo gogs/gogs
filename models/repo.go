@@ -105,7 +105,6 @@ func CreateRepository(user *User, repoName, desc, repoLang, license string, priv
 		return nil, err
 	}
 
-	// TODO: RemoveAll may fail due to not root access.
 	access := Access{
 		UserName: user.Name,
 		RepoName: repo.Name,
@@ -339,13 +338,21 @@ func RepoPath(userName, repoName string) string {
 }
 
 // DeleteRepository deletes a repository for a user or orgnaztion.
-func DeleteRepository(user *User, reposName string) (err error) {
+func DeleteRepository(userId, repoId int64, userName string) (err error) {
+	repo := &Repository{Id: repoId, OwnerId: userId}
+	has, err := orm.Get(repo)
+	if err != nil {
+		return err
+	} else if !has {
+		return ErrRepoNotExist
+	}
+
 	session := orm.NewSession()
-	if _, err = session.Delete(&Repository{OwnerId: user.Id, Name: reposName}); err != nil {
+	if _, err = session.Delete(&Repository{Id: repoId}); err != nil {
 		session.Rollback()
 		return err
 	}
-	if _, err = session.Exec("update user set num_repos = num_repos - 1 where id = ?", user.Id); err != nil {
+	if _, err = session.Exec("update user set num_repos = num_repos - 1 where id = ?", userId); err != nil {
 		session.Rollback()
 		return err
 	}
@@ -353,9 +360,9 @@ func DeleteRepository(user *User, reposName string) (err error) {
 		session.Rollback()
 		return err
 	}
-	if err = os.RemoveAll(RepoPath(user.Name, reposName)); err != nil {
+	if err = os.RemoveAll(RepoPath(userName, repo.Name)); err != nil {
 		// TODO: log and delete manully
-		log.Error("delete repo %s/%s failed", user.Name, reposName)
+		log.Error("delete repo %s/%s failed", userName, repo.Name)
 		return err
 	}
 	return nil
