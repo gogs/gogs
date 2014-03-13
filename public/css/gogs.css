@@ -372,8 +372,89 @@ body {
     line-height: 32px;
     border-bottom: 1px solid #DDD;
     padding-left: 15px;
+    clear: both;
+}
+
+#gogs-feed-right .repo-panel .list-group-item:last-child {
+    border-bottom: none;
 }
 
 #gogs-feed-right .repo-panel .list-group-item:hover {
     background-color: rgba(65, 131, 196, 0.1);
+}
+
+#gogs-feed-right .repo-panel span.stars {
+    color: #666;
+    line-height: 44px;
+    margin-right: 1em;
+}
+
+/* gogits repo single page */
+
+.gogs-repo-nav h3 .fa {
+    color: #BBB;
+}
+
+.gogs-repo-btns {
+    margin-top: 18px;
+}
+
+.gogs-repo-btns .btn-group {
+    margin-left: 1em;
+}
+
+.gogs-repo-btns .btn-group .btn {
+    padding-left: 6px;
+}
+
+#gogs-repo-watching .dropdown-menu {
+    width: 280px;
+    padding: 0;
+}
+
+#gogs-repo-watching .dropdown-menu .dropdown-item:hover .dropdown-header {
+    color: rgb(65, 131, 196);
+    cursor: pointer;
+}
+
+#gogs-repo-watching .dropdown-menu .description {
+    padding: 0 20px;
+    color: #888;
+}
+
+#gogs-repo-watching .dropdown-menu .dropdown-header {
+    color: #444;
+    font-weight: bold;
+    font-size: 14px;
+    margin-bottom: 4px;
+}
+
+
+#gogs-repo-toolbar{
+    margin-top: 51px;
+    margin-bottom: -50px;
+    border-bottom: 1px solid #BBB;
+    background-color: #FFF;
+    height: 40px;
+}
+
+#gogs-repo-toolbar .navbar-default{
+    border: none;
+    height: 39px;
+}
+
+#gogs-repo-toolbar .nav > li > a{
+    height: 39px;
+}
+
+#gogs-repo-toolbar .navbar-toolbar.navbar-default .navbar-nav>.active>a:after{
+    border-bottom-color: #999;
+}
+
+#gogs-repo-toolbar .navbar.nav-toolbar{
+    margin-bottom: 0;
+}
+
+#gogs-repo-toolbar .navbar-collapse{
+    padding: 0;
 }

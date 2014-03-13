@@ -1,0 +1,42 @@
+{{template "base/head" .}}
+{{template "base/navbar" .}}
+<div id="gogs-body-nav" class="gogs-repo-nav">
+    <div class="container">
+        <div class="gogs-repo-btns pull-right">
+            <div class="btn-group" id="gogs-repo-watching">
+                <button type="button" class="btn btn-default"><i class="fa fa-eye"></i>Watch {x}</button>
+                <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                    <span class="caret"></span>
+                    <span class="sr-only">Toggle Dropdown</span>
+                </button>
+                <div class="dropdown-menu" role="menu">
+                    <div class="dropdown-item" data-val="not-watching">
+                        <h4 role="presentation" class="dropdown-header">Not Watching</h4>
+                        <p class="description">You only receive notifications for conversations in which you participate or are @mentioned.</p>
+                        <p class="divider"></p>
+                    </div>
+                    <div class="dropdown-item" data-val="watching">
+                        <h4 role="presentation" class="dropdown-header">Watching</h4>
+                        <p class="description">You receive notifications for all conversations in this repository.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="btn-group">
+                <button type="button" class="btn btn-default"><i class="fa fa-star"></i>Star&nbsp;&nbsp;{{.Repository.NumStars}}</button>
+            </div>
+            <div class="btn-group">
+                <button type="button" class="btn btn-default"><i class="fa fa-code-fork"></i>Fork&nbsp;&nbsp;{{.Repository.NumForks}}</button>
+            </div>
+        </div>
+        <h3><i class="fa fa-book fa-lg"></i><a href="/{{.Owner.Name}}/">{{.Owner.Name}}</a> / {{.Repository.Name}}</h3>
+    </div>
+</div>
+{{template "repo/toolbar" .}}
+<div id="gogs-body" class="container">
+    <ul>
+    {{range .Files}}
+        <li>{{.Name}} - {{.Type}}</li>
+    {{end}}
+    </ul>
+</div>
+{{template "base/footer" .}}
