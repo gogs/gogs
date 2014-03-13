@@ -33,6 +33,11 @@
 </div>
 {{template "repo/toolbar" .}}
 <div id="gogs-body" class="container">
-    repo single dashboard
+    <h4>Source Files:</h4>
+    <ul>
+    {{range .Files}}
+        <li>{{.Name}} - {{.Type}}</li>
+    {{end}}
+    </ul>
 </div>
 {{template "base/footer" .}}

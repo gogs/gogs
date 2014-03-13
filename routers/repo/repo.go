@@ -6,8 +6,6 @@ package repo
 
 import (
 	"net/http"
-
-	"github.com/codegangsta/martini"
 	"github.com/martini-contrib/render"
 	"github.com/martini-contrib/sessions"
 
@@ -85,20 +83,6 @@ func Delete(req *http.Request, r render.Render, data base.TmplData, session sess
 		log.Error("repo.Delete: %v", err)
 		r.HTML(200, "base/error", data)
 	}
-}
-
-func Repo(params martini.Params, req *http.Request, r render.Render, data base.TmplData, session sessions.Session) {
-	data["Title"] = "Repository"
-	files, err := models.GetReposFiles(params["username"], params["reponame"], "HEAD", "/")
-	if err != nil {
-		data["ErrorMsg"] = err
-		log.Error("repo.List: %v", err)
-		r.HTML(200, "base/error", data)
-		return
-	}
-
-	data["Files"] = files
-	r.HTML(200, "repo/repo", data)
 }
 
 func List(req *http.Request, r render.Render, data base.TmplData, session sessions.Session) {
