@@ -30,10 +30,7 @@ var CmdWeb = cli.Command{
 	Description: `
 gogs web`,
 	Action: runWeb,
-	Flags:  []cli.Flag{
-	//cli.BoolFlag{"update, u", "update pakcage(s) and dependencies if any"},
-	//cli.BoolFlag{"verbose, v", "show process details"},
-	},
+	Flags:  []cli.Flag{},
 }
 
 var AppHelpers template.FuncMap = map[string]interface{}{
@@ -75,8 +72,6 @@ func runWeb(*cli.Context) {
 	m.Any("/repo/delete", auth.SignInRequire(true), repo.Delete)
 	m.Any("/repo/list", auth.SignInRequire(false), repo.List)
 	m.Get("/:username/:reponame", auth.SignInRequire(false), auth.RepoAssignment(true), repo.Single)
-
-	//m.Get("/:username/:reponame", repo.Repo)
 
 	//m.Get("/:username/:reponame", repo.Repo)
 

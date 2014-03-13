@@ -5,7 +5,6 @@
 package user
 
 import (
-	"bytes"
 	"net/http"
 
 	"github.com/codegangsta/martini"
@@ -167,20 +166,10 @@ func Delete(data base.TmplData, req *http.Request, session sessions.Session, r r
 	r.HTML(200, "user/delete", data)
 }
 
-func Feeds(form auth.FeedsForm, r render.Render) string {
+func Feeds(form auth.FeedsForm, r render.Render) {
 	actions, err := models.GetFeeds(form.UserId, form.Offset)
 	if err != nil {
-		return err.Error()
+		r.JSON(500, err)
 	}
-
-	length := len(actions)
-	buf := bytes.NewBuffer([]byte("["))
-	for i, action := range actions {
-		buf.WriteString(action.Content)
-		if i < length-1 {
-			buf.WriteString(",")
-		}
-	}
-	buf.WriteString("]")
-	return buf.String()
+	r.JSON(200, actions)
 }
