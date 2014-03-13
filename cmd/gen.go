@@ -41,6 +41,8 @@ Make sure you run this command in the root path of a go project.`,
 	},
 }
 
+var commonRes = []string{"views", "templates", "static", "public", "conf"}
+
 func runGen(ctx *cli.Context) {
 	setup(ctx)
 
@@ -55,7 +57,7 @@ func runGen(ctx *cli.Context) {
 	}
 
 	targetPath := parseTarget(gf.MustValue("target", "path"))
-	// Get dependencies.
+	// Get and set dependencies.
 	imports := doc.GetAllImports([]string{workDir}, targetPath, ctx.Bool("example"))
 	log.Log("%v", imports)
 	for _, p := range imports {
@@ -70,6 +72,15 @@ func runGen(ctx *cli.Context) {
 			gf.SetValue("deps", p, "")
 		}
 	}
+
+	// Get and set resources.
+	res := make([]string, 0, len(commonRes))
+	for _, cr := range commonRes {
+		if com.IsExist(cr) {
+			res = append(res, cr)
+		}
+	}
+	gf.SetValue("res", "include", strings.Join(res, "|"))
 
 	err = goconfig.SaveConfigFile(gf, ".gopmfile")
 	if err != nil {
