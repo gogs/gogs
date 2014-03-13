@@ -5,7 +5,6 @@
 package models
 
 import (
-	"encoding/json"
 	"time"
 )
 
@@ -21,30 +20,24 @@ const (
 
 // An Action represents
 type Action struct {
-	Id      int64
-	UserId  int64
-	OpType  int
-	RepoId  int64
-	Content string
-	Created time.Time `xorm:"created"`
-}
-
-type NewRepoContent struct {
+	Id       int64
+	UserId   int64
 	UserName string
+	OpType   int
+	RepoId   int64
 	RepoName string
+	Content  string
+	Created  time.Time `xorm:"created"`
 }
 
 // NewRepoAction inserts action for create repository.
 func NewRepoAction(user *User, repo *Repository) error {
-	content, err := json.Marshal(&NewRepoContent{user.Name, repo.Name})
-	if err != nil {
-		return err
-	}
-	_, err = orm.InsertOne(&Action{
-		UserId:  user.Id,
-		OpType:  OP_CREATE_REPO,
-		RepoId:  repo.Id,
-		Content: string(content),
+	_, err := orm.InsertOne(&Action{
+		UserId:   user.Id,
+		UserName: user.Name,
+		OpType:   OP_CREATE_REPO,
+		RepoId:   repo.Id,
+		RepoName: repo.Name,
 	})
 	return err
 }
