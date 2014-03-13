@@ -64,17 +64,18 @@ func runWeb(*cli.Context) {
 	m.Any("/user/logout", auth.SignInRequire(true), user.SignOut)
 	m.Any("/user/sign_up", auth.SignOutRequire(), binding.BindIgnErr(auth.RegisterForm{}), user.SignUp)
 	m.Any("/user/delete", auth.SignInRequire(true), user.Delete)
+	m.Get("/user/feeds", binding.Bind(auth.FeedsForm{}), user.Feeds)
 
 	m.Any("/user/setting", auth.SignInRequire(true), user.Setting)
 	m.Any("/user/setting/ssh", auth.SignInRequire(true), binding.BindIgnErr(auth.AddSSHKeyForm{}), user.SettingSSHKeys)
 
 	m.Get("/user/:username", auth.SignInRequire(false), user.Profile)
 
-	m.Get("/:username/:reponame", repo.Repo)
-
 	m.Any("/repo/create", auth.SignInRequire(true), binding.BindIgnErr(auth.CreateRepoForm{}), repo.Create)
 	m.Any("/repo/delete", auth.SignInRequire(true), repo.Delete)
 	m.Any("/repo/list", auth.SignInRequire(false), repo.List)
+
+	m.Get("/:username/:reponame", repo.Repo)
 
 	listenAddr := fmt.Sprintf("%s:%s",
 		base.Cfg.MustValue("server", "HTTP_ADDR"),
