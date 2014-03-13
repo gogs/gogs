@@ -41,9 +41,8 @@ var Gogits = {
         });
     };
     Gogits.initTabs = function () {
-        var $tabs = $('[data-toggle=tab]');
-        $tabs.tab("show");
-        $tabs.find("li:eq(" + index + ") a").tab("show");
+        var $tabs = $('[data-init=tabs]');
+        $tabs.find("li:eq(0) a").tab("show");
     }
 })(jQuery);
 
@@ -69,6 +68,7 @@ var Gogits = {
 
 function initCore() {
     Gogits.initTooltips();
+    Gogits.initTabs();
     Gogits.initModals();
 }
 
