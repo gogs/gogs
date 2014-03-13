@@ -61,26 +61,6 @@ type Follow struct {
 	Created  time.Time `xorm:"created"`
 }
 
-// Operation types of repository.
-const (
-	OP_CREATE_REPO = iota + 1
-	OP_DELETE_REPO
-	OP_STAR_REPO
-	OP_FOLLOW_REPO
-	OP_COMMIT_REPO
-	OP_PULL_REQUEST
-)
-
-// An Action represents
-type Action struct {
-	Id      int64
-	UserId  int64
-	OpType  int
-	RepoId  int64
-	Content string
-	Created time.Time `xorm:"created"`
-}
-
 var (
 	ErrUserOwnRepos     = errors.New("User still have ownership of repositories")
 	ErrUserAlreadyExist = errors.New("User already exist")

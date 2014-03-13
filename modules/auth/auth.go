@@ -90,6 +90,11 @@ func (f *LogInForm) Validate(errors *binding.Errors, req *http.Request, context 
 	validate(errors, data, f)
 }
 
+type FeedsForm struct {
+	UserId int64 `form:"userid" binding:"Required"`
+	Offset int64 `form:"offset"`
+}
+
 func getMinMaxSize(field reflect.StructField) string {
 	for _, rule := range strings.Split(field.Tag.Get("binding"), ";") {
 		if strings.HasPrefix(rule, "MinSize(") || strings.HasPrefix(rule, "MaxSize(") {
