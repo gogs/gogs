@@ -257,7 +257,7 @@ func genNewGoPath(ctx *cli.Context, isTest bool) {
 			continue
 		}
 
-		if !isExistP && ((len(pkg.Value) > 0 || ctx.Bool("remote")) ||
+		if !isExistP && (len(pkg.Value) > 0 || ctx.Bool("remote") ||
 			!com.IsDir(filepath.Join(installGopath, pkg.ImportPath))) {
 			log.Log("Linking %s", name+suf)
 			err = autoLink(oldPath, newPath)

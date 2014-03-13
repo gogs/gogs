@@ -18,7 +18,7 @@ USAGE:
    gopm [global options] command [command options] [arguments...]
 
 VERSION:
-   0.6.3.0311
+   0.6.3.0313
 
 COMMANDS:
    get		fetch remote package(s) and dependencies to local repository
