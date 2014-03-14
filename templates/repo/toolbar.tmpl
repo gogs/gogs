@@ -1,40 +1,32 @@
 <div id="gogs-repo-toolbar">
     <div class="container">
         <nav class="navbar navbar-toolbar navbar-default" role="navigation">
-            <div class="container-fluid">
-                <div class="collapse navbar-collapse">
-                    <ul class="nav navbar-nav">
-                        <li class="dropdown">
-                            <a href="#" class="dropdown-toggle" data-toggle="dropdown">Branches <b class="caret"></b></a>
-                            <ul class="dropdown-menu">
-                                <li><a href="#">master</a></li>
-                                <li><a href="#">develop</a></li>
-                            </ul>
-                        </li>
-                        <li class="{{if .IsRepoToolbarSource}}active{{end}}"><a href="/{{.RepositoryLink}}">Source</a></li>
-                        <li><a href="#">Commits</a></li>
-                        <li><a href="#">Issues <span class="badge">42</span></a></li>
-                        <li><a href="#">Pull Requests</a></li>
-                        <li class="dropdown">
-                            <a href="#" class="dropdown-toggle" data-toggle="dropdown">More <b class="caret"></b></a>
-                            <ul class="dropdown-menu">
-                                <li><a href="#">Release</a></li>
-                                <li><a href="#">Wiki</a></li>
-                            </ul>
-                        </li>
-                    </ul>
-                    <ul class="nav navbar-nav navbar-right">
-                        <li class="dropdown">
-                            <a href="#" class="dropdown-toggle" data-toggle="dropdown">Statistic <b class="caret"></b></a>
-                            <ul class="dropdown-menu">
-                                <li><a href="#">Graphic</a></li>
-                                <li><a href="#">Pulse</a></li>
-                                <li><a href="#">Network</a></li>
-                            </ul>
-                        </li>{{if .IsRepositoryOwner}}
-                        <li class="{{if .IsRepoToolbarSetting}}active{{end}}"><a href="/{{.RepositoryLink}}/settings">Settings</a></li>{{end}}
-                    </ul>
-                </div>
+            <div class="collapse navbar-collapse">
+                <ul class="nav navbar-nav">
+                    <li class="{{if .IsRepoToolbarSource}}active{{end}}"><a href="/{{.RepositoryLink}}">Source</a></li>
+                    <li><a href="/{{.RepositoryLink}}/commits">Commits</a></li>
+                    <li><a href="/{{.RepositoryLink}}/issues">Issues <!--<span class="badge">42</span>--></a></li>
+                    <li><a href="/{{.RepositoryLink}}/pulls">Pull Requests</a></li>
+                    <li class="dropdown">
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown">More <b class="caret"></b></a>
+                        <ul class="dropdown-menu">
+                            <li><a href="/{{.RepositoryLink}}/release">Release</a></li>
+                            <li><a href="//{{.RepositoryLink}}/wiki">Wiki</a></li>
+                        </ul>
+                    </li>
+                </ul>
+                <ul class="nav navbar-nav navbar-right">
+                    <li class="dropdown">
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown">Statistic <b class="caret"></b></a>
+                        <ul class="dropdown-menu">
+                            <li><a href="#">Graphic</a></li>
+                            <li><a href="#">Pulse</a></li>
+                            <li><a href="#">Network</a></li>
+                        </ul>
+                    </li>{{if .IsRepositoryOwner}}
+                    <li class="{{if .IsRepoToolbarSetting}}active{{end}}"><a href="/{{.RepositoryLink}}/settings">Settings</a>
+                    </li>{{end}}
+                </ul>
             </div>
         </nav>
     </div>
