@@ -1,6 +1,17 @@
 <div id="gogs-body-nav" class="gogs-repo-nav">
     <div class="container">
         <div class="gogs-repo-btns pull-right">
+            <div class="btn-group" id="gogs-repo-clone">
+                <button type="button" class="btn btn-default"><i class="fa fa-download"></i>Clone</button>
+                <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                    <span class="caret"></span>
+                    <span class="sr-only">Toggle Dropdown</span>
+                </button>
+                <div class="dropdown-menu" role="menu">
+                    <div data-val="down-http">http link</div>
+                    <div data-val="down-git">git link</div>
+                </div>
+            </div>
             <div class="btn-group" id="gogs-repo-watching">
                 <button type="button" class="btn btn-default"><i class="fa fa-eye"></i>Watch {x}</button>
                 <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
