@@ -305,11 +305,11 @@ func GetReposFiles(userName, reposName, branchName, rpath string) ([]*RepoFile, 
 	if rpath != "" {
 		rpath = rpath + "/"
 	}
-	fmt.Println("...", rpath, "...")
+	//fmt.Println("...", rpath, "...")
 
 	tree.Walk(func(dirname string, entry *git.TreeEntry) int {
 		if dirname == rpath {
-			fmt.Println("====", dirname, "==", entry.Name)
+			//fmt.Println("====", dirname, "==", entry.Name)
 			repofiles = append(repofiles, &RepoFile{
 				entry.Id,
 				entry.Filemode,
