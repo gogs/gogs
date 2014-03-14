@@ -5,3 +5,4 @@ gogs
 *.db
 *.log
 custom/
+.vendor/
