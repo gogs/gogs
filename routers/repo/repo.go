@@ -5,9 +5,10 @@
 package repo
 
 import (
+	"net/http"
+
 	"github.com/martini-contrib/render"
 	"github.com/martini-contrib/sessions"
-	"net/http"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
@@ -15,7 +16,7 @@ import (
 	"github.com/gogits/gogs/modules/log"
 )
 
-func Create(form auth.CreateRepoForm, req *http.Request, r render.Render, data base.TmplData, session sessions.Session) {
+func Create(form auth.CreateRepoForm, req *http.Request, r render.Render, data base.TmplData, session sessions.Session, eh log.ErrHandler) {
 	data["Title"] = "Create repository"
 
 	if req.Method == "GET" {
@@ -63,9 +64,7 @@ func Create(form auth.CreateRepoForm, req *http.Request, r render.Render, data b
 		return
 	}
 
-	data["ErrorMsg"] = err
-	log.Error("repo.Create: %v", err)
-	r.HTML(200, "base/error", data)
+	eh.Handle("repo.Create", r, err)
 }
 
 func Delete(form auth.DeleteRepoForm, req *http.Request, r render.Render, data base.TmplData, session sessions.Session) {
