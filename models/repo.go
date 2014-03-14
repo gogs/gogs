@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -270,6 +271,7 @@ type RepoFile struct {
 	Id      *git.Oid
 	Type    int
 	Name    string
+	Path    string
 	Message string
 	Created time.Time
 }
@@ -282,7 +284,7 @@ func (f *RepoFile) IsDir() bool {
 	return f.Type == git.FilemodeTree
 }
 
-func GetReposFiles(userName, reposName, treeName, rpath string) ([]*RepoFile, error) {
+func GetReposFiles(userName, reposName, branchName, rpath string) ([]*RepoFile, error) {
 	f := RepoPath(userName, reposName)
 	repo, err := git.OpenRepository(f)
 	if err != nil {
@@ -299,8 +301,28 @@ func GetReposFiles(userName, reposName, treeName, rpath string) ([]*RepoFile, er
 	if err != nil {
 		return nil, err
 	}
-	var i uint64 = 0
-	for ; i < tree.EntryCount(); i++ {
+	//var i uint64 = 0
+	if rpath != "" {
+		rpath = rpath + "/"
+	}
+	fmt.Println("...", rpath, "...")
+
+	tree.Walk(func(dirname string, entry *git.TreeEntry) int {
+		if dirname == rpath {
+			fmt.Println("====", dirname, "==", entry.Name)
+			repofiles = append(repofiles, &RepoFile{
+				entry.Id,
+				entry.Filemode,
+				entry.Name,
+				path.Join(dirname, entry.Name),
+				lastCommit.Message(),
+				lastCommit.Committer().When,
+			})
+		}
+		return 0
+	})
+
+	/*for ; i < tree.EntryCount(); i++ {
 		entry := tree.EntryByIndex(i)
 
 		repofiles = append(repofiles, &RepoFile{
@@ -310,7 +332,7 @@ func GetReposFiles(userName, reposName, treeName, rpath string) ([]*RepoFile, er
 			lastCommit.Message(),
 			lastCommit.Committer().When,
 		})
-	}
+	}*/
 
 	return repofiles, nil
 }
@@ -351,6 +373,10 @@ func DeleteRepository(userId, repoId int64, userName string) (err error) {
 
 	session := orm.NewSession()
 	if _, err = session.Delete(&Repository{Id: repoId}); err != nil {
+		session.Rollback()
+		return err
+	}
+	if _, err := session.Delete(&Access{UserName: userName, RepoName: repo.Name}); err != nil {
 		session.Rollback()
 		return err
 	}

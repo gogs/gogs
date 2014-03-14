@@ -78,7 +78,6 @@ function initRegister() {
             rules: {
                 "username": {
                     required: true,
-                    minlength: 5,
                     maxlength: 30
                 },
                 "email": {
