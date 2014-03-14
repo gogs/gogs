@@ -50,7 +50,6 @@ func runWeb(*cli.Context) {
 	// Middlewares.
 	m.Use(render.Renderer(render.Options{Funcs: []template.FuncMap{AppHelpers}}))
 	m.Use(base.InitContext())
-	m.Use(log.ErrHandle())
 
 	// TODO: should use other store because cookie store is not secure.
 	store := sessions.NewCookieStore([]byte("secret123"))
