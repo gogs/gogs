@@ -64,7 +64,7 @@ func Create(form auth.CreateRepoForm, req *http.Request, r render.Render, data b
 		return
 	}
 
-	log.Handle(200, "repo.Create", "base/error", data, r, err)
+	log.Handle(200, "repo.Create", data, r, err)
 }
 
 func Delete(form auth.DeleteRepoForm, req *http.Request, r render.Render, data base.TmplData, session sessions.Session) {
@@ -76,9 +76,7 @@ func Delete(form auth.DeleteRepoForm, req *http.Request, r render.Render, data b
 	}
 
 	if err := models.DeleteRepository(form.UserId, form.RepoId, form.UserName); err != nil {
-		data["ErrorMsg"] = err
-		log.Error("repo.Delete: %v", err)
-		r.HTML(200, "base/error", data)
+		log.Handle(200, "repo.Delete", data, r, err)
 		return
 	}
 
@@ -95,9 +93,7 @@ func List(req *http.Request, r render.Render, data base.TmplData, session sessio
 	data["Title"] = "Repositories"
 	repos, err := models.GetRepositories(u)
 	if err != nil {
-		data["ErrorMsg"] = err
-		log.Error("repo.List: %v", err)
-		r.HTML(200, "base/error", data)
+		log.Handle(200, "repo.List", data, r, err)
 		return
 	}
 

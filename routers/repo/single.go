@@ -16,9 +16,7 @@ func Single(params martini.Params, r render.Render, data base.TmplData) {
 
 	files, err := models.GetReposFiles(params["username"], params["reponame"], "HEAD", "/")
 	if err != nil {
-		data["ErrorMsg"] = err
-		log.Error("repo.List: %v", err)
-		r.HTML(200, "base/error", data)
+		log.Handle(200, "repo.Single", data, r, err)
 		return
 	}
 

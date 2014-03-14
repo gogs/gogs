@@ -22,9 +22,7 @@ func Dashboard(r render.Render, data base.TmplData, session sessions.Session) {
 	data["PageIsUserDashboard"] = true
 	repos, err := models.GetRepositories(&models.User{Id: auth.SignedInId(session)})
 	if err != nil {
-		data["ErrorMsg"] = err
-		log.Error("dashboard: %v", err)
-		r.HTML(200, "base/error", data)
+		log.Handle(200, "user.Dashboard", data, r, err)
 		return
 	}
 	data["MyRepos"] = repos
@@ -37,9 +35,7 @@ func Profile(params martini.Params, r render.Render, data base.TmplData, session
 	// TODO: Need to check view self or others.
 	user, err := models.GetUserByName(params["username"])
 	if err != nil {
-		data["ErrorMsg"] = err
-		log.Error("user.Profile: %v", err)
-		r.HTML(200, "base/error", data)
+		log.Handle(200, "user.Profile", data, r, err)
 		return
 	}
 
@@ -70,9 +66,7 @@ func SignIn(form auth.LogInForm, data base.TmplData, req *http.Request, r render
 			return
 		}
 
-		data["ErrorMsg"] = err
-		log.Error("user.SignIn: %v", err)
-		r.HTML(200, "base/error", data)
+		log.Handle(200, "user.SignIn", data, r, err)
 		return
 	}
 
@@ -129,9 +123,7 @@ func SignUp(form auth.RegisterForm, data base.TmplData, req *http.Request, r ren
 			data["ErrorMsg"] = "E-mail address has been already used"
 			r.HTML(200, "user/signup", data)
 		default:
-			data["ErrorMsg"] = err
-			log.Error("user.SignUp: %v", data)
-			r.HTML(200, "base/error", nil)
+			log.Handle(200, "user.SignUp", data, r, err)
 		}
 		return
 	}
@@ -155,9 +147,7 @@ func Delete(data base.TmplData, req *http.Request, session sessions.Session, r r
 		case models.ErrUserOwnRepos.Error():
 			data["ErrorMsg"] = "Your account still have ownership of repository, you have to delete or transfer them first."
 		default:
-			data["ErrorMsg"] = err
-			log.Error("user.Delete: %v", data)
-			r.HTML(200, "base/error", nil)
+			log.Handle(200, "user.Delete", data, r, err)
 			return
 		}
 	}

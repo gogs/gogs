@@ -6,6 +6,8 @@
 package log
 
 import (
+	"fmt"
+
 	"github.com/martini-contrib/render"
 
 	"github.com/gogits/logs"
@@ -40,8 +42,8 @@ func Critical(format string, v ...interface{}) {
 	logger.Critical(format, v...)
 }
 
-func Handle(status int, title, tmpl string, data base.TmplData, r render.Render, err error) {
+func Handle(status int, title string, data base.TmplData, r render.Render, err error) {
 	data["ErrorMsg"] = err
 	Error("%s: %v", title, err)
-	r.HTML(status, tmpl, data)
+	r.HTML(status, fmt.Sprintf("status/%d", status), data)
 }
