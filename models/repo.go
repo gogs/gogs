@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -262,11 +261,7 @@ func GetRepositoryCount(user *User) (int64, error) {
 	return orm.Count(&Repository{OwnerId: user.Id})
 }
 
-const (
-	RFile = iota + 1
-	RDir
-)
-
+/*
 type RepoFile struct {
 	Id      *git.Oid
 	Type    int
@@ -282,14 +277,18 @@ func (f *RepoFile) IsFile() bool {
 
 func (f *RepoFile) IsDir() bool {
 	return f.Type == git.FilemodeTree
-}
+}*/
 
+/*
 func GetReposFiles(userName, reposName, branchName, rpath string) ([]*RepoFile, error) {
 	f := RepoPath(userName, reposName)
+
 	repo, err := git.OpenRepository(f)
 	if err != nil {
 		return nil, err
 	}
+
+	repo.LookupReference("refs/heads/" + branchName)
 
 	obj, err := repo.RevparseSingle("HEAD")
 	if err != nil {
@@ -322,20 +321,8 @@ func GetReposFiles(userName, reposName, branchName, rpath string) ([]*RepoFile, 
 		return 0
 	})
 
-	/*for ; i < tree.EntryCount(); i++ {
-		entry := tree.EntryByIndex(i)
-
-		repofiles = append(repofiles, &RepoFile{
-			entry.Id,
-			entry.Filemode,
-			entry.Name,
-			lastCommit.Message(),
-			lastCommit.Committer().When,
-		})
-	}*/
-
 	return repofiles, nil
-}
+}*/
 
 func StarReposiory(user *User, repoName string) error {
 	return nil
