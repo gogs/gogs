@@ -48,7 +48,10 @@ type User struct {
 	NumFollowings int
 	NumStars      int
 	NumRepos      int
-	Avatar        string    `xorm:"varchar(2048) not null"`
+	Avatar        string `xorm:"varchar(2048) not null"`
+	AvatarEmail   string `xorm:"not null"`
+	Location      string
+	Website       string
 	Created       time.Time `xorm:"created"`
 	Updated       time.Time `xorm:"updated"`
 }
@@ -104,6 +107,7 @@ func RegisterUser(user *User) (err error) {
 
 	user.LowerName = strings.ToLower(user.Name)
 	user.Avatar = base.EncodeMd5(user.Email)
+	user.AvatarEmail = user.Email
 	if err = user.EncodePasswd(); err != nil {
 		return err
 	}

@@ -137,6 +137,11 @@ body {
     margin-top: 50px;
 }
 
+#gogs-body .btn-default {
+    background-color: #FFF;
+    background-image: linear-gradient(to bottom, #FFF 0, #FAFAFA 100%);
+}
+
 #gogs-body-nav {
     margin-top: 52px;
     margin-bottom: -50px;
@@ -269,7 +274,8 @@ body {
 
 /* gogits user setting */
 
-#gogs-user-setting-nav > h4, #gogs-user-setting-container > h4, #gogs-ssh-keys > h4, #gogs-user-delete > h4 ,#gogs-repo-setting-container .tab-pane > h4{
+#gogs-user-setting-nav > h4, #gogs-user-setting-container > h4, #gogs-user-setting-container > div > h4,
+#gogs-ssh-keys > h4, #gogs-user-delete > h4, #gogs-repo-setting-container .tab-pane > h4 {
     padding-bottom: 18px;
     margin-bottom: 18px;
     border-bottom: 1px solid #CCC;
@@ -380,6 +386,7 @@ body {
 }
 
 #gogs-feed-right .repo-panel .list-group-item:hover {
+    background-color: #eafffd;
     background-color: rgba(65, 131, 196, 0.1);
 }
 
@@ -390,6 +397,12 @@ body {
 }
 
 /* gogits repo single page */
+
+#gogs-body-nav.gogs-repo-nav {
+    padding-top: 16px;
+    padding-bottom: 30px;
+    height: auto;
+}
 
 .gogs-repo-nav h3 .fa {
     color: #BBB;
@@ -429,32 +442,82 @@ body {
     margin-bottom: 4px;
 }
 
-
-#gogs-repo-toolbar{
+#gogs-repo-toolbar {
     margin-top: 51px;
     margin-bottom: -50px;
     border-bottom: 1px solid #BBB;
     background-color: #FFF;
     height: 40px;
+    font-size: 14px;
 }
 
-#gogs-repo-toolbar .navbar-default{
+#gogs-repo-toolbar .navbar-default {
     border: none;
     height: 39px;
 }
 
-#gogs-repo-toolbar .nav > li > a{
+#gogs-repo-toolbar .nav > li > a {
     height: 39px;
 }
 
-#gogs-repo-toolbar .navbar-toolbar.navbar-default .navbar-nav>.active>a:after{
+#gogs-repo-toolbar .navbar-toolbar.navbar-default .navbar-nav > .active > a:after {
     border-bottom-color: #999;
 }
 
-#gogs-repo-toolbar .navbar.nav-toolbar{
+#gogs-repo-toolbar .navbar.nav-toolbar {
     margin-bottom: 0;
 }
 
-#gogs-repo-toolbar .navbar-collapse{
+#gogs-repo-toolbar .navbar-collapse {
     padding: 0;
+}
+
+/* #gogs-source */
+
+#gogs-source-toolbar:after {
+    clear: both;
+}
+
+#gogs-source-toolbar .branch-switch {
+    display: inline-block;
+}
+
+#gogs-source-toolbar .breadcrumb {
+    margin: 0 .5em;
+    font-size: 16px;
+    vertical-align: middle;
+    display: inline-block;
+    background-color: transparent;
+}
+
+#gogs-source-table {
+    margin-top: 1.5em;
+    font-size: 14px;
+}
+
+#gogs-source-table .fa{
+    font-size: 15px;
+    width: 16px;
+    text-align: center;
+    color: #666;
+}
+
+#gogs-source-table .name{
+    width: 160px;
+}
+
+#gogs-source-table .size{
+    width: 80px;
+}
+
+#gogs-source-table .date{
+    width: 120px;
+}
+
+#gogs-source-table .is-dir .name {
+    font-weight: bold;
+}
+
+#gogs-source-table.table-hover > tbody > tr:hover > td {
+    background-color: #FEFEFE;
 }

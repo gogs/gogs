@@ -1,6 +1,7 @@
 package repo
 
 import (
+	"strings"
 	"github.com/codegangsta/martini"
 	"github.com/martini-contrib/render"
 
@@ -13,15 +14,27 @@ func Single(params martini.Params, r render.Render, data base.TmplData) {
 	if !data["IsRepositoryValid"].(bool) {
 		return
 	}
-
-	files, err := models.GetReposFiles(params["username"], params["reponame"], "HEAD", "/")
+	if params["branchname"] == "" {
+		params["branchname"] = "master"
+	}
+	treename := params["_1"]
+	files, err := models.GetReposFiles(params["username"], params["reponame"],
+		params["branchname"], treename)
 	if err != nil {
-		data["ErrorMsg"] = err
-		log.Error("repo.List: %v", err)
-		r.HTML(200, "base/error", data)
+		log.Handle(200, "repo.Single", data, r, err)
 		return
 	}
 
+	data["Username"] = params["username"]
+	data["Reponame"] = params["reponame"]
+	data["Branchname"] = params["branchname"]
+	treenames := strings.Split(treename, "/")
+	Paths := make([]string, 0)
+	for i, _ := range treenames {
+		Paths = append(Paths, strings.Join(treenames[0:i+1], "/"))
+	}
+	data["Paths"] = Paths
+	data["Treenames"] = treenames
 	data["IsRepoToolbarSource"] = true
 	data["Files"] = files
 

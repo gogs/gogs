@@ -3,11 +3,58 @@
 {{template "repo/nav" .}}
 {{template "repo/toolbar" .}}
 <div id="gogs-body" class="container">
-    <h4>Source Files:</h4>
-    <ul>
-    {{range .Files}}
-        <li>{{.Name}} - {{.Id}} - {{.Message}} - {{.Created}} - {{.IsFile}} - {{.IsDir}}</li>
-    {{end}}
-    </ul>
+    <div id="gogs-source">
+        <div id="gogs-source-toolbar">
+            <button class="btn btn-default pull-right"><i class="fa fa-plus-square"></i>Add File</button>
+            <div class="dropdown branch-switch">
+                <a href="#" class="btn btn-success dropdown-toggle" data-toggle="dropdown"><i class="fa fa-chain"></i>master&nbsp;&nbsp;
+                    <b class="caret"></b></a>
+                <ul class="dropdown-menu">
+                    <li><a class="current" href="/{{.RepositoryLink}}/branch/master">master</a></li>
+                    <li><a href="//{{.RepositoryLink}}/branch/develop">develop</a></li>
+                </ul>
+            </div>
+            <ol class="breadcrumb">
+                <li class="root dir">{{.Repository.Name}}</li>
+                {{$paths := .Paths}}
+                {{ $username := .Username}}
+            {{ $reponame := .Reponame}}
+            {{ $branchname := .Branchname}}
+            {{ $treenames := .Treenames}}
+            {{ $n := len $treenames}}
+            {{ $l := Subtract $n 1}}
+                {{range $i, $v := $treenames}}
+                <li class="dir">
+                {{if eq $i $l}}{{$v}}
+                {{else}}
+                <a href="/{{$username}}/{{$reponame}}/tree/{{$branchname}}/{{index $paths $i}}">{{$v}}</a>&nbsp;
+                {{end}}</li>
+                {{end}}
+            </ol>
+        </div>
+        <table id="gogs-source-table" class="table table-hover">
+            <thead class="hidden">
+	            <tr>
+	                <th class="name">Filename</th>
+	                <th class="date">Date modified</th>
+	                <th class="text">Message</th>
+	            </tr>
+            </thead>
+            <tbody>
+    			{{range .Files}}
+				<tr {{if .IsDir}}class="is-dir"{{end}}>
+	                <td class="name"><i class="fa {{if .IsDir}}fa-folder{{else}}fa-file{{end}}"></i>
+                    {{if .IsDir}}
+                    <a href="/{{$username}}/{{$reponame}}/tree/{{$branchname}}/{{.Path}}">{{.Name}}</a>
+                    {{else}}
+                    <a href="#">{{.Name}}</a>
+                    {{end}}</td>
+	                <td class="date"><time datetime="{{.Created}}" data-title="true" title="{{.Created}}">{{TimeSince .Created}}</time></td>
+	                <td class="text">{{.Message}}</td>
+				</tr>
+    			{{end}}
+            </tbody>
+        </table>
+    </div>
 </div>
 {{template "base/footer" .}}

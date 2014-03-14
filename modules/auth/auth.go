@@ -23,7 +23,7 @@ type Form interface {
 }
 
 type RegisterForm struct {
-	UserName     string `form:"username" binding:"Required;AlphaDash;MinSize(5);MaxSize(30)"`
+	UserName     string `form:"username" binding:"Required;AlphaDash;MaxSize(30)"`
 	Email        string `form:"email" binding:"Required;Email;MaxSize(50)"`
 	Password     string `form:"passwd" binding:"Required;MinSize(6);MaxSize(30)"`
 	RetypePasswd string `form:"retypepasswd"`
@@ -59,7 +59,7 @@ func (f *RegisterForm) Validate(errors *binding.Errors, req *http.Request, conte
 }
 
 type LogInForm struct {
-	UserName string `form:"username" binding:"Required;AlphaDash;MinSize(5);MaxSize(30)"`
+	UserName string `form:"username" binding:"Required;AlphaDash;MaxSize(30)"`
 	Password string `form:"passwd" binding:"Required;MinSize(6);MaxSize(30)"`
 }
 
@@ -88,11 +88,6 @@ func (f *LogInForm) Validate(errors *binding.Errors, req *http.Request, context 
 	}
 
 	validate(errors, data, f)
-}
-
-type FeedsForm struct {
-	UserId int64 `form:"userid" binding:"Required"`
-	Offset int64 `form:"offset"`
 }
 
 func getMinMaxSize(field reflect.StructField) string {

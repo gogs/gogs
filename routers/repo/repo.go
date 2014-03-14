@@ -5,9 +5,10 @@
 package repo
 
 import (
+	"net/http"
+
 	"github.com/martini-contrib/render"
 	"github.com/martini-contrib/sessions"
-	"net/http"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
@@ -46,7 +47,7 @@ func Create(form auth.CreateRepoForm, req *http.Request, r render.Render, data b
 	if err == nil {
 		if _, err = models.CreateRepository(user,
 			form.RepoName, form.Description, form.Language, form.License,
-			form.Visibility == "private", form.InitReadme == "true"); err == nil {
+			form.Visibility == "private", form.InitReadme == "on"); err == nil {
 			if err == nil {
 				data["RepoName"] = user.Name + "/" + form.RepoName
 				r.HTML(200, "repo/created", data)
@@ -63,9 +64,7 @@ func Create(form auth.CreateRepoForm, req *http.Request, r render.Render, data b
 		return
 	}
 
-	data["ErrorMsg"] = err
-	log.Error("repo.Create: %v", err)
-	r.HTML(200, "base/error", data)
+	log.Handle(200, "repo.Create", data, r, err)
 }
 
 func Delete(form auth.DeleteRepoForm, req *http.Request, r render.Render, data base.TmplData, session sessions.Session) {
@@ -77,13 +76,11 @@ func Delete(form auth.DeleteRepoForm, req *http.Request, r render.Render, data b
 	}
 
 	if err := models.DeleteRepository(form.UserId, form.RepoId, form.UserName); err != nil {
-		data["ErrorMsg"] = err
-		log.Error("repo.Delete: %v", err)
-		r.HTML(200, "base/error", data)
+		log.Handle(200, "repo.Delete", data, r, err)
 		return
 	}
 
-	r.Redirect("/", 200)
+	r.Redirect("/", 302)
 }
 
 func List(req *http.Request, r render.Render, data base.TmplData, session sessions.Session) {
@@ -96,9 +93,7 @@ func List(req *http.Request, r render.Render, data base.TmplData, session sessio
 	data["Title"] = "Repositories"
 	repos, err := models.GetRepositories(u)
 	if err != nil {
-		data["ErrorMsg"] = err
-		log.Error("repo.List: %v", err)
-		r.HTML(200, "base/error", data)
+		log.Handle(200, "repo.List", data, r, err)
 		return
 	}
 
