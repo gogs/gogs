@@ -21,52 +21,22 @@
         </div>
         <table id="gogs-source-table" class="table table-hover">
             <thead class="hidden">
-            <tr>
-                <th class="name">Filename</th>
-                <th class="size">Size</th>
-                <th class="date">Date modified</th>
-                <th class="text">Message</th>
-            </tr>
+	            <tr>
+	                <th class="name">Filename</th>
+	                <th class="date">Date modified</th>
+	                <th class="text">Message</th>
+	            </tr>
             </thead>
             <tbody>
-            <tr class="is-dir">
-                <td class="name" colspan="3"><i class="fa fa-folder"></i><a href="#">dir-1</a></td>
-                <td class="message">commit message</td>
-            </tr>
-            <tr class="is-dir">
-                <td class="name" colspan="3"><i class="fa fa-folder"></i><a href="#">dir-2</a></td>
-                <td class="message"> commit message</td>
-            </tr>
-            <tr class="is-dir">
-                <td class="name" colspan="3"><i class="fa fa-folder"></i><a href="#">dir-3</a></td>
-                <td class="message">commit message</td>
-            </tr>
-            <tr>
-                <td class="name"><i class="fa fa-file"></i><a href="#">file-1.txt</a></td>
-                <td class="size">177 B</td>
-                <td class="date"><time datetime="2011-10-20T06:51:01+08:00" data-title="true" title="20 October 2011 06:51">3 years ago</time></td>
-                <td class="text">commit message</td>
-            </tr>
-            <tr>
-                <td class="name"><i class="fa fa-file"></i><a href="#">file-2.txt</a></td>
-                <td class="size">177 B</td>
-                <td class="date"><time datetime="2011-10-20T06:51:01+08:00" data-title="true" title="20 October 2011 06:51">3 years ago</time></td>
-                <td class="text">commit message</td>
-            </tr><tr>
-                <td class="name"><i class="fa fa-file"></i><a href="#">file-3.txt</a></td>
-                <td class="size">177 B</td>
-                <td class="date"><time datetime="2011-10-20T06:51:01+08:00" data-title="true" title="20 October 2011 06:51">3 years ago</time></td>
-                <td class="text">commit message</td>
-            </tr>
-
+    			{{range .Files}}
+				<tr {{if .IsDir}}class="is-dir"{{end}}>
+	                <td class="name"><i class="fa fa-file"></i><a href="#">{{.Name}}</a></td>
+	                <td class="date"><time datetime="{{.Created}}" data-title="true" title="{{.Created}}">{{TimeSince .Created}}</time></td>
+	                <td class="text">{{.Message}}</td>
+				</tr>
+    			{{end}}
             </tbody>
         </table>
     </div>
-    <h4>Source Files:</h4>
-    <ul>
-    {{range .Files}}
-        <li>{{.Name}} - {{.Message}} - {{.Created}} - {{.IsFile}} - {{.IsDir}}</li>
-    {{end}}
-    </ul>
 </div>
 {{template "base/footer" .}}

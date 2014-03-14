@@ -40,6 +40,7 @@ var AppHelpers template.FuncMap = map[string]interface{}{
 	"AppVer": func() string {
 		return APP_VER
 	},
+	"TimeSince": base.TimeSince,
 }
 
 func runWeb(*cli.Context) {
