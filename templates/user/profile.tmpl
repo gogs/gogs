@@ -11,8 +11,8 @@
         <div class="profile-info">
             <ul class="list-group">
                 <li class="list-group-item"><i class="fa fa-thumb-tack"></i>{{.Owner.Location}}</li>
-                <li class="list-group-item"><i class="fa fa-envelope"></i><a href="#">{{.Owner.Email}}</a></li>
-                <li class="list-group-item"><i class="fa fa-link"></i><a href="#">{{.Owner.Website}}</a></li>
+                <li class="list-group-item"><i class="fa fa-envelope"></i><a href="mailto:{{.Owner.Email}}">{{.Owner.Email}}</a></li>
+                <li class="list-group-item"><i class="fa fa-link"></i><a target="_blank" href="{{.Owner.Website}}">{{.Owner.Website}}</a></li>
                 <li class="list-group-item"><i class="fa fa-clock-o"></i>{{.Owner.Created}}</li>
             </ul>
         </div>

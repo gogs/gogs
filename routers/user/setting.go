@@ -22,8 +22,9 @@ func Setting(form auth.UpdateProfileForm, r render.Render, data base.TmplData, r
 	data["PageIsUserSetting"] = true
 
 	user := auth.SignedInUser(session)
+	data["Owner"] = user
+
 	if req.Method == "GET" {
-		data["Owner"] = user
 		r.HTML(200, "user/setting", data)
 		return
 	}
@@ -37,6 +38,7 @@ func Setting(form auth.UpdateProfileForm, r render.Render, data base.TmplData, r
 	user.Website = form.Website
 	user.Location = form.Location
 	user.Avatar = base.EncodeMd5(form.Avatar)
+	user.AvatarEmail = form.Avatar
 	if err := models.UpdateUser(user); err != nil {
 		data["ErrorMsg"] = err
 		log.Error("setting.Setting: %v", err)
@@ -44,23 +46,21 @@ func Setting(form auth.UpdateProfileForm, r render.Render, data base.TmplData, r
 		return
 	}
 
+	data["IsSuccess"] = true
 	r.HTML(200, "user/setting", data)
 }
 
-func SettingEmailPassword(r render.Render, data base.TmplData, session sessions.Session, req *http.Request) {
-	data["Title"] = "Email & Password"
+func SettingPassword(form auth.UpdatePasswdForm, r render.Render, data base.TmplData, session sessions.Session, req *http.Request) {
+	data["Title"] = "Password"
 	data["PageIsUserSetting"] = true
-	data["IsPwdSuccess"] = (req.FormValue("password") == "true")
 
-	r.HTML(200, "user/email_password", data)
-}
-
-func UpdatePasswd(form auth.UpdatePasswdForm, r render.Render, data base.TmplData, req *http.Request, session sessions.Session) {
-	data["Title"] = "Setting"
-	data["PageIsUserSetting"] = true
+	if req.Method == "GET" {
+		r.HTML(200, "user/password", data)
+		return
+	}
 
 	user := auth.SignedInUser(session)
-	newUser := &models.User{Passwd: form.OldPasswd}
+	newUser := &models.User{Passwd: form.NewPasswd}
 	if err := newUser.EncodePasswd(); err != nil {
 		data["ErrorMsg"] = err
 		log.Error("setting.UpdatePasswd: %v", err)
@@ -78,14 +78,15 @@ func UpdatePasswd(form auth.UpdatePasswdForm, r render.Render, data base.TmplDat
 		user.Passwd = newUser.Passwd
 		if err := models.UpdateUser(user); err != nil {
 			data["ErrorMsg"] = err
-			log.Error("setting.Setting: %v", err)
+			log.Error("setting.UpdatePasswd: %v", err)
 			r.HTML(200, "base/error", data)
 			return
 		}
+		data["IsSuccess"] = true
 	}
 
 	data["Owner"] = user
-	r.HTML(200, "user/setting", data)
+	r.HTML(200, "user/password", data)
 }
 
 func SettingSSHKeys(form auth.AddSSHKeyForm, r render.Render, data base.TmplData, req *http.Request, session sessions.Session) {
