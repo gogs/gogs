@@ -12,6 +12,10 @@ github.com/dchest/scrypt=
 github.com/go-sql-driver/mysql=
 github.com/libgit2/git2go=commit:054268a63418b03892bfd4c6a509a0294660074b
 github.com/lunny/xorm=
+github.com/speedata/gogit=
 github.com/Unknwon/goconfig=
 github.com/gogits/logs=
+
+[res]
+include=templates|public|conf
 
