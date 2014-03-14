@@ -47,6 +47,14 @@ func Setting(form auth.UpdateProfileForm, r render.Render, data base.TmplData, r
 	r.HTML(200, "user/setting", data)
 }
 
+func SettingEmailPassword(r render.Render, data base.TmplData, session sessions.Session, req *http.Request) {
+	data["Title"] = "Email & Password"
+	data["PageIsUserSetting"] = true
+	data["IsPwdSuccess"] = (req.FormValue("password") == "true")
+
+	r.HTML(200, "user/email_password", data)
+}
+
 func UpdatePasswd(form auth.UpdatePasswdForm, r render.Render, data base.TmplData, req *http.Request, session sessions.Session) {
 	data["Title"] = "Setting"
 	data["PageIsUserSetting"] = true
