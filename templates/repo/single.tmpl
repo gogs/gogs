@@ -30,7 +30,7 @@
             <tbody>
     			{{range .Files}}
 				<tr {{if .IsDir}}class="is-dir"{{end}}>
-	                <td class="name"><i class="fa fa-file"></i><a href="#">{{.Name}}</a></td>
+	                <td class="name"><i class="fa {{if .IsDir}}fa-folder{{else}}fa-file{{end}}"></i><a href="#">{{.Name}}</a></td>
 	                <td class="date"><time datetime="{{.Created}}" data-title="true" title="{{.Created}}">{{TimeSince .Created}}</time></td>
 	                <td class="text">{{.Message}}</td>
 				</tr>
