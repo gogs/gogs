@@ -16,7 +16,7 @@ import (
 	"github.com/gogits/gogs/modules/log"
 )
 
-func Create(form auth.CreateRepoForm, req *http.Request, r render.Render, data base.TmplData, session sessions.Session, eh log.ErrHandler) {
+func Create(form auth.CreateRepoForm, req *http.Request, r render.Render, data base.TmplData, session sessions.Session) {
 	data["Title"] = "Create repository"
 
 	if req.Method == "GET" {
@@ -64,7 +64,7 @@ func Create(form auth.CreateRepoForm, req *http.Request, r render.Render, data b
 		return
 	}
 
-	eh.Handle("repo.Create", r, err)
+	log.Handle(200, "repo.Create", "base/error", data, r, err)
 }
 
 func Delete(form auth.DeleteRepoForm, req *http.Request, r render.Render, data base.TmplData, session sessions.Session) {

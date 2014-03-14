@@ -6,7 +6,11 @@
 package log
 
 import (
+	"github.com/martini-contrib/render"
+
 	"github.com/gogits/logs"
+
+	"github.com/gogits/gogs/modules/base"
 )
 
 var logger *logs.BeeLogger
@@ -34,4 +38,10 @@ func Warn(format string, v ...interface{}) {
 
 func Critical(format string, v ...interface{}) {
 	logger.Critical(format, v...)
+}
+
+func Handle(status int, title, tmpl string, data base.TmplData, r render.Render, err error) {
+	data["ErrorMsg"] = err
+	Error("%s: %v", title, err)
+	r.HTML(status, tmpl, data)
 }
