@@ -267,6 +267,7 @@ const (
 )
 
 type RepoFile struct {
+	Id      *git.Oid
 	Type    int
 	Name    string
 	Message string
@@ -303,6 +304,7 @@ func GetReposFiles(userName, reposName, treeName, rpath string) ([]*RepoFile, er
 		entry := tree.EntryByIndex(i)
 
 		repofiles = append(repofiles, &RepoFile{
+			entry.Id,
 			entry.Filemode,
 			entry.Name,
 			lastCommit.Message(),
