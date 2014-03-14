@@ -64,6 +64,7 @@ func runWeb(*cli.Context) {
 	m.Get("/user/feeds", binding.Bind(auth.FeedsForm{}), user.Feeds)
 
 	m.Any("/user/setting", auth.SignInRequire(true), binding.BindIgnErr(auth.UpdateProfileForm{}), user.Setting)
+	m.Get("/user/setting/email_password",auth.SignInRequire(true),user.SettingEmailPassword)
 	m.Post("/user/setting/update_passwd", auth.SignInRequire(true), binding.BindIgnErr(auth.UpdatePasswdForm{}), user.UpdatePasswd)
 	m.Any("/user/setting/ssh", auth.SignInRequire(true), binding.BindIgnErr(auth.AddSSHKeyForm{}), user.SettingSSHKeys)
 
