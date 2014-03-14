@@ -67,6 +67,8 @@ func runWeb(*cli.Context) {
 	m.Any("/user/setting", auth.SignInRequire(true), binding.BindIgnErr(auth.UpdateProfileForm{}), user.Setting)
 	m.Any("/user/setting/password", auth.SignInRequire(true), binding.BindIgnErr(auth.UpdatePasswdForm{}), user.SettingPassword)
 	m.Any("/user/setting/ssh", auth.SignInRequire(true), binding.BindIgnErr(auth.AddSSHKeyForm{}), user.SettingSSHKeys)
+	m.Any("/user/setting/notification",auth.SignInRequire(true),user.SettingNotification)
+	m.Any("/user/setting/security",auth.SignInRequire(true),user.SettingSecurity)
 
 	m.Get("/user/:username", auth.SignInRequire(false), user.Profile)
 

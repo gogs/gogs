@@ -154,3 +154,17 @@ func SettingSSHKeys(form auth.AddSSHKeyForm, r render.Render, data base.TmplData
 	data["Keys"] = keys
 	r.HTML(200, "user/publickey", data)
 }
+
+func SettingNotification(r render.Render, data base.TmplData) {
+	// todo user setting notification
+	data["Title"] = "Notification"
+	data["PageIsUserSetting"] = true
+	r.HTML(200, "user/notification", data)
+}
+
+func SettingSecurity(r render.Render, data base.TmplData) {
+	// todo user setting security
+	data["Title"] = "Security"
+	data["PageIsUserSetting"] = true
+	r.HTML(200, "user/security", data)
+}
