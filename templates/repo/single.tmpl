@@ -14,15 +14,15 @@
                     <li><a href="//{{.RepositoryLink}}/branch/develop">develop</a></li>
                 </ul>
             </div>
-            <ol class="breadcrumb">
-                <li class="root dir">{{.Repository.Name}}</li>
-                {{$paths := .Paths}}
+            {{$paths := .Paths}}
                 {{ $username := .Username}}
             {{ $reponame := .Reponame}}
             {{ $branchname := .Branchname}}
             {{ $treenames := .Treenames}}
             {{ $n := len $treenames}}
             {{ $l := Subtract $n 1}}
+            <ol class="breadcrumb">
+                <li class="root dir"><a href="/{{$username}}/{{$reponame}}/tree/{{$branchname}}">{{.Repository.Name}}</a></li>
                 {{range $i, $v := $treenames}}
                 <li class="dir">
                 {{if eq $i $l}}{{$v}}
