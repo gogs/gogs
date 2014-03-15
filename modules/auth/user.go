@@ -9,7 +9,6 @@ import (
 	"reflect"
 
 	"github.com/codegangsta/martini"
-	"github.com/martini-contrib/render"
 	"github.com/martini-contrib/sessions"
 
 	"github.com/gogits/binding"
@@ -60,39 +59,6 @@ func SignedInUser(session sessions.Session) *models.User {
 
 func IsSignedIn(session sessions.Session) bool {
 	return SignedInId(session) > 0
-}
-
-// SignInRequire checks user status from session.
-// It will assign correspoding values to
-// template data map if user has signed in.
-func SignInRequire(redirect bool) martini.Handler {
-	return func(r render.Render, data base.TmplData, session sessions.Session) {
-		if !IsSignedIn(session) {
-			if redirect {
-				r.Redirect("/")
-			}
-			return
-		}
-
-		user := SignedInUser(session)
-		if user == nil {
-			r.Redirect("/")
-			return
-		}
-
-		data["IsSigned"] = true
-		data["SignedUser"] = user
-		data["SignedUserId"] = user.Id
-		data["SignedUserName"] = user.LowerName
-	}
-}
-
-func SignOutRequire() martini.Handler {
-	return func(r render.Render, session sessions.Session) {
-		if IsSignedIn(session) {
-			r.Redirect("/")
-		}
-	}
 }
 
 type FeedsForm struct {

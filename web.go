@@ -19,6 +19,7 @@ import (
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
+	"github.com/gogits/gogs/modules/middleware"
 	"github.com/gogits/gogs/routers"
 	"github.com/gogits/gogs/routers/repo"
 	"github.com/gogits/gogs/routers/user"
@@ -33,60 +34,46 @@ gogs web`,
 	Flags:  []cli.Flag{},
 }
 
-var AppHelpers template.FuncMap = map[string]interface{}{
-	"AppName": func() string {
-		return base.Cfg.MustValue("", "APP_NAME")
-	},
-	"AppVer": func() string {
-		return APP_VER
-	},
-	"str2html":   base.Str2html,
-	"TimeSince":  base.TimeSince,
-	"Subtract":   base.Subtract,
-	"ActionIcon": base.ActionIcon,
-	"ActionDesc": base.ActionDesc,
-	"DateFormat": base.DateFormat,
-}
-
 func runWeb(*cli.Context) {
-	log.Info("%s %s", base.Cfg.MustValue("", "APP_NAME"), APP_VER)
+	log.Info("%s %s", base.AppName, base.AppVer)
 
 	m := martini.Classic()
 
 	// Middlewares.
-	m.Use(render.Renderer(render.Options{Funcs: []template.FuncMap{AppHelpers}}))
-	m.Use(base.InitContext())
+	m.Use(render.Renderer(render.Options{Funcs: []template.FuncMap{base.TemplateFuncs}}))
 
 	// TODO: should use other store because cookie store is not secure.
 	store := sessions.NewCookieStore([]byte("secret123"))
 	m.Use(sessions.Sessions("my_session", store))
 
+	m.Use(middleware.InitContext())
+
 	// Routers.
-	m.Get("/", auth.SignInRequire(false), routers.Home)
-	m.Any("/user/login", auth.SignOutRequire(), binding.BindIgnErr(auth.LogInForm{}), user.SignIn)
-	m.Any("/user/logout", auth.SignInRequire(true), user.SignOut)
-	m.Any("/user/sign_up", auth.SignOutRequire(), binding.BindIgnErr(auth.RegisterForm{}), user.SignUp)
-	m.Any("/user/delete", auth.SignInRequire(true), user.Delete)
+	m.Get("/", middleware.SignInRequire(false), routers.Home)
+	m.Any("/user/login", middleware.SignOutRequire(), binding.BindIgnErr(auth.LogInForm{}), user.SignIn)
+	m.Any("/user/logout", middleware.SignInRequire(true), user.SignOut)
+	m.Any("/user/sign_up", middleware.SignOutRequire(), binding.BindIgnErr(auth.RegisterForm{}), user.SignUp)
+	m.Any("/user/delete", middleware.SignInRequire(true), user.Delete)
 	m.Get("/user/feeds", binding.Bind(auth.FeedsForm{}), user.Feeds)
 
-	m.Any("/user/setting", auth.SignInRequire(true), binding.BindIgnErr(auth.UpdateProfileForm{}), user.Setting)
-	m.Any("/user/setting/password", auth.SignInRequire(true), binding.BindIgnErr(auth.UpdatePasswdForm{}), user.SettingPassword)
-	m.Any("/user/setting/ssh", auth.SignInRequire(true), binding.BindIgnErr(auth.AddSSHKeyForm{}), user.SettingSSHKeys)
-	m.Any("/user/setting/notification", auth.SignInRequire(true), user.SettingNotification)
-	m.Any("/user/setting/security", auth.SignInRequire(true), user.SettingSecurity)
+	m.Any("/user/setting", middleware.SignInRequire(true), binding.BindIgnErr(auth.UpdateProfileForm{}), user.Setting)
+	m.Any("/user/setting/password", middleware.SignInRequire(true), binding.BindIgnErr(auth.UpdatePasswdForm{}), user.SettingPassword)
+	m.Any("/user/setting/ssh", middleware.SignInRequire(true), binding.BindIgnErr(auth.AddSSHKeyForm{}), user.SettingSSHKeys)
+	m.Any("/user/setting/notification", middleware.SignInRequire(true), user.SettingNotification)
+	m.Any("/user/setting/security", middleware.SignInRequire(true), user.SettingSecurity)
 
-	m.Get("/user/:username", auth.SignInRequire(false), user.Profile)
+	m.Get("/user/:username", middleware.SignInRequire(false), user.Profile)
 
-	m.Any("/repo/create", auth.SignInRequire(true), binding.BindIgnErr(auth.CreateRepoForm{}), repo.Create)
-	m.Any("/repo/delete", auth.SignInRequire(true), binding.Bind(auth.DeleteRepoForm{}), repo.Delete)
-	m.Any("/repo/list", auth.SignInRequire(false), repo.List)
+	m.Any("/repo/create", middleware.SignInRequire(true), binding.BindIgnErr(auth.CreateRepoForm{}), repo.Create)
+	m.Any("/repo/delete", middleware.SignInRequire(true), binding.Bind(auth.DeleteRepoForm{}), repo.Delete)
+	m.Any("/repo/list", middleware.SignInRequire(false), repo.List)
 
-	m.Get("/:username/:reponame/settings", auth.SignInRequire(false), auth.RepoAssignment(true), repo.Setting)
+	m.Get("/:username/:reponame/settings", middleware.SignInRequire(false), auth.RepoAssignment(true), repo.Setting)
 	m.Get("/:username/:reponame/tree/:branchname/**",
-		auth.SignInRequire(false), auth.RepoAssignment(true), repo.Single)
+		middleware.SignInRequire(false), auth.RepoAssignment(true), repo.Single)
 	m.Get("/:username/:reponame/tree/:branchname",
-		auth.SignInRequire(false), auth.RepoAssignment(true), repo.Single)
-	m.Get("/:username/:reponame", auth.SignInRequire(false), auth.RepoAssignment(true), repo.Single)
+		middleware.SignInRequire(false), auth.RepoAssignment(true), repo.Single)
+	m.Get("/:username/:reponame", middleware.SignInRequire(false), auth.RepoAssignment(true), repo.Single)
 
 	//m.Get("/:username/:reponame", repo.Repo)
 
