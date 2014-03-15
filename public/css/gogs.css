@@ -138,7 +138,7 @@ html, body {
 /* gogits body */
 #gogs-body {
     padding-bottom: 60px;
-    margin-top: 50px;
+    margin-top: 30px;
 }
 
 #gogs-body .btn-default {
