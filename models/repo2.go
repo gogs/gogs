@@ -12,20 +12,10 @@ import (
 )
 
 type RepoFile struct {
-	Id      *git.Oid
-	Type    int
-	Name    string
+	*git.TreeEntry
 	Path    string
 	Message string
 	Created time.Time
-}
-
-func (f *RepoFile) IsFile() bool {
-	return f.Type == git.FileModeBlob || f.Type == git.FileModeBlobExec
-}
-
-func (f *RepoFile) IsDir() bool {
-	return f.Type == git.FileModeTree
 }
 
 func GetReposFiles(userName, reposName, branchName, rpath string) ([]*RepoFile, error) {
@@ -53,18 +43,14 @@ func GetReposFiles(userName, reposName, branchName, rpath string) ([]*RepoFile, 
 			switch entry.Filemode {
 			case git.FileModeBlob, git.FileModeBlobExec:
 				repofiles = append(repofiles, &RepoFile{
-					entry.Id,
-					entry.Filemode,
-					entry.Name,
+					entry,
 					path.Join(dirname, entry.Name),
 					lastCommit.Message(),
 					lastCommit.Committer.When,
 				})
 			case git.FileModeTree:
 				repodirs = append(repodirs, &RepoFile{
-					entry.Id,
-					entry.Filemode,
-					entry.Name,
+					entry,
 					path.Join(dirname, entry.Name),
 					lastCommit.Message(),
 					lastCommit.Committer.When,
