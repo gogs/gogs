@@ -1,9 +1,9 @@
 package repo
 
 import (
-	"strings"
 	"github.com/codegangsta/martini"
 	"github.com/martini-contrib/render"
+	"strings"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"
@@ -24,15 +24,20 @@ func Single(params martini.Params, r render.Render, data base.TmplData) {
 		log.Handle(200, "repo.Single", data, r, err)
 		return
 	}
-
 	data["Username"] = params["username"]
 	data["Reponame"] = params["reponame"]
 	data["Branchname"] = params["branchname"]
-	treenames := strings.Split(treename, "/")
+
+	var treenames []string
 	Paths := make([]string, 0)
-	for i, _ := range treenames {
-		Paths = append(Paths, strings.Join(treenames[0:i+1], "/"))
+
+	if len(treename) > 0 {
+		treenames = strings.Split(treename, "/")
+		for i, _ := range treenames {
+			Paths = append(Paths, strings.Join(treenames[0:i+1], "/"))
+		}
 	}
+
 	data["Paths"] = Paths
 	data["Treenames"] = treenames
 	data["IsRepoToolbarSource"] = true
