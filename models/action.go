@@ -56,6 +56,7 @@ func NewRepoAction(user *User, repo *Repository) error {
 	return err
 }
 
+// GetFeeds returns action list of given user in given context.
 func GetFeeds(userid, offset int64, isProfile bool) ([]Action, error) {
 	actions := make([]Action, 0, 20)
 	sess := orm.Limit(20, int(offset)).Desc("id").Where("user_id=?", userid)

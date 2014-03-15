@@ -97,7 +97,7 @@ func SignOutRequire() martini.Handler {
 
 type FeedsForm struct {
 	UserId int64 `form:"userid" binding:"Required"`
-	Offset int64 `form:"offset"`
+	Page   int64 `form:"p"`
 }
 
 type UpdateProfileForm struct {
