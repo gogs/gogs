@@ -49,7 +49,7 @@ func runWeb(*cli.Context) {
 	m.Use(middleware.InitContext())
 
 	// Routers.
-	m.Get("/", middleware.SignInRequire(true), routers.Home)
+	m.Get("/", middleware.SignInRequire(false), routers.Home)
 	m.Any("/user/login", middleware.SignOutRequire(), binding.BindIgnErr(auth.LogInForm{}), user.SignIn)
 	m.Any("/user/logout", middleware.SignInRequire(true), user.SignOut)
 	m.Any("/user/sign_up", middleware.SignOutRequire(), binding.BindIgnErr(auth.RegisterForm{}), user.SignUp)
