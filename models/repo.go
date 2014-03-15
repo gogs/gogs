@@ -261,69 +261,6 @@ func GetRepositoryCount(user *User) (int64, error) {
 	return orm.Count(&Repository{OwnerId: user.Id})
 }
 
-/*
-type RepoFile struct {
-	Id      *git.Oid
-	Type    int
-	Name    string
-	Path    string
-	Message string
-	Created time.Time
-}
-
-func (f *RepoFile) IsFile() bool {
-	return f.Type == git.FilemodeBlob || f.Type == git.FilemodeBlobExecutable
-}
-
-func (f *RepoFile) IsDir() bool {
-	return f.Type == git.FilemodeTree
-}*/
-
-/*
-func GetReposFiles(userName, reposName, branchName, rpath string) ([]*RepoFile, error) {
-	f := RepoPath(userName, reposName)
-
-	repo, err := git.OpenRepository(f)
-	if err != nil {
-		return nil, err
-	}
-
-	repo.LookupReference("refs/heads/" + branchName)
-
-	obj, err := repo.RevparseSingle("HEAD")
-	if err != nil {
-		return nil, err
-	}
-	lastCommit := obj.(*git.Commit)
-	var repofiles []*RepoFile
-	tree, err := lastCommit.Tree()
-	if err != nil {
-		return nil, err
-	}
-	//var i uint64 = 0
-	if rpath != "" {
-		rpath = rpath + "/"
-	}
-	//fmt.Println("...", rpath, "...")
-
-	tree.Walk(func(dirname string, entry *git.TreeEntry) int {
-		if dirname == rpath {
-			//fmt.Println("====", dirname, "==", entry.Name)
-			repofiles = append(repofiles, &RepoFile{
-				entry.Id,
-				entry.Filemode,
-				entry.Name,
-				path.Join(dirname, entry.Name),
-				lastCommit.Message(),
-				lastCommit.Committer().When,
-			})
-		}
-		return 0
-	})
-
-	return repofiles, nil
-}*/
-
 func StarReposiory(user *User, repoName string) error {
 	return nil
 }

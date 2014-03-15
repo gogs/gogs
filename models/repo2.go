@@ -16,6 +16,7 @@ type RepoFile struct {
 	Path    string
 	Message string
 	Created time.Time
+	Size    int64
 }
 
 func GetReposFiles(userName, reposName, branchName, rpath string) ([]*RepoFile, error) {
@@ -40,6 +41,10 @@ func GetReposFiles(userName, reposName, branchName, rpath string) ([]*RepoFile, 
 	var repofiles []*RepoFile
 	lastCommit.Tree.Walk(func(dirname string, entry *git.TreeEntry) int {
 		if dirname == rpath {
+			size, err := repo.ObjectSize(entry.Id)
+			if err != nil {
+				return 0
+			}
 			switch entry.Filemode {
 			case git.FileModeBlob, git.FileModeBlobExec:
 				repofiles = append(repofiles, &RepoFile{
@@ -47,6 +52,7 @@ func GetReposFiles(userName, reposName, branchName, rpath string) ([]*RepoFile, 
 					path.Join(dirname, entry.Name),
 					lastCommit.Message(),
 					lastCommit.Committer.When,
+					size,
 				})
 			case git.FileModeTree:
 				repodirs = append(repodirs, &RepoFile{
@@ -54,6 +60,7 @@ func GetReposFiles(userName, reposName, branchName, rpath string) ([]*RepoFile, 
 					path.Join(dirname, entry.Name),
 					lastCommit.Message(),
 					lastCommit.Committer.When,
+					size,
 				})
 			}
 		}
