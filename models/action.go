@@ -20,30 +20,50 @@ const (
 
 // An Action represents
 type Action struct {
-	Id       int64
-	UserId   int64
-	UserName string
-	OpType   int
-	RepoId   int64
-	RepoName string
-	Content  string
-	Created  time.Time `xorm:"created"`
+	Id          int64
+	UserId      int64 // Receiver user id.
+	OpType      int
+	ActUserId   int64  // Action user id.
+	ActUserName string // Action user name.
+	RepoId      int64
+	RepoName    string
+	Content     string
+	Created     time.Time `xorm:"created"`
+}
+
+func (a Action) GetOpType() int {
+	return a.OpType
+}
+
+func (a Action) GetActUserName() string {
+	return a.ActUserName
+}
+
+func (a Action) GetRepoName() string {
+	return a.RepoName
 }
 
 // NewRepoAction inserts action for create repository.
 func NewRepoAction(user *User, repo *Repository) error {
 	_, err := orm.InsertOne(&Action{
-		UserId:   user.Id,
-		UserName: user.Name,
-		OpType:   OP_CREATE_REPO,
-		RepoId:   repo.Id,
-		RepoName: repo.Name,
+		UserId:      user.Id,
+		ActUserId:   user.Id,
+		ActUserName: user.Name,
+		OpType:      OP_CREATE_REPO,
+		RepoId:      repo.Id,
+		RepoName:    repo.Name,
 	})
 	return err
 }
 
-func GetFeeds(userid, offset int64) ([]Action, error) {
+func GetFeeds(userid, offset int64, isProfile bool) ([]Action, error) {
 	actions := make([]Action, 0, 20)
-	err := orm.Limit(20, int(offset)).Desc("id").Where("user_id=?", userid).Find(&actions)
+	sess := orm.Limit(20, int(offset)).Desc("id").Where("user_id=?", userid)
+	if isProfile {
+		sess.And("act_user_id=?", userid)
+	} else {
+		sess.And("act_user_id!=?", userid)
+	}
+	err := sess.Find(&actions)
 	return actions, err
 }

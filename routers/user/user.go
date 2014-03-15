@@ -40,6 +40,12 @@ func Profile(params martini.Params, r render.Render, data base.TmplData, session
 	}
 
 	data["Owner"] = user
+	feeds, err := models.GetFeeds(user.Id, 0, true)
+	if err != nil {
+		log.Handle(200, "user.Profile", data, r, err)
+		return
+	}
+	data["Feeds"] = feeds
 	r.HTML(200, "user/profile", data)
 }
 
@@ -156,7 +162,7 @@ func Delete(data base.TmplData, req *http.Request, session sessions.Session, r r
 }
 
 func Feeds(form auth.FeedsForm, r render.Render) {
-	actions, err := models.GetFeeds(form.UserId, form.Offset)
+	actions, err := models.GetFeeds(form.UserId, form.Offset, false)
 	if err != nil {
 		r.JSON(500, err)
 	}

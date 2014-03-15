@@ -8,6 +8,7 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"fmt"
+	"html/template"
 	"time"
 )
 
@@ -27,6 +28,10 @@ const (
 	Month  = 30 * Day
 	Year   = 12 * Month
 )
+
+func Str2html(raw string) template.HTML {
+	return template.HTML(raw)
+}
 
 // TimeSince calculates the time interval and generate user-friendly string.
 func TimeSince(then time.Time) string {
@@ -126,5 +131,39 @@ func Subtract(left interface{}, right interface{}) interface{} {
 		return rleft - rright
 	} else {
 		return fleft + float64(rleft) - (fright + float64(rright))
+	}
+}
+
+type Actioner interface {
+	GetOpType() int
+	GetActUserName() string
+	GetRepoName() string
+}
+
+// ActionIcon accepts a int that represents action operation type
+// and returns a icon class name.
+func ActionIcon(opType int) string {
+	switch opType {
+	case 1: // Create repository.
+		return "plus-circle"
+	default:
+		return "invalid type"
+	}
+}
+
+const (
+	CreateRepoTpl = `<a href="/user/%s">%s</a> created repository <a href="/%s/%s">%s</a>`
+)
+
+// ActionDesc accepts int that represents action operation type
+// and returns the description.
+func ActionDesc(act Actioner) string {
+	actUserName := act.GetActUserName()
+	repoName := act.GetRepoName()
+	switch act.GetOpType() {
+	case 1: // Create repository.
+		return fmt.Sprintf(CreateRepoTpl, actUserName, actUserName, actUserName, repoName, repoName)
+	default:
+		return "invalid type"
 	}
 }

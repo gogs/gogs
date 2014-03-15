@@ -49,8 +49,7 @@ func Create(form auth.CreateRepoForm, req *http.Request, r render.Render, data b
 			form.RepoName, form.Description, form.Language, form.License,
 			form.Visibility == "private", form.InitReadme == "on"); err == nil {
 			if err == nil {
-				data["RepoName"] = user.Name + "/" + form.RepoName
-				r.HTML(200, "repo/created", data)
+				r.Redirect("/"+user.Name+"/"+form.RepoName, 200)
 				return
 			}
 		}
