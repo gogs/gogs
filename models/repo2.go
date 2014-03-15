@@ -8,7 +8,7 @@ import (
 	"path"
 	"time"
 
-	git "github.com/speedata/gogit"
+	git "github.com/gogits/git"
 )
 
 type RepoFile struct {
@@ -46,20 +46,33 @@ func GetReposFiles(userName, reposName, branchName, rpath string) ([]*RepoFile, 
 		return nil, err
 	}
 
+	var repodirs []*RepoFile
 	var repofiles []*RepoFile
 	lastCommit.Tree.Walk(func(dirname string, entry *git.TreeEntry) int {
 		if dirname == rpath {
-			repofiles = append(repofiles, &RepoFile{
-				entry.Id,
-				entry.Filemode,
-				entry.Name,
-				path.Join(dirname, entry.Name),
-				lastCommit.Message(),
-				lastCommit.Committer.When,
-			})
+			switch entry.Filemode {
+			case git.FileModeBlob, git.FileModeBlobExec:
+				repofiles = append(repofiles, &RepoFile{
+					entry.Id,
+					entry.Filemode,
+					entry.Name,
+					path.Join(dirname, entry.Name),
+					lastCommit.Message(),
+					lastCommit.Committer.When,
+				})
+			case git.FileModeTree:
+				repodirs = append(repodirs, &RepoFile{
+					entry.Id,
+					entry.Filemode,
+					entry.Name,
+					path.Join(dirname, entry.Name),
+					lastCommit.Message(),
+					lastCommit.Committer.When,
+				})
+			}
 		}
 		return 0
 	})
 
-	return repofiles, nil
+	return append(repodirs, repofiles...), nil
 }
