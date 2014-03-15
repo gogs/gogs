@@ -8,6 +8,10 @@ body {
     background: #F6F6F6;
 }
 
+html, body {
+    height: 100%;
+}
+
 /* override bs3 */
 
 .tooltip-inner {
@@ -47,6 +51,7 @@ body {
     background-color: #428bca;
     box-shadow: inset 0 -2px 5px rgba(0, 0, 0, .1);
     padding: 0 16px;
+    margin: 0;
 }
 
 /* gogits nav item link */
@@ -143,10 +148,9 @@ body {
 }
 
 #gogs-body-nav {
-    margin-top: 52px;
     margin-bottom: -50px;
     background-color: #FFF;
-    border-bottom: 1px solid #BBB;
+    border-bottom: 1px solid #DDD;
     height: 66px
 }
 
@@ -445,7 +449,7 @@ body {
 #gogs-repo-toolbar {
     margin-top: 51px;
     margin-bottom: -50px;
-    border-bottom: 1px solid #BBB;
+    border-bottom: 1px solid #DDD;
     background-color: #FFF;
     height: 40px;
     font-size: 14px;
@@ -551,3 +555,25 @@ body {
     border-top: none;
 }
 
+#wrapper {
+    min-height: 100%;
+    height: auto !important;
+    height: 100%;
+    margin: 0 auto -100px;
+    padding: 0 0 100px;
+}
+
+#footer {
+    background: #fff;
+    -webkit-box-shadow: 0 -1px 3px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 -1px 3px rgba(0, 0, 0, 0.05);;
+    height: 100px;
+}
+
+#footer .footer-wrap {
+    padding: 20px 0;
+}
+
+#footer a {
+    color: #000;
+}
