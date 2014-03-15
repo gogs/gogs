@@ -29,7 +29,7 @@ func Dashboard(r render.Render, data base.TmplData, session sessions.Session) {
 	r.HTML(200, "user/dashboard", data)
 }
 
-func Profile(params martini.Params, r render.Render, data base.TmplData, session sessions.Session) {
+func Profile(params martini.Params, r render.Render, req *http.Request, data base.TmplData, session sessions.Session) {
 	data["Title"] = "Profile"
 
 	// TODO: Need to check view self or others.
@@ -40,12 +40,23 @@ func Profile(params martini.Params, r render.Render, data base.TmplData, session
 	}
 
 	data["Owner"] = user
-	feeds, err := models.GetFeeds(user.Id, 0, true)
-	if err != nil {
-		log.Handle(200, "user.Profile", data, r, err)
-		return
+
+	req.ParseForm()
+	tab := req.Form.Get("tab")
+	data["TabName"] = tab
+
+	switch tab {
+	case "activity":
+		feeds, err := models.GetFeeds(user.Id, 0, true)
+		if err != nil {
+			log.Handle(200, "user.Profile", data, r, err)
+			return
+		}
+		data["Feeds"] = feeds
+	default:
+
 	}
-	data["Feeds"] = feeds
+
 	r.HTML(200, "user/profile", data)
 }
 

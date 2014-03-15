@@ -45,6 +45,7 @@ var AppHelpers template.FuncMap = map[string]interface{}{
 	"Subtract":   base.Subtract,
 	"ActionIcon": base.ActionIcon,
 	"ActionDesc": base.ActionDesc,
+	"DateFormat": base.DateFormat,
 }
 
 func runWeb(*cli.Context) {

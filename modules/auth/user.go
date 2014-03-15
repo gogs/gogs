@@ -74,10 +74,16 @@ func SignInRequire(redirect bool) martini.Handler {
 			return
 		}
 
+		user := SignedInUser(session)
+		if user == nil {
+			r.Redirect("/")
+			return
+		}
+
 		data["IsSigned"] = true
-		data["SignedUserId"] = SignedInId(session)
-		data["SignedUserName"] = SignedInName(session)
-		data["SignedAvatar"] = SignedInUser(session).Avatar
+		data["SignedUser"] = user
+		data["SignedUserId"] = user.Id
+		data["SignedUserName"] = user.LowerName
 	}
 }
 
