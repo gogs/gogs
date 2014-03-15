@@ -106,8 +106,11 @@ func runGet(ctx *cli.Context) {
 	switch len(ctx.Args()) {
 	case 0:
 		getByGopmfile(ctx)
-	default:
+	case 1:
 		getByPath(ctx)
+	default:
+		log.Error("get", "too many arguments")
+		log.Help("Try 'gopm help get' to get more information")
 	}
 }
 
@@ -124,6 +127,7 @@ func getByGopmfile(ctx *cli.Context) {
 
 	nodes := make([]*doc.Node, 0, len(imports))
 	for _, p := range imports {
+		// TODO: DOING TEST CASES!!!
 		p = doc.GetProjectPath(p)
 		// Skip subpackage(s) of current project.
 		if isSubpackage(p, targetPath) {

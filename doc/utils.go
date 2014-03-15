@@ -29,21 +29,24 @@ import (
 const VENDOR = ".vendor"
 
 // GetDirsInfo returns os.FileInfo of all sub-directories in root path.
-func GetDirsInfo(rootPath string) []os.FileInfo {
+func GetDirsInfo(rootPath string) ([]os.FileInfo, error) {
+	if !com.IsDir(rootPath) {
+		log.Warn("Directory %s does not exist", rootPath)
+		return []os.FileInfo{}, nil
+	}
+
 	rootDir, err := os.Open(rootPath)
 	if err != nil {
-		log.Error("", "Fail to open directory")
-		log.Fatal("", err.Error())
+		return nil, err
 	}
 	defer rootDir.Close()
 
 	dirs, err := rootDir.Readdir(0)
 	if err != nil {
-		log.Error("", "Fail to read directory")
-		log.Fatal("", err.Error())
+		return nil, err
 	}
 
-	return dirs
+	return dirs, nil
 }
 
 // GetImports returns package denpendencies.
@@ -56,7 +59,11 @@ func GetImports(absPath, importPath string, example bool) []string {
 		}
 	}
 
-	fis := GetDirsInfo(absPath)
+	fis, err := GetDirsInfo(absPath)
+	if err != nil {
+		log.Error("", "Fail to get directory's information")
+		log.Fatal("", err.Error())
+	}
 	absPath += "/"
 
 	imports := make([]string, 0, len(pkg.Imports))
@@ -66,7 +73,7 @@ func GetImports(absPath, importPath string, example bool) []string {
 		}
 	}
 
-	// TODO: Load too much
+	// TODO: Load too much, need to make sure which is imported which are not.
 	dirs := make([]string, 0, len(imports))
 	for _, fi := range fis {
 		if fi.IsDir() && !strings.Contains(fi.Name(), VENDOR) {
@@ -80,12 +87,14 @@ func GetImports(absPath, importPath string, example bool) []string {
 	return imports
 }
 
+// isVcsPath returns true if the directory was created by VCS.
 func isVcsPath(dirPath string) bool {
 	return strings.Contains(dirPath, "/.git") ||
 		strings.Contains(dirPath, "/.hg") ||
 		strings.Contains(dirPath, "/.svn")
 }
 
+// GetAllImports returns all imports in given directory and all sub-directories.
 func GetAllImports(dirs []string, importPath string, example bool) (imports []string) {
 	for _, d := range dirs {
 		if !isVcsPath(d) &&
@@ -116,7 +125,11 @@ func CheckIsExistWithVCS(path string) bool {
 	}
 
 	// Check if only has VCS folder.
-	dirs := GetDirsInfo(path)
+	dirs, err := GetDirsInfo(path)
+	if err != nil {
+		log.Error("", "Fail to get directory's information")
+		log.Fatal("", err.Error())
+	}
 
 	if len(dirs) > 1 {
 		return true
