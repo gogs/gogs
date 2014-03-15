@@ -521,3 +521,33 @@ body {
 #gogs-source-table.table-hover > tbody > tr:hover > td {
     background-color: #FEFEFE;
 }
+
+.activity-list {
+    font-size: 14px;
+}
+
+.activity-list .icon {
+    font-size: 20px;
+    color: #aaa;
+    float: left;
+}
+
+.activity-list .info {
+    float: left;
+    padding:0 0 0 10px;
+    line-height: 1.7em;
+}
+
+.activity-list .meta {
+    color: #aaa;
+}
+
+.activity-list li {
+    padding: 15px 0;
+    border-top: 1px solid #ddd;
+}
+
+.activity-list li:first-child {
+    border-top: none;
+}
+

@@ -3,10 +3,10 @@
 <div id="gogs-body" class="container">
     <div id="gogs-user-profile" class="col-md-3">
         <div class="profile-avatar text-center">
-            <a href="#" class="center-block" data-toggle="tooltip" data-placement="bottom" title="Change Avatar">
-                <img id="gogs-user-avatar" src="http://1.gravatar.com/avatar/{{.Owner.Avatar}}?s=200" alt="user-avatar" title="username"/>
+            <a href="{{.Owner.HomeLink}}" class="center-block" data-toggle="tooltip" data-placement="bottom" title="Change Avatar">
+                <img id="gogs-user-avatar" src="{{.Owner.AvatarLink}}?s=200" alt="user-avatar" title="username"/>
             </a>
-            <span id="gogs-user-name" class="center-block" href="#">{{.Owner.Name}}</span>
+            <span id="gogs-user-name" class="center-block">{{.Owner.Name}}</span>
         </div>
         <div class="profile-info">
             <ul class="list-group">
@@ -19,22 +19,33 @@
                 {{if .Owner.Website}}
                     <li class="list-group-item"><i class="fa fa-link"></i><a target="_blank" href="{{.Owner.Website}}">{{.Owner.Website}}</a></li>
                 {{end}}
-                <li class="list-group-item"><i class="fa fa-clock-o"></i>{{.Owner.Created}}</li>
+                <li class="list-group-item"><i class="fa fa-clock-o"></i>Joined on {{DateFormat .Owner.Created "M d, Y"}}</li>
             </ul>
         </div>
     </div>
     <div id="gogs-user-activity" class="col-md-9">
         <ul class="nav nav-tabs" id="gogs-user-act-tabs" data-init="tabs">
-            <li class="active"><a href="#repo" data-toggle="tab"><i class="fa fa-gittip"></i>Repositories</a></li>
-            <li><a href="#activity" data-toggle="tab"><i class="fa fa-rss"></i>Public Activity</a></li>
+            <li{{if not .TabName}} class="active"{{end}}><a href="{{.Owner.HomeLink}}"><i class="fa fa-gittip"></i>Repositories</a></li>
+            <li{{if eq .TabName "activity"}} class="active"{{end}}><a href="{{.Owner.HomeLink}}?tab=activity"><i class="fa fa-rss"></i>Public Activity</a></li>
         </ul>
         <div class="tab-content">
-            <div class="tab-pane active" id="repo">repo</div>
-            <div class="tab-pane" id="activity">
-                {{range .Feeds}}<div>
-                    <i class="fa fa-{{ActionIcon .OpType}}"></i>{{ActionDesc . | str2html}} {{TimeSince .Created}}
-                </div>{{end}}
+            {{if eq .TabName "activity"}}
+            <div class="tab-pane active">
+                <ul class="list-unstyled activity-list">
+                {{range .Feeds}}
+                    <li>
+                        <i class="icon fa fa-{{ActionIcon .OpType}}"></i>
+                        <div class="info"><span class="meta">{{TimeSince .Created}}</span><br>{{ActionDesc . | str2html}}</div>
+                        <span class="clearfix"></span>
+                    </li>
+                {{else}}
+                    <li>Not found any activity</li>
+                {{end}}
+                </ul>
             </div>
+            {{else}}
+                <div class="tab-pane active">repo</div>
+            {{end}}
         </div>
     </div>
 </div>

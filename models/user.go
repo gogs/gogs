@@ -56,6 +56,14 @@ type User struct {
 	Updated       time.Time `xorm:"updated"`
 }
 
+func (user *User) HomeLink() string {
+	return "/user/" + user.LowerName
+}
+
+func (user *User) AvatarLink() string {
+	return "http://1.gravatar.com/avatar/" + user.Avatar
+}
+
 // A Follow represents
 type Follow struct {
 	Id       int64
