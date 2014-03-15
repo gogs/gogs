@@ -8,7 +8,6 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"fmt"
-	"html/template"
 	"strings"
 	"time"
 )
@@ -29,10 +28,6 @@ const (
 	Month  = 30 * Day
 	Year   = 12 * Month
 )
-
-func Str2html(raw string) template.HTML {
-	return template.HTML(raw)
-}
 
 // TimeSince calculates the time interval and generate user-friendly string.
 func TimeSince(then time.Time) string {

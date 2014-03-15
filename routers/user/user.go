@@ -15,6 +15,7 @@ import (
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
+	"github.com/gogits/gogs/modules/middleware"
 )
 
 func Dashboard(r render.Render, data base.TmplData, session sessions.Session) {
@@ -29,35 +30,34 @@ func Dashboard(r render.Render, data base.TmplData, session sessions.Session) {
 	r.HTML(200, "user/dashboard", data)
 }
 
-func Profile(params martini.Params, r render.Render, req *http.Request, data base.TmplData, session sessions.Session) {
-	data["Title"] = "Profile"
+func Profile(ctx *middleware.Context, params martini.Params) {
+	ctx.Data["Title"] = "Profile"
 
 	// TODO: Need to check view self or others.
 	user, err := models.GetUserByName(params["username"])
 	if err != nil {
-		log.Handle(200, "user.Profile", data, r, err)
+		ctx.Log(200, "user.Profile", err)
 		return
 	}
 
-	data["Owner"] = user
+	ctx.Data["Owner"] = user
 
-	req.ParseForm()
-	tab := req.Form.Get("tab")
-	data["TabName"] = tab
+	tab := ctx.Query("tab")
+	ctx.Data["TabName"] = tab
 
 	switch tab {
 	case "activity":
 		feeds, err := models.GetFeeds(user.Id, 0, true)
 		if err != nil {
-			log.Handle(200, "user.Profile", data, r, err)
+			ctx.Log(200, "user.Profile", err)
 			return
 		}
-		data["Feeds"] = feeds
+		ctx.Data["Feeds"] = feeds
 	default:
 
 	}
 
-	r.HTML(200, "user/profile", data)
+	ctx.Render.HTML(200, "user/profile", ctx.Data)
 }
 
 func SignIn(form auth.LogInForm, data base.TmplData, req *http.Request, r render.Render, session sessions.Session) {

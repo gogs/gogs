@@ -23,6 +23,7 @@ const go11tag = true
 const APP_VER = "0.0.8.0315"
 
 func init() {
+	base.AppVer = APP_VER
 	runtime.GOMAXPROCS(runtime.NumCPU())
 }
 

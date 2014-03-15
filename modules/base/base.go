@@ -4,17 +4,9 @@
 
 package base
 
-import (
-	"github.com/codegangsta/martini"
-)
+import ()
 
 type (
 	// Type TmplData represents data in the templates.
 	TmplData map[string]interface{}
 )
-
-func InitContext() martini.Handler {
-	return func(context martini.Context) {
-		context.Map(TmplData{})
-	}
-}

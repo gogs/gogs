@@ -15,7 +15,11 @@ import (
 	"github.com/Unknwon/goconfig"
 )
 
-var Cfg *goconfig.ConfigFile
+var (
+	AppVer  string
+	AppName string
+	Cfg     *goconfig.ConfigFile
+)
 
 func exeDir() (string, error) {
 	file, err := exec.LookPath(os.Args[0])
@@ -52,4 +56,6 @@ func init() {
 		}
 	}
 	Cfg.BlockMode = false
+
+	AppName = Cfg.MustValue("", "APP_NAME")
 }
