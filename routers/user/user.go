@@ -82,10 +82,7 @@ func SignIn(ctx *middleware.Context, form auth.LogInForm) {
 	user, err := models.LoginUserPlain(form.UserName, form.Password)
 	if err != nil {
 		if err.Error() == models.ErrUserNotExist.Error() {
-			ctx.Data["HasError"] = true
-			ctx.Data["ErrorMsg"] = "Username or password is not correct"
-			auth.AssignForm(form, ctx.Data)
-			ctx.Render.HTML(200, "user/signin", ctx.Data)
+			ctx.RenderWithErr("Username or password is not correct", "user/signin", &form)
 			return
 		}
 
@@ -121,7 +118,7 @@ func SignUp(ctx *middleware.Context, form auth.RegisterForm) {
 		auth.AssignForm(form, ctx.Data)
 	}
 
-	if hasErr, ok := ctx.Data["HasError"]; ok && hasErr.(bool) {
+	if ctx.HasError() {
 		ctx.Render.HTML(200, "user/signup", ctx.Data)
 		return
 	}
@@ -133,18 +130,11 @@ func SignUp(ctx *middleware.Context, form auth.RegisterForm) {
 	}
 
 	if err := models.RegisterUser(u); err != nil {
-		ctx.Data["HasError"] = true
-		auth.AssignForm(form, ctx.Data)
-
 		switch err.Error() {
 		case models.ErrUserAlreadyExist.Error():
-			ctx.Data["Err_Username"] = true
-			ctx.Data["ErrorMsg"] = "Username has been already taken"
-			ctx.Render.HTML(200, "user/signup", ctx.Data)
+			ctx.RenderWithErr("Username has been already taken", "user/signup", &form)
 		case models.ErrEmailAlreadyUsed.Error():
-			ctx.Data["Err_Email"] = true
-			ctx.Data["ErrorMsg"] = "E-mail address has been already used"
-			ctx.Render.HTML(200, "user/signup", ctx.Data)
+			ctx.RenderWithErr("E-mail address has been already used", "user/signup", &form)
 		default:
 			ctx.Handle(200, "user.SignUp", err)
 		}
