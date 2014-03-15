@@ -5,29 +5,23 @@
 package repo
 
 import (
-	"net/http"
-
-	"github.com/martini-contrib/render"
-	"github.com/martini-contrib/sessions"
-
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
-	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/middleware"
 )
 
-func Create(form auth.CreateRepoForm, ctx *middleware.Context, req *http.Request, r render.Render, data base.TmplData, session sessions.Session) {
-	data["Title"] = "Create repository"
+func Create(ctx *middleware.Context, form auth.CreateRepoForm) {
+	ctx.Data["Title"] = "Create repository"
 
-	if req.Method == "GET" {
-		data["LanguageIgns"] = models.LanguageIgns
-		data["Licenses"] = models.Licenses
-		r.HTML(200, "repo/create", data)
+	if ctx.Req.Method == "GET" {
+		ctx.Data["LanguageIgns"] = models.LanguageIgns
+		ctx.Data["Licenses"] = models.Licenses
+		ctx.Render.HTML(200, "repo/create", ctx.Data)
 		return
 	}
 
-	if hasErr, ok := data["HasError"]; ok && hasErr.(bool) {
-		r.HTML(200, "repo/create", data)
+	if hasErr, ok := ctx.Data["HasError"]; ok && hasErr.(bool) {
+		ctx.Render.HTML(200, "repo/create", ctx.Data)
 		return
 	}
 
@@ -36,10 +30,10 @@ func Create(form auth.CreateRepoForm, ctx *middleware.Context, req *http.Request
 	user, err := models.GetUserById(form.UserId)
 	if err != nil {
 		if err.Error() == models.ErrUserNotExist.Error() {
-			data["HasError"] = true
-			data["ErrorMsg"] = "User does not exist"
-			auth.AssignForm(form, data)
-			r.HTML(200, "repo/create", data)
+			ctx.Data["HasError"] = true
+			ctx.Data["ErrorMsg"] = "User does not exist"
+			auth.AssignForm(form, ctx.Data)
+			ctx.Render.HTML(200, "repo/create", ctx.Data)
 			return
 		}
 	}
@@ -48,27 +42,27 @@ func Create(form auth.CreateRepoForm, ctx *middleware.Context, req *http.Request
 		if _, err = models.CreateRepository(user,
 			form.RepoName, form.Description, form.Language, form.License,
 			form.Visibility == "private", form.InitReadme == "on"); err == nil {
-			r.Redirect("/"+user.Name+"/"+form.RepoName, 302)
+			ctx.Render.Redirect("/"+user.Name+"/"+form.RepoName, 302)
 			return
 		}
 	}
 
 	if err.Error() == models.ErrRepoAlreadyExist.Error() {
-		data["HasError"] = true
-		data["ErrorMsg"] = "Repository name has already been used"
-		auth.AssignForm(form, data)
-		r.HTML(200, "repo/create", data)
+		ctx.Data["HasError"] = true
+		ctx.Data["ErrorMsg"] = "Repository name has already been used"
+		auth.AssignForm(form, ctx.Data)
+		ctx.Render.HTML(200, "repo/create", ctx.Data)
 		return
 	}
 
 	ctx.Handle(200, "repo.Create", err)
 }
 
-func Delete(form auth.DeleteRepoForm, ctx *middleware.Context, req *http.Request, r render.Render, data base.TmplData, session sessions.Session) {
-	data["Title"] = "Delete repository"
+func Delete(ctx *middleware.Context, form auth.DeleteRepoForm) {
+	ctx.Data["Title"] = "Delete repository"
 
-	if req.Method == "GET" {
-		r.HTML(200, "repo/delete", data)
+	if ctx.Req.Method == "GET" {
+		ctx.Render.HTML(200, "repo/delete", ctx.Data)
 		return
 	}
 
@@ -77,23 +71,22 @@ func Delete(form auth.DeleteRepoForm, ctx *middleware.Context, req *http.Request
 		return
 	}
 
-	r.Redirect("/", 302)
+	ctx.Render.Redirect("/", 302)
 }
 
-func List(ctx *middleware.Context, req *http.Request, r render.Render, data base.TmplData, session sessions.Session) {
-	u := auth.SignedInUser(session)
-	if u != nil {
-		r.Redirect("/")
+func List(ctx *middleware.Context) {
+	if ctx.User != nil {
+		ctx.Render.Redirect("/")
 		return
 	}
 
-	data["Title"] = "Repositories"
-	repos, err := models.GetRepositories(u)
+	ctx.Data["Title"] = "Repositories"
+	repos, err := models.GetRepositories(ctx.User)
 	if err != nil {
 		ctx.Handle(200, "repo.List", err)
 		return
 	}
 
-	data["Repos"] = repos
-	r.HTML(200, "repo/list", data)
+	ctx.Data["Repos"] = repos
+	ctx.Render.HTML(200, "repo/list", ctx.Data)
 }
