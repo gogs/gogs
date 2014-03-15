@@ -1,17 +1,16 @@
 package repo
 
 import (
-	"github.com/codegangsta/martini"
-	"github.com/martini-contrib/render"
 	"strings"
 
+	"github.com/codegangsta/martini"
+
 	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/middleware"
 )
 
-func Single(params martini.Params, ctx *middleware.Context, r render.Render, data base.TmplData) {
-	if !data["IsRepositoryValid"].(bool) {
+func Single(ctx *middleware.Context, params martini.Params) {
+	if !ctx.Data["IsRepositoryValid"].(bool) {
 		return
 	}
 	if params["branchname"] == "" {
@@ -24,9 +23,9 @@ func Single(params martini.Params, ctx *middleware.Context, r render.Render, dat
 		ctx.Handle(200, "repo.Single", err)
 		return
 	}
-	data["Username"] = params["username"]
-	data["Reponame"] = params["reponame"]
-	data["Branchname"] = params["branchname"]
+	ctx.Data["Username"] = params["username"]
+	ctx.Data["Reponame"] = params["reponame"]
+	ctx.Data["Branchname"] = params["branchname"]
 
 	var treenames []string
 	Paths := make([]string, 0)
@@ -38,21 +37,21 @@ func Single(params martini.Params, ctx *middleware.Context, r render.Render, dat
 		}
 	}
 
-	data["Paths"] = Paths
-	data["Treenames"] = treenames
-	data["IsRepoToolbarSource"] = true
-	data["Files"] = files
+	ctx.Data["Paths"] = Paths
+	ctx.Data["Treenames"] = treenames
+	ctx.Data["IsRepoToolbarSource"] = true
+	ctx.Data["Files"] = files
 
-	r.HTML(200, "repo/single", data)
+	ctx.Render.HTML(200, "repo/single", ctx.Data)
 }
 
-func Setting(r render.Render, data base.TmplData) {
-	if !data["IsRepositoryValid"].(bool) {
+func Setting(ctx *middleware.Context) {
+	if !ctx.Data["IsRepositoryValid"].(bool) {
 		return
 	}
 
-	data["Title"] = data["Title"].(string) + " - settings"
-	data["IsRepoToolbarSetting"] = true
+	ctx.Data["Title"] = ctx.Data["Title"].(string) + " - settings"
+	ctx.Data["IsRepoToolbarSetting"] = true
 
-	r.HTML(200, "repo/setting", data)
+	ctx.Render.HTML(200, "repo/setting", ctx.Data)
 }

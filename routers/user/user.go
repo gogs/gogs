@@ -6,7 +6,6 @@ package user
 
 import (
 	"fmt"
-	"net/http"
 
 	"github.com/codegangsta/martini"
 	"github.com/martini-contrib/render"
@@ -67,7 +66,7 @@ func Profile(ctx *middleware.Context, params martini.Params) {
 	ctx.Render.HTML(200, "user/profile", ctx.Data)
 }
 
-func SignIn(form auth.LogInForm, ctx *middleware.Context, r render.Render, session sessions.Session) {
+func SignIn(ctx *middleware.Context, form auth.LogInForm) {
 	ctx.Data["Title"] = "Log In"
 
 	if ctx.Req.Method == "GET" {
@@ -94,9 +93,9 @@ func SignIn(form auth.LogInForm, ctx *middleware.Context, r render.Render, sessi
 		return
 	}
 
-	session.Set("userId", user.Id)
-	session.Set("userName", user.Name)
-	r.Redirect("/")
+	ctx.Session.Set("userId", user.Id)
+	ctx.Session.Set("userName", user.Name)
+	ctx.Render.Redirect("/")
 }
 
 func SignOut(r render.Render, session sessions.Session) {
@@ -105,25 +104,25 @@ func SignOut(r render.Render, session sessions.Session) {
 	r.Redirect("/")
 }
 
-func SignUp(form auth.RegisterForm, ctx *middleware.Context, data base.TmplData, req *http.Request, r render.Render) {
-	data["Title"] = "Sign Up"
-	data["PageIsSignUp"] = true
+func SignUp(ctx *middleware.Context, form auth.RegisterForm) {
+	ctx.Data["Title"] = "Sign Up"
+	ctx.Data["PageIsSignUp"] = true
 
-	if req.Method == "GET" {
-		r.HTML(200, "user/signup", data)
+	if ctx.Req.Method == "GET" {
+		ctx.Render.HTML(200, "user/signup", ctx.Data)
 		return
 	}
 
 	if form.Password != form.RetypePasswd {
-		data["HasError"] = true
-		data["Err_Password"] = true
-		data["Err_RetypePasswd"] = true
-		data["ErrorMsg"] = "Password and re-type password are not same"
-		auth.AssignForm(form, data)
+		ctx.Data["HasError"] = true
+		ctx.Data["Err_Password"] = true
+		ctx.Data["Err_RetypePasswd"] = true
+		ctx.Data["ErrorMsg"] = "Password and re-type password are not same"
+		auth.AssignForm(form, ctx.Data)
 	}
 
-	if hasErr, ok := data["HasError"]; ok && hasErr.(bool) {
-		r.HTML(200, "user/signup", data)
+	if hasErr, ok := ctx.Data["HasError"]; ok && hasErr.(bool) {
+		ctx.Render.HTML(200, "user/signup", ctx.Data)
 		return
 	}
 
@@ -134,49 +133,47 @@ func SignUp(form auth.RegisterForm, ctx *middleware.Context, data base.TmplData,
 	}
 
 	if err := models.RegisterUser(u); err != nil {
-		data["HasError"] = true
-		auth.AssignForm(form, data)
+		ctx.Data["HasError"] = true
+		auth.AssignForm(form, ctx.Data)
 
 		switch err.Error() {
 		case models.ErrUserAlreadyExist.Error():
-			data["Err_Username"] = true
-			data["ErrorMsg"] = "Username has been already taken"
-			r.HTML(200, "user/signup", data)
+			ctx.Data["Err_Username"] = true
+			ctx.Data["ErrorMsg"] = "Username has been already taken"
+			ctx.Render.HTML(200, "user/signup", ctx.Data)
 		case models.ErrEmailAlreadyUsed.Error():
-			data["Err_Email"] = true
-			data["ErrorMsg"] = "E-mail address has been already used"
-			r.HTML(200, "user/signup", data)
+			ctx.Data["Err_Email"] = true
+			ctx.Data["ErrorMsg"] = "E-mail address has been already used"
+			ctx.Render.HTML(200, "user/signup", ctx.Data)
 		default:
 			ctx.Handle(200, "user.SignUp", err)
 		}
 		return
 	}
 
-	r.Redirect("/user/login")
+	ctx.Render.Redirect("/user/login")
 }
 
-func Delete(data base.TmplData, ctx *middleware.Context, req *http.Request, session sessions.Session, r render.Render) {
-	data["Title"] = "Delete Account"
+func Delete(ctx *middleware.Context) {
+	ctx.Data["Title"] = "Delete Account"
 
-	if req.Method == "GET" {
-		r.HTML(200, "user/delete", data)
+	if ctx.Req.Method == "GET" {
+		ctx.Render.HTML(200, "user/delete", ctx.Data)
 		return
 	}
 
-	id := auth.SignedInId(session)
-	u := &models.User{Id: id}
-	if err := models.DeleteUser(u); err != nil {
-		data["HasError"] = true
+	if err := models.DeleteUser(ctx.User); err != nil {
+		ctx.Data["HasError"] = true
 		switch err.Error() {
 		case models.ErrUserOwnRepos.Error():
-			data["ErrorMsg"] = "Your account still have ownership of repository, you have to delete or transfer them first."
+			ctx.Data["ErrorMsg"] = "Your account still have ownership of repository, you have to delete or transfer them first."
 		default:
 			ctx.Handle(200, "user.Delete", err)
 			return
 		}
 	}
 
-	r.HTML(200, "user/delete", data)
+	ctx.Render.HTML(200, "user/delete", ctx.Data)
 }
 
 const (
@@ -184,10 +181,10 @@ const (
                         <div class="info"><span class="meta">%s</span><br>%s</div>`
 )
 
-func Feeds(form auth.FeedsForm, r render.Render) {
+func Feeds(ctx *middleware.Context, form auth.FeedsForm) {
 	actions, err := models.GetFeeds(form.UserId, form.Page*20, false)
 	if err != nil {
-		r.JSON(500, err)
+		ctx.Render.JSON(500, err)
 	}
 
 	feeds := make([]string, len(actions))
@@ -195,5 +192,5 @@ func Feeds(form auth.FeedsForm, r render.Render) {
 		feeds[i] = fmt.Sprintf(feedTpl, base.ActionIcon(actions[i].OpType),
 			base.TimeSince(actions[i].Created), base.ActionDesc(actions[i]))
 	}
-	r.JSON(200, &feeds)
+	ctx.Render.JSON(200, &feeds)
 }

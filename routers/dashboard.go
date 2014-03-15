@@ -5,20 +5,15 @@
 package routers
 
 import (
-	"github.com/martini-contrib/render"
-	"github.com/martini-contrib/sessions"
-
-	"github.com/gogits/gogs/modules/auth"
-	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/middleware"
 	"github.com/gogits/gogs/routers/user"
 )
 
-func Home(ctx *middleware.Context, r render.Render, data base.TmplData, session sessions.Session) {
-	if auth.IsSignedIn(session) {
+func Home(ctx *middleware.Context) {
+	if ctx.IsSigned {
 		user.Dashboard(ctx)
 		return
 	}
-	data["PageIsHome"] = true
-	r.HTML(200, "home", data)
+	ctx.Data["PageIsHome"] = true
+	ctx.Render.HTML(200, "home", ctx.Data)
 }
