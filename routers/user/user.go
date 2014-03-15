@@ -15,27 +15,26 @@ import (
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/middleware"
 )
 
-func Dashboard(r render.Render, data base.TmplData, session sessions.Session) {
-	data["Title"] = "Dashboard"
-	data["PageIsUserDashboard"] = true
-	repos, err := models.GetRepositories(&models.User{Id: auth.SignedInId(session)})
+func Dashboard(ctx *middleware.Context) {
+	ctx.Data["Title"] = "Dashboard"
+	ctx.Data["PageIsUserDashboard"] = true
+	repos, err := models.GetRepositories(&models.User{Id: ctx.User.Id})
 	if err != nil {
-		log.Handle(200, "user.Dashboard", data, r, err)
+		ctx.Handle(200, "user.Dashboard", err)
 		return
 	}
-	data["MyRepos"] = repos
+	ctx.Data["MyRepos"] = repos
 
-	feeds, err := models.GetFeeds(auth.SignedInId(session), 0, false)
+	feeds, err := models.GetFeeds(ctx.User.Id, 0, false)
 	if err != nil {
-		log.Handle(200, "user.Dashboard", data, r, err)
+		ctx.Handle(200, "user.Dashboard", err)
 		return
 	}
-	data["Feeds"] = feeds
-	r.HTML(200, "user/dashboard", data)
+	ctx.Data["Feeds"] = feeds
+	ctx.Render.HTML(200, "user/dashboard", ctx.Data)
 }
 
 func Profile(ctx *middleware.Context, params martini.Params) {
@@ -44,7 +43,7 @@ func Profile(ctx *middleware.Context, params martini.Params) {
 	// TODO: Need to check view self or others.
 	user, err := models.GetUserByName(params["username"])
 	if err != nil {
-		ctx.Log(200, "user.Profile", err)
+		ctx.Handle(200, "user.Profile", err)
 		return
 	}
 
@@ -57,7 +56,7 @@ func Profile(ctx *middleware.Context, params martini.Params) {
 	case "activity":
 		feeds, err := models.GetFeeds(user.Id, 0, true)
 		if err != nil {
-			ctx.Log(200, "user.Profile", err)
+			ctx.Handle(200, "user.Profile", err)
 			return
 		}
 		ctx.Data["Feeds"] = feeds
@@ -68,30 +67,30 @@ func Profile(ctx *middleware.Context, params martini.Params) {
 	ctx.Render.HTML(200, "user/profile", ctx.Data)
 }
 
-func SignIn(form auth.LogInForm, data base.TmplData, req *http.Request, r render.Render, session sessions.Session) {
-	data["Title"] = "Log In"
+func SignIn(form auth.LogInForm, ctx *middleware.Context, r render.Render, session sessions.Session) {
+	ctx.Data["Title"] = "Log In"
 
-	if req.Method == "GET" {
-		r.HTML(200, "user/signin", data)
+	if ctx.Req.Method == "GET" {
+		ctx.Render.HTML(200, "user/signin", ctx.Data)
 		return
 	}
 
-	if hasErr, ok := data["HasError"]; ok && hasErr.(bool) {
-		r.HTML(200, "user/signin", data)
+	if hasErr, ok := ctx.Data["HasError"]; ok && hasErr.(bool) {
+		ctx.Render.HTML(200, "user/signin", ctx.Data)
 		return
 	}
 
 	user, err := models.LoginUserPlain(form.UserName, form.Password)
 	if err != nil {
 		if err.Error() == models.ErrUserNotExist.Error() {
-			data["HasError"] = true
-			data["ErrorMsg"] = "Username or password is not correct"
-			auth.AssignForm(form, data)
-			r.HTML(200, "user/signin", data)
+			ctx.Data["HasError"] = true
+			ctx.Data["ErrorMsg"] = "Username or password is not correct"
+			auth.AssignForm(form, ctx.Data)
+			ctx.Render.HTML(200, "user/signin", ctx.Data)
 			return
 		}
 
-		log.Handle(200, "user.SignIn", data, r, err)
+		ctx.Handle(200, "user.SignIn", err)
 		return
 	}
 
@@ -106,7 +105,7 @@ func SignOut(r render.Render, session sessions.Session) {
 	r.Redirect("/")
 }
 
-func SignUp(form auth.RegisterForm, data base.TmplData, req *http.Request, r render.Render) {
+func SignUp(form auth.RegisterForm, ctx *middleware.Context, data base.TmplData, req *http.Request, r render.Render) {
 	data["Title"] = "Sign Up"
 	data["PageIsSignUp"] = true
 
@@ -148,7 +147,7 @@ func SignUp(form auth.RegisterForm, data base.TmplData, req *http.Request, r ren
 			data["ErrorMsg"] = "E-mail address has been already used"
 			r.HTML(200, "user/signup", data)
 		default:
-			log.Handle(200, "user.SignUp", data, r, err)
+			ctx.Handle(200, "user.SignUp", err)
 		}
 		return
 	}
@@ -156,7 +155,7 @@ func SignUp(form auth.RegisterForm, data base.TmplData, req *http.Request, r ren
 	r.Redirect("/user/login")
 }
 
-func Delete(data base.TmplData, req *http.Request, session sessions.Session, r render.Render) {
+func Delete(data base.TmplData, ctx *middleware.Context, req *http.Request, session sessions.Session, r render.Render) {
 	data["Title"] = "Delete Account"
 
 	if req.Method == "GET" {
@@ -172,7 +171,7 @@ func Delete(data base.TmplData, req *http.Request, session sessions.Session, r r
 		case models.ErrUserOwnRepos.Error():
 			data["ErrorMsg"] = "Your account still have ownership of repository, you have to delete or transfer them first."
 		default:
-			log.Handle(200, "user.Delete", data, r, err)
+			ctx.Handle(200, "user.Delete", err)
 			return
 		}
 	}

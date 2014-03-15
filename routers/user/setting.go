@@ -15,9 +15,10 @@ import (
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
+	"github.com/gogits/gogs/modules/middleware"
 )
 
-func Setting(form auth.UpdateProfileForm, r render.Render, data base.TmplData, req *http.Request, session sessions.Session) {
+func Setting(form auth.UpdateProfileForm, ctx *middleware.Context, r render.Render, data base.TmplData, req *http.Request, session sessions.Session) {
 	data["Title"] = "Setting"
 	data["PageIsUserSetting"] = true
 
@@ -40,7 +41,7 @@ func Setting(form auth.UpdateProfileForm, r render.Render, data base.TmplData, r
 	user.Avatar = base.EncodeMd5(form.Avatar)
 	user.AvatarEmail = form.Avatar
 	if err := models.UpdateUser(user); err != nil {
-		log.Handle(200, "setting.Setting", data, r, err)
+		ctx.Handle(200, "setting.Setting", err)
 		return
 	}
 
@@ -48,7 +49,7 @@ func Setting(form auth.UpdateProfileForm, r render.Render, data base.TmplData, r
 	r.HTML(200, "user/setting", data)
 }
 
-func SettingPassword(form auth.UpdatePasswdForm, r render.Render, data base.TmplData, session sessions.Session, req *http.Request) {
+func SettingPassword(form auth.UpdatePasswdForm, ctx *middleware.Context, r render.Render, data base.TmplData, session sessions.Session, req *http.Request) {
 	data["Title"] = "Password"
 	data["PageIsUserSetting"] = true
 
@@ -60,7 +61,7 @@ func SettingPassword(form auth.UpdatePasswdForm, r render.Render, data base.Tmpl
 	user := auth.SignedInUser(session)
 	newUser := &models.User{Passwd: form.NewPasswd}
 	if err := newUser.EncodePasswd(); err != nil {
-		log.Handle(200, "setting.SettingPassword", data, r, err)
+		ctx.Handle(200, "setting.SettingPassword", err)
 		return
 	}
 
@@ -73,7 +74,7 @@ func SettingPassword(form auth.UpdatePasswdForm, r render.Render, data base.Tmpl
 	} else {
 		user.Passwd = newUser.Passwd
 		if err := models.UpdateUser(user); err != nil {
-			log.Handle(200, "setting.SettingPassword", data, r, err)
+			ctx.Handle(200, "setting.SettingPassword", err)
 			return
 		}
 		data["IsSuccess"] = true

@@ -13,10 +13,10 @@ import (
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/modules/log"
+	"github.com/gogits/gogs/modules/middleware"
 )
 
-func Create(form auth.CreateRepoForm, req *http.Request, r render.Render, data base.TmplData, session sessions.Session) {
+func Create(form auth.CreateRepoForm, ctx *middleware.Context, req *http.Request, r render.Render, data base.TmplData, session sessions.Session) {
 	data["Title"] = "Create repository"
 
 	if req.Method == "GET" {
@@ -61,10 +61,10 @@ func Create(form auth.CreateRepoForm, req *http.Request, r render.Render, data b
 		return
 	}
 
-	log.Handle(200, "repo.Create", data, r, err)
+	ctx.Handle(200, "repo.Create", err)
 }
 
-func Delete(form auth.DeleteRepoForm, req *http.Request, r render.Render, data base.TmplData, session sessions.Session) {
+func Delete(form auth.DeleteRepoForm, ctx *middleware.Context, req *http.Request, r render.Render, data base.TmplData, session sessions.Session) {
 	data["Title"] = "Delete repository"
 
 	if req.Method == "GET" {
@@ -73,14 +73,14 @@ func Delete(form auth.DeleteRepoForm, req *http.Request, r render.Render, data b
 	}
 
 	if err := models.DeleteRepository(form.UserId, form.RepoId, form.UserName); err != nil {
-		log.Handle(200, "repo.Delete", data, r, err)
+		ctx.Handle(200, "repo.Delete", err)
 		return
 	}
 
 	r.Redirect("/", 302)
 }
 
-func List(req *http.Request, r render.Render, data base.TmplData, session sessions.Session) {
+func List(ctx *middleware.Context, req *http.Request, r render.Render, data base.TmplData, session sessions.Session) {
 	u := auth.SignedInUser(session)
 	if u != nil {
 		r.Redirect("/")
@@ -90,7 +90,7 @@ func List(req *http.Request, r render.Render, data base.TmplData, session sessio
 	data["Title"] = "Repositories"
 	repos, err := models.GetRepositories(u)
 	if err != nil {
-		log.Handle(200, "repo.List", data, r, err)
+		ctx.Handle(200, "repo.List", err)
 		return
 	}
 
