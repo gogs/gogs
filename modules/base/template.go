@@ -21,6 +21,7 @@ var TemplateFuncs template.FuncMap = map[string]interface{}{
 	},
 	"str2html":   Str2html,
 	"TimeSince":  TimeSince,
+	"FileSize":   FileSize,
 	"Subtract":   Subtract,
 	"ActionIcon": ActionIcon,
 	"ActionDesc": ActionDesc,
