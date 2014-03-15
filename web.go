@@ -67,12 +67,12 @@ func runWeb(*cli.Context) {
 	m.Any("/repo/create", middleware.SignInRequire(true), binding.BindIgnErr(auth.CreateRepoForm{}), repo.Create)
 	m.Any("/repo/delete", middleware.SignInRequire(true), binding.Bind(auth.DeleteRepoForm{}), repo.Delete)
 
-	m.Get("/:username/:reponame/settings", middleware.SignInRequire(false), auth.RepoAssignment(true), repo.Setting)
+	m.Get("/:username/:reponame/settings", middleware.SignInRequire(false), middleware.RepoAssignment(true), repo.Setting)
 	m.Get("/:username/:reponame/tree/:branchname/**",
-		middleware.SignInRequire(false), auth.RepoAssignment(true), repo.Single)
+		middleware.SignInRequire(false), middleware.RepoAssignment(true), repo.Single)
 	m.Get("/:username/:reponame/tree/:branchname",
-		middleware.SignInRequire(false), auth.RepoAssignment(true), repo.Single)
-	m.Get("/:username/:reponame", middleware.SignInRequire(false), auth.RepoAssignment(true), repo.Single)
+		middleware.SignInRequire(false), middleware.RepoAssignment(true), repo.Single)
+	m.Get("/:username/:reponame", middleware.SignInRequire(false), middleware.RepoAssignment(true), repo.Single)
 
 	//m.Get("/:username/:reponame", repo.Repo)
 
