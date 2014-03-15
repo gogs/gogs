@@ -58,10 +58,11 @@ func InitContext() martini.Handler {
 		ctx := &Context{
 			c: c,
 			// p:      p,
-			Req:    r,
-			Res:    res,
-			Data:   data,
-			Render: rd,
+			Req:     r,
+			Res:     res,
+			Session: session,
+			Data:    data,
+			Render:  rd,
 		}
 
 		// Get user from session if logined.
