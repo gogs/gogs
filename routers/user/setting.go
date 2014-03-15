@@ -5,11 +5,7 @@
 package user
 
 import (
-	"net/http"
 	"strconv"
-
-	"github.com/martini-contrib/render"
-	"github.com/martini-contrib/sessions"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
@@ -18,20 +14,20 @@ import (
 	"github.com/gogits/gogs/modules/middleware"
 )
 
-func Setting(form auth.UpdateProfileForm, ctx *middleware.Context, r render.Render, data base.TmplData, req *http.Request, session sessions.Session) {
-	data["Title"] = "Setting"
-	data["PageIsUserSetting"] = true
+func Setting(ctx *middleware.Context, form auth.UpdateProfileForm) {
+	ctx.Data["Title"] = "Setting"
+	ctx.Data["PageIsUserSetting"] = true
 
-	user := auth.SignedInUser(session)
-	data["Owner"] = user
+	user := ctx.User
+	ctx.Data["Owner"] = user
 
-	if req.Method == "GET" {
-		r.HTML(200, "user/setting", data)
+	if ctx.Req.Method == "GET" {
+		ctx.Render.HTML(200, "user/setting", ctx.Data)
 		return
 	}
 
-	if hasErr, ok := data["HasError"]; ok && hasErr.(bool) {
-		r.HTML(200, "user/setting", data)
+	if hasErr, ok := ctx.Data["HasError"]; ok && hasErr.(bool) {
+		ctx.Render.HTML(200, "user/setting", ctx.Data)
 		return
 	}
 
@@ -45,20 +41,20 @@ func Setting(form auth.UpdateProfileForm, ctx *middleware.Context, r render.Rend
 		return
 	}
 
-	data["IsSuccess"] = true
-	r.HTML(200, "user/setting", data)
+	ctx.Data["IsSuccess"] = true
+	ctx.Render.HTML(200, "user/setting", ctx.Data)
 }
 
-func SettingPassword(form auth.UpdatePasswdForm, ctx *middleware.Context, r render.Render, data base.TmplData, session sessions.Session, req *http.Request) {
-	data["Title"] = "Password"
-	data["PageIsUserSetting"] = true
+func SettingPassword(ctx *middleware.Context, form auth.UpdatePasswdForm) {
+	ctx.Data["Title"] = "Password"
+	ctx.Data["PageIsUserSetting"] = true
 
-	if req.Method == "GET" {
-		r.HTML(200, "user/password", data)
+	if ctx.Req.Method == "GET" {
+		ctx.Render.HTML(200, "user/password", ctx.Data)
 		return
 	}
 
-	user := auth.SignedInUser(session)
+	user := ctx.User
 	newUser := &models.User{Passwd: form.NewPasswd}
 	if err := newUser.EncodePasswd(); err != nil {
 		ctx.Handle(200, "setting.SettingPassword", err)
@@ -66,35 +62,34 @@ func SettingPassword(form auth.UpdatePasswdForm, ctx *middleware.Context, r rend
 	}
 
 	if user.Passwd != newUser.Passwd {
-		data["HasError"] = true
-		data["ErrorMsg"] = "Old password is not correct"
+		ctx.Data["HasError"] = true
+		ctx.Data["ErrorMsg"] = "Old password is not correct"
 	} else if form.NewPasswd != form.RetypePasswd {
-		data["HasError"] = true
-		data["ErrorMsg"] = "New password and re-type password are not same"
+		ctx.Data["HasError"] = true
+		ctx.Data["ErrorMsg"] = "New password and re-type password are not same"
 	} else {
 		user.Passwd = newUser.Passwd
 		if err := models.UpdateUser(user); err != nil {
 			ctx.Handle(200, "setting.SettingPassword", err)
 			return
 		}
-		data["IsSuccess"] = true
+		ctx.Data["IsSuccess"] = true
 	}
 
-	data["Owner"] = user
-	r.HTML(200, "user/password", data)
+	ctx.Data["Owner"] = user
+	ctx.Render.HTML(200, "user/password", ctx.Data)
 }
 
-func SettingSSHKeys(form auth.AddSSHKeyForm, r render.Render, data base.TmplData, req *http.Request, session sessions.Session) {
-	data["Title"] = "SSH Keys"
+func SettingSSHKeys(ctx *middleware.Context, form auth.AddSSHKeyForm) {
+	ctx.Data["Title"] = "SSH Keys"
 
 	// Delete SSH key.
-	if req.Method == "DELETE" || req.FormValue("_method") == "DELETE" {
-		println(1)
-		id, err := strconv.ParseInt(req.FormValue("id"), 10, 64)
+	if ctx.Req.Method == "DELETE" || ctx.Query("_method") == "DELETE" {
+		id, err := strconv.ParseInt(ctx.Query("id"), 10, 64)
 		if err != nil {
-			data["ErrorMsg"] = err
+			ctx.Data["ErrorMsg"] = err
 			log.Error("ssh.DelPublicKey: %v", err)
-			r.JSON(200, map[string]interface{}{
+			ctx.Render.JSON(200, map[string]interface{}{
 				"ok":  false,
 				"err": err.Error(),
 			})
@@ -102,18 +97,18 @@ func SettingSSHKeys(form auth.AddSSHKeyForm, r render.Render, data base.TmplData
 		}
 		k := &models.PublicKey{
 			Id:      id,
-			OwnerId: auth.SignedInId(session),
+			OwnerId: ctx.User.Id,
 		}
 
 		if err = models.DeletePublicKey(k); err != nil {
-			data["ErrorMsg"] = err
+			ctx.Data["ErrorMsg"] = err
 			log.Error("ssh.DelPublicKey: %v", err)
-			r.JSON(200, map[string]interface{}{
+			ctx.Render.JSON(200, map[string]interface{}{
 				"ok":  false,
 				"err": err.Error(),
 			})
 		} else {
-			r.JSON(200, map[string]interface{}{
+			ctx.Render.JSON(200, map[string]interface{}{
 				"ok": true,
 			})
 		}
@@ -121,51 +116,51 @@ func SettingSSHKeys(form auth.AddSSHKeyForm, r render.Render, data base.TmplData
 	}
 
 	// Add new SSH key.
-	if req.Method == "POST" {
-		if hasErr, ok := data["HasError"]; ok && hasErr.(bool) {
-			r.HTML(200, "user/publickey", data)
+	if ctx.Req.Method == "POST" {
+		if hasErr, ok := ctx.Data["HasError"]; ok && hasErr.(bool) {
+			ctx.Render.HTML(200, "user/publickey", ctx.Data)
 			return
 		}
 
-		k := &models.PublicKey{OwnerId: auth.SignedInId(session),
+		k := &models.PublicKey{OwnerId: ctx.User.Id,
 			Name:    form.KeyName,
 			Content: form.KeyContent,
 		}
 
 		if err := models.AddPublicKey(k); err != nil {
-			data["ErrorMsg"] = err
+			ctx.Data["ErrorMsg"] = err
 			log.Error("ssh.AddPublicKey: %v", err)
-			r.HTML(200, "base/error", data)
+			ctx.Render.HTML(200, "base/error", ctx.Data)
 			return
 		} else {
-			data["AddSSHKeySuccess"] = true
+			ctx.Data["AddSSHKeySuccess"] = true
 		}
 	}
 
 	// List existed SSH keys.
-	keys, err := models.ListPublicKey(auth.SignedInId(session))
+	keys, err := models.ListPublicKey(ctx.User.Id)
 	if err != nil {
-		data["ErrorMsg"] = err
+		ctx.Data["ErrorMsg"] = err
 		log.Error("ssh.ListPublicKey: %v", err)
-		r.HTML(200, "base/error", data)
+		ctx.Render.HTML(200, "base/error", ctx.Data)
 		return
 	}
 
-	data["PageIsUserSetting"] = true
-	data["Keys"] = keys
-	r.HTML(200, "user/publickey", data)
+	ctx.Data["PageIsUserSetting"] = true
+	ctx.Data["Keys"] = keys
+	ctx.Render.HTML(200, "user/publickey", ctx.Data)
 }
 
-func SettingNotification(r render.Render, data base.TmplData) {
+func SettingNotification(ctx *middleware.Context) {
 	// todo user setting notification
-	data["Title"] = "Notification"
-	data["PageIsUserSetting"] = true
-	r.HTML(200, "user/notification", data)
+	ctx.Data["Title"] = "Notification"
+	ctx.Data["PageIsUserSetting"] = true
+	ctx.Render.HTML(200, "user/notification", ctx.Data)
 }
 
-func SettingSecurity(r render.Render, data base.TmplData) {
+func SettingSecurity(ctx *middleware.Context) {
 	// todo user setting security
-	data["Title"] = "Security"
-	data["PageIsUserSetting"] = true
-	r.HTML(200, "user/security", data)
+	ctx.Data["Title"] = "Security"
+	ctx.Data["PageIsUserSetting"] = true
+	ctx.Render.HTML(200, "user/security", ctx.Data)
 }
