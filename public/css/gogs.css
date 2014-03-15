@@ -137,7 +137,6 @@ html, body {
 
 /* gogits body */
 #gogs-body {
-    padding-top: 30px;
     padding-bottom: 60px;
     margin-top: 50px;
 }
@@ -148,7 +147,6 @@ html, body {
 }
 
 #gogs-body-nav {
-    margin-bottom: -50px;
     background-color: #FFF;
     border-bottom: 1px solid #DDD;
     height: 66px
@@ -447,8 +445,6 @@ html, body {
 }
 
 #gogs-repo-toolbar {
-    margin-top: 51px;
-    margin-bottom: -50px;
     border-bottom: 1px solid #DDD;
     background-color: #FFF;
     height: 40px;
