@@ -47,7 +47,7 @@
                     {{if .IsDir}}
                     <a href="/{{$username}}/{{$reponame}}/tree/{{$branchname}}/{{.Path}}">{{.Name}}</a>
                     {{else}}
-                    <a href="#">{{.Name}}</a>
+                    <a href="#">{{.Name}} - {{.Size}}</a>
                     {{end}}</td>
 	                <td class="date"><time datetime="{{.Created}}" data-title="true" title="{{.Created}}">{{TimeSince .Created}}</time></td>
 	                <td class="text">{{.Message}}</td>
