@@ -5,6 +5,7 @@
 package user
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/codegangsta/martini"
@@ -27,6 +28,13 @@ func Dashboard(r render.Render, data base.TmplData, session sessions.Session) {
 		return
 	}
 	data["MyRepos"] = repos
+
+	feeds, err := models.GetFeeds(auth.SignedInId(session), 0, false)
+	if err != nil {
+		log.Handle(200, "user.Dashboard", data, r, err)
+		return
+	}
+	data["Feeds"] = feeds
 	r.HTML(200, "user/dashboard", data)
 }
 
@@ -172,10 +180,21 @@ func Delete(data base.TmplData, req *http.Request, session sessions.Session, r r
 	r.HTML(200, "user/delete", data)
 }
 
+const (
+	feedTpl = `<i class="icon fa fa-%s"></i>
+                        <div class="info"><span class="meta">%s</span><br>%s</div>`
+)
+
 func Feeds(form auth.FeedsForm, r render.Render) {
-	actions, err := models.GetFeeds(form.UserId, form.Offset, false)
+	actions, err := models.GetFeeds(form.UserId, form.Page*20, false)
 	if err != nil {
 		r.JSON(500, err)
 	}
-	r.JSON(200, actions)
+
+	feeds := make([]string, len(actions))
+	for i := range actions {
+		feeds[i] = fmt.Sprintf(feedTpl, base.ActionIcon(actions[i].OpType),
+			base.TimeSince(actions[i].Created), base.ActionDesc(actions[i]))
+	}
+	r.JSON(200, &feeds)
 }
