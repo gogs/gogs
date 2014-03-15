@@ -46,10 +46,18 @@
             {{else}}
             {{$owner := .Owner}}
             <div class="tab-pane active">
+                <ul class="list-unstyled repo-list">
                 {{range .Repos}}
-                    <h4><a href="/{{$owner.Name}}/{{.LowerName}}">{{.LowerName}}</a> <small>Star:{{.NumStars}} Fork:{{.NumForks}}</small></h4>
-                    <p>{{.Description}}</p>
+                    <li>
+                        <div class="meta pull-right"><i class="fa fa-star"></i> {{.NumStars}} <i class="fa fa-code-fork"></i> {{.NumForks}}</div>
+                        <h4>
+                            <a href="/{{$owner.Name}}/{{.LowerName}}">{{.LowerName}}</a>
+                        </h4>
+                        <p class="desc">{{.Description}}</p>
+                        <div class="info">Last updated {{.Updated|TimeSince}}</div>
+                    </li>
                 {{end}}
+                </ul>
             </div>
             {{end}}
         </div>
