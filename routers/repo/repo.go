@@ -20,7 +20,7 @@ func Create(ctx *middleware.Context, form auth.CreateRepoForm) {
 		return
 	}
 
-	if hasErr, ok := ctx.Data["HasError"]; ok && hasErr.(bool) {
+	if ctx.HasError() {
 		ctx.Render.HTML(200, "repo/create", ctx.Data)
 		return
 	}
@@ -30,10 +30,7 @@ func Create(ctx *middleware.Context, form auth.CreateRepoForm) {
 	user, err := models.GetUserById(form.UserId)
 	if err != nil {
 		if err.Error() == models.ErrUserNotExist.Error() {
-			ctx.Data["HasError"] = true
-			ctx.Data["ErrorMsg"] = "User does not exist"
-			auth.AssignForm(form, ctx.Data)
-			ctx.Render.HTML(200, "repo/create", ctx.Data)
+			ctx.RenderWithErr("User does not exist", "repo/create", &form)
 			return
 		}
 	}
@@ -48,10 +45,7 @@ func Create(ctx *middleware.Context, form auth.CreateRepoForm) {
 	}
 
 	if err.Error() == models.ErrRepoAlreadyExist.Error() {
-		ctx.Data["HasError"] = true
-		ctx.Data["ErrorMsg"] = "Repository name has already been used"
-		auth.AssignForm(form, ctx.Data)
-		ctx.Render.HTML(200, "repo/create", ctx.Data)
+		ctx.RenderWithErr("Repository name has already been used", "repo/create", &form)
 		return
 	}
 

@@ -41,6 +41,23 @@ func (ctx *Context) Query(name string) string {
 // 	return ctx.p[name]
 // }
 
+// HasError returns true if error occurs in form validation.
+func (ctx *Context) HasError() bool {
+	hasErr, ok := ctx.Data["HasError"]
+	if !ok {
+		return false
+	}
+	return hasErr.(bool)
+}
+
+// RenderWithErr used for page has form validation but need to prompt error to users.
+func (ctx *Context) RenderWithErr(msg, tpl string, form auth.Form) {
+	ctx.Data["HasError"] = true
+	ctx.Data["ErrorMsg"] = msg
+	auth.AssignForm(form, ctx.Data)
+	ctx.Render.HTML(200, tpl, ctx.Data)
+}
+
 // Handle handles and logs error by given status.
 func (ctx *Context) Handle(status int, title string, err error) {
 	ctx.Data["ErrorMsg"] = err
