@@ -121,7 +121,7 @@ func humanateBytes(s uint64, base float64, sizes []string) string {
 }
 
 // FileSize calculates the file size and generate user-friendly string.
-func FileSize(s uint64) string {
+func FileSize(s int64) string {
 	sizes := []string{"B", "KB", "MB", "GB", "TB", "PB", "EB"}
 	return humanateBytes(uint64(s), 1024, sizes)
 }
