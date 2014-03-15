@@ -128,9 +128,7 @@ func SettingSSHKeys(ctx *middleware.Context, form auth.AddSSHKeyForm) {
 		}
 
 		if err := models.AddPublicKey(k); err != nil {
-			ctx.Data["ErrorMsg"] = err
-			log.Error("ssh.AddPublicKey: %v", err)
-			ctx.Render.HTML(200, "base/error", ctx.Data)
+			ctx.Handle(200, "ssh.AddPublicKey", err)
 			return
 		} else {
 			ctx.Data["AddSSHKeySuccess"] = true
@@ -140,9 +138,7 @@ func SettingSSHKeys(ctx *middleware.Context, form auth.AddSSHKeyForm) {
 	// List existed SSH keys.
 	keys, err := models.ListPublicKey(ctx.User.Id)
 	if err != nil {
-		ctx.Data["ErrorMsg"] = err
-		log.Error("ssh.ListPublicKey: %v", err)
-		ctx.Render.HTML(200, "base/error", ctx.Data)
+		ctx.Handle(200, "ssh.ListPublicKey", err)
 		return
 	}
 

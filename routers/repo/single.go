@@ -52,6 +52,5 @@ func Setting(ctx *middleware.Context) {
 
 	ctx.Data["Title"] = ctx.Data["Title"].(string) + " - settings"
 	ctx.Data["IsRepoToolbarSetting"] = true
-
 	ctx.Render.HTML(200, "repo/setting", ctx.Data)
 }
