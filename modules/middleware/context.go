@@ -34,6 +34,7 @@ type Context struct {
 		IsValid    bool
 		IsOwner    bool
 		Repository *models.Repository
+		Owner      *models.User
 	}
 }
 
