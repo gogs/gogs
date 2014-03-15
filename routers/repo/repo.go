@@ -67,20 +67,3 @@ func Delete(ctx *middleware.Context, form auth.DeleteRepoForm) {
 
 	ctx.Render.Redirect("/", 302)
 }
-
-func List(ctx *middleware.Context) {
-	if ctx.User != nil {
-		ctx.Render.Redirect("/")
-		return
-	}
-
-	ctx.Data["Title"] = "Repositories"
-	repos, err := models.GetRepositories(ctx.User)
-	if err != nil {
-		ctx.Handle(200, "repo.List", err)
-		return
-	}
-
-	ctx.Data["Repos"] = repos
-	ctx.Render.HTML(200, "repo/list", ctx.Data)
-}

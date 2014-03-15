@@ -44,7 +44,13 @@
                 </ul>
             </div>
             {{else}}
-            <div class="tab-pane active">repo</div>
+            {{$owner := .Owner}}
+            <div class="tab-pane active">
+                {{range .Repos}}
+                    <h4><a href="/{{$owner.Name}}/{{.LowerName}}">{{.LowerName}}</a> <small>Star:{{.NumStars}} Fork:{{.NumForks}}</small></h4>
+                    <p>{{.Description}}</p>
+                {{end}}
+            </div>
             {{end}}
         </div>
     </div>
