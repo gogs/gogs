@@ -41,7 +41,6 @@ func Single(ctx *middleware.Context, params martini.Params) {
 	ctx.Data["Treenames"] = treenames
 	ctx.Data["IsRepoToolbarSource"] = true
 	ctx.Data["Files"] = files
-
 	ctx.Render.HTML(200, "repo/single", ctx.Data)
 }
 
