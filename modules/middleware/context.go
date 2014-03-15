@@ -60,12 +60,15 @@ func InitContext() martini.Handler {
 		// Get user from session if logined.
 		user := auth.SignedInUser(session)
 		ctx.User = user
-		ctx.IsSigned = ctx != nil
+		ctx.IsSigned = user != nil
 
-		data["IsSigned"] = true
-		data["SignedUser"] = user
-		data["SignedUserId"] = user.Id
-		data["SignedUserName"] = user.LowerName
+		data["IsSigned"] = ctx.IsSigned
+
+		if user != nil {
+			data["SignedUser"] = user
+			data["SignedUserId"] = user.Id
+			data["SignedUserName"] = user.LowerName
+		}
 
 		c.Map(ctx)
 		c.Map(data)
