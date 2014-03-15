@@ -10,12 +10,14 @@ import (
 )
 
 func Single(ctx *middleware.Context, params martini.Params) {
-	if !ctx.Data["IsRepositoryValid"].(bool) {
+	if !ctx.Repo.IsValid {
 		return
 	}
+
 	if params["branchname"] == "" {
 		params["branchname"] = "master"
 	}
+
 	treename := params["_1"]
 	files, err := models.GetReposFiles(params["username"], params["reponame"],
 		params["branchname"], treename)
@@ -46,11 +48,16 @@ func Single(ctx *middleware.Context, params martini.Params) {
 }
 
 func Setting(ctx *middleware.Context) {
-	if !ctx.Data["IsRepositoryValid"].(bool) {
+	if !ctx.Repo.IsValid {
 		return
 	}
 
-	ctx.Data["Title"] = ctx.Data["Title"].(string) + " - settings"
+	var title string
+	if t, ok := ctx.Data["Title"].(string); ok {
+		title = t
+	}
+
+	ctx.Data["Title"] = title + " - settings"
 	ctx.Data["IsRepoToolbarSetting"] = true
 	ctx.Render.HTML(200, "repo/setting", ctx.Data)
 }
