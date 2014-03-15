@@ -66,7 +66,6 @@ func runWeb(*cli.Context) {
 
 	m.Any("/repo/create", middleware.SignInRequire(true), binding.BindIgnErr(auth.CreateRepoForm{}), repo.Create)
 	m.Any("/repo/delete", middleware.SignInRequire(true), binding.Bind(auth.DeleteRepoForm{}), repo.Delete)
-	m.Any("/repo/list", middleware.SignInRequire(false), repo.List)
 
 	m.Get("/:username/:reponame/settings", middleware.SignInRequire(false), auth.RepoAssignment(true), repo.Setting)
 	m.Get("/:username/:reponame/tree/:branchname/**",
