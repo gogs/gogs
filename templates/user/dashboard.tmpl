@@ -14,7 +14,17 @@
 <div id="gogs-body" class="container">
     {{if .HasInfo}}<div class="alert alert-info">{{.InfoMsg}}</div>{{end}}
     <div id="gogs-feed-left" class="col-md-8">
-        Website is still in the progress of building...please come back later! <strong>{{.SignedUserName}}</strong> is logged!
+        <ul class="list-unstyled activity-list">
+        {{range .Feeds}}
+            <li>
+                <i class="icon fa fa-{{ActionIcon .OpType}}"></i>
+                <div class="info"><span class="meta">{{TimeSince .Created}}</span><br>{{ActionDesc . | str2html}}</div>
+                <span class="clearfix"></span>
+            </li>
+        {{else}}
+            <li>Not any activity yet.</li>
+        {{end}}
+        </ul>
     </div>
     <div id="gogs-feed-right" class="col-md-4">
         <div class="panel panel-default repo-panel">
