@@ -7,10 +7,10 @@ import (
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/modules/log"
+	"github.com/gogits/gogs/modules/middleware"
 )
 
-func Single(params martini.Params, r render.Render, data base.TmplData) {
+func Single(params martini.Params, ctx *middleware.Context, r render.Render, data base.TmplData) {
 	if !data["IsRepositoryValid"].(bool) {
 		return
 	}
@@ -21,7 +21,7 @@ func Single(params martini.Params, r render.Render, data base.TmplData) {
 	files, err := models.GetReposFiles(params["username"], params["reponame"],
 		params["branchname"], treename)
 	if err != nil {
-		log.Handle(200, "repo.Single", data, r, err)
+		ctx.Handle(200, "repo.Single", err)
 		return
 	}
 	data["Username"] = params["username"]

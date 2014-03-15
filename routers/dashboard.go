@@ -10,12 +10,13 @@ import (
 
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/base"
+	"github.com/gogits/gogs/modules/middleware"
 	"github.com/gogits/gogs/routers/user"
 )
 
-func Home(r render.Render, data base.TmplData, session sessions.Session) {
+func Home(ctx *middleware.Context, r render.Render, data base.TmplData, session sessions.Session) {
 	if auth.IsSignedIn(session) {
-		user.Dashboard(r, data, session)
+		user.Dashboard(ctx)
 		return
 	}
 	data["PageIsHome"] = true

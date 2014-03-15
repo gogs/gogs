@@ -5,6 +5,7 @@
 package middleware
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/codegangsta/martini"
@@ -17,6 +18,7 @@ import (
 	"github.com/gogits/gogs/modules/log"
 )
 
+// Context represents context of a request.
 type Context struct {
 	c        martini.Context
 	p        martini.Params
@@ -29,6 +31,7 @@ type Context struct {
 	IsSigned bool
 }
 
+// Query querys form parameter.
 func (ctx *Context) Query(name string) string {
 	ctx.Req.ParseForm()
 	return ctx.Req.Form.Get(name)
@@ -38,10 +41,14 @@ func (ctx *Context) Query(name string) string {
 // 	return ctx.p[name]
 // }
 
-func (ctx *Context) Log(status int, title string, err error) {
-	log.Handle(status, title, ctx.Data, ctx.Render, err)
+// Handle handles and logs error by given status.
+func (ctx *Context) Handle(status int, title string, err error) {
+	ctx.Data["ErrorMsg"] = err
+	log.Error("%s: %v", title, err)
+	ctx.Render.HTML(status, fmt.Sprintf("status/%d", status), ctx.Data)
 }
 
+// InitContext initializes a classic context for a request.
 func InitContext() martini.Handler {
 	return func(res http.ResponseWriter, r *http.Request, c martini.Context,
 		session sessions.Session, rd render.Render) {
