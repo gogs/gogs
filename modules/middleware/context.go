@@ -29,6 +29,13 @@ type Context struct {
 	Render   render.Render
 	User     *models.User
 	IsSigned bool
+
+	Repo struct {
+		IsValid    bool
+		IsOwner    bool
+		Repository *models.Repository
+		Owner      *models.User
+	}
 }
 
 // Query querys form parameter.

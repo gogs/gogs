@@ -551,6 +551,38 @@ html, body {
     border-top: none;
 }
 
+.repo-list li {
+    padding: 15px 0;
+    border-top: 1px solid #ddd;
+}
+
+.repo-list li:first-child {
+    border-top: none;
+}
+
+.repo-list h4 {
+    font-weight: bold;
+    font-size: 24px;
+}
+
+.repo-list .meta {
+    margin: 15px 0 0;
+    font-size: 14px;
+}
+
+.repo-list .desc {
+    font-size: 15px;
+}
+
+.repo-list .meta .fa {
+    margin: 0 0 0 20px;
+}
+
+.repo-list .meta,
+.repo-list .info {
+    color: #999;
+}
+
 #wrapper {
     min-height: 100%;
     height: auto !important;

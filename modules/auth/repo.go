@@ -12,11 +12,8 @@ import (
 
 	"github.com/gogits/binding"
 
-	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
-	"github.com/martini-contrib/render"
-	"github.com/martini-contrib/sessions"
 )
 
 type CreateRepoForm struct {
@@ -60,63 +57,4 @@ type DeleteRepoForm struct {
 	UserId   int64  `form:"userId" binding:"Required"`
 	UserName string `form:"userName" binding:"Required"`
 	RepoId   int64  `form:"repoId" binding:"Required"`
-}
-
-func RepoAssignment(redirect bool) martini.Handler {
-	return func(params martini.Params, r render.Render, data base.TmplData, session sessions.Session) {
-		// assign false first
-		data["IsRepositoryValid"] = false
-
-		var (
-			user *models.User
-			err  error
-		)
-		// get repository owner
-		isOwner := (data["SignedUserName"] == params["username"])
-		if !isOwner {
-			user, err = models.GetUserByName(params["username"])
-			if err != nil {
-				if redirect {
-					r.Redirect("/")
-					return
-				}
-				//data["ErrorMsg"] = err
-				//log.Error("repo.Single: %v", err)
-				//r.HTML(200, "base/error", data)
-				return
-			}
-		} else {
-			user = SignedInUser(session)
-		}
-		if user == nil {
-			if redirect {
-				r.Redirect("/")
-				return
-			}
-			//data["ErrorMsg"] = "invliad user account for single repository"
-			//log.Error("repo.Single: %v", err)
-			//r.HTML(200, "base/error", data)
-			return
-		}
-		data["IsRepositoryOwner"] = isOwner
-
-		// get repository
-		repo, err := models.GetRepositoryByName(user, params["reponame"])
-		if err != nil {
-			if redirect {
-				r.Redirect("/")
-				return
-			}
-			//data["ErrorMsg"] = err
-			//log.Error("repo.Single: %v", err)
-			//r.HTML(200, "base/error", data)
-			return
-		}
-
-		data["Repository"] = repo
-		data["Owner"] = user
-		data["Title"] = user.Name + "/" + repo.Name
-		data["RepositoryLink"] = data["Title"]
-		data["IsRepositoryValid"] = true
-	}
 }
