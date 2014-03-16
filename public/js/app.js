@@ -112,3 +112,12 @@ function initUserSetting(){
         }
     });
 }
+
+;(function($){
+    // on Dom Ready
+    $(function(){
+        var $pre = $('.markdown').find('pre > code').parent();
+        $pre.addClass("prettyprint");
+        prettyPrint();
+    });
+})(jQuery);
