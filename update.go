@@ -47,6 +47,7 @@ func runUpdate(*cli.Context) {
 	if err != nil {
 		return
 	}
+
 	sUserId, err := strconv.Atoi(userId)
 	if err != nil {
 		log.Error("runUpdate.Parse userId: %v", err)
@@ -57,8 +58,10 @@ func runUpdate(*cli.Context) {
 		log.Error("runUpdate.Parse repoId: %v", err)
 		return
 	}
+	commits := make([][]string, 0)
+	commits = append(commits, []string{lastCommit.Id().String(), lastCommit.Message()})
 	if err = models.CommitRepoAction(int64(sUserId), userName,
-		int64(sRepoId), repoName, lastCommit.Message()); err != nil {
+		int64(sRepoId), repoName, commits); err != nil {
 		log.Error("runUpdate.models.CommitRepoAction: %v", err)
 	}
 }
