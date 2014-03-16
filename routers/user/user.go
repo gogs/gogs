@@ -157,18 +157,28 @@ func Delete(ctx *middleware.Context) {
 		return
 	}
 
-	if err := models.DeleteUser(ctx.User); err != nil {
+	rawPasswd := ctx.Query("password")
+	encodedPwd, _ := models.EncodePasswd(rawPasswd)
+	if len(encodedPwd) == 0 || encodedPwd != ctx.User.Passwd {
 		ctx.Data["HasError"] = true
-		switch err.Error() {
-		case models.ErrUserOwnRepos.Error():
-			ctx.Data["ErrorMsg"] = "Your account still have ownership of repository, you have to delete or transfer them first."
-		default:
-			ctx.Handle(200, "user.Delete", err)
+		ctx.Data["ErrorMsg"] = "Your password error. Make sure you are owner of this account."
+	} else {
+		if err := models.DeleteUser(ctx.User); err != nil {
+			ctx.Data["HasError"] = true
+			switch err {
+			case models.ErrUserOwnRepos:
+				ctx.Data["ErrorMsg"] = "Your account still have ownership of repository, you have to delete or transfer them first."
+			default:
+				ctx.Handle(200, "user.Delete", err)
+				return
+			}
+		} else {
+			ctx.Render.Redirect("/")
 			return
 		}
 	}
 
-	ctx.Render.Redirect("/", 302)
+	ctx.Render.HTML(200, "user/delete", ctx.Data)
 }
 
 const (
