@@ -560,7 +560,9 @@ html, body {
 .file-list .icon {
     font-size: 17px;
     padding: 5px 0 4px 10px;
-    width: 40px;
+    width: 50px;
+    color: #999;
+    text-align: right;
 }
 
 .file-list .wrap {
@@ -586,6 +588,19 @@ html, body {
 
 .file-list .date {
     text-align: right;
+}
+
+.file-content .file-head {
+    font-size: 18px;
+}
+
+.file-content .file-head .icon {
+    color: #666;
+    margin: 0 .5em 0 0;
+}
+
+.file-content .file-body {
+    padding: 30px 30px 50px;
 }
 
 #wrapper {
