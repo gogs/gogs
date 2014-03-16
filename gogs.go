@@ -7,7 +7,7 @@ package main
 
 import (
 	"os"
-	"os/user"
+	// "os/user"
 	"runtime"
 
 	"github.com/codegangsta/cli"
@@ -27,14 +27,14 @@ func init() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 }
 
-func checkRunUser() bool {
-	u, err := user.Current()
-	if err != nil {
-		// TODO: log
-		return false
-	}
-	return u.Username == base.Cfg.MustValue("", "RUN_USER")
-}
+// func checkRunUser() bool {
+// 	u, err := user.Current()
+// 	if err != nil {
+// 		// TODO: log
+// 		return false
+// 	}
+// 	return u.Username == base.Cfg.MustValue("", "RUN_USER")
+// }
 
 func main() {
 	/*if !checkRunUser() {
@@ -50,8 +50,6 @@ func main() {
 		CmdWeb,
 		CmdServ,
 	}
-	app.Flags = append(app.Flags, []cli.Flag{
-		cli.BoolFlag{"noterm", "disable color output"},
-	}...)
+	app.Flags = append(app.Flags, []cli.Flag{}...)
 	app.Run(os.Args)
 }
