@@ -67,11 +67,23 @@ type PublicKey struct {
 	Updated     time.Time `xorm:"updated"`
 }
 
+var (
+	ErrKeyAlreadyExist = errors.New("Public key already exist")
+)
+
 func GenAuthorizedKey(keyId int64, key string) string {
 	return fmt.Sprintf(tmplPublicKey, appPath, keyId, key)
 }
 
 func AddPublicKey(key *PublicKey) (err error) {
+	// Check if public key name has been used.
+	has, err := orm.Get(key)
+	if err != nil {
+		return err
+	} else if has {
+		return ErrKeyAlreadyExist
+	}
+
 	// Calculate fingerprint.
 	tmpPath := filepath.Join(os.TempDir(), fmt.Sprintf("%d", time.Now().Nanosecond()),
 		"id_rsa.pub")
