@@ -11,6 +11,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -57,29 +58,48 @@ func init() {
 }
 
 type PublicKey struct {
-	Id      int64
-	OwnerId int64     `xorm:"index"`
-	Name    string    `xorm:"unique not null"`
-	Content string    `xorm:"text not null"`
-	Created time.Time `xorm:"created"`
-	Updated time.Time `xorm:"updated"`
+	Id          int64
+	OwnerId     int64  `xorm:"index"`
+	Name        string `xorm:"unique not null"`
+	Fingerprint string
+	Content     string    `xorm:"text not null"`
+	Created     time.Time `xorm:"created"`
+	Updated     time.Time `xorm:"updated"`
 }
 
 func GenAuthorizedKey(keyId int64, key string) string {
 	return fmt.Sprintf(tmplPublicKey, appPath, keyId, key)
 }
 
-func AddPublicKey(key *PublicKey) error {
-	_, err := orm.Insert(key)
+func AddPublicKey(key *PublicKey) (err error) {
+	// Calculate fingerprint.
+	tmpPath := filepath.Join(os.TempDir(), fmt.Sprintf("%d", time.Now().Nanosecond()),
+		"id_rsa.pub")
+	os.MkdirAll(path.Dir(tmpPath), os.ModePerm)
+	f, err := os.Create(tmpPath)
 	if err != nil {
+		return
+	}
+	if _, err = f.WriteString(key.Content); err != nil {
+		return err
+	}
+	f.Close()
+	stdout, _, err := com.ExecCmd("ssh-keygen", "-l", "-f", tmpPath)
+	if err != nil {
+		return err
+	} else if len(stdout) < 2 {
+		return errors.New("Not enough output for calculating fingerprint")
+	}
+	key.Fingerprint = strings.Split(stdout, " ")[1]
+
+	// Save SSH key.
+	if _, err = orm.Insert(key); err != nil {
 		return err
 	}
 
-	err = SaveAuthorizedKeyFile(key)
-	if err != nil {
-		_, err2 := orm.Delete(key)
-		if err2 != nil {
-			// TODO: log the error
+	if err = SaveAuthorizedKeyFile(key); err != nil {
+		if _, err2 := orm.Delete(key); err2 != nil {
+			return err2
 		}
 		return err
 	}
