@@ -21,7 +21,7 @@
                 <li class="list-group-item"><span class="name">SSH Key's name</span></li>{{range .Keys}}
                 <li class="list-group-item">
                     <span class="name">{{.Name}}</span>
-                    <span class="print">(print code)</span>
+                    <span class="print">({{.Fingerprint}})</span>
                     <a href="#" class="btn btn-link btn-danger right delete" rel="{{.Id}}" data-del="{{.Id}}">Delete</a>
                 </li>{{end}}
                 <li class="list-group-item">
