@@ -6,6 +6,7 @@ package models
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -88,6 +89,12 @@ func AddPublicKey(key *PublicKey) error {
 
 // DeletePublicKey deletes SSH key information both in database and authorized_keys file.
 func DeletePublicKey(key *PublicKey) (err error) {
+	has, err := orm.Id(key.Id).Get(key)
+	if err != nil {
+		return err
+	} else if !has {
+		return errors.New("Public key does not exist")
+	}
 	if _, err = orm.Delete(key); err != nil {
 		return err
 	}
@@ -128,12 +135,8 @@ func DeletePublicKey(key *PublicKey) (err error) {
 
 		// Found the line and copy rest of file.
 		if strings.Contains(line, key.Content) {
-			if _, err = io.Copy(fw, fr); err != nil {
-				return err
-			}
-			break
+			continue
 		}
-
 		// Still finding the line, copy the line that currently read.
 		if _, err = fw.WriteString(line + "\n"); err != nil {
 			return err
