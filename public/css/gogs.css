@@ -228,6 +228,12 @@ html, body {
     border-radius: 6px;
 }
 
+#gogs-user-avatar-commit {
+    width: 16px;
+    height: 16px;
+    border-radius: 2px;
+}
+
 #gogs-user-name {
     margin-top: 20px;
     font-size: 1.6em;
