@@ -5,6 +5,7 @@
 package models
 
 import (
+	"encoding/json"
 	"time"
 )
 
@@ -45,13 +46,17 @@ func (a Action) GetRepoName() string {
 
 // CommitRepoAction records action for commit repository.
 func CommitRepoAction(userId int64, userName string,
-	repoId int64, repoName string, msg string) error {
-	_, err := orm.InsertOne(&Action{
+	repoId int64, repoName string, commits [][]string) error {
+	bs, err := json.Marshal(commits)
+	if err != nil {
+		return err
+	}
+	_, err = orm.InsertOne(&Action{
 		UserId:      userId,
 		ActUserId:   userId,
 		ActUserName: userName,
 		OpType:      OP_COMMIT_REPO,
-		Content:     msg,
+		Content:     string(bs),
 		RepoId:      repoId,
 		RepoName:    repoName,
 	})
