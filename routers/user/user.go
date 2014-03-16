@@ -157,11 +157,11 @@ func Delete(ctx *middleware.Context) {
 		return
 	}
 
-	rawPasswd := ctx.Query("password")
-	encodedPwd, _ := models.EncodePasswd(rawPasswd)
-	if len(encodedPwd) == 0 || encodedPwd != ctx.User.Passwd {
+	tmpUser := models.User{Passwd: ctx.Query("password")}
+	tmpUser.EncodePasswd()
+	if len(tmpUser.Passwd) == 0 || tmpUser.Passwd != ctx.User.Passwd {
 		ctx.Data["HasError"] = true
-		ctx.Data["ErrorMsg"] = "Your password error. Make sure you are owner of this account."
+		ctx.Data["ErrorMsg"] = "Password is not correct. Make sure you are owner of this account."
 	} else {
 		if err := models.DeleteUser(ctx.User); err != nil {
 			ctx.Data["HasError"] = true
