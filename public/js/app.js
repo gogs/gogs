@@ -99,15 +99,16 @@ function initRegister() {
 }
 
 function initUserSetting(){
-    $('#gogs-ssh-keys').on("click",".delete",function(){
-        var $this = $(this);
-        Gogits.ajaxDelete("",{"id":$this.data("del")},function(json){
-            if(json.ok){
-                window.location.reload();
-            }else{
-                alert(json.err);
-            }
-        });
-        return false;
+    $('#gogs-ssh-keys .delete').confirmation({
+        singleton: true,
+        onConfirm: function(e, $this){
+            Gogits.ajaxDelete("",{"id":$this.data("del")},function(json){
+                if(json.ok){
+                    window.location.reload();
+                }else{
+                    alert(json.err);
+                }
+            });
+        }
     });
 }

@@ -17,6 +17,7 @@ Please see [Wiki](https://github.com/gogits/gogs/wiki) for project design, devel
 
 ## Features
 
+- Activity timeline
 - SSH protocal support.
 - Register/delete account.
 - Create/delete public repository.

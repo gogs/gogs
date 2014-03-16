@@ -128,6 +128,10 @@ func SettingSSHKeys(ctx *middleware.Context, form auth.AddSSHKeyForm) {
 		}
 
 		if err := models.AddPublicKey(k); err != nil {
+			if err.Error() == models.ErrKeyAlreadyExist.Error() {
+				ctx.RenderWithErr("Public key name has been used", "user/publickey", &form)
+				return
+			}
 			ctx.Handle(200, "ssh.AddPublicKey", err)
 			return
 		} else {

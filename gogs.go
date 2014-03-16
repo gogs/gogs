@@ -7,7 +7,7 @@ package main
 
 import (
 	"os"
-	"os/user"
+	// "os/user"
 	"runtime"
 
 	"github.com/codegangsta/cli"
@@ -20,21 +20,21 @@ import (
 // Test that go1.1 tag above is included in builds. main.go refers to this definition.
 const go11tag = true
 
-const APP_VER = "0.0.8.0315"
+const APP_VER = "0.0.8.0316.1"
 
 func init() {
 	base.AppVer = APP_VER
 	runtime.GOMAXPROCS(runtime.NumCPU())
 }
 
-func checkRunUser() bool {
-	u, err := user.Current()
-	if err != nil {
-		// TODO: log
-		return false
-	}
-	return u.Username == base.Cfg.MustValue("", "RUN_USER")
-}
+// func checkRunUser() bool {
+// 	u, err := user.Current()
+// 	if err != nil {
+// 		// TODO: log
+// 		return false
+// 	}
+// 	return u.Username == base.Cfg.MustValue("", "RUN_USER")
+// }
 
 func main() {
 	/*if !checkRunUser() {
@@ -51,8 +51,6 @@ func main() {
 		CmdServ,
 		CmdUpdate,
 	}
-	app.Flags = append(app.Flags, []cli.Flag{
-		cli.BoolFlag{"noterm", "disable color output"},
-	}...)
+	app.Flags = append(app.Flags, []cli.Flag{}...)
 	app.Run(os.Args)
 }

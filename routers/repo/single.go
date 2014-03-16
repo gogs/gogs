@@ -1,3 +1,7 @@
+// Copyright 2014 The Gogs Authors. All rights reserved.
+// Use of this source code is governed by a MIT-style
+// license that can be found in the LICENSE file.
+
 package repo
 
 import (
@@ -59,4 +63,16 @@ func Setting(ctx *middleware.Context) {
 	ctx.Data["Title"] = title + " - settings"
 	ctx.Data["IsRepoToolbarSetting"] = true
 	ctx.Render.HTML(200, "repo/setting", ctx.Data)
+}
+
+func Commits(ctx *middleware.Context) string {
+	return "This is commits page"
+}
+
+func Issues(ctx *middleware.Context) string {
+	return "This is issues page"
+}
+
+func Pulls(ctx *middleware.Context) string {
+	return "This is pulls page"
 }

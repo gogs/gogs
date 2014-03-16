@@ -142,6 +142,7 @@ func UpdateUser(user *User) (err error) {
 
 // DeleteUser completely deletes everything of the user.
 func DeleteUser(user *User) error {
+	// Check ownership of repository.
 	count, err := GetRepositoryCount(user)
 	if err != nil {
 		return errors.New("modesl.GetRepositories: " + err.Error())
@@ -151,6 +152,22 @@ func DeleteUser(user *User) error {
 
 	// TODO: check issues, other repos' commits
 
+	// Delete all feeds.
+	if _, err = orm.Delete(&Action{UserId: user.Id}); err != nil {
+		return err
+	}
+
+	// Delete all SSH keys.
+	keys := make([]PublicKey, 0, 10)
+	if err = orm.Find(&keys, &PublicKey{OwnerId: user.Id}); err != nil {
+		return err
+	}
+	for _, key := range keys {
+		if err = DeletePublicKey(&key); err != nil {
+			return err
+		}
+	}
+
 	_, err = orm.Delete(user)
 	// TODO: delete and update follower information.
 	return err
@@ -158,13 +175,21 @@ func DeleteUser(user *User) error {
 
 // EncodePasswd encodes password to safe format.
 func (user *User) EncodePasswd() error {
-	newPasswd, err := scrypt.Key([]byte(user.Passwd), []byte(UserPasswdSalt), 16384, 8, 1, 64)
-	user.Passwd = fmt.Sprintf("%x", newPasswd)
+	var err error
+	user.Passwd, err = EncodePasswd(user.Passwd)
 	return err
 }
 
 func UserPath(userName string) string {
 	return filepath.Join(RepoRootPath, userName)
+}
+
+func EncodePasswd(rawPasswd string) (string, error) {
+	newPasswd, err := scrypt.Key([]byte(rawPasswd), []byte(UserPasswdSalt), 16384, 8, 1, 64)
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("%x", newPasswd), nil
 }
 
 func GetUserByKeyId(keyId int64) (*User, error) {
