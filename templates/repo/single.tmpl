@@ -10,8 +10,8 @@
                 <a href="#" class="btn btn-success dropdown-toggle" data-toggle="dropdown"><i class="fa fa-chain"></i>master&nbsp;&nbsp;
                     <b class="caret"></b></a>
                 <ul class="dropdown-menu">
-                    <li><a class="current" href="/{{.RepositoryLink}}/branch/master">master</a></li>
-                    <li><a href="//{{.RepositoryLink}}/branch/develop">develop</a></li>
+                    <li><a class="current" href="/{{.RepositoryLink}}/tree/master">master</a></li>
+                    <li><a href="/{{.RepositoryLink}}/tree/develop">develop</a></li>
                 </ul>
             </div>
             {{$paths := .Paths}}
@@ -47,7 +47,7 @@
                     {{if .IsDir}}
                     <a href="/{{$username}}/{{$reponame}}/tree/{{$branchname}}/{{.Path}}">{{.Name}}</a>
                     {{else}}
-                    <a href="#">{{.Name}} - {{FileSize .Size}}</a>
+                    <a href="/{{$username}}/{{$reponame}}/blob/{{$branchname}}/{{.Name}}">{{.Name}} - {{FileSize .Size}}</a>
                     {{end}}</td>
 	                <td class="date"><time datetime="{{.Created}}" data-title="true" title="{{.Created}}">{{TimeSince .Created}}</time></td>
 	                <td class="text">{{.Message}}</td>

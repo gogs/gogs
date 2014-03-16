@@ -3,8 +3,7 @@
         <nav class="gogs-nav">
             <a id="gogs-nav-logo" class="gogs-nav-item{{if .PageIsHome}} active{{end}}" href="/"><img src="/img/favicon.png" alt="Gogs Logo" id="gogs-logo"></a>
             <a class="gogs-nav-item{{if .PageIsUserDashboard}} active{{end}}" href="/">Dashboard</a>
-            <a class="gogs-nav-item" href="#">Explore</a>
-            <a class="gogs-nav-item" href="#">Help</a>{{if .IsSigned}}
+            <a class="gogs-nav-item" href="/help">Help</a>{{if .IsSigned}}
             <a id="gogs-nav-out" class="gogs-nav-item navbar-right navbar-btn btn btn-danger" href="/user/logout/"><i class="fa fa-power-off fa-lg"></i></a>
             <a id="gogs-nav-avatar" class="gogs-nav-item navbar-right" href="{{.SignedUser.HomeLink}}" data-toggle="tooltip" data-placement="bottom" title="{{.SignedUserName}}">
                 <img src="{{.SignedUser.AvatarLink}}?s=28" alt="user-avatar" title="username"/>
