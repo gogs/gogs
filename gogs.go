@@ -49,6 +49,7 @@ func main() {
 	app.Commands = []cli.Command{
 		CmdWeb,
 		CmdServ,
+		CmdUpdate,
 	}
 	app.Flags = append(app.Flags, []cli.Flag{
 		cli.BoolFlag{"noterm", "disable color output"},

@@ -43,7 +43,22 @@ func (a Action) GetRepoName() string {
 	return a.RepoName
 }
 
+func CommitRepoAction(userId int64, userName string,
+	repoId int64, repoName string, msg string) error {
+	_, err := orm.InsertOne(&Action{
+		UserId:      userId,
+		ActUserId:   userId,
+		ActUserName: userName,
+		OpType:      OP_COMMIT_REPO,
+		Content:     msg,
+		RepoId:      repoId,
+		RepoName:    repoName,
+	})
+	return err
+}
+
 // NewRepoAction inserts action for create repository.
+
 func NewRepoAction(user *User, repo *Repository) error {
 	_, err := orm.InsertOne(&Action{
 		UserId:      user.Id,

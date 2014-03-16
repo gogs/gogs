@@ -73,6 +73,17 @@ func runServ(*cli.Context) {
 	if strings.HasSuffix(repoName, ".git") {
 		repoName = repoName[:len(repoName)-4]
 	}
+
+	os.Setenv("userName", user.Name)
+	os.Setenv("userId", strconv.Itoa(int(user.Id)))
+	repo, err := models.GetRepositoryByName(user, repoName)
+	if err != nil {
+		println("Unavilable repository", err)
+		return
+	}
+	os.Setenv("repoId", strconv.Itoa(int(repo.Id)))
+	os.Setenv("repoName", repoName)
+
 	isWrite := In(verb, COMMANDS_WRITE)
 	isRead := In(verb, COMMANDS_READONLY)
 
