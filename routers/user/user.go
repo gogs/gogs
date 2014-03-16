@@ -60,7 +60,12 @@ func Profile(ctx *middleware.Context, params martini.Params) {
 		}
 		ctx.Data["Feeds"] = feeds
 	default:
-
+		repos, err := models.GetRepositories(user)
+		if err != nil {
+			ctx.Handle(200, "user.Profile", err)
+			return
+		}
+		ctx.Data["Repos"] = repos
 	}
 
 	ctx.Render.HTML(200, "user/profile", ctx.Data)
