@@ -302,30 +302,21 @@ html, body {
 /* gogits user ssh keys */
 
 #gogs-ssh-keys .list-group-item {
-    line-height: 48px;
+    padding: 15px 0;
     border-bottom: 1px solid #DDD;
+}
+
+#gogs-ssh-keys .list-group-item .delete {
+    margin: -5px 50px 0;
 }
 
 #gogs-ssh-keys .list-group-item:after {
     clear: both;
 }
 
-#gogs-ssh-keys .list-group-item:hover a.delete {
-    display: block;
-}
-
 #gogs-ssh-keys .name {
     font-size: 14px;
     font-weight: bold;
-}
-
-#gogs-ssh-keys .list-group-item a.delete {
-    float: right;
-    color: white;
-    cursor: pointer;
-    margin-top: 10px;
-    border-radius: 3px;
-    display: none;
 }
 
 #gogs-ssh-keys .print {

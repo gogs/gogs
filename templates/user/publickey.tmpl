@@ -18,12 +18,14 @@
             <h4>SSH Keys</h4>{{if .AddSSHKeySuccess}}
             <p class="alert alert-success">New SSH Key has been added !</p>{{else if .HasError}}<p class="alert alert-danger">{{.ErrorMsg}}</p>{{end}}
             <ul id="gogs-ssh-keys-list" class="list-group">
-                <li class="list-group-item"><span class="name">SSH Key's name</span></li>{{range .Keys}}
+                <li class="list-group-item"><span class="name">SSH Key's name</span></li>
+                {{range .Keys}}
                 <li class="list-group-item">
                     <span class="name">{{.Name}}</span>
                     <span class="print">({{.Fingerprint}})</span>
-                    <a href="#" class="btn btn-link btn-danger right delete" rel="{{.Id}}" data-del="{{.Id}}">Delete</a>
-                </li>{{end}}
+                    <button href="#" class="btn btn-danger delete pull-right" rel="{{.Id}}" data-del="{{.Id}}">Delete</button>
+                </li>
+                {{end}}
                 <li class="list-group-item">
                     <a class="btn btn-link btn-primary" href="#ssh-add-modal" id="gogs-ssh-add" data-toggle="modal">Add SSH Key</a>
                 </li>
