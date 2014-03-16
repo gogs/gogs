@@ -463,56 +463,6 @@ html, body {
     padding: 0;
 }
 
-/* #gogs-source */
-
-#gogs-source-toolbar:after {
-    clear: both;
-}
-
-#gogs-source-toolbar .branch-switch {
-    display: inline-block;
-}
-
-#gogs-source-toolbar .breadcrumb {
-    margin: 0 .5em;
-    font-size: 16px;
-    vertical-align: middle;
-    display: inline-block;
-    background-color: transparent;
-}
-
-#gogs-source-table {
-    margin-top: 1.5em;
-    font-size: 14px;
-}
-
-#gogs-source-table .fa{
-    font-size: 15px;
-    width: 16px;
-    text-align: center;
-    color: #666;
-}
-
-#gogs-source-table .name{
-    width: 160px;
-}
-
-#gogs-source-table .size{
-    width: 80px;
-}
-
-#gogs-source-table .date{
-    width: 120px;
-}
-
-#gogs-source-table .is-dir .name {
-    font-weight: bold;
-}
-
-#gogs-source-table.table-hover > tbody > tr:hover > td {
-    background-color: #FEFEFE;
-}
-
 .activity-list {
     font-size: 14px;
 }
@@ -572,6 +522,70 @@ html, body {
 .repo-list .meta,
 .repo-list .info {
     color: #999;
+}
+
+/* #gogs-source */
+#gogs-source .source-toolbar:after {
+    clear: both;
+}
+
+#gogs-source .source-toolbar .branch-switch {
+    display: inline-block;
+}
+
+#gogs-source .source-toolbar .breadcrumb {
+    margin: 0 .5em;
+    padding: 6px 15px;
+    font-size: 16px;
+    vertical-align: middle;
+    display: inline-block;
+    background-color: transparent;
+}
+
+#gogs-source .source-toolbar,
+#gogs-source .info-box,
+#gogs-source .file-content {
+    margin: 0 0 10px;
+}
+
+.info-box .info-head,
+.info-box .info-content {
+    padding: 9px 20px;
+}
+
+.file-list {
+    background-color: #fafafa;
+}
+
+.file-list .icon {
+    font-size: 17px;
+    padding: 5px 0 4px 10px;
+    width: 40px;
+}
+
+.file-list .wrap {
+    display: inline-block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    vertical-align: top;
+    white-space: nowrap;
+}
+
+.file-list .name .wrap {
+    max-width: 180px;
+}
+
+.file-list .text .wrap {
+    max-width: 450px;
+}
+
+.file-list .date .wrap {
+    max-width: 100px;
+    padding: 0 20px 0 0; 
+}
+
+.file-list .date {
+    text-align: right;
 }
 
 #wrapper {

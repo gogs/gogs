@@ -4,7 +4,7 @@
 {{template "repo/toolbar" .}}
 <div id="gogs-body" class="container">
     <div id="gogs-source">
-        <div id="gogs-source-toolbar">
+        <div class="source-toolbar">
             <button class="btn btn-default pull-right"><i class="fa fa-plus-square"></i>Add File</button>
             <div class="dropdown branch-switch">
                 <a href="#" class="btn btn-success dropdown-toggle" data-toggle="dropdown"><i class="fa fa-chain"></i>master&nbsp;&nbsp;
@@ -32,29 +32,60 @@
                 {{end}}
             </ol>
         </div>
-        <table id="gogs-source-table" class="table table-hover">
-            <thead class="hidden">
-	            <tr>
-	                <th class="name">Filename</th>
-	                <th class="date">Date modified</th>
-	                <th class="text">Message</th>
-	            </tr>
-            </thead>
-            <tbody>
-    			{{range .Files}}
-				<tr {{if .IsDir}}class="is-dir"{{end}}>
-	                <td class="name"><i class="fa {{if .IsDir}}fa-folder{{else}}fa-file{{end}}"></i>
-                    {{if .IsDir}}
-                    <a href="/{{$username}}/{{$reponame}}/tree/{{$branchname}}/{{.Path}}">{{.Name}}</a>
-                    {{else}}
-                    <a href="/{{$username}}/{{$reponame}}/blob/{{$branchname}}/{{.Name}}">{{.Name}} - {{FileSize .Size}}</a>
-                    {{end}}</td>
-	                <td class="date"><time datetime="{{.Created}}" data-title="true" title="{{.Created}}">{{TimeSince .Created}}</time></td>
-	                <td class="text">{{.Message}}</td>
-				</tr>
-    			{{end}}
-            </tbody>
-        </table>
+        <div class="panel panel-default info-box">
+            <div class="panel-heading info-head">
+                Merge branch 'release/1.1.1'
+            </div>
+            <div class="panel-body info-content">
+                slene authored 4 days ago
+            </div>
+            <table class="panel-footer table file-list">
+                <thead class="hidden">
+    	            <tr>
+                        <th class="icon"></th>
+    	                <th class="name">Filename</th>
+                        <th class="text">Message</th>
+    	                <th class="date">Date modified</th>
+    	            </tr>
+                </thead>
+                <tbody>
+        			{{range .Files}}
+    				<tr {{if .IsDir}}class="is-dir"{{end}}>
+                        <td class="icon">
+                            <i class="fa {{if .IsDir}}fa-folder{{else}}fa-file-text-o{{end}}"></i>
+                        </td>
+    	                <td class="name">
+                            <span class="wrap">
+                                {{if .IsDir}}
+                                <a href="/{{$username}}/{{$reponame}}/tree/{{$branchname}}/{{.Path}}">{{.Name}}</a>
+                                {{else}}
+                                <a href="/{{$username}}/{{$reponame}}/blob/{{$branchname}}/{{.Name}}">{{.Name}}</a>
+                                {{end}}
+                            </span>
+                        </td>
+    	                <td class="text">
+                            <span class="wrap">
+                                {{.Message}}
+                            </span>
+                        </td>
+                        <td class="date">
+                            <span class="wrap">
+                                {{TimeSince .Created}}
+                            </span>
+                        </td>
+    				</tr>
+        			{{end}}
+                </tbody>
+            </table>
+        </div>
+        <div class="panel panel-default file-content">
+            <div class="panel-heading">
+                README.md
+            </div>
+            <div class="panel-body markdown">
+                 httplib
+            </div>
+        </div>
     </div>
 </div>
 {{template "base/footer" .}}
