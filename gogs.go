@@ -49,6 +49,7 @@ func main() {
 	app.Commands = []cli.Command{
 		CmdWeb,
 		CmdServ,
+		CmdUpdate,
 	}
 	app.Flags = append(app.Flags, []cli.Flag{}...)
 	app.Run(os.Args)
