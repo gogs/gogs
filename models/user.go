@@ -142,6 +142,7 @@ func UpdateUser(user *User) (err error) {
 
 // DeleteUser completely deletes everything of the user.
 func DeleteUser(user *User) error {
+	// Check ownership of repository.
 	count, err := GetRepositoryCount(user)
 	if err != nil {
 		return errors.New("modesl.GetRepositories: " + err.Error())
@@ -150,6 +151,17 @@ func DeleteUser(user *User) error {
 	}
 
 	// TODO: check issues, other repos' commits
+
+	// Delete SSH keys.
+	keys := make([]PublicKey, 0, 10)
+	if err = orm.Find(&keys, &PublicKey{OwnerId: user.Id}); err != nil {
+		return err
+	}
+	for _, key := range keys {
+		if err = DeletePublicKey(&key); err != nil {
+			return err
+		}
+	}
 
 	_, err = orm.Delete(user)
 	// TODO: delete and update follower information.
