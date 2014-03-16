@@ -152,7 +152,12 @@ func DeleteUser(user *User) error {
 
 	// TODO: check issues, other repos' commits
 
-	// Delete SSH keys.
+	// Delete all feeds.
+	if _, err = orm.Delete(&Action{UserId: user.Id}); err != nil {
+		return err
+	}
+
+	// Delete all SSH keys.
 	keys := make([]PublicKey, 0, 10)
 	if err = orm.Find(&keys, &PublicKey{OwnerId: user.Id}); err != nil {
 		return err
