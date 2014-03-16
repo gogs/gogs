@@ -44,6 +44,10 @@ func (a Action) GetRepoName() string {
 	return a.RepoName
 }
 
+func (a Action) GetContent() string {
+	return a.Content
+}
+
 // CommitRepoAction records action for commit repository.
 func CommitRepoAction(userId int64, userName string,
 	repoId int64, repoName string, commits [][]string) error {
