@@ -74,8 +74,6 @@ func runWeb(*cli.Context) {
 		middleware.SignInRequire(false), middleware.RepoAssignment(true), repo.Single)
 	m.Get("/:username/:reponame", middleware.SignInRequire(false), middleware.RepoAssignment(true), repo.Single)
 
-	//m.Get("/:username/:reponame", repo.Repo)
-
 	listenAddr := fmt.Sprintf("%s:%s",
 		base.Cfg.MustValue("server", "HTTP_ADDR"),
 		base.Cfg.MustValue("server", "HTTP_PORT", "3000"))
