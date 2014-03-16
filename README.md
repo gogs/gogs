@@ -21,8 +21,9 @@ Please see [Wiki](https://github.com/gogits/gogs/wiki) for project design, devel
 - SSH protocal support.
 - Register/delete account.
 - Create/delete public repository.
-- User/repository home page.
-- Git repository manipulation.
+- User profile page.
+- Repository viewer.
+- Gravatar support.
 
 ## Installation
 

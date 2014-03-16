@@ -168,6 +168,11 @@ func DeleteUser(user *User) error {
 		}
 	}
 
+	// Delete user directory.
+	if err = os.RemoveAll(UserPath(user.Name)); err != nil {
+		return err
+	}
+
 	_, err = orm.Delete(user)
 	// TODO: delete and update follower information.
 	return err
@@ -175,21 +180,13 @@ func DeleteUser(user *User) error {
 
 // EncodePasswd encodes password to safe format.
 func (user *User) EncodePasswd() error {
-	var err error
-	user.Passwd, err = EncodePasswd(user.Passwd)
+	newPasswd, err := scrypt.Key([]byte(user.Passwd), []byte(UserPasswdSalt), 16384, 8, 1, 64)
+	user.Passwd = fmt.Sprintf("%x", newPasswd)
 	return err
 }
 
 func UserPath(userName string) string {
 	return filepath.Join(RepoRootPath, userName)
-}
-
-func EncodePasswd(rawPasswd string) (string, error) {
-	newPasswd, err := scrypt.Key([]byte(rawPasswd), []byte(UserPasswdSalt), 16384, 8, 1, 64)
-	if err != nil {
-		return "", err
-	}
-	return fmt.Sprintf("%x", newPasswd), nil
 }
 
 func GetUserByKeyId(keyId int64) (*User, error) {
