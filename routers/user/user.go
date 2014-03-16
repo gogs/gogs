@@ -189,3 +189,15 @@ func Feeds(ctx *middleware.Context, form auth.FeedsForm) {
 	}
 	ctx.Render.JSON(200, &feeds)
 }
+
+func Issues(ctx *middleware.Context) string {
+	return "This is issues page"
+}
+
+func Pulls(ctx *middleware.Context) string {
+	return "This is pulls page"
+}
+
+func Stars(ctx *middleware.Context) string {
+	return "This is stars page"
+}
