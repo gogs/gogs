@@ -1,13 +1,19 @@
+// Copyright 2014 The Gogs Authors. All rights reserved.
+// Use of this source code is governed by a MIT-style
+// license that can be found in the LICENSE file.
+
 package main
 
 import (
 	"os"
 	"strconv"
 
-	"github.com/gogits/gogs/models"
-
 	"github.com/codegangsta/cli"
+
 	git "github.com/gogits/git"
+
+	"github.com/gogits/gogs/models"
+	"github.com/gogits/gogs/modules/log"
 )
 
 var CmdUpdate = cli.Command{
@@ -41,11 +47,18 @@ func runUpdate(*cli.Context) {
 	if err != nil {
 		return
 	}
-	sUserId, _ := strconv.Atoi(userId)
-	sRepoId, _ := strconv.Atoi(repoId)
-	err = models.CommitRepoAction(int64(sUserId), userName,
-		int64(sRepoId), repoName, lastCommit.Message())
+	sUserId, err := strconv.Atoi(userId)
 	if err != nil {
-		//TODO: log
+		log.Error("runUpdate.Parse userId: %v", err)
+		return
+	}
+	sRepoId, err := strconv.Atoi(repoId)
+	if err != nil {
+		log.Error("runUpdate.Parse repoId: %v", err)
+		return
+	}
+	if err = models.CommitRepoAction(int64(sUserId), userName,
+		int64(sRepoId), repoName, lastCommit.Message()); err != nil {
+		log.Error("runUpdate.models.CommitRepoAction: %v", err)
 	}
 }
