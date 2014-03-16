@@ -223,7 +223,18 @@ func initRepository(f string, user *User, repo *Repository, initReadme bool, rep
 		return err
 	}
 
-	return nil
+	pu, err := os.OpenFile(filepath.Join(f, "hooks", "post-update"), os.O_CREATE|os.O_WRONLY, 0777)
+	if err != nil {
+		return err
+	}
+	defer pu.Close()
+	ep, err := exePath()
+	if err != nil {
+		return err
+	}
+	_, err = pu.WriteString(fmt.Sprintf("#!/usr/bin/env bash\n%s update\n", ep))
+
+	return err
 }
 
 func GetRepositoryByName(user *User, repoName string) (*Repository, error) {
