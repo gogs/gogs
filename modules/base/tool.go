@@ -7,6 +7,7 @@ package base
 import (
 	"crypto/md5"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"math"
 	"strings"
@@ -235,6 +236,7 @@ type Actioner interface {
 	GetOpType() int
 	GetActUserName() string
 	GetRepoName() string
+	GetContent() string
 }
 
 // ActionIcon accepts a int that represents action operation type
@@ -243,13 +245,19 @@ func ActionIcon(opType int) string {
 	switch opType {
 	case 1: // Create repository.
 		return "plus-circle"
+	case 5: // Commit repository.
+		return "arrow-circle-o-right"
 	default:
 		return "invalid type"
 	}
 }
 
 const (
-	CreateRepoTpl = `<a href="/user/%s">%s</a> created repository <a href="/%s/%s">%s</a>`
+	TPL_CREATE_REPO = `<a href="/user/%s">%s</a> created repository <a href="/%s/%s">%s</a>`
+	TPL_COMMIT_REPO = `<a href="/user/%s">%s</a> pushed to <a href="/%s/%s/tree/%s">%s</a> at <a href="/%s/%s">%s/%s</a>
+<ul>
+	<li><a href="/%s/%s/commit/%s">%s</a> %s</li>	
+</ul>`
 )
 
 // ActionDesc accepts int that represents action operation type
@@ -257,9 +265,17 @@ const (
 func ActionDesc(act Actioner) string {
 	actUserName := act.GetActUserName()
 	repoName := act.GetRepoName()
+	content := act.GetContent()
 	switch act.GetOpType() {
 	case 1: // Create repository.
-		return fmt.Sprintf(CreateRepoTpl, actUserName, actUserName, actUserName, repoName, repoName)
+		return fmt.Sprintf(TPL_CREATE_REPO, actUserName, actUserName, actUserName, repoName, repoName)
+	case 5: // Commit repository.
+		var commits [][]string
+		if err := json.Unmarshal([]byte(content), &commits); err != nil {
+			return err.Error()
+		}
+		return fmt.Sprintf(TPL_COMMIT_REPO, actUserName, actUserName, actUserName, repoName, "master", "master", actUserName, repoName, actUserName, repoName,
+			actUserName, repoName, commits[0][0], commits[0][0][:7], commits[0][1])
 	default:
 		return "invalid type"
 	}
