@@ -134,7 +134,7 @@ func DeletePublicKey(key *PublicKey) (err error) {
 		}
 
 		// Found the line and copy rest of file.
-		if strings.Contains(line, key.Content) {
+		if strings.Contains(line, fmt.Sprintf("key-%d", key.Id)) && strings.Contains(line, key.Content) {
 			continue
 		}
 		// Still finding the line, copy the line that currently read.
