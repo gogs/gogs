@@ -43,6 +43,7 @@ func (a Action) GetRepoName() string {
 	return a.RepoName
 }
 
+// CommitRepoAction records action for commit repository.
 func CommitRepoAction(userId int64, userName string,
 	repoId int64, repoName string, msg string) error {
 	_, err := orm.InsertOne(&Action{
@@ -57,8 +58,7 @@ func CommitRepoAction(userId int64, userName string,
 	return err
 }
 
-// NewRepoAction inserts action for create repository.
-
+// NewRepoAction records action for create repository.
 func NewRepoAction(user *User, repo *Repository) error {
 	_, err := orm.InsertOne(&Action{
 		UserId:      user.Id,

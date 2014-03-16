@@ -13,22 +13,33 @@
         </ul>
     </div>
     <div id="gogs-user-setting-container" class="col-md-9">
-        <form action="/user/delete" method="post" class="form-horizontal" id="gogs-user-delete">
-            <h4>Delete Account</h4>
-            <p class="alert alert-danger">{{if not .HasError}}The operation will delete your account permanently. Sorry to see you go, but we know you'll back soon.{{else}}{{.ErrorMsg}}{{end}}</p>
-            <div class="form-group">
-                <div class="col-md-3">
-                    <button type="submit" class="btn btn-danger btn-lg">Delete Account</button>
+        <h4>Delete Account</h4>
+        <p class="alert alert-danger">{{if not .HasError}}The operation will delete your account permanently. Sorry to see you go, but we know you'll back soon.{{else}}{{.ErrorMsg}}{{end}}</p>
+        <div class="form-group">
+            <button type="submit" class="btn btn-danger btn-lg" href="#delete-account-modal" id="gogs-delete-account" data-toggle="modal">Delete Account</button>
+        </div>
+    </div>
+    <div class="modal fade" id="delete-account-modal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <form action="/user/delete" method="post" class="modal-content" id="gogs-user-delete">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                    <h4 class="modal-title" id="myModalLabel">Delete Account</h4>
                 </div>
-            </div>
-        </form>
+
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>Make sure your are owner of this account. Please enter your password.<strong class="text-danger">*</strong></label>
+                        <input name="password" class="form-control" type="password" placeholder="Type your account password" required="required">
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
-<script>
-    $(function(){
-       $('#gogs-user-delete').on('submit',function(){
-           return confirm("Are you sure ?");
-       })
-    });
-</script>
 {{template "base/footer" .}}

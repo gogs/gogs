@@ -5,6 +5,8 @@
 package middleware
 
 import (
+	"errors"
+
 	"github.com/codegangsta/martini"
 
 	"github.com/gogits/gogs/models"
@@ -31,9 +33,7 @@ func RepoAssignment(redirect bool) martini.Handler {
 					ctx.Render.Redirect("/")
 					return
 				}
-				//data["ErrorMsg"] = err
-				//log.Error("repo.Single: %v", err)
-				//r.HTML(200, "base/error", data)
+				ctx.Handle(200, "RepoAssignment", err)
 				return
 			}
 		} else {
@@ -45,9 +45,7 @@ func RepoAssignment(redirect bool) martini.Handler {
 				ctx.Render.Redirect("/")
 				return
 			}
-			//data["ErrorMsg"] = "invliad user account for single repository"
-			//log.Error("repo.Single: %v", err)
-			//r.HTML(200, "base/error", data)
+			ctx.Handle(200, "RepoAssignment", errors.New("invliad user account for single repository"))
 			return
 		}
 
@@ -60,9 +58,7 @@ func RepoAssignment(redirect bool) martini.Handler {
 				ctx.Render.Redirect("/")
 				return
 			}
-			//data["ErrorMsg"] = err
-			//log.Error("repo.Single: %v", err)
-			//r.HTML(200, "base/error", data)
+			ctx.Handle(200, "RepoAssignment", err)
 			return
 		}
 

@@ -157,13 +157,23 @@ func Delete(ctx *middleware.Context) {
 		return
 	}
 
-	if err := models.DeleteUser(ctx.User); err != nil {
+	rawPasswd := ctx.Query("password")
+	encodedPwd, _ := models.EncodePasswd(rawPasswd)
+	if len(encodedPwd) == 0 || encodedPwd != ctx.User.Passwd {
 		ctx.Data["HasError"] = true
-		switch err.Error() {
-		case models.ErrUserOwnRepos.Error():
-			ctx.Data["ErrorMsg"] = "Your account still have ownership of repository, you have to delete or transfer them first."
-		default:
-			ctx.Handle(200, "user.Delete", err)
+		ctx.Data["ErrorMsg"] = "Your password error. Make sure you are owner of this account."
+	} else {
+		if err := models.DeleteUser(ctx.User); err != nil {
+			ctx.Data["HasError"] = true
+			switch err {
+			case models.ErrUserOwnRepos:
+				ctx.Data["ErrorMsg"] = "Your account still have ownership of repository, you have to delete or transfer them first."
+			default:
+				ctx.Handle(200, "user.Delete", err)
+				return
+			}
+		} else {
+			ctx.Render.Redirect("/")
 			return
 		}
 	}
@@ -188,4 +198,16 @@ func Feeds(ctx *middleware.Context, form auth.FeedsForm) {
 			base.TimeSince(actions[i].Created), base.ActionDesc(actions[i]))
 	}
 	ctx.Render.JSON(200, &feeds)
+}
+
+func Issues(ctx *middleware.Context) string {
+	return "This is issues page"
+}
+
+func Pulls(ctx *middleware.Context) string {
+	return "This is pulls page"
+}
+
+func Stars(ctx *middleware.Context) string {
+	return "This is stars page"
 }
