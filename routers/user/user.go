@@ -168,7 +168,7 @@ func Delete(ctx *middleware.Context) {
 		}
 	}
 
-	ctx.Render.HTML(200, "user/delete", ctx.Data)
+	ctx.Render.Redirect("/", 302)
 }
 
 const (
