@@ -149,8 +149,7 @@ func runServ(*cli.Context) {
 	gitcmd.Stdin = os.Stdin
 	gitcmd.Stderr = os.Stderr
 
-	err = gitcmd.Run()
-	if err != nil {
+	if err = gitcmd.Run(); err != nil {
 		println("execute command error:", err.Error())
 	}
 }

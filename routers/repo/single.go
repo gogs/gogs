@@ -13,6 +13,7 @@ import (
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"
+	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/middleware"
 )
 
@@ -21,14 +22,17 @@ func Branches(ctx *middleware.Context, params martini.Params) {
 		return
 	}
 
-	ctx.Data["Username"] = params["username"]
-	ctx.Data["Reponame"] = params["reponame"]
-
 	brs, err := models.GetBranches(params["username"], params["reponame"])
 	if err != nil {
 		ctx.Handle(200, "repo.Branches", err)
 		return
+	} else if len(brs) == 0 {
+		ctx.Render.Error(404)
+		return
 	}
+
+	ctx.Data["Username"] = params["username"]
+	ctx.Data["Reponame"] = params["reponame"]
 
 	ctx.Data["Branchname"] = brs[0]
 	ctx.Data["Branches"] = brs
@@ -49,24 +53,31 @@ func Single(ctx *middleware.Context, params martini.Params) {
 	// Get tree path
 	treename := params["_1"]
 
+	// Branches.
+	brs, err := models.GetBranches(params["username"], params["reponame"])
+	if err != nil {
+		log.Error("repo.Single(GetBranches): %v", err)
+		ctx.Render.Error(404)
+		return
+	} else if len(brs) == 0 {
+		ctx.Data["IsBareRepo"] = true
+		ctx.Render.HTML(200, "repo/single", ctx.Data)
+		return
+	}
+
+	ctx.Data["Branches"] = brs
+
 	// Directory and file list.
 	files, err := models.GetReposFiles(params["username"], params["reponame"],
 		params["branchname"], treename)
 	if err != nil {
-		ctx.Handle(200, "repo.Single(GetReposFiles)", err)
+		log.Error("repo.Single(GetReposFiles): %v", err)
+		ctx.Render.Error(404)
 		return
 	}
 	ctx.Data["Username"] = params["username"]
 	ctx.Data["Reponame"] = params["reponame"]
 	ctx.Data["Branchname"] = params["branchname"]
-
-	// Branches.
-	brs, err := models.GetBranches(params["username"], params["reponame"])
-	if err != nil {
-		ctx.Handle(200, "repo.Single(GetBranches)", err)
-		return
-	}
-	ctx.Data["Branches"] = brs
 
 	var treenames []string
 	Paths := make([]string, 0)
@@ -81,7 +92,8 @@ func Single(ctx *middleware.Context, params martini.Params) {
 	// Get latest commit according username and repo name
 	commit, err := models.GetLastestCommit(params["username"], params["reponame"])
 	if err != nil {
-		ctx.Handle(200, "repo.Single(GetLastestCommit)", err)
+		log.Error("repo.Single(GetLastestCommit): %v", err)
+		ctx.Render.Error(404)
 		return
 	}
 	ctx.Data["LatestCommit"] = commit
@@ -126,6 +138,18 @@ func Setting(ctx *middleware.Context, params martini.Params) {
 		return
 	}
 
+	// Branches.
+	brs, err := models.GetBranches(params["username"], params["reponame"])
+	if err != nil {
+		log.Error("repo.Setting(GetBranches): %v", err)
+		ctx.Render.Error(404)
+		return
+	} else if len(brs) == 0 {
+		ctx.Data["IsBareRepo"] = true
+		ctx.Render.HTML(200, "repo/setting", ctx.Data)
+		return
+	}
+
 	var title string
 	if t, ok := ctx.Data["Title"].(string); ok {
 		title = t
@@ -137,6 +161,15 @@ func Setting(ctx *middleware.Context, params martini.Params) {
 }
 
 func Commits(ctx *middleware.Context, params martini.Params) {
+	brs, err := models.GetBranches(params["username"], params["reponame"])
+	if err != nil {
+		ctx.Handle(200, "repo.Commits", err)
+		return
+	} else if len(brs) == 0 {
+		ctx.Render.Error(404)
+		return
+	}
+
 	ctx.Data["IsRepoToolbarCommits"] = true
 	commits, err := models.GetCommits(params["username"],
 		params["reponame"], params["branchname"])

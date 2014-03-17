@@ -4,10 +4,11 @@
             <div class="col-md-6">
                 <h3><i class="fa fa-book fa-lg"></i><a href="{{.Owner.HomeLink}}">{{.Owner.Name}}</a> / {{.Repository.Name}}</h3>
             </div>
+            {{if not .IsBareRepo}}
             <div class="col-md-6 actions text-right">
                 <div class="btn-group" id="gogs-repo-clone">
                     <button type="button" class="btn btn-default"><i class="fa fa-download"></i>Clone</button>
-                    <button type="button" class="btn btn-default dropdown-toggle" data-container="body" data-toggle="popover" data-placement="bottom" data-content="<label>SSH:</label><div class='input-group'><input type='text' class='form-control' value='git@{{AppDomain}}:{{.Owner.Name}}/{{.Repository.Name}}.git'></div>" data-html="1">
+                    <button type="button" class="btn btn-default dropdown-toggle" data-container="body" data-toggle="popover" data-placement="bottom" data-content="<label>SSH:</label><div class='input-group'><input type='text' class='form-control' value='git@{{AppDomain}}:{{.Owner.LowerName}}/{{.Repository.Name}}.git'></div>" data-html="1">
                         <span class="caret"></span>
                     </button>
                 </div>
@@ -36,6 +37,7 @@
                     <button type="button" class="btn btn-default"><i class="fa fa-code-fork"></i>Fork&nbsp;&nbsp;{{.Repository.NumForks}}</button>
                 </div>
             </div>
+            {{end}}
         </div>
     </div>
 </div>
