@@ -88,15 +88,9 @@ func Single(ctx *middleware.Context, params martini.Params) {
 	var readmeFile *models.RepoFile
 
 	for _, f := range files {
-		if !f.IsFile() {
+		if !f.IsFile() || len(f.Name) < 6 {
 			continue
-		}
-
-		if len(f.Name) < 6 {
-			continue
-		}
-
-		if strings.ToLower(f.Name[:6]) == "readme" {
+		} else if strings.ToLower(f.Name[:6]) == "readme" {
 			readmeFile = f
 			break
 		}
@@ -136,8 +130,9 @@ func Setting(ctx *middleware.Context, params martini.Params) {
 	ctx.Render.HTML(200, "repo/setting", ctx.Data)
 }
 
-func Commits(ctx *middleware.Context) string {
-	return "This is commits page"
+func Commits(ctx *middleware.Context) {
+	ctx.Data["IsRepoToolbarCommits"] = true
+	ctx.Render.HTML(200, "repo/commits", ctx.Data)
 }
 
 func Issues(ctx *middleware.Context) string {
