@@ -6,4 +6,3 @@ gogs
 *.log
 custom/
 .vendor/
-repo/
