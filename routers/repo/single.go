@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/codegangsta/martini"
-	"github.com/slene/blackfriday"
+	// "github.com/slene/blackfriday"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/middleware"
