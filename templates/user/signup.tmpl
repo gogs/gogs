@@ -1,6 +1,6 @@
 {{template "base/head" .}}
 {{template "base/navbar" .}}
-<div class="container" id="gogs-body">
+<div class="container" id="gogs-body" data-page="user-signup">
 	<form action="/user/sign_up" method="post" class="form-horizontal gogs-card" id="gogs-login-card">
         <h3>Sign Up</h3>
 	    <div class="alert alert-danger form-error{{if .HasError}}{{else}} hidden{{end}}">{{.ErrorMsg}}</div>
