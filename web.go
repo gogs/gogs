@@ -74,7 +74,7 @@ func runWeb(*cli.Context) {
 	m.Post("/:username/:reponame/settings", middleware.SignInRequire(true), middleware.RepoAssignment(true), repo.SettingPost)
 	m.Get("/:username/:reponame/settings", middleware.SignInRequire(true), middleware.RepoAssignment(true), repo.Setting)
 
-	m.Get("/:username/:reponame/commits", middleware.SignInRequire(false), middleware.RepoAssignment(true), repo.Commits)
+	m.Get("/:username/:reponame/commits/:branchname", middleware.SignInRequire(false), middleware.RepoAssignment(true), repo.Commits)
 	m.Get("/:username/:reponame/issues", middleware.SignInRequire(false), middleware.RepoAssignment(true), repo.Issues)
 	m.Get("/:username/:reponame/pulls", middleware.SignInRequire(false), middleware.RepoAssignment(true), repo.Pulls)
 	m.Get("/:username/:reponame/branches", middleware.SignInRequire(false), middleware.RepoAssignment(true), repo.Branches)

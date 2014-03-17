@@ -102,9 +102,13 @@ func Single(ctx *middleware.Context, params martini.Params) {
 		if readmeFile.Size > 1024*1024 || readmeFile.Filemode != git.FileModeBlob {
 			ctx.Data["FileIsLarge"] = true
 		} else if blob, err := readmeFile.LookupBlob(); err != nil {
-			ctx.Data["FileIsLarge"] = true
+			ctx.Data["ReadmeExist"] = false
 		} else {
-			ctx.Data["ReadmeContent"] = string(base.RenderMarkdown(blob.Contents()))
+			// current repo branch link
+			urlPrefix := "http://" + base.Domain + "/" + ctx.Repo.Owner.LowerName + "/" +
+				ctx.Repo.Repository.Name + "/blob/" + params["branchname"]
+
+			ctx.Data["ReadmeContent"] = string(base.RenderMarkdown(blob.Contents(), urlPrefix))
 		}
 	}
 
@@ -131,8 +135,15 @@ func Setting(ctx *middleware.Context, params martini.Params) {
 	ctx.Render.HTML(200, "repo/setting", ctx.Data)
 }
 
-func Commits(ctx *middleware.Context) {
+func Commits(ctx *middleware.Context, params martini.Params) {
 	ctx.Data["IsRepoToolbarCommits"] = true
+	commits, err := models.GetCommits(params["username"],
+		params["reponame"], params["branchname"])
+	if err != nil {
+		ctx.Render.Error(404)
+		return
+	}
+	ctx.Data["Commits"] = commits
 	ctx.Render.HTML(200, "repo/commits", ctx.Data)
 }
 
