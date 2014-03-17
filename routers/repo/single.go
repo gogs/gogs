@@ -8,9 +8,11 @@ import (
 	"strings"
 
 	"github.com/codegangsta/martini"
-	// "github.com/slene/blackfriday"
+
+	"github.com/gogits/git"
 
 	"github.com/gogits/gogs/models"
+	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/middleware"
 )
 
@@ -43,12 +45,14 @@ func Single(ctx *middleware.Context, params martini.Params) {
 		params["branchname"] = "master"
 	}
 
-	// Directory and file list.
+	// Get tree path
 	treename := params["_1"]
+
+	// Directory and file list.
 	files, err := models.GetReposFiles(params["username"], params["reponame"],
 		params["branchname"], treename)
 	if err != nil {
-		ctx.Handle(200, "repo.Single", err)
+		ctx.Render.Error(404)
 		return
 	}
 	ctx.Data["Username"] = params["username"]
@@ -58,7 +62,7 @@ func Single(ctx *middleware.Context, params martini.Params) {
 	// Branches.
 	brs, err := models.GetBranches(params["username"], params["reponame"])
 	if err != nil {
-		ctx.Handle(200, "repo.Single", err)
+		ctx.Render.Error(404)
 		return
 	}
 	ctx.Data["Branches"] = brs
@@ -73,22 +77,41 @@ func Single(ctx *middleware.Context, params martini.Params) {
 		}
 	}
 
-	// Latest commit.
+	// Get latest commit according username and repo name
 	commit, err := models.GetLastestCommit(params["username"], params["reponame"])
 	if err != nil {
-		ctx.Handle(200, "repo.Single", err)
+		ctx.Render.Error(404)
 		return
 	}
 	ctx.Data["LatestCommit"] = commit
 
-	// README.
-	// for _, f := range files {
-	// 	if f.Name == "README.md" {
-	// ctx.Data["ReadmeName"] = "README.md"
-	// ctx.Data["ReadmeContent"] =
-	// 		break
-	// 	}
-	// }
+	var readmeFile *models.RepoFile
+
+	for _, f := range files {
+		if !f.IsFile() {
+			continue
+		}
+
+		if len(f.Name) < 6 {
+			continue
+		}
+
+		if strings.ToLower(f.Name[:6]) == "readme" {
+			readmeFile = f
+			break
+		}
+	}
+
+	if readmeFile != nil {
+		// if file large than 1M not show it
+		if readmeFile.Size > 1024*1024 || readmeFile.Filemode != git.FileModeBlob {
+			ctx.Data["FileIsLarge"] = true
+		} else if blob, err := readmeFile.LookupBlob(); err != nil {
+			ctx.Data["FileIsLarge"] = true
+		} else {
+			ctx.Data["ReadmeContent"] = string(base.RenderMarkdown(blob.Contents()))
+		}
+	}
 
 	ctx.Data["Paths"] = Paths
 	ctx.Data["Treenames"] = treenames

@@ -5,6 +5,7 @@
 package models
 
 import (
+	"fmt"
 	"path"
 	"strings"
 	"time"
@@ -22,12 +23,25 @@ type Commit struct {
 	Message string
 }
 
+var (
+	ErrRepoFileNotLoaded = fmt.Errorf("repo file not loaded")
+)
+
 type RepoFile struct {
 	*git.TreeEntry
 	Path    string
 	Message string
 	Created time.Time
 	Size    int64
+	Repo    *git.Repository
+}
+
+func (file *RepoFile) LookupBlob() (*git.Blob, error) {
+	if file.Repo == nil {
+		return nil, ErrRepoFileNotLoaded
+	}
+
+	return file.Repo.LookupBlob(file.Id)
 }
 
 func GetBranches(userName, reposName string) ([]string, error) {
@@ -80,6 +94,7 @@ func GetReposFiles(userName, reposName, branchName, rpath string) ([]*RepoFile, 
 					lastCommit.Message(),
 					lastCommit.Committer.When,
 					size,
+					repo,
 				})
 			case git.FileModeTree:
 				repodirs = append(repodirs, &RepoFile{
@@ -88,6 +103,7 @@ func GetReposFiles(userName, reposName, branchName, rpath string) ([]*RepoFile, 
 					lastCommit.Message(),
 					lastCommit.Committer.When,
 					size,
+					repo,
 				})
 			}
 		}
