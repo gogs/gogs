@@ -10,6 +10,7 @@ body {
 
 html, body {
     height: 100%;
+    font-family: Helvetica, Arial, sans-serif;
 }
 
 /* override bs3 */
