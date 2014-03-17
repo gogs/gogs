@@ -17,7 +17,6 @@ import (
 )
 
 type CreateRepoForm struct {
-	UserId      int64  `form:"userId"`
 	RepoName    string `form:"repo" binding:"Required;AlphaDash"`
 	Visibility  string `form:"visibility"`
 	Description string `form:"desc" binding:"MaxSize(100)"`
@@ -51,10 +50,4 @@ func (f *CreateRepoForm) Validate(errors *binding.Errors, req *http.Request, con
 	}
 
 	validate(errors, data, f)
-}
-
-type DeleteRepoForm struct {
-	UserId   int64  `form:"userId" binding:"Required"`
-	UserName string `form:"userName" binding:"Required"`
-	RepoId   int64  `form:"repoId" binding:"Required"`
 }
