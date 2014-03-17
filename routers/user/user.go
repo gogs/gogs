@@ -195,7 +195,7 @@ func Feeds(ctx *middleware.Context, form auth.FeedsForm) {
 	feeds := make([]string, len(actions))
 	for i := range actions {
 		feeds[i] = fmt.Sprintf(feedTpl, base.ActionIcon(actions[i].OpType),
-			base.TimeSince(actions[i].Created), base.ActionDesc(actions[i]))
+			base.TimeSince(actions[i].Created), base.ActionDesc(actions[i], ctx.User.AvatarLink()))
 	}
 	ctx.Render.JSON(200, &feeds)
 }

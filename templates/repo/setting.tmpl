@@ -4,30 +4,60 @@
 {{template "repo/toolbar" .}}
 <div id="gogs-body" class="container">
     <div id="gogs-user-setting-nav" class="col-md-3">
-        <h4>Repository Settings</h4>
         <ul class="list-group" data-init="tabs">
-            <li class="list-group-item"><a href="#options" data-toggle="tab">Options</a></li>
-            <!--<li class="list-group-item" data-toggle="tab"><a href="#">Collaborators</a></li>
-            <li class="list-group-item" data-toggle="tab"><a href="#">Notifications</a></li>-->
-            <li class="list-group-item"><a href="#delete" data-toggle="tab">Delete</a></li>
+            <li class="list-group-item active"><a href="/{{.Owner.Name}}/{{.Repository.Name}}/settings">Options</a></li>
+            <!--<li class="list-group-item"><a href="#">Collaborators</a></li>
+            <li class="list-group-item"><a href="#">Notifications</a></li>-->
         </ul>
     </div>
-    <div id="gogs-repo-setting-container" class="col-md-9 tab-content">
-        <div id="options" class="tab-pane">
-            <h4>Repository Options</h4>
+    <div id="gogs-repo-setting-container" class="col-md-9">
+        {{if .ErrorMsg}}<p class="alert alert-danger">{{.ErrorMsg}}</p>{{end}}
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                Repository Options
+            </div>
+            <div class="panel-body">
+                
+            </div>
         </div>
-        <div id="delete" class="tab-pane">
-            <h4>Delete Repository</h4>
-            <p class="alert alert-warning">Unexpected bad things will happen if you don't read this!</p>
-            <p>This action <strong>CANNOT</strong> be undone. This will delete the repository, wiki, issues, and comments permanently. </p>
+        <div class="panel panel-warning">
+            <div class="panel-heading">
+                Danger Zone
+            </div>
+            <div class="panel-body">
+                <button type="button" class="btn btn-default pull-right" href="#delete-repository-modal" data-toggle="modal">
+                    Delete this repository
+                </button>
+                <dd>
+                    <dt>Delete this repository.</dt>
+                    <dl>Once you delete a repository, there is no going back. Please be certain.</dl>
+                </dd>
 
-            <form action="/repo/delete" method="post">
-                <input type="hidden" name="userId" value="{{.Owner.Id}}"/>
-                <input type="hidden" name="userName" value="{{.Owner.Name}}"/>
-                <input type="hidden" name="repoId" value="{{.Repository.Id}}"/>
-                <hr/>
-                <button class="btn btn-danger btn-lg">I understand the consequences, delete this repository</button>
-            </form>
+                <div class="modal fade" id="delete-repository-modal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+                    <div class="modal-dialog">
+                        <form action="/{{.Owner.Name}}/{{.Repository.Name}}/settings" method="post" class="modal-content">
+                            <input type="hidden" name="action" value="delete">
+
+                            <div class="modal-header">
+                                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                                <h4 class="modal-title" id="myModalLabel">Delete repository</h4>
+                            </div>
+
+                            <div class="modal-body">
+                                <div class="form-group">
+                                    <label>Please enter your repository name "<strong class="text-danger">{{.Repository.Name}}</strong>"</label>
+                                    <input name="repository" class="form-control" type="text" placeholder="Type your repository name" required="required">
+                                </div>
+                            </div>
+
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+                                <button class="btn btn-danger btn-lg">I understand the consequences, delete this repository</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>

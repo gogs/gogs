@@ -40,10 +40,37 @@ var Gogits = {
             //container: "body"
         });
     };
+    Gogits.initPopovers = function () {
+        var hideAllPopovers = function() {
+           $('[data-toggle=popover]').each(function() {
+                $(this).popover('hide');
+            });  
+        };
+
+        $(document).on('click', function(e) {
+            var $e = $(e.target);
+            if($e.data('toggle') == 'popover'||$e.parents("[data-toggle=popover], .popover").length > 0){
+                return;
+            }
+            hideAllPopovers();
+        });
+
+        $("body").popover({
+            selector: "[data-toggle=popover]"
+        });
+    };
     Gogits.initTabs = function () {
         var $tabs = $('[data-init=tabs]');
         $tabs.find("li:eq(0) a").tab("show");
+    };
+
+    // render markdown
+    Gogits.renderMarkdown = function () {
+        var $pre = $('.markdown').find('pre > code').parent();
+        $pre.addClass("prettyprint");
+        prettyPrint();
     }
+
 })(jQuery);
 
 // ajax utils
@@ -68,8 +95,10 @@ var Gogits = {
 
 function initCore() {
     Gogits.initTooltips();
+    Gogits.initPopovers();
     Gogits.initTabs();
     Gogits.initModals();
+    Gogits.renderMarkdown();
 }
 
 function initRegister() {
@@ -98,17 +127,30 @@ function initRegister() {
     });
 }
 
-function initUserSetting(){
+function initUserSetting() {
     $('#gogs-ssh-keys .delete').confirmation({
         singleton: true,
-        onConfirm: function(e, $this){
-            Gogits.ajaxDelete("",{"id":$this.data("del")},function(json){
-                if(json.ok){
+        onConfirm: function (e, $this) {
+            Gogits.ajaxDelete("", {"id": $this.data("del")}, function (json) {
+                if (json.ok) {
                     window.location.reload();
-                }else{
+                } else {
                     alert(json.err);
                 }
             });
         }
     });
 }
+
+(function ($) {
+    $(function () {
+        initCore();
+        var body = $("#gogs-body");
+        if (body.data("page") == "user-signup") {
+            initRegister();
+        }
+        if (body.data("page") == "user") {
+            initUserSetting();
+        }
+    });
+})(jQuery);

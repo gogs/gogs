@@ -1,0 +1,317 @@
+.markdown {
+  font-size: 14px;
+}
+
+.markdown a {
+  color: #4183C4;
+}
+
+.markdown h1,
+.markdown h2,
+.markdown h3,
+.markdown h4,
+.markdown h5,
+.markdown h6 {
+  line-height: 1.7;
+  padding: 15px 0 0;
+  margin: 0 0 15px;
+  color: #666;
+}
+
+.markdown h1,
+.markdown h2 {
+  border-bottom: 1px solid #EEE;
+}
+
+.markdown h2 {
+  border-bottom: 1px solid #EEE;
+}
+
+.markdown h1 {
+  color: #000;
+  font-size: 33px
+}
+
+.markdown h2 {
+  color: #333;
+  font-size: 28px
+}
+
+.markdown h3 {
+  font-size: 22px
+}
+
+.markdown h4 {
+  font-size: 18px
+}
+
+.markdown h5 {
+  font-size: 14px
+}
+
+.markdown h6 {
+  font-size: 14px
+}
+
+.markdown table {
+  border-collapse: collapse;
+  border-spacing: 0;
+  display: block;
+  overflow: auto;
+  width: 100%;
+  margin: 0 0 9px;
+}
+
+.markdown table th {
+  font-weight: 700
+}
+
+.markdown table th,
+.markdown table td {
+  border: 1px solid #DDD;
+  padding: 6px 13px;
+}
+
+.markdown table tr {
+  background-color: #FFF;
+  border-top: 1px solid #CCC;
+}
+
+.markdown table tr:nth-child(2n) {
+  background-color: #F8F8F8
+}
+
+.markdown li {
+  line-height: 1.6;
+  margin-top: 6px;
+}
+
+.markdown dl dt {
+  font-style: italic;
+  margin-top: 9px;
+}
+
+.markdown dl dd {
+  margin: 0 0 9px;
+  padding: 0 9px;
+}
+
+.markdown blockquote,
+.markdown blockquote p {
+  font-size: 14px;
+  background-color: #f5f5f5;
+}
+
+.markdown > pre {
+  line-height: 1.6;
+  overflow: auto;
+  background: #fff;
+  padding: 6px 10px;
+  border: 1px solid #ddd;
+}
+
+.markdown > pre.linenums {
+  padding: 0;
+}
+
+.markdown > pre > ol.linenums {
+  -webkit-box-shadow: inset 40px 0 0 #f5f5f5, inset 41px 0 0 #ccc;
+  box-shadow: inset 40px 0 0 #f5f5f5, inset 41px 0 0 #ccc;
+}
+
+.markdown > pre > code,
+.markdown > pre > ol.linenums > li > code {
+  white-space: pre;
+  word-wrap: normal;
+}
+
+.markdown > pre > ol.linenums > li > code {
+  padding: 0 10px;
+}
+
+.markdown > pre > ol.linenums > li:first-child {
+  padding-top: 6px;
+}
+
+.markdown > pre > ol.linenums > li:last-child {
+  padding-bottom: 6px;
+}
+
+.markdown > pre > ol.linenums > li {
+  border-left: 1px solid #ddd;
+}
+
+.markdown hr {
+  border: none;
+  color: #ccc;
+  height: 4px;
+  padding: 0;
+  margin: 15px 0;
+  border-bottom: 2px solid #EEE;
+}
+
+.markdown blockquote:last-child,
+.markdown ul:last-child,
+.markdown ol:last-child,
+.markdown > pre:last-child,
+.markdown > pre:last-child,
+.markdown p:last-child {
+  margin-bottom: 0;
+}
+
+.markdown .btn {
+  color: #fff;
+}
+
+/* Author: jmblog */
+/* Project: https://github.com/jmblog/color-themes-for-google-code-prettify */
+/* GitHub Theme */
+/* Pretty printing styles. Used with prettify.js. */
+/* SPAN elements with the classes below are added by prettyprint. */
+/* plain text */
+.pln {
+  color: #333333;
+}
+
+@media screen {
+  /* string content */
+  .str {
+    color: #dd1144;
+  }
+
+  /* a keyword */
+  .kwd {
+    color: #333333;
+  }
+
+  /* a comment */
+  .com {
+    color: #999988;
+  }
+
+  /* a type name */
+  .typ {
+    color: #445588;
+  }
+
+  /* a literal value */
+  .lit {
+    color: #445588;
+  }
+
+  /* punctuation */
+  .pun {
+    color: #333333;
+  }
+
+  /* lisp open bracket */
+  .opn {
+    color: #333333;
+  }
+
+  /* lisp close bracket */
+  .clo {
+    color: #333333;
+  }
+
+  /* a markup tag name */
+  .tag {
+    color: navy;
+  }
+
+  /* a markup attribute name */
+  .atn {
+    color: teal;
+  }
+
+  /* a markup attribute value */
+  .atv {
+    color: #dd1144;
+  }
+
+  /* a declaration */
+  .dec {
+    color: #333333;
+  }
+
+  /* a variable name */
+  .var {
+    color: teal;
+  }
+
+  /* a function name */
+  .fun {
+    color: #990000;
+  }
+}
+/* Use higher contrast and text-weight for printable form. */
+@media print, projection {
+  .str {
+    color: #006600;
+  }
+
+  .kwd {
+    color: #006;
+    font-weight: bold;
+  }
+
+  .com {
+    color: #600;
+    font-style: italic;
+  }
+
+  .typ {
+    color: #404;
+    font-weight: bold;
+  }
+
+  .lit {
+    color: #004444;
+  }
+
+  .pun, .opn, .clo {
+    color: #444400;
+  }
+
+  .tag {
+    color: #006;
+    font-weight: bold;
+  }
+
+  .atn {
+    color: #440044;
+  }
+
+  .atv {
+    color: #006600;
+  }
+}
+
+/* Specify class=linenums on a pre to get line numbering */
+ol.linenums {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+/* IE indents via margin-left */
+li.L0,
+li.L1,
+li.L2,
+li.L3,
+li.L4,
+li.L5,
+li.L6,
+li.L7,
+li.L8,
+li.L9 {
+  /* */
+}
+
+/* Alternate shading for lines */
+li.L1,
+li.L3,
+li.L5,
+li.L7,
+li.L9 {
+  /* */
+}

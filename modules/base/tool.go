@@ -5,8 +5,10 @@
 package base
 
 import (
+	"bytes"
 	"crypto/md5"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"math"
 	"strings"
@@ -18,6 +20,11 @@ func EncodeMd5(str string) string {
 	m := md5.New()
 	m.Write([]byte(str))
 	return hex.EncodeToString(m.Sum(nil))
+}
+
+// AvatarLink returns avatar link by given e-mail.
+func AvatarLink(email string) string {
+	return "http://1.gravatar.com/avatar/" + EncodeMd5(email)
 }
 
 // Seconds-based time units
@@ -235,6 +242,7 @@ type Actioner interface {
 	GetOpType() int
 	GetActUserName() string
 	GetRepoName() string
+	GetContent() string
 }
 
 // ActionIcon accepts a int that represents action operation type
@@ -243,23 +251,39 @@ func ActionIcon(opType int) string {
 	switch opType {
 	case 1: // Create repository.
 		return "plus-circle"
+	case 5: // Commit repository.
+		return "arrow-circle-o-right"
 	default:
 		return "invalid type"
 	}
 }
 
 const (
-	CreateRepoTpl = `<a href="/user/%s">%s</a> created repository <a href="/%s/%s">%s</a>`
+	TPL_CREATE_REPO    = `<a href="/user/%s">%s</a> created repository <a href="/%s/%s">%s</a>`
+	TPL_COMMIT_REPO    = `<a href="/user/%s">%s</a> pushed to <a href="/%s/%s/tree/%s">%s</a> at <a href="/%s/%s">%s/%s</a>%s`
+	TPL_COMMIT_REPO_LI = `<div><img id="gogs-user-avatar-commit" src="%s?s=16" alt="user-avatar" title="username"/> <a href="/%s/%s/commit/%s">%s</a> %s</div>`
 )
 
 // ActionDesc accepts int that represents action operation type
 // and returns the description.
-func ActionDesc(act Actioner) string {
+func ActionDesc(act Actioner, avatarLink string) string {
 	actUserName := act.GetActUserName()
 	repoName := act.GetRepoName()
+	content := act.GetContent()
 	switch act.GetOpType() {
 	case 1: // Create repository.
-		return fmt.Sprintf(CreateRepoTpl, actUserName, actUserName, actUserName, repoName, repoName)
+		return fmt.Sprintf(TPL_CREATE_REPO, actUserName, actUserName, actUserName, repoName, repoName)
+	case 5: // Commit repository.
+		var commits [][]string
+		if err := json.Unmarshal([]byte(content), &commits); err != nil {
+			return err.Error()
+		}
+		buf := bytes.NewBuffer([]byte("\n"))
+		for _, commit := range commits {
+			buf.WriteString(fmt.Sprintf(TPL_COMMIT_REPO_LI, avatarLink, actUserName, repoName, commit[0], commit[0][:7], commit[1]) + "\n")
+		}
+		return fmt.Sprintf(TPL_COMMIT_REPO, actUserName, actUserName, actUserName, repoName, "master", "master", actUserName, repoName, actUserName, repoName,
+			buf.String())
 	default:
 		return "invalid type"
 	}
