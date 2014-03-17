@@ -13,8 +13,10 @@ import (
 	"time"
 
 	"github.com/dchest/scrypt"
+
+	"github.com/gogits/git"
+
 	"github.com/gogits/gogs/modules/base"
-	git "github.com/libgit2/git2go"
 )
 
 var UserPasswdSalt string
@@ -89,6 +91,7 @@ func IsEmailUsed(email string) (bool, error) {
 	return orm.Get(&User{Email: email})
 }
 
+// NewGitSig generates and returns the signature of given user.
 func (user *User) NewGitSig() *git.Signature {
 	return &git.Signature{
 		Name:  user.Name,

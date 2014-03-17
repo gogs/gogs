@@ -20,15 +20,16 @@ func Create(ctx *middleware.Context, form auth.CreateRepoForm) {
 		return
 	}
 
-	if _, err := models.CreateRepository(ctx.User,
-		form.RepoName, form.Description, form.Language, form.License,
-		form.Visibility == "private", form.InitReadme == "on"); err == nil {
+	_, err := models.CreateRepository(ctx.User, form.RepoName, form.Description,
+		form.Language, form.License, form.Visibility == "private", form.InitReadme == "on")
+	if err == nil {
 		ctx.Render.Redirect("/"+ctx.User.Name+"/"+form.RepoName, 302)
 		return
 	} else if err == models.ErrRepoAlreadyExist {
 		ctx.RenderWithErr("Repository name has already been used", "repo/create", &form)
 		return
 	}
+	ctx.Handle(200, "repo.Create", err)
 }
 
 func SettingPost(ctx *middleware.Context) {

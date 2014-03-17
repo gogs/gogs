@@ -11,11 +11,14 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 	"unicode/utf8"
 
+	"github.com/Unknwon/cae/zip"
 	"github.com/Unknwon/com"
-	git "github.com/libgit2/git2go"
+
+	"github.com/gogits/git"
 
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
@@ -44,6 +47,7 @@ type Star struct {
 }
 
 var (
+	gitInitLocker          = sync.Mutex{}
 	LanguageIgns, Licenses []string
 )
 
@@ -55,6 +59,8 @@ var (
 func init() {
 	LanguageIgns = strings.Split(base.Cfg.MustValue("repository", "LANG_IGNS"), "|")
 	Licenses = strings.Split(base.Cfg.MustValue("repository", "LICENSES"), "|")
+
+	zip.Verbose = false
 }
 
 // check if repository is exist
@@ -66,7 +72,7 @@ func IsRepositoryExist(user *User, repoName string) (bool, error) {
 	}
 	s, err := os.Stat(RepoPath(user.Name, repoName))
 	if err != nil {
-		return false, nil
+		return false, nil // Error simply means does not exist, but we don't want to show up.
 	}
 	return s.IsDir(), nil
 }
@@ -138,12 +144,59 @@ func CreateRepository(user *User, repoName, desc, repoLang, license string, priv
 	}
 
 	return repo, NewRepoAction(user, repo)
+	return nil, nil
+}
+
+// extractGitBareZip extracts git-bare.zip to repository path.
+func extractGitBareZip(repoPath string) error {
+	z, err := zip.Open("conf/content/git-bare.zip")
+	if err != nil {
+		fmt.Println("shi?")
+		return err
+	}
+	defer z.Close()
+
+	return z.ExtractTo(repoPath)
+}
+
+// initRepoCommit temporarily changes with work directory.
+func initRepoCommit(tmpPath string, sig *git.Signature) error {
+	gitInitLocker.Lock()
+	defer gitInitLocker.Unlock()
+
+	// Change work directory.
+	curPath, err := os.Getwd()
+	if err != nil {
+		return err
+	} else if err = os.Chdir(tmpPath); err != nil {
+		return err
+	}
+	defer os.Chdir(curPath)
+
+	if _, _, err := com.ExecCmd("git", "add", "--all"); err != nil {
+		return err
+	}
+	if _, _, err := com.ExecCmd("git", "commit", fmt.Sprintf("--author='%s <%s>'", sig.Name, sig.Email),
+		"-m", "Init commit"); err != nil {
+		return err
+	}
+	if _, _, err := com.ExecCmd("git", "push", "origin", "master"); err != nil {
+		return err
+	}
+	return nil
 }
 
 // InitRepository initializes README and .gitignore if needed.
 func initRepository(f string, user *User, repo *Repository, initReadme bool, repoLang, license string) error {
-	fileName := map[string]string{}
+	repoPath := RepoPath(user.Name, repo.Name)
 
+	// Create bare new repository.
+	if err := extractGitBareZip(repoPath); err != nil {
+		return err
+	}
+
+	// Initialize repository according to user's choice.
+	fileName := map[string]string{}
 	if initReadme {
 		fileName["readme"] = "README.md"
 	}
@@ -154,87 +207,52 @@ func initRepository(f string, user *User, repo *Repository, initReadme bool, rep
 		fileName["license"] = "LICENSE"
 	}
 
-	workdir := filepath.Join(os.TempDir(), fmt.Sprintf("%d", time.Now().Nanosecond()))
-	os.MkdirAll(workdir, os.ModePerm)
+	// Clone to temprory path and do the init commit.
+	tmpDir := filepath.Join(os.TempDir(), fmt.Sprintf("%d", time.Now().Nanosecond()))
+	os.MkdirAll(tmpDir, os.ModePerm)
 
-	sig := user.NewGitSig()
+	if _, _, err := com.ExecCmd("git", "clone", repoPath, tmpDir); err != nil {
+		return err
+	}
 
 	// README
 	if initReadme {
 		defaultReadme := repo.Name + "\n" + strings.Repeat("=",
 			utf8.RuneCountInString(repo.Name)) + "\n\n" + repo.Description
-		if err := ioutil.WriteFile(filepath.Join(workdir, fileName["readme"]),
+		if err := ioutil.WriteFile(filepath.Join(tmpDir, fileName["readme"]),
 			[]byte(defaultReadme), 0644); err != nil {
 			return err
 		}
 	}
 
+	// .gitignore
 	if repoLang != "" {
-		// .gitignore
 		filePath := "conf/gitignore/" + repoLang
 		if com.IsFile(filePath) {
 			if _, err := com.Copy(filePath,
-				filepath.Join(workdir, fileName["gitign"])); err != nil {
+				filepath.Join(tmpDir, fileName["gitign"])); err != nil {
 				return err
 			}
 		}
 	}
 
+	// LICENSE
 	if license != "" {
-		// LICENSE
 		filePath := "conf/license/" + license
 		if com.IsFile(filePath) {
 			if _, err := com.Copy(filePath,
-				filepath.Join(workdir, fileName["license"])); err != nil {
+				filepath.Join(tmpDir, fileName["license"])); err != nil {
 				return err
 			}
 		}
 	}
 
-	rp, err := git.InitRepository(f, true)
-	if err != nil {
-		return err
-	}
-	rp.SetWorkdir(workdir, false)
-
-	idx, err := rp.Index()
-	if err != nil {
+	// Apply changes and commit.
+	if err := initRepoCommit(tmpDir, user.NewGitSig()); err != nil {
 		return err
 	}
 
-	for _, name := range fileName {
-		if err = idx.AddByPath(name); err != nil {
-			return err
-		}
-	}
-
-	treeId, err := idx.WriteTree()
-	if err != nil {
-		return err
-	}
-
-	message := "Init commit"
-	tree, err := rp.LookupTree(treeId)
-	if err != nil {
-		return err
-	}
-
-	if _, err = rp.CreateCommit("HEAD", sig, sig, message, tree); err != nil {
-		return err
-	}
-
-	pu, err := os.OpenFile(filepath.Join(f, "hooks", "post-update"), os.O_CREATE|os.O_WRONLY, 0777)
-	if err != nil {
-		return err
-	}
-	defer pu.Close()
-	ep, err := exePath()
-	if err != nil {
-		return err
-	}
-	_, err = pu.WriteString(fmt.Sprintf("#!/usr/bin/env bash\n%s update\n", ep))
-
-	return err
+	return nil
 }
 
 func GetRepositoryByName(user *User, repoName string) (*Repository, error) {
