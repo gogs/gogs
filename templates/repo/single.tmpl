@@ -83,6 +83,7 @@
                 </tbody>
             </table>
         </div>
+        {{if .ReadmeExist}}
         <div class="panel panel-default file-content">
             <div class="panel-heading file-head">
                 <i class="icon fa fa-book"></i> README.md
@@ -97,6 +98,7 @@
                 </div>
             {{end}}
         </div>
+        {{end}}
     </div>
 </div>
 {{template "base/footer" .}}

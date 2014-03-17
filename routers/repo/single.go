@@ -97,6 +97,7 @@ func Single(ctx *middleware.Context, params martini.Params) {
 	}
 
 	if readmeFile != nil {
+		ctx.Data["ReadmeExist"] = true
 		// if file large than 1M not show it
 		if readmeFile.Size > 1024*1024 || readmeFile.Filemode != git.FileModeBlob {
 			ctx.Data["FileIsLarge"] = true
