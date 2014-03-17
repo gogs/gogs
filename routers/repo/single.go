@@ -73,7 +73,6 @@ func Single(ctx *middleware.Context, params martini.Params) {
 	ctx.Data["Paths"] = Paths
 	ctx.Data["Treenames"] = treenames
 	ctx.Data["IsRepoToolbarSource"] = true
-	ctx.Data["IsRepositoryOwner"] = strings.ToLower(params["username"]) == ctx.User.LowerName
 	ctx.Data["Files"] = files
 	ctx.Render.HTML(200, "repo/single", ctx.Data)
 }
@@ -90,7 +89,6 @@ func Setting(ctx *middleware.Context, params martini.Params) {
 
 	ctx.Data["Title"] = title + " - settings"
 	ctx.Data["IsRepoToolbarSetting"] = true
-	ctx.Data["IsRepositoryOwner"] = strings.ToLower(params["username"]) == ctx.User.LowerName
 	ctx.Render.HTML(200, "repo/setting", ctx.Data)
 }
 
