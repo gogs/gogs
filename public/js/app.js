@@ -40,6 +40,25 @@ var Gogits = {
             //container: "body"
         });
     };
+    Gogits.initPopovers = function () {
+        var hideAllPopovers = function() {
+           $('[data-toggle=popover]').each(function() {
+                $(this).popover('hide');
+            });  
+        };
+
+        $(document).on('click', function(e) {
+            var $e = $(e.target);
+            if($e.data('toggle') == 'popover'||$e.parents("[data-toggle=popover], .popover").length > 0){
+                return;
+            }
+            hideAllPopovers();
+        });
+
+        $("body").popover({
+            selector: "[data-toggle=popover]"
+        });
+    };
     Gogits.initTabs = function () {
         var $tabs = $('[data-init=tabs]');
         $tabs.find("li:eq(0) a").tab("show");
@@ -76,6 +95,7 @@ var Gogits = {
 
 function initCore() {
     Gogits.initTooltips();
+    Gogits.initPopovers();
     Gogits.initTabs();
     Gogits.initModals();
     Gogits.renderMarkdown();

@@ -415,16 +415,8 @@ html, body {
     margin-left: 0;
 }
 
-.gogs-repo-btns {
-    margin-top: 18px;
-}
-
-.gogs-repo-btns .btn-group {
-    margin-left: 1em;
-}
-
-.gogs-repo-btns .btn-group .btn {
-    padding-left: 6px;
+.gogs-repo-nav .actions {
+    padding-top: 20px;
 }
 
 #gogs-repo-watching .dropdown-menu {
