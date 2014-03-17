@@ -52,7 +52,7 @@ func Single(ctx *middleware.Context, params martini.Params) {
 	files, err := models.GetReposFiles(params["username"], params["reponame"],
 		params["branchname"], treename)
 	if err != nil {
-		ctx.Handle(200, "repo.Single", err)
+		ctx.Handle(200, "repo.Single(GetReposFiles)", err)
 		return
 	}
 	ctx.Data["Username"] = params["username"]
@@ -62,7 +62,7 @@ func Single(ctx *middleware.Context, params martini.Params) {
 	// Branches.
 	brs, err := models.GetBranches(params["username"], params["reponame"])
 	if err != nil {
-		ctx.Handle(200, "repo.Single", err)
+		ctx.Handle(200, "repo.Single(GetBranches)", err)
 		return
 	}
 	ctx.Data["Branches"] = brs
@@ -80,7 +80,7 @@ func Single(ctx *middleware.Context, params martini.Params) {
 	// Get latest commit according username and repo name
 	commit, err := models.GetLastestCommit(params["username"], params["reponame"])
 	if err != nil {
-		ctx.Handle(200, "repo.Single", err)
+		ctx.Handle(200, "repo.Single(GetLastestCommit)", err)
 		return
 	}
 	ctx.Data["LatestCommit"] = commit
