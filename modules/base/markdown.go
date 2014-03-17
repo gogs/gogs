@@ -5,35 +5,78 @@
 package base
 
 import (
-	"github.com/slene/blackfriday"
+	"bytes"
+	"path"
+
+	"github.com/gogits/gfm"
 )
 
-func RenderMarkdown(rawBytes []byte) []byte {
+func isletter(c byte) bool {
+	return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')
+}
+
+func isalnum(c byte) bool {
+	return (c >= '0' && c <= '9') || isletter(c)
+}
+
+var validLinks = [][]byte{[]byte("http://"), []byte("https://"), []byte("ftp://"), []byte("mailto://")}
+
+func isLink(link []byte) bool {
+	for _, prefix := range validLinks {
+		if len(link) > len(prefix) && bytes.Equal(bytes.ToLower(link[:len(prefix)]), prefix) && isalnum(link[len(prefix)]) {
+			return true
+		}
+	}
+
+	return false
+}
+
+type CustomRender struct {
+	gfm.Renderer
+	urlPrefix string
+}
+
+func (options *CustomRender) Link(out *bytes.Buffer, link []byte, title []byte, content []byte) {
+	if len(link) > 0 && !isLink(link) {
+		if link[0] == '#' {
+			link = append([]byte(options.urlPrefix), link...)
+		} else {
+			link = []byte(path.Join(options.urlPrefix, string(link)))
+		}
+	}
+
+	options.Renderer.Link(out, link, title, content)
+}
+
+func RenderMarkdown(rawBytes []byte, urlPrefix string) []byte {
 	htmlFlags := 0
-	htmlFlags |= blackfriday.HTML_USE_XHTML
-	// htmlFlags |= blackfriday.HTML_USE_SMARTYPANTS
-	// htmlFlags |= blackfriday.HTML_SMARTYPANTS_FRACTIONS
-	// htmlFlags |= blackfriday.HTML_SMARTYPANTS_LATEX_DASHES
-	htmlFlags |= blackfriday.HTML_SKIP_HTML
-	htmlFlags |= blackfriday.HTML_SKIP_STYLE
-	htmlFlags |= blackfriday.HTML_SKIP_SCRIPT
-	htmlFlags |= blackfriday.HTML_GITHUB_BLOCKCODE
-	htmlFlags |= blackfriday.HTML_OMIT_CONTENTS
-	htmlFlags |= blackfriday.HTML_COMPLETE_PAGE
-	renderer := blackfriday.HtmlRenderer(htmlFlags, "", "")
+	htmlFlags |= gfm.HTML_USE_XHTML
+	// htmlFlags |= gfm.HTML_USE_SMARTYPANTS
+	// htmlFlags |= gfm.HTML_SMARTYPANTS_FRACTIONS
+	// htmlFlags |= gfm.HTML_SMARTYPANTS_LATEX_DASHES
+	htmlFlags |= gfm.HTML_SKIP_HTML
+	htmlFlags |= gfm.HTML_SKIP_STYLE
+	htmlFlags |= gfm.HTML_SKIP_SCRIPT
+	htmlFlags |= gfm.HTML_GITHUB_BLOCKCODE
+	htmlFlags |= gfm.HTML_OMIT_CONTENTS
+	htmlFlags |= gfm.HTML_COMPLETE_PAGE
+	renderer := &CustomRender{
+		Renderer:  gfm.HtmlRenderer(htmlFlags, "", ""),
+		urlPrefix: urlPrefix,
+	}
 
 	// set up the parser
 	extensions := 0
-	extensions |= blackfriday.EXTENSION_NO_INTRA_EMPHASIS
-	extensions |= blackfriday.EXTENSION_TABLES
-	extensions |= blackfriday.EXTENSION_FENCED_CODE
-	extensions |= blackfriday.EXTENSION_AUTOLINK
-	extensions |= blackfriday.EXTENSION_STRIKETHROUGH
-	extensions |= blackfriday.EXTENSION_HARD_LINE_BREAK
-	extensions |= blackfriday.EXTENSION_SPACE_HEADERS
-	extensions |= blackfriday.EXTENSION_NO_EMPTY_LINE_BEFORE_BLOCK
+	extensions |= gfm.EXTENSION_NO_INTRA_EMPHASIS
+	extensions |= gfm.EXTENSION_TABLES
+	extensions |= gfm.EXTENSION_FENCED_CODE
+	extensions |= gfm.EXTENSION_AUTOLINK
+	extensions |= gfm.EXTENSION_STRIKETHROUGH
+	extensions |= gfm.EXTENSION_HARD_LINE_BREAK
+	extensions |= gfm.EXTENSION_SPACE_HEADERS
+	extensions |= gfm.EXTENSION_NO_EMPTY_LINE_BEFORE_BLOCK
 
-	body := blackfriday.Markdown(rawBytes, renderer, extensions)
+	body := gfm.Markdown(rawBytes, renderer, extensions)
 
 	return body
 }
