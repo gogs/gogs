@@ -12,7 +12,8 @@
 		"models": "",
 		"others": [
 			"modules",
-			"$GOPATH/src/github.com/gogits/binding"
+			"$GOPATH/src/github.com/gogits/binding",
+			"$GOPATH/src/github.com/gogits/git"
 		]
 	},
 	"cmd_args": [

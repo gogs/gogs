@@ -5,21 +5,23 @@
 <div id="gogs-body" class="container">
     <div id="gogs-source">
         <div class="source-toolbar">
-            <button class="btn btn-default pull-right"><i class="fa fa-plus-square"></i>Add File</button>
-            <div class="dropdown branch-switch">
-                <a href="#" class="btn btn-success dropdown-toggle" data-toggle="dropdown"><i class="fa fa-chain"></i>master&nbsp;&nbsp;
-                    <b class="caret"></b></a>
-                <ul class="dropdown-menu">
-                    <li><a class="current" href="/{{.RepositoryLink}}/tree/master">master</a></li>
-                    <li><a href="/{{.RepositoryLink}}/tree/develop">develop</a></li>
-                </ul>
-            </div>
-            {{$paths := .Paths}}
-                {{ $username := .Username}}
+            {{ $username := .Username}}
             {{ $reponame := .Reponame}}
             {{ $branchname := .Branchname}}
             {{ $treenames := .Treenames}}
+            {{ $repoLink := .RepositoryLink}}
             {{ $n := len $treenames}}
+            <button class="btn btn-default pull-right"><i class="fa fa-plus-square"></i>Add File</button>
+            <div class="dropdown branch-switch">
+                <a href="#" class="btn btn-success dropdown-toggle" data-toggle="dropdown"><i class="fa fa-chain"></i>{{$branchname}}&nbsp;&nbsp;
+                    <b class="caret"></b></a>
+                <ul class="dropdown-menu">
+                    {{range .Branches}}
+                    <li><a {{if eq . $branchname}}class="current" {{end}}href="/{{$repoLink}}/tree/{{.}}">{{.}}</a></li>
+                    {{end}}
+                </ul>
+            </div>
+            {{$paths := .Paths}}
             {{ $l := Subtract $n 1}}
             <ol class="breadcrumb">
                 <li class="root dir"><a href="/{{$username}}/{{$reponame}}/tree/{{$branchname}}">{{.Repository.Name}}</a></li>
