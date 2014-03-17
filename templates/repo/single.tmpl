@@ -4,6 +4,9 @@
 {{template "repo/toolbar" .}}
 <div id="gogs-body" class="container">
     <div id="gogs-source">
+        {{if .IsBareRepo}}
+        Need to fill in some guide.
+        {{else}}
         <div class="source-toolbar">
             {{ $username := .Username}}
             {{ $reponame := .Reponame}}
@@ -36,6 +39,7 @@
                 {{end}}
             </ol>
         </div>
+
         <div class="panel panel-default info-box">
             <div class="panel-heading info-head">
                 <a href="/{{$username}}/{{$reponame}}/commit/{{.LatestCommit.SHA}}">{{.LatestCommit.Message}}</a>
@@ -94,6 +98,7 @@
                 </div>
             {{end}}
         </div>
+        {{end}}
         {{end}}
     </div>
 </div>

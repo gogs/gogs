@@ -223,6 +223,17 @@ func initRepository(f string, user *User, repo *Repository, initReadme bool, rep
 		return err
 	}
 
+	// hook/post-update
+	pu, err := os.OpenFile(filepath.Join(repoPath, "hooks", "post-update"), os.O_CREATE|os.O_WRONLY, 0777)
+	if err != nil {
+		return err
+	}
+	defer pu.Close()
+	// TODO: Windows .bat
+	if _, err = pu.WriteString(fmt.Sprintf("#!/usr/bin/env bash\n%s update\n", appPath)); err != nil {
+		return err
+	}
+
 	// Initialize repository according to user's choice.
 	fileName := map[string]string{}
 	if initReadme {
@@ -275,11 +286,14 @@ func initRepository(f string, user *User, repo *Repository, initReadme bool, rep
 		}
 	}
 
+	if len(fileName) == 0 {
+		return nil
+	}
+
 	// Apply changes and commit.
 	if err := initRepoCommit(tmpDir, user.NewGitSig()); err != nil {
 		return err
 	}
-
 	return nil
 }
 
