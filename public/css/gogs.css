@@ -10,6 +10,7 @@ body {
 
 html, body {
     height: 100%;
+    font-family: Helvetica, Arial, sans-serif;
 }
 
 /* override bs3 */
@@ -50,7 +51,6 @@ html, body {
 .gogs-masthead {
     background-color: #428bca;
     box-shadow: inset 0 -2px 5px rgba(0, 0, 0, .1);
-    padding: 0 16px;
     margin: 0;
 }
 
@@ -63,6 +63,12 @@ html, body {
     color: #EEE;
     font-size: 100%;
     height: 46px;
+}
+
+#gogs-nav-logo{
+    padding-left: 0;
+    padding-right: 0;
+    margin-right: 10px;
 }
 
 .gogs-nav-item:hover,
@@ -128,6 +134,11 @@ html, body {
     padding: 5px 0;
     margin-left: 10px;
     height: 28px;
+    float: right;
+}
+
+#gogs-nav-signin{
+    float: right;
 }
 
 #gogs-nav-out .fa {
@@ -226,6 +237,12 @@ html, body {
     width: 200px;
     height: 200px;
     border-radius: 6px;
+}
+
+#gogs-user-avatar-commit {
+    width: 16px;
+    height: 16px;
+    border-radius: 2px;
 }
 
 #gogs-user-name {
@@ -338,10 +355,6 @@ html, body {
 
 /* #gogs-feed */
 
-#gogs-feed-left {
-    padding-left: 0;
-}
-
 #gogs-feed-right .repo-panel .panel-heading .btn {
     margin-top: -4px;
 }
@@ -399,18 +412,11 @@ html, body {
 
 .gogs-repo-nav h3 .fa {
     color: #BBB;
+    margin-left: 0;
 }
 
-.gogs-repo-btns {
-    margin-top: 18px;
-}
-
-.gogs-repo-btns .btn-group {
-    margin-left: 1em;
-}
-
-.gogs-repo-btns .btn-group .btn {
-    padding-left: 6px;
+.gogs-repo-nav .actions {
+    padding-top: 20px;
 }
 
 #gogs-repo-watching .dropdown-menu {
@@ -475,7 +481,7 @@ html, body {
 
 .activity-list .info {
     float: left;
-    padding:0 0 0 10px;
+    padding: 0 0 0 10px;
     line-height: 1.7em;
 }
 
@@ -525,6 +531,10 @@ html, body {
 }
 
 /* #gogs-source */
+#gogs-source {
+    margin-top: -20px;
+}
+
 #gogs-source .source-toolbar:after {
     clear: both;
 }
@@ -560,7 +570,9 @@ html, body {
 .file-list .icon {
     font-size: 17px;
     padding: 5px 0 4px 10px;
-    width: 40px;
+    width: 50px;
+    color: #999;
+    text-align: right;
 }
 
 .file-list .wrap {
@@ -581,12 +593,86 @@ html, body {
 
 .file-list .date .wrap {
     max-width: 120px;
-    padding: 0 20px 0 0; 
+    padding: 0 20px 0 0;
 }
 
 .file-list .date {
     text-align: right;
 }
+
+.file-content .file-head {
+    font-size: 18px;
+}
+
+.file-content .file-head .icon {
+    color: #666;
+    margin: 0 .5em 0 0;
+}
+
+.file-content .file-body {
+    padding: 30px 30px 50px;
+}
+
+.branch-list th{
+    background-color: #FFF;
+    line-height: 28px !important;
+}
+
+.branch-list td{
+    line-height: 36px !important;
+}
+
+.branch-box tr:hover td{
+    background-color: rgba(19, 95, 215, 0.06) !important;
+}
+
+.branch-box .name{
+    padding-left: 20px;
+    font-size: 15px;
+}
+
+.branch-box .action{
+    width: 150px;
+}
+
+.branch-box td.date,.branch-box td.behind,.branch-box td.ahead{
+    width: 120px;
+    font-family: Verdana, Arial, sans-serif;
+}
+
+.branch-box .graph{
+    display: block;
+    height: 3px;
+}
+
+.branch-box .behind{
+    text-align: right;
+    direction: rtl;
+}
+
+.branch-box .behind .graph{
+    background-color: #888;
+}
+
+.branch-box .ahead .graph{
+    background-color: #0093c4;
+}
+
+.branch-box .branch-main{
+    background-color: #444;
+    color: #FFF;
+    border-color: #444;
+}
+
+.branch-box .branch-main a{
+    color: #FFF;
+}
+
+.branch-box .branch-main .name .btn{
+    margin-left: .5em;
+}
+
+/* wrapper and footer */
 
 #wrapper {
     min-height: 100%;
@@ -604,7 +690,7 @@ html, body {
 }
 
 #footer .footer-wrap {
-    padding: 20px 0;
+    padding: 20px 15px;
 }
 
 #footer a {

@@ -5,56 +5,61 @@
 <div id="gogs-body" class="container">
     <div id="gogs-source">
         <div class="source-toolbar">
-            <button class="btn btn-default pull-right"><i class="fa fa-plus-square"></i>Add File</button>
-            <div class="dropdown branch-switch">
-                <a href="#" class="btn btn-success dropdown-toggle" data-toggle="dropdown"><i class="fa fa-chain"></i>master&nbsp;&nbsp;
-                    <b class="caret"></b></a>
-                <ul class="dropdown-menu">
-                    <li><a class="current" href="/{{.RepositoryLink}}/tree/master">master</a></li>
-                    <li><a href="/{{.RepositoryLink}}/tree/develop">develop</a></li>
-                </ul>
-            </div>
-            {{$paths := .Paths}}
-                {{ $username := .Username}}
+            {{ $username := .Username}}
             {{ $reponame := .Reponame}}
             {{ $branchname := .Branchname}}
             {{ $treenames := .Treenames}}
+            {{ $repoLink := .RepositoryLink}}
             {{ $n := len $treenames}}
+            <button class="btn btn-default pull-right"><i class="fa fa-plus-square"></i>Add File</button>
+            <div class="dropdown branch-switch">
+                <a href="#" class="btn btn-success dropdown-toggle" data-toggle="dropdown"><i class="fa fa-chain"></i>{{$branchname}}&nbsp;&nbsp;
+                    <b class="caret"></b></a>
+                <ul class="dropdown-menu">
+                    {{range .Branches}}
+                    <li><a {{if eq . $branchname}}class="current" {{end}}href="/{{$repoLink}}/tree/{{.}}">{{.}}</a></li>
+                    {{end}}
+                </ul>
+            </div>
+            {{$paths := .Paths}}
             {{ $l := Subtract $n 1}}
             <ol class="breadcrumb">
-                <li class="root dir"><a href="/{{$username}}/{{$reponame}}/tree/{{$branchname}}">{{.Repository.Name}}</a></li>
+                <li class="root dir">
+                    <a href="/{{$username}}/{{$reponame}}/tree/{{$branchname}}">{{.Repository.Name}}</a></li>
                 {{range $i, $v := $treenames}}
                 <li class="dir">
-                {{if eq $i $l}}{{$v}}
-                {{else}}
-                <a href="/{{$username}}/{{$reponame}}/tree/{{$branchname}}/{{index $paths $i}}">{{$v}}</a>&nbsp;
-                {{end}}</li>
+                    {{if eq $i $l}}{{$v}}
+                    {{else}}
+                    <a href="/{{$username}}/{{$reponame}}/tree/{{$branchname}}/{{index $paths $i}}">{{$v}}</a>&nbsp;
+                    {{end}}
+                </li>
                 {{end}}
             </ol>
         </div>
         <div class="panel panel-default info-box">
             <div class="panel-heading info-head">
-                Merge branch 'release/1.1.1'
+                <a href="/{{$username}}/{{$reponame}}/commit/{{.LatestCommit.SHA}}">{{.LatestCommit.Message}}</a>
             </div>
             <div class="panel-body info-content">
-                slene authored 4 days ago
+                <a href="/user/{{.LatestCommit.Author}}">{{.LatestCommit.Author}}</a> <span class="text-muted">{{TimeSince .LatestCommit.Date}}</span>
             </div>
             <table class="panel-footer table file-list">
                 <thead class="hidden">
-    	            <tr>
-                        <th class="icon"></th>
-    	                <th class="name">Filename</th>
-                        <th class="text">Message</th>
-    	                <th class="date">Date modified</th>
-    	            </tr>
+                <tr>
+                    <th class="icon"></th>
+                    <th class="name">Filename</th>
+                    <th class="text">Message</th>
+                    <th class="date">Date modified</th>
+                </tr>
                 </thead>
                 <tbody>
-        			{{range .Files}}
-    				<tr {{if .IsDir}}class="is-dir"{{end}}>
-                        <td class="icon">
-                            <i class="fa {{if .IsDir}}fa-folder{{else}}fa-file-text-o{{end}}"></i>
-                        </td>
-    	                <td class="name">
+                {{range .Files}}
+                <tr
+                {{if .IsDir}}class="is-dir"{{end}}>
+                <td class="icon">
+                    <i class="fa {{if .IsDir}}fa-folder{{else}}fa-file-text-o{{end}}"></i>
+                </td>
+                <td class="name">
                             <span class="wrap">
                                 {{if .IsDir}}
                                 <a href="/{{$username}}/{{$reponame}}/tree/{{$branchname}}/{{.Path}}">{{.Name}}</a>
@@ -62,29 +67,35 @@
                                 <a href="/{{$username}}/{{$reponame}}/blob/{{$branchname}}/{{.Name}}">{{.Name}}</a>
                                 {{end}}
                             </span>
-                        </td>
-    	                <td class="text">
+                </td>
+                <td class="text">
                             <span class="wrap">
                                 {{.Message}}
                             </span>
-                        </td>
-                        <td class="date">
+                </td>
+                <td class="date">
                             <span class="wrap">
                                 {{TimeSince .Created}}
                             </span>
-                        </td>
-    				</tr>
-        			{{end}}
+                </td>
+                </tr>
+                {{end}}
                 </tbody>
             </table>
         </div>
         <div class="panel panel-default file-content">
-            <div class="panel-heading">
-                README.md
+            <div class="panel-heading file-head">
+                <i class="icon fa fa-book"></i> README.md
             </div>
-            <div class="panel-body markdown">
-                 httplib
-            </div>
+            {{if .FileIsLarge}}
+                <div class="panel-footer">
+                    Large file size 1000kb
+                </div>
+            {{else}}
+                <div class="panel-body file-body markdown">
+                    {{.ReadmeContent|str2html}}
+                </div>
+            {{end}}
         </div>
     </div>
 </div>

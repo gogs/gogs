@@ -307,6 +307,9 @@ func DeleteRepository(userId, repoId int64, userName string) (err error) {
 	}
 
 	session := orm.NewSession()
+	if err = session.Begin(); err != nil {
+		return err
+	}
 	if _, err = session.Delete(&Repository{Id: repoId}); err != nil {
 		session.Rollback()
 		return err
