@@ -201,17 +201,16 @@ func initRepoCommit(tmpPath string, sig *git.Signature) error {
 	if _, stderr, err = com.ExecCmd("git", "add", "--all"); err != nil {
 		return err
 	}
-	// log.Info("stderr(1): %s", stderr)
+	log.Info("stderr(1): %s", stderr)
 	if _, stderr, err = com.ExecCmd("git", "commit", fmt.Sprintf("--author='%s <%s>'", sig.Name, sig.Email),
 		"-m", "Init commit"); err != nil {
 		return err
 	}
-	// log.Info("stderr(2): %s", stderr)
+	log.Info("stderr(2): %s", stderr)
 	if _, stderr, err = com.ExecCmd("git", "push", "origin", "master"); err != nil {
 		return err
 	}
-	// log.Info("stderr(3): %s", stderr)
-	_ = stderr
+	log.Info("stderr(3): %s", stderr)
 	return nil
 }
 
