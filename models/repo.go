@@ -63,6 +63,21 @@ func init() {
 	Licenses = strings.Split(base.Cfg.MustValue("repository", "LICENSES"), "|")
 
 	zip.Verbose = false
+
+	// Check if server has basic git setting.
+	stdout, _, err := com.ExecCmd("git", "config", "--get", "user.name")
+	if err != nil {
+		fmt.Printf("repo.init(fail to get git user.name): %v", err)
+		os.Exit(2)
+	} else if len(stdout) == 0 {
+		if _, _, err = com.ExecCmd("git", "config", "--global", "user.email", "gogitservice@gmail.com"); err != nil {
+			fmt.Printf("repo.init(fail to set git user.email): %v", err)
+			os.Exit(2)
+		} else if _, _, err = com.ExecCmd("git", "config", "--global", "user.name", "Gogs"); err != nil {
+			fmt.Printf("repo.init(fail to set git user.name): %v", err)
+			os.Exit(2)
+		}
+	}
 }
 
 // IsRepositoryExist returns true if the repository with given name under user has already existed.
@@ -182,23 +197,21 @@ func initRepoCommit(tmpPath string, sig *git.Signature) error {
 	}
 	defer os.Chdir(curPath)
 
-	var stdout, stderr string
-	if stdout, stderr, err = com.ExecCmd("git", "add", "--all"); err != nil {
+	var stderr string
+	if _, stderr, err = com.ExecCmd("git", "add", "--all"); err != nil {
 		return err
 	}
-	log.Info("stdout(1): %s", stdout)
-	log.Info("stderr(1): %s", stderr)
-	if stdout, stderr, err = com.ExecCmd("git", "commit", fmt.Sprintf("--author='%s <%s>'", sig.Name, sig.Email),
+	// log.Info("stderr(1): %s", stderr)
+	if _, stderr, err = com.ExecCmd("git", "commit", fmt.Sprintf("--author='%s <%s>'", sig.Name, sig.Email),
 		"-m", "Init commit"); err != nil {
 		return err
 	}
-	log.Info("stdout(2): %s", stdout)
-	log.Info("stderr(2): %s", stderr)
-	if stdout, stderr, err = com.ExecCmd("git", "push", "origin", "master"); err != nil {
+	// log.Info("stderr(2): %s", stderr)
+	if _, stderr, err = com.ExecCmd("git", "push", "origin", "master"); err != nil {
 		return err
 	}
-	log.Info("stdout(3): %s", stdout)
-	log.Info("stderr(3): %s", stderr)
+	// log.Info("stderr(3): %s", stderr)
+	_ = stderr
 	return nil
 }
 
