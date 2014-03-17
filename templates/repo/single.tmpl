@@ -24,13 +24,15 @@
             {{$paths := .Paths}}
             {{ $l := Subtract $n 1}}
             <ol class="breadcrumb">
-                <li class="root dir"><a href="/{{$username}}/{{$reponame}}/tree/{{$branchname}}">{{.Repository.Name}}</a></li>
+                <li class="root dir">
+                    <a href="/{{$username}}/{{$reponame}}/tree/{{$branchname}}">{{.Repository.Name}}</a></li>
                 {{range $i, $v := $treenames}}
                 <li class="dir">
-                {{if eq $i $l}}{{$v}}
-                {{else}}
-                <a href="/{{$username}}/{{$reponame}}/tree/{{$branchname}}/{{index $paths $i}}">{{$v}}</a>&nbsp;
-                {{end}}</li>
+                    {{if eq $i $l}}{{$v}}
+                    {{else}}
+                    <a href="/{{$username}}/{{$reponame}}/tree/{{$branchname}}/{{index $paths $i}}">{{$v}}</a>&nbsp;
+                    {{end}}
+                </li>
                 {{end}}
             </ol>
         </div>
@@ -43,20 +45,21 @@
             </div>
             <table class="panel-footer table file-list">
                 <thead class="hidden">
-    	            <tr>
-                        <th class="icon"></th>
-    	                <th class="name">Filename</th>
-                        <th class="text">Message</th>
-    	                <th class="date">Date modified</th>
-    	            </tr>
+                <tr>
+                    <th class="icon"></th>
+                    <th class="name">Filename</th>
+                    <th class="text">Message</th>
+                    <th class="date">Date modified</th>
+                </tr>
                 </thead>
                 <tbody>
-        			{{range .Files}}
-    				<tr {{if .IsDir}}class="is-dir"{{end}}>
-                        <td class="icon">
-                            <i class="fa {{if .IsDir}}fa-folder{{else}}fa-file-text-o{{end}}"></i>
-                        </td>
-    	                <td class="name">
+                {{range .Files}}
+                <tr
+                {{if .IsDir}}class="is-dir"{{end}}>
+                <td class="icon">
+                    <i class="fa {{if .IsDir}}fa-folder{{else}}fa-file-text-o{{end}}"></i>
+                </td>
+                <td class="name">
                             <span class="wrap">
                                 {{if .IsDir}}
                                 <a href="/{{$username}}/{{$reponame}}/tree/{{$branchname}}/{{.Path}}">{{.Name}}</a>
@@ -64,19 +67,19 @@
                                 <a href="/{{$username}}/{{$reponame}}/blob/{{$branchname}}/{{.Name}}">{{.Name}}</a>
                                 {{end}}
                             </span>
-                        </td>
-    	                <td class="text">
+                </td>
+                <td class="text">
                             <span class="wrap">
                                 {{.Message}}
                             </span>
-                        </td>
-                        <td class="date">
+                </td>
+                <td class="date">
                             <span class="wrap">
                                 {{TimeSince .Created}}
                             </span>
-                        </td>
-    				</tr>
-        			{{end}}
+                </td>
+                </tr>
+                {{end}}
                 </tbody>
             </table>
         </div>
