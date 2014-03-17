@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/codegangsta/martini"
+	// "github.com/slene/blackfriday"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/middleware"
@@ -42,6 +43,7 @@ func Single(ctx *middleware.Context, params martini.Params) {
 		params["branchname"] = "master"
 	}
 
+	// Directory and file list.
 	treename := params["_1"]
 	files, err := models.GetReposFiles(params["username"], params["reponame"],
 		params["branchname"], treename)
@@ -53,6 +55,7 @@ func Single(ctx *middleware.Context, params martini.Params) {
 	ctx.Data["Reponame"] = params["reponame"]
 	ctx.Data["Branchname"] = params["branchname"]
 
+	// Branches.
 	brs, err := models.GetBranches(params["username"], params["reponame"])
 	if err != nil {
 		ctx.Handle(200, "repo.Single", err)
@@ -70,12 +73,22 @@ func Single(ctx *middleware.Context, params martini.Params) {
 		}
 	}
 
+	// Latest commit.
 	commit, err := models.GetLastestCommit(params["username"], params["reponame"])
 	if err != nil {
 		ctx.Handle(200, "repo.Single", err)
 		return
 	}
 	ctx.Data["LatestCommit"] = commit
+
+	// README.
+	// for _, f := range files {
+	// 	if f.Name == "README.md" {
+	// ctx.Data["ReadmeName"] = "README.md"
+	// ctx.Data["ReadmeContent"] =
+	// 		break
+	// 	}
+	// }
 
 	ctx.Data["Paths"] = Paths
 	ctx.Data["Treenames"] = treenames

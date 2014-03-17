@@ -6,6 +6,7 @@ package middleware
 
 import (
 	"errors"
+	"strings"
 
 	"github.com/codegangsta/martini"
 
@@ -23,7 +24,7 @@ func RepoAssignment(redirect bool) martini.Handler {
 		)
 
 		// get repository owner
-		ctx.Repo.IsOwner = ctx.IsSigned && ctx.User.LowerName == params["username"]
+		ctx.Repo.IsOwner = ctx.IsSigned && ctx.User.LowerName == strings.ToLower(params["username"])
 
 		if !ctx.Repo.IsOwner {
 			user, err = models.GetUserByName(params["username"])
