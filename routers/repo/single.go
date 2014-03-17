@@ -65,7 +65,8 @@ func Single(ctx *middleware.Context, params martini.Params) {
 }
 
 func Setting(ctx *middleware.Context, params martini.Params) {
-	if !ctx.Repo.IsValid {
+	if !ctx.Repo.IsOwner {
+		ctx.Render.Error(404)
 		return
 	}
 
