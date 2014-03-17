@@ -20,49 +20,35 @@ func Create(ctx *middleware.Context, form auth.CreateRepoForm) {
 		return
 	}
 
-	if ctx.HasError() {
-		ctx.Render.HTML(200, "repo/create", ctx.Data)
+	if _, err := models.CreateRepository(ctx.User,
+		form.RepoName, form.Description, form.Language, form.License,
+		form.Visibility == "private", form.InitReadme == "on"); err == nil {
+		ctx.Render.Redirect("/"+ctx.User.Name+"/"+form.RepoName, 302)
 		return
-	}
-
-	// TODO: access check
-
-	user, err := models.GetUserById(form.UserId)
-	if err != nil {
-		if err.Error() == models.ErrUserNotExist.Error() {
-			ctx.RenderWithErr("User does not exist", "repo/create", &form)
-			return
-		}
-	}
-
-	if err == nil {
-		if _, err = models.CreateRepository(user,
-			form.RepoName, form.Description, form.Language, form.License,
-			form.Visibility == "private", form.InitReadme == "on"); err == nil {
-			ctx.Render.Redirect("/"+user.Name+"/"+form.RepoName, 302)
-			return
-		}
-	}
-
-	if err.Error() == models.ErrRepoAlreadyExist.Error() {
+	} else if err == models.ErrRepoAlreadyExist {
 		ctx.RenderWithErr("Repository name has already been used", "repo/create", &form)
 		return
 	}
-
-	ctx.Handle(200, "repo.Create", err)
 }
 
-func Delete(ctx *middleware.Context, form auth.DeleteRepoForm) {
-	ctx.Data["Title"] = "Delete repository"
-
-	if ctx.Req.Method == "GET" {
-		ctx.Render.HTML(200, "repo/delete", ctx.Data)
+func SettingPost(ctx *middleware.Context) {
+	if !ctx.Repo.IsOwner {
+		ctx.Render.Error(404)
 		return
 	}
 
-	if err := models.DeleteRepository(form.UserId, form.RepoId, form.UserName); err != nil {
-		ctx.Handle(200, "repo.Delete", err)
-		return
+	switch ctx.Query("action") {
+	case "delete":
+		if len(ctx.Repo.Repository.Name) == 0 || ctx.Repo.Repository.Name != ctx.Query("repository") {
+			ctx.Data["ErrorMsg"] = "Please make sure you entered repository name is correct."
+			ctx.Render.HTML(200, "repo/setting", ctx.Data)
+			return
+		}
+
+		if err := models.DeleteRepository(ctx.User.Id, ctx.Repo.Repository.Id, ctx.User.LowerName); err != nil {
+			ctx.Handle(200, "repo.Delete", err)
+			return
+		}
 	}
 
 	ctx.Render.Redirect("/", 302)
