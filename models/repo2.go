@@ -8,7 +8,7 @@ import (
 	"path"
 	"time"
 
-	git "github.com/gogits/git"
+	"github.com/gogits/git"
 )
 
 type RepoFile struct {
@@ -19,10 +19,26 @@ type RepoFile struct {
 	Size    int64
 }
 
-func GetReposFiles(userName, reposName, branchName, rpath string) ([]*RepoFile, error) {
-	f := RepoPath(userName, reposName)
+func GetBranches(userName, reposName string) ([]string, error) {
+	repo, err := git.OpenRepository(RepoPath(userName, reposName))
+	if err != nil {
+		return nil, err
+	}
 
-	repo, err := git.OpenRepository(f)
+	refs, err := repo.AllReferences()
+	if err != nil {
+		return nil, err
+	}
+
+	brs := make([]string, len(refs))
+	for i, ref := range refs {
+		brs[i] = ref.Name
+	}
+	return brs, nil
+}
+
+func GetReposFiles(userName, reposName, branchName, rpath string) ([]*RepoFile, error) {
+	repo, err := git.OpenRepository(RepoPath(userName, reposName))
 	if err != nil {
 		return nil, err
 	}
