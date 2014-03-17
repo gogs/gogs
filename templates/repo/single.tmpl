@@ -60,23 +60,19 @@
                     <i class="fa {{if .IsDir}}fa-folder{{else}}fa-file-text-o{{end}}"></i>
                 </td>
                 <td class="name">
-                            <span class="wrap">
-                                {{if .IsDir}}
-                                <a href="/{{$username}}/{{$reponame}}/tree/{{$branchname}}/{{.Path}}">{{.Name}}</a>
-                                {{else}}
-                                <a href="/{{$username}}/{{$reponame}}/blob/{{$branchname}}/{{.Name}}">{{.Name}}</a>
-                                {{end}}
-                            </span>
+                    <span class="wrap">
+                        {{if .IsDir}}
+                        <a href="/{{$username}}/{{$reponame}}/tree/{{$branchname}}/{{.Path}}">{{.Name}}</a>
+                        {{else}}
+                        <a href="/{{$username}}/{{$reponame}}/blob/{{$branchname}}/{{.Name}}">{{.Name}}</a>
+                        {{end}}
+                    </span>
                 </td>
                 <td class="text">
-                            <span class="wrap">
-                                {{.Message}}
-                            </span>
+                    <span class="wrap"><a href="/{{$username}}/{{$reponame}}/commit/{{.LastCommit}}">{{.Message}}</a></span>
                 </td>
                 <td class="date">
-                            <span class="wrap">
-                                {{TimeSince .Created}}
-                            </span>
+                    <span class="wrap">{{TimeSince .Created}}</span>
                 </td>
                 </tr>
                 {{end}}
