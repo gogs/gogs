@@ -24,7 +24,6 @@ func RepoAssignment(redirect bool) martini.Handler {
 
 		// get repository owner
 		ctx.Repo.IsOwner = ctx.IsSigned && ctx.User.LowerName == params["username"]
-		ctx.Data["IsRepositoryOwner"] = ctx.Repo.IsOwner
 
 		if !ctx.Repo.IsOwner {
 			user, err = models.GetUserByName(params["username"])
@@ -70,5 +69,6 @@ func RepoAssignment(redirect bool) martini.Handler {
 		ctx.Data["Owner"] = user
 		ctx.Data["Title"] = user.Name + "/" + repo.Name
 		ctx.Data["RepositoryLink"] = ctx.Data["Title"]
+		ctx.Data["IsRepositoryOwner"] = ctx.Repo.IsOwner
 	}
 }
