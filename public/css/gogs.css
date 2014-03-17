@@ -65,6 +65,10 @@ html, body {
     height: 46px;
 }
 
+#gogs-nav-logo{
+    padding-left: 0;
+}
+
 .gogs-nav-item:hover,
 .gogs-nav-item:focus {
     color: #fff;
@@ -405,6 +409,7 @@ html, body {
 
 .gogs-repo-nav h3 .fa {
     color: #BBB;
+    margin-left: 0;
 }
 
 .gogs-repo-btns {
@@ -481,7 +486,7 @@ html, body {
 
 .activity-list .info {
     float: left;
-    padding:0 0 0 10px;
+    padding: 0 0 0 10px;
     line-height: 1.7em;
 }
 
@@ -531,6 +536,10 @@ html, body {
 }
 
 /* #gogs-source */
+#gogs-source {
+    margin-top: -20px;
+}
+
 #gogs-source .source-toolbar:after {
     clear: both;
 }
@@ -589,7 +598,7 @@ html, body {
 
 .file-list .date .wrap {
     max-width: 120px;
-    padding: 0 20px 0 0; 
+    padding: 0 20px 0 0;
 }
 
 .file-list .date {
