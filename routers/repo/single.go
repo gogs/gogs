@@ -131,8 +131,15 @@ func Setting(ctx *middleware.Context, params martini.Params) {
 	ctx.Render.HTML(200, "repo/setting", ctx.Data)
 }
 
-func Commits(ctx *middleware.Context) {
+func Commits(ctx *middleware.Context, params martini.Params) {
 	ctx.Data["IsRepoToolbarCommits"] = true
+	commits, err := models.GetCommits(params["username"],
+		params["reponame"], params["branchname"])
+	if err != nil {
+		ctx.Render.Error(404)
+		return
+	}
+	ctx.Data["Commits"] = commits
 	ctx.Render.HTML(200, "repo/commits", ctx.Data)
 }
 

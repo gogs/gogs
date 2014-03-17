@@ -191,3 +191,15 @@ func GetLastestCommit(userName, repoName string) (*Commit, error) {
 	}
 	return commit, nil
 }
+
+func GetCommits(userName, reposName, branchname string) ([]*git.Commit, error) {
+	repo, err := git.OpenRepository(RepoPath(userName, reposName))
+	if err != nil {
+		return nil, err
+	}
+	r, err := repo.LookupReference(fmt.Sprintf("refs/heads/%s", branchname))
+	if err != nil {
+		return nil, err
+	}
+	return r.AllCommits()
+}
