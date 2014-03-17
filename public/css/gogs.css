@@ -67,6 +67,8 @@ html, body {
 
 #gogs-nav-logo{
     padding-left: 0;
+    padding-right: 0;
+    margin-right: 10px;
 }
 
 .gogs-nav-item:hover,
@@ -618,6 +620,67 @@ html, body {
 .file-content .file-body {
     padding: 30px 30px 50px;
 }
+
+.branch-list th{
+    background-color: #FFF;
+    line-height: 28px !important;
+}
+
+.branch-list td{
+    line-height: 36px !important;
+}
+
+.branch-box tr:hover td{
+    background-color: rgba(19, 95, 215, 0.06) !important;
+}
+
+.branch-box .name{
+    padding-left: 20px;
+    font-size: 15px;
+}
+
+.branch-box .action{
+    width: 150px;
+}
+
+.branch-box td.date,.branch-box td.behind,.branch-box td.ahead{
+    width: 120px;
+    font-family: Verdana, Arial, sans-serif;
+}
+
+.branch-box .graph{
+    display: block;
+    height: 3px;
+}
+
+.branch-box .behind{
+    text-align: right;
+    direction: rtl;
+}
+
+.branch-box .behind .graph{
+    background-color: #888;
+}
+
+.branch-box .ahead .graph{
+    background-color: #0093c4;
+}
+
+.branch-box .branch-main{
+    background-color: #444;
+    color: #FFF;
+    border-color: #444;
+}
+
+.branch-box .branch-main a{
+    color: #FFF;
+}
+
+.branch-box .branch-main .name .btn{
+    margin-left: .5em;
+}
+
+/* wrapper and footer */
 
 #wrapper {
     min-height: 100%;

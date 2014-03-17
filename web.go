@@ -77,6 +77,7 @@ func runWeb(*cli.Context) {
 	m.Get("/:username/:reponame/commits", middleware.SignInRequire(false), middleware.RepoAssignment(true), repo.Commits)
 	m.Get("/:username/:reponame/issues", middleware.SignInRequire(false), middleware.RepoAssignment(true), repo.Issues)
 	m.Get("/:username/:reponame/pulls", middleware.SignInRequire(false), middleware.RepoAssignment(true), repo.Pulls)
+	m.Get("/:username/:reponame/branches", middleware.SignInRequire(false), middleware.RepoAssignment(true), repo.Branches)
 	m.Get("/:username/:reponame/tree/:branchname/**",
 		middleware.SignInRequire(false), middleware.RepoAssignment(true), repo.Single)
 	m.Get("/:username/:reponame/tree/:branchname",

@@ -13,6 +13,26 @@ import (
 	"github.com/gogits/gogs/modules/middleware"
 )
 
+func Branches(ctx *middleware.Context, params martini.Params) {
+	if !ctx.Repo.IsValid {
+		return
+	}
+
+	ctx.Data["Username"] = params["username"]
+	ctx.Data["Reponame"] = params["reponame"]
+
+	brs, err := models.GetBranches(params["username"], params["reponame"])
+	if err != nil {
+		ctx.Handle(200, "repo.Branches", err)
+		return
+	}
+
+	ctx.Data["Branches"] = brs
+	ctx.Data["IsRepoToolbarBranches"] = true
+
+	ctx.Render.HTML(200, "repo/branches", ctx.Data)
+}
+
 func Single(ctx *middleware.Context, params martini.Params) {
 	if !ctx.Repo.IsValid {
 		return
