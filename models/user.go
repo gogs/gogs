@@ -190,7 +190,7 @@ func (user *User) EncodePasswd() error {
 
 // UserPath returns the path absolute path of user repositories.
 func UserPath(userName string) string {
-	return filepath.Join(RepoRootPath, userName)
+	return filepath.Join(RepoRootPath, strings.ToLower(userName))
 }
 
 func GetUserByKeyId(keyId int64) (*User, error) {
