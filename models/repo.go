@@ -182,16 +182,23 @@ func initRepoCommit(tmpPath string, sig *git.Signature) error {
 	}
 	defer os.Chdir(curPath)
 
-	if _, _, err := com.ExecCmd("git", "add", "--all"); err != nil {
+	var stdout, stderr string
+	if stdout, stderr, err = com.ExecCmd("git", "add", "--all"); err != nil {
 		return err
 	}
-	if _, _, err := com.ExecCmd("git", "commit", fmt.Sprintf("--author='%s <%s>'", sig.Name, sig.Email),
+	log.Info("stdout(1): %s", stdout)
+	log.Info("stderr(1): %s", stderr)
+	if stdout, stderr, err = com.ExecCmd("git", "commit", fmt.Sprintf("--author='%s <%s>'", sig.Name, sig.Email),
 		"-m", "Init commit"); err != nil {
 		return err
 	}
-	if _, _, err := com.ExecCmd("git", "push", "origin", "master"); err != nil {
+	log.Info("stdout(2): %s", stdout)
+	log.Info("stderr(2): %s", stderr)
+	if stdout, stderr, err = com.ExecCmd("git", "push", "origin", "master"); err != nil {
 		return err
 	}
+	log.Info("stdout(3): %s", stdout)
+	log.Info("stderr(3): %s", stderr)
 	return nil
 }
 
