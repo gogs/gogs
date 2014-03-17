@@ -104,7 +104,11 @@ func Single(ctx *middleware.Context, params martini.Params) {
 		} else if blob, err := readmeFile.LookupBlob(); err != nil {
 			ctx.Data["FileIsLarge"] = true
 		} else {
-			ctx.Data["ReadmeContent"] = string(base.RenderMarkdown(blob.Contents()))
+			// current repo branch link
+			urlPrefix := "http://" + base.Domain + "/" + ctx.Repo.Owner.LowerName + "/" +
+				ctx.Repo.Repository.Name + "/blob/" + params["branchname"]
+
+			ctx.Data["ReadmeContent"] = string(base.RenderMarkdown(blob.Contents(), urlPrefix))
 		}
 	}
 
