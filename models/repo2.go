@@ -37,28 +37,6 @@ type RepoFile struct {
 	LastCommit string
 }
 
-func findTree(repo *git.Repository, tree *git.Tree, rpath string) *git.Tree {
-	if rpath == "" {
-		return tree
-	}
-	paths := strings.Split(rpath, "/")
-	var g = tree
-	for _, p := range paths {
-		s := g.EntryByName(p)
-		if s == nil {
-			return nil
-		}
-		g, err := repo.LookupTree(s.Id)
-		if err != nil {
-			return nil
-		}
-		if g == nil {
-			return nil
-		}
-	}
-	return g
-}
-
 func (file *RepoFile) LookupBlob() (*git.Blob, error) {
 	if file.Repo == nil {
 		return nil, ErrRepoFileNotLoaded
@@ -116,7 +94,7 @@ func GetReposFiles(userName, reposName, branchName, rpath string) ([]*RepoFile, 
 				if cm.ParentCount() == 0 {
 					break
 				} else if cm.ParentCount() == 1 {
-					pt := findTree(repo, cm.Parent(0).Tree, dirname)
+					pt, _ := repo.SubTree(cm.Parent(0).Tree, dirname)
 					if pt == nil {
 						break
 					}
@@ -131,7 +109,7 @@ func GetReposFiles(userName, reposName, branchName, rpath string) ([]*RepoFile, 
 					var sameIdcnt = 0
 					for i := 0; i < cm.ParentCount(); i++ {
 						p := cm.Parent(i)
-						pt := findTree(repo, p.Tree, dirname)
+						pt, _ := repo.SubTree(p.Tree, dirname)
 						var pEntry *git.TreeEntry
 						if pt != nil {
 							pEntry = pt.EntryByName(entry.Name)
