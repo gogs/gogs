@@ -102,7 +102,7 @@ func Single(ctx *middleware.Context, params martini.Params) {
 		if readmeFile.Size > 1024*1024 || readmeFile.Filemode != git.FileModeBlob {
 			ctx.Data["FileIsLarge"] = true
 		} else if blob, err := readmeFile.LookupBlob(); err != nil {
-			ctx.Data["FileIsLarge"] = true
+			ctx.Data["ReadmeExist"] = false
 		} else {
 			// current repo branch link
 			urlPrefix := "http://" + base.Domain + "/" + ctx.Repo.Owner.LowerName + "/" +
