@@ -48,6 +48,7 @@ func init() {
 		fmt.Printf("Cannot load config file '%s'\n", cfgPath)
 		os.Exit(2)
 	}
+	Cfg.BlockMode = false
 
 	cfgPath = filepath.Join(workDir, "custom/conf/app.ini")
 	if com.IsFile(cfgPath) {

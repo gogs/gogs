@@ -11,11 +11,12 @@ github.com/Unknwon/cae=
 github.com/Unknwon/goconfig=
 github.com/dchest/scrypt=
 github.com/go-sql-driver/mysql=
+github.com/lib/pq=
 github.com/lunny/xorm=
-github.com/slene/blackfriday=
 github.com/gogits/logs=
 github.com/gogits/binding=
 github.com/gogits/git=
+github.com/gogits/gfm=
 
 [res]
 include=templates|public|conf

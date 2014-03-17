@@ -9,11 +9,13 @@ import (
 	"time"
 )
 
+// Access types.
 const (
 	AU_READABLE = iota + 1
 	AU_WRITABLE
 )
 
+// Access represents the accessibility of user and repository.
 type Access struct {
 	Id       int64
 	UserName string    `xorm:"unique(s)"`
@@ -22,12 +24,13 @@ type Access struct {
 	Created  time.Time `xorm:"created"`
 }
 
+// AddAccess adds new access record.
 func AddAccess(access *Access) error {
 	_, err := orm.Insert(access)
 	return err
 }
 
-// if one user can read or write one repository
+// HasAccess returns true if someone can read or write given repository.
 func HasAccess(userName, repoName string, mode int) (bool, error) {
 	return orm.Get(&Access{
 		Id:       0,

@@ -18,6 +18,7 @@ import (
 	"github.com/gogits/gogs/modules/log"
 )
 
+// SignedInId returns the id of signed in user.
 func SignedInId(session sessions.Session) int64 {
 	userId := session.Get("userId")
 	if userId == nil {
@@ -32,6 +33,7 @@ func SignedInId(session sessions.Session) int64 {
 	return 0
 }
 
+// SignedInName returns the name of signed in user.
 func SignedInName(session sessions.Session) string {
 	userName := session.Get("userName")
 	if userName == nil {
@@ -43,6 +45,7 @@ func SignedInName(session sessions.Session) string {
 	return ""
 }
 
+// SignedInUser returns the user object of signed user.
 func SignedInUser(session sessions.Session) *models.User {
 	id := SignedInId(session)
 	if id <= 0 {
@@ -57,6 +60,7 @@ func SignedInUser(session sessions.Session) *models.User {
 	return user
 }
 
+// IsSignedIn check if any user has signed in.
 func IsSignedIn(session sessions.Session) bool {
 	return SignedInId(session) > 0
 }
