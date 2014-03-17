@@ -18,6 +18,7 @@ import (
 var (
 	AppVer  string
 	AppName string
+	Domain  string
 	Cfg     *goconfig.ConfigFile
 )
 
@@ -58,4 +59,5 @@ func init() {
 	Cfg.BlockMode = false
 
 	AppName = Cfg.MustValue("", "APP_NAME")
+	Domain = Cfg.MustValue("server", "DOMAIN")
 }
