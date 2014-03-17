@@ -50,6 +50,13 @@ func Single(ctx *middleware.Context, params martini.Params) {
 		}
 	}
 
+	commit, err := models.GetLastestCommit(params["username"], params["reponame"])
+	if err != nil {
+		ctx.Handle(200, "repo.Single", err)
+		return
+	}
+	ctx.Data["LatestCommit"] = commit
+
 	ctx.Data["Paths"] = Paths
 	ctx.Data["Treenames"] = treenames
 	ctx.Data["IsRepoToolbarSource"] = true
