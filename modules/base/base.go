@@ -4,8 +4,6 @@
 
 package base
 
-import ()
-
 type (
 	// Type TmplData represents data in the templates.
 	TmplData map[string]interface{}

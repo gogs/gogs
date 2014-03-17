@@ -19,7 +19,9 @@ import (
 	"github.com/gogits/gogs/modules/base"
 )
 
-var UserPasswdSalt string
+var (
+	UserPasswdSalt string
+)
 
 func init() {
 	UserPasswdSalt = base.Cfg.MustValue("security", "USER_PASSWD_SALT")
@@ -37,7 +39,7 @@ const (
 	LT_LDAP
 )
 
-// A User represents the object of individual and member of organization.
+// User represents the object of individual and member of organization.
 type User struct {
 	Id            int64
 	LowerName     string `xorm:"unique not null"`
@@ -58,15 +60,16 @@ type User struct {
 	Updated       time.Time `xorm:"updated"`
 }
 
+// HomeLink returns the user home page link.
 func (user *User) HomeLink() string {
 	return "/user/" + user.LowerName
 }
 
+// AvatarLink returns the user gravatar link.
 func (user *User) AvatarLink() string {
 	return "http://1.gravatar.com/avatar/" + user.Avatar
 }
 
-// A Follow represents
 type Follow struct {
 	Id       int64
 	UserId   int64     `xorm:"unique(s)"`
@@ -87,6 +90,7 @@ func IsUserExist(name string) (bool, error) {
 	return orm.Get(&User{LowerName: strings.ToLower(name)})
 }
 
+// IsEmailUsed returns true if the e-mail has been used.
 func IsEmailUsed(email string) (bool, error) {
 	return orm.Get(&User{Email: email})
 }
@@ -121,16 +125,12 @@ func RegisterUser(user *User) (err error) {
 	user.AvatarEmail = user.Email
 	if err = user.EncodePasswd(); err != nil {
 		return err
-	}
-	if _, err = orm.Insert(user); err != nil {
+	} else if _, err = orm.Insert(user); err != nil {
 		return err
-	}
-
-	if err = os.MkdirAll(UserPath(user.Name), os.ModePerm); err != nil {
-
+	} else if err = os.MkdirAll(UserPath(user.Name), os.ModePerm); err != nil {
 		if _, err := orm.Id(user.Id).Delete(&User{}); err != nil {
 			return errors.New(fmt.Sprintf(
-				"both create userpath %s and delete table record faild", user.Name))
+				"both create userpath %s and delete table record faild: %v", user.Name, err))
 		}
 		return err
 	}
@@ -188,23 +188,28 @@ func (user *User) EncodePasswd() error {
 	return err
 }
 
+// UserPath returns the path absolute path of user repositories.
 func UserPath(userName string) string {
 	return filepath.Join(RepoRootPath, userName)
 }
 
 func GetUserByKeyId(keyId int64) (*User, error) {
 	user := new(User)
-	has, err := orm.Sql("select a.* from user as a, public_key as b where a.id = b.owner_id and b.id=?", keyId).Get(user)
+	rawSql := "SELECT a.* FROM user AS a, public_key AS b WHERE a.id = b.owner_id AND b.id=?"
+	if base.Cfg.MustValue("database", "DB_TYPE") == "postgres" {
+		rawSql = "SELECT a.* FROM \"user\" AS a, public_key AS b WHERE a.id = b.owner_id AND b.id=?"
+	}
+	has, err := orm.Sql(rawSql, keyId).Get(user)
 	if err != nil {
 		return nil, err
-	}
-	if !has {
+	} else if !has {
 		err = errors.New("not exist key owner")
 		return nil, err
 	}
 	return user, nil
 }
 
+// GetUserById returns the user object by given id if exists.
 func GetUserById(id int64) (*User, error) {
 	user := new(User)
 	has, err := orm.Id(id).Get(user)
@@ -217,6 +222,7 @@ func GetUserById(id int64) (*User, error) {
 	return user, nil
 }
 
+// GetUserByName returns the user object by given name if exists.
 func GetUserByName(name string) (*User, error) {
 	if len(name) == 0 {
 		return nil, ErrUserNotExist
@@ -227,8 +233,7 @@ func GetUserByName(name string) (*User, error) {
 	has, err := orm.Get(user)
 	if err != nil {
 		return nil, err
-	}
-	if !has {
+	} else if !has {
 		return nil, ErrUserNotExist
 	}
 	return user, nil
@@ -242,32 +247,39 @@ func LoginUserPlain(name, passwd string) (*User, error) {
 	}
 
 	has, err := orm.Get(&user)
-	if !has {
-		err = ErrUserNotExist
-	}
 	if err != nil {
 		return nil, err
+	} else if !has {
+		err = ErrUserNotExist
 	}
 	return &user, nil
 }
 
 // FollowUser marks someone be another's follower.
-func FollowUser(userId int64, followId int64) error {
+func FollowUser(userId int64, followId int64) (err error) {
 	session := orm.NewSession()
 	defer session.Close()
 	session.Begin()
-	_, err := session.Insert(&Follow{UserId: userId, FollowId: followId})
-	if err != nil {
+
+	if _, err = session.Insert(&Follow{UserId: userId, FollowId: followId}); err != nil {
 		session.Rollback()
 		return err
 	}
-	_, err = session.Exec("update user set num_followers = num_followers + 1 where id = ?", followId)
-	if err != nil {
+
+	rawSql := "UPDATE user SET num_followers = num_followers + 1 WHERE id = ?"
+	if base.Cfg.MustValue("database", "DB_TYPE") == "postgres" {
+		rawSql = "UPDATE \"user\" SET num_followers = num_followers + 1 WHERE id = ?"
+	}
+	if _, err = session.Exec(rawSql, followId); err != nil {
 		session.Rollback()
 		return err
 	}
-	_, err = session.Exec("update user set num_followings = num_followings + 1 where id = ?", userId)
-	if err != nil {
+
+	rawSql = "UPDATE user SET num_followings = num_followings + 1 WHERE id = ?"
+	if base.Cfg.MustValue("database", "DB_TYPE") == "postgres" {
+		rawSql = "UPDATE \"user\" SET num_followings = num_followings + 1 WHERE id = ?"
+	}
+	if _, err = session.Exec(rawSql, userId); err != nil {
 		session.Rollback()
 		return err
 	}
@@ -275,22 +287,30 @@ func FollowUser(userId int64, followId int64) error {
 }
 
 // UnFollowUser unmarks someone be another's follower.
-func UnFollowUser(userId int64, unFollowId int64) error {
+func UnFollowUser(userId int64, unFollowId int64) (err error) {
 	session := orm.NewSession()
 	defer session.Close()
 	session.Begin()
-	_, err := session.Delete(&Follow{UserId: userId, FollowId: unFollowId})
-	if err != nil {
+
+	if _, err = session.Delete(&Follow{UserId: userId, FollowId: unFollowId}); err != nil {
 		session.Rollback()
 		return err
 	}
-	_, err = session.Exec("update user set num_followers = num_followers - 1 where id = ?", unFollowId)
-	if err != nil {
+
+	rawSql := "UPDATE user SET num_followers = num_followers - 1 WHERE id = ?"
+	if base.Cfg.MustValue("database", "DB_TYPE") == "postgres" {
+		rawSql = "UPDATE \"user\" SET num_followers = num_followers - 1 WHERE id = ?"
+	}
+	if _, err = session.Exec(rawSql, unFollowId); err != nil {
 		session.Rollback()
 		return err
 	}
-	_, err = session.Exec("update user set num_followings = num_followings - 1 where id = ?", userId)
-	if err != nil {
+
+	rawSql = "UPDATE user SET num_followings = num_followings - 1 WHERE id = ?"
+	if base.Cfg.MustValue("database", "DB_TYPE") == "postgres" {
+		rawSql = "UPDATE \"user\" SET num_followings = num_followings - 1 WHERE id = ?"
+	}
+	if _, err = session.Exec(rawSql, userId); err != nil {
 		session.Rollback()
 		return err
 	}

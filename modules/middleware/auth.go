@@ -8,6 +8,7 @@ import (
 	"github.com/codegangsta/martini"
 )
 
+// SignInRequire requires user to sign in.
 func SignInRequire(redirect bool) martini.Handler {
 	return func(ctx *Context) {
 		if !ctx.IsSigned {
@@ -19,6 +20,7 @@ func SignInRequire(redirect bool) martini.Handler {
 	}
 }
 
+// SignOutRequire requires user to sign out.
 func SignOutRequire() martini.Handler {
 	return func(ctx *Context) {
 		if ctx.IsSigned {

@@ -13,7 +13,8 @@ There are some very good products in this category such as [gitlab](http://gitla
 
 ## Overview
 
-Please see [Wiki](https://github.com/gogits/gogs/wiki) for project design, develop specification, change log and road map.
+- Please see [Wiki](https://github.com/gogits/gogs/wiki) for project design, develop specification, change log and road map.
+- See [Trello Broad](https://trello.com/b/uxAoeLUl/gogs-go-git-service) to follow the develop team.
 
 ## Features
 
@@ -24,6 +25,7 @@ Please see [Wiki](https://github.com/gogits/gogs/wiki) for project design, devel
 - User profile page.
 - Repository viewer.
 - Gravatar support.
+- Supports MySQL and PostgreSQL.
 
 ## Installation
 
@@ -40,4 +42,4 @@ There are two ways to install Gogs:
 
 ## Contributors
 
-This project was launched by [Unknown](https://github.com/Unknwon), [lunny](https://github.com/lunny) and [fuxiaohei](https://github.com/fuxiaohei). See [contributors page](https://github.com/gogits/gogs/graphs/contributors) for full list of contributors.
+This project was launched by [Unknown](https://github.com/Unknwon) and [lunny](https://github.com/lunny); [fuxiaohei](https://github.com/fuxiaohei) and [slene](https://github.com/slene) joined the team soon after. See [contributors page](https://github.com/gogits/gogs/graphs/contributors) for full list of contributors.

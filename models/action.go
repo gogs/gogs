@@ -19,7 +19,7 @@ const (
 	OP_PULL_REQUEST
 )
 
-// An Action represents
+// Action represents user operation type and information to the repository.
 type Action struct {
 	Id          int64
 	UserId      int64 // Receiver user id.
