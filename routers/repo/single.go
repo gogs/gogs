@@ -33,6 +33,13 @@ func Single(ctx *middleware.Context, params martini.Params) {
 	ctx.Data["Reponame"] = params["reponame"]
 	ctx.Data["Branchname"] = params["branchname"]
 
+	brs, err := models.GetBranches(params["username"], params["reponame"])
+	if err != nil {
+		ctx.Handle(200, "repo.Single", err)
+		return
+	}
+	ctx.Data["Branches"] = brs
+
 	var treenames []string
 	Paths := make([]string, 0)
 
@@ -42,6 +49,13 @@ func Single(ctx *middleware.Context, params martini.Params) {
 			Paths = append(Paths, strings.Join(treenames[0:i+1], "/"))
 		}
 	}
+
+	commit, err := models.GetLastestCommit(params["username"], params["reponame"])
+	if err != nil {
+		ctx.Handle(200, "repo.Single", err)
+		return
+	}
+	ctx.Data["LatestCommit"] = commit
 
 	ctx.Data["Paths"] = Paths
 	ctx.Data["Treenames"] = treenames

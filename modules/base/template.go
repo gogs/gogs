@@ -19,6 +19,7 @@ var TemplateFuncs template.FuncMap = map[string]interface{}{
 	"AppVer": func() string {
 		return AppVer
 	},
+	"AvatarLink": AvatarLink,
 	"str2html":   Str2html,
 	"TimeSince":  TimeSince,
 	"FileSize":   FileSize,
