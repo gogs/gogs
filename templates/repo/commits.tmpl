@@ -4,6 +4,11 @@
 {{template "repo/toolbar" .}}
 <div id="gogs-body" class="container">
     <div id="gogs-commits">
+    <ul>
+    {{range .Commits}}
+    <li>{{.Committer.Name}} - {{.Id}} - {{.Message}} - {{.Committer.When}}</li>
+    {{end}}
+    </ul>
     </div>
 </div>
 {{template "base/footer" .}}
