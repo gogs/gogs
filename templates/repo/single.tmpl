@@ -42,10 +42,10 @@
 
         <div class="panel panel-default info-box">
             <div class="panel-heading info-head">
-                <a href="/{{$username}}/{{$reponame}}/commit/{{.LatestCommit.SHA}}">{{.LatestCommit.Message}}</a>
+                <a href="/{{$username}}/{{$reponame}}/commit/{{.LastCommit.Oid.String}}">{{.LastCommit.Message}}</a>
             </div>
             <div class="panel-body info-content">
-                <a href="/user/{{.LatestCommit.Author}}">{{.LatestCommit.Author}}</a> <span class="text-muted">{{TimeSince .LatestCommit.Date}}</span>
+                <a href="/user/{{.LastCommit.Author.Name}}">{{.LastCommit.Author.Name}}</a> <span class="text-muted">{{TimeSince .LastCommit.Author.When}}</span>
             </div>
             <table class="panel-footer table file-list">
                 <thead class="hidden">

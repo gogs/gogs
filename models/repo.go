@@ -400,15 +400,6 @@ func DeleteRepository(userId, repoId int64, userName string) (err error) {
 	return nil
 }
 
-// Commit represents a git commit.
-type Commit struct {
-	Author  string
-	Email   string
-	Date    time.Time
-	SHA     string
-	Message string
-}
-
 var (
 	ErrRepoFileNotLoaded = fmt.Errorf("repo file not loaded")
 )
@@ -553,34 +544,16 @@ func GetReposFiles(userName, reposName, branchName, rpath string) ([]*RepoFile, 
 }
 
 // GetLastestCommit returns the latest commit of given repository.
-func GetLastestCommit(userName, repoName string) (*Commit, error) {
-	stdout, _, err := com.ExecCmd("git", "--git-dir="+RepoPath(userName, repoName), "log", "-1")
+func GetLastCommit(userName, repoName, branchname string) (*git.Commit, error) {
+	repo, err := git.OpenRepository(RepoPath(userName, repoName))
 	if err != nil {
 		return nil, err
 	}
-
-	commit := new(Commit)
-	for _, line := range strings.Split(stdout, "\n") {
-		if len(line) == 0 {
-			continue
-		}
-		switch {
-		case line[0] == 'c':
-			commit.SHA = line[7:]
-		case line[0] == 'A':
-			infos := strings.SplitN(line, " ", 3)
-			commit.Author = infos[1]
-			commit.Email = infos[2][1 : len(infos[2])-1]
-		case line[0] == 'D':
-			commit.Date, err = time.Parse("Mon Jan 02 15:04:05 2006 -0700", line[8:])
-			if err != nil {
-				return nil, err
-			}
-		case line[:4] == "    ":
-			commit.Message = line[4:]
-		}
+	r, err := repo.LookupReference(fmt.Sprintf("refs/heads/%s", branchname))
+	if err != nil {
+		return nil, err
 	}
-	return commit, nil
+	return r.LastCommit()
 }
 
 // GetCommits returns all commits of given branch of repository.
