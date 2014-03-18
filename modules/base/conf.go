@@ -13,13 +13,23 @@ import (
 
 	"github.com/Unknwon/com"
 	"github.com/Unknwon/goconfig"
+
+	"github.com/gogits/gogs/modules/log"
 )
 
+// Mailer represents a mail service.
+type Mailer struct {
+	Name         string
+	Host         string
+	User, Passwd string
+}
+
 var (
-	AppVer  string
-	AppName string
-	Domain  string
-	Cfg     *goconfig.ConfigFile
+	AppVer      string
+	AppName     string
+	Domain      string
+	Cfg         *goconfig.ConfigFile
+	MailService *Mailer
 )
 
 func exeDir() (string, error) {
@@ -59,6 +69,17 @@ func init() {
 	}
 	Cfg.BlockMode = false
 
-	AppName = Cfg.MustValue("", "APP_NAME")
+	AppName = Cfg.MustValue("", "APP_NAME", "Gogs: Go Git Service")
 	Domain = Cfg.MustValue("server", "DOMAIN")
+
+	// Check mailer setting.
+	if Cfg.MustBool("mailer", "ENABLED") {
+		MailService = &Mailer{
+			Name:   Cfg.MustValue("mailer", "NAME", AppName),
+			Host:   Cfg.MustValue("mailer", "HOST", "127.0.0.1:25"),
+			User:   Cfg.MustValue("mailer", "USER", "example@example.com"),
+			Passwd: Cfg.MustValue("mailer", "PASSWD", "******"),
+		}
+		log.Info("Mail Service Enabled")
+	}
 }
