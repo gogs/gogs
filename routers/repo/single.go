@@ -182,10 +182,12 @@ func Commits(ctx *middleware.Context, params martini.Params) {
 	ctx.Render.HTML(200, "repo/commits", ctx.Data)
 }
 
-func Issues(ctx *middleware.Context) string {
-	return "This is issues page"
+func Issues(ctx *middleware.Context) {
+	ctx.Data["IsRepoToolbarIssues"] = true
+	ctx.Render.HTML(200, "repo/issues", ctx.Data)
 }
 
-func Pulls(ctx *middleware.Context) string {
-	return "This is pulls page"
+func Pulls(ctx *middleware.Context) {
+	ctx.Data["IsRepoToolbarPulls"] = true
+	ctx.Render.HTML(200, "repo/pulls", ctx.Data)
 }
