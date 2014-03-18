@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
+	"strings"
 
 	"github.com/codegangsta/cli"
 	"github.com/codegangsta/martini"
@@ -34,8 +35,20 @@ gogs web`,
 	Flags:  []cli.Flag{},
 }
 
+// Check run mode(Default of martini is Dev).
+func checkRunMode() {
+	switch base.Cfg.MustValue("", "RUN_MODE") {
+	case "prod":
+		martini.Env = martini.Prod
+	case "test":
+		martini.Env = martini.Test
+	}
+	log.Info("Run Mode: %s", strings.Title(martini.Env))
+}
+
 func runWeb(*cli.Context) {
 	log.Info("%s %s", base.AppName, base.AppVer)
+	checkRunMode()
 
 	m := martini.Classic()
 
