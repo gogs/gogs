@@ -1,4 +1,4 @@
-// Copyright 2013 gopm authors.
+// Copyright 2013-2014 gopm authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License"): you may
 // not use this file except in compliance with the License. You may obtain
@@ -110,8 +110,7 @@ func runBin(ctx *cli.Context) {
 
 	// Change to repository path.
 	log.Log("Changing work directory to %s", repoPath)
-	err = os.Chdir(repoPath)
-	if err != nil {
+	if err = os.Chdir(repoPath); err != nil {
 		log.Error("bin", "Fail to change work directory:")
 		log.Fatal("", "\t"+err.Error())
 	}
@@ -123,6 +122,7 @@ func runBin(ctx *cli.Context) {
 		os.RemoveAll(path.Join(repoPath, doc.VENDOR))
 	}()
 
+	includes := make([]string, 0, 3)
 	// Check if previous steps were successful.
 	if com.IsFile(doc.GOPM_FILE_NAME) {
 		log.Trace("Loading gopmfile...")
@@ -133,6 +133,8 @@ func runBin(ctx *cli.Context) {
 		if err == nil {
 			log.Log("Target name: %s", pkgName)
 		}
+
+		includes = strings.Split(gf.MustValue("res", "include"), "|")
 	}
 
 	if len(pkgName) == 0 {
@@ -157,19 +159,29 @@ func runBin(ctx *cli.Context) {
 	}
 
 	if com.IsExist(movePath + "/" + binName) {
-		err = os.Remove(movePath + "/" + binName)
-		if err != nil {
+		if err = os.Remove(movePath + "/" + binName); err != nil {
 			log.Warn("Cannot remove binary in work directory:")
 			log.Warn("\t %s", err)
 		}
 	}
 
-	err = os.Rename(binName, movePath+"/"+binName)
-	if err != nil {
+	if err = os.Rename(binName, movePath+"/"+binName); err != nil {
 		log.Error("bin", "Fail to move binary:")
 		log.Fatal("", "\t"+err.Error())
 	}
 	os.Chmod(movePath+"/"+binName, os.ModePerm)
+
+	if len(includes) > 0 {
+		log.Log("Copying resources to %s", movePath)
+		for _, include := range includes {
+			if com.IsDir(include) {
+				if err = com.CopyDir(include, filepath.Join(movePath, include)); err != nil {
+					log.Error("bin", "Fail to copy following resource:")
+					log.Error("", "\t"+include)
+				}
+			}
+		}
+	}
 
 	log.Log("Changing work directory back to %s", wd)
 	os.Chdir(wd)

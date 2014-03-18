@@ -14,11 +14,14 @@ Please see **[Documentation](https://github.com/gpmgo/docs)** before you ever st
 # Commands
 
 ```
+NAME:
+   gopm - Go Package Manager
+
 USAGE:
    gopm [global options] command [command options] [arguments...]
 
 VERSION:
-   0.6.3.0313
+   0.6.4.0318
 
 COMMANDS:
    get		fetch remote package(s) and dependencies to local repository
@@ -30,7 +33,7 @@ COMMANDS:
    update	check and update gopm resources including itself
    config	configurate gopm global settings
    help, h	Shows a list of commands or help for one command
-
+   
 GLOBAL OPTIONS:
    --noterm		disable color output
    --version, -v	print the version

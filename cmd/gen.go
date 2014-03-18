@@ -59,7 +59,6 @@ func runGen(ctx *cli.Context) {
 	targetPath := parseTarget(gf.MustValue("target", "path"))
 	// Get and set dependencies.
 	imports := doc.GetAllImports([]string{workDir}, targetPath, ctx.Bool("example"))
-	log.Log("%v", imports)
 	for _, p := range imports {
 		p = doc.GetProjectPath(p)
 		// Skip subpackage(s) of current project.
