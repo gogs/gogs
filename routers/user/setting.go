@@ -14,10 +14,11 @@ import (
 	"github.com/gogits/gogs/modules/middleware"
 )
 
-// render user setting page (email, website modify)
+// Render user setting page (email, website modify)
 func Setting(ctx *middleware.Context, form auth.UpdateProfileForm) {
 	ctx.Data["Title"] = "Setting"
-	ctx.Data["PageIsUserSetting"] = true
+	ctx.Data["PageIsUserSetting"] = true // For navbar arrow.
+	ctx.Data["IsUserPageSetting"] = true // For setting nav highlight.
 
 	user := ctx.User
 	ctx.Data["Owner"] = user
@@ -50,6 +51,7 @@ func Setting(ctx *middleware.Context, form auth.UpdateProfileForm) {
 func SettingPassword(ctx *middleware.Context, form auth.UpdatePasswdForm) {
 	ctx.Data["Title"] = "Password"
 	ctx.Data["PageIsUserSetting"] = true
+	ctx.Data["IsUserPageSettingPasswd"] = true
 
 	if ctx.Req.Method == "GET" {
 		ctx.Render.HTML(200, "user/password", ctx.Data)
@@ -149,20 +151,23 @@ func SettingSSHKeys(ctx *middleware.Context, form auth.AddSSHKeyForm) {
 	}
 
 	ctx.Data["PageIsUserSetting"] = true
+	ctx.Data["IsUserPageSettingSSH"] = true
 	ctx.Data["Keys"] = keys
 	ctx.Render.HTML(200, "user/publickey", ctx.Data)
 }
 
 func SettingNotification(ctx *middleware.Context) {
-	// todo user setting notification
+	// TODO: user setting notification
 	ctx.Data["Title"] = "Notification"
 	ctx.Data["PageIsUserSetting"] = true
+	ctx.Data["IsUserPageSettingNotify"] = true
 	ctx.Render.HTML(200, "user/notification", ctx.Data)
 }
 
 func SettingSecurity(ctx *middleware.Context) {
-	// todo user setting security
+	// TODO: user setting security
 	ctx.Data["Title"] = "Security"
 	ctx.Data["PageIsUserSetting"] = true
+	ctx.Data["IsUserPageSettingSecurity"] = true
 	ctx.Render.HTML(200, "user/security", ctx.Data)
 }
