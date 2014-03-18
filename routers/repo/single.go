@@ -90,13 +90,13 @@ func Single(ctx *middleware.Context, params martini.Params) {
 	}
 
 	// Get latest commit according username and repo name
-	commit, err := models.GetLastestCommit(params["username"], params["reponame"])
+	commit, err := models.GetLastCommit(params["username"], params["reponame"], params["branchname"])
 	if err != nil {
 		log.Error("repo.Single(GetLastestCommit): %v", err)
 		ctx.Render.Error(404)
 		return
 	}
-	ctx.Data["LatestCommit"] = commit
+	ctx.Data["LastCommit"] = commit
 
 	var readmeFile *models.RepoFile
 
