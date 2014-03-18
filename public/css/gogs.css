@@ -33,6 +33,10 @@ html, body {
     margin: 0 .5em;
 }
 
+.fa-m{
+    margin: 0;
+}
+
 .list-group .list-group-item {
     background-color: transparent;
 }
@@ -419,6 +423,10 @@ html, body {
     padding-top: 20px;
 }
 
+.gogs-repo-nav .btn-default{
+    font-family: Tahoma, Arial, sans-serif;
+}
+
 #gogs-repo-watching .dropdown-menu {
     width: 280px;
     padding: 0;
@@ -528,6 +536,10 @@ html, body {
 .repo-list .meta,
 .repo-list .info {
     color: #999;
+}
+
+.popover .repo-clone-div{
+    min-width: 200px;
 }
 
 /* #gogs-source */

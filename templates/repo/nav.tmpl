@@ -7,24 +7,24 @@
             {{if not .IsBareRepo}}
             <div class="col-md-6 actions text-right">
                 <div class="btn-group" id="gogs-repo-clone">
-                    <button type="button" class="btn btn-default"><i class="fa fa-download"></i>Clone</button>
+                    <button type="button" class="btn btn-default"><i class="fa fa-download fa-lg fa-m"></i></button>
                     <button type="button" class="btn btn-default dropdown-toggle" data-container="body" data-toggle="popover" data-placement="bottom" data-content="<label>SSH:</label><div class='input-group'><input type='text' class='form-control' value='git@{{AppDomain}}:{{.Owner.LowerName}}/{{.Repository.Name}}.git'></div>" data-html="1">
                         <span class="caret"></span>
                     </button>
                 </div>
                 <div class="btn-group" id="gogs-repo-watching">
-                    <button type="button" class="btn btn-default"><i class="fa fa-eye"></i>Watch {x}</button>
+                    <button type="button" class="btn btn-default"><i class="fa fa-eye fa-lg fa-m"></i></button>
                     <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
                         <span class="caret"></span>
                         <span class="sr-only">Toggle Dropdown</span>
                     </button>
                     <div class="dropdown-menu" role="menu">
-                        <div class="dropdown-item" data-val="not-watching">
+                        <div class="dropdown-item text-left" data-val="not-watching">
                             <h4 role="presentation" class="dropdown-header">Not Watching</h4>
                             <p class="description">You only receive notifications for conversations in which you participate or are @mentioned.</p>
                             <p class="divider"></p>
                         </div>
-                        <div class="dropdown-item" data-val="watching">
+                        <div class="dropdown-item text-left" data-val="watching">
                             <h4 role="presentation" class="dropdown-header">Watching</h4>
                             <p class="description">You receive notifications for all conversations in this repository.</p>
                         </div>
