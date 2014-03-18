@@ -14,6 +14,7 @@ import (
 	"github.com/gogits/gogs/modules/middleware"
 )
 
+// render user setting page (email, website modify)
 func Setting(ctx *middleware.Context, form auth.UpdateProfileForm) {
 	ctx.Data["Title"] = "Setting"
 	ctx.Data["PageIsUserSetting"] = true
@@ -26,6 +27,7 @@ func Setting(ctx *middleware.Context, form auth.UpdateProfileForm) {
 		return
 	}
 
+	// below is for POST requests
 	if hasErr, ok := ctx.Data["HasError"]; ok && hasErr.(bool) {
 		ctx.Render.HTML(200, "user/setting", ctx.Data)
 		return

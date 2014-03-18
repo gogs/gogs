@@ -10,8 +10,7 @@ import (
 
 	"github.com/codegangsta/cli"
 
-	git "github.com/gogits/git"
-
+	"github.com/gogits/git"
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/log"
 )
@@ -25,6 +24,7 @@ gogs serv provide access auth for repositories`,
 	Flags:  []cli.Flag{},
 }
 
+// for command: ./gogs update
 func runUpdate(*cli.Context) {
 	userName := os.Getenv("userName")
 	userId := os.Getenv("userId")
