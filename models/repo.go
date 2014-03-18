@@ -416,12 +416,10 @@ var (
 // RepoFile represents a file object in git repository.
 type RepoFile struct {
 	*git.TreeEntry
-	Path       string
-	Message    string
-	Created    time.Time
-	Size       int64
-	Repo       *git.Repository
-	LastCommit string
+	Path   string
+	Size   int64
+	Repo   *git.Repository
+	Commit *git.Commit
 }
 
 // LookupBlob returns the content of an object.
@@ -453,32 +451,28 @@ func GetBranches(userName, reposName string) ([]string, error) {
 }
 
 // GetReposFiles returns a list of file object in given directory of repository.
-func GetReposFiles(userName, reposName, branchName, rpath string) ([]*RepoFile, error) {
+func GetReposFiles(userName, reposName, branchName, commitId, rpath string) ([]*RepoFile, error) {
 	repo, err := git.OpenRepository(RepoPath(userName, reposName))
 	if err != nil {
 		return nil, err
 	}
 
-	ref, err := repo.LookupReference("refs/heads/" + branchName)
-	if err != nil {
-		return nil, err
-	}
-
-	lastCommit, err := repo.LookupCommit(ref.Oid)
+	commit, err := GetCommit(userName, reposName, branchName, commitId)
 	if err != nil {
 		return nil, err
 	}
 
 	var repodirs []*RepoFile
 	var repofiles []*RepoFile
-	lastCommit.Tree.Walk(func(dirname string, entry *git.TreeEntry) int {
+	commit.Tree.Walk(func(dirname string, entry *git.TreeEntry) int {
 		if dirname == rpath {
+			// TODO: size get method shoule be improved
 			size, err := repo.ObjectSize(entry.Id)
 			if err != nil {
 				return 0
 			}
 
-			var cm = lastCommit
+			var cm = commit
 
 			for {
 				if cm.ParentCount() == 0 {
@@ -533,11 +527,9 @@ func GetReposFiles(userName, reposName, branchName, rpath string) ([]*RepoFile, 
 			rp := &RepoFile{
 				entry,
 				path.Join(dirname, entry.Name),
-				cm.Message(),
-				cm.Committer.When,
 				size,
 				repo,
-				cm.Id().String(),
+				cm,
 			}
 
 			if entry.IsFile() {
@@ -552,6 +544,31 @@ func GetReposFiles(userName, reposName, branchName, rpath string) ([]*RepoFile, 
 	return append(repodirs, repofiles...), nil
 }
 
+func GetCommit(userName, repoName, branchname, commitid string) (*git.Commit, error) {
+	repo, err := git.OpenRepository(RepoPath(userName, repoName))
+	if err != nil {
+		return nil, err
+	}
+
+	if commitid != "" {
+		oid, err := git.NewOidFromString(commitid)
+		if err != nil {
+			return nil, err
+		}
+		return repo.LookupCommit(oid)
+	}
+	if branchname == "" {
+		return nil, errors.New("no branch name and no commit id")
+	}
+
+	r, err := repo.LookupReference(fmt.Sprintf("refs/heads/%s", branchname))
+	if err != nil {
+		return nil, err
+	}
+	return r.LastCommit()
+}
+
+/*
 // GetLastestCommit returns the latest commit of given repository.
 func GetLastestCommit(userName, repoName string) (*Commit, error) {
 	stdout, _, err := com.ExecCmd("git", "--git-dir="+RepoPath(userName, repoName), "log", "-1")
@@ -581,7 +598,7 @@ func GetLastestCommit(userName, repoName string) (*Commit, error) {
 		}
 	}
 	return commit, nil
-}
+}*/
 
 // GetCommits returns all commits of given branch of repository.
 func GetCommits(userName, reposName, branchname string) ([]*git.Commit, error) {

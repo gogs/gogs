@@ -45,7 +45,7 @@
                 <a href="/{{$username}}/{{$reponame}}/commit/{{.LatestCommit.SHA}}">{{.LatestCommit.Message}}</a>
             </div>
             <div class="panel-body info-content">
-                <a href="/user/{{.LatestCommit.Author}}">{{.LatestCommit.Author}}</a> <span class="text-muted">{{TimeSince .LatestCommit.Date}}</span>
+                <a href="/user/{{.LatestCommit.Author}}">{{.LatestCommit.Author}}</a> <span class="text-muted">{{TimeSince .CurrentCommit.Committer.When}}</span>
             </div>
             <table class="panel-footer table file-list">
                 <thead class="hidden">
@@ -57,6 +57,7 @@
                 </tr>
                 </thead>
                 <tbody>
+                {{$currentCommit := .CurrentCommit}}
                 {{range .Files}}
                 <tr
                 {{if .IsDir}}class="is-dir"{{end}}>
@@ -73,10 +74,10 @@
                     </span>
                 </td>
                 <td class="text">
-                    <span class="wrap"><a href="/{{$username}}/{{$reponame}}/commit/{{.LastCommit}}">{{.Message}}</a></span>
+                    <span class="wrap"><a href="/{{$username}}/{{$reponame}}/commit/{{.Commit.Oid}}">{{.Commit.Message}}</a></span>
                 </td>
                 <td class="date">
-                    <span class="wrap">{{TimeSince .Created}}</span>
+                    <span class="wrap">{{TimeSince .Commit.Committer.When}}</span>
                 </td>
                 </tr>
                 {{end}}
