@@ -69,7 +69,7 @@ func Single(ctx *middleware.Context, params martini.Params) {
 
 	// Directory and file list.
 	files, err := models.GetReposFiles(params["username"], params["reponame"],
-		params["branchname"], treename)
+		params["branchname"], params["commitid"], treename)
 	if err != nil {
 		log.Error("repo.Single(GetReposFiles): %v", err)
 		ctx.Render.Error(404)
@@ -90,9 +90,10 @@ func Single(ctx *middleware.Context, params martini.Params) {
 	}
 
 	// Get latest commit according username and repo name
-	commit, err := models.GetLastCommit(params["username"], params["reponame"], params["branchname"])
+	commit, err := models.GetCommit(params["username"], params["reponame"],
+		params["branchname"], params["commitid"])
 	if err != nil {
-		log.Error("repo.Single(GetLastestCommit): %v", err)
+		log.Error("repo.Single(GetCommit): %v", err)
 		ctx.Render.Error(404)
 		return
 	}
