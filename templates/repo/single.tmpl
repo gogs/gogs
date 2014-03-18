@@ -73,10 +73,10 @@
                     </span>
                 </td>
                 <td class="text">
-                    <span class="wrap"><a href="/{{$username}}/{{$reponame}}/commit/{{.LastCommit}}">{{.Message}}</a></span>
+                    <span class="wrap"><a href="/{{$username}}/{{$reponame}}/commit/{{.Commit.Oid}}">{{.Commit.Message}}</a></span>
                 </td>
                 <td class="date">
-                    <span class="wrap">{{TimeSince .Created}}</span>
+                    <span class="wrap">{{TimeSince .Commit.Committer.When}}</span>
                 </td>
                 </tr>
                 {{end}}

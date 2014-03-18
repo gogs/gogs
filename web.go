@@ -82,6 +82,9 @@ func runWeb(*cli.Context) {
 		middleware.SignInRequire(false), middleware.RepoAssignment(true), repo.Single)
 	m.Get("/:username/:reponame/tree/:branchname",
 		middleware.SignInRequire(false), middleware.RepoAssignment(true), repo.Single)
+	m.Get("/:username/:reponame/commit/:commitid/**", middleware.SignInRequire(false), middleware.RepoAssignment(true), repo.Single)
+	m.Get("/:username/:reponame/commit/:commitid", middleware.SignInRequire(false), middleware.RepoAssignment(true), repo.Single)
+
 	m.Get("/:username/:reponame", middleware.SignInRequire(false), middleware.RepoAssignment(true), repo.Single)
 
 	listenAddr := fmt.Sprintf("%s:%s",
