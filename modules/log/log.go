@@ -11,7 +11,7 @@ import (
 
 var logger *logs.BeeLogger
 
-func init() {
+func NewLogger() {
 	logger = logs.NewLogger(10000)
 	logger.SetLogger("console", "")
 }
