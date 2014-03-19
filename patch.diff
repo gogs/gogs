@@ -1,0 +1,982 @@
+From 56af7e99a819758c6bedc6d745a9f810f3fc050d Mon Sep 17 00:00:00 2001
+From: Gogs <gogitservice@gmail.com>
+Date: Wed, 19 Mar 2014 21:57:55 +0800
+Subject: [PATCH] fork render
+
+---
+ .gopmfile                     |   1 -
+ modules/base/template.go      |   5 +
+ modules/middleware/auth.go    |   4 +-
+ modules/middleware/context.go |  28 ++---
+ modules/middleware/render.go  | 286 ++++++++++++++++++++++++++++++++++++++++++
+ modules/middleware/repo.go    |   6 +-
+ routers/dashboard.go          |   4 +-
+ routers/repo/repo.go          |  10 +-
+ routers/repo/single.go        |  32 ++---
+ routers/user/setting.go       |  24 ++--
+ routers/user/user.go          |  43 +++----
+ templates/base/footer.tmpl    |   4 +-
+ web.go                        |   3 +-
+ 13 files changed, 367 insertions(+), 83 deletions(-)
+ create mode 100644 modules/middleware/render.go
+
+diff --git a/.gopmfile b/.gopmfile
+index 4c05ae4..9e2440f 100644
+--- a/.gopmfile
++++ b/.gopmfile
+@@ -4,7 +4,6 @@ path=github.com/gogits/gogs
+ [deps]
+ github.com/codegangsta/cli=
+ github.com/codegangsta/martini=
+-github.com/martini-contrib/render=
+ github.com/martini-contrib/sessions=
+ github.com/Unknwon/com=
+ github.com/Unknwon/cae=
+diff --git a/modules/base/template.go b/modules/base/template.go
+index db79340..23d3d27 100644
+--- a/modules/base/template.go
++++ b/modules/base/template.go
+@@ -6,7 +6,9 @@ package base
+ 
+ import (
+ 	"container/list"
++	"fmt"
+ 	"html/template"
++	"time"
+ )
+ 
+ func Str2html(raw string) template.HTML {
+@@ -40,6 +42,9 @@ var TemplateFuncs template.FuncMap = map[string]interface{}{
+ 	"AppDomain": func() string {
+ 		return Domain
+ 	},
++	"LoadTimes": func(startTime time.Time) string {
++		return fmt.Sprint(time.Since(startTime).Nanoseconds()/1e6) + "ms"
++	},
+ 	"AvatarLink": AvatarLink,
+ 	"str2html":   Str2html,
+ 	"TimeSince":  TimeSince,
+diff --git a/modules/middleware/auth.go b/modules/middleware/auth.go
+index 84bbc7f..ed847dd 100644
+--- a/modules/middleware/auth.go
++++ b/modules/middleware/auth.go
+@@ -13,7 +13,7 @@ func SignInRequire(redirect bool) martini.Handler {
+ 	return func(ctx *Context) {
+ 		if !ctx.IsSigned {
+ 			if redirect {
+-				ctx.Render.Redirect("/")
++				ctx.Redirect("/")
+ 			}
+ 			return
+ 		} else if !ctx.User.IsActive {
+@@ -28,7 +28,7 @@ func SignInRequire(redirect bool) martini.Handler {
+ func SignOutRequire() martini.Handler {
+ 	return func(ctx *Context) {
+ 		if ctx.IsSigned {
+-			ctx.Render.Redirect("/")
++			ctx.Redirect("/")
+ 		}
+ 	}
+ }
+diff --git a/modules/middleware/context.go b/modules/middleware/context.go
+index 7eaf665..c97c329 100644
+--- a/modules/middleware/context.go
++++ b/modules/middleware/context.go
+@@ -7,26 +7,24 @@ package middleware
+ import (
+ 	"fmt"
+ 	"net/http"
++	"time"
+ 
+ 	"github.com/codegangsta/martini"
+-	"github.com/martini-contrib/render"
+ 	"github.com/martini-contrib/sessions"
+ 
+ 	"github.com/gogits/gogs/models"
+ 	"github.com/gogits/gogs/modules/auth"
+-	"github.com/gogits/gogs/modules/base"
+ 	"github.com/gogits/gogs/modules/log"
+ )
+ 
+ // Context represents context of a request.
+ type Context struct {
++	*Render
+ 	c        martini.Context
+ 	p        martini.Params
+ 	Req      *http.Request
+ 	Res      http.ResponseWriter
+ 	Session  sessions.Session
+-	Data     base.TmplData
+-	Render   render.Render
+ 	User     *models.User
+ 	IsSigned bool
+ 
+@@ -62,27 +60,25 @@ func (ctx *Context) RenderWithErr(msg, tpl string, form auth.Form) {
+ 	ctx.Data["HasError"] = true
+ 	ctx.Data["ErrorMsg"] = msg
+ 	auth.AssignForm(form, ctx.Data)
+-	ctx.Render.HTML(200, tpl, ctx.Data)
++	ctx.HTML(200, tpl, ctx.Data)
+ }
+ 
+ // Handle handles and logs error by given status.
+ func (ctx *Context) Handle(status int, title string, err error) {
+ 	log.Error("%s: %v", title, err)
+ 	if martini.Dev == martini.Prod {
+-		ctx.Render.HTML(500, "status/500", ctx.Data)
++		ctx.HTML(500, "status/500", ctx.Data)
+ 		return
+ 	}
+ 
+ 	ctx.Data["ErrorMsg"] = err
+-	ctx.Render.HTML(status, fmt.Sprintf("status/%d", status), ctx.Data)
++	ctx.HTML(status, fmt.Sprintf("status/%d", status), ctx.Data)
+ }
+ 
+ // InitContext initializes a classic context for a request.
+ func InitContext() martini.Handler {
+ 	return func(res http.ResponseWriter, r *http.Request, c martini.Context,
+-		session sessions.Session, rd render.Render) {
+-
+-		data := base.TmplData{}
++		session sessions.Session, rd *Render) {
+ 
+ 		ctx := &Context{
+ 			c: c,
+@@ -90,7 +86,6 @@ func InitContext() martini.Handler {
+ 			Req:     r,
+ 			Res:     res,
+ 			Session: session,
+-			Data:    data,
+ 			Render:  rd,
+ 		}
+ 
+@@ -99,16 +94,17 @@ func InitContext() martini.Handler {
+ 		ctx.User = user
+ 		ctx.IsSigned = user != nil
+ 
+-		data["IsSigned"] = ctx.IsSigned
++		ctx.Data["IsSigned"] = ctx.IsSigned
+ 
+ 		if user != nil {
+-			data["SignedUser"] = user
+-			data["SignedUserId"] = user.Id
+-			data["SignedUserName"] = user.LowerName
++			ctx.Data["SignedUser"] = user
++			ctx.Data["SignedUserId"] = user.Id
++			ctx.Data["SignedUserName"] = user.LowerName
+ 		}
+ 
++		ctx.Data["PageStartTime"] = time.Now()
++
+ 		c.Map(ctx)
+-		c.Map(data)
+ 
+ 		c.Next()
+ 	}
+diff --git a/modules/middleware/render.go b/modules/middleware/render.go
+new file mode 100644
+index 0000000..8a54183
+--- /dev/null
++++ b/modules/middleware/render.go
+@@ -0,0 +1,286 @@
++// Copyright 2014 The Gogs Authors. All rights reserved.
++// Use of this source code is governed by a MIT-style
++// license that can be found in the LICENSE file.
++
++// foked from https://github.com/martini-contrib/render/blob/master/render.go
++package middleware
++
++import (
++	"bytes"
++	"encoding/json"
++	"fmt"
++	"html/template"
++	"io"
++	"io/ioutil"
++	"net/http"
++	"os"
++	"path/filepath"
++	"time"
++
++	"github.com/codegangsta/martini"
++
++	"github.com/gogits/gogs/modules/base"
++)
++
++const (
++	ContentType    = "Content-Type"
++	ContentLength  = "Content-Length"
++	ContentJSON    = "application/json"
++	ContentHTML    = "text/html"
++	ContentXHTML   = "application/xhtml+xml"
++	defaultCharset = "UTF-8"
++)
++
++var helperFuncs = template.FuncMap{
++	"yield": func() (string, error) {
++		return "", fmt.Errorf("yield called with no layout defined")
++	},
++}
++
++type Delims struct {
++	Left string
++
++	Right string
++}
++
++type RenderOptions struct {
++	Directory string
++
++	Layout string
++
++	Extensions []string
++
++	Funcs []template.FuncMap
++
++	Delims Delims
++
++	Charset string
++
++	IndentJSON bool
++
++	HTMLContentType string
++}
++
++type HTMLOptions struct {
++	Layout string
++}
++
++func Renderer(options ...RenderOptions) martini.Handler {
++	opt := prepareOptions(options)
++	cs := prepareCharset(opt.Charset)
++	t := compile(opt)
++	return func(res http.ResponseWriter, req *http.Request, c martini.Context) {
++		var tc *template.Template
++		if martini.Env == martini.Dev {
++
++			tc = compile(opt)
++		} else {
++
++			tc, _ = t.Clone()
++		}
++
++		rd := &Render{res, req, tc, opt, cs, base.TmplData{}, time.Time{}}
++
++		rd.Data["TmplLoadTimes"] = func() string {
++			if rd.startTime.IsZero() {
++				return ""
++			}
++			return fmt.Sprint(time.Since(rd.startTime).Nanoseconds()/1e6) + "ms"
++		}
++
++		c.Map(rd.Data)
++		c.Map(rd)
++	}
++}
++
++func prepareCharset(charset string) string {
++	if len(charset) != 0 {
++		return "; charset=" + charset
++	}
++
++	return "; charset=" + defaultCharset
++}
++
++func prepareOptions(options []RenderOptions) RenderOptions {
++	var opt RenderOptions
++	if len(options) > 0 {
++		opt = options[0]
++	}
++
++	if len(opt.Directory) == 0 {
++		opt.Directory = "templates"
++	}
++	if len(opt.Extensions) == 0 {
++		opt.Extensions = []string{".tmpl"}
++	}
++	if len(opt.HTMLContentType) == 0 {
++		opt.HTMLContentType = ContentHTML
++	}
++
++	return opt
++}
++
++func compile(options RenderOptions) *template.Template {
++	dir := options.Directory
++	t := template.New(dir)
++	t.Delims(options.Delims.Left, options.Delims.Right)
++
++	template.Must(t.Parse("Martini"))
++
++	filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
++		r, err := filepath.Rel(dir, path)
++		if err != nil {
++			return err
++		}
++
++		ext := filepath.Ext(r)
++		for _, extension := range options.Extensions {
++			if ext == extension {
++
++				buf, err := ioutil.ReadFile(path)
++				if err != nil {
++					panic(err)
++				}
++
++				name := (r[0 : len(r)-len(ext)])
++				tmpl := t.New(filepath.ToSlash(name))
++
++				for _, funcs := range options.Funcs {
++					tmpl.Funcs(funcs)
++				}
++
++				template.Must(tmpl.Funcs(helperFuncs).Parse(string(buf)))
++				break
++			}
++		}
++
++		return nil
++	})
++
++	return t
++}
++
++type Render struct {
++	http.ResponseWriter
++	req             *http.Request
++	t               *template.Template
++	opt             RenderOptions
++	compiledCharset string
++
++	Data base.TmplData
++
++	startTime time.Time
++}
++
++func (r *Render) JSON(status int, v interface{}) {
++	var result []byte
++	var err error
++	if r.opt.IndentJSON {
++		result, err = json.MarshalIndent(v, "", "  ")
++	} else {
++		result, err = json.Marshal(v)
++	}
++	if err != nil {
++		http.Error(r, err.Error(), 500)
++		return
++	}
++
++	r.Header().Set(ContentType, ContentJSON+r.compiledCharset)
++	r.WriteHeader(status)
++	r.Write(result)
++}
++
++func (r *Render) JSONString(v interface{}) (string, error) {
++	var result []byte
++	var err error
++	if r.opt.IndentJSON {
++		result, err = json.MarshalIndent(v, "", "  ")
++	} else {
++		result, err = json.Marshal(v)
++	}
++	if err != nil {
++		return "", err
++	}
++	return string(result), nil
++}
++
++func (r *Render) renderBytes(name string, binding interface{}, htmlOpt ...HTMLOptions) (*bytes.Buffer, error) {
++	opt := r.prepareHTMLOptions(htmlOpt)
++
++	if len(opt.Layout) > 0 {
++		r.addYield(name, binding)
++		name = opt.Layout
++	}
++
++	out, err := r.execute(name, binding)
++	if err != nil {
++		return nil, err
++	}
++
++	return out, nil
++}
++
++func (r *Render) HTML(status int, name string, binding interface{}, htmlOpt ...HTMLOptions) {
++	r.startTime = time.Now()
++
++	out, err := r.renderBytes(name, binding, htmlOpt...)
++	if err != nil {
++		http.Error(r, err.Error(), http.StatusInternalServerError)
++		return
++	}
++
++	r.Header().Set(ContentType, r.opt.HTMLContentType+r.compiledCharset)
++	r.WriteHeader(status)
++	io.Copy(r, out)
++}
++
++func (r *Render) HTMLString(name string, binding interface{}, htmlOpt ...HTMLOptions) (string, error) {
++	if out, err := r.renderBytes(name, binding, htmlOpt...); err != nil {
++		return "", err
++	} else {
++		return out.String(), nil
++	}
++}
++
++func (r *Render) Error(status int) {
++	r.WriteHeader(status)
++}
++
++func (r *Render) Redirect(location string, status ...int) {
++	code := http.StatusFound
++	if len(status) == 1 {
++		code = status[0]
++	}
++
++	http.Redirect(r, r.req, location, code)
++}
++
++func (r *Render) Template() *template.Template {
++	return r.t
++}
++
++func (r *Render) execute(name string, binding interface{}) (*bytes.Buffer, error) {
++	buf := new(bytes.Buffer)
++	return buf, r.t.ExecuteTemplate(buf, name, binding)
++}
++
++func (r *Render) addYield(name string, binding interface{}) {
++	funcs := template.FuncMap{
++		"yield": func() (template.HTML, error) {
++			buf, err := r.execute(name, binding)
++
++			return template.HTML(buf.String()), err
++		},
++	}
++	r.t.Funcs(funcs)
++}
++
++func (r *Render) prepareHTMLOptions(htmlOpt []HTMLOptions) HTMLOptions {
++	if len(htmlOpt) > 0 {
++		return htmlOpt[0]
++	}
++
++	return HTMLOptions{
++		Layout: r.opt.Layout,
++	}
++}
+diff --git a/modules/middleware/repo.go b/modules/middleware/repo.go
+index db29bd1..a12212a 100644
+--- a/modules/middleware/repo.go
++++ b/modules/middleware/repo.go
+@@ -30,7 +30,7 @@ func RepoAssignment(redirect bool) martini.Handler {
+ 			user, err = models.GetUserByName(params["username"])
+ 			if err != nil {
+ 				if redirect {
+-					ctx.Render.Redirect("/")
++					ctx.Redirect("/")
+ 					return
+ 				}
+ 				ctx.Handle(200, "RepoAssignment", err)
+@@ -42,7 +42,7 @@ func RepoAssignment(redirect bool) martini.Handler {
+ 
+ 		if user == nil {
+ 			if redirect {
+-				ctx.Render.Redirect("/")
++				ctx.Redirect("/")
+ 				return
+ 			}
+ 			ctx.Handle(200, "RepoAssignment", errors.New("invliad user account for single repository"))
+@@ -55,7 +55,7 @@ func RepoAssignment(redirect bool) martini.Handler {
+ 		repo, err := models.GetRepositoryByName(user, params["reponame"])
+ 		if err != nil {
+ 			if redirect {
+-				ctx.Render.Redirect("/")
++				ctx.Redirect("/")
+ 				return
+ 			}
+ 			ctx.Handle(200, "RepoAssignment", err)
+diff --git a/routers/dashboard.go b/routers/dashboard.go
+index d5358f0..6c194ad 100644
+--- a/routers/dashboard.go
++++ b/routers/dashboard.go
+@@ -15,10 +15,10 @@ func Home(ctx *middleware.Context) {
+ 		return
+ 	}
+ 	ctx.Data["PageIsHome"] = true
+-	ctx.Render.HTML(200, "home", ctx.Data)
++	ctx.HTML(200, "home", ctx.Data)
+ }
+ 
+ func Help(ctx *middleware.Context) {
+ 	ctx.Data["PageIsHelp"] = true
+-	ctx.Render.HTML(200, "help", ctx.Data)
++	ctx.HTML(200, "help", ctx.Data)
+ }
+diff --git a/routers/repo/repo.go b/routers/repo/repo.go
+index 61bf47c..947643a 100644
+--- a/routers/repo/repo.go
++++ b/routers/repo/repo.go
+@@ -17,7 +17,7 @@ func Create(ctx *middleware.Context, form auth.CreateRepoForm) {
+ 	if ctx.Req.Method == "GET" {
+ 		ctx.Data["LanguageIgns"] = models.LanguageIgns
+ 		ctx.Data["Licenses"] = models.Licenses
+-		ctx.Render.HTML(200, "repo/create", ctx.Data)
++		ctx.HTML(200, "repo/create", ctx.Data)
+ 		return
+ 	}
+ 
+@@ -25,7 +25,7 @@ func Create(ctx *middleware.Context, form auth.CreateRepoForm) {
+ 		form.Language, form.License, form.Visibility == "private", form.InitReadme == "on")
+ 	if err == nil {
+ 		log.Trace("%s Repository created: %s/%s", ctx.Req.RequestURI, ctx.User.LowerName, form.RepoName)
+-		ctx.Render.Redirect("/"+ctx.User.Name+"/"+form.RepoName, 302)
++		ctx.Redirect("/"+ctx.User.Name+"/"+form.RepoName, 302)
+ 		return
+ 	} else if err == models.ErrRepoAlreadyExist {
+ 		ctx.RenderWithErr("Repository name has already been used", "repo/create", &form)
+@@ -36,7 +36,7 @@ func Create(ctx *middleware.Context, form auth.CreateRepoForm) {
+ 
+ func SettingPost(ctx *middleware.Context) {
+ 	if !ctx.Repo.IsOwner {
+-		ctx.Render.Error(404)
++		ctx.Error(404)
+ 		return
+ 	}
+ 
+@@ -44,7 +44,7 @@ func SettingPost(ctx *middleware.Context) {
+ 	case "delete":
+ 		if len(ctx.Repo.Repository.Name) == 0 || ctx.Repo.Repository.Name != ctx.Query("repository") {
+ 			ctx.Data["ErrorMsg"] = "Please make sure you entered repository name is correct."
+-			ctx.Render.HTML(200, "repo/setting", ctx.Data)
++			ctx.HTML(200, "repo/setting", ctx.Data)
+ 			return
+ 		}
+ 
+@@ -55,5 +55,5 @@ func SettingPost(ctx *middleware.Context) {
+ 	}
+ 
+ 	log.Trace("%s Repository deleted: %s/%s", ctx.Req.RequestURI, ctx.User.LowerName, ctx.Repo.Repository.LowerName)
+-	ctx.Render.Redirect("/", 302)
++	ctx.Redirect("/", 302)
+ }
+diff --git a/routers/repo/single.go b/routers/repo/single.go
+index d64248d..171b095 100644
+--- a/routers/repo/single.go
++++ b/routers/repo/single.go
+@@ -27,7 +27,7 @@ func Branches(ctx *middleware.Context, params martini.Params) {
+ 		ctx.Handle(200, "repo.Branches", err)
+ 		return
+ 	} else if len(brs) == 0 {
+-		ctx.Render.Error(404)
++		ctx.Error(404)
+ 		return
+ 	}
+ 
+@@ -38,7 +38,7 @@ func Branches(ctx *middleware.Context, params martini.Params) {
+ 	ctx.Data["Branches"] = brs
+ 	ctx.Data["IsRepoToolbarBranches"] = true
+ 
+-	ctx.Render.HTML(200, "repo/branches", ctx.Data)
++	ctx.HTML(200, "repo/branches", ctx.Data)
+ }
+ 
+ func Single(ctx *middleware.Context, params martini.Params) {
+@@ -57,11 +57,11 @@ func Single(ctx *middleware.Context, params martini.Params) {
+ 	brs, err := models.GetBranches(params["username"], params["reponame"])
+ 	if err != nil {
+ 		log.Error("repo.Single(GetBranches): %v", err)
+-		ctx.Render.Error(404)
++		ctx.Error(404)
+ 		return
+ 	} else if len(brs) == 0 {
+ 		ctx.Data["IsBareRepo"] = true
+-		ctx.Render.HTML(200, "repo/single", ctx.Data)
++		ctx.HTML(200, "repo/single", ctx.Data)
+ 		return
+ 	}
+ 
+@@ -72,7 +72,7 @@ func Single(ctx *middleware.Context, params martini.Params) {
+ 		params["branchname"], params["commitid"], treename)
+ 	if err != nil {
+ 		log.Error("repo.Single(GetReposFiles): %v", err)
+-		ctx.Render.Error(404)
++		ctx.Error(404)
+ 		return
+ 	}
+ 	ctx.Data["Username"] = params["username"]
+@@ -94,7 +94,7 @@ func Single(ctx *middleware.Context, params martini.Params) {
+ 		params["branchname"], params["commitid"])
+ 	if err != nil {
+ 		log.Error("repo.Single(GetCommit): %v", err)
+-		ctx.Render.Error(404)
++		ctx.Error(404)
+ 		return
+ 	}
+ 	ctx.Data["LastCommit"] = commit
+@@ -130,12 +130,12 @@ func Single(ctx *middleware.Context, params martini.Params) {
+ 	ctx.Data["Treenames"] = treenames
+ 	ctx.Data["IsRepoToolbarSource"] = true
+ 	ctx.Data["Files"] = files
+-	ctx.Render.HTML(200, "repo/single", ctx.Data)
++	ctx.HTML(200, "repo/single", ctx.Data)
+ }
+ 
+ func Setting(ctx *middleware.Context, params martini.Params) {
+ 	if !ctx.Repo.IsOwner {
+-		ctx.Render.Error(404)
++		ctx.Error(404)
+ 		return
+ 	}
+ 
+@@ -143,11 +143,11 @@ func Setting(ctx *middleware.Context, params martini.Params) {
+ 	brs, err := models.GetBranches(params["username"], params["reponame"])
+ 	if err != nil {
+ 		log.Error("repo.Setting(GetBranches): %v", err)
+-		ctx.Render.Error(404)
++		ctx.Error(404)
+ 		return
+ 	} else if len(brs) == 0 {
+ 		ctx.Data["IsBareRepo"] = true
+-		ctx.Render.HTML(200, "repo/setting", ctx.Data)
++		ctx.HTML(200, "repo/setting", ctx.Data)
+ 		return
+ 	}
+ 
+@@ -158,7 +158,7 @@ func Setting(ctx *middleware.Context, params martini.Params) {
+ 
+ 	ctx.Data["Title"] = title + " - settings"
+ 	ctx.Data["IsRepoToolbarSetting"] = true
+-	ctx.Render.HTML(200, "repo/setting", ctx.Data)
++	ctx.HTML(200, "repo/setting", ctx.Data)
+ }
+ 
+ func Commits(ctx *middleware.Context, params martini.Params) {
+@@ -167,7 +167,7 @@ func Commits(ctx *middleware.Context, params martini.Params) {
+ 		ctx.Handle(200, "repo.Commits", err)
+ 		return
+ 	} else if len(brs) == 0 {
+-		ctx.Render.Error(404)
++		ctx.Error(404)
+ 		return
+ 	}
+ 
+@@ -175,19 +175,19 @@ func Commits(ctx *middleware.Context, params martini.Params) {
+ 	commits, err := models.GetCommits(params["username"],
+ 		params["reponame"], params["branchname"])
+ 	if err != nil {
+-		ctx.Render.Error(404)
++		ctx.Error(404)
+ 		return
+ 	}
+ 	ctx.Data["Commits"] = commits
+-	ctx.Render.HTML(200, "repo/commits", ctx.Data)
++	ctx.HTML(200, "repo/commits", ctx.Data)
+ }
+ 
+ func Issues(ctx *middleware.Context) {
+ 	ctx.Data["IsRepoToolbarIssues"] = true
+-	ctx.Render.HTML(200, "repo/issues", ctx.Data)
++	ctx.HTML(200, "repo/issues", ctx.Data)
+ }
+ 
+ func Pulls(ctx *middleware.Context) {
+ 	ctx.Data["IsRepoToolbarPulls"] = true
+-	ctx.Render.HTML(200, "repo/pulls", ctx.Data)
++	ctx.HTML(200, "repo/pulls", ctx.Data)
+ }
+diff --git a/routers/user/setting.go b/routers/user/setting.go
+index 66289b6..719e0c1 100644
+--- a/routers/user/setting.go
++++ b/routers/user/setting.go
+@@ -24,13 +24,13 @@ func Setting(ctx *middleware.Context, form auth.UpdateProfileForm) {
+ 	ctx.Data["Owner"] = user
+ 
+ 	if ctx.Req.Method == "GET" {
+-		ctx.Render.HTML(200, "user/setting", ctx.Data)
++		ctx.HTML(200, "user/setting", ctx.Data)
+ 		return
+ 	}
+ 
+ 	// below is for POST requests
+ 	if hasErr, ok := ctx.Data["HasError"]; ok && hasErr.(bool) {
+-		ctx.Render.HTML(200, "user/setting", ctx.Data)
++		ctx.HTML(200, "user/setting", ctx.Data)
+ 		return
+ 	}
+ 
+@@ -45,7 +45,7 @@ func Setting(ctx *middleware.Context, form auth.UpdateProfileForm) {
+ 	}
+ 
+ 	ctx.Data["IsSuccess"] = true
+-	ctx.Render.HTML(200, "user/setting", ctx.Data)
++	ctx.HTML(200, "user/setting", ctx.Data)
+ 	log.Trace("%s User setting updated: %s", ctx.Req.RequestURI, ctx.User.LowerName)
+ }
+ 
+@@ -55,7 +55,7 @@ func SettingPassword(ctx *middleware.Context, form auth.UpdatePasswdForm) {
+ 	ctx.Data["IsUserPageSettingPasswd"] = true
+ 
+ 	if ctx.Req.Method == "GET" {
+-		ctx.Render.HTML(200, "user/password", ctx.Data)
++		ctx.HTML(200, "user/password", ctx.Data)
+ 		return
+ 	}
+ 
+@@ -82,7 +82,7 @@ func SettingPassword(ctx *middleware.Context, form auth.UpdatePasswdForm) {
+ 	}
+ 
+ 	ctx.Data["Owner"] = user
+-	ctx.Render.HTML(200, "user/password", ctx.Data)
++	ctx.HTML(200, "user/password", ctx.Data)
+ 	log.Trace("%s User password updated: %s", ctx.Req.RequestURI, ctx.User.LowerName)
+ }
+ 
+@@ -95,7 +95,7 @@ func SettingSSHKeys(ctx *middleware.Context, form auth.AddSSHKeyForm) {
+ 		if err != nil {
+ 			ctx.Data["ErrorMsg"] = err
+ 			log.Error("ssh.DelPublicKey: %v", err)
+-			ctx.Render.JSON(200, map[string]interface{}{
++			ctx.JSON(200, map[string]interface{}{
+ 				"ok":  false,
+ 				"err": err.Error(),
+ 			})
+@@ -109,13 +109,13 @@ func SettingSSHKeys(ctx *middleware.Context, form auth.AddSSHKeyForm) {
+ 		if err = models.DeletePublicKey(k); err != nil {
+ 			ctx.Data["ErrorMsg"] = err
+ 			log.Error("ssh.DelPublicKey: %v", err)
+-			ctx.Render.JSON(200, map[string]interface{}{
++			ctx.JSON(200, map[string]interface{}{
+ 				"ok":  false,
+ 				"err": err.Error(),
+ 			})
+ 		} else {
+ 			log.Trace("%s User SSH key deleted: %s", ctx.Req.RequestURI, ctx.User.LowerName)
+-			ctx.Render.JSON(200, map[string]interface{}{
++			ctx.JSON(200, map[string]interface{}{
+ 				"ok": true,
+ 			})
+ 		}
+@@ -125,7 +125,7 @@ func SettingSSHKeys(ctx *middleware.Context, form auth.AddSSHKeyForm) {
+ 	// Add new SSH key.
+ 	if ctx.Req.Method == "POST" {
+ 		if hasErr, ok := ctx.Data["HasError"]; ok && hasErr.(bool) {
+-			ctx.Render.HTML(200, "user/publickey", ctx.Data)
++			ctx.HTML(200, "user/publickey", ctx.Data)
+ 			return
+ 		}
+ 
+@@ -157,7 +157,7 @@ func SettingSSHKeys(ctx *middleware.Context, form auth.AddSSHKeyForm) {
+ 	ctx.Data["PageIsUserSetting"] = true
+ 	ctx.Data["IsUserPageSettingSSH"] = true
+ 	ctx.Data["Keys"] = keys
+-	ctx.Render.HTML(200, "user/publickey", ctx.Data)
++	ctx.HTML(200, "user/publickey", ctx.Data)
+ }
+ 
+ func SettingNotification(ctx *middleware.Context) {
+@@ -165,7 +165,7 @@ func SettingNotification(ctx *middleware.Context) {
+ 	ctx.Data["Title"] = "Notification"
+ 	ctx.Data["PageIsUserSetting"] = true
+ 	ctx.Data["IsUserPageSettingNotify"] = true
+-	ctx.Render.HTML(200, "user/notification", ctx.Data)
++	ctx.HTML(200, "user/notification", ctx.Data)
+ }
+ 
+ func SettingSecurity(ctx *middleware.Context) {
+@@ -173,5 +173,5 @@ func SettingSecurity(ctx *middleware.Context) {
+ 	ctx.Data["Title"] = "Security"
+ 	ctx.Data["PageIsUserSetting"] = true
+ 	ctx.Data["IsUserPageSettingSecurity"] = true
+-	ctx.Render.HTML(200, "user/security", ctx.Data)
++	ctx.HTML(200, "user/security", ctx.Data)
+ }
+diff --git a/routers/user/user.go b/routers/user/user.go
+index d702f2b..4203007 100644
+--- a/routers/user/user.go
++++ b/routers/user/user.go
+@@ -9,8 +9,6 @@ import (
+ 	"strings"
+ 
+ 	"github.com/codegangsta/martini"
+-	"github.com/martini-contrib/render"
+-	"github.com/martini-contrib/sessions"
+ 
+ 	"github.com/gogits/gogs/models"
+ 	"github.com/gogits/gogs/modules/auth"
+@@ -35,7 +33,7 @@ func Dashboard(ctx *middleware.Context) {
+ 		return
+ 	}
+ 	ctx.Data["Feeds"] = feeds
+-	ctx.Render.HTML(200, "user/dashboard", ctx.Data)
++	ctx.HTML(200, "user/dashboard", ctx.Data)
+ }
+ 
+ func Profile(ctx *middleware.Context, params martini.Params) {
+@@ -70,19 +68,19 @@ func Profile(ctx *middleware.Context, params martini.Params) {
+ 		ctx.Data["Repos"] = repos
+ 	}
+ 
+-	ctx.Render.HTML(200, "user/profile", ctx.Data)
++	ctx.HTML(200, "user/profile", ctx.Data)
+ }
+ 
+ func SignIn(ctx *middleware.Context, form auth.LogInForm) {
+ 	ctx.Data["Title"] = "Log In"
+ 
+ 	if ctx.Req.Method == "GET" {
+-		ctx.Render.HTML(200, "user/signin", ctx.Data)
++		ctx.HTML(200, "user/signin", ctx.Data)
+ 		return
+ 	}
+ 
+ 	if hasErr, ok := ctx.Data["HasError"]; ok && hasErr.(bool) {
+-		ctx.Render.HTML(200, "user/signin", ctx.Data)
++		ctx.HTML(200, "user/signin", ctx.Data)
+ 		return
+ 	}
+ 
+@@ -99,14 +97,13 @@ func SignIn(ctx *middleware.Context, form auth.LogInForm) {
+ 
+ 	ctx.Session.Set("userId", user.Id)
+ 	ctx.Session.Set("userName", user.Name)
+-
+-	ctx.Render.Redirect("/")
++	ctx.Redirect("/")
+ }
+ 
+-func SignOut(r render.Render, session sessions.Session) {
+-	session.Delete("userId")
+-	session.Delete("userName")
+-	r.Redirect("/")
++func SignOut(ctx *middleware.Context) {
++	ctx.Session.Delete("userId")
++	ctx.Session.Delete("userName")
++	ctx.Redirect("/")
+ }
+ 
+ func SignUp(ctx *middleware.Context, form auth.RegisterForm) {
+@@ -114,7 +111,7 @@ func SignUp(ctx *middleware.Context, form auth.RegisterForm) {
+ 	ctx.Data["PageIsSignUp"] = true
+ 
+ 	if ctx.Req.Method == "GET" {
+-		ctx.Render.HTML(200, "user/signup", ctx.Data)
++		ctx.HTML(200, "user/signup", ctx.Data)
+ 		return
+ 	}
+ 
+@@ -127,7 +124,7 @@ func SignUp(ctx *middleware.Context, form auth.RegisterForm) {
+ 	}
+ 
+ 	if ctx.HasError() {
+-		ctx.Render.HTML(200, "user/signup", ctx.Data)
++		ctx.HTML(200, "user/signup", ctx.Data)
+ 		return
+ 	}
+ 
+@@ -157,7 +154,7 @@ func SignUp(ctx *middleware.Context, form auth.RegisterForm) {
+ 	if base.Service.RegisterEmailConfirm {
+ 		auth.SendRegisterMail(u)
+ 	}
+-	ctx.Render.Redirect("/user/login")
++	ctx.Redirect("/user/login")
+ }
+ 
+ func Delete(ctx *middleware.Context) {
+@@ -166,7 +163,7 @@ func Delete(ctx *middleware.Context) {
+ 	ctx.Data["IsUserPageSettingDelete"] = true
+ 
+ 	if ctx.Req.Method == "GET" {
+-		ctx.Render.HTML(200, "user/delete", ctx.Data)
++		ctx.HTML(200, "user/delete", ctx.Data)
+ 		return
+ 	}
+ 
+@@ -186,12 +183,12 @@ func Delete(ctx *middleware.Context) {
+ 				return
+ 			}
+ 		} else {
+-			ctx.Render.Redirect("/")
++			ctx.Redirect("/")
+ 			return
+ 		}
+ 	}
+ 
+-	ctx.Render.HTML(200, "user/delete", ctx.Data)
++	ctx.HTML(200, "user/delete", ctx.Data)
+ }
+ 
+ const (
+@@ -202,7 +199,7 @@ const (
+ func Feeds(ctx *middleware.Context, form auth.FeedsForm) {
+ 	actions, err := models.GetFeeds(form.UserId, form.Page*20, false)
+ 	if err != nil {
+-		ctx.Render.JSON(500, err)
++		ctx.JSON(500, err)
+ 	}
+ 
+ 	feeds := make([]string, len(actions))
+@@ -210,19 +207,19 @@ func Feeds(ctx *middleware.Context, form auth.FeedsForm) {
+ 		feeds[i] = fmt.Sprintf(TPL_FEED, base.ActionIcon(actions[i].OpType),
+ 			base.TimeSince(actions[i].Created), base.ActionDesc(actions[i], ctx.User.AvatarLink()))
+ 	}
+-	ctx.Render.JSON(200, &feeds)
++	ctx.JSON(200, &feeds)
+ }
+ 
+ func Issues(ctx *middleware.Context) {
+-	ctx.Render.HTML(200, "user/issues", ctx.Data)
++	ctx.HTML(200, "user/issues", ctx.Data)
+ }
+ 
+ func Pulls(ctx *middleware.Context) {
+-	ctx.Render.HTML(200, "user/pulls", ctx.Data)
++	ctx.HTML(200, "user/pulls", ctx.Data)
+ }
+ 
+ func Stars(ctx *middleware.Context) {
+-	ctx.Render.HTML(200, "user/stars", ctx.Data)
++	ctx.HTML(200, "user/stars", ctx.Data)
+ }
+ 
+ func Activate(ctx *middleware.Context) {
+diff --git a/templates/base/footer.tmpl b/templates/base/footer.tmpl
+index 841af68..fe0ea93 100644
+--- a/templates/base/footer.tmpl
++++ b/templates/base/footer.tmpl
+@@ -3,7 +3,9 @@
+ <footer id="footer">
+     <div class="container footer-wrap">
+         <p>© 2014 Gogs · ver {{AppVer}} ·
+-            <i class="fa fa-github"></i><a target="_blank" href="https://github.com/gogits/gogs">GitHub</a>
++            All: {{LoadTimes .PageStartTime}} ·
++            Tmpl: {{call .TmplLoadTimes}} ·
++            <i class="fa fa-github"></i><a target="_blank" href="https://github.com/gogits/gogs">GitHub</a> ·
+         </p>
+         <p class="desc"></p>
+     </div>
+diff --git a/web.go b/web.go
+index e519fe1..fe3596e 100644
+--- a/web.go
++++ b/web.go
+@@ -12,7 +12,6 @@ import (
+ 
+ 	"github.com/codegangsta/cli"
+ 	"github.com/codegangsta/martini"
+-	"github.com/martini-contrib/render"
+ 	"github.com/martini-contrib/sessions"
+ 
+ 	"github.com/gogits/binding"
+@@ -64,7 +63,7 @@ func runWeb(*cli.Context) {
+ 	m := newMartini()
+ 
+ 	// Middlewares.
+-	m.Use(render.Renderer(render.Options{Funcs: []template.FuncMap{base.TemplateFuncs}}))
++	m.Use(middleware.Renderer(middleware.RenderOptions{Funcs: []template.FuncMap{base.TemplateFuncs}}))
+ 
+ 	// TODO: should use other store because cookie store is not secure.
+ 	store := sessions.NewCookieStore([]byte("secret123"))
+-- 
+1.8.4.1
+
