@@ -33,6 +33,10 @@ html, body {
     margin: 0 .5em;
 }
 
+.fa-m{
+    margin: 0;
+}
+
 .list-group .list-group-item {
     background-color: transparent;
 }
@@ -410,6 +414,15 @@ html, body {
     height: auto;
 }
 
+.gogs-repo-nav .name{
+    margin-top: 15px;
+}
+
+.gogs-repo-nav .desc{
+    color: #888;
+    margin-bottom: 0;
+}
+
 .gogs-repo-nav h3 .fa {
     color: #BBB;
     margin-left: 0;
@@ -417,6 +430,10 @@ html, body {
 
 .gogs-repo-nav .actions {
     padding-top: 20px;
+}
+
+.gogs-repo-nav .btn-default{
+    font-family: Tahoma, Arial, sans-serif;
 }
 
 #gogs-repo-watching .dropdown-menu {
@@ -528,6 +545,10 @@ html, body {
 .repo-list .meta,
 .repo-list .info {
     color: #999;
+}
+
+.popover .repo-clone-div{
+    min-width: 200px;
 }
 
 /* #gogs-source */
