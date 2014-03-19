@@ -105,7 +105,7 @@
 .markdown > pre {
   line-height: 1.6;
   overflow: auto;
-  background: #fff;
+  background: #f8f8f8;
   padding: 6px 10px;
   border: 1px solid #ddd;
 }
