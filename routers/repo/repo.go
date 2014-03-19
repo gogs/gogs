@@ -17,7 +17,7 @@ func Create(ctx *middleware.Context, form auth.CreateRepoForm) {
 	if ctx.Req.Method == "GET" {
 		ctx.Data["LanguageIgns"] = models.LanguageIgns
 		ctx.Data["Licenses"] = models.Licenses
-		ctx.Render.HTML(200, "repo/create", ctx.Data)
+		ctx.HTML(200, "repo/create", ctx.Data)
 		return
 	}
 
@@ -25,7 +25,7 @@ func Create(ctx *middleware.Context, form auth.CreateRepoForm) {
 		form.Language, form.License, form.Visibility == "private", form.InitReadme == "on")
 	if err == nil {
 		log.Trace("%s Repository created: %s/%s", ctx.Req.RequestURI, ctx.User.LowerName, form.RepoName)
-		ctx.Render.Redirect("/"+ctx.User.Name+"/"+form.RepoName, 302)
+		ctx.Redirect("/"+ctx.User.Name+"/"+form.RepoName, 302)
 		return
 	} else if err == models.ErrRepoAlreadyExist {
 		ctx.RenderWithErr("Repository name has already been used", "repo/create", &form)
@@ -36,7 +36,7 @@ func Create(ctx *middleware.Context, form auth.CreateRepoForm) {
 
 func SettingPost(ctx *middleware.Context) {
 	if !ctx.Repo.IsOwner {
-		ctx.Render.Error(404)
+		ctx.Error(404)
 		return
 	}
 
@@ -44,7 +44,7 @@ func SettingPost(ctx *middleware.Context) {
 	case "delete":
 		if len(ctx.Repo.Repository.Name) == 0 || ctx.Repo.Repository.Name != ctx.Query("repository") {
 			ctx.Data["ErrorMsg"] = "Please make sure you entered repository name is correct."
-			ctx.Render.HTML(200, "repo/setting", ctx.Data)
+			ctx.HTML(200, "repo/setting", ctx.Data)
 			return
 		}
 
@@ -55,5 +55,5 @@ func SettingPost(ctx *middleware.Context) {
 	}
 
 	log.Trace("%s Repository deleted: %s/%s", ctx.Req.RequestURI, ctx.User.LowerName, ctx.Repo.Repository.LowerName)
-	ctx.Render.Redirect("/", 302)
+	ctx.Redirect("/", 302)
 }
