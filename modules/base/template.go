@@ -5,11 +5,29 @@
 package base
 
 import (
+	"container/list"
 	"html/template"
 )
 
 func Str2html(raw string) template.HTML {
 	return template.HTML(raw)
+}
+
+func Range(l int) []int {
+	return make([]int, l)
+}
+
+func List(l *list.List) chan interface{} {
+	e := l.Front()
+	c := make(chan interface{})
+	go func() {
+		for e != nil {
+			c <- e.Value
+			e = e.Next()
+		}
+		close(c)
+	}()
+	return c
 }
 
 var TemplateFuncs template.FuncMap = map[string]interface{}{
@@ -30,4 +48,5 @@ var TemplateFuncs template.FuncMap = map[string]interface{}{
 	"ActionIcon": ActionIcon,
 	"ActionDesc": ActionDesc,
 	"DateFormat": DateFormat,
+	"List":       List,
 }

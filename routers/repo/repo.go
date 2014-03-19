@@ -7,6 +7,7 @@ package repo
 import (
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
+	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/middleware"
 )
 
@@ -23,6 +24,7 @@ func Create(ctx *middleware.Context, form auth.CreateRepoForm) {
 	_, err := models.CreateRepository(ctx.User, form.RepoName, form.Description,
 		form.Language, form.License, form.Visibility == "private", form.InitReadme == "on")
 	if err == nil {
+		log.Trace("%s Repository created: %s/%s", ctx.Req.RequestURI, ctx.User.LowerName, form.RepoName)
 		ctx.Render.Redirect("/"+ctx.User.Name+"/"+form.RepoName, 302)
 		return
 	} else if err == models.ErrRepoAlreadyExist {
@@ -52,5 +54,6 @@ func SettingPost(ctx *middleware.Context) {
 		}
 	}
 
+	log.Trace("%s Repository deleted: %s/%s", ctx.Req.RequestURI, ctx.User.LowerName, ctx.Repo.Repository.LowerName)
 	ctx.Render.Redirect("/", 302)
 }

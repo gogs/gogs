@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
+	"strings"
 
 	"github.com/codegangsta/cli"
 	"github.com/codegangsta/martini"
@@ -34,10 +35,33 @@ gogs web`,
 	Flags:  []cli.Flag{},
 }
 
+// Check run mode(Default of martini is Dev).
+func checkRunMode() {
+	switch base.Cfg.MustValue("", "RUN_MODE") {
+	case "prod":
+		martini.Env = martini.Prod
+	case "test":
+		martini.Env = martini.Test
+	}
+	log.Info("Run Mode: %s", strings.Title(martini.Env))
+}
+
+func newMartini() *martini.ClassicMartini {
+	r := martini.NewRouter()
+	m := martini.New()
+	m.Use(middleware.Logger())
+	m.Use(martini.Recovery())
+	m.Use(martini.Static("public"))
+	m.MapTo(r, (*martini.Routes)(nil))
+	m.Action(r.Handle)
+	return &martini.ClassicMartini{m, r}
+}
+
 func runWeb(*cli.Context) {
+	checkRunMode()
 	log.Info("%s %s", base.AppName, base.AppVer)
 
-	m := martini.Classic()
+	m := newMartini()
 
 	// Middlewares.
 	m.Use(render.Renderer(render.Options{Funcs: []template.FuncMap{base.TemplateFuncs}}))
@@ -48,48 +72,52 @@ func runWeb(*cli.Context) {
 
 	m.Use(middleware.InitContext())
 
+	ignSignIn := middleware.SignInRequire(false)
+	reqSignIn, reqSignOut := middleware.SignInRequire(true), middleware.SignOutRequire()
 	// Routers.
-	m.Get("/", middleware.SignInRequire(false), routers.Home)
-	m.Get("/issues", middleware.SignInRequire(true), user.Issues)
-	m.Get("/pulls", middleware.SignInRequire(true), user.Pulls)
-	m.Get("/stars", middleware.SignInRequire(true), user.Stars)
-	m.Any("/user/login", middleware.SignOutRequire(), binding.BindIgnErr(auth.LogInForm{}), user.SignIn)
-	m.Any("/user/logout", middleware.SignInRequire(true), user.SignOut)
-	m.Any("/user/sign_up", middleware.SignOutRequire(), binding.BindIgnErr(auth.RegisterForm{}), user.SignUp)
-	m.Any("/user/delete", middleware.SignInRequire(true), user.Delete)
+	m.Get("/", ignSignIn, routers.Home)
+	m.Get("/issues", reqSignIn, user.Issues)
+	m.Get("/pulls", reqSignIn, user.Pulls)
+	m.Get("/stars", reqSignIn, user.Stars)
+	m.Any("/user/login", reqSignOut, binding.BindIgnErr(auth.LogInForm{}), user.SignIn)
+	m.Any("/user/logout", reqSignIn, user.SignOut)
+	m.Any("/user/sign_up", reqSignOut, binding.BindIgnErr(auth.RegisterForm{}), user.SignUp)
+	m.Any("/user/delete", reqSignIn, user.Delete)
 	m.Get("/user/feeds", binding.Bind(auth.FeedsForm{}), user.Feeds)
 
-	m.Any("/user/setting", middleware.SignInRequire(true), binding.BindIgnErr(auth.UpdateProfileForm{}), user.Setting)
-	m.Any("/user/setting/password", middleware.SignInRequire(true), binding.BindIgnErr(auth.UpdatePasswdForm{}), user.SettingPassword)
-	m.Any("/user/setting/ssh", middleware.SignInRequire(true), binding.BindIgnErr(auth.AddSSHKeyForm{}), user.SettingSSHKeys)
-	m.Any("/user/setting/notification", middleware.SignInRequire(true), user.SettingNotification)
-	m.Any("/user/setting/security", middleware.SignInRequire(true), user.SettingSecurity)
+	m.Any("/user/setting", reqSignIn, binding.BindIgnErr(auth.UpdateProfileForm{}), user.Setting)
+	m.Any("/user/setting/password", reqSignIn, binding.BindIgnErr(auth.UpdatePasswdForm{}), user.SettingPassword)
+	m.Any("/user/setting/ssh", reqSignIn, binding.BindIgnErr(auth.AddSSHKeyForm{}), user.SettingSSHKeys)
+	m.Any("/user/setting/notification", reqSignIn, user.SettingNotification)
+	m.Any("/user/setting/security", reqSignIn, user.SettingSecurity)
 
-	m.Get("/user/:username", middleware.SignInRequire(false), user.Profile)
+	m.Get("/user/:username", ignSignIn, user.Profile)
 
-	m.Any("/repo/create", middleware.SignInRequire(true), binding.BindIgnErr(auth.CreateRepoForm{}), repo.Create)
+	m.Any("/repo/create", reqSignIn, binding.BindIgnErr(auth.CreateRepoForm{}), repo.Create)
 
 	m.Get("/help", routers.Help)
 
-	m.Post("/:username/:reponame/settings", middleware.SignInRequire(true), middleware.RepoAssignment(true), repo.SettingPost)
-	m.Get("/:username/:reponame/settings", middleware.SignInRequire(true), middleware.RepoAssignment(true), repo.Setting)
+	m.Post("/:username/:reponame/settings", reqSignIn, middleware.RepoAssignment(true), repo.SettingPost)
+	m.Get("/:username/:reponame/settings", reqSignIn, middleware.RepoAssignment(true), repo.Setting)
 
-	m.Get("/:username/:reponame/commits/:branchname", middleware.SignInRequire(false), middleware.RepoAssignment(true), repo.Commits)
-	m.Get("/:username/:reponame/issues", middleware.SignInRequire(false), middleware.RepoAssignment(true), repo.Issues)
-	m.Get("/:username/:reponame/pulls", middleware.SignInRequire(false), middleware.RepoAssignment(true), repo.Pulls)
-	m.Get("/:username/:reponame/branches", middleware.SignInRequire(false), middleware.RepoAssignment(true), repo.Branches)
+	m.Get("/:username/:reponame/commits/:branchname", ignSignIn, middleware.RepoAssignment(true), repo.Commits)
+	m.Get("/:username/:reponame/issues", ignSignIn, middleware.RepoAssignment(true), repo.Issues)
+	m.Get("/:username/:reponame/pulls", ignSignIn, middleware.RepoAssignment(true), repo.Pulls)
+	m.Get("/:username/:reponame/branches", ignSignIn, middleware.RepoAssignment(true), repo.Branches)
 	m.Get("/:username/:reponame/tree/:branchname/**",
-		middleware.SignInRequire(false), middleware.RepoAssignment(true), repo.Single)
+		ignSignIn, middleware.RepoAssignment(true), repo.Single)
 	m.Get("/:username/:reponame/tree/:branchname",
-		middleware.SignInRequire(false), middleware.RepoAssignment(true), repo.Single)
-	m.Get("/:username/:reponame/commit/:commitid/**", middleware.SignInRequire(false), middleware.RepoAssignment(true), repo.Single)
-	m.Get("/:username/:reponame/commit/:commitid", middleware.SignInRequire(false), middleware.RepoAssignment(true), repo.Single)
+		ignSignIn, middleware.RepoAssignment(true), repo.Single)
+	m.Get("/:username/:reponame/commit/:commitid/**", ignSignIn, middleware.RepoAssignment(true), repo.Single)
+	m.Get("/:username/:reponame/commit/:commitid", ignSignIn, middleware.RepoAssignment(true), repo.Single)
 
-	m.Get("/:username/:reponame", middleware.SignInRequire(false), middleware.RepoAssignment(true), repo.Single)
+	m.Get("/:username/:reponame", ignSignIn, middleware.RepoAssignment(true), repo.Single)
 
 	listenAddr := fmt.Sprintf("%s:%s",
 		base.Cfg.MustValue("server", "HTTP_ADDR"),
 		base.Cfg.MustValue("server", "HTTP_PORT", "3000"))
 	log.Info("Listen: %s", listenAddr)
-	http.ListenAndServe(listenAddr, m)
+	if err := http.ListenAndServe(listenAddr, m); err != nil {
+		log.Critical(err.Error())
+	}
 }

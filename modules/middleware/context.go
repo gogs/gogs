@@ -67,8 +67,13 @@ func (ctx *Context) RenderWithErr(msg, tpl string, form auth.Form) {
 
 // Handle handles and logs error by given status.
 func (ctx *Context) Handle(status int, title string, err error) {
-	ctx.Data["ErrorMsg"] = err
 	log.Error("%s: %v", title, err)
+	if martini.Dev == martini.Prod {
+		ctx.Render.HTML(500, "status/500", ctx.Data)
+		return
+	}
+
+	ctx.Data["ErrorMsg"] = err
 	ctx.Render.HTML(status, fmt.Sprintf("status/%d", status), ctx.Data)
 }
 

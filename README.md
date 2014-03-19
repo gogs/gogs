@@ -15,6 +15,7 @@ There are some very good products in this category such as [gitlab](http://gitla
 
 - Please see [Wiki](https://github.com/gogits/gogs/wiki) for project design, develop specification, change log and road map.
 - See [Trello Broad](https://trello.com/b/uxAoeLUl/gogs-go-git-service) to follow the develop team.
+- Try it before anything? Go down to **Installation -> Install from binary** section!.
 
 ## Features
 
@@ -33,11 +34,12 @@ Make sure you install [Prerequirements](https://github.com/gogits/gogs/wiki/Prer
 
 There are two ways to install Gogs:
 
-- [Install from binary](https://github.com/gogits/gogs/wiki/Install-from-binary)
+- [Install from binary](https://github.com/gogits/gogs/wiki/Install-from-binary): **STRONGLY RECOMMENDED** for just try and deployment!
 - [Install from source](https://github.com/gogits/gogs/wiki/Install-from-source)
 
 ## Acknowledgments
 
+- Mail service is based on [WeTalk](https://github.com/beego/wetalk).
 - Logo inspired by [martini](https://github.com/martini-contrib).
 
 ## Contributors
