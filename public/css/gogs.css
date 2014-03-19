@@ -119,6 +119,10 @@ html, body {
     bottom: -4px !important;
 }
 
+#gogs-nav-avatar:after {
+    bottom: -4px !important;
+}
+
 .gogs-nav .tooltip {
     border: none;
 }
@@ -712,11 +716,11 @@ html, body {
     vertical-align: top;
 }
 
-.commit-box .search{
+.commit-box .search {
     margin-top: 3px;
 }
 
-.commit-box td{
+.commit-box td {
     background-color: #FFF;
 }
 

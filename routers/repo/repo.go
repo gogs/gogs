@@ -15,6 +15,7 @@ func Create(ctx *middleware.Context, form auth.CreateRepoForm) {
 	ctx.Data["Title"] = "Create repository"
 
 	if ctx.Req.Method == "GET" {
+		ctx.Data["PageIsNewRepo"] = true // For navbar arrow.
 		ctx.Data["LanguageIgns"] = models.LanguageIgns
 		ctx.Data["Licenses"] = models.Licenses
 		ctx.HTML(200, "repo/create", ctx.Data)
