@@ -34,6 +34,7 @@ type Repository struct {
 	LowerName   string `xorm:"unique(s) index not null"`
 	Name        string `xorm:"index not null"`
 	Description string
+	Website     string
 	Private     bool
 	NumWatchs   int
 	NumStars    int
