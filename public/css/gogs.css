@@ -33,7 +33,7 @@ html, body {
     margin: 0 .5em;
 }
 
-.fa-m{
+.fa-m {
     margin: 0;
 }
 
@@ -69,7 +69,7 @@ html, body {
     height: 46px;
 }
 
-#gogs-nav-logo{
+#gogs-nav-logo {
     padding-left: 0;
     padding-right: 0;
     margin-right: 10px;
@@ -141,7 +141,7 @@ html, body {
     float: right;
 }
 
-#gogs-nav-signin{
+#gogs-nav-signin {
     float: right;
 }
 
@@ -414,11 +414,11 @@ html, body {
     height: auto;
 }
 
-.gogs-repo-nav .name{
+.gogs-repo-nav .name {
     margin-top: 15px;
 }
 
-.gogs-repo-nav .desc{
+.gogs-repo-nav .desc {
     color: #888;
     margin-bottom: 0;
 }
@@ -432,7 +432,7 @@ html, body {
     padding-top: 20px;
 }
 
-.gogs-repo-nav .btn-default{
+.gogs-repo-nav .btn-default {
     font-family: Tahoma, Arial, sans-serif;
 }
 
@@ -547,7 +547,7 @@ html, body {
     color: #999;
 }
 
-.popover .repo-clone-div{
+.popover .repo-clone-div {
     min-width: 200px;
 }
 
@@ -588,7 +588,7 @@ html, body {
     font-weight: normal;
 }
 
-.info-box .info-content  a,
+.info-box .info-content a,
 .info-box .info-head a {
     color: #666;
 }
@@ -643,63 +643,81 @@ html, body {
     padding: 30px 30px 50px;
 }
 
-.branch-list th{
+.branch-list th, .commit-list th {
     background-color: #FFF;
     line-height: 28px !important;
 }
 
-.branch-list td{
+.branch-list td {
     line-height: 36px !important;
 }
 
-.branch-box tr:hover td{
+.branch-box tr:hover td, .commit-box tr:hover td {
     background-color: rgba(19, 95, 215, 0.06) !important;
 }
 
-.branch-box .name{
+.branch-box .name, .commit-box .author {
     padding-left: 20px;
+}
+
+.branch-box .name {
     font-size: 15px;
 }
 
-.branch-box .action{
+.branch-box .action {
     width: 150px;
 }
 
-.branch-box td.date,.branch-box td.behind,.branch-box td.ahead{
+.branch-box td.date, .branch-box td.behind, .branch-box td.ahead {
     width: 120px;
     font-family: Verdana, Arial, sans-serif;
 }
 
-.branch-box .graph{
+.branch-box .graph {
     display: block;
     height: 3px;
 }
 
-.branch-box .behind{
+.branch-box .behind {
     text-align: right;
     direction: rtl;
 }
 
-.branch-box .behind .graph{
+.branch-box .behind .graph {
     background-color: #888;
 }
 
-.branch-box .ahead .graph{
+.branch-box .ahead .graph {
     background-color: #0093c4;
 }
 
-.branch-box .branch-main{
+.branch-box .branch-main {
     background-color: #444;
     color: #FFF;
     border-color: #444;
 }
 
-.branch-box .branch-main a{
+.branch-box .branch-main a {
     color: #FFF;
 }
 
-.branch-box .branch-main .name .btn{
+.branch-box .branch-main .name .btn {
     margin-left: .5em;
+}
+
+.commit-box .avatar {
+    width: 20px;
+    height: 20px;
+    margin-right: 8px;
+    vertical-align: top;
+}
+
+.commit-box .search{
+    margin-top: 3px;
+}
+
+.commit-box td{
+    background-color: #FFF;
 }
 
 /* wrapper and footer */
