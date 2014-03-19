@@ -131,15 +131,15 @@ func newMailService() {
 	}
 }
 
-func newRegisterService() {
+func newRegisterMailService() {
 	if !Cfg.MustBool("service", "REGISTER_EMAIL_CONFIRM") {
 		return
 	} else if MailService == nil {
-		log.Warn("Register Service: Mail Service is not enabled")
+		log.Warn("Register Mail Service: Mail Service is not enabled")
 		return
 	}
 	Service.RegisterEmailConfirm = true
-	log.Info("Register Service Enabled")
+	log.Info("Register Mail Service Enabled")
 }
 
 func init() {
@@ -177,5 +177,5 @@ func init() {
 	newService()
 	newLogService()
 	newMailService()
-	newRegisterService()
+	newRegisterMailService()
 }

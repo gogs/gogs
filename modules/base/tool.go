@@ -36,6 +36,35 @@ func GetRandomString(n int) string {
 	return string(bytes)
 }
 
+// verify time limit code
+func VerifyTimeLimitCode(data string, minutes int, code string) bool {
+	if len(code) <= 18 {
+		return false
+	}
+
+	// split code
+	start := code[:12]
+	lives := code[12:18]
+	if d, err := StrTo(lives).Int(); err == nil {
+		minutes = d
+	}
+
+	// right active code
+	retCode := CreateTimeLimitCode(data, minutes, start)
+	if retCode == code && minutes > 0 {
+		// check time is expired or not
+		before, _ := DateParse(start, "YmdHi")
+		now := time.Now()
+		if before.Add(time.Minute*time.Duration(minutes)).Unix() > now.Unix() {
+			return true
+		}
+	}
+
+	return false
+}
+
+const TimeLimitCodeLength = 12 + 6 + 40
+
 // create a time limit code
 // code format: 12 length date time string + 6 minutes string + 40 sha1 encoded string
 func CreateTimeLimitCode(data string, minutes int, startInf interface{}) string {
@@ -283,16 +312,24 @@ func DateFormat(t time.Time, format string) string {
 	return t.Format(format)
 }
 
-type argInt []int
+// convert string to specify type
 
-func (a argInt) Get(i int, args ...int) (r int) {
-	if i >= 0 && i < len(a) {
-		r = a[i]
+type StrTo string
+
+func (f StrTo) Exist() bool {
+	return string(f) != string(0x1E)
+}
+
+func (f StrTo) Int() (int, error) {
+	v, err := strconv.ParseInt(f.String(), 10, 32)
+	return int(v), err
+}
+
+func (f StrTo) String() string {
+	if f.Exist() {
+		return string(f)
 	}
-	if len(args) > 0 {
-		r = args[0]
-	}
-	return
+	return ""
 }
 
 // convert any type to string
@@ -332,6 +369,18 @@ func ToStr(value interface{}, args ...int) (s string) {
 		s = fmt.Sprintf("%v", v)
 	}
 	return s
+}
+
+type argInt []int
+
+func (a argInt) Get(i int, args ...int) (r int) {
+	if i >= 0 && i < len(a) {
+		r = a[i]
+	}
+	if len(args) > 0 {
+		r = args[0]
+	}
+	return
 }
 
 type Actioner interface {
