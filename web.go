@@ -47,8 +47,8 @@ func checkRunMode() {
 }
 
 func runWeb(*cli.Context) {
-	log.Info("%s %s", base.AppName, base.AppVer)
 	checkRunMode()
+	log.Info("%s %s", base.AppName, base.AppVer)
 
 	m := martini.Classic()
 
