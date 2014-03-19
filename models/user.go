@@ -105,19 +105,19 @@ func GetUserSalt() string {
 }
 
 // RegisterUser creates record of a new user.
-func RegisterUser(user *User) (err error) {
+func RegisterUser(user *User) (*User, error) {
 	isExist, err := IsUserExist(user.Name)
 	if err != nil {
-		return err
+		return nil, err
 	} else if isExist {
-		return ErrUserAlreadyExist
+		return nil, ErrUserAlreadyExist
 	}
 
 	isExist, err = IsEmailUsed(user.Email)
 	if err != nil {
-		return err
+		return nil, err
 	} else if isExist {
-		return ErrEmailAlreadyUsed
+		return nil, ErrEmailAlreadyUsed
 	}
 
 	user.LowerName = strings.ToLower(user.Name)
@@ -126,22 +126,17 @@ func RegisterUser(user *User) (err error) {
 	user.Expired = time.Now().Add(3 * 24 * time.Hour)
 	user.Rands = GetUserSalt()
 	if err = user.EncodePasswd(); err != nil {
-		return err
+		return nil, err
 	} else if _, err = orm.Insert(user); err != nil {
-		return err
+		return nil, err
 	} else if err = os.MkdirAll(UserPath(user.Name), os.ModePerm); err != nil {
 		if _, err := orm.Id(user.Id).Delete(&User{}); err != nil {
-			return errors.New(fmt.Sprintf(
+			return nil, errors.New(fmt.Sprintf(
 				"both create userpath %s and delete table record faild: %v", user.Name, err))
 		}
-		return err
+		return nil, err
 	}
-
-	// Send confirmation e-mail.
-	if base.Service.RegisterEmailConfitm {
-
-	}
-	return nil
+	return user, nil
 }
 
 // UpdateUser updates user's information.

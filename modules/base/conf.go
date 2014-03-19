@@ -37,7 +37,7 @@ var (
 )
 
 var Service struct {
-	RegisterEmailConfitm bool
+	RegisterEmailConfirm bool
 	ActiveCodeLives      int
 	ResetPwdCodeLives    int
 }
@@ -138,7 +138,7 @@ func newRegisterService() {
 		log.Warn("Register Service: Mail Service is not enabled")
 		return
 	}
-	Service.RegisterEmailConfitm = true
+	Service.RegisterEmailConfirm = true
 	log.Info("Register Service Enabled")
 }
 
