@@ -58,6 +58,7 @@ func newMartini() *martini.ClassicMartini {
 }
 
 func runWeb(*cli.Context) {
+	base.NewServices()
 	checkRunMode()
 	log.Info("%s %s", base.AppName, base.AppVer)
 

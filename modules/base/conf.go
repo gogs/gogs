@@ -172,8 +172,9 @@ func init() {
 	AppUrl = Cfg.MustValue("server", "ROOT_URL")
 	Domain = Cfg.MustValue("server", "DOMAIN")
 	SecretKey = Cfg.MustValue("security", "SECRET_KEY")
+}
 
-	// Extensions.
+func NewServices() {
 	newService()
 	newLogService()
 	newMailService()
