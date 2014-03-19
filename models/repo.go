@@ -5,6 +5,7 @@
 package models
 
 import (
+	"container/list"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -144,10 +145,7 @@ func CreateRepository(user *User, repoName, desc, repoLang, license string, priv
 		return nil, err
 	}
 
-	rawSql := "UPDATE user SET num_repos = num_repos + 1 WHERE id = ?"
-	if base.Cfg.MustValue("database", "DB_TYPE") == "postgres" {
-		rawSql = "UPDATE \"user\" SET num_repos = num_repos + 1 WHERE id = ?"
-	}
+	rawSql := "UPDATE `user` SET num_repos = num_repos + 1 WHERE id = ?"
 	if _, err = session.Exec(rawSql, user.Id); err != nil {
 		session.Rollback()
 		if err2 := os.RemoveAll(repoPath); err2 != nil {
@@ -448,7 +446,7 @@ func GetReposFiles(userName, reposName, branchName, commitId, rpath string) ([]*
 		return nil, err
 	}
 
-	commit, err := GetCommit(userName, reposName, branchName, commitId)
+	commit, err := repo.GetCommit(branchName, commitId)
 	if err != nil {
 		return nil, err
 	}
@@ -464,8 +462,10 @@ func GetReposFiles(userName, reposName, branchName, commitId, rpath string) ([]*
 			}
 
 			var cm = commit
-
+			var i int
 			for {
+				i = i + 1
+				//fmt.Println(".....", i, cm.Id(), cm.ParentCount())
 				if cm.ParentCount() == 0 {
 					break
 				} else if cm.ParentCount() == 1 {
@@ -482,7 +482,10 @@ func GetReposFiles(userName, reposName, branchName, commitId, rpath string) ([]*
 				} else {
 					var emptyCnt = 0
 					var sameIdcnt = 0
+					var lastSameCm *git.Commit
+					//fmt.Println(".....", cm.ParentCount())
 					for i := 0; i < cm.ParentCount(); i++ {
+						//fmt.Println("parent", i, cm.Parent(i).Id())
 						p := cm.Parent(i)
 						pt, _ := repo.SubTree(p.Tree, dirname)
 						var pEntry *git.TreeEntry
@@ -490,23 +493,31 @@ func GetReposFiles(userName, reposName, branchName, commitId, rpath string) ([]*
 							pEntry = pt.EntryByName(entry.Name)
 						}
 
+						//fmt.Println("pEntry", pEntry)
+
 						if pEntry == nil {
-							if emptyCnt == cm.ParentCount()-1 {
-								goto loop
-							} else {
-								emptyCnt = emptyCnt + 1
-								continue
+							emptyCnt = emptyCnt + 1
+							if emptyCnt+sameIdcnt == cm.ParentCount() {
+								if lastSameCm == nil {
+									goto loop
+								} else {
+									cm = lastSameCm
+									break
+								}
 							}
 						} else {
+							//fmt.Println(i, "pEntry", pEntry.Id, "entry", entry.Id)
 							if !pEntry.Id.Equal(entry.Id) {
 								goto loop
 							} else {
-								if sameIdcnt == cm.ParentCount()-1 {
+								lastSameCm = cm.Parent(i)
+								sameIdcnt = sameIdcnt + 1
+								if emptyCnt+sameIdcnt == cm.ParentCount() {
 									// TODO: now follow the first parent commit?
-									cm = cm.Parent(0)
+									cm = lastSameCm
+									//fmt.Println("sameId...")
 									break
 								}
-								sameIdcnt = sameIdcnt + 1
 							}
 						}
 					}
@@ -541,26 +552,11 @@ func GetCommit(userName, repoName, branchname, commitid string) (*git.Commit, er
 		return nil, err
 	}
 
-	if commitid != "" {
-		oid, err := git.NewOidFromString(commitid)
-		if err != nil {
-			return nil, err
-		}
-		return repo.LookupCommit(oid)
-	}
-	if branchname == "" {
-		return nil, errors.New("no branch name and no commit id")
-	}
-
-	r, err := repo.LookupReference(fmt.Sprintf("refs/heads/%s", branchname))
-	if err != nil {
-		return nil, err
-	}
-	return r.LastCommit()
+	return repo.GetCommit(branchname, commitid)
 }
 
 // GetCommits returns all commits of given branch of repository.
-func GetCommits(userName, reposName, branchname string) ([]*git.Commit, error) {
+func GetCommits(userName, reposName, branchname string) (*list.List, error) {
 	repo, err := git.OpenRepository(RepoPath(userName, reposName))
 	if err != nil {
 		return nil, err

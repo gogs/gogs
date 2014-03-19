@@ -7,10 +7,13 @@ package base
 import (
 	"bytes"
 	"crypto/md5"
+	"crypto/rand"
+	"crypto/sha1"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"math"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -20,6 +23,67 @@ func EncodeMd5(str string) string {
 	m := md5.New()
 	m.Write([]byte(str))
 	return hex.EncodeToString(m.Sum(nil))
+}
+
+// Random generate string
+func GetRandomString(n int) string {
+	const alphanum = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+	var bytes = make([]byte, n)
+	rand.Read(bytes)
+	for i, b := range bytes {
+		bytes[i] = alphanum[b%byte(len(alphanum))]
+	}
+	return string(bytes)
+}
+
+// create a time limit code
+// code format: 12 length date time string + 6 minutes string + 40 sha1 encoded string
+func CreateTimeLimitCode(data string, minutes int, startInf interface{}) string {
+	format := "YmdHi"
+
+	var start, end time.Time
+	var startStr, endStr string
+
+	if startInf == nil {
+		// Use now time create code
+		start = time.Now()
+		startStr = DateFormat(start, format)
+	} else {
+		// use start string create code
+		startStr = startInf.(string)
+		start, _ = DateParse(startStr, format)
+		startStr = DateFormat(start, format)
+	}
+
+	end = start.Add(time.Minute * time.Duration(minutes))
+	endStr = DateFormat(end, format)
+
+	// create sha1 encode string
+	sh := sha1.New()
+	sh.Write([]byte(data + SecretKey + startStr + endStr + ToStr(minutes)))
+	encoded := hex.EncodeToString(sh.Sum(nil))
+
+	code := fmt.Sprintf("%s%06d%s", startStr, minutes, encoded)
+	return code
+}
+
+// TODO:
+func RenderTemplate(TplNames string, Data map[interface{}]interface{}) string {
+	// if beego.RunMode == "dev" {
+	// 	beego.BuildTemplate(beego.ViewsPath)
+	// }
+
+	// ibytes := bytes.NewBufferString("")
+	// if _, ok := beego.BeeTemplates[TplNames]; !ok {
+	// 	panic("can't find templatefile in the path:" + TplNames)
+	// }
+	// err := beego.BeeTemplates[TplNames].ExecuteTemplate(ibytes, TplNames, Data)
+	// if err != nil {
+	// 	beego.Trace("template Execute err:", err)
+	// }
+	// icontent, _ := ioutil.ReadAll(ibytes)
+	// return string(icontent)
+	return "not implement yet"
 }
 
 // AvatarLink returns avatar link by given e-mail.
@@ -236,6 +300,57 @@ func DateFormat(t time.Time, format string) string {
 	replacer := strings.NewReplacer(datePatterns...)
 	format = replacer.Replace(format)
 	return t.Format(format)
+}
+
+type argInt []int
+
+func (a argInt) Get(i int, args ...int) (r int) {
+	if i >= 0 && i < len(a) {
+		r = a[i]
+	}
+	if len(args) > 0 {
+		r = args[0]
+	}
+	return
+}
+
+// convert any type to string
+func ToStr(value interface{}, args ...int) (s string) {
+	switch v := value.(type) {
+	case bool:
+		s = strconv.FormatBool(v)
+	case float32:
+		s = strconv.FormatFloat(float64(v), 'f', argInt(args).Get(0, -1), argInt(args).Get(1, 32))
+	case float64:
+		s = strconv.FormatFloat(v, 'f', argInt(args).Get(0, -1), argInt(args).Get(1, 64))
+	case int:
+		s = strconv.FormatInt(int64(v), argInt(args).Get(0, 10))
+	case int8:
+		s = strconv.FormatInt(int64(v), argInt(args).Get(0, 10))
+	case int16:
+		s = strconv.FormatInt(int64(v), argInt(args).Get(0, 10))
+	case int32:
+		s = strconv.FormatInt(int64(v), argInt(args).Get(0, 10))
+	case int64:
+		s = strconv.FormatInt(v, argInt(args).Get(0, 10))
+	case uint:
+		s = strconv.FormatUint(uint64(v), argInt(args).Get(0, 10))
+	case uint8:
+		s = strconv.FormatUint(uint64(v), argInt(args).Get(0, 10))
+	case uint16:
+		s = strconv.FormatUint(uint64(v), argInt(args).Get(0, 10))
+	case uint32:
+		s = strconv.FormatUint(uint64(v), argInt(args).Get(0, 10))
+	case uint64:
+		s = strconv.FormatUint(v, argInt(args).Get(0, 10))
+	case string:
+		s = v
+	case []byte:
+		s = string(v)
+	default:
+		s = fmt.Sprintf("%v", v)
+	}
+	return s
 }
 
 type Actioner interface {

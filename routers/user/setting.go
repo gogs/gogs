@@ -14,9 +14,11 @@ import (
 	"github.com/gogits/gogs/modules/middleware"
 )
 
+// Render user setting page (email, website modify)
 func Setting(ctx *middleware.Context, form auth.UpdateProfileForm) {
 	ctx.Data["Title"] = "Setting"
-	ctx.Data["PageIsUserSetting"] = true
+	ctx.Data["PageIsUserSetting"] = true // For navbar arrow.
+	ctx.Data["IsUserPageSetting"] = true // For setting nav highlight.
 
 	user := ctx.User
 	ctx.Data["Owner"] = user
@@ -26,6 +28,7 @@ func Setting(ctx *middleware.Context, form auth.UpdateProfileForm) {
 		return
 	}
 
+	// below is for POST requests
 	if hasErr, ok := ctx.Data["HasError"]; ok && hasErr.(bool) {
 		ctx.Render.HTML(200, "user/setting", ctx.Data)
 		return
@@ -43,11 +46,13 @@ func Setting(ctx *middleware.Context, form auth.UpdateProfileForm) {
 
 	ctx.Data["IsSuccess"] = true
 	ctx.Render.HTML(200, "user/setting", ctx.Data)
+	log.Trace("%s User setting updated: %s", ctx.Req.RequestURI, ctx.User.LowerName)
 }
 
 func SettingPassword(ctx *middleware.Context, form auth.UpdatePasswdForm) {
 	ctx.Data["Title"] = "Password"
 	ctx.Data["PageIsUserSetting"] = true
+	ctx.Data["IsUserPageSettingPasswd"] = true
 
 	if ctx.Req.Method == "GET" {
 		ctx.Render.HTML(200, "user/password", ctx.Data)
@@ -78,6 +83,7 @@ func SettingPassword(ctx *middleware.Context, form auth.UpdatePasswdForm) {
 
 	ctx.Data["Owner"] = user
 	ctx.Render.HTML(200, "user/password", ctx.Data)
+	log.Trace("%s User password updated: %s", ctx.Req.RequestURI, ctx.User.LowerName)
 }
 
 func SettingSSHKeys(ctx *middleware.Context, form auth.AddSSHKeyForm) {
@@ -108,6 +114,7 @@ func SettingSSHKeys(ctx *middleware.Context, form auth.AddSSHKeyForm) {
 				"err": err.Error(),
 			})
 		} else {
+			log.Trace("%s User SSH key deleted: %s", ctx.Req.RequestURI, ctx.User.LowerName)
 			ctx.Render.JSON(200, map[string]interface{}{
 				"ok": true,
 			})
@@ -133,6 +140,7 @@ func SettingSSHKeys(ctx *middleware.Context, form auth.AddSSHKeyForm) {
 				return
 			}
 			ctx.Handle(200, "ssh.AddPublicKey", err)
+			log.Trace("%s User SSH key added: %s", ctx.Req.RequestURI, ctx.User.LowerName)
 			return
 		} else {
 			ctx.Data["AddSSHKeySuccess"] = true
@@ -147,20 +155,23 @@ func SettingSSHKeys(ctx *middleware.Context, form auth.AddSSHKeyForm) {
 	}
 
 	ctx.Data["PageIsUserSetting"] = true
+	ctx.Data["IsUserPageSettingSSH"] = true
 	ctx.Data["Keys"] = keys
 	ctx.Render.HTML(200, "user/publickey", ctx.Data)
 }
 
 func SettingNotification(ctx *middleware.Context) {
-	// todo user setting notification
+	// TODO: user setting notification
 	ctx.Data["Title"] = "Notification"
 	ctx.Data["PageIsUserSetting"] = true
+	ctx.Data["IsUserPageSettingNotify"] = true
 	ctx.Render.HTML(200, "user/notification", ctx.Data)
 }
 
 func SettingSecurity(ctx *middleware.Context) {
-	// todo user setting security
+	// TODO: user setting security
 	ctx.Data["Title"] = "Security"
 	ctx.Data["PageIsUserSetting"] = true
+	ctx.Data["IsUserPageSettingSecurity"] = true
 	ctx.Render.HTML(200, "user/security", ctx.Data)
 }

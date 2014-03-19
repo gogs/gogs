@@ -19,14 +19,6 @@ import (
 	"github.com/gogits/gogs/modules/base"
 )
 
-var (
-	UserPasswdSalt string
-)
-
-func init() {
-	UserPasswdSalt = base.Cfg.MustValue("security", "USER_PASSWD_SALT")
-}
-
 // User types.
 const (
 	UT_INDIVIDUAL = iota + 1
@@ -56,6 +48,9 @@ type User struct {
 	AvatarEmail   string `xorm:"not null"`
 	Location      string
 	Website       string
+	IsActive      bool
+	Rands         string `xorm:"VARCHAR(10)"`
+	Expired       time.Time
 	Created       time.Time `xorm:"created"`
 	Updated       time.Time `xorm:"updated"`
 }
@@ -104,37 +99,44 @@ func (user *User) NewGitSig() *git.Signature {
 	}
 }
 
+// return a user salt token
+func GetUserSalt() string {
+	return base.GetRandomString(10)
+}
+
 // RegisterUser creates record of a new user.
-func RegisterUser(user *User) (err error) {
+func RegisterUser(user *User) (*User, error) {
 	isExist, err := IsUserExist(user.Name)
 	if err != nil {
-		return err
+		return nil, err
 	} else if isExist {
-		return ErrUserAlreadyExist
+		return nil, ErrUserAlreadyExist
 	}
 
 	isExist, err = IsEmailUsed(user.Email)
 	if err != nil {
-		return err
+		return nil, err
 	} else if isExist {
-		return ErrEmailAlreadyUsed
+		return nil, ErrEmailAlreadyUsed
 	}
 
 	user.LowerName = strings.ToLower(user.Name)
 	user.Avatar = base.EncodeMd5(user.Email)
 	user.AvatarEmail = user.Email
+	user.Expired = time.Now().Add(3 * 24 * time.Hour)
+	user.Rands = GetUserSalt()
 	if err = user.EncodePasswd(); err != nil {
-		return err
+		return nil, err
 	} else if _, err = orm.Insert(user); err != nil {
-		return err
+		return nil, err
 	} else if err = os.MkdirAll(UserPath(user.Name), os.ModePerm); err != nil {
 		if _, err := orm.Id(user.Id).Delete(&User{}); err != nil {
-			return errors.New(fmt.Sprintf(
+			return nil, errors.New(fmt.Sprintf(
 				"both create userpath %s and delete table record faild: %v", user.Name, err))
 		}
-		return err
+		return nil, err
 	}
-	return nil
+	return user, nil
 }
 
 // UpdateUser updates user's information.
@@ -183,7 +185,7 @@ func DeleteUser(user *User) error {
 
 // EncodePasswd encodes password to safe format.
 func (user *User) EncodePasswd() error {
-	newPasswd, err := scrypt.Key([]byte(user.Passwd), []byte(UserPasswdSalt), 16384, 8, 1, 64)
+	newPasswd, err := scrypt.Key([]byte(user.Passwd), []byte(base.SecretKey), 16384, 8, 1, 64)
 	user.Passwd = fmt.Sprintf("%x", newPasswd)
 	return err
 }
@@ -252,7 +254,7 @@ func LoginUserPlain(name, passwd string) (*User, error) {
 	} else if !has {
 		err = ErrUserNotExist
 	}
-	return &user, nil
+	return &user, err
 }
 
 // FollowUser marks someone be another's follower.
