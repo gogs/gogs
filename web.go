@@ -34,6 +34,10 @@ gogs web`,
 	Flags:  []cli.Flag{},
 }
 
+func Range(l int) []int {
+	return make([]int, l)
+}
+
 func runWeb(*cli.Context) {
 	log.Info("%s %s", base.AppName, base.AppVer)
 

@@ -5,8 +5,9 @@
 <div id="gogs-body" class="container">
     <div id="gogs-commits">
     <ul>
-    {{range .Commits}}
-    <li>{{.Committer.Name}} - {{.Id}} - {{.Message}} - {{.Committer.When}}</li>
+    {{$r := List .Commits}}
+    {{range $r}}
+		    <li>{{.Committer.Name}} - {{.Id}} - {{.Message}} - {{.Committer.When}}</li>
     {{end}}
     </ul>
     </div>
