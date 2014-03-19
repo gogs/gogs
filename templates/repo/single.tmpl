@@ -57,6 +57,14 @@
                 </tr>
                 </thead>
                 <tbody>
+                {{if .HasParentPath}}
+                    <tr class="has-parent">
+                        <td class="icon"><a href="/{{$username}}/{{$reponame}}/tree/{{$branchname}}{{.ParentPath}}"><i class="fa fa-reply"></i></a></td>
+                        <td class="name"><a href="/{{$username}}/{{$reponame}}/tree/{{$branchname}}{{.ParentPath}}">..</a></td>
+                        <td class="text"></td>
+                        <td class="date"></td>
+                    </tr>
+                {{end}}
                 {{range .Files}}
                 <tr
                 {{if .IsDir}}class="is-dir"{{end}}>
