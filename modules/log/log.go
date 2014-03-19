@@ -11,9 +11,9 @@ import (
 
 var logger *logs.BeeLogger
 
-func init() {
-	logger = logs.NewLogger(10000)
-	logger.SetLogger("console", "")
+func NewLogger(bufLen int64, mode, config string) {
+	logger = logs.NewLogger(bufLen)
+	logger.SetLogger(mode, config)
 }
 
 func Trace(format string, v ...interface{}) {
