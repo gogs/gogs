@@ -19,14 +19,6 @@ import (
 	"github.com/gogits/gogs/modules/base"
 )
 
-var (
-	UserPasswdSalt string
-)
-
-func init() {
-	UserPasswdSalt = base.Cfg.MustValue("security", "USER_PASSWD_SALT")
-}
-
 // User types.
 const (
 	UT_INDIVIDUAL = iota + 1
@@ -56,6 +48,9 @@ type User struct {
 	AvatarEmail   string `xorm:"not null"`
 	Location      string
 	Website       string
+	IsActive      bool
+	Rands         string `xorm:"VARCHAR(10)"`
+	Expired       time.Time
 	Created       time.Time `xorm:"created"`
 	Updated       time.Time `xorm:"updated"`
 }
@@ -104,6 +99,11 @@ func (user *User) NewGitSig() *git.Signature {
 	}
 }
 
+// return a user salt token
+func GetUserSalt() string {
+	return base.GetRandomString(10)
+}
+
 // RegisterUser creates record of a new user.
 func RegisterUser(user *User) (err error) {
 	isExist, err := IsUserExist(user.Name)
@@ -123,6 +123,8 @@ func RegisterUser(user *User) (err error) {
 	user.LowerName = strings.ToLower(user.Name)
 	user.Avatar = base.EncodeMd5(user.Email)
 	user.AvatarEmail = user.Email
+	user.Expired = time.Now().Add(3 * 24 * time.Hour)
+	user.Rands = GetUserSalt()
 	if err = user.EncodePasswd(); err != nil {
 		return err
 	} else if _, err = orm.Insert(user); err != nil {
@@ -133,6 +135,11 @@ func RegisterUser(user *User) (err error) {
 				"both create userpath %s and delete table record faild: %v", user.Name, err))
 		}
 		return err
+	}
+
+	// Send confirmation e-mail.
+	if base.Service.RegisterEmailConfitm {
+
 	}
 	return nil
 }
@@ -183,7 +190,7 @@ func DeleteUser(user *User) error {
 
 // EncodePasswd encodes password to safe format.
 func (user *User) EncodePasswd() error {
-	newPasswd, err := scrypt.Key([]byte(user.Passwd), []byte(UserPasswdSalt), 16384, 8, 1, 64)
+	newPasswd, err := scrypt.Key([]byte(user.Passwd), []byte(base.SecretKey), 16384, 8, 1, 64)
 	user.Passwd = fmt.Sprintf("%x", newPasswd)
 	return err
 }

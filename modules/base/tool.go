@@ -7,6 +7,8 @@ package base
 import (
 	"bytes"
 	"crypto/md5"
+	"crypto/rand"
+	"crypto/sha1"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -20,6 +22,66 @@ func EncodeMd5(str string) string {
 	m := md5.New()
 	m.Write([]byte(str))
 	return hex.EncodeToString(m.Sum(nil))
+}
+
+// Random generate string
+func GetRandomString(n int) string {
+	const alphanum = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+	var bytes = make([]byte, n)
+	rand.Read(bytes)
+	for i, b := range bytes {
+		bytes[i] = alphanum[b%byte(len(alphanum))]
+	}
+	return string(bytes)
+}
+
+// create a time limit code
+// code format: 12 length date time string + 6 minutes string + 40 sha1 encoded string
+func CreateTimeLimitCode(data string, minutes int, startInf interface{}) string {
+	format := "YmdHi"
+
+	var start, end time.Time
+	var startStr, endStr string
+
+	if startInf == nil {
+		// Use now time create code
+		start = time.Now()
+		startStr = DateFormat(start, format)
+	} else {
+		// use start string create code
+		startStr = startInf.(string)
+		start, _ = DateParse(startStr, format)
+		startStr = DateFormat(start, format)
+	}
+
+	end = start.Add(time.Minute * time.Duration(minutes))
+	endStr = DateFormat(end, format)
+
+	// create sha1 encode string
+	sh := sha1.New()
+	sh.Write([]byte(data + SecretKey + startStr + endStr + fmt.Sprintf("%d", minutes)))
+	encoded := hex.EncodeToString(sh.Sum(nil))
+
+	code := fmt.Sprintf("%s%06d%s", startStr, minutes, encoded)
+	return code
+}
+
+func RenderTemplate(TplNames string, Data map[interface{}]interface{}) string {
+	// if beego.RunMode == "dev" {
+	// 	beego.BuildTemplate(beego.ViewsPath)
+	// }
+
+	// ibytes := bytes.NewBufferString("")
+	// if _, ok := beego.BeeTemplates[TplNames]; !ok {
+	// 	panic("can't find templatefile in the path:" + TplNames)
+	// }
+	// err := beego.BeeTemplates[TplNames].ExecuteTemplate(ibytes, TplNames, Data)
+	// if err != nil {
+	// 	beego.Trace("template Execute err:", err)
+	// }
+	// icontent, _ := ioutil.ReadAll(ibytes)
+	// return string(icontent)
+	return "not implement yet"
 }
 
 // AvatarLink returns avatar link by given e-mail.

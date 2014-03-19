@@ -28,10 +28,19 @@ type Mailer struct {
 var (
 	AppVer      string
 	AppName     string
+	AppLogo     string
+	AppUrl      string
 	Domain      string
+	SecretKey   string
 	Cfg         *goconfig.ConfigFile
 	MailService *Mailer
 )
+
+var Service struct {
+	RegisterEmailConfitm bool
+	ActiveCodeLives      int
+	ResetPwdCodeLives    int
+}
 
 func exeDir() (string, error) {
 	file, err := exec.LookPath(os.Args[0])
@@ -52,6 +61,11 @@ var logLevels = map[string]string{
 	"Warn":     "3",
 	"Error":    "4",
 	"Critical": "5",
+}
+
+func newService() {
+	Service.ActiveCodeLives = Cfg.MustInt("service", "ACTIVE_CODE_LIVE_MINUTES", 180)
+	Service.ResetPwdCodeLives = Cfg.MustInt("service", "RESET_PASSWD_CODE_LIVE_MINUTES", 180)
 }
 
 func newLogService() {
@@ -117,6 +131,17 @@ func newMailService() {
 	}
 }
 
+func newRegisterService() {
+	if !Cfg.MustBool("service", "REGISTER_EMAIL_CONFIRM") {
+		return
+	} else if MailService == nil {
+		log.Warn("Register Service: Mail Service is not enabled")
+		return
+	}
+	Service.RegisterEmailConfitm = true
+	log.Info("Register Service Enabled")
+}
+
 func init() {
 	var err error
 	workDir, err := exeDir()
@@ -143,9 +168,13 @@ func init() {
 	Cfg.BlockMode = false
 
 	AppName = Cfg.MustValue("", "APP_NAME", "Gogs: Go Git Service")
+	AppLogo = Cfg.MustValue("", "APP_LOGO", "img/favicon.png")
+	AppUrl = Cfg.MustValue("server", "ROOT_URL")
 	Domain = Cfg.MustValue("server", "DOMAIN")
+	SecretKey = Cfg.MustValue("security", "SECRET_KEY")
 
 	// Extensions.
 	newLogService()
 	newMailService()
+	newRegisterService()
 }
