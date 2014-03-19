@@ -16,6 +16,10 @@ func SignInRequire(redirect bool) martini.Handler {
 				ctx.Render.Redirect("/")
 			}
 			return
+		} else if !ctx.User.IsActive {
+			ctx.Data["Title"] = "Activate Your Account"
+			ctx.Render.HTML(200, "user/active", ctx.Data)
+			return
 		}
 	}
 }

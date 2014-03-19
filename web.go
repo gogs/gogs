@@ -84,6 +84,7 @@ func runWeb(*cli.Context) {
 	m.Any("/user/sign_up", reqSignOut, binding.BindIgnErr(auth.RegisterForm{}), user.SignUp)
 	m.Any("/user/delete", reqSignIn, user.Delete)
 	m.Get("/user/feeds", binding.Bind(auth.FeedsForm{}), user.Feeds)
+	m.Get("/user/activate", user.Activate)
 
 	m.Any("/user/setting", reqSignIn, binding.BindIgnErr(auth.UpdateProfileForm{}), user.Setting)
 	m.Any("/user/setting/password", reqSignIn, binding.BindIgnErr(auth.UpdatePasswdForm{}), user.SettingPassword)

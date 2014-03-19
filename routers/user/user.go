@@ -99,6 +99,7 @@ func SignIn(ctx *middleware.Context, form auth.LogInForm) {
 
 	ctx.Session.Set("userId", user.Id)
 	ctx.Session.Set("userName", user.Name)
+
 	ctx.Render.Redirect("/")
 }
 
@@ -222,4 +223,19 @@ func Pulls(ctx *middleware.Context) {
 
 func Stars(ctx *middleware.Context) {
 	ctx.Render.HTML(200, "user/stars", ctx.Data)
+}
+
+func Activate(ctx *middleware.Context) {
+	code := ctx.Query("code")
+	if len(code) == 0 {
+		ctx.Data["IsActivatePage"] = true
+		// Resend confirmation e-mail.
+		if base.Service.RegisterEmailConfirm {
+			auth.SendRegisterMail(ctx.User)
+		} else {
+			ctx.Data["ServiceNotEnabled"] = true
+		}
+		ctx.Render.HTML(200, "user/active", ctx.Data)
+		return
+	}
 }
