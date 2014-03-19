@@ -37,9 +37,9 @@ func GetMailTmplData(user *models.User) map[interface{}]interface{} {
 
 // create a time limit code for user active
 func CreateUserActiveCode(user *models.User, startInf interface{}) string {
-	hours := base.Service.ActiveCodeLives / 60
+	minutes := base.Service.ActiveCodeLives
 	data := base.ToStr(user.Id) + user.Email + user.LowerName + user.Passwd + user.Rands
-	code := base.CreateTimeLimitCode(data, hours, startInf)
+	code := base.CreateTimeLimitCode(data, minutes, startInf)
 
 	// add tail hex username
 	code += hex.EncodeToString([]byte(user.LowerName))
@@ -70,11 +70,11 @@ func SendRegisterMail(r *middleware.Render, user *models.User) {
 func SendActiveMail(r *middleware.Render, user *models.User) {
 	code := CreateUserActiveCode(user, nil)
 
-	subject := "Verify your email address"
+	subject := "Verify your e-mail address"
 
 	data := GetMailTmplData(user)
 	data["Code"] = code
-	body, err := r.HTMLString("mail/auth/active_email.html", data)
+	body, err := r.HTMLString("mail/auth/active_email", data)
 	if err != nil {
 		log.Error("mail.SendActiveMail(fail to render): %v", err)
 		return
