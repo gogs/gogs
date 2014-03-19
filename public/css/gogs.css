@@ -563,6 +563,15 @@ html, body {
     padding: 9px 20px;
 }
 
+.info-box .info-head {
+    font-weight: normal;
+}
+
+.info-box .info-content  a,
+.info-box .info-head a {
+    color: #666;
+}
+
 .file-list {
     background-color: #fafafa;
 }
