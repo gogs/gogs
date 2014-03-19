@@ -68,6 +68,7 @@ func Profile(ctx *middleware.Context, params martini.Params) {
 		ctx.Data["Repos"] = repos
 	}
 
+	ctx.Data["PageIsUserProfile"] = true
 	ctx.HTML(200, "user/profile", ctx.Data)
 }
 
