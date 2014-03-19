@@ -131,9 +131,10 @@ func SignUp(ctx *middleware.Context, form auth.RegisterForm) {
 	}
 
 	u := &models.User{
-		Name:   form.UserName,
-		Email:  form.Email,
-		Passwd: form.Password,
+		Name:     form.UserName,
+		Email:    form.Email,
+		Passwd:   form.Password,
+		IsActive: !base.Service.RegisterEmailConfitm,
 	}
 
 	if err := models.RegisterUser(u); err != nil {
