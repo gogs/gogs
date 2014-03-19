@@ -18,6 +18,7 @@ func Home(ctx *middleware.Context) {
 	ctx.Render.HTML(200, "home", ctx.Data)
 }
 
-func Help(ctx *middleware.Context) string {
-	return "This is help page"
+func Help(ctx *middleware.Context) {
+	ctx.Data["PageIsHelp"] = true
+	ctx.Render.HTML(200, "help", ctx.Data)
 }

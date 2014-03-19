@@ -252,7 +252,7 @@ func LoginUserPlain(name, passwd string) (*User, error) {
 	} else if !has {
 		err = ErrUserNotExist
 	}
-	return &user, nil
+	return &user, err
 }
 
 // FollowUser marks someone be another's follower.
