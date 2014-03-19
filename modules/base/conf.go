@@ -44,6 +44,23 @@ func exeDir() (string, error) {
 	return path.Dir(p), nil
 }
 
+func newLogService() {
+	log.NewLogger()
+}
+
+func newMailService() {
+	// Check mailer setting.
+	if Cfg.MustBool("mailer", "ENABLED") {
+		MailService = &Mailer{
+			Name:   Cfg.MustValue("mailer", "NAME", AppName),
+			Host:   Cfg.MustValue("mailer", "HOST", "127.0.0.1:25"),
+			User:   Cfg.MustValue("mailer", "USER", "example@example.com"),
+			Passwd: Cfg.MustValue("mailer", "PASSWD", "******"),
+		}
+		log.Info("Mail Service Enabled")
+	}
+}
+
 func init() {
 	var err error
 	workDir, err := exeDir()
@@ -72,14 +89,7 @@ func init() {
 	AppName = Cfg.MustValue("", "APP_NAME", "Gogs: Go Git Service")
 	Domain = Cfg.MustValue("server", "DOMAIN")
 
-	// Check mailer setting.
-	if Cfg.MustBool("mailer", "ENABLED") {
-		MailService = &Mailer{
-			Name:   Cfg.MustValue("mailer", "NAME", AppName),
-			Host:   Cfg.MustValue("mailer", "HOST", "127.0.0.1:25"),
-			User:   Cfg.MustValue("mailer", "USER", "example@example.com"),
-			Passwd: Cfg.MustValue("mailer", "PASSWD", "******"),
-		}
-		log.Info("Mail Service Enabled")
-	}
+	// Extensions.
+	newLogService()
+	newMailService()
 }
