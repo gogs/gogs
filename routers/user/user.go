@@ -151,6 +151,8 @@ func SignUp(ctx *middleware.Context, form auth.RegisterForm) {
 
 func Delete(ctx *middleware.Context) {
 	ctx.Data["Title"] = "Delete Account"
+	ctx.Data["PageIsUserSetting"] = true
+	ctx.Data["IsUserPageSettingDelete"] = true
 
 	if ctx.Req.Method == "GET" {
 		ctx.Render.HTML(200, "user/delete", ctx.Data)
@@ -182,7 +184,7 @@ func Delete(ctx *middleware.Context) {
 }
 
 const (
-	feedTpl = `<i class="icon fa fa-%s"></i>
+	TPL_FEED = `<i class="icon fa fa-%s"></i>
                         <div class="info"><span class="meta">%s</span><br>%s</div>`
 )
 
@@ -194,20 +196,20 @@ func Feeds(ctx *middleware.Context, form auth.FeedsForm) {
 
 	feeds := make([]string, len(actions))
 	for i := range actions {
-		feeds[i] = fmt.Sprintf(feedTpl, base.ActionIcon(actions[i].OpType),
+		feeds[i] = fmt.Sprintf(TPL_FEED, base.ActionIcon(actions[i].OpType),
 			base.TimeSince(actions[i].Created), base.ActionDesc(actions[i], ctx.User.AvatarLink()))
 	}
 	ctx.Render.JSON(200, &feeds)
 }
 
-func Issues(ctx *middleware.Context) string {
-	return "This is issues page"
+func Issues(ctx *middleware.Context) {
+	ctx.Render.HTML(200, "user/issues", ctx.Data)
 }
 
-func Pulls(ctx *middleware.Context) string {
-	return "This is pulls page"
+func Pulls(ctx *middleware.Context) {
+	ctx.Render.HTML(200, "user/pulls", ctx.Data)
 }
 
-func Stars(ctx *middleware.Context) string {
-	return "This is stars page"
+func Stars(ctx *middleware.Context) {
+	ctx.Render.HTML(200, "user/stars", ctx.Data)
 }
