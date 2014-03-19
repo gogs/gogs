@@ -6,6 +6,7 @@ package user
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/codegangsta/martini"
 	"github.com/martini-contrib/render"
@@ -14,6 +15,7 @@ import (
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/base"
+	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/middleware"
 )
 
@@ -146,6 +148,7 @@ func SignUp(ctx *middleware.Context, form auth.RegisterForm) {
 		return
 	}
 
+	log.Trace("%s User created: %s", ctx.Req.RequestURI, strings.ToLower(form.UserName))
 	ctx.Render.Redirect("/user/login")
 }
 

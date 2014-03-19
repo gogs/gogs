@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"strings"
 
 	"github.com/Unknwon/com"
 	"github.com/Unknwon/goconfig"
@@ -63,9 +64,10 @@ func newLogService() {
 	}
 
 	// Log level.
-	level, ok := logLevels[Cfg.MustValue("log."+mode, "LEVEL", "Trace")]
+	levelName := Cfg.MustValue("log."+mode, "LEVEL", "Trace")
+	level, ok := logLevels[levelName]
 	if !ok {
-		fmt.Printf("Unknown log level: %s\n", Cfg.MustValue("log."+mode, "LEVEL", "Trace"))
+		fmt.Printf("Unknown log level: %s\n", levelName)
 		os.Exit(2)
 	}
 
@@ -99,6 +101,7 @@ func newLogService() {
 	}
 
 	log.NewLogger(Cfg.MustInt64("log", "BUFFER_LEN", 10000), mode, config)
+	log.Info("Log Mode: %s(%s)", strings.Title(mode), levelName)
 }
 
 func newMailService() {

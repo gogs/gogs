@@ -46,6 +46,7 @@ func Setting(ctx *middleware.Context, form auth.UpdateProfileForm) {
 
 	ctx.Data["IsSuccess"] = true
 	ctx.Render.HTML(200, "user/setting", ctx.Data)
+	log.Trace("%s User setting updated: %s", ctx.Req.RequestURI, ctx.User.LowerName)
 }
 
 func SettingPassword(ctx *middleware.Context, form auth.UpdatePasswdForm) {
@@ -82,6 +83,7 @@ func SettingPassword(ctx *middleware.Context, form auth.UpdatePasswdForm) {
 
 	ctx.Data["Owner"] = user
 	ctx.Render.HTML(200, "user/password", ctx.Data)
+	log.Trace("%s User password updated: %s", ctx.Req.RequestURI, ctx.User.LowerName)
 }
 
 func SettingSSHKeys(ctx *middleware.Context, form auth.AddSSHKeyForm) {
@@ -112,6 +114,7 @@ func SettingSSHKeys(ctx *middleware.Context, form auth.AddSSHKeyForm) {
 				"err": err.Error(),
 			})
 		} else {
+			log.Trace("%s User SSH key deleted: %s", ctx.Req.RequestURI, ctx.User.LowerName)
 			ctx.Render.JSON(200, map[string]interface{}{
 				"ok": true,
 			})
@@ -137,6 +140,7 @@ func SettingSSHKeys(ctx *middleware.Context, form auth.AddSSHKeyForm) {
 				return
 			}
 			ctx.Handle(200, "ssh.AddPublicKey", err)
+			log.Trace("%s User SSH key added: %s", ctx.Req.RequestURI, ctx.User.LowerName)
 			return
 		} else {
 			ctx.Data["AddSSHKeySuccess"] = true
