@@ -17,9 +17,9 @@ func SignInRequire(redirect bool) martini.Handler {
 			}
 			return
 		} else if !ctx.User.IsActive {
-			ctx.Data["Title"] = "Activate Your Account"
-			ctx.Render.HTML(200, "user/active", ctx.Data)
-			return
+			// ctx.Data["Title"] = "Activate Your Account"
+			// ctx.Render.HTML(200, "user/active", ctx.Data)
+			// return
 		}
 	}
 }
