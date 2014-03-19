@@ -134,10 +134,11 @@ func SignUp(ctx *middleware.Context, form auth.RegisterForm) {
 		Name:     form.UserName,
 		Email:    form.Email,
 		Passwd:   form.Password,
-		IsActive: !base.Service.RegisterEmailConfitm,
+		IsActive: !base.Service.RegisterEmailConfirm,
 	}
 
-	if err := models.RegisterUser(u); err != nil {
+	var err error
+	if u, err = models.RegisterUser(u); err != nil {
 		switch err.Error() {
 		case models.ErrUserAlreadyExist.Error():
 			ctx.RenderWithErr("Username has been already taken", "user/signup", &form)
@@ -150,6 +151,11 @@ func SignUp(ctx *middleware.Context, form auth.RegisterForm) {
 	}
 
 	log.Trace("%s User created: %s", ctx.Req.RequestURI, strings.ToLower(form.UserName))
+
+	// Send confirmation e-mail.
+	if base.Service.RegisterEmailConfirm {
+		auth.SendRegisterMail(u)
+	}
 	ctx.Render.Redirect("/user/login")
 }
 

@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -59,13 +60,14 @@ func CreateTimeLimitCode(data string, minutes int, startInf interface{}) string 
 
 	// create sha1 encode string
 	sh := sha1.New()
-	sh.Write([]byte(data + SecretKey + startStr + endStr + fmt.Sprintf("%d", minutes)))
+	sh.Write([]byte(data + SecretKey + startStr + endStr + ToStr(minutes)))
 	encoded := hex.EncodeToString(sh.Sum(nil))
 
 	code := fmt.Sprintf("%s%06d%s", startStr, minutes, encoded)
 	return code
 }
 
+// TODO:
 func RenderTemplate(TplNames string, Data map[interface{}]interface{}) string {
 	// if beego.RunMode == "dev" {
 	// 	beego.BuildTemplate(beego.ViewsPath)
@@ -298,6 +300,57 @@ func DateFormat(t time.Time, format string) string {
 	replacer := strings.NewReplacer(datePatterns...)
 	format = replacer.Replace(format)
 	return t.Format(format)
+}
+
+type argInt []int
+
+func (a argInt) Get(i int, args ...int) (r int) {
+	if i >= 0 && i < len(a) {
+		r = a[i]
+	}
+	if len(args) > 0 {
+		r = args[0]
+	}
+	return
+}
+
+// convert any type to string
+func ToStr(value interface{}, args ...int) (s string) {
+	switch v := value.(type) {
+	case bool:
+		s = strconv.FormatBool(v)
+	case float32:
+		s = strconv.FormatFloat(float64(v), 'f', argInt(args).Get(0, -1), argInt(args).Get(1, 32))
+	case float64:
+		s = strconv.FormatFloat(v, 'f', argInt(args).Get(0, -1), argInt(args).Get(1, 64))
+	case int:
+		s = strconv.FormatInt(int64(v), argInt(args).Get(0, 10))
+	case int8:
+		s = strconv.FormatInt(int64(v), argInt(args).Get(0, 10))
+	case int16:
+		s = strconv.FormatInt(int64(v), argInt(args).Get(0, 10))
+	case int32:
+		s = strconv.FormatInt(int64(v), argInt(args).Get(0, 10))
+	case int64:
+		s = strconv.FormatInt(v, argInt(args).Get(0, 10))
+	case uint:
+		s = strconv.FormatUint(uint64(v), argInt(args).Get(0, 10))
+	case uint8:
+		s = strconv.FormatUint(uint64(v), argInt(args).Get(0, 10))
+	case uint16:
+		s = strconv.FormatUint(uint64(v), argInt(args).Get(0, 10))
+	case uint32:
+		s = strconv.FormatUint(uint64(v), argInt(args).Get(0, 10))
+	case uint64:
+		s = strconv.FormatUint(v, argInt(args).Get(0, 10))
+	case string:
+		s = v
+	case []byte:
+		s = string(v)
+	default:
+		s = fmt.Sprintf("%v", v)
+	}
+	return s
 }
 
 type Actioner interface {

@@ -9,6 +9,13 @@ import (
 	"github.com/gogits/gogs/modules/base"
 )
 
+// Create New mail message use MailFrom and MailUser
+func NewMailMessage(To []string, subject, body string) Message {
+	msg := NewHtmlMessage(To, base.MailService.User, subject, body)
+	msg.User = base.MailService.User
+	return msg
+}
+
 func GetMailTmplData(user *models.User) map[interface{}]interface{} {
 	data := make(map[interface{}]interface{}, 10)
 	data["AppName"] = base.AppName

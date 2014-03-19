@@ -50,10 +50,10 @@ func SettingPost(ctx *middleware.Context) {
 
 		if err := models.DeleteRepository(ctx.User.Id, ctx.Repo.Repository.Id, ctx.User.LowerName); err != nil {
 			ctx.Handle(200, "repo.Delete", err)
-			log.Trace("%s Repository deleted: %s/%s", ctx.Req.RequestURI, ctx.User.LowerName, ctx.Repo.Repository.LowerName)
 			return
 		}
 	}
 
+	log.Trace("%s Repository deleted: %s/%s", ctx.Req.RequestURI, ctx.User.LowerName, ctx.Repo.Repository.LowerName)
 	ctx.Render.Redirect("/", 302)
 }
