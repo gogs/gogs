@@ -7,24 +7,26 @@ package middleware
 import (
 	"fmt"
 	"net/http"
-	"time"
 
 	"github.com/codegangsta/martini"
+	"github.com/martini-contrib/render"
 	"github.com/martini-contrib/sessions"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
+	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
 )
 
 // Context represents context of a request.
 type Context struct {
-	*Render
 	c        martini.Context
 	p        martini.Params
 	Req      *http.Request
 	Res      http.ResponseWriter
 	Session  sessions.Session
+	Data     base.TmplData
+	Render   render.Render
 	User     *models.User
 	IsSigned bool
 
@@ -60,25 +62,27 @@ func (ctx *Context) RenderWithErr(msg, tpl string, form auth.Form) {
 	ctx.Data["HasError"] = true
 	ctx.Data["ErrorMsg"] = msg
 	auth.AssignForm(form, ctx.Data)
-	ctx.HTML(200, tpl, ctx.Data)
+	ctx.Render.HTML(200, tpl, ctx.Data)
 }
 
 // Handle handles and logs error by given status.
 func (ctx *Context) Handle(status int, title string, err error) {
 	log.Error("%s: %v", title, err)
 	if martini.Dev == martini.Prod {
-		ctx.HTML(500, "status/500", ctx.Data)
+		ctx.Render.HTML(500, "status/500", ctx.Data)
 		return
 	}
 
 	ctx.Data["ErrorMsg"] = err
-	ctx.HTML(status, fmt.Sprintf("status/%d", status), ctx.Data)
+	ctx.Render.HTML(status, fmt.Sprintf("status/%d", status), ctx.Data)
 }
 
 // InitContext initializes a classic context for a request.
 func InitContext() martini.Handler {
 	return func(res http.ResponseWriter, r *http.Request, c martini.Context,
-		session sessions.Session, rd *Render) {
+		session sessions.Session, rd render.Render) {
+
+		data := base.TmplData{}
 
 		ctx := &Context{
 			c: c,
@@ -86,6 +90,7 @@ func InitContext() martini.Handler {
 			Req:     r,
 			Res:     res,
 			Session: session,
+			Data:    data,
 			Render:  rd,
 		}
 
@@ -94,17 +99,16 @@ func InitContext() martini.Handler {
 		ctx.User = user
 		ctx.IsSigned = user != nil
 
-		ctx.Data["IsSigned"] = ctx.IsSigned
+		data["IsSigned"] = ctx.IsSigned
 
 		if user != nil {
-			ctx.Data["SignedUser"] = user
-			ctx.Data["SignedUserId"] = user.Id
-			ctx.Data["SignedUserName"] = user.LowerName
+			data["SignedUser"] = user
+			data["SignedUserId"] = user.Id
+			data["SignedUserName"] = user.LowerName
 		}
 
-		ctx.Data["PageStartTime"] = time.Now()
-
 		c.Map(ctx)
+		c.Map(data)
 
 		c.Next()
 	}

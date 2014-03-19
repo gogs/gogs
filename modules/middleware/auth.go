@@ -13,7 +13,7 @@ func SignInRequire(redirect bool) martini.Handler {
 	return func(ctx *Context) {
 		if !ctx.IsSigned {
 			if redirect {
-				ctx.Redirect("/")
+				ctx.Render.Redirect("/")
 			}
 			return
 		} else if !ctx.User.IsActive {
@@ -28,7 +28,7 @@ func SignInRequire(redirect bool) martini.Handler {
 func SignOutRequire() martini.Handler {
 	return func(ctx *Context) {
 		if ctx.IsSigned {
-			ctx.Redirect("/")
+			ctx.Render.Redirect("/")
 		}
 	}
 }
