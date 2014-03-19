@@ -145,10 +145,7 @@ func CreateRepository(user *User, repoName, desc, repoLang, license string, priv
 		return nil, err
 	}
 
-	rawSql := "UPDATE user SET num_repos = num_repos + 1 WHERE id = ?"
-	if base.Cfg.MustValue("database", "DB_TYPE") == "postgres" {
-		rawSql = "UPDATE \"user\" SET num_repos = num_repos + 1 WHERE id = ?"
-	}
+	rawSql := "UPDATE `user` SET num_repos = num_repos + 1 WHERE id = ?"
 	if _, err = session.Exec(rawSql, user.Id); err != nil {
 		session.Rollback()
 		if err2 := os.RemoveAll(repoPath); err2 != nil {
