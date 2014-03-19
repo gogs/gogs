@@ -5,6 +5,7 @@
 package repo
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/codegangsta/martini"
@@ -87,6 +88,11 @@ func Single(ctx *middleware.Context, params martini.Params) {
 		for i, _ := range treenames {
 			Paths = append(Paths, strings.Join(treenames[0:i+1], "/"))
 		}
+
+		ctx.Data["HasParentPath"] = true
+		if len(Paths)-2 >= 0 {
+			ctx.Data["ParentPath"] = "/" + Paths[len(Paths)-2]
+		}
 	}
 
 	// Get latest commit according username and repo name
@@ -125,6 +131,8 @@ func Single(ctx *middleware.Context, params martini.Params) {
 			ctx.Data["ReadmeContent"] = string(base.RenderMarkdown(blob.Contents(), urlPrefix))
 		}
 	}
+
+	fmt.Println(Paths)
 
 	ctx.Data["Paths"] = Paths
 	ctx.Data["Treenames"] = treenames
