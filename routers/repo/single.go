@@ -186,6 +186,8 @@ func Commits(ctx *middleware.Context, params martini.Params) {
 		ctx.Error(404)
 		return
 	}
+	ctx.Data["Username"] = params["username"]
+	ctx.Data["Reponame"] = params["reponame"]
 	ctx.Data["Commits"] = commits
 	ctx.HTML(200, "repo/commits", ctx.Data)
 }
