@@ -46,11 +46,22 @@ func checkRunMode() {
 	log.Info("Run Mode: %s", strings.Title(martini.Env))
 }
 
+func newMartini() *martini.ClassicMartini {
+	r := martini.NewRouter()
+	m := martini.New()
+	m.Use(middleware.Logger())
+	m.Use(martini.Recovery())
+	m.Use(martini.Static("public"))
+	m.MapTo(r, (*martini.Routes)(nil))
+	m.Action(r.Handle)
+	return &martini.ClassicMartini{m, r}
+}
+
 func runWeb(*cli.Context) {
 	checkRunMode()
 	log.Info("%s %s", base.AppName, base.AppVer)
 
-	m := martini.Classic()
+	m := newMartini()
 
 	// Middlewares.
 	m.Use(render.Renderer(render.Options{Funcs: []template.FuncMap{base.TemplateFuncs}}))
