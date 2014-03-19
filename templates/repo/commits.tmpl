@@ -4,6 +4,44 @@
 {{template "repo/toolbar" .}}
 <div id="gogs-body" class="container">
     <div id="gogs-commits">
+        <div class="panel panel-default commit-box info-box">
+            <div class="panel-heading info-head">
+                <div class="search pull-right form">
+                    <input class="form-control search" type="search" placeholder="search commit"/>
+                </div>
+                <h4>Commits</h4>
+            </div>
+            <table class="panel-footer table commit-list table table-striped">
+                <thead>
+                <tr>
+                    <th class="author">Author</th>
+                    <th class="sha">Commit</th>
+                    <th class="message">Message</th>
+                    <th class="date">Date</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <td class="author"><img class="avatar" src="#" alt=""/>CommitUser</td>
+                    <td class="sha"><a class="label label-success" href="#">d91b380</a></td>
+                    <td class="message">Fix Synchronize to delete service objects in subduers upon move</td>
+                    <td class="date">3 years ago</td>
+                </tr>
+                <tr>
+                    <td class="author"><img class="avatar" src="#" alt=""/>CommitUser</td>
+                    <td class="sha"><a class="label label-success" href="#">d91b380</a></td>
+                    <td class="message">Fix Synchronize to delete service objects in subduers upon move</td>
+                    <td class="date">3 years ago</td>
+                </tr>
+                <tr>
+                    <td class="author"><img class="avatar" src="#" alt=""/>CommitUser</td>
+                    <td class="sha"><a class="label label-success" href="#">d91b380</a></td>
+                    <td class="message">Fix Synchronize to delete service objects in subduers upon move</td>
+                    <td class="date">3 years ago</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
     <ul>
     {{$r := List .Commits}}
     {{range $r}}
