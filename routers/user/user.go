@@ -70,6 +70,8 @@ func Profile(ctx *middleware.Context, params martini.Params) {
 		ctx.Data["Repos"] = repos
 	}
 
+	ctx.Data["PageIsUserProfile"] = true // For navbar arrow.
+
 	ctx.Render.HTML(200, "user/profile", ctx.Data)
 }
 
