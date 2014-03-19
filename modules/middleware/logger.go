@@ -32,11 +32,11 @@ func Logger() martini.Handler {
 		if !isWindows {
 			switch rw.Status() {
 			case 200:
-				content = fmt.Sprintf("\033[1;32%s\033[0m", content)
+				content = fmt.Sprintf("\033[1;32m%s\033[0m", content)
 			case 304:
-				content = fmt.Sprintf("\033[1;33%s\033[0m", content)
+				content = fmt.Sprintf("\033[1;33m%s\033[0m", content)
 			case 404:
-				content = fmt.Sprintf("\033[1;31%s\033[0m", content)
+				content = fmt.Sprintf("\033[1;31m%s\033[0m", content)
 			}
 		}
 		log.Println(content)
