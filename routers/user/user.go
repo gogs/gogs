@@ -9,8 +9,6 @@ import (
 	"strings"
 
 	"github.com/codegangsta/martini"
-	"github.com/martini-contrib/render"
-	"github.com/martini-contrib/sessions"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
@@ -35,7 +33,7 @@ func Dashboard(ctx *middleware.Context) {
 		return
 	}
 	ctx.Data["Feeds"] = feeds
-	ctx.Render.HTML(200, "user/dashboard", ctx.Data)
+	ctx.HTML(200, "user/dashboard", ctx.Data)
 }
 
 func Profile(ctx *middleware.Context, params martini.Params) {
@@ -70,19 +68,19 @@ func Profile(ctx *middleware.Context, params martini.Params) {
 		ctx.Data["Repos"] = repos
 	}
 
-	ctx.Render.HTML(200, "user/profile", ctx.Data)
+	ctx.HTML(200, "user/profile", ctx.Data)
 }
 
 func SignIn(ctx *middleware.Context, form auth.LogInForm) {
 	ctx.Data["Title"] = "Log In"
 
 	if ctx.Req.Method == "GET" {
-		ctx.Render.HTML(200, "user/signin", ctx.Data)
+		ctx.HTML(200, "user/signin", ctx.Data)
 		return
 	}
 
 	if hasErr, ok := ctx.Data["HasError"]; ok && hasErr.(bool) {
-		ctx.Render.HTML(200, "user/signin", ctx.Data)
+		ctx.HTML(200, "user/signin", ctx.Data)
 		return
 	}
 
@@ -99,13 +97,13 @@ func SignIn(ctx *middleware.Context, form auth.LogInForm) {
 
 	ctx.Session.Set("userId", user.Id)
 	ctx.Session.Set("userName", user.Name)
-	ctx.Render.Redirect("/")
+	ctx.Redirect("/")
 }
 
-func SignOut(r render.Render, session sessions.Session) {
-	session.Delete("userId")
-	session.Delete("userName")
-	r.Redirect("/")
+func SignOut(ctx *middleware.Context) {
+	ctx.Session.Delete("userId")
+	ctx.Session.Delete("userName")
+	ctx.Redirect("/")
 }
 
 func SignUp(ctx *middleware.Context, form auth.RegisterForm) {
@@ -113,7 +111,7 @@ func SignUp(ctx *middleware.Context, form auth.RegisterForm) {
 	ctx.Data["PageIsSignUp"] = true
 
 	if ctx.Req.Method == "GET" {
-		ctx.Render.HTML(200, "user/signup", ctx.Data)
+		ctx.HTML(200, "user/signup", ctx.Data)
 		return
 	}
 
@@ -126,7 +124,7 @@ func SignUp(ctx *middleware.Context, form auth.RegisterForm) {
 	}
 
 	if ctx.HasError() {
-		ctx.Render.HTML(200, "user/signup", ctx.Data)
+		ctx.HTML(200, "user/signup", ctx.Data)
 		return
 	}
 
@@ -156,7 +154,7 @@ func SignUp(ctx *middleware.Context, form auth.RegisterForm) {
 	if base.Service.RegisterEmailConfirm {
 		auth.SendRegisterMail(u)
 	}
-	ctx.Render.Redirect("/user/login")
+	ctx.Redirect("/user/login")
 }
 
 func Delete(ctx *middleware.Context) {
@@ -165,7 +163,7 @@ func Delete(ctx *middleware.Context) {
 	ctx.Data["IsUserPageSettingDelete"] = true
 
 	if ctx.Req.Method == "GET" {
-		ctx.Render.HTML(200, "user/delete", ctx.Data)
+		ctx.HTML(200, "user/delete", ctx.Data)
 		return
 	}
 
@@ -185,12 +183,12 @@ func Delete(ctx *middleware.Context) {
 				return
 			}
 		} else {
-			ctx.Render.Redirect("/")
+			ctx.Redirect("/")
 			return
 		}
 	}
 
-	ctx.Render.HTML(200, "user/delete", ctx.Data)
+	ctx.HTML(200, "user/delete", ctx.Data)
 }
 
 const (
@@ -201,7 +199,7 @@ const (
 func Feeds(ctx *middleware.Context, form auth.FeedsForm) {
 	actions, err := models.GetFeeds(form.UserId, form.Page*20, false)
 	if err != nil {
-		ctx.Render.JSON(500, err)
+		ctx.JSON(500, err)
 	}
 
 	feeds := make([]string, len(actions))
@@ -209,17 +207,32 @@ func Feeds(ctx *middleware.Context, form auth.FeedsForm) {
 		feeds[i] = fmt.Sprintf(TPL_FEED, base.ActionIcon(actions[i].OpType),
 			base.TimeSince(actions[i].Created), base.ActionDesc(actions[i], ctx.User.AvatarLink()))
 	}
-	ctx.Render.JSON(200, &feeds)
+	ctx.JSON(200, &feeds)
 }
 
 func Issues(ctx *middleware.Context) {
-	ctx.Render.HTML(200, "user/issues", ctx.Data)
+	ctx.HTML(200, "user/issues", ctx.Data)
 }
 
 func Pulls(ctx *middleware.Context) {
-	ctx.Render.HTML(200, "user/pulls", ctx.Data)
+	ctx.HTML(200, "user/pulls", ctx.Data)
 }
 
 func Stars(ctx *middleware.Context) {
-	ctx.Render.HTML(200, "user/stars", ctx.Data)
+	ctx.HTML(200, "user/stars", ctx.Data)
+}
+
+func Activate(ctx *middleware.Context) {
+	code := ctx.Query("code")
+	if len(code) == 0 {
+		ctx.Data["IsActivatePage"] = true
+		// Resend confirmation e-mail.
+		if base.Service.RegisterEmailConfirm {
+			auth.SendRegisterMail(ctx.User)
+		} else {
+			ctx.Data["ServiceNotEnabled"] = true
+		}
+		ctx.Render.HTML(200, "user/active", ctx.Data)
+		return
+	}
 }

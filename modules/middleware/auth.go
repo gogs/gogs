@@ -13,9 +13,13 @@ func SignInRequire(redirect bool) martini.Handler {
 	return func(ctx *Context) {
 		if !ctx.IsSigned {
 			if redirect {
-				ctx.Render.Redirect("/")
+				ctx.Redirect("/")
 			}
 			return
+		} else if !ctx.User.IsActive {
+			// ctx.Data["Title"] = "Activate Your Account"
+			// ctx.Render.HTML(200, "user/active", ctx.Data)
+			// return
 		}
 	}
 }
@@ -24,7 +28,7 @@ func SignInRequire(redirect bool) martini.Handler {
 func SignOutRequire() martini.Handler {
 	return func(ctx *Context) {
 		if ctx.IsSigned {
-			ctx.Render.Redirect("/")
+			ctx.Redirect("/")
 		}
 	}
 }

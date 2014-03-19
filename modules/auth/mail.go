@@ -39,3 +39,20 @@ func SendRegisterMail(user *models.User) {
 	// async send mail
 	mailer.SendAsync(msg)
 }
+
+// Send email verify active email.
+func SendActiveMail(user *models.User) {
+	code := CreateUserActiveCode(user, nil)
+
+	subject := "Verify your email address"
+
+	data := mailer.GetMailTmplData(user)
+	data["Code"] = code
+	body := base.RenderTemplate("mail/auth/active_email.html", data)
+
+	msg := mailer.NewMailMessage([]string{user.Email}, subject, body)
+	msg.Info = fmt.Sprintf("UID: %d, send email verify mail", user.Id)
+
+	// async send mail
+	mailer.SendAsync(msg)
+}

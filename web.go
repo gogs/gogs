@@ -12,7 +12,6 @@ import (
 
 	"github.com/codegangsta/cli"
 	"github.com/codegangsta/martini"
-	"github.com/martini-contrib/render"
 	"github.com/martini-contrib/sessions"
 
 	"github.com/gogits/binding"
@@ -64,7 +63,7 @@ func runWeb(*cli.Context) {
 	m := newMartini()
 
 	// Middlewares.
-	m.Use(render.Renderer(render.Options{Funcs: []template.FuncMap{base.TemplateFuncs}}))
+	m.Use(middleware.Renderer(middleware.RenderOptions{Funcs: []template.FuncMap{base.TemplateFuncs}}))
 
 	// TODO: should use other store because cookie store is not secure.
 	store := sessions.NewCookieStore([]byte("secret123"))
@@ -84,6 +83,7 @@ func runWeb(*cli.Context) {
 	m.Any("/user/sign_up", reqSignOut, binding.BindIgnErr(auth.RegisterForm{}), user.SignUp)
 	m.Any("/user/delete", reqSignIn, user.Delete)
 	m.Get("/user/feeds", binding.Bind(auth.FeedsForm{}), user.Feeds)
+	m.Get("/user/activate", user.Activate)
 
 	m.Any("/user/setting", reqSignIn, binding.BindIgnErr(auth.UpdateProfileForm{}), user.Setting)
 	m.Any("/user/setting/password", reqSignIn, binding.BindIgnErr(auth.UpdatePasswdForm{}), user.SettingPassword)
