@@ -5,6 +5,7 @@
 package models
 
 import (
+	"container/list"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -601,7 +602,7 @@ func GetLastestCommit(userName, repoName string) (*Commit, error) {
 }*/
 
 // GetCommits returns all commits of given branch of repository.
-func GetCommits(userName, reposName, branchname string) ([]*git.Commit, error) {
+func GetCommits(userName, reposName, branchname string) (*list.List, error) {
 	repo, err := git.OpenRepository(RepoPath(userName, reposName))
 	if err != nil {
 		return nil, err
