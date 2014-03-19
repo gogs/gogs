@@ -15,10 +15,10 @@ func Home(ctx *middleware.Context) {
 		return
 	}
 	ctx.Data["PageIsHome"] = true
-	ctx.HTML(200, "home", ctx.Data)
+	ctx.Render.HTML(200, "home", ctx.Data)
 }
 
 func Help(ctx *middleware.Context) {
 	ctx.Data["PageIsHelp"] = true
-	ctx.HTML(200, "help", ctx.Data)
+	ctx.Render.HTML(200, "help", ctx.Data)
 }
