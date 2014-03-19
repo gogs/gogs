@@ -13,41 +13,28 @@
             </div>
             <table class="panel-footer table commit-list table table-striped">
                 <thead>
-                <tr>
-                    <th class="author">Author</th>
-                    <th class="sha">Commit</th>
-                    <th class="message">Message</th>
-                    <th class="date">Date</th>
-                </tr>
+                    <tr>
+                        <th class="author">Author</th>
+                        <th class="sha">Commit</th>
+                        <th class="message">Message</th>
+                        <th class="date">Date</th>
+                    </tr>
                 </thead>
                 <tbody>
+                {{ $username := .Username}}
+                {{ $reponame := .Reponame}}
+                {{$r := List .Commits}}
+                {{range $r}}
                 <tr>
-                    <td class="author"><img class="avatar" src="#" alt=""/>CommitUser</td>
-                    <td class="sha"><a class="label label-success" href="#">d91b380</a></td>
-                    <td class="message">Fix Synchronize to delete service objects in subduers upon move</td>
-                    <td class="date">3 years ago</td>
+                    <td class="author"><img class="avatar" src="{{AvatarLink .Committer.Email}}" alt=""/>{{.Committer.Name}}</td>
+                    <td class="sha"><a class="label label-success" href="/{{$username}}/{{$reponame}}/commit/{{.Id}} ">{{SubStr .Id.String 0 7}} </a></td>
+                    <td class="message">{{.Message}} </td>
+                    <td class="date">{{TimeSince .Committer.When}}</td>
                 </tr>
-                <tr>
-                    <td class="author"><img class="avatar" src="#" alt=""/>CommitUser</td>
-                    <td class="sha"><a class="label label-success" href="#">d91b380</a></td>
-                    <td class="message">Fix Synchronize to delete service objects in subduers upon move</td>
-                    <td class="date">3 years ago</td>
-                </tr>
-                <tr>
-                    <td class="author"><img class="avatar" src="#" alt=""/>CommitUser</td>
-                    <td class="sha"><a class="label label-success" href="#">d91b380</a></td>
-                    <td class="message">Fix Synchronize to delete service objects in subduers upon move</td>
-                    <td class="date">3 years ago</td>
-                </tr>
+                {{end}}
                 </tbody>
             </table>
         </div>
-    <ul>
-    {{$r := List .Commits}}
-    {{range $r}}
-		    <li>{{.Committer.Name}} - {{.Id}} - {{.Message}} - {{.Committer.When}}</li>
-    {{end}}
-    </ul>
     </div>
 </div>
 {{template "base/footer" .}}

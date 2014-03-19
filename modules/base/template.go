@@ -58,4 +58,7 @@ var TemplateFuncs template.FuncMap = map[string]interface{}{
 	"Mail2Domain": func(mail string) string {
 		return "mail." + strings.Split(mail, "@")[1]
 	},
+	"SubStr": func(str string, start, length int) string {
+		return str[start : start+length]
+	},
 }
