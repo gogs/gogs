@@ -24,13 +24,13 @@ func Setting(ctx *middleware.Context, form auth.UpdateProfileForm) {
 	ctx.Data["Owner"] = user
 
 	if ctx.Req.Method == "GET" {
-		ctx.HTML(200, "user/setting", ctx.Data)
+		ctx.Render.HTML(200, "user/setting", ctx.Data)
 		return
 	}
 
 	// below is for POST requests
 	if hasErr, ok := ctx.Data["HasError"]; ok && hasErr.(bool) {
-		ctx.HTML(200, "user/setting", ctx.Data)
+		ctx.Render.HTML(200, "user/setting", ctx.Data)
 		return
 	}
 
@@ -45,7 +45,7 @@ func Setting(ctx *middleware.Context, form auth.UpdateProfileForm) {
 	}
 
 	ctx.Data["IsSuccess"] = true
-	ctx.HTML(200, "user/setting", ctx.Data)
+	ctx.Render.HTML(200, "user/setting", ctx.Data)
 	log.Trace("%s User setting updated: %s", ctx.Req.RequestURI, ctx.User.LowerName)
 }
 
@@ -55,7 +55,7 @@ func SettingPassword(ctx *middleware.Context, form auth.UpdatePasswdForm) {
 	ctx.Data["IsUserPageSettingPasswd"] = true
 
 	if ctx.Req.Method == "GET" {
-		ctx.HTML(200, "user/password", ctx.Data)
+		ctx.Render.HTML(200, "user/password", ctx.Data)
 		return
 	}
 
@@ -82,7 +82,7 @@ func SettingPassword(ctx *middleware.Context, form auth.UpdatePasswdForm) {
 	}
 
 	ctx.Data["Owner"] = user
-	ctx.HTML(200, "user/password", ctx.Data)
+	ctx.Render.HTML(200, "user/password", ctx.Data)
 	log.Trace("%s User password updated: %s", ctx.Req.RequestURI, ctx.User.LowerName)
 }
 
@@ -95,7 +95,7 @@ func SettingSSHKeys(ctx *middleware.Context, form auth.AddSSHKeyForm) {
 		if err != nil {
 			ctx.Data["ErrorMsg"] = err
 			log.Error("ssh.DelPublicKey: %v", err)
-			ctx.JSON(200, map[string]interface{}{
+			ctx.Render.JSON(200, map[string]interface{}{
 				"ok":  false,
 				"err": err.Error(),
 			})
@@ -109,13 +109,13 @@ func SettingSSHKeys(ctx *middleware.Context, form auth.AddSSHKeyForm) {
 		if err = models.DeletePublicKey(k); err != nil {
 			ctx.Data["ErrorMsg"] = err
 			log.Error("ssh.DelPublicKey: %v", err)
-			ctx.JSON(200, map[string]interface{}{
+			ctx.Render.JSON(200, map[string]interface{}{
 				"ok":  false,
 				"err": err.Error(),
 			})
 		} else {
 			log.Trace("%s User SSH key deleted: %s", ctx.Req.RequestURI, ctx.User.LowerName)
-			ctx.JSON(200, map[string]interface{}{
+			ctx.Render.JSON(200, map[string]interface{}{
 				"ok": true,
 			})
 		}
@@ -125,7 +125,7 @@ func SettingSSHKeys(ctx *middleware.Context, form auth.AddSSHKeyForm) {
 	// Add new SSH key.
 	if ctx.Req.Method == "POST" {
 		if hasErr, ok := ctx.Data["HasError"]; ok && hasErr.(bool) {
-			ctx.HTML(200, "user/publickey", ctx.Data)
+			ctx.Render.HTML(200, "user/publickey", ctx.Data)
 			return
 		}
 
@@ -157,7 +157,7 @@ func SettingSSHKeys(ctx *middleware.Context, form auth.AddSSHKeyForm) {
 	ctx.Data["PageIsUserSetting"] = true
 	ctx.Data["IsUserPageSettingSSH"] = true
 	ctx.Data["Keys"] = keys
-	ctx.HTML(200, "user/publickey", ctx.Data)
+	ctx.Render.HTML(200, "user/publickey", ctx.Data)
 }
 
 func SettingNotification(ctx *middleware.Context) {
@@ -165,7 +165,7 @@ func SettingNotification(ctx *middleware.Context) {
 	ctx.Data["Title"] = "Notification"
 	ctx.Data["PageIsUserSetting"] = true
 	ctx.Data["IsUserPageSettingNotify"] = true
-	ctx.HTML(200, "user/notification", ctx.Data)
+	ctx.Render.HTML(200, "user/notification", ctx.Data)
 }
 
 func SettingSecurity(ctx *middleware.Context) {
@@ -173,5 +173,5 @@ func SettingSecurity(ctx *middleware.Context) {
 	ctx.Data["Title"] = "Security"
 	ctx.Data["PageIsUserSetting"] = true
 	ctx.Data["IsUserPageSettingSecurity"] = true
-	ctx.HTML(200, "user/security", ctx.Data)
+	ctx.Render.HTML(200, "user/security", ctx.Data)
 }
