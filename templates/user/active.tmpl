@@ -4,19 +4,23 @@
     <form action="/user/activate" method="post" class="form-horizontal gogs-card" id="gogs-login-card">
         <h3>Activate Your Account</h3>
         {{if .IsActivatePage}}
-        {{if .ServiceNotEnabled}}
-        <p>Sorry, Register Mail Confirmation has been disabled.</p>
+            {{if .ServiceNotEnabled}}
+            <p>Sorry, Register Mail Confirmation has been disabled.</p>
+            {{else}}
+            <p>New confirmation e-mail has been sent to <b>{{.SignedUser.Email}}</b>, please check your inbox within {{.Hours}} hours.</p>
+            {{end}}
         {{else}}
-        <p>New confirmation e-mail has been sent to <b>{{.SignedUser.Email}}</b>, please check your inbox within 3 days.</p>
-        {{end}}
-        {{else}}
-		<p>Hi, {{.SignedUser.Name}}, you have an unconfirmed email address(<b>{{.SignedUser.Email}}</b>). If you haven't received a confirmation e-mail or need to resend a new one, please click botton below.</p>
-		<hr/>
-        <div class="form-group">
-            <div class="col-md-offset-4 col-md-6">
-                <button type="submit" class="btn btn-lg btn-primary">Click here to resend your active e-mail</button>
+            {{if .IsSendRegisterMail}}
+            <p>A confirmation e-mail has been sent to <b>{{.Email}}</b>, please check your inbox within {{.Hours}} hours.</p>
+            {{else}}
+    		<p>Hi, {{.SignedUser.Name}}, you have an unconfirmed email address(<b>{{.SignedUser.Email}}</b>). If you haven't received a confirmation e-mail or need to resend a new one, please click botton below.</p>
+    		<hr/>
+            <div class="form-group">
+                <div class="col-md-offset-4 col-md-6">
+                    <button type="submit" class="btn btn-lg btn-primary">Click here to resend your active e-mail</button>
+                </div>
             </div>
-        </div>
+            {{end}}
         {{end}}
     </form>
 </div>

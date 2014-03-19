@@ -67,25 +67,6 @@ func CreateTimeLimitCode(data string, minutes int, startInf interface{}) string 
 	return code
 }
 
-// TODO:
-func RenderTemplate(TplNames string, Data map[interface{}]interface{}) string {
-	// if beego.RunMode == "dev" {
-	// 	beego.BuildTemplate(beego.ViewsPath)
-	// }
-
-	// ibytes := bytes.NewBufferString("")
-	// if _, ok := beego.BeeTemplates[TplNames]; !ok {
-	// 	panic("can't find templatefile in the path:" + TplNames)
-	// }
-	// err := beego.BeeTemplates[TplNames].ExecuteTemplate(ibytes, TplNames, Data)
-	// if err != nil {
-	// 	beego.Trace("template Execute err:", err)
-	// }
-	// icontent, _ := ioutil.ReadAll(ibytes)
-	// return string(icontent)
-	return "not implement yet"
-}
-
 // AvatarLink returns avatar link by given e-mail.
 func AvatarLink(email string) string {
 	return "http://1.gravatar.com/avatar/" + EncodeMd5(email)
