@@ -27,7 +27,7 @@ func Branches(ctx *middleware.Context, params martini.Params) {
 		ctx.Handle(200, "repo.Branches", err)
 		return
 	} else if len(brs) == 0 {
-		ctx.Error(404)
+		ctx.Render.Error(404)
 		return
 	}
 
@@ -38,7 +38,7 @@ func Branches(ctx *middleware.Context, params martini.Params) {
 	ctx.Data["Branches"] = brs
 	ctx.Data["IsRepoToolbarBranches"] = true
 
-	ctx.HTML(200, "repo/branches", ctx.Data)
+	ctx.Render.HTML(200, "repo/branches", ctx.Data)
 }
 
 func Single(ctx *middleware.Context, params martini.Params) {
@@ -57,11 +57,11 @@ func Single(ctx *middleware.Context, params martini.Params) {
 	brs, err := models.GetBranches(params["username"], params["reponame"])
 	if err != nil {
 		log.Error("repo.Single(GetBranches): %v", err)
-		ctx.Error(404)
+		ctx.Render.Error(404)
 		return
 	} else if len(brs) == 0 {
 		ctx.Data["IsBareRepo"] = true
-		ctx.HTML(200, "repo/single", ctx.Data)
+		ctx.Render.HTML(200, "repo/single", ctx.Data)
 		return
 	}
 
@@ -72,7 +72,7 @@ func Single(ctx *middleware.Context, params martini.Params) {
 		params["branchname"], params["commitid"], treename)
 	if err != nil {
 		log.Error("repo.Single(GetReposFiles): %v", err)
-		ctx.Error(404)
+		ctx.Render.Error(404)
 		return
 	}
 	ctx.Data["Username"] = params["username"]
@@ -94,7 +94,7 @@ func Single(ctx *middleware.Context, params martini.Params) {
 		params["branchname"], params["commitid"])
 	if err != nil {
 		log.Error("repo.Single(GetCommit): %v", err)
-		ctx.Error(404)
+		ctx.Render.Error(404)
 		return
 	}
 	ctx.Data["LastCommit"] = commit
@@ -130,12 +130,12 @@ func Single(ctx *middleware.Context, params martini.Params) {
 	ctx.Data["Treenames"] = treenames
 	ctx.Data["IsRepoToolbarSource"] = true
 	ctx.Data["Files"] = files
-	ctx.HTML(200, "repo/single", ctx.Data)
+	ctx.Render.HTML(200, "repo/single", ctx.Data)
 }
 
 func Setting(ctx *middleware.Context, params martini.Params) {
 	if !ctx.Repo.IsOwner {
-		ctx.Error(404)
+		ctx.Render.Error(404)
 		return
 	}
 
@@ -143,11 +143,11 @@ func Setting(ctx *middleware.Context, params martini.Params) {
 	brs, err := models.GetBranches(params["username"], params["reponame"])
 	if err != nil {
 		log.Error("repo.Setting(GetBranches): %v", err)
-		ctx.Error(404)
+		ctx.Render.Error(404)
 		return
 	} else if len(brs) == 0 {
 		ctx.Data["IsBareRepo"] = true
-		ctx.HTML(200, "repo/setting", ctx.Data)
+		ctx.Render.HTML(200, "repo/setting", ctx.Data)
 		return
 	}
 
@@ -158,7 +158,7 @@ func Setting(ctx *middleware.Context, params martini.Params) {
 
 	ctx.Data["Title"] = title + " - settings"
 	ctx.Data["IsRepoToolbarSetting"] = true
-	ctx.HTML(200, "repo/setting", ctx.Data)
+	ctx.Render.HTML(200, "repo/setting", ctx.Data)
 }
 
 func Commits(ctx *middleware.Context, params martini.Params) {
@@ -167,7 +167,7 @@ func Commits(ctx *middleware.Context, params martini.Params) {
 		ctx.Handle(200, "repo.Commits", err)
 		return
 	} else if len(brs) == 0 {
-		ctx.Error(404)
+		ctx.Render.Error(404)
 		return
 	}
 
@@ -175,19 +175,19 @@ func Commits(ctx *middleware.Context, params martini.Params) {
 	commits, err := models.GetCommits(params["username"],
 		params["reponame"], params["branchname"])
 	if err != nil {
-		ctx.Error(404)
+		ctx.Render.Error(404)
 		return
 	}
 	ctx.Data["Commits"] = commits
-	ctx.HTML(200, "repo/commits", ctx.Data)
+	ctx.Render.HTML(200, "repo/commits", ctx.Data)
 }
 
 func Issues(ctx *middleware.Context) {
 	ctx.Data["IsRepoToolbarIssues"] = true
-	ctx.HTML(200, "repo/issues", ctx.Data)
+	ctx.Render.HTML(200, "repo/issues", ctx.Data)
 }
 
 func Pulls(ctx *middleware.Context) {
 	ctx.Data["IsRepoToolbarPulls"] = true
-	ctx.HTML(200, "repo/pulls", ctx.Data)
+	ctx.Render.HTML(200, "repo/pulls", ctx.Data)
 }

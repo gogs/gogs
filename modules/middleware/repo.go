@@ -30,7 +30,7 @@ func RepoAssignment(redirect bool) martini.Handler {
 			user, err = models.GetUserByName(params["username"])
 			if err != nil {
 				if redirect {
-					ctx.Redirect("/")
+					ctx.Render.Redirect("/")
 					return
 				}
 				ctx.Handle(200, "RepoAssignment", err)
@@ -42,7 +42,7 @@ func RepoAssignment(redirect bool) martini.Handler {
 
 		if user == nil {
 			if redirect {
-				ctx.Redirect("/")
+				ctx.Render.Redirect("/")
 				return
 			}
 			ctx.Handle(200, "RepoAssignment", errors.New("invliad user account for single repository"))
@@ -55,7 +55,7 @@ func RepoAssignment(redirect bool) martini.Handler {
 		repo, err := models.GetRepositoryByName(user, params["reponame"])
 		if err != nil {
 			if redirect {
-				ctx.Redirect("/")
+				ctx.Render.Redirect("/")
 				return
 			}
 			ctx.Handle(200, "RepoAssignment", err)
