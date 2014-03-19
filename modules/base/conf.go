@@ -174,6 +174,7 @@ func init() {
 	SecretKey = Cfg.MustValue("security", "SECRET_KEY")
 
 	// Extensions.
+	newService()
 	newLogService()
 	newMailService()
 	newRegisterService()

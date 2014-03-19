@@ -14,6 +14,7 @@ import (
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
+	"github.com/gogits/gogs/modules/mailer"
 	"github.com/gogits/gogs/modules/middleware"
 )
 
@@ -152,7 +153,12 @@ func SignUp(ctx *middleware.Context, form auth.RegisterForm) {
 
 	// Send confirmation e-mail.
 	if base.Service.RegisterEmailConfirm {
-		auth.SendRegisterMail(u)
+		mailer.SendRegisterMail(ctx.Render, u)
+		ctx.Data["IsSendRegisterMail"] = true
+		ctx.Data["Email"] = u.Email
+		ctx.Data["Hours"] = base.Service.ActiveCodeLives / 60
+		ctx.Render.HTML(200, "user/active", ctx.Data)
+		return
 	}
 	ctx.Redirect("/user/login")
 }
@@ -228,7 +234,8 @@ func Activate(ctx *middleware.Context) {
 		ctx.Data["IsActivatePage"] = true
 		// Resend confirmation e-mail.
 		if base.Service.RegisterEmailConfirm {
-			auth.SendRegisterMail(ctx.User)
+			ctx.Data["Hours"] = base.Service.ActiveCodeLives / 60
+			mailer.SendActiveMail(ctx.Render, ctx.User)
 		} else {
 			ctx.Data["ServiceNotEnabled"] = true
 		}

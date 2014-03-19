@@ -1,0 +1,25 @@
+{{template "mail/base.html" .}}
+{{define "title"}}
+	{{if eq .Lang "zh-CN"}}
+		 {{.User.NickName}}，激活你的账户
+	{{end}}
+	{{if eq .Lang "en-US"}}
+		 {{.User.NickName}}, please active your account
+	{{end}}
+{{end}}
+{{define "body"}}
+	{{if eq .Lang "zh-CN"}}
+		<p style="margin:0;padding:0 0 9px 0;">点击链接验证email，{{.ActiveCodeLives}} 分钟内有效</p>
+		<p style="margin:0;padding:0 0 9px 0;">
+			<a href="{{.AppUrl}}active/{{.Code}}">{{.AppUrl}}active/{{.Code}}</a>
+		</p>
+		<p style="margin:0;padding:0 0 9px 0;">如果链接点击无反应，请复制到浏览器打开。</p>
+	{{end}}
+	{{if eq .Lang "en-US"}}
+		<p style="margin:0;padding:0 0 9px 0;">Please click following link to verify your e-mail in {{.ActiveCodeLives}} hours</p>
+		<p style="margin:0;padding:0 0 9px 0;">
+			<a href="{{.AppUrl}}active/{{.Code}}">{{.AppUrl}}active/{{.Code}}</a>
+		</p>
+		<p style="margin:0;padding:0 0 9px 0;">Copy and paste it to your browser if it's not working.</p>
+	{{end}}
+{{end}}
