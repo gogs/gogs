@@ -414,6 +414,15 @@ html, body {
     height: auto;
 }
 
+.gogs-repo-nav .name{
+    margin-top: 15px;
+}
+
+.gogs-repo-nav .desc{
+    color: #888;
+    margin-bottom: 0;
+}
+
 .gogs-repo-nav h3 .fa {
     color: #BBB;
     margin-left: 0;
