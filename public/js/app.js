@@ -74,8 +74,8 @@ var Gogits = {
         var $lineNums = $pre.parent().siblings('.lines-num');
         if ($lineNums.length > 0) {
             var nums = $pre.find('ol.linenums > li').length;
-            for (var i = 0; i < nums; i++) {
-                $lineNums.append('<span id="L' + i + '" rel=".L' + i + '">' + (i + 1) + '</span>');
+            for (var i = 1; i <= nums; i++) {
+                $lineNums.append('<span id="L' + i + '" rel=".L' + i + '">' + i + '</span>');
             }
 
             var last;
