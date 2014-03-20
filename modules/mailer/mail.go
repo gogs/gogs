@@ -62,8 +62,7 @@ func SendRegisterMail(r *middleware.Render, user *models.User) {
 	msg := NewMailMessage([]string{user.Email}, subject, body)
 	msg.Info = fmt.Sprintf("UID: %d, send register mail", user.Id)
 
-	// async send mail
-	SendAsync(msg)
+	SendAsync(&msg)
 }
 
 // Send email verify active email.
@@ -83,6 +82,5 @@ func SendActiveMail(r *middleware.Render, user *models.User) {
 	msg := NewMailMessage([]string{user.Email}, subject, body)
 	msg.Info = fmt.Sprintf("UID: %d, send email verify mail", user.Id)
 
-	// async send mail
-	SendAsync(msg)
+	SendAsync(&msg)
 }

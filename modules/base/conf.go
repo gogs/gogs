@@ -91,9 +91,11 @@ func newLogService() {
 	case "console":
 		config = fmt.Sprintf(`{"level":%s}`, level)
 	case "file":
+		logPath := Cfg.MustValue(modeSec, "FILE_NAME", "log/gogs.log")
+		os.MkdirAll(path.Dir(logPath), os.ModePerm)
 		config = fmt.Sprintf(
 			`{"level":%s,"filename":%s,"rotate":%v,"maxlines":%d,"maxsize",%d,"daily":%v,"maxdays":%d}`, level,
-			Cfg.MustValue(modeSec, "FILE_NAME", "log/gogs.log"),
+			logPath,
 			Cfg.MustBool(modeSec, "LOG_ROTATE", true),
 			Cfg.MustInt(modeSec, "MAX_LINES", 1000000),
 			1<<uint(Cfg.MustInt(modeSec, "MAX_SIZE_SHIFT", 28)),
