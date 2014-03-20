@@ -62,8 +62,7 @@ func runGen(ctx *cli.Context) {
 	for _, p := range imports {
 		p = doc.GetProjectPath(p)
 		// Skip subpackage(s) of current project.
-		if strings.HasSuffix(strings.Replace(workDir, "\\", "/", -1), p) ||
-			strings.HasPrefix(p, targetPath) {
+		if isSubpackage(p, targetPath) {
 			continue
 		}
 
