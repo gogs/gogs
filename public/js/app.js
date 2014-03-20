@@ -68,8 +68,29 @@ var Gogits = {
     Gogits.renderMarkdown = function () {
         var $md = $('.markdown');
         var $pre = $md.find('pre > code').parent();
-        $pre.addClass("prettyprint");
+        $pre.addClass('prettyprint');
         prettyPrint();
+
+        var $lineNums = $pre.parent().siblings('.lines-num');
+        if($lineNums.length > 0){
+            var nums = $pre.find('ol.linenums > li').length;
+            for(var i=0;i < nums;i++){
+                $lineNums.append('<span id="L'+i+'" rel=".L'+i+'">'+(i+1)+'</span>');
+            }
+
+            var last;
+            $(document).on('click', '.lines-num span', function(){
+                var $e = $(this);
+                console.log($e.parent().siblings('.lines-code').find('ol.linenums > ' + $e.attr('rel')));
+                console.log('ol.linenums > ' + $e.attr('rel'));
+                if(last){
+                    last.removeClass('active');
+                }
+                last = $e.parent().siblings('.lines-code').find('ol.linenums > ' + $e.attr('rel'));
+                last.addClass('active');
+                window.location.href = '#' + $e.attr('id');
+            });
+        }
 
         // Set anchor.
         var headers = {};
