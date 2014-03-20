@@ -137,10 +137,9 @@ func Single(ctx *middleware.Context, params martini.Params) {
 				return
 			} else {
 				// current repo branch link
-				urlPrefix := "http://" + base.Domain + branchLink
 
 				ctx.Data["FileName"] = readmeFile.Name
-				ctx.Data["FileContent"] = string(base.RenderMarkdown(blob.Contents(), urlPrefix))
+				ctx.Data["FileContent"] = string(base.RenderMarkdown(blob.Contents(), branchLink))
 			}
 		}
 	}
