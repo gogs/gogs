@@ -65,9 +65,11 @@ func RepoAssignment(redirect bool) martini.Handler {
 		}
 
 		ctx.Repo.IsValid = true
-		ctx.Repo.IsWatching = models.IsWatching(ctx.User.Id, repo.Id)
+		if ctx.User != nil {
+			ctx.Repo.IsWatching = models.IsWatching(ctx.User.Id, repo.Id)
+		}
 		ctx.Repo.Repository = repo
-		ctx.Repo.CloneLink.SSH = fmt.Sprintf("git@%s:%s/%s.git", base.Domain, ctx.User.LowerName, repo.LowerName)
+		ctx.Repo.CloneLink.SSH = fmt.Sprintf("git@%s:%s/%s.git", base.Domain, user.LowerName, repo.LowerName)
 
 		ctx.Data["IsRepositoryValid"] = true
 		ctx.Data["Repository"] = repo
