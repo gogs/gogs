@@ -16,6 +16,32 @@
             </div>
 
             <div class="panel-body">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Id</th>
+                            <th>Name</th>
+                            <th>E-mail</th>
+                            <th>Actived</th>
+                            <th>Admin</th>
+                            <th>Repos</th>
+                            <th>Join</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {{range .Users}}
+                        <tr>
+                            <td>{{.Id}}</td>
+                            <td>{{.Name}}</td>
+                            <td>{{.Email}}</td>
+                            <td><i class="fa fa{{if .IsActive}}-check{{end}}-square-o"></i></td>
+                            <td><i class="fa fa{{if .IsAdmin}}-check{{end}}-square-o"></i></td>
+                            <td>{{.NumRepos}}</td>
+                            <td>{{DateFormat .Created "M d, Y"}}</td>
+                        </tr>
+                        {{end}}
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>

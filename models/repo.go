@@ -27,63 +27,18 @@ import (
 	"github.com/gogits/gogs/modules/log"
 )
 
-// Repository represents a git repository.
-type Repository struct {
-	Id          int64
-	OwnerId     int64 `xorm:"unique(s)"`
-	ForkId      int64
-	LowerName   string `xorm:"unique(s) index not null"`
-	Name        string `xorm:"index not null"`
-	Description string
-	Website     string
-	Private     bool
-	NumWatchs   int
-	NumStars    int
-	NumForks    int
-	Created     time.Time `xorm:"created"`
-	Updated     time.Time `xorm:"updated"`
-}
-
-// Watch is connection request for receiving repository notifycation.
-type Watch struct {
-	Id     int64
-	RepoId int64 `xorm:"UNIQUE(watch)"`
-	UserId int64 `xorm:"UNIQUE(watch)"`
-}
-
-// Watch or unwatch repository.
-func WatchRepo(userId, repoId int64, watch bool) (err error) {
-	if watch {
-		_, err = orm.Insert(&Watch{RepoId: repoId, UserId: userId})
-	} else {
-		_, err = orm.Delete(&Watch{0, repoId, userId})
-	}
-	return err
-}
-
-// GetWatches returns all watches of given repository.
-func GetWatches(repoId int64) ([]Watch, error) {
-	watches := make([]Watch, 0, 10)
-	err := orm.Find(&watches, &Watch{RepoId: repoId})
-	return watches, err
-}
-
-// IsWatching checks if user has watched given repository.
-func IsWatching(userId, repoId int64) bool {
-	has, _ := orm.Get(&Watch{0, repoId, userId})
-	return has
-}
-
 var (
-	gitInitLocker          = sync.Mutex{}
-	LanguageIgns, Licenses []string
+	ErrRepoAlreadyExist  = errors.New("Repository already exist")
+	ErrRepoNotExist      = errors.New("Repository does not exist")
+	ErrRepoFileNotExist  = errors.New("Target Repo file does not exist")
+	ErrRepoNameIllegal   = errors.New("Repository name contains illegal characters")
+	ErrRepoFileNotLoaded = fmt.Errorf("repo file not loaded")
 )
 
+var gitInitLocker = sync.Mutex{}
+
 var (
-	ErrRepoAlreadyExist = errors.New("Repository already exist")
-	ErrRepoNotExist     = errors.New("Repository does not exist")
-	ErrRepoFileNotExist = errors.New("Target Repo file does not exist")
-	ErrRepoNameIllegal  = errors.New("Repository name contains illegal characters")
+	LanguageIgns, Licenses []string
 )
 
 func init() {
@@ -115,6 +70,23 @@ func init() {
 		}
 		illegalPatterns[i+1] = pattern
 	}
+}
+
+// Repository represents a git repository.
+type Repository struct {
+	Id          int64
+	OwnerId     int64 `xorm:"unique(s)"`
+	ForkId      int64
+	LowerName   string `xorm:"unique(s) index not null"`
+	Name        string `xorm:"index not null"`
+	Description string
+	Website     string
+	Private     bool
+	NumWatches  int
+	NumStars    int
+	NumForks    int
+	Created     time.Time `xorm:"created"`
+	Updated     time.Time `xorm:"updated"`
 }
 
 // IsRepositoryExist returns true if the repository with given name under user has already existed.
@@ -351,6 +323,60 @@ func initRepository(f string, user *User, repo *Repository, initReadme bool, rep
 	return nil
 }
 
+// GetRepos returns given number of repository objects with offset.
+func GetRepos(num, offset int) ([]Repository, error) {
+	repos := make([]Repository, 0, num)
+	err := orm.Limit(num, offset).Asc("id").Find(&repos)
+	return repos, err
+}
+
+func RepoPath(userName, repoName string) string {
+	return filepath.Join(UserPath(userName), repoName+".git")
+}
+
+// DeleteRepository deletes a repository for a user or orgnaztion.
+func DeleteRepository(userId, repoId int64, userName string) (err error) {
+	repo := &Repository{Id: repoId, OwnerId: userId}
+	has, err := orm.Get(repo)
+	if err != nil {
+		return err
+	} else if !has {
+		return ErrRepoNotExist
+	}
+
+	session := orm.NewSession()
+	if err = session.Begin(); err != nil {
+		return err
+	}
+	if _, err = session.Delete(&Repository{Id: repoId}); err != nil {
+		session.Rollback()
+		return err
+	}
+	if _, err := session.Delete(&Access{UserName: userName, RepoName: repo.Name}); err != nil {
+		session.Rollback()
+		return err
+	}
+	rawSql := "UPDATE `user` SET num_repos = num_repos - 1 WHERE id = ?"
+	if _, err = session.Exec(rawSql, userId); err != nil {
+		session.Rollback()
+		return err
+	}
+	if _, err = session.Delete(&Watch{RepoId: repoId}); err != nil {
+		session.Rollback()
+		return err
+	}
+	if err = session.Commit(); err != nil {
+		session.Rollback()
+		return err
+	}
+	if err = os.RemoveAll(RepoPath(userName, repo.Name)); err != nil {
+		// TODO: log and delete manully
+		log.Error("delete repo %s/%s failed: %v", userName, repo.Name, err)
+		return err
+	}
+	return nil
+}
+
 // GetRepositoryByName returns the repository by given name under user if exists.
 func GetRepositoryByName(user *User, repoName string) (*Repository, error) {
 	repo := &Repository{
@@ -388,6 +414,36 @@ func GetRepositoryCount(user *User) (int64, error) {
 	return orm.Count(&Repository{OwnerId: user.Id})
 }
 
+// Watch is connection request for receiving repository notifycation.
+type Watch struct {
+	Id     int64
+	RepoId int64 `xorm:"UNIQUE(watch)"`
+	UserId int64 `xorm:"UNIQUE(watch)"`
+}
+
+// Watch or unwatch repository.
+func WatchRepo(userId, repoId int64, watch bool) (err error) {
+	if watch {
+		_, err = orm.Insert(&Watch{RepoId: repoId, UserId: userId})
+	} else {
+		_, err = orm.Delete(&Watch{0, repoId, userId})
+	}
+	return err
+}
+
+// GetWatches returns all watches of given repository.
+func GetWatches(repoId int64) ([]Watch, error) {
+	watches := make([]Watch, 0, 10)
+	err := orm.Find(&watches, &Watch{RepoId: repoId})
+	return watches, err
+}
+
+// IsWatching checks if user has watched given repository.
+func IsWatching(userId, repoId int64) bool {
+	has, _ := orm.Get(&Watch{0, repoId, userId})
+	return has
+}
+
 func StarReposiory(user *User, repoName string) error {
 	return nil
 }
@@ -407,60 +463,6 @@ func UnWatchRepository() {
 func ForkRepository(reposName string, userId int64) {
 
 }
-
-func RepoPath(userName, repoName string) string {
-	return filepath.Join(UserPath(userName), repoName+".git")
-}
-
-// DeleteRepository deletes a repository for a user or orgnaztion.
-func DeleteRepository(userId, repoId int64, userName string) (err error) {
-	repo := &Repository{Id: repoId, OwnerId: userId}
-	has, err := orm.Get(repo)
-	if err != nil {
-		return err
-	} else if !has {
-		return ErrRepoNotExist
-	}
-
-	session := orm.NewSession()
-	if err = session.Begin(); err != nil {
-		return err
-	}
-	if _, err = session.Delete(&Repository{Id: repoId}); err != nil {
-		session.Rollback()
-		return err
-	}
-	if _, err := session.Delete(&Access{UserName: userName, RepoName: repo.Name}); err != nil {
-		session.Rollback()
-		return err
-	}
-	rawSql := "UPDATE user SET num_repos = num_repos - 1 WHERE id = ?"
-	if base.Cfg.MustValue("database", "DB_TYPE") == "postgres" {
-		rawSql = "UPDATE \"user\" SET num_repos = num_repos - 1 WHERE id = ?"
-	}
-	if _, err = session.Exec(rawSql, userId); err != nil {
-		session.Rollback()
-		return err
-	}
-	if _, err = session.Delete(&Watch{RepoId: repoId}); err != nil {
-		session.Rollback()
-		return err
-	}
-	if err = session.Commit(); err != nil {
-		session.Rollback()
-		return err
-	}
-	if err = os.RemoveAll(RepoPath(userName, repo.Name)); err != nil {
-		// TODO: log and delete manully
-		log.Error("delete repo %s/%s failed: %v", userName, repo.Name, err)
-		return err
-	}
-	return nil
-}
-
-var (
-	ErrRepoFileNotLoaded = fmt.Errorf("repo file not loaded")
-)
 
 // RepoFile represents a file object in git repository.
 type RepoFile struct {

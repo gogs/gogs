@@ -15,12 +15,12 @@ import (
 	"github.com/gogits/gogs/modules/base"
 )
 
-// +build go1.1
+// +build go1.2
 
-// Test that go1.1 tag above is included in builds. main.go refers to this definition.
-const go11tag = true
+// Test that go1.2 tag above is included in builds. main.go refers to this definition.
+const go12tag = true
 
-const APP_VER = "0.1.3.0320.1"
+const APP_VER = "0.1.4.0321"
 
 func init() {
 	base.AppVer = APP_VER
