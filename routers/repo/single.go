@@ -5,7 +5,6 @@
 package repo
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/codegangsta/martini"
@@ -47,7 +46,7 @@ func Single(ctx *middleware.Context, params martini.Params) {
 		return
 	}
 
-	if params["branchname"] == "" {
+	if len(params["branchname"]) == 0 {
 		params["branchname"] = "master"
 	}
 
@@ -56,7 +55,7 @@ func Single(ctx *middleware.Context, params martini.Params) {
 
 	if len(treename) > 0 && treename[len(treename)-1] == '/' {
 		ctx.Redirect("/"+ctx.Repo.Owner.LowerName+"/"+
-			ctx.Repo.Repository.Name+"/tree/"+params["branchname"]+"/"+treename[:len(treename)-1], 302)
+			ctx.Repo.Repository.Name+"/src/"+params["branchname"]+"/"+treename[:len(treename)-1], 302)
 		return
 	}
 
@@ -74,14 +73,78 @@ func Single(ctx *middleware.Context, params martini.Params) {
 
 	ctx.Data["Branches"] = brs
 
-	// Directory and file list.
-	files, err := models.GetReposFiles(params["username"], params["reponame"],
+	repoFile, err := models.GetTargetFile(params["username"], params["reponame"],
 		params["branchname"], params["commitid"], treename)
-	if err != nil {
-		log.Error("repo.Single(GetReposFiles): %v", err)
+
+	if err != nil && err != models.ErrRepoFileNotExist {
+		log.Error("repo.Single(GetTargetFile): %v", err)
 		ctx.Error(404)
 		return
 	}
+
+	branchLink := "/" + ctx.Repo.Owner.LowerName + "/" + ctx.Repo.Repository.Name + "/src/" + params["branchname"]
+
+	if repoFile != nil && repoFile.IsFile() {
+		if repoFile.Size > 1024*1024 || repoFile.Filemode != git.FileModeBlob {
+			ctx.Data["FileIsLarge"] = true
+		} else if blob, err := repoFile.LookupBlob(); err != nil {
+			log.Error("repo.Single(repoFile.LookupBlob): %v", err)
+			ctx.Error(404)
+		} else {
+			ctx.Data["IsFile"] = true
+			ctx.Data["FileName"] = repoFile.Name
+
+			readmeExist := base.IsMarkdownFile(repoFile.Name) || base.IsReadmeFile(repoFile.Name)
+			ctx.Data["ReadmeExist"] = readmeExist
+			if readmeExist {
+				ctx.Data["FileContent"] = string(base.RenderMarkdown(blob.Contents(), ""))
+			} else {
+				ctx.Data["FileContent"] = string(blob.Contents())
+			}
+		}
+
+	} else {
+		// Directory and file list.
+		files, err := models.GetReposFiles(params["username"], params["reponame"],
+			params["branchname"], params["commitid"], treename)
+		if err != nil {
+			log.Error("repo.Single(GetReposFiles): %v", err)
+			ctx.Error(404)
+			return
+		}
+
+		ctx.Data["Files"] = files
+
+		var readmeFile *models.RepoFile
+
+		for _, f := range files {
+			if !f.IsFile() || !base.IsReadmeFile(f.Name) {
+				continue
+			} else {
+				readmeFile = f
+				break
+			}
+		}
+
+		if readmeFile != nil {
+			ctx.Data["ReadmeExist"] = true
+			// if file large than 1M not show it
+			if readmeFile.Size > 1024*1024 || readmeFile.Filemode != git.FileModeBlob {
+				ctx.Data["FileIsLarge"] = true
+			} else if blob, err := readmeFile.LookupBlob(); err != nil {
+				log.Error("repo.Single(readmeFile.LookupBlob): %v", err)
+				ctx.Error(404)
+				return
+			} else {
+				// current repo branch link
+				urlPrefix := "http://" + base.Domain + branchLink
+
+				ctx.Data["FileName"] = readmeFile.Name
+				ctx.Data["FileContent"] = string(base.RenderMarkdown(blob.Contents(), urlPrefix))
+			}
+		}
+	}
+
 	ctx.Data["Username"] = params["username"]
 	ctx.Data["Reponame"] = params["reponame"]
 	ctx.Data["Branchname"] = params["branchname"]
@@ -111,39 +174,10 @@ func Single(ctx *middleware.Context, params martini.Params) {
 	}
 	ctx.Data["LastCommit"] = commit
 
-	var readmeFile *models.RepoFile
-
-	for _, f := range files {
-		if !f.IsFile() || len(f.Name) < 6 {
-			continue
-		} else if strings.ToLower(f.Name[:6]) == "readme" {
-			readmeFile = f
-			break
-		}
-	}
-
-	if readmeFile != nil {
-		ctx.Data["ReadmeExist"] = true
-		// if file large than 1M not show it
-		if readmeFile.Size > 1024*1024 || readmeFile.Filemode != git.FileModeBlob {
-			ctx.Data["FileIsLarge"] = true
-		} else if blob, err := readmeFile.LookupBlob(); err != nil {
-			ctx.Data["ReadmeExist"] = false
-		} else {
-			// current repo branch link
-			urlPrefix := "http://" + base.Domain + "/" + ctx.Repo.Owner.LowerName + "/" +
-				ctx.Repo.Repository.Name + "/tree/" + params["branchname"]
-
-			ctx.Data["ReadmeContent"] = string(base.RenderMarkdown(blob.Contents(), urlPrefix))
-		}
-	}
-
-	log.Trace("repo.Single: Paths: %s", strings.Join(Paths, ", "))
-
 	ctx.Data["Paths"] = Paths
 	ctx.Data["Treenames"] = treenames
 	ctx.Data["IsRepoToolbarSource"] = true
-	ctx.Data["Files"] = files
+	ctx.Data["BranchLink"] = branchLink
 	ctx.HTML(200, "repo/single", ctx.Data)
 }
 

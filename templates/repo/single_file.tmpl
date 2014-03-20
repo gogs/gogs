@@ -1,0 +1,20 @@
+<div class="panel panel-default file-content">
+    <div class="panel-heading file-head">
+        <i class="icon fa fa-book"></i> {{.FileName}}
+    </div>
+    {{if .FileIsLarge}}
+        <div class="panel-footer">
+            Large file size 1000kb
+        </div>
+    {{else}}
+        {{if .ReadmeExist}}
+            <div class="panel-body file-body markdown">
+                {{.FileContent|str2html}}
+            </div>
+        {{else}}
+            <div class="panel-body file-body markdown">
+                <pre><code>{{.FileContent|str2html}}</code></pre>
+            </div>
+        {{end}}
+    {{end}}
+</div>
