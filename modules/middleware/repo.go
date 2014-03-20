@@ -63,6 +63,7 @@ func RepoAssignment(redirect bool) martini.Handler {
 		}
 
 		ctx.Repo.IsValid = true
+		ctx.Repo.IsWatching = models.IsWatching(ctx.User.Id, repo.Id)
 		ctx.Repo.Repository = repo
 
 		ctx.Data["IsRepositoryValid"] = true

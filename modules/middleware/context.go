@@ -31,6 +31,7 @@ type Context struct {
 	Repo struct {
 		IsValid    bool
 		IsOwner    bool
+		IsWatching bool
 		Repository *models.Repository
 		Owner      *models.User
 	}

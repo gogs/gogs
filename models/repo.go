@@ -67,6 +67,12 @@ func GetWatches(repoId int64) ([]Watch, error) {
 	return watches, err
 }
 
+// IsWatching checks if user has watched given repository.
+func IsWatching(userId, repoId int64) bool {
+	has, _ := orm.Get(&Watch{0, repoId, userId})
+	return has
+}
+
 var (
 	gitInitLocker          = sync.Mutex{}
 	LanguageIgns, Licenses []string
