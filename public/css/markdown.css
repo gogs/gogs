@@ -123,6 +123,10 @@
   padding: 0;
 }
 
+.markdown > pre > ol.linenums > li {
+  margin-top: 2px;
+}
+
 .markdown > pre.linenums-style > ol.linenums {
   list-style-type: decimal;
   padding: 0 0 0 40px;
@@ -246,6 +250,7 @@
   /* a comment */
   .com {
     color: #999988;
+    font-style: italic;
   }
 
   /* a type name */
