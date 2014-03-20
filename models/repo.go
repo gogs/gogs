@@ -81,6 +81,7 @@ var (
 var (
 	ErrRepoAlreadyExist = errors.New("Repository already exist")
 	ErrRepoNotExist     = errors.New("Repository does not exist")
+	ErrRepoFileNotExist = errors.New("Target Repo file does not exist")
 )
 
 func init() {
@@ -461,6 +462,51 @@ func GetBranches(userName, reposName string) ([]string, error) {
 		brs[i] = ref.Name
 	}
 	return brs, nil
+}
+
+func GetTargetFile(userName, reposName, branchName, commitId, rpath string) (*RepoFile, error) {
+	repo, err := git.OpenRepository(RepoPath(userName, reposName))
+	if err != nil {
+		return nil, err
+	}
+
+	commit, err := repo.GetCommit(branchName, commitId)
+	if err != nil {
+		return nil, err
+	}
+
+	parts := strings.Split(path.Clean(rpath), "/")
+
+	var entry *git.TreeEntry
+	tree := commit.Tree
+	for i, part := range parts {
+		if i == len(parts)-1 {
+			entry = tree.EntryByName(part)
+			if entry == nil {
+				return nil, ErrRepoFileNotExist
+			}
+		} else {
+			tree, err = repo.SubTree(tree, part)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	size, err := repo.ObjectSize(entry.Id)
+	if err != nil {
+		return nil, err
+	}
+
+	repoFile := &RepoFile{
+		entry,
+		rpath,
+		size,
+		repo,
+		commit,
+	}
+
+	return repoFile, nil
 }
 
 // GetReposFiles returns a list of file object in given directory of repository.
