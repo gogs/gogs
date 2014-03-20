@@ -51,8 +51,7 @@ type User struct {
 	Location      string
 	Website       string
 	IsActive      bool
-	Rands         string `xorm:"VARCHAR(10)"`
-	Expired       time.Time
+	Rands         string    `xorm:"VARCHAR(10)"`
 	Created       time.Time `xorm:"created"`
 	Updated       time.Time `xorm:"updated"`
 }
@@ -125,7 +124,6 @@ func RegisterUser(user *User) (*User, error) {
 	user.LowerName = strings.ToLower(user.Name)
 	user.Avatar = base.EncodeMd5(user.Email)
 	user.AvatarEmail = user.Email
-	user.Expired = time.Now().Add(3 * 24 * time.Hour)
 	user.Rands = GetUserSalt()
 	if err = user.EncodePasswd(); err != nil {
 		return nil, err

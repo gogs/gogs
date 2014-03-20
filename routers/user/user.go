@@ -249,6 +249,9 @@ func Activate(ctx *middleware.Context) {
 		user.IsActive = true
 		user.Rands = models.GetUserSalt()
 		models.UpdateUser(user)
+
+		log.Trace("%s User activated: %s", ctx.Req.RequestURI, user.LowerName)
+
 		ctx.Session.Set("userId", user.Id)
 		ctx.Session.Set("userName", user.Name)
 		ctx.Redirect("/", 302)
