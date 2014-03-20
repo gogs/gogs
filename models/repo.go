@@ -12,6 +12,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -82,6 +83,7 @@ var (
 	ErrRepoAlreadyExist = errors.New("Repository already exist")
 	ErrRepoNotExist     = errors.New("Repository does not exist")
 	ErrRepoFileNotExist = errors.New("Target Repo file does not exist")
+	ErrRepoNameIllegal  = errors.New("Repository name contains illegal characters")
 )
 
 func init() {
@@ -104,6 +106,15 @@ func init() {
 			os.Exit(2)
 		}
 	}
+
+	// Initialize illegal patterns.
+	for i := range illegalPatterns[1:] {
+		pattern := ""
+		for j := range illegalPatterns[i+1] {
+			pattern += "[" + string(illegalPatterns[i+1][j]-32) + string(illegalPatterns[i+1][j]) + "]"
+		}
+		illegalPatterns[i+1] = pattern
+	}
 }
 
 // IsRepositoryExist returns true if the repository with given name under user has already existed.
@@ -120,8 +131,28 @@ func IsRepositoryExist(user *User, repoName string) (bool, error) {
 	return s.IsDir(), nil
 }
 
+var (
+	// Define as all lower case!!
+	illegalPatterns = []string{"[.][Gg][Ii][Tt]", "user", "help", "stars", "issues", "pulls", "commits", "admin", "repo", "template"}
+)
+
+// IsLegalName returns false if name contains illegal characters.
+func IsLegalName(repoName string) bool {
+	for _, pattern := range illegalPatterns {
+		has, _ := regexp.MatchString(pattern, repoName)
+		if has {
+			return false
+		}
+	}
+	return true
+}
+
 // CreateRepository creates a repository for given user or orgnaziation.
 func CreateRepository(user *User, repoName, desc, repoLang, license string, private bool, initReadme bool) (*Repository, error) {
+	if !IsLegalName(repoName) {
+		return nil, ErrRepoNameIllegal
+	}
+
 	isExist, err := IsRepositoryExist(user, repoName)
 	if err != nil {
 		return nil, err
