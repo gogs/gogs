@@ -7,6 +7,8 @@ package base
 import (
 	"bytes"
 	"path"
+	"path/filepath"
+	"strings"
 
 	"github.com/gogits/gfm"
 )
@@ -28,6 +30,26 @@ func isLink(link []byte) bool {
 		}
 	}
 
+	return false
+}
+
+func IsMarkdownFile(name string) bool {
+	name = strings.ToLower(name)
+	switch filepath.Ext(name) {
+	case "md", "markdown":
+		return true
+	}
+	return false
+}
+
+func IsReadmeFile(name string) bool {
+	name = strings.ToLower(name)
+	if len(name) < 6 {
+		return false
+	}
+	if name[:6] == "readme" {
+		return true
+	}
 	return false
 }
 

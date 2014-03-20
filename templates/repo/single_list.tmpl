@@ -1,0 +1,54 @@
+<div class="panel panel-default info-box">
+    <div class="panel-heading info-head">
+        <a href="/{{.Username}}/{{.Reponame}}/commit/{{.LastCommit.Oid.String}}">{{.LastCommit.Message}}</a>
+    </div>
+    <div class="panel-body info-content">
+        <a href="/user/{{.LastCommit.Author.Name}}">{{.LastCommit.Author.Name}}</a> <span class="text-muted">{{TimeSince .LastCommit.Author.When}}</span>
+    </div>
+    <table class="panel-footer table file-list">
+        <thead class="hidden">
+        <tr>
+            <th class="icon"></th>
+            <th class="name">Filename</th>
+            <th class="text">Message</th>
+            <th class="date">Date modified</th>
+        </tr>
+        </thead>
+        <tbody>
+        {{if .HasParentPath}}
+            <tr class="has-parent">
+                <td class="icon"><a href="{{.BranchLink}}{{.ParentPath}}"><i class="fa fa-reply"></i></a></td>
+                <td class="name"><a href="{{.BranchLink}}{{.ParentPath}}">..</a></td>
+                <td class="text"></td>
+                <td class="date"></td>
+            </tr>
+        {{end}}
+        {{range .Files}}
+        <tr
+        {{if .IsDir}}class="is-dir"{{end}}>
+        <td class="icon">
+            <i class="fa {{if .IsDir}}fa-folder{{else}}fa-file-text-o{{end}}"></i>
+        </td>
+        <td class="name">
+            <span class="wrap">
+                {{if .IsDir}}
+                <a href="{{$.BranchLink}}/{{.Path}}">{{.Name}}</a>
+                {{else}}
+                <a href="{{$.BranchLink}}/{{.Path}}">{{.Name}}</a>
+                {{end}}
+            </span>
+        </td>
+        <td class="text">
+            <span class="wrap"><a href="/{{$.Username}}/{{$.Reponame}}/commit/{{.Commit.Oid}}">{{.Commit.Message}}</a></span>
+        </td>
+        <td class="date">
+            <span class="wrap">{{TimeSince .Commit.Committer.When}}</span>
+        </td>
+        </tr>
+        {{end}}
+        </tbody>
+    </table>
+</div>
+{{if .ReadmeExist}}
+    {{template "repo/single_file" .}}
+{{end}}
