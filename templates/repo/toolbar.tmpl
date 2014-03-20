@@ -15,9 +15,8 @@
                             <li><a href="/{{.RepositoryLink}}/release">Release</a></li>
                             <li><a href="//{{.RepositoryLink}}/wiki">Wiki</a></li>
                         </ul>
-                    </li>
+                    </li>{{end}}
                 </ul>
-                {{end}}
                 <ul class="nav navbar-nav navbar-right">
                     {{if not .IsBareRepo}}
                     <li class="dropdown">
