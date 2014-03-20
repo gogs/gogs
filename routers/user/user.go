@@ -243,4 +243,21 @@ func Activate(ctx *middleware.Context) {
 		ctx.Render.HTML(200, "user/active", ctx.Data)
 		return
 	}
+
+	// Verify code.
+	if user := models.VerifyUserActiveCode(code); user != nil {
+		user.IsActive = true
+		user.Rands = models.GetUserSalt()
+		models.UpdateUser(user)
+
+		log.Trace("%s User activated: %s", ctx.Req.RequestURI, user.LowerName)
+
+		ctx.Session.Set("userId", user.Id)
+		ctx.Session.Set("userName", user.Name)
+		ctx.Redirect("/", 302)
+		return
+	}
+
+	ctx.Data["IsActivateFailed"] = true
+	ctx.Render.HTML(200, "user/active", ctx.Data)
 }

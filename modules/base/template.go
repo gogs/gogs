@@ -8,6 +8,7 @@ import (
 	"container/list"
 	"fmt"
 	"html/template"
+	"strings"
 	"time"
 )
 
@@ -54,4 +55,10 @@ var TemplateFuncs template.FuncMap = map[string]interface{}{
 	"ActionDesc": ActionDesc,
 	"DateFormat": DateFormat,
 	"List":       List,
+	"Mail2Domain": func(mail string) string {
+		return "mail." + strings.Split(mail, "@")[1]
+	},
+	"SubStr": func(str string, start, length int) string {
+		return str[start : start+length]
+	},
 }

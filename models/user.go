@@ -5,6 +5,7 @@
 package models
 
 import (
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"os"
@@ -17,6 +18,7 @@ import (
 	"github.com/gogits/git"
 
 	"github.com/gogits/gogs/modules/base"
+	"github.com/gogits/gogs/modules/log"
 )
 
 // User types.
@@ -49,8 +51,7 @@ type User struct {
 	Location      string
 	Website       string
 	IsActive      bool
-	Rands         string `xorm:"VARCHAR(10)"`
-	Expired       time.Time
+	Rands         string    `xorm:"VARCHAR(10)"`
 	Created       time.Time `xorm:"created"`
 	Updated       time.Time `xorm:"updated"`
 }
@@ -123,7 +124,6 @@ func RegisterUser(user *User) (*User, error) {
 	user.LowerName = strings.ToLower(user.Name)
 	user.Avatar = base.EncodeMd5(user.Email)
 	user.AvatarEmail = user.Email
-	user.Expired = time.Now().Add(3 * 24 * time.Hour)
 	user.Rands = GetUserSalt()
 	if err = user.EncodePasswd(); err != nil {
 		return nil, err
@@ -139,9 +139,43 @@ func RegisterUser(user *User) (*User, error) {
 	return user, nil
 }
 
+// get user by erify code
+func getVerifyUser(code string) (user *User) {
+	if len(code) <= base.TimeLimitCodeLength {
+		return nil
+	}
+
+	// use tail hex username query user
+	hexStr := code[base.TimeLimitCodeLength:]
+	if b, err := hex.DecodeString(hexStr); err == nil {
+		if user, err = GetUserByName(string(b)); user != nil {
+			return user
+		}
+		log.Error("user.getVerifyUser: %v", err)
+	}
+
+	return nil
+}
+
+// verify active code when active account
+func VerifyUserActiveCode(code string) (user *User) {
+	minutes := base.Service.ActiveCodeLives
+
+	if user = getVerifyUser(code); user != nil {
+		// time limit code
+		prefix := code[:base.TimeLimitCodeLength]
+		data := base.ToStr(user.Id) + user.Email + user.LowerName + user.Passwd + user.Rands
+
+		if base.VerifyTimeLimitCode(data, minutes, prefix) {
+			return user
+		}
+	}
+	return nil
+}
+
 // UpdateUser updates user's information.
 func UpdateUser(user *User) (err error) {
-	_, err = orm.Id(user.Id).Update(user)
+	_, err = orm.Id(user.Id).UseBool().Update(user)
 	return err
 }
 

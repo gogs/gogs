@@ -5,6 +5,7 @@
 package repo
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/codegangsta/martini"
@@ -137,6 +138,8 @@ func Single(ctx *middleware.Context, params martini.Params) {
 		}
 	}
 
+	fmt.Println(Paths)
+
 	ctx.Data["Paths"] = Paths
 	ctx.Data["Treenames"] = treenames
 	ctx.Data["IsRepoToolbarSource"] = true
@@ -189,6 +192,9 @@ func Commits(ctx *middleware.Context, params martini.Params) {
 		ctx.Error(404)
 		return
 	}
+	ctx.Data["Username"] = params["username"]
+	ctx.Data["Reponame"] = params["reponame"]
+	ctx.Data["CommitCount"] = commits.Len()
 	ctx.Data["Commits"] = commits
 	ctx.HTML(200, "repo/commits", ctx.Data)
 }
