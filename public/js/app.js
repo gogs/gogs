@@ -81,8 +81,6 @@ var Gogits = {
             var last;
             $(document).on('click', '.lines-num span', function(){
                 var $e = $(this);
-                console.log($e.parent().siblings('.lines-code').find('ol.linenums > ' + $e.attr('rel')));
-                console.log('ol.linenums > ' + $e.attr('rel'));
                 if(last){
                     last.removeClass('active');
                 }
