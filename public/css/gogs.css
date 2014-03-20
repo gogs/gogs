@@ -501,8 +501,7 @@ html, body {
 }
 
 .activity-list .info {
-    float: left;
-    padding: 0 0 0 10px;
+    margin: 0 0 0 40px;
     line-height: 1.7em;
 }
 
