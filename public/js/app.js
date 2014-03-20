@@ -68,7 +68,7 @@ var Gogits = {
     Gogits.renderMarkdown = function () {
         var $md = $('.markdown');
         var $pre = $md.find('pre > code').parent();
-        $pre.addClass('prettyprint');
+        $pre.addClass('prettyprint linenums');
         prettyPrint();
 
         var $lineNums = $pre.parent().siblings('.lines-num');

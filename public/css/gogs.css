@@ -651,7 +651,7 @@ html, body {
     overflow-y: hidden;
 }
 
-.file-content .file-body pre {
+.file-content .file-body.file-code pre {
     background-color: #FFF;
     border: none;
 }
