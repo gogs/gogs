@@ -644,7 +644,19 @@ html, body {
 }
 
 .file-content .file-body {
-    padding: 30px 30px 50px;
+    padding: 0;
+    border: none;
+    background-color: #FFF;
+}
+
+.file-content .file-body pre {
+    background-color: #FFF;
+    border: none;
+}
+
+.file-content .markdown > pre > ol.linenums > li:first-child {
+    padding-top: 0;
+    margin-top: 0;
 }
 
 .branch-list th, .commit-list th {
@@ -736,6 +748,10 @@ html, body {
 
 .guide-box input[readonly] {
     background-color: #FFF;
+}
+
+.guide-box {
+    margin-top: 20px;
 }
 
 /* wrapper and footer */

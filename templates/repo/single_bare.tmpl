@@ -6,8 +6,8 @@
         <h3>Clone this repository</h3>
         <div class="input-group col-md-8 col-md-offset-2 guide-buttons">
             <span class="input-group-btn">
-                <button class="btn btn-default" data-url="{{.CloneLink.HTTPS}}" type="button">HTTPS</button>
                 <button class="btn btn-default" data-url="{{.CloneLink.SSH}}" type="button">SSH</button>
+                <button class="btn btn-default" data-url="{{.CloneLink.HTTPS}}" type="button">HTTPS</button>
             </span>
             <input type="text" class="form-control" id="guide-clone-url" value="" readonly/>
             <span class="input-group-btn">
@@ -20,12 +20,12 @@
             <pre class="text-left"><code>touch README.md
 git init
 git add README.md
-git commit -m "first commit" {{.CloneLink.SSH}}
-git remote add origin <span class="clone-url">{{.CloneLink.HTTPS}}</span>
+git commit -m "first commit"
+git remote add origin <span class="clone-url"></span>
 git push -u origin master</code></pre>
         <hr/>
         <h3>Push an existing repository from the command line</h3>
-        <pre class="text-left"><code>git remote add origin <span class="clone-url">{{.CloneLink.HTTPS}}</span>
+        <pre class="text-left"><code>git remote add origin <span class="clone-url"></span>
 git push -u origin master</code></pre>
     </div>
 </div>
