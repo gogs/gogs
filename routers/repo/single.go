@@ -87,6 +87,11 @@ func Single(ctx *middleware.Context, params martini.Params) {
 
 	branchLink := "/" + ctx.Repo.Owner.LowerName + "/" + ctx.Repo.Repository.Name + "/src/" + params["branchname"]
 
+	if len(treename) != 0 && repoFile == nil {
+		ctx.Error(404)
+		return
+	}
+
 	if repoFile != nil && repoFile.IsFile() {
 		if repoFile.Size > 1024*1024 || repoFile.Filemode != git.FileModeBlob {
 			ctx.Data["FileIsLarge"] = true
