@@ -66,9 +66,28 @@ var Gogits = {
 
     // render markdown
     Gogits.renderMarkdown = function () {
-        var $pre = $('.markdown').find('pre > code').parent();
+        var $md = $('.markdown');
+        var $pre = $md.find('pre > code').parent();
         $pre.addClass("prettyprint");
         prettyPrint();
+
+        // Set anchor.
+        var headers = {};
+        $md.find('h1, h2, h3, h4, h5, h6').each(function () {
+            var node = $(this);
+            var val = encodeURIComponent(node.text().toLowerCase().replace(/[^\w\- ]/g, '').replace(/[ ]/g, '-'));
+            var name = val;
+            if(headers[val] > 0){
+                name = val + '-' + headers[val];
+            }
+            if(headers[val] == undefined){
+                headers[val] = 1;
+            }else{
+                headers[val] += 1;
+            }
+            node = node.wrap('<div id="' + name + '" class="anchor-wrap" ></div>');
+            node.append('<a class="anchor" href="#' + name + '"><span class="octicon octicon-link"></span></a>');
+        });
     }
 
 })(jQuery);
