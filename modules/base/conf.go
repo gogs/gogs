@@ -32,7 +32,6 @@ var (
 	AppUrl      string
 	Domain      string
 	SecretKey   string
-	AdminName   string
 	Cfg         *goconfig.ConfigFile
 	MailService *Mailer
 )
@@ -174,7 +173,6 @@ func init() {
 	AppUrl = Cfg.MustValue("server", "ROOT_URL")
 	Domain = Cfg.MustValue("server", "DOMAIN")
 	SecretKey = Cfg.MustValue("security", "SECRET_KEY")
-	AdminName = strings.ToLower(Cfg.MustValue("admin", "NAME"))
 }
 
 func NewServices() {

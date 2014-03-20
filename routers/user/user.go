@@ -153,7 +153,7 @@ func SignUp(ctx *middleware.Context, form auth.RegisterForm) {
 	log.Trace("%s User created: %s", ctx.Req.RequestURI, strings.ToLower(form.UserName))
 
 	// Send confirmation e-mail.
-	if base.Service.RegisterEmailConfirm {
+	if base.Service.RegisterEmailConfirm && u.Id > 1 {
 		mailer.SendRegisterMail(ctx.Render, u)
 		ctx.Data["IsSendRegisterMail"] = true
 		ctx.Data["Email"] = u.Email

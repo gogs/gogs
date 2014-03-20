@@ -137,7 +137,13 @@ func RegisterUser(user *User) (*User, error) {
 		}
 		return nil, err
 	}
-	return user, nil
+
+	if user.Id == 1 {
+		user.IsAdmin = true
+		user.IsActive = true
+		_, err = orm.Id(user.Id).UseBool().Update(user)
+	}
+	return user, err
 }
 
 // get user by erify code

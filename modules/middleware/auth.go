@@ -39,7 +39,7 @@ func SignOutRequire() martini.Handler {
 // AdminRequire requires user signed in as administor.
 func AdminRequire() martini.Handler {
 	return func(ctx *Context) {
-		if ctx.User.LowerName != base.AdminName && !ctx.User.IsAdmin {
+		if !ctx.User.IsAdmin {
 			ctx.Error(403)
 			return
 		}

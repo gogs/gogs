@@ -14,7 +14,6 @@ import (
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
-	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
 )
 
@@ -112,10 +111,7 @@ func InitContext() martini.Handler {
 			ctx.Data["SignedUser"] = user
 			ctx.Data["SignedUserId"] = user.Id
 			ctx.Data["SignedUserName"] = user.LowerName
-
-			if ctx.User.IsAdmin || ctx.User.LowerName == base.AdminName {
-				ctx.Data["IsAdmin"] = true
-			}
+			ctx.Data["IsAdmin"] = ctx.User.IsAdmin
 		}
 
 		ctx.Data["PageStartTime"] = time.Now()
