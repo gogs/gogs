@@ -445,7 +445,7 @@ html, body {
     padding: 0;
 }
 
-#gogs-repo-watching .dropdown-menu .dropdown-item:hover .dropdown-header {
+#gogs-repo-watching .dropdown-menu .dropdown-item:hover .dropdown-header, #gogs-repo-watching .dropdown-item .dropdown-header.text-primary {
     color: rgb(65, 131, 196);
     cursor: pointer;
 }
@@ -678,7 +678,7 @@ html, body {
 }
 
 .file-content .file-body.file-code .lines-num span {
-    font-family: Menlo,Monaco,Consolas,"Courier New",monospace;
+    font-family: Menlo, Monaco, Consolas, "Courier New", monospace;
     line-height: 1.6;
     padding: 0 8px 0 10px;
     cursor: pointer;
@@ -781,6 +781,10 @@ html, body {
 
 .commit-list .date {
     width: 120px;
+}
+
+.commit-list .author {
+    min-width: 180px;
 }
 
 .guide-box pre, .guide-box .input-group {
