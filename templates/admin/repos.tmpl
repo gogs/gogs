@@ -16,6 +16,30 @@
             </div>
 
             <div class="panel-body">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Id</th>
+                            <th>Name</th>
+                            <th>Private</th>
+                            <th>Watches</th>
+                            <th>Forks</th>
+                            <th>Created</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {{range .Repos}}
+                        <tr>
+                            <td>{{.Id}}</td>
+                            <td>{{.Name}}</td>
+                            <td><i class="fa fa{{if .Private}}-check{{end}}-square-o"></i></td>
+                            <td>{{.NumWatches}}</td>
+                            <td>{{.NumForks}}</td>
+                            <td>{{DateFormat .Created "M d, Y"}}</td>
+                        </tr>
+                        {{end}}
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>

@@ -26,12 +26,14 @@ type Mailer struct {
 }
 
 var (
-	AppVer      string
-	AppName     string
-	AppLogo     string
-	AppUrl      string
-	Domain      string
-	SecretKey   string
+	AppVer       string
+	AppName      string
+	AppLogo      string
+	AppUrl       string
+	Domain       string
+	SecretKey    string
+	RepoRootPath string
+
 	Cfg         *goconfig.ConfigFile
 	MailService *Mailer
 )
@@ -173,6 +175,13 @@ func init() {
 	AppUrl = Cfg.MustValue("server", "ROOT_URL")
 	Domain = Cfg.MustValue("server", "DOMAIN")
 	SecretKey = Cfg.MustValue("security", "SECRET_KEY")
+
+	// Determine and create root git reposiroty path.
+	RepoRootPath = Cfg.MustValue("repository", "ROOT")
+	if err = os.MkdirAll(RepoRootPath, os.ModePerm); err != nil {
+		fmt.Printf("models.init(fail to create RepoRootPath(%s)): %v\n", RepoRootPath, err)
+		os.Exit(2)
+	}
 }
 
 func NewServices() {

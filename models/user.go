@@ -33,6 +33,14 @@ const (
 	LT_LDAP
 )
 
+var (
+	ErrUserOwnRepos     = errors.New("User still have ownership of repositories")
+	ErrUserAlreadyExist = errors.New("User already exist")
+	ErrUserNotExist     = errors.New("User does not exist")
+	ErrEmailAlreadyUsed = errors.New("E-mail already used")
+	ErrUserNameIllegal  = errors.New("User name contains illegal characters")
+)
+
 // User represents the object of individual and member of organization.
 type User struct {
 	Id            int64
@@ -67,20 +75,28 @@ func (user *User) AvatarLink() string {
 	return "http://1.gravatar.com/avatar/" + user.Avatar
 }
 
-type Follow struct {
-	Id       int64
-	UserId   int64     `xorm:"unique(s)"`
-	FollowId int64     `xorm:"unique(s)"`
-	Created  time.Time `xorm:"created"`
+// NewGitSig generates and returns the signature of given user.
+func (user *User) NewGitSig() *git.Signature {
+	return &git.Signature{
+		Name:  user.Name,
+		Email: user.Email,
+		When:  time.Now(),
+	}
 }
 
-var (
-	ErrUserOwnRepos     = errors.New("User still have ownership of repositories")
-	ErrUserAlreadyExist = errors.New("User already exist")
-	ErrUserNotExist     = errors.New("User does not exist")
-	ErrEmailAlreadyUsed = errors.New("E-mail already used")
-	ErrUserNameIllegal  = errors.New("User name contains illegal characters")
-)
+// EncodePasswd encodes password to safe format.
+func (user *User) EncodePasswd() error {
+	newPasswd, err := scrypt.Key([]byte(user.Passwd), []byte(base.SecretKey), 16384, 8, 1, 64)
+	user.Passwd = fmt.Sprintf("%x", newPasswd)
+	return err
+}
+
+// Member represents user is member of organization.
+type Member struct {
+	Id     int64
+	OrgId  int64 `xorm:"unique(member) index"`
+	UserId int64 `xorm:"unique(member)"`
+}
 
 // IsUserExist checks if given user name exist,
 // the user name should be noncased unique.
@@ -91,15 +107,6 @@ func IsUserExist(name string) (bool, error) {
 // IsEmailUsed returns true if the e-mail has been used.
 func IsEmailUsed(email string) (bool, error) {
 	return orm.Get(&User{Email: email})
-}
-
-// NewGitSig generates and returns the signature of given user.
-func (user *User) NewGitSig() *git.Signature {
-	return &git.Signature{
-		Name:  user.Name,
-		Email: user.Email,
-		When:  time.Now(),
-	}
 }
 
 // return a user salt token
@@ -149,6 +156,13 @@ func RegisterUser(user *User) (*User, error) {
 		_, err = orm.Id(user.Id).UseBool().Update(user)
 	}
 	return user, err
+}
+
+// GetUsers returns given number of user objects with offset.
+func GetUsers(num, offset int) ([]User, error) {
+	users := make([]User, 0, num)
+	err := orm.Limit(num, offset).Asc("id").Find(&users)
+	return users, err
 }
 
 // get user by erify code
@@ -229,24 +243,14 @@ func DeleteUser(user *User) error {
 	return err
 }
 
-// EncodePasswd encodes password to safe format.
-func (user *User) EncodePasswd() error {
-	newPasswd, err := scrypt.Key([]byte(user.Passwd), []byte(base.SecretKey), 16384, 8, 1, 64)
-	user.Passwd = fmt.Sprintf("%x", newPasswd)
-	return err
-}
-
 // UserPath returns the path absolute path of user repositories.
 func UserPath(userName string) string {
-	return filepath.Join(RepoRootPath, strings.ToLower(userName))
+	return filepath.Join(base.RepoRootPath, strings.ToLower(userName))
 }
 
 func GetUserByKeyId(keyId int64) (*User, error) {
 	user := new(User)
-	rawSql := "SELECT a.* FROM user AS a, public_key AS b WHERE a.id = b.owner_id AND b.id=?"
-	if base.Cfg.MustValue("database", "DB_TYPE") == "postgres" {
-		rawSql = "SELECT a.* FROM \"user\" AS a, public_key AS b WHERE a.id = b.owner_id AND b.id=?"
-	}
+	rawSql := "SELECT a.* FROM `user` AS a, public_key AS b WHERE a.id = b.owner_id AND b.id=?"
 	has, err := orm.Sql(rawSql, keyId).Get(user)
 	if err != nil {
 		return nil, err
@@ -303,6 +307,13 @@ func LoginUserPlain(name, passwd string) (*User, error) {
 	return &user, err
 }
 
+// Follow is connection request for receiving user notifycation.
+type Follow struct {
+	Id       int64
+	UserId   int64 `xorm:"unique(follow)"`
+	FollowId int64 `xorm:"unique(follow)"`
+}
+
 // FollowUser marks someone be another's follower.
 func FollowUser(userId int64, followId int64) (err error) {
 	session := orm.NewSession()
@@ -314,19 +325,13 @@ func FollowUser(userId int64, followId int64) (err error) {
 		return err
 	}
 
-	rawSql := "UPDATE user SET num_followers = num_followers + 1 WHERE id = ?"
-	if base.Cfg.MustValue("database", "DB_TYPE") == "postgres" {
-		rawSql = "UPDATE \"user\" SET num_followers = num_followers + 1 WHERE id = ?"
-	}
+	rawSql := "UPDATE `user` SET num_followers = num_followers + 1 WHERE id = ?"
 	if _, err = session.Exec(rawSql, followId); err != nil {
 		session.Rollback()
 		return err
 	}
 
-	rawSql = "UPDATE user SET num_followings = num_followings + 1 WHERE id = ?"
-	if base.Cfg.MustValue("database", "DB_TYPE") == "postgres" {
-		rawSql = "UPDATE \"user\" SET num_followings = num_followings + 1 WHERE id = ?"
-	}
+	rawSql = "UPDATE `user` SET num_followings = num_followings + 1 WHERE id = ?"
 	if _, err = session.Exec(rawSql, userId); err != nil {
 		session.Rollback()
 		return err
@@ -345,19 +350,13 @@ func UnFollowUser(userId int64, unFollowId int64) (err error) {
 		return err
 	}
 
-	rawSql := "UPDATE user SET num_followers = num_followers - 1 WHERE id = ?"
-	if base.Cfg.MustValue("database", "DB_TYPE") == "postgres" {
-		rawSql = "UPDATE \"user\" SET num_followers = num_followers - 1 WHERE id = ?"
-	}
+	rawSql := "UPDATE `user` SET num_followers = num_followers - 1 WHERE id = ?"
 	if _, err = session.Exec(rawSql, unFollowId); err != nil {
 		session.Rollback()
 		return err
 	}
 
-	rawSql = "UPDATE user SET num_followings = num_followings - 1 WHERE id = ?"
-	if base.Cfg.MustValue("database", "DB_TYPE") == "postgres" {
-		rawSql = "UPDATE \"user\" SET num_followings = num_followings - 1 WHERE id = ?"
-	}
+	rawSql = "UPDATE `user` SET num_followings = num_followings - 1 WHERE id = ?"
 	if _, err = session.Exec(rawSql, userId); err != nil {
 		session.Rollback()
 		return err

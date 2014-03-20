@@ -12,7 +12,9 @@ import (
 	"strings"
 
 	"github.com/codegangsta/cli"
+
 	"github.com/gogits/gogs/models"
+	"github.com/gogits/gogs/modules/base"
 )
 
 var (
@@ -144,7 +146,7 @@ func runServ(*cli.Context) {
 	}
 
 	gitcmd := exec.Command(verb, rRepo)
-	gitcmd.Dir = models.RepoRootPath
+	gitcmd.Dir = base.RepoRootPath
 	gitcmd.Stdout = os.Stdout
 	gitcmd.Stdin = os.Stdin
 	gitcmd.Stderr = os.Stderr

@@ -15,30 +15,7 @@ import (
 	"github.com/gogits/gogs/modules/base"
 )
 
-var (
-	orm          *xorm.Engine
-	RepoRootPath string
-)
-
-type Members struct {
-	Id     int64
-	OrgId  int64 `xorm:"unique(s) index"`
-	UserId int64 `xorm:"unique(s)"`
-}
-
-type Issue struct {
-	Id       int64
-	RepoId   int64 `xorm:"index"`
-	PosterId int64
-}
-
-type PullRequest struct {
-	Id int64
-}
-
-type Comment struct {
-	Id int64
-}
+var orm *xorm.Engine
 
 func setEngine() {
 	dbType := base.Cfg.MustValue("database", "DB_TYPE")
@@ -65,8 +42,8 @@ func setEngine() {
 		os.Exit(2)
 	}
 
-	// TODO: for serv command, MUST remove the output to os.stdout, so
-	// use log file to instead print to stdout
+	// WARNNING: for serv command, MUST remove the output to os.stdout,
+	// so use log file to instead print to stdout.
 
 	//x.ShowDebug = true
 	//orm.ShowErr = true
@@ -77,20 +54,29 @@ func setEngine() {
 	}
 	orm.Logger = f
 	orm.ShowSQL = true
-
-	// Determine and create root git reposiroty path.
-	RepoRootPath = base.Cfg.MustValue("repository", "ROOT")
-	if err = os.MkdirAll(RepoRootPath, os.ModePerm); err != nil {
-		fmt.Printf("models.init(fail to create RepoRootPath(%s)): %v\n", RepoRootPath, err)
-		os.Exit(2)
-	}
 }
 
 func init() {
 	setEngine()
-	if err := orm.Sync(new(User), new(PublicKey), new(Repository), new(Access),
-		new(Action), new(Watch)); err != nil {
+	if err := orm.Sync(new(User), new(PublicKey), new(Repository), new(Watch),
+		new(Action), new(Access)); err != nil {
 		fmt.Printf("sync database struct error: %v\n", err)
 		os.Exit(2)
 	}
+}
+
+type Statistic struct {
+	Counter struct {
+		User, PublicKey, Repo, Watch, Action, Access int64
+	}
+}
+
+func GetStatistic() (stats Statistic) {
+	stats.Counter.User, _ = orm.Count(new(User))
+	stats.Counter.PublicKey, _ = orm.Count(new(PublicKey))
+	stats.Counter.Repo, _ = orm.Count(new(Repository))
+	stats.Counter.Watch, _ = orm.Count(new(Watch))
+	stats.Counter.Action, _ = orm.Count(new(Action))
+	stats.Counter.Access, _ = orm.Count(new(Access))
+	return stats
 }
