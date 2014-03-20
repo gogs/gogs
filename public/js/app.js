@@ -181,6 +181,7 @@ function initUserSetting() {
 }
 
 function initRepository() {
+    // guide box script
     (function () {
         var $guide = $('.guide-box');
         if ($guide.length) {
@@ -196,6 +197,40 @@ function initRepository() {
             }).eq(0).trigger("click");
             // todo copy to clipboard
         }
+    })();
+
+    // watching script
+    (function () {
+        var $watch = $('#gogs-repo-watching'),
+            watchLink = $watch.data("watch"),
+            unwatchLink = $watch.data("unwatch");
+        $watch.on('click', '.to-watch',function () {
+            if ($watch.hasClass("watching")) {
+                return false;
+            }
+            $.get(watchLink, function (json) {
+                if (json.ok) {
+                    $watch.find('.text-primary').removeClass('text-primary');
+                    $watch.find('.to-watch h4').addClass('text-primary');
+                    $watch.find('.fa-eye-slash').removeClass('fa-eye-slash').addClass('fa-eye');
+                    $watch.removeClass("no-watching").addClass("watching");
+                }
+            });
+            return false;
+        }).on('click', '.to-unwatch', function () {
+            if ($watch.hasClass("no-watching")) {
+                return false;
+            }
+            $.get(unwatchLink, function (json) {
+                if (json.ok) {
+                    $watch.find('.text-primary').removeClass('text-primary');
+                    $watch.find('.to-unwatch h4').addClass('text-primary');
+                    $watch.find('.fa-eye').removeClass('fa-eye').addClass('fa-eye-slash');
+                    $watch.removeClass("watching").addClass("no-watching");
+                }
+            });
+            return false;
+        });
     })();
 }
 

@@ -411,6 +411,10 @@ func DeleteRepository(userId, repoId int64, userName string) (err error) {
 		session.Rollback()
 		return err
 	}
+	if _, err = session.Delete(&Watch{RepoId: repoId}); err != nil {
+		session.Rollback()
+		return err
+	}
 	if err = session.Commit(); err != nil {
 		session.Rollback()
 		return err
