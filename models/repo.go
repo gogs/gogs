@@ -424,9 +424,18 @@ type Watch struct {
 // Watch or unwatch repository.
 func WatchRepo(userId, repoId int64, watch bool) (err error) {
 	if watch {
-		_, err = orm.Insert(&Watch{RepoId: repoId, UserId: userId})
+		if _, err = orm.Insert(&Watch{RepoId: repoId, UserId: userId}); err != nil {
+			return err
+		}
+
+		rawSql := "UPDATE `repository` SET num_watches = num_watches + 1 WHERE id = ?"
+		_, err = orm.Exec(rawSql, repoId)
 	} else {
-		_, err = orm.Delete(&Watch{0, repoId, userId})
+		if _, err = orm.Delete(&Watch{0, repoId, userId}); err != nil {
+			return err
+		}
+		rawSql := "UPDATE `repository` SET num_watches = num_watches - 1 WHERE id = ?"
+		_, err = orm.Exec(rawSql, repoId)
 	}
 	return err
 }
