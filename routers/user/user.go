@@ -233,6 +233,10 @@ func Activate(ctx *middleware.Context) {
 	code := ctx.Query("code")
 	if len(code) == 0 {
 		ctx.Data["IsActivatePage"] = true
+		if ctx.User.IsActive {
+			ctx.Error(404)
+			return
+		}
 		// Resend confirmation e-mail.
 		if base.Service.RegisterEmailConfirm {
 			ctx.Data["Hours"] = base.Service.ActiveCodeLives / 60
