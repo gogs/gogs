@@ -647,6 +647,9 @@ html, body {
     padding: 30px 30px 50px;
     border: none;
     background-color: #FFF;
+    overflow: auto;
+    overflow-x: auto;
+    overflow-y: hidden;
 }
 
 .file-content .file-body pre {
