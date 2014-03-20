@@ -112,6 +112,7 @@
   overflow: auto;
   background: #f8f8f8;
   border: 1px solid #ddd;
+  padding: 0;
 }
 
 .markdown > pre.linenums {
@@ -127,7 +128,7 @@
   margin-top: 2px;
 }
 
-.markdown > pre.linenums-style > ol.linenums {
+.markdown > pre.nums-style > ol.linenums {
   list-style-type: decimal;
   padding: 0 0 0 40px;
   -webkit-box-shadow: inset 40px 0 0 #f5f5f5, inset 41px 0 0 #ccc;
@@ -152,7 +153,7 @@
   padding-bottom: 12px;
 }
 
-.markdown > pre.linenums-style > ol.linenums > li {
+.markdown > pre.nums-style > ol.linenums > li {
   border-left: 1px solid #ddd;
 }
 
