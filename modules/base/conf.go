@@ -167,7 +167,6 @@ func init() {
 			os.Exit(2)
 		}
 	}
-	Cfg.BlockMode = false
 
 	AppName = Cfg.MustValue("", "APP_NAME", "Gogs: Go Git Service")
 	AppLogo = Cfg.MustValue("", "APP_LOGO", "img/favicon.png")
