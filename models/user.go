@@ -79,6 +79,7 @@ var (
 	ErrUserAlreadyExist = errors.New("User already exist")
 	ErrUserNotExist     = errors.New("User does not exist")
 	ErrEmailAlreadyUsed = errors.New("E-mail already used")
+	ErrUserNameIllegal  = errors.New("User name contains illegal characters")
 )
 
 // IsUserExist checks if given user name exist,
@@ -108,6 +109,10 @@ func GetUserSalt() string {
 
 // RegisterUser creates record of a new user.
 func RegisterUser(user *User) (*User, error) {
+	if !IsLegalName(user.Name) {
+		return nil, ErrUserNameIllegal
+	}
+
 	isExist, err := IsUserExist(user.Name)
 	if err != nil {
 		return nil, err

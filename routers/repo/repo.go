@@ -31,6 +31,9 @@ func Create(ctx *middleware.Context, form auth.CreateRepoForm) {
 	} else if err == models.ErrRepoAlreadyExist {
 		ctx.RenderWithErr("Repository name has already been used", "repo/create", &form)
 		return
+	} else if err == models.ErrRepoNameIllegal {
+		ctx.RenderWithErr(models.ErrRepoNameIllegal.Error(), "repo/create", &form)
+		return
 	}
 	ctx.Handle(200, "repo.Create", err)
 }
