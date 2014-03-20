@@ -1,4 +1,4 @@
-// Copyright 2013 gopm authors.
+// Copyright 2013-2014 gopm authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License"): you may
 // not use this file except in compliance with the License. You may obtain
@@ -58,11 +58,12 @@ func runGen(ctx *cli.Context) {
 
 	targetPath := parseTarget(gf.MustValue("target", "path"))
 	// Get and set dependencies.
-	imports := doc.GetAllImports([]string{workDir}, targetPath, ctx.Bool("example"))
+	imports := doc.GetAllImports([]string{workDir}, targetPath, ctx.Bool("example"), false)
 	for _, p := range imports {
 		p = doc.GetProjectPath(p)
 		// Skip subpackage(s) of current project.
-		if strings.HasSuffix(workDir, p) || strings.HasPrefix(p, targetPath) {
+		if strings.HasSuffix(strings.Replace(workDir, "\\", "/", -1), p) ||
+			strings.HasPrefix(p, targetPath) {
 			continue
 		}
 

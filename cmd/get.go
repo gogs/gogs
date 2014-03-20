@@ -123,7 +123,7 @@ func getByGopmfile(ctx *cli.Context) {
 
 	targetPath := parseTarget(gf.MustValue("target", "path"))
 	// Get dependencies.
-	imports := doc.GetAllImports([]string{workDir}, targetPath, ctx.Bool("example"))
+	imports := doc.GetAllImports([]string{workDir}, targetPath, ctx.Bool("example"), false)
 
 	nodes := make([]*doc.Node, 0, len(imports))
 	for _, p := range imports {
@@ -316,12 +316,12 @@ func downloadPackage(ctx *cli.Context, nod *doc.Node) (*doc.Node, []string) {
 	vcs := getVcsName(gopathDir)
 	if ctx.Bool("update") && ctx.Bool("gopath") && len(vcs) > 0 {
 		err = updateByVcs(vcs, gopathDir)
-		imports = doc.GetAllImports([]string{gopathDir}, nod.RootPath, false)
+		imports = doc.GetAllImports([]string{gopathDir}, nod.RootPath, false, false)
 	} else {
 		// If package has revision and exist, then just check dependencies.
 		if nod.IsGetDepsOnly {
 			return nod, doc.GetAllImports([]string{path.Join(installRepoPath, nod.RootPath) + versionSuffix(nod.Value)},
-				nod.RootPath, ctx.Bool("example"))
+				nod.RootPath, ctx.Bool("example"), false)
 		}
 		nod.Revision = doc.LocalNodes.MustValue(nod.RootPath, "value")
 		imports, err = doc.PureDownload(nod, installRepoPath, ctx) //CmdGet.Flags)

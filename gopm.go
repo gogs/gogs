@@ -29,9 +29,10 @@ import (
 // Test that go1.1 tag above is included in builds. main.go refers to this definition.
 const go11tag = true
 
-const APP_VER = "0.6.4.0318"
+const APP_VER = "0.6.5.0320"
 
-// 	//cmd.CmdSearch,
+//		cmd.CmdTest,
+//		cmd.CmdSearch,
 // 		cmdClean,
 // 		cmdDoc,
 // 		cmdEnv,
@@ -39,7 +40,6 @@ const APP_VER = "0.6.4.0318"
 // 		cmdList,
 // 		cmdTool,
 // 		cmdVet,
-// }
 
 func init() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
@@ -59,7 +59,6 @@ func main() {
 		cmd.CmdInstall,
 		cmd.CmdUpdate,
 		cmd.CmdConfig,
-		//cmd.CmdTest,
 	}
 	app.Flags = append(app.Flags, []cli.Flag{
 		cli.BoolFlag{"noterm", "disable color output"},
