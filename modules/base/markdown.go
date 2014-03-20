@@ -36,7 +36,7 @@ func isLink(link []byte) bool {
 func IsMarkdownFile(name string) bool {
 	name = strings.ToLower(name)
 	switch filepath.Ext(name) {
-	case "md", "markdown", "mdown":
+	case ".md", ".markdown", ".mdown":
 		return true
 	}
 	return false

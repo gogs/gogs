@@ -96,7 +96,11 @@ func Single(ctx *middleware.Context, params martini.Params) {
 		} else {
 			ctx.Data["IsFile"] = true
 			ctx.Data["FileName"] = repoFile.Name
-			ctx.Data["FileExt"] = path.Ext(repoFile.Name)
+			ext := path.Ext(repoFile.Name)
+			if len(ext) > 0 {
+				ext = ext[1:]
+			}
+			ctx.Data["FileExt"] = ext
 
 			readmeExist := base.IsMarkdownFile(repoFile.Name) || base.IsReadmeFile(repoFile.Name)
 			ctx.Data["ReadmeExist"] = readmeExist
