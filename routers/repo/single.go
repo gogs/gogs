@@ -217,6 +217,11 @@ func Setting(ctx *middleware.Context, params martini.Params) {
 		title = t
 	}
 
+	if len(params["branchname"]) == 0 {
+		params["branchname"] = "master"
+	}
+
+	ctx.Data["Branchname"] = params["branchname"]
 	ctx.Data["Title"] = title + " - settings"
 	ctx.HTML(200, "repo/setting")
 }

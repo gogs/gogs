@@ -139,11 +139,13 @@ func SignUp(ctx *middleware.Context, form auth.RegisterForm) {
 
 	var err error
 	if u, err = models.RegisterUser(u); err != nil {
-		switch err.Error() {
-		case models.ErrUserAlreadyExist.Error():
+		switch err {
+		case models.ErrUserAlreadyExist:
 			ctx.RenderWithErr("Username has been already taken", "user/signup", &form)
-		case models.ErrEmailAlreadyUsed.Error():
+		case models.ErrEmailAlreadyUsed:
 			ctx.RenderWithErr("E-mail address has been already used", "user/signup", &form)
+		case models.ErrUserNameIllegal:
+			ctx.RenderWithErr(models.ErrRepoNameIllegal.Error(), "user/signup", &form)
 		default:
 			ctx.Handle(200, "user.SignUp", err)
 		}
