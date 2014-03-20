@@ -59,6 +59,8 @@ func Single(ctx *middleware.Context, params martini.Params) {
 		return
 	}
 
+	ctx.Data["IsRepoToolbarSource"] = true
+
 	// Branches.
 	brs, err := models.GetBranches(params["username"], params["reponame"])
 	if err != nil {
@@ -176,7 +178,6 @@ func Single(ctx *middleware.Context, params martini.Params) {
 
 	ctx.Data["Paths"] = Paths
 	ctx.Data["Treenames"] = treenames
-	ctx.Data["IsRepoToolbarSource"] = true
 	ctx.Data["BranchLink"] = branchLink
 	ctx.HTML(200, "repo/single")
 }
@@ -186,6 +187,8 @@ func Setting(ctx *middleware.Context, params martini.Params) {
 		ctx.Error(404)
 		return
 	}
+
+	ctx.Data["IsRepoToolbarSetting"] = true
 
 	// Branches.
 	brs, err := models.GetBranches(params["username"], params["reponame"])
@@ -205,7 +208,6 @@ func Setting(ctx *middleware.Context, params martini.Params) {
 	}
 
 	ctx.Data["Title"] = title + " - settings"
-	ctx.Data["IsRepoToolbarSetting"] = true
 	ctx.HTML(200, "repo/setting")
 }
 
