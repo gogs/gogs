@@ -6,11 +6,13 @@ package middleware
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/codegangsta/martini"
 
 	"github.com/gogits/gogs/models"
+	"github.com/gogits/gogs/modules/base"
 )
 
 func RepoAssignment(redirect bool) martini.Handler {
@@ -65,11 +67,13 @@ func RepoAssignment(redirect bool) martini.Handler {
 		ctx.Repo.IsValid = true
 		ctx.Repo.IsWatching = models.IsWatching(ctx.User.Id, repo.Id)
 		ctx.Repo.Repository = repo
+		ctx.Repo.CloneLink.SSH = fmt.Sprintf("git@%s:%s/%s.git", base.Domain, ctx.User.LowerName, repo.LowerName)
 
 		ctx.Data["IsRepositoryValid"] = true
 		ctx.Data["Repository"] = repo
 		ctx.Data["Owner"] = user
 		ctx.Data["Title"] = user.Name + "/" + repo.Name
+		ctx.Data["CloneLink"] = ctx.Repo.CloneLink
 		ctx.Data["RepositoryLink"] = ctx.Data["Title"]
 		ctx.Data["IsRepositoryOwner"] = ctx.Repo.IsOwner
 	}
