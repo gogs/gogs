@@ -10,6 +10,7 @@
             </a>
             <a class="navbar-right gogs-nav-item{{if .PageIsNewRepo}} active{{end}}" href="/repo/create" data-toggle="tooltip" data-placement="bottom" title="New Repository"><i class="fa fa-plus fa-lg"></i></a>
             <a class="navbar-right gogs-nav-item{{if .PageIsUserSetting}} active{{end}}" href="/user/setting"  data-toggle="tooltip" data-placement="bottom" title="Setting"><i class="fa fa-cogs fa-lg"></i></a>
+            {{if .IsAdmin}}<a class="navbar-right gogs-nav-item{{if .PageIsAdmin}} active{{end}}" href="/admin"  data-toggle="tooltip" data-placement="bottom" title="Admin"><i class="fa fa-gear fa-lg"></i></a>{{end}}
             {{else}}<a id="gogs-nav-signin" class="gogs-nav-item navbar-right navbar-btn btn btn-danger" href="/user/login/">Sign in</a>{{end}}
         </nav>
     </div>

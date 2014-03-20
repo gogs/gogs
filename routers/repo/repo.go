@@ -18,7 +18,7 @@ func Create(ctx *middleware.Context, form auth.CreateRepoForm) {
 	ctx.Data["Licenses"] = models.Licenses
 
 	if ctx.Req.Method == "GET" {
-		ctx.HTML(200, "repo/create", ctx.Data)
+		ctx.HTML(200, "repo/create")
 		return
 	}
 
@@ -45,7 +45,7 @@ func SettingPost(ctx *middleware.Context) {
 	case "delete":
 		if len(ctx.Repo.Repository.Name) == 0 || ctx.Repo.Repository.Name != ctx.Query("repository") {
 			ctx.Data["ErrorMsg"] = "Please make sure you entered repository name is correct."
-			ctx.HTML(200, "repo/setting", ctx.Data)
+			ctx.HTML(200, "repo/setting")
 			return
 		}
 

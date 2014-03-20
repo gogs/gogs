@@ -34,7 +34,7 @@ func Dashboard(ctx *middleware.Context) {
 		return
 	}
 	ctx.Data["Feeds"] = feeds
-	ctx.HTML(200, "user/dashboard", ctx.Data)
+	ctx.HTML(200, "user/dashboard")
 }
 
 func Profile(ctx *middleware.Context, params martini.Params) {
@@ -70,19 +70,19 @@ func Profile(ctx *middleware.Context, params martini.Params) {
 	}
 
 	ctx.Data["PageIsUserProfile"] = true
-	ctx.HTML(200, "user/profile", ctx.Data)
+	ctx.HTML(200, "user/profile")
 }
 
 func SignIn(ctx *middleware.Context, form auth.LogInForm) {
 	ctx.Data["Title"] = "Log In"
 
 	if ctx.Req.Method == "GET" {
-		ctx.HTML(200, "user/signin", ctx.Data)
+		ctx.HTML(200, "user/signin")
 		return
 	}
 
 	if hasErr, ok := ctx.Data["HasError"]; ok && hasErr.(bool) {
-		ctx.HTML(200, "user/signin", ctx.Data)
+		ctx.HTML(200, "user/signin")
 		return
 	}
 
@@ -113,7 +113,7 @@ func SignUp(ctx *middleware.Context, form auth.RegisterForm) {
 	ctx.Data["PageIsSignUp"] = true
 
 	if ctx.Req.Method == "GET" {
-		ctx.HTML(200, "user/signup", ctx.Data)
+		ctx.HTML(200, "user/signup")
 		return
 	}
 
@@ -126,7 +126,7 @@ func SignUp(ctx *middleware.Context, form auth.RegisterForm) {
 	}
 
 	if ctx.HasError() {
-		ctx.HTML(200, "user/signup", ctx.Data)
+		ctx.HTML(200, "user/signup")
 		return
 	}
 
@@ -158,7 +158,7 @@ func SignUp(ctx *middleware.Context, form auth.RegisterForm) {
 		ctx.Data["IsSendRegisterMail"] = true
 		ctx.Data["Email"] = u.Email
 		ctx.Data["Hours"] = base.Service.ActiveCodeLives / 60
-		ctx.Render.HTML(200, "user/active", ctx.Data)
+		ctx.HTML(200, "user/active")
 		return
 	}
 	ctx.Redirect("/user/login")
@@ -170,7 +170,7 @@ func Delete(ctx *middleware.Context) {
 	ctx.Data["IsUserPageSettingDelete"] = true
 
 	if ctx.Req.Method == "GET" {
-		ctx.HTML(200, "user/delete", ctx.Data)
+		ctx.HTML(200, "user/delete")
 		return
 	}
 
@@ -195,7 +195,7 @@ func Delete(ctx *middleware.Context) {
 		}
 	}
 
-	ctx.HTML(200, "user/delete", ctx.Data)
+	ctx.HTML(200, "user/delete")
 }
 
 const (
@@ -218,15 +218,15 @@ func Feeds(ctx *middleware.Context, form auth.FeedsForm) {
 }
 
 func Issues(ctx *middleware.Context) {
-	ctx.HTML(200, "user/issues", ctx.Data)
+	ctx.HTML(200, "user/issues")
 }
 
 func Pulls(ctx *middleware.Context) {
-	ctx.HTML(200, "user/pulls", ctx.Data)
+	ctx.HTML(200, "user/pulls")
 }
 
 func Stars(ctx *middleware.Context) {
-	ctx.HTML(200, "user/stars", ctx.Data)
+	ctx.HTML(200, "user/stars")
 }
 
 func Activate(ctx *middleware.Context) {
@@ -244,7 +244,7 @@ func Activate(ctx *middleware.Context) {
 		} else {
 			ctx.Data["ServiceNotEnabled"] = true
 		}
-		ctx.Render.HTML(200, "user/active", ctx.Data)
+		ctx.HTML(200, "user/active")
 		return
 	}
 
@@ -263,5 +263,5 @@ func Activate(ctx *middleware.Context) {
 	}
 
 	ctx.Data["IsActivateFailed"] = true
-	ctx.Render.HTML(200, "user/active", ctx.Data)
+	ctx.HTML(200, "user/active")
 }

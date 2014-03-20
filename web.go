@@ -21,6 +21,7 @@ import (
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/middleware"
 	"github.com/gogits/gogs/routers"
+	"github.com/gogits/gogs/routers/admin"
 	"github.com/gogits/gogs/routers/dev"
 	"github.com/gogits/gogs/routers/repo"
 	"github.com/gogits/gogs/routers/user"
@@ -98,6 +99,11 @@ func runWeb(*cli.Context) {
 	m.Any("/repo/create", reqSignIn, binding.BindIgnErr(auth.CreateRepoForm{}), repo.Create)
 
 	m.Get("/help", routers.Help)
+
+	adminReq := middleware.AdminRequire()
+	m.Any("/admin", reqSignIn, adminReq, admin.Dashboard)
+	m.Any("/admin/users", reqSignIn, adminReq, admin.Users)
+	m.Any("/admin/repos", reqSignIn, adminReq, admin.Repositories)
 
 	m.Post("/:username/:reponame/settings", reqSignIn, middleware.RepoAssignment(true), repo.SettingPost)
 	m.Get("/:username/:reponame/settings", reqSignIn, middleware.RepoAssignment(true), repo.Setting)
