@@ -61,24 +61,29 @@ func (ctx *Context) HasError() bool {
 	return hasErr.(bool)
 }
 
+// HTML calls render.HTML underlying but reduce one argument.
+func (ctx *Context) HTML(status int, name string, htmlOpt ...HTMLOptions) {
+	ctx.Render.HTML(status, name, ctx.Data, htmlOpt...)
+}
+
 // RenderWithErr used for page has form validation but need to prompt error to users.
 func (ctx *Context) RenderWithErr(msg, tpl string, form auth.Form) {
 	ctx.Data["HasError"] = true
 	ctx.Data["ErrorMsg"] = msg
 	auth.AssignForm(form, ctx.Data)
-	ctx.HTML(200, tpl, ctx.Data)
+	ctx.HTML(200, tpl)
 }
 
 // Handle handles and logs error by given status.
 func (ctx *Context) Handle(status int, title string, err error) {
 	log.Error("%s: %v", title, err)
 	if martini.Dev == martini.Prod {
-		ctx.HTML(500, "status/500", ctx.Data)
+		ctx.HTML(500, "status/500")
 		return
 	}
 
 	ctx.Data["ErrorMsg"] = err
-	ctx.HTML(status, fmt.Sprintf("status/%d", status), ctx.Data)
+	ctx.HTML(status, fmt.Sprintf("status/%d", status))
 }
 
 // InitContext initializes a classic context for a request.
@@ -106,6 +111,7 @@ func InitContext() martini.Handler {
 			ctx.Data["SignedUser"] = user
 			ctx.Data["SignedUserId"] = user.Id
 			ctx.Data["SignedUserName"] = user.LowerName
+			ctx.Data["IsAdmin"] = ctx.User.IsAdmin
 		}
 
 		ctx.Data["PageStartTime"] = time.Now()

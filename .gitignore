@@ -6,3 +6,5 @@ gogs
 *.log
 custom/
 .vendor/
+.idea/
+*.iml
