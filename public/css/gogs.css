@@ -644,7 +644,7 @@ html, body {
 }
 
 .file-content .file-body {
-    padding: 0;
+    padding: 30px 30px 50px;
     border: none;
     background-color: #FFF;
 }
@@ -654,17 +654,50 @@ html, body {
     border: none;
 }
 
-.file-content .markdown > pre > ol.linenums > li:first-child {
-    padding-top: 0;
-    margin-top: 0;
-}
-
 .file-content .file-body.file-code {
     padding: 0;
 }
 
-.file-content .file-body.file-code > pre {
+.file-content .file-body.file-code .lines-code > pre {
     border: none;
+    background: none;
+    border-left: 1px solid #ddd;
+}
+
+.file-content .file-body.file-code .lines-code ol.linenums > .active {
+    background: #ffffdd;
+}
+
+.file-content .file-body.file-code .lines-num {
+    text-align: right;
+    color: #999;
+    background: #fafafa;
+    width: 1%;
+}
+
+.file-content .file-body.file-code .lines-num span {
+    font-family: Menlo,Monaco,Consolas,"Courier New",monospace;
+    line-height: 1.6;
+    padding: 0 8px 0 10px;
+    cursor: pointer;
+    display: block;
+    margin-top: 6px;
+    font-size: 90%;
+}
+
+.file-content .file-body.file-code .lines-num span:first-child {
+    margin-top: 0;
+}
+
+.file-content .file-body.file-code > table {
+    width: 100%;
+}
+
+.file-content .file-body.file-code > table > tbody > tr,
+.file-content .file-body.file-code > table > tbody > tr > td,
+.file-content .file-body.file-code > table {
+    border: none;
+    background: none;
 }
 
 .branch-list th, .commit-list th {

@@ -111,7 +111,6 @@
   line-height: 1.6;
   overflow: auto;
   background: #f8f8f8;
-  padding: 6px 10px;
   border: 1px solid #ddd;
 }
 
@@ -120,6 +119,13 @@
 }
 
 .markdown > pre > ol.linenums {
+  list-style: none;
+  padding: 0;
+}
+
+.markdown > pre.linenums-style > ol.linenums {
+  list-style-type: decimal;
+  padding: 0 0 0 40px;
   -webkit-box-shadow: inset 40px 0 0 #f5f5f5, inset 41px 0 0 #ccc;
   box-shadow: inset 40px 0 0 #f5f5f5, inset 41px 0 0 #ccc;
 }
@@ -142,7 +148,7 @@
   padding-bottom: 12px;
 }
 
-.markdown > pre > ol.linenums > li {
+.markdown > pre.linenums-style > ol.linenums > li {
   border-left: 1px solid #ddd;
 }
 

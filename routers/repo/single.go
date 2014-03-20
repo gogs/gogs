@@ -5,6 +5,7 @@
 package repo
 
 import (
+	"path"
 	"strings"
 
 	"github.com/codegangsta/martini"
@@ -95,6 +96,7 @@ func Single(ctx *middleware.Context, params martini.Params) {
 		} else {
 			ctx.Data["IsFile"] = true
 			ctx.Data["FileName"] = repoFile.Name
+			ctx.Data["FileExt"] = path.Ext(repoFile.Name)
 
 			readmeExist := base.IsMarkdownFile(repoFile.Name) || base.IsReadmeFile(repoFile.Name)
 			ctx.Data["ReadmeExist"] = readmeExist
