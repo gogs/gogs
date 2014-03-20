@@ -38,7 +38,7 @@ func Branches(ctx *middleware.Context, params martini.Params) {
 	ctx.Data["Branches"] = brs
 	ctx.Data["IsRepoToolbarBranches"] = true
 
-	ctx.HTML(200, "repo/branches", ctx.Data)
+	ctx.HTML(200, "repo/branches")
 }
 
 func Single(ctx *middleware.Context, params martini.Params) {
@@ -67,7 +67,7 @@ func Single(ctx *middleware.Context, params martini.Params) {
 		return
 	} else if len(brs) == 0 {
 		ctx.Data["IsBareRepo"] = true
-		ctx.HTML(200, "repo/single", ctx.Data)
+		ctx.HTML(200, "repo/single")
 		return
 	}
 
@@ -178,7 +178,7 @@ func Single(ctx *middleware.Context, params martini.Params) {
 	ctx.Data["Treenames"] = treenames
 	ctx.Data["IsRepoToolbarSource"] = true
 	ctx.Data["BranchLink"] = branchLink
-	ctx.HTML(200, "repo/single", ctx.Data)
+	ctx.HTML(200, "repo/single")
 }
 
 func Setting(ctx *middleware.Context, params martini.Params) {
@@ -195,7 +195,7 @@ func Setting(ctx *middleware.Context, params martini.Params) {
 		return
 	} else if len(brs) == 0 {
 		ctx.Data["IsBareRepo"] = true
-		ctx.HTML(200, "repo/setting", ctx.Data)
+		ctx.HTML(200, "repo/setting")
 		return
 	}
 
@@ -206,7 +206,7 @@ func Setting(ctx *middleware.Context, params martini.Params) {
 
 	ctx.Data["Title"] = title + " - settings"
 	ctx.Data["IsRepoToolbarSetting"] = true
-	ctx.HTML(200, "repo/setting", ctx.Data)
+	ctx.HTML(200, "repo/setting")
 }
 
 func Commits(ctx *middleware.Context, params martini.Params) {
@@ -230,17 +230,17 @@ func Commits(ctx *middleware.Context, params martini.Params) {
 	ctx.Data["Reponame"] = params["reponame"]
 	ctx.Data["CommitCount"] = commits.Len()
 	ctx.Data["Commits"] = commits
-	ctx.HTML(200, "repo/commits", ctx.Data)
+	ctx.HTML(200, "repo/commits")
 }
 
 func Issues(ctx *middleware.Context) {
 	ctx.Data["IsRepoToolbarIssues"] = true
-	ctx.HTML(200, "repo/issues", ctx.Data)
+	ctx.HTML(200, "repo/issues")
 }
 
 func Pulls(ctx *middleware.Context) {
 	ctx.Data["IsRepoToolbarPulls"] = true
-	ctx.HTML(200, "repo/pulls", ctx.Data)
+	ctx.HTML(200, "repo/pulls")
 }
 
 func Action(ctx *middleware.Context, params martini.Params) {

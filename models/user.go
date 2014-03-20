@@ -51,6 +51,7 @@ type User struct {
 	Location      string
 	Website       string
 	IsActive      bool
+	IsAdmin       bool
 	Rands         string    `xorm:"VARCHAR(10)"`
 	Created       time.Time `xorm:"created"`
 	Updated       time.Time `xorm:"updated"`

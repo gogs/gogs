@@ -10,20 +10,24 @@
             <li class="list-group-item"><a href="#">Notifications</a></li>-->
         </ul>
     </div>
+
     <div id="gogs-repo-setting-container" class="col-md-9">
         {{if .ErrorMsg}}<p class="alert alert-danger">{{.ErrorMsg}}</p>{{end}}
         <div class="panel panel-default">
             <div class="panel-heading">
                 Repository Options
             </div>
+
             <div class="panel-body">
                 
             </div>
         </div>
+
         <div class="panel panel-warning">
             <div class="panel-heading">
                 Danger Zone
             </div>
+            
             <div class="panel-body">
                 <button type="button" class="btn btn-default pull-right" href="#delete-repository-modal" data-toggle="modal">
                     Delete this repository
