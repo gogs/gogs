@@ -107,9 +107,9 @@ func runWeb(*cli.Context) {
 	m.Get("/:username/:reponame/pulls", ignSignIn, middleware.RepoAssignment(true), repo.Pulls)
 	m.Get("/:username/:reponame/branches", ignSignIn, middleware.RepoAssignment(true), repo.Branches)
 	m.Get("/:username/:reponame/action/:action", reqSignIn, middleware.RepoAssignment(true), repo.Action)
-	m.Get("/:username/:reponame/tree/:branchname/**",
+	m.Get("/:username/:reponame/src/:branchname/**",
 		ignSignIn, middleware.RepoAssignment(true), repo.Single)
-	m.Get("/:username/:reponame/tree/:branchname",
+	m.Get("/:username/:reponame/src/:branchname",
 		ignSignIn, middleware.RepoAssignment(true), repo.Single)
 	m.Get("/:username/:reponame/commit/:commitid/**", ignSignIn, middleware.RepoAssignment(true), repo.Single)
 	m.Get("/:username/:reponame/commit/:commitid", ignSignIn, middleware.RepoAssignment(true), repo.Single)
