@@ -41,15 +41,15 @@ var Gogits = {
         });
     };
     Gogits.initPopovers = function () {
-        var hideAllPopovers = function() {
-           $('[data-toggle=popover]').each(function() {
+        var hideAllPopovers = function () {
+            $('[data-toggle=popover]').each(function () {
                 $(this).popover('hide');
-            });  
+            });
         };
 
-        $(document).on('click', function(e) {
+        $(document).on('click', function (e) {
             var $e = $(e.target);
-            if($e.data('toggle') == 'popover'||$e.parents("[data-toggle=popover], .popover").length > 0){
+            if ($e.data('toggle') == 'popover' || $e.parents("[data-toggle=popover], .popover").length > 0) {
                 return;
             }
             hideAllPopovers();
@@ -161,6 +161,23 @@ function initUserSetting() {
     });
 }
 
+function initRepository() {
+    var $guide = $('.guide-box');
+    if ($guide.length) {
+        var $url = $('#guide-clone-url');
+        $guide.find('button[data-url]').on("click",function () {
+            var $this = $(this);
+            if (!$this.hasClass('btn-primary')) {
+                $guide.find('.btn-primary').removeClass('btn-primary').addClass("btn-default");
+                $(this).addClass('btn-primary').removeClass('btn-default');
+                $url.val($this.data("url"));
+                $guide.find('span.clone-url').text($this.data('url'));
+            }
+        }).eq(0).trigger("click");
+        // todo copy to clipboard
+    }
+}
+
 (function ($) {
     $(function () {
         initCore();
@@ -170,6 +187,9 @@ function initUserSetting() {
         }
         if (body.data("page") == "user") {
             initUserSetting();
+        }
+        if ($('.gogs-repo-nav').length) {
+            initRepository();
         }
     });
 })(jQuery);

@@ -57,9 +57,9 @@ func processMailQueue() {
 					info = ", info: " + msg.Info
 				}
 				log.Error(fmt.Sprintf("Async sent email %d succeed, not send emails: %s%s err: %s", num, tos, info, err))
-				return
+			} else {
+				log.Trace(fmt.Sprintf("Async sent email %d succeed, sent emails: %s%s", num, tos, info))
 			}
-			log.Trace(fmt.Sprintf("Async sent email %d succeed, sent emails: %s%s", num, tos, info))
 		}
 	}
 }
