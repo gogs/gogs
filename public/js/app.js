@@ -72,18 +72,18 @@ var Gogits = {
         prettyPrint();
 
         var $lineNums = $pre.parent().siblings('.lines-num');
-        if($lineNums.length > 0){
+        if ($lineNums.length > 0) {
             var nums = $pre.find('ol.linenums > li').length;
-            for(var i=0;i < nums;i++){
-                $lineNums.append('<span id="L'+i+'" rel=".L'+i+'">'+(i+1)+'</span>');
+            for (var i = 1; i <= nums; i++) {
+                $lineNums.append('<span id="L' + i + '" rel=".L' + i + '">' + i + '</span>');
             }
 
             var last;
-            $(document).on('click', '.lines-num span', function(){
+            $(document).on('click', '.lines-num span', function () {
                 var $e = $(this);
                 console.log($e.parent().siblings('.lines-code').find('ol.linenums > ' + $e.attr('rel')));
                 console.log('ol.linenums > ' + $e.attr('rel'));
-                if(last){
+                if (last) {
                     last.removeClass('active');
                 }
                 last = $e.parent().siblings('.lines-code').find('ol.linenums > ' + $e.attr('rel'));
@@ -98,12 +98,12 @@ var Gogits = {
             var node = $(this);
             var val = encodeURIComponent(node.text().toLowerCase().replace(/[^\w\- ]/g, '').replace(/[ ]/g, '-'));
             var name = val;
-            if(headers[val] > 0){
+            if (headers[val] > 0) {
                 name = val + '-' + headers[val];
             }
-            if(headers[val] == undefined){
+            if (headers[val] == undefined) {
                 headers[val] = 1;
-            }else{
+            } else {
                 headers[val] += 1;
             }
             node = node.wrap('<div id="' + name + '" class="anchor-wrap" ></div>');
@@ -183,20 +183,22 @@ function initUserSetting() {
 }
 
 function initRepository() {
-    var $guide = $('.guide-box');
-    if ($guide.length) {
-        var $url = $('#guide-clone-url');
-        $guide.find('button[data-url]').on("click",function () {
-            var $this = $(this);
-            if (!$this.hasClass('btn-primary')) {
-                $guide.find('.btn-primary').removeClass('btn-primary').addClass("btn-default");
-                $(this).addClass('btn-primary').removeClass('btn-default');
-                $url.val($this.data("url"));
-                $guide.find('span.clone-url').text($this.data('url'));
-            }
-        }).eq(0).trigger("click");
-        // todo copy to clipboard
-    }
+    (function () {
+        var $guide = $('.guide-box');
+        if ($guide.length) {
+            var $url = $('#guide-clone-url');
+            $guide.find('button[data-url]').on("click",function () {
+                var $this = $(this);
+                if (!$this.hasClass('btn-primary')) {
+                    $guide.find('.btn-primary').removeClass('btn-primary').addClass("btn-default");
+                    $(this).addClass('btn-primary').removeClass('btn-default');
+                    $url.val($this.data("url"));
+                    $guide.find('span.clone-url').text($this.data('url'));
+                }
+            }).eq(0).trigger("click");
+            // todo copy to clipboard
+        }
+    })();
 }
 
 (function ($) {
