@@ -138,7 +138,7 @@ func Single(ctx *middleware.Context, params martini.Params) {
 		}
 	}
 
-	fmt.Println(Paths)
+	log.Trace("repo.Single: Paths: %s", strings.Join(Paths, ", "))
 
 	ctx.Data["Paths"] = Paths
 	ctx.Data["Treenames"] = treenames
