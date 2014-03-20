@@ -34,6 +34,11 @@ type Context struct {
 		IsWatching bool
 		Repository *models.Repository
 		Owner      *models.User
+		CloneLink  struct {
+			SSH   string
+			HTTPS string
+			Git   string
+		}
 	}
 }
 
