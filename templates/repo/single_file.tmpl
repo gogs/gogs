@@ -1,6 +1,10 @@
 <div class="panel panel-default file-content">
     <div class="panel-heading file-head">
-        <i class="icon fa fa-book"></i> {{.FileName}}
+        {{if .ReadmeExist}}
+            <i class="icon fa fa-book"></i>
+        {{else}}
+            <i class="icon fa fa-file-text-o"></i>
+        {{end}}{{.FileName}}
     </div>
     {{if .FileIsLarge}}
         <div class="panel-footer">
@@ -12,8 +16,8 @@
                 {{.FileContent|str2html}}
             </div>
         {{else}}
-            <div class="panel-body file-body markdown">
-                <pre><code>{{.FileContent}}</code></pre>
+            <div class="panel-body file-body file-code markdown">
+                <pre class="linenums"><code>{{.FileContent}}</code></pre>
             </div>
         {{end}}
     {{end}}
