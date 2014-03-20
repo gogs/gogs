@@ -43,11 +43,20 @@ type Repository struct {
 	Updated     time.Time `xorm:"updated"`
 }
 
-type Star struct {
-	Id      int64
-	RepoId  int64
-	UserId  int64
-	Created time.Time `xorm:"created"`
+// Watch is connection request for receiving repository notifycation.
+type Watch struct {
+	Id     int64
+	RepoId int64 `xorm:"UNIQUE(watch)"`
+	UserId int64 `xorm:"UNIQUE(watch)"`
+}
+
+func WatchRepo(userId, repoId int64, watch bool) (err error) {
+	if watch {
+		_, err = orm.Insert(&Watch{RepoId: repoId, UserId: userId})
+	} else {
+		_, err = orm.Delete(&Watch{0, repoId, userId})
+	}
+	return err
 }
 
 var (

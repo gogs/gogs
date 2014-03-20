@@ -26,7 +26,7 @@
                 {{$r := List .Commits}}
                 {{range $r}}
                 <tr>
-                    <td class="author"><img class="avatar" src="{{AvatarLink .Committer.Email}}" alt=""/>{{.Committer.Name}}</td>
+                    <td class="author"><img class="avatar" src="{{AvatarLink .Committer.Email}}" alt=""/><a href="/user/{{.Committer.Name}}">{{.Committer.Name}}</a></td>
                     <td class="sha"><a class="label label-success" href="/{{$username}}/{{$reponame}}/commit/{{.Id}} ">{{SubStr .Id.String 0 7}} </a></td>
                     <td class="message">{{.Message}} </td>
                     <td class="date">{{TimeSince .Committer.When}}</td>

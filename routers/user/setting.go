@@ -93,7 +93,6 @@ func SettingSSHKeys(ctx *middleware.Context, form auth.AddSSHKeyForm) {
 	if ctx.Req.Method == "DELETE" || ctx.Query("_method") == "DELETE" {
 		id, err := strconv.ParseInt(ctx.Query("id"), 10, 64)
 		if err != nil {
-			ctx.Data["ErrorMsg"] = err
 			log.Error("ssh.DelPublicKey: %v", err)
 			ctx.JSON(200, map[string]interface{}{
 				"ok":  false,
@@ -107,7 +106,6 @@ func SettingSSHKeys(ctx *middleware.Context, form auth.AddSSHKeyForm) {
 		}
 
 		if err = models.DeletePublicKey(k); err != nil {
-			ctx.Data["ErrorMsg"] = err
 			log.Error("ssh.DelPublicKey: %v", err)
 			ctx.JSON(200, map[string]interface{}{
 				"ok":  false,
