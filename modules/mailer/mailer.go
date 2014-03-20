@@ -38,8 +38,34 @@ func (m Message) Content() string {
 	return content
 }
 
+var mailQueue chan *Message
+
+func init() {
+	mailQueue = make(chan *Message, base.Cfg.MustInt("mailer", "SEND_BUFFER_LEN", 10))
+	go processMailQueue()
+}
+
+func processMailQueue() {
+	for {
+		select {
+		case msg := <-mailQueue:
+			num, err := Send(msg)
+			tos := strings.Join(msg.To, "; ")
+			info := ""
+			if err != nil {
+				if len(msg.Info) > 0 {
+					info = ", info: " + msg.Info
+				}
+				log.Error(fmt.Sprintf("Async sent email %d succeed, not send emails: %s%s err: %s", num, tos, info, err))
+				return
+			}
+			log.Trace(fmt.Sprintf("Async sent email %d succeed, sent emails: %s%s", num, tos, info))
+		}
+	}
+}
+
 // Direct Send mail message
-func Send(msg Message) (int, error) {
+func Send(msg *Message) (int, error) {
 	log.Trace("Sending mails to: %s", strings.Join(msg.To, "; "))
 	host := strings.Split(base.MailService.Host, ":")
 
@@ -82,21 +108,9 @@ func Send(msg Message) (int, error) {
 }
 
 // Async Send mail message
-func SendAsync(msg Message) {
-	// TODO may be need pools limit concurrent nums
+func SendAsync(msg *Message) {
 	go func() {
-		num, err := Send(msg)
-		tos := strings.Join(msg.To, "; ")
-		info := ""
-		if err != nil {
-			if len(msg.Info) > 0 {
-				info = ", info: " + msg.Info
-			}
-			// log failed
-			log.Error(fmt.Sprintf("Async sent email %d succeed, not send emails: %s%s err: %s", num, tos, info, err))
-			return
-		}
-		log.Trace(fmt.Sprintf("Async sent email %d succeed, sent emails: %s%s", num, tos, info))
+		mailQueue <- msg
 	}()
 }
 

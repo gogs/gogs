@@ -91,9 +91,11 @@ func newLogService() {
 	case "console":
 		config = fmt.Sprintf(`{"level":%s}`, level)
 	case "file":
+		logPath := Cfg.MustValue(modeSec, "FILE_NAME", "log/gogs.log")
+		os.MkdirAll(path.Dir(logPath), os.ModePerm)
 		config = fmt.Sprintf(
 			`{"level":%s,"filename":%s,"rotate":%v,"maxlines":%d,"maxsize",%d,"daily":%v,"maxdays":%d}`, level,
-			Cfg.MustValue(modeSec, "FILE_NAME", "log/gogs.log"),
+			logPath,
 			Cfg.MustBool(modeSec, "LOG_ROTATE", true),
 			Cfg.MustInt(modeSec, "MAX_LINES", 1000000),
 			1<<uint(Cfg.MustInt(modeSec, "MAX_SIZE_SHIFT", 28)),
@@ -131,15 +133,15 @@ func newMailService() {
 	}
 }
 
-func newRegisterService() {
+func newRegisterMailService() {
 	if !Cfg.MustBool("service", "REGISTER_EMAIL_CONFIRM") {
 		return
 	} else if MailService == nil {
-		log.Warn("Register Service: Mail Service is not enabled")
+		log.Warn("Register Mail Service: Mail Service is not enabled")
 		return
 	}
 	Service.RegisterEmailConfirm = true
-	log.Info("Register Service Enabled")
+	log.Info("Register Mail Service Enabled")
 }
 
 func init() {
@@ -172,10 +174,11 @@ func init() {
 	AppUrl = Cfg.MustValue("server", "ROOT_URL")
 	Domain = Cfg.MustValue("server", "DOMAIN")
 	SecretKey = Cfg.MustValue("security", "SECRET_KEY")
+}
 
-	// Extensions.
+func NewServices() {
 	newService()
 	newLogService()
 	newMailService()
-	newRegisterService()
+	newRegisterMailService()
 }

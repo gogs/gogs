@@ -21,6 +21,7 @@ import (
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/middleware"
 	"github.com/gogits/gogs/routers"
+	"github.com/gogits/gogs/routers/dev"
 	"github.com/gogits/gogs/routers/repo"
 	"github.com/gogits/gogs/routers/user"
 )
@@ -57,6 +58,7 @@ func newMartini() *martini.ClassicMartini {
 }
 
 func runWeb(*cli.Context) {
+	base.NewServices()
 	checkRunMode()
 	log.Info("%s %s", base.AppName, base.AppVer)
 
@@ -112,6 +114,10 @@ func runWeb(*cli.Context) {
 	m.Get("/:username/:reponame/commit/:commitid", ignSignIn, middleware.RepoAssignment(true), repo.Single)
 
 	m.Get("/:username/:reponame", ignSignIn, middleware.RepoAssignment(true), repo.Single)
+
+	if martini.Env == martini.Dev {
+		m.Get("/template/**", dev.TemplatePreview)
+	}
 
 	listenAddr := fmt.Sprintf("%s:%s",
 		base.Cfg.MustValue("server", "HTTP_ADDR"),
