@@ -53,6 +53,12 @@ func Single(ctx *middleware.Context, params martini.Params) {
 	// Get tree path
 	treename := params["_1"]
 
+	if len(treename) > 0 && treename[len(treename)-1] == '/' {
+		ctx.Redirect("/"+ctx.Repo.Owner.LowerName+"/"+
+			ctx.Repo.Repository.Name+"/tree/"+params["branchname"]+"/"+treename[:len(treename)-1], 302)
+		return
+	}
+
 	// Branches.
 	brs, err := models.GetBranches(params["username"], params["reponame"])
 	if err != nil {
@@ -125,7 +131,7 @@ func Single(ctx *middleware.Context, params martini.Params) {
 		} else {
 			// current repo branch link
 			urlPrefix := "http://" + base.Domain + "/" + ctx.Repo.Owner.LowerName + "/" +
-				ctx.Repo.Repository.Name + "/blob/" + params["branchname"]
+				ctx.Repo.Repository.Name + "/tree/" + params["branchname"]
 
 			ctx.Data["ReadmeContent"] = string(base.RenderMarkdown(blob.Contents(), urlPrefix))
 		}
