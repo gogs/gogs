@@ -647,6 +647,14 @@ html, body {
     padding: 30px 30px 50px;
 }
 
+.file-content .file-body.file-code {
+    padding: 0;
+}
+
+.file-content .file-body.file-code > pre {
+    border: none;
+}
+
 .branch-list th, .commit-list th {
     background-color: #FFF;
     line-height: 28px !important;
