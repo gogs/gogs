@@ -73,8 +73,8 @@ func runWeb(*cli.Context) {
 
 	m.Use(middleware.InitContext())
 
-	ignSignIn := middleware.SignInRequire(false)
-	reqSignIn, reqSignOut := middleware.SignInRequire(true), middleware.SignOutRequire()
+	reqSignIn, ignSignIn := middleware.SignInRequire(true), middleware.SignInRequire(false)
+	reqSignOut := middleware.SignOutRequire()
 	// Routers.
 	m.Get("/", ignSignIn, routers.Home)
 	m.Get("/issues", reqSignIn, user.Issues)
@@ -106,6 +106,7 @@ func runWeb(*cli.Context) {
 	m.Get("/:username/:reponame/issues", ignSignIn, middleware.RepoAssignment(true), repo.Issues)
 	m.Get("/:username/:reponame/pulls", ignSignIn, middleware.RepoAssignment(true), repo.Pulls)
 	m.Get("/:username/:reponame/branches", ignSignIn, middleware.RepoAssignment(true), repo.Branches)
+	m.Get("/:username/:reponame/action/:action", reqSignIn, middleware.RepoAssignment(true), repo.Action)
 	m.Get("/:username/:reponame/tree/:branchname/**",
 		ignSignIn, middleware.RepoAssignment(true), repo.Single)
 	m.Get("/:username/:reponame/tree/:branchname",

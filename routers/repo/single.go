@@ -208,3 +208,25 @@ func Pulls(ctx *middleware.Context) {
 	ctx.Data["IsRepoToolbarPulls"] = true
 	ctx.HTML(200, "repo/pulls", ctx.Data)
 }
+
+func Action(ctx *middleware.Context, params martini.Params) {
+	var err error
+	switch params["action"] {
+	case "watch":
+		err = models.WatchRepo(ctx.User.Id, ctx.Repo.Repository.Id, true)
+	case "unwatch":
+		err = models.WatchRepo(ctx.User.Id, ctx.Repo.Repository.Id, false)
+	}
+
+	if err != nil {
+		log.Error("repo.Action(%s): %v", params["action"], err)
+		ctx.JSON(200, map[string]interface{}{
+			"ok":  false,
+			"err": err.Error(),
+		})
+		return
+	}
+	ctx.JSON(200, map[string]interface{}{
+		"ok": true,
+	})
+}

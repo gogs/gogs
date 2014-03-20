@@ -3,8 +3,8 @@
 <div id="gogs-body" class="container" data-page="user">
     <div id="gogs-user-profile" class="col-md-3">
         <div class="profile-avatar text-center">
-            <a href="{{.Owner.HomeLink}}" class="center-block" data-toggle="tooltip" data-placement="bottom" title="Change Avatar">
-                <img id="gogs-user-avatar" src="{{.Owner.AvatarLink}}?s=200" alt="user-avatar" title="username"/>
+            <a href="http://gravatar.com/emails/" class="center-block" data-toggle="tooltip" data-placement="bottom" title="Change your avatar at gravatar.com">
+                <img id="gogs-user-avatar" src="{{.Owner.AvatarLink}}?s=200" alt="user-avatar" title="{{.Owner.Name}}"/>
             </a>
             <span id="gogs-user-name" class="center-block">{{.Owner.Name}}</span>
         </div>
