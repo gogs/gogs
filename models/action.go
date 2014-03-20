@@ -55,16 +55,27 @@ func CommitRepoAction(userId int64, userName string,
 	if err != nil {
 		return err
 	}
-	_, err = orm.InsertOne(&Action{
-		UserId:      userId,
-		ActUserId:   userId,
-		ActUserName: userName,
-		OpType:      OP_COMMIT_REPO,
-		Content:     string(bs),
-		RepoId:      repoId,
-		RepoName:    repoName,
-	})
-	return err
+
+	// Add feeds for user self and all watchers.
+	watches, err := GetWatches(repoId)
+	if err != nil {
+		return err
+	}
+	watches = append(watches, Watch{UserId: userId})
+
+	for i := range watches {
+		_, err = orm.InsertOne(&Action{
+			UserId:      watches[i].UserId,
+			ActUserId:   userId,
+			ActUserName: userName,
+			OpType:      OP_COMMIT_REPO,
+			Content:     string(bs),
+			RepoId:      repoId,
+			RepoName:    repoName,
+		})
+		return err
+	}
+	return nil
 }
 
 // NewRepoAction records action for create repository.

@@ -50,6 +50,7 @@ type Watch struct {
 	UserId int64 `xorm:"UNIQUE(watch)"`
 }
 
+// Watch or unwatch repository.
 func WatchRepo(userId, repoId int64, watch bool) (err error) {
 	if watch {
 		_, err = orm.Insert(&Watch{RepoId: repoId, UserId: userId})
@@ -57,6 +58,13 @@ func WatchRepo(userId, repoId int64, watch bool) (err error) {
 		_, err = orm.Delete(&Watch{0, repoId, userId})
 	}
 	return err
+}
+
+// GetWatches returns all watches of given repository.
+func GetWatches(repoId int64) ([]Watch, error) {
+	watches := make([]Watch, 0, 10)
+	err := orm.Find(&watches, &Watch{RepoId: repoId})
+	return watches, err
 }
 
 var (
