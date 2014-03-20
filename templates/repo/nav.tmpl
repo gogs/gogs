@@ -13,7 +13,7 @@
                         <span class="caret"></span>
                     </button>
                 </div>
-                <div class="btn-group" id="gogs-repo-watching">
+                <div class="btn-group {{if .IsRepositoryWatching}}watching{{end}}" id="gogs-repo-watching">
                     <button type="button" class="btn btn-default"><i class="fa fa-eye fa-lg fa-m"></i></button>
                     <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
                         <span class="caret"></span>
