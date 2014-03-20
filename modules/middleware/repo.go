@@ -79,5 +79,6 @@ func RepoAssignment(redirect bool) martini.Handler {
 		ctx.Data["CloneLink"] = ctx.Repo.CloneLink
 		ctx.Data["RepositoryLink"] = ctx.Data["Title"]
 		ctx.Data["IsRepositoryOwner"] = ctx.Repo.IsOwner
+		ctx.Data["IsRepositoryWatching"] = ctx.Repo.IsWatching
 	}
 }
