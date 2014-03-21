@@ -7,6 +7,7 @@ package models
 import (
 	"fmt"
 	"os"
+	"path"
 
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/lib/pq"
@@ -16,48 +17,37 @@ import (
 )
 
 var (
-	orm          *xorm.Engine
-	RepoRootPath string
+	orm *xorm.Engine
+
+	DbCfg struct {
+		Type, Host, Name, User, Pwd, Path, SslMode string
+	}
 )
 
-type Members struct {
-	Id     int64
-	OrgId  int64 `xorm:"unique(s) index"`
-	UserId int64 `xorm:"unique(s)"`
-}
-
-type Issue struct {
-	Id       int64
-	RepoId   int64 `xorm:"index"`
-	PosterId int64
-}
-
-type PullRequest struct {
-	Id int64
-}
-
-type Comment struct {
-	Id int64
+func LoadModelsConfig() {
+	DbCfg.Type = base.Cfg.MustValue("database", "DB_TYPE")
+	DbCfg.Host = base.Cfg.MustValue("database", "HOST")
+	DbCfg.Name = base.Cfg.MustValue("database", "NAME")
+	DbCfg.User = base.Cfg.MustValue("database", "USER")
+	DbCfg.Pwd = base.Cfg.MustValue("database", "PASSWD")
+	DbCfg.SslMode = base.Cfg.MustValue("database", "SSL_MODE")
+	DbCfg.Path = base.Cfg.MustValue("database", "PATH", "data/gogs.db")
 }
 
 func setEngine() {
-	dbType := base.Cfg.MustValue("database", "DB_TYPE")
-	dbHost := base.Cfg.MustValue("database", "HOST")
-	dbName := base.Cfg.MustValue("database", "NAME")
-	dbUser := base.Cfg.MustValue("database", "USER")
-	dbPwd := base.Cfg.MustValue("database", "PASSWD")
-	sslMode := base.Cfg.MustValue("database", "SSL_MODE")
-
 	var err error
-	switch dbType {
+	switch DbCfg.Type {
 	case "mysql":
 		orm, err = xorm.NewEngine("mysql", fmt.Sprintf("%s:%s@%s/%s?charset=utf8",
-			dbUser, dbPwd, dbHost, dbName))
+			DbCfg.User, DbCfg.Pwd, DbCfg.Host, DbCfg.Name))
 	case "postgres":
 		orm, err = xorm.NewEngine("postgres", fmt.Sprintf("user=%s password=%s dbname=%s sslmode=%s",
-			dbUser, dbPwd, dbName, sslMode))
+			DbCfg.User, DbCfg.Pwd, DbCfg.Name, DbCfg.SslMode))
+	case "sqlite3":
+		os.MkdirAll(path.Dir(DbCfg.Path), os.ModePerm)
+		orm, err = xorm.NewEngine("sqlite3", DbCfg.Path)
 	default:
-		fmt.Printf("Unknown database type: %s\n", dbType)
+		fmt.Printf("Unknown database type: %s\n", DbCfg.Type)
 		os.Exit(2)
 	}
 	if err != nil {
@@ -65,8 +55,8 @@ func setEngine() {
 		os.Exit(2)
 	}
 
-	// TODO: for serv command, MUST remove the output to os.stdout, so
-	// use log file to instead print to stdout
+	// WARNNING: for serv command, MUST remove the output to os.stdout,
+	// so use log file to instead print to stdout.
 
 	//x.ShowDebug = true
 	//orm.ShowErr = true
@@ -77,20 +67,29 @@ func setEngine() {
 	}
 	orm.Logger = f
 	orm.ShowSQL = true
+}
 
-	// Determine and create root git reposiroty path.
-	RepoRootPath = base.Cfg.MustValue("repository", "ROOT")
-	if err = os.MkdirAll(RepoRootPath, os.ModePerm); err != nil {
-		fmt.Printf("models.init(fail to create RepoRootPath(%s)): %v\n", RepoRootPath, err)
+func NewEngine() {
+	setEngine()
+	if err := orm.Sync(new(User), new(PublicKey), new(Repository), new(Watch),
+		new(Action), new(Access)); err != nil {
+		fmt.Printf("sync database struct error: %v\n", err)
 		os.Exit(2)
 	}
 }
 
-func init() {
-	setEngine()
-	if err := orm.Sync(new(User), new(PublicKey), new(Repository), new(Access),
-		new(Action), new(Watch)); err != nil {
-		fmt.Printf("sync database struct error: %v\n", err)
-		os.Exit(2)
+type Statistic struct {
+	Counter struct {
+		User, PublicKey, Repo, Watch, Action, Access int64
 	}
+}
+
+func GetStatistic() (stats Statistic) {
+	stats.Counter.User, _ = orm.Count(new(User))
+	stats.Counter.PublicKey, _ = orm.Count(new(PublicKey))
+	stats.Counter.Repo, _ = orm.Count(new(Repository))
+	stats.Counter.Watch, _ = orm.Count(new(Watch))
+	stats.Counter.Action, _ = orm.Count(new(Action))
+	stats.Counter.Access, _ = orm.Count(new(Access))
+	return stats
 }

@@ -5,7 +5,7 @@
 <div id="gogs-body" class="container">
     <div id="gogs-source">
         {{if .IsBareRepo}}
-        Need to fill in some guide.
+        {{template "repo/single_bare" .}}
         {{else}}
         <div class="source-toolbar">
             {{ $n := len .Treenames}}
@@ -15,7 +15,7 @@
                     <b class="caret"></b></a>
                 <ul class="dropdown-menu">
                     {{range .Branches}}
-                    <li><a {{if eq . $.Branchname}}class="current" {{end}}href="{{$.BranchLink}}">{{.}}</a></li>
+                    <li><a {{if eq . $.Branchname}}class="current" {{end}}href="/{{$.Username}}/{{$.Reponame}}/src/{{.}}">{{.}}</a></li>
                     {{end}}
                 </ul>
             </div>

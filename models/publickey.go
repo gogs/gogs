@@ -27,8 +27,12 @@ const (
 )
 
 var (
-	sshOpLocker = sync.Mutex{}
+	ErrKeyAlreadyExist = errors.New("Public key already exist")
+)
 
+var sshOpLocker = sync.Mutex{}
+
+var (
 	sshPath string
 	appPath string
 )
@@ -78,10 +82,6 @@ type PublicKey struct {
 	Created     time.Time `xorm:"created"`
 	Updated     time.Time `xorm:"updated"`
 }
-
-var (
-	ErrKeyAlreadyExist = errors.New("Public key already exist")
-)
 
 // GenAuthorizedKey returns formatted public key string.
 func GenAuthorizedKey(keyId int64, key string) string {

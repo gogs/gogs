@@ -145,8 +145,9 @@ html, body {
     float: right;
 }
 
-#gogs-nav-signin {
+#gogs-nav-signin, #gogs-nav-signup {
     float: right;
+    margin-left: 1em;
 }
 
 #gogs-nav-out .fa {
@@ -324,6 +325,27 @@ html, body {
     color: #444;
 }
 
+.gogs-admin-nav {
+    background-color: #FFF;
+    padding-top: 10px;
+    padding-left: 0;
+    padding-right: 0;
+    border: 1px solid #D8D8D8;
+}
+
+.gogs-admin-nav li {
+    margin-bottom: 8px;
+    border-left: 4px solid transparent;
+}
+
+.gogs-admin-nav li:hover {
+    border-left-color: #EEE;
+}
+
+.gogs-admin-nav li.active:hover {
+    border-left: 4px solid #DD4B39;
+}
+
 /* gogits user ssh keys */
 
 #gogs-ssh-keys .list-group-item {
@@ -376,7 +398,7 @@ html, body {
 }
 
 #gogs-feed-right .repo-panel .list-group-item a {
-    display: inline-block;
+    display: block;
     margin-left: 0;
     background-color: transparent;
     padding-left: 0;
@@ -406,7 +428,6 @@ html, body {
 
 #gogs-feed-right .repo-panel span.stars {
     color: #666;
-    line-height: 44px;
     margin-right: 1em;
 }
 
@@ -445,7 +466,7 @@ html, body {
     padding: 0;
 }
 
-#gogs-repo-watching .dropdown-menu .dropdown-item:hover .dropdown-header {
+#gogs-repo-watching .dropdown-menu .dropdown-item:hover .dropdown-header, #gogs-repo-watching .dropdown-item .dropdown-header.text-primary {
     color: rgb(65, 131, 196);
     cursor: pointer;
 }
@@ -501,8 +522,7 @@ html, body {
 }
 
 .activity-list .info {
-    float: left;
-    padding: 0 0 0 10px;
+    margin: 0 0 0 40px;
     line-height: 1.7em;
 }
 
@@ -553,6 +573,15 @@ html, body {
 
 .popover .repo-clone-div {
     min-width: 200px;
+}
+
+#gogs-repo-clone .dropdown-menu{
+    width: 400px;
+    padding: 20px;
+}
+
+#gogs-repo-clone .input-group{
+    margin-bottom: 15px;
 }
 
 /* #gogs-source */
@@ -645,6 +674,62 @@ html, body {
 
 .file-content .file-body {
     padding: 30px 30px 50px;
+    border: none;
+    background-color: #FFF;
+    overflow: auto;
+    overflow-x: auto;
+    overflow-y: hidden;
+}
+
+.file-content .file-body.file-code pre {
+    background-color: #FFF;
+    border: none;
+}
+
+.file-content .file-body.file-code {
+    padding: 0;
+}
+
+.file-content .file-body.file-code .lines-code > pre {
+    border: none;
+    background: none;
+    border-left: 1px solid #ddd;
+}
+
+.file-content .file-body.file-code .lines-code ol.linenums > .active {
+    background: #ffffdd;
+}
+
+.file-content .file-body.file-code .lines-num {
+    text-align: right;
+    color: #999;
+    background: #fafafa;
+    width: 1%;
+}
+
+.file-content .file-body.file-code .lines-num span {
+    font-family: Menlo, Monaco, Consolas, "Courier New", monospace;
+    line-height: 1.6;
+    padding: 0 8px 0 10px;
+    cursor: pointer;
+    display: block;
+    margin-top: 2px;
+    font-size: 90%;
+}
+
+.file-content .file-body.file-code .lines-num span:first-child {
+    margin-top: 0;
+}
+
+.file-content .file-body.file-code > table {
+    width: 100%;
+}
+
+.file-content .file-body.file-code > table > tbody > tr,
+.file-content .file-body.file-code > table > tbody > tr > td,
+.file-content .file-body.file-code > table {
+    border: none;
+    background: none;
 }
 
 .branch-list th, .commit-list th {
@@ -722,6 +807,28 @@ html, body {
 
 .commit-box td {
     background-color: #FFF;
+}
+
+.commit-list .date {
+    width: 120px;
+}
+
+.commit-list .author {
+    min-width: 180px;
+}
+
+.guide-box pre, .guide-box .input-group {
+    margin-top: 20px;
+    margin-bottom: 30px;
+    line-height: 24px;
+}
+
+.guide-box input[readonly] {
+    background-color: #FFF;
+}
+
+.guide-box {
+    margin-top: 20px;
 }
 
 /* wrapper and footer */
