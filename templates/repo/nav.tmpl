@@ -5,8 +5,8 @@
                 <h3 class="name"><i class="fa fa-book fa-lg"></i><a href="{{.Owner.HomeLink}}">{{.Owner.Name}}</a> / {{.Repository.Name}}</h3>
                 <p class="desc">{{.Repository.Description}}{{if .Repository.Website}}<a href="{{.Repository.Website}}">{{.Repository.Website}}</a>{{end}}</p>
             </div>
-            {{if not .IsBareRepo}}
             <div class="col-md-6 actions text-right">
+                {{if not .IsBareRepo}}
                 <div class="btn-group" id="gogs-repo-clone">
                     <button type="button" class="btn btn-default"><i class="fa fa-download fa-lg fa-m"></i></button>
                     <button type="button" class="btn btn-default dropdown-toggle" data-container="body" data-toggle="popover" data-placement="bottom" data-content="<label>SSH:</label><div class='input-group'><input type='text' class='form-control' value='{{.CloneLink.SSH}}'></div>" data-html="1">
@@ -38,11 +38,11 @@
                 <div class="btn-group">
                     <button type="button" class="btn btn-default"><i class="fa fa-star"></i>Star&nbsp;&nbsp;{{.Repository.NumStars}}</button>
                 </div>
+                {{end}}
                 <div class="btn-group">
-                    <button type="button" class="btn btn-default"><i class="fa fa-code-fork"></i>Fork&nbsp;&nbsp;{{.Repository.NumForks}}</button>
+                    <a type="button" {{if not .IsRepositoryOwner}}href="/{{.Username}}/{{.Reponame}}/fork"{{end}} class="btn btn-default"><i class="fa fa-code-fork"></i>Fork&nbsp;&nbsp;{{.Repository.NumForks}}</a>
                 </div>
             </div>
-            {{end}}
         </div>
     </div>
 </div>
