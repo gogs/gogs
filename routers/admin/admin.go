@@ -11,12 +11,14 @@ import (
 
 func Dashboard(ctx *middleware.Context) {
 	ctx.Data["Title"] = "Admin Dashboard"
+	ctx.Data["PageIsDashboard"] = true
 	ctx.Data["Stats"] = models.GetStatistic()
 	ctx.HTML(200, "admin/dashboard")
 }
 
 func Users(ctx *middleware.Context) {
 	ctx.Data["Title"] = "User Management"
+	ctx.Data["PageIsUsers"] = true
 
 	var err error
 	ctx.Data["Users"], err = models.GetUsers(100, 0)
@@ -29,6 +31,8 @@ func Users(ctx *middleware.Context) {
 
 func Repositories(ctx *middleware.Context) {
 	ctx.Data["Title"] = "Repository Management"
+	ctx.Data["PageIsRepos"] = true
+
 	var err error
 	ctx.Data["Repos"], err = models.GetRepos(100, 0)
 	if err != nil {
@@ -36,4 +40,10 @@ func Repositories(ctx *middleware.Context) {
 		return
 	}
 	ctx.HTML(200, "admin/repos")
+}
+
+func Config(ctx *middleware.Context) {
+	ctx.Data["Title"] = "Server Configuration"
+	ctx.Data["PageIsConfig"] = true
+	ctx.HTML(200, "admin/config")
 }

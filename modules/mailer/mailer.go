@@ -40,7 +40,7 @@ func (m Message) Content() string {
 
 var mailQueue chan *Message
 
-func init() {
+func NewMailerContext() {
 	mailQueue = make(chan *Message, base.Cfg.MustInt("mailer", "SEND_BUFFER_LEN", 10))
 	go processMailQueue()
 }

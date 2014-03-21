@@ -1,14 +1,7 @@
 {{template "base/head" .}}
 {{template "base/navbar" .}}
 <div id="gogs-body" class="container" data-page="admin">
-    <div id="gogs-user-setting-nav" class="col-md-3">
-        <ul class="list-group" data-init="tabs">
-            <li class="list-group-item"><a href="/admin"><i class="fa fa-tachometer fa-lg"></i> Dashboard</a></li>
-            <li class="list-group-item"><a href="/admin/users"><i class="fa fa-users fa-lg"></i> Users</a></li>
-            <li class="list-group-item active"><a href="/admin/repos"><i class="fa fa-book fa-lg"></i> Repositories</a></li>
-        </ul>
-    </div>
-
+    {{template "admin/nav" .}}
     <div id="gogs-admin-container" class="col-md-9">
         <div class="panel panel-default">
             <div class="panel-heading">

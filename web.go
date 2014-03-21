@@ -16,9 +16,11 @@ import (
 
 	"github.com/gogits/binding"
 
+	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
+	"github.com/gogits/gogs/modules/mailer"
 	"github.com/gogits/gogs/modules/middleware"
 	"github.com/gogits/gogs/routers"
 	"github.com/gogits/gogs/routers/admin"
@@ -34,6 +36,16 @@ var CmdWeb = cli.Command{
 gogs web`,
 	Action: runWeb,
 	Flags:  []cli.Flag{},
+}
+
+// globalInit is for global configuration reload-able.
+func globalInit() {
+	base.NewConfigContext()
+	mailer.NewMailerContext()
+	models.LoadModelsConfig()
+	models.LoadRepoConfig()
+	models.NewRepoContext()
+	models.NewEngine()
 }
 
 // Check run mode(Default of martini is Dev).
@@ -59,6 +71,7 @@ func newMartini() *martini.ClassicMartini {
 }
 
 func runWeb(*cli.Context) {
+	globalInit()
 	base.NewServices()
 	checkRunMode()
 	log.Info("%s %s", base.AppName, base.AppVer)
@@ -101,9 +114,10 @@ func runWeb(*cli.Context) {
 	m.Get("/help", routers.Help)
 
 	adminReq := middleware.AdminRequire()
-	m.Any("/admin", reqSignIn, adminReq, admin.Dashboard)
-	m.Any("/admin/users", reqSignIn, adminReq, admin.Users)
-	m.Any("/admin/repos", reqSignIn, adminReq, admin.Repositories)
+	m.Get("/admin", reqSignIn, adminReq, admin.Dashboard)
+	m.Get("/admin/users", reqSignIn, adminReq, admin.Users)
+	m.Get("/admin/repos", reqSignIn, adminReq, admin.Repositories)
+	m.Get("/admin/config", reqSignIn, adminReq, admin.Config)
 
 	m.Post("/:username/:reponame/settings", reqSignIn, middleware.RepoAssignment(true), repo.SettingPost)
 	m.Get("/:username/:reponame/settings", reqSignIn, middleware.RepoAssignment(true), repo.Setting)

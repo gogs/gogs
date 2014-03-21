@@ -13,6 +13,9 @@ import (
 )
 
 func init() {
+	LoadModelsConfig()
+	NewEngine()
+
 	var err error
 	orm, err = xorm.NewEngine("sqlite3", "./test.db")
 	if err != nil {

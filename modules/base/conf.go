@@ -148,7 +148,7 @@ func newRegisterMailService() {
 	log.Info("Register Mail Service Enabled")
 }
 
-func init() {
+func NewConfigContext() {
 	var err error
 	workDir, err := exeDir()
 	if err != nil {

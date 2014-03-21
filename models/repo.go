@@ -41,10 +41,12 @@ var (
 	LanguageIgns, Licenses []string
 )
 
-func init() {
+func LoadRepoConfig() {
 	LanguageIgns = strings.Split(base.Cfg.MustValue("repository", "LANG_IGNS"), "|")
 	Licenses = strings.Split(base.Cfg.MustValue("repository", "LICENSES"), "|")
+}
 
+func NewRepoContext() {
 	zip.Verbose = false
 
 	// Check if server has basic git setting.
