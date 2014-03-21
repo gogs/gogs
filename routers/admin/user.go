@@ -7,8 +7,11 @@ package admin
 import (
 	"strings"
 
+	"github.com/codegangsta/martini"
+
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
+	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/middleware"
 )
@@ -60,4 +63,45 @@ func NewUser(ctx *middleware.Context, form auth.RegisterForm) {
 		ctx.User.LowerName, strings.ToLower(form.UserName))
 
 	ctx.Redirect("/admin/users")
+}
+
+func EditUser(ctx *middleware.Context, params martini.Params, form auth.AdminEditUserForm) {
+	ctx.Data["Title"] = "Edit Account"
+
+	uid, err := base.StrTo(params["userid"]).Int()
+	if err != nil {
+		ctx.Handle(200, "admin.user.EditUser", err)
+		return
+	}
+
+	u, err := models.GetUserById(int64(uid))
+	if err != nil {
+		ctx.Handle(200, "admin.user.EditUser", err)
+		return
+	}
+
+	if ctx.Req.Method == "GET" {
+		ctx.Data["User"] = u
+		ctx.HTML(200, "admin/users/edit")
+		return
+	}
+
+	u.Email = form.Email
+	u.Website = form.Website
+	u.Location = form.Location
+	u.Avatar = base.EncodeMd5(form.Avatar)
+	u.AvatarEmail = form.Avatar
+	u.IsActive = form.Active == "on"
+	u.IsAdmin = form.Admin == "on"
+	if err := models.UpdateUser(u); err != nil {
+		ctx.Handle(200, "admin.user.EditUser", err)
+		return
+	}
+
+	ctx.Data["IsSuccess"] = true
+	ctx.Data["User"] = u
+	ctx.HTML(200, "admin/users/edit")
+
+	log.Trace("%s User profile updated by admin(%s): %s", ctx.Req.RequestURI,
+		ctx.User.LowerName, ctx.User.LowerName)
 }

@@ -118,6 +118,7 @@ func runWeb(*cli.Context) {
 	m.Get("/admin", reqSignIn, adminReq, admin.Dashboard)
 	m.Get("/admin/users", reqSignIn, adminReq, admin.Users)
 	m.Any("/admin/users/new", reqSignIn, adminReq, binding.BindIgnErr(auth.RegisterForm{}), admin.NewUser)
+	m.Any("/admin/users/:userid", reqSignIn, adminReq, binding.BindIgnErr(auth.AdminEditUserForm{}), admin.EditUser)
 	m.Get("/admin/repos", reqSignIn, adminReq, admin.Repositories)
 	m.Get("/admin/config", reqSignIn, adminReq, admin.Config)
 

@@ -46,6 +46,7 @@ func Setting(ctx *middleware.Context, form auth.UpdateProfileForm) {
 
 	ctx.Data["IsSuccess"] = true
 	ctx.HTML(200, "user/setting")
+
 	log.Trace("%s User setting updated: %s", ctx.Req.RequestURI, ctx.User.LowerName)
 }
 

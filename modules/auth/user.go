@@ -79,7 +79,7 @@ type UpdateProfileForm struct {
 
 func (f *UpdateProfileForm) Name(field string) string {
 	names := map[string]string{
-		"Email":    "Email address",
+		"Email":    "E-mail address",
 		"Website":  "Website",
 		"Location": "Location",
 		"Avatar":   "Gravatar Email",
