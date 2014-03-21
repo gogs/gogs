@@ -575,6 +575,15 @@ html, body {
     min-width: 200px;
 }
 
+#gogs-repo-clone .dropdown-menu{
+    width: 400px;
+    padding: 20px;
+}
+
+#gogs-repo-clone .input-group{
+    margin-bottom: 15px;
+}
+
 /* #gogs-source */
 #gogs-source {
     margin-top: -20px;

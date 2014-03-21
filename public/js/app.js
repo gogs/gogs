@@ -63,6 +63,12 @@ var Gogits = {
         var $tabs = $('[data-init=tabs]');
         $tabs.find("li:eq(0) a").tab("show");
     };
+    // fix dropdown inside click
+    Gogits.initDropDown = function(){
+        $('.dropdown-menu').on('click','a,button,input,select',function(e){
+            e.stopPropagation();
+        });
+    };
 
     // render markdown
     Gogits.renderMarkdown = function () {
@@ -136,6 +142,7 @@ function initCore() {
     Gogits.initPopovers();
     Gogits.initTabs();
     Gogits.initModals();
+    Gogits.initDropDown();
     Gogits.renderMarkdown();
 }
 
@@ -181,18 +188,18 @@ function initUserSetting() {
 }
 
 function initRepository() {
-    // guide box script
+    // clone group button script
     (function () {
-        var $guide = $('.guide-box');
-        if ($guide.length) {
-            var $url = $('#guide-clone-url');
-            $guide.find('button[data-link]').on("click",function () {
+        var $clone = $('.clone-group-btn');
+        if ($clone.length) {
+            var $url = $('.clone-group-url');
+            $clone.find('button[data-link]').on("click",function (e) {
                 var $this = $(this);
                 if (!$this.hasClass('btn-primary')) {
-                    $guide.find('.btn-primary').removeClass('btn-primary').addClass("btn-default");
+                    $clone.find('.btn-primary').removeClass('btn-primary').addClass("btn-default");
                     $(this).addClass('btn-primary').removeClass('btn-default');
                     $url.val($this.data("link"));
-                    $guide.find('span.clone-url').text($this.data('link'));
+                    $clone.find('span.clone-url').text($this.data('link'));
                 }
             }).eq(0).trigger("click");
             // todo copy to clipboard
