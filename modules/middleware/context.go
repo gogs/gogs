@@ -12,6 +12,8 @@ import (
 	"github.com/codegangsta/martini"
 	"github.com/martini-contrib/sessions"
 
+	"github.com/gogits/cache"
+
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/log"
@@ -25,6 +27,7 @@ type Context struct {
 	Req      *http.Request
 	Res      http.ResponseWriter
 	Session  sessions.Session
+	Cache    cache.Cache
 	User     *models.User
 	IsSigned bool
 
