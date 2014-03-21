@@ -87,7 +87,8 @@ func runWeb(*cli.Context) {
 
 	m.Use(middleware.InitContext())
 
-	reqSignIn, ignSignIn := middleware.SignInRequire(true), middleware.SignInRequire(false)
+	reqSignIn := middleware.SignInRequire(true)
+	ignSignIn := middleware.SignInRequire(base.Service.RequireSignInView)
 	reqSignOut := middleware.SignOutRequire()
 	// Routers.
 	m.Get("/", ignSignIn, routers.Home)

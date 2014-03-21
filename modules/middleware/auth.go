@@ -15,7 +15,7 @@ func SignInRequire(redirect bool) martini.Handler {
 	return func(ctx *Context) {
 		if !ctx.IsSigned {
 			if redirect {
-				ctx.Redirect("/")
+				ctx.Redirect("/user/login")
 			}
 			return
 		} else if !ctx.User.IsActive && base.Service.RegisterEmailConfirm {

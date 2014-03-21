@@ -41,6 +41,7 @@ var (
 var Service struct {
 	RegisterEmailConfirm   bool
 	DisenableRegisteration bool
+	RequireSignInView      bool
 	ActiveCodeLives        int
 	ResetPwdCodeLives      int
 }
@@ -70,6 +71,7 @@ func newService() {
 	Service.ActiveCodeLives = Cfg.MustInt("service", "ACTIVE_CODE_LIVE_MINUTES", 180)
 	Service.ResetPwdCodeLives = Cfg.MustInt("service", "RESET_PASSWD_CODE_LIVE_MINUTES", 180)
 	Service.DisenableRegisteration = Cfg.MustBool("service", "DISENABLE_REGISTERATION", false)
+	Service.RequireSignInView = Cfg.MustBool("service", "REQUIRE_SIGNIN_VIEW", false)
 }
 
 func newLogService() {
