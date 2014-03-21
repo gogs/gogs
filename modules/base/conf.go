@@ -32,6 +32,7 @@ var (
 	AppUrl       string
 	Domain       string
 	SecretKey    string
+	RunUser      string
 	RepoRootPath string
 
 	Cfg         *goconfig.ConfigFile
@@ -179,6 +180,7 @@ func NewConfigContext() {
 	AppUrl = Cfg.MustValue("server", "ROOT_URL")
 	Domain = Cfg.MustValue("server", "DOMAIN")
 	SecretKey = Cfg.MustValue("security", "SECRET_KEY")
+	RunUser = Cfg.MustValue("", "RUN_USER")
 
 	// Determine and create root git reposiroty path.
 	RepoRootPath = Cfg.MustValue("repository", "ROOT")

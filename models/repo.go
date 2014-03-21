@@ -107,7 +107,7 @@ func IsRepositoryExist(user *User, repoName string) (bool, error) {
 
 var (
 	// Define as all lower case!!
-	illegalPatterns = []string{"[.][Gg][Ii][Tt]", "user", "help", "stars", "issues", "pulls", "commits", "admin", "repo", "template"}
+	illegalPatterns = []string{"[.][Gg][Ii][Tt]", "user", "help", "stars", "issues", "pulls", "commits", "admin", "repo", "template", "admin"}
 )
 
 // IsLegalName returns false if name contains illegal characters.
