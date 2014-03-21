@@ -324,6 +324,27 @@ html, body {
     color: #444;
 }
 
+.gogs-admin-nav{
+    background-color: #FFF;
+    padding-top: 10px;
+    padding-left: 0;
+    padding-right: 0;
+    border:1px solid #D8D8D8;
+}
+
+.gogs-admin-nav li{
+    margin-bottom: 8px;
+    border-left: 4px solid transparent;
+}
+
+.gogs-admin-nav li:hover{
+    border-left-color: #EEE;
+}
+
+.gogs-admin-nav li.active:hover{
+    border-left: 4px solid #DD4B39;
+}
+
 /* gogits user ssh keys */
 
 #gogs-ssh-keys .list-group-item {
