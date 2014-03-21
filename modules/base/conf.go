@@ -15,6 +15,8 @@ import (
 	"github.com/Unknwon/com"
 	"github.com/Unknwon/goconfig"
 
+	"github.com/gogits/cache"
+
 	"github.com/gogits/gogs/modules/log"
 )
 
@@ -37,6 +39,10 @@ var (
 
 	Cfg         *goconfig.ConfigFile
 	MailService *Mailer
+
+	Cache        cache.Cache
+	CacheAdapter string
+	CacheConfig  string
 )
 
 var Service struct {
@@ -181,6 +187,16 @@ func NewConfigContext() {
 	Domain = Cfg.MustValue("server", "DOMAIN")
 	SecretKey = Cfg.MustValue("security", "SECRET_KEY")
 	RunUser = Cfg.MustValue("", "RUN_USER")
+
+	CacheAdapter = Cfg.MustValue("cache", "ADAPTER")
+	CacheConfig = Cfg.MustValue("cache", "CONFIG")
+
+	Cache, err = cache.NewCache(CacheAdapter, CacheConfig)
+	if err != nil {
+		fmt.Printf("Init cache system failed, adapter: %s, config: %s, %v\n",
+			CacheAdapter, CacheConfig, err)
+		os.Exit(2)
+	}
 
 	// Determine and create root git reposiroty path.
 	RepoRootPath = Cfg.MustValue("repository", "ROOT")
