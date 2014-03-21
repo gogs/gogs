@@ -64,6 +64,10 @@ func CommitRepoAction(userId int64, userName string,
 	watches = append(watches, Watch{UserId: userId})
 
 	for i := range watches {
+		if userId == watches[i].UserId && i > 0 {
+			continue // Do not add twice in case author watches his/her repository.
+		}
+
 		_, err = orm.InsertOne(&Action{
 			UserId:      watches[i].UserId,
 			ActUserId:   userId,

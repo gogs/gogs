@@ -112,6 +112,12 @@ func SignUp(ctx *middleware.Context, form auth.RegisterForm) {
 	ctx.Data["Title"] = "Sign Up"
 	ctx.Data["PageIsSignUp"] = true
 
+	if base.Service.DisenableRegisteration {
+		ctx.Data["DisenableRegisteration"] = true
+		ctx.HTML(200, "user/signup")
+		return
+	}
+
 	if ctx.Req.Method == "GET" {
 		ctx.HTML(200, "user/signup")
 		return

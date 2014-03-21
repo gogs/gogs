@@ -20,6 +20,7 @@
                     <thead>
                         <tr>
                             <th>Id</th>
+                            <th>Owner</th>
                             <th>Name</th>
                             <th>Private</th>
                             <th>Watches</th>
@@ -31,7 +32,8 @@
                         {{range .Repos}}
                         <tr>
                             <td>{{.Id}}</td>
-                            <td>{{.Name}}</td>
+                            <th>{{.UserName}}</th>
+                            <td><a href="/{{.UserName}}/{{.Name}}">{{.Name}}</a></td>
                             <td><i class="fa fa{{if .Private}}-check{{end}}-square-o"></i></td>
                             <td>{{.NumWatches}}</td>
                             <td>{{.NumForks}}</td>

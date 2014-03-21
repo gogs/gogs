@@ -33,6 +33,10 @@ func List(l *list.List) chan interface{} {
 	return c
 }
 
+var mailDomains = map[string]string{
+	"gmail.com": "gmail.com",
+}
+
 var TemplateFuncs template.FuncMap = map[string]interface{}{
 	"AppName": func() string {
 		return AppName
@@ -56,7 +60,12 @@ var TemplateFuncs template.FuncMap = map[string]interface{}{
 	"DateFormat": DateFormat,
 	"List":       List,
 	"Mail2Domain": func(mail string) string {
-		return "mail." + strings.Split(mail, "@")[1]
+		suffix := strings.SplitN(mail, "@", 2)[1]
+		domain, ok := mailDomains[suffix]
+		if !ok {
+			return "mail." + suffix
+		}
+		return domain
 	},
 	"SubStr": func(str string, start, length int) string {
 		return str[start : start+length]
