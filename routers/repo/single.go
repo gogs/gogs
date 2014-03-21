@@ -5,11 +5,13 @@
 package repo
 
 import (
+	"path"
 	"strings"
 
 	"github.com/codegangsta/martini"
 
 	"github.com/gogits/git"
+	"github.com/gogits/webdav"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"
@@ -179,6 +181,29 @@ func Single(ctx *middleware.Context, params martini.Params) {
 	ctx.Data["IsRepoToolbarSource"] = true
 	ctx.Data["BranchLink"] = branchLink
 	ctx.HTML(200, "repo/single", ctx.Data)
+}
+
+func Http(ctx *middleware.Context, params martini.Params) {
+	/*if !ctx.Repo.IsValid {
+		return
+	}*/
+
+	// TODO: access check
+
+	username := params["username"]
+	reponame := params["reponame"]
+	if strings.HasSuffix(reponame, ".git") {
+		reponame = reponame[:len(reponame)-4]
+	}
+
+	prefix := path.Join("/", username, params["reponame"])
+	server := &webdav.Server{
+		Fs:         webdav.Dir(models.RepoPath(username, reponame)),
+		TrimPrefix: prefix,
+		Listings:   true,
+	}
+
+	server.ServeHTTP(ctx.ResponseWriter, ctx.Req)
 }
 
 func Setting(ctx *middleware.Context, params martini.Params) {
