@@ -167,6 +167,10 @@ func SignUp(ctx *middleware.Context, form auth.RegisterForm) {
 		ctx.Data["Email"] = u.Email
 		ctx.Data["Hours"] = base.Service.ActiveCodeLives / 60
 		ctx.HTML(200, "user/active")
+
+		if err = ctx.Cache.Put("MailResendLimit_"+u.LowerName, u.LowerName, 180); err != nil {
+			log.Error("Set cache(MailResendLimit) fail: %v", err)
+		}
 		return
 	}
 	ctx.Redirect("/user/login")
@@ -247,8 +251,12 @@ func Activate(ctx *middleware.Context) {
 		}
 		// Resend confirmation e-mail.
 		if base.Service.RegisterEmailConfirm {
-			ctx.Data["Hours"] = base.Service.ActiveCodeLives / 60
-			mailer.SendActiveMail(ctx.Render, ctx.User)
+			if ctx.Cache.IsExist("MailResendLimit_" + ctx.User.LowerName) {
+				ctx.Data["ResendLimited"] = true
+			} else {
+				ctx.Data["Hours"] = base.Service.ActiveCodeLives / 60
+				mailer.SendActiveMail(ctx.Render, ctx.User)
+			}
 		} else {
 			ctx.Data["ServiceNotEnabled"] = true
 		}

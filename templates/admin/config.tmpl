@@ -63,6 +63,17 @@
                 <div><b>User:</b> {{.Mailer.User}}</div>
             </div>
         </div>
+
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                Cache Configuration
+            </div>
+
+            <div class="panel-body">
+                <div><b>Cache Adapter:</b> {{.CacheAdapter}}</div>
+                <div><b>Cache Config:</b> <code>{{.CacheConfig}}</code></div>
+            </div>
+        </div>
     </div>
 </div>
 {{template "base/footer" .}}
