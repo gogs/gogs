@@ -11,7 +11,7 @@
             <div class="panel-body">
             	<br/>
 				<form action="/admin/users/{{.User.Id}}" method="post" class="form-horizontal">
-				    {{if .IsSuccess}}<p class="alert alert-success">Your profile has been successfully updated.</p>{{else if .HasError}}<p class="alert alert-danger form-error">{{.ErrorMsg}}</p>{{end}}
+				    {{if .IsSuccess}}<p class="alert alert-success">Account profile has been successfully updated.</p>{{else if .HasError}}<p class="alert alert-danger form-error">{{.ErrorMsg}}</p>{{end}}
                 	<input type="hidden" value="{{.User.Id}}" name="userId"/>
 					<div class="form-group">
 						<label class="col-md-3 control-label">Username: </label>
