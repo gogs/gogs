@@ -397,7 +397,7 @@ html, body {
 }
 
 #gogs-feed-right .repo-panel .list-group-item a {
-    display: inline-block;
+    display: block;
     margin-left: 0;
     background-color: transparent;
     padding-left: 0;
@@ -427,7 +427,6 @@ html, body {
 
 #gogs-feed-right .repo-panel span.stars {
     color: #666;
-    line-height: 44px;
     margin-right: 1em;
 }
 
