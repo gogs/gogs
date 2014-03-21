@@ -15,7 +15,7 @@
                     <b class="caret"></b></a>
                 <ul class="dropdown-menu">
                     {{range .Branches}}
-                    <li><a {{if eq . $.Branchname}}class="current" {{end}}href="{{$.BranchLink}}">{{.}}</a></li>
+                    <li><a {{if eq . $.Branchname}}class="current" {{end}}href="/{{$.Username}}/{{$.Reponame}}/src/{{.}}">{{.}}</a></li>
                     {{end}}
                 </ul>
             </div>

@@ -323,11 +323,33 @@ func initRepository(f string, user *User, repo *Repository, initReadme bool, rep
 	return nil
 }
 
+// UserRepo reporesents a repository with user name.
+type UserRepo struct {
+	*Repository
+	UserName string
+}
+
 // GetRepos returns given number of repository objects with offset.
-func GetRepos(num, offset int) ([]Repository, error) {
+func GetRepos(num, offset int) ([]UserRepo, error) {
 	repos := make([]Repository, 0, num)
-	err := orm.Limit(num, offset).Asc("id").Find(&repos)
-	return repos, err
+	if err := orm.Limit(num, offset).Asc("id").Find(&repos); err != nil {
+		return nil, err
+	}
+
+	urepos := make([]UserRepo, len(repos))
+	for i := range repos {
+		urepos[i].Repository = &repos[i]
+		u := new(User)
+		has, err := orm.Id(urepos[i].Repository.OwnerId).Get(u)
+		if err != nil {
+			return nil, err
+		} else if !has {
+			return nil, ErrUserNotExist
+		}
+		urepos[i].UserName = u.Name
+	}
+
+	return urepos, nil
 }
 
 func RepoPath(userName, repoName string) string {

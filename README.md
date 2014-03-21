@@ -28,7 +28,7 @@ There are some very good products in this category such as [gitlab](http://gitla
 - Repository viewer.
 - Gravatar support.
 - Mail service(register).
-- Supports MySQL and PostgreSQL.
+- Supports MySQL, PostgreSQL and SQLite3(binary release only).
 
 ## Installation
 

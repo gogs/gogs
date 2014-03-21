@@ -39,9 +39,10 @@ var (
 )
 
 var Service struct {
-	RegisterEmailConfirm bool
-	ActiveCodeLives      int
-	ResetPwdCodeLives    int
+	RegisterEmailConfirm   bool
+	DisenableRegisteration bool
+	ActiveCodeLives        int
+	ResetPwdCodeLives      int
 }
 
 func exeDir() (string, error) {
@@ -68,6 +69,7 @@ var logLevels = map[string]string{
 func newService() {
 	Service.ActiveCodeLives = Cfg.MustInt("service", "ACTIVE_CODE_LIVE_MINUTES", 180)
 	Service.ResetPwdCodeLives = Cfg.MustInt("service", "RESET_PASSWD_CODE_LIVE_MINUTES", 180)
+	Service.DisenableRegisteration = Cfg.MustBool("service", "DISENABLE_REGISTERATION", false)
 }
 
 func newLogService() {

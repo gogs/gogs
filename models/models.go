@@ -7,6 +7,7 @@ package models
 import (
 	"fmt"
 	"os"
+	"path"
 
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/lib/pq"
@@ -23,6 +24,7 @@ func setEngine() {
 	dbName := base.Cfg.MustValue("database", "NAME")
 	dbUser := base.Cfg.MustValue("database", "USER")
 	dbPwd := base.Cfg.MustValue("database", "PASSWD")
+	dbPath := base.Cfg.MustValue("database", "PATH", "data/gogs.db")
 	sslMode := base.Cfg.MustValue("database", "SSL_MODE")
 
 	var err error
@@ -33,6 +35,9 @@ func setEngine() {
 	case "postgres":
 		orm, err = xorm.NewEngine("postgres", fmt.Sprintf("user=%s password=%s dbname=%s sslmode=%s",
 			dbUser, dbPwd, dbName, sslMode))
+	case "sqlite3":
+		os.MkdirAll(path.Dir(dbPath), os.ModePerm)
+		orm, err = xorm.NewEngine("sqlite3", dbPath)
 	default:
 		fmt.Printf("Unknown database type: %s\n", dbType)
 		os.Exit(2)
