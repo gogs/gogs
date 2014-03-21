@@ -16,6 +16,7 @@ import (
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
+	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
 )
 
@@ -100,6 +101,7 @@ func InitContext() martini.Handler {
 			Req:     r,
 			Res:     res,
 			Session: session,
+			Cache:   base.Cache,
 			Render:  rd,
 		}
 
