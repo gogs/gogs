@@ -35,7 +35,6 @@ func LoadModelsConfig() {
 }
 
 func setEngine() {
-
 	var err error
 	switch DbCfg.Type {
 	case "mysql":

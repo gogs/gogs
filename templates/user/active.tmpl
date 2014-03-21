@@ -6,6 +6,8 @@
         {{if .IsActivatePage}}
             {{if .ServiceNotEnabled}}
             <p>Sorry, Register Mail Confirmation has been disabled.</p>
+            {{else if .ResendLimited}}
+            <p>Sorry, you are sending activation e-mail too frequently, please wait 3 minutes.</p>
             {{else}}
             <p>New confirmation e-mail has been sent to <b>{{.SignedUser.Email}}</b>, please check your inbox within {{.Hours}} hours to complete your registeration.</p>
             <hr/>

@@ -133,6 +133,30 @@ func newLogService() {
 	log.Info("Log Mode: %s(%s)", strings.Title(mode), levelName)
 }
 
+func newCacheService() {
+	CacheAdapter = Cfg.MustValue("cache", "ADAPTER", "memory")
+
+	switch CacheAdapter {
+	case "memory":
+		CacheConfig = fmt.Sprintf(`{"interval":%d}`, Cfg.MustInt("cache", "INTERVAL", 60))
+	case "redis", "memcache":
+		CacheConfig = fmt.Sprintf(`{"conn":"%s"}`, Cfg.MustValue("cache", "HOST"))
+	default:
+		fmt.Printf("Unknown cache adapter: %s\n", CacheAdapter)
+		os.Exit(2)
+	}
+
+	var err error
+	Cache, err = cache.NewCache(CacheAdapter, CacheConfig)
+	if err != nil {
+		fmt.Printf("Init cache system failed, adapter: %s, config: %s, %v\n",
+			CacheAdapter, CacheConfig, err)
+		os.Exit(2)
+	}
+
+	log.Info("Cache Service Enabled")
+}
+
 func newMailService() {
 	// Check mailer setting.
 	if Cfg.MustBool("mailer", "ENABLED") {
@@ -188,16 +212,6 @@ func NewConfigContext() {
 	SecretKey = Cfg.MustValue("security", "SECRET_KEY")
 	RunUser = Cfg.MustValue("", "RUN_USER")
 
-	CacheAdapter = Cfg.MustValue("cache", "ADAPTER")
-	CacheConfig = Cfg.MustValue("cache", "CONFIG")
-
-	Cache, err = cache.NewCache(CacheAdapter, CacheConfig)
-	if err != nil {
-		fmt.Printf("Init cache system failed, adapter: %s, config: %s, %v\n",
-			CacheAdapter, CacheConfig, err)
-		os.Exit(2)
-	}
-
 	// Determine and create root git reposiroty path.
 	RepoRootPath = Cfg.MustValue("repository", "ROOT")
 	if err = os.MkdirAll(RepoRootPath, os.ModePerm); err != nil {
@@ -209,6 +223,7 @@ func NewConfigContext() {
 func NewServices() {
 	newService()
 	newLogService()
+	newCacheService()
 	newMailService()
 	newRegisterMailService()
 }
