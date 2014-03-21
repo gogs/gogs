@@ -145,8 +145,9 @@ html, body {
     float: right;
 }
 
-#gogs-nav-signin {
+#gogs-nav-signin, #gogs-nav-signup {
     float: right;
+    margin-left: 1em;
 }
 
 #gogs-nav-out .fa {
@@ -324,24 +325,24 @@ html, body {
     color: #444;
 }
 
-.gogs-admin-nav{
+.gogs-admin-nav {
     background-color: #FFF;
     padding-top: 10px;
     padding-left: 0;
     padding-right: 0;
-    border:1px solid #D8D8D8;
+    border: 1px solid #D8D8D8;
 }
 
-.gogs-admin-nav li{
+.gogs-admin-nav li {
     margin-bottom: 8px;
     border-left: 4px solid transparent;
 }
 
-.gogs-admin-nav li:hover{
+.gogs-admin-nav li:hover {
     border-left-color: #EEE;
 }
 
-.gogs-admin-nav li.active:hover{
+.gogs-admin-nav li.active:hover {
     border-left: 4px solid #DD4B39;
 }
 
