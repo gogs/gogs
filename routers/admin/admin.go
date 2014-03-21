@@ -67,5 +67,8 @@ func Config(ctx *middleware.Context) {
 		ctx.Data["Mailer"] = base.MailService
 	}
 
+	ctx.Data["CacheAdapter"] = base.CacheAdapter
+	ctx.Data["CacheConfig"] = base.CacheConfig
+
 	ctx.HTML(200, "admin/config")
 }
