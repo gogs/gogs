@@ -36,7 +36,7 @@ func isLink(link []byte) bool {
 func IsMarkdownFile(name string) bool {
 	name = strings.ToLower(name)
 	switch filepath.Ext(name) {
-	case "md", "markdown":
+	case ".md", ".markdown", ".mdown":
 		return true
 	}
 	return false
@@ -61,7 +61,7 @@ type CustomRender struct {
 func (options *CustomRender) Link(out *bytes.Buffer, link []byte, title []byte, content []byte) {
 	if len(link) > 0 && !isLink(link) {
 		if link[0] == '#' {
-			link = append([]byte(options.urlPrefix), link...)
+			// link = append([]byte(options.urlPrefix), link...)
 		} else {
 			link = []byte(path.Join(options.urlPrefix, string(link)))
 		}

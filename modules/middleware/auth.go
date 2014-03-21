@@ -15,12 +15,12 @@ func SignInRequire(redirect bool) martini.Handler {
 	return func(ctx *Context) {
 		if !ctx.IsSigned {
 			if redirect {
-				ctx.Redirect("/")
+				ctx.Redirect("/user/login")
 			}
 			return
 		} else if !ctx.User.IsActive && base.Service.RegisterEmailConfirm {
 			ctx.Data["Title"] = "Activate Your Account"
-			ctx.Render.HTML(200, "user/active", ctx.Data)
+			ctx.HTML(200, "user/active")
 			return
 		}
 	}
@@ -31,6 +31,18 @@ func SignOutRequire() martini.Handler {
 	return func(ctx *Context) {
 		if ctx.IsSigned {
 			ctx.Redirect("/")
+			return
 		}
+	}
+}
+
+// AdminRequire requires user signed in as administor.
+func AdminRequire() martini.Handler {
+	return func(ctx *Context) {
+		if !ctx.User.IsAdmin {
+			ctx.Error(403)
+			return
+		}
+		ctx.Data["PageIsAdmin"] = true
 	}
 }

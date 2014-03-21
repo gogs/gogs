@@ -18,7 +18,7 @@ func Create(ctx *middleware.Context, form auth.CreateRepoForm) {
 	ctx.Data["Licenses"] = models.Licenses
 
 	if ctx.Req.Method == "GET" {
-		ctx.HTML(200, "repo/create", ctx.Data)
+		ctx.HTML(200, "repo/create")
 		return
 	}
 
@@ -30,6 +30,9 @@ func Create(ctx *middleware.Context, form auth.CreateRepoForm) {
 		return
 	} else if err == models.ErrRepoAlreadyExist {
 		ctx.RenderWithErr("Repository name has already been used", "repo/create", &form)
+		return
+	} else if err == models.ErrRepoNameIllegal {
+		ctx.RenderWithErr(models.ErrRepoNameIllegal.Error(), "repo/create", &form)
 		return
 	}
 	ctx.Handle(200, "repo.Create", err)
@@ -45,7 +48,7 @@ func SettingPost(ctx *middleware.Context) {
 	case "delete":
 		if len(ctx.Repo.Repository.Name) == 0 || ctx.Repo.Repository.Name != ctx.Query("repository") {
 			ctx.Data["ErrorMsg"] = "Please make sure you entered repository name is correct."
-			ctx.HTML(200, "repo/setting", ctx.Data)
+			ctx.HTML(200, "repo/setting")
 			return
 		}
 

@@ -12,7 +12,9 @@ import (
 	"strings"
 
 	"github.com/codegangsta/cli"
+
 	"github.com/gogits/gogs/models"
+	"github.com/gogits/gogs/modules/base"
 )
 
 var (
@@ -43,6 +45,10 @@ func In(b string, sl map[string]int) bool {
 }
 
 func runServ(*cli.Context) {
+	base.NewConfigContext()
+	models.LoadModelsConfig()
+	models.NewEngine()
+
 	keys := strings.Split(os.Args[2], "-")
 	if len(keys) != 2 {
 		fmt.Println("auth file format error")
@@ -144,7 +150,7 @@ func runServ(*cli.Context) {
 	}
 
 	gitcmd := exec.Command(verb, rRepo)
-	gitcmd.Dir = models.RepoRootPath
+	gitcmd.Dir = base.RepoRootPath
 	gitcmd.Stdout = os.Stdout
 	gitcmd.Stdin = os.Stdin
 	gitcmd.Stderr = os.Stderr

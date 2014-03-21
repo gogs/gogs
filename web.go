@@ -16,11 +16,14 @@ import (
 
 	"github.com/gogits/binding"
 
+	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
+	"github.com/gogits/gogs/modules/mailer"
 	"github.com/gogits/gogs/modules/middleware"
 	"github.com/gogits/gogs/routers"
+	"github.com/gogits/gogs/routers/admin"
 	"github.com/gogits/gogs/routers/dev"
 	"github.com/gogits/gogs/routers/repo"
 	"github.com/gogits/gogs/routers/user"
@@ -33,6 +36,16 @@ var CmdWeb = cli.Command{
 gogs web`,
 	Action: runWeb,
 	Flags:  []cli.Flag{},
+}
+
+// globalInit is for global configuration reload-able.
+func globalInit() {
+	base.NewConfigContext()
+	mailer.NewMailerContext()
+	models.LoadModelsConfig()
+	models.LoadRepoConfig()
+	models.NewRepoContext()
+	models.NewEngine()
 }
 
 // Check run mode(Default of martini is Dev).
@@ -58,6 +71,7 @@ func newMartini() *martini.ClassicMartini {
 }
 
 func runWeb(*cli.Context) {
+	globalInit()
 	base.NewServices()
 	checkRunMode()
 	log.Info("%s %s", base.AppName, base.AppVer)
@@ -73,7 +87,8 @@ func runWeb(*cli.Context) {
 
 	m.Use(middleware.InitContext())
 
-	reqSignIn, ignSignIn := middleware.SignInRequire(true), middleware.SignInRequire(false)
+	reqSignIn := middleware.SignInRequire(true)
+	ignSignIn := middleware.SignInRequire(base.Service.RequireSignInView)
 	reqSignOut := middleware.SignOutRequire()
 	// Routers.
 	m.Get("/", ignSignIn, routers.Home)
@@ -98,6 +113,14 @@ func runWeb(*cli.Context) {
 	m.Any("/repo/create", reqSignIn, binding.BindIgnErr(auth.CreateRepoForm{}), repo.Create)
 
 	m.Get("/help", routers.Help)
+
+	adminReq := middleware.AdminRequire()
+	m.Get("/admin", reqSignIn, adminReq, admin.Dashboard)
+	m.Get("/admin/users", reqSignIn, adminReq, admin.Users)
+	m.Any("/admin/users/new", reqSignIn, adminReq, binding.BindIgnErr(auth.RegisterForm{}), admin.NewUser)
+	m.Any("/admin/users/:userid", reqSignIn, adminReq, binding.BindIgnErr(auth.AdminEditUserForm{}), admin.EditUser)
+	m.Get("/admin/repos", reqSignIn, adminReq, admin.Repositories)
+	m.Get("/admin/config", reqSignIn, adminReq, admin.Config)
 
 	m.Post("/:username/:reponame/settings", reqSignIn, middleware.RepoAssignment(true), repo.SettingPost)
 	m.Get("/:username/:reponame/settings", reqSignIn, middleware.RepoAssignment(true), repo.Setting)

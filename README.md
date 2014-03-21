@@ -5,7 +5,7 @@ Gogs(Go Git Service) is a GitHub-like clone in the Go Programming Language.
 
 Since we choose to use pure Go implementation of Git manipulation, Gogs certainly supports **ALL platforms**  that Go supports, including Linux, Max OS X, and Windows with **ZERO** dependency.
 
-##### Current version: 0.1.1 Alpha
+##### Current version: 0.1.5 Alpha
 
 ## Purpose
 
@@ -15,7 +15,7 @@ There are some very good products in this category such as [gitlab](http://gitla
 
 - Please see [Wiki](https://github.com/gogits/gogs/wiki) for project design, develop specification, change log and road map.
 - See [Trello Broad](https://trello.com/b/uxAoeLUl/gogs-go-git-service) to follow the develop team.
-- Try it before anything? Go down to **Installation -> Install from binary** section!.
+- Try it before anything? Do it [online](http://try.gogits.org/Unknown/gogs) or go down to **Installation -> Install from binary** section!
 - Having troubles? Get help from [Troubleshooting](https://github.com/gogits/gogs/wiki/Troubleshooting).
 
 ## Features
@@ -28,7 +28,8 @@ There are some very good products in this category such as [gitlab](http://gitla
 - Repository viewer.
 - Gravatar support.
 - Mail service(register).
-- Supports MySQL and PostgreSQL.
+- Administration panel.
+- Supports MySQL, PostgreSQL and SQLite3(binary release only).
 
 ## Installation
 

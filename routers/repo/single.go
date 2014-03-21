@@ -40,7 +40,7 @@ func Branches(ctx *middleware.Context, params martini.Params) {
 	ctx.Data["Branches"] = brs
 	ctx.Data["IsRepoToolbarBranches"] = true
 
-	ctx.HTML(200, "repo/branches", ctx.Data)
+	ctx.HTML(200, "repo/branches")
 }
 
 func Single(ctx *middleware.Context, params martini.Params) {
@@ -61,6 +61,8 @@ func Single(ctx *middleware.Context, params martini.Params) {
 		return
 	}
 
+	ctx.Data["IsRepoToolbarSource"] = true
+
 	// Branches.
 	brs, err := models.GetBranches(params["username"], params["reponame"])
 	if err != nil {
@@ -69,7 +71,7 @@ func Single(ctx *middleware.Context, params martini.Params) {
 		return
 	} else if len(brs) == 0 {
 		ctx.Data["IsBareRepo"] = true
-		ctx.HTML(200, "repo/single", ctx.Data)
+		ctx.HTML(200, "repo/single")
 		return
 	}
 
@@ -86,6 +88,11 @@ func Single(ctx *middleware.Context, params martini.Params) {
 
 	branchLink := "/" + ctx.Repo.Owner.LowerName + "/" + ctx.Repo.Repository.Name + "/src/" + params["branchname"]
 
+	if len(treename) != 0 && repoFile == nil {
+		ctx.Error(404)
+		return
+	}
+
 	if repoFile != nil && repoFile.IsFile() {
 		if repoFile.Size > 1024*1024 || repoFile.Filemode != git.FileModeBlob {
 			ctx.Data["FileIsLarge"] = true
@@ -95,6 +102,11 @@ func Single(ctx *middleware.Context, params martini.Params) {
 		} else {
 			ctx.Data["IsFile"] = true
 			ctx.Data["FileName"] = repoFile.Name
+			ext := path.Ext(repoFile.Name)
+			if len(ext) > 0 {
+				ext = ext[1:]
+			}
+			ctx.Data["FileExt"] = ext
 
 			readmeExist := base.IsMarkdownFile(repoFile.Name) || base.IsReadmeFile(repoFile.Name)
 			ctx.Data["ReadmeExist"] = readmeExist
@@ -139,10 +151,9 @@ func Single(ctx *middleware.Context, params martini.Params) {
 				return
 			} else {
 				// current repo branch link
-				urlPrefix := "http://" + base.Domain + branchLink
 
 				ctx.Data["FileName"] = readmeFile.Name
-				ctx.Data["FileContent"] = string(base.RenderMarkdown(blob.Contents(), urlPrefix))
+				ctx.Data["FileContent"] = string(base.RenderMarkdown(blob.Contents(), branchLink))
 			}
 		}
 	}
@@ -178,9 +189,8 @@ func Single(ctx *middleware.Context, params martini.Params) {
 
 	ctx.Data["Paths"] = Paths
 	ctx.Data["Treenames"] = treenames
-	ctx.Data["IsRepoToolbarSource"] = true
 	ctx.Data["BranchLink"] = branchLink
-	ctx.HTML(200, "repo/single", ctx.Data)
+	ctx.HTML(200, "repo/single")
 }
 
 func Http(ctx *middleware.Context, params martini.Params) {
@@ -212,6 +222,8 @@ func Setting(ctx *middleware.Context, params martini.Params) {
 		return
 	}
 
+	ctx.Data["IsRepoToolbarSetting"] = true
+
 	// Branches.
 	brs, err := models.GetBranches(params["username"], params["reponame"])
 	if err != nil {
@@ -220,7 +232,7 @@ func Setting(ctx *middleware.Context, params martini.Params) {
 		return
 	} else if len(brs) == 0 {
 		ctx.Data["IsBareRepo"] = true
-		ctx.HTML(200, "repo/setting", ctx.Data)
+		ctx.HTML(200, "repo/setting")
 		return
 	}
 
@@ -229,9 +241,13 @@ func Setting(ctx *middleware.Context, params martini.Params) {
 		title = t
 	}
 
+	if len(params["branchname"]) == 0 {
+		params["branchname"] = "master"
+	}
+
+	ctx.Data["Branchname"] = params["branchname"]
 	ctx.Data["Title"] = title + " - settings"
-	ctx.Data["IsRepoToolbarSetting"] = true
-	ctx.HTML(200, "repo/setting", ctx.Data)
+	ctx.HTML(200, "repo/setting")
 }
 
 func Commits(ctx *middleware.Context, params martini.Params) {
@@ -255,17 +271,17 @@ func Commits(ctx *middleware.Context, params martini.Params) {
 	ctx.Data["Reponame"] = params["reponame"]
 	ctx.Data["CommitCount"] = commits.Len()
 	ctx.Data["Commits"] = commits
-	ctx.HTML(200, "repo/commits", ctx.Data)
+	ctx.HTML(200, "repo/commits")
 }
 
 func Issues(ctx *middleware.Context) {
 	ctx.Data["IsRepoToolbarIssues"] = true
-	ctx.HTML(200, "repo/issues", ctx.Data)
+	ctx.HTML(200, "repo/issues")
 }
 
 func Pulls(ctx *middleware.Context) {
 	ctx.Data["IsRepoToolbarPulls"] = true
-	ctx.HTML(200, "repo/pulls", ctx.Data)
+	ctx.HTML(200, "repo/pulls")
 }
 
 func Action(ctx *middleware.Context, params martini.Params) {
