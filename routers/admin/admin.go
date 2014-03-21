@@ -61,7 +61,11 @@ func Config(ctx *middleware.Context) {
 
 	ctx.Data["DbCfg"] = models.DbCfg
 
-	ctx.Data["Mailer"] = base.MailService
+	ctx.Data["MailerEnabled"] = false
+	if base.MailService != nil {
+		ctx.Data["MailerEnabled"] = true
+		ctx.Data["Mailer"] = base.MailService
+	}
 
 	ctx.HTML(200, "admin/config")
 }
