@@ -5,7 +5,12 @@
 package admin
 
 import (
+	"strings"
+
+	"github.com/codegangsta/martini"
+
 	"github.com/gogits/gogs/models"
+	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/middleware"
 )
 
@@ -45,5 +50,18 @@ func Repositories(ctx *middleware.Context) {
 func Config(ctx *middleware.Context) {
 	ctx.Data["Title"] = "Server Configuration"
 	ctx.Data["PageIsConfig"] = true
+
+	ctx.Data["AppUrl"] = base.AppUrl
+	ctx.Data["Domain"] = base.Domain
+	ctx.Data["RunUser"] = base.RunUser
+	ctx.Data["RunMode"] = strings.Title(martini.Env)
+	ctx.Data["RepoRootPath"] = base.RepoRootPath
+
+	ctx.Data["Service"] = base.Service
+
+	ctx.Data["DbCfg"] = models.DbCfg
+
+	ctx.Data["Mailer"] = base.MailService
+
 	ctx.HTML(200, "admin/config")
 }

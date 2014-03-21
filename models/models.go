@@ -19,36 +19,36 @@ import (
 var (
 	orm *xorm.Engine
 
-	dbCfg struct {
+	DbCfg struct {
 		Type, Host, Name, User, Pwd, Path, SslMode string
 	}
 )
 
 func LoadModelsConfig() {
-	dbCfg.Type = base.Cfg.MustValue("database", "DB_TYPE")
-	dbCfg.Host = base.Cfg.MustValue("database", "HOST")
-	dbCfg.Name = base.Cfg.MustValue("database", "NAME")
-	dbCfg.User = base.Cfg.MustValue("database", "USER")
-	dbCfg.Pwd = base.Cfg.MustValue("database", "PASSWD")
-	dbCfg.Path = base.Cfg.MustValue("database", "PATH", "data/gogs.db")
-	dbCfg.SslMode = base.Cfg.MustValue("database", "SSL_MODE")
+	DbCfg.Type = base.Cfg.MustValue("database", "DB_TYPE")
+	DbCfg.Host = base.Cfg.MustValue("database", "HOST")
+	DbCfg.Name = base.Cfg.MustValue("database", "NAME")
+	DbCfg.User = base.Cfg.MustValue("database", "USER")
+	DbCfg.Pwd = base.Cfg.MustValue("database", "PASSWD")
+	DbCfg.SslMode = base.Cfg.MustValue("database", "SSL_MODE")
+	DbCfg.Path = base.Cfg.MustValue("database", "PATH", "data/gogs.db")
 }
 
 func setEngine() {
 
 	var err error
-	switch dbCfg.Type {
+	switch DbCfg.Type {
 	case "mysql":
 		orm, err = xorm.NewEngine("mysql", fmt.Sprintf("%s:%s@%s/%s?charset=utf8",
-			dbCfg.User, dbCfg.Pwd, dbCfg.Host, dbCfg.Name))
+			DbCfg.User, DbCfg.Pwd, DbCfg.Host, DbCfg.Name))
 	case "postgres":
 		orm, err = xorm.NewEngine("postgres", fmt.Sprintf("user=%s password=%s dbname=%s sslmode=%s",
-			dbCfg.User, dbCfg.Pwd, dbCfg.Name, dbCfg.SslMode))
+			DbCfg.User, DbCfg.Pwd, DbCfg.Name, DbCfg.SslMode))
 	case "sqlite3":
-		os.MkdirAll(path.Dir(dbCfg.Path), os.ModePerm)
-		orm, err = xorm.NewEngine("sqlite3", dbCfg.Path)
+		os.MkdirAll(path.Dir(DbCfg.Path), os.ModePerm)
+		orm, err = xorm.NewEngine("sqlite3", DbCfg.Path)
 	default:
-		fmt.Printf("Unknown database type: %s\n", dbCfg.Type)
+		fmt.Printf("Unknown database type: %s\n", DbCfg.Type)
 		os.Exit(2)
 	}
 	if err != nil {

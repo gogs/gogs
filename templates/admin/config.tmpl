@@ -9,7 +9,57 @@
             </div>
 
             <div class="panel-body">
+                <div><b>Application Name:</b> {{AppName}}</div>
+                <div><b>Application Version:</b> {{AppVer}}</div>
+                <div><b>Application URL:</b> {{.AppUrl}}</div>
+                <div><b>Domain:</b> {{.Domain}}</div>
+                <hr/>
+                <div><b>Run User:</b> {{.RunUser}}</div>
+                <div><b>Run Mode:</b> {{.RunMode}}</div>
+                <hr/>
+                <div><b>Repository Root Path:</b> {{.RepoRootPath}}</div>
+            </div>
+        </div>
 
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                Database Configuration
+            </div>
+
+            <div class="panel-body">
+                <div><b>Type:</b> {{.DbCfg.Type}}</div>
+                <div><b>Host:</b> {{.DbCfg.Host}}</div>
+                <div><b>Name:</b> {{.DbCfg.Name}}</div>
+                <div><b>User:</b> {{.DbCfg.User}}</div>
+                <div><b>SslMode:</b> {{.DbCfg.SslMode}} (for "postgres" only)</div>
+                <div><b>Path:</b> {{.DbCfg.Path}} (for "sqlite3" only)</div>
+            </div>
+        </div>
+
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                Service Configuration
+            </div>
+
+            <div class="panel-body">
+                <div><b>Register Email Confirmation:</b> <i class="fa fa{{if .Service.RegisterEmailConfirm}}-check{{end}}-square-o"></i></div>
+                <div><b>Disenable Registeration:</b> <i class="fa fa{{if .Service.DisenableRegisteration}}-check{{end}}-square-o"></i></div>
+                <div><b>Require Sign In View:</b> <i class="fa fa{{if .Service.RequireSignInView}}-check{{end}}-square-o"></i></div>
+                <hr/>
+                <div><b>Active Code Lives:</b> {{.Service.ActiveCodeLives}} minutes</div>
+                <div><b>Reset Password Code Lives:</b> {{.Service.ResetPwdCodeLives}} minutes</div>
+            </div>
+        </div>
+
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                Mailer Configuration
+            </div>
+
+            <div class="panel-body">
+                <div><b>Name:</b> {{.Mailer.Name}}</div>
+                <div><b>Host:</b> {{.Mailer.Host}}</div>
+                <div><b>User:</b> {{.Mailer.User}}</div>
             </div>
         </div>
     </div>
