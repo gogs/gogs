@@ -18,6 +18,7 @@ import (
 
 func NewUser(ctx *middleware.Context, form auth.RegisterForm) {
 	ctx.Data["Title"] = "New Account"
+	ctx.Data["PageIsUsers"] = true
 
 	if ctx.Req.Method == "GET" {
 		ctx.HTML(200, "admin/users/new")
@@ -67,6 +68,7 @@ func NewUser(ctx *middleware.Context, form auth.RegisterForm) {
 
 func EditUser(ctx *middleware.Context, params martini.Params, form auth.AdminEditUserForm) {
 	ctx.Data["Title"] = "Edit Account"
+	ctx.Data["PageIsUsers"] = true
 
 	uid, err := base.StrTo(params["userid"]).Int()
 	if err != nil {
