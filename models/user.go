@@ -231,10 +231,8 @@ func UserPath(userName string) string {
 
 func GetUserByKeyId(keyId int64) (*User, error) {
 	user := new(User)
-	rawSql := "SELECT a.* FROM user AS a, public_key AS b WHERE a.id = b.owner_id AND b.id=?"
-	if base.Cfg.MustValue("database", "DB_TYPE") == "postgres" {
-		rawSql = "SELECT a.* FROM \"user\" AS a, public_key AS b WHERE a.id = b.owner_id AND b.id=?"
-	}
+	rawSql := "SELECT a.* FROM `user` AS a, public_key AS b WHERE a.id = b.owner_id AND b.id=?"
+
 	has, err := orm.Sql(rawSql, keyId).Get(user)
 	if err != nil {
 		return nil, err
