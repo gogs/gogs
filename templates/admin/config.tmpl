@@ -71,7 +71,21 @@
 
             <div class="panel-body">
                 <div><b>Cache Adapter:</b> {{.CacheAdapter}}</div>
-                <div><b>Cache Config:</b> <code>{{.CacheConfig}}</code></div>
+                <div><b>Cache Config:</b></div>
+                <div style="padding-top: 5px;"><pre>{{.CacheConfig}}</pre></div>
+            </div>
+        </div>
+
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                Log Configuration
+            </div>
+
+            <div class="panel-body">
+                <div><b>Log Mode:</b> {{.LogMode}}</div>
+                <div><b>Log Config:</b></div>
+                <div style="padding-top: 5px;"><pre>{{.LogConfig}}</pre></div>
+                
             </div>
         </div>
     </div>
