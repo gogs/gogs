@@ -45,6 +45,10 @@ func In(b string, sl map[string]int) bool {
 }
 
 func runServ(*cli.Context) {
+	base.NewConfigContext()
+	models.LoadModelsConfig()
+	models.NewEngine()
+
 	keys := strings.Split(os.Args[2], "-")
 	if len(keys) != 2 {
 		fmt.Println("auth file format error")
