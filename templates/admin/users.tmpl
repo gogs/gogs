@@ -20,6 +20,7 @@
                             <th>Admin</th>
                             <th>Repos</th>
                             <th>Join</th>
+                            <th>Edit</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -32,6 +33,7 @@
                             <td><i class="fa fa{{if .IsAdmin}}-check{{end}}-square-o"></i></td>
                             <td>{{.NumRepos}}</td>
                             <td>{{DateFormat .Created "M d, Y"}}</td>
+                            <td><a href="/admin/users/{{.Id}}"><i class="fa fa-pencil-square-o"></i></a></td>
                         </tr>
                         {{end}}
                     </tbody>
