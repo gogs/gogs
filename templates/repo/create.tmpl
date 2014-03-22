@@ -2,6 +2,7 @@
 {{template "base/navbar" .}}
 <div class="container" id="gogs-body">
     <form action="/repo/create" method="post" class="form-horizontal gogs-card" id="gogs-repo-create">
+        {{.CsrfTokenHtml}}
         <h3>Create New Repository</h3>
         <div class="alert alert-danger form-error{{if .HasError}}{{else}} hidden{{end}}">{{.ErrorMsg}}</div>
         <div class="form-group">
