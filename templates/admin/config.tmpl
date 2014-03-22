@@ -79,6 +79,25 @@
 
         <div class="panel panel-default">
             <div class="panel-heading">
+                Session Configuration
+            </div>
+
+            <div class="panel-body">
+                <div><b>Session Provider:</b> {{.SessionProvider}}</div>
+                <div><b>Cookie Name:</b> {{.SessionConfig.CookieName}}</div>
+                <div><b>Enable Set Cookie:</b> <i class="fa fa{{if .SessionConfig.EnableSetCookie}}-check{{end}}-square-o"></i></div>
+                <div><b>GC Interval Time:</b> {{.SessionConfig.GcIntervalTime}} seconds</div>
+                <div><b>Session Life Time:</b> {{.SessionConfig.SessionLifeTime}} seconds</div>
+                <div><b>HTTPS Only:</b> <i class="fa fa{{if .SessionConfig.CookieSecure}}-check{{end}}-square-o"></i></div>
+                <div><b>Cookie Life Time:</b> {{.SessionConfig.CookieLifeTime}} seconds</div>
+                <div><b>Session ID Hash Function:</b> {{.SessionConfig.SessionIDHashFunc}}</div>
+                <div><b>Session ID Hash Key:</b> {{.SessionConfig.SessionIDHashKey}}</div>
+                <div><b>Provider Config:</b> {{.SessionConfig.ProviderConfig}}</div>
+            </div>
+        </div>
+
+        <div class="panel panel-default">
+            <div class="panel-heading">
                 Picture Configuration
             </div>
 
