@@ -358,6 +358,11 @@ func RepoPath(userName, repoName string) string {
 	return filepath.Join(UserPath(userName), repoName+".git")
 }
 
+func UpdateRepository(repo *Repository) error {
+	_, err := orm.Id(repo.Id).UseBool().Update(repo)
+	return err
+}
+
 // DeleteRepository deletes a repository for a user or orgnaztion.
 func DeleteRepository(userId, repoId int64, userName string) (err error) {
 	repo := &Repository{Id: repoId, OwnerId: userId}
@@ -402,9 +407,9 @@ func DeleteRepository(userId, repoId int64, userName string) (err error) {
 }
 
 // GetRepositoryByName returns the repository by given name under user if exists.
-func GetRepositoryByName(user *User, repoName string) (*Repository, error) {
+func GetRepositoryByName(userId int64, repoName string) (*Repository, error) {
 	repo := &Repository{
-		OwnerId:   user.Id,
+		OwnerId:   userId,
 		LowerName: strings.ToLower(repoName),
 	}
 	has, err := orm.Get(repo)
