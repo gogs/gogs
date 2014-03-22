@@ -77,7 +77,39 @@ func SignIn(ctx *middleware.Context, form auth.LogInForm) {
 	ctx.Data["Title"] = "Log In"
 
 	if ctx.Req.Method == "GET" {
-		ctx.HTML(200, "user/signin")
+		// Check auto-login.
+		userName := ctx.GetCookie(base.CookieUserName)
+		if len(userName) == 0 {
+			ctx.HTML(200, "user/signin")
+			return
+		}
+
+		isSucceed := false
+		defer func() {
+			if !isSucceed {
+				log.Trace("%s auto-login cookie cleared: %s", ctx.Req.RequestURI, userName)
+				ctx.SetCookie(base.CookieUserName, "", -1)
+				ctx.SetCookie(base.CookieRememberName, "", -1)
+			}
+		}()
+
+		user, err := models.GetUserByName(userName)
+		if err != nil {
+			ctx.HTML(200, "user/signin")
+			return
+		}
+
+		secret := base.EncodeMd5(user.Rands + user.Passwd)
+		value, _ := ctx.GetSecureCookie(secret, base.CookieRememberName)
+		if value != user.Name {
+			ctx.HTML(200, "user/signin")
+			return
+		}
+
+		isSucceed = true
+		ctx.Session.Set("userId", user.Id)
+		ctx.Session.Set("userName", user.Name)
+		ctx.Redirect("/")
 		return
 	}
 
@@ -89,12 +121,20 @@ func SignIn(ctx *middleware.Context, form auth.LogInForm) {
 	user, err := models.LoginUserPlain(form.UserName, form.Password)
 	if err != nil {
 		if err == models.ErrUserNotExist {
+			log.Trace("%s Log in failed: %s/%s", ctx.Req.RequestURI, form.UserName, form.Password)
 			ctx.RenderWithErr("Username or password is not correct", "user/signin", &form)
 			return
 		}
 
 		ctx.Handle(200, "user.SignIn", err)
 		return
+	}
+
+	if form.Remember == "on" {
+		secret := base.EncodeMd5(user.Rands + user.Passwd)
+		days := 86400 * base.LogInRememberDays
+		ctx.SetCookie(base.CookieUserName, user.Name, days)
+		ctx.SetSecureCookie(secret, base.CookieRememberName, user.Name, days)
 	}
 
 	ctx.Session.Set("userId", user.Id)

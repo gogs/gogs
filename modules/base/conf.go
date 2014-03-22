@@ -38,6 +38,10 @@ var (
 	RunUser      string
 	RepoRootPath string
 
+	LogInRememberDays  int
+	CookieUserName     string
+	CookieRememberName string
+
 	Cfg         *goconfig.ConfigFile
 	MailService *Mailer
 
@@ -251,6 +255,10 @@ func NewConfigContext() {
 	Domain = Cfg.MustValue("server", "DOMAIN")
 	SecretKey = Cfg.MustValue("security", "SECRET_KEY")
 	RunUser = Cfg.MustValue("", "RUN_USER")
+
+	LogInRememberDays = Cfg.MustInt("security", "LOGIN_REMEMBER_DAYS")
+	CookieUserName = Cfg.MustValue("security", "COOKIE_USERNAME")
+	CookieRememberName = Cfg.MustValue("security", "COOKIE_REMEMBER_NAME")
 
 	PictureService = Cfg.MustValue("picture", "SERVICE")
 	PictureRootPath = Cfg.MustValue("picture", "PATH")
