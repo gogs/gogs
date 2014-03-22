@@ -216,10 +216,6 @@ func InitContext() martini.Handler {
 			ctx.Data["SignedUserId"] = user.Id
 			ctx.Data["SignedUserName"] = user.LowerName
 			ctx.Data["IsAdmin"] = ctx.User.IsAdmin
-
-			if ctx.User.IsAdmin {
-				ctx.Data["PageIsAdmin"] = true
-			}
 		}
 
 		// get or create csrf token

@@ -372,7 +372,7 @@ func RepoPath(userName, repoName string) string {
 }
 
 func UpdateRepository(repo *Repository) error {
-	_, err := orm.Id(repo.Id).UseBool().Update(repo)
+	_, err := orm.Id(repo.Id).UseBool().Cols("description", "website").Update(repo)
 	return err
 }
 

@@ -28,3 +28,13 @@ func Issues(ctx *middleware.Context, params martini.Params) {
 
 	ctx.HTML(200, "repo/issues")
 }
+
+func CreateIssue(ctx *middleware.Context, params martini.Params) {
+	if !ctx.Repo.IsOwner {
+		ctx.Error(404)
+		return
+	}
+	// else if err = models.CreateIssue(userId, repoId, milestoneId, assigneeId, name, labels, mentions, content, isPull); err != nil {
+
+	// }
+}
