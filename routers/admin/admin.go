@@ -70,6 +70,9 @@ func Config(ctx *middleware.Context) {
 	ctx.Data["CacheAdapter"] = base.CacheAdapter
 	ctx.Data["CacheConfig"] = base.CacheConfig
 
+	ctx.Data["PictureService"] = base.PictureService
+	ctx.Data["PictureRootPath"] = base.PictureRootPath
+
 	ctx.Data["LogMode"] = base.LogMode
 	ctx.Data["LogConfig"] = base.LogConfig
 
