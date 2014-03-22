@@ -201,7 +201,7 @@ func VerifyUserActiveCode(code string) (user *User) {
 
 // UpdateUser updates user's information.
 func UpdateUser(user *User) (err error) {
-	_, err = orm.Id(user.Id).UseBool().Update(user)
+	_, err = orm.Id(user.Id).UseBool().Cols("website", "location").Update(user)
 	return err
 }
 

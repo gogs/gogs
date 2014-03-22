@@ -49,6 +49,7 @@ func Toggle(options *ToggleOptions) martini.Handler {
 				ctx.Error(403)
 				return
 			}
+			ctx.Data["PageIsAdmin"] = true
 		}
 	}
 }
