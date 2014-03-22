@@ -262,6 +262,17 @@ func initRepository(f string, user *User, repo *Repository, initReadme bool, rep
 		return err
 	}
 
+	// hook/post-update
+	pu2, err := os.OpenFile(filepath.Join(repoPath, "hooks", "post-receive"), os.O_CREATE|os.O_WRONLY, 0777)
+	if err != nil {
+		return err
+	}
+	defer pu2.Close()
+	// TODO: Windows .bat
+	if _, err = pu2.WriteString("#!/usr/bin/env bash\ngit update-server-info\n"); err != nil {
+		return err
+	}
+
 	// Initialize repository according to user's choice.
 	fileName := map[string]string{}
 	if initReadme {

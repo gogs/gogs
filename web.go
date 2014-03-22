@@ -139,6 +139,8 @@ func runWeb(*cli.Context) {
 
 	m.Get("/:username/:reponame", ignSignIn, middleware.RepoAssignment(true), repo.Single)
 
+	m.Any("/:username/:reponame/**", ignSignIn, repo.Http)
+
 	if martini.Env == martini.Dev {
 		m.Get("/template/**", dev.TemplatePreview)
 	}
