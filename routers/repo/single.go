@@ -69,7 +69,7 @@ func Single(ctx *middleware.Context, params martini.Params) {
 		log.Error("repo.Single(GetBranches): %v", err)
 		ctx.Error(404)
 		return
-	} else if len(brs) == 0 {
+	} else if ctx.Repo.Repository.IsBare {
 		ctx.Data["IsBareRepo"] = true
 		ctx.HTML(200, "repo/single")
 		return
@@ -224,13 +224,7 @@ func Setting(ctx *middleware.Context, params martini.Params) {
 
 	ctx.Data["IsRepoToolbarSetting"] = true
 
-	// Branches.
-	brs, err := models.GetBranches(params["username"], params["reponame"])
-	if err != nil {
-		log.Error("repo.Setting(GetBranches): %v", err)
-		ctx.Error(404)
-		return
-	} else if len(brs) == 0 {
+	if ctx.Repo.Repository.IsBare {
 		ctx.Data["IsBareRepo"] = true
 		ctx.HTML(200, "repo/setting")
 		return

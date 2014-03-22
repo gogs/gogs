@@ -83,10 +83,11 @@ type Repository struct {
 	Name        string `xorm:"index not null"`
 	Description string
 	Website     string
-	Private     bool
 	NumWatches  int
 	NumStars    int
 	NumForks    int
+	IsPrivate   bool
+	IsBare      bool
 	Created     time.Time `xorm:"created"`
 	Updated     time.Time `xorm:"updated"`
 }
@@ -139,7 +140,8 @@ func CreateRepository(user *User, repoName, desc, repoLang, license string, priv
 		Name:        repoName,
 		LowerName:   strings.ToLower(repoName),
 		Description: desc,
-		Private:     private,
+		IsPrivate:   private,
+		IsBare:      repoLang == "" && license == "" && !initReadme,
 	}
 
 	repoPath := RepoPath(user.Name, repoName)
