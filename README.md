@@ -42,8 +42,9 @@ There are two ways to install Gogs:
 
 ## Acknowledgments
 
-- Mail service is based on [WeTalk](https://github.com/beego/wetalk).
 - Logo is inspired by [martini](https://github.com/martini-contrib).
+- Mail service is based on [WeTalk](https://github.com/beego/wetalk).
+- System Monitor Status is based on [GoBlog](https://github.com/fuxiaohei/goblog).
 
 ## Contributors
 
