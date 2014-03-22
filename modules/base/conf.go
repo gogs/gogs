@@ -41,19 +41,19 @@ var (
 	Cfg         *goconfig.ConfigFile
 	MailService *Mailer
 
+	LogMode   string
+	LogConfig string
+
 	Cache        cache.Cache
 	CacheAdapter string
 	CacheConfig  string
 
-	PictureService  string
-	PictureRootPath string
-
-	LogMode   string
-	LogConfig string
-
 	SessionProvider string
 	SessionConfig   *session.Config
 	SessionManager  *session.Manager
+
+	PictureService  string
+	PictureRootPath string
 )
 
 var Service struct {
@@ -181,6 +181,10 @@ func newSessionService() {
 	SessionConfig.SessionLifeTime = Cfg.MustInt64("session", "SESSION_LIFE_TIME", 86400)
 	SessionConfig.SessionIDHashFunc = Cfg.MustValue("session", "SESSION_ID_HASHFUNC", "sha1")
 	SessionConfig.SessionIDHashKey = Cfg.MustValue("session", "SESSION_ID_HASHKEY")
+
+	if SessionProvider == "file" {
+		os.MkdirAll(path.Dir(SessionConfig.ProviderConfig), os.ModePerm)
+	}
 
 	var err error
 	SessionManager, err = session.NewManager(SessionProvider, *SessionConfig)
