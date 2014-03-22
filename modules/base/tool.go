@@ -111,6 +111,85 @@ const (
 	Year   = 12 * Month
 )
 
+func computeTimeDiff(diff int64) (int64, string) {
+	diffStr := ""
+	switch {
+	case diff <= 0:
+		diff = 0
+		diffStr = "now"
+	case diff < 2:
+		diff = 0
+		diffStr = "1 second"
+	case diff < 1*Minute:
+		diffStr = fmt.Sprintf("%d seconds", diff)
+		diff = 0
+
+	case diff < 2*Minute:
+		diff -= 1 * Minute
+		diffStr = "1 minute"
+	case diff < 1*Hour:
+		diffStr = fmt.Sprintf("%d minutes", diff/Minute)
+		diff -= diff / Minute * Minute
+
+	case diff < 2*Hour:
+		diff -= 1 * Hour
+		diffStr = "1 hour"
+	case diff < 1*Day:
+		diffStr = fmt.Sprintf("%d hours", diff/Hour)
+		diff -= diff / Hour * Hour
+
+	case diff < 2*Day:
+		diff -= 1 * Day
+		diffStr = "1 day"
+	case diff < 1*Week:
+		diffStr = fmt.Sprintf("%d days", diff/Day)
+		diff -= diff / Day * Day
+
+	case diff < 2*Week:
+		diff -= 1 * Week
+		diffStr = "1 week"
+	case diff < 1*Month:
+		diffStr = fmt.Sprintf("%d weeks", diff/Week)
+		diff -= diff / Week * Week
+
+	case diff < 2*Month:
+		diff -= 1 * Month
+		diffStr = "1 month"
+	case diff < 1*Year:
+		diffStr = fmt.Sprintf("%d months", diff/Month)
+		diff -= diff / Month * Month
+
+	case diff < 2*Year:
+		diff -= 1 * Year
+		diffStr = "1 year"
+	default:
+		diffStr = fmt.Sprintf("%d years", diff/Year)
+		diff = 0
+	}
+	return diff, diffStr
+}
+
+// TimeSincePro calculates the time interval and generate full user-friendly string.
+func TimeSincePro(then time.Time) string {
+	now := time.Now()
+	diff := now.Unix() - then.Unix()
+
+	if then.After(now) {
+		return "future"
+	}
+
+	var timeStr, diffStr string
+	for {
+		if diff == 0 {
+			break
+		}
+
+		diff, diffStr = computeTimeDiff(diff)
+		timeStr += ", " + diffStr
+	}
+	return strings.TrimPrefix(timeStr, ", ")
+}
+
 // TimeSince calculates the time interval and generate user-friendly string.
 func TimeSince(then time.Time) string {
 	now := time.Now()
@@ -123,7 +202,6 @@ func TimeSince(then time.Time) string {
 	}
 
 	switch {
-
 	case diff <= 0:
 		return "now"
 	case diff <= 2:
@@ -156,8 +234,10 @@ func TimeSince(then time.Time) string {
 	case diff < 1*Year:
 		return fmt.Sprintf("%d months %s", diff/Month, lbl)
 
-	case diff < 18*Month:
+	case diff < 2*Year:
 		return fmt.Sprintf("1 year %s", lbl)
+	default:
+		return fmt.Sprintf("%d years %s", diff/Year, lbl)
 	}
 	return then.String()
 }
