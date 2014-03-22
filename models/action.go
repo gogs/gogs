@@ -7,6 +7,8 @@ package models
 import (
 	"encoding/json"
 	"time"
+
+	"github.com/gogits/gogs/modules/log"
 )
 
 // Operation types of user action.
@@ -89,6 +91,8 @@ func CommitRepoAction(userId int64, userName string,
 	if err = UpdateRepository(repo); err != nil {
 		return err
 	}
+
+	log.Trace("action.CommitRepoAction: %d/%s", userId, repo.LowerName)
 	return nil
 }
 
@@ -102,6 +106,8 @@ func NewRepoAction(user *User, repo *Repository) error {
 		RepoId:      repo.Id,
 		RepoName:    repo.Name,
 	})
+
+	log.Trace("action.NewRepoAction: %s/%s", user.LowerName, repo.LowerName)
 	return err
 }
 
