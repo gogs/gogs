@@ -10,9 +10,9 @@ import (
 	"time"
 
 	"github.com/codegangsta/martini"
-	"github.com/martini-contrib/sessions"
 
 	"github.com/gogits/cache"
+	"github.com/gogits/session"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
@@ -27,7 +27,7 @@ type Context struct {
 	p        martini.Params
 	Req      *http.Request
 	Res      http.ResponseWriter
-	Session  sessions.Session
+	Session  session.SessionStore
 	Cache    cache.Cache
 	User     *models.User
 	IsSigned bool
@@ -92,21 +92,25 @@ func (ctx *Context) Handle(status int, title string, err error) {
 
 // InitContext initializes a classic context for a request.
 func InitContext() martini.Handler {
-	return func(res http.ResponseWriter, r *http.Request, c martini.Context,
-		session sessions.Session, rd *Render) {
+	return func(res http.ResponseWriter, r *http.Request, c martini.Context, rd *Render) {
 
 		ctx := &Context{
 			c: c,
 			// p:      p,
-			Req:     r,
-			Res:     res,
-			Session: session,
-			Cache:   base.Cache,
-			Render:  rd,
+			Req:    r,
+			Res:    res,
+			Cache:  base.Cache,
+			Render: rd,
 		}
 
+		// start session
+		ctx.Session = base.SessionManager.SessionStart(res, r)
+		defer func() {
+			ctx.Session.SessionRelease(res)
+		}()
+
 		// Get user from session if logined.
-		user := auth.SignedInUser(session)
+		user := auth.SignedInUser(ctx.Session)
 		ctx.User = user
 		ctx.IsSigned = user != nil
 

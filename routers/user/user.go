@@ -88,7 +88,7 @@ func SignIn(ctx *middleware.Context, form auth.LogInForm) {
 
 	user, err := models.LoginUserPlain(form.UserName, form.Password)
 	if err != nil {
-		if err.Error() == models.ErrUserNotExist.Error() {
+		if err == models.ErrUserNotExist {
 			ctx.RenderWithErr("Username or password is not correct", "user/signin", &form)
 			return
 		}

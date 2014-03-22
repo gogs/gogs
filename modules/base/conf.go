@@ -16,6 +16,7 @@ import (
 	"github.com/Unknwon/goconfig"
 
 	"github.com/gogits/cache"
+	"github.com/gogits/session"
 
 	"github.com/gogits/gogs/modules/log"
 )
@@ -49,6 +50,10 @@ var (
 
 	LogMode   string
 	LogConfig string
+
+	SessionProvider string
+	SessionConfig   *session.Config
+	SessionManager  *session.Manager
 )
 
 var Service struct {
@@ -164,6 +169,30 @@ func newCacheService() {
 	log.Info("Cache Service Enabled")
 }
 
+func newSessionService() {
+	SessionProvider = Cfg.MustValue("session", "PROVIDER", "memory")
+
+	SessionConfig = new(session.Config)
+	SessionConfig.ProviderConfig = Cfg.MustValue("session", "PROVIDER_CONFIG")
+	SessionConfig.CookieName = Cfg.MustValue("session", "COOKIE_NAME", "i_like_gogits")
+	SessionConfig.CookieSecure = Cfg.MustBool("session", "COOKIE_SECURE")
+	SessionConfig.EnableSetCookie = Cfg.MustBool("session", "ENABLE_SET_COOKIE", true)
+	SessionConfig.GcIntervalTime = Cfg.MustInt64("session", "GC_INTERVAL_TIME", 86400)
+	SessionConfig.SessionLifeTime = Cfg.MustInt64("session", "SESSION_LIFE_TIME", 86400)
+	SessionConfig.SessionIDHashFunc = Cfg.MustValue("session", "SESSION_ID_HASHFUNC", "sha1")
+	SessionConfig.SessionIDHashKey = Cfg.MustValue("session", "SESSION_ID_HASHKEY")
+
+	var err error
+	SessionManager, err = session.NewManager(SessionProvider, *SessionConfig)
+	if err != nil {
+		fmt.Printf("Init session system failed, provider: %s, %v\n",
+			SessionProvider, err)
+		os.Exit(2)
+	}
+
+	log.Info("Session Service Enabled")
+}
+
 func newMailService() {
 	// Check mailer setting.
 	if Cfg.MustBool("mailer", "ENABLED") {
@@ -234,6 +263,7 @@ func NewServices() {
 	newService()
 	newLogService()
 	newCacheService()
+	newSessionService()
 	newMailService()
 	newRegisterMailService()
 }
