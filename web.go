@@ -12,7 +12,6 @@ import (
 
 	"github.com/codegangsta/cli"
 	"github.com/codegangsta/martini"
-	"github.com/martini-contrib/sessions"
 
 	"github.com/gogits/binding"
 
@@ -80,10 +79,6 @@ func runWeb(*cli.Context) {
 
 	// Middlewares.
 	m.Use(middleware.Renderer(middleware.RenderOptions{Funcs: []template.FuncMap{base.TemplateFuncs}}))
-
-	// TODO: should use other store because cookie store is not secure.
-	store := sessions.NewCookieStore([]byte("secret123"))
-	m.Use(sessions.Sessions("my_session", store))
 
 	m.Use(middleware.InitContext())
 
