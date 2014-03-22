@@ -45,6 +45,7 @@
                 <div><b>Register Email Confirmation:</b> <i class="fa fa{{if .Service.RegisterEmailConfirm}}-check{{end}}-square-o"></i></div>
                 <div><b>Disenable Registeration:</b> <i class="fa fa{{if .Service.DisenableRegisteration}}-check{{end}}-square-o"></i></div>
                 <div><b>Require Sign In View:</b> <i class="fa fa{{if .Service.RequireSignInView}}-check{{end}}-square-o"></i></div>
+                <div><b>Enable Cache Avatar:</b> <i class="fa fa{{if .Service.EnableCacheAvatar}}-check{{end}}-square-o"></i></div>
                 <hr/>
                 <div><b>Active Code Lives:</b> {{.Service.ActiveCodeLives}} minutes</div>
                 <div><b>Reset Password Code Lives:</b> {{.Service.ResetPwdCodeLives}} minutes</div>
@@ -73,6 +74,17 @@
                 <div><b>Cache Adapter:</b> {{.CacheAdapter}}</div>
                 <div><b>Cache Config:</b></div>
                 <div style="padding-top: 5px;"><pre>{{.CacheConfig}}</pre></div>
+            </div>
+        </div>
+
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                Picture Configuration
+            </div>
+
+            <div class="panel-body">
+                <div><b>Picture Service:</b> {{.PictureService}}</div>
+                <div><b>Picture Root Path:</b> {{.PictureRootPath}}</div>
             </div>
         </div>
 

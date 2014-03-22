@@ -44,6 +44,9 @@ var (
 	CacheAdapter string
 	CacheConfig  string
 
+	PictureService  string
+	PictureRootPath string
+
 	LogMode   string
 	LogConfig string
 )
@@ -52,6 +55,7 @@ var Service struct {
 	RegisterEmailConfirm   bool
 	DisenableRegisteration bool
 	RequireSignInView      bool
+	EnableCacheAvatar      bool
 	ActiveCodeLives        int
 	ResetPwdCodeLives      int
 }
@@ -82,6 +86,7 @@ func newService() {
 	Service.ResetPwdCodeLives = Cfg.MustInt("service", "RESET_PASSWD_CODE_LIVE_MINUTES", 180)
 	Service.DisenableRegisteration = Cfg.MustBool("service", "DISENABLE_REGISTERATION", false)
 	Service.RequireSignInView = Cfg.MustBool("service", "REQUIRE_SIGNIN_VIEW", false)
+	Service.EnableCacheAvatar = Cfg.MustBool("service", "ENABLE_CACHE_AVATAR", false)
 }
 
 func newLogService() {
@@ -213,6 +218,9 @@ func NewConfigContext() {
 	Domain = Cfg.MustValue("server", "DOMAIN")
 	SecretKey = Cfg.MustValue("security", "SECRET_KEY")
 	RunUser = Cfg.MustValue("", "RUN_USER")
+
+	PictureService = Cfg.MustValue("picture", "SERVICE")
+	PictureRootPath = Cfg.MustValue("picture", "PATH")
 
 	// Determine and create root git reposiroty path.
 	RepoRootPath = Cfg.MustValue("repository", "ROOT")
