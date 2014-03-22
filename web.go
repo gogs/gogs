@@ -82,9 +82,10 @@ func runWeb(*cli.Context) {
 
 	m.Use(middleware.InitContext())
 
-	reqSignIn := middleware.SignInRequire(true)
-	ignSignIn := middleware.SignInRequire(base.Service.RequireSignInView)
-	reqSignOut := middleware.SignOutRequire()
+	reqSignIn := middleware.Toggle(&middleware.ToggleOptions{SignInRequire: true})
+	ignSignIn := middleware.Toggle(&middleware.ToggleOptions{SignInRequire: base.Service.RequireSignInView})
+	reqSignOut := middleware.Toggle(&middleware.ToggleOptions{SignOutRequire: true})
+
 	// Routers.
 	m.Get("/", ignSignIn, routers.Home)
 	m.Get("/issues", reqSignIn, user.Issues)
@@ -109,14 +110,15 @@ func runWeb(*cli.Context) {
 
 	m.Get("/help", routers.Help)
 
-	adminReq := middleware.AdminRequire()
-	m.Get("/admin", reqSignIn, adminReq, admin.Dashboard)
-	m.Get("/admin/users", reqSignIn, adminReq, admin.Users)
-	m.Any("/admin/users/new", reqSignIn, adminReq, binding.BindIgnErr(auth.RegisterForm{}), admin.NewUser)
-	m.Any("/admin/users/:userid", reqSignIn, adminReq, binding.BindIgnErr(auth.AdminEditUserForm{}), admin.EditUser)
-	m.Any("/admin/users/:userid/delete", reqSignIn, adminReq, admin.DeleteUser)
-	m.Get("/admin/repos", reqSignIn, adminReq, admin.Repositories)
-	m.Get("/admin/config", reqSignIn, adminReq, admin.Config)
+	adminReq := middleware.Toggle(&middleware.ToggleOptions{SignInRequire: true, AdminRequire: true})
+
+	m.Get("/admin", adminReq, admin.Dashboard)
+	m.Get("/admin/users", adminReq, admin.Users)
+	m.Any("/admin/users/new", adminReq, binding.BindIgnErr(auth.RegisterForm{}), admin.NewUser)
+	m.Any("/admin/users/:userid", adminReq, binding.BindIgnErr(auth.AdminEditUserForm{}), admin.EditUser)
+	m.Any("/admin/users/:userid/delete", adminReq, admin.DeleteUser)
+	m.Get("/admin/repos", adminReq, admin.Repositories)
+	m.Get("/admin/config", adminReq, admin.Config)
 
 	m.Post("/:username/:reponame/settings", reqSignIn, middleware.RepoAssignment(true), repo.SettingPost)
 	m.Get("/:username/:reponame/settings", reqSignIn, middleware.RepoAssignment(true), repo.Setting)

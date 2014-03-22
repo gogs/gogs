@@ -25,13 +25,17 @@ func EncodeMd5(str string) string {
 	return hex.EncodeToString(m.Sum(nil))
 }
 
-// Random generate string
-func GetRandomString(n int) string {
+// GetRandomString generate random string by specify chars.
+func GetRandomString(n int, alphabets ...byte) string {
 	const alphanum = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
 	var bytes = make([]byte, n)
 	rand.Read(bytes)
 	for i, b := range bytes {
-		bytes[i] = alphanum[b%byte(len(alphanum))]
+		if len(alphabets) == 0 {
+			bytes[i] = alphanum[b%byte(len(alphanum))]
+		} else {
+			bytes[i] = alphabets[b%byte(len(alphabets))]
+		}
 	}
 	return string(bytes)
 }
