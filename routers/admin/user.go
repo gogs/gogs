@@ -140,5 +140,5 @@ func DeleteUser(ctx *middleware.Context, params martini.Params) {
 	log.Trace("%s User deleted by admin(%s): %s", ctx.Req.RequestURI,
 		ctx.User.LowerName, ctx.User.LowerName)
 
-	ctx.Redirect("/admin/users", 302)
+	ctx.Redirect("/admin/users")
 }
