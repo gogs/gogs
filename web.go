@@ -91,53 +91,73 @@ func runWeb(*cli.Context) {
 	m.Get("/issues", reqSignIn, user.Issues)
 	m.Get("/pulls", reqSignIn, user.Pulls)
 	m.Get("/stars", reqSignIn, user.Stars)
-	m.Any("/user/login", reqSignOut, binding.BindIgnErr(auth.LogInForm{}), user.SignIn)
-	m.Any("/user/logout", reqSignIn, user.SignOut)
-	m.Any("/user/sign_up", reqSignOut, binding.BindIgnErr(auth.RegisterForm{}), user.SignUp)
-	m.Any("/user/delete", reqSignIn, user.Delete)
-	m.Get("/user/feeds", binding.Bind(auth.FeedsForm{}), user.Feeds)
-	m.Get("/user/activate", user.Activate)
+	m.Get("/help", routers.Help)
 
-	m.Any("/user/setting", reqSignIn, binding.BindIgnErr(auth.UpdateProfileForm{}), user.Setting)
-	m.Any("/user/setting/password", reqSignIn, binding.BindIgnErr(auth.UpdatePasswdForm{}), user.SettingPassword)
-	m.Any("/user/setting/ssh", reqSignIn, binding.BindIgnErr(auth.AddSSHKeyForm{}), user.SettingSSHKeys)
-	m.Any("/user/setting/notification", reqSignIn, user.SettingNotification)
-	m.Any("/user/setting/security", reqSignIn, user.SettingSecurity)
+	m.Group("/user", func(r martini.Router) {
+		r.Any("/login", binding.BindIgnErr(auth.LogInForm{}), user.SignIn)
+		r.Any("/sign_up", reqSignOut, binding.BindIgnErr(auth.RegisterForm{}), user.SignUp)
+	}, reqSignOut)
+	m.Group("/user", func(r martini.Router) {
+		r.Any("/logout", user.SignOut)
+		r.Any("/delete", user.Delete)
+		r.Any("/setting", binding.BindIgnErr(auth.UpdateProfileForm{}), user.Setting)
+	}, reqSignIn)
+	m.Group("/user", func(r martini.Router) {
+		r.Get("/feeds", binding.Bind(auth.FeedsForm{}), user.Feeds)
+		r.Get("/activate", user.Activate)
+	})
+
+	m.Group("/user/setting", func(r martini.Router) {
+		r.Any("/password", binding.BindIgnErr(auth.UpdatePasswdForm{}), user.SettingPassword)
+		r.Any("/ssh", binding.BindIgnErr(auth.AddSSHKeyForm{}), user.SettingSSHKeys)
+		r.Any("/notification", user.SettingNotification)
+		r.Any("/security", user.SettingSecurity)
+	}, reqSignIn)
 
 	m.Get("/user/:username", ignSignIn, user.Profile)
 
 	m.Any("/repo/create", reqSignIn, binding.BindIgnErr(auth.CreateRepoForm{}), repo.Create)
 
-	m.Get("/help", routers.Help)
-
 	adminReq := middleware.Toggle(&middleware.ToggleOptions{SignInRequire: true, AdminRequire: true})
 
 	m.Get("/admin", adminReq, admin.Dashboard)
-	m.Get("/admin/users", adminReq, admin.Users)
-	m.Any("/admin/users/new", adminReq, binding.BindIgnErr(auth.RegisterForm{}), admin.NewUser)
-	m.Any("/admin/users/:userid", adminReq, binding.BindIgnErr(auth.AdminEditUserForm{}), admin.EditUser)
-	m.Any("/admin/users/:userid/delete", adminReq, admin.DeleteUser)
-	m.Get("/admin/repos", adminReq, admin.Repositories)
-	m.Get("/admin/config", adminReq, admin.Config)
+	m.Group("/admin", func(r martini.Router) {
+		r.Get("/users", admin.Users)
+		r.Get("/repos", admin.Repositories)
+		r.Get("/config", admin.Config)
+	}, adminReq)
+	m.Group("/admin/users", func(r martini.Router) {
+		r.Any("/new", binding.BindIgnErr(auth.RegisterForm{}), admin.NewUser)
+		r.Any("/:userid", binding.BindIgnErr(auth.AdminEditUserForm{}), admin.EditUser)
+		r.Any("/:userid/delete", admin.DeleteUser)
+	}, adminReq)
 
-	m.Post("/:username/:reponame/settings", reqSignIn, middleware.RepoAssignment(true), repo.SettingPost)
-	m.Get("/:username/:reponame/settings", reqSignIn, middleware.RepoAssignment(true), repo.Setting)
+	m.Group("/:username/:reponame", func(r martini.Router) {
+		r.Post("/settings", repo.SettingPost)
+		r.Get("/settings", repo.Setting)
+		r.Get("/action/:action", repo.Action)
+	}, reqSignIn, middleware.RepoAssignment(true))
+	m.Group("/:username/:reponame", func(r martini.Router) {
+		r.Get("/commits/:branchname", repo.Commits)
+		r.Get("/issues", repo.Issues)
+		r.Any("/issues/new", binding.BindIgnErr(auth.CreateIssueForm{}), repo.CreateIssue)
+		r.Get("/issues/:issueid", repo.ViewIssue)
+		r.Get("/pulls", repo.Pulls)
+		r.Get("/branches", repo.Branches)
+		r.Get("/src/:branchname", repo.Single)
+		r.Get("/src/:branchname/**", repo.Single)
+		r.Get("/commits/:branchname", repo.Commits)
+		r.Get("/commits/:branchname", repo.Commits)
+	}, ignSignIn, middleware.RepoAssignment(true))
 
-	m.Get("/:username/:reponame/commits/:branchname", ignSignIn, middleware.RepoAssignment(true), repo.Commits)
-	m.Get("/:username/:reponame/issues", ignSignIn, middleware.RepoAssignment(true), repo.Issues)
-	m.Get("/:username/:reponame/pulls", ignSignIn, middleware.RepoAssignment(true), repo.Pulls)
-	m.Get("/:username/:reponame/branches", ignSignIn, middleware.RepoAssignment(true), repo.Branches)
-	m.Get("/:username/:reponame/action/:action", reqSignIn, middleware.RepoAssignment(true), repo.Action)
-	m.Get("/:username/:reponame/src/:branchname/**",
-		ignSignIn, middleware.RepoAssignment(true), repo.Single)
-	m.Get("/:username/:reponame/src/:branchname",
-		ignSignIn, middleware.RepoAssignment(true), repo.Single)
-	m.Get("/:username/:reponame/commit/:commitid/**", ignSignIn, middleware.RepoAssignment(true), repo.Single)
-	m.Get("/:username/:reponame/commit/:commitid", ignSignIn, middleware.RepoAssignment(true), repo.Single)
+	// TODO: implement single commit page
+	// m.Get("/:username/:reponame/commit/:commitid/**", ignSignIn, middleware.RepoAssignment(true), repo.Single)
+	// m.Get("/:username/:reponame/commit/:commitid", ignSignIn, middleware.RepoAssignment(true), repo.Single)
 
-	m.Get("/:username/:reponame", ignSignIn, middleware.RepoAssignment(true), repo.Single)
-
-	m.Any("/:username/:reponame/**", ignSignIn, repo.Http)
+	m.Group("/:username", func(r martini.Router) {
+		r.Get("/:reponame", middleware.RepoAssignment(true), repo.Single)
+		r.Any("/:reponame/**", repo.Http)
+	}, ignSignIn)
 
 	if martini.Env == martini.Dev {
 		m.Get("/template/**", dev.TemplatePreview)

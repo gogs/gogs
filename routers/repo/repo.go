@@ -31,6 +31,11 @@ func Create(ctx *middleware.Context, form auth.CreateRepoForm) {
 		return
 	}
 
+	if ctx.HasError() {
+		ctx.HTML(200, "repo/create")
+		return
+	}
+
 	_, err := models.CreateRepository(ctx.User, form.RepoName, form.Description,
 		form.Language, form.License, form.Visibility == "private", form.InitReadme == "on")
 	if err == nil {

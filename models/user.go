@@ -201,6 +201,13 @@ func VerifyUserActiveCode(code string) (user *User) {
 
 // UpdateUser updates user's information.
 func UpdateUser(user *User) (err error) {
+	if len(user.Location) > 255 {
+		user.Location = user.Location[:255]
+	}
+	if len(user.Website) > 255 {
+		user.Website = user.Website[:255]
+	}
+
 	_, err = orm.Id(user.Id).UseBool().Cols("website", "location").Update(user)
 	return err
 }
