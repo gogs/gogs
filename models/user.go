@@ -279,9 +279,7 @@ func GetUserByName(name string) (*User, error) {
 	if len(name) == 0 {
 		return nil, ErrUserNotExist
 	}
-	user := &User{
-		LowerName: strings.ToLower(name),
-	}
+	user := &User{LowerName: strings.ToLower(name)}
 	has, err := orm.Get(user)
 	if err != nil {
 		return nil, err

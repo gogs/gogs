@@ -79,6 +79,16 @@ func CommitRepoAction(userId int64, userName string,
 		})
 		return err
 	}
+
+	// Update repository last update time.
+	repo, err := GetRepositoryByName(userId, repoName)
+	if err != nil {
+		return err
+	}
+	repo.Updated = time.Now()
+	if err = UpdateRepository(repo); err != nil {
+		return err
+	}
 	return nil
 }
 
