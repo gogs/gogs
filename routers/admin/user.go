@@ -107,3 +107,38 @@ func EditUser(ctx *middleware.Context, params martini.Params, form auth.AdminEdi
 	log.Trace("%s User profile updated by admin(%s): %s", ctx.Req.RequestURI,
 		ctx.User.LowerName, ctx.User.LowerName)
 }
+
+func DeleteUser(ctx *middleware.Context, params martini.Params) {
+	ctx.Data["Title"] = "Edit Account"
+	ctx.Data["PageIsUsers"] = true
+
+	uid, err := base.StrTo(params["userid"]).Int()
+	if err != nil {
+		ctx.Handle(200, "admin.user.EditUser", err)
+		return
+	}
+
+	u, err := models.GetUserById(int64(uid))
+	if err != nil {
+		ctx.Handle(200, "admin.user.EditUser", err)
+		return
+	}
+
+	if err = models.DeleteUser(u); err != nil {
+		ctx.Data["HasError"] = true
+		switch err {
+		case models.ErrUserOwnRepos:
+			ctx.Data["ErrorMsg"] = "This account still has ownership of repository, owner has to delete or transfer them first."
+			ctx.Data["User"] = u
+			ctx.HTML(200, "admin/users/edit")
+		default:
+			ctx.Handle(200, "admin.user.DeleteUser", err)
+		}
+		return
+	}
+
+	log.Trace("%s User deleted by admin(%s): %s", ctx.Req.RequestURI,
+		ctx.User.LowerName, ctx.User.LowerName)
+
+	ctx.Redirect("/admin/users", 302)
+}
