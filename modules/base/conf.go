@@ -143,6 +143,10 @@ func newLogService() {
 			Cfg.MustValue(modeSec, "HOST", "127.0.0.1:25"),
 			Cfg.MustValue(modeSec, "RECEIVERS", "[]"),
 			Cfg.MustValue(modeSec, "SUBJECT", "Diagnostic message from serve"))
+	case "database":
+		LogConfig = fmt.Sprintf(`{"level":%s,"driver":%s,"conn":%s}`, level,
+			Cfg.MustValue(modeSec, "Driver"),
+			Cfg.MustValue(modeSec, "CONN"))
 	}
 
 	log.NewLogger(Cfg.MustInt64("log", "BUFFER_LEN", 10000), LogMode, LogConfig)

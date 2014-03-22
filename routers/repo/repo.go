@@ -40,7 +40,7 @@ func Create(ctx *middleware.Context, form auth.CreateRepoForm) {
 		form.Language, form.License, form.Visibility == "private", form.InitReadme == "on")
 	if err == nil {
 		log.Trace("%s Repository created: %s/%s", ctx.Req.RequestURI, ctx.User.LowerName, form.RepoName)
-		ctx.Redirect("/"+ctx.User.Name+"/"+form.RepoName, 302)
+		ctx.Redirect("/" + ctx.User.Name + "/" + form.RepoName)
 		return
 	} else if err == models.ErrRepoAlreadyExist {
 		ctx.RenderWithErr("Repository name has already been used", "repo/create", &form)
@@ -73,7 +73,7 @@ func SettingPost(ctx *middleware.Context) {
 	}
 
 	log.Trace("%s Repository deleted: %s/%s", ctx.Req.RequestURI, ctx.User.LowerName, ctx.Repo.Repository.LowerName)
-	ctx.Redirect("/", 302)
+	ctx.Redirect("/")
 }
 
 func Branches(ctx *middleware.Context, params martini.Params) {
@@ -113,8 +113,8 @@ func Single(ctx *middleware.Context, params martini.Params) {
 	treename := params["_1"]
 
 	if len(treename) > 0 && treename[len(treename)-1] == '/' {
-		ctx.Redirect("/"+ctx.Repo.Owner.LowerName+"/"+
-			ctx.Repo.Repository.Name+"/src/"+params["branchname"]+"/"+treename[:len(treename)-1], 302)
+		ctx.Redirect("/" + ctx.Repo.Owner.LowerName + "/" +
+			ctx.Repo.Repository.Name + "/src/" + params["branchname"] + "/" + treename[:len(treename)-1])
 		return
 	}
 

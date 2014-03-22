@@ -5,6 +5,8 @@
 package middleware
 
 import (
+	"net/url"
+
 	"github.com/codegangsta/martini"
 
 	"github.com/gogits/gogs/modules/base"
@@ -35,6 +37,7 @@ func Toggle(options *ToggleOptions) martini.Handler {
 
 		if options.SignInRequire {
 			if !ctx.IsSigned {
+				ctx.SetCookie("redirect_to", "/"+url.QueryEscape(ctx.Req.RequestURI))
 				ctx.Redirect("/user/login")
 				return
 			} else if !ctx.User.IsActive && base.Service.RegisterEmailConfirm {

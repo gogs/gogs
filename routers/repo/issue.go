@@ -56,7 +56,7 @@ func CreateIssue(ctx *middleware.Context, params martini.Params, form auth.Creat
 		form.IssueName, form.Labels, form.Content, false)
 	if err == nil {
 		log.Trace("%s Issue created: %d", form.RepoId, issue.Id)
-		ctx.Redirect(fmt.Sprintf("/%s/%s/issues/%d", params["username"], params["reponame"], issue.Index), 302)
+		ctx.Redirect(fmt.Sprintf("/%s/%s/issues/%d", params["username"], params["reponame"], issue.Index))
 		return
 	}
 	ctx.Handle(200, "issue.CreateIssue", err)

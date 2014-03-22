@@ -6,6 +6,7 @@ package user
 
 import (
 	"fmt"
+	"net/url"
 	"strings"
 
 	"github.com/codegangsta/martini"
@@ -109,7 +110,13 @@ func SignIn(ctx *middleware.Context, form auth.LogInForm) {
 		isSucceed = true
 		ctx.Session.Set("userId", user.Id)
 		ctx.Session.Set("userName", user.Name)
-		ctx.Redirect("/")
+		redirectTo, _ := url.QueryUnescape(ctx.GetCookie("redirect_to"))
+		if len(redirectTo) > 0 {
+			ctx.SetCookie("redirect_to", "", -1)
+			ctx.Redirect(redirectTo)
+		} else {
+			ctx.Redirect("/")
+		}
 		return
 	}
 
@@ -139,12 +146,20 @@ func SignIn(ctx *middleware.Context, form auth.LogInForm) {
 
 	ctx.Session.Set("userId", user.Id)
 	ctx.Session.Set("userName", user.Name)
-	ctx.Redirect("/")
+	redirectTo, _ := url.QueryUnescape(ctx.GetCookie("redirect_to"))
+	if len(redirectTo) > 0 {
+		ctx.SetCookie("redirect_to", "", -1)
+		ctx.Redirect(redirectTo)
+	} else {
+		ctx.Redirect("/")
+	}
 }
 
 func SignOut(ctx *middleware.Context) {
 	ctx.Session.Delete("userId")
 	ctx.Session.Delete("userName")
+	ctx.SetCookie(base.CookieUserName, "", -1)
+	ctx.SetCookie(base.CookieRememberName, "", -1)
 	ctx.Redirect("/")
 }
 
@@ -314,7 +329,7 @@ func Activate(ctx *middleware.Context) {
 
 		ctx.Session.Set("userId", user.Id)
 		ctx.Session.Set("userName", user.Name)
-		ctx.Redirect("/", 302)
+		ctx.Redirect("/")
 		return
 	}
 
