@@ -10,39 +10,45 @@ import (
 	"github.com/gogits/gogs/modules/base"
 )
 
-// SignInRequire requires user to sign in.
-func SignInRequire(redirect bool) martini.Handler {
-	return func(ctx *Context) {
-		if !ctx.IsSigned {
-			if redirect {
-				ctx.Redirect("/user/login")
-			}
-			return
-		} else if !ctx.User.IsActive && base.Service.RegisterEmailConfirm {
-			ctx.Data["Title"] = "Activate Your Account"
-			ctx.HTML(200, "user/active")
-			return
-		}
-	}
+type ToggleOptions struct {
+	SignInRequire  bool
+	SignOutRequire bool
+	AdminRequire   bool
+	DisableCsrf    bool
 }
 
-// SignOutRequire requires user to sign out.
-func SignOutRequire() martini.Handler {
+func Toggle(options *ToggleOptions) martini.Handler {
 	return func(ctx *Context) {
-		if ctx.IsSigned {
+		if options.SignOutRequire && ctx.IsSigned {
 			ctx.Redirect("/")
 			return
 		}
-	}
-}
 
-// AdminRequire requires user signed in as administor.
-func AdminRequire() martini.Handler {
-	return func(ctx *Context) {
-		if !ctx.User.IsAdmin {
-			ctx.Error(403)
-			return
+		if !options.DisableCsrf {
+			if ctx.Req.Method == "POST" {
+				if !ctx.CsrfTokenValid() {
+					ctx.Error(403, "CSRF token does not match")
+					return
+				}
+			}
 		}
-		ctx.Data["PageIsAdmin"] = true
+
+		if options.SignInRequire {
+			if !ctx.IsSigned {
+				ctx.Redirect("/user/login")
+				return
+			} else if !ctx.User.IsActive && base.Service.RegisterEmailConfirm {
+				ctx.Data["Title"] = "Activate Your Account"
+				ctx.HTML(200, "user/active")
+				return
+			}
+		}
+
+		if options.AdminRequire {
+			if !ctx.User.IsAdmin {
+				ctx.Error(403)
+				return
+			}
+		}
 	}
 }

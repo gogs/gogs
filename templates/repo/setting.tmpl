@@ -40,6 +40,7 @@
                 <div class="modal fade" id="delete-repository-modal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
                     <div class="modal-dialog">
                         <form action="/{{.Owner.Name}}/{{.Repository.Name}}/settings" method="post" class="modal-content">
+                            {{.CsrfTokenHtml}}
                             <input type="hidden" name="action" value="delete">
 
                             <div class="modal-header">

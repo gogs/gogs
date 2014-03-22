@@ -11,6 +11,7 @@
             <div class="panel-body">
             	<br/>
 				<form action="/admin/users/new" method="post" class="form-horizontal">
+					{{.CsrfTokenHtml}}
 				    <div class="alert alert-danger form-error{{if .HasError}}{{else}} hidden{{end}}">{{.ErrorMsg}}</div>
 					<div class="form-group {{if .Err_UserName}}has-error has-feedback{{end}}">
 						<label class="col-md-3 control-label">Username: </label>

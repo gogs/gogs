@@ -242,8 +242,11 @@ func (r *Render) HTMLString(name string, binding interface{}, htmlOpt ...HTMLOpt
 	}
 }
 
-func (r *Render) Error(status int) {
+func (r *Render) Error(status int, message ...string) {
 	r.WriteHeader(status)
+	if len(message) > 0 {
+		r.Write([]byte(message[0]))
+	}
 }
 
 func (r *Render) Redirect(location string, status ...int) {
