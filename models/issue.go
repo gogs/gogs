@@ -5,10 +5,15 @@
 package models
 
 import (
+	"errors"
 	"strings"
 	"time"
 
 	"github.com/gogits/gogs/modules/base"
+)
+
+var (
+	ErrIssueNotExist = errors.New("Issue does not exist")
 )
 
 // Issue represents an issue or pull request of repository.
@@ -22,22 +27,25 @@ type Issue struct {
 	AssigneeId  int64
 	IsPull      bool // Indicates whether is a pull request or not.
 	IsClosed    bool
-	Labels      string
-	Mentions    string
-	Content     string
+	Labels      string `xorm:"TEXT"`
+	Mentions    string `xorm:"TEXT"`
+	Content     string `xorm:"TEXT"`
 	NumComments int
 	Created     time.Time `xorm:"created"`
 	Updated     time.Time `xorm:"updated"`
 }
 
 // CreateIssue creates new issue for repository.
-func CreateIssue(userId, repoId, milestoneId, assigneeId int64, name, labels, mentions, content string, isPull bool) error {
+func CreateIssue(userId, repoId, milestoneId, assigneeId int64, name, labels, content string, isPull bool) (*Issue, error) {
 	count, err := GetIssueCount(repoId)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	_, err = orm.Insert(&Issue{
+	// TODO: find out mentions
+	mentions := ""
+
+	issue := &Issue{
 		Index:       count + 1,
 		Name:        name,
 		RepoId:      repoId,
@@ -48,8 +56,9 @@ func CreateIssue(userId, repoId, milestoneId, assigneeId int64, name, labels, me
 		Labels:      labels,
 		Mentions:    mentions,
 		Content:     content,
-	})
-	return err
+	}
+	_, err = orm.Insert(issue)
+	return issue, err
 }
 
 // GetIssueCount returns count of issues in the repository.
@@ -57,9 +66,28 @@ func GetIssueCount(repoId int64) (int64, error) {
 	return orm.Count(&Issue{RepoId: repoId})
 }
 
+// GetIssueById returns issue object by given id.
+func GetIssueById(id int64) (*Issue, error) {
+	issue := new(Issue)
+	has, err := orm.Id(id).Get(issue)
+	if err != nil {
+		return nil, err
+	} else if !has {
+		return nil, ErrIssueNotExist
+	}
+	return issue, nil
+}
+
 // GetIssues returns a list of issues by given conditions.
 func GetIssues(userId, repoId, posterId, milestoneId int64, page int, isClosed, isMention bool, labels, sortType string) ([]Issue, error) {
-	sess := orm.Limit(20, (page-1)*20).Where("repo_id=?", repoId).And("is_closed=?", isClosed)
+	sess := orm.Limit(20, (page-1)*20)
+
+	if repoId > 0 {
+		sess = sess.Where("repo_id=?", repoId).And("is_closed=?", isClosed)
+	} else {
+		sess = sess.Where("is_closed=?", isClosed)
+	}
+
 	if userId > 0 {
 		sess = sess.And("assignee_id=?", userId)
 	} else if posterId > 0 {

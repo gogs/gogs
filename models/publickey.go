@@ -80,7 +80,7 @@ type PublicKey struct {
 	OwnerId     int64  `xorm:"index"`
 	Name        string `xorm:"unique not null"`
 	Fingerprint string
-	Content     string    `xorm:"text not null"`
+	Content     string    `xorm:"TEXT not null"`
 	Created     time.Time `xorm:"created"`
 	Updated     time.Time `xorm:"updated"`
 }

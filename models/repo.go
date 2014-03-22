@@ -372,6 +372,13 @@ func RepoPath(userName, repoName string) string {
 }
 
 func UpdateRepository(repo *Repository) error {
+	if len(repo.Description) > 255 {
+		repo.Description = repo.Description[:255]
+	}
+	if len(repo.Website) > 255 {
+		repo.Website = repo.Website[:255]
+	}
+
 	_, err := orm.Id(repo.Id).UseBool().Cols("description", "website").Update(repo)
 	return err
 }
