@@ -20,6 +20,17 @@
         </div>
 
         <div class="form-group">
+            <div class="col-md-6 col-md-offset-4">
+                <div class="checkbox">
+                    <label>
+                        <input type="checkbox" name="remember" {{if .remember}}checked{{end}}>
+                        <strong>Remember me</strong>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-group">
             <div class="col-md-offset-4 col-md-6">
                 <button type="submit" class="btn btn-lg btn-primary">Log In</button>
                 <a href="/forget-password/">Forgot your password?</a>
