@@ -88,7 +88,6 @@ func CommitRepoAction(userId int64, userName string,
 		return err
 	}
 	repo.IsBare = false
-	repo.Updated = time.Now()
 	if err = UpdateRepository(repo); err != nil {
 		return err
 	}
