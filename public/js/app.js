@@ -2,6 +2,39 @@ var Gogits = {
     "PageIsSignup": false
 };
 
+(function($){
+    // extend jQuery ajax, set csrf token value
+    var ajax = $.ajax;
+    $.extend({
+        ajax: function(url, options) {
+            if (typeof url === 'object') {
+                options = url;
+                url = undefined;
+            }
+            options = options || {};
+            url = options.url;
+            var csrftoken = $('meta[name=_csrf]').attr('content');
+            var headers = options.headers || {};
+            var domain = document.domain.replace(/\./ig, '\\.');
+            if (!/^(http:|https:).*/.test(url) || eval('/^(http:|https:)\\/\\/(.+\\.)*' + domain + '.*/').test(url)) {
+                headers = $.extend(headers, {'X-Csrf-Token':csrftoken});
+            }
+            options.headers = headers;
+            var callback = options.success;
+            options.success = function(data){
+                if(data.once){
+                    // change all _once value if ajax data.once exist
+                    $('[name=_once]').val(data.once);
+                }
+                if(callback){
+                    callback.apply(this, arguments);
+                }
+            };
+            return ajax(url, options);
+        }
+    });
+}(jQuery));
+
 (function ($) {
 
     Gogits.showTab = function (selector, index) {

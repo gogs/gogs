@@ -6,6 +6,7 @@ package middleware
 
 import (
 	"fmt"
+	"html/template"
 	"net/http"
 	"time"
 
@@ -31,6 +32,8 @@ type Context struct {
 	Cache    cache.Cache
 	User     *models.User
 	IsSigned bool
+
+	csrfToken string
 
 	Repo struct {
 		IsValid    bool
@@ -90,6 +93,95 @@ func (ctx *Context) Handle(status int, title string, err error) {
 	ctx.HTML(status, fmt.Sprintf("status/%d", status))
 }
 
+func (ctx *Context) GetCookie(name string) string {
+	cookie, err := ctx.Req.Cookie(name)
+	if err != nil {
+		return ""
+	}
+	return cookie.Value
+}
+
+func (ctx *Context) SetCookie(name string, value string, others ...interface{}) {
+	cookie := http.Cookie{}
+	cookie.Name = name
+	cookie.Value = value
+
+	if len(others) > 0 {
+		switch v := others[0].(type) {
+		case int:
+			cookie.MaxAge = v
+		case int64:
+			cookie.MaxAge = int(v)
+		case int32:
+			cookie.MaxAge = int(v)
+		}
+	}
+
+	// default "/"
+	if len(others) > 1 {
+		if v, ok := others[1].(string); ok && len(v) > 0 {
+			cookie.Path = v
+		}
+	} else {
+		cookie.Path = "/"
+	}
+
+	// default empty
+	if len(others) > 2 {
+		if v, ok := others[2].(string); ok && len(v) > 0 {
+			cookie.Domain = v
+		}
+	}
+
+	// default empty
+	if len(others) > 3 {
+		switch v := others[3].(type) {
+		case bool:
+			cookie.Secure = v
+		default:
+			if others[3] != nil {
+				cookie.Secure = true
+			}
+		}
+	}
+
+	// default false. for session cookie default true
+	if len(others) > 4 {
+		if v, ok := others[4].(bool); ok && v {
+			cookie.HttpOnly = true
+		}
+	}
+
+	ctx.Res.Header().Add("Set-Cookie", cookie.String())
+}
+
+func (ctx *Context) CsrfToken() string {
+	if len(ctx.csrfToken) > 0 {
+		return ctx.csrfToken
+	}
+
+	token := ctx.GetCookie("_csrf")
+	if len(token) == 0 {
+		token = base.GetRandomString(30)
+		ctx.SetCookie("_csrf", token)
+	}
+	ctx.csrfToken = token
+	return token
+}
+
+func (ctx *Context) CsrfTokenValid() bool {
+	token := ctx.Query("_csrf")
+	if token == "" {
+		token = ctx.Req.Header.Get("X-Csrf-Token")
+	}
+	if token == "" {
+		return false
+	} else if ctx.csrfToken != token {
+		return false
+	}
+	return true
+}
+
 // InitContext initializes a classic context for a request.
 func InitContext() martini.Handler {
 	return func(res http.ResponseWriter, r *http.Request, c martini.Context, rd *Render) {
@@ -103,11 +195,14 @@ func InitContext() martini.Handler {
 			Render: rd,
 		}
 
+		ctx.Data["PageStartTime"] = time.Now()
+
 		// start session
 		ctx.Session = base.SessionManager.SessionStart(res, r)
-		defer func() {
+		rw := res.(martini.ResponseWriter)
+		rw.Before(func(martini.ResponseWriter) {
 			ctx.Session.SessionRelease(res)
-		}()
+		})
 
 		// Get user from session if logined.
 		user := auth.SignedInUser(ctx.Session)
@@ -121,9 +216,15 @@ func InitContext() martini.Handler {
 			ctx.Data["SignedUserId"] = user.Id
 			ctx.Data["SignedUserName"] = user.LowerName
 			ctx.Data["IsAdmin"] = ctx.User.IsAdmin
+
+			if ctx.User.IsAdmin {
+				ctx.Data["PageIsAdmin"] = true
+			}
 		}
 
-		ctx.Data["PageStartTime"] = time.Now()
+		// get or create csrf token
+		ctx.Data["CsrfToken"] = ctx.CsrfToken()
+		ctx.Data["CsrfTokenHtml"] = template.HTML(`<input type="hidden" name="_csrf" value="` + ctx.csrfToken + `">`)
 
 		c.Map(ctx)
 
