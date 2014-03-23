@@ -1,4 +1,4 @@
-// Copyright 2013 gopm authors.
+// Copyright 2013-2014 gopm authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License"): you may
 // not use this file except in compliance with the License. You may obtain
@@ -245,7 +245,11 @@ metaScan:
 }
 
 func getImports(rootPath string, match map[string]string, cmdFlags map[string]bool, nod *Node) (imports []string) {
-	dirs := GetDirsInfo(rootPath)
+	dirs, err := GetDirsInfo(rootPath)
+	if err != nil {
+		log.Error("", "Fail to get directory's information")
+		log.Fatal("", err.Error())
+	}
 
 	for _, d := range dirs {
 		if d.IsDir() && !(!cmdFlags["-e"] && strings.Contains(d.Name(), "example")) {

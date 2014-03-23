@@ -1,4 +1,4 @@
-// Copyright 2013 gopm authors.
+// Copyright 2013-2014 gopm authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License"): you may
 // not use this file except in compliance with the License. You may obtain
@@ -15,11 +15,16 @@
 package doc
 
 import (
+	"bytes"
 	"go/build"
+	"io"
+	"io/ioutil"
 	"os"
 	"path"
+	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/Unknwon/com"
 
@@ -29,35 +34,111 @@ import (
 const VENDOR = ".vendor"
 
 // GetDirsInfo returns os.FileInfo of all sub-directories in root path.
-func GetDirsInfo(rootPath string) []os.FileInfo {
+func GetDirsInfo(rootPath string) ([]os.FileInfo, error) {
+	if !com.IsDir(rootPath) {
+		log.Warn("Directory %s does not exist", rootPath)
+		return []os.FileInfo{}, nil
+	}
+
 	rootDir, err := os.Open(rootPath)
 	if err != nil {
-		log.Error("", "Fail to open directory")
-		log.Fatal("", err.Error())
+		return nil, err
 	}
 	defer rootDir.Close()
 
 	dirs, err := rootDir.Readdir(0)
 	if err != nil {
-		log.Error("", "Fail to read directory")
-		log.Fatal("", err.Error())
+		return nil, err
 	}
 
-	return dirs
+	return dirs, nil
+}
+
+// A Source describles a Source code file.
+type Source struct {
+	SrcName string
+	SrcData []byte
+}
+
+func (s *Source) Name() string       { return s.SrcName }
+func (s *Source) Size() int64        { return int64(len(s.SrcData)) }
+func (s *Source) Mode() os.FileMode  { return 0 }
+func (s *Source) ModTime() time.Time { return time.Time{} }
+func (s *Source) IsDir() bool        { return false }
+func (s *Source) Sys() interface{}   { return nil }
+func (s *Source) Data() []byte       { return s.SrcData }
+
+type Context struct {
+	build.Context
+	importPath string
+	srcFiles   map[string]*Source
+}
+
+func (ctx *Context) readDir(dir string) ([]os.FileInfo, error) {
+	fis := make([]os.FileInfo, 0, len(ctx.srcFiles))
+	for _, src := range ctx.srcFiles {
+		fis = append(fis, src)
+	}
+	return fis, nil
+}
+
+func (ctx *Context) openFile(path string) (r io.ReadCloser, err error) {
+	if src, ok := ctx.srcFiles[filepath.Base(path)]; ok {
+		return ioutil.NopCloser(bytes.NewReader(src.Data())), nil
+	}
+	return nil, os.ErrNotExist
 }
 
 // GetImports returns package denpendencies.
-func GetImports(absPath, importPath string, example bool) []string {
-	pkg, err := build.ImportDir(absPath, build.AllowBinary)
+func GetImports(absPath, importPath string, example, test bool) []string {
+	fis, err := GetDirsInfo(absPath)
+	if err != nil {
+		log.Error("", "Fail to get directory's information")
+		log.Fatal("", err.Error())
+	}
+	absPath += "/"
+
+	ctx := new(Context)
+	ctx.importPath = importPath
+	ctx.srcFiles = make(map[string]*Source)
+	ctx.Context = build.Default
+	ctx.JoinPath = path.Join
+	ctx.IsAbsPath = path.IsAbs
+	ctx.ReadDir = ctx.readDir
+	ctx.OpenFile = ctx.openFile
+
+	// TODO: Load too much, need to make sure which is imported which are not.
+	dirs := make([]string, 0, 10)
+	for _, fi := range fis {
+		if strings.Contains(fi.Name(), VENDOR) {
+			continue
+		}
+
+		if fi.IsDir() {
+			dirs = append(dirs, absPath+fi.Name())
+			continue
+		} else if !test && strings.HasSuffix(fi.Name(), "_test.go") {
+			continue
+		} else if !strings.HasSuffix(fi.Name(), ".go") || strings.HasPrefix(fi.Name(), ".") ||
+			strings.HasPrefix(fi.Name(), "_") {
+			continue
+		}
+		src := &Source{SrcName: fi.Name()}
+		src.SrcData, err = ioutil.ReadFile(absPath + fi.Name())
+		if err != nil {
+			log.Error("", "Fail to read file")
+			log.Fatal("", err.Error())
+		}
+		ctx.srcFiles[fi.Name()] = src
+	}
+
+	pkg, err := ctx.ImportDir(absPath, build.AllowBinary)
 	if err != nil {
 		if _, ok := err.(*build.NoGoError); !ok {
 			log.Error("", "Fail to get imports")
 			log.Fatal("", err.Error())
 		}
 	}
-
-	fis := GetDirsInfo(absPath)
-	absPath += "/"
 
 	imports := make([]string, 0, len(pkg.Imports))
 	for _, p := range pkg.Imports {
@@ -66,31 +147,25 @@ func GetImports(absPath, importPath string, example bool) []string {
 		}
 	}
 
-	// TODO: Load too much
-	dirs := make([]string, 0, len(imports))
-	for _, fi := range fis {
-		if fi.IsDir() && !strings.Contains(fi.Name(), VENDOR) {
-			dirs = append(dirs, absPath+fi.Name())
-		}
-	}
-
 	if len(dirs) > 0 {
-		imports = append(imports, GetAllImports(dirs, importPath, example)...)
+		imports = append(imports, GetAllImports(dirs, importPath, example, test)...)
 	}
 	return imports
 }
 
+// isVcsPath returns true if the directory was created by VCS.
 func isVcsPath(dirPath string) bool {
 	return strings.Contains(dirPath, "/.git") ||
 		strings.Contains(dirPath, "/.hg") ||
 		strings.Contains(dirPath, "/.svn")
 }
 
-func GetAllImports(dirs []string, importPath string, example bool) (imports []string) {
+// GetAllImports returns all imports in given directory and all sub-directories.
+func GetAllImports(dirs []string, importPath string, example, test bool) (imports []string) {
 	for _, d := range dirs {
 		if !isVcsPath(d) &&
 			!(!example && strings.Contains(d, "example")) {
-			imports = append(imports, GetImports(d, importPath, example)...)
+			imports = append(imports, GetImports(d, importPath, example, test)...)
 		}
 	}
 	return imports
@@ -116,7 +191,11 @@ func CheckIsExistWithVCS(path string) bool {
 	}
 
 	// Check if only has VCS folder.
-	dirs := GetDirsInfo(path)
+	dirs, err := GetDirsInfo(path)
+	if err != nil {
+		log.Error("", "Fail to get directory's information")
+		log.Fatal("", err.Error())
+	}
 
 	if len(dirs) > 1 {
 		return true

@@ -106,8 +106,11 @@ func runGet(ctx *cli.Context) {
 	switch len(ctx.Args()) {
 	case 0:
 		getByGopmfile(ctx)
-	default:
+	case 1:
 		getByPath(ctx)
+	default:
+		log.Error("get", "too many arguments")
+		log.Help("Try 'gopm help get' to get more information")
 	}
 }
 
@@ -120,10 +123,11 @@ func getByGopmfile(ctx *cli.Context) {
 
 	targetPath := parseTarget(gf.MustValue("target", "path"))
 	// Get dependencies.
-	imports := doc.GetAllImports([]string{workDir}, targetPath, ctx.Bool("example"))
+	imports := doc.GetAllImports([]string{workDir}, targetPath, ctx.Bool("example"), false)
 
 	nodes := make([]*doc.Node, 0, len(imports))
 	for _, p := range imports {
+		// TODO: DOING TEST CASES!!!
 		p = doc.GetProjectPath(p)
 		// Skip subpackage(s) of current project.
 		if isSubpackage(p, targetPath) {
@@ -312,12 +316,12 @@ func downloadPackage(ctx *cli.Context, nod *doc.Node) (*doc.Node, []string) {
 	vcs := getVcsName(gopathDir)
 	if ctx.Bool("update") && ctx.Bool("gopath") && len(vcs) > 0 {
 		err = updateByVcs(vcs, gopathDir)
-		imports = doc.GetAllImports([]string{gopathDir}, nod.RootPath, false)
+		imports = doc.GetAllImports([]string{gopathDir}, nod.RootPath, false, false)
 	} else {
 		// If package has revision and exist, then just check dependencies.
 		if nod.IsGetDepsOnly {
 			return nod, doc.GetAllImports([]string{path.Join(installRepoPath, nod.RootPath) + versionSuffix(nod.Value)},
-				nod.RootPath, ctx.Bool("example"))
+				nod.RootPath, ctx.Bool("example"), false)
 		}
 		nod.Revision = doc.LocalNodes.MustValue(nod.RootPath, "value")
 		imports, err = doc.PureDownload(nod, installRepoPath, ctx) //CmdGet.Flags)

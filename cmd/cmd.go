@@ -83,5 +83,6 @@ func versionSuffix(value string) string {
 }
 
 func isSubpackage(rootPath, targetPath string) bool {
-	return strings.HasSuffix(workDir, rootPath) || strings.HasPrefix(rootPath, targetPath)
+	return strings.HasSuffix(strings.Replace(workDir, "\\", "/", -1), rootPath) ||
+		strings.HasPrefix(rootPath, targetPath)
 }

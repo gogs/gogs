@@ -1,3 +1,17 @@
+// Copyright 2013-2014 gopm authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License"): you may
+// not use this file except in compliance with the License. You may obtain
+// a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+// WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+// License for the specific language governing permissions and limitations
+// under the License.
+
 package cmd
 
 import (
@@ -35,7 +49,7 @@ func getGopmPkgs(dirPath string, isTest bool) (pkgs map[string]*doc.Pkg, err err
 		}
 	}
 
-	imports := doc.GetAllImports([]string{dirPath}, ".", false)
+	imports := doc.GetAllImports([]string{dirPath}, ".", false, false)
 	pkgs = make(map[string]*doc.Pkg)
 	for _, name := range imports {
 		if name == "C" {
@@ -257,7 +271,7 @@ func genNewGoPath(ctx *cli.Context, isTest bool) {
 			continue
 		}
 
-		if !isExistP && ((len(pkg.Value) > 0 || ctx.Bool("remote")) ||
+		if !isExistP && (len(pkg.Value) > 0 || ctx.Bool("remote") ||
 			!com.IsDir(filepath.Join(installGopath, pkg.ImportPath))) {
 			log.Log("Linking %s", name+suf)
 			err = autoLink(oldPath, newPath)
