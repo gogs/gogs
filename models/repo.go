@@ -83,10 +83,11 @@ type Repository struct {
 	Name        string `xorm:"index not null"`
 	Description string
 	Website     string
-	Private     bool
 	NumWatches  int
 	NumStars    int
 	NumForks    int
+	IsPrivate   bool
+	IsBare      bool
 	Created     time.Time `xorm:"created"`
 	Updated     time.Time `xorm:"updated"`
 }
@@ -139,7 +140,8 @@ func CreateRepository(user *User, repoName, desc, repoLang, license string, priv
 		Name:        repoName,
 		LowerName:   strings.ToLower(repoName),
 		Description: desc,
-		Private:     private,
+		IsPrivate:   private,
+		IsBare:      repoLang == "" && license == "" && !initReadme,
 	}
 
 	repoPath := RepoPath(user.Name, repoName)
@@ -369,6 +371,18 @@ func RepoPath(userName, repoName string) string {
 	return filepath.Join(UserPath(userName), repoName+".git")
 }
 
+func UpdateRepository(repo *Repository) error {
+	if len(repo.Description) > 255 {
+		repo.Description = repo.Description[:255]
+	}
+	if len(repo.Website) > 255 {
+		repo.Website = repo.Website[:255]
+	}
+
+	_, err := orm.Id(repo.Id).UseBool().Cols("description", "website").Update(repo)
+	return err
+}
+
 // DeleteRepository deletes a repository for a user or orgnaztion.
 func DeleteRepository(userId, repoId int64, userName string) (err error) {
 	repo := &Repository{Id: repoId, OwnerId: userId}
@@ -413,9 +427,9 @@ func DeleteRepository(userId, repoId int64, userName string) (err error) {
 }
 
 // GetRepositoryByName returns the repository by given name under user if exists.
-func GetRepositoryByName(user *User, repoName string) (*Repository, error) {
+func GetRepositoryByName(userId int64, repoName string) (*Repository, error) {
 	repo := &Repository{
-		OwnerId:   user.Id,
+		OwnerId:   userId,
 		LowerName: strings.ToLower(repoName),
 	}
 	has, err := orm.Get(repo)

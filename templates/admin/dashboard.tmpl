@@ -15,10 +15,42 @@
 
         <div class="panel panel-default">
             <div class="panel-heading">
-                System Status
+                System Monitor Status
             </div>
 
             <div class="panel-body">
+                <div>Server Uptime: <b>{{.SysStatus.Uptime}}</b></div>
+                <div>Current Goroutines: <b>{{.SysStatus.NumGoroutine}}</b></div>
+                <hr/>
+                <div>Current Memory Usage: <b>{{.SysStatus.MemAllocated}}</b></div>
+                <div>Total Memory Allocated: <b>{{.SysStatus.MemTotal}}</b></div>
+                <div>Memory Obtained: <b>{{.SysStatus.MemSys}}</b></div>
+                <div>Pointer Lookup Times: <b>{{.SysStatus.Lookups}}</b></div>
+                <div>Memory Allocate Times: <b>{{.SysStatus.MemMallocs}}</b></div>
+                <div>Memory Free Times: <b>{{.SysStatus.MemFrees}}</b></div>
+                <hr/>
+                <div>Current Heap Usage: <b>{{.SysStatus.HeapAlloc}}</b></div>
+                <div>Heap Memory Obtained: <b>{{.SysStatus.HeapSys}}</b></div>
+                <div>Heap Memory Idle: <b>{{.SysStatus.HeapIdle}}</b></div>
+                <div>Heap Memory In Use: <b>{{.SysStatus.HeapInuse}}</b></div>
+                <div>Heap Memory Released: <b>{{.SysStatus.HeapReleased}}</b></div>
+                <div>Heap Objects: <b>{{.SysStatus.HeapObjects}}</b></div>
+                <hr/>
+                <div>Bootstrap Stack Usage: <b>{{.SysStatus.StackInuse}}</b></div>
+                <div>Stack Memory Obtained: <b>{{.SysStatus.StackSys}}</b></div>
+                <div>MSpan Structures Usage: <b>{{.SysStatus.MSpanInuse}}</b></div>
+                <div>MSpan Structures Obtained: <b>{{.SysStatus.HeapSys}}</b></div>
+                <div>MCache Structures Usage: <b>{{.SysStatus.MCacheInuse}}</b></div>
+                <div>MCache Structures Obtained: <b>{{.SysStatus.MCacheSys}}</b></div>
+                <div>Profiling Bucket Hash Table Obtained: <b>{{.SysStatus.BuckHashSys}}</b></div>
+                <div>GC Metadada Obtained: <b>{{.SysStatus.GCSys}}</b></div>
+                <div>Other System Allocation Obtained: <b>{{.SysStatus.OtherSys}}</b></div>
+                <hr/>
+                <div>Next GC Recycle: <b>{{.SysStatus.NextGC}}</b></div>
+                <div>Last GC Time: <b>{{.SysStatus.LastGC}} ago</b></div>
+                <div>Total GC Pause: <b>{{.SysStatus.PauseTotalNs}}</b></div>
+                <div>Last GC Pause: <b>{{.SysStatus.PauseNs}}</b></div>
+                <div>GC Times: <b>{{.SysStatus.NumGC}}</b></div>
             </div>
         </div>
     </div>

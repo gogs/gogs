@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-// gogs(Go Git Service) is a Go clone of Github.
+// Gogs(Go Git Service) is a Self Hosted Git Service in the Go Programming Language.
 package main
 
 import (
@@ -20,7 +20,7 @@ import (
 // Test that go1.2 tag above is included in builds. main.go refers to this definition.
 const go12tag = true
 
-const APP_VER = "0.1.5.0321"
+const APP_VER = "0.1.6.0323.1"
 
 func init() {
 	base.AppVer = APP_VER

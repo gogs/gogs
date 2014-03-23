@@ -2,6 +2,7 @@
 {{template "base/navbar" .}}
 <div class="container" id="gogs-body" data-page="user-signup">
 	<form action="/user/sign_up" method="post" class="form-horizontal gogs-card" id="gogs-login-card">
+		{{.CsrfTokenHtml}}
 		{{if .DisenableRegisteration}}
 		Sorry, registeration has been disenabled, you can only get account from administrator.
 		{{else}}

@@ -106,7 +106,7 @@ func runServ(k *cli.Context) {
 
 	//os.Setenv("userName", user.Name)
 	//os.Setenv("userId", strconv.Itoa(int(user.Id)))
-	repo, err := models.GetRepositoryByName(user, repoName)
+	repo, err := models.GetRepositoryByName(user.Id, repoName)
 	var isExist bool = true
 	if err != nil {
 		if err == models.ErrRepoNotExist {
