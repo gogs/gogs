@@ -272,7 +272,7 @@ func runServ(k *cli.Context) {
 	}
 
 	if err = models.CommitRepoAction(user.Id, user.Name,
-		repo.Id, repoName, refname, &models.PushCommits{l.Len(), commits}); err != nil {
+		repo.Id, repoName, refname, &base.PushCommits{l.Len(), commits}); err != nil {
 		log.Error("runUpdate.models.CommitRepoAction: %v", err, commits)
 	} else {
 		//log.Info("refname", refname)
