@@ -16,12 +16,12 @@
                 {{.FileContent|str2html}}
             </div>
         {{else}}
-            <div class="panel-body file-body file-code">
+            <div class="panel-body file-body file-code code-view">
                 <table>
                     <tbody>
                         <tr>
                             <td class="lines-num"></td>
-                            <td class="lines-code markdown"><pre class="linenums lang-{{.FileExt}}"><code>{{.FileContent}}</code></pre></td>
+                            <td class="lines-code markdown"><pre class="prettyprint linenums lang-{{.FileExt}}">{{.FileContent}}</pre></td>
                         </tr>
                     </tbody>
                 </table>
