@@ -301,7 +301,7 @@ func Activate(ctx *middleware.Context) {
 	if len(code) == 0 {
 		ctx.Data["IsActivatePage"] = true
 		if ctx.User.IsActive {
-			ctx.Error(404)
+			ctx.Handle(404, "user.Activate", nil)
 			return
 		}
 		// Resend confirmation e-mail.

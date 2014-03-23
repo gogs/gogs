@@ -86,7 +86,7 @@ func Branches(ctx *middleware.Context, params martini.Params) {
 		ctx.Handle(200, "repo.Branches", err)
 		return
 	} else if len(brs) == 0 {
-		ctx.Error(404)
+		ctx.Handle(404, "repo.Branches", nil)
 		return
 	}
 
@@ -123,8 +123,8 @@ func Single(ctx *middleware.Context, params martini.Params) {
 	// Branches.
 	brs, err := models.GetBranches(params["username"], params["reponame"])
 	if err != nil {
-		log.Error("repo.Single(GetBranches): %v", err)
-		ctx.Error(404)
+		//log.Error("repo.Single(GetBranches): %v", err)
+		ctx.Handle(404, "repo.Single(GetBranches)", err)
 		return
 	} else if ctx.Repo.Repository.IsBare {
 		ctx.Data["IsBareRepo"] = true
@@ -138,15 +138,15 @@ func Single(ctx *middleware.Context, params martini.Params) {
 		params["branchname"], params["commitid"], treename)
 
 	if err != nil && err != models.ErrRepoFileNotExist {
-		log.Error("repo.Single(GetTargetFile): %v", err)
-		ctx.Error(404)
+		//log.Error("repo.Single(GetTargetFile): %v", err)
+		ctx.Handle(404, "repo.Single(GetTargetFile)", err)
 		return
 	}
 
 	branchLink := "/" + ctx.Repo.Owner.LowerName + "/" + ctx.Repo.Repository.Name + "/src/" + params["branchname"]
 
 	if len(treename) != 0 && repoFile == nil {
-		ctx.Error(404)
+		ctx.Handle(404, "repo.Single", nil)
 		return
 	}
 
@@ -154,8 +154,8 @@ func Single(ctx *middleware.Context, params martini.Params) {
 		if repoFile.Size > 1024*1024 || repoFile.Filemode != git.FileModeBlob {
 			ctx.Data["FileIsLarge"] = true
 		} else if blob, err := repoFile.LookupBlob(); err != nil {
-			log.Error("repo.Single(repoFile.LookupBlob): %v", err)
-			ctx.Error(404)
+			//log.Error("repo.Single(repoFile.LookupBlob): %v", err)
+			ctx.Handle(404, "repo.Single(repoFile.LookupBlob)", err)
 		} else {
 			ctx.Data["IsFile"] = true
 			ctx.Data["FileName"] = repoFile.Name
@@ -179,8 +179,8 @@ func Single(ctx *middleware.Context, params martini.Params) {
 		files, err := models.GetReposFiles(params["username"], params["reponame"],
 			params["branchname"], params["commitid"], treename)
 		if err != nil {
-			log.Error("repo.Single(GetReposFiles): %v", err)
-			ctx.Error(404)
+			//log.Error("repo.Single(GetReposFiles): %v", err)
+			ctx.Handle(404, "repo.Single(GetReposFiles)", err)
 			return
 		}
 
@@ -203,8 +203,8 @@ func Single(ctx *middleware.Context, params martini.Params) {
 			if readmeFile.Size > 1024*1024 || readmeFile.Filemode != git.FileModeBlob {
 				ctx.Data["FileIsLarge"] = true
 			} else if blob, err := readmeFile.LookupBlob(); err != nil {
-				log.Error("repo.Single(readmeFile.LookupBlob): %v", err)
-				ctx.Error(404)
+				//log.Error("repo.Single(readmeFile.LookupBlob): %v", err)
+				ctx.Handle(404, "repo.Single(readmeFile.LookupBlob)", err)
 				return
 			} else {
 				// current repo branch link
@@ -239,7 +239,7 @@ func Single(ctx *middleware.Context, params martini.Params) {
 		params["branchname"], params["commitid"])
 	if err != nil {
 		log.Error("repo.Single(GetCommit): %v", err)
-		ctx.Error(404)
+		ctx.Handle(404, "repo.Single(GetCommit)", err)
 		return
 	}
 	ctx.Data["LastCommit"] = commit
@@ -275,7 +275,7 @@ func Http(ctx *middleware.Context, params martini.Params) {
 
 func Setting(ctx *middleware.Context, params martini.Params) {
 	if !ctx.Repo.IsOwner {
-		ctx.Error(404)
+		ctx.Handle(404, "repo.Setting", nil)
 		return
 	}
 
@@ -307,7 +307,7 @@ func Commits(ctx *middleware.Context, params martini.Params) {
 		ctx.Handle(200, "repo.Commits", err)
 		return
 	} else if len(brs) == 0 {
-		ctx.Error(404)
+		ctx.Handle(404, "repo.Commits", nil)
 		return
 	}
 
@@ -315,7 +315,7 @@ func Commits(ctx *middleware.Context, params martini.Params) {
 	commits, err := models.GetCommits(params["username"],
 		params["reponame"], params["branchname"])
 	if err != nil {
-		ctx.Error(404)
+		ctx.Handle(404, "repo.Commits", nil)
 		return
 	}
 	ctx.Data["Username"] = params["username"]
