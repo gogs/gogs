@@ -20,5 +20,12 @@ func Home(ctx *middleware.Context) {
 
 func Help(ctx *middleware.Context) {
 	ctx.Data["PageIsHelp"] = true
+	ctx.Data["Title"] = "Help"
 	ctx.HTML(200, "help")
+}
+
+func NotFound(ctx *middleware.Context) {
+	ctx.Data["PageIsNotFound"] = true
+	ctx.Data["Title"] = 404
+	ctx.Handle(404, "home.NotFound", nil)
 }
