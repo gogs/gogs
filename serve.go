@@ -227,7 +227,7 @@ func runServ(k *cli.Context) {
 			return
 		}
 		if ref, ok = refs[refname]; !ok {
-			println("unknow reference name", refname)
+			println("unknow reference name -", refname, "-")
 			return
 		}
 		l, err = ref.AllCommits()
