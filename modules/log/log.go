@@ -11,6 +11,11 @@ import (
 
 var logger *logs.BeeLogger
 
+func init() {
+	logger = logs.NewLogger(10000)
+	logger.SetLogger("console", `{"level": 0}`)
+}
+
 func NewLogger(bufLen int64, mode, config string) {
 	logger = logs.NewLogger(bufLen)
 	logger.SetLogger(mode, config)
