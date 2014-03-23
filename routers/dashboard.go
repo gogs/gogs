@@ -26,6 +26,6 @@ func Help(ctx *middleware.Context) {
 
 func NotFound(ctx *middleware.Context) {
 	ctx.Data["PageIsNotFound"] = true
-	ctx.Data["Title"] = 404
+	ctx.Data["Title"] = "Page Not Found"
 	ctx.Handle(404, "home.NotFound", nil)
 }

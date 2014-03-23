@@ -5,7 +5,7 @@ Gogs(Go Git Service) is a Self Hosted Git Service in the Go Programming Language
 
 ![Demo](http://gowalker.org/public/gogs_demo.gif)
 
-##### Current version: 0.1.6 Alpha
+##### Current version: 0.1.7 Alpha
 
 #### Other language version
 
@@ -27,7 +27,7 @@ More importantly, Gogs only needs one binary to setup your own project hosting o
 ## Features
 
 - Activity timeline
-- SSH protocol support.
+- SSH/HTTPS protocol support.
 - Register/delete account.
 - Create/delete/watch public repository.
 - User profile page.
