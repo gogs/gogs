@@ -19,7 +19,41 @@
             </div>
 
             <div class="panel-body">
-                
+                <form action="/{{.Owner.Name}}/{{.Repository.Name}}/settings" method="post" class="form-horizontal">
+                    {{.CsrfTokenHtml}}
+                    <input type="hidden" name="action" value="update">
+                    <div class="form-group">
+                        <label class="col-md-3 text-right">Repository Name <strong class="text-danger">*</strong></label>
+                        <div class="col-md-9">
+                            <input type="text" class="form-control" name="repo-name" required="required" value="{{.Repository.Name}}"/>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-md-3 text-right">Description</label>
+                        <div class="col-md-9">
+                            <textarea class="form-control" name="desc" id="repo-desc" rows="6"></textarea>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-md-3 text-right">Official Site</label>
+                        <div class="col-md-9">
+                            <input type="url" class="form-control" name="repo-site"/>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-md-3 text-right">Default Branch</label>
+                        <div class="col-md-9">
+                            <select name="branch" id="repo-default-branch" class="form-control">
+                                <option value="">Branch</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <div class="col-md-9 col-md-offset-3">
+                            <button class="btn btn-primary" type="submit">Save Options</button>
+                        </div>
+                    </div>
+                </form>
             </div>
         </div>
 
