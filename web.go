@@ -94,7 +94,7 @@ func runWeb(*cli.Context) {
 	m.Get("/stars", reqSignIn, user.Stars)
 	m.Get("/help", routers.Help)
 
-	avatarCache := avatar.HttpHandler("public/img/avatar/", "public/img/avatar/default.jpg")
+	avatarCache := avatar.HttpHandler("public/img/avatar/", "public/img/avatar_default.jpg")
 	m.Get("/avatar/:hash", avatarCache.ServeHTTP)
 
 	m.Group("/user", func(r martini.Router) {
