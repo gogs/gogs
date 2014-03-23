@@ -9,7 +9,8 @@ import (
 	"reflect"
 
 	"github.com/codegangsta/martini"
-	"github.com/martini-contrib/sessions"
+
+	"github.com/gogits/session"
 
 	"github.com/gogits/binding"
 
@@ -19,7 +20,7 @@ import (
 )
 
 // SignedInId returns the id of signed in user.
-func SignedInId(session sessions.Session) int64 {
+func SignedInId(session session.SessionStore) int64 {
 	userId := session.Get("userId")
 	if userId == nil {
 		return 0
@@ -34,7 +35,7 @@ func SignedInId(session sessions.Session) int64 {
 }
 
 // SignedInName returns the name of signed in user.
-func SignedInName(session sessions.Session) string {
+func SignedInName(session session.SessionStore) string {
 	userName := session.Get("userName")
 	if userName == nil {
 		return ""
@@ -46,7 +47,7 @@ func SignedInName(session sessions.Session) string {
 }
 
 // SignedInUser returns the user object of signed user.
-func SignedInUser(session sessions.Session) *models.User {
+func SignedInUser(session session.SessionStore) *models.User {
 	id := SignedInId(session)
 	if id <= 0 {
 		return nil
@@ -61,7 +62,7 @@ func SignedInUser(session sessions.Session) *models.User {
 }
 
 // IsSignedIn check if any user has signed in.
-func IsSignedIn(session sessions.Session) bool {
+func IsSignedIn(session session.SessionStore) bool {
 	return SignedInId(session) > 0
 }
 

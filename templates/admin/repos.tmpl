@@ -27,7 +27,7 @@
                             <td>{{.Id}}</td>
                             <th>{{.UserName}}</th>
                             <td><a href="/{{.UserName}}/{{.Name}}">{{.Name}}</a></td>
-                            <td><i class="fa fa{{if .Private}}-check{{end}}-square-o"></i></td>
+                            <td><i class="fa fa{{if .IsPrivate}}-check{{end}}-square-o"></i></td>
                             <td>{{.NumWatches}}</td>
                             <td>{{.NumForks}}</td>
                             <td>{{DateFormat .Created "M d, Y"}}</td>

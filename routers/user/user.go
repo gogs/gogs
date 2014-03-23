@@ -6,6 +6,7 @@ package user
 
 import (
 	"fmt"
+	"net/url"
 	"strings"
 
 	"github.com/codegangsta/martini"
@@ -77,7 +78,45 @@ func SignIn(ctx *middleware.Context, form auth.LogInForm) {
 	ctx.Data["Title"] = "Log In"
 
 	if ctx.Req.Method == "GET" {
-		ctx.HTML(200, "user/signin")
+		// Check auto-login.
+		userName := ctx.GetCookie(base.CookieUserName)
+		if len(userName) == 0 {
+			ctx.HTML(200, "user/signin")
+			return
+		}
+
+		isSucceed := false
+		defer func() {
+			if !isSucceed {
+				log.Trace("%s auto-login cookie cleared: %s", ctx.Req.RequestURI, userName)
+				ctx.SetCookie(base.CookieUserName, "", -1)
+				ctx.SetCookie(base.CookieRememberName, "", -1)
+			}
+		}()
+
+		user, err := models.GetUserByName(userName)
+		if err != nil {
+			ctx.HTML(200, "user/signin")
+			return
+		}
+
+		secret := base.EncodeMd5(user.Rands + user.Passwd)
+		value, _ := ctx.GetSecureCookie(secret, base.CookieRememberName)
+		if value != user.Name {
+			ctx.HTML(200, "user/signin")
+			return
+		}
+
+		isSucceed = true
+		ctx.Session.Set("userId", user.Id)
+		ctx.Session.Set("userName", user.Name)
+		redirectTo, _ := url.QueryUnescape(ctx.GetCookie("redirect_to"))
+		if len(redirectTo) > 0 {
+			ctx.SetCookie("redirect_to", "", -1)
+			ctx.Redirect(redirectTo)
+		} else {
+			ctx.Redirect("/")
+		}
 		return
 	}
 
@@ -88,7 +127,8 @@ func SignIn(ctx *middleware.Context, form auth.LogInForm) {
 
 	user, err := models.LoginUserPlain(form.UserName, form.Password)
 	if err != nil {
-		if err.Error() == models.ErrUserNotExist.Error() {
+		if err == models.ErrUserNotExist {
+			log.Trace("%s Log in failed: %s/%s", ctx.Req.RequestURI, form.UserName, form.Password)
 			ctx.RenderWithErr("Username or password is not correct", "user/signin", &form)
 			return
 		}
@@ -97,14 +137,29 @@ func SignIn(ctx *middleware.Context, form auth.LogInForm) {
 		return
 	}
 
+	if form.Remember == "on" {
+		secret := base.EncodeMd5(user.Rands + user.Passwd)
+		days := 86400 * base.LogInRememberDays
+		ctx.SetCookie(base.CookieUserName, user.Name, days)
+		ctx.SetSecureCookie(secret, base.CookieRememberName, user.Name, days)
+	}
+
 	ctx.Session.Set("userId", user.Id)
 	ctx.Session.Set("userName", user.Name)
-	ctx.Redirect("/")
+	redirectTo, _ := url.QueryUnescape(ctx.GetCookie("redirect_to"))
+	if len(redirectTo) > 0 {
+		ctx.SetCookie("redirect_to", "", -1)
+		ctx.Redirect(redirectTo)
+	} else {
+		ctx.Redirect("/")
+	}
 }
 
 func SignOut(ctx *middleware.Context) {
 	ctx.Session.Delete("userId")
 	ctx.Session.Delete("userName")
+	ctx.SetCookie(base.CookieUserName, "", -1)
+	ctx.SetCookie(base.CookieRememberName, "", -1)
 	ctx.Redirect("/")
 }
 
@@ -246,7 +301,7 @@ func Activate(ctx *middleware.Context) {
 	if len(code) == 0 {
 		ctx.Data["IsActivatePage"] = true
 		if ctx.User.IsActive {
-			ctx.Error(404)
+			ctx.Handle(404, "user.Activate", nil)
 			return
 		}
 		// Resend confirmation e-mail.
@@ -274,7 +329,7 @@ func Activate(ctx *middleware.Context) {
 
 		ctx.Session.Set("userId", user.Id)
 		ctx.Session.Set("userName", user.Name)
-		ctx.Redirect("/", 302)
+		ctx.Redirect("/")
 		return
 	}
 

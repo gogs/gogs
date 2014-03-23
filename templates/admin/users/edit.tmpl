@@ -12,6 +12,7 @@
             	<br/>
 				<form action="/admin/users/{{.User.Id}}" method="post" class="form-horizontal">
 				    {{if .IsSuccess}}<p class="alert alert-success">Account profile has been successfully updated.</p>{{else if .HasError}}<p class="alert alert-danger form-error">{{.ErrorMsg}}</p>{{end}}
+				    {{.CsrfTokenHtml}}
                 	<input type="hidden" value="{{.User.Id}}" name="userId"/>
 					<div class="form-group">
 						<label class="col-md-3 control-label">Username: </label>
@@ -71,7 +72,7 @@
 					<div class="form-group">
 					    <div class="col-md-offset-3 col-md-6">
 					    	<button type="submit" class="btn btn-lg btn-primary btn-block">Update account profile</button>
-					    	<!-- <a type="button" href="/admin/users/{{.User.Id}}/delete" class="btn btn-lg btn-danger btn-block">Delete this account</a> -->
+					    	<a type="button" href="/admin/users/{{.User.Id}}/delete" class="btn btn-lg btn-danger btn-block">Delete this account</a>
 					    </div>
 					</div>
 				</form>

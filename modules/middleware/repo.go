@@ -54,7 +54,7 @@ func RepoAssignment(redirect bool) martini.Handler {
 		ctx.Repo.Owner = user
 
 		// get repository
-		repo, err := models.GetRepositoryByName(user, params["reponame"])
+		repo, err := models.GetRepositoryByName(user.Id, params["reponame"])
 		if err != nil {
 			if redirect {
 				ctx.Redirect("/")
