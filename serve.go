@@ -281,6 +281,7 @@ func runServ(k *cli.Context) {
 
 		//runUpdate(k)
 		c := exec.Command("git", "update-server-info")
+		c.Dir = models.RepoPath(user.Name, repoName)
 		err := c.Run()
 		if err != nil {
 			log.Error("update-server-info: %v", err)

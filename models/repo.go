@@ -200,6 +200,7 @@ func CreateRepository(user *User, repoName, desc, repoLang, license string, priv
 	}
 
 	c := exec.Command("git", "update-server-info")
+	c.Dir = repoPath
 	err = c.Run()
 	if err != nil {
 		log.Error("repo.CreateRepository(exec update-server-info): %v", err)
