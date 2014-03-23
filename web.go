@@ -95,7 +95,7 @@ func runWeb(*cli.Context) {
 
 	m.Group("/user", func(r martini.Router) {
 		r.Any("/login", binding.BindIgnErr(auth.LogInForm{}), user.SignIn)
-		r.Any("/sign_up", reqSignOut, binding.BindIgnErr(auth.RegisterForm{}), user.SignUp)
+		r.Any("/sign_up", binding.BindIgnErr(auth.RegisterForm{}), user.SignUp)
 	}, reqSignOut)
 	m.Group("/user", func(r martini.Router) {
 		r.Any("/logout", user.SignOut)
