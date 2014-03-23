@@ -17,6 +17,7 @@
                 <div><b>Run User:</b> {{.RunUser}}</div>
                 <div><b>Run Mode:</b> {{.RunMode}}</div>
                 <hr/>
+                <div><b>Enable HTTPS Clone</b> <i class="fa fa{{if .EnableHttpsClone}}-check{{end}}-square-o"></i></div>
                 <div><b>Repository Root Path:</b> {{.RepoRootPath}}</div>
             </div>
         </div>
@@ -45,6 +46,7 @@
                 <div><b>Register Email Confirmation:</b> <i class="fa fa{{if .Service.RegisterEmailConfirm}}-check{{end}}-square-o"></i></div>
                 <div><b>Disenable Registeration:</b> <i class="fa fa{{if .Service.DisenableRegisteration}}-check{{end}}-square-o"></i></div>
                 <div><b>Require Sign In View:</b> <i class="fa fa{{if .Service.RequireSignInView}}-check{{end}}-square-o"></i></div>
+                <div><b>Enable Cache Avatar:</b> <i class="fa fa{{if .Service.EnableCacheAvatar}}-check{{end}}-square-o"></i></div>
                 <hr/>
                 <div><b>Active Code Lives:</b> {{.Service.ActiveCodeLives}} minutes</div>
                 <div><b>Reset Password Code Lives:</b> {{.Service.ResetPwdCodeLives}} minutes</div>
@@ -73,6 +75,36 @@
                 <div><b>Cache Adapter:</b> {{.CacheAdapter}}</div>
                 <div><b>Cache Config:</b></div>
                 <div style="padding-top: 5px;"><pre>{{.CacheConfig}}</pre></div>
+            </div>
+        </div>
+
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                Session Configuration
+            </div>
+
+            <div class="panel-body">
+                <div><b>Session Provider:</b> {{.SessionProvider}}</div>
+                <div><b>Cookie Name:</b> {{.SessionConfig.CookieName}}</div>
+                <div><b>Enable Set Cookie:</b> <i class="fa fa{{if .SessionConfig.EnableSetCookie}}-check{{end}}-square-o"></i></div>
+                <div><b>GC Interval Time:</b> {{.SessionConfig.GcIntervalTime}} seconds</div>
+                <div><b>Session Life Time:</b> {{.SessionConfig.SessionLifeTime}} seconds</div>
+                <div><b>HTTPS Only:</b> <i class="fa fa{{if .SessionConfig.CookieSecure}}-check{{end}}-square-o"></i></div>
+                <div><b>Cookie Life Time:</b> {{.SessionConfig.CookieLifeTime}} seconds</div>
+                <div><b>Session ID Hash Function:</b> {{.SessionConfig.SessionIDHashFunc}}</div>
+                <div><b>Session ID Hash Key:</b> {{.SessionConfig.SessionIDHashKey}}</div>
+                <div><b>Provider Config:</b> {{.SessionConfig.ProviderConfig}}</div>
+            </div>
+        </div>
+
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                Picture Configuration
+            </div>
+
+            <div class="panel-body">
+                <div><b>Picture Service:</b> {{.PictureService}}</div>
+                <div><b>Picture Root Path:</b> {{.PictureRootPath}}</div>
             </div>
         </div>
 

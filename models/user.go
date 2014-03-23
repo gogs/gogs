@@ -201,7 +201,14 @@ func VerifyUserActiveCode(code string) (user *User) {
 
 // UpdateUser updates user's information.
 func UpdateUser(user *User) (err error) {
-	_, err = orm.Id(user.Id).UseBool().Update(user)
+	if len(user.Location) > 255 {
+		user.Location = user.Location[:255]
+	}
+	if len(user.Website) > 255 {
+		user.Website = user.Website[:255]
+	}
+
+	_, err = orm.Id(user.Id).UseBool().Cols("website", "location", "is_active", "is_admin").Update(user)
 	return err
 }
 
@@ -279,9 +286,7 @@ func GetUserByName(name string) (*User, error) {
 	if len(name) == 0 {
 		return nil, ErrUserNotExist
 	}
-	user := &User{
-		LowerName: strings.ToLower(name),
-	}
+	user := &User{LowerName: strings.ToLower(name)}
 	has, err := orm.Get(user)
 	if err != nil {
 		return nil, err

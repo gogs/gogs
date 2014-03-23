@@ -25,13 +25,17 @@ func EncodeMd5(str string) string {
 	return hex.EncodeToString(m.Sum(nil))
 }
 
-// Random generate string
-func GetRandomString(n int) string {
+// GetRandomString generate random string by specify chars.
+func GetRandomString(n int, alphabets ...byte) string {
 	const alphanum = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
 	var bytes = make([]byte, n)
 	rand.Read(bytes)
 	for i, b := range bytes {
-		bytes[i] = alphanum[b%byte(len(alphanum))]
+		if len(alphabets) == 0 {
+			bytes[i] = alphanum[b%byte(len(alphanum))]
+		} else {
+			bytes[i] = alphabets[b%byte(len(alphabets))]
+		}
 	}
 	return string(bytes)
 }
@@ -111,6 +115,85 @@ const (
 	Year   = 12 * Month
 )
 
+func computeTimeDiff(diff int64) (int64, string) {
+	diffStr := ""
+	switch {
+	case diff <= 0:
+		diff = 0
+		diffStr = "now"
+	case diff < 2:
+		diff = 0
+		diffStr = "1 second"
+	case diff < 1*Minute:
+		diffStr = fmt.Sprintf("%d seconds", diff)
+		diff = 0
+
+	case diff < 2*Minute:
+		diff -= 1 * Minute
+		diffStr = "1 minute"
+	case diff < 1*Hour:
+		diffStr = fmt.Sprintf("%d minutes", diff/Minute)
+		diff -= diff / Minute * Minute
+
+	case diff < 2*Hour:
+		diff -= 1 * Hour
+		diffStr = "1 hour"
+	case diff < 1*Day:
+		diffStr = fmt.Sprintf("%d hours", diff/Hour)
+		diff -= diff / Hour * Hour
+
+	case diff < 2*Day:
+		diff -= 1 * Day
+		diffStr = "1 day"
+	case diff < 1*Week:
+		diffStr = fmt.Sprintf("%d days", diff/Day)
+		diff -= diff / Day * Day
+
+	case diff < 2*Week:
+		diff -= 1 * Week
+		diffStr = "1 week"
+	case diff < 1*Month:
+		diffStr = fmt.Sprintf("%d weeks", diff/Week)
+		diff -= diff / Week * Week
+
+	case diff < 2*Month:
+		diff -= 1 * Month
+		diffStr = "1 month"
+	case diff < 1*Year:
+		diffStr = fmt.Sprintf("%d months", diff/Month)
+		diff -= diff / Month * Month
+
+	case diff < 2*Year:
+		diff -= 1 * Year
+		diffStr = "1 year"
+	default:
+		diffStr = fmt.Sprintf("%d years", diff/Year)
+		diff = 0
+	}
+	return diff, diffStr
+}
+
+// TimeSincePro calculates the time interval and generate full user-friendly string.
+func TimeSincePro(then time.Time) string {
+	now := time.Now()
+	diff := now.Unix() - then.Unix()
+
+	if then.After(now) {
+		return "future"
+	}
+
+	var timeStr, diffStr string
+	for {
+		if diff == 0 {
+			break
+		}
+
+		diff, diffStr = computeTimeDiff(diff)
+		timeStr += ", " + diffStr
+	}
+	return strings.TrimPrefix(timeStr, ", ")
+}
+
 // TimeSince calculates the time interval and generate user-friendly string.
 func TimeSince(then time.Time) string {
 	now := time.Now()
@@ -123,7 +206,6 @@ func TimeSince(then time.Time) string {
 	}
 
 	switch {
-
 	case diff <= 0:
 		return "now"
 	case diff <= 2:
@@ -156,8 +238,10 @@ func TimeSince(then time.Time) string {
 	case diff < 1*Year:
 		return fmt.Sprintf("%d months %s", diff/Month, lbl)
 
-	case diff < 18*Month:
+	case diff < 2*Year:
 		return fmt.Sprintf("1 year %s", lbl)
+	default:
+		return fmt.Sprintf("%d years %s", diff/Year, lbl)
 	}
 	return then.String()
 }
@@ -387,6 +471,7 @@ type Actioner interface {
 	GetOpType() int
 	GetActUserName() string
 	GetRepoName() string
+	GetBranch() string
 	GetContent() string
 }
 
@@ -409,25 +494,34 @@ const (
 	TPL_COMMIT_REPO_LI = `<div><img id="gogs-user-avatar-commit" src="%s?s=16" alt="user-avatar" title="username"/> <a href="/%s/%s/commit/%s">%s</a> %s</div>`
 )
 
+type PushCommits struct {
+	Len     int
+	Commits [][]string
+}
+
 // ActionDesc accepts int that represents action operation type
 // and returns the description.
 func ActionDesc(act Actioner, avatarLink string) string {
 	actUserName := act.GetActUserName()
 	repoName := act.GetRepoName()
+	branch := act.GetBranch()
 	content := act.GetContent()
 	switch act.GetOpType() {
 	case 1: // Create repository.
 		return fmt.Sprintf(TPL_CREATE_REPO, actUserName, actUserName, actUserName, repoName, repoName)
 	case 5: // Commit repository.
-		var commits [][]string
-		if err := json.Unmarshal([]byte(content), &commits); err != nil {
+		var push *PushCommits
+		if err := json.Unmarshal([]byte(content), &push); err != nil {
 			return err.Error()
 		}
 		buf := bytes.NewBuffer([]byte("\n"))
-		for _, commit := range commits {
+		for _, commit := range push.Commits {
 			buf.WriteString(fmt.Sprintf(TPL_COMMIT_REPO_LI, avatarLink, actUserName, repoName, commit[0], commit[0][:7], commit[1]) + "\n")
 		}
-		return fmt.Sprintf(TPL_COMMIT_REPO, actUserName, actUserName, actUserName, repoName, "master", "master", actUserName, repoName, actUserName, repoName,
+		if push.Len > 3 {
+			buf.WriteString(fmt.Sprintf(`<div><a href="/%s/%s/commits/%s">%d other commits >></a></div>`, actUserName, repoName, branch, push.Len))
+		}
+		return fmt.Sprintf(TPL_COMMIT_REPO, actUserName, actUserName, actUserName, repoName, branch, branch, actUserName, repoName, actUserName, repoName,
 			buf.String())
 	default:
 		return "invalid type"

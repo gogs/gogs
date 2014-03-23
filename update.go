@@ -4,16 +4,9 @@
 
 package main
 
-import (
-	"os"
-	"strconv"
+import "github.com/codegangsta/cli"
 
-	"github.com/codegangsta/cli"
-
-	"github.com/gogits/git"
-	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/modules/log"
-)
+//"github.com/gogits/gogs/modules/log"
 
 var CmdUpdate = cli.Command{
 	Name:  "update",
@@ -26,6 +19,9 @@ gogs serv provide access auth for repositories`,
 
 // for command: ./gogs update
 func runUpdate(*cli.Context) {
+	/*w, _ := os.Create("update.log")
+	log.SetOutput(w)
+
 	userName := os.Getenv("userName")
 	userId := os.Getenv("userId")
 	repoId := os.Getenv("repoId")
@@ -35,16 +31,19 @@ func runUpdate(*cli.Context) {
 
 	repo, err := git.OpenRepository(f)
 	if err != nil {
+		log.Error("runUpdate.Open repoId: %v", err)
 		return
 	}
 
 	ref, err := repo.LookupReference("HEAD")
 	if err != nil {
+		log.Error("runUpdate.Ref repoId: %v", err)
 		return
 	}
 
 	lastCommit, err := repo.LookupCommit(ref.Oid)
 	if err != nil {
+		log.Error("runUpdate.Commit repoId: %v", err)
 		return
 	}
 
@@ -63,5 +62,8 @@ func runUpdate(*cli.Context) {
 	if err = models.CommitRepoAction(int64(sUserId), userName,
 		int64(sRepoId), repoName, commits); err != nil {
 		log.Error("runUpdate.models.CommitRepoAction: %v", err)
-	}
+	} else {
+		l := exec.Command("exec", "git", "update-server-info")
+		l.Run()
+	}*/
 }

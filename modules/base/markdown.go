@@ -72,7 +72,7 @@ func (options *CustomRender) Link(out *bytes.Buffer, link []byte, title []byte, 
 
 func RenderMarkdown(rawBytes []byte, urlPrefix string) []byte {
 	htmlFlags := 0
-	htmlFlags |= gfm.HTML_USE_XHTML
+	// htmlFlags |= gfm.HTML_USE_XHTML
 	// htmlFlags |= gfm.HTML_USE_SMARTYPANTS
 	// htmlFlags |= gfm.HTML_SMARTYPANTS_FRACTIONS
 	// htmlFlags |= gfm.HTML_SMARTYPANTS_LATEX_DASHES
@@ -81,7 +81,7 @@ func RenderMarkdown(rawBytes []byte, urlPrefix string) []byte {
 	htmlFlags |= gfm.HTML_SKIP_SCRIPT
 	htmlFlags |= gfm.HTML_GITHUB_BLOCKCODE
 	htmlFlags |= gfm.HTML_OMIT_CONTENTS
-	htmlFlags |= gfm.HTML_COMPLETE_PAGE
+	// htmlFlags |= gfm.HTML_COMPLETE_PAGE
 	renderer := &CustomRender{
 		Renderer:  gfm.HtmlRenderer(htmlFlags, "", ""),
 		urlPrefix: urlPrefix,

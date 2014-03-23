@@ -2,6 +2,7 @@
 {{template "base/navbar" .}}
 <div class="container" id="gogs-body" data-page="user-signin">
     <form action="/user/login" method="post" class="form-horizontal gogs-card" id="gogs-login-card">
+        {{.CsrfTokenHtml}}
         <h3>Log in</h3>
         <div class="alert alert-danger form-error{{if .HasError}}{{else}} hidden{{end}}">{{.ErrorMsg}}</div>
         <div class="form-group {{if .Err_UserName}}has-error has-feedback{{end}}">
@@ -15,6 +16,17 @@
             <label class="col-md-4 control-label">Password: </label>
             <div class="col-md-6">
                 <input name="passwd" type="password" class="form-control" placeholder="Type your password" required="required">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <div class="col-md-6 col-md-offset-4">
+                <div class="checkbox">
+                    <label>
+                        <input type="checkbox" name="remember" {{if .remember}}checked{{end}}>
+                        <strong>Remember me</strong>
+                    </label>
+                </div>
             </div>
         </div>
 

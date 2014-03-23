@@ -16,6 +16,7 @@ import (
 	"github.com/Unknwon/goconfig"
 
 	"github.com/gogits/cache"
+	"github.com/gogits/session"
 
 	"github.com/gogits/gogs/modules/log"
 )
@@ -37,21 +38,35 @@ var (
 	RunUser      string
 	RepoRootPath string
 
+	EnableHttpsClone bool
+
+	LogInRememberDays  int
+	CookieUserName     string
+	CookieRememberName string
+
 	Cfg         *goconfig.ConfigFile
 	MailService *Mailer
+
+	LogMode   string
+	LogConfig string
 
 	Cache        cache.Cache
 	CacheAdapter string
 	CacheConfig  string
 
-	LogMode   string
-	LogConfig string
+	SessionProvider string
+	SessionConfig   *session.Config
+	SessionManager  *session.Manager
+
+	PictureService  string
+	PictureRootPath string
 )
 
 var Service struct {
 	RegisterEmailConfirm   bool
 	DisenableRegisteration bool
 	RequireSignInView      bool
+	EnableCacheAvatar      bool
 	ActiveCodeLives        int
 	ResetPwdCodeLives      int
 }
@@ -82,6 +97,7 @@ func newService() {
 	Service.ResetPwdCodeLives = Cfg.MustInt("service", "RESET_PASSWD_CODE_LIVE_MINUTES", 180)
 	Service.DisenableRegisteration = Cfg.MustBool("service", "DISENABLE_REGISTERATION", false)
 	Service.RequireSignInView = Cfg.MustBool("service", "REQUIRE_SIGNIN_VIEW", false)
+	Service.EnableCacheAvatar = Cfg.MustBool("service", "ENABLE_CACHE_AVATAR", false)
 }
 
 func newLogService() {
@@ -129,6 +145,10 @@ func newLogService() {
 			Cfg.MustValue(modeSec, "HOST", "127.0.0.1:25"),
 			Cfg.MustValue(modeSec, "RECEIVERS", "[]"),
 			Cfg.MustValue(modeSec, "SUBJECT", "Diagnostic message from serve"))
+	case "database":
+		LogConfig = fmt.Sprintf(`{"level":%s,"driver":%s,"conn":%s}`, level,
+			Cfg.MustValue(modeSec, "Driver"),
+			Cfg.MustValue(modeSec, "CONN"))
 	}
 
 	log.NewLogger(Cfg.MustInt64("log", "BUFFER_LEN", 10000), LogMode, LogConfig)
@@ -157,6 +177,34 @@ func newCacheService() {
 	}
 
 	log.Info("Cache Service Enabled")
+}
+
+func newSessionService() {
+	SessionProvider = Cfg.MustValue("session", "PROVIDER", "memory")
+
+	SessionConfig = new(session.Config)
+	SessionConfig.ProviderConfig = Cfg.MustValue("session", "PROVIDER_CONFIG")
+	SessionConfig.CookieName = Cfg.MustValue("session", "COOKIE_NAME", "i_like_gogits")
+	SessionConfig.CookieSecure = Cfg.MustBool("session", "COOKIE_SECURE")
+	SessionConfig.EnableSetCookie = Cfg.MustBool("session", "ENABLE_SET_COOKIE", true)
+	SessionConfig.GcIntervalTime = Cfg.MustInt64("session", "GC_INTERVAL_TIME", 86400)
+	SessionConfig.SessionLifeTime = Cfg.MustInt64("session", "SESSION_LIFE_TIME", 86400)
+	SessionConfig.SessionIDHashFunc = Cfg.MustValue("session", "SESSION_ID_HASHFUNC", "sha1")
+	SessionConfig.SessionIDHashKey = Cfg.MustValue("session", "SESSION_ID_HASHKEY")
+
+	if SessionProvider == "file" {
+		os.MkdirAll(path.Dir(SessionConfig.ProviderConfig), os.ModePerm)
+	}
+
+	var err error
+	SessionManager, err = session.NewManager(SessionProvider, *SessionConfig)
+	if err != nil {
+		fmt.Printf("Init session system failed, provider: %s, %v\n",
+			SessionProvider, err)
+		os.Exit(2)
+	}
+
+	log.Info("Session Service Enabled")
 }
 
 func newMailService() {
@@ -214,6 +262,15 @@ func NewConfigContext() {
 	SecretKey = Cfg.MustValue("security", "SECRET_KEY")
 	RunUser = Cfg.MustValue("", "RUN_USER")
 
+	EnableHttpsClone = Cfg.MustBool("security", "ENABLE_HTTPS_CLONE", false)
+
+	LogInRememberDays = Cfg.MustInt("security", "LOGIN_REMEMBER_DAYS")
+	CookieUserName = Cfg.MustValue("security", "COOKIE_USERNAME")
+	CookieRememberName = Cfg.MustValue("security", "COOKIE_REMEMBER_NAME")
+
+	PictureService = Cfg.MustValue("picture", "SERVICE")
+	PictureRootPath = Cfg.MustValue("picture", "PATH")
+
 	// Determine and create root git reposiroty path.
 	RepoRootPath = Cfg.MustValue("repository", "ROOT")
 	if err = os.MkdirAll(RepoRootPath, os.ModePerm); err != nil {
@@ -226,6 +283,7 @@ func NewServices() {
 	newService()
 	newLogService()
 	newCacheService()
+	newSessionService()
 	newMailService()
 	newRegisterMailService()
 }

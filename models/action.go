@@ -7,6 +7,9 @@ package models
 import (
 	"encoding/json"
 	"time"
+
+	"github.com/gogits/gogs/modules/base"
+	"github.com/gogits/gogs/modules/log"
 )
 
 // Operation types of user action.
@@ -28,7 +31,8 @@ type Action struct {
 	ActUserName string // Action user name.
 	RepoId      int64
 	RepoName    string
-	Content     string
+	RefName     string
+	Content     string    `xorm:"TEXT"`
 	Created     time.Time `xorm:"created"`
 }
 
@@ -44,13 +48,17 @@ func (a Action) GetRepoName() string {
 	return a.RepoName
 }
 
+func (a Action) GetBranch() string {
+	return a.RefName
+}
+
 func (a Action) GetContent() string {
 	return a.Content
 }
 
 // CommitRepoAction records action for commit repository.
 func CommitRepoAction(userId int64, userName string,
-	repoId int64, repoName string, commits [][]string) error {
+	repoId int64, repoName string, refName string, commits *base.PushCommits) error {
 	bs, err := json.Marshal(commits)
 	if err != nil {
 		return err
@@ -76,9 +84,22 @@ func CommitRepoAction(userId int64, userName string,
 			Content:     string(bs),
 			RepoId:      repoId,
 			RepoName:    repoName,
+			RefName:     refName,
 		})
 		return err
 	}
+
+	// Update repository last update time.
+	repo, err := GetRepositoryByName(userId, repoName)
+	if err != nil {
+		return err
+	}
+	repo.IsBare = false
+	if err = UpdateRepository(repo); err != nil {
+		return err
+	}
+
+	log.Trace("action.CommitRepoAction: %d/%s", userId, repo.LowerName)
 	return nil
 }
 
@@ -92,6 +113,8 @@ func NewRepoAction(user *User, repo *Repository) error {
 		RepoId:      repo.Id,
 		RepoName:    repo.Name,
 	})
+
+	log.Trace("action.NewRepoAction: %s/%s", user.LowerName, repo.LowerName)
 	return err
 }
 

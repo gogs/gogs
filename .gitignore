@@ -5,6 +5,7 @@ gogs
 *.db
 *.log
 custom/
+data/
 .vendor/
 .idea/
 *.iml

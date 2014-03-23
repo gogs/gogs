@@ -19,6 +19,8 @@ import (
 	"time"
 
 	"github.com/Unknwon/com"
+
+	"github.com/gogits/gogs/modules/log"
 )
 
 const (
@@ -78,7 +80,7 @@ type PublicKey struct {
 	OwnerId     int64  `xorm:"index"`
 	Name        string `xorm:"unique not null"`
 	Fingerprint string
-	Content     string    `xorm:"text not null"`
+	Content     string    `xorm:"TEXT not null"`
 	Created     time.Time `xorm:"created"`
 	Updated     time.Time `xorm:"updated"`
 }
@@ -99,8 +101,8 @@ func AddPublicKey(key *PublicKey) (err error) {
 	}
 
 	// Calculate fingerprint.
-	tmpPath := filepath.Join(os.TempDir(), fmt.Sprintf("%d", time.Now().Nanosecond()),
-		"id_rsa.pub")
+	tmpPath := strings.Replace(filepath.Join(os.TempDir(), fmt.Sprintf("%d", time.Now().Nanosecond()),
+		"id_rsa.pub"), "\\", "/", -1)
 	os.MkdirAll(path.Dir(tmpPath), os.ModePerm)
 	if err = ioutil.WriteFile(tmpPath, []byte(key.Content), os.ModePerm); err != nil {
 		return err
@@ -127,25 +129,11 @@ func AddPublicKey(key *PublicKey) (err error) {
 	return nil
 }
 
-// DeletePublicKey deletes SSH key information both in database and authorized_keys file.
-func DeletePublicKey(key *PublicKey) (err error) {
-	// Delete SSH key in database.
-	has, err := orm.Id(key.Id).Get(key)
-	if err != nil {
-		return err
-	} else if !has {
-		return errors.New("Public key does not exist")
-	}
-	if _, err = orm.Delete(key); err != nil {
-		return err
-	}
-
+func rewriteAuthorizedKeys(key *PublicKey, p, tmpP string) error {
 	// Delete SSH key in SSH key file.
 	sshOpLocker.Lock()
 	defer sshOpLocker.Unlock()
 
-	p := filepath.Join(sshPath, "authorized_keys")
-	tmpP := filepath.Join(sshPath, "authorized_keys.tmp")
 	fr, err := os.Open(p)
 	if err != nil {
 		return err
@@ -188,8 +176,29 @@ func DeletePublicKey(key *PublicKey) (err error) {
 			break
 		}
 	}
+	return nil
+}
 
-	if err = os.Remove(p); err != nil {
+// DeletePublicKey deletes SSH key information both in database and authorized_keys file.
+func DeletePublicKey(key *PublicKey) (err error) {
+	// Delete SSH key in database.
+	has, err := orm.Id(key.Id).Get(key)
+	if err != nil {
+		return err
+	} else if !has {
+		return errors.New("Public key does not exist")
+	}
+	if _, err = orm.Delete(key); err != nil {
+		return err
+	}
+
+	p := filepath.Join(sshPath, "authorized_keys")
+	tmpP := filepath.Join(sshPath, "authorized_keys.tmp")
+	log.Trace("ssh.DeletePublicKey(authorized_keys): %s", p)
+
+	if err = rewriteAuthorizedKeys(key, p, tmpP); err != nil {
+		return err
+	} else if err = os.Remove(p); err != nil {
 		return err
 	}
 	return os.Rename(tmpP, p)
