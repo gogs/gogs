@@ -59,7 +59,7 @@ func init() {
 		}
 	}
 	Cfg, err = goconfig.LoadConfigFile(cfgPath)
-	if _, err = os.Create(cfgPath); err != nil {
+	if err != nil {
 		log.Error("", "Fail to load gopm config file")
 		log.Fatal("", err.Error())
 	}
