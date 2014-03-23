@@ -67,13 +67,13 @@ func CreateIssue(ctx *middleware.Context, params martini.Params, form auth.Creat
 }
 
 func ViewIssue(ctx *middleware.Context, params martini.Params) {
-	issueid, err := base.StrTo(params["issueid"]).Int()
+	index, err := base.StrTo(params["index"]).Int()
 	if err != nil {
 		ctx.Handle(404, "issue.ViewIssue", err)
 		return
 	}
 
-	issue, err := models.GetIssueById(int64(issueid))
+	issue, err := models.GetIssueByIndex(ctx.Repo.Repository.Id, int64(index))
 	if err != nil {
 		if err == models.ErrIssueNotExist {
 			ctx.Handle(404, "issue.ViewIssue", err)
@@ -86,4 +86,40 @@ func ViewIssue(ctx *middleware.Context, params martini.Params) {
 	ctx.Data["Title"] = issue.Name
 	ctx.Data["Issue"] = issue
 	ctx.HTML(200, "issue/view")
+}
+
+func UpdateIssue(ctx *middleware.Context, params martini.Params, form auth.CreateIssueForm) {
+	if !ctx.Repo.IsOwner {
+		ctx.Handle(404, "issue.UpdateIssue", nil)
+		return
+	}
+
+	index, err := base.StrTo(params["index"]).Int()
+	if err != nil {
+		ctx.Handle(404, "issue.UpdateIssue", err)
+		return
+	}
+
+	issue, err := models.GetIssueByIndex(ctx.Repo.Repository.Id, int64(index))
+	if err != nil {
+		if err == models.ErrIssueNotExist {
+			ctx.Handle(404, "issue.UpdateIssue", err)
+		} else {
+			ctx.Handle(200, "issue.UpdateIssue", err)
+		}
+		return
+	}
+
+	issue.Name = form.IssueName
+	issue.MilestoneId = form.MilestoneId
+	issue.AssigneeId = form.AssigneeId
+	issue.Labels = form.Labels
+	issue.Content = form.Content
+	if err = models.UpdateIssue(issue); err != nil {
+		ctx.Handle(200, "issue.UpdateIssue", err)
+		return
+	}
+
+	ctx.Data["Title"] = issue.Name
+	ctx.Data["Issue"] = issue
 }

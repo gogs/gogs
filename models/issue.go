@@ -58,6 +58,7 @@ func CreateIssue(userId, repoId, milestoneId, assigneeId int64, name, labels, co
 		Content:     content,
 	}
 	_, err = orm.Insert(issue)
+	// TODO: newIssueAction
 	return issue, err
 }
 
@@ -67,9 +68,9 @@ func GetIssueCount(repoId int64) (int64, error) {
 }
 
 // GetIssueById returns issue object by given id.
-func GetIssueById(id int64) (*Issue, error) {
-	issue := new(Issue)
-	has, err := orm.Id(id).Get(issue)
+func GetIssueByIndex(repoId, index int64) (*Issue, error) {
+	issue := &Issue{RepoId: repoId, Index: index}
+	has, err := orm.Get(issue)
 	if err != nil {
 		return nil, err
 	} else if !has {
@@ -124,6 +125,18 @@ func GetIssues(userId, repoId, posterId, milestoneId int64, page int, isClosed, 
 	var issues []Issue
 	err := sess.Find(&issues)
 	return issues, err
+}
+
+// UpdateIssue updates information of issue.
+func UpdateIssue(issue *Issue) error {
+	_, err := orm.Update(issue, &Issue{RepoId: issue.RepoId, Index: issue.Index})
+	return err
+}
+
+func CloseIssue() {
+}
+
+func ReopenIssue() {
 }
 
 // Label represents a list of labels of repository for issues.
