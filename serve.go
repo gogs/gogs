@@ -15,7 +15,7 @@ import (
 	"strings"
 
 	"github.com/codegangsta/cli"
-	"github.com/qiniu/log"
+	"github.com/gogits/gogs/modules/log"
 
 	"github.com/gogits/git"
 	"github.com/gogits/gogs/models"
@@ -104,8 +104,6 @@ func runServ(k *cli.Context) {
 		repoName = repoName[:len(repoName)-4]
 	}
 
-	//os.Setenv("userName", user.Name)
-	//os.Setenv("userId", strconv.Itoa(int(user.Id)))
 	repo, err := models.GetRepositoryByName(user.Id, repoName)
 	var isExist bool = true
 	if err != nil {
@@ -116,8 +114,6 @@ func runServ(k *cli.Context) {
 			return
 		}
 	}
-	//os.Setenv("repoId", strconv.Itoa(int(repo.Id)))
-	//os.Setenv("repoName", repoName)
 
 	isWrite := In(verb, COMMANDS_WRITE)
 	isRead := In(verb, COMMANDS_READONLY)
@@ -187,17 +183,22 @@ func runServ(k *cli.Context) {
 	b := bytes.NewBufferString(s)
 
 	gitcmd.Stdout = io.MultiWriter(os.Stdout, b)
-	gitcmd.Stdin = io.MultiReader(os.Stdin, b)
+	//gitcmd.Stdin = io.MultiReader(os.Stdin, b)
+	gitcmd.Stdin = os.Stdin
 	gitcmd.Stderr = os.Stderr
 
 	if err = gitcmd.Run(); err != nil {
 		println("execute command error:", err.Error())
 	}
 
+	if !strings.HasPrefix(cmd, "git-receive-pack") {
+		return
+	}
+
 	// update
-	w, _ := os.Create("serve.log")
-	defer w.Close()
-	log.SetOutput(w)
+	//w, _ := os.Create("serve.log")
+	//defer w.Close()
+	//log.SetOutput(w)
 
 	var t = "ok refs/heads/"
 	var i int
@@ -226,7 +227,7 @@ func runServ(k *cli.Context) {
 			return
 		}
 		if ref, ok = refs[refname]; !ok {
-			println("unknow reference name", refname)
+			println("unknow reference name -", refname, "-")
 			return
 		}
 		l, err = ref.AllCommits()
