@@ -58,8 +58,7 @@ var (
 	SessionConfig   *session.Config
 	SessionManager  *session.Manager
 
-	PictureService  string
-	PictureRootPath string
+	PictureService string
 )
 
 var Service struct {
@@ -269,7 +268,6 @@ func NewConfigContext() {
 	CookieRememberName = Cfg.MustValue("security", "COOKIE_REMEMBER_NAME")
 
 	PictureService = Cfg.MustValue("picture", "SERVICE")
-	PictureRootPath = Cfg.MustValue("picture", "PATH")
 
 	// Determine and create root git reposiroty path.
 	RepoRootPath = Cfg.MustValue("repository", "ROOT")

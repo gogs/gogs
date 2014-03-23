@@ -161,7 +161,6 @@ func Config(ctx *middleware.Context) {
 	ctx.Data["SessionConfig"] = base.SessionConfig
 
 	ctx.Data["PictureService"] = base.PictureService
-	ctx.Data["PictureRootPath"] = base.PictureRootPath
 
 	ctx.Data["LogMode"] = base.LogMode
 	ctx.Data["LogConfig"] = base.LogConfig
