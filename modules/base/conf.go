@@ -43,6 +43,9 @@ var (
 	Cache        cache.Cache
 	CacheAdapter string
 	CacheConfig  string
+
+	LogMode   string
+	LogConfig string
 )
 
 var Service struct {
@@ -83,15 +86,15 @@ func newService() {
 
 func newLogService() {
 	// Get and check log mode.
-	mode := Cfg.MustValue("log", "MODE", "console")
-	modeSec := "log." + mode
+	LogMode = Cfg.MustValue("log", "MODE", "console")
+	modeSec := "log." + LogMode
 	if _, err := Cfg.GetSection(modeSec); err != nil {
-		fmt.Printf("Unknown log mode: %s\n", mode)
+		fmt.Printf("Unknown log mode: %s\n", LogMode)
 		os.Exit(2)
 	}
 
 	// Log level.
-	levelName := Cfg.MustValue("log."+mode, "LEVEL", "Trace")
+	levelName := Cfg.MustValue("log."+LogMode, "LEVEL", "Trace")
 	level, ok := logLevels[levelName]
 	if !ok {
 		fmt.Printf("Unknown log level: %s\n", levelName)
@@ -99,14 +102,13 @@ func newLogService() {
 	}
 
 	// Generate log configuration.
-	var config string
-	switch mode {
+	switch LogMode {
 	case "console":
-		config = fmt.Sprintf(`{"level":%s}`, level)
+		LogConfig = fmt.Sprintf(`{"level":%s}`, level)
 	case "file":
 		logPath := Cfg.MustValue(modeSec, "FILE_NAME", "log/gogs.log")
 		os.MkdirAll(path.Dir(logPath), os.ModePerm)
-		config = fmt.Sprintf(
+		LogConfig = fmt.Sprintf(
 			`{"level":%s,"filename":%s,"rotate":%v,"maxlines":%d,"maxsize",%d,"daily":%v,"maxdays":%d}`, level,
 			logPath,
 			Cfg.MustBool(modeSec, "LOG_ROTATE", true),
@@ -115,13 +117,13 @@ func newLogService() {
 			Cfg.MustBool(modeSec, "DAILY_ROTATE", true),
 			Cfg.MustInt(modeSec, "MAX_DAYS", 7))
 	case "conn":
-		config = fmt.Sprintf(`{"level":%s,"reconnectOnMsg":%v,"reconnect":%v,"net":%s,"addr":%s}`, level,
+		LogConfig = fmt.Sprintf(`{"level":%s,"reconnectOnMsg":%v,"reconnect":%v,"net":%s,"addr":%s}`, level,
 			Cfg.MustBool(modeSec, "RECONNECT_ON_MSG", false),
 			Cfg.MustBool(modeSec, "RECONNECT", false),
 			Cfg.MustValue(modeSec, "PROTOCOL", "tcp"),
 			Cfg.MustValue(modeSec, "ADDR", ":7020"))
 	case "smtp":
-		config = fmt.Sprintf(`{"level":%s,"username":%s,"password":%s,"host":%s,"sendTos":%s,"subject":%s}`, level,
+		LogConfig = fmt.Sprintf(`{"level":%s,"username":%s,"password":%s,"host":%s,"sendTos":%s,"subject":%s}`, level,
 			Cfg.MustValue(modeSec, "USER", "example@example.com"),
 			Cfg.MustValue(modeSec, "PASSWD", "******"),
 			Cfg.MustValue(modeSec, "HOST", "127.0.0.1:25"),
@@ -129,8 +131,8 @@ func newLogService() {
 			Cfg.MustValue(modeSec, "SUBJECT", "Diagnostic message from serve"))
 	}
 
-	log.NewLogger(Cfg.MustInt64("log", "BUFFER_LEN", 10000), mode, config)
-	log.Info("Log Mode: %s(%s)", strings.Title(mode), levelName)
+	log.NewLogger(Cfg.MustInt64("log", "BUFFER_LEN", 10000), LogMode, LogConfig)
+	log.Info("Log Mode: %s(%s)", strings.Title(LogMode), levelName)
 }
 
 func newCacheService() {

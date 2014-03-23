@@ -98,7 +98,7 @@ func CreateTimeLimitCode(data string, minutes int, startInf interface{}) string 
 
 // AvatarLink returns avatar link by given e-mail.
 func AvatarLink(email string) string {
-	return "http://1.gravatar.com/avatar/" + EncodeMd5(email)
+	return "/avatar/" + EncodeMd5(email)
 }
 
 // Seconds-based time units
