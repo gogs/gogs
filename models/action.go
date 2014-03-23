@@ -30,6 +30,7 @@ type Action struct {
 	ActUserName string // Action user name.
 	RepoId      int64
 	RepoName    string
+	RefName     string
 	Content     string    `xorm:"TEXT"`
 	Created     time.Time `xorm:"created"`
 }
@@ -52,7 +53,7 @@ func (a Action) GetContent() string {
 
 // CommitRepoAction records action for commit repository.
 func CommitRepoAction(userId int64, userName string,
-	repoId int64, repoName string, commits [][]string) error {
+	repoId int64, repoName string, refName string, commits [][]string) error {
 	bs, err := json.Marshal(commits)
 	if err != nil {
 		return err
@@ -78,6 +79,7 @@ func CommitRepoAction(userId int64, userName string,
 			Content:     string(bs),
 			RepoId:      repoId,
 			RepoName:    repoName,
+			RefName:     refName,
 		})
 		return err
 	}
