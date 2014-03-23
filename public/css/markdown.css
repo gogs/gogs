@@ -175,6 +175,10 @@
   margin-bottom: 0;
 }
 
+.markdown img {
+  max-width: 100%;
+}
+
 .markdown .btn {
   color: #fff;
 }
