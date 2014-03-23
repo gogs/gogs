@@ -31,6 +31,10 @@ func Issues(ctx *middleware.Context, params martini.Params) {
 		return
 	}
 
+	if len(params["branchname"]) == 0 {
+		params["branchname"] = "master"
+	}
+	ctx.Data["Branchname"] = params["branchname"]
 	ctx.HTML(200, "repo/issues")
 }
 

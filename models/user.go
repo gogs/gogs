@@ -72,7 +72,10 @@ func (user *User) HomeLink() string {
 
 // AvatarLink returns the user gravatar link.
 func (user *User) AvatarLink() string {
-	return "/avatar/" + user.Avatar
+	if base.Service.EnableCacheAvatar {
+		return "/avatar/" + user.Avatar
+	}
+	return "http://1.gravatar.com/avatar/" + user.Avatar
 }
 
 // NewGitSig generates and returns the signature of given user.

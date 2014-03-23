@@ -20,6 +20,10 @@ func Trace(format string, v ...interface{}) {
 	logger.Trace(format, v...)
 }
 
+func Debug(format string, v ...interface{}) {
+	logger.Debug(format, v...)
+}
+
 func Info(format string, v ...interface{}) {
 	logger.Info(format, v...)
 }
