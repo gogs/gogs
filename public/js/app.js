@@ -110,25 +110,6 @@ var Gogits = {
         $pre.addClass('prettyprint linenums');
         prettyPrint();
 
-        var $lineNums = $pre.parent().siblings('.lines-num');
-        if ($lineNums.length > 0) {
-            var nums = $pre.find('ol.linenums > li').length;
-            for (var i = 1; i <= nums; i++) {
-                $lineNums.append('<span id="L' + i + '" rel=".L' + i + '">' + i + '</span>');
-            }
-
-            var last;
-            $(document).on('click', '.lines-num span', function () {
-                var $e = $(this);
-                if (last) {
-                    last.removeClass('active');
-                }
-                last = $e.parent().siblings('.lines-code').find('ol.linenums > ' + $e.attr('rel'));
-                last.addClass('active');
-                window.location.href = '#' + $e.attr('id');
-            });
-        }
-
         // Set anchor.
         var headers = {};
         $md.find('h1, h2, h3, h4, h5, h6').each(function () {
@@ -147,6 +128,30 @@ var Gogits = {
             node.append('<a class="anchor" href="#' + name + '"><span class="octicon octicon-link"></span></a>');
         });
     }
+
+    Gogits.renderCodeView = function () {
+        $('.code-view .lines-code > pre').each(function(){
+            var $pre = $(this);
+            var $lineNums = $pre.parent().siblings('.lines-num');
+            if ($lineNums.length > 0) {
+                var nums = $pre.find('ol.linenums > li').length;
+                for (var i = 1; i <= nums; i++) {
+                    $lineNums.append('<span id="L' + i + '" rel=".L' + i + '">' + i + '</span>');
+                }
+
+                var last;
+                $(document).on('click', '.lines-num span', function () {
+                    var $e = $(this);
+                    if (last) {
+                        last.removeClass('active');
+                    }
+                    last = $e.parent().siblings('.lines-code').find('ol.linenums > ' + $e.attr('rel'));
+                    last.addClass('active');
+                    window.location.href = '#' + $e.attr('id');
+                });
+            }
+        });
+    };
 
 })(jQuery);
 
@@ -177,6 +182,7 @@ function initCore() {
     Gogits.initModals();
     Gogits.initDropDown();
     Gogits.renderMarkdown();
+    Gogits.renderCodeView();
 }
 
 function initRegister() {
