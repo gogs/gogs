@@ -31,6 +31,23 @@ var Gogits = {
                 }
             };
             return ajax(url, options);
+        },
+
+        changeHash: function(hash) {
+            if(history.pushState) {
+                history.pushState(null, null, hash);
+            }
+            else {
+                location.hash = hash;
+            }
+        },
+
+        deSelect: function() {
+            if(window.getSelection) {
+                window.getSelection().removeAllRanges();
+            } else {
+                document.selection.empty();
+            }
         }
     });
 }(jQuery));
@@ -130,27 +147,67 @@ var Gogits = {
     }
 
     Gogits.renderCodeView = function () {
+        function selectRange($list, $select, $from){
+            $list.removeClass('active');
+            if($from){
+                var a = parseInt($select.attr('rel').substr(1));
+                var b = parseInt($from.attr('rel').substr(1));
+                var c;
+                if(a != b){
+                    if(a > b){
+                        c = a;
+                        a = b;
+                        b = c;
+                    }
+                    var classes = [];
+                    for(i = a; i <= b; i++) {
+                        classes.push('.L'+i);
+                    }
+                    $list.filter(classes.join(',')).addClass('active');
+                    $.changeHash('#L' + a + '-' + 'L' + b);
+                    return
+                }
+            }
+            $select.addClass('active');
+            $.changeHash('#' + $select.attr('rel'));
+        }
+
+        $(document).on('click', '.lines-num span', function (e) {
+            var $select = $(this);
+            var $list = $select.parent().siblings('.lines-code').find('ol.linenums > li');
+            selectRange($list, $list.filter('[rel='+$select.attr('rel')+']'), (e.shiftKey?$list.filter('.active').eq(0):null));
+            $.deSelect();
+        });
+
         $('.code-view .lines-code > pre').each(function(){
             var $pre = $(this);
-            var $lineNums = $pre.parent().siblings('.lines-num');
+            var $lineCode = $pre.parent();
+            var $lineNums = $lineCode.siblings('.lines-num');
             if ($lineNums.length > 0) {
                 var nums = $pre.find('ol.linenums > li').length;
                 for (var i = 1; i <= nums; i++) {
-                    $lineNums.append('<span id="L' + i + '" rel=".L' + i + '">' + i + '</span>');
+                    $lineNums.append('<span id="L' + i + '" rel="L' + i + '">' + i + '</span>');
                 }
-
-                var last;
-                $(document).on('click', '.lines-num span', function () {
-                    var $e = $(this);
-                    if (last) {
-                        last.removeClass('active');
-                    }
-                    last = $e.parent().siblings('.lines-code').find('ol.linenums > ' + $e.attr('rel'));
-                    last.addClass('active');
-                    window.location.href = '#' + $e.attr('id');
-                });
             }
         });
+
+        $(window).on('hashchange', function(e) {
+            var m = window.location.hash.match(/^#(L\d+)\-(L\d+)$/);
+            var $list = $('.code-view ol.linenums > li');
+            if(m){
+                var $first = $list.filter('.'+m[1]);
+                selectRange($list, $first, $list.filter('.'+m[2]));
+                $("html, body").scrollTop($first.offset().top-200);
+                console.log($first.offset().top);
+                return;
+            }
+            m = window.location.hash.match(/^#(L\d+)$/);
+            if(m){
+                var $first = $list.filter('.'+m[1]);
+                selectRange($list, $first);
+                $("html, body").scrollTop($first.offset().top-200);
+            }
+        }).trigger('hashchange');
     };
 
 })(jQuery);
