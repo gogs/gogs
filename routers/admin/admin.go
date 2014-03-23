@@ -141,6 +141,7 @@ func Config(ctx *middleware.Context) {
 	ctx.Data["Domain"] = base.Domain
 	ctx.Data["RunUser"] = base.RunUser
 	ctx.Data["RunMode"] = strings.Title(martini.Env)
+	ctx.Data["EnableHttpsClone"] = base.EnableHttpsClone
 	ctx.Data["RepoRootPath"] = base.RepoRootPath
 
 	ctx.Data["Service"] = base.Service

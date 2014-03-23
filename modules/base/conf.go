@@ -38,6 +38,8 @@ var (
 	RunUser      string
 	RepoRootPath string
 
+	EnableHttpsClone bool
+
 	LogInRememberDays  int
 	CookieUserName     string
 	CookieRememberName string
@@ -259,6 +261,8 @@ func NewConfigContext() {
 	Domain = Cfg.MustValue("server", "DOMAIN")
 	SecretKey = Cfg.MustValue("security", "SECRET_KEY")
 	RunUser = Cfg.MustValue("", "RUN_USER")
+
+	EnableHttpsClone = Cfg.MustBool("security", "ENABLE_HTTPS_CLONE", false)
 
 	LogInRememberDays = Cfg.MustInt("security", "LOGIN_REMEMBER_DAYS")
 	CookieUserName = Cfg.MustValue("security", "COOKIE_USERNAME")
