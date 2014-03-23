@@ -51,9 +51,14 @@ func (a Action) GetContent() string {
 	return a.Content
 }
 
+type PushCommits struct {
+	Len     int
+	Commits [][]string
+}
+
 // CommitRepoAction records action for commit repository.
 func CommitRepoAction(userId int64, userName string,
-	repoId int64, repoName string, refName string, commits [][]string) error {
+	repoId int64, repoName string, refName string, commits *PushCommits) error {
 	bs, err := json.Marshal(commits)
 	if err != nil {
 		return err
