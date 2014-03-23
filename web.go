@@ -17,6 +17,7 @@ import (
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
+	"github.com/gogits/gogs/modules/avatar"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/mailer"
@@ -92,6 +93,9 @@ func runWeb(*cli.Context) {
 	m.Get("/pulls", reqSignIn, user.Pulls)
 	m.Get("/stars", reqSignIn, user.Stars)
 	m.Get("/help", routers.Help)
+
+	avatarCache := avatar.HttpHandler("public/img/avatar/", "public/img/avatar/default.jpg")
+	m.Get("/avatar/:hash", avatarCache.ServeHTTP)
 
 	m.Group("/user", func(r martini.Router) {
 		r.Any("/login", binding.BindIgnErr(auth.LogInForm{}), user.SignIn)
