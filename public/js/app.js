@@ -98,7 +98,7 @@ var Gogits = {
     };
     // fix dropdown inside click
     Gogits.initDropDown = function(){
-        $('.dropdown-menu').on('click','a,button,input,select',function(e){
+        $('.dropdown-menu.no-propagation').on('click',function(e){
             e.stopPropagation();
         });
     };
