@@ -36,7 +36,7 @@ func Issues(ctx *middleware.Context, params martini.Params) {
 
 func CreateIssue(ctx *middleware.Context, params martini.Params, form auth.CreateIssueForm) {
 	if !ctx.Repo.IsOwner {
-		ctx.Error(404)
+		ctx.Handle(404, "issue.CreateIssue", nil)
 		return
 	}
 
@@ -65,14 +65,14 @@ func CreateIssue(ctx *middleware.Context, params martini.Params, form auth.Creat
 func ViewIssue(ctx *middleware.Context, params martini.Params) {
 	issueid, err := base.StrTo(params["issueid"]).Int()
 	if err != nil {
-		ctx.Error(404)
+		ctx.Handle(404, "issue.ViewIssue", err)
 		return
 	}
 
 	issue, err := models.GetIssueById(int64(issueid))
 	if err != nil {
 		if err == models.ErrIssueNotExist {
-			ctx.Error(404)
+			ctx.Handle(404, "issue.ViewIssue", err)
 		} else {
 			ctx.Handle(200, "issue.ViewIssue", err)
 		}
