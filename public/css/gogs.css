@@ -346,6 +346,10 @@ html, body {
     border-left: 4px solid #DD4B39;
 }
 
+#gogs-repo-setting-container .form-horizontal label {
+    line-height: 30px;
+}
+
 /* gogits user ssh keys */
 
 #gogs-ssh-keys .list-group-item {
@@ -575,12 +579,12 @@ html, body {
     min-width: 200px;
 }
 
-#gogs-repo-clone .dropdown-menu{
+#gogs-repo-clone .dropdown-menu {
     width: 400px;
     padding: 20px;
 }
 
-#gogs-repo-clone .input-group{
+#gogs-repo-clone .input-group {
     margin-bottom: 15px;
 }
 
