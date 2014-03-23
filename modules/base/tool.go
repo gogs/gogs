@@ -471,6 +471,7 @@ type Actioner interface {
 	GetOpType() int
 	GetActUserName() string
 	GetRepoName() string
+	GetBranch() string
 	GetContent() string
 }
 
@@ -493,25 +494,34 @@ const (
 	TPL_COMMIT_REPO_LI = `<div><img id="gogs-user-avatar-commit" src="%s?s=16" alt="user-avatar" title="username"/> <a href="/%s/%s/commit/%s">%s</a> %s</div>`
 )
 
+type PushCommits struct {
+	Len     int
+	Commits [][]string
+}
+
 // ActionDesc accepts int that represents action operation type
 // and returns the description.
 func ActionDesc(act Actioner, avatarLink string) string {
 	actUserName := act.GetActUserName()
 	repoName := act.GetRepoName()
+	branch := act.GetBranch()
 	content := act.GetContent()
 	switch act.GetOpType() {
 	case 1: // Create repository.
 		return fmt.Sprintf(TPL_CREATE_REPO, actUserName, actUserName, actUserName, repoName, repoName)
 	case 5: // Commit repository.
-		var commits [][]string
-		if err := json.Unmarshal([]byte(content), &commits); err != nil {
+		var push *PushCommits
+		if err := json.Unmarshal([]byte(content), &push); err != nil {
 			return err.Error()
 		}
 		buf := bytes.NewBuffer([]byte("\n"))
-		for _, commit := range commits {
+		for _, commit := range push.Commits {
 			buf.WriteString(fmt.Sprintf(TPL_COMMIT_REPO_LI, avatarLink, actUserName, repoName, commit[0], commit[0][:7], commit[1]) + "\n")
 		}
-		return fmt.Sprintf(TPL_COMMIT_REPO, actUserName, actUserName, actUserName, repoName, "master", "master", actUserName, repoName, actUserName, repoName,
+		if push.Len > 3 {
+			buf.WriteString(fmt.Sprintf(`<div><a href="/%s/%s/commits">%d other commits >></a></div>`, actUserName, repoName, push.Len))
+		}
+		return fmt.Sprintf(TPL_COMMIT_REPO, actUserName, actUserName, actUserName, repoName, branch, branch, actUserName, repoName, actUserName, repoName,
 			buf.String())
 	default:
 		return "invalid type"

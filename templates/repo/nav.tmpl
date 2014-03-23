@@ -3,7 +3,7 @@
         <div class="row">
             <div class="col-md-7">
                 <h3 class="name"><i class="fa fa-book fa-lg"></i><a href="{{.Owner.HomeLink}}">{{.Owner.Name}}</a> / {{.Repository.Name}}</h3>
-                <p class="desc">{{.Repository.Description}}{{if .Repository.Website}}<a href="{{.Repository.Website}}">{{.Repository.Website}}</a>{{end}}</p>
+                <p class="desc">{{.Repository.Description}}{{if .Repository.Website}} <a href="{{.Repository.Website}}">{{.Repository.Website}}</a>{{end}}</p>
             </div>
             <div class="col-md-5 actions text-right clone-group-btn">
                 {{if not .IsBareRepo}}
@@ -32,7 +32,7 @@
                         <p class="help-block text-center">Need help cloning? Visit <a href="#">Help</a>!</p>
                     </div>
                 </div>
-                <div class="btn-group {{if .IsRepositoryWatching}}watching{{else}}no-watching{{end}}" id="gogs-repo-watching" data-watch="/{{.SignedUser.Name}}/{{.Repository.Name}}/action/watch" data-unwatch="/{{.SignedUser.Name}}/{{.Repository.Name}}/action/unwatch">
+                <div class="btn-group {{if .IsRepositoryWatching}}watching{{else}}no-watching{{end}}" id="gogs-repo-watching" data-watch="/{{.Owner.Name}}/{{.Repository.Name}}/action/watch" data-unwatch="/{{.Owner.Name}}/{{.Repository.Name}}/action/unwatch">
                     {{if .IsRepositoryWatching}}
                     <button type="button" class="btn btn-default"><i class="fa fa-eye fa-lg fa-m"></i></button>
                     {{else}}
