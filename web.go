@@ -163,7 +163,7 @@ func runWeb(*cli.Context) {
 		m.Get("/template/**", dev.TemplatePreview)
 	}
 
-	// not found handler
+	// Not found handler.
 	m.NotFound(routers.NotFound)
 
 	listenAddr := fmt.Sprintf("%s:%s",

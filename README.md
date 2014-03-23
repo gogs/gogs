@@ -1,4 +1,4 @@
-Gogs - Go Git Service [![wercker status](https://app.wercker.com/status/ad0bdb0bc450ac6f09bc56b9640a50aa/s/ "wercker status")](https://app.wercker.com/project/bykey/ad0bdb0bc450ac6f09bc56b9640a50aa) [![Build Status](https://drone.io/github.com/gogits/gogs/status.png)](https://drone.io/github.com/gogits/gogs/latest)
+Gogs - Go Git Service [![wercker status](https://app.wercker.com/status/ad0bdb0bc450ac6f09bc56b9640a50aa/s/ "wercker status")](https://app.wercker.com/project/bykey/ad0bdb0bc450ac6f09bc56b9640a50aa) [![Build Status](https://drone.io/github.com/gogits/gogs/status.png)](https://drone.io/github.com/gogits/gogs/latest) [![Bitdeli Badge](https://d2weczhvl823v0.cloudfront.net/gogits/gogs/trend.png)](https://bitdeli.com/free "Bitdeli Badge")
 =====================
 
 Gogs(Go Git Service) is a Self Hosted Git Service in the Go Programming Language.
@@ -7,7 +7,9 @@ Gogs(Go Git Service) is a Self Hosted Git Service in the Go Programming Language
 
 ##### Current version: 0.1.6 Alpha
 
-[简体中文](README_ZH.md)
+#### Other language version
+
+- [简体中文](README_ZH.md)
 
 ## Purpose
 

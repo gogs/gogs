@@ -83,42 +83,42 @@ func GetIssues(userId, repoId, posterId, milestoneId int64, page int, isClosed, 
 	sess := orm.Limit(20, (page-1)*20)
 
 	if repoId > 0 {
-		sess = sess.Where("repo_id=?", repoId).And("is_closed=?", isClosed)
+		sess.Where("repo_id=?", repoId).And("is_closed=?", isClosed)
 	} else {
-		sess = sess.Where("is_closed=?", isClosed)
+		sess.Where("is_closed=?", isClosed)
 	}
 
 	if userId > 0 {
-		sess = sess.And("assignee_id=?", userId)
+		sess.And("assignee_id=?", userId)
 	} else if posterId > 0 {
-		sess = sess.And("poster_id=?", posterId)
+		sess.And("poster_id=?", posterId)
 	} else if isMention {
-		sess = sess.And("mentions like '%$" + base.ToStr(userId) + "|%'")
+		sess.And("mentions like '%$" + base.ToStr(userId) + "|%'")
 	}
 
 	if milestoneId > 0 {
-		sess = sess.And("milestone_id=?", milestoneId)
+		sess.And("milestone_id=?", milestoneId)
 	}
 
 	if len(labels) > 0 {
 		for _, label := range strings.Split(labels, ",") {
-			sess = sess.And("mentions like '%$" + label + "|%'")
+			sess.And("mentions like '%$" + label + "|%'")
 		}
 	}
 
 	switch sortType {
 	case "oldest":
-		sess = sess.Asc("created")
+		sess.Asc("created")
 	case "recentupdate":
-		sess = sess.Desc("updated")
+		sess.Desc("updated")
 	case "leastupdate":
-		sess = sess.Asc("updated")
+		sess.Asc("updated")
 	case "mostcomment":
-		sess = sess.Desc("num_comments")
+		sess.Desc("num_comments")
 	case "leastcomment":
-		sess = sess.Asc("num_comments")
+		sess.Asc("num_comments")
 	default:
-		sess = sess.Desc("created")
+		sess.Desc("created")
 	}
 
 	var issues []Issue

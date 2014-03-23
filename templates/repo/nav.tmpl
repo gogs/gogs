@@ -3,7 +3,7 @@
         <div class="row">
             <div class="col-md-7">
                 <h3 class="name"><i class="fa fa-book fa-lg"></i><a href="{{.Owner.HomeLink}}">{{.Owner.Name}}</a> / {{.Repository.Name}}</h3>
-                <p class="desc">{{.Repository.Description}}{{if .Repository.Website}}<a href="{{.Repository.Website}}">{{.Repository.Website}}</a>{{end}}</p>
+                <p class="desc">{{.Repository.Description}}{{if .Repository.Website}} <a href="{{.Repository.Website}}">{{.Repository.Website}}</a>{{end}}</p>
             </div>
             <div class="col-md-5 actions text-right clone-group-btn">
                 {{if not .IsBareRepo}}
