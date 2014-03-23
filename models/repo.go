@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path"
 	"path/filepath"
 	"regexp"
@@ -196,6 +197,12 @@ func CreateRepository(user *User, repoName, desc, repoLang, license string, priv
 				"delete repo directory %s/%s failed(3): %v", user.Name, repoName, err2))
 		}
 		return nil, err
+	}
+
+	c := exec.Command("git", "update-server-info")
+	err = c.Run()
+	if err != nil {
+		log.Error("repo.CreateRepository(exec update-server-info): %v", err)
 	}
 
 	return repo, NewRepoAction(user, repo)
