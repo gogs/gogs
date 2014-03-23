@@ -263,7 +263,7 @@ func runServ(k *cli.Context) {
 
 	commits := make([][]string, 0)
 	var maxCommits = 3
-	for e := l.Back(); e != nil; e = e.Prev() {
+	for e := l.Front(); e != nil; e = e.Next() {
 		commit := e.Value.(*git.Commit)
 		commits = append(commits, []string{commit.Id().String(), commit.Message()})
 		if len(commits) >= maxCommits {
