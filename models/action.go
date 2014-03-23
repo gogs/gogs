@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
 )
 
@@ -47,18 +48,17 @@ func (a Action) GetRepoName() string {
 	return a.RepoName
 }
 
+func (a Action) GetBranch() string {
+	return a.RefName
+}
+
 func (a Action) GetContent() string {
 	return a.Content
 }
 
-type PushCommits struct {
-	Len     int
-	Commits [][]string
-}
-
 // CommitRepoAction records action for commit repository.
 func CommitRepoAction(userId int64, userName string,
-	repoId int64, repoName string, refName string, commits *PushCommits) error {
+	repoId int64, repoName string, refName string, commits *base.PushCommits) error {
 	bs, err := json.Marshal(commits)
 	if err != nil {
 		return err

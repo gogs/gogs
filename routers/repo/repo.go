@@ -52,30 +52,6 @@ func Create(ctx *middleware.Context, form auth.CreateRepoForm) {
 	ctx.Handle(200, "repo.Create", err)
 }
 
-func SettingPost(ctx *middleware.Context) {
-	if !ctx.Repo.IsOwner {
-		ctx.Error(404)
-		return
-	}
-
-	switch ctx.Query("action") {
-	case "delete":
-		if len(ctx.Repo.Repository.Name) == 0 || ctx.Repo.Repository.Name != ctx.Query("repository") {
-			ctx.Data["ErrorMsg"] = "Please make sure you entered repository name is correct."
-			ctx.HTML(200, "repo/setting")
-			return
-		}
-
-		if err := models.DeleteRepository(ctx.User.Id, ctx.Repo.Repository.Id, ctx.User.LowerName); err != nil {
-			ctx.Handle(200, "repo.Delete", err)
-			return
-		}
-	}
-
-	log.Trace("%s Repository deleted: %s/%s", ctx.Req.RequestURI, ctx.User.LowerName, ctx.Repo.Repository.LowerName)
-	ctx.Redirect("/")
-}
-
 func Branches(ctx *middleware.Context, params martini.Params) {
 	if !ctx.Repo.IsValid {
 		return
@@ -203,7 +179,6 @@ func Single(ctx *middleware.Context, params martini.Params) {
 			if readmeFile.Size > 1024*1024 || readmeFile.Filemode != git.FileModeBlob {
 				ctx.Data["FileIsLarge"] = true
 			} else if blob, err := readmeFile.LookupBlob(); err != nil {
-				//log.Error("repo.Single(readmeFile.LookupBlob): %v", err)
 				ctx.Handle(404, "repo.Single(readmeFile.LookupBlob)", err)
 				return
 			} else {
@@ -299,6 +274,40 @@ func Setting(ctx *middleware.Context, params martini.Params) {
 	ctx.Data["Branchname"] = params["branchname"]
 	ctx.Data["Title"] = title + " - settings"
 	ctx.HTML(200, "repo/setting")
+}
+
+func SettingPost(ctx *middleware.Context, params martini.Params) {
+	if !ctx.Repo.IsOwner {
+		ctx.Error(404)
+		return
+	}
+
+	switch ctx.Query("action") {
+	case "update":
+		ctx.Repo.Repository.Description = ctx.Query("desc")
+		ctx.Repo.Repository.Website = ctx.Query("site")
+		if err := models.UpdateRepository(ctx.Repo.Repository); err != nil {
+			ctx.Handle(404, "repo.SettingPost(update)", err)
+			return
+		}
+		ctx.Data["IsSuccess"] = true
+		ctx.HTML(200, "repo/setting")
+		log.Trace("%s Repository updated: %s/%s", ctx.Req.RequestURI, ctx.User.LowerName, ctx.Repo.Repository.LowerName)
+	case "delete":
+		if len(ctx.Repo.Repository.Name) == 0 || ctx.Repo.Repository.Name != ctx.Query("repository") {
+			ctx.Data["ErrorMsg"] = "Please make sure you entered repository name is correct."
+			ctx.HTML(200, "repo/setting")
+			return
+		}
+
+		if err := models.DeleteRepository(ctx.User.Id, ctx.Repo.Repository.Id, ctx.User.LowerName); err != nil {
+			ctx.Handle(200, "repo.Delete", err)
+			return
+		}
+
+		log.Trace("%s Repository deleted: %s/%s", ctx.Req.RequestURI, ctx.User.LowerName, ctx.Repo.Repository.LowerName)
+		ctx.Redirect("/")
+	}
 }
 
 func Commits(ctx *middleware.Context, params martini.Params) {
