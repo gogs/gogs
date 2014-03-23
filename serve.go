@@ -262,7 +262,7 @@ func runServ(k *cli.Context) {
 	}
 
 	commits := make([][]string, 0)
-	var maxCommits = 5
+	var maxCommits = 3
 	for e := l.Back(); e != nil; e = e.Prev() {
 		commit := e.Value.(*git.Commit)
 		commits = append(commits, []string{commit.Id().String(), commit.Message()})
@@ -272,7 +272,7 @@ func runServ(k *cli.Context) {
 	}
 
 	if err = models.CommitRepoAction(user.Id, user.Name,
-		repo.Id, repoName, refname, commits); err != nil {
+		repo.Id, repoName, refname, &models.PushCommits{l.Len(), commits}); err != nil {
 		log.Error("runUpdate.models.CommitRepoAction: %v", err, commits)
 	} else {
 		//log.Info("refname", refname)
