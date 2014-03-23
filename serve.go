@@ -5,14 +5,19 @@
 package main
 
 import (
+	"bytes"
+	"container/list"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"strconv"
 	"strings"
 
 	"github.com/codegangsta/cli"
+	"github.com/qiniu/log"
 
+	"github.com/gogits/git"
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"
 )
@@ -39,12 +44,27 @@ gogs serv provide access auth for repositories`,
 	Flags:  []cli.Flag{},
 }
 
+func parseCmd(cmd string) (string, string) {
+	ss := strings.SplitN(cmd, " ", 2)
+	if len(ss) != 2 {
+		return "", ""
+	}
+
+	verb, args := ss[0], ss[1]
+	if verb == "git" {
+		ss = strings.SplitN(args, " ", 2)
+		args = ss[1]
+		verb = fmt.Sprintf("%s %s", verb, ss[0])
+	}
+	return verb, args
+}
+
 func In(b string, sl map[string]int) bool {
 	_, e := sl[b]
 	return e
 }
 
-func runServ(*cli.Context) {
+func runServ(k *cli.Context) {
 	base.NewConfigContext()
 	models.LoadModelsConfig()
 	models.NewEngine()
@@ -84,15 +104,20 @@ func runServ(*cli.Context) {
 		repoName = repoName[:len(repoName)-4]
 	}
 
-	os.Setenv("userName", user.Name)
-	os.Setenv("userId", strconv.Itoa(int(user.Id)))
+	//os.Setenv("userName", user.Name)
+	//os.Setenv("userId", strconv.Itoa(int(user.Id)))
 	repo, err := models.GetRepositoryByName(user, repoName)
+	var isExist bool = true
 	if err != nil {
-		println("Unavilable repository", err)
-		return
+		if err == models.ErrRepoNotExist {
+			isExist = false
+		} else {
+			println("Unavilable repository", err)
+			return
+		}
 	}
-	os.Setenv("repoId", strconv.Itoa(int(repo.Id)))
-	os.Setenv("repoName", repoName)
+	//os.Setenv("repoId", strconv.Itoa(int(repo.Id)))
+	//os.Setenv("repoName", repoName)
 
 	isWrite := In(verb, COMMANDS_WRITE)
 	isRead := In(verb, COMMANDS_READONLY)
@@ -130,12 +155,6 @@ func runServ(*cli.Context) {
 		return
 	}
 
-	isExist, err := models.IsRepositoryExist(user, repoName)
-	if err != nil {
-		println("Inernel error:", err.Error())
-		return
-	}
-
 	if !isExist {
 		if isRead {
 			println("Repository", user.Name+"/"+repoName, "is not exist")
@@ -149,28 +168,114 @@ func runServ(*cli.Context) {
 		}
 	}
 
+	rep, err := git.OpenRepository(models.RepoPath(user.Name, repoName))
+	if err != nil {
+		println(err.Error())
+		return
+	}
+
+	refs, err := rep.AllReferencesMap()
+	if err != nil {
+		println(err.Error())
+		return
+	}
+
 	gitcmd := exec.Command(verb, rRepo)
 	gitcmd.Dir = base.RepoRootPath
-	gitcmd.Stdout = os.Stdout
-	gitcmd.Stdin = os.Stdin
+
+	var s string
+	b := bytes.NewBufferString(s)
+
+	gitcmd.Stdout = io.MultiWriter(os.Stdout, b)
+	gitcmd.Stdin = io.MultiReader(os.Stdin, b)
 	gitcmd.Stderr = os.Stderr
 
 	if err = gitcmd.Run(); err != nil {
 		println("execute command error:", err.Error())
 	}
-}
 
-func parseCmd(cmd string) (string, string) {
-	ss := strings.SplitN(cmd, " ", 2)
-	if len(ss) != 2 {
-		return "", ""
+	// update
+	w, _ := os.Create("serve.log")
+	defer w.Close()
+	log.SetOutput(w)
+
+	var t = "ok refs/heads/"
+	var i int
+	var refname string
+	for {
+		l, err := b.ReadString('\n')
+		if err != nil {
+			break
+		}
+		i = i + 1
+		l = l[:len(l)-1]
+		idx := strings.Index(l, t)
+		if idx > 0 {
+			refname = l[idx+len(t):]
+		}
+	}
+	var ref *git.Reference
+	var ok bool
+
+	var l *list.List
+	//log.Info("----", refname, "-----")
+	if ref, ok = refs[refname]; !ok {
+		refs, err = rep.AllReferencesMap()
+		if err != nil {
+			println(err.Error())
+			return
+		}
+		if ref, ok = refs[refname]; !ok {
+			println("unknow reference name", refname)
+			return
+		}
+		l, err = ref.AllCommits()
+		if err != nil {
+			println(err.Error())
+			return
+		}
+	} else {
+		//log.Info("----", ref, "-----")
+		var last *git.Commit
+		//log.Info("00000", ref.Oid.String())
+		last, err = ref.LastCommit()
+		if err != nil {
+			println(err.Error())
+			return
+		}
+
+		ref2, err := rep.LookupReference(ref.Name)
+		if err != nil {
+			println(err.Error())
+			return
+		}
+
+		//log.Info("11111", ref2.Oid.String())
+		before, err := ref2.LastCommit()
+		if err != nil {
+			println(err.Error())
+			return
+		}
+		//log.Info("----", before.Id(), "-----", last.Id())
+		l = ref.CommitsBetween(before, last)
 	}
 
-	verb, args := ss[0], ss[1]
-	if verb == "git" {
-		ss = strings.SplitN(args, " ", 2)
-		args = ss[1]
-		verb = fmt.Sprintf("%s %s", verb, ss[0])
+	commits := make([][]string, 0)
+	for e := l.Back(); e != nil; e = e.Prev() {
+		commit := e.Value.(*git.Commit)
+		commits = append(commits, []string{commit.Id().String(), commit.Message()})
 	}
-	return verb, args
+
+	if err = models.CommitRepoAction(user.Id, user.Name,
+		repo.Id, ref.BranchName(), commits); err != nil {
+		log.Error("runUpdate.models.CommitRepoAction: %v", err, commits)
+	} else {
+		//log.Info("refname", refname)
+		//log.Info("Listen: %v", cmd)
+		//fmt.Println("...", cmd)
+
+		//runUpdate(k)
+		c := exec.Command("exec", "git", "update-server-info")
+		c.Run()
+	}
 }

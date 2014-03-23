@@ -28,7 +28,7 @@ type Action struct {
 	ActUserName string // Action user name.
 	RepoId      int64
 	RepoName    string
-	Content     string
+	Content     string    `xorm:"varchar(1000)"`
 	Created     time.Time `xorm:"created"`
 }
 
