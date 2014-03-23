@@ -91,5 +91,5 @@ func GetStatistic() (stats Statistic) {
 	stats.Counter.Watch, _ = orm.Count(new(Watch))
 	stats.Counter.Action, _ = orm.Count(new(Action))
 	stats.Counter.Access, _ = orm.Count(new(Access))
-	return stats
+	return
 }
