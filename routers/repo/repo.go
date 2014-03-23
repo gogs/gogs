@@ -69,7 +69,10 @@ func Branches(ctx *middleware.Context, params martini.Params) {
 	ctx.Data["Username"] = params["username"]
 	ctx.Data["Reponame"] = params["reponame"]
 
-	ctx.Data["Branchname"] = brs[0]
+	if len(params["branchname"]) == 0 {
+		params["branchname"] = "master"
+	}
+	ctx.Data["Branchname"] = params["branchname"]
 	ctx.Data["Branches"] = brs
 	ctx.Data["IsRepoToolbarBranches"] = true
 
@@ -334,8 +337,13 @@ func Commits(ctx *middleware.Context, params martini.Params) {
 	ctx.HTML(200, "repo/commits")
 }
 
-func Pulls(ctx *middleware.Context) {
+func Pulls(ctx *middleware.Context, params martini.Params) {
 	ctx.Data["IsRepoToolbarPulls"] = true
+	if len(params["branchname"]) == 0 {
+		params["branchname"] = "master"
+	}
+
+	ctx.Data["Branchname"] = params["branchname"]
 	ctx.HTML(200, "repo/pulls")
 }
 
