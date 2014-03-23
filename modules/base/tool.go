@@ -515,16 +515,11 @@ func ActionDesc(act Actioner, avatarLink string) string {
 			return err.Error()
 		}
 		buf := bytes.NewBuffer([]byte("\n"))
-		max := 3
-		count := len(push.Commits)
-		if count < max {
-			max = count
-		}
-		for _, commit := range push.Commits[:max] {
+		for _, commit := range push.Commits {
 			buf.WriteString(fmt.Sprintf(TPL_COMMIT_REPO_LI, avatarLink, actUserName, repoName, commit[0], commit[0][:7], commit[1]) + "\n")
 		}
-		if count > max {
-			buf.WriteString(fmt.Sprintf(`<div><a href="/%s/%s/commits">%d other commits >></a></div>`, actUserName, repoName, count-max))
+		if push.Len > 3 {
+			buf.WriteString(fmt.Sprintf(`<div><a href="/%s/%s/commits">%d other commits >></a></div>`, actUserName, repoName, push.Len))
 		}
 		return fmt.Sprintf(TPL_COMMIT_REPO, actUserName, actUserName, actUserName, repoName, branch, branch, actUserName, repoName, actUserName, repoName,
 			buf.String())
