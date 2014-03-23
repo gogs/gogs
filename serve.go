@@ -15,7 +15,7 @@ import (
 	"strings"
 
 	"github.com/codegangsta/cli"
-	"github.com/qiniu/log"
+	"github.com/gogits/gogs/modules/log"
 
 	"github.com/gogits/git"
 	"github.com/gogits/gogs/models"
@@ -195,9 +195,9 @@ func runServ(k *cli.Context) {
 	}
 
 	// update
-	w, _ := os.Create("serve.log")
-	defer w.Close()
-	log.SetOutput(w)
+	//w, _ := os.Create("serve.log")
+	//defer w.Close()
+	//log.SetOutput(w)
 
 	var t = "ok refs/heads/"
 	var i int
