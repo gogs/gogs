@@ -18,6 +18,7 @@ import (
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
+	"github.com/gogits/gogs/modules/avatar"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/mailer"
@@ -114,6 +115,9 @@ func runWeb(*cli.Context) {
 
 	m.Get("/help", routers.Help)
 
+	avatarHandler := avatar.HttpHandler("public/img/avatar", "public/img/avatar/default.jpg")
+	m.Get("/avatar/:hash", avatarHandler.ServeHTTP)
+
 	adminReq := middleware.AdminRequire()
 	m.Get("/admin", reqSignIn, adminReq, admin.Dashboard)
 	m.Get("/admin/users", reqSignIn, adminReq, admin.Users)
@@ -136,7 +140,6 @@ func runWeb(*cli.Context) {
 		ignSignIn, middleware.RepoAssignment(true), repo.Single)
 	m.Get("/:username/:reponame/commit/:commitid/**", ignSignIn, middleware.RepoAssignment(true), repo.Single)
 	m.Get("/:username/:reponame/commit/:commitid", ignSignIn, middleware.RepoAssignment(true), repo.Single)
-
 	m.Get("/:username/:reponame", ignSignIn, middleware.RepoAssignment(true), repo.Single)
 
 	m.Any("/:username/:reponame/**", ignSignIn, repo.Http)

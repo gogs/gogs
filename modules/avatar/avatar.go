@@ -1,3 +1,8 @@
+// Copyright 2014 The Gogs Authors. All rights reserved.
+// Use of this source code is governed by a MIT-style
+// license that can be found in the LICENSE file.
+
+// for www.gravatar.com image cache
 package avatar
 
 import (
@@ -22,11 +27,17 @@ import (
 )
 
 var (
-	gravatar         = "http://www.gravatar.com/avatar"
-	defaultImagePath = "./default.jpg"
+	gravatar = "http://www.gravatar.com/avatar"
 )
 
+func debug(a ...interface{}) {
+	if true {
+		log.Println(a...)
+	}
+}
+
 // hash email to md5 string
+// keep this func in order to make this package indenpent
 func HashEmail(email string) string {
 	h := md5.New()
 	h.Write([]byte(strings.ToLower(email)))
@@ -35,6 +46,7 @@ func HashEmail(email string) string {
 
 type Avatar struct {
 	Hash           string
+	AlterImage     string // image path
 	cacheDir       string // image save dir
 	reqParams      string
 	imagePath      string
@@ -54,7 +66,7 @@ func New(hash string, cacheDir string) *Avatar {
 	}
 }
 
-func (this *Avatar) InCache() bool {
+func (this *Avatar) HasCache() bool {
 	fileInfo, err := os.Stat(this.imagePath)
 	return err == nil && fileInfo.Mode().IsRegular()
 }
@@ -68,11 +80,8 @@ func (this *Avatar) Modtime() (modtime time.Time, err error) {
 }
 
 func (this *Avatar) Expired() bool {
-	if !this.InCache() {
-		return true
-	}
-	fileInfo, err := os.Stat(this.imagePath)
-	return err != nil || time.Since(fileInfo.ModTime()) > this.expireDuration
+	modtime, err := this.Modtime()
+	return err != nil || time.Since(modtime) > this.expireDuration
 }
 
 // default image format: jpeg
@@ -92,8 +101,11 @@ func (this *Avatar) Encode(wr io.Writer, size int) (err error) {
 		return
 	}
 	imgPath := this.imagePath
-	if !this.InCache() {
-		imgPath = defaultImagePath
+	if !this.HasCache() {
+		if this.AlterImage == "" {
+			return errors.New("request image failed, and no alt image offered")
+		}
+		imgPath = this.AlterImage
 	}
 	img, err = decodeImageFile(imgPath)
 	if err != nil {
@@ -120,61 +132,66 @@ func (this *Avatar) UpdateTimeout(timeout time.Duration) error {
 	return err
 }
 
-func init() {
-	log.SetFlags(log.Lshortfile | log.LstdFlags)
+type avatarHandler struct {
+	cacheDir string
+	altImage string
+}
+
+func (this *avatarHandler) mustInt(r *http.Request, defaultValue int, keys ...string) int {
+	var v int
+	for _, k := range keys {
+		if _, err := fmt.Sscanf(r.FormValue(k), "%d", &v); err == nil {
+			defaultValue = v
+		}
+	}
+	return defaultValue
+}
+
+func (this *avatarHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	urlPath := r.URL.Path
+	hash := urlPath[strings.LastIndex(urlPath, "/")+1:]
+	//hash = HashEmail(hash)
+	size := this.mustInt(r, 80, "s", "size") // size = 80*80
+
+	avatar := New(hash, this.cacheDir)
+	avatar.AlterImage = this.altImage
+	if avatar.Expired() {
+		err := avatar.UpdateTimeout(time.Millisecond * 500)
+		if err != nil {
+			debug(err)
+			//log.Trace("avatar update error: %v", err)
+		}
+	}
+	if modtime, err := avatar.Modtime(); err == nil {
+		etag := fmt.Sprintf("size(%d)", size)
+		if t, err := time.Parse(http.TimeFormat, r.Header.Get("If-Modified-Since")); err == nil && modtime.Before(t.Add(1*time.Second)) && etag == r.Header.Get("If-None-Match") {
+			h := w.Header()
+			delete(h, "Content-Type")
+			delete(h, "Content-Length")
+			w.WriteHeader(http.StatusNotModified)
+			return
+		}
+		w.Header().Set("Last-Modified", modtime.UTC().Format(http.TimeFormat))
+		w.Header().Set("ETag", etag)
+	}
+	w.Header().Set("Content-Type", "image/jpeg")
+	err := avatar.Encode(w, size)
+	if err != nil {
+		//log.Warn("avatar encode error: %v", err) // will panic when err != nil
+		debug(err)
+		w.WriteHeader(500)
+	}
 }
 
 // http.Handle("/avatar/", avatar.HttpHandler("./cache"))
-func HttpHandler(cacheDir string) func(w http.ResponseWriter, r *http.Request) {
-	MustInt := func(r *http.Request, defaultValue int, keys ...string) int {
-		var v int
-		for _, k := range keys {
-			if _, err := fmt.Sscanf(r.FormValue(k), "%d", &v); err == nil {
-				defaultValue = v
-			}
-		}
-		return defaultValue
-	}
-
-	return func(w http.ResponseWriter, r *http.Request) {
-		urlPath := r.URL.Path
-		hash := urlPath[strings.LastIndex(urlPath, "/")+1:]
-		hash = HashEmail(hash)
-		size := MustInt(r, 80, "s", "size") // size = 80*80
-
-		avatar := New(hash, cacheDir)
-		if avatar.Expired() {
-			err := avatar.UpdateTimeout(time.Millisecond * 500)
-			if err != nil {
-				log.Println(err)
-			}
-		}
-		if modtime, err := avatar.Modtime(); err == nil {
-			etag := fmt.Sprintf("size(%d)", size)
-			if t, err := time.Parse(http.TimeFormat, r.Header.Get("If-Modified-Since")); err == nil && modtime.Before(t.Add(1*time.Second)) && etag == r.Header.Get("If-None-Match") {
-				h := w.Header()
-				delete(h, "Content-Type")
-				delete(h, "Content-Length")
-				w.WriteHeader(http.StatusNotModified)
-				return
-			}
-			w.Header().Set("Last-Modified", modtime.UTC().Format(http.TimeFormat))
-			w.Header().Set("ETag", etag)
-		}
-		w.Header().Set("Content-Type", "image/jpeg")
-		err := avatar.Encode(w, size)
-		if err != nil {
-			log.Println(err)
-			w.WriteHeader(500)
-		}
+func HttpHandler(cacheDir string, defaultImgPath string) http.Handler {
+	return &avatarHandler{
+		cacheDir: cacheDir,
+		altImage: defaultImgPath,
 	}
 }
 
-func init() {
-	http.HandleFunc("/", HttpHandler("./"))
-	log.Fatal(http.ListenAndServe(":8001", nil))
-}
-
+// thunder downloader
 var thunder = &Thunder{QueueSize: 10}
 
 type Thunder struct {
@@ -234,7 +251,7 @@ func (this *thunderTask) Fetch() {
 var client = &http.Client{}
 
 func (this *thunderTask) fetch() error {
-	log.Println("thunder, fetch", this.Url)
+	//log.Println("thunder, fetch", this.Url)
 	req, _ := http.NewRequest("GET", this.Url, nil)
 	req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8")
 	req.Header.Set("Accept-Encoding", "gzip,deflate,sdch")
