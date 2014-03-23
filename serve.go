@@ -280,7 +280,10 @@ func runServ(k *cli.Context) {
 		//fmt.Println("...", cmd)
 
 		//runUpdate(k)
-		c := exec.Command("exec", "git", "update-server-info")
-		c.Run()
+		c := exec.Command("git", "update-server-info")
+		err := c.Run()
+		if err != nil {
+			log.Error("update-server-info: %v", err)
+		}
 	}
 }
