@@ -63,9 +63,11 @@ func getGithubDoc(client *http.Client, match map[string]string, installRepoPath 
 
 			err := com.HttpGetJSON(client, com.Expand("https://api.github.com/repos/{owner}/{repo}/git/refs?{cred}", match), &refs)
 			if err != nil {
+				if strings.Contains(err.Error(), "403") {
+					break
+				}
 				log.Warn("GET", "Fail to get revision")
 				log.Warn("", err.Error())
-				log.Help("Try 'gopm config github' to set and gain more API calls")
 				break
 			}
 
