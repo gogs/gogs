@@ -198,7 +198,6 @@ var Gogits = {
                 var $first = $list.filter('.'+m[1]);
                 selectRange($list, $first, $list.filter('.'+m[2]));
                 $("html, body").scrollTop($first.offset().top-200);
-                console.log($first.offset().top);
                 return;
             }
             m = window.location.hash.match(/^#(L\d+)$/);
