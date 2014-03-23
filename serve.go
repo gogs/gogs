@@ -262,9 +262,13 @@ func runServ(k *cli.Context) {
 	}
 
 	commits := make([][]string, 0)
+	var maxCommits = 5
 	for e := l.Back(); e != nil; e = e.Prev() {
 		commit := e.Value.(*git.Commit)
 		commits = append(commits, []string{commit.Id().String(), commit.Message()})
+		if len(commits) >= maxCommits {
+			break
+		}
 	}
 
 	if err = models.CommitRepoAction(user.Id, user.Name,
