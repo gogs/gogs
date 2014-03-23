@@ -1,15 +1,19 @@
-Gogs - Go Git Service [![wercker status](https://app.wercker.com/status/ad0bdb0bc450ac6f09bc56b9640a50aa/s/ "wercker status")](https://app.wercker.com/project/bykey/ad0bdb0bc450ac6f09bc56b9640a50aa) [![Go Walker](http://gowalker.org/api/v1/badge)](https://gowalker.org/github.com/gogits/gogs)
+Gogs - Go Git Service [![wercker status](https://app.wercker.com/status/ad0bdb0bc450ac6f09bc56b9640a50aa/s/ "wercker status")](https://app.wercker.com/project/bykey/ad0bdb0bc450ac6f09bc56b9640a50aa) [![Build Status](https://drone.io/github.com/gogits/gogs/status.png)](https://drone.io/github.com/gogits/gogs/latest)
 =====================
 
-Gogs(Go Git Service) is a GitHub-like clone in the Go Programming Language.
+Gogs(Go Git Service) is a Self Hosted Git Service in the Go Programming Language.
 
-Since we choose to use pure Go implementation of Git manipulation, Gogs certainly supports **ALL platforms**  that Go supports, including Linux, Max OS X, and Windows with **ZERO** dependency.
+![Demo](http://gowalker.org/public/gogs_demo.gif)
 
 ##### Current version: 0.1.6 Alpha
 
+[简体中文](README_ZH.md)
+
 ## Purpose
 
-There are some very good products in this category such as [gitlab](http://gitlab.com), but the environment setup steps often make us crazy. So our goal of Gogs is to build a GitHub-like clone with very easy setup steps, which take advantages of the Go Programming Language.
+Since we choose to use pure Go implementation of Git manipulation, Gogs certainly supports **ALL platforms**  that Go supports, including Linux, Mac OS X, and Windows with **ZERO** dependency. 
+
+More importantly, Gogs only needs one binary to setup your own project hosting on the fly!
 
 ## Overview
 
@@ -23,7 +27,7 @@ There are some very good products in this category such as [gitlab](http://gitla
 - Activity timeline
 - SSH protocol support.
 - Register/delete account.
-- Create/delete public repository.
+- Create/delete/watch public repository.
 - User profile page.
 - Repository viewer.
 - Gravatar support.

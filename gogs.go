@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-// gogs(Go Git Service) is a Go clone of Github.
+// Gogs(Go Git Service) is a Self Hosted Git Service in the Go Programming Language.
 package main
 
 import (
