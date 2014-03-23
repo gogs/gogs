@@ -70,5 +70,8 @@ func Config(ctx *middleware.Context) {
 	ctx.Data["CacheAdapter"] = base.CacheAdapter
 	ctx.Data["CacheConfig"] = base.CacheConfig
 
+	ctx.Data["LogMode"] = base.LogMode
+	ctx.Data["LogConfig"] = base.LogConfig
+
 	ctx.HTML(200, "admin/config")
 }
