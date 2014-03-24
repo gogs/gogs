@@ -4,13 +4,14 @@
 package avatar_test
 
 import (
-	"log"
+	"errors"
 	"os"
 	"strconv"
 	"testing"
 	"time"
 
 	"github.com/gogits/gogs/modules/avatar"
+	"github.com/gogits/gogs/modules/log"
 )
 
 const TMPDIR = "test-avatar"
@@ -28,7 +29,7 @@ func TestFetchMany(t *testing.T) {
 	os.Mkdir(TMPDIR, 0755)
 	defer os.RemoveAll(TMPDIR)
 
-	log.Println("start")
+	t.Log("start")
 	var n = 5
 	ch := make(chan bool, n)
 	for i := 0; i < n; i++ {
@@ -36,14 +37,14 @@ func TestFetchMany(t *testing.T) {
 			hash := avatar.HashEmail(strconv.Itoa(i) + "ssx205@gmail.com")
 			a := avatar.New(hash, TMPDIR)
 			a.Update()
-			log.Println("finish", hash)
+			t.Log("finish", hash)
 			ch <- true
 		}(i)
 	}
 	for i := 0; i < n; i++ {
 		<-ch
 	}
-	log.Println("end")
+	t.Log("end")
 }
 
 // cat
@@ -54,3 +55,7 @@ func TestHttp(t *testing.T) {
 	http.ListenAndServe(":8001", nil)
 }
 */
+
+func TestLogTrace(t *testing.T) {
+	log.Trace("%v", errors.New("console log test"))
+}
