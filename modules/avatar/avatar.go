@@ -3,6 +3,14 @@
 // license that can be found in the LICENSE file.
 
 // for www.gravatar.com image cache
+
+/*
+It is recommend to use this way
+
+	cacheDir := "./cache"
+	defaultImg := "./default.jpg"
+	http.Handle("/avatar/", avatar.HttpHandler(cacheDir, defaultImg))
+*/
 package avatar
 
 import (
@@ -14,7 +22,6 @@ import (
 	"image/jpeg"
 	"image/png"
 	"io"
-	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -23,18 +30,13 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gogits/gogs/modules/log"
 	"github.com/nfnt/resize"
 )
 
 var (
 	gravatar = "http://www.gravatar.com/avatar"
 )
-
-func debug(a ...interface{}) {
-	if true {
-		log.Println(a...)
-	}
-}
 
 // hash email to md5 string
 // keep this func in order to make this package indenpent
@@ -125,7 +127,7 @@ func (this *Avatar) UpdateTimeout(timeout time.Duration) error {
 	var err error
 	select {
 	case <-time.After(timeout):
-		err = errors.New("get gravatar image timeout")
+		err = fmt.Errorf("get gravatar image %s timeout", this.Hash)
 	case err = <-thunder.GoFetch(gravatar+"/"+this.Hash+"?"+this.reqParams,
 		this.imagePath):
 	}
@@ -150,16 +152,14 @@ func (this *avatarHandler) mustInt(r *http.Request, defaultValue int, keys ...st
 func (this *avatarHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	urlPath := r.URL.Path
 	hash := urlPath[strings.LastIndex(urlPath, "/")+1:]
-	//hash = HashEmail(hash)
-	size := this.mustInt(r, 80, "s", "size") // size = 80*80
+	size := this.mustInt(r, 80, "s", "size") // default size = 80*80
 
 	avatar := New(hash, this.cacheDir)
 	avatar.AlterImage = this.altImage
 	if avatar.Expired() {
 		err := avatar.UpdateTimeout(time.Millisecond * 500)
 		if err != nil {
-			debug(err)
-			//log.Trace("avatar update error: %v", err)
+			log.Trace("avatar update error: %v", err)
 		}
 	}
 	if modtime, err := avatar.Modtime(); err == nil {
@@ -177,8 +177,7 @@ func (this *avatarHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "image/jpeg")
 	err := avatar.Encode(w, size)
 	if err != nil {
-		//log.Warn("avatar encode error: %v", err) // will panic when err != nil
-		debug(err)
+		log.Warn("avatar encode error: %v", err)
 		w.WriteHeader(500)
 	}
 }
@@ -251,7 +250,6 @@ func (this *thunderTask) Fetch() {
 var client = &http.Client{}
 
 func (this *thunderTask) fetch() error {
-	//log.Println("thunder, fetch", this.Url)
 	req, _ := http.NewRequest("GET", this.Url, nil)
 	req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8")
 	req.Header.Set("Accept-Encoding", "gzip,deflate,sdch")
