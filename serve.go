@@ -68,6 +68,7 @@ func runServ(k *cli.Context) {
 	base.NewConfigContext()
 	models.LoadModelsConfig()
 	models.NewEngine()
+	base.NewLogService()
 
 	keys := strings.Split(os.Args[2], "-")
 	if len(keys) != 2 {
