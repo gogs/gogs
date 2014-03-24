@@ -12,7 +12,7 @@
             <a class="navbar-right gogs-nav-item{{if .PageIsUserSetting}} active{{end}}" href="/user/setting"  data-toggle="tooltip" data-placement="bottom" title="Setting"><i class="fa fa-cogs fa-lg"></i></a>
             {{if .IsAdmin}}<a class="navbar-right gogs-nav-item{{if .PageIsAdmin}} active{{end}}" href="/admin"  data-toggle="tooltip" data-placement="bottom" title="Admin"><i class="fa fa-gear fa-lg"></i></a>{{end}}
             {{else}}<a id="gogs-nav-signin" class="gogs-nav-item navbar-right navbar-btn btn btn-danger" href="/user/login/">Sign In</a>
-            <a id="gogs-nav-signup" class="gogs-nav-item navbar-right navbar-btn btn btn-info" href="/user/sign_up/">Sign Up</a>{{end}}
+            <a id="gogs-nav-signup" class="gogs-nav-item navbar-right" href="/user/sign_up/">Sign Up</a>{{end}}
         </nav>
     </div>
 </div>
