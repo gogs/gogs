@@ -31,9 +31,10 @@ import (
 
 var CmdWeb = cli.Command{
 	Name:  "web",
-	Usage: "just run",
+	Usage: "Gogs web server",
 	Description: `
-gogs web`,
+gogs web server is the only thing you need to run, 
+and it takes care of all the other things for you`,
 	Action: runWeb,
 	Flags:  []cli.Flag{},
 }

@@ -1,4 +1,4 @@
-Gogs - Go Git Service [![wercker status](https://app.wercker.com/status/ad0bdb0bc450ac6f09bc56b9640a50aa/s/ "wercker status")](https://app.wercker.com/project/bykey/ad0bdb0bc450ac6f09bc56b9640a50aa) [![Build Status](https://drone.io/github.com/gogits/gogs/status.png)](https://drone.io/github.com/gogits/gogs/latest) [![Bitdeli Badge](https://d2weczhvl823v0.cloudfront.net/gogits/gogs/trend.png)](https://bitdeli.com/free "Bitdeli Badge")
+Gogs - Go Git Service [![wercker status](https://app.wercker.com/status/ad0bdb0bc450ac6f09bc56b9640a50aa/s/ "wercker status")](https://app.wercker.com/project/bykey/ad0bdb0bc450ac6f09bc56b9640a50aa) [![Build Status](https://drone.io/github.com/gogits/gogs/status.png)](https://drone.io/github.com/gogits/gogs/latest)
 =====================
 
 Gogs(Go Git Service) is a Self Hosted Git Service in the Go Programming Language.
@@ -48,9 +48,11 @@ There are two ways to install Gogs:
 
 ## Acknowledgments
 
-- Logo is inspired by [martini](https://github.com/martini-contrib).
+- Logo is inspired by [martini-contrib](https://github.com/martini-contrib).
+- Router and middleware mechanism of [martini](http://martini.codegangsta.io/).
 - Mail Service, modules design is inspired by [WeTalk](https://github.com/beego/wetalk).
 - System Monitor Status is inspired by [GoBlog](https://github.com/fuxiaohei/goblog).
+- Usage and modification from [beego](http://beego.me) modules.
 
 ## Contributors
 
