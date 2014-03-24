@@ -387,7 +387,7 @@ func UpdateRepository(repo *Repository) error {
 		repo.Website = repo.Website[:255]
 	}
 
-	_, err := orm.Id(repo.Id).UseBool().Cols("description", "website").Update(repo)
+	_, err := orm.Id(repo.Id).UseBool().Cols("description", "website", "updated").Update(repo)
 	return err
 }
 

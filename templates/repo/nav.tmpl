@@ -53,9 +53,9 @@
                         </div>
                     </div>
                 </div>
-                <div class="btn-group">
+                <!-- <div class="btn-group">
                     <button type="button" class="btn btn-default" data-toggle="tooltip" data-placement="top" title="Star"><i class="fa fa-star"></i>&nbsp;{{.Repository.NumStars}}</button>
-                </div>
+                </div> -->
                 {{end}}
                 <div class="btn-group">
                     <a type="button" {{if not .IsRepositoryOwner}}href="/{{.Username}}/{{.Reponame}}/fork"{{end}} class="btn btn-default" data-toggle="tooltip" data-placement="top" title="Fork"><i class="fa fa-code-fork fa-lg"></i>&nbsp;{{.Repository.NumForks}}</a>

@@ -31,9 +31,10 @@ import (
 
 var CmdWeb = cli.Command{
 	Name:  "web",
-	Usage: "just run",
+	Usage: "Gogs web server",
 	Description: `
-gogs web`,
+gogs web server is the only thing you need to run, 
+and it takes care of all the other things for you`,
 	Action: runWeb,
 	Flags:  []cli.Flag{},
 }
@@ -88,7 +89,7 @@ func runWeb(*cli.Context) {
 	reqSignOut := middleware.Toggle(&middleware.ToggleOptions{SignOutRequire: true})
 
 	// Routers.
-	m.Get("/", ignSignIn, routers.Home)
+	m.Get("/", reqSignIn, routers.Home)
 	m.Get("/issues", reqSignIn, user.Issues)
 	m.Get("/pulls", reqSignIn, user.Pulls)
 	m.Get("/stars", reqSignIn, user.Stars)
@@ -145,7 +146,8 @@ func runWeb(*cli.Context) {
 		r.Get("/commits/:branchname", repo.Commits)
 		r.Get("/issues", repo.Issues)
 		r.Any("/issues/new", binding.BindIgnErr(auth.CreateIssueForm{}), repo.CreateIssue)
-		r.Get("/issues/:issueid", repo.ViewIssue)
+		r.Get("/issues/:index", repo.ViewIssue)
+		r.Post("/issues/:index", binding.BindIgnErr(auth.CreateIssueForm{}), repo.UpdateIssue)
 		r.Get("/pulls", repo.Pulls)
 		r.Get("/branches", repo.Branches)
 		r.Get("/src/:branchname", repo.Single)
