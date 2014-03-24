@@ -8,6 +8,7 @@ github.com/Unknwon/com=
 github.com/Unknwon/cae=
 github.com/Unknwon/goconfig=
 github.com/dchest/scrypt=
+github.com/nfnt/resize=
 github.com/lunny/xorm=
 github.com/gogits/logs=
 github.com/gogits/binding=

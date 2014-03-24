@@ -711,6 +711,12 @@ html, body {
     width: 1%;
 }
 
+.file-content .file-body.file-code .lines-ellipsis {
+    background-color: #FAFAFA;
+    color: #999;
+    width: 1%;
+}
+
 .file-content .file-body.file-code .lines-num span {
     font-family: Menlo, Monaco, Consolas, "Courier New", monospace;
     line-height: 1.6;
@@ -798,7 +804,7 @@ html, body {
     margin-left: .5em;
 }
 
-.commit-box .avatar {
+.commit-box .avatar, .diff-head-box .avatar {
     width: 20px;
     height: 20px;
     margin-right: 8px;
@@ -831,8 +837,139 @@ html, body {
     background-color: #FFF;
 }
 
-.guide-box {
+.guide-box, .diff-head-box {
     margin-top: 20px;
+}
+
+.diff-head-box h4 {
+    margin-top: 0;
+    margin-bottom: 0;
+    line-height: 26px;
+}
+
+.diff-head-box p {
+    margin-bottom: 0;
+}
+
+.diff-head-box .sha {
+    margin-left: 8px;
+}
+
+.diff-head-box a.name {
+    color: #444;
+    margin-right: 8px;
+}
+
+.diff-head-box span.time {
+    color: #888;
+}
+
+.diff-detail-box {
+    margin-bottom: 16px;
+    line-height: 30px;
+}
+
+.diff-detail-box span.status {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    margin-right: 8px;
+    vertical-align: middle;
+}
+
+.diff-detail-box ol {
+    padding-left: 0;
+    margin-bottom: 28px;
+}
+
+.diff-detail-box li {
+    list-style: none;
+    padding-bottom: 4px;
+    margin-bottom: 4px;
+    border-bottom: 1px dashed #DDD;
+    padding-left: 6px;
+}
+
+.diff-detail-box span.status.modify {
+    background-color: #f0db88;
+}
+
+.diff-detail-box span.status.add {
+    background-color: #b4e2b4;
+}
+
+.diff-detail-box span.status.del {
+    background-color: #e9aeae;
+}
+
+.diff-detail-box span.status.rename {
+    background-color: #dad8ff;
+}
+
+.diff-file-box .panel-heading {
+    padding: 10px 20px;
+    line-height: 26px;
+}
+
+.diff-box .count {
+    margin-right: 12px;
+}
+
+.diff-box .count .bar {
+    width: 40px;
+    display: inline-block;
+    margin: 2px 4px 0 4px;
+    vertical-align: text-top;
+}
+
+.diff-box .file {
+    color: #888;
+}
+
+#gogs-source .file-content.diff-file-box {
+    margin-bottom: 20px;
+}
+
+.diff-box .count .bar .add {
+    background-color: #77c64a;
+    height: 12px;
+}
+
+.diff-box .count .bar .del, .diff-box .count .bar {
+    background-color: #e75316;
+    height: 12px;
+}
+
+.diff-file-box .file-body.file-code .lines-code > pre {
+    margin: 0;
+    padding: 3px;
+}
+
+.diff-file-box .file-body.file-code .lines-num-old {
+    border-right: 1px solid #DDD;
+}
+
+.diff-file-box .code-bin td {
+    padding: 20px;
+}
+
+.diff-file-box .code-diff tbody tr.add-code td, .diff-file-box .code-diff tbody tr.add-code pre {
+    background-color: #d1ffd6 !important;
+    border-color: #b4e2b4 !important;
+}
+
+.diff-file-box .code-diff tbody tr.del-code td, .diff-file-box .code-diff tbody tr.del-code pre {
+    background-color: #ffe2dd !important;
+    border-color: #e9aeae !important;
+}
+
+.diff-file-box .code-diff tbody tr:hover td, .diff-file-box .code-diff tbody tr:hover pre {
+    background-color: #fff8d2 !important;
+    border-color: #f0db88 !important;
+}
+
+.diff-file-box .ellipsis-code pre {
+    color: #AAA;
 }
 
 /* wrapper and footer */

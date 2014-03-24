@@ -38,6 +38,8 @@ var (
 	RunUser      string
 	RepoRootPath string
 
+	EnableHttpsClone bool
+
 	LogInRememberDays  int
 	CookieUserName     string
 	CookieRememberName string
@@ -56,8 +58,7 @@ var (
 	SessionConfig   *session.Config
 	SessionManager  *session.Manager
 
-	PictureService  string
-	PictureRootPath string
+	PictureService string
 )
 
 var Service struct {
@@ -65,6 +66,7 @@ var Service struct {
 	DisenableRegisteration bool
 	RequireSignInView      bool
 	EnableCacheAvatar      bool
+	NotifyMail             bool
 	ActiveCodeLives        int
 	ResetPwdCodeLives      int
 }
@@ -98,7 +100,7 @@ func newService() {
 	Service.EnableCacheAvatar = Cfg.MustBool("service", "ENABLE_CACHE_AVATAR", false)
 }
 
-func newLogService() {
+func NewLogService() {
 	// Get and check log mode.
 	LogMode = Cfg.MustValue("log", "MODE", "console")
 	modeSec := "log." + LogMode
@@ -123,7 +125,7 @@ func newLogService() {
 		logPath := Cfg.MustValue(modeSec, "FILE_NAME", "log/gogs.log")
 		os.MkdirAll(path.Dir(logPath), os.ModePerm)
 		LogConfig = fmt.Sprintf(
-			`{"level":%s,"filename":%s,"rotate":%v,"maxlines":%d,"maxsize",%d,"daily":%v,"maxdays":%d}`, level,
+			`{"level":%s,"filename":"%s","rotate":%v,"maxlines":%d,"maxsize":%d,"daily":%v,"maxdays":%d}`, level,
 			logPath,
 			Cfg.MustBool(modeSec, "LOG_ROTATE", true),
 			Cfg.MustInt(modeSec, "MAX_LINES", 1000000),
@@ -131,20 +133,20 @@ func newLogService() {
 			Cfg.MustBool(modeSec, "DAILY_ROTATE", true),
 			Cfg.MustInt(modeSec, "MAX_DAYS", 7))
 	case "conn":
-		LogConfig = fmt.Sprintf(`{"level":%s,"reconnectOnMsg":%v,"reconnect":%v,"net":%s,"addr":%s}`, level,
+		LogConfig = fmt.Sprintf(`{"level":"%s","reconnectOnMsg":%v,"reconnect":%v,"net":"%s","addr":"%s"}`, level,
 			Cfg.MustBool(modeSec, "RECONNECT_ON_MSG", false),
 			Cfg.MustBool(modeSec, "RECONNECT", false),
 			Cfg.MustValue(modeSec, "PROTOCOL", "tcp"),
 			Cfg.MustValue(modeSec, "ADDR", ":7020"))
 	case "smtp":
-		LogConfig = fmt.Sprintf(`{"level":%s,"username":%s,"password":%s,"host":%s,"sendTos":%s,"subject":%s}`, level,
+		LogConfig = fmt.Sprintf(`{"level":"%s","username":"%s","password":"%s","host":"%s","sendTos":"%s","subject":"%s"}`, level,
 			Cfg.MustValue(modeSec, "USER", "example@example.com"),
 			Cfg.MustValue(modeSec, "PASSWD", "******"),
 			Cfg.MustValue(modeSec, "HOST", "127.0.0.1:25"),
 			Cfg.MustValue(modeSec, "RECEIVERS", "[]"),
 			Cfg.MustValue(modeSec, "SUBJECT", "Diagnostic message from serve"))
 	case "database":
-		LogConfig = fmt.Sprintf(`{"level":%s,"driver":%s,"conn":%s}`, level,
+		LogConfig = fmt.Sprintf(`{"level":"%s","driver":"%s","conn":"%s"}`, level,
 			Cfg.MustValue(modeSec, "Driver"),
 			Cfg.MustValue(modeSec, "CONN"))
 	}
@@ -229,6 +231,17 @@ func newRegisterMailService() {
 	log.Info("Register Mail Service Enabled")
 }
 
+func newNotifyMailService() {
+	if !Cfg.MustBool("service", "ENABLE_NOTIFY_MAIL") {
+		return
+	} else if MailService == nil {
+		log.Warn("Notify Mail Service: Mail Service is not enabled")
+		return
+	}
+	Service.NotifyMail = true
+	log.Info("Notify Mail Service Enabled")
+}
+
 func NewConfigContext() {
 	var err error
 	workDir, err := exeDir()
@@ -246,11 +259,16 @@ func NewConfigContext() {
 	Cfg.BlockMode = false
 
 	cfgPath = filepath.Join(workDir, "custom/conf/app.ini")
-	if com.IsFile(cfgPath) {
-		if err = Cfg.AppendFiles(cfgPath); err != nil {
-			fmt.Printf("Cannot load config file '%s'\n", cfgPath)
-			os.Exit(2)
-		}
+	if !com.IsFile(cfgPath) {
+		fmt.Println("Custom configuration not found(custom/conf/app.ini)\n" +
+			"Please create it and make your own configuration!")
+		os.Exit(2)
+
+	}
+
+	if err = Cfg.AppendFiles(cfgPath); err != nil {
+		fmt.Printf("Cannot load config file '%s'\n", cfgPath)
+		os.Exit(2)
 	}
 
 	AppName = Cfg.MustValue("", "APP_NAME", "Gogs: Go Git Service")
@@ -260,12 +278,13 @@ func NewConfigContext() {
 	SecretKey = Cfg.MustValue("security", "SECRET_KEY")
 	RunUser = Cfg.MustValue("", "RUN_USER")
 
+	EnableHttpsClone = Cfg.MustBool("security", "ENABLE_HTTPS_CLONE", false)
+
 	LogInRememberDays = Cfg.MustInt("security", "LOGIN_REMEMBER_DAYS")
 	CookieUserName = Cfg.MustValue("security", "COOKIE_USERNAME")
 	CookieRememberName = Cfg.MustValue("security", "COOKIE_REMEMBER_NAME")
 
 	PictureService = Cfg.MustValue("picture", "SERVICE")
-	PictureRootPath = Cfg.MustValue("picture", "PATH")
 
 	// Determine and create root git reposiroty path.
 	RepoRootPath = Cfg.MustValue("repository", "ROOT")
@@ -277,9 +296,10 @@ func NewConfigContext() {
 
 func NewServices() {
 	newService()
-	newLogService()
+	NewLogService()
 	newCacheService()
 	newSessionService()
 	newMailService()
 	newRegisterMailService()
+	newNotifyMailService()
 }

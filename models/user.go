@@ -72,6 +72,9 @@ func (user *User) HomeLink() string {
 
 // AvatarLink returns the user gravatar link.
 func (user *User) AvatarLink() string {
+	if base.Service.EnableCacheAvatar {
+		return "/avatar/" + user.Avatar
+	}
 	return "http://1.gravatar.com/avatar/" + user.Avatar
 }
 
@@ -208,7 +211,7 @@ func UpdateUser(user *User) (err error) {
 		user.Website = user.Website[:255]
 	}
 
-	_, err = orm.Id(user.Id).UseBool().Cols("website", "location").Update(user)
+	_, err = orm.Id(user.Id).AllCols().Update(user)
 	return err
 }
 

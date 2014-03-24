@@ -102,7 +102,7 @@ func CreateTimeLimitCode(data string, minutes int, startInf interface{}) string 
 
 // AvatarLink returns avatar link by given e-mail.
 func AvatarLink(email string) string {
-	return "http://1.gravatar.com/avatar/" + EncodeMd5(email)
+	return "/avatar/" + EncodeMd5(email)
 }
 
 // Seconds-based time units
@@ -519,7 +519,7 @@ func ActionDesc(act Actioner, avatarLink string) string {
 			buf.WriteString(fmt.Sprintf(TPL_COMMIT_REPO_LI, avatarLink, actUserName, repoName, commit[0], commit[0][:7], commit[1]) + "\n")
 		}
 		if push.Len > 3 {
-			buf.WriteString(fmt.Sprintf(`<div><a href="/%s/%s/commits">%d other commits >></a></div>`, actUserName, repoName, push.Len))
+			buf.WriteString(fmt.Sprintf(`<div><a href="/%s/%s/commits/%s">%d other commits >></a></div>`, actUserName, repoName, branch, push.Len))
 		}
 		return fmt.Sprintf(TPL_COMMIT_REPO, actUserName, actUserName, actUserName, repoName, branch, branch, actUserName, repoName, actUserName, repoName,
 			buf.String())
