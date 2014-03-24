@@ -676,6 +676,12 @@ html, body {
     margin: 0 .5em 0 0;
 }
 
+.file-content .file-head .file-size{
+    font-size: 13px;
+    color: #888;
+    margin-left: 1em;
+}
+
 .file-content .file-body {
     padding: 30px 30px 50px;
     border: none;
