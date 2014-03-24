@@ -291,7 +291,7 @@ function initRepository() {
             $clone.find('button[data-link]').on("click",function (e) {
                 var $this = $(this);
                 if (!$this.hasClass('btn-primary')) {
-                    $clone.find('.btn-primary').removeClass('btn-primary').addClass("btn-default");
+                    $clone.find('.input-group-btn .btn-primary').removeClass('btn-primary').addClass("btn-default");
                     $(this).addClass('btn-primary').removeClass('btn-default');
                     $url.val($this.data("link"));
                     $clone.find('span.clone-url').text($this.data('link'));
