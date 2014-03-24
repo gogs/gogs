@@ -1,4 +1,4 @@
-Gogs - Go Git Service [![wercker status](https://app.wercker.com/status/ad0bdb0bc450ac6f09bc56b9640a50aa/s/ "wercker status")](https://app.wercker.com/project/bykey/ad0bdb0bc450ac6f09bc56b9640a50aa) [![Build Status](https://drone.io/github.com/gogits/gogs/status.png)](https://drone.io/github.com/gogits/gogs/latest) [![Bitdeli Badge](https://d2weczhvl823v0.cloudfront.net/gogits/gogs/trend.png)](https://bitdeli.com/free "Bitdeli Badge")
+Gogs - Go Git Service [![wercker status](https://app.wercker.com/status/ad0bdb0bc450ac6f09bc56b9640a50aa/s/ "wercker status")](https://app.wercker.com/project/bykey/ad0bdb0bc450ac6f09bc56b9640a50aa) [![Build Status](https://drone.io/github.com/gogits/gogs/status.png)](https://drone.io/github.com/gogits/gogs/latest)
 =====================
 
 Gogs(Go Git Service) 是一个由 Go 语言编写的自助 Git 托管服务。
@@ -44,9 +44,11 @@ Gogs 完全使用 Go 语言来实现对 Git 数据的操作，实现 **零** 依
 
 ## 特别鸣谢
 
-- Logo 基于 [martini](https://github.com/martini-contrib) 修改而来。
-- 邮件服务、模块设计基于 [WeTalk](https://github.com/beego/wetalk) 修改而来。
-- 系统监视状态基于 [GoBlog](https://github.com/fuxiaohei/goblog) 修改而来。
+- Logo 基于 [martini-contrib](https://github.com/martini-contrib) 修改而来。
+- 基于 [WeTalk](https://github.com/beego/wetalk) 修改的邮件服务和模块设计。
+- 基于 [GoBlog](https://github.com/fuxiaohei/goblog) 修改的系统监视状态。
+- [beego](http://beego.me) 模块的使用与修改。
+- [martini](http://martini.codegangsta.io/) 的路由与中间件机制。
 
 ## 贡献成员
 
