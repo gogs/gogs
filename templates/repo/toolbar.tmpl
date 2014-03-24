@@ -6,27 +6,27 @@
                     <li class="{{if .IsRepoToolbarSource}}active{{end}}"><a href="/{{.RepositoryLink}}">Source</a></li>
                     {{if not .IsBareRepo}}
                     <li class="{{if .IsRepoToolbarCommits}}active{{end}}"><a href="/{{.RepositoryLink}}/commits/{{.Branchname}}">Commits</a></li>
-                    <li class="{{if .IsRepoToolbarBranches}}active{{end}}"><a href="/{{.RepositoryLink}}/branches">Branches</a></li>
-                    <li class="{{if .IsRepoToolbarPulls}}active{{end}}"><a href="/{{.RepositoryLink}}/pulls">Pull Requests</a></li>
+                    <!-- <li class="{{if .IsRepoToolbarBranches}}active{{end}}"><a href="/{{.RepositoryLink}}/branches">Branches</a></li> -->
+                    <!-- <li class="{{if .IsRepoToolbarPulls}}active{{end}}"><a href="/{{.RepositoryLink}}/pulls">Pull Requests</a></li> -->
                     <li class="{{if .IsRepoToolbarIssues}}active{{end}}"><a href="/{{.RepositoryLink}}/issues">Issues <!--<span class="badge">42</span>--></a></li>
-                    <li class="dropdown">
+                    <!-- <li class="dropdown">
                         <a href="#" class="dropdown-toggle" data-toggle="dropdown">More <b class="caret"></b></a>
                         <ul class="dropdown-menu">
                             <li><a href="/{{.RepositoryLink}}/release">Release</a></li>
                             <li><a href="//{{.RepositoryLink}}/wiki">Wiki</a></li>
                         </ul>
-                    </li>{{end}}
+                    </li> -->{{end}}
                 </ul>
                 <ul class="nav navbar-nav navbar-right">
                     {{if not .IsBareRepo}}
-                    <li class="dropdown">
+                    <!-- <li class="dropdown">
                         <a href="#" class="dropdown-toggle" data-toggle="dropdown">Statistic <b class="caret"></b></a>
                         <ul class="dropdown-menu">
                             <li><a href="#">Graphic</a></li>
                             <li><a href="#">Pulse</a></li>
                             <li><a href="#">Network</a></li>
                         </ul>
-                    </li>{{end}}{{if .IsRepositoryOwner}}
+                    </li> -->{{end}}{{if .IsRepositoryOwner}}
                     <li class="{{if .IsRepoToolbarSetting}}active{{end}}"><a href="/{{.RepositoryLink}}/settings">Settings</a>
                     </li>{{end}}
                 </ul>

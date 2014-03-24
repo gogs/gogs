@@ -135,13 +135,12 @@
   box-shadow: inset 40px 0 0 #f5f5f5, inset 41px 0 0 #ccc;
 }
 
-.markdown > pre > code,
-.markdown > pre > ol.linenums > li > code {
+.markdown > pre > code {
   white-space: pre;
   word-wrap: normal;
 }
 
-.markdown > pre > ol.linenums > li > code {
+.markdown > pre > ol.linenums > li {
   padding: 0 10px;
 }
 

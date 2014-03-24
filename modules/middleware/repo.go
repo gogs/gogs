@@ -69,8 +69,12 @@ func RepoAssignment(redirect bool) martini.Handler {
 			ctx.Repo.IsWatching = models.IsWatching(ctx.User.Id, repo.Id)
 		}
 		ctx.Repo.Repository = repo
+		scheme := "http"
+		if base.EnableHttpsClone {
+			scheme = "https"
+		}
 		ctx.Repo.CloneLink.SSH = fmt.Sprintf("git@%s:%s/%s.git", base.Domain, user.LowerName, repo.LowerName)
-		ctx.Repo.CloneLink.HTTPS = fmt.Sprintf("https://%s/%s/%s.git", base.Domain, user.LowerName, repo.LowerName)
+		ctx.Repo.CloneLink.HTTPS = fmt.Sprintf("%s://%s/%s/%s.git", scheme, base.Domain, user.LowerName, repo.LowerName)
 
 		ctx.Data["IsRepositoryValid"] = true
 		ctx.Data["Repository"] = repo

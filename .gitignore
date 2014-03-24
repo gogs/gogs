@@ -9,3 +9,4 @@ data/
 .vendor/
 .idea/
 *.iml
+public/img/avatar/

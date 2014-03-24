@@ -2,11 +2,11 @@ var Gogits = {
     "PageIsSignup": false
 };
 
-(function($){
+(function ($) {
     // extend jQuery ajax, set csrf token value
     var ajax = $.ajax;
     $.extend({
-        ajax: function(url, options) {
+        ajax: function (url, options) {
             if (typeof url === 'object') {
                 options = url;
                 url = undefined;
@@ -17,20 +17,37 @@ var Gogits = {
             var headers = options.headers || {};
             var domain = document.domain.replace(/\./ig, '\\.');
             if (!/^(http:|https:).*/.test(url) || eval('/^(http:|https:)\\/\\/(.+\\.)*' + domain + '.*/').test(url)) {
-                headers = $.extend(headers, {'X-Csrf-Token':csrftoken});
+                headers = $.extend(headers, {'X-Csrf-Token': csrftoken});
             }
             options.headers = headers;
             var callback = options.success;
-            options.success = function(data){
-                if(data.once){
+            options.success = function (data) {
+                if (data.once) {
                     // change all _once value if ajax data.once exist
                     $('[name=_once]').val(data.once);
                 }
-                if(callback){
+                if (callback) {
                     callback.apply(this, arguments);
                 }
             };
             return ajax(url, options);
+        },
+
+        changeHash: function (hash) {
+            if (history.pushState) {
+                history.pushState(null, null, hash);
+            }
+            else {
+                location.hash = hash;
+            }
+        },
+
+        deSelect: function () {
+            if (window.getSelection) {
+                window.getSelection().removeAllRanges();
+            } else {
+                document.selection.empty();
+            }
         }
     });
 }(jQuery));
@@ -97,8 +114,8 @@ var Gogits = {
         $tabs.find("li:eq(0) a").tab("show");
     };
     // fix dropdown inside click
-    Gogits.initDropDown = function(){
-        $('.dropdown-menu.no-propagation').on('click',function(e){
+    Gogits.initDropDown = function () {
+        $('.dropdown-menu.no-propagation').on('click', function (e) {
             e.stopPropagation();
         });
     };
@@ -109,25 +126,6 @@ var Gogits = {
         var $pre = $md.find('pre > code').parent();
         $pre.addClass('prettyprint linenums');
         prettyPrint();
-
-        var $lineNums = $pre.parent().siblings('.lines-num');
-        if ($lineNums.length > 0) {
-            var nums = $pre.find('ol.linenums > li').length;
-            for (var i = 1; i <= nums; i++) {
-                $lineNums.append('<span id="L' + i + '" rel=".L' + i + '">' + i + '</span>');
-            }
-
-            var last;
-            $(document).on('click', '.lines-num span', function () {
-                var $e = $(this);
-                if (last) {
-                    last.removeClass('active');
-                }
-                last = $e.parent().siblings('.lines-code').find('ol.linenums > ' + $e.attr('rel'));
-                last.addClass('active');
-                window.location.href = '#' + $e.attr('id');
-            });
-        }
 
         // Set anchor.
         var headers = {};
@@ -146,7 +144,70 @@ var Gogits = {
             node = node.wrap('<div id="' + name + '" class="anchor-wrap" ></div>');
             node.append('<a class="anchor" href="#' + name + '"><span class="octicon octicon-link"></span></a>');
         });
-    }
+    };
+
+    Gogits.renderCodeView = function () {
+        function selectRange($list, $select, $from) {
+            $list.removeClass('active');
+            if ($from) {
+                var a = parseInt($select.attr('rel').substr(1));
+                var b = parseInt($from.attr('rel').substr(1));
+                var c;
+                if (a != b) {
+                    if (a > b) {
+                        c = a;
+                        a = b;
+                        b = c;
+                    }
+                    var classes = [];
+                    for (i = a; i <= b; i++) {
+                        classes.push('.L' + i);
+                    }
+                    $list.filter(classes.join(',')).addClass('active');
+                    $.changeHash('#L' + a + '-' + 'L' + b);
+                    return
+                }
+            }
+            $select.addClass('active');
+            $.changeHash('#' + $select.attr('rel'));
+        }
+
+        $(document).on('click', '.lines-num span', function (e) {
+            var $select = $(this);
+            var $list = $select.parent().siblings('.lines-code').find('ol.linenums > li');
+            selectRange($list, $list.filter('[rel=' + $select.attr('rel') + ']'), (e.shiftKey ? $list.filter('.active').eq(0) : null));
+            $.deSelect();
+        });
+
+        $('.code-view .lines-code > pre').each(function () {
+            var $pre = $(this);
+            var $lineCode = $pre.parent();
+            var $lineNums = $lineCode.siblings('.lines-num');
+            if ($lineNums.length > 0) {
+                var nums = $pre.find('ol.linenums > li').length;
+                for (var i = 1; i <= nums; i++) {
+                    $lineNums.append('<span id="L' + i + '" rel="L' + i + '">' + i + '</span>');
+                }
+            }
+        });
+
+        $(window).on('hashchange',function (e) {
+            var m = window.location.hash.match(/^#(L\d+)\-(L\d+)$/);
+            var $list = $('.code-view ol.linenums > li');
+            if (m) {
+                var $first = $list.filter('.' + m[1]);
+                selectRange($list, $first, $list.filter('.' + m[2]));
+                $("html, body").scrollTop($first.offset().top - 200);
+                return;
+            }
+            m = window.location.hash.match(/^#(L\d+)$/);
+            if (m) {
+                var $first = $list.filter('.' + m[1]);
+                selectRange($list, $first);
+                $("html, body").scrollTop($first.offset().top - 200);
+            }
+        }).trigger('hashchange');
+    };
 
 })(jQuery);
 
@@ -177,6 +238,7 @@ function initCore() {
     Gogits.initModals();
     Gogits.initDropDown();
     Gogits.renderMarkdown();
+    Gogits.renderCodeView();
 }
 
 function initRegister() {
@@ -272,6 +334,21 @@ function initRepository() {
             return false;
         });
     })();
+
+    // repo diff counter
+    (function () {
+        var $counter = $('.diff-counter');
+        if ($counter.length < 1) {
+            return;
+        }
+        $counter.each(function (i, item) {
+            var $item = $(item);
+            var addLine = $item.find('span[data-line].add').data("line");
+            var delLine = $item.find('span[data-line].del').data("line");
+            var addPercent = parseFloat(addLine) / (parseFloat(addLine) + parseFloat(delLine)) * 100;
+            $item.find(".bar .add").css("width", addPercent + "%");
+        });
+    }());
 }
 
 (function ($) {

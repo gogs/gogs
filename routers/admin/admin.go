@@ -141,6 +141,7 @@ func Config(ctx *middleware.Context) {
 	ctx.Data["Domain"] = base.Domain
 	ctx.Data["RunUser"] = base.RunUser
 	ctx.Data["RunMode"] = strings.Title(martini.Env)
+	ctx.Data["EnableHttpsClone"] = base.EnableHttpsClone
 	ctx.Data["RepoRootPath"] = base.RepoRootPath
 
 	ctx.Data["Service"] = base.Service
@@ -160,7 +161,6 @@ func Config(ctx *middleware.Context) {
 	ctx.Data["SessionConfig"] = base.SessionConfig
 
 	ctx.Data["PictureService"] = base.PictureService
-	ctx.Data["PictureRootPath"] = base.PictureRootPath
 
 	ctx.Data["LogMode"] = base.LogMode
 	ctx.Data["LogConfig"] = base.LogConfig
