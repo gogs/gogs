@@ -44,6 +44,10 @@ gogs serv provide access auth for repositories`,
 	Flags:  []cli.Flag{},
 }
 
+func init() {
+	log.NewLogger(10000, "file", fmt.Sprintf(`{"filename":"%s"}`, "log/serv.log"))
+}
+
 func parseCmd(cmd string) (string, string) {
 	ss := strings.SplitN(cmd, " ", 2)
 	if len(ss) != 2 {
@@ -68,6 +72,7 @@ func runServ(k *cli.Context) {
 	base.NewConfigContext()
 	models.LoadModelsConfig()
 	models.NewEngine()
+	base.NewLogService()
 
 	keys := strings.Split(os.Args[2], "-")
 	if len(keys) != 2 {
@@ -227,7 +232,7 @@ func runServ(k *cli.Context) {
 			return
 		}
 		if ref, ok = refs[refname]; !ok {
-			println("unknow reference name -", refname, "-")
+			log.Trace("unknow reference name -", refname, "-", b.String())
 			return
 		}
 		l, err = ref.AllCommits()

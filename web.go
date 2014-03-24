@@ -157,8 +157,8 @@ func runWeb(*cli.Context) {
 	}, ignSignIn, middleware.RepoAssignment(true))
 
 	// TODO: implement single commit page
-	// m.Get("/:username/:reponame/commit/:commitid/**", ignSignIn, middleware.RepoAssignment(true), repo.Single)
-	// m.Get("/:username/:reponame/commit/:commitid", ignSignIn, middleware.RepoAssignment(true), repo.Single)
+	m.Get("/:username/:reponame/commit/:commitid/**", ignSignIn, middleware.RepoAssignment(true), repo.Diff)
+	m.Get("/:username/:reponame/commit/:commitid", ignSignIn, middleware.RepoAssignment(true), repo.Diff)
 
 	m.Group("/:username", func(r martini.Router) {
 		r.Get("/:reponame", middleware.RepoAssignment(true), repo.Single)

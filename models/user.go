@@ -211,7 +211,7 @@ func UpdateUser(user *User) (err error) {
 		user.Website = user.Website[:255]
 	}
 
-	_, err = orm.Id(user.Id).UseBool().Cols("email", "passwd", "avatar", "avatar_email", "website", "location", "is_active", "is_admin", "updated").Update(user)
+	_, err = orm.Id(user.Id).AllCols().Update(user)
 	return err
 }
 
