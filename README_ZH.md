@@ -49,6 +49,7 @@ Gogs 完全使用 Go 语言来实现对 Git 数据的操作，实现 **零** 依
 - 基于 [GoBlog](https://github.com/fuxiaohei/goblog) 修改的系统监视状态。
 - [beego](http://beego.me) 模块的使用与修改。
 - [martini](http://martini.codegangsta.io/) 的路由与中间件机制。
+- 感谢 [gobuild.io](http://gobuild.io) 提供二进制编译与下载服务。
 
 ## 贡献成员
 
