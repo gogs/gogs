@@ -30,6 +30,10 @@
                             </span>
                         </div>
                         <p class="help-block text-center">Need help cloning? Visit <a href="#">Help</a>!</p>
+                        <hr/>
+                        <div class="clone-zip text-center">
+                            <a class="btn btn-success btn-lg" href="#"><i class="fa fa-suitcase"></i>Download ZIP</a>
+                        </div>
                     </div>
                 </div>
                 <div class="btn-group {{if .IsRepositoryWatching}}watching{{else}}no-watching{{end}}" id="gogs-repo-watching" data-watch="/{{.Owner.Name}}/{{.Repository.Name}}/action/watch" data-unwatch="/{{.Owner.Name}}/{{.Repository.Name}}/action/unwatch">
