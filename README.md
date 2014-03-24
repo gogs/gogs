@@ -53,6 +53,7 @@ There are two ways to install Gogs:
 - Mail Service, modules design is inspired by [WeTalk](https://github.com/beego/wetalk).
 - System Monitor Status is inspired by [GoBlog](https://github.com/fuxiaohei/goblog).
 - Usage and modification from [beego](http://beego.me) modules.
+- Thanks [gobuild.io](http://gobuild.io) for providing binary compile and download service.
 
 ## Contributors
 
