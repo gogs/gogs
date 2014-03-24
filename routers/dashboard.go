@@ -5,6 +5,7 @@
 package routers
 
 import (
+	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/middleware"
 	"github.com/gogits/gogs/routers/user"
 )
@@ -14,6 +15,14 @@ func Home(ctx *middleware.Context) {
 		user.Dashboard(ctx)
 		return
 	}
+
+	// Check auto-login.
+	userName := ctx.GetCookie(base.CookieUserName)
+	if len(userName) != 0 {
+		ctx.Redirect("/user/login")
+		return
+	}
+
 	ctx.Data["PageIsHome"] = true
 	ctx.HTML(200, "home")
 }
