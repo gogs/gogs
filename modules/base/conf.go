@@ -100,7 +100,7 @@ func newService() {
 	Service.EnableCacheAvatar = Cfg.MustBool("service", "ENABLE_CACHE_AVATAR", false)
 }
 
-func NewLogService() {
+func newLogService() {
 	// Get and check log mode.
 	LogMode = Cfg.MustValue("log", "MODE", "console")
 	modeSec := "log." + LogMode
@@ -296,7 +296,7 @@ func NewConfigContext() {
 
 func NewServices() {
 	newService()
-	NewLogService()
+	newLogService()
 	newCacheService()
 	newSessionService()
 	newMailService()
