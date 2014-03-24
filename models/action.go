@@ -92,10 +92,12 @@ func CommitRepoAction(userId int64, userName string,
 	// Update repository last update time.
 	repo, err := GetRepositoryByName(userId, repoName)
 	if err != nil {
+		log.Error("action.CommitRepoAction(GetRepositoryByName): %d/%s", userId, repo.LowerName)
 		return err
 	}
 	repo.IsBare = false
 	if err = UpdateRepository(repo); err != nil {
+		log.Error("action.CommitRepoAction(UpdateRepository): %d/%s", userId, repo.LowerName)
 		return err
 	}
 
