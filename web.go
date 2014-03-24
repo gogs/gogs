@@ -152,6 +152,7 @@ func runWeb(*cli.Context) {
 		r.Get("/branches", repo.Branches)
 		r.Get("/src/:branchname", repo.Single)
 		r.Get("/src/:branchname/**", repo.Single)
+		r.Get("/raw/:branchname/**", repo.SingleDownload)
 		r.Get("/commits/:branchname", repo.Commits)
 		r.Get("/commits/:branchname", repo.Commits)
 	}, ignSignIn, middleware.RepoAssignment(true))
@@ -161,6 +162,7 @@ func runWeb(*cli.Context) {
 	m.Get("/:username/:reponame/commit/:commitid", ignSignIn, middleware.RepoAssignment(true), repo.Diff)
 
 	m.Group("/:username", func(r martini.Router) {
+		r.Get("/:reponame", middleware.RepoAssignment(true), repo.Single)
 		r.Get("/:reponame", middleware.RepoAssignment(true), repo.Single)
 		r.Any("/:reponame/**", repo.Http)
 	}, ignSignIn)
