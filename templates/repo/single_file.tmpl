@@ -6,14 +6,14 @@
         {{else}}
             <i class="icon fa fa-file-text-o"></i>
             {{.FileName}} <span class="file-size">{{FileSize .FileSize}}</span>
-            <div class="btn-group pull-right">
-                <a class="btn btn-default hidden" href="#">Edit</a>
-                <a class="btn btn-default" href="{{.FileLink}}">Raw</a>
-                <a class="btn btn-default hidden" href="#">Blame</a>
-                <a class="btn btn-default hidden" href="#">History</a>
-                <a class="btn btn-danger hidden" href="#">Delete</a>
-            </div>
         {{end}}
+        <div class="btn-group pull-right">
+            <a class="btn btn-default hidden" href="#">Edit</a>
+            <a class="btn btn-default" href="{{.FileLink}}">Raw</a>
+            <a class="btn btn-default hidden" href="#">Blame</a>
+            <a class="btn btn-default hidden" href="#">History</a>
+            <a class="btn btn-danger hidden" href="#">Delete</a>
+        </div>
     </div>
     {{if not .FileIsText}}
         <div class="panel-footer text-center">
