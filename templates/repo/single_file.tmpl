@@ -2,11 +2,16 @@
     <div class="panel-heading file-head">
         {{if .ReadmeExist}}
             <i class="icon fa fa-book"></i>
+            {{if .ReadmeInSingle}}
             {{.FileName}}
+            {{else}}
+            {{.FileName}} <span class="file-size">{{FileSize .FileSize}}</span>
+            {{end}}
         {{else}}
             <i class="icon fa fa-file-text-o"></i>
             {{.FileName}} <span class="file-size">{{FileSize .FileSize}}</span>
         {{end}}
+        {{if not .ReadmeInSingle}}
         <div class="btn-group pull-right">
             <a class="btn btn-default hidden" href="#">Edit</a>
             <a class="btn btn-default" href="{{.FileLink}}">Raw</a>
@@ -14,10 +19,11 @@
             <a class="btn btn-default hidden" href="#">History</a>
             <a class="btn btn-danger hidden" href="#">Delete</a>
         </div>
+        {{end}}
     </div>
     {{if not .FileIsText}}
         <div class="panel-footer text-center">
-            <a href="{{.FileLink}}" class="btn btn-default btn-lg">View Raw</a>
+            <a href="{{.FileLink}}" class="btn btn-default">View Raw</a>
         </div>
     {{else}}
         {{if .ReadmeExist}}
