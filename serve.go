@@ -45,6 +45,7 @@ gogs serv provide access auth for repositories`,
 }
 
 func init() {
+	os.MkdirAll("log", os.ModePerm)
 	log.NewLogger(10000, "file", fmt.Sprintf(`{"filename":"%s"}`, "log/serv.log"))
 }
 
@@ -72,7 +73,6 @@ func runServ(k *cli.Context) {
 	base.NewConfigContext()
 	models.LoadModelsConfig()
 	models.NewEngine()
-	base.NewLogService()
 
 	keys := strings.Split(os.Args[2], "-")
 	if len(keys) != 2 {
