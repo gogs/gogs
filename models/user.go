@@ -72,7 +72,10 @@ func (user *User) HomeLink() string {
 
 // AvatarLink returns the user gravatar link.
 func (user *User) AvatarLink() string {
-	return "/avatar/" + user.Avatar
+	if base.Service.EnableCacheAvatar {
+		return "/avatar/" + user.Avatar
+	}
+	return "http://1.gravatar.com/avatar/" + user.Avatar
 }
 
 // NewGitSig generates and returns the signature of given user.
@@ -208,7 +211,7 @@ func UpdateUser(user *User) (err error) {
 		user.Website = user.Website[:255]
 	}
 
-	_, err = orm.Id(user.Id).UseBool().Cols("website", "location", "is_active", "is_admin").Update(user)
+	_, err = orm.Id(user.Id).UseBool().Cols("email", "passwd", "avatar", "avatar_email", "website", "location", "is_active", "is_admin", "updated").Update(user)
 	return err
 }
 

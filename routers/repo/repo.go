@@ -52,30 +52,6 @@ func Create(ctx *middleware.Context, form auth.CreateRepoForm) {
 	ctx.Handle(200, "repo.Create", err)
 }
 
-func Branches(ctx *middleware.Context, params martini.Params) {
-	if !ctx.Repo.IsValid {
-		return
-	}
-
-	brs, err := models.GetBranches(params["username"], params["reponame"])
-	if err != nil {
-		ctx.Handle(200, "repo.Branches", err)
-		return
-	} else if len(brs) == 0 {
-		ctx.Handle(404, "repo.Branches", nil)
-		return
-	}
-
-	ctx.Data["Username"] = params["username"]
-	ctx.Data["Reponame"] = params["reponame"]
-
-	ctx.Data["Branchname"] = brs[0]
-	ctx.Data["Branches"] = brs
-	ctx.Data["IsRepoToolbarBranches"] = true
-
-	ctx.HTML(200, "repo/branches")
-}
-
 func Single(ctx *middleware.Context, params martini.Params) {
 	if !ctx.Repo.IsValid {
 		return
@@ -276,7 +252,7 @@ func Setting(ctx *middleware.Context, params martini.Params) {
 	ctx.HTML(200, "repo/setting")
 }
 
-func SettingPost(ctx *middleware.Context, params martini.Params) {
+func SettingPost(ctx *middleware.Context) {
 	if !ctx.Repo.IsOwner {
 		ctx.Error(404)
 		return
@@ -308,35 +284,6 @@ func SettingPost(ctx *middleware.Context, params martini.Params) {
 		log.Trace("%s Repository deleted: %s/%s", ctx.Req.RequestURI, ctx.User.LowerName, ctx.Repo.Repository.LowerName)
 		ctx.Redirect("/")
 	}
-}
-
-func Commits(ctx *middleware.Context, params martini.Params) {
-	brs, err := models.GetBranches(params["username"], params["reponame"])
-	if err != nil {
-		ctx.Handle(200, "repo.Commits", err)
-		return
-	} else if len(brs) == 0 {
-		ctx.Handle(404, "repo.Commits", nil)
-		return
-	}
-
-	ctx.Data["IsRepoToolbarCommits"] = true
-	commits, err := models.GetCommits(params["username"],
-		params["reponame"], params["branchname"])
-	if err != nil {
-		ctx.Handle(404, "repo.Commits", nil)
-		return
-	}
-	ctx.Data["Username"] = params["username"]
-	ctx.Data["Reponame"] = params["reponame"]
-	ctx.Data["CommitCount"] = commits.Len()
-	ctx.Data["Commits"] = commits
-	ctx.HTML(200, "repo/commits")
-}
-
-func Pulls(ctx *middleware.Context) {
-	ctx.Data["IsRepoToolbarPulls"] = true
-	ctx.HTML(200, "repo/pulls")
 }
 
 func Action(ctx *middleware.Context, params martini.Params) {

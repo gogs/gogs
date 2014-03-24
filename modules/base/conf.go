@@ -66,6 +66,7 @@ var Service struct {
 	DisenableRegisteration bool
 	RequireSignInView      bool
 	EnableCacheAvatar      bool
+	NotifyMail             bool
 	ActiveCodeLives        int
 	ResetPwdCodeLives      int
 }
@@ -230,6 +231,17 @@ func newRegisterMailService() {
 	log.Info("Register Mail Service Enabled")
 }
 
+func newNotifyMailService() {
+	if !Cfg.MustBool("service", "ENABLE_NOTIFY_MAIL") {
+		return
+	} else if MailService == nil {
+		log.Warn("Notify Mail Service: Mail Service is not enabled")
+		return
+	}
+	Service.NotifyMail = true
+	log.Info("Notify Mail Service Enabled")
+}
+
 func NewConfigContext() {
 	var err error
 	workDir, err := exeDir()
@@ -284,4 +296,5 @@ func NewServices() {
 	newSessionService()
 	newMailService()
 	newRegisterMailService()
+	newNotifyMailService()
 }
