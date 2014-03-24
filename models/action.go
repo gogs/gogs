@@ -59,14 +59,18 @@ func (a Action) GetContent() string {
 // CommitRepoAction records action for commit repository.
 func CommitRepoAction(userId int64, userName string,
 	repoId int64, repoName string, refName string, commits *base.PushCommits) error {
+	log.Trace("action.CommitRepoAction: %d/%s", userId, repoName)
+
 	bs, err := json.Marshal(commits)
 	if err != nil {
+		log.Error("action.CommitRepoAction(json): %d/%s", userId, repoName)
 		return err
 	}
 
 	// Add feeds for user self and all watchers.
 	watches, err := GetWatches(repoId)
 	if err != nil {
+		log.Error("action.CommitRepoAction(get watches): %d/%s", userId, repoName)
 		return err
 	}
 	watches = append(watches, Watch{UserId: userId})
@@ -86,22 +90,23 @@ func CommitRepoAction(userId int64, userName string,
 			RepoName:    repoName,
 			RefName:     refName,
 		})
+		if err != nil {
+			log.Error("action.CommitRepoAction(notify watches): %d/%s", userId, repoName)
+		}
 		return err
 	}
 
 	// Update repository last update time.
 	repo, err := GetRepositoryByName(userId, repoName)
 	if err != nil {
-		log.Error("action.CommitRepoAction(GetRepositoryByName): %d/%s", userId, repo.LowerName)
+		log.Error("action.CommitRepoAction(GetRepositoryByName): %d/%s", userId, repoName)
 		return err
 	}
 	repo.IsBare = false
 	if err = UpdateRepository(repo); err != nil {
-		log.Error("action.CommitRepoAction(UpdateRepository): %d/%s", userId, repo.LowerName)
+		log.Error("action.CommitRepoAction(UpdateRepository): %d/%s", userId, repoName)
 		return err
 	}
-
-	log.Trace("action.CommitRepoAction: %d/%s", userId, repo.LowerName)
 	return nil
 }
 
