@@ -89,7 +89,7 @@ func runWeb(*cli.Context) {
 	reqSignOut := middleware.Toggle(&middleware.ToggleOptions{SignOutRequire: true})
 
 	// Routers.
-	m.Get("/", reqSignIn, routers.Home)
+	m.Get("/", ignSignIn, routers.Home)
 	m.Get("/issues", reqSignIn, user.Issues)
 	m.Get("/pulls", reqSignIn, user.Pulls)
 	m.Get("/stars", reqSignIn, user.Stars)
