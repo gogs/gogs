@@ -33,3 +33,9 @@ func Commits(ctx *middleware.Context, params martini.Params) {
 	ctx.Data["Commits"] = commits
 	ctx.HTML(200, "repo/commits")
 }
+
+func Diff(ctx *middleware.Context,params martini.Params){
+	ctx.Data["Title"] = "commit-sha"
+	ctx.Data["IsRepoToolbarCommits"] = true
+	ctx.HTML(200,"repo/diff")
+}
