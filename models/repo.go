@@ -261,6 +261,7 @@ func initRepository(f string, user *User, repo *Repository, initReadme bool, rep
 		return err
 	}
 
+	/*
 	// hook/post-update
 	pu, err := os.OpenFile(filepath.Join(repoPath, "hooks", "post-update"), os.O_CREATE|os.O_WRONLY, 0777)
 	if err != nil {
@@ -282,6 +283,7 @@ func initRepository(f string, user *User, repo *Repository, initReadme bool, rep
 	if _, err = pu2.WriteString("#!/usr/bin/env bash\ngit update-server-info\n"); err != nil {
 		return err
 	}
+	*/
 
 	// Initialize repository according to user's choice.
 	fileName := map[string]string{}
@@ -387,7 +389,7 @@ func UpdateRepository(repo *Repository) error {
 		repo.Website = repo.Website[:255]
 	}
 
-	_, err := orm.Id(repo.Id).UseBool().Cols("description", "website", "updated").Update(repo)
+	_, err := orm.Id(repo.Id).AllCols().Update(repo)
 	return err
 }
 
