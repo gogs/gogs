@@ -711,6 +711,12 @@ html, body {
     width: 1%;
 }
 
+.file-content .file-body.file-code .lines-ellipsis {
+    background-color: #FAFAFA;
+    color: #999;
+    width: 1%;
+}
+
 .file-content .file-body.file-code .lines-num span {
     font-family: Menlo, Monaco, Consolas, "Courier New", monospace;
     line-height: 1.6;
@@ -896,7 +902,7 @@ html, body {
     background-color: #e9aeae;
 }
 
-.diff-detail-box span.status.rename{
+.diff-detail-box span.status.rename {
     background-color: #dad8ff;
 }
 
@@ -960,6 +966,10 @@ html, body {
 .diff-file-box .code-diff tbody tr:hover td, .diff-file-box .code-diff tbody tr:hover pre {
     background-color: #fff8d2 !important;
     border-color: #f0db88 !important;
+}
+
+.diff-file-box .ellipsis-code pre {
+    color: #AAA;
 }
 
 /* wrapper and footer */
