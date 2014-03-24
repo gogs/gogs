@@ -156,6 +156,7 @@ func Single(ctx *middleware.Context, params martini.Params) {
 		}
 
 		if readmeFile != nil {
+			ctx.Data["ReadmeInSingle"] = true
 			ctx.Data["ReadmeExist"] = true
 			if blob, err := readmeFile.LookupBlob(); err != nil {
 				ctx.Handle(404, "repo.Single(readmeFile.LookupBlob)", err)
