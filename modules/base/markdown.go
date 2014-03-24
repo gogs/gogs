@@ -6,6 +6,7 @@ package base
 
 import (
 	"bytes"
+	"net/http"
 	"path"
 	"path/filepath"
 	"strings"
@@ -40,6 +41,14 @@ func IsMarkdownFile(name string) bool {
 		return true
 	}
 	return false
+}
+
+func IsTextFile(data []byte) (string, bool) {
+	contentType := http.DetectContentType(data)
+	if strings.Index(contentType, "text/") != -1 {
+		return contentType, true
+	}
+	return contentType, false
 }
 
 func IsReadmeFile(name string) bool {

@@ -2,20 +2,22 @@
     <div class="panel-heading file-head">
         {{if .ReadmeExist}}
             <i class="icon fa fa-book"></i>
+            {{.FileName}}
         {{else}}
+            <i class="icon fa fa-file-text-o"></i>
+            {{.FileName}} {{FileSize .FileSize}}
             <div class="btn-group pull-right">
                 <a class="btn btn-default hidden" href="#">Edit</a>
-                <a class="btn btn-default" href="#">Raw</a>
+                <a class="btn btn-default" href="{{.FileLink}}">Raw</a>
                 <a class="btn btn-default hidden" href="#">Blame</a>
                 <a class="btn btn-default hidden" href="#">History</a>
                 <a class="btn btn-danger hidden" href="#">Delete</a>
             </div>
-            <i class="icon fa fa-file-text-o"></i>
-        {{end}}{{.FileName}}
+        {{end}}
     </div>
-    {{if .FileIsLarge}}
-        <div class="panel-footer">
-            Large file size 1000kb
+    {{if not .FileIsText}}
+        <div class="panel-footer text-center">
+            <a href="{{.FileLink}}" class="btn btn-default">View Raw</a>
         </div>
     {{else}}
         {{if .ReadmeExist}}
@@ -28,7 +30,7 @@
                     <tbody>
                         <tr>
                             <td class="lines-num"></td>
-                            <td class="lines-code markdown"><pre class="prettyprint linenums lang-{{.FileExt}}">{{.FileContent}}</pre></td>
+                            <td class="lines-code markdown"><pre class="prettyprint linenums{{if .FileExt}} lang-{{.FileExt}}{{end}}">{{.FileContent}}</pre></td>
                         </tr>
                     </tbody>
                 </table>
