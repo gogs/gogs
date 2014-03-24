@@ -3,9 +3,15 @@
         {{if .ReadmeExist}}
             <i class="icon fa fa-book"></i>
         {{else}}
+            <div class="btn-group pull-right">
+                <a class="btn btn-default hidden" href="#">Edit</a>
+                <a class="btn btn-default" href="#">Raw</a>
+                <a class="btn btn-default hidden" href="#">Blame</a>
+                <a class="btn btn-default hidden" href="#">History</a>
+                <a class="btn btn-danger hidden" href="#">Delete</a>
+            </div>
             <i class="icon fa fa-file-text-o"></i>
         {{end}}{{.FileName}}
-        <a class="btn btn-default pull-right" href="#">Raw</a>
     </div>
     {{if .FileIsLarge}}
         <div class="panel-footer">
