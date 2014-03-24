@@ -6,6 +6,7 @@ package repo
 
 import (
 	"github.com/codegangsta/martini"
+
 	"github.com/gogits/gogs/modules/middleware"
 )
 
