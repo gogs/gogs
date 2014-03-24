@@ -9,7 +9,7 @@
         {{else}}
         <div class="source-toolbar">
             {{ $n := len .Treenames}}
-            {{if not .IsFile}}<button class="btn btn-default pull-right"><i class="fa fa-plus-square"></i>Add File</button>{{end}}
+            {{if not .IsFile}}<button class="btn btn-default pull-right hidden"><i class="fa fa-plus-square"></i>Add File</button>{{end}}
             <div class="dropdown branch-switch">
                 <a href="#" class="btn btn-success dropdown-toggle" data-toggle="dropdown"><i class="fa fa-chain"></i>{{.Branchname}}&nbsp;&nbsp;
                     <b class="caret"></b></a>
