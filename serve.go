@@ -183,14 +183,14 @@ func runServ(k *cli.Context) {
 
 		rep, err = git.OpenRepository(repoPath)
 		if err != nil {
-			println(err.Error())
+			println("OpenRepository failed:", err.Error())
 			log.Error(err.Error())
 			return
 		}
 
 	refs, err := rep.AllReferencesMap()
 	if err != nil {
-		println(err.Error())
+		println("Get All References failed:", err.Error())
 		log.Error(err.Error())
 		return
 	}
@@ -247,7 +247,7 @@ func runServ(k *cli.Context) {
 		// for new branch
 		refs, err = rep.AllReferencesMap()
 		if err != nil {
-			println(err.Error())
+			println("Get All References failed:", err.Error())
 			log.Error(err.Error())
 			return
 		}
@@ -257,7 +257,7 @@ func runServ(k *cli.Context) {
 		}
 		l, err = ref.AllCommits()
 		if err != nil {
-			println(err.Error())
+			println("Get All Commits failed:", err.Error())
 			log.Error(err.Error())
 			return
 		}
@@ -267,14 +267,14 @@ func runServ(k *cli.Context) {
 		//log.Info("00000", ref.Oid.String())
 		last, err = ref.LastCommit()
 		if err != nil {
-			println(err.Error())
+			println("Get last commit failed:", err.Error())
 			log.Error(err.Error())
 			return
 		}
 
 		ref2, err := rep.LookupReference(ref.Name)
 		if err != nil {
-			println(err.Error())
+			println("look up reference failed:", err.Error())
 			log.Error(err.Error())
 			return
 		}
@@ -282,7 +282,7 @@ func runServ(k *cli.Context) {
 		//log.Info("11111", ref2.Oid.String())
 		before, err := ref2.LastCommit()
 		if err != nil {
-			println(err.Error())
+			println("Get last commit failed:", err.Error())
 			log.Error(err.Error())
 			return
 		}
