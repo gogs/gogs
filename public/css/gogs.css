@@ -512,6 +512,14 @@ html, body {
     height: 39px;
 }
 
+#repo-toolbar .nav .tmp a:hover {
+    text-decoration: none;
+}
+
+#repo-toolbar .nav .tmp .btn {
+    margin-top: -2px;
+}
+
 #repo-toolbar .nav .active {
     color: #F6F6F6;
 }
@@ -602,7 +610,7 @@ html, body {
 }
 
 /* #source */
-#source {
+#source, #commits {
     margin-top: -20px;
 }
 
@@ -857,7 +865,7 @@ html, body {
 }
 
 .guide-box, .diff-head-box {
-    margin-top: 20px;
+    margin-top: 4px;
 }
 
 .diff-head-box h4 {
@@ -989,6 +997,24 @@ html, body {
 
 .diff-file-box .ellipsis-code pre {
     color: #AAA;
+}
+
+/* issue */
+
+#issue-create-form .panel-body {
+    padding: 15px 0 0 0;
+}
+
+#issue-create-form .panel-body.form-group, #issue-create-form .tab-pane .form-group {
+    margin-bottom: 0;
+}
+
+#issue-create-form .nav-tabs {
+    margin-bottom: 10px;
+}
+
+#issue-create-form .md-help{
+    margin-top: 6px;
 }
 
 /* wrapper and footer */
