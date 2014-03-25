@@ -45,10 +45,10 @@ gogs serv provide access auth for repositories`,
 	Flags:  []cli.Flag{},
 }
 
-func init() {
+func newLogger(execDir string) {
 	level := "0"
 	os.MkdirAll("log", os.ModePerm)
-	log.NewLogger(10000, "file", fmt.Sprintf(`{"level":%s,"filename":"%s"}`, level, "log/serv.log"))
+	log.NewLogger(10000, "file", fmt.Sprintf(`{"level":%s,"filename":"%s"}`, level, execDir+"/log/serv.log"))
 	log.Trace("start logging...")
 }
 
@@ -73,6 +73,8 @@ func In(b string, sl map[string]int) bool {
 }
 
 func runServ(k *cli.Context) {
+	execDir, _ := base.ExecDir()
+	newLogger(execDir)
 	log.Trace("new serv request " + log.Mode + ":" + log.Config)
 
 	base.NewConfigContext()
