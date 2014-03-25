@@ -34,12 +34,13 @@ func runUpdate(c *cli.Context) {
 	for i, arg := range c.Args() {
 		log.Info(i, arg)
 	}
-	/*userName := os.Getenv("userName")
-	userId := os.Getenv("userId")
-	repoId := os.Getenv("repoId")
-	repoName := os.Getenv("repoName")
+	userName := os.Getenv("userName")
+	//userId := os.Getenv("userId")
+	//repoId := os.Getenv("repoId")
+	//repoName := os.Getenv("repoName")
 
-	f := models.RepoPath(userName, repoName)
+	log.Info("username", userName)
+	/*f := models.RepoPath(userName, repoName)
 
 	repo, err := git.OpenRepository(f)
 	if err != nil {
