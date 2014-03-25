@@ -49,7 +49,7 @@ func init() {
 	level := "0"
 	os.MkdirAll("log", os.ModePerm)
 	log.NewLogger(10000, "file", fmt.Sprintf(`{"level":%s,"filename":"%s"}`, level, "log/serv.log"))
-	log.Info("start logging...")
+	log.Trace("start logging...")
 }
 
 func parseCmd(cmd string) (string, string) {
@@ -73,6 +73,8 @@ func In(b string, sl map[string]int) bool {
 }
 
 func runServ(k *cli.Context) {
+	log.Trace("new serv request")
+
 	base.NewConfigContext()
 	models.LoadModelsConfig()
 	models.NewEngine()
@@ -80,17 +82,20 @@ func runServ(k *cli.Context) {
 	keys := strings.Split(os.Args[2], "-")
 	if len(keys) != 2 {
 		fmt.Println("auth file format error")
+		log.Error("auth file format error")
 		return
 	}
 
 	keyId, err := strconv.ParseInt(keys[1], 10, 64)
 	if err != nil {
 		fmt.Println("auth file format error")
+		log.Error("auth file format error")
 		return
 	}
 	user, err := models.GetUserByKeyId(keyId)
 	if err != nil {
 		fmt.Println("You have no right to access")
+		log.Error("You have no right to access")
 		return
 	}
 
@@ -105,6 +110,7 @@ func runServ(k *cli.Context) {
 	rr := strings.SplitN(rRepo, "/", 2)
 	if len(rr) != 2 {
 		println("Unavilable repository", args)
+		log.Error("Unavilable repository %v", args)
 		return
 	}
 	repoName := rr[1]
@@ -122,11 +128,12 @@ func runServ(k *cli.Context) {
 			isExist = false
 			if isRead {
 				println("Repository", user.Name+"/"+repoName, "is not exist")
+				log.Error("Repository " + user.Name + "/" + repoName + " is not exist")
 				return
 			}
 		} else {
 			println("Get repository error:", err)
-			log.Error(err.Error())
+			log.Error("Get repository error: " + err.Error())
 			return
 		}
 	}
@@ -142,6 +149,7 @@ func runServ(k *cli.Context) {
 		}
 		if !has {
 			println("You have no right to write this repository")
+			log.Error("You have no right to access this repository")
 			return
 		}
 	case isRead:
@@ -161,10 +169,12 @@ func runServ(k *cli.Context) {
 		}
 		if !has {
 			println("You have no right to access this repository")
+			log.Error("You have no right to access this repository")
 			return
 		}
 	default:
 		println("Unknown command")
+		log.Error("Unknown command")
 		return
 	}
 
@@ -175,23 +185,23 @@ func runServ(k *cli.Context) {
 			_, err = models.CreateRepository(user, repoName, "", "", "", false, true)
 			if err != nil {
 				println("Create repository failed")
-				log.Error(err.Error())
+				log.Error("Create repository failed: " + err.Error())
 				return
 			}
 		}
 	}
 
-		rep, err = git.OpenRepository(repoPath)
-		if err != nil {
-			println("OpenRepository failed:", err.Error())
-			log.Error(err.Error())
-			return
-		}
+	rep, err = git.OpenRepository(repoPath)
+	if err != nil {
+		println("OpenRepository failed:", err.Error())
+		log.Error("OpenRepository failed: " + err.Error())
+		return
+	}
 
 	refs, err := rep.AllReferencesMap()
 	if err != nil {
 		println("Get All References failed:", err.Error())
-		log.Error(err.Error())
+		log.Error("Get All References failed: " + err.Error())
 		return
 	}
 
@@ -208,7 +218,7 @@ func runServ(k *cli.Context) {
 
 	if err = gitcmd.Run(); err != nil {
 		println("execute command error:", err.Error())
-		log.Error(err.Error())
+		log.Error("execute command error: " + err.Error())
 		return
 	}
 
@@ -236,6 +246,7 @@ func runServ(k *cli.Context) {
 	}
 	if refname == "" {
 		println("No find any reference name:", b.String())
+		log.Error("No find any reference name: " + b.String())
 		return
 	}
 
@@ -248,17 +259,18 @@ func runServ(k *cli.Context) {
 		refs, err = rep.AllReferencesMap()
 		if err != nil {
 			println("Get All References failed:", err.Error())
-			log.Error(err.Error())
+			log.Error("Get All References failed: " + err.Error())
 			return
 		}
 		if ref, ok = refs[refname]; !ok {
+			log.Error("unknow reference name -", refname, "-", b.String())
 			log.Error("unknow reference name -", refname, "-", b.String())
 			return
 		}
 		l, err = ref.AllCommits()
 		if err != nil {
 			println("Get All Commits failed:", err.Error())
-			log.Error(err.Error())
+			log.Error("Get All Commits failed: " + err.Error())
 			return
 		}
 	} else {
@@ -268,14 +280,14 @@ func runServ(k *cli.Context) {
 		last, err = ref.LastCommit()
 		if err != nil {
 			println("Get last commit failed:", err.Error())
-			log.Error(err.Error())
+			log.Error("Get last commit failed: " + err.Error())
 			return
 		}
 
 		ref2, err := rep.LookupReference(ref.Name)
 		if err != nil {
 			println("look up reference failed:", err.Error())
-			log.Error(err.Error())
+			log.Error("look up reference failed: " + err.Error())
 			return
 		}
 
@@ -283,7 +295,7 @@ func runServ(k *cli.Context) {
 		before, err := ref2.LastCommit()
 		if err != nil {
 			println("Get last commit failed:", err.Error())
-			log.Error(err.Error())
+			log.Error("Get last commit failed: " + err.Error())
 			return
 		}
 		//log.Info("----", before.Id(), "-----", last.Id())
