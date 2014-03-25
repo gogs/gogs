@@ -262,7 +262,7 @@ func initRepository(f string, user *User, repo *Repository, initReadme bool, rep
 	}
 
 	// hook/post-update
-	pu, err := os.OpenFile(filepath.Join(repoPath, "hooks", "post-update"), os.O_CREATE|os.O_WRONLY, 0777)
+	pu, err := os.OpenFile(filepath.Join(repoPath, "hooks", "update"), os.O_CREATE|os.O_WRONLY, 0777)
 	if err != nil {
 		return err
 	}
