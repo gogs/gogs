@@ -268,7 +268,7 @@ func initRepository(f string, user *User, repo *Repository, initReadme bool, rep
 	}
 	defer pu.Close()
 	// TODO: Windows .bat
-	if _, err = pu.WriteString(fmt.Sprintf("#!/usr/bin/env bash\n%s update ARGV[0] ARGV[1] ARGV[2]\n", appPath)); err != nil {
+	if _, err = pu.WriteString(fmt.Sprintf("#!/usr/bin/env bash\n%s update $1 $2 $3\n", appPath)); err != nil {
 		return err
 	}
 
