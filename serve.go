@@ -46,8 +46,9 @@ gogs serv provide access auth for repositories`,
 }
 
 func init() {
+	level := "0"
 	os.MkdirAll("log", os.ModePerm)
-	log.NewLogger(10000, "file", fmt.Sprintf(`{"filename":"%s"}`, "log/serv.log"))
+	log.NewLogger(10000, "file", fmt.Sprintf(`{"level":%s,"filename":"%s"}`, level, "log/serv.log"))
 	log.Info("start logging...")
 }
 
