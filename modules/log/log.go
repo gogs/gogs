@@ -9,7 +9,10 @@ import (
 	"github.com/gogits/logs"
 )
 
-var logger *logs.BeeLogger
+var (
+	logger       *logs.BeeLogger
+	Mode, Config string
+)
 
 func init() {
 	logger = logs.NewLogger(10000)
@@ -17,6 +20,7 @@ func init() {
 }
 
 func NewLogger(bufLen int64, mode, config string) {
+	Mode, Config = mode, config
 	logger = logs.NewLogger(bufLen)
 	logger.SetLogger(mode, config)
 }
