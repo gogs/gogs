@@ -71,7 +71,7 @@ var Service struct {
 	ResetPwdCodeLives      int
 }
 
-func exeDir() (string, error) {
+func ExecDir() (string, error) {
 	file, err := exec.LookPath(os.Args[0])
 	if err != nil {
 		return "", err
@@ -244,7 +244,7 @@ func newNotifyMailService() {
 
 func NewConfigContext() {
 	//var err error
-	workDir, err := exeDir()
+	workDir, err := ExecDir()
 	if err != nil {
 		fmt.Printf("Fail to get work directory: %s\n", err)
 		os.Exit(2)

@@ -59,7 +59,7 @@ func (a Action) GetContent() string {
 // CommitRepoAction records action for commit repository.
 func CommitRepoAction(userId int64, userName string,
 	repoId int64, repoName string, refName string, commits *base.PushCommits) error {
-	log.Trace("action.CommitRepoAction: %d/%s", userId, repoName)
+	log.Trace("action.CommitRepoAction(start): %d/%s", userId, repoName)
 
 	bs, err := json.Marshal(commits)
 	if err != nil {
@@ -92,8 +92,8 @@ func CommitRepoAction(userId int64, userName string,
 		})
 		if err != nil {
 			log.Error("action.CommitRepoAction(notify watches): %d/%s", userId, repoName)
+			return err
 		}
-		return err
 	}
 
 	// Update repository last update time.
@@ -107,6 +107,8 @@ func CommitRepoAction(userId int64, userName string,
 		log.Error("action.CommitRepoAction(UpdateRepository): %d/%s", userId, repoName)
 		return err
 	}
+
+	log.Trace("action.CommitRepoAction(end): %d/%s", userId, repoName)
 	return nil
 }
 
