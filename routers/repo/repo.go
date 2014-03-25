@@ -6,11 +6,11 @@ package repo
 
 import (
 	"path"
+	"path/filepath"
 	"strings"
 
 	"github.com/codegangsta/martini"
 
-	"github.com/gogits/git"
 	"github.com/gogits/webdav"
 
 	"github.com/gogits/gogs/models"
@@ -96,6 +96,7 @@ func Single(ctx *middleware.Context, params martini.Params) {
 	}
 
 	branchLink := "/" + ctx.Repo.Owner.LowerName + "/" + ctx.Repo.Repository.Name + "/src/" + params["branchname"]
+	rawLink := "/" + ctx.Repo.Owner.LowerName + "/" + ctx.Repo.Repository.Name + "/raw/" + params["branchname"]
 
 	if len(treename) != 0 && repoFile == nil {
 		ctx.Handle(404, "repo.Single", nil)
@@ -103,12 +104,10 @@ func Single(ctx *middleware.Context, params martini.Params) {
 	}
 
 	if repoFile != nil && repoFile.IsFile() {
-		if repoFile.Size > 1024*1024 || repoFile.Filemode != git.FileModeBlob {
-			ctx.Data["FileIsLarge"] = true
-		} else if blob, err := repoFile.LookupBlob(); err != nil {
-			//log.Error("repo.Single(repoFile.LookupBlob): %v", err)
+		if blob, err := repoFile.LookupBlob(); err != nil {
 			ctx.Handle(404, "repo.Single(repoFile.LookupBlob)", err)
 		} else {
+			ctx.Data["FileSize"] = repoFile.Size
 			ctx.Data["IsFile"] = true
 			ctx.Data["FileName"] = repoFile.Name
 			ext := path.Ext(repoFile.Name)
@@ -116,13 +115,20 @@ func Single(ctx *middleware.Context, params martini.Params) {
 				ext = ext[1:]
 			}
 			ctx.Data["FileExt"] = ext
+			ctx.Data["FileLink"] = rawLink + "/" + treename
+
+			data := blob.Contents()
+			_, isTextFile := base.IsTextFile(data)
+			ctx.Data["FileIsText"] = isTextFile
 
 			readmeExist := base.IsMarkdownFile(repoFile.Name) || base.IsReadmeFile(repoFile.Name)
 			ctx.Data["ReadmeExist"] = readmeExist
 			if readmeExist {
-				ctx.Data["FileContent"] = string(base.RenderMarkdown(blob.Contents(), ""))
+				ctx.Data["FileContent"] = string(base.RenderMarkdown(data, ""))
 			} else {
-				ctx.Data["FileContent"] = string(blob.Contents())
+				if isTextFile {
+					ctx.Data["FileContent"] = string(data)
+				}
 			}
 		}
 
@@ -150,18 +156,21 @@ func Single(ctx *middleware.Context, params martini.Params) {
 		}
 
 		if readmeFile != nil {
+			ctx.Data["ReadmeInSingle"] = true
 			ctx.Data["ReadmeExist"] = true
-			// if file large than 1M not show it
-			if readmeFile.Size > 1024*1024 || readmeFile.Filemode != git.FileModeBlob {
-				ctx.Data["FileIsLarge"] = true
-			} else if blob, err := readmeFile.LookupBlob(); err != nil {
+			if blob, err := readmeFile.LookupBlob(); err != nil {
 				ctx.Handle(404, "repo.Single(readmeFile.LookupBlob)", err)
 				return
 			} else {
-				// current repo branch link
-
+				ctx.Data["FileSize"] = readmeFile.Size
+				ctx.Data["FileLink"] = rawLink + "/" + treename
+				data := blob.Contents()
+				_, isTextFile := base.IsTextFile(data)
+				ctx.Data["FileIsText"] = isTextFile
 				ctx.Data["FileName"] = readmeFile.Name
-				ctx.Data["FileContent"] = string(base.RenderMarkdown(blob.Contents(), branchLink))
+				if isTextFile {
+					ctx.Data["FileContent"] = string(base.RenderMarkdown(data, branchLink))
+				}
 			}
 		}
 	}
@@ -199,6 +208,44 @@ func Single(ctx *middleware.Context, params martini.Params) {
 	ctx.Data["Treenames"] = treenames
 	ctx.Data["BranchLink"] = branchLink
 	ctx.HTML(200, "repo/single")
+}
+
+func SingleDownload(ctx *middleware.Context, params martini.Params) {
+	if !ctx.Repo.IsValid {
+		ctx.Handle(404, "repo.SingleDownload", nil)
+		return
+	}
+
+	if len(params["branchname"]) == 0 {
+		params["branchname"] = "master"
+	}
+
+	// Get tree path
+	treename := params["_1"]
+
+	repoFile, err := models.GetTargetFile(params["username"], params["reponame"],
+		params["branchname"], params["commitid"], treename)
+
+	if err != nil {
+		ctx.Handle(404, "repo.SingleDownload(GetTargetFile)", err)
+		return
+	}
+
+	blob, err := repoFile.LookupBlob()
+	if err != nil {
+		ctx.Handle(404, "repo.SingleDownload(LookupBlob)", err)
+		return
+	}
+
+	data := blob.Contents()
+	contentType, isTextFile := base.IsTextFile(data)
+	ctx.Res.Header().Set("Content-Type", contentType)
+	if !isTextFile {
+		ctx.Res.Header().Set("Content-Type", contentType)
+		ctx.Res.Header().Set("Content-Disposition", "attachment; filename="+filepath.Base(treename))
+		ctx.Res.Header().Set("Content-Transfer-Encoding", "binary")
+	}
+	ctx.Res.Write(data)
 }
 
 func Http(ctx *middleware.Context, params martini.Params) {
