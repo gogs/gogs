@@ -20,7 +20,7 @@ More importantly, Gogs only needs one binary to setup your own project hosting o
 ## Overview
 
 - Please see [Wiki](https://github.com/gogits/gogs/wiki) for project design, develop specification, change log and road map.
-- See [Trello Broad](https://trello.com/b/uxAoeLUl/gogs-go-git-service) to follow the develop team.
+- See [Trello Board](https://trello.com/b/uxAoeLUl/gogs-go-git-service) to follow the develop team.
 - Try it before anything? Do it [online](http://try.gogits.org/Unknown/gogs) or go down to **Installation -> Install from binary** section!
 - Having troubles? Get help from [Troubleshooting](https://github.com/gogits/gogs/wiki/Troubleshooting).
 
