@@ -1,7 +1,10 @@
 {{template "base/head" .}}
 {{template "base/navbar" .}}
+{{template "repo/nav" .}}
+{{template "repo/toolbar" .}}
 <div id="body" class="container">
-	<p>An error is occurred : {{.ErrorMsg}}</p>
-	<p>Application Version: {{AppVer}}</p>
+    <div id="source">
+        new-issues
+    </div>
 </div>
 {{template "base/footer" .}}

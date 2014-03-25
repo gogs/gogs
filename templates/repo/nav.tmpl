@@ -1,4 +1,4 @@
-<div id="gogs-body-nav" class="gogs-repo-nav">
+<div id="body-nav" class="repo-nav">
     <div class="container">
         <div class="row">
             <div class="col-md-7">
@@ -7,13 +7,13 @@
             </div>
             <div class="col-md-5 actions text-right clone-group-btn">
                 {{if not .IsBareRepo}}
-                <!--<div class="btn-group" id="gogs-repo-clone">
+                <!--<div class="btn-group" id="repo-clone">
                     <button type="button" class="btn btn-default"><i class="fa fa-download fa-lg fa-m"></i></button>
                     <button type="button" class="btn btn-default dropdown-toggle" data-container="body" data-toggle="popover" data-placement="bottom" data-content="<label>SSH:</label><div class='input-group'><input type='text' class='form-control' value='{{.CloneLink.SSH}}'></div>" data-html="1">
                         <span class="caret"></span>
                     </button>
                 </div>-->
-                <div class="btn-group" id="gogs-repo-clone">
+                <div class="btn-group" id="repo-clone">
                     <button type="button" class="btn btn-default"><i class="fa fa-download fa-lg fa-m"></i></button>
                     <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
                         <span class="caret"></span>
@@ -36,7 +36,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="btn-group {{if .IsRepositoryWatching}}watching{{else}}no-watching{{end}}" id="gogs-repo-watching" data-watch="/{{.Owner.Name}}/{{.Repository.Name}}/action/watch" data-unwatch="/{{.Owner.Name}}/{{.Repository.Name}}/action/unwatch">
+                <div class="btn-group {{if .IsRepositoryWatching}}watching{{else}}no-watching{{end}}" id="repo-watching" data-watch="/{{.Owner.Name}}/{{.Repository.Name}}/action/watch" data-unwatch="/{{.Owner.Name}}/{{.Repository.Name}}/action/unwatch">
                     {{if .IsRepositoryWatching}}
                     <button type="button" class="btn btn-default"><i class="fa fa-eye fa-lg fa-m"></i></button>
                     {{else}}
