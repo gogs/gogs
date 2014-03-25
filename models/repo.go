@@ -261,7 +261,6 @@ func initRepository(f string, user *User, repo *Repository, initReadme bool, rep
 		return err
 	}
 
-	/*
 	// hook/post-update
 	pu, err := os.OpenFile(filepath.Join(repoPath, "hooks", "post-update"), os.O_CREATE|os.O_WRONLY, 0777)
 	if err != nil {
@@ -269,11 +268,11 @@ func initRepository(f string, user *User, repo *Repository, initReadme bool, rep
 	}
 	defer pu.Close()
 	// TODO: Windows .bat
-	if _, err = pu.WriteString(fmt.Sprintf("#!/usr/bin/env bash\n%s update\n", appPath)); err != nil {
+	if _, err = pu.WriteString(fmt.Sprintf("#!/usr/bin/env bash\n%s update ARGV[0] ARGV[1] ARGV[2]\n", appPath)); err != nil {
 		return err
 	}
 
-	// hook/post-update
+	/*// hook/post-update
 	pu2, err := os.OpenFile(filepath.Join(repoPath, "hooks", "post-receive"), os.O_CREATE|os.O_WRONLY, 0777)
 	if err != nil {
 		return err

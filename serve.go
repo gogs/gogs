@@ -212,18 +212,18 @@ func runServ(k *cli.Context) {
 		return
 	}
 
-	if isRead {
+	//if isRead {
 		return
-	}
+	//}
 
 	time.Sleep(time.Second)
 	log.Info(s)
 
 	// find push reference name
-	var t = "ok refs/heads/"
-	var i int
+	//var t = "ok refs/heads/"
+	//var i int
 	var refname string
-	for {
+	/*for {
 		l, err := b.ReadString('\n')
 		if err != nil {
 			break
@@ -234,6 +234,18 @@ func runServ(k *cli.Context) {
 		if idx > 0 {
 			refname = l[idx+len(t):]
 		}
+	}
+	*/
+
+	refs2, err := rep.AllReferencesMap()
+	for name, ref := range refs2 {
+		if ref2, ok := refs[name]; ok {
+			if ref.Oid.Equal(ref2.Oid) {
+				continue
+			}
+		}
+		refname = name
+		break
 	}
 	if refname == "" {
 		println("No find any reference name:", s)
