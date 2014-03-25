@@ -48,6 +48,7 @@ gogs serv provide access auth for repositories`,
 func init() {
 	os.MkdirAll("log", os.ModePerm)
 	log.NewLogger(10000, "file", fmt.Sprintf(`{"filename":"%s"}`, "log/serv.log"))
+	log.Info("start logging...")
 }
 
 func parseCmd(cmd string) (string, string) {
@@ -124,6 +125,7 @@ func runServ(k *cli.Context) {
 			}
 		} else {
 			println("Get repository error:", err)
+			log.Error(err.Error())
 			return
 		}
 	}
@@ -134,6 +136,7 @@ func runServ(k *cli.Context) {
 		has, err := models.HasAccess(user.Name, repoName, models.AU_WRITABLE)
 		if err != nil {
 			println("Inernel error:", err)
+			log.Error(err.Error())
 			return
 		}
 		if !has {
@@ -144,12 +147,14 @@ func runServ(k *cli.Context) {
 		has, err := models.HasAccess(user.Name, repoName, models.AU_READABLE)
 		if err != nil {
 			println("Inernel error")
+			log.Error(err.Error())
 			return
 		}
 		if !has {
 			has, err = models.HasAccess(user.Name, repoName, models.AU_WRITABLE)
 			if err != nil {
 				println("Inernel error")
+				log.Error(err.Error())
 				return
 			}
 		}
@@ -169,6 +174,7 @@ func runServ(k *cli.Context) {
 			_, err = models.CreateRepository(user, repoName, "", "", "", false, true)
 			if err != nil {
 				println("Create repository failed")
+				log.Error(err.Error())
 				return
 			}
 		}
@@ -177,12 +183,14 @@ func runServ(k *cli.Context) {
 		rep, err = git.OpenRepository(repoPath)
 		if err != nil {
 			println(err.Error())
+			log.Error(err.Error())
 			return
 		}
 
 	refs, err := rep.AllReferencesMap()
 	if err != nil {
 		println(err.Error())
+		log.Error(err.Error())
 		return
 	}
 
@@ -199,6 +207,7 @@ func runServ(k *cli.Context) {
 
 	if err = gitcmd.Run(); err != nil {
 		println("execute command error:", err.Error())
+		log.Error(err.Error())
 		return
 	}
 
@@ -238,15 +247,17 @@ func runServ(k *cli.Context) {
 		refs, err = rep.AllReferencesMap()
 		if err != nil {
 			println(err.Error())
+			log.Error(err.Error())
 			return
 		}
 		if ref, ok = refs[refname]; !ok {
-			log.Trace("unknow reference name -", refname, "-", b.String())
+			log.Error("unknow reference name -", refname, "-", b.String())
 			return
 		}
 		l, err = ref.AllCommits()
 		if err != nil {
 			println(err.Error())
+			log.Error(err.Error())
 			return
 		}
 	} else {
@@ -256,12 +267,14 @@ func runServ(k *cli.Context) {
 		last, err = ref.LastCommit()
 		if err != nil {
 			println(err.Error())
+			log.Error(err.Error())
 			return
 		}
 
 		ref2, err := rep.LookupReference(ref.Name)
 		if err != nil {
 			println(err.Error())
+			log.Error(err.Error())
 			return
 		}
 
@@ -269,6 +282,7 @@ func runServ(k *cli.Context) {
 		before, err := ref2.LastCommit()
 		if err != nil {
 			println(err.Error())
+			log.Error(err.Error())
 			return
 		}
 		//log.Info("----", before.Id(), "-----", last.Id())
