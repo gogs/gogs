@@ -4,9 +4,12 @@
 
 package main
 
-import "github.com/codegangsta/cli"
-
-//"github.com/gogits/gogs/modules/log"
+import (
+"fmt"
+"os"
+"github.com/codegangsta/cli"
+"github.com/gogits/gogs/modules/log"
+)
 
 var CmdUpdate = cli.Command{
 	Name:  "update",
@@ -18,11 +21,18 @@ gogs serv provide access auth for repositories`,
 }
 
 // for command: ./gogs update
-func runUpdate(*cli.Context) {
-	/*w, _ := os.Create("update.log")
-	log.SetOutput(w)
+func runUpdate(c *cli.Context) {
+	level := "0"
+	os.MkdirAll("log", os.ModePerm)
+	log.NewLogger(10000, "file", fmt.Sprintf(`{"level":%s,"filename":"%s"}`, level, "log/serv.log"))
+	log.Info("start update logging...")
 
-	userName := os.Getenv("userName")
+	//w, _ := os.Create("update.log")
+	//log.SetOutput(w)
+	for i, arg := range c.Args() {
+	log.Info("%d : %s", i, arg)
+}
+	/*userName := os.Getenv("userName")
 	userId := os.Getenv("userId")
 	repoId := os.Getenv("repoId")
 	repoName := os.Getenv("repoName")
