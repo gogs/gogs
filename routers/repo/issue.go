@@ -30,12 +30,7 @@ func Issues(ctx *middleware.Context, params martini.Params) {
 		ctx.Handle(200, "issue.Issues: %v", err)
 		return
 	}
-
-	if len(params["branchname"]) == 0 {
-		params["branchname"] = "master"
-	}
-	ctx.Data["Branchname"] = params["branchname"]
-	ctx.HTML(200, "issue/repo")
+	ctx.HTML(200, "issue/list")
 }
 
 func CreateIssue(ctx *middleware.Context, params martini.Params, form auth.CreateIssueForm) {
@@ -57,10 +52,10 @@ func CreateIssue(ctx *middleware.Context, params martini.Params, form auth.Creat
 		return
 	}
 
-	issue, err := models.CreateIssue(ctx.User.Id, form.RepoId, form.MilestoneId, form.AssigneeId,
+	issue, err := models.CreateIssue(ctx.User.Id, ctx.Repo.Repository.Id, form.MilestoneId, form.AssigneeId,
 		form.IssueName, form.Labels, form.Content, false)
 	if err == nil {
-		log.Trace("%s Issue created: %d", form.RepoId, issue.Id)
+		log.Trace("%d Issue created: %d", ctx.Repo.Repository.Id, issue.Id)
 		ctx.Redirect(fmt.Sprintf("/%s/%s/issues/%d", params["username"], params["reponame"], issue.Index))
 		return
 	}

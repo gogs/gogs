@@ -90,7 +90,7 @@ func runWeb(*cli.Context) {
 
 	// Routers.
 	m.Get("/", ignSignIn, routers.Home)
-	m.Get("/install",routers.Install)
+	m.Get("/install", routers.Install)
 	m.Get("/issues", reqSignIn, user.Issues)
 	m.Get("/pulls", reqSignIn, user.Pulls)
 	m.Get("/stars", reqSignIn, user.Stars)
@@ -142,13 +142,13 @@ func runWeb(*cli.Context) {
 		r.Post("/settings", repo.SettingPost)
 		r.Get("/settings", repo.Setting)
 		r.Get("/action/:action", repo.Action)
+		r.Any("/issues/new", binding.BindIgnErr(auth.CreateIssueForm{}), repo.CreateIssue)
+		r.Post("/issues/:index", binding.BindIgnErr(auth.CreateIssueForm{}), repo.UpdateIssue)
 	}, reqSignIn, middleware.RepoAssignment(true))
 	m.Group("/:username/:reponame", func(r martini.Router) {
 		r.Get("/commits/:branchname", repo.Commits)
 		r.Get("/issues", repo.Issues)
-		r.Any("/issues/new", binding.BindIgnErr(auth.CreateIssueForm{}), repo.CreateIssue)
 		r.Get("/issues/:index", repo.ViewIssue)
-		r.Post("/issues/:index", binding.BindIgnErr(auth.CreateIssueForm{}), repo.UpdateIssue)
 		r.Get("/pulls", repo.Pulls)
 		r.Get("/branches", repo.Branches)
 		r.Get("/src/:branchname", repo.Single)

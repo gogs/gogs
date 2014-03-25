@@ -19,6 +19,11 @@
                 </div>
             </div>
             <div class="issues list-group">
+                {{range .Issues}}
+                <div class="list-group-item issue-item" id="{{.Id}}"></div>
+                {{end}}
+            </div>
+            <div class="issues list-group">
                 <div class="list-group-item unread issue-item" id="issue-id">
                     <span class="number pull-right">#123</span>
                     <h5 class="title"><a href="#">Bug: When running tests after generating a beego app, templates do not load.</a></h5>

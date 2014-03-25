@@ -57,10 +57,6 @@ func Single(ctx *middleware.Context, params martini.Params) {
 		return
 	}
 
-	if len(params["branchname"]) == 0 {
-		params["branchname"] = "master"
-	}
-
 	// Get tree path
 	treename := params["_1"]
 
@@ -177,7 +173,6 @@ func Single(ctx *middleware.Context, params martini.Params) {
 
 	ctx.Data["Username"] = params["username"]
 	ctx.Data["Reponame"] = params["reponame"]
-	ctx.Data["Branchname"] = params["branchname"]
 
 	var treenames []string
 	Paths := make([]string, 0)
@@ -214,10 +209,6 @@ func SingleDownload(ctx *middleware.Context, params martini.Params) {
 	if !ctx.Repo.IsValid {
 		ctx.Handle(404, "repo.SingleDownload", nil)
 		return
-	}
-
-	if len(params["branchname"]) == 0 {
-		params["branchname"] = "master"
 	}
 
 	// Get tree path
@@ -290,11 +281,6 @@ func Setting(ctx *middleware.Context, params martini.Params) {
 		title = t
 	}
 
-	if len(params["branchname"]) == 0 {
-		params["branchname"] = "master"
-	}
-
-	ctx.Data["Branchname"] = params["branchname"]
 	ctx.Data["Title"] = title + " - settings"
 	ctx.HTML(200, "repo/setting")
 }
