@@ -73,8 +73,7 @@ func In(b string, sl map[string]int) bool {
 }
 
 func runServ(k *cli.Context) {
-	fmt.Println("new serv request", log.Mode, log.Config)
-	log.Trace("new serv request")
+	log.Trace("new serv request " + log.Mode + ":" + log.Config)
 
 	base.NewConfigContext()
 	models.LoadModelsConfig()
