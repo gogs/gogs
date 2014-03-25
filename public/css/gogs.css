@@ -1026,6 +1026,14 @@ html, body {
     color: #444;
 }
 
+#issue .filter-list a.sm{
+    font-size: 13px;
+}
+
+#issue .filter-list hr{
+    border-color: #CCC;
+}
+
 #issue .filter-list a:hover {
     background-color: #DDD;
     text-decoration: none;
@@ -1042,6 +1050,10 @@ html, body {
 
 #issue .list-group .list-group-item {
     background-color: #FFF;
+}
+
+#issue .issue-item:hover{
+    background-color: rgba(19, 95, 215, 0.03);
 }
 
 #issue .list-group .list-group-item.unread {
