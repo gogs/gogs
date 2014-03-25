@@ -13,6 +13,7 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/codegangsta/cli"
 	"github.com/gogits/gogs/modules/log"
@@ -204,6 +205,8 @@ func runServ(k *cli.Context) {
 	if isRead {
 		return
 	}
+
+	time.Sleep(time.Second)
 
 	// find push reference name
 	var t = "ok refs/heads/"
