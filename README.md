@@ -32,7 +32,7 @@ More importantly, Gogs only needs one binary to setup your own project hosting o
 - Create/delete/watch public repository.
 - User profile page.
 - Repository viewer.
-- Gravatar support.
+- Gravatar and cache support.
 - Mail service(register).
 - Administration panel.
 - Supports MySQL, PostgreSQL and SQLite3(binary release only).

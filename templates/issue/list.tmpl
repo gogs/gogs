@@ -6,7 +6,7 @@
     <div id="issue">
         <div class="col-md-3 filter-list">
             <ul class="list-unstyled">
-                <li><a href="#" class="active">All Issues <strong class="pull-right">10</strong></a></li>
+                <li><a href="#" class="active">All Issues <strong class="pull-right">{{.IssueCount}}</strong></a></li>
                 <li><a href="#">My Issues</a></li>
                 <li><a href="#">Mentioned</a></li>
             </ul>
@@ -14,46 +14,24 @@
         <div class="col-md-9">
             <div class="filter-option">
                 <div class="btn-group">
-                    <a class="btn btn-default active issue-open" href="#">27 Open</a>
-                    <a class="btn btn-default issue-close" href="#">Close 128</a>
+                    <a class="btn btn-default active issue-open" href="#">{{.OpenCount}} Open</a>
+                    <a class="btn btn-default issue-close" href="#">{{.ClosedCount}} Closed</a>
                 </div>
             </div>
             <div class="issues list-group">
                 {{range .Issues}}
-                <div class="list-group-item issue-item" id="{{.Id}}"></div>
+                <div class="list-group-item issue-item" id="{{.Id}}">
+                    <span class="number pull-right">#{{.Index}}</span>
+                    <h5 class="title"><a href="/{{$.RepositoryLink}}/issues/{{.Index}}">{{.Name}}</a></h5>
+                    <p class="info">
+                        <span class="author"><img class="avatar" src="{{.Poster.AvatarLink}}" alt="" width="20"/>
+                        <a href="/user/{{.Poster.Name}}">{{.Poster.Name}}</a></span>
+                        <span class="time">{{TimeSince .Created}}</span>
+                        <span class="comment"><i class="fa fa-comments"></i> {{.NumComments}}</span>
+                    </p>
+                </div>
                 {{end}}
             </div>
-            <div class="issues list-group">
-                <div class="list-group-item unread issue-item" id="issue-id">
-                    <span class="number pull-right">#123</span>
-                    <h5 class="title"><a href="#">Bug: When running tests after generating a beego app, templates do not load.</a></h5>
-                    <p class="info">
-                        <span class="author"><img class="avatar" src="http://tp2.sinaimg.cn/5068084885/50/40050297589/1" alt="" width="20"/>
-                        <a href="#">Obama</a></span>
-                        <span class="time">3 days ago</span>
-                        <span class="comment"><i class="fa fa-comments"></i> 3</span>
-                    </p>
-                </div>
-                <div class="list-group-item issue-item" id="issue-id2">
-                    <span class="number pull-right">#123</span>
-                    <h5 class="title"><a href="#">Bug: When running tests after generating a beego app, templates do not load.</a></h5>
-                    <p class="info">
-                        <span class="author"><img class="avatar" src="http://tp2.sinaimg.cn/5068084885/50/40050297589/1" alt="" width="20"/>
-                        <a href="#">Obama</a></span>
-                        <span class="time">3 days ago</span>
-                        <span class="comment"><i class="fa fa-comments"></i> 3</span>
-                    </p>
-                </div>
-                <div class="list-group-item issue-item" id="issue-id3">
-                    <span class="number pull-right">#123</span>
-                    <h5 class="title"><a href="#">Bug: When running tests after generating a beego app, templates do not load.</a></h5>
-                    <p class="info">
-                        <span class="author"><img class="avatar" src="http://tp2.sinaimg.cn/5068084885/50/40050297589/1" alt="" width="20"/>
-                        <a href="#">Obama</a></span>
-                        <span class="time">3 days ago</span>
-                        <span class="comment"><i class="fa fa-comments"></i> 3</span>
-                    </p>
-                </div>
             </div>
         </div>
     </div>
