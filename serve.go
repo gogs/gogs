@@ -73,6 +73,8 @@ func In(b string, sl map[string]int) bool {
 }
 
 func runServ(k *cli.Context) {
+	log.Trace("new serv request")
+
 	base.NewConfigContext()
 	models.LoadModelsConfig()
 	models.NewEngine()
