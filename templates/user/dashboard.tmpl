@@ -1,6 +1,6 @@
 {{template "base/head" .}}
 {{template "base/navbar" .}}
-<div id="gogs-body-nav">
+<div id="body-nav">
     <div class="container">
         <ul class="nav nav-pills pull-right">
             <li class="active"><a href="/">Feed</a></li>
@@ -11,9 +11,9 @@
         <h3>News Feed</h3>
     </div>
 </div>
-<div id="gogs-body" class="container" data-page="user">
+<div id="body" class="container" data-page="user">
     {{if .HasInfo}}<div class="alert alert-info">{{.InfoMsg}}</div>{{end}}
-    <div id="gogs-feed-left" class="col-md-8">
+    <div id="feed-left" class="col-md-8">
         <ul class="list-unstyled activity-list">
         {{range .Feeds}}
             <li>
@@ -26,7 +26,7 @@
         {{end}}
         </ul>
     </div>
-    <div id="gogs-feed-right" class="col-md-4">
+    <div id="feed-right" class="col-md-4">
         <div class="panel panel-default repo-panel">
             <div class="panel-heading">Your Repositories
                 <a class="btn btn-success pull-right btn-sm" href="/repo/create"><i class="fa fa-plus-square"></i>New Repo</a>

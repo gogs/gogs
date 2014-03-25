@@ -1,6 +1,6 @@
 {{template "base/head" .}}
 {{template "base/navbar" .}}
-<div id="gogs-body-nav">
+<div id="body-nav">
     <div class="container">
         <ul class="nav nav-pills pull-right">
             <li><a href="/">Feed</a></li>
@@ -11,7 +11,7 @@
         <h3>Pull Requests</h3>
     </div>
 </div>
-<div id="gogs-body" class="container" data-page="user">
+<div id="body" class="container" data-page="user">
     {{if .HasInfo}}<div class="alert alert-info">{{.InfoMsg}}</div>{{end}}
 </div>
 {{template "base/footer" .}}

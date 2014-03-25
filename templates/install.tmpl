@@ -1,6 +1,6 @@
 {{template "base/head" .}}
-<div id="gogs-body" class="container">
-    <form action="/install" method="post" class="form-horizontal gogs-card" id="gogs-install-card">
+<div id="body" class="container">
+    <form action="/install" method="post" class="form-horizontal card" id="install-card">
         {{.CsrfTokenHtml}}
         <h3>Install Steps</h3>
         <div class="alert alert-danger form-error{{if .HasError}}{{else}} hidden{{end}}">{{.ErrorMsg}}</div>
