@@ -13,6 +13,7 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/codegangsta/cli"
 	"github.com/gogits/gogs/modules/log"
@@ -45,7 +46,10 @@ gogs serv provide access auth for repositories`,
 }
 
 func init() {
-	log.NewLogger(10000, "file", fmt.Sprintf(`{"filename":"%s"}`, "log/serv.log"))
+	level := "0"
+	os.MkdirAll("log", os.ModePerm)
+	log.NewLogger(10000, "file", fmt.Sprintf(`{"level":%s,"filename":"%s"}`, level, "log/serv.log"))
+	log.Info("start logging...")
 }
 
 func parseCmd(cmd string) (string, string) {
@@ -72,7 +76,6 @@ func runServ(k *cli.Context) {
 	base.NewConfigContext()
 	models.LoadModelsConfig()
 	models.NewEngine()
-	base.NewLogService()
 
 	keys := strings.Split(os.Args[2], "-")
 	if len(keys) != 2 {
@@ -109,25 +112,32 @@ func runServ(k *cli.Context) {
 		repoName = repoName[:len(repoName)-4]
 	}
 
+	isWrite := In(verb, COMMANDS_WRITE)
+	isRead := In(verb, COMMANDS_READONLY)
+
 	repo, err := models.GetRepositoryByName(user.Id, repoName)
 	var isExist bool = true
 	if err != nil {
 		if err == models.ErrRepoNotExist {
 			isExist = false
+			if isRead {
+				println("Repository", user.Name+"/"+repoName, "is not exist")
+				return
+			}
 		} else {
-			println("Unavilable repository", err)
+			println("Get repository error:", err)
+			log.Error(err.Error())
 			return
 		}
 	}
 
-	isWrite := In(verb, COMMANDS_WRITE)
-	isRead := In(verb, COMMANDS_READONLY)
-
+	// access check
 	switch {
 	case isWrite:
 		has, err := models.HasAccess(user.Name, repoName, models.AU_WRITABLE)
 		if err != nil {
 			println("Inernel error:", err)
+			log.Error(err.Error())
 			return
 		}
 		if !has {
@@ -138,12 +148,14 @@ func runServ(k *cli.Context) {
 		has, err := models.HasAccess(user.Name, repoName, models.AU_READABLE)
 		if err != nil {
 			println("Inernel error")
+			log.Error(err.Error())
 			return
 		}
 		if !has {
 			has, err = models.HasAccess(user.Name, repoName, models.AU_WRITABLE)
 			if err != nil {
 				println("Inernel error")
+				log.Error(err.Error())
 				return
 			}
 		}
@@ -156,28 +168,30 @@ func runServ(k *cli.Context) {
 		return
 	}
 
+	var rep *git.Repository
+	repoPath := models.RepoPath(user.Name, repoName)
 	if !isExist {
-		if isRead {
-			println("Repository", user.Name+"/"+repoName, "is not exist")
-			return
-		} else if isWrite {
-			_, err := models.CreateRepository(user, repoName, "", "", "", false, true)
+		if isWrite {
+			_, err = models.CreateRepository(user, repoName, "", "", "", false, true)
 			if err != nil {
 				println("Create repository failed")
+				log.Error(err.Error())
 				return
 			}
 		}
 	}
 
-	rep, err := git.OpenRepository(models.RepoPath(user.Name, repoName))
-	if err != nil {
-		println(err.Error())
-		return
-	}
+		rep, err = git.OpenRepository(repoPath)
+		if err != nil {
+			println("OpenRepository failed:", err.Error())
+			log.Error(err.Error())
+			return
+		}
 
 	refs, err := rep.AllReferencesMap()
 	if err != nil {
-		println(err.Error())
+		println("Get All References failed:", err.Error())
+		log.Error(err.Error())
 		return
 	}
 
@@ -194,17 +208,17 @@ func runServ(k *cli.Context) {
 
 	if err = gitcmd.Run(); err != nil {
 		println("execute command error:", err.Error())
-	}
-
-	if !strings.HasPrefix(cmd, "git-receive-pack") {
+		log.Error(err.Error())
 		return
 	}
 
-	// update
-	//w, _ := os.Create("serve.log")
-	//defer w.Close()
-	//log.SetOutput(w)
+	if isRead {
+		return
+	}
 
+	time.Sleep(time.Second)
+
+	// find push reference name
 	var t = "ok refs/heads/"
 	var i int
 	var refname string
@@ -220,24 +234,31 @@ func runServ(k *cli.Context) {
 			refname = l[idx+len(t):]
 		}
 	}
+	if refname == "" {
+		println("No find any reference name:", b.String())
+		return
+	}
+
 	var ref *git.Reference
 	var ok bool
-
 	var l *list.List
 	//log.Info("----", refname, "-----")
 	if ref, ok = refs[refname]; !ok {
+		// for new branch
 		refs, err = rep.AllReferencesMap()
 		if err != nil {
-			println(err.Error())
+			println("Get All References failed:", err.Error())
+			log.Error(err.Error())
 			return
 		}
 		if ref, ok = refs[refname]; !ok {
-			log.Trace("unknow reference name -", refname, "-", b.String())
+			log.Error("unknow reference name -", refname, "-", b.String())
 			return
 		}
 		l, err = ref.AllCommits()
 		if err != nil {
-			println(err.Error())
+			println("Get All Commits failed:", err.Error())
+			log.Error(err.Error())
 			return
 		}
 	} else {
@@ -246,20 +267,23 @@ func runServ(k *cli.Context) {
 		//log.Info("00000", ref.Oid.String())
 		last, err = ref.LastCommit()
 		if err != nil {
-			println(err.Error())
+			println("Get last commit failed:", err.Error())
+			log.Error(err.Error())
 			return
 		}
 
 		ref2, err := rep.LookupReference(ref.Name)
 		if err != nil {
-			println(err.Error())
+			println("look up reference failed:", err.Error())
+			log.Error(err.Error())
 			return
 		}
 
 		//log.Info("11111", ref2.Oid.String())
 		before, err := ref2.LastCommit()
 		if err != nil {
-			println(err.Error())
+			println("Get last commit failed:", err.Error())
+			log.Error(err.Error())
 			return
 		}
 		//log.Info("----", before.Id(), "-----", last.Id())
@@ -280,13 +304,8 @@ func runServ(k *cli.Context) {
 		repo.Id, repoName, refname, &base.PushCommits{l.Len(), commits}); err != nil {
 		log.Error("runUpdate.models.CommitRepoAction: %v", err, commits)
 	} else {
-		//log.Info("refname", refname)
-		//log.Info("Listen: %v", cmd)
-		//fmt.Println("...", cmd)
-
-		//runUpdate(k)
 		c := exec.Command("git", "update-server-info")
-		c.Dir = models.RepoPath(user.Name, repoName)
+		c.Dir = repoPath
 		err := c.Run()
 		if err != nil {
 			log.Error("update-server-info: %v", err)

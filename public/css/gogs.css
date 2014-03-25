@@ -224,6 +224,15 @@ html, body {
     line-height: 30px;
 }
 
+#gogs-install-card{
+    width: 800px;
+}
+
+#gogs-install-card .form-group {
+    margin-left: 0;
+    margin-right: 0;
+}
+
 .gogs-card .btn {
     cursor: pointer;
     margin-right: 1.2em;
@@ -674,6 +683,12 @@ html, body {
 .file-content .file-head .icon {
     color: #666;
     margin: 0 .5em 0 0;
+}
+
+.file-content .file-head .file-size {
+    font-size: 13px;
+    color: #888;
+    margin-left: 1em;
 }
 
 .file-content .file-body {
