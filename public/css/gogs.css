@@ -97,11 +97,11 @@ html, body {
 }
 
 /* gogits nav item active status */
-.nav .active {
+#masthead .nav .active {
     color: #fff;
 }
 
-.nav .active:after {
+#masthead .nav .active:after {
     position: absolute;
     bottom: -1px;
     left: 50%;
