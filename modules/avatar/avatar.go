@@ -30,8 +30,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gogits/gogs/modules/log"
 	"github.com/nfnt/resize"
+
+	"github.com/gogits/gogs/modules/log"
 )
 
 var (

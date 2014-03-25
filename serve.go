@@ -249,8 +249,8 @@ func runServ(k *cli.Context) {
 		}
 	}
 	if refname == "" {
-		println("No find any reference name:", b.String())
-		log.Error("No find any reference name: " + b.String())
+		println("Not found any reference name:", b.String())
+		log.Error("Not found any reference name: " + b.String())
 		return
 	}
 
@@ -267,7 +267,6 @@ func runServ(k *cli.Context) {
 			return
 		}
 		if ref, ok = refs[refname]; !ok {
-			log.Error("unknow reference name -", refname, "-", b.String())
 			log.Error("unknow reference name -", refname, "-", b.String())
 			return
 		}
