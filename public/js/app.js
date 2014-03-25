@@ -111,6 +111,7 @@ var Gogits = {
     };
     Gogits.initTabs = function () {
         var $tabs = $('[data-init=tabs]');
+        $tabs.tab("show");
         $tabs.find("li:eq(0) a").tab("show");
     };
     // fix dropdown inside click

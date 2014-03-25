@@ -3,8 +3,40 @@
 {{template "repo/nav" .}}
 {{template "repo/toolbar" .}}
 <div id="body" class="container">
-    <div id="source">
-        new-issues
+    <div id="issue">
+        <form class="form" action="#" method="post" id="issue-create-form">
+            <div class="col-md-1">
+                <img class="avatar" src="http://tp2.sinaimg.cn/5068084885/50/40050297589/1" alt=""/>
+            </div>
+            <div class="col-md-8 panel panel-default">
+                <div class="form-group panel-body">
+                    <input class="form-control input-lg" type="text" name="title" required="required" placeholder="Title"/>
+                </div>
+                <div class="form-group panel-body">
+                    <div class="md-help pull-right"><!-- todo help link -->
+                        Content with <a href="#">Markdown</a>
+                    </div>
+                    <ul class="nav nav-tabs" data-init="tabs">
+                        <li class="active"><a href="#issue-textarea" data-toggle="tab">Write</a></li>
+                        <li><a href="#issue-preview" data-toggle="tab">Preview</a></li>
+                    </ul>
+                    <div class="tab-content">
+                        <div class="tab-pane" id="issue-textarea">
+                            <div class="form-group">
+                                <textarea class="form-control" name="content" id="issue-content" rows="10" placeholder="Write some content"></textarea>
+                            </div>
+                        </div>
+                        <div class="tab-pane" id="issue-preview">preview</div>
+                    </div>
+                </div>
+                <div class="text-right panel-body">
+                    <div class="form-group">
+                        <input type="hidden" value="id" name="repo-id"/>
+                        <button class="btn-success btn">Create new issue</button>
+                    </div>
+                </div>
+            </div>
+        </form>
     </div>
 </div>
 {{template "base/footer" .}}
