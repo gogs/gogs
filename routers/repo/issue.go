@@ -35,7 +35,7 @@ func Issues(ctx *middleware.Context, params martini.Params) {
 		params["branchname"] = "master"
 	}
 	ctx.Data["Branchname"] = params["branchname"]
-	ctx.HTML(200, "repo/issues")
+	ctx.HTML(200, "issue/repo")
 }
 
 func CreateIssue(ctx *middleware.Context, params martini.Params, form auth.CreateIssueForm) {

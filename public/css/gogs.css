@@ -1013,8 +1013,72 @@ html, body {
     margin-bottom: 10px;
 }
 
-#issue-create-form .md-help{
+#issue-create-form .md-help {
     margin-top: 6px;
+}
+
+#issue .filter-list a {
+    padding: 6px 10px;
+    font-size: 14px;
+    display: block;
+    margin-bottom: 6px;
+    border-radius: 3px;
+    color: #444;
+}
+
+#issue .filter-list a:hover {
+    background-color: #DDD;
+    text-decoration: none;
+}
+
+#issue .filter-list a.active {
+    background-color: #4183c4;
+    color: #FFF;
+}
+
+#issue .filter-option {
+    margin-bottom: 12px;
+}
+
+#issue .list-group .list-group-item {
+    background-color: #FFF;
+}
+
+#issue .list-group .list-group-item.unread {
+    border-left: 2px solid #DD4B39;
+}
+
+#issue .issue-item .title {
+    margin-bottom: 16px;
+}
+
+#issue .issue-item h5.title a {
+    color: #444;
+}
+
+#issue .issue-item.unread h5 {
+    font-weight: bold;
+}
+
+#issue .issue-item .info span {
+    margin-right: 12px;
+    color: #888;
+    line-height: 20px;
+}
+
+#issue .issue-item .info a, #issue .issue-item .number {
+    color: #888;
+}
+
+#issue .issue-item .number {
+    margin-top: 8px;
+}
+
+#issue .issue-item .avatar {
+    margin-right: 8px;
+    width: 20px;
+    height: 20px;
+    vertical-align: top;
 }
 
 /* wrapper and footer */
