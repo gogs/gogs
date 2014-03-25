@@ -1026,11 +1026,11 @@ html, body {
     color: #444;
 }
 
-#issue .filter-list a.sm{
+#issue .filter-list a.sm {
     font-size: 13px;
 }
 
-#issue .filter-list hr{
+#issue .filter-list hr {
     border-color: #CCC;
 }
 
@@ -1052,7 +1052,7 @@ html, body {
     background-color: #FFF;
 }
 
-#issue .issue-item:hover{
+#issue .issue-item:hover {
     background-color: rgba(19, 95, 215, 0.03);
 }
 
@@ -1062,14 +1062,11 @@ html, body {
 
 #issue .issue-item .title {
     margin-bottom: 16px;
+    font-weight: bold;
 }
 
 #issue .issue-item h5.title a {
     color: #444;
-}
-
-#issue .issue-item.unread h5 {
-    font-weight: bold;
 }
 
 #issue .issue-item .info span {
