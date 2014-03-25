@@ -109,20 +109,25 @@ func runServ(k *cli.Context) {
 		repoName = repoName[:len(repoName)-4]
 	}
 
+	isWrite := In(verb, COMMANDS_WRITE)
+	isRead := In(verb, COMMANDS_READONLY)
+
 	repo, err := models.GetRepositoryByName(user.Id, repoName)
 	var isExist bool = true
 	if err != nil {
 		if err == models.ErrRepoNotExist {
 			isExist = false
+			if isRead {
+				println("Repository", user.Name+"/"+repoName, "is not exist")
+				return
+			}
 		} else {
-			println("Unavilable repository", err)
+			println("Get repository error:", err)
 			return
 		}
 	}
 
-	isWrite := In(verb, COMMANDS_WRITE)
-	isRead := In(verb, COMMANDS_READONLY)
-
+	// access check
 	switch {
 	case isWrite:
 		has, err := models.HasAccess(user.Name, repoName, models.AU_WRITABLE)
@@ -156,12 +161,11 @@ func runServ(k *cli.Context) {
 		return
 	}
 
+	var rep *git.Repository
+	repoPath := models.RepoPath(user.Name, repoName)
 	if !isExist {
-		if isRead {
-			println("Repository", user.Name+"/"+repoName, "is not exist")
-			return
-		} else if isWrite {
-			_, err := models.CreateRepository(user, repoName, "", "", "", false, true)
+		if isWrite {
+			_, err = models.CreateRepository(user, repoName, "", "", "", false, true)
 			if err != nil {
 				println("Create repository failed")
 				return
@@ -169,11 +173,11 @@ func runServ(k *cli.Context) {
 		}
 	}
 
-	rep, err := git.OpenRepository(models.RepoPath(user.Name, repoName))
-	if err != nil {
-		println(err.Error())
-		return
-	}
+		rep, err = git.OpenRepository(repoPath)
+		if err != nil {
+			println(err.Error())
+			return
+		}
 
 	refs, err := rep.AllReferencesMap()
 	if err != nil {
@@ -194,17 +198,14 @@ func runServ(k *cli.Context) {
 
 	if err = gitcmd.Run(); err != nil {
 		println("execute command error:", err.Error())
-	}
-
-	if !strings.HasPrefix(cmd, "git-receive-pack") {
 		return
 	}
 
-	// update
-	//w, _ := os.Create("serve.log")
-	//defer w.Close()
-	//log.SetOutput(w)
+	if isRead {
+		return
+	}
 
+	// find push reference name
 	var t = "ok refs/heads/"
 	var i int
 	var refname string
@@ -220,12 +221,17 @@ func runServ(k *cli.Context) {
 			refname = l[idx+len(t):]
 		}
 	}
+	if refname == "" {
+		println("No find any reference name:", b.String())
+		return
+	}
+
 	var ref *git.Reference
 	var ok bool
-
 	var l *list.List
 	//log.Info("----", refname, "-----")
 	if ref, ok = refs[refname]; !ok {
+		// for new branch
 		refs, err = rep.AllReferencesMap()
 		if err != nil {
 			println(err.Error())
@@ -280,13 +286,8 @@ func runServ(k *cli.Context) {
 		repo.Id, repoName, refname, &base.PushCommits{l.Len(), commits}); err != nil {
 		log.Error("runUpdate.models.CommitRepoAction: %v", err, commits)
 	} else {
-		//log.Info("refname", refname)
-		//log.Info("Listen: %v", cmd)
-		//fmt.Println("...", cmd)
-
-		//runUpdate(k)
 		c := exec.Command("git", "update-server-info")
-		c.Dir = models.RepoPath(user.Name, repoName)
+		c.Dir = repoPath
 		err := c.Run()
 		if err != nil {
 			log.Error("update-server-info: %v", err)
