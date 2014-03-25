@@ -1,7 +1,7 @@
 {{template "base/head" .}}
 {{template "base/navbar" .}}
-<div id="gogs-body" class="container" data-page="user">
-    <div id="gogs-user-setting-nav" class="col-md-3">
+<div id="body" class="container" data-page="user">
+    <div id="user-setting-nav" class="col-md-3">
         <h4>Account Setting</h4>
         <ul class="list-group">
             <li class="list-group-item"><a href="/user/setting">Account Profile</a></li>
@@ -12,16 +12,16 @@
             <li class="list-group-item list-group-item-success"><a href="/user/delete">Delete Account</a></li>
         </ul>
     </div>
-    <div id="gogs-user-setting-container" class="col-md-9">
+    <div id="user-setting-container" class="col-md-9">
         <h4>Delete Account</h4>
         <p class="alert alert-danger">{{if not .HasError}}The operation will delete your account permanently. Sorry to see you go, but we know you'll back soon.{{else}}{{.ErrorMsg}}{{end}}</p>
         <div class="form-group">
-            <button type="submit" class="btn btn-danger btn-lg" href="#delete-account-modal" id="gogs-delete-account" data-toggle="modal">Delete Account</button>
+            <button type="submit" class="btn btn-danger btn-lg" href="#delete-account-modal" id="delete-account" data-toggle="modal">Delete Account</button>
         </div>
     </div>
     <div class="modal fade" id="delete-account-modal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
         <div class="modal-dialog">
-            <form action="/user/delete" method="post" class="modal-content" id="gogs-user-delete">
+            <form action="/user/delete" method="post" class="modal-content" id="user-delete">
                 {{.CsrfTokenHtml}}
                 <div class="modal-header">
                     <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>

@@ -1,25 +1,25 @@
-<div class="gogs-masthead navbar" id="masthead">
+<div class="masthead navbar" id="masthead">
     <div class="container">
-        <nav class="gogs-nav">
-            <a id="gogs-nav-logo" class="gogs-nav-item{{if .PageIsHome}} active{{end}}" href="/"><img src="/img/favicon.png" alt="Gogs Logo" id="gogs-logo"></a>
-            <a class="gogs-nav-item{{if .PageIsUserDashboard}} active{{end}}" href="/">Dashboard</a>
-            <a class="gogs-nav-item{{if .PageIsHelp}} active{{end}}" href="/help">Help</a>{{if .IsSigned}}
-            <a id="gogs-nav-out" class="gogs-nav-item navbar-right navbar-btn btn btn-danger" href="/user/logout/"><i class="fa fa-power-off fa-lg"></i></a>
-            <a id="gogs-nav-avatar" class="gogs-nav-item navbar-right{{if .PageIsUserProfile}} active{{end}}" href="{{.SignedUser.HomeLink}}" data-toggle="tooltip" data-placement="bottom" title="{{.SignedUserName}}">
+        <nav class="nav">
+            <a id="nav-logo" class="nav-item{{if .PageIsHome}} active{{end}}" href="/"><img src="/img/favicon.png" alt="Gogs Logo" id="logo"></a>
+            <a class="nav-item{{if .PageIsUserDashboard}} active{{end}}" href="/">Dashboard</a>
+            <a class="nav-item{{if .PageIsHelp}} active{{end}}" href="/help">Help</a>{{if .IsSigned}}
+            <a id="nav-out" class="nav-item navbar-right navbar-btn btn btn-danger" href="/user/logout/"><i class="fa fa-power-off fa-lg"></i></a>
+            <a id="nav-avatar" class="nav-item navbar-right{{if .PageIsUserProfile}} active{{end}}" href="{{.SignedUser.HomeLink}}" data-toggle="tooltip" data-placement="bottom" title="{{.SignedUserName}}">
                 <img src="{{.SignedUser.AvatarLink}}?s=28" alt="user-avatar" title="username"/>
             </a>
-            <a class="navbar-right gogs-nav-item{{if .PageIsNewRepo}} active{{end}}" href="/repo/create" data-toggle="tooltip" data-placement="bottom" title="New Repository"><i class="fa fa-plus fa-lg"></i></a>
-            <a class="navbar-right gogs-nav-item{{if .PageIsUserSetting}} active{{end}}" href="/user/setting"  data-toggle="tooltip" data-placement="bottom" title="Setting"><i class="fa fa-cogs fa-lg"></i></a>
-            {{if .IsAdmin}}<a class="navbar-right gogs-nav-item{{if .PageIsAdmin}} active{{end}}" href="/admin"  data-toggle="tooltip" data-placement="bottom" title="Admin"><i class="fa fa-gear fa-lg"></i></a>{{end}}
-            {{else}}<a id="gogs-nav-signin" class="gogs-nav-item navbar-right navbar-btn btn btn-danger" href="/user/login/">Sign In</a>
-            <a id="gogs-nav-signup" class="gogs-nav-item navbar-right" href="/user/sign_up/">Sign Up</a>{{end}}
+            <a class="navbar-right nav-item{{if .PageIsNewRepo}} active{{end}}" href="/repo/create" data-toggle="tooltip" data-placement="bottom" title="New Repository"><i class="fa fa-plus fa-lg"></i></a>
+            <a class="navbar-right nav-item{{if .PageIsUserSetting}} active{{end}}" href="/user/setting"  data-toggle="tooltip" data-placement="bottom" title="Setting"><i class="fa fa-cogs fa-lg"></i></a>
+            {{if .IsAdmin}}<a class="navbar-right nav-item{{if .PageIsAdmin}} active{{end}}" href="/admin"  data-toggle="tooltip" data-placement="bottom" title="Admin"><i class="fa fa-gear fa-lg"></i></a>{{end}}
+            {{else}}<a id="nav-signin" class="nav-item navbar-right navbar-btn btn btn-danger" href="/user/login/">Sign In</a>
+            <a id="nav-signup" class="nav-item navbar-right" href="/user/sign_up/">Sign Up</a>{{end}}
         </nav>
     </div>
 </div>
 <!--<nav class="navbar navbar-inverse navbar-fixed-top">
 	<div class="container">
 		<div class="navbar-header">
-			<button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#gogs-navbar-collapse">
+			<button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#navbar-collapse">
 				<i class="fa fa-bars"></i>
 			</button>
 			<a class="navbar-brand" href="/"><img src="/img/favicon.png" alt="Gogs Logo"></a>

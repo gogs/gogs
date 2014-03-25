@@ -1,12 +1,12 @@
 {{template "base/head" .}}
 {{template "base/navbar" .}}
-<div id="gogs-body" class="container" data-page="user">
+<div id="body" class="container" data-page="user">
     {{template "user/setting_nav" .}}
-    <div id="gogs-user-setting-container" class="col-md-9">
-        <div id="gogs-ssh-keys">
+    <div id="user-setting-container" class="col-md-9">
+        <div id="ssh-keys">
             <h4>SSH Keys</h4>{{if .AddSSHKeySuccess}}
             <p class="alert alert-success">New SSH Key has been added !</p>{{else if .HasError}}<p class="alert alert-danger">{{.ErrorMsg}}</p>{{end}}
-            <ul id="gogs-ssh-keys-list" class="list-group">
+            <ul id="ssh-keys-list" class="list-group">
                 <li class="list-group-item"><span class="name">SSH Key's name</span></li>
                 {{range .Keys}}
                 <li class="list-group-item">
@@ -16,12 +16,12 @@
                 </li>
                 {{end}}
                 <li class="list-group-item">
-                    <a class="btn btn-link btn-primary" href="#ssh-add-modal" id="gogs-ssh-add" data-toggle="modal">Add SSH Key</a>
+                    <a class="btn btn-link btn-primary" href="#ssh-add-modal" id="ssh-add" data-toggle="modal">Add SSH Key</a>
                 </li>
             </ul>
             <div class="modal fade" id="ssh-add-modal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
                 <div class="modal-dialog">
-                    <form class="modal-content form-horizontal" id="gogs-ssh-form" method="post" action="/user/setting/ssh/">
+                    <form class="modal-content form-horizontal" id="ssh-form" method="post" action="/user/setting/ssh/">
                         {{.CsrfTokenHtml}}
                         <div class="modal-header">
                             <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>

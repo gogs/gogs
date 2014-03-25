@@ -1,6 +1,6 @@
 {{template "base/head" .}}
 {{template "base/navbar" .}}
-<div class="container" id="gogs-body">
+<div class="container" id="body">
 	<ul>
 	{{range .Repos}}
 		<li>{{.Name}} stars: {{.NumStars}} forks: {{.NumForks}} watches:{{.NumWatchs}}</li>

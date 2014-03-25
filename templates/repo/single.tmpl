@@ -2,8 +2,8 @@
 {{template "base/navbar" .}}
 {{template "repo/nav" .}}
 {{template "repo/toolbar" .}}
-<div id="gogs-body" class="container">
-    <div id="gogs-source">
+<div id="body" class="container">
+    <div id="source">
         {{if .IsBareRepo}}
         {{template "repo/single_bare" .}}
         {{else}}
