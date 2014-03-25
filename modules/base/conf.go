@@ -243,7 +243,7 @@ func newNotifyMailService() {
 }
 
 func NewConfigContext() {
-	var err error
+	//var err error
 	workDir, err := exeDir()
 	if err != nil {
 		fmt.Printf("Fail to get work directory: %s\n", err)
