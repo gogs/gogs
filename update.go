@@ -5,10 +5,10 @@
 package main
 
 import (
-"fmt"
 "os"
 "github.com/codegangsta/cli"
-"github.com/gogits/gogs/modules/log"
+//"github.com/gogits/gogs/modules/log"
+"github.com/qiniu/log"
 )
 
 var CmdUpdate = cli.Command{
@@ -22,16 +22,18 @@ gogs serv provide access auth for repositories`,
 
 // for command: ./gogs update
 func runUpdate(c *cli.Context) {
-	level := "0"
-	os.MkdirAll("log", os.ModePerm)
-	log.NewLogger(10000, "file", fmt.Sprintf(`{"level":%s,"filename":"%s"}`, level, "log/serv.log"))
-	log.Info("start update logging...")
+	//level := "0"
+	//os.MkdirAll("log", os.ModePerm)
+	//log.NewLogger(10000, "file", fmt.Sprintf(`{"level":%s,"filename":"%s"}`, level, "log/serv.log"))
+	//log.Info("start update logging...")
 
-	//w, _ := os.Create("update.log")
-	//log.SetOutput(w)
+	w, _ := os.Create("update.log")
+	defer w.Close()
+
+	log.SetOutput(w)
 	for i, arg := range c.Args() {
-	log.Info("%d : %s", i, arg)
-}
+		log.Info(i, arg)
+	}
 	/*userName := os.Getenv("userName")
 	userId := os.Getenv("userId")
 	repoId := os.Getenv("repoId")
