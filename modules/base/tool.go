@@ -486,15 +486,19 @@ func ActionIcon(opType int) string {
 		return "plus-circle"
 	case 5: // Commit repository.
 		return "arrow-circle-o-right"
+	case 6: // Create issue.
+		return "exclamation-circle"
 	default:
 		return "invalid type"
 	}
 }
 
 const (
-	TPL_CREATE_REPO    = `<a href="/user/%s">%s</a> created repository <a href="/%s/%s">%s</a>`
-	TPL_COMMIT_REPO    = `<a href="/user/%s">%s</a> pushed to <a href="/%s/%s/tree/%s">%s</a> at <a href="/%s/%s">%s/%s</a>%s`
-	TPL_COMMIT_REPO_LI = `<div><img id="gogs-user-avatar-commit" src="%s?s=16" alt="user-avatar" title="username"/> <a href="/%s/%s/commit/%s">%s</a> %s</div>`
+	TPL_CREATE_REPO    = `<a href="/user/%s">%s</a> created repository <a href="/%s">%s</a>`
+	TPL_COMMIT_REPO    = `<a href="/user/%s">%s</a> pushed to <a href="/%s/src/%s">%s</a> at <a href="/%s">%s</a>%s`
+	TPL_COMMIT_REPO_LI = `<div><img src="%s?s=16" alt="user-avatar"/> <a href="/%s/commit/%s">%s</a> %s</div>`
+	TPL_CREATE_Issue   = `<a href="/user/%s">%s</a> opened issue <a href="/%s/issues/%s">%s#%s</a>
+<div><img src="%s?s=16" alt="user-avatar"/> %s</div>`
 )
 
 type PushCommits struct {
@@ -507,11 +511,12 @@ type PushCommits struct {
 func ActionDesc(act Actioner, avatarLink string) string {
 	actUserName := act.GetActUserName()
 	repoName := act.GetRepoName()
+	repoLink := actUserName + "/" + repoName
 	branch := act.GetBranch()
 	content := act.GetContent()
 	switch act.GetOpType() {
 	case 1: // Create repository.
-		return fmt.Sprintf(TPL_CREATE_REPO, actUserName, actUserName, actUserName, repoName, repoName)
+		return fmt.Sprintf(TPL_CREATE_REPO, actUserName, actUserName, repoLink, repoName)
 	case 5: // Commit repository.
 		var push *PushCommits
 		if err := json.Unmarshal([]byte(content), &push); err != nil {
@@ -519,13 +524,17 @@ func ActionDesc(act Actioner, avatarLink string) string {
 		}
 		buf := bytes.NewBuffer([]byte("\n"))
 		for _, commit := range push.Commits {
-			buf.WriteString(fmt.Sprintf(TPL_COMMIT_REPO_LI, avatarLink, actUserName, repoName, commit[0], commit[0][:7], commit[1]) + "\n")
+			buf.WriteString(fmt.Sprintf(TPL_COMMIT_REPO_LI, avatarLink, repoLink, commit[0], commit[0][:7], commit[1]) + "\n")
 		}
 		if push.Len > 3 {
 			buf.WriteString(fmt.Sprintf(`<div><a href="/%s/%s/commits/%s">%d other commits >></a></div>`, actUserName, repoName, branch, push.Len))
 		}
-		return fmt.Sprintf(TPL_COMMIT_REPO, actUserName, actUserName, actUserName, repoName, branch, branch, actUserName, repoName, actUserName, repoName,
+		return fmt.Sprintf(TPL_COMMIT_REPO, actUserName, actUserName, repoLink, branch, branch, repoLink, repoLink,
 			buf.String())
+	case 6: // Create issue.
+		infos := strings.SplitN(content, "|", 2)
+		return fmt.Sprintf(TPL_CREATE_Issue, actUserName, actUserName, repoLink, infos[0], repoLink, infos[0],
+			avatarLink, infos[1])
 	default:
 		return "invalid type"
 	}

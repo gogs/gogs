@@ -262,27 +262,27 @@ func initRepository(f string, user *User, repo *Repository, initReadme bool, rep
 	}
 
 	/*
-	// hook/post-update
-	pu, err := os.OpenFile(filepath.Join(repoPath, "hooks", "post-update"), os.O_CREATE|os.O_WRONLY, 0777)
-	if err != nil {
-		return err
-	}
-	defer pu.Close()
-	// TODO: Windows .bat
-	if _, err = pu.WriteString(fmt.Sprintf("#!/usr/bin/env bash\n%s update\n", appPath)); err != nil {
-		return err
-	}
+		// hook/post-update
+		pu, err := os.OpenFile(filepath.Join(repoPath, "hooks", "post-update"), os.O_CREATE|os.O_WRONLY, 0777)
+		if err != nil {
+			return err
+		}
+		defer pu.Close()
+		// TODO: Windows .bat
+		if _, err = pu.WriteString(fmt.Sprintf("#!/usr/bin/env bash\n%s update\n", appPath)); err != nil {
+			return err
+		}
 
-	// hook/post-update
-	pu2, err := os.OpenFile(filepath.Join(repoPath, "hooks", "post-receive"), os.O_CREATE|os.O_WRONLY, 0777)
-	if err != nil {
-		return err
-	}
-	defer pu2.Close()
-	// TODO: Windows .bat
-	if _, err = pu2.WriteString("#!/usr/bin/env bash\ngit update-server-info\n"); err != nil {
-		return err
-	}
+		// hook/post-update
+		pu2, err := os.OpenFile(filepath.Join(repoPath, "hooks", "post-receive"), os.O_CREATE|os.O_WRONLY, 0777)
+		if err != nil {
+			return err
+		}
+		defer pu2.Close()
+		// TODO: Windows .bat
+		if _, err = pu2.WriteString("#!/usr/bin/env bash\ngit update-server-info\n"); err != nil {
+			return err
+		}
 	*/
 
 	// Initialize repository according to user's choice.
@@ -504,6 +504,37 @@ func GetWatches(repoId int64) ([]Watch, error) {
 	watches := make([]Watch, 0, 10)
 	err := orm.Find(&watches, &Watch{RepoId: repoId})
 	return watches, err
+}
+
+// NotifyWatchers creates batch of actions for every watcher.
+func NotifyWatchers(userId, repoId int64, opType int, userName, repoName, refName, content string) error {
+	// Add feeds for user self and all watchers.
+	watches, err := GetWatches(repoId)
+	if err != nil {
+		return errors.New("repo.NotifyWatchers(get watches): " + err.Error())
+	}
+	watches = append(watches, Watch{UserId: userId})
+
+	for i := range watches {
+		if userId == watches[i].UserId && i > 0 {
+			continue // Do not add twice in case author watches his/her repository.
+		}
+
+		_, err = orm.InsertOne(&Action{
+			UserId:      watches[i].UserId,
+			ActUserId:   userId,
+			ActUserName: userName,
+			OpType:      opType,
+			Content:     content,
+			RepoId:      repoId,
+			RepoName:    repoName,
+			RefName:     refName,
+		})
+		if err != nil {
+			return errors.New("repo.NotifyWatchers(create action): " + err.Error())
+		}
+	}
+	return nil
 }
 
 // IsWatching checks if user has watched given repository.
