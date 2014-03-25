@@ -217,6 +217,7 @@ func runServ(k *cli.Context) {
 	}
 
 	time.Sleep(time.Second)
+	log.Info(s)
 
 	// find push reference name
 	var t = "ok refs/heads/"
@@ -235,7 +236,7 @@ func runServ(k *cli.Context) {
 		}
 	}
 	if refname == "" {
-		println("No find any reference name:", b.String())
+		println("No find any reference name:", s)
 		return
 	}
 
