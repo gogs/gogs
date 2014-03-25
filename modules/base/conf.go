@@ -275,7 +275,7 @@ func NewConfigContext() {
 	RunUser = Cfg.MustValue("", "RUN_USER")
 	curUser := os.Getenv("USERNAME")
 	if len(curUser) == 0 {
-		curUser = os.Getenv("whoami")
+		curUser = os.Getenv("USER")
 	}
 	if RunUser != curUser {
 		fmt.Printf("Expect user(%s) but current user is: %s\n", RunUser, curUser)
