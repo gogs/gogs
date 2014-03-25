@@ -7,7 +7,6 @@ package main
 
 import (
 	"os"
-	// "os/user"
 	"runtime"
 
 	"github.com/codegangsta/cli"
@@ -27,21 +26,7 @@ func init() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 }
 
-// func checkRunUser() bool {
-// 	u, err := user.Current()
-// 	if err != nil {
-// 		// TODO: log
-// 		return false
-// 	}
-// 	return u.Username == base.Cfg.MustValue("", "RUN_USER")
-// }
-
 func main() {
-	/*if !checkRunUser() {
-		println("The command should be run as", base.Cfg.MustValue("", "RUN_USER"))
-		return
-	}*/
-
 	app := cli.NewApp()
 	app.Name = "Gogs"
 	app.Usage = "Go Git Service"
