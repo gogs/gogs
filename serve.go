@@ -11,6 +11,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path"
 	"strconv"
 	"strings"
 	"time"
@@ -47,8 +48,9 @@ gogs serv provide access auth for repositories`,
 
 func newLogger(execDir string) {
 	level := "0"
-	os.MkdirAll("log", os.ModePerm)
-	log.NewLogger(10000, "file", fmt.Sprintf(`{"level":%s,"filename":"%s"}`, level, execDir+"/log/serv.log"))
+	logPath := execDir + "/log/serv.log"
+	os.MkdirAll(path.Dir(logPath), os.ModePerm)
+	log.NewLogger(10000, "file", fmt.Sprintf(`{"level":%s,"filename":"%s"}`, level, logPath))
 	log.Trace("start logging...")
 }
 
