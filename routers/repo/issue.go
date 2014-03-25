@@ -45,6 +45,7 @@ func CreateIssue(ctx *middleware.Context, params martini.Params, form auth.Creat
 	}
 
 	ctx.Data["Title"] = "Create issue"
+	ctx.Data["IsRepoToolbarIssues"] = true
 
 	if ctx.Req.Method == "GET" {
 		ctx.HTML(200, "issue/create")
