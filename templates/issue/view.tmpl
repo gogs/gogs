@@ -1,0 +1,89 @@
+{{template "base/head" .}}
+{{template "base/navbar" .}}
+{{template "repo/nav" .}}
+{{template "repo/toolbar" .}}
+<div id="body" class="container">
+    <div id="issue">
+        <div id="issue-id" class="issue-whole">
+            <div class="issue-head clearfix">
+                <div class="number pull-right">#448</div>
+                <span class="author pull-left"><img class="avatar" src="#" alt="" width="30"/></span>
+                <h1 class="title pull-left">[Request]关于context中的Download方法</h1>
+                <p class="info pull-left">
+                    <span class="status label label-success">Open</span>
+                    <a href="#" class="author"><strong>linbaozhong</strong></a> opened this issue
+                    <span class="time">2 months ago</span> · 1 comment
+                </p>
+            </div>
+            <div class="issue-main">
+               <div class="panel panel-default issue-content">
+                   <div class="panel-body markdown">
+                       <p>context中的Download方法：</p>
+                       <p>func (output *BeegoOutput) Download(file string)</p>
+                       <p>建议在file参数后面增加一个可选参数filename.</p>
+                       <p>如果filename不存在或为空，output.Header("Content-Disposition", "attachment; filename="+filepath.Base(file))</p>
+                       <p>如果filename不为空，output.Header("Content-Disposition", "attachment; filename="+filename)</p>
+                       <p>因为有时候，多数情况下，要下载的真实的文件名与显示和保存的本地的文件名是不一样的，希望显示的文件名更友好些</p>
+                   </div>
+               </div>
+               <div class="issue-child">
+                   <a class="user pull-left" href="#"><img class="avatar" src="#" alt=""/></a>
+                   <div class="issue-content panel panel-default">
+                       <div class="panel-heading">
+                           <a href="#" class="user">phpqinsir</a> commented <span class="time">3 days ago</span>
+                       </div>
+                       <div class="panel-body markdown">
+                           <p>@slene 看来也只能这样了。最主要是数组与切片的用法，我感觉不科学。因为要知道个数，然后个数与问号个数要对应。不能像PHP YII框架那样，直接传入一个数组，自己在里面把参数组装成1,2,3,4这种格式。希望，Beego框架能加上。那就太完美了。谢谢。</p>
+                       </div>
+                   </div>
+               </div>
+                <div class="issue-child">
+                    <a class="user pull-left" href="#"><img class="avatar" src="#" alt=""/></a>
+                    <div class="issue-content panel panel-default">
+                        <div class="panel-heading">
+                            <a href="#" class="user">phpqinsir</a> commented <span class="time">3 days ago</span>
+                        </div>
+                        <div class="panel-body markdown">
+                            <p>@slene 看来也只能这样了。最主要是数组与切片的用法，我感觉不科学。因为要知道个数，然后个数与问号个数要对应。不能像PHP YII框架那样，直接传入一个数组，自己在里面把参数组装成1,2,3,4这种格式。希望，Beego框架能加上。那就太完美了。谢谢。</p>
+                        </div>
+                    </div>
+                </div>
+                <hr class="issue-line"/>
+                <div class="issue-child issue-reply">
+                    <a class="user pull-left" href="#"><img class="avatar" src="#" alt=""/></a>
+                    <form class="panel panel-default issue-content" action="">
+                        <div class="panel-body">
+                            <div class="form-group">
+                                <div class="md-help pull-right"><!-- todo help link -->
+                                    Content with <a href="#">Markdown</a>
+                                </div>
+                                <ul class="nav nav-tabs" data-init="tabs">
+                                    <li class="active"><a href="#issue-textarea" data-toggle="tab">Write</a></li>
+                                    <li><a href="#issue-preview" data-toggle="tab">Preview</a></li>
+                                </ul>
+                                <div class="tab-content">
+                                    <div class="tab-pane" id="issue-textarea">
+                                        <div class="form-group">
+                                            <textarea class="form-control" name="content" id="issue-content" rows="10" placeholder="Write some content">{{.content}}</textarea>
+                                        </div>
+                                    </div>
+                                    <div class="tab-pane" id="issue-preview">preview</div>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <div class="form-group">
+                                    <input type="hidden" value="id" name="repo-id"/>
+                                    <button class="btn-success btn">Comment</button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div><!--
+            <div class="col-md-3">
+                label assignment milestone dashboard
+            </div>-->
+        </div>
+    </div>
+</div>
+{{template "base/footer" .}}

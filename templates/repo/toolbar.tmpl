@@ -10,9 +10,11 @@
                     <!-- <li class="{{if .IsRepoToolbarPulls}}active{{end}}"><a href="/{{.RepositoryLink}}/pulls">Pull Requests</a></li> -->
                     <li class="{{if .IsRepoToolbarIssues}}active{{end}}"><a href="/{{.RepositoryLink}}/issues">Issues <!--<span class="badge">42</span>--></a></li>
                     {{if .IsRepoToolbarIssues}}
-                    <li class="tmp"><a href="/{{.RepositoryLink}}/issues/new">
+                    <li class="tmp">{{if .IsRepoToolbarIssuesList}}<a href="/{{.RepositoryLink}}/issues/new">
                         <button class="btn btn-primary btn-sm">New Issue</button>
-                    </a></li>
+                    </a>{{else}}<a href="/{{.RepositoryLink}}/issues">
+                        <button class="btn btn-primary btn-sm">Issues List</button>
+                    </a>{{end}}</li>
                     {{end}}
                     <!-- <li class="dropdown">
                         <a href="#" class="dropdown-toggle" data-toggle="dropdown">More <b class="caret"></b></a>
