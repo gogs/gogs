@@ -5,18 +5,18 @@
 package main
 
 import (
-"os"
-"os/exec"
-"strings"
-"strconv"
-"container/list"
+	"container/list"
+	"os"
+	"os/exec"
+	"strconv"
+	"strings"
 
-"github.com/codegangsta/cli"
-//"github.com/gogits/gogs/modules/log"
-"github.com/gogits/gogs/models"
-"github.com/gogits/gogs/modules/base"
-"github.com/qiniu/log"
-"github.com/gogits/git"
+	"github.com/codegangsta/cli"
+	//"github.com/gogits/gogs/modules/log"
+	"github.com/gogits/git"
+	"github.com/gogits/gogs/models"
+	"github.com/gogits/gogs/modules/base"
+	"github.com/qiniu/log"
 )
 
 var CmdUpdate = cli.Command{
@@ -103,7 +103,7 @@ func runUpdate(c *cli.Context) {
 	// if a new branch
 	if strings.HasPrefix(oldCommitId, "0000000") {
 		l, err = ref.AllCommits()
-		
+
 	} else {
 		l = ref.CommitsBetween(newCommit, oldCommit)
 	}
