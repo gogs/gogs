@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 
 
 gogs
@@ -13,6 +14,8 @@ data/
 *.iml
 public/img/avatar/
 
+=======
+>>>>>>> b4db9f67548a41922f1b337daf9c9d2b975b55c4
 # Compiled Object files, Static and Dynamic libs (Shared Objects)
 *.o
 *.a

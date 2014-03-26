@@ -1,6 +1,3 @@
-Gogs - Go Git Service [![wercker status](https://app.wercker.com/status/ad0bdb0bc450ac6f09bc56b9640a50aa/s/ "wercker status")](https://app.wercker.com/project/bykey/ad0bdb0bc450ac6f09bc56b9640a50aa) [![Build Status](https://drone.io/github.com/gogits/gogs/status.png)](https://drone.io/github.com/gogits/gogs/latest)
-=====================
-
 Gogs(Go Git Service) is a Self Hosted Git Service in the Go Programming Language.
 
 ![Demo](http://gowalker.org/public/gogs_demo.gif)
