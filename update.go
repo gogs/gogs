@@ -60,7 +60,7 @@ func runUpdate(c *cli.Context) {
 	log.Info("username", userName)
 	log.Info("repoName", repoName)
 	f := models.RepoPath(userName, repoName)
-	log.Debug("f", f)
+	log.Info("f", f)
 
 	gitUpdate := exec.Command("git", "update-server-info")
 	gitUpdate.Dir = f
