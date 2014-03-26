@@ -351,8 +351,9 @@ func GetDiff(repoPath, commitid string) (*Diff, error) {
 		return nil, err
 	}
 
+	// ????
 	if commit.ParentCount() == 0 {
-		return nil, err
+		return &Diff{}, err
 	}
 
 	rd, wr := io.Pipe()
