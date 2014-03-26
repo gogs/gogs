@@ -62,6 +62,7 @@ func CreateIssue(ctx *middleware.Context, params martini.Params, form auth.Creat
 
 	ctx.Data["Title"] = "Create issue"
 	ctx.Data["IsRepoToolbarIssues"] = true
+	ctx.Data["IsRepoToolbarIssuesList"] = false
 
 	if ctx.Req.Method == "GET" {
 		ctx.HTML(200, "issue/create")
@@ -118,6 +119,8 @@ func ViewIssue(ctx *middleware.Context, params martini.Params) {
 
 	ctx.Data["Title"] = issue.Name
 	ctx.Data["Issue"] = issue
+	ctx.Data["IsRepoToolbarIssues"] = true
+	ctx.Data["IsRepoToolbarIssuesList"] = false
 	ctx.HTML(200, "issue/view")
 }
 
