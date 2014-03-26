@@ -159,7 +159,6 @@ func runWeb(*cli.Context) {
 		r.Get("/commits/:branchname", repo.Commits)
 	}, ignSignIn, middleware.RepoAssignment(true))
 
-	// TODO: implement single commit page
 	m.Get("/:username/:reponame/commit/:commitid/**", ignSignIn, middleware.RepoAssignment(true), repo.Diff)
 	m.Get("/:username/:reponame/commit/:commitid", ignSignIn, middleware.RepoAssignment(true), repo.Diff)
 

@@ -15,6 +15,8 @@ import (
 	"strings"
 
 	"github.com/gogits/git"
+
+	"github.com/gogits/gogs/modules/base"
 )
 
 // RepoFile represents a file object in git repository.
@@ -249,6 +251,10 @@ type DiffLine struct {
 	Content  string
 }
 
+func (d DiffLine) GetType() int {
+	return d.Type
+}
+
 type DiffSection struct {
 	Name  string
 	Lines []*DiffLine
@@ -274,16 +280,20 @@ const DIFF_HEAD = "diff --git "
 
 func ParsePatch(reader io.Reader) (*Diff, error) {
 	scanner := bufio.NewScanner(reader)
-	var curFile *DiffFile
-	curSection := &DiffSection{
-		Lines: make([]*DiffLine, 0, 10),
-	}
-	//var leftLine, rightLine int
+	var (
+		curFile    *DiffFile
+		curSection = &DiffSection{
+			Lines: make([]*DiffLine, 0, 10),
+		}
+
+		leftLine, rightLine int
+	)
+
 	diff := &Diff{Files: make([]*DiffFile, 0)}
 	var i int
 	for scanner.Scan() {
 		line := scanner.Text()
-		fmt.Println(i, line)
+		// fmt.Println(i, line)
 		if strings.HasPrefix(line, "+++ ") || strings.HasPrefix(line, "--- ") {
 			continue
 		}
@@ -293,31 +303,37 @@ func ParsePatch(reader io.Reader) (*Diff, error) {
 			continue
 		}
 		if line[0] == ' ' {
-			diffLine := &DiffLine{Type: DIFF_LINE_PLAIN, Content: line}
+			diffLine := &DiffLine{Type: DIFF_LINE_PLAIN, Content: line, LeftIdx: leftLine, RightIdx: rightLine}
+			leftLine++
+			rightLine++
 			curSection.Lines = append(curSection.Lines, diffLine)
 			continue
 		} else if line[0] == '@' {
 			curSection = &DiffSection{}
 			curFile.Sections = append(curFile.Sections, curSection)
 			ss := strings.Split(line, "@@")
-			diffLine := &DiffLine{Type: DIFF_LINE_SECTION, Content: "@@" + ss[len(ss)-2] + "@@"}
+			diffLine := &DiffLine{Type: DIFF_LINE_SECTION, Content: line}
 			curSection.Lines = append(curSection.Lines, diffLine)
 
-			if len(ss[len(ss)-1]) > 0 {
-				diffLine = &DiffLine{Type: DIFF_LINE_PLAIN, Content: ss[len(ss)-1]}
-				curSection.Lines = append(curSection.Lines, diffLine)
-			}
+			// Parse line number.
+			ranges := strings.Split(ss[len(ss)-2][1:], " ")
+			leftLine, _ = base.StrTo(strings.Split(ranges[0], ",")[0][1:]).Int()
+			rightLine, _ = base.StrTo(strings.Split(ranges[1], ",")[0]).Int()
 			continue
 		} else if line[0] == '+' {
 			curFile.Addition++
 			diff.TotalAddition++
-			diffLine := &DiffLine{Type: DIFF_LINE_ADD, Content: line}
+			diffLine := &DiffLine{Type: DIFF_LINE_ADD, Content: line, RightIdx: rightLine}
+			rightLine++
 			curSection.Lines = append(curSection.Lines, diffLine)
 			continue
 		} else if line[0] == '-' {
 			curFile.Deletion++
 			diff.TotalDeletion++
-			diffLine := &DiffLine{Type: DIFF_LINE_DEL, Content: line}
+			diffLine := &DiffLine{Type: DIFF_LINE_DEL, Content: line, LeftIdx: leftLine}
+			if leftLine > 0 {
+				leftLine++
+			}
 			curSection.Lines = append(curSection.Lines, diffLine)
 			continue
 		}
@@ -365,8 +381,20 @@ func GetDiff(repoPath, commitid string) (*Diff, error) {
 		return nil, err
 	}
 
+	// First commit of repository.
 	if commit.ParentCount() == 0 {
-		return &Diff{}, err
+		rd, wr := io.Pipe()
+		go func() {
+			cmd := exec.Command("git", "show", commitid)
+			cmd.Dir = repoPath
+			cmd.Stdout = wr
+			cmd.Stdin = os.Stdin
+			cmd.Stderr = os.Stderr
+			cmd.Run()
+			wr.Close()
+		}()
+		defer rd.Close()
+		return ParsePatch(rd)
 	}
 
 	rd, wr := io.Pipe()
@@ -377,47 +405,8 @@ func GetDiff(repoPath, commitid string) (*Diff, error) {
 		cmd.Stdin = os.Stdin
 		cmd.Stderr = os.Stderr
 		cmd.Run()
-		//if err != nil {
-		//	return nil, err
-		//}
 		wr.Close()
 	}()
-
 	defer rd.Close()
-
 	return ParsePatch(rd)
 }
-
-/*func GetDiff(repoPath, commitid string) (*Diff, error) {
-	stdout, _, err := com.ExecCmdDir(repoPath, "git", "show", commitid)
-	if err != nil {
-		return nil, err
-	}
-
-	// Sperate parts by file.
-	startIndex := strings.Index(stdout, "diff --git ") + 12
-
-	// First part is commit information.
-	// Check if it's a merge.
-	mergeIndex := strings.Index(stdout[:startIndex], "merge")
-	if mergeIndex > -1 {
-		mergeCommit := strings.SplitN(strings.Split(stdout[:startIndex], "\n")[1], "", 3)[2]
-		return GetDiff(repoPath, mergeCommit)
-	}
-
-	parts := strings.Split(stdout[startIndex:], "diff --git ")
-	diff := &Diff{NumFiles: len(parts)}
-	diff.Files = make([]*DiffFile, 0, diff.NumFiles)
-	for _, part := range parts {
-		infos := strings.SplitN(part, "\n", 6)
-		maxIndex := len(infos) - 1
-		infos[maxIndex] = strings.TrimSuffix(strings.TrimSuffix(infos[maxIndex], "\n"), "\n\\ No newline at end of file")
-
-		file := &DiffFile{
-			Name:    strings.TrimPrefix(strings.Split(infos[0], " ")[0], "a/"),
-			Content: strings.Split(infos[maxIndex], "\n"),
-		}
-		diff.Files = append(diff.Files, file)
-	}
-	return diff, nil
-}*/

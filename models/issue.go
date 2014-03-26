@@ -173,14 +173,23 @@ type Comment struct {
 
 // CreateComment creates comment of issue or commit.
 func CreateComment(userId, issueId, commitId, line int64, content string) error {
-	_, err := orm.Insert(&Comment{
-		PosterId: userId,
-		IssueId:  issueId,
-		CommitId: commitId,
-		Line:     line,
-		Content:  content,
-	})
-	return err
+	sess := orm.NewSession()
+	defer sess.Close()
+	sess.Begin()
+
+	if _, err := orm.Insert(&Comment{PosterId: userId, IssueId: issueId,
+		CommitId: commitId, Line: line, Content: content,
+	}); err != nil {
+		sess.Rollback()
+		return err
+	}
+
+	rawSql := "UPDATE `issue` SET num_comments = num_comments + 1 WHERE id = ?"
+	if _, err := sess.Exec(rawSql, issueId); err != nil {
+		sess.Rollback()
+		return err
+	}
+	return sess.Commit()
 }
 
 // GetIssueComments returns list of comment by given issue id.
