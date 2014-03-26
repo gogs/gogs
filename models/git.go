@@ -9,8 +9,10 @@ import (
 	"fmt"
 	"path"
 	"strings"
-
-	"github.com/Unknwon/com"
+	"io"
+	"bufio"
+	"os"
+	"os/exec"
 
 	"github.com/gogits/git"
 )
@@ -226,20 +228,150 @@ func GetCommits(userName, reposName, branchname string) (*list.List, error) {
 	return r.AllCommits()
 }
 
+const (
+	PlainLine = iota + 1
+	AddLine
+	DelLine
+	SectionLine
+)
+
+const (
+	AddFile = iota + 1
+	ChangeFile
+	DelFile
+)
+
+type DiffLine struct {
+	LeftIdx int
+	RightIdx int
+	Type int
+	Content string
+}
+
+type DiffSection struct {
+	Name string
+	Lines []*DiffLine
+}
+
 type DiffFile struct {
 	Name               string
 	Addition, Deletion int
-	Type               string
-	Content            []string
+	Type               int
+	Sections            []*DiffSection
 }
 
 type Diff struct {
-	NumFiles                     int // Number of file has been changed.
 	TotalAddition, TotalDeletion int
 	Files                        []*DiffFile
 }
 
+func (diff *Diff) NumFiles() int {
+	return len(diff.Files)
+}
+
+const diffHead = "diff --git "
+
+func ParsePatch(reader io.Reader) (*Diff, error) {
+	scanner := bufio.NewScanner(reader)
+	var totalAdd, totalDel int
+	var curFile *DiffFile
+	var curSection * DiffSection
+	//var leftLine, rightLine int
+	diff := &Diff{Files:make([]*DiffFile, 0)}
+	var i int
+	for scanner.Scan() {
+		line := scanner.Text()
+		fmt.Println(i, line)
+		i = i + 1
+		if line == "" {
+			continue
+		}
+		if line[0] == ' ' {
+			diffLine := &DiffLine{Type: PlainLine, Content:line}
+			curSection.Lines = append(curSection.Lines, diffLine)
+			continue
+		} else if line[0] == '@' {
+			ss := strings.Split(line, "@@")
+			diffLine := &DiffLine{Type: SectionLine, Content:"@@ "+ss[len(ss)-2]}
+			curSection.Lines = append(curSection.Lines, diffLine)
+
+
+
+			diffLine = &DiffLine{Type: PlainLine, Content:ss[len(ss)-1]}
+			curSection.Lines = append(curSection.Lines, diffLine)
+			continue
+		} else if line[0] == '+' {
+			diffLine := &DiffLine{Type: AddLine, Content:line}
+			curSection.Lines = append(curSection.Lines, diffLine)
+			continue
+		} else if line[0] == '-' {
+			diffLine := &DiffLine{Type: DelLine, Content:line}
+			curSection.Lines = append(curSection.Lines, diffLine)
+			continue
+		}
+
+		if strings.HasPrefix(line, diffHead) {
+			if curFile != nil {
+				curFile.Addition, totalAdd = totalAdd, 0
+				curFile.Deletion, totalDel = totalDel, 0
+				curFile = nil
+			}
+			fs := strings.Split(line[len(diffHead):], " ")
+			a := fs[0]
+			
+			curFile = &DiffFile{
+				Name:a[strings.Index(a, "/")+1:], 
+				Type: ChangeFile,
+				Sections:make([]*DiffSection, 0),
+			}
+			diff.Files = append(diff.Files, curFile)
+			scanner.Scan()
+			scanner.Scan()
+			if scanner.Text() == "--- /dev/null" {
+				curFile.Type = AddFile
+			}
+			scanner.Scan()
+		}
+	}
+
+	return diff, nil
+}
+
 func GetDiff(repoPath, commitid string) (*Diff, error) {
+	repo, err := git.OpenRepository(repoPath)
+	if err != nil {
+		return nil, err
+	}
+
+	commit, err := repo.GetCommit("", commitid)
+	if err != nil {
+		return nil, err
+	}
+
+	if commit.ParentCount() == 0 {
+		return nil, err
+	}
+
+	rd, wr := io.Pipe()
+	go func() {
+		cmd := exec.Command("git", "diff", commitid, commit.Parent(0).Oid.String())
+		cmd.Dir = repoPath
+		cmd.Stdout = wr
+		cmd.Stdin = os.Stdin
+		cmd.Stderr = os.Stderr
+		cmd.Run()
+		//if err != nil {
+		//	return nil, err
+		//}
+		wr.Close()
+	}()
+
+	defer rd.Close()
+
+	return ParsePatch(rd)
+}
+
+/*func GetDiff(repoPath, commitid string) (*Diff, error) {
 	stdout, _, err := com.ExecCmdDir(repoPath, "git", "show", commitid)
 	if err != nil {
 		return nil, err
@@ -271,4 +403,4 @@ func GetDiff(repoPath, commitid string) (*Diff, error) {
 		diff.Files = append(diff.Files, file)
 	}
 	return diff, nil
-}
+}*/
