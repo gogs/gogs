@@ -59,7 +59,6 @@ func CreateIssue(userId, repoId, milestoneId, assigneeId int64, name, labels, co
 		Content:     content,
 	}
 	_, err = orm.Insert(issue)
-	// TODO: newIssueAction
 	return issue, err
 }
 

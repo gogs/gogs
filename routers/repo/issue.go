@@ -13,6 +13,7 @@ import (
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
+	"github.com/gogits/gogs/modules/mailer"
 	"github.com/gogits/gogs/modules/middleware"
 )
 
@@ -84,6 +85,14 @@ func CreateIssue(ctx *middleware.Context, params martini.Params, form auth.Creat
 		ctx.User.Name, ctx.Repo.Repository.Name, "", fmt.Sprintf("%d|%s", issue.Index, issue.Name)); err != nil {
 		ctx.Handle(200, "issue.CreateIssue", err)
 		return
+	}
+
+	// Mail watchers.
+	if base.Service.NotifyMail {
+		if err = mailer.SendNotifyMail(ctx.User.Id, ctx.Repo.Repository.Id, ctx.User.Name, ctx.Repo.Repository.Name, issue.Name, issue.Content); err != nil {
+			ctx.Handle(200, "issue.CreateIssue", err)
+			return
+		}
 	}
 
 	log.Trace("%d Issue created: %d", ctx.Repo.Repository.Id, issue.Id)
