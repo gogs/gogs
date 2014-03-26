@@ -26,11 +26,6 @@ func Branches(ctx *middleware.Context, params martini.Params) {
 
 	ctx.Data["Username"] = params["username"]
 	ctx.Data["Reponame"] = params["reponame"]
-
-	if len(params["branchname"]) == 0 {
-		params["branchname"] = "master"
-	}
-	ctx.Data["Branchname"] = params["branchname"]
 	ctx.Data["Branches"] = brs
 	ctx.Data["IsRepoToolbarBranches"] = true
 

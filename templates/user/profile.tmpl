@@ -1,12 +1,12 @@
 {{template "base/head" .}}
 {{template "base/navbar" .}}
-<div id="gogs-body" class="container" data-page="user">
-    <div id="gogs-user-profile" class="col-md-3">
+<div id="body" class="container" data-page="user">
+    <div id="user-profile" class="col-md-3">
         <div class="profile-avatar text-center">
             <a href="http://gravatar.com/emails/" class="center-block" data-toggle="tooltip" data-placement="bottom" title="Change your avatar at gravatar.com">
-                <img id="gogs-user-avatar" src="{{.Owner.AvatarLink}}?s=200" alt="user-avatar" title="{{.Owner.Name}}"/>
+                <img id="user-avatar" src="{{.Owner.AvatarLink}}?s=200" alt="user-avatar" title="{{.Owner.Name}}"/>
             </a>
-            <span id="gogs-user-name" class="center-block">{{.Owner.Name}}</span>
+            <span id="user-name" class="center-block">{{.Owner.Name}}</span>
         </div>
         <div class="profile-info">
             <ul class="list-group">
@@ -23,8 +23,8 @@
             </ul>
         </div>
     </div>
-    <div id="gogs-user-activity" class="col-md-9">
-        <ul class="nav nav-tabs" id="gogs-user-act-tabs" data-init="tabs">
+    <div id="user-activity" class="col-md-9">
+        <ul class="nav nav-tabs" id="user-act-tabs">
             <li{{if not .TabName}} class="active"{{end}}><a href="{{.Owner.HomeLink}}"><i class="fa fa-gittip"></i>Repositories</a></li>
             <li{{if eq .TabName "activity"}} class="active"{{end}}><a href="{{.Owner.HomeLink}}?tab=activity"><i class="fa fa-rss"></i>Public Activity</a></li>
         </ul>

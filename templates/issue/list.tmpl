@@ -1,0 +1,39 @@
+{{template "base/head" .}}
+{{template "base/navbar" .}}
+{{template "repo/nav" .}}
+{{template "repo/toolbar" .}}
+<div id="body" class="container">
+    <div id="issue">
+        <div class="col-md-3 filter-list">
+            <ul class="list-unstyled">
+                <li><a href="#" class="active">All Issues <strong class="pull-right">{{.IssueCount}}</strong></a></li>
+                <li><a href="#">My Issues</a></li>
+                <li><a href="#">Mentioned</a></li>
+            </ul>
+        </div>
+        <div class="col-md-9">
+            <div class="filter-option">
+                <div class="btn-group">
+                    <a class="btn btn-default active issue-open" href="#">{{.OpenCount}} Open</a>
+                    <a class="btn btn-default issue-close" href="#">{{.ClosedCount}} Closed</a>
+                </div>
+            </div>
+            <div class="issues list-group">
+                {{range .Issues}}
+                <div class="list-group-item issue-item" id="{{.Id}}">
+                    <span class="number pull-right">#{{.Index}}</span>
+                    <h5 class="title"><a href="/{{$.RepositoryLink}}/issues/{{.Index}}">{{.Name}}</a></h5>
+                    <p class="info">
+                        <span class="author"><img class="avatar" src="{{.Poster.AvatarLink}}" alt="" width="20"/>
+                        <a href="/user/{{.Poster.Name}}">{{.Poster.Name}}</a></span>
+                        <span class="time">{{TimeSince .Created}}</span>
+                        <span class="comment"><i class="fa fa-comments"></i> {{.NumComments}}</span>
+                    </p>
+                </div>
+                {{end}}
+            </div>
+            </div>
+        </div>
+    </div>
+</div>
+{{template "base/footer" .}}

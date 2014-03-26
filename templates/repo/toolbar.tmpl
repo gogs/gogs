@@ -1,4 +1,4 @@
-<div id="gogs-repo-toolbar">
+<div id="repo-toolbar">
     <div class="container">
         <nav class="navbar navbar-toolbar navbar-default" role="navigation">
             <div class="collapse navbar-collapse">
@@ -9,6 +9,11 @@
                     <!-- <li class="{{if .IsRepoToolbarBranches}}active{{end}}"><a href="/{{.RepositoryLink}}/branches">Branches</a></li> -->
                     <!-- <li class="{{if .IsRepoToolbarPulls}}active{{end}}"><a href="/{{.RepositoryLink}}/pulls">Pull Requests</a></li> -->
                     <li class="{{if .IsRepoToolbarIssues}}active{{end}}"><a href="/{{.RepositoryLink}}/issues">Issues <!--<span class="badge">42</span>--></a></li>
+                    {{if .IsRepoToolbarIssues}}
+                    <li class="tmp"><a href="/{{.RepositoryLink}}/issues/new">
+                        <button class="btn btn-primary btn-sm">New Issue</button>
+                    </a></li>
+                    {{end}}
                     <!-- <li class="dropdown">
                         <a href="#" class="dropdown-toggle" data-toggle="dropdown">More <b class="caret"></b></a>
                         <ul class="dropdown-menu">

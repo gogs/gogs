@@ -285,7 +285,8 @@ func Feeds(ctx *middleware.Context, form auth.FeedsForm) {
 }
 
 func Issues(ctx *middleware.Context) {
-	ctx.HTML(200, "user/issues")
+	ctx.Data["Title"] = "Your Issues"
+	ctx.HTML(200, "issue/user")
 }
 
 func Pulls(ctx *middleware.Context) {

@@ -23,6 +23,7 @@ type Issue struct {
 	Name        string
 	RepoId      int64 `xorm:"index"`
 	PosterId    int64
+	Poster      *User `xorm:"-"`
 	MilestoneId int64
 	AssigneeId  int64
 	IsPull      bool // Indicates whether is a pull request or not.
@@ -58,7 +59,6 @@ func CreateIssue(userId, repoId, milestoneId, assigneeId int64, name, labels, co
 		Content:     content,
 	}
 	_, err = orm.Insert(issue)
-	// TODO: newIssueAction
 	return issue, err
 }
 

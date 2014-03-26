@@ -2,16 +2,16 @@
 {{template "base/navbar" .}}
 {{template "repo/nav" .}}
 {{template "repo/toolbar" .}}
-<div id="gogs-body" class="container">
-    <div id="gogs-user-setting-nav" class="col-md-3">
-        <ul class="list-group" data-init="tabs">
+<div id="body" class="container">
+    <div id="user-setting-nav" class="col-md-3">
+        <ul class="list-group">
             <li class="list-group-item active"><a href="/{{.Owner.Name}}/{{.Repository.Name}}/settings">Options</a></li>
             <!--<li class="list-group-item"><a href="#">Collaborators</a></li>
             <li class="list-group-item"><a href="#">Notifications</a></li>-->
         </ul>
     </div>
 
-    <div id="gogs-repo-setting-container" class="col-md-9">
+    <div id="repo-setting-container" class="col-md-9">
         {{if .IsSuccess}}<p class="alert alert-success">Repository option has been successfully updated.</p>{{else if .HasError}}<p class="alert alert-danger form-error">{{.ErrorMsg}}</p>{{end}}
         <div class="panel panel-default">
             <div class="panel-heading">

@@ -111,6 +111,7 @@ var Gogits = {
     };
     Gogits.initTabs = function () {
         var $tabs = $('[data-init=tabs]');
+        $tabs.tab("show");
         $tabs.find("li:eq(0) a").tab("show");
     };
     // fix dropdown inside click
@@ -243,7 +244,7 @@ function initCore() {
 
 function initRegister() {
     $.getScript("/js/jquery.validate.min.js", function () {
-        Gogits.validateForm("#gogs-login-card", {
+        Gogits.validateForm("#login-card", {
             rules: {
                 "username": {
                     required: true,
@@ -268,7 +269,7 @@ function initRegister() {
 }
 
 function initUserSetting() {
-    $('#gogs-ssh-keys .delete').confirmation({
+    $('#ssh-keys .delete').confirmation({
         singleton: true,
         onConfirm: function (e, $this) {
             Gogits.ajaxDelete("", {"id": $this.data("del")}, function (json) {
@@ -303,7 +304,7 @@ function initRepository() {
 
     // watching script
     (function () {
-        var $watch = $('#gogs-repo-watching'),
+        var $watch = $('#repo-watching'),
             watchLink = $watch.data("watch"),
             unwatchLink = $watch.data("unwatch");
         $watch.on('click', '.to-watch',function () {
@@ -354,14 +355,14 @@ function initRepository() {
 (function ($) {
     $(function () {
         initCore();
-        var body = $("#gogs-body");
+        var body = $("#body");
         if (body.data("page") == "user-signup") {
             initRegister();
         }
         if (body.data("page") == "user") {
             initUserSetting();
         }
-        if ($('.gogs-repo-nav').length) {
+        if ($('.repo-nav').length) {
             initRepository();
         }
     });
