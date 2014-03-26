@@ -58,7 +58,9 @@ func runUpdate(c *cli.Context) {
 	repoName := os.Getenv("repoName")
 
 	log.Info("username", userName)
+	log.Info("repoName", repoName)
 	f := models.RepoPath(userName, repoName)
+	log.Debug("f", f)
 
 	gitUpdate := exec.Command("git", "update-server-info")
 	gitUpdate.Dir = f
@@ -140,7 +142,5 @@ func runUpdate(c *cli.Context) {
 	if err = models.CommitRepoAction(int64(sUserId), userName,
 		repos.Id, repoName, refName, &base.PushCommits{l.Len(), commits}); err != nil {
 		log.Error("runUpdate.models.CommitRepoAction: %v", err)
-	} else {
-
 	}
 }
