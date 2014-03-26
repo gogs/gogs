@@ -39,7 +39,7 @@
                         <span class="del" data-line="{{.Deletion}}">{{.Deletion}}</span>
                     </div>
                     <!-- todo finish all file status, now modify, add, delete and rename -->
-                    <span class="status modify" data-toggle="tooltip" data-placement="right" title="modify">&nbsp;</span>
+                    <span class="status {{DiffTypeToStr .Type}}" data-toggle="tooltip" data-placement="right" title="{{DiffTypeToStr .Type}}">&nbsp;</span>
                     <a class="file" href="#diff-1">{{.Name}}</a>
                 </li>
                 {{end}}

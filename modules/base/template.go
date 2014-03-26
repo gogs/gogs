@@ -70,4 +70,5 @@ var TemplateFuncs template.FuncMap = map[string]interface{}{
 	"SubStr": func(str string, start, length int) string {
 		return str[start : start+length]
 	},
+	"DiffTypeToStr": DiffTypeToStr,
 }
