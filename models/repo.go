@@ -563,7 +563,7 @@ func GetBranches(userName, reposName string) ([]string, error) {
 
 	brs := make([]string, len(refs))
 	for i, ref := range refs {
-		brs[i] = ref.Name
+		brs[i] = ref.BranchName()
 	}
 	return brs, nil
 }
