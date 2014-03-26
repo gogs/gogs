@@ -144,6 +144,7 @@ func runWeb(*cli.Context) {
 		r.Get("/action/:action", repo.Action)
 		r.Any("/issues/new", binding.BindIgnErr(auth.CreateIssueForm{}), repo.CreateIssue)
 		r.Post("/issues/:index", binding.BindIgnErr(auth.CreateIssueForm{}), repo.UpdateIssue)
+		r.Post("/comment/:action", repo.Comment)
 	}, reqSignIn, middleware.RepoAssignment(true))
 	m.Group("/:username/:reponame", func(r martini.Router) {
 		r.Get("/commits/:branchname", repo.Commits)

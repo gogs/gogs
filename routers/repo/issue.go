@@ -113,8 +113,34 @@ func ViewIssue(ctx *middleware.Context, params martini.Params) {
 		return
 	}
 
+	// Get posters.
+	u, err := models.GetUserById(issue.PosterId)
+	if err != nil {
+		ctx.Handle(200, "issue.ViewIssue(get poster): %v", err)
+		return
+	}
+	issue.Poster = u
+
+	// Get comments.
+	comments, err := models.GetIssueComments(issue.Id)
+	if err != nil {
+		ctx.Handle(200, "issue.ViewIssue(get comments): %v", err)
+		return
+	}
+
+	// Get posters.
+	for i := range comments {
+		u, err := models.GetUserById(comments[i].PosterId)
+		if err != nil {
+			ctx.Handle(200, "issue.ViewIssue(get poster): %v", err)
+			return
+		}
+		comments[i].Poster = u
+	}
+
 	ctx.Data["Title"] = issue.Name
 	ctx.Data["Issue"] = issue
+	ctx.Data["Comments"] = comments
 	ctx.Data["IsRepoToolbarIssues"] = true
 	ctx.Data["IsRepoToolbarIssuesList"] = false
 	ctx.HTML(200, "issue/view")
@@ -132,7 +158,7 @@ func UpdateIssue(ctx *middleware.Context, params martini.Params, form auth.Creat
 		if err == models.ErrIssueNotExist {
 			ctx.Handle(404, "issue.UpdateIssue", err)
 		} else {
-			ctx.Handle(200, "issue.UpdateIssue", err)
+			ctx.Handle(200, "issue.UpdateIssue(get issue)", err)
 		}
 		return
 	}
@@ -148,10 +174,48 @@ func UpdateIssue(ctx *middleware.Context, params martini.Params, form auth.Creat
 	issue.Labels = form.Labels
 	issue.Content = form.Content
 	if err = models.UpdateIssue(issue); err != nil {
-		ctx.Handle(200, "issue.UpdateIssue", err)
+		ctx.Handle(200, "issue.UpdateIssue(update issue)", err)
 		return
 	}
 
 	ctx.Data["Title"] = issue.Name
 	ctx.Data["Issue"] = issue
+}
+
+func Comment(ctx *middleware.Context, params martini.Params) {
+	index, err := base.StrTo(ctx.Query("issueIndex")).Int()
+	if err != nil {
+		ctx.Handle(404, "issue.Comment", err)
+		return
+	}
+
+	issue, err := models.GetIssueByIndex(ctx.Repo.Repository.Id, int64(index))
+	if err != nil {
+		if err == models.ErrIssueNotExist {
+			ctx.Handle(404, "issue.Comment", err)
+		} else {
+			ctx.Handle(200, "issue.Comment(get issue)", err)
+		}
+		return
+	}
+
+	content := ctx.Query("content")
+	if len(content) == 0 {
+		ctx.Handle(404, "issue.Comment", err)
+		return
+	}
+
+	switch params["action"] {
+	case "new":
+		if err = models.CreateComment(ctx.User.Id, issue.Id, 0, 0, content); err != nil {
+			ctx.Handle(500, "issue.Comment(create comment)", err)
+			return
+		}
+		log.Trace("%s Comment created: %d", ctx.Req.RequestURI, issue.Id)
+	default:
+		ctx.Handle(404, "issue.Comment", err)
+		return
+	}
+
+	ctx.Redirect(fmt.Sprintf("/%s/%s/issues/%d", ctx.User.Name, ctx.Repo.Repository.Name, index))
 }
