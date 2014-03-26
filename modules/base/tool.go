@@ -490,7 +490,7 @@ func ActionIcon(opType int) string {
 
 const (
 	TPL_CREATE_REPO    = `<a href="/user/%s">%s</a> created repository <a href="/%s/%s">%s</a>`
-	TPL_COMMIT_REPO    = `<a href="/user/%s">%s</a> pushed to <a href="/%s/%s/tree/%s">%s</a> at <a href="/%s/%s">%s/%s</a>%s`
+	TPL_COMMIT_REPO    = `<a href="/user/%s">%s</a> pushed to <a href="/%s/%s/src/%s">%s</a> at <a href="/%s/%s">%s/%s</a>%s`
 	TPL_COMMIT_REPO_LI = `<div><img id="gogs-user-avatar-commit" src="%s?s=16" alt="user-avatar" title="username"/> <a href="/%s/%s/commit/%s">%s</a> %s</div>`
 )
 
