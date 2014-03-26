@@ -51,7 +51,7 @@ func TestFetchMany(t *testing.T) {
 // wget http://www.artsjournal.com/artfulmanager/wp/wp-content/uploads/2013/12/200x200xmirror_cat.jpg.pagespeed.ic.GOZSv6v1_H.jpg -O default.jpg
 /*
 func TestHttp(t *testing.T) {
-	http.Handle("/", avatar.HttpHandler("./", "default.jpg"))
+	http.Handle("/", avatar.CacheServer("./", "default.jpg"))
 	http.ListenAndServe(":8001", nil)
 }
 */

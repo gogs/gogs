@@ -80,7 +80,7 @@ func ExecDir() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return path.Dir(p), nil
+	return path.Dir(strings.Replace(p, "\\", "/", -1)), nil
 }
 
 var logLevels = map[string]string{

@@ -235,6 +235,18 @@ func initRepoCommit(tmpPath string, sig *git.Signature) (err error) {
 	return nil
 }
 
+func createHookUpdate(hookPath, content string) error {
+	pu, err := os.OpenFile(hookPath, os.O_CREATE|os.O_WRONLY, 0777)
+	if err != nil {
+		return err
+	}
+	defer pu.Close()
+	if _, err = pu.WriteString(content); err != nil {
+		return err
+	}
+	return nil
+}
+
 // InitRepository initializes README and .gitignore if needed.
 func initRepository(f string, user *User, repo *Repository, initReadme bool, repoLang, license string) error {
 	repoPath := RepoPath(user.Name, repo.Name)
@@ -245,13 +257,9 @@ func initRepository(f string, user *User, repo *Repository, initReadme bool, rep
 	}
 
 	// hook/post-update
-	pu, err := os.OpenFile(filepath.Join(repoPath, "hooks", "update"), os.O_CREATE|os.O_WRONLY, 0777)
-	if err != nil {
-		return err
-	}
-	defer pu.Close()
-	// TODO: Windows .bat
-	if _, err = pu.WriteString(fmt.Sprintf("#!/usr/bin/env bash\n%s update $1 $2 $3\n", appPath)); err != nil {
+	if err := createHookUpdate(filepath.Join(repoPath, "hooks", "update"),
+		fmt.Sprintf("#!/usr/bin/env bash\n%s update $1 $2 $3\n",
+			strings.Replace(appPath, "\\", "/", -1))); err != nil {
 		return err
 	}
 
