@@ -5,14 +5,14 @@
 package models
 
 import (
+	"bufio"
 	"container/list"
 	"fmt"
-	"path"
-	"strings"
 	"io"
-	"bufio"
 	"os"
 	"os/exec"
+	"path"
+	"strings"
 
 	"github.com/gogits/git"
 )
@@ -228,28 +228,29 @@ func GetCommits(userName, reposName, branchname string) (*list.List, error) {
 	return r.AllCommits()
 }
 
+// Diff line types.
 const (
-	PlainLine = iota + 1
-	AddLine
-	DelLine
-	SectionLine
+	DIFF_LINE_PLAIN = iota + 1
+	DIFF_LINE_ADD
+	DIFF_LINE_DEL
+	DIFF_LINE_SECTION
 )
 
 const (
-	AddFile = iota + 1
-	ChangeFile
-	DelFile
+	DIFF_FILE_ADD = iota + 1
+	DIFF_FILE_CHANGE
+	DIFF_FILE_DEL
 )
 
 type DiffLine struct {
-	LeftIdx int
+	LeftIdx  int
 	RightIdx int
-	Type int
-	Content string
+	Type     int
+	Content  string
 }
 
 type DiffSection struct {
-	Name string
+	Name  string
 	Lines []*DiffLine
 }
 
@@ -257,7 +258,7 @@ type DiffFile struct {
 	Name               string
 	Addition, Deletion int
 	Type               int
-	Sections            []*DiffSection
+	Sections           []*DiffSection
 }
 
 type Diff struct {
@@ -269,15 +270,17 @@ func (diff *Diff) NumFiles() int {
 	return len(diff.Files)
 }
 
-const diffHead = "diff --git "
+const DIFF_HEAD = "diff --git "
 
 func ParsePatch(reader io.Reader) (*Diff, error) {
 	scanner := bufio.NewScanner(reader)
 	var totalAdd, totalDel int
 	var curFile *DiffFile
-	var curSection * DiffSection
+	curSection := &DiffSection{
+		Lines: make([]*DiffLine, 0, 10),
+	}
 	//var leftLine, rightLine int
-	diff := &Diff{Files:make([]*DiffFile, 0)}
+	diff := &Diff{Files: make([]*DiffFile, 0)}
 	var i int
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -287,50 +290,48 @@ func ParsePatch(reader io.Reader) (*Diff, error) {
 			continue
 		}
 		if line[0] == ' ' {
-			diffLine := &DiffLine{Type: PlainLine, Content:line}
+			diffLine := &DiffLine{Type: DIFF_LINE_PLAIN, Content: line}
 			curSection.Lines = append(curSection.Lines, diffLine)
 			continue
 		} else if line[0] == '@' {
 			curSection = &DiffSection{}
 			curFile.Sections = append(curFile.Sections, curSection)
 			ss := strings.Split(line, "@@")
-			diffLine := &DiffLine{Type: SectionLine, Content:"@@ "+ss[len(ss)-2]}
+			diffLine := &DiffLine{Type: DIFF_LINE_SECTION, Content: "@@" + ss[len(ss)-2] + "@@"}
 			curSection.Lines = append(curSection.Lines, diffLine)
 
-
-
-			diffLine = &DiffLine{Type: PlainLine, Content:ss[len(ss)-1]}
+			diffLine = &DiffLine{Type: DIFF_LINE_PLAIN, Content: ss[len(ss)-1]}
 			curSection.Lines = append(curSection.Lines, diffLine)
 			continue
 		} else if line[0] == '+' {
-			diffLine := &DiffLine{Type: AddLine, Content:line}
+			diffLine := &DiffLine{Type: DIFF_LINE_ADD, Content: line}
 			curSection.Lines = append(curSection.Lines, diffLine)
 			continue
 		} else if line[0] == '-' {
-			diffLine := &DiffLine{Type: DelLine, Content:line}
+			diffLine := &DiffLine{Type: DIFF_LINE_DEL, Content: line}
 			curSection.Lines = append(curSection.Lines, diffLine)
 			continue
 		}
 
-		if strings.HasPrefix(line, diffHead) {
+		if strings.HasPrefix(line, DIFF_HEAD) {
 			if curFile != nil {
 				curFile.Addition, totalAdd = totalAdd, 0
 				curFile.Deletion, totalDel = totalDel, 0
 				curFile = nil
 			}
-			fs := strings.Split(line[len(diffHead):], " ")
+			fs := strings.Split(line[len(DIFF_HEAD):], " ")
 			a := fs[0]
-			
+
 			curFile = &DiffFile{
-				Name:a[strings.Index(a, "/")+1:], 
-				Type: ChangeFile,
-				Sections:make([]*DiffSection, 0),
+				Name:     a[strings.Index(a, "/")+1:],
+				Type:     DIFF_FILE_CHANGE,
+				Sections: make([]*DiffSection, 0),
 			}
 			diff.Files = append(diff.Files, curFile)
 			scanner.Scan()
 			scanner.Scan()
 			if scanner.Text() == "--- /dev/null" {
-				curFile.Type = AddFile
+				curFile.Type = DIFF_FILE_ADD
 			}
 			scanner.Scan()
 		}
