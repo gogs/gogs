@@ -20,6 +20,7 @@ import (
 func Issues(ctx *middleware.Context, params martini.Params) {
 	ctx.Data["Title"] = "Issues"
 	ctx.Data["IsRepoToolbarIssues"] = true
+	ctx.Data["IsRepoToolbarIssuesList"] = true
 
 	milestoneId, _ := base.StrTo(params["milestone"]).Int()
 	page, _ := base.StrTo(params["page"]).Int()

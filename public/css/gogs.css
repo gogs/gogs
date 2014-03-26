@@ -1014,11 +1014,11 @@ html, body {
     margin-bottom: 0;
 }
 
-#issue-create-form .nav-tabs {
+#issue-create-form .nav-tabs, #issue .issue-reply .nav-tabs {
     margin-bottom: 10px;
 }
 
-#issue-create-form .md-help {
+#issue .md-help {
     margin-top: 6px;
 }
 
@@ -1093,6 +1093,75 @@ html, body {
     width: 20px;
     height: 20px;
     vertical-align: top;
+}
+
+#issue .issue-whole .title {
+    margin-top: 0;
+    font-size: 28px;
+}
+
+#issue .issue-whole .number {
+    font-size: 26px;
+    color: #AAA;
+}
+
+#issue .issue-head .author .avatar {
+    width: 48px;
+    height: 48px;
+    margin-right: 16px;
+}
+
+#issue .issue-head .info {
+    width: 99%;
+    margin-top: 10px;
+    padding-left: 64px;
+    margin-bottom: 16px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #CCC;
+}
+
+#issue .issue-head .status {
+    font-size: 16px;
+    font-weight: bold;
+    padding: 6px 18px;
+    border-radius: 3px;
+}
+
+#issue .issue-head a.author {
+    margin-left: .6em;
+    color: #444;
+}
+
+#issue .issue-main {
+    padding-left: 0;
+}
+
+#issue .issue-content {
+    border-bottom-width: 1px;
+}
+
+#issue .issue-child .user .avatar {
+    width: 42px;
+    height: 42px;
+    margin-right: 12px;
+}
+
+#issue .issue-child .issue-content {
+    margin-left: 56px;
+}
+
+#issue .issue-child .panel-heading {
+    padding-top: 10px;
+    padding-bottom: 10px;
+    font-weight: normal;
+}
+
+#issue .issue-child .panel-heading .user {
+    font-weight: bold;
+}
+
+#issue .issue-line {
+    border-color: #CCC;
 }
 
 /* wrapper and footer */

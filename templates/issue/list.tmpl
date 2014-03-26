@@ -20,7 +20,7 @@
             </div>
             <div class="issues list-group">
                 {{range .Issues}}
-                <div class="list-group-item issue-item" id="{{.Id}}">
+                <div class="list-group-item issue-item" id="issue-{{.Id}}">
                     <span class="number pull-right">#{{.Index}}</span>
                     <h5 class="title"><a href="/{{$.RepositoryLink}}/issues/{{.Index}}">{{.Name}}</a></h5>
                     <p class="info">
