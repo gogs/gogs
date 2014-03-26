@@ -246,25 +246,27 @@ func GetDiff(repoPath, commitid string) (*Diff, error) {
 	}
 
 	// Sperate parts by file.
-	parts := strings.Split(stdout, "diff --git ")
+	startIndex := strings.Index(stdout, "diff --git ") + 12
 
 	// First part is commit information.
 	// Check if it's a merge.
-	mergeIndex := strings.Index(parts[0], "merge")
+	mergeIndex := strings.Index(stdout[:startIndex], "merge")
 	if mergeIndex > -1 {
-		mergeCommit := strings.SplitN(strings.Split(parts[0], "\n")[1], "", 3)[2]
+		mergeCommit := strings.SplitN(strings.Split(stdout[:startIndex], "\n")[1], "", 3)[2]
 		return GetDiff(repoPath, mergeCommit)
 	}
 
-	diff := &Diff{NumFiles: len(parts[1:])}
+	parts := strings.Split(stdout[startIndex:], "diff --git ")
+	diff := &Diff{NumFiles: len(parts)}
 	diff.Files = make([]*DiffFile, 0, diff.NumFiles)
-	for _, part := range parts[1:] {
+	for _, part := range parts {
 		infos := strings.SplitN(part, "\n", 6)
-		infos[5] = strings.TrimSuffix(strings.TrimSuffix(infos[5], "\n"), "\n\\ No newline at end of file")
+		maxIndex := len(infos) - 1
+		infos[maxIndex] = strings.TrimSuffix(strings.TrimSuffix(infos[maxIndex], "\n"), "\n\\ No newline at end of file")
 
 		file := &DiffFile{
 			Name:    strings.TrimPrefix(strings.Split(infos[0], " ")[0], "a/"),
-			Content: strings.Split(infos[5], "\n"),
+			Content: strings.Split(infos[maxIndex], "\n"),
 		}
 		diff.Files = append(diff.Files, file)
 	}
