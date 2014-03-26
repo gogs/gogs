@@ -30,6 +30,9 @@ gogs serv provide access auth for repositories`,
 
 // for command: ./gogs update
 func runUpdate(c *cli.Context) {
+	base.NewConfigContext()
+	models.LoadModelsConfig()
+	models.NewEngine()
 	//level := "0"
 	//os.MkdirAll("log", os.ModePerm)
 	//log.NewLogger(10000, "file", fmt.Sprintf(`{"level":%s,"filename":"%s"}`, level, "log/serv.log"))
