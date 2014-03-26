@@ -6,9 +6,17 @@ package main
 
 import (
 "os"
+"os/exec"
+"strings"
+"strconv"
+"container/list"
+
 "github.com/codegangsta/cli"
 //"github.com/gogits/gogs/modules/log"
+"github.com/gogits/gogs/models"
+"github.com/gogits/gogs/modules/base"
 "github.com/qiniu/log"
+"github.com/gogits/git"
 )
 
 var CmdUpdate = cli.Command{
@@ -31,16 +39,30 @@ func runUpdate(c *cli.Context) {
 	defer w.Close()
 
 	log.SetOutput(w)
-	for i, arg := range c.Args() {
-		log.Info(i, arg)
+
+
+
+	args := c.Args()
+	if len(args) != 3 {
+		log.Error("received less 3 parameters")
+		return
 	}
+
+	refName := args[0]
+	oldCommitId := args[1]
+	newCommitId := args[2]
+
 	userName := os.Getenv("userName")
-	//userId := os.Getenv("userId")
+	userId := os.Getenv("userId")
 	//repoId := os.Getenv("repoId")
-	//repoName := os.Getenv("repoName")
+	repoName := os.Getenv("repoName")
 
 	log.Info("username", userName)
-	/*f := models.RepoPath(userName, repoName)
+	f := models.RepoPath(userName, repoName)
+
+	gitUpdate := exec.Command("git", "update-server-info")
+	gitUpdate.Dir = f
+	gitUpdate.Run()
 
 	repo, err := git.OpenRepository(f)
 	if err != nil {
@@ -48,13 +70,45 @@ func runUpdate(c *cli.Context) {
 		return
 	}
 
-	ref, err := repo.LookupReference("HEAD")
+	ref, err := repo.LookupReference(refName)
 	if err != nil {
 		log.Error("runUpdate.Ref repoId: %v", err)
 		return
 	}
 
-	lastCommit, err := repo.LookupCommit(ref.Oid)
+	oldOid, err := git.NewOidFromString(oldCommitId)
+	if err != nil {
+		log.Error("runUpdate.Ref repoId: %v", err)
+		return
+	}
+
+	oldCommit, err := repo.LookupCommit(oldOid)
+	if err != nil {
+		log.Error("runUpdate.Ref repoId: %v", err)
+		return
+	}
+
+	newOid, err := git.NewOidFromString(newCommitId)
+	if err != nil {
+		log.Error("runUpdate.Ref repoId: %v", err)
+		return
+	}
+
+	newCommit, err := repo.LookupCommit(newOid)
+	if err != nil {
+		log.Error("runUpdate.Ref repoId: %v", err)
+		return
+	}
+
+	var l *list.List
+	// if a new branch
+	if strings.HasPrefix(oldCommitId, "0000000") {
+		l, err = ref.AllCommits()
+		
+	} else {
+		l = ref.CommitsBetween(newCommit, oldCommit)
+	}
+
 	if err != nil {
 		log.Error("runUpdate.Commit repoId: %v", err)
 		return
@@ -65,18 +119,28 @@ func runUpdate(c *cli.Context) {
 		log.Error("runUpdate.Parse userId: %v", err)
 		return
 	}
-	sRepoId, err := strconv.Atoi(repoId)
+
+	repos, err := models.GetRepositoryByName(int64(sUserId), repoName)
 	if err != nil {
-		log.Error("runUpdate.Parse repoId: %v", err)
+		log.Error("runUpdate.GetRepositoryByName userId: %v", err)
 		return
 	}
+
 	commits := make([][]string, 0)
-	commits = append(commits, []string{lastCommit.Id().String(), lastCommit.Message()})
+	var maxCommits = 3
+	for e := l.Front(); e != nil; e = e.Next() {
+		commit := e.Value.(*git.Commit)
+		commits = append(commits, []string{commit.Id().String(), commit.Message()})
+		if len(commits) >= maxCommits {
+			break
+		}
+	}
+
+	//commits = append(commits, []string{lastCommit.Id().String(), lastCommit.Message()})
 	if err = models.CommitRepoAction(int64(sUserId), userName,
-		int64(sRepoId), repoName, commits); err != nil {
+		repos.Id, repoName, refName, &base.PushCommits{l.Len(), commits}); err != nil {
 		log.Error("runUpdate.models.CommitRepoAction: %v", err)
 	} else {
-		l := exec.Command("exec", "git", "update-server-info")
-		l.Run()
-	}*/
+
+	}
 }

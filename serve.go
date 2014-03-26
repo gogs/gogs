@@ -5,20 +5,17 @@
 package main
 
 import (
-	"bytes"
-	"container/list"
+	//"container/list"
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/codegangsta/cli"
 	"github.com/gogits/gogs/modules/log"
 
-	"github.com/gogits/git"
+	//"github.com/gogits/git"
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"
 )
@@ -115,11 +112,11 @@ func runServ(k *cli.Context) {
 	isWrite := In(verb, COMMANDS_WRITE)
 	isRead := In(verb, COMMANDS_READONLY)
 
-	repo, err := models.GetRepositoryByName(user.Id, repoName)
-	var isExist bool = true
+	//repo, err := models.GetRepositoryByName(user.Id, repoName)
+	//var isExist bool = true
 	if err != nil {
 		if err == models.ErrRepoNotExist {
-			isExist = false
+			//isExist = false
 			if isRead {
 				println("Repository", user.Name+"/"+repoName, "is not exist")
 				return
@@ -168,6 +165,7 @@ func runServ(k *cli.Context) {
 		return
 	}
 
+	/*
 	var rep *git.Repository
 	repoPath := models.RepoPath(user.Name, repoName)
 	if !isExist {
@@ -194,14 +192,20 @@ func runServ(k *cli.Context) {
 		log.Error(err.Error())
 		return
 	}
+*/
+
+	os.Setenv("userName", user.Name)
+	os.Setenv("userId", strconv.Itoa(int(user.Id)))
+	//os.Setenv("repoId", repoId)
+	os.Setenv("repoName", repoName)
 
 	gitcmd := exec.Command(verb, rRepo)
 	gitcmd.Dir = base.RepoRootPath
 
-	var s string
-	b := bytes.NewBufferString(s)
+	//var s string
+	//b := bytes.NewBufferString(s)
 
-	gitcmd.Stdout = io.MultiWriter(os.Stdout, b)
+	gitcmd.Stdout = os.Stdout
 	//gitcmd.Stdin = io.MultiReader(os.Stdin, b)
 	gitcmd.Stdin = os.Stdin
 	gitcmd.Stderr = os.Stderr
@@ -213,16 +217,13 @@ func runServ(k *cli.Context) {
 	}
 
 	//if isRead {
-		return
+	//	return
 	//}
-
-	time.Sleep(time.Second)
-	log.Info(s)
 
 	// find push reference name
 	//var t = "ok refs/heads/"
 	//var i int
-	var refname string
+	//var refname string
 	/*for {
 		l, err := b.ReadString('\n')
 		if err != nil {
@@ -237,7 +238,7 @@ func runServ(k *cli.Context) {
 	}
 	*/
 
-	refs2, err := rep.AllReferencesMap()
+	/*refs2, err := rep.AllReferencesMap()
 	for name, ref := range refs2 {
 		if ref2, ok := refs[name]; ok {
 			if ref.Oid.Equal(ref2.Oid) {
@@ -323,5 +324,5 @@ func runServ(k *cli.Context) {
 		if err != nil {
 			log.Error("update-server-info: %v", err)
 		}
-	}
+	}*/
 }
