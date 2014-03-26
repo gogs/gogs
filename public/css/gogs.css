@@ -980,6 +980,11 @@ html, body {
     padding: 20px;
 }
 
+.diff-file-box .code-diff tbody tr.tag-code td, .diff-file-box .code-diff tbody tr.tag-code pre {
+    background-color: #E0E0E0 !important;
+    border-color: #ADADAD !important;
+}
+
 .diff-file-box .code-diff tbody tr.add-code td, .diff-file-box .code-diff tbody tr.add-code pre {
     background-color: #d1ffd6 !important;
     border-color: #b4e2b4 !important;

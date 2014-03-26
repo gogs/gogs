@@ -71,7 +71,6 @@ func Single(ctx *middleware.Context, params martini.Params) {
 	// Branches.
 	brs, err := models.GetBranches(params["username"], params["reponame"])
 	if err != nil {
-		//log.Error("repo.Single(GetBranches): %v", err)
 		ctx.Handle(404, "repo.Single(GetBranches)", err)
 		return
 	} else if ctx.Repo.Repository.IsBare {
@@ -79,14 +78,11 @@ func Single(ctx *middleware.Context, params martini.Params) {
 		ctx.HTML(200, "repo/single")
 		return
 	}
-
 	ctx.Data["Branches"] = brs
 
 	repoFile, err := models.GetTargetFile(params["username"], params["reponame"],
 		params["branchname"], params["commitid"], treename)
-
 	if err != nil && err != models.ErrRepoFileNotExist {
-		//log.Error("repo.Single(GetTargetFile): %v", err)
 		ctx.Handle(404, "repo.Single(GetTargetFile)", err)
 		return
 	}
@@ -133,7 +129,6 @@ func Single(ctx *middleware.Context, params martini.Params) {
 		files, err := models.GetReposFiles(params["username"], params["reponame"],
 			params["branchname"], params["commitid"], treename)
 		if err != nil {
-			//log.Error("repo.Single(GetReposFiles): %v", err)
 			ctx.Handle(404, "repo.Single(GetReposFiles)", err)
 			return
 		}
@@ -189,7 +184,7 @@ func Single(ctx *middleware.Context, params martini.Params) {
 		}
 	}
 
-	// Get latest commit according username and repo name
+	// Get latest commit according username and repo name.
 	commit, err := models.GetCommit(params["username"], params["reponame"],
 		params["branchname"], params["commitid"])
 	if err != nil {

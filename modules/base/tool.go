@@ -552,3 +552,15 @@ func DiffTypeToStr(diffType int) string {
 		return "unknown"
 	}
 }
+
+func DiffLineTypeToStr(diffType int) string {
+	switch diffType {
+	case 2:
+		return "add"
+	case 3:
+		return "del"
+	case 4:
+		return "tag"
+	}
+	return "same"
+}
