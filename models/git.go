@@ -291,6 +291,8 @@ func ParsePatch(reader io.Reader) (*Diff, error) {
 			curSection.Lines = append(curSection.Lines, diffLine)
 			continue
 		} else if line[0] == '@' {
+			curSection = &DiffSection{}
+			curFile.Sections = append(curFile.Sections, curSection)
 			ss := strings.Split(line, "@@")
 			diffLine := &DiffLine{Type: SectionLine, Content:"@@ "+ss[len(ss)-2]}
 			curSection.Lines = append(curSection.Lines, diffLine)
