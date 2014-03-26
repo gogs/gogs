@@ -274,7 +274,6 @@ const DIFF_HEAD = "diff --git "
 
 func ParsePatch(reader io.Reader) (*Diff, error) {
 	scanner := bufio.NewScanner(reader)
-	var totalAdd, totalDel int
 	var curFile *DiffFile
 	curSection := &DiffSection{
 		Lines: make([]*DiffLine, 0, 10),
@@ -285,6 +284,10 @@ func ParsePatch(reader io.Reader) (*Diff, error) {
 	for scanner.Scan() {
 		line := scanner.Text()
 		fmt.Println(i, line)
+		if strings.HasPrefix(line, "+++ ") || strings.HasPrefix(line, "--- ") {
+			continue
+		}
+
 		i = i + 1
 		if line == "" {
 			continue
@@ -300,40 +303,51 @@ func ParsePatch(reader io.Reader) (*Diff, error) {
 			diffLine := &DiffLine{Type: DIFF_LINE_SECTION, Content: "@@" + ss[len(ss)-2] + "@@"}
 			curSection.Lines = append(curSection.Lines, diffLine)
 
-			diffLine = &DiffLine{Type: DIFF_LINE_PLAIN, Content: ss[len(ss)-1]}
-			curSection.Lines = append(curSection.Lines, diffLine)
+			if len(ss[len(ss)-1]) > 0 {
+				diffLine = &DiffLine{Type: DIFF_LINE_PLAIN, Content: ss[len(ss)-1]}
+				curSection.Lines = append(curSection.Lines, diffLine)
+			}
 			continue
 		} else if line[0] == '+' {
+			curFile.Addition++
+			diff.TotalAddition++
 			diffLine := &DiffLine{Type: DIFF_LINE_ADD, Content: line}
 			curSection.Lines = append(curSection.Lines, diffLine)
 			continue
 		} else if line[0] == '-' {
+			curFile.Deletion++
+			diff.TotalDeletion++
 			diffLine := &DiffLine{Type: DIFF_LINE_DEL, Content: line}
 			curSection.Lines = append(curSection.Lines, diffLine)
 			continue
 		}
 
+		// Get new file.
 		if strings.HasPrefix(line, DIFF_HEAD) {
-			if curFile != nil {
-				curFile.Addition, totalAdd = totalAdd, 0
-				curFile.Deletion, totalDel = totalDel, 0
-				curFile = nil
-			}
 			fs := strings.Split(line[len(DIFF_HEAD):], " ")
 			a := fs[0]
 
 			curFile = &DiffFile{
 				Name:     a[strings.Index(a, "/")+1:],
 				Type:     DIFF_FILE_CHANGE,
-				Sections: make([]*DiffSection, 0),
+				Sections: make([]*DiffSection, 0, 10),
 			}
 			diff.Files = append(diff.Files, curFile)
-			scanner.Scan()
-			scanner.Scan()
-			if scanner.Text() == "--- /dev/null" {
-				curFile.Type = DIFF_FILE_ADD
+
+			// Check file diff type.
+			for scanner.Scan() {
+				switch {
+				case strings.HasPrefix(scanner.Text(), "new file"):
+					curFile.Type = DIFF_FILE_ADD
+				case strings.HasPrefix(scanner.Text(), "deleted"):
+					curFile.Type = DIFF_FILE_DEL
+				case strings.HasPrefix(scanner.Text(), "index"):
+					curFile.Type = DIFF_FILE_CHANGE
+				}
+				if curFile.Type > 0 {
+					break
+				}
 			}
-			scanner.Scan()
 		}
 	}
 
@@ -351,14 +365,13 @@ func GetDiff(repoPath, commitid string) (*Diff, error) {
 		return nil, err
 	}
 
-	// ????
 	if commit.ParentCount() == 0 {
 		return &Diff{}, err
 	}
 
 	rd, wr := io.Pipe()
 	go func() {
-		cmd := exec.Command("git", "diff", commitid, commit.Parent(0).Oid.String())
+		cmd := exec.Command("git", "diff", commit.Parent(0).Oid.String(), commitid)
 		cmd.Dir = repoPath
 		cmd.Stdout = wr
 		cmd.Stdin = os.Stdin

@@ -539,3 +539,16 @@ func ActionDesc(act Actioner, avatarLink string) string {
 		return "invalid type"
 	}
 }
+
+func DiffTypeToStr(diffType int) string {
+	switch diffType {
+	case 1:
+		return "add"
+	case 2:
+		return "modify"
+	case 3:
+		return "del"
+	default:
+		return "unknown"
+	}
+}
