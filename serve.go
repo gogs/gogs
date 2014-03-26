@@ -131,7 +131,6 @@ func runServ(k *cli.Context) {
 	// access check
 	switch {
 	case isWrite:
-		println(user.Name, repoName, models.AU_WRITABLE)
 		has, err := models.HasAccess(user.Name, repoName, models.AU_WRITABLE)
 		if err != nil {
 			println("Inernel error:", err)
