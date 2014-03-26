@@ -163,9 +163,29 @@ type Milestone struct {
 type Comment struct {
 	Id       int64
 	PosterId int64
+	Poster   *User `xorm:"-"`
 	IssueId  int64
 	CommitId int64
-	Line     int
+	Line     int64
 	Content  string
 	Created  time.Time `xorm:"created"`
+}
+
+// CreateComment creates comment of issue or commit.
+func CreateComment(userId, issueId, commitId, line int64, content string) error {
+	_, err := orm.Insert(&Comment{
+		PosterId: userId,
+		IssueId:  issueId,
+		CommitId: commitId,
+		Line:     line,
+		Content:  content,
+	})
+	return err
+}
+
+// GetIssueComments returns list of comment by given issue id.
+func GetIssueComments(issueId int64) ([]Comment, error) {
+	comments := make([]Comment, 0, 10)
+	err := orm.Asc("created").Find(&comments, &Comment{IssueId: issueId})
+	return comments, err
 }
