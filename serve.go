@@ -131,6 +131,7 @@ func runServ(k *cli.Context) {
 	// access check
 	switch {
 	case isWrite:
+		println(user.Name, repoName, models.AU_WRITABLE)
 		has, err := models.HasAccess(user.Name, repoName, models.AU_WRITABLE)
 		if err != nil {
 			println("Inernel error:", err)
@@ -165,48 +166,14 @@ func runServ(k *cli.Context) {
 		return
 	}
 
-	/*
-	var rep *git.Repository
-	repoPath := models.RepoPath(user.Name, repoName)
-	if !isExist {
-		if isWrite {
-			_, err = models.CreateRepository(user, repoName, "", "", "", false, true)
-			if err != nil {
-				println("Create repository failed")
-				log.Error(err.Error())
-				return
-			}
-		}
-	}
-
-		rep, err = git.OpenRepository(repoPath)
-		if err != nil {
-			println("OpenRepository failed:", err.Error())
-			log.Error(err.Error())
-			return
-		}
-
-	refs, err := rep.AllReferencesMap()
-	if err != nil {
-		println("Get All References failed:", err.Error())
-		log.Error(err.Error())
-		return
-	}
-*/
-
+	// for update use
 	os.Setenv("userName", user.Name)
 	os.Setenv("userId", strconv.Itoa(int(user.Id)))
-	//os.Setenv("repoId", repoId)
 	os.Setenv("repoName", repoName)
 
 	gitcmd := exec.Command(verb, rRepo)
 	gitcmd.Dir = base.RepoRootPath
-
-	//var s string
-	//b := bytes.NewBufferString(s)
-
 	gitcmd.Stdout = os.Stdout
-	//gitcmd.Stdin = io.MultiReader(os.Stdin, b)
 	gitcmd.Stdin = os.Stdin
 	gitcmd.Stderr = os.Stderr
 
@@ -215,114 +182,4 @@ func runServ(k *cli.Context) {
 		log.Error(err.Error())
 		return
 	}
-
-	//if isRead {
-	//	return
-	//}
-
-	// find push reference name
-	//var t = "ok refs/heads/"
-	//var i int
-	//var refname string
-	/*for {
-		l, err := b.ReadString('\n')
-		if err != nil {
-			break
-		}
-		i = i + 1
-		l = l[:len(l)-1]
-		idx := strings.Index(l, t)
-		if idx > 0 {
-			refname = l[idx+len(t):]
-		}
-	}
-	*/
-
-	/*refs2, err := rep.AllReferencesMap()
-	for name, ref := range refs2 {
-		if ref2, ok := refs[name]; ok {
-			if ref.Oid.Equal(ref2.Oid) {
-				continue
-			}
-		}
-		refname = name
-		break
-	}
-	if refname == "" {
-		println("No find any reference name:", s)
-		return
-	}
-
-	var ref *git.Reference
-	var ok bool
-	var l *list.List
-	//log.Info("----", refname, "-----")
-	if ref, ok = refs[refname]; !ok {
-		// for new branch
-		refs, err = rep.AllReferencesMap()
-		if err != nil {
-			println("Get All References failed:", err.Error())
-			log.Error(err.Error())
-			return
-		}
-		if ref, ok = refs[refname]; !ok {
-			log.Error("unknow reference name -", refname, "-", b.String())
-			return
-		}
-		l, err = ref.AllCommits()
-		if err != nil {
-			println("Get All Commits failed:", err.Error())
-			log.Error(err.Error())
-			return
-		}
-	} else {
-		//log.Info("----", ref, "-----")
-		var last *git.Commit
-		//log.Info("00000", ref.Oid.String())
-		last, err = ref.LastCommit()
-		if err != nil {
-			println("Get last commit failed:", err.Error())
-			log.Error(err.Error())
-			return
-		}
-
-		ref2, err := rep.LookupReference(ref.Name)
-		if err != nil {
-			println("look up reference failed:", err.Error())
-			log.Error(err.Error())
-			return
-		}
-
-		//log.Info("11111", ref2.Oid.String())
-		before, err := ref2.LastCommit()
-		if err != nil {
-			println("Get last commit failed:", err.Error())
-			log.Error(err.Error())
-			return
-		}
-		//log.Info("----", before.Id(), "-----", last.Id())
-		l = ref.CommitsBetween(before, last)
-	}
-
-	commits := make([][]string, 0)
-	var maxCommits = 3
-	for e := l.Front(); e != nil; e = e.Next() {
-		commit := e.Value.(*git.Commit)
-		commits = append(commits, []string{commit.Id().String(), commit.Message()})
-		if len(commits) >= maxCommits {
-			break
-		}
-	}
-
-	if err = models.CommitRepoAction(user.Id, user.Name,
-		repo.Id, repoName, refname, &base.PushCommits{l.Len(), commits}); err != nil {
-		log.Error("runUpdate.models.CommitRepoAction: %v", err, commits)
-	} else {
-		c := exec.Command("git", "update-server-info")
-		c.Dir = repoPath
-		err := c.Run()
-		if err != nil {
-			log.Error("update-server-info: %v", err)
-		}
-	}*/
 }
