@@ -24,7 +24,7 @@
         </div>
     </div>
     <div id="user-activity" class="col-md-9">
-        <ul class="nav nav-tabs" id="user-act-tabs" data-init="tabs">
+        <ul class="nav nav-tabs" id="user-act-tabs">
             <li{{if not .TabName}} class="active"{{end}}><a href="{{.Owner.HomeLink}}"><i class="fa fa-gittip"></i>Repositories</a></li>
             <li{{if eq .TabName "activity"}} class="active"{{end}}><a href="{{.Owner.HomeLink}}?tab=activity"><i class="fa fa-rss"></i>Public Activity</a></li>
         </ul>
