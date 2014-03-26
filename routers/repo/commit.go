@@ -34,8 +34,24 @@ func Commits(ctx *middleware.Context, params martini.Params) {
 	ctx.HTML(200, "repo/commits")
 }
 
-func Diff(ctx *middleware.Context,params martini.Params){
-	ctx.Data["Title"] = "commit-sha"
+func Diff(ctx *middleware.Context, params martini.Params) {
+	commit, err := models.GetCommit(params["username"], params["reponame"], params["branchname"], params["commitid"])
+	if err != nil {
+		ctx.Handle(404, "repo.Diff", err)
+		return
+	}
+
+	diff, err := models.GetDiff(models.RepoPath(params["username"], params["reponame"]), params["commitid"])
+	if err != nil {
+		ctx.Handle(404, "repo.Diff", err)
+		return
+	}
+
+	shortSha := params["commitid"][:7]
+	ctx.Data["Title"] = commit.Message() + " · " + shortSha
+	ctx.Data["Commit"] = commit
+	ctx.Data["ShortSha"] = shortSha
+	ctx.Data["Diff"] = diff
 	ctx.Data["IsRepoToolbarCommits"] = true
-	ctx.HTML(200,"repo/diff")
+	ctx.HTML(200, "repo/diff")
 }
