@@ -71,7 +71,7 @@ var Service struct {
 	ResetPwdCodeLives      int
 }
 
-func exeDir() (string, error) {
+func ExecDir() (string, error) {
 	file, err := exec.LookPath(os.Args[0])
 	if err != nil {
 		return "", err
@@ -244,7 +244,7 @@ func newNotifyMailService() {
 
 func NewConfigContext() {
 	//var err error
-	workDir, err := exeDir()
+	workDir, err := ExecDir()
 	if err != nil {
 		fmt.Printf("Fail to get work directory: %s\n", err)
 		os.Exit(2)
@@ -259,16 +259,11 @@ func NewConfigContext() {
 	Cfg.BlockMode = false
 
 	cfgPath = filepath.Join(workDir, "custom/conf/app.ini")
-	if !com.IsFile(cfgPath) {
-		fmt.Println("Custom configuration not found(custom/conf/app.ini)\n" +
-			"Please create it and make your own configuration!")
-		os.Exit(2)
-
-	}
-
-	if err = Cfg.AppendFiles(cfgPath); err != nil {
-		fmt.Printf("Cannot load config file '%s'\n", cfgPath)
-		os.Exit(2)
+	if com.IsFile(cfgPath) {
+		if err = Cfg.AppendFiles(cfgPath); err != nil {
+			fmt.Printf("Cannot load config file '%s'\n", cfgPath)
+			os.Exit(2)
+		}
 	}
 
 	AppName = Cfg.MustValue("", "APP_NAME", "Gogs: Go Git Service")
@@ -276,7 +271,16 @@ func NewConfigContext() {
 	AppUrl = Cfg.MustValue("server", "ROOT_URL")
 	Domain = Cfg.MustValue("server", "DOMAIN")
 	SecretKey = Cfg.MustValue("security", "SECRET_KEY")
+
 	RunUser = Cfg.MustValue("", "RUN_USER")
+	curUser := os.Getenv("USERNAME")
+	if len(curUser) == 0 {
+		curUser = os.Getenv("USER")
+	}
+	if RunUser != curUser {
+		fmt.Printf("Expect user(%s) but current user is: %s\n", RunUser, curUser)
+		os.Exit(2)
+	}
 
 	EnableHttpsClone = Cfg.MustBool("security", "ENABLE_HTTPS_CLONE", false)
 

@@ -17,9 +17,8 @@ import (
 )
 
 type CreateIssueForm struct {
-	IssueName   string `form:"name" binding:"Required;MaxSize(50)"`
-	RepoId      int64  `form:"repoid" binding:"Required"`
-	MilestoneId int64  `form:"milestoneid" binding:"Required"`
+	IssueName   string `form:"title" binding:"Required;MaxSize(50)"`
+	MilestoneId int64  `form:"milestoneid"`
 	AssigneeId  int64  `form:"assigneeid"`
 	Labels      string `form:"labels"`
 	Content     string `form:"content"`
@@ -27,9 +26,7 @@ type CreateIssueForm struct {
 
 func (f *CreateIssueForm) Name(field string) string {
 	names := map[string]string{
-		"IssueName":   "Issue name",
-		"RepoId":      "Repository ID",
-		"MilestoneId": "Milestone ID",
+		"IssueName": "Issue name",
 	}
 	return names[field]
 }

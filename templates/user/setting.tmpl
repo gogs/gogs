@@ -1,11 +1,11 @@
 {{template "base/head" .}}
 {{template "base/navbar" .}}
-<div id="gogs-body" class="container" data-page="user">
+<div id="body" class="container" data-page="user">
     {{template "user/setting_nav" .}}
-    <div id="gogs-user-setting-container" class="col-md-9">
-        <div id="gogs-setting-pwd">
+    <div id="user-setting-container" class="col-md-9">
+        <div id="setting-pwd">
             <h4>Account Profile</h4>
-            <form class="form-horizontal" id="gogs-password-form" method="post" action="/user/setting">
+            <form class="form-horizontal" id="password-form" method="post" action="/user/setting">
                 {{.CsrfTokenHtml}}
                 {{if .IsSuccess}}<p class="alert alert-success">Your profile has been successfully updated.</p>{{else if .HasError}}<p class="alert alert-danger form-error">{{.ErrorMsg}}</p>{{end}}
                 <p>Your Email will be public and used for Account related notifications and any web based operations made via the web.</p>

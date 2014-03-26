@@ -19,6 +19,7 @@ const (
 	OP_STAR_REPO
 	OP_FOLLOW_REPO
 	OP_COMMIT_REPO
+	OP_CREATE_ISSUE
 	OP_PULL_REQUEST
 )
 
@@ -59,7 +60,7 @@ func (a Action) GetContent() string {
 // CommitRepoAction records action for commit repository.
 func CommitRepoAction(userId int64, userName string,
 	repoId int64, repoName string, refName string, commits *base.PushCommits) error {
-	log.Trace("action.CommitRepoAction: %d/%s", userId, repoName)
+	log.Trace("action.CommitRepoAction(start): %d/%s", userId, repoName)
 
 	bs, err := json.Marshal(commits)
 	if err != nil {
@@ -67,32 +68,8 @@ func CommitRepoAction(userId int64, userName string,
 		return err
 	}
 
-	// Add feeds for user self and all watchers.
-	watches, err := GetWatches(repoId)
-	if err != nil {
-		log.Error("action.CommitRepoAction(get watches): %d/%s", userId, repoName)
-		return err
-	}
-	watches = append(watches, Watch{UserId: userId})
-
-	for i := range watches {
-		if userId == watches[i].UserId && i > 0 {
-			continue // Do not add twice in case author watches his/her repository.
-		}
-
-		_, err = orm.InsertOne(&Action{
-			UserId:      watches[i].UserId,
-			ActUserId:   userId,
-			ActUserName: userName,
-			OpType:      OP_COMMIT_REPO,
-			Content:     string(bs),
-			RepoId:      repoId,
-			RepoName:    repoName,
-			RefName:     refName,
-		})
-		if err != nil {
-			log.Error("action.CommitRepoAction(notify watches): %d/%s", userId, repoName)
-		}
+	if err = NotifyWatchers(userId, repoId, OP_COMMIT_REPO, userName, repoName, refName, string(bs)); err != nil {
+		log.Error("action.CommitRepoAction(notify watchers): %d/%s", userId, repoName)
 		return err
 	}
 
@@ -107,6 +84,8 @@ func CommitRepoAction(userId int64, userName string,
 		log.Error("action.CommitRepoAction(UpdateRepository): %d/%s", userId, repoName)
 		return err
 	}
+
+	log.Trace("action.CommitRepoAction(end): %d/%s", userId, repoName)
 	return nil
 }
 

@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path"
 	"strconv"
 	"strings"
 
@@ -42,11 +43,12 @@ gogs serv provide access auth for repositories`,
 	Flags:  []cli.Flag{},
 }
 
-func init() {
+func newLogger(execDir string) {
 	level := "0"
-	os.MkdirAll("log", os.ModePerm)
-	log.NewLogger(10000, "file", fmt.Sprintf(`{"level":%s,"filename":"%s"}`, level, "log/serv.log"))
-	log.Info("start logging...")
+	logPath := execDir + "/log/serv.log"
+	os.MkdirAll(path.Dir(logPath), os.ModePerm)
+	log.NewLogger(10000, "file", fmt.Sprintf(`{"level":%s,"filename":"%s"}`, level, logPath))
+	log.Trace("start logging...")
 }
 
 func parseCmd(cmd string) (string, string) {
@@ -70,6 +72,10 @@ func In(b string, sl map[string]int) bool {
 }
 
 func runServ(k *cli.Context) {
+	execDir, _ := base.ExecDir()
+	newLogger(execDir)
+	log.Trace("new serv request " + log.Mode + ":" + log.Config)
+
 	base.NewConfigContext()
 	models.LoadModelsConfig()
 	models.NewEngine()
@@ -77,17 +83,20 @@ func runServ(k *cli.Context) {
 	keys := strings.Split(os.Args[2], "-")
 	if len(keys) != 2 {
 		fmt.Println("auth file format error")
+		log.Error("auth file format error")
 		return
 	}
 
 	keyId, err := strconv.ParseInt(keys[1], 10, 64)
 	if err != nil {
 		fmt.Println("auth file format error")
+		log.Error("auth file format error")
 		return
 	}
 	user, err := models.GetUserByKeyId(keyId)
 	if err != nil {
 		fmt.Println("You have no right to access")
+		log.Error("You have no right to access")
 		return
 	}
 
@@ -102,6 +111,7 @@ func runServ(k *cli.Context) {
 	rr := strings.SplitN(rRepo, "/", 2)
 	if len(rr) != 2 {
 		println("Unavilable repository", args)
+		log.Error("Unavilable repository %v", args)
 		return
 	}
 	repoName := rr[1]
@@ -112,21 +122,22 @@ func runServ(k *cli.Context) {
 	isWrite := In(verb, COMMANDS_WRITE)
 	isRead := In(verb, COMMANDS_READONLY)
 
-	//repo, err := models.GetRepositoryByName(user.Id, repoName)
+	/*//repo, err := models.GetRepositoryByName(user.Id, repoName)
 	//var isExist bool = true
 	if err != nil {
 		if err == models.ErrRepoNotExist {
 			//isExist = false
 			if isRead {
 				println("Repository", user.Name+"/"+repoName, "is not exist")
+				log.Error("Repository " + user.Name + "/" + repoName + " is not exist")
 				return
 			}
 		} else {
 			println("Get repository error:", err)
-			log.Error(err.Error())
+			log.Error("Get repository error: " + err.Error())
 			return
 		}
-	}
+	}*/
 
 	// access check
 	switch {
@@ -139,6 +150,7 @@ func runServ(k *cli.Context) {
 		}
 		if !has {
 			println("You have no right to write this repository")
+			log.Error("You have no right to access this repository")
 			return
 		}
 	case isRead:
@@ -158,10 +170,12 @@ func runServ(k *cli.Context) {
 		}
 		if !has {
 			println("You have no right to access this repository")
+			log.Error("You have no right to access this repository")
 			return
 		}
 	default:
 		println("Unknown command")
+		log.Error("Unknown command")
 		return
 	}
 
@@ -178,7 +192,7 @@ func runServ(k *cli.Context) {
 
 	if err = gitcmd.Run(); err != nil {
 		println("execute command error:", err.Error())
-		log.Error(err.Error())
+		log.Error("execute command error: " + err.Error())
 		return
 	}
 }

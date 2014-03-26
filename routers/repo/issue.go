@@ -13,6 +13,7 @@ import (
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
+	"github.com/gogits/gogs/modules/mailer"
 	"github.com/gogits/gogs/modules/middleware"
 )
 
@@ -23,19 +24,34 @@ func Issues(ctx *middleware.Context, params martini.Params) {
 	milestoneId, _ := base.StrTo(params["milestone"]).Int()
 	page, _ := base.StrTo(params["page"]).Int()
 
-	var err error
-	ctx.Data["Issues"], err = models.GetIssues(0, ctx.Repo.Repository.Id, 0,
+	// Get issues.
+	issues, err := models.GetIssues(0, ctx.Repo.Repository.Id, 0,
 		int64(milestoneId), page, params["state"] == "closed", false, params["labels"], params["sortType"])
 	if err != nil {
 		ctx.Handle(200, "issue.Issues: %v", err)
 		return
 	}
 
-	if len(params["branchname"]) == 0 {
-		params["branchname"] = "master"
+	var closedCount int
+	// Get posters.
+	for i := range issues {
+		u, err := models.GetUserById(issues[i].PosterId)
+		if err != nil {
+			ctx.Handle(200, "issue.Issues(get poster): %v", err)
+			return
+		}
+
+		if issues[i].IsClosed {
+			closedCount++
+		}
+		issues[i].Poster = u
 	}
-	ctx.Data["Branchname"] = params["branchname"]
-	ctx.HTML(200, "repo/issues")
+
+	ctx.Data["Issues"] = issues
+	ctx.Data["IssueCount"] = len(issues)
+	ctx.Data["OpenCount"] = len(issues) - closedCount
+	ctx.Data["ClosedCount"] = closedCount
+	ctx.HTML(200, "issue/list")
 }
 
 func CreateIssue(ctx *middleware.Context, params martini.Params, form auth.CreateIssueForm) {
@@ -57,14 +73,30 @@ func CreateIssue(ctx *middleware.Context, params martini.Params, form auth.Creat
 		return
 	}
 
-	issue, err := models.CreateIssue(ctx.User.Id, form.RepoId, form.MilestoneId, form.AssigneeId,
+	issue, err := models.CreateIssue(ctx.User.Id, ctx.Repo.Repository.Id, form.MilestoneId, form.AssigneeId,
 		form.IssueName, form.Labels, form.Content, false)
-	if err == nil {
-		log.Trace("%s Issue created: %d", form.RepoId, issue.Id)
-		ctx.Redirect(fmt.Sprintf("/%s/%s/issues/%d", params["username"], params["reponame"], issue.Index))
+	if err != nil {
+		ctx.Handle(200, "issue.CreateIssue", err)
 		return
 	}
-	ctx.Handle(200, "issue.CreateIssue", err)
+
+	// Notify watchers.
+	if err = models.NotifyWatchers(ctx.User.Id, ctx.Repo.Repository.Id, models.OP_CREATE_ISSUE,
+		ctx.User.Name, ctx.Repo.Repository.Name, "", fmt.Sprintf("%d|%s", issue.Index, issue.Name)); err != nil {
+		ctx.Handle(200, "issue.CreateIssue", err)
+		return
+	}
+
+	// Mail watchers.
+	if base.Service.NotifyMail {
+		if err = mailer.SendNotifyMail(ctx.User.Id, ctx.Repo.Repository.Id, ctx.User.Name, ctx.Repo.Repository.Name, issue.Name, issue.Content); err != nil {
+			ctx.Handle(200, "issue.CreateIssue", err)
+			return
+		}
+	}
+
+	log.Trace("%d Issue created: %d", ctx.Repo.Repository.Id, issue.Id)
+	ctx.Redirect(fmt.Sprintf("/%s/%s/issues/%d", params["username"], params["reponame"], issue.Index))
 }
 
 func ViewIssue(ctx *middleware.Context, params martini.Params) {

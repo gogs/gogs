@@ -1,7 +1,7 @@
 {{template "base/head" .}}
 {{template "base/navbar" .}}
-<div class="container" id="gogs-body" data-page="user-signin">
-    <form action="/user/login" method="post" class="form-horizontal gogs-card" id="gogs-login-card">
+<div class="container" id="body" data-page="user-signin">
+    <form action="/user/login" method="post" class="form-horizontal card" id="login-card">
         {{.CsrfTokenHtml}}
         <h3>Log in</h3>
         <div class="alert alert-danger form-error{{if .HasError}}{{else}} hidden{{end}}">{{.ErrorMsg}}</div>
@@ -43,7 +43,7 @@
             </div>
         </div>
 
-        <div class="form-group text-center" id="gogs-social-login">
+        <div class="form-group text-center" id="social-login">
             <a class="btn btn-danger btn-lg">Register new account</a>
         </div>
     </form>

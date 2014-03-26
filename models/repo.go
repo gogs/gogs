@@ -5,17 +5,14 @@
 package models
 
 import (
-	"container/list"
 	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
-	"path"
 	"path/filepath"
 	"regexp"
 	"strings"
-	"sync"
 	"time"
 	"unicode/utf8"
 
@@ -35,8 +32,6 @@ var (
 	ErrRepoNameIllegal   = errors.New("Repository name contains illegal characters")
 	ErrRepoFileNotLoaded = fmt.Errorf("repo file not loaded")
 )
-
-var gitInitLocker = sync.Mutex{}
 
 var (
 	LanguageIgns, Licenses []string
@@ -222,33 +217,21 @@ func extractGitBareZip(repoPath string) error {
 }
 
 // initRepoCommit temporarily changes with work directory.
-func initRepoCommit(tmpPath string, sig *git.Signature) error {
-	gitInitLocker.Lock()
-	defer gitInitLocker.Unlock()
-
-	// Change work directory.
-	curPath, err := os.Getwd()
-	if err != nil {
-		return err
-	} else if err = os.Chdir(tmpPath); err != nil {
-		return err
-	}
-	defer os.Chdir(curPath)
-
+func initRepoCommit(tmpPath string, sig *git.Signature) (err error) {
 	var stderr string
-	if _, stderr, err = com.ExecCmd("git", "add", "--all"); err != nil {
+	if _, stderr, err = com.ExecCmdDir(tmpPath, "git", "add", "--all"); err != nil {
 		return err
 	}
-	log.Info("stderr(1): %s", stderr)
-	if _, stderr, err = com.ExecCmd("git", "commit", fmt.Sprintf("--author='%s <%s>'", sig.Name, sig.Email),
+	log.Trace("stderr(1): %s", stderr)
+	if _, stderr, err = com.ExecCmdDir(tmpPath, "git", "commit", fmt.Sprintf("--author='%s <%s>'", sig.Name, sig.Email),
 		"-m", "Init commit"); err != nil {
 		return err
 	}
-	log.Info("stderr(2): %s", stderr)
-	if _, stderr, err = com.ExecCmd("git", "push", "origin", "master"); err != nil {
+	log.Trace("stderr(2): %s", stderr)
+	if _, stderr, err = com.ExecCmdDir(tmpPath, "git", "push", "origin", "master"); err != nil {
 		return err
 	}
-	log.Info("stderr(3): %s", stderr)
+	log.Trace("stderr(3): %s", stderr)
 	return nil
 }
 
@@ -271,18 +254,6 @@ func initRepository(f string, user *User, repo *Repository, initReadme bool, rep
 	if _, err = pu.WriteString(fmt.Sprintf("#!/usr/bin/env bash\n%s update $1 $2 $3\n", appPath)); err != nil {
 		return err
 	}
-
-	/*// hook/post-update
-	pu2, err := os.OpenFile(filepath.Join(repoPath, "hooks", "post-receive"), os.O_CREATE|os.O_WRONLY, 0777)
-	if err != nil {
-		return err
-	}
-	defer pu2.Close()
-	// TODO: Windows .bat
-	if _, err = pu2.WriteString("#!/usr/bin/env bash\ngit update-server-info\n"); err != nil {
-		return err
-	}
-	*/
 
 	// Initialize repository according to user's choice.
 	fileName := map[string]string{}
@@ -505,239 +476,43 @@ func GetWatches(repoId int64) ([]Watch, error) {
 	return watches, err
 }
 
+// NotifyWatchers creates batch of actions for every watcher.
+func NotifyWatchers(userId, repoId int64, opType int, userName, repoName, refName, content string) error {
+	// Add feeds for user self and all watchers.
+	watches, err := GetWatches(repoId)
+	if err != nil {
+		return errors.New("repo.NotifyWatchers(get watches): " + err.Error())
+	}
+	watches = append(watches, Watch{UserId: userId})
+
+	for i := range watches {
+		if userId == watches[i].UserId && i > 0 {
+			continue // Do not add twice in case author watches his/her repository.
+		}
+
+		_, err = orm.InsertOne(&Action{
+			UserId:      watches[i].UserId,
+			ActUserId:   userId,
+			ActUserName: userName,
+			OpType:      opType,
+			Content:     content,
+			RepoId:      repoId,
+			RepoName:    repoName,
+			RefName:     refName,
+		})
+		if err != nil {
+			return errors.New("repo.NotifyWatchers(create action): " + err.Error())
+		}
+	}
+	return nil
+}
+
 // IsWatching checks if user has watched given repository.
 func IsWatching(userId, repoId int64) bool {
 	has, _ := orm.Get(&Watch{0, repoId, userId})
 	return has
 }
 
-func StarReposiory(user *User, repoName string) error {
-	return nil
-}
-
-func UnStarRepository() {
-
-}
-
-func WatchRepository() {
-
-}
-
-func UnWatchRepository() {
-
-}
-
 func ForkRepository(reposName string, userId int64) {
 
-}
-
-// RepoFile represents a file object in git repository.
-type RepoFile struct {
-	*git.TreeEntry
-	Path   string
-	Size   int64
-	Repo   *git.Repository
-	Commit *git.Commit
-}
-
-// LookupBlob returns the content of an object.
-func (file *RepoFile) LookupBlob() (*git.Blob, error) {
-	if file.Repo == nil {
-		return nil, ErrRepoFileNotLoaded
-	}
-
-	return file.Repo.LookupBlob(file.Id)
-}
-
-// GetBranches returns all branches of given repository.
-func GetBranches(userName, reposName string) ([]string, error) {
-	repo, err := git.OpenRepository(RepoPath(userName, reposName))
-	if err != nil {
-		return nil, err
-	}
-
-	refs, err := repo.AllReferences()
-	if err != nil {
-		return nil, err
-	}
-
-	brs := make([]string, len(refs))
-	for i, ref := range refs {
-		brs[i] = ref.BranchName()
-	}
-	return brs, nil
-}
-
-func GetTargetFile(userName, reposName, branchName, commitId, rpath string) (*RepoFile, error) {
-	repo, err := git.OpenRepository(RepoPath(userName, reposName))
-	if err != nil {
-		return nil, err
-	}
-
-	commit, err := repo.GetCommit(branchName, commitId)
-	if err != nil {
-		return nil, err
-	}
-
-	parts := strings.Split(path.Clean(rpath), "/")
-
-	var entry *git.TreeEntry
-	tree := commit.Tree
-	for i, part := range parts {
-		if i == len(parts)-1 {
-			entry = tree.EntryByName(part)
-			if entry == nil {
-				return nil, ErrRepoFileNotExist
-			}
-		} else {
-			tree, err = repo.SubTree(tree, part)
-			if err != nil {
-				return nil, err
-			}
-		}
-	}
-
-	size, err := repo.ObjectSize(entry.Id)
-	if err != nil {
-		return nil, err
-	}
-
-	repoFile := &RepoFile{
-		entry,
-		rpath,
-		size,
-		repo,
-		commit,
-	}
-
-	return repoFile, nil
-}
-
-// GetReposFiles returns a list of file object in given directory of repository.
-func GetReposFiles(userName, reposName, branchName, commitId, rpath string) ([]*RepoFile, error) {
-	repo, err := git.OpenRepository(RepoPath(userName, reposName))
-	if err != nil {
-		return nil, err
-	}
-
-	commit, err := repo.GetCommit(branchName, commitId)
-	if err != nil {
-		return nil, err
-	}
-
-	var repodirs []*RepoFile
-	var repofiles []*RepoFile
-	commit.Tree.Walk(func(dirname string, entry *git.TreeEntry) int {
-		if dirname == rpath {
-			// TODO: size get method shoule be improved
-			size, err := repo.ObjectSize(entry.Id)
-			if err != nil {
-				return 0
-			}
-
-			var cm = commit
-			var i int
-			for {
-				i = i + 1
-				//fmt.Println(".....", i, cm.Id(), cm.ParentCount())
-				if cm.ParentCount() == 0 {
-					break
-				} else if cm.ParentCount() == 1 {
-					pt, _ := repo.SubTree(cm.Parent(0).Tree, dirname)
-					if pt == nil {
-						break
-					}
-					pEntry := pt.EntryByName(entry.Name)
-					if pEntry == nil || !pEntry.Id.Equal(entry.Id) {
-						break
-					} else {
-						cm = cm.Parent(0)
-					}
-				} else {
-					var emptyCnt = 0
-					var sameIdcnt = 0
-					var lastSameCm *git.Commit
-					//fmt.Println(".....", cm.ParentCount())
-					for i := 0; i < cm.ParentCount(); i++ {
-						//fmt.Println("parent", i, cm.Parent(i).Id())
-						p := cm.Parent(i)
-						pt, _ := repo.SubTree(p.Tree, dirname)
-						var pEntry *git.TreeEntry
-						if pt != nil {
-							pEntry = pt.EntryByName(entry.Name)
-						}
-
-						//fmt.Println("pEntry", pEntry)
-
-						if pEntry == nil {
-							emptyCnt = emptyCnt + 1
-							if emptyCnt+sameIdcnt == cm.ParentCount() {
-								if lastSameCm == nil {
-									goto loop
-								} else {
-									cm = lastSameCm
-									break
-								}
-							}
-						} else {
-							//fmt.Println(i, "pEntry", pEntry.Id, "entry", entry.Id)
-							if !pEntry.Id.Equal(entry.Id) {
-								goto loop
-							} else {
-								lastSameCm = cm.Parent(i)
-								sameIdcnt = sameIdcnt + 1
-								if emptyCnt+sameIdcnt == cm.ParentCount() {
-									// TODO: now follow the first parent commit?
-									cm = lastSameCm
-									//fmt.Println("sameId...")
-									break
-								}
-							}
-						}
-					}
-				}
-			}
-
-		loop:
-
-			rp := &RepoFile{
-				entry,
-				path.Join(dirname, entry.Name),
-				size,
-				repo,
-				cm,
-			}
-
-			if entry.IsFile() {
-				repofiles = append(repofiles, rp)
-			} else if entry.IsDir() {
-				repodirs = append(repodirs, rp)
-			}
-		}
-		return 0
-	})
-
-	return append(repodirs, repofiles...), nil
-}
-
-func GetCommit(userName, repoName, branchname, commitid string) (*git.Commit, error) {
-	repo, err := git.OpenRepository(RepoPath(userName, repoName))
-	if err != nil {
-		return nil, err
-	}
-
-	return repo.GetCommit(branchname, commitid)
-}
-
-// GetCommits returns all commits of given branch of repository.
-func GetCommits(userName, reposName, branchname string) (*list.List, error) {
-	repo, err := git.OpenRepository(RepoPath(userName, reposName))
-	if err != nil {
-		return nil, err
-	}
-	r, err := repo.LookupReference(fmt.Sprintf("refs/heads/%s", branchname))
-	if err != nil {
-		return nil, err
-	}
-	return r.AllCommits()
 }

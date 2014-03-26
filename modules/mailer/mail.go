@@ -6,6 +6,7 @@ package mailer
 
 import (
 	"encoding/hex"
+	"errors"
 	"fmt"
 
 	"github.com/gogits/gogs/models"
@@ -15,10 +16,15 @@ import (
 )
 
 // Create New mail message use MailFrom and MailUser
-func NewMailMessage(To []string, subject, body string) Message {
-	msg := NewHtmlMessage(To, base.MailService.User, subject, body)
+func NewMailMessageFrom(To []string, from, subject, body string) Message {
+	msg := NewHtmlMessage(To, from, subject, body)
 	msg.User = base.MailService.User
 	return msg
+}
+
+// Create New mail message use MailFrom and MailUser
+func NewMailMessage(To []string, subject, body string) Message {
+	return NewMailMessageFrom(To, base.MailService.User, subject, body)
 }
 
 func GetMailTmplData(user *models.User) map[interface{}]interface{} {
@@ -83,4 +89,34 @@ func SendActiveMail(r *middleware.Render, user *models.User) {
 	msg.Info = fmt.Sprintf("UID: %d, send email verify mail", user.Id)
 
 	SendAsync(&msg)
+}
+
+// SendNotifyMail sends mail notification of all watchers.
+func SendNotifyMail(userId, repoId int64, userName, repoName, subject, content string) error {
+	watches, err := models.GetWatches(repoId)
+	if err != nil {
+		return errors.New("mail.NotifyWatchers(get watches): " + err.Error())
+	}
+
+	tos := make([]string, 0, len(watches))
+	for i := range watches {
+		uid := watches[i].UserId
+		if userId == uid {
+			continue
+		}
+		u, err := models.GetUserById(uid)
+		if err != nil {
+			return errors.New("mail.NotifyWatchers(get user): " + err.Error())
+		}
+		tos = append(tos, u.Email)
+	}
+
+	if len(tos) == 0 {
+		return nil
+	}
+
+	msg := NewMailMessageFrom(tos, userName, subject, content)
+	msg.Info = fmt.Sprintf("Subject: %s, send notify emails", subject)
+	SendAsync(&msg)
+	return nil
 }
