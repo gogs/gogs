@@ -117,11 +117,6 @@ func ViewIssue(ctx *middleware.Context, params martini.Params) {
 }
 
 func UpdateIssue(ctx *middleware.Context, params martini.Params, form auth.CreateIssueForm) {
-	if !ctx.Repo.IsOwner {
-		ctx.Handle(404, "issue.UpdateIssue", nil)
-		return
-	}
-
 	index, err := base.StrTo(params["index"]).Int()
 	if err != nil {
 		ctx.Handle(404, "issue.UpdateIssue", err)
@@ -135,6 +130,11 @@ func UpdateIssue(ctx *middleware.Context, params martini.Params, form auth.Creat
 		} else {
 			ctx.Handle(200, "issue.UpdateIssue", err)
 		}
+		return
+	}
+
+	if ctx.User.Id != issue.PosterId {
+		ctx.Handle(404, "issue.UpdateIssue", nil)
 		return
 	}
 
