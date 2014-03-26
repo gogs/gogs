@@ -33,17 +33,11 @@ func runUpdate(c *cli.Context) {
 	base.NewConfigContext()
 	models.LoadModelsConfig()
 	models.NewEngine()
-	//level := "0"
-	//os.MkdirAll("log", os.ModePerm)
-	//log.NewLogger(10000, "file", fmt.Sprintf(`{"level":%s,"filename":"%s"}`, level, "log/serv.log"))
-	//log.Info("start update logging...")
 
 	w, _ := os.Create("update.log")
 	defer w.Close()
 
 	log.SetOutput(w)
-
-
 
 	args := c.Args()
 	if len(args) != 3 {
@@ -143,7 +137,7 @@ func runUpdate(c *cli.Context) {
 
 	//commits = append(commits, []string{lastCommit.Id().String(), lastCommit.Message()})
 	if err = models.CommitRepoAction(int64(sUserId), userName,
-		repos.Id, repoName, refName, &base.PushCommits{l.Len(), commits}); err != nil {
+		repos.Id, repoName, git.BranchName(refName), &base.PushCommits{l.Len(), commits}); err != nil {
 		log.Error("runUpdate.models.CommitRepoAction: %v", err)
 	}
 }
