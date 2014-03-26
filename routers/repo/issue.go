@@ -55,11 +55,6 @@ func Issues(ctx *middleware.Context, params martini.Params) {
 }
 
 func CreateIssue(ctx *middleware.Context, params martini.Params, form auth.CreateIssueForm) {
-	if !ctx.Repo.IsOwner {
-		ctx.Handle(404, "issue.CreateIssue", nil)
-		return
-	}
-
 	ctx.Data["Title"] = "Create issue"
 	ctx.Data["IsRepoToolbarIssues"] = true
 
