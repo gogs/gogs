@@ -63,7 +63,8 @@
             <div class="panel-body file-body file-code code-view code-diff">
                 <table>
                     <tbody>
-                        {{range .Content}}
+                        {{range .Sections}}
+                        {{range .Lines}}
                         <tr class="same-code nl-1 ol-1">
                             <td class="lines-num lines-num-old">
                                 <span rel="L1"></span>
@@ -72,9 +73,10 @@
                                 <span rel="L1"></span>
                             </td>
                             <td class="lines-code">
-                                <pre>{{.}}</pre>
+                                <pre>{{.Content}}</pre>
                             </td>
                         </tr>
+                        {{end}}
                         {{end}}
                        <!--  <tr class="same-code nl-2 ol-2">
                             <td class="lines-num lines-num-old">
