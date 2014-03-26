@@ -9,7 +9,7 @@ It is recommend to use this way
 
 	cacheDir := "./cache"
 	defaultImg := "./default.jpg"
-	http.Handle("/avatar/", avatar.HttpHandler(cacheDir, defaultImg))
+	http.Handle("/avatar/", avatar.CacheServer(cacheDir, defaultImg))
 */
 package avatar
 
@@ -135,12 +135,12 @@ func (this *Avatar) UpdateTimeout(timeout time.Duration) error {
 	return err
 }
 
-type avatarHandler struct {
+type service struct {
 	cacheDir string
 	altImage string
 }
 
-func (this *avatarHandler) mustInt(r *http.Request, defaultValue int, keys ...string) int {
+func (this *service) mustInt(r *http.Request, defaultValue int, keys ...string) int {
 	var v int
 	for _, k := range keys {
 		if _, err := fmt.Sscanf(r.FormValue(k), "%d", &v); err == nil {
@@ -150,7 +150,7 @@ func (this *avatarHandler) mustInt(r *http.Request, defaultValue int, keys ...st
 	return defaultValue
 }
 
-func (this *avatarHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (this *service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	urlPath := r.URL.Path
 	hash := urlPath[strings.LastIndex(urlPath, "/")+1:]
 	size := this.mustInt(r, 80, "s", "size") // default size = 80*80
@@ -183,9 +183,9 @@ func (this *avatarHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// http.Handle("/avatar/", avatar.HttpHandler("./cache"))
-func HttpHandler(cacheDir string, defaultImgPath string) http.Handler {
-	return &avatarHandler{
+// http.Handle("/avatar/", avatar.CacheServer("./cache"))
+func CacheServer(cacheDir string, defaultImgPath string) http.Handler {
+	return &service{
 		cacheDir: cacheDir,
 		altImage: defaultImgPath,
 	}
