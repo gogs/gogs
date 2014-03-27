@@ -53,7 +53,7 @@ func IsTextFile(data []byte) (string, bool) {
 
 func IsImageFile(data []byte) (string, bool) {
 	contentType := http.DetectContentType(data)
-	if strings.Index(contentType, "img/") != -1 {
+	if strings.Index(contentType, "image/") != -1 {
 		return contentType, true
 	}
 	return contentType, false
