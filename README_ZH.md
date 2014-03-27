@@ -54,3 +54,7 @@ Gogs 完全使用 Go 语言来实现对 Git 数据的操作，实现 **零** 依
 ## 贡献成员
 
 本项目最初由 [Unknown](https://github.com/Unknwon) 和 [lunny](https://github.com/lunny) 发起，随后 [fuxiaohei](https://github.com/fuxiaohei) 与 [slene](https://github.com/slene) 加入到开发团队。您可以通过查看 [贡献者页面](https://github.com/gogits/gogs/graphs/contributors) 获取完整的贡献者列表。
+
+## 授权许可
+
+Gogs 采用 MIT 开源授权许可证，完整的授权说明已放置在 [LICENSE](https://github.com/gogits/gogs/blob/master/LICENSE) 文件中。

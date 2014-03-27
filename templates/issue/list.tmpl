@@ -7,15 +7,15 @@
         <div class="col-md-3 filter-list">
             <ul class="list-unstyled">
                 <li><a href="#" class="active">All Issues <strong class="pull-right">{{.IssueCount}}</strong></a></li>
-                <li><a href="#">My Issues</a></li>
-                <li><a href="#">Mentioned</a></li>
+                <!-- <li><a href="#">My Issues</a></li>
+                <li><a href="#">Mentioned</a></li> -->
             </ul>
         </div>
         <div class="col-md-9">
             <div class="filter-option">
                 <div class="btn-group">
-                    <a class="btn btn-default active issue-open" href="#">{{.OpenCount}} Open</a>
-                    <a class="btn btn-default issue-close" href="#">{{.ClosedCount}} Closed</a>
+                    <a class="btn btn-default issue-open{{if not .IsShowClosed}} active{{end}}" href="/{{.RepositoryLink}}/issues">{{.OpenCount}} Open</a>
+                    <a class="btn btn-default issue-close{{if .IsShowClosed}} active{{end}}" href="/{{.RepositoryLink}}/issues?state=closed">{{.ClosedCount}} Closed</a>
                 </div>
             </div>
             <div class="issues list-group">

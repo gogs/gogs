@@ -72,20 +72,22 @@ func NewRepoContext() {
 
 // Repository represents a git repository.
 type Repository struct {
-	Id          int64
-	OwnerId     int64 `xorm:"unique(s)"`
-	ForkId      int64
-	LowerName   string `xorm:"unique(s) index not null"`
-	Name        string `xorm:"index not null"`
-	Description string
-	Website     string
-	NumWatches  int
-	NumStars    int
-	NumForks    int
-	IsPrivate   bool
-	IsBare      bool
-	Created     time.Time `xorm:"created"`
-	Updated     time.Time `xorm:"updated"`
+	Id              int64
+	OwnerId         int64 `xorm:"unique(s)"`
+	ForkId          int64
+	LowerName       string `xorm:"unique(s) index not null"`
+	Name            string `xorm:"index not null"`
+	Description     string
+	Website         string
+	NumWatches      int
+	NumStars        int
+	NumForks        int
+	NumIssues       int
+	NumClosedIssues int
+	IsPrivate       bool
+	IsBare          bool
+	Created         time.Time `xorm:"created"`
+	Updated         time.Time `xorm:"updated"`
 }
 
 // IsRepositoryExist returns true if the repository with given name under user has already existed.
@@ -491,11 +493,16 @@ func NotifyWatchers(act *Action) error {
 	if err != nil {
 		return errors.New("repo.NotifyWatchers(get watches): " + err.Error())
 	}
-	watches = append(watches, Watch{UserId: act.ActUserId})
+
+	// Add feed for actioner.
+	act.UserId = act.ActUserId
+	if _, err = orm.InsertOne(act); err != nil {
+		return errors.New("repo.NotifyWatchers(create action): " + err.Error())
+	}
 
 	for i := range watches {
-		if act.ActUserId == watches[i].UserId && i > 0 {
-			continue // Do not add twice in case author watches his/her repository.
+		if act.ActUserId == watches[i].UserId {
+			continue
 		}
 
 		act.UserId = watches[i].UserId
