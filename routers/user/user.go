@@ -289,6 +289,9 @@ func Issues(ctx *middleware.Context) {
 	ctx.Data["ViewType"] = "all"
 
 	page, _ := base.StrTo(ctx.Query("page")).Int()
+	repoId, _ := base.StrTo(ctx.Query("repoid")).Int64()
+
+	ctx.Data["RepoId"] = repoId
 
 	var posterId int64 = 0
 	if ctx.Query("type") == "created_by" {
@@ -299,9 +302,11 @@ func Issues(ctx *middleware.Context) {
 	// Get all repositories.
 	repos, err := models.GetRepositories(ctx.User)
 	if err != nil {
-		ctx.Handle(200, "user.Issues(get repository)", err)
+		ctx.Handle(200, "user.Issues(get repositories)", err)
 		return
 	}
+
+	showRepos := make([]models.Repository, 0, len(repos))
 
 	var closedIssueCount, createdByCount int
 
@@ -315,8 +320,18 @@ func Issues(ctx *middleware.Context) {
 		}
 
 		closedIssueCount += repo.NumClosedIssues
-		repos[i].NumOpenIssues = repo.NumIssues - repo.NumClosedIssues
+
+		// Set repository information to issues.
+		for j := range issues {
+			issues[j].Repo = &repos[i]
+		}
 		allIssues = append(allIssues, issues...)
+
+		repos[i].NumOpenIssues = repo.NumIssues - repo.NumClosedIssues
+		if repos[i].NumOpenIssues > 0 {
+			showRepos = append(showRepos, repos[i])
+
+		}
 	}
 
 	showIssues := make([]models.Issue, 0, len(allIssues))
@@ -335,12 +350,16 @@ func Issues(ctx *middleware.Context) {
 			createdByCount++
 		}
 
+		if repoId > 0 && repoId != allIssues[i].Repo.Id {
+			continue
+		}
+
 		if isShowClosed == allIssues[i].IsClosed {
 			showIssues = append(showIssues, allIssues[i])
 		}
 	}
 
-	ctx.Data["Repos"] = repos
+	ctx.Data["Repos"] = showRepos
 	ctx.Data["Issues"] = showIssues
 	ctx.Data["AllIssueCount"] = len(allIssues)
 	ctx.Data["ClosedIssueCount"] = closedIssueCount

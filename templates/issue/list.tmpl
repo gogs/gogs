@@ -15,8 +15,8 @@
         <div class="col-md-9">
             <div class="filter-option">
                 <div class="btn-group">
-                    <a class="btn btn-default issue-open{{if not .IsShowClosed}} active{{end}}" href="/{{.RepositoryLink}}/issues">{{.OpenCount}} Open</a>
-                    <a class="btn btn-default issue-close{{if .IsShowClosed}} active{{end}}" href="/{{.RepositoryLink}}/issues?state=closed">{{.ClosedCount}} Closed</a>
+                    <a class="btn btn-default issue-open{{if not .IsShowClosed}} active{{end}}" href="/{{.RepositoryLink}}/issues?type={{.ViewType}}">{{.OpenCount}} Open</a>
+                    <a class="btn btn-default issue-close{{if .IsShowClosed}} active{{end}}" href="/{{.RepositoryLink}}/issues?state=closed&type={{.ViewType}}">{{.ClosedCount}} Closed</a>
                 </div>
             </div>
             <div class="issues list-group">

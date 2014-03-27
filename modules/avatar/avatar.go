@@ -47,6 +47,7 @@ func HashEmail(email string) string {
 	return hex.EncodeToString(h.Sum(nil))
 }
 
+// Avatar represents the avatar object.
 type Avatar struct {
 	Hash           string
 	AlterImage     string // image path
@@ -96,8 +97,8 @@ func (this *Avatar) Encode(wr io.Writer, size int) (err error) {
 			return
 		}
 		defer fd.Close()
-		img, err = jpeg.Decode(fd)
-		if err != nil {
+
+		if img, err = jpeg.Decode(fd); err != nil {
 			fd.Seek(0, os.SEEK_SET)
 			img, err = png.Decode(fd)
 		}
@@ -110,8 +111,8 @@ func (this *Avatar) Encode(wr io.Writer, size int) (err error) {
 		}
 		imgPath = this.AlterImage
 	}
-	img, err = decodeImageFile(imgPath)
-	if err != nil {
+
+	if img, err = decodeImageFile(imgPath); err != nil {
 		return
 	}
 	m := resize.Resize(uint(size), 0, img, resize.Lanczos3)
@@ -124,8 +125,7 @@ func (this *Avatar) Update() {
 		this.imagePath)
 }
 
-func (this *Avatar) UpdateTimeout(timeout time.Duration) error {
-	var err error
+func (this *Avatar) UpdateTimeout(timeout time.Duration) (err error) {
 	select {
 	case <-time.After(timeout):
 		err = fmt.Errorf("get gravatar image %s timeout", this.Hash)
@@ -140,8 +140,7 @@ type service struct {
 	altImage string
 }
 
-func (this *service) mustInt(r *http.Request, defaultValue int, keys ...string) int {
-	var v int
+func (this *service) mustInt(r *http.Request, defaultValue int, keys ...string) (v int) {
 	for _, k := range keys {
 		if _, err := fmt.Sscanf(r.FormValue(k), "%d", &v); err == nil {
 			defaultValue = v
@@ -176,8 +175,8 @@ func (this *service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("ETag", etag)
 	}
 	w.Header().Set("Content-Type", "image/jpeg")
-	err := avatar.Encode(w, size)
-	if err != nil {
+
+	if err := avatar.Encode(w, size); err != nil {
 		log.Warn("avatar encode error: %v", err)
 		w.WriteHeader(500)
 	}

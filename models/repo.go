@@ -436,7 +436,8 @@ func GetRepositoryByName(userId int64, repoName string) (*Repository, error) {
 }
 
 // GetRepositoryById returns the repository by given id if exists.
-func GetRepositoryById(id int64) (repo *Repository, err error) {
+func GetRepositoryById(id int64) (*Repository, error) {
+	repo := &Repository{}
 	has, err := orm.Id(id).Get(repo)
 	if err != nil {
 		return nil, err

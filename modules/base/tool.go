@@ -412,6 +412,11 @@ func (f StrTo) Int() (int, error) {
 	return int(v), err
 }
 
+func (f StrTo) Int64() (int64, error) {
+	v, err := strconv.ParseInt(f.String(), 10, 64)
+	return int64(v), err
+}
+
 func (f StrTo) String() string {
 	if f.Exist() {
 		return string(f)
@@ -541,16 +546,10 @@ func ActionDesc(act Actioner, avatarLink string) string {
 }
 
 func DiffTypeToStr(diffType int) string {
-	switch diffType {
-	case 1:
-		return "add"
-	case 2:
-		return "modify"
-	case 3:
-		return "del"
-	default:
-		return "unknown"
+	diffTypes := map[int]string{
+		1: "add", 2: "modify", 3: "del",
 	}
+	return diffTypes[diffType]
 }
 
 func DiffLineTypeToStr(diffType int) string {

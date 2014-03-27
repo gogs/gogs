@@ -21,7 +21,8 @@ type Issue struct {
 	Id          int64
 	Index       int64 // Index in one repository.
 	Name        string
-	RepoId      int64 `xorm:"index"`
+	RepoId      int64       `xorm:"index"`
+	Repo        *Repository `xorm:"-"`
 	PosterId    int64
 	Poster      *User `xorm:"-"`
 	MilestoneId int64
