@@ -120,15 +120,20 @@ func Single(ctx *middleware.Context, params martini.Params) {
 
 			data := blob.Contents()
 			_, isTextFile := base.IsTextFile(data)
+			_, isImageFile := base.IsImageFile(data)
 			ctx.Data["FileIsText"] = isTextFile
 
-			readmeExist := base.IsMarkdownFile(repoFile.Name) || base.IsReadmeFile(repoFile.Name)
-			ctx.Data["ReadmeExist"] = readmeExist
-			if readmeExist {
-				ctx.Data["FileContent"] = string(base.RenderMarkdown(data, ""))
+			if isImageFile {
+				ctx.Data["IsImageFile"] = true
 			} else {
-				if isTextFile {
-					ctx.Data["FileContent"] = string(data)
+				readmeExist := base.IsMarkdownFile(repoFile.Name) || base.IsReadmeFile(repoFile.Name)
+				ctx.Data["ReadmeExist"] = readmeExist
+				if readmeExist {
+					ctx.Data["FileContent"] = string(base.RenderMarkdown(data, ""))
+				} else {
+					if isTextFile {
+						ctx.Data["FileContent"] = string(data)
+					}
 				}
 			}
 		}
@@ -236,9 +241,9 @@ func SingleDownload(ctx *middleware.Context, params martini.Params) {
 
 	data := blob.Contents()
 	contentType, isTextFile := base.IsTextFile(data)
+	_, isImageFile := base.IsImageFile(data)
 	ctx.Res.Header().Set("Content-Type", contentType)
 	if !isTextFile {
-		ctx.Res.Header().Set("Content-Type", contentType)
 		ctx.Res.Header().Set("Content-Disposition", "attachment; filename="+filepath.Base(treename))
 		ctx.Res.Header().Set("Content-Transfer-Encoding", "binary")
 	}
