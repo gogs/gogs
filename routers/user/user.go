@@ -286,6 +286,66 @@ func Feeds(ctx *middleware.Context, form auth.FeedsForm) {
 
 func Issues(ctx *middleware.Context) {
 	ctx.Data["Title"] = "Your Issues"
+	ctx.Data["ViewType"] = "all"
+
+	page, _ := base.StrTo(ctx.Query("page")).Int()
+
+	var posterId int64 = 0
+	if ctx.Query("type") == "created_by" {
+		posterId = ctx.User.Id
+		ctx.Data["ViewType"] = "created_by"
+	}
+
+	// Get all repositories.
+	repos, err := models.GetRepositories(ctx.User)
+	if err != nil {
+		ctx.Handle(200, "user.Issues(get repository)", err)
+		return
+	}
+
+	var closedIssueCount, createdByCount int
+
+	// Get all issues.
+	allIssues := make([]models.Issue, 0, 5*len(repos))
+	for i, repo := range repos {
+		issues, err := models.GetIssues(0, repo.Id, posterId, 0, page, false, false, "", "")
+		if err != nil {
+			ctx.Handle(200, "user.Issues(get issues)", err)
+			return
+		}
+
+		closedIssueCount += repo.NumClosedIssues
+		repos[i].NumOpenIssues = repo.NumIssues - repo.NumClosedIssues
+		allIssues = append(allIssues, issues...)
+	}
+
+	showIssues := make([]models.Issue, 0, len(allIssues))
+	isShowClosed := ctx.Query("state") == "closed"
+	ctx.Data["IsShowClosed"] = isShowClosed
+
+	// Get posters and filter issues.
+	for i := range allIssues {
+		u, err := models.GetUserById(allIssues[i].PosterId)
+		if err != nil {
+			ctx.Handle(200, "user.Issues(get poster): %v", err)
+			return
+		}
+		allIssues[i].Poster = u
+		if u.Id == ctx.User.Id {
+			createdByCount++
+		}
+
+		if isShowClosed == allIssues[i].IsClosed {
+			showIssues = append(showIssues, allIssues[i])
+		}
+	}
+
+	ctx.Data["Repos"] = repos
+	ctx.Data["Issues"] = showIssues
+	ctx.Data["AllIssueCount"] = len(allIssues)
+	ctx.Data["ClosedIssueCount"] = closedIssueCount
+	ctx.Data["OpenIssueCount"] = len(allIssues) - closedIssueCount
+	ctx.Data["CreatedByCount"] = createdByCount
 	ctx.HTML(200, "issue/user")
 }
 

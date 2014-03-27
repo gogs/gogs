@@ -21,13 +21,21 @@ func Issues(ctx *middleware.Context) {
 	ctx.Data["Title"] = "Issues"
 	ctx.Data["IsRepoToolbarIssues"] = true
 	ctx.Data["IsRepoToolbarIssuesList"] = true
+	ctx.Data["ViewType"] = "all"
 
 	milestoneId, _ := base.StrTo(ctx.Query("milestone")).Int()
 	page, _ := base.StrTo(ctx.Query("page")).Int()
 
+	var posterId int64 = 0
+	if ctx.Query("type") == "created_by" {
+		posterId = ctx.User.Id
+		ctx.Data["ViewType"] = "created_by"
+	}
+	ctx.Data["IssueCreatedCount"] = models.GetUserIssueCount(ctx.User.Id, ctx.Repo.Repository.Id)
+
 	// Get issues.
-	issues, err := models.GetIssues(0, ctx.Repo.Repository.Id, 0,
-		int64(milestoneId), page, ctx.Query("state") == "closed", false, ctx.Query("labels"), ctx.Query("sortType"))
+	issues, err := models.GetIssues(0, ctx.Repo.Repository.Id, posterId, int64(milestoneId), page,
+		ctx.Query("state") == "closed", false, ctx.Query("labels"), ctx.Query("sortType"))
 	if err != nil {
 		ctx.Handle(200, "issue.Issues: %v", err)
 		return
