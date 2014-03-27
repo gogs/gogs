@@ -4,12 +4,16 @@
 {{template "repo/toolbar" .}}
 <div id="body" class="container">
     <div id="issue">
-        <div id="issue-id" class="issue-whole">
+        <div id="issue-{issue.id}" class="issue-whole">
             <div class="issue-head clearfix">
                 <div class="number pull-right">#{{.Issue.Index}}</div>
                 <a class="author pull-left" href="/user/{{.Issue.Poster.Name}}"><img class="avatar" src="{{.Issue.Poster.AvatarLink}}" alt="" width="30"/></a>
                 <h1 class="title pull-left">{{.Issue.Name}}</h1>
+                <input id="issue-edit-title" class="form-control input-lg pull-left hidden" type="text" value="{issue.title}" data-ajax-rel="issue-save"/>
                 <p class="info pull-left">
+                    <a class="btn btn-default pull-right issue-edit" href="#" id="issue-edit-btn">Edit</a>
+                    <a class="btn btn-danger pull-right issue-edit-cancel hidden" href="#">Cancel</a>
+                    <a class="btn btn-primary pull-right issue-edit-save hidden" href="#" data-ajax="{issue.save.link}" data-ajax-name="issue-save">Save</a>
                     <span class="status label label-{{if .Issue.IsClosed}}danger{{else}}success{{end}}">{{if .Issue.IsClosed}}Closed{{else}}Open{{end}}</span>
                     <a href="/user/{{.Issue.Poster.Name}}" class="author"><strong>{{.Issue.Poster.Name}}</strong></a> opened this issue
                     <span class="time">{{TimeSince .Issue.Created}}</span> · {{.Issue.NumComments}} comments
@@ -18,15 +22,21 @@
             <div class="issue-main">
                <div class="panel panel-default issue-content">
                    <div class="panel-body markdown">
-                      {{str2html .Issue.Content}}
+                       <div class="content">
+                           {{str2html .Issue.Content}}
+                       </div>
+                       <textarea class="form-control hidden" name="content" id="issue-edit-content" rows="10" data-ajax-rel="issue-save">content</textarea>
                    </div>
                </div>
                {{range .Comments}}
-               <div class="issue-child">
+               <div class="issue-child" id="issue-comment-{issue.comment.id}">
                    <a class="user pull-left" href="/user/{{.Poster.Name}}"><img class="avatar" src="{{.Poster.AvatarLink}}" alt=""/></a>
                    <div class="issue-content panel panel-default">
                        <div class="panel-heading">
                            <a href="/user/{{.Poster.Name}}" class="user">{{.Poster.Name}}</a> commented <span class="time">{{TimeSince .Created}}</span>
+                           <a class="issue-comment-del pull-right issue-action" href="#" title="Edit Comment"><i class="fa fa-times-circle"></i></a>
+                           <a class="issue-comment-edit pull-right issue-action" href="#" title="Remove Comment" data-url="{remove-link}"><i class="fa fa-edit"></i></a>
+                           <span class="role label label-default pull-right">Owner</span>
                        </div>
                        <div class="panel-body markdown">
                           {{str2html .Content}}
@@ -52,7 +62,7 @@
                                     <div class="tab-pane" id="issue-textarea">
                                         <div class="form-group">
                                             <input type="hidden" value="{{.Issue.Index}}" name="issueIndex"/>
-                                            <textarea class="form-control" name="content" id="issue-content" rows="10" placeholder="Write some content">{{.content}}</textarea>
+                                            <textarea class="form-control" name="content" id="issue-reply-content" rows="10" placeholder="Write some content">{{.content}}</textarea>
                                         </div>
                                     </div>
                                     <div class="tab-pane" id="issue-preview">preview</div>
@@ -61,7 +71,9 @@
                             <div class="text-right">
                                 <div class="form-group">
                                     <input type="hidden" value="id" name="repo-id"/>
-                                    <button class="btn-success btn">Comment</button>
+                                    <button class="btn-default btn issue-open" id="issue-open-btn" data-origin="Open" data-text="Open & Comment">Open</button>&nbsp;&nbsp;
+                                    <button class="btn-default btn issue-close" id="issue-close-btn" data-origin="Close" data-text="Close & Comment">Close</button>&nbsp;&nbsp;
+                                    <button class="btn-success btn" id="issue-reply-btn">Comment</button>
                                 </div>
                             </div>
                         </div>
