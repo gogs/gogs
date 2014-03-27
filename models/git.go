@@ -38,8 +38,8 @@ func (file *RepoFile) LookupBlob() (*git.Blob, error) {
 }
 
 // GetBranches returns all branches of given repository.
-func GetBranches(userName, reposName string) ([]string, error) {
-	repo, err := git.OpenRepository(RepoPath(userName, reposName))
+func GetBranches(userName, repoName string) ([]string, error) {
+	repo, err := git.OpenRepository(RepoPath(userName, repoName))
 	if err != nil {
 		return nil, err
 	}
@@ -56,8 +56,16 @@ func GetBranches(userName, reposName string) ([]string, error) {
 	return brs, nil
 }
 
-func GetTargetFile(userName, reposName, branchName, commitId, rpath string) (*RepoFile, error) {
-	repo, err := git.OpenRepository(RepoPath(userName, reposName))
+func IsBranchExist(userName, repoName, branchName string) bool {
+	repo, err := git.OpenRepository(RepoPath(userName, repoName))
+	if err != nil {
+		return false
+	}
+	return repo.IsBranchExist(branchName)
+}
+
+func GetTargetFile(userName, repoName, branchName, commitId, rpath string) (*RepoFile, error) {
+	repo, err := git.OpenRepository(RepoPath(userName, repoName))
 	if err != nil {
 		return nil, err
 	}
@@ -102,8 +110,8 @@ func GetTargetFile(userName, reposName, branchName, commitId, rpath string) (*Re
 }
 
 // GetReposFiles returns a list of file object in given directory of repository.
-func GetReposFiles(userName, reposName, branchName, commitId, rpath string) ([]*RepoFile, error) {
-	repo, err := git.OpenRepository(RepoPath(userName, reposName))
+func GetReposFiles(userName, repoName, branchName, commitId, rpath string) ([]*RepoFile, error) {
+	repo, err := git.OpenRepository(RepoPath(userName, repoName))
 	if err != nil {
 		return nil, err
 	}
@@ -217,13 +225,27 @@ func GetCommit(userName, repoName, branchname, commitid string) (*git.Commit, er
 	return repo.GetCommit(branchname, commitid)
 }
 
-// GetCommits returns all commits of given branch of repository.
-func GetCommits(userName, reposName, branchname string) (*list.List, error) {
-	repo, err := git.OpenRepository(RepoPath(userName, reposName))
+// GetCommitsByBranch returns all commits of given branch of repository.
+func GetCommitsByBranch(userName, repoName, branchName string) (*list.List, error) {
+	repo, err := git.OpenRepository(RepoPath(userName, repoName))
 	if err != nil {
 		return nil, err
 	}
-	r, err := repo.LookupReference(fmt.Sprintf("refs/heads/%s", branchname))
+	r, err := repo.LookupReference(fmt.Sprintf("refs/heads/%s", branchName))
+	if err != nil {
+		return nil, err
+	}
+	return r.AllCommits()
+}
+
+// GetCommitsByCommitId returns all commits of given commitId of repository.
+func GetCommitsByCommitId(userName, repoName, commitId string) (*list.List, error) {
+	repo, err := git.OpenRepository(RepoPath(userName, repoName))
+	if err != nil {
+		return nil, err
+	}
+	fmt.Println(userName, repoName, commitId)
+	r, err := repo.LookupReference(commitId)
 	if err != nil {
 		return nil, err
 	}
