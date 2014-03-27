@@ -243,7 +243,7 @@ func SingleDownload(ctx *middleware.Context, params martini.Params) {
 	contentType, isTextFile := base.IsTextFile(data)
 	_, isImageFile := base.IsImageFile(data)
 	ctx.Res.Header().Set("Content-Type", contentType)
-	if !isTextFile {
+	if !isTextFile && !isImageFile {
 		ctx.Res.Header().Set("Content-Disposition", "attachment; filename="+filepath.Base(treename))
 		ctx.Res.Header().Set("Content-Transfer-Encoding", "binary")
 	}
