@@ -96,12 +96,11 @@ func IsRepositoryExist(user *User, repoName string) (bool, error) {
 	has, err := orm.Where("lower_name = ?", strings.ToLower(repoName)).Get(&repo)
 	if err != nil {
 		return has, err
+	} else if !has {
+		return false, nil
 	}
-	s, err := os.Stat(RepoPath(user.Name, repoName))
-	if err != nil {
-		return false, nil // Error simply means does not exist, but we don't want to show up.
-	}
-	return s.IsDir(), nil
+
+	return com.IsDir(RepoPath(user.Name, repoName)), nil
 }
 
 var (
@@ -224,16 +223,24 @@ func initRepoCommit(tmpPath string, sig *git.Signature) (err error) {
 	if _, stderr, err = com.ExecCmdDir(tmpPath, "git", "add", "--all"); err != nil {
 		return err
 	}
-	log.Trace("stderr(1): %s", stderr)
+	if len(stderr) > 0 {
+		log.Trace("stderr(1): %s", stderr)
+	}
+
 	if _, stderr, err = com.ExecCmdDir(tmpPath, "git", "commit", fmt.Sprintf("--author='%s <%s>'", sig.Name, sig.Email),
 		"-m", "Init commit"); err != nil {
 		return err
 	}
-	log.Trace("stderr(2): %s", stderr)
+	if len(stderr) > 0 {
+		log.Trace("stderr(2): %s", stderr)
+	}
+
 	if _, stderr, err = com.ExecCmdDir(tmpPath, "git", "push", "origin", "master"); err != nil {
 		return err
 	}
-	log.Trace("stderr(3): %s", stderr)
+	if len(stderr) > 0 {
+		log.Trace("stderr(3): %s", stderr)
+	}
 	return nil
 }
 
@@ -243,10 +250,9 @@ func createHookUpdate(hookPath, content string) error {
 		return err
 	}
 	defer pu.Close()
-	if _, err = pu.WriteString(content); err != nil {
-		return err
-	}
-	return nil
+
+	_, err = pu.WriteString(content)
+	return err
 }
 
 // InitRepository initializes README and .gitignore if needed.
@@ -322,10 +328,7 @@ func initRepository(f string, user *User, repo *Repository, initReadme bool, rep
 	}
 
 	// Apply changes and commit.
-	if err := initRepoCommit(tmpDir, user.NewGitSig()); err != nil {
-		return err
-	}
-	return nil
+	return initRepoCommit(tmpDir, user.NewGitSig())
 }
 
 // UserRepo reporesents a repository with user name.
