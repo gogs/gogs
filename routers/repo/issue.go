@@ -17,23 +17,22 @@ import (
 	"github.com/gogits/gogs/modules/middleware"
 )
 
-func Issues(ctx *middleware.Context, params martini.Params) {
+func Issues(ctx *middleware.Context) {
 	ctx.Data["Title"] = "Issues"
 	ctx.Data["IsRepoToolbarIssues"] = true
 	ctx.Data["IsRepoToolbarIssuesList"] = true
 
-	milestoneId, _ := base.StrTo(params["milestone"]).Int()
-	page, _ := base.StrTo(params["page"]).Int()
+	milestoneId, _ := base.StrTo(ctx.Query("milestone")).Int()
+	page, _ := base.StrTo(ctx.Query("page")).Int()
 
 	// Get issues.
 	issues, err := models.GetIssues(0, ctx.Repo.Repository.Id, 0,
-		int64(milestoneId), page, params["state"] == "closed", false, params["labels"], params["sortType"])
+		int64(milestoneId), page, ctx.Query("state") == "closed", false, ctx.Query("labels"), ctx.Query("sortType"))
 	if err != nil {
 		ctx.Handle(200, "issue.Issues: %v", err)
 		return
 	}
 
-	var closedCount int
 	// Get posters.
 	for i := range issues {
 		u, err := models.GetUserById(issues[i].PosterId)
@@ -41,17 +40,14 @@ func Issues(ctx *middleware.Context, params martini.Params) {
 			ctx.Handle(200, "issue.Issues(get poster): %v", err)
 			return
 		}
-
-		if issues[i].IsClosed {
-			closedCount++
-		}
 		issues[i].Poster = u
 	}
 
 	ctx.Data["Issues"] = issues
-	ctx.Data["IssueCount"] = len(issues)
-	ctx.Data["OpenCount"] = len(issues) - closedCount
-	ctx.Data["ClosedCount"] = closedCount
+	ctx.Data["IssueCount"] = ctx.Repo.Repository.NumIssues
+	ctx.Data["OpenCount"] = ctx.Repo.Repository.NumIssues - ctx.Repo.Repository.NumClosedIssues
+	ctx.Data["ClosedCount"] = ctx.Repo.Repository.NumClosedIssues
+	ctx.Data["IsShowClosed"] = ctx.Query("state") == "closed"
 	ctx.HTML(200, "issue/list")
 }
 
@@ -71,7 +67,7 @@ func CreateIssue(ctx *middleware.Context, params martini.Params, form auth.Creat
 	}
 
 	issue, err := models.CreateIssue(ctx.User.Id, ctx.Repo.Repository.Id, form.MilestoneId, form.AssigneeId,
-		form.IssueName, form.Labels, form.Content, false)
+		ctx.Repo.Repository.NumIssues, form.IssueName, form.Labels, form.Content, false)
 	if err != nil {
 		ctx.Handle(200, "issue.CreateIssue", err)
 		return
