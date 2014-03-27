@@ -60,7 +60,13 @@
                 <a class="btn btn-default btn-sm pull-right" href="{{$.SourcePath}}/{{.Name}}">View File</a>
                 <span class="file">{{.Name}}</span>
             </div>
+            {{$isImage := (call $.IsImageFile .Name)}}
             <div class="panel-body file-body file-code code-view code-diff">
+                {{if $isImage}}
+                    <div class="text-center">
+                        <img src="{{$.RawPath}}/{{.Name}}">
+                    </div>
+                {{else}}
                 <table>
                     <tbody>
                         {{range .Sections}}
@@ -201,6 +207,7 @@
                         </tr> -->
                     </tbody>
                 </table>
+                {{end}}
             </div>
         </div>
         {{end}}
