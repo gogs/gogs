@@ -6,12 +6,12 @@ package repo
 
 import (
 	"container/list"
-	"fmt"
 	"path"
 
 	"github.com/codegangsta/martini"
 
 	"github.com/gogits/gogs/models"
+	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/middleware"
 )
 
@@ -50,25 +50,49 @@ func Commits(ctx *middleware.Context, params martini.Params) {
 }
 
 func Diff(ctx *middleware.Context, params martini.Params) {
-	fmt.Println(params["branchname"])
-	commit, err := models.GetCommit(params["username"], params["reponame"], params["branchname"], params["commitid"])
+	userName := params["username"]
+	repoName := params["reponame"]
+	branchName := params["branchname"]
+	commitId := params["commitid"]
+
+	commit, err := models.GetCommit(userName, repoName, branchName, commitId)
 	if err != nil {
 		ctx.Handle(404, "repo.Diff", err)
 		return
 	}
 
-	diff, err := models.GetDiff(models.RepoPath(params["username"], params["reponame"]), params["commitid"])
+	diff, err := models.GetDiff(models.RepoPath(userName, repoName), commitId)
 	if err != nil {
 		ctx.Handle(404, "repo.Diff", err)
 		return
+	}
+
+	isImageFile := func(name string) bool {
+		repoFile, err := models.GetTargetFile(userName, repoName,
+			branchName, commitId, name)
+
+		if err != nil {
+			return false
+		}
+
+		blob, err := repoFile.LookupBlob()
+		if err != nil {
+			return false
+		}
+
+		data := blob.Contents()
+		_, isImage := base.IsImageFile(data)
+		return isImage
 	}
 
 	shortSha := params["commitid"][:10]
+	ctx.Data["IsImageFile"] = isImageFile
 	ctx.Data["Title"] = commit.Message() + " · " + shortSha
 	ctx.Data["Commit"] = commit
 	ctx.Data["ShortSha"] = shortSha
 	ctx.Data["Diff"] = diff
 	ctx.Data["IsRepoToolbarCommits"] = true
-	ctx.Data["SourcePath"] = "/" + path.Join(params["username"], params["reponame"], "src", params["commitid"])
+	ctx.Data["SourcePath"] = "/" + path.Join(userName, repoName, "src", commitId)
+	ctx.Data["RawPath"] = "/" + path.Join(userName, repoName, "raw", commitId)
 	ctx.HTML(200, "repo/diff")
 }
