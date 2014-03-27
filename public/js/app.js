@@ -352,6 +352,24 @@ function initRepository() {
     }());
 }
 
+function initInstall(){
+    $('#install-database').on("change", function () {
+        var val = $(this).val();
+        if (val != "sqlite") {
+            $('.server-sql').show();
+            $('.sqlite-setting').addClass("hide");
+            if (val == "pgsql") {
+                $('.pgsql-setting').removeClass("hide");
+            } else {
+                $('.pgsql-setting').addClass("hide");
+            }
+        } else {
+            $('.server-sql').hide();
+            $('.sqlite-setting').removeClass("hide");
+        }
+    });
+}
+
 (function ($) {
     $(function () {
         initCore();
@@ -364,6 +382,9 @@ function initRepository() {
         }
         if ($('.repo-nav').length) {
             initRepository();
+        }
+        if($('#install-card').length){
+            initInstall();
         }
     });
 })(jQuery);
