@@ -23,7 +23,11 @@
     </div>
     {{if not .FileIsText}}
         <div class="panel-footer text-center">
-            <a href="{{.FileLink}}" class="btn btn-default">View Raw</a>
+            {{if .IsImageFile}}
+                <img src="{{.FileLink}}">
+            {{else}}
+                <a href="{{.FileLink}}" class="btn btn-default">View Raw</a>
+            {{end}}
         </div>
     {{else}}
         {{if .ReadmeExist}}
