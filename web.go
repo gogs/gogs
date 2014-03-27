@@ -138,6 +138,10 @@ func runWeb(*cli.Context) {
 		r.Any("/:userid/delete", admin.DeleteUser)
 	}, adminReq)
 
+	if martini.Env == martini.Dev {
+		m.Get("/template/**", dev.TemplatePreview)
+	}
+
 	m.Group("/:username/:reponame", func(r martini.Router) {
 		r.Post("/settings", repo.SettingPost)
 		r.Get("/settings", repo.Setting)
@@ -167,10 +171,6 @@ func runWeb(*cli.Context) {
 		r.Get("/:reponame", middleware.RepoAssignment(true), repo.Single)
 		r.Any("/:reponame/**", repo.Http)
 	}, ignSignIn)
-
-	if martini.Env == martini.Dev {
-		m.Get("/template/**", dev.TemplatePreview)
-	}
 
 	// Not found handler.
 	m.NotFound(routers.NotFound)

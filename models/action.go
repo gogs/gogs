@@ -23,7 +23,8 @@ const (
 	OP_PULL_REQUEST
 )
 
-// Action represents user operation type and information to the repository.
+// Action represents user operation type and other information to repository.,
+// it implemented interface base.Actioner so that can be used in template render.
 type Action struct {
 	Id          int64
 	UserId      int64  // Receiver user id.
@@ -57,7 +58,7 @@ func (a Action) GetContent() string {
 	return a.Content
 }
 
-// CommitRepoAction records action for commit repository.
+// CommitRepoAction adds new action for committing repository.
 func CommitRepoAction(userId int64, userName string,
 	repoId int64, repoName string, refName string, commits *base.PushCommits) error {
 	log.Trace("action.CommitRepoAction(start): %d/%s", userId, repoName)
@@ -68,12 +69,13 @@ func CommitRepoAction(userId int64, userName string,
 		return err
 	}
 
-	if err = NotifyWatchers(userId, repoId, OP_COMMIT_REPO, userName, repoName, refName, string(bs)); err != nil {
+	if err = NotifyWatchers(&Action{ActUserId: userId, ActUserName: userName, OpType: OP_COMMIT_REPO,
+		Content: string(bs), RepoId: repoId, RepoName: repoName, RefName: refName}); err != nil {
 		log.Error("action.CommitRepoAction(notify watchers): %d/%s", userId, repoName)
 		return err
 	}
 
-	// Update repository last update time.
+	// Change repository bare status and update last updated time.
 	repo, err := GetRepositoryByName(userId, repoName)
 	if err != nil {
 		log.Error("action.CommitRepoAction(GetRepositoryByName): %d/%s", userId, repoName)
