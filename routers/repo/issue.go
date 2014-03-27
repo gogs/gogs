@@ -78,8 +78,9 @@ func CreateIssue(ctx *middleware.Context, params martini.Params, form auth.Creat
 	}
 
 	// Notify watchers.
-	if err = models.NotifyWatchers(ctx.User.Id, ctx.Repo.Repository.Id, models.OP_CREATE_ISSUE,
-		ctx.User.Name, ctx.Repo.Repository.Name, "", fmt.Sprintf("%d|%s", issue.Index, issue.Name)); err != nil {
+	if err = models.NotifyWatchers(&models.Action{ActUserId: ctx.User.Id, ActUserName: ctx.User.Name,
+		OpType: models.OP_CREATE_ISSUE, Content: fmt.Sprintf("%d|%s", issue.Index, issue.Name),
+		RepoId: ctx.Repo.Repository.Id, RepoName: ctx.Repo.Repository.Name, RefName: ""}); err != nil {
 		ctx.Handle(200, "issue.CreateIssue", err)
 		return
 	}
@@ -120,6 +121,7 @@ func ViewIssue(ctx *middleware.Context, params martini.Params) {
 		return
 	}
 	issue.Poster = u
+	issue.Content = string(base.RenderMarkdown([]byte(issue.Content), ""))
 
 	// Get comments.
 	comments, err := models.GetIssueComments(issue.Id)
@@ -136,6 +138,7 @@ func ViewIssue(ctx *middleware.Context, params martini.Params) {
 			return
 		}
 		comments[i].Poster = u
+		comments[i].Content = string(base.RenderMarkdown([]byte(comments[i].Content), ""))
 	}
 
 	ctx.Data["Title"] = issue.Name
