@@ -244,7 +244,6 @@ func GetCommitsByCommitId(userName, repoName, commitId string) (*list.List, erro
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println(userName, repoName, commitId)
 	r, err := repo.LookupReference(commitId)
 	if err != nil {
 		return nil, err
