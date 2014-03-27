@@ -21,22 +21,22 @@
                 <li><a href="/issues?type=created_by"{{if eq .ViewType "created_by"}} class="active"{{end}}>Created by you <strong class="pull-right">{{.CreatedByCount}}</strong></a></li>
                 <li><hr/></li>
                 {{range .Repos}}
-                <li><a href="" class="sm">{{.OwnerId}}/{{.Name}} <strong class="pull-right">{{.NumOpenIssues}}</strong></a></li>
+                <li><a href="/issues?type={{$.ViewType}}{{if eq $.RepoId .Id}}{{else}}&repoid={{.Id}}{{end}}" class="sm{{if eq $.RepoId .Id}} active{{end}}">{{$.SignedUser.Name}}/{{.Name}} <strong class="pull-right">{{.NumOpenIssues}}</strong></a></li>
                 {{end}}
             </ul>
         </div>
         <div class="col-md-9">
             <div class="filter-option">
                 <div class="btn-group">
-                    <a class="btn btn-default issue-open{{if not .IsShowClosed}} active{{end}}" href="/issues">{{.OpenIssueCount}} Open</a>
-                    <a class="btn btn-default issue-close{{if .IsShowClosed}} active{{end}}" href="/issues?state=closed">{{.ClosedIssueCount}} Close</a>
+                    <a class="btn btn-default issue-open{{if not .IsShowClosed}} active{{end}}" href="/issues?type={{.ViewType}}&repoid={{.RepoId}}">{{.OpenIssueCount}} Open</a>
+                    <a class="btn btn-default issue-close{{if .IsShowClosed}} active{{end}}" href="/issues?state=closed&type={{.ViewType}}&repoid={{.RepoId}}">{{.ClosedIssueCount}} Close</a>
                 </div>
             </div>
             <div class="issues list-group">
                 {{range .Issues}}
                 <div class="list-group-item issue-item" id="issue-{{.Id}}">
                     <span class="number pull-right">#{{.Index}}</span>
-                    <h5 class="title"><a href="/{{$.RepositoryLink}}/issues/{{.Index}}">{{.Name}}</a></h5>
+                    <h5 class="title"><a href="/{{$.SignedUser.Name}}/{{.Repo.Name}}/issues/{{.Index}}">{{.Name}}</a></h5>
                     <p class="info">
                         <span class="author"><img class="avatar" src="{{.Poster.AvatarLink}}" alt="" width="20"/>
                         <a href="/user/{{.Poster.Name}}">{{.Poster.Name}}</a></span>
