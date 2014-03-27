@@ -58,3 +58,8 @@ There are two ways to install Gogs:
 ## Contributors
 
 This project was launched by [Unknown](https://github.com/Unknwon) and [lunny](https://github.com/lunny); [fuxiaohei](https://github.com/fuxiaohei) and [slene](https://github.com/slene) joined the team soon after. See [contributors page](https://github.com/gogits/gogs/graphs/contributors) for full list of contributors.
+
+## License
+
+Gogs is under the MIT License.
+See the [LICENSE file](https://github.com/gogits/gogs/blob/master/LICENSE) for the full license text.
