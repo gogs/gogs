@@ -37,7 +37,7 @@ func Commits(ctx *middleware.Context, params martini.Params) {
 	}
 
 	if err != nil {
-		ctx.Handle(404, "repo.Commits", nil)
+		ctx.Handle(404, "repo.Commits", err)
 		return
 	}
 
