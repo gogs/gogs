@@ -225,8 +225,18 @@ func SingleDownload(ctx *middleware.Context, params martini.Params) {
 	// Get tree path
 	treename := params["_1"]
 
-	repoFile, err := models.GetTargetFile(params["username"], params["reponame"],
-		params["branchname"], params["commitid"], treename)
+	branchName := params["branchname"]
+	userName := params["username"]
+	repoName := params["reponame"]
+
+	var commitId string
+	if !models.IsBranchExist(userName, repoName, branchName) {
+		commitId = branchName
+		branchName = ""
+	}
+
+	repoFile, err := models.GetTargetFile(userName, repoName,
+		branchName, commitId, treename)
 
 	if err != nil {
 		ctx.Handle(404, "repo.SingleDownload(GetTargetFile)", err)
