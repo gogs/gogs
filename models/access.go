@@ -15,7 +15,7 @@ const (
 	AU_WRITABLE
 )
 
-// Access represents the accessibility of user and repository.
+// Access represents the accessibility of user to repository.
 type Access struct {
 	Id       int64
 	UserName string    `xorm:"unique(s)"`
@@ -30,7 +30,7 @@ func AddAccess(access *Access) error {
 	return err
 }
 
-// HasAccess returns true if someone can read or write given repository.
+// HasAccess returns true if someone can read or write to given repository.
 func HasAccess(userName, repoName string, mode int) (bool, error) {
 	return orm.Get(&Access{
 		Id:       0,

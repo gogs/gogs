@@ -18,7 +18,7 @@
             <div class="issue-main">
                <div class="panel panel-default issue-content">
                    <div class="panel-body markdown">
-                       <p>{{.Issue.Content}}</p>
+                      {{str2html .Issue.Content}}
                    </div>
                </div>
                {{range .Comments}}
@@ -29,7 +29,7 @@
                            <a href="/user/{{.Poster.Name}}" class="user">{{.Poster.Name}}</a> commented <span class="time">{{TimeSince .Created}}</span>
                        </div>
                        <div class="panel-body markdown">
-                           <p>{{.Content}}</p>
+                          {{str2html .Content}}
                        </div>
                    </div>
                 </div>

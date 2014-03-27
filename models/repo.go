@@ -485,30 +485,21 @@ func GetWatches(repoId int64) ([]Watch, error) {
 }
 
 // NotifyWatchers creates batch of actions for every watcher.
-func NotifyWatchers(userId, repoId int64, opType int, userName, repoName, refName, content string) error {
+func NotifyWatchers(act *Action) error {
 	// Add feeds for user self and all watchers.
-	watches, err := GetWatches(repoId)
+	watches, err := GetWatches(act.RepoId)
 	if err != nil {
 		return errors.New("repo.NotifyWatchers(get watches): " + err.Error())
 	}
-	watches = append(watches, Watch{UserId: userId})
+	watches = append(watches, Watch{UserId: act.ActUserId})
 
 	for i := range watches {
-		if userId == watches[i].UserId && i > 0 {
+		if act.ActUserId == watches[i].UserId && i > 0 {
 			continue // Do not add twice in case author watches his/her repository.
 		}
 
-		_, err = orm.InsertOne(&Action{
-			UserId:      watches[i].UserId,
-			ActUserId:   userId,
-			ActUserName: userName,
-			OpType:      opType,
-			Content:     content,
-			RepoId:      repoId,
-			RepoName:    repoName,
-			RefName:     refName,
-		})
-		if err != nil {
+		act.UserId = watches[i].UserId
+		if _, err = orm.InsertOne(act); err != nil {
 			return errors.New("repo.NotifyWatchers(create action): " + err.Error())
 		}
 	}
