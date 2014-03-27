@@ -61,5 +61,4 @@ This project was launched by [Unknown](https://github.com/Unknwon) and [lunny](h
 
 ## License
 
-Gogs is under the MIT License.
-See the [LICENSE file](https://github.com/gogits/gogs/blob/master/LICENSE) for the full license text.
+Gogs is under the MIT License. See the [LICENSE](https://github.com/gogits/gogs/blob/master/LICENSE) file for the full license text.

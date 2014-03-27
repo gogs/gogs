@@ -60,10 +60,10 @@ func (a Action) GetContent() string {
 
 // CommitRepoAction adds new action for committing repository.
 func CommitRepoAction(userId int64, userName string,
-	repoId int64, repoName string, refName string, commits *base.PushCommits) error {
+	repoId int64, repoName string, refName string, commit *base.PushCommits) error {
 	log.Trace("action.CommitRepoAction(start): %d/%s", userId, repoName)
 
-	bs, err := json.Marshal(commits)
+	bs, err := json.Marshal(commit)
 	if err != nil {
 		log.Error("action.CommitRepoAction(json): %d/%s", userId, repoName)
 		return err
@@ -91,16 +91,13 @@ func CommitRepoAction(userId int64, userName string,
 	return nil
 }
 
-// NewRepoAction records action for create repository.
-func NewRepoAction(user *User, repo *Repository) error {
-	_, err := orm.InsertOne(&Action{
-		UserId:      user.Id,
-		ActUserId:   user.Id,
-		ActUserName: user.Name,
-		OpType:      OP_CREATE_REPO,
-		RepoId:      repo.Id,
-		RepoName:    repo.Name,
-	})
+// NewRepoAction adds new action for creating repository.
+func NewRepoAction(user *User, repo *Repository) (err error) {
+	if err = NotifyWatchers(&Action{ActUserId: user.Id, ActUserName: user.Name, OpType: OP_CREATE_REPO,
+		RepoId: repo.Id, RepoName: repo.Name}); err != nil {
+		log.Error("action.NewRepoAction(notify watchers): %d/%s", user.Id, repo.Name)
+		return err
+	}
 
 	log.Trace("action.NewRepoAction: %s/%s", user.LowerName, repo.LowerName)
 	return err
