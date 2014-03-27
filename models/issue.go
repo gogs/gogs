@@ -37,7 +37,7 @@ type Issue struct {
 }
 
 // CreateIssue creates new issue for repository.
-func CreateIssue(userId, repoId, milestoneId, assigneeId int64, name, labels, content string, isPull bool) (*Issue, error) {
+func CreateIssue(userId, repoId, milestoneId, assigneeId int64, issueCount int, name, labels, content string, isPull bool) (*Issue, error) {
 	count, err := GetIssueCount(repoId)
 	if err != nil {
 		return nil, err
@@ -45,6 +45,10 @@ func CreateIssue(userId, repoId, milestoneId, assigneeId int64, name, labels, co
 
 	// TODO: find out mentions
 	mentions := ""
+
+	sess := orm.NewSession()
+	defer sess.Close()
+	sess.Begin()
 
 	issue := &Issue{
 		Index:       count + 1,
@@ -58,8 +62,23 @@ func CreateIssue(userId, repoId, milestoneId, assigneeId int64, name, labels, co
 		Mentions:    mentions,
 		Content:     content,
 	}
-	_, err = orm.Insert(issue)
-	return issue, err
+	if _, err = sess.Insert(issue); err != nil {
+		sess.Rollback()
+		return nil, err
+	}
+
+	rawSql := "UPDATE `repository` SET num_issues = num_issues + 1 WHERE id = ?"
+	if _, err = sess.Exec(rawSql, repoId); err != nil {
+		sess.Rollback()
+		return nil, err
+	}
+
+	if err = sess.Commit(); err != nil {
+		sess.Rollback()
+		return nil, err
+	}
+
+	return issue, nil
 }
 
 // GetIssueCount returns count of issues in the repository.
