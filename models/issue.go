@@ -136,6 +136,12 @@ func GetIssues(userId, repoId, posterId, milestoneId int64, page int, isClosed, 
 	return issues, err
 }
 
+// GetUserIssueCount returns the number of issues that were created by given user in repository.
+func GetUserIssueCount(userId, repoId int64) int64 {
+	count, _ := orm.Where("poster_id=?", userId).And("repo_id=?", repoId).Count(new(Issue))
+	return count
+}
+
 // UpdateIssue updates information of issue.
 func UpdateIssue(issue *Issue) error {
 	_, err := orm.Id(issue.Id).AllCols().Update(issue)

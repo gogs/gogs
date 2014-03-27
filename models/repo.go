@@ -84,6 +84,7 @@ type Repository struct {
 	NumForks        int
 	NumIssues       int
 	NumClosedIssues int
+	NumOpenIssues   int `xorm:"-"`
 	IsPrivate       bool
 	IsBare          bool
 	Created         time.Time `xorm:"created"`

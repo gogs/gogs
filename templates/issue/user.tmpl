@@ -16,21 +16,20 @@
     <div id="issue">
         <div class="col-md-3 filter-list">
             <ul class="list-unstyled">
-                <li><a href="#" class="active">In your repositories <strong class="pull-right">10</strong></a></li>
+                <li><a href="/issues"{{if eq .ViewType "all"}} class="active"{{end}}>In your repositories <strong class="pull-right">{{.AllIssueCount}}</strong></a></li>
                 <!-- <li><a href="#">Assigned to you</a></li> -->
-                <li><a href="#">Created by you</a></li>
-                <!-- <li><a href="#">Assigned to you</a></li> -->
+                <li><a href="/issues?type=created_by"{{if eq .ViewType "created_by"}} class="active"{{end}}>Created by you <strong class="pull-right">{{.CreatedByCount}}</strong></a></li>
                 <li><hr/></li>
-                <li><a href="" class="sm">gogits/gogs <strong class="pull-right">12</strong></a></li>
-                <li><a href="" class="sm">gogits/session <strong class="pull-right">8</strong></a></li>
-                <li><a href="" class="sm">gogits/git <strong class="pull-right">2</strong></a></li>
+                {{range .Repos}}
+                <li><a href="" class="sm">{{.OwnerId}}/{{.Name}} <strong class="pull-right">{{.NumOpenIssues}}</strong></a></li>
+                {{end}}
             </ul>
         </div>
         <div class="col-md-9">
             <div class="filter-option">
                 <div class="btn-group">
-                    <a class="btn btn-default active issue-open" href="#">27 Open</a>
-                    <a class="btn btn-default issue-close" href="#">Close 128</a>
+                    <a class="btn btn-default issue-open{{if not .IsShowClosed}} active{{end}}" href="/issues">{{.OpenIssueCount}} Open</a>
+                    <a class="btn btn-default issue-close{{if .IsShowClosed}} active{{end}}" href="/issues?state=closed">{{.ClosedIssueCount}} Close</a>
                 </div>
             </div>
             <div class="issues list-group">

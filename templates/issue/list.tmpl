@@ -6,9 +6,9 @@
     <div id="issue">
         <div class="col-md-3 filter-list">
             <ul class="list-unstyled">
-                <li><a href="#" class="active">All Issues <strong class="pull-right">{{.IssueCount}}</strong></a></li>
+                <li><a href="/{{.RepositoryLink}}/issues"{{if eq .ViewType "all"}} class="active"{{end}}>All Issues <strong class="pull-right">{{.IssueCount}}</strong></a></li>
                 <!-- <li><a href="#">Assigned to you</a></li> -->
-                <li><a href="#">Created by you</a></li>
+                <li><a href="/{{.RepositoryLink}}/issues?type=created_by"{{if eq .ViewType "created_by"}} class="active"{{end}}>Created by you <strong class="pull-right">{{.IssueCreatedCount}}</strong></a></li>
                 <!-- <li><a href="#">Mentioned</a></li> -->
             </ul>
         </div>
