@@ -19,7 +19,7 @@ import (
 // Test that go1.2 tag above is included in builds. main.go refers to this definition.
 const go12tag = true
 
-const APP_VER = "0.1.9.0327 Alpha"
+const APP_VER = "0.1.9.0328 Alpha"
 
 func init() {
 	base.AppVer = APP_VER

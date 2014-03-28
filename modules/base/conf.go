@@ -40,8 +40,6 @@ var (
 
 	InstallLock bool
 
-	EnableHttpsClone bool
-
 	LogInRememberDays  int
 	CookieUserName     string
 	CookieRememberName string
@@ -285,8 +283,6 @@ func NewConfigContext() {
 	}
 
 	InstallLock = Cfg.MustBool("security", "INSTALL_LOCK", false)
-
-	EnableHttpsClone = Cfg.MustBool("security", "ENABLE_HTTPS_CLONE", false)
 
 	LogInRememberDays = Cfg.MustInt("security", "LOGIN_REMEMBER_DAYS")
 	CookieUserName = Cfg.MustValue("security", "COOKIE_USERNAME")
