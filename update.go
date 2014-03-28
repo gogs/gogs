@@ -40,24 +40,33 @@ func runUpdate(c *cli.Context) {
 	log.SetOutput(w)
 
 	args := c.Args()
+	//log.Info(args)
 	if len(args) != 3 {
 		log.Error("received less 3 parameters")
 		return
 	}
 
 	refName := args[0]
+	if refName == "" {
+		log.Error("refName is empty, shouldn't use")
+		return
+	}
 	oldCommitId := args[1]
 	newCommitId := args[2]
+
+	isNew := strings.HasPrefix(oldCommitId, "0000000")
+	if isNew &&
+		strings.HasPrefix(newCommitId, "0000000") {
+		log.Error("old rev and new rev both 000000")
+		return
+	}
 
 	userName := os.Getenv("userName")
 	userId := os.Getenv("userId")
 	//repoId := os.Getenv("repoId")
 	repoName := os.Getenv("repoName")
 
-	log.Info("username", userName)
-	log.Info("repoName", repoName)
 	f := models.RepoPath(userName, repoName)
-	log.Info("f", f)
 
 	gitUpdate := exec.Command("git", "update-server-info")
 	gitUpdate.Dir = f
@@ -66,24 +75,6 @@ func runUpdate(c *cli.Context) {
 	repo, err := git.OpenRepository(f)
 	if err != nil {
 		log.Error("runUpdate.Open repoId: %v", err)
-		return
-	}
-
-	ref, err := repo.LookupReference(refName)
-	if err != nil {
-		log.Error("runUpdate.Ref repoId: %v", err)
-		return
-	}
-
-	oldOid, err := git.NewOidFromString(oldCommitId)
-	if err != nil {
-		log.Error("runUpdate.Ref repoId: %v", err)
-		return
-	}
-
-	oldCommit, err := repo.LookupCommit(oldOid)
-	if err != nil {
-		log.Error("runUpdate.Ref repoId: %v", err)
 		return
 	}
 
@@ -101,11 +92,25 @@ func runUpdate(c *cli.Context) {
 
 	var l *list.List
 	// if a new branch
-	if strings.HasPrefix(oldCommitId, "0000000") {
-		l, err = ref.AllCommits()
-
+	if isNew {
+		l, err = repo.CommitsBefore(newCommit.Id())
+		if err != nil {
+			log.Error("Find CommitsBefore erro:", err)
+			return
+		}
 	} else {
-		l = ref.CommitsBetween(newCommit, oldCommit)
+		oldOid, err := git.NewOidFromString(oldCommitId)
+		if err != nil {
+			log.Error("runUpdate.Ref repoId: %v", err)
+			return
+		}
+
+		oldCommit, err := repo.LookupCommit(oldOid)
+		if err != nil {
+			log.Error("runUpdate.Ref repoId: %v", err)
+			return
+		}
+		l = repo.CommitsBetween(newCommit, oldCommit)
 	}
 
 	if err != nil {
