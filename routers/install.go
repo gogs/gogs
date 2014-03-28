@@ -8,11 +8,12 @@ import (
 	"errors"
 
 	"github.com/gogits/gogs/models"
+	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/middleware"
 )
 
-func Install(ctx *middleware.Context) {
+func Install(ctx *middleware.Context, form auth.InstallForm) {
 	if base.InstallLock {
 		ctx.Handle(404, "install.Install", errors.New("Installation is prohibited"))
 		return
