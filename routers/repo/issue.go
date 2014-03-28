@@ -231,6 +231,12 @@ func Comment(ctx *middleware.Context, params martini.Params) {
 		return
 	}
 
+	content := ctx.Query("content")
+	if len(content) == 0 {
+		ctx.Redirect(fmt.Sprintf("/%s/%s/issues/%d", ctx.User.Name, ctx.Repo.Repository.Name, index))
+		return
+	}
+
 	issue, err := models.GetIssueByIndex(ctx.Repo.Repository.Id, int64(index))
 	if err != nil {
 		if err == models.ErrIssueNotExist {
@@ -238,12 +244,6 @@ func Comment(ctx *middleware.Context, params martini.Params) {
 		} else {
 			ctx.Handle(200, "issue.Comment(get issue)", err)
 		}
-		return
-	}
-
-	content := ctx.Query("content")
-	if len(content) == 0 {
-		ctx.Handle(404, "issue.Comment", err)
 		return
 	}
 
