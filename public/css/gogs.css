@@ -856,6 +856,7 @@ html, body {
 
 .commit-list .sha a {
     font-family: Consolas, Menlo, Monaco, "Lucida Console", monospace;
+    font-size: 14px;
 }
 
 .guide-box pre, .guide-box .input-group {
@@ -1165,12 +1166,16 @@ html, body {
     font-weight: normal;
 }
 
-#issue .issue-child .panel-heading .user {
+#issue .issue-child .panel-heading .user,#issue .issue-closed a.user,#issue .issue-opened a.user {
     font-weight: bold;
 }
 
 #issue .issue-line {
     border-color: #CCC;
+}
+
+#issue .issue-is-closed .issue-line{
+    display: none;
 }
 
 #issue .issue-head .info .btn {
@@ -1186,6 +1191,20 @@ html, body {
 
 #issue-edit-title {
     width: 60%;
+}
+
+#issue .issue-closed .issue-content,#issue .issue-opened .issue-content{
+    line-height: 42px;
+}
+
+#issue .issue-closed{
+    border-bottom: 3px solid #CCC;
+    margin-bottom: 24px;
+    padding-bottom: 24px;
+}
+
+#issue .issue-closed .btn-danger,#issue .issue-opened .btn-success{
+    margin: 0 .8em;
 }
 
 /* wrapper and footer */
