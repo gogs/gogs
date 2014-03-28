@@ -5,7 +5,7 @@ Gogs(Go Git Service) is a Self Hosted Git Service in the Go Programming Language
 
 ![Demo](http://gowalker.org/public/gogs_demo.gif)
 
-##### Current version: 0.1.8 Alpha
+##### Current version: 0.1.9 Alpha
 
 #### Other language version
 
@@ -19,7 +19,7 @@ More importantly, Gogs only needs one binary to setup your own project hosting o
 
 ## Overview
 
-- Please see [Wiki](https://github.com/gogits/gogs/wiki) for project design, develop specification, change log and road map.
+- Please see [Wiki](https://github.com/gogits/gogs/wiki) for project design, known issues, change log and road map.
 - See [Trello Board](https://trello.com/b/uxAoeLUl/gogs-go-git-service) to follow the develop team.
 - Try it before anything? Do it [online](http://try.gogits.org/Unknown/gogs) or go down to **Installation -> Install from binary** section!
 - Having troubles? Get help from [Troubleshooting](https://github.com/gogits/gogs/wiki/Troubleshooting).
@@ -27,7 +27,7 @@ More importantly, Gogs only needs one binary to setup your own project hosting o
 ## Features
 
 - Activity timeline
-- SSH/HTTPS protocol support.
+- SSH/HTTPS(Clone only) protocol support.
 - Register/delete account.
 - Create/delete/watch public repository.
 - User profile page.
@@ -58,3 +58,7 @@ There are two ways to install Gogs:
 ## Contributors
 
 This project was launched by [Unknown](https://github.com/Unknwon) and [lunny](https://github.com/lunny); [fuxiaohei](https://github.com/fuxiaohei) and [slene](https://github.com/slene) joined the team soon after. See [contributors page](https://github.com/gogits/gogs/graphs/contributors) for full list of contributors.
+
+## License
+
+Gogs is under the MIT License. See the [LICENSE](https://github.com/gogits/gogs/blob/master/LICENSE) file for the full license text.

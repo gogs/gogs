@@ -23,7 +23,8 @@ const (
 	OP_PULL_REQUEST
 )
 
-// Action represents user operation type and information to the repository.
+// Action represents user operation type and other information to repository.,
+// it implemented interface base.Actioner so that can be used in template render.
 type Action struct {
 	Id          int64
 	UserId      int64  // Receiver user id.
@@ -57,23 +58,24 @@ func (a Action) GetContent() string {
 	return a.Content
 }
 
-// CommitRepoAction records action for commit repository.
+// CommitRepoAction adds new action for committing repository.
 func CommitRepoAction(userId int64, userName string,
-	repoId int64, repoName string, refName string, commits *base.PushCommits) error {
+	repoId int64, repoName string, refName string, commit *base.PushCommits) error {
 	log.Trace("action.CommitRepoAction(start): %d/%s", userId, repoName)
 
-	bs, err := json.Marshal(commits)
+	bs, err := json.Marshal(commit)
 	if err != nil {
 		log.Error("action.CommitRepoAction(json): %d/%s", userId, repoName)
 		return err
 	}
 
-	if err = NotifyWatchers(userId, repoId, OP_COMMIT_REPO, userName, repoName, refName, string(bs)); err != nil {
+	if err = NotifyWatchers(&Action{ActUserId: userId, ActUserName: userName, OpType: OP_COMMIT_REPO,
+		Content: string(bs), RepoId: repoId, RepoName: repoName, RefName: refName}); err != nil {
 		log.Error("action.CommitRepoAction(notify watchers): %d/%s", userId, repoName)
 		return err
 	}
 
-	// Update repository last update time.
+	// Change repository bare status and update last updated time.
 	repo, err := GetRepositoryByName(userId, repoName)
 	if err != nil {
 		log.Error("action.CommitRepoAction(GetRepositoryByName): %d/%s", userId, repoName)
@@ -89,16 +91,13 @@ func CommitRepoAction(userId int64, userName string,
 	return nil
 }
 
-// NewRepoAction records action for create repository.
-func NewRepoAction(user *User, repo *Repository) error {
-	_, err := orm.InsertOne(&Action{
-		UserId:      user.Id,
-		ActUserId:   user.Id,
-		ActUserName: user.Name,
-		OpType:      OP_CREATE_REPO,
-		RepoId:      repo.Id,
-		RepoName:    repo.Name,
-	})
+// NewRepoAction adds new action for creating repository.
+func NewRepoAction(user *User, repo *Repository) (err error) {
+	if err = NotifyWatchers(&Action{ActUserId: user.Id, ActUserName: user.Name, OpType: OP_CREATE_REPO,
+		RepoId: repo.Id, RepoName: repo.Name}); err != nil {
+		log.Error("action.NewRepoAction(notify watchers): %d/%s", user.Id, repo.Name)
+		return err
+	}
 
 	log.Trace("action.NewRepoAction: %s/%s", user.LowerName, repo.LowerName)
 	return err

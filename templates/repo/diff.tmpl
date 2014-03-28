@@ -6,7 +6,7 @@
     <div id="source">
         <div class="panel panel-info diff-box diff-head-box">
             <div class="panel-heading">
-                <a class="pull-right btn btn-primary btn-sm" href="#commit-source">Browse Source</a>
+                <a class="pull-right btn btn-primary btn-sm" href="{{.SourcePath}}">Browse Source</a>
                 <h4>{{.Commit.Message}}</h4>
             </div>
             <div class="panel-body">
@@ -57,10 +57,16 @@
                     </span>
                     <span class="del" data-line="{{.Deletion}}">- {{.Deletion}}</span>
                 </div>
-                <a class="btn btn-default btn-sm pull-right" href="#">View File</a>
+                <a class="btn btn-default btn-sm pull-right" href="{{$.SourcePath}}/{{.Name}}">View File</a>
                 <span class="file">{{.Name}}</span>
             </div>
+            {{$isImage := (call $.IsImageFile .Name)}}
             <div class="panel-body file-body file-code code-view code-diff">
+                {{if $isImage}}
+                    <div class="text-center">
+                        <img src="{{$.RawPath}}/{{.Name}}">
+                    </div>
+                {{else}}
                 <table>
                     <tbody>
                         {{range .Sections}}
@@ -201,6 +207,7 @@
                         </tr> -->
                     </tbody>
                 </table>
+                {{end}}
             </div>
         </div>
         {{end}}

@@ -72,20 +72,23 @@ func NewRepoContext() {
 
 // Repository represents a git repository.
 type Repository struct {
-	Id          int64
-	OwnerId     int64 `xorm:"unique(s)"`
-	ForkId      int64
-	LowerName   string `xorm:"unique(s) index not null"`
-	Name        string `xorm:"index not null"`
-	Description string
-	Website     string
-	NumWatches  int
-	NumStars    int
-	NumForks    int
-	IsPrivate   bool
-	IsBare      bool
-	Created     time.Time `xorm:"created"`
-	Updated     time.Time `xorm:"updated"`
+	Id              int64
+	OwnerId         int64 `xorm:"unique(s)"`
+	ForkId          int64
+	LowerName       string `xorm:"unique(s) index not null"`
+	Name            string `xorm:"index not null"`
+	Description     string
+	Website         string
+	NumWatches      int
+	NumStars        int
+	NumForks        int
+	NumIssues       int
+	NumClosedIssues int
+	NumOpenIssues   int `xorm:"-"`
+	IsPrivate       bool
+	IsBare          bool
+	Created         time.Time `xorm:"created"`
+	Updated         time.Time `xorm:"updated"`
 }
 
 // IsRepositoryExist returns true if the repository with given name under user has already existed.
@@ -94,17 +97,16 @@ func IsRepositoryExist(user *User, repoName string) (bool, error) {
 	has, err := orm.Where("lower_name = ?", strings.ToLower(repoName)).Get(&repo)
 	if err != nil {
 		return has, err
+	} else if !has {
+		return false, nil
 	}
-	s, err := os.Stat(RepoPath(user.Name, repoName))
-	if err != nil {
-		return false, nil // Error simply means does not exist, but we don't want to show up.
-	}
-	return s.IsDir(), nil
+
+	return com.IsDir(RepoPath(user.Name, repoName)), nil
 }
 
 var (
 	// Define as all lower case!!
-	illegalPatterns = []string{"[.][Gg][Ii][Tt]", "raw", "user", "help", "stars", "issues", "pulls", "commits", "admin", "repo", "template", "admin"}
+	illegalPatterns = []string{"[.][Gg][Ii][Tt]", "raw", "user", "help", "stars", "issues", "pulls", "commits", "repo", "template", "admin"}
 )
 
 // IsLegalName returns false if name contains illegal characters.
@@ -222,16 +224,24 @@ func initRepoCommit(tmpPath string, sig *git.Signature) (err error) {
 	if _, stderr, err = com.ExecCmdDir(tmpPath, "git", "add", "--all"); err != nil {
 		return err
 	}
-	log.Trace("stderr(1): %s", stderr)
+	if len(stderr) > 0 {
+		log.Trace("stderr(1): %s", stderr)
+	}
+
 	if _, stderr, err = com.ExecCmdDir(tmpPath, "git", "commit", fmt.Sprintf("--author='%s <%s>'", sig.Name, sig.Email),
 		"-m", "Init commit"); err != nil {
 		return err
 	}
-	log.Trace("stderr(2): %s", stderr)
+	if len(stderr) > 0 {
+		log.Trace("stderr(2): %s", stderr)
+	}
+
 	if _, stderr, err = com.ExecCmdDir(tmpPath, "git", "push", "origin", "master"); err != nil {
 		return err
 	}
-	log.Trace("stderr(3): %s", stderr)
+	if len(stderr) > 0 {
+		log.Trace("stderr(3): %s", stderr)
+	}
 	return nil
 }
 
@@ -241,10 +251,9 @@ func createHookUpdate(hookPath, content string) error {
 		return err
 	}
 	defer pu.Close()
-	if _, err = pu.WriteString(content); err != nil {
-		return err
-	}
-	return nil
+
+	_, err = pu.WriteString(content)
+	return err
 }
 
 // InitRepository initializes README and .gitignore if needed.
@@ -320,10 +329,7 @@ func initRepository(f string, user *User, repo *Repository, initReadme bool, rep
 	}
 
 	// Apply changes and commit.
-	if err := initRepoCommit(tmpDir, user.NewGitSig()); err != nil {
-		return err
-	}
-	return nil
+	return initRepoCommit(tmpDir, user.NewGitSig())
 }
 
 // UserRepo reporesents a repository with user name.
@@ -430,7 +436,8 @@ func GetRepositoryByName(userId int64, repoName string) (*Repository, error) {
 }
 
 // GetRepositoryById returns the repository by given id if exists.
-func GetRepositoryById(id int64) (repo *Repository, err error) {
+func GetRepositoryById(id int64) (*Repository, error) {
+	repo := &Repository{}
 	has, err := orm.Id(id).Get(repo)
 	if err != nil {
 		return nil, err
@@ -485,30 +492,26 @@ func GetWatches(repoId int64) ([]Watch, error) {
 }
 
 // NotifyWatchers creates batch of actions for every watcher.
-func NotifyWatchers(userId, repoId int64, opType int, userName, repoName, refName, content string) error {
+func NotifyWatchers(act *Action) error {
 	// Add feeds for user self and all watchers.
-	watches, err := GetWatches(repoId)
+	watches, err := GetWatches(act.RepoId)
 	if err != nil {
 		return errors.New("repo.NotifyWatchers(get watches): " + err.Error())
 	}
-	watches = append(watches, Watch{UserId: userId})
+
+	// Add feed for actioner.
+	act.UserId = act.ActUserId
+	if _, err = orm.InsertOne(act); err != nil {
+		return errors.New("repo.NotifyWatchers(create action): " + err.Error())
+	}
 
 	for i := range watches {
-		if userId == watches[i].UserId && i > 0 {
-			continue // Do not add twice in case author watches his/her repository.
+		if act.ActUserId == watches[i].UserId {
+			continue
 		}
 
-		_, err = orm.InsertOne(&Action{
-			UserId:      watches[i].UserId,
-			ActUserId:   userId,
-			ActUserName: userName,
-			OpType:      opType,
-			Content:     content,
-			RepoId:      repoId,
-			RepoName:    repoName,
-			RefName:     refName,
-		})
-		if err != nil {
+		act.UserId = watches[i].UserId
+		if _, err = orm.InsertOne(act); err != nil {
 			return errors.New("repo.NotifyWatchers(create action): " + err.Error())
 		}
 	}

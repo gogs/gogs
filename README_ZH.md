@@ -5,7 +5,7 @@ Gogs(Go Git Service) 是一个由 Go 语言编写的自助 Git 托管服务。
 
 ![Demo](http://gowalker.org/public/gogs_demo.gif)
 
-##### 当前版本：0.1.8 Alpha
+##### 当前版本：0.1.9 Alpha
 
 ## 开发目的
 
@@ -15,7 +15,7 @@ Gogs 完全使用 Go 语言来实现对 Git 数据的操作，实现 **零** 依
 
 ## 项目概览
 
-- 有关项目设计、开发说明、变更日志和路线图，请通过  [Wiki](https://github.com/gogits/gogs/wiki) 查看。
+- 有关项目设计、已知问题、变更日志和路线图，请通过  [Wiki](https://github.com/gogits/gogs/wiki) 查看。
 - 您可以到 [Trello Board](https://trello.com/b/uxAoeLUl/gogs-go-git-service) 跟随开发团队的脚步。
 - 想要先睹为快？通过 [在线体验](http://try.gogits.org/Unknown/gogs) 或查看 **安装部署 -> 二进制安装** 小节。
 - 使用过程中遇到问题？尝试从 [故障排查](https://github.com/gogits/gogs/wiki/Troubleshooting) 页面获取帮助。
@@ -23,7 +23,7 @@ Gogs 完全使用 Go 语言来实现对 Git 数据的操作，实现 **零** 依
 ## 功能特性
 
 - 活动时间线
-- SSH/HTTPS 协议支持
+- SSH/HTTPS（仅限 Clone） 协议支持
 - 注册/删除用户
 - 创建/删除/关注公开仓库
 - 用户个人信息页面
@@ -54,3 +54,7 @@ Gogs 完全使用 Go 语言来实现对 Git 数据的操作，实现 **零** 依
 ## 贡献成员
 
 本项目最初由 [Unknown](https://github.com/Unknwon) 和 [lunny](https://github.com/lunny) 发起，随后 [fuxiaohei](https://github.com/fuxiaohei) 与 [slene](https://github.com/slene) 加入到开发团队。您可以通过查看 [贡献者页面](https://github.com/gogits/gogs/graphs/contributors) 获取完整的贡献者列表。
+
+## 授权许可
+
+Gogs 采用 MIT 开源授权许可证，完整的授权说明已放置在 [LICENSE](https://github.com/gogits/gogs/blob/master/LICENSE) 文件中。

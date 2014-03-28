@@ -51,6 +51,14 @@ func IsTextFile(data []byte) (string, bool) {
 	return contentType, false
 }
 
+func IsImageFile(data []byte) (string, bool) {
+	contentType := http.DetectContentType(data)
+	if strings.Index(contentType, "image/") != -1 {
+		return contentType, true
+	}
+	return contentType, false
+}
+
 func IsReadmeFile(name string) bool {
 	name = strings.ToLower(name)
 	if len(name) < 6 {

@@ -21,7 +21,8 @@ type Issue struct {
 	Id          int64
 	Index       int64 // Index in one repository.
 	Name        string
-	RepoId      int64 `xorm:"index"`
+	RepoId      int64       `xorm:"index"`
+	Repo        *Repository `xorm:"-"`
 	PosterId    int64
 	Poster      *User `xorm:"-"`
 	MilestoneId int64
@@ -37,17 +38,16 @@ type Issue struct {
 }
 
 // CreateIssue creates new issue for repository.
-func CreateIssue(userId, repoId, milestoneId, assigneeId int64, name, labels, content string, isPull bool) (*Issue, error) {
-	count, err := GetIssueCount(repoId)
-	if err != nil {
-		return nil, err
-	}
-
+func CreateIssue(userId, repoId, milestoneId, assigneeId int64, issueCount int, name, labels, content string, isPull bool) (issue *Issue, err error) {
 	// TODO: find out mentions
 	mentions := ""
 
-	issue := &Issue{
-		Index:       count + 1,
+	sess := orm.NewSession()
+	defer sess.Close()
+	sess.Begin()
+
+	issue = &Issue{
+		Index:       int64(issueCount) + 1,
 		Name:        name,
 		RepoId:      repoId,
 		PosterId:    userId,
@@ -58,13 +58,23 @@ func CreateIssue(userId, repoId, milestoneId, assigneeId int64, name, labels, co
 		Mentions:    mentions,
 		Content:     content,
 	}
-	_, err = orm.Insert(issue)
-	return issue, err
-}
+	if _, err = sess.Insert(issue); err != nil {
+		sess.Rollback()
+		return nil, err
+	}
 
-// GetIssueCount returns count of issues in the repository.
-func GetIssueCount(repoId int64) (int64, error) {
-	return orm.Count(&Issue{RepoId: repoId})
+	rawSql := "UPDATE `repository` SET num_issues = num_issues + 1 WHERE id = ?"
+	if _, err = sess.Exec(rawSql, repoId); err != nil {
+		sess.Rollback()
+		return nil, err
+	}
+
+	if err = sess.Commit(); err != nil {
+		sess.Rollback()
+		return nil, err
+	}
+
+	return issue, nil
 }
 
 // GetIssueById returns issue object by given id.
@@ -127,16 +137,16 @@ func GetIssues(userId, repoId, posterId, milestoneId int64, page int, isClosed, 
 	return issues, err
 }
 
+// GetUserIssueCount returns the number of issues that were created by given user in repository.
+func GetUserIssueCount(userId, repoId int64) int64 {
+	count, _ := orm.Where("poster_id=?", userId).And("repo_id=?", repoId).Count(new(Issue))
+	return count
+}
+
 // UpdateIssue updates information of issue.
 func UpdateIssue(issue *Issue) error {
-	_, err := orm.Update(issue, &Issue{RepoId: issue.RepoId, Index: issue.Index})
+	_, err := orm.Id(issue.Id).AllCols().Update(issue)
 	return err
-}
-
-func CloseIssue() {
-}
-
-func ReopenIssue() {
 }
 
 // Label represents a list of labels of repository for issues.
@@ -178,8 +188,7 @@ func CreateComment(userId, issueId, commitId, line int64, content string) error 
 	sess.Begin()
 
 	if _, err := orm.Insert(&Comment{PosterId: userId, IssueId: issueId,
-		CommitId: commitId, Line: line, Content: content,
-	}); err != nil {
+		CommitId: commitId, Line: line, Content: content}); err != nil {
 		sess.Rollback()
 		return err
 	}
