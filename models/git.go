@@ -244,11 +244,11 @@ func GetCommitsByCommitId(userName, repoName, commitId string) (*list.List, erro
 	if err != nil {
 		return nil, err
 	}
-	r, err := repo.LookupReference(commitId)
+	oid, err := git.NewOidFromString(commitId)
 	if err != nil {
 		return nil, err
 	}
-	return r.AllCommits()
+	return repo.CommitsBefore(oid)
 }
 
 // Diff line types.
