@@ -38,6 +38,8 @@ var (
 	RunUser      string
 	RepoRootPath string
 
+	InstallLock bool
+
 	EnableHttpsClone bool
 
 	LogInRememberDays  int
@@ -281,6 +283,8 @@ func NewConfigContext() {
 		fmt.Printf("Expect user(%s) but current user is: %s\n", RunUser, curUser)
 		os.Exit(2)
 	}
+
+	InstallLock = Cfg.MustBool("security", "INSTALL_LOCK", false)
 
 	EnableHttpsClone = Cfg.MustBool("security", "ENABLE_HTTPS_CLONE", false)
 
