@@ -291,9 +291,14 @@ func NewConfigContext() {
 	PictureService = Cfg.MustValue("picture", "SERVICE")
 
 	// Determine and create root git reposiroty path.
-	RepoRootPath = Cfg.MustValue("repository", "ROOT")
+	homeDir, err := com.HomeDir()
+	if err != nil {
+		fmt.Printf("Fail to get home directory): %v\n", err)
+		os.Exit(2)
+	}
+	RepoRootPath = Cfg.MustValue("repository", "ROOT", filepath.Join(homeDir, "git/gogs-repositories"))
 	if err = os.MkdirAll(RepoRootPath, os.ModePerm); err != nil {
-		fmt.Printf("models.init(fail to create RepoRootPath(%s)): %v\n", RepoRootPath, err)
+		fmt.Printf("Fail to create RepoRootPath(%s): %v\n", RepoRootPath, err)
 		os.Exit(2)
 	}
 }
