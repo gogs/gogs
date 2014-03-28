@@ -40,9 +40,7 @@ func Issues(ctx *middleware.Context) {
 			ctx.Redirect("/user/login/", 302)
 			return
 		}
-		posterId = ctx.User.Id
 		ctx.Data["ViewType"] = "created_by"
-		ctx.Data["IssueCreatedCount"] = models.GetUserIssueCount(posterId, ctx.Repo.Repository.Id)
 	}
 
 	// Get issues.
@@ -53,6 +51,11 @@ func Issues(ctx *middleware.Context) {
 		return
 	}
 
+	if ctx.IsSigned {
+		posterId = ctx.User.Id
+	}
+	var createdByCount int
+
 	// Get posters.
 	for i := range issues {
 		u, err := models.GetUserById(issues[i].PosterId)
@@ -61,12 +64,16 @@ func Issues(ctx *middleware.Context) {
 			return
 		}
 		issues[i].Poster = u
+		if u.Id == posterId {
+			createdByCount++
+		}
 	}
 
 	ctx.Data["Issues"] = issues
 	ctx.Data["IssueCount"] = ctx.Repo.Repository.NumIssues
 	ctx.Data["OpenCount"] = ctx.Repo.Repository.NumIssues - ctx.Repo.Repository.NumClosedIssues
 	ctx.Data["ClosedCount"] = ctx.Repo.Repository.NumClosedIssues
+	ctx.Data["IssueCreatedCount"] = createdByCount
 	ctx.Data["IsShowClosed"] = ctx.Query("state") == "closed"
 	ctx.HTML(200, "issue/list")
 }
