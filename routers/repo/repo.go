@@ -85,9 +85,11 @@ func Single(ctx *middleware.Context, params martini.Params) {
 	ctx.Data["Branches"] = brs
 
 	var commitId string
-	if !models.IsBranchExist(userName, repoName, branchName) {
+	isViewBranch := models.IsBranchExist(userName, repoName, branchName)
+	if !isViewBranch {
 		commitId = branchName
 	}
+	ctx.Data["IsViewBranch"] = isViewBranch
 
 	repoFile, err := models.GetTargetFile(userName, repoName,
 		branchName, commitId, treename)
