@@ -6,6 +6,7 @@ package repo
 
 import (
 	"fmt"
+	"net/url"
 
 	"github.com/codegangsta/martini"
 
@@ -35,7 +36,9 @@ func Issues(ctx *middleware.Context) {
 	var posterId int64 = 0
 	if ctx.Query("type") == "created_by" {
 		if !ctx.IsSigned {
+			ctx.SetCookie("redirect_to", "/"+url.QueryEscape(ctx.Req.RequestURI))
 			ctx.Redirect("/user/login/", 302)
+			return
 		}
 		posterId = ctx.User.Id
 		ctx.Data["ViewType"] = "created_by"
