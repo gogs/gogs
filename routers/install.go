@@ -22,6 +22,7 @@ func Install(ctx *middleware.Context) {
 	ctx.Data["DbCfg"] = models.DbCfg
 	ctx.Data["RepoRootPath"] = base.RepoRootPath
 	ctx.Data["RunUser"] = base.RunUser
+	ctx.Data["AppUrl"] = base.AppUrl
 	ctx.Data["PageIsInstall"] = true
 
 	if ctx.Req.Method == "GET" {

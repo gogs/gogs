@@ -510,6 +510,7 @@ func NotifyWatchers(act *Action) error {
 			continue
 		}
 
+		act.Id = 0
 		act.UserId = watches[i].UserId
 		if _, err = orm.InsertOne(act); err != nil {
 			return errors.New("repo.NotifyWatchers(create action): " + err.Error())
