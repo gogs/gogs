@@ -4,7 +4,7 @@
 {{template "repo/toolbar" .}}
 <div id="body" class="container">
     <div id="issue">
-        <div id="issue-{issue.id}" class="issue-whole">
+        <div id="issue-{issue.id}" class="issue-whole issue-is-opening">
             <div class="issue-head clearfix">
                 <div class="number pull-right">#{{.Issue.Index}}</div>
                 <a class="author pull-left" href="/user/{{.Issue.Poster.Name}}"><img class="avatar" src="{{.Issue.Poster.AvatarLink}}" alt="" width="30"/></a>
@@ -44,6 +44,22 @@
                    </div>
                 </div>
                 {{end}}
+                <div class="issue-child issue-closed">
+                    <a class="user pull-left" href="{user.link}"><img class="avatar" src="{user.avatar}" alt=""/></a>
+                    <div class="issue-content">
+                        <a class="user pull-left" href="{user.link}">{user.name}</a>
+                        <span class="btn btn-danger">Closed</span> this
+                        <span class="time">{close.time}</span>
+                    </div>
+                </div>
+                <div class="issue-child issue-opened">
+                    <a class="user pull-left" href="{user.link}"><img class="avatar" src="{user.avatar}" alt=""/></a>
+                    <div class="issue-content">
+                        <a class="user pull-left" href="{user.link}">{user.name}</a>
+                        <span class="btn btn-success">Reopened</span> this
+                        <span class="time">{close.time}</span>
+                    </div>
+                </div>
                 <hr class="issue-line"/>
                 <div class="issue-child issue-reply">
                     <a class="user pull-left" href="/user/{{.SignedUser.Name}}"><img class="avatar" src="{{.SignedUser.AvatarLink}}" alt=""/></a>
@@ -71,7 +87,7 @@
                             <div class="text-right">
                                 <div class="form-group">
                                     <input type="hidden" value="id" name="repo-id"/>
-                                    <button class="btn-default btn issue-open" id="issue-open-btn" data-origin="Open" data-text="Open & Comment">Open</button>&nbsp;&nbsp;
+                                    <button class="btn-default btn issue-open" id="issue-open-btn" data-origin="Re-Open" data-text="Re-Open & Comment">Open</button>&nbsp;&nbsp;
                                     <button class="btn-default btn issue-close" id="issue-close-btn" data-origin="Close" data-text="Close & Comment">Close</button>&nbsp;&nbsp;
                                     <button class="btn-success btn" id="issue-reply-btn">Comment</button>
                                 </div>
