@@ -18,6 +18,10 @@ import (
 )
 
 func Issues(ctx *middleware.Context) {
+	if !ctx.Repo.IsValid {
+		ctx.Handle(404, "issue.Issues(invalid repo):", nil)
+	}
+
 	ctx.Data["Title"] = "Issues"
 	ctx.Data["IsRepoToolbarIssues"] = true
 	ctx.Data["IsRepoToolbarIssuesList"] = true
@@ -26,12 +30,17 @@ func Issues(ctx *middleware.Context) {
 	milestoneId, _ := base.StrTo(ctx.Query("milestone")).Int()
 	page, _ := base.StrTo(ctx.Query("page")).Int()
 
+	ctx.Data["IssueCreatedCount"] = 0
+
 	var posterId int64 = 0
 	if ctx.Query("type") == "created_by" {
+		if !ctx.IsSigned {
+			ctx.Redirect("/user/login/", 302)
+		}
 		posterId = ctx.User.Id
 		ctx.Data["ViewType"] = "created_by"
+		ctx.Data["IssueCreatedCount"] = models.GetUserIssueCount(posterId, ctx.Repo.Repository.Id)
 	}
-	ctx.Data["IssueCreatedCount"] = models.GetUserIssueCount(ctx.User.Id, ctx.Repo.Repository.Id)
 
 	// Get issues.
 	issues, err := models.GetIssues(0, ctx.Repo.Repository.Id, posterId, int64(milestoneId), page,
@@ -60,6 +69,10 @@ func Issues(ctx *middleware.Context) {
 }
 
 func CreateIssue(ctx *middleware.Context, params martini.Params, form auth.CreateIssueForm) {
+	if !ctx.Repo.IsValid {
+		ctx.Handle(404, "issue.CreateIssue(invalid repo):", nil)
+	}
+
 	ctx.Data["Title"] = "Create issue"
 	ctx.Data["IsRepoToolbarIssues"] = true
 	ctx.Data["IsRepoToolbarIssuesList"] = false
@@ -102,6 +115,10 @@ func CreateIssue(ctx *middleware.Context, params martini.Params, form auth.Creat
 }
 
 func ViewIssue(ctx *middleware.Context, params martini.Params) {
+	if !ctx.Repo.IsValid {
+		ctx.Handle(404, "issue.ViewIssue(invalid repo):", nil)
+	}
+
 	index, err := base.StrTo(params["index"]).Int()
 	if err != nil {
 		ctx.Handle(404, "issue.ViewIssue", err)
@@ -154,6 +171,10 @@ func ViewIssue(ctx *middleware.Context, params martini.Params) {
 }
 
 func UpdateIssue(ctx *middleware.Context, params martini.Params, form auth.CreateIssueForm) {
+	if !ctx.Repo.IsValid {
+		ctx.Handle(404, "issue.UpdateIssue(invalid repo):", nil)
+	}
+
 	index, err := base.StrTo(params["index"]).Int()
 	if err != nil {
 		ctx.Handle(404, "issue.UpdateIssue", err)
@@ -190,6 +211,10 @@ func UpdateIssue(ctx *middleware.Context, params martini.Params, form auth.Creat
 }
 
 func Comment(ctx *middleware.Context, params martini.Params) {
+	if !ctx.Repo.IsValid {
+		ctx.Handle(404, "issue.Comment(invalid repo):", nil)
+	}
+
 	index, err := base.StrTo(ctx.Query("issueIndex")).Int()
 	if err != nil {
 		ctx.Handle(404, "issue.Comment", err)
