@@ -78,7 +78,7 @@ func runServ(k *cli.Context) {
 
 	base.NewConfigContext()
 	models.LoadModelsConfig()
-	models.NewEngine()
+	models.SetEngine()
 
 	keys := strings.Split(os.Args[2], "-")
 	if len(keys) != 2 {

@@ -4,10 +4,28 @@
 
 package routers
 
-import "github.com/gogits/gogs/modules/middleware"
+import (
+	"errors"
 
-func Install(ctx *middleware.Context){
-	ctx.Data["PageIsInstall"] = true
+	"github.com/gogits/gogs/models"
+	"github.com/gogits/gogs/modules/base"
+	"github.com/gogits/gogs/modules/middleware"
+)
+
+func Install(ctx *middleware.Context) {
+	if base.InstallLock {
+		ctx.Handle(404, "install.Install", errors.New("Installation is prohibited"))
+		return
+	}
+
 	ctx.Data["Title"] = "Install"
-	ctx.HTML(200,"install")
+	ctx.Data["DbCfg"] = models.DbCfg
+	ctx.Data["RepoRootPath"] = base.RepoRootPath
+	ctx.Data["RunUser"] = base.RunUser
+	ctx.Data["PageIsInstall"] = true
+
+	if ctx.Req.Method == "GET" {
+		ctx.HTML(200, "install")
+		return
+	}
 }

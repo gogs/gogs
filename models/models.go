@@ -34,7 +34,7 @@ func LoadModelsConfig() {
 	DbCfg.Path = base.Cfg.MustValue("database", "PATH", "data/gogs.db")
 }
 
-func setEngine() {
+func SetEngine() {
 	var err error
 	switch DbCfg.Type {
 	case "mysql":
@@ -70,7 +70,7 @@ func setEngine() {
 }
 
 func NewEngine() {
-	setEngine()
+	SetEngine()
 	if err := orm.Sync(new(User), new(PublicKey), new(Repository), new(Watch),
 		new(Action), new(Access), new(Issue), new(Comment)); err != nil {
 		fmt.Printf("sync database struct error: %v\n", err)
