@@ -854,6 +854,10 @@ html, body {
     min-width: 180px;
 }
 
+.commit-list .sha a {
+    font-family: Consolas, Menlo, Monaco, "Lucida Console", monospace;
+}
+
 .guide-box pre, .guide-box .input-group {
     margin-top: 20px;
     margin-bottom: 30px;
@@ -1119,7 +1123,7 @@ html, body {
 #issue .issue-head .info {
     width: 99%;
     margin-top: 10px;
-    padding-left: 64px;
+    padding-left: 74px;
     margin-bottom: 16px;
     padding-bottom: 20px;
     border-bottom: 1px solid #CCC;
@@ -1167,6 +1171,21 @@ html, body {
 
 #issue .issue-line {
     border-color: #CCC;
+}
+
+#issue .issue-head .info .btn {
+    margin-top: -8px;
+    margin-left: 8px;
+}
+
+#issue .issue-action {
+    padding-left: 8px;
+    color: #888;
+    width: 24px;
+}
+
+#issue-edit-title {
+    width: 60%;
 }
 
 /* wrapper and footer */

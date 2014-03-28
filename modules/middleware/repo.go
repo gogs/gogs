@@ -56,7 +56,9 @@ func RepoAssignment(redirect bool) martini.Handler {
 		// get repository
 		repo, err := models.GetRepositoryByName(user.Id, params["reponame"])
 		if err != nil {
-			if redirect {
+			if err == models.ErrRepoNotExist {
+				ctx.Handle(404, "RepoAssignment", err)
+			} else if redirect {
 				ctx.Redirect("/")
 				return
 			}

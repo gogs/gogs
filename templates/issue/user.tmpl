@@ -16,53 +16,35 @@
     <div id="issue">
         <div class="col-md-3 filter-list">
             <ul class="list-unstyled">
-                <li><a href="#" class="active">In your repositories <strong class="pull-right">10</strong></a></li>
-                <li><a href="#">Created by you</a></li>
-                <li><a href="#">Assigned to you</a></li>
+                <li><a href="/issues"{{if eq .ViewType "all"}} class="active"{{end}}>In your repositories <strong class="pull-right">{{.AllIssueCount}}</strong></a></li>
+                <!-- <li><a href="#">Assigned to you</a></li> -->
+                <li><a href="/issues?type=created_by"{{if eq .ViewType "created_by"}} class="active"{{end}}>Created by you <strong class="pull-right">{{.CreatedByCount}}</strong></a></li>
                 <li><hr/></li>
-                <li><a href="" class="sm">gogits/gogs <strong class="pull-right">12</strong></a></li>
-                <li><a href="" class="sm">gogits/session <strong class="pull-right">8</strong></a></li>
-                <li><a href="" class="sm">gogits/git <strong class="pull-right">2</strong></a></li>
+                {{range .Repos}}
+                <li><a href="/issues?type={{$.ViewType}}{{if eq $.RepoId .Id}}{{else}}&repoid={{.Id}}{{end}}" class="sm{{if eq $.RepoId .Id}} active{{end}}">{{$.SignedUser.Name}}/{{.Name}} <strong class="pull-right">{{.NumOpenIssues}}</strong></a></li>
+                {{end}}
             </ul>
         </div>
         <div class="col-md-9">
             <div class="filter-option">
                 <div class="btn-group">
-                    <a class="btn btn-default active issue-open" href="#">27 Open</a>
-                    <a class="btn btn-default issue-close" href="#">Close 128</a>
+                    <a class="btn btn-default issue-open{{if not .IsShowClosed}} active{{end}}" href="/issues?type={{.ViewType}}&repoid={{.RepoId}}">{{.OpenIssueCount}} Open</a>
+                    <a class="btn btn-default issue-close{{if .IsShowClosed}} active{{end}}" href="/issues?state=closed&type={{.ViewType}}&repoid={{.RepoId}}">{{.ClosedIssueCount}} Close</a>
                 </div>
             </div>
             <div class="issues list-group">
-                <div class="list-group-item unread issue-item" id="issue-id">
-                    <span class="number pull-right">#123</span>
-                    <h5 class="title"><a href="#">Bug: When running tests after generating a beego app, templates do not load.</a></h5>
+                {{range .Issues}}
+                <div class="list-group-item issue-item" id="issue-{{.Id}}">
+                    <span class="number pull-right">#{{.Index}}</span>
+                    <h5 class="title"><a href="/{{$.SignedUser.Name}}/{{.Repo.Name}}/issues/{{.Index}}">{{.Name}}</a></h5>
                     <p class="info">
-                        <span class="author"><img class="avatar" src="http://tp2.sinaimg.cn/5068084885/50/40050297589/1" alt="" width="20"/>
-                        <a href="#">Obama</a></span>
-                        <span class="time">3 days ago</span>
-                        <span class="comment"><i class="fa fa-comments"></i> 3</span>
+                        <span class="author"><img class="avatar" src="{{.Poster.AvatarLink}}" alt="" width="20"/>
+                        <a href="/user/{{.Poster.Name}}">{{.Poster.Name}}</a></span>
+                        <span class="time">{{TimeSince .Created}}</span>
+                        <span class="comment"><i class="fa fa-comments"></i> {{.NumComments}}</span>
                     </p>
                 </div>
-                <div class="list-group-item issue-item" id="issue-id2">
-                    <span class="number pull-right">#123</span>
-                    <h5 class="title"><a href="#">Bug: When running tests after generating a beego app, templates do not load.</a></h5>
-                    <p class="info">
-                        <span class="author"><img class="avatar" src="http://tp2.sinaimg.cn/5068084885/50/40050297589/1" alt="" width="20"/>
-                        <a href="#">Obama</a></span>
-                        <span class="time">3 days ago</span>
-                        <span class="comment"><i class="fa fa-comments"></i> 3</span>
-                    </p>
-                </div>
-                <div class="list-group-item issue-item" id="issue-id3">
-                    <span class="number pull-right">#123</span>
-                    <h5 class="title"><a href="#">Bug: When running tests after generating a beego app, templates do not load.</a></h5>
-                    <p class="info">
-                        <span class="author"><img class="avatar" src="http://tp2.sinaimg.cn/5068084885/50/40050297589/1" alt="" width="20"/>
-                        <a href="#">Obama</a></span>
-                        <span class="time">3 days ago</span>
-                        <span class="comment"><i class="fa fa-comments"></i> 3</span>
-                    </p>
-                </div>
+                {{end}}
             </div>
         </div>
     </div>

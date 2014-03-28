@@ -57,19 +57,23 @@ func Single(ctx *middleware.Context, params martini.Params) {
 		return
 	}
 
+	branchName := params["branchname"]
+	userName := params["username"]
+	repoName := params["reponame"]
+
 	// Get tree path
 	treename := params["_1"]
 
 	if len(treename) > 0 && treename[len(treename)-1] == '/' {
 		ctx.Redirect("/" + ctx.Repo.Owner.LowerName + "/" +
-			ctx.Repo.Repository.Name + "/src/" + params["branchname"] + "/" + treename[:len(treename)-1])
+			ctx.Repo.Repository.Name + "/src/" + branchName + "/" + treename[:len(treename)-1])
 		return
 	}
 
 	ctx.Data["IsRepoToolbarSource"] = true
 
 	// Branches.
-	brs, err := models.GetBranches(params["username"], params["reponame"])
+	brs, err := models.GetBranches(userName, repoName)
 	if err != nil {
 		ctx.Handle(404, "repo.Single(GetBranches)", err)
 		return
@@ -80,15 +84,22 @@ func Single(ctx *middleware.Context, params martini.Params) {
 	}
 	ctx.Data["Branches"] = brs
 
-	repoFile, err := models.GetTargetFile(params["username"], params["reponame"],
-		params["branchname"], params["commitid"], treename)
+	var commitId string
+	isViewBranch := models.IsBranchExist(userName, repoName, branchName)
+	if !isViewBranch {
+		commitId = branchName
+	}
+	ctx.Data["IsViewBranch"] = isViewBranch
+
+	repoFile, err := models.GetTargetFile(userName, repoName,
+		branchName, commitId, treename)
 	if err != nil && err != models.ErrRepoFileNotExist {
 		ctx.Handle(404, "repo.Single(GetTargetFile)", err)
 		return
 	}
 
-	branchLink := "/" + ctx.Repo.Owner.LowerName + "/" + ctx.Repo.Repository.Name + "/src/" + params["branchname"]
-	rawLink := "/" + ctx.Repo.Owner.LowerName + "/" + ctx.Repo.Repository.Name + "/raw/" + params["branchname"]
+	branchLink := "/" + ctx.Repo.Owner.LowerName + "/" + ctx.Repo.Repository.Name + "/src/" + branchName
+	rawLink := "/" + ctx.Repo.Owner.LowerName + "/" + ctx.Repo.Repository.Name + "/raw/" + branchName
 
 	if len(treename) != 0 && repoFile == nil {
 		ctx.Handle(404, "repo.Single", nil)
@@ -111,23 +122,28 @@ func Single(ctx *middleware.Context, params martini.Params) {
 
 			data := blob.Contents()
 			_, isTextFile := base.IsTextFile(data)
+			_, isImageFile := base.IsImageFile(data)
 			ctx.Data["FileIsText"] = isTextFile
 
-			readmeExist := base.IsMarkdownFile(repoFile.Name) || base.IsReadmeFile(repoFile.Name)
-			ctx.Data["ReadmeExist"] = readmeExist
-			if readmeExist {
-				ctx.Data["FileContent"] = string(base.RenderMarkdown(data, ""))
+			if isImageFile {
+				ctx.Data["IsImageFile"] = true
 			} else {
-				if isTextFile {
-					ctx.Data["FileContent"] = string(data)
+				readmeExist := base.IsMarkdownFile(repoFile.Name) || base.IsReadmeFile(repoFile.Name)
+				ctx.Data["ReadmeExist"] = readmeExist
+				if readmeExist {
+					ctx.Data["FileContent"] = string(base.RenderMarkdown(data, ""))
+				} else {
+					if isTextFile {
+						ctx.Data["FileContent"] = string(data)
+					}
 				}
 			}
 		}
 
 	} else {
 		// Directory and file list.
-		files, err := models.GetReposFiles(params["username"], params["reponame"],
-			params["branchname"], params["commitid"], treename)
+		files, err := models.GetReposFiles(userName, repoName,
+			branchName, commitId, treename)
 		if err != nil {
 			ctx.Handle(404, "repo.Single(GetReposFiles)", err)
 			return
@@ -166,8 +182,8 @@ func Single(ctx *middleware.Context, params martini.Params) {
 		}
 	}
 
-	ctx.Data["Username"] = params["username"]
-	ctx.Data["Reponame"] = params["reponame"]
+	ctx.Data["Username"] = userName
+	ctx.Data["Reponame"] = repoName
 
 	var treenames []string
 	Paths := make([]string, 0)
@@ -185,14 +201,16 @@ func Single(ctx *middleware.Context, params martini.Params) {
 	}
 
 	// Get latest commit according username and repo name.
-	commit, err := models.GetCommit(params["username"], params["reponame"],
-		params["branchname"], params["commitid"])
+	commit, err := models.GetCommit(userName, repoName,
+		branchName, commitId)
 	if err != nil {
 		log.Error("repo.Single(GetCommit): %v", err)
 		ctx.Handle(404, "repo.Single(GetCommit)", err)
 		return
 	}
 	ctx.Data["LastCommit"] = commit
+
+	ctx.Data["CommitId"] = commitId
 
 	ctx.Data["Paths"] = Paths
 	ctx.Data["Treenames"] = treenames
@@ -209,8 +227,18 @@ func SingleDownload(ctx *middleware.Context, params martini.Params) {
 	// Get tree path
 	treename := params["_1"]
 
-	repoFile, err := models.GetTargetFile(params["username"], params["reponame"],
-		params["branchname"], params["commitid"], treename)
+	branchName := params["branchname"]
+	userName := params["username"]
+	repoName := params["reponame"]
+
+	var commitId string
+	if !models.IsBranchExist(userName, repoName, branchName) {
+		commitId = branchName
+		branchName = ""
+	}
+
+	repoFile, err := models.GetTargetFile(userName, repoName,
+		branchName, commitId, treename)
 
 	if err != nil {
 		ctx.Handle(404, "repo.SingleDownload(GetTargetFile)", err)
@@ -225,9 +253,9 @@ func SingleDownload(ctx *middleware.Context, params martini.Params) {
 
 	data := blob.Contents()
 	contentType, isTextFile := base.IsTextFile(data)
+	_, isImageFile := base.IsImageFile(data)
 	ctx.Res.Header().Set("Content-Type", contentType)
-	if !isTextFile {
-		ctx.Res.Header().Set("Content-Type", contentType)
+	if !isTextFile && !isImageFile {
 		ctx.Res.Header().Set("Content-Disposition", "attachment; filename="+filepath.Base(treename))
 		ctx.Res.Header().Set("Content-Transfer-Encoding", "binary")
 	}

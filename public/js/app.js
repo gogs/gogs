@@ -50,6 +50,14 @@ var Gogits = {
             }
         }
     });
+    $.fn.extend({
+        toggleHide: function () {
+            $(this).addClass("hidden");
+        },
+        toggleShow: function () {
+            $(this).removeClass("hidden");
+        }
+    })
 }(jQuery));
 
 (function ($) {
@@ -352,6 +360,54 @@ function initRepository() {
     }());
 }
 
+function initInstall() {
+    // database type change
+    $('#install-database').on("change", function () {
+        var val = $(this).val();
+        if (val != "sqlite") {
+            $('.server-sql').show();
+            $('.sqlite-setting').addClass("hide");
+            if (val == "pgsql") {
+                $('.pgsql-setting').removeClass("hide");
+            } else {
+                $('.pgsql-setting').addClass("hide");
+            }
+        } else {
+            $('.server-sql').hide();
+            $('.sqlite-setting').removeClass("hide");
+        }
+    });
+}
+
+function initIssue() {
+    // close button
+    (function () {
+        var $closeBtn = $('#issue-close-btn');
+        var $openBtn = $('#issue-open-btn');
+        $('#issue-reply-content').on("keyup", function () {
+            if ($(this).val().length) {
+                $closeBtn.text($closeBtn.data("text"));
+                $openBtn.text($openBtn.data("text"));
+            } else {
+                $closeBtn.text($closeBtn.data("origin"));
+                $openBtn.text($openBtn.data("origin"));
+            }
+        });
+    }());
+
+    // issue edit mode
+    (function () {
+        $("#issue-edit-btn").on("click", function () {
+            $('#issue h1.title,#issue .issue-main > .issue-content .content,#issue-edit-btn').toggleHide();
+            $('#issue-edit-title,#issue-edit-content,.issue-edit-cancel,.issue-edit-save').toggleShow();
+        });
+        $('.issue-edit-cancel').on("click", function () {
+            $('#issue h1.title,#issue .issue-main > .issue-content .content,#issue-edit-btn').toggleShow();
+            $('#issue-edit-title,#issue-edit-content,.issue-edit-cancel,.issue-edit-save').toggleHide();
+        })
+    }());
+}
+
 (function ($) {
     $(function () {
         initCore();
@@ -364,6 +420,12 @@ function initRepository() {
         }
         if ($('.repo-nav').length) {
             initRepository();
+        }
+        if ($('#install-card').length) {
+            initInstall();
+        }
+        if ($('#issue').length) {
+            initIssue();
         }
     });
 })(jQuery);
