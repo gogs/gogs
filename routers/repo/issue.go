@@ -40,9 +40,7 @@ func Issues(ctx *middleware.Context) {
 			ctx.Redirect("/user/login/", 302)
 			return
 		}
-		posterId = ctx.User.Id
 		ctx.Data["ViewType"] = "created_by"
-		ctx.Data["IssueCreatedCount"] = models.GetUserIssueCount(posterId, ctx.Repo.Repository.Id)
 	}
 
 	// Get issues.
@@ -53,6 +51,11 @@ func Issues(ctx *middleware.Context) {
 		return
 	}
 
+	if ctx.IsSigned {
+		posterId = ctx.User.Id
+	}
+	var createdByCount int
+
 	// Get posters.
 	for i := range issues {
 		u, err := models.GetUserById(issues[i].PosterId)
@@ -61,12 +64,16 @@ func Issues(ctx *middleware.Context) {
 			return
 		}
 		issues[i].Poster = u
+		if u.Id == posterId {
+			createdByCount++
+		}
 	}
 
 	ctx.Data["Issues"] = issues
 	ctx.Data["IssueCount"] = ctx.Repo.Repository.NumIssues
 	ctx.Data["OpenCount"] = ctx.Repo.Repository.NumIssues - ctx.Repo.Repository.NumClosedIssues
 	ctx.Data["ClosedCount"] = ctx.Repo.Repository.NumClosedIssues
+	ctx.Data["IssueCreatedCount"] = createdByCount
 	ctx.Data["IsShowClosed"] = ctx.Query("state") == "closed"
 	ctx.HTML(200, "issue/list")
 }
@@ -224,6 +231,12 @@ func Comment(ctx *middleware.Context, params martini.Params) {
 		return
 	}
 
+	content := ctx.Query("content")
+	if len(content) == 0 {
+		ctx.Redirect(fmt.Sprintf("/%s/%s/issues/%d", ctx.User.Name, ctx.Repo.Repository.Name, index))
+		return
+	}
+
 	issue, err := models.GetIssueByIndex(ctx.Repo.Repository.Id, int64(index))
 	if err != nil {
 		if err == models.ErrIssueNotExist {
@@ -231,12 +244,6 @@ func Comment(ctx *middleware.Context, params martini.Params) {
 		} else {
 			ctx.Handle(200, "issue.Comment(get issue)", err)
 		}
-		return
-	}
-
-	content := ctx.Query("content")
-	if len(content) == 0 {
-		ctx.Handle(404, "issue.Comment", err)
 		return
 	}
 
