@@ -11,7 +11,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -59,15 +58,6 @@ func NewRepoContext() {
 			os.Exit(2)
 		}
 	}
-
-	// Initialize illegal patterns.
-	for i := range illegalPatterns[1:] {
-		pattern := ""
-		for j := range illegalPatterns[i+1] {
-			pattern += "[" + string(illegalPatterns[i+1][j]-32) + string(illegalPatterns[i+1][j]) + "]"
-		}
-		illegalPatterns[i+1] = pattern
-	}
 }
 
 // Repository represents a git repository.
@@ -105,15 +95,20 @@ func IsRepositoryExist(user *User, repoName string) (bool, error) {
 }
 
 var (
-	// Define as all lower case!!
-	illegalPatterns = []string{"[.][Gg][Ii][Tt]", "raw", "user", "help", "stars", "issues", "pulls", "commits", "repo", "template", "admin"}
+	illegalEquals  = []string{"raw", "install", "api", "avatar", "user", "help", "stars", "issues", "pulls", "commits", "repo", "template", "admin"}
+	illegalSuffixs = []string{".git"}
 )
 
 // IsLegalName returns false if name contains illegal characters.
 func IsLegalName(repoName string) bool {
-	for _, pattern := range illegalPatterns {
-		has, _ := regexp.MatchString(pattern, repoName)
-		if has {
+	repoName = strings.ToLower(repoName)
+	for _, char := range illegalEquals {
+		if repoName == char {
+			return false
+		}
+	}
+	for _, char := range illegalSuffixs {
+		if strings.HasSuffix(repoName, char) {
 			return false
 		}
 	}
