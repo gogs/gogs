@@ -506,9 +506,16 @@ const (
 <div><img src="%s?s=16" alt="user-avatar"/> %s</div>`
 )
 
+type PushCommit struct {
+	Sha1        string
+	Message     string
+	AuthorEmail string
+	AuthorName  string
+}
+
 type PushCommits struct {
 	Len     int
-	Commits [][]string
+	Commits []*PushCommit
 }
 
 // ActionDesc accepts int that represents action operation type
@@ -529,7 +536,7 @@ func ActionDesc(act Actioner, avatarLink string) string {
 		}
 		buf := bytes.NewBuffer([]byte("\n"))
 		for _, commit := range push.Commits {
-			buf.WriteString(fmt.Sprintf(TPL_COMMIT_REPO_LI, avatarLink, repoLink, commit[0], commit[0][:7], commit[1]) + "\n")
+			buf.WriteString(fmt.Sprintf(TPL_COMMIT_REPO_LI, avatarLink, repoLink, commit.Sha1, commit.Sha1[:7], commit.Message) + "\n")
 		}
 		if push.Len > 3 {
 			buf.WriteString(fmt.Sprintf(`<div><a href="/%s/%s/commits/%s">%d other commits >></a></div>`, actUserName, repoName, branch, push.Len))

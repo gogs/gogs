@@ -130,11 +130,15 @@ func runUpdate(c *cli.Context) {
 		return
 	}
 
-	commits := make([][]string, 0)
+	commits := make([]*base.PushCommit, 0)
 	var maxCommits = 3
 	for e := l.Front(); e != nil; e = e.Next() {
 		commit := e.Value.(*git.Commit)
-		commits = append(commits, []string{commit.Id().String(), commit.Message()})
+		commits = append(commits,
+			&base.PushCommit{commit.Id().String(),
+				commit.Message(),
+				commit.Author.Email,
+				commit.Author.Name})
 		if len(commits) >= maxCommits {
 			break
 		}
