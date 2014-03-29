@@ -132,8 +132,12 @@ func runUpdate(c *cli.Context) {
 
 	commits := make([]*base.PushCommit, 0)
 	var maxCommits = 3
+	var actEmail string
 	for e := l.Front(); e != nil; e = e.Next() {
 		commit := e.Value.(*git.Commit)
+		if actEmail == "" {
+			actEmail = commit.Committer.Email
+		}
 		commits = append(commits,
 			&base.PushCommit{commit.Id().String(),
 				commit.Message(),
@@ -145,7 +149,7 @@ func runUpdate(c *cli.Context) {
 	}
 
 	//commits = append(commits, []string{lastCommit.Id().String(), lastCommit.Message()})
-	if err = models.CommitRepoAction(int64(sUserId), userName,
+	if err = models.CommitRepoAction(int64(sUserId), userName, actEmail,
 		repos.Id, repoName, git.BranchName(refName), &base.PushCommits{l.Len(), commits}); err != nil {
 		log.Error("runUpdate.models.CommitRepoAction: %v", err)
 	}
