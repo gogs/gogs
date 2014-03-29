@@ -92,7 +92,7 @@ func runWeb(*cli.Context) {
 
 	// Routers.
 	m.Get("/", ignSignIn, routers.Home)
-	m.Any("/install", routers.Install)
+	m.Any("/install", binding.BindIgnErr(auth.InstallForm{}), routers.Install)
 	m.Get("/issues", reqSignIn, user.Issues)
 	m.Get("/pulls", reqSignIn, user.Pulls)
 	m.Get("/stars", reqSignIn, user.Stars)

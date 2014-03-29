@@ -12,9 +12,9 @@
                 <input id="issue-edit-title" class="form-control input-lg pull-left hidden" type="text" value="{{.Issue.Name}}" data-ajax-rel="issue-edit-save" data-ajax-val="val" data-ajax-field="title"/>
                 <input type="hidden" value="{{.Issue.Id}}" data-ajax-rel="issue-edit-save" data-ajax-val="val" data-ajax-field="issue_id"/>
                 <p class="info pull-left">
-                    <a class="btn btn-default pull-right issue-edit" href="#" id="issue-edit-btn">Edit</a>
+                    {{if .IsIssueOwner}}<a class="btn btn-default pull-right issue-edit" href="#" id="issue-edit-btn">Edit</a>
                     <a class="btn btn-danger pull-right issue-edit-cancel hidden" href="#">Cancel</a>
-                    <a class="btn btn-primary pull-right issue-edit-save hidden" href="#" data-ajax="/{{.RepositoryLink}}/issues/{{.Issue.Index}}" data-ajax-name="issue-edit-save" data-ajax-method="post">Save</a>
+                    <a class="btn btn-primary pull-right issue-edit-save hidden" href="#" data-ajax="/{{.RepositoryLink}}/issues/{{.Issue.Index}}" data-ajax-name="issue-edit-save" data-ajax-method="post">Save</a>{{end}}
                     <span class="status label label-{{if .Issue.IsClosed}}danger{{else}}success{{end}}">{{if .Issue.IsClosed}}Closed{{else}}Open{{end}}</span>
                     <a href="/user/{{.Issue.Poster.Name}}" class="author"><strong>{{.Issue.Poster.Name}}</strong></a> opened this issue
                     <span class="time">{{TimeSince .Issue.Created}}</span> · {{.Issue.NumComments}} comments
@@ -62,7 +62,7 @@
                     </div>
                 </div> -->
                 <hr class="issue-line"/>
-                <div class="issue-child issue-reply">
+                {{if .SignedUser}}<div class="issue-child issue-reply">
                     <a class="user pull-left" href="/user/{{.SignedUser.Name}}"><img class="avatar" src="{{.SignedUser.AvatarLink}}" alt=""/></a>
                     <form class="panel panel-default issue-content" action="/{{.RepositoryLink}}/comment/new" method="post">
                         {{.CsrfTokenHtml}}
@@ -95,7 +95,7 @@
                             </div>
                         </div>
                     </form>
-                </div>
+                </div>{{else}}<div class="alert alert-warning"><a class="btn btn-success btn-lg" href="/user/sign_up">Sign up for free</a> to join this conversation. Already have an account? <a href="/user/login">Sign in to comment</a></div>{{end}}
             </div><!--
             <div class="col-md-3">
                 label assignment milestone dashboard
