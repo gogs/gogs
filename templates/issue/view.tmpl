@@ -30,37 +30,37 @@
                    </div>
                </div>
                {{range .Comments}}
-               <div class="issue-child" id="issue-comment-{{.Id}}">
-                   <a class="user pull-left" href="/user/{{.Poster.Name}}"><img class="avatar" src="{{.Poster.AvatarLink}}" alt=""/></a>
-                   <div class="issue-content panel panel-default">
-                       <div class="panel-heading">
-                           <a href="/user/{{.Poster.Name}}" class="user">{{.Poster.Name}}</a> commented <span class="time">{{TimeSince .Created}}</span>
-                           <!-- <a class="issue-comment-del pull-right issue-action" href="#" title="Edit Comment"><i class="fa fa-times-circle"></i></a>
-                           <a class="issue-comment-edit pull-right issue-action" href="#" title="Remove Comment" data-url="{remove-link}"><i class="fa fa-edit"></i></a> -->
-                           <span class="role label label-default pull-right">Owner</span>
-                       </div>
-                       <div class="panel-body markdown">
-                          {{str2html .Content}}
-                       </div>
-                   </div>
-                </div>
+                {{if eq .Type 0}}
+                 <div class="issue-child" id="issue-comment-{{.Id}}">
+                     <a class="user pull-left" href="/user/{{.Poster.Name}}"><img class="avatar" src="{{.Poster.AvatarLink}}" alt=""/></a>
+                     <div class="issue-content panel panel-default">
+                         <div class="panel-heading">
+                             <a href="/user/{{.Poster.Name}}" class="user">{{.Poster.Name}}</a> commented <span class="time">{{TimeSince .Created}}</span>
+                             <!-- <a class="issue-comment-del pull-right issue-action" href="#" title="Edit Comment"><i class="fa fa-times-circle"></i></a>
+                             <a class="issue-comment-edit pull-right issue-action" href="#" title="Remove Comment" data-url="{remove-link}"><i class="fa fa-edit"></i></a> -->
+                             <span class="role label label-default pull-right">Owner</span>
+                         </div>
+                         <div class="panel-body markdown">
+                            {{str2html .Content}}
+                         </div>
+                     </div>
+                  </div>
+                  {{else if eq .Type 1}}
+                  <div class="issue-child issue-opened">
+                      <a class="user pull-left" href="/user/{{.Poster.Name}}"><img class="avatar" src="{{.Poster.AvatarLink}}" alt="" /></a>
+                      <div class="issue-content">
+                          <a class="user pull-left" href="/user/{{.Poster.Name}}">{{.Poster.Name}}</a> <span class="label label-success">Reopened</span> this issue <span class="time">{{TimeSince .Created}}</span>
+                      </div>
+                  </div>
+                  {{else if eq .Type 2}}
+                  <div class="issue-child issue-closed">
+                    <a class="user pull-left" href="/user/{{.Poster.Name}}"><img class="avatar" src="{{.Poster.AvatarLink}}" alt=""/></a>
+                    <div class="issue-content">
+                        <a class="user pull-left" href="/user/{{.Poster.Name}}">{{.Poster.Name}}</a> <span class="label label-danger">Closed</span> this issue <span class="time">{{TimeSince .Created}}</span>
+                    </div>
+                  </div>
+                  {{end}}
                 {{end}}
-                <!-- <div class="issue-child issue-closed">
-                    <a class="user pull-left" href="{user.link}"><img class="avatar" src="{user.avatar}" alt=""/></a>
-                    <div class="issue-content">
-                        <a class="user pull-left" href="{user.link}">{user.name}</a>
-                        <span class="btn btn-danger">Closed</span> this
-                        <span class="time">{close.time}</span>
-                    </div>
-                </div>
-                <div class="issue-child issue-opened">
-                    <a class="user pull-left" href="{user.link}"><img class="avatar" src="{user.avatar}" alt=""/></a>
-                    <div class="issue-content">
-                        <a class="user pull-left" href="{user.link}">{user.name}</a>
-                        <span class="btn btn-success">Reopened</span> this
-                        <span class="time">{close.time}</span>
-                    </div>
-                </div> -->
                 <hr class="issue-line"/>
                 {{if .SignedUser}}<div class="issue-child issue-reply">
                     <a class="user pull-left" href="/user/{{.SignedUser.Name}}"><img class="avatar" src="{{.SignedUser.AvatarLink}}" alt=""/></a>
@@ -68,8 +68,7 @@
                         {{.CsrfTokenHtml}}
                         <div class="panel-body">
                             <div class="form-group">
-                                <div class="md-help pull-right"><!-- todo help link -->
-                                    Content with <a href="https://help.github.com/articles/markdown-basics">Markdown</a>
+                                <div class="md-help pull-right">Content with <a href="https://help.github.com/articles/markdown-basics">Markdown</a>
                                 </div>
                                 <ul class="nav nav-tabs" data-init="tabs">
                                     <li class="active issue-write"><a href="#issue-textarea" data-toggle="tab">Write</a></li>
@@ -82,13 +81,13 @@
                                             <textarea class="form-control" name="content" id="issue-reply-content" rows="10" placeholder="Write some content" data-ajax-rel="issue-preview" data-ajax-val="val" data-ajax-field="content">{{.content}}</textarea>
                                         </div>
                                     </div>
-                                    <div class="tab-pane issue-preview-content" id="issue-preview">loading...</div>
+                                    <div class="tab-pane issue-preview-content" id="issue-preview">Loading...</div>
                                 </div>
                             </div>
                             <div class="text-right">
                                 <div class="form-group">
                                     {{if .Issue.IsClosed}}
-                                    <input type="submit" class="btn-default btn issue-open" id="issue-open-btn" data-origin="Re-Open" data-text="Re-Open & Comment" name="change_status" value="Reopen"/>{{else}}
+                                    <input type="submit" class="btn-default btn issue-open" id="issue-open-btn" data-origin="Reopen" data-text="Reopen & Comment" name="change_status" value="Reopen"/>{{else}}
                                     <input type="submit" class="btn-default btn issue-close" id="issue-close-btn" data-origin="Close" data-text="Close & Comment" name="change_status" value="Close"/>{{end}}&nbsp;&nbsp;
                                     <button class="btn-success btn" id="issue-reply-btn">Comment</button>
                                 </div>

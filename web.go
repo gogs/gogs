@@ -8,19 +8,16 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
-	"strings"
 
 	"github.com/codegangsta/cli"
 	"github.com/codegangsta/martini"
 
 	"github.com/gogits/binding"
 
-	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/avatar"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
-	"github.com/gogits/gogs/modules/mailer"
 	"github.com/gogits/gogs/modules/middleware"
 	"github.com/gogits/gogs/routers"
 	"github.com/gogits/gogs/routers/admin"
@@ -40,27 +37,6 @@ and it takes care of all the other things for you`,
 	Flags:  []cli.Flag{},
 }
 
-// globalInit is for global configuration reload-able.
-func globalInit() {
-	base.NewConfigContext()
-	mailer.NewMailerContext()
-	models.LoadModelsConfig()
-	models.LoadRepoConfig()
-	models.NewRepoContext()
-	models.NewEngine()
-}
-
-// Check run mode(Default of martini is Dev).
-func checkRunMode() {
-	switch base.Cfg.MustValue("", "RUN_MODE") {
-	case "prod":
-		martini.Env = martini.Prod
-	case "test":
-		martini.Env = martini.Test
-	}
-	log.Info("Run Mode: %s", strings.Title(martini.Env))
-}
-
 func newMartini() *martini.ClassicMartini {
 	r := martini.NewRouter()
 	m := martini.New()
@@ -74,9 +50,7 @@ func newMartini() *martini.ClassicMartini {
 
 func runWeb(*cli.Context) {
 	fmt.Println("Server is running...")
-	globalInit()
-	base.NewServices()
-	checkRunMode()
+	routers.GlobalInit()
 	log.Info("%s %s", base.AppName, base.AppVer)
 
 	m := newMartini()

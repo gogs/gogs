@@ -7,6 +7,7 @@ package repo
 import (
 	"fmt"
 	"net/url"
+	"strings"
 
 	"github.com/codegangsta/martini"
 
@@ -175,7 +176,7 @@ func ViewIssue(ctx *middleware.Context, params martini.Params) {
 	ctx.Data["Title"] = issue.Name
 	ctx.Data["Issue"] = issue
 	ctx.Data["Comments"] = comments
-	ctx.Data["IsIssueOwner"] = issue.PosterId == ctx.User.Id
+	ctx.Data["IsIssueOwner"] = ctx.Repo.IsOwner || issue.PosterId == ctx.User.Id
 	ctx.Data["IsRepoToolbarIssues"] = true
 	ctx.Data["IsRepoToolbarIssuesList"] = false
 	ctx.HTML(200, "issue/view")
@@ -225,24 +226,17 @@ func UpdateIssue(ctx *middleware.Context, params martini.Params, form auth.Creat
 }
 
 func Comment(ctx *middleware.Context, params martini.Params) {
-	fmt.Println(ctx.Query("change_status"))
 	if !ctx.Repo.IsValid {
 		ctx.Handle(404, "issue.Comment(invalid repo):", nil)
 	}
 
-	index, err := base.StrTo(ctx.Query("issueIndex")).Int()
+	index, err := base.StrTo(ctx.Query("issueIndex")).Int64()
 	if err != nil {
-		ctx.Handle(404, "issue.Comment", err)
+		ctx.Handle(404, "issue.Comment(get index)", err)
 		return
 	}
 
-	content := ctx.Query("content")
-	if len(content) == 0 {
-		ctx.Redirect(fmt.Sprintf("/%s/%s/issues/%d", ctx.User.Name, ctx.Repo.Repository.Name, index))
-		return
-	}
-
-	issue, err := models.GetIssueByIndex(ctx.Repo.Repository.Id, int64(index))
+	issue, err := models.GetIssueByIndex(ctx.Repo.Repository.Id, index)
 	if err != nil {
 		if err == models.ErrIssueNotExist {
 			ctx.Handle(404, "issue.Comment", err)
@@ -252,16 +246,46 @@ func Comment(ctx *middleware.Context, params martini.Params) {
 		return
 	}
 
-	switch params["action"] {
-	case "new":
-		if err = models.CreateComment(ctx.User.Id, issue.Id, 0, 0, content); err != nil {
-			ctx.Handle(500, "issue.Comment(create comment)", err)
+	// Check if issue owner changes the status of issue.
+	var newStatus string
+	if ctx.Repo.IsOwner || issue.PosterId == ctx.User.Id {
+		newStatus = ctx.Query("change_status")
+	}
+	if len(newStatus) > 0 {
+		if (strings.Contains(newStatus, "Reopen") && issue.IsClosed) ||
+			(strings.Contains(newStatus, "Close") && !issue.IsClosed) {
+			issue.IsClosed = !issue.IsClosed
+			if err = models.UpdateIssue(issue); err != nil {
+				ctx.Handle(200, "issue.Comment(update issue status)", err)
+				return
+			}
+
+			cmtType := models.IT_CLOSE
+			if !issue.IsClosed {
+				cmtType = models.IT_REOPEN
+			}
+
+			if err = models.CreateComment(ctx.User.Id, ctx.Repo.Repository.Id, issue.Id, 0, 0, cmtType, ""); err != nil {
+				ctx.Handle(200, "issue.Comment(create status change comment)", err)
+				return
+			}
+			log.Trace("%s Issue(%d) status changed: %v", ctx.Req.RequestURI, issue.Id, !issue.IsClosed)
+		}
+	}
+
+	content := ctx.Query("content")
+	if len(content) > 0 {
+		switch params["action"] {
+		case "new":
+			if err = models.CreateComment(ctx.User.Id, ctx.Repo.Repository.Id, issue.Id, 0, 0, models.IT_PLAIN, content); err != nil {
+				ctx.Handle(500, "issue.Comment(create comment)", err)
+				return
+			}
+			log.Trace("%s Comment created: %d", ctx.Req.RequestURI, issue.Id)
+		default:
+			ctx.Handle(404, "issue.Comment", err)
 			return
 		}
-		log.Trace("%s Comment created: %d", ctx.Req.RequestURI, issue.Id)
-	default:
-		ctx.Handle(404, "issue.Comment", err)
-		return
 	}
 
 	ctx.Redirect(fmt.Sprintf("/%s/%s/issues/%d", ctx.User.Name, ctx.Repo.Repository.Name, index))

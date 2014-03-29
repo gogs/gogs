@@ -5,7 +5,7 @@ Gogs(Go Git Service) is a Self Hosted Git Service in the Go Programming Language
 
 ![Demo](http://gowalker.org/public/gogs_demo.gif)
 
-##### Current version: 0.1.9 Alpha
+##### Current version: 0.2.0 Alpha
 
 #### Due to testing purpose, data of [try.gogits.org](http://try.gogits.org) has been reset in March 29, 2014 and will reset multiple times after. Please do NOT put your important data on the site.
 
