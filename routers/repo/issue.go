@@ -105,7 +105,7 @@ func CreateIssue(ctx *middleware.Context, params martini.Params, form auth.Creat
 	}
 
 	// Notify watchers.
-	if err = models.NotifyWatchers(&models.Action{ActUserId: ctx.User.Id, ActUserName: ctx.User.Name,
+	if err = models.NotifyWatchers(&models.Action{ActUserId: ctx.User.Id, ActUserName: ctx.User.Name, ActEmail: ctx.User.Email,
 		OpType: models.OP_CREATE_ISSUE, Content: fmt.Sprintf("%d|%s", issue.Index, issue.Name),
 		RepoId: ctx.Repo.Repository.Id, RepoName: ctx.Repo.Repository.Name, RefName: ""}); err != nil {
 		ctx.Handle(200, "issue.CreateIssue", err)
@@ -221,6 +221,7 @@ func UpdateIssue(ctx *middleware.Context, params martini.Params, form auth.Creat
 }
 
 func Comment(ctx *middleware.Context, params martini.Params) {
+	fmt.Println(ctx.Query("change_status"))
 	if !ctx.Repo.IsValid {
 		ctx.Handle(404, "issue.Comment(invalid repo):", nil)
 	}
