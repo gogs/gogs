@@ -64,7 +64,7 @@ func (a Action) GetContent() string {
 }
 
 // CommitRepoAction adds new action for committing repository.
-func CommitRepoAction(userId int64, userName string,
+func CommitRepoAction(userId int64, userName, actEmail string,
 	repoId int64, repoName string, refName string, commit *base.PushCommits) error {
 	log.Trace("action.CommitRepoAction(start): %d/%s", userId, repoName)
 
@@ -74,7 +74,7 @@ func CommitRepoAction(userId int64, userName string,
 		return err
 	}
 
-	if err = NotifyWatchers(&Action{ActUserId: userId, ActUserName: userName, ActEmail: "",
+	if err = NotifyWatchers(&Action{ActUserId: userId, ActUserName: userName, ActEmail: actEmail,
 		OpType: OP_COMMIT_REPO, Content: string(bs), RepoId: repoId, RepoName: repoName, RefName: refName}); err != nil {
 		log.Error("action.CommitRepoAction(notify watchers): %d/%s", userId, repoName)
 		return err
