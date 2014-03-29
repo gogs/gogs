@@ -35,7 +35,7 @@
                 {{range .Feeds}}
                     <li>
                         <i class="icon fa fa-{{ActionIcon .OpType}}"></i>
-                        <div class="info"><span class="meta">{{TimeSince .Created}}</span><br>{{ActionDesc . $.Owner.AvatarLink | str2html}}</div>
+                        <div class="info"><span class="meta">{{TimeSince .Created}}</span><br>{{ActionDesc . | str2html}}</div>
                         <span class="clearfix"></span>
                     </li>
                 {{else}}
