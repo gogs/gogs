@@ -18,23 +18,24 @@ var (
 
 // Issue represents an issue or pull request of repository.
 type Issue struct {
-	Id          int64
-	Index       int64 // Index in one repository.
-	Name        string
-	RepoId      int64       `xorm:"index"`
-	Repo        *Repository `xorm:"-"`
-	PosterId    int64
-	Poster      *User `xorm:"-"`
-	MilestoneId int64
-	AssigneeId  int64
-	IsPull      bool // Indicates whether is a pull request or not.
-	IsClosed    bool
-	Labels      string `xorm:"TEXT"`
-	Mentions    string `xorm:"TEXT"`
-	Content     string `xorm:"TEXT"`
-	NumComments int
-	Created     time.Time `xorm:"created"`
-	Updated     time.Time `xorm:"updated"`
+	Id              int64
+	Index           int64 // Index in one repository.
+	Name            string
+	RepoId          int64       `xorm:"index"`
+	Repo            *Repository `xorm:"-"`
+	PosterId        int64
+	Poster          *User `xorm:"-"`
+	MilestoneId     int64
+	AssigneeId      int64
+	IsPull          bool // Indicates whether is a pull request or not.
+	IsClosed        bool
+	Labels          string `xorm:"TEXT"`
+	Mentions        string `xorm:"TEXT"`
+	Content         string `xorm:"TEXT"`
+	RenderedContent string `xorm:"-"`
+	NumComments     int
+	Created         time.Time `xorm:"created"`
+	Updated         time.Time `xorm:"updated"`
 }
 
 // CreateIssue creates new issue for repository.

@@ -152,7 +152,7 @@ func ViewIssue(ctx *middleware.Context, params martini.Params) {
 		return
 	}
 	issue.Poster = u
-	issue.Content = string(base.RenderMarkdown([]byte(issue.Content), ""))
+	issue.RenderedContent = string(base.RenderMarkdown([]byte(issue.Content), ""))
 
 	// Get comments.
 	comments, err := models.GetIssueComments(issue.Id)
@@ -216,8 +216,12 @@ func UpdateIssue(ctx *middleware.Context, params martini.Params, form auth.Creat
 		return
 	}
 
-	ctx.Data["Title"] = issue.Name
-	ctx.Data["Issue"] = issue
+	ctx.JSON(200, map[string]interface{}{
+		"ok":          true,
+		"title":       issue.Name,
+		"content":     string(base.RenderMarkdown([]byte(issue.Content), "")),
+		"raw_content": issue.Content,
+	})
 }
 
 func Comment(ctx *middleware.Context, params martini.Params) {
