@@ -24,6 +24,7 @@ import (
 	"github.com/gogits/gogs/modules/middleware"
 	"github.com/gogits/gogs/routers"
 	"github.com/gogits/gogs/routers/admin"
+	"github.com/gogits/gogs/routers/api/v1"
 	"github.com/gogits/gogs/routers/dev"
 	"github.com/gogits/gogs/routers/repo"
 	"github.com/gogits/gogs/routers/user"
@@ -72,6 +73,7 @@ func newMartini() *martini.ClassicMartini {
 }
 
 func runWeb(*cli.Context) {
+	fmt.Println("Server is running...")
 	globalInit()
 	base.NewServices()
 	checkRunMode()
@@ -95,7 +97,10 @@ func runWeb(*cli.Context) {
 	m.Get("/pulls", reqSignIn, user.Pulls)
 	m.Get("/stars", reqSignIn, user.Stars)
 	m.Get("/help", routers.Help)
-	m.Post("/preview", routers.Preview)
+
+	m.Group("/api/v1", func(r martini.Router) {
+		r.Post("/markdown", v1.Markdown)
+	})
 
 	avt := avatar.CacheServer("public/img/avatar/", "public/img/avatar_default.jpg")
 	m.Get("/avatar/:hash", avt.ServeHTTP)

@@ -2,16 +2,17 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-package routers
+package v1
 
-import "github.com/gogits/gogs/modules/middleware"
+import (
+	"github.com/gogits/gogs/modules/base"
+	"github.com/gogits/gogs/modules/middleware"
+)
 
-func Preview(ctx *middleware.Context) {
+func Markdown(ctx *middleware.Context) {
 	content := ctx.Query("content")
-	// todo : gfm render content
-	// content = Markdown(content)
 	ctx.Render.JSON(200, map[string]interface{}{
 		"ok":      true,
-		"content": "preview : " + content,
+		"content": string(base.RenderMarkdown([]byte(content), "")),
 	})
 }

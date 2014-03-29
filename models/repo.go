@@ -198,12 +198,19 @@ func CreateRepository(user *User, repoName, desc, repoLang, license string, priv
 
 	c := exec.Command("git", "update-server-info")
 	c.Dir = repoPath
-	err = c.Run()
-	if err != nil {
+	if err = c.Run(); err != nil {
 		log.Error("repo.CreateRepository(exec update-server-info): %v", err)
 	}
 
-	return repo, NewRepoAction(user, repo)
+	if err = NewRepoAction(user, repo); err != nil {
+		log.Error("repo.CreateRepository(NewRepoAction): %v", err)
+	}
+
+	if err = WatchRepo(user.Id, repo.Id, true); err != nil {
+		log.Error("repo.CreateRepository(WatchRepo): %v", err)
+	}
+
+	return repo, nil
 }
 
 // extractGitBareZip extracts git-bare.zip to repository path.
