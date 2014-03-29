@@ -221,6 +221,7 @@ func UpdateIssue(ctx *middleware.Context, params martini.Params, form auth.Creat
 }
 
 func Comment(ctx *middleware.Context, params martini.Params) {
+	fmt.Println(ctx.Query("change_status"))
 	if !ctx.Repo.IsValid {
 		ctx.Handle(404, "issue.Comment(invalid repo):", nil)
 	}
