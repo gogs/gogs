@@ -478,6 +478,7 @@ func (a argInt) Get(i int, args ...int) (r int) {
 type Actioner interface {
 	GetOpType() int
 	GetActUserName() string
+	GetActEmail() string
 	GetRepoName() string
 	GetBranch() string
 	GetContent() string
@@ -520,8 +521,9 @@ type PushCommits struct {
 
 // ActionDesc accepts int that represents action operation type
 // and returns the description.
-func ActionDesc(act Actioner, avatarLink string) string {
+func ActionDesc(act Actioner) string {
 	actUserName := act.GetActUserName()
+	email := act.GetActEmail()
 	repoName := act.GetRepoName()
 	repoLink := actUserName + "/" + repoName
 	branch := act.GetBranch()
@@ -536,7 +538,7 @@ func ActionDesc(act Actioner, avatarLink string) string {
 		}
 		buf := bytes.NewBuffer([]byte("\n"))
 		for _, commit := range push.Commits {
-			buf.WriteString(fmt.Sprintf(TPL_COMMIT_REPO_LI, avatarLink, repoLink, commit.Sha1, commit.Sha1[:7], commit.Message) + "\n")
+			buf.WriteString(fmt.Sprintf(TPL_COMMIT_REPO_LI, AvatarLink(commit.AuthorEmail), repoLink, commit.Sha1, commit.Sha1[:7], commit.Message) + "\n")
 		}
 		if push.Len > 3 {
 			buf.WriteString(fmt.Sprintf(`<div><a href="/%s/%s/commits/%s">%d other commits >></a></div>`, actUserName, repoName, branch, push.Len))
@@ -546,7 +548,7 @@ func ActionDesc(act Actioner, avatarLink string) string {
 	case 6: // Create issue.
 		infos := strings.SplitN(content, "|", 2)
 		return fmt.Sprintf(TPL_CREATE_Issue, actUserName, actUserName, repoLink, infos[0], repoLink, infos[0],
-			avatarLink, infos[1])
+			AvatarLink(email), infos[1])
 	default:
 		return "invalid type"
 	}
