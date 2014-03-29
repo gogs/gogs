@@ -454,6 +454,7 @@ function initIssue() {
                 if (json.ok) {
                     $('.issue-head h1.title').text(json.title);
                     $('.issue-main > .issue-content .content').html(json.content);
+                    $('.issue-edit-cancel').trigger("click");
                 }
             });
         });
