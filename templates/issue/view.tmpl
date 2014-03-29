@@ -4,17 +4,17 @@
 {{template "repo/toolbar" .}}
 <div id="body" class="container">
     <div id="issue">
-        <div id="issue-{issue.id}" class="issue-whole issue-is-opening">
+        <div id="issue-{{.Issue.Id}}" class="issue-whole issue-is-opening">
             <div class="issue-head clearfix">
                 <div class="number pull-right">#{{.Issue.Index}}</div>
                 <a class="author pull-left" href="/user/{{.Issue.Poster.Name}}"><img class="avatar" src="{{.Issue.Poster.AvatarLink}}" alt="" width="30"/></a>
                 <h1 class="title pull-left">{{.Issue.Name}}</h1>
-                <input id="issue-edit-title" class="form-control input-lg pull-left hidden" type="text" value="{issue.title}" data-ajax-rel="issue-edit-save" data-ajax-val="val" data-ajax-field="title"/>
-                <input type="hidden" value="{issue.id}" data-ajax-rel="issue-edit-save" data-ajax-val="val" data-ajax-field="issue_id"/>
+                <input id="issue-edit-title" class="form-control input-lg pull-left hidden" type="text" value="{{.Issue.Name}}" data-ajax-rel="issue-edit-save" data-ajax-val="val" data-ajax-field="title"/>
+                <input type="hidden" value="{{.Issue.Id}}" data-ajax-rel="issue-edit-save" data-ajax-val="val" data-ajax-field="issue_id"/>
                 <p class="info pull-left">
                     <a class="btn btn-default pull-right issue-edit" href="#" id="issue-edit-btn">Edit</a>
                     <a class="btn btn-danger pull-right issue-edit-cancel hidden" href="#">Cancel</a>
-                    <a class="btn btn-primary pull-right issue-edit-save hidden" href="#" data-ajax="{issue.edit.save.link}" data-ajax-name="issue-edit-save" data-ajax-method="post">Save</a>
+                    <a class="btn btn-primary pull-right issue-edit-save hidden" href="#" data-ajax="/{{.RepositoryLink}}/issues/{{.Issue.Index}}" data-ajax-name="issue-edit-save" data-ajax-method="post">Save</a>
                     <span class="status label label-{{if .Issue.IsClosed}}danger{{else}}success{{end}}">{{if .Issue.IsClosed}}Closed{{else}}Open{{end}}</span>
                     <a href="/user/{{.Issue.Poster.Name}}" class="author"><strong>{{.Issue.Poster.Name}}</strong></a> opened this issue
                     <span class="time">{{TimeSince .Issue.Created}}</span> · {{.Issue.NumComments}} comments
@@ -24,13 +24,13 @@
                <div class="panel panel-default issue-content">
                    <div class="panel-body markdown">
                        <div class="content">
-                           {{str2html .Issue.Content}}
+                           {{str2html .Issue.RenderedContent}}
                        </div>
-                       <textarea class="form-control hidden" name="content" id="issue-edit-content" rows="10" data-ajax-rel="issue-edit-save" data-ajax-val="val" data-ajax-field="content">{issue.content}</textarea>
+                       <textarea class="form-control hidden" name="content" id="issue-edit-content" rows="10" data-ajax-rel="issue-edit-save" data-ajax-val="val" data-ajax-field="content">{{.Issue.Content}}</textarea>
                    </div>
                </div>
                {{range .Comments}}
-               <div class="issue-child" id="issue-comment-{issue.comment.id}">
+               <div class="issue-child" id="issue-comment-{{.Id}}">
                    <a class="user pull-left" href="/user/{{.Poster.Name}}"><img class="avatar" src="{{.Poster.AvatarLink}}" alt=""/></a>
                    <div class="issue-content panel panel-default">
                        <div class="panel-heading">
