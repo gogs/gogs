@@ -175,6 +175,7 @@ func ViewIssue(ctx *middleware.Context, params martini.Params) {
 	ctx.Data["Title"] = issue.Name
 	ctx.Data["Issue"] = issue
 	ctx.Data["Comments"] = comments
+	ctx.Data["IsIssueOwner"] = issue.PosterId == ctx.User.Id
 	ctx.Data["IsRepoToolbarIssues"] = true
 	ctx.Data["IsRepoToolbarIssuesList"] = false
 	ctx.HTML(200, "issue/view")
@@ -217,10 +218,9 @@ func UpdateIssue(ctx *middleware.Context, params martini.Params, form auth.Creat
 	}
 
 	ctx.JSON(200, map[string]interface{}{
-		"ok":          true,
-		"title":       issue.Name,
-		"content":     string(base.RenderMarkdown([]byte(issue.Content), "")),
-		"raw_content": issue.Content,
+		"ok":      true,
+		"title":   issue.Name,
+		"content": string(base.RenderMarkdown([]byte(issue.Content), "")),
 	})
 }
 
