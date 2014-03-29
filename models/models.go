@@ -34,11 +34,11 @@ func LoadModelsConfig() {
 	DbCfg.Path = base.Cfg.MustValue("database", "PATH", "data/gogs.db")
 }
 
-func setEngine() {
+func SetEngine() {
 	var err error
 	switch DbCfg.Type {
 	case "mysql":
-		orm, err = xorm.NewEngine("mysql", fmt.Sprintf("%s:%s@%s/%s?charset=utf8",
+		orm, err = xorm.NewEngine("mysql", fmt.Sprintf("%s:%s@tcp(%s)/%s?charset=utf8",
 			DbCfg.User, DbCfg.Pwd, DbCfg.Host, DbCfg.Name))
 	case "postgres":
 		orm, err = xorm.NewEngine("postgres", fmt.Sprintf("user=%s password=%s dbname=%s sslmode=%s",
@@ -70,7 +70,7 @@ func setEngine() {
 }
 
 func NewEngine() {
-	setEngine()
+	SetEngine()
 	if err := orm.Sync(new(User), new(PublicKey), new(Repository), new(Watch),
 		new(Action), new(Access), new(Issue), new(Comment)); err != nil {
 		fmt.Printf("sync database struct error: %v\n", err)

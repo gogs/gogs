@@ -32,7 +32,7 @@ gogs serv provide access auth for repositories`,
 func runUpdate(c *cli.Context) {
 	base.NewConfigContext()
 	models.LoadModelsConfig()
-	models.NewEngine()
+	models.SetEngine()
 
 	w, _ := os.Create("update.log")
 	defer w.Close()

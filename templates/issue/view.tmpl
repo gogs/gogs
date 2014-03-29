@@ -4,14 +4,14 @@
 {{template "repo/toolbar" .}}
 <div id="body" class="container">
     <div id="issue">
-        <div id="issue-{issue.id}" class="issue-whole">
+        <div id="issue-{issue.id}" class="issue-whole issue-is-opening">
             <div class="issue-head clearfix">
                 <div class="number pull-right">#{{.Issue.Index}}</div>
                 <a class="author pull-left" href="/user/{{.Issue.Poster.Name}}"><img class="avatar" src="{{.Issue.Poster.AvatarLink}}" alt="" width="30"/></a>
                 <h1 class="title pull-left">{{.Issue.Name}}</h1>
                 <input id="issue-edit-title" class="form-control input-lg pull-left hidden" type="text" value="{issue.title}" data-ajax-rel="issue-save"/>
                 <p class="info pull-left">
-                    <a class="btn btn-default pull-right issue-edit" href="#" id="issue-edit-btn">Edit</a>
+                    <!-- <a class="btn btn-default pull-right issue-edit" href="#" id="issue-edit-btn">Edit</a> -->
                     <a class="btn btn-danger pull-right issue-edit-cancel hidden" href="#">Cancel</a>
                     <a class="btn btn-primary pull-right issue-edit-save hidden" href="#" data-ajax="{issue.save.link}" data-ajax-name="issue-save">Save</a>
                     <span class="status label label-{{if .Issue.IsClosed}}danger{{else}}success{{end}}">{{if .Issue.IsClosed}}Closed{{else}}Open{{end}}</span>
@@ -34,8 +34,8 @@
                    <div class="issue-content panel panel-default">
                        <div class="panel-heading">
                            <a href="/user/{{.Poster.Name}}" class="user">{{.Poster.Name}}</a> commented <span class="time">{{TimeSince .Created}}</span>
-                           <a class="issue-comment-del pull-right issue-action" href="#" title="Edit Comment"><i class="fa fa-times-circle"></i></a>
-                           <a class="issue-comment-edit pull-right issue-action" href="#" title="Remove Comment" data-url="{remove-link}"><i class="fa fa-edit"></i></a>
+                           <!-- <a class="issue-comment-del pull-right issue-action" href="#" title="Edit Comment"><i class="fa fa-times-circle"></i></a>
+                           <a class="issue-comment-edit pull-right issue-action" href="#" title="Remove Comment" data-url="{remove-link}"><i class="fa fa-edit"></i></a> -->
                            <span class="role label label-default pull-right">Owner</span>
                        </div>
                        <div class="panel-body markdown">
@@ -44,6 +44,22 @@
                    </div>
                 </div>
                 {{end}}
+                <!-- <div class="issue-child issue-closed">
+                    <a class="user pull-left" href="{user.link}"><img class="avatar" src="{user.avatar}" alt=""/></a>
+                    <div class="issue-content">
+                        <a class="user pull-left" href="{user.link}">{user.name}</a>
+                        <span class="btn btn-danger">Closed</span> this
+                        <span class="time">{close.time}</span>
+                    </div>
+                </div>
+                <div class="issue-child issue-opened">
+                    <a class="user pull-left" href="{user.link}"><img class="avatar" src="{user.avatar}" alt=""/></a>
+                    <div class="issue-content">
+                        <a class="user pull-left" href="{user.link}">{user.name}</a>
+                        <span class="btn btn-success">Reopened</span> this
+                        <span class="time">{close.time}</span>
+                    </div>
+                </div> -->
                 <hr class="issue-line"/>
                 <div class="issue-child issue-reply">
                     <a class="user pull-left" href="/user/{{.SignedUser.Name}}"><img class="avatar" src="{{.SignedUser.AvatarLink}}" alt=""/></a>
@@ -70,9 +86,11 @@
                             </div>
                             <div class="text-right">
                                 <div class="form-group">
-                                    <input type="hidden" value="id" name="repo-id"/>
-                                    <button class="btn-default btn issue-open" id="issue-open-btn" data-origin="Open" data-text="Open & Comment">Open</button>&nbsp;&nbsp;
-                                    <button class="btn-default btn issue-close" id="issue-close-btn" data-origin="Close" data-text="Close & Comment">Close</button>&nbsp;&nbsp;
+                                    {{if .Issue.IsClosed}}
+                                    <input type="hidden" value="reopen" name="change_status"/>
+                                    <button class="btn-default btn issue-open" id="issue-open-btn" data-origin="Re-Open" data-text="Re-Open & Comment">Reopen</button>{{else}}
+                                    <input type="hidden" value="close" name="change_status"/>
+                                    <button class="btn-default btn issue-close" id="issue-close-btn" data-origin="Close" data-text="Close & Comment">Close</button>{{end}}&nbsp;&nbsp;
                                     <button class="btn-success btn" id="issue-reply-btn">Comment</button>
                                 </div>
                             </div>

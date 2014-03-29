@@ -12,7 +12,7 @@
                 <select name="database" id="install-database" class="form-control">
                     <option value="mysql">MySQL</option>
                     <option value="pgsql">PostgreSQL</option>
-                    <option value="sqlite">SQLite</option>
+                    <option value="sqlite">SQLite3</option>
                 </select>
             </div>
         </div>
@@ -21,28 +21,21 @@
                 <label class="col-md-3 control-label">Host: </label>
 
                 <div class="col-md-8">
-                    <input name="host" class="form-control" placeholder="Type mysql server ip or domain" value="localhost" required="required">
-                </div>
-            </div>
-            <div class="form-group">
-                <label class="col-md-3 control-label">Port: </label>
-
-                <div class="col-md-8">
-                    <input name="port" class="form-control" placeholder="Type mysql server port" value="3306" required="required">
+                    <input name="host" class="form-control" placeholder="Type database server host, leave blank to keep default" value="{{.DbCfg.Host}}" required="required">
                 </div>
             </div>
             <div class="form-group">
                 <label class="col-md-3 control-label">User: </label>
 
                 <div class="col-md-8">
-                    <input name="user" class="form-control" placeholder="Type mysql username" required="required">
+                    <input name="user" class="form-control" placeholder="Type database username" required="required" value="{{.DbCfg.User}}">
                 </div>
             </div>
             <div class="form-group">
                 <label class="col-md-3 control-label">Password: </label>
 
                 <div class="col-md-8">
-                    <input name="passwd" type="password" class="form-control" placeholder="Type mysql password" required="required">
+                    <input name="passwd" type="password" class="form-control" placeholder="Type database password" required="required" value="{{.DbCfg.Pwd}}">
                 </div>
             </div>
 
@@ -50,7 +43,7 @@
                 <label class="col-md-3 control-label">Database Name: </label>
 
                 <div class="col-md-8">
-                    <input name="database" type="text" class="form-control" placeholder="Type mysql database name" value="gogs" required="required">
+                    <input name="database_name" type="text" class="form-control" placeholder="Type mysql database name" value="{{.DbCfg.Name}}" required="required">
                     <p class="help-block">Recommend use INNODB engine with utf8_general_ci charset.</p>
                 </div>
             </div>
@@ -71,17 +64,11 @@
                 <label class="col-md-3 control-label">Path: </label>
 
                 <div class="col-md-8">
-                    <input name="path" class="form-control" placeholder="Type sqlite file path" value="xxx/file.db">
-                    <p class="help-block">The file path of SQLite database.</p>
+                    <input name="database_path" class="form-control" placeholder="Type sqlite3 file path" value="{{.DbCfg.Path}}">
+                    <p class="help-block">The file path of SQLite3 database.</p>
                 </div>
             </div>
         </div>
-
-        <!-- <div class="form-group">
-            <div class="col-md-8 col-md-offset-3">
-                <button class="btn btn-sm btn-info">Test Connection</button>
-            </div>
-        </div> -->
 
         <hr/>
 
@@ -91,17 +78,27 @@
             <label class="col-md-3 control-label">Repository Path: </label>
 
             <div class="col-md-8">
-                <input name="repo-path" type="text" class="form-control" placeholder="Type your repository directory" value="/var/gogs/repostiory" required="required">
+                <input name="repo_path" type="text" class="form-control" placeholder="Type your repository directory" value="{{.RepoRootPath}}" required="required">
 
                 <p class="help-block">The git copy of each repository is saved in this directory.</p>
             </div>
         </div>
+
         <div class="form-group">
             <label class="col-md-3 control-label">Run User: </label>
 
             <div class="col-md-8">
-                <input name="system-user" type="text" class="form-control" placeholder="Type mysql password" value="root" required="required">
+                <input name="run_user" type="text" class="form-control" placeholder="Type system user name" value="{{.RunUser}}" required="required">
                 <p class="help-block">The user has access to visit and run Gogs.</p>
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label class="col-md-3 control-label">App URL: </label>
+
+            <div class="col-md-8">
+                <input name="app_url" type="text" class="form-control" placeholder="Type app root URL " value="{{.AppUrl}}" required="required">
+                <p class="help-block">This affects HTTP/HTTPS clone URL and somewhere in e-mail.</p>
             </div>
         </div>
 
@@ -113,20 +110,30 @@
             <label class="col-md-3 control-label">Username: </label>
 
             <div class="col-md-8">
-                <input name="repo-path" type="text" class="form-control" placeholder="Type admin user name" value="admin" required="required">
+                <input name="admin_name" type="text" class="form-control" placeholder="Type admin user name" value="admin" required="required">
             </div>
         </div>
+
         <div class="form-group">
             <label class="col-md-3 control-label">Password: </label>
 
             <div class="col-md-8">
-                <input name="system-user" type="password" class="form-control" placeholder="Type admin user password" required="required">
+                <input name="admin_pwd" type="password" class="form-control" placeholder="Type admin user password" required="required">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="col-md-3 control-label">E-mail: </label>
+
+            <div class="col-md-8">
+                <input name="admin_email" type="text" class="form-control" placeholder="Type admin user e-mail" required="required">
             </div>
         </div>
 
         <hr/>
 
         <div class="form-group text-center">
+            <button class="btn btn-primary btn-lg">Test Configuration</button>
             <button class="btn btn-danger btn-lg">Install Gogs</button>
             <button class="btn btn-default btn-sm" type="button" data-toggle="modal" data-target="#advance-options-modal">
                 Advanced Options
@@ -144,21 +151,21 @@
                             <label class="col-md-3 control-label">SMTP Host: </label>
 
                             <div class="col-md-8">
-                                <input name="repo-path" type="text" class="form-control" placeholder="Type admin user name">
+                                <input name="smtp_host" type="text" class="form-control" placeholder="Type SMTP host address">
                             </div>
                         </div>
                         <div class="form-group">
                             <label class="col-md-3 control-label">Email: </label>
 
                             <div class="col-md-8">
-                                <input name="repo-path" type="text" class="form-control" placeholder="Type admin user name">
+                                <input name="mailer_user" type="text" class="form-control" placeholder="Type SMTP user e-mail address">
                             </div>
                         </div>
                         <div class="form-group">
                             <label class="col-md-3 control-label">Password: </label>
 
                             <div class="col-md-8">
-                                <input name="system-user" type="password" class="form-control" placeholder="Type admin user password">
+                                <input name="mailer_pwd" type="password" class="form-control" placeholder="Type SMTP user password">
                             </div>
                         </div>
                         <hr/>
@@ -168,7 +175,7 @@
                             <div class="col-md-offset-3 col-md-7">
                                 <div class="checkbox">
                                     <label>
-                                        <input name="system-user" type="checkbox">
+                                        <input name="register_confirm" type="checkbox">
                                         <strong>Enable Register Confirmation</strong>
                                     </label>
                                 </div>
@@ -179,7 +186,7 @@
                             <div class="col-md-offset-3 col-md-7">
                                 <div class="checkbox">
                                     <label>
-                                        <input name="system-user" type="checkbox">
+                                        <input name="mail_notify" type="checkbox">
                                         <strong>Enable Mail Notification</strong>
                                     </label>
                                 </div>
