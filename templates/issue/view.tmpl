@@ -72,17 +72,17 @@
                                     Content with <a href="#">Markdown</a>
                                 </div>
                                 <ul class="nav nav-tabs" data-init="tabs">
-                                    <li class="active"><a href="#issue-textarea" data-toggle="tab">Write</a></li>
-                                    <li><a href="#issue-preview" data-toggle="tab">Preview</a></li>
+                                    <li class="active issue-write"><a href="#issue-textarea" data-toggle="tab">Write</a></li>
+                                    <li class="issue-preview"><a href="#issue-preview" data-toggle="tab" data-ajax="/preview?repo=repo_id&issue=issue_id&comment=new" data-ajax-name="issue-preview" data-ajax-method="post" data-preview="#issue-preview">Preview</a></li>
                                 </ul>
                                 <div class="tab-content">
                                     <div class="tab-pane" id="issue-textarea">
                                         <div class="form-group">
                                             <input type="hidden" value="{{.Issue.Index}}" name="issueIndex"/>
-                                            <textarea class="form-control" name="content" id="issue-reply-content" rows="10" placeholder="Write some content">{{.content}}</textarea>
+                                            <textarea class="form-control" name="content" id="issue-content" rows="10" placeholder="Write some content" data-ajax-rel="issue-preview" data-ajax-val="val" data-ajax-field="content">{{.content}}</textarea>
                                         </div>
                                     </div>
-                                    <div class="tab-pane" id="issue-preview">preview</div>
+                                    <div class="tab-pane issue-preview-content" id="issue-preview">loading...</div>
                                 </div>
                             </div>
                             <div class="text-right">

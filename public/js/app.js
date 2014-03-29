@@ -399,21 +399,24 @@ function initRepository() {
 
 function initInstall() {
     // database type change
-    $('#install-database').on("change", function () {
-        var val = $(this).val();
-        if (val != "sqlite") {
-            $('.server-sql').show();
-            $('.sqlite-setting').addClass("hide");
-            if (val == "pgsql") {
-                $('.pgsql-setting').removeClass("hide");
+    (function () {
+        $('#install-database').on("change", function () {
+            var val = $(this).val();
+            if (val != "sqlite") {
+                $('.server-sql').show();
+                $('.sqlite-setting').addClass("hide");
+                if (val == "pgsql") {
+                    $('.pgsql-setting').removeClass("hide");
+                } else {
+                    $('.pgsql-setting').addClass("hide");
+                }
             } else {
-                $('.pgsql-setting').addClass("hide");
+                $('.server-sql').hide();
+                $('.sqlite-setting').removeClass("hide");
             }
-        } else {
-            $('.server-sql').hide();
-            $('.sqlite-setting').removeClass("hide");
-        }
-    });
+        });
+    }());
+
 }
 
 function initIssue() {
@@ -445,14 +448,32 @@ function initIssue() {
     }());
 
     // issue ajax update
-    $('.issue-edit-save').on("click", function () {
-        $(this).toggleAjax(function(json){
-            if(json.ok){
-                $('.issue-head h1.title').text(json.title);
-                $('.issue-main > .issue-content .content').html(json.content);
-            }
+    (function () {
+        $('.issue-edit-save').on("click", function () {
+            $(this).toggleAjax(function (json) {
+                if (json.ok) {
+                    $('.issue-head h1.title').text(json.title);
+                    $('.issue-main > .issue-content .content').html(json.content);
+                }
+            });
         });
-    });
+    }());
+
+    // issue ajax preview
+    (function () {
+        $('[data-ajax-name=issue-preview]').on("click", function () {
+            var $this = $(this);
+            $this.toggleAjax(function (json) {
+                if (json.ok) {
+                    $($this.data("preview")).html(json.content);
+                }
+            })
+        });
+        $('.issue-write a[data-toggle]').on("click", function () {
+            $('.issue-preview-content').html("loading...");
+        });
+    }())
+
 }
 
 (function ($) {

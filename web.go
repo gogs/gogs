@@ -95,6 +95,7 @@ func runWeb(*cli.Context) {
 	m.Get("/pulls", reqSignIn, user.Pulls)
 	m.Get("/stars", reqSignIn, user.Stars)
 	m.Get("/help", routers.Help)
+	m.Post("/preview", routers.Preview)
 
 	avt := avatar.CacheServer("public/img/avatar/", "public/img/avatar_default.jpg")
 	m.Get("/avatar/:hash", avt.ServeHTTP)
