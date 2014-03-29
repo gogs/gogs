@@ -38,7 +38,7 @@ func SetEngine() {
 	var err error
 	switch DbCfg.Type {
 	case "mysql":
-		orm, err = xorm.NewEngine("mysql", fmt.Sprintf("%s:%s@%s/%s?charset=utf8",
+		orm, err = xorm.NewEngine("mysql", fmt.Sprintf("%s:%s@tcp(%s)/%s?charset=utf8",
 			DbCfg.User, DbCfg.Pwd, DbCfg.Host, DbCfg.Name))
 	case "postgres":
 		orm, err = xorm.NewEngine("postgres", fmt.Sprintf("user=%s password=%s dbname=%s sslmode=%s",
