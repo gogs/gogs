@@ -269,7 +269,7 @@ func InitContext() martini.Handler {
 		if user != nil {
 			ctx.Data["SignedUser"] = user
 			ctx.Data["SignedUserId"] = user.Id
-			ctx.Data["SignedUserName"] = user.LowerName
+			ctx.Data["SignedUserName"] = user.Name
 			ctx.Data["IsAdmin"] = ctx.User.IsAdmin
 		}
 
