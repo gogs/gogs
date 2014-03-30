@@ -34,8 +34,7 @@ func LoadModelsConfig() {
 	DbCfg.Path = base.Cfg.MustValue("database", "PATH", "data/gogs.db")
 }
 
-func SetEngine() {
-	var err error
+func SetEngine() (err error) {
 	switch DbCfg.Type {
 	case "mysql":
 		orm, err = xorm.NewEngine("mysql", fmt.Sprintf("%s:%s@tcp(%s)/%s?charset=utf8",
@@ -47,12 +46,10 @@ func SetEngine() {
 		os.MkdirAll(path.Dir(DbCfg.Path), os.ModePerm)
 		orm, err = xorm.NewEngine("sqlite3", DbCfg.Path)
 	default:
-		fmt.Printf("Unknown database type: %s\n", DbCfg.Type)
-		os.Exit(2)
+		return fmt.Errorf("Unknown database type: %s\n", DbCfg.Type)
 	}
 	if err != nil {
-		fmt.Printf("models.init(fail to conntect database): %v\n", err)
-		os.Exit(2)
+		return fmt.Errorf("models.init(fail to conntect database): %v\n", err)
 	}
 
 	// WARNNING: for serv command, MUST remove the output to os.stdout,
@@ -62,20 +59,21 @@ func SetEngine() {
 	//orm.ShowErr = true
 	f, err := os.Create("xorm.log")
 	if err != nil {
-		fmt.Printf("models.init(fail to create xorm.log): %v\n", err)
-		os.Exit(2)
+		return fmt.Errorf("models.init(fail to create xorm.log): %v\n", err)
 	}
 	orm.Logger = f
 	orm.ShowSQL = true
+	return nil
 }
 
-func NewEngine() {
-	SetEngine()
-	if err := orm.Sync(new(User), new(PublicKey), new(Repository), new(Watch),
+func NewEngine() (err error) {
+	if err = SetEngine(); err != nil {
+		return err
+	} else if err = orm.Sync(new(User), new(PublicKey), new(Repository), new(Watch),
 		new(Action), new(Access), new(Issue), new(Comment)); err != nil {
-		fmt.Printf("sync database struct error: %v\n", err)
-		os.Exit(2)
+		return fmt.Errorf("sync database struct error: %v\n", err)
 	}
+	return nil
 }
 
 type Statistic struct {

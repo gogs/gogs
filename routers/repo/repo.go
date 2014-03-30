@@ -53,20 +53,20 @@ func Create(ctx *middleware.Context, form auth.CreateRepoForm) {
 }
 
 func Single(ctx *middleware.Context, params martini.Params) {
-	if !ctx.Repo.IsValid {
-		return
-	}
+	branchName := ctx.Repo.BranchName
+	commitId := ctx.Repo.CommitId
+	userName := ctx.Repo.Owner.Name
+	repoName := ctx.Repo.Repository.Name
 
-	branchName := params["branchname"]
-	userName := params["username"]
-	repoName := params["reponame"]
+	repoLink := ctx.Repo.RepoLink
+	branchLink := ctx.Repo.RepoLink + "/src/" + branchName
+	rawLink := ctx.Repo.RepoLink + "/raw/" + branchName
 
 	// Get tree path
 	treename := params["_1"]
 
 	if len(treename) > 0 && treename[len(treename)-1] == '/' {
-		ctx.Redirect("/" + ctx.Repo.Owner.LowerName + "/" +
-			ctx.Repo.Repository.Name + "/src/" + branchName + "/" + treename[:len(treename)-1])
+		ctx.Redirect(repoLink + "/src/" + branchName + "/" + treename[:len(treename)-1])
 		return
 	}
 
@@ -84,22 +84,16 @@ func Single(ctx *middleware.Context, params martini.Params) {
 	}
 	ctx.Data["Branches"] = brs
 
-	var commitId string
-	isViewBranch := models.IsBranchExist(userName, repoName, branchName)
-	if !isViewBranch {
-		commitId = branchName
-	}
+	isViewBranch := ctx.Repo.IsBranch
 	ctx.Data["IsViewBranch"] = isViewBranch
 
 	repoFile, err := models.GetTargetFile(userName, repoName,
 		branchName, commitId, treename)
+
 	if err != nil && err != models.ErrRepoFileNotExist {
 		ctx.Handle(404, "repo.Single(GetTargetFile)", err)
 		return
 	}
-
-	branchLink := "/" + ctx.Repo.Owner.LowerName + "/" + ctx.Repo.Repository.Name + "/src/" + branchName
-	rawLink := "/" + ctx.Repo.Owner.LowerName + "/" + ctx.Repo.Repository.Name + "/raw/" + branchName
 
 	if len(treename) != 0 && repoFile == nil {
 		ctx.Handle(404, "repo.Single", nil)
@@ -142,8 +136,7 @@ func Single(ctx *middleware.Context, params martini.Params) {
 
 	} else {
 		// Directory and file list.
-		files, err := models.GetReposFiles(userName, repoName,
-			branchName, commitId, treename)
+		files, err := models.GetReposFiles(userName, repoName, ctx.Repo.CommitId, treename)
 		if err != nil {
 			ctx.Handle(404, "repo.Single(GetReposFiles)", err)
 			return
@@ -200,18 +193,7 @@ func Single(ctx *middleware.Context, params martini.Params) {
 		}
 	}
 
-	// Get latest commit according username and repo name.
-	commit, err := models.GetCommit(userName, repoName,
-		branchName, commitId)
-	if err != nil {
-		log.Error("repo.Single(GetCommit): %v", err)
-		ctx.Handle(404, "repo.Single(GetCommit)", err)
-		return
-	}
-	ctx.Data["LastCommit"] = commit
-
-	ctx.Data["CommitId"] = commitId
-
+	ctx.Data["LastCommit"] = ctx.Repo.Commit
 	ctx.Data["Paths"] = Paths
 	ctx.Data["Treenames"] = treenames
 	ctx.Data["BranchLink"] = branchLink
@@ -219,11 +201,6 @@ func Single(ctx *middleware.Context, params martini.Params) {
 }
 
 func SingleDownload(ctx *middleware.Context, params martini.Params) {
-	if !ctx.Repo.IsValid {
-		ctx.Handle(404, "repo.SingleDownload", nil)
-		return
-	}
-
 	// Get tree path
 	treename := params["_1"]
 
@@ -263,10 +240,6 @@ func SingleDownload(ctx *middleware.Context, params martini.Params) {
 }
 
 func Http(ctx *middleware.Context, params martini.Params) {
-	/*if !ctx.Repo.IsValid {
-		return
-	}*/
-
 	// TODO: access check
 
 	username := params["username"]

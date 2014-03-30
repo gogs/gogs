@@ -33,6 +33,13 @@ func List(l *list.List) chan interface{} {
 	return c
 }
 
+func ShortSha(sha1 string) string {
+	if len(sha1) == 40 {
+		return sha1[:10]
+	}
+	return sha1
+}
+
 var mailDomains = map[string]string{
 	"gmail.com": "gmail.com",
 }
@@ -72,4 +79,5 @@ var TemplateFuncs template.FuncMap = map[string]interface{}{
 	},
 	"DiffTypeToStr":     DiffTypeToStr,
 	"DiffLineTypeToStr": DiffLineTypeToStr,
+	"ShortSha":          ShortSha,
 }

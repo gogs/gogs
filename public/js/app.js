@@ -56,6 +56,43 @@ var Gogits = {
         },
         toggleShow: function () {
             $(this).removeClass("hidden");
+        },
+        toggleAjax: function (successCallback) {
+            var url = $(this).data("ajax");
+            var method = $(this).data('ajax-method') || 'get';
+            var ajaxName = $(this).data('ajax-name');
+            var data = {};
+            $('[data-ajax-rel=' + ajaxName + ']').each(function () {
+                var field = $(this).data("ajax-field");
+                var t = $(this).data("ajax-val");
+                if (t == "val") {
+                    data[field] = $(this).val();
+                    return true;
+                }
+                if (t == "txt") {
+                    data[field] = $(this).text();
+                    return true;
+                }
+                if (t == "html") {
+                    data[field] = $(this).html();
+                    return true;
+                }
+                if (t == "data") {
+                    data[field] = $(this).data("ajax-data");
+                    return true;
+                }
+                return true;
+            });
+            $.ajax({
+                url: url,
+                method: method.toUpperCase(),
+                data: data,
+                success: function (d) {
+                    if (successCallback) {
+                        successCallback(d);
+                    }
+                }
+            })
         }
     })
 }(jQuery));
@@ -362,21 +399,24 @@ function initRepository() {
 
 function initInstall() {
     // database type change
-    $('#install-database').on("change", function () {
-        var val = $(this).val();
-        if (val != "sqlite") {
-            $('.server-sql').show();
-            $('.sqlite-setting').addClass("hide");
-            if (val == "pgsql") {
-                $('.pgsql-setting').removeClass("hide");
+    (function () {
+        $('#install-database').on("change", function () {
+            var val = $(this).val();
+            if (val != "sqlite") {
+                $('.server-sql').show();
+                $('.sqlite-setting').addClass("hide");
+                if (val == "pgsql") {
+                    $('.pgsql-setting').removeClass("hide");
+                } else {
+                    $('.pgsql-setting').addClass("hide");
+                }
             } else {
-                $('.pgsql-setting').addClass("hide");
+                $('.server-sql').hide();
+                $('.sqlite-setting').removeClass("hide");
             }
-        } else {
-            $('.server-sql').hide();
-            $('.sqlite-setting').removeClass("hide");
-        }
-    });
+        });
+    }());
+
 }
 
 function initIssue() {
@@ -386,11 +426,11 @@ function initIssue() {
         var $openBtn = $('#issue-open-btn');
         $('#issue-reply-content').on("keyup", function () {
             if ($(this).val().length) {
-                $closeBtn.text($closeBtn.data("text"));
-                $openBtn.text($openBtn.data("text"));
+                $closeBtn.val($closeBtn.data("text"));
+                $openBtn.val($openBtn.data("text"));
             } else {
-                $closeBtn.text($closeBtn.data("origin"));
-                $openBtn.text($openBtn.data("origin"));
+                $closeBtn.val($closeBtn.data("origin"));
+                $openBtn.val($openBtn.data("origin"));
             }
         });
     }());
@@ -406,6 +446,35 @@ function initIssue() {
             $('#issue-edit-title,#issue-edit-content,.issue-edit-cancel,.issue-edit-save').toggleHide();
         })
     }());
+
+    // issue ajax update
+    (function () {
+        $('.issue-edit-save').on("click", function () {
+            $(this).toggleAjax(function (json) {
+                if (json.ok) {
+                    $('.issue-head h1.title').text(json.title);
+                    $('.issue-main > .issue-content .content').html(json.content);
+                    $('.issue-edit-cancel').trigger("click");
+                }
+            });
+        });
+    }());
+
+    // issue ajax preview
+    (function () {
+        $('[data-ajax-name=issue-preview]').on("click", function () {
+            var $this = $(this);
+            $this.toggleAjax(function (json) {
+                if (json.ok) {
+                    $($this.data("preview")).html(json.content);
+                }
+            })
+        });
+        $('.issue-write a[data-toggle]').on("click", function () {
+            $('.issue-preview-content').html("loading...");
+        });
+    }())
+
 }
 
 (function ($) {

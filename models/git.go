@@ -70,9 +70,12 @@ func GetTargetFile(userName, repoName, branchName, commitId, rpath string) (*Rep
 		return nil, err
 	}
 
-	commit, err := repo.GetCommit(branchName, commitId)
+	commit, err := repo.GetCommitOfBranch(branchName)
 	if err != nil {
-		return nil, err
+		commit, err = repo.GetCommit(commitId)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	parts := strings.Split(path.Clean(rpath), "/")
@@ -110,13 +113,22 @@ func GetTargetFile(userName, repoName, branchName, commitId, rpath string) (*Rep
 }
 
 // GetReposFiles returns a list of file object in given directory of repository.
-func GetReposFiles(userName, repoName, branchName, commitId, rpath string) ([]*RepoFile, error) {
+// func GetReposFilesOfBranch(userName, repoName, branchName, rpath string) ([]*RepoFile, error) {
+// 	return getReposFiles(userName, repoName, commitId, rpath)
+// }
+
+// GetReposFiles returns a list of file object in given directory of repository.
+func GetReposFiles(userName, repoName, commitId, rpath string) ([]*RepoFile, error) {
+	return getReposFiles(userName, repoName, commitId, rpath)
+}
+
+func getReposFiles(userName, repoName, commitId string, rpath string) ([]*RepoFile, error) {
 	repo, err := git.OpenRepository(RepoPath(userName, repoName))
 	if err != nil {
 		return nil, err
 	}
 
-	commit, err := repo.GetCommit(branchName, commitId)
+	commit, err := repo.GetCommit(commitId)
 	if err != nil {
 		return nil, err
 	}
@@ -216,13 +228,13 @@ func GetReposFiles(userName, repoName, branchName, commitId, rpath string) ([]*R
 	return append(repodirs, repofiles...), nil
 }
 
-func GetCommit(userName, repoName, branchname, commitid string) (*git.Commit, error) {
+func GetCommit(userName, repoName, commitId string) (*git.Commit, error) {
 	repo, err := git.OpenRepository(RepoPath(userName, repoName))
 	if err != nil {
 		return nil, err
 	}
 
-	return repo.GetCommit(branchname, commitid)
+	return repo.GetCommit(commitId)
 }
 
 // GetCommitsByBranch returns all commits of given branch of repository.
@@ -397,7 +409,7 @@ func GetDiff(repoPath, commitid string) (*Diff, error) {
 		return nil, err
 	}
 
-	commit, err := repo.GetCommit("", commitid)
+	commit, err := repo.GetCommit(commitid)
 	if err != nil {
 		return nil, err
 	}

@@ -172,6 +172,7 @@ type InstallForm struct {
 	DatabasePath    string `form:"database_path"`
 	RepoRootPath    string `form:"repo_path"`
 	RunUser         string `form:"run_user"`
+	Domain          string `form:"domain"`
 	AppUrl          string `form:"app_url"`
 	AdminName       string `form:"admin_name" binding:"Required"`
 	AdminPasswd     string `form:"admin_pwd" binding:"Required;MinSize(6);MaxSize(30)"`

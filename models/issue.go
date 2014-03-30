@@ -18,23 +18,24 @@ var (
 
 // Issue represents an issue or pull request of repository.
 type Issue struct {
-	Id          int64
-	Index       int64 // Index in one repository.
-	Name        string
-	RepoId      int64       `xorm:"index"`
-	Repo        *Repository `xorm:"-"`
-	PosterId    int64
-	Poster      *User `xorm:"-"`
-	MilestoneId int64
-	AssigneeId  int64
-	IsPull      bool // Indicates whether is a pull request or not.
-	IsClosed    bool
-	Labels      string `xorm:"TEXT"`
-	Mentions    string `xorm:"TEXT"`
-	Content     string `xorm:"TEXT"`
-	NumComments int
-	Created     time.Time `xorm:"created"`
-	Updated     time.Time `xorm:"updated"`
+	Id              int64
+	Index           int64 // Index in one repository.
+	Name            string
+	RepoId          int64       `xorm:"index"`
+	Repo            *Repository `xorm:"-"`
+	PosterId        int64
+	Poster          *User `xorm:"-"`
+	MilestoneId     int64
+	AssigneeId      int64
+	IsPull          bool // Indicates whether is a pull request or not.
+	IsClosed        bool
+	Labels          string `xorm:"TEXT"`
+	Mentions        string `xorm:"TEXT"`
+	Content         string `xorm:"TEXT"`
+	RenderedContent string `xorm:"-"`
+	NumComments     int
+	Created         time.Time `xorm:"created"`
+	Updated         time.Time `xorm:"updated"`
 }
 
 // CreateIssue creates new issue for repository.
@@ -169,9 +170,17 @@ type Milestone struct {
 	Created   time.Time `xorm:"created"`
 }
 
+// Issue types.
+const (
+	IT_PLAIN  = iota // Pure comment.
+	IT_REOPEN        // Issue reopen status change prompt.
+	IT_CLOSE         // Issue close status change prompt.
+)
+
 // Comment represents a comment in commit and issue page.
 type Comment struct {
 	Id       int64
+	Type     int
 	PosterId int64
 	Poster   *User `xorm:"-"`
 	IssueId  int64
@@ -182,21 +191,37 @@ type Comment struct {
 }
 
 // CreateComment creates comment of issue or commit.
-func CreateComment(userId, issueId, commitId, line int64, content string) error {
+func CreateComment(userId, repoId, issueId, commitId, line int64, cmtType int, content string) error {
 	sess := orm.NewSession()
 	defer sess.Close()
 	sess.Begin()
 
-	if _, err := orm.Insert(&Comment{PosterId: userId, IssueId: issueId,
+	if _, err := orm.Insert(&Comment{PosterId: userId, Type: cmtType, IssueId: issueId,
 		CommitId: commitId, Line: line, Content: content}); err != nil {
 		sess.Rollback()
 		return err
 	}
 
-	rawSql := "UPDATE `issue` SET num_comments = num_comments + 1 WHERE id = ?"
-	if _, err := sess.Exec(rawSql, issueId); err != nil {
-		sess.Rollback()
-		return err
+	// Check comment type.
+	switch cmtType {
+	case IT_PLAIN:
+		rawSql := "UPDATE `issue` SET num_comments = num_comments + 1 WHERE id = ?"
+		if _, err := sess.Exec(rawSql, issueId); err != nil {
+			sess.Rollback()
+			return err
+		}
+	case IT_REOPEN:
+		rawSql := "UPDATE `repository` SET num_closed_issues = num_closed_issues - 1 WHERE id = ?"
+		if _, err := sess.Exec(rawSql, repoId); err != nil {
+			sess.Rollback()
+			return err
+		}
+	case IT_CLOSE:
+		rawSql := "UPDATE `repository` SET num_closed_issues = num_closed_issues + 1 WHERE id = ?"
+		if _, err := sess.Exec(rawSql, repoId); err != nil {
+			sess.Rollback()
+			return err
+		}
 	}
 	return sess.Commit()
 }
