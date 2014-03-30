@@ -73,10 +73,29 @@ func RepoAssignment(redirect bool) martini.Handler {
 
 		gitRepo, err := git.OpenRepository(models.RepoPath(userName, repoName))
 		if err != nil {
-			ctx.Handle(404, "RepoAssignment Invalid repo", err)
+			ctx.Handle(404, "RepoAssignment Invalid repo "+models.RepoPath(userName, repoName), err)
 			return
 		}
 		ctx.Repo.GitRepo = gitRepo
+
+		ctx.Repo.Owner = user
+		ctx.Repo.RepoLink = "/" + user.Name + "/" + repo.Name
+
+		ctx.Data["Title"] = user.Name + "/" + repo.Name
+		ctx.Data["Repository"] = repo
+		ctx.Data["Owner"] = user
+		ctx.Data["RepoLink"] = ctx.Repo.RepoLink
+		ctx.Data["IsRepositoryOwner"] = ctx.Repo.IsOwner
+
+		ctx.Repo.CloneLink.SSH = fmt.Sprintf("%s@%s:%s/%s.git", base.RunUser, base.Domain, user.LowerName, repo.LowerName)
+		ctx.Repo.CloneLink.HTTPS = fmt.Sprintf("%s%s/%s.git", base.AppUrl, user.LowerName, repo.LowerName)
+		ctx.Data["CloneLink"] = ctx.Repo.CloneLink
+
+		if repo.IsBare {
+			ctx.Data["IsBareRepo"] = true
+			ctx.HTML(200, "repo/single_bare")
+			return
+		}
 
 	detect:
 		if len(branchName) > 0 {
@@ -117,19 +136,8 @@ func RepoAssignment(redirect bool) martini.Handler {
 			ctx.Repo.IsWatching = models.IsWatching(ctx.User.Id, repo.Id)
 		}
 
-		ctx.Repo.Owner = user
-		ctx.Repo.CloneLink.SSH = fmt.Sprintf("%s@%s:%s/%s.git", base.RunUser, base.Domain, user.LowerName, repo.LowerName)
-		ctx.Repo.CloneLink.HTTPS = fmt.Sprintf("%s%s/%s.git", base.AppUrl, user.LowerName, repo.LowerName)
-		ctx.Repo.RepoLink = "/" + user.Name + "/" + repo.Name
-
 		ctx.Data["BranchName"] = ctx.Repo.BranchName
 		ctx.Data["CommitId"] = ctx.Repo.CommitId
-		ctx.Data["Repository"] = repo
-		ctx.Data["Owner"] = user
-		ctx.Data["Title"] = user.Name + "/" + repo.Name
-		ctx.Data["CloneLink"] = ctx.Repo.CloneLink
-		ctx.Data["RepoLink"] = ctx.Repo.RepoLink
-		ctx.Data["IsRepositoryOwner"] = ctx.Repo.IsOwner
 		ctx.Data["IsRepositoryWatching"] = ctx.Repo.IsWatching
 	}
 }
