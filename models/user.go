@@ -39,6 +39,7 @@ var (
 	ErrUserNotExist     = errors.New("User does not exist")
 	ErrEmailAlreadyUsed = errors.New("E-mail already used")
 	ErrUserNameIllegal  = errors.New("User name contains illegal characters")
+	ErrKeyNotExist      = errors.New("Public key does not exist")
 )
 
 // User represents the object of individual and member of organization.

@@ -157,7 +157,7 @@ func CreateRepository(user *User, repoName, desc, repoLang, license string, priv
 	}
 
 	access := Access{
-		UserName: user.Name,
+		UserName: user.LowerName,
 		RepoName: strings.ToLower(path.Join(user.Name, repo.Name)),
 		Mode:     AU_WRITABLE,
 	}

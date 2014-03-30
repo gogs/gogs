@@ -185,6 +185,7 @@ func Install(ctx *middleware.Context, form auth.InstallForm) {
 			ctx.RenderWithErr("Admin account setting is invalid: "+err.Error(), "install", &form)
 			return
 		}
+		log.Info("Admin account already exist")
 	}
 
 	log.Info("First-time run install finished!")

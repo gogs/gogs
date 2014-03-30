@@ -12,6 +12,7 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/lib/pq"
 	"github.com/lunny/xorm"
+	// _ "github.com/mattn/go-sqlite3"
 
 	"github.com/gogits/gogs/modules/base"
 )
@@ -23,10 +24,15 @@ var (
 	DbCfg struct {
 		Type, Host, Name, User, Pwd, Path, SslMode string
 	}
+
+	UseSQLite3 bool
 )
 
 func LoadModelsConfig() {
 	DbCfg.Type = base.Cfg.MustValue("database", "DB_TYPE")
+	if DbCfg.Type == "sqlite3" {
+		UseSQLite3 = true
+	}
 	DbCfg.Host = base.Cfg.MustValue("database", "HOST")
 	DbCfg.Name = base.Cfg.MustValue("database", "NAME")
 	DbCfg.User = base.Cfg.MustValue("database", "USER")
