@@ -64,7 +64,7 @@
                 <hr class="issue-line"/>
                 {{if .SignedUser}}<div class="issue-child issue-reply">
                     <a class="user pull-left" href="/user/{{.SignedUser.Name}}"><img class="avatar" src="{{.SignedUser.AvatarLink}}" alt=""/></a>
-                    <form class="panel panel-default issue-content" action="/{{.RepositoryLink}}/comment/new" method="post">
+                    <form class="panel panel-default issue-content" action="{{.RepoLink}}/comment/new" method="post">
                         {{.CsrfTokenHtml}}
                         <div class="panel-body">
                             <div class="form-group">

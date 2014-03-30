@@ -364,7 +364,7 @@ func GetRepos(num, offset int) ([]UserRepo, error) {
 }
 
 func RepoPath(userName, repoName string) string {
-	return filepath.Join(UserPath(userName), repoName+".git")
+	return filepath.Join(UserPath(userName), strings.ToLower(repoName)+".git")
 }
 
 func UpdateRepository(repo *Repository) error {
