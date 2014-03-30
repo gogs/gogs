@@ -1,6 +1,7 @@
 {{template "base/head" .}}
 {{template "base/navbar" .}}
 {{template "repo/nav" .}}
+{{template "repo/toolbar" .}}
 <div id="body" class="container">
     <div id="source">
         <div class="panel panel-default guide-box clone-group-btn">
@@ -23,15 +24,15 @@
                 <hr/>
                 <h3>Create a new repository on the command line</h3>
                     <pre class="text-left"><code>touch README.md
-        git init
-        git add README.md
-        git commit -m "first commit"
-        git remote add origin <span class="clone-url"></span>
-        git push -u origin master</code></pre>
+git init
+git add README.md
+git commit -m "first commit"
+git remote add origin <span class="clone-url"></span>
+git push -u origin master</code></pre>
                 <hr/>
                 <h3>Push an existing repository from the command line</h3>
                 <pre class="text-left"><code>git remote add origin <span class="clone-url"></span>
-        git push -u origin master</code></pre>
+git push -u origin master</code></pre>
             </div>
         </div>
     </div>

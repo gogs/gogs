@@ -78,6 +78,7 @@ func Single(ctx *middleware.Context, params martini.Params) {
 		ctx.Handle(404, "repo.Single(GetBranches)", err)
 		return
 	}
+
 	ctx.Data["Branches"] = brs
 
 	isViewBranch := ctx.Repo.IsBranch
