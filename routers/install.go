@@ -11,7 +11,7 @@ import (
 
 	"github.com/Unknwon/goconfig"
 	"github.com/codegangsta/martini"
-	// "github.com/lunny/xorm"
+	"github.com/lunny/xorm"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
@@ -113,12 +113,10 @@ func Install(ctx *middleware.Context, form auth.InstallForm) {
 	models.DbCfg.SslMode = form.SslMode
 	models.DbCfg.Path = form.DatabasePath
 
-	// ctx.RenderWithErr("Database setting is not correct: ", "install", &form)
-	// return
-	log.Trace("00000000000000000000000000000000000000000000")
+	// Set test engine.
 	var x *xorm.Engine
 	if err := models.NewTestEngine(x); err != nil {
-		if strings.Contains(err.Error(), `unknown driver "sqlite3"`) {
+		if strings.Contains(err.Error(), `Unknown database type: sqlite3`) {
 			ctx.RenderWithErr("Your release version does not support SQLite3, please download the official binary version "+
 				"from https://github.com/gogits/gogs/wiki/Install-from-binary, NOT the gobuild version.", "install", &form)
 		} else {
@@ -131,15 +129,6 @@ func Install(ctx *middleware.Context, form auth.InstallForm) {
 	if err := os.MkdirAll(form.RepoRootPath, os.ModePerm); err != nil {
 		ctx.RenderWithErr("Repository root path is invalid: "+err.Error(), "install", &form)
 		return
-	}
-
-	// Create admin account.
-	if _, err := models.RegisterUser(&models.User{Name: form.AdminName, Email: form.AdminEmail, Passwd: form.AdminPasswd,
-		IsAdmin: true, IsActive: true}); err != nil {
-		if err != models.ErrUserAlreadyExist {
-			ctx.RenderWithErr("Admin account setting is invalid: "+err.Error(), "install", &form)
-			return
-		}
 	}
 
 	// Save settings.
@@ -168,12 +157,21 @@ func Install(ctx *middleware.Context, form auth.InstallForm) {
 
 	base.Cfg.SetValue("security", "INSTALL_LOCK", "true")
 
-	if err := goconfig.SaveConfigFile(base.Cfg, "custom/conf/app1.ini"); err != nil {
+	if err := goconfig.SaveConfigFile(base.Cfg, "custom/conf/app.ini"); err != nil {
 		ctx.RenderWithErr("Fail to save configuration: "+err.Error(), "install", &form)
 		return
 	}
 
 	GlobalInit()
+
+	// Create admin account.
+	if _, err := models.RegisterUser(&models.User{Name: form.AdminName, Email: form.AdminEmail, Passwd: form.AdminPasswd,
+		IsAdmin: true, IsActive: true}); err != nil {
+		if err != models.ErrUserAlreadyExist {
+			ctx.RenderWithErr("Admin account setting is invalid: "+err.Error(), "install", &form)
+			return
+		}
+	}
 
 	log.Info("First-time run install finished!")
 	ctx.Redirect("/user/login")

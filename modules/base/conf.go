@@ -253,7 +253,7 @@ func NewConfigContext() {
 	cfgPath := filepath.Join(workDir, "conf/app.ini")
 	Cfg, err = goconfig.LoadConfigFile(cfgPath)
 	if err != nil {
-		fmt.Printf("Cannot load config file '%s'\n", cfgPath)
+		fmt.Printf("Cannot load config file(%s): %v\n", cfgPath, err)
 		os.Exit(2)
 	}
 	Cfg.BlockMode = false
@@ -261,7 +261,7 @@ func NewConfigContext() {
 	cfgPath = filepath.Join(workDir, "custom/conf/app.ini")
 	if com.IsFile(cfgPath) {
 		if err = Cfg.AppendFiles(cfgPath); err != nil {
-			fmt.Printf("Cannot load config file '%s'\n", cfgPath)
+			fmt.Printf("Cannot load config file(%s): %v\n", cfgPath, err)
 			os.Exit(2)
 		}
 	}
