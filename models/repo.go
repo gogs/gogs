@@ -12,7 +12,6 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -60,15 +59,6 @@ func NewRepoContext() {
 			os.Exit(2)
 		}
 	}
-
-	// Initialize illegal patterns.
-	for i := range illegalPatterns[1:] {
-		pattern := ""
-		for j := range illegalPatterns[i+1] {
-			pattern += "[" + string(illegalPatterns[i+1][j]-32) + string(illegalPatterns[i+1][j]) + "]"
-		}
-		illegalPatterns[i+1] = pattern
-	}
 }
 
 // Repository represents a git repository.
@@ -106,15 +96,20 @@ func IsRepositoryExist(user *User, repoName string) (bool, error) {
 }
 
 var (
-	// Define as all lower case!!
-	illegalPatterns = []string{"[.][Gg][Ii][Tt]", "raw", "user", "help", "stars", "issues", "pulls", "commits", "repo", "template", "admin"}
+	illegalEquals  = []string{"raw", "install", "api", "avatar", "user", "help", "stars", "issues", "pulls", "commits", "repo", "template", "admin"}
+	illegalSuffixs = []string{".git"}
 )
 
 // IsLegalName returns false if name contains illegal characters.
 func IsLegalName(repoName string) bool {
-	for _, pattern := range illegalPatterns {
-		has, _ := regexp.MatchString(pattern, repoName)
-		if has {
+	repoName = strings.ToLower(repoName)
+	for _, char := range illegalEquals {
+		if repoName == char {
+			return false
+		}
+	}
+	for _, char := range illegalSuffixs {
+		if strings.HasSuffix(repoName, char) {
 			return false
 		}
 	}
@@ -199,12 +194,19 @@ func CreateRepository(user *User, repoName, desc, repoLang, license string, priv
 
 	c := exec.Command("git", "update-server-info")
 	c.Dir = repoPath
-	err = c.Run()
-	if err != nil {
+	if err = c.Run(); err != nil {
 		log.Error("repo.CreateRepository(exec update-server-info): %v", err)
 	}
 
-	return repo, NewRepoAction(user, repo)
+	if err = NewRepoAction(user, repo); err != nil {
+		log.Error("repo.CreateRepository(NewRepoAction): %v", err)
+	}
+
+	if err = WatchRepo(user.Id, repo.Id, true); err != nil {
+		log.Error("repo.CreateRepository(WatchRepo): %v", err)
+	}
+
+	return repo, nil
 }
 
 // extractGitBareZip extracts git-bare.zip to repository path.
@@ -363,7 +365,7 @@ func GetRepos(num, offset int) ([]UserRepo, error) {
 }
 
 func RepoPath(userName, repoName string) string {
-	return filepath.Join(UserPath(userName), repoName+".git")
+	return filepath.Join(UserPath(userName), strings.ToLower(repoName)+".git")
 }
 
 func UpdateRepository(repo *Repository) error {

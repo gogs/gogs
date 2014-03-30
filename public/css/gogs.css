@@ -1197,13 +1197,13 @@ html, body {
     line-height: 42px;
 }
 
-#issue .issue-closed{
-    border-bottom: 3px solid #CCC;
+#issue .issue-closed, #issue .issue-opened {
+    border-bottom: 2px solid #CCC;
     margin-bottom: 24px;
     padding-bottom: 24px;
 }
 
-#issue .issue-closed .btn-danger,#issue .issue-opened .btn-success{
+#issue .issue-closed .label-danger,#issue .issue-opened .label-success{
     margin: 0 .8em;
 }
 

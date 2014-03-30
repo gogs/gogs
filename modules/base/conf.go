@@ -272,17 +272,18 @@ func NewConfigContext() {
 	Domain = Cfg.MustValue("server", "DOMAIN")
 	SecretKey = Cfg.MustValue("security", "SECRET_KEY")
 
+	InstallLock = Cfg.MustBool("security", "INSTALL_LOCK", false)
+
 	RunUser = Cfg.MustValue("", "RUN_USER")
 	curUser := os.Getenv("USERNAME")
 	if len(curUser) == 0 {
 		curUser = os.Getenv("USER")
 	}
-	if RunUser != curUser {
+	// Does not check run user when the install lock is off.
+	if InstallLock && RunUser != curUser {
 		fmt.Printf("Expect user(%s) but current user is: %s\n", RunUser, curUser)
 		os.Exit(2)
 	}
-
-	InstallLock = Cfg.MustBool("security", "INSTALL_LOCK", false)
 
 	LogInRememberDays = Cfg.MustInt("security", "LOGIN_REMEMBER_DAYS")
 	CookieUserName = Cfg.MustValue("security", "COOKIE_USERNAME")
