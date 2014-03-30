@@ -5,7 +5,7 @@
                 <ul class="nav navbar-nav">
                     <li class="{{if .IsRepoToolbarSource}}active{{end}}"><a href="{{.RepoLink}}{{if .BranchName}}{{if ne .BranchName `master`}}/src/{{.BranchName}}{{end}}{{end}}">Source</a></li>
                     {{if not .IsBareRepo}}
-                    <li class="{{if .IsRepoToolbarCommits}}active{{end}}"><a href="{{.RepoLink}}/commits/{{.BranchName}}">Commits</a></li>
+                    <li class="{{if .IsRepoToolbarCommits}}active{{end}}"><a href="{{.RepoLink}}/commits/{{if .BranchName}}{{.BranchName}}{{else}}master{{end}}">Commits</a></li>
                     <!-- <li class="{{if .IsRepoToolbarBranches}}active{{end}}"><a href="{{.RepoLink}}/branches">Branches</a></li> -->
                     <!-- <li class="{{if .IsRepoToolbarPulls}}active{{end}}"><a href="{{.RepoLink}}/pulls">Pull Requests</a></li> -->
                     <li class="{{if .IsRepoToolbarIssues}}active{{end}}"><a href="{{.RepoLink}}/issues">Issues <!--<span class="badge">42</span>--></a></li>
