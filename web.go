@@ -130,8 +130,8 @@ func runWeb(*cli.Context) {
 		r.Post("/issues/:index", binding.BindIgnErr(auth.CreateIssueForm{}), repo.UpdateIssue)
 		r.Post("/comment/:action", repo.Comment)
 	}, reqSignIn, middleware.RepoAssignment(true))
+
 	m.Group("/:username/:reponame", func(r martini.Router) {
-		r.Get("/commits/:branchname", repo.Commits)
 		r.Get("/issues", repo.Issues)
 		r.Get("/issues/:index", repo.ViewIssue)
 		r.Get("/pulls", repo.Pulls)
@@ -140,11 +140,10 @@ func runWeb(*cli.Context) {
 		r.Get("/src/:branchname/**", repo.Single)
 		r.Get("/raw/:branchname/**", repo.SingleDownload)
 		r.Get("/commits/:branchname", repo.Commits)
-		r.Get("/commits/:branchname", repo.Commits)
 	}, ignSignIn, middleware.RepoAssignment(true))
 
-	m.Get("/:username/:reponame/commit/:commitid/**", ignSignIn, middleware.RepoAssignment(true), repo.Diff)
-	m.Get("/:username/:reponame/commit/:commitid", ignSignIn, middleware.RepoAssignment(true), repo.Diff)
+	m.Get("/:username/:reponame/commit/:branchname/**", ignSignIn, middleware.RepoAssignment(true), repo.Diff)
+	m.Get("/:username/:reponame/commit/:branchname", ignSignIn, middleware.RepoAssignment(true), repo.Diff)
 
 	m.Group("/:username", func(r martini.Router) {
 		r.Get("/:reponame", middleware.RepoAssignment(true), repo.Single)
