@@ -212,9 +212,9 @@ func newMailService() {
 	if Cfg.MustBool("mailer", "ENABLED") {
 		MailService = &Mailer{
 			Name:   Cfg.MustValue("mailer", "NAME", AppName),
-			Host:   Cfg.MustValue("mailer", "HOST", "127.0.0.1:25"),
-			User:   Cfg.MustValue("mailer", "USER", "example@example.com"),
-			Passwd: Cfg.MustValue("mailer", "PASSWD", "******"),
+			Host:   Cfg.MustValue("mailer", "HOST"),
+			User:   Cfg.MustValue("mailer", "USER"),
+			Passwd: Cfg.MustValue("mailer", "PASSWD"),
 		}
 		log.Info("Mail Service Enabled")
 	}

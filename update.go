@@ -32,6 +32,12 @@ gogs serv provide access auth for repositories`,
 func runUpdate(c *cli.Context) {
 	base.NewConfigContext()
 	models.LoadModelsConfig()
+
+	if models.UseSQLite3 {
+		execDir, _ := base.ExecDir()
+		os.Chdir(execDir)
+	}
+
 	models.SetEngine()
 
 	w, _ := os.Create("update.log")
