@@ -77,10 +77,6 @@ func Single(ctx *middleware.Context, params martini.Params) {
 	if err != nil {
 		ctx.Handle(404, "repo.Single(GetBranches)", err)
 		return
-	} else if ctx.Repo.Repository.IsBare {
-		ctx.Data["IsBareRepo"] = true
-		ctx.HTML(200, "repo/single")
-		return
 	}
 	ctx.Data["Branches"] = brs
 
@@ -263,12 +259,6 @@ func Setting(ctx *middleware.Context, params martini.Params) {
 	}
 
 	ctx.Data["IsRepoToolbarSetting"] = true
-
-	if ctx.Repo.Repository.IsBare {
-		ctx.Data["IsBareRepo"] = true
-		ctx.HTML(200, "repo/setting")
-		return
-	}
 
 	var title string
 	if t, ok := ctx.Data["Title"].(string); ok {

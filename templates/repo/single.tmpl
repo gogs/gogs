@@ -4,9 +4,6 @@
 {{template "repo/toolbar" .}}
 <div id="body" class="container">
     <div id="source">
-        {{if .IsBareRepo}}
-        {{template "repo/single_bare" .}}
-        {{else}}
         <div class="source-toolbar">
             {{ $n := len .Treenames}}
             {{if not .IsFile}}<button class="btn btn-default pull-right hidden"><i class="fa fa-plus-square"></i>Add File</button>{{end}}
@@ -37,7 +34,6 @@
             {{template "repo/single_file" .}}
         {{else}}
             {{template "repo/single_list" .}}
-        {{end}}
         {{end}}
     </div>
 </div>
