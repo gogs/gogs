@@ -136,19 +136,20 @@ func runWeb(*cli.Context) {
 		r.Get("/issues/:index", repo.ViewIssue)
 		r.Get("/pulls", repo.Pulls)
 		r.Get("/branches", repo.Branches)
+	}, ignSignIn, middleware.RepoAssignment(true))
+
+	m.Group("/:username/:reponame", func(r martini.Router) {
 		r.Get("/src/:branchname", repo.Single)
 		r.Get("/src/:branchname/**", repo.Single)
 		r.Get("/raw/:branchname/**", repo.SingleDownload)
 		r.Get("/commits/:branchname", repo.Commits)
-	}, ignSignIn, middleware.RepoAssignment(true))
-
-	m.Get("/:username/:reponame/commit/:branchname/**", ignSignIn, middleware.RepoAssignment(true), repo.Diff)
-	m.Get("/:username/:reponame/commit/:branchname", ignSignIn, middleware.RepoAssignment(true), repo.Diff)
+		r.Get("/commit/:branchname", repo.Diff)
+		r.Get("/commit/:branchname/**", repo.Diff)
+	}, ignSignIn, middleware.RepoAssignment(true, true))
 
 	m.Group("/:username", func(r martini.Router) {
-		r.Get("/:reponame", middleware.RepoAssignment(true), repo.Single)
-		r.Get("/:reponame", middleware.RepoAssignment(true), repo.Single)
 		r.Any("/:reponame/**", repo.Http)
+		r.Get("/:reponame", middleware.RepoAssignment(true, true, true), repo.Single)
 	}, ignSignIn)
 
 	// Not found handler.
