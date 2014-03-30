@@ -140,6 +140,9 @@ func RepoAssignment(redirect bool, args ...bool) martini.Handler {
 				branchName = "master"
 				goto detect
 			}
+
+			ctx.Data["IsBranch"] = ctx.Repo.IsBranch
+			ctx.Data["IsCommit"] = ctx.Repo.IsCommit
 		}
 
 		// repo is bare and display enable
