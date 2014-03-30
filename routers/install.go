@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"github.com/Unknwon/goconfig"
-	"github.com/codegangsta/martini"
+	"github.com/go-martini/martini"
 	"github.com/lunny/xorm"
 
 	"github.com/gogits/gogs/models"
