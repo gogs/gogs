@@ -131,6 +131,17 @@ func Install(ctx *middleware.Context, form auth.InstallForm) {
 		return
 	}
 
+	// Check run user.
+	curUser := os.Getenv("USERNAME")
+	if len(curUser) == 0 {
+		curUser = os.Getenv("USER")
+	}
+	// Does not check run user when the install lock is off.
+	if form.RunUser != curUser {
+		ctx.RenderWithErr("Run user isn't the current user: "+form.RunUser+" -> "+curUser, "install", &form)
+		return
+	}
+
 	// Save settings.
 	base.Cfg.SetValue("database", "DB_TYPE", models.DbCfg.Type)
 	base.Cfg.SetValue("database", "HOST", models.DbCfg.Host)
@@ -155,8 +166,11 @@ func Install(ctx *middleware.Context, form auth.InstallForm) {
 		base.Cfg.SetValue("service", "ENABLE_NOTIFY_MAIL", base.ToStr(form.MailNotify == "on"))
 	}
 
+	base.Cfg.SetValue("", "RUN_MODE", "prod")
+
 	base.Cfg.SetValue("security", "INSTALL_LOCK", "true")
 
+	os.MkdirAll("custom/conf", os.ModePerm)
 	if err := goconfig.SaveConfigFile(base.Cfg, "custom/conf/app.ini"); err != nil {
 		ctx.RenderWithErr("Fail to save configuration: "+err.Error(), "install", &form)
 		return

@@ -21,6 +21,11 @@ type ToggleOptions struct {
 
 func Toggle(options *ToggleOptions) martini.Handler {
 	return func(ctx *Context) {
+		if !base.InstallLock {
+			ctx.Redirect("/install")
+			return
+		}
+
 		if options.SignOutRequire && ctx.IsSigned && ctx.Req.RequestURI != "/" {
 			ctx.Redirect("/")
 			return
