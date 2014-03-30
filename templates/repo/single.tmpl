@@ -8,7 +8,7 @@
             {{ $n := len .Treenames}}
             {{if not .IsFile}}<button class="btn btn-default pull-right hidden"><i class="fa fa-plus-square"></i>Add File</button>{{end}}
             <div class="dropdown branch-switch">
-                <a href="#" class="btn btn-success dropdown-toggle" data-toggle="dropdown"><i class="fa fa-chain"></i>{{if .CommitId}}{{ShortSha .CommitId}}{{else}}{{.BranchName}}{{end}}&nbsp;&nbsp;
+                <a href="#" class="btn btn-success dropdown-toggle" data-toggle="dropdown"><i class="fa fa-chain"></i>{{if .IsBranch}}{{.BranchName}}{{else}}{{ShortSha .CommitId}}{{end}}&nbsp;&nbsp;
                     <b class="caret"></b></a>
                 <ul class="dropdown-menu">
                     {{range .Branches}}
