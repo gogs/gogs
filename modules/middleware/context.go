@@ -15,7 +15,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/codegangsta/martini"
+	"github.com/go-martini/martini"
 
 	"github.com/gogits/cache"
 	"github.com/gogits/git"

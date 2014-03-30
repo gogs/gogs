@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/codegangsta/martini"
+	"github.com/go-martini/martini"
 
 	"github.com/gogits/git"
 

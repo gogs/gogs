@@ -8,11 +8,10 @@ import (
 	"net/http"
 	"reflect"
 
-	"github.com/codegangsta/martini"
-
-	"github.com/gogits/session"
+	"github.com/go-martini/martini"
 
 	"github.com/gogits/binding"
+	"github.com/gogits/session"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"
