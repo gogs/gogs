@@ -11,6 +11,7 @@ import (
 
 	"github.com/Unknwon/goconfig"
 	"github.com/codegangsta/martini"
+	// "github.com/lunny/xorm"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
@@ -38,9 +39,14 @@ func GlobalInit() {
 	models.LoadModelsConfig()
 	models.LoadRepoConfig()
 	models.NewRepoContext()
-	if err := models.NewEngine(); err != nil && base.InstallLock {
-		log.Error("%v", err)
-		os.Exit(2)
+
+	if base.InstallLock {
+		if err := models.NewEngine(); err != nil {
+			log.Error("%v", err)
+			os.Exit(2)
+		}
+
+		models.HasEngine = true
 	}
 	base.NewServices()
 	checkRunMode()
@@ -107,7 +113,11 @@ func Install(ctx *middleware.Context, form auth.InstallForm) {
 	models.DbCfg.SslMode = form.SslMode
 	models.DbCfg.Path = form.DatabasePath
 
-	if err := models.NewEngine(); err != nil {
+	// ctx.RenderWithErr("Database setting is not correct: ", "install", &form)
+	// return
+	log.Trace("00000000000000000000000000000000000000000000")
+	var x *xorm.Engine
+	if err := models.NewTestEngine(x); err != nil {
 		if strings.Contains(err.Error(), `unknown driver "sqlite3"`) {
 			ctx.RenderWithErr("Your release version does not support SQLite3, please download the official binary version "+
 				"from https://github.com/gogits/gogs/wiki/Install-from-binary, NOT the gobuild version.", "install", &form)
@@ -158,7 +168,7 @@ func Install(ctx *middleware.Context, form auth.InstallForm) {
 
 	base.Cfg.SetValue("security", "INSTALL_LOCK", "true")
 
-	if err := goconfig.SaveConfigFile(base.Cfg, "custom/conf/app.ini"); err != nil {
+	if err := goconfig.SaveConfigFile(base.Cfg, "custom/conf/app1.ini"); err != nil {
 		ctx.RenderWithErr("Fail to save configuration: "+err.Error(), "install", &form)
 		return
 	}
