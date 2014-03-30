@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -162,7 +163,7 @@ func CreateRepository(user *User, repoName, desc, repoLang, license string, priv
 
 	access := Access{
 		UserName: user.Name,
-		RepoName: repo.Name,
+		RepoName: strings.ToLower(path.Join(user.Name, repo.Name)),
 		Mode:     AU_WRITABLE,
 	}
 	if _, err = session.Insert(&access); err != nil {
@@ -510,7 +511,6 @@ func NotifyWatchers(act *Action) error {
 			continue
 		}
 
-		act.Id = 0
 		act.UserId = watches[i].UserId
 		if _, err = orm.InsertOne(act); err != nil {
 			return errors.New("repo.NotifyWatchers(create action): " + err.Error())
