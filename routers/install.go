@@ -156,7 +156,7 @@ func Install(ctx *middleware.Context, form auth.InstallForm) {
 	base.Cfg.SetValue("server", "DOMAIN", form.Domain)
 	base.Cfg.SetValue("server", "ROOT_URL", form.AppUrl)
 
-	if len(form.Host) > 0 {
+	if len(strings.TrimSpace(form.SmtpHost)) > 0 {
 		base.Cfg.SetValue("mailer", "ENABLED", "true")
 		base.Cfg.SetValue("mailer", "HOST", form.SmtpHost)
 		base.Cfg.SetValue("mailer", "USER", form.SmtpEmail)
