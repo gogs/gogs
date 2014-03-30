@@ -67,7 +67,7 @@ type User struct {
 
 // HomeLink returns the user home page link.
 func (user *User) HomeLink() string {
-	return "/user/" + user.LowerName
+	return "/user/" + user.Name
 }
 
 // AvatarLink returns the user gravatar link.
