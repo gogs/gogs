@@ -3,24 +3,24 @@
         <nav class="navbar navbar-toolbar navbar-default" role="navigation">
             <div class="collapse navbar-collapse">
                 <ul class="nav navbar-nav">
-                    <li class="{{if .IsRepoToolbarSource}}active{{end}}"><a href="/{{.RepositoryLink}}">Source</a></li>
+                    <li class="{{if .IsRepoToolbarSource}}active{{end}}"><a href="{{.RepoLink}}{{if ne .BranchName `master`}}/src/{{.BranchName}}{{end}}">Source</a></li>
                     {{if not .IsBareRepo}}
-                    <li class="{{if .IsRepoToolbarCommits}}active{{end}}"><a href="/{{.RepositoryLink}}/commits/{{.Branchname}}">Commits</a></li>
-                    <!-- <li class="{{if .IsRepoToolbarBranches}}active{{end}}"><a href="/{{.RepositoryLink}}/branches">Branches</a></li> -->
-                    <!-- <li class="{{if .IsRepoToolbarPulls}}active{{end}}"><a href="/{{.RepositoryLink}}/pulls">Pull Requests</a></li> -->
-                    <li class="{{if .IsRepoToolbarIssues}}active{{end}}"><a href="/{{.RepositoryLink}}/issues">Issues <!--<span class="badge">42</span>--></a></li>
+                    <li class="{{if .IsRepoToolbarCommits}}active{{end}}"><a href="{{.RepoLink}}/commits/{{.BranchName}}">Commits</a></li>
+                    <!-- <li class="{{if .IsRepoToolbarBranches}}active{{end}}"><a href="{{.RepoLink}}/branches">Branches</a></li> -->
+                    <!-- <li class="{{if .IsRepoToolbarPulls}}active{{end}}"><a href="{{.RepoLink}}/pulls">Pull Requests</a></li> -->
+                    <li class="{{if .IsRepoToolbarIssues}}active{{end}}"><a href="{{.RepoLink}}/issues">Issues <!--<span class="badge">42</span>--></a></li>
                     {{if .IsRepoToolbarIssues}}
-                    <li class="tmp">{{if .IsRepoToolbarIssuesList}}<a href="/{{.RepositoryLink}}/issues/new">
+                    <li class="tmp">{{if .IsRepoToolbarIssuesList}}<a href="{{.RepoLink}}/issues/new">
                         <button class="btn btn-primary btn-sm">New Issue</button>
-                    </a>{{else}}<a href="/{{.RepositoryLink}}/issues">
+                    </a>{{else}}<a href="{{.RepoLink}}/issues">
                         <button class="btn btn-primary btn-sm">Issues List</button>
                     </a>{{end}}</li>
                     {{end}}
                     <!-- <li class="dropdown">
                         <a href="#" class="dropdown-toggle" data-toggle="dropdown">More <b class="caret"></b></a>
                         <ul class="dropdown-menu">
-                            <li><a href="/{{.RepositoryLink}}/release">Release</a></li>
-                            <li><a href="//{{.RepositoryLink}}/wiki">Wiki</a></li>
+                            <li><a href="{{.RepoLink}}/release">Release</a></li>
+                            <li><a href="{{.RepoLink}}/wiki">Wiki</a></li>
                         </ul>
                     </li> -->{{end}}
                 </ul>
@@ -34,7 +34,7 @@
                             <li><a href="#">Network</a></li>
                         </ul>
                     </li> -->{{end}}{{if .IsRepositoryOwner}}
-                    <li class="{{if .IsRepoToolbarSetting}}active{{end}}"><a href="/{{.RepositoryLink}}/settings">Settings</a>
+                    <li class="{{if .IsRepoToolbarSetting}}active{{end}}"><a href="{{.RepoLink}}/settings">Settings</a>
                     </li>{{end}}
                 </ul>
             </div>

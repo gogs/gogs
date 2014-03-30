@@ -4,7 +4,7 @@
 {{template "repo/toolbar" .}}
 <div id="body" class="container">
     <div id="issue">
-        <form class="form" action="/{{.RepositoryLink}}/issues/new" method="post" id="issue-create-form">
+        <form class="form" action="{{.RepoLink}}/issues/new" method="post" id="issue-create-form">
             {{.CsrfTokenHtml}}
             <div class="col-md-1">
                 <img class="avatar" src="{{.SignedUser.AvatarLink}}" alt=""/>
