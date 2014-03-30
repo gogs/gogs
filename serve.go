@@ -90,13 +90,13 @@ func runServ(k *cli.Context) {
 	keyId, err := strconv.ParseInt(keys[1], 10, 64)
 	if err != nil {
 		fmt.Println("auth file format error")
-		log.Error("auth file format error")
+		log.Error("auth file format error", err)
 		return
 	}
 	user, err := models.GetUserByKeyId(keyId)
 	if err != nil {
 		fmt.Println("You have no right to access")
-		log.Error("You have no right to access")
+		log.Error("SSH visit error", err)
 		return
 	}
 
@@ -107,13 +107,14 @@ func runServ(k *cli.Context) {
 	}
 
 	verb, args := parseCmd(cmd)
-	rRepo := strings.Trim(args, "'")
-	rr := strings.SplitN(rRepo, "/", 2)
+	repoPath := strings.Trim(args, "'")
+	rr := strings.SplitN(repoPath, "/", 2)
 	if len(rr) != 2 {
 		println("Unavilable repository", args)
 		log.Error("Unavilable repository %v", args)
 		return
 	}
+	repoUserName := rr[0]
 	repoName := rr[1]
 	if strings.HasSuffix(repoName, ".git") {
 		repoName = repoName[:len(repoName)-4]
@@ -122,27 +123,17 @@ func runServ(k *cli.Context) {
 	isWrite := In(verb, COMMANDS_WRITE)
 	isRead := In(verb, COMMANDS_READONLY)
 
-	/*//repo, err := models.GetRepositoryByName(user.Id, repoName)
-	//var isExist bool = true
+	repoUser, err := models.GetUserByName(repoUserName)
 	if err != nil {
-		if err == models.ErrRepoNotExist {
-			//isExist = false
-			if isRead {
-				println("Repository", user.Name+"/"+repoName, "is not exist")
-				log.Error("Repository " + user.Name + "/" + repoName + " is not exist")
-				return
-			}
-		} else {
-			println("Get repository error:", err)
-			log.Error("Get repository error: " + err.Error())
-			return
-		}
-	}*/
+		fmt.Println("You have no right to access")
+		log.Error("Get user failed", err)
+		return
+	}
 
 	// access check
 	switch {
 	case isWrite:
-		has, err := models.HasAccess(user.Name, repoName, models.AU_WRITABLE)
+		has, err := models.HasAccess(user.Name, strings.ToLower(path.Join(repoUserName, repoName)), models.AU_WRITABLE)
 		if err != nil {
 			println("Inernel error:", err)
 			log.Error(err.Error())
@@ -150,18 +141,29 @@ func runServ(k *cli.Context) {
 		}
 		if !has {
 			println("You have no right to write this repository")
-			log.Error("You have no right to access this repository")
+			log.Error("User %s has no right to write repository %s", user.Name, repoPath)
 			return
 		}
 	case isRead:
-		has, err := models.HasAccess(user.Name, repoName, models.AU_READABLE)
+		repo, err := models.GetRepositoryByName(repoUser.Id, repoName)
+		if err != nil {
+			println("Get repository error:", err)
+			log.Error("Get repository error: " + err.Error())
+			return
+		}
+
+		if !repo.IsPrivate {
+			break
+		}
+
+		has, err := models.HasAccess(user.Name, repoPath, models.AU_READABLE)
 		if err != nil {
 			println("Inernel error")
 			log.Error(err.Error())
 			return
 		}
 		if !has {
-			has, err = models.HasAccess(user.Name, repoName, models.AU_WRITABLE)
+			has, err = models.HasAccess(user.Name, repoPath, models.AU_WRITABLE)
 			if err != nil {
 				println("Inernel error")
 				log.Error(err.Error())
@@ -184,7 +186,7 @@ func runServ(k *cli.Context) {
 	os.Setenv("userId", strconv.Itoa(int(user.Id)))
 	os.Setenv("repoName", repoName)
 
-	gitcmd := exec.Command(verb, rRepo)
+	gitcmd := exec.Command(verb, repoPath)
 	gitcmd.Dir = base.RepoRootPath
 	gitcmd.Stdout = os.Stdout
 	gitcmd.Stdin = os.Stdin
