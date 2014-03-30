@@ -398,7 +398,7 @@ func DeleteRepository(userId, repoId int64, userName string) (err error) {
 		session.Rollback()
 		return err
 	}
-	if _, err := session.Delete(&Access{UserName: userName, RepoName: repo.Name}); err != nil {
+	if _, err := session.Delete(&Access{RepoName: strings.ToLower(path.Join(userName, repo.Name))}); err != nil {
 		session.Rollback()
 		return err
 	}
