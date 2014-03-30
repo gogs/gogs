@@ -164,7 +164,7 @@ func ViewIssue(ctx *middleware.Context, params martini.Params) {
 	ctx.Data["Title"] = issue.Name
 	ctx.Data["Issue"] = issue
 	ctx.Data["Comments"] = comments
-	ctx.Data["IsIssueOwner"] = ctx.Repo.IsOwner || issue.PosterId == ctx.User.Id
+	ctx.Data["IsIssueOwner"] = ctx.Repo.IsOwner || (ctx.IsSigned && issue.PosterId == ctx.User.Id)
 	ctx.Data["IsRepoToolbarIssues"] = true
 	ctx.Data["IsRepoToolbarIssuesList"] = false
 	ctx.HTML(200, "issue/view")
