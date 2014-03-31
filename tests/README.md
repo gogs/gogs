@@ -1,11 +1,13 @@
-## gogs test
+## Gogs Test
 
-this is for developers
+This is for developers.
 
-## prepare environment
+## Prepare Environment
+
 	go get -u github.com/shxsun/travelexec
 	# start gogs server
 	gogs web
 
-## start test
+## Start Testing
+
 	travelexec
