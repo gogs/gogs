@@ -160,6 +160,7 @@ func runWeb(*cli.Context) {
 		base.Cfg.MustValue("server", "HTTP_PORT", "3000"))
 	log.Info("Listen: %s", listenAddr)
 	if err := http.ListenAndServe(listenAddr, m); err != nil {
-		log.Critical(err.Error())
+		fmt.Println(err.Error())
+		//log.Critical(err.Error()) // not working now
 	}
 }
