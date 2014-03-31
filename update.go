@@ -32,6 +32,12 @@ gogs serv provide access auth for repositories`,
 func runUpdate(c *cli.Context) {
 	base.NewConfigContext()
 	models.LoadModelsConfig()
+
+	if models.UseSQLite3 {
+		execDir, _ := base.ExecDir()
+		os.Chdir(execDir)
+	}
+
 	models.SetEngine()
 
 	w, _ := os.Create("update.log")
@@ -130,18 +136,26 @@ func runUpdate(c *cli.Context) {
 		return
 	}
 
-	commits := make([][]string, 0)
+	commits := make([]*base.PushCommit, 0)
 	var maxCommits = 3
+	var actEmail string
 	for e := l.Front(); e != nil; e = e.Next() {
 		commit := e.Value.(*git.Commit)
-		commits = append(commits, []string{commit.Id().String(), commit.Message()})
+		if actEmail == "" {
+			actEmail = commit.Committer.Email
+		}
+		commits = append(commits,
+			&base.PushCommit{commit.Id().String(),
+				commit.Message(),
+				commit.Author.Email,
+				commit.Author.Name})
 		if len(commits) >= maxCommits {
 			break
 		}
 	}
 
 	//commits = append(commits, []string{lastCommit.Id().String(), lastCommit.Message()})
-	if err = models.CommitRepoAction(int64(sUserId), userName,
+	if err = models.CommitRepoAction(int64(sUserId), userName, actEmail,
 		repos.Id, repoName, git.BranchName(refName), &base.PushCommits{l.Len(), commits}); err != nil {
 		log.Error("runUpdate.models.CommitRepoAction: %v", err)
 	}

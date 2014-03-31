@@ -26,6 +26,8 @@ type Access struct {
 
 // AddAccess adds new access record.
 func AddAccess(access *Access) error {
+	access.UserName = strings.ToLower(access.UserName)
+	access.RepoName = strings.ToLower(access.RepoName)
 	_, err := orm.Insert(access)
 	return err
 }

@@ -8,22 +8,20 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
-	"strings"
 
 	"github.com/codegangsta/cli"
-	"github.com/codegangsta/martini"
+	"github.com/go-martini/martini"
 
 	"github.com/gogits/binding"
 
-	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/avatar"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
-	"github.com/gogits/gogs/modules/mailer"
 	"github.com/gogits/gogs/modules/middleware"
 	"github.com/gogits/gogs/routers"
 	"github.com/gogits/gogs/routers/admin"
+	"github.com/gogits/gogs/routers/api/v1"
 	"github.com/gogits/gogs/routers/dev"
 	"github.com/gogits/gogs/routers/repo"
 	"github.com/gogits/gogs/routers/user"
@@ -39,27 +37,6 @@ and it takes care of all the other things for you`,
 	Flags:  []cli.Flag{},
 }
 
-// globalInit is for global configuration reload-able.
-func globalInit() {
-	base.NewConfigContext()
-	mailer.NewMailerContext()
-	models.LoadModelsConfig()
-	models.LoadRepoConfig()
-	models.NewRepoContext()
-	models.NewEngine()
-}
-
-// Check run mode(Default of martini is Dev).
-func checkRunMode() {
-	switch base.Cfg.MustValue("", "RUN_MODE") {
-	case "prod":
-		martini.Env = martini.Prod
-	case "test":
-		martini.Env = martini.Test
-	}
-	log.Info("Run Mode: %s", strings.Title(martini.Env))
-}
-
 func newMartini() *martini.ClassicMartini {
 	r := martini.NewRouter()
 	m := martini.New()
@@ -72,9 +49,8 @@ func newMartini() *martini.ClassicMartini {
 }
 
 func runWeb(*cli.Context) {
-	globalInit()
-	base.NewServices()
-	checkRunMode()
+	fmt.Println("Server is running...")
+	routers.GlobalInit()
 	log.Info("%s %s", base.AppName, base.AppVer)
 
 	m := newMartini()
@@ -90,11 +66,15 @@ func runWeb(*cli.Context) {
 
 	// Routers.
 	m.Get("/", ignSignIn, routers.Home)
-	m.Get("/install", routers.Install)
+	m.Any("/install", binding.BindIgnErr(auth.InstallForm{}), routers.Install)
 	m.Get("/issues", reqSignIn, user.Issues)
 	m.Get("/pulls", reqSignIn, user.Pulls)
 	m.Get("/stars", reqSignIn, user.Stars)
 	m.Get("/help", routers.Help)
+
+	m.Group("/api/v1", func(r martini.Router) {
+		r.Post("/markdown", v1.Markdown)
+	})
 
 	avt := avatar.CacheServer("public/img/avatar/", "public/img/avatar_default.jpg")
 	m.Get("/avatar/:hash", avt.ServeHTTP)
@@ -150,26 +130,26 @@ func runWeb(*cli.Context) {
 		r.Post("/issues/:index", binding.BindIgnErr(auth.CreateIssueForm{}), repo.UpdateIssue)
 		r.Post("/comment/:action", repo.Comment)
 	}, reqSignIn, middleware.RepoAssignment(true))
+
 	m.Group("/:username/:reponame", func(r martini.Router) {
-		r.Get("/commits/:branchname", repo.Commits)
 		r.Get("/issues", repo.Issues)
 		r.Get("/issues/:index", repo.ViewIssue)
 		r.Get("/pulls", repo.Pulls)
 		r.Get("/branches", repo.Branches)
+	}, ignSignIn, middleware.RepoAssignment(true))
+
+	m.Group("/:username/:reponame", func(r martini.Router) {
 		r.Get("/src/:branchname", repo.Single)
 		r.Get("/src/:branchname/**", repo.Single)
 		r.Get("/raw/:branchname/**", repo.SingleDownload)
 		r.Get("/commits/:branchname", repo.Commits)
-		r.Get("/commits/:branchname", repo.Commits)
-	}, ignSignIn, middleware.RepoAssignment(true))
-
-	m.Get("/:username/:reponame/commit/:commitid/**", ignSignIn, middleware.RepoAssignment(true), repo.Diff)
-	m.Get("/:username/:reponame/commit/:commitid", ignSignIn, middleware.RepoAssignment(true), repo.Diff)
+		r.Get("/commit/:branchname", repo.Diff)
+		r.Get("/commit/:branchname/**", repo.Diff)
+	}, ignSignIn, middleware.RepoAssignment(true, true))
 
 	m.Group("/:username", func(r martini.Router) {
-		r.Get("/:reponame", middleware.RepoAssignment(true), repo.Single)
-		r.Get("/:reponame", middleware.RepoAssignment(true), repo.Single)
 		r.Any("/:reponame/**", repo.Http)
+		r.Get("/:reponame", middleware.RepoAssignment(true, true, true), repo.Single)
 	}, ignSignIn)
 
 	// Not found handler.
@@ -180,6 +160,7 @@ func runWeb(*cli.Context) {
 		base.Cfg.MustValue("server", "HTTP_PORT", "3000"))
 	log.Info("Listen: %s", listenAddr)
 	if err := http.ListenAndServe(listenAddr, m); err != nil {
-		log.Critical(err.Error())
+		fmt.Println(err.Error())
+		//log.Critical(err.Error()) // not working now
 	}
 }

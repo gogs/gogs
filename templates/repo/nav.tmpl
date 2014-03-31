@@ -7,12 +7,6 @@
             </div>
             <div class="col-md-5 actions text-right clone-group-btn">
                 {{if not .IsBareRepo}}
-                <!--<div class="btn-group" id="repo-clone">
-                    <button type="button" class="btn btn-default"><i class="fa fa-download fa-lg fa-m"></i></button>
-                    <button type="button" class="btn btn-default dropdown-toggle" data-container="body" data-toggle="popover" data-placement="bottom" data-content="<label>SSH:</label><div class='input-group'><input type='text' class='form-control' value='{{.CloneLink.SSH}}'></div>" data-html="1">
-                        <span class="caret"></span>
-                    </button>
-                </div>-->
                 <div class="btn-group" id="repo-clone">
                     <button type="button" class="btn btn-default"><i class="fa fa-download fa-lg fa-m"></i></button>
                     <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
@@ -30,10 +24,10 @@
                             </span>
                         </div>
                         <p class="help-block text-center">Need help cloning? Visit <a href="#">Help</a>!</p>
-                        <hr/>
+                        <!-- <hr/>
                         <div class="clone-zip text-center">
                             <a class="btn btn-success btn-lg" href="#"><i class="fa fa-suitcase"></i>Download ZIP</a>
-                        </div>
+                        </div> -->
                     </div>
                 </div>
                 <div class="btn-group {{if .IsRepositoryWatching}}watching{{else}}no-watching{{end}}" id="repo-watching" data-watch="/{{.Owner.Name}}/{{.Repository.Name}}/action/watch" data-unwatch="/{{.Owner.Name}}/{{.Repository.Name}}/action/unwatch">
@@ -61,9 +55,9 @@
                     <button type="button" class="btn btn-default" data-toggle="tooltip" data-placement="top" title="Star"><i class="fa fa-star"></i>&nbsp;{{.Repository.NumStars}}</button>
                 </div> -->
                 {{end}}
-                <div class="btn-group">
+                <!-- <div class="btn-group">
                     <a type="button" {{if not .IsRepositoryOwner}}href="/{{.Username}}/{{.Reponame}}/fork"{{end}} class="btn btn-default" data-toggle="tooltip" data-placement="top" title="Fork"><i class="fa fa-code-fork fa-lg"></i>&nbsp;{{.Repository.NumForks}}</a>
-                </div>
+                </div> -->
             </div>
         </div>
     </div>

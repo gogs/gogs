@@ -9,7 +9,7 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/codegangsta/martini"
+	"github.com/go-martini/martini"
 
 	"github.com/gogits/binding"
 
@@ -160,4 +160,55 @@ func AssignForm(form interface{}, data base.TmplData) {
 
 		data[fieldName] = val.Field(i).Interface()
 	}
+}
+
+type InstallForm struct {
+	Database        string `form:"database" binding:"Required"`
+	Host            string `form:"host"`
+	User            string `form:"user"`
+	Passwd          string `form:"passwd"`
+	DatabaseName    string `form:"database_name"`
+	SslMode         string `form:"ssl_mode"`
+	DatabasePath    string `form:"database_path"`
+	RepoRootPath    string `form:"repo_path"`
+	RunUser         string `form:"run_user"`
+	Domain          string `form:"domain"`
+	AppUrl          string `form:"app_url"`
+	AdminName       string `form:"admin_name" binding:"Required"`
+	AdminPasswd     string `form:"admin_pwd" binding:"Required;MinSize(6);MaxSize(30)"`
+	AdminEmail      string `form:"admin_email" binding:"Required;Email;MaxSize(50)"`
+	SmtpHost        string `form:"smtp_host"`
+	SmtpEmail       string `form:"mailer_user"`
+	SmtpPasswd      string `form:"mailer_pwd"`
+	RegisterConfirm string `form:"register_confirm"`
+	MailNotify      string `form:"mail_notify"`
+}
+
+func (f *InstallForm) Name(field string) string {
+	names := map[string]string{
+		"Database":    "Database name",
+		"AdminName":   "Admin user name",
+		"AdminPasswd": "Admin password",
+		"AdminEmail":  "Admin e-maill address",
+	}
+	return names[field]
+}
+
+func (f *InstallForm) Validate(errors *binding.Errors, req *http.Request, context martini.Context) {
+	if req.Method == "GET" || errors.Count() == 0 {
+		return
+	}
+
+	data := context.Get(reflect.TypeOf(base.TmplData{})).Interface().(base.TmplData)
+	data["HasError"] = true
+	AssignForm(f, data)
+
+	if len(errors.Overall) > 0 {
+		for _, err := range errors.Overall {
+			log.Error("InstallForm.Validate: %v", err)
+		}
+		return
+	}
+
+	validate(errors, data, f)
 }

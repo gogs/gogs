@@ -212,9 +212,9 @@ func newMailService() {
 	if Cfg.MustBool("mailer", "ENABLED") {
 		MailService = &Mailer{
 			Name:   Cfg.MustValue("mailer", "NAME", AppName),
-			Host:   Cfg.MustValue("mailer", "HOST", "127.0.0.1:25"),
-			User:   Cfg.MustValue("mailer", "USER", "example@example.com"),
-			Passwd: Cfg.MustValue("mailer", "PASSWD", "******"),
+			Host:   Cfg.MustValue("mailer", "HOST"),
+			User:   Cfg.MustValue("mailer", "USER"),
+			Passwd: Cfg.MustValue("mailer", "PASSWD"),
 		}
 		log.Info("Mail Service Enabled")
 	}
@@ -253,7 +253,7 @@ func NewConfigContext() {
 	cfgPath := filepath.Join(workDir, "conf/app.ini")
 	Cfg, err = goconfig.LoadConfigFile(cfgPath)
 	if err != nil {
-		fmt.Printf("Cannot load config file '%s'\n", cfgPath)
+		fmt.Printf("Cannot load config file(%s): %v\n", cfgPath, err)
 		os.Exit(2)
 	}
 	Cfg.BlockMode = false
@@ -261,7 +261,7 @@ func NewConfigContext() {
 	cfgPath = filepath.Join(workDir, "custom/conf/app.ini")
 	if com.IsFile(cfgPath) {
 		if err = Cfg.AppendFiles(cfgPath); err != nil {
-			fmt.Printf("Cannot load config file '%s'\n", cfgPath)
+			fmt.Printf("Cannot load config file(%s): %v\n", cfgPath, err)
 			os.Exit(2)
 		}
 	}
@@ -272,17 +272,18 @@ func NewConfigContext() {
 	Domain = Cfg.MustValue("server", "DOMAIN")
 	SecretKey = Cfg.MustValue("security", "SECRET_KEY")
 
+	InstallLock = Cfg.MustBool("security", "INSTALL_LOCK", false)
+
 	RunUser = Cfg.MustValue("", "RUN_USER")
 	curUser := os.Getenv("USERNAME")
 	if len(curUser) == 0 {
 		curUser = os.Getenv("USER")
 	}
-	if RunUser != curUser {
+	// Does not check run user when the install lock is off.
+	if InstallLock && RunUser != curUser {
 		fmt.Printf("Expect user(%s) but current user is: %s\n", RunUser, curUser)
 		os.Exit(2)
 	}
-
-	InstallLock = Cfg.MustBool("security", "INSTALL_LOCK", false)
 
 	LogInRememberDays = Cfg.MustInt("security", "LOGIN_REMEMBER_DAYS")
 	CookieUserName = Cfg.MustValue("security", "COOKIE_USERNAME")
@@ -291,9 +292,14 @@ func NewConfigContext() {
 	PictureService = Cfg.MustValue("picture", "SERVICE")
 
 	// Determine and create root git reposiroty path.
-	RepoRootPath = Cfg.MustValue("repository", "ROOT")
+	homeDir, err := com.HomeDir()
+	if err != nil {
+		fmt.Printf("Fail to get home directory): %v\n", err)
+		os.Exit(2)
+	}
+	RepoRootPath = Cfg.MustValue("repository", "ROOT", filepath.Join(homeDir, "git/gogs-repositories"))
 	if err = os.MkdirAll(RepoRootPath, os.ModePerm); err != nil {
-		fmt.Printf("models.init(fail to create RepoRootPath(%s)): %v\n", RepoRootPath, err)
+		fmt.Printf("Fail to create RepoRootPath(%s): %v\n", RepoRootPath, err)
 		os.Exit(2)
 	}
 }

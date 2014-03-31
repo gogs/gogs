@@ -5,27 +5,22 @@
 package repo
 
 import (
-	"github.com/codegangsta/martini"
+	"github.com/go-martini/martini"
+
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/middleware"
 )
 
 func Branches(ctx *middleware.Context, params martini.Params) {
-	if !ctx.Repo.IsValid {
-		return
-	}
-
-	brs, err := models.GetBranches(params["username"], params["reponame"])
+	brs, err := models.GetBranches(ctx.Repo.Owner.Name, ctx.Repo.Repository.Name)
 	if err != nil {
-		ctx.Handle(200, "repo.Branches", err)
+		ctx.Handle(404, "repo.Branches", err)
 		return
 	} else if len(brs) == 0 {
 		ctx.Handle(404, "repo.Branches", nil)
 		return
 	}
 
-	ctx.Data["Username"] = params["username"]
-	ctx.Data["Reponame"] = params["reponame"]
 	ctx.Data["Branches"] = brs
 	ctx.Data["IsRepoToolbarBranches"] = true
 
