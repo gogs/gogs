@@ -6,17 +6,19 @@ package main
 
 import (
 	"container/list"
+	"fmt"
 	"os"
 	"os/exec"
+	"path"
 	"strconv"
 	"strings"
 
 	"github.com/codegangsta/cli"
-	//"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/git"
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"
-	"github.com/qiniu/log"
+	"github.com/gogits/gogs/modules/log"
+	//"github.com/qiniu/log"
 )
 
 var CmdUpdate = cli.Command{
@@ -28,25 +30,29 @@ gogs serv provide access auth for repositories`,
 	Flags:  []cli.Flag{},
 }
 
+func newUpdateLogger(execDir string) {
+	level := "0"
+	logPath := execDir + "/log/update.log"
+	os.MkdirAll(path.Dir(logPath), os.ModePerm)
+	log.NewLogger(0, "file", fmt.Sprintf(`{"level":%s,"filename":"%s"}`, level, logPath))
+	log.Trace("start logging...")
+}
+
 // for command: ./gogs update
 func runUpdate(c *cli.Context) {
+	execDir, _ := base.ExecDir()
+	newLogger(execDir)
+
 	base.NewConfigContext()
 	models.LoadModelsConfig()
 
 	if models.UseSQLite3 {
-		execDir, _ := base.ExecDir()
 		os.Chdir(execDir)
 	}
 
 	models.SetEngine()
 
-	w, _ := os.Create("update.log")
-	defer w.Close()
-
-	log.SetOutput(w)
-
 	args := c.Args()
-	//log.Info(args)
 	if len(args) != 3 {
 		log.Error("received less 3 parameters")
 		return
