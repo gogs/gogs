@@ -1,0 +1,9 @@
+command: python -m pytest {}
+include: ^test_.*\.py$
+path: ./
+depth: 1
+verbose: true
+timeout: 1m
+reload: false
+html: test.html
+notify: []
