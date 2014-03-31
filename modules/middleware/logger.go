@@ -11,7 +11,7 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/codegangsta/martini"
+	"github.com/go-martini/martini"
 )
 
 var isWindows bool

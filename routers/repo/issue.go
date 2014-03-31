@@ -7,8 +7,9 @@ package repo
 import (
 	"fmt"
 	"net/url"
+	"strings"
 
-	"github.com/codegangsta/martini"
+	"github.com/go-martini/martini"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
@@ -19,10 +20,6 @@ import (
 )
 
 func Issues(ctx *middleware.Context) {
-	if !ctx.Repo.IsValid {
-		ctx.Handle(404, "issue.Issues(invalid repo):", nil)
-	}
-
 	ctx.Data["Title"] = "Issues"
 	ctx.Data["IsRepoToolbarIssues"] = true
 	ctx.Data["IsRepoToolbarIssuesList"] = true
@@ -79,10 +76,6 @@ func Issues(ctx *middleware.Context) {
 }
 
 func CreateIssue(ctx *middleware.Context, params martini.Params, form auth.CreateIssueForm) {
-	if !ctx.Repo.IsValid {
-		ctx.Handle(404, "issue.CreateIssue(invalid repo):", nil)
-	}
-
 	ctx.Data["Title"] = "Create issue"
 	ctx.Data["IsRepoToolbarIssues"] = true
 	ctx.Data["IsRepoToolbarIssuesList"] = false
@@ -105,7 +98,7 @@ func CreateIssue(ctx *middleware.Context, params martini.Params, form auth.Creat
 	}
 
 	// Notify watchers.
-	if err = models.NotifyWatchers(&models.Action{ActUserId: ctx.User.Id, ActUserName: ctx.User.Name,
+	if err = models.NotifyWatchers(&models.Action{ActUserId: ctx.User.Id, ActUserName: ctx.User.Name, ActEmail: ctx.User.Email,
 		OpType: models.OP_CREATE_ISSUE, Content: fmt.Sprintf("%d|%s", issue.Index, issue.Name),
 		RepoId: ctx.Repo.Repository.Id, RepoName: ctx.Repo.Repository.Name, RefName: ""}); err != nil {
 		ctx.Handle(200, "issue.CreateIssue", err)
@@ -125,10 +118,6 @@ func CreateIssue(ctx *middleware.Context, params martini.Params, form auth.Creat
 }
 
 func ViewIssue(ctx *middleware.Context, params martini.Params) {
-	if !ctx.Repo.IsValid {
-		ctx.Handle(404, "issue.ViewIssue(invalid repo):", nil)
-	}
-
 	index, err := base.StrTo(params["index"]).Int()
 	if err != nil {
 		ctx.Handle(404, "issue.ViewIssue", err)
@@ -152,7 +141,7 @@ func ViewIssue(ctx *middleware.Context, params martini.Params) {
 		return
 	}
 	issue.Poster = u
-	issue.Content = string(base.RenderMarkdown([]byte(issue.Content), ""))
+	issue.RenderedContent = string(base.RenderMarkdown([]byte(issue.Content), ""))
 
 	// Get comments.
 	comments, err := models.GetIssueComments(issue.Id)
@@ -175,16 +164,13 @@ func ViewIssue(ctx *middleware.Context, params martini.Params) {
 	ctx.Data["Title"] = issue.Name
 	ctx.Data["Issue"] = issue
 	ctx.Data["Comments"] = comments
+	ctx.Data["IsIssueOwner"] = ctx.Repo.IsOwner || (ctx.IsSigned && issue.PosterId == ctx.User.Id)
 	ctx.Data["IsRepoToolbarIssues"] = true
 	ctx.Data["IsRepoToolbarIssuesList"] = false
 	ctx.HTML(200, "issue/view")
 }
 
 func UpdateIssue(ctx *middleware.Context, params martini.Params, form auth.CreateIssueForm) {
-	if !ctx.Repo.IsValid {
-		ctx.Handle(404, "issue.UpdateIssue(invalid repo):", nil)
-	}
-
 	index, err := base.StrTo(params["index"]).Int()
 	if err != nil {
 		ctx.Handle(404, "issue.UpdateIssue", err)
@@ -216,22 +202,21 @@ func UpdateIssue(ctx *middleware.Context, params martini.Params, form auth.Creat
 		return
 	}
 
-	ctx.Data["Title"] = issue.Name
-	ctx.Data["Issue"] = issue
+	ctx.JSON(200, map[string]interface{}{
+		"ok":      true,
+		"title":   issue.Name,
+		"content": string(base.RenderMarkdown([]byte(issue.Content), "")),
+	})
 }
 
 func Comment(ctx *middleware.Context, params martini.Params) {
-	if !ctx.Repo.IsValid {
-		ctx.Handle(404, "issue.Comment(invalid repo):", nil)
-	}
-
-	index, err := base.StrTo(ctx.Query("issueIndex")).Int()
+	index, err := base.StrTo(ctx.Query("issueIndex")).Int64()
 	if err != nil {
-		ctx.Handle(404, "issue.Comment", err)
+		ctx.Handle(404, "issue.Comment(get index)", err)
 		return
 	}
 
-	issue, err := models.GetIssueByIndex(ctx.Repo.Repository.Id, int64(index))
+	issue, err := models.GetIssueByIndex(ctx.Repo.Repository.Id, index)
 	if err != nil {
 		if err == models.ErrIssueNotExist {
 			ctx.Handle(404, "issue.Comment", err)
@@ -241,22 +226,46 @@ func Comment(ctx *middleware.Context, params martini.Params) {
 		return
 	}
 
-	content := ctx.Query("content")
-	if len(content) == 0 {
-		ctx.Handle(404, "issue.Comment", err)
-		return
+	// Check if issue owner changes the status of issue.
+	var newStatus string
+	if ctx.Repo.IsOwner || issue.PosterId == ctx.User.Id {
+		newStatus = ctx.Query("change_status")
+	}
+	if len(newStatus) > 0 {
+		if (strings.Contains(newStatus, "Reopen") && issue.IsClosed) ||
+			(strings.Contains(newStatus, "Close") && !issue.IsClosed) {
+			issue.IsClosed = !issue.IsClosed
+			if err = models.UpdateIssue(issue); err != nil {
+				ctx.Handle(200, "issue.Comment(update issue status)", err)
+				return
+			}
+
+			cmtType := models.IT_CLOSE
+			if !issue.IsClosed {
+				cmtType = models.IT_REOPEN
+			}
+
+			if err = models.CreateComment(ctx.User.Id, ctx.Repo.Repository.Id, issue.Id, 0, 0, cmtType, ""); err != nil {
+				ctx.Handle(200, "issue.Comment(create status change comment)", err)
+				return
+			}
+			log.Trace("%s Issue(%d) status changed: %v", ctx.Req.RequestURI, issue.Id, !issue.IsClosed)
+		}
 	}
 
-	switch params["action"] {
-	case "new":
-		if err = models.CreateComment(ctx.User.Id, issue.Id, 0, 0, content); err != nil {
-			ctx.Handle(500, "issue.Comment(create comment)", err)
+	content := ctx.Query("content")
+	if len(content) > 0 {
+		switch params["action"] {
+		case "new":
+			if err = models.CreateComment(ctx.User.Id, ctx.Repo.Repository.Id, issue.Id, 0, 0, models.IT_PLAIN, content); err != nil {
+				ctx.Handle(500, "issue.Comment(create comment)", err)
+				return
+			}
+			log.Trace("%s Comment created: %d", ctx.Req.RequestURI, issue.Id)
+		default:
+			ctx.Handle(404, "issue.Comment", err)
 			return
 		}
-		log.Trace("%s Comment created: %d", ctx.Req.RequestURI, issue.Id)
-	default:
-		ctx.Handle(404, "issue.Comment", err)
-		return
 	}
 
 	ctx.Redirect(fmt.Sprintf("/%s/%s/issues/%d", ctx.User.Name, ctx.Repo.Repository.Name, index))

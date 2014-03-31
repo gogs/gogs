@@ -39,6 +39,7 @@ var (
 	ErrUserNotExist     = errors.New("User does not exist")
 	ErrEmailAlreadyUsed = errors.New("E-mail already used")
 	ErrUserNameIllegal  = errors.New("User name contains illegal characters")
+	ErrKeyNotExist      = errors.New("Public key does not exist")
 )
 
 // User represents the object of individual and member of organization.
@@ -67,7 +68,7 @@ type User struct {
 
 // HomeLink returns the user home page link.
 func (user *User) HomeLink() string {
-	return "/user/" + user.LowerName
+	return "/user/" + user.Name
 }
 
 // AvatarLink returns the user gravatar link.

@@ -8,7 +8,7 @@ import (
 	"container/list"
 	"path"
 
-	"github.com/codegangsta/martini"
+	"github.com/go-martini/martini"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"
@@ -50,16 +50,12 @@ func Commits(ctx *middleware.Context, params martini.Params) {
 }
 
 func Diff(ctx *middleware.Context, params martini.Params) {
-	userName := params["username"]
-	repoName := params["reponame"]
-	branchName := params["branchname"]
-	commitId := params["commitid"]
+	userName := ctx.Repo.Owner.Name
+	repoName := ctx.Repo.Repository.Name
+	branchName := ctx.Repo.BranchName
+	commitId := ctx.Repo.CommitId
 
-	commit, err := models.GetCommit(userName, repoName, branchName, commitId)
-	if err != nil {
-		ctx.Handle(404, "repo.Diff", err)
-		return
-	}
+	commit := ctx.Repo.Commit
 
 	diff, err := models.GetDiff(models.RepoPath(userName, repoName), commitId)
 	if err != nil {
@@ -85,11 +81,9 @@ func Diff(ctx *middleware.Context, params martini.Params) {
 		return isImage
 	}
 
-	shortSha := params["commitid"][:10]
 	ctx.Data["IsImageFile"] = isImageFile
-	ctx.Data["Title"] = commit.Message() + " · " + shortSha
+	ctx.Data["Title"] = commit.Message() + " · " + base.ShortSha(commitId)
 	ctx.Data["Commit"] = commit
-	ctx.Data["ShortSha"] = shortSha
 	ctx.Data["Diff"] = diff
 	ctx.Data["IsRepoToolbarCommits"] = true
 	ctx.Data["SourcePath"] = "/" + path.Join(userName, repoName, "src", commitId)

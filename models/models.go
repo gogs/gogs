@@ -12,20 +12,27 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/lib/pq"
 	"github.com/lunny/xorm"
+	// _ "github.com/mattn/go-sqlite3"
 
 	"github.com/gogits/gogs/modules/base"
 )
 
 var (
-	orm *xorm.Engine
+	orm       *xorm.Engine
+	HasEngine bool
 
 	DbCfg struct {
 		Type, Host, Name, User, Pwd, Path, SslMode string
 	}
+
+	UseSQLite3 bool
 )
 
 func LoadModelsConfig() {
 	DbCfg.Type = base.Cfg.MustValue("database", "DB_TYPE")
+	if DbCfg.Type == "sqlite3" {
+		UseSQLite3 = true
+	}
 	DbCfg.Host = base.Cfg.MustValue("database", "HOST")
 	DbCfg.Name = base.Cfg.MustValue("database", "NAME")
 	DbCfg.User = base.Cfg.MustValue("database", "USER")
@@ -34,11 +41,32 @@ func LoadModelsConfig() {
 	DbCfg.Path = base.Cfg.MustValue("database", "PATH", "data/gogs.db")
 }
 
-func SetEngine() {
-	var err error
+func NewTestEngine(x *xorm.Engine) (err error) {
 	switch DbCfg.Type {
 	case "mysql":
-		orm, err = xorm.NewEngine("mysql", fmt.Sprintf("%s:%s@%s/%s?charset=utf8",
+		x, err = xorm.NewEngine("mysql", fmt.Sprintf("%s:%s@tcp(%s)/%s?charset=utf8",
+			DbCfg.User, DbCfg.Pwd, DbCfg.Host, DbCfg.Name))
+	case "postgres":
+		x, err = xorm.NewEngine("postgres", fmt.Sprintf("user=%s password=%s dbname=%s sslmode=%s",
+			DbCfg.User, DbCfg.Pwd, DbCfg.Name, DbCfg.SslMode))
+	// case "sqlite3":
+	// 	os.MkdirAll(path.Dir(DbCfg.Path), os.ModePerm)
+	// 	x, err = xorm.NewEngine("sqlite3", DbCfg.Path)
+	default:
+		return fmt.Errorf("Unknown database type: %s\n", DbCfg.Type)
+	}
+	if err != nil {
+		return fmt.Errorf("models.init(fail to conntect database): %v\n", err)
+	}
+
+	return x.Sync(new(User), new(PublicKey), new(Repository), new(Watch),
+		new(Action), new(Access), new(Issue), new(Comment))
+}
+
+func SetEngine() (err error) {
+	switch DbCfg.Type {
+	case "mysql":
+		orm, err = xorm.NewEngine("mysql", fmt.Sprintf("%s:%s@tcp(%s)/%s?charset=utf8",
 			DbCfg.User, DbCfg.Pwd, DbCfg.Host, DbCfg.Name))
 	case "postgres":
 		orm, err = xorm.NewEngine("postgres", fmt.Sprintf("user=%s password=%s dbname=%s sslmode=%s",
@@ -47,12 +75,10 @@ func SetEngine() {
 		os.MkdirAll(path.Dir(DbCfg.Path), os.ModePerm)
 		orm, err = xorm.NewEngine("sqlite3", DbCfg.Path)
 	default:
-		fmt.Printf("Unknown database type: %s\n", DbCfg.Type)
-		os.Exit(2)
+		return fmt.Errorf("Unknown database type: %s\n", DbCfg.Type)
 	}
 	if err != nil {
-		fmt.Printf("models.init(fail to conntect database): %v\n", err)
-		os.Exit(2)
+		return fmt.Errorf("models.init(fail to conntect database): %v\n", err)
 	}
 
 	// WARNNING: for serv command, MUST remove the output to os.stdout,
@@ -62,20 +88,21 @@ func SetEngine() {
 	//orm.ShowErr = true
 	f, err := os.Create("xorm.log")
 	if err != nil {
-		fmt.Printf("models.init(fail to create xorm.log): %v\n", err)
-		os.Exit(2)
+		return fmt.Errorf("models.init(fail to create xorm.log): %v\n", err)
 	}
 	orm.Logger = f
 	orm.ShowSQL = true
+	return nil
 }
 
-func NewEngine() {
-	SetEngine()
-	if err := orm.Sync(new(User), new(PublicKey), new(Repository), new(Watch),
+func NewEngine() (err error) {
+	if err = SetEngine(); err != nil {
+		return err
+	} else if err = orm.Sync(new(User), new(PublicKey), new(Repository), new(Watch),
 		new(Action), new(Access), new(Issue), new(Comment)); err != nil {
-		fmt.Printf("sync database struct error: %v\n", err)
-		os.Exit(2)
+		return fmt.Errorf("sync database struct error: %v\n", err)
 	}
+	return nil
 }
 
 type Statistic struct {

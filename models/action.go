@@ -31,6 +31,7 @@ type Action struct {
 	OpType      int    // Operations: CREATE DELETE STAR ...
 	ActUserId   int64  // Action user id.
 	ActUserName string // Action user name.
+	ActEmail    string
 	RepoId      int64
 	RepoName    string
 	RefName     string
@@ -46,6 +47,10 @@ func (a Action) GetActUserName() string {
 	return a.ActUserName
 }
 
+func (a Action) GetActEmail() string {
+	return a.ActEmail
+}
+
 func (a Action) GetRepoName() string {
 	return a.RepoName
 }
@@ -59,7 +64,7 @@ func (a Action) GetContent() string {
 }
 
 // CommitRepoAction adds new action for committing repository.
-func CommitRepoAction(userId int64, userName string,
+func CommitRepoAction(userId int64, userName, actEmail string,
 	repoId int64, repoName string, refName string, commit *base.PushCommits) error {
 	log.Trace("action.CommitRepoAction(start): %d/%s", userId, repoName)
 
@@ -69,8 +74,8 @@ func CommitRepoAction(userId int64, userName string,
 		return err
 	}
 
-	if err = NotifyWatchers(&Action{ActUserId: userId, ActUserName: userName, OpType: OP_COMMIT_REPO,
-		Content: string(bs), RepoId: repoId, RepoName: repoName, RefName: refName}); err != nil {
+	if err = NotifyWatchers(&Action{ActUserId: userId, ActUserName: userName, ActEmail: actEmail,
+		OpType: OP_COMMIT_REPO, Content: string(bs), RepoId: repoId, RepoName: repoName, RefName: refName}); err != nil {
 		log.Error("action.CommitRepoAction(notify watchers): %d/%s", userId, repoName)
 		return err
 	}
@@ -93,8 +98,8 @@ func CommitRepoAction(userId int64, userName string,
 
 // NewRepoAction adds new action for creating repository.
 func NewRepoAction(user *User, repo *Repository) (err error) {
-	if err = NotifyWatchers(&Action{ActUserId: user.Id, ActUserName: user.Name, OpType: OP_CREATE_REPO,
-		RepoId: repo.Id, RepoName: repo.Name}); err != nil {
+	if err = NotifyWatchers(&Action{ActUserId: user.Id, ActUserName: user.Name, ActEmail: user.Email,
+		OpType: OP_CREATE_REPO, RepoId: repo.Id, RepoName: repo.Name}); err != nil {
 		log.Error("action.NewRepoAction(notify watchers): %d/%s", user.Id, repo.Name)
 		return err
 	}

@@ -15,9 +15,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/codegangsta/martini"
+	"github.com/go-martini/martini"
 
 	"github.com/gogits/cache"
+	"github.com/gogits/git"
 	"github.com/gogits/session"
 
 	"github.com/gogits/gogs/models"
@@ -41,11 +42,18 @@ type Context struct {
 	csrfToken string
 
 	Repo struct {
-		IsValid    bool
 		IsOwner    bool
 		IsWatching bool
+		IsBranch   bool
+		IsTag      bool
+		IsCommit   bool
 		Repository *models.Repository
 		Owner      *models.User
+		Commit     *git.Commit
+		GitRepo    *git.Repository
+		BranchName string
+		CommitId   string
+		RepoLink   string
 		CloneLink  struct {
 			SSH   string
 			HTTPS string
@@ -96,6 +104,10 @@ func (ctx *Context) Handle(status int, title string, err error) {
 
 	ctx.Data["ErrorMsg"] = err
 	ctx.HTML(status, fmt.Sprintf("status/%d", status))
+}
+
+func (ctx *Context) Debug(msg string, args ...interface{}) {
+	log.Debug(msg, args...)
 }
 
 func (ctx *Context) GetCookie(name string) string {
@@ -257,7 +269,7 @@ func InitContext() martini.Handler {
 		if user != nil {
 			ctx.Data["SignedUser"] = user
 			ctx.Data["SignedUserId"] = user.Id
-			ctx.Data["SignedUserName"] = user.LowerName
+			ctx.Data["SignedUserName"] = user.Name
 			ctx.Data["IsAdmin"] = ctx.User.IsAdmin
 		}
 

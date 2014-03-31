@@ -8,11 +8,10 @@ import (
 	"net/http"
 	"reflect"
 
-	"github.com/codegangsta/martini"
-
-	"github.com/gogits/session"
+	"github.com/go-martini/martini"
 
 	"github.com/gogits/binding"
+	"github.com/gogits/session"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"
@@ -21,6 +20,10 @@ import (
 
 // SignedInId returns the id of signed in user.
 func SignedInId(session session.SessionStore) int64 {
+	if !models.HasEngine {
+		return 0
+	}
+
 	userId := session.Get("userId")
 	if userId == nil {
 		return 0

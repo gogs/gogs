@@ -17,7 +17,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/codegangsta/martini"
+	"github.com/go-martini/martini"
 
 	"github.com/gogits/gogs/modules/base"
 )

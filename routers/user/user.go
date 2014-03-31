@@ -9,7 +9,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/codegangsta/martini"
+	"github.com/go-martini/martini"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
@@ -120,7 +120,7 @@ func SignIn(ctx *middleware.Context, form auth.LogInForm) {
 		return
 	}
 
-	if hasErr, ok := ctx.Data["HasError"]; ok && hasErr.(bool) {
+	if ctx.HasError() {
 		ctx.HTML(200, "user/signin")
 		return
 	}
@@ -279,7 +279,7 @@ func Feeds(ctx *middleware.Context, form auth.FeedsForm) {
 	feeds := make([]string, len(actions))
 	for i := range actions {
 		feeds[i] = fmt.Sprintf(TPL_FEED, base.ActionIcon(actions[i].OpType),
-			base.TimeSince(actions[i].Created), base.ActionDesc(actions[i], ctx.User.AvatarLink()))
+			base.TimeSince(actions[i].Created), base.ActionDesc(actions[i]))
 	}
 	ctx.JSON(200, &feeds)
 }
@@ -308,17 +308,19 @@ func Issues(ctx *middleware.Context) {
 
 	showRepos := make([]models.Repository, 0, len(repos))
 
-	var closedIssueCount, createdByCount int
+	isShowClosed := ctx.Query("state") == "closed"
+	var closedIssueCount, createdByCount, allIssueCount int
 
 	// Get all issues.
 	allIssues := make([]models.Issue, 0, 5*len(repos))
 	for i, repo := range repos {
-		issues, err := models.GetIssues(0, repo.Id, posterId, 0, page, false, false, "", "")
+		issues, err := models.GetIssues(0, repo.Id, posterId, 0, page, isShowClosed, false, "", "")
 		if err != nil {
 			ctx.Handle(200, "user.Issues(get issues)", err)
 			return
 		}
 
+		allIssueCount += repo.NumIssues
 		closedIssueCount += repo.NumClosedIssues
 
 		// Set repository information to issues.
@@ -330,12 +332,10 @@ func Issues(ctx *middleware.Context) {
 		repos[i].NumOpenIssues = repo.NumIssues - repo.NumClosedIssues
 		if repos[i].NumOpenIssues > 0 {
 			showRepos = append(showRepos, repos[i])
-
 		}
 	}
 
 	showIssues := make([]models.Issue, 0, len(allIssues))
-	isShowClosed := ctx.Query("state") == "closed"
 	ctx.Data["IsShowClosed"] = isShowClosed
 
 	// Get posters and filter issues.
@@ -361,9 +361,9 @@ func Issues(ctx *middleware.Context) {
 
 	ctx.Data["Repos"] = showRepos
 	ctx.Data["Issues"] = showIssues
-	ctx.Data["AllIssueCount"] = len(allIssues)
+	ctx.Data["AllIssueCount"] = allIssueCount
 	ctx.Data["ClosedIssueCount"] = closedIssueCount
-	ctx.Data["OpenIssueCount"] = len(allIssues) - closedIssueCount
+	ctx.Data["OpenIssueCount"] = allIssueCount - closedIssueCount
 	ctx.Data["CreatedByCount"] = createdByCount
 	ctx.HTML(200, "issue/user")
 }
