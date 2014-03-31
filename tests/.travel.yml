@@ -1,5 +1,5 @@
-command: python -m pytest {}
-include: ^test_.*\.py$
+command: go test -v {}
+include: ^.+_test\.go$
 path: ./
 depth: 1
 verbose: true
