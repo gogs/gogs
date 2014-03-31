@@ -1,9 +1,3 @@
-<<<<<<< HEAD
-
-
-gogs
-*.exe
-*.exe~
 .DS_Store
 *.db
 *.log
@@ -14,8 +8,6 @@ data/
 *.iml
 public/img/avatar/
 
-=======
->>>>>>> b4db9f67548a41922f1b337daf9c9d2b975b55c4
 # Compiled Object files, Static and Dynamic libs (Shared Objects)
 *.o
 *.a
@@ -38,3 +30,6 @@ _cgo_export.*
 _testmain.go
 
 *.exe
+*.exe~
+gogs
+__pycache__
