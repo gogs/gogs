@@ -1234,10 +1234,10 @@ html, body {
 
 /* admin dashboard/configuration */
 
-.dl-horizontal > dt {
+.admin-dl-horizontal > dt {
     width: 320px;
 }
 
-.dl-horizontal > dd {
+.admin-dl-horizontal > dd {
     margin-left: 340px;
 }
