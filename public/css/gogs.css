@@ -1231,3 +1231,13 @@ html, body {
 #footer a {
     color: #000;
 }
+
+/* admin dashboard/configuration */
+
+.dl-horizontal > dt {
+    width: 320px;
+}
+
+.dl-horizontal > dd {
+    margin-left: 340px;
+}
