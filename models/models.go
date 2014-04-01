@@ -83,15 +83,19 @@ func SetEngine() (err error) {
 
 	// WARNNING: for serv command, MUST remove the output to os.stdout,
 	// so use log file to instead print to stdout.
+	execDir, _ := base.ExecDir()
+	logPath := execDir + "/log/xorm.log"
+	os.MkdirAll(path.Dir(logPath), os.ModePerm)
 
-	//x.ShowDebug = true
-	//orm.ShowErr = true
-	f, err := os.Create("xorm.log")
+	f, err := os.Create(logPath)
 	if err != nil {
 		return fmt.Errorf("models.init(fail to create xorm.log): %v\n", err)
 	}
 	orm.Logger = f
+
 	orm.ShowSQL = true
+	orm.ShowDebug = true
+	orm.ShowErr = true
 	return nil
 }
 
