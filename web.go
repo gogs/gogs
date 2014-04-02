@@ -11,8 +11,8 @@ import (
 
 	"github.com/codegangsta/cli"
 	"github.com/go-martini/martini"
-	"github.com/martini-contrib/oauth2"
-	"github.com/martini-contrib/sessions"
+	// "github.com/martini-contrib/oauth2"
+	// "github.com/martini-contrib/sessions"
 
 	"github.com/gogits/binding"
 
@@ -60,15 +60,15 @@ func runWeb(*cli.Context) {
 	// Middlewares.
 	m.Use(middleware.Renderer(middleware.RenderOptions{Funcs: []template.FuncMap{base.TemplateFuncs}}))
 
-	scope := "https://api.github.com/user"
-	oauth2.PathCallback = "/oauth2callback"
-	m.Use(sessions.Sessions("my_session", sessions.NewCookieStore([]byte("secret123"))))
-	m.Use(oauth2.Github(&oauth2.Options{
-		ClientId:     "09383403ff2dc16daaa1",
-		ClientSecret: "5f6e7101d30b77952aab22b75eadae17551ea6b5",
-		RedirectURL:  base.AppUrl + oauth2.PathCallback,
-		Scopes:       []string{scope},
-	}))
+	// scope := "https://api.github.com/user"
+	// oauth2.PathCallback = "/oauth2callback"
+	// m.Use(sessions.Sessions("my_session", sessions.NewCookieStore([]byte("secret123"))))
+	// m.Use(oauth2.Github(&oauth2.Options{
+	// 	ClientId:     "09383403ff2dc16daaa1",
+	// 	ClientSecret: "5f6e7101d30b77952aab22b75eadae17551ea6b5",
+	// 	RedirectURL:  base.AppUrl + oauth2.PathCallback,
+	// 	Scopes:       []string{scope},
+	// }))
 
 	m.Use(middleware.InitContext())
 
@@ -92,7 +92,7 @@ func runWeb(*cli.Context) {
 	m.Get("/avatar/:hash", avt.ServeHTTP)
 
 	m.Group("/user", func(r martini.Router) {
-		r.Any("/login/github", user.SocialSignIn)
+		// r.Any("/login/github", user.SocialSignIn)
 		r.Any("/login", binding.BindIgnErr(auth.LogInForm{}), user.SignIn)
 		r.Any("/sign_up", binding.BindIgnErr(auth.RegisterForm{}), user.SignUp)
 	}, reqSignOut)
