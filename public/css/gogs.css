@@ -1235,9 +1235,9 @@ html, body {
 /* admin dashboard/configuration */
 
 .admin-dl-horizontal > dt {
-    width: 320px;
+    width: 220px;
 }
 
 .admin-dl-horizontal > dd {
-    margin-left: 340px;
+    margin-left: 240px;
 }
