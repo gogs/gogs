@@ -147,6 +147,7 @@ func runWeb(*cli.Context) {
 	m.Group("/:username/:reponame", func(r martini.Router) {
 		r.Get("/issues", repo.Issues)
 		r.Get("/issues/:index", repo.ViewIssue)
+		r.Get("/releases", repo.Releases)
 		r.Get("/pulls", repo.Pulls)
 		r.Get("/branches", repo.Branches)
 	}, ignSignIn, middleware.RepoAssignment(true))
