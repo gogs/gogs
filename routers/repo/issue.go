@@ -74,7 +74,7 @@ func Issues(ctx *middleware.Context) {
 
 	ctx.Data["Issues"] = showIssues
 	ctx.Data["IssueCount"] = ctx.Repo.Repository.NumIssues
-	ctx.Data["OpenCount"] = ctx.Repo.Repository.NumIssues - ctx.Repo.Repository.NumClosedIssues
+	ctx.Data["OpenCount"] = ctx.Repo.Repository.NumOpenIssues
 	ctx.Data["ClosedCount"] = ctx.Repo.Repository.NumClosedIssues
 	ctx.Data["IssueCreatedCount"] = createdByCount
 	ctx.Data["IsShowClosed"] = ctx.Query("state") == "closed"
