@@ -8,7 +8,7 @@ import (
 
 	"code.google.com/p/goauth2/oauth"
 	"github.com/gogits/gogs/modules/log"
-	"github.com/martini-contrib/oauth2"
+	"github.com/gogits/oauth2"
 )
 
 // github && google && ...
