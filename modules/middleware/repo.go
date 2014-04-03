@@ -79,6 +79,7 @@ func RepoAssignment(redirect bool, args ...bool) martini.Handler {
 			ctx.Handle(404, "RepoAssignment", err)
 			return
 		}
+		repo.NumOpenIssues = repo.NumIssues - repo.NumClosedIssues
 		ctx.Repo.Repository = repo
 
 		ctx.Data["IsBareRepo"] = ctx.Repo.Repository.IsBare

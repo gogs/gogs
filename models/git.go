@@ -56,6 +56,25 @@ func GetBranches(userName, repoName string) ([]string, error) {
 	return brs, nil
 }
 
+// GetTags returns all tags of given repository.
+func GetTags(userName, repoName string) ([]string, error) {
+	repo, err := git.OpenRepository(RepoPath(userName, repoName))
+	if err != nil {
+		return nil, err
+	}
+
+	refs, err := repo.AllTags()
+	if err != nil {
+		return nil, err
+	}
+
+	tags := make([]string, len(refs))
+	for i, ref := range refs {
+		tags[i] = ref.Name
+	}
+	return tags, nil
+}
+
 func IsBranchExist(userName, repoName, branchName string) bool {
 	repo, err := git.OpenRepository(RepoPath(userName, repoName))
 	if err != nil {
