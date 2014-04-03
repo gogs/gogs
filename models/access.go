@@ -32,6 +32,14 @@ func AddAccess(access *Access) error {
 	return err
 }
 
+// UpdateAccess updates access information.
+func UpdateAccess(access *Access) error {
+	access.UserName = strings.ToLower(access.UserName)
+	access.RepoName = strings.ToLower(access.RepoName)
+	_, err := orm.Id(access.Id).Update(access)
+	return err
+}
+
 // HasAccess returns true if someone can read or write to given repository.
 func HasAccess(userName, repoName string, mode int) (bool, error) {
 	return orm.Get(&Access{
