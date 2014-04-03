@@ -203,8 +203,52 @@ func VerifyUserActiveCode(code string) (user *User) {
 	return nil
 }
 
+// ChangeUserName changes all corresponding setting from old user name to new one.
+func ChangeUserName(user *User, newUserName string) (err error) {
+	newUserName = strings.ToLower(newUserName)
+
+	// Update accesses of user.
+	accesses := make([]Access, 0, 10)
+	if err = orm.Find(&accesses, &Access{UserName: user.LowerName}); err != nil {
+		return err
+	}
+	for i := range accesses {
+		accesses[i].UserName = newUserName
+		if strings.HasPrefix(accesses[i].RepoName, user.LowerName+"/") {
+			accesses[i].RepoName = strings.Replace(accesses[i].RepoName, user.LowerName, newUserName, 1)
+			if err = UpdateAccess(&accesses[i]); err != nil {
+				return err
+			}
+		}
+	}
+
+	repos, err := GetRepositories(user)
+	if err != nil {
+		return err
+	}
+	for i := range repos {
+		accesses = make([]Access, 0, 10)
+		// Update accesses of user repository.
+		if err = orm.Find(&accesses, &Access{RepoName: user.LowerName + "/" + repos[i].LowerName}); err != nil {
+			return err
+		}
+
+		for j := range accesses {
+			accesses[j].RepoName = newUserName + "/" + repos[i].LowerName
+			if err = UpdateAccess(&accesses[j]); err != nil {
+				return err
+			}
+		}
+	}
+
+	// Change user directory name.
+	return os.Rename(UserPath(user.LowerName), UserPath(newUserName))
+}
+
 // UpdateUser updates user's information.
 func UpdateUser(user *User) (err error) {
+	user.LowerName = strings.ToLower(user.Name)
+
 	if len(user.Location) > 255 {
 		user.Location = user.Location[:255]
 	}
@@ -230,6 +274,11 @@ func DeleteUser(user *User) error {
 
 	// Delete all feeds.
 	if _, err = orm.Delete(&Action{UserId: user.Id}); err != nil {
+		return err
+	}
+
+	// Delete all accesses.
+	if _, err = orm.Delete(&Access{UserName: user.LowerName}); err != nil {
 		return err
 	}
 
