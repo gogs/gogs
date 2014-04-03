@@ -369,14 +369,34 @@ func RepoPath(userName, repoName string) string {
 	return filepath.Join(UserPath(userName), strings.ToLower(repoName)+".git")
 }
 
+// ChangeRepositoryName changes all corresponding setting from old repository name to new one.
+func ChangeRepositoryName(userName, oldRepoName, newRepoName string) (err error) {
+	// Update accesses.
+	accesses := make([]Access, 0, 5)
+	err = orm.Find(&accesses, &Access{RepoName: strings.ToLower(userName + "/" + oldRepoName)})
+	if err != nil {
+		return err
+	}
+	for i := range accesses {
+		accesses[i].RepoName = userName + "/" + newRepoName
+		if err = UpdateAccess(&accesses[i]); err != nil {
+			return err
+		}
+	}
+
+	// Change repository directory name.
+	return os.Rename(RepoPath(userName, oldRepoName), RepoPath(userName, newRepoName))
+}
+
 func UpdateRepository(repo *Repository) error {
+	repo.LowerName = strings.ToLower(repo.Name)
+
 	if len(repo.Description) > 255 {
 		repo.Description = repo.Description[:255]
 	}
 	if len(repo.Website) > 255 {
 		repo.Website = repo.Website[:255]
 	}
-
 	_, err := orm.Id(repo.Id).AllCols().Update(repo)
 	return err
 }
