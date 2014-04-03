@@ -372,9 +372,8 @@ func RepoPath(userName, repoName string) string {
 // ChangeRepositoryName changes all corresponding setting from old repository name to new one.
 func ChangeRepositoryName(userName, oldRepoName, newRepoName string) (err error) {
 	// Update accesses.
-	accesses := make([]Access, 0, 5)
-	err = orm.Find(&accesses, &Access{RepoName: strings.ToLower(userName + "/" + oldRepoName)})
-	if err != nil {
+	accesses := make([]Access, 0, 10)
+	if err = orm.Find(&accesses, &Access{RepoName: strings.ToLower(userName + "/" + oldRepoName)}); err != nil {
 		return err
 	}
 	for i := range accesses {

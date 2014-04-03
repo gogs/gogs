@@ -291,7 +291,7 @@ func SettingPost(ctx *middleware.Context) {
 				ctx.RenderWithErr("Repository name has been taken in your repositories.", "repo/setting", nil)
 				return
 			} else if err = models.ChangeRepositoryName(ctx.Repo.Owner.Name, ctx.Repo.Repository.Name, newRepoName); err != nil {
-				ctx.Handle(404, "repo.SettingPost(update)", err)
+				ctx.Handle(404, "repo.SettingPost(change repository name)", err)
 				return
 			}
 			log.Trace("%s Repository name changed: %s/%s -> %s", ctx.Req.RequestURI, ctx.User.Name, ctx.Repo.Repository.Name, newRepoName)
