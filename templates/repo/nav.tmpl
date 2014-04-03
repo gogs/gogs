@@ -18,9 +18,9 @@
                                 <button class="btn btn-default" data-link="{{.CloneLink.SSH}}" type="button">SSH</button>
                                 <button class="btn btn-default" data-link="{{.CloneLink.HTTPS}}" type="button">HTTPS</button>
                             </span>
-                            <input type="text" class="form-control clone-group-url" value="" readonly/>
+                            <input type="text" class="form-control clone-group-url" value="" readonly id="repo-clone-ipt"/>
                             <span class="input-group-btn">
-                                <button class="btn btn-default" type="button"><i class="fa fa-copy" data-toggle="tooltip" title="copy to clipboard" data-placement="top"></i></button>
+                                <button class="btn btn-default" type="button" data-toggle="tooltip" title="copy to clipboard" data-placement="top" data-init="copy" data-copy-val="val" data-copy-from="#repo-clone-ipt"><i class="fa fa-copy"></i></button>
                             </span>
                         </div>
                         <p class="help-block text-center">Need help cloning? Visit <a href="#">Help</a>!</p>

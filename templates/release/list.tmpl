@@ -1,0 +1,10 @@
+{{template "base/head" .}}
+{{template "base/navbar" .}}
+{{template "repo/nav" .}}
+{{template "repo/toolbar" .}}
+<div id="body" class="container">
+    {{range .Releases}}
+        {{.}}
+    {{end}}
+</div>
+{{template "base/footer" .}}
