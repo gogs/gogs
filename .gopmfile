@@ -19,6 +19,9 @@ github.com/gogits/gfm=
 github.com/gogits/cache=
 github.com/gogits/session=
 github.com/gogits/webdav=
+github.com/martini-contrib/oauth2=
+github.com/martini-contrib/sessions=
+code.google.com/p/goauth2=
 
 [res]
 include=templates|public|conf
