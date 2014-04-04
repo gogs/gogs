@@ -74,6 +74,7 @@ type Repository struct {
 	NumStars        int
 	NumForks        int
 	NumIssues       int
+	NumReleases     int `xorm:"NOT NULL"`
 	NumClosedIssues int
 	NumOpenIssues   int `xorm:"-"`
 	IsPrivate       bool
@@ -368,14 +369,33 @@ func RepoPath(userName, repoName string) string {
 	return filepath.Join(UserPath(userName), strings.ToLower(repoName)+".git")
 }
 
+// ChangeRepositoryName changes all corresponding setting from old repository name to new one.
+func ChangeRepositoryName(userName, oldRepoName, newRepoName string) (err error) {
+	// Update accesses.
+	accesses := make([]Access, 0, 10)
+	if err = orm.Find(&accesses, &Access{RepoName: strings.ToLower(userName + "/" + oldRepoName)}); err != nil {
+		return err
+	}
+	for i := range accesses {
+		accesses[i].RepoName = userName + "/" + newRepoName
+		if err = UpdateAccess(&accesses[i]); err != nil {
+			return err
+		}
+	}
+
+	// Change repository directory name.
+	return os.Rename(RepoPath(userName, oldRepoName), RepoPath(userName, newRepoName))
+}
+
 func UpdateRepository(repo *Repository) error {
+	repo.LowerName = strings.ToLower(repo.Name)
+
 	if len(repo.Description) > 255 {
 		repo.Description = repo.Description[:255]
 	}
 	if len(repo.Website) > 255 {
 		repo.Website = repo.Website[:255]
 	}
-
 	_, err := orm.Id(repo.Id).AllCols().Update(repo)
 	return err
 }
@@ -513,6 +533,7 @@ func NotifyWatchers(act *Action) error {
 			continue
 		}
 
+		act.Id = 0
 		act.UserId = watches[i].UserId
 		if _, err = orm.InsertOne(act); err != nil {
 			return errors.New("repo.NotifyWatchers(create action): " + err.Error())

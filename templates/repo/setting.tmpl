@@ -12,7 +12,7 @@
     </div>
 
     <div id="repo-setting-container" class="col-md-9">
-        {{if .IsSuccess}}<p class="alert alert-success">Repository option has been successfully updated.</p>{{else if .HasError}}<p class="alert alert-danger form-error">{{.ErrorMsg}}</p>{{end}}
+        {{if .IsSuccess}}<p class="alert alert-success">Repository options has been successfully updated.</p>{{else if .HasError}}<p class="alert alert-danger form-error">{{.ErrorMsg}}</p>{{end}}
         <div class="panel panel-default">
             <div class="panel-heading">
                 Repository Options
@@ -23,11 +23,19 @@
                     {{.CsrfTokenHtml}}
                     <input type="hidden" name="action" value="update">
                     <div class="form-group">
+                        <label class="col-md-3 text-right">Name</label>
+                        <div class="col-md-9">
+                            <input class="form-control" name="name" value="{{.Repository.Name}}" />
+                        </div>
+                    </div>
+
+                    <div class="form-group">
                         <label class="col-md-3 text-right">Description</label>
                         <div class="col-md-9">
                             <textarea class="form-control" name="desc" id="repo-desc" rows="3">{{.Repository.Description}}</textarea>
                         </div>
                     </div>
+
                     <div class="form-group">
                         <label class="col-md-3 text-right">Official Site</label>
                         <div class="col-md-9">

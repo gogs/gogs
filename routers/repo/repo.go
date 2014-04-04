@@ -5,6 +5,7 @@
 package repo
 
 import (
+	"fmt"
 	"path"
 	"path/filepath"
 	"strings"
@@ -278,19 +279,44 @@ func SettingPost(ctx *middleware.Context) {
 
 	switch ctx.Query("action") {
 	case "update":
+		isNameChanged := false
+		newRepoName := ctx.Query("name")
+		// Check if repository name has been changed.
+		if ctx.Repo.Repository.Name != newRepoName {
+			isExist, err := models.IsRepositoryExist(ctx.Repo.Owner, newRepoName)
+			if err != nil {
+				ctx.Handle(404, "repo.SettingPost(update: check existence)", err)
+				return
+			} else if isExist {
+				ctx.RenderWithErr("Repository name has been taken in your repositories.", "repo/setting", nil)
+				return
+			} else if err = models.ChangeRepositoryName(ctx.Repo.Owner.Name, ctx.Repo.Repository.Name, newRepoName); err != nil {
+				ctx.Handle(404, "repo.SettingPost(change repository name)", err)
+				return
+			}
+			log.Trace("%s Repository name changed: %s/%s -> %s", ctx.Req.RequestURI, ctx.User.Name, ctx.Repo.Repository.Name, newRepoName)
+
+			isNameChanged = true
+			ctx.Repo.Repository.Name = newRepoName
+		}
+
 		ctx.Repo.Repository.Description = ctx.Query("desc")
 		ctx.Repo.Repository.Website = ctx.Query("site")
 		if err := models.UpdateRepository(ctx.Repo.Repository); err != nil {
 			ctx.Handle(404, "repo.SettingPost(update)", err)
 			return
 		}
+
 		ctx.Data["IsSuccess"] = true
-		ctx.HTML(200, "repo/setting")
-		log.Trace("%s Repository updated: %s/%s", ctx.Req.RequestURI, ctx.User.LowerName, ctx.Repo.Repository.LowerName)
+		if isNameChanged {
+			ctx.Redirect(fmt.Sprintf("/%s/%s/settings", ctx.Repo.Owner.Name, ctx.Repo.Repository.Name))
+		} else {
+			ctx.HTML(200, "repo/setting")
+		}
+		log.Trace("%s Repository updated: %s/%s", ctx.Req.RequestURI, ctx.Repo.Owner.Name, ctx.Repo.Repository.Name)
 	case "delete":
 		if len(ctx.Repo.Repository.Name) == 0 || ctx.Repo.Repository.Name != ctx.Query("repository") {
-			ctx.Data["ErrorMsg"] = "Please make sure you entered repository name is correct."
-			ctx.HTML(200, "repo/setting")
+			ctx.RenderWithErr("Please make sure you entered repository name is correct.", "repo/setting", nil)
 			return
 		}
 

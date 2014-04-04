@@ -31,7 +31,8 @@ func Issues(ctx *middleware.Context) {
 	ctx.Data["IssueCreatedCount"] = 0
 
 	var posterId int64 = 0
-	if ctx.Query("type") == "created_by" {
+	isCreatedBy := ctx.Query("type") == "created_by"
+	if isCreatedBy {
 		if !ctx.IsSigned {
 			ctx.SetCookie("redirect_to", "/"+url.QueryEscape(ctx.Req.RequestURI))
 			ctx.Redirect("/user/login/", 302)
@@ -53,6 +54,7 @@ func Issues(ctx *middleware.Context) {
 	}
 	var createdByCount int
 
+	showIssues := make([]models.Issue, 0, len(issues))
 	// Get posters.
 	for i := range issues {
 		u, err := models.GetUserById(issues[i].PosterId)
@@ -60,15 +62,19 @@ func Issues(ctx *middleware.Context) {
 			ctx.Handle(200, "issue.Issues(get poster): %v", err)
 			return
 		}
-		issues[i].Poster = u
+		if isCreatedBy && u.Id != posterId {
+			continue
+		}
 		if u.Id == posterId {
 			createdByCount++
 		}
+		issues[i].Poster = u
+		showIssues = append(showIssues, issues[i])
 	}
 
-	ctx.Data["Issues"] = issues
+	ctx.Data["Issues"] = showIssues
 	ctx.Data["IssueCount"] = ctx.Repo.Repository.NumIssues
-	ctx.Data["OpenCount"] = ctx.Repo.Repository.NumIssues - ctx.Repo.Repository.NumClosedIssues
+	ctx.Data["OpenCount"] = ctx.Repo.Repository.NumOpenIssues
 	ctx.Data["ClosedCount"] = ctx.Repo.Repository.NumClosedIssues
 	ctx.Data["IssueCreatedCount"] = createdByCount
 	ctx.Data["IsShowClosed"] = ctx.Query("state") == "closed"
@@ -107,7 +113,7 @@ func CreateIssue(ctx *middleware.Context, params martini.Params, form auth.Creat
 
 	// Mail watchers.
 	if base.Service.NotifyMail {
-		if err = mailer.SendNotifyMail(ctx.User.Id, ctx.Repo.Repository.Id, ctx.User.Name, ctx.Repo.Repository.Name, issue.Name, issue.Content); err != nil {
+		if err = mailer.SendNotifyMail(ctx.User, ctx.Repo.Owner, ctx.Repo.Repository, issue); err != nil {
 			ctx.Handle(200, "issue.CreateIssue", err)
 			return
 		}
