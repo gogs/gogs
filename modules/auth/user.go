@@ -75,6 +75,7 @@ type FeedsForm struct {
 }
 
 type UpdateProfileForm struct {
+	UserName string `form:"username" binding:"Required;AlphaDash;MaxSize(30)"`
 	Email    string `form:"email" binding:"Required;Email;MaxSize(50)"`
 	Website  string `form:"website" binding:"MaxSize(50)"`
 	Location string `form:"location" binding:"MaxSize(50)"`
@@ -83,6 +84,7 @@ type UpdateProfileForm struct {
 
 func (f *UpdateProfileForm) Name(field string) string {
 	names := map[string]string{
+		"UserName": "Username",
 		"Email":    "E-mail address",
 		"Website":  "Website",
 		"Location": "Location",
