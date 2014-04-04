@@ -314,6 +314,29 @@ func SettingPost(ctx *middleware.Context) {
 			ctx.HTML(200, "repo/setting")
 		}
 		log.Trace("%s Repository updated: %s/%s", ctx.Req.RequestURI, ctx.Repo.Owner.Name, ctx.Repo.Repository.Name)
+	case "transfer":
+		if len(ctx.Repo.Repository.Name) == 0 || ctx.Repo.Repository.Name != ctx.Query("repository") {
+			ctx.RenderWithErr("Please make sure you entered repository name is correct.", "repo/setting", nil)
+			return
+		}
+
+		newOwner := ctx.Query("owner")
+		// Check if new owner exists.
+		isExist, err := models.IsUserExist(newOwner)
+		if err != nil {
+			ctx.Handle(404, "repo.SettingPost(transfer: check existence)", err)
+			return
+		} else if !isExist {
+			ctx.RenderWithErr("Please make sure you entered owner name is correct.", "repo/setting", nil)
+			return
+		} else if err = models.TransferOwnership(ctx.User, newOwner, ctx.Repo.Repository); err != nil {
+			ctx.Handle(404, "repo.SettingPost(transfer repository)", err)
+			return
+		}
+		log.Trace("%s Repository transfered: %s/%s -> %s", ctx.Req.RequestURI, ctx.User.Name, ctx.Repo.Repository.Name, newOwner)
+
+		ctx.Redirect("/")
+		return
 	case "delete":
 		if len(ctx.Repo.Repository.Name) == 0 || ctx.Repo.Repository.Name != ctx.Query("repository") {
 			ctx.RenderWithErr("Please make sure you entered repository name is correct.", "repo/setting", nil)
