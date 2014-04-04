@@ -381,45 +381,62 @@ func TransferOwnership(user *User, newOwner string, repo *Repository) (err error
 	if err = orm.Find(&accesses, &Access{RepoName: user.LowerName + "/" + repo.LowerName}); err != nil {
 		return err
 	}
+
+	sess := orm.NewSession()
+	defer sess.Close()
+	if err = sess.Begin(); err != nil {
+		return err
+	}
+
 	for i := range accesses {
 		accesses[i].RepoName = newUser.LowerName + "/" + repo.LowerName
 		if accesses[i].UserName == user.LowerName {
 			accesses[i].UserName = newUser.LowerName
 		}
-		if err = UpdateAccess(&accesses[i]); err != nil {
+		if err = UpdateAccessWithSession(sess, &accesses[i]); err != nil {
 			return err
 		}
 	}
 
 	// Update repository.
 	repo.OwnerId = newUser.Id
-	if _, err := orm.Id(repo.Id).Update(repo); err != nil {
+	if _, err := sess.Id(repo.Id).Update(repo); err != nil {
+		sess.Rollback()
 		return err
 	}
 
 	// Update user repository number.
 	rawSql := "UPDATE `user` SET num_repos = num_repos + 1 WHERE id = ?"
-	if _, err = orm.Exec(rawSql, newUser.Id); err != nil {
+	if _, err = sess.Exec(rawSql, newUser.Id); err != nil {
+		sess.Rollback()
 		return err
 	}
 	rawSql = "UPDATE `user` SET num_repos = num_repos - 1 WHERE id = ?"
-	if _, err = orm.Exec(rawSql, user.Id); err != nil {
+	if _, err = sess.Exec(rawSql, user.Id); err != nil {
+		sess.Rollback()
 		return err
 	}
 
 	// Add watch of new owner to repository.
 	if !IsWatching(newUser.Id, repo.Id) {
 		if err = WatchRepo(newUser.Id, repo.Id, true); err != nil {
+			sess.Rollback()
 			return err
 		}
 	}
 
 	if err = TransferRepoAction(user, newUser, repo); err != nil {
+		sess.Rollback()
 		return err
 	}
 
 	// Change repository directory name.
-	return os.Rename(RepoPath(user.Name, repo.Name), RepoPath(newUser.Name, repo.Name))
+	if err = os.Rename(RepoPath(user.Name, repo.Name), RepoPath(newUser.Name, repo.Name)); err != nil {
+		sess.Rollback()
+		return err
+	}
+
+	return sess.Commit()
 }
 
 // ChangeRepositoryName changes all corresponding setting from old repository name to new one.
@@ -429,15 +446,27 @@ func ChangeRepositoryName(userName, oldRepoName, newRepoName string) (err error)
 	if err = orm.Find(&accesses, &Access{RepoName: strings.ToLower(userName + "/" + oldRepoName)}); err != nil {
 		return err
 	}
+
+	sess := orm.NewSession()
+	defer sess.Close()
+	if err = sess.Begin(); err != nil {
+		return err
+	}
+
 	for i := range accesses {
 		accesses[i].RepoName = userName + "/" + newRepoName
-		if err = UpdateAccess(&accesses[i]); err != nil {
+		if err = UpdateAccessWithSession(sess, &accesses[i]); err != nil {
 			return err
 		}
 	}
 
 	// Change repository directory name.
-	return os.Rename(RepoPath(userName, oldRepoName), RepoPath(userName, newRepoName))
+	if err = os.Rename(RepoPath(userName, oldRepoName), RepoPath(userName, newRepoName)); err != nil {
+		sess.Rollback()
+		return err
+	}
+
+	return sess.Commit()
 }
 
 func UpdateRepository(repo *Repository) error {
