@@ -21,6 +21,7 @@ const (
 	OP_COMMIT_REPO
 	OP_CREATE_ISSUE
 	OP_PULL_REQUEST
+	OP_TRANSFER_REPO
 )
 
 // Action represents user operation type and other information to repository.,
@@ -105,6 +106,18 @@ func NewRepoAction(user *User, repo *Repository) (err error) {
 	}
 
 	log.Trace("action.NewRepoAction: %s/%s", user.LowerName, repo.LowerName)
+	return err
+}
+
+// TransferRepoAction adds new action for transfering repository.
+func TransferRepoAction(user, newUser *User, repo *Repository) (err error) {
+	if err = NotifyWatchers(&Action{ActUserId: user.Id, ActUserName: user.Name, ActEmail: user.Email,
+		OpType: OP_TRANSFER_REPO, RepoId: repo.Id, RepoName: repo.Name, Content: newUser.Name}); err != nil {
+		log.Error("action.TransferRepoAction(notify watchers): %d/%s", user.Id, repo.Name)
+		return err
+	}
+
+	log.Trace("action.TransferRepoAction: %s/%s", user.LowerName, repo.LowerName)
 	return err
 }
 
