@@ -218,11 +218,18 @@ func ChangeUserName(user *User, newUserName string) (err error) {
 	if err = orm.Find(&accesses, &Access{UserName: user.LowerName}); err != nil {
 		return err
 	}
+
+	sess := orm.NewSession()
+	defer sess.Close()
+	if err = sess.Begin(); err != nil {
+		return err
+	}
+
 	for i := range accesses {
 		accesses[i].UserName = newUserName
 		if strings.HasPrefix(accesses[i].RepoName, user.LowerName+"/") {
 			accesses[i].RepoName = strings.Replace(accesses[i].RepoName, user.LowerName, newUserName, 1)
-			if err = UpdateAccess(&accesses[i]); err != nil {
+			if err = UpdateAccessWithSession(sess, &accesses[i]); err != nil {
 				return err
 			}
 		}
@@ -241,14 +248,19 @@ func ChangeUserName(user *User, newUserName string) (err error) {
 
 		for j := range accesses {
 			accesses[j].RepoName = newUserName + "/" + repos[i].LowerName
-			if err = UpdateAccess(&accesses[j]); err != nil {
+			if err = UpdateAccessWithSession(sess, &accesses[j]); err != nil {
 				return err
 			}
 		}
 	}
 
 	// Change user directory name.
-	return os.Rename(UserPath(user.LowerName), UserPath(newUserName))
+	if err = os.Rename(UserPath(user.LowerName), UserPath(newUserName)); err != nil {
+		sess.Rollback()
+		return err
+	}
+
+	return sess.Commit()
 }
 
 // UpdateUser updates user's information.
