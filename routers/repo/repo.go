@@ -245,10 +245,10 @@ func Http(ctx *middleware.Context, params martini.Params) {
 		reponame = reponame[:len(reponame)-4]
 	}
 
+	dir := models.RepoPath(username, reponame)
 	prefix := path.Join("/", username, params["reponame"])
 	server := webdav.NewServer(
-		models.RepoPath(username, reponame),
-		prefix, true)
+		dir, prefix, true)
 
 	server.ServeHTTP(ctx.ResponseWriter, ctx.Req)
 }
