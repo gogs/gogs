@@ -3,6 +3,82 @@
 {{template "repo/nav" .}}
 {{template "repo/toolbar" .}}
 <div id="body" class="container">
+    <div id="release">
+        <h4 id="release-head">
+            <span class="release"><strong>Release</strong></span> /
+            <a class="tag" href="/{tag_link}">Tags</a>
+            <!-- comment : if in tag page, show a.release and span.tag please -->
+        </h4>
+        <ul id="release-list" class="list-unstyled">
+            <li class="release-item release-tag clearfix" id="release-tag-{release_tag_id}">
+                <div class="col-md-2 text-right">
+                    <a class="commit" href="{commit_link}"><i class="fa fa-code"></i>commit-sha</a>
+                </div>
+                <div class="col-md-10">
+                    <h5 class="title"><a href="{release_single_link}">Release Tag</a><i class="fa fa-tag"></i></h5>
+                    <p class="info">
+                        <span class="author"><img class="avatar" src="http://1.gravatar.com/avatar/f72f7454ce9d710baa506394f68f4132" alt="" width="20">&nbsp;&nbsp;
+                        <a href="/user/fuxiaohei">fuxiaohei</a></span>
+                        <span class="time">1 week ago</span>
+                        <span class="ahead"><strong>0</strong> commits since this tag</span>
+                    </p>
+                    <p class="download">
+                        <a class="download-link" href="{release_download_link}"><i class="fa fa-download"></i>zip</a>
+                        <a class="download-link" href="{release_download_link}"><i class="fa fa-download"></i>tar.gz</a>
+                    </p>
+                    <span class="dot">&nbsp;</span>
+                </div>
+            </li>
+            <li class="release-item clearfix" id="release-{release_id}">
+                <div class="col-md-2 text-right">
+                    <span class="btn btn-success status stable">Stable</span>
+                    <a class="tag" href="{commit_link}"><i class="fa fa-tag"></i>release tag</a>
+                    <a class="commit" href="{commit_link}"><i class="fa fa-code"></i>commit-sha</a>
+                </div>
+                <div class="col-md-10">
+                    <h4 class="title"><a href="{release_single_link}">Release Title</a></h4>
+                    <p class="info">
+                        <span class="author"><img class="avatar" src="http://1.gravatar.com/avatar/f72f7454ce9d710baa506394f68f4132" alt="" width="20">&nbsp;&nbsp;
+                        <a href="/user/fuxiaohei">fuxiaohei</a></span>
+                        <span class="time">1 week ago</span>
+                        <span class="ahead"><strong>0</strong> commits since this tag</span>
+                    </p>
+                    <div class="markdown desc">
+                        release descriptions, support markdown content
+                    </div>
+                    <p class="download">
+                        <a class="btn btn-default" href="{release_download_link}"><i class="fa fa-download"></i>Source Code (ZIP)</a>
+                        <a class="btn btn-default" href="{release_download_link}"><i class="fa fa-download"></i>Source Code (TAR.GZ)</a>
+                    </p>
+                    <span class="dot">&nbsp;</span>
+                </div>
+            </li>
+            <li class="release-item clearfix" id="release-{release_id}">
+                <div class="col-md-2 text-right">
+                    <span class="btn btn-warning status pre-release">Pre-Release</span>
+                    <a class="tag" href="{commit_link}"><i class="fa fa-tag"></i>release tag</a>
+                    <a class="commit" href="{commit_link}"><i class="fa fa-code"></i>commit-sha</a>
+                </div>
+                <div class="col-md-10">
+                    <h4 class="title"><a href="{release_single_link}">Release Title</a></h4>
+                    <p class="info">
+                        <span class="author"><img class="avatar" src="http://1.gravatar.com/avatar/f72f7454ce9d710baa506394f68f4132" alt="" width="20">&nbsp;&nbsp;
+                        <a href="/user/fuxiaohei">fuxiaohei</a></span>
+                        <span class="time">1 week ago</span>
+                        <span class="ahead"><strong>0</strong> commits since this tag</span>
+                    </p>
+                    <div class="markdown desc">
+                        release descriptions, support markdown content
+                    </div>
+                    <p class="download">
+                        <a class="btn btn-default" href="{release_download_link}"><i class="fa fa-download"></i>Source Code (ZIP)</a>
+                        <a class="btn btn-default" href="{release_download_link}"><i class="fa fa-download"></i>Source Code (TAR.GZ)</a>
+                    </p>
+                    <span class="dot">&nbsp;</span>
+                </div>
+            </li>
+        </ul>
+    </div>
     {{range .Releases}}
         {{.}}
     {{end}}
