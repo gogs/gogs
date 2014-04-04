@@ -105,11 +105,17 @@ type Member struct {
 // IsUserExist checks if given user name exist,
 // the user name should be noncased unique.
 func IsUserExist(name string) (bool, error) {
+	if len(name) == 0 {
+		return false, nil
+	}
 	return orm.Get(&User{LowerName: strings.ToLower(name)})
 }
 
 // IsEmailUsed returns true if the e-mail has been used.
 func IsEmailUsed(email string) (bool, error) {
+	if len(email) == 0 {
+		return false, nil
+	}
 	return orm.Get(&User{Email: email})
 }
 

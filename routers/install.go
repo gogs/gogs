@@ -43,7 +43,7 @@ func GlobalInit() {
 
 	if base.InstallLock {
 		if err := models.NewEngine(); err != nil {
-			fmt.Println("%v", err)
+			fmt.Println(err)
 			os.Exit(2)
 		}
 
