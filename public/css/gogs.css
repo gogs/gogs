@@ -1166,7 +1166,7 @@ html, body {
     font-weight: normal;
 }
 
-#issue .issue-child .panel-heading .user,#issue .issue-closed a.user,#issue .issue-opened a.user {
+#issue .issue-child .panel-heading .user, #issue .issue-closed a.user, #issue .issue-opened a.user {
     font-weight: bold;
 }
 
@@ -1174,7 +1174,7 @@ html, body {
     border-color: #CCC;
 }
 
-#issue .issue-is-closed .issue-line{
+#issue .issue-is-closed .issue-line {
     display: none;
 }
 
@@ -1193,7 +1193,7 @@ html, body {
     width: 60%;
 }
 
-#issue .issue-closed .issue-content,#issue .issue-opened .issue-content{
+#issue .issue-closed .issue-content, #issue .issue-opened .issue-content {
     line-height: 42px;
 }
 
@@ -1203,7 +1203,7 @@ html, body {
     padding-bottom: 24px;
 }
 
-#issue .issue-closed .label-danger,#issue .issue-opened .label-success{
+#issue .issue-closed .label-danger, #issue .issue-opened .label-success {
     margin: 0 .8em;
 }
 
@@ -1240,4 +1240,68 @@ html, body {
 
 .admin-dl-horizontal > dd {
     margin-left: 240px;
+}
+
+/* release page */
+
+#release-head {
+    margin-top: 0;
+    padding-bottom: 30px;
+    margin-bottom: 0;
+    border-bottom: 1px solid #DDD;
+}
+
+#release .release-item .col-md-10 {
+    border-left: 1px solid #DDD;
+    position: relative;
+}
+
+#release .release-item .commit, #release .release-item .tag {
+    display: block;
+    margin-top: 12px;
+}
+
+#release .release-item.release-tag .commit {
+    margin-top: 6px;
+}
+
+#release .release-item .title {
+    line-height: 30px;
+    margin-top: 0;
+}
+
+#release .release-item .dot {
+    width: 9px;
+    height: 9px;
+    background-color: #ccc;
+    z-index: 999;
+    position: absolute;
+    display: block;
+    left: -5px;
+    top: 30px;
+    border-radius: 6px;
+    border: 1px solid #FFF;
+}
+
+#release .release-item > div {
+    padding-top: 20px;
+    padding-bottom: 20px;
+}
+
+#release .release-item p.info {
+    line-height: 20px;
+    color: #666;
+    margin-bottom: 18px;
+}
+
+#release .release-item div.desc {
+    margin-bottom: 18px;
+}
+
+#release .release-item p.info > *, #release .release-item .download a {
+    margin-right: 12px;
+}
+
+#release .release-item .info .avatar {
+    vertical-align: middle;
 }
