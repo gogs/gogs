@@ -261,7 +261,7 @@ func basicDecode(encoded string) (user string, name string, err error) {
 }
 
 func authRequired(ctx *middleware.Context) {
-	ctx.ResponseWriter.Header().Set("WWW-Authenticate", `Basic realm="Gogs Auth"`)
+	ctx.ResponseWriter.Header().Set("WWW-Authenticate", "Basic realm=\".\"")
 	ctx.Data["ErrorMsg"] = "no basic auth and digit auth"
 	ctx.HTML(401, fmt.Sprintf("status/401"))
 }
@@ -272,6 +272,8 @@ func Http(ctx *middleware.Context, params martini.Params) {
 	if strings.HasSuffix(reponame, ".git") {
 		reponame = reponame[:len(reponame)-4]
 	}
+
+	//fmt.Println("req:", ctx.Req.Header)
 
 	repoUser, err := models.GetUserByName(username)
 	if err != nil {
@@ -297,43 +299,43 @@ func Http(ctx *middleware.Context, params martini.Params) {
 
 		// check basic auth
 		baHead := ctx.Req.Header.Get("Authorization")
-		if baHead != "" {
-			auths := strings.Fields(baHead)
-			if len(auths) != 2 || auths[0] != "Basic" {
-				ctx.Handle(401, "no basic auth and digit auth", nil)
-				return
-			}
-			authUsername, passwd, err := basicDecode(auths[1])
-			if err != nil {
-				ctx.Handle(401, "no basic auth and digit auth", nil)
-				return
-			}
-
-			authUser, err := models.GetUserByName(authUsername)
-			if err != nil {
-				ctx.Handle(401, "no basic auth and digit auth", nil)
-				return
-			}
-
-			newUser := &models.User{Passwd: passwd}
-			newUser.EncodePasswd()
-			if authUser.Passwd != newUser.Passwd {
-				ctx.Handle(401, "no basic auth and digit auth", nil)
-				return
-			}
-
-			var tp = models.AU_WRITABLE
-			if isPull {
-				tp = models.AU_READABLE
-			}
-
-			has, err := models.HasAccess(authUsername, username+"/"+reponame, tp)
-			if err != nil || !has {
-				ctx.Handle(401, "no basic auth and digit auth", nil)
-				return
-			}
-		} else {
+		if baHead == "" {
 			authRequired(ctx)
+			return
+		}
+
+		auths := strings.Fields(baHead)
+		if len(auths) != 2 || auths[0] != "Basic" {
+			ctx.Handle(401, "no basic auth and digit auth", nil)
+			return
+		}
+		authUsername, passwd, err := basicDecode(auths[1])
+		if err != nil {
+			ctx.Handle(401, "no basic auth and digit auth", nil)
+			return
+		}
+
+		authUser, err := models.GetUserByName(authUsername)
+		if err != nil {
+			ctx.Handle(401, "no basic auth and digit auth", nil)
+			return
+		}
+
+		newUser := &models.User{Passwd: passwd}
+		newUser.EncodePasswd()
+		if authUser.Passwd != newUser.Passwd {
+			ctx.Handle(401, "no basic auth and digit auth", nil)
+			return
+		}
+
+		var tp = models.AU_WRITABLE
+		if isPull {
+			tp = models.AU_READABLE
+		}
+
+		has, err := models.HasAccess(authUsername, username+"/"+reponame, tp)
+		if err != nil || !has {
+			ctx.Handle(401, "no basic auth and digit auth", nil)
 			return
 		}
 	}
