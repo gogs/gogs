@@ -78,7 +78,7 @@ func init() {
 type PublicKey struct {
 	Id          int64
 	OwnerId     int64  `xorm:"unique(s) index not null"`
-	Name        string `xorm:"unique(s) not null"` //UNIQUE(s)
+	Name        string `xorm:"unique(s) not null"`
 	Fingerprint string
 	Content     string    `xorm:"TEXT not null"`
 	Created     time.Time `xorm:"created"`
