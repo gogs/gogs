@@ -367,6 +367,21 @@ func GetUserByName(name string) (*User, error) {
 	return user, nil
 }
 
+// GetUserByEmail returns the user object by given e-mail if exists.
+func GetUserByEmail(email string) (*User, error) {
+	if len(email) == 0 {
+		return nil, ErrUserNotExist
+	}
+	user := &User{Email: strings.ToLower(email)}
+	has, err := orm.Get(user)
+	if err != nil {
+		return nil, err
+	} else if !has {
+		return nil, ErrUserNotExist
+	}
+	return user, nil
+}
+
 // LoginUserPlain validates user by raw user name and password.
 func LoginUserPlain(name, passwd string) (*User, error) {
 	user := User{LowerName: strings.ToLower(name), Passwd: passwd}

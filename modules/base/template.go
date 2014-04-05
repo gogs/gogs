@@ -67,6 +67,10 @@ var TemplateFuncs template.FuncMap = map[string]interface{}{
 	"DateFormat": DateFormat,
 	"List":       List,
 	"Mail2Domain": func(mail string) string {
+		if !strings.Contains(mail, "@") {
+			return "try.gogits.org"
+		}
+
 		suffix := strings.SplitN(mail, "@", 2)[1]
 		domain, ok := mailDomains[suffix]
 		if !ok {

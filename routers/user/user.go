@@ -403,9 +403,12 @@ func Activate(ctx *middleware.Context) {
 	if user := models.VerifyUserActiveCode(code); user != nil {
 		user.IsActive = true
 		user.Rands = models.GetUserSalt()
-		models.UpdateUser(user)
+		if err := models.UpdateUser(user); err != nil {
+			ctx.Handle(404, "user.Activate", err)
+			return
+		}
 
-		log.Trace("%s User activated: %s", ctx.Req.RequestURI, user.LowerName)
+		log.Trace("%s User activated: %s", ctx.Req.RequestURI, user.Name)
 
 		ctx.Session.Set("userId", user.Id)
 		ctx.Session.Set("userName", user.Name)
@@ -415,4 +418,81 @@ func Activate(ctx *middleware.Context) {
 
 	ctx.Data["IsActivateFailed"] = true
 	ctx.HTML(200, "user/active")
+}
+
+func ForgotPasswd(ctx *middleware.Context) {
+	ctx.Data["Title"] = "Forgot Password"
+
+	if base.MailService == nil {
+		ctx.Data["IsResetDisable"] = true
+		ctx.HTML(200, "user/forgot_passwd")
+		return
+	}
+
+	ctx.Data["IsResetRequest"] = true
+	if ctx.Req.Method == "GET" {
+		ctx.HTML(200, "user/forgot_passwd")
+		return
+	}
+
+	email := ctx.Query("email")
+	u, err := models.GetUserByEmail(email)
+	if err != nil {
+		if err == models.ErrUserNotExist {
+			ctx.RenderWithErr("This e-mail address does not associate to any account.", "user/forgot_passwd", nil)
+		} else {
+			ctx.Handle(404, "user.ResetPasswd(check existence)", err)
+		}
+		return
+	}
+
+	mailer.SendResetPasswdMail(ctx.Render, u)
+	ctx.Data["Email"] = email
+	ctx.Data["Hours"] = base.Service.ActiveCodeLives / 60
+	ctx.Data["IsResetSent"] = true
+	ctx.HTML(200, "user/forgot_passwd")
+}
+
+func ResetPasswd(ctx *middleware.Context) {
+	code := ctx.Query("code")
+	if len(code) == 0 {
+		ctx.Error(404)
+		return
+	}
+	ctx.Data["Code"] = code
+
+	if ctx.Req.Method == "GET" {
+		ctx.Data["IsResetForm"] = true
+		ctx.HTML(200, "user/reset_passwd")
+		return
+	}
+
+	if u := models.VerifyUserActiveCode(code); u != nil {
+		// Validate password length.
+		passwd := ctx.Query("passwd")
+		if len(passwd) < 6 || len(passwd) > 30 {
+			ctx.Data["IsResetForm"] = true
+			ctx.RenderWithErr("Password length should be in 6 and 30.", "user/reset_passwd", nil)
+			return
+		}
+
+		u.Passwd = passwd
+		if err := u.EncodePasswd(); err != nil {
+			ctx.Handle(404, "user.ResetPasswd(EncodePasswd)", err)
+			return
+		}
+
+		u.Rands = models.GetUserSalt()
+		if err := models.UpdateUser(u); err != nil {
+			ctx.Handle(404, "user.ResetPasswd(UpdateUser)", err)
+			return
+		}
+
+		log.Trace("%s User password reset: %s", ctx.Req.RequestURI, u.Name)
+		ctx.Redirect("/user/login")
+		return
+	}
+
+	ctx.Data["IsResetFailed"] = true
+	ctx.HTML(200, "user/reset_passwd")
 }
