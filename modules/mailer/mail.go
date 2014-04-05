@@ -86,7 +86,27 @@ func SendActiveMail(r *middleware.Render, user *models.User) {
 	}
 
 	msg := NewMailMessage([]string{user.Email}, subject, body)
-	msg.Info = fmt.Sprintf("UID: %d, send email verify mail", user.Id)
+	msg.Info = fmt.Sprintf("UID: %d, send active mail", user.Id)
+
+	SendAsync(&msg)
+}
+
+// Send reset password email.
+func SendResetPasswdMail(r *middleware.Render, user *models.User) {
+	code := CreateUserActiveCode(user, nil)
+
+	subject := "Reset your password"
+
+	data := GetMailTmplData(user)
+	data["Code"] = code
+	body, err := r.HTMLString("mail/auth/reset_passwd", data)
+	if err != nil {
+		log.Error("mail.SendResetPasswdMail(fail to render): %v", err)
+		return
+	}
+
+	msg := NewMailMessage([]string{user.Email}, subject, body)
+	msg.Info = fmt.Sprintf("UID: %d, send reset password email", user.Id)
 
 	SendAsync(&msg)
 }
