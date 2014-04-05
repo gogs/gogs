@@ -77,8 +77,8 @@ func init() {
 // PublicKey represents a SSH key of user.
 type PublicKey struct {
 	Id          int64
-	OwnerId     int64  `xorm:" index not null"`
-	Name        string `xorm:" not null"` //UNIQUE(s)
+	OwnerId     int64  `xorm:"unique(s) index not null"`
+	Name        string `xorm:"unique(s) not null"` //UNIQUE(s)
 	Fingerprint string
 	Content     string    `xorm:"TEXT not null"`
 	Created     time.Time `xorm:"created"`
