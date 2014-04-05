@@ -1,28 +1,26 @@
 [target]
-path=github.com/gogits/gogs
+path = github.com/gogits/gogs
 
 [deps]
-github.com/codegangsta/cli=
-github.com/go-martini/martini=
-github.com/Unknwon/com=
-github.com/Unknwon/cae=
-github.com/Unknwon/goconfig=
-github.com/dchest/scrypt=
-github.com/nfnt/resize=
-github.com/lunny/xorm=
-github.com/go-sql-driver/mysql=
-github.com/lib/pq=
-github.com/gogits/logs=
-github.com/gogits/binding=
-github.com/gogits/git=
-github.com/gogits/gfm=
-github.com/gogits/cache=
-github.com/gogits/session=
-github.com/gogits/webdav=
-github.com/martini-contrib/oauth2=
-github.com/martini-contrib/sessions=
-code.google.com/p/goauth2=
+github.com/codegangsta/cli = 
+github.com/go-martini/martini = 
+github.com/Unknwon/com = 
+github.com/Unknwon/cae = 
+github.com/Unknwon/goconfig = 
+github.com/dchest/scrypt = 
+github.com/nfnt/resize = 
+github.com/lunny/xorm = 
+github.com/go-sql-driver/mysql = 
+github.com/lib/pq = 
+github.com/gogits/logs = 
+github.com/gogits/binding = 
+github.com/gogits/git = 
+github.com/gogits/gfm = 
+github.com/gogits/cache = 
+github.com/gogits/session = 
+github.com/gogits/webdav = 
+code.google.com/p/goauth2 = 
 
 [res]
-include=templates|public|conf
+include = templates|public|conf
 
