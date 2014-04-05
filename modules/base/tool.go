@@ -494,6 +494,8 @@ func ActionIcon(opType int) string {
 		return "arrow-circle-o-right"
 	case 6: // Create issue.
 		return "exclamation-circle"
+	case 8: // Transfer repository.
+		return "share"
 	default:
 		return "invalid type"
 	}
@@ -503,8 +505,9 @@ const (
 	TPL_CREATE_REPO    = `<a href="/user/%s">%s</a> created repository <a href="/%s">%s</a>`
 	TPL_COMMIT_REPO    = `<a href="/user/%s">%s</a> pushed to <a href="/%s/src/%s">%s</a> at <a href="/%s">%s</a>%s`
 	TPL_COMMIT_REPO_LI = `<div><img src="%s?s=16" alt="user-avatar"/> <a href="/%s/commit/%s">%s</a> %s</div>`
-	TPL_CREATE_Issue   = `<a href="/user/%s">%s</a> opened issue <a href="/%s/issues/%s">%s#%s</a>
+	TPL_CREATE_ISSUE   = `<a href="/user/%s">%s</a> opened issue <a href="/%s/issues/%s">%s#%s</a>
 <div><img src="%s?s=16" alt="user-avatar"/> %s</div>`
+	TPL_TRANSFER_REPO = `<a href="/user/%s">%s</a> transfered repository <code>%s</code> to <a href="/%s">%s</a>`
 )
 
 type PushCommit struct {
@@ -547,8 +550,11 @@ func ActionDesc(act Actioner) string {
 			buf.String())
 	case 6: // Create issue.
 		infos := strings.SplitN(content, "|", 2)
-		return fmt.Sprintf(TPL_CREATE_Issue, actUserName, actUserName, repoLink, infos[0], repoLink, infos[0],
+		return fmt.Sprintf(TPL_CREATE_ISSUE, actUserName, actUserName, repoLink, infos[0], repoLink, infos[0],
 			AvatarLink(email), infos[1])
+	case 8: // Transfer repository.
+		newRepoLink := content + "/" + repoName
+		return fmt.Sprintf(TPL_TRANSFER_REPO, actUserName, actUserName, repoLink, newRepoLink, newRepoLink)
 	default:
 		return "invalid type"
 	}

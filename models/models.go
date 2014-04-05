@@ -53,10 +53,10 @@ func NewTestEngine(x *xorm.Engine) (err error) {
 	// 	os.MkdirAll(path.Dir(DbCfg.Path), os.ModePerm)
 	// 	x, err = xorm.NewEngine("sqlite3", DbCfg.Path)
 	default:
-		return fmt.Errorf("Unknown database type: %s\n", DbCfg.Type)
+		return fmt.Errorf("Unknown database type: %s", DbCfg.Type)
 	}
 	if err != nil {
-		return fmt.Errorf("models.init(fail to conntect database): %v\n", err)
+		return fmt.Errorf("models.init(fail to conntect database): %v", err)
 	}
 
 	return x.Sync(new(User), new(PublicKey), new(Repository), new(Watch),
@@ -75,10 +75,10 @@ func SetEngine() (err error) {
 		os.MkdirAll(path.Dir(DbCfg.Path), os.ModePerm)
 		orm, err = xorm.NewEngine("sqlite3", DbCfg.Path)
 	default:
-		return fmt.Errorf("Unknown database type: %s\n", DbCfg.Type)
+		return fmt.Errorf("Unknown database type: %s", DbCfg.Type)
 	}
 	if err != nil {
-		return fmt.Errorf("models.init(fail to conntect database): %v\n", err)
+		return fmt.Errorf("models.init(fail to conntect database): %v", err)
 	}
 
 	// WARNNING: for serv command, MUST remove the output to os.stdout,
@@ -89,7 +89,7 @@ func SetEngine() (err error) {
 
 	f, err := os.Create(logPath)
 	if err != nil {
-		return fmt.Errorf("models.init(fail to create xorm.log): %v\n", err)
+		return fmt.Errorf("models.init(fail to create xorm.log): %v", err)
 	}
 	orm.Logger = f
 
@@ -104,7 +104,7 @@ func NewEngine() (err error) {
 		return err
 	} else if err = orm.Sync(new(User), new(PublicKey), new(Repository), new(Watch),
 		new(Action), new(Access), new(Issue), new(Comment)); err != nil {
-		return fmt.Errorf("sync database struct error: %v\n", err)
+		return fmt.Errorf("sync database struct error: %v", err)
 	}
 	return nil
 }
