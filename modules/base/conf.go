@@ -14,6 +14,7 @@ import (
 
 	"github.com/Unknwon/com"
 	"github.com/Unknwon/goconfig"
+	qlog "github.com/qiniu/log"
 
 	"github.com/gogits/cache"
 	"github.com/gogits/session"
@@ -105,16 +106,14 @@ func newLogService() {
 	LogMode = Cfg.MustValue("log", "MODE", "console")
 	modeSec := "log." + LogMode
 	if _, err := Cfg.GetSection(modeSec); err != nil {
-		fmt.Printf("Unknown log mode: %s\n", LogMode)
-		os.Exit(2)
+		qlog.Fatalf("Unknown log mode: %s\n", LogMode)
 	}
 
 	// Log level.
 	levelName := Cfg.MustValue("log."+LogMode, "LEVEL", "Trace")
 	level, ok := logLevels[levelName]
 	if !ok {
-		fmt.Printf("Unknown log level: %s\n", levelName)
-		os.Exit(2)
+		qlog.Fatalf("Unknown log level: %s\n", levelName)
 	}
 
 	// Generate log configuration.
@@ -164,16 +163,14 @@ func newCacheService() {
 	case "redis", "memcache":
 		CacheConfig = fmt.Sprintf(`{"conn":"%s"}`, Cfg.MustValue("cache", "HOST"))
 	default:
-		fmt.Printf("Unknown cache adapter: %s\n", CacheAdapter)
-		os.Exit(2)
+		qlog.Fatalf("Unknown cache adapter: %s\n", CacheAdapter)
 	}
 
 	var err error
 	Cache, err = cache.NewCache(CacheAdapter, CacheConfig)
 	if err != nil {
-		fmt.Printf("Init cache system failed, adapter: %s, config: %s, %v\n",
+		qlog.Fatalf("Init cache system failed, adapter: %s, config: %s, %v\n",
 			CacheAdapter, CacheConfig, err)
-		os.Exit(2)
 	}
 
 	log.Info("Cache Service Enabled")
@@ -199,9 +196,8 @@ func newSessionService() {
 	var err error
 	SessionManager, err = session.NewManager(SessionProvider, *SessionConfig)
 	if err != nil {
-		fmt.Printf("Init session system failed, provider: %s, %v\n",
+		qlog.Fatalf("Init session system failed, provider: %s, %v\n",
 			SessionProvider, err)
-		os.Exit(2)
 	}
 
 	log.Info("Session Service Enabled")
@@ -246,23 +242,20 @@ func NewConfigContext() {
 	//var err error
 	workDir, err := ExecDir()
 	if err != nil {
-		fmt.Printf("Fail to get work directory: %s\n", err)
-		os.Exit(2)
+		qlog.Fatalf("Fail to get work directory: %s\n", err)
 	}
 
 	cfgPath := filepath.Join(workDir, "conf/app.ini")
 	Cfg, err = goconfig.LoadConfigFile(cfgPath)
 	if err != nil {
-		fmt.Printf("Cannot load config file(%s): %v\n", cfgPath, err)
-		os.Exit(2)
+		qlog.Fatalf("Cannot load config file(%s): %v\n", cfgPath, err)
 	}
 	Cfg.BlockMode = false
 
 	cfgPath = filepath.Join(workDir, "custom/conf/app.ini")
 	if com.IsFile(cfgPath) {
 		if err = Cfg.AppendFiles(cfgPath); err != nil {
-			fmt.Printf("Cannot load config file(%s): %v\n", cfgPath, err)
-			os.Exit(2)
+			qlog.Fatalf("Cannot load config file(%s): %v\n", cfgPath, err)
 		}
 	}
 
@@ -281,8 +274,7 @@ func NewConfigContext() {
 	}
 	// Does not check run user when the install lock is off.
 	if InstallLock && RunUser != curUser {
-		fmt.Printf("Expect user(%s) but current user is: %s\n", RunUser, curUser)
-		os.Exit(2)
+		qlog.Fatalf("Expect user(%s) but current user is: %s\n", RunUser, curUser)
 	}
 
 	LogInRememberDays = Cfg.MustInt("security", "LOGIN_REMEMBER_DAYS")
@@ -294,14 +286,14 @@ func NewConfigContext() {
 	// Determine and create root git reposiroty path.
 	homeDir, err := com.HomeDir()
 	if err != nil {
-		fmt.Printf("Fail to get home directory): %v\n", err)
-		os.Exit(2)
+		qlog.Fatalf("Fail to get home directory): %v\n", err)
 	}
 	RepoRootPath = Cfg.MustValue("repository", "ROOT", filepath.Join(homeDir, "git/gogs-repositories"))
 	if err = os.MkdirAll(RepoRootPath, os.ModePerm); err != nil {
-		fmt.Printf("Fail to create RepoRootPath(%s): %v\n", RepoRootPath, err)
-		os.Exit(2)
+		qlog.Fatalf("Fail to create RepoRootPath(%s): %v\n", RepoRootPath, err)
 	}
+
+	log.Info("%s %s", AppName, AppVer)
 }
 
 func NewServices() {
