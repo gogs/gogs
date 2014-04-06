@@ -15,4 +15,5 @@ RUN apt-get autoremove -y
 RUN apt-get clean all
 
 EXPOSE 3306
+
 CMD ["/usr/bin/mysqld_safe", "--skip-syslog", "--log-error=/dev/null"]  
