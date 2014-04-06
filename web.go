@@ -11,8 +11,6 @@ import (
 
 	"github.com/codegangsta/cli"
 	"github.com/go-martini/martini"
-	// "github.com/martini-contrib/oauth2"
-	// "github.com/martini-contrib/sessions"
 
 	"github.com/gogits/binding"
 
@@ -21,6 +19,7 @@ import (
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/middleware"
+	"github.com/gogits/gogs/modules/oauth2"
 	"github.com/gogits/gogs/routers"
 	"github.com/gogits/gogs/routers/admin"
 	"github.com/gogits/gogs/routers/api/v1"
@@ -59,18 +58,16 @@ func runWeb(*cli.Context) {
 
 	// Middlewares.
 	m.Use(middleware.Renderer(middleware.RenderOptions{Funcs: []template.FuncMap{base.TemplateFuncs}}))
-
-	// scope := "https://api.github.com/user"
-	// oauth2.PathCallback = "/oauth2callback"
-	// m.Use(sessions.Sessions("my_session", sessions.NewCookieStore([]byte("secret123"))))
-	// m.Use(oauth2.Github(&oauth2.Options{
-	// 	ClientId:     "09383403ff2dc16daaa1",
-	// 	ClientSecret: "5f6e7101d30b77952aab22b75eadae17551ea6b5",
-	// 	RedirectURL:  base.AppUrl + oauth2.PathCallback,
-	// 	Scopes:       []string{scope},
-	// }))
-
 	m.Use(middleware.InitContext())
+
+	scope := "https://api.github.com/user"
+	oauth2.PathCallback = "/oauth2callback"
+	m.Use(oauth2.Github(&oauth2.Options{
+		ClientId:     "09383403ff2dc16daaa1",
+		ClientSecret: "5f6e7101d30b77952aab22b75eadae17551ea6b5",
+		RedirectURL:  base.AppUrl + oauth2.PathCallback,
+		Scopes:       []string{scope},
+	}))
 
 	reqSignIn := middleware.Toggle(&middleware.ToggleOptions{SignInRequire: true})
 	ignSignIn := middleware.Toggle(&middleware.ToggleOptions{SignInRequire: base.Service.RequireSignInView})
@@ -95,6 +92,8 @@ func runWeb(*cli.Context) {
 		// r.Any("/login/github", user.SocialSignIn)
 		r.Any("/login", binding.BindIgnErr(auth.LogInForm{}), user.SignIn)
 		r.Any("/sign_up", binding.BindIgnErr(auth.RegisterForm{}), user.SignUp)
+		r.Any("/forget_password", user.ForgotPasswd)
+		r.Any("/reset_password", user.ResetPasswd)
 	}, reqSignOut)
 	m.Group("/user", func(r martini.Router) {
 		r.Any("/logout", user.SignOut)
@@ -170,12 +169,22 @@ func runWeb(*cli.Context) {
 	// Not found handler.
 	m.NotFound(routers.NotFound)
 
+	protocol := base.Cfg.MustValue("server", "PROTOCOL", "http")
 	listenAddr := fmt.Sprintf("%s:%s",
 		base.Cfg.MustValue("server", "HTTP_ADDR"),
 		base.Cfg.MustValue("server", "HTTP_PORT", "3000"))
-	log.Info("Listen: %s", listenAddr)
-	if err := http.ListenAndServe(listenAddr, m); err != nil {
-		fmt.Println(err.Error())
-		//log.Critical(err.Error()) // not working now
+
+	if protocol == "http" {
+		log.Info("Listen: http://%s", listenAddr)
+		if err := http.ListenAndServe(listenAddr, m); err != nil {
+			fmt.Println(err.Error())
+			//log.Critical(err.Error()) // not working now
+		}
+	} else if protocol == "https" {
+		log.Info("Listen: https://%s", listenAddr)
+		if err := http.ListenAndServeTLS(listenAddr, base.Cfg.MustValue("server", "CERT_FILE"),
+			base.Cfg.MustValue("server", "KEY_FILE"), m); err != nil {
+			fmt.Println(err.Error())
+		}
 	}
 }

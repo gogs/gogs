@@ -7,6 +7,8 @@ package models
 import (
 	"strings"
 	"time"
+
+	"github.com/lunny/xorm"
 )
 
 // Access types.
@@ -38,6 +40,15 @@ func UpdateAccess(access *Access) error {
 	access.RepoName = strings.ToLower(access.RepoName)
 	_, err := orm.Id(access.Id).Update(access)
 	return err
+}
+
+// UpdateAccess updates access information with session for rolling back.
+func UpdateAccessWithSession(sess *xorm.Session, access *Access) error {
+	if _, err := sess.Id(access.Id).Update(access); err != nil {
+		sess.Rollback()
+		return err
+	}
+	return nil
 }
 
 // HasAccess returns true if someone can read or write to given repository.

@@ -105,11 +105,17 @@ type Member struct {
 // IsUserExist checks if given user name exist,
 // the user name should be noncased unique.
 func IsUserExist(name string) (bool, error) {
+	if len(name) == 0 {
+		return false, nil
+	}
 	return orm.Get(&User{LowerName: strings.ToLower(name)})
 }
 
 // IsEmailUsed returns true if the e-mail has been used.
 func IsEmailUsed(email string) (bool, error) {
+	if len(email) == 0 {
+		return false, nil
+	}
 	return orm.Get(&User{Email: email})
 }
 
@@ -212,11 +218,18 @@ func ChangeUserName(user *User, newUserName string) (err error) {
 	if err = orm.Find(&accesses, &Access{UserName: user.LowerName}); err != nil {
 		return err
 	}
+
+	sess := orm.NewSession()
+	defer sess.Close()
+	if err = sess.Begin(); err != nil {
+		return err
+	}
+
 	for i := range accesses {
 		accesses[i].UserName = newUserName
 		if strings.HasPrefix(accesses[i].RepoName, user.LowerName+"/") {
 			accesses[i].RepoName = strings.Replace(accesses[i].RepoName, user.LowerName, newUserName, 1)
-			if err = UpdateAccess(&accesses[i]); err != nil {
+			if err = UpdateAccessWithSession(sess, &accesses[i]); err != nil {
 				return err
 			}
 		}
@@ -235,14 +248,19 @@ func ChangeUserName(user *User, newUserName string) (err error) {
 
 		for j := range accesses {
 			accesses[j].RepoName = newUserName + "/" + repos[i].LowerName
-			if err = UpdateAccess(&accesses[j]); err != nil {
+			if err = UpdateAccessWithSession(sess, &accesses[j]); err != nil {
 				return err
 			}
 		}
 	}
 
 	// Change user directory name.
-	return os.Rename(UserPath(user.LowerName), UserPath(newUserName))
+	if err = os.Rename(UserPath(user.LowerName), UserPath(newUserName)); err != nil {
+		sess.Rollback()
+		return err
+	}
+
+	return sess.Commit()
 }
 
 // UpdateUser updates user's information.
@@ -340,6 +358,21 @@ func GetUserByName(name string) (*User, error) {
 		return nil, ErrUserNotExist
 	}
 	user := &User{LowerName: strings.ToLower(name)}
+	has, err := orm.Get(user)
+	if err != nil {
+		return nil, err
+	} else if !has {
+		return nil, ErrUserNotExist
+	}
+	return user, nil
+}
+
+// GetUserByEmail returns the user object by given e-mail if exists.
+func GetUserByEmail(email string) (*User, error) {
+	if len(email) == 0 {
+		return nil, ErrUserNotExist
+	}
+	user := &User{Email: strings.ToLower(email)}
 	has, err := orm.Get(user)
 	if err != nil {
 		return nil, err

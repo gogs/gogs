@@ -43,7 +43,7 @@ func GlobalInit() {
 
 	if base.InstallLock {
 		if err := models.NewEngine(); err != nil {
-			fmt.Println("%v", err)
+			fmt.Println(err)
 			os.Exit(2)
 		}
 
@@ -183,6 +183,7 @@ func Install(ctx *middleware.Context, form auth.InstallForm) {
 	if _, err := models.RegisterUser(&models.User{Name: form.AdminName, Email: form.AdminEmail, Passwd: form.AdminPasswd,
 		IsAdmin: true, IsActive: true}); err != nil {
 		if err != models.ErrUserAlreadyExist {
+			base.InstallLock = false
 			ctx.RenderWithErr("Admin account setting is invalid: "+err.Error(), "install", &form)
 			return
 		}

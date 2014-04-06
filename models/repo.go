@@ -143,17 +143,17 @@ func CreateRepository(user *User, repoName, desc, repoLang, license string, priv
 	if err = initRepository(repoPath, user, repo, initReadme, repoLang, license); err != nil {
 		return nil, err
 	}
-	session := orm.NewSession()
-	defer session.Close()
-	session.Begin()
+	sess := orm.NewSession()
+	defer sess.Close()
+	sess.Begin()
 
-	if _, err = session.Insert(repo); err != nil {
+	if _, err = sess.Insert(repo); err != nil {
 		if err2 := os.RemoveAll(repoPath); err2 != nil {
 			log.Error("repo.CreateRepository(repo): %v", err)
 			return nil, errors.New(fmt.Sprintf(
 				"delete repo directory %s/%s failed(1): %v", user.Name, repoName, err2))
 		}
-		session.Rollback()
+		sess.Rollback()
 		return nil, err
 	}
 
@@ -162,8 +162,8 @@ func CreateRepository(user *User, repoName, desc, repoLang, license string, priv
 		RepoName: strings.ToLower(path.Join(user.Name, repo.Name)),
 		Mode:     AU_WRITABLE,
 	}
-	if _, err = session.Insert(&access); err != nil {
-		session.Rollback()
+	if _, err = sess.Insert(&access); err != nil {
+		sess.Rollback()
 		if err2 := os.RemoveAll(repoPath); err2 != nil {
 			log.Error("repo.CreateRepository(access): %v", err)
 			return nil, errors.New(fmt.Sprintf(
@@ -173,8 +173,8 @@ func CreateRepository(user *User, repoName, desc, repoLang, license string, priv
 	}
 
 	rawSql := "UPDATE `user` SET num_repos = num_repos + 1 WHERE id = ?"
-	if _, err = session.Exec(rawSql, user.Id); err != nil {
-		session.Rollback()
+	if _, err = sess.Exec(rawSql, user.Id); err != nil {
+		sess.Rollback()
 		if err2 := os.RemoveAll(repoPath); err2 != nil {
 			log.Error("repo.CreateRepository(repo count): %v", err)
 			return nil, errors.New(fmt.Sprintf(
@@ -183,8 +183,8 @@ func CreateRepository(user *User, repoName, desc, repoLang, license string, priv
 		return nil, err
 	}
 
-	if err = session.Commit(); err != nil {
-		session.Rollback()
+	if err = sess.Commit(); err != nil {
+		sess.Rollback()
 		if err2 := os.RemoveAll(repoPath); err2 != nil {
 			log.Error("repo.CreateRepository(commit): %v", err)
 			return nil, errors.New(fmt.Sprintf(
@@ -369,6 +369,76 @@ func RepoPath(userName, repoName string) string {
 	return filepath.Join(UserPath(userName), strings.ToLower(repoName)+".git")
 }
 
+// TransferOwnership transfers all corresponding setting from old user to new one.
+func TransferOwnership(user *User, newOwner string, repo *Repository) (err error) {
+	newUser, err := GetUserByName(newOwner)
+	if err != nil {
+		return err
+	}
+
+	// Update accesses.
+	accesses := make([]Access, 0, 10)
+	if err = orm.Find(&accesses, &Access{RepoName: user.LowerName + "/" + repo.LowerName}); err != nil {
+		return err
+	}
+
+	sess := orm.NewSession()
+	defer sess.Close()
+	if err = sess.Begin(); err != nil {
+		return err
+	}
+
+	for i := range accesses {
+		accesses[i].RepoName = newUser.LowerName + "/" + repo.LowerName
+		if accesses[i].UserName == user.LowerName {
+			accesses[i].UserName = newUser.LowerName
+		}
+		if err = UpdateAccessWithSession(sess, &accesses[i]); err != nil {
+			return err
+		}
+	}
+
+	// Update repository.
+	repo.OwnerId = newUser.Id
+	if _, err := sess.Id(repo.Id).Update(repo); err != nil {
+		sess.Rollback()
+		return err
+	}
+
+	// Update user repository number.
+	rawSql := "UPDATE `user` SET num_repos = num_repos + 1 WHERE id = ?"
+	if _, err = sess.Exec(rawSql, newUser.Id); err != nil {
+		sess.Rollback()
+		return err
+	}
+	rawSql = "UPDATE `user` SET num_repos = num_repos - 1 WHERE id = ?"
+	if _, err = sess.Exec(rawSql, user.Id); err != nil {
+		sess.Rollback()
+		return err
+	}
+
+	// Add watch of new owner to repository.
+	if !IsWatching(newUser.Id, repo.Id) {
+		if err = WatchRepo(newUser.Id, repo.Id, true); err != nil {
+			sess.Rollback()
+			return err
+		}
+	}
+
+	if err = TransferRepoAction(user, newUser, repo); err != nil {
+		sess.Rollback()
+		return err
+	}
+
+	// Change repository directory name.
+	if err = os.Rename(RepoPath(user.Name, repo.Name), RepoPath(newUser.Name, repo.Name)); err != nil {
+		sess.Rollback()
+		return err
+	}
+
+	return sess.Commit()
+}
+
 // ChangeRepositoryName changes all corresponding setting from old repository name to new one.
 func ChangeRepositoryName(userName, oldRepoName, newRepoName string) (err error) {
 	// Update accesses.
@@ -376,15 +446,27 @@ func ChangeRepositoryName(userName, oldRepoName, newRepoName string) (err error)
 	if err = orm.Find(&accesses, &Access{RepoName: strings.ToLower(userName + "/" + oldRepoName)}); err != nil {
 		return err
 	}
+
+	sess := orm.NewSession()
+	defer sess.Close()
+	if err = sess.Begin(); err != nil {
+		return err
+	}
+
 	for i := range accesses {
 		accesses[i].RepoName = userName + "/" + newRepoName
-		if err = UpdateAccess(&accesses[i]); err != nil {
+		if err = UpdateAccessWithSession(sess, &accesses[i]); err != nil {
 			return err
 		}
 	}
 
 	// Change repository directory name.
-	return os.Rename(RepoPath(userName, oldRepoName), RepoPath(userName, newRepoName))
+	if err = os.Rename(RepoPath(userName, oldRepoName), RepoPath(userName, newRepoName)); err != nil {
+		sess.Rollback()
+		return err
+	}
+
+	return sess.Commit()
 }
 
 func UpdateRepository(repo *Repository) error {
@@ -410,29 +492,30 @@ func DeleteRepository(userId, repoId int64, userName string) (err error) {
 		return ErrRepoNotExist
 	}
 
-	session := orm.NewSession()
-	if err = session.Begin(); err != nil {
+	sess := orm.NewSession()
+	defer sess.Close()
+	if err = sess.Begin(); err != nil {
 		return err
 	}
-	if _, err = session.Delete(&Repository{Id: repoId}); err != nil {
-		session.Rollback()
+	if _, err = sess.Delete(&Repository{Id: repoId}); err != nil {
+		sess.Rollback()
 		return err
 	}
-	if _, err := session.Delete(&Access{RepoName: strings.ToLower(path.Join(userName, repo.Name))}); err != nil {
-		session.Rollback()
+	if _, err := sess.Delete(&Access{RepoName: strings.ToLower(path.Join(userName, repo.Name))}); err != nil {
+		sess.Rollback()
 		return err
 	}
 	rawSql := "UPDATE `user` SET num_repos = num_repos - 1 WHERE id = ?"
-	if _, err = session.Exec(rawSql, userId); err != nil {
-		session.Rollback()
+	if _, err = sess.Exec(rawSql, userId); err != nil {
+		sess.Rollback()
 		return err
 	}
-	if _, err = session.Delete(&Watch{RepoId: repoId}); err != nil {
-		session.Rollback()
+	if _, err = sess.Delete(&Watch{RepoId: repoId}); err != nil {
+		sess.Rollback()
 		return err
 	}
-	if err = session.Commit(); err != nil {
-		session.Rollback()
+	if err = sess.Commit(); err != nil {
+		sess.Rollback()
 		return err
 	}
 	if err = os.RemoveAll(RepoPath(userName, repo.Name)); err != nil {
