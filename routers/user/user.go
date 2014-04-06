@@ -477,12 +477,9 @@ func ResetPasswd(ctx *middleware.Context) {
 		}
 
 		u.Passwd = passwd
-		if err := u.EncodePasswd(); err != nil {
-			ctx.Handle(404, "user.ResetPasswd(EncodePasswd)", err)
-			return
-		}
-
 		u.Rands = models.GetUserSalt()
+		u.Salt = models.GetUserSalt()
+		u.EncodePasswd()
 		if err := models.UpdateUser(u); err != nil {
 			ctx.Handle(404, "user.ResetPasswd(UpdateUser)", err)
 			return
