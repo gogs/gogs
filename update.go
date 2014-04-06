@@ -45,7 +45,7 @@ func newUpdateLogger(execDir string) {
 // for command: ./gogs update
 func runUpdate(c *cli.Context) {
 	execDir, _ := base.ExecDir()
-	newLogger(execDir)
+	newUpdateLogger(execDir)
 
 	base.NewConfigContext()
 	models.LoadModelsConfig()
