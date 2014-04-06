@@ -150,6 +150,7 @@ func newLogService() {
 			Cfg.MustValue(modeSec, "CONN"))
 	}
 
+	log.Info("%s %s", AppName, AppVer)
 	log.NewLogger(Cfg.MustInt64("log", "BUFFER_LEN", 10000), LogMode, LogConfig)
 	log.Info("Log Mode: %s(%s)", strings.Title(LogMode), levelName)
 }
@@ -292,8 +293,6 @@ func NewConfigContext() {
 	if err = os.MkdirAll(RepoRootPath, os.ModePerm); err != nil {
 		qlog.Fatalf("Fail to create RepoRootPath(%s): %v\n", RepoRootPath, err)
 	}
-
-	log.Info("%s %s", AppName, AppVer)
 }
 
 func NewServices() {
