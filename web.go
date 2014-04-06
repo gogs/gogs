@@ -148,6 +148,7 @@ func runWeb(*cli.Context) {
 		r.Get("/issues", repo.Issues)
 		r.Get("/issues/:index", repo.ViewIssue)
 		r.Get("/releases", repo.Releases)
+		r.Any("/releases/new",repo.ReleasesNew)
 		r.Get("/pulls", repo.Pulls)
 		r.Get("/branches", repo.Branches)
 	}, ignSignIn, middleware.RepoAssignment(true))

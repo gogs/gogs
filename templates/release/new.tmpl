@@ -1,0 +1,15 @@
+{{template "base/head" .}}
+{{template "base/navbar" .}}
+{{template "repo/nav" .}}
+{{template "repo/toolbar" .}}
+<div id="body" class="container">
+    <div id="release">
+        <h4 id="release-head">New Release</h4>
+        <form id="release-new-form" action="" class="form form-inline">
+            <div class="form-group">
+                <input id="release-tag-name" type="text" class="form-control" placeholder="tag name"/>
+            </div>
+        </form>
+    </div>
+</div>
+{{template "base/footer" .}}
