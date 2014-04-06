@@ -23,15 +23,27 @@ func Setting(ctx *middleware.Context, form auth.UpdateProfileForm) {
 	user := ctx.User
 	ctx.Data["Owner"] = user
 
-	if ctx.Req.Method == "GET" {
+	if ctx.Req.Method == "GET" || ctx.HasError() {
 		ctx.HTML(200, "user/setting")
 		return
 	}
 
-	// below is for POST requests
-	if hasErr, ok := ctx.Data["HasError"]; ok && hasErr.(bool) {
-		ctx.HTML(200, "user/setting")
-		return
+	// Check if user name has been changed.
+	if user.Name != form.UserName {
+		isExist, err := models.IsUserExist(form.UserName)
+		if err != nil {
+			ctx.Handle(404, "user.Setting(update: check existence)", err)
+			return
+		} else if isExist {
+			ctx.RenderWithErr("User name has been taken.", "user/setting", &form)
+			return
+		} else if err = models.ChangeUserName(user, form.UserName); err != nil {
+			ctx.Handle(404, "user.Setting(change user name)", err)
+			return
+		}
+		log.Trace("%s User name changed: %s -> %s", ctx.Req.RequestURI, user.Name, form.UserName)
+
+		user.Name = form.UserName
 	}
 
 	user.Email = form.Email
@@ -46,7 +58,6 @@ func Setting(ctx *middleware.Context, form auth.UpdateProfileForm) {
 
 	ctx.Data["IsSuccess"] = true
 	ctx.HTML(200, "user/setting")
-
 	log.Trace("%s User setting updated: %s", ctx.Req.RequestURI, ctx.User.LowerName)
 }
 

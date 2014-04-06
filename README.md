@@ -30,10 +30,10 @@ More importantly, Gogs only needs one binary to setup your own project hosting o
 
 - Activity timeline
 - SSH/HTTPS(Clone only) protocol support.
-- Register/delete account.
-- Create/delete/watch public repository.
-- User profile page.
+- Register/delete/rename account.
+- Create/delete/watch/rename public repository.
 - Repository viewer.
+- Issue tracker.
 - Gravatar and cache support.
 - Mail service(register, issue).
 - Administration panel.
@@ -59,7 +59,7 @@ There are two ways to install Gogs:
 
 ## Contributors
 
-This project was launched by [Unknown](https://github.com/Unknwon) and [lunny](https://github.com/lunny); [fuxiaohei](https://github.com/fuxiaohei) and [slene](https://github.com/slene) joined the team soon after. See [contributors page](https://github.com/gogits/gogs/graphs/contributors) for full list of contributors.
+This project was launched by [Unknown](https://github.com/Unknwon) and [lunny](https://github.com/lunny); [fuxiaohei](https://github.com/fuxiaohei), [slene](https://github.com/slene) and [skyblue](https://github.com/shxsun) joined the team soon after. See [contributors page](https://github.com/gogits/gogs/graphs/contributors) for full list of contributors.
 
 ## License
 

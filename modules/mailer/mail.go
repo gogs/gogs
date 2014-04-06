@@ -92,8 +92,8 @@ func SendActiveMail(r *middleware.Render, user *models.User) {
 }
 
 // SendNotifyMail sends mail notification of all watchers.
-func SendNotifyMail(userId, repoId int64, userName, repoName, subject, content string) error {
-	watches, err := models.GetWatches(repoId)
+func SendNotifyMail(user, owner *models.User, repo *models.Repository, issue *models.Issue) error {
+	watches, err := models.GetWatches(repo.Id)
 	if err != nil {
 		return errors.New("mail.NotifyWatchers(get watches): " + err.Error())
 	}
@@ -101,7 +101,7 @@ func SendNotifyMail(userId, repoId int64, userName, repoName, subject, content s
 	tos := make([]string, 0, len(watches))
 	for i := range watches {
 		uid := watches[i].UserId
-		if userId == uid {
+		if user.Id == uid {
 			continue
 		}
 		u, err := models.GetUserById(uid)
@@ -115,7 +115,10 @@ func SendNotifyMail(userId, repoId int64, userName, repoName, subject, content s
 		return nil
 	}
 
-	msg := NewMailMessageFrom(tos, userName, subject, content)
+	subject := fmt.Sprintf("[%s] %s", repo.Name, issue.Name)
+	content := fmt.Sprintf("%s<br>-<br> <a href=\"%s%s/%s/issues/%d\">View it on Gogs</a>.",
+		issue.Content, base.AppUrl, owner.Name, repo.Name, issue.Index)
+	msg := NewMailMessageFrom(tos, user.Name, subject, content)
 	msg.Info = fmt.Sprintf("Subject: %s, send notify emails", subject)
 	SendAsync(&msg)
 	return nil
