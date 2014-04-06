@@ -520,6 +520,23 @@ function initIssue() {
 
 }
 
+function initRelease() {
+// release new ajax preview
+    (function () {
+        $('[data-ajax-name=release-preview]').on("click", function () {
+            var $this = $(this);
+            $this.toggleAjax(function (json) {
+                if (json.ok) {
+                    $($this.data("preview")).html(json.content);
+                }
+            })
+        });
+        $('.release-write a[data-toggle]').on("click", function () {
+            $('.release-preview-content').html("loading...");
+        });
+    }())
+}
+
 (function ($) {
     $(function () {
         initCore();
@@ -538,6 +555,9 @@ function initIssue() {
         }
         if ($('#issue').length) {
             initIssue();
+        }
+        if ($('#release').length) {
+            initRelease();
         }
     });
 })(jQuery);
