@@ -12,6 +12,7 @@ import (
 func Releases(ctx *middleware.Context) {
 	ctx.Data["Title"] = "Releases"
 	ctx.Data["IsRepoToolbarReleases"] = true
+	ctx.Data["IsRepoReleaseNew"] = false
 	tags, err := models.GetTags(ctx.Repo.Owner.Name, ctx.Repo.Repository.Name)
 	if err != nil {
 		ctx.Handle(404, "repo.Releases(GetTags)", err)
@@ -19,4 +20,11 @@ func Releases(ctx *middleware.Context) {
 	}
 	ctx.Data["Releases"] = tags
 	ctx.HTML(200, "release/list")
+}
+
+func ReleasesNew(ctx *middleware.Context) {
+	ctx.Data["Title"] = "New Release"
+	ctx.Data["IsRepoToolbarReleases"] = true
+	ctx.Data["IsRepoReleaseNew"] = true
+	ctx.HTML(200, "release/new")
 }
