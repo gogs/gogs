@@ -46,7 +46,8 @@ gogs serv provide access auth for repositories`,
 func newLogger(execDir string) {
 	logPath := execDir + "/log/serv.log"
 	os.MkdirAll(path.Dir(logPath), os.ModePerm)
-	f, err := os.Open(logPath)
+
+	f, err := os.OpenFile(logPath, os.O_WRONLY|os.O_APPEND|os.O_CREATE, os.ModePerm)
 	if err != nil {
 		qlog.Fatal(err)
 	}
