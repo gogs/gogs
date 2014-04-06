@@ -13,10 +13,12 @@ RUN apt-get update && apt-get install --yes --force-yes curl git mercurial zip w
 RUN curl -s http://docker.u.qiniudn.com/go1.2.1.src.tar.gz | tar -v -C /usr/local -xz
 RUN cd /usr/local/go/src && ./make.bash --no-clean 2>&1
 
-RUN go get -u github.com/gogits/gogs 
+RUN http_proxy=106.187.38.45:3128 go get -u github.com/gogits/gogs 
 RUN cd $GOPATH/src/github.com/gogits/gogs && go build
 
 RUN apt-get autoremove -y
 RUN apt-get clean all
 
 EXPOSE 3000
+
+CMD ["./$GOPATH/src/github.com/gogits/gogs/gogs"]  
