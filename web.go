@@ -88,7 +88,7 @@ func runWeb(*cli.Context) {
 	m.Get("/avatar/:hash", avt.ServeHTTP)
 
 	m.Group("/user", func(r martini.Router) {
-		// r.Any("/login/github", user.SocialSignIn)
+		r.Any("/login/github", user.SocialSignIn)
 		r.Any("/login", binding.BindIgnErr(auth.LogInForm{}), user.SignIn)
 		r.Any("/sign_up", binding.BindIgnErr(auth.RegisterForm{}), user.SignUp)
 		r.Any("/forget_password", user.ForgotPasswd)
