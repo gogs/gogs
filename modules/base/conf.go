@@ -288,7 +288,7 @@ func NewConfigContext() {
 	if err != nil {
 		qlog.Fatalf("Fail to get home directory): %v\n", err)
 	}
-	RepoRootPath = Cfg.MustValue("repository", "ROOT", filepath.Join(homeDir, "git/gogs-repositories"))
+	RepoRootPath = Cfg.MustValue("repository", "ROOT", filepath.Join(homeDir, "gogs-repositories"))
 	if err = os.MkdirAll(RepoRootPath, os.ModePerm); err != nil {
 		qlog.Fatalf("Fail to create RepoRootPath(%s): %v\n", RepoRootPath, err)
 	}
