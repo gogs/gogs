@@ -24,10 +24,10 @@ Gogs 完全使用 Go 语言来实现对 Git 数据的操作，实现 **零** 依
 
 - 活动时间线
 - SSH/HTTPS（仅限 Clone） 协议支持
-- 注册/删除用户
-- 创建/删除/关注公开仓库
-- 用户个人信息页面
+- 注册/删除/重命名用户
+- 创建/删除/关注/重命名公开仓库
 - 仓库浏览器
+- Bug 追踪系统
 - Gravatar 以及缓存支持
 - 邮件服务（注册、Issue）
 - 管理员面板
@@ -53,7 +53,7 @@ Gogs 完全使用 Go 语言来实现对 Git 数据的操作，实现 **零** 依
 
 ## 贡献成员
 
-本项目最初由 [Unknown](https://github.com/Unknwon) 和 [lunny](https://github.com/lunny) 发起，随后 [fuxiaohei](https://github.com/fuxiaohei) 与 [slene](https://github.com/slene) 加入到开发团队。您可以通过查看 [贡献者页面](https://github.com/gogits/gogs/graphs/contributors) 获取完整的贡献者列表。
+本项目最初由 [Unknown](https://github.com/Unknwon) 和 [lunny](https://github.com/lunny) 发起，随后 [fuxiaohei](https://github.com/fuxiaohei)、[slene](https://github.com/slene) 以及 [skyblue](https://github.com/shxsun) 加入到开发团队。您可以通过查看 [贡献者页面](https://github.com/gogits/gogs/graphs/contributors) 获取完整的贡献者列表。
 
 ## 授权许可
 

@@ -6,6 +6,7 @@ package routers
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"strings"
 
@@ -42,7 +43,7 @@ func GlobalInit() {
 
 	if base.InstallLock {
 		if err := models.NewEngine(); err != nil {
-			log.Error("%v", err)
+			fmt.Println(err)
 			os.Exit(2)
 		}
 

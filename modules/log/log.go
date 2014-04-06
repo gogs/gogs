@@ -15,7 +15,7 @@ var (
 )
 
 func init() {
-	NewLogger(10000, "console", `{"level": 0}`)
+	NewLogger(0, "console", `{"level": 0}`)
 }
 
 func NewLogger(bufLen int64, mode, config string) {

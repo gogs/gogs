@@ -159,12 +159,14 @@ var Gogits = {
         $tabs.tab("show");
         $tabs.find("li:eq(0) a").tab("show");
     };
+
     // fix dropdown inside click
     Gogits.initDropDown = function () {
         $('.dropdown-menu.no-propagation').on('click', function (e) {
             e.stopPropagation();
         });
     };
+
 
     // render markdown
     Gogits.renderMarkdown = function () {
@@ -192,6 +194,7 @@ var Gogits = {
         });
     };
 
+    // render code view
     Gogits.renderCodeView = function () {
         function selectRange($list, $select, $from) {
             $list.removeClass('active');
@@ -254,6 +257,43 @@ var Gogits = {
             }
         }).trigger('hashchange');
     };
+
+    // copy utils
+    Gogits.bindCopy = function (selector) {
+        if ($(selector).hasClass('js-copy-bind')) {
+            return;
+        }
+        $(selector).zclip({
+            path: "/js/ZeroClipboard.swf",
+            copy: function () {
+                var t = $(this).data("copy-val");
+                var to = $($(this).data("copy-from"));
+                var str = "";
+                if (t == "txt") {
+                    str = to.text();
+                }
+                if (t == 'val') {
+                    str = to.val();
+                }
+                if (t == 'html') {
+                    str = to.html();
+                }
+                return str;
+            },
+            afterCopy: function () {
+                var $this = $(this);
+                $this.tooltip('hide')
+                    .attr('data-original-title', 'Copied OK');
+                setTimeout(function () {
+                    $this.tooltip("show");
+                }, 200);
+                setTimeout(function () {
+                    $this.tooltip('hide')
+                        .attr('data-original-title', 'Copy to Clipboard');
+                }, 3000);
+            }
+        }).addClass("js-copy-bind");
+    }
 
 })(jQuery);
 
@@ -343,7 +383,10 @@ function initRepository() {
                     $clone.find('span.clone-url').text($this.data('link'));
                 }
             }).eq(0).trigger("click");
-            // todo copy to clipboard
+            $("#repo-clone").on("shown.bs.dropdown",function () {
+                Gogits.bindCopy("[data-init=copy]");
+            });
+            Gogits.bindCopy("[data-init=copy]:visible");
         }
     })();
 

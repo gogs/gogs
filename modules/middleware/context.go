@@ -90,7 +90,9 @@ func (ctx *Context) HTML(status int, name string, htmlOpt ...HTMLOptions) {
 func (ctx *Context) RenderWithErr(msg, tpl string, form auth.Form) {
 	ctx.Data["HasError"] = true
 	ctx.Data["ErrorMsg"] = msg
-	auth.AssignForm(form, ctx.Data)
+	if form != nil {
+		auth.AssignForm(form, ctx.Data)
+	}
 	ctx.HTML(200, tpl)
 }
 
