@@ -92,13 +92,11 @@ func runUpdate(c *cli.Context) {
 	newOid, err := git.NewOidFromString(newCommitId)
 	if err != nil {
 		qlog.Fatalf("runUpdate.Ref repoId: %v", err)
-		return
 	}
 
 	newCommit, err := repo.LookupCommit(newOid)
 	if err != nil {
 		qlog.Fatalf("runUpdate.Ref repoId: %v", err)
-		return
 	}
 
 	var l *list.List
@@ -107,38 +105,32 @@ func runUpdate(c *cli.Context) {
 		l, err = repo.CommitsBefore(newCommit.Id())
 		if err != nil {
 			qlog.Fatalf("Find CommitsBefore erro:", err)
-			return
 		}
 	} else {
 		oldOid, err := git.NewOidFromString(oldCommitId)
 		if err != nil {
 			qlog.Fatalf("runUpdate.Ref repoId: %v", err)
-			return
 		}
 
 		oldCommit, err := repo.LookupCommit(oldOid)
 		if err != nil {
 			qlog.Fatalf("runUpdate.Ref repoId: %v", err)
-			return
 		}
 		l = repo.CommitsBetween(newCommit, oldCommit)
 	}
 
 	if err != nil {
 		qlog.Fatalf("runUpdate.Commit repoId: %v", err)
-		return
 	}
 
 	sUserId, err := strconv.Atoi(userId)
 	if err != nil {
 		qlog.Fatalf("runUpdate.Parse userId: %v", err)
-		return
 	}
 
 	repos, err := models.GetRepositoryByName(int64(sUserId), repoName)
 	if err != nil {
 		qlog.Fatalf("runUpdate.GetRepositoryByName userId: %v", err)
-		return
 	}
 
 	commits := make([]*base.PushCommit, 0)
