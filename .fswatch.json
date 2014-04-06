@@ -1,0 +1,22 @@
+{
+    "paths": [
+		"."
+	],
+    "depth": 2,
+    "exclude": [
+		"^gogs$",
+        "~$",
+        "\\.swp$",
+        "\\.exe$",
+		"\\.swx$",
+		".*\\.log$"
+    ],
+    "include": [],
+    "command": [
+        "bash", "-c", "go build && ./gogs web"
+    ],
+    "env": {
+        "PROGRAM": "fswatch"
+    },
+    "enable-restart": false
+}
