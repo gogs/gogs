@@ -5,6 +5,8 @@
 package repo
 
 import (
+	"encoding/base64"
+	"errors"
 	"fmt"
 	"path"
 	"path/filepath"
@@ -237,19 +239,112 @@ func SingleDownload(ctx *middleware.Context, params martini.Params) {
 	ctx.Res.Write(data)
 }
 
-func Http(ctx *middleware.Context, params martini.Params) {
-	// TODO: access check
+func basicEncode(username, password string) string {
+	auth := username + ":" + password
+	return base64.StdEncoding.EncodeToString([]byte(auth))
+}
 
+func basicDecode(encoded string) (user string, name string, err error) {
+	var s []byte
+	s, err = base64.StdEncoding.DecodeString(encoded)
+	if err != nil {
+		return
+	}
+
+	a := strings.Split(string(s), ":")
+	if len(a) == 2 {
+		user, name = a[0], a[1]
+	} else {
+		err = errors.New("decode failed")
+	}
+	return
+}
+
+func authRequired(ctx *middleware.Context) {
+	ctx.ResponseWriter.Header().Set("WWW-Authenticate", "Basic realm=\".\"")
+	ctx.Data["ErrorMsg"] = "no basic auth and digit auth"
+	ctx.HTML(401, fmt.Sprintf("status/401"))
+}
+
+func Http(ctx *middleware.Context, params martini.Params) {
 	username := params["username"]
 	reponame := params["reponame"]
 	if strings.HasSuffix(reponame, ".git") {
 		reponame = reponame[:len(reponame)-4]
 	}
 
+	//fmt.Println("req:", ctx.Req.Header)
+
+	repoUser, err := models.GetUserByName(username)
+	if err != nil {
+		ctx.Handle(500, "repo.GetUserByName", nil)
+		return
+	}
+
+	repo, err := models.GetRepositoryByName(repoUser.Id, reponame)
+	if err != nil {
+		ctx.Handle(500, "repo.GetRepositoryByName", nil)
+		return
+	}
+
+	isPull := webdav.IsPullMethod(ctx.Req.Method)
+	var askAuth = !(!repo.IsPrivate && isPull)
+
+	//authRequired(ctx)
+	//return
+
+	// check access
+	if askAuth {
+		// check digit auth
+
+		// check basic auth
+		baHead := ctx.Req.Header.Get("Authorization")
+		if baHead == "" {
+			authRequired(ctx)
+			return
+		}
+
+		auths := strings.Fields(baHead)
+		if len(auths) != 2 || auths[0] != "Basic" {
+			ctx.Handle(401, "no basic auth and digit auth", nil)
+			return
+		}
+		authUsername, passwd, err := basicDecode(auths[1])
+		if err != nil {
+			ctx.Handle(401, "no basic auth and digit auth", nil)
+			return
+		}
+
+		authUser, err := models.GetUserByName(authUsername)
+		if err != nil {
+			ctx.Handle(401, "no basic auth and digit auth", nil)
+			return
+		}
+
+		newUser := &models.User{Passwd: passwd}
+		newUser.EncodePasswd()
+		if authUser.Passwd != newUser.Passwd {
+			ctx.Handle(401, "no basic auth and digit auth", nil)
+			return
+		}
+
+		var tp = models.AU_WRITABLE
+		if isPull {
+			tp = models.AU_READABLE
+		}
+
+		has, err := models.HasAccess(authUsername, username+"/"+reponame, tp)
+		if err != nil || !has {
+			ctx.Handle(401, "no basic auth and digit auth", nil)
+			return
+		}
+	}
+
+	dir := models.RepoPath(username, reponame)
+
 	prefix := path.Join("/", username, params["reponame"])
 	server := webdav.NewServer(
-		models.RepoPath(username, reponame),
-		prefix, true)
+		dir, prefix, true)
 
 	server.ServeHTTP(ctx.ResponseWriter, ctx.Req)
 }
@@ -314,6 +409,29 @@ func SettingPost(ctx *middleware.Context) {
 			ctx.HTML(200, "repo/setting")
 		}
 		log.Trace("%s Repository updated: %s/%s", ctx.Req.RequestURI, ctx.Repo.Owner.Name, ctx.Repo.Repository.Name)
+	case "transfer":
+		if len(ctx.Repo.Repository.Name) == 0 || ctx.Repo.Repository.Name != ctx.Query("repository") {
+			ctx.RenderWithErr("Please make sure you entered repository name is correct.", "repo/setting", nil)
+			return
+		}
+
+		newOwner := ctx.Query("owner")
+		// Check if new owner exists.
+		isExist, err := models.IsUserExist(newOwner)
+		if err != nil {
+			ctx.Handle(404, "repo.SettingPost(transfer: check existence)", err)
+			return
+		} else if !isExist {
+			ctx.RenderWithErr("Please make sure you entered owner name is correct.", "repo/setting", nil)
+			return
+		} else if err = models.TransferOwnership(ctx.User, newOwner, ctx.Repo.Repository); err != nil {
+			ctx.Handle(404, "repo.SettingPost(transfer repository)", err)
+			return
+		}
+		log.Trace("%s Repository transfered: %s/%s -> %s", ctx.Req.RequestURI, ctx.User.Name, ctx.Repo.Repository.Name, newOwner)
+
+		ctx.Redirect("/")
+		return
 	case "delete":
 		if len(ctx.Repo.Repository.Name) == 0 || ctx.Repo.Repository.Name != ctx.Query("repository") {
 			ctx.RenderWithErr("Please make sure you entered repository name is correct.", "repo/setting", nil)
