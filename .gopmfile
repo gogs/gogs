@@ -7,7 +7,6 @@ github.com/go-martini/martini =
 github.com/Unknwon/com = 
 github.com/Unknwon/cae = 
 github.com/Unknwon/goconfig = 
-github.com/dchest/scrypt = 
 github.com/nfnt/resize = 
 github.com/lunny/xorm = 
 github.com/go-sql-driver/mysql = 

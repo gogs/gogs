@@ -5,6 +5,7 @@
 package models
 
 import (
+	"crypto/sha256"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -12,8 +13,6 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
-
-	"github.com/dchest/scrypt"
 
 	"github.com/gogits/git"
 
@@ -62,6 +61,7 @@ type User struct {
 	IsActive      bool
 	IsAdmin       bool
 	Rands         string    `xorm:"VARCHAR(10)"`
+	Salt          string    `xorm:"VARCHAR(10)"`
 	Created       time.Time `xorm:"created"`
 	Updated       time.Time `xorm:"updated"`
 }
@@ -89,10 +89,9 @@ func (user *User) NewGitSig() *git.Signature {
 }
 
 // EncodePasswd encodes password to safe format.
-func (user *User) EncodePasswd() error {
-	newPasswd, err := scrypt.Key([]byte(user.Passwd), []byte(base.SecretKey), 16384, 8, 1, 64)
+func (user *User) EncodePasswd() {
+	newPasswd := base.PBKDF2([]byte(user.Passwd), []byte(user.Salt), 10000, 50, sha256.New)
 	user.Passwd = fmt.Sprintf("%x", newPasswd)
-	return err
 }
 
 // Member represents user is member of organization.
@@ -148,9 +147,9 @@ func RegisterUser(user *User) (*User, error) {
 	user.Avatar = base.EncodeMd5(user.Email)
 	user.AvatarEmail = user.Email
 	user.Rands = GetUserSalt()
-	if err = user.EncodePasswd(); err != nil {
-		return nil, err
-	} else if _, err = orm.Insert(user); err != nil {
+	user.Salt = GetUserSalt()
+	user.EncodePasswd()
+	if _, err = orm.Insert(user); err != nil {
 		return nil, err
 	} else if err = os.MkdirAll(UserPath(user.Name), os.ModePerm); err != nil {
 		if _, err := orm.Id(user.Id).Delete(&User{}); err != nil {
@@ -384,18 +383,20 @@ func GetUserByEmail(email string) (*User, error) {
 
 // LoginUserPlain validates user by raw user name and password.
 func LoginUserPlain(name, passwd string) (*User, error) {
-	user := User{LowerName: strings.ToLower(name), Passwd: passwd}
-	if err := user.EncodePasswd(); err != nil {
-		return nil, err
-	}
-
+	user := User{LowerName: strings.ToLower(name)}
 	has, err := orm.Get(&user)
 	if err != nil {
 		return nil, err
 	} else if !has {
-		err = ErrUserNotExist
+		return nil, ErrUserNotExist
 	}
-	return &user, err
+
+	newUser := &User{Passwd: passwd, Salt: user.Salt}
+	newUser.EncodePasswd()
+	if user.Passwd != newUser.Passwd {
+		return nil, ErrUserNotExist
+	}
+	return &user, nil
 }
 
 // Follow is connection request for receiving user notifycation.
