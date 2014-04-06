@@ -354,6 +354,7 @@ function initRegister() {
 }
 
 function initUserSetting() {
+    // ssh confirmation
     $('#ssh-keys .delete').confirmation({
         singleton: true,
         onConfirm: function (e, $this) {
@@ -366,6 +367,18 @@ function initUserSetting() {
             });
         }
     });
+
+    // profile form
+    (function () {
+        $('#user-setting-username').on("keyup", function () {
+            var $this = $(this);
+            if ($this.val() != $this.attr('title')) {
+                $this.next('.help-block').toggleShow();
+            } else {
+                $this.next('.help-block').toggleHide();
+            }
+        });
+    }())
 }
 
 function initRepository() {
@@ -383,7 +396,7 @@ function initRepository() {
                     $clone.find('span.clone-url').text($this.data('link'));
                 }
             }).eq(0).trigger("click");
-            $("#repo-clone").on("shown.bs.dropdown",function () {
+            $("#repo-clone").on("shown.bs.dropdown", function () {
                 Gogits.bindCopy("[data-init=copy]");
             });
             Gogits.bindCopy("[data-init=copy]:visible");
@@ -438,6 +451,18 @@ function initRepository() {
             $item.find(".bar .add").css("width", addPercent + "%");
         });
     }());
+
+    // repo setting form
+    (function () {
+        $('#repo-setting-name').on("keyup", function () {
+            var $this = $(this);
+            if ($this.val() != $this.attr('title')) {
+                $this.next('.help-block').toggleShow();
+            } else {
+                $this.next('.help-block').toggleHide();
+            }
+        });
+    }())
 }
 
 function initInstall() {
