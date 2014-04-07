@@ -20,13 +20,16 @@ import (
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/middleware"
-	"github.com/gogits/gogs/modules/oauth2"
+	//"github.com/gogits/gogs/modules/oauth2"
 	"github.com/gogits/gogs/routers"
 	"github.com/gogits/gogs/routers/admin"
 	"github.com/gogits/gogs/routers/api/v1"
 	"github.com/gogits/gogs/routers/dev"
 	"github.com/gogits/gogs/routers/repo"
 	"github.com/gogits/gogs/routers/user"
+
+	"github.com/martini-contrib/oauth2"
+	"github.com/martini-contrib/sessions"
 )
 
 var CmdWeb = cli.Command{
@@ -61,6 +64,7 @@ func runWeb(*cli.Context) {
 
 	scope := "https://api.github.com/user"
 	oauth2.PathCallback = "/oauth2callback"
+	m.Use(sessions.Sessions("my_session", sessions.NewCookieStore([]byte("secret123"))))
 	m.Use(oauth2.Github(&oauth2.Options{
 		ClientId:     "09383403ff2dc16daaa1",
 		ClientSecret: "5f6e7101d30b77952aab22b75eadae17551ea6b5",
@@ -88,7 +92,7 @@ func runWeb(*cli.Context) {
 	m.Get("/avatar/:hash", avt.ServeHTTP)
 
 	m.Group("/user", func(r martini.Router) {
-		r.Any("/login/github", user.SocialSignIn)
+		r.Any("/login/github", reqSignOut, oauth2.LoginRequired, user.SocialSignIn)
 		r.Any("/login", binding.BindIgnErr(auth.LogInForm{}), user.SignIn)
 		r.Any("/sign_up", binding.BindIgnErr(auth.RegisterForm{}), user.SignUp)
 		r.Any("/forget_password", user.ForgotPasswd)
