@@ -147,7 +147,7 @@ func ViewIssue(ctx *middleware.Context, params martini.Params) {
 		return
 	}
 	issue.Poster = u
-	issue.RenderedContent = string(base.RenderMarkdown([]byte(issue.Content), ""))
+	issue.RenderedContent = string(base.RenderMarkdown([]byte(issue.Content), ctx.Repo.RepoLink))
 
 	// Get comments.
 	comments, err := models.GetIssueComments(issue.Id)
@@ -164,7 +164,7 @@ func ViewIssue(ctx *middleware.Context, params martini.Params) {
 			return
 		}
 		comments[i].Poster = u
-		comments[i].Content = string(base.RenderMarkdown([]byte(comments[i].Content), ""))
+		comments[i].Content = string(base.RenderMarkdown([]byte(comments[i].Content), ctx.Repo.RepoLink))
 	}
 
 	ctx.Data["Title"] = issue.Name
@@ -193,7 +193,7 @@ func UpdateIssue(ctx *middleware.Context, params martini.Params, form auth.Creat
 		return
 	}
 
-	if ctx.User.Id != issue.PosterId {
+	if ctx.User.Id != issue.PosterId && !ctx.Repo.IsOwner {
 		ctx.Handle(404, "issue.UpdateIssue", nil)
 		return
 	}
@@ -211,7 +211,7 @@ func UpdateIssue(ctx *middleware.Context, params martini.Params, form auth.Creat
 	ctx.JSON(200, map[string]interface{}{
 		"ok":      true,
 		"title":   issue.Name,
-		"content": string(base.RenderMarkdown([]byte(issue.Content), "")),
+		"content": string(base.RenderMarkdown([]byte(issue.Content), ctx.Repo.RepoLink)),
 	})
 }
 
