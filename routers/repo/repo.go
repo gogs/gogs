@@ -5,6 +5,8 @@
 package repo
 
 import (
+	"encoding/base64"
+	"errors"
 	"fmt"
 	"path"
 	"path/filepath"
@@ -237,16 +239,109 @@ func SingleDownload(ctx *middleware.Context, params martini.Params) {
 	ctx.Res.Write(data)
 }
 
-func Http(ctx *middleware.Context, params martini.Params) {
-	// TODO: access check
+func basicEncode(username, password string) string {
+	auth := username + ":" + password
+	return base64.StdEncoding.EncodeToString([]byte(auth))
+}
 
+func basicDecode(encoded string) (user string, name string, err error) {
+	var s []byte
+	s, err = base64.StdEncoding.DecodeString(encoded)
+	if err != nil {
+		return
+	}
+
+	a := strings.Split(string(s), ":")
+	if len(a) == 2 {
+		user, name = a[0], a[1]
+	} else {
+		err = errors.New("decode failed")
+	}
+	return
+}
+
+func authRequired(ctx *middleware.Context) {
+	ctx.ResponseWriter.Header().Set("WWW-Authenticate", "Basic realm=\".\"")
+	ctx.Data["ErrorMsg"] = "no basic auth and digit auth"
+	ctx.HTML(401, fmt.Sprintf("status/401"))
+}
+
+func Http(ctx *middleware.Context, params martini.Params) {
 	username := params["username"]
 	reponame := params["reponame"]
 	if strings.HasSuffix(reponame, ".git") {
 		reponame = reponame[:len(reponame)-4]
 	}
 
+	//fmt.Println("req:", ctx.Req.Header)
+
+	repoUser, err := models.GetUserByName(username)
+	if err != nil {
+		ctx.Handle(500, "repo.GetUserByName", nil)
+		return
+	}
+
+	repo, err := models.GetRepositoryByName(repoUser.Id, reponame)
+	if err != nil {
+		ctx.Handle(500, "repo.GetRepositoryByName", nil)
+		return
+	}
+
+	isPull := webdav.IsPullMethod(ctx.Req.Method)
+	var askAuth = !(!repo.IsPrivate && isPull)
+
+	//authRequired(ctx)
+	//return
+
+	// check access
+	if askAuth {
+		// check digit auth
+
+		// check basic auth
+		baHead := ctx.Req.Header.Get("Authorization")
+		if baHead == "" {
+			authRequired(ctx)
+			return
+		}
+
+		auths := strings.Fields(baHead)
+		if len(auths) != 2 || auths[0] != "Basic" {
+			ctx.Handle(401, "no basic auth and digit auth", nil)
+			return
+		}
+		authUsername, passwd, err := basicDecode(auths[1])
+		if err != nil {
+			ctx.Handle(401, "no basic auth and digit auth", nil)
+			return
+		}
+
+		authUser, err := models.GetUserByName(authUsername)
+		if err != nil {
+			ctx.Handle(401, "no basic auth and digit auth", nil)
+			return
+		}
+
+		newUser := &models.User{Passwd: passwd}
+		newUser.EncodePasswd()
+		if authUser.Passwd != newUser.Passwd {
+			ctx.Handle(401, "no basic auth and digit auth", nil)
+			return
+		}
+
+		var tp = models.AU_WRITABLE
+		if isPull {
+			tp = models.AU_READABLE
+		}
+
+		has, err := models.HasAccess(authUsername, username+"/"+reponame, tp)
+		if err != nil || !has {
+			ctx.Handle(401, "no basic auth and digit auth", nil)
+			return
+		}
+	}
+
 	dir := models.RepoPath(username, reponame)
+
 	prefix := path.Join("/", username, params["reponame"])
 	server := webdav.NewServer(
 		dir, prefix, true)
