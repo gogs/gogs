@@ -59,20 +59,16 @@ func runWeb(*cli.Context) {
 	m.Use(middleware.Renderer(middleware.RenderOptions{Funcs: []template.FuncMap{base.TemplateFuncs}}))
 	m.Use(middleware.InitContext())
 
-	scope := "https://api.github.com/user"
-	// m.Use(sessions.Sessions("my_session", sessions.NewCookieStore([]byte("secret123"))))
-	// m.Use(oauth2.Github(&oauth2.Options{
-	// 	ClientId:     "09383403ff2dc16daaa1",
-	// 	ClientSecret: "5f6e7101d30b77952aab22b75eadae17551ea6b5",
-	// 	RedirectURL:  base.AppUrl + oauth2.PathCallback,
-	// 	Scopes:       []string{scope},
-	// }))
-	m.Use(oauth2.Github(&oauth2.Options{
-		ClientId:     "ba323b44192e65c7c320",
-		ClientSecret: "6818ffed53bea5815bf1a6412d1933f25fa10619",
-		RedirectURL:  base.AppUrl + oauth2.PathCallback[1:],
-		Scopes:       []string{scope},
-	}))
+	if base.OauthService != nil {
+		if base.OauthService.GitHub.Enabled {
+			m.Use(oauth2.Github(&oauth2.Options{
+				ClientId:     base.OauthService.GitHub.ClientId,
+				ClientSecret: base.OauthService.GitHub.ClientSecret,
+				RedirectURL:  base.AppUrl + oauth2.PathCallback[1:],
+				Scopes:       []string{base.OauthService.GitHub.Scopes},
+			}))
+		}
+	}
 
 	reqSignIn := middleware.Toggle(&middleware.ToggleOptions{SignInRequire: true})
 	ignSignIn := middleware.Toggle(&middleware.ToggleOptions{SignInRequire: base.Service.RequireSignInView})

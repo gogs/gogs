@@ -34,6 +34,7 @@ type Oauther struct {
 	GitHub struct {
 		Enabled                bool
 		ClientId, ClientSecret string
+		Scopes                 string
 	}
 }
 
@@ -263,6 +264,7 @@ func newOauthService() {
 		OauthService.GitHub.Enabled = true
 		OauthService.GitHub.ClientId = Cfg.MustValue("oauth.github", "CLIENT_ID")
 		OauthService.GitHub.ClientSecret = Cfg.MustValue("oauth.github", "CLIENT_SECRET")
+		OauthService.GitHub.Scopes = Cfg.MustValue("oauth.github", "SCOPES")
 		oauths = append(oauths, "GitHub")
 	}
 
