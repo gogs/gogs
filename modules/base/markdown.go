@@ -6,9 +6,11 @@ package base
 
 import (
 	"bytes"
+	"fmt"
 	"net/http"
 	"path"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/gogits/gfm"
@@ -87,7 +89,53 @@ func (options *CustomRender) Link(out *bytes.Buffer, link []byte, title []byte, 
 	options.Renderer.Link(out, link, title, content)
 }
 
+var (
+	mentionPattern    = regexp.MustCompile(`@[0-9a-zA-Z_]{1,}`)
+	commitPattern     = regexp.MustCompile(`(\s|^)https?.*commit/[0-9a-zA-Z]+(#+[0-9a-zA-Z-]*)?`)
+	issueFullPattern  = regexp.MustCompile(`(\s|^)https?.*issues/[0-9]+(#+[0-9a-zA-Z-]*)?`)
+	issueIndexPattern = regexp.MustCompile(`(\s|^)#[0-9]+`)
+)
+
+func RenderSpecialLink(rawBytes []byte, urlPrefix string) []byte {
+	ms := mentionPattern.FindAll(rawBytes, -1)
+	for _, m := range ms {
+		rawBytes = bytes.Replace(rawBytes, m,
+			[]byte(fmt.Sprintf(`<a href="/user/%s">%s</a>`, m[1:], m)), -1)
+	}
+	ms = commitPattern.FindAll(rawBytes, -1)
+	for _, m := range ms {
+		m = bytes.TrimPrefix(m, []byte(" "))
+		i := strings.Index(string(m), "commit/")
+		j := strings.Index(string(m), "#")
+		if j == -1 {
+			j = len(m)
+		}
+		rawBytes = bytes.Replace(rawBytes, m, []byte(fmt.Sprintf(
+			` <code><a href="%s">%s</a></code>`, m, ShortSha(string(m[i+7:j])))), -1)
+	}
+	ms = issueFullPattern.FindAll(rawBytes, -1)
+	for _, m := range ms {
+		m = bytes.TrimPrefix(m, []byte(" "))
+		i := strings.Index(string(m), "issues/")
+		j := strings.Index(string(m), "#")
+		if j == -1 {
+			j = len(m)
+		}
+		rawBytes = bytes.Replace(rawBytes, m, []byte(fmt.Sprintf(
+			` <a href="%s">#%s</a>`, m, ShortSha(string(m[i+7:j])))), -1)
+	}
+	ms = issueIndexPattern.FindAll(rawBytes, -1)
+	for _, m := range ms {
+		m = bytes.TrimPrefix(m, []byte(" "))
+		rawBytes = bytes.Replace(rawBytes, m, []byte(fmt.Sprintf(
+			` <a href="%s/issues/%s">%s</a>`, urlPrefix, m[1:], m)), -1)
+	}
+	return rawBytes
+}
+
 func RenderMarkdown(rawBytes []byte, urlPrefix string) []byte {
+	body := RenderSpecialLink(rawBytes, urlPrefix)
+	fmt.Println(string(body))
 	htmlFlags := 0
 	// htmlFlags |= gfm.HTML_USE_XHTML
 	// htmlFlags |= gfm.HTML_USE_SMARTYPANTS
@@ -99,10 +147,10 @@ func RenderMarkdown(rawBytes []byte, urlPrefix string) []byte {
 	htmlFlags |= gfm.HTML_GITHUB_BLOCKCODE
 	htmlFlags |= gfm.HTML_OMIT_CONTENTS
 	// htmlFlags |= gfm.HTML_COMPLETE_PAGE
-	renderer := &CustomRender{
-		Renderer:  gfm.HtmlRenderer(htmlFlags, "", ""),
-		urlPrefix: urlPrefix,
-	}
+	// renderer := &CustomRender{
+	// 	Renderer:  gfm.HtmlRenderer(htmlFlags, "", ""),
+	// 	urlPrefix: urlPrefix,
+	// }
 
 	// set up the parser
 	extensions := 0
@@ -115,7 +163,7 @@ func RenderMarkdown(rawBytes []byte, urlPrefix string) []byte {
 	extensions |= gfm.EXTENSION_SPACE_HEADERS
 	extensions |= gfm.EXTENSION_NO_EMPTY_LINE_BEFORE_BLOCK
 
-	body := gfm.Markdown(rawBytes, renderer, extensions)
-
+	// body = gfm.Markdown(body, renderer, extensions)
+	// fmt.Println(string(body))
 	return body
 }

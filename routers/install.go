@@ -6,13 +6,13 @@ package routers
 
 import (
 	"errors"
-	"fmt"
 	"os"
 	"strings"
 
 	"github.com/Unknwon/goconfig"
 	"github.com/go-martini/martini"
 	"github.com/lunny/xorm"
+	qlog "github.com/qiniu/log"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
@@ -43,8 +43,7 @@ func GlobalInit() {
 
 	if base.InstallLock {
 		if err := models.NewEngine(); err != nil {
-			fmt.Println(err)
-			os.Exit(2)
+			qlog.Fatal(err)
 		}
 
 		models.HasEngine = true

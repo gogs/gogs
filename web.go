@@ -11,6 +11,7 @@ import (
 
 	"github.com/codegangsta/cli"
 	"github.com/go-martini/martini"
+	qlog "github.com/qiniu/log"
 
 	"github.com/gogits/binding"
 
@@ -50,9 +51,7 @@ func newMartini() *martini.ClassicMartini {
 }
 
 func runWeb(*cli.Context) {
-	fmt.Println("Server is running...")
 	routers.GlobalInit()
-	log.Info("%s %s", base.AppName, base.AppVer)
 
 	m := newMartini()
 
@@ -177,14 +176,13 @@ func runWeb(*cli.Context) {
 	if protocol == "http" {
 		log.Info("Listen: http://%s", listenAddr)
 		if err := http.ListenAndServe(listenAddr, m); err != nil {
-			fmt.Println(err.Error())
-			//log.Critical(err.Error()) // not working now
+			qlog.Error(err.Error())
 		}
 	} else if protocol == "https" {
 		log.Info("Listen: https://%s", listenAddr)
 		if err := http.ListenAndServeTLS(listenAddr, base.Cfg.MustValue("server", "CERT_FILE"),
 			base.Cfg.MustValue("server", "KEY_FILE"), m); err != nil {
-			fmt.Println(err.Error())
+			qlog.Error(err.Error())
 		}
 	}
 }

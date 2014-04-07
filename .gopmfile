@@ -7,11 +7,12 @@ github.com/go-martini/martini =
 github.com/Unknwon/com = 
 github.com/Unknwon/cae = 
 github.com/Unknwon/goconfig = 
-github.com/dchest/scrypt = 
 github.com/nfnt/resize = 
 github.com/lunny/xorm = 
 github.com/go-sql-driver/mysql = 
 github.com/lib/pq = 
+github.com/qiniu/log = 
+code.google.com/p/goauth2 = 
 github.com/gogits/logs = 
 github.com/gogits/binding = 
 github.com/gogits/git = 
@@ -19,7 +20,6 @@ github.com/gogits/gfm =
 github.com/gogits/cache = 
 github.com/gogits/session = 
 github.com/gogits/webdav = 
-code.google.com/p/goauth2 = 
 
 [res]
 include = templates|public|conf

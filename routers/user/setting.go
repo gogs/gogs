@@ -73,11 +73,7 @@ func SettingPassword(ctx *middleware.Context, form auth.UpdatePasswdForm) {
 
 	user := ctx.User
 	newUser := &models.User{Passwd: form.NewPasswd}
-	if err := newUser.EncodePasswd(); err != nil {
-		ctx.Handle(200, "setting.SettingPassword", err)
-		return
-	}
-
+	newUser.EncodePasswd()
 	if user.Passwd != newUser.Passwd {
 		ctx.Data["HasError"] = true
 		ctx.Data["ErrorMsg"] = "Old password is not correct"
@@ -85,6 +81,7 @@ func SettingPassword(ctx *middleware.Context, form auth.UpdatePasswdForm) {
 		ctx.Data["HasError"] = true
 		ctx.Data["ErrorMsg"] = "New password and re-type password are not same"
 	} else {
+		newUser.Salt = models.GetUserSalt()
 		user.Passwd = newUser.Passwd
 		if err := models.UpdateUser(user); err != nil {
 			ctx.Handle(200, "setting.SettingPassword", err)
