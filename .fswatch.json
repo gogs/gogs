@@ -1,14 +1,7 @@
 {
     "paths": ["."],
     "depth": 2,
-    "exclude": [
-        "^gogs$",
-        "~$",
-        "\\.swp$",
-        "\\.exe$",
-        "\\.swx$",
-        ".*\\.log$"
-    ],
+    "exclude": [],
     "include": ["\\.go$"],
     "command": [
         "bash", "-c", "go build && ./gogs web"
@@ -16,5 +9,5 @@
     "env": {
         "POWERED_BY": "github.com/shxsun/fswatch"
     },
-    "enable-restart": false
+    "enable-restart": true
 }
