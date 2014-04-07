@@ -18,7 +18,9 @@ import (
 )
 
 var (
-	orm       *xorm.Engine
+	orm    *xorm.Engine
+	tables []interface{}
+
 	HasEngine bool
 
 	DbCfg struct {
@@ -27,6 +29,11 @@ var (
 
 	UseSQLite3 bool
 )
+
+func init() {
+	tables = append(tables, new(User), new(PublicKey), new(Repository), new(Watch),
+		new(Action), new(Access), new(Issue), new(Comment), new(Oauth2))
+}
 
 func LoadModelsConfig() {
 	DbCfg.Type = base.Cfg.MustValue("database", "DB_TYPE")
@@ -58,9 +65,7 @@ func NewTestEngine(x *xorm.Engine) (err error) {
 	if err != nil {
 		return fmt.Errorf("models.init(fail to conntect database): %v", err)
 	}
-
-	return x.Sync(new(User), new(PublicKey), new(Repository), new(Watch),
-		new(Action), new(Access), new(Issue), new(Comment))
+	return x.Sync(tables...)
 }
 
 func SetEngine() (err error) {
@@ -102,9 +107,9 @@ func SetEngine() (err error) {
 func NewEngine() (err error) {
 	if err = SetEngine(); err != nil {
 		return err
-	} else if err = orm.Sync(new(User), new(PublicKey), new(Repository), new(Watch),
-		new(Action), new(Access), new(Issue), new(Comment)); err != nil {
-		return fmt.Errorf("sync database struct error: %v", err)
+	}
+	if err = orm.Sync(tables...); err != nil {
+		return fmt.Errorf("sync database struct error: %v\n", err)
 	}
 	return nil
 }

@@ -5,13 +5,13 @@
 package base
 
 import (
-	"bytes"
+	"crypto/hmac"
 	"crypto/md5"
 	"crypto/rand"
 	"crypto/sha1"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
+	"hash"
 	"math"
 	"strconv"
 	"strings"
@@ -38,6 +38,44 @@ func GetRandomString(n int, alphabets ...byte) string {
 		}
 	}
 	return string(bytes)
+}
+
+// http://code.google.com/p/go/source/browse/pbkdf2/pbkdf2.go?repo=crypto
+func PBKDF2(password, salt []byte, iter, keyLen int, h func() hash.Hash) []byte {
+	prf := hmac.New(h, password)
+	hashLen := prf.Size()
+	numBlocks := (keyLen + hashLen - 1) / hashLen
+
+	var buf [4]byte
+	dk := make([]byte, 0, numBlocks*hashLen)
+	U := make([]byte, hashLen)
+	for block := 1; block <= numBlocks; block++ {
+		// N.B.: || means concatenation, ^ means XOR
+		// for each block T_i = U_1 ^ U_2 ^ ... ^ U_iter
+		// U_1 = PRF(password, salt || uint(i))
+		prf.Reset()
+		prf.Write(salt)
+		buf[0] = byte(block >> 24)
+		buf[1] = byte(block >> 16)
+		buf[2] = byte(block >> 8)
+		buf[3] = byte(block)
+		prf.Write(buf[:4])
+		dk = prf.Sum(dk)
+		T := dk[len(dk)-hashLen:]
+		copy(U, T)
+
+		// U_n = PRF(password, U_(n-1))
+		for n := 2; n <= iter; n++ {
+			prf.Reset()
+			prf.Write(U)
+			U = U[:0]
+			U = prf.Sum(U)
+			for x := range U {
+				T[x] ^= U[x]
+			}
+		}
+	}
+	return dk[:keyLen]
 }
 
 // verify time limit code
@@ -473,108 +511,4 @@ func (a argInt) Get(i int, args ...int) (r int) {
 		r = args[0]
 	}
 	return
-}
-
-type Actioner interface {
-	GetOpType() int
-	GetActUserName() string
-	GetActEmail() string
-	GetRepoName() string
-	GetBranch() string
-	GetContent() string
-}
-
-// ActionIcon accepts a int that represents action operation type
-// and returns a icon class name.
-func ActionIcon(opType int) string {
-	switch opType {
-	case 1: // Create repository.
-		return "plus-circle"
-	case 5: // Commit repository.
-		return "arrow-circle-o-right"
-	case 6: // Create issue.
-		return "exclamation-circle"
-	case 8: // Transfer repository.
-		return "share"
-	default:
-		return "invalid type"
-	}
-}
-
-const (
-	TPL_CREATE_REPO    = `<a href="/user/%s">%s</a> created repository <a href="/%s">%s</a>`
-	TPL_COMMIT_REPO    = `<a href="/user/%s">%s</a> pushed to <a href="/%s/src/%s">%s</a> at <a href="/%s">%s</a>%s`
-	TPL_COMMIT_REPO_LI = `<div><img src="%s?s=16" alt="user-avatar"/> <a href="/%s/commit/%s">%s</a> %s</div>`
-	TPL_CREATE_ISSUE   = `<a href="/user/%s">%s</a> opened issue <a href="/%s/issues/%s">%s#%s</a>
-<div><img src="%s?s=16" alt="user-avatar"/> %s</div>`
-	TPL_TRANSFER_REPO = `<a href="/user/%s">%s</a> transfered repository <code>%s</code> to <a href="/%s">%s</a>`
-)
-
-type PushCommit struct {
-	Sha1        string
-	Message     string
-	AuthorEmail string
-	AuthorName  string
-}
-
-type PushCommits struct {
-	Len     int
-	Commits []*PushCommit
-}
-
-// ActionDesc accepts int that represents action operation type
-// and returns the description.
-func ActionDesc(act Actioner) string {
-	actUserName := act.GetActUserName()
-	email := act.GetActEmail()
-	repoName := act.GetRepoName()
-	repoLink := actUserName + "/" + repoName
-	branch := act.GetBranch()
-	content := act.GetContent()
-	switch act.GetOpType() {
-	case 1: // Create repository.
-		return fmt.Sprintf(TPL_CREATE_REPO, actUserName, actUserName, repoLink, repoName)
-	case 5: // Commit repository.
-		var push *PushCommits
-		if err := json.Unmarshal([]byte(content), &push); err != nil {
-			return err.Error()
-		}
-		buf := bytes.NewBuffer([]byte("\n"))
-		for _, commit := range push.Commits {
-			buf.WriteString(fmt.Sprintf(TPL_COMMIT_REPO_LI, AvatarLink(commit.AuthorEmail), repoLink, commit.Sha1, commit.Sha1[:7], commit.Message) + "\n")
-		}
-		if push.Len > 3 {
-			buf.WriteString(fmt.Sprintf(`<div><a href="/%s/%s/commits/%s">%d other commits >></a></div>`, actUserName, repoName, branch, push.Len))
-		}
-		return fmt.Sprintf(TPL_COMMIT_REPO, actUserName, actUserName, repoLink, branch, branch, repoLink, repoLink,
-			buf.String())
-	case 6: // Create issue.
-		infos := strings.SplitN(content, "|", 2)
-		return fmt.Sprintf(TPL_CREATE_ISSUE, actUserName, actUserName, repoLink, infos[0], repoLink, infos[0],
-			AvatarLink(email), infos[1])
-	case 8: // Transfer repository.
-		newRepoLink := content + "/" + repoName
-		return fmt.Sprintf(TPL_TRANSFER_REPO, actUserName, actUserName, repoLink, newRepoLink, newRepoLink)
-	default:
-		return "invalid type"
-	}
-}
-
-func DiffTypeToStr(diffType int) string {
-	diffTypes := map[int]string{
-		1: "add", 2: "modify", 3: "del",
-	}
-	return diffTypes[diffType]
-}
-
-func DiffLineTypeToStr(diffType int) string {
-	switch diffType {
-	case 2:
-		return "add"
-	case 3:
-		return "del"
-	case 4:
-		return "tag"
-	}
-	return "same"
 }

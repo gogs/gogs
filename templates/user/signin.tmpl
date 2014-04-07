@@ -33,7 +33,7 @@
         <div class="form-group">
             <div class="col-md-offset-4 col-md-6">
                 <button type="submit" class="btn btn-lg btn-primary">Log In</button>
-                <a href="/forget-password/">Forgot your password?</a>
+                <a href="/user/forget_password/">Forgot your password?</a>
             </div>
         </div>
 
@@ -43,9 +43,12 @@
             </div>
         </div>
 
+        {{if .OauthEnabled}}
         <div class="form-group text-center" id="social-login">
-            <a class="btn btn-danger btn-lg" href="/user/sign_up">Register new account</a>
+            <h4>Log In with Social Accounts</h4>
+            {{if .OauthGitHubEnabled}}<a href="/user/login/github"><i class="fa fa-github-square fa-3x"></i></a>{{end}}
         </div>
+        {{end}}
     </form>
 </div>
 {{template "base/footer" .}}

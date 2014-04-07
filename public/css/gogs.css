@@ -1305,3 +1305,73 @@ html, body {
 #release .release-item .info .avatar {
     vertical-align: middle;
 }
+
+#release-new-form {
+    margin-top: 24px;
+}
+
+#release-new-form .target-at {
+    margin: 0 1em;
+}
+
+#release-new-form .target-text {
+    color: #888;
+}
+
+#release-new-target-branch-list {
+    padding-top: 0;
+    padding-bottom: 0;
+    min-width: 200px;
+}
+
+#release-new-target-branch-list ul {
+    margin-bottom: 0;
+}
+
+#release-new-target-branch-list li {
+    padding: 8px 20px;
+}
+
+#release-new-target-branch-list li a {
+    margin-left: 0;
+    background-color: transparent;
+    padding: 0;
+}
+
+#release-new-target-branch-list li a:hover {
+    background-image: none;
+}
+
+#release-new-target-branch-list li:hover {
+    background-color: #0093c4;
+}
+
+#release-new-target-branch-list li:hover a {
+    color: #FFF;
+}
+
+#release-new-title {
+    width: 50%;
+}
+
+#release-new-content-div {
+    margin-top: 16px;
+    padding-left: 0;
+}
+
+#release-new-content-div .md-help {
+    margin-top: 6px;
+}
+
+#release-textarea .form-group {
+    display: block;
+}
+
+#release-new-content {
+    width: 100%;
+    margin: 16px 0;
+}
+
+#release-preview{
+    margin: 6px 0;
+}
