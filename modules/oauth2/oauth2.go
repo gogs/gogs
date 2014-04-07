@@ -29,13 +29,13 @@ import (
 
 	"github.com/gogits/session"
 
+	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/middleware"
 )
 
 const (
-	codeRedirect = 302
-	keyToken     = "oauth2_token"
-	keyNextPage  = "next"
+	keyToken    = "oauth2_token"
+	keyNextPage = "next"
 )
 
 var (
@@ -179,42 +179,49 @@ var LoginRequired martini.Handler = func() martini.Handler {
 		token := unmarshallToken(ctx.Session)
 		if token == nil || token.IsExpired() {
 			next := url.QueryEscape(ctx.Req.URL.RequestURI())
-			ctx.Redirect(PathLogin+"?next="+next, codeRedirect)
+			ctx.Redirect(PathLogin + "?next=" + next)
+			return
 		}
 	}
 }()
 
 func login(t *oauth.Transport, ctx *middleware.Context) {
-	next := extractPath(ctx.Req.URL.Query().Get(keyNextPage))
+	next := extractPath(ctx.Query(keyNextPage))
 	if ctx.Session.Get(keyToken) == nil {
 		// User is not logged in.
-		ctx.Redirect(t.Config.AuthCodeURL(next), codeRedirect)
+		ctx.Redirect(t.Config.AuthCodeURL(next))
 		return
 	}
 	// No need to login, redirect to the next page.
-	ctx.Redirect(next, codeRedirect)
+	ctx.Redirect(next)
 }
 
 func logout(t *oauth.Transport, ctx *middleware.Context) {
-	next := extractPath(ctx.Req.URL.Query().Get(keyNextPage))
+	next := extractPath(ctx.Query(keyNextPage))
 	ctx.Session.Delete(keyToken)
-	ctx.Redirect(next, codeRedirect)
+	ctx.Redirect(next)
 }
 
 func handleOAuth2Callback(t *oauth.Transport, ctx *middleware.Context) {
-	next := extractPath(ctx.Req.URL.Query().Get("state"))
-	code := ctx.Req.URL.Query().Get("code")
+	if errMsg := ctx.Query("error_description"); len(errMsg) > 0 {
+		log.Error("oauth2.handleOAuth2Callback: %s", errMsg)
+		return
+	}
+
+	next := extractPath(ctx.Query("state"))
+	code := ctx.Query("code")
 	tk, err := t.Exchange(code)
 	if err != nil {
 		// Pass the error message, or allow dev to provide its own
 		// error handler.
-		ctx.Redirect(PathError, codeRedirect)
+		log.Error("oauth2.handleOAuth2Callback(token.Exchange): %v", err)
+		// ctx.Redirect(PathError)
 		return
 	}
 	// Store the credentials in the session.
 	val, _ := json.Marshal(tk)
 	ctx.Session.Set(keyToken, val)
-	ctx.Redirect(next, codeRedirect)
+	ctx.Redirect(next)
 }
 
 func unmarshallToken(s session.SessionStore) (t *token) {

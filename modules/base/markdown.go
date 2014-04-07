@@ -90,21 +90,21 @@ func (options *CustomRender) Link(out *bytes.Buffer, link []byte, title []byte, 
 }
 
 var (
-	mentionPattern    = regexp.MustCompile(`@[0-9a-zA-Z_]{1,}`)
+	MentionPattern    = regexp.MustCompile(`@[0-9a-zA-Z_]{1,}`)
 	commitPattern     = regexp.MustCompile(`(\s|^)https?.*commit/[0-9a-zA-Z]+(#+[0-9a-zA-Z-]*)?`)
 	issueFullPattern  = regexp.MustCompile(`(\s|^)https?.*issues/[0-9]+(#+[0-9a-zA-Z-]*)?`)
-	issueIndexPattern = regexp.MustCompile(`(\s|^)#[0-9]+`)
+	issueIndexPattern = regexp.MustCompile(`#[0-9]+`)
 )
 
 func RenderSpecialLink(rawBytes []byte, urlPrefix string) []byte {
-	ms := mentionPattern.FindAll(rawBytes, -1)
+	ms := MentionPattern.FindAll(rawBytes, -1)
 	for _, m := range ms {
 		rawBytes = bytes.Replace(rawBytes, m,
 			[]byte(fmt.Sprintf(`<a href="/user/%s">%s</a>`, m[1:], m)), -1)
 	}
 	ms = commitPattern.FindAll(rawBytes, -1)
 	for _, m := range ms {
-		m = bytes.TrimPrefix(m, []byte(" "))
+		m = bytes.TrimSpace(m)
 		i := strings.Index(string(m), "commit/")
 		j := strings.Index(string(m), "#")
 		if j == -1 {
@@ -115,7 +115,7 @@ func RenderSpecialLink(rawBytes []byte, urlPrefix string) []byte {
 	}
 	ms = issueFullPattern.FindAll(rawBytes, -1)
 	for _, m := range ms {
-		m = bytes.TrimPrefix(m, []byte(" "))
+		m = bytes.TrimSpace(m)
 		i := strings.Index(string(m), "issues/")
 		j := strings.Index(string(m), "#")
 		if j == -1 {
@@ -126,9 +126,8 @@ func RenderSpecialLink(rawBytes []byte, urlPrefix string) []byte {
 	}
 	ms = issueIndexPattern.FindAll(rawBytes, -1)
 	for _, m := range ms {
-		m = bytes.TrimPrefix(m, []byte(" "))
 		rawBytes = bytes.Replace(rawBytes, m, []byte(fmt.Sprintf(
-			` <a href="%s/issues/%s">%s</a>`, urlPrefix, m[1:], m)), -1)
+			`<a href="%s/issues/%s">%s</a>`, urlPrefix, m[1:], m)), -1)
 	}
 	return rawBytes
 }

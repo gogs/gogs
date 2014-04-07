@@ -43,9 +43,12 @@
             </div>
         </div>
 
+        {{if .OauthEnabled}}
         <div class="form-group text-center" id="social-login">
-            <a class="btn btn-danger btn-lg" href="/user/sign_up">Register new account</a>
+            <h4>Log In with Social Accounts</h4>
+            {{if .OauthGitHubEnabled}}<a href="/user/login/github"><i class="fa fa-github-square fa-3x"></i></a>{{end}}
         </div>
+        {{end}}
     </form>
 </div>
 {{template "base/footer" .}}

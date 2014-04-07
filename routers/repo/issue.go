@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/Unknwon/com"
 	"github.com/go-martini/martini"
 
 	"github.com/gogits/gogs/models"
@@ -99,7 +100,7 @@ func CreateIssue(ctx *middleware.Context, params martini.Params, form auth.Creat
 	issue, err := models.CreateIssue(ctx.User.Id, ctx.Repo.Repository.Id, form.MilestoneId, form.AssigneeId,
 		ctx.Repo.Repository.NumIssues, form.IssueName, form.Labels, form.Content, false)
 	if err != nil {
-		ctx.Handle(200, "issue.CreateIssue", err)
+		ctx.Handle(200, "issue.CreateIssue(CreateIssue)", err)
 		return
 	}
 
@@ -107,14 +108,31 @@ func CreateIssue(ctx *middleware.Context, params martini.Params, form auth.Creat
 	if err = models.NotifyWatchers(&models.Action{ActUserId: ctx.User.Id, ActUserName: ctx.User.Name, ActEmail: ctx.User.Email,
 		OpType: models.OP_CREATE_ISSUE, Content: fmt.Sprintf("%d|%s", issue.Index, issue.Name),
 		RepoId: ctx.Repo.Repository.Id, RepoName: ctx.Repo.Repository.Name, RefName: ""}); err != nil {
-		ctx.Handle(200, "issue.CreateIssue", err)
+		ctx.Handle(200, "issue.CreateIssue(NotifyWatchers)", err)
 		return
 	}
 
-	// Mail watchers.
+	// Mail watchers and mentions.
 	if base.Service.NotifyMail {
-		if err = mailer.SendNotifyMail(ctx.User, ctx.Repo.Owner, ctx.Repo.Repository, issue); err != nil {
-			ctx.Handle(200, "issue.CreateIssue", err)
+		tos, err := mailer.SendIssueNotifyMail(ctx.User, ctx.Repo.Owner, ctx.Repo.Repository, issue)
+		if err != nil {
+			ctx.Handle(200, "issue.CreateIssue(SendIssueNotifyMail)", err)
+			return
+		}
+
+		tos = append(tos, ctx.User.LowerName)
+		ms := base.MentionPattern.FindAllString(issue.Content, -1)
+		newTos := make([]string, 0, len(ms))
+		for _, m := range ms {
+			if com.IsSliceContainsStr(tos, m[1:]) {
+				continue
+			}
+
+			newTos = append(newTos, m[1:])
+		}
+		if err = mailer.SendIssueMentionMail(ctx.User, ctx.Repo.Owner, ctx.Repo.Repository,
+			issue, models.GetUserEmailsByNames(newTos)); err != nil {
+			ctx.Handle(200, "issue.CreateIssue(SendIssueMentionMail)", err)
 			return
 		}
 	}

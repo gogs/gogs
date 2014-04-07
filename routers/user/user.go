@@ -78,6 +78,11 @@ func SignIn(ctx *middleware.Context, form auth.LogInForm) {
 	ctx.Data["Title"] = "Log In"
 
 	if ctx.Req.Method == "GET" {
+		if base.OauthService != nil {
+			ctx.Data["OauthEnabled"] = true
+			ctx.Data["OauthGitHubEnabled"] = base.OauthService.GitHub.Enabled
+		}
+
 		// Check auto-login.
 		userName := ctx.GetCookie(base.CookieUserName)
 		if len(userName) == 0 {
