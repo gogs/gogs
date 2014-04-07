@@ -22,11 +22,19 @@ import (
 	"github.com/gogits/gogs/modules/log"
 )
 
-// Mailer represents a mail service.
+// Mailer represents mail service.
 type Mailer struct {
 	Name         string
 	Host         string
 	User, Passwd string
+}
+
+// Oauther represents oauth service.
+type Oauther struct {
+	GitHub struct {
+		Enabled                bool
+		ClientId, ClientSecret string
+	}
 }
 
 var (
@@ -45,8 +53,9 @@ var (
 	CookieUserName     string
 	CookieRememberName string
 
-	Cfg         *goconfig.ConfigFile
-	MailService *Mailer
+	Cfg          *goconfig.ConfigFile
+	MailService  *Mailer
+	OauthService *Oauther
 
 	LogMode   string
 	LogConfig string
@@ -206,15 +215,17 @@ func newSessionService() {
 
 func newMailService() {
 	// Check mailer setting.
-	if Cfg.MustBool("mailer", "ENABLED") {
-		MailService = &Mailer{
-			Name:   Cfg.MustValue("mailer", "NAME", AppName),
-			Host:   Cfg.MustValue("mailer", "HOST"),
-			User:   Cfg.MustValue("mailer", "USER"),
-			Passwd: Cfg.MustValue("mailer", "PASSWD"),
-		}
-		log.Info("Mail Service Enabled")
+	if !Cfg.MustBool("mailer", "ENABLED") {
+		return
 	}
+
+	MailService = &Mailer{
+		Name:   Cfg.MustValue("mailer", "NAME", AppName),
+		Host:   Cfg.MustValue("mailer", "HOST"),
+		User:   Cfg.MustValue("mailer", "USER"),
+		Passwd: Cfg.MustValue("mailer", "PASSWD"),
+	}
+	log.Info("Mail Service Enabled")
 }
 
 func newRegisterMailService() {
@@ -237,6 +248,25 @@ func newNotifyMailService() {
 	}
 	Service.NotifyMail = true
 	log.Info("Notify Mail Service Enabled")
+}
+
+func newOauthService() {
+	if !Cfg.MustBool("oauth", "ENABLED") {
+		return
+	}
+
+	OauthService = &Oauther{}
+	oauths := make([]string, 0, 10)
+
+	// GitHub.
+	if Cfg.MustBool("oauth.github", "ENABLED") {
+		OauthService.GitHub.Enabled = true
+		OauthService.GitHub.ClientId = Cfg.MustValue("oauth.github", "CLIENT_ID")
+		OauthService.GitHub.ClientSecret = Cfg.MustValue("oauth.github", "CLIENT_SECRET")
+		oauths = append(oauths, "GitHub")
+	}
+
+	log.Info("Oauth Service Enabled %s", oauths)
 }
 
 func NewConfigContext() {
@@ -303,4 +333,5 @@ func NewServices() {
 	newMailService()
 	newRegisterMailService()
 	newNotifyMailService()
+	newOauthService()
 }

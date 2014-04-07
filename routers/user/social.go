@@ -1,20 +1,20 @@
 // Copyright 2014 The Gogs Authors. All rights reserved.
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
+
 package user
 
 import (
 	"encoding/json"
 	"strconv"
 
+	"code.google.com/p/goauth2/oauth"
+
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/middleware"
-	//"github.com/gogits/gogs/modules/oauth2"
-
-	"code.google.com/p/goauth2/oauth"
-	"github.com/martini-contrib/oauth2"
+	"github.com/gogits/gogs/modules/oauth2"
 )
 
 type SocialConnector interface {
@@ -79,6 +79,10 @@ func SocialSignIn(ctx *middleware.Context, tokens oauth2.Tokens) {
 			Expiry:       tokens.ExpiryTime(),
 			Extra:        tokens.ExtraData(),
 		},
+	}
+	if len(tokens.Access()) == 0 {
+		log.Error("empty access")
+		return
 	}
 	var err error
 	var u *models.User
