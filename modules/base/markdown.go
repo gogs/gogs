@@ -133,8 +133,8 @@ func RenderSpecialLink(rawBytes []byte, urlPrefix string) []byte {
 }
 
 func RenderMarkdown(rawBytes []byte, urlPrefix string) []byte {
-	body := RenderSpecialLink(rawBytes, urlPrefix)
-	fmt.Println(string(body))
+	// body := RenderSpecialLink(rawBytes, urlPrefix)
+	// fmt.Println(string(body))
 	htmlFlags := 0
 	// htmlFlags |= gfm.HTML_USE_XHTML
 	// htmlFlags |= gfm.HTML_USE_SMARTYPANTS
@@ -146,10 +146,10 @@ func RenderMarkdown(rawBytes []byte, urlPrefix string) []byte {
 	htmlFlags |= gfm.HTML_GITHUB_BLOCKCODE
 	htmlFlags |= gfm.HTML_OMIT_CONTENTS
 	// htmlFlags |= gfm.HTML_COMPLETE_PAGE
-	// renderer := &CustomRender{
-	// 	Renderer:  gfm.HtmlRenderer(htmlFlags, "", ""),
-	// 	urlPrefix: urlPrefix,
-	// }
+	renderer := &CustomRender{
+		Renderer:  gfm.HtmlRenderer(htmlFlags, "", ""),
+		urlPrefix: urlPrefix,
+	}
 
 	// set up the parser
 	extensions := 0
@@ -162,7 +162,7 @@ func RenderMarkdown(rawBytes []byte, urlPrefix string) []byte {
 	extensions |= gfm.EXTENSION_SPACE_HEADERS
 	extensions |= gfm.EXTENSION_NO_EMPTY_LINE_BEFORE_BLOCK
 
-	// body = gfm.Markdown(body, renderer, extensions)
+	body := gfm.Markdown(rawBytes, renderer, extensions)
 	// fmt.Println(string(body))
 	return body
 }
