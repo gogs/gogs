@@ -27,6 +27,7 @@ func checkRunMode() {
 	switch base.Cfg.MustValue("", "RUN_MODE") {
 	case "prod":
 		martini.Env = martini.Prod
+		base.IsProdMode = true
 	case "test":
 		martini.Env = martini.Test
 	}
