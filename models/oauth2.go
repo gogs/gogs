@@ -1,9 +1,6 @@
 package models
 
-import (
-	"errors"
-	"fmt"
-)
+import "errors"
 
 // OT: Oauth2 Type
 const (
@@ -41,8 +38,7 @@ func GetOauth2(identity string) (oa *Oauth2, err error) {
 		return
 	}
 	if !exists {
-		err = fmt.Errorf("not exists oauth2: %s", identity)
-		return
+		return nil, ErrOauth2RecordNotExists
 	}
 	if oa.Uid == 0 {
 		return oa, ErrOauth2NotAssociatedWithUser
