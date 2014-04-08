@@ -29,7 +29,7 @@ More importantly, Gogs only needs one binary to setup your own project hosting o
 ## Features
 
 - Activity timeline
-- SSH/HTTPS(Clone only) protocol support.
+- SSH/HTTP(S) protocol support.
 - Register/delete/rename account.
 - Create/delete/watch/rename/transfer public repository.
 - Repository viewer.
