@@ -11,7 +11,6 @@ import (
 	"code.google.com/p/goauth2/oauth"
 
 	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/middleware"
 	"github.com/gogits/gogs/modules/oauth2"
@@ -85,7 +84,6 @@ func SocialSignIn(ctx *middleware.Context, tokens oauth2.Tokens) {
 		return
 	}
 	var err error
-	var u *models.User
 	if err = gh.Update(); err != nil {
 		// FIXME: handle error page
 		log.Error("connect with github error: %s", err)
@@ -93,20 +91,14 @@ func SocialSignIn(ctx *middleware.Context, tokens oauth2.Tokens) {
 	}
 	var soc SocialConnector = gh
 	log.Info("login: %s", soc.Name())
-	// FIXME: login here, user email to check auth, if not registe, then generate a uniq username
-	if u, err = models.GetOauth2User(soc.Identity()); err != nil {
-		u = &models.User{
-			Name:     soc.Name(),
-			Email:    soc.Email(),
-			Passwd:   "123456",
-			IsActive: !base.Service.RegisterEmailConfirm,
-		}
-		if u, err = models.RegisterUser(u); err != nil {
-			log.Error("register user: %v", err)
-			return
-		}
-		oa := &models.Oauth2{}
-		oa.Uid = u.Id
+	oa, err := models.GetOauth2(soc.Identity())
+	switch err {
+	case nil:
+		ctx.Session.Set("userId", oa.User.Id)
+		ctx.Session.Set("userName", oa.User.Name)
+	case models.ErrOauth2RecordNotExists:
+		oa = &models.Oauth2{}
+		oa.Uid = 0
 		oa.Type = soc.Type()
 		oa.Token = soc.Token()
 		oa.Identity = soc.Identity()
@@ -115,8 +107,10 @@ func SocialSignIn(ctx *middleware.Context, tokens oauth2.Tokens) {
 			log.Error("add oauth2 %v", err)
 			return
 		}
+	case models.ErrOauth2NotAssociatedWithUser:
+		// pass
 	}
-	ctx.Session.Set("userId", u.Id)
-	ctx.Session.Set("userName", u.Name)
+	ctx.Session.Set("socialId", oa.Id)
+	log.Info("socialId: %v", oa.Id)
 	ctx.Redirect("/")
 }
