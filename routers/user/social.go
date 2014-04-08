@@ -109,6 +109,9 @@ func SocialSignIn(ctx *middleware.Context, tokens oauth2.Tokens) {
 		}
 	case models.ErrOauth2NotAssociatedWithUser:
 		// pass
+	default:
+		log.Error(err) // FIXME: handle error page
+		return
 	}
 	ctx.Session.Set("socialId", oa.Id)
 	log.Info("socialId: %v", oa.Id)
