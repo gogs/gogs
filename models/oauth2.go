@@ -1,6 +1,9 @@
 package models
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+)
 
 // OT: Oauth2 Type
 const (
@@ -9,12 +12,18 @@ const (
 	OT_TWITTER
 )
 
+var (
+	ErrOauth2RecordNotExists       = errors.New("not exists oauth2 record")
+	ErrOauth2NotAssociatedWithUser = errors.New("not associated with user")
+)
+
 type Oauth2 struct {
-	Uid      int64  `xorm:"pk"`               // userId
+	Id       int64
+	Uid      int64  `xorm:"pk"` // userId
+	User     *User  `xorm:"-"`
 	Type     int    `xorm:"pk unique(oauth)"` // twitter,github,google...
 	Identity string `xorm:"pk unique(oauth)"` // id..
 	Token    string `xorm:"VARCHAR(200) not null"`
-	//RefreshTime time.Time `xorm:"created"`
 }
 
 func AddOauth2(oa *Oauth2) (err error) {
@@ -24,8 +33,8 @@ func AddOauth2(oa *Oauth2) (err error) {
 	return nil
 }
 
-func GetOauth2User(identity string) (u *User, err error) {
-	oa := &Oauth2{}
+func GetOauth2(identity string) (oa *Oauth2, err error) {
+	oa = &Oauth2{}
 	oa.Identity = identity
 	exists, err := orm.Get(oa)
 	if err != nil {
@@ -35,5 +44,9 @@ func GetOauth2User(identity string) (u *User, err error) {
 		err = fmt.Errorf("not exists oauth2: %s", identity)
 		return
 	}
-	return GetUserById(oa.Uid)
+	if oa.Uid == 0 {
+		return oa, ErrOauth2NotAssociatedWithUser
+	}
+	oa.User, err = GetUserById(oa.Uid)
+	return
 }
