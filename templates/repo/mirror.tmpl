@@ -16,7 +16,7 @@
         <div class="form-group">
             <label class="col-md-2 control-label">URL<strong class="text-danger">*</strong></label>
             <div class="col-md-8">
-                <input name="url" type="text" class="form-control" placeholder="Type your imported repository url link" required="required">
+                <input name="url" type="text" class="form-control" placeholder="Type your mirror repository url link" required="required">
             </div>
         </div>
         <div class="form-group">
@@ -71,39 +71,8 @@
         </div>
 
         <div class="form-group">
-            <label class="col-md-2 control-label">Language</label>
-            <div class="col-md-8">
-                <select class="form-control" name="language">
-                    <option value="">Select a language</option>
-                    {{range .LanguageIgns}}<option value="{{.}}">{{.}}</option>{{end}}
-                </select>
-            </div>
-        </div>
-
-        <div class="form-group">
-            <label class="col-md-2 control-label">License</label>
-            <div class="col-md-8">
-                <select class="form-control" name="license">
-                    <option value="">Select a license</option>
-                    {{range .Licenses}}<option value="{{.}}">{{.}}</option>{{end}}
-                </select>
-            </div>
-        </div>
-
-        <!--<div class="form-group">
-            <div class="col-md-8 col-md-offset-2">
-                <div class="checkbox">
-                    <label>
-                        <input type="checkbox" name="initReadme" {{if .initReadme}}checked{{end}}>
-                        <strong>Initialize this repository with a README</strong>
-                    </label>
-                </div>
-            </div>
-        </div>-->
-
-        <div class="form-group">
             <div class="col-md-offset-2 col-md-8">
-                <button type="submit" class="btn btn-lg btn-primary">Import repository</button>
+                <button type="submit" class="btn btn-lg btn-primary">Mirror repository</button>
                 <a href="/" class="text-danger">Cancel</a>
             </div>
         </div>
