@@ -309,6 +309,18 @@ html, body {
     height: 8em;
 }
 
+#repo-import-auth{
+    width: 100%;
+    margin-top: 48px;
+    box-sizing: border-box;
+}
+
+#repo-import-auth .form-group{
+    box-sizing: border-box;
+    margin-left: 0;
+    margin-right: 0;
+}
+
 /* gogits user setting */
 
 #user-setting-nav > h4, #user-setting-container > h4, #user-setting-container > div > h4,

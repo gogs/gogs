@@ -55,6 +55,38 @@ func Create(ctx *middleware.Context, form auth.CreateRepoForm) {
 	ctx.Handle(200, "repo.Create", err)
 }
 
+func Import(ctx *middleware.Context, form auth.CreateRepoForm) {
+	ctx.Data["Title"] = "Import repository"
+	ctx.Data["PageIsNewRepo"] = true // For navbar arrow.
+	ctx.Data["LanguageIgns"] = models.LanguageIgns
+	ctx.Data["Licenses"] = models.Licenses
+
+	if ctx.Req.Method == "GET" {
+		ctx.HTML(200, "repo/import")
+		return
+	}
+
+	if ctx.HasError() {
+		ctx.HTML(200, "repo/import")
+		return
+	}
+
+	_, err := models.CreateRepository(ctx.User, form.RepoName, form.Description,
+		form.Language, form.License, form.Visibility == "private", form.InitReadme == "on")
+	if err == nil {
+		log.Trace("%s Repository created: %s/%s", ctx.Req.RequestURI, ctx.User.LowerName, form.RepoName)
+		ctx.Redirect("/" + ctx.User.Name + "/" + form.RepoName)
+		return
+	} else if err == models.ErrRepoAlreadyExist {
+		ctx.RenderWithErr("Repository name has already been used", "repo/import", &form)
+		return
+	} else if err == models.ErrRepoNameIllegal {
+		ctx.RenderWithErr(models.ErrRepoNameIllegal.Error(), "repo/import", &form)
+		return
+	}
+	ctx.Handle(200, "repo.Import", err)
+}
+
 func Single(ctx *middleware.Context, params martini.Params) {
 	branchName := ctx.Repo.BranchName
 	commitId := ctx.Repo.CommitId
