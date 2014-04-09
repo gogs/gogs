@@ -91,7 +91,7 @@ func runWeb(*cli.Context) {
 
 	m.Group("/user", func(r martini.Router) {
 		r.Any("/login", binding.BindIgnErr(auth.LogInForm{}), user.SignIn)
-		r.Any("/login/github", oauth2.LoginRequired, user.SocialSignIn)
+		r.Any("/login/github", user.SocialSignIn)
 		r.Any("/sign_up", binding.BindIgnErr(auth.RegisterForm{}), user.SignUp)
 		r.Any("/forget_password", user.ForgotPasswd)
 		r.Any("/reset_password", user.ResetPasswd)
@@ -116,6 +116,7 @@ func runWeb(*cli.Context) {
 	m.Get("/user/:username", ignSignIn, user.Profile)
 
 	m.Any("/repo/create", reqSignIn, binding.BindIgnErr(auth.CreateRepoForm{}), repo.Create)
+	m.Any("/repo/import", reqSignIn, binding.BindIgnErr(auth.CreateRepoForm{}), repo.Import)
 
 	adminReq := middleware.Toggle(&middleware.ToggleOptions{SignInRequire: true, AdminRequire: true})
 
