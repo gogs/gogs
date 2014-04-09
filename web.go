@@ -116,7 +116,7 @@ func runWeb(*cli.Context) {
 	m.Get("/user/:username", ignSignIn, user.Profile)
 
 	m.Any("/repo/create", reqSignIn, binding.BindIgnErr(auth.CreateRepoForm{}), repo.Create)
-	m.Any("/repo/import", reqSignIn, binding.BindIgnErr(auth.CreateRepoForm{}), repo.Import)
+	m.Any("/repo/mirror", reqSignIn, binding.BindIgnErr(auth.CreateRepoForm{}), repo.Mirror)
 
 	adminReq := middleware.Toggle(&middleware.ToggleOptions{SignInRequire: true, AdminRequire: true})
 

@@ -55,36 +55,34 @@ func Create(ctx *middleware.Context, form auth.CreateRepoForm) {
 	ctx.Handle(200, "repo.Create", err)
 }
 
-func Import(ctx *middleware.Context, form auth.CreateRepoForm) {
-	ctx.Data["Title"] = "Import repository"
+func Mirror(ctx *middleware.Context, form auth.CreateRepoForm) {
+	ctx.Data["Title"] = "Mirror repository"
 	ctx.Data["PageIsNewRepo"] = true // For navbar arrow.
-	ctx.Data["LanguageIgns"] = models.LanguageIgns
-	ctx.Data["Licenses"] = models.Licenses
 
 	if ctx.Req.Method == "GET" {
-		ctx.HTML(200, "repo/import")
+		ctx.HTML(200, "repo/mirror")
 		return
 	}
 
 	if ctx.HasError() {
-		ctx.HTML(200, "repo/import")
+		ctx.HTML(200, "repo/mirror")
 		return
 	}
 
 	_, err := models.CreateRepository(ctx.User, form.RepoName, form.Description,
-		form.Language, form.License, form.Visibility == "private", form.InitReadme == "on")
+		"", form.License, form.Visibility == "private", false)
 	if err == nil {
 		log.Trace("%s Repository created: %s/%s", ctx.Req.RequestURI, ctx.User.LowerName, form.RepoName)
 		ctx.Redirect("/" + ctx.User.Name + "/" + form.RepoName)
 		return
 	} else if err == models.ErrRepoAlreadyExist {
-		ctx.RenderWithErr("Repository name has already been used", "repo/import", &form)
+		ctx.RenderWithErr("Repository name has already been used", "repo/mirror", &form)
 		return
 	} else if err == models.ErrRepoNameIllegal {
-		ctx.RenderWithErr(models.ErrRepoNameIllegal.Error(), "repo/import", &form)
+		ctx.RenderWithErr(models.ErrRepoNameIllegal.Error(), "repo/mirror", &form)
 		return
 	}
-	ctx.Handle(200, "repo.Import", err)
+	ctx.Handle(200, "repo.Mirror", err)
 }
 
 func Single(ctx *middleware.Context, params martini.Params) {
