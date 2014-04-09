@@ -444,6 +444,32 @@ html, body {
     margin-right: 1em;
 }
 
+#user-dashboard-repo-new .btn-sm.dropdown-toggle {
+    padding: 3px 8px;
+}
+
+#user-dashboard-repo-new .dropdown-menu {
+    padding: 0;
+    margin: 0;
+}
+
+#user-dashboard-repo-new ul {
+    margin: 0;
+    width: 200px;
+}
+
+#user-dashboard-repo-new li a {
+    line-height: 36px;
+    display: block;
+    padding: 0 18px;
+    color: #444;
+}
+
+#user-dashboard-repo-new li a:hover {
+    background: #0093c4;
+    color: #FFF;
+}
+
 /* gogits repo single page */
 
 #body-nav.repo-nav {
@@ -1372,6 +1398,6 @@ html, body {
     margin: 16px 0;
 }
 
-#release-preview{
+#release-preview {
     margin: 6px 0;
 }
