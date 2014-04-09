@@ -29,7 +29,20 @@
     <div id="feed-right" class="col-md-4">
         <div class="panel panel-default repo-panel">
             <div class="panel-heading">Your Repositories
-                <a class="btn btn-success pull-right btn-sm" href="/repo/create"><i class="fa fa-plus-square"></i>New Repo</a>
+                <div class="btn-group pull-right" id="user-dashboard-repo-new">
+                    <button type="button" class="btn btn-success btn-sm"><i class="fa fa-plus-square"></i>New</button>
+                    <button type="button" class="btn btn-success btn-sm dropdown-toggle" data-toggle="dropdown">
+                        <span class="caret"></span>
+                    </button>
+                    <div class="dropdown-menu dropdown-menu-right">
+                       <ul class="list-unstyled">
+                           <li><a href="/repo/create"><i class="fa fa-book"></i>Repository</a></li>
+                           <li><a href="#"><i class="fa fa-clipboard"></i>Mirror</a></li>
+                           <li><a href="#"><i class="fa fa-users"></i>Organization</a></li>
+                       </ul>
+
+                    </div>
+                </div>
             </div>
             <div class="panel-body">
                 <ul class="list-group">{{range .MyRepos}}
