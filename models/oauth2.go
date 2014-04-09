@@ -1,3 +1,7 @@
+// Copyright 2014 The Gogs Authors. All rights reserved.
+// Use of this source code is governed by a MIT-style
+// license that can be found in the LICENSE file.
+
 package models
 
 import "errors"
@@ -16,7 +20,7 @@ var (
 
 type Oauth2 struct {
 	Id       int64
-	Uid      int64  `xorm:"pk"` // userId
+	Uid      int64  // userId
 	User     *User  `xorm:"-"`
 	Type     int    `xorm:"pk unique(oauth)"` // twitter,github,google...
 	Identity string `xorm:"pk unique(oauth)"` // id..
@@ -31,18 +35,14 @@ func AddOauth2(oa *Oauth2) (err error) {
 }
 
 func GetOauth2(identity string) (oa *Oauth2, err error) {
-	oa = &Oauth2{}
-	oa.Identity = identity
-	exists, err := orm.Get(oa)
+	oa = &Oauth2{Identity: identity}
+	isExist, err := orm.Get(oa)
 	if err != nil {
 		return
-	}
-	if !exists {
+	} else if !isExist {
 		return nil, ErrOauth2RecordNotExists
-	}
-	if oa.Uid == 0 {
+	} else if oa.Uid == 0 {
 		return oa, ErrOauth2NotAssociatedWithUser
 	}
-	oa.User, err = GetUserById(oa.Uid)
-	return
+	return GetUserById(oa.Uid)
 }
