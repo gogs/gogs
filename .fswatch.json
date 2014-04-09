@@ -8,6 +8,5 @@
     ],
     "env": {
         "POWERED_BY": "github.com/shxsun/fswatch"
-    },
-    "enable-restart": false
+    }
 }
