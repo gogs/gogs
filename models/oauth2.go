@@ -15,8 +15,8 @@ var (
 )
 
 type Oauth2 struct {
-	Id       int64
-	Uid      int64  `xorm:"pk"` // userId
+	Id       int64  `xorm:"default 1"`
+	Uid      int64  `xorm:"pk"` // UserId
 	User     *User  `xorm:"-"`
 	Type     int    `xorm:"pk unique(oauth)"` // twitter,github,google...
 	Identity string `xorm:"pk unique(oauth)"` // id..
