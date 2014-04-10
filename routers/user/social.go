@@ -93,11 +93,10 @@ func SocialSignIn(ctx *middleware.Context, tokens oauth2.Tokens) {
 		log.Info("login soc id: %v", socid)
 		return
 	}
+
 	config := &oauth.Config{
-		//ClientId: base.OauthService.Github.ClientId,
-		//ClientSecret: base.OauthService.Github.ClientSecret, // FIXME: I don't know why compile error here
-		ClientId:     "09383403ff2dc16daaa1",
-		ClientSecret: "0e4aa0c3630df396cdcea01a9d45cacf79925fea",
+		ClientId:     base.OauthService.GitHub.ClientId,
+		ClientSecret: base.OauthService.GitHub.ClientSecret,
 		RedirectURL:  strings.TrimSuffix(base.AppUrl, "/") + ctx.Req.URL.RequestURI(),
 		Scope:        base.OauthService.GitHub.Scopes,
 		AuthURL:      "https://github.com/login/oauth/authorize",
