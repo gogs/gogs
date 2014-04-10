@@ -9,6 +9,7 @@
 		<meta name="description" content="Gogs(Go Git Service) is a GitHub-like clone in the Go Programming Language" />
 		<meta name="keywords" content="go, git">
 		<meta name="_csrf" content="{{.CsrfToken}}" />
+		{{if .Repository.IsGoget}}<meta name="go-import" content="{{AppDomain}} git {{.CloneLink.HTTPS}}">{{end}}
 
 		 <!-- Stylesheets -->
 		{{if IsProdMode}}
