@@ -11,7 +11,7 @@
                     <li class="{{if .IsRepoToolbarIssues}}active{{end}}"><a href="{{.RepoLink}}/issues">{{if .Repository.NumOpenIssues}}<span class="badge">{{.Repository.NumOpenIssues}}</span> {{end}}Issues <!--<span class="badge">42</span>--></a></li>
                     {{if .IsRepoToolbarIssues}}
                     <li class="tmp">{{if .IsRepoToolbarIssuesList}}<a href="{{.RepoLink}}/issues/new"><button class="btn btn-primary btn-sm">New Issue</button>
-                    </a>{{else}}<a href="{{.RepoLink}}/issues"><button class="btn btn-primary btn-sm">Issues List</button></a>{{end}}</li>
+                    </a>{{end}}</li>
                     {{end}}
                     <li class="{{if .IsRepoToolbarReleases}}active{{end}}"><a href="{{.RepoLink}}/releases">{{if .Repository.NumReleases}}<span class="badge">{{.Repository.NumReleases}}</span> {{end}}Releases</a></li>
                     {{if .IsRepoToolbarReleases}}

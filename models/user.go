@@ -289,8 +289,18 @@ func DeleteUser(user *User) error {
 
 	// TODO: check issues, other repos' commits
 
+	// Delete all followers.
+	if _, err = orm.Delete(&Follow{FollowId: user.Id}); err != nil {
+		return err
+	}
+
 	// Delete all feeds.
 	if _, err = orm.Delete(&Action{UserId: user.Id}); err != nil {
+		return err
+	}
+
+	// Delete all watches.
+	if _, err = orm.Delete(&Watch{UserId: user.Id}); err != nil {
 		return err
 	}
 
@@ -316,7 +326,6 @@ func DeleteUser(user *User) error {
 	}
 
 	_, err = orm.Delete(user)
-	// TODO: delete and update follower information.
 	return err
 }
 

@@ -43,6 +43,7 @@ var (
 	AppName      string
 	AppLogo      string
 	AppUrl       string
+	IsProdMode   bool
 	Domain       string
 	SecretKey    string
 	RunUser      string
