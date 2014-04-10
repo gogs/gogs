@@ -74,9 +74,12 @@ func runWeb(*cli.Context) {
 	ignSignIn := middleware.Toggle(&middleware.ToggleOptions{SignInRequire: base.Service.RequireSignInView})
 	reqSignOut := middleware.Toggle(&middleware.ToggleOptions{SignOutRequire: true})
 
+	bindIgnErr := binding.BindIgnErr
+
 	// Routers.
 	m.Get("/", ignSignIn, routers.Home)
-	m.Any("/install", binding.BindIgnErr(auth.InstallForm{}), routers.Install)
+	m.Get("/install", bindIgnErr(auth.InstallForm{}), routers.InstallRouter.Get)
+	m.Post("/install", bindIgnErr(auth.InstallForm{}), routers.InstallRouter.Post)
 	m.Get("/issues", reqSignIn, user.Issues)
 	m.Get("/pulls", reqSignIn, user.Pulls)
 	m.Get("/stars", reqSignIn, user.Stars)
