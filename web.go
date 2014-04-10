@@ -11,11 +11,10 @@ import (
 
 	"github.com/codegangsta/cli"
 	"github.com/go-martini/martini"
+
 	// "github.com/martini-contrib/oauth2"
 	// "github.com/martini-contrib/sessions"
-
 	"github.com/gogits/binding"
-
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/avatar"
 	"github.com/gogits/gogs/modules/base"
@@ -74,6 +73,11 @@ func runWeb(*cli.Context) {
 
 	reqSignIn := middleware.Toggle(&middleware.ToggleOptions{SignInRequire: true})
 	ignSignIn := middleware.Toggle(&middleware.ToggleOptions{SignInRequire: base.Service.RequireSignInView})
+	ignSignInAndCsrf := middleware.Toggle(&middleware.ToggleOptions{
+		SignInRequire: base.Service.RequireSignInView,
+		DisableCsrf:   true,
+	})
+
 	reqSignOut := middleware.Toggle(&middleware.ToggleOptions{SignOutRequire: true})
 
 	// Routers.
@@ -164,7 +168,7 @@ func runWeb(*cli.Context) {
 	m.Group("/:username", func(r martini.Router) {
 		r.Any("/:reponame/**", repo.Http)
 		r.Get("/:reponame", middleware.RepoAssignment(true, true, true), repo.Single)
-	}, ignSignIn)
+	}, ignSignInAndCsrf)
 
 	// Not found handler.
 	m.NotFound(routers.NotFound)
