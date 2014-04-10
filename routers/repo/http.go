@@ -82,7 +82,8 @@ func Http(ctx *middleware.Context, params martini.Params) {
 			return
 		}
 
-		newUser := &models.User{Passwd: passwd}
+		newUser := &models.User{Passwd: passwd, Salt: authUser.Salt}
+
 		newUser.EncodePasswd()
 		if authUser.Passwd != newUser.Passwd {
 			ctx.Handle(401, "no basic auth and digit auth", nil)
@@ -112,7 +113,10 @@ func Http(ctx *middleware.Context, params martini.Params) {
 		}
 	}
 
-	config := Config{base.RepoRootPath, "git", true, true}
+	config := Config{base.RepoRootPath, "git", true, true, func(rpc string, input []byte) {
+		//fmt.Println("rpc:", rpc)
+		//fmt.Println("input:", string(input))
+	}}
 
 	handler := HttpBackend(&config)
 	handler(ctx.ResponseWriter, ctx.Req)
@@ -135,11 +139,11 @@ type route struct {
 }
 
 type Config struct {
-	ReposRoot     string
-	GitBinPath    string
-	UploadPack    bool
-	ReceivePack   bool
-	OnPushSucceed func()
+	ReposRoot   string
+	GitBinPath  string
+	UploadPack  bool
+	ReceivePack bool
+	OnSucceed   func(rpc string, input []byte)
 }
 
 type handler struct {
@@ -243,7 +247,9 @@ func serviceRpc(rpc string, hr handler) {
 	io.Copy(w, stdout)
 	cmd.Wait()
 
-	hr.Config.OnPushSucceed()
+	if hr.Config.OnSucceed != nil {
+		hr.Config.OnSucceed(rpc, input)
+	}
 }
 
 func getInfoRefs(hr handler) {
