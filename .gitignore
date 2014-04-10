@@ -33,3 +33,4 @@ _testmain.go
 *.exe~
 gogs
 __pycache__
+*.pem
