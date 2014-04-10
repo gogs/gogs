@@ -1,0 +1,8 @@
+<div id="user-setting-nav" class="col-md-2 admin-nav">
+    <ul class="list-group">
+        <li class="list-group-item{{if .PageIsDashboard}} active{{end}}"><a href="/admin"><i class="fa fa-tachometer fa-lg"></i> Dashboard</a></li>
+        <li class="list-group-item{{if .PageIsUsers}} active{{end}}"><a href="/admin/users"><i class="fa fa-users fa-lg"></i> Users</a></li>
+        <li class="list-group-item{{if .PageIsRepos}} active{{end}}"><a href="/admin/repos"><i class="fa fa-book fa-lg"></i> Repositories</a></li>
+        <li class="list-group-item{{if .PageIsConfig}} active{{end}}"><a href="/admin/config"><i class="fa fa-cogs fa-lg"></i> Configuration</a></li>
+    </ul>
+</div>

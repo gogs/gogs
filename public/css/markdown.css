@@ -1,0 +1,385 @@
+.markdown {
+  font-size: 14px;
+}
+
+.markdown a {
+  color: #4183C4;
+}
+
+.markdown h1,
+.markdown h2,
+.markdown h3,
+.markdown h4,
+.markdown h5,
+.markdown h6 {
+  line-height: 1.7;
+  padding: 15px 0 0;
+  margin: 0 0 15px;
+  color: #444;
+  font-weight: bold;
+}
+
+.markdown h1,
+.markdown h2 {
+  border-bottom: 1px solid #EEE;
+}
+
+.markdown h2 {
+  border-bottom: 1px solid #EEE;
+}
+
+.markdown h1 {
+  color: #000;
+  font-size: 33px
+}
+
+.markdown h2 {
+  color: #333;
+  font-size: 28px
+}
+
+.markdown h3 {
+  font-size: 22px
+}
+
+.markdown h4 {
+  font-size: 18px
+}
+
+.markdown h5 {
+  font-size: 14px
+}
+
+.markdown h6 {
+  font-size: 14px
+}
+
+.markdown table {
+  border-collapse: collapse;
+  border-spacing: 0;
+  display: block;
+  overflow: auto;
+  width: 100%;
+  margin: 0 0 9px;
+}
+
+.markdown table th {
+  font-weight: 700
+}
+
+.markdown table th,
+.markdown table td {
+  border: 1px solid #DDD;
+  padding: 6px 13px;
+}
+
+.markdown table tr {
+  background-color: #FFF;
+  border-top: 1px solid #CCC;
+}
+
+.markdown table tr:nth-child(2n) {
+  background-color: #F8F8F8
+}
+
+.markdown li {
+  line-height: 1.6;
+  margin-top: 6px;
+}
+
+.markdown li:first-child {
+  margin-top: 0;
+}
+
+.markdown dl dt {
+  font-style: italic;
+  margin-top: 9px;
+}
+
+.markdown dl dd {
+  margin: 0 0 9px;
+  padding: 0 9px;
+}
+
+.markdown blockquote,
+.markdown blockquote p {
+  font-size: 14px;
+  background-color: #f5f5f5;
+}
+
+.markdown > pre {
+  line-height: 1.6;
+  overflow: auto;
+  background: #f8f8f8;
+  border: 1px solid #ddd;
+  padding: 0;
+}
+
+.markdown > pre.linenums {
+  padding: 0;
+}
+
+.markdown > pre > ol.linenums {
+  list-style: none;
+  padding: 0;
+}
+
+.markdown > pre > ol.linenums > li {
+  margin-top: 2px;
+}
+
+.markdown > pre.nums-style > ol.linenums {
+  list-style-type: decimal;
+  padding: 0 0 0 40px;
+  -webkit-box-shadow: inset 40px 0 0 #f5f5f5, inset 41px 0 0 #ccc;
+  box-shadow: inset 40px 0 0 #f5f5f5, inset 41px 0 0 #ccc;
+}
+
+.markdown > pre > code {
+  white-space: pre;
+  word-wrap: normal;
+}
+
+.markdown > pre > ol.linenums > li {
+  padding: 0 10px;
+}
+
+.markdown > pre > ol.linenums > li:first-child {
+  padding-top: 12px;
+}
+
+.markdown > pre > ol.linenums > li:last-child {
+  padding-bottom: 12px;
+}
+
+.markdown > pre.nums-style > ol.linenums > li {
+  border-left: 1px solid #ddd;
+}
+
+.markdown hr {
+  border: none;
+  color: #ccc;
+  height: 4px;
+  padding: 0;
+  margin: 15px 0;
+  border-bottom: 2px solid #EEE;
+}
+
+.markdown blockquote:last-child,
+.markdown ul:last-child,
+.markdown ol:last-child,
+.markdown > pre:last-child,
+.markdown > pre:last-child,
+.markdown p:last-child {
+  margin-bottom: 0;
+}
+
+.markdown img {
+  max-width: 100%;
+}
+
+.markdown .btn {
+  color: #fff;
+}
+
+.markdown .anchor-wrap {
+  /*margin-top: -50px;*/
+  /*padding-top: 50px;*/
+}
+
+.markdown h1 a, .markdown h2 a, .markdown h3 a {
+  text-decoration: none;
+}
+
+.markdown h1 a.anchor,
+.markdown h2 a.anchor,
+.markdown h3 a.anchor,
+.markdown h4 a.anchor,
+.markdown h5 a.anchor,
+.markdown h6 a.anchor {
+  text-decoration:none;
+  line-height:1;
+  padding-left:0;
+  margin-left:5px;
+  top:15%;
+}
+.markdown a span.octicon {
+  font-size: 16px;
+  font-family: "FontAwesome";
+  line-height: 1;
+  display: inline-block;
+  text-decoration: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+.markdown a span.octicon-link {
+  display: none;
+  color: #000;
+}
+
+.markdown a span.octicon-link:before {
+  content: "\f0c1";
+}
+
+.markdown h1:hover .octicon-link,
+.markdown h2:hover .octicon-link,
+.markdown h3:hover .octicon-link,
+.markdown h4:hover .octicon-link,
+.markdown h5:hover .octicon-link,
+.markdown h6:hover .octicon-link {
+  display:inline-block
+}
+
+/* Author: jmblog */
+/* Project: https://github.com/jmblog/color-themes-for-google-code-prettify */
+/* GitHub Theme */
+/* Pretty printing styles. Used with prettify.js. */
+/* SPAN elements with the classes below are added by prettyprint. */
+/* plain text */
+.pln {
+  color: #333333;
+}
+
+@media screen {
+  /* string content */
+  .str {
+    color: #dd1144;
+  }
+
+  /* a keyword */
+  .kwd {
+    color: #333333;
+  }
+
+  /* a comment */
+  .com {
+    color: #999988;
+    font-style: italic;
+  }
+
+  /* a type name */
+  .typ {
+    color: #445588;
+  }
+
+  /* a literal value */
+  .lit {
+    color: #445588;
+  }
+
+  /* punctuation */
+  .pun {
+    color: #333333;
+  }
+
+  /* lisp open bracket */
+  .opn {
+    color: #333333;
+  }
+
+  /* lisp close bracket */
+  .clo {
+    color: #333333;
+  }
+
+  /* a markup tag name */
+  .tag {
+    color: navy;
+  }
+
+  /* a markup attribute name */
+  .atn {
+    color: teal;
+  }
+
+  /* a markup attribute value */
+  .atv {
+    color: #dd1144;
+  }
+
+  /* a declaration */
+  .dec {
+    color: #333333;
+  }
+
+  /* a variable name */
+  .var {
+    color: teal;
+  }
+
+  /* a function name */
+  .fun {
+    color: #990000;
+  }
+}
+/* Use higher contrast and text-weight for printable form. */
+@media print, projection {
+  .str {
+    color: #006600;
+  }
+
+  .kwd {
+    color: #006;
+    font-weight: bold;
+  }
+
+  .com {
+    color: #600;
+    font-style: italic;
+  }
+
+  .typ {
+    color: #404;
+    font-weight: bold;
+  }
+
+  .lit {
+    color: #004444;
+  }
+
+  .pun, .opn, .clo {
+    color: #444400;
+  }
+
+  .tag {
+    color: #006;
+    font-weight: bold;
+  }
+
+  .atn {
+    color: #440044;
+  }
+
+  .atv {
+    color: #006600;
+  }
+}
+
+/* Specify class=linenums on a pre to get line numbering */
+ol.linenums {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+/* IE indents via margin-left */
+li.L0,
+li.L1,
+li.L2,
+li.L3,
+li.L4,
+li.L5,
+li.L6,
+li.L7,
+li.L8,
+li.L9 {
+  /* */
+}
+
+/* Alternate shading for lines */
+li.L1,
+li.L3,
+li.L5,
+li.L7,
+li.L9 {
+  /* */
+}

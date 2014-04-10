@@ -1,0 +1,40 @@
+{{template "base/head" .}}
+{{template "base/navbar" .}}
+{{template "repo/nav" .}}
+{{template "repo/toolbar" .}}
+<div id="body" class="container">
+    <div id="source">
+        <div class="source-toolbar">
+            {{ $n := len .Treenames}}
+            {{if not .IsFile}}<button class="btn btn-default pull-right hidden"><i class="fa fa-plus-square"></i>Add File</button>{{end}}
+            <div class="dropdown branch-switch">
+                <a href="#" class="btn btn-success dropdown-toggle" data-toggle="dropdown"><i class="fa fa-chain"></i>{{if .IsBranch}}{{.BranchName}}{{else}}{{ShortSha .CommitId}}{{end}}&nbsp;&nbsp;
+                    <b class="caret"></b></a>
+                <ul class="dropdown-menu">
+                    {{range .Branches}}
+                    <li><a {{if eq . $.BranchName}}class="current" {{end}}href="/{{$.Username}}/{{$.Reponame}}/src/{{.}}">{{.}}</a></li>
+                    {{end}}
+                </ul>
+            </div>
+            {{ $l := Subtract $n 1}}
+            <ol class="breadcrumb">
+                <li class="root dir">
+                    <a href="{{.BranchLink}}">{{.Repository.Name}}</a></li>
+                {{range $i, $v := .Treenames}}
+                <li class="dir">
+                    {{if eq $i $l}}{{$v}}
+                    {{else}}
+                    <a href="{{$.BranchLink}}/{{index $.Paths $i}}">{{$v}}</a>&nbsp;
+                    {{end}}
+                </li>
+                {{end}}
+            </ol>
+        </div>
+        {{if .IsFile}}
+            {{template "repo/single_file" .}}
+        {{else}}
+            {{template "repo/single_list" .}}
+        {{end}}
+    </div>
+</div>
+{{template "base/footer" .}}

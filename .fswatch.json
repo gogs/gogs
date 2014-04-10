@@ -1,0 +1,12 @@
+{
+    "paths": ["."],
+    "depth": 2,
+    "exclude": [],
+    "include": ["\\.go$", "\\.ini$"],
+    "command": [
+        "bash", "-c", "go build && ./gogs web"
+    ],
+    "env": {
+        "POWERED_BY": "github.com/shxsun/fswatch"
+    }
+}

@@ -1,0 +1,66 @@
+{{template "base/head" .}}
+{{template "base/navbar" .}}
+<div id="body" class="container" data-page="user">
+    <div id="user-profile" class="col-md-3">
+        <div class="profile-avatar text-center">
+            <a href="http://gravatar.com/emails/" class="center-block" data-toggle="tooltip" data-placement="bottom" title="Change your avatar at gravatar.com">
+                <img id="user-avatar" src="{{.Owner.AvatarLink}}?s=200" alt="user-avatar" title="{{.Owner.Name}}"/>
+            </a>
+            <span id="user-name" class="center-block">{{.Owner.Name}}</span>
+        </div>
+        <div class="profile-info">
+            <ul class="list-group">
+                {{if .Owner.Location}}
+                    <li class="list-group-item"><i class="fa fa-thumb-tack"></i>{{.Owner.Location}}</li>
+                {{end}}
+                {{if .Owner.Email}}
+                    <li class="list-group-item"><i class="fa fa-envelope"></i><a href="mailto:{{.Owner.Email}}">{{.Owner.Email}}</a></li>
+                {{end}}
+                {{if .Owner.Website}}
+                    <li class="list-group-item"><i class="fa fa-link"></i><a target="_blank" href="{{.Owner.Website}}">{{.Owner.Website}}</a></li>
+                {{end}}
+                <li class="list-group-item"><i class="fa fa-clock-o"></i>Joined on {{DateFormat .Owner.Created "M d, Y"}}</li>
+            </ul>
+        </div>
+    </div>
+    <div id="user-activity" class="col-md-9">
+        <ul class="nav nav-tabs" id="user-act-tabs">
+            <li{{if not .TabName}} class="active"{{end}}><a href="{{.Owner.HomeLink}}"><i class="fa fa-gittip"></i>Repositories</a></li>
+            <li{{if eq .TabName "activity"}} class="active"{{end}}><a href="{{.Owner.HomeLink}}?tab=activity"><i class="fa fa-rss"></i>Public Activity</a></li>
+        </ul>
+        <div class="tab-content">
+            {{if eq .TabName "activity"}}
+            <div class="tab-pane active">
+                <ul class="list-unstyled activity-list">
+                {{range .Feeds}}
+                    <li>
+                        <i class="icon fa fa-{{ActionIcon .OpType}}"></i>
+                        <div class="info"><span class="meta">{{TimeSince .Created}}</span><br>{{ActionDesc . | str2html}}</div>
+                        <span class="clearfix"></span>
+                    </li>
+                {{else}}
+                    <li>No any public activity yet.</li>
+                {{end}}
+                </ul>
+            </div>
+            {{else}}
+            {{$owner := .Owner}}
+            <div class="tab-pane active">
+                <ul class="list-unstyled repo-list">
+                {{range .Repos}}
+                    <li>
+                        <div class="meta pull-right"><!-- <i class="fa fa-star"></i> {{.NumStars}} --> <i class="fa fa-code-fork"></i> {{.NumForks}}</div>
+                        <h4>
+                            <a href="/{{$owner.Name}}/{{.Name}}">{{.Name}}</a>
+                        </h4>
+                        <p class="desc">{{.Description}}</p>
+                        <div class="info">Last updated {{.Updated|TimeSince}}</div>
+                    </li>
+                {{end}}
+                </ul>
+            </div>
+            {{end}}
+        </div>
+    </div>
+</div>
+{{template "base/footer" .}}

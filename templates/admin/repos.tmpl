@@ -1,0 +1,42 @@
+{{template "base/head" .}}
+{{template "base/navbar" .}}
+<div id="body" class="container" data-page="admin">
+    {{template "admin/nav" .}}
+    <div id="admin-container" class="col-md-10">
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                Repository Management
+            </div>
+
+            <div class="panel-body">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Id</th>
+                            <th>Owner</th>
+                            <th>Name</th>
+                            <th>Private</th>
+                            <th>Watches</th>
+                            <th>Forks</th>
+                            <th>Created</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {{range .Repos}}
+                        <tr>
+                            <td>{{.Id}}</td>
+                            <th>{{.UserName}}</th>
+                            <td><a href="/{{.UserName}}/{{.Name}}">{{.Name}}</a></td>
+                            <td><i class="fa fa{{if .IsPrivate}}-check{{end}}-square-o"></i></td>
+                            <td>{{.NumWatches}}</td>
+                            <td>{{.NumForks}}</td>
+                            <td>{{DateFormat .Created "M d, Y"}}</td>
+                        </tr>
+                        {{end}}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{{template "base/footer" .}}
