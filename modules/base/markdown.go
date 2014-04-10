@@ -140,7 +140,7 @@ func RenderMarkdown(rawBytes []byte, urlPrefix string) []byte {
 	// htmlFlags |= gfm.HTML_USE_SMARTYPANTS
 	// htmlFlags |= gfm.HTML_SMARTYPANTS_FRACTIONS
 	// htmlFlags |= gfm.HTML_SMARTYPANTS_LATEX_DASHES
-	htmlFlags |= gfm.HTML_SKIP_HTML
+	// htmlFlags |= gfm.HTML_SKIP_HTML
 	htmlFlags |= gfm.HTML_SKIP_STYLE
 	htmlFlags |= gfm.HTML_SKIP_SCRIPT
 	htmlFlags |= gfm.HTML_GITHUB_BLOCKCODE
