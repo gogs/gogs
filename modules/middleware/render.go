@@ -146,7 +146,7 @@ func compile(options RenderOptions) *template.Template {
 				tmpl := t.New(filepath.ToSlash(name))
 
 				for _, funcs := range options.Funcs {
-					tmpl.Funcs(funcs)
+					tmpl = tmpl.Funcs(funcs)
 				}
 
 				template.Must(tmpl.Funcs(helperFuncs).Parse(string(buf)))
