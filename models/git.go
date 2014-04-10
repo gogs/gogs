@@ -163,7 +163,7 @@ func getReposFiles(userName, repoName, commitId string, rpath string) ([]*RepoFi
 				return 0
 			}
 
-			cmd := exec.Command("git", "log", "-1", "--pretty=format:%H", commitId, "--", entry.Name)
+			cmd := exec.Command("git", "log", "-1", "--pretty=format:%H", commitId, "--", path.Join(dirname, entry.Name))
 			cmd.Dir = repopath
 			out, err := cmd.Output()
 			if err != nil {
