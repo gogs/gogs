@@ -79,6 +79,7 @@ type Repository struct {
 	NumOpenIssues   int `xorm:"-"`
 	IsPrivate       bool
 	IsBare          bool
+	IsGoget         bool
 	Created         time.Time `xorm:"created"`
 	Updated         time.Time `xorm:"updated"`
 }

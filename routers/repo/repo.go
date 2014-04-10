@@ -427,6 +427,7 @@ func SettingPost(ctx *middleware.Context) {
 
 		ctx.Repo.Repository.Description = ctx.Query("desc")
 		ctx.Repo.Repository.Website = ctx.Query("site")
+		ctx.Repo.Repository.IsGoget = ctx.Query("goget") == "on"
 		if err := models.UpdateRepository(ctx.Repo.Repository); err != nil {
 			ctx.Handle(404, "repo.SettingPost(update)", err)
 			return
