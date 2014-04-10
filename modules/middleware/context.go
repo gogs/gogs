@@ -91,10 +91,11 @@ func (ctx *Context) HTML(status int, name string, htmlOpt ...HTMLOptions) {
 
 // RenderWithErr used for page has form validation but need to prompt error to users.
 func (ctx *Context) RenderWithErr(msg, tpl string, form auth.Form) {
-	ctx.Flash.Error(msg)
 	if form != nil {
 		auth.AssignForm(form, ctx.Data)
 	}
+	ctx.Flash.ErrorMsg = msg
+	ctx.Data["Flash"] = ctx.Flash
 	ctx.HTML(200, tpl)
 }
 
@@ -274,22 +275,25 @@ func InitContext() martini.Handler {
 		// start session
 		ctx.Session = base.SessionManager.SessionStart(res, r)
 
-		ctx.Flash = &Flash{}
 		// Get flash.
 		values, err := url.ParseQuery(ctx.GetCookie("gogs_flash"))
 		if err != nil {
 			log.Error("InitContext.ParseQuery(flash): %v", err)
-		} else {
-			ctx.Flash.Values = values
+		} else if len(values) > 0 {
+			ctx.Flash = &Flash{Values: values}
+			ctx.Flash.ErrorMsg = ctx.Flash.Get("error")
+			ctx.Flash.SuccessMsg = ctx.Flash.Get("success")
 			ctx.Data["Flash"] = ctx.Flash
+			ctx.SetCookie("gogs_flash", "", -1)
 		}
+		ctx.Flash = &Flash{Values: url.Values{}}
 
 		rw := res.(martini.ResponseWriter)
 		rw.Before(func(martini.ResponseWriter) {
 			ctx.Session.SessionRelease(res)
 
 			if flash := ctx.Flash.Encode(); len(flash) > 0 {
-				ctx.SetCookie("gogs_flash", ctx.Flash.Encode(), -1)
+				ctx.SetCookie("gogs_flash", ctx.Flash.Encode(), 0)
 			}
 		})
 

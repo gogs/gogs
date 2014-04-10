@@ -23,10 +23,6 @@ import (
 	"github.com/gogits/gogs/modules/middleware"
 )
 
-type installRouter int
-
-var InstallRouter installRouter = 1
-
 // Check run mode(Default of martini is Dev).
 func checkRunMode() {
 	switch base.Cfg.MustValue("", "RUN_MODE") {
@@ -58,7 +54,7 @@ func GlobalInit() {
 	checkRunMode()
 }
 
-func (r installRouter) Get(ctx *middleware.Context, form auth.InstallForm) {
+func Install(ctx *middleware.Context, form auth.InstallForm) {
 	if base.InstallLock {
 		ctx.Handle(404, "install.Install", errors.New("Installation is prohibited"))
 		return
@@ -101,7 +97,7 @@ func (r installRouter) Get(ctx *middleware.Context, form auth.InstallForm) {
 	ctx.HTML(200, "install")
 }
 
-func (r installRouter) Post(ctx *middleware.Context, form auth.InstallForm) {
+func InstallPost(ctx *middleware.Context, form auth.InstallForm) {
 	if base.InstallLock {
 		ctx.Handle(404, "install.Install", errors.New("Installation is prohibited"))
 		return

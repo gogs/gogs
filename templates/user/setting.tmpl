@@ -7,7 +7,7 @@
             <h4>Account Profile</h4>
             <form class="form-horizontal" id="password-form" method="post" action="/user/setting">
                 {{.CsrfTokenHtml}}
-                {{if .IsSuccess}}<p class="alert alert-success">Your profile has been successfully updated.</p>{{else if .HasError}}<p class="alert alert-danger form-error">{{.ErrorMsg}}</p>{{end}}
+                {{template "base/alert" .}}
                 <p>Your Email will be public and used for Account related notifications and any web based operations made via the web.</p>
                 <div class="form-group">
                     <label class="col-md-2 control-label" for="user-setting-username">Username<strong class="text-danger">*</strong></label>

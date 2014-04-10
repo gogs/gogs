@@ -4,7 +4,7 @@
     <form action="/user/forget_password" method="post" class="form-horizontal card" id="login-card">
         {{.CsrfTokenHtml}}
         <h3>Reset Your Password</h3>
-        <div class="alert alert-danger form-error{{if .HasError}}{{else}} hidden{{end}}">{{.ErrorMsg}}</div>
+        {{template "base/alert" .}}
         {{if .IsResetSent}}
         <p>A confirmation e-mail has been sent to <b>{{.Email}}</b>, please check your inbox within {{.Hours}} hours.</p>
         <hr/>

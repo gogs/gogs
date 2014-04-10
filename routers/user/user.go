@@ -74,55 +74,61 @@ func Profile(ctx *middleware.Context, params martini.Params) {
 	ctx.HTML(200, "user/profile")
 }
 
-func SignIn(ctx *middleware.Context, form auth.LogInForm) {
+func SignIn(ctx *middleware.Context) {
 	ctx.Data["Title"] = "Log In"
 
-	if ctx.Req.Method == "GET" {
-		if base.OauthService != nil {
-			ctx.Data["OauthEnabled"] = true
-			ctx.Data["OauthGitHubEnabled"] = base.OauthService.GitHub.Enabled
-		}
+	if base.OauthService != nil {
+		ctx.Data["OauthEnabled"] = true
+		ctx.Data["OauthGitHubEnabled"] = base.OauthService.GitHub.Enabled
+	}
 
-		// Check auto-login.
-		userName := ctx.GetCookie(base.CookieUserName)
-		if len(userName) == 0 {
-			ctx.HTML(200, "user/signin")
-			return
-		}
-
-		isSucceed := false
-		defer func() {
-			if !isSucceed {
-				log.Trace("%s auto-login cookie cleared: %s", ctx.Req.RequestURI, userName)
-				ctx.SetCookie(base.CookieUserName, "", -1)
-				ctx.SetCookie(base.CookieRememberName, "", -1)
-			}
-		}()
-
-		user, err := models.GetUserByName(userName)
-		if err != nil {
-			ctx.HTML(200, "user/signin")
-			return
-		}
-
-		secret := base.EncodeMd5(user.Rands + user.Passwd)
-		value, _ := ctx.GetSecureCookie(secret, base.CookieRememberName)
-		if value != user.Name {
-			ctx.HTML(200, "user/signin")
-			return
-		}
-
-		isSucceed = true
-		ctx.Session.Set("userId", user.Id)
-		ctx.Session.Set("userName", user.Name)
-		redirectTo, _ := url.QueryUnescape(ctx.GetCookie("redirect_to"))
-		if len(redirectTo) > 0 {
-			ctx.SetCookie("redirect_to", "", -1)
-			ctx.Redirect(redirectTo)
-		} else {
-			ctx.Redirect("/")
-		}
+	// Check auto-login.
+	userName := ctx.GetCookie(base.CookieUserName)
+	if len(userName) == 0 {
+		ctx.HTML(200, "user/signin")
 		return
+	}
+
+	isSucceed := false
+	defer func() {
+		if !isSucceed {
+			log.Trace("%s auto-login cookie cleared: %s", ctx.Req.RequestURI, userName)
+			ctx.SetCookie(base.CookieUserName, "", -1)
+			ctx.SetCookie(base.CookieRememberName, "", -1)
+		}
+	}()
+
+	user, err := models.GetUserByName(userName)
+	if err != nil {
+		ctx.HTML(200, "user/signin")
+		return
+	}
+
+	secret := base.EncodeMd5(user.Rands + user.Passwd)
+	value, _ := ctx.GetSecureCookie(secret, base.CookieRememberName)
+	if value != user.Name {
+		ctx.HTML(200, "user/signin")
+		return
+	}
+
+	isSucceed = true
+	ctx.Session.Set("userId", user.Id)
+	ctx.Session.Set("userName", user.Name)
+	if redirectTo, _ := url.QueryUnescape(ctx.GetCookie("redirect_to")); len(redirectTo) > 0 {
+		ctx.SetCookie("redirect_to", "", -1)
+		ctx.Redirect(redirectTo)
+		return
+	}
+
+	ctx.Redirect("/")
+}
+
+func SignInPost(ctx *middleware.Context, form auth.LogInForm) {
+	ctx.Data["Title"] = "Log In"
+
+	if base.OauthService != nil {
+		ctx.Data["OauthEnabled"] = true
+		ctx.Data["OauthGitHubEnabled"] = base.OauthService.GitHub.Enabled
 	}
 
 	if ctx.HasError() {
@@ -138,7 +144,7 @@ func SignIn(ctx *middleware.Context, form auth.LogInForm) {
 			return
 		}
 
-		ctx.Handle(200, "user.SignIn", err)
+		ctx.Handle(500, "user.SignIn", err)
 		return
 	}
 
@@ -151,13 +157,13 @@ func SignIn(ctx *middleware.Context, form auth.LogInForm) {
 
 	ctx.Session.Set("userId", user.Id)
 	ctx.Session.Set("userName", user.Name)
-	redirectTo, _ := url.QueryUnescape(ctx.GetCookie("redirect_to"))
-	if len(redirectTo) > 0 {
+	if redirectTo, _ := url.QueryUnescape(ctx.GetCookie("redirect_to")); len(redirectTo) > 0 {
 		ctx.SetCookie("redirect_to", "", -1)
 		ctx.Redirect(redirectTo)
-	} else {
-		ctx.Redirect("/")
+		return
 	}
+
+	ctx.Redirect("/")
 }
 
 func SignOut(ctx *middleware.Context) {
@@ -168,7 +174,7 @@ func SignOut(ctx *middleware.Context) {
 	ctx.Redirect("/")
 }
 
-func SignUp(ctx *middleware.Context, form auth.RegisterForm) {
+func SignUp(ctx *middleware.Context) {
 	ctx.Data["Title"] = "Sign Up"
 	ctx.Data["PageIsSignUp"] = true
 
@@ -178,8 +184,15 @@ func SignUp(ctx *middleware.Context, form auth.RegisterForm) {
 		return
 	}
 
-	if ctx.Req.Method == "GET" {
-		ctx.HTML(200, "user/signup")
+	ctx.HTML(200, "user/signup")
+}
+
+func SignUpPost(ctx *middleware.Context, form auth.RegisterForm) {
+	ctx.Data["Title"] = "Sign Up"
+	ctx.Data["PageIsSignUp"] = true
+
+	if base.Service.DisenableRegisteration {
+		ctx.Handle(403, "user.SignUpPost", nil)
 		return
 	}
 
@@ -213,7 +226,7 @@ func SignUp(ctx *middleware.Context, form auth.RegisterForm) {
 		case models.ErrUserNameIllegal:
 			ctx.RenderWithErr(models.ErrRepoNameIllegal.Error(), "user/signup", &form)
 		default:
-			ctx.Handle(200, "user.SignUp", err)
+			ctx.Handle(500, "user.SignUp", err)
 		}
 		return
 	}
@@ -240,25 +253,28 @@ func Delete(ctx *middleware.Context) {
 	ctx.Data["Title"] = "Delete Account"
 	ctx.Data["PageIsUserSetting"] = true
 	ctx.Data["IsUserPageSettingDelete"] = true
+	ctx.HTML(200, "user/delete")
+}
 
-	if ctx.Req.Method == "GET" {
-		ctx.HTML(200, "user/delete")
-		return
+func DeletePost(ctx *middleware.Context) {
+	ctx.Data["Title"] = "Delete Account"
+	ctx.Data["PageIsUserSetting"] = true
+	ctx.Data["IsUserPageSettingDelete"] = true
+
+	tmpUser := models.User{
+		Passwd: ctx.Query("password"),
+		Salt:   ctx.User.Salt,
 	}
-
-	tmpUser := models.User{Passwd: ctx.Query("password")}
 	tmpUser.EncodePasswd()
-	if len(tmpUser.Passwd) == 0 || tmpUser.Passwd != ctx.User.Passwd {
-		ctx.Data["HasError"] = true
-		ctx.Data["ErrorMsg"] = "Password is not correct. Make sure you are owner of this account."
+	if tmpUser.Passwd != ctx.User.Passwd {
+		ctx.Flash.Error("Password is not correct. Make sure you are owner of this account.")
 	} else {
 		if err := models.DeleteUser(ctx.User); err != nil {
-			ctx.Data["HasError"] = true
 			switch err {
 			case models.ErrUserOwnRepos:
-				ctx.Data["ErrorMsg"] = "Your account still have ownership of repository, you have to delete or transfer them first."
+				ctx.Flash.Error("Your account still have ownership of repository, you have to delete or transfer them first.")
 			default:
-				ctx.Handle(200, "user.Delete", err)
+				ctx.Handle(500, "user.Delete", err)
 				return
 			}
 		} else {
@@ -267,7 +283,7 @@ func Delete(ctx *middleware.Context) {
 		}
 	}
 
-	ctx.HTML(200, "user/delete")
+	ctx.Redirect("/user/delete")
 }
 
 const (
@@ -439,10 +455,17 @@ func ForgotPasswd(ctx *middleware.Context) {
 	}
 
 	ctx.Data["IsResetRequest"] = true
-	if ctx.Req.Method == "GET" {
-		ctx.HTML(200, "user/forgot_passwd")
+	ctx.HTML(200, "user/forgot_passwd")
+}
+
+func ForgotPasswdPost(ctx *middleware.Context) {
+	ctx.Data["Title"] = "Forgot Password"
+
+	if base.MailService == nil {
+		ctx.Handle(403, "user.ForgotPasswdPost", nil)
 		return
 	}
+	ctx.Data["IsResetRequest"] = true
 
 	email := ctx.Query("email")
 	u, err := models.GetUserByEmail(email)
@@ -450,7 +473,7 @@ func ForgotPasswd(ctx *middleware.Context) {
 		if err == models.ErrUserNotExist {
 			ctx.RenderWithErr("This e-mail address does not associate to any account.", "user/forgot_passwd", nil)
 		} else {
-			ctx.Handle(404, "user.ResetPasswd(check existence)", err)
+			ctx.Handle(500, "user.ResetPasswd(check existence)", err)
 		}
 		return
 	}
@@ -473,6 +496,8 @@ func ForgotPasswd(ctx *middleware.Context) {
 }
 
 func ResetPasswd(ctx *middleware.Context) {
+	ctx.Data["Title"] = "Reset Password"
+
 	code := ctx.Query("code")
 	if len(code) == 0 {
 		ctx.Error(404)
@@ -480,11 +505,19 @@ func ResetPasswd(ctx *middleware.Context) {
 	}
 	ctx.Data["Code"] = code
 
-	if ctx.Req.Method == "GET" {
-		ctx.Data["IsResetForm"] = true
-		ctx.HTML(200, "user/reset_passwd")
+	ctx.Data["IsResetForm"] = true
+	ctx.HTML(200, "user/reset_passwd")
+}
+
+func ResetPasswdPost(ctx *middleware.Context) {
+	ctx.Data["Title"] = "Reset Password"
+
+	code := ctx.Query("code")
+	if len(code) == 0 {
+		ctx.Error(404)
 		return
 	}
+	ctx.Data["Code"] = code
 
 	if u := models.VerifyUserActiveCode(code); u != nil {
 		// Validate password length.
@@ -500,7 +533,7 @@ func ResetPasswd(ctx *middleware.Context) {
 		u.Salt = models.GetUserSalt()
 		u.EncodePasswd()
 		if err := models.UpdateUser(u); err != nil {
-			ctx.Handle(404, "user.ResetPasswd(UpdateUser)", err)
+			ctx.Handle(500, "user.ResetPasswd(UpdateUser)", err)
 			return
 		}
 
