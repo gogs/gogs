@@ -7,6 +7,7 @@ package routers
 import (
 	"errors"
 	"os"
+	"os/exec"
 	"strings"
 
 	"github.com/Unknwon/goconfig"
@@ -27,6 +28,7 @@ func checkRunMode() {
 	switch base.Cfg.MustValue("", "RUN_MODE") {
 	case "prod":
 		martini.Env = martini.Prod
+		base.IsProdMode = true
 	case "test":
 		martini.Env = martini.Test
 	}
@@ -99,6 +101,11 @@ func Install(ctx *middleware.Context, form auth.InstallForm) {
 
 	if ctx.HasError() {
 		ctx.HTML(200, "install")
+		return
+	}
+
+	if _, err := exec.LookPath("git"); err != nil {
+		ctx.RenderWithErr("Fail to test 'git' command: "+err.Error(), "install", &form)
 		return
 	}
 

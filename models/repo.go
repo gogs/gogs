@@ -79,6 +79,7 @@ type Repository struct {
 	NumOpenIssues   int `xorm:"-"`
 	IsPrivate       bool
 	IsBare          bool
+	IsGoget         bool
 	Created         time.Time `xorm:"created"`
 	Updated         time.Time `xorm:"updated"`
 }
@@ -261,6 +262,13 @@ func createHookUpdate(hookPath, content string) error {
 	return err
 }
 
+// SetRepoEnvs sets environment variables for command update.
+func SetRepoEnvs(userId int64, userName, repoName string) {
+	os.Setenv("userId", base.ToStr(userId))
+	os.Setenv("userName", userName)
+	os.Setenv("repoName", repoName)
+}
+
 // InitRepository initializes README and .gitignore if needed.
 func initRepository(f string, user *User, repo *Repository, initReadme bool, repoLang, license string) error {
 	repoPath := RepoPath(user.Name, repo.Name)
@@ -333,10 +341,7 @@ func initRepository(f string, user *User, repo *Repository, initReadme bool, rep
 		return nil
 	}
 
-	// for update use
-	os.Setenv("userName", user.Name)
-	os.Setenv("userId", base.ToStr(user.Id))
-	os.Setenv("repoName", repo.Name)
+	SetRepoEnvs(user.Id, user.Name, repo.Name)
 
 	// Apply changes and commit.
 	return initRepoCommit(tmpDir, user.NewGitSig())

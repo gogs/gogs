@@ -53,6 +53,36 @@ func Create(ctx *middleware.Context, form auth.CreateRepoForm) {
 	ctx.Handle(200, "repo.Create", err)
 }
 
+func Mirror(ctx *middleware.Context, form auth.CreateRepoForm) {
+	ctx.Data["Title"] = "Mirror repository"
+	ctx.Data["PageIsNewRepo"] = true // For navbar arrow.
+
+	if ctx.Req.Method == "GET" {
+		ctx.HTML(200, "repo/mirror")
+		return
+	}
+
+	if ctx.HasError() {
+		ctx.HTML(200, "repo/mirror")
+		return
+	}
+
+	_, err := models.CreateRepository(ctx.User, form.RepoName, form.Description,
+		"", form.License, form.Visibility == "private", false)
+	if err == nil {
+		log.Trace("%s Repository created: %s/%s", ctx.Req.RequestURI, ctx.User.LowerName, form.RepoName)
+		ctx.Redirect("/" + ctx.User.Name + "/" + form.RepoName)
+		return
+	} else if err == models.ErrRepoAlreadyExist {
+		ctx.RenderWithErr("Repository name has already been used", "repo/mirror", &form)
+		return
+	} else if err == models.ErrRepoNameIllegal {
+		ctx.RenderWithErr(models.ErrRepoNameIllegal.Error(), "repo/mirror", &form)
+		return
+	}
+	ctx.Handle(200, "repo.Mirror", err)
+}
+
 func Single(ctx *middleware.Context, params martini.Params) {
 	branchName := ctx.Repo.BranchName
 	commitId := ctx.Repo.CommitId
@@ -312,6 +342,7 @@ func SettingPost(ctx *middleware.Context) {
 
 		ctx.Repo.Repository.Description = ctx.Query("desc")
 		ctx.Repo.Repository.Website = ctx.Query("site")
+		ctx.Repo.Repository.IsGoget = ctx.Query("goget") == "on"
 		if err := models.UpdateRepository(ctx.Repo.Repository); err != nil {
 			ctx.Handle(404, "repo.SettingPost(update)", err)
 			return
