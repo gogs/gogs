@@ -11,10 +11,10 @@ import (
 
 	"github.com/codegangsta/cli"
 	"github.com/go-martini/martini"
+
 	qlog "github.com/qiniu/log"
 
 	"github.com/gogits/binding"
-
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/avatar"
 	"github.com/gogits/gogs/modules/base"
@@ -72,6 +72,11 @@ func runWeb(*cli.Context) {
 
 	reqSignIn := middleware.Toggle(&middleware.ToggleOptions{SignInRequire: true})
 	ignSignIn := middleware.Toggle(&middleware.ToggleOptions{SignInRequire: base.Service.RequireSignInView})
+	ignSignInAndCsrf := middleware.Toggle(&middleware.ToggleOptions{
+		SignInRequire: base.Service.RequireSignInView,
+		DisableCsrf:   true,
+	})
+
 	reqSignOut := middleware.Toggle(&middleware.ToggleOptions{SignOutRequire: true})
 
 	// Routers.
@@ -91,7 +96,7 @@ func runWeb(*cli.Context) {
 
 	m.Group("/user", func(r martini.Router) {
 		r.Any("/login", binding.BindIgnErr(auth.LogInForm{}), user.SignIn)
-		r.Any("/login/github", oauth2.LoginRequired, user.SocialSignIn)
+		r.Any("/login/github", user.SocialSignIn)
 		r.Any("/sign_up", binding.BindIgnErr(auth.RegisterForm{}), user.SignUp)
 		r.Any("/forget_password", user.ForgotPasswd)
 		r.Any("/reset_password", user.ResetPasswd)
@@ -116,6 +121,7 @@ func runWeb(*cli.Context) {
 	m.Get("/user/:username", ignSignIn, user.Profile)
 
 	m.Any("/repo/create", reqSignIn, binding.BindIgnErr(auth.CreateRepoForm{}), repo.Create)
+	m.Any("/repo/mirror", reqSignIn, binding.BindIgnErr(auth.CreateRepoForm{}), repo.Mirror)
 
 	adminReq := middleware.Toggle(&middleware.ToggleOptions{SignInRequire: true, AdminRequire: true})
 
@@ -165,7 +171,7 @@ func runWeb(*cli.Context) {
 	m.Group("/:username", func(r martini.Router) {
 		r.Any("/:reponame/**", repo.Http)
 		r.Get("/:reponame", middleware.RepoAssignment(true, true, true), repo.Single)
-	}, ignSignIn)
+	}, ignSignInAndCsrf)
 
 	// Not found handler.
 	m.NotFound(routers.NotFound)

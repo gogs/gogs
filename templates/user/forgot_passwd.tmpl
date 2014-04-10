@@ -24,6 +24,8 @@
         </div>
         {{else if .IsResetDisable}}
         <p>Sorry, mail service is not enabled.</p>
+        {{else if .ResendLimited}}
+        <p>Sorry, you are sending e-mail too frequently, please wait 3 minutes.</p>
         {{end}}
     </form>
 </div>

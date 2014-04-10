@@ -43,6 +43,7 @@
                             <input type="url" class="form-control" name="site" value="{{.Repository.Website}}" />
                         </div>
                     </div>
+                    <hr>
                     <!-- <div class="form-group">
                         <label class="col-md-3 text-right">Default Branch</label>
                         <div class="col-md-9">
@@ -51,6 +52,18 @@
                             </select>
                         </div>
                     </div> -->
+
+                    <div class="form-group">
+                        <div class="col-md-offset-3 col-md-9">
+                            <div class="checkbox">
+                                <label style="line-height: 15px;">
+                                    <input type="checkbox" name="goget" {{if .Repository.IsGoget}}checked{{end}}>
+                                    <strong>Enable 'go get' meta</strong>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="form-group">
                         <div class="col-md-9 col-md-offset-3">
                             <button class="btn btn-primary" type="submit">Save Options</button>

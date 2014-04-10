@@ -177,10 +177,7 @@ func runServ(k *cli.Context) {
 		qlog.Fatal("Unknown command")
 	}
 
-	// for update use
-	os.Setenv("userName", user.Name)
-	os.Setenv("userId", strconv.Itoa(int(user.Id)))
-	os.Setenv("repoName", repoName)
+	models.SetRepoEnvs(user.Id, user.Name, repoName)
 
 	gitcmd := exec.Command(verb, repoPath)
 	gitcmd.Dir = base.RepoRootPath

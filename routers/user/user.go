@@ -396,6 +396,10 @@ func Activate(ctx *middleware.Context) {
 			} else {
 				ctx.Data["Hours"] = base.Service.ActiveCodeLives / 60
 				mailer.SendActiveMail(ctx.Render, ctx.User)
+
+				if err := ctx.Cache.Put("MailResendLimit_"+ctx.User.LowerName, ctx.User.LowerName, 180); err != nil {
+					log.Error("Set cache(MailResendLimit) fail: %v", err)
+				}
 			}
 		} else {
 			ctx.Data["ServiceNotEnabled"] = true
@@ -451,7 +455,17 @@ func ForgotPasswd(ctx *middleware.Context) {
 		return
 	}
 
+	if ctx.Cache.IsExist("MailResendLimit_" + u.LowerName) {
+		ctx.Data["ResendLimited"] = true
+		ctx.HTML(200, "user/forgot_passwd")
+		return
+	}
+
 	mailer.SendResetPasswdMail(ctx.Render, u)
+	if err = ctx.Cache.Put("MailResendLimit_"+u.LowerName, u.LowerName, 180); err != nil {
+		log.Error("Set cache(MailResendLimit) fail: %v", err)
+	}
+
 	ctx.Data["Email"] = email
 	ctx.Data["Hours"] = base.Service.ActiveCodeLives / 60
 	ctx.Data["IsResetSent"] = true
