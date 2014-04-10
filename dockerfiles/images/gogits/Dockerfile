@@ -19,6 +19,10 @@ RUN cd $GOPATH/src/github.com/gogits/gogs && go build
 RUN apt-get autoremove -y
 RUN apt-get clean all
 
-EXPOSE 3000
+# Add the deploy script to the docker image and assign execution permission to it.
+ADD ./deploy.sh /
+RUN chmod +x deploy.sh
 
-CMD ["./$GOPATH/src/github.com/gogits/gogs/gogs"]  
+EXPOSE 3000
+CMD [/deploy.sh]
+CMD ["$GOPATH/src/github.com/gogits/gogs/gogs web"]  
