@@ -69,38 +69,46 @@ func SettingPost(ctx *middleware.Context, form auth.UpdateProfileForm) {
 	ctx.Redirect("/user/setting")
 }
 
-func SettingPassword(ctx *middleware.Context, form auth.UpdatePasswdForm) {
+func SettingPassword(ctx *middleware.Context) {
+	ctx.Data["Title"] = "Password"
+	ctx.Data["PageIsUserSetting"] = true
+	ctx.Data["IsUserPageSettingPasswd"] = true
+	ctx.HTML(200, "user/password")
+}
+
+func SettingPasswordPost(ctx *middleware.Context, form auth.UpdatePasswdForm) {
 	ctx.Data["Title"] = "Password"
 	ctx.Data["PageIsUserSetting"] = true
 	ctx.Data["IsUserPageSettingPasswd"] = true
 
-	if ctx.Req.Method == "GET" {
+	if ctx.HasError() {
 		ctx.HTML(200, "user/password")
 		return
 	}
 
 	user := ctx.User
-	newUser := &models.User{Passwd: form.NewPasswd}
-	newUser.EncodePasswd()
-	if user.Passwd != newUser.Passwd {
-		ctx.Data["HasError"] = true
-		ctx.Data["ErrorMsg"] = "Old password is not correct"
+	tmpUser := &models.User{
+		Passwd: form.OldPasswd,
+		Salt:   user.Salt,
+	}
+	tmpUser.EncodePasswd()
+	if user.Passwd != tmpUser.Passwd {
+		ctx.Flash.Error("Old password is not correct")
 	} else if form.NewPasswd != form.RetypePasswd {
-		ctx.Data["HasError"] = true
-		ctx.Data["ErrorMsg"] = "New password and re-type password are not same"
+		ctx.Flash.Error("New password and re-type password are not same")
 	} else {
-		newUser.Salt = models.GetUserSalt()
-		user.Passwd = newUser.Passwd
+		user.Passwd = form.NewPasswd
+		user.Salt = models.GetUserSalt()
+		user.EncodePasswd()
 		if err := models.UpdateUser(user); err != nil {
 			ctx.Handle(200, "setting.SettingPassword", err)
 			return
 		}
-		ctx.Data["IsSuccess"] = true
+		log.Trace("%s User password updated: %s", ctx.Req.RequestURI, ctx.User.LowerName)
+		ctx.Flash.Success("Password is changed successfully. You can now sign in via new password.")
 	}
 
-	ctx.Data["Owner"] = user
-	ctx.HTML(200, "user/password")
-	log.Trace("%s User password updated: %s", ctx.Req.RequestURI, ctx.User.LowerName)
+	ctx.Redirect("/user/setting/password")
 }
 
 func SettingSSHKeys(ctx *middleware.Context, form auth.AddSSHKeyForm) {

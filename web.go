@@ -103,8 +103,6 @@ func runWeb(*cli.Context) {
 		r.Get("/login/github", user.SocialSignIn)
 		r.Get("/sign_up", user.SignUp)
 		r.Post("/sign_up", bindIgnErr(auth.RegisterForm{}), user.SignUpPost)
-		r.Get("/forget_password", user.ForgotPasswd)
-		r.Post("/forget_password", user.ForgotPasswdPost)
 		r.Get("/reset_password", user.ResetPasswd)
 		r.Post("/reset_password", user.ResetPasswdPost)
 	}, reqSignOut)
@@ -118,18 +116,25 @@ func runWeb(*cli.Context) {
 	m.Group("/user", func(r martini.Router) {
 		r.Get("/feeds", binding.Bind(auth.FeedsForm{}), user.Feeds)
 		r.Get("/activate", user.Activate)
+		r.Get("/forget_password", user.ForgotPasswd)
+		r.Post("/forget_password", user.ForgotPasswdPost)
 	})
 	m.Group("/user/setting", func(r martini.Router) {
-		r.Any("/password", bindIgnErr(auth.UpdatePasswdForm{}), user.SettingPassword)
+		r.Get("/password", user.SettingPassword)
+		r.Post("/password", bindIgnErr(auth.UpdatePasswdForm{}), user.SettingPasswordPost)
 		r.Any("/ssh", bindIgnErr(auth.AddSSHKeyForm{}), user.SettingSSHKeys)
-		r.Any("/notification", user.SettingNotification)
-		r.Any("/security", user.SettingSecurity)
+		r.Get("/notification", user.SettingNotification)
+		r.Get("/security", user.SettingSecurity)
 	}, reqSignIn)
 
 	m.Get("/user/:username", ignSignIn, user.Profile)
 
-	m.Any("/repo/create", reqSignIn, bindIgnErr(auth.CreateRepoForm{}), repo.Create)
-	m.Any("/repo/mirror", reqSignIn, bindIgnErr(auth.CreateRepoForm{}), repo.Mirror)
+	m.Group("/repo", func(r martini.Router) {
+		m.Get("/create", repo.Create)
+		m.Post("/create", bindIgnErr(auth.CreateRepoForm{}), repo.CreatePost)
+		m.Get("/mirror", repo.Mirror)
+		m.Post("/mirror", bindIgnErr(auth.CreateRepoForm{}), repo.MirrorPost)
+	}, reqSignIn)
 
 	adminReq := middleware.Toggle(&middleware.ToggleOptions{SignInRequire: true, AdminRequire: true})
 
@@ -140,9 +145,11 @@ func runWeb(*cli.Context) {
 		r.Get("/config", admin.Config)
 	}, adminReq)
 	m.Group("/admin/users", func(r martini.Router) {
-		r.Any("/new", bindIgnErr(auth.RegisterForm{}), admin.NewUser)
-		r.Any("/:userid", bindIgnErr(auth.AdminEditUserForm{}), admin.EditUser)
-		r.Any("/:userid/delete", admin.DeleteUser)
+		r.Get("/new", admin.NewUser)
+		r.Post("/new", bindIgnErr(auth.RegisterForm{}), admin.NewUserPost)
+		r.Get("/:userid", admin.EditUser)
+		r.Post("/:userid", bindIgnErr(auth.AdminEditUserForm{}), admin.EditUserPost)
+		r.Get("/:userid/delete", admin.DeleteUser)
 	}, adminReq)
 
 	if martini.Env == martini.Dev {
@@ -153,7 +160,8 @@ func runWeb(*cli.Context) {
 		r.Post("/settings", repo.SettingPost)
 		r.Get("/settings", repo.Setting)
 		r.Get("/action/:action", repo.Action)
-		r.Any("/issues/new", bindIgnErr(auth.CreateIssueForm{}), repo.CreateIssue)
+		r.Get("/issues/new", repo.CreateIssue)
+		r.Post("/issues/new", bindIgnErr(auth.CreateIssueForm{}), repo.CreateIssuePost)
 		r.Post("/issues/:index", bindIgnErr(auth.CreateIssueForm{}), repo.UpdateIssue)
 		r.Post("/comment/:action", repo.Comment)
 	}, reqSignIn, middleware.RepoAssignment(true))
@@ -162,7 +170,7 @@ func runWeb(*cli.Context) {
 		r.Get("/issues", repo.Issues)
 		r.Get("/issues/:index", repo.ViewIssue)
 		r.Get("/releases", repo.Releases)
-		r.Any("/releases/new", repo.ReleasesNew)
+		r.Any("/releases/new", repo.ReleasesNew) // TODO:
 		r.Get("/pulls", repo.Pulls)
 		r.Get("/branches", repo.Branches)
 	}, ignSignIn, middleware.RepoAssignment(true))

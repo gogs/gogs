@@ -4,7 +4,7 @@
     <form action="/repo/create" method="post" class="form-horizontal card" id="repo-create">
         {{.CsrfTokenHtml}}
         <h3>Create Repository Mirror</h3>
-        <div class="alert alert-danger form-error{{if .HasError}}{{else}} hidden{{end}}">{{.ErrorMsg}}</div>
+        {{template "base/alert" .}}
         <div class="form-group">
             <label class="col-md-2 control-label">From<strong class="text-danger">*</strong></label>
             <div class="col-md-8">
