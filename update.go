@@ -42,32 +42,7 @@ func newUpdateLogger(execDir string) {
 	qlog.Info("Start logging update...")
 }
 
-// for command: ./gogs update
-func runUpdate(c *cli.Context) {
-	execDir, _ := base.ExecDir()
-	newUpdateLogger(execDir)
-
-	base.NewConfigContext()
-	models.LoadModelsConfig()
-
-	if models.UseSQLite3 {
-		os.Chdir(execDir)
-	}
-
-	models.SetEngine()
-
-	args := c.Args()
-	if len(args) != 3 {
-		qlog.Fatal("received less 3 parameters")
-	}
-
-	refName := args[0]
-	if refName == "" {
-		qlog.Fatal("refName is empty, shouldn't use")
-	}
-	oldCommitId := args[1]
-	newCommitId := args[2]
-
+func update(refName, oldCommitId, newCommitId string) {
 	isNew := strings.HasPrefix(oldCommitId, "0000000")
 	if isNew &&
 		strings.HasPrefix(newCommitId, "0000000") {
@@ -157,4 +132,33 @@ func runUpdate(c *cli.Context) {
 		repos.Id, repoName, git.BranchName(refName), &base.PushCommits{l.Len(), commits}); err != nil {
 		qlog.Fatalf("runUpdate.models.CommitRepoAction: %v", err)
 	}
+}
+
+// for command: ./gogs update
+func runUpdate(c *cli.Context) {
+	execDir, _ := base.ExecDir()
+	newUpdateLogger(execDir)
+
+	base.NewConfigContext()
+	models.LoadModelsConfig()
+
+	if models.UseSQLite3 {
+		os.Chdir(execDir)
+	}
+
+	models.SetEngine()
+
+	args := c.Args()
+	if len(args) != 3 {
+		qlog.Fatal("received less 3 parameters")
+	}
+
+	refName := args[0]
+	if refName == "" {
+		qlog.Fatal("refName is empty, shouldn't use")
+	}
+	oldCommitId := args[1]
+	newCommitId := args[2]
+
+	update(refName, oldCommitId, newCommitId)
 }

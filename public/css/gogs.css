@@ -309,13 +309,13 @@ html, body {
     height: 8em;
 }
 
-#repo-import-auth{
+#repo-import-auth {
     width: 100%;
     margin-top: 48px;
     box-sizing: border-box;
 }
 
-#repo-import-auth .form-group{
+#repo-import-auth .form-group {
     box-sizing: border-box;
     margin-left: 0;
     margin-right: 0;
@@ -460,26 +460,37 @@ html, body {
     padding: 3px 8px;
 }
 
-#user-dashboard-repo-new .dropdown-menu {
+#user-dashboard-repo-new .dropdown-menu, #nav-repo-new .dropdown-menu {
     padding: 0;
     margin: 0;
 }
 
-#user-dashboard-repo-new ul {
+#user-dashboard-repo-new ul, #nav-repo-new ul {
     margin: 0;
     width: 200px;
 }
 
-#user-dashboard-repo-new li a {
+#user-dashboard-repo-new li a, #nav-repo-new li a {
     line-height: 36px;
     display: block;
     padding: 0 18px;
     color: #444;
 }
 
-#user-dashboard-repo-new li a:hover {
+#user-dashboard-repo-new li a:hover, #nav-repo-new li a:hover {
     background: #0093c4;
     color: #FFF;
+}
+
+#nav-repo-new button {
+    border: none;
+    background: transparent;
+    padding: 0;
+    width: 15px;
+}
+
+#nav-repo-new li .fa {
+    margin: 0 .5em;
 }
 
 /* gogits repo single page */
