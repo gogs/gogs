@@ -138,11 +138,8 @@ func CreateRepository(user *User, repoName, desc, repoLang, license string, priv
 		IsPrivate:   private,
 		IsBare:      repoLang == "" && license == "" && !initReadme,
 	}
-
 	repoPath := RepoPath(user.Name, repoName)
-	if err = initRepository(repoPath, user, repo, initReadme, repoLang, license); err != nil {
-		return nil, err
-	}
+
 	sess := orm.NewSession()
 	defer sess.Close()
 	sess.Begin()
@@ -205,6 +202,10 @@ func CreateRepository(user *User, repoName, desc, repoLang, license string, priv
 
 	if err = WatchRepo(user.Id, repo.Id, true); err != nil {
 		log.Error("repo.CreateRepository(WatchRepo): %v", err)
+	}
+
+	if err = initRepository(repoPath, user, repo, initReadme, repoLang, license); err != nil {
+		return nil, err
 	}
 
 	return repo, nil
@@ -331,6 +332,11 @@ func initRepository(f string, user *User, repo *Repository, initReadme bool, rep
 	if len(fileName) == 0 {
 		return nil
 	}
+
+	// for update use
+	os.Setenv("userName", user.Name)
+	os.Setenv("userId", base.ToStr(user.Id))
+	os.Setenv("repoName", repo.Name)
 
 	// Apply changes and commit.
 	return initRepoCommit(tmpDir, user.NewGitSig())

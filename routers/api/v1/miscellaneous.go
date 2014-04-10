@@ -13,6 +13,6 @@ func Markdown(ctx *middleware.Context) {
 	content := ctx.Query("content")
 	ctx.Render.JSON(200, map[string]interface{}{
 		"ok":      true,
-		"content": string(base.RenderMarkdown([]byte(content), "")),
+		"content": string(base.RenderMarkdown([]byte(content), ctx.Query("repoLink"))),
 	})
 }
