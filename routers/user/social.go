@@ -6,7 +6,10 @@ package user
 
 import (
 	"encoding/json"
+	"net/http"
+	"net/url"
 	"strconv"
+	"strings"
 
 	"code.google.com/p/goauth2/oauth"
 
@@ -70,53 +73,87 @@ func (s *SocialGithub) Update() error {
 	return json.NewDecoder(r.Body).Decode(&s.data)
 }
 
+func extractPath(next string) string {
+	n, err := url.Parse(next)
+	if err != nil {
+		return "/"
+	}
+	return n.Path
+}
+
 // github && google && ...
 func SocialSignIn(ctx *middleware.Context, tokens oauth2.Tokens) {
-	gh := &SocialGithub{
-		WebToken: &oauth.Token{
-			AccessToken:  tokens.Access(),
-			RefreshToken: tokens.Refresh(),
-			Expiry:       tokens.ExpiryTime(),
-			Extra:        tokens.ExtraData(),
-		},
-	}
-	if len(tokens.Access()) == 0 {
-		log.Error("empty access")
+	var socid int64
+	var ok bool
+	next := extractPath(ctx.Query("next"))
+	log.Debug("social signed check %s", next)
+	if socid, ok = ctx.Session.Get("socialId").(int64); ok && socid != 0 {
+		// already login
+		ctx.Redirect(next)
+		log.Info("login soc id: %v", socid)
 		return
 	}
-	var err error
-	var u *models.User
+	config := &oauth.Config{
+		//ClientId: base.OauthService.Github.ClientId,
+		//ClientSecret: base.OauthService.Github.ClientSecret, // FIXME: I don't know why compile error here
+		ClientId:     "09383403ff2dc16daaa1",
+		ClientSecret: "0e4aa0c3630df396cdcea01a9d45cacf79925fea",
+		RedirectURL:  strings.TrimSuffix(base.AppUrl, "/") + ctx.Req.URL.RequestURI(),
+		Scope:        base.OauthService.GitHub.Scopes,
+		AuthURL:      "https://github.com/login/oauth/authorize",
+		TokenURL:     "https://github.com/login/oauth/access_token",
+	}
+	transport := &oauth.Transport{
+		Config:    config,
+		Transport: http.DefaultTransport,
+	}
+	code := ctx.Query("code")
+	if code == "" {
+		// redirect to social login page
+		ctx.Redirect(config.AuthCodeURL(next))
+		return
+	}
+
+	// handle call back
+	tk, err := transport.Exchange(code)
+	if err != nil {
+		log.Error("oauth2 handle callback error: %v", err)
+		return // FIXME, need error page 501
+	}
+	next = extractPath(ctx.Query("state"))
+	log.Debug("success token: %v", tk)
+
+	gh := &SocialGithub{WebToken: tk}
 	if err = gh.Update(); err != nil {
-		// FIXME: handle error page
+		// FIXME: handle error page 501
 		log.Error("connect with github error: %s", err)
 		return
 	}
 	var soc SocialConnector = gh
 	log.Info("login: %s", soc.Name())
-	// FIXME: login here, user email to check auth, if not registe, then generate a uniq username
-	if u, err = models.GetOauth2User(soc.Identity()); err != nil {
-		u = &models.User{
-			Name:     soc.Name(),
-			Email:    soc.Email(),
-			Passwd:   "123456",
-			IsActive: !base.Service.RegisterEmailConfirm,
-		}
-		if u, err = models.RegisterUser(u); err != nil {
-			log.Error("register user: %v", err)
-			return
-		}
-		oa := &models.Oauth2{}
-		oa.Uid = u.Id
+	oa, err := models.GetOauth2(soc.Identity())
+	switch err {
+	case nil:
+		ctx.Session.Set("userId", oa.User.Id)
+		ctx.Session.Set("userName", oa.User.Name)
+	case models.ErrOauth2RecordNotExists:
+		oa = &models.Oauth2{}
+		oa.Uid = 0
 		oa.Type = soc.Type()
 		oa.Token = soc.Token()
 		oa.Identity = soc.Identity()
-		log.Info("oa: %v", oa)
+		log.Debug("oa: %v", oa)
 		if err = models.AddOauth2(oa); err != nil {
-			log.Error("add oauth2 %v", err)
+			log.Error("add oauth2 %v", err) // 501
 			return
 		}
+	case models.ErrOauth2NotAssociatedWithUser:
+		// ignore it. judge in /usr/login page
+	default:
+		log.Error(err.Error()) // FIXME: handle error page
+		return
 	}
-	ctx.Session.Set("userId", u.Id)
-	ctx.Session.Set("userName", u.Name)
-	ctx.Redirect("/")
+	ctx.Session.Set("socialId", oa.Id)
+	log.Debug("socialId: %v", oa.Id)
+	ctx.Redirect(next)
 }

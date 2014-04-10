@@ -133,14 +133,14 @@ func RenderSpecialLink(rawBytes []byte, urlPrefix string) []byte {
 }
 
 func RenderMarkdown(rawBytes []byte, urlPrefix string) []byte {
-	// body := RenderSpecialLink(rawBytes, urlPrefix)
+	body := RenderSpecialLink(rawBytes, urlPrefix)
 	// fmt.Println(string(body))
 	htmlFlags := 0
 	// htmlFlags |= gfm.HTML_USE_XHTML
 	// htmlFlags |= gfm.HTML_USE_SMARTYPANTS
 	// htmlFlags |= gfm.HTML_SMARTYPANTS_FRACTIONS
 	// htmlFlags |= gfm.HTML_SMARTYPANTS_LATEX_DASHES
-	htmlFlags |= gfm.HTML_SKIP_HTML
+	// htmlFlags |= gfm.HTML_SKIP_HTML
 	htmlFlags |= gfm.HTML_SKIP_STYLE
 	htmlFlags |= gfm.HTML_SKIP_SCRIPT
 	htmlFlags |= gfm.HTML_GITHUB_BLOCKCODE
@@ -162,7 +162,7 @@ func RenderMarkdown(rawBytes []byte, urlPrefix string) []byte {
 	extensions |= gfm.EXTENSION_SPACE_HEADERS
 	extensions |= gfm.EXTENSION_NO_EMPTY_LINE_BEFORE_BLOCK
 
-	body := gfm.Markdown(rawBytes, renderer, extensions)
+	body = gfm.Markdown(body, renderer, extensions)
 	// fmt.Println(string(body))
 	return body
 }
