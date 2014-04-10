@@ -5,7 +5,7 @@ Gogs(Go Git Service) 是一个由 Go 语言编写的自助 Git 托管服务。
 
 ![Demo](http://gowalker.org/public/gogs_demo.gif)
 
-##### 当前版本：0.2.3 Alpha
+##### 当前版本：0.2.4 Alpha
 
 ## 开发目的
 

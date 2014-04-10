@@ -21,16 +21,19 @@ import (
 	"github.com/gogits/gogs/modules/middleware"
 )
 
-func Create(ctx *middleware.Context, form auth.CreateRepoForm) {
+func Create(ctx *middleware.Context) {
 	ctx.Data["Title"] = "Create repository"
-	ctx.Data["PageIsNewRepo"] = true // For navbar arrow.
+	ctx.Data["PageIsNewRepo"] = true
 	ctx.Data["LanguageIgns"] = models.LanguageIgns
 	ctx.Data["Licenses"] = models.Licenses
+	ctx.HTML(200, "repo/create")
+}
 
-	if ctx.Req.Method == "GET" {
-		ctx.HTML(200, "repo/create")
-		return
-	}
+func CreatePost(ctx *middleware.Context, form auth.CreateRepoForm) {
+	ctx.Data["Title"] = "Create repository"
+	ctx.Data["PageIsNewRepo"] = true
+	ctx.Data["LanguageIgns"] = models.LanguageIgns
+	ctx.Data["Licenses"] = models.Licenses
 
 	if ctx.HasError() {
 		ctx.HTML(200, "repo/create")
@@ -50,17 +53,18 @@ func Create(ctx *middleware.Context, form auth.CreateRepoForm) {
 		ctx.RenderWithErr(models.ErrRepoNameIllegal.Error(), "repo/create", &form)
 		return
 	}
-	ctx.Handle(200, "repo.Create", err)
+	ctx.Handle(500, "repo.Create", err)
 }
 
-func Mirror(ctx *middleware.Context, form auth.CreateRepoForm) {
+func Mirror(ctx *middleware.Context) {
 	ctx.Data["Title"] = "Mirror repository"
-	ctx.Data["PageIsNewRepo"] = true // For navbar arrow.
+	ctx.Data["PageIsNewRepo"] = true
+	ctx.HTML(200, "repo/mirror")
+}
 
-	if ctx.Req.Method == "GET" {
-		ctx.HTML(200, "repo/mirror")
-		return
-	}
+func MirrorPost(ctx *middleware.Context, form auth.CreateRepoForm) {
+	ctx.Data["Title"] = "Mirror repository"
+	ctx.Data["PageIsNewRepo"] = true
 
 	if ctx.HasError() {
 		ctx.HTML(200, "repo/mirror")
@@ -80,7 +84,7 @@ func Mirror(ctx *middleware.Context, form auth.CreateRepoForm) {
 		ctx.RenderWithErr(models.ErrRepoNameIllegal.Error(), "repo/mirror", &form)
 		return
 	}
-	ctx.Handle(200, "repo.Mirror", err)
+	ctx.Handle(500, "repo.Mirror", err)
 }
 
 func Single(ctx *middleware.Context, params martini.Params) {
