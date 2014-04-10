@@ -1,0 +1,17 @@
+{{template "base/head" .}}
+{{template "base/navbar" .}}
+<div id="body-nav">
+    <div class="container">
+        <ul class="nav nav-pills pull-right">
+            <li><a href="/">Feed</a></li>
+            <li><a href="/issues">Issues</a></li>
+            <li><a href="/pulls">Pull Requests</a></li>
+            <li class="active"><a href="/stars">Stars</a></li>
+        </ul>
+        <h3>Stars</h3>
+    </div>
+</div>
+<div id="body" class="container" data-page="user">
+    {{if .HasInfo}}<div class="alert alert-info">{{.InfoMsg}}</div>{{end}}
+</div>
+{{template "base/footer" .}}

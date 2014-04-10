@@ -1,0 +1,50 @@
+<div class="panel panel-default file-content">
+    <div class="panel-heading file-head">
+        {{if .ReadmeExist}}
+            <i class="icon fa fa-book"></i>
+            {{if .ReadmeInSingle}}
+            {{.FileName}}
+            {{else}}
+            {{.FileName}} <span class="file-size">{{FileSize .FileSize}}</span>
+            {{end}}
+        {{else}}
+            <i class="icon fa fa-file-text-o"></i>
+            {{.FileName}} <span class="file-size">{{FileSize .FileSize}}</span>
+        {{end}}
+        {{if not .ReadmeInSingle}}
+        <div class="btn-group pull-right">
+            <a class="btn btn-default hidden" href="#">Edit</a>
+            <a class="btn btn-default" href="{{.FileLink}}">Raw</a>
+            <a class="btn btn-default hidden" href="#">Blame</a>
+            <a class="btn btn-default hidden" href="#">History</a>
+            <a class="btn btn-danger hidden" href="#">Delete</a>
+        </div>
+        {{end}}
+    </div>
+    {{if not .FileIsText}}
+        <div class="panel-footer text-center">
+            {{if .IsImageFile}}
+                <img src="{{.FileLink}}">
+            {{else}}
+                <a href="{{.FileLink}}" class="btn btn-default">View Raw</a>
+            {{end}}
+        </div>
+    {{else}}
+        {{if .ReadmeExist}}
+            <div class="panel-body file-body markdown">
+                {{.FileContent|str2html}}
+            </div>
+        {{else}}
+            <div class="panel-body file-body file-code code-view">
+                <table>
+                    <tbody>
+                        <tr>
+                            <td class="lines-num"></td>
+                            <td class="lines-code markdown"><pre class="prettyprint linenums{{if .FileExt}} lang-{{.FileExt}}{{end}}">{{.FileContent}}</pre></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        {{end}}
+    {{end}}
+</div>

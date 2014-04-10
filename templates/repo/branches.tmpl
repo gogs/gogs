@@ -1,0 +1,42 @@
+{{template "base/head" .}}
+{{template "base/navbar" .}}
+{{template "repo/nav" .}}
+{{template "repo/toolbar" .}}
+<div id="body" class="container">
+    <div id="source">
+        <div class="panel panel-default branch-box info-box">
+            <div class="panel-heading info-head">
+                <h4>Branches</h4>
+            </div>
+            <table class="panel-footer table branch-list table table-hover">
+                <thead>
+                <tr>
+                    <th class="name"></th>
+                    <th class="behind">Behind</th>
+                    <th class="ahead">Ahead</th>
+                    <th class="date">Last Commit</th>
+                    <th class="action"></th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr class="branch-main">
+                    <td class="name" colspan="3">
+                        <a href="#"><strong>BranchName</strong></a>
+                        <button class="btn btn-primary btn-sm">base branch</button>
+                    </td>
+                    <td class="date">3 years ago</td>
+                    <td class="action"></td>
+                </tr>
+                <tr>
+                    <td class="name"><a href="#"><strong>BranchName</strong></a></td>
+                    <td class="behind">102 <span class="graph" style="width: 100%"></span></td>
+                    <td class="ahead"><span class="graph" style="width: 4%"></span>4</td>
+                    <td class="date">3 years ago</td>
+                    <td class="action"><a class="btn btn-info btn-sm" href="#">compare</a></td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{{template "base/footer" .}}

@@ -1,0 +1,45 @@
+{{template "base/head" .}}
+{{template "base/navbar" .}}
+<div id="body" class="container" data-page="admin">
+    {{template "admin/nav" .}}
+    <div id="admin-container" class="col-md-10">
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                User Management
+            </div>
+
+            <div class="panel-body">
+                <a href="/admin/users/new" class="btn btn-primary">New Account</a>
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Id</th>
+                            <th>Name</th>
+                            <th>E-mail</th>
+                            <th>Actived</th>
+                            <th>Admin</th>
+                            <th>Repos</th>
+                            <th>Join</th>
+                            <th>Edit</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {{range .Users}}
+                        <tr>
+                            <td>{{.Id}}</td>
+                            <td><a href="/user/{{.Name}}">{{.Name}}</a></td>
+                            <td>{{.Email}}</td>
+                            <td><i class="fa fa{{if .IsActive}}-check{{end}}-square-o"></i></td>
+                            <td><i class="fa fa{{if .IsAdmin}}-check{{end}}-square-o"></i></td>
+                            <td>{{.NumRepos}}</td>
+                            <td>{{DateFormat .Created "M d, Y"}}</td>
+                            <td><a href="/admin/users/{{.Id}}"><i class="fa fa-pencil-square-o"></i></a></td>
+                        </tr>
+                        {{end}}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{{template "base/footer" .}}
