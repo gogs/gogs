@@ -142,7 +142,8 @@ func GetReposFiles(userName, repoName, commitId, rpath string) ([]*RepoFile, err
 }
 
 func getReposFiles(userName, repoName, commitId string, rpath string) ([]*RepoFile, error) {
-	repo, err := git.OpenRepository(RepoPath(userName, repoName))
+	repopath := RepoPath(userName, repoName)
+	repo, err := git.OpenRepository(repopath)
 	if err != nil {
 		return nil, err
 	}
@@ -162,77 +163,23 @@ func getReposFiles(userName, repoName, commitId string, rpath string) ([]*RepoFi
 				return 0
 			}
 
-			var cm = commit
-			var i int
-			for {
-				i = i + 1
-				//fmt.Println(".....", i, cm.Id(), cm.ParentCount())
-				if cm.ParentCount() == 0 {
-					break
-				} else if cm.ParentCount() == 1 {
-					pt, _ := repo.SubTree(cm.Parent(0).Tree, dirname)
-					if pt == nil {
-						break
-					}
-					pEntry := pt.EntryByName(entry.Name)
-					if pEntry == nil || !pEntry.Id.Equal(entry.Id) {
-						break
-					} else {
-						cm = cm.Parent(0)
-					}
-				} else {
-					var emptyCnt = 0
-					var sameIdcnt = 0
-					var lastSameCm *git.Commit
-					//fmt.Println(".....", cm.ParentCount())
-					for i := 0; i < cm.ParentCount(); i++ {
-						//fmt.Println("parent", i, cm.Parent(i).Id())
-						p := cm.Parent(i)
-						pt, _ := repo.SubTree(p.Tree, dirname)
-						var pEntry *git.TreeEntry
-						if pt != nil {
-							pEntry = pt.EntryByName(entry.Name)
-						}
-
-						//fmt.Println("pEntry", pEntry)
-
-						if pEntry == nil {
-							emptyCnt = emptyCnt + 1
-							if emptyCnt+sameIdcnt == cm.ParentCount() {
-								if lastSameCm == nil {
-									goto loop
-								} else {
-									cm = lastSameCm
-									break
-								}
-							}
-						} else {
-							//fmt.Println(i, "pEntry", pEntry.Id, "entry", entry.Id)
-							if !pEntry.Id.Equal(entry.Id) {
-								goto loop
-							} else {
-								lastSameCm = cm.Parent(i)
-								sameIdcnt = sameIdcnt + 1
-								if emptyCnt+sameIdcnt == cm.ParentCount() {
-									// TODO: now follow the first parent commit?
-									cm = lastSameCm
-									//fmt.Println("sameId...")
-									break
-								}
-							}
-						}
-					}
-				}
+			cmd := exec.Command("git", "log", "-1", "--pretty=format:%H", commitId, "--", entry.Name)
+			cmd.Dir = repopath
+			out, err := cmd.Output()
+			if err != nil {
+				return 0
 			}
-
-		loop:
+			filecm, err := repo.GetCommit(string(out))
+			if err != nil {
+				return 0
+			}
 
 			rp := &RepoFile{
 				entry,
 				path.Join(dirname, entry.Name),
 				size,
 				repo,
-				cm,
+				filecm,
 			}
 
 			if entry.IsFile() {
