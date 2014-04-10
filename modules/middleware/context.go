@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -34,6 +35,7 @@ type Context struct {
 	p        martini.Params
 	Req      *http.Request
 	Res      http.ResponseWriter
+	Flash    *Flash
 	Session  session.SessionStore
 	Cache    cache.Cache
 	User     *models.User
@@ -78,6 +80,7 @@ func (ctx *Context) HasError() bool {
 	if !ok {
 		return false
 	}
+	ctx.Flash.Error(ctx.Data["ErrorMsg"].(string))
 	return hasErr.(bool)
 }
 
@@ -88,8 +91,7 @@ func (ctx *Context) HTML(status int, name string, htmlOpt ...HTMLOptions) {
 
 // RenderWithErr used for page has form validation but need to prompt error to users.
 func (ctx *Context) RenderWithErr(msg, tpl string, form auth.Form) {
-	ctx.Data["HasError"] = true
-	ctx.Data["ErrorMsg"] = msg
+	ctx.Flash.Error(msg)
 	if form != nil {
 		auth.AssignForm(form, ctx.Data)
 	}
@@ -239,6 +241,21 @@ func (ctx *Context) CsrfTokenValid() bool {
 	return true
 }
 
+type Flash struct {
+	url.Values
+	ErrorMsg, SuccessMsg string
+}
+
+func (f *Flash) Error(msg string) {
+	f.Set("error", msg)
+	f.ErrorMsg = msg
+}
+
+func (f *Flash) Success(msg string) {
+	f.Set("success", msg)
+	f.SuccessMsg = msg
+}
+
 // InitContext initializes a classic context for a request.
 func InitContext() martini.Handler {
 	return func(res http.ResponseWriter, r *http.Request, c martini.Context, rd *Render) {
@@ -256,9 +273,24 @@ func InitContext() martini.Handler {
 
 		// start session
 		ctx.Session = base.SessionManager.SessionStart(res, r)
+
+		ctx.Flash = &Flash{}
+		// Get flash.
+		values, err := url.ParseQuery(ctx.GetCookie("gogs_flash"))
+		if err != nil {
+			log.Error("InitContext.ParseQuery(flash): %v", err)
+		} else {
+			ctx.Flash.Values = values
+			ctx.Data["Flash"] = ctx.Flash
+		}
+
 		rw := res.(martini.ResponseWriter)
 		rw.Before(func(martini.ResponseWriter) {
 			ctx.Session.SessionRelease(res)
+
+			if flash := ctx.Flash.Encode(); len(flash) > 0 {
+				ctx.SetCookie("gogs_flash", ctx.Flash.Encode(), -1)
+			}
 		})
 
 		// Get user from session if logined.

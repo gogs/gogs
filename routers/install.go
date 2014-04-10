@@ -23,6 +23,10 @@ import (
 	"github.com/gogits/gogs/modules/middleware"
 )
 
+type installRouter int
+
+var InstallRouter installRouter = 1
+
 // Check run mode(Default of martini is Dev).
 func checkRunMode() {
 	switch base.Cfg.MustValue("", "RUN_MODE") {
@@ -54,7 +58,7 @@ func GlobalInit() {
 	checkRunMode()
 }
 
-func Install(ctx *middleware.Context, form auth.InstallForm) {
+func (r installRouter) Get(ctx *middleware.Context, form auth.InstallForm) {
 	if base.InstallLock {
 		ctx.Handle(404, "install.Install", errors.New("Installation is prohibited"))
 		return
@@ -63,41 +67,48 @@ func Install(ctx *middleware.Context, form auth.InstallForm) {
 	ctx.Data["Title"] = "Install"
 	ctx.Data["PageIsInstall"] = true
 
-	if ctx.Req.Method == "GET" {
-		// Get and assign value to install form.
-		if len(form.Host) == 0 {
-			form.Host = models.DbCfg.Host
-		}
-		if len(form.User) == 0 {
-			form.User = models.DbCfg.User
-		}
-		if len(form.Passwd) == 0 {
-			form.Passwd = models.DbCfg.Pwd
-		}
-		if len(form.DatabaseName) == 0 {
-			form.DatabaseName = models.DbCfg.Name
-		}
-		if len(form.DatabasePath) == 0 {
-			form.DatabasePath = models.DbCfg.Path
-		}
+	// Get and assign value to install form.
+	if len(form.Host) == 0 {
+		form.Host = models.DbCfg.Host
+	}
+	if len(form.User) == 0 {
+		form.User = models.DbCfg.User
+	}
+	if len(form.Passwd) == 0 {
+		form.Passwd = models.DbCfg.Pwd
+	}
+	if len(form.DatabaseName) == 0 {
+		form.DatabaseName = models.DbCfg.Name
+	}
+	if len(form.DatabasePath) == 0 {
+		form.DatabasePath = models.DbCfg.Path
+	}
 
-		if len(form.RepoRootPath) == 0 {
-			form.RepoRootPath = base.RepoRootPath
-		}
-		if len(form.RunUser) == 0 {
-			form.RunUser = base.RunUser
-		}
-		if len(form.Domain) == 0 {
-			form.Domain = base.Domain
-		}
-		if len(form.AppUrl) == 0 {
-			form.AppUrl = base.AppUrl
-		}
+	if len(form.RepoRootPath) == 0 {
+		form.RepoRootPath = base.RepoRootPath
+	}
+	if len(form.RunUser) == 0 {
+		form.RunUser = base.RunUser
+	}
+	if len(form.Domain) == 0 {
+		form.Domain = base.Domain
+	}
+	if len(form.AppUrl) == 0 {
+		form.AppUrl = base.AppUrl
+	}
 
-		auth.AssignForm(form, ctx.Data)
-		ctx.HTML(200, "install")
+	auth.AssignForm(form, ctx.Data)
+	ctx.HTML(200, "install")
+}
+
+func (r installRouter) Post(ctx *middleware.Context, form auth.InstallForm) {
+	if base.InstallLock {
+		ctx.Handle(404, "install.Install", errors.New("Installation is prohibited"))
 		return
 	}
+
+	ctx.Data["Title"] = "Install"
+	ctx.Data["PageIsInstall"] = true
 
 	if ctx.HasError() {
 		ctx.HTML(200, "install")
@@ -197,5 +208,6 @@ func Install(ctx *middleware.Context, form auth.InstallForm) {
 	}
 
 	log.Info("First-time run install finished!")
+	ctx.Flash.Success("Welcome! We're glad that you choose Gogs, have fun and take care.")
 	ctx.Redirect("/user/login")
 }

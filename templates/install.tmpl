@@ -3,7 +3,7 @@
     <form action="/install" method="post" class="form-horizontal card" id="install-card">
         {{.CsrfTokenHtml}}
         <h3>Install Steps For First-time Run</h3>
-        <div class="alert alert-danger form-error{{if .HasError}}{{else}} hidden{{end}}">{{.ErrorMsg}}</div>
+        {{template "base/alert" .}}
         <p class="help-block text-center">Gogs requires MySQL or PostgreSQL, SQLite3 only available for official binary version</p>
         <div class="form-group">
             <label class="col-md-3 control-label">Database Type: </label>
