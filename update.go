@@ -6,7 +6,6 @@ package main
 
 import (
 	"container/list"
-	"fmt"
 	"os"
 	"os/exec"
 	"path"
@@ -14,11 +13,11 @@ import (
 	"strings"
 
 	"github.com/codegangsta/cli"
+	qlog "github.com/qiniu/log"
+
 	"github.com/gogits/git"
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/modules/log"
-	//"github.com/qiniu/log"
 )
 
 var CmdUpdate = cli.Command{
@@ -31,17 +30,22 @@ gogs serv provide access auth for repositories`,
 }
 
 func newUpdateLogger(execDir string) {
-	level := "0"
 	logPath := execDir + "/log/update.log"
 	os.MkdirAll(path.Dir(logPath), os.ModePerm)
-	log.NewLogger(0, "file", fmt.Sprintf(`{"level":%s,"filename":"%s"}`, level, logPath))
-	log.Trace("start logging...")
+
+	f, err := os.OpenFile(logPath, os.O_WRONLY|os.O_APPEND|os.O_CREATE, os.ModePerm)
+	if err != nil {
+		qlog.Fatal(err)
+	}
+
+	qlog.SetOutput(f)
+	qlog.Info("Start logging update...")
 }
 
 // for command: ./gogs update
 func runUpdate(c *cli.Context) {
 	execDir, _ := base.ExecDir()
-	newLogger(execDir)
+	newUpdateLogger(execDir)
 
 	base.NewConfigContext()
 	models.LoadModelsConfig()
@@ -54,14 +58,12 @@ func runUpdate(c *cli.Context) {
 
 	args := c.Args()
 	if len(args) != 3 {
-		log.Error("received less 3 parameters")
-		return
+		qlog.Fatal("received less 3 parameters")
 	}
 
 	refName := args[0]
 	if refName == "" {
-		log.Error("refName is empty, shouldn't use")
-		return
+		qlog.Fatal("refName is empty, shouldn't use")
 	}
 	oldCommitId := args[1]
 	newCommitId := args[2]
@@ -69,8 +71,7 @@ func runUpdate(c *cli.Context) {
 	isNew := strings.HasPrefix(oldCommitId, "0000000")
 	if isNew &&
 		strings.HasPrefix(newCommitId, "0000000") {
-		log.Error("old rev and new rev both 000000")
-		return
+		qlog.Fatal("old rev and new rev both 000000")
 	}
 
 	userName := os.Getenv("userName")
@@ -86,20 +87,17 @@ func runUpdate(c *cli.Context) {
 
 	repo, err := git.OpenRepository(f)
 	if err != nil {
-		log.Error("runUpdate.Open repoId: %v", err)
-		return
+		qlog.Fatalf("runUpdate.Open repoId: %v", err)
 	}
 
 	newOid, err := git.NewOidFromString(newCommitId)
 	if err != nil {
-		log.Error("runUpdate.Ref repoId: %v", err)
-		return
+		qlog.Fatalf("runUpdate.Ref repoId: %v", err)
 	}
 
 	newCommit, err := repo.LookupCommit(newOid)
 	if err != nil {
-		log.Error("runUpdate.Ref repoId: %v", err)
-		return
+		qlog.Fatalf("runUpdate.Ref repoId: %v", err)
 	}
 
 	var l *list.List
@@ -107,39 +105,33 @@ func runUpdate(c *cli.Context) {
 	if isNew {
 		l, err = repo.CommitsBefore(newCommit.Id())
 		if err != nil {
-			log.Error("Find CommitsBefore erro:", err)
-			return
+			qlog.Fatalf("Find CommitsBefore erro:", err)
 		}
 	} else {
 		oldOid, err := git.NewOidFromString(oldCommitId)
 		if err != nil {
-			log.Error("runUpdate.Ref repoId: %v", err)
-			return
+			qlog.Fatalf("runUpdate.Ref repoId: %v", err)
 		}
 
 		oldCommit, err := repo.LookupCommit(oldOid)
 		if err != nil {
-			log.Error("runUpdate.Ref repoId: %v", err)
-			return
+			qlog.Fatalf("runUpdate.Ref repoId: %v", err)
 		}
 		l = repo.CommitsBetween(newCommit, oldCommit)
 	}
 
 	if err != nil {
-		log.Error("runUpdate.Commit repoId: %v", err)
-		return
+		qlog.Fatalf("runUpdate.Commit repoId: %v", err)
 	}
 
 	sUserId, err := strconv.Atoi(userId)
 	if err != nil {
-		log.Error("runUpdate.Parse userId: %v", err)
-		return
+		qlog.Fatalf("runUpdate.Parse userId: %v", err)
 	}
 
 	repos, err := models.GetRepositoryByName(int64(sUserId), repoName)
 	if err != nil {
-		log.Error("runUpdate.GetRepositoryByName userId: %v", err)
-		return
+		qlog.Fatalf("runUpdate.GetRepositoryByName userId: %v", err)
 	}
 
 	commits := make([]*base.PushCommit, 0)
@@ -163,6 +155,6 @@ func runUpdate(c *cli.Context) {
 	//commits = append(commits, []string{lastCommit.Id().String(), lastCommit.Message()})
 	if err = models.CommitRepoAction(int64(sUserId), userName, actEmail,
 		repos.Id, repoName, git.BranchName(refName), &base.PushCommits{l.Len(), commits}); err != nil {
-		log.Error("runUpdate.models.CommitRepoAction: %v", err)
+		qlog.Fatalf("runUpdate.models.CommitRepoAction: %v", err)
 	}
 }

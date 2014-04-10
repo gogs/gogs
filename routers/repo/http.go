@@ -135,10 +135,11 @@ type route struct {
 }
 
 type Config struct {
-	ReposRoot   string
-	GitBinPath  string
-	UploadPack  bool
-	ReceivePack bool
+	ReposRoot     string
+	GitBinPath    string
+	UploadPack    bool
+	ReceivePack   bool
+	OnPushSucceed func()
 }
 
 type handler struct {
@@ -223,21 +224,26 @@ func serviceRpc(rpc string, hr handler) {
 	in, err := cmd.StdinPipe()
 	if err != nil {
 		log.Print(err)
+		return
 	}
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		log.Print(err)
+		return
 	}
 
 	err = cmd.Start()
 	if err != nil {
 		log.Print(err)
+		return
 	}
 
 	in.Write(input)
 	io.Copy(w, stdout)
 	cmd.Wait()
+
+	hr.Config.OnPushSucceed()
 }
 
 func getInfoRefs(hr handler) {
