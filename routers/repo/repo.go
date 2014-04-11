@@ -21,16 +21,19 @@ import (
 	"github.com/gogits/gogs/modules/middleware"
 )
 
-func Create(ctx *middleware.Context, form auth.CreateRepoForm) {
+func Create(ctx *middleware.Context) {
 	ctx.Data["Title"] = "Create repository"
-	ctx.Data["PageIsNewRepo"] = true // For navbar arrow.
+	ctx.Data["PageIsNewRepo"] = true
 	ctx.Data["LanguageIgns"] = models.LanguageIgns
 	ctx.Data["Licenses"] = models.Licenses
+	ctx.HTML(200, "repo/create")
+}
 
-	if ctx.Req.Method == "GET" {
-		ctx.HTML(200, "repo/create")
-		return
-	}
+func CreatePost(ctx *middleware.Context, form auth.CreateRepoForm) {
+	ctx.Data["Title"] = "Create repository"
+	ctx.Data["PageIsNewRepo"] = true
+	ctx.Data["LanguageIgns"] = models.LanguageIgns
+	ctx.Data["Licenses"] = models.Licenses
 
 	if ctx.HasError() {
 		ctx.HTML(200, "repo/create")
@@ -50,17 +53,18 @@ func Create(ctx *middleware.Context, form auth.CreateRepoForm) {
 		ctx.RenderWithErr(models.ErrRepoNameIllegal.Error(), "repo/create", &form)
 		return
 	}
-	ctx.Handle(200, "repo.Create", err)
+	ctx.Handle(500, "repo.Create", err)
 }
 
-func Mirror(ctx *middleware.Context, form auth.CreateRepoForm) {
+func Mirror(ctx *middleware.Context) {
 	ctx.Data["Title"] = "Mirror repository"
-	ctx.Data["PageIsNewRepo"] = true // For navbar arrow.
+	ctx.Data["PageIsNewRepo"] = true
+	ctx.HTML(200, "repo/mirror")
+}
 
-	if ctx.Req.Method == "GET" {
-		ctx.HTML(200, "repo/mirror")
-		return
-	}
+func MirrorPost(ctx *middleware.Context, form auth.CreateRepoForm) {
+	ctx.Data["Title"] = "Mirror repository"
+	ctx.Data["PageIsNewRepo"] = true
 
 	if ctx.HasError() {
 		ctx.HTML(200, "repo/mirror")
@@ -80,7 +84,7 @@ func Mirror(ctx *middleware.Context, form auth.CreateRepoForm) {
 		ctx.RenderWithErr(models.ErrRepoNameIllegal.Error(), "repo/mirror", &form)
 		return
 	}
-	ctx.Handle(200, "repo.Mirror", err)
+	ctx.Handle(500, "repo.Mirror", err)
 }
 
 func Single(ctx *middleware.Context, params martini.Params) {
@@ -319,27 +323,29 @@ func SettingPost(ctx *middleware.Context) {
 
 	switch ctx.Query("action") {
 	case "update":
-		isNameChanged := false
 		newRepoName := ctx.Query("name")
 		// Check if repository name has been changed.
 		if ctx.Repo.Repository.Name != newRepoName {
 			isExist, err := models.IsRepositoryExist(ctx.Repo.Owner, newRepoName)
 			if err != nil {
-				ctx.Handle(404, "repo.SettingPost(update: check existence)", err)
+				ctx.Handle(500, "repo.SettingPost(update: check existence)", err)
 				return
 			} else if isExist {
 				ctx.RenderWithErr("Repository name has been taken in your repositories.", "repo/setting", nil)
 				return
 			} else if err = models.ChangeRepositoryName(ctx.Repo.Owner.Name, ctx.Repo.Repository.Name, newRepoName); err != nil {
-				ctx.Handle(404, "repo.SettingPost(change repository name)", err)
+				ctx.Handle(500, "repo.SettingPost(change repository name)", err)
 				return
 			}
 			log.Trace("%s Repository name changed: %s/%s -> %s", ctx.Req.RequestURI, ctx.User.Name, ctx.Repo.Repository.Name, newRepoName)
 
-			isNameChanged = true
 			ctx.Repo.Repository.Name = newRepoName
 		}
 
+		br := ctx.Query("branch")
+		if models.IsBranchExist(ctx.User.Name, ctx.Repo.Repository.Name, br) {
+			ctx.Repo.Repository.DefaultBranch = br
+		}
 		ctx.Repo.Repository.Description = ctx.Query("desc")
 		ctx.Repo.Repository.Website = ctx.Query("site")
 		ctx.Repo.Repository.IsGoget = ctx.Query("goget") == "on"
@@ -347,14 +353,10 @@ func SettingPost(ctx *middleware.Context) {
 			ctx.Handle(404, "repo.SettingPost(update)", err)
 			return
 		}
-
-		ctx.Data["IsSuccess"] = true
-		if isNameChanged {
-			ctx.Redirect(fmt.Sprintf("/%s/%s/settings", ctx.Repo.Owner.Name, ctx.Repo.Repository.Name))
-		} else {
-			ctx.HTML(200, "repo/setting")
-		}
 		log.Trace("%s Repository updated: %s/%s", ctx.Req.RequestURI, ctx.Repo.Owner.Name, ctx.Repo.Repository.Name)
+
+		ctx.Flash.Success("Repository options has been successfully updated.")
+		ctx.Redirect(fmt.Sprintf("/%s/%s/settings", ctx.Repo.Owner.Name, ctx.Repo.Repository.Name))
 	case "transfer":
 		if len(ctx.Repo.Repository.Name) == 0 || ctx.Repo.Repository.Name != ctx.Query("repository") {
 			ctx.RenderWithErr("Please make sure you entered repository name is correct.", "repo/setting", nil)
@@ -365,19 +367,18 @@ func SettingPost(ctx *middleware.Context) {
 		// Check if new owner exists.
 		isExist, err := models.IsUserExist(newOwner)
 		if err != nil {
-			ctx.Handle(404, "repo.SettingPost(transfer: check existence)", err)
+			ctx.Handle(500, "repo.SettingPost(transfer: check existence)", err)
 			return
 		} else if !isExist {
 			ctx.RenderWithErr("Please make sure you entered owner name is correct.", "repo/setting", nil)
 			return
 		} else if err = models.TransferOwnership(ctx.User, newOwner, ctx.Repo.Repository); err != nil {
-			ctx.Handle(404, "repo.SettingPost(transfer repository)", err)
+			ctx.Handle(500, "repo.SettingPost(transfer repository)", err)
 			return
 		}
 		log.Trace("%s Repository transfered: %s/%s -> %s", ctx.Req.RequestURI, ctx.User.Name, ctx.Repo.Repository.Name, newOwner)
 
 		ctx.Redirect("/")
-		return
 	case "delete":
 		if len(ctx.Repo.Repository.Name) == 0 || ctx.Repo.Repository.Name != ctx.Query("repository") {
 			ctx.RenderWithErr("Please make sure you entered repository name is correct.", "repo/setting", nil)
@@ -385,11 +386,11 @@ func SettingPost(ctx *middleware.Context) {
 		}
 
 		if err := models.DeleteRepository(ctx.User.Id, ctx.Repo.Repository.Id, ctx.User.LowerName); err != nil {
-			ctx.Handle(200, "repo.Delete", err)
+			ctx.Handle(500, "repo.Delete", err)
 			return
 		}
-
 		log.Trace("%s Repository deleted: %s/%s", ctx.Req.RequestURI, ctx.User.LowerName, ctx.Repo.Repository.LowerName)
+
 		ctx.Redirect("/")
 	}
 }

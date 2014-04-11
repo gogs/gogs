@@ -12,7 +12,7 @@
     </div>
 
     <div id="repo-setting-container" class="col-md-9">
-        {{if .IsSuccess}}<p class="alert alert-success">Repository options has been successfully updated.</p>{{else if .HasError}}<p class="alert alert-danger form-error">{{.ErrorMsg}}</p>{{end}}
+        {{template "base/alert" .}}
         <div class="panel panel-default">
             <div class="panel-heading">
                 Repository Options
@@ -44,14 +44,17 @@
                         </div>
                     </div>
                     <hr>
-                    <!-- <div class="form-group">
+                    <div class="form-group">
                         <label class="col-md-3 text-right">Default Branch</label>
                         <div class="col-md-9">
                             <select name="branch" id="repo-default-branch" class="form-control">
-                                <option value="">Branch</option>
+                                <option value="{{.Repository.DefaultBranch}}">{{.Repository.DefaultBranch}}</option>
+                                {{range .Branches}}
+                                {{if eq . $.Repository.DefaultBranch}}{{else}}<option value="{{.}}">{{.}}</option>{{end}}
+                                {{end}}
                             </select>
                         </div>
-                    </div> -->
+                    </div>
 
                     <div class="form-group">
                         <div class="col-md-offset-3 col-md-9">

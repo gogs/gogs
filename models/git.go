@@ -14,6 +14,8 @@ import (
 	"path"
 	"strings"
 
+	"github.com/Unknwon/com"
+
 	"github.com/gogits/git"
 
 	"github.com/gogits/gogs/modules/base"
@@ -163,13 +165,11 @@ func getReposFiles(userName, repoName, commitId string, rpath string) ([]*RepoFi
 				return 0
 			}
 
-			cmd := exec.Command("git", "log", "-1", "--pretty=format:%H", commitId, "--", path.Join(dirname, entry.Name))
-			cmd.Dir = repopath
-			out, err := cmd.Output()
+			stdout, _, err := com.ExecCmdDir(repopath, "git", "log", "-1", "--pretty=format:%H", commitId, "--", path.Join(dirname, entry.Name))
 			if err != nil {
 				return 0
 			}
-			filecm, err := repo.GetCommit(string(out))
+			filecm, err := repo.GetCommit(string(stdout))
 			if err != nil {
 				return 0
 			}

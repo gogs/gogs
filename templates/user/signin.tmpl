@@ -4,7 +4,7 @@
     <form action="/user/login" method="post" class="form-horizontal card" id="login-card">
         {{.CsrfTokenHtml}}
         <h3>Log in</h3>
-        <div class="alert alert-danger form-error{{if .HasError}}{{else}} hidden{{end}}">{{.ErrorMsg}}</div>
+        {{template "base/alert" .}}
         <div class="form-group {{if .Err_UserName}}has-error has-feedback{{end}}">
             <label class="col-md-4 control-label">Username: </label>
             <div class="col-md-6">
