@@ -160,7 +160,7 @@ func RepoAssignment(redirect bool, args ...bool) martini.Handler {
 		}
 
 		ctx.Data["BranchName"] = ctx.Repo.BranchName
-		ctx.Data["Branches"], _ = models.GetBranches(ctx.User.Name, ctx.Repo.Repository.Name)
+		ctx.Data["Branches"], _ = models.GetBranches(user.Name, repoName)
 		ctx.Data["CommitId"] = ctx.Repo.CommitId
 		ctx.Data["IsRepositoryWatching"] = ctx.Repo.IsWatching
 	}
