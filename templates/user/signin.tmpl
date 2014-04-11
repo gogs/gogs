@@ -46,7 +46,7 @@
         {{if .OauthEnabled}}
         <div class="form-group text-center" id="social-login">
             <h4>Log In with Social Accounts</h4>
-            {{if .OauthGitHubEnabled}}<a href="/user/login/github"><i class="fa fa-github-square fa-3x"></i></a>{{end}}
+            {{if .OauthGitHubEnabled}}<a href="/user/login/github?next=/user/sign_up"><i class="fa fa-github-square fa-3x"></i></a>{{end}}
         </div>
         {{end}}
     </form>

@@ -22,10 +22,9 @@ import (
 
 type SocialConnector interface {
 	Identity() string
-	Type() int
 	Name() string
 	Email() string
-	Token() string
+	TokenString() string
 }
 
 type SocialGithub struct {
@@ -34,15 +33,11 @@ type SocialGithub struct {
 		Name  string `json:"login"`
 		Email string `json:"email"`
 	}
-	WebToken *oauth.Token
+	Token *oauth.Token
 }
 
 func (s *SocialGithub) Identity() string {
 	return strconv.Itoa(s.data.Id)
-}
-
-func (s *SocialGithub) Type() int {
-	return models.OT_GITHUB
 }
 
 func (s *SocialGithub) Name() string {
@@ -53,8 +48,8 @@ func (s *SocialGithub) Email() string {
 	return s.data.Email
 }
 
-func (s *SocialGithub) Token() string {
-	data, _ := json.Marshal(s.WebToken)
+func (s *SocialGithub) TokenString() string {
+	data, _ := json.Marshal(s.Token)
 	return string(data)
 }
 
@@ -62,7 +57,7 @@ func (s *SocialGithub) Token() string {
 func (s *SocialGithub) Update() error {
 	scope := "https://api.github.com/user"
 	transport := &oauth.Transport{
-		Token: s.WebToken,
+		Token: s.Token,
 	}
 	log.Debug("update github info")
 	r, err := transport.Client().Get(scope)
@@ -122,7 +117,7 @@ func SocialSignIn(ctx *middleware.Context, tokens oauth2.Tokens) {
 	next = extractPath(ctx.Query("state"))
 	log.Debug("success token: %v", tk)
 
-	gh := &SocialGithub{WebToken: tk}
+	gh := &SocialGithub{Token: tk}
 	if err = gh.Update(); err != nil {
 		// FIXME: handle error page 501
 		log.Error("connect with github error: %s", err)
@@ -137,9 +132,9 @@ func SocialSignIn(ctx *middleware.Context, tokens oauth2.Tokens) {
 		ctx.Session.Set("userName", oa.User.Name)
 	case models.ErrOauth2RecordNotExists:
 		oa = &models.Oauth2{}
-		oa.Uid = 0
-		oa.Type = soc.Type()
-		oa.Token = soc.Token()
+		oa.Uid = -1
+		oa.Type = models.OT_GITHUB
+		oa.Token = soc.TokenString()
 		oa.Identity = soc.Identity()
 		log.Debug("oa: %v", oa)
 		if err = models.AddOauth2(oa); err != nil {
@@ -147,7 +142,11 @@ func SocialSignIn(ctx *middleware.Context, tokens oauth2.Tokens) {
 			return
 		}
 	case models.ErrOauth2NotAssociatedWithUser:
-		// ignore it. judge in /usr/login page
+		ctx.Session.Set("socialName", soc.Name())
+		ctx.Session.Set("socialEmail", soc.Email())
+		ctx.Session.Set("socialId", oa.Id)
+		ctx.Redirect("/user/sign_up")
+		return
 	default:
 		log.Error(err.Error()) // FIXME: handle error page
 		return
