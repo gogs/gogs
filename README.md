@@ -45,8 +45,9 @@ Make sure you install [Prerequirements](https://github.com/gogits/gogs/wiki/Prer
 
 There are two ways to install Gogs:
 
-- [Install from binary](https://github.com/gogits/gogs/wiki/Install-from-binary): **STRONGLY RECOMMENDED** for just try and deployment!
+- [Install from binary](https://github.com/gogits/gogs/wiki/Install-from-binary): **STRONGLY RECOMMENDED**
 - [Install from source](https://github.com/gogits/gogs/wiki/Install-from-source)
+- [Ship with Docker](https://github.com/gogits/gogs/tree/master/dockerfiles)
 
 ## Acknowledgments
 
@@ -56,6 +57,7 @@ There are two ways to install Gogs:
 - System Monitor Status is inspired by [GoBlog](https://github.com/fuxiaohei/goblog).
 - Usage and modification from [beego](http://beego.me) modules.
 - Thanks [gobuild.io](http://gobuild.io) for providing binary compile and download service.
+- Great thanks to [Docker China](http://www.dockboard.org/) for providing [dockerfiles](https://github.com/gogits/gogs/tree/master/dockerfiles).
 
 ## Contributors
 

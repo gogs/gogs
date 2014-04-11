@@ -39,8 +39,9 @@ Gogs 完全使用 Go 语言来实现对 Git 数据的操作，实现 **零** 依
 
 然后，您可以通过以下两种方式来安装 Gogs：
 
-- [二进制安装](https://github.com/gogits/gogs/wiki/Install-from-binary): **强烈推荐** 适合体验者和实际部署
+- [二进制安装](https://github.com/gogits/gogs/wiki/Install-from-binary): **强烈推荐**
 - [源码安装](https://github.com/gogits/gogs/wiki/Install-from-source)
+- [采用 Docker 部署](https://github.com/gogits/gogs/tree/master/dockerfiles)
 
 ## 特别鸣谢
 
@@ -50,6 +51,7 @@ Gogs 完全使用 Go 语言来实现对 Git 数据的操作，实现 **零** 依
 - [beego](http://beego.me) 模块的使用与修改。
 - [martini](http://martini.codegangsta.io/) 的路由与中间件机制。
 - 感谢 [gobuild.io](http://gobuild.io) 提供二进制编译与下载服务。
+- 感谢 [Docker 中文社区](http://www.dockboard.org/) 提供的 [dockerfiles](https://github.com/gogits/gogs/tree/master/dockerfiles)。
 
 ## 贡献成员
 
