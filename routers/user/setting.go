@@ -14,8 +14,16 @@ import (
 	"github.com/gogits/gogs/modules/middleware"
 )
 
+func Setting(ctx *middleware.Context) {
+	ctx.Data["Title"] = "Setting"
+	ctx.Data["PageIsUserSetting"] = true
+	ctx.Data["IsUserPageSetting"] = true
+	ctx.Data["Owner"] = ctx.User
+	ctx.HTML(200, "user/setting")
+}
+
 // Render user setting page (email, website modify)
-func Setting(ctx *middleware.Context, form auth.UpdateProfileForm) {
+func SettingPost(ctx *middleware.Context, form auth.UpdateProfileForm) {
 	ctx.Data["Title"] = "Setting"
 	ctx.Data["PageIsUserSetting"] = true // For navbar arrow.
 	ctx.Data["IsUserPageSetting"] = true // For setting nav highlight.
@@ -23,7 +31,7 @@ func Setting(ctx *middleware.Context, form auth.UpdateProfileForm) {
 	user := ctx.User
 	ctx.Data["Owner"] = user
 
-	if ctx.Req.Method == "GET" || ctx.HasError() {
+	if ctx.HasError() {
 		ctx.HTML(200, "user/setting")
 		return
 	}
@@ -32,13 +40,13 @@ func Setting(ctx *middleware.Context, form auth.UpdateProfileForm) {
 	if user.Name != form.UserName {
 		isExist, err := models.IsUserExist(form.UserName)
 		if err != nil {
-			ctx.Handle(404, "user.Setting(update: check existence)", err)
+			ctx.Handle(500, "user.Setting(update: check existence)", err)
 			return
 		} else if isExist {
 			ctx.RenderWithErr("User name has been taken.", "user/setting", &form)
 			return
 		} else if err = models.ChangeUserName(user, form.UserName); err != nil {
-			ctx.Handle(404, "user.Setting(change user name)", err)
+			ctx.Handle(500, "user.Setting(change user name)", err)
 			return
 		}
 		log.Trace("%s User name changed: %s -> %s", ctx.Req.RequestURI, user.Name, form.UserName)
@@ -52,47 +60,55 @@ func Setting(ctx *middleware.Context, form auth.UpdateProfileForm) {
 	user.Avatar = base.EncodeMd5(form.Avatar)
 	user.AvatarEmail = form.Avatar
 	if err := models.UpdateUser(user); err != nil {
-		ctx.Handle(200, "setting.Setting", err)
+		ctx.Handle(500, "setting.Setting", err)
 		return
 	}
-
-	ctx.Data["IsSuccess"] = true
-	ctx.HTML(200, "user/setting")
 	log.Trace("%s User setting updated: %s", ctx.Req.RequestURI, ctx.User.LowerName)
+
+	ctx.Flash.Success("Your profile has been successfully updated.")
+	ctx.Redirect("/user/setting")
 }
 
-func SettingPassword(ctx *middleware.Context, form auth.UpdatePasswdForm) {
+func SettingPassword(ctx *middleware.Context) {
+	ctx.Data["Title"] = "Password"
+	ctx.Data["PageIsUserSetting"] = true
+	ctx.Data["IsUserPageSettingPasswd"] = true
+	ctx.HTML(200, "user/password")
+}
+
+func SettingPasswordPost(ctx *middleware.Context, form auth.UpdatePasswdForm) {
 	ctx.Data["Title"] = "Password"
 	ctx.Data["PageIsUserSetting"] = true
 	ctx.Data["IsUserPageSettingPasswd"] = true
 
-	if ctx.Req.Method == "GET" {
+	if ctx.HasError() {
 		ctx.HTML(200, "user/password")
 		return
 	}
 
 	user := ctx.User
-	newUser := &models.User{Passwd: form.NewPasswd}
-	newUser.EncodePasswd()
-	if user.Passwd != newUser.Passwd {
-		ctx.Data["HasError"] = true
-		ctx.Data["ErrorMsg"] = "Old password is not correct"
+	tmpUser := &models.User{
+		Passwd: form.OldPasswd,
+		Salt:   user.Salt,
+	}
+	tmpUser.EncodePasswd()
+	if user.Passwd != tmpUser.Passwd {
+		ctx.Flash.Error("Old password is not correct")
 	} else if form.NewPasswd != form.RetypePasswd {
-		ctx.Data["HasError"] = true
-		ctx.Data["ErrorMsg"] = "New password and re-type password are not same"
+		ctx.Flash.Error("New password and re-type password are not same")
 	} else {
-		newUser.Salt = models.GetUserSalt()
-		user.Passwd = newUser.Passwd
+		user.Passwd = form.NewPasswd
+		user.Salt = models.GetUserSalt()
+		user.EncodePasswd()
 		if err := models.UpdateUser(user); err != nil {
 			ctx.Handle(200, "setting.SettingPassword", err)
 			return
 		}
-		ctx.Data["IsSuccess"] = true
+		log.Trace("%s User password updated: %s", ctx.Req.RequestURI, ctx.User.LowerName)
+		ctx.Flash.Success("Password is changed successfully. You can now sign in via new password.")
 	}
 
-	ctx.Data["Owner"] = user
-	ctx.HTML(200, "user/password")
-	log.Trace("%s User password updated: %s", ctx.Req.RequestURI, ctx.User.LowerName)
+	ctx.Redirect("/user/setting/password")
 }
 
 func SettingSSHKeys(ctx *middleware.Context, form auth.AddSSHKeyForm) {

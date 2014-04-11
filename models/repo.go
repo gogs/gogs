@@ -80,6 +80,7 @@ type Repository struct {
 	IsPrivate       bool
 	IsBare          bool
 	IsGoget         bool
+	DefaultBranch   string
 	Created         time.Time `xorm:"created"`
 	Updated         time.Time `xorm:"updated"`
 }

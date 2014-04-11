@@ -4,7 +4,7 @@
     <form action="/user/reset_password?code={{.Code}}" method="post" class="form-horizontal card" id="login-card">
         {{.CsrfTokenHtml}}
         <h3>Reset Your Pasword</h3>
-        <div class="alert alert-danger form-error{{if .HasError}}{{else}} hidden{{end}}">{{.ErrorMsg}}</div>
+        {{template "base/alert" .}}
         {{if .IsResetForm}}
         <div class="form-group">
             <label class="col-md-4 control-label">Password: </label>
