@@ -30,12 +30,16 @@
                 {{range .Diff.Files}}
                 <li>
                     <div class="diff-counter count pull-right">
+                        {{if Subtract .Addition .Deletion}}
                         <span class="add" data-line="{{.Addition}}">{{.Addition}}</span>
                         <span class="bar">
                             <span class="pull-left add"></span>
                             <span class="pull-left del"></span>
                         </span>
                         <span class="del" data-line="{{.Deletion}}">{{.Deletion}}</span>
+                        {{else}}
+                        <span>BIN</span>
+                        {{end}}
                     </div>
                     <!-- todo finish all file status, now modify, add, delete and rename -->
                     <span class="status {{DiffTypeToStr .Type}}" data-toggle="tooltip" data-placement="right" title="{{DiffTypeToStr .Type}}">&nbsp;</span>
@@ -49,12 +53,16 @@
         <div class="panel panel-default diff-file-box diff-box file-content" id="diff-2">
             <div class="panel-heading">
                 <div class="diff-counter count pull-left">
+                    {{if Subtract .Addition .Deletion}}
                     <span class="add" data-line="{{.Addition}}">+ {{.Addition}}</span>
                     <span class="bar">
                         <span class="pull-left add"></span>
                         <span class="pull-left del"></span>
                     </span>
                     <span class="del" data-line="{{.Deletion}}">- {{.Deletion}}</span>
+                    {{else}}
+                    BIN
+                    {{end}}
                 </div>
                 <a class="btn btn-default btn-sm pull-right" href="{{$.SourcePath}}/{{.Name}}">View File</a>
                 <span class="file">{{.Name}}</span>
