@@ -103,7 +103,7 @@ func (ctx *Context) RenderWithErr(msg, tpl string, form auth.Form) {
 func (ctx *Context) Handle(status int, title string, err error) {
 	log.Error("%s: %v", title, err)
 	if martini.Dev == martini.Prod {
-		ctx.HTML(500, "status/500")
+		ctx.HTML(200, "status/500")
 		return
 	}
 

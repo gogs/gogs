@@ -67,6 +67,9 @@ var TemplateFuncs template.FuncMap = map[string]interface{}{
 	"TimeSince":  TimeSince,
 	"FileSize":   FileSize,
 	"Subtract":   Subtract,
+	"Add": func(a, b int) int {
+		return a + b
+	},
 	"ActionIcon": ActionIcon,
 	"ActionDesc": ActionDesc,
 	"DateFormat": DateFormat,
