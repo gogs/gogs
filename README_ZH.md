@@ -37,7 +37,7 @@ Gogs 完全使用 Go 语言来实现对 Git 数据的操作，实现 **零** 依
 
 在安装 Gogs 之前，您需要先安装 [基本环境](https://github.com/gogits/gogs/wiki/Prerequirements)。
 
-然后，您可以通过以下两种方式来安装 Gogs：
+然后，您可以通过以下 3 种方式来安装 Gogs：
 
 - [二进制安装](https://github.com/gogits/gogs/wiki/Install-from-binary): **强烈推荐**
 - [源码安装](https://github.com/gogits/gogs/wiki/Install-from-source)

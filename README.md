@@ -43,7 +43,7 @@ More importantly, Gogs only needs one binary to setup your own project hosting o
 
 Make sure you install [Prerequirements](https://github.com/gogits/gogs/wiki/Prerequirements) first.
 
-There are two ways to install Gogs:
+There are 3 ways to install Gogs:
 
 - [Install from binary](https://github.com/gogits/gogs/wiki/Install-from-binary): **STRONGLY RECOMMENDED**
 - [Install from source](https://github.com/gogits/gogs/wiki/Install-from-source)
