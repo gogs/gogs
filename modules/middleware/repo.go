@@ -76,7 +76,7 @@ func RepoAssignment(redirect bool, args ...bool) martini.Handler {
 				ctx.Redirect("/")
 				return
 			}
-			ctx.Handle(404, "RepoAssignment", err)
+			ctx.Handle(500, "RepoAssignment", err)
 			return
 		}
 		repo.NumOpenIssues = repo.NumIssues - repo.NumClosedIssues
@@ -86,7 +86,7 @@ func RepoAssignment(redirect bool, args ...bool) martini.Handler {
 
 		gitRepo, err := git.OpenRepository(models.RepoPath(userName, repoName))
 		if err != nil {
-			ctx.Handle(404, "RepoAssignment Invalid repo "+models.RepoPath(userName, repoName), err)
+			ctx.Handle(500, "RepoAssignment Invalid repo "+models.RepoPath(userName, repoName), err)
 			return
 		}
 		ctx.Repo.GitRepo = gitRepo
@@ -138,7 +138,10 @@ func RepoAssignment(redirect bool, args ...bool) martini.Handler {
 				}
 
 			} else {
-				branchName = "master"
+				branchName = ctx.Repo.Repository.DefaultBranch
+				if len(branchName) == 0 {
+					branchName = "master"
+				}
 				goto detect
 			}
 
@@ -157,6 +160,7 @@ func RepoAssignment(redirect bool, args ...bool) martini.Handler {
 		}
 
 		ctx.Data["BranchName"] = ctx.Repo.BranchName
+		ctx.Data["Branches"], _ = models.GetBranches(ctx.User.Name, ctx.Repo.Repository.Name)
 		ctx.Data["CommitId"] = ctx.Repo.CommitId
 		ctx.Data["IsRepositoryWatching"] = ctx.Repo.IsWatching
 	}
