@@ -119,7 +119,6 @@ func Http(ctx *middleware.Context, params martini.Params) {
 	config := Config{base.RepoRootPath, "git", true, true, func(rpc string, input []byte) {
 		if rpc == "receive-pack" {
 			firstLine := bytes.IndexRune(input, '\n')
-			fmt.Println("firstLine", firstLine)
 			if firstLine > -1 {
 				fields := strings.Fields(string(input[:firstLine]))
 				if len(fields) > 3 {
