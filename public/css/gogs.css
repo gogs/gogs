@@ -67,6 +67,7 @@ html, body {
     color: #EEE;
     font-size: 100%;
     height: 46px;
+    margin-top: 3px;
 }
 
 #nav-logo {
@@ -81,10 +82,6 @@ html, body {
     text-decoration: none;
 }
 
-.nav-item.navbar-right {
-    margin-top: 3px;
-}
-
 .nav-item.navbar-btn {
     cursor: pointer;
     margin-top: 8px;
@@ -94,6 +91,28 @@ html, body {
 
 .nav-item.navbar-right .fa {
     margin: 0;
+}
+
+#nav-search-form {
+    width: 300px;
+    margin-top: 0;
+}
+
+#nav-search-form button {
+    margin-top: 0;
+    background-image: none;
+    background-color: #F6F6F6;
+}
+
+#nav-search-form input[type=search] {
+    background-color: #F6F6F6;
+    border-bottom-right-radius: 3px;
+    border-top-right-radius: 3px;
+}
+
+#nav-search-form input[type=search]:focus {
+    background-color: #FFF;
+    border-color: #D9D9D9;
 }
 
 /* gogits nav item active status */
@@ -663,6 +682,10 @@ html, body {
     margin-top: -20px;
 }
 
+#commits-pager {
+    margin-top: 0;
+}
+
 #source .source-toolbar:after {
     clear: both;
 }
@@ -880,15 +903,15 @@ html, body {
     margin-left: .5em;
 }
 
+#commits-search-form {
+    margin-top: 4px;
+}
+
 .commit-box .avatar, .diff-head-box .avatar {
     width: 20px;
     height: 20px;
     margin-right: 8px;
     vertical-align: top;
-}
-
-.commit-box .search {
-    margin-top: 3px;
 }
 
 .commit-box td {
