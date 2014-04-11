@@ -6,19 +6,24 @@
 		{{if .DisenableRegisteration}}
 		Sorry, registeration has been disenabled, you can only get account from administrator.
 		{{else}}
-        <h3>Sign Up</h3>
+		{{if .IsSocialLogin}}
+			<h3>Social login: 2nd step <small>complete information</small></h3>
+		{{else}}
+			<h3>Sign Up</h3>
+		{{end}}
 	    {{template "base/alert" .}}
+		{{if .IsSocialLogin}}
+		{{end}}
 		<div class="form-group {{if .Err_UserName}}has-error has-feedback{{end}}">
 			<label class="col-md-4 control-label">Username: </label>
 			<div class="col-md-6">
 				<input name="username" class="form-control" placeholder="Type your username" value="{{.username}}" required="required">
 			</div>
 		</div>
-
 		<div class="form-group {{if .Err_Email}}has-error has-feedback{{end}}">
 			<label class="col-md-4 control-label">Email: </label>
 			<div class="col-md-6">
-				<input name="email" class="form-control" placeholder="Type your e-mail address" value="{{.email}}" required="required" title="Email is not valid">
+				<input name="email" class="form-control" placeholder="Type your e-mail address" value="{{.email}}{{.socialEmail}}" required="required" title="Email is not valid">
 			</div>
 		</div>
 
@@ -44,7 +49,11 @@
 		
 	    <div class="form-group">
             <div class="col-md-offset-4 col-md-6">
+			{{if .IsSocialLogin}}
+                <a href="/user/login">Already have an account? Bind now!</a>
+			{{else}}
                 <a href="/user/login">Already have an account? Sign in now!</a>
+			{{end}}
             </div>
 	    </div>
 	    {{end}}
