@@ -189,4 +189,13 @@ func runServ(k *cli.Context) {
 		println("execute command error:", err.Error())
 		qlog.Fatal("execute command error: " + err.Error())
 	}
+
+	//refName := os.Getenv("refName")
+	//oldCommitId := os.Getenv("oldCommitId")
+	//newCommitId := os.Getenv("newCommitId")
+
+	//qlog.Error("get envs:", refName, oldCommitId, newCommitId)
+
+	// update
+	//models.Update(refName, oldCommitId, newCommitId, repoUserName, repoName, user.Id)
 }
