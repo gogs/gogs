@@ -663,6 +663,10 @@ html, body {
     margin-top: -20px;
 }
 
+#commits-pager {
+    margin-top: 0;
+}
+
 #source .source-toolbar:after {
     clear: both;
 }
@@ -880,15 +884,15 @@ html, body {
     margin-left: .5em;
 }
 
+#commits-search-form {
+    margin-top: 4px;
+}
+
 .commit-box .avatar, .diff-head-box .avatar {
     width: 20px;
     height: 20px;
     margin-right: 8px;
     vertical-align: top;
-}
-
-.commit-box .search {
-    margin-top: 3px;
 }
 
 .commit-box td {

@@ -6,9 +6,14 @@
     <div id="commits">
         <div class="panel panel-default commit-box info-box">
             <div class="panel-heading info-head">
-                <div class="search pull-right form">
-                    <input class="form-control search" type="search" placeholder="search commit"/>
-                </div>
+                <form class="search pull-right col-md-3" action="" method="post" id="commits-search-form">
+                    <div class="input-group">
+                        <input class="form-control search" type="search" placeholder="search commit" name="q"/>
+                        <div class="input-group-btn">
+                            <button type="button" class="btn btn-default">Find</button>
+                        </div>
+                    </div>
+                </form>
                 <h4>{{.CommitCount}} Commits</h4>
             </div>
             <table class="panel-footer table commit-list table table-striped">
@@ -35,6 +40,15 @@
                 </tbody>
             </table>
         </div>
+        <ul class="pagination" id="commits-pager">
+            <li><a href="#">&laquo;</a></li>
+            <li><a href="#">1</a></li>
+            <li><a href="#">2</a></li>
+            <li><a href="#">3</a></li>
+            <li><a href="#">4</a></li>
+            <li><a href="#">5</a></li>
+            <li><a href="#">&raquo;</a></li>
+        </ul>
     </div>
 </div>
 {{template "base/footer" .}}
