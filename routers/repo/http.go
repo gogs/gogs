@@ -1,6 +1,7 @@
 package repo
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -54,6 +55,8 @@ func Http(ctx *middleware.Context, params martini.Params) {
 	// only public pull don't need auth
 	var askAuth = !(!repo.IsPrivate && isPull)
 
+	var authUser *models.User
+
 	// check access
 	if askAuth {
 		baHead := ctx.Req.Header.Get("Authorization")
@@ -76,7 +79,7 @@ func Http(ctx *middleware.Context, params martini.Params) {
 			return
 		}
 
-		authUser, err := models.GetUserByName(authUsername)
+		authUser, err = models.GetUserByName(authUsername)
 		if err != nil {
 			ctx.Handle(401, "no basic auth and digit auth", nil)
 			return
@@ -114,8 +117,20 @@ func Http(ctx *middleware.Context, params martini.Params) {
 	}
 
 	config := Config{base.RepoRootPath, "git", true, true, func(rpc string, input []byte) {
-		//fmt.Println("rpc:", rpc)
-		//fmt.Println("input:", string(input))
+		if rpc == "receive-pack" {
+			firstLine := bytes.IndexRune(input, '\n')
+			fmt.Println("firstLine", firstLine)
+			if firstLine > -1 {
+				fields := strings.Fields(string(input[:firstLine]))
+				if len(fields) > 3 {
+					oldCommitId := fields[0][4:]
+					newCommitId := fields[1]
+					refName := fields[2]
+
+					models.Update(refName, oldCommitId, newCommitId, username, reponame, authUser.Id)
+				}
+			}
+		}
 	}}
 
 	handler := HttpBackend(&config)
