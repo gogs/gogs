@@ -425,3 +425,7 @@ func Action(ctx *middleware.Context, params martini.Params) {
 		"ok": true,
 	})
 }
+
+func Import(ctx *middleware.Context, params martini.Params) {
+	ctx.ResponseWriter.Write([]byte("not done yet"))
+}
