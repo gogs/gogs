@@ -13,13 +13,13 @@ cd images/mysql
 docker build -t gogs/mysql .
 #
 ## Build the gogits image
-cd images/gogits
+cd ../gogits
 docker build -t gogs/gogits .
 #
 ## Run MySQL image with name
 docker run -d --name $MYSQL_RUN_NAME gogs/mysql
 #
 ## Run gogits image and link it to the MySQL image
-echo "Now we have the MySQL image(running) and gogs image, use the follow command to start gogs service:'
+echo "Now we have the MySQL image(running) and gogs image, use the follow command to start gogs service:"
 echo -e "\033[33m docker run -i -t --link $MYSQL_RUN_NAME:db -p $HOST_PORT:3000 gogs/gogits \033[0m"
 
