@@ -6,7 +6,9 @@ package models
 
 import (
 	"bufio"
+	"bytes"
 	"container/list"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -408,4 +410,63 @@ func GetDiff(repoPath, commitid string) (*Diff, error) {
 	}()
 	defer rd.Close()
 	return ParsePatch(rd)
+}
+
+const prettyLogFormat = `--pretty=format:%H%n%an <%ae> %at%n%s`
+
+func parsePrettyFormatLog(logByts []byte) (*list.List, error) {
+	l := list.New()
+	buf := bytes.NewBuffer(logByts)
+	if buf.Len() == 0 {
+		return l, nil
+	}
+
+	idx := 0
+	var commit *git.Commit
+
+	for {
+		line, err := buf.ReadString('\n')
+		if err != nil && err != io.EOF {
+			return nil, err
+		}
+		line = strings.TrimSpace(line)
+		// fmt.Println(line)
+
+		var parseErr error
+		switch idx {
+		case 0: // SHA1.
+			commit = &git.Commit{}
+			commit.Oid, parseErr = git.NewOidFromString(line)
+		case 1: // Signature.
+			commit.Author, parseErr = git.NewSignatureFromCommitline([]byte(line + " "))
+		case 2: // Commit message.
+			commit.CommitMessage = line
+			l.PushBack(commit)
+			idx = -1
+		}
+
+		if parseErr != nil {
+			return nil, parseErr
+		}
+
+		idx++
+
+		if err == io.EOF {
+			break
+		}
+	}
+
+	return l, nil
+}
+
+// SearchCommits searches commits in given branch and keyword of repository.
+func SearchCommits(repoPath, branch, keyword string) (*list.List, error) {
+	stdout, stderr, err := com.ExecCmdDirBytes(repoPath, "git", "log", branch, "-100",
+		"-i", "--grep="+keyword, prettyLogFormat)
+	if err != nil {
+		return nil, err
+	} else if len(stderr) > 0 {
+		return nil, errors.New(string(stderr))
+	}
+	return parsePrettyFormatLog(stdout)
 }

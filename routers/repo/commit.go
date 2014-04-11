@@ -22,7 +22,7 @@ func Commits(ctx *middleware.Context, params martini.Params) {
 
 	brs, err := models.GetBranches(userName, repoName)
 	if err != nil {
-		ctx.Handle(200, "repo.Commits", err)
+		ctx.Handle(500, "repo.Commits", err)
 		return
 	} else if len(brs) == 0 {
 		ctx.Handle(404, "repo.Commits", nil)
@@ -89,4 +89,42 @@ func Diff(ctx *middleware.Context, params martini.Params) {
 	ctx.Data["SourcePath"] = "/" + path.Join(userName, repoName, "src", commitId)
 	ctx.Data["RawPath"] = "/" + path.Join(userName, repoName, "raw", commitId)
 	ctx.HTML(200, "repo/diff")
+}
+
+func SearchCommits(ctx *middleware.Context, params martini.Params) {
+	keyword := ctx.Query("q")
+	if len(keyword) == 0 {
+		ctx.Redirect(ctx.Repo.RepoLink + "/commits/" + ctx.Repo.BranchName)
+		return
+	}
+
+	userName := params["username"]
+	repoName := params["reponame"]
+	branchName := params["branchname"]
+
+	brs, err := models.GetBranches(userName, repoName)
+	if err != nil {
+		ctx.Handle(500, "repo.SearchCommits(GetBranches)", err)
+		return
+	} else if len(brs) == 0 {
+		ctx.Handle(404, "repo.SearchCommits(GetBranches)", nil)
+		return
+	}
+
+	var commits *list.List
+	if !models.IsBranchExist(userName, repoName, branchName) {
+		ctx.Handle(404, "repo.SearchCommits(IsBranchExist)", err)
+		return
+	} else if commits, err = models.SearchCommits(models.RepoPath(userName, repoName), branchName, keyword); err != nil {
+		ctx.Handle(500, "repo.SearchCommits(SearchCommits)", err)
+		return
+	}
+
+	ctx.Data["Keyword"] = keyword
+	ctx.Data["Username"] = userName
+	ctx.Data["Reponame"] = repoName
+	ctx.Data["CommitCount"] = commits.Len()
+	ctx.Data["Commits"] = commits
+	ctx.Data["IsRepoToolbarCommits"] = true
+	ctx.HTML(200, "repo/commits")
 }

@@ -164,6 +164,7 @@ func runWeb(*cli.Context) {
 		r.Post("/issues/new", bindIgnErr(auth.CreateIssueForm{}), repo.CreateIssuePost)
 		r.Post("/issues/:index", bindIgnErr(auth.CreateIssueForm{}), repo.UpdateIssue)
 		r.Post("/comment/:action", repo.Comment)
+		r.Post("/import", repo.Import)
 	}, reqSignIn, middleware.RepoAssignment(true))
 
 	m.Group("/:username/:reponame", func(r martini.Router) {
@@ -180,6 +181,7 @@ func runWeb(*cli.Context) {
 		r.Get("/src/:branchname/**", repo.Single)
 		r.Get("/raw/:branchname/**", repo.SingleDownload)
 		r.Get("/commits/:branchname", repo.Commits)
+		r.Get("/commits/:branchname/search", repo.SearchCommits)
 		r.Get("/commit/:branchname", repo.Diff)
 		r.Get("/commit/:branchname/**", repo.Diff)
 	}, ignSignIn, middleware.RepoAssignment(true, true))
