@@ -24,14 +24,14 @@ func Dashboard(ctx *middleware.Context) {
 	ctx.Data["PageIsUserDashboard"] = true
 	repos, err := models.GetRepositories(&models.User{Id: ctx.User.Id})
 	if err != nil {
-		ctx.Handle(200, "user.Dashboard", err)
+		ctx.Handle(500, "user.Dashboard", err)
 		return
 	}
 	ctx.Data["MyRepos"] = repos
 
 	feeds, err := models.GetFeeds(ctx.User.Id, 0, false)
 	if err != nil {
-		ctx.Handle(200, "user.Dashboard", err)
+		ctx.Handle(500, "user.Dashboard", err)
 		return
 	}
 	ctx.Data["Feeds"] = feeds
@@ -44,7 +44,7 @@ func Profile(ctx *middleware.Context, params martini.Params) {
 	// TODO: Need to check view self or others.
 	user, err := models.GetUserByName(params["username"])
 	if err != nil {
-		ctx.Handle(200, "user.Profile", err)
+		ctx.Handle(500, "user.Profile", err)
 		return
 	}
 
@@ -57,14 +57,14 @@ func Profile(ctx *middleware.Context, params martini.Params) {
 	case "activity":
 		feeds, err := models.GetFeeds(user.Id, 0, true)
 		if err != nil {
-			ctx.Handle(200, "user.Profile", err)
+			ctx.Handle(500, "user.Profile", err)
 			return
 		}
 		ctx.Data["Feeds"] = feeds
 	default:
 		repos, err := models.GetRepositories(user)
 		if err != nil {
-			ctx.Handle(200, "user.Profile", err)
+			ctx.Handle(500, "user.Profile", err)
 			return
 		}
 		ctx.Data["Repos"] = repos
@@ -103,14 +103,14 @@ func SignIn(ctx *middleware.Context) {
 
 	user, err = models.GetUserByName(userName)
 	if err != nil {
-		ctx.HTML(200, "user/signin")
+		ctx.HTML(500, "user/signin")
 		return
 	}
 
 	secret := base.EncodeMd5(user.Rands + user.Passwd)
 	value, _ := ctx.GetSecureCookie(secret, base.CookieRememberName)
 	if value != user.Name {
-		ctx.HTML(200, "user/signin")
+		ctx.HTML(500, "user/signin")
 		return
 	}
 
