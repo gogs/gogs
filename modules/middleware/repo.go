@@ -15,6 +15,7 @@ import (
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"
+	"github.com/gogits/gogs/modules/log"
 )
 
 func RepoAssignment(redirect bool, args ...bool) martini.Handler {
@@ -160,7 +161,11 @@ func RepoAssignment(redirect bool, args ...bool) martini.Handler {
 		}
 
 		ctx.Data["BranchName"] = ctx.Repo.BranchName
-		ctx.Data["Branches"], _ = models.GetBranches(user.Name, repoName)
+		brs, err := models.GetBranches(user.Name, repoName)
+		if err != nil {
+			log.Error("RepoAssignment(GetBranches): %v", err)
+		}
+		ctx.Data["Branches"] = brs
 		ctx.Data["CommitId"] = ctx.Repo.CommitId
 		ctx.Data["IsRepositoryWatching"] = ctx.Repo.IsWatching
 	}
