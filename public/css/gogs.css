@@ -74,6 +74,7 @@ html, body {
     padding-left: 0;
     padding-right: 0;
     margin-right: 10px;
+    margin-top: 0;
 }
 
 .nav-item:hover,
@@ -308,6 +309,22 @@ html, body {
     border-bottom: 1px solid #ccc;
     padding-left: 18px;
     padding-right: 18px;
+}
+
+#user-profile .profile-rel .col-md-6 {
+    text-align: center;
+    padding-bottom: 12px;
+}
+
+#user-profile .profile-rel strong {
+    font-size: 24px;
+    color: #444;
+    display: block;
+}
+
+#user-profile .profile-rel p {
+   margin-right: 0;
+    color: #888;
 }
 
 #user-activity .tab-pane {
