@@ -17,7 +17,6 @@ import (
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/middleware"
-	"github.com/gogits/gogs/modules/oauth2"
 )
 
 type SocialConnector interface {
@@ -77,7 +76,10 @@ func extractPath(next string) string {
 }
 
 // github && google && ...
-func SocialSignIn(ctx *middleware.Context, tokens oauth2.Tokens) {
+func SocialSignIn(ctx *middleware.Context) {
+	//if base.OauthService != nil && base.OauthService.GitHub.Enabled {
+	//}
+
 	var socid int64
 	var ok bool
 	next := extractPath(ctx.Query("next"))
@@ -142,9 +144,9 @@ func SocialSignIn(ctx *middleware.Context, tokens oauth2.Tokens) {
 			return
 		}
 	case models.ErrOauth2NotAssociatedWithUser:
+		ctx.Session.Set("socialId", oa.Id)
 		ctx.Session.Set("socialName", soc.Name())
 		ctx.Session.Set("socialEmail", soc.Email())
-		ctx.Session.Set("socialId", oa.Id)
 		ctx.Redirect("/user/sign_up")
 		return
 	default:

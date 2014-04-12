@@ -82,7 +82,6 @@ func SignIn(ctx *middleware.Context) {
 		ctx.Data["OauthGitHubEnabled"] = base.OauthService.GitHub.Enabled
 	}
 
-	var user *models.User
 	// Check auto-login.
 	userName := ctx.GetCookie(base.CookieUserName)
 	if len(userName) == 0 {
@@ -91,7 +90,6 @@ func SignIn(ctx *middleware.Context) {
 	}
 
 	isSucceed := false
-	var err error
 	defer func() {
 		if !isSucceed {
 			log.Trace("%s auto-login cookie cleared: %s", ctx.Req.RequestURI, userName)
@@ -101,7 +99,7 @@ func SignIn(ctx *middleware.Context) {
 		}
 	}()
 
-	user, err = models.GetUserByName(userName)
+	user, err := models.GetUserByName(userName)
 	if err != nil {
 		ctx.HTML(500, "user/signin")
 		return
@@ -181,6 +179,8 @@ func SignOut(ctx *middleware.Context) {
 	ctx.Session.Delete("userId")
 	ctx.Session.Delete("userName")
 	ctx.Session.Delete("socialId")
+	ctx.Session.Delete("socialName")
+	ctx.Session.Delete("socialEmail")
 	ctx.SetCookie(base.CookieUserName, "", -1)
 	ctx.SetCookie(base.CookieRememberName, "", -1)
 	ctx.Redirect("/")

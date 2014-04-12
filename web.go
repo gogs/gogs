@@ -20,7 +20,6 @@ import (
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/middleware"
-	"github.com/gogits/gogs/modules/oauth2"
 	"github.com/gogits/gogs/routers"
 	"github.com/gogits/gogs/routers/admin"
 	"github.com/gogits/gogs/routers/api/v1"
@@ -58,17 +57,6 @@ func runWeb(*cli.Context) {
 	// Middlewares.
 	m.Use(middleware.Renderer(middleware.RenderOptions{Funcs: []template.FuncMap{base.TemplateFuncs}}))
 	m.Use(middleware.InitContext())
-
-	if base.OauthService != nil {
-		if base.OauthService.GitHub.Enabled {
-			m.Use(oauth2.Github(&oauth2.Options{
-				ClientId:     base.OauthService.GitHub.ClientId,
-				ClientSecret: base.OauthService.GitHub.ClientSecret,
-				RedirectURL:  base.AppUrl + oauth2.PathCallback[1:],
-				Scopes:       []string{base.OauthService.GitHub.Scopes},
-			}))
-		}
-	}
 
 	reqSignIn := middleware.Toggle(&middleware.ToggleOptions{SignInRequire: true})
 	ignSignIn := middleware.Toggle(&middleware.ToggleOptions{SignInRequire: base.Service.RequireSignInView})
