@@ -192,12 +192,6 @@ func CreateRepository(user *User, repoName, desc, repoLang, license string, priv
 		return nil, err
 	}
 
-	c := exec.Command("git", "update-server-info")
-	c.Dir = repoPath
-	if err = c.Run(); err != nil {
-		log.Error("repo.CreateRepository(exec update-server-info): %v", err)
-	}
-
 	if err = NewRepoAction(user, repo); err != nil {
 		log.Error("repo.CreateRepository(NewRepoAction): %v", err)
 	}
@@ -208,6 +202,12 @@ func CreateRepository(user *User, repoName, desc, repoLang, license string, priv
 
 	if err = initRepository(repoPath, user, repo, initReadme, repoLang, license); err != nil {
 		return nil, err
+	}
+
+	c := exec.Command("git", "update-server-info")
+	c.Dir = repoPath
+	if err = c.Run(); err != nil {
+		log.Error("repo.CreateRepository(exec update-server-info): %v", err)
 	}
 
 	return repo, nil

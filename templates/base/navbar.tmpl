@@ -4,19 +4,19 @@
             <a id="nav-logo" class="nav-item pull-left{{if .PageIsHome}} active{{end}}" href="/"><img src="/img/favicon.png" alt="Gogs Logo" id="logo"></a>
             <a class="nav-item pull-left{{if .PageIsUserDashboard}} active{{end}}" href="/">Dashboard</a>
             <a class="nav-item pull-left{{if .PageIsHelp}} active{{end}}" href="https://github.com/gogits/gogs/wiki">Help</a>{{if .IsSigned}}
-            {{if .Repository}}<form class="nav-item pull-left{{if .PageIsNewRepo}} active{{end}}" id="nav-search-form">
+            <form class="nav-item pull-left{{if .PageIsNewRepo}} active{{end}}" id="nav-search-form">
                 <div class="input-group">
                     <div class="input-group-btn">
-                        <button type="button" class="btn btn-sm btn-default dropdown-toggle" data-toggle="dropdown">All Repositories <span class="caret"></span></button>
+                        <button type="button" class="btn btn-sm btn-default dropdown-toggle" data-toggle="dropdown">{{if .Repository}}This Repository{{else}}All Repositories{{end}} <span class="caret"></span></button>
                         <ul class="dropdown-menu">
+                            {{if .Repository}}<li><a href="#">This Repository</a></li>
+                            <li class="divider"></li>{{end}}
                             <li><a href="#">All Repositories</a></li>
-                            <li class="divider"></li>
-                            <li><a href="#">This Repository</a></li>
                         </ul>
                     </div>
                     <input type="search" class="form-control input-sm" name="q" placeholder="search code, commits and issues"/>
                 </div>
-            </form>{{end}}
+            </form>
             <a id="nav-out" class="nav-item navbar-right navbar-btn btn btn-danger" href="/user/logout/"><i class="fa fa-power-off fa-lg"></i></a>
             <a id="nav-avatar" class="nav-item navbar-right{{if .PageIsUserProfile}} active{{end}}" href="{{.SignedUser.HomeLink}}" data-toggle="tooltip" data-placement="bottom" title="{{.SignedUserName}}">
                 <img src="{{.SignedUser.AvatarLink}}?s=28" alt="user-avatar" title="username"/>
@@ -29,7 +29,7 @@
                     <ul class="list-unstyled">
                         <li><a href="/repo/create"><i class="fa fa-book"></i>Repository</a></li>
                         <li><a href="/repo/mirror"><i class="fa fa-clipboard"></i>Mirror</a></li>
-                        <li><a href="#"><i class="fa fa-users"></i>Organization</a></li>
+                        <!-- <li><a href="#"><i class="fa fa-users"></i>Organization</a></li> -->
                     </ul>
                 </div>
             </div>
