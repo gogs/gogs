@@ -13,6 +13,7 @@ const (
 	OT_GITHUB = iota + 1
 	OT_GOOGLE
 	OT_TWITTER
+	OT_QQ
 )
 
 var (

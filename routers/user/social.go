@@ -28,7 +28,7 @@ type BasicUserInfo struct {
 type SocialConnector interface {
 	Type() int
 	SetRedirectUrl(string)
-	UserInfo(*oauth.Token) (*BasicUserInfo, error)
+	UserInfo(*oauth.Token, *url.URL) (*BasicUserInfo, error)
 
 	AuthCodeURL(string) string
 	Exchange(string) (*oauth.Token, error)
@@ -63,13 +63,13 @@ func SocialSignIn(params martini.Params, ctx *middleware.Context) {
 	code := ctx.Query("code")
 	if code == "" {
 		// redirect to social login page
-		connect.SetRedirectUrl(strings.TrimSuffix(base.AppUrl, "/") + ctx.Req.URL.RequestURI())
+		connect.SetRedirectUrl(strings.TrimSuffix(base.AppUrl, "/") + ctx.Req.URL.Host + ctx.Req.URL.Path)
 		ctx.Redirect(connect.AuthCodeURL(next))
 		return
 	}
 
 	// handle call back
-	tk, err := connect.Exchange(code) // transport.Exchange(code)
+	tk, err := connect.Exchange(code) // exchange for token
 	if err != nil {
 		log.Error("oauth2 handle callback error: %v", err)
 		ctx.Handle(500, "exchange code error", nil)
@@ -78,7 +78,7 @@ func SocialSignIn(params martini.Params, ctx *middleware.Context) {
 	next = extractPath(ctx.Query("state"))
 	log.Trace("success get token")
 
-	ui, err := connect.UserInfo(tk)
+	ui, err := connect.UserInfo(tk, ctx.Req.URL)
 	if err != nil {
 		ctx.Handle(500, fmt.Sprintf("get infomation from %s error: %v", name, err), nil)
 		log.Error("social connect error: %s", err)
