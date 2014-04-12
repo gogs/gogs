@@ -259,14 +259,40 @@ html, body {
 }
 
 #social-login {
-    margin-top: 30px;
-    padding-top: 20px;
+    margin-top: 40px;
+    padding-top: 40px;
     border-top: 1px solid #ccc;
+    position: relative;
 }
 
 #social-login .btn {
     float: none;
-    margin: auto;
+    margin: auto 4px;
+}
+
+#social-login .btn .fa {
+    margin-left: 0;
+    margin-right: 4px;
+}
+
+#social-login .btn span {
+    display: inline-block;
+    vertical-align: top;
+    font-size: 16px;
+    margin-top: 5px;
+}
+
+#social-login h4 {
+    position: absolute;
+    top: -20px;
+    width: 100%;
+    text-align: center;
+    background-color: transparent;
+}
+
+#social-login h4 span {
+    background-color: #FFF;
+    padding: 0 12px;
 }
 
 /* gogs-user-profile */
@@ -323,7 +349,7 @@ html, body {
 }
 
 #user-profile .profile-rel p {
-   margin-right: 0;
+    margin-right: 0;
     color: #888;
 }
 
