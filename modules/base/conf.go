@@ -302,9 +302,9 @@ func NewConfigContext() {
 	InstallLock = Cfg.MustBool("security", "INSTALL_LOCK", false)
 
 	RunUser = Cfg.MustValue("", "RUN_USER")
-	curUser := os.Getenv("USERNAME")
+	curUser := os.Getenv("USER")
 	if len(curUser) == 0 {
-		curUser = os.Getenv("USER")
+		curUser = os.Getenv("USERNAME")
 	}
 	// Does not check run user when the install lock is off.
 	if InstallLock && RunUser != curUser {

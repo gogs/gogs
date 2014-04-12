@@ -146,9 +146,9 @@ func InstallPost(ctx *middleware.Context, form auth.InstallForm) {
 	}
 
 	// Check run user.
-	curUser := os.Getenv("USERNAME")
+	curUser := os.Getenv("USER")
 	if len(curUser) == 0 {
-		curUser = os.Getenv("USER")
+		curUser = os.Getenv("USERNAME")
 	}
 	// Does not check run user when the install lock is off.
 	if form.RunUser != curUser {
