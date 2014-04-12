@@ -49,6 +49,7 @@ type Context struct {
 		IsBranch   bool
 		IsTag      bool
 		IsCommit   bool
+		HasAccess  bool
 		Repository *models.Repository
 		Owner      *models.User
 		Commit     *git.Commit
@@ -102,12 +103,10 @@ func (ctx *Context) RenderWithErr(msg, tpl string, form auth.Form) {
 // Handle handles and logs error by given status.
 func (ctx *Context) Handle(status int, title string, err error) {
 	log.Error("%s: %v", title, err)
-	if martini.Dev == martini.Prod {
-		ctx.HTML(200, "status/500")
-		return
+	if martini.Dev != martini.Prod {
+		ctx.Data["ErrorMsg"] = err
 	}
 
-	ctx.Data["ErrorMsg"] = err
 	ctx.HTML(status, fmt.Sprintf("status/%d", status))
 }
 

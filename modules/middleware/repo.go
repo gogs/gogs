@@ -67,12 +67,14 @@ func RepoAssignment(redirect bool, args ...bool) martini.Handler {
 			ctx.Handle(200, "RepoAssignment", errors.New("invliad user account for single repository"))
 			return
 		}
+		ctx.Repo.Owner = user
 
 		// get repository
 		repo, err := models.GetRepositoryByName(user.Id, repoName)
 		if err != nil {
 			if err == models.ErrRepoNotExist {
 				ctx.Handle(404, "RepoAssignment", err)
+				return
 			} else if redirect {
 				ctx.Redirect("/")
 				return
@@ -80,6 +82,26 @@ func RepoAssignment(redirect bool, args ...bool) martini.Handler {
 			ctx.Handle(500, "RepoAssignment", err)
 			return
 		}
+
+		// Check access.
+		if repo.IsPrivate {
+			if ctx.User == nil {
+				ctx.Handle(404, "RepoAssignment(HasAccess)", nil)
+				return
+			}
+
+			hasAccess, err := models.HasAccess(ctx.User.Name, ctx.Repo.Owner.Name+"/"+repo.Name, models.AU_READABLE)
+			if err != nil {
+				ctx.Handle(500, "RepoAssignment(HasAccess)", err)
+				return
+			} else if !hasAccess {
+				ctx.Handle(404, "RepoAssignment(HasAccess)", nil)
+				return
+			}
+		}
+		ctx.Repo.HasAccess = true
+		ctx.Data["HasAccess"] = true
+
 		repo.NumOpenIssues = repo.NumIssues - repo.NumClosedIssues
 		ctx.Repo.Repository = repo
 
@@ -91,8 +113,6 @@ func RepoAssignment(redirect bool, args ...bool) martini.Handler {
 			return
 		}
 		ctx.Repo.GitRepo = gitRepo
-
-		ctx.Repo.Owner = user
 		ctx.Repo.RepoLink = "/" + user.Name + "/" + repo.Name
 
 		ctx.Data["Title"] = user.Name + "/" + repo.Name
@@ -168,5 +188,29 @@ func RepoAssignment(redirect bool, args ...bool) martini.Handler {
 		ctx.Data["Branches"] = brs
 		ctx.Data["CommitId"] = ctx.Repo.CommitId
 		ctx.Data["IsRepositoryWatching"] = ctx.Repo.IsWatching
+	}
+}
+
+func WriteAccess() martini.Handler {
+	return func(ctx *Context) {
+		if ctx.Repo.Repository.IsPrivate {
+			ctx.Repo.HasAccess = false
+			ctx.Data["HasAccess"] = false
+			if ctx.User == nil {
+				ctx.Handle(404, "WriteAccess", nil)
+				return
+			}
+
+			hasAccess, err := models.HasAccess(ctx.User.Name, ctx.Repo.Owner.Name+"/"+ctx.Repo.Repository.Name, models.AU_WRITABLE)
+			if err != nil {
+				ctx.Handle(500, "WriteAccess(HasAccess)", err)
+				return
+			} else if !hasAccess {
+				ctx.Handle(404, "WriteAccess(HasAccess)", nil)
+				return
+			}
+		}
+		ctx.Repo.HasAccess = true
+		ctx.Data["HasAccess"] = true
 	}
 }
