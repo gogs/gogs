@@ -1,8 +1,13 @@
+// Copyright 2014 The Gogs Authors. All rights reserved.
+// Use of this source code is governed by a MIT-style
+// license that can be found in the LICENSE file.
+
 package user
 
 import (
 	"encoding/json"
 	"net/http"
+	"net/url"
 	"github.com/gogits/gogs/models"
 
 	"code.google.com/p/goauth2/oauth"
@@ -40,7 +45,7 @@ func (s *SocialGoogle) SetRedirectUrl(url string) {
 	s.Transport.Config.RedirectURL = url
 }
 
-func (s *SocialGoogle) UserInfo(token *oauth.Token) (*BasicUserInfo, error) {
+func (s *SocialGoogle) UserInfo(token *oauth.Token, _ *url.URL) (*BasicUserInfo, error) {
 	transport := &oauth.Transport{Token: token}
 	var data struct {
 		Id    string `json:"id"`
