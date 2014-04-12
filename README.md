@@ -5,7 +5,7 @@ Gogs(Go Git Service) is a Self Hosted Git Service in the Go Programming Language
 
 ![Demo](http://gowalker.org/public/gogs_demo.gif)
 
-##### Current version: 0.2.5 Alpha
+##### Current version: 0.2.6 Alpha
 
 #### Due to testing purpose, data of [try.gogits.org](http://try.gogits.org) has been reset in April 6, 2014 and will reset multiple times after. Please do NOT put your important data on the site.
 
@@ -43,7 +43,7 @@ More importantly, Gogs only needs one binary to setup your own project hosting o
 
 Make sure you install [Prerequirements](https://github.com/gogits/gogs/wiki/Prerequirements) first.
 
-There are two ways to install Gogs:
+There are 3 ways to install Gogs:
 
 - [Install from binary](https://github.com/gogits/gogs/wiki/Install-from-binary): **STRONGLY RECOMMENDED**
 - [Install from source](https://github.com/gogits/gogs/wiki/Install-from-source)

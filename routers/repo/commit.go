@@ -22,29 +22,53 @@ func Commits(ctx *middleware.Context, params martini.Params) {
 
 	brs, err := models.GetBranches(userName, repoName)
 	if err != nil {
-		ctx.Handle(200, "repo.Commits", err)
+		ctx.Handle(500, "repo.Commits", err)
 		return
 	} else if len(brs) == 0 {
 		ctx.Handle(404, "repo.Commits", nil)
 		return
 	}
 
+	repoPath := models.RepoPath(userName, repoName)
+	commitsCount, err := models.GetCommitsCount(repoPath, branchName)
+	if err != nil {
+		ctx.Handle(500, "repo.Commits(GetCommitsCount)", err)
+		return
+	}
+
+	// Calculate and validate page number.
+	page, _ := base.StrTo(ctx.Query("p")).Int()
+	if page < 1 {
+		page = 1
+	}
+	lastPage := page - 1
+	if lastPage < 0 {
+		lastPage = 0
+	}
+	nextPage := page + 1
+	if nextPage*50 > commitsCount {
+		nextPage = 0
+	}
+
 	var commits *list.List
 	if models.IsBranchExist(userName, repoName, branchName) {
-		commits, err = models.GetCommitsByBranch(userName, repoName, branchName)
+		// commits, err = models.GetCommitsByBranch(userName, repoName, branchName)
+		commits, err = models.GetCommitsByRange(repoPath, branchName, page)
 	} else {
 		commits, err = models.GetCommitsByCommitId(userName, repoName, branchName)
 	}
 
 	if err != nil {
-		ctx.Handle(404, "repo.Commits", err)
+		ctx.Handle(404, "repo.Commits(get commits)", err)
 		return
 	}
 
 	ctx.Data["Username"] = userName
 	ctx.Data["Reponame"] = repoName
-	ctx.Data["CommitCount"] = commits.Len()
+	ctx.Data["CommitCount"] = commitsCount
 	ctx.Data["Commits"] = commits
+	ctx.Data["LastPageNum"] = lastPage
+	ctx.Data["NextPageNum"] = nextPage
 	ctx.Data["IsRepoToolbarCommits"] = true
 	ctx.HTML(200, "repo/commits")
 }
@@ -89,4 +113,43 @@ func Diff(ctx *middleware.Context, params martini.Params) {
 	ctx.Data["SourcePath"] = "/" + path.Join(userName, repoName, "src", commitId)
 	ctx.Data["RawPath"] = "/" + path.Join(userName, repoName, "raw", commitId)
 	ctx.HTML(200, "repo/diff")
+}
+
+func SearchCommits(ctx *middleware.Context, params martini.Params) {
+	keyword := ctx.Query("q")
+	if len(keyword) == 0 {
+		ctx.Redirect(ctx.Repo.RepoLink + "/commits/" + ctx.Repo.BranchName)
+		return
+	}
+
+	userName := params["username"]
+	repoName := params["reponame"]
+	branchName := params["branchname"]
+
+	brs, err := models.GetBranches(userName, repoName)
+	if err != nil {
+		ctx.Handle(500, "repo.SearchCommits(GetBranches)", err)
+		return
+	} else if len(brs) == 0 {
+		ctx.Handle(404, "repo.SearchCommits(GetBranches)", nil)
+		return
+	}
+
+	var commits *list.List
+	if !models.IsBranchExist(userName, repoName, branchName) {
+		ctx.Handle(404, "repo.SearchCommits(IsBranchExist)", err)
+		return
+	} else if commits, err = models.SearchCommits(models.RepoPath(userName, repoName), branchName, keyword); err != nil {
+		ctx.Handle(500, "repo.SearchCommits(SearchCommits)", err)
+		return
+	}
+
+	ctx.Data["Keyword"] = keyword
+	ctx.Data["Username"] = userName
+	ctx.Data["Reponame"] = repoName
+	ctx.Data["CommitCount"] = commits.Len()
+	ctx.Data["Commits"] = commits
+	ctx.Data["IsSearchPage"] = true
+	ctx.Data["IsRepoToolbarCommits"] = true
+	ctx.HTML(200, "repo/commits")
 }
