@@ -50,16 +50,10 @@ func Commits(ctx *middleware.Context, params martini.Params) {
 		nextPage = 0
 	}
 
-	var commits *list.List
-	if models.IsBranchExist(userName, repoName, branchName) {
-		// commits, err = models.GetCommitsByBranch(userName, repoName, branchName)
-		commits, err = models.GetCommitsByRange(repoPath, branchName, page)
-	} else {
-		commits, err = models.GetCommitsByCommitId(userName, repoName, branchName)
-	}
-
+	//both `git log branchName` and `git log  commitId` work
+	commits, err := models.GetCommitsByRange(repoPath, branchName, page)
 	if err != nil {
-		ctx.Handle(404, "repo.Commits(get commits)", err)
+		ctx.Handle(500, "repo.Commits(get commits)", err)
 		return
 	}
 
@@ -109,6 +103,7 @@ func Diff(ctx *middleware.Context, params martini.Params) {
 	ctx.Data["Title"] = commit.Message() + " · " + base.ShortSha(commitId)
 	ctx.Data["Commit"] = commit
 	ctx.Data["Diff"] = diff
+	ctx.Data["DiffNotAvailable"] = diff.NumFiles() == 0
 	ctx.Data["IsRepoToolbarCommits"] = true
 	ctx.Data["SourcePath"] = "/" + path.Join(userName, repoName, "src", commitId)
 	ctx.Data["RawPath"] = "/" + path.Join(userName, repoName, "raw", commitId)

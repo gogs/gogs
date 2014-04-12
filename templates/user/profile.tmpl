@@ -10,6 +10,18 @@
         </div>
         <div class="profile-info">
             <ul class="list-group">
+                <li class="list-group-item">
+                    <div class="profile-rel">
+                        <div class="col-md-6 followers">
+                            <strong>123</strong>
+                            <p>followers</p>
+                        </div>
+                        <div class="col-md-6 following">
+                            <strong>123</strong>
+                            <p>following</p>
+                        </div>
+                    </div>
+                </li>
                 {{if .Owner.Location}}
                     <li class="list-group-item"><i class="fa fa-thumb-tack"></i>{{.Owner.Location}}</li>
                 {{end}}
