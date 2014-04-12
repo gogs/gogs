@@ -21,6 +21,7 @@ import (
 	"github.com/gogits/git"
 
 	"github.com/gogits/gogs/modules/base"
+	"github.com/gogits/gogs/modules/log"
 )
 
 // RepoFile represents a file object in git repository.
@@ -302,7 +303,8 @@ func ParsePatch(reader io.Reader) (*Diff, error) {
 		i = i + 1
 
 		// Diff data too large.
-		if i == 2000 {
+		if i == 5000 {
+			log.Warn("Diff data too large")
 			return &Diff{}, nil
 		}
 
