@@ -192,8 +192,10 @@ func CreateRepository(user *User, repoName, desc, repoLang, license string, priv
 		return nil, err
 	}
 
-	if err = NewRepoAction(user, repo); err != nil {
-		log.Error("repo.CreateRepository(NewRepoAction): %v", err)
+	if !repo.IsPrivate {
+		if err = NewRepoAction(user, repo); err != nil {
+			log.Error("repo.CreateRepository(NewRepoAction): %v", err)
+		}
 	}
 
 	if err = WatchRepo(user.Id, repo.Id, true); err != nil {
