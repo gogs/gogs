@@ -52,6 +52,10 @@ func Commits(ctx *middleware.Context, params martini.Params) {
 
 	//both `git log branchName` and `git log  commitId` work
 	commits, err := models.GetCommitsByRange(repoPath, branchName, page)
+	if err != nil {
+		ctx.Handle(500, "repo.Commits(get commits)", err)
+		return
+	}
 
 	ctx.Data["Username"] = userName
 	ctx.Data["Reponame"] = repoName
