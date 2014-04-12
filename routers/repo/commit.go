@@ -103,6 +103,7 @@ func Diff(ctx *middleware.Context, params martini.Params) {
 	ctx.Data["Title"] = commit.Message() + " · " + base.ShortSha(commitId)
 	ctx.Data["Commit"] = commit
 	ctx.Data["Diff"] = diff
+	ctx.Data["DiffNotAvailable"] = diff.NumFiles() == 0
 	ctx.Data["IsRepoToolbarCommits"] = true
 	ctx.Data["SourcePath"] = "/" + path.Join(userName, repoName, "src", commitId)
 	ctx.Data["RawPath"] = "/" + path.Join(userName, repoName, "raw", commitId)

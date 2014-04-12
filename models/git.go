@@ -300,6 +300,12 @@ func ParsePatch(reader io.Reader) (*Diff, error) {
 		}
 
 		i = i + 1
+
+		// Diff data too large.
+		if i == 2000 {
+			return &Diff{}, nil
+		}
+
 		if line == "" {
 			continue
 		}
