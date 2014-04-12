@@ -12,8 +12,6 @@
 			<h3>Sign Up</h3>
 		{{end}}
 	    {{template "base/alert" .}}
-		{{if .IsSocialLogin}}
-		{{end}}
 		<div class="form-group {{if .Err_UserName}}has-error has-feedback{{end}}">
 			<label class="col-md-4 control-label">Username: </label>
 			<div class="col-md-6">
@@ -23,7 +21,7 @@
 		<div class="form-group {{if .Err_Email}}has-error has-feedback{{end}}">
 			<label class="col-md-4 control-label">Email: </label>
 			<div class="col-md-6">
-				<input name="email" class="form-control" placeholder="Type your e-mail address" value="{{.email}}{{.socialEmail}}" required="required" title="Email is not valid">
+				<input name="email" class="form-control" placeholder="Type your e-mail address" value="{{.email}}" required="required" title="Email is not valid">
 			</div>
 		</div>
 

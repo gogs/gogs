@@ -6,8 +6,6 @@ package models
 
 import (
 	"errors"
-
-	"github.com/gogits/gogs/modules/log"
 )
 
 // OT: Oauth2 Type
@@ -20,7 +18,6 @@ const (
 var (
 	ErrOauth2RecordNotExists       = errors.New("not exists oauth2 record")
 	ErrOauth2NotAssociatedWithUser = errors.New("not associated with user")
-	ErrOauth2NotExist              = errors.New("not exist oauth2")
 )
 
 type Oauth2 struct {
@@ -61,12 +58,11 @@ func GetOauth2(identity string) (oa *Oauth2, err error) {
 func GetOauth2ById(id int64) (oa *Oauth2, err error) {
 	oa = new(Oauth2)
 	has, err := orm.Id(id).Get(oa)
-	log.Info("oa: %v", oa)
 	if err != nil {
 		return nil, err
 	}
 	if !has {
-		return nil, ErrOauth2NotExist
+		return nil, ErrOauth2RecordNotExists
 	}
 	return oa, nil
 }
