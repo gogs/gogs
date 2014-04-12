@@ -20,6 +20,9 @@
             </div>
         </div>
 
+        {{if .DiffNotAvailable}}
+        <h4>Diff Data Not Available.</h4>
+        {{else}}
         <div class="diff-detail-box diff-box">
             <a class="pull-right btn btn-default" data-toggle="collapse" data-target="#diff-files">Show Diff Stats</a>
             <p class="showing">
@@ -96,6 +99,7 @@
                 {{end}}
             </div>
         </div>
+        {{end}}
         {{end}}
     </div>
 </div>
