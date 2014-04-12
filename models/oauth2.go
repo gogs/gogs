@@ -26,7 +26,7 @@ type Oauth2 struct {
 	User     *User  `xorm:"-"`
 	Type     int    `xorm:"unique(s) unique(oauth)"` // twitter,github,google...
 	Identity string `xorm:"unique(s) unique(oauth)"` // id..
-	Token    string `xorm:"VARCHAR(200) not null"`
+	Token    string `xorm:"TEXT not null"`
 }
 
 func BindUserOauth2(userId, oauthId int64) error {
@@ -48,7 +48,7 @@ func GetOauth2(identity string) (oa *Oauth2, err error) {
 		return
 	} else if !isExist {
 		return nil, ErrOauth2RecordNotExists
-	} else if oa.Uid == 0 {
+	} else if oa.Uid == -1 {
 		return oa, ErrOauth2NotAssociatedWithUser
 	}
 	oa.User, err = GetUserById(oa.Uid)
