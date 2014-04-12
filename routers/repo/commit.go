@@ -50,18 +50,8 @@ func Commits(ctx *middleware.Context, params martini.Params) {
 		nextPage = 0
 	}
 
-	var commits *list.List
-	if models.IsBranchExist(userName, repoName, branchName) {
-		// commits, err = models.GetCommitsByBranch(userName, repoName, branchName)
-		commits, err = models.GetCommitsByRange(repoPath, branchName, page)
-	} else {
-		commits, err = models.GetCommitsByCommitId(userName, repoName, branchName)
-	}
-
-	if err != nil {
-		ctx.Handle(404, "repo.Commits(get commits)", err)
-		return
-	}
+	//both `git log branchName` and `git log  commitId` work
+	commits, err := models.GetCommitsByRange(repoPath, branchName, page)
 
 	ctx.Data["Username"] = userName
 	ctx.Data["Reponame"] = repoName
