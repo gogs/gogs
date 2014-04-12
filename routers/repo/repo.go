@@ -41,7 +41,7 @@ func CreatePost(ctx *middleware.Context, form auth.CreateRepoForm) {
 	}
 
 	_, err := models.CreateRepository(ctx.User, form.RepoName, form.Description,
-		form.Language, form.License, form.Visibility == "private", form.InitReadme == "on")
+		form.Language, form.License, form.Private == "on", form.InitReadme == "on")
 	if err == nil {
 		log.Trace("%s Repository created: %s/%s", ctx.Req.RequestURI, ctx.User.LowerName, form.RepoName)
 		ctx.Redirect("/" + ctx.User.Name + "/" + form.RepoName)
@@ -72,7 +72,7 @@ func MirrorPost(ctx *middleware.Context, form auth.CreateRepoForm) {
 	}
 
 	_, err := models.CreateRepository(ctx.User, form.RepoName, form.Description,
-		"", form.License, form.Visibility == "private", false)
+		"", form.License, form.Private == "on", false)
 	if err == nil {
 		log.Trace("%s Repository created: %s/%s", ctx.Req.RequestURI, ctx.User.LowerName, form.RepoName)
 		ctx.Redirect("/" + ctx.User.Name + "/" + form.RepoName)

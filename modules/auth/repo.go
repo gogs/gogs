@@ -18,7 +18,7 @@ import (
 
 type CreateRepoForm struct {
 	RepoName    string `form:"repo" binding:"Required;AlphaDash"`
-	Visibility  string `form:"visibility"`
+	Private     string `form:"private"`
 	Description string `form:"desc" binding:"MaxSize(100)"`
 	Language    string `form:"language"`
 	License     string `form:"license"`

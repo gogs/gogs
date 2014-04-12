@@ -156,22 +156,24 @@ func runWeb(*cli.Context) {
 		m.Get("/template/**", dev.TemplatePreview)
 	}
 
+	writeable := middleware.WriteAccess()
+
 	m.Group("/:username/:reponame", func(r martini.Router) {
-		r.Post("/settings", repo.SettingPost)
-		r.Get("/settings", repo.Setting)
+		r.Get("/settings", writeable, repo.Setting)
+		r.Post("/settings", writeable, repo.SettingPost)
 		r.Get("/action/:action", repo.Action)
 		r.Get("/issues/new", repo.CreateIssue)
 		r.Post("/issues/new", bindIgnErr(auth.CreateIssueForm{}), repo.CreateIssuePost)
 		r.Post("/issues/:index", bindIgnErr(auth.CreateIssueForm{}), repo.UpdateIssue)
 		r.Post("/comment/:action", repo.Comment)
-		r.Post("/import", repo.Import)
+		r.Post("/import", writeable, repo.Import)
 	}, reqSignIn, middleware.RepoAssignment(true))
 
 	m.Group("/:username/:reponame", func(r martini.Router) {
 		r.Get("/issues", repo.Issues)
 		r.Get("/issues/:index", repo.ViewIssue)
 		r.Get("/releases", repo.Releases)
-		r.Any("/releases/new", repo.ReleasesNew) // TODO:
+		r.Any("/releases/new", writeable, repo.ReleasesNew) // TODO:
 		r.Get("/pulls", repo.Pulls)
 		r.Get("/branches", repo.Branches)
 	}, ignSignIn, middleware.RepoAssignment(true))
@@ -187,8 +189,8 @@ func runWeb(*cli.Context) {
 	}, ignSignIn, middleware.RepoAssignment(true, true))
 
 	m.Group("/:username", func(r martini.Router) {
-		r.Any("/:reponame/**", repo.Http)
 		r.Get("/:reponame", middleware.RepoAssignment(true, true, true), repo.Single)
+		r.Any("/:reponame/**", repo.Http)
 	}, ignSignInAndCsrf)
 
 	// Not found handler.

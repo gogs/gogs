@@ -295,6 +295,9 @@ func DeleteUser(user *User) error {
 	}
 
 	// Delete oauth2.
+	if _, err = orm.Delete(&Oauth2{Uid: user.Id}); err != nil {
+		return err
+	}
 
 	// Delete all feeds.
 	if _, err = orm.Delete(&Action{UserId: user.Id}); err != nil {

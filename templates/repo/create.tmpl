@@ -22,10 +22,14 @@
         </div>
 
         <div class="form-group">
-            <label class="col-md-2 control-label">Visibility<strong class="text-danger">*</strong></label>
+            <label class="col-md-2 control-label">Visibility</label>
             <div class="col-md-8">
-                <p class="form-control-static">Public</p>
-                <input type="hidden" value="public" name="visibility"/>
+                <div class="checkbox">
+                    <label>
+                        <input type="checkbox" name="private" {{if .private}}checked{{end}}>
+                        <strong>This repository is private</strong>
+                    </label>
+                </div>
             </div>
         </div>
 

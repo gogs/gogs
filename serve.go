@@ -120,10 +120,7 @@ func runServ(k *cli.Context) {
 		qlog.Fatalf("Unavilable repository %v", args)
 	}
 	repoUserName := rr[0]
-	repoName := rr[1]
-	if strings.HasSuffix(repoName, ".git") {
-		repoName = repoName[:len(repoName)-4]
-	}
+	repoName := strings.TrimSuffix(rr[1], ".git")
 
 	isWrite := In(verb, COMMANDS_WRITE)
 	isRead := In(verb, COMMANDS_READONLY)
@@ -156,7 +153,7 @@ func runServ(k *cli.Context) {
 			break
 		}
 
-		has, err := models.HasAccess(user.Name, repoPath, models.AU_READABLE)
+		has, err := models.HasAccess(user.Name, path.Join(repoUserName, repoName), models.AU_READABLE)
 		if err != nil {
 			println("Inernel error")
 			qlog.Fatal(err)
