@@ -31,7 +31,7 @@ More importantly, Gogs only needs one binary to setup your own project hosting o
 - Activity timeline
 - SSH/HTTP(S) protocol support.
 - Register/delete/rename account.
-- Create/delete/watch/rename/transfer public repository.
+- Create/delete/watch/rename/transfer public/private repository.
 - Repository viewer.
 - Issue tracker.
 - Gravatar and cache support.
