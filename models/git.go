@@ -470,3 +470,26 @@ func SearchCommits(repoPath, branch, keyword string) (*list.List, error) {
 	}
 	return parsePrettyFormatLog(stdout)
 }
+
+// GetCommitsByRange returns certain number of commits with given page of repository.
+func GetCommitsByRange(repoPath, branch string, page int) (*list.List, error) {
+	stdout, stderr, err := com.ExecCmdDirBytes(repoPath, "git", "log", branch,
+		"--skip="+base.ToStr((page-1)*50), "--max-count=50", prettyLogFormat)
+	if err != nil {
+		return nil, err
+	} else if len(stderr) > 0 {
+		return nil, errors.New(string(stderr))
+	}
+	return parsePrettyFormatLog(stdout)
+}
+
+// GetCommitsCount returns the commits count of given branch of repository.
+func GetCommitsCount(repoPath, branch string) (int, error) {
+	stdout, stderr, err := com.ExecCmdDir(repoPath, "git", "rev-list", "--count", branch)
+	if err != nil {
+		return 0, err
+	} else if len(stderr) > 0 {
+		return 0, errors.New(stderr)
+	}
+	return base.StrTo(strings.TrimSpace(stdout)).Int()
+}
