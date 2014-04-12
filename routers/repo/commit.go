@@ -29,22 +29,46 @@ func Commits(ctx *middleware.Context, params martini.Params) {
 		return
 	}
 
+	repoPath := models.RepoPath(userName, repoName)
+	commitsCount, err := models.GetCommitsCount(repoPath, branchName)
+	if err != nil {
+		ctx.Handle(500, "repo.Commits(GetCommitsCount)", err)
+		return
+	}
+
+	// Calculate and validate page number.
+	page, _ := base.StrTo(ctx.Query("p")).Int()
+	if page < 1 {
+		page = 1
+	}
+	lastPage := page - 1
+	if lastPage < 0 {
+		lastPage = 0
+	}
+	nextPage := page + 1
+	if nextPage*50 > commitsCount {
+		nextPage = 0
+	}
+
 	var commits *list.List
 	if models.IsBranchExist(userName, repoName, branchName) {
-		commits, err = models.GetCommitsByBranch(userName, repoName, branchName)
+		// commits, err = models.GetCommitsByBranch(userName, repoName, branchName)
+		commits, err = models.GetCommitsByRange(repoPath, branchName, page)
 	} else {
 		commits, err = models.GetCommitsByCommitId(userName, repoName, branchName)
 	}
 
 	if err != nil {
-		ctx.Handle(404, "repo.Commits", err)
+		ctx.Handle(404, "repo.Commits(get commits)", err)
 		return
 	}
 
 	ctx.Data["Username"] = userName
 	ctx.Data["Reponame"] = repoName
-	ctx.Data["CommitCount"] = commits.Len()
+	ctx.Data["CommitCount"] = commitsCount
 	ctx.Data["Commits"] = commits
+	ctx.Data["LastPageNum"] = lastPage
+	ctx.Data["NextPageNum"] = nextPage
 	ctx.Data["IsRepoToolbarCommits"] = true
 	ctx.HTML(200, "repo/commits")
 }
@@ -125,6 +149,7 @@ func SearchCommits(ctx *middleware.Context, params martini.Params) {
 	ctx.Data["Reponame"] = repoName
 	ctx.Data["CommitCount"] = commits.Len()
 	ctx.Data["Commits"] = commits
+	ctx.Data["IsSearchPage"] = true
 	ctx.Data["IsRepoToolbarCommits"] = true
 	ctx.HTML(200, "repo/commits")
 }

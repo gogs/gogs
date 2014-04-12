@@ -40,15 +40,10 @@
                 </tbody>
             </table>
         </div>
-        <ul class="pagination" id="commits-pager">
-            <li><a href="#">&laquo;</a></li>
-            <li><a href="#">1</a></li>
-            <li><a href="#">2</a></li>
-            <li><a href="#">3</a></li>
-            <li><a href="#">4</a></li>
-            <li><a href="#">5</a></li>
-            <li><a href="#">&raquo;</a></li>
-        </ul>
+        {{if not .IsSearchPage}}<ul class="pagination" id="commits-pager">
+            {{if .LastPageNum}}<li><a href="{{.RepoLink}}/commits/{{.BranchName}}?p={{.LastPageNum}}">&laquo; Newer</a></li>{{end}}
+            {{if .NextPageNum}}<li><a href="{{.RepoLink}}/commits/{{.BranchName}}?p={{.NextPageNum}}">&raquo; Older</a></li>{{end}}
+        </ul>{{end}}
     </div>
 </div>
 {{template "base/footer" .}}
