@@ -4,13 +4,13 @@
     <form action="/user/login" method="post" class="form-horizontal card" id="login-card">
         {{.CsrfTokenHtml}}
         <h3>Log in
-        {{if .OauthEnabled}}
+        <!--{{if .OauthEnabled}}
             <small class="pull-right">social login: 
             {{if .OauthGitHubEnabled}}
                 <a href="/user/login/github?next=/user/sign_up"><i class="fa fa-github-square fa-2x"></i></a>
             {{end}}
             </small>
-        {{end}}
+        {{end}}-->
         </h3>
         {{template "base/alert" .}}
         <div class="form-group {{if .Err_UserName}}has-error has-feedback{{end}}">
@@ -51,12 +51,27 @@
             </div>
         </div>
 
-      <!--   {{if .OauthEnabled}}
+        {{if .OauthEnabled}}
         <div class="form-group text-center" id="social-login">
-            <h4>Log In with Social Accounts</h4>
-            {{if .OauthGitHubEnabled}}<a href="/user/login/github?next=/user/sign_up"><i class="fa fa-github-square fa-3x"></i></a>{{end}}
+            <h4><span>or</span></h4>
+            <!--<a href="/user/login/github?next=/user/sign_up" class="btn btn-default google">
+                <i class="fa fa-google-plus-square fa-2x"></i>
+                <span>Google</span>
+            </a>
+            <a href="/user/login/github?next=/user/sign_up" class="btn btn-default facebbok">
+                <i class="fa fa-facebook-square fa-2x"></i>
+                <span>Facebook</span>
+            </a>
+            <a href="/user/login/github?next=/user/sign_up" class="btn btn-default weibo">
+                <i class="fa fa-weibo fa-2x"></i>
+                <span>Weibo</span>
+            </a>-->
+            {{if .OauthGitHubEnabled}}<a href="/user/login/github?next=/user/sign_up" class="github btn btn-default">
+            <i class="fa fa-github-square fa-2x"></i>
+            <span>GitHub</span>
+            </a>{{end}}
         </div>
-        {{end}} -->
+        {{end}}
     </form>
 </div>
 {{template "base/footer" .}}
