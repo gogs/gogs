@@ -26,7 +26,8 @@ var (
 		Type, Host, Name, User, Pwd, Path, SslMode string
 	}
 
-	UseSQLite3 bool
+	EnableSQLite3 bool
+	UseSQLite3    bool
 )
 
 func init() {
@@ -56,6 +57,9 @@ func NewTestEngine(x *xorm.Engine) (err error) {
 		x, err = xorm.NewEngine("postgres", fmt.Sprintf("user=%s password=%s dbname=%s sslmode=%s",
 			DbCfg.User, DbCfg.Pwd, DbCfg.Name, DbCfg.SslMode))
 	case "sqlite3":
+		if !EnableSQLite3 {
+			return fmt.Errorf("Unknown database type: %s", DbCfg.Type)
+		}
 		os.MkdirAll(path.Dir(DbCfg.Path), os.ModePerm)
 		x, err = xorm.NewEngine("sqlite3", DbCfg.Path)
 	default:
