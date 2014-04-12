@@ -12,7 +12,6 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/lib/pq"
 	"github.com/lunny/xorm"
-	// _ "github.com/mattn/go-sqlite3"
 
 	"github.com/gogits/gogs/modules/base"
 )
@@ -56,9 +55,9 @@ func NewTestEngine(x *xorm.Engine) (err error) {
 	case "postgres":
 		x, err = xorm.NewEngine("postgres", fmt.Sprintf("user=%s password=%s dbname=%s sslmode=%s",
 			DbCfg.User, DbCfg.Pwd, DbCfg.Name, DbCfg.SslMode))
-	// case "sqlite3":
-	// 	os.MkdirAll(path.Dir(DbCfg.Path), os.ModePerm)
-	// 	x, err = xorm.NewEngine("sqlite3", DbCfg.Path)
+	case "sqlite3":
+		os.MkdirAll(path.Dir(DbCfg.Path), os.ModePerm)
+		x, err = xorm.NewEngine("sqlite3", DbCfg.Path)
 	default:
 		return fmt.Errorf("Unknown database type: %s", DbCfg.Type)
 	}
