@@ -6,65 +6,32 @@ package user
 
 import (
 	"encoding/json"
-	"net/http"
+	"fmt"
 	"net/url"
-	"strconv"
 	"strings"
 
 	"code.google.com/p/goauth2/oauth"
 
+	"github.com/go-martini/martini"
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/middleware"
 )
 
+type BasicUserInfo struct {
+	Identity string
+	Name     string
+	Email    string
+}
+
 type SocialConnector interface {
-	Identity() string
-	Name() string
-	Email() string
-	TokenString() string
-}
+	Type() int
+	SetRedirectUrl(string)
+	UserInfo(*oauth.Token, *url.URL) (*BasicUserInfo, error)
 
-type SocialGithub struct {
-	data struct {
-		Id    int    `json:"id"`
-		Name  string `json:"login"`
-		Email string `json:"email"`
-	}
-	Token *oauth.Token
-}
-
-func (s *SocialGithub) Identity() string {
-	return strconv.Itoa(s.data.Id)
-}
-
-func (s *SocialGithub) Name() string {
-	return s.data.Name
-}
-
-func (s *SocialGithub) Email() string {
-	return s.data.Email
-}
-
-func (s *SocialGithub) TokenString() string {
-	data, _ := json.Marshal(s.Token)
-	return string(data)
-}
-
-// Github API refer: https://developer.github.com/v3/users/
-func (s *SocialGithub) Update() error {
-	scope := "https://api.github.com/user"
-	transport := &oauth.Transport{
-		Token: s.Token,
-	}
-	log.Debug("update github info")
-	r, err := transport.Client().Get(scope)
-	if err != nil {
-		return err
-	}
-	defer r.Body.Close()
-	return json.NewDecoder(r.Body).Decode(&s.data)
+	AuthCodeURL(string) string
+	Exchange(string) (*oauth.Token, error)
 }
 
 func extractPath(next string) string {
@@ -75,85 +42,76 @@ func extractPath(next string) string {
 	return n.Path
 }
 
-// github && google && ...
-func SocialSignIn(ctx *middleware.Context) {
-	//if base.OauthService != nil && base.OauthService.GitHub.Enabled {
-	//}
+var (
+	SocialBaseUrl = "/user/login"
+	SocialMap     = make(map[string]SocialConnector)
+)
 
-	var socid int64
-	var ok bool
-	next := extractPath(ctx.Query("next"))
-	log.Debug("social signed check %s", next)
-	if socid, ok = ctx.Session.Get("socialId").(int64); ok && socid != 0 {
-		// already login
-		ctx.Redirect(next)
-		log.Info("login soc id: %v", socid)
+// github && google && ...
+func SocialSignIn(params martini.Params, ctx *middleware.Context) {
+	if base.OauthService == nil || !base.OauthService.GitHub.Enabled {
+		ctx.Handle(404, "social login not enabled", nil)
 		return
 	}
-
-	config := &oauth.Config{
-		ClientId:     base.OauthService.GitHub.ClientId,
-		ClientSecret: base.OauthService.GitHub.ClientSecret,
-		RedirectURL:  strings.TrimSuffix(base.AppUrl, "/") + ctx.Req.URL.RequestURI(),
-		Scope:        base.OauthService.GitHub.Scopes,
-		AuthURL:      "https://github.com/login/oauth/authorize",
-		TokenURL:     "https://github.com/login/oauth/access_token",
-	}
-	transport := &oauth.Transport{
-		Config:    config,
-		Transport: http.DefaultTransport,
+	next := extractPath(ctx.Query("next"))
+	name := params["name"]
+	connect, ok := SocialMap[name]
+	if !ok {
+		ctx.Handle(404, "social login", nil)
+		return
 	}
 	code := ctx.Query("code")
 	if code == "" {
 		// redirect to social login page
-		ctx.Redirect(config.AuthCodeURL(next))
+		connect.SetRedirectUrl(strings.TrimSuffix(base.AppUrl, "/") + ctx.Req.URL.Host + ctx.Req.URL.Path)
+		ctx.Redirect(connect.AuthCodeURL(next))
 		return
 	}
 
 	// handle call back
-	tk, err := transport.Exchange(code)
+	tk, err := connect.Exchange(code) // exchange for token
 	if err != nil {
 		log.Error("oauth2 handle callback error: %v", err)
-		return // FIXME, need error page 501
-	}
-	next = extractPath(ctx.Query("state"))
-	log.Debug("success token: %v", tk)
-
-	gh := &SocialGithub{Token: tk}
-	if err = gh.Update(); err != nil {
-		// FIXME: handle error page 501
-		log.Error("connect with github error: %s", err)
+		ctx.Handle(500, "exchange code error", nil)
 		return
 	}
-	var soc SocialConnector = gh
-	log.Info("login: %s", soc.Name())
-	oa, err := models.GetOauth2(soc.Identity())
+	next = extractPath(ctx.Query("state"))
+	log.Trace("success get token")
+
+	ui, err := connect.UserInfo(tk, ctx.Req.URL)
+	if err != nil {
+		ctx.Handle(500, fmt.Sprintf("get infomation from %s error: %v", name, err), nil)
+		log.Error("social connect error: %s", err)
+		return
+	}
+	log.Info("social login: %s", ui)
+	oa, err := models.GetOauth2(ui.Identity)
 	switch err {
 	case nil:
 		ctx.Session.Set("userId", oa.User.Id)
 		ctx.Session.Set("userName", oa.User.Name)
 	case models.ErrOauth2RecordNotExists:
 		oa = &models.Oauth2{}
+		raw, _ := json.Marshal(tk) // json encode
+		oa.Token = string(raw)
 		oa.Uid = -1
-		oa.Type = models.OT_GITHUB
-		oa.Token = soc.TokenString()
-		oa.Identity = soc.Identity()
-		log.Debug("oa: %v", oa)
+		oa.Type = connect.Type()
+		oa.Identity = ui.Identity
+		log.Trace("oa: %v", oa)
 		if err = models.AddOauth2(oa); err != nil {
 			log.Error("add oauth2 %v", err) // 501
 			return
 		}
 	case models.ErrOauth2NotAssociatedWithUser:
-		ctx.Session.Set("socialId", oa.Id)
-		ctx.Session.Set("socialName", soc.Name())
-		ctx.Session.Set("socialEmail", soc.Email())
-		ctx.Redirect("/user/sign_up")
-		return
+		next = "/user/sign_up"
 	default:
-		log.Error(err.Error()) // FIXME: handle error page
+		log.Error("other error: %v", err)
+		ctx.Handle(500, err.Error(), nil)
 		return
 	}
 	ctx.Session.Set("socialId", oa.Id)
-	log.Debug("socialId: %v", oa.Id)
+	ctx.Session.Set("socialName", ui.Name)
+	ctx.Session.Set("socialEmail", ui.Email)
+	log.Trace("socialId: %v", oa.Id)
 	ctx.Redirect(next)
 }
