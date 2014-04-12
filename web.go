@@ -88,7 +88,7 @@ func runWeb(*cli.Context) {
 	m.Group("/user", func(r martini.Router) {
 		r.Get("/login", user.SignIn)
 		r.Post("/login", bindIgnErr(auth.LogInForm{}), user.SignInPost)
-		r.Get("/login/github", user.SocialSignIn)
+		r.Get("/login/:name", user.SocialSignIn)
 		r.Get("/sign_up", user.SignUp)
 		r.Post("/sign_up", bindIgnErr(auth.RegisterForm{}), user.SignUpPost)
 		r.Get("/reset_password", user.ResetPasswd)
