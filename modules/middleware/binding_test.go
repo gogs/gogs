@@ -121,7 +121,7 @@ func handle(test testCase, t *testing.T, index int, post BlogPost, errors Errors
 	if test.ok && errors.Count() > 0 {
 		t.Errorf("%+v should be OK (0 errors), but had errors: %+v", test, errors)
 	} else if !test.ok && errors.Count() == 0 {
-		t.Errorf("%+v should have errors, but was OK (0 errors): %+v", test)
+		t.Errorf("%+v should have errors, but was OK (0 errors)", test)
 	}
 }
 
@@ -132,7 +132,7 @@ func handleEmpty(test emptyPayloadTestCase, t *testing.T, index int, section Blo
 	if test.ok && errors.Count() > 0 {
 		t.Errorf("%+v should be OK (0 errors), but had errors: %+v", test, errors)
 	} else if !test.ok && errors.Count() == 0 {
-		t.Errorf("%+v should have errors, but was OK (0 errors): %+v", test)
+		t.Errorf("%+v should have errors, but was OK (0 errors)", test)
 	}
 }
 

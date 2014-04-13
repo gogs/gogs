@@ -284,7 +284,6 @@ func TimeSince(then time.Time) string {
 	default:
 		return fmt.Sprintf("%d years %s", diff/Year, lbl)
 	}
-	return then.String()
 }
 
 const (

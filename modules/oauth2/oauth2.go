@@ -9,7 +9,6 @@ package oauth2
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
@@ -93,11 +92,6 @@ func (t *token) IsExpired() bool {
 // access token.
 func (t *token) ExpiryTime() time.Time {
 	return t.Expiry
-}
-
-// Formats tokens into string.
-func (t *token) String() string {
-	return fmt.Sprintf("tokens: %v", t)
 }
 
 // Returns a new Google OAuth 2.0 backend endpoint.

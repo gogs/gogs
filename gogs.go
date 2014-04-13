@@ -1,3 +1,5 @@
+// +build go1.2
+
 // Copyright 2014 The Gogs Authors. All rights reserved.
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
@@ -13,8 +15,6 @@ import (
 
 	"github.com/gogits/gogs/modules/base"
 )
-
-// +build go1.2
 
 // Test that go1.2 tag above is included in builds. main.go refers to this definition.
 const go12tag = true
