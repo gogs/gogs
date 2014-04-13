@@ -32,7 +32,8 @@ var (
 
 func init() {
 	tables = append(tables, new(User), new(PublicKey), new(Repository), new(Watch),
-		new(Action), new(Access), new(Issue), new(Comment), new(Oauth2), new(Follow))
+		new(Action), new(Access), new(Issue), new(Comment), new(Oauth2), new(Follow),
+		new(Mirror))
 }
 
 func LoadModelsConfig() {

@@ -14,7 +14,7 @@
                 </span>
                 <p class="author">
                     <img class="avatar" src="{{AvatarLink .Commit.Author.Email}}" alt=""/>
-                    <a class="name" href="#"><strong>{{.Commit.Author.Name}}</strong></a>
+                    <a class="name" href="/user/email2user?email={{.Commit.Author.Email}}"><strong>{{.Commit.Author.Name}}</strong></a>
                     <span class="time">{{TimeSince .Commit.Author.When}}</span>
                 </p>
             </div>

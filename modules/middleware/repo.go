@@ -190,27 +190,3 @@ func RepoAssignment(redirect bool, args ...bool) martini.Handler {
 		ctx.Data["IsRepositoryWatching"] = ctx.Repo.IsWatching
 	}
 }
-
-func WriteAccess() martini.Handler {
-	return func(ctx *Context) {
-		if ctx.Repo.Repository.IsPrivate {
-			ctx.Repo.HasAccess = false
-			ctx.Data["HasAccess"] = false
-			if ctx.User == nil {
-				ctx.Handle(404, "WriteAccess", nil)
-				return
-			}
-
-			hasAccess, err := models.HasAccess(ctx.User.Name, ctx.Repo.Owner.Name+"/"+ctx.Repo.Repository.Name, models.AU_WRITABLE)
-			if err != nil {
-				ctx.Handle(500, "WriteAccess(HasAccess)", err)
-				return
-			} else if !hasAccess {
-				ctx.Handle(404, "WriteAccess(HasAccess)", nil)
-				return
-			}
-		}
-		ctx.Repo.HasAccess = true
-		ctx.Data["HasAccess"] = true
-	}
-}

@@ -40,8 +40,8 @@ func CreatePost(ctx *middleware.Context, form auth.CreateRepoForm) {
 		return
 	}
 
-	_, err := models.CreateRepository(ctx.User, form.RepoName, form.Description,
-		form.Language, form.License, form.Private == "on", form.InitReadme == "on")
+	repo, err := models.CreateRepository(ctx.User, form.RepoName, form.Description,
+		form.Language, form.License, form.Private, false, form.InitReadme)
 	if err == nil {
 		log.Trace("%s Repository created: %s/%s", ctx.Req.RequestURI, ctx.User.LowerName, form.RepoName)
 		ctx.Redirect("/" + ctx.User.Name + "/" + form.RepoName)
@@ -53,38 +53,56 @@ func CreatePost(ctx *middleware.Context, form auth.CreateRepoForm) {
 		ctx.RenderWithErr(models.ErrRepoNameIllegal.Error(), "repo/create", &form)
 		return
 	}
+
+	if repo != nil {
+		if errDelete := models.DeleteRepository(ctx.User.Id, repo.Id, ctx.User.Name); errDelete != nil {
+			log.Error("repo.MigratePost(CreatePost): %v", errDelete)
+		}
+	}
 	ctx.Handle(500, "repo.Create", err)
 }
 
-func Mirror(ctx *middleware.Context) {
-	ctx.Data["Title"] = "Mirror repository"
+func Migrate(ctx *middleware.Context) {
+	ctx.Data["Title"] = "Migrate repository"
 	ctx.Data["PageIsNewRepo"] = true
-	ctx.HTML(200, "repo/mirror")
+	ctx.HTML(200, "repo/migrate")
 }
 
-func MirrorPost(ctx *middleware.Context, form auth.CreateRepoForm) {
-	ctx.Data["Title"] = "Mirror repository"
+func MigratePost(ctx *middleware.Context, form auth.MigrateRepoForm) {
+	ctx.Data["Title"] = "Migrate repository"
 	ctx.Data["PageIsNewRepo"] = true
 
 	if ctx.HasError() {
-		ctx.HTML(200, "repo/mirror")
+		ctx.HTML(200, "repo/migrate")
 		return
 	}
 
-	_, err := models.CreateRepository(ctx.User, form.RepoName, form.Description,
-		"", form.License, form.Private == "on", false)
+	url := strings.Replace(form.Url, "://", fmt.Sprintf("://%s:%s@", form.AuthUserName, form.AuthPasswd), 1)
+	repo, err := models.MigrateRepository(ctx.User, form.RepoName, form.Description, form.Private,
+		form.Mirror, url)
 	if err == nil {
-		log.Trace("%s Repository created: %s/%s", ctx.Req.RequestURI, ctx.User.LowerName, form.RepoName)
+		log.Trace("%s Repository migrated: %s/%s", ctx.Req.RequestURI, ctx.User.LowerName, form.RepoName)
 		ctx.Redirect("/" + ctx.User.Name + "/" + form.RepoName)
 		return
 	} else if err == models.ErrRepoAlreadyExist {
-		ctx.RenderWithErr("Repository name has already been used", "repo/mirror", &form)
+		ctx.RenderWithErr("Repository name has already been used", "repo/migrate", &form)
 		return
 	} else if err == models.ErrRepoNameIllegal {
-		ctx.RenderWithErr(models.ErrRepoNameIllegal.Error(), "repo/mirror", &form)
+		ctx.RenderWithErr(models.ErrRepoNameIllegal.Error(), "repo/migrate", &form)
 		return
 	}
-	ctx.Handle(500, "repo.Mirror", err)
+
+	if repo != nil {
+		if errDelete := models.DeleteRepository(ctx.User.Id, repo.Id, ctx.User.Name); errDelete != nil {
+			log.Error("repo.MigratePost(DeleteRepository): %v", errDelete)
+		}
+	}
+
+	if strings.Contains(err.Error(), "Authentication failed") {
+		ctx.RenderWithErr(err.Error(), "repo/migrate", &form)
+		return
+	}
+	ctx.Handle(500, "repo.Migrate", err)
 }
 
 func Single(ctx *middleware.Context, params martini.Params) {
@@ -424,8 +442,4 @@ func Action(ctx *middleware.Context, params martini.Params) {
 	ctx.JSON(200, map[string]interface{}{
 		"ok": true,
 	})
-}
-
-func Import(ctx *middleware.Context, params martini.Params) {
-	ctx.ResponseWriter.Write([]byte("not done yet"))
 }
