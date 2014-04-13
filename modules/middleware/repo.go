@@ -102,9 +102,17 @@ func RepoAssignment(redirect bool, args ...bool) martini.Handler {
 		ctx.Repo.HasAccess = true
 		ctx.Data["HasAccess"] = true
 
+		if repo.IsMirror {
+			ctx.Repo.Mirror, err = models.GetMirror(repo.Id)
+			if err != nil {
+				ctx.Handle(500, "RepoAssignment(GetMirror)", err)
+				return
+			}
+			ctx.Data["MirrorInterval"] = ctx.Repo.Mirror.Interval
+		}
+
 		repo.NumOpenIssues = repo.NumIssues - repo.NumClosedIssues
 		ctx.Repo.Repository = repo
-
 		ctx.Data["IsBareRepo"] = ctx.Repo.Repository.IsBare
 
 		gitRepo, err := git.OpenRepository(models.RepoPath(userName, repoName))

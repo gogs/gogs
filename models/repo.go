@@ -30,7 +30,8 @@ var (
 	ErrRepoNotExist      = errors.New("Repository does not exist")
 	ErrRepoFileNotExist  = errors.New("Target Repo file does not exist")
 	ErrRepoNameIllegal   = errors.New("Repository name contains illegal characters")
-	ErrRepoFileNotLoaded = fmt.Errorf("repo file not loaded")
+	ErrRepoFileNotLoaded = errors.New("repo file not loaded")
+	ErrMirrorNotExist    = errors.New("Mirror does not exist")
 )
 
 var (
@@ -130,6 +131,22 @@ type Mirror struct {
 	NextUpdate time.Time
 }
 
+func GetMirror(repoId int64) (*Mirror, error) {
+	m := &Mirror{RepoId: repoId}
+	has, err := orm.Get(m)
+	if err != nil {
+		return nil, err
+	} else if !has {
+		return nil, ErrMirrorNotExist
+	}
+	return m, nil
+}
+
+func UpdateMirror(m *Mirror) error {
+	_, err := orm.Id(m.Id).Update(m)
+	return err
+}
+
 // MirrorUpdate checks and updates mirror repositories.
 func MirrorUpdate() {
 	if err := orm.Iterate(new(Mirror), func(idx int, bean interface{}) error {
@@ -149,8 +166,7 @@ func MirrorUpdate() {
 		}
 
 		m.NextUpdate = time.Now().Add(time.Duration(m.Interval) * time.Hour)
-		_, err = orm.Id(m.Id).Update(m)
-		return err
+		return UpdateMirror(m)
 	}); err != nil {
 		log.Error("repo.MirrorUpdate: %v", err)
 	}
@@ -644,6 +660,10 @@ func DeleteRepository(userId, repoId int64, userName string) (err error) {
 		return err
 	}
 	if _, err = sess.Delete(&Watch{RepoId: repoId}); err != nil {
+		sess.Rollback()
+		return err
+	}
+	if _, err = sess.Delete(&Mirror{RepoId: repoId}); err != nil {
 		sess.Rollback()
 		return err
 	}

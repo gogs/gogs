@@ -336,6 +336,8 @@ func SettingPost(ctx *middleware.Context) {
 		return
 	}
 
+	ctx.Data["IsRepoToolbarSetting"] = true
+
 	switch ctx.Query("action") {
 	case "update":
 		newRepoName := ctx.Query("name")
@@ -370,6 +372,18 @@ func SettingPost(ctx *middleware.Context) {
 			return
 		}
 		log.Trace("%s Repository updated: %s/%s", ctx.Req.RequestURI, ctx.Repo.Owner.Name, ctx.Repo.Repository.Name)
+
+		if ctx.Repo.Repository.IsMirror {
+			if len(ctx.Query("interval")) > 0 {
+				var err error
+				ctx.Repo.Mirror.Interval, err = base.StrTo(ctx.Query("interval")).Int()
+				if err != nil {
+					log.Error("repo.SettingPost(get mirror interval): %v", err)
+				} else if err = models.UpdateMirror(ctx.Repo.Mirror); err != nil {
+					log.Error("repo.SettingPost(UpdateMirror): %v", err)
+				}
+			}
+		}
 
 		ctx.Flash.Success("Repository options has been successfully updated.")
 		ctx.Redirect(fmt.Sprintf("/%s/%s/settings", ctx.Repo.Owner.Name, ctx.Repo.Repository.Name))

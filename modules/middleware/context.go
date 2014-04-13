@@ -62,6 +62,7 @@ type Context struct {
 			HTTPS string
 			Git   string
 		}
+		*models.Mirror
 	}
 }
 
