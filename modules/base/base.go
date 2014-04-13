@@ -54,3 +54,5 @@ const (
 	BindingBooleanTypeError     string = "BooleanTypeError"
 	BindingFloatTypeError       string = "FloatTypeError"
 )
+
+var GoGetMetas = make(map[string]bool)
