@@ -255,12 +255,13 @@ func CreateRepository(user *User, name, desc, lang, license string, private, mir
 	}
 
 	repo := &Repository{
-		OwnerId:     user.Id,
-		Name:        name,
-		LowerName:   strings.ToLower(name),
-		Description: desc,
-		IsPrivate:   private,
-		IsBare:      lang == "" && license == "" && !initReadme,
+		OwnerId:       user.Id,
+		Name:          name,
+		LowerName:     strings.ToLower(name),
+		Description:   desc,
+		IsPrivate:     private,
+		IsBare:        lang == "" && license == "" && !initReadme,
+		DefaultBranch: "master",
 	}
 	repoPath := RepoPath(user.Name, repo.Name)
 

@@ -134,6 +134,10 @@ func RepoAssignment(redirect bool, args ...bool) martini.Handler {
 		ctx.Repo.CloneLink.HTTPS = fmt.Sprintf("%s%s/%s.git", base.AppUrl, user.LowerName, repo.LowerName)
 		ctx.Data["CloneLink"] = ctx.Repo.CloneLink
 
+		if ctx.Repo.Repository.IsGoget {
+			ctx.Data["GoGetLink"] = strings.TrimSuffix(ctx.Repo.CloneLink.HTTPS, ".git")
+		}
+
 		// when repo is bare, not valid branch
 		if !ctx.Repo.Repository.IsBare && validBranch {
 		detect:
