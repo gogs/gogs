@@ -28,34 +28,25 @@ func Update(refName, oldCommitId, newCommitId, userName, repoName string, userId
 		qlog.Fatalf("runUpdate.Open repoId: %v", err)
 	}
 
-	newOid, err := git.NewOidFromString(newCommitId)
+	newCommit, err := repo.GetCommit(newCommitId)
 	if err != nil {
-		qlog.Fatalf("runUpdate.Ref repoId:%v err: %v", newCommitId, err)
-	}
-
-	newCommit, err := repo.LookupCommit(newOid)
-	if err != nil {
-		qlog.Fatalf("runUpdate.Ref repoId: %v", err)
+		qlog.Fatalf("runUpdate GetCommit of newCommitId: %v", err)
+		return
 	}
 
 	var l *list.List
 	// if a new branch
 	if isNew {
-		l, err = repo.CommitsBefore(newCommit.Id())
+		l, err = newCommit.CommitsBefore()
 		if err != nil {
 			qlog.Fatalf("Find CommitsBefore erro:", err)
 		}
 	} else {
-		oldOid, err := git.NewOidFromString(oldCommitId)
+		l, err = newCommit.CommitsBeforeUntil(oldCommitId)
 		if err != nil {
-			qlog.Fatalf("runUpdate.Ref repoId: %v", err)
+			qlog.Fatalf("Find CommitsBeforeUntil erro:", err)
+			return
 		}
-
-		oldCommit, err := repo.LookupCommit(oldOid)
-		if err != nil {
-			qlog.Fatalf("runUpdate.Ref repoId: %v", err)
-		}
-		l = repo.CommitsBetween(newCommit, oldCommit)
 	}
 
 	if err != nil {
@@ -76,7 +67,7 @@ func Update(refName, oldCommitId, newCommitId, userName, repoName string, userId
 			actEmail = commit.Committer.Email
 		}
 		commits = append(commits,
-			&base.PushCommit{commit.Id().String(),
+			&base.PushCommit{commit.Id.String(),
 				commit.Message(),
 				commit.Author.Email,
 				commit.Author.Name})
@@ -87,7 +78,7 @@ func Update(refName, oldCommitId, newCommitId, userName, repoName string, userId
 
 	//commits = append(commits, []string{lastCommit.Id().String(), lastCommit.Message()})
 	if err = CommitRepoAction(userId, userName, actEmail,
-		repos.Id, repoName, git.BranchName(refName), &base.PushCommits{l.Len(), commits}); err != nil {
+		repos.Id, repoName, git.RefEndName(refName), &base.PushCommits{l.Len(), commits}); err != nil {
 		qlog.Fatalf("runUpdate.models.CommitRepoAction: %v", err)
 	}
 }
