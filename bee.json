@@ -12,8 +12,6 @@
 		"models": "",
 		"others": [
 			"modules",
-			"$GOPATH/src/github.com/gogits/binding",
-			"$GOPATH/src/github.com/gogits/webdav",
 			"$GOPATH/src/github.com/gogits/logs",
 			"$GOPATH/src/github.com/gogits/git",
 			"$GOPATH/src/github.com/gogits/gfm"

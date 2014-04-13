@@ -10,7 +10,6 @@ import (
 
 	"github.com/go-martini/martini"
 
-	"github.com/gogits/binding"
 	"github.com/gogits/session"
 
 	"github.com/gogits/gogs/models"
@@ -93,7 +92,7 @@ func (f *UpdateProfileForm) Name(field string) string {
 	return names[field]
 }
 
-func (f *UpdateProfileForm) Validate(errors *binding.Errors, req *http.Request, context martini.Context) {
+func (f *UpdateProfileForm) Validate(errors *base.BindingErrors, req *http.Request, context martini.Context) {
 	if req.Method == "GET" || errors.Count() == 0 {
 		return
 	}
@@ -126,7 +125,7 @@ func (f *UpdatePasswdForm) Name(field string) string {
 	return names[field]
 }
 
-func (f *UpdatePasswdForm) Validate(errors *binding.Errors, req *http.Request, context martini.Context) {
+func (f *UpdatePasswdForm) Validate(errors *base.BindingErrors, req *http.Request, context martini.Context) {
 	if req.Method == "GET" || errors.Count() == 0 {
 		return
 	}
