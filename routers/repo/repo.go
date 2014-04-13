@@ -107,10 +107,6 @@ func MigratePost(ctx *middleware.Context, form auth.MigrateRepoForm) {
 }
 
 func Single(ctx *middleware.Context, params martini.Params) {
-	if ctx.Query("go-get") == "1" {
-		base.GoGetMetas[strings.TrimSuffix(ctx.Repo.CloneLink.HTTPS, ".git")] = true
-	}
-
 	branchName := ctx.Repo.BranchName
 	userName := ctx.Repo.Owner.Name
 	repoName := ctx.Repo.Repository.Name

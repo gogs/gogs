@@ -11,11 +11,6 @@ import (
 )
 
 func Home(ctx *middleware.Context) {
-	if ctx.Query("go-get") == "1" {
-		ctx.Write(base.GetGoGetMetaList())
-		return
-	}
-
 	if ctx.IsSigned {
 		user.Dashboard(ctx)
 		return
