@@ -197,15 +197,3 @@ func DiffLineTypeToStr(diffType int) string {
 	}
 	return "same"
 }
-
-const (
-	TPL_GO_GET_META = `<meta name="go-import" content="%s git %s">`
-)
-
-func GetGoGetMetaList() []byte {
-	buf := bytes.NewBuffer([]byte(""))
-	for meta := range GoGetMetas {
-		buf.WriteString(fmt.Sprintf(TPL_GO_GET_META, Domain, meta))
-	}
-	return buf.Bytes()
-}
