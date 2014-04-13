@@ -5,7 +5,6 @@
 package repo
 
 import (
-	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/middleware"
 )
 
@@ -13,7 +12,7 @@ func Releases(ctx *middleware.Context) {
 	ctx.Data["Title"] = "Releases"
 	ctx.Data["IsRepoToolbarReleases"] = true
 	ctx.Data["IsRepoReleaseNew"] = false
-	tags, err := models.GetTags(ctx.Repo.Owner.Name, ctx.Repo.Repository.Name)
+	tags, err := ctx.Repo.GitRepo.GetTags()
 	if err != nil {
 		ctx.Handle(404, "repo.Releases(GetTags)", err)
 		return

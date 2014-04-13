@@ -8,6 +8,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"github.com/gogits/git"
 	"path"
 	"path/filepath"
 	"strings"
@@ -107,7 +108,6 @@ func MigratePost(ctx *middleware.Context, form auth.MigrateRepoForm) {
 
 func Single(ctx *middleware.Context, params martini.Params) {
 	branchName := ctx.Repo.BranchName
-	commitId := ctx.Repo.CommitId
 	userName := ctx.Repo.Owner.Name
 	repoName := ctx.Repo.Repository.Name
 
@@ -125,46 +125,42 @@ func Single(ctx *middleware.Context, params martini.Params) {
 
 	ctx.Data["IsRepoToolbarSource"] = true
 
-	// Branches.
-	brs, err := models.GetBranches(userName, repoName)
-	if err != nil {
-		ctx.Handle(404, "repo.Single(GetBranches)", err)
-		return
-	}
-
-	ctx.Data["Branches"] = brs
-
 	isViewBranch := ctx.Repo.IsBranch
 	ctx.Data["IsViewBranch"] = isViewBranch
 
-	repoFile, err := models.GetTargetFile(userName, repoName,
-		branchName, commitId, treename)
+	treePath := treename
+	if len(treePath) != 0 {
+		treePath = treePath + "/"
+	}
 
-	if err != nil && err != models.ErrRepoFileNotExist {
-		ctx.Handle(404, "repo.Single(GetTargetFile)", err)
+	entry, err := ctx.Repo.Commit.GetTreeEntryByPath(treename)
+
+	if err != nil && err != git.ErrNotExist {
+		ctx.Handle(404, "repo.Single(GetTreeEntryByPath)", err)
 		return
 	}
 
-	if len(treename) != 0 && repoFile == nil {
+	if len(treename) != 0 && entry == nil {
 		ctx.Handle(404, "repo.Single", nil)
 		return
 	}
 
-	if repoFile != nil && repoFile.IsFile() {
-		if blob, err := repoFile.LookupBlob(); err != nil {
-			ctx.Handle(404, "repo.Single(repoFile.LookupBlob)", err)
+	if entry != nil && entry.IsFile() {
+		blob := entry.Blob()
+
+		if data, err := blob.Data(); err != nil {
+			ctx.Handle(404, "repo.Single(blob.Data)", err)
 		} else {
-			ctx.Data["FileSize"] = repoFile.Size
+			ctx.Data["FileSize"] = blob.Size()
 			ctx.Data["IsFile"] = true
-			ctx.Data["FileName"] = repoFile.Name
-			ext := path.Ext(repoFile.Name)
+			ctx.Data["FileName"] = blob.Name
+			ext := path.Ext(blob.Name)
 			if len(ext) > 0 {
 				ext = ext[1:]
 			}
 			ctx.Data["FileExt"] = ext
 			ctx.Data["FileLink"] = rawLink + "/" + treename
 
-			data := blob.Contents()
 			_, isTextFile := base.IsTextFile(data)
 			_, isImageFile := base.IsImageFile(data)
 			ctx.Data["FileIsText"] = isTextFile
@@ -172,7 +168,7 @@ func Single(ctx *middleware.Context, params martini.Params) {
 			if isImageFile {
 				ctx.Data["IsImageFile"] = true
 			} else {
-				readmeExist := base.IsMarkdownFile(repoFile.Name) || base.IsReadmeFile(repoFile.Name)
+				readmeExist := base.IsMarkdownFile(blob.Name) || base.IsReadmeFile(blob.Name)
 				ctx.Data["ReadmeExist"] = readmeExist
 				if readmeExist {
 					ctx.Data["FileContent"] = string(base.RenderMarkdown(data, ""))
@@ -186,21 +182,35 @@ func Single(ctx *middleware.Context, params martini.Params) {
 
 	} else {
 		// Directory and file list.
-		files, err := models.GetReposFiles(userName, repoName, ctx.Repo.CommitId, treename)
+		tree, err := ctx.Repo.Commit.SubTree(treename)
 		if err != nil {
-			ctx.Handle(404, "repo.Single(GetReposFiles)", err)
+			ctx.Handle(404, "repo.Single(SubTree)", err)
 			return
+		}
+		entries := tree.ListEntries()
+		entries.Sort()
+
+		files := make([][]interface{}, 0, len(entries))
+
+		for _, te := range entries {
+			c, err := ctx.Repo.Commit.GetCommitOfRelPath(filepath.Join(treePath, te.Name))
+			if err != nil {
+				ctx.Handle(404, "repo.Single(SubTree)", err)
+				return
+			}
+
+			files = append(files, []interface{}{te, c})
 		}
 
 		ctx.Data["Files"] = files
 
-		var readmeFile *models.RepoFile
+		var readmeFile *git.Blob
 
-		for _, f := range files {
+		for _, f := range entries {
 			if !f.IsFile() || !base.IsReadmeFile(f.Name) {
 				continue
 			} else {
-				readmeFile = f
+				readmeFile = f.Blob()
 				break
 			}
 		}
@@ -208,13 +218,12 @@ func Single(ctx *middleware.Context, params martini.Params) {
 		if readmeFile != nil {
 			ctx.Data["ReadmeInSingle"] = true
 			ctx.Data["ReadmeExist"] = true
-			if blob, err := readmeFile.LookupBlob(); err != nil {
+			if data, err := readmeFile.Data(); err != nil {
 				ctx.Handle(404, "repo.Single(readmeFile.LookupBlob)", err)
 				return
 			} else {
 				ctx.Data["FileSize"] = readmeFile.Size
 				ctx.Data["FileLink"] = rawLink + "/" + treename
-				data := blob.Contents()
 				_, isTextFile := base.IsTextFile(data)
 				ctx.Data["FileIsText"] = isTextFile
 				ctx.Data["FileName"] = readmeFile.Name
@@ -246,6 +255,7 @@ func Single(ctx *middleware.Context, params martini.Params) {
 	ctx.Data["LastCommit"] = ctx.Repo.Commit
 	ctx.Data["Paths"] = Paths
 	ctx.Data["Treenames"] = treenames
+	ctx.Data["TreePath"] = treePath
 	ctx.Data["BranchLink"] = branchLink
 	ctx.HTML(200, "repo/single")
 }
@@ -254,31 +264,18 @@ func SingleDownload(ctx *middleware.Context, params martini.Params) {
 	// Get tree path
 	treename := params["_1"]
 
-	branchName := params["branchname"]
-	userName := params["username"]
-	repoName := params["reponame"]
-
-	var commitId string
-	if !models.IsBranchExist(userName, repoName, branchName) {
-		commitId = branchName
-		branchName = ""
-	}
-
-	repoFile, err := models.GetTargetFile(userName, repoName,
-		branchName, commitId, treename)
-
+	blob, err := ctx.Repo.Commit.GetBlobByPath(treename)
 	if err != nil {
-		ctx.Handle(404, "repo.SingleDownload(GetTargetFile)", err)
+		ctx.Handle(404, "repo.SingleDownload(GetBlobByPath)", err)
 		return
 	}
 
-	blob, err := repoFile.LookupBlob()
+	data, err := blob.Data()
 	if err != nil {
-		ctx.Handle(404, "repo.SingleDownload(LookupBlob)", err)
+		ctx.Handle(404, "repo.SingleDownload(Data)", err)
 		return
 	}
 
-	data := blob.Contents()
 	contentType, isTextFile := base.IsTextFile(data)
 	_, isImageFile := base.IsImageFile(data)
 	ctx.Res.Header().Set("Content-Type", contentType)
@@ -361,7 +358,8 @@ func SettingPost(ctx *middleware.Context) {
 		}
 
 		br := ctx.Query("branch")
-		if models.IsBranchExist(ctx.User.Name, ctx.Repo.Repository.Name, br) {
+
+		if git.IsBranchExist(models.RepoPath(ctx.User.Name, ctx.Repo.Repository.Name), br) {
 			ctx.Repo.Repository.DefaultBranch = br
 		}
 		ctx.Repo.Repository.Description = ctx.Query("desc")

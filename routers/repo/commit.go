@@ -5,7 +5,6 @@
 package repo
 
 import (
-	"container/list"
 	"path"
 
 	"github.com/go-martini/martini"
@@ -16,11 +15,10 @@ import (
 )
 
 func Commits(ctx *middleware.Context, params martini.Params) {
-	userName := params["username"]
-	repoName := params["reponame"]
-	branchName := params["branchname"]
+	userName := ctx.Repo.Owner.Name
+	repoName := ctx.Repo.Repository.Name
 
-	brs, err := models.GetBranches(userName, repoName)
+	brs, err := ctx.Repo.GitRepo.GetBranches()
 	if err != nil {
 		ctx.Handle(500, "repo.Commits", err)
 		return
@@ -29,8 +27,7 @@ func Commits(ctx *middleware.Context, params martini.Params) {
 		return
 	}
 
-	repoPath := models.RepoPath(userName, repoName)
-	commitsCount, err := models.GetCommitsCount(repoPath, branchName)
+	commitsCount, err := ctx.Repo.Commit.CommitsCount()
 	if err != nil {
 		ctx.Handle(500, "repo.Commits(GetCommitsCount)", err)
 		return
@@ -51,7 +48,7 @@ func Commits(ctx *middleware.Context, params martini.Params) {
 	}
 
 	//both `git log branchName` and `git log  commitId` work
-	commits, err := models.GetCommitsByRange(repoPath, branchName, page)
+	commits, err := ctx.Repo.Commit.CommitsByRange(page)
 	if err != nil {
 		ctx.Handle(500, "repo.Commits(get commits)", err)
 		return
@@ -70,7 +67,6 @@ func Commits(ctx *middleware.Context, params martini.Params) {
 func Diff(ctx *middleware.Context, params martini.Params) {
 	userName := ctx.Repo.Owner.Name
 	repoName := ctx.Repo.Repository.Name
-	branchName := ctx.Repo.BranchName
 	commitId := ctx.Repo.CommitId
 
 	commit := ctx.Repo.Commit
@@ -82,19 +78,15 @@ func Diff(ctx *middleware.Context, params martini.Params) {
 	}
 
 	isImageFile := func(name string) bool {
-		repoFile, err := models.GetTargetFile(userName, repoName,
-			branchName, commitId, name)
-
+		blob, err := ctx.Repo.Commit.GetBlobByPath(name)
 		if err != nil {
 			return false
 		}
 
-		blob, err := repoFile.LookupBlob()
+		data, err := blob.Data()
 		if err != nil {
 			return false
 		}
-
-		data := blob.Contents()
 		_, isImage := base.IsImageFile(data)
 		return isImage
 	}
@@ -119,9 +111,8 @@ func SearchCommits(ctx *middleware.Context, params martini.Params) {
 
 	userName := params["username"]
 	repoName := params["reponame"]
-	branchName := params["branchname"]
 
-	brs, err := models.GetBranches(userName, repoName)
+	brs, err := ctx.Repo.GitRepo.GetBranches()
 	if err != nil {
 		ctx.Handle(500, "repo.SearchCommits(GetBranches)", err)
 		return
@@ -130,11 +121,8 @@ func SearchCommits(ctx *middleware.Context, params martini.Params) {
 		return
 	}
 
-	var commits *list.List
-	if !models.IsBranchExist(userName, repoName, branchName) {
-		ctx.Handle(404, "repo.SearchCommits(IsBranchExist)", err)
-		return
-	} else if commits, err = models.SearchCommits(models.RepoPath(userName, repoName), branchName, keyword); err != nil {
+	commits, err := ctx.Repo.Commit.SearchCommits(keyword)
+	if err != nil {
 		ctx.Handle(500, "repo.SearchCommits(SearchCommits)", err)
 		return
 	}

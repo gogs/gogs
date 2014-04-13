@@ -131,7 +131,7 @@ func RepoAssignment(redirect bool, args ...bool) martini.Handler {
 		detect:
 			if len(branchName) > 0 {
 				// TODO check tag
-				if models.IsBranchExist(user.Name, repoName, branchName) {
+				if gitRepo.IsBranchExist(branchName) {
 					ctx.Repo.IsBranch = true
 					ctx.Repo.BranchName = branchName
 
@@ -141,7 +141,7 @@ func RepoAssignment(redirect bool, args ...bool) martini.Handler {
 						return
 					}
 
-					ctx.Repo.CommitId = ctx.Repo.Commit.Oid.String()
+					ctx.Repo.CommitId = ctx.Repo.Commit.Id.String()
 
 				} else if len(branchName) == 40 {
 					ctx.Repo.IsCommit = true
@@ -181,7 +181,7 @@ func RepoAssignment(redirect bool, args ...bool) martini.Handler {
 		}
 
 		ctx.Data["BranchName"] = ctx.Repo.BranchName
-		brs, err := models.GetBranches(user.Name, repoName)
+		brs, err := ctx.Repo.GitRepo.GetBranches()
 		if err != nil {
 			log.Error("RepoAssignment(GetBranches): %v", err)
 		}
