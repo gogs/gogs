@@ -152,7 +152,7 @@ func SendIssueMentionMail(user, owner *models.User, repo *models.Repository, iss
 	}
 
 	issueLink := fmt.Sprintf("%s%s/%s/issues/%d", base.AppUrl, owner.Name, repo.Name, issue.Index)
-	body := fmt.Sprintf(`%s mentioned you.`)
+	body := fmt.Sprintf(`%s mentioned you.`, user.Name)
 	subject := fmt.Sprintf("[%s] %s", repo.Name, issue.Name)
 	content := fmt.Sprintf("%s<br>-<br> <a href=\"%s\">View it on Gogs</a>.", body, issueLink)
 	msg := NewMailMessageFrom(tos, user.Name, subject, content)

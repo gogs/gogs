@@ -39,12 +39,12 @@ func Update(refName, oldCommitId, newCommitId, userName, repoName string, userId
 	if isNew {
 		l, err = newCommit.CommitsBefore()
 		if err != nil {
-			qlog.Fatalf("Find CommitsBefore erro:", err)
+			qlog.Fatalf("Find CommitsBefore erro: %v", err)
 		}
 	} else {
 		l, err = newCommit.CommitsBeforeUntil(oldCommitId)
 		if err != nil {
-			qlog.Fatalf("Find CommitsBeforeUntil erro:", err)
+			qlog.Fatalf("Find CommitsBeforeUntil erro: %v", err)
 			return
 		}
 	}
