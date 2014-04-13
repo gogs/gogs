@@ -130,6 +130,32 @@ type Mirror struct {
 	NextUpdate time.Time
 }
 
+// MirrorUpdate checks and updates mirror repositories.
+func MirrorUpdate() {
+	if err := orm.Iterate(new(Mirror), func(idx int, bean interface{}) error {
+		m := bean.(*Mirror)
+		if m.NextUpdate.After(time.Now()) {
+			return nil
+		}
+
+		repoPath := filepath.Join(base.RepoRootPath, m.RepoName+".git")
+		_, stderr, err := com.ExecCmdDir(repoPath, "git", "remote", "update")
+		if err != nil {
+			return err
+		} else if strings.Contains(stderr, "fatal:") {
+			return errors.New(stderr)
+		} else if err = git.UnpackRefs(repoPath); err != nil {
+			return err
+		}
+
+		m.NextUpdate = time.Now().Add(time.Duration(m.Interval) * time.Hour)
+		_, err = orm.Id(m.Id).Update(m)
+		return err
+	}); err != nil {
+		log.Error("repo.MirrorUpdate: %v", err)
+	}
+}
+
 // MirrorRepository creates a mirror repository from source.
 func MirrorRepository(repoId int64, userName, repoName, repoPath, url string) error {
 	_, stderr, err := com.ExecCmd("git", "clone", "--mirror", url, repoPath)
