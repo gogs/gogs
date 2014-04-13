@@ -14,7 +14,6 @@ import (
 
 	qlog "github.com/qiniu/log"
 
-	"github.com/gogits/binding"
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/avatar"
 	"github.com/gogits/gogs/modules/base"
@@ -67,7 +66,7 @@ func runWeb(*cli.Context) {
 
 	reqSignOut := middleware.Toggle(&middleware.ToggleOptions{SignOutRequire: true})
 
-	bindIgnErr := binding.BindIgnErr
+	bindIgnErr := middleware.BindIgnErr
 
 	// Routers.
 	m.Get("/", ignSignIn, routers.Home)
@@ -102,7 +101,7 @@ func runWeb(*cli.Context) {
 		r.Post("/setting", bindIgnErr(auth.UpdateProfileForm{}), user.SettingPost)
 	}, reqSignIn)
 	m.Group("/user", func(r martini.Router) {
-		r.Get("/feeds", binding.Bind(auth.FeedsForm{}), user.Feeds)
+		r.Get("/feeds", middleware.Bind(auth.FeedsForm{}), user.Feeds)
 		r.Get("/activate", user.Activate)
 		r.Get("/email2user", user.Email2User)
 		r.Get("/forget_password", user.ForgotPasswd)

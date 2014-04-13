@@ -10,8 +10,6 @@ import (
 
 	"github.com/go-martini/martini"
 
-	"github.com/gogits/binding"
-
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
 )
@@ -35,7 +33,7 @@ func (f *AdminEditUserForm) Name(field string) string {
 	return names[field]
 }
 
-func (f *AdminEditUserForm) Validate(errors *binding.Errors, req *http.Request, context martini.Context) {
+func (f *AdminEditUserForm) Validate(errors *base.BindingErrors, req *http.Request, context martini.Context) {
 	if req.Method == "GET" || errors.Count() == 0 {
 		return
 	}
