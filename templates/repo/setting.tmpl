@@ -46,7 +46,7 @@
                     <hr>
                     <div class="form-group">
                         <label class="col-md-3 text-right">Default Branch</label>
-                        <div class="col-md-9">
+                        <div class="col-md-3">
                             <select name="branch" id="repo-default-branch" class="form-control">
                                 <option value="{{.Repository.DefaultBranch}}">{{.Repository.DefaultBranch}}</option>
                                 {{range .Branches}}
@@ -55,6 +55,13 @@
                             </select>
                         </div>
                     </div>
+
+                    {{if .Repository.IsMirror}}<div class="form-group">
+                        <label class="col-md-3 text-right">Mirror Interval(hours)</label>
+                        <div class="col-md-3">
+                            <input class="form-control" name="interval" value="{{.MirrorInterval}}"/>
+                        </div>
+                    </div>{{end}}
 
                     <div class="form-group">
                         <div class="col-md-offset-3 col-md-9">
