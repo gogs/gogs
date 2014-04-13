@@ -21,7 +21,7 @@ const (
 type Access struct {
 	Id       int64
 	UserName string    `xorm:"unique(s)"`
-	RepoName string    `xorm:"unique(s)"`
+	RepoName string    `xorm:"unique(s)"` // <user name>/<repo name>
 	Mode     int       `xorm:"unique(s)"`
 	Created  time.Time `xorm:"created"`
 }

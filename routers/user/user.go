@@ -74,6 +74,20 @@ func Profile(ctx *middleware.Context, params martini.Params) {
 	ctx.HTML(200, "user/profile")
 }
 
+func Email2User(ctx *middleware.Context) {
+	u, err := models.GetUserByEmail(ctx.Query("email"))
+	if err != nil {
+		if err == models.ErrUserNotExist {
+			ctx.Handle(404, "user.Email2User", err)
+		} else {
+			ctx.Handle(500, "user.Email2User(GetUserByEmail)", err)
+		}
+		return
+	}
+
+	ctx.Redirect("/user/" + u.Name)
+}
+
 func SignIn(ctx *middleware.Context) {
 	ctx.Data["Title"] = "Log In"
 

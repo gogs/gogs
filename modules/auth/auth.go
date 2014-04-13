@@ -130,7 +130,9 @@ func validate(errors *binding.Errors, data base.TmplData, form Form) {
 			case binding.MaxSizeError:
 				data["ErrorMsg"] = form.Name(field.Name) + " must contain at most " + getMinMaxSize(field) + " characters"
 			case binding.EmailError:
-				data["ErrorMsg"] = form.Name(field.Name) + " is not valid"
+				data["ErrorMsg"] = form.Name(field.Name) + " is not a valid e-mail address"
+			case binding.UrlError:
+				data["ErrorMsg"] = form.Name(field.Name) + " is not a valid URL"
 			default:
 				data["ErrorMsg"] = "Unknown error: " + err
 			}

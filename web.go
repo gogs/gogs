@@ -104,6 +104,7 @@ func runWeb(*cli.Context) {
 	m.Group("/user", func(r martini.Router) {
 		r.Get("/feeds", binding.Bind(auth.FeedsForm{}), user.Feeds)
 		r.Get("/activate", user.Activate)
+		r.Get("/email2user", user.Email2User)
 		r.Get("/forget_password", user.ForgotPasswd)
 		r.Post("/forget_password", user.ForgotPasswdPost)
 	})
@@ -120,8 +121,8 @@ func runWeb(*cli.Context) {
 	m.Group("/repo", func(r martini.Router) {
 		m.Get("/create", repo.Create)
 		m.Post("/create", bindIgnErr(auth.CreateRepoForm{}), repo.CreatePost)
-		m.Get("/mirror", repo.Mirror)
-		m.Post("/mirror", bindIgnErr(auth.CreateRepoForm{}), repo.MirrorPost)
+		m.Get("/migrate", repo.Migrate)
+		m.Post("/migrate", bindIgnErr(auth.MigrateRepoForm{}), repo.MigratePost)
 	}, reqSignIn)
 
 	adminReq := middleware.Toggle(&middleware.ToggleOptions{SignInRequire: true, AdminRequire: true})
@@ -144,24 +145,21 @@ func runWeb(*cli.Context) {
 		m.Get("/template/**", dev.TemplatePreview)
 	}
 
-	writeable := middleware.WriteAccess()
-
 	m.Group("/:username/:reponame", func(r martini.Router) {
-		r.Get("/settings", writeable, repo.Setting)
-		r.Post("/settings", writeable, repo.SettingPost)
+		r.Get("/settings", repo.Setting)
+		r.Post("/settings", repo.SettingPost)
 		r.Get("/action/:action", repo.Action)
 		r.Get("/issues/new", repo.CreateIssue)
 		r.Post("/issues/new", bindIgnErr(auth.CreateIssueForm{}), repo.CreateIssuePost)
 		r.Post("/issues/:index", bindIgnErr(auth.CreateIssueForm{}), repo.UpdateIssue)
 		r.Post("/comment/:action", repo.Comment)
-		r.Post("/import", writeable, repo.Import)
 	}, reqSignIn, middleware.RepoAssignment(true))
 
 	m.Group("/:username/:reponame", func(r martini.Router) {
 		r.Get("/issues", repo.Issues)
 		r.Get("/issues/:index", repo.ViewIssue)
 		r.Get("/releases", repo.Releases)
-		r.Any("/releases/new", writeable, repo.ReleasesNew) // TODO:
+		r.Any("/releases/new", repo.ReleasesNew) // TODO:
 		r.Get("/pulls", repo.Pulls)
 		r.Get("/branches", repo.Branches)
 	}, ignSignIn, middleware.RepoAssignment(true))
