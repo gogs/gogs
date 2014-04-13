@@ -29,13 +29,17 @@ type Mailer struct {
 	User, Passwd string
 }
 
+type OauthInfo struct {
+	ClientId, ClientSecret string
+	Scopes                 string
+	AuthUrl, TokenUrl      string
+}
+
 // Oauther represents oauth service.
 type Oauther struct {
-	GitHub struct {
-		Enabled                bool
-		ClientId, ClientSecret string
-		Scopes                 string
-	}
+	GitHub, Google, Tencent bool
+	Twitter                 bool
+	OauthInfos              map[string]*OauthInfo
 }
 
 var (
@@ -252,26 +256,6 @@ func newNotifyMailService() {
 	log.Info("Notify Mail Service Enabled")
 }
 
-func newOauthService() {
-	if !Cfg.MustBool("oauth", "ENABLED") {
-		return
-	}
-
-	OauthService = &Oauther{}
-	oauths := make([]string, 0, 10)
-
-	// GitHub.
-	if Cfg.MustBool("oauth.github", "ENABLED") {
-		OauthService.GitHub.Enabled = true
-		OauthService.GitHub.ClientId = Cfg.MustValue("oauth.github", "CLIENT_ID")
-		OauthService.GitHub.ClientSecret = Cfg.MustValue("oauth.github", "CLIENT_SECRET")
-		OauthService.GitHub.Scopes = Cfg.MustValue("oauth.github", "SCOPES")
-		oauths = append(oauths, "GitHub")
-	}
-
-	log.Info("Oauth Service Enabled %s", oauths)
-}
-
 func NewConfigContext() {
 	//var err error
 	workDir, err := ExecDir()
@@ -328,7 +312,7 @@ func NewConfigContext() {
 	}
 }
 
-func NewServices() {
+func NewBaseServices() {
 	newService()
 	newLogService()
 	newCacheService()
@@ -336,5 +320,4 @@ func NewServices() {
 	newMailService()
 	newRegisterMailService()
 	newNotifyMailService()
-	newOauthService()
 }

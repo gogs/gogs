@@ -14,11 +14,15 @@ const (
 	OT_GOOGLE
 	OT_TWITTER
 	OT_QQ
+	OT_WEIBO
+	OT_BITBUCKET
+	OT_OSCHINA
+	OT_FACEBOOK
 )
 
 var (
-	ErrOauth2RecordNotExists       = errors.New("not exists oauth2 record")
-	ErrOauth2NotAssociatedWithUser = errors.New("not associated with user")
+	ErrOauth2RecordNotExist = errors.New("OAuth2 record does not exist")
+	ErrOauth2NotAssociated  = errors.New("OAuth2 is not associated with user")
 )
 
 type Oauth2 struct {
@@ -35,11 +39,9 @@ func BindUserOauth2(userId, oauthId int64) error {
 	return err
 }
 
-func AddOauth2(oa *Oauth2) (err error) {
-	if _, err = orm.Insert(oa); err != nil {
-		return err
-	}
-	return nil
+func AddOauth2(oa *Oauth2) error {
+	_, err := orm.Insert(oa)
+	return err
 }
 
 func GetOauth2(identity string) (oa *Oauth2, err error) {
@@ -48,9 +50,9 @@ func GetOauth2(identity string) (oa *Oauth2, err error) {
 	if err != nil {
 		return
 	} else if !isExist {
-		return nil, ErrOauth2RecordNotExists
+		return nil, ErrOauth2RecordNotExist
 	} else if oa.Uid == -1 {
-		return oa, ErrOauth2NotAssociatedWithUser
+		return oa, ErrOauth2NotAssociated
 	}
 	oa.User, err = GetUserById(oa.Uid)
 	return oa, err
@@ -61,9 +63,8 @@ func GetOauth2ById(id int64) (oa *Oauth2, err error) {
 	has, err := orm.Id(id).Get(oa)
 	if err != nil {
 		return nil, err
-	}
-	if !has {
-		return nil, ErrOauth2RecordNotExists
+	} else if !has {
+		return nil, ErrOauth2RecordNotExist
 	}
 	return oa, nil
 }

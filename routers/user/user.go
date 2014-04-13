@@ -19,9 +19,15 @@ import (
 func SignIn(ctx *middleware.Context) {
 	ctx.Data["Title"] = "Log In"
 
+	if _, ok := ctx.Session.Get("socialId").(int64); ok {
+		ctx.Data["IsSocialLogin"] = true
+		ctx.HTML(200, "user/signin")
+		return
+	}
+
 	if base.OauthService != nil {
 		ctx.Data["OauthEnabled"] = true
-		ctx.Data["OauthGitHubEnabled"] = base.OauthService.GitHub.Enabled
+		ctx.Data["OauthService"] = base.OauthService
 	}
 
 	// Check auto-login.
@@ -34,7 +40,7 @@ func SignIn(ctx *middleware.Context) {
 	isSucceed := false
 	defer func() {
 		if !isSucceed {
-			log.Trace("%s auto-login cookie cleared: %s", ctx.Req.RequestURI, userName)
+			log.Trace("user.SignIn(auto-login cookie cleared): %s", userName)
 			ctx.SetCookie(base.CookieUserName, "", -1)
 			ctx.SetCookie(base.CookieRememberName, "", -1)
 			return
@@ -70,9 +76,12 @@ func SignIn(ctx *middleware.Context) {
 func SignInPost(ctx *middleware.Context, form auth.LogInForm) {
 	ctx.Data["Title"] = "Log In"
 
-	if base.OauthService != nil {
+	sid, isOauth := ctx.Session.Get("socialId").(int64)
+	if isOauth {
+		ctx.Data["IsSocialLogin"] = true
+	} else if base.OauthService != nil {
 		ctx.Data["OauthEnabled"] = true
-		ctx.Data["OauthGitHubEnabled"] = base.OauthService.GitHub.Enabled
+		ctx.Data["OauthService"] = base.OauthService
 	}
 
 	if ctx.HasError() {
@@ -99,13 +108,20 @@ func SignInPost(ctx *middleware.Context, form auth.LogInForm) {
 		ctx.SetSecureCookie(secret, base.CookieRememberName, user.Name, days)
 	}
 
-	// Bind with social account
-	if sid, ok := ctx.Session.Get("socialId").(int64); ok {
+	// Bind with social account.
+	if isOauth {
 		if err = models.BindUserOauth2(user.Id, sid); err != nil {
-			log.Error("bind user error: %v", err)
+			if err == models.ErrOauth2RecordNotExist {
+				ctx.Handle(404, "user.SignInPost(GetOauth2ById)", err)
+			} else {
+				ctx.Handle(500, "user.SignInPost(GetOauth2ById)", err)
+			}
+			return
 		}
 		ctx.Session.Delete("socialId")
+		log.Trace("%s OAuth binded: %s -> %d", ctx.Req.RequestURI, form.UserName, sid)
 	}
+
 	ctx.Session.Set("userId", user.Id)
 	ctx.Session.Set("userName", user.Name)
 	if redirectTo, _ := url.QueryUnescape(ctx.GetCookie("redirect_to")); len(redirectTo) > 0 {
@@ -115,6 +131,27 @@ func SignInPost(ctx *middleware.Context, form auth.LogInForm) {
 	}
 
 	ctx.Redirect("/")
+}
+
+func oauthSignInPost(ctx *middleware.Context, sid int64) {
+	ctx.Data["Title"] = "OAuth Sign Up"
+	ctx.Data["PageIsSignUp"] = true
+
+	if _, err := models.GetOauth2ById(sid); err != nil {
+		if err == models.ErrOauth2RecordNotExist {
+			ctx.Handle(404, "user.oauthSignUp(GetOauth2ById)", err)
+		} else {
+			ctx.Handle(500, "user.oauthSignUp(GetOauth2ById)", err)
+		}
+		return
+	}
+
+	ctx.Data["IsSocialLogin"] = true
+	ctx.Data["username"] = ctx.Session.Get("socialName")
+	ctx.Data["email"] = ctx.Session.Get("socialEmail")
+	log.Trace("user.oauthSignUp(social ID): %v", ctx.Session.Get("socialId"))
+
+	ctx.HTML(200, "user/signup")
 }
 
 func SignOut(ctx *middleware.Context) {
@@ -132,23 +169,37 @@ func SignUp(ctx *middleware.Context) {
 	ctx.Data["Title"] = "Sign Up"
 	ctx.Data["PageIsSignUp"] = true
 
-	if sid, ok := ctx.Session.Get("socialId").(int64); ok {
-		var err error
-		if _, err = models.GetOauth2ById(sid); err == nil {
-			ctx.Data["IsSocialLogin"] = true
-			// FIXME: don't set in error page
-			ctx.Data["username"] = ctx.Session.Get("socialName")
-			ctx.Data["email"] = ctx.Session.Get("socialEmail")
-		} else {
-			log.Error("unaccepted oauth error: %s", err) // FIXME: should it show in page
-		}
-	}
 	if base.Service.DisenableRegisteration {
 		ctx.Data["DisenableRegisteration"] = true
 		ctx.HTML(200, "user/signup")
 		return
 	}
-	log.Info("session: %v", ctx.Session.Get("socialId"))
+
+	if sid, ok := ctx.Session.Get("socialId").(int64); ok {
+		oauthSignUp(ctx, sid)
+		return
+	}
+
+	ctx.HTML(200, "user/signup")
+}
+
+func oauthSignUp(ctx *middleware.Context, sid int64) {
+	ctx.Data["Title"] = "OAuth Sign Up"
+	ctx.Data["PageIsSignUp"] = true
+
+	if _, err := models.GetOauth2ById(sid); err != nil {
+		if err == models.ErrOauth2RecordNotExist {
+			ctx.Handle(404, "user.oauthSignUp(GetOauth2ById)", err)
+		} else {
+			ctx.Handle(500, "user.oauthSignUp(GetOauth2ById)", err)
+		}
+		return
+	}
+
+	ctx.Data["IsSocialLogin"] = true
+	ctx.Data["username"] = strings.Replace(ctx.Session.Get("socialName").(string), " ", "", -1)
+	ctx.Data["email"] = ctx.Session.Get("socialEmail")
+	log.Trace("user.oauthSignUp(social ID): %v", ctx.Session.Get("socialId"))
 
 	ctx.HTML(200, "user/signup")
 }
@@ -160,6 +211,11 @@ func SignUpPost(ctx *middleware.Context, form auth.RegisterForm) {
 	if base.Service.DisenableRegisteration {
 		ctx.Handle(403, "user.SignUpPost", nil)
 		return
+	}
+
+	sid, isOauth := ctx.Session.Get("socialId").(int64)
+	if isOauth {
+		ctx.Data["IsSocialLogin"] = true
 	}
 
 	if form.Password != form.RetypePasswd {
@@ -179,7 +235,7 @@ func SignUpPost(ctx *middleware.Context, form auth.RegisterForm) {
 		Name:     form.UserName,
 		Email:    form.Email,
 		Passwd:   form.Password,
-		IsActive: !base.Service.RegisterEmailConfirm,
+		IsActive: !base.Service.RegisterEmailConfirm || isOauth,
 	}
 
 	var err error
@@ -192,20 +248,25 @@ func SignUpPost(ctx *middleware.Context, form auth.RegisterForm) {
 		case models.ErrUserNameIllegal:
 			ctx.RenderWithErr(models.ErrRepoNameIllegal.Error(), "user/signup", &form)
 		default:
-			ctx.Handle(500, "user.SignUp", err)
+			ctx.Handle(500, "user.SignUp(RegisterUser)", err)
 		}
 		return
 	}
 
-	log.Trace("%s User created: %s", ctx.Req.RequestURI, strings.ToLower(form.UserName))
-	// Bind Social Account
-	if sid, ok := ctx.Session.Get("socialId").(int64); ok {
-		models.BindUserOauth2(u.Id, sid)
+	log.Trace("%s User created: %s", ctx.Req.RequestURI, form.UserName)
+
+	// Bind social account.
+	if isOauth {
+		if err = models.BindUserOauth2(u.Id, sid); err != nil {
+			ctx.Handle(500, "user.SignUp(BindUserOauth2)", err)
+			return
+		}
 		ctx.Session.Delete("socialId")
+		log.Trace("%s OAuth binded: %s -> %d", ctx.Req.RequestURI, form.UserName, sid)
 	}
 
-	// Send confirmation e-mail.
-	if base.Service.RegisterEmailConfirm && u.Id > 1 {
+	// Send confirmation e-mail, no need for social account.
+	if !isOauth && base.Service.RegisterEmailConfirm && u.Id > 1 {
 		mailer.SendRegisterMail(ctx.Render, u)
 		ctx.Data["IsSendRegisterMail"] = true
 		ctx.Data["Email"] = u.Email
