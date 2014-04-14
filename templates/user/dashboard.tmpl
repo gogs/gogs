@@ -44,7 +44,7 @@
                 <ul class="list-group">{{range .MyRepos}}
                     <li class="list-group-item"><a href="/{{$.SignedUserName}}/{{.Name}}">
                         <!-- <span class="stars pull-right"><i class="fa fa-star"></i>{{.NumStars}}</span> -->
-                        <i class="fa fa-book"></i>{{.Name}}</a>
+                        <i class="fa fa-book"></i>{{.Name}}{{if .IsPrivate}} <span class="label label-default">Private</span>{{end}}</a>
                     </li>{{end}}
                 </ul>
             </div>

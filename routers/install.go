@@ -22,6 +22,7 @@ import (
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/mailer"
 	"github.com/gogits/gogs/modules/middleware"
+	"github.com/gogits/gogs/modules/social"
 )
 
 // Check run mode(Default of martini is Dev).
@@ -34,6 +35,11 @@ func checkRunMode() {
 		martini.Env = martini.Test
 	}
 	log.Info("Run Mode: %s", strings.Title(martini.Env))
+}
+
+func NewServices() {
+	base.NewBaseServices()
+	social.NewOauthService()
 }
 
 // GlobalInit is for global configuration reload-able.
@@ -52,7 +58,7 @@ func GlobalInit() {
 		models.HasEngine = true
 		cron.NewCronContext()
 	}
-	base.NewServices()
+	NewServices()
 	checkRunMode()
 }
 

@@ -75,9 +75,9 @@ type Repository struct {
 	NumStars        int
 	NumForks        int
 	NumIssues       int
-	NumReleases     int `xorm:"NOT NULL"`
 	NumClosedIssues int
 	NumOpenIssues   int `xorm:"-"`
+	NumTags         int `xorm:"-"`
 	IsPrivate       bool
 	IsMirror        bool
 	IsBare          bool
@@ -714,9 +714,14 @@ func GetRepositoryById(id int64) (*Repository, error) {
 }
 
 // GetRepositories returns the list of repositories of given user.
-func GetRepositories(user *User) ([]Repository, error) {
+func GetRepositories(user *User, private bool) ([]Repository, error) {
 	repos := make([]Repository, 0, 10)
-	err := orm.Desc("updated").Find(&repos, &Repository{OwnerId: user.Id})
+	sess := orm.Desc("updated")
+	if !private {
+		sess.Where("is_private=?", false)
+	}
+
+	err := sess.Find(&repos, &Repository{OwnerId: user.Id})
 	return repos, err
 }
 

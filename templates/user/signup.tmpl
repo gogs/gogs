@@ -1,15 +1,15 @@
 {{template "base/head" .}}
 {{template "base/navbar" .}}
-<div class="container" id="body" data-page="user-signup">
+<div class="container" id="body">
 	<form action="/user/sign_up" method="post" class="form-horizontal card" id="login-card">
 		{{.CsrfTokenHtml}}
 		{{if .DisenableRegisteration}}
 		Sorry, registeration has been disenabled, you can only get account from administrator.
 		{{else}}
 		{{if .IsSocialLogin}}
-			<h3>Social login: 2nd step <small>complete information</small></h3>
+		<h3>Social login: 2nd step <small>complete information</small></h3>
 		{{else}}
-			<h3>Sign Up</h3>
+		<h3>Sign Up</h3>
 		{{end}}
 	    {{template "base/alert" .}}
 		<div class="form-group {{if .Err_UserName}}has-error has-feedback{{end}}">

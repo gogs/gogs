@@ -69,6 +69,20 @@ func SettingPost(ctx *middleware.Context, form auth.UpdateProfileForm) {
 	ctx.Redirect("/user/setting")
 }
 
+func SettingSocial(ctx *middleware.Context) {
+	ctx.Data["Title"] = "Social Account"
+	ctx.Data["PageIsUserSetting"] = true
+	ctx.Data["IsUserPageSettingSocial"] = true
+	socials, err := models.GetOauthByUserId(ctx.User.Id)
+	if err != nil {
+		ctx.Handle(500, "user.SettingSocial", err)
+		return
+	}
+
+	ctx.Data["Socials"] = socials
+	ctx.HTML(200, "user/social")
+}
+
 func SettingPassword(ctx *middleware.Context) {
 	ctx.Data["Title"] = "Password"
 	ctx.Data["PageIsUserSetting"] = true
@@ -147,7 +161,7 @@ func SettingSSHKeys(ctx *middleware.Context, form auth.AddSSHKeyForm) {
 
 	// Add new SSH key.
 	if ctx.Req.Method == "POST" {
-		if hasErr, ok := ctx.Data["HasError"]; ok && hasErr.(bool) {
+		if ctx.HasError() {
 			ctx.HTML(200, "user/publickey")
 			return
 		}
@@ -162,11 +176,13 @@ func SettingSSHKeys(ctx *middleware.Context, form auth.AddSSHKeyForm) {
 				ctx.RenderWithErr("Public key name has been used", "user/publickey", &form)
 				return
 			}
-			ctx.Handle(200, "ssh.AddPublicKey", err)
-			log.Trace("%s User SSH key added: %s", ctx.Req.RequestURI, ctx.User.LowerName)
+			ctx.Handle(500, "ssh.AddPublicKey", err)
 			return
 		} else {
-			ctx.Data["AddSSHKeySuccess"] = true
+			log.Trace("%s User SSH key added: %s", ctx.Req.RequestURI, ctx.User.LowerName)
+			ctx.Flash.Success("New SSH Key has been added!")
+			ctx.Redirect("/user/setting/ssh")
+			return
 		}
 	}
 

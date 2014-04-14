@@ -88,12 +88,34 @@
                 <dl class="dl-horizontal admin-dl-horizontal">
                     <dt>Enabled</dt>
                     <dd><i class="fa fa{{if .MailerEnabled}}-check{{end}}-square-o"></i></dd>
-                    <dt>Name</dt>
+                    {{if .MailerEnabled}}<dt>Name</dt>
                     <dd>{{.Mailer.Name}}</dd>
                     <dt>Host</dt>
                     <dd>{{.Mailer.Host}}</dd>
                     <dt>User</dt>
-                    <dd>{{.Mailer.User}}</dd>
+                    <dd>{{.Mailer.User}}</dd>{{end}}
+                </dl>
+            </div>
+        </div>
+
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                OAuth Configuration
+            </div>
+
+            <div class="panel-body">
+                <dl class="dl-horizontal admin-dl-horizontal">
+                    <dt>Enabled</dt>
+                    <dd><i class="fa fa{{if .OauthEnabled}}-check{{end}}-square-o"></i></dd>
+                    {{if .OauthEnabled}}<dt>GitHub</dt>
+                    <dd><i class="fa fa{{if .Oauther.GitHub}}-check{{end}}-square-o"></i></dd>
+                    <dt>Google</dt>
+                    <dd><i class="fa fa{{if .Oauther.Google}}-check{{end}}-square-o"></i></dd>
+                    <dt>Tencent QQ</dt>
+                    <dd><i class="fa fa{{if .Oauther.Tencent}}-check{{end}}-square-o"></i></dd>
+                    <dt>Weibo</dt>
+                    <dd><i class="fa fa{{if .Oauther.Weibo}}-check{{end}}-square-o"></i></dd>
+                    <dd>{{.Mailer.User}}</dd>{{end}}
                 </dl>
             </div>
         </div>
