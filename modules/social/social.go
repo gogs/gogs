@@ -12,7 +12,7 @@ import (
 	"strconv"
 	"strings"
 
-	"code.google.com/p/goauth2/oauth"
+	oauth "github.com/gogits/oauth2"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"
@@ -368,7 +368,7 @@ func (s *SocialWeibo) SetRedirectUrl(url string) {
 	s.Transport.Config.RedirectURL = url
 }
 
-func (s *SocialWeibo) UserInfo(token *oauth.Token, URL *url.URL) (*BasicUserInfo, error) {
+func (s *SocialWeibo) UserInfo(token *oauth.Token, _ *url.URL) (*BasicUserInfo, error) {
 	transport := &oauth.Transport{Token: token}
 	var data struct {
 		Id   string `json:"id"`
@@ -378,7 +378,7 @@ func (s *SocialWeibo) UserInfo(token *oauth.Token, URL *url.URL) (*BasicUserInfo
 
 	var urls = url.Values{
 		"access_token": {token.AccessToken},
-		"uid":          URL.Query()["uid"],
+		"uid":          {token.Extra["id_token"]},
 	}
 	reqUrl := "https://api.weibo.com/2/users/show.json"
 	r, err := transport.Client().Get(reqUrl + "?" + urls.Encode())
