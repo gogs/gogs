@@ -109,11 +109,13 @@ html, body {
     background-color: #F6F6F6;
     border-bottom-right-radius: 3px;
     border-top-right-radius: 3px;
+    -webkit-transition: width linear .25s;
 }
 
 #nav-search-form input[type=search]:focus {
     background-color: #FFF;
     border-color: #D9D9D9;
+    width: 320px;
 }
 
 /* gogits nav item active status */

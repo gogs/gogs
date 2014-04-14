@@ -559,7 +559,15 @@ function initRelease() {
         $('.release-write a[data-toggle]').on("click", function () {
             $('.release-preview-content').html("loading...");
         });
-    }())
+    }());
+
+    // release new target selection
+    (function () {
+        $('#release-new-target-branch-list').on('click', 'a', function () {
+            $('#tag-target').val($(this).text());
+            $('#release-new-target-name').text(" " + $(this).text());
+        });
+    }());
 }
 
 (function ($) {
