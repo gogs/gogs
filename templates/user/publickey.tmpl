@@ -4,8 +4,8 @@
     {{template "user/setting_nav" .}}
     <div id="user-setting-container" class="col-md-9">
         <div id="ssh-keys">
-            <h4>SSH Keys</h4>{{if .AddSSHKeySuccess}}
-            <p class="alert alert-success">New SSH Key has been added !</p>{{else if .HasError}}<p class="alert alert-danger">{{.ErrorMsg}}</p>{{end}}
+            <h4>SSH Keys</h4>
+            {{template "base/alert" .}}
             <ul id="ssh-keys-list" class="list-group">
                 <li class="list-group-item"><span class="name">SSH Key's name</span></li>
                 {{range .Keys}}

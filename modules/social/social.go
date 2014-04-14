@@ -48,7 +48,7 @@ func NewOauthService() {
 	base.OauthService.OauthInfos = make(map[string]*base.OauthInfo)
 
 	socialConfigs := make(map[string]*oauth.Config)
-	allOauthes := []string{"github", "google", "qq", "twitter"}
+	allOauthes := []string{"github", "google", "qq", "twitter", "weibo"}
 	// Load all OAuth config data.
 	for _, name := range allOauthes {
 		base.OauthService.OauthInfos[name] = &base.OauthInfo{
@@ -96,6 +96,13 @@ func NewOauthService() {
 		base.OauthService.Twitter = true
 		newTwitterOauth(socialConfigs["twitter"])
 		enabledOauths = append(enabledOauths, "Twitter")
+	}
+
+	// Weibo.
+	if base.Cfg.MustBool("oauth.weibo", "ENABLED") {
+		base.OauthService.Weibo = true
+		newWeiboOauth(socialConfigs["weibo"])
+		enabledOauths = append(enabledOauths, "Weibo")
 	}
 
 	log.Info("Oauth Service Enabled %s", enabledOauths)
@@ -329,5 +336,58 @@ func (s *SocialTwitter) UserInfo(token *oauth.Token, _ *url.URL) (*BasicUserInfo
 	// 	Name:     data.Name,
 	// 	Email:    data.Email,
 	// }, nil
+	return nil, nil
+}
+
+//  __      __       ._____.
+// /  \    /  \ ____ |__\_ |__   ____
+// \   \/\/   // __ \|  || __ \ /  _ \
+//  \        /\  ___/|  || \_\ (  <_> )
+//   \__/\  /  \___  >__||___  /\____/
+//        \/       \/        \/
+
+type SocialWeibo struct {
+	Token *oauth.Token
+	*oauth.Transport
+}
+
+func (s *SocialWeibo) Type() int {
+	return models.OT_WEIBO
+}
+
+func newWeiboOauth(config *oauth.Config) {
+	SocialMap["weibo"] = &SocialWeibo{
+		Transport: &oauth.Transport{
+			Config:    config,
+			Transport: http.DefaultTransport,
+		},
+	}
+}
+
+func (s *SocialWeibo) SetRedirectUrl(url string) {
+	s.Transport.Config.RedirectURL = url
+}
+
+func (s *SocialWeibo) UserInfo(token *oauth.Token, _ *url.URL) (*BasicUserInfo, error) {
+	transport := &oauth.Transport{Token: token}
+	var data struct {
+		Id   string `json:"id"`
+		Name string `json:"name"`
+	}
+	var err error
+
+	reqUrl := "https://api.weibo.com/2/users/show.json"
+	r, err := transport.Client().Get(reqUrl)
+	if err != nil {
+		return nil, err
+	}
+	defer r.Body.Close()
+	if err = json.NewDecoder(r.Body).Decode(&data); err != nil {
+		return nil, err
+	}
+	return &BasicUserInfo{
+		Identity: data.Id,
+		Name:     data.Name,
+	}, nil
 	return nil, nil
 }

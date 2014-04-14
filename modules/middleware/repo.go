@@ -123,6 +123,13 @@ func RepoAssignment(redirect bool, args ...bool) martini.Handler {
 		ctx.Repo.GitRepo = gitRepo
 		ctx.Repo.RepoLink = "/" + user.Name + "/" + repo.Name
 
+		tags, err := ctx.Repo.GitRepo.GetTags()
+		if err != nil {
+			ctx.Handle(500, "RepoAssignment(GetTags))", err)
+			return
+		}
+		ctx.Repo.Repository.NumTags = len(tags)
+
 		ctx.Data["Title"] = user.Name + "/" + repo.Name
 		ctx.Data["Repository"] = repo
 		ctx.Data["Owner"] = user

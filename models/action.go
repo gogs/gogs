@@ -8,6 +8,8 @@ import (
 	"encoding/json"
 	"time"
 
+	// "github.com/gogits/git"
+
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
 )
@@ -22,6 +24,7 @@ const (
 	OP_CREATE_ISSUE
 	OP_PULL_REQUEST
 	OP_TRANSFER_REPO
+	OP_PUSH_TAG
 )
 
 // Action represents user operation type and other information to repository.,
@@ -67,7 +70,14 @@ func (a Action) GetContent() string {
 // CommitRepoAction adds new action for committing repository.
 func CommitRepoAction(userId int64, userName, actEmail string,
 	repoId int64, repoName string, refName string, commit *base.PushCommits) error {
-	log.Trace("action.CommitRepoAction(start): %d/%s", userId, repoName)
+	// log.Trace("action.CommitRepoAction(start): %d/%s", userId, repoName)
+
+	opType := OP_COMMIT_REPO
+	// Check it's tag push or branch.
+	// if git.IsTagExist(RepoPath(userName, repoName), refName) {
+	// 	opType = OP_PUSH_TAG
+	// 	commit = &base.PushCommits{}
+	// }
 
 	bs, err := json.Marshal(commit)
 	if err != nil {
@@ -76,7 +86,7 @@ func CommitRepoAction(userId int64, userName, actEmail string,
 	}
 
 	if err = NotifyWatchers(&Action{ActUserId: userId, ActUserName: userName, ActEmail: actEmail,
-		OpType: OP_COMMIT_REPO, Content: string(bs), RepoId: repoId, RepoName: repoName, RefName: refName}); err != nil {
+		OpType: opType, Content: string(bs), RepoId: repoId, RepoName: repoName, RefName: refName}); err != nil {
 		log.Error("action.CommitRepoAction(notify watchers): %d/%s", userId, repoName)
 		return err
 	}
