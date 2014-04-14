@@ -20,8 +20,8 @@
                     <li class="list-group-item"><i class="fa fa-link"></i><a target="_blank" href="{{.Owner.Website}}">{{.Owner.Website}}</a></li>
                 {{end}}
                 <li class="list-group-item"><i class="fa fa-clock-o"></i>Joined on {{DateFormat .Owner.Created "M d, Y"}}</li>
-                <hr>
-                <li class="list-group-item" style="padding-top: 5px;">
+                <!-- <hr> -->
+                <!-- <li class="list-group-item" style="padding-top: 5px;">
                     <div class="profile-rel">
                         <div class="col-md-6 followers">
                             <strong>123</strong>
@@ -33,7 +33,7 @@
                         </div>
                     </div>
                 </li>
-                <hr>
+                <hr> -->
             </ul>
         </div>
     </div>
@@ -65,7 +65,7 @@
                     <li>
                         <div class="meta pull-right"><!-- <i class="fa fa-star"></i> {{.NumStars}} --> <i class="fa fa-code-fork"></i> {{.NumForks}}</div>
                         <h4>
-                            <a href="/{{$owner.Name}}/{{.Name}}">{{.Name}}</a>
+                            <a href="/{{$owner.Name}}/{{.Name}}">{{.Name}}{{if .IsPrivate}} <span class="label label-default">Private</span>{{end}}</a>
                         </h4>
                         <p class="desc">{{.Description}}</p>
                         <div class="info">Last updated {{.Updated|TimeSince}}</div>

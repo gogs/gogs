@@ -18,7 +18,7 @@ import (
 func Dashboard(ctx *middleware.Context) {
 	ctx.Data["Title"] = "Dashboard"
 	ctx.Data["PageIsUserDashboard"] = true
-	repos, err := models.GetRepositories(&models.User{Id: ctx.User.Id})
+	repos, err := models.GetRepositories(&models.User{Id: ctx.User.Id}, true)
 	if err != nil {
 		ctx.Handle(500, "user.Dashboard", err)
 		return
@@ -58,7 +58,7 @@ func Profile(ctx *middleware.Context, params martini.Params) {
 		}
 		ctx.Data["Feeds"] = feeds
 	default:
-		repos, err := models.GetRepositories(user)
+		repos, err := models.GetRepositories(user, ctx.IsSigned && ctx.User.Id == user.Id)
 		if err != nil {
 			ctx.Handle(500, "user.Profile", err)
 			return
@@ -119,7 +119,7 @@ func Issues(ctx *middleware.Context) {
 	}
 
 	// Get all repositories.
-	repos, err := models.GetRepositories(ctx.User)
+	repos, err := models.GetRepositories(ctx.User, true)
 	if err != nil {
 		ctx.Handle(200, "user.Issues(get repositories)", err)
 		return

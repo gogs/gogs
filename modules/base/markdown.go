@@ -166,3 +166,7 @@ func RenderMarkdown(rawBytes []byte, urlPrefix string) []byte {
 	// fmt.Println(string(body))
 	return body
 }
+
+func RenderMarkdownString(raw, urlPrefix string) string {
+	return string(RenderMarkdown([]byte(raw), urlPrefix))
+}

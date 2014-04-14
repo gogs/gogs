@@ -234,7 +234,7 @@ func ChangeUserName(user *User, newUserName string) (err error) {
 		}
 	}
 
-	repos, err := GetRepositories(user)
+	repos, err := GetRepositories(user, true)
 	if err != nil {
 		return err
 	}

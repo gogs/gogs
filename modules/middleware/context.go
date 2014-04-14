@@ -82,7 +82,8 @@ func (ctx *Context) HasError() bool {
 	if !ok {
 		return false
 	}
-	ctx.Flash.Error(ctx.Data["ErrorMsg"].(string))
+	ctx.Flash.ErrorMsg = ctx.Data["ErrorMsg"].(string)
+	ctx.Data["Flash"] = ctx.Flash
 	return hasErr.(bool)
 }
 
