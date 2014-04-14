@@ -371,7 +371,6 @@ func (s *SocialWeibo) SetRedirectUrl(url string) {
 func (s *SocialWeibo) UserInfo(token *oauth.Token, _ *url.URL) (*BasicUserInfo, error) {
 	transport := &oauth.Transport{Token: token}
 	var data struct {
-		Id   int64  `json:"id"`
 		Name string `json:"name"`
 	}
 	var err error
@@ -390,7 +389,7 @@ func (s *SocialWeibo) UserInfo(token *oauth.Token, _ *url.URL) (*BasicUserInfo, 
 		return nil, err
 	}
 	return &BasicUserInfo{
-		Identity: base.StrTo(data.Id).String(),
+		Identity: token.Extra["id_token"],
 		Name:     data.Name,
 	}, nil
 	return nil, nil
