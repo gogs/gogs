@@ -9,7 +9,7 @@ Gogs(Go Git Service) is a Self Hosted Git Service in the Go Programming Language
 
 ### NOTICES
 
-- Due to testing purpose, data of [try.gogits.org](http://try.gogits.org) has been reset in **April 6, 2014** and will reset multiple times after. Please do **NOT** put your important data on the site.
+- Due to testing purpose, data of [try.gogits.org](http://try.gogits.org) has been reset in **April 14, 2014** and will reset multiple times after. Please do **NOT** put your important data on the site.
 - Demo site [try.gogits.org](http://try.gogits.org) is running under `dev` branch.
 
 #### Other language version
@@ -35,7 +35,7 @@ More importantly, Gogs only needs one binary to setup your own project hosting o
 - SSH/HTTP(S) protocol support.
 - Register/delete/rename account.
 - Create/migrate/mirror/delete/watch/rename/transfer public/private repository.
-- Repository viewer/issue tracker.
+- Repository viewer/release/issue tracker.
 - Gravatar and cache support.
 - Mail service(register, issue).
 - Administration panel.
