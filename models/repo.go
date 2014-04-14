@@ -66,6 +66,7 @@ func NewRepoContext() {
 type Repository struct {
 	Id              int64
 	OwnerId         int64 `xorm:"unique(s)"`
+	Owner           *User `xorm:"-"`
 	ForkId          int64
 	LowerName       string `xorm:"unique(s) index not null"`
 	Name            string `xorm:"index not null"`
@@ -364,24 +365,21 @@ func initRepoCommit(tmpPath string, sig *git.Signature) (err error) {
 	var stderr string
 	if _, stderr, err = com.ExecCmdDir(tmpPath, "git", "add", "--all"); err != nil {
 		return err
-	}
-	if len(stderr) > 0 {
-		log.Trace("stderr(1): %s", stderr)
+	} else if strings.Contains(stderr, "fatal:") {
+		return errors.New("git add: " + stderr)
 	}
 
 	if _, stderr, err = com.ExecCmdDir(tmpPath, "git", "commit", fmt.Sprintf("--author='%s <%s>'", sig.Name, sig.Email),
 		"-m", "Init commit"); err != nil {
 		return err
-	}
-	if len(stderr) > 0 {
-		log.Trace("stderr(2): %s", stderr)
+	} else if strings.Contains(stderr, "fatal:") {
+		return errors.New("git commit: " + stderr)
 	}
 
 	if _, stderr, err = com.ExecCmdDir(tmpPath, "git", "push", "origin", "master"); err != nil {
 		return err
-	}
-	if len(stderr) > 0 {
-		log.Trace("stderr(3): %s", stderr)
+	} else if strings.Contains(stderr, "fatal:") {
+		return errors.New("git push: " + stderr)
 	}
 	return nil
 }
@@ -439,9 +437,8 @@ func initRepository(f string, user *User, repo *Repository, initReadme bool, rep
 	_, stderr, err := com.ExecCmd("git", "clone", repoPath, tmpDir)
 	if err != nil {
 		return err
-	}
-	if len(stderr) > 0 {
-		log.Trace("repo.initRepository(git clone): %s", stderr)
+	} else if strings.Contains(stderr, "fatal:") {
+		return errors.New("git clone: " + stderr)
 	}
 
 	// README
@@ -725,6 +722,13 @@ func GetRepositories(user *User, private bool) ([]Repository, error) {
 	return repos, err
 }
 
+// GetRecentUpdatedRepositories returns the list of repositories that are recently updated.
+func GetRecentUpdatedRepositories() (repos []*Repository, err error) {
+	err = orm.Where("is_private=?", false).Limit(5).Desc("updated").Find(&repos)
+	return repos, err
+}
+
+// GetRepositoryCount returns the total number of repositories of user.
 func GetRepositoryCount(user *User) (int64, error) {
 	return orm.Count(&Repository{OwnerId: user.Id})
 }
