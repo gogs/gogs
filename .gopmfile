@@ -10,7 +10,6 @@ github.com/go-sql-driver/mysql =
 github.com/lib/pq = 
 github.com/qiniu/log = 
 github.com/robfig/cron = 
-code.google.com/p/goauth2 = 
 github.com/Unknwon/com = 
 github.com/Unknwon/cae = 
 github.com/Unknwon/goconfig = 
@@ -20,6 +19,7 @@ github.com/gogits/git =
 github.com/gogits/gfm = 
 github.com/gogits/cache = 
 github.com/gogits/session = 
+github.com/gogits/oauth2 = 
 
 [res]
 include = templates|public|conf
