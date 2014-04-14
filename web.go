@@ -63,7 +63,7 @@ func runWeb(*cli.Context) {
 		SignInRequire: base.Service.RequireSignInView,
 		DisableCsrf:   true,
 	})
-
+	
 	reqSignOut := middleware.Toggle(&middleware.ToggleOptions{SignOutRequire: true})
 
 	bindIgnErr := middleware.BindIgnErr
@@ -108,6 +108,7 @@ func runWeb(*cli.Context) {
 		r.Post("/forget_password", user.ForgotPasswdPost)
 	})
 	m.Group("/user/setting", func(r martini.Router) {
+		r.Get("/social", user.SettingSocial)
 		r.Get("/password", user.SettingPassword)
 		r.Post("/password", bindIgnErr(auth.UpdatePasswdForm{}), user.SettingPasswordPost)
 		r.Any("/ssh", bindIgnErr(auth.AddSSHKeyForm{}), user.SettingSSHKeys)

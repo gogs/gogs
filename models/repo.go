@@ -75,9 +75,9 @@ type Repository struct {
 	NumStars        int
 	NumForks        int
 	NumIssues       int
-	NumReleases     int `xorm:"NOT NULL"`
 	NumClosedIssues int
 	NumOpenIssues   int `xorm:"-"`
+	NumTags         int `xorm:"-"`
 	IsPrivate       bool
 	IsMirror        bool
 	IsBare          bool

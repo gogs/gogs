@@ -68,3 +68,9 @@ func GetOauth2ById(id int64) (oa *Oauth2, err error) {
 	}
 	return oa, nil
 }
+
+// GetOauthByUserId returns list of oauthes that are releated to given user.
+func GetOauthByUserId(uid int64) (oas []*Oauth2, err error) {
+	err = orm.Find(&oas, Oauth2{Uid: uid})
+	return oas, err
+}

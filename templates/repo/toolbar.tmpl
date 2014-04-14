@@ -13,7 +13,7 @@
                     <li class="tmp">{{if .IsRepoToolbarIssuesList}}<a href="{{.RepoLink}}/issues/new"><button class="btn btn-primary btn-sm">New Issue</button>
                     </a>{{end}}</li>
                     {{end}}
-                    <li class="{{if .IsRepoToolbarReleases}}active{{end}}"><a href="{{.RepoLink}}/releases">{{if .Repository.NumReleases}}<span class="badge">{{.Repository.NumReleases}}</span> {{end}}Releases</a></li>
+                    <li class="{{if .IsRepoToolbarReleases}}active{{end}}"><a href="{{.RepoLink}}/releases">{{if .Repository.NumTags}}<span class="badge">{{.Repository.NumTags}}</span> {{end}}Releases</a></li>
                     {{if .IsRepoToolbarReleases}}
                     <li class="tmp">{{if not .IsRepoReleaseNew}}<a href="{{.RepoLink}}/releases/new"><button class="btn btn-primary btn-sm">New Release</button></a>{{end}}</li>
                     {{end}}
