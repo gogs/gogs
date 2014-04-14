@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"strings"
 
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/lib/pq"
@@ -55,8 +56,18 @@ func NewTestEngine(x *xorm.Engine) (err error) {
 		x, err = xorm.NewEngine("mysql", fmt.Sprintf("%s:%s@tcp(%s)/%s?charset=utf8",
 			DbCfg.User, DbCfg.Pwd, DbCfg.Host, DbCfg.Name))
 	case "postgres":
-		x, err = xorm.NewEngine("postgres", fmt.Sprintf("user=%s password=%s dbname=%s sslmode=%s",
-			DbCfg.User, DbCfg.Pwd, DbCfg.Name, DbCfg.SslMode))
+		var host, port = "127.0.0.1", "5432"
+		fields := strings.Split(DbCfg.Host, ":")
+		if len(fields) > 0 {
+			host = fields[0]
+		}
+		if len(fields) > 1 {
+			port = fields[1]
+		}
+		cnnstr := fmt.Sprintf("user=%s password=%s host=%s port=%s dbname=%s sslmode=%s",
+			DbCfg.User, DbCfg.Pwd, host, port, DbCfg.Name, DbCfg.SslMode)
+		//fmt.Println(cnnstr)
+		x, err = xorm.NewEngine("postgres", cnnstr)
 	case "sqlite3":
 		if !EnableSQLite3 {
 			return fmt.Errorf("Unknown database type: %s", DbCfg.Type)
