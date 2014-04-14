@@ -368,7 +368,7 @@ func (s *SocialWeibo) SetRedirectUrl(url string) {
 	s.Transport.Config.RedirectURL = url
 }
 
-func (s *SocialWeibo) UserInfo(token *oauth.Token, _ *url.URL) (*BasicUserInfo, error) {
+func (s *SocialWeibo) UserInfo(token *oauth.Token, URL *url.URL) (*BasicUserInfo, error) {
 	transport := &oauth.Transport{Token: token}
 	var data struct {
 		Id   string `json:"id"`
@@ -376,8 +376,12 @@ func (s *SocialWeibo) UserInfo(token *oauth.Token, _ *url.URL) (*BasicUserInfo, 
 	}
 	var err error
 
+	var urls = url.Values{
+		"access_token": {token.AccessToken},
+		"uid":          URL.Query()["uid"],
+	}
 	reqUrl := "https://api.weibo.com/2/users/show.json"
-	r, err := transport.Client().Get(reqUrl)
+	r, err := transport.Client().Get(reqUrl + "?" + urls.Encode())
 	if err != nil {
 		return nil, err
 	}
