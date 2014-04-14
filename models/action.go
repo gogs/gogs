@@ -6,9 +6,10 @@ package models
 
 import (
 	"encoding/json"
+	"strings"
 	"time"
 
-	// "github.com/gogits/git"
+	"github.com/gogits/git"
 
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
@@ -74,10 +75,12 @@ func CommitRepoAction(userId int64, userName, actEmail string,
 
 	opType := OP_COMMIT_REPO
 	// Check it's tag push or branch.
-	// if git.IsTagExist(RepoPath(userName, repoName), refName) {
-	// 	opType = OP_PUSH_TAG
-	// 	commit = &base.PushCommits{}
-	// }
+	if strings.HasPrefix(refName, "refs/tags/") {
+		opType = OP_PUSH_TAG
+		commit = &base.PushCommits{}
+	}
+
+	refName = git.RefEndName(refName)
 
 	bs, err := json.Marshal(commit)
 	if err != nil {
