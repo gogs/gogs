@@ -59,7 +59,7 @@ func CreateRelease(repoPath string, rel *Release, gitRepo *git.Repository) error
 	}
 
 	if !git.IsTagExist(repoPath, rel.TagName) {
-		_, stderr, err := com.ExecCmdDir(repoPath, "git", "tag", rel.TagName, "-m", "\""+rel.Title+"\"")
+		_, stderr, err := com.ExecCmdDir(repoPath, "git", "tag", rel.TagName, "-m", rel.Title)
 		if err != nil {
 			return err
 		} else if strings.Contains(stderr, "fatal:") {
