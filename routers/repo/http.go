@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -333,7 +334,7 @@ func sendFile(contentType string, hr handler) {
 	http.ServeFile(w, r, reqFile)
 }
 
-func getGitDir(config *Config, filePath string) (string, error) {
+func getGitDir(config *Config, fPath string) (string, error) {
 	root := config.ReposRoot
 
 	if root == "" {
@@ -347,7 +348,11 @@ func getGitDir(config *Config, filePath string) (string, error) {
 		root = cwd
 	}
 
-	f := path.Join(root, filePath)
+	if !strings.HasSuffix(fPath, ".git") {
+		fPath = fPath + ".git"
+	}
+
+	f := filepath.Join(root, fPath)
 	if _, err := os.Stat(f); os.IsNotExist(err) {
 		return "", err
 	}
