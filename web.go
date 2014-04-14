@@ -63,7 +63,7 @@ func runWeb(*cli.Context) {
 		SignInRequire: base.Service.RequireSignInView,
 		DisableCsrf:   true,
 	})
-	
+
 	reqSignOut := middleware.Toggle(&middleware.ToggleOptions{SignOutRequire: true})
 
 	bindIgnErr := middleware.BindIgnErr
@@ -153,13 +153,16 @@ func runWeb(*cli.Context) {
 		r.Post("/issues/new", bindIgnErr(auth.CreateIssueForm{}), repo.CreateIssuePost)
 		r.Post("/issues/:index", bindIgnErr(auth.CreateIssueForm{}), repo.UpdateIssue)
 		r.Post("/comment/:action", repo.Comment)
+		r.Get("/releases/new", repo.ReleasesNew)
 	}, reqSignIn, middleware.RepoAssignment(true))
+
+	m.Group("/:username/:reponame", func(r martini.Router) {
+		r.Post("/releases/new", bindIgnErr(auth.NewReleaseForm{}), repo.ReleasesNewPost)
+	}, reqSignIn, middleware.RepoAssignment(true, true))
 
 	m.Group("/:username/:reponame", func(r martini.Router) {
 		r.Get("/issues", repo.Issues)
 		r.Get("/issues/:index", repo.ViewIssue)
-		r.Get("/releases", repo.Releases)
-		r.Any("/releases/new", repo.ReleasesNew) // TODO:
 		r.Get("/pulls", repo.Pulls)
 		r.Get("/branches", repo.Branches)
 	}, ignSignIn, middleware.RepoAssignment(true))
@@ -172,6 +175,7 @@ func runWeb(*cli.Context) {
 		r.Get("/commits/:branchname/search", repo.SearchCommits)
 		r.Get("/commit/:branchname", repo.Diff)
 		r.Get("/commit/:branchname/**", repo.Diff)
+		r.Get("/releases", repo.Releases)
 	}, ignSignIn, middleware.RepoAssignment(true, true))
 
 	m.Group("/:username", func(r martini.Router) {
