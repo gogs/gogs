@@ -1,5 +1,9 @@
 ### Gogs Install With Docker
 
+
+
+#### Gogs With MySQL
+
 Deply gogs in [Docker](http://www.docker.io/) is just as easy as eating a pie, what you do is just open the `dockerfiles/build.sh` file, replace the confis:
 
 ```
@@ -35,11 +39,9 @@ http://YOUR_HOST_IP:YOUR_HOST_PORT
 
 Let's 'gogs'!
 
-#### Gogs With MySQL
-
-
 #### Gogs With PostgreSQL
 
+Installing Gogs with PostgreSQL is nearly the same with installing it with MySQL. What you do is just change the DB_TYPE in build.sh to 'postgres'.
 
 #### Gogs, MySQL With Redis
 
