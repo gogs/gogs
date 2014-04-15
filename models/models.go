@@ -89,8 +89,16 @@ func SetEngine() (err error) {
 		orm, err = xorm.NewEngine("mysql", fmt.Sprintf("%s:%s@tcp(%s)/%s?charset=utf8",
 			DbCfg.User, DbCfg.Pwd, DbCfg.Host, DbCfg.Name))
 	case "postgres":
-		orm, err = xorm.NewEngine("postgres", fmt.Sprintf("user=%s password=%s dbname=%s sslmode=%s",
-			DbCfg.User, DbCfg.Pwd, DbCfg.Name, DbCfg.SslMode))
+		var host, port = "127.0.0.1", "5432"
+		fields := strings.Split(DbCfg.Host, ":")
+		if len(fields) > 0 {
+			host = fields[0]
+		}
+		if len(fields) > 1 {
+			port = fields[1]
+		}
+		orm, err = xorm.NewEngine("postgres", fmt.Sprintf("user=%s password=%s host=%s port=%s dbname=%s sslmode=%s",
+			DbCfg.User, DbCfg.Pwd, host, port, DbCfg.Name, DbCfg.SslMode))
 	case "sqlite3":
 		os.MkdirAll(path.Dir(DbCfg.Path), os.ModePerm)
 		orm, err = xorm.NewEngine("sqlite3", DbCfg.Path)
