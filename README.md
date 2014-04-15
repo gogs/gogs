@@ -24,7 +24,7 @@ More importantly, Gogs only needs one binary to setup your own project hosting o
 
 ## Overview
 
-- Please see [Wiki](https://github.com/gogits/gogs/wiki) for project design, known issues, change log and road map.
+- Please see [Wiki](https://github.com/gogits/gogs/wiki) for project design, known issues, and change log.
 - See [Trello Board](https://trello.com/b/uxAoeLUl/gogs-go-git-service) to follow the develop team.
 - Try it before anything? Do it [online](http://try.gogits.org/Unknown/gogs) or go down to **Installation -> Install from binary** section!
 - Having troubles? Get help from [Troubleshooting](https://github.com/gogits/gogs/wiki/Troubleshooting).
@@ -64,7 +64,7 @@ There are 3 ways to install Gogs:
 
 ## Contributors
 
-This project was launched by [Unknown](https://github.com/Unknwon) and [lunny](https://github.com/lunny); [fuxiaohei](https://github.com/fuxiaohei), [slene](https://github.com/slene) and [skyblue](https://github.com/shxsun) joined the team soon after. See [contributors page](https://github.com/gogits/gogs/graphs/contributors) for full list of contributors.
+This project was launched by [Unknown](https://github.com/Unknwon) and [lunny](https://github.com/lunny); [fuxiaohei](https://github.com/fuxiaohei), [slene](https://github.com/slene) and [codeskyblue](https://github.com/codeskyblue) joined the team soon after. See [contributors page](https://github.com/gogits/gogs/graphs/contributors) for full list of contributors.
 
 ## License
 

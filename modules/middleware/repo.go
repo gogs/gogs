@@ -40,7 +40,7 @@ func RepoAssignment(redirect bool, args ...bool) martini.Handler {
 
 		userName := params["username"]
 		repoName := params["reponame"]
-		branchName := params["branchname"]
+		refName := params["branchname"]
 
 		// get repository owner
 		ctx.Repo.IsOwner = ctx.IsSigned && ctx.User.LowerName == strings.ToLower(userName)
@@ -149,26 +149,35 @@ func RepoAssignment(redirect bool, args ...bool) martini.Handler {
 		// when repo is bare, not valid branch
 		if !ctx.Repo.Repository.IsBare && validBranch {
 		detect:
-			if len(branchName) > 0 {
-				// TODO check tag
-				if gitRepo.IsBranchExist(branchName) {
+			if len(refName) > 0 {
+				if gitRepo.IsBranchExist(refName) {
 					ctx.Repo.IsBranch = true
-					ctx.Repo.BranchName = branchName
+					ctx.Repo.BranchName = refName
 
-					ctx.Repo.Commit, err = gitRepo.GetCommitOfBranch(branchName)
+					ctx.Repo.Commit, err = gitRepo.GetCommitOfBranch(refName)
 					if err != nil {
 						ctx.Handle(404, "RepoAssignment invalid branch", nil)
 						return
 					}
-
 					ctx.Repo.CommitId = ctx.Repo.Commit.Id.String()
 
-				} else if len(branchName) == 40 {
-					ctx.Repo.IsCommit = true
-					ctx.Repo.CommitId = branchName
-					ctx.Repo.BranchName = branchName
+				} else if gitRepo.IsTagExist(refName) {
+					ctx.Repo.IsBranch = true
+					ctx.Repo.BranchName = refName
 
-					ctx.Repo.Commit, err = gitRepo.GetCommit(branchName)
+					ctx.Repo.Commit, err = gitRepo.GetCommitOfTag(refName)
+					if err != nil {
+						ctx.Handle(404, "RepoAssignment invalid tag", nil)
+						return
+					}
+					ctx.Repo.CommitId = ctx.Repo.Commit.Id.String()
+
+				} else if len(refName) == 40 {
+					ctx.Repo.IsCommit = true
+					ctx.Repo.CommitId = refName
+					ctx.Repo.BranchName = refName
+
+					ctx.Repo.Commit, err = gitRepo.GetCommit(refName)
 					if err != nil {
 						ctx.Handle(404, "RepoAssignment invalid commit", nil)
 						return
@@ -179,9 +188,9 @@ func RepoAssignment(redirect bool, args ...bool) martini.Handler {
 				}
 
 			} else {
-				branchName = ctx.Repo.Repository.DefaultBranch
-				if len(branchName) == 0 {
-					branchName = "master"
+				refName = ctx.Repo.Repository.DefaultBranch
+				if len(refName) == 0 {
+					refName = "master"
 				}
 				goto detect
 			}
