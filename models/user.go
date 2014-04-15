@@ -76,7 +76,7 @@ func (user *User) AvatarLink() string {
 	if base.Service.EnableCacheAvatar {
 		return "/avatar/" + user.Avatar
 	}
-	return "http://1.gravatar.com/avatar/" + user.Avatar
+	return "//1.gravatar.com/avatar/" + user.Avatar
 }
 
 // NewGitSig generates and returns the signature of given user.
