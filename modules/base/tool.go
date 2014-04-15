@@ -143,7 +143,7 @@ func AvatarLink(email string) string {
 	if Service.EnableCacheAvatar {
 		return "/avatar/" + EncodeMd5(email)
 	}
-	return "http://1.gravatar.com/avatar/" + EncodeMd5(email)
+	return "//1.gravatar.com/avatar/" + EncodeMd5(email)
 }
 
 // Seconds-based time units
