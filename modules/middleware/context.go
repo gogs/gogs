@@ -10,8 +10,10 @@ import (
 	"encoding/base64"
 	"fmt"
 	"html/template"
+	"io"
 	"net/http"
 	"net/url"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -62,7 +64,7 @@ type Context struct {
 			HTTPS string
 			Git   string
 		}
-		*models.Mirror
+		Mirror *models.Mirror
 	}
 }
 
@@ -241,6 +243,41 @@ func (ctx *Context) CsrfTokenValid() bool {
 		return false
 	}
 	return true
+}
+
+func (ctx *Context) ServeFile(file string, names ...string) {
+	var name string
+	if len(names) > 0 {
+		name = names[0]
+	} else {
+		name = filepath.Base(file)
+	}
+	ctx.Res.Header().Set("Content-Description", "File Transfer")
+	ctx.Res.Header().Set("Content-Type", "application/octet-stream")
+	ctx.Res.Header().Set("Content-Disposition", "attachment; filename="+name)
+	ctx.Res.Header().Set("Content-Transfer-Encoding", "binary")
+	ctx.Res.Header().Set("Expires", "0")
+	ctx.Res.Header().Set("Cache-Control", "must-revalidate")
+	ctx.Res.Header().Set("Pragma", "public")
+	http.ServeFile(ctx.Res, ctx.Req, file)
+}
+
+func (ctx *Context) ServeContent(name string, r io.ReadSeeker, params ...interface{}) {
+	modtime := time.Now()
+	for _, p := range params {
+		switch v := p.(type) {
+		case time.Time:
+			modtime = v
+		}
+	}
+	ctx.Res.Header().Set("Content-Description", "File Transfer")
+	ctx.Res.Header().Set("Content-Type", "application/octet-stream")
+	ctx.Res.Header().Set("Content-Disposition", "attachment; filename="+name)
+	ctx.Res.Header().Set("Content-Transfer-Encoding", "binary")
+	ctx.Res.Header().Set("Expires", "0")
+	ctx.Res.Header().Set("Cache-Control", "must-revalidate")
+	ctx.Res.Header().Set("Pragma", "public")
+	http.ServeContent(ctx.Res, ctx.Req, name, modtime, r)
 }
 
 type Flash struct {
