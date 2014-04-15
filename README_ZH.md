@@ -15,7 +15,7 @@ Gogs 完全使用 Go 语言来实现对 Git 数据的操作，实现 **零** 依
 
 ## 项目概览
 
-- 有关项目设计、已知问题、变更日志和路线图，请通过  [Wiki](https://github.com/gogits/gogs/wiki) 查看。
+- 有关项目设计、已知问题和变更日志，请通过  [Wiki](https://github.com/gogits/gogs/wiki) 查看。
 - 您可以到 [Trello Board](https://trello.com/b/uxAoeLUl/gogs-go-git-service) 跟随开发团队的脚步。
 - 想要先睹为快？通过 [在线体验](http://try.gogits.org/Unknown/gogs) 或查看 **安装部署 -> 二进制安装** 小节。
 - 使用过程中遇到问题？尝试从 [故障排查](https://github.com/gogits/gogs/wiki/Troubleshooting) 页面获取帮助。
@@ -30,7 +30,7 @@ Gogs 完全使用 Go 语言来实现对 Git 数据的操作，实现 **零** 依
 - Gravatar 以及缓存支持
 - 邮件服务（注册、Issue）
 - 管理员面板
-- 支持 MySQL、PostgreSQL 以及 SQLite3
+- 支持 MySQL、PostgreSQL 以及 SQLite3 数据库
 - 社交帐号登录（GitHub、Google、QQ、微博）
 
 ## 安装部署
@@ -55,7 +55,7 @@ Gogs 完全使用 Go 语言来实现对 Git 数据的操作，实现 **零** 依
 
 ## 贡献成员
 
-本项目最初由 [Unknown](https://github.com/Unknwon) 和 [lunny](https://github.com/lunny) 发起，随后 [fuxiaohei](https://github.com/fuxiaohei)、[slene](https://github.com/slene) 以及 [skyblue](https://github.com/shxsun) 加入到开发团队。您可以通过查看 [贡献者页面](https://github.com/gogits/gogs/graphs/contributors) 获取完整的贡献者列表。
+本项目最初由 [Unknown](https://github.com/Unknwon) 和 [lunny](https://github.com/lunny) 发起，随后 [fuxiaohei](https://github.com/fuxiaohei)、[slene](https://github.com/slene) 以及 [codeskyblue](https://github.com/codeskyblue) 加入到开发团队。您可以通过查看 [贡献者页面](https://github.com/gogits/gogs/graphs/contributors) 获取完整的贡献者列表。
 
 ## 授权许可
 
