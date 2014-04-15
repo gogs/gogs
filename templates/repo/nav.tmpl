@@ -8,7 +8,7 @@
             <div class="col-md-5 actions text-right clone-group-btn">
                 {{if not .IsBareRepo}}
                 <div class="btn-group" id="repo-clone">
-                    <button type="button" class="btn btn-default"><i class="fa fa-download fa-lg fa-m"></i></button>
+                    <a class="btn btn-default" href="{{.RepoLink}}/archive/{{.BranchName}}/{{.Repository.Name}}.zip"><i class="fa fa-download fa-lg fa-m"></i></a>
                     <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
                         <span class="caret"></span>
                     </button>
