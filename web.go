@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
+	"os"
 
 	"github.com/codegangsta/cli"
 	"github.com/go-martini/martini"
@@ -82,6 +83,7 @@ func runWeb(*cli.Context) {
 	})
 
 	avt := avatar.CacheServer("public/img/avatar/", "public/img/avatar_default.jpg")
+	os.MkdirAll("public/img/avatar/", os.ModePerm)
 	m.Get("/avatar/:hash", avt.ServeHTTP)
 
 	m.Group("/user", func(r martini.Router) {

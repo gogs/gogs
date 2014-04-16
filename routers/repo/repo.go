@@ -153,7 +153,7 @@ func Single(ctx *middleware.Context, params martini.Params) {
 		} else {
 			ctx.Data["FileSize"] = blob.Size()
 			ctx.Data["IsFile"] = true
-			ctx.Data["FileName"] = blob.Name
+			ctx.Data["FileName"] = blob.Name()
 			ext := path.Ext(blob.Name())
 			if len(ext) > 0 {
 				ext = ext[1:]
@@ -226,7 +226,7 @@ func Single(ctx *middleware.Context, params martini.Params) {
 				ctx.Data["FileLink"] = rawLink + "/" + treename
 				_, isTextFile := base.IsTextFile(data)
 				ctx.Data["FileIsText"] = isTextFile
-				ctx.Data["FileName"] = readmeFile.Name
+				ctx.Data["FileName"] = readmeFile.Name()
 				if isTextFile {
 					ctx.Data["FileContent"] = string(base.RenderMarkdown(data, branchLink))
 				}

@@ -51,6 +51,7 @@ type DiffFile struct {
 	Name               string
 	Addition, Deletion int
 	Type               int
+	IsBin              bool
 	Sections           []*DiffSection
 }
 
@@ -96,13 +97,15 @@ func ParsePatch(reader io.Reader) (*Diff, error) {
 		if line == "" {
 			continue
 		}
-		if line[0] == ' ' {
+
+		switch {
+		case line[0] == ' ':
 			diffLine := &DiffLine{Type: DIFF_LINE_PLAIN, Content: line, LeftIdx: leftLine, RightIdx: rightLine}
 			leftLine++
 			rightLine++
 			curSection.Lines = append(curSection.Lines, diffLine)
 			continue
-		} else if line[0] == '@' {
+		case line[0] == '@':
 			curSection = &DiffSection{}
 			curFile.Sections = append(curFile.Sections, curSection)
 			ss := strings.Split(line, "@@")
@@ -114,14 +117,14 @@ func ParsePatch(reader io.Reader) (*Diff, error) {
 			leftLine, _ = base.StrTo(strings.Split(ranges[0], ",")[0][1:]).Int()
 			rightLine, _ = base.StrTo(strings.Split(ranges[1], ",")[0]).Int()
 			continue
-		} else if line[0] == '+' {
+		case line[0] == '+':
 			curFile.Addition++
 			diff.TotalAddition++
 			diffLine := &DiffLine{Type: DIFF_LINE_ADD, Content: line, RightIdx: rightLine}
 			rightLine++
 			curSection.Lines = append(curSection.Lines, diffLine)
 			continue
-		} else if line[0] == '-' {
+		case line[0] == '-':
 			curFile.Deletion++
 			diff.TotalDeletion++
 			diffLine := &DiffLine{Type: DIFF_LINE_DEL, Content: line, LeftIdx: leftLine}
@@ -129,6 +132,8 @@ func ParsePatch(reader io.Reader) (*Diff, error) {
 				leftLine++
 			}
 			curSection.Lines = append(curSection.Lines, diffLine)
+		case strings.HasPrefix(line, "Binary"):
+			curFile.IsBin = true
 			continue
 		}
 
