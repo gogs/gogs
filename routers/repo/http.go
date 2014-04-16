@@ -1,3 +1,7 @@
+// Copyright 2014 The Gogs Authors. All rights reserved.
+// Use of this source code is governed by a MIT-style
+// license that can be found in the LICENSE file.
+
 package repo
 
 import (
@@ -54,7 +58,7 @@ func Http(ctx *middleware.Context, params martini.Params) {
 	}
 
 	// only public pull don't need auth
-	var askAuth = !(!repo.IsPrivate && isPull)
+	var askAuth = !(!repo.IsPrivate && isPull) || base.Service.RequireSignInView
 
 	var authUser *models.User
 
