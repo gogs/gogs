@@ -58,7 +58,8 @@ func Http(ctx *middleware.Context, params martini.Params) {
 	}
 
 	// only public pull don't need auth
-	var askAuth = !(!repo.IsPrivate && isPull) || base.Service.RequireSignInView
+	isPublicPull := !repo.IsPrivate && isPull
+	var askAuth = !isPublicPull || base.Service.RequireSignInView
 
 	var authUser *models.User
 
@@ -91,32 +92,33 @@ func Http(ctx *middleware.Context, params martini.Params) {
 		}
 
 		newUser := &models.User{Passwd: passwd, Salt: authUser.Salt}
-
 		newUser.EncodePasswd()
 		if authUser.Passwd != newUser.Passwd {
 			ctx.Handle(401, "no basic auth and digit auth", nil)
 			return
 		}
 
-		var tp = models.AU_WRITABLE
-		if isPull {
-			tp = models.AU_READABLE
-		}
+		if !isPublicPull {
+			var tp = models.AU_WRITABLE
+			if isPull {
+				tp = models.AU_READABLE
+			}
 
-		has, err := models.HasAccess(authUsername, username+"/"+reponame, tp)
-		if err != nil {
-			ctx.Handle(401, "no basic auth and digit auth", nil)
-			return
-		} else if !has {
-			if tp == models.AU_READABLE {
-				has, err = models.HasAccess(authUsername, username+"/"+reponame, models.AU_WRITABLE)
-				if err != nil || !has {
+			has, err := models.HasAccess(authUsername, username+"/"+reponame, tp)
+			if err != nil {
+				ctx.Handle(401, "no basic auth and digit auth", nil)
+				return
+			} else if !has {
+				if tp == models.AU_READABLE {
+					has, err = models.HasAccess(authUsername, username+"/"+reponame, models.AU_WRITABLE)
+					if err != nil || !has {
+						ctx.Handle(401, "no basic auth and digit auth", nil)
+						return
+					}
+				} else {
 					ctx.Handle(401, "no basic auth and digit auth", nil)
 					return
 				}
-			} else {
-				ctx.Handle(401, "no basic auth and digit auth", nil)
-				return
 			}
 		}
 	}
