@@ -119,10 +119,10 @@ func Http(ctx *middleware.Context, params martini.Params) {
 
 	config := Config{base.RepoRootPath, "git", true, true, func(rpc string, input []byte) {
 		if rpc == "receive-pack" {
-			firstLine := bytes.IndexRune(input, '\n')
+			firstLine := bytes.IndexRune(input, '\000')
 			if firstLine > -1 {
 				fields := strings.Fields(string(input[:firstLine]))
-				if len(fields) > 3 {
+				if len(fields) == 3 {
 					oldCommitId := fields[0][4:]
 					newCommitId := fields[1]
 					refName := fields[2]
