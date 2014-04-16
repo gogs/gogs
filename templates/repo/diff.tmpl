@@ -5,7 +5,7 @@
     <div id="source">
         <div class="panel panel-info diff-box diff-head-box">
             <div class="panel-heading">
-                <a class="pull-right btn btn-primary btn-sm" href="{{.SourcePath}}">Browse Source</a>
+                <a class="pull-right btn btn-primary btn-sm" rel="nofollow" href="{{.SourcePath}}">Browse Source</a>
                 <h4>{{.Commit.Message}}</h4>
             </div>
             <div class="panel-body">
@@ -33,7 +33,7 @@
                 {{range .Diff.Files}}
                 <li>
                     <div class="diff-counter count pull-right">
-                        {{if Add .Addition .Deletion}}
+                        {{if not .IsBin}}
                         <span class="add" data-line="{{.Addition}}">{{.Addition}}</span>
                         <span class="bar">
                             <span class="pull-left add"></span>
@@ -56,7 +56,7 @@
         <div class="panel panel-default diff-file-box diff-box file-content" id="diff-2">
             <div class="panel-heading">
                 <div class="diff-counter count pull-left">
-                    {{if Add .Addition .Deletion}}
+                    {{if not .IsBin}}
                     <span class="add" data-line="{{.Addition}}">+ {{.Addition}}</span>
                     <span class="bar">
                         <span class="pull-left add"></span>
@@ -67,7 +67,7 @@
                     BIN
                     {{end}}
                 </div>
-                <a class="btn btn-default btn-sm pull-right" href="{{$.SourcePath}}/{{.Name}}">View File</a>
+                <a class="btn btn-default btn-sm pull-right" rel="nofollow" href="{{$.SourcePath}}/{{.Name}}">View File</a>
                 <span class="file">{{.Name}}</span>
             </div>
             {{$isImage := (call $.IsImageFile .Name)}}

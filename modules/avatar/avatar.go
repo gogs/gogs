@@ -157,9 +157,9 @@ func (this *service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	avatar := New(hash, this.cacheDir)
 	avatar.AlterImage = this.altImage
 	if avatar.Expired() {
-		err := avatar.UpdateTimeout(time.Millisecond * 500)
-		if err != nil {
+		if err := avatar.UpdateTimeout(time.Millisecond * 1000); err != nil {
 			log.Trace("avatar update error: %v", err)
+			return
 		}
 	}
 	if modtime, err := avatar.Modtime(); err == nil {
@@ -250,6 +250,7 @@ func (this *thunderTask) Fetch() {
 var client = &http.Client{}
 
 func (this *thunderTask) fetch() error {
+	log.Debug("avatar.fetch(fetch new avatar): %s", this.Url)
 	req, _ := http.NewRequest("GET", this.Url, nil)
 	req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/jpeg,image/png,*/*;q=0.8")
 	req.Header.Set("Accept-Encoding", "deflate,sdch")
