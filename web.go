@@ -60,10 +60,7 @@ func runWeb(*cli.Context) {
 
 	reqSignIn := middleware.Toggle(&middleware.ToggleOptions{SignInRequire: true})
 	ignSignIn := middleware.Toggle(&middleware.ToggleOptions{SignInRequire: base.Service.RequireSignInView})
-	ignSignInAndCsrf := middleware.Toggle(&middleware.ToggleOptions{
-		SignInRequire: base.Service.RequireSignInView,
-		DisableCsrf:   true,
-	})
+	ignSignInAndCsrf := middleware.Toggle(&middleware.ToggleOptions{DisableCsrf: true})
 
 	reqSignOut := middleware.Toggle(&middleware.ToggleOptions{SignOutRequire: true})
 
