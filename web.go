@@ -12,7 +12,6 @@ import (
 
 	"github.com/codegangsta/cli"
 	"github.com/go-martini/martini"
-
 	qlog "github.com/qiniu/log"
 
 	"github.com/gogits/gogs/modules/auth"
