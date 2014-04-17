@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	_ "github.com/go-sql-driver/mysql"
+	_ "github.com/gogits/cache"
 	_ "github.com/lib/pq"
 	"github.com/lunny/xorm"
 
