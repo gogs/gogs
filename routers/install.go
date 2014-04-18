@@ -12,7 +12,7 @@ import (
 
 	"github.com/Unknwon/goconfig"
 	"github.com/go-martini/martini"
-	"github.com/lunny/xorm"
+	"github.com/go-xorm/xorm"
 	qlog "github.com/qiniu/log"
 
 	"github.com/gogits/gogs/models"
