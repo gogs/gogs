@@ -100,7 +100,7 @@ func runWeb(*cli.Context) {
 	}, reqSignIn)
 	m.Group("/user", func(r martini.Router) {
 		r.Get("/feeds", middleware.Bind(auth.FeedsForm{}), user.Feeds)
-		r.Get("/activate", user.Activate)
+		r.Any("/activate", user.Activate)
 		r.Get("/email2user", user.Email2User)
 		r.Get("/forget_password", user.ForgotPasswd)
 		r.Post("/forget_password", user.ForgotPasswdPost)
