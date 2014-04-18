@@ -47,7 +47,7 @@ func Toggle(options *ToggleOptions) martini.Handler {
 				return
 			} else if !ctx.User.IsActive && base.Service.RegisterEmailConfirm {
 				ctx.Data["Title"] = "Activate Your Account"
-				ctx.HTML(200, "user/active")
+				ctx.HTML(200, "user/activate")
 				return
 			}
 		}
