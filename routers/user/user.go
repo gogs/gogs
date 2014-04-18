@@ -341,7 +341,7 @@ func Activate(ctx *middleware.Context) {
 		} else {
 			ctx.Data["ServiceNotEnabled"] = true
 		}
-		ctx.HTML(200, "user/active")
+		ctx.HTML(200, "user/activate")
 		return
 	}
 
@@ -363,7 +363,7 @@ func Activate(ctx *middleware.Context) {
 	}
 
 	ctx.Data["IsActivateFailed"] = true
-	ctx.HTML(200, "user/active")
+	ctx.HTML(200, "user/activate")
 }
 
 func ForgotPasswd(ctx *middleware.Context) {
