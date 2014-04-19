@@ -271,7 +271,7 @@ func SignUpPost(ctx *middleware.Context, form auth.RegisterForm) {
 		ctx.Data["IsSendRegisterMail"] = true
 		ctx.Data["Email"] = u.Email
 		ctx.Data["Hours"] = base.Service.ActiveCodeLives / 60
-		ctx.HTML(200, "user/active")
+		ctx.HTML(200, "user/activate")
 
 		if err = ctx.Cache.Put("MailResendLimit_"+u.LowerName, u.LowerName, 180); err != nil {
 			log.Error("Set cache(MailResendLimit) fail: %v", err)
