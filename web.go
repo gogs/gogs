@@ -92,7 +92,6 @@ func runWeb(*cli.Context) {
 		r.Post("/reset_password", user.ResetPasswdPost)
 	}, reqSignOut)
 	m.Group("/user", func(r martini.Router) {
-		r.Get("/logout", user.SignOut)
 		r.Get("/delete", user.Delete)
 		r.Post("/delete", user.DeletePost)
 		r.Get("/setting", user.Setting)
@@ -104,6 +103,7 @@ func runWeb(*cli.Context) {
 		r.Get("/email2user", user.Email2User)
 		r.Get("/forget_password", user.ForgotPasswd)
 		r.Post("/forget_password", user.ForgotPasswdPost)
+		r.Get("/logout", user.SignOut)
 	})
 	m.Group("/user/setting", func(r martini.Router) {
 		r.Get("/social", user.SettingSocial)
