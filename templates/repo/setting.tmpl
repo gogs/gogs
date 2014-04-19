@@ -67,6 +67,13 @@
                         <div class="col-md-offset-3 col-md-9">
                             <div class="checkbox">
                                 <label style="line-height: 15px;">
+                                    <input type="checkbox" name="private" {{if .Repository.IsPrivate}}checked{{end}}>
+                                    <strong>Make this repository private</strong>
+                                </label>
+                            </div>
+
+                            <div class="checkbox">
+                                <label style="line-height: 15px;">
                                     <input type="checkbox" name="goget" {{if .Repository.IsGoget}}checked{{end}}>
                                     <strong>Enable 'go get' meta</strong>
                                 </label>

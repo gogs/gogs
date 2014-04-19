@@ -413,7 +413,7 @@ func initRepository(f string, user *User, repo *Repository, initReadme bool, rep
 
 	// hook/post-update
 	if err := createHookUpdate(filepath.Join(repoPath, "hooks", "update"),
-		fmt.Sprintf("#!/usr/bin/env bash\n%s update $1 $2 $3\n",
+		fmt.Sprintf("#!/usr/bin/env %s\n%s update $1 $2 $3\n", base.ScriptType,
 			strings.Replace(appPath, "\\", "/", -1))); err != nil {
 		return err
 	}

@@ -2,24 +2,23 @@
 path = github.com/gogits/gogs
 
 [deps]
+github.com/Unknwon/cae = 
+github.com/Unknwon/com = 
+github.com/Unknwon/goconfig = 
 github.com/codegangsta/cli = 
 github.com/go-martini/martini = 
-github.com/nfnt/resize = 
-github.com/lunny/xorm = 
 github.com/go-sql-driver/mysql = 
+github.com/go-xorm/xorm = 
+github.com/gogits/cache = 
+github.com/gogits/gfm = 
+github.com/gogits/git = 
+github.com/gogits/logs = 
+github.com/gogits/oauth2 = 
+github.com/gogits/session = 
 github.com/lib/pq = 
+github.com/nfnt/resize = 
 github.com/qiniu/log = 
 github.com/robfig/cron = 
-github.com/Unknwon/com = 
-github.com/Unknwon/cae = 
-github.com/Unknwon/goconfig = 
-github.com/gogits/logs = 
-github.com/gogits/binding = 
-github.com/gogits/git = 
-github.com/gogits/gfm = 
-github.com/gogits/cache = 
-github.com/gogits/session = 
-github.com/gogits/oauth2 = 
 
 [res]
 include = templates|public|conf
