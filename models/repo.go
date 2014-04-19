@@ -455,7 +455,7 @@ func initRepository(f string, user *User, repo *Repository, initReadme bool, rep
 	if repoLang != "" {
 		filePath := "conf/gitignore/" + repoLang
 		if com.IsFile(filePath) {
-			if _, err := com.Copy(filePath,
+			if err := com.Copy(filePath,
 				filepath.Join(tmpDir, fileName["gitign"])); err != nil {
 				return err
 			}
@@ -466,7 +466,7 @@ func initRepository(f string, user *User, repo *Repository, initReadme bool, rep
 	if license != "" {
 		filePath := "conf/license/" + license
 		if com.IsFile(filePath) {
-			if _, err := com.Copy(filePath,
+			if err := com.Copy(filePath,
 				filepath.Join(tmpDir, fileName["license"])); err != nil {
 				return err
 			}
