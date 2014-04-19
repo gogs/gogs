@@ -43,15 +43,17 @@ type Oauther struct {
 }
 
 var (
-	AppVer       string
-	AppName      string
-	AppLogo      string
-	AppUrl       string
-	IsProdMode   bool
-	Domain       string
-	SecretKey    string
-	RunUser      string
+	AppVer     string
+	AppName    string
+	AppLogo    string
+	AppUrl     string
+	IsProdMode bool
+	Domain     string
+	SecretKey  string
+	RunUser    string
+
 	RepoRootPath string
+	ScriptType   string
 
 	InstallLock bool
 
@@ -310,6 +312,7 @@ func NewConfigContext() {
 	if err = os.MkdirAll(RepoRootPath, os.ModePerm); err != nil {
 		qlog.Fatalf("Fail to create RepoRootPath(%s): %v\n", RepoRootPath, err)
 	}
+	ScriptType = Cfg.MustValue("repository", "SCRIPT_TYPE", "bash")
 }
 
 func NewBaseServices() {
