@@ -197,7 +197,10 @@ func RepoAssignment(redirect bool, args ...bool) martini.Handler {
 
 			ctx.Data["IsBranch"] = ctx.Repo.IsBranch
 			ctx.Data["IsCommit"] = ctx.Repo.IsCommit
+			log.Debug("Repo.Commit: %v", ctx.Repo.Commit)
 		}
+
+		log.Debug("displayBare: %v; IsBare: %v", displayBare, ctx.Repo.Repository.IsBare)
 
 		// repo is bare and display enable
 		if displayBare && ctx.Repo.Repository.IsBare {
