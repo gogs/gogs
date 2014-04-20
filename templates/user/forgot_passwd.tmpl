@@ -19,13 +19,13 @@
         <hr/>
         <div class="form-group">
             <div class="col-md-offset-4 col-md-6">
-                <button type="submit" class="btn btn-lg btn-primary">Click here to send reset confirmation e-mail</button>
+                <button type="submit" class="btn btn-lg btn-primary">Click here to send resend confirmation e-mail</button>
             </div>
         </div>
         {{else if .IsResetDisable}}
         <p>Sorry, mail service is not enabled.</p>
         {{else if .ResendLimited}}
-        <p>Sorry, you are sending e-mail too frequently, please wait 3 minutes.</p>
+        <p>Sorry, you are sending an e-mail too frequently, please wait another 3 minutes and try again.</p>
         {{end}}
     </form>
 </div>
