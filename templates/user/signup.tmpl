@@ -4,7 +4,7 @@
 	<form action="/user/sign_up" method="post" class="form-horizontal card" id="login-card">
 		{{.CsrfTokenHtml}}
 		{{if .DisenableRegisteration}}
-		Sorry, registeration has been disenabled, you can only get account from administrator.
+		Sorry, registration has been disabled. Please contact the site administrator.
 		{{else}}
 		{{if .IsSocialLogin}}
 		<h3>Social login: 2nd step <small>complete information</small></h3>
