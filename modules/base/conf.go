@@ -174,6 +174,12 @@ func newLogService() {
 
 func newCacheService() {
 	CacheAdapter = Cfg.MustValue("cache", "ADAPTER", "memory")
+	if cache.EnableRedis {
+		log.Info("Redis Enabled")
+	}
+	if cache.EnableMemcache {
+		log.Info("Memcache Enabled")
+	}
 
 	switch CacheAdapter {
 	case "memory":

@@ -36,7 +36,7 @@
                         </span>
                     </td>
                     <td class="text">
-                        <span class="wrap"><a href="/{{$.Username}}/{{$.Reponame}}/commit/{{$commit.Id}}">{{$commit.Message}}</a></span>
+                        <span class="wrap"><a rel="nofollow" href="/{{$.Username}}/{{$.Reponame}}/commit/{{$commit.Id}}">{{$commit.Message}}</a></span>
                     </td>
                     <td class="date">
                         <span class="wrap">{{TimeSince $commit.Committer.When}}</span>
