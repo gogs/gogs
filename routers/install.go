@@ -49,6 +49,7 @@ func GlobalInit() {
 	models.LoadModelsConfig()
 	models.LoadRepoConfig()
 	models.NewRepoContext()
+	NewServices()
 
 	if base.InstallLock {
 		if err := models.NewEngine(); err != nil {
@@ -56,9 +57,11 @@ func GlobalInit() {
 		}
 
 		models.HasEngine = true
+		if models.EnableSQLite3 {
+			log.Info("SQLite3 Enabled")
+		}
 		cron.NewCronContext()
 	}
-	NewServices()
 	checkRunMode()
 }
 

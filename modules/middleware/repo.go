@@ -201,6 +201,7 @@ func RepoAssignment(redirect bool, args ...bool) martini.Handler {
 
 		// repo is bare and display enable
 		if displayBare && ctx.Repo.Repository.IsBare {
+			log.Debug("Bare repository: %s", ctx.Repo.RepoLink)
 			ctx.HTML(200, "repo/single_bare")
 			return
 		}
