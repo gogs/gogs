@@ -10,9 +10,10 @@ import (
 	"strconv"
 
 	"github.com/codegangsta/cli"
+	qlog "github.com/qiniu/log"
+
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"
-	qlog "github.com/qiniu/log"
 )
 
 var CmdUpdate = cli.Command{

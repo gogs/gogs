@@ -45,12 +45,12 @@ Gogs 完全使用 Go 语言来实现对 Git 数据的操作，实现 **零** 依
 
 ## 特别鸣谢
 
-- Logo 基于 [martini-contrib](https://github.com/martini-contrib) 修改而来。
 - 基于 [WeTalk](https://github.com/beego/wetalk) 修改的邮件服务和模块设计。
 - 基于 [GoBlog](https://github.com/fuxiaohei/goblog) 修改的系统监视状态。
 - [beego](http://beego.me) 模块的使用与修改。
 - [martini](http://martini.codegangsta.io/) 的路由与中间件机制。
 - 感谢 [gobuild.io](http://gobuild.io) 提供二进制编译与下载服务。
+- 感谢 [lavachen](http://www.lavachen.cn/) 设计的 Logo。
 - 感谢 [Docker 中文社区](http://www.dockboard.org/) 提供的 [dockerfiles](https://github.com/gogits/gogs/tree/master/dockerfiles)。
 
 ## 贡献成员
