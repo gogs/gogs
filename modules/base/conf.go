@@ -84,7 +84,7 @@ var (
 
 var Service struct {
 	RegisterEmailConfirm   bool
-	DisenableRegisteration bool
+	DisableRegistration    bool
 	RequireSignInView      bool
 	EnableCacheAvatar      bool
 	NotifyMail             bool
@@ -116,7 +116,7 @@ var logLevels = map[string]string{
 func newService() {
 	Service.ActiveCodeLives = Cfg.MustInt("service", "ACTIVE_CODE_LIVE_MINUTES", 180)
 	Service.ResetPwdCodeLives = Cfg.MustInt("service", "RESET_PASSWD_CODE_LIVE_MINUTES", 180)
-	Service.DisenableRegisteration = Cfg.MustBool("service", "DISENABLE_REGISTERATION", false)
+	Service.DisableRegistration = Cfg.MustBool("service", "DISABLE_REGISTRATION", false)
 	Service.RequireSignInView = Cfg.MustBool("service", "REQUIRE_SIGNIN_VIEW", false)
 	Service.EnableCacheAvatar = Cfg.MustBool("service", "ENABLE_CACHE_AVATAR", false)
 }
