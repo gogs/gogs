@@ -77,6 +77,9 @@ var (
 	SessionManager  *session.Manager
 
 	PictureService string
+
+	EnableRedis    bool
+	EnableMemcache bool
 )
 
 var Service struct {
@@ -174,10 +177,10 @@ func newLogService() {
 
 func newCacheService() {
 	CacheAdapter = Cfg.MustValue("cache", "ADAPTER", "memory")
-	if cache.EnableRedis {
+	if EnableRedis {
 		log.Info("Redis Enabled")
 	}
-	if cache.EnableMemcache {
+	if EnableMemcache {
 		log.Info("Memcache Enabled")
 	}
 
