@@ -12,7 +12,6 @@ import (
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/go-xorm/xorm"
-	_ "github.com/gogits/cache"
 	_ "github.com/lib/pq"
 
 	"github.com/gogits/gogs/modules/base"
