@@ -120,7 +120,7 @@ func SetEngine() (err error) {
 	if err != nil {
 		return fmt.Errorf("models.init(fail to create xorm.log): %v", err)
 	}
-	orm.Logger = f
+	orm.Logger = xorm.NewSimpleLogger(f)
 
 	orm.ShowSQL = true
 	orm.ShowDebug = true
