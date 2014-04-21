@@ -54,11 +54,11 @@ There are 3 ways to install Gogs:
 
 ## Acknowledgments
 
-- Logo is inspired by [martini-contrib](https://github.com/martini-contrib).
 - Router and middleware mechanism of [martini](http://martini.codegangsta.io/).
 - Mail Service, modules design is inspired by [WeTalk](https://github.com/beego/wetalk).
 - System Monitor Status is inspired by [GoBlog](https://github.com/fuxiaohei/goblog).
 - Usage and modification from [beego](http://beego.me) modules.
+- Thanks [lavachen](http://www.lavachen.cn/) for designing Logo.
 - Thanks [gobuild.io](http://gobuild.io) for providing binary compile and download service.
 - Great thanks to [Docker China](http://www.dockboard.org/) for providing [dockerfiles](https://github.com/gogits/gogs/tree/master/dockerfiles).
 
