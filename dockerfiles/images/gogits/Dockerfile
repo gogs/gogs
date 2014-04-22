@@ -13,14 +13,13 @@ ENV GOROOT /usr/local/go
 ENV GOPATH /go
 
 RUN apt-get update && apt-get install --yes --force-yes curl git mercurial zip wget ca-certificates build-essential
+RUN apt-get install -yq vim
 
 RUN curl -s http://docker.u.qiniudn.com/go1.2.1.src.tar.gz | tar -v -C /usr/local -xz
 RUN cd /usr/local/go/src && ./make.bash --no-clean 2>&1
 
-# You may need a proxy, if github is very slow.
-#RUN http_proxy=106.187.38.45:3128 go get -u github.com/gogits/gogs 
-RUN go get -u github.com/gogits/gogs 
-RUN cd $GOPATH/src/github.com/gogits/gogs && go build
+RUN go get -u -d github.com/gogits/gogs 
+RUN cd $GOPATH/src/github.com/gogits/gogs && git checkout dev && git pull origin dev && go install && go build -tags redis
 
 # Clean all the unused packages
 RUN apt-get autoremove -y
