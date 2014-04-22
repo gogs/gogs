@@ -12,6 +12,7 @@ public/img/avatar/
 *.o
 *.a
 *.so
+dev
 
 # Folders
 _obj
