@@ -125,6 +125,7 @@ func GetUserSalt() string {
 
 // RegisterUser creates record of a new user.
 func RegisterUser(user *User) (*User, error) {
+
 	if !IsLegalName(user.Name) {
 		return nil, ErrUserNameIllegal
 	}
