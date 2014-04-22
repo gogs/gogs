@@ -3,7 +3,7 @@
 <div class="container" id="body">
 	<form action="/user/sign_up" method="post" class="form-horizontal card" id="login-card">
 		{{.CsrfTokenHtml}}
-		{{if .DisenableRegisteration}}
+		{{if .DisableRegistration}}
 		Sorry, registration has been disabled. Please contact the site administrator.
 		{{else}}
 		{{if .IsSocialLogin}}
