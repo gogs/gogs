@@ -4,11 +4,12 @@
 
 #### Gogs With MySQL
 
-Deply gogs in [Docker](http://www.docker.io/) is just as easy as eating a pie, what you do is just open the `dockerfiles/build.sh` file, replace the confis:
+Deploying gogs in [Docker](http://www.docker.io/) is just as easy as eating a pie, what you do is just open the `dockerfiles/build.sh` file, replace the configs:
 
 ```
-MYSQL_PASSWORD="YOUR_MYSQL_PASSWORD"
-MYSQL_RUN_NAME="YOUR_MYSQL_RUN_NAME"
+DB_TYPE="mysql"
+DB_PASSWORD="YOUR_MYSQL_PASSWORD"
+DB_RUN_NAME="YOUR_MYSQL_RUN_NAME"
 HOST_PORT="YOUR_HOST_PORT"
 ```
 
