@@ -116,8 +116,8 @@ func runServ(k *cli.Context) {
 	repoPath := strings.Trim(args, "'")
 	rr := strings.SplitN(repoPath, "/", 2)
 	if len(rr) != 2 {
-		println("Unavilable repository", args)
-		qlog.Fatalf("Unavilable repository %v", args)
+		println("Unavailable repository", args)
+		qlog.Fatalf("Unavailable repository %v", args)
 	}
 	repoUserName := rr[0]
 	repoName := strings.TrimSuffix(rr[1], ".git")
@@ -136,7 +136,7 @@ func runServ(k *cli.Context) {
 	case isWrite:
 		has, err := models.HasAccess(user.LowerName, path.Join(repoUserName, repoName), models.AU_WRITABLE)
 		if err != nil {
-			println("Inernel error:", err)
+			println("Internal error:", err)
 			qlog.Fatal(err)
 		} else if !has {
 			println("You have no right to write this repository")
@@ -155,13 +155,13 @@ func runServ(k *cli.Context) {
 
 		has, err := models.HasAccess(user.Name, path.Join(repoUserName, repoName), models.AU_READABLE)
 		if err != nil {
-			println("Inernel error")
+			println("Internal error")
 			qlog.Fatal(err)
 		}
 		if !has {
 			has, err = models.HasAccess(user.Name, repoPath, models.AU_WRITABLE)
 			if err != nil {
-				println("Inernel error")
+				println("Internal error")
 				qlog.Fatal(err)
 			}
 		}
