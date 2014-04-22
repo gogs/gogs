@@ -169,8 +169,8 @@ func SignUp(ctx *middleware.Context) {
 	ctx.Data["Title"] = "Sign Up"
 	ctx.Data["PageIsSignUp"] = true
 
-	if base.Service.DisenableRegisteration {
-		ctx.Data["DisenableRegisteration"] = true
+	if base.Service.DisableRegistration {
+		ctx.Data["DisableRegistration"] = true
 		ctx.HTML(200, "user/signup")
 		return
 	}
@@ -208,7 +208,7 @@ func SignUpPost(ctx *middleware.Context, form auth.RegisterForm) {
 	ctx.Data["Title"] = "Sign Up"
 	ctx.Data["PageIsSignUp"] = true
 
-	if base.Service.DisenableRegisteration {
+	if base.Service.DisableRegistration {
 		ctx.Handle(403, "user.SignUpPost", nil)
 		return
 	}
