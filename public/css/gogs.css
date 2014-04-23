@@ -67,22 +67,20 @@ html, body {
     color: #EEE;
     font-size: 100%;
     height: 46px;
+    margin-top: 3px;
 }
 
 #nav-logo {
     padding-left: 0;
     padding-right: 0;
     margin-right: 10px;
+    margin-top: 0;
 }
 
 .nav-item:hover,
 .nav-item:focus {
     color: #fff;
     text-decoration: none;
-}
-
-.nav-item.navbar-right {
-    margin-top: 3px;
 }
 
 .nav-item.navbar-btn {
@@ -94,6 +92,30 @@ html, body {
 
 .nav-item.navbar-right .fa {
     margin: 0;
+}
+
+#nav-search-form {
+    width: 300px;
+    margin-top: 0;
+}
+
+#nav-search-form button {
+    margin-top: 0;
+    background-image: none;
+    background-color: #F6F6F6;
+}
+
+#nav-search-form input[type=search] {
+    background-color: #F6F6F6;
+    border-bottom-right-radius: 3px;
+    border-top-right-radius: 3px;
+    -webkit-transition: width linear .25s;
+}
+
+#nav-search-form input[type=search]:focus {
+    background-color: #FFF;
+    border-color: #D9D9D9;
+    width: 320px;
 }
 
 /* gogits nav item active status */
@@ -239,14 +261,40 @@ html, body {
 }
 
 #social-login {
-    margin-top: 30px;
-    padding-top: 20px;
+    margin-top: 40px;
+    padding-top: 40px;
     border-top: 1px solid #ccc;
+    position: relative;
 }
 
 #social-login .btn {
     float: none;
-    margin: auto;
+    margin: auto 4px;
+}
+
+#social-login .btn .fa {
+    margin-left: 0;
+    margin-right: 4px;
+}
+
+#social-login .btn span {
+    display: inline-block;
+    vertical-align: top;
+    font-size: 16px;
+    margin-top: 5px;
+}
+
+#social-login h4 {
+    position: absolute;
+    top: -20px;
+    width: 100%;
+    text-align: center;
+    background-color: transparent;
+}
+
+#social-login h4 span {
+    background-color: #FFF;
+    padding: 0 12px;
 }
 
 /* gogs-user-profile */
@@ -291,6 +339,22 @@ html, body {
     padding-right: 18px;
 }
 
+#user-profile .profile-rel .col-md-6 {
+    text-align: center;
+    padding-bottom: 12px;
+}
+
+#user-profile .profile-rel strong {
+    font-size: 24px;
+    color: #444;
+    display: block;
+}
+
+#user-profile .profile-rel p {
+    margin-right: 0;
+    color: #888;
+}
+
 #user-activity .tab-pane {
     padding: 20px;
 }
@@ -307,6 +371,18 @@ html, body {
 
 #repo-create textarea[name=desc] {
     height: 8em;
+}
+
+#repo-import-auth {
+    width: 100%;
+    margin-top: 48px;
+    box-sizing: border-box;
+}
+
+#repo-import-auth .form-group {
+    box-sizing: border-box;
+    margin-left: 0;
+    margin-right: 0;
 }
 
 /* gogits user setting */
@@ -442,6 +518,43 @@ html, body {
 #feed-right .repo-panel span.stars {
     color: #666;
     margin-right: 1em;
+}
+
+#user-dashboard-repo-new .btn-sm.dropdown-toggle {
+    padding: 3px 8px;
+}
+
+#user-dashboard-repo-new .dropdown-menu, #nav-repo-new .dropdown-menu {
+    padding: 0;
+    margin: 0;
+}
+
+#user-dashboard-repo-new ul, #nav-repo-new ul {
+    margin: 0;
+    width: 200px;
+}
+
+#user-dashboard-repo-new li a, #nav-repo-new li a {
+    line-height: 36px;
+    display: block;
+    padding: 0 18px;
+    color: #444;
+}
+
+#user-dashboard-repo-new li a:hover, #nav-repo-new li a:hover {
+    background: #0093c4;
+    color: #FFF;
+}
+
+#nav-repo-new button {
+    border: none;
+    background: transparent;
+    padding: 0;
+    width: 15px;
+}
+
+#nav-repo-new li .fa {
+    margin: 0 .5em;
 }
 
 /* gogits repo single page */
@@ -612,6 +725,10 @@ html, body {
 /* #source */
 #source, #commits {
     margin-top: -20px;
+}
+
+#commits-pager {
+    margin-top: 0;
 }
 
 #source .source-toolbar:after {
@@ -831,15 +948,15 @@ html, body {
     margin-left: .5em;
 }
 
+#commits-search-form {
+    margin-top: 4px;
+}
+
 .commit-box .avatar, .diff-head-box .avatar {
     width: 20px;
     height: 20px;
     margin-right: 8px;
     vertical-align: top;
-}
-
-.commit-box .search {
-    margin-top: 3px;
 }
 
 .commit-box td {
@@ -1304,4 +1421,74 @@ html, body {
 
 #release .release-item .info .avatar {
     vertical-align: middle;
+}
+
+#release-new-form {
+    margin-top: 24px;
+}
+
+#release-new-form .target-at {
+    margin: 0 1em;
+}
+
+#release-new-form .target-text {
+    color: #888;
+}
+
+#release-new-target-branch-list {
+    padding-top: 0;
+    padding-bottom: 0;
+    min-width: 200px;
+}
+
+#release-new-target-branch-list ul {
+    margin-bottom: 0;
+}
+
+#release-new-target-branch-list li {
+    padding: 8px 20px;
+}
+
+#release-new-target-branch-list li a {
+    margin-left: 0;
+    background-color: transparent;
+    padding: 0;
+}
+
+#release-new-target-branch-list li a:hover {
+    background-image: none;
+}
+
+#release-new-target-branch-list li:hover {
+    background-color: #0093c4;
+}
+
+#release-new-target-branch-list li:hover a {
+    color: #FFF;
+}
+
+#release-new-title {
+    width: 50%;
+}
+
+#release-new-content-div {
+    margin-top: 16px;
+    padding-left: 0;
+}
+
+#release-new-content-div .md-help {
+    margin-top: 6px;
+}
+
+#release-textarea .form-group {
+    display: block;
+}
+
+#release-new-content {
+    width: 100%;
+    margin: 16px 0;
+}
+
+#release-preview {
+    margin: 6px 0;
 }

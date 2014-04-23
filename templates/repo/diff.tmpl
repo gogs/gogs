@@ -5,7 +5,7 @@
     <div id="source">
         <div class="panel panel-info diff-box diff-head-box">
             <div class="panel-heading">
-                <a class="pull-right btn btn-primary btn-sm" href="{{.SourcePath}}">Browse Source</a>
+                <a class="pull-right btn btn-primary btn-sm" rel="nofollow" href="{{.SourcePath}}">Browse Source</a>
                 <h4>{{.Commit.Message}}</h4>
             </div>
             <div class="panel-body">
@@ -14,12 +14,15 @@
                 </span>
                 <p class="author">
                     <img class="avatar" src="{{AvatarLink .Commit.Author.Email}}" alt=""/>
-                    <a class="name" href="#"><strong>{{.Commit.Author.Name}}</strong></a>
+                    <a class="name" href="/user/email2user?email={{.Commit.Author.Email}}"><strong>{{.Commit.Author.Name}}</strong></a>
                     <span class="time">{{TimeSince .Commit.Author.When}}</span>
                 </p>
             </div>
         </div>
 
+        {{if .DiffNotAvailable}}
+        <h4>Diff Data Not Available.</h4>
+        {{else}}
         <div class="diff-detail-box diff-box">
             <a class="pull-right btn btn-default" data-toggle="collapse" data-target="#diff-files">Show Diff Stats</a>
             <p class="showing">
@@ -30,12 +33,16 @@
                 {{range .Diff.Files}}
                 <li>
                     <div class="diff-counter count pull-right">
+                        {{if not .IsBin}}
                         <span class="add" data-line="{{.Addition}}">{{.Addition}}</span>
                         <span class="bar">
                             <span class="pull-left add"></span>
                             <span class="pull-left del"></span>
                         </span>
                         <span class="del" data-line="{{.Deletion}}">{{.Deletion}}</span>
+                        {{else}}
+                        <span>BIN</span>
+                        {{end}}
                     </div>
                     <!-- todo finish all file status, now modify, add, delete and rename -->
                     <span class="status {{DiffTypeToStr .Type}}" data-toggle="tooltip" data-placement="right" title="{{DiffTypeToStr .Type}}">&nbsp;</span>
@@ -49,14 +56,18 @@
         <div class="panel panel-default diff-file-box diff-box file-content" id="diff-2">
             <div class="panel-heading">
                 <div class="diff-counter count pull-left">
+                    {{if not .IsBin}}
                     <span class="add" data-line="{{.Addition}}">+ {{.Addition}}</span>
                     <span class="bar">
                         <span class="pull-left add"></span>
                         <span class="pull-left del"></span>
                     </span>
                     <span class="del" data-line="{{.Deletion}}">- {{.Deletion}}</span>
+                    {{else}}
+                    BIN
+                    {{end}}
                 </div>
-                <a class="btn btn-default btn-sm pull-right" href="{{$.SourcePath}}/{{.Name}}">View File</a>
+                <a class="btn btn-default btn-sm pull-right" rel="nofollow" href="{{$.SourcePath}}/{{.Name}}">View File</a>
                 <span class="file">{{.Name}}</span>
             </div>
             {{$isImage := (call $.IsImageFile .Name)}}
@@ -83,338 +94,13 @@
                         </tr>
                         {{end}}
                         {{end}}
-                       <!--  <tr class="same-code nl-2 ol-2">
-                            <td class="lines-num lines-num-old">
-                                <span rel="L1">2</span>
-                            </td>
-                            <td class="lines-num lines-num-new">
-                                <span rel="L1">2</span>
-                            </td>
-                            <td class="lines-code">
-                                <pre>	"github.com/youtube/vitess/go/bson"</pre>
-                            </td>
-                        </tr>
-                        <tr class="same-code nl-3 ol-3">
-                            <td class="lines-num lines-num-old">
-                                <span rel="L3">3</span>
-                            </td>
-                            <td class="lines-num lines-num-new">
-                                <span rel="L3">3</span>
-                            </td>
-                            <td class="lines-code">
-                                <pre>	"github.com/youtube/vitess/go/bson"</pre>
-                            </td>
-                        </tr>
-                        <tr class="add-code nl-4 ol-0">
-                            <td class="lines-num lines-num-old">
-                                <span rel="add">+</span>
-                            </td>
-                            <td class="lines-num lines-num-new">
-                                <span rel="L4">4</span>
-                            </td>
-                            <td class="lines-code">
-                                <pre>	"github.com/youtube/vitess/go/bson"</pre>
-                            </td>
-                        </tr>
-                        <tr class="add-code nl-5 ol-0">
-                            <td class="lines-num lines-num-old">
-                                <span rel="add">+</span>
-                            </td>
-                            <td class="lines-num lines-num-new">
-                                <span rel="L5">5</span>
-                            </td>
-                            <td class="lines-code">
-                                <pre>	"github.com/youtube/vitess/go/bson"</pre>
-                            </td>
-                        </tr>
-                        <tr class="del-code nl-0 ol-4">
-                            <td class="lines-num lines-num-old">
-                                <span rel="L4">4</span>
-                            </td>
-                            <td class="lines-num lines-num-new">
-                                <span rel="del">-</span>
-                            </td>
-                            <td class="lines-code">
-                                <pre>	"github.com/youtube/vitess/go/bson"</pre>
-                            </td>
-                        </tr>
-                        <tr class="del-code nl-0 ol-5">
-                            <td class="lines-num lines-num-old">
-                                <span rel="L5">5</span>
-                            </td>
-                            <td class="lines-num lines-num-new">
-                                <span rel="del">-</span>
-                            </td>
-                            <td class="lines-code">
-                                <pre>	"github.com/youtube/vitess/go/bson"</pre>
-                            </td>
-                        </tr>
-                        <tr class="del-code nl-0 ol-6">
-                            <td class="lines-num lines-num-old">
-                                <span rel="L6">6</span>
-                            </td>
-                            <td class="lines-num lines-num-new">
-                                <span rel="del">-</span>
-                            </td>
-                            <td class="lines-code">
-                                <pre>	"github.com/youtube/vitess/go/bson"</pre>
-                            </td>
-                        </tr>
-                        <tr class="del-code nl-0 ol-7">
-                            <td class="lines-num lines-num-old">
-                                <span rel="L7">7</span>
-                            </td>
-                            <td class="lines-num lines-num-new">
-                                <span rel="del">-</span>
-                            </td>
-                            <td class="lines-code">
-                                <pre>	"github.com/youtube/vitess/go/bson"</pre>
-                            </td>
-                        </tr>
-                        <tr class="same-code nl-6 ol-8">
-                            <td class="lines-num lines-num-old">
-                                <span rel="L8">8</span>
-                            </td>
-                            <td class="lines-num lines-num-new">
-                                <span rel="L6">6</span>
-                            </td>
-                            <td class="lines-code">
-                                <pre>	"github.com/youtube/vitess/go/bson"</pre>
-                            </td>
-                        </tr>
-                        <tr class="same-code nl-7 ol-9">
-                            <td class="lines-num lines-num-old">
-                                <span rel="L1">9</span>
-                            </td>
-                            <td class="lines-num lines-num-new">
-                                <span rel="L1">7</span>
-                            </td>
-                            <td class="lines-code">
-                                <pre>	"github.com/youtube/vitess/go/bson"</pre>
-                            </td>
-                        </tr>
-                        <tr class="same-code nl-8 ol-10">
-                            <td class="lines-num lines-num-old">
-                                <span rel="L1">10</span>
-                            </td>
-                            <td class="lines-num lines-num-new">
-                                <span rel="L1">8</span>
-                            </td>
-                            <td class="lines-code">
-                                <pre>	"github.com/youtube/vitess/go/bson"</pre>
-                            </td>
-                        </tr> -->
                     </tbody>
                 </table>
                 {{end}}
             </div>
         </div>
         {{end}}
-
-        <!-- <div class="panel panel-default diff-file-box diff-box file-content">
-            <div class="panel-heading">
-                <div class="diff-counter count pull-left">
-                    <span class="add" data-line="2">+ 2</span>
-                    <span class="bar">
-                        <span class="pull-left add"></span>
-                        <span class="pull-left del"></span>
-                    </span>
-                    <span class="del" data-line="4">- 4</span>
-                </div>
-                <a class="btn btn-default btn-sm pull-right" href="#">View File</a>
-                <span class="file">data/test/bson_test/simple_type.go</span>
-            </div>
-            <div class="panel-body file-body file-code code-view code-diff">
-                <table>
-                    <tbody>
-                    <tr class="same-code nl-1 ol-1">
-                        <td class="lines-num lines-num-old">
-                            <span rel="L1">1</span>
-                        </td>
-                        <td class="lines-num lines-num-new">
-                            <span rel="L1">1</span>
-                        </td>
-                        <td class="lines-code">
-                            <pre>	"github.com/youtube/vitess/go/bson"</pre>
-                        </td>
-                    </tr>
-                    <tr class="same-code nl-2 ol-2">
-                        <td class="lines-num lines-num-old">
-                            <span rel="L1">2</span>
-                        </td>
-                        <td class="lines-num lines-num-new">
-                            <span rel="L1">2</span>
-                        </td>
-                        <td class="lines-code">
-                            <pre>	"github.com/youtube/vitess/go/bson"</pre>
-                        </td>
-                    </tr>
-                    <tr class="same-code nl-3 ol-3">
-                        <td class="lines-num lines-num-old">
-                            <span rel="L3">3</span>
-                        </td>
-                        <td class="lines-num lines-num-new">
-                            <span rel="L3">3</span>
-                        </td>
-                        <td class="lines-code">
-                            <pre>	"github.com/youtube/vitess/go/bson"</pre>
-                        </td>
-                    </tr>
-                    <tr class="add-code nl-4 ol-0">
-                        <td class="lines-num lines-num-old">
-                            <span rel="add">+</span>
-                        </td>
-                        <td class="lines-num lines-num-new">
-                            <span rel="L4">4</span>
-                        </td>
-                        <td class="lines-code">
-                            <pre>	"github.com/youtube/vitess/go/bson"</pre>
-                        </td>
-                    </tr>
-                    <tr class="add-code nl-5 ol-0">
-                        <td class="lines-num lines-num-old">
-                            <span rel="add">+</span>
-                        </td>
-                        <td class="lines-num lines-num-new">
-                            <span rel="L5">5</span>
-                        </td>
-                        <td class="lines-code">
-                            <pre>	"github.com/youtube/vitess/go/bson"</pre>
-                        </td>
-                    </tr>
-                    <tr class="del-code nl-0 ol-4">
-                        <td class="lines-num lines-num-old">
-                            <span rel="L4">4</span>
-                        </td>
-                        <td class="lines-num lines-num-new">
-                            <span rel="del">-</span>
-                        </td>
-                        <td class="lines-code">
-                            <pre>	"github.com/youtube/vitess/go/bson"</pre>
-                        </td>
-                    </tr>
-                    <tr class="del-code nl-0 ol-5">
-                        <td class="lines-num lines-num-old">
-                            <span rel="L5">5</span>
-                        </td>
-                        <td class="lines-num lines-num-new">
-                            <span rel="del">-</span>
-                        </td>
-                        <td class="lines-code">
-                            <pre>	"github.com/youtube/vitess/go/bson"</pre>
-                        </td>
-                    </tr>
-                    <tr class="del-code nl-0 ol-6">
-                        <td class="lines-num lines-num-old">
-                            <span rel="L6">6</span>
-                        </td>
-                        <td class="lines-num lines-num-new">
-                            <span rel="del">-</span>
-                        </td>
-                        <td class="lines-code">
-                            <pre>	"github.com/youtube/vitess/go/bson"</pre>
-                        </td>
-                    </tr>
-                    <tr class="del-code nl-0 ol-7">
-                        <td class="lines-num lines-num-old">
-                            <span rel="L7">7</span>
-                        </td>
-                        <td class="lines-num lines-num-new">
-                            <span rel="del">-</span>
-                        </td>
-                        <td class="lines-code">
-                            <pre>	"github.com/youtube/vitess/go/bson"</pre>
-                        </td>
-                    </tr>
-                    <tr class="same-code nl-6 ol-8">
-                        <td class="lines-num lines-num-old">
-                            <span rel="L8">8</span>
-                        </td>
-                        <td class="lines-num lines-num-new">
-                            <span rel="L6">6</span>
-                        </td>
-                        <td class="lines-code">
-                            <pre>	"github.com/youtube/vitess/go/bson"</pre>
-                        </td>
-                    </tr>
-                    <tr class="same-code nl-7 ol-9">
-                        <td class="lines-num lines-num-old">
-                            <span rel="L1">9</span>
-                        </td>
-                        <td class="lines-num lines-num-new">
-                            <span rel="L1">7</span>
-                        </td>
-                        <td class="lines-code">
-                            <pre>	"github.com/youtube/vitess/go/bson"</pre>
-                        </td>
-                    </tr>
-                    <tr class="same-code nl-8 ol-10">
-                        <td class="lines-num lines-num-old">
-                            <span rel="L1">10</span>
-                        </td>
-                        <td class="lines-num lines-num-new">
-                            <span rel="L1">8</span>
-                        </td>
-                        <td class="lines-code">
-                            <pre>	"github.com/youtube/vitess/go/bson"</pre>
-                        </td>
-                    </tr>
-                    <tr class="ellipsis-code">
-                        <td class="text-center lines-ellipsis" colspan="2">
-                            <i class="fa fa-ellipsis-h"></i>
-                        </td>
-                        <td class="lines-code">
-                            <pre>	"github.com/youtube/vitess/go/bson"</pre>
-                        </td>
-                    </tr>
-                    <tr class="same-code nl-8 ol-10">
-                        <td class="lines-num lines-num-old">
-                            <span rel="L1">10</span>
-                        </td>
-                        <td class="lines-num lines-num-new">
-                            <span rel="L1">8</span>
-                        </td>
-                        <td class="lines-code">
-                            <pre>	"github.com/youtube/vitess/go/bson"</pre>
-                        </td>
-                    </tr>
-                    <tr class="same-code nl-8 ol-10">
-                        <td class="lines-num lines-num-old">
-                            <span rel="L1">10</span>
-                        </td>
-                        <td class="lines-num lines-num-new">
-                            <span rel="L1">8</span>
-                        </td>
-                        <td class="lines-code">
-                            <pre>	"github.com/youtube/vitess/go/bson"</pre>
-                        </td>
-                    </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <div class="panel panel-default diff-file-box diff-box file-content">
-            <div class="panel-heading">
-                <div class="diff-counter count pull-left">
-                    <span class="add" data-line="0">BIN</span>
-                    <span class="bar">
-                        <span class="pull-left add"></span>
-                        <span class="pull-left del"></span>
-                    </span>
-                    <span class="del" data-line="1"></span>
-                </div>
-                <a class="btn btn-default btn-sm pull-right" href="#">View File</a>
-                <span class="file">data/test/bson_test/simple_type.png</span>
-            </div>
-            <div class="panel-body file-body file-code code-view code-bin">
-                <table>
-                    <tbody>
-                    <tr class="text-center"><td><img src="http://1.gravatar.com/avatar/f72f7454ce9d710baa506394f68f4132?s=200" alt=""/></td></tr>
-                    </tbody>
-                </table>
-            </div>
-        </div> -->
+        {{end}}
     </div>
 </div>
 {{template "base/footer" .}}

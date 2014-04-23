@@ -1,0 +1,32 @@
+{{template "base/head" .}}
+{{template "base/navbar" .}}
+<div id="body" class="container">
+    <form action="/user/forget_password" method="post" class="form-horizontal card" id="login-card">
+        {{.CsrfTokenHtml}}
+        <h3>Reset Your Password</h3>
+        {{template "base/alert" .}}
+        {{if .IsResetSent}}
+        <p>A confirmation e-mail has been sent to <b>{{.Email}}</b>, please check your inbox within {{.Hours}} hours.</p>
+        <hr/>
+        <a href="http://{{Mail2Domain .Email}}" class="btn btn-lg btn-success">Sign in to your e-mail</a>
+        {{else if .IsResetRequest}}
+        <div class="form-group {{if .Err_Email}}has-error has-feedback{{end}}">
+            <label class="col-md-3 control-label">Email: </label>
+            <div class="col-md-7">
+                <input name="email" class="form-control" placeholder="Type your e-mail address" required="required">
+            </div>
+        </div>
+        <hr/>
+        <div class="form-group">
+            <div class="col-md-offset-4 col-md-6">
+                <button type="submit" class="btn btn-lg btn-primary">Click here to send resend confirmation e-mail</button>
+            </div>
+        </div>
+        {{else if .IsResetDisable}}
+        <p>Sorry, mail service is not enabled.</p>
+        {{else if .ResendLimited}}
+        <p>Sorry, you are sending an e-mail too frequently, please wait another 3 minutes and try again.</p>
+        {{end}}
+    </form>
+</div>
+{{template "base/footer" .}}

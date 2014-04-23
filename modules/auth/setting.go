@@ -11,8 +11,6 @@ import (
 
 	"github.com/go-martini/martini"
 
-	"github.com/gogits/binding"
-
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
 )
@@ -30,7 +28,7 @@ func (f *AddSSHKeyForm) Name(field string) string {
 	return names[field]
 }
 
-func (f *AddSSHKeyForm) Validate(errors *binding.Errors, req *http.Request, context martini.Context) {
+func (f *AddSSHKeyForm) Validate(errors *base.BindingErrors, req *http.Request, context martini.Context) {
 	data := context.Get(reflect.TypeOf(base.TmplData{})).Interface().(base.TmplData)
 	AssignForm(f, data)
 

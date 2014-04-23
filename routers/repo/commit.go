@@ -5,7 +5,6 @@
 package repo
 
 import (
-	"container/list"
 	"path"
 
 	"github.com/go-martini/martini"
@@ -16,35 +15,51 @@ import (
 )
 
 func Commits(ctx *middleware.Context, params martini.Params) {
-	userName := params["username"]
-	repoName := params["reponame"]
-	branchName := params["branchname"]
+	userName := ctx.Repo.Owner.Name
+	repoName := ctx.Repo.Repository.Name
 
-	brs, err := models.GetBranches(userName, repoName)
+	brs, err := ctx.Repo.GitRepo.GetBranches()
 	if err != nil {
-		ctx.Handle(200, "repo.Commits", err)
+		ctx.Handle(500, "repo.Commits", err)
 		return
 	} else if len(brs) == 0 {
 		ctx.Handle(404, "repo.Commits", nil)
 		return
 	}
 
-	var commits *list.List
-	if models.IsBranchExist(userName, repoName, branchName) {
-		commits, err = models.GetCommitsByBranch(userName, repoName, branchName)
-	} else {
-		commits, err = models.GetCommitsByCommitId(userName, repoName, branchName)
+	commitsCount, err := ctx.Repo.Commit.CommitsCount()
+	if err != nil {
+		ctx.Handle(500, "repo.Commits(GetCommitsCount)", err)
+		return
 	}
 
+	// Calculate and validate page number.
+	page, _ := base.StrTo(ctx.Query("p")).Int()
+	if page < 1 {
+		page = 1
+	}
+	lastPage := page - 1
+	if lastPage < 0 {
+		lastPage = 0
+	}
+	nextPage := page + 1
+	if nextPage*50 > commitsCount {
+		nextPage = 0
+	}
+
+	//both `git log branchName` and `git log  commitId` work
+	commits, err := ctx.Repo.Commit.CommitsByRange(page)
 	if err != nil {
-		ctx.Handle(404, "repo.Commits", err)
+		ctx.Handle(500, "repo.Commits(get commits)", err)
 		return
 	}
 
 	ctx.Data["Username"] = userName
 	ctx.Data["Reponame"] = repoName
-	ctx.Data["CommitCount"] = commits.Len()
+	ctx.Data["CommitCount"] = commitsCount
 	ctx.Data["Commits"] = commits
+	ctx.Data["LastPageNum"] = lastPage
+	ctx.Data["NextPageNum"] = nextPage
 	ctx.Data["IsRepoToolbarCommits"] = true
 	ctx.HTML(200, "repo/commits")
 }
@@ -52,7 +67,6 @@ func Commits(ctx *middleware.Context, params martini.Params) {
 func Diff(ctx *middleware.Context, params martini.Params) {
 	userName := ctx.Repo.Owner.Name
 	repoName := ctx.Repo.Repository.Name
-	branchName := ctx.Repo.BranchName
 	commitId := ctx.Repo.CommitId
 
 	commit := ctx.Repo.Commit
@@ -64,19 +78,15 @@ func Diff(ctx *middleware.Context, params martini.Params) {
 	}
 
 	isImageFile := func(name string) bool {
-		repoFile, err := models.GetTargetFile(userName, repoName,
-			branchName, commitId, name)
-
+		blob, err := ctx.Repo.Commit.GetBlobByPath(name)
 		if err != nil {
 			return false
 		}
 
-		blob, err := repoFile.LookupBlob()
+		data, err := blob.Data()
 		if err != nil {
 			return false
 		}
-
-		data := blob.Contents()
 		_, isImage := base.IsImageFile(data)
 		return isImage
 	}
@@ -85,8 +95,44 @@ func Diff(ctx *middleware.Context, params martini.Params) {
 	ctx.Data["Title"] = commit.Message() + " · " + base.ShortSha(commitId)
 	ctx.Data["Commit"] = commit
 	ctx.Data["Diff"] = diff
+	ctx.Data["DiffNotAvailable"] = diff.NumFiles() == 0
 	ctx.Data["IsRepoToolbarCommits"] = true
 	ctx.Data["SourcePath"] = "/" + path.Join(userName, repoName, "src", commitId)
 	ctx.Data["RawPath"] = "/" + path.Join(userName, repoName, "raw", commitId)
 	ctx.HTML(200, "repo/diff")
+}
+
+func SearchCommits(ctx *middleware.Context, params martini.Params) {
+	keyword := ctx.Query("q")
+	if len(keyword) == 0 {
+		ctx.Redirect(ctx.Repo.RepoLink + "/commits/" + ctx.Repo.BranchName)
+		return
+	}
+
+	userName := params["username"]
+	repoName := params["reponame"]
+
+	brs, err := ctx.Repo.GitRepo.GetBranches()
+	if err != nil {
+		ctx.Handle(500, "repo.SearchCommits(GetBranches)", err)
+		return
+	} else if len(brs) == 0 {
+		ctx.Handle(404, "repo.SearchCommits(GetBranches)", nil)
+		return
+	}
+
+	commits, err := ctx.Repo.Commit.SearchCommits(keyword)
+	if err != nil {
+		ctx.Handle(500, "repo.SearchCommits(SearchCommits)", err)
+		return
+	}
+
+	ctx.Data["Keyword"] = keyword
+	ctx.Data["Username"] = userName
+	ctx.Data["Reponame"] = repoName
+	ctx.Data["CommitCount"] = commits.Len()
+	ctx.Data["Commits"] = commits
+	ctx.Data["IsSearchPage"] = true
+	ctx.Data["IsRepoToolbarCommits"] = true
+	ctx.HTML(200, "repo/commits")
 }

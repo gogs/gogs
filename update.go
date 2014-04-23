@@ -5,20 +5,15 @@
 package main
 
 import (
-	"container/list"
-	"fmt"
 	"os"
-	"os/exec"
 	"path"
 	"strconv"
-	"strings"
 
 	"github.com/codegangsta/cli"
-	"github.com/gogits/git"
+	qlog "github.com/qiniu/log"
+
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/modules/log"
-	//"github.com/qiniu/log"
 )
 
 var CmdUpdate = cli.Command{
@@ -31,17 +26,34 @@ gogs serv provide access auth for repositories`,
 }
 
 func newUpdateLogger(execDir string) {
-	level := "0"
 	logPath := execDir + "/log/update.log"
 	os.MkdirAll(path.Dir(logPath), os.ModePerm)
-	log.NewLogger(0, "file", fmt.Sprintf(`{"level":%s,"filename":"%s"}`, level, logPath))
-	log.Trace("start logging...")
+
+	f, err := os.OpenFile(logPath, os.O_WRONLY|os.O_APPEND|os.O_CREATE, os.ModePerm)
+	if err != nil {
+		qlog.Fatal(err)
+	}
+
+	qlog.SetOutput(f)
+	qlog.Info("Start logging update...")
+}
+
+func updateEnv(refName, oldCommitId, newCommitId string) {
+	os.Setenv("refName", refName)
+	os.Setenv("oldCommitId", oldCommitId)
+	os.Setenv("newCommitId", newCommitId)
+	qlog.Error("set envs:", refName, oldCommitId, newCommitId)
 }
 
 // for command: ./gogs update
 func runUpdate(c *cli.Context) {
+	cmd := os.Getenv("SSH_ORIGINAL_COMMAND")
+	if cmd == "" {
+		return
+	}
+
 	execDir, _ := base.ExecDir()
-	newLogger(execDir)
+	newUpdateLogger(execDir)
 
 	base.NewConfigContext()
 	models.LoadModelsConfig()
@@ -54,115 +66,20 @@ func runUpdate(c *cli.Context) {
 
 	args := c.Args()
 	if len(args) != 3 {
-		log.Error("received less 3 parameters")
-		return
+		qlog.Fatal("received less 3 parameters")
 	}
 
-	refName := args[0]
-	if refName == "" {
-		log.Error("refName is empty, shouldn't use")
-		return
+	if args[0] == "" {
+		qlog.Fatal("refName is empty, shouldn't use")
 	}
-	oldCommitId := args[1]
-	newCommitId := args[2]
 
-	isNew := strings.HasPrefix(oldCommitId, "0000000")
-	if isNew &&
-		strings.HasPrefix(newCommitId, "0000000") {
-		log.Error("old rev and new rev both 000000")
-		return
-	}
+	//updateEnv(args[0], args[1], args[2])
 
 	userName := os.Getenv("userName")
 	userId := os.Getenv("userId")
+	iUserId, _ := strconv.ParseInt(userId, 10, 64)
 	//repoId := os.Getenv("repoId")
 	repoName := os.Getenv("repoName")
 
-	f := models.RepoPath(userName, repoName)
-
-	gitUpdate := exec.Command("git", "update-server-info")
-	gitUpdate.Dir = f
-	gitUpdate.Run()
-
-	repo, err := git.OpenRepository(f)
-	if err != nil {
-		log.Error("runUpdate.Open repoId: %v", err)
-		return
-	}
-
-	newOid, err := git.NewOidFromString(newCommitId)
-	if err != nil {
-		log.Error("runUpdate.Ref repoId: %v", err)
-		return
-	}
-
-	newCommit, err := repo.LookupCommit(newOid)
-	if err != nil {
-		log.Error("runUpdate.Ref repoId: %v", err)
-		return
-	}
-
-	var l *list.List
-	// if a new branch
-	if isNew {
-		l, err = repo.CommitsBefore(newCommit.Id())
-		if err != nil {
-			log.Error("Find CommitsBefore erro:", err)
-			return
-		}
-	} else {
-		oldOid, err := git.NewOidFromString(oldCommitId)
-		if err != nil {
-			log.Error("runUpdate.Ref repoId: %v", err)
-			return
-		}
-
-		oldCommit, err := repo.LookupCommit(oldOid)
-		if err != nil {
-			log.Error("runUpdate.Ref repoId: %v", err)
-			return
-		}
-		l = repo.CommitsBetween(newCommit, oldCommit)
-	}
-
-	if err != nil {
-		log.Error("runUpdate.Commit repoId: %v", err)
-		return
-	}
-
-	sUserId, err := strconv.Atoi(userId)
-	if err != nil {
-		log.Error("runUpdate.Parse userId: %v", err)
-		return
-	}
-
-	repos, err := models.GetRepositoryByName(int64(sUserId), repoName)
-	if err != nil {
-		log.Error("runUpdate.GetRepositoryByName userId: %v", err)
-		return
-	}
-
-	commits := make([]*base.PushCommit, 0)
-	var maxCommits = 3
-	var actEmail string
-	for e := l.Front(); e != nil; e = e.Next() {
-		commit := e.Value.(*git.Commit)
-		if actEmail == "" {
-			actEmail = commit.Committer.Email
-		}
-		commits = append(commits,
-			&base.PushCommit{commit.Id().String(),
-				commit.Message(),
-				commit.Author.Email,
-				commit.Author.Name})
-		if len(commits) >= maxCommits {
-			break
-		}
-	}
-
-	//commits = append(commits, []string{lastCommit.Id().String(), lastCommit.Message()})
-	if err = models.CommitRepoAction(int64(sUserId), userName, actEmail,
-		repos.Id, repoName, git.BranchName(refName), &base.PushCommits{l.Len(), commits}); err != nil {
-		log.Error("runUpdate.models.CommitRepoAction: %v", err)
-	}
+	models.Update(args[0], args[1], args[2], userName, repoName, iUserId)
 }

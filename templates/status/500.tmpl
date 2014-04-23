@@ -2,8 +2,8 @@
 {{template "base/navbar" .}}
 <div id="body" class="container text-center">
     <p style="margin-top: 80px"><img src="/img/500.png" alt="404"/></p>
-    <hr/>
-    <p>An error is occurred : {{.ErrorMsg}}</p>
+    {{if .ErrorMsg}}<hr/>
+    <p>An error is occurred : {{.ErrorMsg}}</p>{{end}}
     <hr/>
     <p>Application Version: {{AppVer}}</p>
 </div>

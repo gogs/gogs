@@ -153,6 +153,12 @@ func Config(ctx *middleware.Context) {
 		ctx.Data["Mailer"] = base.MailService
 	}
 
+	ctx.Data["OauthEnabled"] = false
+	if base.OauthService != nil {
+		ctx.Data["OauthEnabled"] = true
+		ctx.Data["Oauther"] = base.OauthService
+	}
+
 	ctx.Data["CacheAdapter"] = base.CacheAdapter
 	ctx.Data["CacheConfig"] = base.CacheConfig
 

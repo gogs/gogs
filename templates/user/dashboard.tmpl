@@ -22,20 +22,29 @@
                 <span class="clearfix"></span>
             </li>
         {{else}}
-            <li>No any activity yet.</li>
+            <li>Oh. Looks like there isn't any activity here yet. Get Busy!</li>
         {{end}}
         </ul>
     </div>
     <div id="feed-right" class="col-md-4">
         <div class="panel panel-default repo-panel">
             <div class="panel-heading">Your Repositories
-                <a class="btn btn-success pull-right btn-sm" href="/repo/create"><i class="fa fa-plus-square"></i>New Repo</a>
+                <div class="btn-group pull-right" id="user-dashboard-repo-new">
+                    <button type="button" class="btn btn-success btn-sm dropdown-toggle" data-toggle="dropdown"><i class="fa fa-plus-square"></i>New</button>
+                    <div class="dropdown-menu dropdown-menu-right">
+                       <ul class="list-unstyled">
+                           <li><a href="/repo/create"><i class="fa fa-book"></i>Repository</a></li>
+                           <li><a href="/repo/migrate"><i class="fa fa-clipboard"></i>Migration</a></li>
+                           <!-- <li><a href="#"><i class="fa fa-users"></i>Organization</a></li> -->
+                       </ul>
+                    </div>
+                </div>
             </div>
             <div class="panel-body">
                 <ul class="list-group">{{range .MyRepos}}
                     <li class="list-group-item"><a href="/{{$.SignedUserName}}/{{.Name}}">
                         <!-- <span class="stars pull-right"><i class="fa fa-star"></i>{{.NumStars}}</span> -->
-                        <i class="fa fa-book"></i>{{.Name}}</a>
+                        <i class="fa fa-book"></i>{{.Name}}{{if .IsPrivate}} <span class="label label-default">Private</span>{{end}}</a>
                     </li>{{end}}
                 </ul>
             </div>

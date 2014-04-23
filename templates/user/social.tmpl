@@ -1,0 +1,17 @@
+{{template "base/head" .}}
+{{template "base/navbar" .}}
+<div id="body" class="container" data-page="user">
+    {{template "user/setting_nav" .}}
+    <div id="user-setting-container" class="col-md-9">
+        <div id="ssh-keys">
+            <h4>Social Account</h4>
+            {{template "base/alert" .}}
+            <ul id="ssh-keys-list" class="list-group">
+                {{range .Socials}}
+                    <i class="fa {{Oauth2Icon .Type}} fa-3x"></i>
+                {{end}}
+            </ul>
+        </div>
+    </div>
+</div>
+{{template "base/footer" .}}

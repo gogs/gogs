@@ -7,12 +7,13 @@
             <h4>Account Profile</h4>
             <form class="form-horizontal" id="password-form" method="post" action="/user/setting">
                 {{.CsrfTokenHtml}}
-                {{if .IsSuccess}}<p class="alert alert-success">Your profile has been successfully updated.</p>{{else if .HasError}}<p class="alert alert-danger form-error">{{.ErrorMsg}}</p>{{end}}
-                <p>Your Email will be public and used for Account related notifications and any web based operations made via the web.</p>
+                {{template "base/alert" .}}
+                <p>Your Email address is public and will be used for any account related notifications, and any web based operations made via the site.</p>
                 <div class="form-group">
-                    <label class="col-md-2 control-label">Username<strong class="text-danger">*</strong></label>
+                    <label class="col-md-2 control-label" for="user-setting-username">Username<strong class="text-danger">*</strong></label>
                     <div class="col-md-8">
-                        <input name="username" class="form-control" placeholder="Type your user name" required="required" value="{{.SignedUser.Name}}" title="{{.SignedUser.Name}}">
+                        <input name="username" class="form-control" placeholder="Type your user name" required="required" value="{{.SignedUser.Name}}" title="{{.SignedUser.Name}}" id="user-setting-username">
+                        <p class="help-block hidden"><span class="text-danger">Cautious : </span>your username is changing !</p>
                     </div>
                 </div>
 
