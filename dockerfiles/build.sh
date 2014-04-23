@@ -1,16 +1,14 @@
 # Configs of the docker images, you might have specify your own configs here.
 
-# type of database, support 'mysql' and 'postgres'
-DB_TYPE="YOUR_DB_TYPE"
-# type of memory database, support 'redis' and 'memcache'
-MEM_TYPE="YOUR_MEM_TYPE"
+DB_TYPE="YOUR_DB_TYPE"            # type of database, support 'mysql' and 'postgres'
+MEM_TYPE="YOUR_MEM_TYPE"          # type of memory database, support 'redis' and 'memcache'
+DB_PASSWORD="YOUR_DB_PASSWORD"    # The database password.
+DB_RUN_NAME="YOUR_DB_RUN_NAME"    # The --name option value when run the database image.
+MEM_RUN_NAME="YOUR_MEM_RUN_NAME"  # The --name option value when run the mem database image.
+HOST_PORT="YOUR_HOST_PORT"        # The port on host, which will be redirected to the port 3000 inside gogs container.
+
 # apt source, you can select 'nchc'(mirror in Taiwan) or 'aliyun'(best for mainlance China users) according to your network, if you could connect to the official unbunt mirror in a fast speed, just leave it to "".
 APT_SOURCE=""
-
-DB_PASSWORD="YOUR_DB_PASSWORD"
-DB_RUN_NAME="YOUR_DB_RUN_NAME"
-MEM_RUN_NAME="YOUR_MEM_RUN_NAME"
-HOST_PORT="YOUR_HOST_PORT"
 
 # Replace the database root password in database image Dockerfile.
 sed -i "s/THE_DB_PASSWORD/$DB_PASSWORD/g" images/$DB_TYPE/Dockerfile
