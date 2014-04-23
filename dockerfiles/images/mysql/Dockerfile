@@ -10,7 +10,7 @@ RUN add-apt-repository -y "deb http://archive.ubuntu.com/ubuntu $(lsb_release -s
 RUN apt-get --yes --force-yes update
 RUN apt-get --yes --force-yes upgrade 
 
-ENV MYSQL_PASSWORD THE_MYSQL_PASSWORD
+ENV MYSQL_PASSWORD THE_DB_PASSWORD
 
 RUN echo "mysql-server mysql-server/root_password password $MYSQL_PASSWORD" | debconf-set-selections  
 RUN echo "mysql-server mysql-server/root_password_again password $MYSQL_PASSWORD" | debconf-set-selections
