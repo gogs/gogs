@@ -29,7 +29,7 @@
             <div class="filter-option">
                 <div class="btn-group">
                     <a class="btn btn-default issue-open{{if not .IsShowClosed}} active{{end}}" href="/issues?type={{.ViewType}}&repoid={{.RepoId}}">{{.OpenIssueCount}} Open</a>
-                    <a class="btn btn-default issue-close{{if .IsShowClosed}} active{{end}}" href="/issues?state=closed&type={{.ViewType}}&repoid={{.RepoId}}">{{.ClosedIssueCount}} Close</a>
+                    <a class="btn btn-default issue-close{{if .IsShowClosed}} active{{end}}" href="/issues?state=closed&type={{.ViewType}}&repoid={{.RepoId}}">{{.ClosedIssueCount}} Closed</a>
                 </div>
             </div>
             <div class="issues list-group">
