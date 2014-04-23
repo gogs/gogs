@@ -1,3 +1,4 @@
+sudo adduser git
 sudo apt-get update
 sudo apt-get upgrade
 
