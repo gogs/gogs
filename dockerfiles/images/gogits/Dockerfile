@@ -18,7 +18,6 @@ RUN apt-get install -yq vim
 RUN curl -s http://docker.u.qiniudn.com/go1.2.1.src.tar.gz | tar -v -C /usr/local -xz
 RUN cd /usr/local/go/src && ./make.bash --no-clean 2>&1
 
-RUN go get -u github.com/Unknwon/com
 RUN go get -u -d github.com/gogits/gogs 
 RUN cd $GOPATH/src/github.com/gogits/gogs && git checkout dev && git pull origin dev && go install && go build -tags redis
 
