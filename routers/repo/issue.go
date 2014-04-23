@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/Unknwon/com"
 	"github.com/go-martini/martini"
 
 	"github.com/gogits/gogs/models"
@@ -81,15 +82,17 @@ func Issues(ctx *middleware.Context) {
 	ctx.HTML(200, "issue/list")
 }
 
-func CreateIssue(ctx *middleware.Context, params martini.Params, form auth.CreateIssueForm) {
+func CreateIssue(ctx *middleware.Context, params martini.Params) {
 	ctx.Data["Title"] = "Create issue"
 	ctx.Data["IsRepoToolbarIssues"] = true
 	ctx.Data["IsRepoToolbarIssuesList"] = false
+	ctx.HTML(200, "issue/create")
+}
 
-	if ctx.Req.Method == "GET" {
-		ctx.HTML(200, "issue/create")
-		return
-	}
+func CreateIssuePost(ctx *middleware.Context, params martini.Params, form auth.CreateIssueForm) {
+	ctx.Data["Title"] = "Create issue"
+	ctx.Data["IsRepoToolbarIssues"] = true
+	ctx.Data["IsRepoToolbarIssuesList"] = false
 
 	if ctx.HasError() {
 		ctx.HTML(200, "issue/create")
@@ -99,7 +102,7 @@ func CreateIssue(ctx *middleware.Context, params martini.Params, form auth.Creat
 	issue, err := models.CreateIssue(ctx.User.Id, ctx.Repo.Repository.Id, form.MilestoneId, form.AssigneeId,
 		ctx.Repo.Repository.NumIssues, form.IssueName, form.Labels, form.Content, false)
 	if err != nil {
-		ctx.Handle(200, "issue.CreateIssue", err)
+		ctx.Handle(500, "issue.CreateIssue(CreateIssue)", err)
 		return
 	}
 
@@ -107,19 +110,36 @@ func CreateIssue(ctx *middleware.Context, params martini.Params, form auth.Creat
 	if err = models.NotifyWatchers(&models.Action{ActUserId: ctx.User.Id, ActUserName: ctx.User.Name, ActEmail: ctx.User.Email,
 		OpType: models.OP_CREATE_ISSUE, Content: fmt.Sprintf("%d|%s", issue.Index, issue.Name),
 		RepoId: ctx.Repo.Repository.Id, RepoName: ctx.Repo.Repository.Name, RefName: ""}); err != nil {
-		ctx.Handle(200, "issue.CreateIssue", err)
+		ctx.Handle(500, "issue.CreateIssue(NotifyWatchers)", err)
 		return
 	}
 
-	// Mail watchers.
+	// Mail watchers and mentions.
 	if base.Service.NotifyMail {
-		if err = mailer.SendNotifyMail(ctx.User, ctx.Repo.Owner, ctx.Repo.Repository, issue); err != nil {
-			ctx.Handle(200, "issue.CreateIssue", err)
+		tos, err := mailer.SendIssueNotifyMail(ctx.User, ctx.Repo.Owner, ctx.Repo.Repository, issue)
+		if err != nil {
+			ctx.Handle(500, "issue.CreateIssue(SendIssueNotifyMail)", err)
+			return
+		}
+
+		tos = append(tos, ctx.User.LowerName)
+		ms := base.MentionPattern.FindAllString(issue.Content, -1)
+		newTos := make([]string, 0, len(ms))
+		for _, m := range ms {
+			if com.IsSliceContainsStr(tos, m[1:]) {
+				continue
+			}
+
+			newTos = append(newTos, m[1:])
+		}
+		if err = mailer.SendIssueMentionMail(ctx.User, ctx.Repo.Owner, ctx.Repo.Repository,
+			issue, models.GetUserEmailsByNames(newTos)); err != nil {
+			ctx.Handle(500, "issue.CreateIssue(SendIssueMentionMail)", err)
 			return
 		}
 	}
-
 	log.Trace("%d Issue created: %d", ctx.Repo.Repository.Id, issue.Id)
+
 	ctx.Redirect(fmt.Sprintf("/%s/%s/issues/%d", params["username"], params["reponame"], issue.Index))
 }
 
@@ -147,7 +167,7 @@ func ViewIssue(ctx *middleware.Context, params martini.Params) {
 		return
 	}
 	issue.Poster = u
-	issue.RenderedContent = string(base.RenderMarkdown([]byte(issue.Content), ""))
+	issue.RenderedContent = string(base.RenderMarkdown([]byte(issue.Content), ctx.Repo.RepoLink))
 
 	// Get comments.
 	comments, err := models.GetIssueComments(issue.Id)
@@ -164,7 +184,7 @@ func ViewIssue(ctx *middleware.Context, params martini.Params) {
 			return
 		}
 		comments[i].Poster = u
-		comments[i].Content = string(base.RenderMarkdown([]byte(comments[i].Content), ""))
+		comments[i].Content = string(base.RenderMarkdown([]byte(comments[i].Content), ctx.Repo.RepoLink))
 	}
 
 	ctx.Data["Title"] = issue.Name
@@ -193,7 +213,7 @@ func UpdateIssue(ctx *middleware.Context, params martini.Params, form auth.Creat
 		return
 	}
 
-	if ctx.User.Id != issue.PosterId {
+	if ctx.User.Id != issue.PosterId && !ctx.Repo.IsOwner {
 		ctx.Handle(404, "issue.UpdateIssue", nil)
 		return
 	}
@@ -211,7 +231,7 @@ func UpdateIssue(ctx *middleware.Context, params martini.Params, form auth.Creat
 	ctx.JSON(200, map[string]interface{}{
 		"ok":      true,
 		"title":   issue.Name,
-		"content": string(base.RenderMarkdown([]byte(issue.Content), "")),
+		"content": string(base.RenderMarkdown([]byte(issue.Content), ctx.Repo.RepoLink)),
 	})
 }
 

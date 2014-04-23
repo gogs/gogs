@@ -5,14 +5,15 @@
 package repo
 
 import (
+	"encoding/base64"
+	"errors"
 	"fmt"
+	"github.com/gogits/git"
 	"path"
 	"path/filepath"
 	"strings"
 
 	"github.com/go-martini/martini"
-
-	"github.com/gogits/webdav"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
@@ -21,24 +22,27 @@ import (
 	"github.com/gogits/gogs/modules/middleware"
 )
 
-func Create(ctx *middleware.Context, form auth.CreateRepoForm) {
+func Create(ctx *middleware.Context) {
 	ctx.Data["Title"] = "Create repository"
-	ctx.Data["PageIsNewRepo"] = true // For navbar arrow.
+	ctx.Data["PageIsNewRepo"] = true
 	ctx.Data["LanguageIgns"] = models.LanguageIgns
 	ctx.Data["Licenses"] = models.Licenses
+	ctx.HTML(200, "repo/create")
+}
 
-	if ctx.Req.Method == "GET" {
-		ctx.HTML(200, "repo/create")
-		return
-	}
+func CreatePost(ctx *middleware.Context, form auth.CreateRepoForm) {
+	ctx.Data["Title"] = "Create repository"
+	ctx.Data["PageIsNewRepo"] = true
+	ctx.Data["LanguageIgns"] = models.LanguageIgns
+	ctx.Data["Licenses"] = models.Licenses
 
 	if ctx.HasError() {
 		ctx.HTML(200, "repo/create")
 		return
 	}
 
-	_, err := models.CreateRepository(ctx.User, form.RepoName, form.Description,
-		form.Language, form.License, form.Visibility == "private", form.InitReadme == "on")
+	repo, err := models.CreateRepository(ctx.User, form.RepoName, form.Description,
+		form.Language, form.License, form.Private, false, form.InitReadme)
 	if err == nil {
 		log.Trace("%s Repository created: %s/%s", ctx.Req.RequestURI, ctx.User.LowerName, form.RepoName)
 		ctx.Redirect("/" + ctx.User.Name + "/" + form.RepoName)
@@ -50,12 +54,60 @@ func Create(ctx *middleware.Context, form auth.CreateRepoForm) {
 		ctx.RenderWithErr(models.ErrRepoNameIllegal.Error(), "repo/create", &form)
 		return
 	}
-	ctx.Handle(200, "repo.Create", err)
+
+	if repo != nil {
+		if errDelete := models.DeleteRepository(ctx.User.Id, repo.Id, ctx.User.Name); errDelete != nil {
+			log.Error("repo.MigratePost(CreatePost): %v", errDelete)
+		}
+	}
+	ctx.Handle(500, "repo.Create", err)
+}
+
+func Migrate(ctx *middleware.Context) {
+	ctx.Data["Title"] = "Migrate repository"
+	ctx.Data["PageIsNewRepo"] = true
+	ctx.HTML(200, "repo/migrate")
+}
+
+func MigratePost(ctx *middleware.Context, form auth.MigrateRepoForm) {
+	ctx.Data["Title"] = "Migrate repository"
+	ctx.Data["PageIsNewRepo"] = true
+
+	if ctx.HasError() {
+		ctx.HTML(200, "repo/migrate")
+		return
+	}
+
+	url := strings.Replace(form.Url, "://", fmt.Sprintf("://%s:%s@", form.AuthUserName, form.AuthPasswd), 1)
+	repo, err := models.MigrateRepository(ctx.User, form.RepoName, form.Description, form.Private,
+		form.Mirror, url)
+	if err == nil {
+		log.Trace("%s Repository migrated: %s/%s", ctx.Req.RequestURI, ctx.User.LowerName, form.RepoName)
+		ctx.Redirect("/" + ctx.User.Name + "/" + form.RepoName)
+		return
+	} else if err == models.ErrRepoAlreadyExist {
+		ctx.RenderWithErr("Repository name has already been used", "repo/migrate", &form)
+		return
+	} else if err == models.ErrRepoNameIllegal {
+		ctx.RenderWithErr(models.ErrRepoNameIllegal.Error(), "repo/migrate", &form)
+		return
+	}
+
+	if repo != nil {
+		if errDelete := models.DeleteRepository(ctx.User.Id, repo.Id, ctx.User.Name); errDelete != nil {
+			log.Error("repo.MigratePost(DeleteRepository): %v", errDelete)
+		}
+	}
+
+	if strings.Contains(err.Error(), "Authentication failed") {
+		ctx.RenderWithErr(err.Error(), "repo/migrate", &form)
+		return
+	}
+	ctx.Handle(500, "repo.Migrate", err)
 }
 
 func Single(ctx *middleware.Context, params martini.Params) {
 	branchName := ctx.Repo.BranchName
-	commitId := ctx.Repo.CommitId
 	userName := ctx.Repo.Owner.Name
 	repoName := ctx.Repo.Repository.Name
 
@@ -73,46 +125,42 @@ func Single(ctx *middleware.Context, params martini.Params) {
 
 	ctx.Data["IsRepoToolbarSource"] = true
 
-	// Branches.
-	brs, err := models.GetBranches(userName, repoName)
-	if err != nil {
-		ctx.Handle(404, "repo.Single(GetBranches)", err)
-		return
-	}
-
-	ctx.Data["Branches"] = brs
-
 	isViewBranch := ctx.Repo.IsBranch
 	ctx.Data["IsViewBranch"] = isViewBranch
 
-	repoFile, err := models.GetTargetFile(userName, repoName,
-		branchName, commitId, treename)
+	treePath := treename
+	if len(treePath) != 0 {
+		treePath = treePath + "/"
+	}
 
-	if err != nil && err != models.ErrRepoFileNotExist {
-		ctx.Handle(404, "repo.Single(GetTargetFile)", err)
+	entry, err := ctx.Repo.Commit.GetTreeEntryByPath(treename)
+
+	if err != nil && err != git.ErrNotExist {
+		ctx.Handle(404, "repo.Single(GetTreeEntryByPath)", err)
 		return
 	}
 
-	if len(treename) != 0 && repoFile == nil {
+	if len(treename) != 0 && entry == nil {
 		ctx.Handle(404, "repo.Single", nil)
 		return
 	}
 
-	if repoFile != nil && repoFile.IsFile() {
-		if blob, err := repoFile.LookupBlob(); err != nil {
-			ctx.Handle(404, "repo.Single(repoFile.LookupBlob)", err)
+	if entry != nil && !entry.IsDir() {
+		blob := entry.Blob()
+
+		if data, err := blob.Data(); err != nil {
+			ctx.Handle(404, "repo.Single(blob.Data)", err)
 		} else {
-			ctx.Data["FileSize"] = repoFile.Size
+			ctx.Data["FileSize"] = blob.Size()
 			ctx.Data["IsFile"] = true
-			ctx.Data["FileName"] = repoFile.Name
-			ext := path.Ext(repoFile.Name)
+			ctx.Data["FileName"] = blob.Name()
+			ext := path.Ext(blob.Name())
 			if len(ext) > 0 {
 				ext = ext[1:]
 			}
 			ctx.Data["FileExt"] = ext
 			ctx.Data["FileLink"] = rawLink + "/" + treename
 
-			data := blob.Contents()
 			_, isTextFile := base.IsTextFile(data)
 			_, isImageFile := base.IsImageFile(data)
 			ctx.Data["FileIsText"] = isTextFile
@@ -120,7 +168,7 @@ func Single(ctx *middleware.Context, params martini.Params) {
 			if isImageFile {
 				ctx.Data["IsImageFile"] = true
 			} else {
-				readmeExist := base.IsMarkdownFile(repoFile.Name) || base.IsReadmeFile(repoFile.Name)
+				readmeExist := base.IsMarkdownFile(blob.Name()) || base.IsReadmeFile(blob.Name())
 				ctx.Data["ReadmeExist"] = readmeExist
 				if readmeExist {
 					ctx.Data["FileContent"] = string(base.RenderMarkdown(data, ""))
@@ -134,21 +182,35 @@ func Single(ctx *middleware.Context, params martini.Params) {
 
 	} else {
 		// Directory and file list.
-		files, err := models.GetReposFiles(userName, repoName, ctx.Repo.CommitId, treename)
+		tree, err := ctx.Repo.Commit.SubTree(treename)
 		if err != nil {
-			ctx.Handle(404, "repo.Single(GetReposFiles)", err)
+			ctx.Handle(404, "repo.Single(SubTree)", err)
 			return
+		}
+		entries := tree.ListEntries()
+		entries.Sort()
+
+		files := make([][]interface{}, 0, len(entries))
+
+		for _, te := range entries {
+			c, err := ctx.Repo.Commit.GetCommitOfRelPath(filepath.Join(treePath, te.Name()))
+			if err != nil {
+				ctx.Handle(404, "repo.Single(SubTree)", err)
+				return
+			}
+
+			files = append(files, []interface{}{te, c})
 		}
 
 		ctx.Data["Files"] = files
 
-		var readmeFile *models.RepoFile
+		var readmeFile *git.Blob
 
-		for _, f := range files {
-			if !f.IsFile() || !base.IsReadmeFile(f.Name) {
+		for _, f := range entries {
+			if f.IsDir() || !base.IsReadmeFile(f.Name()) {
 				continue
 			} else {
-				readmeFile = f
+				readmeFile = f.Blob()
 				break
 			}
 		}
@@ -156,16 +218,15 @@ func Single(ctx *middleware.Context, params martini.Params) {
 		if readmeFile != nil {
 			ctx.Data["ReadmeInSingle"] = true
 			ctx.Data["ReadmeExist"] = true
-			if blob, err := readmeFile.LookupBlob(); err != nil {
+			if data, err := readmeFile.Data(); err != nil {
 				ctx.Handle(404, "repo.Single(readmeFile.LookupBlob)", err)
 				return
 			} else {
 				ctx.Data["FileSize"] = readmeFile.Size
 				ctx.Data["FileLink"] = rawLink + "/" + treename
-				data := blob.Contents()
 				_, isTextFile := base.IsTextFile(data)
 				ctx.Data["FileIsText"] = isTextFile
-				ctx.Data["FileName"] = readmeFile.Name
+				ctx.Data["FileName"] = readmeFile.Name()
 				if isTextFile {
 					ctx.Data["FileContent"] = string(base.RenderMarkdown(data, branchLink))
 				}
@@ -194,64 +255,36 @@ func Single(ctx *middleware.Context, params martini.Params) {
 	ctx.Data["LastCommit"] = ctx.Repo.Commit
 	ctx.Data["Paths"] = Paths
 	ctx.Data["Treenames"] = treenames
+	ctx.Data["TreePath"] = treePath
 	ctx.Data["BranchLink"] = branchLink
 	ctx.HTML(200, "repo/single")
 }
 
-func SingleDownload(ctx *middleware.Context, params martini.Params) {
-	// Get tree path
-	treename := params["_1"]
-
-	branchName := params["branchname"]
-	userName := params["username"]
-	repoName := params["reponame"]
-
-	var commitId string
-	if !models.IsBranchExist(userName, repoName, branchName) {
-		commitId = branchName
-		branchName = ""
-	}
-
-	repoFile, err := models.GetTargetFile(userName, repoName,
-		branchName, commitId, treename)
-
-	if err != nil {
-		ctx.Handle(404, "repo.SingleDownload(GetTargetFile)", err)
-		return
-	}
-
-	blob, err := repoFile.LookupBlob()
-	if err != nil {
-		ctx.Handle(404, "repo.SingleDownload(LookupBlob)", err)
-		return
-	}
-
-	data := blob.Contents()
-	contentType, isTextFile := base.IsTextFile(data)
-	_, isImageFile := base.IsImageFile(data)
-	ctx.Res.Header().Set("Content-Type", contentType)
-	if !isTextFile && !isImageFile {
-		ctx.Res.Header().Set("Content-Disposition", "attachment; filename="+filepath.Base(treename))
-		ctx.Res.Header().Set("Content-Transfer-Encoding", "binary")
-	}
-	ctx.Res.Write(data)
+func basicEncode(username, password string) string {
+	auth := username + ":" + password
+	return base64.StdEncoding.EncodeToString([]byte(auth))
 }
 
-func Http(ctx *middleware.Context, params martini.Params) {
-	// TODO: access check
-
-	username := params["username"]
-	reponame := params["reponame"]
-	if strings.HasSuffix(reponame, ".git") {
-		reponame = reponame[:len(reponame)-4]
+func basicDecode(encoded string) (user string, name string, err error) {
+	var s []byte
+	s, err = base64.StdEncoding.DecodeString(encoded)
+	if err != nil {
+		return
 	}
 
-	dir := models.RepoPath(username, reponame)
-	prefix := path.Join("/", username, params["reponame"])
-	server := webdav.NewServer(
-		dir, prefix, true)
+	a := strings.Split(string(s), ":")
+	if len(a) == 2 {
+		user, name = a[0], a[1]
+	} else {
+		err = errors.New("decode failed")
+	}
+	return
+}
 
-	server.ServeHTTP(ctx.ResponseWriter, ctx.Req)
+func authRequired(ctx *middleware.Context) {
+	ctx.ResponseWriter.Header().Set("WWW-Authenticate", "Basic realm=\".\"")
+	ctx.Data["ErrorMsg"] = "no basic auth and digit auth"
+	ctx.HTML(401, fmt.Sprintf("status/401"))
 }
 
 func Setting(ctx *middleware.Context, params martini.Params) {
@@ -277,43 +310,58 @@ func SettingPost(ctx *middleware.Context) {
 		return
 	}
 
+	ctx.Data["IsRepoToolbarSetting"] = true
+
 	switch ctx.Query("action") {
 	case "update":
-		isNameChanged := false
 		newRepoName := ctx.Query("name")
 		// Check if repository name has been changed.
 		if ctx.Repo.Repository.Name != newRepoName {
 			isExist, err := models.IsRepositoryExist(ctx.Repo.Owner, newRepoName)
 			if err != nil {
-				ctx.Handle(404, "repo.SettingPost(update: check existence)", err)
+				ctx.Handle(500, "repo.SettingPost(update: check existence)", err)
 				return
 			} else if isExist {
 				ctx.RenderWithErr("Repository name has been taken in your repositories.", "repo/setting", nil)
 				return
 			} else if err = models.ChangeRepositoryName(ctx.Repo.Owner.Name, ctx.Repo.Repository.Name, newRepoName); err != nil {
-				ctx.Handle(404, "repo.SettingPost(change repository name)", err)
+				ctx.Handle(500, "repo.SettingPost(change repository name)", err)
 				return
 			}
 			log.Trace("%s Repository name changed: %s/%s -> %s", ctx.Req.RequestURI, ctx.User.Name, ctx.Repo.Repository.Name, newRepoName)
 
-			isNameChanged = true
 			ctx.Repo.Repository.Name = newRepoName
 		}
 
+		br := ctx.Query("branch")
+
+		if git.IsBranchExist(models.RepoPath(ctx.User.Name, ctx.Repo.Repository.Name), br) {
+			ctx.Repo.Repository.DefaultBranch = br
+		}
 		ctx.Repo.Repository.Description = ctx.Query("desc")
 		ctx.Repo.Repository.Website = ctx.Query("site")
+		ctx.Repo.Repository.IsPrivate = ctx.Query("private") == "on"
+		ctx.Repo.Repository.IsGoget = ctx.Query("goget") == "on"
 		if err := models.UpdateRepository(ctx.Repo.Repository); err != nil {
 			ctx.Handle(404, "repo.SettingPost(update)", err)
 			return
 		}
-
-		ctx.Data["IsSuccess"] = true
-		if isNameChanged {
-			ctx.Redirect(fmt.Sprintf("/%s/%s/settings", ctx.Repo.Owner.Name, ctx.Repo.Repository.Name))
-		} else {
-			ctx.HTML(200, "repo/setting")
-		}
 		log.Trace("%s Repository updated: %s/%s", ctx.Req.RequestURI, ctx.Repo.Owner.Name, ctx.Repo.Repository.Name)
+
+		if ctx.Repo.Repository.IsMirror {
+			if len(ctx.Query("interval")) > 0 {
+				var err error
+				ctx.Repo.Mirror.Interval, err = base.StrTo(ctx.Query("interval")).Int()
+				if err != nil {
+					log.Error("repo.SettingPost(get mirror interval): %v", err)
+				} else if err = models.UpdateMirror(ctx.Repo.Mirror); err != nil {
+					log.Error("repo.SettingPost(UpdateMirror): %v", err)
+				}
+			}
+		}
+
+		ctx.Flash.Success("Repository options has been successfully updated.")
+		ctx.Redirect(fmt.Sprintf("/%s/%s/settings", ctx.Repo.Owner.Name, ctx.Repo.Repository.Name))
 	case "transfer":
 		if len(ctx.Repo.Repository.Name) == 0 || ctx.Repo.Repository.Name != ctx.Query("repository") {
 			ctx.RenderWithErr("Please make sure you entered repository name is correct.", "repo/setting", nil)
@@ -324,19 +372,18 @@ func SettingPost(ctx *middleware.Context) {
 		// Check if new owner exists.
 		isExist, err := models.IsUserExist(newOwner)
 		if err != nil {
-			ctx.Handle(404, "repo.SettingPost(transfer: check existence)", err)
+			ctx.Handle(500, "repo.SettingPost(transfer: check existence)", err)
 			return
 		} else if !isExist {
 			ctx.RenderWithErr("Please make sure you entered owner name is correct.", "repo/setting", nil)
 			return
 		} else if err = models.TransferOwnership(ctx.User, newOwner, ctx.Repo.Repository); err != nil {
-			ctx.Handle(404, "repo.SettingPost(transfer repository)", err)
+			ctx.Handle(500, "repo.SettingPost(transfer repository)", err)
 			return
 		}
 		log.Trace("%s Repository transfered: %s/%s -> %s", ctx.Req.RequestURI, ctx.User.Name, ctx.Repo.Repository.Name, newOwner)
 
 		ctx.Redirect("/")
-		return
 	case "delete":
 		if len(ctx.Repo.Repository.Name) == 0 || ctx.Repo.Repository.Name != ctx.Query("repository") {
 			ctx.RenderWithErr("Please make sure you entered repository name is correct.", "repo/setting", nil)
@@ -344,11 +391,11 @@ func SettingPost(ctx *middleware.Context) {
 		}
 
 		if err := models.DeleteRepository(ctx.User.Id, ctx.Repo.Repository.Id, ctx.User.LowerName); err != nil {
-			ctx.Handle(200, "repo.Delete", err)
+			ctx.Handle(500, "repo.Delete", err)
 			return
 		}
-
 		log.Trace("%s Repository deleted: %s/%s", ctx.Req.RequestURI, ctx.User.LowerName, ctx.Repo.Repository.LowerName)
+
 		ctx.Redirect("/")
 	}
 }

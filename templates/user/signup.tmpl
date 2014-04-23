@@ -1,20 +1,23 @@
 {{template "base/head" .}}
 {{template "base/navbar" .}}
-<div class="container" id="body" data-page="user-signup">
+<div class="container" id="body">
 	<form action="/user/sign_up" method="post" class="form-horizontal card" id="login-card">
 		{{.CsrfTokenHtml}}
-		{{if .DisenableRegisteration}}
-		Sorry, registeration has been disenabled, you can only get account from administrator.
+		{{if .DisableRegistration}}
+		Sorry, registration has been disabled. Please contact the site administrator.
 		{{else}}
-        <h3>Sign Up</h3>
-	    <div class="alert alert-danger form-error{{if .HasError}}{{else}} hidden{{end}}">{{.ErrorMsg}}</div>
+		{{if .IsSocialLogin}}
+		<h3>Social login: 2nd step <small>complete information</small></h3>
+		{{else}}
+		<h3>Sign Up</h3>
+		{{end}}
+	    {{template "base/alert" .}}
 		<div class="form-group {{if .Err_UserName}}has-error has-feedback{{end}}">
 			<label class="col-md-4 control-label">Username: </label>
 			<div class="col-md-6">
 				<input name="username" class="form-control" placeholder="Type your username" value="{{.username}}" required="required">
 			</div>
 		</div>
-
 		<div class="form-group {{if .Err_Email}}has-error has-feedback{{end}}">
 			<label class="col-md-4 control-label">Email: </label>
 			<div class="col-md-6">
@@ -44,7 +47,11 @@
 		
 	    <div class="form-group">
             <div class="col-md-offset-4 col-md-6">
+			{{if .IsSocialLogin}}
+                <a href="/user/login">Already have an account? Bind now!</a>
+			{{else}}
                 <a href="/user/login">Already have an account? Sign in now!</a>
+			{{end}}
             </div>
 	    </div>
 	    {{end}}

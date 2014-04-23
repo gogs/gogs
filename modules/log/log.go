@@ -21,8 +21,7 @@ func init() {
 func NewLogger(bufLen int64, mode, config string) {
 	Mode, Config = mode, config
 	logger = logs.NewLogger(bufLen)
-	logger.EnableFuncCallDepth(true)
-	logger.SetLogFuncCallDepth(4)
+	logger.SetLogFuncCallDepth(3)
 	logger.SetLogger(mode, config)
 }
 

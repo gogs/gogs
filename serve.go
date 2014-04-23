@@ -14,7 +14,7 @@ import (
 	"strings"
 
 	"github.com/codegangsta/cli"
-	"github.com/gogits/gogs/modules/log"
+	qlog "github.com/qiniu/log"
 
 	//"github.com/gogits/git"
 	"github.com/gogits/gogs/models"
@@ -44,11 +44,16 @@ gogs serv provide access auth for repositories`,
 }
 
 func newLogger(execDir string) {
-	level := "0"
 	logPath := execDir + "/log/serv.log"
 	os.MkdirAll(path.Dir(logPath), os.ModePerm)
-	log.NewLogger(0, "file", fmt.Sprintf(`{"level":%s,"filename":"%s"}`, level, logPath))
-	log.Trace("start logging...")
+
+	f, err := os.OpenFile(logPath, os.O_WRONLY|os.O_APPEND|os.O_CREATE, os.ModePerm)
+	if err != nil {
+		qlog.Fatal(err)
+	}
+
+	qlog.SetOutput(f)
+	qlog.Info("Start logging serv...")
 }
 
 func parseCmd(cmd string) (string, string) {
@@ -87,21 +92,18 @@ func runServ(k *cli.Context) {
 	keys := strings.Split(os.Args[2], "-")
 	if len(keys) != 2 {
 		println("auth file format error")
-		log.Error("auth file format error")
-		return
+		qlog.Fatal("auth file format error")
 	}
 
 	keyId, err := strconv.ParseInt(keys[1], 10, 64)
 	if err != nil {
 		println("auth file format error")
-		log.Error("auth file format error", err)
-		return
+		qlog.Fatal("auth file format error", err)
 	}
 	user, err := models.GetUserByKeyId(keyId)
 	if err != nil {
 		println("You have no right to access")
-		log.Error("SSH visit error: %v", err)
-		return
+		qlog.Fatalf("SSH visit error: %v", err)
 	}
 
 	cmd := os.Getenv("SSH_ORIGINAL_COMMAND")
@@ -114,24 +116,19 @@ func runServ(k *cli.Context) {
 	repoPath := strings.Trim(args, "'")
 	rr := strings.SplitN(repoPath, "/", 2)
 	if len(rr) != 2 {
-		println("Unavilable repository", args)
-		log.Error("Unavilable repository %v", args)
-		return
+		println("Unavailable repository", args)
+		qlog.Fatalf("Unavailable repository %v", args)
 	}
 	repoUserName := rr[0]
-	repoName := rr[1]
-	if strings.HasSuffix(repoName, ".git") {
-		repoName = repoName[:len(repoName)-4]
-	}
+	repoName := strings.TrimSuffix(rr[1], ".git")
 
 	isWrite := In(verb, COMMANDS_WRITE)
 	isRead := In(verb, COMMANDS_READONLY)
 
 	repoUser, err := models.GetUserByName(repoUserName)
 	if err != nil {
-		fmt.Println("You have no right to access")
-		log.Error("Get user failed", err)
-		return
+		println("You have no right to access")
+		qlog.Fatal("Get user failed", err)
 	}
 
 	// access check
@@ -139,55 +136,45 @@ func runServ(k *cli.Context) {
 	case isWrite:
 		has, err := models.HasAccess(user.LowerName, path.Join(repoUserName, repoName), models.AU_WRITABLE)
 		if err != nil {
-			println("Inernel error:", err)
-			log.Error(err.Error())
-			return
+			println("Internal error:", err)
+			qlog.Fatal(err)
 		} else if !has {
 			println("You have no right to write this repository")
-			log.Error("User %s has no right to write repository %s", user.Name, repoPath)
-			return
+			qlog.Fatalf("User %s has no right to write repository %s", user.Name, repoPath)
 		}
 	case isRead:
 		repo, err := models.GetRepositoryByName(repoUser.Id, repoName)
 		if err != nil {
 			println("Get repository error:", err)
-			log.Error("Get repository error: " + err.Error())
-			return
+			qlog.Fatal("Get repository error: " + err.Error())
 		}
 
 		if !repo.IsPrivate {
 			break
 		}
 
-		has, err := models.HasAccess(user.Name, repoPath, models.AU_READABLE)
+		has, err := models.HasAccess(user.Name, path.Join(repoUserName, repoName), models.AU_READABLE)
 		if err != nil {
-			println("Inernel error")
-			log.Error(err.Error())
-			return
+			println("Internal error")
+			qlog.Fatal(err)
 		}
 		if !has {
 			has, err = models.HasAccess(user.Name, repoPath, models.AU_WRITABLE)
 			if err != nil {
-				println("Inernel error")
-				log.Error(err.Error())
-				return
+				println("Internal error")
+				qlog.Fatal(err)
 			}
 		}
 		if !has {
 			println("You have no right to access this repository")
-			log.Error("You have no right to access this repository")
-			return
+			qlog.Fatal("You have no right to access this repository")
 		}
 	default:
 		println("Unknown command")
-		log.Error("Unknown command")
-		return
+		qlog.Fatal("Unknown command")
 	}
 
-	// for update use
-	os.Setenv("userName", user.Name)
-	os.Setenv("userId", strconv.Itoa(int(user.Id)))
-	os.Setenv("repoName", repoName)
+	models.SetRepoEnvs(user.Id, user.Name, repoName)
 
 	gitcmd := exec.Command(verb, repoPath)
 	gitcmd.Dir = base.RepoRootPath
@@ -197,7 +184,15 @@ func runServ(k *cli.Context) {
 
 	if err = gitcmd.Run(); err != nil {
 		println("execute command error:", err.Error())
-		log.Error("execute command error: " + err.Error())
-		return
+		qlog.Fatal("execute command error: " + err.Error())
 	}
+
+	//refName := os.Getenv("refName")
+	//oldCommitId := os.Getenv("oldCommitId")
+	//newCommitId := os.Getenv("newCommitId")
+
+	//qlog.Error("get envs:", refName, oldCommitId, newCommitId)
+
+	// update
+	//models.Update(refName, oldCommitId, newCommitId, repoUserName, repoName, user.Id)
 }

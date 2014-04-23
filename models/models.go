@@ -8,25 +8,34 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"strings"
 
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/go-xorm/xorm"
 	_ "github.com/lib/pq"
-	"github.com/lunny/xorm"
-	// _ "github.com/mattn/go-sqlite3"
 
 	"github.com/gogits/gogs/modules/base"
 )
 
 var (
-	orm       *xorm.Engine
+	orm    *xorm.Engine
+	tables []interface{}
+
 	HasEngine bool
 
 	DbCfg struct {
 		Type, Host, Name, User, Pwd, Path, SslMode string
 	}
 
-	UseSQLite3 bool
+	EnableSQLite3 bool
+	UseSQLite3    bool
 )
+
+func init() {
+	tables = append(tables, new(User), new(PublicKey), new(Repository), new(Watch),
+		new(Action), new(Access), new(Issue), new(Comment), new(Oauth2), new(Follow),
+		new(Mirror), new(Release))
+}
 
 func LoadModelsConfig() {
 	DbCfg.Type = base.Cfg.MustValue("database", "DB_TYPE")
@@ -47,20 +56,31 @@ func NewTestEngine(x *xorm.Engine) (err error) {
 		x, err = xorm.NewEngine("mysql", fmt.Sprintf("%s:%s@tcp(%s)/%s?charset=utf8",
 			DbCfg.User, DbCfg.Pwd, DbCfg.Host, DbCfg.Name))
 	case "postgres":
-		x, err = xorm.NewEngine("postgres", fmt.Sprintf("user=%s password=%s dbname=%s sslmode=%s",
-			DbCfg.User, DbCfg.Pwd, DbCfg.Name, DbCfg.SslMode))
-	// case "sqlite3":
-	// 	os.MkdirAll(path.Dir(DbCfg.Path), os.ModePerm)
-	// 	x, err = xorm.NewEngine("sqlite3", DbCfg.Path)
+		var host, port = "127.0.0.1", "5432"
+		fields := strings.Split(DbCfg.Host, ":")
+		if len(fields) > 0 {
+			host = fields[0]
+		}
+		if len(fields) > 1 {
+			port = fields[1]
+		}
+		cnnstr := fmt.Sprintf("user=%s password=%s host=%s port=%s dbname=%s sslmode=%s",
+			DbCfg.User, DbCfg.Pwd, host, port, DbCfg.Name, DbCfg.SslMode)
+		//fmt.Println(cnnstr)
+		x, err = xorm.NewEngine("postgres", cnnstr)
+	case "sqlite3":
+		if !EnableSQLite3 {
+			return fmt.Errorf("Unknown database type: %s", DbCfg.Type)
+		}
+		os.MkdirAll(path.Dir(DbCfg.Path), os.ModePerm)
+		x, err = xorm.NewEngine("sqlite3", DbCfg.Path)
 	default:
 		return fmt.Errorf("Unknown database type: %s", DbCfg.Type)
 	}
 	if err != nil {
 		return fmt.Errorf("models.init(fail to conntect database): %v", err)
 	}
-
-	return x.Sync(new(User), new(PublicKey), new(Repository), new(Watch),
-		new(Action), new(Access), new(Issue), new(Comment))
+	return x.Sync(tables...)
 }
 
 func SetEngine() (err error) {
@@ -69,8 +89,16 @@ func SetEngine() (err error) {
 		orm, err = xorm.NewEngine("mysql", fmt.Sprintf("%s:%s@tcp(%s)/%s?charset=utf8",
 			DbCfg.User, DbCfg.Pwd, DbCfg.Host, DbCfg.Name))
 	case "postgres":
-		orm, err = xorm.NewEngine("postgres", fmt.Sprintf("user=%s password=%s dbname=%s sslmode=%s",
-			DbCfg.User, DbCfg.Pwd, DbCfg.Name, DbCfg.SslMode))
+		var host, port = "127.0.0.1", "5432"
+		fields := strings.Split(DbCfg.Host, ":")
+		if len(fields) > 0 {
+			host = fields[0]
+		}
+		if len(fields) > 1 {
+			port = fields[1]
+		}
+		orm, err = xorm.NewEngine("postgres", fmt.Sprintf("user=%s password=%s host=%s port=%s dbname=%s sslmode=%s",
+			DbCfg.User, DbCfg.Pwd, host, port, DbCfg.Name, DbCfg.SslMode))
 	case "sqlite3":
 		os.MkdirAll(path.Dir(DbCfg.Path), os.ModePerm)
 		orm, err = xorm.NewEngine("sqlite3", DbCfg.Path)
@@ -91,7 +119,7 @@ func SetEngine() (err error) {
 	if err != nil {
 		return fmt.Errorf("models.init(fail to create xorm.log): %v", err)
 	}
-	orm.Logger = f
+	orm.Logger = xorm.NewSimpleLogger(f)
 
 	orm.ShowSQL = true
 	orm.ShowDebug = true
@@ -102,16 +130,19 @@ func SetEngine() (err error) {
 func NewEngine() (err error) {
 	if err = SetEngine(); err != nil {
 		return err
-	} else if err = orm.Sync(new(User), new(PublicKey), new(Repository), new(Watch),
-		new(Action), new(Access), new(Issue), new(Comment)); err != nil {
-		return fmt.Errorf("sync database struct error: %v", err)
+	}
+	if err = orm.Sync(tables...); err != nil {
+		return fmt.Errorf("sync database struct error: %v\n", err)
 	}
 	return nil
 }
 
 type Statistic struct {
 	Counter struct {
-		User, PublicKey, Repo, Watch, Action, Access int64
+		User, PublicKey, Repo,
+		Watch, Action, Access,
+		Issue, Comment,
+		Mirror, Oauth, Release int64
 	}
 }
 
@@ -122,5 +153,10 @@ func GetStatistic() (stats Statistic) {
 	stats.Counter.Watch, _ = orm.Count(new(Watch))
 	stats.Counter.Action, _ = orm.Count(new(Action))
 	stats.Counter.Access, _ = orm.Count(new(Access))
+	stats.Counter.Issue, _ = orm.Count(new(Issue))
+	stats.Counter.Comment, _ = orm.Count(new(Comment))
+	stats.Counter.Mirror, _ = orm.Count(new(Mirror))
+	stats.Counter.Oauth, _ = orm.Count(new(Oauth2))
+	stats.Counter.Release, _ = orm.Count(new(Release))
 	return
 }

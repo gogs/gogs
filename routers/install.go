@@ -6,20 +6,23 @@ package routers
 
 import (
 	"errors"
-	"fmt"
 	"os"
+	"os/exec"
 	"strings"
 
 	"github.com/Unknwon/goconfig"
 	"github.com/go-martini/martini"
-	"github.com/lunny/xorm"
+	"github.com/go-xorm/xorm"
+	qlog "github.com/qiniu/log"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/base"
+	"github.com/gogits/gogs/modules/cron"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/mailer"
 	"github.com/gogits/gogs/modules/middleware"
+	"github.com/gogits/gogs/modules/social"
 )
 
 // Check run mode(Default of martini is Dev).
@@ -27,10 +30,16 @@ func checkRunMode() {
 	switch base.Cfg.MustValue("", "RUN_MODE") {
 	case "prod":
 		martini.Env = martini.Prod
+		base.IsProdMode = true
 	case "test":
 		martini.Env = martini.Test
 	}
 	log.Info("Run Mode: %s", strings.Title(martini.Env))
+}
+
+func NewServices() {
+	base.NewBaseServices()
+	social.NewOauthService()
 }
 
 // GlobalInit is for global configuration reload-able.
@@ -40,16 +49,19 @@ func GlobalInit() {
 	models.LoadModelsConfig()
 	models.LoadRepoConfig()
 	models.NewRepoContext()
+	NewServices()
 
 	if base.InstallLock {
 		if err := models.NewEngine(); err != nil {
-			fmt.Println(err)
-			os.Exit(2)
+			qlog.Fatal(err)
 		}
 
 		models.HasEngine = true
+		if models.EnableSQLite3 {
+			log.Info("SQLite3 Enabled")
+		}
+		cron.NewCronContext()
 	}
-	base.NewServices()
 	checkRunMode()
 }
 
@@ -62,44 +74,56 @@ func Install(ctx *middleware.Context, form auth.InstallForm) {
 	ctx.Data["Title"] = "Install"
 	ctx.Data["PageIsInstall"] = true
 
-	if ctx.Req.Method == "GET" {
-		// Get and assign value to install form.
-		if len(form.Host) == 0 {
-			form.Host = models.DbCfg.Host
-		}
-		if len(form.User) == 0 {
-			form.User = models.DbCfg.User
-		}
-		if len(form.Passwd) == 0 {
-			form.Passwd = models.DbCfg.Pwd
-		}
-		if len(form.DatabaseName) == 0 {
-			form.DatabaseName = models.DbCfg.Name
-		}
-		if len(form.DatabasePath) == 0 {
-			form.DatabasePath = models.DbCfg.Path
-		}
+	// Get and assign value to install form.
+	if len(form.Host) == 0 {
+		form.Host = models.DbCfg.Host
+	}
+	if len(form.User) == 0 {
+		form.User = models.DbCfg.User
+	}
+	if len(form.Passwd) == 0 {
+		form.Passwd = models.DbCfg.Pwd
+	}
+	if len(form.DatabaseName) == 0 {
+		form.DatabaseName = models.DbCfg.Name
+	}
+	if len(form.DatabasePath) == 0 {
+		form.DatabasePath = models.DbCfg.Path
+	}
 
-		if len(form.RepoRootPath) == 0 {
-			form.RepoRootPath = base.RepoRootPath
-		}
-		if len(form.RunUser) == 0 {
-			form.RunUser = base.RunUser
-		}
-		if len(form.Domain) == 0 {
-			form.Domain = base.Domain
-		}
-		if len(form.AppUrl) == 0 {
-			form.AppUrl = base.AppUrl
-		}
+	if len(form.RepoRootPath) == 0 {
+		form.RepoRootPath = base.RepoRootPath
+	}
+	if len(form.RunUser) == 0 {
+		form.RunUser = base.RunUser
+	}
+	if len(form.Domain) == 0 {
+		form.Domain = base.Domain
+	}
+	if len(form.AppUrl) == 0 {
+		form.AppUrl = base.AppUrl
+	}
 
-		auth.AssignForm(form, ctx.Data)
+	auth.AssignForm(form, ctx.Data)
+	ctx.HTML(200, "install")
+}
+
+func InstallPost(ctx *middleware.Context, form auth.InstallForm) {
+	if base.InstallLock {
+		ctx.Handle(404, "install.Install", errors.New("Installation is prohibited"))
+		return
+	}
+
+	ctx.Data["Title"] = "Install"
+	ctx.Data["PageIsInstall"] = true
+
+	if ctx.HasError() {
 		ctx.HTML(200, "install")
 		return
 	}
 
-	if ctx.HasError() {
-		ctx.HTML(200, "install")
+	if _, err := exec.LookPath("git"); err != nil {
+		ctx.RenderWithErr("Fail to test 'git' command: "+err.Error(), "install", &form)
 		return
 	}
 
@@ -133,9 +157,9 @@ func Install(ctx *middleware.Context, form auth.InstallForm) {
 	}
 
 	// Check run user.
-	curUser := os.Getenv("USERNAME")
+	curUser := os.Getenv("USER")
 	if len(curUser) == 0 {
-		curUser = os.Getenv("USER")
+		curUser = os.Getenv("USERNAME")
 	}
 	// Does not check run user when the install lock is off.
 	if form.RunUser != curUser {
@@ -183,6 +207,7 @@ func Install(ctx *middleware.Context, form auth.InstallForm) {
 	if _, err := models.RegisterUser(&models.User{Name: form.AdminName, Email: form.AdminEmail, Passwd: form.AdminPasswd,
 		IsAdmin: true, IsActive: true}); err != nil {
 		if err != models.ErrUserAlreadyExist {
+			base.InstallLock = false
 			ctx.RenderWithErr("Admin account setting is invalid: "+err.Error(), "install", &form)
 			return
 		}
@@ -190,5 +215,6 @@ func Install(ctx *middleware.Context, form auth.InstallForm) {
 	}
 
 	log.Info("First-time run install finished!")
+	ctx.Flash.Success("Welcome! We're glad that you choose Gogs, have fun and take care.")
 	ctx.Redirect("/user/login")
 }

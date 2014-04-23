@@ -1,0 +1,36 @@
+{{template "base/head" .}}
+{{template "base/navbar" .}}
+<div id="body" class="container">
+    <form action="/user/activate" method="post" class="form-horizontal card" id="login-card">
+        {{.CsrfTokenHtml}}
+        <h3>Activate Your Account</h3>
+        {{if .IsActivatePage}}
+            {{if .ServiceNotEnabled}}
+            <p>Sorry, Register Mail Confirmation has been disabled.</p>
+            {{else if .ResendLimited}}
+            <p>Sorry, you are sending an activation e-mail too frequently. Please wait 3 minutes.</p>
+            {{else}}
+            <p>A new confirmation e-mail has been sent to <b>{{.SignedUser.Email}}</b>, please check your inbox within the next {{.Hours}} hours to complete your registration.</p>
+            <hr/>
+            <a href="http://{{Mail2Domain .SignedUser.Email}}" class="btn btn-lg btn-success">Sign in to your e-mail</a>
+            {{end}}
+        {{else}}
+            {{if .IsSendRegisterMail}}
+            <p>A confirmation e-mail has been sent to <b>{{.Email}}</b>, please check your inbox within the next {{.Hours}} hours to complete your registration.</p>
+            <hr/>
+            <a href="http://{{Mail2Domain .Email}}" class="btn btn-lg btn-success">Sign in to your e-mail</a>
+            {{else if .IsActivateFailed}}
+            <p>Sorry, your confirmation code has exipired or not valid.</p>
+            {{else}}
+    		<p>Hi, {{.SignedUser.Name}}, you have an unconfirmed email address(<b>{{.SignedUser.Email}}</b>). If you haven't received a confirmation e-mail or need to resend a new one, please click on the button below.</p>
+    		<hr/>
+            <div class="form-group">
+                <div class="col-md-offset-4 col-md-6">
+                    <button type="submit" class="btn btn-lg btn-primary">Click here to resend your activation e-mail</button>
+                </div>
+            </div>
+            {{end}}
+        {{end}}
+    </form>
+</div>
+{{template "base/footer" .}}
