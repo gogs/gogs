@@ -20,7 +20,7 @@ var CmdUpdate = cli.Command{
 	Name:  "update",
 	Usage: "This command just should be called by ssh shell",
 	Description: `
-gogs serv provide access auth for repositories`,
+gogs update get pushed info and insert into database`,
 	Action: runUpdate,
 	Flags:  []cli.Flag{},
 }
