@@ -7,12 +7,11 @@ package repo
 import (
 	"github.com/go-martini/martini"
 
-	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/middleware"
 )
 
 func Branches(ctx *middleware.Context, params martini.Params) {
-	brs, err := models.GetBranches(ctx.Repo.Owner.Name, ctx.Repo.Repository.Name)
+	brs, err := ctx.Repo.GitRepo.GetBranches()
 	if err != nil {
 		ctx.Handle(404, "repo.Branches", err)
 		return

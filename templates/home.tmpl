@@ -1,8 +1,27 @@
 {{template "base/head" .}}
 {{template "base/navbar" .}}
 <div id="body" class="container">
+	{{if not .Repos}}
 	<h4>Hey there, welcome to the land of Gogs!</h4>
-	<p>If you just get your Gogs server running, go <a href="/install">install</a> guide page will help you setup things for your first-time run.</p>
+	<p>If you just got your Gogs server running, go to the <a href="/install">install</a> guide page, which will guide you through your initial setup.</p>
 	<img src="http://gowalker.org/public/gogs_demo.gif">
+	{{else}}
+	<h4>Hey there, welcome to the land of Gogs!</h4>
+	<h5>Here are some recent updated repositories:</h5>
+    <div class="tab-pane active">
+        <ul class="list-unstyled repo-list">
+        {{range .Repos}}
+            <li>
+                <div class="meta pull-right"><!-- <i class="fa fa-star"></i> {{.NumStars}} --> <i class="fa fa-code-fork"></i> {{.NumForks}}</div>
+                <h4>
+                    <a href="/{{.Owner.Name}}/{{.Name}}">{{.Name}}</a>
+                </h4>
+                <p class="desc">{{.Description}}</p>
+                <div class="info">Last updated {{.Updated|TimeSince}}</div>
+            </li>
+        {{end}}
+        </ul>
+    </div>
+	{{end}}
 </div>
 {{template "base/footer" .}}

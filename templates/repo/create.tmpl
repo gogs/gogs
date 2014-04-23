@@ -4,7 +4,7 @@
     <form action="/repo/create" method="post" class="form-horizontal card" id="repo-create">
         {{.CsrfTokenHtml}}
         <h3>Create New Repository</h3>
-        <div class="alert alert-danger form-error{{if .HasError}}{{else}} hidden{{end}}">{{.ErrorMsg}}</div>
+        {{template "base/alert" .}}
         <div class="form-group">
             <label class="col-md-2 control-label">Owner<strong class="text-danger">*</strong></label>
             <div class="col-md-8">
@@ -22,10 +22,14 @@
         </div>
 
         <div class="form-group">
-            <label class="col-md-2 control-label">Visibility<strong class="text-danger">*</strong></label>
+            <label class="col-md-2 control-label">Visibility</label>
             <div class="col-md-8">
-                <p class="form-control-static">Public</p>
-                <input type="hidden" value="public" name="visibility"/>
+                <div class="checkbox">
+                    <label>
+                        <input type="checkbox" name="private" {{if .private}}checked{{end}}>
+                        <strong>This repository is private</strong>
+                    </label>
+                </div>
             </div>
         </div>
 
@@ -43,6 +47,8 @@
                     <option value="">Select a language</option>
                     {{range .LanguageIgns}}<option value="{{.}}">{{.}}</option>{{end}}
                 </select>
+                <br>
+                <div>Need more .gitignore? Go <a href="http://www.gitignore.io/">gitignore.io</a>.</div>
             </div>
         </div>
 

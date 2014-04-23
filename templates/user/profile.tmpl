@@ -20,6 +20,20 @@
                     <li class="list-group-item"><i class="fa fa-link"></i><a target="_blank" href="{{.Owner.Website}}">{{.Owner.Website}}</a></li>
                 {{end}}
                 <li class="list-group-item"><i class="fa fa-clock-o"></i>Joined on {{DateFormat .Owner.Created "M d, Y"}}</li>
+                <!-- <hr> -->
+                <!-- <li class="list-group-item" style="padding-top: 5px;">
+                    <div class="profile-rel">
+                        <div class="col-md-6 followers">
+                            <strong>123</strong>
+                            <p>followers</p>
+                        </div>
+                        <div class="col-md-6 following">
+                            <strong>123</strong>
+                            <p>following</p>
+                        </div>
+                    </div>
+                </li>
+                <hr> -->
             </ul>
         </div>
     </div>
@@ -39,19 +53,18 @@
                         <span class="clearfix"></span>
                     </li>
                 {{else}}
-                    <li>No any public activity yet.</li>
+                    <li>No public activity yet.</li>
                 {{end}}
                 </ul>
             </div>
             {{else}}
-            {{$owner := .Owner}}
             <div class="tab-pane active">
                 <ul class="list-unstyled repo-list">
                 {{range .Repos}}
                     <li>
                         <div class="meta pull-right"><!-- <i class="fa fa-star"></i> {{.NumStars}} --> <i class="fa fa-code-fork"></i> {{.NumForks}}</div>
                         <h4>
-                            <a href="/{{$owner.Name}}/{{.Name}}">{{.Name}}</a>
+                            <a href="/{{$.Owner.Name}}/{{.Name}}">{{.Name}}{{if .IsPrivate}} <span class="label label-default">Private</span>{{end}}</a>
                         </h4>
                         <p class="desc">{{.Description}}</p>
                         <div class="info">Last updated {{.Updated|TimeSince}}</div>

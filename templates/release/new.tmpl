@@ -1,0 +1,70 @@
+{{template "base/head" .}}
+{{template "base/navbar" .}}
+{{template "repo/nav" .}}
+{{template "repo/toolbar" .}}
+<div id="body" class="container">
+    <div id="release">
+        <h4 id="release-head">New Release</h4>
+        {{template "base/alert" .}}
+        <form id="release-new-form" action="{{.RepoLink}}/releases/new" method="post" class="form form-inline">
+            {{.CsrfTokenHtml}}
+            <div class="form-group">
+                <input id="tag-name" name="tag_name" type="text" class="form-control" placeholder="tag name" value="{{.tag_name}}" />
+                <span class="target-at">@</span>
+                <div class="btn-group" id="release-new-target-select">
+                    <button type="button" class="btn btn-default"><i class="fa fa-code-fork fa-lg fa-m"></i>
+                        <span class="target-text">Target : </span>
+                        <strong id="release-new-target-name"> {{.Repository.DefaultBranch}}</strong>
+                    </button>
+                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                        <span class="caret"></span>
+                    </button>
+                    <div class="dropdown-menu clone-group-btn" id="release-new-target-branch-list">
+                        <ul class="list-group">
+                            {{range .Branches}}
+                            <li class="list-group-item">
+                                <a href="#" rel="{{.}}"><i class="fa fa-code-fork"></i>{{.}}</a>
+                            </li>
+                            {{end}}
+                        </ul>
+                    </div>
+                    <input id="tag-target" type="hidden" name="tag_target" value="{{.Repository.DefaultBranch}}"/>
+                </div>
+                <p class="help-block">Choose an existing tag, or create a new tag on publish</p>
+            </div>
+            <div class="form-group" style="display: block">
+                <input class="form-control input-lg" id="release-new-title" name="title" type="text" placeholder="release title" value="{{.title}}" />
+            </div>
+            <div class="form-group col-md-8" style="display: block" id="release-new-content-div">
+                <div class="md-help pull-right">
+                    Content with <a href="https://help.github.com/articles/markdown-basics">Markdown</a>
+                </div>
+                <ul class="nav nav-tabs" data-init="tabs">
+                    <li class="release-write active"><a href="#release-textarea" data-toggle="tab">Write</a></li>
+                    <li class="release-preview"><a href="#release-preview" data-toggle="tab" data-ajax="/api/v1/markdown?repo=repo_id&amp;release=new" data-ajax-name="release-preview" data-ajax-method="post" data-preview="#release-preview">Preview</a></li>
+                </ul>
+                <div class="tab-content">
+                    <div class="tab-pane active" id="release-textarea">
+                        <div class="form-group">
+                            <textarea class="form-control" name="content" id="release-new-content" rows="10" placeholder="Write some content" data-ajax-rel="release-preview" data-ajax-val="val" data-ajax-field="content">{{.content}}</textarea>
+                        </div>
+                    </div>
+                    <div class="tab-pane release-preview-content" id="release-preview">loading...</div>
+                </div>
+            </div>
+            <div class="text-right form-group col-md-8" style="display: block">
+                <hr/>
+                <label for="release-new-pre-release">
+                    <input id="release-new-pre-release" type="checkbox" name="prerelease" {{if .prerelease}}checked{{end}}/>
+                    <strong>This is a pre-release</strong>
+                </label>
+                <p class="help-block">We’ll point out that this release is identified as non-production ready.</p>
+            </div>
+            <div class="text-right form-group col-md-8" style="display: block">
+                <button class="btn-success btn">Publish release</button>
+                <!-- <input class="btn btn-default" type="submit" name="draft" value="Save Draft"/> -->
+            </div>
+        </form>
+    </div>
+</div>
+{{template "base/footer" .}}

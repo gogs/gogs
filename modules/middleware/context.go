@@ -10,7 +10,10 @@ import (
 	"encoding/base64"
 	"fmt"
 	"html/template"
+	"io"
 	"net/http"
+	"net/url"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -34,6 +37,7 @@ type Context struct {
 	p        martini.Params
 	Req      *http.Request
 	Res      http.ResponseWriter
+	Flash    *Flash
 	Session  session.SessionStore
 	Cache    cache.Cache
 	User     *models.User
@@ -47,6 +51,7 @@ type Context struct {
 		IsBranch   bool
 		IsTag      bool
 		IsCommit   bool
+		HasAccess  bool
 		Repository *models.Repository
 		Owner      *models.User
 		Commit     *git.Commit
@@ -59,6 +64,7 @@ type Context struct {
 			HTTPS string
 			Git   string
 		}
+		Mirror *models.Mirror
 	}
 }
 
@@ -78,6 +84,8 @@ func (ctx *Context) HasError() bool {
 	if !ok {
 		return false
 	}
+	ctx.Flash.ErrorMsg = ctx.Data["ErrorMsg"].(string)
+	ctx.Data["Flash"] = ctx.Flash
 	return hasErr.(bool)
 }
 
@@ -88,23 +96,21 @@ func (ctx *Context) HTML(status int, name string, htmlOpt ...HTMLOptions) {
 
 // RenderWithErr used for page has form validation but need to prompt error to users.
 func (ctx *Context) RenderWithErr(msg, tpl string, form auth.Form) {
-	ctx.Data["HasError"] = true
-	ctx.Data["ErrorMsg"] = msg
 	if form != nil {
 		auth.AssignForm(form, ctx.Data)
 	}
+	ctx.Flash.ErrorMsg = msg
+	ctx.Data["Flash"] = ctx.Flash
 	ctx.HTML(200, tpl)
 }
 
 // Handle handles and logs error by given status.
 func (ctx *Context) Handle(status int, title string, err error) {
 	log.Error("%s: %v", title, err)
-	if martini.Dev == martini.Prod {
-		ctx.HTML(500, "status/500")
-		return
+	if martini.Dev != martini.Prod {
+		ctx.Data["ErrorMsg"] = err
 	}
 
-	ctx.Data["ErrorMsg"] = err
 	ctx.HTML(status, fmt.Sprintf("status/%d", status))
 }
 
@@ -239,6 +245,56 @@ func (ctx *Context) CsrfTokenValid() bool {
 	return true
 }
 
+func (ctx *Context) ServeFile(file string, names ...string) {
+	var name string
+	if len(names) > 0 {
+		name = names[0]
+	} else {
+		name = filepath.Base(file)
+	}
+	ctx.Res.Header().Set("Content-Description", "File Transfer")
+	ctx.Res.Header().Set("Content-Type", "application/octet-stream")
+	ctx.Res.Header().Set("Content-Disposition", "attachment; filename="+name)
+	ctx.Res.Header().Set("Content-Transfer-Encoding", "binary")
+	ctx.Res.Header().Set("Expires", "0")
+	ctx.Res.Header().Set("Cache-Control", "must-revalidate")
+	ctx.Res.Header().Set("Pragma", "public")
+	http.ServeFile(ctx.Res, ctx.Req, file)
+}
+
+func (ctx *Context) ServeContent(name string, r io.ReadSeeker, params ...interface{}) {
+	modtime := time.Now()
+	for _, p := range params {
+		switch v := p.(type) {
+		case time.Time:
+			modtime = v
+		}
+	}
+	ctx.Res.Header().Set("Content-Description", "File Transfer")
+	ctx.Res.Header().Set("Content-Type", "application/octet-stream")
+	ctx.Res.Header().Set("Content-Disposition", "attachment; filename="+name)
+	ctx.Res.Header().Set("Content-Transfer-Encoding", "binary")
+	ctx.Res.Header().Set("Expires", "0")
+	ctx.Res.Header().Set("Cache-Control", "must-revalidate")
+	ctx.Res.Header().Set("Pragma", "public")
+	http.ServeContent(ctx.Res, ctx.Req, name, modtime, r)
+}
+
+type Flash struct {
+	url.Values
+	ErrorMsg, SuccessMsg string
+}
+
+func (f *Flash) Error(msg string) {
+	f.Set("error", msg)
+	f.ErrorMsg = msg
+}
+
+func (f *Flash) Success(msg string) {
+	f.Set("success", msg)
+	f.SuccessMsg = msg
+}
+
 // InitContext initializes a classic context for a request.
 func InitContext() martini.Handler {
 	return func(res http.ResponseWriter, r *http.Request, c martini.Context, rd *Render) {
@@ -256,9 +312,27 @@ func InitContext() martini.Handler {
 
 		// start session
 		ctx.Session = base.SessionManager.SessionStart(res, r)
+
+		// Get flash.
+		values, err := url.ParseQuery(ctx.GetCookie("gogs_flash"))
+		if err != nil {
+			log.Error("InitContext.ParseQuery(flash): %v", err)
+		} else if len(values) > 0 {
+			ctx.Flash = &Flash{Values: values}
+			ctx.Flash.ErrorMsg = ctx.Flash.Get("error")
+			ctx.Flash.SuccessMsg = ctx.Flash.Get("success")
+			ctx.Data["Flash"] = ctx.Flash
+			ctx.SetCookie("gogs_flash", "", -1)
+		}
+		ctx.Flash = &Flash{Values: url.Values{}}
+
 		rw := res.(martini.ResponseWriter)
 		rw.Before(func(martini.ResponseWriter) {
 			ctx.Session.SessionRelease(res)
+
+			if flash := ctx.Flash.Encode(); len(flash) > 0 {
+				ctx.SetCookie("gogs_flash", ctx.Flash.Encode(), 0)
+			}
 		})
 
 		// Get user from session if logined.

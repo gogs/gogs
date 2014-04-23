@@ -1,0 +1,99 @@
+{{template "base/head" .}}
+{{template "base/navbar" .}}
+<div class="container" id="body">
+    <form action="/repo/migrate" method="post" class="form-horizontal card" id="repo-create">
+        {{.CsrfTokenHtml}}
+        <h3>Repository Migration</h3>
+        {{template "base/alert" .}}
+        <!-- <div class="form-group">
+            <label class="col-md-2 control-label">From<strong class="text-danger">*</strong></label>
+            <div class="col-md-8">
+                <select class="form-control" name="from">
+                    <option value="github">GitHub</option>
+                </select>
+            </div>
+        </div> -->
+
+        <div class="form-group">
+            <label class="col-md-2 control-label">HTTPS URL<strong class="text-danger">*</strong></label>
+            <div class="col-md-8">
+                <input name="url" type="text" class="form-control" placeholder="Type your migration repository HTTPS URL" value="{{.url}}" required="required" >
+            </div>
+        </div>
+
+        <div class="form-group">
+            <div class="col-md-offset-2 col-md-8">
+                <a class="btn btn-default" data-toggle="collapse" data-target="#repo-import-auth">Need Authorization</a>
+            </div>
+            <div id="repo-import-auth" class="collapse">
+                <div class="form-group">
+                    <label class="col-md-2 control-label">Username</label>
+                    <div class="col-md-8">
+                        <input name="auth_username" type="text" class="form-control" placeholder="Type your user name" value="{{.auth_username}}" >
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-md-2 control-label">Password</label>
+                    <div class="col-md-8">
+                        <input name="auth_password" type="password" class="form-control" placeholder="Type your password" value="{{.auth_password}}" >
+                    </div>
+                </div>
+            </div>
+        </div>
+        <hr/>
+        <div class="form-group">
+            <label class="col-md-2 control-label">Owner<strong class="text-danger">*</strong></label>
+            <div class="col-md-8">
+                <p class="form-control-static">{{.SignedUserName}}</p>
+                <input type="hidden" value="{{.SignedUserId}}" name="userId"/>
+            </div>
+        </div>
+
+        <div class="form-group {{if .Err_RepoName}}has-error has-feedback{{end}}">
+            <label class="col-md-2 control-label">Repository<strong class="text-danger">*</strong></label>
+            <div class="col-md-8">
+                <input name="repo" type="text" class="form-control" placeholder="Type your repository name" value="{{.repo}}" required="required">
+                <span class="help-block">Great repository names are short and memorable. </span>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="col-md-2 control-label">Migration Type</label>
+            <div class="col-md-8">
+                <div class="checkbox">
+                    <label>
+                        <input type="checkbox" name="mirror" {{if .mirror}}checked{{end}}>
+                        <strong>This repository is a mirror</strong>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="col-md-2 control-label">Visibility</label>
+            <div class="col-md-8">
+                <div class="checkbox">
+                    <label>
+                        <input type="checkbox" name="private" {{if .private}}checked{{end}}>
+                        <strong>This repository is private</strong>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-group {{if .Err_Description}}has-error has-feedback{{end}}">
+            <label class="col-md-2 control-label">Description</label>
+            <div class="col-md-8">
+                <textarea name="desc" class="form-control" placeholder="Type your repository description">{{.desc}}</textarea>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <div class="col-md-offset-2 col-md-8">
+                <button type="submit" class="btn btn-lg btn-primary">Migrate repository</button>
+                <a href="/" class="text-danger">Cancel</a>
+            </div>
+        </div>
+    </form>
+</div>
+{{template "base/footer" .}}

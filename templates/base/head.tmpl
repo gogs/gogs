@@ -9,16 +9,27 @@
 		<meta name="description" content="Gogs(Go Git Service) is a GitHub-like clone in the Go Programming Language" />
 		<meta name="keywords" content="go, git">
 		<meta name="_csrf" content="{{.CsrfToken}}" />
+		{{if .Repository.IsGoget}}<meta name="go-import" content="{{.GoGetImport}} git {{.CloneLink.HTTPS}}">{{end}}
 
 		 <!-- Stylesheets -->
+		{{if IsProdMode}}
+		<link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+		<link href="//netdna.bootstrapcdn.com/font-awesome/4.0.3/css/font-awesome.css" rel="stylesheet">
+
+		<script src="//code.jquery.com/jquery-1.11.0.min.js"></script>
+		<script src="//netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+		{{else}}
 		<link href="/css/bootstrap.min.css" rel="stylesheet" />
-		<link href="/css/todc-bootstrap.min.css" rel="stylesheet" />
 		<link href="/css/font-awesome.min.css" rel="stylesheet" />
-		<link href="/css/markdown.css" rel="stylesheet" />
-		<link href="/css/gogs.css" rel="stylesheet" />
 
 		<script src="/js/jquery-1.10.1.min.js"></script>
 		<script src="/js/bootstrap.min.js"></script>
+		{{end}}
+
+		<link href="/css/todc-bootstrap.min.css" rel="stylesheet" />
+		<link href="/css/markdown.css" rel="stylesheet" />
+		<link href="/css/gogs.css" rel="stylesheet" />
+
         <script src="/js/lib.js"></script>
         <script src="/js/app.js"></script>
 		<title>{{if .Title}}{{.Title}} - {{end}}{{AppName}}</title>
