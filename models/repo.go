@@ -47,16 +47,16 @@ func NewRepoContext() {
 	zip.Verbose = false
 
 	// Check if server has basic git setting.
-	stdout, _, err := com.ExecCmd("git", "config", "--get", "user.name")
-	if err != nil {
-		fmt.Printf("repo.init(fail to get git user.name): %v", err)
+	stdout, stderr, err := com.ExecCmd("git", "config", "--get", "user.name")
+	if strings.Contains(stderr, "fatal:") {
+		fmt.Printf("repo.NewRepoContext(fail to get git user.name): %s", stderr)
 		os.Exit(2)
-	} else if len(stdout) == 0 {
-		if _, _, err = com.ExecCmd("git", "config", "--global", "user.email", "gogitservice@gmail.com"); err != nil {
-			fmt.Printf("repo.init(fail to set git user.email): %v", err)
+	} else if err != nil || len(strings.TrimSpace(stdout)) == 0 {
+		if _, stderr, err = com.ExecCmd("git", "config", "--global", "user.email", "gogitservice@gmail.com"); err != nil {
+			fmt.Printf("repo.NewRepoContext(fail to set git user.email): %s", stderr)
 			os.Exit(2)
-		} else if _, _, err = com.ExecCmd("git", "config", "--global", "user.name", "Gogs"); err != nil {
-			fmt.Printf("repo.init(fail to set git user.name): %v", err)
+		} else if _, stderr, err = com.ExecCmd("git", "config", "--global", "user.name", "Gogs"); err != nil {
+			fmt.Printf("repo.NewRepoContext(fail to set git user.name): %s", stderr)
 			os.Exit(2)
 		}
 	}
@@ -352,7 +352,6 @@ func CreateRepository(user *User, name, desc, lang, license string, private, mir
 func extractGitBareZip(repoPath string) error {
 	z, err := zip.Open("conf/content/git-bare.zip")
 	if err != nil {
-		fmt.Println("shi?")
 		return err
 	}
 	defer z.Close()
@@ -364,21 +363,14 @@ func extractGitBareZip(repoPath string) error {
 func initRepoCommit(tmpPath string, sig *git.Signature) (err error) {
 	var stderr string
 	if _, stderr, err = com.ExecCmdDir(tmpPath, "git", "add", "--all"); err != nil {
-		return err
-	} else if strings.Contains(stderr, "fatal:") {
 		return errors.New("git add: " + stderr)
 	}
-
 	if _, stderr, err = com.ExecCmdDir(tmpPath, "git", "commit", fmt.Sprintf("--author='%s <%s>'", sig.Name, sig.Email),
 		"-m", "Init commit"); err != nil {
-		return err
-	} else if strings.Contains(stderr, "fatal:") {
 		return errors.New("git commit: " + stderr)
 	}
 
 	if _, stderr, err = com.ExecCmdDir(tmpPath, "git", "push", "origin", "master"); err != nil {
-		return err
-	} else if strings.Contains(stderr, "fatal:") {
 		return errors.New("git push: " + stderr)
 	}
 	return nil
