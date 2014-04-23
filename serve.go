@@ -159,7 +159,7 @@ func runServ(k *cli.Context) {
 			qlog.Fatal(err)
 		}
 		if !has {
-			has, err = models.HasAccess(user.Name, repoPath, models.AU_WRITABLE)
+			has, err = models.HasAccess(user.Name, path.Join(repoUserName, repoName), models.AU_WRITABLE)
 			if err != nil {
 				println("Internal error")
 				qlog.Fatal(err)
