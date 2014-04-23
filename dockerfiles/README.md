@@ -1,6 +1,6 @@
 ### Install Gogs With Docker
 
-Deplying gogs in [Docker](http://www.docker.io/) is just as easy as eating a pie, what you do is just open the `dockerfiles/build.sh` file, replace the confis:
+Deplying gogs in [Docker](http://www.docker.io/) is just as easy as eating a pie, what you do is just open the `dockerfiles/build.sh` file, replace the configs:
 
 ```
 DB_TYPE="YOUR_DB_TYPE"            # type of database, support 'mysql' and 'postgres'
