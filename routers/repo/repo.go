@@ -134,7 +134,6 @@ func Single(ctx *middleware.Context, params martini.Params) {
 	}
 
 	entry, err := ctx.Repo.Commit.GetTreeEntryByPath(treename)
-
 	if err != nil && err != git.ErrNotExist {
 		ctx.Handle(404, "repo.Single(GetTreeEntryByPath)", err)
 		return

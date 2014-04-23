@@ -87,7 +87,6 @@ func Releases(ctx *middleware.Context) {
 				return
 			}
 			tags.rels[i].NumCommitsBehind = commitsCount - tags.rels[i].NumCommits
-			tags.rels[i].Created = commit.Author.When
 		}
 	}
 
