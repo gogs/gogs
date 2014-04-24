@@ -89,7 +89,16 @@ func SignInPost(ctx *middleware.Context, form auth.LogInForm) {
 		return
 	}
 
-	user, err := models.LoginUserPlain(form.UserName, form.Password)
+	var user *models.User
+	var err error
+	// try to login against LDAP if defined
+	if base.LdapAuth {
+		user, err = models.LoginUserLdap(form.UserName, form.Password)
+	}
+	// try local if not LDAP or it's failed
+	if (!base.LdapAuth) || (err != nil) {
+		user, err = models.LoginUserPlain(form.UserName, form.Password)
+	}
 	if err != nil {
 		if err == models.ErrUserNotExist {
 			log.Trace("%s Log in failed: %s/%s", ctx.Req.RequestURI, form.UserName, form.Password)
