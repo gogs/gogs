@@ -5,7 +5,7 @@
     <div id="user-setting-container" class="col-md-9">
         <div id="setting-pwd">
             <h4>Account Profile</h4>
-            <form class="form-horizontal" id="password-form" method="post" action="/user/setting">
+            <form class="form-horizontal" id="password-form" method="post" action="/user/settings">
                 {{.CsrfTokenHtml}}
                 {{template "base/alert" .}}
                 <p>Your Email address is public and will be used for any account related notifications, and any web based operations made via the site.</p>
