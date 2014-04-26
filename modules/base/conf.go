@@ -316,7 +316,7 @@ func NewConfigContext() {
 	// load LDAP authentication configuration if present
 	LdapAuth = Cfg.MustBool("security", "LDAP_AUTH", false)
 	if LdapAuth {
-		log.Debug("LDAP AUTHENTICATION activated")
+		qlog.Debug("LDAP AUTHENTICATION activated")
 		nbsrc := 0
 		for _, v := range Cfg.GetSectionList() {
 			if matched, _ := regexp.MatchString("(?i)^LDAPSOURCE.*", v); matched {
@@ -329,15 +329,15 @@ func NewConfigContext() {
 				ldapmsadsaformat := Cfg.MustValue(v, "MSADSAFORMAT", "%s")
 				ldap.AddSource(ldapname, ldaphost, ldapport, ldapbasedn, ldapattribute, ldapfilter, ldapmsadsaformat)
 				nbsrc += 1
-				log.Debug("%s added as LDAP source", ldapname)
+				qlog.Debug("%s added as LDAP source", ldapname)
 			}
 		}
 		if nbsrc == 0 {
-			log.Debug("No valide LDAP found, LDAP AUTHENTICATION NOT activated")
+			qlog.Debug("No valide LDAP found, LDAP AUTHENTICATION NOT activated")
 			LdapAuth = false
 		}
 	} else {
-		log.Debug("LDAP AUTHENTICATION NOT activated")
+		qlog.Debug("LDAP AUTHENTICATION NOT activated")
 	}
 
 	PictureService = Cfg.MustValue("picture", "SERVICE")
