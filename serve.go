@@ -53,6 +53,7 @@ func newLogger(execDir string) {
 	}
 
 	qlog.SetOutput(f)
+	//qlog.SetOutputLevel(qlog.Ldebug)
 	qlog.Info("Start logging serv...")
 }
 
