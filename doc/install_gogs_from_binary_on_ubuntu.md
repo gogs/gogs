@@ -18,8 +18,8 @@
 ### install the gogs
 - mkdir gogs
 - cd gogs
-- curl -L http://gobuild.io/github.com/gogits/gogs/v0.2.0/linux/amd64 -o v0.2.0.zip
-- unzip v0.2.0.zip
+- curl -L http://gobuild.io/github.com/gogits/gogs/v0.3.0/linux/amd64 -o v0.3.0.zip
+- unzip v0.3.0.zip
 - ./start.sh
 
 > The up-to-date binary could be found at

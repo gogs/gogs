@@ -178,6 +178,36 @@ func newLogService() {
 	log.Info("Log Mode: %s(%s)", strings.Title(LogMode), levelName)
 }
 
+func newLdapService() {
+	LdapAuth = Cfg.MustBool("security", "LDAP_AUTH", false)
+	if !LdapAuth {
+		return
+	}
+
+	nbsrc := 0
+	for _, v := range Cfg.GetSectionList() {
+		if matched, _ := regexp.MatchString("(?i)^LDAPSOURCE.*", v); matched {
+			ldapname := Cfg.MustValue(v, "name", v)
+			ldaphost := Cfg.MustValue(v, "host")
+			ldapport := Cfg.MustInt(v, "port", 389)
+			ldapbasedn := Cfg.MustValue(v, "basedn", "dc=*,dc=*")
+			ldapattribute := Cfg.MustValue(v, "attribute", "mail")
+			ldapfilter := Cfg.MustValue(v, "filter", "(*)")
+			ldapmsadsaformat := Cfg.MustValue(v, "MSADSAFORMAT", "%s")
+			ldap.AddSource(ldapname, ldaphost, ldapport, ldapbasedn, ldapattribute, ldapfilter, ldapmsadsaformat)
+			nbsrc++
+			log.Debug("%s added as LDAP source", ldapname)
+		}
+	}
+	if nbsrc == 0 {
+		log.Warn("No valide LDAP found, LDAP Authentication NOT enabled")
+		LdapAuth = false
+		return
+	}
+
+	log.Info("LDAP Authentication Enabled")
+}
+
 func newCacheService() {
 	CacheAdapter = Cfg.MustValue("cache", "ADAPTER", "memory")
 	if EnableRedis {
@@ -313,33 +343,6 @@ func NewConfigContext() {
 	CookieUserName = Cfg.MustValue("security", "COOKIE_USERNAME")
 	CookieRememberName = Cfg.MustValue("security", "COOKIE_REMEMBER_NAME")
 
-	// load LDAP authentication configuration if present
-	LdapAuth = Cfg.MustBool("security", "LDAP_AUTH", false)
-	if LdapAuth {
-		qlog.Debug("LDAP AUTHENTICATION activated")
-		nbsrc := 0
-		for _, v := range Cfg.GetSectionList() {
-			if matched, _ := regexp.MatchString("(?i)^LDAPSOURCE.*", v); matched {
-				ldapname := Cfg.MustValue(v, "name", v)
-				ldaphost := Cfg.MustValue(v, "host")
-				ldapport := Cfg.MustInt(v, "port", 389)
-				ldapbasedn := Cfg.MustValue(v, "basedn", "dc=*,dc=*")
-				ldapattribute := Cfg.MustValue(v, "attribute", "mail")
-				ldapfilter := Cfg.MustValue(v, "filter", "(*)")
-				ldapmsadsaformat := Cfg.MustValue(v, "MSADSAFORMAT", "%s")
-				ldap.AddSource(ldapname, ldaphost, ldapport, ldapbasedn, ldapattribute, ldapfilter, ldapmsadsaformat)
-				nbsrc += 1
-				qlog.Debug("%s added as LDAP source", ldapname)
-			}
-		}
-		if nbsrc == 0 {
-			qlog.Debug("No valide LDAP found, LDAP AUTHENTICATION NOT activated")
-			LdapAuth = false
-		}
-	} else {
-		qlog.Debug("LDAP AUTHENTICATION NOT activated")
-	}
-
 	PictureService = Cfg.MustValue("picture", "SERVICE")
 
 	// Determine and create root git reposiroty path.
@@ -357,6 +360,7 @@ func NewConfigContext() {
 func NewBaseServices() {
 	newService()
 	newLogService()
+	newLdapService()
 	newCacheService()
 	newSessionService()
 	newMailService()
