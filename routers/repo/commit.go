@@ -92,7 +92,7 @@ func Diff(ctx *middleware.Context, params martini.Params) {
 	}
 
 	ctx.Data["IsImageFile"] = isImageFile
-	ctx.Data["Title"] = commit.Message() + " · " + base.ShortSha(commitId)
+	ctx.Data["Title"] = commit.Summary() + " · " + base.ShortSha(commitId)
 	ctx.Data["Commit"] = commit
 	ctx.Data["Diff"] = diff
 	ctx.Data["DiffNotAvailable"] = diff.NumFiles() == 0
