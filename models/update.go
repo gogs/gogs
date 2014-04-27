@@ -1,3 +1,7 @@
+// Copyright 2014 The Gogs Authors. All rights reserved.
+// Use of this source code is governed by a MIT-style
+// license that can be found in the LICENSE file.
+
 package models
 
 import (
@@ -5,9 +9,11 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/gogits/git"
-	"github.com/gogits/gogs/modules/base"
 	qlog "github.com/qiniu/log"
+
+	"github.com/gogits/git"
+
+	"github.com/gogits/gogs/modules/base"
 )
 
 func Update(refName, oldCommitId, newCommitId, userName, repoName string, userId int64) {

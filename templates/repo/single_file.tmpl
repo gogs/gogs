@@ -14,7 +14,7 @@
         {{if not .ReadmeInSingle}}
         <div class="btn-group pull-right">
             <a class="btn btn-default hidden" href="#">Edit</a>
-            <a class="btn btn-default" href="{{.FileLink}}">Raw</a>
+            <a class="btn btn-default" href="{{.FileLink}}" rel="nofollow">Raw</a>
             <a class="btn btn-default hidden" href="#">Blame</a>
             <a class="btn btn-default hidden" href="#">History</a>
             <a class="btn btn-danger hidden" href="#">Delete</a>
@@ -27,7 +27,7 @@
         {{if .IsImageFile}}
             <img src="{{.FileLink}}">
         {{else}}
-            <a href="{{.FileLink}}" class="btn btn-default">View Raw</a>
+            <a href="{{.FileLink}}" rel="nofollow" class="btn btn-default">View Raw</a>
         {{end}}
     </div>
     {{else}}
