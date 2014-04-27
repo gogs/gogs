@@ -57,7 +57,7 @@ func (f *RegisterForm) Validate(errors *base.BindingErrors, req *http.Request, c
 }
 
 type LogInForm struct {
-	UserName string `form:"username" binding:"Required;AlphaDash;MaxSize(30)"`
+	UserName string `form:"username" binding:"Required;MaxSize(35)"`
 	Password string `form:"passwd" binding:"Required;MinSize(6);MaxSize(30)"`
 	Remember string `form:"remember"`
 }
