@@ -10,6 +10,8 @@ Want to hack on Gogs? Awesome! Here are instructions to get you started. They ar
 
 ### Pull requests are always welcome
 
+**ALL PULL REQUESTS MUST SEND TO `DEV` BRANCH**
+
 We are always thrilled to receive pull requests, and do our best to process them as fast as possible. Not sure if that typo is worth a pull request? Do it! We will appreciate it.
 
 If your pull request is not accepted on the first try, don't be discouraged! If there's a problem with the implementation, hopefully you received feedback on what to improve.

@@ -1,9 +1,0 @@
-command: go test -v {}
-include: ^.+_test\.go$
-path: ./
-depth: 1
-verbose: true
-timeout: 1m
-reload: false
-html: test.html
-notify: []
