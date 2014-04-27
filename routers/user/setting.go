@@ -166,7 +166,8 @@ func SettingSSHKeys(ctx *middleware.Context, form auth.AddSSHKeyForm) {
 			return
 		}
 
-		k := &models.PublicKey{OwnerId: ctx.User.Id,
+		k := &models.PublicKey{
+			OwnerId: ctx.User.Id,
 			Name:    form.KeyName,
 			Content: form.KeyContent,
 		}
