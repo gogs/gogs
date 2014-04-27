@@ -33,7 +33,7 @@
                 <tr>
                     <td class="author"><img class="avatar" src="{{AvatarLink .Author.Email}}" alt=""/><a href="/user/email2user?email={{.Author.Email}}">{{.Author.Name}}</a></td>
                     <td class="sha"><a rel="nofollow" class="label label-success" href="/{{$username}}/{{$reponame}}/commit/{{.Id}} ">{{SubStr .Id.String 0 10}} </a></td>
-                    <td class="message">{{.Message}} </td>
+                    <td class="message">{{.Summary}} </td>
                     <td class="date">{{TimeSince .Author.When}}</td>
                 </tr>
                 {{end}}
