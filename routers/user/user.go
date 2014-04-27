@@ -144,27 +144,6 @@ func SignInPost(ctx *middleware.Context, form auth.LogInForm) {
 	ctx.Redirect("/")
 }
 
-func oauthSignInPost(ctx *middleware.Context, sid int64) {
-	ctx.Data["Title"] = "OAuth Sign Up"
-	ctx.Data["PageIsSignUp"] = true
-
-	if _, err := models.GetOauth2ById(sid); err != nil {
-		if err == models.ErrOauth2RecordNotExist {
-			ctx.Handle(404, "user.oauthSignUp(GetOauth2ById)", err)
-		} else {
-			ctx.Handle(500, "user.oauthSignUp(GetOauth2ById)", err)
-		}
-		return
-	}
-
-	ctx.Data["IsSocialLogin"] = true
-	ctx.Data["username"] = ctx.Session.Get("socialName")
-	ctx.Data["email"] = ctx.Session.Get("socialEmail")
-	log.Trace("user.oauthSignUp(social ID): %v", ctx.Session.Get("socialId"))
-
-	ctx.HTML(200, "user/signup")
-}
-
 func SignOut(ctx *middleware.Context) {
 	ctx.Session.Delete("userId")
 	ctx.Session.Delete("userName")

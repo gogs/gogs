@@ -410,21 +410,27 @@ func GetUserByEmail(email string) (*User, error) {
 }
 
 // LoginUserPlain validates user by raw user name and password.
-func LoginUserPlain(name, passwd string) (*User, error) {
-	user := User{LowerName: strings.ToLower(name)}
-	has, err := orm.Get(&user)
+func LoginUserPlain(uname, passwd string) (*User, error) {
+	var u *User
+	if strings.Contains(uname, "@") {
+		u = &User{Email: uname}
+	} else {
+		u = &User{LowerName: strings.ToLower(uname)}
+	}
+
+	has, err := orm.Get(u)
 	if err != nil {
 		return nil, err
 	} else if !has {
 		return nil, ErrUserNotExist
 	}
 
-	newUser := &User{Passwd: passwd, Salt: user.Salt}
+	newUser := &User{Passwd: passwd, Salt: u.Salt}
 	newUser.EncodePasswd()
-	if user.Passwd != newUser.Passwd {
+	if u.Passwd != newUser.Passwd {
 		return nil, ErrUserNotExist
 	}
-	return &user, nil
+	return u, nil
 }
 
 // Follow is connection request for receiving user notifycation.
