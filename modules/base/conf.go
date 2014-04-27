@@ -45,14 +45,15 @@ type Oauther struct {
 }
 
 var (
-	AppVer     string
-	AppName    string
-	AppLogo    string
-	AppUrl     string
-	IsProdMode bool
-	Domain     string
-	SecretKey  string
-	RunUser    string
+	AppVer      string
+	AppName     string
+	AppLogo     string
+	AppUrl      string
+	OfflineMode bool
+	ProdMode    bool
+	Domain      string
+	SecretKey   string
+	RunUser     string
 
 	RepoRootPath string
 	ScriptType   string
@@ -325,6 +326,7 @@ func NewConfigContext() {
 	AppLogo = Cfg.MustValue("", "APP_LOGO", "img/favicon.png")
 	AppUrl = Cfg.MustValue("server", "ROOT_URL")
 	Domain = Cfg.MustValue("server", "DOMAIN")
+	OfflineMode = Cfg.MustBool("server", "OFFLINE_MODE", false)
 	SecretKey = Cfg.MustValue("security", "SECRET_KEY")
 
 	InstallLock = Cfg.MustBool("security", "INSTALL_LOCK", false)

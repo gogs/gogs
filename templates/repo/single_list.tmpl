@@ -1,6 +1,6 @@
 <div class="panel panel-default info-box">
     <div class="panel-heading info-head">
-        <a href="/{{.Username}}/{{.Reponame}}/commit/{{.LastCommit.Id}}">{{.LastCommit.Message}}</a>
+        <a href="/{{.Username}}/{{.Reponame}}/commit/{{.LastCommit.Id}}" rel="nofollow">{{.LastCommit.Message}}</a>
     </div>
     <div class="panel-body info-content">
         <a href="/user/{{.LastCommit.Author.Name}}">{{.LastCommit.Author.Name}}</a> <span class="text-muted">{{TimeSince .LastCommit.Author.When}}</span>
