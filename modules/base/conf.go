@@ -342,7 +342,6 @@ func NewConfigContext() {
 	LogInRememberDays = Cfg.MustInt("security", "LOGIN_REMEMBER_DAYS")
 	CookieUserName = Cfg.MustValue("security", "COOKIE_USERNAME")
 	CookieRememberName = Cfg.MustValue("security", "COOKIE_REMEMBER_NAME")
-
 	PictureService = Cfg.MustValue("picture", "SERVICE")
 
 	// Determine and create root git reposiroty path.
