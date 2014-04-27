@@ -53,7 +53,6 @@ var (
 	Domain     string
 	SecretKey  string
 	RunUser    string
-	LdapAuth   bool
 
 	RepoRootPath string
 	ScriptType   string
@@ -93,6 +92,7 @@ var Service struct {
 	NotifyMail           bool
 	ActiveCodeLives      int
 	ResetPwdCodeLives    int
+	LdapAuth             bool
 }
 
 func ExecDir() (string, error) {
@@ -179,8 +179,8 @@ func newLogService() {
 }
 
 func newLdapService() {
-	LdapAuth = Cfg.MustBool("security", "LDAP_AUTH", false)
-	if !LdapAuth {
+	Service.LdapAuth = Cfg.MustBool("security", "LDAP_AUTH", false)
+	if !Service.LdapAuth {
 		return
 	}
 
@@ -201,7 +201,7 @@ func newLdapService() {
 	}
 	if nbsrc == 0 {
 		log.Warn("No valide LDAP found, LDAP Authentication NOT enabled")
-		LdapAuth = false
+		Service.LdapAuth = false
 		return
 	}
 
