@@ -1,4 +1,4 @@
-FROM stackbrew/ubuntu:13.10
+FROM ubuntu
 MAINTAINER  Meaglith Ma <genedna@gmail.com> (@genedna)
 
 ENV DEBIAN_FRONTEND noninteractive

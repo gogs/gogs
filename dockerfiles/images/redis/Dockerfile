@@ -1,4 +1,4 @@
-FROM   	    stackbrew/ubuntu:saucy
+FROM   	    ubuntu
 MAINTAINER  Meaglith Ma <genedna@gmail.com> (@genedna), Lance Ju <juzhenatpku@gmail.com> (@crystaldust)
 
 ENV DEBIAN_FRONTEND noninteractive
