@@ -97,6 +97,7 @@ func Diff(ctx *middleware.Context, params martini.Params) {
 		parents[i] = sha.String()
 		if err != nil {
 			ctx.Handle(404, "repo.Diff", err)
+			return
 		}
 	}
 

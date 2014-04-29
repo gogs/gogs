@@ -8,13 +8,11 @@
                 <a class="pull-right btn btn-primary btn-sm" rel="nofollow" href="{{.SourcePath}}">Browse Source</a>
                 <h4>{{.Commit.Message}}</h4>
             </div>
-            {{ $username := .Username }}
-            {{ $reponame := .Reponame }}
             <div class="panel-body">
                 <span class="pull-right">
                 <ul class="list-unstyled">
                     {{range .Parents}}
-                    <li>parent <a href="/{{$username}}/{{$reponame}}/commit/{{.}}"><span class="label label-default sha">{{ShortSha .}}</span></a></li>
+                    <li>parent <a href="{{$.RepoLink}}/commit/{{.}}"><span class="label label-default sha">{{ShortSha .}}</span></a></li>
                     {{end}}
                     <li>commit <span class="label label-default sha">{{ShortSha .CommitId}}</span></li>
                 </ul>
