@@ -56,7 +56,7 @@ Gogs 完全使用 Go 语言来实现对 Git 数据的操作，实现 **零** 依
 - [beego](http://beego.me) 模块的使用与修改。
 - [martini](http://martini.codegangsta.io/) 的路由与中间件机制。
 - 感谢 [gobuild.io](http://gobuild.io) 提供二进制编译与下载服务。
-- 感谢 [lavachen](http://www.lavachen.cn/) 设计的 Logo。
+- 感谢 [lavachen](http://www.lavachen.cn/) 和 [Rocker](http://weibo.com/rocker1989) 设计的 Logo。
 - 感谢 [Docker 中文社区](http://www.dockboard.org/) 提供的 [dockerfiles](https://github.com/gogits/gogs/tree/master/dockerfiles)。
 
 ## 贡献成员
