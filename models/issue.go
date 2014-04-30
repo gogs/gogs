@@ -71,7 +71,7 @@ func CreateIssue(userId, repoId, milestoneId, assigneeId int64, issueCount int, 
 	}
 
 	if err = sess.Commit(); err != nil {
-		sess.Rollback()
+		//sess.Rollback()
 		return nil, err
 	}
 
@@ -196,7 +196,7 @@ func CreateComment(userId, repoId, issueId, commitId, line int64, cmtType int, c
 	defer sess.Close()
 	sess.Begin()
 
-	if _, err := orm.Insert(&Comment{PosterId: userId, Type: cmtType, IssueId: issueId,
+	if _, err := sess.Insert(&Comment{PosterId: userId, Type: cmtType, IssueId: issueId,
 		CommitId: commitId, Line: line, Content: content}); err != nil {
 		sess.Rollback()
 		return err
