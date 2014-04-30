@@ -19,6 +19,7 @@ github.com/lib/pq =
 github.com/nfnt/resize = 
 github.com/qiniu/log = 
 github.com/robfig/cron = 
+github.com/juju2013/goldap = 
 
 [res]
 include = templates|public|conf

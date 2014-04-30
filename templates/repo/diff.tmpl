@@ -10,7 +10,12 @@
             </div>
             <div class="panel-body">
                 <span class="pull-right">
-                    commit <span class="label label-default sha">{{ShortSha .CommitId}}</span>
+                <ul class="list-unstyled">
+                    {{range .Parents}}
+                    <li>parent <a href="{{$.RepoLink}}/commit/{{.}}"><span class="label label-default sha">{{ShortSha .}}</span></a></li>
+                    {{end}}
+                    <li>commit <span class="label label-default sha">{{ShortSha .CommitId}}</span></li>
+                </ul>
                 </span>
                 <p class="author">
                     <img class="avatar" src="{{AvatarLink .Commit.Author.Email}}" alt=""/>

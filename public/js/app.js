@@ -468,13 +468,28 @@ function initRepository() {
 function initInstall() {
     // database type change
     (function () {
+        var mysql_default    = '127.0.0.1:3306'
+        var postgres_default = '127.0.0.1:5432'
+
         $('#install-database').on("change", function () {
             var val = $(this).val();
-            if (val != "sqlite") {
+            if (val != "SQLite3") {
                 $('.server-sql').show();
                 $('.sqlite-setting').addClass("hide");
-                if (val == "pgsql") {
+                if (val == "PostgreSQL") {
                     $('.pgsql-setting').removeClass("hide");
+
+                    // Change the host value to the Postgres default, but only
+                    // if the user hasn't already changed it from the MySQL
+                    // default.
+                    if ($('#database-host').val() == mysql_default) {
+                        $('#database-host').val(postgres_default);
+                    }
+                } else if (val == 'MySQL') {
+                    $('.pgsql-setting').addClass("hide");
+                    if ($('#database-host').val() == postgres_default) {
+                        $('#database-host').val(mysql_default);
+                    }
                 } else {
                     $('.pgsql-setting').addClass("hide");
                 }

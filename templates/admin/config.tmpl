@@ -18,6 +18,8 @@
                     <dd>{{.AppUrl}}</dd>
                     <dt>Domain</dt>
                     <dd>{{.Domain}}</dd>
+                    <dt>Offline Mode</dt>
+                    <dd><i class="fa fa{{if .OfflineMode}}-check{{end}}-square-o"></i></dd>
                     <hr/>
                     <dt>Run User</dt>
                     <dd>{{.RunUser}}</dd>
@@ -26,6 +28,8 @@
                     <hr/>
                     <dt>Repository Root Path</dt>
                     <dd>{{.RepoRootPath}}</dd>
+                    <dt>Script Type</dt>
+                    <dd>{{.ScriptType}}</dd>
                 </dl>
             </div>
         </div>
