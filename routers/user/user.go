@@ -91,12 +91,14 @@ func SignInPost(ctx *middleware.Context, form auth.LogInForm) {
 
 	var user *models.User
 	var err error
-	// try to login against LDAP if defined
-	if base.LdapAuth {
+	if base.Service.LdapAuth {
 		user, err = models.LoginUserLdap(form.UserName, form.Password)
+		if err != nil {
+			log.Error("Fail to login through LDAP: %v", err)
+		}
 	}
 	// try local if not LDAP or it's failed
-	if (!base.LdapAuth) || (err != nil) {
+	if !base.Service.LdapAuth || err != nil {
 		user, err = models.LoginUserPlain(form.UserName, form.Password)
 	}
 	if err != nil {
@@ -140,27 +142,6 @@ func SignInPost(ctx *middleware.Context, form auth.LogInForm) {
 	}
 
 	ctx.Redirect("/")
-}
-
-func oauthSignInPost(ctx *middleware.Context, sid int64) {
-	ctx.Data["Title"] = "OAuth Sign Up"
-	ctx.Data["PageIsSignUp"] = true
-
-	if _, err := models.GetOauth2ById(sid); err != nil {
-		if err == models.ErrOauth2RecordNotExist {
-			ctx.Handle(404, "user.oauthSignUp(GetOauth2ById)", err)
-		} else {
-			ctx.Handle(500, "user.oauthSignUp(GetOauth2ById)", err)
-		}
-		return
-	}
-
-	ctx.Data["IsSocialLogin"] = true
-	ctx.Data["username"] = ctx.Session.Get("socialName")
-	ctx.Data["email"] = ctx.Session.Get("socialEmail")
-	log.Trace("user.oauthSignUp(social ID): %v", ctx.Session.Get("socialId"))
-
-	ctx.HTML(200, "user/signup")
 }
 
 func SignOut(ctx *middleware.Context) {

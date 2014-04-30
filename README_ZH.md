@@ -5,7 +5,7 @@ Gogs(Go Git Service) 是一个由 Go 语言编写的自助 Git 托管服务。
 
 ![Demo](http://gowalker.org/public/gogs_demo.gif)
 
-##### 当前版本：0.3.0 Alpha
+##### 当前版本：0.3.1 Alpha
 
 ## 开发目的
 
@@ -32,6 +32,12 @@ Gogs 完全使用 Go 语言来实现对 Git 数据的操作，实现 **零** 依
 - 管理员面板
 - 支持 MySQL、PostgreSQL 以及 SQLite3 数据库
 - 社交帐号登录（GitHub、Google、QQ、微博）
+
+## 系统要求
+
+- 最低的系统硬件要求为一个廉价的树莓派
+- 如果用于团队项目，建议使用 4 核 CPU 及 1GB 内存
+
 
 ## 安装部署
 

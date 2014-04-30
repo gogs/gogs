@@ -77,12 +77,12 @@ func init() {
 // PublicKey represents a SSH key of user.
 type PublicKey struct {
 	Id          int64
-	OwnerId     int64  `xorm:"unique(s) index not null"`
-	Name        string `xorm:"unique(s) not null"`
+	OwnerId     int64  `xorm:"UNIQUE(s) INDEX NOT NULL"`
+	Name        string `xorm:"UNIQUE(s) NOT NULL"`
 	Fingerprint string
-	Content     string    `xorm:"TEXT not null"`
-	Created     time.Time `xorm:"created"`
-	Updated     time.Time `xorm:"updated"`
+	Content     string    `xorm:"TEXT NOT NULL"`
+	Created     time.Time `xorm:"CREATED"`
+	Updated     time.Time `xorm:"UPDATED"`
 }
 
 // GenAuthorizedKey returns formatted public key string.
@@ -107,9 +107,9 @@ func AddPublicKey(key *PublicKey) (err error) {
 	if err = ioutil.WriteFile(tmpPath, []byte(key.Content), os.ModePerm); err != nil {
 		return err
 	}
-	stdout, _, err := com.ExecCmd("ssh-keygen", "-l", "-f", tmpPath)
+	stdout, stderr, err := com.ExecCmd("ssh-keygen", "-l", "-f", tmpPath)
 	if err != nil {
-		return err
+		return errors.New("ssh-keygen -l -f: " + stderr)
 	} else if len(stdout) < 2 {
 		return errors.New("Not enough output for calculating fingerprint")
 	}

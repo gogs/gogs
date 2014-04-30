@@ -9,7 +9,8 @@ RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys B97B0AFCAA
 
 # Add PostgreSQL's repository. It contains the most recent stable release
 #     of PostgreSQL, ``9.3``.
-RUN echo "deb http://apt.postgresql.org/pub/repos/apt/ precise-pgdg main" > /etc/apt/sources.list.d/pgdg.list
+# See http://apt.postgresql.org/pub/repos/apt/README
+RUN echo "deb http://apt.postgresql.org/pub/repos/apt/ $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list
 
 # Update the Ubuntu and PostgreSQL repository indexes
 RUN apt-get update

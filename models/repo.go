@@ -159,9 +159,7 @@ func MirrorUpdate() {
 		repoPath := filepath.Join(base.RepoRootPath, m.RepoName+".git")
 		_, stderr, err := com.ExecCmdDir(repoPath, "git", "remote", "update")
 		if err != nil {
-			return err
-		} else if strings.Contains(stderr, "fatal:") {
-			return errors.New(stderr)
+			return errors.New("git remote update: " + stderr)
 		} else if err = git.UnpackRefs(repoPath); err != nil {
 			return err
 		}
@@ -177,9 +175,7 @@ func MirrorUpdate() {
 func MirrorRepository(repoId int64, userName, repoName, repoPath, url string) error {
 	_, stderr, err := com.ExecCmd("git", "clone", "--mirror", url, repoPath)
 	if err != nil {
-		return err
-	} else if strings.Contains(stderr, "fatal:") {
-		return errors.New(stderr)
+		return errors.New("git clone --mirror: " + stderr)
 	}
 
 	if _, err = orm.InsertOne(&Mirror{
@@ -219,23 +215,17 @@ func MigrateRepository(user *User, name, desc string, private, mirror bool, url 
 	// Clone from local repository.
 	_, stderr, err := com.ExecCmd("git", "clone", repoPath, tmpDir)
 	if err != nil {
-		return repo, err
-	} else if strings.Contains(stderr, "fatal:") {
 		return repo, errors.New("git clone: " + stderr)
 	}
 
 	// Pull data from source.
 	_, stderr, err = com.ExecCmdDir(tmpDir, "git", "pull", url)
 	if err != nil {
-		return repo, err
-	} else if strings.Contains(stderr, "fatal:") {
 		return repo, errors.New("git pull: " + stderr)
 	}
 
 	// Push data to local repository.
 	if _, stderr, err = com.ExecCmdDir(tmpDir, "git", "push", "origin", "master"); err != nil {
-		return repo, err
-	} else if strings.Contains(stderr, "fatal:") {
 		return repo, errors.New("git push: " + stderr)
 	}
 
@@ -403,10 +393,11 @@ func initRepository(f string, user *User, repo *Repository, initReadme bool, rep
 		return err
 	}
 
+	rp := strings.NewReplacer("\\", "/", " ", "\\ ")
 	// hook/post-update
 	if err := createHookUpdate(filepath.Join(repoPath, "hooks", "update"),
 		fmt.Sprintf("#!/usr/bin/env %s\n%s update $1 $2 $3\n", base.ScriptType,
-			strings.Replace(appPath, "\\", "/", -1))); err != nil {
+			rp.Replace(appPath))); err != nil {
 		return err
 	}
 
@@ -428,8 +419,6 @@ func initRepository(f string, user *User, repo *Repository, initReadme bool, rep
 
 	_, stderr, err := com.ExecCmd("git", "clone", repoPath, tmpDir)
 	if err != nil {
-		return err
-	} else if strings.Contains(stderr, "fatal:") {
 		return errors.New("git clone: " + stderr)
 	}
 
