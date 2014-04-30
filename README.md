@@ -63,7 +63,7 @@ There are 3 ways to install Gogs:
 - Mail Service, modules design is inspired by [WeTalk](https://github.com/beego/wetalk).
 - System Monitor Status is inspired by [GoBlog](https://github.com/fuxiaohei/goblog).
 - Usage and modification from [beego](http://beego.me) modules.
-- Thanks [lavachen](http://www.lavachen.cn/) for designing Logo.
+- Thanks [lavachen](http://www.lavachen.cn/) and [Rocker](http://weibo.com/rocker1989) for designing Logo.
 - Thanks [gobuild.io](http://gobuild.io) for providing binary compile and download service.
 - Great thanks to [Docker China](http://www.dockboard.org/) for providing [dockerfiles](https://github.com/gogits/gogs/tree/master/dockerfiles).
 
