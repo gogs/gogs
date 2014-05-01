@@ -240,7 +240,7 @@ var Gogits = {
             }
         });
 
-        $(window).on('hashchange',function (e) {
+        $(window).on('hashchange', function (e) {
             var m = window.location.hash.match(/^#(L\d+)\-(L\d+)$/);
             var $list = $('.code-view ol.linenums > li');
             if (m) {
@@ -387,7 +387,7 @@ function initRepository() {
         var $clone = $('.clone-group-btn');
         if ($clone.length) {
             var $url = $('.clone-group-url');
-            $clone.find('button[data-link]').on("click",function (e) {
+            $clone.find('button[data-link]').on("click", function (e) {
                 var $this = $(this);
                 if (!$this.hasClass('btn-primary')) {
                     $clone.find('.input-group-btn .btn-primary').removeClass('btn-primary').addClass("btn-default");
@@ -408,7 +408,7 @@ function initRepository() {
         var $watch = $('#repo-watching'),
             watchLink = $watch.data("watch"),
             unwatchLink = $watch.data("unwatch");
-        $watch.on('click', '.to-watch',function () {
+        $watch.on('click', '.to-watch', function () {
             if ($watch.hasClass("watching")) {
                 return false;
             }
@@ -468,7 +468,7 @@ function initRepository() {
 function initInstall() {
     // database type change
     (function () {
-        var mysql_default    = '127.0.0.1:3306'
+        var mysql_default = '127.0.0.1:3306'
         var postgres_default = '127.0.0.1:5432'
 
         $('#install-database').on("change", function () {
@@ -585,6 +585,39 @@ function initRelease() {
     }());
 }
 
+function initRepoSetting() {
+    // repo member add
+    $('#repo-collaborator').on('keyup', function () {
+        var $this = $(this);
+        if (!$this.val()) {
+            $this.next().toggleHide();
+            return;
+        }
+        $.ajax({
+            url: '/api/v1/users/search?q=' + $this.val(),
+            dataType: "json",
+            success: function (json) {
+                if (json.ok && json.data) {
+                    var html = '';
+                    $.each(json.data, function (i, item) {
+                        html += '<li><img src="' + item.avatar + '">' + item.username + '</li>';
+                    });
+                    $this.next().toggleShow();
+                    $this.next().find('ul').html(html);
+                }else{
+                    $this.next().toggleHide();
+                }
+            }
+        });
+    }).on('focus', function () {
+        if (!$(this).val()) {
+            $(this).next().toggleHide();
+        }
+    }).next().on("click",'li',function(){
+        $('#repo-collaborator').val($(this).text());
+    });
+}
+
 (function ($) {
     $(function () {
         initCore();
@@ -606,6 +639,9 @@ function initRelease() {
         }
         if ($('#release').length) {
             initRelease();
+        }
+        if ($('#repo-setting-container').length) {
+            initRepoSetting();
         }
     });
 })(jQuery);
