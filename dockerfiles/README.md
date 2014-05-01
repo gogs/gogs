@@ -36,5 +36,13 @@ Now we have gogs running! Open the browser and navigate to:
 http://YOUR_HOST_IP:YOUR_HOST_PORT
 ```
 
+By the way, if you want to deploy multiple versions of gogs with different database and memory db combination, take advantage of git:
+
+```
+git checkout -- images/
+```
+
+Then re-configure the config items above and run deploy.sh again.
+
 Let's 'gogs'!
 Ouya~

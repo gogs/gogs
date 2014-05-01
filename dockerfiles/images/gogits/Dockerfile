@@ -1,7 +1,5 @@
-FROM stackbrew/ubuntu:13.10
+FROM ubuntu
 MAINTAINER  Meaglith Ma <genedna@gmail.com> (@genedna)
-
-ENV DEBIAN_FRONTEND noninteractive
 
 #aliyun#RUN echo "deb http://mirrors.aliyun.com/ubuntu/ saucy main restricted" > /etc/apt/sources.list && echo "deb http://mirrors.aliyun.com/ubuntu/ saucy-updates main restricted" >> /etc/apt/sources.list && echo "deb http://mirrors.aliyun.com/ubuntu/ saucy universe" >> /etc/apt/sources.list && echo "deb http://mirrors.aliyun.com/ubuntu/ saucy-updates universe" >> /etc/apt/sources.list && echo "deb http://mirrors.aliyun.com/ubuntu/ saucy multiverse" >> /etc/apt/sources.list && echo "deb http://mirrors.aliyun.com/ubuntu/ saucy-updates multiverse" >> /etc/apt/sources.list && echo "deb http://mirrors.aliyun.com/ubuntu/ saucy-backports main restricted universe multiverse" >> /etc/apt/sources.list && echo "deb http://mirrors.aliyun.com/ubuntu/ saucy-security main restricted" >> /etc/apt/sources.list && echo "deb http://mirrors.aliyun.com/ubuntu/ saucy-security universe" >> /etc/apt/sources.list && echo "deb http://mirrors.aliyun.com/ubuntu/ saucy-security multiverse" >> /etc/apt/sources.list
 
