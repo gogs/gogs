@@ -310,14 +310,12 @@ func CreateRepository(user *User, name, desc, lang, license string, private, mir
 		return nil, err
 	}
 
-	if !repo.IsPrivate {
-		if err = NewRepoAction(user, repo); err != nil {
-			log.Error("repo.CreateRepository(NewRepoAction): %v", err)
-		}
-	}
-
 	if err = WatchRepo(user.Id, repo.Id, true); err != nil {
 		log.Error("repo.CreateRepository(WatchRepo): %v", err)
+	}
+
+	if err = NewRepoAction(user, repo); err != nil {
+		log.Error("repo.CreateRepository(NewRepoAction): %v", err)
 	}
 
 	// No need for init for mirror.
