@@ -6,6 +6,7 @@
             <a href="http://gravatar.com/emails/" class="center-block" data-toggle="tooltip" data-placement="bottom" title="Change your avatar at gravatar.com">
                 <img id="user-avatar" src="{{.Owner.AvatarLink}}?s=200" alt="user-avatar" title="{{.Owner.Name}}"/>
             </a>
+            {{if .Owner.FullName}}<span id="user-name" class="center-block">{{.Owner.FullName}}</span>{{end}}
             <span id="user-name" class="center-block">{{.Owner.Name}}</span>
         </div>
         <div class="profile-info">
