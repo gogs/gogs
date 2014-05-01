@@ -176,7 +176,7 @@ type InstallForm struct {
 	RunUser         string `form:"run_user"`
 	Domain          string `form:"domain"`
 	AppUrl          string `form:"app_url"`
-	AdminName       string `form:"admin_name" binding:"Required"`
+	AdminName       string `form:"admin_name" binding:"Required;AlphaDashDot;MaxSize(30)"`
 	AdminPasswd     string `form:"admin_pwd" binding:"Required;MinSize(6);MaxSize(30)"`
 	AdminEmail      string `form:"admin_email" binding:"Required;Email;MaxSize(50)"`
 	SmtpHost        string `form:"smtp_host"`
