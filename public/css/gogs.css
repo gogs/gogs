@@ -311,11 +311,18 @@ html, body {
     border-radius: 2px;
 }
 
-#user-name {
-    margin-top: 20px;
+#user-name,#user-full-name {
     font-size: 1.6em;
     font-weight: bold;
+}
+
+#user-name{
     margin-bottom: 20px;
+    margin-top: 10px;
+}
+
+#user-full-name{
+    margin-top: 20px;
 }
 
 #user-profile .profile-info .list-group-item {
@@ -387,7 +394,7 @@ html, body {
 
 /* gogits user setting */
 
-#user-setting-nav {
+#user-setting-nav.repo-setting-nav {
     background-color: #FFF;
     border: 1px solid #CCC;
     padding: 0;
