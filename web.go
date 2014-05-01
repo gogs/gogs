@@ -121,10 +121,10 @@ func runWeb(*cli.Context) {
 	m.Get("/user/:username", ignSignIn, user.Profile)
 
 	m.Group("/repo", func(r martini.Router) {
-		m.Get("/create", repo.Create)
-		m.Post("/create", bindIgnErr(auth.CreateRepoForm{}), repo.CreatePost)
-		m.Get("/migrate", repo.Migrate)
-		m.Post("/migrate", bindIgnErr(auth.MigrateRepoForm{}), repo.MigratePost)
+		r.Get("/create", repo.Create)
+		r.Post("/create", bindIgnErr(auth.CreateRepoForm{}), repo.CreatePost)
+		r.Get("/migrate", repo.Migrate)
+		r.Post("/migrate", bindIgnErr(auth.MigrateRepoForm{}), repo.MigratePost)
 	}, reqSignIn)
 
 	adminReq := middleware.Toggle(&middleware.ToggleOptions{SignInRequire: true, AdminRequire: true})
@@ -150,6 +150,7 @@ func runWeb(*cli.Context) {
 	m.Group("/:username/:reponame", func(r martini.Router) {
 		r.Get("/settings", repo.Setting)
 		r.Post("/settings", repo.SettingPost)
+		r.Get("/collaboration", repo.Collaboration)
 		r.Get("/action/:action", repo.Action)
 		r.Get("/issues/new", repo.CreateIssue)
 		r.Post("/issues/new", bindIgnErr(auth.CreateIssueForm{}), repo.CreateIssuePost)
