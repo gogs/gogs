@@ -41,7 +41,7 @@
                         <label class="col-md-3 text-right">Default Branch</label>
                         <div class="col-md-3">
                             <select name="branch" id="repo-default-branch" class="form-control">
-                                <option value="{{.Repository.DefaultBranch}}">{{.Repository.DefaultBranch}}</option>
+                                {{if .Repository.DefaultBranch}}<option value="{{.Repository.DefaultBranch}}">{{.Repository.DefaultBranch}}</option>{{end}}
                                 {{range .Branches}}
                                 {{if eq . $.Repository.DefaultBranch}}{{else}}<option value="{{.}}">{{.}}</option>{{end}}
                                 {{end}}
