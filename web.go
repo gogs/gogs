@@ -150,7 +150,8 @@ func runWeb(*cli.Context) {
 	m.Group("/:username/:reponame", func(r martini.Router) {
 		r.Get("/settings", repo.Setting)
 		r.Post("/settings", repo.SettingPost)
-		r.Get("/collaboration", repo.Collaboration)
+		r.Get("/settings/collaboration", repo.Collaboration)
+		r.Post("/settings/collaboration", repo.CollaborationPost)
 		r.Get("/action/:action", repo.Action)
 		r.Get("/issues/new", repo.CreateIssue)
 		r.Post("/issues/new", bindIgnErr(auth.CreateIssueForm{}), repo.CreateIssuePost)

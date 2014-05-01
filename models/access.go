@@ -42,6 +42,12 @@ func UpdateAccess(access *Access) error {
 	return err
 }
 
+// DeleteAccess deletes access record.
+func DeleteAccess(access *Access) error {
+	_, err := orm.Delete(access)
+	return err
+}
+
 // UpdateAccess updates access information with session for rolling back.
 func UpdateAccessWithSession(sess *xorm.Session, access *Access) error {
 	if _, err := sess.Id(access.Id).Update(access); err != nil {
