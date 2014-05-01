@@ -24,10 +24,10 @@ More importantly, Gogs only needs one binary to setup your own project hosting o
 
 ## Overview
 
-- Please see [Wiki](https://github.com/gogits/gogs/wiki) for project design, known issues, and change log.
+- Please see [Documentation](http://gogs.io/docs/intro/) for project design, known issues, and change log.
 - See [Trello Board](https://trello.com/b/uxAoeLUl/gogs-go-git-service) to follow the develop team.
 - Try it before anything? Do it [online](http://try.gogits.org/Unknown/gogs) or go down to **Installation -> Install from binary** section!
-- Having troubles? Get help from [Troubleshooting](https://github.com/gogits/gogs/wiki/Troubleshooting).
+- Having troubles? Get help from [Troubleshooting](http://gogs.io/docs/intro/troubleshooting.md).
 
 ## Features
 
@@ -49,12 +49,12 @@ More importantly, Gogs only needs one binary to setup your own project hosting o
 
 ## Installation
 
-Make sure you install [Prerequirements](https://github.com/gogits/gogs/wiki/Prerequirements) first.
+Make sure you install [Prerequirements](http://gogs.io/docs/installation/) first.
 
 There are 3 ways to install Gogs:
 
-- [Install from binary](https://github.com/gogits/gogs/wiki/Install-from-binary): **STRONGLY RECOMMENDED**
-- [Install from source](https://github.com/gogits/gogs/wiki/Install-from-source)
+- [Install from binary](http://gogs.io/docs/installation/install_from_binary.md): **STRONGLY RECOMMENDED**
+- [Install from source](http://gogs.io/docs/installation/install_from_source.md)
 - [Ship with Docker](https://github.com/gogits/gogs/tree/master/dockerfiles)
 
 ## Acknowledgments

@@ -75,6 +75,7 @@ type FeedsForm struct {
 
 type UpdateProfileForm struct {
 	UserName string `form:"username" binding:"Required;AlphaDash;MaxSize(30)"`
+	FullName string `form:"fullname" binding:"MaxSize(40)"`
 	Email    string `form:"email" binding:"Required;Email;MaxSize(50)"`
 	Website  string `form:"website" binding:"MaxSize(50)"`
 	Location string `form:"location" binding:"MaxSize(50)"`

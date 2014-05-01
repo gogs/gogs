@@ -21,5 +21,6 @@ func TemplatePreview(ctx *middleware.Context, params martini.Params) {
 	ctx.Data["Code"] = "2014031910370000009fff6782aadb2162b4a997acb69d4400888e0b9274657374"
 	ctx.Data["ActiveCodeLives"] = base.Service.ActiveCodeLives / 60
 	ctx.Data["ResetPwdCodeLives"] = base.Service.ResetPwdCodeLives / 60
+	ctx.Data["CurDbValue"] = ""
 	ctx.HTML(200, params["_1"])
 }

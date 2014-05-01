@@ -21,7 +21,7 @@ type Form interface {
 }
 
 type RegisterForm struct {
-	UserName     string `form:"username" binding:"Required;AlphaDash;MaxSize(30)"`
+	UserName     string `form:"username" binding:"Required;AlphaDashDot;MaxSize(30)"`
 	Email        string `form:"email" binding:"Required;Email;MaxSize(50)"`
 	Password     string `form:"passwd" binding:"Required;MinSize(6);MaxSize(30)"`
 	RetypePasswd string `form:"retypepasswd"`
@@ -123,6 +123,8 @@ func validate(errors *base.BindingErrors, data base.TmplData, form Form) {
 				data["ErrorMsg"] = form.Name(field.Name) + " cannot be empty"
 			case base.BindingAlphaDashError:
 				data["ErrorMsg"] = form.Name(field.Name) + " must be valid alpha or numeric or dash(-_) characters"
+			case base.BindingAlphaDashDotError:
+				data["ErrorMsg"] = form.Name(field.Name) + " must be valid alpha or numeric or dash(-_) or dot characters"
 			case base.BindingMinSizeError:
 				data["ErrorMsg"] = form.Name(field.Name) + " must contain at least " + getMinMaxSize(field) + " characters"
 			case base.BindingMaxSizeError:
@@ -174,7 +176,7 @@ type InstallForm struct {
 	RunUser         string `form:"run_user"`
 	Domain          string `form:"domain"`
 	AppUrl          string `form:"app_url"`
-	AdminName       string `form:"admin_name" binding:"Required"`
+	AdminName       string `form:"admin_name" binding:"Required;AlphaDashDot;MaxSize(30)"`
 	AdminPasswd     string `form:"admin_pwd" binding:"Required;MinSize(6);MaxSize(30)"`
 	AdminEmail      string `form:"admin_email" binding:"Required;Email;MaxSize(50)"`
 	SmtpHost        string `form:"smtp_host"`
