@@ -5,7 +5,7 @@ Gogs(Go Git Service) is a Self Hosted Git Service in the Go Programming Language
 
 ![Demo](http://gowalker.org/public/gogs_demo.gif)
 
-##### Current version: 0.3.0 Alpha
+##### Current version: 0.3.1 Alpha
 
 ### NOTICES
 
@@ -41,6 +41,11 @@ More importantly, Gogs only needs one binary to setup your own project hosting o
 - Administration panel.
 - Supports MySQL, PostgreSQL and SQLite3.
 - Social account login(GitHub, Google, QQ, Weibo)
+
+## System Requirements
+
+- A cheap Raspberry Pi is powerful enough to match the minimal requirement.
+- 4 CPU Cores and 1GB RAM would be the baseline for teamwork.
 
 ## Installation
 

@@ -91,10 +91,23 @@ func Diff(ctx *middleware.Context, params martini.Params) {
 		return isImage
 	}
 
+	parents := make([]string, commit.ParentCount())
+	for i := 0; i < commit.ParentCount(); i++ {
+		sha, err := commit.ParentId(i)
+		parents[i] = sha.String()
+		if err != nil {
+			ctx.Handle(404, "repo.Diff", err)
+			return
+		}
+	}
+
+	ctx.Data["Username"] = userName
+	ctx.Data["Reponame"] = repoName
 	ctx.Data["IsImageFile"] = isImageFile
-	ctx.Data["Title"] = commit.Message() + " · " + base.ShortSha(commitId)
+	ctx.Data["Title"] = commit.Summary() + " · " + base.ShortSha(commitId)
 	ctx.Data["Commit"] = commit
 	ctx.Data["Diff"] = diff
+	ctx.Data["Parents"] = parents
 	ctx.Data["DiffNotAvailable"] = diff.NumFiles() == 0
 	ctx.Data["IsRepoToolbarCommits"] = true
 	ctx.Data["SourcePath"] = "/" + path.Join(userName, repoName, "src", commitId)

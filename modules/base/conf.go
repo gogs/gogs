@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/Unknwon/com"
@@ -19,6 +20,7 @@ import (
 	"github.com/gogits/cache"
 	"github.com/gogits/session"
 
+	"github.com/gogits/gogs/modules/auth/ldap"
 	"github.com/gogits/gogs/modules/log"
 )
 
@@ -43,14 +45,15 @@ type Oauther struct {
 }
 
 var (
-	AppVer     string
-	AppName    string
-	AppLogo    string
-	AppUrl     string
-	IsProdMode bool
-	Domain     string
-	SecretKey  string
-	RunUser    string
+	AppVer      string
+	AppName     string
+	AppLogo     string
+	AppUrl      string
+	OfflineMode bool
+	ProdMode    bool
+	Domain      string
+	SecretKey   string
+	RunUser     string
 
 	RepoRootPath string
 	ScriptType   string
@@ -83,13 +86,14 @@ var (
 )
 
 var Service struct {
-	RegisterEmailConfirm   bool
-	DisableRegistration    bool
-	RequireSignInView      bool
-	EnableCacheAvatar      bool
-	NotifyMail             bool
-	ActiveCodeLives        int
-	ResetPwdCodeLives      int
+	RegisterEmailConfirm bool
+	DisableRegistration  bool
+	RequireSignInView    bool
+	EnableCacheAvatar    bool
+	NotifyMail           bool
+	ActiveCodeLives      int
+	ResetPwdCodeLives    int
+	LdapAuth             bool
 }
 
 func ExecDir() (string, error) {
@@ -173,6 +177,36 @@ func newLogService() {
 	log.Info("%s %s", AppName, AppVer)
 	log.NewLogger(Cfg.MustInt64("log", "BUFFER_LEN", 10000), LogMode, LogConfig)
 	log.Info("Log Mode: %s(%s)", strings.Title(LogMode), levelName)
+}
+
+func newLdapService() {
+	Service.LdapAuth = Cfg.MustBool("security", "LDAP_AUTH", false)
+	if !Service.LdapAuth {
+		return
+	}
+
+	nbsrc := 0
+	for _, v := range Cfg.GetSectionList() {
+		if matched, _ := regexp.MatchString("(?i)^LDAPSOURCE.*", v); matched {
+			ldapname := Cfg.MustValue(v, "name", v)
+			ldaphost := Cfg.MustValue(v, "host")
+			ldapport := Cfg.MustInt(v, "port", 389)
+			ldapbasedn := Cfg.MustValue(v, "basedn", "dc=*,dc=*")
+			ldapattribute := Cfg.MustValue(v, "attribute", "mail")
+			ldapfilter := Cfg.MustValue(v, "filter", "(*)")
+			ldapmsadsaformat := Cfg.MustValue(v, "MSADSAFORMAT", "%s")
+			ldap.AddSource(ldapname, ldaphost, ldapport, ldapbasedn, ldapattribute, ldapfilter, ldapmsadsaformat)
+			nbsrc++
+			log.Debug("%s added as LDAP source", ldapname)
+		}
+	}
+	if nbsrc == 0 {
+		log.Warn("No valide LDAP found, LDAP Authentication NOT enabled")
+		Service.LdapAuth = false
+		return
+	}
+
+	log.Info("LDAP Authentication Enabled")
 }
 
 func newCacheService() {
@@ -292,6 +326,7 @@ func NewConfigContext() {
 	AppLogo = Cfg.MustValue("", "APP_LOGO", "img/favicon.png")
 	AppUrl = Cfg.MustValue("server", "ROOT_URL")
 	Domain = Cfg.MustValue("server", "DOMAIN")
+	OfflineMode = Cfg.MustBool("server", "OFFLINE_MODE", false)
 	SecretKey = Cfg.MustValue("security", "SECRET_KEY")
 
 	InstallLock = Cfg.MustBool("security", "INSTALL_LOCK", false)
@@ -309,7 +344,6 @@ func NewConfigContext() {
 	LogInRememberDays = Cfg.MustInt("security", "LOGIN_REMEMBER_DAYS")
 	CookieUserName = Cfg.MustValue("security", "COOKIE_USERNAME")
 	CookieRememberName = Cfg.MustValue("security", "COOKIE_REMEMBER_NAME")
-
 	PictureService = Cfg.MustValue("picture", "SERVICE")
 
 	// Determine and create root git reposiroty path.
@@ -327,6 +361,7 @@ func NewConfigContext() {
 func NewBaseServices() {
 	newService()
 	newLogService()
+	newLdapService()
 	newCacheService()
 	newSessionService()
 	newMailService()

@@ -10,7 +10,7 @@
         {{end}}
         {{template "base/alert" .}}
         <div class="form-group {{if .Err_UserName}}has-error has-feedback{{end}}">
-            <label class="col-md-4 control-label">Username: </label>
+            <label class="col-md-4 control-label">Username or e-mail: </label>
             <div class="col-md-6">
                 <input name="username" class="form-control" placeholder="Type your username" value="{{.username}}" required="required">
             </div>

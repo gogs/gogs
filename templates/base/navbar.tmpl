@@ -3,7 +3,7 @@
         <nav class="nav">
             <a id="nav-logo" class="nav-item pull-left{{if .PageIsHome}} active{{end}}" href="/"><img src="/img/favicon.png" alt="Gogs Logo" id="logo"></a>
             <a class="nav-item pull-left{{if .PageIsUserDashboard}} active{{end}}" href="/">Dashboard</a>
-            <a class="nav-item pull-left{{if .PageIsHelp}} active{{end}}" href="https://github.com/gogits/gogs/wiki">Help</a>{{if .IsSigned}}
+            <a class="nav-item pull-left{{if .PageIsHelp}} active{{end}}" target="_blank" href="https://github.com/gogits/gogs/wiki">Help</a>{{if .IsSigned}}
             {{if .HasAccess}}<!-- <form class="nav-item pull-left{{if .PageIsNewRepo}} active{{end}}" id="nav-search-form">
                 <div class="input-group">
                     <div class="input-group-btn">
@@ -21,7 +21,7 @@
             <a id="nav-avatar" class="nav-item navbar-right{{if .PageIsUserProfile}} active{{end}}" href="{{.SignedUser.HomeLink}}" data-toggle="tooltip" data-placement="bottom" title="{{.SignedUserName}}">
                 <img src="{{.SignedUser.AvatarLink}}?s=28" alt="user-avatar" title="username"/>
             </a>
-            <a class="navbar-right nav-item{{if .PageIsUserSetting}} active{{end}}" href="/user/setting"  data-toggle="tooltip" data-placement="bottom" title="Setting"><i class="fa fa-cogs fa-lg"></i></a>
+            <a class="navbar-right nav-item{{if .PageIsUserSetting}} active{{end}}" href="/user/settings"  data-toggle="tooltip" data-placement="bottom" title="Settings"><i class="fa fa-cogs fa-lg"></i></a>
             {{if .IsAdmin}}<a class="navbar-right nav-item{{if .PageIsAdmin}} active{{end}}" href="/admin"  data-toggle="tooltip" data-placement="bottom" title="Admin"><i class="fa fa-gear fa-lg"></i></a>{{end}}
             <div class="navbar-right nav-item pull-right{{if .PageIsNewRepo}} active{{end}}" id="nav-repo-new" data-toggle="tooltip" data-placement="bottom" title="New Repo">
                 <button type="button" class="dropdown-toggle" data-toggle="dropdown"><i class="fa fa-plus-square fa-lg"></i></button>
@@ -33,8 +33,8 @@
                     </ul>
                 </div>
             </div>
-            {{else}}<a id="nav-signin" class="nav-item navbar-right navbar-btn btn btn-danger" href="/user/login/">Sign In</a>
-            <a id="nav-signup" class="nav-item navbar-right" href="/user/sign_up/">Sign Up</a>{{end}}
+            {{else}}<a id="nav-signin" class="nav-item navbar-right navbar-btn btn btn-danger" href="/user/login/" rel="nofollow">Sign In</a>
+            <a id="nav-signup" class="nav-item navbar-right" href="/user/sign_up/" rel="nofollow">Sign Up</a>{{end}}
         </nav>
     </div>
 </div>

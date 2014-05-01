@@ -30,7 +30,7 @@ func checkRunMode() {
 	switch base.Cfg.MustValue("", "RUN_MODE") {
 	case "prod":
 		martini.Env = martini.Prod
-		base.IsProdMode = true
+		base.ProdMode = true
 	case "test":
 		martini.Env = martini.Test
 	}
@@ -63,6 +63,10 @@ func GlobalInit() {
 		cron.NewCronContext()
 	}
 	checkRunMode()
+}
+
+func renderDbOption(ctx *middleware.Context) {
+	ctx.Data["DbOptions"] = []string{"MySQL", "PostgreSQL", "SQLite3"}
 }
 
 func Install(ctx *middleware.Context, form auth.InstallForm) {
@@ -104,6 +108,13 @@ func Install(ctx *middleware.Context, form auth.InstallForm) {
 		form.AppUrl = base.AppUrl
 	}
 
+	renderDbOption(ctx)
+	curDbValue := ""
+	if models.EnableSQLite3 {
+		curDbValue = "SQLite3" // Default when enabled.
+	}
+	ctx.Data["CurDbValue"] = curDbValue
+
 	auth.AssignForm(form, ctx.Data)
 	ctx.HTML(200, "install")
 }
@@ -117,6 +128,9 @@ func InstallPost(ctx *middleware.Context, form auth.InstallForm) {
 	ctx.Data["Title"] = "Install"
 	ctx.Data["PageIsInstall"] = true
 
+	renderDbOption(ctx)
+	ctx.Data["CurDbValue"] = form.Database
+
 	if ctx.HasError() {
 		ctx.HTML(200, "install")
 		return
@@ -129,7 +143,7 @@ func InstallPost(ctx *middleware.Context, form auth.InstallForm) {
 
 	// Pass basic check, now test configuration.
 	// Test database setting.
-	dbTypes := map[string]string{"mysql": "mysql", "pgsql": "postgres", "sqlite": "sqlite3"}
+	dbTypes := map[string]string{"MySQL": "mysql", "PostgreSQL": "postgres", "SQLite3": "sqlite3"}
 	models.DbCfg.Type = dbTypes[form.Database]
 	models.DbCfg.Host = form.Host
 	models.DbCfg.User = form.User

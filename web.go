@@ -94,8 +94,8 @@ func runWeb(*cli.Context) {
 	m.Group("/user", func(r martini.Router) {
 		r.Get("/delete", user.Delete)
 		r.Post("/delete", user.DeletePost)
-		r.Get("/setting", user.Setting)
-		r.Post("/setting", bindIgnErr(auth.UpdateProfileForm{}), user.SettingPost)
+		r.Get("/settings", user.Setting)
+		r.Post("/settings", bindIgnErr(auth.UpdateProfileForm{}), user.SettingPost)
 	}, reqSignIn)
 	m.Group("/user", func(r martini.Router) {
 		r.Get("/feeds", middleware.Bind(auth.FeedsForm{}), user.Feeds)
@@ -105,7 +105,7 @@ func runWeb(*cli.Context) {
 		r.Post("/forget_password", user.ForgotPasswdPost)
 		r.Get("/logout", user.SignOut)
 	})
-	m.Group("/user/setting", func(r martini.Router) {
+	m.Group("/user/settings", func(r martini.Router) {
 		r.Get("/social", user.SettingSocial)
 		r.Get("/password", user.SettingPassword)
 		r.Post("/password", bindIgnErr(auth.UpdatePasswdForm{}), user.SettingPasswordPost)

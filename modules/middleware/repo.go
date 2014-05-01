@@ -26,11 +26,14 @@ func RepoAssignment(redirect bool, args ...bool) martini.Handler {
 		var displayBare bool
 
 		if len(args) >= 1 {
-			validBranch = args[0]
+			// Note: argument has wrong value in Go1.3 martini.
+			// validBranch = args[0]
+			validBranch = true
 		}
 
 		if len(args) >= 2 {
-			displayBare = args[1]
+			// displayBare = args[1]
+			displayBare = true
 		}
 
 		var (

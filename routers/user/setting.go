@@ -66,7 +66,7 @@ func SettingPost(ctx *middleware.Context, form auth.UpdateProfileForm) {
 	log.Trace("%s User setting updated: %s", ctx.Req.RequestURI, ctx.User.LowerName)
 
 	ctx.Flash.Success("Your profile has been successfully updated.")
-	ctx.Redirect("/user/setting")
+	ctx.Redirect("/user/settings")
 }
 
 func SettingSocial(ctx *middleware.Context) {
@@ -122,7 +122,7 @@ func SettingPasswordPost(ctx *middleware.Context, form auth.UpdatePasswdForm) {
 		ctx.Flash.Success("Password is changed successfully. You can now sign in via new password.")
 	}
 
-	ctx.Redirect("/user/setting/password")
+	ctx.Redirect("/user/settings/password")
 }
 
 func SettingSSHKeys(ctx *middleware.Context, form auth.AddSSHKeyForm) {
@@ -166,7 +166,8 @@ func SettingSSHKeys(ctx *middleware.Context, form auth.AddSSHKeyForm) {
 			return
 		}
 
-		k := &models.PublicKey{OwnerId: ctx.User.Id,
+		k := &models.PublicKey{
+			OwnerId: ctx.User.Id,
 			Name:    form.KeyName,
 			Content: form.KeyContent,
 		}
@@ -181,7 +182,7 @@ func SettingSSHKeys(ctx *middleware.Context, form auth.AddSSHKeyForm) {
 		} else {
 			log.Trace("%s User SSH key added: %s", ctx.Req.RequestURI, ctx.User.LowerName)
 			ctx.Flash.Success("New SSH Key has been added!")
-			ctx.Redirect("/user/setting/ssh")
+			ctx.Redirect("/user/settings/ssh")
 			return
 		}
 	}

@@ -470,10 +470,10 @@ function initInstall() {
     (function () {
         $('#install-database').on("change", function () {
             var val = $(this).val();
-            if (val != "sqlite") {
+            if (val != "SQLite3") {
                 $('.server-sql').show();
                 $('.sqlite-setting').addClass("hide");
-                if (val == "pgsql") {
+                if (val == "PostgreSQL") {
                     $('.pgsql-setting').removeClass("hide");
                 } else {
                     $('.pgsql-setting').addClass("hide");

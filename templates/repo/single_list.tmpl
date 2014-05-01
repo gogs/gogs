@@ -1,6 +1,6 @@
 <div class="panel panel-default info-box">
     <div class="panel-heading info-head">
-        <a href="/{{.Username}}/{{.Reponame}}/commit/{{.LastCommit.Id}}">{{.LastCommit.Message}}</a>
+        <a href="/{{.Username}}/{{.Reponame}}/commit/{{.LastCommit.Id}}" rel="nofollow">{{.LastCommit.Summary}}</a>
     </div>
     <div class="panel-body info-content">
         <a href="/user/{{.LastCommit.Author.Name}}">{{.LastCommit.Author.Name}}</a> <span class="text-muted">{{TimeSince .LastCommit.Author.When}}</span>
@@ -36,7 +36,7 @@
                         </span>
                     </td>
                     <td class="text">
-                        <span class="wrap"><a rel="nofollow" href="/{{$.Username}}/{{$.Reponame}}/commit/{{$commit.Id}}">{{$commit.Message}}</a></span>
+                        <span class="wrap"><a rel="nofollow" href="/{{$.Username}}/{{$.Reponame}}/commit/{{$commit.Id}}">{{$commit.Summary}}</a></span>
                     </td>
                     <td class="date">
                         <span class="wrap">{{TimeSince $commit.Committer.When}}</span>

@@ -13,7 +13,7 @@ ENV GOROOT /usr/local/go
 ENV GOPATH /go
 
 RUN apt-get update && apt-get install --yes --force-yes curl git mercurial zip wget ca-certificates build-essential
-RUN apt-get install -yq vim
+RUN apt-get install -yq vim sudo
 
 RUN curl -s http://docker.u.qiniudn.com/go1.2.1.src.tar.gz | tar -v -C /usr/local -xz
 RUN cd /usr/local/go/src && ./make.bash --no-clean 2>&1

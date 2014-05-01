@@ -56,8 +56,8 @@ var TemplateFuncs template.FuncMap = map[string]interface{}{
 	"AppDomain": func() string {
 		return Domain
 	},
-	"IsProdMode": func() bool {
-		return IsProdMode
+	"CdnMode": func() bool {
+		return ProdMode && !OfflineMode
 	},
 	"LoadTimes": func(startTime time.Time) string {
 		return fmt.Sprint(time.Since(startTime).Nanoseconds()/1e6) + "ms"
@@ -124,11 +124,11 @@ func ActionIcon(opType int) string {
 const (
 	TPL_CREATE_REPO    = `<a href="/user/%s">%s</a> created repository <a href="/%s">%s</a>`
 	TPL_COMMIT_REPO    = `<a href="/user/%s">%s</a> pushed to <a href="/%s/src/%s">%s</a> at <a href="/%s">%s</a>%s`
-	TPL_COMMIT_REPO_LI = `<div><img src="%s?s=16" alt="user-avatar"/> <a href="/%s/commit/%s">%s</a> %s</div>`
+	TPL_COMMIT_REPO_LI = `<div><img src="%s?s=16" alt="user-avatar"/> <a href="/%s/commit/%s" rel="nofollow">%s</a> %s</div>`
 	TPL_CREATE_ISSUE   = `<a href="/user/%s">%s</a> opened issue <a href="/%s/issues/%s">%s#%s</a>
 <div><img src="%s?s=16" alt="user-avatar"/> %s</div>`
 	TPL_TRANSFER_REPO = `<a href="/user/%s">%s</a> transfered repository <code>%s</code> to <a href="/%s">%s</a>`
-	TPL_PUSH_TAG      = `<a href="/user/%s">%s</a> pushed tag <a href="/%s/src/%s">%s</a> at <a href="/%s">%s</a>`
+	TPL_PUSH_TAG      = `<a href="/user/%s">%s</a> pushed tag <a href="/%s/src/%s" rel="nofollow">%s</a> at <a href="/%s">%s</a>`
 )
 
 type PushCommit struct {
@@ -165,7 +165,7 @@ func ActionDesc(act Actioner) string {
 			buf.WriteString(fmt.Sprintf(TPL_COMMIT_REPO_LI, AvatarLink(commit.AuthorEmail), repoLink, commit.Sha1, commit.Sha1[:7], commit.Message) + "\n")
 		}
 		if push.Len > 3 {
-			buf.WriteString(fmt.Sprintf(`<div><a href="/%s/%s/commits/%s">%d other commits >></a></div>`, actUserName, repoName, branch, push.Len))
+			buf.WriteString(fmt.Sprintf(`<div><a href="/%s/%s/commits/%s" rel="nofollow">%d other commits >></a></div>`, actUserName, repoName, branch, push.Len))
 		}
 		return fmt.Sprintf(TPL_COMMIT_REPO, actUserName, actUserName, repoLink, branch, branch, repoLink, repoLink,
 			buf.String())

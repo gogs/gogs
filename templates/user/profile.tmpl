@@ -11,13 +11,13 @@
         <div class="profile-info">
             <ul class="list-group">
                 {{if .Owner.Location}}
-                    <li class="list-group-item"><i class="fa fa-thumb-tack"></i>{{.Owner.Location}}</li>
+                <li class="list-group-item"><i class="fa fa-thumb-tack"></i>{{.Owner.Location}}</li>
                 {{end}}
                 {{if .Owner.Email}}
-                    <li class="list-group-item"><i class="fa fa-envelope"></i><a href="mailto:{{.Owner.Email}}">{{.Owner.Email}}</a></li>
+                <li class="list-group-item"><i class="fa fa-envelope"></i><a href="mailto:{{.Owner.Email}}" rel="nofollow">{{.Owner.Email}}</a></li>
                 {{end}}
                 {{if .Owner.Website}}
-                    <li class="list-group-item"><i class="fa fa-link"></i><a target="_blank" href="{{.Owner.Website}}">{{.Owner.Website}}</a></li>
+                <li class="list-group-item"><i class="fa fa-link"></i><a target="_blank" href="{{.Owner.Website}}">{{.Owner.Website}}</a></li>
                 {{end}}
                 <li class="list-group-item"><i class="fa fa-clock-o"></i>Joined on {{DateFormat .Owner.Created "M d, Y"}}</li>
                 <!-- <hr> -->
