@@ -194,9 +194,17 @@ func RepoAssignment(redirect bool, args ...bool) martini.Handler {
 				}
 
 			} else {
-				refName = ctx.Repo.Repository.DefaultBranch
 				if len(refName) == 0 {
-					refName = "master"
+					if gitRepo.IsBranchExist(ctx.Repo.Repository.DefaultBranch) {
+						refName = ctx.Repo.Repository.DefaultBranch
+					} else {
+						brs, err := gitRepo.GetBranches()
+						if err != nil {
+							ctx.Handle(500, "RepoAssignment(GetBranches))", err)
+							return
+						}
+						refName = brs[0]
+					}
 				}
 				goto detect
 			}
