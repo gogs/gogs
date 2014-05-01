@@ -70,12 +70,7 @@ func CreateIssue(userId, repoId, milestoneId, assigneeId int64, issueCount int, 
 		return nil, err
 	}
 
-	if err = sess.Commit(); err != nil {
-		//sess.Rollback()
-		return nil, err
-	}
-
-	return issue, nil
+	return issue, sess.Commit()
 }
 
 // GetIssueById returns issue object by given id.

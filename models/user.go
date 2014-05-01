@@ -409,6 +409,25 @@ func GetUserByEmail(email string) (*User, error) {
 	return user, nil
 }
 
+// SearchUserByName returns given number of users whose name contains keyword.
+func SearchUserByName(key string, limit int) (us []*User, err error) {
+	// Prevent SQL inject.
+	key = strings.TrimSpace(key)
+	if len(key) == 0 {
+		return us, nil
+	}
+
+	key = strings.Split(key, " ")[0]
+	if len(key) == 0 {
+		return us, nil
+	}
+	key = strings.ToLower(key)
+
+	us = make([]*User, 0, limit)
+	err = orm.Limit(limit).Where("lower_name like '%" + key + "%'").Find(&us)
+	return us, err
+}
+
 // LoginUserPlain validates user by raw user name and password.
 func LoginUserPlain(uname, passwd string) (*User, error) {
 	var u *User

@@ -75,7 +75,11 @@ func runWeb(*cli.Context) {
 	m.Get("/help", routers.Help)
 
 	m.Group("/api/v1", func(r martini.Router) {
+		// Miscellaneous.
 		r.Post("/markdown", v1.Markdown)
+
+		// Users.
+		r.Get("/users/search", v1.SearchUser)
 	})
 
 	avt := avatar.CacheServer("public/img/avatar/", "public/img/avatar_default.jpg")
