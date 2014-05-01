@@ -45,6 +45,7 @@ func (this *BindingErrors) Combine(other BindingErrors) {
 const (
 	BindingRequireError         string = "Required"
 	BindingAlphaDashError       string = "AlphaDash"
+	BindingAlphaDashDotError    string = "AlphaDashDot"
 	BindingMinSizeError         string = "MinSize"
 	BindingMaxSizeError         string = "MaxSize"
 	BindingEmailError           string = "Email"
