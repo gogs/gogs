@@ -6,7 +6,10 @@ package repo
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/gogits/git"
+
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
@@ -20,13 +23,7 @@ func Setting(ctx *middleware.Context) {
 	}
 
 	ctx.Data["IsRepoToolbarSetting"] = true
-
-	var title string
-	if t, ok := ctx.Data["Title"].(string); ok {
-		title = t
-	}
-
-	ctx.Data["Title"] = title + " - settings"
+	ctx.Data["Title"] = strings.TrimPrefix(ctx.Repo.RepoLink, "/") + " - settings"
 	ctx.HTML(200, "repo/setting")
 }
 
@@ -128,17 +125,82 @@ func SettingPost(ctx *middleware.Context) {
 
 func Collaboration(ctx *middleware.Context) {
 	if !ctx.Repo.IsOwner {
-		ctx.Handle(404, "repo.Setting", nil)
+		ctx.Error(404)
 		return
 	}
 
-	ctx.Data["IsRepoToolbarSetting"] = true
+	repoLink := strings.TrimPrefix(ctx.Repo.RepoLink, "/")
+	ctx.Data["IsRepoToolbarCollaboration"] = true
+	ctx.Data["Title"] = repoLink + " - collaboration"
 
-	var title string
-	if t, ok := ctx.Data["Title"].(string); ok {
-		title = t
+	// Delete collaborator.
+	remove := strings.ToLower(ctx.Query("remove"))
+	if len(remove) > 0 && remove != ctx.Repo.Owner.LowerName {
+		if err := models.DeleteAccess(&models.Access{UserName: remove, RepoName: repoLink}); err != nil {
+			ctx.Handle(500, "repo.Collaboration(DeleteAccess)", err)
+			return
+		}
+		ctx.Flash.Success("Collaborator has been removed.")
+		ctx.Redirect(ctx.Repo.RepoLink + "/settings/collaboration")
+		return
 	}
 
-	ctx.Data["Title"] = title + " - collaboration"
+	names, err := models.GetCollaborators(repoLink)
+	if err != nil {
+		ctx.Handle(500, "repo.Collaboration(GetCollaborators)", err)
+		return
+	}
+
+	us := make([]*models.User, len(names))
+	for i, name := range names {
+		us[i], err = models.GetUserByName(name)
+		if err != nil {
+			ctx.Handle(500, "repo.Collaboration(GetUserByName)", err)
+			return
+		}
+	}
+
+	ctx.Data["Collaborators"] = us
 	ctx.HTML(200, "repo/collaboration")
+}
+
+func CollaborationPost(ctx *middleware.Context) {
+	if !ctx.Repo.IsOwner {
+		ctx.Error(404)
+		return
+	}
+
+	repoLink := strings.TrimPrefix(ctx.Repo.RepoLink, "/")
+	name := strings.ToLower(ctx.Query("collaborator"))
+	if len(name) == 0 || ctx.Repo.Owner.LowerName == name {
+		ctx.Redirect(ctx.Req.RequestURI)
+		return
+	}
+	has, err := models.HasAccess(name, repoLink, models.AU_WRITABLE)
+	if err != nil {
+		ctx.Handle(500, "repo.CollaborationPost(HasAccess)", err)
+		return
+	} else if has {
+		ctx.Redirect(ctx.Req.RequestURI)
+		return
+	}
+
+	isExist, err := models.IsUserExist(name)
+	if err != nil {
+		ctx.Handle(500, "repo.CollaborationPost(IsUserExist)", err)
+		return
+	} else if !isExist {
+		ctx.Flash.Error("Given user does not exist.")
+		ctx.Redirect(ctx.Req.RequestURI)
+		return
+	}
+
+	if err := models.AddAccess(&models.Access{UserName: name, RepoName: repoLink,
+		Mode: models.AU_WRITABLE}); err != nil {
+		ctx.Handle(500, "repo.CollaborationPost(AddAccess)", err)
+		return
+	}
+
+	ctx.Flash.Success("New collaborator has been added.")
+	ctx.Redirect(ctx.Req.RequestURI)
 }

@@ -398,6 +398,7 @@ html, body {
     background-color: #FFF;
     border: 1px solid #CCC;
     padding: 0;
+    padding-top: 10px;
 }
 
 #user-setting-nav > h4, #user-setting-container > h4, #user-setting-container > div > h4,

@@ -3,14 +3,7 @@
 {{template "repo/nav" .}}
 {{template "repo/toolbar" .}}
 <div id="body" class="container">
-    <div id="user-setting-nav" class="col-md-2 repo-setting-nav">
-        <ul class="list-group">
-            <li class="list-group-item"><a href="/{{.Owner.Name}}/{{.Repository.Name}}/settings">Options</a></li>
-            <li class="list-group-item active"><a href="/{{.Owner.Name}}/{{.Repository.Name}}/collaboration">Collaborators</a></li>
-            <!--<li class="list-group-item"><a href="#">Notifications</a></li>-->
-        </ul>
-    </div>
-
+    {{template "repo/setting_nav" .}}
     <div id="repo-setting-container" class="col-md-10">
         {{template "base/alert" .}}
         <div class="panel panel-default">
@@ -19,23 +12,24 @@
             </div>
             <div class="panel-body">
                 <ul id="repo-collab-list" class="list-unstyled">
-                    <li>No Collaborators</li>
+                    {{range .Collaborators}}
                     <li class="collab">
-                        <a href="/{{.Owner.Name}}/{{.Repository.Name}}/remove_member?name=" class="remove-collab pull-right"><i class="fa fa-times"></i></a>
-                        <a class="member" href="#">
-                            <img alt="无闻" class="pull-left avatar" src="https://avatars2.githubusercontent.com/u/2946214?s=140">
-                                <strong class="access-member-fullname">无闻</strong><br/>
-                                Unknwon
+                        {{if not (eq .LowerName $.Owner.LowerName)}}<a href="{{$.RepoLink}}/settings/collaboration?remove={{.Name}}" class="remove-collab pull-right"><i class="fa fa-times"></i></a>{{end}}
+                        <a class="member" href="/user/{{.Name}}">
+                            <img alt="{{.Name}}" class="pull-left avatar" src="{{.AvatarLink}}">
+                            <strong class="access-member-fullname">{{.FullName}}</strong><br/>
+                            {{.Name}}
                         </a>
                     </li>
+                    {{end}}
                 </ul>
             </div>
             <div class="panel-footer">
-                <form action="/{{.Owner.Name}}/{{.Repository.Name}}/collaboration" method="post" class="form-horizontal" id="repo-collab-form">
+                <form action="{{.RepoLink}}/settings/collaboration" method="post" class="form-horizontal" id="repo-collab-form">
                     {{.CsrfTokenHtml}}
                     <div class="form-group" style="margin-bottom: 0">
                         <div class="col-md-4">
-                            <input type="text" name="collaborator" class="form-control dropdown-toggle" id="repo-collaborator" required="required" data-toggle="dropdown"/>
+                            <input type="text" name="collaborator" class="form-control dropdown-toggle" id="repo-collaborator" autocomplete="off" required="required" data-toggle="dropdown"/>
                             <div class="dropdown-menu">
                                 <ul class="list-unstyled"></ul>
                             </div>

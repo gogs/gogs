@@ -712,6 +712,20 @@ func GetRepositoryCount(user *User) (int64, error) {
 	return orm.Count(&Repository{OwnerId: user.Id})
 }
 
+// GetCollaborators returns a list of user name of repository's collaborators.
+func GetCollaborators(repoName string) ([]string, error) {
+	accesses := make([]*Access, 0, 10)
+	if err := orm.Find(&accesses, &Access{RepoName: strings.ToLower(repoName)}); err != nil {
+		return nil, err
+	}
+
+	names := make([]string, len(accesses))
+	for i := range accesses {
+		names[i] = accesses[i].UserName
+	}
+	return names, nil
+}
+
 // Watch is connection request for receiving repository notifycation.
 type Watch struct {
 	Id     int64
