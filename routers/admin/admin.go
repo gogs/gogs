@@ -140,6 +140,7 @@ func Config(ctx *middleware.Context) {
 	ctx.Data["AppUrl"] = base.AppUrl
 	ctx.Data["Domain"] = base.Domain
 	ctx.Data["OfflineMode"] = base.OfflineMode
+	ctx.Data["RouterLog"] = base.RouterLog
 	ctx.Data["RunUser"] = base.RunUser
 	ctx.Data["RunMode"] = strings.Title(martini.Env)
 	ctx.Data["RepoRootPath"] = base.RepoRootPath

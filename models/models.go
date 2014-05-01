@@ -58,10 +58,10 @@ func NewTestEngine(x *xorm.Engine) (err error) {
 	case "postgres":
 		var host, port = "127.0.0.1", "5432"
 		fields := strings.Split(DbCfg.Host, ":")
-		if len(fields) > 0 {
+		if len(fields) > 0 && len(strings.TrimSpace(fields[0])) > 0 {
 			host = fields[0]
 		}
-		if len(fields) > 1 {
+		if len(fields) > 1 && len(strings.TrimSpace(fields[1])) > 0 {
 			port = fields[1]
 		}
 		cnnstr := fmt.Sprintf("user=%s password=%s host=%s port=%s dbname=%s sslmode=%s",
@@ -91,10 +91,10 @@ func SetEngine() (err error) {
 	case "postgres":
 		var host, port = "127.0.0.1", "5432"
 		fields := strings.Split(DbCfg.Host, ":")
-		if len(fields) > 0 {
+		if len(fields) > 0 && len(strings.TrimSpace(fields[0])) > 0 {
 			host = fields[0]
 		}
-		if len(fields) > 1 {
+		if len(fields) > 1 && len(strings.TrimSpace(fields[1])) > 0 {
 			port = fields[1]
 		}
 		orm, err = xorm.NewEngine("postgres", fmt.Sprintf("user=%s password=%s host=%s port=%s dbname=%s sslmode=%s",
