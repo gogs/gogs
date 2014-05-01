@@ -248,6 +248,7 @@ func ChangeUserName(user *User, newUserName string) (err error) {
 		}
 
 		for j := range accesses {
+			accesses[j].UserName = newUserName
 			accesses[j].RepoName = newUserName + "/" + repos[i].LowerName
 			if err = UpdateAccessWithSession(sess, &accesses[j]); err != nil {
 				return err
