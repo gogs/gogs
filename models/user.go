@@ -230,9 +230,9 @@ func ChangeUserName(user *User, newUserName string) (err error) {
 		accesses[i].UserName = newUserName
 		if strings.HasPrefix(accesses[i].RepoName, user.LowerName+"/") {
 			accesses[i].RepoName = strings.Replace(accesses[i].RepoName, user.LowerName, newUserName, 1)
-			if err = UpdateAccessWithSession(sess, &accesses[i]); err != nil {
-				return err
-			}
+		}
+		if err = UpdateAccessWithSession(sess, &accesses[i]); err != nil {
+			return err
 		}
 	}
 
