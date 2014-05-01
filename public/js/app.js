@@ -597,7 +597,7 @@ function initRepoSetting() {
             url: '/api/v1/users/search?q=' + $this.val(),
             dataType: "json",
             success: function (json) {
-                if (json.ok && json.data) {
+                if (json.ok && json.data.length) {
                     var html = '';
                     $.each(json.data, function (i, item) {
                         html += '<li><img src="' + item.avatar + '">' + item.username + '</li>';
