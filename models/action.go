@@ -88,12 +88,6 @@ func CommitRepoAction(userId int64, userName, actEmail string,
 		return err
 	}
 
-	if err = NotifyWatchers(&Action{ActUserId: userId, ActUserName: userName, ActEmail: actEmail,
-		OpType: opType, Content: string(bs), RepoId: repoId, RepoName: repoName, RefName: refName}); err != nil {
-		log.Error("action.CommitRepoAction(notify watchers): %d/%s", userId, repoName)
-		return err
-	}
-
 	// Change repository bare status and update last updated time.
 	repo, err := GetRepositoryByName(userId, repoName)
 	if err != nil {
@@ -106,12 +100,24 @@ func CommitRepoAction(userId int64, userName, actEmail string,
 		return err
 	}
 
+	if !repo.IsPrivate {
+		if err = NotifyWatchers(&Action{ActUserId: userId, ActUserName: userName, ActEmail: actEmail,
+			OpType: opType, Content: string(bs), RepoId: repoId, RepoName: repoName, RefName: refName}); err != nil {
+			log.Error("action.CommitRepoAction(notify watchers): %d/%s", userId, repoName)
+			return err
+		}
+	}
+
 	log.Trace("action.CommitRepoAction(end): %d/%s", userId, repoName)
 	return nil
 }
 
 // NewRepoAction adds new action for creating repository.
 func NewRepoAction(user *User, repo *Repository) (err error) {
+	if repo.IsPrivate {
+		return nil
+	}
+
 	if err = NotifyWatchers(&Action{ActUserId: user.Id, ActUserName: user.Name, ActEmail: user.Email,
 		OpType: OP_CREATE_REPO, RepoId: repo.Id, RepoName: repo.Name}); err != nil {
 		log.Error("action.NewRepoAction(notify watchers): %d/%s", user.Id, repo.Name)
@@ -124,6 +130,10 @@ func NewRepoAction(user *User, repo *Repository) (err error) {
 
 // TransferRepoAction adds new action for transfering repository.
 func TransferRepoAction(user, newUser *User, repo *Repository) (err error) {
+	if repo.IsPrivate {
+		return nil
+	}
+
 	if err = NotifyWatchers(&Action{ActUserId: user.Id, ActUserName: user.Name, ActEmail: user.Email,
 		OpType: OP_TRANSFER_REPO, RepoId: repo.Id, RepoName: repo.Name, Content: newUser.Name}); err != nil {
 		log.Error("action.TransferRepoAction(notify watchers): %d/%s", user.Id, repo.Name)
