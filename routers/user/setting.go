@@ -54,6 +54,7 @@ func SettingPost(ctx *middleware.Context, form auth.UpdateProfileForm) {
 		user.Name = form.UserName
 	}
 
+	user.FullName = form.FullName
 	user.Email = form.Email
 	user.Website = form.Website
 	user.Location = form.Location
