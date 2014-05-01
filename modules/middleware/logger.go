@@ -12,6 +12,8 @@ import (
 	"time"
 
 	"github.com/go-martini/martini"
+
+	"github.com/gogits/gogs/modules/base"
 )
 
 var isWindows bool
@@ -22,6 +24,10 @@ func init() {
 
 func Logger() martini.Handler {
 	return func(res http.ResponseWriter, req *http.Request, ctx martini.Context, log *log.Logger) {
+		if !base.RouterLog {
+			return
+		}
+
 		start := time.Now()
 		log.Printf("Started %s %s", req.Method, req.URL.Path)
 

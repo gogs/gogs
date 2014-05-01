@@ -106,11 +106,19 @@ func (ctx *Context) RenderWithErr(msg, tpl string, form auth.Form) {
 
 // Handle handles and logs error by given status.
 func (ctx *Context) Handle(status int, title string, err error) {
-	log.Error("%s: %v", title, err)
-	if martini.Dev != martini.Prod {
-		ctx.Data["ErrorMsg"] = err
+	if err != nil {
+		log.Error("%s: %v", title, err)
+		if martini.Dev != martini.Prod {
+			ctx.Data["ErrorMsg"] = err
+		}
 	}
 
+	switch status {
+	case 404:
+		ctx.Data["Title"] = "Page Not Found"
+	case 500:
+		ctx.Data["Title"] = "Internal Server Error"
+	}
 	ctx.HTML(status, fmt.Sprintf("status/%d", status))
 }
 

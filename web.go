@@ -42,7 +42,7 @@ func newMartini() *martini.ClassicMartini {
 	m := martini.New()
 	m.Use(middleware.Logger())
 	m.Use(martini.Recovery())
-	m.Use(martini.Static("public"))
+	m.Use(martini.Static("public", martini.StaticOptions{SkipLogging: !base.RouterLog}))
 	m.MapTo(r, (*martini.Routes)(nil))
 	m.Action(r.Handle)
 	return &martini.ClassicMartini{m, r}
@@ -208,4 +208,5 @@ func runWeb(*cli.Context) {
 			qlog.Error(err.Error())
 		}
 	}
+	qlog.Fatalf("Invalid protocol: %s", protocol)
 }

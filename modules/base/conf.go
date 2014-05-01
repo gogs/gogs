@@ -50,6 +50,7 @@ var (
 	AppLogo     string
 	AppUrl      string
 	OfflineMode bool
+	RouterLog   bool
 	ProdMode    bool
 	Domain      string
 	SecretKey   string
@@ -327,6 +328,7 @@ func NewConfigContext() {
 	AppUrl = Cfg.MustValue("server", "ROOT_URL")
 	Domain = Cfg.MustValue("server", "DOMAIN")
 	OfflineMode = Cfg.MustBool("server", "OFFLINE_MODE", false)
+	RouterLog = Cfg.MustBool("server", "ROUTER_LOG", true)
 	SecretKey = Cfg.MustValue("security", "SECRET_KEY")
 
 	InstallLock = Cfg.MustBool("security", "INSTALL_LOCK", false)
