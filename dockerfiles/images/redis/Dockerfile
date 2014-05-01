@@ -1,8 +1,6 @@
 FROM   	    stackbrew/ubuntu:saucy
 MAINTAINER  Meaglith Ma <genedna@gmail.com> (@genedna), Lance Ju <juzhenatpku@gmail.com> (@crystaldust)
 
-ENV         DEBIAN_FRONTEND noninteractive
-
 RUN         apt-get update && apt-get install -y redis-server
 # Usually redis doesn't need a password
 #RUN         sed -i "s/# requirepass foobared/requirepass THE_REDIS_PASSWORD/g" /etc/redis/redis.conf
