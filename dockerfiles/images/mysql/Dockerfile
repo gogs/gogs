@@ -3,8 +3,6 @@
 FROM   stackbrew/ubuntu:saucy
 MAINTAINER  Meaglith Ma <genedna@gmail.com> (@genedna)
 
-ENV DEBIAN_FRONTEND noninteractive
-
 RUN apt-get install -y --force-yes software-properties-common
 RUN add-apt-repository -y "deb http://archive.ubuntu.com/ubuntu $(lsb_release -sc) universe"
 RUN apt-get --yes --force-yes update
