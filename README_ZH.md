@@ -15,10 +15,10 @@ Gogs 完全使用 Go 语言来实现对 Git 数据的操作，实现 **零** 依
 
 ## 项目概览
 
-- 有关项目设计、已知问题和变更日志，请通过  [Wiki](https://github.com/gogits/gogs/wiki) 查看。
+- 有关项目设计、已知问题和变更日志，请通过  [使用手册](http://gogs.io/docs/intro/) 查看。
 - 您可以到 [Trello Board](https://trello.com/b/uxAoeLUl/gogs-go-git-service) 跟随开发团队的脚步。
 - 想要先睹为快？通过 [在线体验](http://try.gogits.org/Unknown/gogs) 或查看 **安装部署 -> 二进制安装** 小节。
-- 使用过程中遇到问题？尝试从 [故障排查](https://github.com/gogits/gogs/wiki/Troubleshooting) 页面获取帮助。
+- 使用过程中遇到问题？尝试从 [故障排查](http://gogs.io/docs/intro/troubleshooting.md) 页面获取帮助。
 
 ## 功能特性
 
@@ -41,12 +41,12 @@ Gogs 完全使用 Go 语言来实现对 Git 数据的操作，实现 **零** 依
 
 ## 安装部署
 
-在安装 Gogs 之前，您需要先安装 [基本环境](https://github.com/gogits/gogs/wiki/Prerequirements)。
+在安装 Gogs 之前，您需要先安装 [基本环境](http://gogs.io/docs/installation/)。
 
 然后，您可以通过以下 3 种方式来安装 Gogs：
 
-- [二进制安装](https://github.com/gogits/gogs/wiki/Install-from-binary): **强烈推荐**
-- [源码安装](https://github.com/gogits/gogs/wiki/Install-from-source)
+- [二进制安装](http://gogs.io/docs/installation/install_from_binary.md): **强烈推荐**
+- [源码安装](http://gogs.io/docs/installation/install_from_source.md)
 - [采用 Docker 部署](https://github.com/gogits/gogs/tree/master/dockerfiles)
 
 ## 特别鸣谢

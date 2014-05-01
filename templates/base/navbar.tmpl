@@ -3,7 +3,7 @@
         <nav class="nav">
             <a id="nav-logo" class="nav-item pull-left{{if .PageIsHome}} active{{end}}" href="/"><img src="/img/favicon.png" alt="Gogs Logo" id="logo"></a>
             <a class="nav-item pull-left{{if .PageIsUserDashboard}} active{{end}}" href="/">Dashboard</a>
-            <a class="nav-item pull-left{{if .PageIsHelp}} active{{end}}" target="_blank" href="https://github.com/gogits/gogs/wiki">Help</a>{{if .IsSigned}}
+            <a class="nav-item pull-left{{if .PageIsHelp}} active{{end}}" target="_blank" href="http://gogs.io/docs">Help</a>{{if .IsSigned}}
             {{if .HasAccess}}<form class="nav-item pull-left{{if .PageIsNewRepo}} active{{end}}" id="nav-search-form">
                 <div class="input-group">
                     <div class="input-group-btn">

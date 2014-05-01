@@ -46,6 +46,7 @@ type User struct {
 	Id            int64
 	LowerName     string `xorm:"unique not null"`
 	Name          string `xorm:"unique not null"`
+	FullName      string
 	Email         string `xorm:"unique not null"`
 	Passwd        string `xorm:"not null"`
 	LoginType     int

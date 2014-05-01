@@ -180,9 +180,10 @@ func Validate(obj interface{}) martini.Handler {
 }
 
 var (
-	alphaDashPattern = regexp.MustCompile("[^\\d\\w-_]")
-	emailPattern     = regexp.MustCompile("[\\w!#$%&'*+/=?^_`{|}~-]+(?:\\.[\\w!#$%&'*+/=?^_`{|}~-]+)*@(?:[\\w](?:[\\w-]*[\\w])?\\.)+[a-zA-Z0-9](?:[\\w-]*[\\w])?")
-	urlPattern       = regexp.MustCompile(`(http|https):\/\/[\w\-_]+(\.[\w\-_]+)+([\w\-\.,@?^=%&amp;:/~\+#]*[\w\-\@?^=%&amp;/~\+#])?`)
+	alphaDashPattern    = regexp.MustCompile("[^\\d\\w-_]")
+	alphaDashDotPattern = regexp.MustCompile("[^\\d\\w-_\\.]")
+	emailPattern        = regexp.MustCompile("[\\w!#$%&'*+/=?^_`{|}~-]+(?:\\.[\\w!#$%&'*+/=?^_`{|}~-]+)*@(?:[\\w](?:[\\w-]*[\\w])?\\.)+[a-zA-Z0-9](?:[\\w-]*[\\w])?")
+	urlPattern          = regexp.MustCompile(`(http|https):\/\/[\w\-_]+(\.[\w\-_]+)+([\w\-\.,@?^=%&amp;:/~\+#]*[\w\-\@?^=%&amp;/~\+#])?`)
 )
 
 func validateStruct(errors *base.BindingErrors, obj interface{}) {
@@ -225,6 +226,11 @@ func validateStruct(errors *base.BindingErrors, obj interface{}) {
 			case rule == "AlphaDash":
 				if alphaDashPattern.MatchString(fmt.Sprintf("%v", fieldValue)) {
 					errors.Fields[field.Name] = base.BindingAlphaDashError
+					break
+				}
+			case rule == "AlphaDashDot":
+				if alphaDashDotPattern.MatchString(fmt.Sprintf("%v", fieldValue)) {
+					errors.Fields[field.Name] = base.BindingAlphaDashDotError
 					break
 				}
 			case strings.HasPrefix(rule, "MinSize("):
