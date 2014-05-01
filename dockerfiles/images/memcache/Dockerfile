@@ -3,8 +3,6 @@ FROM ubuntu
 # Set the file maintainer (your name - the file's author)
 MAINTAINER Borja Burgos <borja@tutum.co>
 
-ENV DEBIAN_FRONTEND noninteractive
-
 # Update the default application repository sources list
 RUN apt-get update
 
