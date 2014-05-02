@@ -294,5 +294,5 @@ func Comment(ctx *middleware.Context, params martini.Params) {
 		}
 	}
 
-	ctx.Redirect(fmt.Sprintf("/%s/%s/issues/%d", ctx.User.Name, ctx.Repo.Repository.Name, index))
+	ctx.Redirect(fmt.Sprintf("%s/issues/%d", ctx.Repo.RepoLink, index))
 }
