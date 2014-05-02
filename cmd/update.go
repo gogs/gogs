@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-package main
+package cmd
 
 import (
 	"os"
@@ -18,9 +18,9 @@ import (
 
 var CmdUpdate = cli.Command{
 	Name:  "update",
-	Usage: "This command just should be called by ssh shell",
+	Usage: "This command should only be called by SSH shell",
 	Description: `
-gogs update get pushed info and insert into database`,
+Update get pushed info and insert into database`,
 	Action: runUpdate,
 	Flags:  []cli.Flag{},
 }

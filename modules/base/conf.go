@@ -303,7 +303,6 @@ func newNotifyMailService() {
 }
 
 func NewConfigContext() {
-	//var err error
 	workDir, err := ExecDir()
 	if err != nil {
 		qlog.Fatalf("Fail to get work directory: %s\n", err)

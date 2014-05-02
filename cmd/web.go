@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-package main
+package cmd
 
 import (
 	"fmt"
@@ -29,9 +29,9 @@ import (
 
 var CmdWeb = cli.Command{
 	Name:  "web",
-	Usage: "Gogs web server",
+	Usage: "Start Gogs web server",
 	Description: `
-gogs web server is the only thing you need to run, 
+Gogs web server is the only thing you need to run, 
 and it takes care of all the other things for you`,
 	Action: runWeb,
 	Flags:  []cli.Flag{},
