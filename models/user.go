@@ -74,7 +74,9 @@ func (user *User) HomeLink() string {
 
 // AvatarLink returns the user gravatar link.
 func (user *User) AvatarLink() string {
-	if base.Service.EnableCacheAvatar {
+	if base.DisableGravatar {
+		return "/img/avatar_default.jpg"
+	} else if base.Service.EnableCacheAvatar {
 		return "/avatar/" + user.Avatar
 	}
 	return "//1.gravatar.com/avatar/" + user.Avatar

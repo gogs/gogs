@@ -80,7 +80,8 @@ var (
 	SessionConfig   *session.Config
 	SessionManager  *session.Manager
 
-	PictureService string
+	PictureService  string
+	DisableGravatar bool
 
 	EnableRedis    bool
 	EnableMemcache bool
@@ -345,7 +346,9 @@ func NewConfigContext() {
 	LogInRememberDays = Cfg.MustInt("security", "LOGIN_REMEMBER_DAYS")
 	CookieUserName = Cfg.MustValue("security", "COOKIE_USERNAME")
 	CookieRememberName = Cfg.MustValue("security", "COOKIE_REMEMBER_NAME")
+
 	PictureService = Cfg.MustValue("picture", "SERVICE")
+	DisableGravatar = Cfg.MustBool("picture", "DISABLE_GRAVATAR", false)
 
 	// Determine and create root git reposiroty path.
 	homeDir, err := com.HomeDir()
