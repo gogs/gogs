@@ -13,6 +13,7 @@ import (
 
 	"github.com/codegangsta/cli"
 
+	"github.com/gogits/gogs/cmd"
 	"github.com/gogits/gogs/modules/base"
 )
 
@@ -32,10 +33,11 @@ func main() {
 	app.Usage = "Go Git Service"
 	app.Version = APP_VER
 	app.Commands = []cli.Command{
-		CmdWeb,
-		CmdServ,
-		CmdUpdate,
-		// CmdFix,
+		cmd.CmdWeb,
+		// cmd.CmdFix,
+		cmd.CmdDump,
+		cmd.CmdServ,
+		cmd.CmdUpdate,
 	}
 	app.Flags = append(app.Flags, []cli.Flag{}...)
 	app.Run(os.Args)

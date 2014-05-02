@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-package main
+package cmd
 
 import (
 	//"container/list"
@@ -36,9 +36,9 @@ var (
 
 var CmdServ = cli.Command{
 	Name:  "serv",
-	Usage: "This command just should be called by ssh shell",
+	Usage: "This command should only be called by SSH shell",
 	Description: `
-gogs serv provide access auth for repositories`,
+Serv provide access auth for repositories`,
 	Action: runServ,
 	Flags:  []cli.Flag{},
 }
