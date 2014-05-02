@@ -2,6 +2,6 @@
     <ul class="list-group">
         <li class="list-group-item{{if .IsRepoToolbarSetting}} active{{end}}"><a href="/{{.Owner.Name}}/{{.Repository.Name}}/settings">Options</a></li>
         <li class="list-group-item{{if .IsRepoToolbarCollaboration}} active{{end}}"><a href="/{{.Owner.Name}}/{{.Repository.Name}}/settings/collaboration">Collaborators</a></li>
-        <!--<li class="list-group-item"><a href="#">Notifications</a></li>-->
+        <li class="list-group-item{{if .IsRepoToolbarWebHooks}} active{{end}}"><a href="/{{.Owner.Name}}/{{.Repository.Name}}/settings/hooks">Webhooks</a></li>
     </ul>
 </div>
