@@ -204,3 +204,25 @@ func CollaborationPost(ctx *middleware.Context) {
 	ctx.Flash.Success("New collaborator has been added.")
 	ctx.Redirect(ctx.Req.RequestURI)
 }
+
+func WebHooks(ctx *middleware.Context) {
+	if !ctx.Repo.IsOwner {
+		ctx.Handle(404, "repo.WebHooks", nil)
+		return
+	}
+
+	ctx.Data["IsRepoToolbarWebHooks"] = true
+	ctx.Data["Title"] = strings.TrimPrefix(ctx.Repo.RepoLink, "/") + " - Web Hooks"
+	ctx.HTML(200, "repo/hooks")
+}
+
+func WebHooksAdd(ctx *middleware.Context) {
+	if !ctx.Repo.IsOwner {
+		ctx.Handle(404, "repo.WebHooksAdd", nil)
+		return
+	}
+
+	ctx.Data["IsRepoToolbarWebHooks"] = true
+	ctx.Data["Title"] = strings.TrimPrefix(ctx.Repo.RepoLink, "/") + " - Add Web Hook"
+	ctx.HTML(200, "repo/hooks_add")
+}

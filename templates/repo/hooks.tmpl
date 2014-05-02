@@ -1,0 +1,37 @@
+{{template "base/head" .}}
+{{template "base/navbar" .}}
+{{template "repo/nav" .}}
+{{template "repo/toolbar" .}}
+<div id="body" class="container">
+    {{template "repo/setting_nav" .}}
+    <div id="repo-setting-container" class="col-md-10">
+        {{template "base/alert" .}}
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                Webhooks
+            </div>
+            <div class="panel-body">
+                <p>Webhooks allow external services to be notified when certain events happen on GitHub. When the specified events happen, we'll send a POST request to each of the URLs you provide. Learn more in our Webhooks Guide.<br/>&nbsp;</p>
+                <ul id="repo-hooks-list" class="list-unstyled">
+                    <li>
+                        <span class="pull-left status text-success"><i class="fa fa-check"></i></span>
+                        <a class="link" href="#">https://inbox-app.wercker.com/commits/11aea6e535af5eefc2a29bc25a23e89a</a>
+                        <a href="{{$.RepoLink}}/settings/hooks?remove=" class="remove-hook pull-right"><i class="fa fa-times"></i></a>
+                        <a href="{{$.RepoLink}}/settings/hooks/id" class="edit-hook pull-right"><i class="fa fa-pencil"></i></a>
+                    </li>
+                    <li>
+                        <span class="pull-left status text-success"><i class="fa fa-check"></i></span>
+                        <a class="link" href="#">https://inbox-app.wercker.com/commits/11aea6e535af5eefc2a29bc25a23e89a</a>
+                        <a href="{{$.RepoLink}}/settings/hooks?remove=" class="remove-hook pull-right"><i class="fa fa-times"></i></a>
+                        <a href="{{$.RepoLink}}/settings/hooks/id" class="edit-hook pull-right"><i class="fa fa-pencil"></i></a>
+                    </li>
+                </ul>
+            </div>
+            <div class="panel-footer">
+                <a href="/{{.Owner.Name}}/{{.Repository.Name}}/settings/hooks/add"><button class="btn btn-primary">Add Webhook</button></a>
+            </div>
+        </div>
+
+    </div>
+</div>
+{{template "base/footer" .}}

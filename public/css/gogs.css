@@ -311,17 +311,17 @@ html, body {
     border-radius: 2px;
 }
 
-#user-name,#user-full-name {
+#user-name, #user-full-name {
     font-size: 1.6em;
     font-weight: bold;
 }
 
-#user-name{
+#user-name {
     margin-bottom: 20px;
     margin-top: 10px;
 }
 
-#user-full-name{
+#user-full-name {
     margin-top: 20px;
 }
 
@@ -446,7 +446,7 @@ html, body {
     border-left: 4px solid #DD4B39;
 }
 
-#repo-setting-container{
+#repo-setting-container {
     padding-right: 0;
 }
 
@@ -454,41 +454,41 @@ html, body {
     line-height: 30px;
 }
 
-#repo-collab-list li.collab{
+#repo-collab-list li.collab {
     margin-bottom: .6em;
 }
 
-#repo-collab-list .avatar{
+#repo-collab-list .avatar {
     margin-right: 1em;
     width: 40px;
 }
 
-#repo-collab-list a.member{
+#repo-collab-list a.member {
     color: #444;
 }
 
-#repo-collab-list .remove-collab{
+#repo-collab-list .remove-collab, #repo-hooks-list .remove-hook {
     color: #DD4B39;
 }
 
-#repo-collab-form .dropdown-menu{
+#repo-collab-form .dropdown-menu {
     margin-left: 15px;
     margin-top: 4px;
     padding: 0;
 }
 
-#repo-collab-form .dropdown-menu li{
+#repo-collab-form .dropdown-menu li {
     padding: 0 1em;
     line-height: 36px;
     cursor: pointer;
     font-weight: bold;
 }
 
-#repo-collab-form .dropdown-menu li:hover{
+#repo-collab-form .dropdown-menu li:hover {
     background-color: #e8f0ff;
 }
 
-#repo-collab-form .dropdown-menu img{
+#repo-collab-form .dropdown-menu img {
     width: 28px;
     height: 28px;
     margin-right: 1em;
@@ -496,8 +496,24 @@ html, body {
     margin-top: -3px;
 }
 
-#repo-collab-form .dropdown-menu ul{
+#repo-collab-form .dropdown-menu ul {
     margin-bottom: 0;
+}
+
+#repo-hooks-list li {
+    line-height: 40px;
+    border-top: 1px solid #DDD;
+    height: 40px;
+}
+
+#repo-hooks-list .link {
+    display: inline-block;
+    max-width: 360px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    height: 40px;
+    line-height: 40px;
+    white-space: nowrap;
 }
 
 /* gogits user ssh keys */
