@@ -45,6 +45,7 @@ func RepoAssignment(redirect bool, args ...bool) martini.Handler {
 		repoName := params["reponame"]
 		refName := params["branchname"]
 
+		// TODO: check collaborators
 		// get repository owner
 		ctx.Repo.IsOwner = ctx.IsSigned && ctx.User.LowerName == strings.ToLower(userName)
 
