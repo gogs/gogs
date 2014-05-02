@@ -252,6 +252,7 @@ func Comment(ctx *middleware.Context, params martini.Params) {
 		return
 	}
 
+	// TODO: check collaborators
 	// Check if issue owner changes the status of issue.
 	var newStatus string
 	if ctx.Repo.IsOwner || issue.PosterId == ctx.User.Id {

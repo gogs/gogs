@@ -86,9 +86,9 @@
                             </div>
                             <div class="text-right">
                                 <div class="form-group">
-                                    {{if .Issue.IsClosed}}
+                                    {{if .IsIssueOwner}}{{if .Issue.IsClosed}}
                                     <input type="submit" class="btn-default btn issue-open" id="issue-open-btn" data-origin="Reopen" data-text="Reopen & Comment" name="change_status" value="Reopen"/>{{else}}
-                                    <input type="submit" class="btn-default btn issue-close" id="issue-close-btn" data-origin="Close" data-text="Close & Comment" name="change_status" value="Close"/>{{end}}&nbsp;&nbsp;
+                                    <input type="submit" class="btn-default btn issue-close" id="issue-close-btn" data-origin="Close" data-text="Close & Comment" name="change_status" value="Close"/>{{end}}{{end}}&nbsp;&nbsp;
                                     <button class="btn-success btn" id="issue-reply-btn">Comment</button>
                                 </div>
                             </div>
