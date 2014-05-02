@@ -40,6 +40,7 @@ type Action struct {
 	RepoId      int64
 	RepoName    string
 	RefName     string
+	IsPrivate   bool      `xorm:"NOT NULL DEFAULT false"`
 	Content     string    `xorm:"TEXT"`
 	Created     time.Time `xorm:"created"`
 }
@@ -101,7 +102,8 @@ func CommitRepoAction(userId int64, userName, actEmail string,
 	}
 
 	if err = NotifyWatchers(&Action{ActUserId: userId, ActUserName: userName, ActEmail: actEmail,
-		OpType: opType, Content: string(bs), RepoId: repoId, RepoName: repoName, RefName: refName}); err != nil {
+		OpType: opType, Content: string(bs), RepoId: repoId, RepoName: repoName, RefName: refName,
+		IsPrivate: repo.IsPrivate}); err != nil {
 		log.Error("action.CommitRepoAction(notify watchers): %d/%s", userId, repoName)
 		return err
 	}
@@ -113,7 +115,7 @@ func CommitRepoAction(userId int64, userName, actEmail string,
 // NewRepoAction adds new action for creating repository.
 func NewRepoAction(user *User, repo *Repository) (err error) {
 	if err = NotifyWatchers(&Action{ActUserId: user.Id, ActUserName: user.Name, ActEmail: user.Email,
-		OpType: OP_CREATE_REPO, RepoId: repo.Id, RepoName: repo.Name}); err != nil {
+		OpType: OP_CREATE_REPO, RepoId: repo.Id, RepoName: repo.Name, IsPrivate: repo.IsPrivate}); err != nil {
 		log.Error("action.NewRepoAction(notify watchers): %d/%s", user.Id, repo.Name)
 		return err
 	}
@@ -125,7 +127,8 @@ func NewRepoAction(user *User, repo *Repository) (err error) {
 // TransferRepoAction adds new action for transfering repository.
 func TransferRepoAction(user, newUser *User, repo *Repository) (err error) {
 	if err = NotifyWatchers(&Action{ActUserId: user.Id, ActUserName: user.Name, ActEmail: user.Email,
-		OpType: OP_TRANSFER_REPO, RepoId: repo.Id, RepoName: repo.Name, Content: newUser.Name}); err != nil {
+		OpType: OP_TRANSFER_REPO, RepoId: repo.Id, RepoName: repo.Name, Content: newUser.Name,
+		IsPrivate: repo.IsPrivate}); err != nil {
 		log.Error("action.TransferRepoAction(notify watchers): %d/%s", user.Id, repo.Name)
 		return err
 	}
