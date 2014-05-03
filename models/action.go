@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/gogits/git"
+	qlog "github.com/qiniu/log"
 
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
@@ -31,18 +32,19 @@ const (
 // Action represents user operation type and other information to repository.,
 // it implemented interface base.Actioner so that can be used in template render.
 type Action struct {
-	Id          int64
-	UserId      int64  // Receiver user id.
-	OpType      int    // Operations: CREATE DELETE STAR ...
-	ActUserId   int64  // Action user id.
-	ActUserName string // Action user name.
-	ActEmail    string
-	RepoId      int64
-	RepoName    string
-	RefName     string
-	IsPrivate   bool      `xorm:"NOT NULL DEFAULT false"`
-	Content     string    `xorm:"TEXT"`
-	Created     time.Time `xorm:"created"`
+	Id           int64
+	UserId       int64  // Receiver user id.
+	OpType       int    // Operations: CREATE DELETE STAR ...
+	ActUserId    int64  // Action user id.
+	ActUserName  string // Action user name.
+	ActEmail     string
+	RepoId       int64
+	RepoUserName string
+	RepoName     string
+	RefName      string
+	IsPrivate    bool      `xorm:"NOT NULL DEFAULT false"`
+	Content      string    `xorm:"TEXT"`
+	Created      time.Time `xorm:"created"`
 }
 
 func (a Action) GetOpType() int {
@@ -70,8 +72,8 @@ func (a Action) GetContent() string {
 }
 
 // CommitRepoAction adds new action for committing repository.
-func CommitRepoAction(userId int64, userName, actEmail string,
-	repoId int64, repoName string, refName string, commit *base.PushCommits) error {
+func CommitRepoAction(userId, repoUserId int64, userName, actEmail string,
+	repoId int64, repoUserName, repoName string, refName string, commit *base.PushCommits) error {
 	// log.Trace("action.CommitRepoAction(start): %d/%s", userId, repoName)
 
 	opType := OP_COMMIT_REPO
@@ -85,30 +87,31 @@ func CommitRepoAction(userId int64, userName, actEmail string,
 
 	bs, err := json.Marshal(commit)
 	if err != nil {
-		log.Error("action.CommitRepoAction(json): %d/%s", userId, repoName)
+		qlog.Error("action.CommitRepoAction(json): %d/%s", repoUserId, repoName)
 		return err
 	}
 
 	// Change repository bare status and update last updated time.
-	repo, err := GetRepositoryByName(userId, repoName)
+	repo, err := GetRepositoryByName(repoUserId, repoName)
 	if err != nil {
-		log.Error("action.CommitRepoAction(GetRepositoryByName): %d/%s", userId, repoName)
+		qlog.Error("action.CommitRepoAction(GetRepositoryByName): %d/%s", repoUserId, repoName)
 		return err
 	}
 	repo.IsBare = false
 	if err = UpdateRepository(repo); err != nil {
-		log.Error("action.CommitRepoAction(UpdateRepository): %d/%s", userId, repoName)
+		qlog.Error("action.CommitRepoAction(UpdateRepository): %d/%s", repoUserId, repoName)
 		return err
 	}
 
 	if err = NotifyWatchers(&Action{ActUserId: userId, ActUserName: userName, ActEmail: actEmail,
-		OpType: opType, Content: string(bs), RepoId: repoId, RepoName: repoName, RefName: refName,
+		OpType: opType, Content: string(bs), RepoId: repoId, RepoUserName: repoUserName,
+		RepoName: repoName, RefName: refName,
 		IsPrivate: repo.IsPrivate}); err != nil {
-		log.Error("action.CommitRepoAction(notify watchers): %d/%s", userId, repoName)
+		qlog.Error("action.CommitRepoAction(notify watchers): %d/%s", userId, repoName)
 		return err
 	}
 
-	log.Trace("action.CommitRepoAction(end): %d/%s", userId, repoName)
+	qlog.Info("action.CommitRepoAction(end): %d/%s", repoUserId, repoName)
 	return nil
 }
 

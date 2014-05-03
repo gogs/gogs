@@ -60,8 +60,8 @@ func Http(ctx *middleware.Context, params martini.Params) {
 	// only public pull don't need auth
 	isPublicPull := !repo.IsPrivate && isPull
 	var askAuth = !isPublicPull || base.Service.RequireSignInView
-
 	var authUser *models.User
+	var authUsername, passwd string
 
 	// check access
 	if askAuth {
@@ -79,7 +79,7 @@ func Http(ctx *middleware.Context, params martini.Params) {
 			ctx.Handle(401, "no basic auth and digit auth", nil)
 			return
 		}
-		authUsername, passwd, err := basicDecode(auths[1])
+		authUsername, passwd, err = basicDecode(auths[1])
 		if err != nil {
 			ctx.Handle(401, "no basic auth and digit auth", nil)
 			return
@@ -133,7 +133,7 @@ func Http(ctx *middleware.Context, params martini.Params) {
 					newCommitId := fields[1]
 					refName := fields[2]
 
-					models.Update(refName, oldCommitId, newCommitId, username, reponame, authUser.Id)
+					models.Update(refName, oldCommitId, newCommitId, authUsername, username, reponame, authUser.Id)
 				}
 			}
 		}
