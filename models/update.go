@@ -29,6 +29,12 @@ func Update(refName, oldCommitId, newCommitId, userName, repoName string, userId
 	gitUpdate.Dir = f
 	gitUpdate.Run()
 
+	isDel := strings.HasPrefix(newCommitId, "0000000")
+	if isDel {
+		qlog.Info("del rev", refName, "from", userName+"/"+repoName+".git", "by", userId)
+		return
+	}
+
 	repo, err := git.OpenRepository(f)
 	if err != nil {
 		qlog.Fatalf("runUpdate.Open repoId: %v", err)
