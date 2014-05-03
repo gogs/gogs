@@ -76,10 +76,10 @@ func runUpdate(c *cli.Context) {
 	//updateEnv(args[0], args[1], args[2])
 
 	userName := os.Getenv("userName")
-	userId := os.Getenv("userId")
-	iUserId, _ := strconv.ParseInt(userId, 10, 64)
+	userId, _ := strconv.ParseInt(os.Getenv("userId"), 10, 64)
 	//repoId := os.Getenv("repoId")
+	repoUserName := os.Getenv("repoUserName")
 	repoName := os.Getenv("repoName")
 
-	models.Update(args[0], args[1], args[2], userName, repoName, iUserId)
+	models.Update(args[0], args[1], args[2], userName, repoUserName, repoName, userId)
 }
