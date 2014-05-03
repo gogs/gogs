@@ -16,14 +16,14 @@ import (
 	"github.com/gogits/gogs/modules/base"
 )
 
-func Update(refName, oldCommitId, newCommitId, userName, repoName string, userId int64) {
+func Update(refName, oldCommitId, newCommitId, userName, repoUserName, repoName string, userId int64) {
 	isNew := strings.HasPrefix(oldCommitId, "0000000")
 	if isNew &&
 		strings.HasPrefix(newCommitId, "0000000") {
 		qlog.Fatal("old rev and new rev both 000000")
 	}
 
-	f := RepoPath(userName, repoName)
+	f := RepoPath(repoUserName, repoName)
 
 	gitUpdate := exec.Command("git", "update-server-info")
 	gitUpdate.Dir = f
@@ -65,7 +65,12 @@ func Update(refName, oldCommitId, newCommitId, userName, repoName string, userId
 		qlog.Fatalf("runUpdate.Commit repoId: %v", err)
 	}
 
-	repos, err := GetRepositoryByName(userId, repoName)
+	ru, err := GetUserByName(repoUserName)
+	if err != nil {
+		qlog.Fatalf("runUpdate.GetUserByName: %v", err)
+	}
+
+	repos, err := GetRepositoryByName(ru.Id, repoName)
 	if err != nil {
 		qlog.Fatalf("runUpdate.GetRepositoryByName userId: %v", err)
 	}
@@ -89,8 +94,8 @@ func Update(refName, oldCommitId, newCommitId, userName, repoName string, userId
 	}
 
 	//commits = append(commits, []string{lastCommit.Id().String(), lastCommit.Message()})
-	if err = CommitRepoAction(userId, userName, actEmail,
-		repos.Id, repoName, refName, &base.PushCommits{l.Len(), commits}); err != nil {
+	if err = CommitRepoAction(userId, ru.Id, userName, actEmail,
+		repos.Id, repoUserName, repoName, refName, &base.PushCommits{l.Len(), commits}); err != nil {
 		qlog.Fatalf("runUpdate.models.CommitRepoAction: %v", err)
 	}
 }

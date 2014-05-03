@@ -379,10 +379,11 @@ func createHookUpdate(hookPath, content string) error {
 }
 
 // SetRepoEnvs sets environment variables for command update.
-func SetRepoEnvs(userId int64, userName, repoName string) {
+func SetRepoEnvs(userId int64, userName, repoName, repoUserName string) {
 	os.Setenv("userId", base.ToStr(userId))
 	os.Setenv("userName", userName)
 	os.Setenv("repoName", repoName)
+	os.Setenv("repoUserName", repoUserName)
 }
 
 // InitRepository initializes README and .gitignore if needed.
@@ -459,7 +460,7 @@ func initRepository(f string, user *User, repo *Repository, initReadme bool, rep
 		return nil
 	}
 
-	SetRepoEnvs(user.Id, user.Name, repo.Name)
+	SetRepoEnvs(user.Id, user.Name, repo.Name, user.Name)
 
 	// Apply changes and commit.
 	return initRepoCommit(tmpDir, user.NewGitSig())
