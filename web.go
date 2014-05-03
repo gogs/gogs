@@ -130,6 +130,7 @@ func runWeb(*cli.Context) {
 		r.Get("/users", admin.Users)
 		r.Get("/repos", admin.Repositories)
 		r.Get("/config", admin.Config)
+		r.Get("/auths", admin.Auths)
 	}, adminReq)
 	m.Group("/admin/users", func(r martini.Router) {
 		r.Get("/new", admin.NewUser)
@@ -137,6 +138,14 @@ func runWeb(*cli.Context) {
 		r.Get("/:userid", admin.EditUser)
 		r.Post("/:userid", bindIgnErr(auth.AdminEditUserForm{}), admin.EditUserPost)
 		r.Get("/:userid/delete", admin.DeleteUser)
+	}, adminReq)
+
+	m.Group("/admin/auths", func(r martini.Router) {
+		r.Get("/new", admin.NewAuthSource)
+		r.Post("/new", bindIgnErr(auth.AuthenticationForm{}), admin.NewAuthSourcePost)
+		r.Get("/:authid", admin.EditAuthSource)
+		r.Post("/:authid" /*, bindIgnErr(auth.AdminEditUserForm{})*/, admin.EditAuthSourcePost)
+		r.Get("/:authid/delete", admin.DeleteAuthSource)
 	}, adminReq)
 
 	if martini.Env == martini.Dev {
