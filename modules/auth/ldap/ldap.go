@@ -8,12 +8,13 @@ package ldap
 
 import (
 	"fmt"
+
 	"github.com/gogits/gogs/modules/log"
 	goldap "github.com/juju2013/goldap"
 )
 
 // Basic LDAP authentication service
-type ldapsource struct {
+type Ldapsource struct {
 	Name         string // canonical name (ie. corporate.ad)
 	Host         string // LDAP host
 	Port         int    // port number
@@ -26,12 +27,12 @@ type ldapsource struct {
 
 //Global LDAP directory pool
 var (
-	Authensource []ldapsource
+	Authensource []Ldapsource
 )
 
 // Add a new source (LDAP directory) to the global pool
 func AddSource(name string, host string, port int, basedn string, attributes string, filter string, msadsaformat string) {
-	ldaphost := ldapsource{name, host, port, basedn, attributes, filter, msadsaformat, true}
+	ldaphost := Ldapsource{name, host, port, basedn, attributes, filter, msadsaformat, true}
 	Authensource = append(Authensource, ldaphost)
 }
 
@@ -50,7 +51,7 @@ func LoginUser(name, passwd string) (a string, r bool) {
 }
 
 // searchEntry : search an LDAP source if an entry (name, passwd) is valide and in the specific filter
-func (ls ldapsource) searchEntry(name, passwd string) (string, bool) {
+func (ls Ldapsource) searchEntry(name, passwd string) (string, bool) {
 	l, err := goldap.Dial("tcp", fmt.Sprintf("%s:%d", ls.Host, ls.Port))
 	if err != nil {
 		log.Debug("LDAP Connect error, disabled source %s", ls.Host)

@@ -30,7 +30,7 @@ func LoginUserLdap(name, passwd string) (*User, error) {
 		Email:     mail}
 	_, err := RegisterUser(&user)
 	if err != nil {
-		log.Debug("LDAP local user %s fond (%s) ", name, err)
+		log.Debug("LDAP local user %s found (%s) ", name, err)
 	}
 	// simulate local user login
 	localUser, err2 := GetUserByName(user.Name)

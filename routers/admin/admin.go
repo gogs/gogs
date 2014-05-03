@@ -120,6 +120,19 @@ func Users(ctx *middleware.Context) {
 	ctx.HTML(200, "admin/users")
 }
 
+func Auths(ctx *middleware.Context) {
+	ctx.Data["Title"] = "Auth Sources"
+	ctx.Data["PageIsAuths"] = true
+
+	var err error
+	ctx.Data["Sources"], err = models.GetAuths()
+	if err != nil {
+		ctx.Handle(200, "admin.Auths", err)
+		return
+	}
+	ctx.HTML(200, "admin/auths")
+}
+
 func Repositories(ctx *middleware.Context) {
 	ctx.Data["Title"] = "Repository Management"
 	ctx.Data["PageIsRepos"] = true

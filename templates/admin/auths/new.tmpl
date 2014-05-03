@@ -1,0 +1,93 @@
+{{template "base/head" .}}
+{{template "base/navbar" .}}
+<div id="body" class="container" data-page="admin">
+    {{template "admin/nav" .}}
+    <div id="admin-container" class="col-md-9">
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                New Authentication
+            </div>
+
+            <div class="panel-body">
+            	<br/>
+				<form action="/admin/auths/new" method="post" class="form-horizontal">
+					{{.CsrfTokenHtml}}
+				    {{template "base/alert" .}}
+				    <div class="form-group">
+				    <label class="col-md-3 control-label">Auth Type: </label>
+				    <div class="col-md-7">
+				    <select class="form-control">
+  <option value=2>LDAP</option>
+  <option value=3>SMTP</option>
+</select>
+	</div>
+	</div>
+					<div class="form-group {{if .Err_UserName}}has-error has-feedback{{end}}">
+						<label class="col-md-3 control-label">Name: </label>
+						<div class="col-md-7">
+							<input name="name" class="form-control" placeholder="Type account's username" value="{{.username}}" required="required">
+						</div>
+					</div>
+
+					<div class="form-group {{if .Err_Email}}has-error has-feedback{{end}}">
+						<label class="col-md-3 control-label">Domain: </label>
+						<div class="col-md-7">
+							<input name="domain" class="form-control" placeholder="Type account's e-mail address" value="{{.email}}" required="required" title="Email is not valid">
+						</div>
+					</div>
+
+					<div class="form-group {{if .Err_Email}}has-error has-feedback{{end}}">
+						<label class="col-md-3 control-label">Host: </label>
+						<div class="col-md-7">
+							<input name="domain" class="form-control" placeholder="Type account's e-mail address" value="{{.email}}" required="required" title="Email is not valid">
+						</div>
+					</div>
+
+					<div class="form-group {{if .Err_Email}}has-error has-feedback{{end}}">
+						<label class="col-md-3 control-label">Port: </label>
+						<div class="col-md-7">
+							<input name="domain" class="form-control" placeholder="Type account's e-mail address" value="{{.email}}" required="required" title="Email is not valid">
+						</div>
+					</div>
+
+					<div class="form-group {{if .Err_Email}}has-error has-feedback{{end}}">
+						<label class="col-md-3 control-label">Base DN: </label>
+						<div class="col-md-7">
+							<input name="domain" class="form-control" placeholder="Type account's e-mail address" value="{{.email}}" required="required" title="Email is not valid">
+						</div>
+					</div>
+
+<div class="form-group {{if .Err_Email}}has-error has-feedback{{end}}">
+						<label class="col-md-3 control-label">Search Attributes: </label>
+						<div class="col-md-7">
+							<input name="domain" class="form-control" placeholder="Type account's e-mail address" value="{{.email}}" required="required" title="Email is not valid">
+						</div>
+					</div>
+
+					<div class="form-group {{if .Err_Email}}has-error has-feedback{{end}}">
+						<label class="col-md-3 control-label">Search Filter: </label>
+						<div class="col-md-7">
+							<input name="domain" class="form-control" placeholder="Type account's e-mail address" value="{{.email}}" required="required" title="Email is not valid">
+						</div>
+					</div>
+
+					<div class="form-group {{if .Err_Email}}has-error has-feedback{{end}}">
+						<label class="col-md-3 control-label">Ms Ad SA: </label>
+						<div class="col-md-7">
+							<input name="domain" class="form-control" placeholder="Type account's e-mail address" value="{{.email}}" required="required" title="Email is not valid">
+						</div>
+					</div>
+					
+					<hr/>
+					<div class="form-group">
+					    <div class="col-md-offset-3 col-md-7">
+					    	<button type="submit" class="btn btn-lg btn-primary">Create new authentication</button>
+					    </div>
+					</div>
+				</form>
+            </div>
+        </div>
+
+	</div>
+</div>
+{{template "base/footer" .}}
