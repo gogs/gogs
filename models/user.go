@@ -26,12 +26,6 @@ const (
 	UT_ORGANIZATION
 )
 
-// Login types.
-const (
-	LT_PLAIN = iota + 1
-	LT_LDAP
-)
-
 var (
 	ErrUserOwnRepos     = errors.New("User still have ownership of repositories")
 	ErrUserAlreadyExist = errors.New("User already exist")
@@ -49,6 +43,7 @@ type User struct {
 	Email         string `xorm:"unique not null"`
 	Passwd        string `xorm:"not null"`
 	LoginType     int
+	LoginSource   int64 `xorm:"not null default 0"`
 	Type          int
 	NumFollowers  int
 	NumFollowings int

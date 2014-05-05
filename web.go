@@ -144,7 +144,7 @@ func runWeb(*cli.Context) {
 		r.Get("/new", admin.NewAuthSource)
 		r.Post("/new", bindIgnErr(auth.AuthenticationForm{}), admin.NewAuthSourcePost)
 		r.Get("/:authid", admin.EditAuthSource)
-		r.Post("/:authid" /*, bindIgnErr(auth.AdminEditUserForm{})*/, admin.EditAuthSourcePost)
+		r.Post("/:authid", bindIgnErr(auth.AuthenticationForm{}), admin.EditAuthSourcePost)
 		r.Get("/:authid/delete", admin.DeleteAuthSource)
 	}, adminReq)
 
@@ -196,7 +196,7 @@ func runWeb(*cli.Context) {
 
 	protocol := base.Cfg.MustValue("server", "PROTOCOL", "http")
 	listenAddr := fmt.Sprintf("%s:%s",
-		base.Cfg.MustValue("server", "HTTP_ADDR"),
+		base.Cfg.MustValue("server", "HTTP_ADDR", "0.0.0.0"),
 		base.Cfg.MustValue("server", "HTTP_PORT", "3000"))
 
 	if protocol == "http" {

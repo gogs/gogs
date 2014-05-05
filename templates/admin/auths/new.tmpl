@@ -17,64 +17,65 @@
 				    <label class="col-md-3 control-label">Auth Type: </label>
 				    <div class="col-md-7">
 				    <select class="form-control">
-  <option value=2>LDAP</option>
-  <option value=3>SMTP</option>
-</select>
+				    {{range $key, $val := .LoginTypes}}
+  					<option value="{{$key}}">{{$val}}</option>
+  					{{end}}
+					</select>
 	</div>
 	</div>
 					<div class="form-group {{if .Err_UserName}}has-error has-feedback{{end}}">
 						<label class="col-md-3 control-label">Name: </label>
 						<div class="col-md-7">
-							<input name="name" class="form-control" placeholder="Type account's username" value="{{.username}}" required="required">
+							<input name="name" class="form-control" placeholder="Authentication's name" required="required">
 						</div>
 					</div>
 
 					<div class="form-group {{if .Err_Email}}has-error has-feedback{{end}}">
 						<label class="col-md-3 control-label">Domain: </label>
 						<div class="col-md-7">
-							<input name="domain" class="form-control" placeholder="Type account's e-mail address" value="{{.email}}" required="required" title="Email is not valid">
+							<input name="domain" class="form-control" placeholder="Domain name" value="{{.domain}}" required="required" title="Email is not valid">
 						</div>
 					</div>
 
 					<div class="form-group {{if .Err_Email}}has-error has-feedback{{end}}">
 						<label class="col-md-3 control-label">Host: </label>
 						<div class="col-md-7">
-							<input name="domain" class="form-control" placeholder="Type account's e-mail address" value="{{.email}}" required="required" title="Email is not valid">
+							<input name="host" class="form-control" placeholder="Type account's e-mail address" value="{{.email}}" required="required" title="Email is not valid">
 						</div>
 					</div>
 
 					<div class="form-group {{if .Err_Email}}has-error has-feedback{{end}}">
 						<label class="col-md-3 control-label">Port: </label>
 						<div class="col-md-7">
-							<input name="domain" class="form-control" placeholder="Type account's e-mail address" value="{{.email}}" required="required" title="Email is not valid">
+							<input name="port" class="form-control" placeholder="Type account's e-mail address" value="{{.email}}" required="required" title="Email is not valid">
 						</div>
 					</div>
 
 					<div class="form-group {{if .Err_Email}}has-error has-feedback{{end}}">
 						<label class="col-md-3 control-label">Base DN: </label>
 						<div class="col-md-7">
-							<input name="domain" class="form-control" placeholder="Type account's e-mail address" value="{{.email}}" required="required" title="Email is not valid">
+							<input name="base_dn" class="form-control" placeholder="Type account's e-mail address" value="{{.email}}" required="required" title="Email is not valid">
 						</div>
 					</div>
 
 <div class="form-group {{if .Err_Email}}has-error has-feedback{{end}}">
 						<label class="col-md-3 control-label">Search Attributes: </label>
 						<div class="col-md-7">
-							<input name="domain" class="form-control" placeholder="Type account's e-mail address" value="{{.email}}" required="required" title="Email is not valid">
+							<input name="attributes" class="form-control" placeholder="Type account's e-mail address" value="{{.email}}" required="required" title="Email is not valid">
 						</div>
 					</div>
 
 					<div class="form-group {{if .Err_Email}}has-error has-feedback{{end}}">
 						<label class="col-md-3 control-label">Search Filter: </label>
 						<div class="col-md-7">
-							<input name="domain" class="form-control" placeholder="Type account's e-mail address" value="{{.email}}" required="required" title="Email is not valid">
+							<input name="filter" class="form-control" placeholder="Type account's e-mail address" value="{{.email}}" required="required" title="Email is not valid">
 						</div>
 					</div>
 
 					<div class="form-group {{if .Err_Email}}has-error has-feedback{{end}}">
 						<label class="col-md-3 control-label">Ms Ad SA: </label>
 						<div class="col-md-7">
-							<input name="domain" class="form-control" placeholder="Type account's e-mail address" value="{{.email}}" required="required" title="Email is not valid">
+							<input name="ms_ad_sa" class="form-control" placeholder="Type account's e-mail address" value="{{.email}}" required="required" title="Email is not valid">
 						</div>
 					</div>
 					
