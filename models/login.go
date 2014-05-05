@@ -1,3 +1,7 @@
+// Copyright github.com/juju2013. All rights reserved.
+// Use of this source code is governed by a MIT-style
+// license that can be found in the LICENSE file.
+
 package models
 
 import (
@@ -7,6 +11,7 @@ import (
 
 	"github.com/go-xorm/core"
 	"github.com/go-xorm/xorm"
+
 	"github.com/gogits/gogs/modules/auth/ldap"
 )
 
@@ -19,7 +24,7 @@ const (
 
 var (
 	ErrAuthenticationAlreadyExist = errors.New("Authentication already exist")
-	ErrAuthenticationNotExist     = errors.New("Authentication is not exist")
+	ErrAuthenticationNotExist     = errors.New("Authentication does not exist")
 	ErrAuthenticationUserUsed     = errors.New("Authentication has been used by some users")
 )
 
