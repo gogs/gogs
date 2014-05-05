@@ -14,6 +14,18 @@
 				    {{.CsrfTokenHtml}}
 				    {{template "base/alert" .}}
                 	<input type="hidden" value="{{.User.Id}}" name="userId"/>
+	<div class="form-group">
+				    <label class="col-md-3 control-label">Auth Source: </label>
+				    <div class="col-md-7">
+				    <select name="logintype" class="form-control">
+				    <option value="0-0"{{if eq 0 .User.LoginSource}} selected{{end}}>Local</option>
+				    {{$tp := .User.LoginSource}}
+				    {{range $key, $val := .LoginSources}}
+  					<option value="{{$val.Type}}-{{$val.Id}}"{{if eq $val.Id $tp}} selected{{end}}>{{$val.Name}}</option>
+  					{{end}}
+					</select>
+	</div>
+	</div>
 					<div class="form-group">
 						<label class="col-md-3 control-label">Username: </label>
 						<label class="control-label">{{.User.Name}}</label>
