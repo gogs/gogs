@@ -9,15 +9,15 @@
             <label class="col-md-3 control-label">Database Type: </label>
             <div class="col-md-8">
                 <select name="database" id="install-database" class="form-control">
-                    {{if .CurDbValue}}<option value="{{.CurDbValue}}">{{.CurDbValue}}</option>{{end}}
+                    {{if .CurDbOption}}<option value="{{.CurDbOption}}">{{.CurDbOption}}</option>{{end}}
                     {{range .DbOptions}}
-                    {{if not (eq $.CurDbValue .)}}<option value="{{.}}">{{.}}</option>{{end}}
+                    {{if not (eq $.CurDbOption .)}}<option value="{{.}}" >{{.}}</option>{{end}}
                     {{end}}
                 </select>
             </div>
         </div>
 
-        <div class="server-sql {{if eq .CurDbValue "SQLite3"}}hide{{end}}">
+        <div class="server-sql {{if eq .CurDbOption "SQLite3"}}hide{{end}}">
             <div class="form-group">
                 <label class="col-md-3 control-label">Host: </label>
                 <div class="col-md-8">
@@ -27,7 +27,6 @@
 
             <div class="form-group">
                 <label class="col-md-3 control-label">User: </label>
-
                 <div class="col-md-8">
                     <input name="user" class="form-control" placeholder="Type database username" value="{{.user}}">
                 </div>
@@ -35,7 +34,6 @@
 
             <div class="form-group">
                 <label class="col-md-3 control-label">Password: </label>
-
                 <div class="col-md-8">
                     <input name="passwd" type="password" class="form-control" placeholder="Type database password" value="{{.passwd}}">
                 </div>
@@ -43,14 +41,13 @@
 
             <div class="form-group">
                 <label class="col-md-3 control-label">Database Name: </label>
-
                 <div class="col-md-8">
                     <input name="database_name" type="text" class="form-control" placeholder="Type mysql database name" value="{{.database_name}}">
                     <p class="help-block">Recommend use INNODB engine with utf8_general_ci charset.</p>
                 </div>
             </div>
 
-            <div class="form-group pgsql-setting {{if not (eq .CurDbValue "PostgreSQL")}}hide{{end}}">
+            <div class="form-group pgsql-setting {{if not (eq .CurDbOption "PostgreSQL")}}hide{{end}}">
                 <label class="col-md-3 control-label">SSL Mode: </label>
                 <div class="col-md-8">
                     <select name="ssl_mode" class="form-control">
@@ -62,10 +59,9 @@
             </div>
         </div>
 
-        <div class="sqlite-setting {{if not (eq .CurDbValue "SQLite3")}}hide{{end}}">
+        <div class="sqlite-setting {{if not (eq .CurDbOption "SQLite3")}}hide{{end}}">
             <div class="form-group">
                 <label class="col-md-3 control-label">Path: </label>
-
                 <div class="col-md-8">
                     <input name="database_path" class="form-control" placeholder="Type sqlite3 file path" value="{{.database_path}}">
                     <p class="help-block">The file path of SQLite3 database.</p>
@@ -78,17 +74,14 @@
         <p class="help-block text-center">General Settings of Gogs</p>
         <div class="form-group">
             <label class="col-md-3 control-label">Repository Path: </label>
-
             <div class="col-md-8">
                 <input name="repo_path" type="text" class="form-control" placeholder="Type your repository directory" value="{{.repo_path}}" required="required">
-
                 <p class="help-block">The git copy of each repository is saved in this directory.</p>
             </div>
         </div>
 
         <div class="form-group">
             <label class="col-md-3 control-label">Run User: </label>
-
             <div class="col-md-8">
                 <input name="run_user" type="text" class="form-control" placeholder="Type system user name" value="{{.run_user}}" required="required">
                 <p class="help-block">The user has access to visit and run Gogs.</p>
@@ -97,7 +90,6 @@
         
         <div class="form-group">
             <label class="col-md-3 control-label">Domain: </label>
-
             <div class="col-md-8">
                 <input name="domain" type="text" class="form-control" placeholder="Type your domain name" value="{{.domain}}" required="required">
                 <p class="help-block">This affects SSH clone URL.</p>
@@ -106,7 +98,6 @@
         
         <div class="form-group">
             <label class="col-md-3 control-label">App URL: </label>
-
             <div class="col-md-8">
                 <input name="app_url" type="text" class="form-control" placeholder="Type app root URL" value="{{.app_url}}" required="required">
                 <p class="help-block">This affects HTTP/HTTPS clone URL and somewhere in e-mail.</p>
@@ -116,7 +107,7 @@
         <hr/>
 
         <p class="help-block text-center">Admin Account Settings</p>
-        <div class="form-group">
+        <div class="form-group {{if .Err_AdminName}}has-error has-feedback{{end}}">
             <label class="col-md-3 control-label">Username: </label>
             <div class="col-md-8">
                 <input name="admin_name" type="text" class="form-control" placeholder="Type admin user name" value="{{.admin_name}}" required="required">
@@ -152,31 +143,30 @@
                     <div class="modal-header"><h4 class="modal-title">Advanced Options</h4></div>
                     <div class="modal-body">
                         <p class="help-block text-center">Email Service Settings</p>
-
                         <div class="form-group">
                             <label class="col-md-3 control-label">SMTP Host: </label>
-
                             <div class="col-md-8">
                                 <input name="smtp_host" type="text" class="form-control" placeholder="Type SMTP host address and port" value="{{.smtp_host}}">
                             </div>
                         </div>
+
                         <div class="form-group">
                             <label class="col-md-3 control-label">Username: </label>
-
                             <div class="col-md-8">
                                 <input name="mailer_user" type="text" class="form-control" placeholder="Type SMTP user e-mail address" value="{{.mailer_user}}">
                             </div>
                         </div>
+
                         <div class="form-group">
                             <label class="col-md-3 control-label">Password: </label>
-
                             <div class="col-md-8">
                                 <input name="mailer_pwd" type="password" class="form-control" placeholder="Type SMTP user password" value="{{.mailer_pwd}}">
                             </div>
                         </div>
-                        <hr/>
-                        <p class="text-center help-block">Notification Settings</p>
 
+                        <hr/>
+
+                        <p class="text-center help-block">Notification Settings</p>
                         <div class="form-group">
                             <div class="col-md-offset-3 col-md-7">
                                 <div class="checkbox">
@@ -202,7 +192,6 @@
                 </div>
             </div>
         </div>
-
     </form>
 </div>
 {{template "base/footer" .}}

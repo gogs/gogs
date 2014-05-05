@@ -132,9 +132,7 @@ func RenderSpecialLink(rawBytes []byte, urlPrefix string) []byte {
 	return rawBytes
 }
 
-func RenderMarkdown(rawBytes []byte, urlPrefix string) []byte {
-	body := RenderSpecialLink(rawBytes, urlPrefix)
-	// fmt.Println(string(body))
+func RenderRawMarkdown(body []byte, urlPrefix string) []byte {
 	htmlFlags := 0
 	// htmlFlags |= gfm.HTML_USE_XHTML
 	// htmlFlags |= gfm.HTML_USE_SMARTYPANTS
@@ -163,7 +161,12 @@ func RenderMarkdown(rawBytes []byte, urlPrefix string) []byte {
 	extensions |= gfm.EXTENSION_NO_EMPTY_LINE_BEFORE_BLOCK
 
 	body = gfm.Markdown(body, renderer, extensions)
-	// fmt.Println(string(body))
+	return body
+}
+
+func RenderMarkdown(rawBytes []byte, urlPrefix string) []byte {
+	body := RenderSpecialLink(rawBytes, urlPrefix)
+	body = RenderRawMarkdown(body, urlPrefix)
 	return body
 }
 
