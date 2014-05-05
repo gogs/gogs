@@ -20,8 +20,8 @@ type AdminEditUserForm struct {
 	Website   string `form:"website" binding:"MaxSize(50)"`
 	Location  string `form:"location" binding:"MaxSize(50)"`
 	Avatar    string `form:"avatar" binding:"Required;Email;MaxSize(50)"`
-	Active    string `form:"active"`
-	Admin     string `form:"admin"`
+	Active    bool   `form:"active"`
+	Admin     bool   `form:"admin"`
 	LoginType int    `form:"login_type"`
 }
 

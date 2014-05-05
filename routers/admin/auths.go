@@ -1,15 +1,20 @@
+// Copyright 2014 The Gogs Authors. All rights reserved.
+// Use of this source code is governed by a MIT-style
+// license that can be found in the LICENSE file.
+
 package admin
 
 import (
 	"strings"
 
 	"github.com/go-martini/martini"
+
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/auth/ldap"
 	"github.com/gogits/gogs/modules/base"
+	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/middleware"
-	"github.com/gpmgo/gopm/log"
 )
 
 func NewAuthSource(ctx *middleware.Context) {
@@ -37,11 +42,11 @@ func NewAuthSourcePost(ctx *middleware.Context, form auth.AuthenticationForm) {
 			Filter:       form.Filter,
 			MsAdSAFormat: form.MsAdSA,
 			Enabled:      true,
-			Name:         form.Name,
+			Name:         form.AuthName,
 		},
 	}
 
-	if err := models.AddLDAPSource(form.Name, u); err != nil {
+	if err := models.AddLDAPSource(form.AuthName, u); err != nil {
 		switch err {
 		default:
 			ctx.Handle(500, "admin.auths.NewAuth", err)
@@ -50,7 +55,7 @@ func NewAuthSourcePost(ctx *middleware.Context, form auth.AuthenticationForm) {
 	}
 
 	log.Trace("%s Authentication created by admin(%s): %s", ctx.Req.RequestURI,
-		ctx.User.LowerName, strings.ToLower(form.Name))
+		ctx.User.LowerName, strings.ToLower(form.AuthName))
 
 	ctx.Redirect("/admin/auths")
 }
@@ -83,7 +88,7 @@ func EditAuthSourcePost(ctx *middleware.Context, form auth.AuthenticationForm) {
 	}
 
 	u := models.LoginSource{
-		Name:      form.Name,
+		Name:      form.AuthName,
 		IsActived: form.IsActived,
 		Type:      models.LT_LDAP,
 		Cfg: &models.LDAPConfig{
@@ -95,7 +100,7 @@ func EditAuthSourcePost(ctx *middleware.Context, form auth.AuthenticationForm) {
 				Filter:       form.Filter,
 				MsAdSAFormat: form.MsAdSA,
 				Enabled:      true,
-				Name:         form.Name,
+				Name:         form.AuthName,
 			},
 		},
 	}
@@ -109,7 +114,7 @@ func EditAuthSourcePost(ctx *middleware.Context, form auth.AuthenticationForm) {
 	}
 
 	log.Trace("%s Authentication changed by admin(%s): %s", ctx.Req.RequestURI,
-		ctx.User.LowerName, strings.ToLower(form.Name))
+		ctx.User.LowerName, strings.ToLower(form.AuthName))
 
 	ctx.Redirect("/admin/auths")
 }

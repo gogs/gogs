@@ -130,9 +130,8 @@ func EditUserPost(ctx *middleware.Context, params martini.Params, form auth.Admi
 	u.Location = form.Location
 	u.Avatar = base.EncodeMd5(form.Avatar)
 	u.AvatarEmail = form.Avatar
-	u.IsActive = form.Active == "on"
-	u.IsAdmin = form.Admin == "on"
-	u.LoginType = form.LoginType
+	u.IsActive = form.Active
+	u.IsAdmin = form.Admin
 	if err := models.UpdateUser(u); err != nil {
 		ctx.Handle(500, "admin.user.EditUser", err)
 		return

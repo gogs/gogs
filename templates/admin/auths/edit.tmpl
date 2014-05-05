@@ -15,69 +15,70 @@
                     {{template "base/alert" .}}
                     <input type="hidden" value="{{.Source.Id}}" name="id"/>
                     <div class="form-group">
-                    <label class="col-md-3 control-label">Auth Type: </label>
-                    <div class="col-md-7">
-                    <select class="form-control">
-                    {{$type := .Source.Type}}
-  {{range $key, $val := .LoginTypes}}
-                    <option value="{{$key}}" {{if eq $key $type}}selected{{end}}>{{$val}}</option>
-                    {{end}}
-</select>
-    </div>
-    </div>
-                    <div class="form-group {{if .Err_UserName}}has-error has-feedback{{end}}">
+                        <label class="col-md-3 control-label">Auth Type: </label>
+                        <div class="col-md-7">
+                            <select class="form-control">
+                                {{$type := .Source.Type}}
+                                {{range $key, $val := .LoginTypes}}
+                                <option value="{{$key}}" {{if eq $key $type}}selected{{end}}>{{$val}}</option>
+                                {{end}}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group {{if .Err_AuthName}}has-error has-feedback{{end}}">
                         <label class="col-md-3 control-label">Name: </label>
                         <div class="col-md-7">
-                            <input name="name" class="form-control" placeholder="Type account's username" value="{{.Source.Name}}" required="required">
+                            <input name="name" class="form-control" placeholder="Type authentication's name" value="{{.Source.Name}}" required="required">
                         </div>
                     </div>
 
-                    <div class="form-group {{if .Err_Email}}has-error has-feedback{{end}}">
+                    <div class="form-group {{if .Err_Domain}}has-error has-feedback{{end}}">
                         <label class="col-md-3 control-label">Domain: </label>
                         <div class="col-md-7">
-                            <input name="domain" class="form-control" placeholder="Type account's e-mail address" value="{{.Source.LDAP.Name}}" required="required" title="Email is not valid">
+                            <input name="domain" class="form-control" placeholder="Type domain name" value="{{.Source.LDAP.Name}}" required="required">
                         </div>
                     </div>
 
-                    <div class="form-group {{if .Err_Email}}has-error has-feedback{{end}}">
+                    <div class="form-group {{if .Err_Host}}has-error has-feedback{{end}}">
                         <label class="col-md-3 control-label">Host: </label>
                         <div class="col-md-7">
-                            <input name="host" class="form-control" placeholder="Type account's e-mail address" value="{{.Source.LDAP.Host}}" required="required" title="Email is not valid">
+                            <input name="host" class="form-control" placeholder="Type host address" value="{{.Source.LDAP.Host}}" required="required">
                         </div>
                     </div>
 
-                    <div class="form-group {{if .Err_Email}}has-error has-feedback{{end}}">
+                    <div class="form-group {{if .Err_Port}}has-error has-feedback{{end}}">
                         <label class="col-md-3 control-label">Port: </label>
                         <div class="col-md-7">
-                            <input name="port" class="form-control" placeholder="Type account's e-mail address" value="{{.Source.LDAP.Port}}" required="required" title="Email is not valid">
+                            <input name="port" class="form-control" placeholder="Type port number" value="{{.Source.LDAP.Port}}" required="required">
                         </div>
                     </div>
 
-                    <div class="form-group {{if .Err_Email}}has-error has-feedback{{end}}">
+                    <div class="form-group {{if .Err_BaseDN}}has-error has-feedback{{end}}">
                         <label class="col-md-3 control-label">Base DN: </label>
                         <div class="col-md-7">
-                            <input name="base_dn" class="form-control" placeholder="Type account's e-mail address" value="{{.Source.LDAP.BaseDN}}" required="required" title="Email is not valid">
+                            <input name="base_dn" class="form-control" placeholder="Type base DN" value="{{.Source.LDAP.BaseDN}}" required="required">
                         </div>
                     </div>
 
-<div class="form-group {{if .Err_Email}}has-error has-feedback{{end}}">
+                    <div class="form-group {{if .Err_Attributes}}has-error has-feedback{{end}}">
                         <label class="col-md-3 control-label">Search Attributes: </label>
                         <div class="col-md-7">
-                            <input name="attributes" class="form-control" placeholder="Type account's e-mail address" value="{{.Source.LDAP.Attributes}}" required="required" title="Email is not valid">
+                            <input name="attributes" class="form-control" placeholder="Type search attributes" value="{{.Source.LDAP.Attributes}}" required="required">
                         </div>
                     </div>
 
-                    <div class="form-group {{if .Err_Email}}has-error has-feedback{{end}}">
+                    <div class="form-group {{if .Err_Filter}}has-error has-feedback{{end}}">
                         <label class="col-md-3 control-label">Search Filter: </label>
                         <div class="col-md-7">
-                            <input name="filter" class="form-control" placeholder="Type account's e-mail address" value="{{.Source.LDAP.Filter}}" required="required" title="Email is not valid">
+                            <input name="filter" class="form-control" placeholder="Type search filter" value="{{.Source.LDAP.Filter}}" required="required">
                         </div>
                     </div>
 
-                    <div class="form-group {{if .Err_Email}}has-error has-feedback{{end}}">
+                    <div class="form-group {{if .Err_MsAdSA}}has-error has-feedback{{end}}">
                         <label class="col-md-3 control-label">Ms Ad SA: </label>
                         <div class="col-md-7">
-                            <input name="ms_ad_sa" class="form-control" placeholder="Type account's e-mail address" value="{{.Source.LDAP.MsAdSAFormat}}" required="required" title="Email is not valid">
+                            <input name="ms_ad_sa" class="form-control" placeholder="Type Ms Ad SA" value="{{.Source.LDAP.MsAdSAFormat}}" required="required">
                         </div>
                     </div>
                     
