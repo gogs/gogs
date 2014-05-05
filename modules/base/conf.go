@@ -316,10 +316,12 @@ func NewConfigContext() {
 	}
 	Cfg.BlockMode = false
 
-	cfgPath = filepath.Join(workDir, "custom/conf/app.ini")
-	if com.IsFile(cfgPath) {
-		if err = Cfg.AppendFiles(cfgPath); err != nil {
-			qlog.Fatalf("Cannot load config file(%s): %v\n", cfgPath, err)
+	cfgPaths := []string{os.Getenv("GOGS_CONFIG"), filepath.Join(workDir, "custom/conf/app.ini")}
+	for _, cfgPath := range cfgPaths {
+		if com.IsFile(cfgPath) {
+			if err = Cfg.AppendFiles(cfgPath); err != nil {
+				qlog.Fatalf("Cannot load config file(%s): %v\n", cfgPath, err)
+			}
 		}
 	}
 
