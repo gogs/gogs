@@ -34,16 +34,15 @@ func NewUserPost(ctx *middleware.Context, form auth.RegisterForm) {
 	ctx.Data["Title"] = "New Account"
 	ctx.Data["PageIsUsers"] = true
 
-	if form.Password != form.RetypePasswd {
-		ctx.Data["HasError"] = true
-		ctx.Data["Err_Password"] = true
-		ctx.Data["Err_RetypePasswd"] = true
-		ctx.Data["ErrorMsg"] = "Password and re-type password are not same"
-		auth.AssignForm(form, ctx.Data)
-	}
-
 	if ctx.HasError() {
 		ctx.HTML(200, "admin/users/new")
+		return
+	}
+
+	if form.Password != form.RetypePasswd {
+		ctx.Data["Err_Password"] = true
+		ctx.Data["Err_RetypePasswd"] = true
+		ctx.RenderWithErr("Password and re-type password are not same.", "admin/users/new", &form)
 		return
 	}
 

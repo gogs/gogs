@@ -11,6 +11,7 @@ import (
 	"github.com/gogits/git"
 
 	"github.com/gogits/gogs/models"
+	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/mailer"
@@ -18,27 +19,22 @@ import (
 )
 
 func Setting(ctx *middleware.Context) {
-	if !ctx.Repo.IsOwner {
-		ctx.Handle(404, "repo.Setting", nil)
-		return
-	}
-
 	ctx.Data["IsRepoToolbarSetting"] = true
 	ctx.Data["Title"] = strings.TrimPrefix(ctx.Repo.RepoLink, "/") + " - settings"
 	ctx.HTML(200, "repo/setting")
 }
 
-func SettingPost(ctx *middleware.Context) {
-	if !ctx.Repo.IsOwner {
-		ctx.Error(404)
-		return
-	}
-
+func SettingPost(ctx *middleware.Context, form auth.RepoSettingForm) {
 	ctx.Data["IsRepoToolbarSetting"] = true
 
 	switch ctx.Query("action") {
 	case "update":
-		newRepoName := ctx.Query("name")
+		if ctx.HasError() {
+			ctx.HTML(200, "repo/setting")
+			return
+		}
+
+		newRepoName := form.RepoName
 		// Check if repository name has been changed.
 		if ctx.Repo.Repository.Name != newRepoName {
 			isExist, err := models.IsRepositoryExist(ctx.Repo.Owner, newRepoName)
@@ -57,15 +53,15 @@ func SettingPost(ctx *middleware.Context) {
 			ctx.Repo.Repository.Name = newRepoName
 		}
 
-		br := ctx.Query("branch")
+		br := form.Branch
 
 		if git.IsBranchExist(models.RepoPath(ctx.User.Name, ctx.Repo.Repository.Name), br) {
 			ctx.Repo.Repository.DefaultBranch = br
 		}
-		ctx.Repo.Repository.Description = ctx.Query("desc")
-		ctx.Repo.Repository.Website = ctx.Query("site")
-		ctx.Repo.Repository.IsPrivate = ctx.Query("private") == "on"
-		ctx.Repo.Repository.IsGoget = ctx.Query("goget") == "on"
+		ctx.Repo.Repository.Description = form.Description
+		ctx.Repo.Repository.Website = form.Website
+		ctx.Repo.Repository.IsPrivate = form.Private
+		ctx.Repo.Repository.IsGoget = form.GoGet
 		if err := models.UpdateRepository(ctx.Repo.Repository); err != nil {
 			ctx.Handle(404, "repo.SettingPost(update)", err)
 			return
@@ -73,12 +69,9 @@ func SettingPost(ctx *middleware.Context) {
 		log.Trace("%s Repository updated: %s/%s", ctx.Req.RequestURI, ctx.Repo.Owner.Name, ctx.Repo.Repository.Name)
 
 		if ctx.Repo.Repository.IsMirror {
-			if len(ctx.Query("interval")) > 0 {
-				var err error
-				ctx.Repo.Mirror.Interval, err = base.StrTo(ctx.Query("interval")).Int()
-				if err != nil {
-					log.Error("repo.SettingPost(get mirror interval): %v", err)
-				} else if err = models.UpdateMirror(ctx.Repo.Mirror); err != nil {
+			if form.Interval > 0 {
+				ctx.Repo.Mirror.Interval = form.Interval
+				if err := models.UpdateMirror(ctx.Repo.Mirror); err != nil {
 					log.Error("repo.SettingPost(UpdateMirror): %v", err)
 				}
 			}
@@ -125,11 +118,6 @@ func SettingPost(ctx *middleware.Context) {
 }
 
 func Collaboration(ctx *middleware.Context) {
-	if !ctx.Repo.IsOwner {
-		ctx.Error(404)
-		return
-	}
-
 	repoLink := strings.TrimPrefix(ctx.Repo.RepoLink, "/")
 	ctx.Data["IsRepoToolbarCollaboration"] = true
 	ctx.Data["Title"] = repoLink + " - collaboration"
@@ -166,11 +154,6 @@ func Collaboration(ctx *middleware.Context) {
 }
 
 func CollaborationPost(ctx *middleware.Context) {
-	if !ctx.Repo.IsOwner {
-		ctx.Error(404)
-		return
-	}
-
 	repoLink := strings.TrimPrefix(ctx.Repo.RepoLink, "/")
 	name := strings.ToLower(ctx.Query("collaborator"))
 	if len(name) == 0 || ctx.Repo.Owner.LowerName == name {
@@ -215,33 +198,18 @@ func CollaborationPost(ctx *middleware.Context) {
 }
 
 func WebHooks(ctx *middleware.Context) {
-	if !ctx.Repo.IsOwner {
-		ctx.Handle(404, "repo.WebHooks", nil)
-		return
-	}
-
 	ctx.Data["IsRepoToolbarWebHooks"] = true
 	ctx.Data["Title"] = strings.TrimPrefix(ctx.Repo.RepoLink, "/") + " - Web Hooks"
 	ctx.HTML(200, "repo/hooks")
 }
 
 func WebHooksAdd(ctx *middleware.Context) {
-	if !ctx.Repo.IsOwner {
-		ctx.Handle(404, "repo.WebHooksAdd", nil)
-		return
-	}
-
 	ctx.Data["IsRepoToolbarWebHooks"] = true
 	ctx.Data["Title"] = strings.TrimPrefix(ctx.Repo.RepoLink, "/") + " - Add Web Hook"
 	ctx.HTML(200, "repo/hooks_add")
 }
 
 func WebHooksEdit(ctx *middleware.Context) {
-	if !ctx.Repo.IsOwner {
-		ctx.Handle(404, "repo.WebHooksEdit", nil)
-		return
-	}
-
 	ctx.Data["IsRepoToolbarWebHooks"] = true
 	ctx.Data["Title"] = strings.TrimPrefix(ctx.Repo.RepoLink, "/") + " - Web Hook Name"
 	ctx.HTML(200, "repo/hooks_edit")

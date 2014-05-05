@@ -8,12 +8,13 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"github.com/gogits/git"
 	"path"
 	"path/filepath"
 	"strings"
 
 	"github.com/go-martini/martini"
+
+	"github.com/gogits/git"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"

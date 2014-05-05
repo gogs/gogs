@@ -7,6 +7,7 @@ package middleware
 import (
 	"errors"
 	"fmt"
+	"net/url"
 	"strings"
 
 	"github.com/go-martini/martini"
@@ -236,5 +237,19 @@ func RepoAssignment(redirect bool, args ...bool) martini.Handler {
 		ctx.Data["Branches"] = brs
 		ctx.Data["CommitId"] = ctx.Repo.CommitId
 		ctx.Data["IsRepositoryWatching"] = ctx.Repo.IsWatching
+	}
+}
+
+func RequireOwner() martini.Handler {
+	return func(ctx *Context) {
+		if !ctx.Repo.IsOwner {
+			if !ctx.IsSigned {
+				ctx.SetCookie("redirect_to", "/"+url.QueryEscape(ctx.Req.RequestURI))
+				ctx.Redirect("/user/login")
+				return
+			}
+			ctx.Handle(404, ctx.Req.RequestURI, nil)
+			return
+		}
 	}
 }

@@ -112,12 +112,25 @@ func Users(ctx *middleware.Context) {
 	ctx.Data["PageIsUsers"] = true
 
 	var err error
-	ctx.Data["Users"], err = models.GetUsers(100, 0)
+	ctx.Data["Users"], err = models.GetUsers(200, 0)
 	if err != nil {
-		ctx.Handle(200, "admin.Users", err)
+		ctx.Handle(500, "admin.Users", err)
 		return
 	}
 	ctx.HTML(200, "admin/users")
+}
+
+func Repositories(ctx *middleware.Context) {
+	ctx.Data["Title"] = "Repository Management"
+	ctx.Data["PageIsRepos"] = true
+
+	var err error
+	ctx.Data["Repos"], err = models.GetRepos(200, 0)
+	if err != nil {
+		ctx.Handle(500, "admin.Repositories", err)
+		return
+	}
+	ctx.HTML(200, "admin/repos")
 }
 
 func Auths(ctx *middleware.Context) {
@@ -127,23 +140,10 @@ func Auths(ctx *middleware.Context) {
 	var err error
 	ctx.Data["Sources"], err = models.GetAuths()
 	if err != nil {
-		ctx.Handle(200, "admin.Auths", err)
+		ctx.Handle(500, "admin.Auths", err)
 		return
 	}
 	ctx.HTML(200, "admin/auths")
-}
-
-func Repositories(ctx *middleware.Context) {
-	ctx.Data["Title"] = "Repository Management"
-	ctx.Data["PageIsRepos"] = true
-
-	var err error
-	ctx.Data["Repos"], err = models.GetRepos(100, 0)
-	if err != nil {
-		ctx.Handle(200, "admin.Repositories", err)
-		return
-	}
-	ctx.HTML(200, "admin/repos")
 }
 
 func Config(ctx *middleware.Context) {
