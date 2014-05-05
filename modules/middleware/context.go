@@ -79,6 +79,19 @@ func (ctx *Context) Query(name string) string {
 // }
 
 // HasError returns true if error occurs in form validation.
+func (ctx *Context) HasApiError() bool {
+	hasErr, ok := ctx.Data["HasError"]
+	if !ok {
+		return false
+	}
+	return hasErr.(bool)
+}
+
+func (ctx *Context) GetErrMsg() string {
+	return ctx.Data["ErrorMsg"].(string)
+}
+
+// HasError returns true if error occurs in form validation.
 func (ctx *Context) HasError() bool {
 	hasErr, ok := ctx.Data["HasError"]
 	if !ok {

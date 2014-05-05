@@ -15,6 +15,7 @@ import (
 	qlog "github.com/qiniu/log"
 
 	"github.com/gogits/gogs/modules/auth"
+	"github.com/gogits/gogs/modules/auth/apiv1"
 	"github.com/gogits/gogs/modules/avatar"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
@@ -54,7 +55,10 @@ func runWeb(*cli.Context) {
 	m := newMartini()
 
 	// Middlewares.
-	m.Use(middleware.Renderer(middleware.RenderOptions{Funcs: []template.FuncMap{base.TemplateFuncs}}))
+	m.Use(middleware.Renderer(middleware.RenderOptions{
+		Funcs:      []template.FuncMap{base.TemplateFuncs},
+		IndentJSON: true,
+	}))
 	m.Use(middleware.InitContext())
 
 	reqSignIn := middleware.Toggle(&middleware.ToggleOptions{SignInRequire: true})
@@ -76,10 +80,15 @@ func runWeb(*cli.Context) {
 
 	m.Group("/api/v1", func(r martini.Router) {
 		// Miscellaneous.
-		r.Post("/markdown", v1.Markdown)
+		r.Post("/markdown", bindIgnErr(apiv1.MarkdownForm{}), v1.Markdown)
+		r.Post("/markdown/raw", v1.MarkdownRaw)
 
 		// Users.
 		r.Get("/users/search", v1.SearchUser)
+
+		r.Any("**", func(ctx *middleware.Context) {
+			ctx.JSON(404, &base.ApiJsonErr{"Not Found", v1.DOC_URL})
+		})
 	})
 
 	avt := avatar.CacheServer("public/img/avatar/", "public/img/avatar_default.jpg")
@@ -87,7 +96,7 @@ func runWeb(*cli.Context) {
 	m.Get("/avatar/:hash", avt.ServeHTTP)
 
 	m.Group("/user", func(r martini.Router) {
-		r.Get("/login", user.SignIn)
+		r.Get("/login", user.SignIn) // TODO
 		r.Post("/login", bindIgnErr(auth.LogInForm{}), user.SignInPost)
 		r.Get("/login/:name", user.SocialSignIn)
 		r.Get("/sign_up", user.SignUp)

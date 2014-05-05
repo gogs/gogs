@@ -21,23 +21,21 @@ type ToggleOptions struct {
 
 func Toggle(options *ToggleOptions) martini.Handler {
 	return func(ctx *Context) {
+		// Cannot view any page before installation.
 		if !base.InstallLock {
 			ctx.Redirect("/install")
 			return
 		}
 
+		// Redirect to dashboard if user tries to visit any non-login page.
 		if options.SignOutRequire && ctx.IsSigned && ctx.Req.RequestURI != "/" {
 			ctx.Redirect("/")
 			return
 		}
 
-		if !options.DisableCsrf {
-			if ctx.Req.Method == "POST" {
-				if !ctx.CsrfTokenValid() {
-					ctx.Error(403, "CSRF token does not match")
-					return
-				}
-			}
+		if !options.DisableCsrf && ctx.Req.Method == "POST" && !ctx.CsrfTokenValid() {
+			ctx.Error(403, "CSRF token does not match")
+			return
 		}
 
 		if options.SignInRequire {

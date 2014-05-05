@@ -24,9 +24,19 @@ func Home(ctx *middleware.Context) {
 		return
 	}
 
-	repos, _ := models.GetRecentUpdatedRepositories()
+	// Show recent updated repositoires for new visiters.
+	repos, err := models.GetRecentUpdatedRepositories()
+	if err != nil {
+		ctx.Handle(500, "dashboard.Home(GetRecentUpdatedRepositories)", err)
+		return
+	}
+
 	for _, repo := range repos {
-		repo.Owner, _ = models.GetUserById(repo.OwnerId)
+		repo.Owner, err = models.GetUserById(repo.OwnerId)
+		if err != nil {
+			ctx.Handle(500, "dashboard.Home(GetUserById)", err)
+			return
+		}
 	}
 	ctx.Data["Repos"] = repos
 	ctx.Data["PageIsHome"] = true

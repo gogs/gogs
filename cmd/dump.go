@@ -5,9 +5,11 @@
 package cmd
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"path"
+	"time"
 
 	"github.com/Unknwon/cae/zip"
 	"github.com/codegangsta/cli"
@@ -43,11 +45,12 @@ func runDump(*cli.Context) {
 		log.Fatalf("Fail to dump database: %v", err)
 	}
 
+	fileName := fmt.Sprintf("gogs-dump-%d.zip", time.Now().Unix())
 	log.Printf("Packing dump files...")
-	z, err := zip.Create("gogs-dump.zip")
+	z, err := zip.Create(fileName)
 	if err != nil {
-		os.Remove("gogs-dump.zip")
-		log.Fatalf("Fail to create gogs-dump.zip: %v", err)
+		os.Remove(fileName)
+		log.Fatalf("Fail to create %s: %v", fileName, err)
 	}
 
 	execDir, _ := base.ExecDir()
@@ -56,8 +59,8 @@ func runDump(*cli.Context) {
 	z.AddFile("custom/conf/app.ini", path.Join(execDir, "custom/conf/app.ini"))
 	z.AddDir("log", path.Join(execDir, "log"))
 	if err = z.Close(); err != nil {
-		os.Remove("gogs-dump.zip")
-		log.Fatalf("Fail to save gogs-dump.zip: %v", err)
+		os.Remove(fileName)
+		log.Fatalf("Fail to save %s: %v", fileName, err)
 	}
 
 	log.Println("Finish dumping!")

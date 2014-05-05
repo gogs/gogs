@@ -62,6 +62,12 @@ var Gogits = {
             var method = $(this).data('ajax-method') || 'get';
             var ajaxName = $(this).data('ajax-name');
             var data = {};
+
+            if (ajaxName.endsWith("preview")) {
+                data["mode"] = "gfm";
+                data["context"] = $(this).data('ajax-context');
+            }
+
             $('[data-ajax-rel=' + ajaxName + ']').each(function () {
                 var field = $(this).data("ajax-field");
                 var t = $(this).data("ajax-val");
@@ -547,10 +553,8 @@ function initIssue() {
     (function () {
         $('[data-ajax-name=issue-preview]').on("click", function () {
             var $this = $(this);
-            $this.toggleAjax(function (json) {
-                if (json.ok) {
-                    $($this.data("preview")).html(json.content);
-                }
+            $this.toggleAjax(function (resp) {
+                $($this.data("preview")).html(resp);
             })
         });
         $('.issue-write a[data-toggle]').on("click", function () {

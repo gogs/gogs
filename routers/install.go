@@ -78,7 +78,7 @@ func Install(ctx *middleware.Context, form auth.InstallForm) {
 	ctx.Data["Title"] = "Install"
 	ctx.Data["PageIsInstall"] = true
 
-	// Get and assign value to install form.
+	// Get and assign values to install form.
 	if len(form.Host) == 0 {
 		form.Host = models.DbCfg.Host
 	}
@@ -109,11 +109,11 @@ func Install(ctx *middleware.Context, form auth.InstallForm) {
 	}
 
 	renderDbOption(ctx)
-	curDbValue := ""
+	curDbOp := ""
 	if models.EnableSQLite3 {
-		curDbValue = "SQLite3" // Default when enabled.
+		curDbOp = "SQLite3" // Default when enabled.
 	}
-	ctx.Data["CurDbValue"] = curDbValue
+	ctx.Data["CurDbOption"] = curDbOp
 
 	auth.AssignForm(form, ctx.Data)
 	ctx.HTML(200, "install")
@@ -129,7 +129,7 @@ func InstallPost(ctx *middleware.Context, form auth.InstallForm) {
 	ctx.Data["PageIsInstall"] = true
 
 	renderDbOption(ctx)
-	ctx.Data["CurDbValue"] = form.Database
+	ctx.Data["CurDbOption"] = form.Database
 
 	if ctx.HasError() {
 		ctx.HTML(200, "install")
@@ -157,7 +157,7 @@ func InstallPost(ctx *middleware.Context, form auth.InstallForm) {
 	if err := models.NewTestEngine(x); err != nil {
 		if strings.Contains(err.Error(), `Unknown database type: sqlite3`) {
 			ctx.RenderWithErr("Your release version does not support SQLite3, please download the official binary version "+
-				"from https://github.com/gogits/gogs/wiki/Install-from-binary, NOT the gobuild version.", "install", &form)
+				"from http://gogs.io/docs/installation/install_from_binary.md, NOT the gobuild version.", "install", &form)
 		} else {
 			ctx.RenderWithErr("Database setting is not correct: "+err.Error(), "install", &form)
 		}

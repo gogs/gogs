@@ -72,13 +72,13 @@
                                 </div>
                                 <ul class="nav nav-tabs" data-init="tabs">
                                     <li class="active issue-write"><a href="#issue-textarea" data-toggle="tab">Write</a></li>
-                                    <li class="issue-preview"><a href="#issue-preview" data-toggle="tab" data-ajax="/api/v1/markdown?repoLink={{.RepoLink}}" data-ajax-name="issue-preview" data-ajax-method="post" data-preview="#issue-preview">Preview</a></li>
+                                    <li class="issue-preview"><a href="#issue-preview" data-toggle="tab" data-ajax="/api/v1/markdown" data-ajax-name="issue-preview"  data-ajax-context="{{.RepoLink}}" data-ajax-method="post" data-preview="#issue-preview">Preview</a></li>
                                 </ul>
                                 <div class="tab-content">
                                     <div class="tab-pane" id="issue-textarea">
                                         <div class="form-group">
                                             <input type="hidden" value="{{.Issue.Index}}" name="issueIndex"/>
-                                            <textarea class="form-control" name="content" id="issue-reply-content" rows="10" placeholder="Write some content" data-ajax-rel="issue-preview" data-ajax-val="val" data-ajax-field="content">{{.content}}</textarea>
+                                            <textarea class="form-control" name="content" id="issue-reply-content" rows="10" placeholder="Write some content" data-ajax-rel="issue-preview" data-ajax-val="val" data-ajax-field="text">{{.content}}</textarea>
                                         </div>
                                     </div>
                                     <div class="tab-pane issue-preview-content" id="issue-preview">Loading...</div>

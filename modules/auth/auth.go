@@ -91,7 +91,7 @@ func (f *LogInForm) Validate(errors *binding.BindingErrors, req *http.Request, c
 	validate(errors, data, f)
 }
 
-func getMinMaxSize(field reflect.StructField) string {
+func GetMinMaxSize(field reflect.StructField) string {
 	for _, rule := range strings.Split(field.Tag.Get("binding"), ";") {
 		if strings.HasPrefix(rule, "MinSize(") || strings.HasPrefix(rule, "MaxSize(") {
 			return rule[8 : len(rule)-1]
@@ -128,9 +128,9 @@ func validate(errors *binding.BindingErrors, data base.TmplData, form Form) {
 			case binding.BindingAlphaDashDotError:
 				data["ErrorMsg"] = form.Name(field.Name) + " must be valid alpha or numeric or dash(-_) or dot characters"
 			case binding.BindingMinSizeError:
-				data["ErrorMsg"] = form.Name(field.Name) + " must contain at least " + getMinMaxSize(field) + " characters"
+				data["ErrorMsg"] = form.Name(field.Name) + " must contain at least " + GetMinMaxSize(field) + " characters"
 			case binding.BindingMaxSizeError:
-				data["ErrorMsg"] = form.Name(field.Name) + " must contain at most " + getMinMaxSize(field) + " characters"
+				data["ErrorMsg"] = form.Name(field.Name) + " must contain at most " + GetMinMaxSize(field) + " characters"
 			case binding.BindingEmailError:
 				data["ErrorMsg"] = form.Name(field.Name) + " is not a valid e-mail address"
 			case binding.BindingUrlError:
