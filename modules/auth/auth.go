@@ -13,6 +13,7 @@ import (
 
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
+	"github.com/gogits/gogs/modules/middleware/binding"
 )
 
 // Web form interface.
@@ -37,7 +38,7 @@ func (f *RegisterForm) Name(field string) string {
 	return names[field]
 }
 
-func (f *RegisterForm) Validate(errors *base.BindingErrors, req *http.Request, context martini.Context) {
+func (f *RegisterForm) Validate(errors *binding.BindingErrors, req *http.Request, context martini.Context) {
 	if req.Method == "GET" || errors.Count() == 0 {
 		return
 	}
@@ -70,7 +71,7 @@ func (f *LogInForm) Name(field string) string {
 	return names[field]
 }
 
-func (f *LogInForm) Validate(errors *base.BindingErrors, req *http.Request, context martini.Context) {
+func (f *LogInForm) Validate(errors *binding.BindingErrors, req *http.Request, context martini.Context) {
 	if req.Method == "GET" || errors.Count() == 0 {
 		return
 	}
@@ -98,7 +99,7 @@ func getMinMaxSize(field reflect.StructField) string {
 	return ""
 }
 
-func validate(errors *base.BindingErrors, data base.TmplData, form Form) {
+func validate(errors *binding.BindingErrors, data base.TmplData, form Form) {
 	typ := reflect.TypeOf(form)
 	val := reflect.ValueOf(form)
 
@@ -119,19 +120,19 @@ func validate(errors *base.BindingErrors, data base.TmplData, form Form) {
 		if err, ok := errors.Fields[field.Name]; ok {
 			data["Err_"+field.Name] = true
 			switch err {
-			case base.BindingRequireError:
+			case binding.BindingRequireError:
 				data["ErrorMsg"] = form.Name(field.Name) + " cannot be empty"
-			case base.BindingAlphaDashError:
+			case binding.BindingAlphaDashError:
 				data["ErrorMsg"] = form.Name(field.Name) + " must be valid alpha or numeric or dash(-_) characters"
-			case base.BindingAlphaDashDotError:
+			case binding.BindingAlphaDashDotError:
 				data["ErrorMsg"] = form.Name(field.Name) + " must be valid alpha or numeric or dash(-_) or dot characters"
-			case base.BindingMinSizeError:
+			case binding.BindingMinSizeError:
 				data["ErrorMsg"] = form.Name(field.Name) + " must contain at least " + getMinMaxSize(field) + " characters"
-			case base.BindingMaxSizeError:
+			case binding.BindingMaxSizeError:
 				data["ErrorMsg"] = form.Name(field.Name) + " must contain at most " + getMinMaxSize(field) + " characters"
-			case base.BindingEmailError:
+			case binding.BindingEmailError:
 				data["ErrorMsg"] = form.Name(field.Name) + " is not a valid e-mail address"
-			case base.BindingUrlError:
+			case binding.BindingUrlError:
 				data["ErrorMsg"] = form.Name(field.Name) + " is not a valid URL"
 			default:
 				data["ErrorMsg"] = "Unknown error: " + err
@@ -196,7 +197,7 @@ func (f *InstallForm) Name(field string) string {
 	return names[field]
 }
 
-func (f *InstallForm) Validate(errors *base.BindingErrors, req *http.Request, context martini.Context) {
+func (f *InstallForm) Validate(errors *binding.BindingErrors, req *http.Request, context martini.Context) {
 	if req.Method == "GET" || errors.Count() == 0 {
 		return
 	}

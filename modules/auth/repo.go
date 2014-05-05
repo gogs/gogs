@@ -12,6 +12,7 @@ import (
 
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
+	"github.com/gogits/gogs/modules/middleware/binding"
 )
 
 type CreateRepoForm struct {
@@ -31,7 +32,7 @@ func (f *CreateRepoForm) Name(field string) string {
 	return names[field]
 }
 
-func (f *CreateRepoForm) Validate(errors *base.BindingErrors, req *http.Request, context martini.Context) {
+func (f *CreateRepoForm) Validate(errors *binding.BindingErrors, req *http.Request, context martini.Context) {
 	if req.Method == "GET" || errors.Count() == 0 {
 		return
 	}
@@ -69,7 +70,7 @@ func (f *MigrateRepoForm) Name(field string) string {
 	return names[field]
 }
 
-func (f *MigrateRepoForm) Validate(errors *base.BindingErrors, req *http.Request, context martini.Context) {
+func (f *MigrateRepoForm) Validate(errors *binding.BindingErrors, req *http.Request, context martini.Context) {
 	if req.Method == "GET" || errors.Count() == 0 {
 		return
 	}

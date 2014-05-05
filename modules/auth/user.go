@@ -15,6 +15,7 @@ import (
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
+	"github.com/gogits/gogs/modules/middleware/binding"
 )
 
 // SignedInId returns the id of signed in user.
@@ -93,7 +94,7 @@ func (f *UpdateProfileForm) Name(field string) string {
 	return names[field]
 }
 
-func (f *UpdateProfileForm) Validate(errors *base.BindingErrors, req *http.Request, context martini.Context) {
+func (f *UpdateProfileForm) Validate(errors *binding.BindingErrors, req *http.Request, context martini.Context) {
 	if req.Method == "GET" || errors.Count() == 0 {
 		return
 	}
@@ -126,7 +127,7 @@ func (f *UpdatePasswdForm) Name(field string) string {
 	return names[field]
 }
 
-func (f *UpdatePasswdForm) Validate(errors *base.BindingErrors, req *http.Request, context martini.Context) {
+func (f *UpdatePasswdForm) Validate(errors *binding.BindingErrors, req *http.Request, context martini.Context) {
 	if req.Method == "GET" || errors.Count() == 0 {
 		return
 	}
