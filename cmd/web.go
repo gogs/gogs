@@ -163,6 +163,7 @@ func runWeb(*cli.Context) {
 		r.Post("/settings/collaboration", repo.CollaborationPost)
 		r.Get("/settings/hooks", repo.WebHooks)
 		r.Get("/settings/hooks/add", repo.WebHooksAdd)
+		r.Get("/settings/hooks/id", repo.WebHooksEdit)
 		r.Get("/action/:action", repo.Action)
 		r.Get("/issues/new", repo.CreateIssue)
 		r.Post("/issues/new", bindIgnErr(auth.CreateIssueForm{}), repo.CreateIssuePost)

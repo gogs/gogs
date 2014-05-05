@@ -235,3 +235,14 @@ func WebHooksAdd(ctx *middleware.Context) {
 	ctx.Data["Title"] = strings.TrimPrefix(ctx.Repo.RepoLink, "/") + " - Add Web Hook"
 	ctx.HTML(200, "repo/hooks_add")
 }
+
+func WebHooksEdit(ctx *middleware.Context) {
+	if !ctx.Repo.IsOwner {
+		ctx.Handle(404, "repo.WebHooksEdit", nil)
+		return
+	}
+
+	ctx.Data["IsRepoToolbarWebHooks"] = true
+	ctx.Data["Title"] = strings.TrimPrefix(ctx.Repo.RepoLink, "/") + " - Web Hook Name"
+	ctx.HTML(200, "repo/hooks_edit")
+}
