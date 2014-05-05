@@ -27,11 +27,11 @@
                         <tr>
                             <td>{{.Id}}</td>
                             <td><a href="/admin/auths/{{.Id}}">{{.Name}}</a></td>
-                            <td>{{.Type}}</td>
-                            <td>{{.Actived}}</td>
+                            <td>{{.TypeString}}</td>
+                            <td><i class="fa fa{{if .IsActived}}-check{{end}}-square-o"></i></td>
                             <td>{{DateFormat .Updated "M d, Y"}}</td>
                             <td>{{DateFormat .Created "M d, Y"}}</td>
-                            <td><a href="/admin/users/{{.Id}}"><i class="fa fa-pencil-square-o"></i></a></td>
+                            <td><a href="/admin/auths/{{.Id}}"><i class="fa fa-pencil-square-o"></i></a></td>
                         </tr>
                         {{end}}
                     </tbody>
