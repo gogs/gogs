@@ -71,7 +71,7 @@ There are 4 ways to install Gogs:
 
 ## Contributors
 
-This project was launched by [Unknwon](https://github.com/Unknwon) and [lunny](https://github.com/lunny); [fuxiaohei](https://github.com/fuxiaohei), [slene](https://github.com/slene) and [codeskyblue](https://github.com/codeskyblue) joined the team soon after. See [contributors page](https://github.com/gogits/gogs/graphs/contributors) for full list of contributors.
+The [core team](http://gogs.io/team) of this project. See [contributors page](https://github.com/gogits/gogs/graphs/contributors) for full list of contributors.
 
 [![Clone in Koding](http://learn.koding.com/btn/clone_d.png)][koding]
 [koding]: https://koding.com/Teamwork?import=https://github.com/gogits/gogs/archive/master.zip&c=git1

@@ -132,8 +132,8 @@ func CreateIssuePost(ctx *middleware.Context, params martini.Params, form auth.C
 
 			newTos = append(newTos, m[1:])
 		}
-		if err = mailer.SendIssueMentionMail(ctx.User, ctx.Repo.Owner, ctx.Repo.Repository,
-			issue, models.GetUserEmailsByNames(newTos)); err != nil {
+		if err = mailer.SendIssueMentionMail(ctx.Render, ctx.User, ctx.Repo.Owner,
+			ctx.Repo.Repository, issue, models.GetUserEmailsByNames(newTos)); err != nil {
 			ctx.Handle(500, "issue.CreateIssue(SendIssueMentionMail)", err)
 			return
 		}

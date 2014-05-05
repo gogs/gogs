@@ -13,6 +13,7 @@ import (
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
+	"github.com/gogits/gogs/modules/mailer"
 	"github.com/gogits/gogs/modules/middleware"
 )
 
@@ -185,20 +186,28 @@ func CollaborationPost(ctx *middleware.Context) {
 		return
 	}
 
-	isExist, err := models.IsUserExist(name)
+	u, err := models.GetUserByName(name)
 	if err != nil {
-		ctx.Handle(500, "repo.CollaborationPost(IsUserExist)", err)
-		return
-	} else if !isExist {
-		ctx.Flash.Error("Given user does not exist.")
-		ctx.Redirect(ctx.Req.RequestURI)
+		if err == models.ErrUserNotExist {
+			ctx.Flash.Error("Given user does not exist.")
+			ctx.Redirect(ctx.Req.RequestURI)
+		} else {
+			ctx.Handle(500, "repo.CollaborationPost(GetUserByName)", err)
+		}
 		return
 	}
 
-	if err := models.AddAccess(&models.Access{UserName: name, RepoName: repoLink,
+	if err = models.AddAccess(&models.Access{UserName: name, RepoName: repoLink,
 		Mode: models.AU_WRITABLE}); err != nil {
 		ctx.Handle(500, "repo.CollaborationPost(AddAccess)", err)
 		return
+	}
+
+	if base.Service.NotifyMail {
+		if err = mailer.SendCollaboratorMail(ctx.Render, u, ctx.User, ctx.Repo.Repository); err != nil {
+			ctx.Handle(500, "repo.CollaborationPost(SendCollaboratorMail)", err)
+			return
+		}
 	}
 
 	ctx.Flash.Success("New collaborator has been added.")
