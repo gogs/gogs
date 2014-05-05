@@ -217,7 +217,7 @@ func SignUpPost(ctx *middleware.Context, form auth.RegisterForm) {
 	if form.Password != form.RetypePasswd {
 		ctx.Data["Err_Password"] = true
 		ctx.Data["Err_RetypePasswd"] = true
-		ctx.RenderWithErr("Password and re-type password are not same", "user/signup", &form)
+		ctx.RenderWithErr("Password and re-type password are not same.", "user/signup", &form)
 		return
 	}
 

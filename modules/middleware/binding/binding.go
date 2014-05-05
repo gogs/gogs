@@ -267,7 +267,10 @@ func validateStruct(errors *BindingErrors, obj interface{}) {
 					break
 				}
 			case rule == "Url":
-				if !urlPattern.MatchString(fmt.Sprintf("%v", fieldValue)) {
+				str := fmt.Sprintf("%v", fieldValue)
+				if len(str) == 0 {
+					continue
+				} else if !urlPattern.MatchString(str) {
 					errors.Fields[field.Name] = BindingUrlError
 					break
 				}

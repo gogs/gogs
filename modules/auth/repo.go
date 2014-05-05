@@ -11,12 +11,11 @@ import (
 	"github.com/go-martini/martini"
 
 	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/middleware/binding"
 )
 
 type CreateRepoForm struct {
-	RepoName    string `form:"repo" binding:"Required;AlphaDash"`
+	RepoName    string `form:"repo" binding:"Required;AlphaDash;MaxSize(100)"`
 	Private     bool   `form:"private"`
 	Description string `form:"desc" binding:"MaxSize(100)"`
 	Language    string `form:"language"`
@@ -33,21 +32,7 @@ func (f *CreateRepoForm) Name(field string) string {
 }
 
 func (f *CreateRepoForm) Validate(errors *binding.BindingErrors, req *http.Request, context martini.Context) {
-	if req.Method == "GET" || errors.Count() == 0 {
-		return
-	}
-
 	data := context.Get(reflect.TypeOf(base.TmplData{})).Interface().(base.TmplData)
-	data["HasError"] = true
-	AssignForm(f, data)
-
-	if len(errors.Overall) > 0 {
-		for _, err := range errors.Overall {
-			log.Error("CreateRepoForm.Validate: %v", err)
-		}
-		return
-	}
-
 	validate(errors, data, f)
 }
 
@@ -55,7 +40,7 @@ type MigrateRepoForm struct {
 	Url          string `form:"url" binding:"Url"`
 	AuthUserName string `form:"auth_username"`
 	AuthPasswd   string `form:"auth_password"`
-	RepoName     string `form:"repo" binding:"Required;AlphaDash"`
+	RepoName     string `form:"repo" binding:"Required;AlphaDash;MaxSize(100)"`
 	Mirror       bool   `form:"mirror"`
 	Private      bool   `form:"private"`
 	Description  string `form:"desc" binding:"MaxSize(100)"`
@@ -71,20 +56,30 @@ func (f *MigrateRepoForm) Name(field string) string {
 }
 
 func (f *MigrateRepoForm) Validate(errors *binding.BindingErrors, req *http.Request, context martini.Context) {
-	if req.Method == "GET" || errors.Count() == 0 {
-		return
-	}
-
 	data := context.Get(reflect.TypeOf(base.TmplData{})).Interface().(base.TmplData)
-	data["HasError"] = true
-	AssignForm(f, data)
+	validate(errors, data, f)
+}
 
-	if len(errors.Overall) > 0 {
-		for _, err := range errors.Overall {
-			log.Error("MigrateRepoForm.Validate: %v", err)
-		}
-		return
+type RepoSettingForm struct {
+	RepoName    string `form:"name" binding:"Required;AlphaDash;MaxSize(100)"`
+	Description string `form:"desc" binding:"MaxSize(100)"`
+	Website     string `form:"url" binding:"Url;MaxSize(100)"`
+	Branch      string `form:"branch"`
+	Interval    int    `form:"interval"`
+	Private     bool   `form:"private"`
+	GoGet       bool   `form:"goget"`
+}
+
+func (f *RepoSettingForm) Name(field string) string {
+	names := map[string]string{
+		"RepoName":    "Repository name",
+		"Description": "Description",
+		"Website":     "Website address",
 	}
+	return names[field]
+}
 
+func (f *RepoSettingForm) Validate(errors *binding.BindingErrors, req *http.Request, context martini.Context) {
+	data := context.Get(reflect.TypeOf(base.TmplData{})).Interface().(base.TmplData)
 	validate(errors, data, f)
 }
