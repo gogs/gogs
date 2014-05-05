@@ -14,12 +14,11 @@ import (
 )
 
 var CmdFix = cli.Command{
-	Name:  "fix",
-	Usage: "This command for upgrade from old version",
-	Description: `
-gogs fix provide upgrade from old version`,
-	Action: runFix,
-	Flags:  []cli.Flag{},
+	Name:        "fix",
+	Usage:       "This command for upgrade from old version",
+	Description: `Fix provide upgrade from old version`,
+	Action:      runFix,
+	Flags:       []cli.Flag{},
 }
 
 func runFix(k *cli.Context) {

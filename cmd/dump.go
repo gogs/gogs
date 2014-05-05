@@ -12,22 +12,23 @@ import (
 	"github.com/Unknwon/cae/zip"
 	"github.com/codegangsta/cli"
 
+	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"
 )
 
 var CmdDump = cli.Command{
 	Name:  "dump",
-	Usage: "Dump Gogs files except database",
-	Description: `
-Dump compresses all related files into zip file except database,
-it can be used for backup and capture Gogs server image to send
-to maintainer`,
+	Usage: "Dump Gogs files and database",
+	Description: `Dump compresses all related files and database into zip file.
+It can be used for backup and capture Gogs server image to send to maintainer`,
 	Action: runDump,
 	Flags:  []cli.Flag{},
 }
 
 func runDump(*cli.Context) {
 	base.NewConfigContext()
+	models.LoadModelsConfig()
+	models.SetEngine()
 
 	log.Printf("Dumping local repositories...%s", base.RepoRootPath)
 	zip.Verbose = false
@@ -36,6 +37,13 @@ func runDump(*cli.Context) {
 		log.Fatalf("Fail to dump local repositories: %v", err)
 	}
 
+	log.Printf("Dumping database...")
+	defer os.Remove("gogs-db.sql")
+	if err := models.DumpDatabase("gogs-db.sql"); err != nil {
+		log.Fatalf("Fail to dump database: %v", err)
+	}
+
+	log.Printf("Packing dump files...")
 	z, err := zip.Create("gogs-dump.zip")
 	if err != nil {
 		os.Remove("gogs-dump.zip")
@@ -44,9 +52,13 @@ func runDump(*cli.Context) {
 
 	execDir, _ := base.ExecDir()
 	z.AddFile("gogs-repo.zip", path.Join(execDir, "gogs-repo.zip"))
+	z.AddFile("gogs-db.sql", path.Join(execDir, "gogs-db.sql"))
 	z.AddFile("custom/conf/app.ini", path.Join(execDir, "custom/conf/app.ini"))
 	z.AddDir("log", path.Join(execDir, "log"))
-	z.Close()
+	if err = z.Close(); err != nil {
+		os.Remove("gogs-dump.zip")
+		log.Fatalf("Fail to save gogs-dump.zip: %v", err)
+	}
 
 	log.Println("Finish dumping!")
 }
