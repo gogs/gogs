@@ -93,6 +93,7 @@ var TemplateFuncs template.FuncMap = map[string]interface{}{
 	"DiffLineTypeToStr": DiffLineTypeToStr,
 	"ShortSha":          ShortSha,
 	"Oauth2Icon":        Oauth2Icon,
+	"Oauth2Name":        Oauth2Name,
 }
 
 type Actioner interface {
@@ -214,6 +215,22 @@ func Oauth2Icon(t int) string {
 		return "fa-linux"
 	case 5:
 		return "fa-weibo"
+	}
+	return ""
+}
+
+func Oauth2Name(t int) string {
+	switch t {
+	case 1:
+		return "GitHub"
+	case 2:
+		return "Google"
+	case 3:
+		return "Twitter"
+	case 4:
+		return "Tencent QQ"
+	case 5:
+		return "Weibo"
 	}
 	return ""
 }

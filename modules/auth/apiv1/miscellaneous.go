@@ -22,19 +22,12 @@ type MarkdownForm struct {
 	Context string `form:"context"`
 }
 
-func (f *MarkdownForm) Name(field string) string {
-	names := map[string]string{
-		"Text": "text",
-	}
-	return names[field]
-}
-
 func (f *MarkdownForm) Validate(errs *binding.BindingErrors, req *http.Request, ctx martini.Context) {
 	data := ctx.Get(reflect.TypeOf(base.TmplData{})).Interface().(base.TmplData)
 	validateApiReq(errs, data, f)
 }
 
-func validateApiReq(errs *binding.BindingErrors, data base.TmplData, f auth.Form) {
+func validateApiReq(errs *binding.BindingErrors, data base.TmplData, f interface{}) {
 	if errs.Count() == 0 {
 		return
 	} else if len(errs.Overall) > 0 {
@@ -64,22 +57,21 @@ func validateApiReq(errs *binding.BindingErrors, data base.TmplData, f auth.Form
 		}
 
 		if err, ok := errs.Fields[field.Name]; ok {
-			data["Err_"+field.Name] = true
 			switch err {
 			case binding.BindingRequireError:
-				data["ErrorMsg"] = f.Name(field.Name) + " cannot be empty"
+				data["ErrorMsg"] = fieldName + " cannot be empty"
 			case binding.BindingAlphaDashError:
-				data["ErrorMsg"] = f.Name(field.Name) + " must be valid alpha or numeric or dash(-_) characters"
+				data["ErrorMsg"] = fieldName + " must be valid alpha or numeric or dash(-_) characters"
 			case binding.BindingAlphaDashDotError:
-				data["ErrorMsg"] = f.Name(field.Name) + " must be valid alpha or numeric or dash(-_) or dot characters"
+				data["ErrorMsg"] = fieldName + " must be valid alpha or numeric or dash(-_) or dot characters"
 			case binding.BindingMinSizeError:
-				data["ErrorMsg"] = f.Name(field.Name) + " must contain at least " + auth.GetMinMaxSize(field) + " characters"
+				data["ErrorMsg"] = fieldName + " must contain at least " + auth.GetMinMaxSize(field) + " characters"
 			case binding.BindingMaxSizeError:
-				data["ErrorMsg"] = f.Name(field.Name) + " must contain at most " + auth.GetMinMaxSize(field) + " characters"
+				data["ErrorMsg"] = fieldName + " must contain at most " + auth.GetMinMaxSize(field) + " characters"
 			case binding.BindingEmailError:
-				data["ErrorMsg"] = f.Name(field.Name) + " is not a valid e-mail address"
+				data["ErrorMsg"] = fieldName + " is not a valid e-mail address"
 			case binding.BindingUrlError:
-				data["ErrorMsg"] = f.Name(field.Name) + " is not a valid URL"
+				data["ErrorMsg"] = fieldName + " is not a valid URL"
 			default:
 				data["ErrorMsg"] = "Unknown error: " + err
 			}

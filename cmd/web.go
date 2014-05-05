@@ -96,7 +96,7 @@ func runWeb(*cli.Context) {
 	m.Get("/avatar/:hash", avt.ServeHTTP)
 
 	m.Group("/user", func(r martini.Router) {
-		r.Get("/login", user.SignIn) // TODO
+		r.Get("/login", user.SignIn)
 		r.Post("/login", bindIgnErr(auth.LogInForm{}), user.SignInPost)
 		r.Get("/login/:name", user.SocialSignIn)
 		r.Get("/sign_up", user.SignUp)
@@ -130,7 +130,7 @@ func runWeb(*cli.Context) {
 	m.Get("/user/:username", ignSignIn, user.Profile)
 
 	m.Group("/repo", func(r martini.Router) {
-		r.Get("/create", repo.Create)
+		r.Get("/create", repo.Create) // TODO
 		r.Post("/create", bindIgnErr(auth.CreateRepoForm{}), repo.CreatePost)
 		r.Get("/migrate", repo.Migrate)
 		r.Post("/migrate", bindIgnErr(auth.MigrateRepoForm{}), repo.MigratePost)

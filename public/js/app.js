@@ -1,6 +1,4 @@
-var Gogits = {
-    "PageIsSignup": false
-};
+var Gogits = {};
 
 (function ($) {
     // extend jQuery ajax, set csrf token value
@@ -333,32 +331,6 @@ function initCore() {
     Gogits.renderCodeView();
 }
 
-function initRegister() {
-    $.getScript("/js/jquery.validate.min.js", function () {
-        Gogits.validateForm("#login-card", {
-            rules: {
-                "username": {
-                    required: true,
-                    maxlength: 30
-                },
-                "email": {
-                    required: true,
-                    email: true
-                },
-                "passwd": {
-                    required: true,
-                    minlength: 6,
-                    maxlength: 30
-                },
-                "re-passwd": {
-                    required: true,
-                    equalTo: "input[name=passwd]"
-                }
-            }
-        });
-    });
-}
-
 function initUserSetting() {
     // ssh confirmation
     $('#ssh-keys .delete').confirmation({
@@ -626,9 +598,6 @@ function initRepoSetting() {
     $(function () {
         initCore();
         var body = $("#body");
-        if (body.data("page") == "user-signup") {
-            initRegister();
-        }
         if (body.data("page") == "user") {
             initUserSetting();
         }

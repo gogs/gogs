@@ -49,14 +49,14 @@ func SignIn(ctx *middleware.Context) {
 
 	user, err := models.GetUserByName(userName)
 	if err != nil {
-		ctx.HTML(500, "user/signin")
+		ctx.Handle(500, "user.SignIn(GetUserByName)", err)
 		return
 	}
 
 	secret := base.EncodeMd5(user.Rands + user.Passwd)
 	value, _ := ctx.GetSecureCookie(secret, base.CookieRememberName)
 	if value != user.Name {
-		ctx.HTML(500, "user/signin")
+		ctx.HTML(200, "user/signin")
 		return
 	}
 
@@ -85,6 +85,7 @@ func SignInPost(ctx *middleware.Context, form auth.LogInForm) {
 	}
 
 	if ctx.HasError() {
+		println("shit")
 		ctx.HTML(200, "user/signin")
 		return
 	}
@@ -112,7 +113,7 @@ func SignInPost(ctx *middleware.Context, form auth.LogInForm) {
 		return
 	}
 
-	if form.Remember == "on" {
+	if form.Remember {
 		secret := base.EncodeMd5(user.Rands + user.Passwd)
 		days := 86400 * base.LogInRememberDays
 		ctx.SetCookie(base.CookieUserName, user.Name, days)
@@ -208,16 +209,15 @@ func SignUpPost(ctx *middleware.Context, form auth.RegisterForm) {
 		ctx.Data["IsSocialLogin"] = true
 	}
 
-	if form.Password != form.RetypePasswd {
-		ctx.Data["HasError"] = true
-		ctx.Data["Err_Password"] = true
-		ctx.Data["Err_RetypePasswd"] = true
-		ctx.Data["ErrorMsg"] = "Password and re-type password are not same"
-		auth.AssignForm(form, ctx.Data)
-	}
-
 	if ctx.HasError() {
 		ctx.HTML(200, "user/signup")
+		return
+	}
+
+	if form.Password != form.RetypePasswd {
+		ctx.Data["Err_Password"] = true
+		ctx.Data["Err_RetypePasswd"] = true
+		ctx.RenderWithErr("Password and re-type password are not same", "user/signup", &form)
 		return
 	}
 
@@ -415,7 +415,6 @@ func ResetPasswd(ctx *middleware.Context) {
 		return
 	}
 	ctx.Data["Code"] = code
-
 	ctx.Data["IsResetForm"] = true
 	ctx.HTML(200, "user/reset_passwd")
 }

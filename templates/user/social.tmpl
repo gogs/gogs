@@ -2,15 +2,35 @@
 {{template "base/navbar" .}}
 <div id="body" class="container" data-page="user">
     {{template "user/setting_nav" .}}
-    <div id="user-setting-container" class="col-md-9">
-        <div id="ssh-keys">
-            <h4>Social Account</h4>
-            {{template "base/alert" .}}
-            <ul id="ssh-keys-list" class="list-group">
-                {{range .Socials}}
-                    <i class="fa {{Oauth2Icon .Type}} fa-3x"></i>
-                {{end}}
-            </ul>
+    <div id="repo-setting-container" class="col-md-10">
+        {{template "base/alert" .}}
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                Social Account
+            </div>
+
+            <div class="panel-body">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th></th>
+                            <th>Name</th>
+                            <th>Identity</th>
+                            <th>Op.</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {{range .Socials}}
+                        <tr>
+                            <td><i class="fa {{Oauth2Icon .Type}} fa-2x"></i></td>
+                            <td>{{Oauth2Name .Type}}</td>
+                            <td>{{.Identity}}</td>
+                            <td><a href="/user/settings/social?remove={{.Id}}">Unbind</a></td>
+                        </tr>
+                        {{end}}
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 </div>
