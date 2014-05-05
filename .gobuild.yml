@@ -8,3 +8,5 @@ filesets:
         - README_ZH.md
         - start.bat
         - start.sh
+    excludes:
+        - \.git
