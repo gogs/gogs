@@ -63,7 +63,7 @@ Gogs 完全使用 Go 语言来实现对 Git 数据的操作，实现 **零** 依
 
 ## 贡献成员
 
-本项目最初由 [Unknown](https://github.com/Unknwon) 和 [lunny](https://github.com/lunny) 发起，随后 [fuxiaohei](https://github.com/fuxiaohei)、[slene](https://github.com/slene) 以及 [codeskyblue](https://github.com/codeskyblue) 加入到开发团队。您可以通过查看 [贡献者页面](https://github.com/gogits/gogs/graphs/contributors) 获取完整的贡献者列表。
+本项目的 [开发团队](http://gogs.io/team)。您可以通过查看 [贡献者页面](https://github.com/gogits/gogs/graphs/contributors) 获取完整的贡献者列表。
 
 [![Clone in Koding](http://learn.koding.com/btn/clone_d.png)][koding]
 [koding]: https://koding.com/Teamwork?import=https://github.com/gogits/gogs/archive/master.zip&c=git1

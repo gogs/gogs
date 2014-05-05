@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"path"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"
@@ -135,7 +136,7 @@ func SendIssueNotifyMail(user, owner *models.User, repo *models.Repository, issu
 		return tos, nil
 	}
 
-	subject := fmt.Sprintf("[%s] %s", repo.Name, issue.Name)
+	subject := fmt.Sprintf("[%s] %s(#%d)", repo.Name, issue.Name, issue.Index)
 	content := fmt.Sprintf("%s<br>-<br> <a href=\"%s%s/%s/issues/%d\">View it on Gogs</a>.",
 		base.RenderSpecialLink([]byte(issue.Content), owner.Name+"/"+repo.Name),
 		base.AppUrl, owner.Name, repo.Name, issue.Index)
@@ -146,17 +147,48 @@ func SendIssueNotifyMail(user, owner *models.User, repo *models.Repository, issu
 }
 
 // SendIssueMentionMail sends mail notification for who are mentioned in issue.
-func SendIssueMentionMail(user, owner *models.User, repo *models.Repository, issue *models.Issue, tos []string) error {
+func SendIssueMentionMail(r *middleware.Render, user, owner *models.User,
+	repo *models.Repository, issue *models.Issue, tos []string) error {
+
 	if len(tos) == 0 {
 		return nil
 	}
 
-	issueLink := fmt.Sprintf("%s%s/%s/issues/%d", base.AppUrl, owner.Name, repo.Name, issue.Index)
-	body := fmt.Sprintf(`%s mentioned you.`, user.Name)
-	subject := fmt.Sprintf("[%s] %s", repo.Name, issue.Name)
-	content := fmt.Sprintf("%s<br>-<br> <a href=\"%s\">View it on Gogs</a>.", body, issueLink)
-	msg := NewMailMessageFrom(tos, user.Name, subject, content)
+	subject := fmt.Sprintf("[%s] %s(#%d)", repo.Name, issue.Name, issue.Index)
+
+	data := GetMailTmplData(nil)
+	data["IssueLink"] = fmt.Sprintf("%s/%s/issues/%d", owner.Name, repo.Name, issue.Index)
+	data["Subject"] = subject
+
+	body, err := r.HTMLString("mail/notify/mention", data)
+	if err != nil {
+		return fmt.Errorf("mail.SendIssueMentionMail(fail to render): %v", err)
+	}
+
+	msg := NewMailMessageFrom(tos, user.Name, subject, body)
 	msg.Info = fmt.Sprintf("Subject: %s, send issue mention emails", subject)
+	SendAsync(&msg)
+	return nil
+}
+
+// SendCollaboratorMail sends mail notification to new collaborator.
+func SendCollaboratorMail(r *middleware.Render, user, owner *models.User,
+	repo *models.Repository) error {
+
+	subject := fmt.Sprintf("%s added you to %s", owner.Name, repo.Name)
+
+	data := GetMailTmplData(nil)
+	data["RepoLink"] = path.Join(owner.Name, repo.Name)
+	data["Subject"] = subject
+
+	body, err := r.HTMLString("mail/notify/collaborator", data)
+	if err != nil {
+		return fmt.Errorf("mail.SendCollaboratorMail(fail to render): %v", err)
+	}
+
+	msg := NewMailMessage([]string{user.Email}, subject, body)
+	msg.Info = fmt.Sprintf("UID: %d, send register mail", user.Id)
+
 	SendAsync(&msg)
 	return nil
 }
