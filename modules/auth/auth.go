@@ -26,6 +26,7 @@ type RegisterForm struct {
 	Email        string `form:"email" binding:"Required;Email;MaxSize(50)"`
 	Password     string `form:"passwd" binding:"Required;MinSize(6);MaxSize(30)"`
 	RetypePasswd string `form:"retypepasswd"`
+	LoginType    string `form:"logintype"`
 }
 
 func (f *RegisterForm) Name(field string) string {

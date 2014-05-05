@@ -5,6 +5,8 @@
 package admin
 
 import (
+	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/go-martini/martini"
@@ -19,6 +21,12 @@ import (
 func NewUser(ctx *middleware.Context) {
 	ctx.Data["Title"] = "New Account"
 	ctx.Data["PageIsUsers"] = true
+	auths, err := models.GetAuths()
+	if err != nil {
+		ctx.Handle(500, "admin.user.NewUser", err)
+		return
+	}
+	ctx.Data["LoginSources"] = auths
 	ctx.HTML(200, "admin/users/new")
 }
 
@@ -40,10 +48,18 @@ func NewUserPost(ctx *middleware.Context, form auth.RegisterForm) {
 	}
 
 	u := &models.User{
-		Name:     form.UserName,
-		Email:    form.Email,
-		Passwd:   form.Password,
-		IsActive: true,
+		Name:      form.UserName,
+		Email:     form.Email,
+		Passwd:    form.Password,
+		IsActive:  true,
+		LoginType: models.LT_PLAIN,
+	}
+
+	if len(form.LoginType) > 0 {
+		fields := strings.Split(form.LoginType, "-")
+		u.LoginType, _ = strconv.Atoi(fields[0])
+		u.LoginSource, _ = strconv.ParseInt(fields[1], 10, 64)
+		fmt.Println(u.LoginSource)
 	}
 
 	var err error
@@ -84,6 +100,12 @@ func EditUser(ctx *middleware.Context, params martini.Params) {
 	}
 
 	ctx.Data["User"] = u
+	auths, err := models.GetAuths()
+	if err != nil {
+		ctx.Handle(500, "admin.user.NewUser", err)
+		return
+	}
+	ctx.Data["LoginSources"] = auths
 	ctx.HTML(200, "admin/users/edit")
 }
 
@@ -110,6 +132,7 @@ func EditUserPost(ctx *middleware.Context, params martini.Params, form auth.Admi
 	u.AvatarEmail = form.Avatar
 	u.IsActive = form.Active == "on"
 	u.IsAdmin = form.Admin == "on"
+	u.LoginType = form.LoginType
 	if err := models.UpdateUser(u); err != nil {
 		ctx.Handle(500, "admin.user.EditUser", err)
 		return
@@ -126,7 +149,7 @@ func DeleteUser(ctx *middleware.Context, params martini.Params) {
 	ctx.Data["Title"] = "Delete Account"
 	ctx.Data["PageIsUsers"] = true
 
-	log.Info("delete")
+	//log.Info("delete")
 	uid, err := base.StrTo(params["userid"]).Int()
 	if err != nil {
 		ctx.Handle(404, "admin.user.EditUser", err)

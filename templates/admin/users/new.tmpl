@@ -13,6 +13,17 @@
 				<form action="/admin/users/new" method="post" class="form-horizontal">
 					{{.CsrfTokenHtml}}
 				    {{template "base/alert" .}}
+				    <div class="form-group">
+				    <label class="col-md-3 control-label">Auth Source: </label>
+				    <div class="col-md-7">
+				    <select name="logintype" class="form-control">
+				    <option value="0-0">Local</option>
+				    {{range $key, $val := .LoginSources}}
+  					<option value="{{$val.Type}}-{{$val.Id}}">{{$val.Name}}</option>
+  					{{end}}
+					</select>
+	</div>
+	</div>
 					<div class="form-group {{if .Err_UserName}}has-error has-feedback{{end}}">
 						<label class="col-md-3 control-label">Username: </label>
 						<div class="col-md-7">

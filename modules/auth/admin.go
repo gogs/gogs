@@ -16,12 +16,13 @@ import (
 )
 
 type AdminEditUserForm struct {
-	Email    string `form:"email" binding:"Required;Email;MaxSize(50)"`
-	Website  string `form:"website" binding:"MaxSize(50)"`
-	Location string `form:"location" binding:"MaxSize(50)"`
-	Avatar   string `form:"avatar" binding:"Required;Email;MaxSize(50)"`
-	Active   string `form:"active"`
-	Admin    string `form:"admin"`
+	Email     string `form:"email" binding:"Required;Email;MaxSize(50)"`
+	Website   string `form:"website" binding:"MaxSize(50)"`
+	Location  string `form:"location" binding:"MaxSize(50)"`
+	Avatar    string `form:"avatar" binding:"Required;Email;MaxSize(50)"`
+	Active    string `form:"active"`
+	Admin     string `form:"admin"`
+	LoginType int    `form:"login_type"`
 }
 
 func (f *AdminEditUserForm) Name(field string) string {
