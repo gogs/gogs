@@ -160,3 +160,8 @@ func GetStatistic() (stats Statistic) {
 	stats.Counter.Release, _ = orm.Count(new(Release))
 	return
 }
+
+// DumpDatabase dumps all data from database to file system.
+func DumpDatabase(filePath string) error {
+	return orm.DumpAllToFile(filePath)
+}

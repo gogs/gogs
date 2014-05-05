@@ -35,12 +35,11 @@ var (
 )
 
 var CmdServ = cli.Command{
-	Name:  "serv",
-	Usage: "This command should only be called by SSH shell",
-	Description: `
-Serv provide access auth for repositories`,
-	Action: runServ,
-	Flags:  []cli.Flag{},
+	Name:        "serv",
+	Usage:       "This command should only be called by SSH shell",
+	Description: `Serv provide access auth for repositories`,
+	Action:      runServ,
+	Flags:       []cli.Flag{},
 }
 
 func newLogger(execDir string) {

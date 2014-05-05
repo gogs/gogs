@@ -30,8 +30,7 @@ import (
 var CmdWeb = cli.Command{
 	Name:  "web",
 	Usage: "Start Gogs web server",
-	Description: `
-Gogs web server is the only thing you need to run, 
+	Description: `Gogs web server is the only thing you need to run, 
 and it takes care of all the other things for you`,
 	Action: runWeb,
 	Flags:  []cli.Flag{},
@@ -153,7 +152,7 @@ func runWeb(*cli.Context) {
 		r.Get("/settings/collaboration", repo.Collaboration)
 		r.Post("/settings/collaboration", repo.CollaborationPost)
 		r.Get("/settings/hooks", repo.WebHooks)
-		r.Get("/settings/hooks/add",repo.WebHooksAdd)
+		r.Get("/settings/hooks/add", repo.WebHooksAdd)
 		r.Get("/action/:action", repo.Action)
 		r.Get("/issues/new", repo.CreateIssue)
 		r.Post("/issues/new", bindIgnErr(auth.CreateIssueForm{}), repo.CreateIssuePost)

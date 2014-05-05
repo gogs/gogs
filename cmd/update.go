@@ -17,12 +17,11 @@ import (
 )
 
 var CmdUpdate = cli.Command{
-	Name:  "update",
-	Usage: "This command should only be called by SSH shell",
-	Description: `
-Update get pushed info and insert into database`,
-	Action: runUpdate,
-	Flags:  []cli.Flag{},
+	Name:        "update",
+	Usage:       "This command should only be called by SSH shell",
+	Description: `Update get pushed info and insert into database`,
+	Action:      runUpdate,
+	Flags:       []cli.Flag{},
 }
 
 func newUpdateLogger(execDir string) {
