@@ -5,7 +5,7 @@
 package user
 
 import (
-	"strconv"
+	"strings"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
@@ -22,11 +22,10 @@ func Setting(ctx *middleware.Context) {
 	ctx.HTML(200, "user/setting")
 }
 
-// Render user setting page (email, website modify)
 func SettingPost(ctx *middleware.Context, form auth.UpdateProfileForm) {
 	ctx.Data["Title"] = "Setting"
-	ctx.Data["PageIsUserSetting"] = true // For navbar arrow.
-	ctx.Data["IsUserPageSetting"] = true // For setting nav highlight.
+	ctx.Data["PageIsUserSetting"] = true
+	ctx.Data["IsUserPageSetting"] = true
 
 	user := ctx.User
 	ctx.Data["Owner"] = user
@@ -74,9 +73,22 @@ func SettingSocial(ctx *middleware.Context) {
 	ctx.Data["Title"] = "Social Account"
 	ctx.Data["PageIsUserSetting"] = true
 	ctx.Data["IsUserPageSettingSocial"] = true
+
+	// Unbind social account.
+	remove, _ := base.StrTo(ctx.Query("remove")).Int64()
+	if remove > 0 {
+		if err := models.DeleteOauth2ById(remove); err != nil {
+			ctx.Handle(500, "user.SettingSocial(DeleteOauth2ById)", err)
+			return
+		}
+		ctx.Flash.Success("OAuth2 has been unbinded.")
+		ctx.Redirect("/user/settings/social")
+		return
+	}
+
 	socials, err := models.GetOauthByUserId(ctx.User.Id)
 	if err != nil {
-		ctx.Handle(500, "user.SettingSocial", err)
+		ctx.Handle(500, "user.SettingSocial(GetOauthByUserId)", err)
 		return
 	}
 
@@ -108,9 +120,9 @@ func SettingPasswordPost(ctx *middleware.Context, form auth.UpdatePasswdForm) {
 	}
 	tmpUser.EncodePasswd()
 	if user.Passwd != tmpUser.Passwd {
-		ctx.Flash.Error("Old password is not correct")
+		ctx.Flash.Error("Old password is not correct.")
 	} else if form.NewPasswd != form.RetypePasswd {
-		ctx.Flash.Error("New password and re-type password are not same")
+		ctx.Flash.Error("New password and re-type password are not same.")
 	} else {
 		user.Passwd = form.NewPasswd
 		user.Salt = models.GetUserSalt()
@@ -128,10 +140,12 @@ func SettingPasswordPost(ctx *middleware.Context, form auth.UpdatePasswdForm) {
 
 func SettingSSHKeys(ctx *middleware.Context, form auth.AddSSHKeyForm) {
 	ctx.Data["Title"] = "SSH Keys"
+	ctx.Data["PageIsUserSetting"] = true
+	ctx.Data["IsUserPageSettingSSH"] = true
 
 	// Delete SSH key.
 	if ctx.Req.Method == "DELETE" || ctx.Query("_method") == "DELETE" {
-		id, err := strconv.ParseInt(ctx.Query("id"), 10, 64)
+		id, err := base.StrTo(ctx.Query("id")).Int64()
 		if err != nil {
 			log.Error("ssh.DelPublicKey: %v", err)
 			ctx.JSON(200, map[string]interface{}{
@@ -160,10 +174,24 @@ func SettingSSHKeys(ctx *middleware.Context, form auth.AddSSHKeyForm) {
 		return
 	}
 
+	// List existed SSH keys.
+	keys, err := models.ListPublicKey(ctx.User.Id)
+	if err != nil {
+		ctx.Handle(500, "ssh.ListPublicKey", err)
+		return
+	}
+	ctx.Data["Keys"] = keys
+
 	// Add new SSH key.
 	if ctx.Req.Method == "POST" {
 		if ctx.HasError() {
 			ctx.HTML(200, "user/publickey")
+			return
+		}
+
+		if len(form.KeyContent) < 100 || !strings.HasPrefix(form.KeyContent, "ssh-rsa") {
+			ctx.Flash.Error("SSH key content is not valid.")
+			ctx.Redirect("/user/settings/ssh")
 			return
 		}
 
@@ -188,16 +216,6 @@ func SettingSSHKeys(ctx *middleware.Context, form auth.AddSSHKeyForm) {
 		}
 	}
 
-	// List existed SSH keys.
-	keys, err := models.ListPublicKey(ctx.User.Id)
-	if err != nil {
-		ctx.Handle(200, "ssh.ListPublicKey", err)
-		return
-	}
-
-	ctx.Data["PageIsUserSetting"] = true
-	ctx.Data["IsUserPageSettingSSH"] = true
-	ctx.Data["Keys"] = keys
 	ctx.HTML(200, "user/publickey")
 }
 

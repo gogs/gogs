@@ -10,6 +10,7 @@
             <div class="panel-heading">
                 Collaborators
             </div>
+            
             <div class="panel-body">
                 <ul id="repo-collab-list" class="list-unstyled">
                     {{range .Collaborators}}
@@ -24,6 +25,7 @@
                     {{end}}
                 </ul>
             </div>
+
             <div class="panel-footer">
                 <form action="{{.RepoLink}}/settings/collaboration" method="post" class="form-horizontal" id="repo-collab-form">
                     {{.CsrfTokenHtml}}

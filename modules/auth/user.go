@@ -78,7 +78,7 @@ type UpdateProfileForm struct {
 	UserName string `form:"username" binding:"Required;AlphaDash;MaxSize(30)"`
 	FullName string `form:"fullname" binding:"MaxSize(40)"`
 	Email    string `form:"email" binding:"Required;Email;MaxSize(50)"`
-	Website  string `form:"website" binding:"MaxSize(50)"`
+	Website  string `form:"website" binding:"Url;MaxSize(50)"`
 	Location string `form:"location" binding:"MaxSize(50)"`
 	Avatar   string `form:"avatar" binding:"Required;Email;MaxSize(50)"`
 }
@@ -94,22 +94,9 @@ func (f *UpdateProfileForm) Name(field string) string {
 	return names[field]
 }
 
-func (f *UpdateProfileForm) Validate(errors *binding.BindingErrors, req *http.Request, context martini.Context) {
-	if req.Method == "GET" || errors.Count() == 0 {
-		return
-	}
-
-	data := context.Get(reflect.TypeOf(base.TmplData{})).Interface().(base.TmplData)
-	data["HasError"] = true
-
-	if len(errors.Overall) > 0 {
-		for _, err := range errors.Overall {
-			log.Error("UpdateProfileForm.Validate: %v", err)
-		}
-		return
-	}
-
-	validate(errors, data, f)
+func (f *UpdateProfileForm) Validate(errs *binding.BindingErrors, req *http.Request, ctx martini.Context) {
+	data := ctx.Get(reflect.TypeOf(base.TmplData{})).Interface().(base.TmplData)
+	validate(errs, data, f)
 }
 
 type UpdatePasswdForm struct {
@@ -127,20 +114,7 @@ func (f *UpdatePasswdForm) Name(field string) string {
 	return names[field]
 }
 
-func (f *UpdatePasswdForm) Validate(errors *binding.BindingErrors, req *http.Request, context martini.Context) {
-	if req.Method == "GET" || errors.Count() == 0 {
-		return
-	}
-
-	data := context.Get(reflect.TypeOf(base.TmplData{})).Interface().(base.TmplData)
-	data["HasError"] = true
-
-	if len(errors.Overall) > 0 {
-		for _, err := range errors.Overall {
-			log.Error("UpdatePasswdForm.Validate: %v", err)
-		}
-		return
-	}
-
-	validate(errors, data, f)
+func (f *UpdatePasswdForm) Validate(errs *binding.BindingErrors, req *http.Request, ctx martini.Context) {
+	data := ctx.Get(reflect.TypeOf(base.TmplData{})).Interface().(base.TmplData)
+	validate(errs, data, f)
 }

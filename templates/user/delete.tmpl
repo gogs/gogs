@@ -2,12 +2,19 @@
 {{template "base/navbar" .}}
 <div id="body" class="container" data-page="user">
     {{template "user/setting_nav" .}}
-    <div id="user-setting-container" class="col-md-9">
-        <h4>Delete Account</h4>
+    <div id="repo-setting-container" class="col-md-10">
         {{template "base/alert" .}}
-        {{if not .Flash.ErrorMsg}}<p class="alert alert-danger">The operation will delete your account permanently. Sorry to see you go, but we know you'll back soon.</p>{{end}}
-        <div class="form-group">
-            <button type="submit" class="btn btn-danger btn-lg" href="#delete-account-modal" id="delete-account" data-toggle="modal">Delete Account</button>
+        <div class="panel panel-warning">
+            <div class="panel-heading">
+                Delete Account
+            </div>
+
+            <div class="panel-body">
+                {{if not .Flash.ErrorMsg}}<p class="alert alert-danger">The operation will delete your account permanently. Sorry to see you go, but we know you'll back soon.</p>{{end}}
+                <div class="form-group">
+                    <button type="submit" class="btn btn-danger btn-lg" href="#delete-account-modal" id="delete-account" data-toggle="modal">Delete Account</button>
+                </div>
+            </div>
         </div>
     </div>
 

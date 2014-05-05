@@ -21,21 +21,21 @@
 		<div class="form-group {{if .Err_Email}}has-error has-feedback{{end}}">
 			<label class="col-md-4 control-label">Email: </label>
 			<div class="col-md-6">
-				<input name="email" class="form-control" placeholder="Type your e-mail address" value="{{.email}}" required="required" title="Email is not valid">
+				<input name="email" class="form-control" placeholder="Type your e-mail address" value="{{.email}}" required="required">
 			</div>
 		</div>
 
 		<div class="form-group {{if .Err_Password}}has-error has-feedback{{end}}">
 			<label class="col-md-4 control-label">Password: </label>
 			<div class="col-md-6">
-				<input name="passwd" type="password" class="form-control" placeholder="Type your password" required="required" title="Password must contain at least 6 characters">
+				<input name="passwd" type="password" class="form-control" placeholder="Type your password" required="required">
 			</div>
 		</div>
 
 		<div class="form-group {{if .Err_RetypePasswd}}has-error has-feedback{{end}}">
 			<label class="col-md-4 control-label">Re-type: </label>
 			<div class="col-md-6">
-				<input name="retypepasswd" type="password" class="form-control" placeholder="Re-type your password" required="required" title="Re-type Password must be same to Password">
+				<input name="retypepasswd" type="password" class="form-control" placeholder="Re-type your password" required="required">
 			</div>
 		</div>
 

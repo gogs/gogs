@@ -39,29 +39,15 @@ func (f *RegisterForm) Name(field string) string {
 	return names[field]
 }
 
-func (f *RegisterForm) Validate(errors *binding.BindingErrors, req *http.Request, context martini.Context) {
-	if req.Method == "GET" || errors.Count() == 0 {
-		return
-	}
-
-	data := context.Get(reflect.TypeOf(base.TmplData{})).Interface().(base.TmplData)
-	data["HasError"] = true
-	AssignForm(f, data)
-
-	if len(errors.Overall) > 0 {
-		for _, err := range errors.Overall {
-			log.Error("RegisterForm.Validate: %v", err)
-		}
-		return
-	}
-
-	validate(errors, data, f)
+func (f *RegisterForm) Validate(errs *binding.BindingErrors, req *http.Request, ctx martini.Context) {
+	data := ctx.Get(reflect.TypeOf(base.TmplData{})).Interface().(base.TmplData)
+	validate(errs, data, f)
 }
 
 type LogInForm struct {
 	UserName string `form:"username" binding:"Required;MaxSize(35)"`
 	Password string `form:"passwd" binding:"Required;MinSize(6);MaxSize(30)"`
-	Remember string `form:"remember"`
+	Remember bool   `form:"remember"`
 }
 
 func (f *LogInForm) Name(field string) string {
@@ -72,23 +58,9 @@ func (f *LogInForm) Name(field string) string {
 	return names[field]
 }
 
-func (f *LogInForm) Validate(errors *binding.BindingErrors, req *http.Request, context martini.Context) {
-	if req.Method == "GET" || errors.Count() == 0 {
-		return
-	}
-
-	data := context.Get(reflect.TypeOf(base.TmplData{})).Interface().(base.TmplData)
-	data["HasError"] = true
-	AssignForm(f, data)
-
-	if len(errors.Overall) > 0 {
-		for _, err := range errors.Overall {
-			log.Error("LogInForm.Validate: %v", err)
-		}
-		return
-	}
-
-	validate(errors, data, f)
+func (f *LogInForm) Validate(errs *binding.BindingErrors, req *http.Request, ctx martini.Context) {
+	data := ctx.Get(reflect.TypeOf(base.TmplData{})).Interface().(base.TmplData)
+	validate(errs, data, f)
 }
 
 func GetMinMaxSize(field reflect.StructField) string {
@@ -100,9 +72,21 @@ func GetMinMaxSize(field reflect.StructField) string {
 	return ""
 }
 
-func validate(errors *binding.BindingErrors, data base.TmplData, form Form) {
-	typ := reflect.TypeOf(form)
-	val := reflect.ValueOf(form)
+func validate(errs *binding.BindingErrors, data base.TmplData, f Form) {
+	if errs.Count() == 0 {
+		return
+	} else if len(errs.Overall) > 0 {
+		for _, err := range errs.Overall {
+			log.Error("%s: %v", reflect.TypeOf(f), err)
+		}
+		return
+	}
+
+	data["HasError"] = true
+	AssignForm(f, data)
+
+	typ := reflect.TypeOf(f)
+	val := reflect.ValueOf(f)
 
 	if typ.Kind() == reflect.Ptr {
 		typ = typ.Elem()
@@ -118,23 +102,23 @@ func validate(errors *binding.BindingErrors, data base.TmplData, form Form) {
 			continue
 		}
 
-		if err, ok := errors.Fields[field.Name]; ok {
+		if err, ok := errs.Fields[field.Name]; ok {
 			data["Err_"+field.Name] = true
 			switch err {
 			case binding.BindingRequireError:
-				data["ErrorMsg"] = form.Name(field.Name) + " cannot be empty"
+				data["ErrorMsg"] = f.Name(field.Name) + " cannot be empty"
 			case binding.BindingAlphaDashError:
-				data["ErrorMsg"] = form.Name(field.Name) + " must be valid alpha or numeric or dash(-_) characters"
+				data["ErrorMsg"] = f.Name(field.Name) + " must be valid alpha or numeric or dash(-_) characters"
 			case binding.BindingAlphaDashDotError:
-				data["ErrorMsg"] = form.Name(field.Name) + " must be valid alpha or numeric or dash(-_) or dot characters"
+				data["ErrorMsg"] = f.Name(field.Name) + " must be valid alpha or numeric or dash(-_) or dot characters"
 			case binding.BindingMinSizeError:
-				data["ErrorMsg"] = form.Name(field.Name) + " must contain at least " + GetMinMaxSize(field) + " characters"
+				data["ErrorMsg"] = f.Name(field.Name) + " must contain at least " + GetMinMaxSize(field) + " characters"
 			case binding.BindingMaxSizeError:
-				data["ErrorMsg"] = form.Name(field.Name) + " must contain at most " + GetMinMaxSize(field) + " characters"
+				data["ErrorMsg"] = f.Name(field.Name) + " must contain at most " + GetMinMaxSize(field) + " characters"
 			case binding.BindingEmailError:
-				data["ErrorMsg"] = form.Name(field.Name) + " is not a valid e-mail address"
+				data["ErrorMsg"] = f.Name(field.Name) + " is not a valid e-mail address"
 			case binding.BindingUrlError:
-				data["ErrorMsg"] = form.Name(field.Name) + " is not a valid URL"
+				data["ErrorMsg"] = f.Name(field.Name) + " is not a valid URL"
 			default:
 				data["ErrorMsg"] = "Unknown error: " + err
 			}

@@ -74,3 +74,9 @@ func GetOauthByUserId(uid int64) (oas []*Oauth2, err error) {
 	err = orm.Find(&oas, Oauth2{Uid: uid})
 	return oas, err
 }
+
+// DeleteOauth2ById deletes a oauth2 by ID.
+func DeleteOauth2ById(id int64) error {
+	_, err := orm.Delete(&Oauth2{Id: id})
+	return err
+}
