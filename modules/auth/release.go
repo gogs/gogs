@@ -12,6 +12,7 @@ import (
 
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
+	"github.com/gogits/gogs/modules/middleware/binding"
 )
 
 type NewReleaseForm struct {
@@ -30,7 +31,7 @@ func (f *NewReleaseForm) Name(field string) string {
 	return names[field]
 }
 
-func (f *NewReleaseForm) Validate(errors *base.BindingErrors, req *http.Request, context martini.Context) {
+func (f *NewReleaseForm) Validate(errors *binding.BindingErrors, req *http.Request, context martini.Context) {
 	if req.Method == "GET" || errors.Count() == 0 {
 		return
 	}

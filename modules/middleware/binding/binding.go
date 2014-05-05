@@ -3,7 +3,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-package middleware
+package binding
 
 import (
 	"encoding/json"
@@ -17,8 +17,6 @@ import (
 	"unicode/utf8"
 
 	"github.com/go-martini/martini"
-
-	"github.com/gogits/gogs/modules/base"
 )
 
 /*
@@ -103,7 +101,7 @@ func Form(formStruct interface{}, ifacePtr ...interface{}) martini.Handler {
 		// Because an empty request body or url can also mean absence of all needed values,
 		// it is not in all cases a bad request, so let's return 422.
 		if parseErr != nil {
-			errors.Overall[base.BindingDeserializationError] = parseErr.Error()
+			errors.Overall[BindingDeserializationError] = parseErr.Error()
 		}
 
 		mapForm(formStruct, req.Form, errors)
@@ -123,12 +121,12 @@ func MultipartForm(formStruct interface{}, ifacePtr ...interface{}) martini.Hand
 		// https://code.google.com/p/go/issues/detail?id=6334
 		multipartReader, err := req.MultipartReader()
 		if err != nil {
-			errors.Overall[base.BindingDeserializationError] = err.Error()
+			errors.Overall[BindingDeserializationError] = err.Error()
 		} else {
 			form, parseErr := multipartReader.ReadForm(MaxMemory)
 
 			if parseErr != nil {
-				errors.Overall[base.BindingDeserializationError] = parseErr.Error()
+				errors.Overall[BindingDeserializationError] = parseErr.Error()
 			}
 
 			req.MultipartForm = form
@@ -156,7 +154,7 @@ func Json(jsonStruct interface{}, ifacePtr ...interface{}) martini.Handler {
 		}
 
 		if err := json.NewDecoder(req.Body).Decode(jsonStruct.Interface()); err != nil && err != io.EOF {
-			errors.Overall[base.BindingDeserializationError] = err.Error()
+			errors.Overall[BindingDeserializationError] = err.Error()
 		}
 
 		validateAndMap(jsonStruct, context, errors, ifacePtr...)
@@ -186,7 +184,7 @@ var (
 	urlPattern          = regexp.MustCompile(`(http|https):\/\/[\w\-_]+(\.[\w\-_]+)+([\w\-\.,@?^=%&amp;:/~\+#]*[\w\-\@?^=%&amp;/~\+#])?`)
 )
 
-func validateStruct(errors *base.BindingErrors, obj interface{}) {
+func validateStruct(errors *BindingErrors, obj interface{}) {
 	typ := reflect.TypeOf(obj)
 	val := reflect.ValueOf(obj)
 
@@ -220,17 +218,17 @@ func validateStruct(errors *base.BindingErrors, obj interface{}) {
 			switch {
 			case rule == "Required":
 				if reflect.DeepEqual(zero, fieldValue) {
-					errors.Fields[field.Name] = base.BindingRequireError
+					errors.Fields[field.Name] = BindingRequireError
 					break
 				}
 			case rule == "AlphaDash":
 				if alphaDashPattern.MatchString(fmt.Sprintf("%v", fieldValue)) {
-					errors.Fields[field.Name] = base.BindingAlphaDashError
+					errors.Fields[field.Name] = BindingAlphaDashError
 					break
 				}
 			case rule == "AlphaDashDot":
 				if alphaDashDotPattern.MatchString(fmt.Sprintf("%v", fieldValue)) {
-					errors.Fields[field.Name] = base.BindingAlphaDashDotError
+					errors.Fields[field.Name] = BindingAlphaDashDotError
 					break
 				}
 			case strings.HasPrefix(rule, "MinSize("):
@@ -240,12 +238,12 @@ func validateStruct(errors *base.BindingErrors, obj interface{}) {
 					break
 				}
 				if str, ok := fieldValue.(string); ok && utf8.RuneCountInString(str) < min {
-					errors.Fields[field.Name] = base.BindingMinSizeError
+					errors.Fields[field.Name] = BindingMinSizeError
 					break
 				}
 				v := reflect.ValueOf(fieldValue)
 				if v.Kind() == reflect.Slice && v.Len() < min {
-					errors.Fields[field.Name] = base.BindingMinSizeError
+					errors.Fields[field.Name] = BindingMinSizeError
 					break
 				}
 			case strings.HasPrefix(rule, "MaxSize("):
@@ -255,22 +253,22 @@ func validateStruct(errors *base.BindingErrors, obj interface{}) {
 					break
 				}
 				if str, ok := fieldValue.(string); ok && utf8.RuneCountInString(str) > max {
-					errors.Fields[field.Name] = base.BindingMaxSizeError
+					errors.Fields[field.Name] = BindingMaxSizeError
 					break
 				}
 				v := reflect.ValueOf(fieldValue)
 				if v.Kind() == reflect.Slice && v.Len() > max {
-					errors.Fields[field.Name] = base.BindingMinSizeError
+					errors.Fields[field.Name] = BindingMinSizeError
 					break
 				}
 			case rule == "Email":
 				if !emailPattern.MatchString(fmt.Sprintf("%v", fieldValue)) {
-					errors.Fields[field.Name] = base.BindingEmailError
+					errors.Fields[field.Name] = BindingEmailError
 					break
 				}
 			case rule == "Url":
 				if !urlPattern.MatchString(fmt.Sprintf("%v", fieldValue)) {
-					errors.Fields[field.Name] = base.BindingUrlError
+					errors.Fields[field.Name] = BindingUrlError
 					break
 				}
 			}
@@ -278,7 +276,7 @@ func validateStruct(errors *base.BindingErrors, obj interface{}) {
 	}
 }
 
-func mapForm(formStruct reflect.Value, form map[string][]string, errors *base.BindingErrors) {
+func mapForm(formStruct reflect.Value, form map[string][]string, errors *BindingErrors) {
 	typ := formStruct.Elem().Type()
 
 	for i := 0; i < typ.NumField(); i++ {
@@ -319,10 +317,10 @@ func mapForm(formStruct reflect.Value, form map[string][]string, errors *base.Bi
 // This is a "default" handler, of sorts, and you are
 // welcome to use your own instead. The Bind middleware
 // invokes this automatically for convenience.
-func ErrorHandler(errs base.BindingErrors, resp http.ResponseWriter) {
+func ErrorHandler(errs BindingErrors, resp http.ResponseWriter) {
 	if errs.Count() > 0 {
 		resp.Header().Set("Content-Type", "application/json; charset=utf-8")
-		if _, ok := errs.Overall[base.BindingDeserializationError]; ok {
+		if _, ok := errs.Overall[BindingDeserializationError]; ok {
 			resp.WriteHeader(http.StatusBadRequest)
 		} else {
 			resp.WriteHeader(422)
@@ -337,7 +335,7 @@ func ErrorHandler(errs base.BindingErrors, resp http.ResponseWriter) {
 // matching value from the request (via Form middleware) in the
 // same type, so that not all deserialized values have to be strings.
 // Supported types are string, int, float, and bool.
-func setWithProperType(valueKind reflect.Kind, val string, structField reflect.Value, nameInTag string, errors *base.BindingErrors) {
+func setWithProperType(valueKind reflect.Kind, val string, structField reflect.Value, nameInTag string, errors *BindingErrors) {
 	switch valueKind {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		if val == "" {
@@ -345,7 +343,7 @@ func setWithProperType(valueKind reflect.Kind, val string, structField reflect.V
 		}
 		intVal, err := strconv.ParseInt(val, 10, 64)
 		if err != nil {
-			errors.Fields[nameInTag] = base.BindingIntegerTypeError
+			errors.Fields[nameInTag] = BindingIntegerTypeError
 		} else {
 			structField.SetInt(intVal)
 		}
@@ -355,7 +353,7 @@ func setWithProperType(valueKind reflect.Kind, val string, structField reflect.V
 		}
 		uintVal, err := strconv.ParseUint(val, 10, 64)
 		if err != nil {
-			errors.Fields[nameInTag] = base.BindingIntegerTypeError
+			errors.Fields[nameInTag] = BindingIntegerTypeError
 		} else {
 			structField.SetUint(uintVal)
 		}
@@ -367,7 +365,7 @@ func setWithProperType(valueKind reflect.Kind, val string, structField reflect.V
 		}
 		floatVal, err := strconv.ParseFloat(val, 32)
 		if err != nil {
-			errors.Fields[nameInTag] = base.BindingFloatTypeError
+			errors.Fields[nameInTag] = BindingFloatTypeError
 		} else {
 			structField.SetFloat(floatVal)
 		}
@@ -377,7 +375,7 @@ func setWithProperType(valueKind reflect.Kind, val string, structField reflect.V
 		}
 		floatVal, err := strconv.ParseFloat(val, 64)
 		if err != nil {
-			errors.Fields[nameInTag] = base.BindingFloatTypeError
+			errors.Fields[nameInTag] = BindingFloatTypeError
 		} else {
 			structField.SetFloat(floatVal)
 		}
@@ -398,7 +396,7 @@ func ensureNotPointer(obj interface{}) {
 // Performs validation and combines errors from validation
 // with errors from deserialization, then maps both the
 // resulting struct and the errors to the context.
-func validateAndMap(obj reflect.Value, context martini.Context, errors *base.BindingErrors, ifacePtr ...interface{}) {
+func validateAndMap(obj reflect.Value, context martini.Context, errors *BindingErrors, ifacePtr ...interface{}) {
 	context.Invoke(Validate(obj.Interface()))
 	errors.Combine(getErrors(context))
 	context.Map(*errors)
@@ -408,12 +406,12 @@ func validateAndMap(obj reflect.Value, context martini.Context, errors *base.Bin
 	}
 }
 
-func newErrors() *base.BindingErrors {
-	return &base.BindingErrors{make(map[string]string), make(map[string]string)}
+func newErrors() *BindingErrors {
+	return &BindingErrors{make(map[string]string), make(map[string]string)}
 }
 
-func getErrors(context martini.Context) base.BindingErrors {
-	return context.Get(reflect.TypeOf(base.BindingErrors{})).Interface().(base.BindingErrors)
+func getErrors(context martini.Context) BindingErrors {
+	return context.Get(reflect.TypeOf(BindingErrors{})).Interface().(BindingErrors)
 }
 
 type (
@@ -421,7 +419,7 @@ type (
 	// validation before the request even gets to your application.
 	// The Validate method will be executed during the validation phase.
 	Validator interface {
-		Validate(*base.BindingErrors, *http.Request, martini.Context)
+		Validate(*BindingErrors, *http.Request, martini.Context)
 	}
 )
 
@@ -429,4 +427,44 @@ var (
 	// Maximum amount of memory to use when parsing a multipart form.
 	// Set this to whatever value you prefer; default is 10 MB.
 	MaxMemory = int64(1024 * 1024 * 10)
+)
+
+// Errors represents the contract of the response body when the
+// binding step fails before getting to the application.
+type BindingErrors struct {
+	Overall map[string]string `json:"overall"`
+	Fields  map[string]string `json:"fields"`
+}
+
+// Total errors is the sum of errors with the request overall
+// and errors on individual fields.
+func (err BindingErrors) Count() int {
+	return len(err.Overall) + len(err.Fields)
+}
+
+func (this *BindingErrors) Combine(other BindingErrors) {
+	for key, val := range other.Fields {
+		if _, exists := this.Fields[key]; !exists {
+			this.Fields[key] = val
+		}
+	}
+	for key, val := range other.Overall {
+		if _, exists := this.Overall[key]; !exists {
+			this.Overall[key] = val
+		}
+	}
+}
+
+const (
+	BindingRequireError         string = "Required"
+	BindingAlphaDashError       string = "AlphaDash"
+	BindingAlphaDashDotError    string = "AlphaDashDot"
+	BindingMinSizeError         string = "MinSize"
+	BindingMaxSizeError         string = "MaxSize"
+	BindingEmailError           string = "Email"
+	BindingUrlError             string = "Url"
+	BindingDeserializationError string = "DeserializationError"
+	BindingIntegerTypeError     string = "IntegerTypeError"
+	BindingBooleanTypeError     string = "BooleanTypeError"
+	BindingFloatTypeError       string = "FloatTypeError"
 )

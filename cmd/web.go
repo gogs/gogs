@@ -19,6 +19,7 @@ import (
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/middleware"
+	"github.com/gogits/gogs/modules/middleware/binding"
 	"github.com/gogits/gogs/routers"
 	"github.com/gogits/gogs/routers/admin"
 	"github.com/gogits/gogs/routers/api/v1"
@@ -62,7 +63,7 @@ func runWeb(*cli.Context) {
 
 	reqSignOut := middleware.Toggle(&middleware.ToggleOptions{SignOutRequire: true})
 
-	bindIgnErr := middleware.BindIgnErr
+	bindIgnErr := binding.BindIgnErr
 
 	// Routers.
 	m.Get("/", ignSignIn, routers.Home)
@@ -101,7 +102,7 @@ func runWeb(*cli.Context) {
 		r.Post("/settings", bindIgnErr(auth.UpdateProfileForm{}), user.SettingPost)
 	}, reqSignIn)
 	m.Group("/user", func(r martini.Router) {
-		r.Get("/feeds", middleware.Bind(auth.FeedsForm{}), user.Feeds)
+		r.Get("/feeds", binding.Bind(auth.FeedsForm{}), user.Feeds)
 		r.Any("/activate", user.Activate)
 		r.Get("/email2user", user.Email2User)
 		r.Get("/forget_password", user.ForgotPasswd)
