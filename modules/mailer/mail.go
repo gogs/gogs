@@ -140,7 +140,7 @@ func SendIssueNotifyMail(user, owner *models.User, repo *models.Repository, issu
 	content := fmt.Sprintf("%s<br>-<br> <a href=\"%s%s/%s/issues/%d\">View it on Gogs</a>.",
 		base.RenderSpecialLink([]byte(issue.Content), owner.Name+"/"+repo.Name),
 		base.AppUrl, owner.Name, repo.Name, issue.Index)
-	msg := NewMailMessageFrom(tos, user.Name, subject, content)
+	msg := NewMailMessageFrom(tos, user.Email, subject, content)
 	msg.Info = fmt.Sprintf("Subject: %s, send issue notify emails", subject)
 	SendAsync(&msg)
 	return tos, nil
@@ -165,7 +165,7 @@ func SendIssueMentionMail(r *middleware.Render, user, owner *models.User,
 		return fmt.Errorf("mail.SendIssueMentionMail(fail to render): %v", err)
 	}
 
-	msg := NewMailMessageFrom(tos, user.Name, subject, body)
+	msg := NewMailMessageFrom(tos, user.Email, subject, body)
 	msg.Info = fmt.Sprintf("Subject: %s, send issue mention emails", subject)
 	SendAsync(&msg)
 	return nil
