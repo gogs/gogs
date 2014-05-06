@@ -154,12 +154,8 @@ func SettingSSHKeys(ctx *middleware.Context, form auth.AddSSHKeyForm) {
 			})
 			return
 		}
-		k := &models.PublicKey{
-			Id:      id,
-			OwnerId: ctx.User.Id,
-		}
 
-		if err = models.DeletePublicKey(k); err != nil {
+		if err = models.DeletePublicKey(&models.PublicKey{Id: id}); err != nil {
 			log.Error("ssh.DelPublicKey: %v", err)
 			ctx.JSON(200, map[string]interface{}{
 				"ok":  false,

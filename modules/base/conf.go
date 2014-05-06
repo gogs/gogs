@@ -98,6 +98,7 @@ var Service struct {
 	LdapAuth             bool
 }
 
+// ExecDir returns absolute path execution(binary) path.
 func ExecDir() (string, error) {
 	file, err := exec.LookPath(os.Args[0])
 	if err != nil {

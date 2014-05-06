@@ -11,7 +11,6 @@ import (
 	"github.com/go-martini/martini"
 
 	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/middleware/binding"
 )
 
@@ -31,20 +30,6 @@ func (f *CreateIssueForm) Name(field string) string {
 }
 
 func (f *CreateIssueForm) Validate(errors *binding.BindingErrors, req *http.Request, context martini.Context) {
-	if req.Method == "GET" || errors.Count() == 0 {
-		return
-	}
-
 	data := context.Get(reflect.TypeOf(base.TmplData{})).Interface().(base.TmplData)
-	data["HasError"] = true
-	AssignForm(f, data)
-
-	if len(errors.Overall) > 0 {
-		for _, err := range errors.Overall {
-			log.Error("CreateIssueForm.Validate: %v", err)
-		}
-		return
-	}
-
 	validate(errors, data, f)
 }

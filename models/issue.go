@@ -30,19 +30,17 @@ type Issue struct {
 	IsPull          bool // Indicates whether is a pull request or not.
 	IsClosed        bool
 	Labels          string `xorm:"TEXT"`
-	Mentions        string `xorm:"TEXT"`
 	Content         string `xorm:"TEXT"`
 	RenderedContent string `xorm:"-"`
+	Priority        int
 	NumComments     int
+	Deadline        time.Time
 	Created         time.Time `xorm:"created"`
 	Updated         time.Time `xorm:"updated"`
 }
 
 // CreateIssue creates new issue for repository.
 func CreateIssue(userId, repoId, milestoneId, assigneeId int64, issueCount int, name, labels, content string, isPull bool) (issue *Issue, err error) {
-	// TODO: find out mentions
-	mentions := ""
-
 	sess := orm.NewSession()
 	defer sess.Close()
 	sess.Begin()
@@ -56,7 +54,6 @@ func CreateIssue(userId, repoId, milestoneId, assigneeId int64, issueCount int, 
 		AssigneeId:  assigneeId,
 		IsPull:      isPull,
 		Labels:      labels,
-		Mentions:    mentions,
 		Content:     content,
 	}
 	if _, err = sess.Insert(issue); err != nil {

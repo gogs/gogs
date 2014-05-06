@@ -139,10 +139,9 @@ func NewEngine() (err error) {
 
 type Statistic struct {
 	Counter struct {
-		User, PublicKey, Repo,
-		Watch, Action, Access,
-		Issue, Comment,
-		Mirror, Oauth, Release int64
+		User, PublicKey, Repo, Watch, Action, Access,
+		Issue, Comment, Mirror, Oauth, Release,
+		LoginSource, Webhook int64
 	}
 }
 
@@ -158,6 +157,8 @@ func GetStatistic() (stats Statistic) {
 	stats.Counter.Mirror, _ = orm.Count(new(Mirror))
 	stats.Counter.Oauth, _ = orm.Count(new(Oauth2))
 	stats.Counter.Release, _ = orm.Count(new(Release))
+	stats.Counter.LoginSource, _ = orm.Count(new(LoginSource))
+	stats.Counter.Webhook, _ = orm.Count(new(Webhook))
 	return
 }
 

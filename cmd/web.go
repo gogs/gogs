@@ -180,7 +180,7 @@ func runWeb(*cli.Context) {
 	}, reqSignIn, middleware.RepoAssignment(true), reqOwner)
 
 	m.Group("/:username/:reponame", func(r martini.Router) {
-		r.Get("/action/:action", repo.Action) // TODO
+		r.Get("/action/:action", repo.Action)
 		r.Get("/issues/new", repo.CreateIssue)
 		r.Post("/issues/new", bindIgnErr(auth.CreateIssueForm{}), repo.CreateIssuePost)
 		r.Post("/issues/:index", bindIgnErr(auth.CreateIssueForm{}), repo.UpdateIssue)
