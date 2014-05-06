@@ -30,4 +30,4 @@ Any significant improvement should be documented as [a GitHub issue](https://git
 
 ### ...but check for existing issues first!
 
-Please take a moment to check that an issue doesn't already exist documenting your bug report or improvement proposal. If it does, it never hurts to add a quick "+1" or "I have this problem too". This will help prioritize the most common problems and requests.
+Please take a moment to check that an issue or card on [Trello](https://trello.com/b/uxAoeLUl/gogs-go-git-service) doesn't already exist documenting your bug report or improvement proposal. If it does, it never hurts to add a quick "+1" or "I have this problem too". This will help prioritize the most common problems and requests.

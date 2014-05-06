@@ -32,7 +32,6 @@ var (
 	ErrUserNotExist     = errors.New("User does not exist")
 	ErrEmailAlreadyUsed = errors.New("E-mail already used")
 	ErrUserNameIllegal  = errors.New("User name contains illegal characters")
-	ErrKeyNotExist      = errors.New("Public key does not exist")
 )
 
 // User represents the object of individual and member of organization.
@@ -315,12 +314,12 @@ func DeleteUser(user *User) error {
 	}
 
 	// Delete all SSH keys.
-	keys := make([]PublicKey, 0, 10)
+	keys := make([]*PublicKey, 0, 10)
 	if err = orm.Find(&keys, &PublicKey{OwnerId: user.Id}); err != nil {
 		return err
 	}
 	for _, key := range keys {
-		if err = DeletePublicKey(&key); err != nil {
+		if err = DeletePublicKey(key); err != nil {
 			return err
 		}
 	}

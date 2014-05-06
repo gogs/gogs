@@ -13,8 +13,7 @@
 		"others": [
 			"modules",
 			"$GOPATH/src/github.com/gogits/logs",
-			"$GOPATH/src/github.com/gogits/git",
-			"$GOPATH/src/github.com/gogits/gfm"
+			"$GOPATH/src/github.com/gogits/git"
 		]
 	},
 	"cmd_args": [

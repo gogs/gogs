@@ -6,6 +6,7 @@ package middleware
 
 import (
 	"net/url"
+	"strings"
 
 	"github.com/go-martini/martini"
 
@@ -40,6 +41,10 @@ func Toggle(options *ToggleOptions) martini.Handler {
 
 		if options.SignInRequire {
 			if !ctx.IsSigned {
+				// Ignore watch repository operation.
+				if strings.HasSuffix(ctx.Req.RequestURI, "watch") {
+					return
+				}
 				ctx.SetCookie("redirect_to", "/"+url.QueryEscape(ctx.Req.RequestURI))
 				ctx.Redirect("/user/login")
 				return
