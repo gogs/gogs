@@ -247,7 +247,7 @@ func WebHooksAddPost(ctx *middleware.Context, form auth.NewWebhookForm) {
 
 	w := &models.Webhook{
 		RepoId:      ctx.Repo.Repository.Id,
-		Payload:     form.Url,
+		Url:         form.Url,
 		ContentType: ct,
 		Secret:      form.Secret,
 		HookEvent: &models.HookEvent{
@@ -315,7 +315,7 @@ func WebHooksEditPost(ctx *middleware.Context, params martini.Params, form auth.
 	w := &models.Webhook{
 		Id:          hookId,
 		RepoId:      ctx.Repo.Repository.Id,
-		Payload:     form.Url,
+		Url:         form.Url,
 		ContentType: ct,
 		Secret:      form.Secret,
 		HookEvent: &models.HookEvent{

@@ -28,7 +28,7 @@ type HookEvent struct {
 type Webhook struct {
 	Id          int64
 	RepoId      int64
-	Payload     string `xorm:"TEXT"`
+	Url         string `xorm:"TEXT"`
 	ContentType int
 	Secret      string `xorm:"TEXT"`
 	Events      string `xorm:"TEXT"`
@@ -48,6 +48,13 @@ func (w *Webhook) SaveEvent() error {
 	data, err := json.Marshal(w.HookEvent)
 	w.Events = string(data)
 	return err
+}
+
+func (w *Webhook) HasPushEvent() bool {
+	if w.PushOnly {
+		return true
+	}
+	return false
 }
 
 // CreateWebhook creates new webhook.
@@ -72,6 +79,12 @@ func GetWebhookById(hookId int64) (*Webhook, error) {
 		return nil, ErrWebhookNotExist
 	}
 	return w, nil
+}
+
+// GetActiveWebhooksByRepoId returns all active webhooks of repository.
+func GetActiveWebhooksByRepoId(repoId int64) (ws []*Webhook, err error) {
+	err = orm.Find(&ws, &Webhook{RepoId: repoId, IsActive: true})
+	return ws, err
 }
 
 // GetWebhooksByRepoId returns all webhooks of repository.

@@ -96,6 +96,6 @@ func Update(refName, oldCommitId, newCommitId, userName, repoUserName, repoName 
 	//commits = append(commits, []string{lastCommit.Id().String(), lastCommit.Message()})
 	if err = CommitRepoAction(userId, ru.Id, userName, actEmail,
 		repos.Id, repoUserName, repoName, refName, &base.PushCommits{l.Len(), commits}); err != nil {
-		qlog.Fatalf("runUpdate.models.CommitRepoAction: %v", err)
+		qlog.Fatalf("runUpdate.models.CommitRepoAction: %s/%s:%v", repoUserName, repoName, err)
 	}
 }
