@@ -80,3 +80,9 @@ func DeleteOauth2ById(id int64) error {
 	_, err := orm.Delete(&Oauth2{Id: id})
 	return err
 }
+
+// CleanUnbindOauth deletes all unbind OAuthes.
+func CleanUnbindOauth() error {
+	_, err := orm.Delete(&Oauth2{Uid: -1})
+	return err
+}
