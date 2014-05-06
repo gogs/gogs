@@ -165,21 +165,22 @@ func runWeb(*cli.Context) {
 		m.Get("/template/**", dev.TemplatePreview)
 	}
 
-	reqOwner := middleware.RequireOwner
+	reqOwner := middleware.RequireOwner()
 
 	m.Group("/:username/:reponame", func(r martini.Router) {
 		r.Get("/settings", repo.Setting)
 		r.Post("/settings", bindIgnErr(auth.RepoSettingForm{}), repo.SettingPost)
 		r.Get("/settings/collaboration", repo.Collaboration)
 		r.Post("/settings/collaboration", repo.CollaborationPost)
-		r.Get("/settings/hooks", repo.WebHooks) // TODO
+		r.Get("/settings/hooks", repo.WebHooks)
 		r.Get("/settings/hooks/add", repo.WebHooksAdd)
 		r.Post("/settings/hooks/add", bindIgnErr(auth.NewWebhookForm{}), repo.WebHooksAddPost)
-		r.Get("/settings/hooks/id", repo.WebHooksEdit)
-	}, reqSignIn, middleware.RepoAssignment(true), reqOwner())
+		r.Get("/settings/hooks/:id", repo.WebHooksEdit)
+		r.Post("/settings/hooks/:id", bindIgnErr(auth.NewWebhookForm{}), repo.WebHooksEditPost)
+	}, reqSignIn, middleware.RepoAssignment(true), reqOwner)
 
 	m.Group("/:username/:reponame", func(r martini.Router) {
-		r.Get("/action/:action", repo.Action)
+		r.Get("/action/:action", repo.Action) // TODO
 		r.Get("/issues/new", repo.CreateIssue)
 		r.Post("/issues/new", bindIgnErr(auth.CreateIssueForm{}), repo.CreateIssuePost)
 		r.Post("/issues/:index", bindIgnErr(auth.CreateIssueForm{}), repo.UpdateIssue)

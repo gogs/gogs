@@ -21,12 +21,14 @@
                             <label for="payload-url">Payload URL</label>
                             <input id="payload-url" name="url" class="form-control" type="url" required="required"/>
                         </div>
+
                         <div class="form-group">
                             <label for="content-type">Content type</label>
                             <select id="content-type" name="content_type" class="form-control">
-                                <option value="json">application/json</option>
+                                <option value="1">application/json</option>
                             </select>
                         </div>
+
                         <div class="form-group">
                             <label for="payload-secret">Secret</label>
                             <input id="payload-secret" name="secret" class="form-control" type="text"/>
@@ -43,8 +45,7 @@
                         <hr/>
                         <div class="form-group">
                             <label>
-                                <input type="checkbox" name="active" checked/>&nbsp;&nbsp;
-                                Active
+                                <input type="checkbox" name="active" checked/>&nbsp;&nbsp;Active
                             </label>
                             <p class="help-block">We will deliver event details when this hook is triggered.</p>
                         </div>

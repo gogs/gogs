@@ -690,7 +690,7 @@ func GetRepositoryById(id int64) (*Repository, error) {
 	} else if !has {
 		return nil, ErrRepoNotExist
 	}
-	return repo, err
+	return repo, nil
 }
 
 // GetRepositories returns the list of repositories of given user.

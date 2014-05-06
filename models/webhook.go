@@ -6,8 +6,13 @@ package models
 
 import (
 	"encoding/json"
+	"errors"
 
 	"github.com/gogits/gogs/modules/log"
+)
+
+var (
+	ErrWebhookNotExist = errors.New("Webhook does not exist")
 )
 
 // Content types.
@@ -27,20 +32,20 @@ type Webhook struct {
 	ContentType int
 	Secret      string `xorm:"TEXT"`
 	Events      string `xorm:"TEXT"`
+	*HookEvent  `xorm:"-"`
 	IsSsl       bool
 	IsActive    bool
 }
 
-func (w *Webhook) GetEvent() *HookEvent {
-	h := &HookEvent{}
-	if err := json.Unmarshal([]byte(w.Events), h); err != nil {
+func (w *Webhook) GetEvent() {
+	w.HookEvent = &HookEvent{}
+	if err := json.Unmarshal([]byte(w.Events), w.HookEvent); err != nil {
 		log.Error("webhook.GetEvent(%d): %v", w.Id, err)
 	}
-	return h
 }
 
-func (w *Webhook) SaveEvent(h *HookEvent) error {
-	data, err := json.Marshal(h)
+func (w *Webhook) SaveEvent() error {
+	data, err := json.Marshal(w.HookEvent)
 	w.Events = string(data)
 	return err
 }
@@ -51,8 +56,32 @@ func CreateWebhook(w *Webhook) error {
 	return err
 }
 
+// UpdateWebhook updates information of webhook.
+func UpdateWebhook(w *Webhook) error {
+	_, err := orm.AllCols().Update(w)
+	return err
+}
+
+// GetWebhookById returns webhook by given ID.
+func GetWebhookById(hookId int64) (*Webhook, error) {
+	w := &Webhook{Id: hookId}
+	has, err := orm.Get(w)
+	if err != nil {
+		return nil, err
+	} else if !has {
+		return nil, ErrWebhookNotExist
+	}
+	return w, nil
+}
+
 // GetWebhooksByRepoId returns all webhooks of repository.
 func GetWebhooksByRepoId(repoId int64) (ws []*Webhook, err error) {
 	err = orm.Find(&ws, &Webhook{RepoId: repoId})
 	return ws, err
+}
+
+// DeleteWebhook deletes webhook of repository.
+func DeleteWebhook(hookId int64) error {
+	_, err := orm.Delete(&Webhook{Id: hookId})
+	return err
 }
