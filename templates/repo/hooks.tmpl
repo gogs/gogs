@@ -13,22 +13,18 @@
             <div class="panel-body">
                 <p>Webhooks allow external services to be notified when certain events happen on GitHub. When the specified events happen, we'll send a POST request to each of the URLs you provide. Learn more in our Webhooks Guide.<br/>&nbsp;</p>
                 <ul id="repo-hooks-list" class="list-unstyled">
+                    {{range .Webhooks}}
                     <li>
                         <span class="pull-left status text-success"><i class="fa fa-check"></i></span>
-                        <a class="link" href="#">https://inbox-app.wercker.com/commits/11aea6e535af5eefc2a29bc25a23e89a</a>
-                        <a href="{{$.RepoLink}}/settings/hooks?remove=" class="remove-hook pull-right"><i class="fa fa-times"></i></a>
-                        <a href="{{$.RepoLink}}/settings/hooks/id" class="edit-hook pull-right"><i class="fa fa-pencil"></i></a>
+                        <a class="link" href="{{$.RepoLink}}/settings/hooks/{{.Id}}">{{.Payload}}</a>
+                        <a href="{{$.RepoLink}}/settings/hooks?remove={{.Id}}" class="remove-hook pull-right"><i class="fa fa-times"></i></a>
+                        <a href="{{$.RepoLink}}/settings/hooks/{{.Id}}" class="edit-hook pull-right"><i class="fa fa-pencil"></i></a>
                     </li>
-                    <li>
-                        <span class="pull-left status text-success"><i class="fa fa-check"></i></span>
-                        <a class="link" href="#">https://inbox-app.wercker.com/commits/11aea6e535af5eefc2a29bc25a23e89a</a>
-                        <a href="{{$.RepoLink}}/settings/hooks?remove=" class="remove-hook pull-right"><i class="fa fa-times"></i></a>
-                        <a href="{{$.RepoLink}}/settings/hooks/id" class="edit-hook pull-right"><i class="fa fa-pencil"></i></a>
-                    </li>
+                    {{end}}
                 </ul>
             </div>
             <div class="panel-footer">
-                <a href="/{{.Owner.Name}}/{{.Repository.Name}}/settings/hooks/add"><button class="btn btn-primary">Add Webhook</button></a>
+                <a href="{{.RepoLink}}/settings/hooks/add"><button class="btn btn-primary">Add Webhook</button></a>
             </div>
         </div>
 

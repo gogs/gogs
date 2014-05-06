@@ -83,3 +83,24 @@ func (f *RepoSettingForm) Validate(errors *binding.BindingErrors, req *http.Requ
 	data := context.Get(reflect.TypeOf(base.TmplData{})).Interface().(base.TmplData)
 	validate(errors, data, f)
 }
+
+type NewWebhookForm struct {
+	Url         string `form:"url" binding:"Required;Url"`
+	ContentType string `form:"content_type" binding:"Required"`
+	Secret      string `form:"secret""`
+	PushOnly    bool   `form:"push_only"`
+	Active      bool   `form:"active"`
+}
+
+func (f *NewWebhookForm) Name(field string) string {
+	names := map[string]string{
+		"Url":         "Payload URL",
+		"ContentType": "Content type",
+	}
+	return names[field]
+}
+
+func (f *NewWebhookForm) Validate(errors *binding.BindingErrors, req *http.Request, context martini.Context) {
+	data := context.Get(reflect.TypeOf(base.TmplData{})).Interface().(base.TmplData)
+	validate(errors, data, f)
+}
