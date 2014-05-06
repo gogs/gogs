@@ -199,18 +199,62 @@ func CollaborationPost(ctx *middleware.Context) {
 
 func WebHooks(ctx *middleware.Context) {
 	ctx.Data["IsRepoToolbarWebHooks"] = true
-	ctx.Data["Title"] = strings.TrimPrefix(ctx.Repo.RepoLink, "/") + " - Web Hooks"
+	ctx.Data["Title"] = strings.TrimPrefix(ctx.Repo.RepoLink, "/") + " - Webhooks"
+
+	ws, err := models.GetWebhooksByRepoId(ctx.Repo.Repository.Id)
+	if err != nil {
+		ctx.Handle(500, "repo.WebHooks(GetWebhooksByRepoId)", err)
+		return
+	}
+
+	ctx.Data["Webhooks"] = ws
 	ctx.HTML(200, "repo/hooks")
 }
 
 func WebHooksAdd(ctx *middleware.Context) {
 	ctx.Data["IsRepoToolbarWebHooks"] = true
-	ctx.Data["Title"] = strings.TrimPrefix(ctx.Repo.RepoLink, "/") + " - Add Web Hook"
+	ctx.Data["Title"] = strings.TrimPrefix(ctx.Repo.RepoLink, "/") + " - Add Webhook"
 	ctx.HTML(200, "repo/hooks_add")
+}
+
+func WebHooksAddPost(ctx *middleware.Context, form auth.NewWebhookForm) {
+	ctx.Data["IsRepoToolbarWebHooks"] = true
+	ctx.Data["Title"] = strings.TrimPrefix(ctx.Repo.RepoLink, "/") + " - Add Webhook"
+
+	if ctx.HasError() {
+		ctx.HTML(200, "repo/hooks_add")
+		return
+	}
+
+	ct := models.CT_JSON
+	if form.ContentType == "form" {
+		ct = models.CT_FORM
+	}
+
+	w := &models.Webhook{
+		RepoId:      ctx.Repo.Repository.Id,
+		Payload:     form.Url,
+		ContentType: ct,
+		Secret:      form.Secret,
+		IsActive:    form.Active,
+	}
+	h := &models.HookEvent{
+		PushOnly: form.PushOnly,
+	}
+	if err := w.SaveEvent(h); err != nil {
+		ctx.Handle(500, "repo.WebHooksAddPost(SaveEvent)", err)
+		return
+	} else if err := models.CreateWebhook(w); err != nil {
+		ctx.Handle(500, "repo.WebHooksAddPost(CreateWebhook)", err)
+		return
+	}
+
+	ctx.Flash.Success("New webhook has been added.")
+	ctx.Redirect(ctx.Repo.RepoLink + "/settings/hooks")
 }
 
 func WebHooksEdit(ctx *middleware.Context) {
 	ctx.Data["IsRepoToolbarWebHooks"] = true
-	ctx.Data["Title"] = strings.TrimPrefix(ctx.Repo.RepoLink, "/") + " - Web Hook Name"
+	ctx.Data["Title"] = strings.TrimPrefix(ctx.Repo.RepoLink, "/") + " - Webhook"
 	ctx.HTML(200, "repo/hooks_edit")
 }

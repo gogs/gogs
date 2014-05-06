@@ -174,6 +174,7 @@ func runWeb(*cli.Context) {
 		r.Post("/settings/collaboration", repo.CollaborationPost)
 		r.Get("/settings/hooks", repo.WebHooks) // TODO
 		r.Get("/settings/hooks/add", repo.WebHooksAdd)
+		r.Post("/settings/hooks/add", bindIgnErr(auth.NewWebhookForm{}), repo.WebHooksAddPost)
 		r.Get("/settings/hooks/id", repo.WebHooksEdit)
 	}, reqSignIn, middleware.RepoAssignment(true), reqOwner())
 
