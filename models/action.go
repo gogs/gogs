@@ -6,6 +6,8 @@ package models
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -13,6 +15,7 @@ import (
 	qlog "github.com/qiniu/log"
 
 	"github.com/gogits/gogs/modules/base"
+	"github.com/gogits/gogs/modules/hooks"
 	"github.com/gogits/gogs/modules/log"
 )
 
@@ -73,45 +76,80 @@ func (a Action) GetContent() string {
 
 // CommitRepoAction adds new action for committing repository.
 func CommitRepoAction(userId, repoUserId int64, userName, actEmail string,
-	repoId int64, repoUserName, repoName string, refName string, commit *base.PushCommits) error {
+	repoId int64, repoUserName, repoName string, refFullName string, commit *base.PushCommits) error {
 	// log.Trace("action.CommitRepoAction(start): %d/%s", userId, repoName)
 
 	opType := OP_COMMIT_REPO
 	// Check it's tag push or branch.
-	if strings.HasPrefix(refName, "refs/tags/") {
+	if strings.HasPrefix(refFullName, "refs/tags/") {
 		opType = OP_PUSH_TAG
 		commit = &base.PushCommits{}
 	}
 
-	refName = git.RefEndName(refName)
+	refName := git.RefEndName(refFullName)
 
 	bs, err := json.Marshal(commit)
 	if err != nil {
-		qlog.Error("action.CommitRepoAction(json): %d/%s", repoUserId, repoName)
-		return err
+		return errors.New("action.CommitRepoAction(json): " + err.Error())
 	}
 
 	// Change repository bare status and update last updated time.
 	repo, err := GetRepositoryByName(repoUserId, repoName)
 	if err != nil {
-		qlog.Error("action.CommitRepoAction(GetRepositoryByName): %d/%s", repoUserId, repoName)
-		return err
+		return errors.New("action.CommitRepoAction(GetRepositoryByName): " + err.Error())
 	}
 	repo.IsBare = false
 	if err = UpdateRepository(repo); err != nil {
-		qlog.Error("action.CommitRepoAction(UpdateRepository): %d/%s", repoUserId, repoName)
-		return err
+		return errors.New("action.CommitRepoAction(UpdateRepository): " + err.Error())
 	}
 
 	if err = NotifyWatchers(&Action{ActUserId: userId, ActUserName: userName, ActEmail: actEmail,
 		OpType: opType, Content: string(bs), RepoId: repoId, RepoUserName: repoUserName,
 		RepoName: repoName, RefName: refName,
 		IsPrivate: repo.IsPrivate}); err != nil {
-		qlog.Error("action.CommitRepoAction(notify watchers): %d/%s", userId, repoName)
-		return err
+		return errors.New("action.CommitRepoAction(NotifyWatchers): " + err.Error())
+
+	}
+	qlog.Info("action.CommitRepoAction(end): %d/%s", repoUserId, repoName)
+
+	// New push event hook.
+	ws, err := GetActiveWebhooksByRepoId(repoId)
+	if err != nil {
+		return errors.New("action.CommitRepoAction(GetWebhooksByRepoId): " + err.Error())
+	} else if len(ws) == 0 {
+		return nil
 	}
 
-	qlog.Info("action.CommitRepoAction(end): %d/%s", repoUserId, repoName)
+	commits := make([]*hooks.PayloadCommit, len(commit.Commits))
+	for i, cmt := range commit.Commits {
+		commits[i] = &hooks.PayloadCommit{
+			Id:      cmt.Sha1,
+			Message: cmt.Message,
+			Url:     fmt.Sprintf("%s%s/%s/commit/%s", base.AppUrl, repoUserName, repoName, cmt.Sha1),
+			Author: &hooks.PayloadAuthor{
+				Name:  cmt.AuthorName,
+				Email: cmt.AuthorEmail,
+			},
+		}
+	}
+	p := &hooks.Payload{
+		Ref:     refFullName,
+		Commits: commits,
+		Pusher: &hooks.PayloadAuthor{
+			Name:  userName,
+			Email: actEmail,
+		},
+	}
+
+	for _, w := range ws {
+		w.GetEvent()
+		if !w.HasPushEvent() {
+			continue
+		}
+
+		p.Secret = w.Secret
+		hooks.AddHookTask(&hooks.HookTask{hooks.HTT_WEBHOOK, w.Url, p, w.ContentType, w.IsSsl})
+	}
 	return nil
 }
 
