@@ -15,7 +15,7 @@
                 <ul id="repo-hooks-list" class="list-unstyled">
                     {{range .Webhooks}}
                     <li>
-                        <span class="pull-left status text-success"><i class="fa fa-check"></i></span>
+                        {{if .IsActive}}<span class="pull-left status text-success"><i class="fa fa-check"></i></span>{{else}}<span class="pull-left status"><i class="fa fa-times"></i></span>{{end}}
                         <a class="link" href="{{$.RepoLink}}/settings/hooks/{{.Id}}">{{.Payload}}</a>
                         <a href="{{$.RepoLink}}/settings/hooks?remove={{.Id}}" class="remove-hook pull-right"><i class="fa fa-times"></i></a>
                         <a href="{{$.RepoLink}}/settings/hooks/{{.Id}}" class="edit-hook pull-right"><i class="fa fa-pencil"></i></a>
