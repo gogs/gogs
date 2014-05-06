@@ -30,14 +30,15 @@ const (
 	OP_PULL_REQUEST
 	OP_TRANSFER_REPO
 	OP_PUSH_TAG
+	OP_COMMENT_ISSUE
 )
 
 // Action represents user operation type and other information to repository.,
 // it implemented interface base.Actioner so that can be used in template render.
 type Action struct {
 	Id           int64
-	UserId       int64  // Receiver user id.
-	OpType       int    // Operations: CREATE DELETE STAR ...
+	UserId       int64 // Receiver user id.
+	OpType       int
 	ActUserId    int64  // Action user id.
 	ActUserName  string // Action user name.
 	ActEmail     string

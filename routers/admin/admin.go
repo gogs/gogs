@@ -98,9 +98,36 @@ func updateSystemStatus() {
 	sysStatus.NumGC = m.NumGC
 }
 
+// Operation types.
+const (
+	OT_CLEAN_OAUTH = iota + 1
+)
+
 func Dashboard(ctx *middleware.Context) {
 	ctx.Data["Title"] = "Admin Dashboard"
 	ctx.Data["PageIsDashboard"] = true
+
+	// Run operation.
+	op, _ := base.StrTo(ctx.Query("op")).Int()
+	if op > 0 {
+		var err error
+		var success string
+
+		switch op {
+		case OT_CLEAN_OAUTH:
+			success = "All unbind OAuthes have been deleted."
+			err = models.CleanUnbindOauth()
+		}
+
+		if err != nil {
+			ctx.Flash.Error(err.Error())
+		} else {
+			ctx.Flash.Success(success)
+		}
+		ctx.Redirect("/admin")
+		return
+	}
+
 	ctx.Data["Stats"] = models.GetStatistic()
 	updateSystemStatus()
 	ctx.Data["SysStatus"] = sysStatus
@@ -153,7 +180,7 @@ func Config(ctx *middleware.Context) {
 	ctx.Data["AppUrl"] = base.AppUrl
 	ctx.Data["Domain"] = base.Domain
 	ctx.Data["OfflineMode"] = base.OfflineMode
-	ctx.Data["RouterLog"] = base.RouterLog
+	ctx.Data["DisableRouterLog"] = base.DisableRouterLog
 	ctx.Data["RunUser"] = base.RunUser
 	ctx.Data["RunMode"] = strings.Title(martini.Env)
 	ctx.Data["RepoRootPath"] = base.RepoRootPath

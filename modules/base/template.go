@@ -117,6 +117,8 @@ func ActionIcon(opType int) string {
 		return "exclamation-circle"
 	case 8: // Transfer repository.
 		return "share"
+	case 10: // Comment issue.
+		return "comment"
 	default:
 		return "invalid type"
 	}
@@ -130,6 +132,8 @@ const (
 <div><img src="%s?s=16" alt="user-avatar"/> %s</div>`
 	TPL_TRANSFER_REPO = `<a href="/user/%s">%s</a> transfered repository <code>%s</code> to <a href="/%s">%s</a>`
 	TPL_PUSH_TAG      = `<a href="/user/%s">%s</a> pushed tag <a href="/%s/src/%s" rel="nofollow">%s</a> at <a href="/%s">%s</a>`
+	TPL_COMMENT_ISSUE = `<a href="/user/%s">%s</a> commented on issue <a href="/%s/issues/%s">%s#%s</a>
+<div><img src="%s?s=16" alt="user-avatar"/> %s</div>`
 )
 
 type PushCommit struct {
@@ -179,6 +183,10 @@ func ActionDesc(act Actioner) string {
 		return fmt.Sprintf(TPL_TRANSFER_REPO, actUserName, actUserName, repoLink, newRepoLink, newRepoLink)
 	case 9: // Push tag.
 		return fmt.Sprintf(TPL_PUSH_TAG, actUserName, actUserName, repoLink, branch, branch, repoLink, repoLink)
+	case 10: // Comment issue.
+		infos := strings.SplitN(content, "|", 2)
+		return fmt.Sprintf(TPL_COMMENT_ISSUE, actUserName, actUserName, repoLink, infos[0], repoLink, infos[0],
+			AvatarLink(email), infos[1])
 	default:
 		return "invalid type"
 	}

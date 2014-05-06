@@ -77,7 +77,7 @@ func handleQueue() {
 				log.Error("hooks.handleQueue: Fail to deliver hook: %v", err)
 				continue
 			}
-			log.Info("Hook delivered")
+			log.Info("Hook delivered: %s", string(data))
 		}
 	}
 }

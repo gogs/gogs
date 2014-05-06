@@ -24,7 +24,7 @@ func init() {
 
 func Logger() martini.Handler {
 	return func(res http.ResponseWriter, req *http.Request, ctx martini.Context, log *log.Logger) {
-		if !base.RouterLog {
+		if base.DisableRouterLog {
 			return
 		}
 

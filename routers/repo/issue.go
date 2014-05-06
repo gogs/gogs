@@ -295,5 +295,39 @@ func Comment(ctx *middleware.Context, params martini.Params) {
 		}
 	}
 
+	// Notify watchers.
+	if err = models.NotifyWatchers(&models.Action{ActUserId: ctx.User.Id, ActUserName: ctx.User.Name, ActEmail: ctx.User.Email,
+		OpType: models.OP_COMMENT_ISSUE, Content: fmt.Sprintf("%d|%s", issue.Index, strings.Split(content, "\n")[0]),
+		RepoId: ctx.Repo.Repository.Id, RepoName: ctx.Repo.Repository.Name, RefName: ""}); err != nil {
+		ctx.Handle(500, "issue.CreateIssue(NotifyWatchers)", err)
+		return
+	}
+
+	// Mail watchers and mentions.
+	if base.Service.NotifyMail {
+		issue.Content = content
+		tos, err := mailer.SendIssueNotifyMail(ctx.User, ctx.Repo.Owner, ctx.Repo.Repository, issue)
+		if err != nil {
+			ctx.Handle(500, "issue.Comment(SendIssueNotifyMail)", err)
+			return
+		}
+
+		tos = append(tos, ctx.User.LowerName)
+		ms := base.MentionPattern.FindAllString(issue.Content, -1)
+		newTos := make([]string, 0, len(ms))
+		for _, m := range ms {
+			if com.IsSliceContainsStr(tos, m[1:]) {
+				continue
+			}
+
+			newTos = append(newTos, m[1:])
+		}
+		if err = mailer.SendIssueMentionMail(ctx.Render, ctx.User, ctx.Repo.Owner,
+			ctx.Repo.Repository, issue, models.GetUserEmailsByNames(newTos)); err != nil {
+			ctx.Handle(500, "issue.Comment(SendIssueMentionMail)", err)
+			return
+		}
+	}
+
 	ctx.Redirect(fmt.Sprintf("%s/issues/%d", ctx.Repo.RepoLink, index))
 }

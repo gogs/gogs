@@ -3,6 +3,7 @@
 <div id="body" class="container" data-page="admin">
     {{template "admin/nav" .}}
     <div id="admin-container" class="col-md-10">
+        {{template "base/alert" .}}
         <div class="panel panel-default">
             <div class="panel-heading">
                 Statistic
@@ -10,6 +11,29 @@
 
             <div class="panel-body">
                 Gogs database has <b>{{.Stats.Counter.User}}</b> users, <b>{{.Stats.Counter.PublicKey}}</b> SSH keys, <b>{{.Stats.Counter.Repo}}</b> repositories, <b>{{.Stats.Counter.Watch}}</b> watches, <b>{{.Stats.Counter.Action}}</b> actions, <b>{{.Stats.Counter.Access}}</b> accesses, <b>{{.Stats.Counter.Issue}}</b> issues, <b>{{.Stats.Counter.Comment}}</b> comments, <b>{{.Stats.Counter.Mirror}}</b> mirrors, <b>{{.Stats.Counter.Oauth}}</b> oauthes, <b>{{.Stats.Counter.Release}}</b> releases.
+            </div>
+        </div>
+
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                Operations
+            </div>
+
+            <div class="panel-body">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Op.</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Clean unbind OAuthes</td>
+                            <td><i class="fa fa-caret-square-o-right"></i> <a href="/admin?op=1">Run</a></td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
         </div>
 
