@@ -65,20 +65,25 @@ func Issues(ctx *middleware.Context) {
 		return
 	}
 
-	var pairs []*models.IssseUser
-	if filterMode == models.FM_MENTION {
-		// Get issue-user pairs.
-		pairs, err = models.GetIssueUserPairs(ctx.Repo.Repository.Id, ctx.User.Id, isShowClosed)
-		if err != nil {
-			ctx.Handle(500, "issue.Issues(GetIssueUserPairs): %v", err)
-			return
-		}
+	// Get issue-user pairs.
+	pairs, err := models.GetIssueUserPairs(ctx.Repo.Repository.Id, ctx.User.Id, isShowClosed)
+	if err != nil {
+		ctx.Handle(500, "issue.Issues(GetIssueUserPairs): %v", err)
+		return
 	}
 
 	// Get posters.
 	for i := range issues {
-		if filterMode == models.FM_MENTION && !models.PairsContains(pairs, issues[i].Id) {
+		idx := models.PairsContains(pairs, issues[i].Id)
+
+		if filterMode == models.FM_MENTION && (idx == -1 || !pairs[idx].IsMentioned) {
 			continue
+		}
+
+		if idx > -1 {
+			issues[i].IsRead = pairs[idx].IsRead
+		} else {
+			issues[i].IsRead = true
 		}
 
 		if err = issues[i].GetPoster(); err != nil {
@@ -135,6 +140,24 @@ func CreateIssuePost(ctx *middleware.Context, params martini.Params, form auth.C
 	if err := models.NewIssue(issue); err != nil {
 		ctx.Handle(500, "issue.CreateIssue(NewIssue)", err)
 		return
+	} else if err := models.NewIssueUserPairs(issue.RepoId, issue.Id,
+		ctx.Repo.Owner.Id, ctx.User.Id, form.AssigneeId); err != nil {
+		ctx.Handle(500, "issue.CreateIssue(NewIssueUserPairs)", err)
+		return
+	}
+
+	// Update mentions.
+	ms := base.MentionPattern.FindAllString(issue.Content, -1)
+	if len(ms) > 0 {
+		for i := range ms {
+			ms[i] = ms[i][1:]
+		}
+
+		ids := models.GetUserIdsByNames(ms)
+		if err := models.UpdateIssueUserPairsByMentions(ids, issue.Id); err != nil {
+			ctx.Handle(500, "issue.CreateIssue(UpdateIssueUserPairsByMentions)", err)
+			return
+		}
 	}
 
 	// Notify watchers.
@@ -154,14 +177,13 @@ func CreateIssuePost(ctx *middleware.Context, params martini.Params, form auth.C
 		}
 
 		tos = append(tos, ctx.User.LowerName)
-		ms := base.MentionPattern.FindAllString(issue.Content, -1)
 		newTos := make([]string, 0, len(ms))
 		for _, m := range ms {
-			if com.IsSliceContainsStr(tos, m[1:]) {
+			if com.IsSliceContainsStr(tos, m) {
 				continue
 			}
 
-			newTos = append(newTos, m[1:])
+			newTos = append(newTos, m)
 		}
 		if err = mailer.SendIssueMentionMail(ctx.Render, ctx.User, ctx.Repo.Owner,
 			ctx.Repo.Repository, issue, models.GetUserEmailsByNames(newTos)); err != nil {
@@ -188,6 +210,12 @@ func ViewIssue(ctx *middleware.Context, params martini.Params) {
 		} else {
 			ctx.Handle(200, "issue.ViewIssue", err)
 		}
+		return
+	}
+
+	// Update issue-user.
+	if err = models.UpdateIssueUserPairByRead(ctx.User.Id, issue.Id); err != nil {
+		ctx.Handle(500, "issue.ViewIssue(UpdateIssueUserPairByRead): %v", err)
 		return
 	}
 
@@ -294,7 +322,10 @@ func Comment(ctx *middleware.Context, params martini.Params) {
 			(strings.Contains(newStatus, "Close") && !issue.IsClosed) {
 			issue.IsClosed = !issue.IsClosed
 			if err = models.UpdateIssue(issue); err != nil {
-				ctx.Handle(200, "issue.Comment(update issue status)", err)
+				ctx.Handle(500, "issue.Comment(UpdateIssue)", err)
+				return
+			} else if err = models.UpdateIssueUserPairsByStatus(issue.Id, issue.IsClosed); err != nil {
+				ctx.Handle(500, "issue.Comment(UpdateIssueUserPairsByStatus)", err)
 				return
 			}
 
@@ -311,6 +342,7 @@ func Comment(ctx *middleware.Context, params martini.Params) {
 		}
 	}
 
+	var ms []string
 	content := ctx.Query("content")
 	if len(content) > 0 {
 		switch params["action"] {
@@ -319,6 +351,21 @@ func Comment(ctx *middleware.Context, params martini.Params) {
 				ctx.Handle(500, "issue.Comment(create comment)", err)
 				return
 			}
+
+			// Update mentions.
+			ms = base.MentionPattern.FindAllString(issue.Content, -1)
+			if len(ms) > 0 {
+				for i := range ms {
+					ms[i] = ms[i][1:]
+				}
+
+				ids := models.GetUserIdsByNames(ms)
+				if err := models.UpdateIssueUserPairsByMentions(ids, issue.Id); err != nil {
+					ctx.Handle(500, "issue.CreateIssue(UpdateIssueUserPairsByMentions)", err)
+					return
+				}
+			}
+
 			log.Trace("%s Comment created: %d", ctx.Req.RequestURI, issue.Id)
 		default:
 			ctx.Handle(404, "issue.Comment", err)
@@ -344,14 +391,13 @@ func Comment(ctx *middleware.Context, params martini.Params) {
 		}
 
 		tos = append(tos, ctx.User.LowerName)
-		ms := base.MentionPattern.FindAllString(issue.Content, -1)
 		newTos := make([]string, 0, len(ms))
 		for _, m := range ms {
-			if com.IsSliceContainsStr(tos, m[1:]) {
+			if com.IsSliceContainsStr(tos, m) {
 				continue
 			}
 
-			newTos = append(newTos, m[1:])
+			newTos = append(newTos, m)
 		}
 		if err = mailer.SendIssueMentionMail(ctx.Render, ctx.User, ctx.Repo.Owner,
 			ctx.Repo.Repository, issue, models.GetUserEmailsByNames(newTos)); err != nil {

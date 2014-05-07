@@ -152,7 +152,7 @@ func Repositories(ctx *middleware.Context) {
 	ctx.Data["PageIsRepos"] = true
 
 	var err error
-	ctx.Data["Repos"], err = models.GetRepos(200, 0)
+	ctx.Data["Repos"], err = models.GetRepositoriesWithUsers(200, 0)
 	if err != nil {
 		ctx.Handle(500, "admin.Repositories", err)
 		return

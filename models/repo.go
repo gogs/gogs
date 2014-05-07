@@ -466,33 +466,25 @@ func initRepository(f string, user *User, repo *Repository, initReadme bool, rep
 	return initRepoCommit(tmpDir, user.NewGitSig())
 }
 
-// UserRepo reporesents a repository with user name.
-type UserRepo struct {
-	*Repository
-	UserName string
-}
-
-// GetRepos returns given number of repository objects with offset.
-func GetRepos(num, offset int) ([]UserRepo, error) {
-	repos := make([]Repository, 0, num)
+// GetRepositoriesWithUsers returns given number of repository objects with offset.
+// It also auto-gets corresponding users.
+func GetRepositoriesWithUsers(num, offset int) ([]*Repository, error) {
+	repos := make([]*Repository, 0, num)
 	if err := orm.Limit(num, offset).Asc("id").Find(&repos); err != nil {
 		return nil, err
 	}
 
-	urepos := make([]UserRepo, len(repos))
-	for i := range repos {
-		urepos[i].Repository = &repos[i]
-		u := new(User)
-		has, err := orm.Id(urepos[i].Repository.OwnerId).Get(u)
+	for _, repo := range repos {
+		repo.Owner = &User{Id: repo.OwnerId}
+		has, err := orm.Get(repo.Owner)
 		if err != nil {
 			return nil, err
 		} else if !has {
 			return nil, ErrUserNotExist
 		}
-		urepos[i].UserName = u.Name
 	}
 
-	return urepos, nil
+	return repos, nil
 }
 
 // RepoPath returns repository path by given user and repository name.
@@ -733,40 +725,40 @@ func GetCollaborators(repoName string) ([]string, error) {
 // Watch is connection request for receiving repository notifycation.
 type Watch struct {
 	Id     int64
-	RepoId int64 `xorm:"UNIQUE(watch)"`
-	UserId int64 `xorm:"UNIQUE(watch)"`
+	Uid    int64 `xorm:"UNIQUE(s)"`
+	RepoId int64 `xorm:"UNIQUE(s)"`
 }
 
 // Watch or unwatch repository.
-func WatchRepo(userId, repoId int64, watch bool) (err error) {
+func WatchRepo(uid, rid int64, watch bool) (err error) {
 	if watch {
-		if _, err = orm.Insert(&Watch{RepoId: repoId, UserId: userId}); err != nil {
+		if _, err = orm.Insert(&Watch{RepoId: rid, Uid: uid}); err != nil {
 			return err
 		}
 
 		rawSql := "UPDATE `repository` SET num_watches = num_watches + 1 WHERE id = ?"
-		_, err = orm.Exec(rawSql, repoId)
+		_, err = orm.Exec(rawSql, rid)
 	} else {
-		if _, err = orm.Delete(&Watch{0, repoId, userId}); err != nil {
+		if _, err = orm.Delete(&Watch{0, rid, uid}); err != nil {
 			return err
 		}
 		rawSql := "UPDATE `repository` SET num_watches = num_watches - 1 WHERE id = ?"
-		_, err = orm.Exec(rawSql, repoId)
+		_, err = orm.Exec(rawSql, rid)
 	}
 	return err
 }
 
-// GetWatches returns all watches of given repository.
-func GetWatches(repoId int64) ([]Watch, error) {
-	watches := make([]Watch, 0, 10)
-	err := orm.Find(&watches, &Watch{RepoId: repoId})
+// GetWatchers returns all watchers of given repository.
+func GetWatchers(rid int64) ([]*Watch, error) {
+	watches := make([]*Watch, 0, 10)
+	err := orm.Find(&watches, &Watch{RepoId: rid})
 	return watches, err
 }
 
 // NotifyWatchers creates batch of actions for every watcher.
 func NotifyWatchers(act *Action) error {
 	// Add feeds for user self and all watchers.
-	watches, err := GetWatches(act.RepoId)
+	watches, err := GetWatchers(act.RepoId)
 	if err != nil {
 		return errors.New("repo.NotifyWatchers(get watches): " + err.Error())
 	}
@@ -778,12 +770,12 @@ func NotifyWatchers(act *Action) error {
 	}
 
 	for i := range watches {
-		if act.ActUserId == watches[i].UserId {
+		if act.ActUserId == watches[i].Uid {
 			continue
 		}
 
 		act.Id = 0
-		act.UserId = watches[i].UserId
+		act.UserId = watches[i].Uid
 		if _, err = orm.InsertOne(act); err != nil {
 			return errors.New("repo.NotifyWatchers(create action): " + err.Error())
 		}
@@ -792,11 +784,11 @@ func NotifyWatchers(act *Action) error {
 }
 
 // IsWatching checks if user has watched given repository.
-func IsWatching(userId, repoId int64) bool {
-	has, _ := orm.Get(&Watch{0, repoId, userId})
+func IsWatching(uid, rid int64) bool {
+	has, _ := orm.Get(&Watch{0, rid, uid})
 	return has
 }
 
-func ForkRepository(reposName string, userId int64) {
+func ForkRepository(repoName string, uid int64) {
 
 }
