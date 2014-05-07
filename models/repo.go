@@ -694,8 +694,8 @@ func GetRepositoryById(id int64) (*Repository, error) {
 }
 
 // GetRepositories returns the list of repositories of given user.
-func GetRepositories(user *User, private bool) ([]Repository, error) {
-	repos := make([]Repository, 0, 10)
+func GetRepositories(user *User, private bool) ([]*Repository, error) {
+	repos := make([]*Repository, 0, 10)
 	sess := orm.Desc("updated")
 	if !private {
 		sess.Where("is_private=?", false)
