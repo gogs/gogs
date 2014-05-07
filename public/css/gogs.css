@@ -706,6 +706,16 @@ html, body {
     height: 39px;
 }
 
+#repo-toolbar .nav .tmp {
+    padding: 0 6px;
+}
+
+#repo-toolbar .nav .tmp a {
+    display: inline-block;
+    padding-left: 6px;
+    padding-right: 6px;
+}
+
 #repo-toolbar .nav .tmp a:hover {
     text-decoration: none;
 }
@@ -1251,12 +1261,12 @@ html, body {
     border-color: #CCC;
 }
 
-#issue .filter-list a:hover {
+#issue .filter-list li a:hover {
     background-color: #DDD;
     text-decoration: none;
 }
 
-#issue .filter-list a.active {
+#issue .filter-list li a.active {
     background-color: #4183c4;
     color: #FFF;
 }
@@ -1407,6 +1417,28 @@ html, body {
 
 #issue .issue-closed .label-danger, #issue .issue-opened .label-success {
     margin: 0 .8em;
+}
+
+#issue .milestone-item .actions {
+    margin-top: 10px;
+}
+
+#issue .milestone-item .actions a {
+    margin-left: 8px;
+}
+
+#issue .milestone-item hr {
+    width: 100%;
+    padding-top: 8px;
+    margin-top: 48px;
+    margin-bottom: 8px;
+}
+
+#issue .milestone-item .label{
+    margin-top: 8px;
+    float: left;
+    padding: .5em;
+    margin-left: .8em;
 }
 
 /* wrapper and footer */
