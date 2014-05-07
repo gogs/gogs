@@ -785,7 +785,7 @@ func NotifyWatchers(act *Action) error {
 
 // IsWatching checks if user has watched given repository.
 func IsWatching(uid, rid int64) bool {
-	has, _ := orm.Get(&Watch{0, rid, uid})
+	has, _ := orm.Get(&Watch{0, uid, rid})
 	return has
 }
 
