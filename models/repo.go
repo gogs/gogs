@@ -725,8 +725,8 @@ func GetCollaborators(repoName string) ([]string, error) {
 // Watch is connection request for receiving repository notifycation.
 type Watch struct {
 	Id     int64
-	UserId int64 `xorm:"UNIQUE(s)"`
-	RepoId int64 `xorm:"UNIQUE(s)"`
+	UserId int64 `xorm:"UNIQUE(watch)"`
+	RepoId int64 `xorm:"UNIQUE(watch)"`
 }
 
 // Watch or unwatch repository.
