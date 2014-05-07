@@ -184,6 +184,7 @@ func runWeb(*cli.Context) {
 		r.Get("/issues/new", repo.CreateIssue)
 		r.Post("/issues/new", bindIgnErr(auth.CreateIssueForm{}), repo.CreateIssuePost)
 		r.Post("/issues/:index", bindIgnErr(auth.CreateIssueForm{}), repo.UpdateIssue)
+		r.Get("/issues/milestones", repo.Milestones)
 		r.Post("/comment/:action", repo.Comment)
 		r.Get("/releases/new", repo.ReleasesNew)
 	}, reqSignIn, middleware.RepoAssignment(true))

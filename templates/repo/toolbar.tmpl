@@ -10,8 +10,10 @@
                     <!-- <li class="{{if .IsRepoToolbarPulls}}active{{end}}"><a href="{{.RepoLink}}/pulls">Pull Requests</a></li> -->
                     <li class="{{if .IsRepoToolbarIssues}}active{{end}}"><a href="{{.RepoLink}}/issues">{{if .Repository.NumOpenIssues}}<span class="badge">{{.Repository.NumOpenIssues}}</span> {{end}}Issues <!--<span class="badge">42</span>--></a></li>
                     {{if .IsRepoToolbarIssues}}
-                    <li class="tmp">{{if .IsRepoToolbarIssuesList}}<a href="{{.RepoLink}}/issues/new"><button class="btn btn-primary btn-sm">New Issue</button>
-                    </a>{{end}}</li>
+                    <li class="tmp">{{if .IsRepoToolbarIssuesList}}
+                        <a href="{{.RepoLink}}/issues/new"><button class="btn btn-primary btn-sm">New Issue</button></a>
+                        <a href="{{.RepoLink}}/issues/milestones"><button class="btn btn-success btn-sm">Milestones</button></a>
+                        {{end}}</li>
                     {{end}}
                     <li class="{{if .IsRepoToolbarReleases}}active{{end}}"><a href="{{.RepoLink}}/releases">{{if .Repository.NumTags}}<span class="badge">{{.Repository.NumTags}}</span> {{end}}Releases</a></li>
                     {{if .IsRepoToolbarReleases}}{{if .IsRepositoryOwner}}{{if not .IsRepoReleaseNew}}

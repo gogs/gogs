@@ -1,0 +1,54 @@
+{{template "base/head" .}}
+{{template "base/navbar" .}}
+{{template "repo/nav" .}}
+{{template "repo/toolbar" .}}
+<div id="body" class="container">
+    <div id="issue">
+        <div class="col-md-3 filter-list">
+            <ul class="list-unstyled">
+                <li><a href="{{.RepoLink}}/issues/milestones" class="active">Open Milestones <strong class="pull-right">1</strong></a></li>
+                <!-- <li><a href="#">Assigned to you</a></li> -->
+                <li><a href="{{.RepoLink}}/issues/milestones">Close Milestones <strong class="pull-right">0</strong></a></li>
+                <!-- <li><a href="#">Mentioned</a></li> -->
+            </ul>
+            <hr/>
+            <a href="{{.RepoLink}}/issues/milestones/new" class="text-center">
+                <button class="btn btn-default btn-block">Create new milestone</button>
+            </a>
+        </div>
+        <div class="col-md-9">
+            <div class="milestones list-group">
+                <div class="list-group-item milestone-item">
+                    <h4 class="title pull-left"><a href="#">Milestone Title</a></h4>
+                    <span class="issue-open label label-success">12</span>
+                    <span class="issue-close label label-warning">2</span>
+                    <p class="actions pull-right">
+                        <a href="#">Edit</a>
+                        <a href="#">Open</a>
+                        <a href="#">Close</a>
+                        <a class="text-danger" href="#">Delete</a>
+                        <a href="#">Issues</a>
+                    </p>
+                    <hr/>
+                    <p class="description">In this version of release, users are able to register and log in/out on Gogs, setting up SSH keys and do most of Git operations through SSH with public repositories. And Web UI only for view of Git data, no extra features are supported.</p>
+                </div>
+                <div class="list-group-item milestone-item">
+                    <h4 class="title pull-left"><a href="#">Milestone Title</a></h4>
+                    <span class="issue-open label label-success">12</span>
+                    <span class="issue-close label label-warning">2</span>
+                    <p class="actions pull-right">
+                        <a href="#">Edit</a>
+                        <a href="#">Open</a>
+                        <a href="#">Close</a>
+                        <a class="text-danger" href="#">Delete</a>
+                        <a href="#">Issues</a>
+                    </p>
+                    <hr/>
+                    <p class="description">In this version of release, users are able to register and log in/out on Gogs, setting up SSH keys and do most of Git operations through SSH with public repositories. And Web UI only for view of Git data, no extra features are supported.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+{{template "base/footer" .}}
