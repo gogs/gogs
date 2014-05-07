@@ -21,7 +21,7 @@
             </div>
             <div class="issues list-group">
                 {{range .Issues}}{{if .Poster}}
-                <div class="list-group-item issue-item" id="issue-{{.Id}}">
+                <div class="list-group-item issue-item{{if not .IsRead}} unread{{end}}" id="issue-{{.Id}}">
                     <span class="number pull-right">#{{.Index}}</span>
                     <h5 class="title"><a href="{{$.RepoLink}}/issues/{{.Index}}">{{.Name}}</a></h5>
                     <p class="info">

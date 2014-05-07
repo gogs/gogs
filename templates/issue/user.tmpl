@@ -21,19 +21,19 @@
                 <li><a href="/issues?type=created_by&repoid={{.RepoId}}&state={{.State}}"{{if eq .ViewType "created_by"}} class="active"{{end}}>Created by you <strong class="pull-right">{{.IssueStats.CreateCount}}</strong></a></li>
                 <li><hr/></li>
                 {{range .Repos}}
-                <li><a href="/issues?type={{$.ViewType}}{{if eq $.RepoId .Id}}{{else}}&repoid={{.Id}}{{end}}" class="sm{{if eq $.RepoId .Id}} active{{end}}">{{$.SignedUser.Name}}/{{.Name}} <strong class="pull-right">{{.NumOpenIssues}}</strong></a></li>
+                <li><a href="/issues?type={{$.ViewType}}{{if eq $.RepoId .Id}}{{else}}&repoid={{.Id}}{{end}}&state={{$.State}}" class="sm{{if eq $.RepoId .Id}} active{{end}}">{{$.SignedUser.Name}}/{{.Name}} <strong class="pull-right">{{if $.IsShowClosed}}{{.NumClosedIssues}}{{else}}{{.NumOpenIssues}}{{end}}</strong></a></li>
                 {{end}}
             </ul>
         </div>
         <div class="col-md-9">
             <div class="filter-option">
                 <div class="btn-group">
-                    <a class="btn btn-default issue-open{{if not .IsShowClosed}} active{{end}}" href="/issues?type={{.ViewType}}">{{..IssueStats.OpenCount}} Open</a>
-                    <a class="btn btn-default issue-close{{if .IsShowClosed}} active{{end}}" href="/issues?type={{.ViewType}}&state=closed">{{.IssueStats.ClosedCount}} Closed</a>
+                    <a class="btn btn-default issue-open{{if not .IsShowClosed}} active{{end}}" href="/issues?type={{.ViewType}}&repoid={{.RepoId}}">Open</a>
+                    <a class="btn btn-default issue-close{{if .IsShowClosed}} active{{end}}" href="/issues?type={{.ViewType}}&repoid={{.RepoId}}&state=closed">Closed</a>
                 </div>
             </div>
             <div class="issues list-group">
-                {{range .Issues}}
+                {{range .Issues}}{{if .}}
                 <div class="list-group-item issue-item" id="issue-{{.Id}}">
                     <span class="number pull-right">#{{.Index}}</span>
                     <h5 class="title"><a href="/{{$.SignedUser.Name}}/{{.Repo.Name}}/issues/{{.Index}}">{{.Name}}</a></h5>
@@ -44,7 +44,7 @@
                         <span class="comment"><i class="fa fa-comments"></i> {{.NumComments}}</span>
                     </p>
                 </div>
-                {{end}}
+                {{end}}{{end}}
             </div>
         </div>
     </div>

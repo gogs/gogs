@@ -114,20 +114,20 @@ func SendResetPasswdMail(r *middleware.Render, user *models.User) {
 
 // SendIssueNotifyMail sends mail notification of all watchers of repository.
 func SendIssueNotifyMail(user, owner *models.User, repo *models.Repository, issue *models.Issue) ([]string, error) {
-	watches, err := models.GetWatches(repo.Id)
+	ws, err := models.GetWatchers(repo.Id)
 	if err != nil {
-		return nil, errors.New("mail.NotifyWatchers(get watches): " + err.Error())
+		return nil, errors.New("mail.NotifyWatchers(GetWatchers): " + err.Error())
 	}
 
-	tos := make([]string, 0, len(watches))
-	for i := range watches {
-		uid := watches[i].UserId
+	tos := make([]string, 0, len(ws))
+	for i := range ws {
+		uid := ws[i].Uid
 		if user.Id == uid {
 			continue
 		}
 		u, err := models.GetUserById(uid)
 		if err != nil {
-			return nil, errors.New("mail.NotifyWatchers(get user): " + err.Error())
+			return nil, errors.New("mail.NotifyWatchers(GetUserById): " + err.Error())
 		}
 		tos = append(tos, u.Email)
 	}

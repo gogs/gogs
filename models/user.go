@@ -304,7 +304,7 @@ func DeleteUser(user *User) error {
 	}
 
 	// Delete all watches.
-	if _, err = orm.Delete(&Watch{UserId: user.Id}); err != nil {
+	if _, err = orm.Delete(&Watch{Uid: user.Id}); err != nil {
 		return err
 	}
 
@@ -390,6 +390,19 @@ func GetUserEmailsByNames(names []string) []string {
 		mails = append(mails, u.Email)
 	}
 	return mails
+}
+
+// GetUserIdsByNames returns a slice of ids corresponds to names.
+func GetUserIdsByNames(names []string) []int64 {
+	ids := make([]int64, 0, len(names))
+	for _, name := range names {
+		u, err := GetUserByName(name)
+		if err != nil {
+			continue
+		}
+		ids = append(ids, u.Id)
+	}
+	return ids
 }
 
 // GetUserByEmail returns the user object by given e-mail if exists.
