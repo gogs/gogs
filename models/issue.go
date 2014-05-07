@@ -174,15 +174,15 @@ func NewIssueUserPairs(rid, iid, oid, uid, aid int64) (err error) {
 		}
 
 		// In case owner is not watching.
-		ws = append(ws, &Watch{Uid: id})
+		ws = append(ws, &Watch{UserId: id})
 	}
 
 	for _, w := range ws {
-		if w.Uid == 0 {
+		if w.UserId == 0 {
 			continue
 		}
 
-		iu.Uid = w.Uid
+		iu.Uid = w.UserId
 		iu.IsPoster = iu.Uid == uid
 		iu.IsAssigned = iu.Uid == aid
 		if _, err = orm.Insert(iu); err != nil {

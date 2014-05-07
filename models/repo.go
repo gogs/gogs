@@ -725,14 +725,14 @@ func GetCollaborators(repoName string) ([]string, error) {
 // Watch is connection request for receiving repository notifycation.
 type Watch struct {
 	Id     int64
-	Uid    int64 `xorm:"UNIQUE(watch)"`
+	UserId int64 `xorm:"UNIQUE(watch)"`
 	RepoId int64 `xorm:"UNIQUE(watch)"`
 }
 
 // Watch or unwatch repository.
 func WatchRepo(uid, rid int64, watch bool) (err error) {
 	if watch {
-		if _, err = orm.Insert(&Watch{RepoId: rid, Uid: uid}); err != nil {
+		if _, err = orm.Insert(&Watch{RepoId: rid, UserId: uid}); err != nil {
 			return err
 		}
 
@@ -770,12 +770,12 @@ func NotifyWatchers(act *Action) error {
 	}
 
 	for i := range watches {
-		if act.ActUserId == watches[i].Uid {
+		if act.ActUserId == watches[i].UserId {
 			continue
 		}
 
 		act.Id = 0
-		act.UserId = watches[i].Uid
+		act.UserId = watches[i].UserId
 		if _, err = orm.InsertOne(act); err != nil {
 			return errors.New("repo.NotifyWatchers(create action): " + err.Error())
 		}

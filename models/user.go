@@ -304,7 +304,7 @@ func DeleteUser(user *User) error {
 	}
 
 	// Delete all watches.
-	if _, err = orm.Delete(&Watch{Uid: user.Id}); err != nil {
+	if _, err = orm.Delete(&Watch{UserId: user.Id}); err != nil {
 		return err
 	}
 
