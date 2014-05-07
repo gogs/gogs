@@ -725,8 +725,8 @@ func GetCollaborators(repoName string) ([]string, error) {
 // Watch is connection request for receiving repository notifycation.
 type Watch struct {
 	Id     int64
-	UserId int64 `xorm:"UNIQUE(watch)"`
-	RepoId int64 `xorm:"UNIQUE(watch)"`
+	UserId int64 `xorm:"UNIQUE(s)"`
+	RepoId int64 `xorm:"UNIQUE(s)"`
 }
 
 // Watch or unwatch repository.
@@ -739,7 +739,7 @@ func WatchRepo(uid, rid int64, watch bool) (err error) {
 		rawSql := "UPDATE `repository` SET num_watches = num_watches + 1 WHERE id = ?"
 		_, err = orm.Exec(rawSql, rid)
 	} else {
-		if _, err = orm.Delete(&Watch{0, rid, uid}); err != nil {
+		if _, err = orm.Delete(&Watch{0, uid, rid}); err != nil {
 			return err
 		}
 		rawSql := "UPDATE `repository` SET num_watches = num_watches - 1 WHERE id = ?"
