@@ -24,61 +24,84 @@ func Issues(ctx *middleware.Context) {
 	ctx.Data["Title"] = "Issues"
 	ctx.Data["IsRepoToolbarIssues"] = true
 	ctx.Data["IsRepoToolbarIssuesList"] = true
-	ctx.Data["ViewType"] = "all"
 
-	milestoneId, _ := base.StrTo(ctx.Query("milestone")).Int()
-	page, _ := base.StrTo(ctx.Query("page")).Int()
-
-	ctx.Data["IssueCreatedCount"] = 0
-
-	var posterId int64 = 0
-	isCreatedBy := ctx.Query("type") == "created_by"
-	if isCreatedBy {
-		if !ctx.IsSigned {
-			ctx.SetCookie("redirect_to", "/"+url.QueryEscape(ctx.Req.RequestURI))
-			ctx.Redirect("/user/login/", 302)
-			return
-		}
-		ctx.Data["ViewType"] = "created_by"
+	viewType := ctx.Query("type")
+	types := []string{"assigned", "created_by", "mentioned"}
+	if !com.IsSliceContainsStr(types, viewType) {
+		viewType = "all"
 	}
 
+	isShowClosed := ctx.Query("state") == "closed"
+
+	if viewType != "all" {
+		if !ctx.IsSigned {
+			ctx.SetCookie("redirect_to", "/"+url.QueryEscape(ctx.Req.RequestURI))
+			ctx.Redirect("/user/login")
+			return
+		}
+	}
+
+	var assigneeId, posterId int64
+	var filterMode int
+	switch viewType {
+	case "assigned":
+		assigneeId = ctx.User.Id
+		filterMode = models.FM_ASSIGN
+	case "created_by":
+		posterId = ctx.User.Id
+		filterMode = models.FM_CREATE
+	case "mentioned":
+		filterMode = models.FM_MENTION
+	}
+
+	mid, _ := base.StrTo(ctx.Query("milestone")).Int64()
+	page, _ := base.StrTo(ctx.Query("page")).Int()
+
 	// Get issues.
-	issues, err := models.GetIssues(0, ctx.Repo.Repository.Id, posterId, int64(milestoneId), page,
-		ctx.Query("state") == "closed", false, ctx.Query("labels"), ctx.Query("sortType"))
+	issues, err := models.GetIssues(assigneeId, ctx.Repo.Repository.Id, posterId, mid, page,
+		isShowClosed, ctx.Query("labels"), ctx.Query("sortType"))
 	if err != nil {
-		ctx.Handle(200, "issue.Issues: %v", err)
+		ctx.Handle(500, "issue.Issues(GetIssues): %v", err)
 		return
 	}
 
-	if ctx.IsSigned {
-		posterId = ctx.User.Id
-	}
-	var createdByCount int
-
-	showIssues := make([]models.Issue, 0, len(issues))
-	// Get posters.
-	for i := range issues {
-		u, err := models.GetUserById(issues[i].PosterId)
+	var pairs []*models.IssseUser
+	if filterMode == models.FM_MENTION {
+		// Get issue-user pairs.
+		pairs, err = models.GetIssueUserPairs(ctx.Repo.Repository.Id, ctx.User.Id, isShowClosed)
 		if err != nil {
-			ctx.Handle(200, "issue.Issues(get poster): %v", err)
+			ctx.Handle(500, "issue.Issues(GetIssueUserPairs): %v", err)
 			return
 		}
-		if isCreatedBy && u.Id != posterId {
-			continue
-		}
-		if u.Id == posterId {
-			createdByCount++
-		}
-		issues[i].Poster = u
-		showIssues = append(showIssues, issues[i])
 	}
 
-	ctx.Data["Issues"] = showIssues
-	ctx.Data["IssueCount"] = ctx.Repo.Repository.NumIssues
-	ctx.Data["OpenCount"] = ctx.Repo.Repository.NumOpenIssues
-	ctx.Data["ClosedCount"] = ctx.Repo.Repository.NumClosedIssues
-	ctx.Data["IssueCreatedCount"] = createdByCount
-	ctx.Data["IsShowClosed"] = ctx.Query("state") == "closed"
+	// Get posters.
+	for i := range issues {
+		if filterMode == models.FM_MENTION && !models.PairsContains(pairs, issues[i].Id) {
+			continue
+		}
+
+		if err = issues[i].GetPoster(); err != nil {
+			ctx.Handle(500, "issue.Issues(GetPoster): %v", err)
+			return
+		}
+	}
+
+	var uid int64 = -1
+	if ctx.User != nil {
+		uid = ctx.User.Id
+	}
+	issueStats := models.GetIssueStats(ctx.Repo.Repository.Id, uid, isShowClosed, filterMode)
+	ctx.Data["IssueStats"] = issueStats
+	ctx.Data["ViewType"] = viewType
+	ctx.Data["Issues"] = issues
+	ctx.Data["IsShowClosed"] = isShowClosed
+	if isShowClosed {
+		ctx.Data["State"] = "closed"
+		ctx.Data["ShowCount"] = issueStats.ClosedCount
+	} else {
+		ctx.Data["ShowCount"] = issueStats.OpenCount
+	}
 	ctx.HTML(200, "issue/list")
 }
 
@@ -99,15 +122,23 @@ func CreateIssuePost(ctx *middleware.Context, params martini.Params, form auth.C
 		return
 	}
 
-	issue, err := models.CreateIssue(ctx.User.Id, ctx.Repo.Repository.Id, form.MilestoneId, form.AssigneeId,
-		ctx.Repo.Repository.NumIssues, form.IssueName, form.Labels, form.Content, false)
-	if err != nil {
-		ctx.Handle(500, "issue.CreateIssue(CreateIssue)", err)
+	issue := &models.Issue{
+		Index:       int64(ctx.Repo.Repository.NumIssues) + 1,
+		Name:        form.IssueName,
+		RepoId:      ctx.Repo.Repository.Id,
+		PosterId:    ctx.User.Id,
+		MilestoneId: form.MilestoneId,
+		AssigneeId:  form.AssigneeId,
+		Labels:      form.Labels,
+		Content:     form.Content,
+	}
+	if err := models.NewIssue(issue); err != nil {
+		ctx.Handle(500, "issue.CreateIssue(NewIssue)", err)
 		return
 	}
 
 	// Notify watchers.
-	if err = models.NotifyWatchers(&models.Action{ActUserId: ctx.User.Id, ActUserName: ctx.User.Name, ActEmail: ctx.User.Email,
+	if err := models.NotifyWatchers(&models.Action{ActUserId: ctx.User.Id, ActUserName: ctx.User.Name, ActEmail: ctx.User.Email,
 		OpType: models.OP_CREATE_ISSUE, Content: fmt.Sprintf("%d|%s", issue.Index, issue.Name),
 		RepoId: ctx.Repo.Repository.Id, RepoName: ctx.Repo.Repository.Name, RefName: ""}); err != nil {
 		ctx.Handle(500, "issue.CreateIssue(NotifyWatchers)", err)
@@ -144,13 +175,13 @@ func CreateIssuePost(ctx *middleware.Context, params martini.Params, form auth.C
 }
 
 func ViewIssue(ctx *middleware.Context, params martini.Params) {
-	index, err := base.StrTo(params["index"]).Int()
-	if err != nil {
-		ctx.Handle(404, "issue.ViewIssue", err)
+	idx, _ := base.StrTo(params["index"]).Int64()
+	if idx == 0 {
+		ctx.Handle(404, "issue.ViewIssue", nil)
 		return
 	}
 
-	issue, err := models.GetIssueByIndex(ctx.Repo.Repository.Id, int64(index))
+	issue, err := models.GetIssueByIndex(ctx.Repo.Repository.Id, idx)
 	if err != nil {
 		if err == models.ErrIssueNotExist {
 			ctx.Handle(404, "issue.ViewIssue", err)
@@ -160,10 +191,10 @@ func ViewIssue(ctx *middleware.Context, params martini.Params) {
 		return
 	}
 
-	// Get posters.
+	// Get poster.
 	u, err := models.GetUserById(issue.PosterId)
 	if err != nil {
-		ctx.Handle(200, "issue.ViewIssue(get poster): %v", err)
+		ctx.Handle(500, "issue.ViewIssue(GetUserById): %v", err)
 		return
 	}
 	issue.Poster = u
@@ -172,7 +203,7 @@ func ViewIssue(ctx *middleware.Context, params martini.Params) {
 	// Get comments.
 	comments, err := models.GetIssueComments(issue.Id)
 	if err != nil {
-		ctx.Handle(200, "issue.ViewIssue(get comments): %v", err)
+		ctx.Handle(500, "issue.ViewIssue(GetIssueComments): %v", err)
 		return
 	}
 
@@ -180,7 +211,7 @@ func ViewIssue(ctx *middleware.Context, params martini.Params) {
 	for i := range comments {
 		u, err := models.GetUserById(comments[i].PosterId)
 		if err != nil {
-			ctx.Handle(200, "issue.ViewIssue(get poster): %v", err)
+			ctx.Handle(500, "issue.ViewIssue(get poster of comment): %v", err)
 			return
 		}
 		comments[i].Poster = u

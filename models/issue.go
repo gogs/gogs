@@ -8,8 +8,6 @@ import (
 	"errors"
 	"strings"
 	"time"
-
-	"github.com/gogits/gogs/modules/base"
 )
 
 var (
@@ -21,7 +19,7 @@ type Issue struct {
 	Id              int64
 	Index           int64 // Index in one repository.
 	Name            string
-	RepoId          int64       `xorm:"index"`
+	RepoId          int64       `xorm:"INDEX"`
 	Repo            *Repository `xorm:"-"`
 	PosterId        int64
 	Poster          *User `xorm:"-"`
@@ -35,44 +33,51 @@ type Issue struct {
 	Priority        int
 	NumComments     int
 	Deadline        time.Time
-	Created         time.Time `xorm:"created"`
-	Updated         time.Time `xorm:"updated"`
+	Created         time.Time `xorm:"CREATED"`
+	Updated         time.Time `xorm:"UPDATED"`
+}
+
+func (i *Issue) GetPoster() (err error) {
+	i.Poster, err = GetUserById(i.PosterId)
+	return err
+}
+
+// IssseUser represents an issue-user relation.
+type IssseUser struct {
+	Id          int64
+	Iid         int64 // Issue ID.
+	Rid         int64 // Repository ID.
+	Uid         int64 // User ID.
+	IsRead      bool
+	IsAssigned  bool
+	IsMentioned bool
+	IsClosed    bool
 }
 
 // CreateIssue creates new issue for repository.
-func CreateIssue(userId, repoId, milestoneId, assigneeId int64, issueCount int, name, labels, content string, isPull bool) (issue *Issue, err error) {
+func NewIssue(issue *Issue) (err error) {
 	sess := orm.NewSession()
 	defer sess.Close()
-	sess.Begin()
-
-	issue = &Issue{
-		Index:       int64(issueCount) + 1,
-		Name:        name,
-		RepoId:      repoId,
-		PosterId:    userId,
-		MilestoneId: milestoneId,
-		AssigneeId:  assigneeId,
-		IsPull:      isPull,
-		Labels:      labels,
-		Content:     content,
+	if err = sess.Begin(); err != nil {
+		return err
 	}
+
 	if _, err = sess.Insert(issue); err != nil {
 		sess.Rollback()
-		return nil, err
+		return err
 	}
 
 	rawSql := "UPDATE `repository` SET num_issues = num_issues + 1 WHERE id = ?"
-	if _, err = sess.Exec(rawSql, repoId); err != nil {
+	if _, err = sess.Exec(rawSql, issue.RepoId); err != nil {
 		sess.Rollback()
-		return nil, err
+		return err
 	}
-
-	return issue, sess.Commit()
+	return sess.Commit()
 }
 
-// GetIssueById returns issue object by given id.
-func GetIssueByIndex(repoId, index int64) (*Issue, error) {
-	issue := &Issue{RepoId: repoId, Index: index}
+// GetIssueByIndex returns issue by given index in repository.
+func GetIssueByIndex(rid, index int64) (*Issue, error) {
+	issue := &Issue{RepoId: rid, Index: index}
 	has, err := orm.Get(issue)
 	if err != nil {
 		return nil, err
@@ -83,30 +88,28 @@ func GetIssueByIndex(repoId, index int64) (*Issue, error) {
 }
 
 // GetIssues returns a list of issues by given conditions.
-func GetIssues(userId, repoId, posterId, milestoneId int64, page int, isClosed, isMention bool, labels, sortType string) ([]Issue, error) {
+func GetIssues(uid, rid, pid, mid int64, page int, isClosed bool, labels, sortType string) ([]Issue, error) {
 	sess := orm.Limit(20, (page-1)*20)
 
-	if repoId > 0 {
-		sess.Where("repo_id=?", repoId).And("is_closed=?", isClosed)
+	if rid > 0 {
+		sess.Where("repo_id=?", rid).And("is_closed=?", isClosed)
 	} else {
 		sess.Where("is_closed=?", isClosed)
 	}
 
-	if userId > 0 {
-		sess.And("assignee_id=?", userId)
-	} else if posterId > 0 {
-		sess.And("poster_id=?", posterId)
-	} else if isMention {
-		sess.And("mentions like '%$" + base.ToStr(userId) + "|%'")
+	if uid > 0 {
+		sess.And("assignee_id=?", uid)
+	} else if pid > 0 {
+		sess.And("poster_id=?", pid)
 	}
 
-	if milestoneId > 0 {
-		sess.And("milestone_id=?", milestoneId)
+	if mid > 0 {
+		sess.And("milestone_id=?", mid)
 	}
 
 	if len(labels) > 0 {
 		for _, label := range strings.Split(labels, ",") {
-			sess.And("mentions like '%$" + label + "|%'")
+			sess.And("labels like '%$" + label + "|%'")
 		}
 	}
 
@@ -130,22 +133,133 @@ func GetIssues(userId, repoId, posterId, milestoneId int64, page int, isClosed, 
 	return issues, err
 }
 
+// PairsContains returns true when pairs list contains given issue.
+func PairsContains(ius []*IssseUser, issueId int64) bool {
+	for i := range ius {
+		if ius[i].Iid == issueId {
+			return true
+		}
+	}
+	return false
+}
+
+// GetIssueUserPairs returns all issue-user pairs by given repository and user.
+func GetIssueUserPairs(rid, uid int64, isClosed bool) ([]*IssseUser, error) {
+	ius := make([]*IssseUser, 0, 10)
+	err := orm.Find(&ius, &IssseUser{Rid: rid, Uid: uid, IsClosed: isClosed})
+	return ius, err
+}
+
 // GetUserIssueCount returns the number of issues that were created by given user in repository.
-func GetUserIssueCount(userId, repoId int64) int64 {
-	count, _ := orm.Where("poster_id=?", userId).And("repo_id=?", repoId).Count(new(Issue))
+func GetUserIssueCount(uid, rid int64) int64 {
+	count, _ := orm.Where("poster_id=?", uid).And("repo_id=?", rid).Count(new(Issue))
 	return count
+}
+
+// IssueStats represents issue statistic information.
+type IssueStats struct {
+	OpenCount, ClosedCount int64
+	AllCount               int64
+	AssignCount            int64
+	CreateCount            int64
+	MentionCount           int64
+}
+
+// Filter modes.
+const (
+	FM_ASSIGN = iota + 1
+	FM_CREATE
+	FM_MENTION
+)
+
+// GetIssueStats returns issue statistic information by given condition.
+func GetIssueStats(rid, uid int64, isShowClosed bool, filterMode int) *IssueStats {
+	stats := &IssueStats{}
+	issue := new(Issue)
+
+	sess := orm.Where("repo_id=?", rid)
+	tmpSess := sess
+	stats.OpenCount, _ = tmpSess.And("is_closed=?", false).Count(issue)
+	*tmpSess = *sess
+	stats.ClosedCount, _ = tmpSess.And("is_closed=?", true).Count(issue)
+	if isShowClosed {
+		stats.AllCount = stats.ClosedCount
+	} else {
+		stats.AllCount = stats.OpenCount
+	}
+
+	if filterMode != FM_MENTION {
+		sess = orm.Where("repo_id=?", rid)
+		switch filterMode {
+		case FM_ASSIGN:
+			sess.And("assignee_id=?", uid)
+		case FM_CREATE:
+			sess.And("poster_id=?", uid)
+		default:
+			goto nofilter
+		}
+		*tmpSess = *sess
+		stats.OpenCount, _ = tmpSess.And("is_closed=?", false).Count(issue)
+		*tmpSess = *sess
+		stats.ClosedCount, _ = tmpSess.And("is_closed=?", true).Count(issue)
+	} else {
+		sess := orm.Where("rid=?", rid).And("uid=?", uid).And("is_mentioned=?", true)
+		tmpSess := sess
+		stats.OpenCount, _ = tmpSess.And("is_closed=?", false).Count(new(IssseUser))
+		*tmpSess = *sess
+		stats.ClosedCount, _ = tmpSess.And("is_closed=?", true).Count(new(IssseUser))
+	}
+nofilter:
+	stats.AssignCount, _ = orm.Where("repo_id=?", rid).And("is_closed=?", isShowClosed).And("assignee_id=?", uid).Count(issue)
+	stats.CreateCount, _ = orm.Where("repo_id=?", rid).And("is_closed=?", isShowClosed).And("poster_id=?", uid).Count(issue)
+	stats.MentionCount, _ = orm.Where("rid=?", rid).And("uid=?", uid).And("is_closed=?", isShowClosed).And("is_mentioned=?", true).Count(new(IssseUser))
+	return stats
+}
+
+// GetUserIssueStats returns issue statistic information for dashboard by given condition.
+func GetUserIssueStats(uid int64, filterMode int) *IssueStats {
+	stats := &IssueStats{}
+	issue := new(Issue)
+	iu := new(IssseUser)
+
+	sess := orm.Where("uid=?", uid)
+	tmpSess := sess
+	if filterMode == 0 {
+		stats.OpenCount, _ = tmpSess.And("is_closed=?", false).Count(iu)
+		*tmpSess = *sess
+		stats.ClosedCount, _ = tmpSess.And("is_closed=?", true).Count(iu)
+	}
+
+	switch filterMode {
+	case FM_ASSIGN:
+		sess.And("is_assigned=?", true)
+		*tmpSess = *sess
+		stats.OpenCount, _ = tmpSess.And("is_closed=?", false).Count(iu)
+		*tmpSess = *sess
+		stats.ClosedCount, _ = tmpSess.And("is_closed=?", true).Count(iu)
+	case FM_CREATE:
+		sess.Where("poster_id=?", uid)
+		*tmpSess = *sess
+		stats.OpenCount, _ = tmpSess.And("is_closed=?", false).Count(issue)
+		*tmpSess = *sess
+		stats.ClosedCount, _ = tmpSess.And("is_closed=?", true).Count(issue)
+	}
+
+	stats.AssignCount, _ = orm.Where("assignee_id=?", uid).And("is_closed=?", false).Count(issue)
+	stats.CreateCount, _ = orm.Where("poster_id=?", uid).And("is_closed=?", false).Count(issue)
+	return stats
 }
 
 // UpdateIssue updates information of issue.
 func UpdateIssue(issue *Issue) error {
-	_, err := orm.Id(issue.Id).AllCols().Update(issue)
+	_, err := orm.AllCols().Update(issue)
 	return err
 }
 
 // Label represents a list of labels of repository for issues.
 type Label struct {
 	Id     int64
-	RepoId int64 `xorm:"index"`
+	RepoId int64 `xorm:"INDEX"`
 	Names  string
 	Colors string
 }
@@ -154,12 +268,12 @@ type Label struct {
 type Milestone struct {
 	Id        int64
 	Name      string
-	RepoId    int64 `xorm:"index"`
+	RepoId    int64 `xorm:"INDEX"`
 	IsClosed  bool
 	Content   string
 	NumIssues int
 	DueDate   time.Time
-	Created   time.Time `xorm:"created"`
+	Created   time.Time `xorm:"CREATED"`
 }
 
 // Issue types.
@@ -179,7 +293,7 @@ type Comment struct {
 	CommitId int64
 	Line     int64
 	Content  string
-	Created  time.Time `xorm:"created"`
+	Created  time.Time `xorm:"CREATED"`
 }
 
 // CreateComment creates comment of issue or commit.

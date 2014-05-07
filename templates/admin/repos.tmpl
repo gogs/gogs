@@ -17,6 +17,7 @@
                             <th>Name</th>
                             <th>Private</th>
                             <th>Watches</th>
+                            <th>Issues</th>
                             <th>Forks</th>
                             <th>Created</th>
                         </tr>
@@ -29,6 +30,7 @@
                             <td><a href="/{{.UserName}}/{{.Name}}">{{.Name}}</a></td>
                             <td><i class="fa fa{{if .IsPrivate}}-check{{end}}-square-o"></i></td>
                             <td>{{.NumWatches}}</td>
+                            <td>{{.NumIssues}}</td>
                             <td>{{.NumForks}}</td>
                             <td>{{DateFormat .Created "M d, Y"}}</td>
                         </tr>
