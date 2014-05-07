@@ -362,3 +362,11 @@ func Comment(ctx *middleware.Context, params martini.Params) {
 
 	ctx.Redirect(fmt.Sprintf("%s/issues/%d", ctx.Repo.RepoLink, index))
 }
+
+func Milestones(ctx *middleware.Context) {
+	ctx.Data["Title"] = "Milestones"
+	ctx.Data["IsRepoToolbarIssues"] = true
+	ctx.Data["IsRepoToolbarIssuesList"] = true
+
+	ctx.HTML(200, "issue/milestone")
+}
