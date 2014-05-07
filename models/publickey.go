@@ -11,6 +11,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path"
 	"path/filepath"
 	"strings"
@@ -20,7 +21,6 @@ import (
 	"github.com/Unknwon/com"
 	qlog "github.com/qiniu/log"
 
-	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
 )
 
@@ -41,6 +41,15 @@ var (
 	appPath string // Execution(binary) path.
 )
 
+// exePath returns the executable path.
+func exePath() (string, error) {
+	file, err := exec.LookPath(os.Args[0])
+	if err != nil {
+		return "", err
+	}
+	return filepath.Abs(file)
+}
+
 // homeDir returns the home directory of current user.
 func homeDir() string {
 	home, err := com.HomeDir()
@@ -53,7 +62,7 @@ func homeDir() string {
 func init() {
 	var err error
 
-	if appPath, err = base.ExecDir(); err != nil {
+	if appPath, err = exePath(); err != nil {
 		qlog.Fatalf("publickey.init(fail to get app path): %v\n", err)
 	}
 
