@@ -136,7 +136,7 @@ func Collaboration(ctx *middleware.Context) {
 		return
 	}
 
-	names, err := models.GetCollaborators(repoLink)
+	names, err := models.GetCollaboratorNames(repoLink)
 	if err != nil {
 		ctx.Handle(500, "setting.Collaboration(GetCollaborators)", err)
 		return

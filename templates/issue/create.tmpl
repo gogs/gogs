@@ -16,7 +16,7 @@
                 </div>
                 <div class="form-group panel-body">
                     <span><strong id="assigned" data-no-assigned="No one">No one</strong> will be assigned</span>
-                    <input type="hidden" name="assigned" value="0" id="assignee"/>&nbsp;&nbsp;
+                    <input type="hidden" name="assigneeid" value="0" id="assignee"/>&nbsp;&nbsp;
                     <div style="display: inline-block;position: relative">
                         <button type="button" class="dropdown-toggle btn btn-default btn-sm" data-toggle="dropdown">
                             <i class="fa fa-group"></i>
@@ -25,7 +25,9 @@
                         <div class="dropdown-menu assignee">
                             <ul class="list-unstyled">
                                 <li data-uid="0" class="clear-assignee hidden"><i class="fa fa-times-circle-o"></i> Clear assignee</li>
-                                <li data-uid="123"><img src="//1.gravatar.com/avatar/f72f7454ce9d710baa506394f68f4132"><strong>fuxiaohei</strong> nickname</li>
+                                {{range .Collaborators}}
+                                <li data-uid="{{.Id}}"><img src="{{.AvatarLink}}"><strong>{{.Name}}</strong> {{.FullName}}</li>
+                                {{end}}
                             </ul>
                         </div>
                     </div>

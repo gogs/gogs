@@ -21,6 +21,7 @@ import (
 
 func RepoAssignment(redirect bool, args ...bool) martini.Handler {
 	return func(ctx *Context, params martini.Params) {
+		log.Trace(fmt.Sprint(args))
 		// valid brachname
 		var validBranch bool
 		// display bare quick start if it is a bare repo
@@ -38,29 +39,36 @@ func RepoAssignment(redirect bool, args ...bool) martini.Handler {
 		}
 
 		var (
-			user *models.User
-			err  error
+			user        *models.User
+			err         error
+			isTrueOwner bool
 		)
 
 		userName := params["username"]
 		repoName := params["reponame"]
 		refName := params["branchname"]
 
-		// TODO: check collaborators
-		// get repository owner
-		ctx.Repo.IsOwner = ctx.IsSigned && ctx.User.LowerName == strings.ToLower(userName)
+		// Collaborators who have write access can be seen as owners.
+		if ctx.IsSigned {
+			ctx.Repo.IsOwner, err = models.HasAccess(ctx.User.Name, repoName, models.AU_WRITABLE)
+			if err != nil {
+				ctx.Handle(500, "RepoAssignment(HasAccess)", err)
+				return
+			}
+			isTrueOwner = ctx.User.LowerName == strings.ToLower(userName)
+		}
 
-		if !ctx.Repo.IsOwner {
-			user, err = models.GetUserByName(params["username"])
+		if !isTrueOwner {
+			user, err = models.GetUserByName(userName)
 			if err != nil {
 				if err == models.ErrUserNotExist {
-					ctx.Handle(404, "RepoAssignment", err)
+					ctx.Handle(404, "RepoAssignment(GetUserByName)", err)
 					return
 				} else if redirect {
 					ctx.Redirect("/")
 					return
 				}
-				ctx.Handle(500, "RepoAssignment", err)
+				ctx.Handle(500, "RepoAssignment(GetUserByName)", err)
 				return
 			}
 		} else {
