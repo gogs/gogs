@@ -27,11 +27,23 @@ func Dashboard(ctx *middleware.Context) {
 	}
 	ctx.Data["MyRepos"] = repos
 
-	feeds, err := models.GetFeeds(ctx.User.Id, 0, false)
+	actions, err := models.GetFeeds(ctx.User.Id, 0, false)
 	if err != nil {
 		ctx.Handle(500, "user.Dashboard", err)
 		return
 	}
+
+	feeds := make([]*models.Action, 0, len(actions))
+	for _, act := range actions {
+		if act.IsPrivate {
+			if has, _ := models.HasAccess(ctx.User.Name, act.RepoUserName+"/"+act.RepoName,
+				models.AU_READABLE); !has {
+				continue
+			}
+		}
+		feeds = append(feeds, act)
+	}
+
 	ctx.Data["Feeds"] = feeds
 	ctx.HTML(200, "user/dashboard")
 }
@@ -39,7 +51,6 @@ func Dashboard(ctx *middleware.Context) {
 func Profile(ctx *middleware.Context, params martini.Params) {
 	ctx.Data["Title"] = "Profile"
 
-	// TODO: Need to check view self or others.
 	user, err := models.GetUserByName(params["username"])
 	if err != nil {
 		ctx.Handle(500, "user.Profile", err)
@@ -95,12 +106,19 @@ func Feeds(ctx *middleware.Context, form auth.FeedsForm) {
 	actions, err := models.GetFeeds(form.UserId, form.Page*20, false)
 	if err != nil {
 		ctx.JSON(500, err)
+		return
 	}
 
-	feeds := make([]string, len(actions))
-	for i := range actions {
-		feeds[i] = fmt.Sprintf(TPL_FEED, base.ActionIcon(actions[i].OpType),
-			base.TimeSince(actions[i].Created), base.ActionDesc(actions[i]))
+	feeds := make([]string, 0, len(actions))
+	for _, act := range actions {
+		if act.IsPrivate {
+			if has, _ := models.HasAccess(ctx.User.Name, act.RepoUserName+"/"+act.RepoName,
+				models.AU_READABLE); !has {
+				continue
+			}
+		}
+		feeds = append(feeds, fmt.Sprintf(TPL_FEED, base.ActionIcon(act.OpType),
+			base.TimeSince(act.Created), base.ActionDesc(act)))
 	}
 	ctx.JSON(200, &feeds)
 }
