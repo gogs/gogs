@@ -88,6 +88,11 @@ type Repository struct {
 	Updated         time.Time `xorm:"updated"`
 }
 
+func (repo *Repository) GetOwner() (err error) {
+	repo.Owner, err = GetUserById(repo.OwnerId)
+	return err
+}
+
 // IsRepositoryExist returns true if the repository with given name under user has already existed.
 func IsRepositoryExist(user *User, repoName string) (bool, error) {
 	repo := Repository{OwnerId: user.Id}

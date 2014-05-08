@@ -114,6 +114,10 @@ func CommitRepoAction(userId, repoUserId int64, userName, actEmail string,
 	qlog.Info("action.CommitRepoAction(end): %d/%s", repoUserId, repoName)
 
 	// New push event hook.
+	if err := repo.GetOwner(); err != nil {
+		return errors.New("action.CommitRepoAction(GetOwner): " + err.Error())
+	}
+
 	ws, err := GetActiveWebhooksByRepoId(repoId)
 	if err != nil {
 		return errors.New("action.CommitRepoAction(GetWebhooksByRepoId): " + err.Error())
@@ -121,12 +125,13 @@ func CommitRepoAction(userId, repoUserId int64, userName, actEmail string,
 		return nil
 	}
 
+	repoLink := fmt.Sprintf("%s%s/%s", base.AppUrl, repoUserName, repoName)
 	commits := make([]*hooks.PayloadCommit, len(commit.Commits))
 	for i, cmt := range commit.Commits {
 		commits[i] = &hooks.PayloadCommit{
 			Id:      cmt.Sha1,
 			Message: cmt.Message,
-			Url:     fmt.Sprintf("%s%s/%s/commit/%s", base.AppUrl, repoUserName, repoName, cmt.Sha1),
+			Url:     fmt.Sprintf("%s/commit/%s", repoLink, cmt.Sha1),
 			Author: &hooks.PayloadAuthor{
 				Name:  cmt.AuthorName,
 				Email: cmt.AuthorEmail,
@@ -136,9 +141,22 @@ func CommitRepoAction(userId, repoUserId int64, userName, actEmail string,
 	p := &hooks.Payload{
 		Ref:     refFullName,
 		Commits: commits,
+		Repo: &hooks.PayloadRepo{
+			Id:          repo.Id,
+			Name:        repo.LowerName,
+			Url:         repoLink,
+			Description: repo.Description,
+			Website:     repo.Website,
+			Watchers:    repo.NumWatches,
+			Owner: &hooks.PayloadAuthor{
+				Name:  repoUserName,
+				Email: actEmail,
+			},
+			Private: repo.IsPrivate,
+		},
 		Pusher: &hooks.PayloadAuthor{
-			Name:  userName,
-			Email: actEmail,
+			Name:  repo.Owner.LowerName,
+			Email: repo.Owner.Email,
 		},
 	}
 

@@ -30,11 +30,23 @@ type PayloadCommit struct {
 	Author  *PayloadAuthor `json:"author"`
 }
 
+type PayloadRepo struct {
+	Id          int64          `json:"id"`
+	Name        string         `json:"name"`
+	Url         string         `json:"url"`
+	Description string         `json:"description"`
+	Website     string         `json:"website"`
+	Watchers    int            `json:"watchers"`
+	Owner       *PayloadAuthor `json:"author"`
+	Private     bool           `json:"private"`
+}
+
 // Payload represents payload information of hook.
 type Payload struct {
 	Secret  string           `json:"secret"`
 	Ref     string           `json:"ref"`
 	Commits []*PayloadCommit `json:"commits"`
+	Repo    *PayloadRepo     `json:"repository"`
 	Pusher  *PayloadAuthor   `json:"pusher"`
 }
 
