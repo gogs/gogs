@@ -1434,33 +1434,43 @@ html, body {
     margin-bottom: 8px;
 }
 
-#issue .milestone-item .label{
+#issue .milestone-item .label {
     margin-top: 8px;
     float: left;
     padding: .5em;
     margin-left: .8em;
 }
 
-#issue .assignee,#issue .assignee ul{
+#issue .assignee.dropdown-menu, #issue .assignee ul {
     padding: 0;
     margin: 0;
     min-width: 300px;
 }
 
-#issue .assignee li{
+#issue .assignee li {
     padding: 4px 12px;
     line-height: 30px;
 }
 
-#issue .assignee li:hover{
+#issue .assignee li:hover {
     background-color: #e8f0ff;
     cursor: pointer;
 }
 
-#issue .assignee li img{
+#issue .assignee li img, #issue .issue-bar .assignee img {
     width: 28px;
     height: 28px;
     margin-right: 12px;
+}
+
+#issue .issue-bar > div {
+    padding-bottom: 8px;
+    margin-bottom: 8px;
+    border-bottom: 1px solid #CCC;
+}
+
+#issue .issue-bar .assignee {
+    line-height: 30px;
 }
 
 /* wrapper and footer */
