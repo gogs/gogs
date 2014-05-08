@@ -1441,6 +1441,28 @@ html, body {
     margin-left: .8em;
 }
 
+#issue .assignee,#issue .assignee ul{
+    padding: 0;
+    margin: 0;
+    min-width: 300px;
+}
+
+#issue .assignee li{
+    padding: 4px 12px;
+    line-height: 30px;
+}
+
+#issue .assignee li:hover{
+    background-color: #e8f0ff;
+    cursor: pointer;
+}
+
+#issue .assignee li img{
+    width: 28px;
+    height: 28px;
+    margin-right: 12px;
+}
+
 /* wrapper and footer */
 
 #wrapper {
