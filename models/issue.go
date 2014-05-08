@@ -338,6 +338,18 @@ func UpdateIssueUserPairsByStatus(iid int64, isClosed bool) error {
 	return err
 }
 
+// UpdateIssueUserPairByAssignee updates issue-user pair for assigning.
+func UpdateIssueUserPairByAssignee(aid, iid int64) error {
+	rawSql := "UPDATE `issue_user` SET is_assigned = ? WHERE issue_id = ?"
+	if _, err := orm.Exec(rawSql, false, iid); err != nil {
+		return err
+	}
+
+	rawSql = "UPDATE `issue_user` SET is_assigned = true WHERE uid = ? AND issue_id = ?"
+	_, err := orm.Exec(rawSql, true, aid, iid)
+	return err
+}
+
 // UpdateIssueUserPairByRead updates issue-user pair for reading.
 func UpdateIssueUserPairByRead(uid, iid int64) error {
 	rawSql := "UPDATE `issue_user` SET is_read = ? WHERE uid = ? AND issue_id = ?"

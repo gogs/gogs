@@ -141,6 +141,10 @@ func CreateIssuePost(ctx *middleware.Context, params martini.Params, form auth.C
 		return
 	}
 
+	// Only collaborators can assign.
+	if !ctx.Repo.IsOwner {
+		form.AssigneeId = 0
+	}
 	issue := &models.Issue{
 		Index:       int64(ctx.Repo.Repository.NumIssues) + 1,
 		Name:        form.IssueName,
@@ -220,11 +224,26 @@ func ViewIssue(ctx *middleware.Context, params martini.Params) {
 	issue, err := models.GetIssueByIndex(ctx.Repo.Repository.Id, idx)
 	if err != nil {
 		if err == models.ErrIssueNotExist {
-			ctx.Handle(404, "issue.ViewIssue", err)
+			ctx.Handle(404, "issue.ViewIssue(GetIssueByIndex)", err)
 		} else {
-			ctx.Handle(200, "issue.ViewIssue", err)
+			ctx.Handle(500, "issue.ViewIssue(GetIssueByIndex)", err)
 		}
 		return
+	}
+
+	// Update assignee.
+	if ctx.Repo.IsOwner {
+		aid, _ := base.StrTo(ctx.Query("assignneid")).Int64()
+		if aid > 0 {
+			// Not check for invalid assignne id and give responsibility to owners.
+			issue.AssigneeId = aid
+			if err = models.UpdateIssueUserPairByAssignee(aid, issue.Id); err != nil {
+				ctx.Handle(500, "issue.ViewIssue(UpdateIssueUserPairByAssignee): %v", err)
+				return
+			}
+			ctx.Redirect(fmt.Sprintf("%s/issues/%d", ctx.Repo.RepoLink, issue.Index))
+			return
+		}
 	}
 
 	// Update issue-user.
@@ -254,7 +273,7 @@ func ViewIssue(ctx *middleware.Context, params martini.Params) {
 	for i := range comments {
 		u, err := models.GetUserById(comments[i].PosterId)
 		if err != nil {
-			ctx.Handle(500, "issue.ViewIssue(get poster of comment): %v", err)
+			ctx.Handle(500, "issue.ViewIssue(GetUserById.2): %v", err)
 			return
 		}
 		comments[i].Poster = u
