@@ -98,10 +98,11 @@
                 </div>{{else}}<div class="alert alert-warning"><a class="btn btn-success btn-lg" href="/user/sign_up">Sign up for free</a> to join this conversation. Already have an account? <a href="/user/login">Sign in to comment</a></div>{{end}}
                 </div>
             </div>
+
             <div class="issue-bar col-md-2">
                 <div class="assignee">
                     <h4>Assignee</h4>
-                    <p><img src="//1.gravatar.com/avatar/f72f7454ce9d710baa506394f68f4132"><strong>fuxiaohei</strong></p>
+                    <p>{{if .Issue.Assignee}}<img src="{{.Issue.Assignee.AvatarLink}}"><strong>{{.Issue.Assignee.Name}}</strong>{{else}}No one assigned{{end}}</p>
                 </div>
             </div><!--
             <div class="col-md-3">

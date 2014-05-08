@@ -28,8 +28,9 @@ type Issue struct {
 	Poster          *User `xorm:"-"`
 	MilestoneId     int64
 	AssigneeId      int64
-	IsRead          bool `xorm:"-"`
-	IsPull          bool // Indicates whether is a pull request or not.
+	Assignee        *User `xorm:"-"`
+	IsRead          bool  `xorm:"-"`
+	IsPull          bool  // Indicates whether is a pull request or not.
 	IsClosed        bool
 	Labels          string `xorm:"TEXT"`
 	Content         string `xorm:"TEXT"`
@@ -43,6 +44,14 @@ type Issue struct {
 
 func (i *Issue) GetPoster() (err error) {
 	i.Poster, err = GetUserById(i.PosterId)
+	return err
+}
+
+func (i *Issue) GetAssignee() (err error) {
+	if i.AssigneeId == 0 {
+		return nil
+	}
+	i.Assignee, err = GetUserById(i.AssigneeId)
 	return err
 }
 
@@ -159,38 +168,35 @@ type IssueUser struct {
 }
 
 // NewIssueUserPairs adds new issue-user pairs for new issue of repository.
-func NewIssueUserPairs(rid, iid, oid, uid, aid int64) (err error) {
+func NewIssueUserPairs(rid, iid, oid, pid, aid int64, repoName string) (err error) {
 	iu := &IssueUser{IssueId: iid, RepoId: rid}
 
-	ws, err := GetWatchers(rid)
+	us, err := GetCollaborators(repoName)
 	if err != nil {
 		return err
 	}
 
-	// TODO: check collaborators.
-	// Add owner.
-	ids := []int64{oid}
-	for _, id := range ids {
-		if IsWatching(id, rid) {
-			continue
+	isNeedAddPoster := true
+	for _, u := range us {
+		iu.Uid = u.Id
+		iu.IsPoster = iu.Uid == pid
+		if isNeedAddPoster && iu.IsPoster {
+			isNeedAddPoster = false
 		}
-
-		// In case owner is not watching.
-		ws = append(ws, &Watch{UserId: id})
-	}
-
-	for _, w := range ws {
-		if w.UserId == 0 {
-			continue
-		}
-
-		iu.Uid = w.UserId
-		iu.IsPoster = iu.Uid == uid
 		iu.IsAssigned = iu.Uid == aid
 		if _, err = orm.Insert(iu); err != nil {
 			return err
 		}
 	}
+	if isNeedAddPoster {
+		iu.Uid = pid
+		iu.IsPoster = true
+		iu.IsAssigned = iu.Uid == aid
+		if _, err = orm.Insert(iu); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 

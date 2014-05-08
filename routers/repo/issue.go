@@ -114,6 +114,13 @@ func CreateIssue(ctx *middleware.Context, params martini.Params) {
 	ctx.Data["Title"] = "Create issue"
 	ctx.Data["IsRepoToolbarIssues"] = true
 	ctx.Data["IsRepoToolbarIssuesList"] = false
+
+	us, err := models.GetCollaborators(strings.TrimPrefix(ctx.Repo.RepoLink, "/"))
+	if err != nil {
+		ctx.Handle(500, "issue.CreateIssue(GetCollaborators)", err)
+		return
+	}
+	ctx.Data["Collaborators"] = us
 	ctx.HTML(200, "issue/create")
 }
 
@@ -121,6 +128,13 @@ func CreateIssuePost(ctx *middleware.Context, params martini.Params, form auth.C
 	ctx.Data["Title"] = "Create issue"
 	ctx.Data["IsRepoToolbarIssues"] = true
 	ctx.Data["IsRepoToolbarIssuesList"] = false
+
+	us, err := models.GetCollaborators(strings.TrimPrefix(ctx.Repo.RepoLink, "/"))
+	if err != nil {
+		ctx.Handle(500, "issue.CreateIssue(GetCollaborators)", err)
+		return
+	}
+	ctx.Data["Collaborators"] = us
 
 	if ctx.HasError() {
 		ctx.HTML(200, "issue/create")
@@ -140,8 +154,8 @@ func CreateIssuePost(ctx *middleware.Context, params martini.Params, form auth.C
 	if err := models.NewIssue(issue); err != nil {
 		ctx.Handle(500, "issue.CreateIssue(NewIssue)", err)
 		return
-	} else if err := models.NewIssueUserPairs(issue.RepoId, issue.Id,
-		ctx.Repo.Owner.Id, ctx.User.Id, form.AssigneeId); err != nil {
+	} else if err := models.NewIssueUserPairs(issue.RepoId, issue.Id, ctx.Repo.Owner.Id,
+		ctx.User.Id, form.AssigneeId, ctx.Repo.Repository.Name); err != nil {
 		ctx.Handle(500, "issue.CreateIssue(NewIssueUserPairs)", err)
 		return
 	}
@@ -219,13 +233,14 @@ func ViewIssue(ctx *middleware.Context, params martini.Params) {
 		return
 	}
 
-	// Get poster.
-	u, err := models.GetUserById(issue.PosterId)
-	if err != nil {
-		ctx.Handle(500, "issue.ViewIssue(GetUserById): %v", err)
+	// Get poster and Assignee.
+	if err = issue.GetPoster(); err != nil {
+		ctx.Handle(500, "issue.ViewIssue(GetPoster): %v", err)
+		return
+	} else if err = issue.GetAssignee(); err != nil {
+		ctx.Handle(500, "issue.ViewIssue(GetAssignee): %v", err)
 		return
 	}
-	issue.Poster = u
 	issue.RenderedContent = string(base.RenderMarkdown([]byte(issue.Content), ctx.Repo.RepoLink))
 
 	// Get comments.
