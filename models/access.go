@@ -60,6 +60,9 @@ func UpdateAccessWithSession(sess *xorm.Session, access *Access) error {
 // HasAccess returns true if someone can read or write to given repository.
 // The repoName should be in format <username>/<reponame>.
 func HasAccess(uname, repoName string, mode int) (bool, error) {
+	if len(repoName) == 0 {
+		return false, nil
+	}
 	access := &Access{
 		UserName: strings.ToLower(uname),
 		RepoName: strings.ToLower(repoName),

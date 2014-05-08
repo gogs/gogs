@@ -50,7 +50,7 @@ func RepoAssignment(redirect bool, args ...bool) martini.Handler {
 
 		// Collaborators who have write access can be seen as owners.
 		if ctx.IsSigned {
-			ctx.Repo.IsOwner, err = models.HasAccess(ctx.User.Name, repoName, models.AU_WRITABLE)
+			ctx.Repo.IsOwner, err = models.HasAccess(ctx.User.Name, userName+"/"+repoName, models.AU_WRITABLE)
 			if err != nil {
 				ctx.Handle(500, "RepoAssignment(HasAccess)", err)
 				return
@@ -100,7 +100,7 @@ func RepoAssignment(redirect bool, args ...bool) martini.Handler {
 		}
 
 		// Check access.
-		if repo.IsPrivate {
+		if repo.IsPrivate && !ctx.Repo.IsOwner {
 			if ctx.User == nil {
 				ctx.Handle(404, "RepoAssignment(HasAccess)", nil)
 				return

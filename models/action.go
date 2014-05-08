@@ -198,8 +198,8 @@ func TransferRepoAction(user, newUser *User, repo *Repository) (err error) {
 }
 
 // GetFeeds returns action list of given user in given context.
-func GetFeeds(userid, offset int64, isProfile bool) ([]Action, error) {
-	actions := make([]Action, 0, 20)
+func GetFeeds(userid, offset int64, isProfile bool) ([]*Action, error) {
+	actions := make([]*Action, 0, 20)
 	sess := orm.Limit(20, int(offset)).Desc("id").Where("user_id=?", userid)
 	if isProfile {
 		sess.Where("is_private=?", false).And("act_user_id=?", userid)

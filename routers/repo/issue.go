@@ -178,10 +178,20 @@ func CreateIssuePost(ctx *middleware.Context, params martini.Params, form auth.C
 		}
 	}
 
+	act := &models.Action{
+		ActUserId:    ctx.User.Id,
+		ActUserName:  ctx.User.Name,
+		ActEmail:     ctx.User.Email,
+		OpType:       models.OP_CREATE_ISSUE,
+		Content:      fmt.Sprintf("%d|%s", issue.Index, issue.Name),
+		RepoId:       ctx.Repo.Repository.Id,
+		RepoUserName: ctx.Repo.Owner.Name,
+		RepoName:     ctx.Repo.Repository.Name,
+		RefName:      ctx.Repo.BranchName,
+		IsPrivate:    ctx.Repo.Repository.IsPrivate,
+	}
 	// Notify watchers.
-	if err := models.NotifyWatchers(&models.Action{ActUserId: ctx.User.Id, ActUserName: ctx.User.Name, ActEmail: ctx.User.Email,
-		OpType: models.OP_CREATE_ISSUE, Content: fmt.Sprintf("%d|%s", issue.Index, issue.Name),
-		RepoId: ctx.Repo.Repository.Id, RepoName: ctx.Repo.Repository.Name, RefName: ""}); err != nil {
+	if err := models.NotifyWatchers(act); err != nil {
 		ctx.Handle(500, "issue.CreateIssue(NotifyWatchers)", err)
 		return
 	}
