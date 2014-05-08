@@ -532,7 +532,20 @@ function initIssue() {
         $('.issue-write a[data-toggle]').on("click", function () {
             $('.issue-preview-content').html("loading...");
         });
-    }())
+    }());
+
+    // assignee
+    $('.assignee', '#issue').on('click', 'li', function () {
+        var uid = $(this).data("uid");
+        $('#assignee').val(uid);
+        if (uid > 0) {
+            $('.clear-assignee').toggleShow();
+            $('#assigned').text($(this).find("strong").text())
+        } else {
+            $('.clear-assignee').toggleHide();
+            $('#assigned').text($('#assigned').data("no-assigned"));
+        }
+    });
 
 }
 
@@ -580,7 +593,7 @@ function initRepoSetting() {
                     });
                     $this.next().toggleShow();
                     $this.next().find('ul').html(html);
-                }else{
+                } else {
                     $this.next().toggleHide();
                 }
             }
@@ -589,7 +602,7 @@ function initRepoSetting() {
         if (!$(this).val()) {
             $(this).next().toggleHide();
         }
-    }).next().on("click",'li',function(){
+    }).next().on("click", 'li', function () {
         $('#repo-collaborator').val($(this).text());
     });
 }
