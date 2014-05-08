@@ -66,7 +66,7 @@ func Issues(ctx *middleware.Context) {
 	}
 
 	// Get issue-user pairs.
-	pairs, err := models.GetIssueUserPairs(ctx.Repo.Repository.Id, ctx.User.Id, isShowClosed)
+	pairs, err := models.GetIssueUserPairs(ctx.Repo.Repository.Id, posterId, isShowClosed)
 	if err != nil {
 		ctx.Handle(500, "issue.Issues(GetIssueUserPairs): %v", err)
 		return

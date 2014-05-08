@@ -128,6 +128,8 @@ func GetIssues(uid, rid, pid, mid int64, page int, isClosed bool, labels, sortTy
 		sess.Desc("num_comments")
 	case "leastcomment":
 		sess.Asc("num_comments")
+	case "priority":
+		sess.Desc("priority")
 	default:
 		sess.Desc("created")
 	}
