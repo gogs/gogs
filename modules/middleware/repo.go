@@ -152,8 +152,19 @@ func RepoAssignment(redirect bool, args ...bool) martini.Handler {
 		ctx.Data["RepoLink"] = ctx.Repo.RepoLink
 		ctx.Data["IsRepositoryOwner"] = ctx.Repo.IsOwner
 		ctx.Data["BranchName"] = ""
+    
+    //When server run on non-default port, has to prefix with ssh://
+  	ctx.Repo.CloneLink.SSH = fmt.Sprintf("%s@%s:%s/%s.git", base.RunUser, base.Domain, user.LowerName, repo.LowerName)
+    if 0 <= strings.LastIndex(base.Domain, ":") {
+      serverUri := strings.Split(base.Domain, ":")
+      if "22" != serverUri[1] { 
+        ctx.Repo.CloneLink.SSH = fmt.Sprintf("ssh://%s@%s:%s/%s.git", base.RunUser, base.Domain, user.LowerName, repo.LowerName)
+      } else {
+        //Clean up URI if user use :22
+        ctx.Repo.CloneLink.SSH = fmt.Sprintf("%s@%s:%s/%s.git", base.RunUser, serverUri[0], user.LowerName, repo.LowerName)
+      }
+    }
 
-		ctx.Repo.CloneLink.SSH = fmt.Sprintf("%s@%s:%s/%s.git", base.RunUser, base.Domain, user.LowerName, repo.LowerName)
 		ctx.Repo.CloneLink.HTTPS = fmt.Sprintf("%s%s/%s.git", base.AppUrl, user.LowerName, repo.LowerName)
 		ctx.Data["CloneLink"] = ctx.Repo.CloneLink
 
