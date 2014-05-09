@@ -1447,6 +1447,15 @@ html, body {
     min-width: 300px;
 }
 
+#issue .issue-bar .assignee, #issue .issue-bar .assignee ul {
+    min-width: 160px;
+}
+
+#issue .issue-bar .assignee .dropdown-menu{
+    padding: 0;
+    margin: 0;
+}
+
 #issue .assignee li {
     padding: 4px 12px;
     line-height: 30px;
@@ -1471,6 +1480,11 @@ html, body {
 
 #issue .issue-bar .assignee {
     line-height: 30px;
+}
+
+#issue .issue-bar .assignee .action{
+    position: relative;
+    margin-top: -8px;
 }
 
 /* wrapper and footer */
