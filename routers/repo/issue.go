@@ -460,3 +460,11 @@ func Milestones(ctx *middleware.Context) {
 
 	ctx.HTML(200, "issue/milestone")
 }
+
+func NewMilestones(ctx *middleware.Context) {
+	ctx.Data["Title"] = "New Milestones"
+	ctx.Data["IsRepoToolbarIssues"] = true
+	ctx.Data["IsRepoToolbarIssuesList"] = true
+
+	ctx.HTML(200, "issue/milestone_new")
+}
