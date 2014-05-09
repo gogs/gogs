@@ -100,6 +100,7 @@ type Actioner interface {
 	GetOpType() int
 	GetActUserName() string
 	GetActEmail() string
+	GetRepoUserName() string
 	GetRepoName() string
 	GetBranch() string
 	GetContent() string
@@ -153,8 +154,9 @@ type PushCommits struct {
 func ActionDesc(act Actioner) string {
 	actUserName := act.GetActUserName()
 	email := act.GetActEmail()
+	repoUserName := act.GetRepoUserName()
 	repoName := act.GetRepoName()
-	repoLink := actUserName + "/" + repoName
+	repoLink := repoUserName + "/" + repoName
 	branch := act.GetBranch()
 	content := act.GetContent()
 	switch act.GetOpType() {

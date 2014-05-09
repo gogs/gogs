@@ -63,6 +63,10 @@ func (a Action) GetActEmail() string {
 	return a.ActEmail
 }
 
+func (a Action) GetRepoUserName() string {
+	return a.RepoUserName
+}
+
 func (a Action) GetRepoName() string {
 	return a.RepoName
 }
