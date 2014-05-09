@@ -33,12 +33,10 @@ func Issues(ctx *middleware.Context) {
 
 	isShowClosed := ctx.Query("state") == "closed"
 
-	if viewType != "all" {
-		if !ctx.IsSigned {
-			ctx.SetCookie("redirect_to", "/"+url.QueryEscape(ctx.Req.RequestURI))
-			ctx.Redirect("/user/login")
-			return
-		}
+	if viewType != "all" && !ctx.IsSigned {
+		ctx.SetCookie("redirect_to", "/"+url.QueryEscape(ctx.Req.RequestURI))
+		ctx.Redirect("/user/login")
+		return
 	}
 
 	var assigneeId, posterId int64
@@ -87,7 +85,7 @@ func Issues(ctx *middleware.Context) {
 		}
 
 		if err = issues[i].GetPoster(); err != nil {
-			ctx.Handle(500, "issue.Issues(GetPoster): %v", err)
+			ctx.Handle(500, "issue.Issues(GetPoster)", fmt.Errorf("[#%d]%v", issues[i].Id, err))
 			return
 		}
 	}
