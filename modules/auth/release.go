@@ -30,7 +30,7 @@ func (f *NewReleaseForm) Name(field string) string {
 	return names[field]
 }
 
-func (f *NewReleaseForm) Validate(errors *binding.BindingErrors, req *http.Request, context martini.Context) {
+func (f *NewReleaseForm) Validate(errors *binding.Errors, req *http.Request, context martini.Context) {
 	data := context.Get(reflect.TypeOf(base.TmplData{})).Interface().(base.TmplData)
 	validate(errors, data, f)
 }
