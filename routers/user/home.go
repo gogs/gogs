@@ -53,7 +53,11 @@ func Profile(ctx *middleware.Context, params martini.Params) {
 
 	user, err := models.GetUserByName(params["username"])
 	if err != nil {
-		ctx.Handle(500, "user.Profile", err)
+		if err == models.ErrUserNotExist {
+			ctx.Handle(404, "user.Profile", err)
+		} else {
+			ctx.Handle(500, "user.Profile", err)
+		}
 		return
 	}
 
