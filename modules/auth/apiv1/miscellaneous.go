@@ -22,12 +22,12 @@ type MarkdownForm struct {
 	Context string `form:"context"`
 }
 
-func (f *MarkdownForm) Validate(errs *binding.BindingErrors, req *http.Request, ctx martini.Context) {
+func (f *MarkdownForm) Validate(errs *binding.Errors, req *http.Request, ctx martini.Context) {
 	data := ctx.Get(reflect.TypeOf(base.TmplData{})).Interface().(base.TmplData)
 	validateApiReq(errs, data, f)
 }
 
-func validateApiReq(errs *binding.BindingErrors, data base.TmplData, f interface{}) {
+func validateApiReq(errs *binding.Errors, data base.TmplData, f interface{}) {
 	if errs.Count() == 0 {
 		return
 	} else if len(errs.Overall) > 0 {

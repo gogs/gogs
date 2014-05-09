@@ -184,7 +184,7 @@ var (
 	urlPattern          = regexp.MustCompile(`(http|https):\/\/[\w\-_]+(\.[\w\-_]+)+([\w\-\.,@?^=%&amp;:/~\+#]*[\w\-\@?^=%&amp;/~\+#])?`)
 )
 
-func validateStruct(errors *BindingErrors, obj interface{}) {
+func validateStruct(errors *Errors, obj interface{}) {
 	typ := reflect.TypeOf(obj)
 	val := reflect.ValueOf(obj)
 
@@ -279,7 +279,7 @@ func validateStruct(errors *BindingErrors, obj interface{}) {
 	}
 }
 
-func mapForm(formStruct reflect.Value, form map[string][]string, errors *BindingErrors) {
+func mapForm(formStruct reflect.Value, form map[string][]string, errors *Errors) {
 	typ := formStruct.Elem().Type()
 
 	for i := 0; i < typ.NumField(); i++ {
@@ -320,7 +320,7 @@ func mapForm(formStruct reflect.Value, form map[string][]string, errors *Binding
 // This is a "default" handler, of sorts, and you are
 // welcome to use your own instead. The Bind middleware
 // invokes this automatically for convenience.
-func ErrorHandler(errs BindingErrors, resp http.ResponseWriter) {
+func ErrorHandler(errs Errors, resp http.ResponseWriter) {
 	if errs.Count() > 0 {
 		resp.Header().Set("Content-Type", "application/json; charset=utf-8")
 		if _, ok := errs.Overall[BindingDeserializationError]; ok {
@@ -338,7 +338,7 @@ func ErrorHandler(errs BindingErrors, resp http.ResponseWriter) {
 // matching value from the request (via Form middleware) in the
 // same type, so that not all deserialized values have to be strings.
 // Supported types are string, int, float, and bool.
-func setWithProperType(valueKind reflect.Kind, val string, structField reflect.Value, nameInTag string, errors *BindingErrors) {
+func setWithProperType(valueKind reflect.Kind, val string, structField reflect.Value, nameInTag string, errors *Errors) {
 	switch valueKind {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		if val == "" {
@@ -399,7 +399,7 @@ func ensureNotPointer(obj interface{}) {
 // Performs validation and combines errors from validation
 // with errors from deserialization, then maps both the
 // resulting struct and the errors to the context.
-func validateAndMap(obj reflect.Value, context martini.Context, errors *BindingErrors, ifacePtr ...interface{}) {
+func validateAndMap(obj reflect.Value, context martini.Context, errors *Errors, ifacePtr ...interface{}) {
 	context.Invoke(Validate(obj.Interface()))
 	errors.Combine(getErrors(context))
 	context.Map(*errors)
@@ -409,12 +409,12 @@ func validateAndMap(obj reflect.Value, context martini.Context, errors *BindingE
 	}
 }
 
-func newErrors() *BindingErrors {
-	return &BindingErrors{make(map[string]string), make(map[string]string)}
+func newErrors() *Errors {
+	return &Errors{make(map[string]string), make(map[string]string)}
 }
 
-func getErrors(context martini.Context) BindingErrors {
-	return context.Get(reflect.TypeOf(BindingErrors{})).Interface().(BindingErrors)
+func getErrors(context martini.Context) Errors {
+	return context.Get(reflect.TypeOf(Errors{})).Interface().(Errors)
 }
 
 type (
@@ -422,7 +422,7 @@ type (
 	// validation before the request even gets to your application.
 	// The Validate method will be executed during the validation phase.
 	Validator interface {
-		Validate(*BindingErrors, *http.Request, martini.Context)
+		Validate(*Errors, *http.Request, martini.Context)
 	}
 )
 
@@ -434,18 +434,18 @@ var (
 
 // Errors represents the contract of the response body when the
 // binding step fails before getting to the application.
-type BindingErrors struct {
+type Errors struct {
 	Overall map[string]string `json:"overall"`
 	Fields  map[string]string `json:"fields"`
 }
 
 // Total errors is the sum of errors with the request overall
 // and errors on individual fields.
-func (err BindingErrors) Count() int {
+func (err Errors) Count() int {
 	return len(err.Overall) + len(err.Fields)
 }
 
-func (this *BindingErrors) Combine(other BindingErrors) {
+func (this *Errors) Combine(other Errors) {
 	for key, val := range other.Fields {
 		if _, exists := this.Fields[key]; !exists {
 			this.Fields[key] = val

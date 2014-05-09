@@ -94,7 +94,7 @@ func (f *UpdateProfileForm) Name(field string) string {
 	return names[field]
 }
 
-func (f *UpdateProfileForm) Validate(errs *binding.BindingErrors, req *http.Request, ctx martini.Context) {
+func (f *UpdateProfileForm) Validate(errs *binding.Errors, req *http.Request, ctx martini.Context) {
 	data := ctx.Get(reflect.TypeOf(base.TmplData{})).Interface().(base.TmplData)
 	validate(errs, data, f)
 }
@@ -114,7 +114,7 @@ func (f *UpdatePasswdForm) Name(field string) string {
 	return names[field]
 }
 
-func (f *UpdatePasswdForm) Validate(errs *binding.BindingErrors, req *http.Request, ctx martini.Context) {
+func (f *UpdatePasswdForm) Validate(errs *binding.Errors, req *http.Request, ctx martini.Context) {
 	data := ctx.Get(reflect.TypeOf(base.TmplData{})).Interface().(base.TmplData)
 	validate(errs, data, f)
 }

@@ -39,7 +39,7 @@ func (f *RegisterForm) Name(field string) string {
 	return names[field]
 }
 
-func (f *RegisterForm) Validate(errs *binding.BindingErrors, req *http.Request, ctx martini.Context) {
+func (f *RegisterForm) Validate(errs *binding.Errors, req *http.Request, ctx martini.Context) {
 	data := ctx.Get(reflect.TypeOf(base.TmplData{})).Interface().(base.TmplData)
 	validate(errs, data, f)
 }
@@ -58,7 +58,7 @@ func (f *LogInForm) Name(field string) string {
 	return names[field]
 }
 
-func (f *LogInForm) Validate(errs *binding.BindingErrors, req *http.Request, ctx martini.Context) {
+func (f *LogInForm) Validate(errs *binding.Errors, req *http.Request, ctx martini.Context) {
 	data := ctx.Get(reflect.TypeOf(base.TmplData{})).Interface().(base.TmplData)
 	validate(errs, data, f)
 }
@@ -72,7 +72,7 @@ func GetMinMaxSize(field reflect.StructField) string {
 	return ""
 }
 
-func validate(errs *binding.BindingErrors, data base.TmplData, f Form) {
+func validate(errs *binding.Errors, data base.TmplData, f Form) {
 	if errs.Count() == 0 {
 		return
 	} else if len(errs.Overall) > 0 {
@@ -182,7 +182,7 @@ func (f *InstallForm) Name(field string) string {
 	return names[field]
 }
 
-func (f *InstallForm) Validate(errors *binding.BindingErrors, req *http.Request, context martini.Context) {
+func (f *InstallForm) Validate(errors *binding.Errors, req *http.Request, context martini.Context) {
 	data := context.Get(reflect.TypeOf(base.TmplData{})).Interface().(base.TmplData)
 	validate(errors, data, f)
 }
