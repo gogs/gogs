@@ -14,7 +14,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/codegangsta/martini"
+	"github.com/go-martini/martini"
 )
 
 func TestBind(t *testing.T) {
