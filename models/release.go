@@ -50,7 +50,7 @@ func IsReleaseExist(repoId int64, tagName string) (bool, error) {
 }
 
 // CreateRelease creates a new release of repository.
-func CreateRelease(repoPath string, rel *Release, gitRepo *git.Repository) error {
+func CreateRelease(gitRepo *git.Repository, rel *Release) error {
 	isExist, err := IsReleaseExist(rel.RepoId, rel.TagName)
 	if err != nil {
 		return err
@@ -58,8 +58,8 @@ func CreateRelease(repoPath string, rel *Release, gitRepo *git.Repository) error
 		return ErrReleaseAlreadyExist
 	}
 
-	if !git.IsTagExist(repoPath, rel.TagName) {
-		_, stderr, err := com.ExecCmdDir(repoPath, "git", "tag", rel.TagName, "-m", rel.Title)
+	if !gitRepo.IsTagExist(rel.TagName) {
+		_, stderr, err := com.ExecCmdDir(gitRepo.Path, "git", "tag", rel.TagName, "-m", rel.Title)
 		if err != nil {
 			return err
 		} else if strings.Contains(stderr, "fatal:") {

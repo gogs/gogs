@@ -140,8 +140,7 @@ func ReleasesNewPost(ctx *middleware.Context, form auth.NewReleaseForm) {
 		IsPrerelease: form.Prerelease,
 	}
 
-	if err = models.CreateRelease(models.RepoPath(ctx.User.Name, ctx.Repo.Repository.Name),
-		rel, ctx.Repo.GitRepo); err != nil {
+	if err = models.CreateRelease(ctx.Repo.GitRepo, rel); err != nil {
 		if err == models.ErrReleaseAlreadyExist {
 			ctx.RenderWithErr("Release with this tag name has already existed", "release/new", &form)
 		} else {
