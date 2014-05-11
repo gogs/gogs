@@ -547,7 +547,7 @@ function initIssue() {
             if(uid != assignee){
                 $.post($a.data("ajax"), {
                     issue: $('#issue').data("id"),
-                    assign: assignee
+                    assigneeid: uid
                 }, function (json) {
                     if (json.ok) {
                         window.location.reload();

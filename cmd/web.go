@@ -184,6 +184,7 @@ func runWeb(*cli.Context) {
 		r.Get("/issues/new", repo.CreateIssue)
 		r.Post("/issues/new", bindIgnErr(auth.CreateIssueForm{}), repo.CreateIssuePost)
 		r.Post("/issues/:index", bindIgnErr(auth.CreateIssueForm{}), repo.UpdateIssue)
+		r.Post("/issues/:index/assignee", repo.UpdateAssignee)
 		r.Get("/issues/milestones", repo.Milestones)
 		r.Get("/issues/milestones/new", repo.NewMilestones)
 		r.Post("/comment/:action", repo.Comment)

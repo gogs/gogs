@@ -177,7 +177,6 @@ func runServ(k *cli.Context) {
 	models.SetRepoEnvs(user.Id, user.Name, repoName, repoUserName)
 
 	gitcmd := exec.Command(verb, repoPath)
-	println(base.RepoRootPath)
 	gitcmd.Dir = base.RepoRootPath
 	gitcmd.Stdout = os.Stdout
 	gitcmd.Stdin = os.Stdin

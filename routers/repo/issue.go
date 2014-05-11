@@ -239,20 +239,12 @@ func ViewIssue(ctx *middleware.Context, params martini.Params) {
 		return
 	}
 
-	// Update assignee.
-	if ctx.Repo.IsOwner {
-		aid, _ := base.StrTo(ctx.Query("assignneid")).Int64()
-		if aid > 0 {
-			// Not check for invalid assignne id and give responsibility to owners.
-			issue.AssigneeId = aid
-			if err = models.UpdateIssueUserPairByAssignee(aid, issue.Id); err != nil {
-				ctx.Handle(500, "issue.ViewIssue(UpdateIssueUserPairByAssignee): %v", err)
-				return
-			}
-			ctx.Redirect(fmt.Sprintf("%s/issues/%d", ctx.Repo.RepoLink, issue.Index))
-			return
-		}
+	us, err := models.GetCollaborators(strings.TrimPrefix(ctx.Repo.RepoLink, "/"))
+	if err != nil {
+		ctx.Handle(500, "issue.CreateIssue(GetCollaborators)", err)
+		return
 	}
+	ctx.Data["Collaborators"] = us
 
 	if ctx.IsSigned {
 		// Update issue-user.
@@ -300,18 +292,18 @@ func ViewIssue(ctx *middleware.Context, params martini.Params) {
 }
 
 func UpdateIssue(ctx *middleware.Context, params martini.Params, form auth.CreateIssueForm) {
-	index, err := base.StrTo(params["index"]).Int()
+	idx, err := base.StrTo(params["index"]).Int()
 	if err != nil {
-		ctx.Handle(404, "issue.UpdateIssue", err)
+		ctx.Error(404)
 		return
 	}
 
-	issue, err := models.GetIssueByIndex(ctx.Repo.Repository.Id, int64(index))
+	issue, err := models.GetIssueByIndex(ctx.Repo.Repository.Id, int64(idx))
 	if err != nil {
 		if err == models.ErrIssueNotExist {
 			ctx.Handle(404, "issue.UpdateIssue", err)
 		} else {
-			ctx.Handle(200, "issue.UpdateIssue(get issue)", err)
+			ctx.Handle(500, "issue.UpdateIssue(GetIssueByIndex)", err)
 		}
 		return
 	}
@@ -327,7 +319,7 @@ func UpdateIssue(ctx *middleware.Context, params martini.Params, form auth.Creat
 	issue.Labels = form.Labels
 	issue.Content = form.Content
 	if err = models.UpdateIssue(issue); err != nil {
-		ctx.Handle(200, "issue.UpdateIssue(update issue)", err)
+		ctx.Handle(500, "issue.UpdateIssue(UpdateIssue)", err)
 		return
 	}
 
@@ -335,6 +327,44 @@ func UpdateIssue(ctx *middleware.Context, params martini.Params, form auth.Creat
 		"ok":      true,
 		"title":   issue.Name,
 		"content": string(base.RenderMarkdown([]byte(issue.Content), ctx.Repo.RepoLink)),
+	})
+}
+
+func UpdateAssignee(ctx *middleware.Context) {
+	if !ctx.Repo.IsOwner {
+		ctx.Error(403)
+		return
+	}
+
+	idx, err := base.StrTo(ctx.Query("issue")).Int64()
+	if err != nil {
+		ctx.Error(404)
+		return
+	}
+
+	issue, err := models.GetIssueByIndex(ctx.Repo.Repository.Id, idx)
+	if err != nil {
+		if err == models.ErrIssueNotExist {
+			ctx.Handle(404, "issue.UpdateAssignee", err)
+		} else {
+			ctx.Handle(500, "issue.UpdateAssignee(GetIssueByIndex)", err)
+		}
+		return
+	}
+
+	aid, _ := base.StrTo(ctx.Query("assigneeid")).Int64()
+	// Not check for invalid assignne id and give responsibility to owners.
+	issue.AssigneeId = aid
+	if err = models.UpdateIssueUserPairByAssignee(aid, issue.Id); err != nil {
+		ctx.Handle(500, "issue.UpdateAssignee(UpdateIssueUserPairByAssignee): %v", err)
+		return
+	} else if err = models.UpdateIssue(issue); err != nil {
+		ctx.Handle(500, "issue.UpdateAssignee(UpdateIssue)", err)
+		return
+	}
+
+	ctx.JSON(200, map[string]interface{}{
+		"ok": true,
 	})
 }
 
