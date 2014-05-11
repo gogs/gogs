@@ -15,17 +15,22 @@ import (
 )
 
 type AuthenticationForm struct {
-	Id         int64  `form:"id"`
-	Type       int    `form:"type"`
-	AuthName   string `form:"name" binding:"Required;MaxSize(50)"`
-	Domain     string `form:"domain" binding:"Required"`
-	Host       string `form:"host" binding:"Required"`
-	Port       int    `form:"port" binding:"Required"`
-	BaseDN     string `form:"base_dn" binding:"Required"`
-	Attributes string `form:"attributes" binding:"Required"`
-	Filter     string `form:"filter" binding:"Required"`
-	MsAdSA     string `form:"ms_ad_sa" binding:"Required"`
-	IsActived  bool   `form:"is_actived"`
+	Id                int64  `form:"id"`
+	Type              int    `form:"type"`
+	AuthName          string `form:"name" binding:"Required;MaxSize(50)"`
+	Domain            string `form:"domain"`
+	Host              string `form:"host"`
+	Port              int    `form:"port"`
+	BaseDN            string `form:"base_dn"`
+	Attributes        string `form:"attributes"`
+	Filter            string `form:"filter"`
+	MsAdSA            string `form:"ms_ad_sa"`
+	IsActived         bool   `form:"is_actived"`
+	SmtpAuth          string `form:"smtpauth"`
+	SmtpHost          string `form:"smtphost"`
+	SmtpPort          int    `form:"smtpport"`
+	SmtpTls           bool   `form:"smtptls"`
+	AllowAutoRegister bool   `form:"allowautoregister"`
 }
 
 func (f *AuthenticationForm) Name(field string) string {

@@ -14,24 +14,24 @@
                     {{.CsrfTokenHtml}}
                     {{template "base/alert" .}}
                     <input type="hidden" value="{{.Source.Id}}" name="id"/>
+                    {{$type := .Source.Type}}
                     <div class="form-group">
                         <label class="col-md-3 control-label">Auth Type: </label>
+                        <input type="hidden" name="type" value="{{.Source.Type}}"/>
                         <div class="col-md-7">
-                            <select class="form-control">
-                                {{$type := .Source.Type}}
-                                {{range $key, $val := .LoginTypes}}
-                                <option value="{{$key}}" {{if eq $key $type}}selected{{end}}>{{$val}}</option>
-                                {{end}}
-                            </select>
+                        {{range $key, $val := .LoginTypes}}
+                            {{if eq $key $type}}{{$val}}{{end}}
+                        {{end}}
                         </div>
                     </div>
-
                     <div class="form-group {{if .Err_AuthName}}has-error has-feedback{{end}}">
                         <label class="col-md-3 control-label">Name: </label>
                         <div class="col-md-7">
                             <input name="name" class="form-control" placeholder="Type authentication's name" value="{{.Source.Name}}" required="required">
                         </div>
                     </div>
+
+                    {{if eq $type 2}}
 
                     <div class="form-group {{if .Err_Domain}}has-error has-feedback{{end}}">
                         <label class="col-md-3 control-label">Domain: </label>
@@ -81,7 +81,53 @@
                             <input name="ms_ad_sa" class="form-control" placeholder="Type Ms Ad SA" value="{{.Source.LDAP.MsAdSAFormat}}" required="required">
                         </div>
                     </div>
+                    {{else}}
+                    {{if eq $type 3}}
+
+                    <div class="form-group {{if .Err_TLS}}has-error has-feedback{{end}}">
+                            <label class="col-md-3 control-label">SMTP Auth: </label>
+                            <div class="col-md-7">
+                                <select name="smtpauth" class="form-control">
+                                {{$auth := .Source.SMTP.Auth}}
+                                    {{range .SMTPAuths}}
+                                    <option value="{{.}}"
+                                    {{if eq . $auth}} selected{{end}}>{{.}}</option>
+                                    {{end}}
+                                    }
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group {{if .Err_Host}}has-error has-feedback{{end}}">
+                            <label class="col-md-3 control-label">Host: </label>
+                            <div class="col-md-7">
+                                <input name="smtphost" class="form-control" placeholder="Type host address" value="{{.Source.SMTP.Host}}">
+                            </div>
+                        </div>
+
+                        <div class="form-group {{if .Err_Port}}has-error has-feedback{{end}}">
+                            <label class="col-md-3 control-label">Port: </label>
+                            <div class="col-md-7">
+                                <input name="smtpport" class="form-control" placeholder="Type port number" value="{{.Source.SMTP.Port}}">
+                            </div>
+                        </div>
+
+                        <div class="form-group {{if .Err_TLS}}has-error has-feedback{{end}}">
+                            <label class="col-md-3 control-label">TLS: </label>
+                            <div class="col-md-7">
+                                <input name="smtptls" type="checkbox" class="form-control" {{if .Source.SMTP.TLS}}checked{{end}}>
+                            </div>
+                        </div>
+                        {{end}}
+                    {{end}}
                     
+                    <div class="form-group {{if .Err_TLS}}has-error has-feedback{{end}}">
+                            <label class="col-md-3 control-label">Auto Register: </label>
+                            <div class="col-md-7">
+                                <input name="allowautoregister" type="checkbox" class="form-control" {{if .Source.AllowAutoRegisted}}checked{{end}}>
+                            </div>
+                    </div>
+
                     <div class="form-group">
                         <div class="col-md-7 col-md-offset-3">
                             <div class="checkbox">

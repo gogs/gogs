@@ -38,6 +38,7 @@ var LoginTypes = map[int]string{
 }
 
 var _ core.Conversion = &LDAPConfig{}
+var _ core.Conversion = &SMTPConfig{}
 
 type LDAPConfig struct {
 	ldap.Ldapsource
@@ -55,7 +56,7 @@ func (cfg *LDAPConfig) ToDB() ([]byte, error) {
 type SMTPConfig struct {
 	Auth string
 	Host string
-	Post string
+	Port int
 	TLS  bool
 }
 
@@ -122,16 +123,12 @@ func GetLoginSourceById(id int64) (*LoginSource, error) {
 	return source, nil
 }
 
-func AddLDAPSource(name string, cfg *LDAPConfig) error {
-	_, err := orm.Insert(&LoginSource{Type: LT_LDAP,
-		Name:      name,
-		IsActived: true,
-		Cfg:       cfg,
-	})
+func AddSource(source *LoginSource) error {
+	_, err := orm.Insert(source)
 	return err
 }
 
-func UpdateLDAPSource(source *LoginSource) error {
+func UpdateSource(source *LoginSource) error {
 	_, err := orm.AllCols().Id(source.Id).Update(source)
 	return err
 }
@@ -293,7 +290,9 @@ func (a *loginAuth) Next(fromServer []byte, more bool) ([]byte, error) {
 }
 
 var (
-	smtpAuths = []string{"plain", "login", ""}
+	SMTP_PLAIN = "PLAIN"
+	SMTP_LOGIN = "LOGIN"
+	SMTPAuths  = []string{SMTP_PLAIN, SMTP_LOGIN}
 )
 
 func SmtpAuth(addr string, a smtp.Auth) error {
@@ -324,13 +323,13 @@ func SmtpAuth(addr string, a smtp.Auth) error {
 // Return the same LoginUserPlain semantic
 func LoginUserSMTPSource(user *User, name, passwd string, sourceId int64, cfg *SMTPConfig, autoRegister bool) (*User, error) {
 	var auth smtp.Auth
-	if cfg.Auth == "plain" {
+	if cfg.Auth == SMTP_PLAIN {
 		auth = smtp.PlainAuth("", name, passwd, cfg.Host)
-	} else if cfg.Auth == "login" {
+	} else if cfg.Auth == SMTP_LOGIN {
 		auth = LoginAuth(name, passwd)
 	}
 
-	err := SmtpAuth(fmt.Sprintf("%s:%d", cfg.Host, cfg.Post), auth)
+	err := SmtpAuth(fmt.Sprintf("%s:%d", cfg.Host, cfg.Port), auth)
 	if err != nil {
 		return nil, err
 	}

@@ -5,10 +5,11 @@
 package admin
 
 import (
+	"errors"
 	"strings"
 
 	"github.com/go-martini/martini"
-
+	"github.com/go-xorm/core"
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/auth/ldap"
@@ -21,32 +22,55 @@ func NewAuthSource(ctx *middleware.Context) {
 	ctx.Data["Title"] = "New Authentication"
 	ctx.Data["PageIsAuths"] = true
 	ctx.Data["LoginTypes"] = models.LoginTypes
+	ctx.Data["SMTPAuths"] = models.SMTPAuths
 	ctx.HTML(200, "admin/auths/new")
 }
 
 func NewAuthSourcePost(ctx *middleware.Context, form auth.AuthenticationForm) {
 	ctx.Data["Title"] = "New Authentication"
 	ctx.Data["PageIsAuths"] = true
+	ctx.Data["LoginTypes"] = models.LoginTypes
+	ctx.Data["SMTPAuths"] = models.SMTPAuths
 
 	if ctx.HasError() {
 		ctx.HTML(200, "admin/auths/new")
 		return
 	}
 
-	u := &models.LDAPConfig{
-		Ldapsource: ldap.Ldapsource{
-			Host:         form.Host,
-			Port:         form.Port,
-			BaseDN:       form.BaseDN,
-			Attributes:   form.Attributes,
-			Filter:       form.Filter,
-			MsAdSAFormat: form.MsAdSA,
-			Enabled:      true,
-			Name:         form.AuthName,
-		},
+	var u core.Conversion
+	if form.Type == models.LT_LDAP {
+		u = &models.LDAPConfig{
+			Ldapsource: ldap.Ldapsource{
+				Host:         form.Host,
+				Port:         form.Port,
+				BaseDN:       form.BaseDN,
+				Attributes:   form.Attributes,
+				Filter:       form.Filter,
+				MsAdSAFormat: form.MsAdSA,
+				Enabled:      true,
+				Name:         form.AuthName,
+			},
+		}
+	} else if form.Type == models.LT_SMTP {
+		u = &models.SMTPConfig{
+			Auth: form.SmtpAuth,
+			Host: form.SmtpHost,
+			Port: form.SmtpPort,
+			TLS:  form.SmtpTls,
+		}
+	} else {
+		panic(errors.New("not allow type"))
 	}
 
-	if err := models.AddLDAPSource(form.AuthName, u); err != nil {
+	var source = &models.LoginSource{
+		Type:              form.Type,
+		Name:              form.AuthName,
+		IsActived:         true,
+		AllowAutoRegisted: form.AllowAutoRegister,
+		Cfg:               u,
+	}
+
+	if err := models.AddSource(source); err != nil {
 		switch err {
 		default:
 			ctx.Handle(500, "admin.auths.NewAuth", err)
@@ -63,6 +87,9 @@ func NewAuthSourcePost(ctx *middleware.Context, form auth.AuthenticationForm) {
 func EditAuthSource(ctx *middleware.Context, params martini.Params) {
 	ctx.Data["Title"] = "Edit Authentication"
 	ctx.Data["PageIsAuths"] = true
+	ctx.Data["LoginTypes"] = models.LoginTypes
+	ctx.Data["SMTPAuths"] = models.SMTPAuths
+
 	id, err := base.StrTo(params["authid"]).Int64()
 	if err != nil {
 		ctx.Handle(404, "admin.auths.EditAuthSource", err)
@@ -74,24 +101,23 @@ func EditAuthSource(ctx *middleware.Context, params martini.Params) {
 		return
 	}
 	ctx.Data["Source"] = u
-	ctx.Data["LoginTypes"] = models.LoginTypes
 	ctx.HTML(200, "admin/auths/edit")
 }
 
 func EditAuthSourcePost(ctx *middleware.Context, form auth.AuthenticationForm) {
 	ctx.Data["Title"] = "Edit Authentication"
 	ctx.Data["PageIsAuths"] = true
+	ctx.Data["LoginTypes"] = models.LoginTypes
+	ctx.Data["SMTPAuths"] = models.SMTPAuths
 
 	if ctx.HasError() {
 		ctx.HTML(200, "admin/auths/edit")
 		return
 	}
 
-	u := models.LoginSource{
-		Name:      form.AuthName,
-		IsActived: form.IsActived,
-		Type:      models.LT_LDAP,
-		Cfg: &models.LDAPConfig{
+	var config core.Conversion
+	if form.Type == models.LT_LDAP {
+		config = &models.LDAPConfig{
 			Ldapsource: ldap.Ldapsource{
 				Host:         form.Host,
 				Port:         form.Port,
@@ -102,10 +128,25 @@ func EditAuthSourcePost(ctx *middleware.Context, form auth.AuthenticationForm) {
 				Enabled:      true,
 				Name:         form.AuthName,
 			},
-		},
+		}
+	} else if form.Type == models.LT_SMTP {
+		config = &models.SMTPConfig{
+			Auth: form.SmtpAuth,
+			Host: form.SmtpHost,
+			Port: form.SmtpPort,
+			TLS:  form.SmtpTls,
+		}
 	}
 
-	if err := models.UpdateLDAPSource(&u); err != nil {
+	u := models.LoginSource{
+		Name:              form.AuthName,
+		IsActived:         form.IsActived,
+		Type:              form.Type,
+		AllowAutoRegisted: form.AllowAutoRegister,
+		Cfg:               config,
+	}
+
+	if err := models.UpdateSource(&u); err != nil {
 		switch err {
 		default:
 			ctx.Handle(500, "admin.auths.EditAuth", err)
