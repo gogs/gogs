@@ -68,7 +68,7 @@ func parseCmd(cmd string) (string, string) {
 		args = ss[1]
 		verb = fmt.Sprintf("%s %s", verb, ss[0])
 	}
-	return verb, args
+	return verb, strings.Replace(args, "'/", "'", 1)
 }
 
 func In(b string, sl map[string]int) bool {
@@ -128,7 +128,7 @@ func runServ(k *cli.Context) {
 	repoUser, err := models.GetUserByName(repoUserName)
 	if err != nil {
 		println("You have no right to access")
-		qlog.Fatal("Get user failed", err)
+		qlog.Fatalf("Get user failed: %v", err)
 	}
 
 	// access check
