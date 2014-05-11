@@ -148,10 +148,8 @@ func DelLoginSource(source *LoginSource) error {
 // login a user
 func LoginUser(uname, passwd string) (*User, error) {
 	var u *User
-	var emailLogin bool
 	if strings.Contains(uname, "@") {
 		u = &User{Email: uname}
-		emailLogin = true
 	} else {
 		u = &User{LowerName: strings.ToLower(uname)}
 	}
@@ -161,14 +159,10 @@ func LoginUser(uname, passwd string) (*User, error) {
 		return nil, err
 	}
 
-	// if email login, then we cannot auto register
-	if emailLogin {
-		if !has {
-			return nil, ErrUserNotExist
-		}
-	}
 	if u.LoginType == LT_NOTYPE {
-		u.LoginType = LT_PLAIN
+		if has {
+			u.LoginType = LT_PLAIN
+		}
 	}
 
 	// for plain login, user must have existed.
@@ -194,13 +188,13 @@ func LoginUser(uname, passwd string) (*User, error) {
 
 			for _, source := range sources {
 				if source.Type == LT_LDAP {
-					u, err := LoginUserLdapSource(nil, u.LoginName, passwd,
+					u, err := LoginUserLdapSource(nil, uname, passwd,
 						source.Id, source.Cfg.(*LDAPConfig), true)
 					if err == nil {
 						return u, err
 					}
 				} else if source.Type == LT_SMTP {
-					u, err := LoginUserSMTPSource(nil, u.LoginName, passwd,
+					u, err := LoginUserSMTPSource(nil, uname, passwd,
 						source.Id, source.Cfg.(*SMTPConfig), true)
 
 					if err == nil {
@@ -295,16 +289,20 @@ var (
 	SMTPAuths  = []string{SMTP_PLAIN, SMTP_LOGIN}
 )
 
-func SmtpAuth(addr string, a smtp.Auth) error {
+func SmtpAuth(addr string, a smtp.Auth, tls bool) error {
 	c, err := smtp.Dial(addr)
 	if err != nil {
 		return err
 	}
 	defer c.Close()
 
-	if ok, _ := c.Extension("STARTTLS"); ok {
-		if err = c.StartTLS(nil); err != nil {
-			return err
+	if tls {
+		if ok, _ := c.Extension("STARTTLS"); ok {
+			if err = c.StartTLS(nil); err != nil {
+				return err
+			}
+		} else {
+			return errors.New("smtp server unsupported tls")
 		}
 	}
 
@@ -327,9 +325,11 @@ func LoginUserSMTPSource(user *User, name, passwd string, sourceId int64, cfg *S
 		auth = smtp.PlainAuth("", name, passwd, cfg.Host)
 	} else if cfg.Auth == SMTP_LOGIN {
 		auth = LoginAuth(name, passwd)
+	} else {
+		return nil, errors.New("Unsupported smtp auth type")
 	}
 
-	err := SmtpAuth(fmt.Sprintf("%s:%d", cfg.Host, cfg.Port), auth)
+	err := SmtpAuth(fmt.Sprintf("%s:%d", cfg.Host, cfg.Port), auth, cfg.TLS)
 	if err != nil {
 		return nil, err
 	}
@@ -338,10 +338,15 @@ func LoginUserSMTPSource(user *User, name, passwd string, sourceId int64, cfg *S
 		return user, nil
 	}
 
+	var loginName = name
+	idx := strings.Index(name, "@")
+	if idx > -1 {
+		loginName = name[:idx]
+	}
 	// fake a local user creation
 	user = &User{
-		LowerName:   strings.ToLower(name),
-		Name:        strings.ToLower(name),
+		LowerName:   strings.ToLower(loginName),
+		Name:        strings.ToLower(loginName),
 		LoginType:   LT_SMTP,
 		LoginSource: sourceId,
 		LoginName:   name,
