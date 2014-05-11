@@ -7,6 +7,8 @@ package models
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
+	"net/smtp"
 	"strings"
 	"time"
 
@@ -50,6 +52,22 @@ func (cfg *LDAPConfig) ToDB() ([]byte, error) {
 	return json.Marshal(cfg.Ldapsource)
 }
 
+type SMTPConfig struct {
+	Auth string
+	Host string
+	Post string
+	TLS  bool
+}
+
+// implement
+func (cfg *SMTPConfig) FromDB(bs []byte) error {
+	return json.Unmarshal(bs, cfg)
+}
+
+func (cfg *SMTPConfig) ToDB() ([]byte, error) {
+	return json.Marshal(cfg)
+}
+
 type LoginSource struct {
 	Id                int64
 	Type              int
@@ -69,6 +87,10 @@ func (source *LoginSource) LDAP() *LDAPConfig {
 	return source.Cfg.(*LDAPConfig)
 }
 
+func (source *LoginSource) SMTP() *SMTPConfig {
+	return source.Cfg.(*SMTPConfig)
+}
+
 // for xorm callback
 func (source *LoginSource) BeforeSet(colName string, val xorm.Cell) {
 	if colName == "type" {
@@ -76,6 +98,8 @@ func (source *LoginSource) BeforeSet(colName string, val xorm.Cell) {
 		switch ty {
 		case LT_LDAP:
 			source.Cfg = new(LDAPConfig)
+		case LT_SMTP:
+			source.Cfg = new(SMTPConfig)
 		}
 	}
 }
@@ -172,10 +196,19 @@ func LoginUser(uname, passwd string) (*User, error) {
 			}
 
 			for _, source := range sources {
-				u, err := LoginUserLdapSource(nil, u.LoginName, passwd,
-					source.Id, source.Cfg.(*LDAPConfig), true)
-				if err == nil {
-					return u, err
+				if source.Type == LT_LDAP {
+					u, err := LoginUserLdapSource(nil, u.LoginName, passwd,
+						source.Id, source.Cfg.(*LDAPConfig), true)
+					if err == nil {
+						return u, err
+					}
+				} else if source.Type == LT_SMTP {
+					u, err := LoginUserSMTPSource(nil, u.LoginName, passwd,
+						source.Id, source.Cfg.(*SMTPConfig), true)
+
+					if err == nil {
+						return u, err
+					}
 				}
 			}
 
@@ -200,6 +233,8 @@ func LoginUser(uname, passwd string) (*User, error) {
 			return LoginUserLdapSource(u, u.LoginName, passwd,
 				source.Id, source.Cfg.(*LDAPConfig), false)
 		case LT_SMTP:
+			return LoginUserSMTPSource(u, u.LoginName, passwd,
+				source.Id, source.Cfg.(*SMTPConfig), false)
 		}
 		return nil, ErrUnsupportedLoginType
 	}
@@ -228,6 +263,92 @@ func LoginUserLdapSource(user *User, name, passwd string, sourceId int64, cfg *L
 		IsActive:    true,
 		Passwd:      passwd,
 		Email:       mail,
+	}
+
+	return RegisterUser(user)
+}
+
+type loginAuth struct {
+	username, password string
+}
+
+func LoginAuth(username, password string) smtp.Auth {
+	return &loginAuth{username, password}
+}
+
+func (a *loginAuth) Start(server *smtp.ServerInfo) (string, []byte, error) {
+	return "LOGIN", []byte(a.username), nil
+}
+
+func (a *loginAuth) Next(fromServer []byte, more bool) ([]byte, error) {
+	if more {
+		switch string(fromServer) {
+		case "Username:":
+			return []byte(a.username), nil
+		case "Password:":
+			return []byte(a.password), nil
+		}
+	}
+	return nil, nil
+}
+
+var (
+	smtpAuths = []string{"plain", "login", ""}
+)
+
+func SmtpAuth(addr string, a smtp.Auth) error {
+	c, err := smtp.Dial(addr)
+	if err != nil {
+		return err
+	}
+	defer c.Close()
+
+	if ok, _ := c.Extension("STARTTLS"); ok {
+		if err = c.StartTLS(nil); err != nil {
+			return err
+		}
+	}
+
+	if ok, _ := c.Extension("AUTH"); ok {
+		if err = c.Auth(a); err != nil {
+			return err
+		}
+		return nil
+	} else {
+		return ErrUnsupportedLoginType
+	}
+}
+
+// Query if name/passwd can login against the LDAP direcotry pool
+// Create a local user if success
+// Return the same LoginUserPlain semantic
+func LoginUserSMTPSource(user *User, name, passwd string, sourceId int64, cfg *SMTPConfig, autoRegister bool) (*User, error) {
+	var auth smtp.Auth
+	if cfg.Auth == "plain" {
+		auth = smtp.PlainAuth("", name, passwd, cfg.Host)
+	} else if cfg.Auth == "login" {
+		auth = LoginAuth(name, passwd)
+	}
+
+	err := SmtpAuth(fmt.Sprintf("%s:%d", cfg.Host, cfg.Post), auth)
+	if err != nil {
+		return nil, err
+	}
+
+	if !autoRegister {
+		return user, nil
+	}
+
+	// fake a local user creation
+	user = &User{
+		LowerName:   strings.ToLower(name),
+		Name:        strings.ToLower(name),
+		LoginType:   LT_SMTP,
+		LoginSource: sourceId,
+		LoginName:   name,
+		IsActive:    true,
+		Passwd:      passwd,
+		Email:       name,
 	}
 
 	return RegisterUser(user)
