@@ -9,6 +9,7 @@ import (
 
 	"github.com/go-martini/martini"
 	"github.com/go-xorm/core"
+
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/auth/ldap"
@@ -114,7 +115,8 @@ func EditAuthSourcePost(ctx *middleware.Context, form auth.AuthenticationForm) {
 	}
 
 	var config core.Conversion
-	if form.Type == models.LT_LDAP {
+	switch form.Type {
+	case models.LT_LDAP:
 		config = &models.LDAPConfig{
 			Ldapsource: ldap.Ldapsource{
 				Host:         form.Host,
@@ -127,13 +129,16 @@ func EditAuthSourcePost(ctx *middleware.Context, form auth.AuthenticationForm) {
 				Name:         form.AuthName,
 			},
 		}
-	} else if form.Type == models.LT_SMTP {
+	case models.LT_SMTP:
 		config = &models.SMTPConfig{
 			Auth: form.SmtpAuth,
 			Host: form.Host,
 			Port: form.Port,
 			TLS:  form.Tls,
 		}
+	default:
+		ctx.Error(400)
+		return
 	}
 
 	u := models.LoginSource{
@@ -145,10 +150,7 @@ func EditAuthSourcePost(ctx *middleware.Context, form auth.AuthenticationForm) {
 	}
 
 	if err := models.UpdateSource(&u); err != nil {
-		switch err {
-		default:
-			ctx.Handle(500, "admin.auths.EditAuth", err)
-		}
+		ctx.Handle(500, "admin.auths.EditAuth", err)
 		return
 	}
 
