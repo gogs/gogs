@@ -10,8 +10,6 @@ import (
 
 	"github.com/go-martini/martini"
 
-	"github.com/gogits/git"
-
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/base"
@@ -57,7 +55,7 @@ func SettingPost(ctx *middleware.Context, form auth.RepoSettingForm) {
 
 		br := form.Branch
 
-		if git.IsBranchExist(models.RepoPath(ctx.User.Name, ctx.Repo.Repository.Name), br) {
+		if ctx.Repo.GitRepo.IsBranchExist(br) {
 			ctx.Repo.Repository.DefaultBranch = br
 		}
 		ctx.Repo.Repository.Description = form.Description

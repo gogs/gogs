@@ -3,7 +3,7 @@
 {{template "repo/nav" .}}
 {{template "repo/toolbar" .}}
 <div id="body" class="container">
-    <div id="issue">
+    <div id="issue" data-id="{{.Issue.Id}}">
         <div id="issue-{{.Issue.Id}}" class="issue-whole issue-is-opening">
             <div class="issue-wrap col-md-10">
                 <div class="issue-head clearfix">
@@ -100,7 +100,22 @@
             </div>
 
             <div class="issue-bar col-md-2">
-                <div class="assignee">
+                <div class="assignee" data-assigned="{{if .Issue.Assignee}}{{.Issue.Assignee.Id}}{{else}}0{{end}}" data-ajax="{url}">{{if .IsRepositoryOwner}}
+                    <div class="pull-right action">
+                        <button type="button" class="dropdown-toggle btn btn-default btn-sm" data-toggle="dropdown">
+                            <i class="fa fa-group"></i>
+                            <span class="caret"></span>
+                        </button>
+                        <div class="dropdown-menu dropdown-menu-right">
+                            <ul class="list-unstyled">
+                                <li data-uid="0" class="clear-assignee hidden"><i class="fa fa-times-circle-o"></i> Clear assignee</li>
+                                {{range .Collaborators}}
+                                <li data-uid="{{.Id}}"><img src="{{.AvatarLink}}"><strong>{{.Name}}</strong> {{.FullName}}</li>
+                                {{end}}
+                                <li data-uid="1"><img src="//1.gravatar.com/avatar/f72f7454ce9d710baa506394f68f4132"><strong>fuxiaohei</strong></li>
+                            </ul>
+                        </div>
+                    </div>{{end}}
                     <h4>Assignee</h4>
                     <p>{{if .Issue.Assignee}}<img src="{{.Issue.Assignee.AvatarLink}}"><strong>{{.Issue.Assignee.Name}}</strong>{{else}}No one assigned{{end}}</p>
                 </div>

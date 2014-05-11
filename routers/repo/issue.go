@@ -254,10 +254,12 @@ func ViewIssue(ctx *middleware.Context, params martini.Params) {
 		}
 	}
 
-	// Update issue-user.
-	if err = models.UpdateIssueUserPairByRead(ctx.User.Id, issue.Id); err != nil {
-		ctx.Handle(500, "issue.ViewIssue(UpdateIssueUserPairByRead): %v", err)
-		return
+	if ctx.IsSigned {
+		// Update issue-user.
+		if err = models.UpdateIssueUserPairByRead(ctx.User.Id, issue.Id); err != nil {
+			ctx.Handle(500, "issue.ViewIssue(UpdateIssueUserPairByRead): %v", err)
+			return
+		}
 	}
 
 	// Get poster and Assignee.
@@ -457,4 +459,12 @@ func Milestones(ctx *middleware.Context) {
 	ctx.Data["IsRepoToolbarIssuesList"] = true
 
 	ctx.HTML(200, "issue/milestone")
+}
+
+func NewMilestones(ctx *middleware.Context) {
+	ctx.Data["Title"] = "New Milestones"
+	ctx.Data["IsRepoToolbarIssues"] = true
+	ctx.Data["IsRepoToolbarIssuesList"] = true
+
+	ctx.HTML(200, "issue/milestone_new")
 }

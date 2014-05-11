@@ -535,8 +535,27 @@ function initIssue() {
     }());
 
     // assignee
+    var is_issue_bar = $('.issue-bar').length > 0;
+    var $a = $('.assignee');
+    if($a.data("assigned") > 0){
+        $('.clear-assignee').toggleShow();
+    }
     $('.assignee', '#issue').on('click', 'li', function () {
         var uid = $(this).data("uid");
+        if(is_issue_bar){
+            var assignee = $a.data("assigned");
+            if(uid != assignee){
+                $.post($a.data("ajax"), {
+                    issue: $('#issue').data("id"),
+                    assign: assignee
+                }, function (json) {
+                    if (json.ok) {
+                        window.location.reload();
+                    }
+                })
+            }
+            return;
+        }
         $('#assignee').val(uid);
         if (uid > 0) {
             $('.clear-assignee').toggleShow();

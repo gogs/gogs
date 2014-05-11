@@ -58,7 +58,8 @@ func NewUserPost(ctx *middleware.Context, form auth.RegisterForm) {
 		fields := strings.Split(form.LoginType, "-")
 		u.LoginType, _ = strconv.Atoi(fields[0])
 		u.LoginSource, _ = strconv.ParseInt(fields[1], 10, 64)
-		fmt.Println(u.LoginSource)
+		u.LoginName = form.LoginName
+		fmt.Println(u.LoginType, u.LoginSource, u.LoginName)
 	}
 
 	var err error

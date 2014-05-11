@@ -42,7 +42,7 @@ func AddSource(name string, host string, port int, basedn string, attributes str
 func LoginUser(name, passwd string) (a string, r bool) {
 	r = false
 	for _, ls := range Authensource {
-		a, r = ls.searchEntry(name, passwd)
+		a, r = ls.SearchEntry(name, passwd)
 		if r {
 			return
 		}
@@ -51,7 +51,7 @@ func LoginUser(name, passwd string) (a string, r bool) {
 }
 
 // searchEntry : search an LDAP source if an entry (name, passwd) is valide and in the specific filter
-func (ls Ldapsource) searchEntry(name, passwd string) (string, bool) {
+func (ls Ldapsource) SearchEntry(name, passwd string) (string, bool) {
 	l, err := goldap.Dial("tcp", fmt.Sprintf("%s:%d", ls.Host, ls.Port))
 	if err != nil {
 		log.Debug("LDAP Connect error, disabled source %s", ls.Host)
