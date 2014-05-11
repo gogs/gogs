@@ -79,7 +79,6 @@
     $(function(){
         $('#login-type').on("change",function(){
             var v = $(this).val();
-            alert(v.indexOf("0-")+1);
             if(v.indexOf("0-")+1){
                 $('.auth-name').toggleHide();
                 $(".pwd").find("input").attr("required","required")
