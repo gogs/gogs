@@ -58,7 +58,7 @@ func CreateRelease(repoPath string, rel *Release, gitRepo *git.Repository) error
 		return ErrReleaseAlreadyExist
 	}
 
-	if !git.IsTagExist(repoPath, rel.TagName) {
+	if !gitRepo.IsTagExist(rel.TagName) {
 		_, stderr, err := com.ExecCmdDir(repoPath, "git", "tag", rel.TagName, "-m", rel.Title)
 		if err != nil {
 			return err

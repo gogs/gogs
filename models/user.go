@@ -44,6 +44,7 @@ type User struct {
 	Passwd        string `xorm:"not null"`
 	LoginType     int
 	LoginSource   int64 `xorm:"not null default 0"`
+	LoginName     string
 	Type          int
 	NumFollowers  int
 	NumFollowings int
