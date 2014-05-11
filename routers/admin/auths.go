@@ -5,7 +5,6 @@
 package admin
 
 import (
-	"errors"
 	"strings"
 
 	"github.com/go-martini/martini"
@@ -38,7 +37,8 @@ func NewAuthSourcePost(ctx *middleware.Context, form auth.AuthenticationForm) {
 	}
 
 	var u core.Conversion
-	if form.Type == models.LT_LDAP {
+	switch form.Type {
+	case models.LT_LDAP:
 		u = &models.LDAPConfig{
 			Ldapsource: ldap.Ldapsource{
 				Host:         form.Host,
@@ -51,15 +51,16 @@ func NewAuthSourcePost(ctx *middleware.Context, form auth.AuthenticationForm) {
 				Name:         form.AuthName,
 			},
 		}
-	} else if form.Type == models.LT_SMTP {
+	case models.LT_SMTP:
 		u = &models.SMTPConfig{
 			Auth: form.SmtpAuth,
-			Host: form.SmtpHost,
-			Port: form.SmtpPort,
-			TLS:  form.SmtpTls,
+			Host: form.Host,
+			Port: form.Port,
+			TLS:  form.Tls,
 		}
-	} else {
-		panic(errors.New("not allow type"))
+	default:
+		ctx.Error(400)
+		return
 	}
 
 	var source = &models.LoginSource{
@@ -71,10 +72,7 @@ func NewAuthSourcePost(ctx *middleware.Context, form auth.AuthenticationForm) {
 	}
 
 	if err := models.AddSource(source); err != nil {
-		switch err {
-		default:
-			ctx.Handle(500, "admin.auths.NewAuth", err)
-		}
+		ctx.Handle(500, "admin.auths.NewAuth", err)
 		return
 	}
 
@@ -132,9 +130,9 @@ func EditAuthSourcePost(ctx *middleware.Context, form auth.AuthenticationForm) {
 	} else if form.Type == models.LT_SMTP {
 		config = &models.SMTPConfig{
 			Auth: form.SmtpAuth,
-			Host: form.SmtpHost,
-			Port: form.SmtpPort,
-			TLS:  form.SmtpTls,
+			Host: form.Host,
+			Port: form.Port,
+			TLS:  form.Tls,
 		}
 	}
 

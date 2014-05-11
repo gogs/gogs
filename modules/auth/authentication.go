@@ -27,9 +27,7 @@ type AuthenticationForm struct {
 	MsAdSA            string `form:"ms_ad_sa"`
 	IsActived         bool   `form:"is_actived"`
 	SmtpAuth          string `form:"smtpauth"`
-	SmtpHost          string `form:"smtphost"`
-	SmtpPort          int    `form:"smtpport"`
-	SmtpTls           bool   `form:"smtptls"`
+	Tls               bool   `form:"tls"`
 	AllowAutoRegister bool   `form:"allowautoregister"`
 }
 
