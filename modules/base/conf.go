@@ -49,6 +49,7 @@ var (
 	AppName          string
 	AppLogo          string
 	AppUrl           string
+	SshPort          int
 	OfflineMode      bool
 	DisableRouterLog bool
 	ProdMode         bool
@@ -330,6 +331,7 @@ func NewConfigContext() {
 	AppLogo = Cfg.MustValue("", "APP_LOGO", "img/favicon.png")
 	AppUrl = Cfg.MustValue("server", "ROOT_URL")
 	Domain = Cfg.MustValue("server", "DOMAIN")
+	SshPort = Cfg.MustInt("server", "SSH_PORT", 22)
 	OfflineMode = Cfg.MustBool("server", "OFFLINE_MODE", false)
 	DisableRouterLog = Cfg.MustBool("server", "DISABLE_ROUTER_LOG", false)
 	SecretKey = Cfg.MustValue("security", "SECRET_KEY")
