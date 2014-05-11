@@ -77,7 +77,7 @@ type LoginSource struct {
 	Cfg               core.Conversion `xorm:"TEXT"`
 	Created           time.Time       `xorm:"created"`
 	Updated           time.Time       `xorm:"updated"`
-	AllowAutoRegisted bool            `xorm:"not null default false"`
+	AllowAutoRegister bool            `xorm:"not null default false"`
 }
 
 func (source *LoginSource) TypeString() string {
@@ -180,7 +180,7 @@ func LoginUser(uname, passwd string) (*User, error) {
 	} else {
 		if !has {
 			var sources []LoginSource
-			cond := &LoginSource{IsActived: true, AllowAutoRegisted: true}
+			cond := &LoginSource{IsActived: true, AllowAutoRegister: true}
 			err = orm.UseBool().Find(&sources, cond)
 			if err != nil {
 				return nil, err
