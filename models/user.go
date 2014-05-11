@@ -27,11 +27,14 @@ const (
 )
 
 var (
-	ErrUserOwnRepos     = errors.New("User still have ownership of repositories")
-	ErrUserAlreadyExist = errors.New("User already exist")
-	ErrUserNotExist     = errors.New("User does not exist")
-	ErrEmailAlreadyUsed = errors.New("E-mail already used")
-	ErrUserNameIllegal  = errors.New("User name contains illegal characters")
+	ErrUserOwnRepos          = errors.New("User still have ownership of repositories")
+	ErrUserAlreadyExist      = errors.New("User already exist")
+	ErrUserNotExist          = errors.New("User does not exist")
+	ErrEmailAlreadyUsed      = errors.New("E-mail already used")
+	ErrUserNameIllegal       = errors.New("User name contains illegal characters")
+	ErrLoginSourceNotExist   = errors.New("Login source does not exist")
+	ErrLoginSourceNotActived = errors.New("Login source is not actived")
+	ErrUnsupportedLoginType  = errors.New("Login source is unknow")
 )
 
 // User represents the object of individual and member of organization.
@@ -438,30 +441,6 @@ func SearchUserByName(key string, limit int) (us []*User, err error) {
 	us = make([]*User, 0, limit)
 	err = orm.Limit(limit).Where("lower_name like '%" + key + "%'").Find(&us)
 	return us, err
-}
-
-// LoginUserPlain validates user by raw user name and password.
-func LoginUserPlain(uname, passwd string) (*User, error) {
-	var u *User
-	if strings.Contains(uname, "@") {
-		u = &User{Email: uname}
-	} else {
-		u = &User{LowerName: strings.ToLower(uname)}
-	}
-
-	has, err := orm.Get(u)
-	if err != nil {
-		return nil, err
-	} else if !has {
-		return nil, ErrUserNotExist
-	}
-
-	newUser := &User{Passwd: passwd, Salt: u.Salt}
-	newUser.EncodePasswd()
-	if u.Passwd != newUser.Passwd {
-		return nil, ErrUserNotExist
-	}
-	return u, nil
 }
 
 // Follow is connection request for receiving user notifycation.
