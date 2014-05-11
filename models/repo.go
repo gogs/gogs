@@ -18,6 +18,7 @@ import (
 
 	"github.com/Unknwon/cae/zip"
 	"github.com/Unknwon/com"
+	qlog "github.com/qiniu/log"
 
 	"github.com/gogits/git"
 
@@ -39,8 +40,38 @@ var (
 )
 
 func LoadRepoConfig() {
-	LanguageIgns = strings.Split(base.Cfg.MustValue("repository", "LANG_IGNS"), "|")
-	Licenses = strings.Split(base.Cfg.MustValue("repository", "LICENSES"), "|")
+	workDir, err := base.ExecDir()
+	if err != nil {
+		qlog.Fatalf("Fail to get work directory: %s\n", err)
+	}
+
+	// Load .gitignore and license files.
+	types := []string{"gitignore", "license"}
+	typeFiles := make([][]string, 2)
+	for i, t := range types {
+		cfgPath := filepath.Join(workDir, "conf", t)
+		files, err := com.StatDir(cfgPath)
+		if err != nil {
+			qlog.Fatalf("Fail to get default %s files: %v\n", t, err)
+		}
+		cfgPath = filepath.Join(workDir, "custom/conf/gitignore")
+		if com.IsDir(cfgPath) {
+			customFiles, err := com.StatDir(cfgPath)
+			if err != nil {
+				qlog.Fatalf("Fail to get custom %s files: %v\n", t, err)
+			}
+
+			for _, f := range customFiles {
+				if !com.IsSliceContainsStr(files, f) {
+					files = append(files, f)
+				}
+			}
+		}
+		typeFiles[i] = files
+	}
+
+	LanguageIgns = typeFiles[0]
+	Licenses = typeFiles[1]
 }
 
 func NewRepoContext() {
@@ -49,15 +80,12 @@ func NewRepoContext() {
 	// Check if server has basic git setting.
 	stdout, stderr, err := com.ExecCmd("git", "config", "--get", "user.name")
 	if strings.Contains(stderr, "fatal:") {
-		fmt.Printf("repo.NewRepoContext(fail to get git user.name): %s", stderr)
-		os.Exit(2)
+		qlog.Fatalf("repo.NewRepoContext(fail to get git user.name): %s", stderr)
 	} else if err != nil || len(strings.TrimSpace(stdout)) == 0 {
 		if _, stderr, err = com.ExecCmd("git", "config", "--global", "user.email", "gogitservice@gmail.com"); err != nil {
-			fmt.Printf("repo.NewRepoContext(fail to set git user.email): %s", stderr)
-			os.Exit(2)
+			qlog.Fatalf("repo.NewRepoContext(fail to set git user.email): %s", stderr)
 		} else if _, stderr, err = com.ExecCmd("git", "config", "--global", "user.name", "Gogs"); err != nil {
-			fmt.Printf("repo.NewRepoContext(fail to set git user.name): %s", stderr)
-			os.Exit(2)
+			qlog.Fatalf("repo.NewRepoContext(fail to set git user.name): %s", stderr)
 		}
 	}
 }
