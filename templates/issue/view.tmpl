@@ -100,7 +100,7 @@
             </div>
 
             <div class="issue-bar col-md-2">
-                <div class="assignee" data-assigned="{{if .Issue.Assignee}}{{.Issue.Assignee.Id}}{{else}}0{{end}}" data-ajax="{url}">{{if .IsRepositoryOwner}}
+                <div class="assignee" data-assigned="{{if .Issue.Assignee}}{{.Issue.Assignee.Id}}{{else}}0{{end}}" data-ajax="{{.Issue.Index}}/assignee">{{if .IsRepositoryOwner}}
                     <div class="pull-right action">
                         <button type="button" class="dropdown-toggle btn btn-default btn-sm" data-toggle="dropdown">
                             <i class="fa fa-group"></i>
@@ -112,7 +112,6 @@
                                 {{range .Collaborators}}
                                 <li data-uid="{{.Id}}"><img src="{{.AvatarLink}}"><strong>{{.Name}}</strong> {{.FullName}}</li>
                                 {{end}}
-                                <li data-uid="1"><img src="//1.gravatar.com/avatar/f72f7454ce9d710baa506394f68f4132"><strong>fuxiaohei</strong></li>
                             </ul>
                         </div>
                     </div>{{end}}

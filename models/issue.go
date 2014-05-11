@@ -349,8 +349,12 @@ func UpdateIssueUserPairByAssignee(aid, iid int64) error {
 		return err
 	}
 
+	// Assignee ID equals to 0 means clear assignee.
+	if aid == 0 {
+		return nil
+	}
 	rawSql = "UPDATE `issue_user` SET is_assigned = true WHERE uid = ? AND issue_id = ?"
-	_, err := orm.Exec(rawSql, true, aid, iid)
+	_, err := orm.Exec(rawSql, aid, iid)
 	return err
 }
 
