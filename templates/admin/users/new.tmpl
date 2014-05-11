@@ -24,6 +24,13 @@
 							</select>
 						</div>
 					</div>
+
+					<div class="form-group">
+					    <label class="col-md-3 control-label">Auth Login Name: </label>
+					    <div class="col-md-7">
+							<input name="loginname" class="form-control" placeholder="Type auth login's username" value="{{.loginname}}">
+						</div>
+					</div>
 					
 					<div class="form-group {{if .Err_UserName}}has-error has-feedback{{end}}">
 						<label class="col-md-3 control-label">Username: </label>
