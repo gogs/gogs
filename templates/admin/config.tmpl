@@ -194,12 +194,14 @@
 
             <div class="panel-body">
                 <dl class="dl-horizontal admin-dl-horizontal">
+                    {{range .Loggers}}
                     <dt>Log Mode</dt>
-                    <dd>{{.LogMode}}</dd>
+                    <dd>{{.Mode}}</dd>
                     <dt>Log Config</dt>
                     <dd>
-                        <div style="padding-top: 5px;"><pre>{{.LogConfig}}</pre></div>
+                        <div style="padding-top: 5px;"><pre>{{.Config}}</pre></div>
                     </dd>
+                    {{end}}
                 </dl>
                 
             </div>

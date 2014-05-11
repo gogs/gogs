@@ -211,8 +211,14 @@ func Config(ctx *middleware.Context) {
 	ctx.Data["PictureService"] = base.PictureService
 	ctx.Data["DisableGravatar"] = base.DisableGravatar
 
-	ctx.Data["LogMode"] = base.LogMode
-	ctx.Data["LogConfig"] = base.LogConfig
+	type logger struct {
+		Mode, Config string
+	}
+	loggers := make([]*logger, len(base.LogModes))
+	for i := range base.LogModes {
+		loggers[i] = &logger{base.LogModes[i], base.LogConfigs[i]}
+	}
+	ctx.Data["Loggers"] = loggers
 
 	ctx.HTML(200, "admin/config")
 }

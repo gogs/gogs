@@ -10,8 +10,7 @@ import (
 )
 
 var (
-	logger       *logs.BeeLogger
-	Mode, Config string
+	loggers []*logs.BeeLogger
 )
 
 func init() {
@@ -19,32 +18,54 @@ func init() {
 }
 
 func NewLogger(bufLen int64, mode, config string) {
-	Mode, Config = mode, config
-	logger = logs.NewLogger(bufLen)
+	logger := logs.NewLogger(bufLen)
+
+	isExist := false
+	for _, l := range loggers {
+		if l.Adapter == mode {
+			isExist = true
+			l = logger
+		}
+	}
+	if !isExist {
+		loggers = append(loggers, logger)
+	}
 	logger.SetLogFuncCallDepth(3)
 	logger.SetLogger(mode, config)
 }
 
 func Trace(format string, v ...interface{}) {
-	logger.Trace(format, v...)
+	for _, logger := range loggers {
+		logger.Trace(format, v...)
+	}
 }
 
 func Debug(format string, v ...interface{}) {
-	logger.Debug(format, v...)
+	for _, logger := range loggers {
+		logger.Debug(format, v...)
+	}
 }
 
 func Info(format string, v ...interface{}) {
-	logger.Info(format, v...)
+	for _, logger := range loggers {
+		logger.Info(format, v...)
+	}
 }
 
 func Error(format string, v ...interface{}) {
-	logger.Error(format, v...)
+	for _, logger := range loggers {
+		logger.Error(format, v...)
+	}
 }
 
 func Warn(format string, v ...interface{}) {
-	logger.Warn(format, v...)
+	for _, logger := range loggers {
+		logger.Warn(format, v...)
+	}
 }
 
 func Critical(format string, v ...interface{}) {
-	logger.Critical(format, v...)
+	for _, logger := range loggers {
+		logger.Critical(format, v...)
+	}
 }
