@@ -67,7 +67,7 @@ func NewAuthSourcePost(ctx *middleware.Context, form auth.AuthenticationForm) {
 		Type:              form.Type,
 		Name:              form.AuthName,
 		IsActived:         true,
-		AllowAutoRegisted: form.AllowAutoRegister,
+		AllowAutoRegister: form.AllowAutoRegister,
 		Cfg:               u,
 	}
 
@@ -140,7 +140,7 @@ func EditAuthSourcePost(ctx *middleware.Context, form auth.AuthenticationForm) {
 		Name:              form.AuthName,
 		IsActived:         form.IsActived,
 		Type:              form.Type,
-		AllowAutoRegisted: form.AllowAutoRegister,
+		AllowAutoRegister: form.AllowAutoRegister,
 		Cfg:               config,
 	}
 
