@@ -1,7 +1,7 @@
 #!/bin/sh
 
-PID="tmp/supervisord.pid"
-CONF="etc/supervisord.conf"
+PID="/tmp/supervisord.pid"
+CONF="conf/etc/supervisord.conf"
 
 stop() {
     if [ -f $PID ]; then
