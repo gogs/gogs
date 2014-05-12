@@ -721,7 +721,7 @@ func GetRepositoryById(id int64) (*Repository, error) {
 	return repo, nil
 }
 
-// GetRepositories returns the list of repositories of given user.
+// GetRepositories returns a list of repositories of given user.
 func GetRepositories(user *User, private bool) ([]*Repository, error) {
 	repos := make([]*Repository, 0, 10)
 	sess := orm.Desc("updated")
@@ -756,6 +756,36 @@ func GetCollaboratorNames(repoName string) ([]string, error) {
 		names[i] = accesses[i].UserName
 	}
 	return names, nil
+}
+
+// GetCollaborativeRepos returns a list of repositories that user is collaborator.
+func GetCollaborativeRepos(uname string) ([]*Repository, error) {
+	uname = strings.ToLower(uname)
+	accesses := make([]*Access, 0, 10)
+	if err := orm.Find(&accesses, &Access{UserName: uname}); err != nil {
+		return nil, err
+	}
+
+	repos := make([]*Repository, 0, 10)
+	for _, access := range accesses {
+		if strings.HasPrefix(access.RepoName, uname) {
+			continue
+		}
+
+		infos := strings.Split(access.RepoName, "/")
+		u, err := GetUserByName(infos[0])
+		if err != nil {
+			return nil, err
+		}
+
+		repo, err := GetRepositoryByName(u.Id, infos[1])
+		if err != nil {
+			return nil, err
+		}
+		repo.Owner = u
+		repos = append(repos, repo)
+	}
+	return repos, nil
 }
 
 // GetCollaborators returns a list of users of repository's collaborators.

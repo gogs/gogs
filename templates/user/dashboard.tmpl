@@ -40,9 +40,22 @@
                     </div>
                 </div>
             </div>
+            
             <div class="panel-body">
                 <ul class="list-group">{{range .MyRepos}}
                     <li class="list-group-item"><a href="/{{$.SignedUserName}}/{{.Name}}">
+                        <!-- <span class="stars pull-right"><i class="fa fa-star"></i>{{.NumStars}}</span> -->
+                        <i class="fa fa-book"></i>{{.Name}}{{if .IsPrivate}} <span class="label label-default">Private</span>{{end}}</a>
+                    </li>{{end}}
+                </ul>
+            </div>
+        </div>
+
+        <div class="panel panel-default repo-panel">
+            <div class="panel-heading">Collaborative Repositories</div>
+            <div class="panel-body">
+                <ul class="list-group">{{range .CollaborativeRepos}}
+                    <li class="list-group-item"><a href="/{{.Owner.Name}}/{{.Name}}">
                         <!-- <span class="stars pull-right"><i class="fa fa-star"></i>{{.NumStars}}</span> -->
                         <i class="fa fa-book"></i>{{.Name}}{{if .IsPrivate}} <span class="label label-default">Private</span>{{end}}</a>
                     </li>{{end}}
