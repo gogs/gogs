@@ -22,14 +22,21 @@ func Dashboard(ctx *middleware.Context) {
 	ctx.Data["PageIsUserDashboard"] = true
 	repos, err := models.GetRepositories(&models.User{Id: ctx.User.Id}, true)
 	if err != nil {
-		ctx.Handle(500, "user.Dashboard", err)
+		ctx.Handle(500, "home.Dashboard(GetRepositories)", err)
 		return
 	}
 	ctx.Data["MyRepos"] = repos
 
+	collaRepos, err := models.GetCollaborativeRepos(ctx.User.Name)
+	if err != nil {
+		ctx.Handle(500, "home.Dashboard(GetCollaborativeRepos)", err)
+		return
+	}
+	ctx.Data["CollaborativeRepos"] = collaRepos
+
 	actions, err := models.GetFeeds(ctx.User.Id, 0, false)
 	if err != nil {
-		ctx.Handle(500, "user.Dashboard", err)
+		ctx.Handle(500, "home.Dashboard", err)
 		return
 	}
 
