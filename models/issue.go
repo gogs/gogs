@@ -20,9 +20,9 @@ var (
 // Issue represents an issue or pull request of repository.
 type Issue struct {
 	Id              int64
+	RepoId          int64 `xorm:"INDEX"`
 	Index           int64 // Index in one repository.
 	Name            string
-	RepoId          int64       `xorm:"INDEX"`
 	Repo            *Repository `xorm:"-"`
 	PosterId        int64
 	Poster          *User `xorm:"-"`
@@ -390,7 +390,7 @@ func UpdateIssueUserPairsByMentions(uids []int64, iid int64) error {
 // Label represents a label of repository for issues.
 type Label struct {
 	Id              int64
-	Rid             int64 `xorm:"INDEX"`
+	RepoId          int64 `xorm:"INDEX"`
 	Name            string
 	Color           string
 	NumIssues       int
@@ -401,15 +401,51 @@ type Label struct {
 // Milestone represents a milestone of repository.
 type Milestone struct {
 	Id              int64
-	Rid             int64 `xorm:"INDEX"`
+	RepoId          int64 `xorm:"INDEX"`
+	Index           int64
 	Name            string
 	Content         string
+	RenderedContent string `xorm:"-"`
 	IsClosed        bool
 	NumIssues       int
 	NumClosedIssues int
+	NumOpenIssues   int `xorm:"-"`
 	Completeness    int // Percentage(1-100).
 	Deadline        time.Time
 	ClosedDate      time.Time
+}
+
+// CalOpenIssues calculates the open issues of milestone.
+func (m *Milestone) CalOpenIssues() {
+	m.NumOpenIssues = m.NumIssues - m.NumClosedIssues
+}
+
+// NewMilestone creates new milestone of repository.
+func NewMilestone(m *Milestone) (err error) {
+	sess := orm.NewSession()
+	defer sess.Close()
+	if err = sess.Begin(); err != nil {
+		return err
+	}
+
+	if _, err = sess.Insert(m); err != nil {
+		sess.Rollback()
+		return err
+	}
+
+	rawSql := "UPDATE `repository` SET num_milestones = num_milestones + 1 WHERE id = ?"
+	if _, err = sess.Exec(rawSql, m.RepoId); err != nil {
+		sess.Rollback()
+		return err
+	}
+	return sess.Commit()
+}
+
+// GetMilestones returns a list of milestones of given repository and status.
+func GetMilestones(repoId int64, isClosed bool) ([]*Milestone, error) {
+	miles := make([]*Milestone, 0, 10)
+	err := orm.Where("repo_id=?", repoId).And("is_closed=?", isClosed).Find(&miles)
+	return miles, err
 }
 
 // Issue types.

@@ -14,6 +14,13 @@ import (
 	"github.com/gogits/gogs/modules/middleware/binding"
 )
 
+// __________                           .__  __
+// \______   \ ____ ______   ____  _____|__|/  |_  ___________ ___.__.
+//  |       _// __ \\____ \ /  _ \/  ___/  \   __\/  _ \_  __ <   |  |
+//  |    |   \  ___/|  |_> >  <_> )___ \|  ||  | (  <_> )  | \/\___  |
+//  |____|_  /\___  >   __/ \____/____  >__||__|  \____/|__|   / ____|
+//         \/     \/|__|              \/                       \/
+
 type CreateRepoForm struct {
 	RepoName    string `form:"repo" binding:"Required;AlphaDash;MaxSize(100)"`
 	Private     bool   `form:"private"`
@@ -63,7 +70,7 @@ func (f *MigrateRepoForm) Validate(errors *binding.Errors, req *http.Request, co
 type RepoSettingForm struct {
 	RepoName    string `form:"name" binding:"Required;AlphaDash;MaxSize(100)"`
 	Description string `form:"desc" binding:"MaxSize(100)"`
-	Website     string `form:"url" binding:"Url;MaxSize(100)"`
+	Website     string `form:"site" binding:"Url;MaxSize(100)"`
 	Branch      string `form:"branch"`
 	Interval    int    `form:"interval"`
 	Private     bool   `form:"private"`
@@ -84,6 +91,13 @@ func (f *RepoSettingForm) Validate(errors *binding.Errors, req *http.Request, co
 	validate(errors, data, f)
 }
 
+//  __      __      ___.   .__    .__            __
+// /  \    /  \ ____\_ |__ |  |__ |  |__   ____ |  | __
+// \   \/\/   // __ \| __ \|  |  \|  |  \ /  _ \|  |/ /
+//  \        /\  ___/| \_\ \   Y  \   Y  (  <_> )    <
+//   \__/\  /  \___  >___  /___|  /___|  /\____/|__|_ \
+//        \/       \/    \/     \/     \/            \/
+
 type NewWebhookForm struct {
 	Url         string `form:"url" binding:"Required;Url"`
 	ContentType string `form:"content_type" binding:"Required"`
@@ -101,6 +115,86 @@ func (f *NewWebhookForm) Name(field string) string {
 }
 
 func (f *NewWebhookForm) Validate(errors *binding.Errors, req *http.Request, context martini.Context) {
+	data := context.Get(reflect.TypeOf(base.TmplData{})).Interface().(base.TmplData)
+	validate(errors, data, f)
+}
+
+// .___
+// |   | ______ ________ __   ____
+// |   |/  ___//  ___/  |  \_/ __ \
+// |   |\___ \ \___ \|  |  /\  ___/
+// |___/____  >____  >____/  \___  >
+//          \/     \/            \/
+
+type CreateIssueForm struct {
+	IssueName   string `form:"title" binding:"Required;MaxSize(50)"`
+	MilestoneId int64  `form:"milestoneid"`
+	AssigneeId  int64  `form:"assigneeid"`
+	Labels      string `form:"labels"`
+	Content     string `form:"content"`
+}
+
+func (f *CreateIssueForm) Name(field string) string {
+	names := map[string]string{
+		"IssueName": "Issue name",
+	}
+	return names[field]
+}
+
+func (f *CreateIssueForm) Validate(errors *binding.Errors, req *http.Request, context martini.Context) {
+	data := context.Get(reflect.TypeOf(base.TmplData{})).Interface().(base.TmplData)
+	validate(errors, data, f)
+}
+
+//    _____  .__.__                   __
+//   /     \ |__|  |   ____   _______/  |_  ____   ____   ____
+//  /  \ /  \|  |  | _/ __ \ /  ___/\   __\/  _ \ /    \_/ __ \
+// /    Y    \  |  |_\  ___/ \___ \  |  | (  <_> )   |  \  ___/
+// \____|__  /__|____/\___  >____  > |__|  \____/|___|  /\___  >
+//         \/             \/     \/                   \/     \/
+
+type CreateMilestoneForm struct {
+	Title    string `form:"title" binding:"Required;MaxSize(50)"`
+	Content  string `form:"content"`
+	Deadline string `form:"due_date"`
+}
+
+func (f *CreateMilestoneForm) Name(field string) string {
+	names := map[string]string{
+		"Title": "Milestone name",
+	}
+	return names[field]
+}
+
+func (f *CreateMilestoneForm) Validate(errors *binding.Errors, req *http.Request, context martini.Context) {
+	data := context.Get(reflect.TypeOf(base.TmplData{})).Interface().(base.TmplData)
+	validate(errors, data, f)
+}
+
+// __________       .__
+// \______   \ ____ |  |   ____ _____    ______ ____
+//  |       _// __ \|  | _/ __ \\__  \  /  ___// __ \
+//  |    |   \  ___/|  |_\  ___/ / __ \_\___ \\  ___/
+//  |____|_  /\___  >____/\___  >____  /____  >\___  >
+//         \/     \/          \/     \/     \/     \/
+
+type NewReleaseForm struct {
+	TagName    string `form:"tag_name" binding:"Required"`
+	Title      string `form:"title" binding:"Required"`
+	Content    string `form:"content" binding:"Required"`
+	Prerelease bool   `form:"prerelease"`
+}
+
+func (f *NewReleaseForm) Name(field string) string {
+	names := map[string]string{
+		"TagName": "Tag name",
+		"Title":   "Release title",
+		"Content": "Release content",
+	}
+	return names[field]
+}
+
+func (f *NewReleaseForm) Validate(errors *binding.Errors, req *http.Request, context martini.Context) {
 	data := context.Get(reflect.TypeOf(base.TmplData{})).Interface().(base.TmplData)
 	validate(errors, data, f)
 }
