@@ -97,12 +97,31 @@ var (
 )
 
 func RenderSpecialLink(rawBytes []byte, urlPrefix string) []byte {
-	ms := MentionPattern.FindAll(rawBytes, -1)
-	for _, m := range ms {
-		rawBytes = bytes.Replace(rawBytes, m,
-			[]byte(fmt.Sprintf(`<a href="/user/%s">%s</a>`, m[1:], m)), -1)
+	buf := bytes.NewBufferString("")
+	inCodeBlock := false
+	codeBlockPrefix := []byte("```")
+	lineBreak := []byte("\n")
+	tab := []byte("\t")
+	lines := bytes.Split(rawBytes, lineBreak)
+	for _, line := range lines {
+		if bytes.HasPrefix(line, codeBlockPrefix) {
+			inCodeBlock = !inCodeBlock
+		}
+
+		if !inCodeBlock && !bytes.HasPrefix(line, tab) {
+			ms := MentionPattern.FindAll(line, -1)
+			for _, m := range ms {
+				line = bytes.Replace(line, m,
+					[]byte(fmt.Sprintf(`<a href="/user/%s">%s</a>`, m[1:], m)), -1)
+			}
+		}
+
+		buf.Write(line)
+		buf.Write(lineBreak)
 	}
-	ms = commitPattern.FindAll(rawBytes, -1)
+
+	rawBytes = buf.Bytes()
+	ms := commitPattern.FindAll(rawBytes, -1)
 	for _, m := range ms {
 		m = bytes.TrimSpace(m)
 		i := strings.Index(string(m), "commit/")
