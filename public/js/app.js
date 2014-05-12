@@ -55,7 +55,7 @@ var Gogits = {};
         toggleShow: function () {
             $(this).removeClass("hidden");
         },
-        toggleAjax: function (successCallback) {
+        toggleAjax: function (successCallback, errorCallback) {
             var url = $(this).data("ajax");
             var method = $(this).data('ajax-method') || 'get';
             var ajaxName = $(this).data('ajax-name');
@@ -91,6 +91,7 @@ var Gogits = {};
                 url: url,
                 method: method.toUpperCase(),
                 data: data,
+                error: errorCallback,
                 success: function (d) {
                     if (successCallback) {
                         successCallback(d);
@@ -527,6 +528,8 @@ function initIssue() {
             var $this = $(this);
             $this.toggleAjax(function (resp) {
                 $($this.data("preview")).html(resp);
+            },function(){
+                $($this.data("preview")).html("no content");
             })
         });
         $('.issue-write a[data-toggle]').on("click", function () {
@@ -537,14 +540,14 @@ function initIssue() {
     // assignee
     var is_issue_bar = $('.issue-bar').length > 0;
     var $a = $('.assignee');
-    if($a.data("assigned") > 0){
+    if ($a.data("assigned") > 0) {
         $('.clear-assignee').toggleShow();
     }
     $('.assignee', '#issue').on('click', 'li', function () {
         var uid = $(this).data("uid");
-        if(is_issue_bar){
+        if (is_issue_bar) {
             var assignee = $a.data("assigned");
-            if(uid != assignee){
+            if (uid != assignee) {
                 $.post($a.data("ajax"), {
                     issue: $('#issue').data("id"),
                     assigneeid: uid
@@ -574,9 +577,9 @@ function initRelease() {
         $('[data-ajax-name=release-preview]').on("click", function () {
             var $this = $(this);
             $this.toggleAjax(function (json) {
-                if (json.ok) {
-                    $($this.data("preview")).html(json.content);
-                }
+                $($this.data("preview")).html(json.ok ? json.content : "no content");
+            }, function () {
+                $($this.data("preview")).html("no content");
             })
         });
         $('.release-write a[data-toggle]').on("click", function () {
@@ -651,6 +654,6 @@ function initRepoSetting() {
     });
 })(jQuery);
 
-String.prototype.endsWith = function(suffix) {
+String.prototype.endsWith = function (suffix) {
     return this.indexOf(suffix, this.length - suffix.length) !== -1;
 };
