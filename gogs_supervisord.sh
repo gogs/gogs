@@ -1,7 +1,14 @@
 #!/bin/sh
 
-PID="tmp/supervisord.pid"
-CONF="etc/supervisord.conf"
+echo 'plase remember to modify the command path in etc/conf/supervisord.conf(line 23)'
+
+PID="/tmp/supervisord.pid"
+CONF="conf/etc/supervisord.conf"
+
+LOGDIR="log"  
+if [ ! -d $LOGDIR ]; then  
+    mkdir $LOGDIR
+fi
 
 stop() {
     if [ -f $PID ]; then
