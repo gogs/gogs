@@ -93,17 +93,17 @@
                             </div>
                         </div>
 
-                        <div class="form-group {{if .Err_Host}}has-error has-feedback{{end}}">
+                        <div class="form-group {{if .Err_SmtpHost}}has-error has-feedback{{end}}">
                             <label class="col-md-3 control-label">Host: </label>
                             <div class="col-md-7">
-                                <input name="host" class="form-control" placeholder="Type host address" value="{{.host}}">
+                                <input name="smtphost" class="form-control" placeholder="Type host address" value="{{.smtphost}}">
                             </div>
                         </div>
 
-                        <div class="form-group {{if .Err_Port}}has-error has-feedback{{end}}">
+                        <div class="form-group {{if .Err_SmtpPort}}has-error has-feedback{{end}}">
                             <label class="col-md-3 control-label">Port: </label>
                             <div class="col-md-7">
-                                <input name="port" class="form-control" placeholder="Type port number" value="{{.port}}">
+                                <input name="smtpport" class="form-control" placeholder="Type port number" value="{{.smtpport}}">
                             </div>
                         </div>
 
