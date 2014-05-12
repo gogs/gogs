@@ -92,28 +92,31 @@ func NewRepoContext() {
 
 // Repository represents a git repository.
 type Repository struct {
-	Id              int64
-	OwnerId         int64 `xorm:"unique(s)"`
-	Owner           *User `xorm:"-"`
-	ForkId          int64
-	LowerName       string `xorm:"unique(s) index not null"`
-	Name            string `xorm:"index not null"`
-	Description     string
-	Website         string
-	NumWatches      int
-	NumStars        int
-	NumForks        int
-	NumIssues       int
-	NumClosedIssues int
-	NumOpenIssues   int `xorm:"-"`
-	NumTags         int `xorm:"-"`
-	IsPrivate       bool
-	IsMirror        bool
-	IsBare          bool
-	IsGoget         bool
-	DefaultBranch   string
-	Created         time.Time `xorm:"created"`
-	Updated         time.Time `xorm:"updated"`
+	Id                  int64
+	OwnerId             int64 `xorm:"unique(s)"`
+	Owner               *User `xorm:"-"`
+	ForkId              int64
+	LowerName           string `xorm:"unique(s) index not null"`
+	Name                string `xorm:"index not null"`
+	Description         string
+	Website             string
+	NumWatches          int
+	NumStars            int
+	NumForks            int
+	NumIssues           int
+	NumClosedIssues     int
+	NumOpenIssues       int `xorm:"-"`
+	NumMilestones       int `xorm:"NOT NULL DEFAULT 0"`
+	NumClosedMilestones int `xorm:"NOT NULL DEFAULT 0"`
+	NumOpenMilestones   int `xorm:"-"`
+	NumTags             int `xorm:"-"`
+	IsPrivate           bool
+	IsMirror            bool
+	IsBare              bool
+	IsGoget             bool
+	DefaultBranch       string
+	Created             time.Time `xorm:"created"`
+	Updated             time.Time `xorm:"updated"`
 }
 
 func (repo *Repository) GetOwner() (err error) {

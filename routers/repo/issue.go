@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/Unknwon/com"
 	"github.com/go-martini/martini"
@@ -144,9 +145,9 @@ func CreateIssuePost(ctx *middleware.Context, params martini.Params, form auth.C
 		form.AssigneeId = 0
 	}
 	issue := &models.Issue{
+		RepoId:      ctx.Repo.Repository.Id,
 		Index:       int64(ctx.Repo.Repository.NumIssues) + 1,
 		Name:        form.IssueName,
-		RepoId:      ctx.Repo.Repository.Id,
 		PosterId:    ctx.User.Id,
 		MilestoneId: form.MilestoneId,
 		AssigneeId:  form.AssigneeId,
@@ -385,7 +386,6 @@ func Comment(ctx *middleware.Context, params martini.Params) {
 		return
 	}
 
-	// TODO: check collaborators
 	// Check if issue owner changes the status of issue.
 	var newStatus string
 	if ctx.Repo.IsOwner || issue.PosterId == ctx.User.Id {
@@ -488,15 +488,64 @@ func Milestones(ctx *middleware.Context) {
 	ctx.Data["IsRepoToolbarIssues"] = true
 	ctx.Data["IsRepoToolbarIssuesList"] = true
 
+	isShowClosed := ctx.Query("state") == "closed"
+
+	miles, err := models.GetMilestones(ctx.Repo.Repository.Id, isShowClosed)
+	if err != nil {
+		ctx.Handle(500, "issue.Milestones(GetMilestones)", err)
+		return
+	}
+	for _, m := range miles {
+		m.RenderedContent = string(base.RenderSpecialLink([]byte(m.Content), ctx.Repo.RepoLink))
+		m.CalOpenIssues()
+	}
+	ctx.Data["Milestones"] = miles
+
+	if isShowClosed {
+		ctx.Data["State"] = "closed"
+	} else {
+		ctx.Data["State"] = "open"
+	}
 	ctx.HTML(200, "issue/milestone")
 }
 
-func NewMilestones(ctx *middleware.Context) {
-	ctx.Data["Title"] = "New Milestones"
+func NewMilestone(ctx *middleware.Context) {
+	ctx.Data["Title"] = "New Milestone"
+	ctx.Data["IsRepoToolbarIssues"] = true
+	ctx.Data["IsRepoToolbarIssuesList"] = true
+	ctx.HTML(200, "issue/milestone_new")
+}
+
+func NewMilestonePost(ctx *middleware.Context, form auth.CreateMilestoneForm) {
+	ctx.Data["Title"] = "New Milestone"
 	ctx.Data["IsRepoToolbarIssues"] = true
 	ctx.Data["IsRepoToolbarIssuesList"] = true
 
-	ctx.HTML(200, "issue/milestone_new")
+	var deadline time.Time
+	var err error
+	if len(form.Deadline) == 0 {
+		deadline = time.Now().AddDate(100, 0, 0)
+	} else {
+		deadline, err = time.Parse("01/02/2006", form.Deadline)
+		if err != nil {
+			ctx.Handle(500, "issue.NewMilestonePost(time.Parse)", err)
+			return
+		}
+	}
+
+	m := &models.Milestone{
+		RepoId:   ctx.Repo.Repository.Id,
+		Index:    int64(ctx.Repo.Repository.NumMilestones) + 1,
+		Name:     form.Title,
+		Content:  form.Content,
+		Deadline: deadline,
+	}
+	if err = models.NewMilestone(m); err != nil {
+		ctx.Handle(500, "issue.NewMilestonePost(NewMilestone)", err)
+		return
+	}
+
+	ctx.Redirect(ctx.Repo.RepoLink + "/issues/milestones")
 }
 
 func UpdateMilestones(ctx *middleware.Context) {
@@ -506,4 +555,3 @@ func UpdateMilestones(ctx *middleware.Context) {
 
 	ctx.HTML(200, "issue/milestone_edit")
 }
-

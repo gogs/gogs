@@ -34,7 +34,8 @@ var (
 func init() {
 	tables = append(tables, new(User), new(PublicKey), new(Repository), new(Watch),
 		new(Action), new(Access), new(Issue), new(Comment), new(Oauth2), new(Follow),
-		new(Mirror), new(Release), new(LoginSource), new(Webhook), new(IssueUser))
+		new(Mirror), new(Release), new(LoginSource), new(Webhook), new(IssueUser),
+		new(Milestone))
 }
 
 func LoadModelsConfig() {
@@ -141,7 +142,7 @@ type Statistic struct {
 	Counter struct {
 		User, PublicKey, Repo, Watch, Action, Access,
 		Issue, Comment, Mirror, Oauth, Release,
-		LoginSource, Webhook int64
+		LoginSource, Webhook, Milestone int64
 	}
 }
 
@@ -159,6 +160,7 @@ func GetStatistic() (stats Statistic) {
 	stats.Counter.Release, _ = orm.Count(new(Release))
 	stats.Counter.LoginSource, _ = orm.Count(new(LoginSource))
 	stats.Counter.Webhook, _ = orm.Count(new(Webhook))
+	stats.Counter.Milestone, _ = orm.Count(new(Milestone))
 	return
 }
 
