@@ -55,8 +55,8 @@ func NewAuthSourcePost(ctx *middleware.Context, form auth.AuthenticationForm) {
 	case models.LT_SMTP:
 		u = &models.SMTPConfig{
 			Auth: form.SmtpAuth,
-			Host: form.Host,
-			Port: form.Port,
+			Host: form.SmtpHost,
+			Port: form.SmtpPort,
 			TLS:  form.Tls,
 		}
 	default:
@@ -132,8 +132,8 @@ func EditAuthSourcePost(ctx *middleware.Context, form auth.AuthenticationForm) {
 	case models.LT_SMTP:
 		config = &models.SMTPConfig{
 			Auth: form.SmtpAuth,
-			Host: form.Host,
-			Port: form.Port,
+			Host: form.SmtpHost,
+			Port: form.SmtpPort,
 			TLS:  form.Tls,
 		}
 	default:

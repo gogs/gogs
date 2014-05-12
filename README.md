@@ -52,10 +52,11 @@ More importantly, Gogs only needs one binary to setup your own project hosting o
 
 Make sure you install [Prerequirements](http://gogs.io/docs/installation/) first.
 
-There are 4 ways to install Gogs:
+There are 5 ways to install Gogs:
 
 - [Install from binary](http://gogs.io/docs/installation/install_from_binary.md): **STRONGLY RECOMMENDED**
 - [Install from source](http://gogs.io/docs/installation/install_from_source.md)
+- [Install from packages](http://gogs.io/docs/installation/install_from_packages.md)
 - [Ship with Docker](https://github.com/gogits/gogs/tree/master/dockerfiles)
 - [Install with Vagrant](https://github.com/geerlingguy/ansible-vagrant-examples/tree/master/gogs)
 

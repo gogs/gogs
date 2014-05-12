@@ -37,8 +37,11 @@ var LoginTypes = map[int]string{
 	LT_SMTP: "SMTP",
 }
 
-var _ core.Conversion = &LDAPConfig{}
-var _ core.Conversion = &SMTPConfig{}
+// Ensure structs implmented interface.
+var (
+	_ core.Conversion = &LDAPConfig{}
+	_ core.Conversion = &SMTPConfig{}
+)
 
 type LDAPConfig struct {
 	ldap.Ldapsource
