@@ -1,0 +1,1 @@
+here is log for supervisord and gogs
