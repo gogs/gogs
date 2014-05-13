@@ -471,6 +471,64 @@ func UpdateMilestone(m *Milestone) error {
 	return err
 }
 
+// ChangeMilestoneStatus changes the milestone open/closed status.
+func ChangeMilestoneStatus(m *Milestone, isClosed bool) (err error) {
+	repo, err := GetRepositoryById(m.RepoId)
+	if err != nil {
+		return err
+	}
+
+	sess := orm.NewSession()
+	defer sess.Close()
+	if err = sess.Begin(); err != nil {
+		return err
+	}
+
+	m.IsClosed = isClosed
+	if _, err = sess.Id(m.Id).AllCols().Update(m); err != nil {
+		sess.Rollback()
+		return err
+	}
+
+	if isClosed {
+		repo.NumClosedMilestones++
+	} else {
+		repo.NumClosedMilestones--
+	}
+	if _, err = sess.Id(repo.Id).Update(repo); err != nil {
+		sess.Rollback()
+		return err
+	}
+	return sess.Commit()
+}
+
+// DeleteMilestone deletes a milestone.
+func DeleteMilestone(m *Milestone) (err error) {
+	sess := orm.NewSession()
+	defer sess.Close()
+	if err = sess.Begin(); err != nil {
+		return err
+	}
+
+	if _, err = sess.Delete(m); err != nil {
+		sess.Rollback()
+		return err
+	}
+
+	rawSql := "UPDATE `repository` SET num_milestones = num_milestones - 1 WHERE id = ?"
+	if _, err = sess.Exec(rawSql, m.RepoId); err != nil {
+		sess.Rollback()
+		return err
+	}
+
+	rawSql = "UPDATE `issue` SET milestone_id = 0 WHERE milestone_id = ?"
+	if _, err = sess.Exec(rawSql, m.Id); err != nil {
+		sess.Rollback()
+		return err
+	}
+	return sess.Commit()
+}
+
 // Issue types.
 const (
 	IT_PLAIN  = iota // Pure comment.

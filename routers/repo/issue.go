@@ -567,6 +567,34 @@ func UpdateMilestone(ctx *middleware.Context, params martini.Params) {
 		}
 		return
 	}
+
+	action := params["action"]
+	if len(action) > 0 {
+		switch action {
+		case "open":
+			if mile.IsClosed {
+				if err = models.ChangeMilestoneStatus(mile, false); err != nil {
+					ctx.Handle(500, "issue.UpdateMilestone(ChangeMilestoneStatus)", err)
+					return
+				}
+			}
+		case "close":
+			if !mile.IsClosed {
+				if err = models.ChangeMilestoneStatus(mile, true); err != nil {
+					ctx.Handle(500, "issue.UpdateMilestone(ChangeMilestoneStatus)", err)
+					return
+				}
+			}
+		case "delete":
+			if err = models.DeleteMilestone(mile); err != nil {
+				ctx.Handle(500, "issue.UpdateMilestone(DeleteMilestone)", err)
+				return
+			}
+		}
+		ctx.Redirect(ctx.Repo.RepoLink + "/issues/milestones")
+		return
+	}
+
 	mile.DeadlineString = mile.Deadline.UTC().Format("01/02/2006")
 	if mile.DeadlineString == "12/31/9999" {
 		mile.DeadlineString = ""
@@ -583,16 +611,16 @@ func UpdateMilestonePost(ctx *middleware.Context, params martini.Params, form au
 
 	idx, _ := base.StrTo(params["index"]).Int64()
 	if idx == 0 {
-		ctx.Handle(404, "issue.UpdateMilestone", nil)
+		ctx.Handle(404, "issue.UpdateMilestonePost", nil)
 		return
 	}
 
 	mile, err := models.GetMilestoneByIndex(ctx.Repo.Repository.Id, idx)
 	if err != nil {
 		if err == models.ErrMilestoneNotExist {
-			ctx.Handle(404, "issue.UpdateMilestone(GetMilestoneByIndex)", err)
+			ctx.Handle(404, "issue.UpdateMilestonePost(GetMilestoneByIndex)", err)
 		} else {
-			ctx.Handle(500, "issue.UpdateMilestone(GetMilestoneByIndex)", err)
+			ctx.Handle(500, "issue.UpdateMilestonePost(GetMilestoneByIndex)", err)
 		}
 		return
 	}
