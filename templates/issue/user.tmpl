@@ -36,7 +36,7 @@
                 {{range .Issues}}{{if .}}
                 <div class="list-group-item issue-item" id="issue-{{.Id}}">
                     <span class="number pull-right">#{{.Index}}</span>
-                    <h5 class="title"><a href="/{{$.SignedUser.Name}}/{{.Repo.Name}}/issues/{{.Index}}">{{.Name}}</a></h5>
+                    <h5 class="title"><a href="/{{.Repo.Owner.Name}}/{{.Repo.Name}}/issues/{{.Index}}">{{.Name}}</a></h5>
                     <p class="info">
                         <span class="author"><img class="avatar" src="{{.Poster.AvatarLink}}" alt="" width="20"/>
                         <a href="/user/{{.Poster.Name}}">{{.Poster.Name}}</a></span>
