@@ -235,6 +235,12 @@ func Issues(ctx *middleware.Context) {
 			return
 		}
 
+		err = issues[i].Repo.GetOwner()
+		if err != nil {
+			ctx.Handle(500, "user.Issues(GetOwner)", err)
+			return
+		}
+
 		issues[i].Poster, err = models.GetUserById(issues[i].PosterId)
 		if err != nil {
 			ctx.Handle(500, "user.Issues(GetUserById)", err)
