@@ -51,14 +51,14 @@
                     </div>
                     <!-- todo finish all file status, now modify, add, delete and rename -->
                     <span class="status {{DiffTypeToStr .Type}}" data-toggle="tooltip" data-placement="right" title="{{DiffTypeToStr .Type}}">&nbsp;</span>
-                    <a class="file" href="#diff-1">{{.Name}}</a>
+                    <a class="file" href="#diff-{{.Index}}">{{.Name}}</a>
                 </li>
                 {{end}}
             </ol>
         </div>
 
         {{range .Diff.Files}}
-        <div class="panel panel-default diff-file-box diff-box file-content" id="diff-2">
+        <div class="panel panel-default diff-file-box diff-box file-content" id="diff-{{.Index}}">
             <div class="panel-heading">
                 <div class="diff-counter count pull-left">
                     {{if not .IsBin}}
