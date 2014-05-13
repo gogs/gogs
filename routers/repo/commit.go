@@ -47,10 +47,10 @@ func Commits(ctx *middleware.Context, params martini.Params) {
 		nextPage = 0
 	}
 
-	//both `git log branchName` and `git log  commitId` work
+	//both `git log branchName` and `git log commitId` work
 	commits, err := ctx.Repo.Commit.CommitsByRange(page)
 	if err != nil {
-		ctx.Handle(500, "repo.Commits(get commits)", err)
+		ctx.Handle(500, "repo.Commits(CommitsByRange)", err)
 		return
 	}
 
@@ -146,6 +146,68 @@ func SearchCommits(ctx *middleware.Context, params martini.Params) {
 	ctx.Data["CommitCount"] = commits.Len()
 	ctx.Data["Commits"] = commits
 	ctx.Data["IsSearchPage"] = true
+	ctx.Data["IsRepoToolbarCommits"] = true
+	ctx.HTML(200, "repo/commits")
+}
+
+func FileHistory(ctx *middleware.Context, params martini.Params) {
+	fileName := params["_1"]
+	if len(fileName) == 0 {
+		Commits(ctx, params)
+		return
+	}
+
+	userName := ctx.Repo.Owner.Name
+	repoName := ctx.Repo.Repository.Name
+	branchName := params["branchname"]
+
+	brs, err := ctx.Repo.GitRepo.GetBranches()
+	if err != nil {
+		ctx.Handle(500, "repo.FileHistory", err)
+		return
+	} else if len(brs) == 0 {
+		ctx.Handle(404, "repo.FileHistory", nil)
+		return
+	}
+
+	commitsCount, err := ctx.Repo.GitRepo.FileCommitsCount(branchName, fileName)
+	if err != nil {
+		ctx.Handle(500, "repo.FileHistory(GetCommitsCount)", err)
+		return
+	}
+	if commitsCount == 0 {
+		ctx.Handle(404, "repo.FileHistory", nil)
+		return
+	}
+
+	// Calculate and validate page number.
+	page, _ := base.StrTo(ctx.Query("p")).Int()
+	if page < 1 {
+		page = 1
+	}
+	lastPage := page - 1
+	if lastPage < 0 {
+		lastPage = 0
+	}
+	nextPage := page + 1
+	if nextPage*50 > commitsCount {
+		nextPage = 0
+	}
+
+	//both `git log branchName` and `git log commitId` work
+	commits, err := ctx.Repo.GitRepo.CommitsByFileAndRange(branchName, fileName, page)
+	if err != nil {
+		ctx.Handle(500, "repo.FileHistory(CommitsByRange)", err)
+		return
+	}
+
+	ctx.Data["Username"] = userName
+	ctx.Data["Reponame"] = repoName
+	ctx.Data["FileName"] = fileName
+	ctx.Data["CommitCount"] = commitsCount
+	ctx.Data["Commits"] = commits
+	ctx.Data["LastPageNum"] = lastPage
+	ctx.Data["NextPageNum"] = nextPage
 	ctx.Data["IsRepoToolbarCommits"] = true
 	ctx.HTML(200, "repo/commits")
 }

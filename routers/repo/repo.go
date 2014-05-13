@@ -254,6 +254,7 @@ func Single(ctx *middleware.Context, params martini.Params) {
 
 	ctx.Data["LastCommit"] = ctx.Repo.Commit
 	ctx.Data["Paths"] = Paths
+	ctx.Data["TreeName"] = treename
 	ctx.Data["Treenames"] = treenames
 	ctx.Data["TreePath"] = treePath
 	ctx.Data["BranchLink"] = branchLink

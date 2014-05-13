@@ -41,8 +41,8 @@
             </table>
         </div>
         {{if not .IsSearchPage}}<ul class="pagination" id="commits-pager">
-            {{if .LastPageNum}}<li><a href="{{.RepoLink}}/commits/{{.BranchName}}?p={{.LastPageNum}}" rel="nofollow">&laquo; Newer</a></li>{{end}}
-            {{if .NextPageNum}}<li><a href="{{.RepoLink}}/commits/{{.BranchName}}?p={{.NextPageNum}}" rel="nofollow">&raquo; Older</a></li>{{end}}
+            {{if .LastPageNum}}<li><a href="{{.RepoLink}}/commits/{{.BranchName}}{{if .FileName}}/{{.FileName}}{{end}}?p={{.LastPageNum}}" rel="nofollow">&laquo; Newer</a></li>{{end}}
+            {{if .NextPageNum}}<li><a href="{{.RepoLink}}/commits/{{.BranchName}}{{if .FileName}}/{{.FileName}}{{end}}?p={{.NextPageNum}}" rel="nofollow">&raquo; Older</a></li>{{end}}
         </ul>{{end}}
     </div>
 </div>
