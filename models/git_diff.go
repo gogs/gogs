@@ -49,6 +49,7 @@ type DiffSection struct {
 
 type DiffFile struct {
 	Name               string
+	Index              int
 	Addition, Deletion int
 	Type               int
 	IsBin              bool
@@ -144,6 +145,7 @@ func ParsePatch(reader io.Reader) (*Diff, error) {
 
 			curFile = &DiffFile{
 				Name:     a[strings.Index(a, "/")+1:],
+				Index:    len(diff.Files) + 1,
 				Type:     DIFF_FILE_CHANGE,
 				Sections: make([]*DiffSection, 0, 10),
 			}
