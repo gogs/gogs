@@ -524,23 +524,22 @@ func NewMilestonePost(ctx *middleware.Context, form auth.CreateMilestoneForm) {
 	var deadline time.Time
 	var err error
 	if len(form.Deadline) == 0 {
-		deadline = time.Now().AddDate(100, 0, 0)
-	} else {
-		deadline, err = time.Parse("01/02/2006", form.Deadline)
-		if err != nil {
-			ctx.Handle(500, "issue.NewMilestonePost(time.Parse)", err)
-			return
-		}
+		form.Deadline = "12/31/9999"
+	}
+	deadline, err = time.Parse("01/02/2006", form.Deadline)
+	if err != nil {
+		ctx.Handle(500, "issue.NewMilestonePost(time.Parse)", err)
+		return
 	}
 
-	m := &models.Milestone{
+	mile := &models.Milestone{
 		RepoId:   ctx.Repo.Repository.Id,
 		Index:    int64(ctx.Repo.Repository.NumMilestones) + 1,
 		Name:     form.Title,
 		Content:  form.Content,
 		Deadline: deadline,
 	}
-	if err = models.NewMilestone(m); err != nil {
+	if err = models.NewMilestone(mile); err != nil {
 		ctx.Handle(500, "issue.NewMilestonePost(NewMilestone)", err)
 		return
 	}
@@ -548,10 +547,73 @@ func NewMilestonePost(ctx *middleware.Context, form auth.CreateMilestoneForm) {
 	ctx.Redirect(ctx.Repo.RepoLink + "/issues/milestones")
 }
 
-func UpdateMilestones(ctx *middleware.Context) {
-	ctx.Data["Title"] = "Update Milestones"
+func UpdateMilestone(ctx *middleware.Context, params martini.Params) {
+	ctx.Data["Title"] = "Update Milestone"
 	ctx.Data["IsRepoToolbarIssues"] = true
 	ctx.Data["IsRepoToolbarIssuesList"] = true
 
+	idx, _ := base.StrTo(params["index"]).Int64()
+	if idx == 0 {
+		ctx.Handle(404, "issue.UpdateMilestone", nil)
+		return
+	}
+
+	mile, err := models.GetMilestoneByIndex(ctx.Repo.Repository.Id, idx)
+	if err != nil {
+		if err == models.ErrMilestoneNotExist {
+			ctx.Handle(404, "issue.UpdateMilestone(GetMilestoneByIndex)", err)
+		} else {
+			ctx.Handle(500, "issue.UpdateMilestone(GetMilestoneByIndex)", err)
+		}
+		return
+	}
+	mile.DeadlineString = mile.Deadline.UTC().Format("01/02/2006")
+	if mile.DeadlineString == "12/31/9999" {
+		mile.DeadlineString = ""
+	}
+	ctx.Data["Milestone"] = mile
+
 	ctx.HTML(200, "issue/milestone_edit")
+}
+
+func UpdateMilestonePost(ctx *middleware.Context, params martini.Params, form auth.CreateMilestoneForm) {
+	ctx.Data["Title"] = "Update Milestone"
+	ctx.Data["IsRepoToolbarIssues"] = true
+	ctx.Data["IsRepoToolbarIssuesList"] = true
+
+	idx, _ := base.StrTo(params["index"]).Int64()
+	if idx == 0 {
+		ctx.Handle(404, "issue.UpdateMilestone", nil)
+		return
+	}
+
+	mile, err := models.GetMilestoneByIndex(ctx.Repo.Repository.Id, idx)
+	if err != nil {
+		if err == models.ErrMilestoneNotExist {
+			ctx.Handle(404, "issue.UpdateMilestone(GetMilestoneByIndex)", err)
+		} else {
+			ctx.Handle(500, "issue.UpdateMilestone(GetMilestoneByIndex)", err)
+		}
+		return
+	}
+
+	var deadline time.Time
+	if len(form.Deadline) == 0 {
+		form.Deadline = "12/31/9999"
+	}
+	deadline, err = time.Parse("01/02/2006", form.Deadline)
+	if err != nil {
+		ctx.Handle(500, "issue.UpdateMilestonePost(time.Parse)", err)
+		return
+	}
+
+	mile.Name = form.Title
+	mile.Content = form.Content
+	mile.Deadline = deadline
+	if err = models.UpdateMilestone(mile); err != nil {
+		ctx.Handle(500, "issue.UpdateMilestonePost(UpdateMilestone)", err)
+		return
+	}
+
+	ctx.Redirect(ctx.Repo.RepoLink + "/issues/milestones")
 }

@@ -14,7 +14,8 @@ import (
 )
 
 var (
-	ErrIssueNotExist = errors.New("Issue does not exist")
+	ErrIssueNotExist     = errors.New("Issue does not exist")
+	ErrMilestoneNotExist = errors.New("Milestone does not exist")
 )
 
 // Issue represents an issue or pull request of repository.
@@ -412,6 +413,7 @@ type Milestone struct {
 	NumOpenIssues   int `xorm:"-"`
 	Completeness    int // Percentage(1-100).
 	Deadline        time.Time
+	DeadlineString  string `xorm:"-"`
 	ClosedDate      time.Time
 }
 
@@ -441,11 +443,29 @@ func NewMilestone(m *Milestone) (err error) {
 	return sess.Commit()
 }
 
+// GetMilestoneByIndex returns the milestone of given repository and index.
+func GetMilestoneByIndex(repoId, idx int64) (*Milestone, error) {
+	m := &Milestone{RepoId: repoId, Index: idx}
+	has, err := orm.Get(m)
+	if err != nil {
+		return nil, err
+	} else if !has {
+		return nil, ErrMilestoneNotExist
+	}
+	return m, nil
+}
+
 // GetMilestones returns a list of milestones of given repository and status.
 func GetMilestones(repoId int64, isClosed bool) ([]*Milestone, error) {
 	miles := make([]*Milestone, 0, 10)
 	err := orm.Where("repo_id=?", repoId).And("is_closed=?", isClosed).Find(&miles)
 	return miles, err
+}
+
+// UpdateMilestone updates information of given milestone.
+func UpdateMilestone(m *Milestone) error {
+	_, err := orm.Id(m.Id).Update(m)
+	return err
 }
 
 // Issue types.
