@@ -210,6 +210,7 @@ func runWeb(*cli.Context) {
 		r.Get("/raw/:branchname/**", repo.SingleDownload)
 		r.Get("/commits/:branchname", repo.Commits)
 		r.Get("/commits/:branchname/search", repo.SearchCommits)
+		r.Get("/commits/:branchname/**", repo.FileHistory)
 		r.Get("/commit/:branchname", repo.Diff)
 		r.Get("/commit/:branchname/**", repo.Diff)
 		r.Get("/releases", repo.Releases)

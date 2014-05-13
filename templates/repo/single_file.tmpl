@@ -16,7 +16,7 @@
             <a class="btn btn-default hidden" href="#">Edit</a>
             <a class="btn btn-default" href="{{.FileLink}}" rel="nofollow">Raw</a>
             <a class="btn btn-default hidden" href="#">Blame</a>
-            <a class="btn btn-default hidden" href="#">History</a>
+            <a class="btn btn-default" href="{{.RepoLink}}/commits/{{.BranchName}}/{{.TreeName}}">History</a>
             <a class="btn btn-danger hidden" href="#">Delete</a>
         </div>
         {{end}}
