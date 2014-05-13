@@ -83,6 +83,9 @@ func SettingPost(ctx *middleware.Context, form auth.RepoSettingForm) {
 		if len(ctx.Repo.Repository.Name) == 0 || ctx.Repo.Repository.Name != ctx.Query("repository") {
 			ctx.RenderWithErr("Please make sure you entered repository name is correct.", "repo/setting", nil)
 			return
+		} else if ctx.Repo.Repository.IsMirror {
+			ctx.Error(404)
+			return
 		}
 
 		newOwner := ctx.Query("owner")

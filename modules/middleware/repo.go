@@ -99,6 +99,11 @@ func RepoAssignment(redirect bool, args ...bool) martini.Handler {
 			return
 		}
 
+		// Check if the mirror repository owner(mirror repository doesn't have access).
+		if !ctx.Repo.IsOwner && repo.OwnerId == ctx.User.Id {
+			ctx.Repo.IsOwner = true
+		}
+
 		// Check access.
 		if repo.IsPrivate && !ctx.Repo.IsOwner {
 			if ctx.User == nil {

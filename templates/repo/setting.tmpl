@@ -88,6 +88,7 @@
                 Danger Zone
             </div>
             
+            {{if not .Repository.IsMirror}}
             <div class="panel-body">
                 <button type="button" class="btn btn-default pull-right" href="#transfer-repository-modal" data-toggle="modal">
                     Transfer ownership 
@@ -137,6 +138,8 @@
                     </div>
                 </div>
             </div>
+            {{end}}
+            
             <hr>
             <div class="panel-body">
                 <button type="button" class="btn btn-default pull-right" href="#delete-repository-modal" data-toggle="modal">
