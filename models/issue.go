@@ -10,6 +10,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-xorm/xorm"
+
 	"github.com/gogits/gogs/modules/base"
 )
 
@@ -281,9 +283,10 @@ const (
 func GetIssueStats(rid, uid int64, isShowClosed bool, filterMode int) *IssueStats {
 	stats := &IssueStats{}
 	issue := new(Issue)
+	tmpSess := &xorm.Session{}
 
 	sess := orm.Where("repo_id=?", rid)
-	tmpSess := sess
+	*tmpSess = *sess
 	stats.OpenCount, _ = tmpSess.And("is_closed=?", false).Count(issue)
 	*tmpSess = *sess
 	stats.ClosedCount, _ = tmpSess.And("is_closed=?", true).Count(issue)
