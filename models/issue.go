@@ -167,6 +167,8 @@ type IssueUser struct {
 	Uid         int64 // User ID.
 	IssueId     int64
 	RepoId      int64
+	MilestoneId int64
+	Labels      string `xorm:"TEXT"`
 	IsRead      bool
 	IsAssigned  bool
 	IsMentioned bool
