@@ -48,25 +48,33 @@
                                     </ul>
                                     <div class="tab-content">
                                         <div class="tab-pane active" id="milestone-open">
+                                            {{if not .OpenMilestones}}
                                             <p class="milestone-item">Nothing to show</p>
+                                            {{else}}
                                             <ul class="list-unstyled">
-                                                <li class="milestone-item" data-id="1">
-                                                    <p><strong>Milestone name</strong></p>
-                                                    <p>due to 3 days later</p>
+                                                {{range .OpenMilestones}}
+                                                <li class="milestone-item" data-id="{{.Id}}">
+                                                    <p><strong>{{.Name}}</strong></p>
+                                                    <!-- <p>due to 3 days later</p> -->
                                                 </li>
-                                                <li class="milestone-item" data-id="1">
-                                                    <p><strong>Milestone name</strong></p>
-                                                    <p>due to 3 days later</p>
-                                                </li>
+                                                {{end}}
                                             </ul>
+                                            {{end}}
                                         </div>
+
                                         <div class="tab-pane" id="milestone-close">
+                                            {{if not .ClosedMilestones}}
+                                            <p class="milestone-item">Nothing to show</p>
+                                            {{else}}
                                             <ul class="list-unstyled">
-                                                <li class="milestone-item" data-id="1">
-                                                    <p><strong>Milestone name</strong></p>
-                                                    <p>closed 3 days ago</p>
+                                                {{range .ClosedMilestones}}
+                                                <li class="milestone-item" data-id="{{.Id}}">
+                                                    <p><strong>{{.Name}}</strong></p>
+                                                    <p>Closed {{TimeSince .ClosedDate}}</p>
                                                 </li>
+                                                {{end}}
                                             </ul>
+                                            {{end}}
                                         </div>
                                     </div>
                                 </li>

@@ -53,17 +53,21 @@ func Issues(ctx *middleware.Context) {
 		filterMode = models.FM_MENTION
 	}
 
+	var mid int64
 	midx, _ := base.StrTo(ctx.Query("milestone")).Int64()
-	mile, err := models.GetMilestoneByIndex(ctx.Repo.Repository.Id, midx)
-	if err != nil {
-		ctx.Handle(500, "issue.Issues(GetMilestoneByIndex): %v", err)
-		return
+	if midx > 0 {
+		mile, err := models.GetMilestoneByIndex(ctx.Repo.Repository.Id, midx)
+		if err != nil {
+			ctx.Handle(500, "issue.Issues(GetMilestoneByIndex): %v", err)
+			return
+		}
+		mid = mile.Id
 	}
 
 	page, _ := base.StrTo(ctx.Query("page")).Int()
 
 	// Get issues.
-	issues, err := models.GetIssues(assigneeId, ctx.Repo.Repository.Id, posterId, mile.Id, page,
+	issues, err := models.GetIssues(assigneeId, ctx.Repo.Repository.Id, posterId, mid, page,
 		isShowClosed, ctx.Query("labels"), ctx.Query("sortType"))
 	if err != nil {
 		ctx.Handle(500, "issue.Issues(GetIssues): %v", err)
@@ -120,6 +124,19 @@ func CreateIssue(ctx *middleware.Context, params martini.Params) {
 	ctx.Data["IsRepoToolbarIssues"] = true
 	ctx.Data["IsRepoToolbarIssuesList"] = false
 
+	var err error
+	// Get all milestones.
+	ctx.Data["OpenMilestones"], err = models.GetMilestones(ctx.Repo.Repository.Id, false)
+	if err != nil {
+		ctx.Handle(500, "issue.ViewIssue(GetMilestones.1): %v", err)
+		return
+	}
+	ctx.Data["ClosedMilestones"], err = models.GetMilestones(ctx.Repo.Repository.Id, true)
+	if err != nil {
+		ctx.Handle(500, "issue.ViewIssue(GetMilestones.2): %v", err)
+		return
+	}
+
 	us, err := models.GetCollaborators(strings.TrimPrefix(ctx.Repo.RepoLink, "/"))
 	if err != nil {
 		ctx.Handle(500, "issue.CreateIssue(GetCollaborators)", err)
@@ -133,6 +150,19 @@ func CreateIssuePost(ctx *middleware.Context, params martini.Params, form auth.C
 	ctx.Data["Title"] = "Create issue"
 	ctx.Data["IsRepoToolbarIssues"] = true
 	ctx.Data["IsRepoToolbarIssuesList"] = false
+
+	var err error
+	// Get all milestones.
+	ctx.Data["OpenMilestones"], err = models.GetMilestones(ctx.Repo.Repository.Id, false)
+	if err != nil {
+		ctx.Handle(500, "issue.ViewIssue(GetMilestones.1): %v", err)
+		return
+	}
+	ctx.Data["ClosedMilestones"], err = models.GetMilestones(ctx.Repo.Repository.Id, true)
+	if err != nil {
+		ctx.Handle(500, "issue.ViewIssue(GetMilestones.2): %v", err)
+		return
+	}
 
 	us, err := models.GetCollaborators(strings.TrimPrefix(ctx.Repo.RepoLink, "/"))
 	if err != nil {
