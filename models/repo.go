@@ -684,6 +684,10 @@ func DeleteRepository(userId, repoId int64, userName string) (err error) {
 		sess.Rollback()
 		return err
 	}
+	if _, err = sess.Delete(&Milestone{RepoId: repoId}); err != nil {
+		sess.Rollback()
+		return err
+	}
 
 	rawSql := "UPDATE `user` SET num_repos = num_repos - 1 WHERE id = ?"
 	if _, err = sess.Exec(rawSql, userId); err != nil {
