@@ -1441,7 +1441,7 @@ html, body {
     margin-left: .8em;
 }
 
-#issue .assignee.dropdown-menu, #issue .assignee ul {
+#issue .assignee.dropdown-menu, #issue .assignee ul, #issue .milestone ul {
     padding: 0;
     margin: 0;
     min-width: 300px;
@@ -1451,17 +1451,33 @@ html, body {
     min-width: 160px;
 }
 
-#issue .issue-bar .assignee .dropdown-menu{
+#issue .issue-bar .assignee .dropdown-menu, #issue .issue-bar .milestone .dropdown-menu {
     padding: 0;
     margin: 0;
 }
 
-#issue .assignee li {
+#issue .assignee li, #issue .milestone li.clear-milestone {
     padding: 4px 12px;
     line-height: 30px;
 }
 
-#issue .assignee li:hover {
+#issue .milestone .milestone-item {
+    padding: 8px 12px;
+}
+
+#issue .milestone li.milestone-item {
+    border-bottom: 1px solid #CCC;
+}
+
+#issue .milestone li.milestone-item:last-child {
+    border-bottom: none;
+}
+
+#issue .milestone .milestone-item p {
+    margin-bottom: 0;
+}
+
+#issue .assignee li:hover, #issue .milestone li.clear-milestone:hover, #issue .milestone li.milestone-item:hover {
     background-color: #e8f0ff;
     cursor: pointer;
 }
@@ -1474,7 +1490,7 @@ html, body {
 
 #issue .issue-bar > div {
     padding-bottom: 8px;
-    margin-bottom: 8px;
+    margin-bottom: 40px;
     border-bottom: 1px solid #CCC;
 }
 
@@ -1482,9 +1498,24 @@ html, body {
     line-height: 30px;
 }
 
-#issue .issue-bar .assignee .action{
+#issue .issue-bar .assignee .action, #issue .issue-bar .milestone .action {
     position: relative;
     margin-top: -8px;
+}
+
+#issue .issue-bar .milestone .completion {
+    margin-top: 20px;
+    margin-bottom: 12px;
+}
+
+#issue .issue-bar .milestone .completion span {
+    display: block;
+    height: 12px;
+    background-color: #77c64a;
+}
+
+#issue .issue-bar .milestone .nav-tabs a {
+    padding: 4px 8px;
 }
 
 /* wrapper and footer */
