@@ -221,18 +221,23 @@ func Issues(ctx *middleware.Context) {
 		issues[i], err = models.GetIssueById(ius[i].IssueId)
 		if err != nil {
 			if err == models.ErrIssueNotExist {
-				log.Error("user.Issues(#%d): issue not exist", ius[i].IssueId)
+				log.Warn("user.Issues(GetIssueById #%d): issue not exist", ius[i].IssueId)
 				continue
 			} else {
-				ctx.Handle(500, "user.Issues(GetIssue)", err)
+				ctx.Handle(500, fmt.Sprintf("user.Issues(GetIssueById #%d)", ius[i].IssueId), err)
 				return
 			}
 		}
 
 		issues[i].Repo, err = models.GetRepositoryById(issues[i].RepoId)
 		if err != nil {
-			ctx.Handle(500, "user.Issues(GetRepositoryById)", err)
-			return
+			if err == models.ErrRepoNotExist {
+				log.Warn("user.Issues(GetRepositoryById #%d): repository not exist", issues[i].RepoId)
+				continue
+			} else {
+				ctx.Handle(500, fmt.Sprintf("user.Issues(GetRepositoryById #%d)", issues[i].RepoId), err)
+				return
+			}
 		}
 
 		if err = issues[i].Repo.GetOwner(); err != nil {
@@ -240,8 +245,7 @@ func Issues(ctx *middleware.Context) {
 			return
 		}
 
-		issues[i].Poster, err = models.GetUserById(issues[i].PosterId)
-		if err != nil {
+		if err = issues[i].GetPoster(); err != nil {
 			ctx.Handle(500, "user.Issues(GetUserById)", err)
 			return
 		}

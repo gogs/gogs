@@ -337,18 +337,18 @@ func UpdateAssignee(ctx *middleware.Context) {
 		return
 	}
 
-	idx, err := base.StrTo(ctx.Query("issue")).Int64()
+	issueId, err := base.StrTo(ctx.Query("issue")).Int64()
 	if err != nil {
 		ctx.Error(404)
 		return
 	}
 
-	issue, err := models.GetIssueByIndex(ctx.Repo.Repository.Id, idx)
+	issue, err := models.GetIssueById(issueId)
 	if err != nil {
 		if err == models.ErrIssueNotExist {
-			ctx.Handle(404, "issue.UpdateAssignee", err)
+			ctx.Handle(404, "issue.UpdateAssignee(GetIssueById)", err)
 		} else {
-			ctx.Handle(500, "issue.UpdateAssignee(GetIssueByIndex)", err)
+			ctx.Handle(500, "issue.UpdateAssignee(GetIssueById)", err)
 		}
 		return
 	}
