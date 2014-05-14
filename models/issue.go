@@ -446,6 +446,18 @@ func NewMilestone(m *Milestone) (err error) {
 	return sess.Commit()
 }
 
+// GetMilestoneById returns the milestone by given ID.
+func GetMilestoneById(id int64) (*Milestone, error) {
+	m := &Milestone{Id: id}
+	has, err := orm.Get(m)
+	if err != nil {
+		return nil, err
+	} else if !has {
+		return nil, ErrMilestoneNotExist
+	}
+	return m, nil
+}
+
 // GetMilestoneByIndex returns the milestone of given repository and index.
 func GetMilestoneByIndex(repoId, idx int64) (*Milestone, error) {
 	m := &Milestone{RepoId: repoId, Index: idx}
@@ -496,6 +508,51 @@ func ChangeMilestoneStatus(m *Milestone, isClosed bool) (err error) {
 		repo.NumClosedMilestones--
 	}
 	if _, err = sess.Id(repo.Id).Update(repo); err != nil {
+		sess.Rollback()
+		return err
+	}
+	return sess.Commit()
+}
+
+// ChangeMilestoneAssign changes assignment of milestone for issue.
+func ChangeMilestoneAssign(oldMid, mid int64, isIssueClosed bool) (err error) {
+	sess := orm.NewSession()
+	defer sess.Close()
+	if err = sess.Begin(); err != nil {
+		return err
+	}
+
+	if oldMid > 0 {
+		m, err := GetMilestoneById(oldMid)
+		if err != nil {
+			return err
+		}
+
+		m.NumIssues--
+		if isIssueClosed {
+			m.NumClosedIssues--
+		}
+		if m.NumIssues > 0 {
+			m.Completeness = m.NumClosedIssues * 100 / m.NumIssues
+		} else {
+			m.Completeness = 0
+		}
+		if _, err = sess.Id(m.Id).Update(m); err != nil {
+			sess.Rollback()
+			return err
+		}
+	}
+
+	m, err := GetMilestoneById(mid)
+	if err != nil {
+		return err
+	}
+	m.NumIssues++
+	if isIssueClosed {
+		m.NumClosedIssues++
+	}
+	m.Completeness = m.NumClosedIssues * 100 / m.NumIssues
+	if _, err = sess.Id(m.Id).Update(m); err != nil {
 		sess.Rollback()
 		return err
 	}

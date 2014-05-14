@@ -100,7 +100,7 @@
             </div>
 
             <div class="issue-bar col-md-2">
-                <div class="milestone" data-milestone="0" data-ajax="{url}">
+                <div class="milestone" data-milestone="0" data-ajax="{{.Issue.Index}}/milestone">
                     <div class="pull-right action">
                         <button class="btn btn-default btn-sm" data-toggle="dropdown">
                             <i class="fa fa-check-square-o"></i>
@@ -116,25 +116,33 @@
                                     </ul>
                                     <div class="tab-content">
                                         <div class="tab-pane active" id="milestone-open">
+                                            {{if not .OpenMilestones}}
                                             <p class="milestone-item">Nothing to show</p>
+                                            {{else}}
                                             <ul class="list-unstyled">
-                                                <li class="milestone-item" data-id="1">
-                                                    <p><strong>Milestone name</strong></p>
-                                                    <p>due to 3 days later</p>
+                                                {{range .OpenMilestones}}
+                                                <li class="milestone-item" data-id="{{.Id}}">
+                                                    <p><strong>{{.Name}}</strong></p>
+                                                    <!-- <p>due to 3 days later</p> -->
                                                 </li>
-                                                <li class="milestone-item" data-id="1">
-                                                    <p><strong>Milestone name</strong></p>
-                                                    <p>due to 3 days later</p>
-                                                </li>
+                                                {{end}}
                                             </ul>
+                                            {{end}}
                                         </div>
+
                                         <div class="tab-pane" id="milestone-close">
+                                            {{if not .ClosedMilestones}}
+                                            <p class="milestone-item">Nothing to show</p>
+                                            {{else}}
                                             <ul class="list-unstyled">
-                                                <li class="milestone-item" data-id="1">
-                                                    <p><strong>Milestone name</strong></p>
-                                                    <p>closed 3 days ago</p>
+                                                {{range .ClosedMilestones}}
+                                                <li class="milestone-item" data-id="{{.Id}}">
+                                                    <p><strong>{{.Name}}</strong></p>
+                                                    <p>{{TimeSince .ClosedDate}}</p>
                                                 </li>
+                                                {{end}}
                                             </ul>
+                                            {{end}}
                                         </div>
                                     </div>
                                 </li>
@@ -142,10 +150,14 @@
                         </div>
                     </div>
                     <h4>Milestone</h4>
-                    <p class="completion"><span style="width:80%">&nbsp;</span></p>
-                    <p class="name"><strong><a href="#">Milestone name</a></strong></p>
+                    {{if .Milestone}}
+                    <p class="completion{{if eq .Milestone.Completeness 0}} hidden{{end}}"><span style="width:{{.Milestone.Completeness}}%">&nbsp;</span></p>
+                    <p class="name"><strong><a href="{{$.RepoLink}}/issues?milestone={{.Milestone.Index}}{{if $.Issue.IsClosed}}&state=closed{{end}}">{{.Milestone.Name}}</a></strong></p>
+                    {{else}}
                     <p class="name">No milestone</p>
+                    {{end}}
                 </div>
+
                 <div class="assignee" data-assigned="{{if .Issue.Assignee}}{{.Issue.Assignee.Id}}{{else}}0{{end}}" data-ajax="{{.Issue.Index}}/assignee">{{if .IsRepositoryOwner}}
                     <div class="pull-right action">
                         <button type="button" class="dropdown-toggle btn btn-default btn-sm" data-toggle="dropdown">
@@ -166,7 +178,7 @@
                 </div>
             </div><!--
             <div class="col-md-3">
-                label assignment milestone dashboard
+                label dashboard
             </div>-->
         </div>
     </div>
