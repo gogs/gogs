@@ -100,7 +100,7 @@
             </div>
 
             <div class="issue-bar col-md-2">
-                <div class="milestone" data-milestone="0" data-ajax="{{.Issue.Index}}/milestone">
+                <div class="milestone" data-milestone="{{.Milestone.Id}}" data-ajax="{{.Issue.Index}}/milestone">
                     <div class="pull-right action">
                         <button class="btn btn-default btn-sm" data-toggle="dropdown">
                             <i class="fa fa-check-square-o"></i>
@@ -108,7 +108,7 @@
                         </button>
                         <div class="dropdown-menu dropdown-menu-right">
                             <ul class="list-unstyled">
-                                <li data-id="0" class="clear-milestone milestone-item hidden"><i class="fa fa-times-circle-o"></i> Clear milestone </li>
+                                <li data-id="0" class="clear-milestone milestone-item  hidden"><i class="fa fa-times-circle-o"></i> Clear milestone </li>
                                 <li class="milestone-list">
                                     <ul class="nav nav-tabs" data-init="tabs">
                                         <li class="active"><a href="#milestone-open" data-toggle="tab">Open</a></li>
@@ -138,7 +138,7 @@
                                                 {{range .ClosedMilestones}}
                                                 <li class="milestone-item" data-id="{{.Id}}">
                                                     <p><strong>{{.Name}}</strong></p>
-                                                    <p>{{TimeSince .ClosedDate}}</p>
+                                                    <p>Closed {{TimeSince .ClosedDate}}</p>
                                                 </li>
                                                 {{end}}
                                             </ul>

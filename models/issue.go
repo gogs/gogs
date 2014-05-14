@@ -543,18 +543,20 @@ func ChangeMilestoneAssign(oldMid, mid int64, isIssueClosed bool) (err error) {
 		}
 	}
 
-	m, err := GetMilestoneById(mid)
-	if err != nil {
-		return err
-	}
-	m.NumIssues++
-	if isIssueClosed {
-		m.NumClosedIssues++
-	}
-	m.Completeness = m.NumClosedIssues * 100 / m.NumIssues
-	if _, err = sess.Id(m.Id).Update(m); err != nil {
-		sess.Rollback()
-		return err
+	if mid > 0 {
+		m, err := GetMilestoneById(mid)
+		if err != nil {
+			return err
+		}
+		m.NumIssues++
+		if isIssueClosed {
+			m.NumClosedIssues++
+		}
+		m.Completeness = m.NumClosedIssues * 100 / m.NumIssues
+		if _, err = sess.Id(m.Id).Update(m); err != nil {
+			sess.Rollback()
+			return err
+		}
 	}
 	return sess.Commit()
 }
