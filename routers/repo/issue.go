@@ -63,6 +63,7 @@ func Issues(ctx *middleware.Context) {
 		}
 		mid = mile.Id
 	}
+	fmt.Println(mid)
 
 	page, _ := base.StrTo(ctx.Query("page")).Int()
 
