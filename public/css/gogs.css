@@ -1441,7 +1441,7 @@ html, body {
     margin-left: .8em;
 }
 
-#issue .assignee.dropdown-menu, #issue .assignee ul, #issue .milestone ul {
+#issue .assignee.dropdown-menu, #issue .assignee ul, #issue .milestone.dropdown-menu, #issue .milestone ul {
     padding: 0;
     margin: 0;
     min-width: 300px;
@@ -1514,8 +1514,14 @@ html, body {
     background-color: #77c64a;
 }
 
-#issue .issue-bar .milestone .nav-tabs a {
+#issue .milestone .nav-tabs a {
     padding: 4px 8px;
+    border-top: none;
+}
+
+#milestone {
+    margin-left: 24px;
+    margin-right: 12px;
 }
 
 /* wrapper and footer */

@@ -571,7 +571,7 @@ function initIssue() {
 
     // milestone
 
-    $('.issue-bar .dropdown-menu a[data-toggle="tab"]').on("click", function (e) {
+    $('#issue .dropdown-menu a[data-toggle="tab"]').on("click", function (e) {
         e.stopPropagation();
         $(this).tab('show');
         return false;
@@ -580,6 +580,7 @@ function initIssue() {
     var $m = $('.milestone');
     if ($m.data("milestone") > 0) {
         $('.clear-milestone').toggleShow();
+        console.log("show");
     }
     $('.milestone', '#issue').on('click', 'li.milestone-item', function () {
         var id = $(this).data("id");
@@ -600,8 +601,16 @@ function initIssue() {
                     }
                 })
             }
+            return;
         }
-        return;
+        $('#milestone-id').val(id);
+        if (id > 0) {
+            $('.clear-milestone').toggleShow();
+            $('#milestone').text($(this).find("strong").text())
+        } else {
+            $('.clear-milestone').toggleHide();
+            $('#milestone').text($('#milestone').data("no-milestone"));
+        }
     });
 }
 
