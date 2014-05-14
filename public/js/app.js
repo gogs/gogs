@@ -528,7 +528,7 @@ function initIssue() {
             var $this = $(this);
             $this.toggleAjax(function (resp) {
                 $($this.data("preview")).html(resp);
-            },function(){
+            }, function () {
                 $($this.data("preview")).html("no content");
             })
         });
@@ -569,6 +569,40 @@ function initIssue() {
         }
     });
 
+    // milestone
+
+    $('.issue-bar .dropdown-menu a[data-toggle="tab"]').on("click", function (e) {
+        e.stopPropagation();
+        $(this).tab('show');
+        return false;
+    });
+
+    var $m = $('.milestone');
+    if ($m.data("milestone") > 0) {
+        $('.clear-milestone').toggleShow();
+    }
+    $('.milestone', '#issue').on('click', 'li.milestone-item', function () {
+        var id = $(this).data("id");
+        if (is_issue_bar) {
+            var m = $m.data("milestone");
+            if (id != m) {
+                $.post($m.data("ajax"), {
+                    issue: $('#issue').data("id"),
+                    milestone: id
+                }, function (json) {
+                    if (json.ok) {
+                        window.location.reload();
+                        if (id > 0) {
+                            $('.clear-milestone').toggleShow();
+                        } else {
+                            $('.clear-milestone').toggleHide();
+                        }
+                    }
+                })
+            }
+        }
+        return;
+    });
 }
 
 function initRelease() {

@@ -100,6 +100,52 @@
             </div>
 
             <div class="issue-bar col-md-2">
+                <div class="milestone" data-milestone="0" data-ajax="{url}">
+                    <div class="pull-right action">
+                        <button class="btn btn-default btn-sm" data-toggle="dropdown">
+                            <i class="fa fa-check-square-o"></i>
+                            <span class="caret"></span>
+                        </button>
+                        <div class="dropdown-menu dropdown-menu-right">
+                            <ul class="list-unstyled">
+                                <li data-id="0" class="clear-milestone hidden"><i class="fa fa-times-circle-o"></i> Clear milestone </li>
+                                <li class="milestone-list">
+                                    <ul class="nav nav-tabs" data-init="tabs">
+                                        <li class="active"><a href="#milestone-open" data-toggle="tab">Open</a></li>
+                                        <li><a href="#milestone-close" data-toggle="tab">Closed</a></li>
+                                    </ul>
+                                    <div class="tab-content">
+                                        <div class="tab-pane active" id="milestone-open">
+                                            <p class="milestone-item">Nothing to show</p>
+                                            <ul class="list-unstyled">
+                                                <li class="milestone-item" data-id="1">
+                                                    <p><strong>Milestone name</strong></p>
+                                                    <p>due to 3 days later</p>
+                                                </li>
+                                                <li class="milestone-item" data-id="1">
+                                                    <p><strong>Milestone name</strong></p>
+                                                    <p>due to 3 days later</p>
+                                                </li>
+                                            </ul>
+                                        </div>
+                                        <div class="tab-pane" id="milestone-close">
+                                            <ul class="list-unstyled">
+                                                <li class="milestone-item" data-id="1">
+                                                    <p><strong>Milestone name</strong></p>
+                                                    <p>closed 3 days ago</p>
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                    <h4>Milestone</h4>
+                    <p class="completion"><span style="width:80%">&nbsp;</span></p>
+                    <p class="name"><strong><a href="#">Milestone name</a></strong></p>
+                    <p class="name">No milestone</p>
+                </div>
                 <div class="assignee" data-assigned="{{if .Issue.Assignee}}{{.Issue.Assignee.Id}}{{else}}0{{end}}" data-ajax="{{.Issue.Index}}/assignee">{{if .IsRepositoryOwner}}
                     <div class="pull-right action">
                         <button type="button" class="dropdown-toggle btn btn-default btn-sm" data-toggle="dropdown">
@@ -110,7 +156,7 @@
                             <ul class="list-unstyled">
                                 <li data-uid="0" class="clear-assignee hidden"><i class="fa fa-times-circle-o"></i> Clear assignee</li>
                                 {{range .Collaborators}}
-                                <li data-uid="{{.Id}}"><img src="{{.AvatarLink}}"><strong>{{.Name}}</strong> {{.FullName}}</li>
+                                <li data-uid="{{.Id}}"><img src="{{.AvatarLink}}"><strong>{{.Name}}</strong></li>
                                 {{end}}
                             </ul>
                         </div>
