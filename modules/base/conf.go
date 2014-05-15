@@ -200,11 +200,12 @@ func newLdapService() {
 			ldapname := Cfg.MustValue(v, "name", v)
 			ldaphost := Cfg.MustValue(v, "host")
 			ldapport := Cfg.MustInt(v, "port", 389)
+			ldapusessl := Cfg.MustBool(v, "usessl", false)
 			ldapbasedn := Cfg.MustValue(v, "basedn", "dc=*,dc=*")
 			ldapattribute := Cfg.MustValue(v, "attribute", "mail")
 			ldapfilter := Cfg.MustValue(v, "filter", "(*)")
 			ldapmsadsaformat := Cfg.MustValue(v, "MSADSAFORMAT", "%s")
-			ldap.AddSource(ldapname, ldaphost, ldapport, ldapbasedn, ldapattribute, ldapfilter, ldapmsadsaformat)
+			ldap.AddSource(ldapname, ldaphost, ldapport, ldapusessl, ldapbasedn, ldapattribute, ldapfilter, ldapmsadsaformat)
 			nbsrc++
 			log.Debug("%s added as LDAP source", ldapname)
 		}
