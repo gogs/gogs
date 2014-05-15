@@ -21,6 +21,7 @@ type AuthenticationForm struct {
 	Domain            string `form:"domain"`
 	Host              string `form:"host"`
 	Port              int    `form:"port"`
+	UseSSL            bool   `form:"usessl"`
 	BaseDN            string `form:"base_dn"`
 	Attributes        string `form:"attributes"`
 	Filter            string `form:"filter"`
@@ -37,6 +38,7 @@ func (f *AuthenticationForm) Name(field string) string {
 		"Domain":     "Domain name",
 		"Host":       "Host address",
 		"Port":       "Port Number",
+		"UseSSL":     "Use SSL",
 		"BaseDN":     "Base DN",
 		"Attributes": "Search attributes",
 		"Filter":     "Search filter",
