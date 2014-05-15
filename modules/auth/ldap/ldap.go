@@ -18,6 +18,7 @@ type Ldapsource struct {
 	Name         string // canonical name (ie. corporate.ad)
 	Host         string // LDAP host
 	Port         int    // port number
+	UseSSL       bool   // Use SSL
 	BaseDN       string // Base DN
 	Attributes   string // Attribut to search
 	Filter       string // Query filter to validate entry
@@ -31,8 +32,8 @@ var (
 )
 
 // Add a new source (LDAP directory) to the global pool
-func AddSource(name string, host string, port int, basedn string, attributes string, filter string, msadsaformat string) {
-	ldaphost := Ldapsource{name, host, port, basedn, attributes, filter, msadsaformat, true}
+func AddSource(name string, host string, port int, usessl bool, basedn string, attributes string, filter string, msadsaformat string) {
+	ldaphost := Ldapsource{name, host, port, usessl, basedn, attributes, filter, msadsaformat, true}
 	Authensource = append(Authensource, ldaphost)
 }
 
@@ -52,7 +53,8 @@ func LoginUser(name, passwd string) (a string, r bool) {
 
 // searchEntry : search an LDAP source if an entry (name, passwd) is valide and in the specific filter
 func (ls Ldapsource) SearchEntry(name, passwd string) (string, bool) {
-	l, err := goldap.Dial("tcp", fmt.Sprintf("%s:%d", ls.Host, ls.Port))
+	l, err := ldapDial(ls)
+
 	if err != nil {
 		log.Debug("LDAP Connect error, disabled source %s", ls.Host)
 		ls.Enabled = false
@@ -84,4 +86,12 @@ func (ls Ldapsource) SearchEntry(name, passwd string) (string, bool) {
 		return r, true
 	}
 	return "", true
+}
+
+func ldapDial(ls Ldapsource) (*goldap.Conn, error) {
+	if ls.UseSSL {
+		return goldap.DialTLS("tcp", fmt.Sprintf("%s:%d", ls.Host, ls.Port), nil)
+	} else {
+		return goldap.Dial("tcp", fmt.Sprintf("%s:%d", ls.Host, ls.Port))
+	}
 }
