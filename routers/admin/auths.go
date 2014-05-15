@@ -144,6 +144,7 @@ func EditAuthSourcePost(ctx *middleware.Context, form auth.AuthenticationForm) {
 	}
 
 	u := models.LoginSource{
+		Id:                form.Id,
 		Name:              form.AuthName,
 		IsActived:         form.IsActived,
 		Type:              form.Type,
