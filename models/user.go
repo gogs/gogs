@@ -34,7 +34,7 @@ var (
 	ErrUserNameIllegal       = errors.New("User name contains illegal characters")
 	ErrLoginSourceNotExist   = errors.New("Login source does not exist")
 	ErrLoginSourceNotActived = errors.New("Login source is not actived")
-	ErrUnsupportedLoginType  = errors.New("Login source is unknow")
+	ErrUnsupportedLoginType  = errors.New("Login source is unknown")
 )
 
 // User represents the object of individual and member of organization.

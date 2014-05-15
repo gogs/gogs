@@ -5,6 +5,7 @@
 package models
 
 import (
+	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -133,7 +134,7 @@ func AddSource(source *LoginSource) error {
 }
 
 func UpdateSource(source *LoginSource) error {
-	_, err := orm.AllCols().Id(source.Id).Update(source)
+	_, err := orm.Id(source.Id).AllCols().Update(source)
 	return err
 }
 
@@ -197,7 +198,7 @@ func LoginUser(uname, passwd string) (*User, error) {
 					if err == nil {
 						return u, nil
 					} else {
-						log.Warn("try ldap login", source.Name, "by", uname, "error:", err)
+						log.Warn("Fail to login(%s) by LDAP(%s): %v", uname, source.Name, err)
 					}
 				} else if source.Type == LT_SMTP {
 					u, err := LoginUserSMTPSource(nil, uname, passwd,
@@ -205,7 +206,7 @@ func LoginUser(uname, passwd string) (*User, error) {
 					if err == nil {
 						return u, nil
 					} else {
-						log.Warn("try smtp login", source.Name, "by", uname, "error:", err)
+						log.Warn("Fail to login(%s) by SMTP(%s): %v", uname, source.Name, err)
 					}
 				}
 			}
@@ -217,12 +218,9 @@ func LoginUser(uname, passwd string) (*User, error) {
 		hasSource, err := orm.Id(u.LoginSource).Get(&source)
 		if err != nil {
 			return nil, err
-		}
-		if !hasSource {
+		} else if !hasSource {
 			return nil, ErrLoginSourceNotExist
-		}
-
-		if !source.IsActived {
+		} else if !source.IsActived {
 			return nil, ErrLoginSourceNotActived
 		}
 
@@ -296,20 +294,25 @@ var (
 	SMTPAuths  = []string{SMTP_PLAIN, SMTP_LOGIN}
 )
 
-func SmtpAuth(addr string, a smtp.Auth, tls bool) error {
-	c, err := smtp.Dial(addr)
+func SmtpAuth(host string, port int, a smtp.Auth, useTls bool) error {
+	c, err := smtp.Dial(fmt.Sprintf("%s:%d", host, port))
 	if err != nil {
 		return err
 	}
 	defer c.Close()
 
-	if tls {
+	if err = c.Hello("gogs"); err != nil {
+		return err
+	}
+
+	if useTls {
 		if ok, _ := c.Extension("STARTTLS"); ok {
-			if err = c.StartTLS(nil); err != nil {
+			config := &tls.Config{ServerName: host}
+			if err = c.StartTLS(config); err != nil {
 				return err
 			}
 		} else {
-			return errors.New("smtp server unsupported tls")
+			return errors.New("SMTP server unsupported TLS")
 		}
 	}
 
@@ -333,11 +336,13 @@ func LoginUserSMTPSource(user *User, name, passwd string, sourceId int64, cfg *S
 	} else if cfg.Auth == SMTP_LOGIN {
 		auth = LoginAuth(name, passwd)
 	} else {
-		return nil, errors.New("Unsupported smtp auth type")
+		return nil, errors.New("Unsupported SMTP auth type")
 	}
 
-	err := SmtpAuth(fmt.Sprintf("%s:%d", cfg.Host, cfg.Port), auth, cfg.TLS)
-	if err != nil {
+	if err := SmtpAuth(cfg.Host, cfg.Port, auth, cfg.TLS); err != nil {
+		if strings.Contains(err.Error(), "Username and Password not accepted") {
+			return nil, ErrUserNotExist
+		}
 		return nil, err
 	}
 
