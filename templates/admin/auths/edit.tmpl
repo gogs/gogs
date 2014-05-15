@@ -115,16 +115,20 @@
                             <input name="smtpport" class="form-control" placeholder="Type port number" value="{{.Source.SMTP.Port}}">
                         </div>
                     </div>
-
-                    <!-- <div class="form-group {{if .Err_TLS}}has-error has-feedback{{end}}">
-                        <label class="col-md-3 control-label">TLS: </label>
-                        <div class="col-md-7">
-                            <input name="tls" type="checkbox" class="form-control" {{if .Source.SMTP.TLS}}checked{{end}}>
-                        </div>
-                    </div> -->
                     {{end}}
 
                     <div class="form-group">
+                        {{if eq $type 3}}
+                        <div class="col-md-offset-3 col-md-7">
+                            <div class="checkbox">
+                                <label>
+                                <input name="tls" type="checkbox" class="form-control" {{if .Source.SMTP.TLS}}checked{{end}}>
+                                    <strong>Enable TLS Encryption</strong>
+                                </label>
+                            </div>
+                        </div>
+                        {{end}}
+
                         <div class="col-md-offset-3 col-md-7">
                             <div class="checkbox">
                                 <label>
