@@ -44,6 +44,7 @@ func NewAuthSourcePost(ctx *middleware.Context, form auth.AuthenticationForm) {
 			Ldapsource: ldap.Ldapsource{
 				Host:         form.Host,
 				Port:         form.Port,
+				UseSSL:       form.UseSSL,
 				BaseDN:       form.BaseDN,
 				Attributes:   form.Attributes,
 				Filter:       form.Filter,
@@ -121,6 +122,7 @@ func EditAuthSourcePost(ctx *middleware.Context, form auth.AuthenticationForm) {
 			Ldapsource: ldap.Ldapsource{
 				Host:         form.Host,
 				Port:         form.Port,
+				UseSSL:       form.UseSSL,
 				BaseDN:       form.BaseDN,
 				Attributes:   form.Attributes,
 				Filter:       form.Filter,

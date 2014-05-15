@@ -53,6 +53,14 @@
                         </div>
                     </div>
 
+                    <div class="form-group {{if .Err_UseSSL}}has-error has-feedback{{end}}">
+                         <label class="col-md-3 control-label">Use SSL: </label>
+                         <div class="col-md-7">
+                              <input name="usessl" class="form-control" type="checkbox" {{if .Source.LDAP.UseSSL}}checked{{end}}>
+                         </div>
+                    </div>
+
+
                     <div class="form-group {{if .Err_BaseDN}}has-error has-feedback{{end}}">
                         <label class="col-md-3 control-label">Base DN: </label>
                         <div class="col-md-7">
