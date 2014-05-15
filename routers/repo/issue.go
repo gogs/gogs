@@ -53,7 +53,18 @@ func Issues(ctx *middleware.Context) {
 		filterMode = models.FM_MENTION
 	}
 
-	mid, _ := base.StrTo(ctx.Query("milestone")).Int64()
+	var mid int64
+	midx, _ := base.StrTo(ctx.Query("milestone")).Int64()
+	if midx > 0 {
+		mile, err := models.GetMilestoneByIndex(ctx.Repo.Repository.Id, midx)
+		if err != nil {
+			ctx.Handle(500, "issue.Issues(GetMilestoneByIndex): %v", err)
+			return
+		}
+		mid = mile.Id
+	}
+	fmt.Println(mid)
+
 	page, _ := base.StrTo(ctx.Query("page")).Int()
 
 	// Get issues.
@@ -114,6 +125,19 @@ func CreateIssue(ctx *middleware.Context, params martini.Params) {
 	ctx.Data["IsRepoToolbarIssues"] = true
 	ctx.Data["IsRepoToolbarIssuesList"] = false
 
+	var err error
+	// Get all milestones.
+	ctx.Data["OpenMilestones"], err = models.GetMilestones(ctx.Repo.Repository.Id, false)
+	if err != nil {
+		ctx.Handle(500, "issue.ViewIssue(GetMilestones.1): %v", err)
+		return
+	}
+	ctx.Data["ClosedMilestones"], err = models.GetMilestones(ctx.Repo.Repository.Id, true)
+	if err != nil {
+		ctx.Handle(500, "issue.ViewIssue(GetMilestones.2): %v", err)
+		return
+	}
+
 	us, err := models.GetCollaborators(strings.TrimPrefix(ctx.Repo.RepoLink, "/"))
 	if err != nil {
 		ctx.Handle(500, "issue.CreateIssue(GetCollaborators)", err)
@@ -127,6 +151,19 @@ func CreateIssuePost(ctx *middleware.Context, params martini.Params, form auth.C
 	ctx.Data["Title"] = "Create issue"
 	ctx.Data["IsRepoToolbarIssues"] = true
 	ctx.Data["IsRepoToolbarIssuesList"] = false
+
+	var err error
+	// Get all milestones.
+	ctx.Data["OpenMilestones"], err = models.GetMilestones(ctx.Repo.Repository.Id, false)
+	if err != nil {
+		ctx.Handle(500, "issue.ViewIssue(GetMilestones.1): %v", err)
+		return
+	}
+	ctx.Data["ClosedMilestones"], err = models.GetMilestones(ctx.Repo.Repository.Id, true)
+	if err != nil {
+		ctx.Handle(500, "issue.ViewIssue(GetMilestones.2): %v", err)
+		return
+	}
 
 	us, err := models.GetCollaborators(strings.TrimPrefix(ctx.Repo.RepoLink, "/"))
 	if err != nil {
@@ -240,12 +277,37 @@ func ViewIssue(ctx *middleware.Context, params martini.Params) {
 		return
 	}
 
-	us, err := models.GetCollaborators(strings.TrimPrefix(ctx.Repo.RepoLink, "/"))
+	// Get assigned milestone.
+	if issue.MilestoneId > 0 {
+		ctx.Data["Milestone"], err = models.GetMilestoneById(issue.MilestoneId)
+		if err != nil {
+			if err == models.ErrMilestoneNotExist {
+				log.Warn("issue.ViewIssue(GetMilestoneById): %v", err)
+			} else {
+				ctx.Handle(500, "issue.ViewIssue(GetMilestoneById)", err)
+				return
+			}
+		}
+	}
+
+	// Get all milestones.
+	ctx.Data["OpenMilestones"], err = models.GetMilestones(ctx.Repo.Repository.Id, false)
+	if err != nil {
+		ctx.Handle(500, "issue.ViewIssue(GetMilestones.1): %v", err)
+		return
+	}
+	ctx.Data["ClosedMilestones"], err = models.GetMilestones(ctx.Repo.Repository.Id, true)
+	if err != nil {
+		ctx.Handle(500, "issue.ViewIssue(GetMilestones.2): %v", err)
+		return
+	}
+
+	// Get all collaborators.
+	ctx.Data["Collaborators"], err = models.GetCollaborators(strings.TrimPrefix(ctx.Repo.RepoLink, "/"))
 	if err != nil {
 		ctx.Handle(500, "issue.CreateIssue(GetCollaborators)", err)
 		return
 	}
-	ctx.Data["Collaborators"] = us
 
 	if ctx.IsSigned {
 		// Update issue-user.
@@ -328,6 +390,52 @@ func UpdateIssue(ctx *middleware.Context, params martini.Params, form auth.Creat
 		"ok":      true,
 		"title":   issue.Name,
 		"content": string(base.RenderMarkdown([]byte(issue.Content), ctx.Repo.RepoLink)),
+	})
+}
+
+func UpdateIssueMilestone(ctx *middleware.Context) {
+	if !ctx.Repo.IsOwner {
+		ctx.Error(403)
+		return
+	}
+
+	issueId, err := base.StrTo(ctx.Query("issue")).Int64()
+	if err != nil {
+		ctx.Error(404)
+		return
+	}
+
+	issue, err := models.GetIssueById(issueId)
+	if err != nil {
+		if err == models.ErrIssueNotExist {
+			ctx.Handle(404, "issue.UpdateIssueMilestone(GetIssueById)", err)
+		} else {
+			ctx.Handle(500, "issue.UpdateIssueMilestone(GetIssueById)", err)
+		}
+		return
+	}
+
+	oldMid := issue.MilestoneId
+	mid, _ := base.StrTo(ctx.Query("milestone")).Int64()
+	if oldMid == mid {
+		ctx.JSON(200, map[string]interface{}{
+			"ok": true,
+		})
+		return
+	}
+
+	// Not check for invalid milestone id and give responsibility to owners.
+	issue.MilestoneId = mid
+	if err = models.ChangeMilestoneAssign(oldMid, mid, issue.IsClosed); err != nil {
+		ctx.Handle(500, "issue.UpdateIssueMilestone(ChangeMilestoneAssign)", err)
+		return
+	} else if err = models.UpdateIssue(issue); err != nil {
+		ctx.Handle(500, "issue.UpdateIssueMilestone(UpdateIssue)", err)
+		return
+	}
+
+	ctx.JSON(200, map[string]interface{}{
+		"ok": true,
 	})
 }
 
@@ -580,6 +688,7 @@ func UpdateMilestone(ctx *middleware.Context, params martini.Params) {
 			}
 		case "close":
 			if !mile.IsClosed {
+				mile.ClosedDate = time.Now()
 				if err = models.ChangeMilestoneStatus(mile, true); err != nil {
 					ctx.Handle(500, "issue.UpdateMilestone(ChangeMilestoneStatus)", err)
 					return

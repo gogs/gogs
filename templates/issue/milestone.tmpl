@@ -19,8 +19,8 @@
                 {{range .Milestones}}
                 <div class="list-group-item milestone-item">
                     <h4 class="title pull-left"><a href="{{$.RepoLink}}/issues?milestone={{.Index}}{{if .IsClosed}}&state=closed{{end}}">{{.Name}}</a></h4>
-                    <span class="issue-open label label-success">{{.NumClosedIssues}}</span>
-                    <span class="issue-close label label-warning">{{.NumOpenIssues}}</span>
+                    <span class="issue-open label label-success">{{.NumOpenIssues}}</span>
+                    <span class="issue-close label label-warning">{{.NumClosedIssues}}</span>
                     <p class="actions pull-right">
                         <a href="{{$.RepoLink}}/issues/milestones/{{.Index}}/edit">Edit</a>
                         {{if .IsClosed}}

@@ -676,15 +676,33 @@ func DeleteRepository(userId, repoId int64, userName string) (err error) {
 		sess.Rollback()
 		return err
 	}
-	if _, err = sess.Delete(&Issue{RepoId: repoId}); err != nil {
-		sess.Rollback()
-		return err
-	}
 	if _, err = sess.Delete(&IssueUser{RepoId: repoId}); err != nil {
 		sess.Rollback()
 		return err
 	}
 	if _, err = sess.Delete(&Milestone{RepoId: repoId}); err != nil {
+		sess.Rollback()
+		return err
+	}
+	if _, err = sess.Delete(&Release{RepoId: repoId}); err != nil {
+		sess.Rollback()
+		return err
+	}
+
+	// Delete comments.
+	if err = orm.Iterate(&Issue{RepoId: repoId}, func(idx int, bean interface{}) error {
+		issue := bean.(*Issue)
+		if _, err = sess.Delete(&Comment{IssueId: issue.Id}); err != nil {
+			sess.Rollback()
+			return err
+		}
+		return nil
+	}); err != nil {
+		sess.Rollback()
+		return err
+	}
+
+	if _, err = sess.Delete(&Issue{RepoId: repoId}); err != nil {
 		sess.Rollback()
 		return err
 	}
