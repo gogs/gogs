@@ -16,6 +16,7 @@ import (
 	"github.com/go-xorm/xorm"
 
 	"github.com/gogits/gogs/modules/auth/ldap"
+	"github.com/gogits/gogs/modules/log"
 )
 
 // Login types.
@@ -194,14 +195,17 @@ func LoginUser(uname, passwd string) (*User, error) {
 					u, err := LoginUserLdapSource(nil, uname, passwd,
 						source.Id, source.Cfg.(*LDAPConfig), true)
 					if err == nil {
-						return u, err
+						return u, nil
+					} else {
+						log.Warn("try ldap login", source.Name, "by", uname, "error:", err)
 					}
 				} else if source.Type == LT_SMTP {
 					u, err := LoginUserSMTPSource(nil, uname, passwd,
 						source.Id, source.Cfg.(*SMTPConfig), true)
-
 					if err == nil {
-						return u, err
+						return u, nil
+					} else {
+						log.Warn("try smtp login", source.Name, "by", uname, "error:", err)
 					}
 				}
 			}
