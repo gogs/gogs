@@ -4,13 +4,36 @@
 {{template "repo/toolbar" .}}
 <div id="body" class="container">
     <div id="issue">
-        <div class="col-md-3 filter-list">
-            <ul class="list-unstyled">
-                <li><a href="{{.RepoLink}}/issues?state={{.State}}"{{if eq .ViewType "all"}} class="active"{{end}}>All Issues <strong class="pull-right">{{..IssueStats.AllCount}}</strong></a></li>
-                <li><a href="{{.RepoLink}}/issues?type=assigned&state={{.State}}"{{if eq .ViewType "assigned"}} class="active"{{end}}>Assigned to you <strong class="pull-right">{{.IssueStats.AssignCount}}</strong></a></li>
-                <li><a href="{{.RepoLink}}/issues?type=created_by&state={{.State}}"{{if eq .ViewType "created_by"}} class="active"{{end}}>Created by you <strong class="pull-right">{{.IssueStats.CreateCount}}</strong></a></li>
-                <li><a href="{{.RepoLink}}/issues?type=mentioned&state={{.State}}"{{if eq .ViewType "mentioned"}} class="active"{{end}}>Mentioning you <strong class="pull-right">{{.IssueStats.MentionCount}}</strong></a></li>
-            </ul>
+        <div class="col-md-3 filters">
+            <div class="filter-list">
+                <ul class="list-unstyled">
+                    <li><a href="{{.RepoLink}}/issues?state={{.State}}"{{if eq .ViewType "all"}} class="active"{{end}}>All Issues <strong class="pull-right">{{..IssueStats.AllCount}}</strong></a></li>
+                    <li><a href="{{.RepoLink}}/issues?type=assigned&state={{.State}}"{{if eq .ViewType "assigned"}} class="active"{{end}}>Assigned to you <strong class="pull-right">{{.IssueStats.AssignCount}}</strong></a></li>
+                    <li><a href="{{.RepoLink}}/issues?type=created_by&state={{.State}}"{{if eq .ViewType "created_by"}} class="active"{{end}}>Created by you <strong class="pull-right">{{.IssueStats.CreateCount}}</strong></a></li>
+                    <li><a href="{{.RepoLink}}/issues?type=mentioned&state={{.State}}"{{if eq .ViewType "mentioned"}} class="active"{{end}}>Mentioning you <strong class="pull-right">{{.IssueStats.MentionCount}}</strong></a></li>
+                </ul>
+            </div>
+            <div class="label-filter">
+                <h4>Label</h4>
+                <ul class="list-unstyled">
+                    <li><a href="#"><span class="pull-right count">1</span><span class="color" style="background-color: red"></span>bug</a></li>
+                    <li><a href=""><span class="pull-right count">1</span><span class="color" style="background-color: #AAA"></span>duplicate</a></li>
+                    <li><a href=""><span class="pull-right count">1</span><span class="color" style="background-color: #0072E3"></span>enhancement</a></li>
+                </ul>
+                <button class="btn btn-default btn-block label-button">Manage Labels</button>
+                <hr/>
+                <form id="label-add-form" action="#" method="post">
+                    <h5><strong>New Label</strong></h5>
+                    <div class="input-group label-color-picker form-group">
+                        <input type="text" value="" class="form-control" name="name" required="required" id="label-name-ipt"/>
+                        <input type="hidden" value="" name="color" id="label-color-ipt"/>
+                        <span class="input-group-addon"><i></i></span>
+                    </div>
+                    <div class="form-group text-right">
+                        <button class="btn btn-default btn-sm">Create</button>
+                    </div>
+                </form>
+            </div>
         </div>
         <div class="col-md-9">
             <div class="filter-option">
@@ -37,4 +60,12 @@
         </div>
     </div>
 </div>
+<script src="/js/bootstrap-colorpicker.min.js"></script>
+<script>
+    $(function(){
+        $('.label-color-picker').colorpicker({
+            input:$('#label-color-ipt')
+        });
+    });
+</script>
 {{template "base/footer" .}}
