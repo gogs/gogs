@@ -32,15 +32,16 @@ More importantly, Gogs only needs one binary to setup your own project hosting o
 ## Features
 
 - Activity timeline
-- SSH/HTTP(S) protocol support.
-- Register/delete/rename account.
-- Create/migrate/mirror/delete/watch/rename/transfer public/private repository.
-- Repository viewer/release/issue tracker/webhooks.
-- Add/remove repository collaborators.
-- Gravatar and cache support.
-- Mail service(register, issue).
-- Administration panel.
-- Supports MySQL, PostgreSQL and SQLite3.
+- SSH/HTTP(S) protocol support
+- SMTP authentication support
+- Register/delete/rename account
+- Create/migrate/mirror/delete/watch/rename/transfer public/private repository
+- Repository viewer/release/issue tracker/webhooks
+- Add/remove repository collaborators
+- Gravatar and cache support
+- Mail service(register, issue)
+- Administration panel
+- Supports MySQL, PostgreSQL and SQLite3
 - Social account login(GitHub, Google, QQ, Weibo)
 
 ## System Requirements
