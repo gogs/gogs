@@ -47,7 +47,7 @@ func ZipDownload(ctx *middleware.Context, params martini.Params) {
 	commitId := ctx.Repo.CommitId
 	archivesPath := filepath.Join(ctx.Repo.GitRepo.Path, "archives/zip")
 	if !com.IsDir(archivesPath) {
-		if err := os.Mkdir(archivesPath, 0755); err != nil {
+		if err := os.MkdirAll(archivesPath, 0755); err != nil {
 			ctx.Handle(404, "ZipDownload -> os.Mkdir(archivesPath)", err)
 			return
 		}
@@ -73,7 +73,7 @@ func TarGzDownload(ctx *middleware.Context, params martini.Params) {
 	commitId := ctx.Repo.CommitId
 	archivesPath := filepath.Join(ctx.Repo.GitRepo.Path, "archives/targz")
 	if !com.IsDir(archivesPath) {
-		if err := os.Mkdir(archivesPath, 0755); err != nil {
+		if err := os.MkdirAll(archivesPath, 0755); err != nil {
 			ctx.Handle(404, "TarGzDownload -> os.Mkdir(archivesPath)", err)
 			return
 		}
