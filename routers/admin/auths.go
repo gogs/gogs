@@ -158,7 +158,7 @@ func EditAuthSourcePost(ctx *middleware.Context, form auth.AuthenticationForm) {
 	}
 
 	log.Trace("%s Authentication changed by admin(%s): %s", ctx.Req.RequestURI,
-		ctx.User.LowerName, strings.ToLower(form.AuthName))
+		ctx.User.LowerName, form.AuthName)
 
 	ctx.Redirect("/admin/auths")
 }

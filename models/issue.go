@@ -161,6 +161,13 @@ func GetIssueCountByPoster(uid, rid int64, isClosed bool) int64 {
 	return count
 }
 
+// .___                             ____ ___
+// |   | ______ ________ __   ____ |    |   \______ ___________
+// |   |/  ___//  ___/  |  \_/ __ \|    |   /  ___// __ \_  __ \
+// |   |\___ \ \___ \|  |  /\  ___/|    |  /\___ \\  ___/|  | \/
+// |___/____  >____  >____/  \___  >______//____  >\___  >__|
+//          \/     \/            \/             \/     \/
+
 // IssueUser represents an issue-user relation.
 type IssueUser struct {
 	Id          int64
@@ -404,6 +411,13 @@ type Label struct {
 	NumOpenIssues   int `xorm:"-"`
 }
 
+//    _____  .__.__                   __
+//   /     \ |__|  |   ____   _______/  |_  ____   ____   ____
+//  /  \ /  \|  |  | _/ __ \ /  ___/\   __\/  _ \ /    \_/ __ \
+// /    Y    \  |  |_\  ___/ \___ \  |  | (  <_> )   |  \  ___/
+// \____|__  /__|____/\___  >____  > |__|  \____/|___|  /\___  >
+//         \/             \/     \/                   \/     \/
+
 // Milestone represents a milestone of repository.
 type Milestone struct {
 	Id              int64
@@ -517,7 +531,7 @@ func ChangeMilestoneStatus(m *Milestone, isClosed bool) (err error) {
 }
 
 // ChangeMilestoneAssign changes assignment of milestone for issue.
-func ChangeMilestoneAssign(oldMid, mid int64, isIssueClosed bool) (err error) {
+func ChangeMilestoneAssign(oldMid, mid int64, issue *Issue) (err error) {
 	sess := orm.NewSession()
 	defer sess.Close()
 	if err = sess.Begin(); err != nil {
@@ -531,7 +545,7 @@ func ChangeMilestoneAssign(oldMid, mid int64, isIssueClosed bool) (err error) {
 		}
 
 		m.NumIssues--
-		if isIssueClosed {
+		if issue.IsClosed {
 			m.NumClosedIssues--
 		}
 		if m.NumIssues > 0 {
@@ -543,6 +557,12 @@ func ChangeMilestoneAssign(oldMid, mid int64, isIssueClosed bool) (err error) {
 			sess.Rollback()
 			return err
 		}
+
+		rawSql := "UPDATE `issue_user` SET milestone_id = 0 WHERE issue_id = ?"
+		if _, err = sess.Exec(rawSql, issue.Id); err != nil {
+			sess.Rollback()
+			return err
+		}
 	}
 
 	if mid > 0 {
@@ -551,11 +571,17 @@ func ChangeMilestoneAssign(oldMid, mid int64, isIssueClosed bool) (err error) {
 			return err
 		}
 		m.NumIssues++
-		if isIssueClosed {
+		if issue.IsClosed {
 			m.NumClosedIssues++
 		}
 		m.Completeness = m.NumClosedIssues * 100 / m.NumIssues
 		if _, err = sess.Id(m.Id).Update(m); err != nil {
+			sess.Rollback()
+			return err
+		}
+
+		rawSql := "UPDATE `issue_user` SET milestone_id = ? WHERE issue_id = ?"
+		if _, err = sess.Exec(rawSql, m.Id, issue.Id); err != nil {
 			sess.Rollback()
 			return err
 		}
@@ -587,8 +613,21 @@ func DeleteMilestone(m *Milestone) (err error) {
 		sess.Rollback()
 		return err
 	}
+
+	rawSql = "UPDATE `issue_user` SET milestone_id = 0 WHERE milestone_id = ?"
+	if _, err = sess.Exec(rawSql, m.Id); err != nil {
+		sess.Rollback()
+		return err
+	}
 	return sess.Commit()
 }
+
+// _________                                       __
+// \_   ___ \  ____   _____   _____   ____   _____/  |_
+// /    \  \/ /  _ \ /     \ /     \_/ __ \ /    \   __\
+// \     \___(  <_> )  Y Y  \  Y Y  \  ___/|   |  \  |
+//  \______  /\____/|__|_|  /__|_|  /\___  >___|  /__|
+//         \/             \/      \/     \/     \/
 
 // Issue types.
 const (
