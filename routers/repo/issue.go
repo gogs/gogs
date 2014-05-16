@@ -426,7 +426,7 @@ func UpdateIssueMilestone(ctx *middleware.Context) {
 
 	// Not check for invalid milestone id and give responsibility to owners.
 	issue.MilestoneId = mid
-	if err = models.ChangeMilestoneAssign(oldMid, mid, issue.IsClosed); err != nil {
+	if err = models.ChangeMilestoneAssign(oldMid, mid, issue); err != nil {
 		ctx.Handle(500, "issue.UpdateIssueMilestone(ChangeMilestoneAssign)", err)
 		return
 	} else if err = models.UpdateIssue(issue); err != nil {
