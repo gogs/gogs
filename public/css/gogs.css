@@ -1244,6 +1244,10 @@ html, body {
     margin-top: 6px;
 }
 
+#issue .filters ul {
+    margin-bottom: 0;
+}
+
 #issue .filter-list a {
     padding: 6px 10px;
     font-size: 14px;
@@ -1273,6 +1277,47 @@ html, body {
 
 #issue .filter-option {
     margin-bottom: 12px;
+}
+
+#issue .filters > div {
+    margin-bottom: 16px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #CCC;
+}
+
+#issue .label-filter li {
+    line-height: 24px;
+    margin-top: 4px;
+}
+
+#issue .label-filter a {
+    color: #666;
+    font-weight: bold;
+    padding: 0 4px;
+    display: block;
+}
+
+#issue .label-filter a:hover {
+    background-color: #FFF;
+}
+
+#issue .label-filter .count {
+    font-size: 12px;
+    margin-right: 6px;
+    color: #888;
+}
+
+#issue .label-filter .color {
+    float: left;
+    height: 12px;
+    width: 12px;
+    border-radius: 2px;
+    margin-right: 12px;
+    margin-top: 6px;
+}
+
+#issue .label-filter .label-button {
+    margin-top: 16px;
 }
 
 #issue .list-group .list-group-item {
