@@ -125,8 +125,8 @@ func (repo *Repository) GetOwner() (err error) {
 }
 
 // IsRepositoryExist returns true if the repository with given name under user has already existed.
-func IsRepositoryExist(user *User, repoName string) (bool, error) {
-	repo := Repository{OwnerId: user.Id}
+func IsRepositoryExist(u *User, repoName string) (bool, error) {
+	repo := Repository{OwnerId: u.Id}
 	has, err := orm.Where("lower_name = ?", strings.ToLower(repoName)).Get(&repo)
 	if err != nil {
 		return has, err
@@ -134,7 +134,7 @@ func IsRepositoryExist(user *User, repoName string) (bool, error) {
 		return false, nil
 	}
 
-	return com.IsDir(RepoPath(user.Name, repoName)), nil
+	return com.IsDir(RepoPath(u.Name, repoName)), nil
 }
 
 var (
