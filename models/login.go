@@ -312,7 +312,7 @@ func SmtpAuth(host string, port int, a smtp.Auth, useTls bool) error {
 				return err
 			}
 		} else {
-			return errors.New("SMTP server unsupported TLS")
+			return errors.New("SMTP server unsupports TLS")
 		}
 	}
 

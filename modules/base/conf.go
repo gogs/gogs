@@ -10,7 +10,6 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
-	"regexp"
 	"strings"
 
 	"github.com/Unknwon/com"
@@ -20,7 +19,6 @@ import (
 	"github.com/gogits/cache"
 	"github.com/gogits/session"
 
-	"github.com/gogits/gogs/modules/auth/ldap"
 	"github.com/gogits/gogs/modules/log"
 )
 
@@ -188,37 +186,6 @@ func newLogService() {
 	}
 }
 
-func newLdapService() {
-	Service.LdapAuth = Cfg.MustBool("security", "LDAP_AUTH", false)
-	if !Service.LdapAuth {
-		return
-	}
-
-	nbsrc := 0
-	for _, v := range Cfg.GetSectionList() {
-		if matched, _ := regexp.MatchString("(?i)^LDAPSOURCE.*", v); matched {
-			ldapname := Cfg.MustValue(v, "name", v)
-			ldaphost := Cfg.MustValue(v, "host")
-			ldapport := Cfg.MustInt(v, "port", 389)
-			ldapusessl := Cfg.MustBool(v, "usessl", false)
-			ldapbasedn := Cfg.MustValue(v, "basedn", "dc=*,dc=*")
-			ldapattribute := Cfg.MustValue(v, "attribute", "mail")
-			ldapfilter := Cfg.MustValue(v, "filter", "(*)")
-			ldapmsadsaformat := Cfg.MustValue(v, "MSADSAFORMAT", "%s")
-			ldap.AddSource(ldapname, ldaphost, ldapport, ldapusessl, ldapbasedn, ldapattribute, ldapfilter, ldapmsadsaformat)
-			nbsrc++
-			log.Debug("%s added as LDAP source", ldapname)
-		}
-	}
-	if nbsrc == 0 {
-		log.Warn("No valide LDAP found, LDAP Authentication NOT enabled")
-		Service.LdapAuth = false
-		return
-	}
-
-	log.Info("LDAP Authentication Enabled")
-}
-
 func newCacheService() {
 	CacheAdapter = Cfg.MustValue("cache", "ADAPTER", "memory")
 	if EnableRedis {
@@ -376,7 +343,6 @@ func NewConfigContext() {
 func NewBaseServices() {
 	newService()
 	newLogService()
-	newLdapService()
 	newCacheService()
 	newSessionService()
 	newMailService()
