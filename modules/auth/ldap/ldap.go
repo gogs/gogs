@@ -54,9 +54,8 @@ func LoginUser(name, passwd string) (a string, r bool) {
 // searchEntry : search an LDAP source if an entry (name, passwd) is valide and in the specific filter
 func (ls Ldapsource) SearchEntry(name, passwd string) (string, bool) {
 	l, err := ldapDial(ls)
-
 	if err != nil {
-		log.Debug("LDAP Connect error, disabled source %s", ls.Host)
+		log.Error("LDAP Connect error, %s:%v", ls.Host, err)
 		ls.Enabled = false
 		return "", false
 	}
