@@ -218,6 +218,7 @@ func runWeb(*cli.Context) {
 		r.Get("/commit/:branchname/**", repo.Diff)
 		r.Get("/releases", repo.Releases)
 		r.Get("/archive/:branchname/:reponame.zip", repo.ZipDownload)
+		r.Get("/archive/:branchname/:reponame.tar.gz", repo.TarGzDownload)
 	}, ignSignIn, middleware.RepoAssignment(true, true))
 
 	m.Group("/:username", func(r martini.Router) {

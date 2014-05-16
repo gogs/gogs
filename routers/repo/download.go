@@ -11,6 +11,8 @@ import (
 	"github.com/Unknwon/com"
 	"github.com/go-martini/martini"
 
+	"github.com/gogits/git"
+
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/middleware"
 )
@@ -43,7 +45,7 @@ func SingleDownload(ctx *middleware.Context, params martini.Params) {
 
 func ZipDownload(ctx *middleware.Context, params martini.Params) {
 	commitId := ctx.Repo.CommitId
-	archivesPath := filepath.Join(ctx.Repo.GitRepo.Path, "archives")
+	archivesPath := filepath.Join(ctx.Repo.GitRepo.Path, "archives/zip")
 	if !com.IsDir(archivesPath) {
 		if err := os.Mkdir(archivesPath, 0755); err != nil {
 			ctx.Handle(404, "ZipDownload -> os.Mkdir(archivesPath)", err)
@@ -51,18 +53,44 @@ func ZipDownload(ctx *middleware.Context, params martini.Params) {
 		}
 	}
 
-	zipPath := filepath.Join(archivesPath, commitId+".zip")
+	archivePath := filepath.Join(archivesPath, commitId+".zip")
 
-	if com.IsFile(zipPath) {
-		ctx.ServeFile(zipPath, ctx.Repo.Repository.Name+".zip")
+	if com.IsFile(archivePath) {
+		ctx.ServeFile(archivePath, ctx.Repo.Repository.Name+".zip")
 		return
 	}
 
-	err := ctx.Repo.Commit.CreateArchive(zipPath)
+	err := ctx.Repo.Commit.CreateArchive(archivePath, git.AT_ZIP)
 	if err != nil {
-		ctx.Handle(404, "ZipDownload -> CreateArchive "+zipPath, err)
+		ctx.Handle(404, "ZipDownload -> CreateArchive "+archivePath, err)
 		return
 	}
 
-	ctx.ServeFile(zipPath, ctx.Repo.Repository.Name+".zip")
+	ctx.ServeFile(archivePath, ctx.Repo.Repository.Name+".zip")
+}
+
+func TarGzDownload(ctx *middleware.Context, params martini.Params) {
+	commitId := ctx.Repo.CommitId
+	archivesPath := filepath.Join(ctx.Repo.GitRepo.Path, "archives/targz")
+	if !com.IsDir(archivesPath) {
+		if err := os.Mkdir(archivesPath, 0755); err != nil {
+			ctx.Handle(404, "TarGzDownload -> os.Mkdir(archivesPath)", err)
+			return
+		}
+	}
+
+	archivePath := filepath.Join(archivesPath, commitId+".tar.gz")
+
+	if com.IsFile(archivePath) {
+		ctx.ServeFile(archivePath, ctx.Repo.Repository.Name+".tar.gz")
+		return
+	}
+
+	err := ctx.Repo.Commit.CreateArchive(archivePath, git.AT_TARGZ)
+	if err != nil {
+		ctx.Handle(404, "TarGzDownload -> CreateArchive "+archivePath, err)
+		return
+	}
+
+	ctx.ServeFile(archivePath, ctx.Repo.Repository.Name+".tar.gz")
 }
