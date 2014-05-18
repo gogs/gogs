@@ -400,17 +400,6 @@ func UpdateIssueUserPairsByMentions(uids []int64, iid int64) error {
 	return nil
 }
 
-// Label represents a label of repository for issues.
-type Label struct {
-	Id              int64
-	RepoId          int64 `xorm:"INDEX"`
-	Name            string
-	Color           string
-	NumIssues       int
-	NumClosedIssues int
-	NumOpenIssues   int `xorm:"-"`
-}
-
 //    _____  .__.__                   __
 //   /     \ |__|  |   ____   _______/  |_  ____   ____   ____
 //  /  \ /  \|  |  | _/ __ \ /  ___/\   __\/  _ \ /    \_/ __ \
@@ -620,6 +609,42 @@ func DeleteMilestone(m *Milestone) (err error) {
 		return err
 	}
 	return sess.Commit()
+}
+
+// .____          ___.          .__
+// |    |   _____ \_ |__   ____ |  |
+// |    |   \__  \ | __ \_/ __ \|  |
+// |    |___ / __ \| \_\ \  ___/|  |__
+// |_______ (____  /___  /\___  >____/
+//         \/    \/    \/     \/
+
+// Label represents a label of repository for issues.
+type Label struct {
+	Id              int64
+	RepoId          int64 `xorm:"INDEX"`
+	Name            string
+	Color           string `xorm:"VARCHAR(7)"`
+	NumIssues       int
+	NumClosedIssues int
+	NumOpenIssues   int `xorm:"-"`
+}
+
+// CalOpenIssues calculates the open issues of label.
+func (m *Label) CalOpenIssues() {
+	m.NumOpenIssues = m.NumIssues - m.NumClosedIssues
+}
+
+// NewLabel creates new label of repository.
+func NewLabel(l *Label) error {
+	_, err := orm.Insert(l)
+	return err
+}
+
+// GetLabels returns a list of labels of given repository ID.
+func GetLabels(repoId int64) ([]*Label, error) {
+	labels := make([]*Label, 0, 10)
+	err := orm.Where("repo_id=?", repoId).Find(&labels)
+	return labels, err
 }
 
 // _________                                       __

@@ -171,6 +171,31 @@ func (f *CreateMilestoneForm) Validate(errors *binding.Errors, req *http.Request
 	validate(errors, data, f)
 }
 
+// .____          ___.          .__
+// |    |   _____ \_ |__   ____ |  |
+// |    |   \__  \ | __ \_/ __ \|  |
+// |    |___ / __ \| \_\ \  ___/|  |__
+// |_______ (____  /___  /\___  >____/
+//         \/    \/    \/     \/
+
+type CreateLabelForm struct {
+	Title string `form:"title" binding:"Required;MaxSize(50)"`
+	Color string `form:"color" binding:"Required;Size(7)"`
+}
+
+func (f *CreateLabelForm) Name(field string) string {
+	names := map[string]string{
+		"Title": "Label name",
+		"Color": "Label color",
+	}
+	return names[field]
+}
+
+func (f *CreateLabelForm) Validate(errors *binding.Errors, req *http.Request, context martini.Context) {
+	data := context.Get(reflect.TypeOf(base.TmplData{})).Interface().(base.TmplData)
+	validate(errors, data, f)
+}
+
 // __________       .__
 // \______   \ ____ |  |   ____ _____    ______ ____
 //  |       _// __ \|  | _/ __ \\__  \  /  ___// __ \

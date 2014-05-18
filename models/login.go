@@ -185,9 +185,8 @@ func LoginUser(uname, passwd string) (*User, error) {
 	} else {
 		if !has {
 			var sources []LoginSource
-			cond := &LoginSource{IsActived: true, AllowAutoRegister: true}
-			err = orm.UseBool().Find(&sources, cond)
-			if err != nil {
+			if err = orm.UseBool().Find(&sources,
+				&LoginSource{IsActived: true, AllowAutoRegister: true}); err != nil {
 				return nil, err
 			}
 
