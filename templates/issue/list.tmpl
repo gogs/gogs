@@ -16,17 +16,18 @@
             <div class="label-filter">
                 <h4>Label</h4>
                 <ul class="list-unstyled">
-                    <li><a href="#"><span class="pull-right count">1</span><span class="color" style="background-color: red"></span>bug</a></li>
-                    <li><a href=""><span class="pull-right count">1</span><span class="color" style="background-color: #AAA"></span>duplicate</a></li>
-                    <li><a href=""><span class="pull-right count">1</span><span class="color" style="background-color: #0072E3"></span>enhancement</a></li>
+                    {{range .Labels}}
+                    <li><a href="#"><span class="pull-right count">{{if $.IsShowClosed}}{{.NumClosedIssues}}{{else}}{{.NumOpenIssues}}{{end}}</span><span class="color" style="background-color: {{.Color}}"></span>{{.Name}}</a></li>
+                    {{end}}
                 </ul>
                 <button class="btn btn-default btn-block label-button">Manage Labels</button>
                 <hr/>
-                <form id="label-add-form" action="#" method="post">
+                <form id="label-add-form" action="{{$.RepoLink}}/issues/labels/new" method="post">
+                    {{.CsrfTokenHtml}}
                     <h5><strong>New Label</strong></h5>
                     <div class="input-group label-color-picker form-group">
-                        <input type="text" value="" class="form-control" name="name" required="required" id="label-name-ipt"/>
-                        <input type="hidden" value="" name="color" id="label-color-ipt"/>
+                        <input type="text" class="form-control" name="title" required="required" id="label-name-ipt"/>
+                        <input type="hidden" name="color" id="label-color-ipt"/>
                         <span class="input-group-addon"><i></i></span>
                     </div>
                     <div class="form-group text-right">
@@ -36,6 +37,7 @@
             </div>
         </div>
         <div class="col-md-9">
+            {{template "base/alert" .}}
             <div class="filter-option">
                 <div class="btn-group">
                     <a class="btn btn-default issue-open{{if not .IsShowClosed}} active{{end}}" href="{{.RepoLink}}/issues?type={{.ViewType}}">{{..IssueStats.OpenCount}} Open</a>

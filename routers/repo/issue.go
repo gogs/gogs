@@ -63,7 +63,16 @@ func Issues(ctx *middleware.Context) {
 		}
 		mid = mile.Id
 	}
-	fmt.Println(mid)
+
+	labels, err := models.GetLabels(ctx.Repo.Repository.Id)
+	if err != nil {
+		ctx.Handle(500, "issue.Issues(GetLabels): %v", err)
+		return
+	}
+	for _, l := range labels {
+		l.CalOpenIssues()
+	}
+	ctx.Data["Labels"] = labels
 
 	page, _ := base.StrTo(ctx.Query("page")).Int()
 
@@ -589,6 +598,28 @@ func Comment(ctx *middleware.Context, params martini.Params) {
 	}
 
 	ctx.Redirect(fmt.Sprintf("%s/issues/%d", ctx.Repo.RepoLink, index))
+}
+
+func NewLabel(ctx *middleware.Context, form auth.CreateLabelForm) {
+	if ctx.HasError() {
+		Issues(ctx)
+		return
+	}
+
+	l := &models.Label{
+		RepoId: ctx.Repo.Repository.Id,
+		Name:   form.Title,
+		Color:  form.Color,
+	}
+	if err := models.NewLabel(l); err != nil {
+		ctx.Handle(500, "issue.NewLabel(NewLabel)", err)
+		return
+	}
+	ctx.Redirect(ctx.Repo.RepoLink + "/issues")
+}
+
+func UpdateLabel(ctx *middleware.Context, params martini.Params) {
+
 }
 
 func Milestones(ctx *middleware.Context) {
