@@ -15,19 +15,39 @@
             </div>
             <div class="label-filter">
                 <h4>Label</h4>
-                <ul class="list-unstyled">
+                <ul class="list-unstyled" id="label-list" data-ajax="/{url}">
                     {{range .Labels}}
-                    <li><a href="#"><span class="pull-right count">{{if $.IsShowClosed}}{{.NumClosedIssues}}{{else}}{{.NumOpenIssues}}{{end}}</span><span class="color" style="background-color: {{.Color}}"></span>{{.Name}}</a></li>
+                    <li class="label-item" id="label-{{.Id}}" data-id="{{.Id}}"><a href="#">
+                        <span class="pull-right count">{{if $.IsShowClosed}}{{.NumClosedIssues}}{{else}}{{.NumOpenIssues}}{{end}}</span>
+                        <span class="color" style="background-color: {{.Color}}" data-color="{{.Color}}"></span>
+                        <span class="name">{{.Name}}</span>
+                    </a>
+                    <a class="del pull-right" href="#" data-id="{{.Id}}"><i class="fa fa-times-circle-o"></i></a>
+                    </li>
                     {{end}}
+                    <li class="label-change-li" style="display: none">
+                        <form id="label-change-form" action="{{$.RepoLink}}/issues/labels/edit" method="post">
+                            {{.CsrfTokenHtml}}
+                            <div class="input-group label-change-color-picker form-group" style="margin-bottom: 2px">
+                                <input type="text" class="form-control" name="title" required="required" id="label-name-change-ipt"/>
+                                <input type="hidden" name="color" id="label-color-change-ipt" value="#444444"/>
+                                <span class="input-group-addon"><i></i></span>
+                                <input type="hidden" name="id" id="label-change-id-ipt" value="0"/>
+                            </div>
+                            <div class="form-group text-right">
+                                <button class="btn btn-default btn-sm">Save</button>
+                            </div>
+                        </form>
+                    </li>
                 </ul>
-                <button class="btn btn-default btn-block label-button">Manage Labels</button>
+                <button class="btn btn-default btn-block label-button" id="label-manage-btn">Manage Labels</button>
                 <hr/>
                 <form id="label-add-form" action="{{$.RepoLink}}/issues/labels/new" method="post">
                     {{.CsrfTokenHtml}}
                     <h5><strong>New Label</strong></h5>
                     <div class="input-group label-color-picker form-group">
                         <input type="text" class="form-control" name="title" required="required" id="label-name-ipt"/>
-                        <input type="hidden" name="color" id="label-color-ipt"/>
+                        <input type="hidden" name="color" id="label-color-ipt" value="#444444"/>
                         <span class="input-group-addon"><i></i></span>
                     </div>
                     <div class="form-group text-right">
@@ -67,6 +87,9 @@
     $(function(){
         $('.label-color-picker').colorpicker({
             input:$('#label-color-ipt')
+        });
+        $('.label-change-color-picker').colorpicker({
+            input:$('#label-color-change-ipt')
         });
     });
 </script>

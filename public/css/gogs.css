@@ -1297,7 +1297,7 @@ html, body {
     display: block;
 }
 
-#issue .label-filter a:hover {
+#issue .label-filter li.label-item:hover {
     background-color: #FFF;
 }
 
@@ -1314,6 +1314,12 @@ html, body {
     border-radius: 2px;
     margin-right: 12px;
     margin-top: 6px;
+}
+
+#issue .label-filter .del {
+    margin-top: -24px;
+    color: #888;
+    display: none;
 }
 
 #issue .label-filter .label-button {

@@ -612,6 +612,44 @@ function initIssue() {
             $('#milestone').text($('#milestone').data("no-milestone"));
         }
     });
+
+    // labels
+    $('#label-manage-btn').on("click", function () {
+        var $list = $('#label-list');
+        if ($list.hasClass("managing")) {
+            var ids = [];
+            $list.find('li').each(function (i, item) {
+                var id = $(item).data("id");
+                if (id > 0) {
+                    ids.push(id);
+                }
+            });
+            $.post($list.data("ajax"), {"ids": ids.join(",")}, function (json) {
+                if (json.ok) {
+                    window.location.reload();
+                }
+            })
+        } else {
+            $list.addClass("managing");
+            $list.find(".count").hide();
+            $list.find(".del").show();
+            $(this).text("Save Labels");
+            $list.on('click', 'li.label-item', function () {
+                var $this = $(this);
+                $this.after($('.label-change-li').detach().show());
+                $('#label-name-change-ipt').val($this.find('.name').text());
+                var color = $this.find('.color').data("color");
+                $('.label-change-color-picker').colorpicker("setValue", color);
+                $('#label-color-change-ipt').val(color);
+                $('#label-change-id-ipt').val($this.data("id"));
+                return false;
+            });
+        }
+    });
+    $("#label-list").on('click', '.del', function () {
+        $(this).parent().remove();
+        return false;
+    });
 }
 
 function initRelease() {
