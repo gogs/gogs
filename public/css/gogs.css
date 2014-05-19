@@ -1502,7 +1502,7 @@ html, body {
     min-width: 160px;
 }
 
-#issue .issue-bar .assignee .dropdown-menu, #issue .issue-bar .milestone .dropdown-menu {
+#issue .issue-bar .assignee .dropdown-menu, #issue .issue-bar .milestone .dropdown-menu, #issue .issue-bar .labels .dropdown-menu {
     padding: 0;
     margin: 0;
 }
@@ -1549,9 +1549,9 @@ html, body {
     line-height: 30px;
 }
 
-#issue .issue-bar .assignee .action, #issue .issue-bar .milestone .action {
+#issue .issue-bar .assignee .action, #issue .issue-bar .milestone .action, #issue .issue-bar .labels .action {
     position: relative;
-    margin-top: -8px;
+    margin-top: -6px;
 }
 
 #issue .issue-bar .milestone .completion {
@@ -1573,6 +1573,48 @@ html, body {
 #milestone {
     margin-left: 24px;
     margin-right: 12px;
+}
+
+#issue .issue-bar .labels .label-item {
+    padding: 2px 12px 4px 12px;
+    border-radius: 2px;
+    text-shadow: 0 0 2px #444;
+}
+
+#issue .issue-bar .labels .label-white {
+    color: #FFF;
+}
+
+#issue .issue-bar .labels .label-black {
+    color: #444;
+}
+
+#issue .issue-bar .labels .dropdown-menu ul {
+    margin: 0;
+    width: 180px;
+}
+
+#issue .issue-bar .labels .dropdown-menu li {
+    line-height: 30px;
+    padding-left: 12px;
+    border-bottom: 1px solid #DDD;
+}
+
+#issue .issue-bar .labels .dropdown-menu li:hover {
+    background-color: #e8f0ff;
+    cursor: pointer;
+}
+
+#issue .issue-bar .labels .color {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    vertical-align: text-top;
+    margin-right: 6px;
+}
+
+#issue .issue-bar .labels .no-checked .color {
+    margin-left: 26px;
 }
 
 /* wrapper and footer */

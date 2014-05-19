@@ -100,6 +100,35 @@
             </div>
 
             <div class="issue-bar col-md-2">
+                <div class="labels" data-ajax="{url}">
+                    <div class="pull-right action">
+                        <button class="btn btn-default btn-sm" data-toggle="dropdown">
+                            <i class="fa fa-tags"></i>
+                            <span class="caret"></span>
+                        </button>
+                        <div class="dropdown-menu dropdown-menu-right no">
+                            <ul class="list-unstyled">
+                                <li class="checked" data-id="1">
+                                    <span class="check pull-left"><i class="fa fa-check"></i></span>
+                                    <span class="color" style="background-color: #f59e00"></span>
+                                    <span class="name">bug</span>
+                                </li>
+                                <li class="no-checked" data-id="2">
+                                    <span class="color" style="background-color: #f59e00"></span>
+                                    <span class="name">bug</span>
+                                </li>
+                                <li class="no-checked" data-id="3">
+                                    <span class="color" style="background-color: #f59e00"></span>
+                                    <span class="name">bug</span>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                    <h4>Labels</h4>
+                    <p id="label-1" class="label-item label-white" style="background-color: #e75316"><strong>bug</strong></p>
+                    <p id="label-2" class="label-item label-white" style="background-color: #e8f0ff"><strong>bug</strong></p>
+                    <p>Not yet</p>
+                </div>
                 <div class="milestone" data-milestone="{{.Milestone.Id}}" data-ajax="{{.Issue.Index}}/milestone">
                     <div class="pull-right action">
                         <button class="btn btn-default btn-sm" data-toggle="dropdown">

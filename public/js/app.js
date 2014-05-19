@@ -650,6 +650,18 @@ function initIssue() {
         $(this).parent().remove();
         return false;
     });
+    $('.issue-bar .labels .dropdown-menu').on('click', 'li', function (e) {
+        var url = $('.issue-bar .labels').data("ajax");
+        var id = $(this).data('id');
+        var check = $(this).hasClass("checked");
+        $.post(url, {id: id, action: check ? 'detach' : "attach"}, function (json) {
+            if (json.ok) {
+                window.location.reload();
+            }
+        });
+        e.stopPropagation();
+        return false;
+    })
 }
 
 function initRelease() {
