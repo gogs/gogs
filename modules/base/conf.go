@@ -141,7 +141,8 @@ func newLogService() {
 		}
 
 		// Log level.
-		levelName := Cfg.MustValue("log."+mode, "LEVEL", "Trace")
+		levelName := Cfg.MustValueRange("log."+mode, "LEVEL", "Trace",
+			[]string{"Trace", "Debug", "Info", "Warn", "Error", "Critical"})
 		level, ok := logLevels[levelName]
 		if !ok {
 			qlog.Fatalf("Unknown log level: %s\n", levelName)
@@ -166,7 +167,7 @@ func newLogService() {
 			LogConfigs[i] = fmt.Sprintf(`{"level":"%s","reconnectOnMsg":%v,"reconnect":%v,"net":"%s","addr":"%s"}`, level,
 				Cfg.MustBool(modeSec, "RECONNECT_ON_MSG", false),
 				Cfg.MustBool(modeSec, "RECONNECT", false),
-				Cfg.MustValue(modeSec, "PROTOCOL", "tcp"),
+				Cfg.MustValueRange(modeSec, "PROTOCOL", "tcp", []string{"tcp", "unix", "udp"}),
 				Cfg.MustValue(modeSec, "ADDR", ":7020"))
 		case "smtp":
 			LogConfigs[i] = fmt.Sprintf(`{"level":"%s","username":"%s","password":"%s","host":"%s","sendTos":"%s","subject":"%s"}`, level,
@@ -177,7 +178,7 @@ func newLogService() {
 				Cfg.MustValue(modeSec, "SUBJECT", "Diagnostic message from serve"))
 		case "database":
 			LogConfigs[i] = fmt.Sprintf(`{"level":"%s","driver":"%s","conn":"%s"}`, level,
-				Cfg.MustValue(modeSec, "Driver"),
+				Cfg.MustValue(modeSec, "DRIVER"),
 				Cfg.MustValue(modeSec, "CONN"))
 		}
 
@@ -187,7 +188,7 @@ func newLogService() {
 }
 
 func newCacheService() {
-	CacheAdapter = Cfg.MustValue("cache", "ADAPTER", "memory")
+	CacheAdapter = Cfg.MustValueRange("cache", "ADAPTER", "memory", []string{"memory", "redis", "memcache"})
 	if EnableRedis {
 		log.Info("Redis Enabled")
 	}
@@ -215,7 +216,8 @@ func newCacheService() {
 }
 
 func newSessionService() {
-	SessionProvider = Cfg.MustValue("session", "PROVIDER", "memory")
+	SessionProvider = Cfg.MustValueRange("session", "PROVIDER", "memory",
+		[]string{"memory", "file", "redis", "mysql"})
 
 	SessionConfig = new(session.Config)
 	SessionConfig.ProviderConfig = Cfg.MustValue("session", "PROVIDER_CONFIG")
@@ -224,7 +226,8 @@ func newSessionService() {
 	SessionConfig.EnableSetCookie = Cfg.MustBool("session", "ENABLE_SET_COOKIE", true)
 	SessionConfig.GcIntervalTime = Cfg.MustInt64("session", "GC_INTERVAL_TIME", 86400)
 	SessionConfig.SessionLifeTime = Cfg.MustInt64("session", "SESSION_LIFE_TIME", 86400)
-	SessionConfig.SessionIDHashFunc = Cfg.MustValue("session", "SESSION_ID_HASHFUNC", "sha1")
+	SessionConfig.SessionIDHashFunc = Cfg.MustValueRange("session", "SESSION_ID_HASHFUNC",
+		"sha1", []string{"sha1", "sha256", "md5"})
 	SessionConfig.SessionIDHashKey = Cfg.MustValue("session", "SESSION_ID_HASHKEY")
 
 	if SessionProvider == "file" {
