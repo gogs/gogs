@@ -105,7 +105,7 @@ func SignInPost(ctx *middleware.Context, form auth.LogInForm) {
 	user, err = models.LoginUser(form.UserName, form.Password)
 	if err != nil {
 		if err == models.ErrUserNotExist {
-			log.Trace("%s Log in failed: %s/%s", ctx.Req.RequestURI, form.UserName, form.Password)
+			log.Trace("%s Log in failed: %s", ctx.Req.RequestURI, form.UserName)
 			ctx.RenderWithErr("Username or password is not correct", "user/signin", &form)
 			return
 		}
