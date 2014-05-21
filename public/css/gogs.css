@@ -1244,7 +1244,7 @@ html, body {
     margin-bottom: 0;
 }
 
-#issue-create-form .nav-tabs, #issue .issue-reply .nav-tabs {
+#issue-create-form .nav-tabs, #issue .issue-reply .nav-tabs,#issue .issue-edit-content .nav-tabs {
     margin-bottom: 10px;
 }
 
