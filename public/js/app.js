@@ -87,6 +87,7 @@ var Gogits = {};
                 }
                 return true;
             });
+            console.log("toggleAjax:", method, url, data);
             $.ajax({
                 url: url,
                 method: method.toUpperCase(),
@@ -501,17 +502,19 @@ function initIssue() {
     (function () {
         $("#issue-edit-btn").on("click", function () {
             $('#issue h1.title,#issue .issue-main > .issue-content .content,#issue-edit-btn').toggleHide();
-            $('#issue-edit-title,#issue-edit-content,.issue-edit-cancel,.issue-edit-save').toggleShow();
+            $('#issue-edit-title,.issue-edit-content,.issue-edit-cancel,.issue-edit-save').toggleShow();
         });
         $('.issue-edit-cancel').on("click", function () {
             $('#issue h1.title,#issue .issue-main > .issue-content .content,#issue-edit-btn').toggleShow();
-            $('#issue-edit-title,#issue-edit-content,.issue-edit-cancel,.issue-edit-save').toggleHide();
+            $('#issue-edit-title,.issue-edit-content,.issue-edit-cancel,.issue-edit-save').toggleHide();
         })
     }());
 
     // issue ajax update
     (function () {
+        var $cnt = $('#issue-edit-content');
         $('.issue-edit-save').on("click", function () {
+            $cnt.attr('data-ajax-rel', 'issue-edit-save');
             $(this).toggleAjax(function (json) {
                 if (json.ok) {
                     $('.issue-head h1.title').text(json.title);
@@ -519,12 +522,15 @@ function initIssue() {
                     $('.issue-edit-cancel').trigger("click");
                 }
             });
+            setTimeout(function () {
+                $cnt.attr('data-ajax-rel', 'issue-edit-preview');
+            }, 200)
         });
     }());
 
     // issue ajax preview
     (function () {
-        $('[data-ajax-name=issue-preview]').on("click", function () {
+        $('[data-ajax-name=issue-preview],[data-ajax-name=issue-edit-preview]').on("click", function () {
             var $this = $(this);
             $this.toggleAjax(function (resp) {
                 $($this.data("preview")).html(resp);
@@ -533,7 +539,8 @@ function initIssue() {
             })
         });
         $('.issue-write a[data-toggle]').on("click", function () {
-            $('.issue-preview-content').html("loading...");
+            var selector = $(this).parent().next(".issue-preview").find('a').data('preview');
+            $(selector).html("loading...");
         });
     }());
 
@@ -580,7 +587,6 @@ function initIssue() {
     var $m = $('.milestone');
     if ($m.data("milestone") > 0) {
         $('.clear-milestone').toggleShow();
-        console.log("show");
     }
     $('.milestone', '#issue').on('click', 'li.milestone-item', function () {
         var id = $(this).data("id");

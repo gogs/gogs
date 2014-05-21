@@ -390,6 +390,10 @@ func UpdateIssue(ctx *middleware.Context, params martini.Params, form auth.Creat
 	issue.AssigneeId = form.AssigneeId
 	issue.Labels = form.Labels
 	issue.Content = form.Content
+	// try get content from text, ignore conflict with preview ajax
+	if form.Content == "" {
+		issue.Content = ctx.Query("text")
+	}
 	if err = models.UpdateIssue(issue); err != nil {
 		ctx.Handle(500, "issue.UpdateIssue(UpdateIssue)", err)
 		return

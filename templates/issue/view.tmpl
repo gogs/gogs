@@ -23,11 +23,29 @@
                 </div>
                 <div class="issue-main">
                     <div class="panel panel-default issue-content">
-                        <div class="panel-body markdown">
-                            <div class="content">
+                        <div class="panel-body">
+                            <div class="content markdown">
                                 {{str2html .Issue.RenderedContent}}
                             </div>
-                            <textarea class="form-control hidden" name="content" id="issue-edit-content" rows="10" data-ajax-rel="issue-edit-save" data-ajax-val="val" data-ajax-field="content">{{.Issue.Content}}</textarea>
+                            <div class="issue-edit-content hidden">
+                                <div class="form-group">
+                                    <div class="md-help pull-right">Content with <a href="https://help.github.com/articles/markdown-basics">Markdown</a>
+                                    </div>
+                                    <ul class="nav nav-tabs" data-init="tabs">
+                                        <li class="issue-write active"><a href="#issue-edit-textarea" data-toggle="tab">Write</a></li>
+                                        <li class="issue-preview"><a href="#issue-edit-preview" data-toggle="tab" data-ajax="/api/v1/markdown" data-ajax-name="issue-edit-preview" data-ajax-context="{{.RepoLink}}" data-ajax-method="post" data-preview="#issue-edit-preview">Preview</a></li>
+                                    </ul>
+                                    <div class="tab-content">
+                                        <div class="tab-pane active" id="issue-edit-textarea">
+                                            <div class="form-group">
+                                                <input type="hidden" value="1" name="issueIndex">
+                                                <textarea class="form-control" name="content" id="issue-edit-content" rows="10" placeholder="Write some content" data-ajax-rel="issue-edit-preview" data-ajax-val="val" data-ajax-field="text">{{.Issue.Content}}</textarea>
+                                            </div>
+                                        </div>
+                                        <div class="tab-pane issue-preview-content" id="issue-edit-preview">Loading...</div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     {{range .Comments}}
