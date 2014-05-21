@@ -817,6 +817,10 @@ html, body {
     margin-bottom: 15px;
 }
 
+#repo-clone .zclip {
+    left: auto !important;
+}
+
 /* #source */
 #source, #commits {
     margin-top: -20px;
@@ -1083,6 +1087,10 @@ html, body {
 
 .guide-box, .diff-head-box {
     margin-top: 4px;
+}
+
+.guide-box .zclip {
+    left: auto !important;
 }
 
 .diff-head-box h4 {
