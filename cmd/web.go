@@ -78,16 +78,18 @@ func runWeb(*cli.Context) {
 	m.Get("/stars", reqSignIn, user.Stars)
 	m.Get("/help", routers.Help)
 
-	m.Group("/api/v1", func(r martini.Router) {
-		// Miscellaneous.
-		r.Post("/markdown", bindIgnErr(apiv1.MarkdownForm{}), v1.Markdown)
-		r.Post("/markdown/raw", v1.MarkdownRaw)
+	m.Group("/api", func(r martini.Router) {
+		m.Group("/v1", func(r martini.Router) {
+			// Miscellaneous.
+			r.Post("/markdown", bindIgnErr(apiv1.MarkdownForm{}), v1.Markdown)
+			r.Post("/markdown/raw", v1.MarkdownRaw)
 
-		// Users.
-		r.Get("/users/search", v1.SearchUser)
+			// Users.
+			r.Get("/users/search", v1.SearchUser)
 
-		r.Any("**", func(ctx *middleware.Context) {
-			ctx.JSON(404, &base.ApiJsonErr{"Not Found", v1.DOC_URL})
+			r.Any("**", func(ctx *middleware.Context) {
+				ctx.JSON(404, &base.ApiJsonErr{"Not Found", v1.DOC_URL})
+			})
 		})
 	})
 
@@ -170,29 +172,36 @@ func runWeb(*cli.Context) {
 	m.Group("/:username/:reponame", func(r martini.Router) {
 		r.Get("/settings", repo.Setting)
 		r.Post("/settings", bindIgnErr(auth.RepoSettingForm{}), repo.SettingPost)
-		r.Get("/settings/collaboration", repo.Collaboration)
-		r.Post("/settings/collaboration", repo.CollaborationPost)
-		r.Get("/settings/hooks", repo.WebHooks)
-		r.Get("/settings/hooks/add", repo.WebHooksAdd)
-		r.Post("/settings/hooks/add", bindIgnErr(auth.NewWebhookForm{}), repo.WebHooksAddPost)
-		r.Get("/settings/hooks/:id", repo.WebHooksEdit)
-		r.Post("/settings/hooks/:id", bindIgnErr(auth.NewWebhookForm{}), repo.WebHooksEditPost)
+
+		m.Group("/settings", func(r martini.Router) {
+			r.Get("/collaboration", repo.Collaboration)
+			r.Post("/collaboration", repo.CollaborationPost)
+			r.Get("/hooks", repo.WebHooks)
+			r.Get("/hooks/add", repo.WebHooksAdd)
+			r.Post("/hooks/add", bindIgnErr(auth.NewWebhookForm{}), repo.WebHooksAddPost)
+			r.Get("/hooks/:id", repo.WebHooksEdit)
+			r.Post("/hooks/:id", bindIgnErr(auth.NewWebhookForm{}), repo.WebHooksEditPost)
+		})
 	}, reqSignIn, middleware.RepoAssignment(true), reqOwner)
 
 	m.Group("/:username/:reponame", func(r martini.Router) {
 		r.Get("/action/:action", repo.Action)
-		r.Get("/issues/new", repo.CreateIssue)
-		r.Post("/issues/new", bindIgnErr(auth.CreateIssueForm{}), repo.CreateIssuePost)
-		r.Post("/issues/:index", bindIgnErr(auth.CreateIssueForm{}), repo.UpdateIssue)
-		r.Post("/issues/:index/assignee", repo.UpdateAssignee)
-		r.Post("/issues/:index/milestone", repo.UpdateIssueMilestone)
-		r.Post("/issues/labels/new", bindIgnErr(auth.CreateLabelForm{}), repo.NewLabel)
-		r.Get("/issues/milestones", repo.Milestones)
-		r.Get("/issues/milestones/new", repo.NewMilestone)
-		r.Post("/issues/milestones/new", bindIgnErr(auth.CreateMilestoneForm{}), repo.NewMilestonePost)
-		r.Get("/issues/milestones/:index/edit", repo.UpdateMilestone)
-		r.Post("/issues/milestones/:index/edit", bindIgnErr(auth.CreateMilestoneForm{}), repo.UpdateMilestonePost)
-		r.Get("/issues/milestones/:index/:action", repo.UpdateMilestone)
+
+		m.Group("/issues", func(r martini.Router) {
+			r.Get("/new", repo.CreateIssue)
+			r.Post("/new", bindIgnErr(auth.CreateIssueForm{}), repo.CreateIssuePost)
+			r.Post("/:index", bindIgnErr(auth.CreateIssueForm{}), repo.UpdateIssue)
+			r.Post("/:index/assignee", repo.UpdateAssignee)
+			r.Post("/:index/milestone", repo.UpdateIssueMilestone)
+			r.Post("/labels/new", bindIgnErr(auth.CreateLabelForm{}), repo.NewLabel)
+			r.Get("/milestones", repo.Milestones)
+			r.Get("/milestones/new", repo.NewMilestone)
+			r.Post("/milestones/new", bindIgnErr(auth.CreateMilestoneForm{}), repo.NewMilestonePost)
+			r.Get("/milestones/:index/edit", repo.UpdateMilestone)
+			r.Post("/milestones/:index/edit", bindIgnErr(auth.CreateMilestoneForm{}), repo.UpdateMilestonePost)
+			r.Get("/milestones/:index/:action", repo.UpdateMilestone)
+		})
+
 		r.Post("/comment/:action", repo.Comment)
 		r.Get("/releases/new", repo.ReleasesNew)
 	}, reqSignIn, middleware.RepoAssignment(true))
