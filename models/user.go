@@ -30,6 +30,7 @@ var (
 	ErrUserOwnRepos          = errors.New("User still have ownership of repositories")
 	ErrUserAlreadyExist      = errors.New("User already exist")
 	ErrUserNotExist          = errors.New("User does not exist")
+	ErrUserNotKeyOwner       = errors.New("User does not the owner of public key")
 	ErrEmailAlreadyUsed      = errors.New("E-mail already used")
 	ErrUserNameIllegal       = errors.New("User name contains illegal characters")
 	ErrLoginSourceNotExist   = errors.New("Login source does not exist")
@@ -349,8 +350,7 @@ func GetUserByKeyId(keyId int64) (*User, error) {
 	if err != nil {
 		return nil, err
 	} else if !has {
-		err = errors.New("not exist key owner")
-		return nil, err
+		return nil, ErrUserNotKeyOwner
 	}
 	return user, nil
 }

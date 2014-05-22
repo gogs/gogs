@@ -5,7 +5,6 @@
 package cmd
 
 import (
-	//"container/list"
 	"fmt"
 	"os"
 	"os/exec"
@@ -16,22 +15,8 @@ import (
 	"github.com/codegangsta/cli"
 	qlog "github.com/qiniu/log"
 
-	//"github.com/gogits/git"
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"
-)
-
-var (
-	COMMANDS_READONLY = map[string]int{
-		"git-upload-pack":    models.AU_WRITABLE,
-		"git upload-pack":    models.AU_WRITABLE,
-		"git-upload-archive": models.AU_WRITABLE,
-	}
-
-	COMMANDS_WRITE = map[string]int{
-		"git-receive-pack": models.AU_READABLE,
-		"git receive-pack": models.AU_READABLE,
-	}
 )
 
 var CmdServ = cli.Command{
@@ -42,8 +27,7 @@ var CmdServ = cli.Command{
 	Flags:       []cli.Flag{},
 }
 
-func newLogger(execDir string) {
-	logPath := execDir + "/log/serv.log"
+func newLogger(logPath string) {
 	os.MkdirAll(path.Dir(logPath), os.ModePerm)
 
 	f, err := os.OpenFile(logPath, os.O_WRONLY|os.O_APPEND|os.O_CREATE, os.ModePerm)
@@ -54,6 +38,20 @@ func newLogger(execDir string) {
 	qlog.SetOutput(f)
 	//qlog.SetOutputLevel(qlog.Ldebug)
 	qlog.Info("Start logging serv...")
+}
+
+func setup(logPath string) {
+	execDir, _ := base.ExecDir()
+	newLogger(path.Join(execDir, logPath))
+
+	base.NewConfigContext()
+	models.LoadModelsConfig()
+
+	if models.UseSQLite3 {
+		os.Chdir(execDir)
+	}
+
+	models.SetEngine()
 }
 
 func parseCmd(cmd string) (string, string) {
@@ -71,39 +69,46 @@ func parseCmd(cmd string) (string, string) {
 	return verb, strings.Replace(args, "'/", "'", 1)
 }
 
+var (
+	COMMANDS_READONLY = map[string]int{
+		"git-upload-pack":    models.AU_WRITABLE,
+		"git upload-pack":    models.AU_WRITABLE,
+		"git-upload-archive": models.AU_WRITABLE,
+	}
+
+	COMMANDS_WRITE = map[string]int{
+		"git-receive-pack": models.AU_READABLE,
+		"git receive-pack": models.AU_READABLE,
+	}
+)
+
 func In(b string, sl map[string]int) bool {
 	_, e := sl[b]
 	return e
 }
 
 func runServ(k *cli.Context) {
-	execDir, _ := base.ExecDir()
-	newLogger(execDir)
-
-	base.NewConfigContext()
-	models.LoadModelsConfig()
-
-	if models.UseSQLite3 {
-		os.Chdir(execDir)
-	}
-
-	models.SetEngine()
+	setup("log/serv.log")
 
 	keys := strings.Split(os.Args[2], "-")
 	if len(keys) != 2 {
-		println("auth file format error")
-		qlog.Fatal("auth file format error")
+		println("Gogs: auth file format error")
+		qlog.Fatal("Invalid auth file format: %s", os.Args[2])
 	}
 
 	keyId, err := strconv.ParseInt(keys[1], 10, 64)
 	if err != nil {
-		println("auth file format error")
-		qlog.Fatal("auth file format error", err)
+		println("Gogs: auth file format error")
+		qlog.Fatalf("Invalid auth file format: %v", err)
 	}
 	user, err := models.GetUserByKeyId(keyId)
 	if err != nil {
-		println("You have no right to access")
-		qlog.Fatalf("SSH visit error: %v", err)
+		if err == models.ErrUserNotKeyOwner {
+			println("Gogs: you are not the owner of SSH key")
+			qlog.Fatalf("Invalid owner of SSH key: %d", keyId)
+		}
+		println("Gogs: internal error:", err)
+		qlog.Fatalf("Fail to get user by key ID(%d): %v", keyId, err)
 	}
 
 	cmd := os.Getenv("SSH_ORIGINAL_COMMAND")
@@ -116,8 +121,8 @@ func runServ(k *cli.Context) {
 	repoPath := strings.Trim(args, "'")
 	rr := strings.SplitN(repoPath, "/", 2)
 	if len(rr) != 2 {
-		println("Unavailable repository", args)
-		qlog.Fatalf("Unavailable repository %v", args)
+		println("Gogs: unavailable repository", args)
+		qlog.Fatalf("Unavailable repository: %v", args)
 	}
 	repoUserName := rr[0]
 	repoName := strings.TrimSuffix(rr[1], ".git")
@@ -127,17 +132,21 @@ func runServ(k *cli.Context) {
 
 	repoUser, err := models.GetUserByName(repoUserName)
 	if err != nil {
-		println("You have no right to access")
-		qlog.Fatalf("Get user failed: %v", err)
+		if err == models.ErrUserNotExist {
+			println("Gogs: given repository owner are not registered")
+			qlog.Fatalf("Unregistered owner: %s", repoUserName)
+		}
+		println("Gogs: internal error:", err)
+		qlog.Fatalf("Fail to get repository owner(%s): %v", repoUserName, err)
 	}
 
-	// access check
+	// Access check.
 	switch {
 	case isWrite:
-		has, err := models.HasAccess(user.LowerName, path.Join(repoUserName, repoName), models.AU_WRITABLE)
+		has, err := models.HasAccess(user.Name, path.Join(repoUserName, repoName), models.AU_WRITABLE)
 		if err != nil {
-			println("Internal error:", err)
-			qlog.Fatal(err)
+			println("Gogs: internal error:", err)
+			qlog.Fatal("Fail to check write access:", err)
 		} else if !has {
 			println("You have no right to write this repository")
 			qlog.Fatalf("User %s has no right to write repository %s", user.Name, repoPath)
@@ -145,8 +154,12 @@ func runServ(k *cli.Context) {
 	case isRead:
 		repo, err := models.GetRepositoryByName(repoUser.Id, repoName)
 		if err != nil {
-			println("Get repository error:", err)
-			qlog.Fatal("Get repository error: " + err.Error())
+			if err == models.ErrRepoNotExist {
+				println("Gogs: given repository does not exist")
+				qlog.Fatalf("Repository does not exist: %s/%s", repoUser.Name, repoName)
+			}
+			println("Gogs: internal error:", err)
+			qlog.Fatalf("Fail to get repository: %v", err)
 		}
 
 		if !repo.IsPrivate {
@@ -155,23 +168,15 @@ func runServ(k *cli.Context) {
 
 		has, err := models.HasAccess(user.Name, path.Join(repoUserName, repoName), models.AU_READABLE)
 		if err != nil {
-			println("Internal error")
-			qlog.Fatal(err)
-		}
-		if !has {
-			has, err = models.HasAccess(user.Name, path.Join(repoUserName, repoName), models.AU_WRITABLE)
-			if err != nil {
-				println("Internal error")
-				qlog.Fatal(err)
-			}
-		}
-		if !has {
+			println("Gogs: internal error:", err)
+			qlog.Fatal("Fail to check read access:", err)
+		} else if !has {
 			println("You have no right to access this repository")
-			qlog.Fatal("You have no right to access this repository")
+			qlog.Fatalf("User %s has no right to read repository %s", user.Name, repoPath)
 		}
 	default:
 		println("Unknown command")
-		qlog.Fatal("Unknown command")
+		return
 	}
 
 	models.SetRepoEnvs(user.Id, user.Name, repoName, repoUserName)
@@ -183,8 +188,8 @@ func runServ(k *cli.Context) {
 	gitcmd.Stderr = os.Stderr
 
 	if err = gitcmd.Run(); err != nil {
-		println("execute command error:", err.Error())
-		qlog.Fatal("execute command error: " + err.Error())
+		println("Gogs: internal error:", err)
+		qlog.Fatalf("Fail to execute git command: %v", err)
 	}
 
 	//refName := os.Getenv("refName")

@@ -17,7 +17,7 @@ import (
 	"github.com/gogits/gogs/modules/base"
 )
 
-const APP_VER = "0.3.5.0518 Alpha"
+const APP_VER = "0.3.5.0521 Alpha"
 
 func init() {
 	base.AppVer = APP_VER

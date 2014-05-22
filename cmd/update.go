@@ -6,14 +6,12 @@ package cmd
 
 import (
 	"os"
-	"path"
 	"strconv"
 
 	"github.com/codegangsta/cli"
 	qlog "github.com/qiniu/log"
 
 	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/modules/base"
 )
 
 var CmdUpdate = cli.Command{
@@ -24,51 +22,25 @@ var CmdUpdate = cli.Command{
 	Flags:       []cli.Flag{},
 }
 
-func newUpdateLogger(execDir string) {
-	logPath := execDir + "/log/update.log"
-	os.MkdirAll(path.Dir(logPath), os.ModePerm)
-
-	f, err := os.OpenFile(logPath, os.O_WRONLY|os.O_APPEND|os.O_CREATE, os.ModePerm)
-	if err != nil {
-		qlog.Fatal(err)
-	}
-
-	qlog.SetOutput(f)
-	qlog.Info("Start logging update...")
-}
-
 func updateEnv(refName, oldCommitId, newCommitId string) {
 	os.Setenv("refName", refName)
 	os.Setenv("oldCommitId", oldCommitId)
 	os.Setenv("newCommitId", newCommitId)
-	qlog.Error("set envs:", refName, oldCommitId, newCommitId)
+	qlog.Info("set envs:", refName, oldCommitId, newCommitId)
 }
 
-// for command: ./gogs update
 func runUpdate(c *cli.Context) {
 	cmd := os.Getenv("SSH_ORIGINAL_COMMAND")
 	if cmd == "" {
 		return
 	}
 
-	execDir, _ := base.ExecDir()
-	newUpdateLogger(execDir)
-
-	base.NewConfigContext()
-	models.LoadModelsConfig()
-
-	if models.UseSQLite3 {
-		os.Chdir(execDir)
-	}
-
-	models.SetEngine()
+	setup("log/update.log")
 
 	args := c.Args()
 	if len(args) != 3 {
 		qlog.Fatal("received less 3 parameters")
-	}
-
-	if args[0] == "" {
+	} else if args[0] == "" {
 		qlog.Fatal("refName is empty, shouldn't use")
 	}
 

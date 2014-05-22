@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
+	"runtime"
 	"strings"
 	"time"
 )
@@ -47,6 +48,9 @@ var mailDomains = map[string]string{
 }
 
 var TemplateFuncs template.FuncMap = map[string]interface{}{
+	"GoVer": func() string {
+		return runtime.Version()
+	},
 	"AppName": func() string {
 		return AppName
 	},
