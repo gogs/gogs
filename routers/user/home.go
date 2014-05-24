@@ -20,26 +20,27 @@ import (
 func Dashboard(ctx *middleware.Context) {
 	ctx.Data["Title"] = "Dashboard"
 	ctx.Data["PageIsUserDashboard"] = true
-	repos, err := models.GetRepositories(&models.User{Id: ctx.User.Id}, true)
+
+	var err error
+	ctx.Data["MyRepos"], err = models.GetRepositories(ctx.User.Id, true)
 	if err != nil {
 		ctx.Handle(500, "home.Dashboard(GetRepositories)", err)
 		return
 	}
-	ctx.Data["MyRepos"] = repos
 
-	collaRepos, err := models.GetCollaborativeRepos(ctx.User.Name)
+	ctx.Data["CollaborativeRepos"], err = models.GetCollaborativeRepos(ctx.User.Name)
 	if err != nil {
 		ctx.Handle(500, "home.Dashboard(GetCollaborativeRepos)", err)
 		return
 	}
-	ctx.Data["CollaborativeRepos"] = collaRepos
 
 	actions, err := models.GetFeeds(ctx.User.Id, 0, false)
 	if err != nil {
-		ctx.Handle(500, "home.Dashboard", err)
+		ctx.Handle(500, "home.Dashboard(GetFeeds)", err)
 		return
 	}
 
+	// Check access of private repositories.
 	feeds := make([]*models.Action, 0, len(actions))
 	for _, act := range actions {
 		if act.IsPrivate {
@@ -50,47 +51,42 @@ func Dashboard(ctx *middleware.Context) {
 		}
 		feeds = append(feeds, act)
 	}
-
 	ctx.Data["Feeds"] = feeds
 	ctx.HTML(200, "user/dashboard")
 }
 
 func Profile(ctx *middleware.Context, params martini.Params) {
 	ctx.Data["Title"] = "Profile"
+	ctx.Data["PageIsUserProfile"] = true
 
 	user, err := models.GetUserByName(params["username"])
 	if err != nil {
 		if err == models.ErrUserNotExist {
-			ctx.Handle(404, "user.Profile", err)
+			ctx.Handle(404, "user.Profile(GetUserByName)", err)
 		} else {
-			ctx.Handle(500, "user.Profile", err)
+			ctx.Handle(500, "user.Profile(GetUserByName)", err)
 		}
 		return
 	}
-
 	ctx.Data["Owner"] = user
 
 	tab := ctx.Query("tab")
 	ctx.Data["TabName"] = tab
-
 	switch tab {
 	case "activity":
-		feeds, err := models.GetFeeds(user.Id, 0, true)
+		ctx.Data["Feeds"], err = models.GetFeeds(user.Id, 0, true)
 		if err != nil {
-			ctx.Handle(500, "user.Profile", err)
+			ctx.Handle(500, "user.Profile(GetFeeds)", err)
 			return
 		}
-		ctx.Data["Feeds"] = feeds
 	default:
-		repos, err := models.GetRepositories(user, ctx.IsSigned && ctx.User.Id == user.Id)
+		ctx.Data["Repos"], err = models.GetRepositories(user.Id, ctx.IsSigned && ctx.User.Id == user.Id)
 		if err != nil {
-			ctx.Handle(500, "user.Profile", err)
+			ctx.Handle(500, "user.Profile(GetRepositories)", err)
 			return
 		}
-		ctx.Data["Repos"] = repos
 	}
 
-	ctx.Data["PageIsUserProfile"] = true
 	ctx.HTML(200, "user/profile")
 }
 
@@ -98,13 +94,12 @@ func Email2User(ctx *middleware.Context) {
 	u, err := models.GetUserByEmail(ctx.Query("email"))
 	if err != nil {
 		if err == models.ErrUserNotExist {
-			ctx.Handle(404, "user.Email2User", err)
+			ctx.Handle(404, "user.Email2User(GetUserByEmail)", err)
 		} else {
 			ctx.Handle(500, "user.Email2User(GetUserByEmail)", err)
 		}
 		return
 	}
-
 	ctx.Redirect("/user/" + u.Name)
 }
 
@@ -145,36 +140,32 @@ func Issues(ctx *middleware.Context) {
 
 	isShowClosed := ctx.Query("state") == "closed"
 
-	var assigneeId, posterId int64
 	var filterMode int
 	switch viewType {
 	case "assigned":
-		assigneeId = ctx.User.Id
 		filterMode = models.FM_ASSIGN
 	case "created_by":
-		posterId = ctx.User.Id
 		filterMode = models.FM_CREATE
 	}
-	_, _ = assigneeId, posterId
 
-	rid, _ := base.StrTo(ctx.Query("repoid")).Int64()
+	repoId, _ := base.StrTo(ctx.Query("repoid")).Int64()
 	issueStats := models.GetUserIssueStats(ctx.User.Id, filterMode)
 
 	// Get all repositories.
-	repos, err := models.GetRepositories(ctx.User, true)
+	repos, err := models.GetRepositories(ctx.User.Id, true)
 	if err != nil {
 		ctx.Handle(500, "user.Issues(GetRepositories)", err)
 		return
 	}
 
-	rids := make([]int64, 0, len(repos))
+	repoIds := make([]int64, 0, len(repos))
 	showRepos := make([]*models.Repository, 0, len(repos))
 	for _, repo := range repos {
 		if repo.NumIssues == 0 {
 			continue
 		}
 
-		rids = append(rids, repo.Id)
+		repoIds = append(repoIds, repo.Id)
 		repo.NumOpenIssues = repo.NumIssues - repo.NumClosedIssues
 		issueStats.AllCount += int64(repo.NumOpenIssues)
 
@@ -195,8 +186,8 @@ func Issues(ctx *middleware.Context) {
 		}
 	}
 
-	if rid > 0 {
-		rids = []int64{rid}
+	if repoId > 0 {
+		repoIds = []int64{repoId}
 	}
 
 	page, _ := base.StrTo(ctx.Query("page")).Int()
@@ -207,9 +198,9 @@ func Issues(ctx *middleware.Context) {
 	case "assigned":
 		fallthrough
 	case "created_by":
-		ius, err = models.GetIssueUserPairsByMode(ctx.User.Id, rid, isShowClosed, page, filterMode)
+		ius, err = models.GetIssueUserPairsByMode(ctx.User.Id, repoId, isShowClosed, page, filterMode)
 	default:
-		ius, err = models.GetIssueUserPairsByRepoIds(rids, isShowClosed, page)
+		ius, err = models.GetIssueUserPairsByRepoIds(repoIds, isShowClosed, page)
 	}
 	if err != nil {
 		ctx.Handle(500, "user.Issues(GetAllIssueUserPairs)", err)
@@ -251,7 +242,7 @@ func Issues(ctx *middleware.Context) {
 		}
 	}
 
-	ctx.Data["RepoId"] = rid
+	ctx.Data["RepoId"] = repoId
 	ctx.Data["Repos"] = showRepos
 	ctx.Data["Issues"] = issues
 	ctx.Data["ViewType"] = viewType
@@ -263,7 +254,7 @@ func Issues(ctx *middleware.Context) {
 	} else {
 		ctx.Data["ShowCount"] = issueStats.OpenCount
 	}
-	ctx.HTML(200, "issue/user")
+	ctx.HTML(200, "user/issue")
 }
 
 func Pulls(ctx *middleware.Context) {

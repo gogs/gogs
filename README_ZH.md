@@ -72,4 +72,4 @@ Gogs 完全使用 Go 语言来实现对 Git 数据的操作，实现 **零** 依
 
 ## 授权许可
 
-Gogs 采用 MIT 开源授权许可证，完整的授权说明已放置在 [LICENSE](https://github.com/gogits/gogs/blob/master/LICENSE) 文件中。
+本项目采用 MIT 开源授权许可证，完整的授权说明已放置在 [LICENSE](https://github.com/gogits/gogs/blob/master/LICENSE) 文件中。

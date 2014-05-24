@@ -27,16 +27,15 @@ func SettingPost(ctx *middleware.Context, form auth.UpdateProfileForm) {
 	ctx.Data["PageIsUserSetting"] = true
 	ctx.Data["IsUserPageSetting"] = true
 
-	user := ctx.User
-	ctx.Data["Owner"] = user
-
 	if ctx.HasError() {
 		ctx.HTML(200, "user/setting")
 		return
 	}
 
+	ctx.Data["Owner"] = ctx.User
+
 	// Check if user name has been changed.
-	if user.Name != form.UserName {
+	if ctx.User.Name != form.UserName {
 		isExist, err := models.IsUserExist(form.UserName)
 		if err != nil {
 			ctx.Handle(500, "user.Setting(update: check existence)", err)
@@ -44,27 +43,26 @@ func SettingPost(ctx *middleware.Context, form auth.UpdateProfileForm) {
 		} else if isExist {
 			ctx.RenderWithErr("User name has been taken.", "user/setting", &form)
 			return
-		} else if err = models.ChangeUserName(user, form.UserName); err != nil {
+		} else if err = models.ChangeUserName(ctx.User, form.UserName); err != nil {
 			ctx.Handle(500, "user.Setting(change user name)", err)
 			return
 		}
-		log.Trace("%s User name changed: %s -> %s", ctx.Req.RequestURI, user.Name, form.UserName)
+		log.Trace("%s User name changed: %s -> %s", ctx.Req.RequestURI, ctx.User.Name, form.UserName)
 
-		user.Name = form.UserName
+		ctx.User.Name = form.UserName
 	}
 
-	user.FullName = form.FullName
-	user.Email = form.Email
-	user.Website = form.Website
-	user.Location = form.Location
-	user.Avatar = base.EncodeMd5(form.Avatar)
-	user.AvatarEmail = form.Avatar
-	if err := models.UpdateUser(user); err != nil {
+	ctx.User.FullName = form.FullName
+	ctx.User.Email = form.Email
+	ctx.User.Website = form.Website
+	ctx.User.Location = form.Location
+	ctx.User.Avatar = base.EncodeMd5(form.Avatar)
+	ctx.User.AvatarEmail = form.Avatar
+	if err := models.UpdateUser(ctx.User); err != nil {
 		ctx.Handle(500, "setting.Setting", err)
 		return
 	}
 	log.Trace("%s User setting updated: %s", ctx.Req.RequestURI, ctx.User.LowerName)
-
 	ctx.Flash.Success("Your profile has been successfully updated.")
 	ctx.Redirect("/user/settings")
 }
@@ -86,13 +84,12 @@ func SettingSocial(ctx *middleware.Context) {
 		return
 	}
 
-	socials, err := models.GetOauthByUserId(ctx.User.Id)
+	var err error
+	ctx.Data["Socials"], err = models.GetOauthByUserId(ctx.User.Id)
 	if err != nil {
 		ctx.Handle(500, "user.SettingSocial(GetOauthByUserId)", err)
 		return
 	}
-
-	ctx.Data["Socials"] = socials
 	ctx.HTML(200, "user/social")
 }
 
@@ -113,28 +110,26 @@ func SettingPasswordPost(ctx *middleware.Context, form auth.UpdatePasswdForm) {
 		return
 	}
 
-	user := ctx.User
 	tmpUser := &models.User{
 		Passwd: form.OldPasswd,
-		Salt:   user.Salt,
+		Salt:   ctx.User.Salt,
 	}
 	tmpUser.EncodePasswd()
-	if user.Passwd != tmpUser.Passwd {
+	if ctx.User.Passwd != tmpUser.Passwd {
 		ctx.Flash.Error("Old password is not correct.")
 	} else if form.NewPasswd != form.RetypePasswd {
 		ctx.Flash.Error("New password and re-type password are not same.")
 	} else {
-		user.Passwd = form.NewPasswd
-		user.Salt = models.GetUserSalt()
-		user.EncodePasswd()
-		if err := models.UpdateUser(user); err != nil {
+		ctx.User.Passwd = form.NewPasswd
+		ctx.User.Salt = models.GetUserSalt()
+		ctx.User.EncodePasswd()
+		if err := models.UpdateUser(ctx.User); err != nil {
 			ctx.Handle(200, "setting.SettingPassword", err)
 			return
 		}
 		log.Trace("%s User password updated: %s", ctx.Req.RequestURI, ctx.User.LowerName)
 		ctx.Flash.Success("Password is changed successfully. You can now sign in via new password.")
 	}
-
 	ctx.Redirect("/user/settings/password")
 }
 
@@ -170,13 +165,13 @@ func SettingSSHKeys(ctx *middleware.Context, form auth.AddSSHKeyForm) {
 		return
 	}
 
+	var err error
 	// List existed SSH keys.
-	keys, err := models.ListPublicKey(ctx.User.Id)
+	ctx.Data["Keys"], err = models.ListPublicKey(ctx.User.Id)
 	if err != nil {
 		ctx.Handle(500, "ssh.ListPublicKey", err)
 		return
 	}
-	ctx.Data["Keys"] = keys
 
 	// Add new SSH key.
 	if ctx.Req.Method == "POST" {

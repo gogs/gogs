@@ -24,6 +24,8 @@ func Home(ctx *middleware.Context) {
 		return
 	}
 
+	ctx.Data["PageIsHome"] = true
+
 	// Show recent updated repositoires for new visiters.
 	repos, err := models.GetRecentUpdatedRepositories()
 	if err != nil {
@@ -38,12 +40,11 @@ func Home(ctx *middleware.Context) {
 		}
 	}
 	ctx.Data["Repos"] = repos
-	ctx.Data["PageIsHome"] = true
 	ctx.HTML(200, "home")
 }
 
 func NotFound(ctx *middleware.Context) {
-	ctx.Data["PageIsNotFound"] = true
 	ctx.Data["Title"] = "Page Not Found"
+	ctx.Data["PageIsNotFound"] = true
 	ctx.Handle(404, "home.NotFound", nil)
 }
