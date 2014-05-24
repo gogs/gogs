@@ -742,7 +742,15 @@ func UpdateLabel(ctx *middleware.Context, params martini.Params, form auth.Creat
 }
 
 func DeleteLabel(ctx *middleware.Context) {
-	strIds := strings.Split(ctx.Query("remove"), ",")
+	removes := ctx.Query("remove")
+	if len(strings.TrimSpace(removes)) == 0 {
+		ctx.JSON(200, map[string]interface{}{
+			"ok": true,
+		})
+		return
+	}
+
+	strIds := strings.Split(removes, ",")
 	for _, strId := range strIds {
 		if err := models.DeleteLabel(ctx.Repo.Repository.Id, strId); err != nil {
 			ctx.Handle(500, "issue.DeleteLabel(DeleteLabel)", err)
