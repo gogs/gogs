@@ -76,7 +76,6 @@ func runWeb(*cli.Context) {
 	m.Get("/issues", reqSignIn, user.Issues)
 	m.Get("/pulls", reqSignIn, user.Pulls)
 	m.Get("/stars", reqSignIn, user.Stars)
-	m.Get("/help", routers.Help)
 
 	m.Group("/api", func(r martini.Router) {
 		m.Group("/v1", func(r martini.Router) {
@@ -191,9 +190,12 @@ func runWeb(*cli.Context) {
 			r.Get("/new", repo.CreateIssue)
 			r.Post("/new", bindIgnErr(auth.CreateIssueForm{}), repo.CreateIssuePost)
 			r.Post("/:index", bindIgnErr(auth.CreateIssueForm{}), repo.UpdateIssue)
-			r.Post("/:index/assignee", repo.UpdateAssignee)
+			r.Post("/:index/label", repo.UpdateIssueLabel)
 			r.Post("/:index/milestone", repo.UpdateIssueMilestone)
+			r.Post("/:index/assignee", repo.UpdateAssignee)
 			r.Post("/labels/new", bindIgnErr(auth.CreateLabelForm{}), repo.NewLabel)
+			r.Post("/labels/edit", bindIgnErr(auth.CreateLabelForm{}), repo.UpdateLabel)
+			r.Post("/labels/delete", repo.DeleteLabel)
 			r.Get("/milestones", repo.Milestones)
 			r.Get("/milestones/new", repo.NewMilestone)
 			r.Post("/milestones/new", bindIgnErr(auth.CreateMilestoneForm{}), repo.NewMilestonePost)

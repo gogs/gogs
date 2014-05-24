@@ -25,7 +25,6 @@ import (
 	"github.com/gogits/gogs/modules/social"
 )
 
-// Check run mode(Default of martini is Dev).
 func checkRunMode() {
 	switch base.Cfg.MustValue("", "RUN_MODE") {
 	case "prod":

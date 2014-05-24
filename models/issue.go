@@ -17,6 +17,7 @@ import (
 
 var (
 	ErrIssueNotExist     = errors.New("Issue does not exist")
+	ErrLabelNotExist     = errors.New("Label does not exist")
 	ErrMilestoneNotExist = errors.New("Milestone does not exist")
 )
 
@@ -28,14 +29,15 @@ type Issue struct {
 	Name            string
 	Repo            *Repository `xorm:"-"`
 	PosterId        int64
-	Poster          *User `xorm:"-"`
+	Poster          *User    `xorm:"-"`
+	LabelIds        string   `xorm:"TEXT"`
+	Labels          []*Label `xorm:"-"`
 	MilestoneId     int64
 	AssigneeId      int64
 	Assignee        *User `xorm:"-"`
 	IsRead          bool  `xorm:"-"`
 	IsPull          bool  // Indicates whether is a pull request or not.
 	IsClosed        bool
-	Labels          string `xorm:"TEXT"`
 	Content         string `xorm:"TEXT"`
 	RenderedContent string `xorm:"-"`
 	Priority        int
@@ -54,11 +56,37 @@ func (i *Issue) GetPoster() (err error) {
 	return err
 }
 
+func (i *Issue) GetLabels() error {
+	if len(i.LabelIds) < 3 {
+		return nil
+	}
+
+	strIds := strings.Split(strings.TrimSuffix(i.LabelIds[1:], "|"), "|$")
+	i.Labels = make([]*Label, 0, len(strIds))
+	for _, strId := range strIds {
+		id, _ := base.StrTo(strId).Int64()
+		if id > 0 {
+			l, err := GetLabelById(id)
+			if err != nil {
+				if err == ErrLabelNotExist {
+					continue
+				}
+				return err
+			}
+			i.Labels = append(i.Labels, l)
+		}
+	}
+	return nil
+}
+
 func (i *Issue) GetAssignee() (err error) {
 	if i.AssigneeId == 0 {
 		return nil
 	}
 	i.Assignee, err = GetUserById(i.AssigneeId)
+	if err == ErrUserNotExist {
+		return nil
+	}
 	return err
 }
 
@@ -108,7 +136,7 @@ func GetIssueById(id int64) (*Issue, error) {
 }
 
 // GetIssues returns a list of issues by given conditions.
-func GetIssues(uid, rid, pid, mid int64, page int, isClosed bool, labels, sortType string) ([]Issue, error) {
+func GetIssues(uid, rid, pid, mid int64, page int, isClosed bool, labelIds, sortType string) ([]Issue, error) {
 	sess := orm.Limit(20, (page-1)*20)
 
 	if rid > 0 {
@@ -127,9 +155,9 @@ func GetIssues(uid, rid, pid, mid int64, page int, isClosed bool, labels, sortTy
 		sess.And("milestone_id=?", mid)
 	}
 
-	if len(labels) > 0 {
-		for _, label := range strings.Split(labels, ",") {
-			sess.And("labels like '%$" + label + "|%'")
+	if len(labelIds) > 0 {
+		for _, label := range strings.Split(labelIds, ",") {
+			sess.And("label_ids like '%$" + label + "|%'")
 		}
 	}
 
@@ -155,6 +183,13 @@ func GetIssues(uid, rid, pid, mid int64, page int, isClosed bool, labels, sortTy
 	return issues, err
 }
 
+// GetIssuesByLabel returns a list of issues by given label and repository.
+func GetIssuesByLabel(repoId int64, label string) ([]*Issue, error) {
+	issues := make([]*Issue, 0, 10)
+	err := orm.Where("repo_id=?", repoId).And("label_ids like '%$" + label + "|%'").Find(&issues)
+	return issues, err
+}
+
 // GetIssueCountByPoster returns number of issues of repository by poster.
 func GetIssueCountByPoster(uid, rid int64, isClosed bool) int64 {
 	count, _ := orm.Where("repo_id=?", rid).And("poster_id=?", uid).And("is_closed=?", isClosed).Count(new(Issue))
@@ -175,7 +210,6 @@ type IssueUser struct {
 	IssueId     int64
 	RepoId      int64
 	MilestoneId int64
-	Labels      string `xorm:"TEXT"`
 	IsRead      bool
 	IsAssigned  bool
 	IsMentioned bool
@@ -400,6 +434,98 @@ func UpdateIssueUserPairsByMentions(uids []int64, iid int64) error {
 	return nil
 }
 
+// .____          ___.          .__
+// |    |   _____ \_ |__   ____ |  |
+// |    |   \__  \ | __ \_/ __ \|  |
+// |    |___ / __ \| \_\ \  ___/|  |__
+// |_______ (____  /___  /\___  >____/
+//         \/    \/    \/     \/
+
+// Label represents a label of repository for issues.
+type Label struct {
+	Id              int64
+	RepoId          int64 `xorm:"INDEX"`
+	Name            string
+	Color           string `xorm:"VARCHAR(7)"`
+	NumIssues       int
+	NumClosedIssues int
+	NumOpenIssues   int  `xorm:"-"`
+	IsChecked       bool `xorm:"-"`
+}
+
+// CalOpenIssues calculates the open issues of label.
+func (m *Label) CalOpenIssues() {
+	m.NumOpenIssues = m.NumIssues - m.NumClosedIssues
+}
+
+// NewLabel creates new label of repository.
+func NewLabel(l *Label) error {
+	_, err := orm.Insert(l)
+	return err
+}
+
+// GetLabelById returns a label by given ID.
+func GetLabelById(id int64) (*Label, error) {
+	l := &Label{Id: id}
+	has, err := orm.Get(l)
+	if err != nil {
+		return nil, err
+	} else if !has {
+		return nil, ErrLabelNotExist
+	}
+	return l, nil
+}
+
+// GetLabels returns a list of labels of given repository ID.
+func GetLabels(repoId int64) ([]*Label, error) {
+	labels := make([]*Label, 0, 10)
+	err := orm.Where("repo_id=?", repoId).Find(&labels)
+	return labels, err
+}
+
+// UpdateLabel updates label information.
+func UpdateLabel(l *Label) error {
+	_, err := orm.Id(l.Id).Update(l)
+	return err
+}
+
+// DeleteLabel delete a label of given repository.
+func DeleteLabel(repoId int64, strId string) error {
+	id, _ := base.StrTo(strId).Int64()
+	l, err := GetLabelById(id)
+	if err != nil {
+		if err == ErrLabelNotExist {
+			return nil
+		}
+		return err
+	}
+
+	issues, err := GetIssuesByLabel(repoId, strId)
+	if err != nil {
+		return err
+	}
+
+	sess := orm.NewSession()
+	defer sess.Close()
+	if err = sess.Begin(); err != nil {
+		return err
+	}
+
+	for _, issue := range issues {
+		issue.LabelIds = strings.Replace(issue.LabelIds, "$"+strId+"|", "", -1)
+		if _, err = sess.Id(issue.Id).AllCols().Update(issue); err != nil {
+			sess.Rollback()
+			return err
+		}
+	}
+
+	if _, err = sess.Delete(l); err != nil {
+		sess.Rollback()
+		return err
+	}
+	return sess.Commit()
+}
+
 //    _____  .__.__                   __
 //   /     \ |__|  |   ____   _______/  |_  ____   ____   ____
 //  /  \ /  \|  |  | _/ __ \ /  ___/\   __\/  _ \ /    \_/ __ \
@@ -609,42 +735,6 @@ func DeleteMilestone(m *Milestone) (err error) {
 		return err
 	}
 	return sess.Commit()
-}
-
-// .____          ___.          .__
-// |    |   _____ \_ |__   ____ |  |
-// |    |   \__  \ | __ \_/ __ \|  |
-// |    |___ / __ \| \_\ \  ___/|  |__
-// |_______ (____  /___  /\___  >____/
-//         \/    \/    \/     \/
-
-// Label represents a label of repository for issues.
-type Label struct {
-	Id              int64
-	RepoId          int64 `xorm:"INDEX"`
-	Name            string
-	Color           string `xorm:"VARCHAR(7)"`
-	NumIssues       int
-	NumClosedIssues int
-	NumOpenIssues   int `xorm:"-"`
-}
-
-// CalOpenIssues calculates the open issues of label.
-func (m *Label) CalOpenIssues() {
-	m.NumOpenIssues = m.NumIssues - m.NumClosedIssues
-}
-
-// NewLabel creates new label of repository.
-func NewLabel(l *Label) error {
-	_, err := orm.Insert(l)
-	return err
-}
-
-// GetLabels returns a list of labels of given repository ID.
-func GetLabels(repoId int64) ([]*Label, error) {
-	labels := make([]*Label, 0, 10)
-	err := orm.Where("repo_id=?", repoId).Find(&labels)
-	return labels, err
 }
 
 // _________                                       __

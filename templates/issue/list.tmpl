@@ -15,7 +15,7 @@
             </div>
             <div class="label-filter">
                 <h4>Label</h4>
-                <ul class="list-unstyled" id="label-list" data-ajax="/{url}">
+                <ul class="list-unstyled" id="label-list" data-ajax="{{$.RepoLink}}/issues/labels/delete">
                     {{range .Labels}}
                     <li class="label-item" id="label-{{.Id}}" data-id="{{.Id}}"><a href="#">
                         <span class="pull-right count">{{if $.IsShowClosed}}{{.NumClosedIssues}}{{else}}{{.NumOpenIssues}}{{end}}</span>
@@ -60,7 +60,7 @@
             {{template "base/alert" .}}
             <div class="filter-option">
                 <div class="btn-group">
-                    <a class="btn btn-default issue-open{{if not .IsShowClosed}} active{{end}}" href="{{.RepoLink}}/issues?type={{.ViewType}}">{{..IssueStats.OpenCount}} Open</a>
+                    <a class="btn btn-default issue-open{{if not .IsShowClosed}} active{{end}}" href="{{.RepoLink}}/issues?type={{.ViewType}}">{{.IssueStats.OpenCount}} Open</a>
                     <a class="btn btn-default issue-close{{if .IsShowClosed}} active{{end}}" href="{{.RepoLink}}/issues?type={{.ViewType}}&state=closed">{{.IssueStats.ClosedCount}} Closed</a>
                 </div>
             </div>

@@ -197,7 +197,7 @@ func CreateIssuePost(ctx *middleware.Context, params martini.Params, form auth.C
 		PosterId:    ctx.User.Id,
 		MilestoneId: form.MilestoneId,
 		AssigneeId:  form.AssigneeId,
-		Labels:      form.Labels,
+		LabelIds:    form.Labels,
 		Content:     form.Content,
 	}
 	if err := models.NewIssue(issue); err != nil {
@@ -269,6 +269,17 @@ func CreateIssuePost(ctx *middleware.Context, params martini.Params, form auth.C
 	ctx.Redirect(fmt.Sprintf("/%s/%s/issues/%d", params["username"], params["reponame"], issue.Index))
 }
 
+func checkLabels(labels, allLabels []*models.Label) {
+	for _, l := range labels {
+		for _, l2 := range allLabels {
+			if l.Id == l2.Id {
+				l2.IsChecked = true
+				break
+			}
+		}
+	}
+}
+
 func ViewIssue(ctx *middleware.Context, params martini.Params) {
 	idx, _ := base.StrTo(params["index"]).Int64()
 	if idx == 0 {
@@ -285,6 +296,19 @@ func ViewIssue(ctx *middleware.Context, params martini.Params) {
 		}
 		return
 	}
+
+	// Get labels.
+	if err = issue.GetLabels(); err != nil {
+		ctx.Handle(500, "issue.ViewIssue(GetLabels)", err)
+		return
+	}
+	labels, err := models.GetLabels(ctx.Repo.Repository.Id)
+	if err != nil {
+		ctx.Handle(500, "issue.ViewIssue(GetLabels.2)", err)
+		return
+	}
+	checkLabels(issue.Labels, labels)
+	ctx.Data["Labels"] = labels
 
 	// Get assigned milestone.
 	if issue.MilestoneId > 0 {
@@ -364,13 +388,13 @@ func ViewIssue(ctx *middleware.Context, params martini.Params) {
 }
 
 func UpdateIssue(ctx *middleware.Context, params martini.Params, form auth.CreateIssueForm) {
-	idx, err := base.StrTo(params["index"]).Int()
-	if err != nil {
+	idx, _ := base.StrTo(params["index"]).Int64()
+	if idx <= 0 {
 		ctx.Error(404)
 		return
 	}
 
-	issue, err := models.GetIssueByIndex(ctx.Repo.Repository.Id, int64(idx))
+	issue, err := models.GetIssueByIndex(ctx.Repo.Repository.Id, idx)
 	if err != nil {
 		if err == models.ErrIssueNotExist {
 			ctx.Handle(404, "issue.UpdateIssue", err)
@@ -381,14 +405,14 @@ func UpdateIssue(ctx *middleware.Context, params martini.Params, form auth.Creat
 	}
 
 	if ctx.User.Id != issue.PosterId && !ctx.Repo.IsOwner {
-		ctx.Handle(404, "issue.UpdateIssue", nil)
+		ctx.Error(403)
 		return
 	}
 
 	issue.Name = form.IssueName
 	issue.MilestoneId = form.MilestoneId
 	issue.AssigneeId = form.AssigneeId
-	issue.Labels = form.Labels
+	issue.LabelIds = form.Labels
 	issue.Content = form.Content
 	// try get content from text, ignore conflict with preview ajax
 	if form.Content == "" {
@@ -403,6 +427,55 @@ func UpdateIssue(ctx *middleware.Context, params martini.Params, form auth.Creat
 		"ok":      true,
 		"title":   issue.Name,
 		"content": string(base.RenderMarkdown([]byte(issue.Content), ctx.Repo.RepoLink)),
+	})
+}
+
+func UpdateIssueLabel(ctx *middleware.Context, params martini.Params) {
+	if !ctx.Repo.IsOwner {
+		ctx.Error(403)
+		return
+	}
+
+	idx, _ := base.StrTo(params["index"]).Int64()
+	if idx <= 0 {
+		ctx.Error(404)
+		return
+	}
+
+	issue, err := models.GetIssueByIndex(ctx.Repo.Repository.Id, idx)
+	if err != nil {
+		if err == models.ErrIssueNotExist {
+			ctx.Handle(404, "issue.UpdateIssueLabel", err)
+		} else {
+			ctx.Handle(500, "issue.UpdateIssueLabel(GetIssueByIndex)", err)
+		}
+		return
+	}
+
+	isAttach := ctx.Query("action") == "attach"
+	labelStrId := ctx.Query("id")
+	isHad := strings.Contains(issue.LabelIds, "$"+labelStrId+"|")
+	isNeedUpdate := false
+	if isAttach {
+		if !isHad {
+			issue.LabelIds += "$" + labelStrId + "|"
+			isNeedUpdate = true
+		}
+	} else {
+		if isHad {
+			issue.LabelIds = strings.Replace(issue.LabelIds, "$"+labelStrId+"|", "", -1)
+			isNeedUpdate = true
+		}
+	}
+
+	if isNeedUpdate {
+		if err = models.UpdateIssue(issue); err != nil {
+			ctx.Handle(500, "issue.UpdateIssueLabel(UpdateIssue)", err)
+			return
+		}
+	}
+	ctx.JSON(200, map[string]interface{}{
+		"ok": true,
 	})
 }
 
@@ -622,8 +695,37 @@ func NewLabel(ctx *middleware.Context, form auth.CreateLabelForm) {
 	ctx.Redirect(ctx.Repo.RepoLink + "/issues")
 }
 
-func UpdateLabel(ctx *middleware.Context, params martini.Params) {
+func UpdateLabel(ctx *middleware.Context, params martini.Params, form auth.CreateLabelForm) {
+	id, _ := base.StrTo(ctx.Query("id")).Int64()
+	if id == 0 {
+		ctx.Error(404)
+		return
+	}
 
+	l := &models.Label{
+		Id:    id,
+		Name:  form.Title,
+		Color: form.Color,
+	}
+	if err := models.UpdateLabel(l); err != nil {
+		ctx.Handle(500, "issue.UpdateLabel(UpdateLabel)", err)
+		return
+	}
+	ctx.Redirect(ctx.Repo.RepoLink + "/issues")
+}
+
+func DeleteLabel(ctx *middleware.Context) {
+	strIds := strings.Split(ctx.Query("remove"), ",")
+	for _, strId := range strIds {
+		if err := models.DeleteLabel(ctx.Repo.Repository.Id, strId); err != nil {
+			ctx.Handle(500, "issue.DeleteLabel(DeleteLabel)", err)
+			return
+		}
+	}
+
+	ctx.JSON(200, map[string]interface{}{
+		"ok": true,
+	})
 }
 
 func Milestones(ctx *middleware.Context) {
