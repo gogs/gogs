@@ -25,16 +25,16 @@ func SignIn(ctx *middleware.Context) {
 		return
 	}
 
-	if base.OauthService != nil {
-		ctx.Data["OauthEnabled"] = true
-		ctx.Data["OauthService"] = base.OauthService
-	}
-
 	// Check auto-login.
 	userName := ctx.GetCookie(base.CookieUserName)
 	if len(userName) == 0 {
 		ctx.HTML(200, "user/signin")
 		return
+	}
+
+	if base.OauthService != nil {
+		ctx.Data["OauthEnabled"] = true
+		ctx.Data["OauthService"] = base.OauthService
 	}
 
 	isSucceed := false
@@ -85,24 +85,11 @@ func SignInPost(ctx *middleware.Context, form auth.LogInForm) {
 	}
 
 	if ctx.HasError() {
-		println("shit")
 		ctx.HTML(200, "user/signin")
 		return
 	}
 
-	var user *models.User
-	var err error
-	/*if base.Service.LdapAuth {
-		user, err = models.LoginUserLdap(form.UserName, form.Password)
-		if err != nil {
-			log.Error("Fail to login through LDAP: %v", err)
-		}
-	}
-	// try local if not LDAP or it's failed
-	if !base.Service.LdapAuth || err != nil {
-		user, err = models.LoginUserPlain(form.UserName, form.Password)
-	}*/
-	user, err = models.LoginUser(form.UserName, form.Password)
+	user, err := models.LoginUser(form.UserName, form.Password)
 	if err != nil {
 		if err == models.ErrUserNotExist {
 			log.Trace("%s Log in failed: %s", ctx.Req.RequestURI, form.UserName)
@@ -192,7 +179,6 @@ func oauthSignUp(ctx *middleware.Context, sid int64) {
 	ctx.Data["username"] = strings.Replace(ctx.Session.Get("socialName").(string), " ", "", -1)
 	ctx.Data["email"] = ctx.Session.Get("socialEmail")
 	log.Trace("user.oauthSignUp(social ID): %v", ctx.Session.Get("socialId"))
-
 	ctx.HTML(200, "user/signup")
 }
 

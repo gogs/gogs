@@ -80,4 +80,4 @@ The [core team](http://gogs.io/team) of this project. See [contributors page](ht
 
 ## License
 
-Gogs is under the MIT License. See the [LICENSE](https://github.com/gogits/gogs/blob/master/LICENSE) file for the full license text.
+This project is under the MIT License. See the [LICENSE](https://github.com/gogits/gogs/blob/master/LICENSE) file for the full license text.
