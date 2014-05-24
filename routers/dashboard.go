@@ -32,21 +32,14 @@ func Home(ctx *middleware.Context) {
 	}
 
 	for _, repo := range repos {
-		repo.Owner, err = models.GetUserById(repo.OwnerId)
-		if err != nil {
-			ctx.Handle(500, "dashboard.Home(GetUserById)", err)
+		if err = repo.GetOwner(); err != nil {
+			ctx.Handle(500, "dashboard.Home(GetOwner)", err)
 			return
 		}
 	}
 	ctx.Data["Repos"] = repos
 	ctx.Data["PageIsHome"] = true
 	ctx.HTML(200, "home")
-}
-
-func Help(ctx *middleware.Context) {
-	ctx.Data["PageIsHelp"] = true
-	ctx.Data["Title"] = "Help"
-	ctx.HTML(200, "help")
 }
 
 func NotFound(ctx *middleware.Context) {
