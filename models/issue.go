@@ -473,6 +473,10 @@ func NewLabel(l *Label) error {
 
 // GetLabelById returns a label by given ID.
 func GetLabelById(id int64) (*Label, error) {
+	if id <= 0 {
+		return nil, ErrLabelNotExist
+	}
+
 	l := &Label{Id: id}
 	has, err := orm.Get(l)
 	if err != nil {
