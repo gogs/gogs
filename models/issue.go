@@ -183,6 +183,13 @@ func GetIssues(uid, rid, pid, mid int64, page int, isClosed bool, labelIds, sort
 	return issues, err
 }
 
+type IssueStatus int
+
+const (
+	IS_OPEN = iota + 1
+	IS_CLOSE
+)
+
 // GetIssuesByLabel returns a list of issues by given label and repository.
 func GetIssuesByLabel(repoId int64, label string) ([]*Issue, error) {
 	issues := make([]*Issue, 0, 10)

@@ -445,7 +445,7 @@ func UpdateIssueLabel(ctx *middleware.Context, params martini.Params) {
 	issue, err := models.GetIssueByIndex(ctx.Repo.Repository.Id, idx)
 	if err != nil {
 		if err == models.ErrIssueNotExist {
-			ctx.Handle(404, "issue.UpdateIssueLabel", err)
+			ctx.Handle(404, "issue.UpdateIssueLabel(GetIssueByIndex)", err)
 		} else {
 			ctx.Handle(500, "issue.UpdateIssueLabel(GetIssueByIndex)", err)
 		}
@@ -454,6 +454,17 @@ func UpdateIssueLabel(ctx *middleware.Context, params martini.Params) {
 
 	isAttach := ctx.Query("action") == "attach"
 	labelStrId := ctx.Query("id")
+	labelId, _ := base.StrTo(labelStrId).Int64()
+	label, err := models.GetLabelById(labelId)
+	if err != nil {
+		if err == models.ErrLabelNotExist {
+			ctx.Handle(404, "issue.UpdateIssueLabel(GetLabelById)", err)
+		} else {
+			ctx.Handle(500, "issue.UpdateIssueLabel(GetLabelById)", err)
+		}
+		return
+	}
+
 	isHad := strings.Contains(issue.LabelIds, "$"+labelStrId+"|")
 	isNeedUpdate := false
 	if isAttach {
@@ -471,6 +482,22 @@ func UpdateIssueLabel(ctx *middleware.Context, params martini.Params) {
 	if isNeedUpdate {
 		if err = models.UpdateIssue(issue); err != nil {
 			ctx.Handle(500, "issue.UpdateIssueLabel(UpdateIssue)", err)
+			return
+		}
+
+		if isAttach {
+			label.NumIssues++
+			if issue.IsClosed {
+				label.NumClosedIssues++
+			}
+		} else {
+			label.NumIssues--
+			if issue.IsClosed {
+				label.NumClosedIssues--
+			}
+		}
+		if err = models.UpdateLabel(label); err != nil {
+			ctx.Handle(500, "issue.UpdateIssueLabel(UpdateLabel)", err)
 			return
 		}
 	}
