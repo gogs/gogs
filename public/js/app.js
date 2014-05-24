@@ -620,6 +620,7 @@ function initIssue() {
     });
 
     // labels
+    var removeLabels = [];
     $('#label-manage-btn').on("click", function () {
         var $list = $('#label-list');
         if ($list.hasClass("managing")) {
@@ -630,7 +631,7 @@ function initIssue() {
                     ids.push(id);
                 }
             });
-            $.post($list.data("ajax"), {"ids": ids.join(",")}, function (json) {
+            $.post($list.data("ajax"), {"ids": ids.join(","), "remove": removeLabels.join(",")}, function (json) {
                 if (json.ok) {
                     window.location.reload();
                 }
@@ -653,14 +654,16 @@ function initIssue() {
         }
     });
     $("#label-list").on('click', '.del', function () {
-        $(this).parent().remove();
+        var $p = $(this).parent();
+        removeLabels.push($p.data('id'));
+        $p.remove();
         return false;
     });
     $('.issue-bar .labels .dropdown-menu').on('click', 'li', function (e) {
         var url = $('.issue-bar .labels').data("ajax");
         var id = $(this).data('id');
         var check = $(this).hasClass("checked");
-        $.post(url, {id: id, action: check ? 'detach' : "attach"}, function (json) {
+        $.post(url, {id: id, action: check ? 'detach' : "attach", issue: $('#issue').data('id')}, function (json) {
             if (json.ok) {
                 window.location.reload();
             }
