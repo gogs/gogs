@@ -85,11 +85,17 @@ func Diff(ctx *middleware.Context, params martini.Params) {
 			return false
 		}
 
-		data, err := blob.Data()
+		dataRc, err := blob.Data()
 		if err != nil {
 			return false
 		}
-		_, isImage := base.IsImageFile(data)
+		buf := make([]byte, 1024)
+		n, _ := dataRc.Read(buf)
+		if n > 0 {
+			buf = buf[:n]
+		}
+		dataRc.Close()
+		_, isImage := base.IsImageFile(buf)
 		return isImage
 	}
 

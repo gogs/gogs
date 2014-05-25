@@ -5,6 +5,7 @@
 package repo
 
 import (
+	"io"
 	"os"
 	"path/filepath"
 
@@ -26,20 +27,31 @@ func SingleDownload(ctx *middleware.Context, params martini.Params) {
 		return
 	}
 
-	data, err := blob.Data()
+	dataRc, err := blob.Data()
 	if err != nil {
 		ctx.Handle(500, "repo.SingleDownload(Data)", err)
 		return
 	}
 
-	contentType, isTextFile := base.IsTextFile(data)
-	_, isImageFile := base.IsImageFile(data)
+	buf := make([]byte, 1024)
+	n, _ := dataRc.Read(buf)
+	if n > 0 {
+		buf = buf[:n]
+	}
+
+	defer func() {
+		dataRc.Close()
+	}()
+
+	contentType, isTextFile := base.IsTextFile(buf)
+	_, isImageFile := base.IsImageFile(buf)
 	ctx.Res.Header().Set("Content-Type", contentType)
 	if !isTextFile && !isImageFile {
 		ctx.Res.Header().Set("Content-Disposition", "attachment; filename="+filepath.Base(treename))
 		ctx.Res.Header().Set("Content-Transfer-Encoding", "binary")
 	}
-	ctx.Res.Write(data)
+	ctx.Res.Write(buf)
+	io.Copy(ctx.Res, dataRc)
 }
 
 func ZipDownload(ctx *middleware.Context, params martini.Params) {

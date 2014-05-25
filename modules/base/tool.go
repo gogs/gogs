@@ -509,8 +509,7 @@ type argInt []int
 func (a argInt) Get(i int, args ...int) (r int) {
 	if i >= 0 && i < len(a) {
 		r = a[i]
-	}
-	if len(args) > 0 {
+	} else if len(args) > 0 {
 		r = args[0]
 	}
 	return
