@@ -12,8 +12,8 @@
 		"models": "",
 		"others": [
 			"modules",
-			"$GOPATH/src/github.com/gogits/logs",
-			"$GOPATH/src/github.com/gogits/git"
+			"/project/works/open/src/github.com/gogits/logs",
+			"/project/works/open/src/github.com/gogits/git"
 		]
 	},
 	"cmd_args": [

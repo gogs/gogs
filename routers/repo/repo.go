@@ -8,6 +8,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"path"
 	"path/filepath"
 	"strings"
@@ -148,7 +149,7 @@ func Single(ctx *middleware.Context, params martini.Params) {
 	if entry != nil && !entry.IsDir() {
 		blob := entry.Blob()
 
-		if data, err := blob.Data(); err != nil {
+		if dataRc, err := blob.Data(); err != nil {
 			ctx.Handle(404, "repo.Single(blob.Data)", err)
 		} else {
 			ctx.Data["FileSize"] = blob.Size()
@@ -161,20 +162,32 @@ func Single(ctx *middleware.Context, params martini.Params) {
 			ctx.Data["FileExt"] = ext
 			ctx.Data["FileLink"] = rawLink + "/" + treename
 
-			_, isTextFile := base.IsTextFile(data)
-			_, isImageFile := base.IsImageFile(data)
+			buf := make([]byte, 1024)
+			n, _ := dataRc.Read(buf)
+			if n > 0 {
+				buf = buf[:n]
+			}
+
+			defer func() {
+				dataRc.Close()
+			}()
+
+			_, isTextFile := base.IsTextFile(buf)
+			_, isImageFile := base.IsImageFile(buf)
 			ctx.Data["FileIsText"] = isTextFile
 
 			if isImageFile {
 				ctx.Data["IsImageFile"] = true
 			} else {
+				d, _ := ioutil.ReadAll(dataRc)
+				buf = append(buf, d...)
 				readmeExist := base.IsMarkdownFile(blob.Name()) || base.IsReadmeFile(blob.Name())
 				ctx.Data["ReadmeExist"] = readmeExist
 				if readmeExist {
-					ctx.Data["FileContent"] = string(base.RenderMarkdown(data, ""))
+					ctx.Data["FileContent"] = string(base.RenderMarkdown(buf, ""))
 				} else {
 					if isTextFile {
-						ctx.Data["FileContent"] = string(data)
+						ctx.Data["FileContent"] = string(buf)
 					}
 				}
 			}
@@ -218,17 +231,29 @@ func Single(ctx *middleware.Context, params martini.Params) {
 		if readmeFile != nil {
 			ctx.Data["ReadmeInSingle"] = true
 			ctx.Data["ReadmeExist"] = true
-			if data, err := readmeFile.Data(); err != nil {
+			if dataRc, err := readmeFile.Data(); err != nil {
 				ctx.Handle(404, "repo.Single(readmeFile.LookupBlob)", err)
 				return
 			} else {
+
+				buf := make([]byte, 1024)
+				n, _ := dataRc.Read(buf)
+				if n > 0 {
+					buf = buf[:n]
+				}
+				defer func() {
+					dataRc.Close()
+				}()
+
 				ctx.Data["FileSize"] = readmeFile.Size
 				ctx.Data["FileLink"] = rawLink + "/" + treename
-				_, isTextFile := base.IsTextFile(data)
+				_, isTextFile := base.IsTextFile(buf)
 				ctx.Data["FileIsText"] = isTextFile
 				ctx.Data["FileName"] = readmeFile.Name()
 				if isTextFile {
-					ctx.Data["FileContent"] = string(base.RenderMarkdown(data, branchLink))
+					d, _ := ioutil.ReadAll(dataRc)
+					buf = append(buf, d...)
+					ctx.Data["FileContent"] = string(base.RenderMarkdown(buf, branchLink))
 				}
 			}
 		}
