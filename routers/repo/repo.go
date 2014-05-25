@@ -176,9 +176,10 @@ func Single(ctx *middleware.Context, params martini.Params) {
 			_, isImageFile := base.IsImageFile(buf)
 			ctx.Data["FileIsText"] = isTextFile
 
-			if isImageFile {
+			switch {
+			case isImageFile:
 				ctx.Data["IsImageFile"] = true
-			} else {
+			case isTextFile:
 				d, _ := ioutil.ReadAll(dataRc)
 				buf = append(buf, d...)
 				readmeExist := base.IsMarkdownFile(blob.Name()) || base.IsReadmeFile(blob.Name())
@@ -186,9 +187,7 @@ func Single(ctx *middleware.Context, params martini.Params) {
 				if readmeExist {
 					ctx.Data["FileContent"] = string(base.RenderMarkdown(buf, ""))
 				} else {
-					if isTextFile {
-						ctx.Data["FileContent"] = string(buf)
-					}
+					ctx.Data["FileContent"] = string(buf)
 				}
 			}
 		}
