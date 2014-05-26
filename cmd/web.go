@@ -18,6 +18,7 @@ import (
 	"github.com/gogits/gogs/modules/auth/apiv1"
 	"github.com/gogits/gogs/modules/avatar"
 	"github.com/gogits/gogs/modules/base"
+	"github.com/gogits/gogs/modules/bin"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/middleware"
 	"github.com/gogits/gogs/modules/middleware/binding"
@@ -39,6 +40,18 @@ and it takes care of all the other things for you`,
 	Flags:  []cli.Flag{},
 }
 
+func checkVersion() {
+	// go-bindata -ignore=\\.DS_Store -o modules/bin/conf.go -pkg="bin" conf/...
+	// Check if binary and static file version match.
+	data, err := bin.Asset("conf/VERSION")
+	if err != nil {
+		log.Fatal("Fail to read 'conf/VERSION': %v", err)
+	}
+	if string(data) != setting.AppVer {
+		log.Fatal("Binary and static file version does not match, did you forget to recompile?")
+	}
+}
+
 func newMartini() *martini.ClassicMartini {
 	r := martini.NewRouter()
 	m := martini.New()
@@ -52,6 +65,7 @@ func newMartini() *martini.ClassicMartini {
 }
 
 func runWeb(*cli.Context) {
+	checkVersion()
 	routers.GlobalInit()
 
 	m := newMartini()

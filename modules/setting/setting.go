@@ -99,6 +99,7 @@ func WorkDir() (string, error) {
 }
 
 // NewConfigContext initializes configuration context.
+// NOTE: do not print any log except error.
 func NewConfigContext() {
 	workDir, err := WorkDir()
 	if err != nil {
@@ -118,7 +119,6 @@ func NewConfigContext() {
 	if len(CustomPath) == 0 {
 		CustomPath = path.Join(workDir, "custom")
 	}
-	log.Trace("Custom path: %s", CustomPath)
 
 	cfgPath := path.Join(CustomPath, "conf/app.ini")
 	if com.IsFile(cfgPath) {
