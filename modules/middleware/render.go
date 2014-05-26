@@ -38,26 +38,18 @@ var helperFuncs = template.FuncMap{
 }
 
 type Delims struct {
-	Left string
-
+	Left  string
 	Right string
 }
 
 type RenderOptions struct {
-	Directory string
-
-	Layout string
-
-	Extensions []string
-
-	Funcs []template.FuncMap
-
-	Delims Delims
-
-	Charset string
-
-	IndentJSON bool
-
+	Directory       string
+	Layout          string
+	Extensions      []string
+	Funcs           []template.FuncMap
+	Delims          Delims
+	Charset         string
+	IndentJSON      bool
 	HTMLContentType string
 }
 

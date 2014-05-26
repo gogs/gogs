@@ -9,10 +9,10 @@ import (
 	"html/template"
 	"net/http"
 	"os"
+	"path"
 
 	"github.com/codegangsta/cli"
 	"github.com/go-martini/martini"
-	qlog "github.com/qiniu/log"
 
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/auth/apiv1"
@@ -21,6 +21,7 @@ import (
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/middleware"
 	"github.com/gogits/gogs/modules/middleware/binding"
+	"github.com/gogits/gogs/modules/setting"
 	"github.com/gogits/gogs/routers"
 	"github.com/gogits/gogs/routers/admin"
 	"github.com/gogits/gogs/routers/api/v1"
@@ -43,7 +44,8 @@ func newMartini() *martini.ClassicMartini {
 	m := martini.New()
 	m.Use(middleware.Logger())
 	m.Use(martini.Recovery())
-	m.Use(martini.Static("public", martini.StaticOptions{SkipLogging: !base.DisableRouterLog}))
+	m.Use(martini.Static(path.Join(setting.StaticRootPath, "public"),
+		martini.StaticOptions{SkipLogging: !setting.DisableRouterLog}))
 	m.MapTo(r, (*martini.Routes)(nil))
 	m.Action(r.Handle)
 	return &martini.ClassicMartini{m, r}
@@ -56,13 +58,14 @@ func runWeb(*cli.Context) {
 
 	// Middlewares.
 	m.Use(middleware.Renderer(middleware.RenderOptions{
+		Directory:  path.Join(setting.StaticRootPath, "templates"),
 		Funcs:      []template.FuncMap{base.TemplateFuncs},
 		IndentJSON: true,
 	}))
 	m.Use(middleware.InitContext())
 
 	reqSignIn := middleware.Toggle(&middleware.ToggleOptions{SignInRequire: true})
-	ignSignIn := middleware.Toggle(&middleware.ToggleOptions{SignInRequire: base.Service.RequireSignInView})
+	ignSignIn := middleware.Toggle(&middleware.ToggleOptions{SignInRequire: setting.Service.RequireSignInView})
 	ignSignInAndCsrf := middleware.Toggle(&middleware.ToggleOptions{DisableCsrf: true})
 
 	reqSignOut := middleware.Toggle(&middleware.ToggleOptions{SignOutRequire: true})
@@ -241,22 +244,19 @@ func runWeb(*cli.Context) {
 	// Not found handler.
 	m.NotFound(routers.NotFound)
 
-	protocol := base.Cfg.MustValue("server", "PROTOCOL", "http")
-	listenAddr := fmt.Sprintf("%s:%s",
-		base.Cfg.MustValue("server", "HTTP_ADDR", "0.0.0.0"),
-		base.Cfg.MustValue("server", "HTTP_PORT", "3000"))
-
-	if protocol == "http" {
-		log.Info("Listen: http://%s", listenAddr)
-		if err := http.ListenAndServe(listenAddr, m); err != nil {
-			qlog.Error(err.Error())
-		}
-	} else if protocol == "https" {
-		log.Info("Listen: https://%s", listenAddr)
-		if err := http.ListenAndServeTLS(listenAddr, base.Cfg.MustValue("server", "CERT_FILE"),
-			base.Cfg.MustValue("server", "KEY_FILE"), m); err != nil {
-			qlog.Error(err.Error())
-		}
+	var err error
+	listenAddr := fmt.Sprintf("%s:%s", setting.HttpAddr, setting.HttpPort)
+	log.Info("Listen: %v://%s", setting.Protocol, listenAddr)
+	switch setting.Protocol {
+	case setting.HTTP:
+		err = http.ListenAndServe(listenAddr, m)
+	case setting.HTTPS:
+		err = http.ListenAndServeTLS(listenAddr, setting.CertFile, setting.KeyFile, m)
+	default:
+		log.Fatal("Invalid protocol: %s", setting.Protocol)
 	}
-	qlog.Fatalf("Invalid protocol: %s", protocol)
+
+	if err != nil {
+		log.Fatal("Fail to start server: %v", err)
+	}
 }

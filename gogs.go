@@ -14,13 +14,13 @@ import (
 	"github.com/codegangsta/cli"
 
 	"github.com/gogits/gogs/cmd"
-	"github.com/gogits/gogs/modules/base"
+	"github.com/gogits/gogs/modules/setting"
 )
 
-const APP_VER = "0.3.5.0524 Alpha"
+const APP_VER = "0.3.5.0525 Alpha"
 
 func init() {
-	base.AppVer = APP_VER
+	setting.AppVer = APP_VER
 	runtime.GOMAXPROCS(runtime.NumCPU())
 }
 

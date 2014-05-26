@@ -13,7 +13,7 @@ import (
 
 	"github.com/go-martini/martini"
 
-	"github.com/gogits/gogs/modules/base"
+	"github.com/gogits/gogs/modules/setting"
 )
 
 var isWindows bool
@@ -24,7 +24,7 @@ func init() {
 
 func Logger() martini.Handler {
 	return func(res http.ResponseWriter, req *http.Request, ctx martini.Context, log *log.Logger) {
-		if base.DisableRouterLog {
+		if setting.DisableRouterLog {
 			return
 		}
 

@@ -10,7 +10,7 @@ import (
 
 	"github.com/codegangsta/cli"
 	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/modules/base"
+	"github.com/gogits/gogs/modules/setting"
 )
 
 var CmdFix = cli.Command{
@@ -22,14 +22,14 @@ var CmdFix = cli.Command{
 }
 
 func runFix(k *cli.Context) {
-	execDir, _ := base.ExecDir()
-	newLogger(execDir)
+	workDir, _ := setting.WorkDir()
+	newLogger(workDir)
 
-	base.NewConfigContext()
+	setting.NewConfigContext()
 	models.LoadModelsConfig()
 
 	if models.UseSQLite3 {
-		os.Chdir(execDir)
+		os.Chdir(workDir)
 	}
 
 	models.SetEngine()

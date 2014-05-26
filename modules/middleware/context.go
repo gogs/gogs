@@ -28,6 +28,7 @@ import (
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
+	"github.com/gogits/gogs/modules/setting"
 )
 
 // Context represents context of a request.
@@ -325,14 +326,14 @@ func InitContext() martini.Handler {
 			// p:      p,
 			Req:    r,
 			Res:    res,
-			Cache:  base.Cache,
+			Cache:  setting.Cache,
 			Render: rd,
 		}
 
 		ctx.Data["PageStartTime"] = time.Now()
 
 		// start session
-		ctx.Session = base.SessionManager.SessionStart(res, r)
+		ctx.Session = setting.SessionManager.SessionStart(res, r)
 
 		// Get flash.
 		values, err := url.ParseQuery(ctx.GetCookie("gogs_flash"))

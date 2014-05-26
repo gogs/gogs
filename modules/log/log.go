@@ -6,6 +6,8 @@
 package log
 
 import (
+	"os"
+
 	"github.com/gogits/logs"
 )
 
@@ -68,4 +70,12 @@ func Critical(format string, v ...interface{}) {
 	for _, logger := range loggers {
 		logger.Critical(format, v...)
 	}
+}
+
+func Fatal(format string, v ...interface{}) {
+	Error(format, v...)
+	for _, l := range loggers {
+		l.Close()
+	}
+	os.Exit(2)
 }

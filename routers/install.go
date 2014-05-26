@@ -8,6 +8,7 @@ import (
 	"errors"
 	"os"
 	"os/exec"
+	"path"
 	"strings"
 
 	"github.com/Unknwon/goconfig"
@@ -22,14 +23,15 @@ import (
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/mailer"
 	"github.com/gogits/gogs/modules/middleware"
+	"github.com/gogits/gogs/modules/setting"
 	"github.com/gogits/gogs/modules/social"
 )
 
 func checkRunMode() {
-	switch base.Cfg.MustValue("", "RUN_MODE") {
+	switch setting.Cfg.MustValue("", "RUN_MODE") {
 	case "prod":
 		martini.Env = martini.Prod
-		base.ProdMode = true
+		setting.ProdMode = true
 	case "test":
 		martini.Env = martini.Test
 	}
@@ -37,20 +39,20 @@ func checkRunMode() {
 }
 
 func NewServices() {
-	base.NewBaseServices()
+	setting.NewServices()
 	social.NewOauthService()
 }
 
 // GlobalInit is for global configuration reload-able.
 func GlobalInit() {
-	base.NewConfigContext()
+	setting.NewConfigContext()
 	mailer.NewMailerContext()
 	models.LoadModelsConfig()
 	models.LoadRepoConfig()
 	models.NewRepoContext()
 	NewServices()
 
-	if base.InstallLock {
+	if setting.InstallLock {
 		if err := models.NewEngine(); err != nil {
 			qlog.Fatal(err)
 		}
@@ -69,7 +71,7 @@ func renderDbOption(ctx *middleware.Context) {
 }
 
 func Install(ctx *middleware.Context, form auth.InstallForm) {
-	if base.InstallLock {
+	if setting.InstallLock {
 		ctx.Handle(404, "install.Install", errors.New("Installation is prohibited"))
 		return
 	}
@@ -95,16 +97,16 @@ func Install(ctx *middleware.Context, form auth.InstallForm) {
 	}
 
 	if len(form.RepoRootPath) == 0 {
-		form.RepoRootPath = base.RepoRootPath
+		form.RepoRootPath = setting.RepoRootPath
 	}
 	if len(form.RunUser) == 0 {
-		form.RunUser = base.RunUser
+		form.RunUser = setting.RunUser
 	}
 	if len(form.Domain) == 0 {
-		form.Domain = base.Domain
+		form.Domain = setting.Domain
 	}
 	if len(form.AppUrl) == 0 {
-		form.AppUrl = base.AppUrl
+		form.AppUrl = setting.AppUrl
 	}
 
 	renderDbOption(ctx)
@@ -119,7 +121,7 @@ func Install(ctx *middleware.Context, form auth.InstallForm) {
 }
 
 func InstallPost(ctx *middleware.Context, form auth.InstallForm) {
-	if base.InstallLock {
+	if setting.InstallLock {
 		ctx.Handle(404, "install.Install", errors.New("Installation is prohibited"))
 		return
 	}
@@ -181,35 +183,35 @@ func InstallPost(ctx *middleware.Context, form auth.InstallForm) {
 	}
 
 	// Save settings.
-	base.Cfg.SetValue("database", "DB_TYPE", models.DbCfg.Type)
-	base.Cfg.SetValue("database", "HOST", models.DbCfg.Host)
-	base.Cfg.SetValue("database", "NAME", models.DbCfg.Name)
-	base.Cfg.SetValue("database", "USER", models.DbCfg.User)
-	base.Cfg.SetValue("database", "PASSWD", models.DbCfg.Pwd)
-	base.Cfg.SetValue("database", "SSL_MODE", models.DbCfg.SslMode)
-	base.Cfg.SetValue("database", "PATH", models.DbCfg.Path)
+	setting.Cfg.SetValue("database", "DB_TYPE", models.DbCfg.Type)
+	setting.Cfg.SetValue("database", "HOST", models.DbCfg.Host)
+	setting.Cfg.SetValue("database", "NAME", models.DbCfg.Name)
+	setting.Cfg.SetValue("database", "USER", models.DbCfg.User)
+	setting.Cfg.SetValue("database", "PASSWD", models.DbCfg.Pwd)
+	setting.Cfg.SetValue("database", "SSL_MODE", models.DbCfg.SslMode)
+	setting.Cfg.SetValue("database", "PATH", models.DbCfg.Path)
 
-	base.Cfg.SetValue("repository", "ROOT", form.RepoRootPath)
-	base.Cfg.SetValue("", "RUN_USER", form.RunUser)
-	base.Cfg.SetValue("server", "DOMAIN", form.Domain)
-	base.Cfg.SetValue("server", "ROOT_URL", form.AppUrl)
+	setting.Cfg.SetValue("repository", "ROOT", form.RepoRootPath)
+	setting.Cfg.SetValue("", "RUN_USER", form.RunUser)
+	setting.Cfg.SetValue("server", "DOMAIN", form.Domain)
+	setting.Cfg.SetValue("server", "ROOT_URL", form.AppUrl)
 
 	if len(strings.TrimSpace(form.SmtpHost)) > 0 {
-		base.Cfg.SetValue("mailer", "ENABLED", "true")
-		base.Cfg.SetValue("mailer", "HOST", form.SmtpHost)
-		base.Cfg.SetValue("mailer", "USER", form.SmtpEmail)
-		base.Cfg.SetValue("mailer", "PASSWD", form.SmtpPasswd)
+		setting.Cfg.SetValue("mailer", "ENABLED", "true")
+		setting.Cfg.SetValue("mailer", "HOST", form.SmtpHost)
+		setting.Cfg.SetValue("mailer", "USER", form.SmtpEmail)
+		setting.Cfg.SetValue("mailer", "PASSWD", form.SmtpPasswd)
 
-		base.Cfg.SetValue("service", "REGISTER_EMAIL_CONFIRM", base.ToStr(form.RegisterConfirm == "on"))
-		base.Cfg.SetValue("service", "ENABLE_NOTIFY_MAIL", base.ToStr(form.MailNotify == "on"))
+		setting.Cfg.SetValue("service", "REGISTER_EMAIL_CONFIRM", base.ToStr(form.RegisterConfirm == "on"))
+		setting.Cfg.SetValue("service", "ENABLE_NOTIFY_MAIL", base.ToStr(form.MailNotify == "on"))
 	}
 
-	base.Cfg.SetValue("", "RUN_MODE", "prod")
+	setting.Cfg.SetValue("", "RUN_MODE", "prod")
 
-	base.Cfg.SetValue("security", "INSTALL_LOCK", "true")
+	setting.Cfg.SetValue("security", "INSTALL_LOCK", "true")
 
 	os.MkdirAll("custom/conf", os.ModePerm)
-	if err := goconfig.SaveConfigFile(base.Cfg, "custom/conf/app.ini"); err != nil {
+	if err := goconfig.SaveConfigFile(setting.Cfg, path.Join(setting.CustomPath, "conf/app.ini")); err != nil {
 		ctx.RenderWithErr("Fail to save configuration: "+err.Error(), "install", &form)
 		return
 	}
@@ -220,7 +222,7 @@ func InstallPost(ctx *middleware.Context, form auth.InstallForm) {
 	if _, err := models.RegisterUser(&models.User{Name: form.AdminName, Email: form.AdminEmail, Passwd: form.AdminPasswd,
 		IsAdmin: true, IsActive: true}); err != nil {
 		if err != models.ErrUserAlreadyExist {
-			base.InstallLock = false
+			setting.InstallLock = false
 			ctx.RenderWithErr("Admin account setting is invalid: "+err.Error(), "install", &form)
 			return
 		}

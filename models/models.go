@@ -14,7 +14,7 @@ import (
 	"github.com/go-xorm/xorm"
 	_ "github.com/lib/pq"
 
-	"github.com/gogits/gogs/modules/base"
+	"github.com/gogits/gogs/modules/setting"
 )
 
 var (
@@ -39,16 +39,16 @@ func init() {
 }
 
 func LoadModelsConfig() {
-	DbCfg.Type = base.Cfg.MustValue("database", "DB_TYPE")
+	DbCfg.Type = setting.Cfg.MustValue("database", "DB_TYPE")
 	if DbCfg.Type == "sqlite3" {
 		UseSQLite3 = true
 	}
-	DbCfg.Host = base.Cfg.MustValue("database", "HOST")
-	DbCfg.Name = base.Cfg.MustValue("database", "NAME")
-	DbCfg.User = base.Cfg.MustValue("database", "USER")
-	DbCfg.Pwd = base.Cfg.MustValue("database", "PASSWD")
-	DbCfg.SslMode = base.Cfg.MustValue("database", "SSL_MODE")
-	DbCfg.Path = base.Cfg.MustValue("database", "PATH", "data/gogs.db")
+	DbCfg.Host = setting.Cfg.MustValue("database", "HOST")
+	DbCfg.Name = setting.Cfg.MustValue("database", "NAME")
+	DbCfg.User = setting.Cfg.MustValue("database", "USER")
+	DbCfg.Pwd = setting.Cfg.MustValue("database", "PASSWD")
+	DbCfg.SslMode = setting.Cfg.MustValue("database", "SSL_MODE")
+	DbCfg.Path = setting.Cfg.MustValue("database", "PATH", "data/gogs.db")
 }
 
 func NewTestEngine(x *xorm.Engine) (err error) {
@@ -112,8 +112,8 @@ func SetEngine() (err error) {
 
 	// WARNNING: for serv command, MUST remove the output to os.stdout,
 	// so use log file to instead print to stdout.
-	execDir, _ := base.ExecDir()
-	logPath := execDir + "/log/xorm.log"
+	workDir, _ := setting.WorkDir()
+	logPath := workDir + "/log/xorm.log"
 	os.MkdirAll(path.Dir(logPath), os.ModePerm)
 
 	f, err := os.Create(logPath)

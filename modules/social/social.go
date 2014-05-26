@@ -15,8 +15,8 @@ import (
 	oauth "github.com/gogits/oauth2"
 
 	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
+	"github.com/gogits/gogs/modules/setting"
 )
 
 type BasicUserInfo struct {
@@ -40,67 +40,67 @@ var (
 )
 
 func NewOauthService() {
-	if !base.Cfg.MustBool("oauth", "ENABLED") {
+	if !setting.Cfg.MustBool("oauth", "ENABLED") {
 		return
 	}
 
-	base.OauthService = &base.Oauther{}
-	base.OauthService.OauthInfos = make(map[string]*base.OauthInfo)
+	setting.OauthService = &setting.Oauther{}
+	setting.OauthService.OauthInfos = make(map[string]*setting.OauthInfo)
 
 	socialConfigs := make(map[string]*oauth.Config)
 	allOauthes := []string{"github", "google", "qq", "twitter", "weibo"}
 	// Load all OAuth config data.
 	for _, name := range allOauthes {
-		base.OauthService.OauthInfos[name] = &base.OauthInfo{
-			ClientId:     base.Cfg.MustValue("oauth."+name, "CLIENT_ID"),
-			ClientSecret: base.Cfg.MustValue("oauth."+name, "CLIENT_SECRET"),
-			Scopes:       base.Cfg.MustValue("oauth."+name, "SCOPES"),
-			AuthUrl:      base.Cfg.MustValue("oauth."+name, "AUTH_URL"),
-			TokenUrl:     base.Cfg.MustValue("oauth."+name, "TOKEN_URL"),
+		setting.OauthService.OauthInfos[name] = &setting.OauthInfo{
+			ClientId:     setting.Cfg.MustValue("oauth."+name, "CLIENT_ID"),
+			ClientSecret: setting.Cfg.MustValue("oauth."+name, "CLIENT_SECRET"),
+			Scopes:       setting.Cfg.MustValue("oauth."+name, "SCOPES"),
+			AuthUrl:      setting.Cfg.MustValue("oauth."+name, "AUTH_URL"),
+			TokenUrl:     setting.Cfg.MustValue("oauth."+name, "TOKEN_URL"),
 		}
 		socialConfigs[name] = &oauth.Config{
-			ClientId:     base.OauthService.OauthInfos[name].ClientId,
-			ClientSecret: base.OauthService.OauthInfos[name].ClientSecret,
-			RedirectURL:  strings.TrimSuffix(base.AppUrl, "/") + SocialBaseUrl + name,
-			Scope:        base.OauthService.OauthInfos[name].Scopes,
-			AuthURL:      base.OauthService.OauthInfos[name].AuthUrl,
-			TokenURL:     base.OauthService.OauthInfos[name].TokenUrl,
+			ClientId:     setting.OauthService.OauthInfos[name].ClientId,
+			ClientSecret: setting.OauthService.OauthInfos[name].ClientSecret,
+			RedirectURL:  strings.TrimSuffix(setting.AppUrl, "/") + SocialBaseUrl + name,
+			Scope:        setting.OauthService.OauthInfos[name].Scopes,
+			AuthURL:      setting.OauthService.OauthInfos[name].AuthUrl,
+			TokenURL:     setting.OauthService.OauthInfos[name].TokenUrl,
 		}
 	}
 
 	enabledOauths := make([]string, 0, 10)
 
 	// GitHub.
-	if base.Cfg.MustBool("oauth.github", "ENABLED") {
-		base.OauthService.GitHub = true
+	if setting.Cfg.MustBool("oauth.github", "ENABLED") {
+		setting.OauthService.GitHub = true
 		newGitHubOauth(socialConfigs["github"])
 		enabledOauths = append(enabledOauths, "GitHub")
 	}
 
 	// Google.
-	if base.Cfg.MustBool("oauth.google", "ENABLED") {
-		base.OauthService.Google = true
+	if setting.Cfg.MustBool("oauth.google", "ENABLED") {
+		setting.OauthService.Google = true
 		newGoogleOauth(socialConfigs["google"])
 		enabledOauths = append(enabledOauths, "Google")
 	}
 
 	// QQ.
-	if base.Cfg.MustBool("oauth.qq", "ENABLED") {
-		base.OauthService.Tencent = true
+	if setting.Cfg.MustBool("oauth.qq", "ENABLED") {
+		setting.OauthService.Tencent = true
 		newTencentOauth(socialConfigs["qq"])
 		enabledOauths = append(enabledOauths, "QQ")
 	}
 
 	// Twitter.
-	if base.Cfg.MustBool("oauth.twitter", "ENABLED") {
-		base.OauthService.Twitter = true
+	if setting.Cfg.MustBool("oauth.twitter", "ENABLED") {
+		setting.OauthService.Twitter = true
 		newTwitterOauth(socialConfigs["twitter"])
 		enabledOauths = append(enabledOauths, "Twitter")
 	}
 
 	// Weibo.
-	if base.Cfg.MustBool("oauth.weibo", "ENABLED") {
-		base.OauthService.Weibo = true
+	if setting.Cfg.MustBool("oauth.weibo", "ENABLED") {
+		setting.OauthService.Weibo = true
 		newWeiboOauth(socialConfigs["weibo"])
 		enabledOauths = append(enabledOauths, "Weibo")
 	}

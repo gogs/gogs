@@ -11,9 +11,12 @@ import (
 )
 
 func Branches(ctx *middleware.Context, params martini.Params) {
+	ctx.Data["Title"] = "Branches"
+	ctx.Data["IsRepoToolbarBranches"] = true
+
 	brs, err := ctx.Repo.GitRepo.GetBranches()
 	if err != nil {
-		ctx.Handle(404, "repo.Branches", err)
+		ctx.Handle(500, "repo.Branches", err)
 		return
 	} else if len(brs) == 0 {
 		ctx.Handle(404, "repo.Branches", nil)
@@ -21,7 +24,5 @@ func Branches(ctx *middleware.Context, params martini.Params) {
 	}
 
 	ctx.Data["Branches"] = brs
-	ctx.Data["IsRepoToolbarBranches"] = true
-
 	ctx.HTML(200, "repo/branches")
 }

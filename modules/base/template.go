@@ -13,6 +13,8 @@ import (
 	"runtime"
 	"strings"
 	"time"
+
+	"github.com/gogits/gogs/modules/setting"
 )
 
 func Str2html(raw string) template.HTML {
@@ -52,16 +54,16 @@ var TemplateFuncs template.FuncMap = map[string]interface{}{
 		return runtime.Version()
 	},
 	"AppName": func() string {
-		return AppName
+		return setting.AppName
 	},
 	"AppVer": func() string {
-		return AppVer
+		return setting.AppVer
 	},
 	"AppDomain": func() string {
-		return Domain
+		return setting.Domain
 	},
 	"CdnMode": func() bool {
-		return ProdMode && !OfflineMode
+		return setting.ProdMode && !setting.OfflineMode
 	},
 	"LoadTimes": func(startTime time.Time) string {
 		return fmt.Sprint(time.Since(startTime).Nanoseconds()/1e6) + "ms"

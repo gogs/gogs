@@ -14,9 +14,9 @@ import (
 	"github.com/go-martini/martini"
 
 	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/middleware"
+	"github.com/gogits/gogs/modules/setting"
 	"github.com/gogits/gogs/modules/social"
 )
 
@@ -29,7 +29,7 @@ func extractPath(next string) string {
 }
 
 func SocialSignIn(ctx *middleware.Context, params martini.Params) {
-	if base.OauthService == nil {
+	if setting.OauthService == nil {
 		ctx.Handle(404, "social.SocialSignIn(oauth service not enabled)", nil)
 		return
 	}
@@ -45,7 +45,7 @@ func SocialSignIn(ctx *middleware.Context, params martini.Params) {
 	code := ctx.Query("code")
 	if code == "" {
 		// redirect to social login page
-		connect.SetRedirectUrl(strings.TrimSuffix(base.AppUrl, "/") + ctx.Req.URL.Path)
+		connect.SetRedirectUrl(strings.TrimSuffix(setting.AppUrl, "/") + ctx.Req.URL.Path)
 		ctx.Redirect(connect.AuthCodeURL(next))
 		return
 	}

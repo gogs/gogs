@@ -10,7 +10,7 @@ import (
 
 	"github.com/go-martini/martini"
 
-	"github.com/gogits/gogs/modules/base"
+	"github.com/gogits/gogs/modules/setting"
 )
 
 type ToggleOptions struct {
@@ -23,7 +23,7 @@ type ToggleOptions struct {
 func Toggle(options *ToggleOptions) martini.Handler {
 	return func(ctx *Context) {
 		// Cannot view any page before installation.
-		if !base.InstallLock {
+		if !setting.InstallLock {
 			ctx.Redirect("/install")
 			return
 		}
@@ -48,7 +48,7 @@ func Toggle(options *ToggleOptions) martini.Handler {
 				ctx.SetCookie("redirect_to", "/"+url.QueryEscape(ctx.Req.RequestURI))
 				ctx.Redirect("/user/login")
 				return
-			} else if !ctx.User.IsActive && base.Service.RegisterEmailConfirm {
+			} else if !ctx.User.IsActive && setting.Service.RegisterEmailConfirm {
 				ctx.Data["Title"] = "Activate Your Account"
 				ctx.HTML(200, "user/activate")
 				return

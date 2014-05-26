@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-package base
+package setting
 
 import (
 	"fmt"
@@ -14,77 +14,170 @@ import (
 
 	"github.com/Unknwon/com"
 	"github.com/Unknwon/goconfig"
-	qlog "github.com/qiniu/log"
 
 	"github.com/gogits/cache"
 	"github.com/gogits/session"
 
+	"github.com/gogits/gogs/modules/bin"
 	"github.com/gogits/gogs/modules/log"
 )
 
-// Mailer represents mail service.
-type Mailer struct {
-	Name         string
-	Host         string
-	User, Passwd string
-}
+type Scheme string
 
-type OauthInfo struct {
-	ClientId, ClientSecret string
-	Scopes                 string
-	AuthUrl, TokenUrl      string
-}
-
-// Oauther represents oauth service.
-type Oauther struct {
-	GitHub, Google, Tencent,
-	Twitter, Weibo bool
-	OauthInfos map[string]*OauthInfo
-}
+const (
+	HTTP  Scheme = "http"
+	HTTPS Scheme = "https"
+)
 
 var (
-	AppVer           string
-	AppName          string
-	AppLogo          string
-	AppUrl           string
-	SshPort          int
-	OfflineMode      bool
-	DisableRouterLog bool
-	ProdMode         bool
-	Domain           string
-	SecretKey        string
-	RunUser          string
+	// App settings.
+	AppVer  string
+	AppName string
+	AppLogo string
+	AppUrl  string
 
-	RepoRootPath string
-	ScriptType   string
+	// Server settings.
+	Protocol           Scheme
+	Domain             string
+	HttpAddr, HttpPort string
+	SshPort            int
+	OfflineMode        bool
+	DisableRouterLog   bool
+	CertFile, KeyFile  string
+	StaticRootPath     string
 
-	InstallLock bool
-
+	// Security settings.
+	InstallLock        bool
+	SecretKey          string
 	LogInRememberDays  int
 	CookieUserName     string
 	CookieRememberName string
 
-	Cfg          *goconfig.ConfigFile
-	MailService  *Mailer
-	OauthService *Oauther
+	// Repository settings.
+	RepoRootPath string
+	ScriptType   string
 
+	// Picture settings.
+	PictureService  string
+	DisableGravatar bool
+
+	// Log settings.
 	LogModes   []string
 	LogConfigs []string
 
+	// Cache settings.
 	Cache        cache.Cache
 	CacheAdapter string
 	CacheConfig  string
 
+	EnableRedis    bool
+	EnableMemcache bool
+
+	// Session settings.
 	SessionProvider string
 	SessionConfig   *session.Config
 	SessionManager  *session.Manager
 
-	PictureService  string
-	DisableGravatar bool
-
-	EnableRedis    bool
-	EnableMemcache bool
+	// Global setting objects.
+	Cfg        *goconfig.ConfigFile
+	CustomPath string // Custom directory path.
+	ProdMode   bool
+	RunUser    string
 )
+
+// WorkDir returns absolute path of work directory.
+func WorkDir() (string, error) {
+	file, err := exec.LookPath(os.Args[0])
+	if err != nil {
+		return "", err
+	}
+	p, err := filepath.Abs(file)
+	if err != nil {
+		return "", err
+	}
+	return path.Dir(strings.Replace(p, "\\", "/", -1)), nil
+}
+
+// NewConfigContext initializes configuration context.
+func NewConfigContext() {
+	workDir, err := WorkDir()
+	if err != nil {
+		log.Fatal("Fail to get work directory: %v", err)
+	}
+
+	data, err := bin.Asset("conf/app.ini")
+	if err != nil {
+		log.Fatal("Fail to read 'conf/app.ini': %v", err)
+	}
+	Cfg, err = goconfig.LoadFromData(data)
+	if err != nil {
+		log.Fatal("Fail to parse 'conf/app.ini': %v", err)
+	}
+
+	CustomPath = os.Getenv("GOGS_CUSTOM")
+	if len(CustomPath) == 0 {
+		CustomPath = path.Join(workDir, "custom")
+	}
+	log.Trace("Custom path: %s", CustomPath)
+
+	cfgPath := path.Join(CustomPath, "conf/app.ini")
+	if com.IsFile(cfgPath) {
+		if err = Cfg.AppendFiles(cfgPath); err != nil {
+			log.Fatal("Fail to load custom 'conf/app.ini': %v", err)
+		}
+	} else {
+		log.Warn("No custom 'conf/app.ini' found")
+	}
+
+	AppName = Cfg.MustValue("", "APP_NAME", "Gogs: Go Git Service")
+	AppLogo = Cfg.MustValue("", "APP_LOGO", "img/favicon.png")
+	AppUrl = Cfg.MustValue("server", "ROOT_URL", "http://localhost:3000")
+
+	Protocol = HTTP
+	if Cfg.MustValue("server", "PROTOCOL") == "https" {
+		Protocol = HTTPS
+		CertFile = Cfg.MustValue("server", "CERT_FILE")
+		KeyFile = Cfg.MustValue("server", "KEY_FILE")
+	}
+	Domain = Cfg.MustValue("server", "DOMAIN", "localhost")
+	HttpAddr = Cfg.MustValue("server", "HTTP_ADDR", "0.0.0.0")
+	HttpPort = Cfg.MustValue("server", "HTTP_PORT", "3000")
+	SshPort = Cfg.MustInt("server", "SSH_PORT", 22)
+	OfflineMode = Cfg.MustBool("server", "OFFLINE_MODE")
+	DisableRouterLog = Cfg.MustBool("server", "DISABLE_ROUTER_LOG")
+	StaticRootPath = Cfg.MustValue("server", "STATIC_ROOT_PATH")
+
+	InstallLock = Cfg.MustBool("security", "INSTALL_LOCK")
+	SecretKey = Cfg.MustValue("security", "SECRET_KEY")
+	LogInRememberDays = Cfg.MustInt("security", "LOGIN_REMEMBER_DAYS")
+	CookieUserName = Cfg.MustValue("security", "COOKIE_USERNAME")
+	CookieRememberName = Cfg.MustValue("security", "COOKIE_REMEMBER_NAME")
+
+	RunUser = Cfg.MustValue("", "RUN_USER")
+	curUser := os.Getenv("USER")
+	if len(curUser) == 0 {
+		curUser = os.Getenv("USERNAME")
+	}
+	// Does not check run user when the install lock is off.
+	if InstallLock && RunUser != curUser {
+		log.Fatal("Expect user(%s) but current user is: %s", RunUser, curUser)
+	}
+
+	// Determine and create root git reposiroty path.
+	homeDir, err := com.HomeDir()
+	if err != nil {
+		log.Fatal("Fail to get home directory: %v", err)
+	}
+	RepoRootPath = Cfg.MustValue("repository", "ROOT", filepath.Join(homeDir, "gogs-repositories"))
+	if err = os.MkdirAll(RepoRootPath, os.ModePerm); err != nil {
+		log.Fatal("Fail to create repository root path(%s): %v", RepoRootPath, err)
+	}
+	ScriptType = Cfg.MustValue("repository", "SCRIPT_TYPE", "bash")
+
+	PictureService = Cfg.MustValueRange("picture", "SERVICE", "server",
+		[]string{"server"})
+	DisableGravatar = Cfg.MustBool("picture", "DISABLE_GRAVATAR")
+}
 
 var Service struct {
 	RegisterEmailConfirm bool
@@ -97,17 +190,12 @@ var Service struct {
 	LdapAuth             bool
 }
 
-// ExecDir returns absolute path execution(binary) path.
-func ExecDir() (string, error) {
-	file, err := exec.LookPath(os.Args[0])
-	if err != nil {
-		return "", err
-	}
-	p, err := filepath.Abs(file)
-	if err != nil {
-		return "", err
-	}
-	return path.Dir(strings.Replace(p, "\\", "/", -1)), nil
+func newService() {
+	Service.ActiveCodeLives = Cfg.MustInt("service", "ACTIVE_CODE_LIVE_MINUTES", 180)
+	Service.ResetPwdCodeLives = Cfg.MustInt("service", "RESET_PASSWD_CODE_LIVE_MINUTES", 180)
+	Service.DisableRegistration = Cfg.MustBool("service", "DISABLE_REGISTRATION")
+	Service.RequireSignInView = Cfg.MustBool("service", "REQUIRE_SIGNIN_VIEW")
+	Service.EnableCacheAvatar = Cfg.MustBool("service", "ENABLE_CACHE_AVATAR")
 }
 
 var logLevels = map[string]string{
@@ -117,14 +205,6 @@ var logLevels = map[string]string{
 	"Warn":     "3",
 	"Error":    "4",
 	"Critical": "5",
-}
-
-func newService() {
-	Service.ActiveCodeLives = Cfg.MustInt("service", "ACTIVE_CODE_LIVE_MINUTES", 180)
-	Service.ResetPwdCodeLives = Cfg.MustInt("service", "RESET_PASSWD_CODE_LIVE_MINUTES", 180)
-	Service.DisableRegistration = Cfg.MustBool("service", "DISABLE_REGISTRATION", false)
-	Service.RequireSignInView = Cfg.MustBool("service", "REQUIRE_SIGNIN_VIEW", false)
-	Service.EnableCacheAvatar = Cfg.MustBool("service", "ENABLE_CACHE_AVATAR", false)
 }
 
 func newLogService() {
@@ -137,7 +217,7 @@ func newLogService() {
 		mode = strings.TrimSpace(mode)
 		modeSec := "log." + mode
 		if _, err := Cfg.GetSection(modeSec); err != nil {
-			qlog.Fatalf("Unknown log mode: %s\n", mode)
+			log.Fatal("Unknown log mode: %s", mode)
 		}
 
 		// Log level.
@@ -145,7 +225,7 @@ func newLogService() {
 			[]string{"Trace", "Debug", "Info", "Warn", "Error", "Critical"})
 		level, ok := logLevels[levelName]
 		if !ok {
-			qlog.Fatalf("Unknown log level: %s\n", levelName)
+			log.Fatal("Unknown log level: %s", levelName)
 		}
 
 		// Generate log configuration.
@@ -165,8 +245,8 @@ func newLogService() {
 				Cfg.MustInt(modeSec, "MAX_DAYS", 7))
 		case "conn":
 			LogConfigs[i] = fmt.Sprintf(`{"level":"%s","reconnectOnMsg":%v,"reconnect":%v,"net":"%s","addr":"%s"}`, level,
-				Cfg.MustBool(modeSec, "RECONNECT_ON_MSG", false),
-				Cfg.MustBool(modeSec, "RECONNECT", false),
+				Cfg.MustBool(modeSec, "RECONNECT_ON_MSG"),
+				Cfg.MustBool(modeSec, "RECONNECT"),
 				Cfg.MustValueRange(modeSec, "PROTOCOL", "tcp", []string{"tcp", "unix", "udp"}),
 				Cfg.MustValue(modeSec, "ADDR", ":7020"))
 		case "smtp":
@@ -202,13 +282,13 @@ func newCacheService() {
 	case "redis", "memcache":
 		CacheConfig = fmt.Sprintf(`{"conn":"%s"}`, Cfg.MustValue("cache", "HOST"))
 	default:
-		qlog.Fatalf("Unknown cache adapter: %s\n", CacheAdapter)
+		log.Fatal("Unknown cache adapter: %s", CacheAdapter)
 	}
 
 	var err error
 	Cache, err = cache.NewCache(CacheAdapter, CacheConfig)
 	if err != nil {
-		qlog.Fatalf("Init cache system failed, adapter: %s, config: %s, %v\n",
+		log.Fatal("Init cache system failed, adapter: %s, config: %s, %v\n",
 			CacheAdapter, CacheConfig, err)
 	}
 
@@ -237,12 +317,37 @@ func newSessionService() {
 	var err error
 	SessionManager, err = session.NewManager(SessionProvider, *SessionConfig)
 	if err != nil {
-		qlog.Fatalf("Init session system failed, provider: %s, %v\n",
+		log.Fatal("Init session system failed, provider: %s, %v",
 			SessionProvider, err)
 	}
 
 	log.Info("Session Service Enabled")
 }
+
+// Mailer represents mail service.
+type Mailer struct {
+	Name         string
+	Host         string
+	User, Passwd string
+}
+
+type OauthInfo struct {
+	ClientId, ClientSecret string
+	Scopes                 string
+	AuthUrl, TokenUrl      string
+}
+
+// Oauther represents oauth service.
+type Oauther struct {
+	GitHub, Google, Tencent,
+	Twitter, Weibo bool
+	OauthInfos map[string]*OauthInfo
+}
+
+var (
+	MailService  *Mailer
+	OauthService *Oauther
+)
 
 func newMailService() {
 	// Check mailer setting.
@@ -281,69 +386,7 @@ func newNotifyMailService() {
 	log.Info("Notify Mail Service Enabled")
 }
 
-func NewConfigContext() {
-	workDir, err := ExecDir()
-	if err != nil {
-		qlog.Fatalf("Fail to get work directory: %s\n", err)
-	}
-
-	cfgPath := filepath.Join(workDir, "conf/app.ini")
-	Cfg, err = goconfig.LoadConfigFile(cfgPath)
-	if err != nil {
-		qlog.Fatalf("Cannot load config file(%s): %v\n", cfgPath, err)
-	}
-	Cfg.BlockMode = false
-
-	cfgPaths := []string{os.Getenv("GOGS_CONFIG"), filepath.Join(workDir, "custom/conf/app.ini")}
-	for _, cfgPath := range cfgPaths {
-		if com.IsFile(cfgPath) {
-			if err = Cfg.AppendFiles(cfgPath); err != nil {
-				qlog.Fatalf("Cannot load config file(%s): %v\n", cfgPath, err)
-			}
-		}
-	}
-
-	AppName = Cfg.MustValue("", "APP_NAME", "Gogs: Go Git Service")
-	AppLogo = Cfg.MustValue("", "APP_LOGO", "img/favicon.png")
-	AppUrl = Cfg.MustValue("server", "ROOT_URL")
-	Domain = Cfg.MustValue("server", "DOMAIN")
-	SshPort = Cfg.MustInt("server", "SSH_PORT", 22)
-	OfflineMode = Cfg.MustBool("server", "OFFLINE_MODE", false)
-	DisableRouterLog = Cfg.MustBool("server", "DISABLE_ROUTER_LOG", false)
-	SecretKey = Cfg.MustValue("security", "SECRET_KEY")
-
-	InstallLock = Cfg.MustBool("security", "INSTALL_LOCK", false)
-
-	RunUser = Cfg.MustValue("", "RUN_USER")
-	curUser := os.Getenv("USER")
-	if len(curUser) == 0 {
-		curUser = os.Getenv("USERNAME")
-	}
-	// Does not check run user when the install lock is off.
-	if InstallLock && RunUser != curUser {
-		qlog.Fatalf("Expect user(%s) but current user is: %s\n", RunUser, curUser)
-	}
-
-	LogInRememberDays = Cfg.MustInt("security", "LOGIN_REMEMBER_DAYS")
-	CookieUserName = Cfg.MustValue("security", "COOKIE_USERNAME")
-	CookieRememberName = Cfg.MustValue("security", "COOKIE_REMEMBER_NAME")
-
-	PictureService = Cfg.MustValue("picture", "SERVICE")
-	DisableGravatar = Cfg.MustBool("picture", "DISABLE_GRAVATAR", false)
-
-	// Determine and create root git reposiroty path.
-	homeDir, err := com.HomeDir()
-	if err != nil {
-		qlog.Fatalf("Fail to get home directory): %v\n", err)
-	}
-	RepoRootPath = Cfg.MustValue("repository", "ROOT", filepath.Join(homeDir, "gogs-repositories"))
-	if err = os.MkdirAll(RepoRootPath, os.ModePerm); err != nil {
-		qlog.Fatalf("Fail to create RepoRootPath(%s): %v\n", RepoRootPath, err)
-	}
-	ScriptType = Cfg.MustValue("repository", "SCRIPT_TYPE", "bash")
-}
-
-func NewBaseServices() {
+func NewServices() {
 	newService()
 	newLogService()
 	newCacheService()

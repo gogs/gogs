@@ -15,6 +15,7 @@ import (
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/middleware"
+	"github.com/gogits/gogs/modules/setting"
 )
 
 var startTime = time.Now()
@@ -177,46 +178,46 @@ func Config(ctx *middleware.Context) {
 	ctx.Data["Title"] = "Server Configuration"
 	ctx.Data["PageIsConfig"] = true
 
-	ctx.Data["AppUrl"] = base.AppUrl
-	ctx.Data["Domain"] = base.Domain
-	ctx.Data["OfflineMode"] = base.OfflineMode
-	ctx.Data["DisableRouterLog"] = base.DisableRouterLog
-	ctx.Data["RunUser"] = base.RunUser
+	ctx.Data["AppUrl"] = setting.AppUrl
+	ctx.Data["Domain"] = setting.Domain
+	ctx.Data["OfflineMode"] = setting.OfflineMode
+	ctx.Data["DisableRouterLog"] = setting.DisableRouterLog
+	ctx.Data["RunUser"] = setting.RunUser
 	ctx.Data["RunMode"] = strings.Title(martini.Env)
-	ctx.Data["RepoRootPath"] = base.RepoRootPath
-	ctx.Data["ScriptType"] = base.ScriptType
+	ctx.Data["RepoRootPath"] = setting.RepoRootPath
+	ctx.Data["ScriptType"] = setting.ScriptType
 
-	ctx.Data["Service"] = base.Service
+	ctx.Data["Service"] = setting.Service
 
 	ctx.Data["DbCfg"] = models.DbCfg
 
 	ctx.Data["MailerEnabled"] = false
-	if base.MailService != nil {
+	if setting.MailService != nil {
 		ctx.Data["MailerEnabled"] = true
-		ctx.Data["Mailer"] = base.MailService
+		ctx.Data["Mailer"] = setting.MailService
 	}
 
 	ctx.Data["OauthEnabled"] = false
-	if base.OauthService != nil {
+	if setting.OauthService != nil {
 		ctx.Data["OauthEnabled"] = true
-		ctx.Data["Oauther"] = base.OauthService
+		ctx.Data["Oauther"] = setting.OauthService
 	}
 
-	ctx.Data["CacheAdapter"] = base.CacheAdapter
-	ctx.Data["CacheConfig"] = base.CacheConfig
+	ctx.Data["CacheAdapter"] = setting.CacheAdapter
+	ctx.Data["CacheConfig"] = setting.CacheConfig
 
-	ctx.Data["SessionProvider"] = base.SessionProvider
-	ctx.Data["SessionConfig"] = base.SessionConfig
+	ctx.Data["SessionProvider"] = setting.SessionProvider
+	ctx.Data["SessionConfig"] = setting.SessionConfig
 
-	ctx.Data["PictureService"] = base.PictureService
-	ctx.Data["DisableGravatar"] = base.DisableGravatar
+	ctx.Data["PictureService"] = setting.PictureService
+	ctx.Data["DisableGravatar"] = setting.DisableGravatar
 
 	type logger struct {
 		Mode, Config string
 	}
-	loggers := make([]*logger, len(base.LogModes))
-	for i := range base.LogModes {
-		loggers[i] = &logger{base.LogModes[i], base.LogConfigs[i]}
+	loggers := make([]*logger, len(setting.LogModes))
+	for i := range setting.LogModes {
+		loggers[i] = &logger{setting.LogModes[i], setting.LogConfigs[i]}
 	}
 	ctx.Data["Loggers"] = loggers
 
