@@ -46,6 +46,7 @@ func NewServices() {
 // GlobalInit is for global configuration reload-able.
 func GlobalInit() {
 	setting.NewConfigContext()
+	log.Trace("Custom path: %s", setting.CustomPath)
 	mailer.NewMailerContext()
 	models.LoadModelsConfig()
 	models.LoadRepoConfig()
