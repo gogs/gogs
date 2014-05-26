@@ -14,6 +14,7 @@ import (
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/mailer"
 	"github.com/gogits/gogs/modules/middleware"
+	"github.com/gogits/gogs/modules/setting"
 )
 
 func SignIn(ctx *middleware.Context) {
@@ -26,23 +27,23 @@ func SignIn(ctx *middleware.Context) {
 	}
 
 	// Check auto-login.
-	userName := ctx.GetCookie(base.CookieUserName)
+	userName := ctx.GetCookie(setting.CookieUserName)
 	if len(userName) == 0 {
 		ctx.HTML(200, "user/signin")
 		return
 	}
 
-	if base.OauthService != nil {
+	if setting.OauthService != nil {
 		ctx.Data["OauthEnabled"] = true
-		ctx.Data["OauthService"] = base.OauthService
+		ctx.Data["OauthService"] = setting.OauthService
 	}
 
 	isSucceed := false
 	defer func() {
 		if !isSucceed {
 			log.Trace("user.SignIn(auto-login cookie cleared): %s", userName)
-			ctx.SetCookie(base.CookieUserName, "", -1)
-			ctx.SetCookie(base.CookieRememberName, "", -1)
+			ctx.SetCookie(setting.CookieUserName, "", -1)
+			ctx.SetCookie(setting.CookieRememberName, "", -1)
 			return
 		}
 	}()
@@ -54,7 +55,7 @@ func SignIn(ctx *middleware.Context) {
 	}
 
 	secret := base.EncodeMd5(user.Rands + user.Passwd)
-	value, _ := ctx.GetSecureCookie(secret, base.CookieRememberName)
+	value, _ := ctx.GetSecureCookie(secret, setting.CookieRememberName)
 	if value != user.Name {
 		ctx.HTML(200, "user/signin")
 		return
@@ -79,9 +80,9 @@ func SignInPost(ctx *middleware.Context, form auth.LogInForm) {
 	sid, isOauth := ctx.Session.Get("socialId").(int64)
 	if isOauth {
 		ctx.Data["IsSocialLogin"] = true
-	} else if base.OauthService != nil {
+	} else if setting.OauthService != nil {
 		ctx.Data["OauthEnabled"] = true
-		ctx.Data["OauthService"] = base.OauthService
+		ctx.Data["OauthService"] = setting.OauthService
 	}
 
 	if ctx.HasError() {
@@ -103,9 +104,9 @@ func SignInPost(ctx *middleware.Context, form auth.LogInForm) {
 
 	if form.Remember {
 		secret := base.EncodeMd5(user.Rands + user.Passwd)
-		days := 86400 * base.LogInRememberDays
-		ctx.SetCookie(base.CookieUserName, user.Name, days)
-		ctx.SetSecureCookie(secret, base.CookieRememberName, user.Name, days)
+		days := 86400 * setting.LogInRememberDays
+		ctx.SetCookie(setting.CookieUserName, user.Name, days)
+		ctx.SetSecureCookie(secret, setting.CookieRememberName, user.Name, days)
 	}
 
 	// Bind with social account.
@@ -139,8 +140,8 @@ func SignOut(ctx *middleware.Context) {
 	ctx.Session.Delete("socialId")
 	ctx.Session.Delete("socialName")
 	ctx.Session.Delete("socialEmail")
-	ctx.SetCookie(base.CookieUserName, "", -1)
-	ctx.SetCookie(base.CookieRememberName, "", -1)
+	ctx.SetCookie(setting.CookieUserName, "", -1)
+	ctx.SetCookie(setting.CookieRememberName, "", -1)
 	ctx.Redirect("/")
 }
 
@@ -148,7 +149,7 @@ func SignUp(ctx *middleware.Context) {
 	ctx.Data["Title"] = "Sign Up"
 	ctx.Data["PageIsSignUp"] = true
 
-	if base.Service.DisableRegistration {
+	if setting.Service.DisableRegistration {
 		ctx.Data["DisableRegistration"] = true
 		ctx.HTML(200, "user/signup")
 		return
@@ -186,7 +187,7 @@ func SignUpPost(ctx *middleware.Context, form auth.RegisterForm) {
 	ctx.Data["Title"] = "Sign Up"
 	ctx.Data["PageIsSignUp"] = true
 
-	if base.Service.DisableRegistration {
+	if setting.Service.DisableRegistration {
 		ctx.Handle(403, "user.SignUpPost", nil)
 		return
 	}
@@ -212,7 +213,7 @@ func SignUpPost(ctx *middleware.Context, form auth.RegisterForm) {
 		Name:     form.UserName,
 		Email:    form.Email,
 		Passwd:   form.Password,
-		IsActive: !base.Service.RegisterEmailConfirm || isOauth,
+		IsActive: !setting.Service.RegisterEmailConfirm || isOauth,
 	}
 
 	var err error
@@ -243,11 +244,11 @@ func SignUpPost(ctx *middleware.Context, form auth.RegisterForm) {
 	}
 
 	// Send confirmation e-mail, no need for social account.
-	if !isOauth && base.Service.RegisterEmailConfirm && u.Id > 1 {
+	if !isOauth && setting.Service.RegisterEmailConfirm && u.Id > 1 {
 		mailer.SendRegisterMail(ctx.Render, u)
 		ctx.Data["IsSendRegisterMail"] = true
 		ctx.Data["Email"] = u.Email
-		ctx.Data["Hours"] = base.Service.ActiveCodeLives / 60
+		ctx.Data["Hours"] = setting.Service.ActiveCodeLives / 60
 		ctx.HTML(200, "user/activate")
 
 		if err = ctx.Cache.Put("MailResendLimit_"+u.LowerName, u.LowerName, 180); err != nil {
@@ -304,11 +305,11 @@ func Activate(ctx *middleware.Context) {
 			return
 		}
 		// Resend confirmation e-mail.
-		if base.Service.RegisterEmailConfirm {
+		if setting.Service.RegisterEmailConfirm {
 			if ctx.Cache.IsExist("MailResendLimit_" + ctx.User.LowerName) {
 				ctx.Data["ResendLimited"] = true
 			} else {
-				ctx.Data["Hours"] = base.Service.ActiveCodeLives / 60
+				ctx.Data["Hours"] = setting.Service.ActiveCodeLives / 60
 				mailer.SendActiveMail(ctx.Render, ctx.User)
 
 				if err := ctx.Cache.Put("MailResendLimit_"+ctx.User.LowerName, ctx.User.LowerName, 180); err != nil {
@@ -346,7 +347,7 @@ func Activate(ctx *middleware.Context) {
 func ForgotPasswd(ctx *middleware.Context) {
 	ctx.Data["Title"] = "Forgot Password"
 
-	if base.MailService == nil {
+	if setting.MailService == nil {
 		ctx.Data["IsResetDisable"] = true
 		ctx.HTML(200, "user/forgot_passwd")
 		return
@@ -359,7 +360,7 @@ func ForgotPasswd(ctx *middleware.Context) {
 func ForgotPasswdPost(ctx *middleware.Context) {
 	ctx.Data["Title"] = "Forgot Password"
 
-	if base.MailService == nil {
+	if setting.MailService == nil {
 		ctx.Handle(403, "user.ForgotPasswdPost", nil)
 		return
 	}
@@ -388,7 +389,7 @@ func ForgotPasswdPost(ctx *middleware.Context) {
 	}
 
 	ctx.Data["Email"] = email
-	ctx.Data["Hours"] = base.Service.ActiveCodeLives / 60
+	ctx.Data["Hours"] = setting.Service.ActiveCodeLives / 60
 	ctx.Data["IsResetSent"] = true
 	ctx.HTML(200, "user/forgot_passwd")
 }

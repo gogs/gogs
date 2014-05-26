@@ -17,6 +17,7 @@ import (
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/hooks"
 	"github.com/gogits/gogs/modules/log"
+	"github.com/gogits/gogs/modules/setting"
 )
 
 // Operation types of user action.
@@ -129,7 +130,7 @@ func CommitRepoAction(userId, repoUserId int64, userName, actEmail string,
 		return nil
 	}
 
-	repoLink := fmt.Sprintf("%s%s/%s", base.AppUrl, repoUserName, repoName)
+	repoLink := fmt.Sprintf("%s%s/%s", setting.AppUrl, repoUserName, repoName)
 	commits := make([]*hooks.PayloadCommit, len(commit.Commits))
 	for i, cmt := range commit.Commits {
 		commits[i] = &hooks.PayloadCommit{

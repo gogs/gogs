@@ -11,6 +11,7 @@ import (
 	"github.com/gogits/gogs/modules/auth/apiv1"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/middleware"
+	"github.com/gogits/gogs/modules/setting"
 )
 
 const DOC_URL = "http://gogs.io/docs"
@@ -25,7 +26,7 @@ func Markdown(ctx *middleware.Context, form apiv1.MarkdownForm) {
 	switch form.Mode {
 	case "gfm":
 		ctx.Write(base.RenderMarkdown([]byte(form.Text),
-			base.AppUrl+strings.TrimPrefix(form.Context, "/")))
+			setting.AppUrl+strings.TrimPrefix(form.Context, "/")))
 	default:
 		ctx.Write(base.RenderRawMarkdown([]byte(form.Text), ""))
 	}

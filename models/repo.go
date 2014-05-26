@@ -23,7 +23,9 @@ import (
 	"github.com/gogits/git"
 
 	"github.com/gogits/gogs/modules/base"
+	"github.com/gogits/gogs/modules/bin"
 	"github.com/gogits/gogs/modules/log"
+	"github.com/gogits/gogs/modules/setting"
 )
 
 var (
@@ -39,26 +41,28 @@ var (
 	LanguageIgns, Licenses []string
 )
 
-func LoadRepoConfig() {
-	workDir, err := base.ExecDir()
-	if err != nil {
-		qlog.Fatalf("Fail to get work directory: %s\n", err)
+// getAssetList returns corresponding asset list in 'conf'.
+func getAssetList(prefix string) []string {
+	assets := make([]string, 0, 15)
+	for _, name := range bin.AssetNames() {
+		if strings.HasPrefix(name, prefix) {
+			assets = append(assets, name)
+		}
 	}
+	return assets
+}
 
+func LoadRepoConfig() {
 	// Load .gitignore and license files.
 	types := []string{"gitignore", "license"}
 	typeFiles := make([][]string, 2)
 	for i, t := range types {
-		cfgPath := filepath.Join(workDir, "conf", t)
-		files, err := com.StatDir(cfgPath)
-		if err != nil {
-			qlog.Fatalf("Fail to get default %s files: %v\n", t, err)
-		}
-		cfgPath = filepath.Join(workDir, "custom/conf/gitignore")
-		if com.IsDir(cfgPath) {
-			customFiles, err := com.StatDir(cfgPath)
+		files := getAssetList(path.Join("conf", t))
+		customPath := path.Join(setting.CustomPath, "conf", t)
+		if com.IsDir(customPath) {
+			customFiles, err := com.StatDir(customPath)
 			if err != nil {
-				qlog.Fatalf("Fail to get custom %s files: %v\n", t, err)
+				log.Fatal("Fail to get custom %s files: %v", t, err)
 			}
 
 			for _, f := range customFiles {
@@ -192,7 +196,7 @@ func MirrorUpdate() {
 			return nil
 		}
 
-		repoPath := filepath.Join(base.RepoRootPath, m.RepoName+".git")
+		repoPath := filepath.Join(setting.RepoRootPath, m.RepoName+".git")
 		_, stderr, err := com.ExecCmdDir(repoPath, "git", "remote", "update")
 		if err != nil {
 			return errors.New("git remote update: " + stderr)
@@ -434,7 +438,7 @@ func initRepository(f string, user *User, repo *Repository, initReadme bool, rep
 	rp := strings.NewReplacer("\\", "/", " ", "\\ ")
 	// hook/post-update
 	if err := createHookUpdate(filepath.Join(repoPath, "hooks", "update"),
-		fmt.Sprintf("#!/usr/bin/env %s\n%s update $1 $2 $3\n", base.ScriptType,
+		fmt.Sprintf("#!/usr/bin/env %s\n%s update $1 $2 $3\n", setting.ScriptType,
 			rp.Replace(appPath))); err != nil {
 		return err
 	}
@@ -452,7 +456,7 @@ func initRepository(f string, user *User, repo *Repository, initReadme bool, rep
 	}
 
 	// Clone to temprory path and do the init commit.
-	tmpDir := filepath.Join(os.TempDir(), fmt.Sprintf("%d", time.Now().Nanosecond()))
+	tmpDir := filepath.Join(os.TempDir(), base.ToStr(time.Now().Nanosecond()))
 	os.MkdirAll(tmpDir, os.ModePerm)
 
 	_, stderr, err := com.ExecCmd("git", "clone", repoPath, tmpDir)

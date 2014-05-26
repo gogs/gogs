@@ -16,6 +16,7 @@ import (
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/mailer"
 	"github.com/gogits/gogs/modules/middleware"
+	"github.com/gogits/gogs/modules/setting"
 )
 
 func Setting(ctx *middleware.Context) {
@@ -189,7 +190,7 @@ func CollaborationPost(ctx *middleware.Context) {
 		return
 	}
 
-	if base.Service.NotifyMail {
+	if setting.Service.NotifyMail {
 		if err = mailer.SendCollaboratorMail(ctx.Render, u, ctx.User, ctx.Repo.Repository); err != nil {
 			ctx.Handle(500, "setting.CollaborationPost(SendCollaboratorMail)", err)
 			return

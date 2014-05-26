@@ -16,7 +16,7 @@ import (
 	qlog "github.com/qiniu/log"
 
 	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/modules/base"
+	"github.com/gogits/gogs/modules/setting"
 )
 
 var CmdServ = cli.Command{
@@ -41,14 +41,14 @@ func newLogger(logPath string) {
 }
 
 func setup(logPath string) {
-	execDir, _ := base.ExecDir()
-	newLogger(path.Join(execDir, logPath))
+	workDir, _ := setting.WorkDir()
+	newLogger(path.Join(workDir, logPath))
 
-	base.NewConfigContext()
+	setting.NewConfigContext()
 	models.LoadModelsConfig()
 
 	if models.UseSQLite3 {
-		os.Chdir(execDir)
+		os.Chdir(workDir)
 	}
 
 	models.SetEngine()
@@ -182,7 +182,7 @@ func runServ(k *cli.Context) {
 	models.SetRepoEnvs(user.Id, user.Name, repoName, repoUserName)
 
 	gitcmd := exec.Command(verb, repoPath)
-	gitcmd.Dir = base.RepoRootPath
+	gitcmd.Dir = setting.RepoRootPath
 	gitcmd.Stdout = os.Stdout
 	gitcmd.Stdin = os.Stdin
 	gitcmd.Stderr = os.Stderr

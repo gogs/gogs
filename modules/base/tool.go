@@ -16,6 +16,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/gogits/gogs/modules/setting"
 )
 
 // Encode string to md5 hex value
@@ -131,7 +133,7 @@ func CreateTimeLimitCode(data string, minutes int, startInf interface{}) string 
 
 	// create sha1 encode string
 	sh := sha1.New()
-	sh.Write([]byte(data + SecretKey + startStr + endStr + ToStr(minutes)))
+	sh.Write([]byte(data + setting.SecretKey + startStr + endStr + ToStr(minutes)))
 	encoded := hex.EncodeToString(sh.Sum(nil))
 
 	code := fmt.Sprintf("%s%06d%s", startStr, minutes, encoded)
@@ -140,9 +142,9 @@ func CreateTimeLimitCode(data string, minutes int, startInf interface{}) string 
 
 // AvatarLink returns avatar link by given e-mail.
 func AvatarLink(email string) string {
-	if DisableGravatar {
+	if setting.DisableGravatar {
 		return "/img/avatar_default.jpg"
-	} else if Service.EnableCacheAvatar {
+	} else if setting.Service.EnableCacheAvatar {
 		return "/avatar/" + EncodeMd5(email)
 	}
 	return "//1.gravatar.com/avatar/" + EncodeMd5(email)

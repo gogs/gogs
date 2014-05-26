@@ -19,6 +19,7 @@ import (
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/mailer"
 	"github.com/gogits/gogs/modules/middleware"
+	"github.com/gogits/gogs/modules/setting"
 )
 
 func Issues(ctx *middleware.Context) {
@@ -242,7 +243,7 @@ func CreateIssuePost(ctx *middleware.Context, params martini.Params, form auth.C
 	}
 
 	// Mail watchers and mentions.
-	if base.Service.NotifyMail {
+	if setting.Service.NotifyMail {
 		tos, err := mailer.SendIssueNotifyMail(ctx.User, ctx.Repo.Owner, ctx.Repo.Repository, issue)
 		if err != nil {
 			ctx.Handle(500, "issue.CreateIssue(SendIssueNotifyMail)", err)
@@ -677,7 +678,7 @@ func Comment(ctx *middleware.Context, params martini.Params) {
 	}
 
 	// Mail watchers and mentions.
-	if base.Service.NotifyMail {
+	if setting.Service.NotifyMail {
 		issue.Content = content
 		tos, err := mailer.SendIssueNotifyMail(ctx.User, ctx.Repo.Owner, ctx.Repo.Repository, issue)
 		if err != nil {

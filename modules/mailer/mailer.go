@@ -9,8 +9,8 @@ import (
 	"net/smtp"
 	"strings"
 
-	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
+	"github.com/gogits/gogs/modules/setting"
 )
 
 type Message struct {
@@ -41,7 +41,7 @@ func (m Message) Content() string {
 var mailQueue chan *Message
 
 func NewMailerContext() {
-	mailQueue = make(chan *Message, base.Cfg.MustInt("mailer", "SEND_BUFFER_LEN", 10))
+	mailQueue = make(chan *Message, setting.Cfg.MustInt("mailer", "SEND_BUFFER_LEN", 10))
 	go processMailQueue()
 }
 
@@ -67,7 +67,7 @@ func processMailQueue() {
 // Direct Send mail message
 func Send(msg *Message) (int, error) {
 	log.Trace("Sending mails to: %s", strings.Join(msg.To, "; "))
-	host := strings.Split(base.MailService.Host, ":")
+	host := strings.Split(setting.MailService.Host, ":")
 
 	// get message body
 	content := msg.Content()
@@ -78,14 +78,14 @@ func Send(msg *Message) (int, error) {
 		return 0, fmt.Errorf("empty email body")
 	}
 
-	auth := smtp.PlainAuth("", base.MailService.User, base.MailService.Passwd, host[0])
+	auth := smtp.PlainAuth("", setting.MailService.User, setting.MailService.Passwd, host[0])
 
 	if msg.Massive {
 		// send mail to multiple emails one by one
 		num := 0
 		for _, to := range msg.To {
 			body := []byte("To: " + to + "\r\n" + content)
-			err := smtp.SendMail(base.MailService.Host, auth, msg.From, []string{to}, body)
+			err := smtp.SendMail(setting.MailService.Host, auth, msg.From, []string{to}, body)
 			if err != nil {
 				return num, err
 			}
@@ -96,7 +96,7 @@ func Send(msg *Message) (int, error) {
 		body := []byte("To: " + strings.Join(msg.To, ";") + "\r\n" + content)
 
 		// send to multiple emails in one message
-		err := smtp.SendMail(base.MailService.Host, auth, msg.From, msg.To, body)
+		err := smtp.SendMail(setting.MailService.Host, auth, msg.From, msg.To, body)
 		if err != nil {
 			return 0, err
 		} else {

@@ -15,8 +15,8 @@ import (
 	"github.com/gogits/git"
 
 	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
+	"github.com/gogits/gogs/modules/setting"
 )
 
 func RepoAssignment(redirect bool, args ...bool) martini.Handler {
@@ -159,17 +159,17 @@ func RepoAssignment(redirect bool, args ...bool) martini.Handler {
 		ctx.Data["IsRepositoryOwner"] = ctx.Repo.IsOwner
 		ctx.Data["BranchName"] = ""
 
-		if base.SshPort != 22 {
-			ctx.Repo.CloneLink.SSH = fmt.Sprintf("ssh://%s@%s/%s/%s.git", base.RunUser, base.Domain, user.LowerName, repo.LowerName)
+		if setting.SshPort != 22 {
+			ctx.Repo.CloneLink.SSH = fmt.Sprintf("ssh://%s@%s/%s/%s.git", setting.RunUser, setting.Domain, user.LowerName, repo.LowerName)
 		} else {
-			ctx.Repo.CloneLink.SSH = fmt.Sprintf("%s@%s:%s/%s.git", base.RunUser, base.Domain, user.LowerName, repo.LowerName)
+			ctx.Repo.CloneLink.SSH = fmt.Sprintf("%s@%s:%s/%s.git", setting.RunUser, setting.Domain, user.LowerName, repo.LowerName)
 		}
-		ctx.Repo.CloneLink.HTTPS = fmt.Sprintf("%s%s/%s.git", base.AppUrl, user.LowerName, repo.LowerName)
+		ctx.Repo.CloneLink.HTTPS = fmt.Sprintf("%s%s/%s.git", setting.AppUrl, user.LowerName, repo.LowerName)
 		ctx.Data["CloneLink"] = ctx.Repo.CloneLink
 
 		if ctx.Repo.Repository.IsGoget {
-			ctx.Data["GoGetLink"] = fmt.Sprintf("%s%s/%s", base.AppUrl, user.LowerName, repo.LowerName)
-			ctx.Data["GoGetImport"] = fmt.Sprintf("%s/%s/%s", base.Domain, user.LowerName, repo.LowerName)
+			ctx.Data["GoGetLink"] = fmt.Sprintf("%s%s/%s", setting.AppUrl, user.LowerName, repo.LowerName)
+			ctx.Data["GoGetImport"] = fmt.Sprintf("%s/%s/%s", setting.Domain, user.LowerName, repo.LowerName)
 		}
 
 		// when repo is bare, not valid branch

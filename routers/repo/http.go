@@ -22,8 +22,8 @@ import (
 
 	"github.com/go-martini/martini"
 	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/middleware"
+	"github.com/gogits/gogs/modules/setting"
 )
 
 func Http(ctx *middleware.Context, params martini.Params) {
@@ -59,7 +59,7 @@ func Http(ctx *middleware.Context, params martini.Params) {
 
 	// only public pull don't need auth
 	isPublicPull := !repo.IsPrivate && isPull
-	var askAuth = !isPublicPull || base.Service.RequireSignInView
+	var askAuth = !isPublicPull || setting.Service.RequireSignInView
 	var authUser *models.User
 	var authUsername, passwd string
 
@@ -123,7 +123,7 @@ func Http(ctx *middleware.Context, params martini.Params) {
 		}
 	}
 
-	config := Config{base.RepoRootPath, "git", true, true, func(rpc string, input []byte) {
+	config := Config{setting.RepoRootPath, "git", true, true, func(rpc string, input []byte) {
 		if rpc == "receive-pack" {
 			firstLine := bytes.IndexRune(input, '\000')
 			if firstLine > -1 {
@@ -141,16 +141,6 @@ func Http(ctx *middleware.Context, params martini.Params) {
 
 	handler := HttpBackend(&config)
 	handler(ctx.ResponseWriter, ctx.Req)
-
-	/* Webdav
-	dir := models.RepoPath(username, reponame)
-
-	prefix := path.Join("/", username, params["reponame"])
-	server := webdav.NewServer(
-		dir, prefix, true)
-
-	server.ServeHTTP(ctx.ResponseWriter, ctx.Req)
-	*/
 }
 
 type route struct {
@@ -483,14 +473,3 @@ func hdrCacheForever(w http.ResponseWriter) {
 	w.Header().Set("Expires", fmt.Sprintf("%d", expires))
 	w.Header().Set("Cache-Control", "public, max-age=31536000")
 }
-
-// Main
-/*
-func main() {
-	http.HandleFunc("/", requestHandler())
-
-	err := http.ListenAndServe(":8080", nil)
-	if err != nil {
-		log.Fatal("ListenAndServe: ", err)
-	}
-}*/

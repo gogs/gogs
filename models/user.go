@@ -18,6 +18,7 @@ import (
 
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
+	"github.com/gogits/gogs/modules/setting"
 )
 
 // User types.
@@ -73,9 +74,9 @@ func (user *User) HomeLink() string {
 
 // AvatarLink returns the user gravatar link.
 func (user *User) AvatarLink() string {
-	if base.DisableGravatar {
+	if setting.DisableGravatar {
 		return "/img/avatar_default.jpg"
-	} else if base.Service.EnableCacheAvatar {
+	} else if setting.Service.EnableCacheAvatar {
 		return "/avatar/" + user.Avatar
 	}
 	return "//1.gravatar.com/avatar/" + user.Avatar
@@ -197,7 +198,7 @@ func getVerifyUser(code string) (user *User) {
 
 // verify active code when active account
 func VerifyUserActiveCode(code string) (user *User) {
-	minutes := base.Service.ActiveCodeLives
+	minutes := setting.Service.ActiveCodeLives
 
 	if user = getVerifyUser(code); user != nil {
 		// time limit code
@@ -340,7 +341,7 @@ func DeleteUser(user *User) error {
 
 // UserPath returns the path absolute path of user repositories.
 func UserPath(userName string) string {
-	return filepath.Join(base.RepoRootPath, strings.ToLower(userName))
+	return filepath.Join(setting.RepoRootPath, strings.ToLower(userName))
 }
 
 func GetUserByKeyId(keyId int64) (*User, error) {

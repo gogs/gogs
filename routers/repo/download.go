@@ -18,18 +18,17 @@ import (
 )
 
 func SingleDownload(ctx *middleware.Context, params martini.Params) {
-	// Get tree path
 	treename := params["_1"]
 
 	blob, err := ctx.Repo.Commit.GetBlobByPath(treename)
 	if err != nil {
-		ctx.Handle(404, "repo.SingleDownload(GetBlobByPath)", err)
+		ctx.Handle(500, "repo.SingleDownload(GetBlobByPath)", err)
 		return
 	}
 
 	data, err := blob.Data()
 	if err != nil {
-		ctx.Handle(404, "repo.SingleDownload(Data)", err)
+		ctx.Handle(500, "repo.SingleDownload(Data)", err)
 		return
 	}
 
@@ -47,8 +46,8 @@ func ZipDownload(ctx *middleware.Context, params martini.Params) {
 	commitId := ctx.Repo.CommitId
 	archivesPath := filepath.Join(ctx.Repo.GitRepo.Path, "archives/zip")
 	if !com.IsDir(archivesPath) {
-		if err := os.MkdirAll(archivesPath, 0755); err != nil {
-			ctx.Handle(404, "ZipDownload -> os.Mkdir(archivesPath)", err)
+		if err := os.MkdirAll(archivesPath, 0655); err != nil {
+			ctx.Handle(500, "ZipDownload -> os.Mkdir(archivesPath)", err)
 			return
 		}
 	}
@@ -60,9 +59,8 @@ func ZipDownload(ctx *middleware.Context, params martini.Params) {
 		return
 	}
 
-	err := ctx.Repo.Commit.CreateArchive(archivePath, git.AT_ZIP)
-	if err != nil {
-		ctx.Handle(404, "ZipDownload -> CreateArchive "+archivePath, err)
+	if err := ctx.Repo.Commit.CreateArchive(archivePath, git.AT_ZIP); err != nil {
+		ctx.Handle(500, "ZipDownload -> CreateArchive "+archivePath, err)
 		return
 	}
 
@@ -74,7 +72,7 @@ func TarGzDownload(ctx *middleware.Context, params martini.Params) {
 	archivesPath := filepath.Join(ctx.Repo.GitRepo.Path, "archives/targz")
 	if !com.IsDir(archivesPath) {
 		if err := os.MkdirAll(archivesPath, 0755); err != nil {
-			ctx.Handle(404, "TarGzDownload -> os.Mkdir(archivesPath)", err)
+			ctx.Handle(500, "TarGzDownload -> os.Mkdir(archivesPath)", err)
 			return
 		}
 	}
@@ -86,9 +84,8 @@ func TarGzDownload(ctx *middleware.Context, params martini.Params) {
 		return
 	}
 
-	err := ctx.Repo.Commit.CreateArchive(archivePath, git.AT_TARGZ)
-	if err != nil {
-		ctx.Handle(404, "TarGzDownload -> CreateArchive "+archivePath, err)
+	if err := ctx.Repo.Commit.CreateArchive(archivePath, git.AT_TARGZ); err != nil {
+		ctx.Handle(500, "TarGzDownload -> CreateArchive "+archivePath, err)
 		return
 	}
 

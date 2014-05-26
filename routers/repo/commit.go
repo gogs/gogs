@@ -15,6 +15,8 @@ import (
 )
 
 func Commits(ctx *middleware.Context, params martini.Params) {
+	ctx.Data["IsRepoToolbarCommits"] = true
+
 	userName := ctx.Repo.Owner.Name
 	repoName := ctx.Repo.Repository.Name
 
@@ -47,8 +49,8 @@ func Commits(ctx *middleware.Context, params martini.Params) {
 		nextPage = 0
 	}
 
-	//both `git log branchName` and `git log commitId` work
-	commits, err := ctx.Repo.Commit.CommitsByRange(page)
+	// Both `git log branchName` and `git log commitId` work.
+	ctx.Data["Commits"], err = ctx.Repo.Commit.CommitsByRange(page)
 	if err != nil {
 		ctx.Handle(500, "repo.Commits(CommitsByRange)", err)
 		return
@@ -57,14 +59,14 @@ func Commits(ctx *middleware.Context, params martini.Params) {
 	ctx.Data["Username"] = userName
 	ctx.Data["Reponame"] = repoName
 	ctx.Data["CommitCount"] = commitsCount
-	ctx.Data["Commits"] = commits
 	ctx.Data["LastPageNum"] = lastPage
 	ctx.Data["NextPageNum"] = nextPage
-	ctx.Data["IsRepoToolbarCommits"] = true
 	ctx.HTML(200, "repo/commits")
 }
 
 func Diff(ctx *middleware.Context, params martini.Params) {
+	ctx.Data["IsRepoToolbarCommits"] = true
+
 	userName := ctx.Repo.Owner.Name
 	repoName := ctx.Repo.Repository.Name
 	commitId := ctx.Repo.CommitId
@@ -109,13 +111,15 @@ func Diff(ctx *middleware.Context, params martini.Params) {
 	ctx.Data["Diff"] = diff
 	ctx.Data["Parents"] = parents
 	ctx.Data["DiffNotAvailable"] = diff.NumFiles() == 0
-	ctx.Data["IsRepoToolbarCommits"] = true
 	ctx.Data["SourcePath"] = "/" + path.Join(userName, repoName, "src", commitId)
 	ctx.Data["RawPath"] = "/" + path.Join(userName, repoName, "raw", commitId)
 	ctx.HTML(200, "repo/diff")
 }
 
 func SearchCommits(ctx *middleware.Context, params martini.Params) {
+	ctx.Data["IsSearchPage"] = true
+	ctx.Data["IsRepoToolbarCommits"] = true
+
 	keyword := ctx.Query("q")
 	if len(keyword) == 0 {
 		ctx.Redirect(ctx.Repo.RepoLink + "/commits/" + ctx.Repo.BranchName)
@@ -145,12 +149,12 @@ func SearchCommits(ctx *middleware.Context, params martini.Params) {
 	ctx.Data["Reponame"] = repoName
 	ctx.Data["CommitCount"] = commits.Len()
 	ctx.Data["Commits"] = commits
-	ctx.Data["IsSearchPage"] = true
-	ctx.Data["IsRepoToolbarCommits"] = true
 	ctx.HTML(200, "repo/commits")
 }
 
 func FileHistory(ctx *middleware.Context, params martini.Params) {
+	ctx.Data["IsRepoToolbarCommits"] = true
+
 	fileName := params["_1"]
 	if len(fileName) == 0 {
 		Commits(ctx, params)
@@ -194,8 +198,8 @@ func FileHistory(ctx *middleware.Context, params martini.Params) {
 		nextPage = 0
 	}
 
-	//both `git log branchName` and `git log commitId` work
-	commits, err := ctx.Repo.GitRepo.CommitsByFileAndRange(branchName, fileName, page)
+	ctx.Data["Commits"], err = ctx.Repo.GitRepo.CommitsByFileAndRange(
+		branchName, fileName, page)
 	if err != nil {
 		ctx.Handle(500, "repo.FileHistory(CommitsByRange)", err)
 		return
@@ -205,9 +209,7 @@ func FileHistory(ctx *middleware.Context, params martini.Params) {
 	ctx.Data["Reponame"] = repoName
 	ctx.Data["FileName"] = fileName
 	ctx.Data["CommitCount"] = commitsCount
-	ctx.Data["Commits"] = commits
 	ctx.Data["LastPageNum"] = lastPage
 	ctx.Data["NextPageNum"] = nextPage
-	ctx.Data["IsRepoToolbarCommits"] = true
 	ctx.HTML(200, "repo/commits")
 }

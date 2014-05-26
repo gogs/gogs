@@ -6,8 +6,8 @@ package routers
 
 import (
 	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/middleware"
+	"github.com/gogits/gogs/modules/setting"
 	"github.com/gogits/gogs/routers/user"
 )
 
@@ -18,7 +18,7 @@ func Home(ctx *middleware.Context) {
 	}
 
 	// Check auto-login.
-	userName := ctx.GetCookie(base.CookieUserName)
+	userName := ctx.GetCookie(setting.CookieUserName)
 	if len(userName) != 0 {
 		ctx.Redirect("/user/login")
 		return

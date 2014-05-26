@@ -14,28 +14,29 @@ import (
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/middleware"
+	"github.com/gogits/gogs/modules/setting"
 )
 
 // Create New mail message use MailFrom and MailUser
 func NewMailMessageFrom(To []string, from, subject, body string) Message {
 	msg := NewHtmlMessage(To, from, subject, body)
-	msg.User = base.MailService.User
+	msg.User = setting.MailService.User
 	return msg
 }
 
 // Create New mail message use MailFrom and MailUser
 func NewMailMessage(To []string, subject, body string) Message {
-	return NewMailMessageFrom(To, base.MailService.User, subject, body)
+	return NewMailMessageFrom(To, setting.MailService.User, subject, body)
 }
 
 func GetMailTmplData(user *models.User) map[interface{}]interface{} {
 	data := make(map[interface{}]interface{}, 10)
-	data["AppName"] = base.AppName
-	data["AppVer"] = base.AppVer
-	data["AppUrl"] = base.AppUrl
-	data["AppLogo"] = base.AppLogo
-	data["ActiveCodeLives"] = base.Service.ActiveCodeLives / 60
-	data["ResetPwdCodeLives"] = base.Service.ResetPwdCodeLives / 60
+	data["AppName"] = setting.AppName
+	data["AppVer"] = setting.AppVer
+	data["AppUrl"] = setting.AppUrl
+	data["AppLogo"] = setting.AppLogo
+	data["ActiveCodeLives"] = setting.Service.ActiveCodeLives / 60
+	data["ResetPwdCodeLives"] = setting.Service.ResetPwdCodeLives / 60
 	if user != nil {
 		data["User"] = user
 	}
@@ -44,7 +45,7 @@ func GetMailTmplData(user *models.User) map[interface{}]interface{} {
 
 // create a time limit code for user active
 func CreateUserActiveCode(user *models.User, startInf interface{}) string {
-	minutes := base.Service.ActiveCodeLives
+	minutes := setting.Service.ActiveCodeLives
 	data := base.ToStr(user.Id) + user.Email + user.LowerName + user.Passwd + user.Rands
 	code := base.CreateTimeLimitCode(data, minutes, startInf)
 
@@ -139,7 +140,7 @@ func SendIssueNotifyMail(user, owner *models.User, repo *models.Repository, issu
 	subject := fmt.Sprintf("[%s] %s(#%d)", repo.Name, issue.Name, issue.Index)
 	content := fmt.Sprintf("%s<br>-<br> <a href=\"%s%s/%s/issues/%d\">View it on Gogs</a>.",
 		base.RenderSpecialLink([]byte(issue.Content), owner.Name+"/"+repo.Name),
-		base.AppUrl, owner.Name, repo.Name, issue.Index)
+		setting.AppUrl, owner.Name, repo.Name, issue.Index)
 	msg := NewMailMessageFrom(tos, user.Email, subject, content)
 	msg.Info = fmt.Sprintf("Subject: %s, send issue notify emails", subject)
 	SendAsync(&msg)

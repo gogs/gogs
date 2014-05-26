@@ -15,7 +15,7 @@ import (
 	"github.com/codegangsta/cli"
 
 	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/modules/base"
+	"github.com/gogits/gogs/modules/setting"
 )
 
 var CmdDump = cli.Command{
@@ -28,14 +28,14 @@ It can be used for backup and capture Gogs server image to send to maintainer`,
 }
 
 func runDump(*cli.Context) {
-	base.NewConfigContext()
+	setting.NewConfigContext()
 	models.LoadModelsConfig()
 	models.SetEngine()
 
-	log.Printf("Dumping local repositories...%s", base.RepoRootPath)
+	log.Printf("Dumping local repositories...%s", setting.RepoRootPath)
 	zip.Verbose = false
 	defer os.Remove("gogs-repo.zip")
-	if err := zip.PackTo(base.RepoRootPath, "gogs-repo.zip", true); err != nil {
+	if err := zip.PackTo(setting.RepoRootPath, "gogs-repo.zip", true); err != nil {
 		log.Fatalf("Fail to dump local repositories: %v", err)
 	}
 
@@ -53,11 +53,11 @@ func runDump(*cli.Context) {
 		log.Fatalf("Fail to create %s: %v", fileName, err)
 	}
 
-	execDir, _ := base.ExecDir()
-	z.AddFile("gogs-repo.zip", path.Join(execDir, "gogs-repo.zip"))
-	z.AddFile("gogs-db.sql", path.Join(execDir, "gogs-db.sql"))
-	z.AddFile("custom/conf/app.ini", path.Join(execDir, "custom/conf/app.ini"))
-	z.AddDir("log", path.Join(execDir, "log"))
+	workDir, _ := setting.WorkDir()
+	z.AddFile("gogs-repo.zip", path.Join(workDir, "gogs-repo.zip"))
+	z.AddFile("gogs-db.sql", path.Join(workDir, "gogs-db.sql"))
+	z.AddFile("custom/conf/app.ini", path.Join(workDir, "custom/conf/app.ini"))
+	z.AddDir("log", path.Join(workDir, "log"))
 	if err = z.Close(); err != nil {
 		os.Remove(fileName)
 		log.Fatalf("Fail to save %s: %v", fileName, err)
