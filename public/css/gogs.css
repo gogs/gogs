@@ -1244,7 +1244,7 @@ html, body {
     margin-bottom: 0;
 }
 
-#issue-create-form .nav-tabs, #issue .issue-reply .nav-tabs,#issue .issue-edit-content .nav-tabs {
+#issue-create-form .nav-tabs, #issue .issue-reply .nav-tabs, #issue .issue-edit-content .nav-tabs {
     margin-bottom: 10px;
 }
 
@@ -1353,6 +1353,10 @@ html, body {
 
 #issue .issue-item h5.title a {
     color: #444;
+}
+
+#issue .issue-item h5 .labels .label {
+    margin-left: 12px;
 }
 
 #issue .issue-item .info span {
@@ -1589,6 +1593,14 @@ html, body {
     text-shadow: 0 0 2px #444;
 }
 
+#issue .label-selected .count, #issue .label-selected a {
+    color: #FAFAFA;
+}
+
+#issue .label-selected a {
+    text-shadow: 0 0 2px #444;
+}
+
 #issue .issue-bar .labels .label-white {
     color: #FFF;
 }
@@ -1623,6 +1635,16 @@ html, body {
 
 #issue .issue-bar .labels .no-checked .color {
     margin-left: 26px;
+}
+
+#label-color-ipt2, #label-color-change-ipt2 {
+    width: 120px;
+    display: inline-block;
+    vertical-align: top;
+}
+
+#label-color-change-ipt2{
+    margin-top: 1px;
 }
 
 /* wrapper and footer */
