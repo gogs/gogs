@@ -647,17 +647,44 @@ function initIssue() {
                 $('#label-name-change-ipt').val($this.find('.name').text());
                 var color = $this.find('.color').data("color");
                 $('.label-change-color-picker').colorpicker("setValue", color);
-                $('#label-color-change-ipt').val(color);
+                $('#label-color-change-ipt,#label-color-change-ipt2').val(color);
                 $('#label-change-id-ipt').val($this.data("id"));
                 return false;
             });
         }
+    });
+    var colorRegex = new RegExp("^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$");
+    $('#label-color-ipt2').on('keyup', function () {
+        var val = $(this).val();
+        if (val.length > 7) {
+            $(this).val(val.substr(0, 7));
+        }
+        if (colorRegex.test(val)) {
+            $('.label-color-picker').colorpicker("setValue", val);
+        }
+        return true;
+    });
+    $('#label-color-change-ipt2').on('keyup', function () {
+        var val = $(this).val();
+        console.log(val);
+        if (val.length > 7) {
+            $(this).val(val.substr(0, 7));
+        }
+        if (colorRegex.test(val)) {
+            $('.label-change-color-picker').colorpicker("setValue", val);
+        }
+        return true;
     });
     $("#label-list").on('click', '.del', function () {
         var $p = $(this).parent();
         removeLabels.push($p.data('id'));
         $p.remove();
         return false;
+    });
+    $('.label-selected').each(function (i, item) {
+        var $item = $(item);
+        var color = $item.find('.color').data('color');
+        $item.css('background-color', color);
     });
     $('.issue-bar .labels .dropdown-menu').on('click', 'li', function (e) {
         var url = $('.issue-bar .labels').data("ajax");
