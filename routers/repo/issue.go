@@ -65,6 +65,7 @@ func Issues(ctx *middleware.Context) {
 		mid = mile.Id
 	}
 
+	selectLabels := ctx.Query("labels")
 	labels, err := models.GetLabels(ctx.Repo.Repository.Id)
 	if err != nil {
 		ctx.Handle(500, "issue.Issues(GetLabels): %v", err)
@@ -79,7 +80,7 @@ func Issues(ctx *middleware.Context) {
 
 	// Get issues.
 	issues, err := models.GetIssues(assigneeId, ctx.Repo.Repository.Id, posterId, mid, page,
-		isShowClosed, ctx.Query("labels"), ctx.Query("sortType"))
+		isShowClosed, selectLabels, ctx.Query("sortType"))
 	if err != nil {
 		ctx.Handle(500, "issue.Issues(GetIssues): %v", err)
 		return
@@ -118,6 +119,7 @@ func Issues(ctx *middleware.Context) {
 	}
 	issueStats := models.GetIssueStats(ctx.Repo.Repository.Id, uid, isShowClosed, filterMode)
 	ctx.Data["IssueStats"] = issueStats
+	ctx.Data["SelectLabels"], _ = base.StrTo(selectLabels).Int64()
 	ctx.Data["ViewType"] = viewType
 	ctx.Data["Issues"] = issues
 	ctx.Data["IsShowClosed"] = isShowClosed

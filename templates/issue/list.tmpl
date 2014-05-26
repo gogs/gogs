@@ -18,10 +18,10 @@
                 <ul class="list-unstyled" id="label-list" data-ajax="{{$.RepoLink}}/issues/labels/delete">
                     {{range .Labels}}
                     <li class="label-item" id="label-{{.Id}}" data-id="{{.Id}}">
-                        <a href="?type={{$.ViewType}}&state={{$.State}}&labels={{.Id}}">
+                        <a href="?type={{$.ViewType}}&state={{$.State}}{{if not (eq $.SelectLabels .Id)}}&labels={{.Id}}{{end}}">
                             <span class="pull-right count">{{if $.IsShowClosed}}{{.NumClosedIssues}}{{else}}{{.NumOpenIssues}}{{end}}</span>
                             <span class="color" style="background-color: {{.Color}}" data-color="{{.Color}}"></span>
-                            <span class="name">{{.Name}}</span>
+                            <span class="name">{{.Name}}{{if eq $.SelectLabels .Id}}*{{end}}</span>
                         </a>
                         <a class="del pull-right" href="#" data-id="{{.Id}}"><i class="fa fa-times-circle-o"></i></a>
                     </li>
