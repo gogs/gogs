@@ -15,6 +15,7 @@ func bindata_read(path, name string) ([]byte, error) {
 	return buf, err
 }
 
+
 // conf_app_ini reads file data from disk. It returns an error on failure.
 func conf_app_ini() ([]byte, error) {
 	return bindata_read(
@@ -175,6 +176,14 @@ func conf_supervisor_ini() ([]byte, error) {
 	)
 }
 
+// conf_version reads file data from disk. It returns an error on failure.
+func conf_version() ([]byte, error) {
+	return bindata_read(
+		"/Users/jiahuachen/Applications/Go/src/github.com/gogits/gogs/conf/VERSION",
+		"conf/VERSION",
+	)
+}
+
 // Asset loads and returns the asset for the given name.
 // It returns an error if the asset could not be found or
 // could not be loaded.
@@ -196,25 +205,26 @@ func AssetNames() []string {
 }
 
 // _bindata is a table, holding each asset generator, mapped to its name.
-var _bindata = map[string]func() ([]byte, error){
-	"conf/app.ini":                        conf_app_ini,
-	"conf/content/git-bare.zip":           conf_content_git_bare_zip,
-	"conf/etc/supervisord.conf":           conf_etc_supervisord_conf,
-	"conf/gitignore/Android":              conf_gitignore_android,
-	"conf/gitignore/C":                    conf_gitignore_c,
-	"conf/gitignore/C Sharp":              conf_gitignore_c_sharp,
-	"conf/gitignore/C++":                  conf_gitignore_c_,
-	"conf/gitignore/Google Go":            conf_gitignore_google_go,
-	"conf/gitignore/Java":                 conf_gitignore_java,
-	"conf/gitignore/Objective-C":          conf_gitignore_objective_c,
-	"conf/gitignore/Python":               conf_gitignore_python,
-	"conf/gitignore/Ruby":                 conf_gitignore_ruby,
-	"conf/license/Affero GPL":             conf_license_affero_gpl,
-	"conf/license/Apache v2 License":      conf_license_apache_v2_license,
-	"conf/license/Artistic License 2.0":   conf_license_artistic_license_2_0,
+var _bindata = map[string] func() ([]byte, error) {
+	"conf/app.ini": conf_app_ini,
+	"conf/content/git-bare.zip": conf_content_git_bare_zip,
+	"conf/etc/supervisord.conf": conf_etc_supervisord_conf,
+	"conf/gitignore/Android": conf_gitignore_android,
+	"conf/gitignore/C": conf_gitignore_c,
+	"conf/gitignore/C Sharp": conf_gitignore_c_sharp,
+	"conf/gitignore/C++": conf_gitignore_c_,
+	"conf/gitignore/Google Go": conf_gitignore_google_go,
+	"conf/gitignore/Java": conf_gitignore_java,
+	"conf/gitignore/Objective-C": conf_gitignore_objective_c,
+	"conf/gitignore/Python": conf_gitignore_python,
+	"conf/gitignore/Ruby": conf_gitignore_ruby,
+	"conf/license/Affero GPL": conf_license_affero_gpl,
+	"conf/license/Apache v2 License": conf_license_apache_v2_license,
+	"conf/license/Artistic License 2.0": conf_license_artistic_license_2_0,
 	"conf/license/BSD (3-Clause) License": conf_license_bsd_3_clause_license,
-	"conf/license/GPL v2":                 conf_license_gpl_v2,
-	"conf/license/MIT License":            conf_license_mit_license,
-	"conf/mysql.sql":                      conf_mysql_sql,
-	"conf/supervisor.ini":                 conf_supervisor_ini,
+	"conf/license/GPL v2": conf_license_gpl_v2,
+	"conf/license/MIT License": conf_license_mit_license,
+	"conf/mysql.sql": conf_mysql_sql,
+	"conf/supervisor.ini": conf_supervisor_ini,
+	"conf/VERSION": conf_version,
 }
