@@ -95,6 +95,11 @@ func Issues(ctx *middleware.Context) {
 
 	// Get posters.
 	for i := range issues {
+		if err = issues[i].GetLabels(); err != nil {
+			ctx.Handle(500, "issue.Issues(GetLabels)", fmt.Errorf("[#%d]%v", issues[i].Id, err))
+			return
+		}
+
 		idx := models.PairsContains(pairs, issues[i].Id)
 
 		if filterMode == models.FM_MENTION && (idx == -1 || !pairs[idx].IsMentioned) {
