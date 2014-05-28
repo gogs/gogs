@@ -185,6 +185,8 @@ func Config(ctx *middleware.Context) {
 	ctx.Data["RunUser"] = setting.RunUser
 	ctx.Data["RunMode"] = strings.Title(martini.Env)
 	ctx.Data["RepoRootPath"] = setting.RepoRootPath
+	ctx.Data["StaticRootPath"] = setting.StaticRootPath
+	ctx.Data["LogRootPath"] = setting.LogRootPath
 	ctx.Data["ScriptType"] = setting.ScriptType
 
 	ctx.Data["Service"] = setting.Service

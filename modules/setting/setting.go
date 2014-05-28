@@ -62,8 +62,9 @@ var (
 	DisableGravatar bool
 
 	// Log settings.
-	LogModes   []string
-	LogConfigs []string
+	LogRootPath string
+	LogModes    []string
+	LogConfigs  []string
 
 	// Cache settings.
 	Cache        cache.Cache
@@ -145,7 +146,8 @@ func NewConfigContext() {
 	SshPort = Cfg.MustInt("server", "SSH_PORT", 22)
 	OfflineMode = Cfg.MustBool("server", "OFFLINE_MODE")
 	DisableRouterLog = Cfg.MustBool("server", "DISABLE_ROUTER_LOG")
-	StaticRootPath = Cfg.MustValue("server", "STATIC_ROOT_PATH")
+	StaticRootPath = Cfg.MustValue("server", "STATIC_ROOT_PATH", workDir)
+	LogRootPath = Cfg.MustValue("log", "ROOT_PATH", path.Join(workDir, "log"))
 
 	InstallLock = Cfg.MustBool("security", "INSTALL_LOCK")
 	SecretKey = Cfg.MustValue("security", "SECRET_KEY")
@@ -233,7 +235,7 @@ func newLogService() {
 		case "console":
 			LogConfigs[i] = fmt.Sprintf(`{"level":%s}`, level)
 		case "file":
-			logPath := Cfg.MustValue(modeSec, "FILE_NAME", "log/gogs.log")
+			logPath := Cfg.MustValue(modeSec, "FILE_NAME", path.Join(LogRootPath, "gogs.log"))
 			os.MkdirAll(path.Dir(logPath), os.ModePerm)
 			LogConfigs[i] = fmt.Sprintf(
 				`{"level":%s,"filename":"%s","rotate":%v,"maxlines":%d,"maxsize":%d,"daily":%v,"maxdays":%d}`, level,

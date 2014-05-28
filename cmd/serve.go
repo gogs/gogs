@@ -88,7 +88,7 @@ func In(b string, sl map[string]int) bool {
 }
 
 func runServ(k *cli.Context) {
-	setup("log/serv.log")
+	setup(path.Join(setting.LogRootPath, "serv.log"))
 
 	keys := strings.Split(os.Args[2], "-")
 	if len(keys) != 2 {
