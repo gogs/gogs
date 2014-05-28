@@ -7,6 +7,7 @@ package cmd
 import (
 	"fmt"
 	"html/template"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"path"
@@ -18,7 +19,6 @@ import (
 	"github.com/gogits/gogs/modules/auth/apiv1"
 	"github.com/gogits/gogs/modules/avatar"
 	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/modules/bin"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/middleware"
 	"github.com/gogits/gogs/modules/middleware/binding"
@@ -40,12 +40,11 @@ and it takes care of all the other things for you`,
 	Flags:  []cli.Flag{},
 }
 
+// checkVersion checks if binary matches the version of temolate files.
 func checkVersion() {
-	// go-bindata -ignore=\\.DS_Store -o modules/bin/conf.go -pkg="bin" conf/...
-	// Check if binary and static file version match.
-	data, err := bin.Asset("conf/VERSION")
+	data, err := ioutil.ReadFile(path.Join(setting.StaticRootPath, "templates/VERSION"))
 	if err != nil {
-		log.Fatal("Fail to read 'conf/VERSION': %v", err)
+		log.Fatal("Fail to read 'templates/VERSION': %v", err)
 	}
 	if string(data) != setting.AppVer {
 		log.Fatal("Binary and static file version does not match, did you forget to recompile?")

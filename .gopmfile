@@ -8,6 +8,7 @@ github.com/Unknwon/goconfig =
 github.com/codegangsta/cli = 
 github.com/go-martini/martini = 
 github.com/go-sql-driver/mysql = 
+github.com/go-xorm/core = 
 github.com/go-xorm/xorm = 
 github.com/gogits/cache = 
 github.com/gogits/gfm = 
@@ -15,12 +16,12 @@ github.com/gogits/git =
 github.com/gogits/logs = 
 github.com/gogits/oauth2 = 
 github.com/gogits/session = 
+github.com/juju2013/goldap = 
 github.com/lib/pq = 
 github.com/nfnt/resize = 
 github.com/qiniu/log = 
 github.com/robfig/cron = 
-github.com/juju2013/goldap = 
 
 [res]
-include = templates|public|conf
+include = templates|public
 
