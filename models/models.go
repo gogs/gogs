@@ -112,8 +112,7 @@ func SetEngine() (err error) {
 
 	// WARNNING: for serv command, MUST remove the output to os.stdout,
 	// so use log file to instead print to stdout.
-	workDir, _ := setting.WorkDir()
-	logPath := workDir + "/log/xorm.log"
+	logPath := path.Join(setting.LogRootPath, "xorm.log")
 	os.MkdirAll(path.Dir(logPath), os.ModePerm)
 
 	f, err := os.Create(logPath)

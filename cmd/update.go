@@ -6,12 +6,14 @@ package cmd
 
 import (
 	"os"
+	"path"
 	"strconv"
 
 	"github.com/codegangsta/cli"
 	qlog "github.com/qiniu/log"
 
 	"github.com/gogits/gogs/models"
+	"github.com/gogits/gogs/modules/setting"
 )
 
 var CmdUpdate = cli.Command{
@@ -35,7 +37,7 @@ func runUpdate(c *cli.Context) {
 		return
 	}
 
-	setup("log/update.log")
+	setup(path.Join(setting.LogRootPath, "update.log"))
 
 	args := c.Args()
 	if len(args) != 3 {
