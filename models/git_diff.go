@@ -67,7 +67,7 @@ func (diff *Diff) NumFiles() int {
 
 const DIFF_HEAD = "diff --git "
 
-func ParsePatch(reader io.Reader) (*Diff, error) {
+func ParsePatch(cmd *exec.Cmd, reader io.Reader) (*Diff, error) {
 	scanner := bufio.NewScanner(reader)
 	var (
 		curFile    *DiffFile
@@ -168,6 +168,13 @@ func ParsePatch(reader io.Reader) (*Diff, error) {
 		}
 	}
 
+	// In case process became zombie.
+	if !cmd.ProcessState.Exited() {
+		log.Debug("git_diff.ParsePatch: process doesn't exit and now will be killed")
+		if err := cmd.Process.Kill(); err != nil {
+			log.Error("git_diff.ParsePatch: fail to kill zombie process: %v", err)
+		}
+	}
 	return diff, nil
 }
 
@@ -182,33 +189,23 @@ func GetDiff(repoPath, commitid string) (*Diff, error) {
 		return nil, err
 	}
 
+	rd, wr := io.Pipe()
+	var cmd *exec.Cmd
 	// First commit of repository.
 	if commit.ParentCount() == 0 {
-		rd, wr := io.Pipe()
-		go func() {
-			cmd := exec.Command("git", "show", commitid)
-			cmd.Dir = repoPath
-			cmd.Stdout = wr
-			cmd.Stdin = os.Stdin
-			cmd.Stderr = os.Stderr
-			cmd.Run()
-			wr.Close()
-		}()
-		defer rd.Close()
-		return ParsePatch(rd)
-	}
-
-	rd, wr := io.Pipe()
-	go func() {
+		cmd = exec.Command("git", "show", commitid)
+	} else {
 		c, _ := commit.Parent(0)
-		cmd := exec.Command("git", "diff", c.Id.String(), commitid)
-		cmd.Dir = repoPath
-		cmd.Stdout = wr
-		cmd.Stdin = os.Stdin
-		cmd.Stderr = os.Stderr
+		cmd = exec.Command("git", "diff", c.Id.String(), commitid)
+	}
+	cmd.Dir = repoPath
+	cmd.Stdout = wr
+	cmd.Stdin = os.Stdin
+	cmd.Stderr = os.Stderr
+	go func() {
 		cmd.Run()
 		wr.Close()
 	}()
 	defer rd.Close()
-	return ParsePatch(rd)
+	return ParsePatch(cmd, rd)
 }
