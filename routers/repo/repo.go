@@ -252,7 +252,10 @@ func Single(ctx *middleware.Context, params martini.Params) {
 				if isTextFile {
 					d, _ := ioutil.ReadAll(dataRc)
 					buf = append(buf, d...)
-					ctx.Data["FileContent"] = string(base.RenderMarkdown(buf, branchLink))
+					if base.IsMarkdownFile(readmeFile.Name()) {
+						buf = base.RenderMarkdown(buf, branchLink)
+					}
+					ctx.Data["FileContent"] = string(buf)
 				}
 			}
 		}
