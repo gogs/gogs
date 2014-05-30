@@ -2,7 +2,6 @@ filesets:
     includes:
         - templates
         - public
-        - conf
         - LICENSE
         - README.md
         - README_ZH.md
