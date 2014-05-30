@@ -47,7 +47,7 @@ func checkVersion() {
 		log.Fatal("Fail to read 'templates/VERSION': %v", err)
 	}
 	if string(data) != setting.AppVer {
-		log.Fatal("Binary and static file version does not match, did you forget to recompile?")
+		log.Fatal("Binary and template file version does not match, did you forget to recompile?")
 	}
 }
 
@@ -64,8 +64,8 @@ func newMartini() *martini.ClassicMartini {
 }
 
 func runWeb(*cli.Context) {
-	checkVersion()
 	routers.GlobalInit()
+	checkVersion()
 
 	m := newMartini()
 

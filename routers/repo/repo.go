@@ -80,7 +80,9 @@ func MigratePost(ctx *middleware.Context, form auth.MigrateRepoForm) {
 		return
 	}
 
-	url := strings.Replace(form.Url, "://", fmt.Sprintf("://%s:%s@", form.AuthUserName, form.AuthPasswd), 1)
+	authStr := strings.Replace(fmt.Sprintf("://%s:%s",
+		form.AuthUserName, form.AuthPasswd), "@", "%40", -1)
+	url := strings.Replace(form.Url, "://", authStr, 1) + "@"
 	repo, err := models.MigrateRepository(ctx.User, form.RepoName, form.Description, form.Private,
 		form.Mirror, url)
 	if err == nil {

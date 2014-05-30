@@ -47,6 +47,7 @@ func NewServices() {
 func GlobalInit() {
 	setting.NewConfigContext()
 	log.Trace("Custom path: %s", setting.CustomPath)
+	log.Trace("Log path: %s", setting.LogRootPath)
 	mailer.NewMailerContext()
 	models.LoadModelsConfig()
 	models.LoadRepoConfig()
