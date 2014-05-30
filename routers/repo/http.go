@@ -47,13 +47,21 @@ func Http(ctx *middleware.Context, params martini.Params) {
 
 	repoUser, err := models.GetUserByName(username)
 	if err != nil {
-		ctx.Handle(500, "repo.GetUserByName", nil)
+		if err == models.ErrUserNotExist {
+			ctx.Handle(404, "repo.Http(GetUserByName)", nil)
+		} else {
+			ctx.Handle(500, "repo.Http(GetUserByName)", nil)
+		}
 		return
 	}
 
 	repo, err := models.GetRepositoryByName(repoUser.Id, reponame)
 	if err != nil {
-		ctx.Handle(500, "repo.GetRepositoryByName", nil)
+		if err == models.ErrRepoNotExist {
+			ctx.Handle(404, "repo.Http(GetRepositoryByName)", nil)
+		} else {
+			ctx.Handle(500, "repo.Http(GetRepositoryByName)", nil)
+		}
 		return
 	}
 
