@@ -2,25 +2,25 @@
 path = github.com/gogits/gogs
 
 [deps]
-github.com/Unknwon/cae = 
-github.com/Unknwon/com = 
-github.com/Unknwon/goconfig = 
-github.com/codegangsta/cli = 
-github.com/go-martini/martini = 
-github.com/go-sql-driver/mysql = 
-github.com/go-xorm/core = 
-github.com/go-xorm/xorm = 
-github.com/gogits/cache = 
-github.com/gogits/gfm = 
-github.com/gogits/git = 
-github.com/gogits/logs = 
-github.com/gogits/oauth2 = 
-github.com/gogits/session = 
-github.com/juju2013/goldap = 
-github.com/lib/pq = 
-github.com/nfnt/resize = 
-github.com/qiniu/log = 
-github.com/robfig/cron = 
+github.com/Unknwon/cae = `commit:a1fa53b`
+github.com/Unknwon/com = `commit:019c36f`
+github.com/Unknwon/goconfig = `commit:c4e325f`
+github.com/codegangsta/cli = `commit:bb91895`
+github.com/go-martini/martini = `commit:49411a5`
+github.com/go-sql-driver/mysql = `commit:b44cac6`
+github.com/go-xorm/core = `commit:267e375`
+github.com/go-xorm/xorm = `commit:bd1487b`
+github.com/gogits/cache = `commit:f9bb61f`
+github.com/gogits/gfm = `commit:40f747a`
+github.com/gogits/git = `commit:3d9e771`
+github.com/gogits/logs = `commit:0a97a46`
+github.com/gogits/oauth2 = `commit:99cbec8`
+github.com/gogits/session = `commit:7ab78d4`
+github.com/juju2013/goldap = `commit:f4a7f67`
+github.com/lib/pq = `commit:529edd9`
+github.com/nfnt/resize = `commit:8aee0d9`
+github.com/qiniu/log = `commit:891d1cb`
+github.com/robfig/cron = `commit:b024fc5`
 
 [res]
 include = templates|public
