@@ -60,10 +60,10 @@ func GlobalInit() {
 		}
 
 		models.HasEngine = true
-		if models.EnableSQLite3 {
-			log.Info("SQLite3 Enabled")
-		}
 		cron.NewCronContext()
+	}
+	if models.EnableSQLite3 {
+		log.Info("SQLite3 Enabled")
 	}
 	checkRunMode()
 }
