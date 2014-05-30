@@ -5,6 +5,7 @@
 package repo
 
 import (
+	"bytes"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -82,7 +83,7 @@ func MigratePost(ctx *middleware.Context, form auth.MigrateRepoForm) {
 
 	authStr := strings.Replace(fmt.Sprintf("://%s:%s",
 		form.AuthUserName, form.AuthPasswd), "@", "%40", -1)
-	url := strings.Replace(form.Url, "://", authStr, 1) + "@"
+	url := strings.Replace(form.Url, "://", authStr+"@", 1)
 	repo, err := models.MigrateRepository(ctx.User, form.RepoName, form.Description, form.Private,
 		form.Mirror, url)
 	if err == nil {
@@ -254,8 +255,11 @@ func Single(ctx *middleware.Context, params martini.Params) {
 				if isTextFile {
 					d, _ := ioutil.ReadAll(dataRc)
 					buf = append(buf, d...)
-					if base.IsMarkdownFile(readmeFile.Name()) {
+					switch {
+					case base.IsMarkdownFile(readmeFile.Name()):
 						buf = base.RenderMarkdown(buf, branchLink)
+					default:
+						buf = bytes.Replace(buf, []byte("\n"), []byte(`<br>`), -1)
 					}
 					ctx.Data["FileContent"] = string(buf)
 				}
