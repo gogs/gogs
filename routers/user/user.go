@@ -26,16 +26,16 @@ func SignIn(ctx *middleware.Context) {
 		return
 	}
 
+	if setting.OauthService != nil {
+		ctx.Data["OauthEnabled"] = true
+		ctx.Data["OauthService"] = setting.OauthService
+	}
+
 	// Check auto-login.
 	userName := ctx.GetCookie(setting.CookieUserName)
 	if len(userName) == 0 {
 		ctx.HTML(200, "user/signin")
 		return
-	}
-
-	if setting.OauthService != nil {
-		ctx.Data["OauthEnabled"] = true
-		ctx.Data["OauthService"] = setting.OauthService
 	}
 
 	isSucceed := false

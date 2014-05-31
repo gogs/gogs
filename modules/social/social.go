@@ -67,7 +67,6 @@ func NewOauthService() {
 			TokenURL:     setting.OauthService.OauthInfos[name].TokenUrl,
 		}
 	}
-
 	enabledOauths := make([]string, 0, 10)
 
 	// GitHub.
