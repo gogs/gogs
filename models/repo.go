@@ -18,7 +18,6 @@ import (
 
 	"github.com/Unknwon/cae/zip"
 	"github.com/Unknwon/com"
-	qlog "github.com/qiniu/log"
 
 	"github.com/gogits/git"
 
@@ -84,12 +83,22 @@ func NewRepoContext() {
 	// Check if server has basic git setting.
 	stdout, stderr, err := com.ExecCmd("git", "config", "--get", "user.name")
 	if strings.Contains(stderr, "fatal:") {
-		qlog.Fatalf("repo.NewRepoContext(fail to get git user.name): %s", stderr)
+		log.Fatal("repo.NewRepoContext(fail to get git user.name): %s", stderr)
 	} else if err != nil || len(strings.TrimSpace(stdout)) == 0 {
 		if _, stderr, err = com.ExecCmd("git", "config", "--global", "user.email", "gogitservice@gmail.com"); err != nil {
-			qlog.Fatalf("repo.NewRepoContext(fail to set git user.email): %s", stderr)
+			log.Fatal("repo.NewRepoContext(fail to set git user.email): %s", stderr)
 		} else if _, stderr, err = com.ExecCmd("git", "config", "--global", "user.name", "Gogs"); err != nil {
-			qlog.Fatalf("repo.NewRepoContext(fail to set git user.name): %s", stderr)
+			log.Fatal("repo.NewRepoContext(fail to set git user.name): %s", stderr)
+		}
+	}
+
+	barePath := path.Join(setting.RepoRootPath, "git-bare.zip")
+	if !com.IsExist(barePath) {
+		data, err := bin.Asset("conf/content/git-bare.zip")
+		if err != nil {
+			log.Fatal("Fail to get asset 'git-bare.zip': %v", err)
+		} else if err := ioutil.WriteFile(barePath, data, os.ModePerm); err != nil {
+			log.Fatal("Fail to write asset 'git-bare.zip': %v", err)
 		}
 	}
 }
@@ -381,7 +390,7 @@ func CreateRepository(user *User, name, desc, lang, license string, private, mir
 
 // extractGitBareZip extracts git-bare.zip to repository path.
 func extractGitBareZip(repoPath string) error {
-	z, err := zip.Open("conf/content/git-bare.zip")
+	z, err := zip.Open(path.Join(setting.RepoRootPath, "git-bare.zip"))
 	if err != nil {
 		return err
 	}
