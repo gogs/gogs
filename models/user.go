@@ -121,7 +121,7 @@ func IsEmailUsed(email string) (bool, error) {
 	return orm.Get(&User{Email: email})
 }
 
-// return a user salt token
+// GetUserSalt returns a user salt token
 func GetUserSalt() string {
 	return base.GetRandomString(10)
 }
