@@ -30,9 +30,9 @@ import (
 var (
 	ErrRepoAlreadyExist  = errors.New("Repository already exist")
 	ErrRepoNotExist      = errors.New("Repository does not exist")
-	ErrRepoFileNotExist  = errors.New("Target Repo file does not exist")
+	ErrRepoFileNotExist  = errors.New("Repository file does not exist")
 	ErrRepoNameIllegal   = errors.New("Repository name contains illegal characters")
-	ErrRepoFileNotLoaded = errors.New("repo file not loaded")
+	ErrRepoFileNotLoaded = errors.New("Repository file not loaded")
 	ErrMirrorNotExist    = errors.New("Mirror does not exist")
 )
 
@@ -45,7 +45,7 @@ func getAssetList(prefix string) []string {
 	assets := make([]string, 0, 15)
 	for _, name := range bin.AssetNames() {
 		if strings.HasPrefix(name, prefix) {
-			assets = append(assets, name)
+			assets = append(assets, strings.TrimPrefix(name, prefix+"/"))
 		}
 	}
 	return assets
