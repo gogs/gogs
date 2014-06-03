@@ -771,7 +771,7 @@ type Comment struct {
 	IssueId  int64
 	CommitId int64
 	Line     int64
-	Content  string
+	Content  string    `xorm:"TEXT"`
 	Created  time.Time `xorm:"CREATED"`
 }
 
