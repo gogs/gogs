@@ -7,6 +7,7 @@ package repo
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/go-martini/martini"
 
@@ -72,6 +73,7 @@ func SettingPost(ctx *middleware.Context, form auth.RepoSettingForm) {
 		if ctx.Repo.Repository.IsMirror {
 			if form.Interval > 0 {
 				ctx.Repo.Mirror.Interval = form.Interval
+				ctx.Repo.Mirror.NextUpdate = time.Now().Add(time.Duration(form.Interval) * time.Hour)
 				if err := models.UpdateMirror(ctx.Repo.Mirror); err != nil {
 					log.Error("setting.SettingPost(UpdateMirror): %v", err)
 				}
