@@ -26,7 +26,7 @@ func NewMailMessageFrom(To []string, from, subject, body string) Message {
 
 // Create New mail message use MailFrom and MailUser
 func NewMailMessage(To []string, subject, body string) Message {
-	return NewMailMessageFrom(To, setting.MailService.User, subject, body)
+	return NewMailMessageFrom(To, setting.MailService.From, subject, body)
 }
 
 func GetMailTmplData(user *models.User) map[interface{}]interface{} {
