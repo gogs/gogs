@@ -330,6 +330,7 @@ func newSessionService() {
 type Mailer struct {
 	Name         string
 	Host         string
+	From         string
 	User, Passwd string
 }
 
@@ -363,6 +364,7 @@ func newMailService() {
 		User:   Cfg.MustValue("mailer", "USER"),
 		Passwd: Cfg.MustValue("mailer", "PASSWD"),
 	}
+	MailService.From = Cfg.MustValue("mailer", "FROM", MailService.User)
 	log.Info("Mail Service Enabled")
 }
 
