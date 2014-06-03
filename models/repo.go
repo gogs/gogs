@@ -12,6 +12,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -75,6 +76,8 @@ func LoadRepoConfig() {
 
 	LanguageIgns = typeFiles[0]
 	Licenses = typeFiles[1]
+	sort.Strings(LanguageIgns)
+	sort.Strings(Licenses)
 }
 
 func NewRepoContext() {
