@@ -489,10 +489,19 @@ func initRepository(f string, user *User, repo *Repository, initReadme bool, rep
 	// .gitignore
 	if repoLang != "" {
 		filePath := "conf/gitignore/" + repoLang
-		if com.IsFile(filePath) {
-			if err := com.Copy(filePath,
-				filepath.Join(tmpDir, fileName["gitign"])); err != nil {
+		targetPath := path.Join(tmpDir, fileName["gitign"])
+		data, err := bin.Asset(filePath)
+		if err == nil {
+			if err = ioutil.WriteFile(targetPath, data, os.ModePerm); err != nil {
 				return err
+			}
+		} else {
+			// Check custom files.
+			filePath = path.Join(setting.CustomPath, "conf/gitignore", repoLang)
+			if com.IsFile(filePath) {
+				if err := com.Copy(filePath, targetPath); err != nil {
+					return err
+				}
 			}
 		}
 	}
@@ -500,10 +509,19 @@ func initRepository(f string, user *User, repo *Repository, initReadme bool, rep
 	// LICENSE
 	if license != "" {
 		filePath := "conf/license/" + license
-		if com.IsFile(filePath) {
-			if err := com.Copy(filePath,
-				filepath.Join(tmpDir, fileName["license"])); err != nil {
+		targetPath := path.Join(tmpDir, fileName["license"])
+		data, err := bin.Asset(filePath)
+		if err == nil {
+			if err = ioutil.WriteFile(targetPath, data, os.ModePerm); err != nil {
 				return err
+			}
+		} else {
+			// Check custom files.
+			filePath = path.Join(setting.CustomPath, "conf/license", license)
+			if com.IsFile(filePath) {
+				if err := com.Copy(filePath, targetPath); err != nil {
+					return err
+				}
 			}
 		}
 	}
