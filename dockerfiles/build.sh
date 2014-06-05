@@ -36,22 +36,22 @@ if [ $MEM_TYPE != "" ]
   sed -i "${GOGS_BUILD_LINE}s/$/ -tags $MEM_TYPE/" images/gogits/Dockerfile
 
   cd images/$MEM_TYPE
-  docker build -t gogits/$MEM_TYPE .
-  docker run -d --name $MEM_RUN_NAME gogits/$MEM_TYPE
+  docker.io build -t gogits/$MEM_TYPE .
+  docker.io run -d --name $MEM_RUN_NAME gogits/$MEM_TYPE
   MEM_LINK=" --link $MEM_RUN_NAME:mem "
   cd ../../
 fi
 
 # Build the database image
 cd images/$DB_TYPE
-docker build -t gogits/$DB_TYPE .
+docker.io build -t gogits/$DB_TYPE .
 #
 
 
 ## Build the gogits image
 cd ../gogits
 
-docker build -t gogits/gogs .
+docker.io build -t gogits/gogs .
 
 #sed -i "s#RUN go get -u -tags $MEM_TYPE github.com/gogits/gogs#RUN go get -u github.com/gogits/gogs#g" Dockerfile
 
@@ -60,9 +60,9 @@ sed -i "s/ -tags $MEM_TYPE//" Dockerfile
 
 #
 ## Run MySQL image with name
-docker run -d --name $DB_RUN_NAME gogits/$DB_TYPE
+docker.io run -d --name $DB_RUN_NAME gogits/$DB_TYPE
 #
 ## Run gogits image and link it to the database image
 echo "Now we have the $DB_TYPE image(running) and gogs image, use the follow command to start gogs service:"
-echo -e "\033[33m docker run -i -t --link $DB_RUN_NAME:db $MEM_LINK -p $HOST_PORT:3000 gogits/gogs \033[0m"
+echo -e "\033[33m docker.io run -i -t --link $DB_RUN_NAME:db $MEM_LINK -p $HOST_PORT:3000 gogits/gogs \033[0m"
 
