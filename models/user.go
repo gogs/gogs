@@ -72,7 +72,7 @@ func (user *User) HomeLink() string {
 	return "/user/" + user.Name
 }
 
-// AvatarLink returns the user gravatar link.
+// AvatarLink returns user gravatar link.
 func (user *User) AvatarLink() string {
 	if setting.DisableGravatar {
 		return "/img/avatar_default.jpg"
@@ -268,17 +268,17 @@ func ChangeUserName(user *User, newUserName string) (err error) {
 }
 
 // UpdateUser updates user's information.
-func UpdateUser(user *User) (err error) {
-	user.LowerName = strings.ToLower(user.Name)
+func UpdateUser(u *User) (err error) {
+	u.LowerName = strings.ToLower(u.Name)
 
-	if len(user.Location) > 255 {
-		user.Location = user.Location[:255]
+	if len(u.Location) > 255 {
+		u.Location = u.Location[:255]
 	}
-	if len(user.Website) > 255 {
-		user.Website = user.Website[:255]
+	if len(u.Website) > 255 {
+		u.Website = u.Website[:255]
 	}
 
-	_, err = orm.Id(user.Id).AllCols().Update(user)
+	_, err = orm.Id(u.Id).AllCols().Update(u)
 	return err
 }
 
@@ -356,17 +356,16 @@ func GetUserByKeyId(keyId int64) (*User, error) {
 	return user, nil
 }
 
-// GetUserById returns the user object by given id if exists.
+// GetUserById returns the user object by given ID if exists.
 func GetUserById(id int64) (*User, error) {
-	user := new(User)
-	has, err := orm.Id(id).Get(user)
+	u := new(User)
+	has, err := orm.Id(id).Get(u)
 	if err != nil {
 		return nil, err
-	}
-	if !has {
+	} else if !has {
 		return nil, ErrUserNotExist
 	}
-	return user, nil
+	return u, nil
 }
 
 // GetUserByName returns the user object by given name if exists.

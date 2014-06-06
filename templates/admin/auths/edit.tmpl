@@ -71,21 +71,21 @@
                     <div class="form-group {{if .Err_Attributes}}has-error has-feedback{{end}}">
                         <label class="col-md-3 control-label">Search Attributes: </label>
                         <div class="col-md-7">
-                            <input name="attributes" class="form-control" placeholder="Type search attributes" value="{{.Source.LDAP.Attributes}}" required="required">
+                            <input name="attributes" class="form-control" placeholder="Type search attributes" value="{{.Source.LDAP.Attributes}}">
                         </div>
                     </div>
 
                     <div class="form-group {{if .Err_Filter}}has-error has-feedback{{end}}">
                         <label class="col-md-3 control-label">Search Filter: </label>
                         <div class="col-md-7">
-                            <input name="filter" class="form-control" placeholder="Type search filter" value="{{.Source.LDAP.Filter}}" required="required">
+                            <input name="filter" class="form-control" placeholder="Type search filter" value="{{.Source.LDAP.Filter}}">
                         </div>
                     </div>
 
                     <div class="form-group {{if .Err_MsAdSA}}has-error has-feedback{{end}}">
                         <label class="col-md-3 control-label">Ms Ad SA: </label>
                         <div class="col-md-7">
-                            <input name="ms_ad_sa" class="form-control" placeholder="Type Ms Ad SA" value="{{.Source.LDAP.MsAdSAFormat}}" required="required">
+                            <input name="ms_ad_sa" class="form-control" placeholder="Type Ms Ad SA" value="{{.Source.LDAP.MsAdSAFormat}}">
                         </div>
                     </div>
                     {{else if eq $type 3}}

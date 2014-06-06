@@ -32,8 +32,8 @@ func SignIn(ctx *middleware.Context) {
 	}
 
 	// Check auto-login.
-	userName := ctx.GetCookie(setting.CookieUserName)
-	if len(userName) == 0 {
+	uname := ctx.GetCookie(setting.CookieUserName)
+	if len(uname) == 0 {
 		ctx.HTML(200, "user/signin")
 		return
 	}
@@ -41,14 +41,14 @@ func SignIn(ctx *middleware.Context) {
 	isSucceed := false
 	defer func() {
 		if !isSucceed {
-			log.Trace("user.SignIn(auto-login cookie cleared): %s", userName)
+			log.Trace("user.SignIn(auto-login cookie cleared): %s", uname)
 			ctx.SetCookie(setting.CookieUserName, "", -1)
 			ctx.SetCookie(setting.CookieRememberName, "", -1)
 			return
 		}
 	}()
 
-	user, err := models.GetUserByName(userName)
+	user, err := models.GetUserByName(uname)
 	if err != nil {
 		ctx.Handle(500, "user.SignIn(GetUserByName)", err)
 		return
@@ -90,7 +90,7 @@ func SignInPost(ctx *middleware.Context, form auth.LogInForm) {
 		return
 	}
 
-	user, err := models.LoginUser(form.UserName, form.Password)
+	user, err := models.UserSignIn(form.UserName, form.Password)
 	if err != nil {
 		if err == models.ErrUserNotExist {
 			log.Trace("%s Log in failed: %s", ctx.Req.RequestURI, form.UserName)
@@ -98,7 +98,7 @@ func SignInPost(ctx *middleware.Context, form auth.LogInForm) {
 			return
 		}
 
-		ctx.Handle(500, "user.SignIn", err)
+		ctx.Handle(500, "user.SignInPost(UserSignIn)", err)
 		return
 	}
 
@@ -220,17 +220,18 @@ func SignUpPost(ctx *middleware.Context, form auth.RegisterForm) {
 	if u, err = models.RegisterUser(u); err != nil {
 		switch err {
 		case models.ErrUserAlreadyExist:
+			ctx.Data["Err_UserName"] = true
 			ctx.RenderWithErr("Username has been already taken", "user/signup", &form)
 		case models.ErrEmailAlreadyUsed:
+			ctx.Data["Err_Email"] = true
 			ctx.RenderWithErr("E-mail address has been already used", "user/signup", &form)
 		case models.ErrUserNameIllegal:
 			ctx.RenderWithErr(models.ErrRepoNameIllegal.Error(), "user/signup", &form)
 		default:
-			ctx.Handle(500, "user.SignUp(RegisterUser)", err)
+			ctx.Handle(500, "user.SignUpPost(RegisterUser)", err)
 		}
 		return
 	}
-
 	log.Trace("%s User created: %s", ctx.Req.RequestURI, form.UserName)
 
 	// Bind social account.
@@ -256,6 +257,7 @@ func SignUpPost(ctx *middleware.Context, form auth.RegisterForm) {
 		}
 		return
 	}
+
 	ctx.Redirect("/user/login")
 }
 

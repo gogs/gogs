@@ -89,9 +89,11 @@ func runWeb(*cli.Context) {
 	m.Get("/", ignSignIn, routers.Home)
 	m.Get("/install", bindIgnErr(auth.InstallForm{}), routers.Install)
 	m.Post("/install", bindIgnErr(auth.InstallForm{}), routers.InstallPost)
-	m.Get("/issues", reqSignIn, user.Issues)
-	m.Get("/pulls", reqSignIn, user.Pulls)
-	m.Get("/stars", reqSignIn, user.Stars)
+	m.Group("", func(r martini.Router) {
+		r.Get("/issues", user.Issues)
+		r.Get("/pulls", user.Pulls)
+		r.Get("/stars", user.Stars)
+	}, reqSignIn)
 
 	m.Group("/api", func(r martini.Router) {
 		m.Group("/v1", func(r martini.Router) {

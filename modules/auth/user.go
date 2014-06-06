@@ -19,54 +19,54 @@ import (
 )
 
 // SignedInId returns the id of signed in user.
-func SignedInId(session session.SessionStore) int64 {
+func SignedInId(sess session.SessionStore) int64 {
 	if !models.HasEngine {
 		return 0
 	}
 
-	userId := session.Get("userId")
-	if userId == nil {
+	uid := sess.Get("userId")
+	if uid == nil {
 		return 0
 	}
-	if s, ok := userId.(int64); ok {
-		if _, err := models.GetUserById(s); err != nil {
+	if id, ok := uid.(int64); ok {
+		if _, err := models.GetUserById(id); err != nil {
 			return 0
 		}
-		return s
+		return id
 	}
 	return 0
 }
 
 // SignedInName returns the name of signed in user.
-func SignedInName(session session.SessionStore) string {
-	userName := session.Get("userName")
-	if userName == nil {
+func SignedInName(sess session.SessionStore) string {
+	uname := sess.Get("userName")
+	if uname == nil {
 		return ""
 	}
-	if s, ok := userName.(string); ok {
+	if s, ok := uname.(string); ok {
 		return s
 	}
 	return ""
 }
 
 // SignedInUser returns the user object of signed user.
-func SignedInUser(session session.SessionStore) *models.User {
-	id := SignedInId(session)
-	if id <= 0 {
+func SignedInUser(sess session.SessionStore) *models.User {
+	uid := SignedInId(sess)
+	if uid <= 0 {
 		return nil
 	}
 
-	user, err := models.GetUserById(id)
+	u, err := models.GetUserById(uid)
 	if err != nil {
 		log.Error("user.SignedInUser: %v", err)
 		return nil
 	}
-	return user
+	return u
 }
 
 // IsSignedIn check if any user has signed in.
-func IsSignedIn(session session.SessionStore) bool {
-	return SignedInId(session) > 0
+func IsSignedIn(sess session.SessionStore) bool {
+	return SignedInId(sess) > 0
 }
 
 type FeedsForm struct {
