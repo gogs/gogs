@@ -150,8 +150,8 @@ func DelLoginSource(source *LoginSource) error {
 	return err
 }
 
-// login a user
-func LoginUser(uname, passwd string) (*User, error) {
+// UserSignIn validates user name and password.
+func UserSignIn(uname, passwd string) (*User, error) {
 	var u *User
 	if strings.Contains(uname, "@") {
 		u = &User{Email: uname}
