@@ -10,6 +10,12 @@ HOST_PORT="YOUR_HOST_PORT"        # The port on host, which will be redirected t
 # apt source, you can select 'nchc'(mirror in Taiwan) or 'aliyun'(best for mainlance China users) according to your network, if you could connect to the official unbunt mirror in a fast speed, just leave it to "".
 APT_SOURCE=""
 
+DOCKER_BIN=$(which docker.io || which docker)
+if [ -z "$DOCKER_BIN" ] ; then
+    echo "Please install docker. You can install docker by running \"wget -qO- https://get.docker.io/ | sh\"."
+    exit 1
+fi
+
 # Replace the database root password in database image Dockerfile.
 sed -i "s/THE_DB_PASSWORD/$DB_PASSWORD/g" images/$DB_TYPE/Dockerfile
 # Replace the database root password in gogits image deploy.sh file. 
@@ -36,22 +42,22 @@ if [ $MEM_TYPE != "" ]
   sed -i "${GOGS_BUILD_LINE}s/$/ -tags $MEM_TYPE/" images/gogits/Dockerfile
 
   cd images/$MEM_TYPE
-  docker.io build -t gogits/$MEM_TYPE .
-  docker.io run -d --name $MEM_RUN_NAME gogits/$MEM_TYPE
+  $DOCKER_BIN build -t gogits/$MEM_TYPE .
+  $DOCKER_BIN run -d --name $MEM_RUN_NAME gogits/$MEM_TYPE
   MEM_LINK=" --link $MEM_RUN_NAME:mem "
   cd ../../
 fi
 
 # Build the database image
 cd images/$DB_TYPE
-docker.io build -t gogits/$DB_TYPE .
+$DOCKER_BIN build -t gogits/$DB_TYPE .
 #
 
 
 ## Build the gogits image
 cd ../gogits
 
-docker.io build -t gogits/gogs .
+$DOCKER_BIN build -t gogits/gogs .
 
 #sed -i "s#RUN go get -u -tags $MEM_TYPE github.com/gogits/gogs#RUN go get -u github.com/gogits/gogs#g" Dockerfile
 
@@ -60,9 +66,9 @@ sed -i "s/ -tags $MEM_TYPE//" Dockerfile
 
 #
 ## Run MySQL image with name
-docker.io run -d --name $DB_RUN_NAME gogits/$DB_TYPE
+$DOCKER_BIN run -d --name $DB_RUN_NAME gogits/$DB_TYPE
 #
 ## Run gogits image and link it to the database image
 echo "Now we have the $DB_TYPE image(running) and gogs image, use the follow command to start gogs service:"
-echo -e "\033[33m docker.io run -i -t --link $DB_RUN_NAME:db $MEM_LINK -p $HOST_PORT:3000 gogits/gogs \033[0m"
+echo -e "\033[33m $DOCKER_BIN run -i -t --link $DB_RUN_NAME:db $MEM_LINK -p $HOST_PORT:3000 gogits/gogs \033[0m"
 
