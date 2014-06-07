@@ -27,6 +27,7 @@ import (
 	"github.com/gogits/gogs/routers/admin"
 	"github.com/gogits/gogs/routers/api/v1"
 	"github.com/gogits/gogs/routers/dev"
+	"github.com/gogits/gogs/routers/org"
 	"github.com/gogits/gogs/routers/repo"
 	"github.com/gogits/gogs/routers/user"
 )
@@ -185,6 +186,10 @@ func runWeb(*cli.Context) {
 	}
 
 	reqOwner := middleware.RequireOwner()
+
+	m.Group("/o", func(r martini.Router) {
+		r.Get("/:org", org.Organization)
+	})
 
 	m.Group("/:username/:reponame", func(r martini.Router) {
 		r.Get("/settings", repo.Setting)
