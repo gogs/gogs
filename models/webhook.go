@@ -43,6 +43,7 @@ type Webhook struct {
 	IsActive    bool
 }
 
+// GetEvent handles conversion from Events to HookEvent.
 func (w *Webhook) GetEvent() {
 	w.HookEvent = &HookEvent{}
 	if err := json.Unmarshal([]byte(w.Events), w.HookEvent); err != nil {
@@ -50,12 +51,14 @@ func (w *Webhook) GetEvent() {
 	}
 }
 
+// UpdateEvent handles conversion from HookEvent to Events.
 func (w *Webhook) UpdateEvent() error {
 	data, err := json.Marshal(w.HookEvent)
 	w.Events = string(data)
 	return err
 }
 
+// HasPushEvent returns true if hook enbaled push event.
 func (w *Webhook) HasPushEvent() bool {
 	if w.PushOnly {
 		return true
@@ -115,7 +118,7 @@ func DeleteWebhook(hookId int64) error {
 type HookTaskType int
 
 const (
-	WEBHOOK = iota + 1
+	WEBHOOK HookTaskType = iota + 1
 	SERVICE
 )
 
@@ -142,7 +145,7 @@ type PayloadRepo struct {
 	Private     bool           `json:"private"`
 }
 
-// Payload represents payload information of hook.
+// Payload represents a payload information of hook.
 type Payload struct {
 	Secret  string           `json:"secret"`
 	Ref     string           `json:"ref"`
@@ -151,10 +154,10 @@ type Payload struct {
 	Pusher  *PayloadAuthor   `json:"pusher"`
 }
 
-// HookTask represents hook task.
+// HookTask represents a hook task.
 type HookTask struct {
 	Id             int64
-	Type           int
+	Type           HookTaskType
 	Url            string
 	*Payload       `xorm:"-"`
 	PayloadContent string `xorm:"TEXT"`
