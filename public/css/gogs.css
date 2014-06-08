@@ -1643,7 +1643,7 @@ html, body {
     vertical-align: top;
 }
 
-#label-color-change-ipt2{
+#label-color-change-ipt2 {
     margin-top: 1px;
 }
 
@@ -1814,4 +1814,96 @@ html, body {
 
 #release-preview {
     margin: 6px 0;
+}
+
+/*  organization */
+
+#body-nav.org-nav {
+    height: 140px;
+    padding: 16px 0;
+}
+
+.org-nav .org-logo {
+    margin-right: 16px;
+    width: 100px;
+    height: 100px;
+}
+
+.org-nav .org-name {
+    margin-top: 0;
+}
+
+.org-description {
+    font-size: 16px;
+}
+
+.org-meta li, .org-meta li a, .org-repo-update, .org-repo-status, .org-team-meta {
+    color: #888;
+}
+
+.org-meta li {
+    margin-right: 12px;
+}
+
+.org-meta li a:hover {
+    text-decoration: underline;
+}
+
+.org-meta .fa {
+    margin-left: 0;
+}
+
+.org-sidebar {
+    margin-top: -100px;
+}
+
+.org-panel .panel-heading {
+    font-size: 18px;
+}
+
+.org-repo-status {
+    font-family: Verdana, Arial, Helvetica, sans-serif;
+}
+
+.org-repo-item {
+    border-bottom: 1px solid #DDD;
+    padding-bottom: 18px;
+}
+
+.org-member img {
+    width: 60px;
+    height: 60px;
+    border-radius: 4px;
+}
+
+.org-member {
+    display: inline-block;
+    padding: 2px;
+}
+
+.org-team-name {
+    font-size: 15px;
+    margin-bottom: 0;
+    color: #444;
+}
+
+.org-team {
+    border-bottom: 1px solid #DDD;
+    margin-bottom: 12px;
+}
+
+.org-team:last-child {
+    border: none;
+}
+
+.org-team a {
+    display: block;
+}
+
+.org-team a:hover {
+    text-decoration: none;
+}
+
+.org-team a:hover .org-team-name {
+    color: #0079bc !important;
 }
