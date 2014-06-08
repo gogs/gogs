@@ -5,13 +5,17 @@
 package cron
 
 import (
+	"fmt"
+
 	"github.com/robfig/cron"
 
 	"github.com/gogits/gogs/models"
+	"github.com/gogits/gogs/modules/setting"
 )
 
 func NewCronContext() {
 	c := cron.New()
 	c.AddFunc("@every 1h", models.MirrorUpdate)
+	c.AddFunc(fmt.Sprintf("@every %dm", setting.WebhookTaskInterval), models.DeliverHooks)
 	c.Start()
 }

@@ -244,9 +244,9 @@ func WebHooksAddPost(ctx *middleware.Context, form auth.NewWebhookForm) {
 		return
 	}
 
-	ct := models.CT_JSON
+	ct := models.JSON
 	if form.ContentType == "2" {
-		ct = models.CT_FORM
+		ct = models.FORM
 	}
 
 	w := &models.Webhook{
@@ -259,8 +259,8 @@ func WebHooksAddPost(ctx *middleware.Context, form auth.NewWebhookForm) {
 		},
 		IsActive: form.Active,
 	}
-	if err := w.SaveEvent(); err != nil {
-		ctx.Handle(500, "setting.WebHooksAddPost(SaveEvent)", err)
+	if err := w.UpdateEvent(); err != nil {
+		ctx.Handle(500, "setting.WebHooksAddPost(UpdateEvent)", err)
 		return
 	} else if err := models.CreateWebhook(w); err != nil {
 		ctx.Handle(500, "setting.WebHooksAddPost(CreateWebhook)", err)
@@ -311,9 +311,9 @@ func WebHooksEditPost(ctx *middleware.Context, params martini.Params, form auth.
 		return
 	}
 
-	ct := models.CT_JSON
+	ct := models.JSON
 	if form.ContentType == "2" {
-		ct = models.CT_FORM
+		ct = models.FORM
 	}
 
 	w := &models.Webhook{
@@ -327,8 +327,8 @@ func WebHooksEditPost(ctx *middleware.Context, params martini.Params, form auth.
 		},
 		IsActive: form.Active,
 	}
-	if err := w.SaveEvent(); err != nil {
-		ctx.Handle(500, "setting.WebHooksEditPost(SaveEvent)", err)
+	if err := w.UpdateEvent(); err != nil {
+		ctx.Handle(500, "setting.WebHooksEditPost(UpdateEvent)", err)
 		return
 	} else if err := models.UpdateWebhook(w); err != nil {
 		ctx.Handle(500, "setting.WebHooksEditPost(WebHooksEditPost)", err)

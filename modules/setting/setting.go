@@ -53,6 +53,10 @@ var (
 	CookieUserName     string
 	CookieRememberName string
 
+	// Webhook settings.
+	WebhookTaskInterval   int
+	WebhookDeliverTimeout int
+
 	// Repository settings.
 	RepoRootPath string
 	ScriptType   string
@@ -187,9 +191,9 @@ var Service struct {
 	RequireSignInView    bool
 	EnableCacheAvatar    bool
 	NotifyMail           bool
+	LdapAuth             bool
 	ActiveCodeLives      int
 	ResetPwdCodeLives    int
-	LdapAuth             bool
 }
 
 func newService() {
@@ -390,6 +394,11 @@ func newNotifyMailService() {
 	log.Info("Notify Mail Service Enabled")
 }
 
+func newWebhookService() {
+	WebhookTaskInterval = Cfg.MustInt("webhook", "TASK_INTERVAL", 1)
+	WebhookDeliverTimeout = Cfg.MustInt("webhook", "DELIVER_TIMEOUT", 5)
+}
+
 func NewServices() {
 	newService()
 	newLogService()
@@ -398,4 +407,5 @@ func NewServices() {
 	newMailService()
 	newRegisterMailService()
 	newNotifyMailService()
+	newWebhookService()
 }

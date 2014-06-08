@@ -193,6 +193,9 @@ func Config(ctx *middleware.Context) {
 
 	ctx.Data["DbCfg"] = models.DbCfg
 
+	ctx.Data["WebhookTaskInterval"] = setting.WebhookTaskInterval
+	ctx.Data["WebhookDeliverTimeout"] = setting.WebhookDeliverTimeout
+
 	ctx.Data["MailerEnabled"] = false
 	if setting.MailService != nil {
 		ctx.Data["MailerEnabled"] = true
