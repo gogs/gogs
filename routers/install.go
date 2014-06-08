@@ -14,7 +14,6 @@ import (
 	"github.com/Unknwon/goconfig"
 	"github.com/go-martini/martini"
 	"github.com/go-xorm/xorm"
-	qlog "github.com/qiniu/log"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
@@ -56,7 +55,7 @@ func GlobalInit() {
 
 	if setting.InstallLock {
 		if err := models.NewEngine(); err != nil {
-			qlog.Fatal(err)
+			log.Fatal("Fail to initialize ORM engine: %v", err)
 		}
 
 		models.HasEngine = true

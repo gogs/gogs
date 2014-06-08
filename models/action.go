@@ -15,7 +15,6 @@ import (
 	qlog "github.com/qiniu/log"
 
 	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/modules/hooks"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/setting"
 )
@@ -131,35 +130,35 @@ func CommitRepoAction(userId, repoUserId int64, userName, actEmail string,
 	}
 
 	repoLink := fmt.Sprintf("%s%s/%s", setting.AppUrl, repoUserName, repoName)
-	commits := make([]*hooks.PayloadCommit, len(commit.Commits))
+	commits := make([]*PayloadCommit, len(commit.Commits))
 	for i, cmt := range commit.Commits {
-		commits[i] = &hooks.PayloadCommit{
+		commits[i] = &PayloadCommit{
 			Id:      cmt.Sha1,
 			Message: cmt.Message,
 			Url:     fmt.Sprintf("%s/commit/%s", repoLink, cmt.Sha1),
-			Author: &hooks.PayloadAuthor{
+			Author: &PayloadAuthor{
 				Name:  cmt.AuthorName,
 				Email: cmt.AuthorEmail,
 			},
 		}
 	}
-	p := &hooks.Payload{
+	p := &Payload{
 		Ref:     refFullName,
 		Commits: commits,
-		Repo: &hooks.PayloadRepo{
+		Repo: &PayloadRepo{
 			Id:          repo.Id,
 			Name:        repo.LowerName,
 			Url:         repoLink,
 			Description: repo.Description,
 			Website:     repo.Website,
 			Watchers:    repo.NumWatches,
-			Owner: &hooks.PayloadAuthor{
+			Owner: &PayloadAuthor{
 				Name:  repoUserName,
 				Email: actEmail,
 			},
 			Private: repo.IsPrivate,
 		},
-		Pusher: &hooks.PayloadAuthor{
+		Pusher: &PayloadAuthor{
 			Name:  repo.Owner.LowerName,
 			Email: repo.Owner.Email,
 		},
@@ -172,7 +171,13 @@ func CommitRepoAction(userId, repoUserId int64, userName, actEmail string,
 		}
 
 		p.Secret = w.Secret
-		hooks.AddHookTask(&hooks.HookTask{hooks.HTT_WEBHOOK, w.Url, p, w.ContentType, w.IsSsl})
+		CreateHookTask(&HookTask{
+			Type:        WEBHOOK,
+			Url:         w.Url,
+			Payload:     p,
+			ContentType: w.ContentType,
+			IsSsl:       w.IsSsl,
+		})
 	}
 	return nil
 }
