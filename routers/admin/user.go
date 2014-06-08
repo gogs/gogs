@@ -51,12 +51,13 @@ func NewUserPost(ctx *middleware.Context, form auth.RegisterForm) {
 		Email:     form.Email,
 		Passwd:    form.Password,
 		IsActive:  true,
-		LoginType: models.LT_PLAIN,
+		LoginType: models.PLAIN,
 	}
 
 	if len(form.LoginType) > 0 {
 		fields := strings.Split(form.LoginType, "-")
-		u.LoginType, _ = strconv.Atoi(fields[0])
+		tp, _ := strconv.Atoi(fields[0])
+		u.LoginType = models.LoginType(tp)
 		u.LoginSource, _ = strconv.ParseInt(fields[1], 10, 64)
 		u.LoginName = form.LoginName
 		fmt.Println(u.LoginType, u.LoginSource, u.LoginName)

@@ -38,8 +38,8 @@ func NewAuthSourcePost(ctx *middleware.Context, form auth.AuthenticationForm) {
 	}
 
 	var u core.Conversion
-	switch form.Type {
-	case models.LT_LDAP:
+	switch models.LoginType(form.Type) {
+	case models.LDAP:
 		u = &models.LDAPConfig{
 			Ldapsource: ldap.Ldapsource{
 				Host:         form.Host,
@@ -53,7 +53,7 @@ func NewAuthSourcePost(ctx *middleware.Context, form auth.AuthenticationForm) {
 				Name:         form.AuthName,
 			},
 		}
-	case models.LT_SMTP:
+	case models.SMTP:
 		u = &models.SMTPConfig{
 			Auth: form.SmtpAuth,
 			Host: form.SmtpHost,
@@ -66,14 +66,14 @@ func NewAuthSourcePost(ctx *middleware.Context, form auth.AuthenticationForm) {
 	}
 
 	var source = &models.LoginSource{
-		Type:              form.Type,
+		Type:              models.LoginType(form.Type),
 		Name:              form.AuthName,
 		IsActived:         true,
 		AllowAutoRegister: form.AllowAutoRegister,
 		Cfg:               u,
 	}
 
-	if err := models.AddSource(source); err != nil {
+	if err := models.CreateSource(source); err != nil {
 		ctx.Handle(500, "admin.auths.NewAuth", err)
 		return
 	}
@@ -116,8 +116,8 @@ func EditAuthSourcePost(ctx *middleware.Context, form auth.AuthenticationForm) {
 	}
 
 	var config core.Conversion
-	switch form.Type {
-	case models.LT_LDAP:
+	switch models.LoginType(form.Type) {
+	case models.LDAP:
 		config = &models.LDAPConfig{
 			Ldapsource: ldap.Ldapsource{
 				Host:         form.Host,
@@ -131,7 +131,7 @@ func EditAuthSourcePost(ctx *middleware.Context, form auth.AuthenticationForm) {
 				Name:         form.AuthName,
 			},
 		}
-	case models.LT_SMTP:
+	case models.SMTP:
 		config = &models.SMTPConfig{
 			Auth: form.SmtpAuth,
 			Host: form.SmtpHost,
@@ -147,7 +147,7 @@ func EditAuthSourcePost(ctx *middleware.Context, form auth.AuthenticationForm) {
 		Id:                form.Id,
 		Name:              form.AuthName,
 		IsActived:         form.IsActived,
-		Type:              form.Type,
+		Type:              models.LoginType(form.Type),
 		AllowAutoRegister: form.AllowAutoRegister,
 		Cfg:               config,
 	}

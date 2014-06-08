@@ -109,11 +109,11 @@ func NewRepoContext() {
 // Repository represents a git repository.
 type Repository struct {
 	Id                  int64
-	OwnerId             int64 `xorm:"unique(s)"`
+	OwnerId             int64 `xorm:"UNIQUE(s)"`
 	Owner               *User `xorm:"-"`
 	ForkId              int64
-	LowerName           string `xorm:"unique(s) index not null"`
-	Name                string `xorm:"index not null"`
+	LowerName           string `xorm:"UNIQUE(s) INDEX NOT NULL"`
+	Name                string `xorm:"INDEX NOT NULL"`
 	Description         string
 	Website             string
 	NumWatches          int
@@ -131,8 +131,8 @@ type Repository struct {
 	IsBare              bool
 	IsGoget             bool
 	DefaultBranch       string
-	Created             time.Time `xorm:"created"`
-	Updated             time.Time `xorm:"updated"`
+	Created             time.Time `xorm:"CREATED"`
+	Updated             time.Time `xorm:"UPDATED"`
 }
 
 func (repo *Repository) GetOwner() (err error) {
@@ -184,6 +184,25 @@ type Mirror struct {
 	NextUpdate time.Time
 }
 
+// MirrorRepository creates a mirror repository from source.
+func MirrorRepository(repoId int64, userName, repoName, repoPath, url string) error {
+	_, stderr, err := com.ExecCmd("git", "clone", "--mirror", url, repoPath)
+	if err != nil {
+		return errors.New("git clone --mirror: " + stderr)
+	}
+
+	if _, err = orm.InsertOne(&Mirror{
+		RepoId:     repoId,
+		RepoName:   strings.ToLower(userName + "/" + repoName),
+		Interval:   24,
+		NextUpdate: time.Now().Add(24 * time.Hour),
+	}); err != nil {
+		return err
+	}
+
+	return git.UnpackRefs(repoPath)
+}
+
 func GetMirror(repoId int64) (*Mirror, error) {
 	m := &Mirror{RepoId: repoId}
 	has, err := orm.Get(m)
@@ -221,25 +240,6 @@ func MirrorUpdate() {
 	}); err != nil {
 		log.Error("repo.MirrorUpdate: %v", err)
 	}
-}
-
-// MirrorRepository creates a mirror repository from source.
-func MirrorRepository(repoId int64, userName, repoName, repoPath, url string) error {
-	_, stderr, err := com.ExecCmd("git", "clone", "--mirror", url, repoPath)
-	if err != nil {
-		return errors.New("git clone --mirror: " + stderr)
-	}
-
-	if _, err = orm.InsertOne(&Mirror{
-		RepoId:     repoId,
-		RepoName:   strings.ToLower(userName + "/" + repoName),
-		Interval:   24,
-		NextUpdate: time.Now().Add(24 * time.Hour),
-	}); err != nil {
-		return err
-	}
-
-	return git.UnpackRefs(repoPath)
 }
 
 // MigrateRepository migrates a existing repository from other project hosting.
@@ -746,16 +746,11 @@ func DeleteRepository(userId, repoId int64, userName string) (err error) {
 		sess.Rollback()
 		return err
 	}
-	if err = sess.Commit(); err != nil {
+	if err = os.RemoveAll(RepoPath(userName, repo.Name)); err != nil {
 		sess.Rollback()
 		return err
 	}
-	if err = os.RemoveAll(RepoPath(userName, repo.Name)); err != nil {
-		// TODO: log and delete manully
-		log.Error("delete repo %s/%s failed: %v", userName, repo.Name, err)
-		return err
-	}
-	return nil
+	return sess.Commit()
 }
 
 // GetRepositoryByName returns the repository by given name under user if exists.
