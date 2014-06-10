@@ -37,7 +37,7 @@ var (
 var sshOpLocker = sync.Mutex{}
 
 var (
-	sshPath string // SSH directory.
+	SshPath string // SSH directory.
 	appPath string // Execution(binary) path.
 )
 
@@ -67,9 +67,9 @@ func init() {
 	}
 
 	// Determine and create .ssh path.
-	sshPath = filepath.Join(homeDir(), ".ssh")
-	if err = os.MkdirAll(sshPath, os.ModePerm); err != nil {
-		qlog.Fatalf("publickey.init(fail to create sshPath(%s)): %v\n", sshPath, err)
+	SshPath = filepath.Join(homeDir(), ".ssh")
+	if err = os.MkdirAll(SshPath, os.ModePerm); err != nil {
+		qlog.Fatalf("publickey.init(fail to create SshPath(%s)): %v\n", SshPath, err)
 	}
 }
 
@@ -94,7 +94,7 @@ func saveAuthorizedKeyFile(key *PublicKey) error {
 	sshOpLocker.Lock()
 	defer sshOpLocker.Unlock()
 
-	fpath := filepath.Join(sshPath, "authorized_keys")
+	fpath := filepath.Join(SshPath, "authorized_keys")
 	f, err := os.OpenFile(fpath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0600)
 	if err != nil {
 		return err
@@ -216,8 +216,8 @@ func DeletePublicKey(key *PublicKey) error {
 		return err
 	}
 
-	fpath := filepath.Join(sshPath, "authorized_keys")
-	tmpPath := filepath.Join(sshPath, "authorized_keys.tmp")
+	fpath := filepath.Join(SshPath, "authorized_keys")
+	tmpPath := filepath.Join(SshPath, "authorized_keys.tmp")
 	log.Trace("publickey.DeletePublicKey(authorized_keys): %s", fpath)
 
 	if err = rewriteAuthorizedKeys(key, fpath, tmpPath); err != nil {

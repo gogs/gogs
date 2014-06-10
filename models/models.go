@@ -46,7 +46,9 @@ func LoadModelsConfig() {
 	DbCfg.Host = setting.Cfg.MustValue("database", "HOST")
 	DbCfg.Name = setting.Cfg.MustValue("database", "NAME")
 	DbCfg.User = setting.Cfg.MustValue("database", "USER")
-	DbCfg.Pwd = setting.Cfg.MustValue("database", "PASSWD")
+	if len(DbCfg.Pwd) == 0 {
+		DbCfg.Pwd = setting.Cfg.MustValue("database", "PASSWD")
+	}
 	DbCfg.SslMode = setting.Cfg.MustValue("database", "SSL_MODE")
 	DbCfg.Path = setting.Cfg.MustValue("database", "PATH", "data/gogs.db")
 }
@@ -67,7 +69,6 @@ func NewTestEngine(x *xorm.Engine) (err error) {
 		}
 		cnnstr := fmt.Sprintf("user=%s password=%s host=%s port=%s dbname=%s sslmode=%s",
 			DbCfg.User, DbCfg.Pwd, host, port, DbCfg.Name, DbCfg.SslMode)
-		//fmt.Println(cnnstr)
 		x, err = xorm.NewEngine("postgres", cnnstr)
 	case "sqlite3":
 		if !EnableSQLite3 {
