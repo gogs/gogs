@@ -28,6 +28,10 @@ import (
 	"github.com/gogits/gogs/modules/setting"
 )
 
+const (
+	TPL_UPDATE_HOOK = "#!/usr/bin/env %s\n%s update $1 $2 $3\n"
+)
+
 var (
 	ErrRepoAlreadyExist  = errors.New("Repository already exist")
 	ErrRepoNotExist      = errors.New("Repository does not exist")
@@ -450,7 +454,7 @@ func initRepository(f string, user *User, repo *Repository, initReadme bool, rep
 	rp := strings.NewReplacer("\\", "/", " ", "\\ ")
 	// hook/post-update
 	if err := createHookUpdate(filepath.Join(repoPath, "hooks", "update"),
-		fmt.Sprintf("#!/usr/bin/env %s\n%s update $1 $2 $3\n", setting.ScriptType,
+		fmt.Sprintf(TPL_UPDATE_HOOK, setting.ScriptType,
 			rp.Replace(appPath))); err != nil {
 		return err
 	}

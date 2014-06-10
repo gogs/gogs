@@ -90,8 +90,7 @@ var (
 	RunUser    string
 )
 
-// WorkDir returns absolute path of work directory.
-func WorkDir() (string, error) {
+func ExecPath() (string, error) {
 	file, err := exec.LookPath(os.Args[0])
 	if err != nil {
 		return "", err
@@ -100,7 +99,13 @@ func WorkDir() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return path.Dir(strings.Replace(p, "\\", "/", -1)), nil
+	return p, nil
+}
+
+// WorkDir returns absolute path of work directory.
+func WorkDir() (string, error) {
+	execPath, err := ExecPath()
+	return path.Dir(strings.Replace(execPath, "\\", "/", -1)), err
 }
 
 // NewConfigContext initializes configuration context.
