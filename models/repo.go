@@ -831,11 +831,11 @@ func GetCollaborativeRepos(uname string) ([]*Repository, error) {
 
 	repos := make([]*Repository, 0, 10)
 	for _, access := range accesses {
-		if strings.HasPrefix(access.RepoName, uname) {
+		infos := strings.Split(access.RepoName, "/")
+		if infos[0] == uname {
 			continue
 		}
-
-		infos := strings.Split(access.RepoName, "/")
+		
 		u, err := GetUserByName(infos[0])
 		if err != nil {
 			return nil, err
