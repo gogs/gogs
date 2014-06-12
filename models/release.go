@@ -61,8 +61,6 @@ func CreateRelease(gitRepo *git.Repository, rel *Release) error {
 	if !gitRepo.IsTagExist(rel.TagName) {
 		_, stderr, err := com.ExecCmdDir(gitRepo.Path, "git", "tag", rel.TagName, "-m", rel.Title)
 		if err != nil {
-			return err
-		} else if strings.Contains(stderr, "fatal:") {
 			return errors.New(stderr)
 		}
 	} else {

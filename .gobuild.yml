@@ -1,6 +1,5 @@
 filesets:
     includes:
-        - conf
         - templates
         - public
         - LICENSE
