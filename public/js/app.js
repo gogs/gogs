@@ -705,8 +705,8 @@ function initRelease() {
     (function () {
         $('[data-ajax-name=release-preview]').on("click", function () {
             var $this = $(this);
-            $this.toggleAjax(function (json) {
-                $($this.data("preview")).html(json.ok ? json.content : "no content");
+            $this.toggleAjax(function (resp) {
+                $($this.data("preview")).html(resp);
             }, function () {
                 $($this.data("preview")).html("no content");
             })

@@ -23,7 +23,12 @@ func (rs *ReleaseSorter) Len() int {
 }
 
 func (rs *ReleaseSorter) Less(i, j int) bool {
-	return rs.rels[i].NumCommits > rs.rels[j].NumCommits
+	diffNum := rs.rels[i].NumCommits - rs.rels[j].NumCommits
+	if diffNum != 0 {
+		return diffNum > 0
+	}
+
+	return rs.rels[i].Created.Second() > rs.rels[j].Created.Second()
 }
 
 func (rs *ReleaseSorter) Swap(i, j int) {
