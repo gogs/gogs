@@ -208,6 +208,7 @@ type NewReleaseForm struct {
 	Target     string `form:"tag_target" binding:"Required"`
 	Title      string `form:"title" binding:"Required"`
 	Content    string `form:"content" binding:"Required"`
+	Draft      string `form:"draft"`
 	Prerelease bool   `form:"prerelease"`
 }
 
@@ -222,6 +223,28 @@ func (f *NewReleaseForm) Name(field string) string {
 }
 
 func (f *NewReleaseForm) Validate(errors *binding.Errors, req *http.Request, context martini.Context) {
+	data := context.Get(reflect.TypeOf(base.TmplData{})).Interface().(base.TmplData)
+	validate(errors, data, f)
+}
+
+type EditReleaseForm struct {
+	Target     string `form:"tag_target" binding:"Required"`
+	Title      string `form:"title" binding:"Required"`
+	Content    string `form:"content" binding:"Required"`
+	Draft      string `form:"draft"`
+	Prerelease bool   `form:"prerelease"`
+}
+
+func (f *EditReleaseForm) Name(field string) string {
+	names := map[string]string{
+		"Target":  "Target",
+		"Title":   "Release title",
+		"Content": "Release content",
+	}
+	return names[field]
+}
+
+func (f *EditReleaseForm) Validate(errors *binding.Errors, req *http.Request, context martini.Context) {
 	data := context.Get(reflect.TypeOf(base.TmplData{})).Interface().(base.TmplData)
 	validate(errors, data, f)
 }
