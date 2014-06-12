@@ -4,17 +4,17 @@
 {{template "repo/toolbar" .}}
 <div id="body" class="container">
     <div id="release">
-        <h4 id="release-head">New Release</h4>
+        <h4 id="release-head">Edit Release</h4>
         {{template "base/alert" .}}
-        <form id="release-new-form" action="{{.RepoLink}}/releases/new" method="post" class="form form-inline">
+        <form id="release-new-form" action="{{.RepoLink}}/releases/edit/{{.Release.TagName}}" method="post" class="form form-inline">
             {{.CsrfTokenHtml}}
             <div class="form-group">
-                <input id="tag-name" name="tag_name" type="text" class="form-control" placeholder="tag name" value="{{.tag_name}}" />
+                <b>{{.Release.TagName}}</b>
                 <span class="target-at">@</span>
                 <div class="btn-group" id="release-new-target-select">
                     <button type="button" class="btn btn-default"><i class="fa fa-code-fork fa-lg fa-m"></i>
                         <span class="target-text">Target : </span>
-                        <strong id="release-new-target-name"> {{.Repository.DefaultBranch}}</strong>
+                        <strong id="release-new-target-name"> {{.Release.Target}}</strong>
                     </button>
                     <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
                         <span class="caret"></span>
@@ -28,12 +28,12 @@
                             {{end}}
                         </ul>
                     </div>
-                    <input id="tag-target" type="hidden" name="tag_target" value="{{.Repository.DefaultBranch}}"/>
+                    <input id="tag-target" type="hidden" name="tag_target" value="{{.Release.Target}}"/>
                 </div>
                 <p class="help-block">Choose an existing tag, or create a new tag on publish</p>
             </div>
             <div class="form-group" style="display: block">
-                <input class="form-control input-lg" id="release-new-title" name="title" type="text" placeholder="release title" value="{{.title}}" />
+                <input class="form-control input-lg" id="release-new-title" name="title" type="text" placeholder="release title" value="{{.Release.Title}}" />
             </div>
             <div class="form-group col-md-8" style="display: block" id="release-new-content-div">
                 <div class="md-help pull-right">
@@ -46,7 +46,7 @@
                 <div class="tab-content">
                     <div class="tab-pane active" id="release-textarea">
                         <div class="form-group">
-                            <textarea class="form-control" name="content" id="release-new-content" rows="10" placeholder="Write some content" data-ajax-rel="release-preview" data-ajax-val="val" data-ajax-field="text">{{.content}}</textarea>
+                            <textarea class="form-control" name="content" id="release-new-content" rows="10" placeholder="Write some content" data-ajax-rel="release-preview" data-ajax-val="val" data-ajax-field="text">{{.Release.Note}}</textarea>
                         </div>
                     </div>
                     <div class="tab-pane release-preview-content" id="release-preview">loading...</div>
@@ -55,7 +55,7 @@
             <div class="text-right form-group col-md-8" style="display: block">
                 <hr/>
                 <label for="release-new-pre-release">
-                    <input id="release-new-pre-release" type="checkbox" name="prerelease" {{if .prerelease}}checked{{end}}/>
+                    <input id="release-new-pre-release" type="checkbox" name="prerelease" {{if .Release.IsPrerelease}}checked{{end}}/>
                     <strong>This is a pre-release</strong>
                 </label>
                 <p class="help-block">We’ll point out that this release is identified as non-production ready.</p>

@@ -835,7 +835,7 @@ func GetCollaborativeRepos(uname string) ([]*Repository, error) {
 		if infos[0] == uname {
 			continue
 		}
-		
+
 		u, err := GetUserByName(infos[0])
 		if err != nil {
 			return nil, err

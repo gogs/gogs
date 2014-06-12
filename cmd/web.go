@@ -228,11 +228,13 @@ func runWeb(*cli.Context) {
 		})
 
 		r.Post("/comment/:action", repo.Comment)
-		r.Get("/releases/new", repo.ReleasesNew)
+		r.Get("/releases/new", repo.NewRelease)
+		r.Get("/releases/edit/:tagname", repo.EditRelease)
 	}, reqSignIn, middleware.RepoAssignment(true))
 
 	m.Group("/:username/:reponame", func(r martini.Router) {
-		r.Post("/releases/new", bindIgnErr(auth.NewReleaseForm{}), repo.ReleasesNewPost)
+		r.Post("/releases/new", bindIgnErr(auth.NewReleaseForm{}), repo.NewReleasePost)
+		r.Post("/releases/edit/:tagname", bindIgnErr(auth.EditReleaseForm{}), repo.EditReleasePost)
 	}, reqSignIn, middleware.RepoAssignment(true, true))
 
 	m.Group("/:username/:reponame", func(r martini.Router) {
