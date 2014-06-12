@@ -205,6 +205,7 @@ func (f *CreateLabelForm) Validate(errors *binding.Errors, req *http.Request, co
 
 type NewReleaseForm struct {
 	TagName    string `form:"tag_name" binding:"Required"`
+	Target     string `form:"tag_target" binding:"Required"`
 	Title      string `form:"title" binding:"Required"`
 	Content    string `form:"content" binding:"Required"`
 	Prerelease bool   `form:"prerelease"`
@@ -213,6 +214,7 @@ type NewReleaseForm struct {
 func (f *NewReleaseForm) Name(field string) string {
 	names := map[string]string{
 		"TagName": "Tag name",
+		"Target":  "Target",
 		"Title":   "Release title",
 		"Content": "Release content",
 	}

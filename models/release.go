@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Unknwon/com"
+	// "github.com/Unknwon/com"
 	"github.com/gogits/git"
 )
 
@@ -26,7 +26,8 @@ type Release struct {
 	Title            string
 	TagName          string
 	LowerTagName     string
-	SHA1             string
+	Target           string
+	Sha1             string `xorm:"VARCHAR(40)"`
 	NumCommits       int
 	NumCommitsBehind int    `xorm:"-"`
 	Note             string `xorm:"TEXT"`
@@ -59,9 +60,13 @@ func CreateRelease(gitRepo *git.Repository, rel *Release) error {
 	}
 
 	if !gitRepo.IsTagExist(rel.TagName) {
-		_, stderr, err := com.ExecCmdDir(gitRepo.Path, "git", "tag", rel.TagName, "-m", rel.Title)
+		commit, err := gitRepo.GetCommitOfBranch(rel.Target)
 		if err != nil {
-			return errors.New(stderr)
+			return err
+		}
+
+		if err = gitRepo.CreateTag(rel.TagName, commit.Id.String()); err != nil {
+			return err
 		}
 	} else {
 		commit, err := gitRepo.GetCommitOfTag(rel.TagName)

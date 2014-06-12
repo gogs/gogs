@@ -79,7 +79,7 @@ func Releases(ctx *middleware.Context) {
 			tags.rels[i] = &models.Release{
 				Title:   rawTag,
 				TagName: rawTag,
-				SHA1:    commit.Id.String(),
+				Sha1:    commit.Id.String(),
 			}
 			tags.rels[i].NumCommits, err = ctx.Repo.GitRepo.CommitsCount(commit.Id.String())
 			if err != nil {
@@ -129,12 +129,18 @@ func ReleasesNewPost(ctx *middleware.Context, form auth.NewReleaseForm) {
 		return
 	}
 
+	if !ctx.Repo.GitRepo.IsBranchExist(form.Target) {
+		ctx.RenderWithErr("Target branch does not exist", "release/new", &form)
+		return
+	}
+
 	rel := &models.Release{
 		RepoId:       ctx.Repo.Repository.Id,
 		PublisherId:  ctx.User.Id,
 		Title:        form.Title,
 		TagName:      form.TagName,
-		SHA1:         ctx.Repo.Commit.Id.String(),
+		Target:       form.Target,
+		Sha1:         ctx.Repo.Commit.Id.String(),
 		NumCommits:   commitsCount,
 		Note:         form.Content,
 		IsPrerelease: form.Prerelease,
