@@ -14,6 +14,7 @@ import (
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"
+	"github.com/gogits/gogs/modules/cron"
 	"github.com/gogits/gogs/modules/middleware"
 	"github.com/gogits/gogs/modules/setting"
 )
@@ -227,4 +228,20 @@ func Config(ctx *middleware.Context) {
 	ctx.Data["Loggers"] = loggers
 
 	ctx.HTML(200, "admin/config")
+}
+
+func Monitor(ctx *middleware.Context) {
+	ctx.Data["Title"] = "Monitoring Center"
+	ctx.Data["PageIsMonitor"] = true
+
+	tab := ctx.Query("tab")
+	switch tab {
+	case "process":
+		ctx.Data["PageIsMonitorProcess"] = true
+	default:
+		ctx.Data["PageIsMonitorCron"] = true
+		ctx.Data["Entries"] = cron.ListEntries()
+	}
+
+	ctx.HTML(200, "admin/monitor/cron")
 }
