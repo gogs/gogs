@@ -62,7 +62,7 @@
             {{if .OauthService.GitHub}}<a href="/user/login/github?next=/user/sign_up" class="btn btn-default"><i class="fa fa-github-square fa-2x"></i><span>GitHub</span></a>{{end}}
             {{if .OauthService.Google}}<a href="/user/login/google?next=/user/sign_up" class="btn btn-default"><i class="fa fa-google-plus-square fa-2x"></i><span>Google</span></a>{{end}}
             {{if .OauthService.Twitter}}<a href="/user/login/twitter?next=/user/sign_up" class="btn btn-default"><i class="fa fa-twitter-square fa-2x"></i><span>Twitter</span></a>{{end}}
-            {{if .OauthService.Tencent}}<a href="/user/login/qq?next=/user/sign_up" class="btn btn-default"><i class="fa fa-linux fa-2x"></i><span>Tencent QQ</span></a>{{end}}
+            {{if not .OauthService.Tencent}}<a href="/user/login/qq?next=/user/sign_up" class="btn btn-default"><i class="fa fa-qq fa-2x"></i><span>Tencent QQ</span></a>{{end}}
             {{if .OauthService.Weibo}}<a href="/user/login/weibo?next=/user/sign_up" class="btn btn-default"><i class="fa fa-weibo fa-2x"></i><span>Weibo</span></a>{{end}}
         </div>
         {{end}}{{end}}

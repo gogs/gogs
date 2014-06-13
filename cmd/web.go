@@ -162,8 +162,9 @@ func runWeb(*cli.Context) {
 	m.Group("/admin", func(r martini.Router) {
 		r.Get("/users", admin.Users)
 		r.Get("/repos", admin.Repositories)
-		r.Get("/config", admin.Config)
 		r.Get("/auths", admin.Auths)
+		r.Get("/config", admin.Config)
+		r.Get("/monitor", admin.Monitor)
 	}, adminReq)
 	m.Group("/admin/users", func(r martini.Router) {
 		r.Get("/new", admin.NewUser)
