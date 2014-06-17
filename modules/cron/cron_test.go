@@ -154,9 +154,9 @@ func TestRunningMultipleSchedules(t *testing.T) {
 	cron.AddFunc("", "0 0 0 1 1 ?", func() {})
 	cron.AddFunc("", "0 0 0 31 12 ?", func() {})
 	cron.AddFunc("", "* * * * * ?", func() { wg.Done() })
-	cron.Schedule("", Every(time.Minute), FuncJob(func() {}))
-	cron.Schedule("", Every(time.Second), FuncJob(func() { wg.Done() }))
-	cron.Schedule("", Every(time.Hour), FuncJob(func() {}))
+	cron.Schedule("", "", Every(time.Minute), FuncJob(func() {}))
+	cron.Schedule("", "", Every(time.Second), FuncJob(func() { wg.Done() }))
+	cron.Schedule("", "", Every(time.Hour), FuncJob(func() {}))
 
 	cron.Start()
 	defer cron.Stop()
@@ -208,8 +208,8 @@ func TestJob(t *testing.T) {
 	cron.AddJob("", "0 0 0 1 1 ?", testJob{wg, "job1"})
 	cron.AddJob("", "* * * * * ?", testJob{wg, "job2"})
 	cron.AddJob("", "1 0 0 1 1 ?", testJob{wg, "job3"})
-	cron.Schedule("", Every(5*time.Second+5*time.Nanosecond), testJob{wg, "job4"})
-	cron.Schedule("", Every(5*time.Minute), testJob{wg, "job5"})
+	cron.Schedule("", "", Every(5*time.Second+5*time.Nanosecond), testJob{wg, "job4"})
+	cron.Schedule("", "", Every(5*time.Minute), testJob{wg, "job5"})
 
 	cron.Start()
 	defer cron.Stop()
