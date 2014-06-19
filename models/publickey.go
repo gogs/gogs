@@ -22,6 +22,7 @@ import (
 	qlog "github.com/qiniu/log"
 
 	"github.com/gogits/gogs/modules/log"
+	"github.com/gogits/gogs/modules/process"
 )
 
 const (
@@ -121,7 +122,7 @@ func AddPublicKey(key *PublicKey) (err error) {
 	if err = ioutil.WriteFile(tmpPath, []byte(key.Content), os.ModePerm); err != nil {
 		return err
 	}
-	stdout, stderr, err := com.ExecCmd("ssh-keygen", "-l", "-f", tmpPath)
+	stdout, stderr, err := process.Exec("AddPublicKey", "ssh-keygen", "-l", "-f", tmpPath)
 	if err != nil {
 		return errors.New("ssh-keygen -l -f: " + stderr)
 	} else if len(stdout) < 2 {

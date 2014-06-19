@@ -32,7 +32,7 @@ func newLogger(logPath string) {
 
 	f, err := os.OpenFile(logPath, os.O_WRONLY|os.O_APPEND|os.O_CREATE, os.ModePerm)
 	if err != nil {
-		qlog.Fatal(err)
+		qlog.Fatal("Fail to open log file(%s): %v", logPath, err)
 	}
 
 	qlog.SetOutput(f)
@@ -185,8 +185,8 @@ func runServ(k *cli.Context) {
 	gitcmd.Stdout = os.Stdout
 	gitcmd.Stdin = os.Stdin
 	gitcmd.Stderr = os.Stderr
-
-	if err = gitcmd.Run(); err != nil {
+	err = gitcmd.Run()
+	if err != nil {
 		println("Gogs: internal error:", err)
 		qlog.Fatalf("Fail to execute git command: %v", err)
 	}

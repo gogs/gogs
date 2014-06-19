@@ -6,6 +6,7 @@ package models
 
 import (
 	"bufio"
+	"fmt"
 	"io"
 	"os"
 	"os/exec"
@@ -15,6 +16,7 @@ import (
 
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
+	"github.com/gogits/gogs/modules/process"
 )
 
 // Diff line types.
@@ -67,7 +69,7 @@ func (diff *Diff) NumFiles() int {
 
 const DIFF_HEAD = "diff --git "
 
-func ParsePatch(cmd *exec.Cmd, reader io.Reader) (*Diff, error) {
+func ParsePatch(pid int64, cmd *exec.Cmd, reader io.Reader) (*Diff, error) {
 	scanner := bufio.NewScanner(reader)
 	var (
 		curFile    *DiffFile
@@ -169,11 +171,8 @@ func ParsePatch(cmd *exec.Cmd, reader io.Reader) (*Diff, error) {
 	}
 
 	// In case process became zombie.
-	if !cmd.ProcessState.Exited() {
-		log.Debug("git_diff.ParsePatch: process doesn't exit and now will be killed")
-		if err := cmd.Process.Kill(); err != nil {
-			log.Error("git_diff.ParsePatch: fail to kill zombie process: %v", err)
-		}
+	if err := process.Kill(pid); err != nil {
+		log.Error("git_diff.ParsePatch(Kill): %v", err)
 	}
 	return diff, nil
 }
@@ -207,5 +206,5 @@ func GetDiff(repoPath, commitid string) (*Diff, error) {
 		wr.Close()
 	}()
 	defer rd.Close()
-	return ParsePatch(cmd, rd)
+	return ParsePatch(process.Add(fmt.Sprintf("GetDiff(%s)", repoPath), cmd), cmd, rd)
 }
