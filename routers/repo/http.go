@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"os"
 	"os/exec"
@@ -22,6 +21,7 @@ import (
 
 	"github.com/go-martini/martini"
 	"github.com/gogits/gogs/models"
+	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/middleware"
 	"github.com/gogits/gogs/modules/setting"
 )
@@ -190,7 +190,7 @@ var routes = []route{
 // Request handling function
 func HttpBackend(config *Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		//log.Printf("%s %s %s %s", r.RemoteAddr, r.Method, r.URL.Path, r.Proto)
+		//log.GitLogger.Printf("%s %s %s %s", r.RemoteAddr, r.Method, r.URL.Path, r.Proto)
 		for _, route := range routes {
 			if m := route.cr.FindStringSubmatch(r.URL.Path); m != nil {
 				if route.method != r.Method {
@@ -202,7 +202,7 @@ func HttpBackend(config *Config) http.HandlerFunc {
 				dir, err := getGitDir(config, m[1])
 
 				if err != nil {
-					log.Print(err)
+					log.GitLogger.Error(err.Error())
 					renderNotFound(w)
 					return
 				}
@@ -246,19 +246,19 @@ func serviceRpc(rpc string, hr handler) {
 	cmd.Dir = dir
 	in, err := cmd.StdinPipe()
 	if err != nil {
-		log.Print(err)
+		log.GitLogger.Error(err.Error())
 		return
 	}
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		log.Print(err)
+		log.GitLogger.Error(err.Error())
 		return
 	}
 
 	err = cmd.Start()
 	if err != nil {
-		log.Print(err)
+		log.GitLogger.Error(err.Error())
 		return
 	}
 
@@ -345,7 +345,7 @@ func getGitDir(config *Config, fPath string) (string, error) {
 		cwd, err := os.Getwd()
 
 		if err != nil {
-			log.Print(err)
+			log.GitLogger.Error(err.Error())
 			return "", err
 		}
 
@@ -422,7 +422,7 @@ func gitCommand(gitBinPath, dir string, args ...string) []byte {
 	out, err := command.Output()
 
 	if err != nil {
-		log.Print(err)
+		log.GitLogger.Error(err.Error())
 	}
 
 	return out

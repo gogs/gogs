@@ -19,7 +19,6 @@ import (
 	"time"
 
 	"github.com/Unknwon/com"
-	qlog "github.com/qiniu/log"
 
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/process"
@@ -55,7 +54,7 @@ func exePath() (string, error) {
 func homeDir() string {
 	home, err := com.HomeDir()
 	if err != nil {
-		qlog.Fatalln(err)
+		log.Fatal("Fail to get home directory: %v", err)
 	}
 	return home
 }
@@ -64,13 +63,13 @@ func init() {
 	var err error
 
 	if appPath, err = exePath(); err != nil {
-		qlog.Fatalf("publickey.init(fail to get app path): %v\n", err)
+		log.Fatal("publickey.init(fail to get app path): %v\n", err)
 	}
 
 	// Determine and create .ssh path.
 	SshPath = filepath.Join(homeDir(), ".ssh")
 	if err = os.MkdirAll(SshPath, os.ModePerm); err != nil {
-		qlog.Fatalf("publickey.init(fail to create SshPath(%s)): %v\n", SshPath, err)
+		log.Fatal("publickey.init(fail to create SshPath(%s)): %v\n", SshPath, err)
 	}
 }
 

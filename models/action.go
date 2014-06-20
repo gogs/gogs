@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/gogits/git"
-	qlog "github.com/qiniu/log"
 
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
@@ -115,7 +114,7 @@ func CommitRepoAction(userId, repoUserId int64, userName, actEmail string,
 		return errors.New("action.CommitRepoAction(NotifyWatchers): " + err.Error())
 
 	}
-	qlog.Info("action.CommitRepoAction(end): %d/%s", repoUserId, repoName)
+	//qlog.Info("action.CommitRepoAction(end): %d/%s", repoUserId, repoName)
 
 	// New push event hook.
 	if err := repo.GetOwner(); err != nil {
