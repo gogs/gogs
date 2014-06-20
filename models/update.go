@@ -9,18 +9,17 @@ import (
 	"os/exec"
 	"strings"
 
-	qlog "github.com/qiniu/log"
-
 	"github.com/gogits/git"
 
 	"github.com/gogits/gogs/modules/base"
+	"github.com/gogits/gogs/modules/log"
 )
 
 func Update(refName, oldCommitId, newCommitId, userName, repoUserName, repoName string, userId int64) {
 	isNew := strings.HasPrefix(oldCommitId, "0000000")
 	if isNew &&
 		strings.HasPrefix(newCommitId, "0000000") {
-		qlog.Fatal("old rev and new rev both 000000")
+		log.GitLogger.Fatal("old rev and new rev both 000000")
 	}
 
 	f := RepoPath(repoUserName, repoName)
@@ -31,18 +30,18 @@ func Update(refName, oldCommitId, newCommitId, userName, repoUserName, repoName 
 
 	isDel := strings.HasPrefix(newCommitId, "0000000")
 	if isDel {
-		qlog.Info("del rev", refName, "from", userName+"/"+repoName+".git", "by", userId)
+		log.GitLogger.Info("del rev", refName, "from", userName+"/"+repoName+".git", "by", userId)
 		return
 	}
 
 	repo, err := git.OpenRepository(f)
 	if err != nil {
-		qlog.Fatalf("runUpdate.Open repoId: %v", err)
+		log.GitLogger.Fatal("runUpdate.Open repoId: %v", err)
 	}
 
 	newCommit, err := repo.GetCommit(newCommitId)
 	if err != nil {
-		qlog.Fatalf("runUpdate GetCommit of newCommitId: %v", err)
+		log.GitLogger.Fatal("runUpdate GetCommit of newCommitId: %v", err)
 		return
 	}
 
@@ -51,28 +50,28 @@ func Update(refName, oldCommitId, newCommitId, userName, repoUserName, repoName 
 	if isNew {
 		l, err = newCommit.CommitsBefore()
 		if err != nil {
-			qlog.Fatalf("Find CommitsBefore erro: %v", err)
+			log.GitLogger.Fatal("Find CommitsBefore erro: %v", err)
 		}
 	} else {
 		l, err = newCommit.CommitsBeforeUntil(oldCommitId)
 		if err != nil {
-			qlog.Fatalf("Find CommitsBeforeUntil erro: %v", err)
+			log.GitLogger.Fatal("Find CommitsBeforeUntil erro: %v", err)
 			return
 		}
 	}
 
 	if err != nil {
-		qlog.Fatalf("runUpdate.Commit repoId: %v", err)
+		log.GitLogger.Fatal("runUpdate.Commit repoId: %v", err)
 	}
 
 	ru, err := GetUserByName(repoUserName)
 	if err != nil {
-		qlog.Fatalf("runUpdate.GetUserByName: %v", err)
+		log.GitLogger.Fatal("runUpdate.GetUserByName: %v", err)
 	}
 
 	repos, err := GetRepositoryByName(ru.Id, repoName)
 	if err != nil {
-		qlog.Fatalf("runUpdate.GetRepositoryByName userId: %v", err)
+		log.GitLogger.Fatal("runUpdate.GetRepositoryByName userId: %v", err)
 	}
 
 	commits := make([]*base.PushCommit, 0)
@@ -96,6 +95,6 @@ func Update(refName, oldCommitId, newCommitId, userName, repoUserName, repoName 
 	//commits = append(commits, []string{lastCommit.Id().String(), lastCommit.Message()})
 	if err = CommitRepoAction(userId, ru.Id, userName, actEmail,
 		repos.Id, repoUserName, repoName, refName, &base.PushCommits{l.Len(), commits}); err != nil {
-		qlog.Fatalf("runUpdate.models.CommitRepoAction: %s/%s:%v", repoUserName, repoName, err)
+		log.GitLogger.Fatal("runUpdate.models.CommitRepoAction: %s/%s:%v", repoUserName, repoName, err)
 	}
 }

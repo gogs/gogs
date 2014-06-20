@@ -60,6 +60,7 @@ func GlobalInit() {
 
 		models.HasEngine = true
 		cron.NewCronContext()
+		log.NewGitLogger(path.Join(setting.LogRootPath, "http.log"))
 	}
 	if models.EnableSQLite3 {
 		log.Info("SQLite3 Enabled")
