@@ -255,20 +255,20 @@ func newLogService() {
 				Cfg.MustBool(modeSec, "DAILY_ROTATE", true),
 				Cfg.MustInt(modeSec, "MAX_DAYS", 7))
 		case "conn":
-			LogConfigs[i] = fmt.Sprintf(`{"level":"%s","reconnectOnMsg":%v,"reconnect":%v,"net":"%s","addr":"%s"}`, level,
+			LogConfigs[i] = fmt.Sprintf(`{"level":%s,"reconnectOnMsg":%v,"reconnect":%v,"net":"%s","addr":"%s"}`, level,
 				Cfg.MustBool(modeSec, "RECONNECT_ON_MSG"),
 				Cfg.MustBool(modeSec, "RECONNECT"),
 				Cfg.MustValueRange(modeSec, "PROTOCOL", "tcp", []string{"tcp", "unix", "udp"}),
 				Cfg.MustValue(modeSec, "ADDR", ":7020"))
 		case "smtp":
-			LogConfigs[i] = fmt.Sprintf(`{"level":"%s","username":"%s","password":"%s","host":"%s","sendTos":"%s","subject":"%s"}`, level,
+			LogConfigs[i] = fmt.Sprintf(`{"level":%s,"username":"%s","password":"%s","host":"%s","sendTos":"%s","subject":"%s"}`, level,
 				Cfg.MustValue(modeSec, "USER", "example@example.com"),
 				Cfg.MustValue(modeSec, "PASSWD", "******"),
 				Cfg.MustValue(modeSec, "HOST", "127.0.0.1:25"),
 				Cfg.MustValue(modeSec, "RECEIVERS", "[]"),
 				Cfg.MustValue(modeSec, "SUBJECT", "Diagnostic message from serve"))
 		case "database":
-			LogConfigs[i] = fmt.Sprintf(`{"level":"%s","driver":"%s","conn":"%s"}`, level,
+			LogConfigs[i] = fmt.Sprintf(`{"level":%s,"driver":"%s","conn":"%s"}`, level,
 				Cfg.MustValue(modeSec, "DRIVER"),
 				Cfg.MustValue(modeSec, "CONN"))
 		}
