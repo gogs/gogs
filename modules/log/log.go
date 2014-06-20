@@ -33,7 +33,9 @@ func NewLogger(bufLen int64, mode, config string) {
 		loggers = append(loggers, logger)
 	}
 	logger.SetLogFuncCallDepth(3)
-	logger.SetLogger(mode, config)
+	if err := logger.SetLogger(mode, config); err != nil {
+		Fatal("Fail to set logger(%s): %v", mode, err)
+	}
 }
 
 func Trace(format string, v ...interface{}) {
