@@ -107,7 +107,7 @@ func saveAuthorizedKeyFile(key *PublicKey) error {
 
 // AddPublicKey adds new public key to database and authorized_keys file.
 func AddPublicKey(key *PublicKey) (err error) {
-	has, err := orm.Get(key)
+	has, err := x.Get(key)
 	if err != nil {
 		return err
 	} else if has {
@@ -130,11 +130,11 @@ func AddPublicKey(key *PublicKey) (err error) {
 	key.Fingerprint = strings.Split(stdout, " ")[1]
 
 	// Save SSH key.
-	if _, err = orm.Insert(key); err != nil {
+	if _, err = x.Insert(key); err != nil {
 		return err
 	} else if err = saveAuthorizedKeyFile(key); err != nil {
 		// Roll back.
-		if _, err2 := orm.Delete(key); err2 != nil {
+		if _, err2 := x.Delete(key); err2 != nil {
 			return err2
 		}
 		return err
@@ -146,7 +146,7 @@ func AddPublicKey(key *PublicKey) (err error) {
 // ListPublicKey returns a list of all public keys that user has.
 func ListPublicKey(uid int64) ([]PublicKey, error) {
 	keys := make([]PublicKey, 0, 5)
-	err := orm.Find(&keys, &PublicKey{OwnerId: uid})
+	err := x.Find(&keys, &PublicKey{OwnerId: uid})
 	return keys, err
 }
 
@@ -205,14 +205,14 @@ func rewriteAuthorizedKeys(key *PublicKey, p, tmpP string) error {
 
 // DeletePublicKey deletes SSH key information both in database and authorized_keys file.
 func DeletePublicKey(key *PublicKey) error {
-	has, err := orm.Get(key)
+	has, err := x.Get(key)
 	if err != nil {
 		return err
 	} else if !has {
 		return ErrKeyNotExist
 	}
 
-	if _, err = orm.Delete(key); err != nil {
+	if _, err = x.Delete(key); err != nil {
 		return err
 	}
 

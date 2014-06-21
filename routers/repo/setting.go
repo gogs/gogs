@@ -192,7 +192,7 @@ func CollaborationPost(ctx *middleware.Context) {
 		return
 	}
 
-	if setting.Service.NotifyMail {
+	if setting.Service.EnableNotifyMail {
 		if err = mailer.SendCollaboratorMail(ctx.Render, u, ctx.User, ctx.Repo.Repository); err != nil {
 			ctx.Handle(500, "setting.CollaborationPost(SendCollaboratorMail)", err)
 			return
