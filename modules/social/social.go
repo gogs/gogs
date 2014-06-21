@@ -120,7 +120,7 @@ type SocialGithub struct {
 }
 
 func (s *SocialGithub) Type() int {
-	return models.OT_GITHUB
+	return int(models.GITHUB)
 }
 
 func newGitHubOauth(config *oauth.Config) {
@@ -174,7 +174,7 @@ type SocialGoogle struct {
 }
 
 func (s *SocialGoogle) Type() int {
-	return models.OT_GOOGLE
+	return int(models.GOOGLE)
 }
 
 func newGoogleOauth(config *oauth.Config) {
@@ -229,7 +229,7 @@ type SocialTencent struct {
 }
 
 func (s *SocialTencent) Type() int {
-	return models.OT_QQ
+	return int(models.QQ)
 }
 
 func newTencentOauth(config *oauth.Config) {
@@ -295,7 +295,7 @@ type SocialTwitter struct {
 }
 
 func (s *SocialTwitter) Type() int {
-	return models.OT_TWITTER
+	return int(models.TWITTER)
 }
 
 func newTwitterOauth(config *oauth.Config) {
@@ -351,7 +351,7 @@ type SocialWeibo struct {
 }
 
 func (s *SocialWeibo) Type() int {
-	return models.OT_WEIBO
+	return int(models.WEIBO)
 }
 
 func newWeiboOauth(config *oauth.Config) {

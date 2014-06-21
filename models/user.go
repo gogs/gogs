@@ -110,7 +110,7 @@ func IsUserExist(name string) (bool, error) {
 	if len(name) == 0 {
 		return false, nil
 	}
-	return orm.Get(&User{LowerName: strings.ToLower(name)})
+	return x.Get(&User{LowerName: strings.ToLower(name)})
 }
 
 // IsEmailUsed returns true if the e-mail has been used.
@@ -118,7 +118,7 @@ func IsEmailUsed(email string) (bool, error) {
 	if len(email) == 0 {
 		return false, nil
 	}
-	return orm.Get(&User{Email: email})
+	return x.Get(&User{Email: email})
 }
 
 // GetUserSalt returns a user salt token
@@ -153,10 +153,10 @@ func RegisterUser(user *User) (*User, error) {
 	user.Rands = GetUserSalt()
 	user.Salt = GetUserSalt()
 	user.EncodePasswd()
-	if _, err = orm.Insert(user); err != nil {
+	if _, err = x.Insert(user); err != nil {
 		return nil, err
 	} else if err = os.MkdirAll(UserPath(user.Name), os.ModePerm); err != nil {
-		if _, err := orm.Id(user.Id).Delete(&User{}); err != nil {
+		if _, err := x.Id(user.Id).Delete(&User{}); err != nil {
 			return nil, errors.New(fmt.Sprintf(
 				"both create userpath %s and delete table record faild: %v", user.Name, err))
 		}
@@ -166,7 +166,7 @@ func RegisterUser(user *User) (*User, error) {
 	if user.Id == 1 {
 		user.IsAdmin = true
 		user.IsActive = true
-		_, err = orm.Id(user.Id).UseBool().Update(user)
+		_, err = x.Id(user.Id).UseBool().Update(user)
 	}
 	return user, err
 }
@@ -174,7 +174,7 @@ func RegisterUser(user *User) (*User, error) {
 // GetUsers returns given number of user objects with offset.
 func GetUsers(num, offset int) ([]User, error) {
 	users := make([]User, 0, num)
-	err := orm.Limit(num, offset).Asc("id").Find(&users)
+	err := x.Limit(num, offset).Asc("id").Find(&users)
 	return users, err
 }
 
@@ -218,11 +218,11 @@ func ChangeUserName(user *User, newUserName string) (err error) {
 
 	// Update accesses of user.
 	accesses := make([]Access, 0, 10)
-	if err = orm.Find(&accesses, &Access{UserName: user.LowerName}); err != nil {
+	if err = x.Find(&accesses, &Access{UserName: user.LowerName}); err != nil {
 		return err
 	}
 
-	sess := orm.NewSession()
+	sess := x.NewSession()
 	defer sess.Close()
 	if err = sess.Begin(); err != nil {
 		return err
@@ -245,7 +245,7 @@ func ChangeUserName(user *User, newUserName string) (err error) {
 	for i := range repos {
 		accesses = make([]Access, 0, 10)
 		// Update accesses of user repository.
-		if err = orm.Find(&accesses, &Access{RepoName: user.LowerName + "/" + repos[i].LowerName}); err != nil {
+		if err = x.Find(&accesses, &Access{RepoName: user.LowerName + "/" + repos[i].LowerName}); err != nil {
 			return err
 		}
 
@@ -278,7 +278,7 @@ func UpdateUser(u *User) (err error) {
 		u.Website = u.Website[:255]
 	}
 
-	_, err = orm.Id(u.Id).AllCols().Update(u)
+	_, err = x.Id(u.Id).AllCols().Update(u)
 	return err
 }
 
@@ -295,33 +295,33 @@ func DeleteUser(user *User) error {
 	// TODO: check issues, other repos' commits
 
 	// Delete all followers.
-	if _, err = orm.Delete(&Follow{FollowId: user.Id}); err != nil {
+	if _, err = x.Delete(&Follow{FollowId: user.Id}); err != nil {
 		return err
 	}
 
 	// Delete oauth2.
-	if _, err = orm.Delete(&Oauth2{Uid: user.Id}); err != nil {
+	if _, err = x.Delete(&Oauth2{Uid: user.Id}); err != nil {
 		return err
 	}
 
 	// Delete all feeds.
-	if _, err = orm.Delete(&Action{UserId: user.Id}); err != nil {
+	if _, err = x.Delete(&Action{UserId: user.Id}); err != nil {
 		return err
 	}
 
 	// Delete all watches.
-	if _, err = orm.Delete(&Watch{UserId: user.Id}); err != nil {
+	if _, err = x.Delete(&Watch{UserId: user.Id}); err != nil {
 		return err
 	}
 
 	// Delete all accesses.
-	if _, err = orm.Delete(&Access{UserName: user.LowerName}); err != nil {
+	if _, err = x.Delete(&Access{UserName: user.LowerName}); err != nil {
 		return err
 	}
 
 	// Delete all SSH keys.
 	keys := make([]*PublicKey, 0, 10)
-	if err = orm.Find(&keys, &PublicKey{OwnerId: user.Id}); err != nil {
+	if err = x.Find(&keys, &PublicKey{OwnerId: user.Id}); err != nil {
 		return err
 	}
 	for _, key := range keys {
@@ -335,7 +335,13 @@ func DeleteUser(user *User) error {
 		return err
 	}
 
-	_, err = orm.Delete(user)
+	_, err = x.Delete(user)
+	return err
+}
+
+// DeleteInactivateUsers deletes all inactivate users.
+func DeleteInactivateUsers() error {
+	_, err := x.Where("is_active=?", false).Delete(new(User))
 	return err
 }
 
@@ -347,7 +353,7 @@ func UserPath(userName string) string {
 func GetUserByKeyId(keyId int64) (*User, error) {
 	user := new(User)
 	rawSql := "SELECT a.* FROM `user` AS a, public_key AS b WHERE a.id = b.owner_id AND b.id=?"
-	has, err := orm.Sql(rawSql, keyId).Get(user)
+	has, err := x.Sql(rawSql, keyId).Get(user)
 	if err != nil {
 		return nil, err
 	} else if !has {
@@ -359,7 +365,7 @@ func GetUserByKeyId(keyId int64) (*User, error) {
 // GetUserById returns the user object by given ID if exists.
 func GetUserById(id int64) (*User, error) {
 	u := new(User)
-	has, err := orm.Id(id).Get(u)
+	has, err := x.Id(id).Get(u)
 	if err != nil {
 		return nil, err
 	} else if !has {
@@ -374,7 +380,7 @@ func GetUserByName(name string) (*User, error) {
 		return nil, ErrUserNotExist
 	}
 	user := &User{LowerName: strings.ToLower(name)}
-	has, err := orm.Get(user)
+	has, err := x.Get(user)
 	if err != nil {
 		return nil, err
 	} else if !has {
@@ -415,7 +421,7 @@ func GetUserByEmail(email string) (*User, error) {
 		return nil, ErrUserNotExist
 	}
 	user := &User{Email: strings.ToLower(email)}
-	has, err := orm.Get(user)
+	has, err := x.Get(user)
 	if err != nil {
 		return nil, err
 	} else if !has {
@@ -439,7 +445,7 @@ func SearchUserByName(key string, limit int) (us []*User, err error) {
 	key = strings.ToLower(key)
 
 	us = make([]*User, 0, limit)
-	err = orm.Limit(limit).Where("lower_name like '%" + key + "%'").Find(&us)
+	err = x.Limit(limit).Where("lower_name like '%" + key + "%'").Find(&us)
 	return us, err
 }
 
@@ -452,7 +458,7 @@ type Follow struct {
 
 // FollowUser marks someone be another's follower.
 func FollowUser(userId int64, followId int64) (err error) {
-	session := orm.NewSession()
+	session := x.NewSession()
 	defer session.Close()
 	session.Begin()
 
@@ -477,7 +483,7 @@ func FollowUser(userId int64, followId int64) (err error) {
 
 // UnFollowUser unmarks someone be another's follower.
 func UnFollowUser(userId int64, unFollowId int64) (err error) {
-	session := orm.NewSession()
+	session := x.NewSession()
 	defer session.Close()
 	session.Begin()
 

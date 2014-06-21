@@ -43,7 +43,7 @@ func IsReleaseExist(repoId int64, tagName string) (bool, error) {
 		return false, nil
 	}
 
-	return orm.Get(&Release{RepoId: repoId, LowerTagName: strings.ToLower(tagName)})
+	return x.Get(&Release{RepoId: repoId, LowerTagName: strings.ToLower(tagName)})
 }
 
 func createTag(gitRepo *git.Repository, rel *Release) error {
@@ -86,7 +86,7 @@ func CreateRelease(gitRepo *git.Repository, rel *Release) error {
 		return err
 	}
 	rel.LowerTagName = strings.ToLower(rel.TagName)
-	_, err = orm.InsertOne(rel)
+	_, err = x.InsertOne(rel)
 	return err
 }
 
@@ -100,13 +100,13 @@ func GetRelease(repoId int64, tagName string) (*Release, error) {
 	}
 
 	rel := &Release{RepoId: repoId, LowerTagName: strings.ToLower(tagName)}
-	_, err = orm.Get(rel)
+	_, err = x.Get(rel)
 	return rel, err
 }
 
 // GetReleasesByRepoId returns a list of releases of repository.
 func GetReleasesByRepoId(repoId int64) (rels []*Release, err error) {
-	err = orm.Desc("created").Find(&rels, Release{RepoId: repoId})
+	err = x.Desc("created").Find(&rels, Release{RepoId: repoId})
 	return rels, err
 }
 
@@ -141,6 +141,6 @@ func UpdateRelease(gitRepo *git.Repository, rel *Release) (err error) {
 	if err = createTag(gitRepo, rel); err != nil {
 		return err
 	}
-	_, err = orm.Id(rel.Id).AllCols().Update(rel)
+	_, err = x.Id(rel.Id).AllCols().Update(rel)
 	return err
 }

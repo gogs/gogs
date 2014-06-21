@@ -147,7 +147,7 @@ func (repo *Repository) GetOwner() (err error) {
 // IsRepositoryExist returns true if the repository with given name under user has already existed.
 func IsRepositoryExist(u *User, repoName string) (bool, error) {
 	repo := Repository{OwnerId: u.Id}
-	has, err := orm.Where("lower_name = ?", strings.ToLower(repoName)).Get(&repo)
+	has, err := x.Where("lower_name = ?", strings.ToLower(repoName)).Get(&repo)
 	if err != nil {
 		return has, err
 	} else if !has {
@@ -197,7 +197,7 @@ func MirrorRepository(repoId int64, userName, repoName, repoPath, url string) er
 		return errors.New("git clone --mirror: " + stderr)
 	}
 
-	if _, err = orm.InsertOne(&Mirror{
+	if _, err = x.InsertOne(&Mirror{
 		RepoId:     repoId,
 		RepoName:   strings.ToLower(userName + "/" + repoName),
 		Interval:   24,
@@ -211,7 +211,7 @@ func MirrorRepository(repoId int64, userName, repoName, repoPath, url string) er
 
 func GetMirror(repoId int64) (*Mirror, error) {
 	m := &Mirror{RepoId: repoId}
-	has, err := orm.Get(m)
+	has, err := x.Get(m)
 	if err != nil {
 		return nil, err
 	} else if !has {
@@ -221,13 +221,13 @@ func GetMirror(repoId int64) (*Mirror, error) {
 }
 
 func UpdateMirror(m *Mirror) error {
-	_, err := orm.Id(m.Id).Update(m)
+	_, err := x.Id(m.Id).Update(m)
 	return err
 }
 
 // MirrorUpdate checks and updates mirror repositories.
 func MirrorUpdate() {
-	if err := orm.Iterate(new(Mirror), func(idx int, bean interface{}) error {
+	if err := x.Iterate(new(Mirror), func(idx int, bean interface{}) error {
 		m := bean.(*Mirror)
 		if m.NextUpdate.After(time.Now()) {
 			return nil
@@ -481,7 +481,7 @@ func CreateRepository(user *User, name, desc, lang, license string, private, mir
 
 	repoPath := RepoPath(user.Name, repo.Name)
 
-	sess := orm.NewSession()
+	sess := x.NewSession()
 	defer sess.Close()
 	sess.Begin()
 
@@ -566,13 +566,13 @@ func CreateRepository(user *User, name, desc, lang, license string, private, mir
 // It also auto-gets corresponding users.
 func GetRepositoriesWithUsers(num, offset int) ([]*Repository, error) {
 	repos := make([]*Repository, 0, num)
-	if err := orm.Limit(num, offset).Asc("id").Find(&repos); err != nil {
+	if err := x.Limit(num, offset).Asc("id").Find(&repos); err != nil {
 		return nil, err
 	}
 
 	for _, repo := range repos {
 		repo.Owner = &User{Id: repo.OwnerId}
-		has, err := orm.Get(repo.Owner)
+		has, err := x.Get(repo.Owner)
 		if err != nil {
 			return nil, err
 		} else if !has {
@@ -597,11 +597,11 @@ func TransferOwnership(user *User, newOwner string, repo *Repository) (err error
 
 	// Update accesses.
 	accesses := make([]Access, 0, 10)
-	if err = orm.Find(&accesses, &Access{RepoName: user.LowerName + "/" + repo.LowerName}); err != nil {
+	if err = x.Find(&accesses, &Access{RepoName: user.LowerName + "/" + repo.LowerName}); err != nil {
 		return err
 	}
 
-	sess := orm.NewSession()
+	sess := x.NewSession()
 	defer sess.Close()
 	if err = sess.Begin(); err != nil {
 		return err
@@ -662,11 +662,11 @@ func TransferOwnership(user *User, newOwner string, repo *Repository) (err error
 func ChangeRepositoryName(userName, oldRepoName, newRepoName string) (err error) {
 	// Update accesses.
 	accesses := make([]Access, 0, 10)
-	if err = orm.Find(&accesses, &Access{RepoName: strings.ToLower(userName + "/" + oldRepoName)}); err != nil {
+	if err = x.Find(&accesses, &Access{RepoName: strings.ToLower(userName + "/" + oldRepoName)}); err != nil {
 		return err
 	}
 
-	sess := orm.NewSession()
+	sess := x.NewSession()
 	defer sess.Close()
 	if err = sess.Begin(); err != nil {
 		return err
@@ -697,21 +697,21 @@ func UpdateRepository(repo *Repository) error {
 	if len(repo.Website) > 255 {
 		repo.Website = repo.Website[:255]
 	}
-	_, err := orm.Id(repo.Id).AllCols().Update(repo)
+	_, err := x.Id(repo.Id).AllCols().Update(repo)
 	return err
 }
 
 // DeleteRepository deletes a repository for a user or orgnaztion.
 func DeleteRepository(userId, repoId int64, userName string) (err error) {
 	repo := &Repository{Id: repoId, OwnerId: userId}
-	has, err := orm.Get(repo)
+	has, err := x.Get(repo)
 	if err != nil {
 		return err
 	} else if !has {
 		return ErrRepoNotExist
 	}
 
-	sess := orm.NewSession()
+	sess := x.NewSession()
 	defer sess.Close()
 	if err = sess.Begin(); err != nil {
 		return err
@@ -750,7 +750,7 @@ func DeleteRepository(userId, repoId int64, userName string) (err error) {
 	}
 
 	// Delete comments.
-	if err = orm.Iterate(&Issue{RepoId: repoId}, func(idx int, bean interface{}) error {
+	if err = x.Iterate(&Issue{RepoId: repoId}, func(idx int, bean interface{}) error {
 		issue := bean.(*Issue)
 		if _, err = sess.Delete(&Comment{IssueId: issue.Id}); err != nil {
 			sess.Rollback()
@@ -785,7 +785,7 @@ func GetRepositoryByName(userId int64, repoName string) (*Repository, error) {
 		OwnerId:   userId,
 		LowerName: strings.ToLower(repoName),
 	}
-	has, err := orm.Get(repo)
+	has, err := x.Get(repo)
 	if err != nil {
 		return nil, err
 	} else if !has {
@@ -797,7 +797,7 @@ func GetRepositoryByName(userId int64, repoName string) (*Repository, error) {
 // GetRepositoryById returns the repository by given id if exists.
 func GetRepositoryById(id int64) (*Repository, error) {
 	repo := &Repository{}
-	has, err := orm.Id(id).Get(repo)
+	has, err := x.Id(id).Get(repo)
 	if err != nil {
 		return nil, err
 	} else if !has {
@@ -809,7 +809,7 @@ func GetRepositoryById(id int64) (*Repository, error) {
 // GetRepositories returns a list of repositories of given user.
 func GetRepositories(uid int64, private bool) ([]*Repository, error) {
 	repos := make([]*Repository, 0, 10)
-	sess := orm.Desc("updated")
+	sess := x.Desc("updated")
 	if !private {
 		sess.Where("is_private=?", false)
 	}
@@ -820,19 +820,19 @@ func GetRepositories(uid int64, private bool) ([]*Repository, error) {
 
 // GetRecentUpdatedRepositories returns the list of repositories that are recently updated.
 func GetRecentUpdatedRepositories() (repos []*Repository, err error) {
-	err = orm.Where("is_private=?", false).Limit(5).Desc("updated").Find(&repos)
+	err = x.Where("is_private=?", false).Limit(5).Desc("updated").Find(&repos)
 	return repos, err
 }
 
 // GetRepositoryCount returns the total number of repositories of user.
 func GetRepositoryCount(user *User) (int64, error) {
-	return orm.Count(&Repository{OwnerId: user.Id})
+	return x.Count(&Repository{OwnerId: user.Id})
 }
 
 // GetCollaboratorNames returns a list of user name of repository's collaborators.
 func GetCollaboratorNames(repoName string) ([]string, error) {
 	accesses := make([]*Access, 0, 10)
-	if err := orm.Find(&accesses, &Access{RepoName: strings.ToLower(repoName)}); err != nil {
+	if err := x.Find(&accesses, &Access{RepoName: strings.ToLower(repoName)}); err != nil {
 		return nil, err
 	}
 
@@ -847,7 +847,7 @@ func GetCollaboratorNames(repoName string) ([]string, error) {
 func GetCollaborativeRepos(uname string) ([]*Repository, error) {
 	uname = strings.ToLower(uname)
 	accesses := make([]*Access, 0, 10)
-	if err := orm.Find(&accesses, &Access{UserName: uname}); err != nil {
+	if err := x.Find(&accesses, &Access{UserName: uname}); err != nil {
 		return nil, err
 	}
 
@@ -876,7 +876,7 @@ func GetCollaborativeRepos(uname string) ([]*Repository, error) {
 // GetCollaborators returns a list of users of repository's collaborators.
 func GetCollaborators(repoName string) (us []*User, err error) {
 	accesses := make([]*Access, 0, 10)
-	if err = orm.Find(&accesses, &Access{RepoName: strings.ToLower(repoName)}); err != nil {
+	if err = x.Find(&accesses, &Access{RepoName: strings.ToLower(repoName)}); err != nil {
 		return nil, err
 	}
 
@@ -900,18 +900,18 @@ type Watch struct {
 // Watch or unwatch repository.
 func WatchRepo(uid, rid int64, watch bool) (err error) {
 	if watch {
-		if _, err = orm.Insert(&Watch{RepoId: rid, UserId: uid}); err != nil {
+		if _, err = x.Insert(&Watch{RepoId: rid, UserId: uid}); err != nil {
 			return err
 		}
 
 		rawSql := "UPDATE `repository` SET num_watches = num_watches + 1 WHERE id = ?"
-		_, err = orm.Exec(rawSql, rid)
+		_, err = x.Exec(rawSql, rid)
 	} else {
-		if _, err = orm.Delete(&Watch{0, uid, rid}); err != nil {
+		if _, err = x.Delete(&Watch{0, uid, rid}); err != nil {
 			return err
 		}
 		rawSql := "UPDATE `repository` SET num_watches = num_watches - 1 WHERE id = ?"
-		_, err = orm.Exec(rawSql, rid)
+		_, err = x.Exec(rawSql, rid)
 	}
 	return err
 }
@@ -919,7 +919,7 @@ func WatchRepo(uid, rid int64, watch bool) (err error) {
 // GetWatchers returns all watchers of given repository.
 func GetWatchers(rid int64) ([]*Watch, error) {
 	watches := make([]*Watch, 0, 10)
-	err := orm.Find(&watches, &Watch{RepoId: rid})
+	err := x.Find(&watches, &Watch{RepoId: rid})
 	return watches, err
 }
 
@@ -933,7 +933,7 @@ func NotifyWatchers(act *Action) error {
 
 	// Add feed for actioner.
 	act.UserId = act.ActUserId
-	if _, err = orm.InsertOne(act); err != nil {
+	if _, err = x.InsertOne(act); err != nil {
 		return errors.New("repo.NotifyWatchers(create action): " + err.Error())
 	}
 
@@ -944,7 +944,7 @@ func NotifyWatchers(act *Action) error {
 
 		act.Id = 0
 		act.UserId = watches[i].UserId
-		if _, err = orm.InsertOne(act); err != nil {
+		if _, err = x.InsertOne(act); err != nil {
 			return errors.New("repo.NotifyWatchers(create action): " + err.Error())
 		}
 	}
@@ -953,7 +953,7 @@ func NotifyWatchers(act *Action) error {
 
 // IsWatching checks if user has watched given repository.
 func IsWatching(uid, rid int64) bool {
-	has, _ := orm.Get(&Watch{0, uid, rid})
+	has, _ := x.Get(&Watch{0, uid, rid})
 	return has
 }
 

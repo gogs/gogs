@@ -30,7 +30,7 @@ type Access struct {
 func AddAccess(access *Access) error {
 	access.UserName = strings.ToLower(access.UserName)
 	access.RepoName = strings.ToLower(access.RepoName)
-	_, err := orm.Insert(access)
+	_, err := x.Insert(access)
 	return err
 }
 
@@ -38,13 +38,13 @@ func AddAccess(access *Access) error {
 func UpdateAccess(access *Access) error {
 	access.UserName = strings.ToLower(access.UserName)
 	access.RepoName = strings.ToLower(access.RepoName)
-	_, err := orm.Id(access.Id).Update(access)
+	_, err := x.Id(access.Id).Update(access)
 	return err
 }
 
 // DeleteAccess deletes access record.
 func DeleteAccess(access *Access) error {
-	_, err := orm.Delete(access)
+	_, err := x.Delete(access)
 	return err
 }
 
@@ -67,7 +67,7 @@ func HasAccess(uname, repoName string, mode int) (bool, error) {
 		UserName: strings.ToLower(uname),
 		RepoName: strings.ToLower(repoName),
 	}
-	has, err := orm.Get(access)
+	has, err := x.Get(access)
 	if err != nil {
 		return false, err
 	} else if !has {

@@ -250,7 +250,7 @@ func CreateIssuePost(ctx *middleware.Context, params martini.Params, form auth.C
 	}
 
 	// Mail watchers and mentions.
-	if setting.Service.NotifyMail {
+	if setting.Service.EnableNotifyMail {
 		tos, err := mailer.SendIssueNotifyMail(ctx.User, ctx.Repo.Owner, ctx.Repo.Repository, issue)
 		if err != nil {
 			ctx.Handle(500, "issue.CreateIssue(SendIssueNotifyMail)", err)
@@ -685,7 +685,7 @@ func Comment(ctx *middleware.Context, params martini.Params) {
 	}
 
 	// Mail watchers and mentions.
-	if setting.Service.NotifyMail {
+	if setting.Service.EnableNotifyMail {
 		issue.Content = content
 		tos, err := mailer.SendIssueNotifyMail(ctx.User, ctx.Repo.Owner, ctx.Repo.Repository, issue)
 		if err != nil {

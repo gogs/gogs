@@ -358,7 +358,7 @@ func InitContext() martini.Handler {
 		})
 
 		// Get user from session if logined.
-		user := auth.SignedInUser(ctx.Session)
+		user := auth.SignedInUser(ctx.req.Header, ctx.Session)
 		ctx.User = user
 		ctx.IsSigned = user != nil
 

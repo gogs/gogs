@@ -102,8 +102,11 @@ func updateSystemStatus() {
 }
 
 // Operation types.
+type AdminOperation int
+
 const (
-	OT_CLEAN_OAUTH = iota + 1
+	CLEAN_UNBIND_OAUTH AdminOperation = iota + 1
+	CLEAN_INACTIVATE_USER
 )
 
 func Dashboard(ctx *middleware.Context) {
@@ -116,10 +119,13 @@ func Dashboard(ctx *middleware.Context) {
 		var err error
 		var success string
 
-		switch op {
-		case OT_CLEAN_OAUTH:
+		switch AdminOperation(op) {
+		case CLEAN_UNBIND_OAUTH:
 			success = "All unbind OAuthes have been deleted."
 			err = models.CleanUnbindOauth()
+		case CLEAN_INACTIVATE_USER:
+			success = "All inactivate accounts have been deleted."
+			err = models.DeleteInactivateUsers()
 		}
 
 		if err != nil {
@@ -190,6 +196,7 @@ func Config(ctx *middleware.Context) {
 	ctx.Data["StaticRootPath"] = setting.StaticRootPath
 	ctx.Data["LogRootPath"] = setting.LogRootPath
 	ctx.Data["ScriptType"] = setting.ScriptType
+	ctx.Data["ReverseProxyAuthUid"] = setting.ReverseProxyAuthUid
 
 	ctx.Data["Service"] = setting.Service
 

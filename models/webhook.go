@@ -68,14 +68,14 @@ func (w *Webhook) HasPushEvent() bool {
 
 // CreateWebhook creates a new web hook.
 func CreateWebhook(w *Webhook) error {
-	_, err := orm.Insert(w)
+	_, err := x.Insert(w)
 	return err
 }
 
 // GetWebhookById returns webhook by given ID.
 func GetWebhookById(hookId int64) (*Webhook, error) {
 	w := &Webhook{Id: hookId}
-	has, err := orm.Get(w)
+	has, err := x.Get(w)
 	if err != nil {
 		return nil, err
 	} else if !has {
@@ -86,25 +86,25 @@ func GetWebhookById(hookId int64) (*Webhook, error) {
 
 // GetActiveWebhooksByRepoId returns all active webhooks of repository.
 func GetActiveWebhooksByRepoId(repoId int64) (ws []*Webhook, err error) {
-	err = orm.Find(&ws, &Webhook{RepoId: repoId, IsActive: true})
+	err = x.Find(&ws, &Webhook{RepoId: repoId, IsActive: true})
 	return ws, err
 }
 
 // GetWebhooksByRepoId returns all webhooks of repository.
 func GetWebhooksByRepoId(repoId int64) (ws []*Webhook, err error) {
-	err = orm.Find(&ws, &Webhook{RepoId: repoId})
+	err = x.Find(&ws, &Webhook{RepoId: repoId})
 	return ws, err
 }
 
 // UpdateWebhook updates information of webhook.
 func UpdateWebhook(w *Webhook) error {
-	_, err := orm.AllCols().Update(w)
+	_, err := x.AllCols().Update(w)
 	return err
 }
 
 // DeleteWebhook deletes webhook of repository.
 func DeleteWebhook(hookId int64) error {
-	_, err := orm.Delete(&Webhook{Id: hookId})
+	_, err := x.Delete(&Webhook{Id: hookId})
 	return err
 }
 
@@ -174,20 +174,20 @@ func CreateHookTask(t *HookTask) error {
 		return err
 	}
 	t.PayloadContent = string(data)
-	_, err = orm.Insert(t)
+	_, err = x.Insert(t)
 	return err
 }
 
 // UpdateHookTask updates information of hook task.
 func UpdateHookTask(t *HookTask) error {
-	_, err := orm.AllCols().Update(t)
+	_, err := x.AllCols().Update(t)
 	return err
 }
 
 // DeliverHooks checks and delivers undelivered hooks.
 func DeliverHooks() {
 	timeout := time.Duration(setting.WebhookDeliverTimeout) * time.Second
-	orm.Where("is_deliveried=?", false).Iterate(new(HookTask),
+	x.Where("is_deliveried=?", false).Iterate(new(HookTask),
 		func(idx int, bean interface{}) error {
 			t := bean.(*HookTask)
 			// Only support JSON now.

@@ -16,20 +16,32 @@ import (
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/middleware/binding"
+	"github.com/gogits/gogs/modules/setting"
 )
 
 // SignedInId returns the id of signed in user.
-func SignedInId(sess session.SessionStore) int64 {
+func SignedInId(header http.Header, sess session.SessionStore) int64 {
 	if !models.HasEngine {
 		return 0
 	}
 
-	uid := sess.Get("userId")
-	if uid == nil {
-		return 0
+	id, _ := base.StrTo(header.Get(setting.ReverseProxyAuthUid)).Int64()
+	if id <= 0 {
+		uid := sess.Get("userId")
+		if uid == nil {
+			return 0
+		}
+		var ok bool
+		if id, ok = uid.(int64); !ok {
+			return 0
+		}
 	}
-	if id, ok := uid.(int64); ok {
+
+	if id > 0 {
 		if _, err := models.GetUserById(id); err != nil {
+			if err != models.ErrUserNotExist {
+				log.Error("auth.user.SignedInId(GetUserById): %v", err)
+			}
 			return 0
 		}
 		return id
@@ -37,21 +49,9 @@ func SignedInId(sess session.SessionStore) int64 {
 	return 0
 }
 
-// SignedInName returns the name of signed in user.
-func SignedInName(sess session.SessionStore) string {
-	uname := sess.Get("userName")
-	if uname == nil {
-		return ""
-	}
-	if s, ok := uname.(string); ok {
-		return s
-	}
-	return ""
-}
-
 // SignedInUser returns the user object of signed user.
-func SignedInUser(sess session.SessionStore) *models.User {
-	uid := SignedInId(sess)
+func SignedInUser(header http.Header, sess session.SessionStore) *models.User {
+	uid := SignedInId(header, sess)
 	if uid <= 0 {
 		return nil
 	}
@@ -65,8 +65,8 @@ func SignedInUser(sess session.SessionStore) *models.User {
 }
 
 // IsSignedIn check if any user has signed in.
-func IsSignedIn(sess session.SessionStore) bool {
-	return SignedInId(sess) > 0
+func IsSignedIn(header http.Header, sess session.SessionStore) bool {
+	return SignedInId(header, sess) > 0
 }
 
 type FeedsForm struct {

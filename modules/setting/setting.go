@@ -47,11 +47,12 @@ var (
 	StaticRootPath     string
 
 	// Security settings.
-	InstallLock        bool
-	SecretKey          string
-	LogInRememberDays  int
-	CookieUserName     string
-	CookieRememberName string
+	InstallLock         bool
+	SecretKey           string
+	LogInRememberDays   int
+	CookieUserName      string
+	CookieRememberName  string
+	ReverseProxyAuthUid string
 
 	// Webhook settings.
 	WebhookTaskInterval   int
@@ -163,6 +164,7 @@ func NewConfigContext() {
 	LogInRememberDays = Cfg.MustInt("security", "LOGIN_REMEMBER_DAYS")
 	CookieUserName = Cfg.MustValue("security", "COOKIE_USERNAME")
 	CookieRememberName = Cfg.MustValue("security", "COOKIE_REMEMBER_NAME")
+	ReverseProxyAuthUid = Cfg.MustValue("security", "REVERSE_PROXY_AUTHENTICATION_UID", "X-WEBAUTH-UID")
 
 	RunUser = Cfg.MustValue("", "RUN_USER")
 	curUser := os.Getenv("USER")
@@ -191,14 +193,15 @@ func NewConfigContext() {
 }
 
 var Service struct {
-	RegisterEmailConfirm bool
-	DisableRegistration  bool
-	RequireSignInView    bool
-	EnableCacheAvatar    bool
-	NotifyMail           bool
-	LdapAuth             bool
-	ActiveCodeLives      int
-	ResetPwdCodeLives    int
+	RegisterEmailConfirm   bool
+	DisableRegistration    bool
+	RequireSignInView      bool
+	EnableCacheAvatar      bool
+	EnableNotifyMail       bool
+	EnableReverseProxyAuth bool
+	LdapAuth               bool
+	ActiveCodeLives        int
+	ResetPwdCodeLives      int
 }
 
 func newService() {
@@ -207,6 +210,7 @@ func newService() {
 	Service.DisableRegistration = Cfg.MustBool("service", "DISABLE_REGISTRATION")
 	Service.RequireSignInView = Cfg.MustBool("service", "REQUIRE_SIGNIN_VIEW")
 	Service.EnableCacheAvatar = Cfg.MustBool("service", "ENABLE_CACHE_AVATAR")
+	Service.EnableReverseProxyAuth = Cfg.MustBool("service", "ENABLE_REVERSE_PROXY_AUTHENTICATION")
 }
 
 var logLevels = map[string]string{
@@ -395,7 +399,7 @@ func newNotifyMailService() {
 		log.Warn("Notify Mail Service: Mail Service is not enabled")
 		return
 	}
-	Service.NotifyMail = true
+	Service.EnableNotifyMail = true
 	log.Info("Notify Mail Service Enabled")
 }
 

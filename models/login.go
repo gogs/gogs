@@ -109,19 +109,19 @@ func (source *LoginSource) BeforeSet(colName string, val xorm.Cell) {
 }
 
 func CreateSource(source *LoginSource) error {
-	_, err := orm.Insert(source)
+	_, err := x.Insert(source)
 	return err
 }
 
 func GetAuths() ([]*LoginSource, error) {
 	var auths = make([]*LoginSource, 0, 5)
-	err := orm.Find(&auths)
+	err := x.Find(&auths)
 	return auths, err
 }
 
 func GetLoginSourceById(id int64) (*LoginSource, error) {
 	source := new(LoginSource)
-	has, err := orm.Id(id).Get(source)
+	has, err := x.Id(id).Get(source)
 	if err != nil {
 		return nil, err
 	} else if !has {
@@ -131,19 +131,19 @@ func GetLoginSourceById(id int64) (*LoginSource, error) {
 }
 
 func UpdateSource(source *LoginSource) error {
-	_, err := orm.Id(source.Id).AllCols().Update(source)
+	_, err := x.Id(source.Id).AllCols().Update(source)
 	return err
 }
 
 func DelLoginSource(source *LoginSource) error {
-	cnt, err := orm.Count(&User{LoginSource: source.Id})
+	cnt, err := x.Count(&User{LoginSource: source.Id})
 	if err != nil {
 		return err
 	}
 	if cnt > 0 {
 		return ErrAuthenticationUserUsed
 	}
-	_, err = orm.Id(source.Id).Delete(&LoginSource{})
+	_, err = x.Id(source.Id).Delete(&LoginSource{})
 	return err
 }
 
@@ -156,7 +156,7 @@ func UserSignIn(uname, passwd string) (*User, error) {
 		u = &User{LowerName: strings.ToLower(uname)}
 	}
 
-	has, err := orm.Get(u)
+	has, err := x.Get(u)
 	if err != nil {
 		return nil, err
 	}
@@ -182,7 +182,7 @@ func UserSignIn(uname, passwd string) (*User, error) {
 	} else {
 		if !has {
 			var sources []LoginSource
-			if err = orm.UseBool().Find(&sources,
+			if err = x.UseBool().Find(&sources,
 				&LoginSource{IsActived: true, AllowAutoRegister: true}); err != nil {
 				return nil, err
 			}
@@ -209,7 +209,7 @@ func UserSignIn(uname, passwd string) (*User, error) {
 		}
 
 		var source LoginSource
-		hasSource, err := orm.Id(u.LoginSource).Get(&source)
+		hasSource, err := x.Id(u.LoginSource).Get(&source)
 		if err != nil {
 			return nil, err
 		} else if !hasSource {
