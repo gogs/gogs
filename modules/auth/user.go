@@ -25,7 +25,11 @@ func SignedInId(header http.Header, sess session.SessionStore) int64 {
 		return 0
 	}
 
-	id, _ := base.StrTo(header.Get(setting.ReverseProxyAuthUid)).Int64()
+	var id int64
+	if setting.Service.EnableReverseProxyAuth {
+		id, _ = base.StrTo(header.Get(setting.ReverseProxyAuthUid)).Int64()
+	}
+
 	if id <= 0 {
 		uid := sess.Get("userId")
 		if uid == nil {
