@@ -26,7 +26,7 @@ func Home(ctx *middleware.Context) {
 
 	ctx.Data["PageIsHome"] = true
 
-	// Show recent updated repositoires for new visiters.
+	// Show recent updated repositories for new visitors.
 	repos, err := models.GetRecentUpdatedRepositories()
 	if err != nil {
 		ctx.Handle(500, "dashboard.Home(GetRecentUpdatedRepositories)", err)
