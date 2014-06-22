@@ -1864,14 +1864,38 @@ html, body {
     padding: 16px 0;
 }
 
+#body-nav.org-nav.org-nav-auto {
+    height: auto;
+}
+
+.org-nav > .container {
+    padding-left: 0;
+    padding-left: 0;
+}
+
 .org-nav .org-logo {
     margin-right: 16px;
     width: 100px;
     height: 100px;
 }
 
+.org-nav .org-small-logo {
+    margin-right: 16px;
+    width: 50px;
+    height: 50px;
+}
+
 .org-nav .org-name {
     margin-top: 0;
+}
+
+.org-nav-auto .org-name {
+    font-size: 1.4em;
+    line-height: 48px;
+}
+
+#body-nav.org-nav-auto .nav {
+    margin-top: 6px;
 }
 
 .org-description {
@@ -1892,6 +1916,10 @@ html, body {
 
 .org-meta .fa {
     margin-left: 0;
+}
+
+.org-main {
+    padding-left: 0;
 }
 
 .org-sidebar {
@@ -1947,4 +1975,42 @@ html, body {
 
 .org-team a:hover .org-team-name {
     color: #0079bc !important;
+}
+
+#org-members {
+    margin-right: 24px;
+}
+
+#org-members .member .avatar img {
+    width: 50px;
+    height: 50px;
+}
+
+#org-members .member {
+    padding-bottom: 20px;
+    margin-bottom: 20px;
+    border-bottom: 1px solid #DDD;
+    height: 70px;
+}
+
+#org-members .member .name {
+    padding-top: 4px;
+}
+
+#org-members .member .nick {
+    display: block;
+    color: #888;
+}
+
+#org-members .member .name a {
+    color: #444;
+}
+
+#org-members .member .name strong {
+    font-size: 1.2em;
+}
+
+#org-members .status, #org-members .role {
+    line-height: 48px;
+    text-align: right;
 }
