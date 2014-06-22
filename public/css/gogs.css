@@ -1898,6 +1898,10 @@ html, body {
     margin-top: 6px;
 }
 
+#body-nav.org-nav-auto .nav a:hover {
+    text-decoration: none;
+}
+
 .org-description {
     font-size: 16px;
 }
@@ -1978,7 +1982,7 @@ html, body {
 }
 
 #org-members {
-    margin-right: 24px;
+    margin-right: 30px;
 }
 
 #org-members .member .avatar img {
@@ -2013,4 +2017,34 @@ html, body {
 #org-members .status, #org-members .role {
     line-height: 48px;
     text-align: right;
+}
+
+#org-teams .org-team .panel-heading {
+    margin-top: 0;
+}
+
+#org-teams .org-team .panel-heading a {
+    color: #444;
+}
+
+#org-teams .org-team-members {
+    margin-top: 18px;
+}
+
+#org-teams .org-team-members img {
+    width: 40px;
+    height: 40px;
+    margin-right: 12px;
+}
+
+#org-teams .org-team-members a {
+    display: inline-block;
+}
+
+#org-teams .org-team .panel-footer {
+    height: 60px;
+}
+
+#org-teams .org-team {
+    border-bottom: none;
 }
