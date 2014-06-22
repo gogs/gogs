@@ -6,9 +6,14 @@ package routers
 
 import (
 	"github.com/gogits/gogs/models"
+	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/middleware"
 	"github.com/gogits/gogs/modules/setting"
 	"github.com/gogits/gogs/routers/user"
+)
+
+const (
+	HOME base.TplName = "home"
 )
 
 func Home(ctx *middleware.Context) {
@@ -40,7 +45,7 @@ func Home(ctx *middleware.Context) {
 		}
 	}
 	ctx.Data["Repos"] = repos
-	ctx.HTML(200, "home")
+	ctx.HTML(200, HOME)
 }
 
 func NotFound(ctx *middleware.Context) {

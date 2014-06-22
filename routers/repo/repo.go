@@ -318,7 +318,7 @@ func basicDecode(encoded string) (user string, name string, err error) {
 func authRequired(ctx *middleware.Context) {
 	ctx.ResponseWriter.Header().Set("WWW-Authenticate", "Basic realm=\".\"")
 	ctx.Data["ErrorMsg"] = "no basic auth and digit auth"
-	ctx.HTML(401, fmt.Sprintf("status/401"))
+	ctx.HTML(401, base.TplName("status/401"))
 }
 
 func Action(ctx *middleware.Context, params martini.Params) {

@@ -20,6 +20,16 @@ import (
 	"github.com/gogits/gogs/modules/setting"
 )
 
+const (
+	DASHBOARD       base.TplName = "admin/dashboard"
+	USERS           base.TplName = "admin/users"
+	REPOS           base.TplName = "admin/repos"
+	AUTHS           base.TplName = "admin/auths"
+	CONFIG          base.TplName = "admin/config"
+	MONITOR_PROCESS base.TplName = "admin/monitor/process"
+	MONITOR_CRON    base.TplName = "admin/monitor/cron"
+)
+
 var startTime = time.Now()
 
 var sysStatus struct {
@@ -140,7 +150,7 @@ func Dashboard(ctx *middleware.Context) {
 	ctx.Data["Stats"] = models.GetStatistic()
 	updateSystemStatus()
 	ctx.Data["SysStatus"] = sysStatus
-	ctx.HTML(200, "admin/dashboard")
+	ctx.HTML(200, DASHBOARD)
 }
 
 func Users(ctx *middleware.Context) {
@@ -150,10 +160,10 @@ func Users(ctx *middleware.Context) {
 	var err error
 	ctx.Data["Users"], err = models.GetUsers(200, 0)
 	if err != nil {
-		ctx.Handle(500, "admin.Users", err)
+		ctx.Handle(500, "admin.Users(GetUsers)", err)
 		return
 	}
-	ctx.HTML(200, "admin/users")
+	ctx.HTML(200, USERS)
 }
 
 func Repositories(ctx *middleware.Context) {
@@ -166,7 +176,7 @@ func Repositories(ctx *middleware.Context) {
 		ctx.Handle(500, "admin.Repositories", err)
 		return
 	}
-	ctx.HTML(200, "admin/repos")
+	ctx.HTML(200, REPOS)
 }
 
 func Auths(ctx *middleware.Context) {
@@ -179,7 +189,7 @@ func Auths(ctx *middleware.Context) {
 		ctx.Handle(500, "admin.Auths", err)
 		return
 	}
-	ctx.HTML(200, "admin/auths")
+	ctx.HTML(200, AUTHS)
 }
 
 func Config(ctx *middleware.Context) {
@@ -235,7 +245,7 @@ func Config(ctx *middleware.Context) {
 	}
 	ctx.Data["Loggers"] = loggers
 
-	ctx.HTML(200, "admin/config")
+	ctx.HTML(200, CONFIG)
 }
 
 func Monitor(ctx *middleware.Context) {
@@ -247,11 +257,10 @@ func Monitor(ctx *middleware.Context) {
 	case "process":
 		ctx.Data["PageIsMonitorProcess"] = true
 		ctx.Data["Processes"] = process.Processes
-		ctx.HTML(200, "admin/monitor/process")
+		ctx.HTML(200, MONITOR_PROCESS)
 	default:
 		ctx.Data["PageIsMonitorCron"] = true
 		ctx.Data["Entries"] = cron.ListEntries()
-		ctx.HTML(200, "admin/monitor/cron")
+		ctx.HTML(200, MONITOR_CRON)
 	}
-
 }
