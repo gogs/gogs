@@ -638,6 +638,47 @@ html, body {
     margin: 0 .5em;
 }
 
+#dashboard-switch .btn {
+    height: 40px;
+}
+
+#dashboard-switch {
+    margin-top: 14px;
+    margin-right: 18px;
+}
+
+#dashboard-switch .dropdown-menu {
+    padding: 0;
+}
+
+#dashboard-switch-menu {
+    width: 180px;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+#dashboard-switch-menu > li > a {
+    display: block;
+    padding: .8em 1.2em;
+}
+
+#dashboard-switch-menu > li {
+    border-bottom: 1px solid #eaeaea;
+}
+
+#dashboard-switch-menu > li .fa {
+    opacity: 0;
+    margin-right: 16px;
+}
+
+#dashboard-switch-menu > li.checked .fa {
+    opacity: 1;
+}
+
+#dashboard-switch-menu > li:last-child {
+    border-bottom: none;
+}
+
 /* gogits repo single page */
 
 #body-nav.repo-nav {
@@ -1823,14 +1864,42 @@ html, body {
     padding: 16px 0;
 }
 
+#body-nav.org-nav.org-nav-auto {
+    height: auto;
+}
+
+.org-nav > .container {
+    padding-left: 0;
+    padding-left: 0;
+}
+
 .org-nav .org-logo {
     margin-right: 16px;
     width: 100px;
     height: 100px;
 }
 
+.org-nav .org-small-logo {
+    margin-right: 16px;
+    width: 50px;
+    height: 50px;
+}
+
 .org-nav .org-name {
     margin-top: 0;
+}
+
+.org-nav-auto .org-name {
+    font-size: 1.4em;
+    line-height: 48px;
+}
+
+#body-nav.org-nav-auto .nav {
+    margin-top: 6px;
+}
+
+#body-nav.org-nav-auto .nav a:hover {
+    text-decoration: none;
 }
 
 .org-description {
@@ -1851,6 +1920,10 @@ html, body {
 
 .org-meta .fa {
     margin-left: 0;
+}
+
+.org-main {
+    padding-left: 0;
 }
 
 .org-sidebar {
@@ -1906,4 +1979,72 @@ html, body {
 
 .org-team a:hover .org-team-name {
     color: #0079bc !important;
+}
+
+#org-members {
+    margin-right: 30px;
+}
+
+#org-members .member .avatar img {
+    width: 50px;
+    height: 50px;
+}
+
+#org-members .member {
+    padding-bottom: 20px;
+    margin-bottom: 20px;
+    border-bottom: 1px solid #DDD;
+    height: 70px;
+}
+
+#org-members .member .name {
+    padding-top: 4px;
+}
+
+#org-members .member .nick {
+    display: block;
+    color: #888;
+}
+
+#org-members .member .name a {
+    color: #444;
+}
+
+#org-members .member .name strong {
+    font-size: 1.2em;
+}
+
+#org-members .status, #org-members .role {
+    line-height: 48px;
+    text-align: right;
+}
+
+#org-teams .org-team .panel-heading {
+    margin-top: 0;
+}
+
+#org-teams .org-team .panel-heading a {
+    color: #444;
+}
+
+#org-teams .org-team-members {
+    margin-top: 18px;
+}
+
+#org-teams .org-team-members img {
+    width: 40px;
+    height: 40px;
+    margin-right: 12px;
+}
+
+#org-teams .org-team-members a {
+    display: inline-block;
+}
+
+#org-teams .org-team .panel-footer {
+    height: 60px;
+}
+
+#org-teams .org-team {
+    border-bottom: none;
 }

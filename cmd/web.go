@@ -96,7 +96,7 @@ func runWeb(*cli.Context) {
 		r.Get("/stars", user.Stars)
 	}, reqSignIn)
 
-	m.Group("/api", func(r martini.Router) {
+	m.Group("/api", func(_ martini.Router) {
 		m.Group("/v1", func(r martini.Router) {
 			// Miscellaneous.
 			r.Post("/markdown", bindIgnErr(apiv1.MarkdownForm{}), v1.Markdown)
@@ -190,6 +190,8 @@ func runWeb(*cli.Context) {
 
 	m.Group("/o", func(r martini.Router) {
 		r.Get("/:org", org.Organization)
+		r.Get("/:org/members", org.Members)
+		r.Get("/:org/teams", org.Teams)
 	})
 
 	m.Group("/:username/:reponame", func(r martini.Router) {
