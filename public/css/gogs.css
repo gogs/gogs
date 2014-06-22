@@ -638,6 +638,47 @@ html, body {
     margin: 0 .5em;
 }
 
+#dashboard-switch .btn {
+    height: 40px;
+}
+
+#dashboard-switch {
+    margin-top: 14px;
+    margin-right: 18px;
+}
+
+#dashboard-switch .dropdown-menu {
+    padding: 0;
+}
+
+#dashboard-switch-menu {
+    width: 180px;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+#dashboard-switch-menu > li > a {
+    display: block;
+    padding: .8em 1.2em;
+}
+
+#dashboard-switch-menu > li {
+    border-bottom: 1px solid #eaeaea;
+}
+
+#dashboard-switch-menu > li .fa {
+    opacity: 0;
+    margin-right: 16px;
+}
+
+#dashboard-switch-menu > li.checked .fa {
+    opacity: 1;
+}
+
+#dashboard-switch-menu > li:last-child {
+    border-bottom: none;
+}
+
 /* gogits repo single page */
 
 #body-nav.repo-nav {
