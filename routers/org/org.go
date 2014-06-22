@@ -6,6 +6,11 @@ import (
 )
 
 func Organization(ctx *middleware.Context, params martini.Params) {
-	ctx.Data["Title"] = "Organization Name" + params["org"]
+	ctx.Data["Title"] = "Organization " + params["org"]
 	ctx.HTML(200, "org/org")
+}
+
+func Members(ctx *middleware.Context,params martini.Params){
+	ctx.Data["Title"] = "Organization " + params["org"]+" Members"
+	ctx.HTML(200,"org/members")
 }
