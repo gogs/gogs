@@ -8,6 +8,7 @@ import (
 	"github.com/go-martini/martini"
 
 	"github.com/gogits/gogs/models"
+	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/middleware"
 	"github.com/gogits/gogs/modules/setting"
 )
@@ -22,5 +23,5 @@ func TemplatePreview(ctx *middleware.Context, params martini.Params) {
 	ctx.Data["ActiveCodeLives"] = setting.Service.ActiveCodeLives / 60
 	ctx.Data["ResetPwdCodeLives"] = setting.Service.ResetPwdCodeLives / 60
 	ctx.Data["CurDbValue"] = ""
-	ctx.HTML(200, params["_1"])
+	ctx.HTML(200, base.TplName(params["_1"]))
 }

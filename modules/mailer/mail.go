@@ -17,6 +17,15 @@ import (
 	"github.com/gogits/gogs/modules/setting"
 )
 
+const (
+	AUTH_ACTIVE           base.TplName = "mail/auth/active"
+	AUTH_REGISTER_SUCCESS base.TplName = "mail/auth/register_success"
+	AUTH_RESET_PASSWORD   base.TplName = "mail/auth/reset_passwd"
+
+	NOTIFY_COLLABORATOR base.TplName = "mail/notify/collaborator"
+	NOTIFY_MENTION      base.TplName = "mail/notify/mention"
+)
+
 // Create New mail message use MailFrom and MailUser
 func NewMailMessageFrom(To []string, from, subject, body string) Message {
 	msg := NewHtmlMessage(To, from, subject, body)
@@ -61,7 +70,7 @@ func SendRegisterMail(r *middleware.Render, u *models.User) {
 
 	data := GetMailTmplData(u)
 	data["Code"] = code
-	body, err := r.HTMLString("mail/auth/register_success", data)
+	body, err := r.HTMLString(string(AUTH_REGISTER_SUCCESS), data)
 	if err != nil {
 		log.Error("mail.SendRegisterMail(fail to render): %v", err)
 		return
@@ -81,7 +90,7 @@ func SendActiveMail(r *middleware.Render, u *models.User) {
 
 	data := GetMailTmplData(u)
 	data["Code"] = code
-	body, err := r.HTMLString("mail/auth/active_email", data)
+	body, err := r.HTMLString(string(AUTH_ACTIVE), data)
 	if err != nil {
 		log.Error("mail.SendActiveMail(fail to render): %v", err)
 		return
@@ -101,7 +110,7 @@ func SendResetPasswdMail(r *middleware.Render, u *models.User) {
 
 	data := GetMailTmplData(u)
 	data["Code"] = code
-	body, err := r.HTMLString("mail/auth/reset_passwd", data)
+	body, err := r.HTMLString(string(AUTH_RESET_PASSWORD), data)
 	if err != nil {
 		log.Error("mail.SendResetPasswdMail(fail to render): %v", err)
 		return
@@ -161,7 +170,7 @@ func SendIssueMentionMail(r *middleware.Render, u, owner *models.User,
 	data["IssueLink"] = fmt.Sprintf("%s/%s/issues/%d", owner.Name, repo.Name, issue.Index)
 	data["Subject"] = subject
 
-	body, err := r.HTMLString("mail/notify/mention", data)
+	body, err := r.HTMLString(string(NOTIFY_MENTION), data)
 	if err != nil {
 		return fmt.Errorf("mail.SendIssueMentionMail(fail to render): %v", err)
 	}
@@ -182,7 +191,7 @@ func SendCollaboratorMail(r *middleware.Render, u, owner *models.User,
 	data["RepoLink"] = path.Join(owner.Name, repo.Name)
 	data["Subject"] = subject
 
-	body, err := r.HTMLString("mail/notify/collaborator", data)
+	body, err := r.HTMLString(string(NOTIFY_COLLABORATOR), data)
 	if err != nil {
 		return fmt.Errorf("mail.SendCollaboratorMail(fail to render): %v", err)
 	}
