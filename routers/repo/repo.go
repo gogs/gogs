@@ -25,12 +25,18 @@ import (
 	"github.com/gogits/gogs/modules/middleware"
 )
 
+const (
+	CREATE  base.TplName = "repo/create"
+	MIGRATE base.TplName = "repo/migrate"
+	SINGLE  base.TplName = "repo/single"
+)
+
 func Create(ctx *middleware.Context) {
 	ctx.Data["Title"] = "Create repository"
 	ctx.Data["PageIsNewRepo"] = true
 	ctx.Data["LanguageIgns"] = models.LanguageIgns
 	ctx.Data["Licenses"] = models.Licenses
-	ctx.HTML(200, "repo/create")
+	ctx.HTML(200, CREATE)
 }
 
 func CreatePost(ctx *middleware.Context, form auth.CreateRepoForm) {
@@ -40,7 +46,7 @@ func CreatePost(ctx *middleware.Context, form auth.CreateRepoForm) {
 	ctx.Data["Licenses"] = models.Licenses
 
 	if ctx.HasError() {
-		ctx.HTML(200, "repo/create")
+		ctx.HTML(200, CREATE)
 		return
 	}
 
@@ -51,25 +57,25 @@ func CreatePost(ctx *middleware.Context, form auth.CreateRepoForm) {
 		ctx.Redirect("/" + ctx.User.Name + "/" + form.RepoName)
 		return
 	} else if err == models.ErrRepoAlreadyExist {
-		ctx.RenderWithErr("Repository name has already been used", "repo/create", &form)
+		ctx.RenderWithErr("Repository name has already been used", CREATE, &form)
 		return
 	} else if err == models.ErrRepoNameIllegal {
-		ctx.RenderWithErr(models.ErrRepoNameIllegal.Error(), "repo/create", &form)
+		ctx.RenderWithErr(models.ErrRepoNameIllegal.Error(), CREATE, &form)
 		return
 	}
 
 	if repo != nil {
 		if errDelete := models.DeleteRepository(ctx.User.Id, repo.Id, ctx.User.Name); errDelete != nil {
-			log.Error("repo.MigratePost(CreatePost): %v", errDelete)
+			log.Error("repo.CreatePost(DeleteRepository): %v", errDelete)
 		}
 	}
-	ctx.Handle(500, "repo.Create", err)
+	ctx.Handle(500, "repo.CreatePost", err)
 }
 
 func Migrate(ctx *middleware.Context) {
 	ctx.Data["Title"] = "Migrate repository"
 	ctx.Data["PageIsNewRepo"] = true
-	ctx.HTML(200, "repo/migrate")
+	ctx.HTML(200, MIGRATE)
 }
 
 func MigratePost(ctx *middleware.Context, form auth.MigrateRepoForm) {
@@ -77,7 +83,7 @@ func MigratePost(ctx *middleware.Context, form auth.MigrateRepoForm) {
 	ctx.Data["PageIsNewRepo"] = true
 
 	if ctx.HasError() {
-		ctx.HTML(200, "repo/migrate")
+		ctx.HTML(200, MIGRATE)
 		return
 	}
 
@@ -91,10 +97,10 @@ func MigratePost(ctx *middleware.Context, form auth.MigrateRepoForm) {
 		ctx.Redirect("/" + ctx.User.Name + "/" + form.RepoName)
 		return
 	} else if err == models.ErrRepoAlreadyExist {
-		ctx.RenderWithErr("Repository name has already been used", "repo/migrate", &form)
+		ctx.RenderWithErr("Repository name has already been used", MIGRATE, &form)
 		return
 	} else if err == models.ErrRepoNameIllegal {
-		ctx.RenderWithErr(models.ErrRepoNameIllegal.Error(), "repo/migrate", &form)
+		ctx.RenderWithErr(models.ErrRepoNameIllegal.Error(), MIGRATE, &form)
 		return
 	}
 
@@ -105,7 +111,7 @@ func MigratePost(ctx *middleware.Context, form auth.MigrateRepoForm) {
 	}
 
 	if strings.Contains(err.Error(), "Authentication failed") {
-		ctx.RenderWithErr(err.Error(), "repo/migrate", &form)
+		ctx.RenderWithErr(err.Error(), MIGRATE, &form)
 		return
 	}
 	ctx.Handle(500, "repo.Migrate", err)
@@ -291,7 +297,7 @@ func Single(ctx *middleware.Context, params martini.Params) {
 	ctx.Data["Treenames"] = treenames
 	ctx.Data["TreePath"] = treePath
 	ctx.Data["BranchLink"] = branchLink
-	ctx.HTML(200, "repo/single")
+	ctx.HTML(200, SINGLE)
 }
 
 func basicEncode(username, password string) string {

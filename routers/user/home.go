@@ -17,6 +17,14 @@ import (
 	"github.com/gogits/gogs/modules/middleware"
 )
 
+const (
+	DASHBOARD base.TplName = "user/dashboard"
+	PROFILE   base.TplName = "user/profile"
+	ISSUES    base.TplName = "user/issue"
+	PULLS     base.TplName = "user/pulls"
+	STARS     base.TplName = "user/stars"
+)
+
 func Dashboard(ctx *middleware.Context) {
 	ctx.Data["Title"] = "Dashboard"
 	ctx.Data["PageIsUserDashboard"] = true
@@ -52,7 +60,7 @@ func Dashboard(ctx *middleware.Context) {
 		feeds = append(feeds, act)
 	}
 	ctx.Data["Feeds"] = feeds
-	ctx.HTML(200, "user/dashboard")
+	ctx.HTML(200, DASHBOARD)
 }
 
 func Profile(ctx *middleware.Context, params martini.Params) {
@@ -87,7 +95,7 @@ func Profile(ctx *middleware.Context, params martini.Params) {
 		}
 	}
 
-	ctx.HTML(200, "user/profile")
+	ctx.HTML(200, PROFILE)
 }
 
 func Email2User(ctx *middleware.Context) {
@@ -254,13 +262,13 @@ func Issues(ctx *middleware.Context) {
 	} else {
 		ctx.Data["ShowCount"] = issueStats.OpenCount
 	}
-	ctx.HTML(200, "user/issue")
+	ctx.HTML(200, ISSUES)
 }
 
 func Pulls(ctx *middleware.Context) {
-	ctx.HTML(200, "user/pulls")
+	ctx.HTML(200, PULLS)
 }
 
 func Stars(ctx *middleware.Context) {
-	ctx.HTML(200, "user/stars")
+	ctx.HTML(200, STARS)
 }

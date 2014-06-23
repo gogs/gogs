@@ -14,6 +14,11 @@ import (
 	"github.com/gogits/gogs/modules/middleware"
 )
 
+const (
+	COMMITS base.TplName = "repo/commits"
+	DIFF    base.TplName = "repo/diff"
+)
+
 func Commits(ctx *middleware.Context, params martini.Params) {
 	ctx.Data["IsRepoToolbarCommits"] = true
 
@@ -22,10 +27,10 @@ func Commits(ctx *middleware.Context, params martini.Params) {
 
 	brs, err := ctx.Repo.GitRepo.GetBranches()
 	if err != nil {
-		ctx.Handle(500, "repo.Commits", err)
+		ctx.Handle(500, "repo.Commits(GetBranches)", err)
 		return
 	} else if len(brs) == 0 {
-		ctx.Handle(404, "repo.Commits", nil)
+		ctx.Handle(404, "repo.Commits(GetBranches)", nil)
 		return
 	}
 
@@ -61,7 +66,43 @@ func Commits(ctx *middleware.Context, params martini.Params) {
 	ctx.Data["CommitCount"] = commitsCount
 	ctx.Data["LastPageNum"] = lastPage
 	ctx.Data["NextPageNum"] = nextPage
-	ctx.HTML(200, "repo/commits")
+	ctx.HTML(200, COMMITS)
+}
+
+func SearchCommits(ctx *middleware.Context, params martini.Params) {
+	ctx.Data["IsSearchPage"] = true
+	ctx.Data["IsRepoToolbarCommits"] = true
+
+	keyword := ctx.Query("q")
+	if len(keyword) == 0 {
+		ctx.Redirect(ctx.Repo.RepoLink + "/commits/" + ctx.Repo.BranchName)
+		return
+	}
+
+	userName := params["username"]
+	repoName := params["reponame"]
+
+	brs, err := ctx.Repo.GitRepo.GetBranches()
+	if err != nil {
+		ctx.Handle(500, "repo.SearchCommits(GetBranches)", err)
+		return
+	} else if len(brs) == 0 {
+		ctx.Handle(404, "repo.SearchCommits(GetBranches)", nil)
+		return
+	}
+
+	commits, err := ctx.Repo.Commit.SearchCommits(keyword)
+	if err != nil {
+		ctx.Handle(500, "repo.SearchCommits(SearchCommits)", err)
+		return
+	}
+
+	ctx.Data["Keyword"] = keyword
+	ctx.Data["Username"] = userName
+	ctx.Data["Reponame"] = repoName
+	ctx.Data["CommitCount"] = commits.Len()
+	ctx.Data["Commits"] = commits
+	ctx.HTML(200, COMMITS)
 }
 
 func Diff(ctx *middleware.Context, params martini.Params) {
@@ -75,7 +116,7 @@ func Diff(ctx *middleware.Context, params martini.Params) {
 
 	diff, err := models.GetDiff(models.RepoPath(userName, repoName), commitId)
 	if err != nil {
-		ctx.Handle(404, "repo.Diff", err)
+		ctx.Handle(404, "repo.Diff(GetDiff)", err)
 		return
 	}
 
@@ -119,43 +160,7 @@ func Diff(ctx *middleware.Context, params martini.Params) {
 	ctx.Data["DiffNotAvailable"] = diff.NumFiles() == 0
 	ctx.Data["SourcePath"] = "/" + path.Join(userName, repoName, "src", commitId)
 	ctx.Data["RawPath"] = "/" + path.Join(userName, repoName, "raw", commitId)
-	ctx.HTML(200, "repo/diff")
-}
-
-func SearchCommits(ctx *middleware.Context, params martini.Params) {
-	ctx.Data["IsSearchPage"] = true
-	ctx.Data["IsRepoToolbarCommits"] = true
-
-	keyword := ctx.Query("q")
-	if len(keyword) == 0 {
-		ctx.Redirect(ctx.Repo.RepoLink + "/commits/" + ctx.Repo.BranchName)
-		return
-	}
-
-	userName := params["username"]
-	repoName := params["reponame"]
-
-	brs, err := ctx.Repo.GitRepo.GetBranches()
-	if err != nil {
-		ctx.Handle(500, "repo.SearchCommits(GetBranches)", err)
-		return
-	} else if len(brs) == 0 {
-		ctx.Handle(404, "repo.SearchCommits(GetBranches)", nil)
-		return
-	}
-
-	commits, err := ctx.Repo.Commit.SearchCommits(keyword)
-	if err != nil {
-		ctx.Handle(500, "repo.SearchCommits(SearchCommits)", err)
-		return
-	}
-
-	ctx.Data["Keyword"] = keyword
-	ctx.Data["Username"] = userName
-	ctx.Data["Reponame"] = repoName
-	ctx.Data["CommitCount"] = commits.Len()
-	ctx.Data["Commits"] = commits
-	ctx.HTML(200, "repo/commits")
+	ctx.HTML(200, DIFF)
 }
 
 func FileHistory(ctx *middleware.Context, params martini.Params) {
@@ -184,8 +189,7 @@ func FileHistory(ctx *middleware.Context, params martini.Params) {
 	if err != nil {
 		ctx.Handle(500, "repo.FileHistory(GetCommitsCount)", err)
 		return
-	}
-	if commitsCount == 0 {
+	} else if commitsCount == 0 {
 		ctx.Handle(404, "repo.FileHistory", nil)
 		return
 	}
@@ -217,5 +221,5 @@ func FileHistory(ctx *middleware.Context, params martini.Params) {
 	ctx.Data["CommitCount"] = commitsCount
 	ctx.Data["LastPageNum"] = lastPage
 	ctx.Data["NextPageNum"] = nextPage
-	ctx.HTML(200, "repo/commits")
+	ctx.HTML(200, COMMITS)
 }

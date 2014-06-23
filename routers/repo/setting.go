@@ -20,10 +20,19 @@ import (
 	"github.com/gogits/gogs/modules/setting"
 )
 
+const (
+	SETTING       base.TplName = "repo/setting"
+	COLLABORATION base.TplName = "repo/collaboration"
+
+	HOOKS     base.TplName = "repo/hooks"
+	HOOK_ADD  base.TplName = "repo/hook_add"
+	HOOK_EDIT base.TplName = "repo/hook_edit"
+)
+
 func Setting(ctx *middleware.Context) {
 	ctx.Data["IsRepoToolbarSetting"] = true
 	ctx.Data["Title"] = strings.TrimPrefix(ctx.Repo.RepoLink, "/") + " - settings"
-	ctx.HTML(200, "repo/setting")
+	ctx.HTML(200, SETTING)
 }
 
 func SettingPost(ctx *middleware.Context, form auth.RepoSettingForm) {
@@ -32,7 +41,7 @@ func SettingPost(ctx *middleware.Context, form auth.RepoSettingForm) {
 	switch ctx.Query("action") {
 	case "update":
 		if ctx.HasError() {
-			ctx.HTML(200, "repo/setting")
+			ctx.HTML(200, SETTING)
 			return
 		}
 
@@ -44,7 +53,7 @@ func SettingPost(ctx *middleware.Context, form auth.RepoSettingForm) {
 				ctx.Handle(500, "setting.SettingPost(update: check existence)", err)
 				return
 			} else if isExist {
-				ctx.RenderWithErr("Repository name has been taken in your repositories.", "repo/setting", nil)
+				ctx.RenderWithErr("Repository name has been taken in your repositories.", SETTING, nil)
 				return
 			} else if err = models.ChangeRepositoryName(ctx.Repo.Owner.Name, ctx.Repo.Repository.Name, newRepoName); err != nil {
 				ctx.Handle(500, "setting.SettingPost(change repository name)", err)
@@ -84,7 +93,7 @@ func SettingPost(ctx *middleware.Context, form auth.RepoSettingForm) {
 		ctx.Redirect(fmt.Sprintf("/%s/%s/settings", ctx.Repo.Owner.Name, ctx.Repo.Repository.Name))
 	case "transfer":
 		if len(ctx.Repo.Repository.Name) == 0 || ctx.Repo.Repository.Name != ctx.Query("repository") {
-			ctx.RenderWithErr("Please make sure you entered repository name is correct.", "repo/setting", nil)
+			ctx.RenderWithErr("Please make sure you entered repository name is correct.", SETTING, nil)
 			return
 		} else if ctx.Repo.Repository.IsMirror {
 			ctx.Error(404)
@@ -98,7 +107,7 @@ func SettingPost(ctx *middleware.Context, form auth.RepoSettingForm) {
 			ctx.Handle(500, "setting.SettingPost(transfer: check existence)", err)
 			return
 		} else if !isExist {
-			ctx.RenderWithErr("Please make sure you entered owner name is correct.", "repo/setting", nil)
+			ctx.RenderWithErr("Please make sure you entered owner name is correct.", SETTING, nil)
 			return
 		} else if err = models.TransferOwnership(ctx.User, newOwner, ctx.Repo.Repository); err != nil {
 			ctx.Handle(500, "setting.SettingPost(transfer repository)", err)
@@ -109,7 +118,7 @@ func SettingPost(ctx *middleware.Context, form auth.RepoSettingForm) {
 		ctx.Redirect("/")
 	case "delete":
 		if len(ctx.Repo.Repository.Name) == 0 || ctx.Repo.Repository.Name != ctx.Query("repository") {
-			ctx.RenderWithErr("Please make sure you entered repository name is correct.", "repo/setting", nil)
+			ctx.RenderWithErr("Please make sure you entered repository name is correct.", SETTING, nil)
 			return
 		}
 
@@ -156,7 +165,7 @@ func Collaboration(ctx *middleware.Context) {
 	}
 
 	ctx.Data["Collaborators"] = us
-	ctx.HTML(200, "repo/collaboration")
+	ctx.HTML(200, COLLABORATION)
 }
 
 func CollaborationPost(ctx *middleware.Context) {
@@ -226,13 +235,13 @@ func WebHooks(ctx *middleware.Context) {
 	}
 
 	ctx.Data["Webhooks"] = ws
-	ctx.HTML(200, "repo/hooks")
+	ctx.HTML(200, HOOKS)
 }
 
 func WebHooksAdd(ctx *middleware.Context) {
 	ctx.Data["IsRepoToolbarWebHooks"] = true
 	ctx.Data["Title"] = strings.TrimPrefix(ctx.Repo.RepoLink, "/") + " - Add Webhook"
-	ctx.HTML(200, "repo/hooks_add")
+	ctx.HTML(200, HOOK_ADD)
 }
 
 func WebHooksAddPost(ctx *middleware.Context, form auth.NewWebhookForm) {
@@ -240,7 +249,7 @@ func WebHooksAddPost(ctx *middleware.Context, form auth.NewWebhookForm) {
 	ctx.Data["Title"] = strings.TrimPrefix(ctx.Repo.RepoLink, "/") + " - Add Webhook"
 
 	if ctx.HasError() {
-		ctx.HTML(200, "repo/hooks_add")
+		ctx.HTML(200, HOOK_ADD)
 		return
 	}
 
@@ -293,21 +302,31 @@ func WebHooksEdit(ctx *middleware.Context, params martini.Params) {
 
 	w.GetEvent()
 	ctx.Data["Webhook"] = w
-	ctx.HTML(200, "repo/hooks_edit")
+	ctx.HTML(200, HOOK_EDIT)
 }
 
 func WebHooksEditPost(ctx *middleware.Context, params martini.Params, form auth.NewWebhookForm) {
 	ctx.Data["IsRepoToolbarWebHooks"] = true
 	ctx.Data["Title"] = strings.TrimPrefix(ctx.Repo.RepoLink, "/") + " - Webhook"
 
-	if ctx.HasError() {
-		ctx.HTML(200, "repo/hooks_add")
-		return
-	}
-
 	hookId, _ := base.StrTo(params["id"]).Int64()
 	if hookId == 0 {
 		ctx.Handle(404, "setting.WebHooksEditPost", nil)
+		return
+	}
+
+	w, err := models.GetWebhookById(hookId)
+	if err != nil {
+		if err == models.ErrWebhookNotExist {
+			ctx.Handle(404, "setting.WebHooksEditPost(GetWebhookById)", nil)
+		} else {
+			ctx.Handle(500, "setting.WebHooksEditPost(GetWebhookById)", err)
+		}
+		return
+	}
+
+	if ctx.HasError() {
+		ctx.HTML(200, HOOK_EDIT)
 		return
 	}
 
@@ -316,17 +335,13 @@ func WebHooksEditPost(ctx *middleware.Context, params martini.Params, form auth.
 		ct = models.FORM
 	}
 
-	w := &models.Webhook{
-		Id:          hookId,
-		RepoId:      ctx.Repo.Repository.Id,
-		Url:         form.Url,
-		ContentType: ct,
-		Secret:      form.Secret,
-		HookEvent: &models.HookEvent{
-			PushOnly: form.PushOnly,
-		},
-		IsActive: form.Active,
+	w.Url = form.Url
+	w.ContentType = ct
+	w.Secret = form.Secret
+	w.HookEvent = &models.HookEvent{
+		PushOnly: form.PushOnly,
 	}
+	w.IsActive = form.Active
 	if err := w.UpdateEvent(); err != nil {
 		ctx.Handle(500, "setting.WebHooksEditPost(UpdateEvent)", err)
 		return
