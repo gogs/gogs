@@ -67,7 +67,7 @@ func Profile(ctx *middleware.Context, params martini.Params) {
 	ctx.Data["Title"] = "Profile"
 	ctx.Data["PageIsUserProfile"] = true
 
-	user, err := models.GetUserByName(params["username"])
+	u, err := models.GetUserByName(params["username"])
 	if err != nil {
 		if err == models.ErrUserNotExist {
 			ctx.Handle(404, "user.Profile(GetUserByName)", err)
@@ -76,19 +76,23 @@ func Profile(ctx *middleware.Context, params martini.Params) {
 		}
 		return
 	}
-	ctx.Data["Owner"] = user
+	// For security reason, hide e-mail address for anonymous visitors.
+	if !ctx.IsSigned {
+		u.Email = ""
+	}
+	ctx.Data["Owner"] = u
 
 	tab := ctx.Query("tab")
 	ctx.Data["TabName"] = tab
 	switch tab {
 	case "activity":
-		ctx.Data["Feeds"], err = models.GetFeeds(user.Id, 0, true)
+		ctx.Data["Feeds"], err = models.GetFeeds(u.Id, 0, true)
 		if err != nil {
 			ctx.Handle(500, "user.Profile(GetFeeds)", err)
 			return
 		}
 	default:
-		ctx.Data["Repos"], err = models.GetRepositories(user.Id, ctx.IsSigned && ctx.User.Id == user.Id)
+		ctx.Data["Repos"], err = models.GetRepositories(u.Id, ctx.IsSigned && ctx.User.Id == u.Id)
 		if err != nil {
 			ctx.Handle(500, "user.Profile(GetRepositories)", err)
 			return
