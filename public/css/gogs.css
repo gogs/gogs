@@ -662,6 +662,14 @@ html, body {
     padding: .8em 1.2em;
 }
 
+#dashboard-switch-menu > li > a:hover {
+    text-decoration: none;
+}
+
+#dashboard-switch-menu > li > a img, #dashboard-switch button img {
+    margin-right: 6px;
+}
+
 #dashboard-switch-menu > li {
     border-bottom: 1px solid #eaeaea;
 }
