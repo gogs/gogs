@@ -141,7 +141,10 @@ func Http(ctx *middleware.Context, params martini.Params) {
 					newCommitId := fields[1]
 					refName := fields[2]
 
-					models.Update(refName, oldCommitId, newCommitId, authUsername, username, reponame, authUser.Id)
+					if err = models.Update(refName, oldCommitId, newCommitId, authUsername, username, reponame, authUser.Id); err != nil {
+						log.GitLogger.Error(err.Error())
+						return
+					}
 				}
 			}
 		}
