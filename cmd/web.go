@@ -194,6 +194,7 @@ func runWeb(*cli.Context) {
 		r.Get("/:org/dashboard", org.Dashboard)
 		r.Get("/:org/members", org.Members)
 		r.Get("/:org/teams", org.Teams)
+		r.Get("/:org/setting", org.Setting)
 	})
 
 	m.Group("/:username/:reponame", func(r martini.Router) {

@@ -29,3 +29,8 @@ func Dashboard(ctx *middleware.Context, params martini.Params) {
 	ctx.Data["Title"] = "Dashboard"
 	ctx.HTML(200, "org/dashboard")
 }
+
+func Setting(ctx *middleware.Context, param martini.Params) {
+	ctx.Data["Title"] = "Setting"
+	ctx.HTML(200, "org/setting")
+}
