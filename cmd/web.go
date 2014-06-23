@@ -189,6 +189,7 @@ func runWeb(*cli.Context) {
 	reqOwner := middleware.RequireOwner()
 
 	m.Group("/o", func(r martini.Router) {
+		r.Get("/create",org.New)
 		r.Get("/:org", org.Organization)
 		r.Get("/:org/members", org.Members)
 		r.Get("/:org/teams", org.Teams)

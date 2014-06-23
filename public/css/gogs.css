@@ -372,7 +372,7 @@ html, body {
 
 /* gogits repo create */
 
-#repo-create {
+#repo-create, #org-create {
     width: 800px;
 }
 
