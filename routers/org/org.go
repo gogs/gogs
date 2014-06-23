@@ -24,3 +24,8 @@ func New(ctx *middleware.Context) {
 	ctx.Data["Title"] = "Create an Organization"
 	ctx.HTML(200, "org/new")
 }
+
+func Dashboard(ctx *middleware.Context, params martini.Params) {
+	ctx.Data["Title"] = "Dashboard"
+	ctx.HTML(200, "org/dashboard")
+}
