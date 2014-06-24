@@ -206,7 +206,7 @@ func Config(ctx *middleware.Context) {
 	ctx.Data["StaticRootPath"] = setting.StaticRootPath
 	ctx.Data["LogRootPath"] = setting.LogRootPath
 	ctx.Data["ScriptType"] = setting.ScriptType
-	ctx.Data["ReverseProxyAuthUid"] = setting.ReverseProxyAuthUid
+	ctx.Data["ReverseProxyAuthUser"] = setting.ReverseProxyAuthUser
 
 	ctx.Data["Service"] = setting.Service
 
