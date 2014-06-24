@@ -182,6 +182,12 @@ func NewConfigContext() {
 		log.Fatal("Fail to get home directory: %v", err)
 	}
 	RepoRootPath = Cfg.MustValue("repository", "ROOT", filepath.Join(homeDir, "gogs-repositories"))
+	if !filepath.IsAbs(RepoRootPath) {
+		RepoRootPath = filepath.Join(workDir, RepoRootPath)
+	} else {
+		RepoRootPath = filepath.Clean(RepoRootPath)
+	}
+
 	if err = os.MkdirAll(RepoRootPath, os.ModePerm); err != nil {
 		log.Fatal("Fail to create repository root path(%s): %v", RepoRootPath, err)
 	}
