@@ -161,7 +161,7 @@ func rewriteAuthorizedKeys(key *PublicKey, p, tmpP string) error {
 	}
 	defer fr.Close()
 
-	fw, err := os.Create(tmpP)
+	fw, err := os.OpenFile(tmpP, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0600)
 	if err != nil {
 		return err
 	}
