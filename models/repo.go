@@ -199,7 +199,7 @@ func MirrorRepository(repoId int64, userName, repoName, repoPath, url string) er
 
 	if _, err = x.InsertOne(&Mirror{
 		RepoId:     repoId,
-		RepoName:   strings.ToLower(userName + "/" + repoName),
+		RepoName:   strings.ToLower(userName) + "/" + repoName,
 		Interval:   24,
 		NextUpdate: time.Now().Add(24 * time.Hour),
 	}); err != nil {
@@ -585,7 +585,7 @@ func GetRepositoriesWithUsers(num, offset int) ([]*Repository, error) {
 
 // RepoPath returns repository path by given user and repository name.
 func RepoPath(userName, repoName string) string {
-	return filepath.Join(UserPath(userName), strings.ToLower(repoName)+".git")
+	return filepath.Join(UserPath(userName), repoName+".git")
 }
 
 // TransferOwnership transfers all corresponding setting from old user to new one.

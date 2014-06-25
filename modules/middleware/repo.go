@@ -156,16 +156,16 @@ func RepoAssignment(redirect bool, args ...bool) martini.Handler {
 		ctx.Data["BranchName"] = ""
 
 		if setting.SshPort != 22 {
-			ctx.Repo.CloneLink.SSH = fmt.Sprintf("ssh://%s@%s/%s/%s.git", setting.RunUser, setting.Domain, user.LowerName, repo.LowerName)
+			ctx.Repo.CloneLink.SSH = fmt.Sprintf("ssh://%s@%s/%s/%s.git", setting.RunUser, setting.Domain, user.LowerName, repo.Name)
 		} else {
-			ctx.Repo.CloneLink.SSH = fmt.Sprintf("%s@%s:%s/%s.git", setting.RunUser, setting.Domain, user.LowerName, repo.LowerName)
+			ctx.Repo.CloneLink.SSH = fmt.Sprintf("%s@%s:%s/%s.git", setting.RunUser, setting.Domain, user.LowerName, repo.Name)
 		}
-		ctx.Repo.CloneLink.HTTPS = fmt.Sprintf("%s%s/%s.git", setting.AppUrl, user.LowerName, repo.LowerName)
+		ctx.Repo.CloneLink.HTTPS = fmt.Sprintf("%s%s/%s.git", setting.AppUrl, user.LowerName, repo.Name)
 		ctx.Data["CloneLink"] = ctx.Repo.CloneLink
 
 		if ctx.Repo.Repository.IsGoget {
-			ctx.Data["GoGetLink"] = fmt.Sprintf("%s%s/%s", setting.AppUrl, user.LowerName, repo.LowerName)
-			ctx.Data["GoGetImport"] = fmt.Sprintf("%s/%s/%s", setting.Domain, user.LowerName, repo.LowerName)
+			ctx.Data["GoGetLink"] = fmt.Sprintf("%s%s/%s", setting.AppUrl, user.LowerName, repo.Name)
+			ctx.Data["GoGetImport"] = fmt.Sprintf("%s/%s/%s", setting.Domain, user.LowerName, repo.Name)
 		}
 
 		// when repo is bare, not valid branch
