@@ -10,21 +10,26 @@
             <div class="col-md-8">
                 <div class="btn-group" id="repo-owner-switch">
                     <button type="button" class="btn btn-default">
-                        <img src="//1.gravatar.com/avatar/f72f7454ce9d710baa506394f68f4132?s=28" alt="user-avatar" title="username">
-                        fuxiaohei
+                        <img src="{{.SignedUser.AvatarLink}}?s=28" alt="user-avatar" title="username">
+                        {{.SignedUser.Name}}
                     </button>
                     <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
                         <span class="caret"></span>
                     </button>
                     <div class="dropdown-menu clone-group-btn no-propagation">
                         <ul id="dashboard-switch-menu" class="list-unstyled">
-                            <li class="checked"><a href="#"><i class="fa fa-check"></i>
-                                <img src="//1.gravatar.com/avatar/f72f7454ce9d710baa506394f68f4132?s=28" alt="user-avatar" title="username">
-                                gogits/gogs</a></li>
+                            <li data-uid="{{.SignedUser.Id}}" class="checked">
+                                <a href="#">
+                                    <i class="fa fa-check"></i>
+                                    <img src="{{.SignedUser.AvatarLink}}?s=28" alt="user-avatar" title="username">
+                                    {{.SignedUser.Name}}
+                                </a>
+                            </li>
                         </ul>
                     </div>
                 </div>
             </div>
+            <input type="hidden" value="{{.SignedUserId}}" name="userId"/>
 
             <!--<div class="col-md-8">
                 <p class="form-control-static">{{.SignedUserName}}</p>
