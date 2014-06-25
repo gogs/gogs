@@ -63,11 +63,26 @@ func CreatePost(ctx *middleware.Context, form auth.CreateRepoForm) {
 		return
 	}
 
-	repo, err := models.CreateRepository(ctx.User, form.RepoName, form.Description,
+	u := ctx.User
+	// Not equal means current user is an organization.
+	if u.Id != form.Uid {
+		var err error
+		u, err = models.GetUserById(form.Uid)
+		if err != nil {
+			if err == models.ErrUserNotExist {
+				ctx.Handle(404, "home.Dashboard(GetUserById)", err)
+			} else {
+				ctx.Handle(500, "home.Dashboard(GetUserById)", err)
+			}
+			return
+		}
+	}
+
+	repo, err := models.CreateRepository(u, form.RepoName, form.Description,
 		form.Language, form.License, form.Private, false, form.InitReadme)
 	if err == nil {
-		log.Trace("%s Repository created: %s/%s", ctx.Req.RequestURI, ctx.User.LowerName, form.RepoName)
-		ctx.Redirect("/" + ctx.User.Name + "/" + form.RepoName)
+		log.Trace("%s Repository created: %s/%s", ctx.Req.RequestURI, u.LowerName, form.RepoName)
+		ctx.Redirect("/" + u.Name + "/" + form.RepoName)
 		return
 	} else if err == models.ErrRepoAlreadyExist {
 		ctx.RenderWithErr("Repository name has already been used", CREATE, &form)
@@ -78,7 +93,7 @@ func CreatePost(ctx *middleware.Context, form auth.CreateRepoForm) {
 	}
 
 	if repo != nil {
-		if errDelete := models.DeleteRepository(ctx.User.Id, repo.Id, ctx.User.Name); errDelete != nil {
+		if errDelete := models.DeleteRepository(u.Id, repo.Id, u.Name); errDelete != nil {
 			log.Error("repo.CreatePost(DeleteRepository): %v", errDelete)
 		}
 	}

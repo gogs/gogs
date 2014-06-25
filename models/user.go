@@ -123,11 +123,14 @@ func (u *User) GetOrganizations() error {
 	return nil
 }
 
-// Member represents user is member of organization.
-type Member struct {
-	Id     int64
-	OrgId  int64 `xorm:"unique(member) index"`
-	UserId int64 `xorm:"unique(member)"`
+// GetOwnerTeam returns owner team of organization.
+func (org *User) GetOwnerTeam() (*Team, error) {
+	t := &Team{
+		OrgId: org.Id,
+		Name:  OWNER_TEAM,
+	}
+	_, err := x.Get(t)
+	return t, err
 }
 
 // IsUserExist checks if given user name exist,
@@ -249,7 +252,7 @@ func CreateOrganization(org, owner *User) (*User, error) {
 	// Create default owner team.
 	t := &Team{
 		OrgId:      org.Id,
-		Name:       "Owner",
+		Name:       OWNER_TEAM,
 		Authorize:  ORG_ADMIN,
 		NumMembers: 1,
 	}

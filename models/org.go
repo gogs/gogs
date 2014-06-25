@@ -12,6 +12,8 @@ const (
 	ORG_ADMIN
 )
 
+const OWNER_TEAM = "Owner"
+
 // Team represents a organization team.
 type Team struct {
 	Id          int64
@@ -19,6 +21,7 @@ type Team struct {
 	Name        string
 	Description string
 	Authorize   AuthorizeType
+	RepoIds     string `xorm:"TEXT"`
 	NumMembers  int
 	NumRepos    int
 }
@@ -26,6 +29,15 @@ type Team struct {
 // NewTeam creates a record of new team.
 func NewTeam(t *Team) error {
 	_, err := x.Insert(t)
+	return err
+}
+
+func UpdateTeam(t *Team) error {
+	if len(t.Description) > 255 {
+		t.Description = t.Description[:255]
+	}
+
+	_, err := x.Id(t.Id).AllCols().Update(t)
 	return err
 }
 
@@ -53,6 +65,13 @@ func GetOrgUsersByUserId(uid int64) ([]*OrgUser, error) {
 	return ous, err
 }
 
+// GetOrgUsersByOrgId returns all organization-user relations by organization ID.
+func GetOrgUsersByOrgId(orgId int64) ([]*OrgUser, error) {
+	ous := make([]*OrgUser, 0, 10)
+	err := x.Where("org_id=?", orgId).Find(&ous)
+	return ous, err
+}
+
 // ___________                    ____ ___
 // \__    ___/___ _____    _____ |    |   \______ ___________
 //   |    |_/ __ \\__  \  /     \|    |   /  ___// __ \_  __ \
@@ -66,4 +85,22 @@ type TeamUser struct {
 	Uid    int64
 	OrgId  int64 `xorm:"INDEX"`
 	TeamId int64
+}
+
+// GetTeamMembers returns all members in given team of organization.
+func GetTeamMembers(orgId, teamId int64) ([]*User, error) {
+	tus := make([]*TeamUser, 0, 10)
+	err := x.Where("org_id=?", orgId).And("team_id=?", teamId).Find(&tus)
+	if err != nil {
+		return nil, err
+	}
+
+	us := make([]*User, len(tus))
+	for i, tu := range tus {
+		us[i], err = GetUserById(tu.Uid)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return us, nil
 }

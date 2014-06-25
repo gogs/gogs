@@ -454,21 +454,27 @@ func initRepository(f string, user *User, repo *Repository, initReadme bool, rep
 	return initRepoCommit(tmpDir, user.NewGitSig())
 }
 
-// CreateRepository creates a repository for given user or orgnaziation.
-func CreateRepository(user *User, name, desc, lang, license string, private, mirror, initReadme bool) (*Repository, error) {
+// CreateRepository creates a repository for given user or organization.
+func CreateRepository(u *User, name, desc, lang, license string, private, mirror, initReadme bool) (*Repository, error) {
 	if !IsLegalName(name) {
 		return nil, ErrRepoNameIllegal
 	}
 
-	isExist, err := IsRepositoryExist(user, name)
+	isExist, err := IsRepositoryExist(u, name)
 	if err != nil {
 		return nil, err
 	} else if isExist {
 		return nil, ErrRepoAlreadyExist
 	}
 
+	sess := x.NewSession()
+	defer sess.Close()
+	if err = sess.Begin(); err != nil {
+		return nil, err
+	}
+
 	repo := &Repository{
-		OwnerId:     user.Id,
+		OwnerId:     u.Id,
 		Name:        name,
 		LowerName:   strings.ToLower(name),
 		Description: desc,
@@ -479,69 +485,85 @@ func CreateRepository(user *User, name, desc, lang, license string, private, mir
 		repo.DefaultBranch = "master"
 	}
 
-	repoPath := RepoPath(user.Name, repo.Name)
-
-	sess := x.NewSession()
-	defer sess.Close()
-	if err = sess.Begin(); err != nil {
-		return nil, err
-	}
-
 	if _, err = sess.Insert(repo); err != nil {
-		if err2 := os.RemoveAll(repoPath); err2 != nil {
-			log.Error("repo.CreateRepository(repo): %v", err)
-			return nil, errors.New(fmt.Sprintf(
-				"delete repo directory %s/%s failed(1): %v", user.Name, repo.Name, err2))
-		}
 		sess.Rollback()
 		return nil, err
 	}
+
+	var t *Team // Owner team.
 
 	mode := WRITABLE
 	if mirror {
 		mode = READABLE
 	}
-	access := Access{
-		UserName: user.LowerName,
-		RepoName: strings.ToLower(path.Join(user.Name, repo.Name)),
+	access := &Access{
+		UserName: u.LowerName,
+		RepoName: strings.ToLower(path.Join(u.Name, repo.Name)),
 		Mode:     mode,
 	}
-	if _, err = sess.Insert(&access); err != nil {
-		sess.Rollback()
-		if err2 := os.RemoveAll(repoPath); err2 != nil {
-			log.Error("repo.CreateRepository(access): %v", err)
-			return nil, errors.New(fmt.Sprintf(
-				"delete repo directory %s/%s failed(2): %v", user.Name, repo.Name, err2))
+	// Give access to all members in owner team.
+	if u.IsOrganization() {
+		t, err = u.GetOwnerTeam()
+		if err != nil {
+			sess.Rollback()
+			return nil, err
 		}
-		return nil, err
+		us, err := GetTeamMembers(u.Id, t.Id)
+		if err != nil {
+			sess.Rollback()
+			return nil, err
+		}
+		for _, u := range us {
+			access.UserName = u.LowerName
+			if _, err = sess.Insert(access); err != nil {
+				sess.Rollback()
+				return nil, err
+			}
+		}
+	} else {
+		if _, err = sess.Insert(access); err != nil {
+			sess.Rollback()
+			return nil, err
+		}
 	}
 
 	rawSql := "UPDATE `user` SET num_repos = num_repos + 1 WHERE id = ?"
-	if _, err = sess.Exec(rawSql, user.Id); err != nil {
+	if _, err = sess.Exec(rawSql, u.Id); err != nil {
 		sess.Rollback()
-		if err2 := os.RemoveAll(repoPath); err2 != nil {
-			log.Error("repo.CreateRepository(repo count): %v", err)
-			return nil, errors.New(fmt.Sprintf(
-				"delete repo directory %s/%s failed(3): %v", user.Name, repo.Name, err2))
-		}
 		return nil, err
+	}
+
+	// Update owner team info and count.
+	if u.IsOrganization() {
+		t.RepoIds += "$" + base.ToStr(repo.Id) + "|"
+		t.NumRepos++
+		if _, err = sess.Id(t.Id).AllCols().Update(t); err != nil {
+			sess.Rollback()
+			return nil, err
+		}
 	}
 
 	if err = sess.Commit(); err != nil {
-		sess.Rollback()
-		if err2 := os.RemoveAll(repoPath); err2 != nil {
-			log.Error("repo.CreateRepository(commit): %v", err)
-			return nil, errors.New(fmt.Sprintf(
-				"delete repo directory %s/%s failed(3): %v", user.Name, repo.Name, err2))
-		}
 		return nil, err
 	}
 
-	if err = WatchRepo(user.Id, repo.Id, true); err != nil {
-		log.Error("repo.CreateRepository(WatchRepo): %v", err)
+	if u.IsOrganization() {
+		ous, err := GetOrgUsersByOrgId(u.Id)
+		if err != nil {
+			log.Error("repo.CreateRepository(GetOrgUsersByOrgId): %v", err)
+		} else {
+			for _, ou := range ous {
+				if err = WatchRepo(ou.Uid, repo.Id, true); err != nil {
+					log.Error("repo.CreateRepository(WatchRepo): %v", err)
+				}
+			}
+		}
+	}
+	if err = WatchRepo(u.Id, repo.Id, true); err != nil {
+		log.Error("repo.CreateRepository(WatchRepo2): %v", err)
 	}
 
-	if err = NewRepoAction(user, repo); err != nil {
+	if err = NewRepoAction(u, repo); err != nil {
 		log.Error("repo.CreateRepository(NewRepoAction): %v", err)
 	}
 
@@ -550,7 +572,13 @@ func CreateRepository(user *User, name, desc, lang, license string, private, mir
 		return repo, nil
 	}
 
-	if err = initRepository(repoPath, user, repo, initReadme, lang, license); err != nil {
+	repoPath := RepoPath(u.Name, repo.Name)
+	if err = initRepository(repoPath, u, repo, initReadme, lang, license); err != nil {
+		if err2 := os.RemoveAll(repoPath); err2 != nil {
+			log.Error("repo.CreateRepository(initRepository): %v", err)
+			return nil, errors.New(fmt.Sprintf(
+				"delete repo directory %s/%s failed(2): %v", u.Name, repo.Name, err2))
+		}
 		return nil, err
 	}
 
