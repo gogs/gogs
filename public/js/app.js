@@ -770,7 +770,10 @@ function initRepoCreating() {
                 $(this).parent().find(".checked").removeClass("checked");
                 $(this).addClass("checked");
             }
-            console.log("set repo owner to uid :",uid);
+            // set button group to show clicked owner
+            $('#repo-owner-avatar').attr("src",$(this).find('img').attr("src"));
+            $('#repo-owner-name').text($(this).text().trim());
+            console.log("set repo owner to uid :",uid,$(this).text().trim());
         });
     }());
     console.log("init repo-creating scripts");

@@ -9,9 +9,9 @@
             <label class="col-md-2 control-label">Owner<strong class="text-danger">*</strong></label>
             <div class="col-md-8">
                 <div class="btn-group" id="repo-owner-switch">
-                    <button type="button" class="btn btn-default">
-                        <img src="{{.SignedUser.AvatarLink}}?s=28" alt="user-avatar" title="username">
-                        {{.SignedUser.Name}}
+                    <button type="button" class="btn btn-default" id="repo-owner-current">
+                        <img src="{{.SignedUser.AvatarLink}}?s=28" alt="user-avatar" title="username" id="repo-owner-avatar">
+                        <span id="repo-owner-name">{{.SignedUser.Name}}</span>
                     </button>
                     <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
                         <span class="caret"></span>
