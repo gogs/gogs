@@ -48,6 +48,7 @@ type MigrateRepoForm struct {
 	Url          string `form:"url" binding:"Url"`
 	AuthUserName string `form:"auth_username"`
 	AuthPasswd   string `form:"auth_password"`
+	Uid          int64  `form:"uid" binding:"Required"`
 	RepoName     string `form:"repo" binding:"Required;AlphaDash;MaxSize(100)"`
 	Mirror       bool   `form:"mirror"`
 	Private      bool   `form:"private"`

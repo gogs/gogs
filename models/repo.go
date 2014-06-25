@@ -251,8 +251,8 @@ func MirrorUpdate() {
 }
 
 // MigrateRepository migrates a existing repository from other project hosting.
-func MigrateRepository(user *User, name, desc string, private, mirror bool, url string) (*Repository, error) {
-	repo, err := CreateRepository(user, name, desc, "", "", private, mirror, false)
+func MigrateRepository(u *User, name, desc string, private, mirror bool, url string) (*Repository, error) {
+	repo, err := CreateRepository(u, name, desc, "", "", private, mirror, false)
 	if err != nil {
 		return nil, err
 	}
@@ -261,11 +261,11 @@ func MigrateRepository(user *User, name, desc string, private, mirror bool, url 
 	tmpDir := filepath.Join(os.TempDir(), fmt.Sprintf("%d", time.Now().Nanosecond()))
 	os.MkdirAll(tmpDir, os.ModePerm)
 
-	repoPath := RepoPath(user.Name, name)
+	repoPath := RepoPath(u.Name, name)
 
 	repo.IsBare = false
 	if mirror {
-		if err = MirrorRepository(repo.Id, user.Name, repo.Name, repoPath, url); err != nil {
+		if err = MirrorRepository(repo.Id, u.Name, repo.Name, repoPath, url); err != nil {
 			return repo, err
 		}
 		repo.IsMirror = true
