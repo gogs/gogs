@@ -184,7 +184,8 @@ func CommitRepoAction(userId, repoUserId int64, userName, actEmail string,
 // NewRepoAction adds new action for creating repository.
 func NewRepoAction(u *User, repo *Repository) (err error) {
 	if err = NotifyWatchers(&Action{ActUserId: u.Id, ActUserName: u.Name, ActEmail: u.Email,
-		OpType: OP_CREATE_REPO, RepoId: repo.Id, RepoName: repo.Name, IsPrivate: repo.IsPrivate}); err != nil {
+		OpType: OP_CREATE_REPO, RepoId: repo.Id, RepoUserName: repo.Owner.Name, RepoName: repo.Name,
+		IsPrivate: repo.IsPrivate}); err != nil {
 		log.Error("action.NewRepoAction(notify watchers): %d/%s", u.Id, repo.Name)
 		return err
 	}

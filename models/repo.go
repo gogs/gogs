@@ -475,6 +475,7 @@ func CreateRepository(u *User, name, desc, lang, license string, private, mirror
 
 	repo := &Repository{
 		OwnerId:     u.Id,
+		Owner:       u,
 		Name:        name,
 		LowerName:   strings.ToLower(name),
 		Description: desc,
