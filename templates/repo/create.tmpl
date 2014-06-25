@@ -19,12 +19,21 @@
                     <div class="dropdown-menu clone-group-btn no-propagation">
                         <ul id="dashboard-switch-menu" class="list-unstyled">
                             <li data-uid="{{.SignedUser.Id}}" class="checked">
-                                <a href="#">
+                                <a>
                                     <i class="fa fa-check"></i>
                                     <img src="{{.SignedUser.AvatarLink}}?s=28" alt="user-avatar" title="username">
                                     {{.SignedUser.Name}}
                                 </a>
                             </li>
+                            {{range .Orgs}}
+                            <li data-uid="{{.Id}}">
+                                <a>
+                                    <i class="fa fa-check"></i>
+                                    <img src="{{.AvatarLink}}?s=28" alt="user-avatar" title="username">
+                                    {{.Name}}
+                                </a>
+                            </li>
+                            {{end}}
                         </ul>
                     </div>
                 </div>

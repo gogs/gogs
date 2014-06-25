@@ -36,6 +36,13 @@ func Create(ctx *middleware.Context) {
 	ctx.Data["PageIsNewRepo"] = true
 	ctx.Data["LanguageIgns"] = models.LanguageIgns
 	ctx.Data["Licenses"] = models.Licenses
+
+	if err := ctx.User.GetOrganizations(); err != nil {
+		ctx.Handle(500, "home.Dashboard(GetOrganizations)", err)
+		return
+	}
+	ctx.Data["Orgs"] = ctx.User.Orgs
+
 	ctx.HTML(200, CREATE)
 }
 
@@ -44,6 +51,12 @@ func CreatePost(ctx *middleware.Context, form auth.CreateRepoForm) {
 	ctx.Data["PageIsNewRepo"] = true
 	ctx.Data["LanguageIgns"] = models.LanguageIgns
 	ctx.Data["Licenses"] = models.Licenses
+
+	if err := ctx.User.GetOrganizations(); err != nil {
+		ctx.Handle(500, "home.Dashboard(GetOrganizations)", err)
+		return
+	}
+	ctx.Data["Orgs"] = ctx.User.Orgs
 
 	if ctx.HasError() {
 		ctx.HTML(200, CREATE)
