@@ -67,7 +67,7 @@ func NewUserPost(ctx *middleware.Context, form auth.RegisterForm) {
 	}
 
 	var err error
-	if u, err = models.RegisterUser(u); err != nil {
+	if u, err = models.CreateUser(u); err != nil {
 		switch err {
 		case models.ErrUserAlreadyExist:
 			ctx.RenderWithErr("Username has been already taken", USER_NEW, &form)
@@ -76,7 +76,7 @@ func NewUserPost(ctx *middleware.Context, form auth.RegisterForm) {
 		case models.ErrUserNameIllegal:
 			ctx.RenderWithErr(models.ErrRepoNameIllegal.Error(), USER_NEW, &form)
 		default:
-			ctx.Handle(500, "admin.user.NewUser(RegisterUser)", err)
+			ctx.Handle(500, "admin.user.NewUser(CreateUser)", err)
 		}
 		return
 	}

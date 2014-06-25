@@ -56,19 +56,19 @@ func parseCmd(cmd string) (string, string) {
 }
 
 var (
-	COMMANDS_READONLY = map[string]int{
-		"git-upload-pack":    models.AU_WRITABLE,
-		"git upload-pack":    models.AU_WRITABLE,
-		"git-upload-archive": models.AU_WRITABLE,
+	COMMANDS_READONLY = map[string]models.AccessType{
+		"git-upload-pack":    models.WRITABLE,
+		"git upload-pack":    models.WRITABLE,
+		"git-upload-archive": models.WRITABLE,
 	}
 
-	COMMANDS_WRITE = map[string]int{
-		"git-receive-pack": models.AU_READABLE,
-		"git receive-pack": models.AU_READABLE,
+	COMMANDS_WRITE = map[string]models.AccessType{
+		"git-receive-pack": models.READABLE,
+		"git receive-pack": models.READABLE,
 	}
 )
 
-func In(b string, sl map[string]int) bool {
+func In(b string, sl map[string]models.AccessType) bool {
 	_, e := sl[b]
 	return e
 }
@@ -129,7 +129,7 @@ func runServ(k *cli.Context) {
 	// Access check.
 	switch {
 	case isWrite:
-		has, err := models.HasAccess(user.Name, path.Join(repoUserName, repoName), models.AU_WRITABLE)
+		has, err := models.HasAccess(user.Name, path.Join(repoUserName, repoName), models.WRITABLE)
 		if err != nil {
 			println("Gogs: internal error:", err)
 			log.GitLogger.Fatal("Fail to check write access:", err)
@@ -152,7 +152,7 @@ func runServ(k *cli.Context) {
 			break
 		}
 
-		has, err := models.HasAccess(user.Name, path.Join(repoUserName, repoName), models.AU_READABLE)
+		has, err := models.HasAccess(user.Name, path.Join(repoUserName, repoName), models.READABLE)
 		if err != nil {
 			println("Gogs: internal error:", err)
 			log.GitLogger.Fatal("Fail to check read access:", err)
