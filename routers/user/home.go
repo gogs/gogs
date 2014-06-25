@@ -20,7 +20,7 @@ import (
 const (
 	DASHBOARD base.TplName = "user/dashboard"
 	PROFILE   base.TplName = "user/profile"
-	ISSUES    base.TplName = "user/issue"
+	ISSUES    base.TplName = "user/issues"
 	PULLS     base.TplName = "user/pulls"
 	STARS     base.TplName = "user/stars"
 )
@@ -28,6 +28,13 @@ const (
 func Dashboard(ctx *middleware.Context) {
 	ctx.Data["Title"] = "Dashboard"
 	ctx.Data["PageIsUserDashboard"] = true
+
+	if err := ctx.User.GetOrganizations(); err != nil {
+		ctx.Handle(500, "home.Dashboard(GetOrganizations)", err)
+		return
+	}
+	ctx.Data["Orgs"] = ctx.User.Orgs
+	ctx.Data["ContextUser"] = ctx.User
 
 	var err error
 	ctx.Data["MyRepos"], err = models.GetRepositories(ctx.User.Id, true)
@@ -53,7 +60,7 @@ func Dashboard(ctx *middleware.Context) {
 	for _, act := range actions {
 		if act.IsPrivate {
 			if has, _ := models.HasAccess(ctx.User.Name, act.RepoUserName+"/"+act.RepoName,
-				models.AU_READABLE); !has {
+				models.READABLE); !has {
 				continue
 			}
 		}
@@ -131,7 +138,7 @@ func Feeds(ctx *middleware.Context, form auth.FeedsForm) {
 	for _, act := range actions {
 		if act.IsPrivate {
 			if has, _ := models.HasAccess(ctx.User.Name, act.RepoUserName+"/"+act.RepoName,
-				models.AU_READABLE); !has {
+				models.READABLE); !has {
 				continue
 			}
 		}

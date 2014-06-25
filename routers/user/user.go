@@ -226,7 +226,7 @@ func SignUpPost(ctx *middleware.Context, form auth.RegisterForm) {
 	}
 
 	var err error
-	if u, err = models.RegisterUser(u); err != nil {
+	if u, err = models.CreateUser(u); err != nil {
 		switch err {
 		case models.ErrUserAlreadyExist:
 			ctx.Data["Err_UserName"] = true
@@ -235,13 +235,14 @@ func SignUpPost(ctx *middleware.Context, form auth.RegisterForm) {
 			ctx.Data["Err_Email"] = true
 			ctx.RenderWithErr("E-mail address has been already used", SIGNUP, &form)
 		case models.ErrUserNameIllegal:
+			ctx.Data["Err_UserName"] = true
 			ctx.RenderWithErr(models.ErrRepoNameIllegal.Error(), SIGNUP, &form)
 		default:
-			ctx.Handle(500, "user.SignUpPost(RegisterUser)", err)
+			ctx.Handle(500, "user.SignUpPost(CreateUser)", err)
 		}
 		return
 	}
-	log.Trace("%s User created: %s", ctx.Req.RequestURI, form.UserName)
+	log.Trace("%s User created: %s", ctx.Req.RequestURI, u.Name)
 
 	// Bind social account.
 	if isOauth {

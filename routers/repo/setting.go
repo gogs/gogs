@@ -175,7 +175,7 @@ func CollaborationPost(ctx *middleware.Context) {
 		ctx.Redirect(ctx.Req.RequestURI)
 		return
 	}
-	has, err := models.HasAccess(name, repoLink, models.AU_WRITABLE)
+	has, err := models.HasAccess(name, repoLink, models.WRITABLE)
 	if err != nil {
 		ctx.Handle(500, "setting.CollaborationPost(HasAccess)", err)
 		return
@@ -196,7 +196,7 @@ func CollaborationPost(ctx *middleware.Context) {
 	}
 
 	if err = models.AddAccess(&models.Access{UserName: name, RepoName: repoLink,
-		Mode: models.AU_WRITABLE}); err != nil {
+		Mode: models.WRITABLE}); err != nil {
 		ctx.Handle(500, "setting.CollaborationPost(AddAccess)", err)
 		return
 	}

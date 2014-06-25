@@ -158,7 +158,7 @@ func IsRepositoryExist(u *User, repoName string) (bool, error) {
 }
 
 var (
-	illegalEquals  = []string{"raw", "install", "api", "avatar", "user", "help", "stars", "issues", "pulls", "commits", "repo", "template", "admin"}
+	illegalEquals  = []string{"raw", "install", "api", "avatar", "user", "org", "help", "stars", "issues", "pulls", "commits", "repo", "template", "admin"}
 	illegalSuffixs = []string{".git"}
 )
 
@@ -483,7 +483,9 @@ func CreateRepository(user *User, name, desc, lang, license string, private, mir
 
 	sess := x.NewSession()
 	defer sess.Close()
-	sess.Begin()
+	if err = sess.Begin(); err != nil {
+		return nil, err
+	}
 
 	if _, err = sess.Insert(repo); err != nil {
 		if err2 := os.RemoveAll(repoPath); err2 != nil {
@@ -495,9 +497,9 @@ func CreateRepository(user *User, name, desc, lang, license string, private, mir
 		return nil, err
 	}
 
-	mode := AU_WRITABLE
+	mode := WRITABLE
 	if mirror {
-		mode = AU_READABLE
+		mode = READABLE
 	}
 	access := Access{
 		UserName: user.LowerName,
