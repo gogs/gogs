@@ -257,6 +257,9 @@ html, body {
 
 .card .btn {
     cursor: pointer;
+}
+
+.card .btn-primary {
     margin-right: 1.2em;
 }
 
@@ -638,7 +641,7 @@ html, body {
     margin: 0 .5em;
 }
 
-#dashboard-switch .btn {
+#dashboard-switch .btn, #repo-owner-switch .btn {
     height: 40px;
 }
 
@@ -647,7 +650,7 @@ html, body {
     margin-right: 18px;
 }
 
-#dashboard-switch .dropdown-menu {
+#dashboard-switch .dropdown-menu,#repo-owner-switch .dropdown-menu {
     padding: 0;
 }
 
