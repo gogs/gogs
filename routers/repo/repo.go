@@ -53,7 +53,7 @@ func CreatePost(ctx *middleware.Context, form auth.CreateRepoForm) {
 	ctx.Data["Licenses"] = models.Licenses
 
 	if err := ctx.User.GetOrganizations(); err != nil {
-		ctx.Handle(500, "home.Dashboard(GetOrganizations)", err)
+		ctx.Handle(500, "home.CreatePost(GetOrganizations)", err)
 		return
 	}
 	ctx.Data["Orgs"] = ctx.User.Orgs
@@ -70,9 +70,9 @@ func CreatePost(ctx *middleware.Context, form auth.CreateRepoForm) {
 		u, err = models.GetUserById(form.Uid)
 		if err != nil {
 			if err == models.ErrUserNotExist {
-				ctx.Handle(404, "home.Dashboard(GetUserById)", err)
+				ctx.Handle(404, "home.CreatePost(GetUserById)", err)
 			} else {
-				ctx.Handle(500, "home.Dashboard(GetUserById)", err)
+				ctx.Handle(500, "home.CreatePost(GetUserById)", err)
 			}
 			return
 		}
@@ -97,12 +97,19 @@ func CreatePost(ctx *middleware.Context, form auth.CreateRepoForm) {
 			log.Error("repo.CreatePost(DeleteRepository): %v", errDelete)
 		}
 	}
-	ctx.Handle(500, "repo.CreatePost", err)
+	ctx.Handle(500, "repo.CreatePost(CreateRepository)", err)
 }
 
 func Migrate(ctx *middleware.Context) {
 	ctx.Data["Title"] = "Migrate repository"
 	ctx.Data["PageIsNewRepo"] = true
+
+	if err := ctx.User.GetOrganizations(); err != nil {
+		ctx.Handle(500, "home.Migrate(GetOrganizations)", err)
+		return
+	}
+	ctx.Data["Orgs"] = ctx.User.Orgs
+
 	ctx.HTML(200, MIGRATE)
 }
 
@@ -110,19 +117,40 @@ func MigratePost(ctx *middleware.Context, form auth.MigrateRepoForm) {
 	ctx.Data["Title"] = "Migrate repository"
 	ctx.Data["PageIsNewRepo"] = true
 
+	if err := ctx.User.GetOrganizations(); err != nil {
+		ctx.Handle(500, "home.MigratePost(GetOrganizations)", err)
+		return
+	}
+	ctx.Data["Orgs"] = ctx.User.Orgs
+
 	if ctx.HasError() {
 		ctx.HTML(200, MIGRATE)
 		return
 	}
 
+	u := ctx.User
+	// Not equal means current user is an organization.
+	if u.Id != form.Uid {
+		var err error
+		u, err = models.GetUserById(form.Uid)
+		if err != nil {
+			if err == models.ErrUserNotExist {
+				ctx.Handle(404, "home.MigratePost(GetUserById)", err)
+			} else {
+				ctx.Handle(500, "home.MigratePost(GetUserById)", err)
+			}
+			return
+		}
+	}
+
 	authStr := strings.Replace(fmt.Sprintf("://%s:%s",
 		form.AuthUserName, form.AuthPasswd), "@", "%40", -1)
 	url := strings.Replace(form.Url, "://", authStr+"@", 1)
-	repo, err := models.MigrateRepository(ctx.User, form.RepoName, form.Description, form.Private,
+	repo, err := models.MigrateRepository(u, form.RepoName, form.Description, form.Private,
 		form.Mirror, url)
 	if err == nil {
-		log.Trace("%s Repository migrated: %s/%s", ctx.Req.RequestURI, ctx.User.LowerName, form.RepoName)
-		ctx.Redirect("/" + ctx.User.Name + "/" + form.RepoName)
+		log.Trace("%s Repository migrated: %s/%s", ctx.Req.RequestURI, u.LowerName, form.RepoName)
+		ctx.Redirect("/" + u.Name + "/" + form.RepoName)
 		return
 	} else if err == models.ErrRepoAlreadyExist {
 		ctx.RenderWithErr("Repository name has already been used", MIGRATE, &form)
@@ -133,7 +161,7 @@ func MigratePost(ctx *middleware.Context, form auth.MigrateRepoForm) {
 	}
 
 	if repo != nil {
-		if errDelete := models.DeleteRepository(ctx.User.Id, repo.Id, ctx.User.Name); errDelete != nil {
+		if errDelete := models.DeleteRepository(u.Id, repo.Id, u.Name); errDelete != nil {
 			log.Error("repo.MigratePost(DeleteRepository): %v", errDelete)
 		}
 	}
@@ -142,7 +170,7 @@ func MigratePost(ctx *middleware.Context, form auth.MigrateRepoForm) {
 		ctx.RenderWithErr(err.Error(), MIGRATE, &form)
 		return
 	}
-	ctx.Handle(500, "repo.Migrate", err)
+	ctx.Handle(500, "repo.Migrate(MigrateRepository)", err)
 }
 
 func Single(ctx *middleware.Context, params martini.Params) {
