@@ -390,7 +390,7 @@ func CreateRepository(user *User, name, desc, lang, license string, private, mir
 
 // extractGitBareZip extracts git-bare.zip to repository path.
 func extractGitBareZip(repoPath string) error {
-	z, err := zip.Open(path.Join(setting.RepoRootPath, "git-bare.zip"))
+	z, err := zip.Open(filepath.Join(setting.RepoRootPath, "git-bare.zip"))
 	if err != nil {
 		return err
 	}
