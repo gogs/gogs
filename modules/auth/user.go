@@ -93,7 +93,7 @@ func (f *UpdateProfileForm) Name(field string) string {
 	names := map[string]string{
 		"UserName": "Username",
 		"Email":    "E-mail address",
-		"Website":  "Website",
+		"Website":  "Website address",
 		"Location": "Location",
 		"Avatar":   "Gravatar Email",
 	}

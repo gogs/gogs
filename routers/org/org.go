@@ -16,7 +16,8 @@ import (
 )
 
 const (
-	NEW base.TplName = "org/new"
+	NEW      base.TplName = "org/new"
+	SETTINGS base.TplName = "org/settings"
 )
 
 func Organization(ctx *middleware.Context, params martini.Params) {
@@ -39,7 +40,7 @@ func New(ctx *middleware.Context) {
 	ctx.HTML(200, NEW)
 }
 
-func NewPost(ctx *middleware.Context, form auth.CreateOrganizationForm) {
+func NewPost(ctx *middleware.Context, form auth.CreateOrgForm) {
 	ctx.Data["Title"] = "Create An Organization"
 
 	if ctx.HasError() {
@@ -114,7 +115,52 @@ func Dashboard(ctx *middleware.Context, params martini.Params) {
 	ctx.HTML(200, user.DASHBOARD)
 }
 
-func Setting(ctx *middleware.Context, param martini.Params) {
-	ctx.Data["Title"] = "Setting"
-	ctx.HTML(200, "org/setting")
+func Settings(ctx *middleware.Context, params martini.Params) {
+	ctx.Data["Title"] = "Settings"
+
+	org, err := models.GetUserByName(params["org"])
+	if err != nil {
+		if err == models.ErrUserNotExist {
+			ctx.Handle(404, "org.Settings(GetUserByName)", err)
+		} else {
+			ctx.Handle(500, "org.Settings(GetUserByName)", err)
+		}
+		return
+	}
+	ctx.Data["Org"] = org
+
+	ctx.HTML(200, SETTINGS)
+}
+
+func SettingsPost(ctx *middleware.Context, params martini.Params, form auth.OrgSettingForm) {
+	ctx.Data["Title"] = "Settings"
+
+	org, err := models.GetUserByName(params["org"])
+	if err != nil {
+		if err == models.ErrUserNotExist {
+			ctx.Handle(404, "org.SettingsPost(GetUserByName)", err)
+		} else {
+			ctx.Handle(500, "org.SettingsPost(GetUserByName)", err)
+		}
+		return
+	}
+	ctx.Data["Org"] = org
+
+	if ctx.HasError() {
+		ctx.HTML(200, SETTINGS)
+		return
+	}
+
+	org.FullName = form.DisplayName
+	org.Email = form.Email
+	org.Description = form.Description
+	org.Website = form.Website
+	org.Location = form.Location
+	if err = models.UpdateUser(org); err != nil {
+		ctx.Handle(500, "org.SettingsPost(UpdateUser)", err)
+		return
+	}
+	log.Trace("%s Organization setting updated: %s", ctx.Req.RequestURI, org.LowerName)
+	ctx.Flash.Success("Organization profile has been successfully updated.")
+	ctx.Redirect("/org/" + org.Name + "/settings")
 }
