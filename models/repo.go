@@ -240,7 +240,7 @@ func MirrorUpdate() {
 			"git", "remote", "update"); err != nil {
 			return errors.New("git remote update: " + stderr)
 		} else if err = git.UnpackRefs(repoPath); err != nil {
-			return err
+			return errors.New("UnpackRefs: " + err.Error())
 		}
 
 		m.NextUpdate = time.Now().Add(time.Duration(m.Interval) * time.Hour)

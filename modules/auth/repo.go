@@ -71,7 +71,7 @@ func (f *MigrateRepoForm) Validate(errors *binding.Errors, req *http.Request, co
 
 type RepoSettingForm struct {
 	RepoName    string `form:"name" binding:"Required;AlphaDash;MaxSize(100)"`
-	Description string `form:"desc" binding:"MaxSize(100)"`
+	Description string `form:"desc" binding:"MaxSize(255)"`
 	Website     string `form:"site" binding:"Url;MaxSize(100)"`
 	Branch      string `form:"branch"`
 	Interval    int    `form:"interval"`

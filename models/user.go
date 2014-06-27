@@ -30,6 +30,7 @@ const (
 
 var (
 	ErrUserOwnRepos          = errors.New("User still have ownership of repositories")
+	ErrUserHasOrgs           = errors.New("User still have membership of organization")
 	ErrUserAlreadyExist      = errors.New("User already exist")
 	ErrUserNotExist          = errors.New("User does not exist")
 	ErrUserNotKeyOwner       = errors.New("User does not the owner of public key")
@@ -69,8 +70,9 @@ type User struct {
 	Updated       time.Time `xorm:"updated"`
 
 	// For organization.
-	NumTeams   int
-	NumMembers int
+	Description string
+	NumTeams    int
+	NumMembers  int
 }
 
 // HomeLink returns the user home page link.
@@ -211,81 +213,6 @@ func CreateUser(u *User) (*User, error) {
 	return u, err
 }
 
-// CreateOrganization creates record of a new organization.
-func CreateOrganization(org, owner *User) (*User, error) {
-	if !IsLegalName(org.Name) {
-		return nil, ErrUserNameIllegal
-	}
-
-	isExist, err := IsUserExist(org.Name)
-	if err != nil {
-		return nil, err
-	} else if isExist {
-		return nil, ErrUserAlreadyExist
-	}
-
-	isExist, err = IsEmailUsed(org.Email)
-	if err != nil {
-		return nil, err
-	} else if isExist {
-		return nil, ErrEmailAlreadyUsed
-	}
-
-	org.LowerName = strings.ToLower(org.Name)
-	org.Avatar = base.EncodeMd5(org.Email)
-	org.AvatarEmail = org.Email
-	// No password for organization.
-	org.NumTeams = 1
-	org.NumMembers = 1
-
-	sess := x.NewSession()
-	defer sess.Close()
-	if err = sess.Begin(); err != nil {
-		return nil, err
-	}
-
-	if _, err = sess.Insert(org); err != nil {
-		sess.Rollback()
-		return nil, err
-	}
-
-	// Create default owner team.
-	t := &Team{
-		OrgId:      org.Id,
-		Name:       OWNER_TEAM,
-		Authorize:  ORG_ADMIN,
-		NumMembers: 1,
-	}
-	if _, err = sess.Insert(t); err != nil {
-		sess.Rollback()
-		return nil, err
-	}
-
-	// Add initial creator to organization and owner team.
-	ou := &OrgUser{
-		Uid:     owner.Id,
-		OrgId:   org.Id,
-		IsOwner: true,
-		NumTeam: 1,
-	}
-	if _, err = sess.Insert(ou); err != nil {
-		sess.Rollback()
-		return nil, err
-	}
-
-	tu := &TeamUser{
-		Uid:    owner.Id,
-		OrgId:  org.Id,
-		TeamId: t.Id,
-	}
-	if _, err = sess.Insert(tu); err != nil {
-		sess.Rollback()
-		return nil, err
-	}
-
-	return org, sess.Commit()
-}
-
 // GetUsers returns given number of user objects with offset.
 func GetUsers(num, offset int) ([]User, error) {
 	users := make([]User, 0, num)
@@ -392,51 +319,62 @@ func UpdateUser(u *User) (err error) {
 	if len(u.Website) > 255 {
 		u.Website = u.Website[:255]
 	}
+	if len(u.Description) > 255 {
+		u.Description = u.Description[:255]
+	}
 
 	_, err = x.Id(u.Id).AllCols().Update(u)
 	return err
 }
 
 // DeleteUser completely deletes everything of the user.
-func DeleteUser(user *User) error {
+func DeleteUser(u *User) error {
 	// Check ownership of repository.
-	count, err := GetRepositoryCount(user)
+	count, err := GetRepositoryCount(u)
 	if err != nil {
-		return errors.New("modesl.GetRepositories: " + err.Error())
+		return errors.New("modesl.GetRepositories(GetRepositoryCount): " + err.Error())
 	} else if count > 0 {
 		return ErrUserOwnRepos
+	}
+
+	// Check membership of organization.
+	count, err = GetOrganizationCount(u)
+	if err != nil {
+		return errors.New("modesl.GetRepositories(GetOrganizationCount): " + err.Error())
+	} else if count > 0 {
+		return ErrUserHasOrgs
 	}
 
 	// TODO: check issues, other repos' commits
 
 	// Delete all followers.
-	if _, err = x.Delete(&Follow{FollowId: user.Id}); err != nil {
+	if _, err = x.Delete(&Follow{FollowId: u.Id}); err != nil {
 		return err
 	}
 
 	// Delete oauth2.
-	if _, err = x.Delete(&Oauth2{Uid: user.Id}); err != nil {
+	if _, err = x.Delete(&Oauth2{Uid: u.Id}); err != nil {
 		return err
 	}
 
 	// Delete all feeds.
-	if _, err = x.Delete(&Action{UserId: user.Id}); err != nil {
+	if _, err = x.Delete(&Action{UserId: u.Id}); err != nil {
 		return err
 	}
 
 	// Delete all watches.
-	if _, err = x.Delete(&Watch{UserId: user.Id}); err != nil {
+	if _, err = x.Delete(&Watch{UserId: u.Id}); err != nil {
 		return err
 	}
 
 	// Delete all accesses.
-	if _, err = x.Delete(&Access{UserName: user.LowerName}); err != nil {
+	if _, err = x.Delete(&Access{UserName: u.LowerName}); err != nil {
 		return err
 	}
 
 	// Delete all SSH keys.
 	keys := make([]*PublicKey, 0, 10)
-	if err = x.Find(&keys, &PublicKey{OwnerId: user.Id}); err != nil {
+	if err = x.Find(&keys, &PublicKey{OwnerId: u.Id}); err != nil {
 		return err
 	}
 	for _, key := range keys {
@@ -446,11 +384,11 @@ func DeleteUser(user *User) error {
 	}
 
 	// Delete user directory.
-	if err = os.RemoveAll(UserPath(user.Name)); err != nil {
+	if err = os.RemoveAll(UserPath(u.Name)); err != nil {
 		return err
 	}
 
-	_, err = x.Delete(user)
+	_, err = x.Delete(u)
 	return err
 }
 

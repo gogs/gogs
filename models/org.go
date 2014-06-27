@@ -4,6 +4,88 @@
 
 package models
 
+import (
+	"strings"
+
+	"github.com/gogits/gogs/modules/base"
+)
+
+// CreateOrganization creates record of a new organization.
+func CreateOrganization(org, owner *User) (*User, error) {
+	if !IsLegalName(org.Name) {
+		return nil, ErrUserNameIllegal
+	}
+
+	isExist, err := IsUserExist(org.Name)
+	if err != nil {
+		return nil, err
+	} else if isExist {
+		return nil, ErrUserAlreadyExist
+	}
+
+	isExist, err = IsEmailUsed(org.Email)
+	if err != nil {
+		return nil, err
+	} else if isExist {
+		return nil, ErrEmailAlreadyUsed
+	}
+
+	org.LowerName = strings.ToLower(org.Name)
+	org.FullName = org.Name
+	org.Avatar = base.EncodeMd5(org.Email)
+	org.AvatarEmail = org.Email
+	// No password for organization.
+	org.NumTeams = 1
+	org.NumMembers = 1
+
+	sess := x.NewSession()
+	defer sess.Close()
+	if err = sess.Begin(); err != nil {
+		return nil, err
+	}
+
+	if _, err = sess.Insert(org); err != nil {
+		sess.Rollback()
+		return nil, err
+	}
+
+	// Create default owner team.
+	t := &Team{
+		OrgId:      org.Id,
+		Name:       OWNER_TEAM,
+		Authorize:  ORG_ADMIN,
+		NumMembers: 1,
+	}
+	if _, err = sess.Insert(t); err != nil {
+		sess.Rollback()
+		return nil, err
+	}
+
+	// Add initial creator to organization and owner team.
+	ou := &OrgUser{
+		Uid:     owner.Id,
+		OrgId:   org.Id,
+		IsOwner: true,
+		NumTeam: 1,
+	}
+	if _, err = sess.Insert(ou); err != nil {
+		sess.Rollback()
+		return nil, err
+	}
+
+	tu := &TeamUser{
+		Uid:    owner.Id,
+		OrgId:  org.Id,
+		TeamId: t.Id,
+	}
+	if _, err = sess.Insert(tu); err != nil {
+		sess.Rollback()
+		return nil, err
+	}
+
+	return org, sess.Commit()
+}
+
 type AuthorizeType int
 
 const (
@@ -70,6 +152,10 @@ func GetOrgUsersByOrgId(orgId int64) ([]*OrgUser, error) {
 	ous := make([]*OrgUser, 0, 10)
 	err := x.Where("org_id=?", orgId).Find(&ous)
 	return ous, err
+}
+
+func GetOrganizationCount(u *User) (int64, error) {
+	return x.Where("uid=?", u.Id).Count(new(OrgUser))
 }
 
 // ___________                    ____ ___
