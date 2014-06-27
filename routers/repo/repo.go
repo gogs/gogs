@@ -25,12 +25,25 @@ import (
 	"github.com/gogits/gogs/modules/middleware"
 )
 
+const (
+	CREATE  base.TplName = "repo/create"
+	MIGRATE base.TplName = "repo/migrate"
+	SINGLE  base.TplName = "repo/single"
+)
+
 func Create(ctx *middleware.Context) {
 	ctx.Data["Title"] = "Create repository"
 	ctx.Data["PageIsNewRepo"] = true
 	ctx.Data["LanguageIgns"] = models.LanguageIgns
 	ctx.Data["Licenses"] = models.Licenses
-	ctx.HTML(200, "repo/create")
+
+	if err := ctx.User.GetOrganizations(); err != nil {
+		ctx.Handle(500, "home.Dashboard(GetOrganizations)", err)
+		return
+	}
+	ctx.Data["Orgs"] = ctx.User.Orgs
+
+	ctx.HTML(200, CREATE)
 }
 
 func CreatePost(ctx *middleware.Context, form auth.CreateRepoForm) {
@@ -39,76 +52,125 @@ func CreatePost(ctx *middleware.Context, form auth.CreateRepoForm) {
 	ctx.Data["LanguageIgns"] = models.LanguageIgns
 	ctx.Data["Licenses"] = models.Licenses
 
+	if err := ctx.User.GetOrganizations(); err != nil {
+		ctx.Handle(500, "home.CreatePost(GetOrganizations)", err)
+		return
+	}
+	ctx.Data["Orgs"] = ctx.User.Orgs
+
 	if ctx.HasError() {
-		ctx.HTML(200, "repo/create")
+		ctx.HTML(200, CREATE)
 		return
 	}
 
-	repo, err := models.CreateRepository(ctx.User, form.RepoName, form.Description,
+	u := ctx.User
+	// Not equal means current user is an organization.
+	if u.Id != form.Uid {
+		var err error
+		u, err = models.GetUserById(form.Uid)
+		if err != nil {
+			if err == models.ErrUserNotExist {
+				ctx.Handle(404, "home.CreatePost(GetUserById)", err)
+			} else {
+				ctx.Handle(500, "home.CreatePost(GetUserById)", err)
+			}
+			return
+		}
+	}
+
+	repo, err := models.CreateRepository(u, form.RepoName, form.Description,
 		form.Language, form.License, form.Private, false, form.InitReadme)
 	if err == nil {
-		log.Trace("%s Repository created: %s/%s", ctx.Req.RequestURI, ctx.User.LowerName, form.RepoName)
-		ctx.Redirect("/" + ctx.User.Name + "/" + form.RepoName)
+		log.Trace("%s Repository created: %s/%s", ctx.Req.RequestURI, u.LowerName, form.RepoName)
+		ctx.Redirect("/" + u.Name + "/" + form.RepoName)
 		return
 	} else if err == models.ErrRepoAlreadyExist {
-		ctx.RenderWithErr("Repository name has already been used", "repo/create", &form)
+		ctx.RenderWithErr("Repository name has already been used", CREATE, &form)
 		return
 	} else if err == models.ErrRepoNameIllegal {
-		ctx.RenderWithErr(models.ErrRepoNameIllegal.Error(), "repo/create", &form)
+		ctx.RenderWithErr(models.ErrRepoNameIllegal.Error(), CREATE, &form)
 		return
 	}
 
 	if repo != nil {
-		if errDelete := models.DeleteRepository(ctx.User.Id, repo.Id, ctx.User.Name); errDelete != nil {
-			log.Error("repo.MigratePost(CreatePost): %v", errDelete)
+		if errDelete := models.DeleteRepository(u.Id, repo.Id, u.Name); errDelete != nil {
+			log.Error("repo.CreatePost(DeleteRepository): %v", errDelete)
 		}
 	}
-	ctx.Handle(500, "repo.Create", err)
+	ctx.Handle(500, "repo.CreatePost(CreateRepository)", err)
 }
 
 func Migrate(ctx *middleware.Context) {
 	ctx.Data["Title"] = "Migrate repository"
 	ctx.Data["PageIsNewRepo"] = true
-	ctx.HTML(200, "repo/migrate")
+
+	if err := ctx.User.GetOrganizations(); err != nil {
+		ctx.Handle(500, "home.Migrate(GetOrganizations)", err)
+		return
+	}
+	ctx.Data["Orgs"] = ctx.User.Orgs
+
+	ctx.HTML(200, MIGRATE)
 }
 
 func MigratePost(ctx *middleware.Context, form auth.MigrateRepoForm) {
 	ctx.Data["Title"] = "Migrate repository"
 	ctx.Data["PageIsNewRepo"] = true
 
-	if ctx.HasError() {
-		ctx.HTML(200, "repo/migrate")
+	if err := ctx.User.GetOrganizations(); err != nil {
+		ctx.Handle(500, "home.MigratePost(GetOrganizations)", err)
 		return
+	}
+	ctx.Data["Orgs"] = ctx.User.Orgs
+
+	if ctx.HasError() {
+		ctx.HTML(200, MIGRATE)
+		return
+	}
+
+	u := ctx.User
+	// Not equal means current user is an organization.
+	if u.Id != form.Uid {
+		var err error
+		u, err = models.GetUserById(form.Uid)
+		if err != nil {
+			if err == models.ErrUserNotExist {
+				ctx.Handle(404, "home.MigratePost(GetUserById)", err)
+			} else {
+				ctx.Handle(500, "home.MigratePost(GetUserById)", err)
+			}
+			return
+		}
 	}
 
 	authStr := strings.Replace(fmt.Sprintf("://%s:%s",
 		form.AuthUserName, form.AuthPasswd), "@", "%40", -1)
 	url := strings.Replace(form.Url, "://", authStr+"@", 1)
-	repo, err := models.MigrateRepository(ctx.User, form.RepoName, form.Description, form.Private,
+	repo, err := models.MigrateRepository(u, form.RepoName, form.Description, form.Private,
 		form.Mirror, url)
 	if err == nil {
-		log.Trace("%s Repository migrated: %s/%s", ctx.Req.RequestURI, ctx.User.LowerName, form.RepoName)
-		ctx.Redirect("/" + ctx.User.Name + "/" + form.RepoName)
+		log.Trace("%s Repository migrated: %s/%s", ctx.Req.RequestURI, u.LowerName, form.RepoName)
+		ctx.Redirect("/" + u.Name + "/" + form.RepoName)
 		return
 	} else if err == models.ErrRepoAlreadyExist {
-		ctx.RenderWithErr("Repository name has already been used", "repo/migrate", &form)
+		ctx.RenderWithErr("Repository name has already been used", MIGRATE, &form)
 		return
 	} else if err == models.ErrRepoNameIllegal {
-		ctx.RenderWithErr(models.ErrRepoNameIllegal.Error(), "repo/migrate", &form)
+		ctx.RenderWithErr(models.ErrRepoNameIllegal.Error(), MIGRATE, &form)
 		return
 	}
 
 	if repo != nil {
-		if errDelete := models.DeleteRepository(ctx.User.Id, repo.Id, ctx.User.Name); errDelete != nil {
+		if errDelete := models.DeleteRepository(u.Id, repo.Id, u.Name); errDelete != nil {
 			log.Error("repo.MigratePost(DeleteRepository): %v", errDelete)
 		}
 	}
 
 	if strings.Contains(err.Error(), "Authentication failed") {
-		ctx.RenderWithErr(err.Error(), "repo/migrate", &form)
+		ctx.RenderWithErr(err.Error(), MIGRATE, &form)
 		return
 	}
-	ctx.Handle(500, "repo.Migrate", err)
+	ctx.Handle(500, "repo.Migrate(MigrateRepository)", err)
 }
 
 func Single(ctx *middleware.Context, params martini.Params) {
@@ -291,7 +353,7 @@ func Single(ctx *middleware.Context, params martini.Params) {
 	ctx.Data["Treenames"] = treenames
 	ctx.Data["TreePath"] = treePath
 	ctx.Data["BranchLink"] = branchLink
-	ctx.HTML(200, "repo/single")
+	ctx.HTML(200, SINGLE)
 }
 
 func basicEncode(username, password string) string {
@@ -318,7 +380,7 @@ func basicDecode(encoded string) (user string, name string, err error) {
 func authRequired(ctx *middleware.Context) {
 	ctx.ResponseWriter.Header().Set("WWW-Authenticate", "Basic realm=\".\"")
 	ctx.Data["ErrorMsg"] = "no basic auth and digit auth"
-	ctx.HTML(401, fmt.Sprintf("status/401"))
+	ctx.HTML(401, base.TplName("status/401"))
 }
 
 func Action(ctx *middleware.Context, params martini.Params) {

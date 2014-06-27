@@ -107,9 +107,9 @@ func Http(ctx *middleware.Context, params martini.Params) {
 		}
 
 		if !isPublicPull {
-			var tp = models.AU_WRITABLE
+			var tp = models.WRITABLE
 			if isPull {
-				tp = models.AU_READABLE
+				tp = models.READABLE
 			}
 
 			has, err := models.HasAccess(authUsername, username+"/"+reponame, tp)
@@ -117,8 +117,8 @@ func Http(ctx *middleware.Context, params martini.Params) {
 				ctx.Handle(401, "no basic auth and digit auth", nil)
 				return
 			} else if !has {
-				if tp == models.AU_READABLE {
-					has, err = models.HasAccess(authUsername, username+"/"+reponame, models.AU_WRITABLE)
+				if tp == models.READABLE {
+					has, err = models.HasAccess(authUsername, username+"/"+reponame, models.WRITABLE)
 					if err != nil || !has {
 						ctx.Handle(401, "no basic auth and digit auth", nil)
 						return
@@ -141,7 +141,10 @@ func Http(ctx *middleware.Context, params martini.Params) {
 					newCommitId := fields[1]
 					refName := fields[2]
 
-					models.Update(refName, oldCommitId, newCommitId, authUsername, username, reponame, authUser.Id)
+					if err = models.Update(refName, oldCommitId, newCommitId, authUsername, username, reponame, authUser.Id); err != nil {
+						log.GitLogger.Error(err.Error())
+						return
+					}
 				}
 			}
 		}

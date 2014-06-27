@@ -47,12 +47,12 @@ var (
 	StaticRootPath     string
 
 	// Security settings.
-	InstallLock         bool
-	SecretKey           string
-	LogInRememberDays   int
-	CookieUserName      string
-	CookieRememberName  string
-	ReverseProxyAuthUid string
+	InstallLock          bool
+	SecretKey            string
+	LogInRememberDays    int
+	CookieUserName       string
+	CookieRememberName   string
+	ReverseProxyAuthUser string
 
 	// Webhook settings.
 	WebhookTaskInterval   int
@@ -164,7 +164,7 @@ func NewConfigContext() {
 	LogInRememberDays = Cfg.MustInt("security", "LOGIN_REMEMBER_DAYS")
 	CookieUserName = Cfg.MustValue("security", "COOKIE_USERNAME")
 	CookieRememberName = Cfg.MustValue("security", "COOKIE_REMEMBER_NAME")
-	ReverseProxyAuthUid = Cfg.MustValue("security", "REVERSE_PROXY_AUTHENTICATION_UID", "X-WEBAUTH-UID")
+	ReverseProxyAuthUser = Cfg.MustValue("security", "REVERSE_PROXY_AUTHENTICATION_USER", "X-WEBAUTH-USER")
 
 	RunUser = Cfg.MustValue("", "RUN_USER")
 	curUser := os.Getenv("USER")

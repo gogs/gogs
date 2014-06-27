@@ -6,6 +6,7 @@ package models
 
 import (
 	"container/list"
+	"fmt"
 	"os/exec"
 	"strings"
 
@@ -15,11 +16,11 @@ import (
 	"github.com/gogits/gogs/modules/log"
 )
 
-func Update(refName, oldCommitId, newCommitId, userName, repoUserName, repoName string, userId int64) {
+func Update(refName, oldCommitId, newCommitId, userName, repoUserName, repoName string, userId int64) error {
 	isNew := strings.HasPrefix(oldCommitId, "0000000")
 	if isNew &&
 		strings.HasPrefix(newCommitId, "0000000") {
-		log.GitLogger.Fatal("old rev and new rev both 000000")
+		return fmt.Errorf("old rev and new rev both 000000")
 	}
 
 	f := RepoPath(repoUserName, repoName)
@@ -31,18 +32,17 @@ func Update(refName, oldCommitId, newCommitId, userName, repoUserName, repoName 
 	isDel := strings.HasPrefix(newCommitId, "0000000")
 	if isDel {
 		log.GitLogger.Info("del rev", refName, "from", userName+"/"+repoName+".git", "by", userId)
-		return
+		return nil
 	}
 
 	repo, err := git.OpenRepository(f)
 	if err != nil {
-		log.GitLogger.Fatal("runUpdate.Open repoId: %v", err)
+		return fmt.Errorf("runUpdate.Open repoId: %v", err)
 	}
 
 	newCommit, err := repo.GetCommit(newCommitId)
 	if err != nil {
-		log.GitLogger.Fatal("runUpdate GetCommit of newCommitId: %v", err)
-		return
+		return fmt.Errorf("runUpdate GetCommit of newCommitId: %v", err)
 	}
 
 	var l *list.List
@@ -50,28 +50,27 @@ func Update(refName, oldCommitId, newCommitId, userName, repoUserName, repoName 
 	if isNew {
 		l, err = newCommit.CommitsBefore()
 		if err != nil {
-			log.GitLogger.Fatal("Find CommitsBefore erro: %v", err)
+			return fmt.Errorf("Find CommitsBefore erro: %v", err)
 		}
 	} else {
 		l, err = newCommit.CommitsBeforeUntil(oldCommitId)
 		if err != nil {
-			log.GitLogger.Fatal("Find CommitsBeforeUntil erro: %v", err)
-			return
+			return fmt.Errorf("Find CommitsBeforeUntil erro: %v", err)
 		}
 	}
 
 	if err != nil {
-		log.GitLogger.Fatal("runUpdate.Commit repoId: %v", err)
+		return fmt.Errorf("runUpdate.Commit repoId: %v", err)
 	}
 
 	ru, err := GetUserByName(repoUserName)
 	if err != nil {
-		log.GitLogger.Fatal("runUpdate.GetUserByName: %v", err)
+		return fmt.Errorf("runUpdate.GetUserByName: %v", err)
 	}
 
 	repos, err := GetRepositoryByName(ru.Id, repoName)
 	if err != nil {
-		log.GitLogger.Fatal("runUpdate.GetRepositoryByName userId: %v", err)
+		return fmt.Errorf("runUpdate.GetRepositoryByName userId: %v", err)
 	}
 
 	commits := make([]*base.PushCommit, 0)
@@ -95,6 +94,7 @@ func Update(refName, oldCommitId, newCommitId, userName, repoUserName, repoName 
 	//commits = append(commits, []string{lastCommit.Id().String(), lastCommit.Message()})
 	if err = CommitRepoAction(userId, ru.Id, userName, actEmail,
 		repos.Id, repoUserName, repoName, refName, &base.PushCommits{l.Len(), commits}); err != nil {
-		log.GitLogger.Fatal("runUpdate.models.CommitRepoAction: %s/%s:%v", repoUserName, repoName, err)
+		return fmt.Errorf("runUpdate.models.CommitRepoAction: %s/%s:%v", repoUserName, repoName, err)
 	}
+	return nil
 }

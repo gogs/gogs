@@ -213,9 +213,9 @@ func GetIssueCountByPoster(uid, rid int64, isClosed bool) int64 {
 // IssueUser represents an issue-user relation.
 type IssueUser struct {
 	Id          int64
-	Uid         int64 // User ID.
+	Uid         int64 `xorm:"INDEX"` // User ID.
 	IssueId     int64
-	RepoId      int64
+	RepoId      int64 `xorm:"INDEX"`
 	MilestoneId int64
 	IsRead      bool
 	IsAssigned  bool
