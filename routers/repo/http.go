@@ -7,6 +7,7 @@ package repo
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -130,24 +131,49 @@ func Http(ctx *middleware.Context, params martini.Params) {
 		}
 	}
 
-	config := Config{setting.RepoRootPath, "git", true, true, func(rpc string, input []byte) {
-		if rpc == "receive-pack" {
-			firstLine := bytes.IndexRune(input, '\000')
-			if firstLine > -1 {
-				fields := strings.Fields(string(input[:firstLine]))
-				if len(fields) == 3 {
-					oldCommitId := fields[0][4:]
-					newCommitId := fields[1]
-					refName := fields[2]
+	var f func(rpc string, input []byte)
 
-					if err = models.Update(refName, oldCommitId, newCommitId, authUsername, username, reponame, authUser.Id); err != nil {
-						log.GitLogger.Error(err.Error())
+	f = func(rpc string, input []byte) {
+		if rpc == "receive-pack" {
+			var lastLine int64 = 0
+
+			for {
+				head := input[lastLine : lastLine+2]
+				if head[0] == '0' && head[1] == '0' {
+					size, err := strconv.ParseInt(string(input[lastLine+2:lastLine+4]), 16, 32)
+					if err != nil {
+						log.Error("%v", err)
 						return
 					}
+
+					if size == 0 {
+						//fmt.Println(string(input[lastLine:]))
+						break
+					}
+
+					line := input[lastLine : lastLine+size]
+					idx := bytes.IndexRune(line, '\000')
+					if idx > -1 {
+						line = line[:idx]
+					}
+					fields := strings.Fields(string(line))
+					if len(fields) >= 3 {
+						oldCommitId := fields[0][4:]
+						newCommitId := fields[1]
+						refName := fields[2]
+
+						models.Update(refName, oldCommitId, newCommitId, authUsername, username, reponame, authUser.Id)
+					}
+					lastLine = lastLine + size
+				} else {
+					//fmt.Println("ddddddddddd")
+					break
 				}
 			}
 		}
-	}}
+	}
+
+	config := Config{setting.RepoRootPath, "git", true, true, f}
 
 	handler := HttpBackend(&config)
 	handler(ctx.ResponseWriter, ctx.Req)
@@ -240,8 +266,14 @@ func serviceRpc(rpc string, hr handler) {
 	w.Header().Set("Content-Type", fmt.Sprintf("application/x-git-%s-result", rpc))
 	w.WriteHeader(http.StatusOK)
 
-	input, _ := ioutil.ReadAll(r.Body)
-	br := bytes.NewReader(input)
+	var input []byte
+	var br io.Reader
+	if hr.Config.OnSucceed != nil {
+		input, _ = ioutil.ReadAll(r.Body)
+		br = bytes.NewReader(input)
+	} else {
+		br = r.Body
+	}
 
 	args := []string{rpc, "--stateless-rpc", dir}
 	cmd := exec.Command(hr.Config.GitBinPath, args...)
