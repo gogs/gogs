@@ -185,16 +185,16 @@ func RepoAssignment(redirect bool, args ...bool) martini.Handler {
 					ctx.Repo.CommitId = ctx.Repo.Commit.Id.String()
 
 				} else if gitRepo.IsTagExist(refName) {
-					ctx.Repo.IsBranch = true
+					ctx.Repo.IsTag = true
 					ctx.Repo.BranchName = refName
 
-					ctx.Repo.Commit, err = gitRepo.GetCommitOfTag(refName)
+					ctx.Repo.Tag, err = gitRepo.GetTag(refName)
 					if err != nil {
 						ctx.Handle(404, "RepoAssignment invalid tag", nil)
 						return
 					}
+					ctx.Repo.Commit, _ = ctx.Repo.Tag.Commit()
 					ctx.Repo.CommitId = ctx.Repo.Commit.Id.String()
-
 				} else if len(refName) == 40 {
 					ctx.Repo.IsCommit = true
 					ctx.Repo.CommitId = refName
@@ -244,6 +244,7 @@ func RepoAssignment(redirect bool, args ...bool) martini.Handler {
 		}
 
 		ctx.Data["BranchName"] = ctx.Repo.BranchName
+		ctx.Data["TagName"] = ctx.Repo.TagName
 		brs, err := ctx.Repo.GitRepo.GetBranches()
 		if err != nil {
 			log.Error("RepoAssignment(GetBranches): %v", err)
