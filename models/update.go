@@ -100,7 +100,7 @@ func Update(refName, oldCommitId, newCommitId, userName, repoUserName, repoName 
 			repos.Id, repoUserName, repoName, refName, commit); err != nil {
 			log.GitLogger.Fatal("runUpdate.models.CommitRepoAction: %s/%s:%v", repoUserName, repoName, err)
 		}
-		return
+		return err
 	}
 
 	// if commits push
