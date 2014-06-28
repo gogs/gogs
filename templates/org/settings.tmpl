@@ -98,11 +98,9 @@
                 <div class="modal fade" id="delete-org-modal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel"
                      aria-hidden="true">
                     <div class="modal-dialog">
-                        <form action="/{{.Owner.Name}}/{{.Repository.Name}}/settings" method="post"
+                        <form action="/org/{{.Org.Name}}/settings/delete" method="post"
                               class="modal-content">
                             {{.CsrfTokenHtml}}
-                            <input type="hidden" name="action" value="delete">
-
                             <div class="modal-header">
                                 <button type="button" class="close" data-dismiss="modal"
                                         aria-hidden="true">&times;</button>
@@ -111,9 +109,8 @@
 
                             <div class="modal-body">
                                 <div class="form-group">
-                                    <label>Please enter your organization name "<strong class="text-danger">{{.Repository.Name}}</strong>"</label>
-                                    <input name="organization" class="form-control" type="text"
-                                           placeholder="Type your organization name" required="required">
+                                    <label>Make sure your are owner of this organization. Please enter your password.<strong class="text-danger">*</strong></label>
+                                    <input name="password" class="form-control" type="password" placeholder="Type your account password" required="required">
                                 </div>
                             </div>
 

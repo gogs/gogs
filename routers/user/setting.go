@@ -68,7 +68,7 @@ func SettingPost(ctx *middleware.Context, form auth.UpdateProfileForm) {
 	ctx.User.Avatar = base.EncodeMd5(form.Avatar)
 	ctx.User.AvatarEmail = form.Avatar
 	if err := models.UpdateUser(ctx.User); err != nil {
-		ctx.Handle(500, "setting.Setting", err)
+		ctx.Handle(500, "setting.Setting(UpdateUser)", err)
 		return
 	}
 	log.Trace("%s User setting updated: %s", ctx.Req.RequestURI, ctx.User.LowerName)
