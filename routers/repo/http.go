@@ -7,7 +7,6 @@ package repo
 import (
 	"bytes"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -190,7 +189,6 @@ var routes = []route{
 // Request handling function
 func HttpBackend(config *Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		//log.GitLogger.Printf("%s %s %s %s", r.RemoteAddr, r.Method, r.URL.Path, r.Proto)
 		for _, route := range routes {
 			if m := route.cr.FindStringSubmatch(r.URL.Path); m != nil {
 				if route.method != r.Method {
@@ -212,13 +210,13 @@ func HttpBackend(config *Config) http.HandlerFunc {
 				return
 			}
 		}
+
 		renderNotFound(w)
 		return
 	}
 }
 
 // Actual command handling functions
-
 func serviceUploadPack(hr handler) {
 	serviceRpc("upload-pack", hr)
 }
@@ -236,35 +234,23 @@ func serviceRpc(rpc string, hr handler) {
 		return
 	}
 
-	input, _ := ioutil.ReadAll(r.Body)
-
 	w.Header().Set("Content-Type", fmt.Sprintf("application/x-git-%s-result", rpc))
 	w.WriteHeader(http.StatusOK)
+
+	input, _ := ioutil.ReadAll(r.Body)
+	br := bytes.NewReader(input)
 
 	args := []string{rpc, "--stateless-rpc", dir}
 	cmd := exec.Command(hr.Config.GitBinPath, args...)
 	cmd.Dir = dir
-	in, err := cmd.StdinPipe()
+	cmd.Stdout = w
+	cmd.Stdin = br
+
+	err := cmd.Run()
 	if err != nil {
 		log.GitLogger.Error(err.Error())
 		return
 	}
-
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		log.GitLogger.Error(err.Error())
-		return
-	}
-
-	err = cmd.Start()
-	if err != nil {
-		log.GitLogger.Error(err.Error())
-		return
-	}
-
-	in.Write(input)
-	io.Copy(w, stdout)
-	cmd.Wait()
 
 	if hr.Config.OnSucceed != nil {
 		hr.Config.OnSucceed(rpc, input)
