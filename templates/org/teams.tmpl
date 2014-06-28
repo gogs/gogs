@@ -1,0 +1,71 @@
+{{template "base/head" .}}
+{{template "base/navbar" .}}
+<div id="body-nav" class="org-nav org-nav-auto">
+    <div class="container clearfix">
+        <div id="org-nav-wrapper">
+            <ul class="nav nav-pills pull-right">
+                <li><a href="#"><i class="fa fa-users"></i>Members
+                    <span class="label label-default">5</span></a>
+                </li>
+                <li class="active"><a href="#"><i class="fa fa-tags"></i>Teams
+                    <span class="label label-default">2</span></a>
+                </li>
+            </ul>
+            <img class="pull-left org-small-logo" src="https://avatars3.githubusercontent.com/u/6656686?s=140" alt="" width="60"/>
+            <div id="org-nav-info">
+                <h2 class="org-name">Organization Name</h2>
+            </div>
+        </div>
+    </div>
+</div>
+<div id="body" class="container">
+    <div id="org">
+        <div id="org-teams">
+            <div id="org-teams-action">
+                <div class="col-md-12">
+                    <a href="#"><button class="btn btn-success"><i class="fa fa-plus-square"></i>New Team</button></a>
+                    <hr/>
+                </div>
+            </div>
+            <div class="org-team col-md-6">
+                <div class="panel panel-default">
+                    <h2 class="panel-heading org-team-name"><a href="#"><strong>Team Name</strong></a></h2>
+                    <div class="panel-body">
+                        <p class="org-team-meta">4 members · 10 repositories</p>
+                        <p class="org-team-members">
+                            <a href="#">
+                                <img class="img-thumbnail" src="https://avatars2.githubusercontent.com/u/2946214?s=60" alt=""/>
+                            </a>
+                            <a href="#">
+                                <img class="img-thumbnail" src="https://avatars2.githubusercontent.com/u/2946214?s=60" alt=""/>
+                            </a>
+                        </p>
+                    </div>
+                    <div class="panel-footer">
+                        <button class="pull-right btn btn-default">Join</button>
+                    </div>
+                </div>
+            </div>
+            <div class="org-team col-md-6">
+                <div class="panel panel-default">
+                    <h2 class="panel-heading org-team-name"><a href="#"><strong>Team Name</strong></a></h2>
+                    <div class="panel-body">
+                        <p class="org-team-meta">4 members · 10 repositories</p>
+                        <p class="org-team-members">
+                            <a href="#">
+                                <img class="img-thumbnail" src="https://avatars2.githubusercontent.com/u/2946214?s=60" alt=""/>
+                            </a>
+                            <a href="#">
+                                <img class="img-thumbnail" src="https://avatars2.githubusercontent.com/u/2946214?s=60" alt=""/>
+                            </a>
+                        </p>
+                    </div>
+                    <div class="panel-footer">
+                        <button class="pull-right btn btn-danger">Leave</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{{template "base/footer" .}}

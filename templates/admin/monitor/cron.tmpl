@@ -1,0 +1,40 @@
+{{template "base/head" .}}
+{{template "base/navbar" .}}
+<div id="body" class="container" data-page="admin">
+    {{template "admin/nav" .}}
+    <div id="admin-container" class="col-md-10">
+        <ul class="nav nav-tabs">
+            <li{{if .PageIsMonitorCron}} class="active"{{end}}><a href="/admin/monitor">Cron Tasks</a></li>
+            <li{{if .PageIsMonitorProcess}} class="active"{{end}}><a href="/admin/monitor?tab=process">Processes</a></li>
+        </ul>
+        <div class="panel panel-default">
+            <div class="panel-body">
+                {{if .PageIsMonitorCron}}
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Schedule</th>
+                            <th>Next Time</th>
+                            <th>Previous Time</th>
+                            <th>Execute Times</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {{range .Entries}}
+                        <tr>
+                            <td>{{.Description}}</td>
+                            <td>{{.Spec}}</td>
+                            <td>{{.Next}}</td>
+                            <td>{{.Prev}}</td>
+                            <td>{{.ExecTimes}}</td>
+                        </tr>
+                        {{end}}
+                    </tbody>
+                </table>
+                {{end}}
+            </div>
+        </div>
+    </div>
+</div>
+{{template "base/footer" .}}

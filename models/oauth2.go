@@ -8,16 +8,16 @@ import (
 	"errors"
 )
 
-// OT: Oauth2 Type
+type OauthType int
+
 const (
-	OT_GITHUB = iota + 1
-	OT_GOOGLE
-	OT_TWITTER
-	OT_QQ
-	OT_WEIBO
-	OT_BITBUCKET
-	OT_OSCHINA
-	OT_FACEBOOK
+	GITHUB OauthType = iota + 1
+	GOOGLE
+	TWITTER
+	QQ
+	WEIBO
+	BITBUCKET
+	FACEBOOK
 )
 
 var (
@@ -35,18 +35,18 @@ type Oauth2 struct {
 }
 
 func BindUserOauth2(userId, oauthId int64) error {
-	_, err := orm.Id(oauthId).Update(&Oauth2{Uid: userId})
+	_, err := x.Id(oauthId).Update(&Oauth2{Uid: userId})
 	return err
 }
 
 func AddOauth2(oa *Oauth2) error {
-	_, err := orm.Insert(oa)
+	_, err := x.Insert(oa)
 	return err
 }
 
 func GetOauth2(identity string) (oa *Oauth2, err error) {
 	oa = &Oauth2{Identity: identity}
-	isExist, err := orm.Get(oa)
+	isExist, err := x.Get(oa)
 	if err != nil {
 		return
 	} else if !isExist {
@@ -60,7 +60,7 @@ func GetOauth2(identity string) (oa *Oauth2, err error) {
 
 func GetOauth2ById(id int64) (oa *Oauth2, err error) {
 	oa = new(Oauth2)
-	has, err := orm.Id(id).Get(oa)
+	has, err := x.Id(id).Get(oa)
 	if err != nil {
 		return nil, err
 	} else if !has {
@@ -71,18 +71,18 @@ func GetOauth2ById(id int64) (oa *Oauth2, err error) {
 
 // GetOauthByUserId returns list of oauthes that are releated to given user.
 func GetOauthByUserId(uid int64) (oas []*Oauth2, err error) {
-	err = orm.Find(&oas, Oauth2{Uid: uid})
+	err = x.Find(&oas, Oauth2{Uid: uid})
 	return oas, err
 }
 
 // DeleteOauth2ById deletes a oauth2 by ID.
 func DeleteOauth2ById(id int64) error {
-	_, err := orm.Delete(&Oauth2{Id: id})
+	_, err := x.Delete(&Oauth2{Id: id})
 	return err
 }
 
 // CleanUnbindOauth deletes all unbind OAuthes.
 func CleanUnbindOauth() error {
-	_, err := orm.Delete(&Oauth2{Uid: -1})
+	_, err := x.Delete(&Oauth2{Uid: -1})
 	return err
 }

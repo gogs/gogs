@@ -17,9 +17,24 @@ import (
 	"github.com/gogits/gogs/modules/middleware"
 )
 
+const (
+	DASHBOARD base.TplName = "user/dashboard"
+	PROFILE   base.TplName = "user/profile"
+	ISSUES    base.TplName = "user/issues"
+	PULLS     base.TplName = "user/pulls"
+	STARS     base.TplName = "user/stars"
+)
+
 func Dashboard(ctx *middleware.Context) {
 	ctx.Data["Title"] = "Dashboard"
 	ctx.Data["PageIsUserDashboard"] = true
+
+	if err := ctx.User.GetOrganizations(); err != nil {
+		ctx.Handle(500, "home.Dashboard(GetOrganizations)", err)
+		return
+	}
+	ctx.Data["Orgs"] = ctx.User.Orgs
+	ctx.Data["ContextUser"] = ctx.User
 
 	var err error
 	ctx.Data["MyRepos"], err = models.GetRepositories(ctx.User.Id, true)
@@ -45,21 +60,21 @@ func Dashboard(ctx *middleware.Context) {
 	for _, act := range actions {
 		if act.IsPrivate {
 			if has, _ := models.HasAccess(ctx.User.Name, act.RepoUserName+"/"+act.RepoName,
-				models.AU_READABLE); !has {
+				models.READABLE); !has {
 				continue
 			}
 		}
 		feeds = append(feeds, act)
 	}
 	ctx.Data["Feeds"] = feeds
-	ctx.HTML(200, "user/dashboard")
+	ctx.HTML(200, DASHBOARD)
 }
 
 func Profile(ctx *middleware.Context, params martini.Params) {
 	ctx.Data["Title"] = "Profile"
 	ctx.Data["PageIsUserProfile"] = true
 
-	user, err := models.GetUserByName(params["username"])
+	u, err := models.GetUserByName(params["username"])
 	if err != nil {
 		if err == models.ErrUserNotExist {
 			ctx.Handle(404, "user.Profile(GetUserByName)", err)
@@ -68,26 +83,30 @@ func Profile(ctx *middleware.Context, params martini.Params) {
 		}
 		return
 	}
-	ctx.Data["Owner"] = user
+	// For security reason, hide e-mail address for anonymous visitors.
+	if !ctx.IsSigned {
+		u.Email = ""
+	}
+	ctx.Data["Owner"] = u
 
 	tab := ctx.Query("tab")
 	ctx.Data["TabName"] = tab
 	switch tab {
 	case "activity":
-		ctx.Data["Feeds"], err = models.GetFeeds(user.Id, 0, true)
+		ctx.Data["Feeds"], err = models.GetFeeds(u.Id, 0, true)
 		if err != nil {
 			ctx.Handle(500, "user.Profile(GetFeeds)", err)
 			return
 		}
 	default:
-		ctx.Data["Repos"], err = models.GetRepositories(user.Id, ctx.IsSigned && ctx.User.Id == user.Id)
+		ctx.Data["Repos"], err = models.GetRepositories(u.Id, ctx.IsSigned && ctx.User.Id == u.Id)
 		if err != nil {
 			ctx.Handle(500, "user.Profile(GetRepositories)", err)
 			return
 		}
 	}
 
-	ctx.HTML(200, "user/profile")
+	ctx.HTML(200, PROFILE)
 }
 
 func Email2User(ctx *middleware.Context) {
@@ -119,7 +138,7 @@ func Feeds(ctx *middleware.Context, form auth.FeedsForm) {
 	for _, act := range actions {
 		if act.IsPrivate {
 			if has, _ := models.HasAccess(ctx.User.Name, act.RepoUserName+"/"+act.RepoName,
-				models.AU_READABLE); !has {
+				models.READABLE); !has {
 				continue
 			}
 		}
@@ -254,13 +273,13 @@ func Issues(ctx *middleware.Context) {
 	} else {
 		ctx.Data["ShowCount"] = issueStats.OpenCount
 	}
-	ctx.HTML(200, "user/issue")
+	ctx.HTML(200, ISSUES)
 }
 
 func Pulls(ctx *middleware.Context) {
-	ctx.HTML(200, "user/pulls")
+	ctx.HTML(200, PULLS)
 }
 
 func Stars(ctx *middleware.Context) {
-	ctx.HTML(200, "user/stars")
+	ctx.HTML(200, STARS)
 }

@@ -6,14 +6,12 @@ package cmd
 
 import (
 	"os"
-	"path"
 	"strconv"
 
 	"github.com/codegangsta/cli"
-	qlog "github.com/qiniu/log"
 
 	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/modules/setting"
+	"github.com/gogits/gogs/modules/log"
 )
 
 var CmdUpdate = cli.Command{
@@ -24,35 +22,27 @@ var CmdUpdate = cli.Command{
 	Flags:       []cli.Flag{},
 }
 
-func updateEnv(refName, oldCommitId, newCommitId string) {
-	os.Setenv("refName", refName)
-	os.Setenv("oldCommitId", oldCommitId)
-	os.Setenv("newCommitId", newCommitId)
-	qlog.Info("set envs:", refName, oldCommitId, newCommitId)
-}
-
 func runUpdate(c *cli.Context) {
 	cmd := os.Getenv("SSH_ORIGINAL_COMMAND")
 	if cmd == "" {
 		return
 	}
 
-	setup(path.Join(setting.LogRootPath, "update.log"))
+	setup("update.log")
 
 	args := c.Args()
 	if len(args) != 3 {
-		qlog.Fatal("received less 3 parameters")
+		log.GitLogger.Fatal("received less 3 parameters")
 	} else if args[0] == "" {
-		qlog.Fatal("refName is empty, shouldn't use")
+		log.GitLogger.Fatal("refName is empty, shouldn't use")
 	}
-
-	//updateEnv(args[0], args[1], args[2])
 
 	userName := os.Getenv("userName")
 	userId, _ := strconv.ParseInt(os.Getenv("userId"), 10, 64)
-	//repoId := os.Getenv("repoId")
 	repoUserName := os.Getenv("repoUserName")
 	repoName := os.Getenv("repoName")
 
-	models.Update(args[0], args[1], args[2], userName, repoUserName, repoName, userId)
+	if err := models.Update(args[0], args[1], args[2], userName, repoUserName, repoName, userId); err != nil {
+		log.GitLogger.Fatal(err.Error())
+	}
 }

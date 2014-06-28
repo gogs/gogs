@@ -17,6 +17,15 @@ import (
 	"github.com/gogits/gogs/modules/setting"
 )
 
+const (
+	AUTH_ACTIVE           base.TplName = "mail/auth/active"
+	AUTH_REGISTER_SUCCESS base.TplName = "mail/auth/register_success"
+	AUTH_RESET_PASSWORD   base.TplName = "mail/auth/reset_passwd"
+
+	NOTIFY_COLLABORATOR base.TplName = "mail/notify/collaborator"
+	NOTIFY_MENTION      base.TplName = "mail/notify/mention"
+)
+
 // Create New mail message use MailFrom and MailUser
 func NewMailMessageFrom(To []string, from, subject, body string) Message {
 	msg := NewHtmlMessage(To, from, subject, body)
@@ -26,10 +35,10 @@ func NewMailMessageFrom(To []string, from, subject, body string) Message {
 
 // Create New mail message use MailFrom and MailUser
 func NewMailMessage(To []string, subject, body string) Message {
-	return NewMailMessageFrom(To, setting.MailService.User, subject, body)
+	return NewMailMessageFrom(To, setting.MailService.From, subject, body)
 }
 
-func GetMailTmplData(user *models.User) map[interface{}]interface{} {
+func GetMailTmplData(u *models.User) map[interface{}]interface{} {
 	data := make(map[interface{}]interface{}, 10)
 	data["AppName"] = setting.AppName
 	data["AppVer"] = setting.AppVer
@@ -37,84 +46,84 @@ func GetMailTmplData(user *models.User) map[interface{}]interface{} {
 	data["AppLogo"] = setting.AppLogo
 	data["ActiveCodeLives"] = setting.Service.ActiveCodeLives / 60
 	data["ResetPwdCodeLives"] = setting.Service.ResetPwdCodeLives / 60
-	if user != nil {
-		data["User"] = user
+	if u != nil {
+		data["User"] = u
 	}
 	return data
 }
 
 // create a time limit code for user active
-func CreateUserActiveCode(user *models.User, startInf interface{}) string {
+func CreateUserActiveCode(u *models.User, startInf interface{}) string {
 	minutes := setting.Service.ActiveCodeLives
-	data := base.ToStr(user.Id) + user.Email + user.LowerName + user.Passwd + user.Rands
+	data := base.ToStr(u.Id) + u.Email + u.LowerName + u.Passwd + u.Rands
 	code := base.CreateTimeLimitCode(data, minutes, startInf)
 
 	// add tail hex username
-	code += hex.EncodeToString([]byte(user.LowerName))
+	code += hex.EncodeToString([]byte(u.LowerName))
 	return code
 }
 
 // Send user register mail with active code
-func SendRegisterMail(r *middleware.Render, user *models.User) {
-	code := CreateUserActiveCode(user, nil)
+func SendRegisterMail(r *middleware.Render, u *models.User) {
+	code := CreateUserActiveCode(u, nil)
 	subject := "Register success, Welcome"
 
-	data := GetMailTmplData(user)
+	data := GetMailTmplData(u)
 	data["Code"] = code
-	body, err := r.HTMLString("mail/auth/register_success", data)
+	body, err := r.HTMLString(string(AUTH_REGISTER_SUCCESS), data)
 	if err != nil {
 		log.Error("mail.SendRegisterMail(fail to render): %v", err)
 		return
 	}
 
-	msg := NewMailMessage([]string{user.Email}, subject, body)
-	msg.Info = fmt.Sprintf("UID: %d, send register mail", user.Id)
+	msg := NewMailMessage([]string{u.Email}, subject, body)
+	msg.Info = fmt.Sprintf("UID: %d, send register mail", u.Id)
 
 	SendAsync(&msg)
 }
 
 // Send email verify active email.
-func SendActiveMail(r *middleware.Render, user *models.User) {
-	code := CreateUserActiveCode(user, nil)
+func SendActiveMail(r *middleware.Render, u *models.User) {
+	code := CreateUserActiveCode(u, nil)
 
 	subject := "Verify your e-mail address"
 
-	data := GetMailTmplData(user)
+	data := GetMailTmplData(u)
 	data["Code"] = code
-	body, err := r.HTMLString("mail/auth/active_email", data)
+	body, err := r.HTMLString(string(AUTH_ACTIVE), data)
 	if err != nil {
 		log.Error("mail.SendActiveMail(fail to render): %v", err)
 		return
 	}
 
-	msg := NewMailMessage([]string{user.Email}, subject, body)
-	msg.Info = fmt.Sprintf("UID: %d, send active mail", user.Id)
+	msg := NewMailMessage([]string{u.Email}, subject, body)
+	msg.Info = fmt.Sprintf("UID: %d, send active mail", u.Id)
 
 	SendAsync(&msg)
 }
 
 // Send reset password email.
-func SendResetPasswdMail(r *middleware.Render, user *models.User) {
-	code := CreateUserActiveCode(user, nil)
+func SendResetPasswdMail(r *middleware.Render, u *models.User) {
+	code := CreateUserActiveCode(u, nil)
 
 	subject := "Reset your password"
 
-	data := GetMailTmplData(user)
+	data := GetMailTmplData(u)
 	data["Code"] = code
-	body, err := r.HTMLString("mail/auth/reset_passwd", data)
+	body, err := r.HTMLString(string(AUTH_RESET_PASSWORD), data)
 	if err != nil {
 		log.Error("mail.SendResetPasswdMail(fail to render): %v", err)
 		return
 	}
 
-	msg := NewMailMessage([]string{user.Email}, subject, body)
-	msg.Info = fmt.Sprintf("UID: %d, send reset password email", user.Id)
+	msg := NewMailMessage([]string{u.Email}, subject, body)
+	msg.Info = fmt.Sprintf("UID: %d, send reset password email", u.Id)
 
 	SendAsync(&msg)
 }
 
 // SendIssueNotifyMail sends mail notification of all watchers of repository.
-func SendIssueNotifyMail(user, owner *models.User, repo *models.Repository, issue *models.Issue) ([]string, error) {
+func SendIssueNotifyMail(u, owner *models.User, repo *models.Repository, issue *models.Issue) ([]string, error) {
 	ws, err := models.GetWatchers(repo.Id)
 	if err != nil {
 		return nil, errors.New("mail.NotifyWatchers(GetWatchers): " + err.Error())
@@ -123,7 +132,7 @@ func SendIssueNotifyMail(user, owner *models.User, repo *models.Repository, issu
 	tos := make([]string, 0, len(ws))
 	for i := range ws {
 		uid := ws[i].UserId
-		if user.Id == uid {
+		if u.Id == uid {
 			continue
 		}
 		u, err := models.GetUserById(uid)
@@ -141,14 +150,14 @@ func SendIssueNotifyMail(user, owner *models.User, repo *models.Repository, issu
 	content := fmt.Sprintf("%s<br>-<br> <a href=\"%s%s/%s/issues/%d\">View it on Gogs</a>.",
 		base.RenderSpecialLink([]byte(issue.Content), owner.Name+"/"+repo.Name),
 		setting.AppUrl, owner.Name, repo.Name, issue.Index)
-	msg := NewMailMessageFrom(tos, user.Email, subject, content)
+	msg := NewMailMessageFrom(tos, u.Email, subject, content)
 	msg.Info = fmt.Sprintf("Subject: %s, send issue notify emails", subject)
 	SendAsync(&msg)
 	return tos, nil
 }
 
 // SendIssueMentionMail sends mail notification for who are mentioned in issue.
-func SendIssueMentionMail(r *middleware.Render, user, owner *models.User,
+func SendIssueMentionMail(r *middleware.Render, u, owner *models.User,
 	repo *models.Repository, issue *models.Issue, tos []string) error {
 
 	if len(tos) == 0 {
@@ -161,19 +170,19 @@ func SendIssueMentionMail(r *middleware.Render, user, owner *models.User,
 	data["IssueLink"] = fmt.Sprintf("%s/%s/issues/%d", owner.Name, repo.Name, issue.Index)
 	data["Subject"] = subject
 
-	body, err := r.HTMLString("mail/notify/mention", data)
+	body, err := r.HTMLString(string(NOTIFY_MENTION), data)
 	if err != nil {
 		return fmt.Errorf("mail.SendIssueMentionMail(fail to render): %v", err)
 	}
 
-	msg := NewMailMessageFrom(tos, user.Email, subject, body)
+	msg := NewMailMessageFrom(tos, u.Email, subject, body)
 	msg.Info = fmt.Sprintf("Subject: %s, send issue mention emails", subject)
 	SendAsync(&msg)
 	return nil
 }
 
 // SendCollaboratorMail sends mail notification to new collaborator.
-func SendCollaboratorMail(r *middleware.Render, user, owner *models.User,
+func SendCollaboratorMail(r *middleware.Render, u, owner *models.User,
 	repo *models.Repository) error {
 
 	subject := fmt.Sprintf("%s added you to %s", owner.Name, repo.Name)
@@ -182,13 +191,13 @@ func SendCollaboratorMail(r *middleware.Render, user, owner *models.User,
 	data["RepoLink"] = path.Join(owner.Name, repo.Name)
 	data["Subject"] = subject
 
-	body, err := r.HTMLString("mail/notify/collaborator", data)
+	body, err := r.HTMLString(string(NOTIFY_COLLABORATOR), data)
 	if err != nil {
 		return fmt.Errorf("mail.SendCollaboratorMail(fail to render): %v", err)
 	}
 
-	msg := NewMailMessage([]string{user.Email}, subject, body)
-	msg.Info = fmt.Sprintf("UID: %d, send register mail", user.Id)
+	msg := NewMailMessage([]string{u.Email}, subject, body)
+	msg.Info = fmt.Sprintf("UID: %d, send register mail", u.Id)
 
 	SendAsync(&msg)
 	return nil

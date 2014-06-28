@@ -11,26 +11,27 @@ import (
 	"github.com/go-xorm/xorm"
 )
 
-// Access types.
+type AccessType int
+
 const (
-	AU_READABLE = iota + 1
-	AU_WRITABLE
+	READABLE AccessType = iota + 1
+	WRITABLE
 )
 
 // Access represents the accessibility of user to repository.
 type Access struct {
 	Id       int64
-	UserName string    `xorm:"unique(s)"`
-	RepoName string    `xorm:"unique(s)"` // <user name>/<repo name>
-	Mode     int       `xorm:"unique(s)"`
-	Created  time.Time `xorm:"created"`
+	UserName string     `xorm:"unique(s)"`
+	RepoName string     `xorm:"unique(s)"` // <user name>/<repo name>
+	Mode     AccessType `xorm:"unique(s)"`
+	Created  time.Time  `xorm:"created"`
 }
 
 // AddAccess adds new access record.
 func AddAccess(access *Access) error {
 	access.UserName = strings.ToLower(access.UserName)
 	access.RepoName = strings.ToLower(access.RepoName)
-	_, err := orm.Insert(access)
+	_, err := x.Insert(access)
 	return err
 }
 
@@ -38,13 +39,13 @@ func AddAccess(access *Access) error {
 func UpdateAccess(access *Access) error {
 	access.UserName = strings.ToLower(access.UserName)
 	access.RepoName = strings.ToLower(access.RepoName)
-	_, err := orm.Id(access.Id).Update(access)
+	_, err := x.Id(access.Id).Update(access)
 	return err
 }
 
 // DeleteAccess deletes access record.
 func DeleteAccess(access *Access) error {
-	_, err := orm.Delete(access)
+	_, err := x.Delete(access)
 	return err
 }
 
@@ -59,7 +60,7 @@ func UpdateAccessWithSession(sess *xorm.Session, access *Access) error {
 
 // HasAccess returns true if someone can read or write to given repository.
 // The repoName should be in format <username>/<reponame>.
-func HasAccess(uname, repoName string, mode int) (bool, error) {
+func HasAccess(uname, repoName string, mode AccessType) (bool, error) {
 	if len(repoName) == 0 {
 		return false, nil
 	}
@@ -67,7 +68,7 @@ func HasAccess(uname, repoName string, mode int) (bool, error) {
 		UserName: strings.ToLower(uname),
 		RepoName: strings.ToLower(repoName),
 	}
-	has, err := orm.Get(access)
+	has, err := x.Get(access)
 	if err != nil {
 		return false, err
 	} else if !has {

@@ -21,14 +21,16 @@ import (
 	"github.com/gogits/gogs/modules/setting"
 )
 
-// User types.
+type UserType int
+
 const (
-	UT_INDIVIDUAL = iota + 1
-	UT_ORGANIZATION
+	INDIVIDUAL UserType = iota // Historic reason to make it starts at 0.
+	ORGANIZATION
 )
 
 var (
 	ErrUserOwnRepos          = errors.New("User still have ownership of repositories")
+	ErrUserHasOrgs           = errors.New("User still have membership of organization")
 	ErrUserAlreadyExist      = errors.New("User already exist")
 	ErrUserNotExist          = errors.New("User does not exist")
 	ErrUserNotKeyOwner       = errors.New("User does not the owner of public key")
@@ -47,10 +49,11 @@ type User struct {
 	FullName      string
 	Email         string `xorm:"unique not null"`
 	Passwd        string `xorm:"not null"`
-	LoginType     int
+	LoginType     LoginType
 	LoginSource   int64 `xorm:"not null default 0"`
 	LoginName     string
-	Type          int
+	Type          UserType
+	Orgs          []*User `xorm:"-"`
 	NumFollowers  int
 	NumFollowings int
 	NumStars      int
@@ -65,43 +68,63 @@ type User struct {
 	Salt          string    `xorm:"VARCHAR(10)"`
 	Created       time.Time `xorm:"created"`
 	Updated       time.Time `xorm:"updated"`
+
+	// For organization.
+	Description string
+	NumTeams    int
+	NumMembers  int
 }
 
 // HomeLink returns the user home page link.
-func (user *User) HomeLink() string {
-	return "/user/" + user.Name
+func (u *User) HomeLink() string {
+	return "/user/" + u.Name
 }
 
-// AvatarLink returns the user gravatar link.
-func (user *User) AvatarLink() string {
+// AvatarLink returns user gravatar link.
+func (u *User) AvatarLink() string {
 	if setting.DisableGravatar {
 		return "/img/avatar_default.jpg"
 	} else if setting.Service.EnableCacheAvatar {
-		return "/avatar/" + user.Avatar
+		return "/avatar/" + u.Avatar
 	}
-	return "//1.gravatar.com/avatar/" + user.Avatar
+	return "//1.gravatar.com/avatar/" + u.Avatar
 }
 
 // NewGitSig generates and returns the signature of given user.
-func (user *User) NewGitSig() *git.Signature {
+func (u *User) NewGitSig() *git.Signature {
 	return &git.Signature{
-		Name:  user.Name,
-		Email: user.Email,
+		Name:  u.Name,
+		Email: u.Email,
 		When:  time.Now(),
 	}
 }
 
 // EncodePasswd encodes password to safe format.
-func (user *User) EncodePasswd() {
-	newPasswd := base.PBKDF2([]byte(user.Passwd), []byte(user.Salt), 10000, 50, sha256.New)
-	user.Passwd = fmt.Sprintf("%x", newPasswd)
+func (u *User) EncodePasswd() {
+	newPasswd := base.PBKDF2([]byte(u.Passwd), []byte(u.Salt), 10000, 50, sha256.New)
+	u.Passwd = fmt.Sprintf("%x", newPasswd)
 }
 
-// Member represents user is member of organization.
-type Member struct {
-	Id     int64
-	OrgId  int64 `xorm:"unique(member) index"`
-	UserId int64 `xorm:"unique(member)"`
+// IsOrganization returns true if user is actually a organization.
+func (u *User) IsOrganization() bool {
+	return u.Type == ORGANIZATION
+}
+
+// GetOrganizations returns all organizations that user belongs to.
+func (u *User) GetOrganizations() error {
+	ous, err := GetOrgUsersByUserId(u.Id)
+	if err != nil {
+		return err
+	}
+
+	u.Orgs = make([]*User, len(ous))
+	for i, ou := range ous {
+		u.Orgs[i], err = GetUserById(ou.OrgId)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // IsUserExist checks if given user name exist,
@@ -110,7 +133,7 @@ func IsUserExist(name string) (bool, error) {
 	if len(name) == 0 {
 		return false, nil
 	}
-	return orm.Get(&User{LowerName: strings.ToLower(name)})
+	return x.Get(&User{LowerName: strings.ToLower(name)})
 }
 
 // IsEmailUsed returns true if the e-mail has been used.
@@ -118,7 +141,7 @@ func IsEmailUsed(email string) (bool, error) {
 	if len(email) == 0 {
 		return false, nil
 	}
-	return orm.Get(&User{Email: email})
+	return x.Get(&User{Email: email})
 }
 
 // GetUserSalt returns a user salt token
@@ -126,55 +149,66 @@ func GetUserSalt() string {
 	return base.GetRandomString(10)
 }
 
-// RegisterUser creates record of a new user.
-func RegisterUser(user *User) (*User, error) {
-
-	if !IsLegalName(user.Name) {
+// CreateUser creates record of a new user.
+func CreateUser(u *User) (*User, error) {
+	if !IsLegalName(u.Name) {
 		return nil, ErrUserNameIllegal
 	}
 
-	isExist, err := IsUserExist(user.Name)
+	isExist, err := IsUserExist(u.Name)
 	if err != nil {
 		return nil, err
 	} else if isExist {
 		return nil, ErrUserAlreadyExist
 	}
 
-	isExist, err = IsEmailUsed(user.Email)
+	isExist, err = IsEmailUsed(u.Email)
 	if err != nil {
 		return nil, err
 	} else if isExist {
 		return nil, ErrEmailAlreadyUsed
 	}
 
-	user.LowerName = strings.ToLower(user.Name)
-	user.Avatar = base.EncodeMd5(user.Email)
-	user.AvatarEmail = user.Email
-	user.Rands = GetUserSalt()
-	user.Salt = GetUserSalt()
-	user.EncodePasswd()
-	if _, err = orm.Insert(user); err != nil {
-		return nil, err
-	} else if err = os.MkdirAll(UserPath(user.Name), os.ModePerm); err != nil {
-		if _, err := orm.Id(user.Id).Delete(&User{}); err != nil {
-			return nil, errors.New(fmt.Sprintf(
-				"both create userpath %s and delete table record faild: %v", user.Name, err))
-		}
+	u.LowerName = strings.ToLower(u.Name)
+	u.Avatar = base.EncodeMd5(u.Email)
+	u.AvatarEmail = u.Email
+	u.Rands = GetUserSalt()
+	u.Salt = GetUserSalt()
+	u.EncodePasswd()
+
+	sess := x.NewSession()
+	defer sess.Close()
+	if err = sess.Begin(); err != nil {
 		return nil, err
 	}
 
-	if user.Id == 1 {
-		user.IsAdmin = true
-		user.IsActive = true
-		_, err = orm.Id(user.Id).UseBool().Update(user)
+	if _, err = sess.Insert(u); err != nil {
+		sess.Rollback()
+		return nil, err
 	}
-	return user, err
+
+	if err = os.MkdirAll(UserPath(u.Name), os.ModePerm); err != nil {
+		sess.Rollback()
+		return nil, err
+	}
+
+	if err = sess.Commit(); err != nil {
+		return nil, err
+	}
+
+	// Auto-set admin for user whose ID is 1.
+	if u.Id == 1 {
+		u.IsAdmin = true
+		u.IsActive = true
+		_, err = x.Id(u.Id).UseBool().Update(u)
+	}
+	return u, err
 }
 
 // GetUsers returns given number of user objects with offset.
 func GetUsers(num, offset int) ([]User, error) {
 	users := make([]User, 0, num)
-	err := orm.Limit(num, offset).Asc("id").Find(&users)
+	err := x.Limit(num, offset).Asc("id").Find(&users)
 	return users, err
 }
 
@@ -218,11 +252,11 @@ func ChangeUserName(user *User, newUserName string) (err error) {
 
 	// Update accesses of user.
 	accesses := make([]Access, 0, 10)
-	if err = orm.Find(&accesses, &Access{UserName: user.LowerName}); err != nil {
+	if err = x.Find(&accesses, &Access{UserName: user.LowerName}); err != nil {
 		return err
 	}
 
-	sess := orm.NewSession()
+	sess := x.NewSession()
 	defer sess.Close()
 	if err = sess.Begin(); err != nil {
 		return err
@@ -245,7 +279,7 @@ func ChangeUserName(user *User, newUserName string) (err error) {
 	for i := range repos {
 		accesses = make([]Access, 0, 10)
 		// Update accesses of user repository.
-		if err = orm.Find(&accesses, &Access{RepoName: user.LowerName + "/" + repos[i].LowerName}); err != nil {
+		if err = x.Find(&accesses, &Access{RepoName: user.LowerName + "/" + repos[i].LowerName}); err != nil {
 			return err
 		}
 
@@ -268,60 +302,68 @@ func ChangeUserName(user *User, newUserName string) (err error) {
 }
 
 // UpdateUser updates user's information.
-func UpdateUser(user *User) (err error) {
-	user.LowerName = strings.ToLower(user.Name)
+func UpdateUser(u *User) (err error) {
+	u.LowerName = strings.ToLower(u.Name)
 
-	if len(user.Location) > 255 {
-		user.Location = user.Location[:255]
+	if len(u.Location) > 255 {
+		u.Location = u.Location[:255]
 	}
-	if len(user.Website) > 255 {
-		user.Website = user.Website[:255]
+	if len(u.Website) > 255 {
+		u.Website = u.Website[:255]
+	}
+	if len(u.Description) > 255 {
+		u.Description = u.Description[:255]
 	}
 
-	_, err = orm.Id(user.Id).AllCols().Update(user)
+	_, err = x.Id(u.Id).AllCols().Update(u)
 	return err
 }
 
-// DeleteUser completely deletes everything of the user.
-func DeleteUser(user *User) error {
+// TODO: need some kind of mechanism to record failure.
+// DeleteUser completely and permanently deletes everything of user.
+func DeleteUser(u *User) error {
 	// Check ownership of repository.
-	count, err := GetRepositoryCount(user)
+	count, err := GetRepositoryCount(u)
 	if err != nil {
-		return errors.New("modesl.GetRepositories: " + err.Error())
+		return errors.New("modesl.GetRepositories(GetRepositoryCount): " + err.Error())
 	} else if count > 0 {
 		return ErrUserOwnRepos
 	}
 
+	// Check membership of organization.
+	count, err = GetOrganizationCount(u)
+	if err != nil {
+		return errors.New("modesl.GetRepositories(GetOrganizationCount): " + err.Error())
+	} else if count > 0 {
+		return ErrUserHasOrgs
+	}
+
 	// TODO: check issues, other repos' commits
+	// TODO: roll backable in some point.
 
 	// Delete all followers.
-	if _, err = orm.Delete(&Follow{FollowId: user.Id}); err != nil {
+	if _, err = x.Delete(&Follow{FollowId: u.Id}); err != nil {
 		return err
 	}
-
 	// Delete oauth2.
-	if _, err = orm.Delete(&Oauth2{Uid: user.Id}); err != nil {
+	if _, err = x.Delete(&Oauth2{Uid: u.Id}); err != nil {
 		return err
 	}
-
 	// Delete all feeds.
-	if _, err = orm.Delete(&Action{UserId: user.Id}); err != nil {
+	if _, err = x.Delete(&Action{UserId: u.Id}); err != nil {
 		return err
 	}
-
 	// Delete all watches.
-	if _, err = orm.Delete(&Watch{UserId: user.Id}); err != nil {
+	if _, err = x.Delete(&Watch{UserId: u.Id}); err != nil {
 		return err
 	}
-
 	// Delete all accesses.
-	if _, err = orm.Delete(&Access{UserName: user.LowerName}); err != nil {
+	if _, err = x.Delete(&Access{UserName: u.LowerName}); err != nil {
 		return err
 	}
-
 	// Delete all SSH keys.
 	keys := make([]*PublicKey, 0, 10)
-	if err = orm.Find(&keys, &PublicKey{OwnerId: user.Id}); err != nil {
+	if err = x.Find(&keys, &PublicKey{OwnerId: u.Id}); err != nil {
 		return err
 	}
 	for _, key := range keys {
@@ -331,11 +373,17 @@ func DeleteUser(user *User) error {
 	}
 
 	// Delete user directory.
-	if err = os.RemoveAll(UserPath(user.Name)); err != nil {
+	if err = os.RemoveAll(UserPath(u.Name)); err != nil {
 		return err
 	}
 
-	_, err = orm.Delete(user)
+	_, err = x.Delete(u)
+	return err
+}
+
+// DeleteInactivateUsers deletes all inactivate users.
+func DeleteInactivateUsers() error {
+	_, err := x.Where("is_active=?", false).Delete(new(User))
 	return err
 }
 
@@ -347,7 +395,7 @@ func UserPath(userName string) string {
 func GetUserByKeyId(keyId int64) (*User, error) {
 	user := new(User)
 	rawSql := "SELECT a.* FROM `user` AS a, public_key AS b WHERE a.id = b.owner_id AND b.id=?"
-	has, err := orm.Sql(rawSql, keyId).Get(user)
+	has, err := x.Sql(rawSql, keyId).Get(user)
 	if err != nil {
 		return nil, err
 	} else if !has {
@@ -356,17 +404,16 @@ func GetUserByKeyId(keyId int64) (*User, error) {
 	return user, nil
 }
 
-// GetUserById returns the user object by given id if exists.
+// GetUserById returns the user object by given ID if exists.
 func GetUserById(id int64) (*User, error) {
-	user := new(User)
-	has, err := orm.Id(id).Get(user)
+	u := new(User)
+	has, err := x.Id(id).Get(u)
 	if err != nil {
 		return nil, err
-	}
-	if !has {
+	} else if !has {
 		return nil, ErrUserNotExist
 	}
-	return user, nil
+	return u, nil
 }
 
 // GetUserByName returns the user object by given name if exists.
@@ -375,7 +422,7 @@ func GetUserByName(name string) (*User, error) {
 		return nil, ErrUserNotExist
 	}
 	user := &User{LowerName: strings.ToLower(name)}
-	has, err := orm.Get(user)
+	has, err := x.Get(user)
 	if err != nil {
 		return nil, err
 	} else if !has {
@@ -416,7 +463,7 @@ func GetUserByEmail(email string) (*User, error) {
 		return nil, ErrUserNotExist
 	}
 	user := &User{Email: strings.ToLower(email)}
-	has, err := orm.Get(user)
+	has, err := x.Get(user)
 	if err != nil {
 		return nil, err
 	} else if !has {
@@ -440,7 +487,7 @@ func SearchUserByName(key string, limit int) (us []*User, err error) {
 	key = strings.ToLower(key)
 
 	us = make([]*User, 0, limit)
-	err = orm.Limit(limit).Where("lower_name like '%" + key + "%'").Find(&us)
+	err = x.Limit(limit).Where("lower_name like '%" + key + "%'").Find(&us)
 	return us, err
 }
 
@@ -453,7 +500,7 @@ type Follow struct {
 
 // FollowUser marks someone be another's follower.
 func FollowUser(userId int64, followId int64) (err error) {
-	session := orm.NewSession()
+	session := x.NewSession()
 	defer session.Close()
 	session.Begin()
 
@@ -478,7 +525,7 @@ func FollowUser(userId int64, followId int64) (err error) {
 
 // UnFollowUser unmarks someone be another's follower.
 func UnFollowUser(userId int64, unFollowId int64) (err error) {
-	session := orm.NewSession()
+	session := x.NewSession()
 	defer session.Close()
 	session.Begin()
 

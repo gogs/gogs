@@ -41,12 +41,12 @@
                 </div>
                 <ul class="nav nav-tabs" data-init="tabs">
                     <li class="release-write active"><a href="#release-textarea" data-toggle="tab">Write</a></li>
-                    <li class="release-preview"><a href="#release-preview" data-toggle="tab" data-ajax="/api/v1/markdown?repo=repo_id&amp;release=new" data-ajax-name="release-preview" data-ajax-method="post" data-preview="#release-preview">Preview</a></li>
+                    <li class="release-preview"><a href="#release-preview" data-toggle="tab" data-ajax="/api/v1/markdown" data-ajax-name="release-preview" data-ajax-context="{{.RepoLink}}" data-ajax-method="post" data-preview="#release-preview">Preview</a></li>
                 </ul>
                 <div class="tab-content">
                     <div class="tab-pane active" id="release-textarea">
                         <div class="form-group">
-                            <textarea class="form-control" name="content" id="release-new-content" rows="10" placeholder="Write some content" data-ajax-rel="release-preview" data-ajax-val="val" data-ajax-field="content">{{.content}}</textarea>
+                            <textarea class="form-control" name="content" id="release-new-content" rows="10" placeholder="Write some content" data-ajax-rel="release-preview" data-ajax-val="val" data-ajax-field="text">{{.content}}</textarea>
                         </div>
                     </div>
                     <div class="tab-pane release-preview-content" id="release-preview">loading...</div>
@@ -62,7 +62,7 @@
             </div>
             <div class="text-right form-group col-md-8" style="display: block">
                 <button class="btn-success btn">Publish release</button>
-                <!-- <input class="btn btn-default" type="submit" name="draft" value="Save Draft"/> -->
+                <input class="btn btn-default" type="submit" name="draft" value="Save draft"/>
             </div>
         </form>
     </div>

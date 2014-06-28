@@ -14,12 +14,21 @@ import (
 	"github.com/gogits/gogs/modules/middleware"
 )
 
+const (
+	SETTING      base.TplName = "user/setting"
+	SOCIAL       base.TplName = "user/social"
+	PASSWORD     base.TplName = "user/password"
+	PUBLICKEY    base.TplName = "user/publickey"
+	NOTIFICATION base.TplName = "user/notification"
+	SECURITY     base.TplName = "user/security"
+)
+
 func Setting(ctx *middleware.Context) {
 	ctx.Data["Title"] = "Setting"
 	ctx.Data["PageIsUserSetting"] = true
 	ctx.Data["IsUserPageSetting"] = true
 	ctx.Data["Owner"] = ctx.User
-	ctx.HTML(200, "user/setting")
+	ctx.HTML(200, SETTING)
 }
 
 func SettingPost(ctx *middleware.Context, form auth.UpdateProfileForm) {
@@ -28,7 +37,7 @@ func SettingPost(ctx *middleware.Context, form auth.UpdateProfileForm) {
 	ctx.Data["IsUserPageSetting"] = true
 
 	if ctx.HasError() {
-		ctx.HTML(200, "user/setting")
+		ctx.HTML(200, SETTING)
 		return
 	}
 
@@ -59,7 +68,7 @@ func SettingPost(ctx *middleware.Context, form auth.UpdateProfileForm) {
 	ctx.User.Avatar = base.EncodeMd5(form.Avatar)
 	ctx.User.AvatarEmail = form.Avatar
 	if err := models.UpdateUser(ctx.User); err != nil {
-		ctx.Handle(500, "setting.Setting", err)
+		ctx.Handle(500, "setting.Setting(UpdateUser)", err)
 		return
 	}
 	log.Trace("%s User setting updated: %s", ctx.Req.RequestURI, ctx.User.LowerName)
@@ -90,14 +99,14 @@ func SettingSocial(ctx *middleware.Context) {
 		ctx.Handle(500, "user.SettingSocial(GetOauthByUserId)", err)
 		return
 	}
-	ctx.HTML(200, "user/social")
+	ctx.HTML(200, SOCIAL)
 }
 
 func SettingPassword(ctx *middleware.Context) {
 	ctx.Data["Title"] = "Password"
 	ctx.Data["PageIsUserSetting"] = true
 	ctx.Data["IsUserPageSettingPasswd"] = true
-	ctx.HTML(200, "user/password")
+	ctx.HTML(200, PASSWORD)
 }
 
 func SettingPasswordPost(ctx *middleware.Context, form auth.UpdatePasswdForm) {
@@ -106,7 +115,7 @@ func SettingPasswordPost(ctx *middleware.Context, form auth.UpdatePasswdForm) {
 	ctx.Data["IsUserPageSettingPasswd"] = true
 
 	if ctx.HasError() {
-		ctx.HTML(200, "user/password")
+		ctx.HTML(200, PASSWORD)
 		return
 	}
 
@@ -207,7 +216,7 @@ func SettingSSHKeys(ctx *middleware.Context, form auth.AddSSHKeyForm) {
 		}
 	}
 
-	ctx.HTML(200, "user/publickey")
+	ctx.HTML(200, PUBLICKEY)
 }
 
 func SettingNotification(ctx *middleware.Context) {
@@ -215,7 +224,7 @@ func SettingNotification(ctx *middleware.Context) {
 	ctx.Data["Title"] = "Notification"
 	ctx.Data["PageIsUserSetting"] = true
 	ctx.Data["IsUserPageSettingNotify"] = true
-	ctx.HTML(200, "user/notification")
+	ctx.HTML(200, NOTIFICATION)
 }
 
 func SettingSecurity(ctx *middleware.Context) {
@@ -223,5 +232,5 @@ func SettingSecurity(ctx *middleware.Context) {
 	ctx.Data["Title"] = "Security"
 	ctx.Data["PageIsUserSetting"] = true
 	ctx.Data["IsUserPageSettingSecurity"] = true
-	ctx.HTML(200, "user/security")
+	ctx.HTML(200, SECURITY)
 }
