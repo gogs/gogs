@@ -56,8 +56,10 @@ type Context struct {
 		Repository *models.Repository
 		Owner      *models.User
 		Commit     *git.Commit
+		Tag        *git.Tag
 		GitRepo    *git.Repository
 		BranchName string
+		TagName    string
 		CommitId   string
 		RepoLink   string
 		CloneLink  struct {

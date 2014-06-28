@@ -16,6 +16,36 @@ import (
 	"github.com/gogits/gogs/modules/log"
 )
 
+type UpdateTask struct {
+	Id          int64
+	Uuid        string `xorm:"index"`
+	RefName     string
+	OldCommitId string
+	NewCommitId string
+}
+
+func AddUpdateTask(task *UpdateTask) error {
+	_, err := x.Insert(task)
+	return err
+}
+
+func GetUpdateTasksByUuid(uuid string) ([]*UpdateTask, error) {
+	task := &UpdateTask{
+		Uuid: uuid,
+	}
+	tasks := make([]*UpdateTask, 0)
+	err := x.Find(&tasks, task)
+	if err != nil {
+		return nil, err
+	}
+	return tasks, nil
+}
+
+func DelUpdateTasksByUuid(uuid string) error {
+	_, err := x.Delete(&UpdateTask{Uuid: uuid})
+	return err
+}
+
 func Update(refName, oldCommitId, newCommitId, userName, repoUserName, repoName string, userId int64) error {
 	//fmt.Println(refName, oldCommitId, newCommitId)
 	//fmt.Println(userName, repoUserName, repoName)
@@ -40,29 +70,6 @@ func Update(refName, oldCommitId, newCommitId, userName, repoUserName, repoName 
 	repo, err := git.OpenRepository(f)
 	if err != nil {
 		return fmt.Errorf("runUpdate.Open repoId: %v", err)
-	}
-
-	newCommit, err := repo.GetCommit(newCommitId)
-	if err != nil {
-		return fmt.Errorf("runUpdate GetCommit of newCommitId: %v", err)
-	}
-
-	var l *list.List
-	// if a new branch
-	if isNew {
-		l, err = newCommit.CommitsBefore()
-		if err != nil {
-			return fmt.Errorf("Find CommitsBefore erro: %v", err)
-		}
-	} else {
-		l, err = newCommit.CommitsBeforeUntil(oldCommitId)
-		if err != nil {
-			return fmt.Errorf("Find CommitsBeforeUntil erro: %v", err)
-		}
-	}
-
-	if err != nil {
-		return fmt.Errorf("runUpdate.Commit repoId: %v", err)
 	}
 
 	ru, err := GetUserByName(repoUserName)
@@ -101,6 +108,29 @@ func Update(refName, oldCommitId, newCommitId, userName, repoUserName, repoName 
 			log.GitLogger.Fatal("runUpdate.models.CommitRepoAction: %s/%s:%v", repoUserName, repoName, err)
 		}
 		return err
+	}
+
+	newCommit, err := repo.GetCommit(newCommitId)
+	if err != nil {
+		return fmt.Errorf("runUpdate GetCommit of newCommitId: %v", err)
+	}
+
+	var l *list.List
+	// if a new branch
+	if isNew {
+		l, err = newCommit.CommitsBefore()
+		if err != nil {
+			return fmt.Errorf("Find CommitsBefore erro: %v", err)
+		}
+	} else {
+		l, err = newCommit.CommitsBeforeUntil(oldCommitId)
+		if err != nil {
+			return fmt.Errorf("Find CommitsBeforeUntil erro: %v", err)
+		}
+	}
+
+	if err != nil {
+		return fmt.Errorf("runUpdate.Commit repoId: %v", err)
 	}
 
 	// if commits push
