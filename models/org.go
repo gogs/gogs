@@ -10,6 +10,16 @@ import (
 	"github.com/gogits/gogs/modules/base"
 )
 
+// GetOwnerTeam returns owner team of organization.
+func (org *User) GetOwnerTeam() (*Team, error) {
+	t := &Team{
+		OrgId: org.Id,
+		Name:  OWNER_TEAM,
+	}
+	_, err := x.Get(t)
+	return t, err
+}
+
 // CreateOrganization creates record of a new organization.
 func CreateOrganization(org, owner *User) (*User, error) {
 	if !IsLegalName(org.Name) {
@@ -86,6 +96,34 @@ func CreateOrganization(org, owner *User) (*User, error) {
 	return org, sess.Commit()
 }
 
+// TODO: need some kind of mechanism to record failure.
+// DeleteOrganization completely and permanently deletes everything of organization.
+func DeleteOrganization(org *User) (err error) {
+	if err := DeleteUser(org); err != nil {
+		return err
+	}
+
+	sess := x.NewSession()
+	defer sess.Close()
+	if err = sess.Begin(); err != nil {
+		return err
+	}
+
+	if _, err = sess.Delete(&Team{OrgId: org.Id}); err != nil {
+		sess.Rollback()
+		return err
+	}
+	if _, err = sess.Delete(&OrgUser{OrgId: org.Id}); err != nil {
+		sess.Rollback()
+		return err
+	}
+	if _, err = sess.Delete(&TeamUser{OrgId: org.Id}); err != nil {
+		sess.Rollback()
+		return err
+	}
+	return sess.Commit()
+}
+
 type AuthorizeType int
 
 const (
@@ -156,6 +194,12 @@ func GetOrgUsersByOrgId(orgId int64) ([]*OrgUser, error) {
 
 func GetOrganizationCount(u *User) (int64, error) {
 	return x.Where("uid=?", u.Id).Count(new(OrgUser))
+}
+
+// IsOrganizationOwner returns true if given user ID is in the owner team.
+func IsOrganizationOwner(orgId, uid int64) bool {
+	has, _ := x.Where("is_owner=?", true).Get(&OrgUser{Uid: uid, OrgId: orgId})
+	return has
 }
 
 // ___________                    ____ ___

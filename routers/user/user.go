@@ -296,7 +296,7 @@ func DeletePost(ctx *middleware.Context) {
 			case models.ErrUserOwnRepos:
 				ctx.Flash.Error("Your account still have ownership of repository, you have to delete or transfer them first.")
 			default:
-				ctx.Handle(500, "user.Delete(DeleteUser)", err)
+				ctx.Handle(500, "user.DeletePost(DeleteUser)", err)
 				return
 			}
 		} else {

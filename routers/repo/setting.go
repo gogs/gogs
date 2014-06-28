@@ -122,13 +122,23 @@ func SettingPost(ctx *middleware.Context, form auth.RepoSettingForm) {
 			return
 		}
 
-		if err := models.DeleteRepository(ctx.User.Id, ctx.Repo.Repository.Id, ctx.User.LowerName); err != nil {
-			ctx.Handle(500, "setting.Delete", err)
+		if ctx.Repo.Owner.IsOrganization() &&
+			!models.IsOrganizationOwner(ctx.Repo.Owner.Id, ctx.User.Id) {
+			ctx.Error(403)
 			return
 		}
-		log.Trace("%s Repository deleted: %s/%s", ctx.Req.RequestURI, ctx.User.LowerName, ctx.Repo.Repository.LowerName)
 
-		ctx.Redirect("/")
+		if err := models.DeleteRepository(ctx.Repo.Owner.Id, ctx.Repo.Repository.Id, ctx.Repo.Owner.Name); err != nil {
+			ctx.Handle(500, "setting.Delete(DeleteRepository)", err)
+			return
+		}
+		log.Trace("%s Repository deleted: %s/%s", ctx.Req.RequestURI, ctx.Repo.Owner.LowerName, ctx.Repo.Repository.LowerName)
+
+		if ctx.Repo.Owner.IsOrganization() {
+			ctx.Redirect("/org/" + ctx.Repo.Owner.Name + "/dashboard")
+		} else {
+			ctx.Redirect("/")
+		}
 	}
 }
 

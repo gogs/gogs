@@ -30,7 +30,6 @@ func Members(ctx *middleware.Context, params martini.Params) {
 	ctx.HTML(200, "org/members")
 }
 
-
 func New(ctx *middleware.Context) {
 	ctx.Data["Title"] = "Create An Organization"
 	ctx.HTML(200, NEW)
@@ -158,5 +157,49 @@ func SettingsPost(ctx *middleware.Context, params martini.Params, form auth.OrgS
 	}
 	log.Trace("%s Organization setting updated: %s", ctx.Req.RequestURI, org.LowerName)
 	ctx.Flash.Success("Organization profile has been successfully updated.")
+	ctx.Redirect("/org/" + org.Name + "/settings")
+}
+
+func DeletePost(ctx *middleware.Context, params martini.Params) {
+	ctx.Data["Title"] = "Settings"
+
+	org, err := models.GetUserByName(params["org"])
+	if err != nil {
+		if err == models.ErrUserNotExist {
+			ctx.Handle(404, "org.DeletePost(GetUserByName)", err)
+		} else {
+			ctx.Handle(500, "org.DeletePost(GetUserByName)", err)
+		}
+		return
+	}
+	ctx.Data["Org"] = org
+
+	if !models.IsOrganizationOwner(org.Id, ctx.User.Id) {
+		ctx.Error(403)
+		return
+	}
+
+	tmpUser := models.User{
+		Passwd: ctx.Query("password"),
+		Salt:   ctx.User.Salt,
+	}
+	tmpUser.EncodePasswd()
+	if tmpUser.Passwd != ctx.User.Passwd {
+		ctx.Flash.Error("Password is not correct. Make sure you are owner of this account.")
+	} else {
+		if err := models.DeleteOrganization(org); err != nil {
+			switch err {
+			case models.ErrUserOwnRepos:
+				ctx.Flash.Error("This organization still have ownership of repository, you have to delete or transfer them first.")
+			default:
+				ctx.Handle(500, "org.DeletePost(DeleteOrganization)", err)
+				return
+			}
+		} else {
+			ctx.Redirect("/")
+			return
+		}
+	}
+
 	ctx.Redirect("/org/" + org.Name + "/settings")
 }

@@ -105,10 +105,12 @@ func (u *User) EncodePasswd() {
 	u.Passwd = fmt.Sprintf("%x", newPasswd)
 }
 
+// IsOrganization returns true if user is actually a organization.
 func (u *User) IsOrganization() bool {
 	return u.Type == ORGANIZATION
 }
 
+// GetOrganizations returns all organizations that user belongs to.
 func (u *User) GetOrganizations() error {
 	ous, err := GetOrgUsersByUserId(u.Id)
 	if err != nil {
@@ -123,16 +125,6 @@ func (u *User) GetOrganizations() error {
 		}
 	}
 	return nil
-}
-
-// GetOwnerTeam returns owner team of organization.
-func (org *User) GetOwnerTeam() (*Team, error) {
-	t := &Team{
-		OrgId: org.Id,
-		Name:  OWNER_TEAM,
-	}
-	_, err := x.Get(t)
-	return t, err
 }
 
 // IsUserExist checks if given user name exist,
@@ -327,7 +319,8 @@ func UpdateUser(u *User) (err error) {
 	return err
 }
 
-// DeleteUser completely deletes everything of the user.
+// TODO: need some kind of mechanism to record failure.
+// DeleteUser completely and permanently deletes everything of user.
 func DeleteUser(u *User) error {
 	// Check ownership of repository.
 	count, err := GetRepositoryCount(u)
@@ -346,32 +339,28 @@ func DeleteUser(u *User) error {
 	}
 
 	// TODO: check issues, other repos' commits
+	// TODO: roll backable in some point.
 
 	// Delete all followers.
 	if _, err = x.Delete(&Follow{FollowId: u.Id}); err != nil {
 		return err
 	}
-
 	// Delete oauth2.
 	if _, err = x.Delete(&Oauth2{Uid: u.Id}); err != nil {
 		return err
 	}
-
 	// Delete all feeds.
 	if _, err = x.Delete(&Action{UserId: u.Id}); err != nil {
 		return err
 	}
-
 	// Delete all watches.
 	if _, err = x.Delete(&Watch{UserId: u.Id}); err != nil {
 		return err
 	}
-
 	// Delete all accesses.
 	if _, err = x.Delete(&Access{UserName: u.LowerName}); err != nil {
 		return err
 	}
-
 	// Delete all SSH keys.
 	keys := make([]*PublicKey, 0, 10)
 	if err = x.Find(&keys, &PublicKey{OwnerId: u.Id}); err != nil {
