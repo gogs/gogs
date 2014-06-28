@@ -10,23 +10,16 @@
             <div class="col-md-8">
                 <div class="btn-group" id="repo-owner-switch">
                     <button type="button" class="btn btn-default" id="repo-owner-current">
-                        <img src="{{.SignedUser.AvatarLink}}?s=28" alt="user-avatar" title="username" id="repo-owner-avatar">
-                        <span id="repo-owner-name">{{.SignedUser.Name}}</span>
+                        <img src="{{.ContextUser.AvatarLink}}?s=28" alt="user-avatar" title="username" id="repo-owner-avatar">
+                        <span id="repo-owner-name">{{.ContextUser.Name}}</span>
                     </button>
                     <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
                         <span class="caret"></span>
                     </button>
                     <div class="dropdown-menu clone-group-btn no-propagation">
                         <ul id="dashboard-switch-menu" class="list-unstyled">
-                            <li data-uid="{{.SignedUser.Id}}" class="checked">
-                                <a>
-                                    <i class="fa fa-check"></i>
-                                    <img src="{{.SignedUser.AvatarLink}}?s=28" alt="user-avatar" title="username">
-                                    {{.SignedUser.Name}}
-                                </a>
-                            </li>
-                            {{range .Orgs}}
-                            <li data-uid="{{.Id}}">
+                            {{range .AllUsers}}
+                            <li data-uid="{{.Id}}"{{if eq .Id $.ContextUser.Id}}class="checked"{{end}}>
                                 <a>
                                     <i class="fa fa-check"></i>
                                     <img src="{{.AvatarLink}}?s=28" alt="user-avatar" title="username">
@@ -38,7 +31,7 @@
                     </div>
                 </div>
             </div>
-            <input type="hidden" value="{{.SignedUserId}}" name="uid" id="repo-owner-id"/>
+            <input type="hidden" value="{{.ContextUser.Id}}" name="uid" id="repo-owner-id"/>
         </div>
 
         <div class="form-group {{if .Err_RepoName}}has-error has-feedback{{end}}">

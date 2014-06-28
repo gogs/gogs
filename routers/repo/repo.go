@@ -37,11 +37,23 @@ func Create(ctx *middleware.Context) {
 	ctx.Data["LanguageIgns"] = models.LanguageIgns
 	ctx.Data["Licenses"] = models.Licenses
 
+	ctxUser := ctx.User
+	orgId, _ := base.StrTo(ctx.Query("org")).Int64()
+	if orgId > 0 {
+		org, err := models.GetUserById(orgId)
+		if err != nil && err != models.ErrUserNotExist {
+			ctx.Handle(500, "home.Dashboard(GetUserById)", err)
+			return
+		}
+		ctxUser = org
+	}
+	ctx.Data["ContextUser"] = ctxUser
+
 	if err := ctx.User.GetOrganizations(); err != nil {
 		ctx.Handle(500, "home.Dashboard(GetOrganizations)", err)
 		return
 	}
-	ctx.Data["Orgs"] = ctx.User.Orgs
+	ctx.Data["AllUsers"] = append([]*models.User{ctx.User}, ctx.User.Orgs...)
 
 	ctx.HTML(200, CREATE)
 }
@@ -74,6 +86,12 @@ func CreatePost(ctx *middleware.Context, form auth.CreateRepoForm) {
 			} else {
 				ctx.Handle(500, "home.CreatePost(GetUserById)", err)
 			}
+			return
+		}
+
+		// Check ownership of organization.
+		if !models.IsOrganizationOwner(u.Id, ctx.User.Id) {
+			ctx.Error(403)
 			return
 		}
 	}

@@ -191,7 +191,7 @@ func runWeb(*cli.Context) {
 	m.Group("/org", func(r martini.Router) {
 		r.Get("/create", org.New)
 		r.Post("/create", bindIgnErr(auth.CreateOrgForm{}), org.NewPost)
-		r.Get("/:org", org.Organization)
+		r.Get("/:org", org.Home)
 		r.Get("/:org/dashboard", org.Dashboard)
 		r.Get("/:org/members", org.Members)
 

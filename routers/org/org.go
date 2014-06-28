@@ -16,13 +16,45 @@ import (
 )
 
 const (
+	HOME     base.TplName = "org/home"
 	NEW      base.TplName = "org/new"
 	SETTINGS base.TplName = "org/settings"
 )
 
-func Organization(ctx *middleware.Context, params martini.Params) {
+func Home(ctx *middleware.Context, params martini.Params) {
 	ctx.Data["Title"] = "Organization " + params["org"]
-	ctx.HTML(200, "org/org")
+
+	org, err := models.GetUserByName(params["org"])
+	if err != nil {
+		if err == models.ErrUserNotExist {
+			ctx.Handle(404, "org.Home(GetUserByName)", err)
+		} else {
+			ctx.Handle(500, "org.Home(GetUserByName)", err)
+		}
+		return
+	}
+	ctx.Data["Org"] = org
+
+	ctx.Data["Repos"], err = models.GetRepositories(org.Id,
+		ctx.IsSigned && models.IsOrganizationMember(org.Id, ctx.User.Id))
+	if err != nil {
+		ctx.Handle(500, "org.Home(GetRepositories)", err)
+		return
+	}
+
+	if err = org.GetMembers(); err != nil {
+		ctx.Handle(500, "org.Home(GetMembers)", err)
+		return
+	}
+	ctx.Data["Members"] = org.Members
+
+	if err = org.GetTeams(); err != nil {
+		ctx.Handle(500, "org.Home(GetTeams)", err)
+		return
+	}
+	ctx.Data["Teams"] = org.Teams
+
+	ctx.HTML(200, HOME)
 }
 
 func Members(ctx *middleware.Context, params martini.Params) {
@@ -63,7 +95,7 @@ func NewPost(ctx *middleware.Context, form auth.CreateOrgForm) {
 			ctx.Data["Err_OrgName"] = true
 			ctx.RenderWithErr(models.ErrRepoNameIllegal.Error(), NEW, &form)
 		default:
-			ctx.Handle(500, "user.NewPost(CreateUser)", err)
+			ctx.Handle(500, "org.NewPost(CreateUser)", err)
 		}
 		return
 	}

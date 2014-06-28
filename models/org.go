@@ -20,6 +20,28 @@ func (org *User) GetOwnerTeam() (*Team, error) {
 	return t, err
 }
 
+// GetTeams returns all teams that belong to organization.
+func (org *User) GetTeams() error {
+	return x.Where("org_id=?", org.Id).Find(&org.Teams)
+}
+
+// GetMembers returns all members of organization.
+func (org *User) GetMembers() error {
+	ous, err := GetOrgUsersByOrgId(org.Id)
+	if err != nil {
+		return err
+	}
+
+	org.Members = make([]*User, len(ous))
+	for i, ou := range ous {
+		org.Members[i], err = GetUserById(ou.Uid)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // CreateOrganization creates record of a new organization.
 func CreateOrganization(org, owner *User) (*User, error) {
 	if !IsLegalName(org.Name) {
@@ -132,12 +154,13 @@ const (
 	ORG_ADMIN
 )
 
-const OWNER_TEAM = "Owner"
+const OWNER_TEAM = "Owners"
 
 // Team represents a organization team.
 type Team struct {
 	Id          int64
 	OrgId       int64 `xorm:"INDEX"`
+	LowerName   string
 	Name        string
 	Description string
 	Authorize   AuthorizeType
@@ -148,15 +171,19 @@ type Team struct {
 
 // NewTeam creates a record of new team.
 func NewTeam(t *Team) error {
+	// TODO: check if same name team of organization exists.
+	t.LowerName = strings.ToLower(t.Name)
 	_, err := x.Insert(t)
 	return err
 }
 
+// UpdateTeam updates information of team.
 func UpdateTeam(t *Team) error {
 	if len(t.Description) > 255 {
 		t.Description = t.Description[:255]
 	}
 
+	t.LowerName = strings.ToLower(t.Name)
 	_, err := x.Id(t.Id).AllCols().Update(t)
 	return err
 }
@@ -192,13 +219,15 @@ func GetOrgUsersByOrgId(orgId int64) ([]*OrgUser, error) {
 	return ous, err
 }
 
-func GetOrganizationCount(u *User) (int64, error) {
-	return x.Where("uid=?", u.Id).Count(new(OrgUser))
-}
-
-// IsOrganizationOwner returns true if given user ID is in the owner team.
+// IsOrganizationOwner returns true if given user is in the owner team.
 func IsOrganizationOwner(orgId, uid int64) bool {
 	has, _ := x.Where("is_owner=?", true).Get(&OrgUser{Uid: uid, OrgId: orgId})
+	return has
+}
+
+// IsOrganizationMember returns true if given user is member of organization.
+func IsOrganizationMember(orgId, uid int64) bool {
+	has, _ := x.Get(&OrgUser{Uid: uid, OrgId: orgId})
 	return has
 }
 
