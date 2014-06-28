@@ -733,7 +733,7 @@ func UpdateRepository(repo *Repository) error {
 }
 
 // DeleteRepository deletes a repository for a user or orgnaztion.
-func DeleteRepository(userId, repoId int64, userName string) (err error) {
+func DeleteRepository(userId, repoId int64, userName string) error {
 	repo := &Repository{Id: repoId, OwnerId: userId}
 	has, err := x.Get(repo)
 	if err != nil {
@@ -747,6 +747,7 @@ func DeleteRepository(userId, repoId int64, userName string) (err error) {
 	if err = sess.Begin(); err != nil {
 		return err
 	}
+
 	if _, err = sess.Delete(&Repository{Id: repoId}); err != nil {
 		sess.Rollback()
 		return err

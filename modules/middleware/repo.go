@@ -44,6 +44,7 @@ func RepoAssignment(redirect bool, args ...bool) martini.Handler {
 		repoName := params["reponame"]
 		refName := params["branchname"]
 
+		// TODO: need more advanced onwership and access level check.
 		// Collaborators who have write access can be seen as owners.
 		if ctx.IsSigned {
 			ctx.Repo.IsOwner, err = models.HasAccess(ctx.User.Name, userName+"/"+repoName, models.WRITABLE)
