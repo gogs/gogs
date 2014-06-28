@@ -26,6 +26,10 @@ import (
 	"github.com/gogits/gogs/modules/social"
 )
 
+const (
+	INSTALL base.TplName = "install"
+)
+
 func checkRunMode() {
 	switch setting.Cfg.MustValue("", "RUN_MODE") {
 	case "prod":
@@ -72,6 +76,7 @@ func renderDbOption(ctx *middleware.Context) {
 	ctx.Data["DbOptions"] = []string{"MySQL", "PostgreSQL", "SQLite3"}
 }
 
+// @router /install [get]
 func Install(ctx *middleware.Context, form auth.InstallForm) {
 	if setting.InstallLock {
 		ctx.Handle(404, "install.Install", errors.New("Installation is prohibited"))
@@ -119,12 +124,12 @@ func Install(ctx *middleware.Context, form auth.InstallForm) {
 	ctx.Data["CurDbOption"] = curDbOp
 
 	auth.AssignForm(form, ctx.Data)
-	ctx.HTML(200, "install")
+	ctx.HTML(200, INSTALL)
 }
 
 func InstallPost(ctx *middleware.Context, form auth.InstallForm) {
 	if setting.InstallLock {
-		ctx.Handle(404, "install.Install", errors.New("Installation is prohibited"))
+		ctx.Handle(404, "install.InstallPost", errors.New("Installation is prohibited"))
 		return
 	}
 
@@ -135,12 +140,12 @@ func InstallPost(ctx *middleware.Context, form auth.InstallForm) {
 	ctx.Data["CurDbOption"] = form.Database
 
 	if ctx.HasError() {
-		ctx.HTML(200, "install")
+		ctx.HTML(200, INSTALL)
 		return
 	}
 
 	if _, err := exec.LookPath("git"); err != nil {
-		ctx.RenderWithErr("Fail to test 'git' command: "+err.Error(), "install", &form)
+		ctx.RenderWithErr("Fail to test 'git' command: "+err.Error(), INSTALL, &form)
 		return
 	}
 
@@ -158,18 +163,19 @@ func InstallPost(ctx *middleware.Context, form auth.InstallForm) {
 	// Set test engine.
 	var x *xorm.Engine
 	if err := models.NewTestEngine(x); err != nil {
+		// NOTE: should use core.QueryDriver (github.com/go-xorm/core)
 		if strings.Contains(err.Error(), `Unknown database type: sqlite3`) {
 			ctx.RenderWithErr("Your release version does not support SQLite3, please download the official binary version "+
-				"from http://gogs.io/docs/installation/install_from_binary.md, NOT the gobuild version.", "install", &form)
+				"from http://gogs.io/docs/installation/install_from_binary.md, NOT the gobuild version.", INSTALL, &form)
 		} else {
-			ctx.RenderWithErr("Database setting is not correct: "+err.Error(), "install", &form)
+			ctx.RenderWithErr("Database setting is not correct: "+err.Error(), INSTALL, &form)
 		}
 		return
 	}
 
 	// Test repository root path.
 	if err := os.MkdirAll(form.RepoRootPath, os.ModePerm); err != nil {
-		ctx.RenderWithErr("Repository root path is invalid: "+err.Error(), "install", &form)
+		ctx.RenderWithErr("Repository root path is invalid: "+err.Error(), INSTALL, &form)
 		return
 	}
 
@@ -180,7 +186,7 @@ func InstallPost(ctx *middleware.Context, form auth.InstallForm) {
 	}
 	// Does not check run user when the install lock is off.
 	if form.RunUser != curUser {
-		ctx.RenderWithErr("Run user isn't the current user: "+form.RunUser+" -> "+curUser, "install", &form)
+		ctx.RenderWithErr("Run user isn't the current user: "+form.RunUser+" -> "+curUser, INSTALL, &form)
 		return
 	}
 
@@ -214,18 +220,18 @@ func InstallPost(ctx *middleware.Context, form auth.InstallForm) {
 
 	os.MkdirAll("custom/conf", os.ModePerm)
 	if err := goconfig.SaveConfigFile(setting.Cfg, path.Join(setting.CustomPath, "conf/app.ini")); err != nil {
-		ctx.RenderWithErr("Fail to save configuration: "+err.Error(), "install", &form)
+		ctx.RenderWithErr("Fail to save configuration: "+err.Error(), INSTALL, &form)
 		return
 	}
 
 	GlobalInit()
 
 	// Create admin account.
-	if _, err := models.RegisterUser(&models.User{Name: form.AdminName, Email: form.AdminEmail, Passwd: form.AdminPasswd,
+	if _, err := models.CreateUser(&models.User{Name: form.AdminName, Email: form.AdminEmail, Passwd: form.AdminPasswd,
 		IsAdmin: true, IsActive: true}); err != nil {
 		if err != models.ErrUserAlreadyExist {
 			setting.InstallLock = false
-			ctx.RenderWithErr("Admin account setting is invalid: "+err.Error(), "install", &form)
+			ctx.RenderWithErr("Admin account setting is invalid: "+err.Error(), INSTALL, &form)
 			return
 		}
 		log.Info("Admin account already exist")

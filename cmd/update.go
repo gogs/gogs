@@ -42,5 +42,7 @@ func runUpdate(c *cli.Context) {
 	repoUserName := os.Getenv("repoUserName")
 	repoName := os.Getenv("repoName")
 
-	models.Update(args[0], args[1], args[2], userName, repoUserName, repoName, userId)
+	if err := models.Update(args[0], args[1], args[2], userName, repoUserName, repoName, userId); err != nil {
+		log.GitLogger.Fatal(err.Error())
+	}
 }

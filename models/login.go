@@ -255,7 +255,7 @@ func LoginUserLdapSource(user *User, name, passwd string, sourceId int64, cfg *L
 		Email:       mail,
 	}
 
-	return RegisterUser(user)
+	return CreateUser(user)
 }
 
 type loginAuth struct {
@@ -359,5 +359,5 @@ func LoginUserSMTPSource(user *User, name, passwd string, sourceId int64, cfg *S
 		Passwd:      passwd,
 		Email:       name,
 	}
-	return RegisterUser(user)
+	return CreateUser(user)
 }

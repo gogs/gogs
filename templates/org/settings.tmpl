@@ -1,0 +1,130 @@
+{{template "base/head" .}}
+{{template "base/navbar" .}}
+<div id="body-nav">
+    <div class="container">
+        <div class="btn-group pull-left" id="dashboard-switch">
+            <button type="button" class="btn btn-default">
+                <img src="{{.Org.AvatarLink}}?s=28" alt="user-avatar" title="username">
+                {{.Org.Name}}
+            </button>
+        </div>
+        <ul class="nav nav-pills pull-right">
+            <li><a href="/org/{{.Org.Name}}/dashboard/">News Feed</a></li>
+            <li><a href="/org/{{.Org.Name}}/dashboard/issues">Issues</a></li>
+            <li class="active"><a href="/org/{{.Org.Name}}/settings">Settings</a></li>
+            <!-- <li><a href="/pulls">Pull Requests</a></li>
+            <li><a href="/stars">Stars</a></li> -->
+        </ul>
+    </div>
+</div>
+
+<div id="body" class="container" data-page="org">
+    <div id="user-setting-nav" class="col-md-2 repo-setting-nav">
+        <ul class="list-group">
+            <li class="list-group-item active"><a href="#">Options</a></li>
+        </ul>
+    </div>
+    <div id="repo-setting-container" class="col-md-10">
+        {{template "base/alert" .}}
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                Organization Options
+            </div>
+
+            <div class="panel-body">
+                <form action="/org/{{.Org.Name}}/settings" method="post" class="form-horizontal">
+                    {{.CsrfTokenHtml}}
+                    <input type="hidden" name="action" value="update">
+
+                    <div class="form-group{{if .Err_DisplayName}} has-error has-feedback{{end}}">
+                        <label class="col-md-3 text-right" for="org-setting-name">Display Name</label>
+                        <div class="col-md-9">
+                            <input class="form-control" name="display_name" value="{{.Org.FullName}}" title="" id="org-setting-name"/>
+                        </div>
+                    </div>
+
+                    <div class="form-group{{if .Err_Email}} has-error has-feedback{{end}}">
+                        <label class="col-md-3 text-right" for="org-email">Email</label>
+                        <div class="col-md-9">
+                            <input class="form-control" name="email" value="{{.Org.Email}}" title="" id="org-email" type="email"/>
+                        </div>
+                    </div>
+
+                    <div class="form-group{{if .Err_Description}} has-error has-feedback{{end}}">
+                        <label class="col-md-3 text-right" for="org-desc">Description</label>
+                        <div class="col-md-9">
+                            <textarea class="form-control" name="desc" id="org-desc" rows="3">{{.Org.Description}}</textarea>
+                        </div>
+                    </div>
+
+                    <div class="form-group{{if .Err_Website}} has-error has-feedback{{end}}">
+                        <label class="col-md-3 text-right" for="org-site">Official Site</label>
+                        <div class="col-md-9">
+                            <input type="url" class="form-control" name="site" value="{{.Org.Website}}" id="org-site"/>
+                        </div>
+                    </div>
+
+                    <div class="form-group{{if .Err_Location}} has-error has-feedback{{end}}">
+                        <label class="col-md-3 text-right" for="org-location">Location</label>
+                        <div class="col-md-9">
+                            <input class="form-control" name="location" value="{{.Org.Location}}" title="" id="org-location"/>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <div class="col-md-9 col-md-offset-3">
+                            <button class="btn btn-primary" type="submit">Save Options</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="panel panel-warning">
+            <div class="panel-heading">
+                Danger Zone
+            </div>
+            <div class="panel-body">
+                <button type="button" class="btn btn-default pull-right" href="#delete-org-modal" data-toggle="modal">
+                    Delete this organization
+                </button>
+                <dd>
+                <dt>Delete this organization</dt>
+                <dl>Once you delete this organization and all repositories in, there is no going back. Please be
+                    certain.
+                </dl>
+                </dd>
+
+                <div class="modal fade" id="delete-org-modal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel"
+                     aria-hidden="true">
+                    <div class="modal-dialog">
+                        <form action="/org/{{.Org.Name}}/settings/delete" method="post"
+                              class="modal-content">
+                            {{.CsrfTokenHtml}}
+                            <div class="modal-header">
+                                <button type="button" class="close" data-dismiss="modal"
+                                        aria-hidden="true">&times;</button>
+                                <h4 class="modal-title" id="myModalLabel">Delete organization</h4>
+                            </div>
+
+                            <div class="modal-body">
+                                <div class="form-group">
+                                    <label>Make sure your are owner of this organization. Please enter your password.<strong class="text-danger">*</strong></label>
+                                    <input name="password" class="form-control" type="password" placeholder="Type your account password" required="required">
+                                </div>
+                            </div>
+
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+                                <button class="btn btn-danger btn-lg">I understand the consequences, delete this
+                                    organization
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{{template "base/footer" .}}

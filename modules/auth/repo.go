@@ -22,9 +22,10 @@ import (
 //         \/     \/|__|              \/                       \/
 
 type CreateRepoForm struct {
+	Uid         int64  `form:"uid" binding:"Required"`
 	RepoName    string `form:"repo" binding:"Required;AlphaDash;MaxSize(100)"`
 	Private     bool   `form:"private"`
-	Description string `form:"desc" binding:"MaxSize(100)"`
+	Description string `form:"desc" binding:"MaxSize(255)"`
 	Language    string `form:"language"`
 	License     string `form:"license"`
 	InitReadme  bool   `form:"initReadme"`
@@ -47,10 +48,11 @@ type MigrateRepoForm struct {
 	Url          string `form:"url" binding:"Url"`
 	AuthUserName string `form:"auth_username"`
 	AuthPasswd   string `form:"auth_password"`
+	Uid          int64  `form:"uid" binding:"Required"`
 	RepoName     string `form:"repo" binding:"Required;AlphaDash;MaxSize(100)"`
 	Mirror       bool   `form:"mirror"`
 	Private      bool   `form:"private"`
-	Description  string `form:"desc" binding:"MaxSize(100)"`
+	Description  string `form:"desc" binding:"MaxSize(255)"`
 }
 
 func (f *MigrateRepoForm) Name(field string) string {
@@ -69,7 +71,7 @@ func (f *MigrateRepoForm) Validate(errors *binding.Errors, req *http.Request, co
 
 type RepoSettingForm struct {
 	RepoName    string `form:"name" binding:"Required;AlphaDash;MaxSize(100)"`
-	Description string `form:"desc" binding:"MaxSize(100)"`
+	Description string `form:"desc" binding:"MaxSize(255)"`
 	Website     string `form:"site" binding:"Url;MaxSize(100)"`
 	Branch      string `form:"branch"`
 	Interval    int    `form:"interval"`
