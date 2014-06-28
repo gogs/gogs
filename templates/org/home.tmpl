@@ -1,0 +1,70 @@
+{{template "base/head" .}}
+{{template "base/navbar" .}}
+<div id="body-nav" class="org-nav">
+    <div class="container clearfix">
+        <div class="col-md-8" id="org-nav-wrapper">
+            <img class="pull-left org-logo" src="{{.Org.AvatarLink}}?s=140" alt="" width="100"/>
+            <div id="org-nav-info">
+                <h2 class="org-name">{{.Org.FullName}}</h2>
+                {{if .Org.Description}}<p class="org-description">{{.Org.Description}}</p>{{end}}
+                <ul class="org-meta list-inline">
+                    {{if .Org.Website}}<li><i class="fa fa-link"></i><a target="_blank" href="{{.Org.Website}}">{{.Org.Website}}</a></li>{{end}}
+                    <li><i class="fa fa-envelope"></i><a href="mailto:{{.Org.Email}}">{{.Org.Email}}</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+<div id="body" class="container">
+    <div id="org">
+        <div class="org-main col-md-8">
+            <div class="org-toolbar clearfix">
+                <a class="btn pull-right btn-success" href="/repo/create?org={{.Org.Id}}"><i class="fa fa-plus"></i> New Repository</a>
+            </div>
+            <hr style="width: 100%;border-color: #DDD"/>
+            <div class="org-repo-list" id="org-repo-list">
+                {{range .Repos}}
+                <div class="org-repo-item">
+                    <div class="org-repo-status pull-right">
+                        <!-- <ul class="list-inline">
+                            <li><strong>Go</strong></li>
+                            <li><i class="i fa fa-star"></i><strong>6</strong></li>
+                            <li><i class="fa fa-code-fork"></i><strong>2</strong></li>
+                        </ul> -->
+                    </div>
+                    <h3 class="org-repo-name"><a href="/{{$.Org.Name}}/{{.Name}}">{{.Name}}</a></h3>
+                    <p class="org-repo-description">{{.Description}}</p>
+                    <p class="org-repo-update">Updated {{TimeSince .Updated}}</p>
+                </div>
+                {{end}}
+            </div>
+        </div>
+
+        <div class="org-sidebar col-md-4">
+            <div class="org-panel panel panel-default" id="org-sidebar-members">
+                <div class="panel-heading"><strong><a href="/org/{{$.Org.Name}}/members">Members</a></strong></div>
+                <div class="panel-body">
+                    {{range .Members}}
+                    <a class="org-member" href="/user/{{.Name}}" data-toggle="tooltip" title="{{.Name}}" data-placement="bottom"><img src="{{.AvatarLink}}?s=140" alt=""/></a>
+                    {{end}}
+                </div>
+            </div>
+            <div class="org-panel panel panel-default" id="org-sidebar-teams">
+                <div class="panel-heading"><strong><a href="/org/{{$.Org.Name}}/teams">Teams</a></strong></div>
+                <div class="panel-body">
+                    {{range .Teams}}
+                    <div class="org-team">
+                        <a href="/org/{{$.Org.Name}}/teams/{{.LowerName}}">
+                            <p class="org-team-name"><strong>{{.Name}}</strong></p>
+                            <p class="org-team-meta">
+                                {{.NumMembers}} members · {{.NumRepos}} repositories
+                            </p>
+                        </a>
+                    </div>
+                    {{end}}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{{template "base/footer" .}}

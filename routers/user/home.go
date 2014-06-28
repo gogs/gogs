@@ -83,6 +83,12 @@ func Profile(ctx *middleware.Context, params martini.Params) {
 		}
 		return
 	}
+
+	if u.IsOrganization() {
+		ctx.Redirect("/org/" + u.Name)
+		return
+	}
+
 	// For security reason, hide e-mail address for anonymous visitors.
 	if !ctx.IsSigned {
 		u.Email = ""

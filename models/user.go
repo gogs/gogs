@@ -73,6 +73,8 @@ type User struct {
 	Description string
 	NumTeams    int
 	NumMembers  int
+	Teams       []*Team `xorm:"-"`
+	Members     []*User `xorm:"-"`
 }
 
 // HomeLink returns the user home page link.
@@ -108,6 +110,11 @@ func (u *User) EncodePasswd() {
 // IsOrganization returns true if user is actually a organization.
 func (u *User) IsOrganization() bool {
 	return u.Type == ORGANIZATION
+}
+
+// GetOrganizationCount returns count of membership of organization of user.
+func (u *User) GetOrganizationCount() (int64, error) {
+	return x.Where("uid=?", u.Id).Count(new(OrgUser))
 }
 
 // GetOrganizations returns all organizations that user belongs to.
@@ -331,7 +338,7 @@ func DeleteUser(u *User) error {
 	}
 
 	// Check membership of organization.
-	count, err = GetOrganizationCount(u)
+	count, err = u.GetOrganizationCount()
 	if err != nil {
 		return errors.New("modesl.GetRepositories(GetOrganizationCount): " + err.Error())
 	} else if count > 0 {
