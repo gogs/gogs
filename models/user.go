@@ -21,14 +21,16 @@ import (
 	"github.com/gogits/gogs/modules/setting"
 )
 
-// User types.
+type UserType int
+
 const (
-	UT_INDIVIDUAL = iota + 1
-	UT_ORGANIZATION
+	INDIVIDUAL UserType = iota // Historic reason to make it starts at 0.
+	ORGANIZATION
 )
 
 var (
 	ErrUserOwnRepos          = errors.New("User still have ownership of repositories")
+	ErrUserHasOrgs           = errors.New("User still have membership of organization")
 	ErrUserAlreadyExist      = errors.New("User already exist")
 	ErrUserNotExist          = errors.New("User does not exist")
 	ErrUserNotKeyOwner       = errors.New("User does not the owner of public key")
@@ -50,7 +52,8 @@ type User struct {
 	LoginType     LoginType
 	LoginSource   int64 `xorm:"not null default 0"`
 	LoginName     string
-	Type          int
+	Type          UserType
+	Orgs          []*User `xorm:"-"`
 	NumFollowers  int
 	NumFollowings int
 	NumStars      int
@@ -65,43 +68,71 @@ type User struct {
 	Salt          string    `xorm:"VARCHAR(10)"`
 	Created       time.Time `xorm:"created"`
 	Updated       time.Time `xorm:"updated"`
+
+	// For organization.
+	Description string
+	NumTeams    int
+	NumMembers  int
 }
 
 // HomeLink returns the user home page link.
-func (user *User) HomeLink() string {
-	return "/user/" + user.Name
+func (u *User) HomeLink() string {
+	return "/user/" + u.Name
 }
 
 // AvatarLink returns user gravatar link.
-func (user *User) AvatarLink() string {
+func (u *User) AvatarLink() string {
 	if setting.DisableGravatar {
 		return "/img/avatar_default.jpg"
 	} else if setting.Service.EnableCacheAvatar {
-		return "/avatar/" + user.Avatar
+		return "/avatar/" + u.Avatar
 	}
-	return "//1.gravatar.com/avatar/" + user.Avatar
+	return "//1.gravatar.com/avatar/" + u.Avatar
 }
 
 // NewGitSig generates and returns the signature of given user.
-func (user *User) NewGitSig() *git.Signature {
+func (u *User) NewGitSig() *git.Signature {
 	return &git.Signature{
-		Name:  user.Name,
-		Email: user.Email,
+		Name:  u.Name,
+		Email: u.Email,
 		When:  time.Now(),
 	}
 }
 
 // EncodePasswd encodes password to safe format.
-func (user *User) EncodePasswd() {
-	newPasswd := base.PBKDF2([]byte(user.Passwd), []byte(user.Salt), 10000, 50, sha256.New)
-	user.Passwd = fmt.Sprintf("%x", newPasswd)
+func (u *User) EncodePasswd() {
+	newPasswd := base.PBKDF2([]byte(u.Passwd), []byte(u.Salt), 10000, 50, sha256.New)
+	u.Passwd = fmt.Sprintf("%x", newPasswd)
 }
 
-// Member represents user is member of organization.
-type Member struct {
-	Id     int64
-	OrgId  int64 `xorm:"unique(member) index"`
-	UserId int64 `xorm:"unique(member)"`
+func (u *User) IsOrganization() bool {
+	return u.Type == ORGANIZATION
+}
+
+func (u *User) GetOrganizations() error {
+	ous, err := GetOrgUsersByUserId(u.Id)
+	if err != nil {
+		return err
+	}
+
+	u.Orgs = make([]*User, len(ous))
+	for i, ou := range ous {
+		u.Orgs[i], err = GetUserById(ou.OrgId)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// GetOwnerTeam returns owner team of organization.
+func (org *User) GetOwnerTeam() (*Team, error) {
+	t := &Team{
+		OrgId: org.Id,
+		Name:  OWNER_TEAM,
+	}
+	_, err := x.Get(t)
+	return t, err
 }
 
 // IsUserExist checks if given user name exist,
@@ -126,49 +157,60 @@ func GetUserSalt() string {
 	return base.GetRandomString(10)
 }
 
-// RegisterUser creates record of a new user.
-func RegisterUser(user *User) (*User, error) {
-
-	if !IsLegalName(user.Name) {
+// CreateUser creates record of a new user.
+func CreateUser(u *User) (*User, error) {
+	if !IsLegalName(u.Name) {
 		return nil, ErrUserNameIllegal
 	}
 
-	isExist, err := IsUserExist(user.Name)
+	isExist, err := IsUserExist(u.Name)
 	if err != nil {
 		return nil, err
 	} else if isExist {
 		return nil, ErrUserAlreadyExist
 	}
 
-	isExist, err = IsEmailUsed(user.Email)
+	isExist, err = IsEmailUsed(u.Email)
 	if err != nil {
 		return nil, err
 	} else if isExist {
 		return nil, ErrEmailAlreadyUsed
 	}
 
-	user.LowerName = strings.ToLower(user.Name)
-	user.Avatar = base.EncodeMd5(user.Email)
-	user.AvatarEmail = user.Email
-	user.Rands = GetUserSalt()
-	user.Salt = GetUserSalt()
-	user.EncodePasswd()
-	if _, err = x.Insert(user); err != nil {
-		return nil, err
-	} else if err = os.MkdirAll(UserPath(user.Name), os.ModePerm); err != nil {
-		if _, err := x.Id(user.Id).Delete(&User{}); err != nil {
-			return nil, errors.New(fmt.Sprintf(
-				"both create userpath %s and delete table record faild: %v", user.Name, err))
-		}
+	u.LowerName = strings.ToLower(u.Name)
+	u.Avatar = base.EncodeMd5(u.Email)
+	u.AvatarEmail = u.Email
+	u.Rands = GetUserSalt()
+	u.Salt = GetUserSalt()
+	u.EncodePasswd()
+
+	sess := x.NewSession()
+	defer sess.Close()
+	if err = sess.Begin(); err != nil {
 		return nil, err
 	}
 
-	if user.Id == 1 {
-		user.IsAdmin = true
-		user.IsActive = true
-		_, err = x.Id(user.Id).UseBool().Update(user)
+	if _, err = sess.Insert(u); err != nil {
+		sess.Rollback()
+		return nil, err
 	}
-	return user, err
+
+	if err = os.MkdirAll(UserPath(u.Name), os.ModePerm); err != nil {
+		sess.Rollback()
+		return nil, err
+	}
+
+	if err = sess.Commit(); err != nil {
+		return nil, err
+	}
+
+	// Auto-set admin for user whose ID is 1.
+	if u.Id == 1 {
+		u.IsAdmin = true
+		u.IsActive = true
+		_, err = x.Id(u.Id).UseBool().Update(u)
+	}
+	return u, err
 }
 
 // GetUsers returns given number of user objects with offset.
@@ -277,51 +319,62 @@ func UpdateUser(u *User) (err error) {
 	if len(u.Website) > 255 {
 		u.Website = u.Website[:255]
 	}
+	if len(u.Description) > 255 {
+		u.Description = u.Description[:255]
+	}
 
 	_, err = x.Id(u.Id).AllCols().Update(u)
 	return err
 }
 
 // DeleteUser completely deletes everything of the user.
-func DeleteUser(user *User) error {
+func DeleteUser(u *User) error {
 	// Check ownership of repository.
-	count, err := GetRepositoryCount(user)
+	count, err := GetRepositoryCount(u)
 	if err != nil {
-		return errors.New("modesl.GetRepositories: " + err.Error())
+		return errors.New("modesl.GetRepositories(GetRepositoryCount): " + err.Error())
 	} else if count > 0 {
 		return ErrUserOwnRepos
+	}
+
+	// Check membership of organization.
+	count, err = GetOrganizationCount(u)
+	if err != nil {
+		return errors.New("modesl.GetRepositories(GetOrganizationCount): " + err.Error())
+	} else if count > 0 {
+		return ErrUserHasOrgs
 	}
 
 	// TODO: check issues, other repos' commits
 
 	// Delete all followers.
-	if _, err = x.Delete(&Follow{FollowId: user.Id}); err != nil {
+	if _, err = x.Delete(&Follow{FollowId: u.Id}); err != nil {
 		return err
 	}
 
 	// Delete oauth2.
-	if _, err = x.Delete(&Oauth2{Uid: user.Id}); err != nil {
+	if _, err = x.Delete(&Oauth2{Uid: u.Id}); err != nil {
 		return err
 	}
 
 	// Delete all feeds.
-	if _, err = x.Delete(&Action{UserId: user.Id}); err != nil {
+	if _, err = x.Delete(&Action{UserId: u.Id}); err != nil {
 		return err
 	}
 
 	// Delete all watches.
-	if _, err = x.Delete(&Watch{UserId: user.Id}); err != nil {
+	if _, err = x.Delete(&Watch{UserId: u.Id}); err != nil {
 		return err
 	}
 
 	// Delete all accesses.
-	if _, err = x.Delete(&Access{UserName: user.LowerName}); err != nil {
+	if _, err = x.Delete(&Access{UserName: u.LowerName}); err != nil {
 		return err
 	}
 
 	// Delete all SSH keys.
 	keys := make([]*PublicKey, 0, 10)
-	if err = x.Find(&keys, &PublicKey{OwnerId: user.Id}); err != nil {
+	if err = x.Find(&keys, &PublicKey{OwnerId: u.Id}); err != nil {
 		return err
 	}
 	for _, key := range keys {
@@ -331,11 +384,11 @@ func DeleteUser(user *User) error {
 	}
 
 	// Delete user directory.
-	if err = os.RemoveAll(UserPath(user.Name)); err != nil {
+	if err = os.RemoveAll(UserPath(u.Name)); err != nil {
 		return err
 	}
 
-	_, err = x.Delete(user)
+	_, err = x.Delete(u)
 	return err
 }
 

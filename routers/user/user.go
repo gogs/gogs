@@ -17,12 +17,21 @@ import (
 	"github.com/gogits/gogs/modules/setting"
 )
 
+const (
+	SIGNIN          base.TplName = "user/signin"
+	SIGNUP          base.TplName = "user/signup"
+	DELETE          base.TplName = "user/delete"
+	ACTIVATE        base.TplName = "user/activate"
+	FORGOT_PASSWORD base.TplName = "user/forgot_passwd"
+	RESET_PASSWORD  base.TplName = "user/reset_passwd"
+)
+
 func SignIn(ctx *middleware.Context) {
 	ctx.Data["Title"] = "Log In"
 
 	if _, ok := ctx.Session.Get("socialId").(int64); ok {
 		ctx.Data["IsSocialLogin"] = true
-		ctx.HTML(200, "user/signin")
+		ctx.HTML(200, SIGNIN)
 		return
 	}
 
@@ -34,7 +43,7 @@ func SignIn(ctx *middleware.Context) {
 	// Check auto-login.
 	uname := ctx.GetCookie(setting.CookieUserName)
 	if len(uname) == 0 {
-		ctx.HTML(200, "user/signin")
+		ctx.HTML(200, SIGNIN)
 		return
 	}
 
@@ -57,7 +66,7 @@ func SignIn(ctx *middleware.Context) {
 	secret := base.EncodeMd5(user.Rands + user.Passwd)
 	value, _ := ctx.GetSecureCookie(secret, setting.CookieRememberName)
 	if value != user.Name {
-		ctx.HTML(200, "user/signin")
+		ctx.HTML(200, SIGNIN)
 		return
 	}
 
@@ -86,7 +95,7 @@ func SignInPost(ctx *middleware.Context, form auth.LogInForm) {
 	}
 
 	if ctx.HasError() {
-		ctx.HTML(200, "user/signin")
+		ctx.HTML(200, SIGNIN)
 		return
 	}
 
@@ -94,7 +103,7 @@ func SignInPost(ctx *middleware.Context, form auth.LogInForm) {
 	if err != nil {
 		if err == models.ErrUserNotExist {
 			log.Trace("%s Log in failed: %s", ctx.Req.RequestURI, form.UserName)
-			ctx.RenderWithErr("Username or password is not correct", "user/signin", &form)
+			ctx.RenderWithErr("Username or password is not correct", SIGNIN, &form)
 			return
 		}
 
@@ -151,7 +160,7 @@ func SignUp(ctx *middleware.Context) {
 
 	if setting.Service.DisableRegistration {
 		ctx.Data["DisableRegistration"] = true
-		ctx.HTML(200, "user/signup")
+		ctx.HTML(200, SIGNUP)
 		return
 	}
 
@@ -160,7 +169,7 @@ func SignUp(ctx *middleware.Context) {
 		return
 	}
 
-	ctx.HTML(200, "user/signup")
+	ctx.HTML(200, SIGNUP)
 }
 
 func oauthSignUp(ctx *middleware.Context, sid int64) {
@@ -180,7 +189,7 @@ func oauthSignUp(ctx *middleware.Context, sid int64) {
 	ctx.Data["username"] = strings.Replace(ctx.Session.Get("socialName").(string), " ", "", -1)
 	ctx.Data["email"] = ctx.Session.Get("socialEmail")
 	log.Trace("user.oauthSignUp(social ID): %v", ctx.Session.Get("socialId"))
-	ctx.HTML(200, "user/signup")
+	ctx.HTML(200, SIGNUP)
 }
 
 func SignUpPost(ctx *middleware.Context, form auth.RegisterForm) {
@@ -198,14 +207,14 @@ func SignUpPost(ctx *middleware.Context, form auth.RegisterForm) {
 	}
 
 	if ctx.HasError() {
-		ctx.HTML(200, "user/signup")
+		ctx.HTML(200, SIGNUP)
 		return
 	}
 
 	if form.Password != form.RetypePasswd {
 		ctx.Data["Err_Password"] = true
 		ctx.Data["Err_RetypePasswd"] = true
-		ctx.RenderWithErr("Password and re-type password are not same.", "user/signup", &form)
+		ctx.RenderWithErr("Password and re-type password are not same.", SIGNUP, &form)
 		return
 	}
 
@@ -217,22 +226,23 @@ func SignUpPost(ctx *middleware.Context, form auth.RegisterForm) {
 	}
 
 	var err error
-	if u, err = models.RegisterUser(u); err != nil {
+	if u, err = models.CreateUser(u); err != nil {
 		switch err {
 		case models.ErrUserAlreadyExist:
 			ctx.Data["Err_UserName"] = true
-			ctx.RenderWithErr("Username has been already taken", "user/signup", &form)
+			ctx.RenderWithErr("Username has been already taken", SIGNUP, &form)
 		case models.ErrEmailAlreadyUsed:
 			ctx.Data["Err_Email"] = true
-			ctx.RenderWithErr("E-mail address has been already used", "user/signup", &form)
+			ctx.RenderWithErr("E-mail address has been already used", SIGNUP, &form)
 		case models.ErrUserNameIllegal:
-			ctx.RenderWithErr(models.ErrRepoNameIllegal.Error(), "user/signup", &form)
+			ctx.Data["Err_UserName"] = true
+			ctx.RenderWithErr(models.ErrRepoNameIllegal.Error(), SIGNUP, &form)
 		default:
-			ctx.Handle(500, "user.SignUpPost(RegisterUser)", err)
+			ctx.Handle(500, "user.SignUpPost(CreateUser)", err)
 		}
 		return
 	}
-	log.Trace("%s User created: %s", ctx.Req.RequestURI, form.UserName)
+	log.Trace("%s User created: %s", ctx.Req.RequestURI, u.Name)
 
 	// Bind social account.
 	if isOauth {
@@ -265,7 +275,7 @@ func Delete(ctx *middleware.Context) {
 	ctx.Data["Title"] = "Delete Account"
 	ctx.Data["PageIsUserSetting"] = true
 	ctx.Data["IsUserPageSettingDelete"] = true
-	ctx.HTML(200, "user/delete")
+	ctx.HTML(200, DELETE)
 }
 
 func DeletePost(ctx *middleware.Context) {
@@ -286,7 +296,7 @@ func DeletePost(ctx *middleware.Context) {
 			case models.ErrUserOwnRepos:
 				ctx.Flash.Error("Your account still have ownership of repository, you have to delete or transfer them first.")
 			default:
-				ctx.Handle(500, "user.Delete", err)
+				ctx.Handle(500, "user.Delete(DeleteUser)", err)
 				return
 			}
 		} else {
@@ -321,7 +331,7 @@ func Activate(ctx *middleware.Context) {
 		} else {
 			ctx.Data["ServiceNotEnabled"] = true
 		}
-		ctx.HTML(200, "user/activate")
+		ctx.HTML(200, ACTIVATE)
 		return
 	}
 
@@ -343,7 +353,7 @@ func Activate(ctx *middleware.Context) {
 	}
 
 	ctx.Data["IsActivateFailed"] = true
-	ctx.HTML(200, "user/activate")
+	ctx.HTML(200, ACTIVATE)
 }
 
 func ForgotPasswd(ctx *middleware.Context) {
@@ -351,12 +361,12 @@ func ForgotPasswd(ctx *middleware.Context) {
 
 	if setting.MailService == nil {
 		ctx.Data["IsResetDisable"] = true
-		ctx.HTML(200, "user/forgot_passwd")
+		ctx.HTML(200, FORGOT_PASSWORD)
 		return
 	}
 
 	ctx.Data["IsResetRequest"] = true
-	ctx.HTML(200, "user/forgot_passwd")
+	ctx.HTML(200, FORGOT_PASSWORD)
 }
 
 func ForgotPasswdPost(ctx *middleware.Context) {
@@ -381,7 +391,7 @@ func ForgotPasswdPost(ctx *middleware.Context) {
 
 	if ctx.Cache.IsExist("MailResendLimit_" + u.LowerName) {
 		ctx.Data["ResendLimited"] = true
-		ctx.HTML(200, "user/forgot_passwd")
+		ctx.HTML(200, FORGOT_PASSWORD)
 		return
 	}
 
@@ -393,7 +403,7 @@ func ForgotPasswdPost(ctx *middleware.Context) {
 	ctx.Data["Email"] = email
 	ctx.Data["Hours"] = setting.Service.ActiveCodeLives / 60
 	ctx.Data["IsResetSent"] = true
-	ctx.HTML(200, "user/forgot_passwd")
+	ctx.HTML(200, FORGOT_PASSWORD)
 }
 
 func ResetPasswd(ctx *middleware.Context) {
@@ -406,7 +416,7 @@ func ResetPasswd(ctx *middleware.Context) {
 	}
 	ctx.Data["Code"] = code
 	ctx.Data["IsResetForm"] = true
-	ctx.HTML(200, "user/reset_passwd")
+	ctx.HTML(200, RESET_PASSWORD)
 }
 
 func ResetPasswdPost(ctx *middleware.Context) {
@@ -443,5 +453,5 @@ func ResetPasswdPost(ctx *middleware.Context) {
 	}
 
 	ctx.Data["IsResetFailed"] = true
-	ctx.HTML(200, "user/reset_passwd")
+	ctx.HTML(200, RESET_PASSWORD)
 }

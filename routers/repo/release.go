@@ -14,6 +14,12 @@ import (
 	"github.com/gogits/gogs/modules/middleware"
 )
 
+const (
+	RELEASES     base.TplName = "repo/release/list"
+	RELEASE_NEW  base.TplName = "repo/release/new"
+	RELEASE_EDIT base.TplName = "repo/release/edit"
+)
+
 func Releases(ctx *middleware.Context) {
 	ctx.Data["Title"] = "Releases"
 	ctx.Data["IsRepoToolbarReleases"] = true
@@ -100,7 +106,7 @@ func Releases(ctx *middleware.Context) {
 	}
 	models.SortReleases(tags)
 	ctx.Data["Releases"] = tags
-	ctx.HTML(200, "release/list")
+	ctx.HTML(200, RELEASES)
 }
 
 func NewRelease(ctx *middleware.Context) {
@@ -112,7 +118,7 @@ func NewRelease(ctx *middleware.Context) {
 	ctx.Data["Title"] = "New Release"
 	ctx.Data["IsRepoToolbarReleases"] = true
 	ctx.Data["IsRepoReleaseNew"] = true
-	ctx.HTML(200, "release/new")
+	ctx.HTML(200, RELEASE_NEW)
 }
 
 func NewReleasePost(ctx *middleware.Context, form auth.NewReleaseForm) {
@@ -126,7 +132,7 @@ func NewReleasePost(ctx *middleware.Context, form auth.NewReleaseForm) {
 	ctx.Data["IsRepoReleaseNew"] = true
 
 	if ctx.HasError() {
-		ctx.HTML(200, "release/new")
+		ctx.HTML(200, RELEASE_NEW)
 		return
 	}
 
@@ -187,7 +193,7 @@ func EditRelease(ctx *middleware.Context, params martini.Params) {
 
 	ctx.Data["Title"] = "Edit Release"
 	ctx.Data["IsRepoToolbarReleases"] = true
-	ctx.HTML(200, "release/edit")
+	ctx.HTML(200, RELEASE_EDIT)
 }
 
 func EditReleasePost(ctx *middleware.Context, params martini.Params, form auth.EditReleaseForm) {
@@ -207,6 +213,11 @@ func EditReleasePost(ctx *middleware.Context, params martini.Params, form auth.E
 		return
 	}
 	ctx.Data["Release"] = rel
+
+	if ctx.HasError() {
+		ctx.HTML(200, RELEASE_EDIT)
+		return
+	}
 
 	ctx.Data["Title"] = "Edit Release"
 	ctx.Data["IsRepoToolbarReleases"] = true

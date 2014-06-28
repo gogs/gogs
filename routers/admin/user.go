@@ -5,8 +5,6 @@
 package admin
 
 import (
-	"fmt"
-	"strconv"
 	"strings"
 
 	"github.com/go-martini/martini"
@@ -18,16 +16,21 @@ import (
 	"github.com/gogits/gogs/modules/middleware"
 )
 
+const (
+	USER_NEW  base.TplName = "admin/user/new"
+	USER_EDIT base.TplName = "admin/user/edit"
+)
+
 func NewUser(ctx *middleware.Context) {
 	ctx.Data["Title"] = "New Account"
 	ctx.Data["PageIsUsers"] = true
 	auths, err := models.GetAuths()
 	if err != nil {
-		ctx.Handle(500, "admin.user.NewUser", err)
+		ctx.Handle(500, "admin.user.NewUser(GetAuths)", err)
 		return
 	}
 	ctx.Data["LoginSources"] = auths
-	ctx.HTML(200, "admin/users/new")
+	ctx.HTML(200, USER_NEW)
 }
 
 func NewUserPost(ctx *middleware.Context, form auth.RegisterForm) {
@@ -35,7 +38,7 @@ func NewUserPost(ctx *middleware.Context, form auth.RegisterForm) {
 	ctx.Data["PageIsUsers"] = true
 
 	if ctx.HasError() {
-		ctx.HTML(200, "admin/users/new")
+		ctx.HTML(200, USER_NEW)
 		return
 	}
 
@@ -55,25 +58,25 @@ func NewUserPost(ctx *middleware.Context, form auth.RegisterForm) {
 	}
 
 	if len(form.LoginType) > 0 {
+		// NOTE: need rewrite.
 		fields := strings.Split(form.LoginType, "-")
-		tp, _ := strconv.Atoi(fields[0])
+		tp, _ := base.StrTo(fields[0]).Int()
 		u.LoginType = models.LoginType(tp)
-		u.LoginSource, _ = strconv.ParseInt(fields[1], 10, 64)
+		u.LoginSource, _ = base.StrTo(fields[1]).Int64()
 		u.LoginName = form.LoginName
-		fmt.Println(u.LoginType, u.LoginSource, u.LoginName)
 	}
 
 	var err error
-	if u, err = models.RegisterUser(u); err != nil {
+	if u, err = models.CreateUser(u); err != nil {
 		switch err {
 		case models.ErrUserAlreadyExist:
-			ctx.RenderWithErr("Username has been already taken", "admin/users/new", &form)
+			ctx.RenderWithErr("Username has been already taken", USER_NEW, &form)
 		case models.ErrEmailAlreadyUsed:
-			ctx.RenderWithErr("E-mail address has been already used", "admin/users/new", &form)
+			ctx.RenderWithErr("E-mail address has been already used", USER_NEW, &form)
 		case models.ErrUserNameIllegal:
-			ctx.RenderWithErr(models.ErrRepoNameIllegal.Error(), "admin/users/new", &form)
+			ctx.RenderWithErr(models.ErrRepoNameIllegal.Error(), USER_NEW, &form)
 		default:
-			ctx.Handle(500, "admin.user.NewUser", err)
+			ctx.Handle(500, "admin.user.NewUser(CreateUser)", err)
 		}
 		return
 	}
@@ -96,18 +99,18 @@ func EditUser(ctx *middleware.Context, params martini.Params) {
 
 	u, err := models.GetUserById(int64(uid))
 	if err != nil {
-		ctx.Handle(500, "admin.user.EditUser", err)
+		ctx.Handle(500, "admin.user.EditUser(GetUserById)", err)
 		return
 	}
 
 	ctx.Data["User"] = u
 	auths, err := models.GetAuths()
 	if err != nil {
-		ctx.Handle(500, "admin.user.NewUser", err)
+		ctx.Handle(500, "admin.user.NewUser(GetAuths)", err)
 		return
 	}
 	ctx.Data["LoginSources"] = auths
-	ctx.HTML(200, "admin/users/edit")
+	ctx.HTML(200, USER_EDIT)
 }
 
 func EditUserPost(ctx *middleware.Context, params martini.Params, form auth.AdminEditUserForm) {
@@ -116,13 +119,18 @@ func EditUserPost(ctx *middleware.Context, params martini.Params, form auth.Admi
 
 	uid, err := base.StrTo(params["userid"]).Int()
 	if err != nil {
-		ctx.Handle(404, "admin.user.EditUser", err)
+		ctx.Handle(404, "admin.user.EditUserPost", err)
 		return
 	}
 
 	u, err := models.GetUserById(int64(uid))
 	if err != nil {
-		ctx.Handle(500, "admin.user.EditUser", err)
+		ctx.Handle(500, "admin.user.EditUserPost(GetUserById)", err)
+		return
+	}
+
+	if ctx.HasError() {
+		ctx.HTML(200, USER_EDIT)
 		return
 	}
 
@@ -134,7 +142,7 @@ func EditUserPost(ctx *middleware.Context, params martini.Params, form auth.Admi
 	u.IsActive = form.Active
 	u.IsAdmin = form.Admin
 	if err := models.UpdateUser(u); err != nil {
-		ctx.Handle(500, "admin.user.EditUser", err)
+		ctx.Handle(500, "admin.user.EditUserPost(UpdateUser)", err)
 		return
 	}
 	log.Trace("%s User profile updated by admin(%s): %s", ctx.Req.RequestURI,
@@ -152,13 +160,13 @@ func DeleteUser(ctx *middleware.Context, params martini.Params) {
 	//log.Info("delete")
 	uid, err := base.StrTo(params["userid"]).Int()
 	if err != nil {
-		ctx.Handle(404, "admin.user.EditUser", err)
+		ctx.Handle(404, "admin.user.DeleteUser", err)
 		return
 	}
 
 	u, err := models.GetUserById(int64(uid))
 	if err != nil {
-		ctx.Handle(500, "admin.user.EditUser", err)
+		ctx.Handle(500, "admin.user.DeleteUser(GetUserById)", err)
 		return
 	}
 

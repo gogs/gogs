@@ -25,23 +25,25 @@ func SignedInId(header http.Header, sess session.SessionStore) int64 {
 		return 0
 	}
 
-	var id int64
 	if setting.Service.EnableReverseProxyAuth {
-		id, _ = base.StrTo(header.Get(setting.ReverseProxyAuthUid)).Int64()
+		webAuthUser := header.Get(setting.ReverseProxyAuthUser)
+		if len(webAuthUser) > 0 {
+			u, err := models.GetUserByName(webAuthUser)
+			if err != nil {
+				if err != models.ErrUserNotExist {
+					log.Error("auth.user.SignedInId(GetUserByName): %v", err)
+				}
+				return 0
+			}
+			return u.Id
+		}
 	}
 
-	if id <= 0 {
-		uid := sess.Get("userId")
-		if uid == nil {
-			return 0
-		}
-		var ok bool
-		if id, ok = uid.(int64); !ok {
-			return 0
-		}
+	uid := sess.Get("userId")
+	if uid == nil {
+		return 0
 	}
-
-	if id > 0 {
+	if id, ok := uid.(int64); ok {
 		if _, err := models.GetUserById(id); err != nil {
 			if err != models.ErrUserNotExist {
 				log.Error("auth.user.SignedInId(GetUserById): %v", err)
@@ -91,7 +93,7 @@ func (f *UpdateProfileForm) Name(field string) string {
 	names := map[string]string{
 		"UserName": "Username",
 		"Email":    "E-mail address",
-		"Website":  "Website",
+		"Website":  "Website address",
 		"Location": "Location",
 		"Avatar":   "Gravatar Email",
 	}
