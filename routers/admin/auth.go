@@ -18,12 +18,17 @@ import (
 	"github.com/gogits/gogs/modules/middleware"
 )
 
+const (
+	AUTH_NEW  base.TplName = "admin/auth/new"
+	AUTH_EDIT base.TplName = "admin/auth/edit"
+)
+
 func NewAuthSource(ctx *middleware.Context) {
 	ctx.Data["Title"] = "New Authentication"
 	ctx.Data["PageIsAuths"] = true
 	ctx.Data["LoginTypes"] = models.LoginTypes
 	ctx.Data["SMTPAuths"] = models.SMTPAuths
-	ctx.HTML(200, "admin/auths/new")
+	ctx.HTML(200, AUTH_NEW)
 }
 
 func NewAuthSourcePost(ctx *middleware.Context, form auth.AuthenticationForm) {
@@ -33,13 +38,13 @@ func NewAuthSourcePost(ctx *middleware.Context, form auth.AuthenticationForm) {
 	ctx.Data["SMTPAuths"] = models.SMTPAuths
 
 	if ctx.HasError() {
-		ctx.HTML(200, "admin/auths/new")
+		ctx.HTML(200, AUTH_NEW)
 		return
 	}
 
 	var u core.Conversion
-	switch form.Type {
-	case models.LT_LDAP:
+	switch models.LoginType(form.Type) {
+	case models.LDAP:
 		u = &models.LDAPConfig{
 			Ldapsource: ldap.Ldapsource{
 				Host:         form.Host,
@@ -53,7 +58,7 @@ func NewAuthSourcePost(ctx *middleware.Context, form auth.AuthenticationForm) {
 				Name:         form.AuthName,
 			},
 		}
-	case models.LT_SMTP:
+	case models.SMTP:
 		u = &models.SMTPConfig{
 			Auth: form.SmtpAuth,
 			Host: form.SmtpHost,
@@ -66,15 +71,15 @@ func NewAuthSourcePost(ctx *middleware.Context, form auth.AuthenticationForm) {
 	}
 
 	var source = &models.LoginSource{
-		Type:              form.Type,
+		Type:              models.LoginType(form.Type),
 		Name:              form.AuthName,
 		IsActived:         true,
 		AllowAutoRegister: form.AllowAutoRegister,
 		Cfg:               u,
 	}
 
-	if err := models.AddSource(source); err != nil {
-		ctx.Handle(500, "admin.auths.NewAuth", err)
+	if err := models.CreateSource(source); err != nil {
+		ctx.Handle(500, "admin.auths.NewAuth(CreateSource)", err)
 		return
 	}
 
@@ -97,11 +102,11 @@ func EditAuthSource(ctx *middleware.Context, params martini.Params) {
 	}
 	u, err := models.GetLoginSourceById(id)
 	if err != nil {
-		ctx.Handle(500, "admin.user.EditUser", err)
+		ctx.Handle(500, "admin.user.EditUser(GetLoginSourceById)", err)
 		return
 	}
 	ctx.Data["Source"] = u
-	ctx.HTML(200, "admin/auths/edit")
+	ctx.HTML(200, AUTH_EDIT)
 }
 
 func EditAuthSourcePost(ctx *middleware.Context, form auth.AuthenticationForm) {
@@ -111,13 +116,13 @@ func EditAuthSourcePost(ctx *middleware.Context, form auth.AuthenticationForm) {
 	ctx.Data["SMTPAuths"] = models.SMTPAuths
 
 	if ctx.HasError() {
-		ctx.HTML(200, "admin/auths/edit")
+		ctx.HTML(200, AUTH_EDIT)
 		return
 	}
 
 	var config core.Conversion
-	switch form.Type {
-	case models.LT_LDAP:
+	switch models.LoginType(form.Type) {
+	case models.LDAP:
 		config = &models.LDAPConfig{
 			Ldapsource: ldap.Ldapsource{
 				Host:         form.Host,
@@ -131,7 +136,7 @@ func EditAuthSourcePost(ctx *middleware.Context, form auth.AuthenticationForm) {
 				Name:         form.AuthName,
 			},
 		}
-	case models.LT_SMTP:
+	case models.SMTP:
 		config = &models.SMTPConfig{
 			Auth: form.SmtpAuth,
 			Host: form.SmtpHost,
@@ -147,13 +152,13 @@ func EditAuthSourcePost(ctx *middleware.Context, form auth.AuthenticationForm) {
 		Id:                form.Id,
 		Name:              form.AuthName,
 		IsActived:         form.IsActived,
-		Type:              form.Type,
+		Type:              models.LoginType(form.Type),
 		AllowAutoRegister: form.AllowAutoRegister,
 		Cfg:               config,
 	}
 
 	if err := models.UpdateSource(&u); err != nil {
-		ctx.Handle(500, "admin.auths.EditAuth", err)
+		ctx.Handle(500, "admin.auths.EditAuth(UpdateSource)", err)
 		return
 	}
 
@@ -175,7 +180,7 @@ func DeleteAuthSource(ctx *middleware.Context, params martini.Params) {
 
 	a, err := models.GetLoginSourceById(id)
 	if err != nil {
-		ctx.Handle(500, "admin.auths.DeleteAuth", err)
+		ctx.Handle(500, "admin.auths.DeleteAuth(GetLoginSourceById)", err)
 		return
 	}
 
@@ -185,7 +190,7 @@ func DeleteAuthSource(ctx *middleware.Context, params martini.Params) {
 			ctx.Flash.Error("This authentication still has used by some users, you should move them and then delete again.")
 			ctx.Redirect("/admin/auths/" + params["authid"])
 		default:
-			ctx.Handle(500, "admin.auths.DeleteAuth", err)
+			ctx.Handle(500, "admin.auths.DeleteAuth(DelLoginSource)", err)
 		}
 		return
 	}

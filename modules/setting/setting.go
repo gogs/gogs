@@ -47,11 +47,16 @@ var (
 	StaticRootPath     string
 
 	// Security settings.
-	InstallLock        bool
-	SecretKey          string
-	LogInRememberDays  int
-	CookieUserName     string
-	CookieRememberName string
+	InstallLock          bool
+	SecretKey            string
+	LogInRememberDays    int
+	CookieUserName       string
+	CookieRememberName   string
+	ReverseProxyAuthUser string
+
+	// Webhook settings.
+	WebhookTaskInterval   int
+	WebhookDeliverTimeout int
 
 	// Repository settings.
 	RepoRootPath string
@@ -86,8 +91,7 @@ var (
 	RunUser    string
 )
 
-// WorkDir returns absolute path of work directory.
-func WorkDir() (string, error) {
+func ExecPath() (string, error) {
 	file, err := exec.LookPath(os.Args[0])
 	if err != nil {
 		return "", err
@@ -96,7 +100,13 @@ func WorkDir() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return path.Dir(strings.Replace(p, "\\", "/", -1)), nil
+	return p, nil
+}
+
+// WorkDir returns absolute path of work directory.
+func WorkDir() (string, error) {
+	execPath, err := ExecPath()
+	return path.Dir(strings.Replace(execPath, "\\", "/", -1)), err
 }
 
 // NewConfigContext initializes configuration context.
@@ -154,6 +164,7 @@ func NewConfigContext() {
 	LogInRememberDays = Cfg.MustInt("security", "LOGIN_REMEMBER_DAYS")
 	CookieUserName = Cfg.MustValue("security", "COOKIE_USERNAME")
 	CookieRememberName = Cfg.MustValue("security", "COOKIE_REMEMBER_NAME")
+	ReverseProxyAuthUser = Cfg.MustValue("security", "REVERSE_PROXY_AUTHENTICATION_USER", "X-WEBAUTH-USER")
 
 	RunUser = Cfg.MustValue("", "RUN_USER")
 	curUser := os.Getenv("USER")
@@ -171,6 +182,12 @@ func NewConfigContext() {
 		log.Fatal("Fail to get home directory: %v", err)
 	}
 	RepoRootPath = Cfg.MustValue("repository", "ROOT", filepath.Join(homeDir, "gogs-repositories"))
+	if !filepath.IsAbs(RepoRootPath) {
+		RepoRootPath = filepath.Join(workDir, RepoRootPath)
+	} else {
+		RepoRootPath = filepath.Clean(RepoRootPath)
+	}
+
 	if err = os.MkdirAll(RepoRootPath, os.ModePerm); err != nil {
 		log.Fatal("Fail to create repository root path(%s): %v", RepoRootPath, err)
 	}
@@ -182,14 +199,15 @@ func NewConfigContext() {
 }
 
 var Service struct {
-	RegisterEmailConfirm bool
-	DisableRegistration  bool
-	RequireSignInView    bool
-	EnableCacheAvatar    bool
-	NotifyMail           bool
-	ActiveCodeLives      int
-	ResetPwdCodeLives    int
-	LdapAuth             bool
+	RegisterEmailConfirm   bool
+	DisableRegistration    bool
+	RequireSignInView      bool
+	EnableCacheAvatar      bool
+	EnableNotifyMail       bool
+	EnableReverseProxyAuth bool
+	LdapAuth               bool
+	ActiveCodeLives        int
+	ResetPwdCodeLives      int
 }
 
 func newService() {
@@ -198,6 +216,7 @@ func newService() {
 	Service.DisableRegistration = Cfg.MustBool("service", "DISABLE_REGISTRATION")
 	Service.RequireSignInView = Cfg.MustBool("service", "REQUIRE_SIGNIN_VIEW")
 	Service.EnableCacheAvatar = Cfg.MustBool("service", "ENABLE_CACHE_AVATAR")
+	Service.EnableReverseProxyAuth = Cfg.MustBool("service", "ENABLE_REVERSE_PROXY_AUTHENTICATION")
 }
 
 var logLevels = map[string]string{
@@ -246,20 +265,20 @@ func newLogService() {
 				Cfg.MustBool(modeSec, "DAILY_ROTATE", true),
 				Cfg.MustInt(modeSec, "MAX_DAYS", 7))
 		case "conn":
-			LogConfigs[i] = fmt.Sprintf(`{"level":"%s","reconnectOnMsg":%v,"reconnect":%v,"net":"%s","addr":"%s"}`, level,
+			LogConfigs[i] = fmt.Sprintf(`{"level":%s,"reconnectOnMsg":%v,"reconnect":%v,"net":"%s","addr":"%s"}`, level,
 				Cfg.MustBool(modeSec, "RECONNECT_ON_MSG"),
 				Cfg.MustBool(modeSec, "RECONNECT"),
 				Cfg.MustValueRange(modeSec, "PROTOCOL", "tcp", []string{"tcp", "unix", "udp"}),
 				Cfg.MustValue(modeSec, "ADDR", ":7020"))
 		case "smtp":
-			LogConfigs[i] = fmt.Sprintf(`{"level":"%s","username":"%s","password":"%s","host":"%s","sendTos":"%s","subject":"%s"}`, level,
+			LogConfigs[i] = fmt.Sprintf(`{"level":%s,"username":"%s","password":"%s","host":"%s","sendTos":"%s","subject":"%s"}`, level,
 				Cfg.MustValue(modeSec, "USER", "example@example.com"),
 				Cfg.MustValue(modeSec, "PASSWD", "******"),
 				Cfg.MustValue(modeSec, "HOST", "127.0.0.1:25"),
 				Cfg.MustValue(modeSec, "RECEIVERS", "[]"),
 				Cfg.MustValue(modeSec, "SUBJECT", "Diagnostic message from serve"))
 		case "database":
-			LogConfigs[i] = fmt.Sprintf(`{"level":"%s","driver":"%s","conn":"%s"}`, level,
+			LogConfigs[i] = fmt.Sprintf(`{"level":%s,"driver":"%s","conn":"%s"}`, level,
 				Cfg.MustValue(modeSec, "DRIVER"),
 				Cfg.MustValue(modeSec, "CONN"))
 		}
@@ -330,6 +349,7 @@ func newSessionService() {
 type Mailer struct {
 	Name         string
 	Host         string
+	From         string
 	User, Passwd string
 }
 
@@ -363,6 +383,7 @@ func newMailService() {
 		User:   Cfg.MustValue("mailer", "USER"),
 		Passwd: Cfg.MustValue("mailer", "PASSWD"),
 	}
+	MailService.From = Cfg.MustValue("mailer", "FROM", MailService.User)
 	log.Info("Mail Service Enabled")
 }
 
@@ -384,8 +405,13 @@ func newNotifyMailService() {
 		log.Warn("Notify Mail Service: Mail Service is not enabled")
 		return
 	}
-	Service.NotifyMail = true
+	Service.EnableNotifyMail = true
 	log.Info("Notify Mail Service Enabled")
+}
+
+func newWebhookService() {
+	WebhookTaskInterval = Cfg.MustInt("webhook", "TASK_INTERVAL", 1)
+	WebhookDeliverTimeout = Cfg.MustInt("webhook", "DELIVER_TIMEOUT", 5)
 }
 
 func NewServices() {
@@ -396,4 +422,5 @@ func NewServices() {
 	newMailService()
 	newRegisterMailService()
 	newNotifyMailService()
+	newWebhookService()
 }

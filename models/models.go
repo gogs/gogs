@@ -18,7 +18,7 @@ import (
 )
 
 var (
-	orm    *xorm.Engine
+	x      *xorm.Engine
 	tables []interface{}
 
 	HasEngine bool
@@ -35,7 +35,7 @@ func init() {
 	tables = append(tables, new(User), new(PublicKey), new(Repository), new(Watch),
 		new(Action), new(Access), new(Issue), new(Comment), new(Oauth2), new(Follow),
 		new(Mirror), new(Release), new(LoginSource), new(Webhook), new(IssueUser),
-		new(Milestone), new(Label))
+		new(Milestone), new(Label), new(HookTask), new(Team), new(OrgUser), new(TeamUser))
 }
 
 func LoadModelsConfig() {
@@ -46,7 +46,9 @@ func LoadModelsConfig() {
 	DbCfg.Host = setting.Cfg.MustValue("database", "HOST")
 	DbCfg.Name = setting.Cfg.MustValue("database", "NAME")
 	DbCfg.User = setting.Cfg.MustValue("database", "USER")
-	DbCfg.Pwd = setting.Cfg.MustValue("database", "PASSWD")
+	if len(DbCfg.Pwd) == 0 {
+		DbCfg.Pwd = setting.Cfg.MustValue("database", "PASSWD")
+	}
 	DbCfg.SslMode = setting.Cfg.MustValue("database", "SSL_MODE")
 	DbCfg.Path = setting.Cfg.MustValue("database", "PATH", "data/gogs.db")
 }
@@ -67,7 +69,6 @@ func NewTestEngine(x *xorm.Engine) (err error) {
 		}
 		cnnstr := fmt.Sprintf("user=%s password=%s host=%s port=%s dbname=%s sslmode=%s",
 			DbCfg.User, DbCfg.Pwd, host, port, DbCfg.Name, DbCfg.SslMode)
-		//fmt.Println(cnnstr)
 		x, err = xorm.NewEngine("postgres", cnnstr)
 	case "sqlite3":
 		if !EnableSQLite3 {
@@ -87,7 +88,7 @@ func NewTestEngine(x *xorm.Engine) (err error) {
 func SetEngine() (err error) {
 	switch DbCfg.Type {
 	case "mysql":
-		orm, err = xorm.NewEngine("mysql", fmt.Sprintf("%s:%s@tcp(%s)/%s?charset=utf8",
+		x, err = xorm.NewEngine("mysql", fmt.Sprintf("%s:%s@tcp(%s)/%s?charset=utf8",
 			DbCfg.User, DbCfg.Pwd, DbCfg.Host, DbCfg.Name))
 	case "postgres":
 		var host, port = "127.0.0.1", "5432"
@@ -98,11 +99,11 @@ func SetEngine() (err error) {
 		if len(fields) > 1 && len(strings.TrimSpace(fields[1])) > 0 {
 			port = fields[1]
 		}
-		orm, err = xorm.NewEngine("postgres", fmt.Sprintf("user=%s password=%s host=%s port=%s dbname=%s sslmode=%s",
+		x, err = xorm.NewEngine("postgres", fmt.Sprintf("user=%s password=%s host=%s port=%s dbname=%s sslmode=%s",
 			DbCfg.User, DbCfg.Pwd, host, port, DbCfg.Name, DbCfg.SslMode))
 	case "sqlite3":
 		os.MkdirAll(path.Dir(DbCfg.Path), os.ModePerm)
-		orm, err = xorm.NewEngine("sqlite3", DbCfg.Path)
+		x, err = xorm.NewEngine("sqlite3", DbCfg.Path)
 	default:
 		return fmt.Errorf("Unknown database type: %s", DbCfg.Type)
 	}
@@ -119,11 +120,11 @@ func SetEngine() (err error) {
 	if err != nil {
 		return fmt.Errorf("models.init(fail to create xorm.log): %v", err)
 	}
-	orm.Logger = xorm.NewSimpleLogger(f)
+	x.Logger = xorm.NewSimpleLogger(f)
 
-	orm.ShowSQL = true
-	orm.ShowDebug = true
-	orm.ShowErr = true
+	x.ShowSQL = true
+	x.ShowDebug = true
+	x.ShowErr = true
 	return nil
 }
 
@@ -131,7 +132,7 @@ func NewEngine() (err error) {
 	if err = SetEngine(); err != nil {
 		return err
 	}
-	if err = orm.Sync(tables...); err != nil {
+	if err = x.Sync2(tables...); err != nil {
 		return fmt.Errorf("sync database struct error: %v\n", err)
 	}
 	return nil
@@ -146,24 +147,24 @@ type Statistic struct {
 }
 
 func GetStatistic() (stats Statistic) {
-	stats.Counter.User, _ = orm.Count(new(User))
-	stats.Counter.PublicKey, _ = orm.Count(new(PublicKey))
-	stats.Counter.Repo, _ = orm.Count(new(Repository))
-	stats.Counter.Watch, _ = orm.Count(new(Watch))
-	stats.Counter.Action, _ = orm.Count(new(Action))
-	stats.Counter.Access, _ = orm.Count(new(Access))
-	stats.Counter.Issue, _ = orm.Count(new(Issue))
-	stats.Counter.Comment, _ = orm.Count(new(Comment))
-	stats.Counter.Mirror, _ = orm.Count(new(Mirror))
-	stats.Counter.Oauth, _ = orm.Count(new(Oauth2))
-	stats.Counter.Release, _ = orm.Count(new(Release))
-	stats.Counter.LoginSource, _ = orm.Count(new(LoginSource))
-	stats.Counter.Webhook, _ = orm.Count(new(Webhook))
-	stats.Counter.Milestone, _ = orm.Count(new(Milestone))
+	stats.Counter.User, _ = x.Count(new(User))
+	stats.Counter.PublicKey, _ = x.Count(new(PublicKey))
+	stats.Counter.Repo, _ = x.Count(new(Repository))
+	stats.Counter.Watch, _ = x.Count(new(Watch))
+	stats.Counter.Action, _ = x.Count(new(Action))
+	stats.Counter.Access, _ = x.Count(new(Access))
+	stats.Counter.Issue, _ = x.Count(new(Issue))
+	stats.Counter.Comment, _ = x.Count(new(Comment))
+	stats.Counter.Mirror, _ = x.Count(new(Mirror))
+	stats.Counter.Oauth, _ = x.Count(new(Oauth2))
+	stats.Counter.Release, _ = x.Count(new(Release))
+	stats.Counter.LoginSource, _ = x.Count(new(LoginSource))
+	stats.Counter.Webhook, _ = x.Count(new(Webhook))
+	stats.Counter.Milestone, _ = x.Count(new(Milestone))
 	return
 }
 
 // DumpDatabase dumps all data from database to file system.
 func DumpDatabase(filePath string) error {
-	return orm.DumpAllToFile(filePath)
+	return x.DumpAllToFile(filePath)
 }

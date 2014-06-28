@@ -705,8 +705,8 @@ function initRelease() {
     (function () {
         $('[data-ajax-name=release-preview]').on("click", function () {
             var $this = $(this);
-            $this.toggleAjax(function (json) {
-                $($this.data("preview")).html(json.ok ? json.content : "no content");
+            $this.toggleAjax(function (resp) {
+                $($this.data("preview")).html(resp);
             }, function () {
                 $($this.data("preview")).html("no content");
             })
@@ -758,6 +758,27 @@ function initRepoSetting() {
     });
 }
 
+function initRepoCreating() {
+    // owner switch menu click
+    (function () {
+        $('#repo-owner-switch .dropdown-menu').on("click", "li", function () {
+            var uid = $(this).data('uid');
+            // set to input
+            $('#repo-owner-id').val(uid);
+            // set checked class
+            if (!$(this).hasClass("checked")) {
+                $(this).parent().find(".checked").removeClass("checked");
+                $(this).addClass("checked");
+            }
+            // set button group to show clicked owner
+            $('#repo-owner-avatar').attr("src",$(this).find('img').attr("src"));
+            $('#repo-owner-name').text($(this).text().trim());
+            console.log("set repo owner to uid :",uid,$(this).text().trim());
+        });
+    }());
+    console.log("init repo-creating scripts");
+}
+
 (function ($) {
     $(function () {
         initCore();
@@ -779,6 +800,9 @@ function initRepoSetting() {
         }
         if ($('#repo-setting-container').length) {
             initRepoSetting();
+        }
+        if ($('#repo-create').length) {
+            initRepoCreating();
         }
     });
 })(jQuery);

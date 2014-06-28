@@ -21,21 +21,17 @@ import (
 
 func RepoAssignment(redirect bool, args ...bool) martini.Handler {
 	return func(ctx *Context, params martini.Params) {
-		log.Trace(fmt.Sprint(args))
 		// valid brachname
 		var validBranch bool
 		// display bare quick start if it is a bare repo
 		var displayBare bool
 
 		if len(args) >= 1 {
-			// Note: argument has wrong value in Go1.3 martini.
-			// validBranch = args[0]
-			validBranch = true
+			validBranch = args[0]
 		}
 
 		if len(args) >= 2 {
-			// displayBare = args[1]
-			displayBare = true
+			displayBare = args[1]
 		}
 
 		var (
@@ -48,9 +44,10 @@ func RepoAssignment(redirect bool, args ...bool) martini.Handler {
 		repoName := params["reponame"]
 		refName := params["branchname"]
 
+		// TODO: need more advanced onwership and access level check.
 		// Collaborators who have write access can be seen as owners.
 		if ctx.IsSigned {
-			ctx.Repo.IsOwner, err = models.HasAccess(ctx.User.Name, userName+"/"+repoName, models.AU_WRITABLE)
+			ctx.Repo.IsOwner, err = models.HasAccess(ctx.User.Name, userName+"/"+repoName, models.WRITABLE)
 			if err != nil {
 				ctx.Handle(500, "RepoAssignment(HasAccess)", err)
 				return
@@ -111,7 +108,7 @@ func RepoAssignment(redirect bool, args ...bool) martini.Handler {
 				return
 			}
 
-			hasAccess, err := models.HasAccess(ctx.User.Name, ctx.Repo.Owner.Name+"/"+repo.Name, models.AU_READABLE)
+			hasAccess, err := models.HasAccess(ctx.User.Name, ctx.Repo.Owner.Name+"/"+repo.Name, models.READABLE)
 			if err != nil {
 				ctx.Handle(500, "RepoAssignment(HasAccess)", err)
 				return

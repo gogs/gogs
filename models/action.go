@@ -12,10 +12,8 @@ import (
 	"time"
 
 	"github.com/gogits/git"
-	qlog "github.com/qiniu/log"
 
 	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/modules/hooks"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/setting"
 )
@@ -116,7 +114,7 @@ func CommitRepoAction(userId, repoUserId int64, userName, actEmail string,
 		return errors.New("action.CommitRepoAction(NotifyWatchers): " + err.Error())
 
 	}
-	qlog.Info("action.CommitRepoAction(end): %d/%s", repoUserId, repoName)
+	//qlog.Info("action.CommitRepoAction(end): %d/%s", repoUserId, repoName)
 
 	// New push event hook.
 	if err := repo.GetOwner(); err != nil {
@@ -131,35 +129,35 @@ func CommitRepoAction(userId, repoUserId int64, userName, actEmail string,
 	}
 
 	repoLink := fmt.Sprintf("%s%s/%s", setting.AppUrl, repoUserName, repoName)
-	commits := make([]*hooks.PayloadCommit, len(commit.Commits))
+	commits := make([]*PayloadCommit, len(commit.Commits))
 	for i, cmt := range commit.Commits {
-		commits[i] = &hooks.PayloadCommit{
+		commits[i] = &PayloadCommit{
 			Id:      cmt.Sha1,
 			Message: cmt.Message,
 			Url:     fmt.Sprintf("%s/commit/%s", repoLink, cmt.Sha1),
-			Author: &hooks.PayloadAuthor{
+			Author: &PayloadAuthor{
 				Name:  cmt.AuthorName,
 				Email: cmt.AuthorEmail,
 			},
 		}
 	}
-	p := &hooks.Payload{
+	p := &Payload{
 		Ref:     refFullName,
 		Commits: commits,
-		Repo: &hooks.PayloadRepo{
+		Repo: &PayloadRepo{
 			Id:          repo.Id,
 			Name:        repo.LowerName,
 			Url:         repoLink,
 			Description: repo.Description,
 			Website:     repo.Website,
 			Watchers:    repo.NumWatches,
-			Owner: &hooks.PayloadAuthor{
+			Owner: &PayloadAuthor{
 				Name:  repoUserName,
 				Email: actEmail,
 			},
 			Private: repo.IsPrivate,
 		},
-		Pusher: &hooks.PayloadAuthor{
+		Pusher: &PayloadAuthor{
 			Name:  repo.Owner.LowerName,
 			Email: repo.Owner.Email,
 		},
@@ -172,20 +170,27 @@ func CommitRepoAction(userId, repoUserId int64, userName, actEmail string,
 		}
 
 		p.Secret = w.Secret
-		hooks.AddHookTask(&hooks.HookTask{hooks.HTT_WEBHOOK, w.Url, p, w.ContentType, w.IsSsl})
+		CreateHookTask(&HookTask{
+			Type:        WEBHOOK,
+			Url:         w.Url,
+			Payload:     p,
+			ContentType: w.ContentType,
+			IsSsl:       w.IsSsl,
+		})
 	}
 	return nil
 }
 
 // NewRepoAction adds new action for creating repository.
-func NewRepoAction(user *User, repo *Repository) (err error) {
-	if err = NotifyWatchers(&Action{ActUserId: user.Id, ActUserName: user.Name, ActEmail: user.Email,
-		OpType: OP_CREATE_REPO, RepoId: repo.Id, RepoName: repo.Name, IsPrivate: repo.IsPrivate}); err != nil {
-		log.Error("action.NewRepoAction(notify watchers): %d/%s", user.Id, repo.Name)
+func NewRepoAction(u *User, repo *Repository) (err error) {
+	if err = NotifyWatchers(&Action{ActUserId: u.Id, ActUserName: u.Name, ActEmail: u.Email,
+		OpType: OP_CREATE_REPO, RepoId: repo.Id, RepoUserName: repo.Owner.Name, RepoName: repo.Name,
+		IsPrivate: repo.IsPrivate}); err != nil {
+		log.Error("action.NewRepoAction(notify watchers): %d/%s", u.Id, repo.Name)
 		return err
 	}
 
-	log.Trace("action.NewRepoAction: %s/%s", user.LowerName, repo.LowerName)
+	log.Trace("action.NewRepoAction: %s/%s", u.LowerName, repo.LowerName)
 	return err
 }
 
@@ -205,7 +210,7 @@ func TransferRepoAction(user, newUser *User, repo *Repository) (err error) {
 // GetFeeds returns action list of given user in given context.
 func GetFeeds(userid, offset int64, isProfile bool) ([]*Action, error) {
 	actions := make([]*Action, 0, 20)
-	sess := orm.Limit(20, int(offset)).Desc("id").Where("user_id=?", userid)
+	sess := x.Limit(20, int(offset)).Desc("id").Where("user_id=?", userid)
 	if isProfile {
 		sess.Where("is_private=?", false).And("act_user_id=?", userid)
 	} else {

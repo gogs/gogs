@@ -5,11 +5,11 @@ Gogs(Go Git Service) is a Self Hosted Git Service in the Go Programming Language
 
 ![Demo](http://gowalker.org/public/gogs_demo.gif)
 
-##### Current version: 0.4.0 Alpha
+##### Current version: 0.4.5 Alpha
 
 ### NOTICES
 
-- Due to testing purpose, data of [try.gogits.org](http://try.gogits.org) has been reset in **April 14, 2014** and will reset multiple times after. Please do **NOT** put your important data on the site.
+- Due to testing purpose, data of [try.gogits.org](http://try.gogits.org) has been reset in **June 21, 2014** and will reset multiple times after. Please do **NOT** put your important data on the site.
 - Demo site [try.gogits.org](http://try.gogits.org) is running under `dev` branch.
 
 #### Other language version
@@ -33,7 +33,7 @@ More importantly, Gogs only needs one binary to setup your own project hosting o
 
 - Activity timeline
 - SSH/HTTP(S) protocol support
-- SMTP/LDAP authentication support
+- SMTP/LDAP/reverse proxy authentication support
 - Register/delete/rename account
 - Create/migrate/mirror/delete/watch/rename/transfer public/private repository
 - Repository viewer/release/issue tracker/webhooks
@@ -74,9 +74,6 @@ There are 5 ways to install Gogs:
 ## Contributors
 
 The [core team](http://gogs.io/team) of this project. See [contributors page](https://github.com/gogits/gogs/graphs/contributors) for full list of contributors.
-
-[![Clone in Koding](http://learn.koding.com/btn/clone_d.png)][koding]
-[koding]: https://koding.com/Teamwork?import=https://github.com/gogits/gogs/archive/master.zip&c=git1
 
 ## License
 

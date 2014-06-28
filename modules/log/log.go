@@ -6,13 +6,16 @@
 package log
 
 import (
+	"fmt"
 	"os"
+	"path"
 
 	"github.com/gogits/logs"
 )
 
 var (
-	loggers []*logs.BeeLogger
+	loggers   []*logs.BeeLogger
+	GitLogger *logs.BeeLogger
 )
 
 func init() {
@@ -33,7 +36,15 @@ func NewLogger(bufLen int64, mode, config string) {
 		loggers = append(loggers, logger)
 	}
 	logger.SetLogFuncCallDepth(3)
-	logger.SetLogger(mode, config)
+	if err := logger.SetLogger(mode, config); err != nil {
+		Fatal("Fail to set logger(%s): %v", mode, err)
+	}
+}
+
+func NewGitLogger(logPath string) {
+	os.MkdirAll(path.Dir(logPath), os.ModePerm)
+	GitLogger = logs.NewLogger(0)
+	GitLogger.SetLogger("file", fmt.Sprintf(`{"level":0,"filename":"%s","rotate":false}`, logPath))
 }
 
 func Trace(format string, v ...interface{}) {

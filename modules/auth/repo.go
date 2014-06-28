@@ -22,9 +22,10 @@ import (
 //         \/     \/|__|              \/                       \/
 
 type CreateRepoForm struct {
+	Uid         int64  `form:"uid" binding:"Required"`
 	RepoName    string `form:"repo" binding:"Required;AlphaDash;MaxSize(100)"`
 	Private     bool   `form:"private"`
-	Description string `form:"desc" binding:"MaxSize(100)"`
+	Description string `form:"desc" binding:"MaxSize(255)"`
 	Language    string `form:"language"`
 	License     string `form:"license"`
 	InitReadme  bool   `form:"initReadme"`
@@ -47,10 +48,11 @@ type MigrateRepoForm struct {
 	Url          string `form:"url" binding:"Url"`
 	AuthUserName string `form:"auth_username"`
 	AuthPasswd   string `form:"auth_password"`
+	Uid          int64  `form:"uid" binding:"Required"`
 	RepoName     string `form:"repo" binding:"Required;AlphaDash;MaxSize(100)"`
 	Mirror       bool   `form:"mirror"`
 	Private      bool   `form:"private"`
-	Description  string `form:"desc" binding:"MaxSize(100)"`
+	Description  string `form:"desc" binding:"MaxSize(255)"`
 }
 
 func (f *MigrateRepoForm) Name(field string) string {
@@ -69,7 +71,7 @@ func (f *MigrateRepoForm) Validate(errors *binding.Errors, req *http.Request, co
 
 type RepoSettingForm struct {
 	RepoName    string `form:"name" binding:"Required;AlphaDash;MaxSize(100)"`
-	Description string `form:"desc" binding:"MaxSize(100)"`
+	Description string `form:"desc" binding:"MaxSize(255)"`
 	Website     string `form:"site" binding:"Url;MaxSize(100)"`
 	Branch      string `form:"branch"`
 	Interval    int    `form:"interval"`
@@ -205,14 +207,17 @@ func (f *CreateLabelForm) Validate(errors *binding.Errors, req *http.Request, co
 
 type NewReleaseForm struct {
 	TagName    string `form:"tag_name" binding:"Required"`
+	Target     string `form:"tag_target" binding:"Required"`
 	Title      string `form:"title" binding:"Required"`
 	Content    string `form:"content" binding:"Required"`
+	Draft      string `form:"draft"`
 	Prerelease bool   `form:"prerelease"`
 }
 
 func (f *NewReleaseForm) Name(field string) string {
 	names := map[string]string{
 		"TagName": "Tag name",
+		"Target":  "Target",
 		"Title":   "Release title",
 		"Content": "Release content",
 	}
@@ -220,6 +225,28 @@ func (f *NewReleaseForm) Name(field string) string {
 }
 
 func (f *NewReleaseForm) Validate(errors *binding.Errors, req *http.Request, context martini.Context) {
+	data := context.Get(reflect.TypeOf(base.TmplData{})).Interface().(base.TmplData)
+	validate(errors, data, f)
+}
+
+type EditReleaseForm struct {
+	Target     string `form:"tag_target" binding:"Required"`
+	Title      string `form:"title" binding:"Required"`
+	Content    string `form:"content" binding:"Required"`
+	Draft      string `form:"draft"`
+	Prerelease bool   `form:"prerelease"`
+}
+
+func (f *EditReleaseForm) Name(field string) string {
+	names := map[string]string{
+		"Target":  "Target",
+		"Title":   "Release title",
+		"Content": "Release content",
+	}
+	return names[field]
+}
+
+func (f *EditReleaseForm) Validate(errors *binding.Errors, req *http.Request, context martini.Context) {
 	data := context.Get(reflect.TypeOf(base.TmplData{})).Interface().(base.TmplData)
 	validate(errors, data, f)
 }

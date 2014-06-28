@@ -19,8 +19,6 @@ github.com/gogits/session = `commit:7ab78d4`
 github.com/juju2013/goldap = `commit:f4a7f67`
 github.com/lib/pq = `commit:529edd9`
 github.com/nfnt/resize = `commit:8aee0d9`
-github.com/qiniu/log = `commit:891d1cb`
-github.com/robfig/cron = `commit:b024fc5`
 
 [res]
 include = templates|public

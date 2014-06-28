@@ -16,57 +16,63 @@ import (
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/middleware/binding"
+	"github.com/gogits/gogs/modules/setting"
 )
 
 // SignedInId returns the id of signed in user.
-func SignedInId(session session.SessionStore) int64 {
+func SignedInId(header http.Header, sess session.SessionStore) int64 {
 	if !models.HasEngine {
 		return 0
 	}
 
-	userId := session.Get("userId")
-	if userId == nil {
+	if setting.Service.EnableReverseProxyAuth {
+		webAuthUser := header.Get(setting.ReverseProxyAuthUser)
+		if len(webAuthUser) > 0 {
+			u, err := models.GetUserByName(webAuthUser)
+			if err != nil {
+				if err != models.ErrUserNotExist {
+					log.Error("auth.user.SignedInId(GetUserByName): %v", err)
+				}
+				return 0
+			}
+			return u.Id
+		}
+	}
+
+	uid := sess.Get("userId")
+	if uid == nil {
 		return 0
 	}
-	if s, ok := userId.(int64); ok {
-		if _, err := models.GetUserById(s); err != nil {
+	if id, ok := uid.(int64); ok {
+		if _, err := models.GetUserById(id); err != nil {
+			if err != models.ErrUserNotExist {
+				log.Error("auth.user.SignedInId(GetUserById): %v", err)
+			}
 			return 0
 		}
-		return s
+		return id
 	}
 	return 0
 }
 
-// SignedInName returns the name of signed in user.
-func SignedInName(session session.SessionStore) string {
-	userName := session.Get("userName")
-	if userName == nil {
-		return ""
-	}
-	if s, ok := userName.(string); ok {
-		return s
-	}
-	return ""
-}
-
 // SignedInUser returns the user object of signed user.
-func SignedInUser(session session.SessionStore) *models.User {
-	id := SignedInId(session)
-	if id <= 0 {
+func SignedInUser(header http.Header, sess session.SessionStore) *models.User {
+	uid := SignedInId(header, sess)
+	if uid <= 0 {
 		return nil
 	}
 
-	user, err := models.GetUserById(id)
+	u, err := models.GetUserById(uid)
 	if err != nil {
 		log.Error("user.SignedInUser: %v", err)
 		return nil
 	}
-	return user
+	return u
 }
 
 // IsSignedIn check if any user has signed in.
-func IsSignedIn(session session.SessionStore) bool {
-	return SignedInId(session) > 0
+func IsSignedIn(header http.Header, sess session.SessionStore) bool {
+	return SignedInId(header, sess) > 0
 }
 
 type FeedsForm struct {
@@ -87,7 +93,7 @@ func (f *UpdateProfileForm) Name(field string) string {
 	names := map[string]string{
 		"UserName": "Username",
 		"Email":    "E-mail address",
-		"Website":  "Website",
+		"Website":  "Website address",
 		"Location": "Location",
 		"Avatar":   "Gravatar Email",
 	}

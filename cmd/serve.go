@@ -13,9 +13,9 @@ import (
 	"strings"
 
 	"github.com/codegangsta/cli"
-	qlog "github.com/qiniu/log"
 
 	"github.com/gogits/gogs/models"
+	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/setting"
 )
 
@@ -27,27 +27,13 @@ var CmdServ = cli.Command{
 	Flags:       []cli.Flag{},
 }
 
-func newLogger(logPath string) {
-	os.MkdirAll(path.Dir(logPath), os.ModePerm)
-
-	f, err := os.OpenFile(logPath, os.O_WRONLY|os.O_APPEND|os.O_CREATE, os.ModePerm)
-	if err != nil {
-		qlog.Fatal(err)
-	}
-
-	qlog.SetOutput(f)
-	//qlog.SetOutputLevel(qlog.Ldebug)
-	qlog.Info("Start logging serv...")
-}
-
 func setup(logPath string) {
-	workDir, _ := setting.WorkDir()
-	newLogger(path.Join(workDir, logPath))
-
 	setting.NewConfigContext()
+	log.NewGitLogger(path.Join(setting.LogRootPath, logPath))
 	models.LoadModelsConfig()
 
 	if models.UseSQLite3 {
+		workDir, _ := setting.WorkDir()
 		os.Chdir(workDir)
 	}
 
@@ -70,45 +56,45 @@ func parseCmd(cmd string) (string, string) {
 }
 
 var (
-	COMMANDS_READONLY = map[string]int{
-		"git-upload-pack":    models.AU_WRITABLE,
-		"git upload-pack":    models.AU_WRITABLE,
-		"git-upload-archive": models.AU_WRITABLE,
+	COMMANDS_READONLY = map[string]models.AccessType{
+		"git-upload-pack":    models.WRITABLE,
+		"git upload-pack":    models.WRITABLE,
+		"git-upload-archive": models.WRITABLE,
 	}
 
-	COMMANDS_WRITE = map[string]int{
-		"git-receive-pack": models.AU_READABLE,
-		"git receive-pack": models.AU_READABLE,
+	COMMANDS_WRITE = map[string]models.AccessType{
+		"git-receive-pack": models.READABLE,
+		"git receive-pack": models.READABLE,
 	}
 )
 
-func In(b string, sl map[string]int) bool {
+func In(b string, sl map[string]models.AccessType) bool {
 	_, e := sl[b]
 	return e
 }
 
 func runServ(k *cli.Context) {
-	setup(path.Join(setting.LogRootPath, "serv.log"))
+	setup("serv.log")
 
 	keys := strings.Split(os.Args[2], "-")
 	if len(keys) != 2 {
 		println("Gogs: auth file format error")
-		qlog.Fatal("Invalid auth file format: %s", os.Args[2])
+		log.GitLogger.Fatal("Invalid auth file format: %s", os.Args[2])
 	}
 
 	keyId, err := strconv.ParseInt(keys[1], 10, 64)
 	if err != nil {
 		println("Gogs: auth file format error")
-		qlog.Fatalf("Invalid auth file format: %v", err)
+		log.GitLogger.Fatal("Invalid auth file format: %v", err)
 	}
 	user, err := models.GetUserByKeyId(keyId)
 	if err != nil {
 		if err == models.ErrUserNotKeyOwner {
 			println("Gogs: you are not the owner of SSH key")
-			qlog.Fatalf("Invalid owner of SSH key: %d", keyId)
+			log.GitLogger.Fatal("Invalid owner of SSH key: %d", keyId)
 		}
 		println("Gogs: internal error:", err)
-		qlog.Fatalf("Fail to get user by key ID(%d): %v", keyId, err)
+		log.GitLogger.Fatal("Fail to get user by key ID(%d): %v", keyId, err)
 	}
 
 	cmd := os.Getenv("SSH_ORIGINAL_COMMAND")
@@ -122,7 +108,7 @@ func runServ(k *cli.Context) {
 	rr := strings.SplitN(repoPath, "/", 2)
 	if len(rr) != 2 {
 		println("Gogs: unavailable repository", args)
-		qlog.Fatalf("Unavailable repository: %v", args)
+		log.GitLogger.Fatal("Unavailable repository: %v", args)
 	}
 	repoUserName := rr[0]
 	repoName := strings.TrimSuffix(rr[1], ".git")
@@ -134,45 +120,45 @@ func runServ(k *cli.Context) {
 	if err != nil {
 		if err == models.ErrUserNotExist {
 			println("Gogs: given repository owner are not registered")
-			qlog.Fatalf("Unregistered owner: %s", repoUserName)
+			log.GitLogger.Fatal("Unregistered owner: %s", repoUserName)
 		}
 		println("Gogs: internal error:", err)
-		qlog.Fatalf("Fail to get repository owner(%s): %v", repoUserName, err)
+		log.GitLogger.Fatal("Fail to get repository owner(%s): %v", repoUserName, err)
 	}
 
 	// Access check.
 	switch {
 	case isWrite:
-		has, err := models.HasAccess(user.Name, path.Join(repoUserName, repoName), models.AU_WRITABLE)
+		has, err := models.HasAccess(user.Name, path.Join(repoUserName, repoName), models.WRITABLE)
 		if err != nil {
 			println("Gogs: internal error:", err)
-			qlog.Fatal("Fail to check write access:", err)
+			log.GitLogger.Fatal("Fail to check write access:", err)
 		} else if !has {
 			println("You have no right to write this repository")
-			qlog.Fatalf("User %s has no right to write repository %s", user.Name, repoPath)
+			log.GitLogger.Fatal("User %s has no right to write repository %s", user.Name, repoPath)
 		}
 	case isRead:
 		repo, err := models.GetRepositoryByName(repoUser.Id, repoName)
 		if err != nil {
 			if err == models.ErrRepoNotExist {
 				println("Gogs: given repository does not exist")
-				qlog.Fatalf("Repository does not exist: %s/%s", repoUser.Name, repoName)
+				log.GitLogger.Fatal("Repository does not exist: %s/%s", repoUser.Name, repoName)
 			}
 			println("Gogs: internal error:", err)
-			qlog.Fatalf("Fail to get repository: %v", err)
+			log.GitLogger.Fatal("Fail to get repository: %v", err)
 		}
 
 		if !repo.IsPrivate {
 			break
 		}
 
-		has, err := models.HasAccess(user.Name, path.Join(repoUserName, repoName), models.AU_READABLE)
+		has, err := models.HasAccess(user.Name, path.Join(repoUserName, repoName), models.READABLE)
 		if err != nil {
 			println("Gogs: internal error:", err)
-			qlog.Fatal("Fail to check read access:", err)
+			log.GitLogger.Fatal("Fail to check read access:", err)
 		} else if !has {
 			println("You have no right to access this repository")
-			qlog.Fatalf("User %s has no right to read repository %s", user.Name, repoPath)
+			log.GitLogger.Fatal("User %s has no right to read repository %s", user.Name, repoPath)
 		}
 	default:
 		println("Unknown command")
@@ -186,18 +172,9 @@ func runServ(k *cli.Context) {
 	gitcmd.Stdout = os.Stdout
 	gitcmd.Stdin = os.Stdin
 	gitcmd.Stderr = os.Stderr
-
-	if err = gitcmd.Run(); err != nil {
+	err = gitcmd.Run()
+	if err != nil {
 		println("Gogs: internal error:", err)
-		qlog.Fatalf("Fail to execute git command: %v", err)
+		log.GitLogger.Fatal("Fail to execute git command: %v", err)
 	}
-
-	//refName := os.Getenv("refName")
-	//oldCommitId := os.Getenv("oldCommitId")
-	//newCommitId := os.Getenv("newCommitId")
-
-	//qlog.Error("get envs:", refName, oldCommitId, newCommitId)
-
-	// update
-	//models.Update(refName, oldCommitId, newCommitId, repoUserName, repoName, user.Id)
 }

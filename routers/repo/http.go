@@ -7,9 +7,7 @@ package repo
 import (
 	"bytes"
 	"fmt"
-	"io"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"os"
 	"os/exec"
@@ -22,6 +20,7 @@ import (
 
 	"github.com/go-martini/martini"
 	"github.com/gogits/gogs/models"
+	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/middleware"
 	"github.com/gogits/gogs/modules/setting"
 )
@@ -107,9 +106,9 @@ func Http(ctx *middleware.Context, params martini.Params) {
 		}
 
 		if !isPublicPull {
-			var tp = models.AU_WRITABLE
+			var tp = models.WRITABLE
 			if isPull {
-				tp = models.AU_READABLE
+				tp = models.READABLE
 			}
 
 			has, err := models.HasAccess(authUsername, username+"/"+reponame, tp)
@@ -117,8 +116,8 @@ func Http(ctx *middleware.Context, params martini.Params) {
 				ctx.Handle(401, "no basic auth and digit auth", nil)
 				return
 			} else if !has {
-				if tp == models.AU_READABLE {
-					has, err = models.HasAccess(authUsername, username+"/"+reponame, models.AU_WRITABLE)
+				if tp == models.READABLE {
+					has, err = models.HasAccess(authUsername, username+"/"+reponame, models.WRITABLE)
 					if err != nil || !has {
 						ctx.Handle(401, "no basic auth and digit auth", nil)
 						return
@@ -141,7 +140,10 @@ func Http(ctx *middleware.Context, params martini.Params) {
 					newCommitId := fields[1]
 					refName := fields[2]
 
-					models.Update(refName, oldCommitId, newCommitId, authUsername, username, reponame, authUser.Id)
+					if err = models.Update(refName, oldCommitId, newCommitId, authUsername, username, reponame, authUser.Id); err != nil {
+						log.GitLogger.Error(err.Error())
+						return
+					}
 				}
 			}
 		}
@@ -190,7 +192,6 @@ var routes = []route{
 // Request handling function
 func HttpBackend(config *Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		//log.Printf("%s %s %s %s", r.RemoteAddr, r.Method, r.URL.Path, r.Proto)
 		for _, route := range routes {
 			if m := route.cr.FindStringSubmatch(r.URL.Path); m != nil {
 				if route.method != r.Method {
@@ -202,7 +203,7 @@ func HttpBackend(config *Config) http.HandlerFunc {
 				dir, err := getGitDir(config, m[1])
 
 				if err != nil {
-					log.Print(err)
+					log.GitLogger.Error(err.Error())
 					renderNotFound(w)
 					return
 				}
@@ -212,13 +213,13 @@ func HttpBackend(config *Config) http.HandlerFunc {
 				return
 			}
 		}
+
 		renderNotFound(w)
 		return
 	}
 }
 
 // Actual command handling functions
-
 func serviceUploadPack(hr handler) {
 	serviceRpc("upload-pack", hr)
 }
@@ -236,35 +237,23 @@ func serviceRpc(rpc string, hr handler) {
 		return
 	}
 
-	input, _ := ioutil.ReadAll(r.Body)
-
 	w.Header().Set("Content-Type", fmt.Sprintf("application/x-git-%s-result", rpc))
 	w.WriteHeader(http.StatusOK)
+
+	input, _ := ioutil.ReadAll(r.Body)
+	br := bytes.NewReader(input)
 
 	args := []string{rpc, "--stateless-rpc", dir}
 	cmd := exec.Command(hr.Config.GitBinPath, args...)
 	cmd.Dir = dir
-	in, err := cmd.StdinPipe()
+	cmd.Stdout = w
+	cmd.Stdin = br
+
+	err := cmd.Run()
 	if err != nil {
-		log.Print(err)
+		log.GitLogger.Error(err.Error())
 		return
 	}
-
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		log.Print(err)
-		return
-	}
-
-	err = cmd.Start()
-	if err != nil {
-		log.Print(err)
-		return
-	}
-
-	in.Write(input)
-	io.Copy(w, stdout)
-	cmd.Wait()
 
 	if hr.Config.OnSucceed != nil {
 		hr.Config.OnSucceed(rpc, input)
@@ -345,7 +334,7 @@ func getGitDir(config *Config, fPath string) (string, error) {
 		cwd, err := os.Getwd()
 
 		if err != nil {
-			log.Print(err)
+			log.GitLogger.Error(err.Error())
 			return "", err
 		}
 
@@ -422,7 +411,7 @@ func gitCommand(gitBinPath, dir string, args ...string) []byte {
 	out, err := command.Output()
 
 	if err != nil {
-		log.Print(err)
+		log.GitLogger.Error(err.Error())
 	}
 
 	return out

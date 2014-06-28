@@ -92,7 +92,7 @@ func (i *Issue) GetAssignee() (err error) {
 
 // CreateIssue creates new issue for repository.
 func NewIssue(issue *Issue) (err error) {
-	sess := orm.NewSession()
+	sess := x.NewSession()
 	defer sess.Close()
 	if err = sess.Begin(); err != nil {
 		return err
@@ -114,7 +114,7 @@ func NewIssue(issue *Issue) (err error) {
 // GetIssueByIndex returns issue by given index in repository.
 func GetIssueByIndex(rid, index int64) (*Issue, error) {
 	issue := &Issue{RepoId: rid, Index: index}
-	has, err := orm.Get(issue)
+	has, err := x.Get(issue)
 	if err != nil {
 		return nil, err
 	} else if !has {
@@ -126,7 +126,7 @@ func GetIssueByIndex(rid, index int64) (*Issue, error) {
 // GetIssueById returns an issue by ID.
 func GetIssueById(id int64) (*Issue, error) {
 	issue := &Issue{Id: id}
-	has, err := orm.Get(issue)
+	has, err := x.Get(issue)
 	if err != nil {
 		return nil, err
 	} else if !has {
@@ -137,7 +137,7 @@ func GetIssueById(id int64) (*Issue, error) {
 
 // GetIssues returns a list of issues by given conditions.
 func GetIssues(uid, rid, pid, mid int64, page int, isClosed bool, labelIds, sortType string) ([]Issue, error) {
-	sess := orm.Limit(20, (page-1)*20)
+	sess := x.Limit(20, (page-1)*20)
 
 	if rid > 0 {
 		sess.Where("repo_id=?", rid).And("is_closed=?", isClosed)
@@ -193,13 +193,13 @@ const (
 // GetIssuesByLabel returns a list of issues by given label and repository.
 func GetIssuesByLabel(repoId int64, label string) ([]*Issue, error) {
 	issues := make([]*Issue, 0, 10)
-	err := orm.Where("repo_id=?", repoId).And("label_ids like '%$" + label + "|%'").Find(&issues)
+	err := x.Where("repo_id=?", repoId).And("label_ids like '%$" + label + "|%'").Find(&issues)
 	return issues, err
 }
 
 // GetIssueCountByPoster returns number of issues of repository by poster.
 func GetIssueCountByPoster(uid, rid int64, isClosed bool) int64 {
-	count, _ := orm.Where("repo_id=?", rid).And("poster_id=?", uid).And("is_closed=?", isClosed).Count(new(Issue))
+	count, _ := x.Where("repo_id=?", rid).And("poster_id=?", uid).And("is_closed=?", isClosed).Count(new(Issue))
 	return count
 }
 
@@ -213,9 +213,9 @@ func GetIssueCountByPoster(uid, rid int64, isClosed bool) int64 {
 // IssueUser represents an issue-user relation.
 type IssueUser struct {
 	Id          int64
-	Uid         int64 // User ID.
+	Uid         int64 `xorm:"INDEX"` // User ID.
 	IssueId     int64
-	RepoId      int64
+	RepoId      int64 `xorm:"INDEX"`
 	MilestoneId int64
 	IsRead      bool
 	IsAssigned  bool
@@ -241,7 +241,7 @@ func NewIssueUserPairs(rid, iid, oid, pid, aid int64, repoName string) (err erro
 			isNeedAddPoster = false
 		}
 		iu.IsAssigned = iu.Uid == aid
-		if _, err = orm.Insert(iu); err != nil {
+		if _, err = x.Insert(iu); err != nil {
 			return err
 		}
 	}
@@ -249,7 +249,7 @@ func NewIssueUserPairs(rid, iid, oid, pid, aid int64, repoName string) (err erro
 		iu.Uid = pid
 		iu.IsPoster = true
 		iu.IsAssigned = iu.Uid == aid
-		if _, err = orm.Insert(iu); err != nil {
+		if _, err = x.Insert(iu); err != nil {
 			return err
 		}
 	}
@@ -270,7 +270,7 @@ func PairsContains(ius []*IssueUser, issueId int64) int {
 // GetIssueUserPairs returns issue-user pairs by given repository and user.
 func GetIssueUserPairs(rid, uid int64, isClosed bool) ([]*IssueUser, error) {
 	ius := make([]*IssueUser, 0, 10)
-	err := orm.Where("is_closed=?", isClosed).Find(&ius, &IssueUser{RepoId: rid, Uid: uid})
+	err := x.Where("is_closed=?", isClosed).Find(&ius, &IssueUser{RepoId: rid, Uid: uid})
 	return ius, err
 }
 
@@ -285,7 +285,7 @@ func GetIssueUserPairsByRepoIds(rids []int64, isClosed bool, page int) ([]*Issue
 	cond := strings.TrimSuffix(buf.String(), " OR ")
 
 	ius := make([]*IssueUser, 0, 10)
-	sess := orm.Limit(20, (page-1)*20).Where("is_closed=?", isClosed)
+	sess := x.Limit(20, (page-1)*20).Where("is_closed=?", isClosed)
 	if len(cond) > 0 {
 		sess.And(cond)
 	}
@@ -296,7 +296,7 @@ func GetIssueUserPairsByRepoIds(rids []int64, isClosed bool, page int) ([]*Issue
 // GetIssueUserPairsByMode returns issue-user pairs by given repository and user.
 func GetIssueUserPairsByMode(uid, rid int64, isClosed bool, page, filterMode int) ([]*IssueUser, error) {
 	ius := make([]*IssueUser, 0, 10)
-	sess := orm.Limit(20, (page-1)*20).Where("uid=?", uid).And("is_closed=?", isClosed)
+	sess := x.Limit(20, (page-1)*20).Where("uid=?", uid).And("is_closed=?", isClosed)
 	if rid > 0 {
 		sess.And("repo_id=?", rid)
 	}
@@ -335,7 +335,7 @@ func GetIssueStats(rid, uid int64, isShowClosed bool, filterMode int) *IssueStat
 	issue := new(Issue)
 	tmpSess := &xorm.Session{}
 
-	sess := orm.Where("repo_id=?", rid)
+	sess := x.Where("repo_id=?", rid)
 	*tmpSess = *sess
 	stats.OpenCount, _ = tmpSess.And("is_closed=?", false).Count(issue)
 	*tmpSess = *sess
@@ -347,7 +347,7 @@ func GetIssueStats(rid, uid int64, isShowClosed bool, filterMode int) *IssueStat
 	}
 
 	if filterMode != FM_MENTION {
-		sess = orm.Where("repo_id=?", rid)
+		sess = x.Where("repo_id=?", rid)
 		switch filterMode {
 		case FM_ASSIGN:
 			sess.And("assignee_id=?", uid)
@@ -361,16 +361,16 @@ func GetIssueStats(rid, uid int64, isShowClosed bool, filterMode int) *IssueStat
 		*tmpSess = *sess
 		stats.ClosedCount, _ = tmpSess.And("is_closed=?", true).Count(issue)
 	} else {
-		sess := orm.Where("repo_id=?", rid).And("uid=?", uid).And("is_mentioned=?", true)
+		sess := x.Where("repo_id=?", rid).And("uid=?", uid).And("is_mentioned=?", true)
 		*tmpSess = *sess
 		stats.OpenCount, _ = tmpSess.And("is_closed=?", false).Count(new(IssueUser))
 		*tmpSess = *sess
 		stats.ClosedCount, _ = tmpSess.And("is_closed=?", true).Count(new(IssueUser))
 	}
 nofilter:
-	stats.AssignCount, _ = orm.Where("repo_id=?", rid).And("is_closed=?", isShowClosed).And("assignee_id=?", uid).Count(issue)
-	stats.CreateCount, _ = orm.Where("repo_id=?", rid).And("is_closed=?", isShowClosed).And("poster_id=?", uid).Count(issue)
-	stats.MentionCount, _ = orm.Where("repo_id=?", rid).And("uid=?", uid).And("is_closed=?", isShowClosed).And("is_mentioned=?", true).Count(new(IssueUser))
+	stats.AssignCount, _ = x.Where("repo_id=?", rid).And("is_closed=?", isShowClosed).And("assignee_id=?", uid).Count(issue)
+	stats.CreateCount, _ = x.Where("repo_id=?", rid).And("is_closed=?", isShowClosed).And("poster_id=?", uid).Count(issue)
+	stats.MentionCount, _ = x.Where("repo_id=?", rid).And("uid=?", uid).And("is_closed=?", isShowClosed).And("is_mentioned=?", true).Count(new(IssueUser))
 	return stats
 }
 
@@ -378,28 +378,28 @@ nofilter:
 func GetUserIssueStats(uid int64, filterMode int) *IssueStats {
 	stats := &IssueStats{}
 	issue := new(Issue)
-	stats.AssignCount, _ = orm.Where("assignee_id=?", uid).And("is_closed=?", false).Count(issue)
-	stats.CreateCount, _ = orm.Where("poster_id=?", uid).And("is_closed=?", false).Count(issue)
+	stats.AssignCount, _ = x.Where("assignee_id=?", uid).And("is_closed=?", false).Count(issue)
+	stats.CreateCount, _ = x.Where("poster_id=?", uid).And("is_closed=?", false).Count(issue)
 	return stats
 }
 
 // UpdateIssue updates information of issue.
 func UpdateIssue(issue *Issue) error {
-	_, err := orm.Id(issue.Id).AllCols().Update(issue)
+	_, err := x.Id(issue.Id).AllCols().Update(issue)
 	return err
 }
 
 // UpdateIssueUserByStatus updates issue-user pairs by issue status.
 func UpdateIssueUserPairsByStatus(iid int64, isClosed bool) error {
 	rawSql := "UPDATE `issue_user` SET is_closed = ? WHERE issue_id = ?"
-	_, err := orm.Exec(rawSql, isClosed, iid)
+	_, err := x.Exec(rawSql, isClosed, iid)
 	return err
 }
 
 // UpdateIssueUserPairByAssignee updates issue-user pair for assigning.
 func UpdateIssueUserPairByAssignee(aid, iid int64) error {
 	rawSql := "UPDATE `issue_user` SET is_assigned = ? WHERE issue_id = ?"
-	if _, err := orm.Exec(rawSql, false, iid); err != nil {
+	if _, err := x.Exec(rawSql, false, iid); err != nil {
 		return err
 	}
 
@@ -408,14 +408,14 @@ func UpdateIssueUserPairByAssignee(aid, iid int64) error {
 		return nil
 	}
 	rawSql = "UPDATE `issue_user` SET is_assigned = true WHERE uid = ? AND issue_id = ?"
-	_, err := orm.Exec(rawSql, aid, iid)
+	_, err := x.Exec(rawSql, aid, iid)
 	return err
 }
 
 // UpdateIssueUserPairByRead updates issue-user pair for reading.
 func UpdateIssueUserPairByRead(uid, iid int64) error {
 	rawSql := "UPDATE `issue_user` SET is_read = ? WHERE uid = ? AND issue_id = ?"
-	_, err := orm.Exec(rawSql, true, uid, iid)
+	_, err := x.Exec(rawSql, true, uid, iid)
 	return err
 }
 
@@ -423,16 +423,16 @@ func UpdateIssueUserPairByRead(uid, iid int64) error {
 func UpdateIssueUserPairsByMentions(uids []int64, iid int64) error {
 	for _, uid := range uids {
 		iu := &IssueUser{Uid: uid, IssueId: iid}
-		has, err := orm.Get(iu)
+		has, err := x.Get(iu)
 		if err != nil {
 			return err
 		}
 
 		iu.IsMentioned = true
 		if has {
-			_, err = orm.Id(iu.Id).AllCols().Update(iu)
+			_, err = x.Id(iu.Id).AllCols().Update(iu)
 		} else {
-			_, err = orm.Insert(iu)
+			_, err = x.Insert(iu)
 		}
 		if err != nil {
 			return err
@@ -467,7 +467,7 @@ func (m *Label) CalOpenIssues() {
 
 // NewLabel creates new label of repository.
 func NewLabel(l *Label) error {
-	_, err := orm.Insert(l)
+	_, err := x.Insert(l)
 	return err
 }
 
@@ -478,7 +478,7 @@ func GetLabelById(id int64) (*Label, error) {
 	}
 
 	l := &Label{Id: id}
-	has, err := orm.Get(l)
+	has, err := x.Get(l)
 	if err != nil {
 		return nil, err
 	} else if !has {
@@ -490,13 +490,13 @@ func GetLabelById(id int64) (*Label, error) {
 // GetLabels returns a list of labels of given repository ID.
 func GetLabels(repoId int64) ([]*Label, error) {
 	labels := make([]*Label, 0, 10)
-	err := orm.Where("repo_id=?", repoId).Find(&labels)
+	err := x.Where("repo_id=?", repoId).Find(&labels)
 	return labels, err
 }
 
 // UpdateLabel updates label information.
 func UpdateLabel(l *Label) error {
-	_, err := orm.Id(l.Id).Update(l)
+	_, err := x.Id(l.Id).Update(l)
 	return err
 }
 
@@ -516,7 +516,7 @@ func DeleteLabel(repoId int64, strId string) error {
 		return err
 	}
 
-	sess := orm.NewSession()
+	sess := x.NewSession()
 	defer sess.Close()
 	if err = sess.Begin(); err != nil {
 		return err
@@ -569,7 +569,7 @@ func (m *Milestone) CalOpenIssues() {
 
 // NewMilestone creates new milestone of repository.
 func NewMilestone(m *Milestone) (err error) {
-	sess := orm.NewSession()
+	sess := x.NewSession()
 	defer sess.Close()
 	if err = sess.Begin(); err != nil {
 		return err
@@ -591,7 +591,7 @@ func NewMilestone(m *Milestone) (err error) {
 // GetMilestoneById returns the milestone by given ID.
 func GetMilestoneById(id int64) (*Milestone, error) {
 	m := &Milestone{Id: id}
-	has, err := orm.Get(m)
+	has, err := x.Get(m)
 	if err != nil {
 		return nil, err
 	} else if !has {
@@ -603,7 +603,7 @@ func GetMilestoneById(id int64) (*Milestone, error) {
 // GetMilestoneByIndex returns the milestone of given repository and index.
 func GetMilestoneByIndex(repoId, idx int64) (*Milestone, error) {
 	m := &Milestone{RepoId: repoId, Index: idx}
-	has, err := orm.Get(m)
+	has, err := x.Get(m)
 	if err != nil {
 		return nil, err
 	} else if !has {
@@ -615,13 +615,13 @@ func GetMilestoneByIndex(repoId, idx int64) (*Milestone, error) {
 // GetMilestones returns a list of milestones of given repository and status.
 func GetMilestones(repoId int64, isClosed bool) ([]*Milestone, error) {
 	miles := make([]*Milestone, 0, 10)
-	err := orm.Where("repo_id=?", repoId).And("is_closed=?", isClosed).Find(&miles)
+	err := x.Where("repo_id=?", repoId).And("is_closed=?", isClosed).Find(&miles)
 	return miles, err
 }
 
 // UpdateMilestone updates information of given milestone.
 func UpdateMilestone(m *Milestone) error {
-	_, err := orm.Id(m.Id).Update(m)
+	_, err := x.Id(m.Id).Update(m)
 	return err
 }
 
@@ -632,7 +632,7 @@ func ChangeMilestoneStatus(m *Milestone, isClosed bool) (err error) {
 		return err
 	}
 
-	sess := orm.NewSession()
+	sess := x.NewSession()
 	defer sess.Close()
 	if err = sess.Begin(); err != nil {
 		return err
@@ -658,7 +658,7 @@ func ChangeMilestoneStatus(m *Milestone, isClosed bool) (err error) {
 
 // ChangeMilestoneAssign changes assignment of milestone for issue.
 func ChangeMilestoneAssign(oldMid, mid int64, issue *Issue) (err error) {
-	sess := orm.NewSession()
+	sess := x.NewSession()
 	defer sess.Close()
 	if err = sess.Begin(); err != nil {
 		return err
@@ -717,7 +717,7 @@ func ChangeMilestoneAssign(oldMid, mid int64, issue *Issue) (err error) {
 
 // DeleteMilestone deletes a milestone.
 func DeleteMilestone(m *Milestone) (err error) {
-	sess := orm.NewSession()
+	sess := x.NewSession()
 	defer sess.Close()
 	if err = sess.Begin(); err != nil {
 		return err
@@ -771,13 +771,13 @@ type Comment struct {
 	IssueId  int64
 	CommitId int64
 	Line     int64
-	Content  string
+	Content  string    `xorm:"TEXT"`
 	Created  time.Time `xorm:"CREATED"`
 }
 
 // CreateComment creates comment of issue or commit.
 func CreateComment(userId, repoId, issueId, commitId, line int64, cmtType int, content string) error {
-	sess := orm.NewSession()
+	sess := x.NewSession()
 	defer sess.Close()
 	if err := sess.Begin(); err != nil {
 		return err
@@ -816,6 +816,6 @@ func CreateComment(userId, repoId, issueId, commitId, line int64, cmtType int, c
 // GetIssueComments returns list of comment by given issue id.
 func GetIssueComments(issueId int64) ([]Comment, error) {
 	comments := make([]Comment, 0, 10)
-	err := orm.Asc("created").Find(&comments, &Comment{IssueId: issueId})
+	err := x.Asc("created").Find(&comments, &Comment{IssueId: issueId})
 	return comments, err
 }

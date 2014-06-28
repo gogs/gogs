@@ -19,9 +19,9 @@ import (
 	"time"
 
 	"github.com/Unknwon/com"
-	qlog "github.com/qiniu/log"
 
 	"github.com/gogits/gogs/modules/log"
+	"github.com/gogits/gogs/modules/process"
 )
 
 const (
@@ -37,7 +37,7 @@ var (
 var sshOpLocker = sync.Mutex{}
 
 var (
-	sshPath string // SSH directory.
+	SshPath string // SSH directory.
 	appPath string // Execution(binary) path.
 )
 
@@ -54,7 +54,7 @@ func exePath() (string, error) {
 func homeDir() string {
 	home, err := com.HomeDir()
 	if err != nil {
-		qlog.Fatalln(err)
+		log.Fatal("Fail to get home directory: %v", err)
 	}
 	return home
 }
@@ -63,13 +63,13 @@ func init() {
 	var err error
 
 	if appPath, err = exePath(); err != nil {
-		qlog.Fatalf("publickey.init(fail to get app path): %v\n", err)
+		log.Fatal("publickey.init(fail to get app path): %v\n", err)
 	}
 
 	// Determine and create .ssh path.
-	sshPath = filepath.Join(homeDir(), ".ssh")
-	if err = os.MkdirAll(sshPath, os.ModePerm); err != nil {
-		qlog.Fatalf("publickey.init(fail to create sshPath(%s)): %v\n", sshPath, err)
+	SshPath = filepath.Join(homeDir(), ".ssh")
+	if err = os.MkdirAll(SshPath, os.ModePerm); err != nil {
+		log.Fatal("publickey.init(fail to create SshPath(%s)): %v\n", SshPath, err)
 	}
 }
 
@@ -94,7 +94,7 @@ func saveAuthorizedKeyFile(key *PublicKey) error {
 	sshOpLocker.Lock()
 	defer sshOpLocker.Unlock()
 
-	fpath := filepath.Join(sshPath, "authorized_keys")
+	fpath := filepath.Join(SshPath, "authorized_keys")
 	f, err := os.OpenFile(fpath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0600)
 	if err != nil {
 		return err
@@ -107,7 +107,7 @@ func saveAuthorizedKeyFile(key *PublicKey) error {
 
 // AddPublicKey adds new public key to database and authorized_keys file.
 func AddPublicKey(key *PublicKey) (err error) {
-	has, err := orm.Get(key)
+	has, err := x.Get(key)
 	if err != nil {
 		return err
 	} else if has {
@@ -121,7 +121,7 @@ func AddPublicKey(key *PublicKey) (err error) {
 	if err = ioutil.WriteFile(tmpPath, []byte(key.Content), os.ModePerm); err != nil {
 		return err
 	}
-	stdout, stderr, err := com.ExecCmd("ssh-keygen", "-l", "-f", tmpPath)
+	stdout, stderr, err := process.Exec("AddPublicKey", "ssh-keygen", "-l", "-f", tmpPath)
 	if err != nil {
 		return errors.New("ssh-keygen -l -f: " + stderr)
 	} else if len(stdout) < 2 {
@@ -130,11 +130,11 @@ func AddPublicKey(key *PublicKey) (err error) {
 	key.Fingerprint = strings.Split(stdout, " ")[1]
 
 	// Save SSH key.
-	if _, err = orm.Insert(key); err != nil {
+	if _, err = x.Insert(key); err != nil {
 		return err
 	} else if err = saveAuthorizedKeyFile(key); err != nil {
 		// Roll back.
-		if _, err2 := orm.Delete(key); err2 != nil {
+		if _, err2 := x.Delete(key); err2 != nil {
 			return err2
 		}
 		return err
@@ -146,7 +146,7 @@ func AddPublicKey(key *PublicKey) (err error) {
 // ListPublicKey returns a list of all public keys that user has.
 func ListPublicKey(uid int64) ([]PublicKey, error) {
 	keys := make([]PublicKey, 0, 5)
-	err := orm.Find(&keys, &PublicKey{OwnerId: uid})
+	err := x.Find(&keys, &PublicKey{OwnerId: uid})
 	return keys, err
 }
 
@@ -161,7 +161,7 @@ func rewriteAuthorizedKeys(key *PublicKey, p, tmpP string) error {
 	}
 	defer fr.Close()
 
-	fw, err := os.Create(tmpP)
+	fw, err := os.OpenFile(tmpP, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0600)
 	if err != nil {
 		return err
 	}
@@ -205,19 +205,19 @@ func rewriteAuthorizedKeys(key *PublicKey, p, tmpP string) error {
 
 // DeletePublicKey deletes SSH key information both in database and authorized_keys file.
 func DeletePublicKey(key *PublicKey) error {
-	has, err := orm.Get(key)
+	has, err := x.Get(key)
 	if err != nil {
 		return err
 	} else if !has {
 		return ErrKeyNotExist
 	}
 
-	if _, err = orm.Delete(key); err != nil {
+	if _, err = x.Delete(key); err != nil {
 		return err
 	}
 
-	fpath := filepath.Join(sshPath, "authorized_keys")
-	tmpPath := filepath.Join(sshPath, "authorized_keys.tmp")
+	fpath := filepath.Join(SshPath, "authorized_keys")
+	tmpPath := filepath.Join(SshPath, "authorized_keys.tmp")
 	log.Trace("publickey.DeletePublicKey(authorized_keys): %s", fpath)
 
 	if err = rewriteAuthorizedKeys(key, fpath, tmpPath); err != nil {

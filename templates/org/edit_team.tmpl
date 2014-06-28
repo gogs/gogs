@@ -1,0 +1,75 @@
+{{template "base/head" .}}
+{{template "base/navbar" .}}
+<div id="body-nav" class="org-nav org-nav-auto">
+    <div class="container clearfix">
+        <div id="org-nav-wrapper">
+            <ul class="nav nav-pills pull-right">
+                <li><a href="#"><i class="fa fa-users"></i>Members
+                    <span class="label label-default">5</span></a>
+                </li>
+                <li class="active"><a href="#"><i class="fa fa-tags"></i>Teams
+                    <span class="label label-default">2</span></a>
+                </li>
+            </ul>
+            <img class="pull-left org-small-logo" src="https://avatars3.githubusercontent.com/u/6656686?s=140" alt="" width="60"/>
+            <div id="org-nav-info">
+                <h2 class="org-name">Organization Name</h2>
+            </div>
+        </div>
+    </div>
+</div>
+<div id="body" class="container">
+    <div id="org">
+        <form id="org-teams-edit" class="form-horizontal card">
+            <h3>Edit team</h3>
+            <div class="form-group">
+                <label class="col-md-2 control-label">Team Name<strong class="text-danger">*</strong></label>
+                <div class="col-md-8">
+                    <input name="team" type="text" class="form-control" placeholder="Type your team name" value="" required="required">
+                    <span class="help-block">You'll use this name to mention this team in conversations.</span>
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-md-2 control-label">Description</label>
+                <div class="col-md-8">
+                    <input name="desc" type="text" class="form-control" placeholder="Type your team description (optional)" value="">
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-md-2 control-label">Permission</label>
+                <div class="col-md-8">
+                    <div class="radio">
+                        <label>
+                            <input type="radio" name="permission" value="pull" checked="">
+                            <strong>Read & Clone</strong>
+                        </label>
+                        <p>This team will be able to view and clone its repositories.</p>
+                    </div>
+                    <div class="radio">
+                        <label>
+                            <input type="radio" name="permission" value="push">
+                            <strong>Push, Read & Clone</strong>
+                        </label>
+                        <p>This team will be able to read its repositories, as well as push to them.</p>
+                    </div>
+                    <div class="radio">
+                        <label>
+                            <input type="radio" name="permission" value="admin">
+                            <strong>Collaboration, Push, Read & Clone</strong>
+                        </label>
+                        <p>This team will be able to push/pull to its repositories, as well as add other collaborators to them.</p>
+                    </div>
+                </div>
+            </div>
+            <hr/>
+            <div class="form-group">
+                <label class="col-md-2">&nbsp;</label>
+                <div class="col-md-8">
+                    <button class="btn btn-primary">Edit this team</button>
+                    <button class="btn btn-danger pull-right" value="delete" name="delete">Delete this team</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{{template "base/footer" .}}

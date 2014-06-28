@@ -11,20 +11,26 @@
         </h4>
         <ul id="release-list" class="list-unstyled">
             {{range .Releases}}
-            <li class="release-item clearfix" id="release-{{.SHA1}}">
+            <li class="release-item clearfix" id="release-{{.Sha1}}">
                 {{if .PublisherId}}
                 <div class="col-md-2 text-right">
-                    {{if .IsPrerelease}}<span class="btn btn-warning status pre-release">Pre-Release</span>{{else}}<span class="btn btn-success status stable">Stable</span>{{end}}
+                    {{if .IsDraft}}
+                    <span class="btn btn-primary status pre-release">Draft</span>
+                    {{else if .IsPrerelease}}
+                    <span class="btn btn-warning status pre-release">Pre-Release</span>
+                    {{else}}
+                    <span class="btn btn-success status stable">Stable</span>
+                    {{end}}
                     <a class="tag" href="{{$.RepoLink}}/src/{{.TagName}}" rel="nofollow"><i class="fa fa-tag"></i>{{.TagName}}</a>
-                    <a class="commit" href="{{$.RepoLink}}/src/{{.SHA1}}" rel="nofollow"><i class="fa fa-code"></i>{{ShortSha .SHA1}}</a>
+                    <a class="commit" href="{{$.RepoLink}}/src/{{.Sha1}}" rel="nofollow"><i class="fa fa-code"></i>{{ShortSha .Sha1}}</a>
                 </div>
                 <div class="col-md-10">
-                    <h4 class="title"><a href="{{$.RepoLink}}/src/{{.TagName}}">{{.Title}}</a></h4>
+                    <h4 class="title"><a href="{{$.RepoLink}}/src/{{.TagName}}">{{.Title}}</a> <small>(<a href="{{$.RepoLink}}/releases/edit/{{.TagName}}" rel="nofollow">edit</a>)</small></h4>
                     <p class="info">
                         <span class="author"><img class="avatar" src="{{.Publisher.AvatarLink}}" alt="" width="20">&nbsp;&nbsp;
                         <a href="/user/{{.Publisher.Name}}">{{.Publisher.Name}}</a></span>
                         {{if .Created}}<span class="time">{{TimeSince .Created}}</span>{{end}}
-                        <span class="ahead"><strong>{{.NumCommitsBehind}}</strong> commits since this release</span>
+                        <span class="ahead"><strong>{{.NumCommitsBehind}}</strong> commits to {{.Target}} since this release</span>
                     </p>
                     <div class="markdown desc">
                         {{str2html .Note}}
@@ -37,7 +43,7 @@
                 </div>
                 {{else}}
                 <div class="col-md-2 text-right">
-                    <a class="commit" href="{{$.RepoLink}}/src/{{.SHA1}}" rel="nofollow"><i class="fa fa-code"></i>{{ShortSha .SHA1}}</a>
+                    <a class="commit" href="{{$.RepoLink}}/src/{{.Sha1}}" rel="nofollow"><i class="fa fa-code"></i>{{ShortSha .Sha1}}</a>
                 </div>
                 <div class="col-md-10">
                     <h5 class="title"><a href="{{$.RepoLink}}/src/{{.TagName}}" rel="nofollow">{{.TagName}}</a><i class="fa fa-tag"></i></h5>

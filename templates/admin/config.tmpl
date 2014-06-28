@@ -36,6 +36,8 @@
                     <dd>{{.LogRootPath}}</dd>
                     <dt>Script Type</dt>
                     <dd>{{.ScriptType}}</dd>
+                    <dt>Reverse Authentication User</dt>
+                    <dd>{{.ReverseProxyAuthUser}}</dd>
                 </dl>
             </div>
         </div>
@@ -77,7 +79,7 @@
                     <dt>Require Sign In View</dt>
                     <dd><i class="fa fa{{if .Service.RequireSignInView}}-check{{end}}-square-o"></i></dd>
                     <dt>Mail Notification</dt>
-                    <dd><i class="fa fa{{if .Service.NotifyMail}}-check{{end}}-square-o"></i></dd>
+                    <dd><i class="fa fa{{if .Service.EnableNotifyMail}}-check{{end}}-square-o"></i></dd>
                     <dt>Enable Cache Avatar</dt>
                     <dd><i class="fa fa{{if .Service.EnableCacheAvatar}}-check{{end}}-square-o"></i></dd>
                     <hr/>
@@ -85,6 +87,21 @@
                     <dd>{{.Service.ActiveCodeLives}} minutes</dd>
                     <dt>Reset Password Code Lives</dt>
                     <dd>{{.Service.ResetPwdCodeLives}} minutes</dd>
+                </dl>
+            </div>
+        </div>
+
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                Webhook Configuration
+            </div>
+
+            <div class="panel-body">
+                <dl class="dl-horizontal admin-dl-horizontal">
+                    <dt>Task Interval</dt>
+                    <dd>{{.WebhookTaskInterval}} minutes</dd>
+                    <dt>Deliver Timeout</dt>
+                    <dd>{{.WebhookDeliverTimeout}} seconds</dd>
                 </dl>
             </div>
         </div>

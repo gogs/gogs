@@ -1,4 +1,4 @@
-// Copyright github.com/juju2013. All rights reserved.
+// Copyright 2014 The Gogs Authors. All rights reserved.
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
@@ -20,12 +20,13 @@ import (
 	"github.com/gogits/gogs/modules/log"
 )
 
-// Login types.
+type LoginType int
+
 const (
-	LT_NOTYPE = iota
-	LT_PLAIN
-	LT_LDAP
-	LT_SMTP
+	NOTYPE LoginType = iota
+	PLAIN
+	LDAP
+	SMTP
 )
 
 var (
@@ -34,9 +35,9 @@ var (
 	ErrAuthenticationUserUsed     = errors.New("Authentication has been used by some users")
 )
 
-var LoginTypes = map[int]string{
-	LT_LDAP: "LDAP",
-	LT_SMTP: "SMTP",
+var LoginTypes = map[LoginType]string{
+	LDAP: "LDAP",
+	SMTP: "SMTP",
 }
 
 // Ensure structs implmented interface.
@@ -49,7 +50,6 @@ type LDAPConfig struct {
 	ldap.Ldapsource
 }
 
-// implement
 func (cfg *LDAPConfig) FromDB(bs []byte) error {
 	return json.Unmarshal(bs, &cfg.Ldapsource)
 }
@@ -65,7 +65,6 @@ type SMTPConfig struct {
 	TLS  bool
 }
 
-// implement
 func (cfg *SMTPConfig) FromDB(bs []byte) error {
 	return json.Unmarshal(bs, cfg)
 }
@@ -76,13 +75,13 @@ func (cfg *SMTPConfig) ToDB() ([]byte, error) {
 
 type LoginSource struct {
 	Id                int64
-	Type              int
-	Name              string          `xorm:"unique"`
-	IsActived         bool            `xorm:"not null default false"`
+	Type              LoginType
+	Name              string          `xorm:"UNIQUE"`
+	IsActived         bool            `xorm:"NOT NULL DEFAULT false"`
 	Cfg               core.Conversion `xorm:"TEXT"`
-	Created           time.Time       `xorm:"created"`
-	Updated           time.Time       `xorm:"updated"`
-	AllowAutoRegister bool            `xorm:"not null default false"`
+	AllowAutoRegister bool            `xorm:"NOT NULL DEFAULT false"`
+	Created           time.Time       `xorm:"CREATED"`
+	Updated           time.Time       `xorm:"UPDATED"`
 }
 
 func (source *LoginSource) TypeString() string {
@@ -97,61 +96,59 @@ func (source *LoginSource) SMTP() *SMTPConfig {
 	return source.Cfg.(*SMTPConfig)
 }
 
-// for xorm callback
 func (source *LoginSource) BeforeSet(colName string, val xorm.Cell) {
 	if colName == "type" {
 		ty := (*val).(int64)
-		switch ty {
-		case LT_LDAP:
+		switch LoginType(ty) {
+		case LDAP:
 			source.Cfg = new(LDAPConfig)
-		case LT_SMTP:
+		case SMTP:
 			source.Cfg = new(SMTPConfig)
 		}
 	}
 }
 
+func CreateSource(source *LoginSource) error {
+	_, err := x.Insert(source)
+	return err
+}
+
 func GetAuths() ([]*LoginSource, error) {
-	var auths = make([]*LoginSource, 0)
-	err := orm.Find(&auths)
+	var auths = make([]*LoginSource, 0, 5)
+	err := x.Find(&auths)
 	return auths, err
 }
 
 func GetLoginSourceById(id int64) (*LoginSource, error) {
 	source := new(LoginSource)
-	has, err := orm.Id(id).Get(source)
+	has, err := x.Id(id).Get(source)
 	if err != nil {
 		return nil, err
-	}
-	if !has {
+	} else if !has {
 		return nil, ErrAuthenticationNotExist
 	}
 	return source, nil
 }
 
-func AddSource(source *LoginSource) error {
-	_, err := orm.Insert(source)
-	return err
-}
-
 func UpdateSource(source *LoginSource) error {
-	_, err := orm.Id(source.Id).AllCols().Update(source)
+	_, err := x.Id(source.Id).AllCols().Update(source)
 	return err
 }
 
 func DelLoginSource(source *LoginSource) error {
-	cnt, err := orm.Count(&User{LoginSource: source.Id})
+	cnt, err := x.Count(&User{LoginSource: source.Id})
 	if err != nil {
 		return err
 	}
 	if cnt > 0 {
 		return ErrAuthenticationUserUsed
 	}
-	_, err = orm.Id(source.Id).Delete(&LoginSource{})
+	_, err = x.Id(source.Id).Delete(&LoginSource{})
 	return err
 }
 
-// login a user
-func LoginUser(uname, passwd string) (*User, error) {
+// UserSignIn validates user name and password.
+func UserSignIn(uname, passwd string) (*User, error) {
 	var u *User
 	if strings.Contains(uname, "@") {
 		u = &User{Email: uname}
@@ -159,19 +156,19 @@ func LoginUser(uname, passwd string) (*User, error) {
 		u = &User{LowerName: strings.ToLower(uname)}
 	}
 
-	has, err := orm.Get(u)
+	has, err := x.Get(u)
 	if err != nil {
 		return nil, err
 	}
 
-	if u.LoginType == LT_NOTYPE {
+	if u.LoginType == NOTYPE {
 		if has {
-			u.LoginType = LT_PLAIN
+			u.LoginType = PLAIN
 		}
 	}
 
 	// for plain login, user must have existed.
-	if u.LoginType == LT_PLAIN {
+	if u.LoginType == PLAIN {
 		if !has {
 			return nil, ErrUserNotExist
 		}
@@ -185,28 +182,26 @@ func LoginUser(uname, passwd string) (*User, error) {
 	} else {
 		if !has {
 			var sources []LoginSource
-			if err = orm.UseBool().Find(&sources,
+			if err = x.UseBool().Find(&sources,
 				&LoginSource{IsActived: true, AllowAutoRegister: true}); err != nil {
 				return nil, err
 			}
 
 			for _, source := range sources {
-				if source.Type == LT_LDAP {
+				if source.Type == LDAP {
 					u, err := LoginUserLdapSource(nil, uname, passwd,
 						source.Id, source.Cfg.(*LDAPConfig), true)
 					if err == nil {
 						return u, nil
-					} else {
-						log.Warn("Fail to login(%s) by LDAP(%s): %v", uname, source.Name, err)
 					}
-				} else if source.Type == LT_SMTP {
+					log.Warn("Fail to login(%s) by LDAP(%s): %v", uname, source.Name, err)
+				} else if source.Type == SMTP {
 					u, err := LoginUserSMTPSource(nil, uname, passwd,
 						source.Id, source.Cfg.(*SMTPConfig), true)
 					if err == nil {
 						return u, nil
-					} else {
-						log.Warn("Fail to login(%s) by SMTP(%s): %v", uname, source.Name, err)
 					}
+					log.Warn("Fail to login(%s) by SMTP(%s): %v", uname, source.Name, err)
 				}
 			}
 
@@ -214,7 +209,7 @@ func LoginUser(uname, passwd string) (*User, error) {
 		}
 
 		var source LoginSource
-		hasSource, err := orm.Id(u.LoginSource).Get(&source)
+		hasSource, err := x.Id(u.LoginSource).Get(&source)
 		if err != nil {
 			return nil, err
 		} else if !hasSource {
@@ -224,10 +219,10 @@ func LoginUser(uname, passwd string) (*User, error) {
 		}
 
 		switch u.LoginType {
-		case LT_LDAP:
+		case LDAP:
 			return LoginUserLdapSource(u, u.LoginName, passwd,
 				source.Id, source.Cfg.(*LDAPConfig), false)
-		case LT_SMTP:
+		case SMTP:
 			return LoginUserSMTPSource(u, u.LoginName, passwd,
 				source.Id, source.Cfg.(*SMTPConfig), false)
 		}
@@ -252,7 +247,7 @@ func LoginUserLdapSource(user *User, name, passwd string, sourceId int64, cfg *L
 	user = &User{
 		LowerName:   strings.ToLower(name),
 		Name:        strings.ToLower(name),
-		LoginType:   LT_LDAP,
+		LoginType:   LDAP,
 		LoginSource: sourceId,
 		LoginName:   name,
 		IsActive:    true,
@@ -260,7 +255,7 @@ func LoginUserLdapSource(user *User, name, passwd string, sourceId int64, cfg *L
 		Email:       mail,
 	}
 
-	return RegisterUser(user)
+	return CreateUser(user)
 }
 
 type loginAuth struct {
@@ -320,9 +315,8 @@ func SmtpAuth(host string, port int, a smtp.Auth, useTls bool) error {
 			return err
 		}
 		return nil
-	} else {
-		return ErrUnsupportedLoginType
 	}
+	return ErrUnsupportedLoginType
 }
 
 // Query if name/passwd can login against the LDAP direcotry pool
@@ -358,13 +352,12 @@ func LoginUserSMTPSource(user *User, name, passwd string, sourceId int64, cfg *S
 	user = &User{
 		LowerName:   strings.ToLower(loginName),
 		Name:        strings.ToLower(loginName),
-		LoginType:   LT_SMTP,
+		LoginType:   SMTP,
 		LoginSource: sourceId,
 		LoginName:   name,
 		IsActive:    true,
 		Passwd:      passwd,
 		Email:       name,
 	}
-
-	return RegisterUser(user)
+	return CreateUser(user)
 }

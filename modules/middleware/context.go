@@ -104,12 +104,12 @@ func (ctx *Context) HasError() bool {
 }
 
 // HTML calls render.HTML underlying but reduce one argument.
-func (ctx *Context) HTML(status int, name string, htmlOpt ...HTMLOptions) {
-	ctx.Render.HTML(status, name, ctx.Data, htmlOpt...)
+func (ctx *Context) HTML(status int, name base.TplName, htmlOpt ...HTMLOptions) {
+	ctx.Render.HTML(status, string(name), ctx.Data, htmlOpt...)
 }
 
 // RenderWithErr used for page has form validation but need to prompt error to users.
-func (ctx *Context) RenderWithErr(msg, tpl string, form auth.Form) {
+func (ctx *Context) RenderWithErr(msg string, tpl base.TplName, form auth.Form) {
 	if form != nil {
 		auth.AssignForm(form, ctx.Data)
 	}
@@ -133,7 +133,7 @@ func (ctx *Context) Handle(status int, title string, err error) {
 	case 500:
 		ctx.Data["Title"] = "Internal Server Error"
 	}
-	ctx.HTML(status, fmt.Sprintf("status/%d", status))
+	ctx.HTML(status, base.TplName(fmt.Sprintf("status/%d", status)))
 }
 
 func (ctx *Context) Debug(msg string, args ...interface{}) {
@@ -358,7 +358,7 @@ func InitContext() martini.Handler {
 		})
 
 		// Get user from session if logined.
-		user := auth.SignedInUser(ctx.Session)
+		user := auth.SignedInUser(ctx.req.Header, ctx.Session)
 		ctx.User = user
 		ctx.IsSigned = user != nil
 

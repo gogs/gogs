@@ -14,8 +14,20 @@ import (
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"
+	"github.com/gogits/gogs/modules/cron"
 	"github.com/gogits/gogs/modules/middleware"
+	"github.com/gogits/gogs/modules/process"
 	"github.com/gogits/gogs/modules/setting"
+)
+
+const (
+	DASHBOARD       base.TplName = "admin/dashboard"
+	USERS           base.TplName = "admin/users"
+	REPOS           base.TplName = "admin/repos"
+	AUTHS           base.TplName = "admin/auths"
+	CONFIG          base.TplName = "admin/config"
+	MONITOR_PROCESS base.TplName = "admin/monitor/process"
+	MONITOR_CRON    base.TplName = "admin/monitor/cron"
 )
 
 var startTime = time.Now()
@@ -100,8 +112,11 @@ func updateSystemStatus() {
 }
 
 // Operation types.
+type AdminOperation int
+
 const (
-	OT_CLEAN_OAUTH = iota + 1
+	CLEAN_UNBIND_OAUTH AdminOperation = iota + 1
+	CLEAN_INACTIVATE_USER
 )
 
 func Dashboard(ctx *middleware.Context) {
@@ -114,10 +129,13 @@ func Dashboard(ctx *middleware.Context) {
 		var err error
 		var success string
 
-		switch op {
-		case OT_CLEAN_OAUTH:
+		switch AdminOperation(op) {
+		case CLEAN_UNBIND_OAUTH:
 			success = "All unbind OAuthes have been deleted."
 			err = models.CleanUnbindOauth()
+		case CLEAN_INACTIVATE_USER:
+			success = "All inactivate accounts have been deleted."
+			err = models.DeleteInactivateUsers()
 		}
 
 		if err != nil {
@@ -132,7 +150,7 @@ func Dashboard(ctx *middleware.Context) {
 	ctx.Data["Stats"] = models.GetStatistic()
 	updateSystemStatus()
 	ctx.Data["SysStatus"] = sysStatus
-	ctx.HTML(200, "admin/dashboard")
+	ctx.HTML(200, DASHBOARD)
 }
 
 func Users(ctx *middleware.Context) {
@@ -142,10 +160,10 @@ func Users(ctx *middleware.Context) {
 	var err error
 	ctx.Data["Users"], err = models.GetUsers(200, 0)
 	if err != nil {
-		ctx.Handle(500, "admin.Users", err)
+		ctx.Handle(500, "admin.Users(GetUsers)", err)
 		return
 	}
-	ctx.HTML(200, "admin/users")
+	ctx.HTML(200, USERS)
 }
 
 func Repositories(ctx *middleware.Context) {
@@ -158,7 +176,7 @@ func Repositories(ctx *middleware.Context) {
 		ctx.Handle(500, "admin.Repositories", err)
 		return
 	}
-	ctx.HTML(200, "admin/repos")
+	ctx.HTML(200, REPOS)
 }
 
 func Auths(ctx *middleware.Context) {
@@ -171,7 +189,7 @@ func Auths(ctx *middleware.Context) {
 		ctx.Handle(500, "admin.Auths", err)
 		return
 	}
-	ctx.HTML(200, "admin/auths")
+	ctx.HTML(200, AUTHS)
 }
 
 func Config(ctx *middleware.Context) {
@@ -188,10 +206,14 @@ func Config(ctx *middleware.Context) {
 	ctx.Data["StaticRootPath"] = setting.StaticRootPath
 	ctx.Data["LogRootPath"] = setting.LogRootPath
 	ctx.Data["ScriptType"] = setting.ScriptType
+	ctx.Data["ReverseProxyAuthUser"] = setting.ReverseProxyAuthUser
 
 	ctx.Data["Service"] = setting.Service
 
 	ctx.Data["DbCfg"] = models.DbCfg
+
+	ctx.Data["WebhookTaskInterval"] = setting.WebhookTaskInterval
+	ctx.Data["WebhookDeliverTimeout"] = setting.WebhookDeliverTimeout
 
 	ctx.Data["MailerEnabled"] = false
 	if setting.MailService != nil {
@@ -223,5 +245,22 @@ func Config(ctx *middleware.Context) {
 	}
 	ctx.Data["Loggers"] = loggers
 
-	ctx.HTML(200, "admin/config")
+	ctx.HTML(200, CONFIG)
+}
+
+func Monitor(ctx *middleware.Context) {
+	ctx.Data["Title"] = "Monitoring Center"
+	ctx.Data["PageIsMonitor"] = true
+
+	tab := ctx.Query("tab")
+	switch tab {
+	case "process":
+		ctx.Data["PageIsMonitorProcess"] = true
+		ctx.Data["Processes"] = process.Processes
+		ctx.HTML(200, MONITOR_PROCESS)
+	default:
+		ctx.Data["PageIsMonitorCron"] = true
+		ctx.Data["Entries"] = cron.ListEntries()
+		ctx.HTML(200, MONITOR_CRON)
+	}
 }
