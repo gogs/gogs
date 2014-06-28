@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/codegangsta/cli"
+	"github.com/satori/go.uuid"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/log"
@@ -165,7 +166,9 @@ func runServ(k *cli.Context) {
 		return
 	}
 
-	models.SetRepoEnvs(user.Id, user.Name, repoName, repoUserName)
+	//models.SetRepoEnvs(user.Id, user.Name, repoName, repoUserName)
+	uuid := uuid.NewV4().String()
+	os.Setenv("uuid", uuid)
 
 	gitcmd := exec.Command(verb, repoPath)
 	gitcmd.Dir = setting.RepoRootPath
@@ -176,5 +179,25 @@ func runServ(k *cli.Context) {
 	if err != nil {
 		println("Gogs: internal error:", err)
 		log.GitLogger.Fatal("Fail to execute git command: %v", err)
+	}
+
+	if isWrite {
+		tasks, err := models.GetUpdateTasksByUuid(uuid)
+		if err != nil {
+			log.GitLogger.Fatal("Fail to get update task: %v", err)
+		}
+
+		for _, task := range tasks {
+			err = models.Update(task.RefName, task.OldCommitId, task.NewCommitId,
+				user.Name, repoUserName, repoName, user.Id)
+			if err != nil {
+				log.GitLogger.Fatal("Fail to update: %v", err)
+			}
+		}
+
+		err = models.DelUpdateTasksByUuid(uuid)
+		if err != nil {
+			log.GitLogger.Fatal("Fail to del update task: %v", err)
+		}
 	}
 }
