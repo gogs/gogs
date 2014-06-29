@@ -35,10 +35,6 @@ func runUpdate(c *cli.Context) {
 		log.GitLogger.Fatal("refName is empty, shouldn't use")
 	}
 
-	//userName := os.Getenv("userName")
-	//userId, _ := strconv.ParseInt(os.Getenv("userId"), 10, 64)
-	//repoUserName := os.Getenv("repoUserName")
-	//repoName := os.Getenv("repoName")
 	uuid := os.Getenv("uuid")
 
 	task := models.UpdateTask{
@@ -48,14 +44,7 @@ func runUpdate(c *cli.Context) {
 		NewCommitId: args[2],
 	}
 
-	log.GitLogger.Error("%v", task)
-
 	if err := models.AddUpdateTask(&task); err != nil {
 		log.GitLogger.Fatal(err.Error())
 	}
-
-	/*if err := models.Update(args[0], args[1], args[2], userName, repoUserName, repoName, userId); err != nil {
-		log.GitLogger.Fatal(err.Error())
-	}*/
-	//setEnvs(args[0], args[1], args[2], userName, repoUserName, repoName, userId)
 }
