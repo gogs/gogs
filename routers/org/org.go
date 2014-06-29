@@ -36,7 +36,7 @@ func Home(ctx *middleware.Context, params martini.Params) {
 	ctx.Data["Org"] = org
 
 	ctx.Data["Repos"], err = models.GetRepositories(org.Id,
-		ctx.IsSigned && models.IsOrganizationMember(org.Id, ctx.User.Id))
+		ctx.IsSigned && org.IsOrgMember(ctx.User.Id))
 	if err != nil {
 		ctx.Handle(500, "org.Home(GetRepositories)", err)
 		return
@@ -55,11 +55,6 @@ func Home(ctx *middleware.Context, params martini.Params) {
 	ctx.Data["Teams"] = org.Teams
 
 	ctx.HTML(200, HOME)
-}
-
-func Members(ctx *middleware.Context, params martini.Params) {
-	ctx.Data["Title"] = "Organization " + params["org"] + " Members"
-	ctx.HTML(200, "org/members")
 }
 
 func New(ctx *middleware.Context) {
@@ -206,7 +201,7 @@ func DeletePost(ctx *middleware.Context, params martini.Params) {
 	}
 	ctx.Data["Org"] = org
 
-	if !models.IsOrganizationOwner(org.Id, ctx.User.Id) {
+	if !org.IsOrgOwner(ctx.User.Id) {
 		ctx.Error(403)
 		return
 	}
