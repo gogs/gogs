@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -30,7 +31,7 @@ var CmdServ = cli.Command{
 
 func setup(logPath string) {
 	setting.NewConfigContext()
-	log.NewGitLogger(path.Join(setting.LogRootPath, logPath))
+	log.NewGitLogger(filepath.Join(setting.LogRootPath, logPath))
 	models.LoadModelsConfig()
 
 	if models.UseSQLite3 {
@@ -166,7 +167,6 @@ func runServ(k *cli.Context) {
 		return
 	}
 
-	//models.SetRepoEnvs(user.Id, user.Name, repoName, repoUserName)
 	uuid := uuid.NewV4().String()
 	os.Setenv("uuid", uuid)
 
