@@ -1,5 +1,5 @@
 /*!
- * Gogs - Go Git Service (http://gogits.org)
+ * Gogs - Go Git Service (http://gogs.io)
  * Copyright 2014 Gogs.
  * Licensed under MIT (https://github.com/gogits/gogs/blob/master/LICENSE)
  */
@@ -7,12 +7,11 @@
 body {
     background: #F6F6F6;
 }
-
-html, body {
+html,
+body {
     height: 100%;
     font-family: Arial, Helvetica, sans-serif;
 }
-
 /* override bs3 */
 
 .tooltip-inner {
@@ -20,45 +19,38 @@ html, body {
     background: #333;
     border: none;
 }
-
 .tooltip-arrow {
     border-bottom-color: #333 !important;
 }
-
 .tooltip-arrow:before {
     border-bottom-color: transparent !important;
 }
-
 .fa {
     margin: 0 .5em;
 }
-
 .fa-m {
     margin: 0;
 }
-
 .list-group .list-group-item {
     background-color: transparent;
 }
-
 .btn {
     cursor: pointer;
 }
-
 .panel-default .panel-heading {
     background-color: #FAFAFA;
     border-bottom: 1px solid #DDD;
     font-weight: bold;
 }
-
 /* gogits nav header */
+
 .masthead {
     background-color: #428bca;
     box-shadow: inset 0 -2px 5px rgba(0, 0, 0, .1);
     margin: 0;
 }
-
 /* gogits nav item link */
+
 .nav-item {
     position: relative;
     display: inline-block;
@@ -69,60 +61,51 @@ html, body {
     height: 46px;
     margin-top: 3px;
 }
-
 #nav-logo {
     padding-left: 0;
     padding-right: 0;
     margin-right: 10px;
     margin-top: 0;
 }
-
 .nav-item:hover,
 .nav-item:focus {
     color: #fff;
     text-decoration: none;
 }
-
 .nav-item.navbar-btn {
     cursor: pointer;
     margin-top: 8px;
     padding: 5px 15px;
     height: 30px;
 }
-
 .nav-item.navbar-right .fa {
     margin: 0;
 }
-
 #nav-search-form {
     width: 300px;
     margin-top: 0;
 }
-
 #nav-search-form button {
     margin-top: 0;
     background-image: none;
     background-color: #F6F6F6;
 }
-
 #nav-search-form input[type=search] {
     background-color: #F6F6F6;
     border-bottom-right-radius: 3px;
     border-top-right-radius: 3px;
     -webkit-transition: width linear .25s;
 }
-
 #nav-search-form input[type=search]:focus {
     background-color: #FFF;
     border-color: #D9D9D9;
     width: 320px;
 }
-
 /* gogits nav item active status */
+
 #masthead .nav .active {
     color: #fff;
 }
-
 #masthead .nav .active:after {
     position: absolute;
     bottom: -1px;
@@ -136,29 +119,25 @@ html, body {
     border-bottom: 5px solid;
     border-left: 5px solid transparent;
 }
-
 #nav-logo:after {
     bottom: -4px !important;
 }
-
 #nav-avatar:after {
     bottom: -4px !important;
 }
-
 .nav .tooltip {
     border: none;
 }
-
 /* gogits logo */
+
 #nav-avatar {
     margin-top: 0;
 }
-
-#logo, #nav-avatar img {
+#logo,
+#nav-avatar img {
     width: 28px;
     height: 28px;
 }
-
 #nav-out {
     margin-top: 10px;
     padding: 5px 0;
@@ -166,56 +145,49 @@ html, body {
     height: 28px;
     float: right;
 }
-
-#nav-signin, #nav-signup {
+#nav-signin,
+#nav-signup {
     float: right;
     margin-left: 1em;
 }
-
 #nav-out .fa {
     vertical-align: -10%;
     margin: 0 .5em;
 }
-
 /* gogits body */
+
 #body {
     padding-bottom: 60px;
     margin-top: 30px;
 }
-
 #body .btn-default {
     background-color: #FFF;
     background-image: linear-gradient(to bottom, #FFF 0, #FAFAFA 100%);
 }
-
 #body-nav {
     background-color: #FFF;
     border-bottom: 1px solid #DDD;
     height: 66px
 }
-
 #body-nav .nav {
     font-size: 14px;
     margin-top: 12px;
 }
-
 #body-nav .nav-pills li a {
     color: #444;
 }
-
 #body-nav .nav-pills li.active a {
     font-weight: bold;
     border-bottom: 2px solid #d26911;
     background-color: transparent;
     color: #444;
 }
-
 #body-nav .nav-pills li:hover a {
     background-color: transparent;
     text-decoration: underline;
 }
-
 /* gogits login card */
+
 .card {
     margin: auto;
     padding: 30px;
@@ -224,69 +196,56 @@ html, body {
     border-radius: 5px;
     box-sizing: border-box;
 }
-
 .card h3 {
     margin-top: 0;
     margin-bottom: 30px;
     padding-bottom: 20px;
     border-bottom: 1px solid #ccc;
 }
-
 #login-card {
     width: 600px;
 }
-
 #login-card .form-control {
     padding: 6px 12px;
     box-sizing: content-box;
 }
-
 #login-card .control-label {
     height: 44px;
     line-height: 30px;
 }
-
 #install-card {
     width: 800px;
 }
-
 #install-card .form-group {
     margin-left: 0;
     margin-right: 0;
 }
-
 .card .btn {
     cursor: pointer;
 }
-
 .card .btn-primary {
     margin-right: 1.2em;
 }
-
 #social-login {
     margin-top: 40px;
     padding-top: 40px;
     border-top: 1px solid #ccc;
     position: relative;
 }
-
 #social-login .btn {
     float: none;
     margin: auto 4px;
 }
-
 #social-login .btn .fa {
     margin-left: 0;
     margin-right: 4px;
 }
-
 #social-login .btn span {
     display: inline-block;
     vertical-align: top;
     font-size: 16px;
     margin-top: 5px;
 }
-
 #social-login h4 {
     position: absolute;
     top: -20px;
@@ -294,12 +253,10 @@ html, body {
     text-align: center;
     background-color: transparent;
 }
-
 #social-login h4 span {
     background-color: #FFF;
     padding: 0 12px;
 }
-
 /* gogs-user-profile */
 
 #user-avatar {
@@ -307,40 +264,34 @@ html, body {
     height: 200px;
     border-radius: 6px;
 }
-
 #user-avatar-commit {
     width: 16px;
     height: 16px;
     border-radius: 2px;
 }
-
-#user-name, #user-full-name {
+#user-name,
+#user-full-name {
     font-size: 1.6em;
     font-weight: bold;
 }
-
 #user-name {
     margin-bottom: 20px;
     margin-top: 10px;
 }
-
 #user-full-name {
     margin-top: 20px;
 }
-
 #user-profile .profile-info .list-group-item {
     background-color: transparent;
     padding-top: 18px;
     color: #666;
 }
-
 #user-profile .profile-info .list-group-item a {
     margin: 0;
     padding: 0;
     display: inline;
     color: #0093c4;
 }
-
 #user-profile .profile-info .list-group {
     border-top: 1px solid #ccc;
     padding-bottom: 18px;
@@ -348,53 +299,46 @@ html, body {
     padding-left: 18px;
     padding-right: 18px;
 }
-
 #user-profile .profile-rel .col-md-6 {
     text-align: center;
     padding-bottom: 12px;
 }
-
 #user-profile .profile-rel strong {
     font-size: 24px;
     color: #444;
     display: block;
 }
-
 #user-profile .profile-rel p {
     margin-right: 0;
     color: #888;
 }
-
 #user-activity .tab-pane {
     padding: 20px;
 }
-
 #user-act-tabs li.active a {
     border-bottom-color: #ddd;
 }
-
 /* gogits repo create */
 
-#repo-create, #org-create, #org-teams-create, #org-teams-edit {
+#repo-create,
+#org-create,
+#org-teams-create,
+#org-teams-edit {
     width: 800px;
 }
-
 #repo-create textarea[name=desc] {
     height: 8em;
 }
-
 #repo-import-auth {
     width: 100%;
     margin-top: 48px;
     box-sizing: border-box;
 }
-
 #repo-import-auth .form-group {
     box-sizing: border-box;
     margin-left: 0;
     margin-right: 0;
 }
-
 /* gogits user setting */
 
 #user-setting-nav.repo-setting-nav {
@@ -403,31 +347,30 @@ html, body {
     padding: 0;
     padding-top: 10px;
 }
-
-#user-setting-nav > h4, #user-setting-container > h4, #user-setting-container > div > h4,
-#ssh-keys > h4, #user-delete > h4, #repo-setting-container .tab-pane > h4 {
+#user-setting-nav > h4,
+#user-setting-container > h4,
+#user-setting-container > div > h4,
+#ssh-keys > h4,
+#user-delete > h4,
+#repo-setting-container .tab-pane > h4 {
     padding-bottom: 18px;
     margin-bottom: 18px;
     border-bottom: 1px solid #CCC;
 }
-
 #user-setting-nav .list-group .list-group-item a {
     margin-left: 0;
     padding: .6em 1.2em;
     font-size: 14px;
     color: #3B73AF;
 }
-
 #user-setting-nav .list-group .list-group-item {
     background-color: transparent;
     margin-bottom: .6em;
 }
-
 #user-setting-nav .list-group .list-group-item-success a {
     font-weight: bold;
     color: #444;
 }
-
 .admin-nav {
     background-color: #FFF;
     padding-top: 10px;
@@ -435,62 +378,50 @@ html, body {
     padding-right: 0;
     border: 1px solid #D8D8D8;
 }
-
 .admin-nav li {
     margin-bottom: 8px;
     border-left: 4px solid transparent;
 }
-
 .admin-nav li:hover {
     border-left-color: #EEE;
 }
-
 .admin-nav li.active:hover {
     border-left: 4px solid #DD4B39;
 }
-
 #repo-setting-container {
     padding-right: 0;
 }
-
 #repo-setting-container .form-horizontal label {
     line-height: 30px;
 }
-
 #repo-collab-list li.collab {
     margin-bottom: .6em;
 }
-
 #repo-collab-list .avatar {
     margin-right: 1em;
     width: 40px;
 }
-
 #repo-collab-list a.member {
     color: #444;
 }
-
-#repo-collab-list .remove-collab, #repo-hooks-list .remove-hook {
+#repo-collab-list .remove-collab,
+#repo-hooks-list .remove-hook {
     color: #DD4B39;
 }
-
 #repo-collab-form .dropdown-menu {
     margin-left: 15px;
     margin-top: 4px;
     padding: 0;
 }
-
 #repo-collab-form .dropdown-menu li {
     padding: 0 1em;
     line-height: 36px;
     cursor: pointer;
     font-weight: bold;
 }
-
 #repo-collab-form .dropdown-menu li:hover {
     background-color: #e8f0ff;
 }
-
 #repo-collab-form .dropdown-menu img {
     width: 28px;
     height: 28px;
@@ -498,17 +429,14 @@ html, body {
     vertical-align: middle;
     margin-top: -3px;
 }
-
 #repo-collab-form .dropdown-menu ul {
     margin-bottom: 0;
 }
-
 #repo-hooks-list li {
     line-height: 40px;
     border-top: 1px solid #DDD;
     height: 40px;
 }
-
 #repo-hooks-list .link {
     display: inline-block;
     max-width: 360px;
@@ -518,32 +446,26 @@ html, body {
     line-height: 40px;
     white-space: nowrap;
 }
-
 /* gogits user ssh keys */
 
 #ssh-keys .list-group-item {
     padding: 15px 0;
     border-bottom: 1px solid #DDD;
 }
-
 #ssh-keys .list-group-item .delete {
     margin: -5px 50px 0;
 }
-
 #ssh-keys .list-group-item:after {
     clear: both;
 }
-
 #ssh-keys .name {
     font-size: 14px;
     font-weight: bold;
 }
-
 #ssh-keys .print {
     padding-left: 1em;
     color: #888;
 }
-
 #ssh-add {
     display: inline-block;
     color: white;
@@ -551,25 +473,20 @@ html, body {
     margin-left: 0;
     border-radius: 3px;
 }
-
 #ssh-form textarea {
     height: 16em;
 }
-
 /* #feed */
 
 #feed-right .repo-panel .panel-heading .btn {
     margin-top: -4px;
 }
-
 #feed-right .repo-panel .panel-body {
     padding: 0;
 }
-
 #feed-right .repo-panel .list-group {
     margin-bottom: 0;
 }
-
 #feed-right .repo-panel .list-group-item a {
     display: block;
     margin-left: 0;
@@ -577,11 +494,9 @@ html, body {
     padding-left: 0;
     font-weight: bold;
 }
-
 #feed-right .repo-panel .list-group-item .fa {
     color: #666;
 }
-
 #feed-right .repo-panel .list-group-item {
     font-size: 14px;
     line-height: 32px;
@@ -589,107 +504,92 @@ html, body {
     padding-left: 15px;
     clear: both;
 }
-
 #feed-right .repo-panel .list-group-item:last-child {
     border-bottom: none;
 }
-
 #feed-right .repo-panel .list-group-item:hover {
     background-color: #eafffd;
     background-color: rgba(65, 131, 196, 0.1);
 }
-
 #feed-right .repo-panel span.stars {
     color: #666;
     margin-right: 1em;
 }
-
 #user-dashboard-repo-new .btn-sm.dropdown-toggle {
     padding: 3px 8px;
 }
-
-#user-dashboard-repo-new .dropdown-menu, #nav-repo-new .dropdown-menu {
+#user-dashboard-repo-new .dropdown-menu,
+#nav-repo-new .dropdown-menu {
     padding: 0;
     margin: 0;
 }
-
-#user-dashboard-repo-new ul, #nav-repo-new ul {
+#user-dashboard-repo-new ul,
+#nav-repo-new ul {
     margin: 0;
     width: 200px;
 }
-
-#user-dashboard-repo-new li a, #nav-repo-new li a {
+#user-dashboard-repo-new li a,
+#nav-repo-new li a {
     line-height: 36px;
     display: block;
     padding: 0 18px;
     color: #444;
 }
-
-#user-dashboard-repo-new li a:hover, #nav-repo-new li a:hover {
+#user-dashboard-repo-new li a:hover,
+#nav-repo-new li a:hover {
     background: #0093c4;
     color: #FFF;
 }
-
 #nav-repo-new button {
     border: none;
     background: transparent;
     padding: 0;
     width: 15px;
 }
-
 #nav-repo-new li .fa {
     margin: 0 .5em;
 }
-
-#dashboard-switch .btn, #repo-owner-switch .btn {
+#dashboard-switch .btn,
+#repo-owner-switch .btn {
     height: 40px;
 }
-
 #dashboard-switch {
     margin-top: 14px;
     margin-right: 18px;
 }
-
-#dashboard-switch .dropdown-menu,#repo-owner-switch .dropdown-menu {
+#dashboard-switch .dropdown-menu,
+#repo-owner-switch .dropdown-menu {
     padding: 0;
 }
-
 #dashboard-switch-menu {
     width: 180px;
     margin-bottom: 0;
     padding-bottom: 0;
 }
-
 #dashboard-switch-menu > li > a {
     display: block;
     padding: .8em 1.2em;
 }
-
 #dashboard-switch-menu > li > a:hover {
     text-decoration: none;
 }
-
-#dashboard-switch-menu > li > a img, #dashboard-switch button img {
+#dashboard-switch-menu > li > a img,
+#dashboard-switch button img {
     margin-right: 6px;
 }
-
 #dashboard-switch-menu > li {
     border-bottom: 1px solid #eaeaea;
 }
-
 #dashboard-switch-menu > li .fa {
     opacity: 0;
     margin-right: 16px;
 }
-
 #dashboard-switch-menu > li.checked .fa {
     opacity: 1;
 }
-
 #dashboard-switch-menu > li:last-child {
     border-bottom: none;
 }
-
 /* gogits repo single page */
 
 #body-nav.repo-nav {
@@ -697,199 +597,159 @@ html, body {
     padding-bottom: 30px;
     height: auto;
 }
-
 .repo-nav .name {
     margin-top: 15px;
 }
-
 .repo-nav .desc {
     color: #888;
     margin-bottom: 0;
 }
-
 .repo-nav h3 .fa {
     color: #BBB;
     margin-left: 0;
 }
-
 .repo-nav .actions {
     padding-top: 20px;
 }
-
 .repo-nav .btn-default {
     font-family: Tahoma, Arial, sans-serif;
 }
-
 #repo-watching .dropdown-menu {
     width: 280px;
     padding: 0;
 }
-
-#repo-watching .dropdown-menu .dropdown-item:hover .dropdown-header, #repo-watching .dropdown-item .dropdown-header.text-primary {
+#repo-watching .dropdown-menu .dropdown-item:hover .dropdown-header,
+#repo-watching .dropdown-item .dropdown-header.text-primary {
     color: rgb(65, 131, 196);
     cursor: pointer;
 }
-
 #repo-watching .dropdown-menu .description {
     padding: 0 20px;
     color: #888;
 }
-
 #repo-watching .dropdown-menu .dropdown-header {
     color: #444;
     font-weight: bold;
     font-size: 14px;
     margin-bottom: 4px;
 }
-
 #repo-toolbar {
     border-bottom: 1px solid #DDD;
     background-color: #FFF;
     height: 40px;
     font-size: 14px;
 }
-
 #repo-toolbar .navbar-default {
     border: none;
     height: 39px;
 }
-
 #repo-toolbar .nav > li > a {
     height: 39px;
 }
-
 #repo-toolbar .nav .tmp {
     padding: 0 6px;
 }
-
 #repo-toolbar .nav .tmp a {
     display: inline-block;
     padding-left: 6px;
     padding-right: 6px;
 }
-
 #repo-toolbar .nav .tmp a:hover {
     text-decoration: none;
 }
-
 #repo-toolbar .nav .tmp .btn {
     margin-top: -2px;
 }
-
 #repo-toolbar .nav .active {
     color: #F6F6F6;
 }
-
 #repo-toolbar .nav > .active > a:after {
     border-bottom-color: #999;
 }
-
 #repo-toolbar .navbar.nav-toolbar {
     margin-bottom: 0;
 }
-
 #repo-toolbar .navbar-collapse {
     padding: 0;
 }
-
 #repo-toolbar ul.navbar-right {
     margin-right: 0;
 }
-
 .activity-list {
     font-size: 14px;
 }
-
 .activity-list .icon {
     font-size: 20px;
     color: #aaa;
     float: left;
 }
-
 .activity-list .info {
     margin: 0 0 0 40px;
     line-height: 1.7em;
 }
-
 .activity-list .meta {
     color: #aaa;
 }
-
 .activity-list li {
     padding: 15px 0;
     border-top: 1px solid #ddd;
 }
-
 .activity-list li:first-child {
     border-top: none;
 }
-
 .repo-list li {
     padding: 15px 0;
     border-top: 1px solid #ddd;
 }
-
 .repo-list li:first-child {
     border-top: none;
 }
-
 .repo-list h4 {
     font-weight: bold;
     font-size: 24px;
 }
-
 .repo-list .meta {
     margin: 15px 0 0;
     font-size: 14px;
 }
-
 .repo-list .desc {
     font-size: 15px;
 }
-
 .repo-list .meta .fa {
     margin: 0 0 0 20px;
 }
-
 .repo-list .meta,
 .repo-list .info {
     color: #999;
 }
-
 .popover .repo-clone-div {
     min-width: 200px;
 }
-
 #repo-clone .dropdown-menu {
     width: 400px;
     padding: 20px;
 }
-
 #repo-clone .input-group {
     margin-bottom: 15px;
 }
-
 #repo-clone .zclip {
     left: auto !important;
 }
-
 /* #source */
-#source, #commits {
+
+#source,
+#commits {
     margin-top: -20px;
 }
-
 #commits-pager {
     margin-top: 0;
 }
-
 #source .source-toolbar:after {
     clear: both;
 }
-
 #source .source-toolbar .branch-switch {
     display: inline-block;
 }
-
 #source .source-toolbar .breadcrumb {
     margin: 0 .5em;
     padding: 6px 15px;
@@ -898,31 +758,25 @@ html, body {
     display: inline-block;
     background-color: transparent;
 }
-
 #source .source-toolbar,
 #source .info-box,
 #source .file-content {
     margin: 0 0 10px;
 }
-
 .info-box .info-head,
 .info-box .info-content {
     padding: 9px 20px;
 }
-
 .info-box .info-head {
     font-weight: normal;
 }
-
 .info-box .info-content a,
 .info-box .info-head a {
     color: #666;
 }
-
 .file-list {
     background-color: #fafafa;
 }
-
 .file-list .icon {
     font-size: 17px;
     padding: 5px 0 4px 10px;
@@ -930,7 +784,6 @@ html, body {
     color: #999;
     text-align: right;
 }
-
 .file-list .wrap {
     display: inline-block;
     overflow: hidden;
@@ -938,39 +791,31 @@ html, body {
     vertical-align: top;
     white-space: nowrap;
 }
-
 .file-list .name .wrap {
     max-width: 180px;
 }
-
 .file-list .text .wrap {
     max-width: 450px;
 }
-
 .file-list .date .wrap {
     max-width: 120px;
     padding: 0 20px 0 0;
 }
-
 .file-list .date {
     text-align: right;
 }
-
 .file-content .file-head {
     font-size: 18px;
 }
-
 .file-content .file-head .icon {
     color: #666;
     margin: 0 .5em 0 0;
 }
-
 .file-content .file-head .file-size {
     font-size: 13px;
     color: #888;
     margin-left: 1em;
 }
-
 .file-content .file-body {
     padding: 30px 30px 50px;
     border: none;
@@ -979,39 +824,32 @@ html, body {
     overflow-x: auto;
     overflow-y: hidden;
 }
-
 .file-content .file-body.file-code pre {
     background-color: #FFF;
     border: none;
 }
-
 .file-content .file-body.file-code {
     padding: 0;
 }
-
 .file-content .file-body.file-code .lines-code > pre {
     border: none;
     background: none;
     border-left: 1px solid #ddd;
 }
-
 .file-content .file-body.file-code .lines-code ol.linenums > .active {
     background: #ffffdd;
 }
-
 .file-content .file-body.file-code .lines-num {
     text-align: right;
     color: #999;
     background: #fafafa;
     width: 1%;
 }
-
 .file-content .file-body.file-code .lines-ellipsis {
     background-color: #FAFAFA;
     color: #999;
     width: 1%;
 }
-
 .file-content .file-body.file-code .lines-num span {
     font-family: Menlo, Monaco, Consolas, "Courier New", monospace;
     line-height: 1.6;
@@ -1021,158 +859,132 @@ html, body {
     margin-top: 2px;
     font-size: 90%;
 }
-
 .file-content .file-body.file-code .lines-num span:first-child {
     margin-top: 0;
 }
-
 .file-content .file-body.file-code > table {
     width: 100%;
 }
-
 .file-content .file-body.file-code > table > tbody > tr,
 .file-content .file-body.file-code > table > tbody > tr > td,
 .file-content .file-body.file-code > table {
     border: none;
     background: none;
 }
-
-.branch-list th, .commit-list th {
+.branch-list th,
+.commit-list th {
     background-color: #FFF;
     line-height: 28px !important;
 }
-
 .branch-list td {
     line-height: 36px !important;
 }
-
-.branch-box tr:hover td, .commit-box tr:hover td {
+.branch-box tr:hover td,
+.commit-box tr:hover td {
     background-color: rgba(19, 95, 215, 0.06) !important;
 }
-
-.branch-box .name, .commit-box .author {
+.branch-box .name,
+.commit-box .author {
     padding-left: 20px;
 }
-
 .branch-box .name {
     font-size: 15px;
 }
-
 .branch-box .action {
     width: 150px;
 }
-
-.branch-box td.date, .branch-box td.behind, .branch-box td.ahead {
+.branch-box td.date,
+.branch-box td.behind,
+.branch-box td.ahead {
     width: 120px;
     font-family: Verdana, Arial, sans-serif;
 }
-
 .branch-box .graph {
     display: block;
     height: 3px;
 }
-
 .branch-box .behind {
     text-align: right;
     direction: rtl;
 }
-
 .branch-box .behind .graph {
     background-color: #888;
 }
-
 .branch-box .ahead .graph {
     background-color: #0093c4;
 }
-
 .branch-box .branch-main {
     background-color: #444;
     color: #FFF;
     border-color: #444;
 }
-
 .branch-box .branch-main a {
     color: #FFF;
 }
-
 .branch-box .branch-main .name .btn {
     margin-left: .5em;
 }
-
 #commits-search-form {
     margin-top: 4px;
 }
-
-.commit-box .avatar, .diff-head-box .avatar {
+.commit-box .avatar,
+.diff-head-box .avatar {
     width: 20px;
     height: 20px;
     margin-right: 8px;
     vertical-align: top;
 }
-
 .commit-box td {
     background-color: #FFF;
 }
-
 .commit-list .date {
     width: 120px;
 }
-
 .commit-list .author {
     min-width: 180px;
 }
-
 .commit-list .sha a {
     font-family: Consolas, Menlo, Monaco, "Lucida Console", monospace;
     font-size: 14px;
 }
-
-.guide-box pre, .guide-box .input-group {
+.guide-box pre,
+.guide-box .input-group {
     margin-top: 20px;
     margin-bottom: 30px;
     line-height: 24px;
 }
-
 .guide-box input[readonly] {
     background-color: #FFF;
 }
-
-.guide-box, .diff-head-box {
+.guide-box,
+.diff-head-box {
     margin-top: 4px;
 }
-
 .guide-box .zclip {
     left: auto !important;
 }
-
 .diff-head-box h4 {
     margin-top: 0;
     margin-bottom: 0;
     line-height: 26px;
 }
-
 .diff-head-box p {
     margin-bottom: 0;
 }
-
 .diff-head-box .sha {
     margin-left: 8px;
 }
-
 .diff-head-box a.name {
     color: #444;
     margin-right: 8px;
 }
-
 .diff-head-box span.time {
     color: #888;
 }
-
 .diff-detail-box {
     margin-bottom: 16px;
     line-height: 30px;
 }
-
 .diff-detail-box span.status {
     display: inline-block;
     width: 12px;
@@ -1180,12 +992,10 @@ html, body {
     margin-right: 8px;
     vertical-align: middle;
 }
-
 .diff-detail-box ol {
     padding-left: 0;
     margin-bottom: 28px;
 }
-
 .diff-detail-box li {
     list-style: none;
     padding-bottom: 4px;
@@ -1193,121 +1003,103 @@ html, body {
     border-bottom: 1px dashed #DDD;
     padding-left: 6px;
 }
-
 .diff-detail-box span.status.modify {
     background-color: #f0db88;
 }
-
 .diff-detail-box span.status.add {
     background-color: #b4e2b4;
 }
-
 .diff-detail-box span.status.del {
     background-color: #e9aeae;
 }
-
 .diff-detail-box span.status.rename {
     background-color: #dad8ff;
 }
-
 .diff-file-box .panel-heading {
     padding: 10px 20px;
     line-height: 26px;
 }
-
 .diff-box .count {
     margin-right: 12px;
 }
-
 .diff-box .count .bar {
     width: 40px;
     display: inline-block;
     margin: 2px 4px 0 4px;
     vertical-align: text-top;
 }
-
 .diff-box .file {
     color: #888;
 }
-
 #source .file-content.diff-file-box {
     margin-bottom: 20px;
 }
-
 .diff-box .count .bar .add {
     background-color: #77c64a;
     height: 12px;
 }
-
-.diff-box .count .bar .del, .diff-box .count .bar {
+.diff-box .count .bar .del,
+.diff-box .count .bar {
     background-color: #e75316;
     height: 12px;
 }
-
 .diff-file-box .file-body.file-code .lines-code > pre {
     margin: 0;
     padding: 3px;
 }
-
 .diff-file-box .file-body.file-code .lines-num-old {
     border-right: 1px solid #DDD;
 }
-
 .diff-file-box .code-bin td {
     padding: 20px;
 }
-
-.diff-file-box .code-diff tbody tr.tag-code td, .diff-file-box .code-diff tbody tr.tag-code pre {
+.diff-file-box .code-diff tbody tr.tag-code td,
+.diff-file-box .code-diff tbody tr.tag-code pre {
     background-color: #E0E0E0 !important;
     border-color: #ADADAD !important;
 }
-
-.diff-file-box .code-diff tbody tr.add-code td, .diff-file-box .code-diff tbody tr.add-code pre {
+.diff-file-box .code-diff tbody tr.add-code td,
+.diff-file-box .code-diff tbody tr.add-code pre {
     background-color: #d1ffd6 !important;
     border-color: #b4e2b4 !important;
 }
-
-.diff-file-box .code-diff tbody tr.del-code td, .diff-file-box .code-diff tbody tr.del-code pre {
+.diff-file-box .code-diff tbody tr.del-code td,
+.diff-file-box .code-diff tbody tr.del-code pre {
     background-color: #ffe2dd !important;
     border-color: #e9aeae !important;
 }
-
-.diff-file-box .code-diff tbody tr:hover td, .diff-file-box .code-diff tbody tr:hover pre {
+.diff-file-box .code-diff tbody tr:hover td,
+.diff-file-box .code-diff tbody tr:hover pre {
     background-color: #fff8d2 !important;
     border-color: #f0db88 !important;
 }
-
 .diff-file-box .ellipsis-code pre {
     color: #AAA;
 }
-
 /* issue */
 
 #issue-create-form .avatar {
     width: 50px;
     height: 50px;
 }
-
 #issue-create-form .panel-body {
     padding: 15px 0 0 0;
 }
-
-#issue-create-form .panel-body.form-group, #issue-create-form .tab-pane .form-group {
+#issue-create-form .panel-body.form-group,
+#issue-create-form .tab-pane .form-group {
     margin-bottom: 0;
 }
-
-#issue-create-form .nav-tabs, #issue .issue-reply .nav-tabs, #issue .issue-edit-content .nav-tabs {
+#issue-create-form .nav-tabs,
+#issue .issue-reply .nav-tabs,
+#issue .issue-edit-content .nav-tabs {
     margin-bottom: 10px;
 }
-
 #issue .md-help {
     margin-top: 6px;
 }
-
 #issue .filters ul {
     margin-bottom: 0;
 }
-
 #issue .filter-list a {
     padding: 6px 10px;
     font-size: 14px;
@@ -1316,57 +1108,46 @@ html, body {
     border-radius: 3px;
     color: #444;
 }
-
 #issue .filter-list a.sm {
     font-size: 13px;
 }
-
 #issue .filter-list hr {
     border-color: #CCC;
 }
-
 #issue .filter-list li a:hover {
     background-color: #DDD;
     text-decoration: none;
 }
-
 #issue .filter-list li a.active {
     background-color: #4183c4;
     color: #FFF;
 }
-
 #issue .filter-option {
     margin-bottom: 12px;
 }
-
 #issue .filters > div {
     margin-bottom: 16px;
     padding-bottom: 16px;
     border-bottom: 1px solid #CCC;
 }
-
 #issue .label-filter li {
     line-height: 24px;
     margin-top: 4px;
 }
-
 #issue .label-filter a {
     color: #666;
     font-weight: bold;
     padding: 0 4px;
     display: block;
 }
-
 #issue .label-filter li.label-item:hover {
     background-color: #FFF;
 }
-
 #issue .label-filter .count {
     font-size: 12px;
     margin-right: 6px;
     color: #888;
 }
-
 #issue .label-filter .color {
     float: left;
     height: 12px;
@@ -1375,79 +1156,64 @@ html, body {
     margin-right: 12px;
     margin-top: 6px;
 }
-
 #issue .label-filter .del {
     margin-top: -24px;
     color: #888;
     display: none;
 }
-
 #issue .label-filter .label-button {
     margin-top: 16px;
 }
-
 #issue .list-group .list-group-item {
     background-color: #FFF;
 }
-
 #issue .issue-item:hover {
     background-color: rgba(19, 95, 215, 0.03);
 }
-
 #issue .list-group .list-group-item.unread {
     border-left: 2px solid #DD4B39;
 }
-
 #issue .issue-item .title {
     margin-bottom: 16px;
     font-weight: bold;
 }
-
 #issue .issue-item h5.title a {
     color: #444;
 }
-
 #issue .issue-item h5 .labels .label {
     margin-left: 12px;
 }
-
 #issue .issue-item .info span {
     margin-right: 12px;
     color: #888;
     line-height: 20px;
 }
-
-#issue .issue-item .info a, #issue .issue-item .number {
+#issue .issue-item .info a,
+#issue .issue-item .number {
     color: #888;
 }
-
 #issue .issue-item .number {
     margin-top: 8px;
 }
-
 #issue .issue-item .avatar {
     margin-right: 8px;
     width: 20px;
     height: 20px;
     vertical-align: top;
 }
-
 #issue .issue-whole .title {
     margin-top: 0;
     font-size: 28px;
 }
-
 #issue .issue-whole .number {
     font-size: 26px;
     color: #AAA;
 }
-
 #issue .issue-head .author .avatar {
     width: 48px;
     height: 48px;
     margin-right: 16px;
 }
-
 #issue .issue-head .info {
     width: 99%;
     margin-top: 10px;
@@ -1456,227 +1222,199 @@ html, body {
     padding-bottom: 20px;
     border-bottom: 1px solid #CCC;
 }
-
 #issue .issue-head .status {
     font-size: 16px;
     font-weight: bold;
     padding: 6px 18px;
     border-radius: 3px;
 }
-
 #issue .issue-head a.author {
     margin-left: .6em;
     color: #444;
 }
-
 #issue .issue-main {
     padding-left: 0;
 }
-
 #issue .issue-content {
     border-bottom-width: 1px;
 }
-
 #issue .issue-child .user .avatar {
     width: 42px;
     height: 42px;
     margin-right: 12px;
 }
-
 #issue .issue-child .issue-content {
     margin-left: 56px;
 }
-
 #issue .issue-child .panel-heading {
     padding-top: 10px;
     padding-bottom: 10px;
     font-weight: normal;
 }
-
-#issue .issue-child .panel-heading .user, #issue .issue-closed a.user, #issue .issue-opened a.user {
+#issue .issue-child .panel-heading .user,
+#issue .issue-closed a.user,
+#issue .issue-opened a.user {
     font-weight: bold;
 }
-
 #issue .issue-line {
     border-color: #CCC;
 }
-
 #issue .issue-is-closed .issue-line {
     display: none;
 }
-
 #issue .issue-head .info .btn {
     margin-top: -8px;
     margin-left: 8px;
 }
-
 #issue .issue-action {
     padding-left: 8px;
     color: #888;
     width: 24px;
 }
-
 #issue-edit-title {
     width: 60%;
 }
-
-#issue .issue-closed .issue-content, #issue .issue-opened .issue-content {
+#issue .issue-closed .issue-content,
+#issue .issue-opened .issue-content {
     line-height: 42px;
 }
-
-#issue .issue-closed, #issue .issue-opened {
+#issue .issue-closed,
+#issue .issue-opened {
     border-bottom: 2px solid #CCC;
     margin-bottom: 24px;
     padding-bottom: 24px;
 }
-
-#issue .issue-closed .label-danger, #issue .issue-opened .label-success {
+#issue .issue-closed .label-danger,
+#issue .issue-opened .label-success {
     margin: 0 .8em;
 }
-
 #issue .milestone-item .actions {
     margin-top: 10px;
 }
-
 #issue .milestone-item .actions a {
     margin-left: 8px;
 }
-
 #issue .milestone-item hr {
     width: 100%;
     padding-top: 8px;
     margin-top: 48px;
     margin-bottom: 8px;
 }
-
 #issue .milestone-item .label {
     margin-top: 8px;
     float: left;
     padding: .5em;
     margin-left: .8em;
 }
-
-#issue .assignee.dropdown-menu, #issue .assignee ul, #issue .milestone.dropdown-menu, #issue .milestone ul {
+#issue .assignee.dropdown-menu,
+#issue .assignee ul,
+#issue .milestone.dropdown-menu,
+#issue .milestone ul {
     padding: 0;
     margin: 0;
     min-width: 300px;
 }
-
-#issue .issue-bar .assignee, #issue .issue-bar .assignee ul {
+#issue .issue-bar .assignee,
+#issue .issue-bar .assignee ul {
     min-width: 160px;
 }
-
-#issue .issue-bar .assignee .dropdown-menu, #issue .issue-bar .milestone .dropdown-menu, #issue .issue-bar .labels .dropdown-menu {
+#issue .issue-bar .assignee .dropdown-menu,
+#issue .issue-bar .milestone .dropdown-menu,
+#issue .issue-bar .labels .dropdown-menu {
     padding: 0;
     margin: 0;
 }
-
-#issue .assignee li, #issue .milestone li.clear-milestone {
+#issue .assignee li,
+#issue .milestone li.clear-milestone {
     padding: 4px 12px;
     line-height: 30px;
 }
-
 #issue .milestone .milestone-item {
     padding: 8px 12px;
 }
-
 #issue .milestone li.milestone-item {
     border-bottom: 1px solid #CCC;
 }
-
 #issue .milestone li.milestone-item:last-child {
     border-bottom: none;
 }
-
 #issue .milestone .milestone-item p {
     margin-bottom: 0;
 }
-
-#issue .assignee li:hover, #issue .milestone li.clear-milestone:hover, #issue .milestone li.milestone-item:hover {
+#issue .assignee li:hover,
+#issue .milestone li.clear-milestone:hover,
+#issue .milestone li.milestone-item:hover {
     background-color: #e8f0ff;
     cursor: pointer;
 }
-
-#issue .assignee li img, #issue .issue-bar .assignee img {
+#issue .assignee li img,
+#issue .issue-bar .assignee img {
     width: 28px;
     height: 28px;
     margin-right: 12px;
 }
-
 #issue .issue-bar > div {
     padding-bottom: 8px;
     margin-bottom: 40px;
     border-bottom: 1px solid #CCC;
 }
-
 #issue .issue-bar .assignee {
     line-height: 30px;
 }
-
-#issue .issue-bar .assignee .action, #issue .issue-bar .milestone .action, #issue .issue-bar .labels .action {
+#issue .issue-bar .assignee .action,
+#issue .issue-bar .milestone .action,
+#issue .issue-bar .labels .action {
     position: relative;
     margin-top: -6px;
 }
-
 #issue .issue-bar .milestone .completion {
     margin-top: 20px;
     margin-bottom: 12px;
 }
-
 #issue .issue-bar .milestone .completion span {
     display: block;
     height: 12px;
     background-color: #77c64a;
 }
-
 #issue .milestone .nav-tabs a {
     padding: 4px 8px;
     border-top: none;
 }
-
 #milestone {
     margin-left: 24px;
     margin-right: 12px;
 }
-
 #issue .issue-bar .labels .label-item {
     padding: 2px 12px 4px 12px;
     border-radius: 2px;
     text-shadow: 0 0 2px #444;
 }
-
-#issue .label-selected .count, #issue .label-selected a {
+#issue .label-selected .count,
+#issue .label-selected a {
     color: #FAFAFA;
 }
-
 #issue .label-selected a {
     text-shadow: 0 0 2px #444;
 }
-
 #issue .issue-bar .labels .label-white {
     color: #FFF;
 }
-
 #issue .issue-bar .labels .label-black {
     color: #444;
 }
-
 #issue .issue-bar .labels .dropdown-menu ul {
     margin: 0;
     width: 180px;
 }
-
 #issue .issue-bar .labels .dropdown-menu li {
     line-height: 30px;
     padding-left: 12px;
     border-bottom: 1px solid #DDD;
 }
-
 #issue .issue-bar .labels .dropdown-menu li:hover {
     background-color: #e8f0ff;
     cursor: pointer;
 }
-
 #issue .issue-bar .labels .color {
     display: inline-block;
     width: 16px;
@@ -1684,21 +1422,18 @@ html, body {
     vertical-align: text-top;
     margin-right: 6px;
 }
-
 #issue .issue-bar .labels .no-checked .color {
     margin-left: 26px;
 }
-
-#label-color-ipt2, #label-color-change-ipt2 {
+#label-color-ipt2,
+#label-color-change-ipt2 {
     width: 120px;
     display: inline-block;
     vertical-align: top;
 }
-
 #label-color-change-ipt2 {
     margin-top: 1px;
 }
-
 /* wrapper and footer */
 
 #wrapper {
@@ -1708,32 +1443,27 @@ html, body {
     margin: 0 auto -100px;
     padding: 0 0 100px;
 }
-
 #footer {
     background: #fff;
     -webkit-box-shadow: 0 -1px 3px rgba(0, 0, 0, 0.05);
-    box-shadow: 0 -1px 3px rgba(0, 0, 0, 0.05);;
+    box-shadow: 0 -1px 3px rgba(0, 0, 0, 0.05);
+    ;
     height: 100px;
 }
-
 #footer .footer-wrap {
     padding: 20px 15px;
 }
-
 #footer a {
     color: #000;
 }
-
 /* admin dashboard/configuration */
 
 .admin-dl-horizontal > dt {
     width: 220px;
 }
-
 .admin-dl-horizontal > dd {
     margin-left: 240px;
 }
-
 /* release page */
 
 #release-head {
@@ -1742,26 +1472,22 @@ html, body {
     margin-bottom: 0;
     border-bottom: 1px solid #DDD;
 }
-
 #release .release-item .col-md-10 {
     border-left: 1px solid #DDD;
     position: relative;
 }
-
-#release .release-item .commit, #release .release-item .tag {
+#release .release-item .commit,
+#release .release-item .tag {
     display: block;
     margin-top: 12px;
 }
-
 #release .release-item.release-tag .commit {
     margin-top: 6px;
 }
-
 #release .release-item .title {
     line-height: 30px;
     margin-top: 0;
 }
-
 #release .release-item .dot {
     width: 9px;
     height: 9px;
@@ -1774,288 +1500,231 @@ html, body {
     border-radius: 6px;
     border: 1px solid #FFF;
 }
-
 #release .release-item > div {
     padding-top: 20px;
     padding-bottom: 20px;
 }
-
 #release .release-item p.info {
     line-height: 20px;
     color: #666;
     margin-bottom: 18px;
 }
-
 #release .release-item div.desc {
     margin-bottom: 18px;
 }
-
-#release .release-item p.info > *, #release .release-item .download a {
+#release .release-item p.info > *,
+#release .release-item .download a {
     margin-right: 12px;
 }
-
 #release .release-item .info .avatar {
     vertical-align: middle;
 }
-
 #release-new-form {
     margin-top: 24px;
 }
-
 #release-new-form .target-at {
     margin: 0 1em;
 }
-
 #release-new-form .target-text {
     color: #888;
 }
-
 #release-new-target-branch-list {
     padding-top: 0;
     padding-bottom: 0;
     min-width: 200px;
 }
-
 #release-new-target-branch-list ul {
     margin-bottom: 0;
 }
-
 #release-new-target-branch-list li {
     padding: 8px 20px;
 }
-
 #release-new-target-branch-list li a {
     margin-left: 0;
     background-color: transparent;
     padding: 0;
 }
-
 #release-new-target-branch-list li a:hover {
     background-image: none;
 }
-
 #release-new-target-branch-list li:hover {
     background-color: #0093c4;
 }
-
 #release-new-target-branch-list li:hover a {
     color: #FFF;
 }
-
 #release-new-title {
     width: 50%;
 }
-
 #release-new-content-div {
     margin-top: 16px;
     padding-left: 0;
 }
-
 #release-new-content-div .md-help {
     margin-top: 6px;
 }
-
 #release-textarea .form-group {
     display: block;
 }
-
 #release-new-content {
     width: 100%;
     margin: 16px 0;
 }
-
 #release-preview {
     margin: 6px 0;
 }
-
 /*  organization */
 
 #body-nav.org-nav {
     height: 140px;
     padding: 16px 0;
 }
-
 #body-nav.org-nav.org-nav-auto {
     height: auto;
 }
-
 .org-nav > .container {
     padding-left: 0;
     padding-left: 0;
 }
-
 .org-nav .org-logo {
     margin-right: 16px;
     width: 100px;
     height: 100px;
 }
-
 .org-nav .org-small-logo {
     margin-right: 16px;
     width: 50px;
     height: 50px;
 }
-
 .org-nav .org-name {
     margin-top: 0;
 }
-
 .org-nav-auto .org-name {
     font-size: 1.4em;
     line-height: 48px;
 }
-
 #body-nav.org-nav-auto .nav {
     margin-top: 6px;
 }
-
 #body-nav.org-nav-auto .nav a:hover {
     text-decoration: none;
 }
-
 .org-description {
     font-size: 16px;
 }
-
-.org-meta li, .org-meta li a, .org-repo-update, .org-repo-status, .org-team-meta {
+.org-meta li,
+.org-meta li a,
+.org-repo-update,
+.org-repo-status,
+.org-team-meta {
     color: #888;
 }
-
 .org-meta li {
     margin-right: 12px;
 }
-
 .org-meta li a:hover {
     text-decoration: underline;
 }
-
 .org-meta .fa {
     margin-left: 0;
 }
-
 .org-main {
     padding-left: 0;
 }
-
 .org-sidebar {
     margin-top: -100px;
 }
-
 .org-panel .panel-heading {
     font-size: 18px;
 }
-
 .org-repo-status {
     font-family: Verdana, Arial, Helvetica, sans-serif;
 }
-
 .org-repo-item {
     border-bottom: 1px solid #DDD;
     padding-bottom: 18px;
 }
-
 .org-member img {
     width: 60px;
     height: 60px;
     border-radius: 4px;
 }
-
 .org-member {
     display: inline-block;
     padding: 2px;
 }
-
 .org-team-name {
     font-size: 15px;
     margin-bottom: 0;
     color: #444;
 }
-
 .org-team {
     border-bottom: 1px solid #DDD;
     margin-bottom: 12px;
 }
-
 .org-team:last-child {
     border: none;
 }
-
 .org-team a {
     display: block;
 }
-
 .org-team a:hover {
     text-decoration: none;
 }
-
 .org-team a:hover .org-team-name {
     color: #0079bc !important;
 }
-
 #org-members {
     margin-right: 30px;
 }
-
 #org-members .member .avatar img {
     width: 50px;
     height: 50px;
 }
-
 #org-members .member {
     padding-bottom: 20px;
     margin-bottom: 20px;
     border-bottom: 1px solid #DDD;
     height: 70px;
 }
-
 #org-members .member .name {
     padding-top: 4px;
 }
-
 #org-members .member .nick {
     display: block;
     color: #888;
 }
-
 #org-members .member .name a {
     color: #444;
 }
-
 #org-members .member .name strong {
     font-size: 1.2em;
 }
-
-#org-members .status, #org-members .role {
+#org-members .status,
+#org-members .role {
     line-height: 48px;
     text-align: right;
 }
-
 #org-teams .org-team .panel-heading {
     margin-top: 0;
 }
-
 #org-teams .org-team .panel-heading a {
     color: #444;
 }
-
 #org-teams .org-team-members {
     margin-top: 18px;
 }
-
 #org-teams .org-team-members img {
     width: 40px;
     height: 40px;
     margin-right: 12px;
 }
-
 #org-teams .org-team-members a {
     display: inline-block;
 }
-
 #org-teams .org-team .panel-footer {
     height: 60px;
 }
-
 #org-teams .org-team {
     border-bottom: none;
 }

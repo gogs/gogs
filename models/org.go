@@ -10,6 +10,16 @@ import (
 	"github.com/gogits/gogs/modules/base"
 )
 
+// IsOrgOwner returns true if given user is in the owner team.
+func (org *User) IsOrgOwner(uid int64) bool {
+	return IsOrganizationOwner(org.Id, uid)
+}
+
+// IsOrgMember returns true if given user is member of organization.
+func (org *User) IsOrgMember(uid int64) bool {
+	return IsOrganizationMember(org.Id, uid)
+}
+
 // GetOwnerTeam returns owner team of organization.
 func (org *User) GetOwnerTeam() (*Team, error) {
 	t := &Team{
@@ -167,6 +177,18 @@ type Team struct {
 	RepoIds     string `xorm:"TEXT"`
 	NumMembers  int
 	NumRepos    int
+	Members     []*User `xorm:"-"`
+}
+
+// IsTeamMember returns true if given user is a member of team.
+func (t *Team) IsMember(uid int64) bool {
+	return IsTeamMember(t.OrgId, t.Id, uid)
+}
+
+// GetMembers returns all members in given team of organization.
+func (t *Team) GetMembers() (err error) {
+	t.Members, err = GetTeamMembers(t.OrgId, t.Id)
+	return err
 }
 
 // NewTeam creates a record of new team.
@@ -205,6 +227,18 @@ type OrgUser struct {
 	NumTeam  int
 }
 
+// IsOrganizationOwner returns true if given user is in the owner team.
+func IsOrganizationOwner(orgId, uid int64) bool {
+	has, _ := x.Where("is_owner=?", true).And("uid=?", uid).And("org_id=?", orgId).Get(new(OrgUser))
+	return has
+}
+
+// IsOrganizationMember returns true if given user is member of organization.
+func IsOrganizationMember(orgId, uid int64) bool {
+	has, _ := x.Where("uid=?", uid).And("org_id=?", orgId).Get(new(OrgUser))
+	return has
+}
+
 // GetOrgUsersByUserId returns all organization-user relations by user ID.
 func GetOrgUsersByUserId(uid int64) ([]*OrgUser, error) {
 	ous := make([]*OrgUser, 0, 10)
@@ -217,18 +251,6 @@ func GetOrgUsersByOrgId(orgId int64) ([]*OrgUser, error) {
 	ous := make([]*OrgUser, 0, 10)
 	err := x.Where("org_id=?", orgId).Find(&ous)
 	return ous, err
-}
-
-// IsOrganizationOwner returns true if given user is in the owner team.
-func IsOrganizationOwner(orgId, uid int64) bool {
-	has, _ := x.Where("is_owner=?", true).Get(&OrgUser{Uid: uid, OrgId: orgId})
-	return has
-}
-
-// IsOrganizationMember returns true if given user is member of organization.
-func IsOrganizationMember(orgId, uid int64) bool {
-	has, _ := x.Get(&OrgUser{Uid: uid, OrgId: orgId})
-	return has
 }
 
 // ___________                    ____ ___
@@ -244,6 +266,12 @@ type TeamUser struct {
 	Uid    int64
 	OrgId  int64 `xorm:"INDEX"`
 	TeamId int64
+}
+
+// IsTeamMember returns true if given user is a member of team.
+func IsTeamMember(orgId, teamId, uid int64) bool {
+	has, _ := x.Where("uid=?", uid).And("org_id=?", orgId).And("team_id=?", teamId).Get(new(TeamUser))
+	return has
 }
 
 // GetTeamMembers returns all members in given team of organization.

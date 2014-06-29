@@ -13,11 +13,11 @@ import (
 	"strings"
 
 	"github.com/codegangsta/cli"
-	"github.com/satori/go.uuid"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/setting"
+	"github.com/gogits/gogs/modules/uuid"
 )
 
 var CmdServ = cli.Command{

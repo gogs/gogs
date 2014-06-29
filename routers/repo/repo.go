@@ -90,7 +90,7 @@ func CreatePost(ctx *middleware.Context, form auth.CreateRepoForm) {
 		}
 
 		// Check ownership of organization.
-		if !models.IsOrganizationOwner(u.Id, ctx.User.Id) {
+		if !u.IsOrgOwner(ctx.User.Id) {
 			ctx.Error(403)
 			return
 		}

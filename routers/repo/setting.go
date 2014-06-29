@@ -123,7 +123,7 @@ func SettingPost(ctx *middleware.Context, form auth.RepoSettingForm) {
 		}
 
 		if ctx.Repo.Owner.IsOrganization() &&
-			!models.IsOrganizationOwner(ctx.Repo.Owner.Id, ctx.User.Id) {
+			!ctx.Repo.Owner.IsOrgOwner(ctx.User.Id) {
 			ctx.Error(403)
 			return
 		}
