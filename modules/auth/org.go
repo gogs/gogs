@@ -14,6 +14,13 @@ import (
 	"github.com/gogits/gogs/modules/middleware/binding"
 )
 
+// ________                            .__                __  .__
+// \_____  \_______  _________    ____ |__|____________ _/  |_|__| ____   ____
+//  /   |   \_  __ \/ ___\__  \  /    \|  \___   /\__  \\   __\  |/  _ \ /    \
+// /    |    \  | \/ /_/  > __ \|   |  \  |/    /  / __ \|  | |  (  <_> )   |  \
+// \_______  /__|  \___  (____  /___|  /__/_____ \(____  /__| |__|\____/|___|  /
+//         \/     /_____/     \/     \/         \/     \/                    \/
+
 type CreateOrgForm struct {
 	OrgName string `form:"orgname" binding:"Required;AlphaDashDot;MaxSize(30)"`
 	Email   string `form:"email" binding:"Required;Email;MaxSize(50)"`
@@ -54,4 +61,30 @@ func (f *OrgSettingForm) Name(field string) string {
 func (f *OrgSettingForm) Validate(errors *binding.Errors, req *http.Request, context martini.Context) {
 	data := context.Get(reflect.TypeOf(base.TmplData{})).Interface().(base.TmplData)
 	validate(errors, data, f)
+}
+
+// ___________
+// \__    ___/___ _____    _____
+//   |    |_/ __ \\__  \  /     \
+//   |    |\  ___/ / __ \|  Y Y  \
+//   |____| \___  >____  /__|_|  /
+//              \/     \/      \/
+
+type CreateTeamForm struct {
+	TeamName    string `form:"name" binding:"Required;AlphaDashDot;MaxSize(30)"`
+	Description string `form:"desc" binding:"MaxSize(255)"`
+	Permission  string `form:"permission"`
+}
+
+func (f *CreateTeamForm) Name(field string) string {
+	names := map[string]string{
+		"TeamName":    "Team name",
+		"Description": "Team description",
+	}
+	return names[field]
+}
+
+func (f *CreateTeamForm) Validate(errs *binding.Errors, req *http.Request, ctx martini.Context) {
+	data := ctx.Get(reflect.TypeOf(base.TmplData{})).Interface().(base.TmplData)
+	validate(errs, data, f)
 }

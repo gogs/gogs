@@ -5,9 +5,15 @@
 package models
 
 import (
+	"errors"
 	"strings"
 
 	"github.com/gogits/gogs/modules/base"
+)
+
+var (
+	ErrOrgNotExist      = errors.New("Organization does not exist")
+	ErrTeamAlreadyExist = errors.New("Team already exist")
 )
 
 // IsOrgOwner returns true if given user is in the owner team.
@@ -156,6 +162,13 @@ func DeleteOrganization(org *User) (err error) {
 	return sess.Commit()
 }
 
+// ___________
+// \__    ___/___ _____    _____
+//   |    |_/ __ \\__  \  /     \
+//   |    |\  ___/ / __ \|  Y Y  \
+//   |____| \___  >____  /__|_|  /
+//              \/     \/      \/
+
 type AuthorizeType int
 
 const (
@@ -192,11 +205,41 @@ func (t *Team) GetMembers() (err error) {
 }
 
 // NewTeam creates a record of new team.
+// It's caller's responsibility to assign organization ID.
 func NewTeam(t *Team) error {
-	// TODO: check if same name team of organization exists.
+	has, err := x.Id(t.OrgId).Get(new(User))
+	if err != nil {
+		return err
+	} else if !has {
+		return ErrOrgNotExist
+	}
+
 	t.LowerName = strings.ToLower(t.Name)
-	_, err := x.Insert(t)
-	return err
+	has, err = x.Where("org_id=?", t.OrgId).And("lower_name=?", t.LowerName).Get(new(Team))
+	if err != nil {
+		return err
+	} else if has {
+		return ErrTeamAlreadyExist
+	}
+
+	sess := x.NewSession()
+	defer sess.Close()
+	if err = sess.Begin(); err != nil {
+		return err
+	}
+
+	if _, err = sess.Insert(t); err != nil {
+		sess.Rollback()
+		return err
+	}
+
+	// Update organization number of teams.
+	rawSql := "UPDATE `user` SET num_teams = num_teams + 1 WHERE id = ?"
+	if _, err = sess.Exec(rawSql, t.OrgId); err != nil {
+		sess.Rollback()
+		return err
+	}
+	return sess.Commit()
 }
 
 // UpdateTeam updates information of team.
