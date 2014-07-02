@@ -195,9 +195,10 @@ func runWeb(*cli.Context) {
 		r.Get("/:org/dashboard", org.Dashboard)
 		r.Get("/:org/members", org.Members)
 
-		r.Get("/:org/teams/:team/edit", org.EditTeam)
-		r.Get("/:org/teams/new", org.NewTeam)
 		r.Get("/:org/teams", org.Teams)
+		r.Get("/:org/teams/new", org.NewTeam)
+		r.Post("/:org/teams/new", bindIgnErr(auth.CreateTeamForm{}), org.NewTeamPost)
+		r.Get("/:org/teams/:team/edit", org.EditTeam)
 
 		r.Get("/:org/settings", org.Settings)
 		r.Post("/:org/settings", bindIgnErr(auth.OrgSettingForm{}), org.SettingsPost)
