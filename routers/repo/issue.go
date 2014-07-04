@@ -687,9 +687,17 @@ func Comment(ctx *middleware.Context, params martini.Params) {
 	}
 
 	// Notify watchers.
-	if err = models.NotifyWatchers(&models.Action{ActUserId: ctx.User.Id, ActUserName: ctx.User.Name, ActEmail: ctx.User.Email,
-		OpType: models.OP_COMMENT_ISSUE, Content: fmt.Sprintf("%d|%s", issue.Index, strings.Split(content, "\n")[0]),
-		RepoId: ctx.Repo.Repository.Id, RepoName: ctx.Repo.Repository.Name, RefName: ""}); err != nil {
+	act := &models.Action{
+		ActUserId:    ctx.User.Id,
+		ActUserName:  ctx.User.LowerName,
+		ActEmail:     ctx.User.Email,
+		OpType:       models.OP_COMMENT_ISSUE,
+		Content:      fmt.Sprintf("%d|%s", issue.Index, strings.Split(content, "\n")[0]),
+		RepoId:       ctx.Repo.Repository.Id,
+		RepoUserName: ctx.Repo.Owner.LowerName,
+		RepoName:     ctx.Repo.Repository.LowerName,
+	}
+	if err = models.NotifyWatchers(act); err != nil {
 		ctx.Handle(500, "issue.CreateIssue(NotifyWatchers)", err)
 		return
 	}
