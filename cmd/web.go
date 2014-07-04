@@ -58,8 +58,8 @@ func newMartini() *martini.ClassicMartini {
 	m := martini.New()
 	m.Use(middleware.Logger())
 	m.Use(martini.Recovery())
-	m.Use(martini.Static(path.Join(setting.StaticRootPath, "public"),
-		martini.StaticOptions{SkipLogging: !setting.DisableRouterLog}))
+	m.Use(middleware.Static("public",
+		middleware.StaticOptions{SkipLogging: !setting.DisableRouterLog}))
 	m.MapTo(r, (*martini.Routes)(nil))
 	m.Action(r.Handle)
 	return &martini.ClassicMartini{m, r}
