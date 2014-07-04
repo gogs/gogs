@@ -260,7 +260,7 @@ func RepoAssignment(redirect bool, args ...bool) martini.Handler {
 	}
 }
 
-func RequireOwner() martini.Handler {
+func RequireTrueOwner() martini.Handler {
 	return func(ctx *Context) {
 		if !ctx.Repo.IsTrueOwner {
 			if !ctx.IsSigned {
