@@ -35,9 +35,8 @@ func RepoAssignment(redirect bool, args ...bool) martini.Handler {
 		}
 
 		var (
-			user        *models.User
-			err         error
-			isTrueOwner bool
+			user *models.User
+			err  error
 		)
 
 		userName := params["username"]
@@ -52,10 +51,10 @@ func RepoAssignment(redirect bool, args ...bool) martini.Handler {
 				ctx.Handle(500, "RepoAssignment(HasAccess)", err)
 				return
 			}
-			isTrueOwner = ctx.User.LowerName == strings.ToLower(userName)
+			ctx.Repo.IsTrueOwner = ctx.User.LowerName == strings.ToLower(userName)
 		}
 
-		if !isTrueOwner {
+		if !ctx.Repo.IsTrueOwner {
 			user, err = models.GetUserByName(userName)
 			if err != nil {
 				if err == models.ErrUserNotExist {
@@ -81,6 +80,11 @@ func RepoAssignment(redirect bool, args ...bool) martini.Handler {
 			return
 		}
 		ctx.Repo.Owner = user
+
+		// Organization owner team members are true owners as well.
+		if ctx.Repo.Owner.IsOrganization() && ctx.Repo.Owner.IsOrgOwner(ctx.User.Id) {
+			ctx.Repo.IsTrueOwner = true
+		}
 
 		// get repository
 		repo, err := models.GetRepositoryByName(user.Id, repoName)
@@ -154,6 +158,7 @@ func RepoAssignment(redirect bool, args ...bool) martini.Handler {
 		ctx.Data["Owner"] = user
 		ctx.Data["RepoLink"] = ctx.Repo.RepoLink
 		ctx.Data["IsRepositoryOwner"] = ctx.Repo.IsOwner
+		ctx.Data["IsRepositoryTrueOwner"] = ctx.Repo.IsTrueOwner
 		ctx.Data["BranchName"] = ""
 
 		if setting.SshPort != 22 {
@@ -257,7 +262,7 @@ func RepoAssignment(redirect bool, args ...bool) martini.Handler {
 
 func RequireOwner() martini.Handler {
 	return func(ctx *Context) {
-		if !ctx.Repo.IsOwner {
+		if !ctx.Repo.IsTrueOwner {
 			if !ctx.IsSigned {
 				ctx.SetCookie("redirect_to", "/"+url.QueryEscape(ctx.Req.RequestURI))
 				ctx.Redirect("/user/login")
