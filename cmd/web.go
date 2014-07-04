@@ -186,7 +186,7 @@ func runWeb(*cli.Context) {
 		m.Get("/template/**", dev.TemplatePreview)
 	}
 
-	reqOwner := middleware.RequireOwner()
+	reqTrueOwner := middleware.RequireTrueOwner()
 
 	m.Group("/org", func(r martini.Router) {
 		r.Get("/create", org.New)
@@ -218,7 +218,7 @@ func runWeb(*cli.Context) {
 			r.Get("/hooks/:id", repo.WebHooksEdit)
 			r.Post("/hooks/:id", bindIgnErr(auth.NewWebhookForm{}), repo.WebHooksEditPost)
 		})
-	}, reqSignIn, middleware.RepoAssignment(true), reqOwner)
+	}, reqSignIn, middleware.RepoAssignment(true), reqTrueOwner)
 
 	m.Group("/:username/:reponame", func(r martini.Router) {
 		r.Get("/action/:action", repo.Action)
