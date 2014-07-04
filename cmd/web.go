@@ -26,6 +26,7 @@ import (
 	"github.com/gogits/gogs/routers"
 	"github.com/gogits/gogs/routers/admin"
 	"github.com/gogits/gogs/routers/api/v1"
+	"github.com/gogits/gogs/routers/debug"
 	"github.com/gogits/gogs/routers/dev"
 	"github.com/gogits/gogs/routers/org"
 	"github.com/gogits/gogs/routers/repo"
@@ -204,6 +205,8 @@ func runWeb(*cli.Context) {
 		r.Post("/:org/settings", bindIgnErr(auth.OrgSettingForm{}), org.SettingsPost)
 		r.Post("/:org/settings/delete", org.DeletePost)
 	}, reqSignIn)
+
+	debug.RegisterRoutes(m)
 
 	m.Group("/:username/:reponame", func(r martini.Router) {
 		r.Get("/settings", repo.Setting)
