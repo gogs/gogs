@@ -109,7 +109,7 @@ func SettingPost(ctx *middleware.Context, form auth.RepoSettingForm) {
 		} else if !isExist {
 			ctx.RenderWithErr("Please make sure you entered owner name is correct.", SETTING, nil)
 			return
-		} else if err = models.TransferOwnership(ctx.User, newOwner, ctx.Repo.Repository); err != nil {
+		} else if err = models.TransferOwnership(ctx.Repo.Owner, newOwner, ctx.Repo.Repository); err != nil {
 			ctx.Handle(500, "setting.SettingPost(transfer repository)", err)
 			return
 		}

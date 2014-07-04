@@ -620,7 +620,7 @@ func RepoPath(userName, repoName string) string {
 }
 
 // TransferOwnership transfers all corresponding setting from old user to new one.
-func TransferOwnership(user *User, newOwner string, repo *Repository) (err error) {
+func TransferOwnership(u *User, newOwner string, repo *Repository) (err error) {
 	newUser, err := GetUserByName(newOwner)
 	if err != nil {
 		return err
@@ -628,7 +628,7 @@ func TransferOwnership(user *User, newOwner string, repo *Repository) (err error
 
 	// Update accesses.
 	accesses := make([]Access, 0, 10)
-	if err = x.Find(&accesses, &Access{RepoName: user.LowerName + "/" + repo.LowerName}); err != nil {
+	if err = x.Find(&accesses, &Access{RepoName: u.LowerName + "/" + repo.LowerName}); err != nil {
 		return err
 	}
 
@@ -640,7 +640,7 @@ func TransferOwnership(user *User, newOwner string, repo *Repository) (err error
 
 	for i := range accesses {
 		accesses[i].RepoName = newUser.LowerName + "/" + repo.LowerName
-		if accesses[i].UserName == user.LowerName {
+		if accesses[i].UserName == u.LowerName {
 			accesses[i].UserName = newUser.LowerName
 		}
 		if err = UpdateAccessWithSession(sess, &accesses[i]); err != nil {
@@ -662,7 +662,7 @@ func TransferOwnership(user *User, newOwner string, repo *Repository) (err error
 		return err
 	}
 	rawSql = "UPDATE `user` SET num_repos = num_repos - 1 WHERE id = ?"
-	if _, err = sess.Exec(rawSql, user.Id); err != nil {
+	if _, err = sess.Exec(rawSql, u.Id); err != nil {
 		sess.Rollback()
 		return err
 	}
@@ -675,13 +675,13 @@ func TransferOwnership(user *User, newOwner string, repo *Repository) (err error
 		}
 	}
 
-	if err = TransferRepoAction(user, newUser, repo); err != nil {
+	if err = TransferRepoAction(u, newUser, repo); err != nil {
 		sess.Rollback()
 		return err
 	}
 
 	// Change repository directory name.
-	if err = os.Rename(RepoPath(user.Name, repo.Name), RepoPath(newUser.Name, repo.Name)); err != nil {
+	if err = os.Rename(RepoPath(u.Name, repo.Name), RepoPath(newUser.Name, repo.Name)); err != nil {
 		sess.Rollback()
 		return err
 	}
