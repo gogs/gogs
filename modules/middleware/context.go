@@ -47,22 +47,23 @@ type Context struct {
 	csrfToken string
 
 	Repo struct {
-		IsOwner    bool
-		IsWatching bool
-		IsBranch   bool
-		IsTag      bool
-		IsCommit   bool
-		HasAccess  bool
-		Repository *models.Repository
-		Owner      *models.User
-		Commit     *git.Commit
-		Tag        *git.Tag
-		GitRepo    *git.Repository
-		BranchName string
-		TagName    string
-		CommitId   string
-		RepoLink   string
-		CloneLink  struct {
+		IsOwner     bool
+		IsTrueOwner bool
+		IsWatching  bool
+		IsBranch    bool
+		IsTag       bool
+		IsCommit    bool
+		HasAccess   bool
+		Repository  *models.Repository
+		Owner       *models.User
+		Commit      *git.Commit
+		Tag         *git.Tag
+		GitRepo     *git.Repository
+		BranchName  string
+		TagName     string
+		CommitId    string
+		RepoLink    string
+		CloneLink   struct {
 			SSH   string
 			HTTPS string
 			Git   string
