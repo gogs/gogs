@@ -15,6 +15,7 @@
                     <input class="form-control input-lg" type="text" name="title" required="required" placeholder="Title" value="{{.title}}" />
                 </div>
                 <div class="form-group panel-body">
+                    {{if .IsRepositoryOwner}}
                     <span><strong id="assigned" data-no-assigned="No one">No one</strong> will be assigned</span>
                     <input type="hidden" name="assigneeid" value="0" id="assignee"/>&nbsp;&nbsp;
                     <div style="display: inline-block;position: relative">
@@ -82,6 +83,7 @@
                         </div>
                     </div>
                 </div>
+                {{end}}
                 <div class="form-group panel-body">
                     <div class="md-help pull-right"><!-- todo help link -->
                         Content with <a href="https://help.github.com/articles/markdown-basics">Markdown</a>

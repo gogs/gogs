@@ -215,7 +215,7 @@ func CreateUser(u *User) (*User, error) {
 // GetUsers returns given number of user objects with offset.
 func GetUsers(num, offset int) ([]User, error) {
 	users := make([]User, 0, num)
-	err := x.Limit(num, offset).Asc("id").Find(&users)
+	err := x.Limit(num, offset).Where("type=0").Asc("id").Find(&users)
 	return users, err
 }
 

@@ -119,6 +119,7 @@
 
             <div class="issue-bar col-md-2">
                 <div class="labels" data-ajax="{{.Issue.Index}}/label">
+                    {{if .IsRepositoryOwner}}
                     <div class="pull-right action">
                         <button class="btn btn-default btn-sm" data-toggle="dropdown">
                             <i class="fa fa-tags"></i>
@@ -136,6 +137,7 @@
                             </ul>
                         </div>
                     </div>
+                    {{end}}
                     <h4>Labels</h4>
                     {{if .Issue.Labels}}
                     {{range .Issue.Labels}}
@@ -147,6 +149,7 @@
                 </div>
                 <div class="milestone" data-milestone="{{.Milestone.Id}}" data-ajax="{{.Issue.Index}}/milestone">
                     <div class="pull-right action">
+                        {{if .IsRepositoryOwner}}
                         <button class="btn btn-default btn-sm" data-toggle="dropdown">
                             <i class="fa fa-check-square-o"></i>
                             <span class="caret"></span>
@@ -193,6 +196,7 @@
                                 </li>
                             </ul>
                         </div>
+                        {{end}}
                     </div>
                     <h4>Milestone</h4>
                     {{if .Milestone}}
