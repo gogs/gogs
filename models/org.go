@@ -6,6 +6,7 @@ package models
 
 import (
 	"errors"
+	"os"
 	"strings"
 
 	"github.com/gogits/gogs/modules/base"
@@ -93,6 +94,11 @@ func CreateOrganization(org, owner *User) (*User, error) {
 	}
 
 	if _, err = sess.Insert(org); err != nil {
+		sess.Rollback()
+		return nil, err
+	}
+
+	if err = os.MkdirAll(UserPath(org.Name), os.ModePerm); err != nil {
 		sess.Rollback()
 		return nil, err
 	}
