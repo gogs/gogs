@@ -626,45 +626,24 @@ func TransferOwnership(u *User, newOwner string, repo *Repository) (err error) {
 		return err
 	}
 
-	// Update accesses.
-	/*accesses := make([]Access, 0, 10)
-	if err = x.Find(&accesses, &Access{RepoName: u.LowerName + "/" + repo.LowerName}); err != nil {
-		return err
-	}*/
-
 	sess := x.NewSession()
 	defer sess.Close()
 	if err = sess.Begin(); err != nil {
 		return err
 	}
 
-	access := &Access{
+	if _, err = sess.Where("repo_name = ?", u.LowerName+"/"+repo.LowerName).
+		And("user_name = ?", u.LowerName).Update(&Access{UserName: newUser.LowerName}); err != nil {
+		sess.Rollback()
+		return err
+	}
+
+	if _, err = sess.Where("repo_name = ?", u.LowerName+"/"+repo.LowerName).Update(&Access{
 		RepoName: newUser.LowerName + "/" + repo.LowerName,
-	}
-
-	sess.Where("repo_name = ?", u.LowerName+"/"+repo.LowerName)
-	_, err = sess.And("user_name = ?", u.LowerName).Update(&Access{UserName: newUser.LowerName})
-	if err != nil {
+	}); err != nil {
 		sess.Rollback()
 		return err
 	}
-
-	_, err = sess.Where("repo_name = ?", u.LowerName+"/"+repo.LowerName).Update(access)
-	if err != nil {
-		sess.Rollback()
-		return err
-	}
-
-	/*
-		for i := range accesses {
-			accesses[i].RepoName = newUser.LowerName + "/" + repo.LowerName
-			if accesses[i].UserName == u.LowerName {
-				accesses[i].UserName = newUser.LowerName
-			}
-			if err = UpdateAccessWithSession(sess, &accesses[i]); err != nil {
-				return err
-			}
-		}*/
 
 	// Update repository.
 	repo.OwnerId = newUser.Id
@@ -686,26 +665,28 @@ func TransferOwnership(u *User, newOwner string, repo *Repository) (err error) {
 		return err
 	}
 
-	// Add watch of new owner to repository.
-	if !IsWatching(newUser.Id, repo.Id) {
-		if err = WatchRepo(newUser.Id, repo.Id, true); err != nil {
-			sess.Rollback()
-			return err
-		}
-	}
-
-	if err = TransferRepoAction(u, newUser, repo); err != nil {
-		sess.Rollback()
-		return err
-	}
-
 	// Change repository directory name.
 	if err = os.Rename(RepoPath(u.Name, repo.Name), RepoPath(newUser.Name, repo.Name)); err != nil {
 		sess.Rollback()
 		return err
 	}
 
-	return sess.Commit()
+	if err = sess.Commit(); err != nil {
+		return err
+	}
+
+	// Add watch of new owner to repository.
+	if !IsWatching(newUser.Id, repo.Id) {
+		if err = WatchRepo(newUser.Id, repo.Id, true); err != nil {
+			return err
+		}
+	}
+
+	if err = TransferRepoAction(u, newUser, repo); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // ChangeRepositoryName changes all corresponding setting from old repository name to new one.
