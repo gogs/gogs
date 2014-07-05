@@ -627,27 +627,48 @@ func TransferOwnership(u *User, newOwner string, repo *Repository) (err error) {
 	}
 
 	// Update accesses.
-	accesses := make([]Access, 0, 10)
+	/*accesses := make([]Access, 0, 10)
 	if err = x.Find(&accesses, &Access{RepoName: u.LowerName + "/" + repo.LowerName}); err != nil {
 		return err
-	}
+	}*/
 
+	//fmt.Println("0")
 	sess := x.NewSession()
 	defer sess.Close()
 	if err = sess.Begin(); err != nil {
 		return err
 	}
 
-	for i := range accesses {
-		accesses[i].RepoName = newUser.LowerName + "/" + repo.LowerName
-		if accesses[i].UserName == u.LowerName {
-			accesses[i].UserName = newUser.LowerName
-		}
-		if err = UpdateAccessWithSession(sess, &accesses[i]); err != nil {
-			return err
-		}
+	access := &Access{
+		RepoName: newUser.LowerName + "/" + repo.LowerName,
+		UserName: newUser.LowerName,
+	}
+	//fmt.Println("1")
+	sess.Where("repo_name = ?", u.LowerName+"/"+repo.LowerName)
+	_, err = sess.And("user_name = ?", u.LowerName).Update(&Access{UserName: newUser.LowerName})
+	if err != nil {
+		sess.Rollback()
+		return err
+	}
+	//fmt.Println("2")
+	_, err = sess.Where("repo_name = ?", u.LowerName+"/"+repo.LowerName).Update(access)
+	if err != nil {
+		sess.Rollback()
+		return err
 	}
 
+	/*
+		for i := range accesses {
+			accesses[i].RepoName = newUser.LowerName + "/" + repo.LowerName
+			if accesses[i].UserName == u.LowerName {
+				accesses[i].UserName = newUser.LowerName
+			}
+			if err = UpdateAccessWithSession(sess, &accesses[i]); err != nil {
+				return err
+			}
+		}*/
+
+	//fmt.Println("3")
 	// Update repository.
 	repo.OwnerId = newUser.Id
 	if _, err := sess.Id(repo.Id).Update(repo); err != nil {
@@ -655,17 +676,21 @@ func TransferOwnership(u *User, newOwner string, repo *Repository) (err error) {
 		return err
 	}
 
+	//fmt.Println("4")
 	// Update user repository number.
 	rawSql := "UPDATE `user` SET num_repos = num_repos + 1 WHERE id = ?"
 	if _, err = sess.Exec(rawSql, newUser.Id); err != nil {
 		sess.Rollback()
 		return err
 	}
+	//fmt.Println("5")
 	rawSql = "UPDATE `user` SET num_repos = num_repos - 1 WHERE id = ?"
 	if _, err = sess.Exec(rawSql, u.Id); err != nil {
 		sess.Rollback()
 		return err
 	}
+
+	//fmt.Println("6")
 
 	// Add watch of new owner to repository.
 	if !IsWatching(newUser.Id, repo.Id) {
@@ -675,17 +700,20 @@ func TransferOwnership(u *User, newOwner string, repo *Repository) (err error) {
 		}
 	}
 
+	//fmt.Println("7")
 	if err = TransferRepoAction(u, newUser, repo); err != nil {
 		sess.Rollback()
 		return err
 	}
 
+	//fmt.Println("8")
 	// Change repository directory name.
 	if err = os.Rename(RepoPath(u.Name, repo.Name), RepoPath(newUser.Name, repo.Name)); err != nil {
 		sess.Rollback()
 		return err
 	}
 
+	//fmt.Println("9")
 	return sess.Commit()
 }
 
