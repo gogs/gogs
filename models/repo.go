@@ -89,7 +89,7 @@ func NewRepoContext() {
 
 	// Check if server has basic git setting.
 	stdout, stderr, err := process.Exec("NewRepoContext(get setting)", "git", "config", "--get", "user.name")
-	if strings.Contains(stderr, "fatal:") {
+	if err != nil {
 		log.Fatal("repo.NewRepoContext(fail to get git user.name): %s", stderr)
 	} else if err != nil || len(strings.TrimSpace(stdout)) == 0 {
 		if _, stderr, err = process.Exec("NewRepoContext(set email)", "git", "config", "--global", "user.email", "gogitservice@gmail.com"); err != nil {
@@ -190,8 +190,8 @@ type Mirror struct {
 
 // MirrorRepository creates a mirror repository from source.
 func MirrorRepository(repoId int64, userName, repoName, repoPath, url string) error {
-	// TODO: need timeout.
-	_, stderr, err := process.Exec(fmt.Sprintf("MirrorRepository: %s/%s", userName, repoName),
+	_, stderr, err := process.ExecTimeout(10*time.Minute,
+		fmt.Sprintf("MirrorRepository: %s/%s", userName, repoName),
 		"git", "clone", "--mirror", url, repoPath)
 	if err != nil {
 		return errors.New("git clone --mirror: " + stderr)
@@ -233,9 +233,8 @@ func MirrorUpdate() {
 			return nil
 		}
 
-		// TODO: need timeout.
 		repoPath := filepath.Join(setting.RepoRootPath, m.RepoName+".git")
-		if _, stderr, err := process.ExecDir(
+		if _, stderr, err := process.ExecDir(10*time.Minute,
 			repoPath, fmt.Sprintf("MirrorUpdate: %s", repoPath),
 			"git", "remote", "update"); err != nil {
 			return errors.New("git remote update: " + stderr)
@@ -272,26 +271,23 @@ func MigrateRepository(u *User, name, desc string, private, mirror bool, url str
 		return repo, UpdateRepository(repo)
 	}
 
-	// TODO: need timeout.
 	// Clone from local repository.
-	_, stderr, err := process.Exec(
+	_, stderr, err := process.ExecTimeout(10*time.Minute,
 		fmt.Sprintf("MigrateRepository(git clone): %s", repoPath),
 		"git", "clone", repoPath, tmpDir)
 	if err != nil {
 		return repo, errors.New("git clone: " + stderr)
 	}
 
-	// TODO: need timeout.
 	// Pull data from source.
-	if _, stderr, err = process.ExecDir(
+	if _, stderr, err = process.ExecDir(3*time.Minute,
 		tmpDir, fmt.Sprintf("MigrateRepository(git pull): %s", repoPath),
 		"git", "pull", url); err != nil {
 		return repo, errors.New("git pull: " + stderr)
 	}
 
-	// TODO: need timeout.
 	// Push data to local repository.
-	if _, stderr, err = process.ExecDir(
+	if _, stderr, err = process.ExecDir(3*time.Minute,
 		tmpDir, fmt.Sprintf("MigrateRepository(git push): %s", repoPath),
 		"git", "push", "origin", "master"); err != nil {
 		return repo, errors.New("git push: " + stderr)
@@ -314,20 +310,20 @@ func extractGitBareZip(repoPath string) error {
 // initRepoCommit temporarily changes with work directory.
 func initRepoCommit(tmpPath string, sig *git.Signature) (err error) {
 	var stderr string
-	if _, stderr, err = process.ExecDir(
+	if _, stderr, err = process.ExecDir(-1,
 		tmpPath, fmt.Sprintf("initRepoCommit(git add): %s", tmpPath),
 		"git", "add", "--all"); err != nil {
 		return errors.New("git add: " + stderr)
 	}
 
-	if _, stderr, err = process.ExecDir(
+	if _, stderr, err = process.ExecDir(-1,
 		tmpPath, fmt.Sprintf("initRepoCommit(git commit): %s", tmpPath),
 		"git", "commit", fmt.Sprintf("--author='%s <%s>'", sig.Name, sig.Email),
 		"-m", "Init commit"); err != nil {
 		return errors.New("git commit: " + stderr)
 	}
 
-	if _, stderr, err = process.ExecDir(
+	if _, stderr, err = process.ExecDir(-1,
 		tmpPath, fmt.Sprintf("initRepoCommit(git push): %s", tmpPath),
 		"git", "push", "origin", "master"); err != nil {
 		return errors.New("git push: " + stderr)
@@ -583,7 +579,7 @@ func CreateRepository(u *User, name, desc, lang, license string, private, mirror
 		return nil, err
 	}
 
-	_, stderr, err := process.ExecDir(
+	_, stderr, err := process.ExecDir(-1,
 		repoPath, fmt.Sprintf("CreateRepository(git update-server-info): %s", repoPath),
 		"git", "update-server-info")
 	if err != nil {

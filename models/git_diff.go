@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 
 	"github.com/gogits/git"
 
@@ -170,10 +171,6 @@ func ParsePatch(pid int64, cmd *exec.Cmd, reader io.Reader) (*Diff, error) {
 		}
 	}
 
-	// In case process became zombie.
-	if err := process.Kill(pid); err != nil {
-		log.Error("git_diff.ParsePatch(Kill): %v", err)
-	}
 	return diff, nil
 }
 
@@ -201,10 +198,30 @@ func GetDiff(repoPath, commitid string) (*Diff, error) {
 	cmd.Stdout = wr
 	cmd.Stdin = os.Stdin
 	cmd.Stderr = os.Stderr
+
+	done := make(chan error)
 	go func() {
-		cmd.Run()
+		cmd.Start()
+		done <- cmd.Wait()
 		wr.Close()
 	}()
 	defer rd.Close()
-	return ParsePatch(process.Add(fmt.Sprintf("GetDiff(%s)", repoPath), cmd), cmd, rd)
+
+	desc := fmt.Sprintf("GetDiff(%s)", repoPath)
+	pid := process.Add(desc, cmd)
+	go func() {
+		// In case process became zombie.
+		select {
+		case <-time.After(5 * time.Minute):
+			if errKill := process.Kill(pid); errKill != nil {
+				log.Error("git_diff.ParsePatch(Kill): %v", err)
+			}
+			<-done
+			// return "", ErrExecTimeout.Error(), ErrExecTimeout
+		case err = <-done:
+			process.Remove(pid)
+		}
+	}()
+
+	return ParsePatch(pid, cmd, rd)
 }
