@@ -9,8 +9,8 @@ import (
 )
 
 func RegisterRoutes(r martini.Router) {
-	r.Get("/debug/pprof/cmdline", pprof.Cmdline)
-	r.Get("/debug/pprof/profile", pprof.Profile)
-	r.Get("/debug/pprof/symbol", pprof.Symbol)
-	r.Get("/debug/pprof/**", pprof.Index)
+	r.Any("/debug/pprof/cmdline", pprof.Cmdline)
+	r.Any("/debug/pprof/profile", pprof.Profile)
+	r.Any("/debug/pprof/symbol", pprof.Symbol)
+	r.Any("/debug/pprof/**", pprof.Index)
 }
