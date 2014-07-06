@@ -1,6 +1,8 @@
-// +build pprof
+// Copyright 2014 The Gogs Authors. All rights reserved.
+// Use of this source code is governed by a MIT-style
+// license that can be found in the LICENSE file.
 
-package debug
+package dev
 
 import (
 	"net/http/pprof"
@@ -8,7 +10,7 @@ import (
 	"github.com/go-martini/martini"
 )
 
-func RegisterRoutes(r martini.Router) {
+func RegisterDebugRoutes(r martini.Router) {
 	r.Any("/debug/pprof/cmdline", pprof.Cmdline)
 	r.Any("/debug/pprof/profile", pprof.Profile)
 	r.Any("/debug/pprof/symbol", pprof.Symbol)
