@@ -6,11 +6,22 @@ package process
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"os/exec"
 	"time"
 
 	"github.com/gogits/gogs/modules/log"
+)
+
+var (
+	ErrExecTimeout = errors.New("Process execution timeout")
+)
+
+// Common timeout.
+var (
+	// NOTE: could be custom in config file for default.
+	DEFAULT = 60 * time.Second
 )
 
 // Process represents a working process inherit from Gogs.
@@ -40,7 +51,12 @@ func Add(desc string, cmd *exec.Cmd) int64 {
 	return pid
 }
 
-func ExecDir(dir, desc, cmdName string, args ...string) (string, string, error) {
+// Exec starts executing a command in given path, it records its process and timeout.
+func ExecDir(timeout time.Duration, dir, desc, cmdName string, args ...string) (string, string, error) {
+	if timeout == -1 {
+		timeout = DEFAULT
+	}
+
 	bufOut := new(bytes.Buffer)
 	bufErr := new(bytes.Buffer)
 
@@ -48,18 +64,39 @@ func ExecDir(dir, desc, cmdName string, args ...string) (string, string, error) 
 	cmd.Dir = dir
 	cmd.Stdout = bufOut
 	cmd.Stderr = bufErr
+	if err := cmd.Start(); err != nil {
+		return "", err.Error(), err
+	}
 
 	pid := Add(desc, cmd)
-	err := cmd.Run()
-	if errKill := Kill(pid); errKill != nil {
-		log.Error("Exec: %v", pid, desc, errKill)
+	done := make(chan error)
+	go func() {
+		done <- cmd.Wait()
+	}()
+
+	var err error
+	select {
+	case <-time.After(timeout):
+		if errKill := Kill(pid); errKill != nil {
+			log.Error("Exec(%d:%s): %v", pid, desc, errKill)
+		}
+		<-done
+		return "", ErrExecTimeout.Error(), ErrExecTimeout
+	case err = <-done:
 	}
+
+	Remove(pid)
 	return bufOut.String(), bufErr.String(), err
 }
 
-// Exec starts executing a command and record its process.
+// Exec starts executing a command, it records its process and timeout.
+func ExecTimeout(timeout time.Duration, desc, cmdName string, args ...string) (string, string, error) {
+	return ExecDir(timeout, "", desc, cmdName, args...)
+}
+
+// Exec starts executing a command, it records its process and has default timeout.
 func Exec(desc, cmdName string, args ...string) (string, string, error) {
-	return ExecDir("", desc, cmdName, args...)
+	return ExecDir(-1, "", desc, cmdName, args...)
 }
 
 // Remove removes a process from list.
