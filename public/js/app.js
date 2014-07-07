@@ -301,6 +301,26 @@ var Gogits = {};
         }).addClass("js-copy-bind");
     }
 
+    // api working
+    Gogits.getUsers = function (val, $target) {
+        $.ajax({
+            url: '/api/v1/users/search?q=' + val,
+            dataType: "json",
+            success: function (json) {
+                if (json.ok && json.data.length) {
+                    var html = '';
+                    $.each(json.data, function (i, item) {
+                        html += '<li><img src="' + item.avatar + '">' + item.username + '</li>';
+                    });
+                    $target.toggleShow();
+                    $target.find('ul').html(html);
+                } else {
+                    $target.toggleHide();
+                }
+            }
+        });
+    }
+
 })(jQuery);
 
 // ajax utils
@@ -733,22 +753,23 @@ function initRepoSetting() {
             $this.next().toggleHide();
             return;
         }
-        $.ajax({
-            url: '/api/v1/users/search?q=' + $this.val(),
-            dataType: "json",
-            success: function (json) {
-                if (json.ok && json.data.length) {
-                    var html = '';
-                    $.each(json.data, function (i, item) {
-                        html += '<li><img src="' + item.avatar + '">' + item.username + '</li>';
-                    });
-                    $this.next().toggleShow();
-                    $this.next().find('ul').html(html);
-                } else {
-                    $this.next().toggleHide();
-                }
-            }
-        });
+        Gogits.getUsers($this.val(), $this.next());
+        /*$.ajax({
+         url: '/api/v1/users/search?q=' + $this.val(),
+         dataType: "json",
+         success: function (json) {
+         if (json.ok && json.data.length) {
+         var html = '';
+         $.each(json.data, function (i, item) {
+         html += '<li><img src="' + item.avatar + '">' + item.username + '</li>';
+         });
+         $this.next().toggleShow();
+         $this.next().find('ul').html(html);
+         } else {
+         $this.next().toggleHide();
+         }
+         }
+         });*/
     }).on('focus', function () {
         if (!$(this).val()) {
             $(this).next().toggleHide();
@@ -771,12 +792,41 @@ function initRepoCreating() {
                 $(this).addClass("checked");
             }
             // set button group to show clicked owner
-            $('#repo-owner-avatar').attr("src",$(this).find('img').attr("src"));
+            $('#repo-owner-avatar').attr("src", $(this).find('img').attr("src"));
             $('#repo-owner-name').text($(this).text().trim());
-            console.log("set repo owner to uid :",uid,$(this).text().trim());
+            console.log("set repo owner to uid :", uid, $(this).text().trim());
         });
     }());
     console.log("init repo-creating scripts");
+}
+
+function initOrganization() {
+    (function(){
+        $('#org-team-add-user').on('keyup', function () {
+            var $this = $(this);
+            if (!$this.val()) {
+                $this.next().toggleHide();
+                return;
+            }
+            Gogits.getUsers($this.val(), $this.next());
+        }).on('focus', function () {
+            if (!$(this).val()) {
+                $(this).next().toggleHide();
+            }
+        }).next().on("click", 'li', function () {
+            $('#org-team-add-user').val($(this).text());
+            $('#org-team-add-user-form').submit();
+        }).toggleHide();
+        console.log("init script : add user to team");
+    }());
+
+    (function(){
+        $('#org-team-add-repo').next().toggleHide();
+        console.log("init script : add repository to team");
+    }());
+
+
+    console.log("init script : organization done");
 }
 
 (function ($) {
@@ -803,6 +853,9 @@ function initRepoCreating() {
         }
         if ($('#repo-create').length) {
             initRepoCreating();
+        }
+        if ($('#body-nav').hasClass("org-nav")) {
+            initOrganization();
         }
     });
 })(jQuery);
