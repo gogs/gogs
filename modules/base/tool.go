@@ -458,6 +458,16 @@ func (f StrTo) Int64() (int64, error) {
 	return int64(v), err
 }
 
+func (f StrTo) MustInt() int {
+	v, _ := f.Int()
+	return v
+}
+
+func (f StrTo) MustInt64() int64 {
+	v, _ := f.Int64()
+	return v
+}
+
 func (f StrTo) String() string {
 	if f.Exist() {
 		return string(f)
