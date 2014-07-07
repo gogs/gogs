@@ -589,6 +589,12 @@ func CreateRepository(u *User, name, desc, lang, license string, private, mirror
 	return repo, nil
 }
 
+// CountRepositories returns number of repositories.
+func CountRepositories() int64 {
+	count, _ := x.Count(new(Repository))
+	return count
+}
+
 // GetRepositoriesWithUsers returns given number of repository objects with offset.
 // It also auto-gets corresponding users.
 func GetRepositoriesWithUsers(num, offset int) ([]*Repository, error) {

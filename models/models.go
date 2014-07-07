@@ -148,9 +148,9 @@ type Statistic struct {
 }
 
 func GetStatistic() (stats Statistic) {
-	stats.Counter.User, _ = x.Count(new(User))
+	stats.Counter.User = CountUsers()
+	stats.Counter.Repo = CountRepositories()
 	stats.Counter.PublicKey, _ = x.Count(new(PublicKey))
-	stats.Counter.Repo, _ = x.Count(new(Repository))
 	stats.Counter.Watch, _ = x.Count(new(Watch))
 	stats.Counter.Action, _ = x.Count(new(Action))
 	stats.Counter.Access, _ = x.Count(new(Access))

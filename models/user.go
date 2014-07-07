@@ -212,6 +212,12 @@ func CreateUser(u *User) (*User, error) {
 	return u, err
 }
 
+// CountUsers returns number of users.
+func CountUsers() int64 {
+	count, _ := x.Where("type=0").Count(new(User))
+	return count
+}
+
 // GetUsers returns given number of user objects with offset.
 func GetUsers(num, offset int) ([]User, error) {
 	users := make([]User, 0, num)
