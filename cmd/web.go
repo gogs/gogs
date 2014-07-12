@@ -103,7 +103,10 @@ func runWeb(*cli.Context) {
 			r.Post("/markdown/raw", v1.MarkdownRaw)
 
 			// Users.
-			r.Get("/users/search", v1.SearchUser)
+			r.Get("/users/search", v1.SearchUsers)
+
+			// Repositories.
+			r.Get("/orgs/:org/repos/search", v1.SearchOrgRepositoreis)
 
 			r.Any("**", func(ctx *middleware.Context) {
 				ctx.JSON(404, &base.ApiJsonErr{"Not Found", v1.DOC_URL})
@@ -181,6 +184,8 @@ func runWeb(*cli.Context) {
 		r.Post("/:authid", bindIgnErr(auth.AuthenticationForm{}), admin.EditAuthSourcePost)
 		r.Get("/:authid/delete", admin.DeleteAuthSource)
 	}, adminReq)
+
+	m.Get("/:username", ignSignIn, user.Profile)
 
 	if martini.Env == martini.Dev {
 		m.Get("/template/**", dev.TemplatePreview)
