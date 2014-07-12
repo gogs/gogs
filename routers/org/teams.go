@@ -129,3 +129,8 @@ func EditTeam(ctx *middleware.Context, params martini.Params) {
 	ctx.Data["Title"] = "Organization " + params["org"] + " Edit Team"
 	ctx.HTML(200, "org/edit_team")
 }
+
+func SingleTeam(ctx *middleware.Context,params martini.Params){
+	ctx.Data["Title"] = "single-team"+params["org"]
+	ctx.HTML(200,"org/team")
+}

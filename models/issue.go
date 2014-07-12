@@ -276,6 +276,10 @@ func GetIssueUserPairs(rid, uid int64, isClosed bool) ([]*IssueUser, error) {
 
 // GetIssueUserPairsByRepoIds returns issue-user pairs by given repository IDs.
 func GetIssueUserPairsByRepoIds(rids []int64, isClosed bool, page int) ([]*IssueUser, error) {
+	if len(rids) == 0 {
+		return []*IssueUser{}, nil
+	}
+
 	buf := bytes.NewBufferString("")
 	for _, rid := range rids {
 		buf.WriteString("repo_id=")
@@ -283,7 +287,6 @@ func GetIssueUserPairsByRepoIds(rids []int64, isClosed bool, page int) ([]*Issue
 		buf.WriteString(" OR ")
 	}
 	cond := strings.TrimSuffix(buf.String(), " OR ")
-
 	ius := make([]*IssueUser, 0, 10)
 	sess := x.Limit(20, (page-1)*20).Where("is_closed=?", isClosed)
 	if len(cond) > 0 {

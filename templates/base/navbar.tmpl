@@ -6,7 +6,7 @@
             <a class="nav-item pull-left{{if .PageIsHelp}} active{{end}}" target="_blank" href="http://gogs.io/docs">Help</a>
             {{if .IsSigned}}
             {{if .HasAccess}}
-            <form class="nav-item pull-left{{if .PageIsNewRepo}} active{{end}}" id="nav-search-form">
+            <!-- <form class="nav-item pull-left{{if .PageIsNewRepo}} active{{end}}" id="nav-search-form">
                 <div class="input-group">
                     <div class="input-group-btn">
                         <button type="button" class="btn btn-sm btn-default dropdown-toggle" data-toggle="dropdown">{{if .Repository}}This Repository{{else}}All Repositories{{end}} <span class="caret"></span></button>
@@ -20,7 +20,7 @@
                     </div>
                     <input type="search" class="form-control input-sm" name="q" placeholder="search code, commits and issues"/>
                 </div>
-            </form>
+            </form> -->
             {{end}}
             <a id="nav-out" class="nav-item navbar-right navbar-btn btn btn-danger" href="/user/logout/"><i class="fa fa-power-off fa-lg"></i></a>
             <a id="nav-avatar" class="nav-item navbar-right{{if .PageIsUserProfile}} active{{end}}" href="{{.SignedUser.HomeLink}}" data-toggle="tooltip" data-placement="bottom" title="{{.SignedUserName}}">

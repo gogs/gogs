@@ -30,7 +30,9 @@ const (
 	MONITOR_CRON    base.TplName = "admin/monitor/cron"
 )
 
-var startTime = time.Now()
+var (
+	startTime = time.Now()
+)
 
 var sysStatus struct {
 	Uptime       string
@@ -157,8 +159,24 @@ func Users(ctx *middleware.Context) {
 	ctx.Data["Title"] = "User Management"
 	ctx.Data["PageIsUsers"] = true
 
+	p := base.StrTo(ctx.Query("p")).MustInt()
+	if p < 1 {
+		p = 1
+	}
+	pageNum := 100
+	count := models.CountUsers()
+	curCount := int64((p-1)*pageNum + pageNum)
+	if curCount > count {
+		p = int(count) / pageNum
+	} else if count > curCount {
+		ctx.Data["NextPageNum"] = p + 1
+	}
+	if p > 1 {
+		ctx.Data["LastPageNum"] = p - 1
+	}
+
 	var err error
-	ctx.Data["Users"], err = models.GetUsers(200, 0)
+	ctx.Data["Users"], err = models.GetUsers(pageNum, (p-1)*pageNum)
 	if err != nil {
 		ctx.Handle(500, "admin.Users(GetUsers)", err)
 		return
@@ -170,8 +188,24 @@ func Repositories(ctx *middleware.Context) {
 	ctx.Data["Title"] = "Repository Management"
 	ctx.Data["PageIsRepos"] = true
 
+	p := base.StrTo(ctx.Query("p")).MustInt()
+	if p < 1 {
+		p = 1
+	}
+	pageNum := 2
+	count := models.CountRepositories()
+	curCount := int64((p-1)*pageNum + pageNum)
+	if curCount > count {
+		p = int(count) / pageNum
+	} else if count > curCount {
+		ctx.Data["NextPageNum"] = p + 1
+	}
+	if p > 1 {
+		ctx.Data["LastPageNum"] = p - 1
+	}
+
 	var err error
-	ctx.Data["Repos"], err = models.GetRepositoriesWithUsers(200, 0)
+	ctx.Data["Repos"], err = models.GetRepositoriesWithUsers(pageNum, (p-1)*pageNum)
 	if err != nil {
 		ctx.Handle(500, "admin.Repositories", err)
 		return

@@ -212,6 +212,12 @@ func CreateUser(u *User) (*User, error) {
 	return u, err
 }
 
+// CountUsers returns number of users.
+func CountUsers() int64 {
+	count, _ := x.Where("type=0").Count(new(User))
+	return count
+}
+
 // GetUsers returns given number of user objects with offset.
 func GetUsers(num, offset int) ([]User, error) {
 	users := make([]User, 0, num)
@@ -291,10 +297,12 @@ func ChangeUserName(user *User, newUserName string) (err error) {
 		}
 
 		for j := range accesses {
-			accesses[j].UserName = newUserName
-			accesses[j].RepoName = newUserName + "/" + repos[i].LowerName
-			if err = UpdateAccessWithSession(sess, &accesses[j]); err != nil {
-				return err
+			// if the access is not the user's access (already updated above)
+			if accesses[j].UserName != user.LowerName {
+				accesses[j].RepoName = newUserName + "/" + repos[i].LowerName
+				if err = UpdateAccessWithSession(sess, &accesses[j]); err != nil {
+					return err
+				}
 			}
 		}
 	}
