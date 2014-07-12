@@ -11,6 +11,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strings"
 	"time"
@@ -359,11 +360,17 @@ func initRepository(f string, user *User, repo *Repository, initReadme bool, rep
 		return err
 	}
 
-	rp := strings.NewReplacer("\\", "/", " ", "\\ ")
+	if runtime.GOOS == "windows" {
+		rp := strings.NewReplacer("\\", "/")
+		appPath = "\"" + rp.Replace(appPath) + "\""
+	} else {
+		rp := strings.NewReplacer("\\", "/", " ", "\\ ")
+		appPath = rp.Replace(appPath)
+	}
+
 	// hook/post-update
 	if err := createHookUpdate(filepath.Join(repoPath, "hooks", "update"),
-		fmt.Sprintf(TPL_UPDATE_HOOK, setting.ScriptType,
-			rp.Replace(appPath))); err != nil {
+		fmt.Sprintf(TPL_UPDATE_HOOK, setting.ScriptType, appPath)); err != nil {
 		return err
 	}
 

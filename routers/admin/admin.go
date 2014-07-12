@@ -163,7 +163,7 @@ func Users(ctx *middleware.Context) {
 	if p < 1 {
 		p = 1
 	}
-	pageNum := 100
+	pageNum := 50
 	count := models.CountUsers()
 	curCount := int64((p-1)*pageNum + pageNum)
 	if curCount > count {
@@ -192,7 +192,7 @@ func Repositories(ctx *middleware.Context) {
 	if p < 1 {
 		p = 1
 	}
-	pageNum := 2
+	pageNum := 50
 	count := models.CountRepositories()
 	curCount := int64((p-1)*pageNum + pageNum)
 	if curCount > count {
