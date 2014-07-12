@@ -408,28 +408,33 @@ body {
 #repo-hooks-list .remove-hook {
     color: #DD4B39;
 }
-#repo-collab-form .dropdown-menu {
+#repo-collab-form .dropdown-menu,
+#org-team-content .header .dropdown-menu {
     margin-left: 15px;
     margin-top: 4px;
     padding: 0;
 }
-#repo-collab-form .dropdown-menu li {
+#repo-collab-form .dropdown-menu li,
+#org-team-content .header .dropdown-menu li {
     padding: 0 1em;
     line-height: 36px;
     cursor: pointer;
     font-weight: bold;
 }
-#repo-collab-form .dropdown-menu li:hover {
+#repo-collab-form .dropdown-menu li:hover,
+#org-team-content .header .dropdown-menu li:hover {
     background-color: #e8f0ff;
 }
-#repo-collab-form .dropdown-menu img {
+#repo-collab-form .dropdown-menu img,
+#org-team-content .header .dropdown-menu img {
     width: 28px;
     height: 28px;
     margin-right: 1em;
     vertical-align: middle;
     margin-top: -3px;
 }
-#repo-collab-form .dropdown-menu ul {
+#repo-collab-form .dropdown-menu ul,
+#org-team-content .header .dropdown-menu ul {
     margin-bottom: 0;
 }
 #repo-hooks-list li {
@@ -1446,8 +1451,7 @@ body {
 #footer {
     background: #fff;
     -webkit-box-shadow: 0 -1px 3px rgba(0, 0, 0, 0.05);
-    box-shadow: 0 -1px 3px rgba(0, 0, 0, 0.05);
-    ;
+    box-shadow: 0 -1px 3px rgba(0, 0, 0, 0.05);;
     height: 100px;
 }
 #footer .footer-wrap {
@@ -1677,31 +1681,39 @@ body {
 #org-members {
     margin-right: 30px;
 }
-#org-members .member .avatar img {
+#org-members .member .avatar img,
+#org-team-members .member .avatar img {
     width: 50px;
     height: 50px;
 }
-#org-members .member {
+#org-members .member,
+#org-team-members .member {
     padding-bottom: 20px;
     margin-bottom: 20px;
     border-bottom: 1px solid #DDD;
     height: 70px;
 }
-#org-members .member .name {
+#org-members .member .name,
+#org-team-members .member .name {
     padding-top: 4px;
 }
-#org-members .member .nick {
+#org-members .member .nick,
+#org-team-members .member .nick {
     display: block;
     color: #888;
 }
-#org-members .member .name a {
+#org-members .member .name a,
+#org-team-members .member .name a {
     color: #444;
 }
-#org-members .member .name strong {
+#org-members .member .name strong,
+#org-team-members .member .name strong {
     font-size: 1.2em;
 }
 #org-members .status,
-#org-members .role {
+#org-members .role,
+#org-team-members .status,
+#org-team-members .role {
     line-height: 48px;
     text-align: right;
 }
@@ -1727,4 +1739,44 @@ body {
 }
 #org-teams .org-team {
     border-bottom: none;
+}
+#org-team-card {
+    border: 1px solid #CCC;
+    background-color: #FFF;
+}
+#org-team-card .meta .num {
+    font-weight: bold;
+    color: #444;
+    font-size: 1.2em;
+}
+#org-team-card .meta > div {
+    margin-bottom: 12px;
+}
+#org-team-card .meta a:hover {
+    text-decoration: none;
+    font-weight: bold;
+}
+#org-team-card .action a {
+    margin-right: 12px;
+}
+#org-team-card .action a:hover {
+    text-decoration: none;
+}
+#org-team-content .header {
+    height: 50px;
+}
+#org-team-content .header > form {
+    padding-right: 0;
+}
+#org-team-repos .repo{
+    padding-bottom: 20px;
+    margin-bottom: 20px;
+    border-bottom: 1px solid #DDD;
+    padding-left: 15px;
+}
+#org-team-repos .repo-name{
+    font-size: 1.2em;
+    color: #444;
+    font-weight: bold;
+    line-height: 30px;
 }
