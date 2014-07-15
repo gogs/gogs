@@ -5,6 +5,7 @@
 package repo
 
 import (
+	"encoding/json"
 	"path"
 
 	"github.com/go-martini/martini"
@@ -105,6 +106,26 @@ func SearchCommits(ctx *middleware.Context, params martini.Params) {
 	ctx.HTML(200, COMMITS)
 }
 
+func DiffAjax(ctx *middleware.Context, params martini.Params) {
+	userName := params["username"]
+	repoName := params["reponame"]
+	commitId := params["branchname"]
+
+	err := models.GetDiffCallback(models.RepoPath(userName, repoName), commitId, func(f *models.DiffFile) error {
+		bs, err := json.Marshal(f)
+		if err != nil {
+			return err
+		}
+		_, err = ctx.Res.Write(bs)
+		return err
+	})
+
+	if err != nil {
+		ctx.Handle(404, "repo.DiffAjax", err)
+		return
+	}
+}
+
 func Diff(ctx *middleware.Context, params martini.Params) {
 	ctx.Data["IsRepoToolbarCommits"] = true
 
@@ -114,11 +135,11 @@ func Diff(ctx *middleware.Context, params martini.Params) {
 
 	commit := ctx.Repo.Commit
 
-	diff, err := models.GetDiff(models.RepoPath(userName, repoName), commitId)
+	/*diff, err := models.GetDiff(models.RepoPath(userName, repoName), commitId)
 	if err != nil {
 		ctx.Handle(404, "repo.Diff(GetDiff)", err)
 		return
-	}
+	}*/
 
 	isImageFile := func(name string) bool {
 		blob, err := ctx.Repo.Commit.GetBlobByPath(name)
@@ -155,9 +176,9 @@ func Diff(ctx *middleware.Context, params martini.Params) {
 	ctx.Data["IsImageFile"] = isImageFile
 	ctx.Data["Title"] = commit.Summary() + " · " + base.ShortSha(commitId)
 	ctx.Data["Commit"] = commit
-	ctx.Data["Diff"] = diff
+	//ctx.Data["Diff"] = diff
 	ctx.Data["Parents"] = parents
-	ctx.Data["DiffNotAvailable"] = diff.NumFiles() == 0
+	//ctx.Data["DiffNotAvailable"] = diff.NumFiles() == 0
 	ctx.Data["SourcePath"] = "/" + path.Join(userName, repoName, "src", commitId)
 	ctx.Data["RawPath"] = "/" + path.Join(userName, repoName, "raw", commitId)
 	ctx.HTML(200, DIFF)

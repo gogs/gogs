@@ -108,6 +108,11 @@ func runWeb(*cli.Context) {
 			// Repositories.
 			r.Get("/orgs/:org/repos/search", v1.SearchOrgRepositoreis)
 
+			m.Group("/:username/:reponame", func(r martini.Router) {
+				r.Get("/commit/:branchname", repo.DiffAjax)
+				r.Get("/commit/:branchname/**", repo.DiffAjax)
+			})
+
 			r.Any("**", func(ctx *middleware.Context) {
 				ctx.JSON(404, &base.ApiJsonErr{"Not Found", v1.DOC_URL})
 			})
@@ -206,7 +211,7 @@ func runWeb(*cli.Context) {
 		r.Post("/:org/teams/new", bindIgnErr(auth.CreateTeamForm{}), org.NewTeamPost)
 		r.Get("/:org/teams/:team/edit", org.EditTeam)
 
-		r.Get("/:org/team/:team",org.SingleTeam)
+		r.Get("/:org/team/:team", org.SingleTeam)
 
 		r.Get("/:org/settings", org.Settings)
 		r.Post("/:org/settings", bindIgnErr(auth.OrgSettingForm{}), org.SettingsPost)

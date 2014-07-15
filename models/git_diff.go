@@ -11,7 +11,6 @@ import (
 	"os"
 	"os/exec"
 	"strings"
-	"time"
 
 	"github.com/gogits/git"
 
@@ -171,6 +170,10 @@ func ParsePatch(pid int64, cmd *exec.Cmd, reader io.Reader) (*Diff, error) {
 		}
 	}
 
+	// In case process became zombie.
+	if err := process.Kill(pid); err != nil {
+		log.Error("git_diff.ParsePatch(Kill): %v", err)
+	}
 	return diff, nil
 }
 
@@ -198,30 +201,152 @@ func GetDiff(repoPath, commitid string) (*Diff, error) {
 	cmd.Stdout = wr
 	cmd.Stdin = os.Stdin
 	cmd.Stderr = os.Stderr
-
-	done := make(chan error)
 	go func() {
-		cmd.Start()
-		done <- cmd.Wait()
+		cmd.Run()
 		wr.Close()
 	}()
 	defer rd.Close()
+	return ParsePatch(process.Add(fmt.Sprintf("GetDiff(%s)", repoPath), cmd), cmd, rd)
+}
 
-	desc := fmt.Sprintf("GetDiff(%s)", repoPath)
-	pid := process.Add(desc, cmd)
-	go func() {
-		// In case process became zombie.
-		select {
-		case <-time.After(5 * time.Minute):
-			if errKill := process.Kill(pid); errKill != nil {
-				log.Error("git_diff.ParsePatch(Kill): %v", err)
-			}
-			<-done
-			// return "", ErrExecTimeout.Error(), ErrExecTimeout
-		case err = <-done:
-			process.Remove(pid)
+func ParsePatchCallback(pid int64, cmd *exec.Cmd, reader io.Reader, callback DiffCallback) error {
+	scanner := bufio.NewScanner(reader)
+	var (
+		curFile    *DiffFile
+		curSection = &DiffSection{
+			Lines: make([]*DiffLine, 0, 10),
 		}
-	}()
 
-	return ParsePatch(pid, cmd, rd)
+		leftLine, rightLine int
+	)
+
+	var idx = 0
+
+	for scanner.Scan() {
+		line := scanner.Text()
+		if strings.HasPrefix(line, "+++ ") || strings.HasPrefix(line, "--- ") {
+			continue
+		}
+
+		if line == "" {
+			continue
+		}
+
+		switch {
+		case line[0] == ' ':
+			diffLine := &DiffLine{Type: DIFF_LINE_PLAIN, Content: line, LeftIdx: leftLine, RightIdx: rightLine}
+			leftLine++
+			rightLine++
+			curSection.Lines = append(curSection.Lines, diffLine)
+			continue
+		case line[0] == '@':
+			curSection = &DiffSection{}
+			curFile.Sections = append(curFile.Sections, curSection)
+			ss := strings.Split(line, "@@")
+			diffLine := &DiffLine{Type: DIFF_LINE_SECTION, Content: line}
+			curSection.Lines = append(curSection.Lines, diffLine)
+
+			// Parse line number.
+			ranges := strings.Split(ss[len(ss)-2][1:], " ")
+			leftLine, _ = base.StrTo(strings.Split(ranges[0], ",")[0][1:]).Int()
+			rightLine, _ = base.StrTo(strings.Split(ranges[1], ",")[0]).Int()
+			continue
+		case line[0] == '+':
+			curFile.Addition++
+			//diff.TotalAddition++
+			diffLine := &DiffLine{Type: DIFF_LINE_ADD, Content: line, RightIdx: rightLine}
+			rightLine++
+			curSection.Lines = append(curSection.Lines, diffLine)
+			continue
+		case line[0] == '-':
+			curFile.Deletion++
+			//diff.TotalDeletion++
+			diffLine := &DiffLine{Type: DIFF_LINE_DEL, Content: line, LeftIdx: leftLine}
+			if leftLine > 0 {
+				leftLine++
+			}
+			curSection.Lines = append(curSection.Lines, diffLine)
+		case strings.HasPrefix(line, "Binary"):
+			curFile.IsBin = true
+			continue
+		}
+
+		// Get new file.
+		if strings.HasPrefix(line, DIFF_HEAD) {
+			fs := strings.Split(line[len(DIFF_HEAD):], " ")
+			a := fs[0]
+
+			if curFile != nil {
+				callback(curFile)
+			}
+
+			curFile = &DiffFile{
+				Name:     a[strings.Index(a, "/")+1:],
+				Index:    idx,
+				Type:     DIFF_FILE_CHANGE,
+				Sections: make([]*DiffSection, 0, 10),
+			}
+			idx = idx + 1
+
+			// Check file diff type.
+			for scanner.Scan() {
+				switch {
+				case strings.HasPrefix(scanner.Text(), "new file"):
+					curFile.Type = DIFF_FILE_ADD
+				case strings.HasPrefix(scanner.Text(), "deleted"):
+					curFile.Type = DIFF_FILE_DEL
+				case strings.HasPrefix(scanner.Text(), "index"):
+					curFile.Type = DIFF_FILE_CHANGE
+				}
+				if curFile.Type > 0 {
+					break
+				}
+			}
+		}
+	}
+
+	if curFile != nil {
+		callback(curFile)
+	}
+
+	// In case process became zombie.
+	if err := process.Kill(pid); err != nil {
+		log.Error("git_diff.ParsePatch(Kill): %v", err)
+	}
+	return nil
+}
+
+type DiffCallback func(*DiffFile) error
+
+func GetDiffCallback(repoPath, commitid string, callback DiffCallback) error {
+	repo, err := git.OpenRepository(repoPath)
+	if err != nil {
+		return err
+	}
+
+	commit, err := repo.GetCommit(commitid)
+	if err != nil {
+		return err
+	}
+
+	rd, wr := io.Pipe()
+	var cmd *exec.Cmd
+	// First commit of repository.
+	if commit.ParentCount() == 0 {
+		cmd = exec.Command("git", "show", commitid)
+	} else {
+		c, _ := commit.Parent(0)
+		cmd = exec.Command("git", "diff", c.Id.String(), commitid)
+	}
+	cmd.Dir = repoPath
+	cmd.Stdout = wr
+	cmd.Stdin = os.Stdin
+	cmd.Stderr = os.Stderr
+	go func() {
+		cmd.Run()
+		wr.Close()
+	}()
+	defer rd.Close()
+	return ParsePatchCallback(process.Add(fmt.Sprintf("GetDiff(%s)", repoPath), cmd),
+		cmd, rd, callback)
 }
