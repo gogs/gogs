@@ -8,8 +8,8 @@
 IFS=' 
 	'
 PATH=/bin:/usr/bin:/usr/local/bin
-HOME=${HOME:?"need \$HOME variable"}
 USER=$(whoami)
+HOME=$(grep "^$USER:" /etc/passwd | cut -d: -f6)
 export USER HOME PATH
 
 cd "$(dirname $0)" && exec ./gogs web
