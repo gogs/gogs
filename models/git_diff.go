@@ -209,7 +209,7 @@ func GetDiff(repoPath, commitid string) (*Diff, error) {
 	return ParsePatch(process.Add(fmt.Sprintf("GetDiff(%s)", repoPath), cmd), cmd, rd)
 }
 
-func ParsePatchCallback(pid int64, cmd *exec.Cmd, reader io.Reader, callback DiffCallback) error {
+func ParsePatchChan(pid int64, cmd *exec.Cmd, reader io.Reader, file chan *DiffFile) error {
 	scanner := bufio.NewScanner(reader)
 	var (
 		curFile    *DiffFile
@@ -277,7 +277,8 @@ func ParsePatchCallback(pid int64, cmd *exec.Cmd, reader io.Reader, callback Dif
 			a := fs[0]
 
 			if curFile != nil {
-				callback(curFile)
+				fmt.Println("curFile:", curFile)
+				file <- curFile
 			}
 
 			curFile = &DiffFile{
@@ -306,7 +307,8 @@ func ParsePatchCallback(pid int64, cmd *exec.Cmd, reader io.Reader, callback Dif
 	}
 
 	if curFile != nil {
-		callback(curFile)
+		fmt.Println("last curFile:", curFile)
+		file <- curFile
 	}
 
 	// In case process became zombie.
@@ -316,9 +318,7 @@ func ParsePatchCallback(pid int64, cmd *exec.Cmd, reader io.Reader, callback Dif
 	return nil
 }
 
-type DiffCallback func(*DiffFile) error
-
-func GetDiffCallback(repoPath, commitid string, callback DiffCallback) error {
+func GetDiffChan(repoPath, commitid string, file chan *DiffFile) error {
 	repo, err := git.OpenRepository(repoPath)
 	if err != nil {
 		return err
@@ -347,6 +347,6 @@ func GetDiffCallback(repoPath, commitid string, callback DiffCallback) error {
 		wr.Close()
 	}()
 	defer rd.Close()
-	return ParsePatchCallback(process.Add(fmt.Sprintf("GetDiff(%s)", repoPath), cmd),
-		cmd, rd, callback)
+	return ParsePatchChan(process.Add(fmt.Sprintf("GetDiff(%s)", repoPath), cmd),
+		cmd, rd, file)
 }

@@ -108,11 +108,6 @@ func runWeb(*cli.Context) {
 			// Repositories.
 			r.Get("/orgs/:org/repos/search", v1.SearchOrgRepositoreis)
 
-			m.Group("/:username/:reponame", func(r martini.Router) {
-				r.Get("/commit/:branchname", repo.DiffAjax)
-				r.Get("/commit/:branchname/**", repo.DiffAjax)
-			})
-
 			r.Any("**", func(ctx *middleware.Context) {
 				ctx.JSON(404, &base.ApiJsonErr{"Not Found", v1.DOC_URL})
 			})
