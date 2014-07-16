@@ -34,3 +34,4 @@ _testmain.go
 gogs
 __pycache__
 *.pem
+output*
