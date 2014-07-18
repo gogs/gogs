@@ -16,6 +16,7 @@ import (
 
 type AdminEditUserForm struct {
 	Email     string `form:"email" binding:"Required;Email;MaxSize(50)"`
+	Passwd    string `form:"passwd"`
 	Website   string `form:"website" binding:"MaxSize(50)"`
 	Location  string `form:"location" binding:"MaxSize(50)"`
 	Avatar    string `form:"avatar" binding:"Required;Email;MaxSize(50)"`
