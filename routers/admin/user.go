@@ -134,6 +134,13 @@ func EditUserPost(ctx *middleware.Context, params martini.Params, form auth.Admi
 		return
 	}
 
+	if (form.Passwd != "") {
+		u.Passwd = form.Passwd
+		u.Rands = models.GetUserSalt()
+		u.Salt = models.GetUserSalt()
+		u.EncodePasswd()
+	}
+
 	u.Email = form.Email
 	u.Website = form.Website
 	u.Location = form.Location
