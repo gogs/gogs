@@ -5,6 +5,11 @@
 package user
 
 import (
+	"errors"
+	"fmt"
+	"io/ioutil"
+	"os"
+	"strconv"
 	"strings"
 
 	"github.com/gogits/gogs/models"
@@ -12,6 +17,7 @@ import (
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/middleware"
+	"github.com/gogits/gogs/modules/process"
 )
 
 const (
@@ -21,6 +27,17 @@ const (
 	PUBLICKEY    base.TplName = "user/publickey"
 	NOTIFICATION base.TplName = "user/notification"
 	SECURITY     base.TplName = "user/security"
+)
+
+var (
+	MinimumKeySize = map[string]int{
+		"(ED25519)": 256,
+		"(ECDSA)":   256,
+		"(NTRU)":    1087,
+		"(MCE)":     1702,
+		"(McE)":     1702,
+		"(RSA)":     2048,
+	}
 )
 
 func Setting(ctx *middleware.Context) {
@@ -142,6 +159,50 @@ func SettingPasswordPost(ctx *middleware.Context, form auth.UpdatePasswdForm) {
 	ctx.Redirect("/user/settings/password")
 }
 
+// Checks if the given public key string is recognized by SSH.
+func CheckPublicKeyString(keyContent string) (ok bool, err error) {
+	if strings.ContainsAny(keyContent, "\n\r") {
+		return false, errors.New("Only a single line with a single key please")
+	}
+
+	// write the key to a file…
+	tmpFile, err := ioutil.TempFile(os.TempDir(), "keytest")
+	if err != nil {
+		return false, err
+	}
+	tmpPath := tmpFile.Name()
+	defer os.Remove(tmpPath)
+	tmpFile.WriteString(keyContent)
+	tmpFile.Close()
+
+	// … see if ssh-keygen recognizes its contents
+	stdout, stderr, err := process.Exec("CheckPublicKeyString", "ssh-keygen", "-l", "-f", tmpPath)
+	if err != nil {
+		return false, errors.New("ssh-keygen -l -f: " + stderr)
+	} else if len(stdout) < 2 {
+		return false, errors.New("ssh-keygen returned not enough output to evaluate the key")
+	}
+	sshKeygenOutput := strings.Split(stdout, " ")
+	if len(sshKeygenOutput) < 4 {
+		return false, errors.New("Not enough fields returned by ssh-keygen -l -f")
+	}
+	keySize, err := strconv.Atoi(sshKeygenOutput[0])
+	if err != nil {
+		return false, errors.New("Cannot get key size of the given key")
+	}
+	keyType := strings.TrimSpace(sshKeygenOutput[len(sshKeygenOutput)-1])
+
+	if minimumKeySize := MinimumKeySize[keyType]; minimumKeySize == 0 {
+		return false, errors.New("Sorry, unrecognized public key type")
+	} else {
+		if keySize < minimumKeySize {
+			return false, fmt.Errorf("The minimum accepted size of a public key %s is %d", keyType, minimumKeySize)
+		}
+	}
+
+	return true, nil
+}
+
 func SettingSSHKeys(ctx *middleware.Context, form auth.AddSSHKeyForm) {
 	ctx.Data["Title"] = "SSH Keys"
 	ctx.Data["PageIsUserSetting"] = true
@@ -189,8 +250,8 @@ func SettingSSHKeys(ctx *middleware.Context, form auth.AddSSHKeyForm) {
 			return
 		}
 
-		if len(form.KeyContent) < 100 || !strings.HasPrefix(form.KeyContent, "ssh-rsa") {
-			ctx.Flash.Error("SSH key content is not valid.")
+		if ok, err := CheckPublicKeyString(form.KeyContent); !ok {
+			ctx.Flash.Error(err.Error())
 			ctx.Redirect("/user/settings/ssh")
 			return
 		}
