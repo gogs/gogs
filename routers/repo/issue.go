@@ -642,6 +642,29 @@ func Comment(ctx *middleware.Context, params martini.Params) {
 				return
 			}
 
+			// Change open/closed issue counter for the associated milestone
+			if issue.MilestoneId > 0 {
+				l, err := models.GetMilestoneById(issue.MilestoneId)
+
+				if err != nil {
+					ctx.Handle(500, "issue.Comment(GetLabelById)", err)
+					return
+				}
+
+				if issue.IsClosed {
+					l.NumOpenIssues = l.NumOpenIssues - 1
+					l.NumClosedIssues = l.NumClosedIssues + 1
+				} else {
+					l.NumOpenIssues = l.NumOpenIssues + 1
+					l.NumClosedIssues = l.NumClosedIssues - 1
+				}
+
+				if err = models.UpdateMilestone(l); err != nil {
+					ctx.Handle(500, "issue.Comment(UpdateLabel)", err)
+					return
+				}
+			}
+
 			cmtType := models.IT_CLOSE
 			if !issue.IsClosed {
 				cmtType = models.IT_REOPEN
