@@ -577,15 +577,28 @@ function initIssue() {
         if (is_issue_bar) {
             var assignee = $a.data("assigned");
             if (uid != assignee) {
+                var text = $(this).text();
+                var img = $("img", this).attr("src");
+
                 $.post($a.data("ajax"), {
                     issue: $('#issue').data("id"),
                     assigneeid: uid
                 }, function (json) {
                     if (json.ok) {
-                        window.location.reload();
+                        //window.location.reload();
+                        $a.data("assigned", uid);
+
+                        if (uid > 0) {    
+                            $('.clear-assignee').toggleShow();
+                            $(".assignee > p").html('<img src="' + img + '"><strong>' + text + '</strong>');
+                        } else {
+                            $('.clear-assignee').toggleHide();
+                            $(".assignee > p").text("No one assigned");
+                        }
                     }
                 })
             }
+
             return;
         }
         $('#assignee').val(uid);
@@ -611,24 +624,31 @@ function initIssue() {
         $('.clear-milestone').toggleShow();
     }
     $('.milestone', '#issue').on('click', 'li.milestone-item', function () {
-        var id = $(this).data("id");
+        var id = $(this).data("id");    
         if (is_issue_bar) {
             var m = $m.data("milestone");
             if (id != m) {
+                var text = $(this).text();
+                
                 $.post($m.data("ajax"), {
                     issue: $('#issue').data("id"),
                     milestone: id
                 }, function (json) {
                     if (json.ok) {
-                        window.location.reload();
-                        if (id > 0) {
+                        //window.location.reload();
+                        $m.data("milestone", id);
+
+                        if (id > 0) {    
                             $('.clear-milestone').toggleShow();
+                            $(".milestone > .name").html('<a href="' + location.pathname + '?milestone=' + id + '"><strong>' + text + '</strong></a>');
                         } else {
                             $('.clear-milestone').toggleHide();
+                            $(".milestone > .name").text("No milestone");
                         }
                     }
-                })
+                });
             }
+
             return;
         }
         $('#milestone-id').val(id);
@@ -708,13 +728,38 @@ function initIssue() {
         var color = $item.find('.color').data('color');
         $item.css('background-color', color);
     });
+
     $('.issue-bar .labels .dropdown-menu').on('click', 'li', function (e) {
-        var url = $('.issue-bar .labels').data("ajax");
+        var $labels = $('.issue-bar .labels');
+        var url = $labels.data("ajax");
         var id = $(this).data('id');
         var check = $(this).hasClass("checked");
+        var item = this;
         $.post(url, {id: id, action: check ? 'detach' : "attach", issue: $('#issue').data('id')}, function (json) {
             if (json.ok) {
-                window.location.reload();
+                if (check) {
+                    $("span.check.pull-left", item).remove();
+
+                    $(item).removeClass("checked");
+                    $(item).addClass("no-checked");
+
+                    $("#label-" + id, $labels).remove();
+                } else {
+                    $(item).prepend('<span class="check pull-left"><i class="fa fa-check"></i></span>');
+
+                    $(item).removeClass("no-checked");
+                    $(item).addClass("checked");
+
+                    var $l = $("<p></p>");
+                    var c = $("span.color", item).css("background-color");
+
+                    $l.attr("id", "label-" + id);
+                    $l.attr("class", "label-item label-white");
+                    $l.css("background-color", c);
+
+                    $l.append("<strong>" + $(item).text() + "</strong>");
+                    $labels.append($l);
+                }
             }
         });
         e.stopPropagation();
