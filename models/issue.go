@@ -19,6 +19,7 @@ var (
 	ErrIssueNotExist     = errors.New("Issue does not exist")
 	ErrLabelNotExist     = errors.New("Label does not exist")
 	ErrMilestoneNotExist = errors.New("Milestone does not exist")
+	ErrWrongIssueCounter = errors.New("Invalid number of issues for this milestone")
 )
 
 // Issue represents an issue or pull request of repository.
@@ -713,6 +714,11 @@ func ChangeMilestoneAssign(oldMid, mid int64, issue *Issue) (err error) {
 		if issue.IsClosed {
 			m.NumClosedIssues++
 		}
+
+		if m.NumIssues == 0 {
+			return ErrWrongIssueCounter
+		}
+
 		m.Completeness = m.NumClosedIssues * 100 / m.NumIssues
 		if _, err = sess.Id(m.Id).Update(m); err != nil {
 			sess.Rollback()
