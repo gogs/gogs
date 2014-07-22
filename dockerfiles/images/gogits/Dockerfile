@@ -19,9 +19,6 @@ RUN cd /usr/local/go/src && ./make.bash --no-clean 2>&1
 RUN go get -u -d github.com/gogits/gogs 
 RUN cd $GOPATH/src/github.com/gogits/gogs && git checkout dev && git pull origin dev && go install && go build -tags redis
 
-# Clean all the unused packages
-RUN apt-get autoremove -y
-RUN apt-get clean all
 
 # Add the deploy script to the docker image and assign execution permission to it.
 ADD ./deploy.sh /
