@@ -8,9 +8,11 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"html/template"
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"sort"
 	"strings"
@@ -44,6 +46,10 @@ var (
 
 var (
 	LanguageIgns, Licenses []string
+)
+
+var (
+	DescriptionPattern = regexp.MustCompile(`https?://\S+`)
 )
 
 // getAssetList returns corresponding asset list in 'conf'.
@@ -143,6 +149,10 @@ type Repository struct {
 func (repo *Repository) GetOwner() (err error) {
 	repo.Owner, err = GetUserById(repo.OwnerId)
 	return err
+}
+
+func (repo *Repository) DescriptionHtml() template.HTML {
+	return template.HTML(DescriptionPattern.ReplaceAllString(repo.Description, `<a href="$0" target="_blank">$0</a>`))
 }
 
 // IsRepositoryExist returns true if the repository with given name under user has already existed.
