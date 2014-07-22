@@ -26,6 +26,7 @@
                         <a class="del pull-right" href="#" data-id="{{.Id}}"><i class="fa fa-times-circle-o"></i></a>
                     </li>
                     {{end}}
+                    {{if or .IsRepositoryOwner .IsAdmin}}
                     <li class="label-change-li" style="display: none">
                         <form id="label-change-form" action="{{$.RepoLink}}/issues/labels/edit" method="post">
                             {{.CsrfTokenHtml}}
@@ -41,7 +42,9 @@
                             </div>
                         </form>
                     </li>
+                    {{end}}
                 </ul>
+                {{if or .IsRepositoryOwner .IsAdmin}}
                 <button class="btn btn-default btn-block label-button" id="label-manage-btn">Manage Labels</button>
                 <hr/>
                 <form id="label-add-form" action="{{$.RepoLink}}/issues/labels/new" method="post">
@@ -57,6 +60,7 @@
                         <button class="btn btn-default btn-sm">Create</button>
                     </div>
                 </form>
+                {{end}}
             </div>
         </div>
         <div class="col-md-9">
