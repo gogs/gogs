@@ -35,7 +35,7 @@ import (
 var CmdWeb = cli.Command{
 	Name:  "web",
 	Usage: "Start Gogs web server",
-	Description: `Gogs web server is the only thing you need to run, 
+	Description: `Gogs web server is the only thing you need to run,
 and it takes care of all the other things for you`,
 	Action: runWeb,
 	Flags:  []cli.Flag{},
@@ -151,6 +151,7 @@ func runWeb(*cli.Context) {
 	}, reqSignIn)
 
 	m.Get("/user/:username", ignSignIn, user.Profile)
+	m.Get("/:username", ignSignIn, user.Profile)
 
 	m.Group("/repo", func(r martini.Router) {
 		r.Get("/create", repo.Create)
