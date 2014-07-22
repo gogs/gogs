@@ -248,13 +248,24 @@ func RepoAssignment(redirect bool, args ...bool) martini.Handler {
 			ctx.Repo.IsWatching = models.IsWatching(ctx.User.Id, repo.Id)
 		}
 
-		ctx.Data["BranchName"] = ctx.Repo.BranchName
 		ctx.Data["TagName"] = ctx.Repo.TagName
 		brs, err := ctx.Repo.GitRepo.GetBranches()
 		if err != nil {
 			log.Error("RepoAssignment(GetBranches): %v", err)
 		}
 		ctx.Data["Branches"] = brs
+
+		// If not branch selected, try default one.
+		// If default branch doesn't exists, fall back to some other branch.
+		if ctx.Repo.BranchName == "" {
+			if ctx.Repo.Repository.DefaultBranch != "" && gitRepo.IsBranchExist(ctx.Repo.Repository.DefaultBranch) {
+				ctx.Repo.BranchName = ctx.Repo.Repository.DefaultBranch
+			} else if len(brs) > 0 {
+				ctx.Repo.BranchName = brs[0]
+			}
+		}
+
+		ctx.Data["BranchName"] = ctx.Repo.BranchName
 		ctx.Data["CommitId"] = ctx.Repo.CommitId
 		ctx.Data["IsRepositoryWatching"] = ctx.Repo.IsWatching
 	}
