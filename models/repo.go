@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"html"
 	"html/template"
 	"os"
 	"path"
@@ -152,7 +153,13 @@ func (repo *Repository) GetOwner() (err error) {
 }
 
 func (repo *Repository) DescriptionHtml() template.HTML {
-	return template.HTML(DescriptionPattern.ReplaceAllString(repo.Description, `<a href="$0" target="_blank">$0</a>`))
+	sanitize := func(s string) string {
+		// TODO(nuss-justin): Improve sanitization. Strip all tags?
+		ss := html.EscapeString(s)
+
+		return fmt.Sprintf(`<a href="%s" target="_blank">%s</a>`, ss, ss)
+	}
+	return template.HTML(DescriptionPattern.ReplaceAllStringFunc(repo.Description, sanitize))
 }
 
 // IsRepositoryExist returns true if the repository with given name under user has already existed.
