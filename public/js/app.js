@@ -406,8 +406,10 @@ function initRepository() {
     // watching script
     (function () {
         var $watch = $('#repo-watching'),
-            watchLink = $watch.data("watch"),
-            unwatchLink = $watch.data("unwatch");
+        	watchLink = $watch.attr("data-watch"),
+            // Use $.attr() to work around jQuery not finding $.data("unwatch") in Firefox,
+            // which has a method "unwatch" on `Object` that gets returned instead.
+            unwatchLink = $watch.attr("data-unwatch");
         $watch.on('click', '.to-watch', function () {
             if ($watch.hasClass("watching")) {
                 return false;

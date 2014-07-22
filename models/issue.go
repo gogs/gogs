@@ -108,7 +108,17 @@ func NewIssue(issue *Issue) (err error) {
 		sess.Rollback()
 		return err
 	}
-	return sess.Commit()
+
+	if err = sess.Commit(); err != nil {
+		return err
+	}
+
+	if issue.MilestoneId > 0 {
+		// FIXES(280): Update milestone counter.
+		return ChangeMilestoneAssign(0, issue.MilestoneId, issue)
+	}
+
+	return
 }
 
 // GetIssueByIndex returns issue by given index in repository.

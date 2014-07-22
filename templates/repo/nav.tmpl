@@ -31,6 +31,7 @@
                         </div>
                     </div>
                 </div>
+                {{if .IsSigned}}
                 <div class="btn-group {{if .IsRepositoryWatching}}watching{{else}}no-watching{{end}}" id="repo-watching" data-watch="/{{.Owner.Name}}/{{.Repository.Name}}/action/watch" data-unwatch="/{{.Owner.Name}}/{{.Repository.Name}}/action/unwatch">
                     {{if .IsRepositoryWatching}}
                     <button type="button" class="btn btn-default"><i class="fa fa-eye fa-lg fa-m"></i></button>
@@ -52,6 +53,7 @@
                         </div>
                     </div>
                 </div>
+                {{end}}
                 <!-- <div class="btn-group">
                     <button type="button" class="btn btn-default" data-toggle="tooltip" data-placement="top" title="Star"><i class="fa fa-star"></i>&nbsp;{{.Repository.NumStars}}</button>
                 </div> -->
