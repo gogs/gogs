@@ -46,6 +46,11 @@
                                     </div>
                                 </div>
                             </div>
+                            <div class="attachments">
+                                {{range .Attachments}}
+                                <a class="attachment" href="{{.IssueId}}/attachment/{{.Id}}">{{.Name}}</a>
+                                {{end}}
+                            </div>                            
                         </div>
                     </div>
                     {{range .Comments}}
