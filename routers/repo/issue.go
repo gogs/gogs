@@ -6,6 +6,9 @@ package repo
 
 import (
 	"fmt"
+	"io"
+	"io/ioutil"
+	"mime"
 	"net/url"
 	"strings"
 	"time"
@@ -396,6 +399,8 @@ func ViewIssue(ctx *middleware.Context, params martini.Params) {
 		comments[i].Content = string(base.RenderMarkdown([]byte(comments[i].Content), ctx.Repo.RepoLink))
 	}
 
+	ctx.Data["AllowedTypes"] = setting.AttachmentAllowedTypes
+
 	ctx.Data["Title"] = issue.Name
 	ctx.Data["Issue"] = issue
 	ctx.Data["Comments"] = comments
@@ -670,7 +675,7 @@ func Comment(ctx *middleware.Context, params martini.Params) {
 				cmtType = models.IT_REOPEN
 			}
 
-			if err = models.CreateComment(ctx.User.Id, ctx.Repo.Repository.Id, issue.Id, 0, 0, cmtType, ""); err != nil {
+			if _, err = models.CreateComment(ctx.User.Id, ctx.Repo.Repository.Id, issue.Id, 0, 0, cmtType, "", nil); err != nil {
 				ctx.Handle(200, "issue.Comment(create status change comment)", err)
 				return
 			}
@@ -678,12 +683,14 @@ func Comment(ctx *middleware.Context, params martini.Params) {
 		}
 	}
 
+	var comment *models.Comment
+
 	var ms []string
 	content := ctx.Query("content")
 	if len(content) > 0 {
 		switch params["action"] {
 		case "new":
-			if err = models.CreateComment(ctx.User.Id, ctx.Repo.Repository.Id, issue.Id, 0, 0, models.IT_PLAIN, content); err != nil {
+			if comment, err = models.CreateComment(ctx.User.Id, ctx.Repo.Repository.Id, issue.Id, 0, 0, models.IT_PLAIN, content, nil); err != nil {
 				ctx.Handle(500, "issue.Comment(create comment)", err)
 				return
 			}
@@ -705,6 +712,24 @@ func Comment(ctx *middleware.Context, params martini.Params) {
 			log.Trace("%s Comment created: %d", ctx.Req.RequestURI, issue.Id)
 		default:
 			ctx.Handle(404, "issue.Comment", err)
+			return
+		}
+	}
+
+	attachments := strings.Split(params["attachments"], ",")
+
+	for _, a := range attachments {
+		aId, err := base.StrTo(a).Int64()
+
+		if err != nil {
+			ctx.Handle(400, "issue.Comment(base.StrTo.Int64)", err)
+			return
+		}
+
+		err = models.AssignAttachment(issue.Id, comment.Id, aId)
+
+		if err != nil {
+			ctx.Handle(400, "issue.Comment(models.AssignAttachment)", err)
 			return
 		}
 	}
@@ -984,4 +1009,119 @@ func UpdateMilestonePost(ctx *middleware.Context, params martini.Params, form au
 	}
 
 	ctx.Redirect(ctx.Repo.RepoLink + "/issues/milestones")
+}
+
+func IssuePostAttachment(ctx *middleware.Context, params martini.Params) {
+	issueId, _ := base.StrTo(params["index"]).Int64()
+
+	if issueId == 0 {
+		ctx.Handle(400, "issue.IssuePostAttachment", nil)
+		return
+	}
+
+	commentId, err := base.StrTo(params["id"]).Int64()
+
+	if err != nil && len(params["id"]) > 0 {
+		ctx.JSON(400, map[string]interface{}{
+			"ok":    false,
+			"error": "invalid comment id",
+		})
+
+		return
+	}
+
+	file, header, err := ctx.Req.FormFile("attachment")
+
+	if err != nil {
+		ctx.JSON(400, map[string]interface{}{
+			"ok":    false,
+			"error": "upload error",
+		})
+
+		return
+	}
+
+	defer file.Close()
+
+	// check mime type, write to file, insert attachment to db
+	allowedTypes := strings.Split(setting.AttachmentAllowedTypes, "|")
+	allowed := false
+
+	fileType := mime.TypeByExtension(header.Filename)
+
+	for _, t := range allowedTypes {
+		t := strings.Trim(t, " ")
+
+		if t == "*/*" || t == fileType {
+			allowed = true
+			break
+		}
+	}
+
+	if !allowed {
+		ctx.JSON(400, map[string]interface{}{
+			"ok":    false,
+			"error": "mime type not allowed",
+		})
+
+		return
+	}
+
+	out, err := ioutil.TempFile(setting.AttachmentPath, "attachment_")
+
+	if err != nil {
+		ctx.JSON(500, map[string]interface{}{
+			"ok":    false,
+			"error": "internal server error",
+		})
+
+		return
+	}
+
+	defer out.Close()
+
+	_, err = io.Copy(out, file)
+
+	if err != nil {
+		ctx.JSON(500, map[string]interface{}{
+			"ok":    false,
+			"error": "internal server error",
+		})
+
+		return
+	}
+
+	a, err := models.CreateAttachment(issueId, commentId, header.Filename, out.Name())
+
+	if err != nil {
+		ctx.JSON(500, map[string]interface{}{
+			"ok":    false,
+			"error": "internal server error",
+		})
+
+		return
+	}
+
+	ctx.JSON(500, map[string]interface{}{
+		"ok": true,
+		"id": a.Id,
+	})
+}
+
+func IssueGetAttachment(ctx *middleware.Context, params martini.Params) {
+	id, err := base.StrTo(params["id"]).Int64()
+
+	if err != nil {
+		ctx.Handle(400, "issue.IssueGetAttachment(base.StrTo.Int64)", err)
+		return
+	}
+
+	attachment, err := models.GetAttachmentById(id)
+
+	if err != nil {
+		ctx.Handle(404, "issue.IssueGetAttachment(models.GetAttachmentById)", err)
+		return
+	}
+
+	ctx.ServeFile(attachment.Path, attachment.Name)
 }
