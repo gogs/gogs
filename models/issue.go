@@ -96,6 +96,11 @@ func (i *Issue) GetAssignee() (err error) {
 	return err
 }
 
+func (i *Issue) Attachments() []*Attachment {
+	a, _ := GetAttachmentsForIssue(i.Id)
+	return a
+}
+
 func (i *Issue) AfterDelete() {
 	_, err := DeleteAttachmentsByIssue(i.Id, true)
 
@@ -871,8 +876,9 @@ func GetIssueComments(issueId int64) ([]Comment, error) {
 }
 
 // Attachments returns the attachments for this comment.
-func (c *Comment) Attachments() ([]*Attachment, error) {
-	return GetAttachmentsByComment(c.Id)
+func (c *Comment) Attachments() []*Attachment {
+	a, _ := GetAttachmentsByComment(c.Id)
+	return a
 }
 
 func (c *Comment) AfterDelete() {
@@ -928,10 +934,16 @@ func GetAttachmentById(id int64) (*Attachment, error) {
 	return m, nil
 }
 
+func GetAttachmentsForIssue(issueId int64) ([]*Attachment, error) {
+	attachments := make([]*Attachment, 0, 10)
+	err := x.Where("issue_id = ?", issueId).Where("comment_id = 0").Find(&attachments)
+	return attachments, err
+}
+
 // GetAttachmentsByIssue returns a list of attachments for the given issue
 func GetAttachmentsByIssue(issueId int64) ([]*Attachment, error) {
 	attachments := make([]*Attachment, 0, 10)
-	err := x.Where("issue_id = ?", issueId).Find(&attachments)
+	err := x.Where("issue_id = ?", issueId).Where("comment_id > 0").Find(&attachments)
 	return attachments, err
 }
 

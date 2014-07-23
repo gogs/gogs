@@ -173,7 +173,10 @@ func CreateIssue(ctx *middleware.Context, params martini.Params) {
 		ctx.Handle(500, "issue.CreateIssue(GetCollaborators)", err)
 		return
 	}
+
+	ctx.Data["AllowedTypes"] = setting.AttachmentAllowedTypes
 	ctx.Data["Collaborators"] = us
+
 	ctx.HTML(200, ISSUE_CREATE)
 }
 
@@ -1028,6 +1031,10 @@ func IssuePostAttachment(ctx *middleware.Context, params martini.Params) {
 		})
 
 		return
+	}
+
+	if commentId == 0 {
+		commentId = -1
 	}
 
 	file, header, err := ctx.Req.FormFile("attachment")

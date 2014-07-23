@@ -525,6 +525,7 @@ function initIssue() {
         var $attachments = $("input[name=attachments]");
         var $addButton = $("#attachments-button");
 
+        var commentId = $addButton.attr("data-comment-id"); // "0" == for issue, "" == for comment
         var accepted = $addButton.attr("data-accept");
 
         $addButton.on("click", function() {
