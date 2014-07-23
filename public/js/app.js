@@ -520,6 +520,19 @@ function initIssue() {
         });
     }());
 
+    (function() {
+        var $attached = $("#attached");
+        var $attachments = $("input[name=attachments]");
+        var $addButton = $("#attachments-button");
+
+        var accepted = $addButton.attr("data-accept");
+
+        $addButton.on("click", function() {
+            // TODO: (nuss-justin): open dialog, upload file, add id to list, add file to $attached list
+            return false;
+        });
+    }());
+
     // issue edit mode
     (function () {
         $("#issue-edit-btn").on("click", function () {

@@ -7,19 +7,24 @@ package models
 import (
 	"bytes"
 	"errors"
+	"os"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/go-xorm/xorm"
 
 	"github.com/gogits/gogs/modules/base"
+	"github.com/gogits/gogs/modules/log"
 )
 
 var (
-	ErrIssueNotExist     = errors.New("Issue does not exist")
-	ErrLabelNotExist     = errors.New("Label does not exist")
-	ErrMilestoneNotExist = errors.New("Milestone does not exist")
-	ErrWrongIssueCounter = errors.New("Invalid number of issues for this milestone")
+	ErrIssueNotExist       = errors.New("Issue does not exist")
+	ErrLabelNotExist       = errors.New("Label does not exist")
+	ErrMilestoneNotExist   = errors.New("Milestone does not exist")
+	ErrWrongIssueCounter   = errors.New("Invalid number of issues for this milestone")
+	ErrAttachmentNotExist  = errors.New("Attachment does not exist")
+	ErrAttachmentNotLinked = errors.New("Attachment does not belong to this issue")
 )
 
 // Issue represents an issue or pull request of repository.
@@ -89,6 +94,14 @@ func (i *Issue) GetAssignee() (err error) {
 		return nil
 	}
 	return err
+}
+
+func (i *Issue) AfterDelete() {
+	_, err := DeleteAttachmentsByIssue(i.Id, true)
+
+	if err != nil {
+		log.Info("Could not delete files for issue #%d: %s", i.Id, err)
+	}
 }
 
 // CreateIssue creates new issue for repository.
@@ -795,17 +808,19 @@ type Comment struct {
 }
 
 // CreateComment creates comment of issue or commit.
-func CreateComment(userId, repoId, issueId, commitId, line int64, cmtType int, content string) error {
+func CreateComment(userId, repoId, issueId, commitId, line int64, cmtType int, content string, attachments []int64) (*Comment, error) {
 	sess := x.NewSession()
 	defer sess.Close()
 	if err := sess.Begin(); err != nil {
-		return err
+		return nil, err
 	}
 
-	if _, err := sess.Insert(&Comment{PosterId: userId, Type: cmtType, IssueId: issueId,
-		CommitId: commitId, Line: line, Content: content}); err != nil {
+	comment := &Comment{PosterId: userId, Type: cmtType, IssueId: issueId,
+		CommitId: commitId, Line: line, Content: content}
+
+	if _, err := sess.Insert(comment); err != nil {
 		sess.Rollback()
-		return err
+		return nil, err
 	}
 
 	// Check comment type.
@@ -814,22 +829,38 @@ func CreateComment(userId, repoId, issueId, commitId, line int64, cmtType int, c
 		rawSql := "UPDATE `issue` SET num_comments = num_comments + 1 WHERE id = ?"
 		if _, err := sess.Exec(rawSql, issueId); err != nil {
 			sess.Rollback()
-			return err
+			return nil, err
+		}
+
+		if len(attachments) > 0 {
+			rawSql = "UPDATE `attachment` SET comment_id = ? WHERE id IN (?)"
+
+			astrs := make([]string, 0, len(attachments))
+
+			for _, a := range attachments {
+				astrs = append(astrs, strconv.FormatInt(a, 10))
+			}
+
+			if _, err := sess.Exec(rawSql, comment.Id, strings.Join(astrs, ",")); err != nil {
+				sess.Rollback()
+				return nil, err
+			}
 		}
 	case IT_REOPEN:
 		rawSql := "UPDATE `repository` SET num_closed_issues = num_closed_issues - 1 WHERE id = ?"
 		if _, err := sess.Exec(rawSql, repoId); err != nil {
 			sess.Rollback()
-			return err
+			return nil, err
 		}
 	case IT_CLOSE:
 		rawSql := "UPDATE `repository` SET num_closed_issues = num_closed_issues + 1 WHERE id = ?"
 		if _, err := sess.Exec(rawSql, repoId); err != nil {
 			sess.Rollback()
-			return err
+			return nil, err
 		}
 	}
-	return sess.Commit()
+
+	return comment, sess.Commit()
 }
 
 // GetIssueComments returns list of comment by given issue id.
@@ -837,4 +868,139 @@ func GetIssueComments(issueId int64) ([]Comment, error) {
 	comments := make([]Comment, 0, 10)
 	err := x.Asc("created").Find(&comments, &Comment{IssueId: issueId})
 	return comments, err
+}
+
+// Attachments returns the attachments for this comment.
+func (c *Comment) Attachments() ([]*Attachment, error) {
+	return GetAttachmentsByComment(c.Id)
+}
+
+func (c *Comment) AfterDelete() {
+	_, err := DeleteAttachmentsByComment(c.Id, true)
+
+	if err != nil {
+		log.Info("Could not delete files for comment %d on issue #%d: %s", c.Id, c.IssueId, err)
+	}
+}
+
+type Attachment struct {
+	Id        int64
+	IssueId   int64
+	CommentId int64
+	Name      string
+	Path      string
+	Created   time.Time `xorm:"CREATED"`
+}
+
+// CreateAttachment creates a new attachment inside the database and
+func CreateAttachment(issueId, commentId int64, name, path string) (*Attachment, error) {
+	sess := x.NewSession()
+	defer sess.Close()
+
+	if err := sess.Begin(); err != nil {
+		return nil, err
+	}
+
+	a := &Attachment{IssueId: issueId, CommentId: commentId, Name: name, Path: path}
+
+	if _, err := sess.Insert(a); err != nil {
+		sess.Rollback()
+		return nil, err
+	}
+
+	return a, sess.Commit()
+}
+
+// Attachment returns the attachment by given ID.
+func GetAttachmentById(id int64) (*Attachment, error) {
+	m := &Attachment{Id: id}
+
+	has, err := x.Get(m)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if !has {
+		return nil, ErrAttachmentNotExist
+	}
+
+	return m, nil
+}
+
+// GetAttachmentsByIssue returns a list of attachments for the given issue
+func GetAttachmentsByIssue(issueId int64) ([]*Attachment, error) {
+	attachments := make([]*Attachment, 0, 10)
+	err := x.Where("issue_id = ?", issueId).Find(&attachments)
+	return attachments, err
+}
+
+// GetAttachmentsByComment returns a list of attachments for the given comment
+func GetAttachmentsByComment(commentId int64) ([]*Attachment, error) {
+	attachments := make([]*Attachment, 0, 10)
+	err := x.Where("comment_id = ?", commentId).Find(&attachments)
+	return attachments, err
+}
+
+// DeleteAttachment deletes the given attachment and optionally the associated file.
+func DeleteAttachment(a *Attachment, remove bool) error {
+	_, err := DeleteAttachments([]*Attachment{a}, remove)
+	return err
+}
+
+// DeleteAttachments deletes the given attachments and optionally the associated files.
+func DeleteAttachments(attachments []*Attachment, remove bool) (int, error) {
+	for i, a := range attachments {
+		if remove {
+			if err := os.Remove(a.Path); err != nil {
+				return i, err
+			}
+		}
+
+		if _, err := x.Delete(a.Id); err != nil {
+			return i, err
+		}
+	}
+
+	return len(attachments), nil
+}
+
+// DeleteAttachmentsByIssue deletes all attachments associated with the given issue.
+func DeleteAttachmentsByIssue(issueId int64, remove bool) (int, error) {
+	attachments, err := GetAttachmentsByIssue(issueId)
+
+	if err != nil {
+		return 0, err
+	}
+
+	return DeleteAttachments(attachments, remove)
+}
+
+// DeleteAttachmentsByComment deletes all attachments associated with the given comment.
+func DeleteAttachmentsByComment(commentId int64, remove bool) (int, error) {
+	attachments, err := GetAttachmentsByComment(commentId)
+
+	if err != nil {
+		return 0, err
+	}
+
+	return DeleteAttachments(attachments, remove)
+}
+
+// AssignAttachment assigns the given attachment to the specified comment
+func AssignAttachment(issueId, commentId, attachmentId int64) error {
+	a, err := GetAttachmentById(attachmentId)
+
+	if err != nil {
+		return err
+	}
+
+	if a.IssueId != issueId {
+		return ErrAttachmentNotLinked
+	}
+
+	a.CommentId = commentId
+
+	_, err = x.Id(a.Id).Update(a)
+	return err
 }

@@ -62,6 +62,11 @@
                             <div class="panel-body markdown">
                                 {{str2html .Content}}
                             </div>
+                            <div class="attachments">
+                                {{range .Attachments}}
+                                <a class="attachment" href="{{.IssueId}}/attachment/{{.Id}}">{{.Name}}</a>
+                                {{end}}
+                            </div>
                         </div>
                     </div>
                     {{else if eq .Type 1}}
@@ -103,8 +108,14 @@
                                     <div class="tab-pane issue-preview-content" id="issue-preview">Loading...</div>
                                 </div>
                             </div>
+                            <div>
+                                <div id="attached"></div>
+                            </div>
                             <div class="text-right">
                                 <div class="form-group">
+                                    <input type="hidden" name="attachments" value="" />
+                                    <button data-accept="{{AllowedTypes}}" class="btn-default btn attachment-add" id="attachments-button">Add Attachments...</button>
+
                                     {{if .IsIssueOwner}}{{if .Issue.IsClosed}}
                                     <input type="submit" class="btn-default btn issue-open" id="issue-open-btn" data-origin="Reopen" data-text="Reopen & Comment" name="change_status" value="Reopen"/>{{else}}
                                     <input type="submit" class="btn-default btn issue-close" id="issue-close-btn" data-origin="Close" data-text="Close & Comment" name="change_status" value="Close"/>{{end}}{{end}}&nbsp;&nbsp;
