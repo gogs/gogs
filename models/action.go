@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
 
@@ -31,6 +32,20 @@ const (
 	OP_PUSH_TAG
 	OP_COMMENT_ISSUE
 )
+
+var (
+	ErrNotImplemented = errors.New("Not implemented yet")
+)
+
+var (
+	// Same as Github. See https://help.github.com/articles/closing-issues-via-commit-messages
+	IssueKeywords    = []string{"close", "closes", "closed", "fix", "fixes", "fixed", "resolve", "resolves", "resolved"}
+	IssueKeywordsPat *regexp.Regexp
+)
+
+func init() {
+	IssueKeywordsPat = regexp.MustCompile(fmt.Sprintf(`(?i)(?:%s) \S+`, strings.Join(IssueKeywords, "|")))
+}
 
 // Action represents user operation type and other information to repository.,
 // it implemented interface base.Actioner so that can be used in template render.
@@ -78,6 +93,52 @@ func (a Action) GetContent() string {
 	return a.Content
 }
 
+func updateIssuesCommit(repoUserName, repoName string, commits []*base.PushCommit) error {
+	for _, c := range commits {
+		refs := IssueKeywordsPat.FindAllString(c.Message, -1)
+
+		for _, ref := range refs {
+			ref := ref[strings.IndexByte(ref, byte(' '))+1:]
+
+			if len(ref) == 0 {
+				continue
+			}
+
+			// Add repo name if missing
+			if ref[0] == '#' {
+				ref = fmt.Sprintf("%s/%s%s", repoUserName, repoName, ref)
+			} else if strings.Contains(ref, "/") == false {
+				// We don't support User#ID syntax yet
+				// return ErrNotImplemented
+
+				continue
+			}
+
+			issue, err := GetIssueByRef(ref)
+
+			if err != nil {
+				return err
+			}
+
+			if issue.IsClosed {
+				continue
+			}
+
+			issue.IsClosed = true
+
+			if err = UpdateIssue(issue); err != nil {
+				return err
+			}
+
+			if err = ChangeMilestoneIssueStats(issue); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
 // CommitRepoAction adds new action for committing repository.
 func CommitRepoAction(userId, repoUserId int64, userName, actEmail string,
 	repoId int64, repoUserName, repoName string, refFullName string, commit *base.PushCommits) error {
@@ -105,6 +166,12 @@ func CommitRepoAction(userId, repoUserId int64, userName, actEmail string,
 	repo.IsBare = false
 	if err = UpdateRepository(repo); err != nil {
 		return errors.New("action.CommitRepoAction(UpdateRepository): " + err.Error())
+	}
+
+	err = updateIssuesCommit(repoUserName, repoName, commit.Commits)
+
+	if err != nil {
+		log.Debug("action.CommitRepoAction(updateIssuesCommit): ", err)
 	}
 
 	if err = NotifyWatchers(&Action{ActUserId: userId, ActUserName: userName, ActEmail: actEmail,
