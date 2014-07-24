@@ -139,10 +139,6 @@ func (ctx *Context) Handle(status int, title string, err error) {
 	ctx.HTML(status, base.TplName(fmt.Sprintf("status/%d", status)))
 }
 
-func (ctx *Context) Debug(msg string, args ...interface{}) {
-	log.Debug(msg, args...)
-}
-
 func (ctx *Context) GetCookie(name string) string {
 	cookie, err := ctx.Req.Cookie(name)
 	if err != nil {
@@ -356,7 +352,7 @@ func InitContext() martini.Handler {
 			ctx.Session.SessionRelease(res)
 
 			if flash := ctx.Flash.Encode(); len(flash) > 0 {
-				ctx.SetCookie("gogs_flash", ctx.Flash.Encode(), 0)
+				ctx.SetCookie("gogs_flash", flash, 0)
 			}
 		})
 

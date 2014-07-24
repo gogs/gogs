@@ -341,6 +341,7 @@ func newSessionService() {
 		log.Fatal("Init session system failed, provider: %s, %v",
 			SessionProvider, err)
 	}
+	go SessionManager.GC()
 
 	log.Info("Session Service Enabled")
 }
