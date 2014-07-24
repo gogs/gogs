@@ -393,7 +393,10 @@ func ViewIssue(ctx *middleware.Context, params martini.Params) {
 			return
 		}
 		comments[i].Poster = u
-		comments[i].Content = string(base.RenderMarkdown([]byte(comments[i].Content), ctx.Repo.RepoLink))
+
+		if comments[i].Type == models.COMMENT {
+			comments[i].Content = string(base.RenderMarkdown([]byte(comments[i].Content), ctx.Repo.RepoLink))
+		}
 	}
 
 	ctx.Data["Title"] = issue.Name
@@ -649,9 +652,9 @@ func Comment(ctx *middleware.Context, params martini.Params) {
 				}
 			}
 
-			cmtType := models.IT_CLOSE
+			cmtType := models.CLOSE
 			if !issue.IsClosed {
-				cmtType = models.IT_REOPEN
+				cmtType = models.REOPEN
 			}
 
 			if err = models.CreateComment(ctx.User.Id, ctx.Repo.Repository.Id, issue.Id, 0, 0, cmtType, ""); err != nil {
@@ -667,7 +670,7 @@ func Comment(ctx *middleware.Context, params martini.Params) {
 	if len(content) > 0 {
 		switch params["action"] {
 		case "new":
-			if err = models.CreateComment(ctx.User.Id, ctx.Repo.Repository.Id, issue.Id, 0, 0, models.IT_PLAIN, content); err != nil {
+			if err = models.CreateComment(ctx.User.Id, ctx.Repo.Repository.Id, issue.Id, 0, 0, models.COMMENT, content); err != nil {
 				ctx.Handle(500, "issue.Comment(create comment)", err)
 				return
 			}

@@ -1258,9 +1258,16 @@ body {
 }
 #issue .issue-child .panel-heading .user,
 #issue .issue-closed a.user,
-#issue .issue-opened a.user {
+#issue .issue-opened a.user,
+#issue .issue-reference a.user {
     font-weight: bold;
 }
+
+#issue .issue-child .issue-content .user .avatar {
+    height: 21px;
+    width: 21px;
+} 
+
 #issue .issue-line {
     border-color: #CCC;
 }
@@ -1280,18 +1287,26 @@ body {
     width: 60%;
 }
 #issue .issue-closed .issue-content,
-#issue .issue-opened .issue-content {
+#issue .issue-opened .issue-content,
+#issue .issue-reference .issue-content {
     line-height: 42px;
 }
 #issue .issue-closed,
-#issue .issue-opened {
+#issue .issue-opened,
+#issue .issue-reference {
     border-bottom: 2px solid #CCC;
     margin-bottom: 24px;
     padding-bottom: 24px;
 }
+
+#issue .issue-reference {
+    padding-bottom: 6px;
+}
+
 #issue .issue-closed .label-danger,
-#issue .issue-opened .label-success {
-    margin: 0 .8em;
+#issue .issue-opened .label-success,
+#issue .issue-reference .label-primary {
+    margin: 0.8em;
 }
 #issue .milestone-item .actions {
     margin-top: 10px;
