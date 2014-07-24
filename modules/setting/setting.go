@@ -11,6 +11,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/Unknwon/com"
 	"github.com/Unknwon/goconfig"
@@ -77,6 +78,9 @@ var (
 	AttachmentMaxSize      int64
 	AttachmentMaxFiles     int
 	AttachmentEnabled      bool
+
+	// Time settings.
+	TimeFormat string
 
 	// Cache settings.
 	Cache        cache.Cache
@@ -178,6 +182,55 @@ func NewConfigContext() {
 	AttachmentMaxSize = Cfg.MustInt64("attachment", "MAX_SIZE", 32)
 	AttachmentMaxFiles = Cfg.MustInt("attachment", "MAX_FILES", 10)
 	AttachmentEnabled = Cfg.MustBool("attachment", "ENABLE", true)
+
+	TimeFormat = Cfg.MustValue("time", "FORMAT", time.RFC1123)
+
+	switch TimeFormat {
+	case "ANSIC":
+		TimeFormat = time.ANSIC
+
+	case "UnixDate":
+		TimeFormat = time.UnixDate
+
+	case "RubyDate":
+		TimeFormat = time.RubyDate
+
+	case "RFC822":
+		TimeFormat = time.RFC822
+
+	case "RFC822Z":
+		TimeFormat = time.RFC822Z
+
+	case "RFC850":
+		TimeFormat = time.RFC850
+
+	case "RFC1123":
+		TimeFormat = time.RFC1123
+
+	case "RFC1123Z":
+		TimeFormat = time.RFC1123Z
+
+	case "RFC3339":
+		TimeFormat = time.RFC3339
+
+	case "RFC3339Nano":
+		TimeFormat = time.RFC3339Nano
+
+	case "Kitchen":
+		TimeFormat = time.Kitchen
+
+	case "Stamp":
+		TimeFormat = time.Stamp
+
+	case "StampMilli":
+		TimeFormat = time.StampMilli
+
+	case "StampMicro":
+		TimeFormat = time.StampMicro
+
+	case "StampNano":
+		TimeFormat = time.StampNano
+	}
 
 	if err = os.MkdirAll(AttachmentPath, os.ModePerm); err != nil {
 		log.Fatal("Could not create directory %s: %s", AttachmentPath, err)
