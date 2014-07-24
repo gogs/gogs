@@ -981,7 +981,7 @@ type Attachment struct {
 	IssueId   int64
 	CommentId int64
 	Name      string
-	Path      string
+	Path      string    `xorm:"TEXT"`
 	Created   time.Time `xorm:"CREATED"`
 }
 
