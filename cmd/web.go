@@ -206,7 +206,7 @@ func runWeb(*cli.Context) {
 		r.Post("/:org/teams/new", bindIgnErr(auth.CreateTeamForm{}), org.NewTeamPost)
 		r.Get("/:org/teams/:team/edit", org.EditTeam)
 
-		r.Get("/:org/team/:team",org.SingleTeam)
+		r.Get("/:org/team/:team", org.SingleTeam)
 
 		r.Get("/:org/settings", org.Settings)
 		r.Post("/:org/settings", bindIgnErr(auth.OrgSettingForm{}), org.SettingsPost)
@@ -238,6 +238,7 @@ func runWeb(*cli.Context) {
 			r.Post("/:index/label", repo.UpdateIssueLabel)
 			r.Post("/:index/milestone", repo.UpdateIssueMilestone)
 			r.Post("/:index/assignee", repo.UpdateAssignee)
+			r.Get("/:index/attachment/:id", repo.IssueGetAttachment)
 			r.Post("/labels/new", bindIgnErr(auth.CreateLabelForm{}), repo.NewLabel)
 			r.Post("/labels/edit", bindIgnErr(auth.CreateLabelForm{}), repo.UpdateLabel)
 			r.Post("/labels/delete", repo.DeleteLabel)

@@ -127,7 +127,7 @@ func updateIssuesCommit(userId, repoId int64, repoUserName, repoName string, com
 			url := fmt.Sprintf("/%s/%s/commit/%s", repoUserName, repoName, c.Sha1)
 			message := fmt.Sprintf(`<a href="%s">%s</a>`, url, c.Message)
 
-			if err = CreateComment(userId, issue.RepoId, issue.Id, 0, 0, COMMIT, message); err != nil {
+			if _, err = CreateComment(userId, issue.RepoId, issue.Id, 0, 0, COMMIT, message, nil); err != nil {
 				return err
 			}
 
@@ -147,7 +147,7 @@ func updateIssuesCommit(userId, repoId int64, repoUserName, repoName string, com
 				}
 
 				// If commit happened in the referenced repository, it means the issue can be closed.
-				if err = CreateComment(userId, repoId, issue.Id, 0, 0, CLOSE, ""); err != nil {
+				if _, err = CreateComment(userId, repoId, issue.Id, 0, 0, CLOSE, "", nil); err != nil {
 					return err
 				}
 			}
