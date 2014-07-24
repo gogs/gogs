@@ -868,6 +868,14 @@ func CreateComment(userId, repoId, issueId, commitId, line int64, cmtType int, c
 	return comment, sess.Commit()
 }
 
+// GetCommentById returns the comment with the given id
+func GetCommentById(commentId int64) (*Comment, error) {
+	c := &Comment{Id: commentId}
+	_, err := x.Get(c)
+
+	return c, err
+}
+
 // GetIssueComments returns list of comment by given issue id.
 func GetIssueComments(issueId int64) ([]Comment, error) {
 	comments := make([]Comment, 0, 10)
@@ -936,14 +944,14 @@ func GetAttachmentById(id int64) (*Attachment, error) {
 
 func GetAttachmentsForIssue(issueId int64) ([]*Attachment, error) {
 	attachments := make([]*Attachment, 0, 10)
-	err := x.Where("issue_id = ?", issueId).Where("comment_id = 0").Find(&attachments)
+	err := x.Where("issue_id = ?", issueId).And("comment_id = 0").Find(&attachments)
 	return attachments, err
 }
 
 // GetAttachmentsByIssue returns a list of attachments for the given issue
 func GetAttachmentsByIssue(issueId int64) ([]*Attachment, error) {
 	attachments := make([]*Attachment, 0, 10)
-	err := x.Where("issue_id = ?", issueId).Where("comment_id > 0").Find(&attachments)
+	err := x.Where("issue_id = ?", issueId).And("comment_id > 0").Find(&attachments)
 	return attachments, err
 }
 
