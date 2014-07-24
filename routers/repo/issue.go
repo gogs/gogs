@@ -1079,5 +1079,7 @@ func IssueGetAttachment(ctx *middleware.Context, params martini.Params) {
 		return
 	}
 
-	ctx.ServeFile(attachment.Path, attachment.Name)
+	// Fix #312. Attachments with , in their name are not handled correctly by Google Chrome.
+	// We must put the name in " manually.
+	ctx.ServeFile(attachment.Path, "\"" + attachment.Name + "\"")
 }
