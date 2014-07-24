@@ -45,8 +45,19 @@
                                         <div class="tab-pane issue-preview-content" id="issue-edit-preview">Loading...</div>
                                     </div>
                                 </div>
-                            </div>
+                            </div>                        
                         </div>
+                        {{with $attachments := .Issue.Attachments}}
+                        {{if $attachments}}
+                        <div class="attachments">
+                            <span class="attachment-label label label-info">Attachments:</span>
+                                
+                            {{range $attachments}}
+                            <a class="attachment label label-default" href="{{.IssueId}}/attachment/{{.Id}}">{{.Name}}</a>
+                            {{end}}
+                        </div>
+                        {{end}}
+                        {{end}}    
                     </div>
                     {{range .Comments}}
                     {{/* 0 = COMMENT, 1 = REOPEN, 2 = CLOSE, 3 = ISSUE, 4 = COMMIT, 5 = PULL */}}
@@ -63,6 +74,17 @@
                             <div class="panel-body markdown">
                                 {{str2html .Content}}
                             </div>
+                            {{with $attachments := .Attachments}}
+                            {{if $attachments}}
+                            <div class="attachments">
+                                <span class="attachment-label label label-info">Attachments:</span>
+
+                                {{range $attachments}}
+                                <a class="attachment label label-default" href="{{.IssueId}}/attachment/{{.Id}}">{{.Name}}</a>
+                                {{end}}
+                            </div>
+                            {{end}}
+                            {{end}}
                         </div>
                     </div>
                     {{else if eq .Type 1}}
@@ -95,7 +117,7 @@
                     <hr class="issue-line"/>
                     {{if .SignedUser}}<div class="issue-child issue-reply">
                     <a class="user pull-left" href="/user/{{.SignedUser.Name}}"><img class="avatar" src="{{.SignedUser.AvatarLink}}" alt=""/></a>
-                    <form class="panel panel-default issue-content" action="{{.RepoLink}}/comment/new" method="post">
+                    <form class="panel panel-default issue-content" action="{{.RepoLink}}/comment/new" method="post" enctype="multipart/form-data">
                         {{.CsrfTokenHtml}}
                         <div class="panel-body">
                             <div class="form-group">
@@ -115,8 +137,17 @@
                                     <div class="tab-pane issue-preview-content" id="issue-preview">Loading...</div>
                                 </div>
                             </div>
+                            {{if .AttachmentsEnabled}}
+                            <div id="attached">
+                                <div id="attached-list"></div>
+                            </div>
+                            {{end}}
                             <div class="text-right">
                                 <div class="form-group">
+                                    {{if .AttachmentsEnabled}}
+                                    <input type="file" accept="{{.AllowedTypes}}" style="display: none;" id="attachments-input" name="attachments" multiple />
+                                    <button class="btn-default btn attachment-add" id="attachments-button">Select Attachments...</button>
+                                    {{end}}
                                     {{if .IsIssueOwner}}{{if .Issue.IsClosed}}
                                     <input type="submit" class="btn-default btn issue-open" id="issue-open-btn" data-origin="Reopen" data-text="Reopen & Comment" name="change_status" value="Reopen"/>{{else}}
                                     <input type="submit" class="btn-default btn issue-close" id="issue-close-btn" data-origin="Close" data-text="Close & Comment" name="change_status" value="Close"/>{{end}}{{end}}&nbsp;&nbsp;
