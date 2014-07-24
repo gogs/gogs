@@ -562,3 +562,45 @@ func UnFollowUser(userId int64, unFollowId int64) (err error) {
 	}
 	return session.Commit()
 }
+
+func UpdateMentions(userNames []string, issueId int64) error {
+	users := make([]*User, 0, len(userNames))
+
+	if err := x.Where("name IN (?)", strings.Join(userNames, "\",\"")).OrderBy("name ASC").Find(&users); err != nil {
+		return err
+	}
+
+	ids := make([]int64, 0, len(userNames))
+
+	for _, user := range users {
+		ids = append(ids, user.Id)
+
+		if user.Type == INDIVIDUAL {
+			continue
+		}
+
+		if user.NumMembers == 0 {
+			continue
+		}
+
+		tempIds := make([]int64, 0, user.NumMembers)
+
+		orgUsers, err := GetOrgUsersByOrgId(user.Id)
+
+		if err != nil {
+			return err
+		}
+
+		for _, orgUser := range orgUsers {
+			tempIds = append(tempIds, orgUser.Id)
+		}
+
+		ids = append(ids, tempIds...)
+	}
+
+	if err := UpdateIssueUserPairsByMentions(ids, issueId); err != nil {
+		return err
+	}
+
+	return nil
+}
