@@ -74,6 +74,8 @@ var (
 	// Attachment settings.
 	AttachmentPath         string
 	AttachmentAllowedTypes string
+	AttachmentMaxSize      int64
+	AttachmentMaxFiles     int
 
 	// Cache settings.
 	Cache        cache.Cache
@@ -172,6 +174,8 @@ func NewConfigContext() {
 
 	AttachmentPath = Cfg.MustValue("attachment", "PATH", "files/attachments")
 	AttachmentAllowedTypes = Cfg.MustValue("attachment", "ALLOWED_TYPES", "*/*")
+	AttachmentMaxSize = Cfg.MustInt64("attachment", "MAX_SIZE", 32)
+	AttachmentMaxFiles = Cfg.MustInt("attachment", "MAX_FILES", 10)
 
 	if err = os.MkdirAll(AttachmentPath, os.ModePerm); err != nil {
 		log.Fatal("Could not create directory %s: %s", AttachmentPath, err)

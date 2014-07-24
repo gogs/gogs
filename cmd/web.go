@@ -238,6 +238,7 @@ func runWeb(*cli.Context) {
 			r.Post("/:index/label", repo.UpdateIssueLabel)
 			r.Post("/:index/milestone", repo.UpdateIssueMilestone)
 			r.Post("/:index/assignee", repo.UpdateAssignee)
+			r.Get("/:index/attachment/:id", repo.IssueGetAttachment)
 			r.Post("/labels/new", bindIgnErr(auth.CreateLabelForm{}), repo.NewLabel)
 			r.Post("/labels/edit", bindIgnErr(auth.CreateLabelForm{}), repo.UpdateLabel)
 			r.Post("/labels/delete", repo.DeleteLabel)
@@ -253,13 +254,6 @@ func runWeb(*cli.Context) {
 		r.Get("/releases/new", repo.NewRelease)
 		r.Get("/releases/edit/:tagname", repo.EditRelease)
 	}, reqSignIn, middleware.RepoAssignment(true))
-
-	m.Group("/:username/:reponame/issues/:index/attachment", func(r martini.Router) {
-		r.Get("/:id", repo.IssueGetAttachment)
-		r.Post("/", repo.IssuePostAttachment)
-		r.Post("/:comment", repo.IssuePostAttachment)
-		r.Delete("/:comment/:id", repo.IssueDeleteAttachment)
-	}, reqSignIn, middleware.RepoAssignment(true), middleware.Toggle(&middleware.ToggleOptions{DisableCsrf: true}))
 
 	m.Group("/:username/:reponame", func(r martini.Router) {
 		r.Post("/releases/new", bindIgnErr(auth.NewReleaseForm{}), repo.NewReleasePost)

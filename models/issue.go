@@ -1085,21 +1085,3 @@ func DeleteAttachmentsByComment(commentId int64, remove bool) (int, error) {
 
 	return DeleteAttachments(attachments, remove)
 }
-
-// AssignAttachment assigns the given attachment to the specified comment
-func AssignAttachment(issueId, commentId, attachmentId int64) error {
-	a, err := GetAttachmentById(attachmentId)
-
-	if err != nil {
-		return err
-	}
-
-	if a.IssueId != issueId {
-		return ErrAttachmentNotLinked
-	}
-
-	a.CommentId = commentId
-
-	_, err = x.Id(a.Id).Update(a)
-	return err
-}

@@ -5,6 +5,7 @@
 package repo
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -33,6 +34,11 @@ const (
 	MILESTONE      base.TplName = "repo/issue/milestone"
 	MILESTONE_NEW  base.TplName = "repo/issue/milestone_new"
 	MILESTONE_EDIT base.TplName = "repo/issue/milestone_edit"
+)
+
+var (
+	ErrFileTypeForbidden = errors.New("File type is not allowed")
+	ErrTooManyFiles      = errors.New("Maximum number of files to upload exceeded")
 )
 
 func Issues(ctx *middleware.Context) {
@@ -232,6 +238,8 @@ func CreateIssuePost(ctx *middleware.Context, params martini.Params, form auth.C
 		ctx.Handle(500, "issue.CreateIssue(NewIssueUserPairs)", err)
 		return
 	}
+
+	uploadFiles(ctx, issue.Id, 0)
 
 	// Update mentions.
 	ms := base.MentionPattern.FindAllString(issue.Content, -1)
@@ -619,6 +627,67 @@ func UpdateAssignee(ctx *middleware.Context) {
 	})
 }
 
+func uploadFiles(ctx *middleware.Context, issueId, commentId int64) {
+	allowedTypes := strings.Split(setting.AttachmentAllowedTypes, "|")
+	attachments := ctx.Req.MultipartForm.File["attachments"]
+
+	if len(attachments) > setting.AttachmentMaxFiles {
+		ctx.Handle(400, "issue.Comment", ErrTooManyFiles)
+		return
+	}
+
+	for _, header := range attachments {
+		file, err := header.Open()
+
+		if err != nil {
+			ctx.Handle(500, "issue.Comment(header.Open)", err)
+			return
+		}
+
+		defer file.Close()
+
+		allowed := false
+		fileType := mime.TypeByExtension(header.Filename)
+
+		for _, t := range allowedTypes {
+			t := strings.Trim(t, " ")
+
+			if t == "*/*" || t == fileType {
+				allowed = true
+				break
+			}
+		}
+
+		if !allowed {
+			ctx.Handle(400, "issue.Comment", ErrFileTypeForbidden)
+			return
+		}
+
+		out, err := ioutil.TempFile(setting.AttachmentPath, "attachment_")
+
+		if err != nil {
+			ctx.Handle(500, "issue.Comment(ioutil.TempFile)", err)
+			return
+		}
+
+		defer out.Close()
+
+		_, err = io.Copy(out, file)
+
+		if err != nil {
+			ctx.Handle(500, "issue.Comment(io.Copy)", err)
+			return
+		}
+
+		_, err = models.CreateAttachment(issueId, commentId, header.Filename, out.Name())
+
+		if err != nil {
+			ctx.Handle(500, "issue.Comment(io.Copy)", err)
+			return
+		}
+	}
+}
+
 func Comment(ctx *middleware.Context, params martini.Params) {
 	index, err := base.StrTo(ctx.Query("issueIndex")).Int64()
 	if err != nil {
@@ -706,28 +775,8 @@ func Comment(ctx *middleware.Context, params martini.Params) {
 		}
 	}
 
-	attachments := strings.Split(params["attachments"], ",")
-
-	for _, a := range attachments {
-		a = strings.Trim(a, " ")
-
-		if len(a) == 0 {
-			continue
-		}
-
-		aId, err := base.StrTo(a).Int64()
-
-		if err != nil {
-			ctx.Handle(400, "issue.Comment(base.StrTo.Int64)", err)
-			return
-		}
-
-		err = models.AssignAttachment(issue.Id, comment.Id, aId)
-
-		if err != nil {
-			ctx.Handle(400, "issue.Comment(models.AssignAttachment)", err)
-			return
-		}
+	if comment != nil {
+		uploadFiles(ctx, issue.Id, comment.Id)
 	}
 
 	// Notify watchers.
@@ -1007,122 +1056,6 @@ func UpdateMilestonePost(ctx *middleware.Context, params martini.Params, form au
 	ctx.Redirect(ctx.Repo.RepoLink + "/issues/milestones")
 }
 
-func IssuePostAttachment(ctx *middleware.Context, params martini.Params) {
-	index, _ := base.StrTo(params["index"]).Int64()
-
-	if index == 0 {
-		ctx.JSON(400, map[string]interface{}{
-			"ok":    false,
-			"error": "invalid issue index",
-		})
-
-		return
-	}
-
-	issue, err := models.GetIssueByIndex(ctx.Repo.Repository.Id, index)
-
-	if err != nil {
-		ctx.JSON(400, map[string]interface{}{
-			"ok":    false,
-			"error": "invalid comment id",
-		})
-
-		return
-	}
-
-	commentId, err := base.StrTo(params["comment"]).Int64()
-
-	if err != nil && len(params["comment"]) > 0 {
-		ctx.JSON(400, map[string]interface{}{
-			"ok":    false,
-			"error": "invalid comment id",
-		})
-
-		return
-	}
-
-	if commentId == 0 {
-		commentId = -1
-	}
-
-	file, header, err := ctx.Req.FormFile("attachment")
-
-	if err != nil {
-		ctx.JSON(400, map[string]interface{}{
-			"ok":    false,
-			"error": "upload error",
-		})
-
-		return
-	}
-
-	defer file.Close()
-
-	// check mime type, write to file, insert attachment to db
-	allowedTypes := strings.Split(setting.AttachmentAllowedTypes, "|")
-	allowed := false
-
-	fileType := mime.TypeByExtension(header.Filename)
-
-	for _, t := range allowedTypes {
-		t := strings.Trim(t, " ")
-
-		if t == "*/*" || t == fileType {
-			allowed = true
-			break
-		}
-	}
-
-	if !allowed {
-		ctx.JSON(400, map[string]interface{}{
-			"ok":    false,
-			"error": "mime type not allowed",
-		})
-
-		return
-	}
-
-	out, err := ioutil.TempFile(setting.AttachmentPath, "attachment_")
-
-	if err != nil {
-		ctx.JSON(500, map[string]interface{}{
-			"ok":    false,
-			"error": "internal server error",
-		})
-
-		return
-	}
-
-	defer out.Close()
-
-	_, err = io.Copy(out, file)
-
-	if err != nil {
-		ctx.JSON(500, map[string]interface{}{
-			"ok":    false,
-			"error": "internal server error",
-		})
-
-		return
-	}
-
-	a, err := models.CreateAttachment(issue.Id, commentId, header.Filename, out.Name())
-
-	if err != nil {
-		ctx.JSON(500, map[string]interface{}{
-			"ok":    false,
-			"error": "internal server error",
-		})
-
-		return
-	}
-
-	ctx.JSON(500, map[string]interface{}{
-		"ok": true,
-		"id": a.Id,
-	})
-}
-
 func IssueGetAttachment(ctx *middleware.Context, params martini.Params) {
 	id, err := base.StrTo(params["id"]).Int64()
 
@@ -1138,117 +1071,5 @@ func IssueGetAttachment(ctx *middleware.Context, params martini.Params) {
 		return
 	}
 
-	log.Error("path=%s name=%s", attachment.Path, attachment.Name)
-
 	ctx.ServeFile(attachment.Path, attachment.Name)
-}
-
-func IssueDeleteAttachment(ctx *middleware.Context, params martini.Params) {
-	index, _ := base.StrTo(params["index"]).Int64()
-
-	if index == 0 {
-		ctx.JSON(400, map[string]interface{}{
-			"ok":    false,
-			"error": "invalid issue index",
-		})
-
-		return
-	}
-
-	issue, err := models.GetIssueByIndex(ctx.Repo.Repository.Id, index)
-
-	if err != nil {
-		ctx.JSON(400, map[string]interface{}{
-			"ok":    false,
-			"error": "invalid comment id",
-		})
-
-		return
-	}
-
-	commentId, err := base.StrTo(params["comment"]).Int64()
-
-	if err != nil || commentId < 0 {
-		ctx.JSON(400, map[string]interface{}{
-			"ok":    false,
-			"error": "invalid comment id",
-		})
-
-		return
-	}
-
-	comment, err := models.GetCommentById(commentId)
-
-	if err != nil {
-		ctx.JSON(400, map[string]interface{}{
-			"ok":    false,
-			"error": "invalid issue id",
-		})
-
-		return
-	}
-
-	if comment.PosterId != ctx.User.Id && !ctx.User.IsAdmin {
-		ctx.JSON(400, map[string]interface{}{
-			"ok":    false,
-			"error": "no permissions",
-		})
-
-		return
-	}
-
-	attachmentId, err := base.StrTo(params["id"]).Int64()
-
-	if err != nil {
-		ctx.JSON(400, map[string]interface{}{
-			"ok":    false,
-			"error": "invalid attachment id",
-		})
-
-		return
-	}
-
-	attachment, err := models.GetAttachmentById(attachmentId)
-
-	if err != nil {
-		ctx.JSON(400, map[string]interface{}{
-			"ok":    false,
-			"error": "wrong attachment id",
-		})
-
-		return
-	}
-
-	if attachment.IssueId != issue.Id {
-		ctx.JSON(400, map[string]interface{}{
-			"ok":    false,
-			"error": "attachment not associated with the given issue",
-		})
-
-		return
-	}
-
-	if attachment.CommentId != commentId {
-		ctx.JSON(400, map[string]interface{}{
-			"ok":    false,
-			"error": "attachment not associated with the given comment",
-		})
-
-		return
-	}
-
-	err = models.DeleteAttachment(attachment, true)
-
-	if err != nil {
-		ctx.JSON(500, map[string]interface{}{
-			"ok":    false,
-			"error": "could not delete attachment",
-		})
-
-		return
-	}
-
-	ctx.JSON(200, map[string]interface{}{
-		"ok": true,
-	})
 }

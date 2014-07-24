@@ -536,7 +536,7 @@ function initIssue() {
         var over = function() {
             var $this = $(this);
 
-            if ($this.text().match(/\.(png|jpg|jpeg|gif)$/) == false) {
+            if ($this.text().match(/\.(png|jpg|jpeg|gif)$/i) == false) {
                 return;
             }
 
@@ -576,15 +576,30 @@ function initIssue() {
 
     // Upload.
     (function() {
-        var $attached = $("#attached");
-        var $attachments = $("input[name=attachments]");
+        var $attachedList = $("#attached-list");
         var $addButton = $("#attachments-button");
 
-        var commentId = $addButton.attr("data-comment-id"); // "0" == for issue, "" == for comment
-        var accepted = $addButton.attr("data-accept");
+        var fileInput = $("#attachments-input")[0];
+
+        fileInput.addEventListener("change", function(event) {
+            $attachedList.empty();
+            $attachedList.append("<b>Attachments:</b> ");
+
+            for (var index = 0; index < fileInput.files.length; index++) {
+                var file = fileInput.files[index];
+
+                var $span = $("<span></span>");
+
+                $span.addClass("label");
+                $span.addClass("label-default");
+
+                $span.append(file.name.toLowerCase());
+                $attachedList.append($span);
+            }
+        });
 
         $addButton.on("click", function() {
-            // TODO: (nuss-justin): open dialog, upload file, add id to list, add file to $attached list
+            fileInput.click();
             return false;
         });
     }());
