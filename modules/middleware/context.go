@@ -139,10 +139,6 @@ func (ctx *Context) Handle(status int, title string, err error) {
 	ctx.HTML(status, base.TplName(fmt.Sprintf("status/%d", status)))
 }
 
-func (ctx *Context) Debug(msg string, args ...interface{}) {
-	log.Debug(msg, args...)
-}
-
 func (ctx *Context) GetCookie(name string) string {
 	cookie, err := ctx.Req.Cookie(name)
 	if err != nil {
@@ -323,7 +319,6 @@ func (f *Flash) Success(msg string) {
 // InitContext initializes a classic context for a request.
 func InitContext() martini.Handler {
 	return func(res http.ResponseWriter, r *http.Request, c martini.Context, rd *Render) {
-
 		ctx := &Context{
 			c: c,
 			// p:      p,
@@ -332,7 +327,6 @@ func InitContext() martini.Handler {
 			Cache:  setting.Cache,
 			Render: rd,
 		}
-
 		ctx.Data["PageStartTime"] = time.Now()
 
 		// start session
@@ -356,7 +350,7 @@ func InitContext() martini.Handler {
 			ctx.Session.SessionRelease(res)
 
 			if flash := ctx.Flash.Encode(); len(flash) > 0 {
-				ctx.SetCookie("gogs_flash", ctx.Flash.Encode(), 0)
+				ctx.SetCookie("gogs_flash", flash, 0)
 			}
 		})
 
@@ -372,6 +366,14 @@ func InitContext() martini.Handler {
 			ctx.Data["SignedUserId"] = user.Id
 			ctx.Data["SignedUserName"] = user.Name
 			ctx.Data["IsAdmin"] = ctx.User.IsAdmin
+		}
+
+		// If request sends files, parse them here otherwise the Query() can't be parsed and the CsrfToken will be invalid.
+		if strings.Contains(r.Header.Get("Content-Type"), "multipart/form-data") {
+			if err = ctx.Req.ParseMultipartForm(setting.AttachmentMaxSize << 20); err != nil { // 32MB max size
+				ctx.Handle(500, "issue.Comment(ctx.Req.ParseMultipartForm)", err)
+				return
+			}
 		}
 
 		// get or create csrf token
