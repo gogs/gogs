@@ -960,6 +960,18 @@ function initOrganization() {
     console.log("init script : organization done");
 }
 
+function initTimeSwitch() {
+    $(".time-since[title]").on("click", function() {
+        var $this = $(this);
+
+        var title = $this.attr("title");
+        var text = $this.text();
+
+        $this.text(title);
+        $this.attr("title", text);
+    });
+}
+
 (function ($) {
     $(function () {
         initCore();
@@ -988,6 +1000,8 @@ function initOrganization() {
         if ($('#body-nav').hasClass("org-nav")) {
             initOrganization();
         }
+
+        initTimeSwitch();
     });
 })(jQuery);
 
