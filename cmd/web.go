@@ -238,9 +238,14 @@ func runWeb(*cli.Context) {
 			r.Post("/:index/label", repo.UpdateIssueLabel)
 			r.Post("/:index/milestone", repo.UpdateIssueMilestone)
 			r.Post("/:index/assignee", repo.UpdateAssignee)
-			r.Post("/:index/attachment", repo.IssuePostAttachment)
-			r.Post("/:index/attachment/:id", repo.IssuePostAttachment)
-			r.Get("/:index/attachment/:id", repo.IssueGetAttachment)
+
+			m.Group("/:index/attachment", func(r martini.Router) {
+				r.Get("/:id", repo.IssueGetAttachment)
+				r.Post("/", repo.IssuePostAttachment)
+				r.Post("/:comment", repo.IssuePostAttachment)
+				r.Delete("/:comment/:id", repo.IssueDeleteAttachment)
+			})
+
 			r.Post("/labels/new", bindIgnErr(auth.CreateLabelForm{}), repo.NewLabel)
 			r.Post("/labels/edit", bindIgnErr(auth.CreateLabelForm{}), repo.UpdateLabel)
 			r.Post("/labels/delete", repo.DeleteLabel)

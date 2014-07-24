@@ -1018,13 +1018,17 @@ func IssuePostAttachment(ctx *middleware.Context, params martini.Params) {
 	issueId, _ := base.StrTo(params["index"]).Int64()
 
 	if issueId == 0 {
-		ctx.Handle(400, "issue.IssuePostAttachment", nil)
+		ctx.JSON(400, map[string]interface{}{
+			"ok":    false,
+			"error": "invalid issue id",
+		})
+
 		return
 	}
 
-	commentId, err := base.StrTo(params["id"]).Int64()
+	commentId, err := base.StrTo(params["comment"]).Int64()
 
-	if err != nil && len(params["id"]) > 0 {
+	if err != nil && len(params["comment"]) > 0 {
 		ctx.JSON(400, map[string]interface{}{
 			"ok":    false,
 			"error": "invalid comment id",
@@ -1131,4 +1135,103 @@ func IssueGetAttachment(ctx *middleware.Context, params martini.Params) {
 	}
 
 	ctx.ServeFile(attachment.Path, attachment.Name)
+}
+
+func IssueDeleteAttachment(ctx *middleware.Context, params martini.Params) {
+	issueId, _ := base.StrTo(params["index"]).Int64()
+
+	if issueId == 0 {
+		ctx.JSON(400, map[string]interface{}{
+			"ok":    false,
+			"error": "invalid issue id",
+		})
+
+		return
+	}
+
+	commentId, err := base.StrTo(params["comment"]).Int64()
+
+	if err != nil || commentId < 0 {
+		ctx.JSON(400, map[string]interface{}{
+			"ok":    false,
+			"error": "invalid comment id",
+		})
+
+		return
+	}
+
+	comment, err := models.GetCommentById(commentId)
+
+	if err != nil {
+		ctx.JSON(400, map[string]interface{}{
+			"ok":    false,
+			"error": "invalid issue id",
+		})
+
+		return
+	}
+
+	if comment.PosterId != ctx.User.Id {
+		ctx.JSON(400, map[string]interface{}{
+			"ok":    false,
+			"error": "no permissions",
+		})
+
+		return
+	}
+
+	attachmentId, err := base.StrTo(params["id"]).Int64()
+
+	if err != nil {
+		ctx.JSON(400, map[string]interface{}{
+			"ok":    false,
+			"error": "invalid attachment id",
+		})
+
+		return
+	}
+
+	attachment, err := models.GetAttachmentById(attachmentId)
+
+	if err != nil {
+		ctx.JSON(400, map[string]interface{}{
+			"ok":    false,
+			"error": "wrong attachment id",
+		})
+
+		return
+	}
+
+	if attachment.IssueId != issueId {
+		ctx.JSON(400, map[string]interface{}{
+			"ok":    false,
+			"error": "attachment not associated with the given issue",
+		})
+
+		return
+	}
+
+	if attachment.CommentId != commentId {
+		ctx.JSON(400, map[string]interface{}{
+			"ok":    false,
+			"error": "attachment not associated with the given comment",
+		})
+
+		return
+	}
+
+	err = models.DeleteAttachment(attachment, true)
+
+	if err != nil {
+		ctx.JSON(500, map[string]interface{}{
+			"ok":    false,
+			"error": "could not delete attachment",
+		})
+
+		return
+	}
+
+	ctx.JSON(200, map[string]interface{}{
+		"ok": true,
+	})
 }
