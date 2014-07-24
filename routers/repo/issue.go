@@ -399,7 +399,10 @@ func ViewIssue(ctx *middleware.Context, params martini.Params) {
 			return
 		}
 		comments[i].Poster = u
-		comments[i].Content = string(base.RenderMarkdown([]byte(comments[i].Content), ctx.Repo.RepoLink))
+
+		if comments[i].Type == models.COMMENT {
+			comments[i].Content = string(base.RenderMarkdown([]byte(comments[i].Content), ctx.Repo.RepoLink))
+		}
 	}
 
 	ctx.Data["AllowedTypes"] = setting.AttachmentAllowedTypes
@@ -652,30 +655,14 @@ func Comment(ctx *middleware.Context, params martini.Params) {
 
 			// Change open/closed issue counter for the associated milestone
 			if issue.MilestoneId > 0 {
-				l, err := models.GetMilestoneById(issue.MilestoneId)
-
-				if err != nil {
-					ctx.Handle(500, "issue.Comment(GetLabelById)", err)
-					return
-				}
-
-				if issue.IsClosed {
-					l.NumOpenIssues = l.NumOpenIssues - 1
-					l.NumClosedIssues = l.NumClosedIssues + 1
-				} else {
-					l.NumOpenIssues = l.NumOpenIssues + 1
-					l.NumClosedIssues = l.NumClosedIssues - 1
-				}
-
-				if err = models.UpdateMilestone(l); err != nil {
-					ctx.Handle(500, "issue.Comment(UpdateLabel)", err)
-					return
+				if err = models.ChangeMilestoneIssueStats(issue); err != nil {
+					ctx.Handle(500, "issue.Comment(ChangeMilestoneIssueStats)", err)
 				}
 			}
 
-			cmtType := models.IT_CLOSE
+			cmtType := models.CLOSE
 			if !issue.IsClosed {
-				cmtType = models.IT_REOPEN
+				cmtType = models.REOPEN
 			}
 
 			if _, err = models.CreateComment(ctx.User.Id, ctx.Repo.Repository.Id, issue.Id, 0, 0, cmtType, "", nil); err != nil {
@@ -693,7 +680,7 @@ func Comment(ctx *middleware.Context, params martini.Params) {
 	if len(content) > 0 {
 		switch params["action"] {
 		case "new":
-			if comment, err = models.CreateComment(ctx.User.Id, ctx.Repo.Repository.Id, issue.Id, 0, 0, models.IT_PLAIN, content, nil); err != nil {
+			if comment, err = models.CreateComment(ctx.User.Id, ctx.Repo.Repository.Id, issue.Id, 0, 0, models.COMMENT, content, nil); err != nil {
 				ctx.Handle(500, "issue.Comment(create comment)", err)
 				return
 			}
