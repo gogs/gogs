@@ -1158,7 +1158,7 @@ func IssueDeleteAttachment(ctx *middleware.Context, params martini.Params) {
 		return
 	}
 
-	if comment.PosterId != ctx.User.Id {
+	if comment.PosterId != ctx.User.Id && !ctx.User.IsAdmin {
 		ctx.JSON(400, map[string]interface{}{
 			"ok":    false,
 			"error": "no permissions",
