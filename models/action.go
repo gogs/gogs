@@ -142,18 +142,6 @@ func updateIssuesCommit(userId, repoId int64, repoUserName, repoName string, com
 					return err
 				}
 
-				issue.Repo, err = GetRepositoryById(issue.RepoId)
-
-				if err != nil {
-					return err
-				}
-
-				issue.Repo.NumClosedIssues++
-
-				if err = UpdateRepository(issue.Repo); err != nil {
-					return err
-				}
-
 				if err = ChangeMilestoneIssueStats(issue); err != nil {
 					return err
 				}
