@@ -768,7 +768,7 @@ func ChangeMilestoneAssign(oldMid, mid int64, issue *Issue) (err error) {
 			m.Completeness = 0
 		}
 
-		if _, err = sess.Id(m.Id).Update(m); err != nil {
+		if _, err = sess.Id(m.Id).Cols("num_issues,num_completeness,num_closed_issues").Update(m); err != nil {
 			sess.Rollback()
 			return err
 		}
@@ -796,7 +796,7 @@ func ChangeMilestoneAssign(oldMid, mid int64, issue *Issue) (err error) {
 		}
 
 		m.Completeness = m.NumClosedIssues * 100 / m.NumIssues
-		if _, err = sess.Id(m.Id).Update(m); err != nil {
+		if _, err = sess.Id(m.Id).Cols("num_issues,num_completeness,num_closed_issues").Update(m); err != nil {
 			sess.Rollback()
 			return err
 		}
