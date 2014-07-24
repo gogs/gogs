@@ -5,7 +5,11 @@
 package repo
 
 import (
+	"errors"
 	"fmt"
+	"io"
+	"io/ioutil"
+	"mime"
 	"net/url"
 	"strings"
 	"time"
@@ -30,6 +34,11 @@ const (
 	MILESTONE      base.TplName = "repo/issue/milestone"
 	MILESTONE_NEW  base.TplName = "repo/issue/milestone_new"
 	MILESTONE_EDIT base.TplName = "repo/issue/milestone_edit"
+)
+
+var (
+	ErrFileTypeForbidden = errors.New("File type is not allowed")
+	ErrTooManyFiles      = errors.New("Maximum number of files to upload exceeded")
 )
 
 func Issues(ctx *middleware.Context) {
@@ -151,6 +160,7 @@ func CreateIssue(ctx *middleware.Context, params martini.Params) {
 	ctx.Data["Title"] = "Create issue"
 	ctx.Data["IsRepoToolbarIssues"] = true
 	ctx.Data["IsRepoToolbarIssuesList"] = false
+	ctx.Data["AttachmentsEnabled"] = setting.AttachmentEnabled
 
 	var err error
 	// Get all milestones.
@@ -170,7 +180,10 @@ func CreateIssue(ctx *middleware.Context, params martini.Params) {
 		ctx.Handle(500, "issue.CreateIssue(GetCollaborators)", err)
 		return
 	}
+
+	ctx.Data["AllowedTypes"] = setting.AttachmentAllowedTypes
 	ctx.Data["Collaborators"] = us
+
 	ctx.HTML(200, ISSUE_CREATE)
 }
 
@@ -178,6 +191,7 @@ func CreateIssuePost(ctx *middleware.Context, params martini.Params, form auth.C
 	ctx.Data["Title"] = "Create issue"
 	ctx.Data["IsRepoToolbarIssues"] = true
 	ctx.Data["IsRepoToolbarIssuesList"] = false
+	ctx.Data["AttachmentsEnabled"] = setting.AttachmentEnabled
 
 	var err error
 	// Get all milestones.
@@ -225,6 +239,10 @@ func CreateIssuePost(ctx *middleware.Context, params martini.Params, form auth.C
 		ctx.User.Id, form.AssigneeId, ctx.Repo.Repository.Name); err != nil {
 		ctx.Handle(500, "issue.CreateIssue(NewIssueUserPairs)", err)
 		return
+	}
+
+	if setting.AttachmentEnabled {
+		uploadFiles(ctx, issue.Id, 0)
 	}
 
 	// Update mentions.
@@ -299,6 +317,8 @@ func checkLabels(labels, allLabels []*models.Label) {
 }
 
 func ViewIssue(ctx *middleware.Context, params martini.Params) {
+	ctx.Data["AttachmentsEnabled"] = setting.AttachmentEnabled
+
 	idx, _ := base.StrTo(params["index"]).Int64()
 	if idx == 0 {
 		ctx.Handle(404, "issue.ViewIssue", nil)
@@ -398,6 +418,8 @@ func ViewIssue(ctx *middleware.Context, params martini.Params) {
 			comments[i].Content = string(base.RenderMarkdown([]byte(comments[i].Content), ctx.Repo.RepoLink))
 		}
 	}
+
+	ctx.Data["AllowedTypes"] = setting.AttachmentAllowedTypes
 
 	ctx.Data["Title"] = issue.Name
 	ctx.Data["Issue"] = issue
@@ -611,6 +633,71 @@ func UpdateAssignee(ctx *middleware.Context) {
 	})
 }
 
+func uploadFiles(ctx *middleware.Context, issueId, commentId int64) {
+	if !setting.AttachmentEnabled {
+		return
+	}
+
+	allowedTypes := strings.Split(setting.AttachmentAllowedTypes, "|")
+	attachments := ctx.Req.MultipartForm.File["attachments"]
+
+	if len(attachments) > setting.AttachmentMaxFiles {
+		ctx.Handle(400, "issue.Comment", ErrTooManyFiles)
+		return
+	}
+
+	for _, header := range attachments {
+		file, err := header.Open()
+
+		if err != nil {
+			ctx.Handle(500, "issue.Comment(header.Open)", err)
+			return
+		}
+
+		defer file.Close()
+
+		allowed := false
+		fileType := mime.TypeByExtension(header.Filename)
+
+		for _, t := range allowedTypes {
+			t := strings.Trim(t, " ")
+
+			if t == "*/*" || t == fileType {
+				allowed = true
+				break
+			}
+		}
+
+		if !allowed {
+			ctx.Handle(400, "issue.Comment", ErrFileTypeForbidden)
+			return
+		}
+
+		out, err := ioutil.TempFile(setting.AttachmentPath, "attachment_")
+
+		if err != nil {
+			ctx.Handle(500, "issue.Comment(ioutil.TempFile)", err)
+			return
+		}
+
+		defer out.Close()
+
+		_, err = io.Copy(out, file)
+
+		if err != nil {
+			ctx.Handle(500, "issue.Comment(io.Copy)", err)
+			return
+		}
+
+		_, err = models.CreateAttachment(issueId, commentId, header.Filename, out.Name())
+
+		if err != nil {
+			ctx.Handle(500, "issue.Comment(io.Copy)", err)
+			return
+		}
+	}
+}
+
 func Comment(ctx *middleware.Context, params martini.Params) {
 	index, err := base.StrTo(ctx.Query("issueIndex")).Int64()
 	if err != nil {
@@ -657,7 +744,7 @@ func Comment(ctx *middleware.Context, params martini.Params) {
 				cmtType = models.REOPEN
 			}
 
-			if err = models.CreateComment(ctx.User.Id, ctx.Repo.Repository.Id, issue.Id, 0, 0, cmtType, ""); err != nil {
+			if _, err = models.CreateComment(ctx.User.Id, ctx.Repo.Repository.Id, issue.Id, 0, 0, cmtType, "", nil); err != nil {
 				ctx.Handle(200, "issue.Comment(create status change comment)", err)
 				return
 			}
@@ -665,12 +752,14 @@ func Comment(ctx *middleware.Context, params martini.Params) {
 		}
 	}
 
+	var comment *models.Comment
+
 	var ms []string
 	content := ctx.Query("content")
 	if len(content) > 0 {
 		switch params["action"] {
 		case "new":
-			if err = models.CreateComment(ctx.User.Id, ctx.Repo.Repository.Id, issue.Id, 0, 0, models.COMMENT, content); err != nil {
+			if comment, err = models.CreateComment(ctx.User.Id, ctx.Repo.Repository.Id, issue.Id, 0, 0, models.COMMENT, content, nil); err != nil {
 				ctx.Handle(500, "issue.Comment(create comment)", err)
 				return
 			}
@@ -694,6 +783,10 @@ func Comment(ctx *middleware.Context, params martini.Params) {
 			ctx.Handle(404, "issue.Comment", err)
 			return
 		}
+	}
+
+	if comment != nil {
+		uploadFiles(ctx, issue.Id, comment.Id)
 	}
 
 	// Notify watchers.
@@ -971,4 +1064,22 @@ func UpdateMilestonePost(ctx *middleware.Context, params martini.Params, form au
 	}
 
 	ctx.Redirect(ctx.Repo.RepoLink + "/issues/milestones")
+}
+
+func IssueGetAttachment(ctx *middleware.Context, params martini.Params) {
+	id, err := base.StrTo(params["id"]).Int64()
+
+	if err != nil {
+		ctx.Handle(400, "issue.IssueGetAttachment(base.StrTo.Int64)", err)
+		return
+	}
+
+	attachment, err := models.GetAttachmentById(id)
+
+	if err != nil {
+		ctx.Handle(404, "issue.IssueGetAttachment(models.GetAttachmentById)", err)
+		return
+	}
+
+	ctx.ServeFile(attachment.Path, attachment.Name)
 }

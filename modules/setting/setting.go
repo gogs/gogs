@@ -71,6 +71,13 @@ var (
 	LogModes    []string
 	LogConfigs  []string
 
+	// Attachment settings.
+	AttachmentPath         string
+	AttachmentAllowedTypes string
+	AttachmentMaxSize      int64
+	AttachmentMaxFiles     int
+	AttachmentEnabled      bool
+
 	// Cache settings.
 	Cache        cache.Cache
 	CacheAdapter string
@@ -165,6 +172,16 @@ func NewConfigContext() {
 	CookieUserName = Cfg.MustValue("security", "COOKIE_USERNAME")
 	CookieRememberName = Cfg.MustValue("security", "COOKIE_REMEMBER_NAME")
 	ReverseProxyAuthUser = Cfg.MustValue("security", "REVERSE_PROXY_AUTHENTICATION_USER", "X-WEBAUTH-USER")
+
+	AttachmentPath = Cfg.MustValue("attachment", "PATH", "files/attachments")
+	AttachmentAllowedTypes = Cfg.MustValue("attachment", "ALLOWED_TYPES", "*/*")
+	AttachmentMaxSize = Cfg.MustInt64("attachment", "MAX_SIZE", 32)
+	AttachmentMaxFiles = Cfg.MustInt("attachment", "MAX_FILES", 10)
+	AttachmentEnabled = Cfg.MustBool("attachment", "ENABLE", true)
+
+	if err = os.MkdirAll(AttachmentPath, os.ModePerm); err != nil {
+		log.Fatal("Could not create directory %s: %s", AttachmentPath, err)
+	}
 
 	RunUser = Cfg.MustValue("", "RUN_USER")
 	curUser := os.Getenv("USER")
