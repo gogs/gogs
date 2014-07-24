@@ -7,9 +7,9 @@ package models
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"html"
 	"html/template"
+	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -43,6 +43,7 @@ var (
 	ErrRepoNameIllegal   = errors.New("Repository name contains illegal characters")
 	ErrRepoFileNotLoaded = errors.New("Repository file not loaded")
 	ErrMirrorNotExist    = errors.New("Mirror does not exist")
+	ErrInvalidReference  = errors.New("Invalid reference specified")
 )
 
 var (
@@ -835,6 +836,26 @@ func DeleteRepository(userId, repoId int64, userName string) error {
 		return err
 	}
 	return sess.Commit()
+}
+
+// GetRepositoryByRef returns a Repository specified by a GFM reference.
+// See https://help.github.com/articles/writing-on-github#references for more information on the syntax.
+func GetRepositoryByRef(ref string) (*Repository, error) {
+	n := strings.IndexByte(ref, byte('/'))
+
+	if n < 2 {
+		return nil, ErrInvalidReference
+	}
+
+	userName, repoName := ref[:n], ref[n+1:]
+
+	user, err := GetUserByName(userName)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return GetRepositoryByName(user.Id, repoName)
 }
 
 // GetRepositoryByName returns the repository by given name under user if exists.
