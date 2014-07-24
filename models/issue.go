@@ -7,6 +7,7 @@ package models
 import (
 	"bytes"
 	"errors"
+	"html/template"
 	"strconv"
 	"strings"
 	"time"
@@ -833,17 +834,33 @@ func DeleteMilestone(m *Milestone) (err error) {
 //  \______  /\____/|__|_|  /__|_|  /\___  >___|  /__|
 //         \/             \/      \/     \/     \/
 
-// Issue types.
+// CommentType defines whether a comment is just a simple comment, an action (like close) or a reference.
+type CommentType int
+
 const (
-	IT_PLAIN  = iota // Pure comment.
-	IT_REOPEN        // Issue reopen status change prompt.
-	IT_CLOSE         // Issue close status change prompt.
+	// Plain comment, can be associated with a commit (CommitId > 0) and a line (Line > 0)
+	COMMENT CommentType = iota
+
+	// Reopen action
+	REOPEN
+
+	// Close action
+	CLOSE
+
+	// Reference from another issue
+	ISSUE
+
+	// Reference from some commit (not part of a pull request)
+	COMMIT
+
+	// Reference from some pull request
+	PULL
 )
 
 // Comment represents a comment in commit and issue page.
 type Comment struct {
 	Id       int64
-	Type     int
+	Type     CommentType
 	PosterId int64
 	Poster   *User `xorm:"-"`
 	IssueId  int64
@@ -854,7 +871,7 @@ type Comment struct {
 }
 
 // CreateComment creates comment of issue or commit.
-func CreateComment(userId, repoId, issueId, commitId, line int64, cmtType int, content string) error {
+func CreateComment(userId, repoId, issueId, commitId, line int64, cmtType CommentType, content string) error {
 	sess := x.NewSession()
 	defer sess.Close()
 	if err := sess.Begin(); err != nil {
@@ -869,19 +886,19 @@ func CreateComment(userId, repoId, issueId, commitId, line int64, cmtType int, c
 
 	// Check comment type.
 	switch cmtType {
-	case IT_PLAIN:
+	case COMMENT:
 		rawSql := "UPDATE `issue` SET num_comments = num_comments + 1 WHERE id = ?"
 		if _, err := sess.Exec(rawSql, issueId); err != nil {
 			sess.Rollback()
 			return err
 		}
-	case IT_REOPEN:
+	case REOPEN:
 		rawSql := "UPDATE `repository` SET num_closed_issues = num_closed_issues - 1 WHERE id = ?"
 		if _, err := sess.Exec(rawSql, repoId); err != nil {
 			sess.Rollback()
 			return err
 		}
-	case IT_CLOSE:
+	case CLOSE:
 		rawSql := "UPDATE `repository` SET num_closed_issues = num_closed_issues + 1 WHERE id = ?"
 		if _, err := sess.Exec(rawSql, repoId); err != nil {
 			sess.Rollback()
@@ -889,6 +906,10 @@ func CreateComment(userId, repoId, issueId, commitId, line int64, cmtType int, c
 		}
 	}
 	return sess.Commit()
+}
+
+func (c *Comment) ContentHtml() template.HTML {
+	return template.HTML(c.Content)
 }
 
 // GetIssueComments returns list of comment by given issue id.

@@ -11,6 +11,7 @@ import (
 	"regexp"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/gogits/git"
 
@@ -93,12 +94,15 @@ func (a Action) GetContent() string {
 	return a.Content
 }
 
-func updateIssuesCommit(repoUserName, repoName string, commits []*base.PushCommit) error {
+func updateIssuesCommit(userId, repoId int64, repoUserName, repoName string, commits []*base.PushCommit) error {
 	for _, c := range commits {
 		refs := IssueKeywordsPat.FindAllString(c.Message, -1)
 
 		for _, ref := range refs {
 			ref := ref[strings.IndexByte(ref, byte(' '))+1:]
+			ref = strings.TrimRightFunc(ref, func(c rune) bool {
+				return !unicode.IsDigit(c)
+			})
 
 			if len(ref) == 0 {
 				continue
@@ -120,24 +124,44 @@ func updateIssuesCommit(repoUserName, repoName string, commits []*base.PushCommi
 				return err
 			}
 
-			if issue.IsClosed {
-				continue
-			}
+			url := fmt.Sprintf("/%s/%s/commit/%s", repoUserName, repoName, c.Sha1)
+			message := fmt.Sprintf(`<a href="%s">%s</a>`, url, c.Message)
 
-			issue.IsClosed = true
-
-			if err = UpdateIssue(issue); err != nil {
+			if err = CreateComment(userId, issue.RepoId, issue.Id, 0, 0, COMMIT, message); err != nil {
 				return err
 			}
 
-			issue.Repo.NumClosedIssues++
+			if issue.RepoId == repoId {
+				if issue.IsClosed {
+					continue
+				}
 
-			if err = UpdateRepository(issue.Repo); err != nil {
-				return err
-			}
+				issue.IsClosed = true
 
-			if err = ChangeMilestoneIssueStats(issue); err != nil {
-				return err
+				if err = UpdateIssue(issue); err != nil {
+					return err
+				}
+
+				issue.Repo, err = GetRepositoryById(issue.RepoId)
+
+				if err != nil {
+					return err
+				}
+
+				issue.Repo.NumClosedIssues++
+
+				if err = UpdateRepository(issue.Repo); err != nil {
+					return err
+				}
+
+				if err = ChangeMilestoneIssueStats(issue); err != nil {
+					return err
+				}
+
+				// If commit happened in the referenced repository, it means the issue can be closed.
+				if err = CreateComment(userId, repoId, issue.Id, 0, 0, CLOSE, ""); err != nil {
+					return err
+				}
 			}
 		}
 	}
@@ -174,7 +198,7 @@ func CommitRepoAction(userId, repoUserId int64, userName, actEmail string,
 		return errors.New("action.CommitRepoAction(UpdateRepository): " + err.Error())
 	}
 
-	err = updateIssuesCommit(repoUserName, repoName, commit.Commits)
+	err = updateIssuesCommit(userId, repoId, repoUserName, repoName, commit.Commits)
 
 	if err != nil {
 		log.Debug("action.CommitRepoAction(updateIssuesCommit): ", err)
