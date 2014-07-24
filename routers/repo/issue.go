@@ -234,9 +234,8 @@ func CreateIssuePost(ctx *middleware.Context, params martini.Params, form auth.C
 			ms[i] = ms[i][1:]
 		}
 
-		ids := models.GetUserIdsByNames(ms)
-		if err := models.UpdateIssueUserPairsByMentions(ids, issue.Id); err != nil {
-			ctx.Handle(500, "issue.CreateIssue(UpdateIssueUserPairsByMentions)", err)
+		if err := models.UpdateMentions(ms, issue.Id); err != nil {
+			ctx.Handle(500, "issue.CreateIssue(UpdateMentions)", err)
 			return
 		}
 	}
@@ -682,9 +681,8 @@ func Comment(ctx *middleware.Context, params martini.Params) {
 					ms[i] = ms[i][1:]
 				}
 
-				ids := models.GetUserIdsByNames(ms)
-				if err := models.UpdateIssueUserPairsByMentions(ids, issue.Id); err != nil {
-					ctx.Handle(500, "issue.CreateIssue(UpdateIssueUserPairsByMentions)", err)
+				if err := models.UpdateMentions(ms, issue.Id); err != nil {
+					ctx.Handle(500, "issue.CreateIssue(UpdateMentions)", err)
 					return
 				}
 			}
