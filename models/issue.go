@@ -7,6 +7,8 @@ package models
 import (
 	"bytes"
 	"errors"
+	"html/template"
+	"strconv"
 	"strings"
 	"time"
 
@@ -16,10 +18,11 @@ import (
 )
 
 var (
-	ErrIssueNotExist     = errors.New("Issue does not exist")
-	ErrLabelNotExist     = errors.New("Label does not exist")
-	ErrMilestoneNotExist = errors.New("Milestone does not exist")
-	ErrWrongIssueCounter = errors.New("Invalid number of issues for this milestone")
+	ErrIssueNotExist      = errors.New("Issue does not exist")
+	ErrLabelNotExist      = errors.New("Label does not exist")
+	ErrMilestoneNotExist  = errors.New("Milestone does not exist")
+	ErrWrongIssueCounter  = errors.New("Invalid number of issues for this milestone")
+	ErrMissingIssueNumber = errors.New("No issue number specified")
 )
 
 // Issue represents an issue or pull request of repository.
@@ -120,6 +123,29 @@ func NewIssue(issue *Issue) (err error) {
 	}
 
 	return
+}
+
+// GetIssueByRef returns an Issue specified by a GFM reference.
+// See https://help.github.com/articles/writing-on-github#references for more information on the syntax.
+func GetIssueByRef(ref string) (issue *Issue, err error) {
+	var issueNumber int64
+	var repo *Repository
+
+	n := strings.IndexByte(ref, byte('#'))
+
+	if n == -1 {
+		return nil, ErrMissingIssueNumber
+	}
+
+	if issueNumber, err = strconv.ParseInt(ref[n+1:], 10, 64); err != nil {
+		return
+	}
+
+	if repo, err = GetRepositoryByRef(ref[:n]); err != nil {
+		return
+	}
+
+	return GetIssueByIndex(repo.Id, issueNumber)
 }
 
 // GetIssueByIndex returns issue by given index in repository.
@@ -400,6 +426,11 @@ func GetUserIssueStats(uid int64, filterMode int) *IssueStats {
 // UpdateIssue updates information of issue.
 func UpdateIssue(issue *Issue) error {
 	_, err := x.Id(issue.Id).AllCols().Update(issue)
+
+	if err != nil {
+		return err
+	}
+
 	return err
 }
 
@@ -670,6 +701,32 @@ func ChangeMilestoneStatus(m *Milestone, isClosed bool) (err error) {
 	return sess.Commit()
 }
 
+// ChangeMilestoneIssueStats updates the open/closed issues counter and progress for the
+// milestone associated witht the given issue.
+func ChangeMilestoneIssueStats(issue *Issue) error {
+	if issue.MilestoneId == 0 {
+		return nil
+	}
+
+	m, err := GetMilestoneById(issue.MilestoneId)
+
+	if err != nil {
+		return err
+	}
+
+	if issue.IsClosed {
+		m.NumOpenIssues--
+		m.NumClosedIssues++
+	} else {
+		m.NumOpenIssues++
+		m.NumClosedIssues--
+	}
+
+	m.Completeness = m.NumClosedIssues * 100 / m.NumIssues
+
+	return UpdateMilestone(m)
+}
+
 // ChangeMilestoneAssign changes assignment of milestone for issue.
 func ChangeMilestoneAssign(oldMid, mid int64, issue *Issue) (err error) {
 	sess := x.NewSession()
@@ -693,6 +750,7 @@ func ChangeMilestoneAssign(oldMid, mid int64, issue *Issue) (err error) {
 		} else {
 			m.Completeness = 0
 		}
+
 		if _, err = sess.Id(m.Id).Update(m); err != nil {
 			sess.Rollback()
 			return err
@@ -710,6 +768,7 @@ func ChangeMilestoneAssign(oldMid, mid int64, issue *Issue) (err error) {
 		if err != nil {
 			return err
 		}
+
 		m.NumIssues++
 		if issue.IsClosed {
 			m.NumClosedIssues++
@@ -731,6 +790,7 @@ func ChangeMilestoneAssign(oldMid, mid int64, issue *Issue) (err error) {
 			return err
 		}
 	}
+
 	return sess.Commit()
 }
 
@@ -774,17 +834,33 @@ func DeleteMilestone(m *Milestone) (err error) {
 //  \______  /\____/|__|_|  /__|_|  /\___  >___|  /__|
 //         \/             \/      \/     \/     \/
 
-// Issue types.
+// CommentType defines whether a comment is just a simple comment, an action (like close) or a reference.
+type CommentType int
+
 const (
-	IT_PLAIN  = iota // Pure comment.
-	IT_REOPEN        // Issue reopen status change prompt.
-	IT_CLOSE         // Issue close status change prompt.
+	// Plain comment, can be associated with a commit (CommitId > 0) and a line (Line > 0)
+	COMMENT CommentType = iota
+
+	// Reopen action
+	REOPEN
+
+	// Close action
+	CLOSE
+
+	// Reference from another issue
+	ISSUE
+
+	// Reference from some commit (not part of a pull request)
+	COMMIT
+
+	// Reference from some pull request
+	PULL
 )
 
 // Comment represents a comment in commit and issue page.
 type Comment struct {
 	Id       int64
-	Type     int
+	Type     CommentType
 	PosterId int64
 	Poster   *User `xorm:"-"`
 	IssueId  int64
@@ -795,7 +871,7 @@ type Comment struct {
 }
 
 // CreateComment creates comment of issue or commit.
-func CreateComment(userId, repoId, issueId, commitId, line int64, cmtType int, content string) error {
+func CreateComment(userId, repoId, issueId, commitId, line int64, cmtType CommentType, content string) error {
 	sess := x.NewSession()
 	defer sess.Close()
 	if err := sess.Begin(); err != nil {
@@ -810,19 +886,19 @@ func CreateComment(userId, repoId, issueId, commitId, line int64, cmtType int, c
 
 	// Check comment type.
 	switch cmtType {
-	case IT_PLAIN:
+	case COMMENT:
 		rawSql := "UPDATE `issue` SET num_comments = num_comments + 1 WHERE id = ?"
 		if _, err := sess.Exec(rawSql, issueId); err != nil {
 			sess.Rollback()
 			return err
 		}
-	case IT_REOPEN:
+	case REOPEN:
 		rawSql := "UPDATE `repository` SET num_closed_issues = num_closed_issues - 1 WHERE id = ?"
 		if _, err := sess.Exec(rawSql, repoId); err != nil {
 			sess.Rollback()
 			return err
 		}
-	case IT_CLOSE:
+	case CLOSE:
 		rawSql := "UPDATE `repository` SET num_closed_issues = num_closed_issues + 1 WHERE id = ?"
 		if _, err := sess.Exec(rawSql, repoId); err != nil {
 			sess.Rollback()
@@ -830,6 +906,10 @@ func CreateComment(userId, repoId, issueId, commitId, line int64, cmtType int, c
 		}
 	}
 	return sess.Commit()
+}
+
+func (c *Comment) ContentHtml() template.HTML {
+	return template.HTML(c.Content)
 }
 
 // GetIssueComments returns list of comment by given issue id.
