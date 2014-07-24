@@ -709,6 +709,12 @@ func Comment(ctx *middleware.Context, params martini.Params) {
 	attachments := strings.Split(params["attachments"], ",")
 
 	for _, a := range attachments {
+		a = strings.Trim(a, " ")
+
+		if len(a) == 0 {
+			continue
+		}
+
 		aId, err := base.StrTo(a).Int64()
 
 		if err != nil {
@@ -1002,12 +1008,23 @@ func UpdateMilestonePost(ctx *middleware.Context, params martini.Params, form au
 }
 
 func IssuePostAttachment(ctx *middleware.Context, params martini.Params) {
-	issueId, _ := base.StrTo(params["index"]).Int64()
+	index, _ := base.StrTo(params["index"]).Int64()
 
-	if issueId == 0 {
+	if index == 0 {
 		ctx.JSON(400, map[string]interface{}{
 			"ok":    false,
-			"error": "invalid issue id",
+			"error": "invalid issue index",
+		})
+
+		return
+	}
+
+	issue, err := models.GetIssueByIndex(ctx.Repo.Repository.Id, index)
+
+	if err != nil {
+		ctx.JSON(400, map[string]interface{}{
+			"ok":    false,
+			"error": "invalid comment id",
 		})
 
 		return
@@ -1089,7 +1106,7 @@ func IssuePostAttachment(ctx *middleware.Context, params martini.Params) {
 		return
 	}
 
-	a, err := models.CreateAttachment(issueId, commentId, header.Filename, out.Name())
+	a, err := models.CreateAttachment(issue.Id, commentId, header.Filename, out.Name())
 
 	if err != nil {
 		ctx.JSON(500, map[string]interface{}{
@@ -1121,16 +1138,29 @@ func IssueGetAttachment(ctx *middleware.Context, params martini.Params) {
 		return
 	}
 
+	log.Error("path=%s name=%s", attachment.Path, attachment.Name)
+
 	ctx.ServeFile(attachment.Path, attachment.Name)
 }
 
 func IssueDeleteAttachment(ctx *middleware.Context, params martini.Params) {
-	issueId, _ := base.StrTo(params["index"]).Int64()
+	index, _ := base.StrTo(params["index"]).Int64()
 
-	if issueId == 0 {
+	if index == 0 {
 		ctx.JSON(400, map[string]interface{}{
 			"ok":    false,
-			"error": "invalid issue id",
+			"error": "invalid issue index",
+		})
+
+		return
+	}
+
+	issue, err := models.GetIssueByIndex(ctx.Repo.Repository.Id, index)
+
+	if err != nil {
+		ctx.JSON(400, map[string]interface{}{
+			"ok":    false,
+			"error": "invalid comment id",
 		})
 
 		return
@@ -1189,7 +1219,7 @@ func IssueDeleteAttachment(ctx *middleware.Context, params martini.Params) {
 		return
 	}
 
-	if attachment.IssueId != issueId {
+	if attachment.IssueId != issue.Id {
 		ctx.JSON(400, map[string]interface{}{
 			"ok":    false,
 			"error": "attachment not associated with the given issue",

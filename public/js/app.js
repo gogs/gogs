@@ -520,6 +520,61 @@ function initIssue() {
         });
     }());
 
+    // Preview for images.
+    (function() {
+        var $hoverElement = $("<div></div>");
+        var $hoverImage = $("<img />");
+
+        $hoverElement.addClass("attachment-preview");
+        $hoverElement.hide();
+
+        $hoverImage.addClass("attachment-preview-img");
+
+        $hoverElement.append($hoverImage);
+        $(document.body).append($hoverElement); 
+
+        var over = function() {
+            var $this = $(this);
+
+            if ($this.text().match(/\.(png|jpg|jpeg|gif)$/) == false) {
+                return;
+            }
+
+            if ($hoverImage.attr("src") != $this.attr("href")) {
+                $hoverImage.attr("src", $this.attr("href"));
+                $hoverImage.load(function() {
+                    var height = this.height;
+                    var width = this.width;
+
+                    if (height > 300) {
+                        var factor = 300 / height;
+
+                        height = factor * height;
+                        width = factor * width;
+                    }
+
+                    $hoverImage.css({"height": height, "width": width});
+
+                    var offset = $this.offset();
+                    var left = offset.left, top = offset.top + $this.height() + 5;
+
+                    $hoverElement.css({"top": top + "px", "left": left + "px"});
+                    $hoverElement.css({"height": height + 16, "width": width + 16});
+                    $hoverElement.show();
+                });            
+            } else {
+                $hoverElement.show();
+            }
+        };
+
+        var out = function() {
+            $hoverElement.hide();
+        };
+
+        $(".issue-main .attachments .attachment").hover(over, out);
+    }());
+
+    // Upload.
     (function() {
         var $attached = $("#attached");
         var $attachments = $("input[name=attachments]");
