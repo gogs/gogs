@@ -4,7 +4,7 @@
 {{template "repo/toolbar" .}}
 <div id="body" class="container">
     <div id="issue">
-        <form class="form" action="{{.RepoLink}}/issues/new" method="post" id="issue-create-form">
+        <form class="form" action="{{.RepoLink}}/issues/new" method="post" id="issue-create-form" enctype="multipart/form-data">
             {{.CsrfTokenHtml}}
             {{template "base/alert" .}}
             <div class="col-md-1">
@@ -101,18 +101,13 @@
                         <div class="tab-pane issue-preview-content" id="issue-preview">loading...</div>
                     </div>
                 </div>
-                <!--
-                <div>
-                    <div id="attached"></div>
+                <div id="attached">
+                    <div id="attached-list"></div>
                 </div>
-                -->
                 <div class="text-right panel-body">
                     <div class="form-group">
-                        <!--
-                        <input type="hidden" name="attachments" value="" />
-                        <button data-accept="{{.AllowedTypes}}" data-comment-id="0" class="btn-default btn attachment-add" id="attachments-button">Add Attachments...</button>
-                        -->
-
+                        <input type="file" accept="{{.AllowedTypes}}" style="display: none;" id="attachments-input" name="attachments" multiple />
+                        <button class="btn-default btn attachment-add" id="attachments-button">Select Attachments...</button>
                         <input type="hidden" value="id" name="repo-id"/>
                         <button class="btn-success btn">Create new issue</button>
                     </div>

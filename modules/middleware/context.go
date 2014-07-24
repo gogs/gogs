@@ -323,7 +323,6 @@ func (f *Flash) Success(msg string) {
 // InitContext initializes a classic context for a request.
 func InitContext() martini.Handler {
 	return func(res http.ResponseWriter, r *http.Request, c martini.Context, rd *Render) {
-
 		ctx := &Context{
 			c: c,
 			// p:      p,
@@ -332,7 +331,6 @@ func InitContext() martini.Handler {
 			Cache:  setting.Cache,
 			Render: rd,
 		}
-
 		ctx.Data["PageStartTime"] = time.Now()
 
 		// start session
@@ -372,6 +370,14 @@ func InitContext() martini.Handler {
 			ctx.Data["SignedUserId"] = user.Id
 			ctx.Data["SignedUserName"] = user.Name
 			ctx.Data["IsAdmin"] = ctx.User.IsAdmin
+		}
+
+		// If request sends files, parse them here otherwise the Query() can't be parsed and the CsrfToken will be invalid.
+		if strings.Contains(r.Header.Get("Content-Type"), "multipart/form-data") {
+			if err = ctx.Req.ParseMultipartForm(setting.AttachmentMaxSize << 20); err != nil { // 32MB max size
+				ctx.Handle(500, "issue.Comment(ctx.Req.ParseMultipartForm)", err)
+				return
+			}
 		}
 
 		// get or create csrf token

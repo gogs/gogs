@@ -1820,3 +1820,20 @@ body {
 .attachment-preview-img {
     border: 1px solid #d8d8d8;
 }
+
+#attachments-button {
+    float: left;
+}
+
+#attached {
+    height: 18px;
+    margin: 10px 10px 15px 10px;
+}
+
+#attached-list .label {
+    margin-right: 10px;
+}
+
+#issue-create-form #attached {
+    margin-bottom: 0;
+}
