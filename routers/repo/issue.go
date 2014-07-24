@@ -160,6 +160,7 @@ func CreateIssue(ctx *middleware.Context, params martini.Params) {
 	ctx.Data["Title"] = "Create issue"
 	ctx.Data["IsRepoToolbarIssues"] = true
 	ctx.Data["IsRepoToolbarIssuesList"] = false
+	ctx.Data["AttachmentsEnabled"] = setting.AttachmentEnabled
 
 	var err error
 	// Get all milestones.
@@ -190,6 +191,7 @@ func CreateIssuePost(ctx *middleware.Context, params martini.Params, form auth.C
 	ctx.Data["Title"] = "Create issue"
 	ctx.Data["IsRepoToolbarIssues"] = true
 	ctx.Data["IsRepoToolbarIssuesList"] = false
+	ctx.Data["AttachmentsEnabled"] = setting.AttachmentEnabled
 
 	var err error
 	// Get all milestones.
@@ -239,7 +241,9 @@ func CreateIssuePost(ctx *middleware.Context, params martini.Params, form auth.C
 		return
 	}
 
-	uploadFiles(ctx, issue.Id, 0)
+	if setting.AttachmentEnabled {
+		uploadFiles(ctx, issue.Id, 0)
+	}
 
 	// Update mentions.
 	ms := base.MentionPattern.FindAllString(issue.Content, -1)
@@ -313,6 +317,8 @@ func checkLabels(labels, allLabels []*models.Label) {
 }
 
 func ViewIssue(ctx *middleware.Context, params martini.Params) {
+	ctx.Data["AttachmentsEnabled"] = setting.AttachmentEnabled
+
 	idx, _ := base.StrTo(params["index"]).Int64()
 	if idx == 0 {
 		ctx.Handle(404, "issue.ViewIssue", nil)
@@ -628,6 +634,10 @@ func UpdateAssignee(ctx *middleware.Context) {
 }
 
 func uploadFiles(ctx *middleware.Context, issueId, commentId int64) {
+	if !setting.AttachmentEnabled {
+		return
+	}
+
 	allowedTypes := strings.Split(setting.AttachmentAllowedTypes, "|")
 	attachments := ctx.Req.MultipartForm.File["attachments"]
 

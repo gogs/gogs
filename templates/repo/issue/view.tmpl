@@ -137,13 +137,17 @@
                                     <div class="tab-pane issue-preview-content" id="issue-preview">Loading...</div>
                                 </div>
                             </div>
+                            {{if .AttachmentsEnabled}}
                             <div id="attached">
                                 <div id="attached-list"></div>
                             </div>
+                            {{end}}
                             <div class="text-right">
                                 <div class="form-group">
+                                    {{if .AttachmentsEnabled}}
                                     <input type="file" accept="{{.AllowedTypes}}" style="display: none;" id="attachments-input" name="attachments" multiple />
                                     <button class="btn-default btn attachment-add" id="attachments-button">Select Attachments...</button>
+                                    {{end}}
                                     {{if .IsIssueOwner}}{{if .Issue.IsClosed}}
                                     <input type="submit" class="btn-default btn issue-open" id="issue-open-btn" data-origin="Reopen" data-text="Reopen & Comment" name="change_status" value="Reopen"/>{{else}}
                                     <input type="submit" class="btn-default btn issue-close" id="issue-close-btn" data-origin="Close" data-text="Close & Comment" name="change_status" value="Close"/>{{end}}{{end}}&nbsp;&nbsp;
