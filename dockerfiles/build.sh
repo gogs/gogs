@@ -10,6 +10,9 @@ HOST_PORT="YOUR_HOST_PORT"        # The port on host, which will be redirected t
 # apt source, you can select 'nchc'(mirror in Taiwan) or 'aliyun'(best for mainlance China users) according to your network, if you could connect to the official unbunt mirror in a fast speed, just leave it to "".
 APT_SOURCE=""
 
+# fail immediately if anything goes wrong
+set -e
+
 DOCKER_BIN=$(which docker.io || which docker)
 if [ -z "$DOCKER_BIN" ] ; then
     echo "Please install docker. You can install docker by running \"wget -qO- https://get.docker.io/ | sh\"."
