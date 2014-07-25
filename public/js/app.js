@@ -646,7 +646,7 @@ function initIssue() {
             $button.removeClass("btn-success btn-default");
             $button.addClass("btn-warning");
 
-            $button.text("Submiting...");
+            $button.text("Submitting&hellip;");
         });
 
         fileInput.form.addEventListener("submit", function(event) {
@@ -698,7 +698,7 @@ function initIssue() {
                     $button.removeClass("btn-warning");
                     $button.addClass("btn-danger");
 
-                    $button.text("An error encoured!")
+                    $button.text("An error occurred!");
 
                     return;
                 }
