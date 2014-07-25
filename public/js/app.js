@@ -643,7 +643,7 @@ function initIssue() {
 
             var $button = $(this);
 
-            $button.removeClass("btn-success");
+            $button.removeClass("btn-success btn-default");
             $button.addClass("btn-warning");
 
             $button.text("Submiting...");
