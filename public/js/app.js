@@ -536,7 +536,7 @@ function initIssue() {
         var over = function() {
             var $this = $(this);
 
-            if ($this.text().match(/\.(png|jpg|jpeg|gif)$/i) == false) {
+            if ((/\.(png|jpg|jpeg|gif)$/i).test($this.text()) == false) {
                 return;
             }
 
