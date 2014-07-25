@@ -72,7 +72,11 @@
                                 <span class="role label label-default pull-right">Owner</span>
                             </div>
                             <div class="panel-body markdown">
+                                {{if len .Content}}
                                 {{str2html .Content}}
+                                {{else}}
+                                <i>No comment entered</i>
+                                {{end}}
                             </div>
                             {{with $attachments := .Attachments}}
                             {{if $attachments}}
