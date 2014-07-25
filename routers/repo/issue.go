@@ -189,9 +189,9 @@ func CreateIssue(ctx *middleware.Context, params martini.Params) {
 
 func CreateIssuePost(ctx *middleware.Context, params martini.Params, form auth.CreateIssueForm) {
 	send := func(status int, data interface{}, err error) {
-		log.Error("issue.Comment(?): %s", err)
-
 		if err != nil {
+			log.Error("issue.CreateIssuePost(?): %s", err.Error())
+
 			ctx.JSON(status, map[string]interface{}{
 				"ok":     false,
 				"status": status,
@@ -711,9 +711,9 @@ func uploadFiles(ctx *middleware.Context, issueId, commentId int64) {
 
 func Comment(ctx *middleware.Context, params martini.Params) {
 	send := func(status int, data interface{}, err error) {
-		log.Error("issue.Comment(?): %s", err)
-
 		if err != nil {
+			log.Error("issue.Comment(?): %s", err.Error())
+
 			ctx.JSON(status, map[string]interface{}{
 				"ok":     false,
 				"status": status,
@@ -860,7 +860,6 @@ func Comment(ctx *middleware.Context, params martini.Params) {
 		}
 	}
 
-	log.Error("url: %#v", fmt.Sprintf("%s/issues/%d", ctx.Repo.RepoLink, index))
 	send(200, fmt.Sprintf("%s/issues/%d", ctx.Repo.RepoLink, index), nil)
 }
 

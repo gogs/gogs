@@ -568,7 +568,7 @@ function initIssue() {
         };
 
         var out = function() {
-            $hoverElement.hide();
+            //$hoverElement.hide();
         };
 
         $(".issue-main .attachments .attachment").hover(over, out);
@@ -598,6 +598,13 @@ function initIssue() {
 
         $("button,input[type=\"submit\"]", fileInput.form).on("click", function() {
             clickedButton = this;
+
+            var $button = $(this);
+
+            $button.removeClass("btn-success");
+            $button.addClass("btn-warning");
+
+            $button.text("Submiting...");
         });
 
          fileInput.form.addEventListener("submit", function(event) {
@@ -630,15 +637,32 @@ function initIssue() {
             });
 
             xhr.addEventListener("load", function() {
-                if (xhr.response.ok === false) {
-                    $("#submit-error").text(xhr.response.error);
+                var response = xhr.response;
+
+                if (typeof response == "string") {
+                    try {
+                        response = JSON.parse(response);
+                    } catch (err) {
+                        response = { ok: false, error: "Could not parse JSON" };
+                    }
+                }
+
+                if (response.ok === false) {
+                    $("#submit-error").text(response.error);
+                    $("#submit-error").show();
+
+                    var $button = $(clickedButton);
+
+                    $button.removeClass("btn-warning");
+                    $button.addClass("btn-danger");
+
+                    $button.text("An error encoured!")
+
                     return;
                 }                   
 
-                window.location.href = xhr.response.data;
+                window.location.href = response.data;
             });
-
-            xhr.responseType = "json";
 
             xhr.open("POST", this.action, true);
             xhr.send(data);
