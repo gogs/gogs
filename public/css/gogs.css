@@ -1826,21 +1826,24 @@ body {
 }
 
 #attached {
-    height: 18px;
-    margin: 10px 10px 15px 10px;
+    margin: 10px 0 15px;
 }
 
 #attached-list .label {
+    display: inline-block;
+    vertical-align: top;
     margin-right: 10px;
+    padding-right: 0;
+}
+
+#attached-list .label .attachment-remove {
+    cursor: pointer;
+}
+
+#attached-list .label .attachment-remove:hover {
+    background: #d8d8d8;
 }
 
 #issue-create-form #attached {
     margin-bottom: 0;
-}
-
-#submit-error {
-    display: none;
-    padding: 10px 15px 15px 15px;
-    font-weight: bold;
-    text-align: center;
 }
