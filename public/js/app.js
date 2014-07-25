@@ -520,6 +520,50 @@ function initIssue() {
         });
     }());
 
+    // store unsend text in session storage.
+    (function() {
+        var $textArea = $("#issue-content,#issue-reply-content");
+        var current = "";
+
+        if ($textArea == null || !('sessionStorage' in window)) {
+            return;
+        }
+
+        var path = location.pathname.split("/");
+        var key = "issue-" + path[1] + "-" + path[2] + "-";
+
+        if (/\/issues\/\d+$/.test(location.pathname)) {
+            key = key + path[4];
+        } else {
+            key = key + "new";
+        }
+
+        if ($textArea.val() !== undefined && $textArea.val() !== "") {
+            sessionStorage.setItem(key, $textArea.val());
+        } else {
+            $textArea.val(sessionStorage.getItem(key) || "");
+
+            if ($textArea.attr("id") == "issue-reply-content") {
+                var $closeBtn = $('#issue-close-btn');
+                var $openBtn = $('#issue-open-btn');
+    
+                if ($textArea.val().length) {
+                    $closeBtn.val($closeBtn.data("text"));
+                    $openBtn.val($openBtn.data("text"));
+                } else {
+                    $closeBtn.val($closeBtn.data("origin"));
+                    $openBtn.val($openBtn.data("origin"));
+                }
+            }
+        }
+
+        $textArea.on("keyup", function() {
+            if ($textArea.val() !== current) {
+                sessionStorage.setItem(key, current = $textArea.val());
+            }
+        });
+    }());
+
     // Preview for images.
     (function() {
         var $hoverElement = $("<div></div>");
@@ -659,8 +703,22 @@ function initIssue() {
                     $button.text("An error encoured!")
 
                     return;
-                }                   
+                }
 
+                if (!('sessionStorage' in window)) {
+                    return;
+                }
+
+                var path = location.pathname.split("/");
+                var key = "issue-" + path[1] + "-" + path[2] + "-";
+
+                if (/\/issues\/\d+$/.test(location.pathname)) {
+                    key = key + path[4];
+                } else {
+                    key = key + "new";
+                }
+
+                sessionStorage.removeItem(key);
                 window.location.href = response.data;
             });
 
