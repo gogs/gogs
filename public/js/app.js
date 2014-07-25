@@ -470,8 +470,8 @@ function initRepository() {
 function initInstall() {
     // database type change
     (function () {
-        var mysql_default = '127.0.0.1:3306'
-        var postgres_default = '127.0.0.1:5432'
+        var mysql_default = '127.0.0.1:3306';
+        var postgres_default = '127.0.0.1:5432';
 
         $('#install-database').on("change", function () {
             var val = $(this).val();
@@ -767,7 +767,7 @@ function initIssue() {
         $('.issue-edit-cancel').on("click", function () {
             $('#issue h1.title,#issue .issue-main > .issue-content .content,#issue-edit-btn').toggleShow();
             $('#issue-edit-title,.issue-edit-content,.issue-edit-cancel,.issue-edit-save').toggleHide();
-        })
+        });
     }());
 
     // issue ajax update
