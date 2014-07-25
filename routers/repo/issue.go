@@ -755,7 +755,8 @@ func Comment(ctx *middleware.Context, params martini.Params) {
 
 	var ms []string
 	content := ctx.Query("content")
-	if len(content) > 0 {
+	// Fix #321. Allow empty comments, as long as we have attachments.
+	if len(content) > 0 || len(ctx.Req.MultipartForm.File["attachments"]) > 0 {
 		switch params["action"] {
 		case "new":
 			if comment, err = models.CreateComment(ctx.User.Id, ctx.Repo.Repository.Id, issue.Id, 0, 0, models.COMMENT, content, nil); err != nil {
@@ -1081,5 +1082,5 @@ func IssueGetAttachment(ctx *middleware.Context, params martini.Params) {
 
 	// Fix #312. Attachments with , in their name are not handled correctly by Google Chrome.
 	// We must put the name in " manually.
-	ctx.ServeFile(attachment.Path, "\"" + attachment.Name + "\"")
+	ctx.ServeFile(attachment.Path, "\""+attachment.Name+"\"")
 }
