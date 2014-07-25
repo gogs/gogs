@@ -596,7 +596,7 @@ function initIssue() {
                 $span.addClass("label");
                 $span.addClass("label-default");
 
-                $span.append(file.name.toLowerCase());
+                $span.append(file.name);
                 $attachedList.append($span);
             }
         });
