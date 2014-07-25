@@ -621,11 +621,9 @@ function initIssue() {
     // Upload.
     (function() {
         var $attachedList = $("#attached-list");
-        var $addButton = $("#attachments-button");
-
-        var files = [];
-
-        var fileInput = document.getElementById("attachments-input");
+        var $addButton    = $("#attachments-button");
+        var files         = [];
+        var fileInput     = document.getElementById("attachments-input");
         
         if (fileInput === null) {
             return;
@@ -637,9 +635,9 @@ function initIssue() {
             files.splice($parent.data("index"), 1);
             $parent.remove();
         });
-
-        var clickedButton = undefined;
-
+        
+        var clickedButton;
+        
         $('#issue-reply-btn,input[type="submit"]', fileInput.form).on('click', function() {
             clickedButton = this;
 
@@ -651,7 +649,7 @@ function initIssue() {
             $button.text("Submiting...");
         });
 
-         fileInput.form.addEventListener("submit", function(event) {
+        fileInput.form.addEventListener("submit", function(event) {
             event.stopImmediatePropagation();
             event.preventDefault();
 
