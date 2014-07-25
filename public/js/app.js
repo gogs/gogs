@@ -568,7 +568,7 @@ function initIssue() {
         };
 
         var out = function() {
-            //$hoverElement.hide();
+            $hoverElement.hide();
         };
 
         $(".issue-main .attachments .attachment").hover(over, out);
