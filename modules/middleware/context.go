@@ -369,8 +369,8 @@ func InitContext() martini.Handler {
 		}
 
 		// If request sends files, parse them here otherwise the Query() can't be parsed and the CsrfToken will be invalid.
-		if strings.Contains(r.Header.Get("Content-Type"), "multipart/form-data") {
-			if err = ctx.Req.ParseMultipartForm(setting.AttachmentMaxSize << 20); err != nil { // 32MB max size
+		if r.Method == "POST" && strings.Contains(r.Header.Get("Content-Type"), "multipart/form-data") {
+			if err = ctx.Req.ParseMultipartForm(setting.AttachmentMaxSize << 20); err != nil && !strings.Contains(err.Error(), "EOF") { // 32MB max size
 				ctx.Handle(500, "issue.Comment(ctx.Req.ParseMultipartForm)", err)
 				return
 			}

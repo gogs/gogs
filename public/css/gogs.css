@@ -1837,3 +1837,10 @@ body {
 #issue-create-form #attached {
     margin-bottom: 0;
 }
+
+#submit-error {
+    display: none;
+    padding: 10px 15px 15px 15px;
+    font-weight: bold;
+    text-align: center;
+}

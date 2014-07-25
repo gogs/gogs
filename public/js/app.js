@@ -579,26 +579,121 @@ function initIssue() {
         var $attachedList = $("#attached-list");
         var $addButton = $("#attachments-button");
 
+        var files = [];
+
         var fileInput = document.getElementById("attachments-input");
         
         if (fileInput === null) {
             return;
         }
-        fileInput.addEventListener("change", function(event) {
-            $attachedList.empty();
-            $attachedList.append("<b>Attachments:</b> ");
 
+        $attachedList.on("click", "span.attachment-remove", function(event) {
+            var $parent = $(this).parent();
+
+            files.splice($parent.data("index"), 1);
+            $parent.remove();
+        });
+
+        var clickedButton = undefined;
+
+        $("button,input[type=\"submit\"]", fileInput.form).on("click", function() {
+            clickedButton = this;
+
+            var $button = $(this);
+
+            $button.removeClass("btn-success");
+            $button.addClass("btn-warning");
+
+            $button.text("Submiting...");
+        });
+
+         fileInput.form.addEventListener("submit", function(event) {
+            event.stopImmediatePropagation();
+            event.preventDefault();
+
+            //var data = new FormData(this);
+
+            // Internet Explorer ... -_-
+            var data = new FormData();
+
+            $.each($("[name]", this), function(i, e) {
+                if (e.name == "attachments" || e.type == "submit") {
+                    return;
+                }
+
+                data.append(e.name, $(e).val());
+            });
+
+            data.append(clickedButton.name, $(clickedButton).val());
+
+            files.forEach(function(file) {
+                data.append("attachments", file);
+            });
+
+            var xhr = new XMLHttpRequest();
+
+            xhr.addEventListener("error", function() {
+                debugger;
+            });
+
+            xhr.addEventListener("load", function() {
+                var response = xhr.response;
+
+                if (typeof response == "string") {
+                    try {
+                        response = JSON.parse(response);
+                    } catch (err) {
+                        response = { ok: false, error: "Could not parse JSON" };
+                    }
+                }
+
+                if (response.ok === false) {
+                    $("#submit-error").text(response.error);
+                    $("#submit-error").show();
+
+                    var $button = $(clickedButton);
+
+                    $button.removeClass("btn-warning");
+                    $button.addClass("btn-danger");
+
+                    $button.text("An error encoured!")
+
+                    return;
+                }                   
+
+                window.location.href = response.data;
+            });
+
+            xhr.open("POST", this.action, true);
+            xhr.send(data);
+            
+            return false;
+        });
+
+        fileInput.addEventListener("change", function(event) {
             for (var index = 0; index < fileInput.files.length; index++) {
                 var file = fileInput.files[index];
+
+                if (files.indexOf(file) > -1) {
+                    continue;
+                }
 
                 var $span = $("<span></span>");
 
                 $span.addClass("label");
                 $span.addClass("label-default");
 
-                $span.append(file.name.toLowerCase());
+                $span.data("index", files.length);
+
+                $span.append(file.name);
+                $span.append(" <span class=\"attachment-remove fa fa-times-circle\"></span>");
+
                 $attachedList.append($span);
+
+                files.push(file);
             }
+
+            this.value = "";
         });
 
         $addButton.on("click", function() {
