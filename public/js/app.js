@@ -675,7 +675,7 @@ function initIssue() {
             var xhr = new XMLHttpRequest();
 
             xhr.addEventListener("error", function() {
-                debugger;
+                console.log("Issue submit request failed. xhr.status: " + xhr.status);
             });
 
             xhr.addEventListener("load", function() {
