@@ -640,7 +640,7 @@ function initIssue() {
 
         var clickedButton = undefined;
 
-        $("button,input[type=\"submit\"]", fileInput.form).on("click", function() {
+        $('#issue-reply-btn,input[type="submit"]', fileInput.form).on('click', function() {
             clickedButton = this;
 
             var $button = $(this);
