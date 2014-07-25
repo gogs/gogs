@@ -95,6 +95,7 @@
                     <div class="tab-content">
                         <div class="tab-pane" id="issue-textarea">
                             <div class="form-group">
+                                <div id="submit-error"></div>
                                 <textarea class="form-control" name="content" id="issue-content" rows="10" placeholder="Write some content" data-ajax-rel="issue-preview" data-ajax-val="val" data-ajax-field="text">{{.content}}</textarea>
                             </div>
                         </div>
@@ -103,7 +104,9 @@
                 </div>
                 {{if .AttachmentsEnabled}}
                 <div id="attached">
-                    <div id="attached-list"></div>
+                    <div id="attached-list">                        
+                        <b>Attachments:</b> 
+                    </div>
                 </div>
                 {{end}}
                 <div class="text-right panel-body">
