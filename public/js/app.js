@@ -726,7 +726,7 @@ function initIssue() {
             return false;
         });
 
-        fileInput.addEventListener("change", function(event) {
+        fileInput.addEventListener("change", function() {
             for (var index = 0; index < fileInput.files.length; index++) {
                 var file = fileInput.files[index];
 
@@ -752,9 +752,9 @@ function initIssue() {
             this.value = "";
         });
 
-        $addButton.on("click", function() {
+        $addButton.on("click", function(evt) {
             fileInput.click();
-            return false;
+            evt.preventDefault();
         });
     }());
 
