@@ -579,8 +579,11 @@ function initIssue() {
         var $attachedList = $("#attached-list");
         var $addButton = $("#attachments-button");
 
-        var fileInput = $("#attachments-input")[0];
-
+        var fileInput = document.getElementById("attachments-input");
+        
+        if (fileInput === null) {
+            return;
+        }
         fileInput.addEventListener("change", function(event) {
             $attachedList.empty();
             $attachedList.append("<b>Attachments:</b> ");
