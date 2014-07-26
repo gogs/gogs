@@ -565,7 +565,7 @@ func UpdateIssueMilestone(ctx *middleware.Context) {
 		return
 	}
 
-	issueId := com.StrTo(ctx.Params(":issue")).MustInt64()
+	issueId := com.StrTo(ctx.Params(":index")).MustInt64()
 	if issueId == 0 {
 		ctx.Error(404)
 		return
