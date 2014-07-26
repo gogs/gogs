@@ -1,9 +1,10 @@
-{{template "base/head" .}}
-{{template "base/navbar" .}}
+{{template "ng/base/head" .}}
+{{template "ng/base/header" .}}
 <div id="body" class="container text-center">
-    <p style="margin-top: 80px"><img src="/img/404.png" alt="404"/></p>
+    <p style="margin-top: 100px"><img src="/img/404.png" alt="404"/></p>
     <hr/>
+    <br>
     <p>Application Version: {{AppVer}}</p>
     <p>If you think this is an error, please open an issue on <a href="https://github.com/gogits/gogs/issues/new">GitHub</a>.</p>
 </div>
-{{template "base/footer" .}}
+{{template "ng/base/footer" .}}

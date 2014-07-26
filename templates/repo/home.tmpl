@@ -1,0 +1,161 @@
+{{template "ng/base/head" .}}
+{{template "ng/base/header" .}}
+<div id="repo-wrapper">
+    <div id="repo-header" class="clear">
+        <div class="container clear">
+            <h1 id="repo-header-name" class="left public">
+                <i class="mega-octicon octicon-{{if .Repository.IsPrivate}}lock{{else}}repo{{end}}"></i>
+                <a class="author" href="/{{.Owner.Name}}">{{.Owner.Name}}</a>
+                <span class="divider">/</span>
+                <a class="repo text-bold" href="{{.RepoLink}}">{{.Repository.Name}}</a>
+            </h1>
+            <ul id="repo-header-meta" class="right menu menu-line">
+                <li id="repo-header-download" class="inline-block down drop">
+                    <a id="repo-header-download-btn" href="#">
+                        <button class="btn btn-black text-bold btn-radius">
+                            <i class="octicon octicon-cloud-download"></i>
+                        </button>
+                    </a>
+                    <div id="repo-header-download-drop" class="drop-down">
+                        <div id="repo-clone" class="clear">
+                            <button id="repo-clone-ssh" class="btn btn-blue current left left btn-left-radius">SSH</button>
+                            <button id="repo-clone-https" class="btn btn-gray left">HTTPS</button>
+                            <input id="repo-clone-url" type="text" class="ipt ipt-disabled left" value="{{.CloneLink.SSH}}" />
+                            <button id="repo-clone-copy" class="btn btn-black left btn-right-radius">Copy</button>
+                            <p class="text-center" id="repo-clone-help">Need help cloning? Visit <a href="#">Help</a>!</p>
+                            <hr/>
+                            <div class="text-center" id="repo-clone-zip">
+                                <a class="btn btn-green btn-radius" href="{{.RepoLink}}/archive/{{.BranchName}}.zip"><i class="octicon octicon-file-zip"></i>ZIP</a>
+                                <a class="btn btn-green btn-radius" href="{{.RepoLink}}/archive/{{.BranchName}}.tar.gz"><i class="octicon octicon-file-zip"></i>TAR.GZ</a>
+                            </div>
+                        </div>
+                    </div>
+                </li>
+                <li id="repo-header-watch">
+                    <a id="repo-header-watch-btn" href="#">
+                        <button class="btn btn-gray text-bold btn-radius">
+                            <i class="octicon octicon-eye-watch"></i>{{if .IsWatchingRepo}}Unwatch{{else}}Watch{{end}}
+                            <span class="num">{{.Repository.NumWatches}}</span>
+                        </button>
+                    </a>
+                </li>
+                <li id="repo-header-star">
+                    <a id="repo-header-star-btn" href="#">
+                        <button class="btn btn-gray text-bold btn-radius">
+                            <i class="octicon octicon-star"></i>Star
+                            <span class="num">{{.Repository.NumStars}}</span>
+                        </button>
+                    </a>
+                </li>
+                <li id="repo-header-fork">
+                    <a id="repo-header-fork-btn" href="#">
+                        <button class="btn btn-gray text-bold btn-radius">
+                            <i class="octicon octicon-repo-forked"></i>Fork
+                            <span class="num">{{.Repository.NumForks}}</span>
+                        </button>
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+    <div id="repo-content" class="clear container">
+        <div id="repo-main" class="left grid-4-5">
+            <p id="repo-desc">
+                <span class="description">{{.Repository.DescriptionHtml}}</span>
+                <a class="link" href="{{.Repository.Website}}">{{.Repository.Website}}</a>
+            </p>
+            <ul id="repo-file-nav" class="clear menu menu-line">
+                <li>
+                    <a href="#">
+                        <button class="btn btn-green btn-small btn-radius" id="repo-compare-btn"><i class="octicon octicon-git-compare"></i></button>
+                    </a>
+                </li>
+                <li id="repo-branch-switch" class="down drop">
+                    <a href="#">
+                        <button class="btn btn-gray btn-small btn-radius">
+                            <i class="octicon octicon-git-branch"></i> Branch :
+                            <strong id="repo-branch-current">{{.BranchName}}</strong>
+                        </button>
+                    </a>
+                    <div class="drop-down panel">
+                        <p class="panel-header text-bold">Branches & Tags</p>
+                        <input id="repo-branch-filter-ipt" class="ipt ipt-large" type="text" placeholder="find branches / tags"/>
+                        <div id="repo-branch-tag">
+                            <ul class="menu menu-line tab-nav clear" id="repo-branch-tab-nav">
+                                <li class="js-tab-nav js-tab-nav-show left" data-tab-target="#repo-branch-list"><a href="#">Branches</a></li>
+                                <li class="js-tab-nav left" data-tab-target="#repo-tag-list"><a href="#">Tags</a></li>
+                            </ul>
+                            <ul class="menu menu-vertical switching-list" id="repo-branch-list">
+                                {{range .Branches}}
+                                <li {{if eq . $.BranchName}}class="checked"{{end}}><a href="{{$.RepoLink}}/src/{{.}}"><i class="octicon octicon-check"></i>master</a></li>
+                                {{end}}
+                            </ul>
+                            <ul class="menu menu-vertical switching-list" id="repo-tag-list">
+                                <li><a href="#"><i class="octicon octicon-check"></i>0.3.3</a></li>
+                                <li><a href="#"><i class="octicon octicon-check"></i>0.4.4</a></li>
+                                <li class="checked"><a href="#"><i class="octicon octicon-check"></i>0.1</a></li>
+                                <li><a href="#"><i class="octicon octicon-check"></i>0.1 beta</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </li>
+                <li id="repo-bread" class="breads">
+                    <a class="title bread" href="{{.RepoLink}}">{{.Repository.Name}}</a>
+                    {{ $n := len .Treenames}}
+                    {{ $l := Subtract $n 1}}
+                    {{range $i, $v := .Treenames}}
+                        {{if eq $i $l}}
+                        <span class="bread">{{$v}}</span>
+                        {{else}}
+                        <span class="bread"><a href="{{$.BranchLink}}/{{index $.Paths $i}}">{{$v}}</a></span>
+                        {{end}}
+                    {{end}}
+                </li>
+                <li id="repo-commits-jump" class="repo-jump right">
+                    <a href="#">
+                        <button class="btn btn-small btn-gray btn-radius"><i class="octicon octicon-git-commit"></i></button>
+                    </a>
+                </li>
+                <li id="repo-find-jump" class="repo-jump right">
+                    <a href="#">
+                        <button class="btn btn-small btn-gray btn-radius"><i class="octicon octicon-list-unordered"></i></button>
+                    </a>
+                </li>
+            </ul>
+            {{if .IsFile}}
+                {{template "repo/view_file" .}}
+            {{else}}
+                {{template "repo/view_list" .}}
+            {{end}}
+        </div>
+        <div id="repo-sidebar" class="right grid-1-5">
+            <ul class="menu menu-vertical" id="repo-sidebar-nav">
+                <li>
+                    <a class="radius" href="{{.RepoLink}}/issues"><i class="octicon octicon-issue-opened"></i>Issues<span class="num right label label-blue label-radius">{{.Repository.NumOpenIssues}}</span></a>
+                </li>
+                <li>
+                    <a class="radius" href="{{.RepoLink}}/pulls"><i class="octicon octicon-git-pull-request"></i>Pull Requests<span class="num right label label-blue label-radius">{{.Repository.NumOpenPulls}}</span></a>
+                </li>
+                <li class="border-bottom"></li>
+                <li class="head">{{.BranchName}}</li>
+                <li>
+                    <a class="radius" href="{{.RepoLink}}/commits/{{.BranchName}}"><i class="octicon octicon-history"></i>Commits <span class="num right label label-gray label-radius">{{.CommitsCount}}</span></a>
+                </li>
+                <li>
+                    <a class="radius" href="{{.RepoLink}}/branches"><i class="octicon octicon-git-branch"></i>Branches<span class="num right label label-gray label-radius">{{.BrancheCount}}</span></a>
+                </li>
+                <li>
+                    <a class="radius" href="{{.RepoLink}}/releases"><i class="octicon octicon-tag"></i>Releases <span class="num right label label-gray label-radius">{{.Repository.NumTags}}</span></a>
+                </li>
+                <li>
+                    <a class="radius" href="#"><i class="octicon octicon-organization"></i>contributors <span class="num right label label-gray label-radius">43</span></a>
+                </li>
+                <li class="border-bottom"></li>
+                <li>
+                    <a class="radius" href="{{.RepoLink}}/settings"><i class="octicon octicon-tools"></i>settings</a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</div>
+{{template "ng/base/footer" .}}

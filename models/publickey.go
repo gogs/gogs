@@ -54,7 +54,7 @@ func exePath() (string, error) {
 func homeDir() string {
 	home, err := com.HomeDir()
 	if err != nil {
-		log.Fatal("Fail to get home directory: %v", err)
+		log.Fatal(4, "Fail to get home directory: %v", err)
 	}
 	return home
 }
@@ -63,30 +63,86 @@ func init() {
 	var err error
 
 	if appPath, err = exePath(); err != nil {
-		log.Fatal("publickey.init(fail to get app path): %v\n", err)
+		log.Fatal(4, "fail to get app path: %v\n", err)
 	}
+	appPath = strings.Replace(appPath, "\\", "/", -1)
 
 	// Determine and create .ssh path.
 	SshPath = filepath.Join(homeDir(), ".ssh")
 	if err = os.MkdirAll(SshPath, os.ModePerm); err != nil {
-		log.Fatal("publickey.init(fail to create SshPath(%s)): %v\n", SshPath, err)
+		log.Fatal(4, "fail to create SshPath(%s): %v\n", SshPath, err)
 	}
 }
 
 // PublicKey represents a SSH key.
 type PublicKey struct {
-	Id          int64
-	OwnerId     int64  `xorm:"UNIQUE(s) INDEX NOT NULL"`
-	Name        string `xorm:"UNIQUE(s) NOT NULL"`
-	Fingerprint string
-	Content     string    `xorm:"TEXT NOT NULL"`
-	Created     time.Time `xorm:"CREATED"`
-	Updated     time.Time `xorm:"UPDATED"`
+	Id                int64
+	OwnerId           int64  `xorm:"UNIQUE(s) INDEX NOT NULL"`
+	Name              string `xorm:"UNIQUE(s) NOT NULL"`
+	Fingerprint       string
+	Content           string    `xorm:"TEXT NOT NULL"`
+	Created           time.Time `xorm:"CREATED"`
+	Updated           time.Time
+	HasRecentActivity bool `xorm:"-"`
+	HasUsed           bool `xorm:"-"`
 }
 
 // GetAuthorizedString generates and returns formatted public key string for authorized_keys file.
 func (key *PublicKey) GetAuthorizedString() string {
 	return fmt.Sprintf(_TPL_PUBLICK_KEY, appPath, key.Id, key.Content)
+}
+
+var (
+	MinimumKeySize = map[string]int{
+		"(ED25519)": 256,
+		"(ECDSA)":   256,
+		"(NTRU)":    1087,
+		"(MCE)":     1702,
+		"(McE)":     1702,
+		"(RSA)":     2048,
+	}
+)
+
+// CheckPublicKeyString checks if the given public key string is recognized by SSH.
+func CheckPublicKeyString(content string) (bool, error) {
+	if strings.ContainsAny(content, "\n\r") {
+		return false, errors.New("Only a single line with a single key please")
+	}
+
+	// write the key to a file…
+	tmpFile, err := ioutil.TempFile(os.TempDir(), "keytest")
+	if err != nil {
+		return false, err
+	}
+	tmpPath := tmpFile.Name()
+	defer os.Remove(tmpPath)
+	tmpFile.WriteString(content)
+	tmpFile.Close()
+
+	// … see if ssh-keygen recognizes its contents
+	stdout, stderr, err := process.Exec("CheckPublicKeyString", "ssh-keygen", "-l", "-f", tmpPath)
+	if err != nil {
+		return false, errors.New("ssh-keygen -l -f: " + stderr)
+	} else if len(stdout) < 2 {
+		return false, errors.New("ssh-keygen returned not enough output to evaluate the key")
+	}
+	sshKeygenOutput := strings.Split(stdout, " ")
+	if len(sshKeygenOutput) < 4 {
+		return false, errors.New("Not enough fields returned by ssh-keygen -l -f")
+	}
+	keySize, err := com.StrTo(sshKeygenOutput[0]).Int()
+	if err != nil {
+		return false, errors.New("Cannot get key size of the given key")
+	}
+	keyType := strings.TrimSpace(sshKeygenOutput[len(sshKeygenOutput)-1])
+
+	if minimumKeySize := MinimumKeySize[keyType]; minimumKeySize == 0 {
+		return false, errors.New("Sorry, unrecognized public key type")
+	} else if keySize < minimumKeySize {
+		return false, fmt.Errorf("The minimum accepted size of a public key %s is %d", keyType, minimumKeySize)
+	}
+
+	return true, nil
 }
 
 // saveAuthorizedKeyFile writes SSH key content to authorized_keys file.
@@ -144,10 +200,18 @@ func AddPublicKey(key *PublicKey) (err error) {
 }
 
 // ListPublicKey returns a list of all public keys that user has.
-func ListPublicKey(uid int64) ([]PublicKey, error) {
-	keys := make([]PublicKey, 0, 5)
+func ListPublicKey(uid int64) ([]*PublicKey, error) {
+	keys := make([]*PublicKey, 0, 5)
 	err := x.Find(&keys, &PublicKey{OwnerId: uid})
-	return keys, err
+	if err != nil {
+		return nil, err
+	}
+
+	for _, key := range keys {
+		key.HasUsed = key.Updated.After(key.Created)
+		key.HasRecentActivity = key.Updated.Add(7 * 24 * time.Hour).After(time.Now())
+	}
+	return keys, nil
 }
 
 // rewriteAuthorizedKeys finds and deletes corresponding line in authorized_keys file.
@@ -218,8 +282,6 @@ func DeletePublicKey(key *PublicKey) error {
 
 	fpath := filepath.Join(SshPath, "authorized_keys")
 	tmpPath := filepath.Join(SshPath, "authorized_keys.tmp")
-	log.Trace("publickey.DeletePublicKey(authorized_keys): %s", fpath)
-
 	if err = rewriteAuthorizedKeys(key, fpath, tmpPath); err != nil {
 		return err
 	} else if err = os.Remove(fpath); err != nil {

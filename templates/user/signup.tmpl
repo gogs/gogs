@@ -1,60 +1,50 @@
-{{template "base/head" .}}
-{{template "base/navbar" .}}
-<div class="container" id="body">
-	<form action="/user/sign_up" method="post" class="form-horizontal card" id="login-card">
-		{{.CsrfTokenHtml}}
-		{{if .DisableRegistration}}
-		Sorry, registration has been disabled. Please contact the site administrator.
-		{{else}}
-		{{if .IsSocialLogin}}
-		<h3>Social login: 2nd step <small>complete information</small></h3>
-		{{else}}
-		<h3>Sign Up</h3>
-		{{end}}
-	    {{template "base/alert" .}}
-		<div class="form-group {{if .Err_UserName}}has-error has-feedback{{end}}">
-			<label class="col-md-4 control-label">Username: </label>
-			<div class="col-md-6">
-				<input name="username" class="form-control" placeholder="Type your username" value="{{.username}}" required="required">
-			</div>
-		</div>
-		<div class="form-group {{if .Err_Email}}has-error has-feedback{{end}}">
-			<label class="col-md-4 control-label">Email: </label>
-			<div class="col-md-6">
-				<input name="email" class="form-control" placeholder="Type your e-mail address" value="{{.email}}" required="required">
-			</div>
-		</div>
-
-		<div class="form-group {{if .Err_Password}}has-error has-feedback{{end}}">
-			<label class="col-md-4 control-label">Password: </label>
-			<div class="col-md-6">
-				<input name="passwd" type="password" class="form-control" placeholder="Type your password" required="required">
-			</div>
-		</div>
-
-		<div class="form-group {{if .Err_RetypePasswd}}has-error has-feedback{{end}}">
-			<label class="col-md-4 control-label">Re-type: </label>
-			<div class="col-md-6">
-				<input name="retypepasswd" type="password" class="form-control" placeholder="Re-type your password" required="required">
-			</div>
-		</div>
-
-		<div class="form-group">
-		    <div class="col-md-offset-4 col-md-6">
-		    	<button type="submit" class="btn btn-lg btn-primary">Create an account</button>
-		    </div>
-		</div>
-		
-	    <div class="form-group">
-            <div class="col-md-offset-4 col-md-6">
-			{{if .IsSocialLogin}}
-                <a href="/user/login">Already have an account? Bind now!</a>
-			{{else}}
-                <a href="/user/login">Already have an account? Sign in now!</a>
-			{{end}}
-            </div>
-	    </div>
-	    {{end}}
-	</form>
+{{template "ng/base/head" .}}
+{{template "ng/base/header" .}}
+<div id="sign-wrapper">
+    <form class="form-align form panel panel-radius sign-panel sign-form container" id="sign-up-form" action="/user/sign_up" method="post">
+        {{.CsrfTokenHtml}}
+        <div class="panel-header">
+            <h2>{{.i18n.Tr "sign_up"}}</h2>
+        </div>
+        <div class="panel-content">
+            {{template "base/alert" .}}
+	        {{if .DisableRegistration}}
+	        <p>{{.i18n.Tr "auth.disable_register_prompt"}}</p>
+	        {{else}}
+            <p class="field">
+                <label class="req" for="username">{{.i18n.Tr "username"}}</label>
+                <input class="ipt ipt-large ipt-radius {{if .Err_UserName}}ipt-error{{end}}" id="username" name="uname" type="text" value="{{.uname}}" required/>
+            </p>
+            <p class="field">
+                <label class="req" for="email">{{.i18n.Tr "email"}}</label>
+                <input class="ipt ipt-large ipt-radius {{if .Err_Email}}ipt-error{{end}}" id="email" name="email" type="email"  value="{{.email}}"required/>
+            </p>
+            <p class="field">
+                <label class="req" for="password">{{.i18n.Tr "password"}}</label>
+                <input class="ipt ipt-large ipt-radius {{if .Err_Password}}ipt-error{{end}}" id="password" name="password" type="password" value="{{.password}}" required/>
+            </p>
+            <p class="field">
+                <label class="req" for="re-type">{{.i18n.Tr "re_type"}}</label>
+                <input class="ipt ipt-large ipt-radius {{if .Err_Password}}ipt-error{{end}}" id="re-type" name="retype" type="password" required/>
+            </p>
+            <p class="field">
+                <label></label>
+                {{CreateCaptcha}}
+            </p>
+            <p class="field">
+                <label class="req" for="captcha">{{.i18n.Tr "captcha"}}</label>
+                <input class="ipt ipt-large ipt-radius {{if .Err_Captcha}}ipt-error{{end}}" id="captcha" name="captcha" type="text" required/>
+            </p>
+            <p class="field">
+                <span class="form-label"></span>
+                <button class="btn btn-blue btn-large btn-radius">{{.i18n.Tr "auth.create_new_account"}}</button>
+            </p>
+            <p class="field">
+                <span class="form-label"></span>
+                <a href="/user/login">{{.i18n.Tr "auth.register_hepler_msg"}}</a>
+            </p>
+        	{{end}}
+        </div>
+    </form>
 </div>
-{{template "base/footer" .}}
+{{template "ng/base/footer" .}}

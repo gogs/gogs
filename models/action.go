@@ -8,30 +8,31 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"path"
 	"regexp"
 	"strings"
 	"time"
 	"unicode"
 
-	"github.com/gogits/git"
-
 	"github.com/gogits/gogs/modules/base"
+	"github.com/gogits/gogs/modules/git"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/setting"
 )
 
-// Operation types of user action.
+type ActionType int
+
 const (
-	OP_CREATE_REPO = iota + 1
-	OP_DELETE_REPO
-	OP_STAR_REPO
-	OP_FOLLOW_REPO
-	OP_COMMIT_REPO
-	OP_CREATE_ISSUE
-	OP_PULL_REQUEST
-	OP_TRANSFER_REPO
-	OP_PUSH_TAG
-	OP_COMMENT_ISSUE
+	CREATE_REPO   ActionType = iota + 1 // 1
+	DELETE_REPO                         // 2
+	STAR_REPO                           // 3
+	FOLLOW_REPO                         // 4
+	COMMIT_REPO                         // 5
+	CREATE_ISSUE                        // 6
+	PULL_REQUEST                        // 7
+	TRANSFER_REPO                       // 8
+	PUSH_TAG                            // 9
+	COMMENT_ISSUE                       // 10
 )
 
 var (
@@ -53,7 +54,7 @@ func init() {
 type Action struct {
 	Id           int64
 	UserId       int64 // Receiver user id.
-	OpType       int
+	OpType       ActionType
 	ActUserId    int64  // Action user id.
 	ActUserName  string // Action user name.
 	ActEmail     string
@@ -67,7 +68,7 @@ type Action struct {
 }
 
 func (a Action) GetOpType() int {
-	return a.OpType
+	return int(a.OpType)
 }
 
 func (a Action) GetActUserName() string {
@@ -86,12 +87,24 @@ func (a Action) GetRepoName() string {
 	return a.RepoName
 }
 
+func (a Action) GetRepoLink() string {
+	return path.Join(a.RepoUserName, a.RepoName)
+}
+
 func (a Action) GetBranch() string {
 	return a.RefName
 }
 
 func (a Action) GetContent() string {
 	return a.Content
+}
+
+func (a Action) GetCreate() time.Time {
+	return a.Created
+}
+
+func (a Action) GetIssueInfos() []string {
+	return strings.SplitN(a.Content, "|", 2)
 }
 
 func updateIssuesCommit(userId, repoId int64, repoUserName, repoName string, commits []*base.PushCommit) error {
@@ -160,12 +173,11 @@ func updateIssuesCommit(userId, repoId int64, repoUserName, repoName string, com
 // CommitRepoAction adds new action for committing repository.
 func CommitRepoAction(userId, repoUserId int64, userName, actEmail string,
 	repoId int64, repoUserName, repoName string, refFullName string, commit *base.PushCommits) error {
-	// log.Trace("action.CommitRepoAction(start): %d/%s", userId, repoName)
 
-	opType := OP_COMMIT_REPO
+	opType := COMMIT_REPO
 	// Check it's tag push or branch.
 	if strings.HasPrefix(refFullName, "refs/tags/") {
-		opType = OP_PUSH_TAG
+		opType = PUSH_TAG
 		commit = &base.PushCommits{}
 	}
 
@@ -269,26 +281,26 @@ func CommitRepoAction(userId, repoUserId int64, userName, actEmail string,
 // NewRepoAction adds new action for creating repository.
 func NewRepoAction(u *User, repo *Repository) (err error) {
 	if err = NotifyWatchers(&Action{ActUserId: u.Id, ActUserName: u.Name, ActEmail: u.Email,
-		OpType: OP_CREATE_REPO, RepoId: repo.Id, RepoUserName: repo.Owner.Name, RepoName: repo.Name,
+		OpType: CREATE_REPO, RepoId: repo.Id, RepoUserName: repo.Owner.Name, RepoName: repo.Name,
 		IsPrivate: repo.IsPrivate}); err != nil {
-		log.Error("action.NewRepoAction(notify watchers): %d/%s", u.Id, repo.Name)
+		log.Error(4, "NotifyWatchers: %d/%s", u.Id, repo.Name)
 		return err
 	}
 
-	log.Trace("action.NewRepoAction: %s/%s", u.LowerName, repo.LowerName)
+	log.Trace("action.NewRepoAction: %s/%s", u.Name, repo.Name)
 	return err
 }
 
 // TransferRepoAction adds new action for transfering repository.
-func TransferRepoAction(user, newUser *User, repo *Repository) (err error) {
-	if err = NotifyWatchers(&Action{ActUserId: user.Id, ActUserName: user.Name, ActEmail: user.Email,
-		OpType: OP_TRANSFER_REPO, RepoId: repo.Id, RepoName: repo.Name, Content: newUser.Name,
+func TransferRepoAction(u, newUser *User, repo *Repository) (err error) {
+	if err = NotifyWatchers(&Action{ActUserId: u.Id, ActUserName: u.Name, ActEmail: u.Email,
+		OpType: TRANSFER_REPO, RepoId: repo.Id, RepoName: repo.Name, Content: newUser.Name,
 		IsPrivate: repo.IsPrivate}); err != nil {
-		log.Error("action.TransferRepoAction(notify watchers): %d/%s", user.Id, repo.Name)
+		log.Error(4, "NotifyWatchers: %d/%s", u.Id, repo.Name)
 		return err
 	}
 
-	log.Trace("action.TransferRepoAction: %s/%s", user.LowerName, repo.LowerName)
+	log.Trace("action.TransferRepoAction: %s/%s", u.Name, repo.Name)
 	return err
 }
 

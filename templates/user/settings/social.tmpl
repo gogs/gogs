@@ -1,0 +1,18 @@
+{{template "ng/base/head" .}}
+{{template "ng/base/header" .}}
+<div id="setting-wrapper" class="main-wrapper">
+    <div id="user-profile-setting" class="container clear">
+        {{template "user/settings/nav" .}}
+        <div class="grid-4-5 left">
+            <div class="setting-content">
+                {{template "ng/base/alert" .}}
+                <div id="setting-content">
+                    <div id="user-profile-setting-content" class="panel panel-radius">
+                        <p class="panel-header"><strong>{{.i18n.Tr "settings.manage_social"}}</strong></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{{template "ng/base/footer" .}}

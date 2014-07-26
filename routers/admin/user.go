@@ -7,7 +7,7 @@ package admin
 import (
 	"strings"
 
-	"github.com/go-martini/martini"
+	"github.com/Unknwon/com"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
@@ -42,7 +42,7 @@ func NewUserPost(ctx *middleware.Context, form auth.RegisterForm) {
 		return
 	}
 
-	if form.Password != form.RetypePasswd {
+	if form.Password != form.Retype {
 		ctx.Data["Err_Password"] = true
 		ctx.Data["Err_RetypePasswd"] = true
 		ctx.RenderWithErr("Password and re-type password are not same.", "admin/users/new", &form)
@@ -60,14 +60,13 @@ func NewUserPost(ctx *middleware.Context, form auth.RegisterForm) {
 	if len(form.LoginType) > 0 {
 		// NOTE: need rewrite.
 		fields := strings.Split(form.LoginType, "-")
-		tp, _ := base.StrTo(fields[0]).Int()
+		tp, _ := com.StrTo(fields[0]).Int()
 		u.LoginType = models.LoginType(tp)
-		u.LoginSource, _ = base.StrTo(fields[1]).Int64()
+		u.LoginSource, _ = com.StrTo(fields[1]).Int64()
 		u.LoginName = form.LoginName
 	}
 
-	var err error
-	if u, err = models.CreateUser(u); err != nil {
+	if err := models.CreateUser(u); err != nil {
 		switch err {
 		case models.ErrUserAlreadyExist:
 			ctx.RenderWithErr("Username has been already taken", USER_NEW, &form)
@@ -87,11 +86,11 @@ func NewUserPost(ctx *middleware.Context, form auth.RegisterForm) {
 	ctx.Redirect("/admin/users")
 }
 
-func EditUser(ctx *middleware.Context, params martini.Params) {
+func EditUser(ctx *middleware.Context) {
 	ctx.Data["Title"] = "Edit Account"
 	ctx.Data["PageIsUsers"] = true
 
-	uid, err := base.StrTo(params["userid"]).Int()
+	uid, err := com.StrTo(ctx.Params(":userid")).Int()
 	if err != nil {
 		ctx.Handle(404, "admin.user.EditUser", err)
 		return
@@ -113,11 +112,11 @@ func EditUser(ctx *middleware.Context, params martini.Params) {
 	ctx.HTML(200, USER_EDIT)
 }
 
-func EditUserPost(ctx *middleware.Context, params martini.Params, form auth.AdminEditUserForm) {
+func EditUserPost(ctx *middleware.Context, form auth.AdminEditUserForm) {
 	ctx.Data["Title"] = "Edit Account"
 	ctx.Data["PageIsUsers"] = true
 
-	uid, err := base.StrTo(params["userid"]).Int()
+	uid, err := com.StrTo(ctx.Params(":userid")).Int()
 	if err != nil {
 		ctx.Handle(404, "admin.user.EditUserPost", err)
 		return
@@ -134,7 +133,7 @@ func EditUserPost(ctx *middleware.Context, params martini.Params, form auth.Admi
 		return
 	}
 
-	if (form.Passwd != "") {
+	if form.Passwd != "" {
 		u.Passwd = form.Passwd
 		u.Rands = models.GetUserSalt()
 		u.Salt = models.GetUserSalt()
@@ -157,15 +156,15 @@ func EditUserPost(ctx *middleware.Context, params martini.Params, form auth.Admi
 
 	ctx.Data["User"] = u
 	ctx.Flash.Success("Account profile has been successfully updated.")
-	ctx.Redirect("/admin/users/" + params["userid"])
+	ctx.Redirect("/admin/users/" + ctx.Params(":userid"))
 }
 
-func DeleteUser(ctx *middleware.Context, params martini.Params) {
+func DeleteUser(ctx *middleware.Context) {
 	ctx.Data["Title"] = "Delete Account"
 	ctx.Data["PageIsUsers"] = true
 
 	//log.Info("delete")
-	uid, err := base.StrTo(params["userid"]).Int()
+	uid, err := com.StrTo(ctx.Params(":userid")).Int()
 	if err != nil {
 		ctx.Handle(404, "admin.user.DeleteUser", err)
 		return
@@ -181,7 +180,7 @@ func DeleteUser(ctx *middleware.Context, params martini.Params) {
 		switch err {
 		case models.ErrUserOwnRepos:
 			ctx.Flash.Error("This account still has ownership of repository, owner has to delete or transfer them first.")
-			ctx.Redirect("/admin/users/" + params["userid"])
+			ctx.Redirect("/admin/users/" + ctx.Params(":userid"))
 		default:
 			ctx.Handle(500, "admin.user.DeleteUser", err)
 		}

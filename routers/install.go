@@ -11,8 +11,9 @@ import (
 	"path"
 	"strings"
 
+	"github.com/Unknwon/com"
 	"github.com/Unknwon/goconfig"
-	"github.com/go-martini/martini"
+	"github.com/Unknwon/macaron"
 	"github.com/go-xorm/xorm"
 
 	"github.com/gogits/gogs/models"
@@ -33,12 +34,12 @@ const (
 func checkRunMode() {
 	switch setting.Cfg.MustValue("", "RUN_MODE") {
 	case "prod":
-		martini.Env = martini.Prod
+		macaron.Env = macaron.PROD
 		setting.ProdMode = true
 	case "test":
-		martini.Env = martini.Test
+		macaron.Env = macaron.TEST
 	}
-	log.Info("Run Mode: %s", strings.Title(martini.Env))
+	log.Info("Run Mode: %s", strings.Title(macaron.Env))
 }
 
 func NewServices() {
@@ -59,7 +60,7 @@ func GlobalInit() {
 
 	if setting.InstallLock {
 		if err := models.NewEngine(); err != nil {
-			log.Fatal("Fail to initialize ORM engine: %v", err)
+			log.Fatal(4, "Fail to initialize ORM engine: %v", err)
 		}
 
 		models.HasEngine = true
@@ -210,8 +211,8 @@ func InstallPost(ctx *middleware.Context, form auth.InstallForm) {
 		setting.Cfg.SetValue("mailer", "USER", form.SmtpEmail)
 		setting.Cfg.SetValue("mailer", "PASSWD", form.SmtpPasswd)
 
-		setting.Cfg.SetValue("service", "REGISTER_EMAIL_CONFIRM", base.ToStr(form.RegisterConfirm == "on"))
-		setting.Cfg.SetValue("service", "ENABLE_NOTIFY_MAIL", base.ToStr(form.MailNotify == "on"))
+		setting.Cfg.SetValue("service", "REGISTER_EMAIL_CONFIRM", com.ToStr(form.RegisterConfirm == "on"))
+		setting.Cfg.SetValue("service", "ENABLE_NOTIFY_MAIL", com.ToStr(form.MailNotify == "on"))
 	}
 
 	setting.Cfg.SetValue("", "RUN_MODE", "prod")
@@ -227,7 +228,7 @@ func InstallPost(ctx *middleware.Context, form auth.InstallForm) {
 	GlobalInit()
 
 	// Create admin account.
-	if _, err := models.CreateUser(&models.User{Name: form.AdminName, Email: form.AdminEmail, Passwd: form.AdminPasswd,
+	if err := models.CreateUser(&models.User{Name: form.AdminName, Email: form.AdminEmail, Passwd: form.AdminPasswd,
 		IsAdmin: true, IsActive: true}); err != nil {
 		if err != models.ErrUserAlreadyExist {
 			setting.InstallLock = false

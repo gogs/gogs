@@ -8,6 +8,7 @@ import (
 	"os"
 
 	"github.com/codegangsta/cli"
+
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/log"
 )
@@ -30,9 +31,9 @@ func runUpdate(c *cli.Context) {
 
 	args := c.Args()
 	if len(args) != 3 {
-		log.GitLogger.Fatal("received less 3 parameters")
+		log.GitLogger.Fatal(2, "received less 3 parameters")
 	} else if args[0] == "" {
-		log.GitLogger.Fatal("refName is empty, shouldn't use")
+		log.GitLogger.Fatal(2, "refName is empty, shouldn't use")
 	}
 
 	uuid := os.Getenv("uuid")
@@ -45,6 +46,6 @@ func runUpdate(c *cli.Context) {
 	}
 
 	if err := models.AddUpdateTask(&task); err != nil {
-		log.GitLogger.Fatal(err.Error())
+		log.GitLogger.Fatal(2, err.Error())
 	}
 }

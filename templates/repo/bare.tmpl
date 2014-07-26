@@ -1,0 +1,50 @@
+{{template "ng/base/head" .}}
+{{template "ng/base/header" .}}
+<div id="repo-wrapper" class="repo-bare">
+    <div id="repo-header" class="clear">
+        <div class="container clear">
+            <h1 id="repo-header-name" class="left public">
+                <i class="mega-octicon octicon-{{if .Repository.IsPrivate}}lock{{else}}repo{{end}}"></i>
+                <a class="author" href="/{{.Repository.Owner.Name}}">{{.Repository.Owner.Name}}</a>
+                <span class="divider">/</span>
+                <a class="repo text-bold" href="{{.RepoLink}}">{{.Repository.Name}}</a>
+            </h1>
+        </div>
+    </div>
+    <div id="repo-content" class="clear container">
+        <div id="repo-bare">
+            <div id="repo-bare-start" class="panel panel-radius">
+                <p class="panel-header"><strong>Quick Start</strong></p>
+                <div class="panel-content">
+                    <div id="repo-clone" class="clear text-center">
+                        <h2>Clone this repository</h2>
+                        <button id="repo-clone-ssh" class="btn btn-blue current left btn-left-radius">SSH</button>
+                        <button id="repo-clone-https" class="btn btn-gray left">HTTPS</button>
+                        <input id="repo-clone-url" type="text" class="ipt ipt-disabled left" value="{{.CloneLink.SSH}}" />
+                        <button id="repo-clone-copy" class="btn btn-black left btn-right-radius">Copy</button>
+                        <p class="text-center" id="repo-clone-help">Need help cloning? Visit <a href="#">Help</a>!</p>
+                        <hr/>
+                    </div>
+                    <div id="repo-bare-cmd" class="text-center">
+                        <h2>Create a new repository on the command line</h2>
+                        <pre class="text-left radius"><code>touch README.md
+git init
+git add README.md
+git commit -m "first commit"
+git remote add origin <span class="clone-url">{{.CloneLink.SSH}}</span>
+git push -u origin master</code></pre>
+                        <br/>
+                        <hr/>
+                    </div>
+                    <div id="repo-bare-remote" class="text-center">
+                        <h2>Push an existing repository from the command line</h2>
+                        <pre class="text-left radius"><code>git remote add origin <span class="clone-url">{{.CloneLink.SSH}}</span>
+git push -u origin master</code></pre>
+                        <br/>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{{template "ng/base/footer" .}}

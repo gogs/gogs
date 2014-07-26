@@ -10,10 +10,11 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
-	"strconv"
 	"strings"
 
 	"github.com/codegangsta/cli"
+
+	"github.com/Unknwon/com"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/log"
@@ -81,22 +82,22 @@ func runServ(k *cli.Context) {
 	keys := strings.Split(os.Args[2], "-")
 	if len(keys) != 2 {
 		println("Gogs: auth file format error")
-		log.GitLogger.Fatal("Invalid auth file format: %s", os.Args[2])
+		log.GitLogger.Fatal(2, "Invalid auth file format: %s", os.Args[2])
 	}
 
-	keyId, err := strconv.ParseInt(keys[1], 10, 64)
+	keyId, err := com.StrTo(keys[1]).Int64()
 	if err != nil {
 		println("Gogs: auth file format error")
-		log.GitLogger.Fatal("Invalid auth file format: %v", err)
+		log.GitLogger.Fatal(2, "Invalid auth file format: %v", err)
 	}
 	user, err := models.GetUserByKeyId(keyId)
 	if err != nil {
 		if err == models.ErrUserNotKeyOwner {
 			println("Gogs: you are not the owner of SSH key")
-			log.GitLogger.Fatal("Invalid owner of SSH key: %d", keyId)
+			log.GitLogger.Fatal(2, "Invalid owner of SSH key: %d", keyId)
 		}
 		println("Gogs: internal error:", err)
-		log.GitLogger.Fatal("Fail to get user by key ID(%d): %v", keyId, err)
+		log.GitLogger.Fatal(2, "Fail to get user by key ID(%d): %v", keyId, err)
 	}
 
 	cmd := os.Getenv("SSH_ORIGINAL_COMMAND")
@@ -110,7 +111,7 @@ func runServ(k *cli.Context) {
 	rr := strings.SplitN(repoPath, "/", 2)
 	if len(rr) != 2 {
 		println("Gogs: unavailable repository", args)
-		log.GitLogger.Fatal("Unavailable repository: %v", args)
+		log.GitLogger.Fatal(2, "Unavailable repository: %v", args)
 	}
 	repoUserName := rr[0]
 	repoName := strings.TrimSuffix(rr[1], ".git")
@@ -122,10 +123,10 @@ func runServ(k *cli.Context) {
 	if err != nil {
 		if err == models.ErrUserNotExist {
 			println("Gogs: given repository owner are not registered")
-			log.GitLogger.Fatal("Unregistered owner: %s", repoUserName)
+			log.GitLogger.Fatal(2, "Unregistered owner: %s", repoUserName)
 		}
 		println("Gogs: internal error:", err)
-		log.GitLogger.Fatal("Fail to get repository owner(%s): %v", repoUserName, err)
+		log.GitLogger.Fatal(2, "Fail to get repository owner(%s): %v", repoUserName, err)
 	}
 
 	// Access check.
@@ -134,20 +135,20 @@ func runServ(k *cli.Context) {
 		has, err := models.HasAccess(user.Name, path.Join(repoUserName, repoName), models.WRITABLE)
 		if err != nil {
 			println("Gogs: internal error:", err)
-			log.GitLogger.Fatal("Fail to check write access:", err)
+			log.GitLogger.Fatal(2, "Fail to check write access:", err)
 		} else if !has {
 			println("You have no right to write this repository")
-			log.GitLogger.Fatal("User %s has no right to write repository %s", user.Name, repoPath)
+			log.GitLogger.Fatal(2, "User %s has no right to write repository %s", user.Name, repoPath)
 		}
 	case isRead:
 		repo, err := models.GetRepositoryByName(repoUser.Id, repoName)
 		if err != nil {
 			if err == models.ErrRepoNotExist {
 				println("Gogs: given repository does not exist")
-				log.GitLogger.Fatal("Repository does not exist: %s/%s", repoUser.Name, repoName)
+				log.GitLogger.Fatal(2, "Repository does not exist: %s/%s", repoUser.Name, repoName)
 			}
 			println("Gogs: internal error:", err)
-			log.GitLogger.Fatal("Fail to get repository: %v", err)
+			log.GitLogger.Fatal(2, "Fail to get repository: %v", err)
 		}
 
 		if !repo.IsPrivate {
@@ -157,10 +158,10 @@ func runServ(k *cli.Context) {
 		has, err := models.HasAccess(user.Name, path.Join(repoUserName, repoName), models.READABLE)
 		if err != nil {
 			println("Gogs: internal error:", err)
-			log.GitLogger.Fatal("Fail to check read access:", err)
+			log.GitLogger.Fatal(2, "Fail to check read access:", err)
 		} else if !has {
 			println("You have no right to access this repository")
-			log.GitLogger.Fatal("User %s has no right to read repository %s", user.Name, repoPath)
+			log.GitLogger.Fatal(2, "User %s has no right to read repository %s", user.Name, repoPath)
 		}
 	default:
 		println("Unknown command")
@@ -175,29 +176,27 @@ func runServ(k *cli.Context) {
 	gitcmd.Stdout = os.Stdout
 	gitcmd.Stdin = os.Stdin
 	gitcmd.Stderr = os.Stderr
-	err = gitcmd.Run()
-	if err != nil {
-		println("Gogs: internal error:", err)
-		log.GitLogger.Fatal("Fail to execute git command: %v", err)
+	if err = gitcmd.Run(); err != nil {
+		println("Gogs: internal error:", err.Error())
+		log.GitLogger.Fatal(2, "Fail to execute git command: %v", err)
 	}
 
 	if isWrite {
 		tasks, err := models.GetUpdateTasksByUuid(uuid)
 		if err != nil {
-			log.GitLogger.Fatal("Fail to get update task: %v", err)
+			log.GitLogger.Fatal(2, "Fail to get update task: %v", err)
 		}
 
 		for _, task := range tasks {
 			err = models.Update(task.RefName, task.OldCommitId, task.NewCommitId,
 				user.Name, repoUserName, repoName, user.Id)
 			if err != nil {
-				log.GitLogger.Fatal("Fail to update: %v", err)
+				log.GitLogger.Fatal(2, "Fail to update: %v", err)
 			}
 		}
 
-		err = models.DelUpdateTasksByUuid(uuid)
-		if err != nil {
-			log.GitLogger.Fatal("Fail to del update task: %v", err)
+		if err = models.DelUpdateTasksByUuid(uuid); err != nil {
+			log.GitLogger.Fatal(2, "Fail to del update task: %v", err)
 		}
 	}
 }

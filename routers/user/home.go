@@ -8,50 +8,49 @@ import (
 	"fmt"
 
 	"github.com/Unknwon/com"
-	"github.com/go-martini/martini"
 
 	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/middleware"
 )
 
 const (
-	DASHBOARD base.TplName = "user/dashboard"
-	PROFILE   base.TplName = "user/profile"
+	DASHBOARD base.TplName = "user/dashboard/dashboard"
 	ISSUES    base.TplName = "user/issues"
 	PULLS     base.TplName = "user/pulls"
 	STARS     base.TplName = "user/stars"
+	PROFILE   base.TplName = "user/profile"
 )
 
 func Dashboard(ctx *middleware.Context) {
-	ctx.Data["Title"] = "Dashboard"
-	ctx.Data["PageIsUserDashboard"] = true
+	ctx.Data["Title"] = ctx.Tr("dashboard")
+	ctx.Data["PageIsDashboard"] = true
+	ctx.Data["PageIsNews"] = true
 
-	if err := ctx.User.GetOrganizations(); err != nil {
-		ctx.Handle(500, "home.Dashboard(GetOrganizations)", err)
-		return
-	}
-	ctx.Data["Orgs"] = ctx.User.Orgs
+	// if err := ctx.User.GetOrganizations(); err != nil {
+	// 	ctx.Handle(500, "home.Dashboard(GetOrganizations)", err)
+	// 	return
+	// }
+	// ctx.Data["Orgs"] = ctx.User.Orgs
 	ctx.Data["ContextUser"] = ctx.User
 
-	var err error
-	ctx.Data["MyRepos"], err = models.GetRepositories(ctx.User.Id, true)
+	repos, err := models.GetRepositories(ctx.User.Id, true)
 	if err != nil {
-		ctx.Handle(500, "home.Dashboard(GetRepositories)", err)
+		ctx.Handle(500, "GetRepositories", err)
 		return
 	}
+	ctx.Data["Repos"] = repos
 
-	ctx.Data["CollaborativeRepos"], err = models.GetCollaborativeRepos(ctx.User.Name)
-	if err != nil {
-		ctx.Handle(500, "home.Dashboard(GetCollaborativeRepos)", err)
-		return
-	}
+	// ctx.Data["CollaborativeRepos"], err = models.GetCollaborativeRepos(ctx.User.Name)
+	// if err != nil {
+	// 	ctx.Handle(500, "home.Dashboard(GetCollaborativeRepos)", err)
+	// 	return
+	// }
 
-	actions, err := models.GetFeeds(ctx.User.Id, 0, false)
+	actions, err := models.GetFeeds(ctx.User.Id, 0, true)
 	if err != nil {
-		ctx.Handle(500, "home.Dashboard(GetFeeds)", err)
+		ctx.Handle(500, "GetFeeds", err)
 		return
 	}
 
@@ -70,11 +69,11 @@ func Dashboard(ctx *middleware.Context) {
 	ctx.HTML(200, DASHBOARD)
 }
 
-func Profile(ctx *middleware.Context, params martini.Params) {
+func Profile(ctx *middleware.Context) {
 	ctx.Data["Title"] = "Profile"
 	ctx.Data["PageIsUserProfile"] = true
 
-	u, err := models.GetUserByName(params["username"])
+	u, err := models.GetUserByName(ctx.Params(":username"))
 	if err != nil {
 		if err == models.ErrUserNotExist {
 			ctx.Handle(404, "user.Profile(GetUserByName)", err)
@@ -133,26 +132,26 @@ const (
                         <div class="info"><span class="meta">%s</span><br>%s</div>`
 )
 
-func Feeds(ctx *middleware.Context, form auth.FeedsForm) {
-	actions, err := models.GetFeeds(form.UserId, form.Page*20, false)
-	if err != nil {
-		ctx.JSON(500, err)
-		return
-	}
+// func Feeds(ctx *middleware.Context, form auth.FeedsForm) {
+// 	actions, err := models.GetFeeds(form.UserId, form.Page*20, false)
+// 	if err != nil {
+// 		ctx.JSON(500, err)
+// 		return
+// 	}
 
-	feeds := make([]string, 0, len(actions))
-	for _, act := range actions {
-		if act.IsPrivate {
-			if has, _ := models.HasAccess(ctx.User.Name, act.RepoUserName+"/"+act.RepoName,
-				models.READABLE); !has {
-				continue
-			}
-		}
-		feeds = append(feeds, fmt.Sprintf(TPL_FEED, base.ActionIcon(act.OpType),
-			base.TimeSince(act.Created), base.ActionDesc(act)))
-	}
-	ctx.JSON(200, &feeds)
-}
+// 	feeds := make([]string, 0, len(actions))
+// 	for _, act := range actions {
+// 		if act.IsPrivate {
+// 			if has, _ := models.HasAccess(ctx.User.Name, act.RepoUserName+"/"+act.RepoName,
+// 				models.READABLE); !has {
+// 				continue
+// 			}
+// 		}
+// 		feeds = append(feeds, fmt.Sprintf(TPL_FEED, base.ActionIcon(act.OpType),
+// 			base.TimeSince(act.Created), base.ActionDesc(act)))
+// 	}
+// 	ctx.JSON(200, &feeds)
+// }
 
 func Issues(ctx *middleware.Context) {
 	ctx.Data["Title"] = "Your Issues"
@@ -173,7 +172,7 @@ func Issues(ctx *middleware.Context) {
 		filterMode = models.FM_CREATE
 	}
 
-	repoId, _ := base.StrTo(ctx.Query("repoid")).Int64()
+	repoId, _ := com.StrTo(ctx.Query("repoid")).Int64()
 	issueStats := models.GetUserIssueStats(ctx.User.Id, filterMode)
 
 	// Get all repositories.
@@ -215,7 +214,7 @@ func Issues(ctx *middleware.Context) {
 		repoIds = []int64{repoId}
 	}
 
-	page, _ := base.StrTo(ctx.Query("page")).Int()
+	page, _ := com.StrTo(ctx.Query("page")).Int()
 
 	// Get all issues.
 	var ius []*models.IssueUser

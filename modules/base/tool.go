@@ -13,9 +13,12 @@ import (
 	"fmt"
 	"hash"
 	"math"
-	"strconv"
+	r "math/rand"
 	"strings"
 	"time"
+
+	"github.com/Unknwon/com"
+	"github.com/Unknwon/i18n"
 
 	"github.com/gogits/gogs/modules/setting"
 )
@@ -40,6 +43,33 @@ func GetRandomString(n int, alphabets ...byte) string {
 		}
 	}
 	return string(bytes)
+}
+
+// RandomCreateBytes generate random []byte by specify chars.
+func RandomCreateBytes(n int, alphabets ...byte) []byte {
+	const alphanum = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+	var bytes = make([]byte, n)
+	var randby bool
+	if num, err := rand.Read(bytes); num != n || err != nil {
+		r.Seed(time.Now().UnixNano())
+		randby = true
+	}
+	for i, b := range bytes {
+		if len(alphabets) == 0 {
+			if randby {
+				bytes[i] = alphanum[r.Intn(len(alphanum))]
+			} else {
+				bytes[i] = alphanum[b%byte(len(alphanum))]
+			}
+		} else {
+			if randby {
+				bytes[i] = alphabets[r.Intn(len(alphabets))]
+			} else {
+				bytes[i] = alphabets[b%byte(len(alphabets))]
+			}
+		}
+	}
+	return bytes
 }
 
 // http://code.google.com/p/go/source/browse/pbkdf2/pbkdf2.go?repo=crypto
@@ -89,7 +119,7 @@ func VerifyTimeLimitCode(data string, minutes int, code string) bool {
 	// split code
 	start := code[:12]
 	lives := code[12:18]
-	if d, err := StrTo(lives).Int(); err == nil {
+	if d, err := com.StrTo(lives).Int(); err == nil {
 		minutes = d
 	}
 
@@ -133,7 +163,7 @@ func CreateTimeLimitCode(data string, minutes int, startInf interface{}) string 
 
 	// create sha1 encode string
 	sh := sha1.New()
-	sh.Write([]byte(data + setting.SecretKey + startStr + endStr + ToStr(minutes)))
+	sh.Write([]byte(data + setting.SecretKey + startStr + endStr + com.ToStr(minutes)))
 	encoded := hex.EncodeToString(sh.Sum(nil))
 
 	code := fmt.Sprintf("%s%06d%s", startStr, minutes, encoded)
@@ -240,53 +270,53 @@ func TimeSincePro(then time.Time) string {
 }
 
 // TimeSince calculates the time interval and generate user-friendly string.
-func TimeSince(then time.Time) string {
+func TimeSince(then time.Time, lang string) string {
 	now := time.Now()
 
-	lbl := "ago"
+	lbl := i18n.Tr(lang, "tool.ago")
 	diff := now.Unix() - then.Unix()
 	if then.After(now) {
-		lbl = "from now"
+		lbl = i18n.Tr(lang, "tool.from_now")
 		diff = then.Unix() - now.Unix()
 	}
 
 	switch {
 	case diff <= 0:
-		return "now"
+		return i18n.Tr(lang, "tool.now")
 	case diff <= 2:
-		return fmt.Sprintf("1 second %s", lbl)
+		return i18n.Tr(lang, "tool.1s", lbl)
 	case diff < 1*Minute:
-		return fmt.Sprintf("%d seconds %s", diff, lbl)
+		return i18n.Tr(lang, "tool.seconds", diff, lbl)
 
 	case diff < 2*Minute:
-		return fmt.Sprintf("1 minute %s", lbl)
+		return i18n.Tr(lang, "tool.1m", lbl)
 	case diff < 1*Hour:
-		return fmt.Sprintf("%d minutes %s", diff/Minute, lbl)
+		return i18n.Tr(lang, "tool.minutes", diff/Minute, lbl)
 
 	case diff < 2*Hour:
-		return fmt.Sprintf("1 hour %s", lbl)
+		return i18n.Tr(lang, "tool.1h", lbl)
 	case diff < 1*Day:
-		return fmt.Sprintf("%d hours %s", diff/Hour, lbl)
+		return i18n.Tr(lang, "tool.hours", diff/Hour, lbl)
 
 	case diff < 2*Day:
-		return fmt.Sprintf("1 day %s", lbl)
+		return i18n.Tr(lang, "tool.1d", lbl)
 	case diff < 1*Week:
-		return fmt.Sprintf("%d days %s", diff/Day, lbl)
+		return i18n.Tr(lang, "tool.days", diff/Day, lbl)
 
 	case diff < 2*Week:
-		return fmt.Sprintf("1 week %s", lbl)
+		return i18n.Tr(lang, "tool.1w", lbl)
 	case diff < 1*Month:
-		return fmt.Sprintf("%d weeks %s", diff/Week, lbl)
+		return i18n.Tr(lang, "tool.weeks", diff/Week, lbl)
 
 	case diff < 2*Month:
-		return fmt.Sprintf("1 month %s", lbl)
+		return i18n.Tr(lang, "tool.1mon", lbl)
 	case diff < 1*Year:
-		return fmt.Sprintf("%d months %s", diff/Month, lbl)
+		return i18n.Tr(lang, "tool.months", diff/Month, lbl)
 
 	case diff < 2*Year:
-		return fmt.Sprintf("1 year %s", lbl)
+		return i18n.Tr(lang, "tool.1y", lbl)
 	default:
-		return fmt.Sprintf("%d years %s", diff/Year, lbl)
+		return i18n.Tr(lang, "tool.years", diff/Year, lbl)
 	}
 }
 
@@ -438,89 +468,4 @@ func DateFormat(t time.Time, format string) string {
 	replacer := strings.NewReplacer(datePatterns...)
 	format = replacer.Replace(format)
 	return t.Format(format)
-}
-
-// convert string to specify type
-
-type StrTo string
-
-func (f StrTo) Exist() bool {
-	return string(f) != string(0x1E)
-}
-
-func (f StrTo) Int() (int, error) {
-	v, err := strconv.ParseInt(f.String(), 10, 32)
-	return int(v), err
-}
-
-func (f StrTo) Int64() (int64, error) {
-	v, err := strconv.ParseInt(f.String(), 10, 64)
-	return int64(v), err
-}
-
-func (f StrTo) MustInt() int {
-	v, _ := f.Int()
-	return v
-}
-
-func (f StrTo) MustInt64() int64 {
-	v, _ := f.Int64()
-	return v
-}
-
-func (f StrTo) String() string {
-	if f.Exist() {
-		return string(f)
-	}
-	return ""
-}
-
-// convert any type to string
-func ToStr(value interface{}, args ...int) (s string) {
-	switch v := value.(type) {
-	case bool:
-		s = strconv.FormatBool(v)
-	case float32:
-		s = strconv.FormatFloat(float64(v), 'f', argInt(args).Get(0, -1), argInt(args).Get(1, 32))
-	case float64:
-		s = strconv.FormatFloat(v, 'f', argInt(args).Get(0, -1), argInt(args).Get(1, 64))
-	case int:
-		s = strconv.FormatInt(int64(v), argInt(args).Get(0, 10))
-	case int8:
-		s = strconv.FormatInt(int64(v), argInt(args).Get(0, 10))
-	case int16:
-		s = strconv.FormatInt(int64(v), argInt(args).Get(0, 10))
-	case int32:
-		s = strconv.FormatInt(int64(v), argInt(args).Get(0, 10))
-	case int64:
-		s = strconv.FormatInt(v, argInt(args).Get(0, 10))
-	case uint:
-		s = strconv.FormatUint(uint64(v), argInt(args).Get(0, 10))
-	case uint8:
-		s = strconv.FormatUint(uint64(v), argInt(args).Get(0, 10))
-	case uint16:
-		s = strconv.FormatUint(uint64(v), argInt(args).Get(0, 10))
-	case uint32:
-		s = strconv.FormatUint(uint64(v), argInt(args).Get(0, 10))
-	case uint64:
-		s = strconv.FormatUint(v, argInt(args).Get(0, 10))
-	case string:
-		s = v
-	case []byte:
-		s = string(v)
-	default:
-		s = fmt.Sprintf("%v", v)
-	}
-	return s
-}
-
-type argInt []int
-
-func (a argInt) Get(i int, args ...int) (r int) {
-	if i >= 0 && i < len(a) {
-		r = a[i]
-	} else if len(args) > 0 {
-		r = args[0]
-	}
-	return
 }
