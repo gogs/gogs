@@ -7,7 +7,7 @@ package captcha
 import (
 	"testing"
 
-	"github.com/astaxie/beego/utils"
+	"github.com/gogits/gogs/modules/base"
 )
 
 type byteCounter struct {
@@ -21,7 +21,7 @@ func (bc *byteCounter) Write(b []byte) (int, error) {
 
 func BenchmarkNewImage(b *testing.B) {
 	b.StopTimer()
-	d := utils.RandomCreateBytes(challengeNums, defaultChars...)
+	d := base.RandomCreateBytes(challengeNums, defaultChars...)
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
 		NewImage(d, stdWidth, stdHeight)
@@ -30,7 +30,7 @@ func BenchmarkNewImage(b *testing.B) {
 
 func BenchmarkImageWriteTo(b *testing.B) {
 	b.StopTimer()
-	d := utils.RandomCreateBytes(challengeNums, defaultChars...)
+	d := base.RandomCreateBytes(challengeNums, defaultChars...)
 	b.StartTimer()
 	counter := &byteCounter{}
 	for i := 0; i < b.N; i++ {
