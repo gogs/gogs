@@ -61,11 +61,11 @@ func (cw *ConsoleWriter) WriteMsg(msg string, skip, level int) error {
 	return nil
 }
 
-func (_ *ConsoleWriter) Destroy() {
-}
-
 func (_ *ConsoleWriter) Flush() {
 
+}
+
+func (_ *ConsoleWriter) Destroy() {
 }
 
 func init() {

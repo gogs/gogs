@@ -81,7 +81,7 @@ type User struct {
 // DashboardLink returns the user dashboard page link.
 func (u *User) DashboardLink() string {
 	if u.IsOrganization() {
-		return "/org/" + u.Name + "/dashboard"
+		return "/org/" + u.Name + "/dashboard/"
 	}
 	return "/"
 }

@@ -54,11 +54,12 @@ func GlobalInit() {
 	log.Trace("Log path: %s", setting.LogRootPath)
 	mailer.NewMailerContext()
 	models.LoadModelsConfig()
-	models.LoadRepoConfig()
-	models.NewRepoContext()
 	NewServices()
 
 	if setting.InstallLock {
+		models.LoadRepoConfig()
+		models.NewRepoContext()
+
 		if err := models.NewEngine(); err != nil {
 			log.Fatal(4, "Fail to initialize ORM engine: %v", err)
 		}

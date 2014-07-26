@@ -15,6 +15,14 @@
     <div class="{{if .ReadmeExist}}panel-content markdown{{end}} code-view">
     	{{if .ReadmeExist}}
     	{{.FileContent | Str2html}}
+        {{else if not .IsFileText}}
+        <div class="view-raw">
+            {{if .IsImageFile}}
+            <img src="{{.FileLink}}">
+            {{else}}
+            <a href="{{.FileLink}}" rel="nofollow" class="btn btn-gray btn-radius">View Raw</a>
+            {{end}}
+        </div>
     	{{else if .FileSize}}
         <table>
             <tbody>

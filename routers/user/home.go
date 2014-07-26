@@ -32,16 +32,12 @@ func Dashboard(ctx *middleware.Context) {
 		ctx.Handle(500, "home.Dashboard(GetOrganizations)", err)
 		return
 	}
-	ctx.Data["Orgs"] = ctx.User.Orgs
 	ctx.Data["ContextUser"] = ctx.User
 
 	repos, err := models.GetRepositories(ctx.User.Id, true)
 	if err != nil {
 		ctx.Handle(500, "GetRepositories", err)
 		return
-	}
-	for _, repo := range repos {
-		repo.Owner = ctx.User
 	}
 	ctx.Data["Repos"] = repos
 

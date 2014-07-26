@@ -48,7 +48,9 @@
         <div id="dashboard-sidebar" class="right grid-1-3">
             <ul id="dashboard-sidebar-menu" class="menu menu-line">
                 <li class="js-tab-nav js-tab-nav-show first" data-tab-target="#dashboard-my-repo"><a href="#">{{.i18n.Tr "repository"}}</a></li>
+                {{if not .ContextUser.IsOrganization}}
                 <li class="js-tab-nav" data-tab-target="#dashboard-my-org"><a href="#">{{.i18n.Tr "organization"}}</a></li>
+                {{end}}
                 <li class="js-tab-nav last" data-tab-target="#dashboard-my-mirror"><a href="#">{{.i18n.Tr "mirror"}}</a></li>
                 <li class="drop right">
                     <button class="btn btn-green text-bold" id="dashboard-new-repo">
@@ -70,26 +72,68 @@
                 <div class="panel-body">
                     <ul class="list-no-style">
                         {{range .Repos}}
-                            {{template "user/dashboard/repo_list" .}}
+                        <li {{if .IsPrivate}}class="private"{{end}}>
+                            <a href="{{$.ContextUser.Name}}/{{.Name}}">
+                                <i class="octicon octicon-{{if .IsPrivate}}lock{{else if .IsFork}}repo-forked{{else if .IsMirror}}repo-clone{{else}}repo{{end}}"></i>
+                                <span class="repo-name">
+                                    <strong class="repo">{{.Name}}</strong>
+                                </span>
+                                <span class="right repo-star">
+                                    <i class="octicon octicon-star"></i>{{.NumStars}}
+                                </span>
+                            </a>
+                        </li>
                         {{end}}
                     </ul>
                 </div>
+                {{if not .ContextUser.IsOrganization}}
                 <div class="panel-header repo-contrib-header">
                     <h4 class="text-bold">{{.i18n.Tr "home.collaborative_repos"}}</h4>
                 </div>
                 <div class="panel-body">
                     <ul class="list-no-style">
                         {{range .CollaborativeRepos}}
-                            {{template "user/dashboard/repo_list" .}}
+                        <li {{if .IsPrivate}}class="private"{{end}}>
+                            <a href="{{.Owner.Name}}/{{.Name}}">
+                                <i class="octicon octicon-{{if .IsPrivate}}lock{{else if .IsFork}}repo-forked{{else if .IsMirror}}repo-clone{{else}}repo{{end}}"></i>
+                                <span class="repo-name">
+                                    <span class="repo-name-prefix">{{.Owner.Name}} / </span>
+                                    <strong class="repo">{{.Name}}</strong>
+                                </span>
+                                <span class="right repo-star">
+                                    <i class="octicon octicon-star"></i>{{.NumStars}}
+                                </span>
+                            </a>
+                        </li>
                         {{end}}
                     </ul>
                 </div>
+                {{end}}
             </div>
+            {{if not .ContextUser.IsOrganization}}
             <div class="panel" id="dashboard-my-org">
                 <div class="panel-header">
                     <h4 class="text-bold">{{.i18n.Tr "home.my_orgs"}}</h4>
                 </div>
+                <div class="panel-body">
+                    <ul class="list-no-style">
+                        {{range .ContextUser.Orgs}}
+                        <li>
+                            <a href="/{{.Name}}">
+                                <i class="octicon octicon-organization"></i>
+                                <span class="repo-name">
+                                    <strong class="repo">{{.Name}}</strong>
+                                </span>
+                                <span class="right repo-star">
+                                    <i class="octicon octicon-repo"></i>{{.NumRepos}}
+                                </span>
+                            </a>
+                        </li>
+                        {{end}}
+                    </ul>
+                </div>
             </div>
+            {{end}}
             <div class="panel" id="dashboard-my-mirror">
                 <div class="panel-header">
                     <h4 class="text-bold">{{.i18n.Tr "home.my_mirrors"}}</h4>
