@@ -30,6 +30,14 @@ func (repo *Repository) GetTags() ([]string, error) {
 	return tags[:len(tags)-1], nil
 }
 
+func (repo *Repository) CreateTag(tagName, idStr string) error {
+	_, stderr, err := com.ExecCmdDir(repo.Path, "git", "tag", tagName, idStr)
+	if err != nil {
+		return errors.New(stderr)
+	}
+	return nil
+}
+
 func (repo *Repository) getTag(id sha1) (*Tag, error) {
 	if repo.tagCache != nil {
 		if t, ok := repo.tagCache[id]; ok {

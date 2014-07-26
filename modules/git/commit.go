@@ -73,6 +73,14 @@ func (c *Commit) CommitsCount() (int, error) {
 	return c.repo.commitsCount(c.Id)
 }
 
+func (c *Commit) SearchCommits(keyword string) (*list.List, error) {
+	return c.repo.searchCommits(c.Id, keyword)
+}
+
+func (c *Commit) CommitsByRange(page int) (*list.List, error) {
+	return c.repo.commitsByRange(c.Id, page)
+}
+
 func (c *Commit) GetCommitOfRelPath(relPath string) (*Commit, error) {
 	return c.repo.getCommitOfRelPath(c.Id, relPath)
 }

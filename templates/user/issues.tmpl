@@ -41,7 +41,7 @@
                     <p class="info">
                         <span class="author"><img class="avatar" src="{{.Poster.AvatarLink}}" alt="" width="20"/>
                         <a href="/user/{{.Poster.Name}}">{{.Poster.Name}}</a></span>
-                        <span class="time">{{TimeSince .Created}}</span>
+                        <span class="time">{{TimeSince .Created $.Lang}}</span>
                         <span class="comment"><i class="fa fa-comments"></i> {{.NumComments}}</span>
                     </p>
                 </div>

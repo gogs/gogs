@@ -28,11 +28,11 @@ func Dashboard(ctx *middleware.Context) {
 	ctx.Data["PageIsDashboard"] = true
 	ctx.Data["PageIsNews"] = true
 
-	// if err := ctx.User.GetOrganizations(); err != nil {
-	// 	ctx.Handle(500, "home.Dashboard(GetOrganizations)", err)
-	// 	return
-	// }
-	// ctx.Data["Orgs"] = ctx.User.Orgs
+	if err := ctx.User.GetOrganizations(); err != nil {
+		ctx.Handle(500, "home.Dashboard(GetOrganizations)", err)
+		return
+	}
+	ctx.Data["Orgs"] = ctx.User.Orgs
 	ctx.Data["ContextUser"] = ctx.User
 
 	repos, err := models.GetRepositories(ctx.User.Id, true)
@@ -40,13 +40,16 @@ func Dashboard(ctx *middleware.Context) {
 		ctx.Handle(500, "GetRepositories", err)
 		return
 	}
+	for _, repo := range repos {
+		repo.Owner = ctx.User
+	}
 	ctx.Data["Repos"] = repos
 
-	// ctx.Data["CollaborativeRepos"], err = models.GetCollaborativeRepos(ctx.User.Name)
-	// if err != nil {
-	// 	ctx.Handle(500, "home.Dashboard(GetCollaborativeRepos)", err)
-	// 	return
-	// }
+	ctx.Data["CollaborativeRepos"], err = models.GetCollaborativeRepos(ctx.User.Name)
+	if err != nil {
+		ctx.Handle(500, "GetCollaborativeRepos", err)
+		return
+	}
 
 	actions, err := models.GetFeeds(ctx.User.Id, 0, true)
 	if err != nil {

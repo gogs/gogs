@@ -106,7 +106,6 @@ var TemplateFuncs template.FuncMap = map[string]interface{}{
 	"CreateCaptcha":         func() string { return "" },
 }
 
-// TODO: Legacy
 type Actioner interface {
 	GetOpType() int
 	GetActUserName() string

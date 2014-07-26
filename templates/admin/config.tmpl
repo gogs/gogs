@@ -176,11 +176,11 @@
                     <dt>Enable Set Cookie</dt>
                     <dd><i class="fa fa{{if .SessionConfig.EnableSetCookie}}-check{{end}}-square-o"></i></dd>
                     <dt>GC Interval Time</dt>
-                    <dd>{{.SessionConfig.GcIntervalTime}} seconds</dd>
+                    <dd>{{.SessionConfig.Gclifetime}} seconds</dd>
                     <dt>Session Life Time</dt>
-                    <dd>{{.SessionConfig.SessionLifeTime}} seconds</dd>
+                    <dd>{{.SessionConfig.Maxlifetime}} seconds</dd>
                     <dt>HTTPS Only</dt>
-                    <dd><i class="fa fa{{if .SessionConfig.CookieSecure}}-check{{end}}-square-o"></i></dd>
+                    <dd><i class="fa fa{{if .SessionConfig.Secure}}-check{{end}}-square-o"></i></dd>
                     <dt>Cookie Life Time</dt>
                     <dd>{{.SessionConfig.CookieLifeTime}} seconds</dd>
                     <dt>Session ID Hash Function</dt>
