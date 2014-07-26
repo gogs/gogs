@@ -5,8 +5,6 @@
 package org
 
 import (
-	"github.com/go-martini/martini"
-
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/base"
@@ -19,10 +17,10 @@ const (
 	TEAM_NEW base.TplName = "org/team_new"
 )
 
-func Teams(ctx *middleware.Context, params martini.Params) {
-	ctx.Data["Title"] = "Organization " + params["org"] + " Teams"
+func Teams(ctx *middleware.Context) {
+	ctx.Data["Title"] = "Organization " + ctx.Params(":org") + " Teams"
 
-	org, err := models.GetUserByName(params["org"])
+	org, err := models.GetUserByName(ctx.Params(":org"))
 	if err != nil {
 		if err == models.ErrUserNotExist {
 			ctx.Handle(404, "org.Teams(GetUserByName)", err)
@@ -48,8 +46,8 @@ func Teams(ctx *middleware.Context, params martini.Params) {
 	ctx.HTML(200, TEAMS)
 }
 
-func NewTeam(ctx *middleware.Context, params martini.Params) {
-	org, err := models.GetUserByName(params["org"])
+func NewTeam(ctx *middleware.Context) {
+	org, err := models.GetUserByName(ctx.Params(":org"))
 	if err != nil {
 		if err == models.ErrUserNotExist {
 			ctx.Handle(404, "org.NewTeam(GetUserByName)", err)
@@ -69,8 +67,8 @@ func NewTeam(ctx *middleware.Context, params martini.Params) {
 	ctx.HTML(200, TEAM_NEW)
 }
 
-func NewTeamPost(ctx *middleware.Context, params martini.Params, form auth.CreateTeamForm) {
-	org, err := models.GetUserByName(params["org"])
+func NewTeamPost(ctx *middleware.Context, form auth.CreateTeamForm) {
+	org, err := models.GetUserByName(ctx.Params(":org"))
 	if err != nil {
 		if err == models.ErrUserNotExist {
 			ctx.Handle(404, "org.NewTeamPost(GetUserByName)", err)
@@ -125,12 +123,12 @@ func NewTeamPost(ctx *middleware.Context, params martini.Params, form auth.Creat
 	ctx.Redirect("/org/" + org.LowerName + "/teams/" + t.LowerName)
 }
 
-func EditTeam(ctx *middleware.Context, params martini.Params) {
-	ctx.Data["Title"] = "Organization " + params["org"] + " Edit Team"
+func EditTeam(ctx *middleware.Context) {
+	ctx.Data["Title"] = "Organization " + ctx.Params(":org") + " Edit Team"
 	ctx.HTML(200, "org/edit_team")
 }
 
-func SingleTeam(ctx *middleware.Context,params martini.Params){
-	ctx.Data["Title"] = "single-team"+params["org"]
-	ctx.HTML(200,"org/team")
+func SingleTeam(ctx *middleware.Context) {
+	ctx.Data["Title"] = "single-team" + ctx.Params(":org")
+	ctx.HTML(200, "org/team")
 }

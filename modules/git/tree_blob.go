@@ -44,3 +44,16 @@ func (t *Tree) GetTreeEntryByPath(relpath string) (*TreeEntry, error) {
 	}
 	return nil, fmt.Errorf("GetTreeEntryByPath: %v", ErrNotExist)
 }
+
+func (t *Tree) GetBlobByPath(rpath string) (*Blob, error) {
+	entry, err := t.GetTreeEntryByPath(rpath)
+	if err != nil {
+		return nil, err
+	}
+
+	if !entry.IsDir() {
+		return entry.Blob(), nil
+	}
+
+	return nil, ErrNotExist
+}

@@ -32,7 +32,18 @@ func (repo *Repository) GetCommitOfBranch(branchName string) (*Commit, error) {
 	if err != nil {
 		return nil, err
 	}
+	return repo.GetCommit(commitId)
+}
 
+func (repo *Repository) GetCommitIdOfTag(tagName string) (string, error) {
+	return repo.getCommitIdOfRef("refs/tags/" + tagName)
+}
+
+func (repo *Repository) GetCommitOfTag(tagName string) (*Commit, error) {
+	commitId, err := repo.GetCommitIdOfTag(tagName)
+	if err != nil {
+		return nil, err
+	}
 	return repo.GetCommit(commitId)
 }
 
@@ -212,11 +223,57 @@ func (repo *Repository) commitsBefore(lock *sync.Mutex, l *list.List, parent *li
 	return nil
 }
 
+func (repo *Repository) CommitsCount(commitId string) (int, error) {
+	id, err := NewIdFromString(commitId)
+	if err != nil {
+		return 0, err
+	}
+	return repo.commitsCount(id)
+}
+
+func (repo *Repository) FileCommitsCount(branch, file string) (int, error) {
+	stdout, stderr, err := com.ExecCmdDir(repo.Path, "git", "rev-list", "--count",
+		branch, "--", file)
+	if err != nil {
+		return 0, errors.New(stderr)
+	}
+	return com.StrTo(strings.TrimSpace(stdout)).Int()
+}
+
+func (repo *Repository) CommitsByFileAndRange(branch, file string, page int) (*list.List, error) {
+	stdout, stderr, err := com.ExecCmdDirBytes(repo.Path, "git", "log", branch,
+		"--skip="+com.ToStr((page-1)*50), "--max-count=50", prettyLogFormat, "--", file)
+	if err != nil {
+		return nil, errors.New(string(stderr))
+	}
+	return parsePrettyFormatLog(repo, stdout)
+}
+
 func (repo *Repository) getCommitsBefore(id sha1) (*list.List, error) {
 	l := list.New()
 	lock := new(sync.Mutex)
 	err := repo.commitsBefore(lock, l, nil, id, 0)
 	return l, err
+}
+
+func (repo *Repository) searchCommits(id sha1, keyword string) (*list.List, error) {
+	stdout, stderr, err := com.ExecCmdDirBytes(repo.Path, "git", "log", id.String(), "-100",
+		"-i", "--grep="+keyword, prettyLogFormat)
+	if err != nil {
+		return nil, err
+	} else if len(stderr) > 0 {
+		return nil, errors.New(string(stderr))
+	}
+	return parsePrettyFormatLog(repo, stdout)
+}
+
+func (repo *Repository) commitsByRange(id sha1, page int) (*list.List, error) {
+	stdout, stderr, err := com.ExecCmdDirBytes(repo.Path, "git", "log", id.String(),
+		"--skip="+com.ToStr((page-1)*50), "--max-count=50", prettyLogFormat)
+	if err != nil {
+		return nil, errors.New(string(stderr))
+	}
+	return parsePrettyFormatLog(repo, stdout)
 }
 
 func (repo *Repository) getCommitOfRelPath(id sha1, relPath string) (*Commit, error) {
