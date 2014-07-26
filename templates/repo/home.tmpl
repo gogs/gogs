@@ -74,7 +74,7 @@
                     <a href="#">
                         <button class="btn btn-gray btn-small btn-radius">
                             <i class="octicon octicon-git-branch"></i> Branch :
-                            <strong id="repo-branch-current">{{.BranchName}}</strong>
+                            <strong id="repo-branch-current">{{if .IsViewBranch}}{{.BranchName}}{{else}}{{ShortSha .BranchName}}{{end}}</strong>
                         </button>
                     </a>
                     <div class="drop-down panel">
@@ -87,7 +87,7 @@
                             </ul>
                             <ul class="menu menu-vertical switching-list" id="repo-branch-list">
                                 {{range .Branches}}
-                                <li {{if eq . $.BranchName}}class="checked"{{end}}><a href="{{$.RepoLink}}/src/{{.}}"><i class="octicon octicon-check"></i>master</a></li>
+                                <li {{if eq . $.BranchName}}class="checked"{{end}}><a href="{{$.RepoLink}}/src/{{.}}"><i class="octicon octicon-check"></i>{{.}}</a></li>
                                 {{end}}
                             </ul>
                             <ul class="menu menu-vertical switching-list" id="repo-tag-list">
@@ -137,7 +137,7 @@
                     <a class="radius" href="{{.RepoLink}}/pulls"><i class="octicon octicon-git-pull-request"></i>Pull Requests<span class="num right label label-blue label-radius">{{.Repository.NumOpenPulls}}</span></a>
                 </li>
                 <li class="border-bottom"></li>
-                <li class="head">{{.BranchName}}</li>
+                <li class="head">{{if .IsViewBranch}}{{.BranchName}}{{else}}{{ShortSha .BranchName}}{{end}}</li>
                 <li>
                     <a class="radius" href="{{.RepoLink}}/commits/{{.BranchName}}"><i class="octicon octicon-history"></i>Commits <span class="num right label label-gray label-radius">{{.CommitsCount}}</span></a>
                 </li>

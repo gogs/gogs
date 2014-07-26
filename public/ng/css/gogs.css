@@ -660,32 +660,41 @@ The dashboard page style
 #dashboard-sidebar-menu > li.last > a {
   border-top-right-radius: .3em;
 }
+#dashboard-my-org li,
 #dashboard-my-repo li {
   border-bottom: 1px solid #EAEAEA;
 }
+#dashboard-my-org li.private,
 #dashboard-my-repo li.private {
   background-color: #fcf8e9;
 }
+#dashboard-my-org li:last-child,
 #dashboard-my-repo li:last-child {
   border-bottom: none;
 }
+#dashboard-my-org li a,
 #dashboard-my-repo li a {
   padding: 6px 1.2em;
   display: block;
 }
+#dashboard-my-org li a .octicon,
 #dashboard-my-repo li a .octicon {
   margin-right: 6px;
   color: #888;
 }
+#dashboard-my-org li a:hover .repo-name,
 #dashboard-my-repo li a:hover .repo-name {
   text-decoration: underline;
 }
+#dashboard-my-org .repo-name,
 #dashboard-my-repo .repo-name {
   font-size: 1.1em;
 }
+#dashboard-my-org .repo-star,
 #dashboard-my-repo .repo-star {
   color: #888;
 }
+#dashboard-my-org .repo-contrib-header,
 #dashboard-my-repo .repo-contrib-header {
   border-top: 1px solid #d6d6d6;
 }
@@ -1139,6 +1148,17 @@ The register and sign-in page style
   overflow: auto;
   overflow-x: auto;
   overflow-y: hidden;
+  background: white;
+}
+.code-view .view-raw {
+  min-height: 40px;
+  text-align: center;
+  padding-top: 20px;
+}
+.code-view .view-raw .btn {
+  font-size: 1.05em;
+  line-height: 16px;
+  padding: 6px 8px;
 }
 .code-view table {
   width: 100%;
@@ -1163,7 +1183,6 @@ The register and sign-in page style
 }
 .code-view .lines-code > pre {
   border: none;
-  background: none;
   border-left: 1px solid #ddd;
 }
 .code-view .lines-code > pre > ol.linenums > li {

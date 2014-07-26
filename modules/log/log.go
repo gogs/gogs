@@ -87,12 +87,12 @@ func Fatal(skip int, format string, v ...interface{}) {
 	os.Exit(1)
 }
 
-// .___ _______________________________________________________  _________ ___________
-// |   |\      \__    ___/\_   _____/\______   \_   _____/  _  \ \_   ___ \\_   _____/
-// |   |/   |   \|    |    |    __)_  |       _/|    __)/  /_\  \/    \  \/ |    __)_
-// |   /    |    \    |    |        \ |    |   \|     \/    |    \     \____|        \
-// |___\____|__  /____|   /_______  / |____|_  /\___  /\____|__  /\______  /_______  /
-//             \/                 \/         \/     \/         \/        \/        \/
+// .___        __                 _____
+// |   | _____/  |_  ____________/ ____\____    ____  ____
+// |   |/    \   __\/ __ \_  __ \   __\\__  \ _/ ___\/ __ \
+// |   |   |  \  | \  ___/|  | \/|  |   / __ \\  \__\  ___/
+// |___|___|  /__|  \___  >__|   |__|  (____  /\___  >___  >
+//          \/          \/                  \/     \/    \/
 
 type LogLevel int
 
@@ -168,7 +168,7 @@ func (l *Logger) SetLogger(adapter string, config string) error {
 		l.outputs[adapter] = lg
 		l.adapter = adapter
 	} else {
-		panic("log: unknown adapter \"" + adapter + "\" (forgotten Register?)")
+		panic("log: unknown adapter \"" + adapter + "\" (forgotten register?)")
 	}
 	return nil
 }
@@ -181,7 +181,7 @@ func (l *Logger) DelLogger(adapter string) error {
 		lg.Destroy()
 		delete(l.outputs, adapter)
 	} else {
-		panic("log: unknown adapter \"" + adapter + "\" (forgotten Register?)")
+		panic("log: unknown adapter \"" + adapter + "\" (forgotten register?)")
 	}
 	return nil
 }

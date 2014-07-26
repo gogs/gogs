@@ -34,7 +34,7 @@
                     </div>
                     <h3 class="org-repo-name"><a href="/{{$.Org.Name}}/{{.Name}}">{{.Name}}</a></h3>
                     <p class="org-repo-description">{{.Description}}</p>
-                    <p class="org-repo-update">Updated {{TimeSince .Updated}}</p>
+                    <p class="org-repo-update">Updated {{TimeSince .Updated $.Lang}}</p>
                 </div>
                 {{end}}
             </div>

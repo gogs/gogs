@@ -11,6 +11,7 @@ import (
 	"html/template"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path"
 	"path/filepath"
 	"regexp"
@@ -83,6 +84,11 @@ func LoadRepoConfig() {
 
 func NewRepoContext() {
 	zip.Verbose = false
+
+	// Check Git installation.
+	if _, err := exec.LookPath("git"); err != nil {
+		log.Fatal(4, "Fail to test 'git' command: %v (forgotten install?)", err)
+	}
 
 	// Check Git version.
 	ver, err := git.GetVersion()
