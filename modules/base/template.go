@@ -51,7 +51,7 @@ var mailDomains = map[string]string{
 
 var TemplateFuncs template.FuncMap = map[string]interface{}{
 	"GoVer": func() string {
-		return runtime.Version()
+		return strings.Title(runtime.Version())
 	},
 	"AppName": func() string {
 		return setting.AppName
@@ -69,7 +69,8 @@ var TemplateFuncs template.FuncMap = map[string]interface{}{
 		return fmt.Sprint(time.Since(startTime).Nanoseconds()/1e6) + "ms"
 	},
 	"AvatarLink": AvatarLink,
-	"str2html":   Str2html,
+	"str2html":   Str2html, // TODO: Legacy
+	"Str2html":   Str2html,
 	"TimeSince":  TimeSince,
 	"FileSize":   FileSize,
 	"Subtract":   Subtract,
@@ -98,8 +99,11 @@ var TemplateFuncs template.FuncMap = map[string]interface{}{
 	"DiffTypeToStr":     DiffTypeToStr,
 	"DiffLineTypeToStr": DiffLineTypeToStr,
 	"ShortSha":          ShortSha,
-	"Oauth2Icon":        Oauth2Icon,
-	"Oauth2Name":        Oauth2Name,
+	"Md5":               EncodeMd5,
+	"ActionContent2Commits": ActionContent2Commits,
+	"Oauth2Icon":            Oauth2Icon,
+	"Oauth2Name":            Oauth2Name,
+	"CreateCaptcha":         func() string { return "" },
 }
 
 type Actioner interface {
@@ -117,11 +121,11 @@ type Actioner interface {
 func ActionIcon(opType int) string {
 	switch opType {
 	case 1: // Create repository.
-		return "plus-circle"
+		return "repo"
 	case 5, 9: // Commit repository.
-		return "arrow-circle-o-right"
+		return "git-commit"
 	case 6: // Create issue.
-		return "exclamation-circle"
+		return "issue-opened"
 	case 8: // Transfer repository.
 		return "share"
 	case 10: // Comment issue.
@@ -131,6 +135,7 @@ func ActionIcon(opType int) string {
 	}
 }
 
+// TODO: Legacy
 const (
 	TPL_CREATE_REPO    = `<a href="/user/%s">%s</a> created repository <a href="/%s">%s</a>`
 	TPL_COMMIT_REPO    = `<a href="/user/%s">%s</a> pushed to <a href="/%s/src/%s">%s</a> at <a href="/%s">%s</a>%s`
@@ -155,6 +160,15 @@ type PushCommits struct {
 	Commits []*PushCommit
 }
 
+func ActionContent2Commits(act Actioner) *PushCommits {
+	var push *PushCommits
+	if err := json.Unmarshal([]byte(act.GetContent()), &push); err != nil {
+		return nil
+	}
+	return push
+}
+
+// TODO: Legacy
 // ActionDesc accepts int that represents action operation type
 // and returns the description.
 func ActionDesc(act Actioner) string {

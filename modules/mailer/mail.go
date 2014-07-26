@@ -10,10 +10,12 @@ import (
 	"fmt"
 	"path"
 
+	"github.com/Unknwon/com"
+	"github.com/Unknwon/macaron"
+
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
-	"github.com/gogits/gogs/modules/middleware"
 	"github.com/gogits/gogs/modules/setting"
 )
 
@@ -55,7 +57,7 @@ func GetMailTmplData(u *models.User) map[interface{}]interface{} {
 // create a time limit code for user active
 func CreateUserActiveCode(u *models.User, startInf interface{}) string {
 	minutes := setting.Service.ActiveCodeLives
-	data := base.ToStr(u.Id) + u.Email + u.LowerName + u.Passwd + u.Rands
+	data := com.ToStr(u.Id) + u.Email + u.LowerName + u.Passwd + u.Rands
 	code := base.CreateTimeLimitCode(data, minutes, startInf)
 
 	// add tail hex username
@@ -64,7 +66,7 @@ func CreateUserActiveCode(u *models.User, startInf interface{}) string {
 }
 
 // Send user register mail with active code
-func SendRegisterMail(r *middleware.Render, u *models.User) {
+func SendRegisterMail(r macaron.Render, u *models.User) {
 	code := CreateUserActiveCode(u, nil)
 	subject := "Register success, Welcome"
 
@@ -72,7 +74,7 @@ func SendRegisterMail(r *middleware.Render, u *models.User) {
 	data["Code"] = code
 	body, err := r.HTMLString(string(AUTH_REGISTER_SUCCESS), data)
 	if err != nil {
-		log.Error("mail.SendRegisterMail(fail to render): %v", err)
+		log.Error(4, "mail.SendRegisterMail(fail to render): %v", err)
 		return
 	}
 
@@ -83,7 +85,7 @@ func SendRegisterMail(r *middleware.Render, u *models.User) {
 }
 
 // Send email verify active email.
-func SendActiveMail(r *middleware.Render, u *models.User) {
+func SendActiveMail(r macaron.Render, u *models.User) {
 	code := CreateUserActiveCode(u, nil)
 
 	subject := "Verify your e-mail address"
@@ -92,7 +94,7 @@ func SendActiveMail(r *middleware.Render, u *models.User) {
 	data["Code"] = code
 	body, err := r.HTMLString(string(AUTH_ACTIVE), data)
 	if err != nil {
-		log.Error("mail.SendActiveMail(fail to render): %v", err)
+		log.Error(4, "mail.SendActiveMail(fail to render): %v", err)
 		return
 	}
 
@@ -103,7 +105,7 @@ func SendActiveMail(r *middleware.Render, u *models.User) {
 }
 
 // Send reset password email.
-func SendResetPasswdMail(r *middleware.Render, u *models.User) {
+func SendResetPasswdMail(r macaron.Render, u *models.User) {
 	code := CreateUserActiveCode(u, nil)
 
 	subject := "Reset your password"
@@ -112,7 +114,7 @@ func SendResetPasswdMail(r *middleware.Render, u *models.User) {
 	data["Code"] = code
 	body, err := r.HTMLString(string(AUTH_RESET_PASSWORD), data)
 	if err != nil {
-		log.Error("mail.SendResetPasswdMail(fail to render): %v", err)
+		log.Error(4, "mail.SendResetPasswdMail(fail to render): %v", err)
 		return
 	}
 
@@ -157,7 +159,7 @@ func SendIssueNotifyMail(u, owner *models.User, repo *models.Repository, issue *
 }
 
 // SendIssueMentionMail sends mail notification for who are mentioned in issue.
-func SendIssueMentionMail(r *middleware.Render, u, owner *models.User,
+func SendIssueMentionMail(r macaron.Render, u, owner *models.User,
 	repo *models.Repository, issue *models.Issue, tos []string) error {
 
 	if len(tos) == 0 {
@@ -182,7 +184,7 @@ func SendIssueMentionMail(r *middleware.Render, u, owner *models.User,
 }
 
 // SendCollaboratorMail sends mail notification to new collaborator.
-func SendCollaboratorMail(r *middleware.Render, u, owner *models.User,
+func SendCollaboratorMail(r macaron.Render, u, owner *models.User,
 	repo *models.Repository) error {
 
 	subject := fmt.Sprintf("%s added you to %s", owner.Name, repo.Name)

@@ -7,10 +7,10 @@ package dev
 import (
 	"net/http/pprof"
 
-	"github.com/go-martini/martini"
+	"github.com/Unknwon/macaron"
 )
 
-func RegisterDebugRoutes(r martini.Router) {
+func RegisterDebugRoutes(r *macaron.Macaron) {
 	r.Any("/debug/pprof/cmdline", pprof.Cmdline)
 	r.Any("/debug/pprof/profile", pprof.Profile)
 	r.Any("/debug/pprof/symbol", pprof.Symbol)

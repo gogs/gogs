@@ -1,105 +1,81 @@
-{{template "base/head" .}}
-{{template "base/navbar" .}}
-<div class="container" id="body">
-    <form action="/repo/create" method="post" class="form-horizontal card" id="repo-create">
+{{template "ng/base/head" .}}
+{{template "ng/base/header" .}}
+<div id="repo-wrapper">
+    <form id="repo-create-form" class="form form-align panel panel-radius" action="/repo/create" method="post">
         {{.CsrfTokenHtml}}
-        <h3>Create New Repository</h3>
-        {{template "base/alert" .}}
-        <div class="form-group">
-            <label class="col-md-2 control-label">Owner<strong class="text-danger">*</strong></label>
-            <div class="col-md-8">
-                <div class="btn-group" id="repo-owner-switch">
-                    <button type="button" class="btn btn-default" id="repo-owner-current">
-                        <img src="{{.ContextUser.AvatarLink}}?s=28" alt="user-avatar" title="username" id="repo-owner-avatar">
-                        <span id="repo-owner-name">{{.ContextUser.Name}}</span>
-                    </button>
-                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
-                        <span class="caret"></span>
-                    </button>
-                    <div class="dropdown-menu clone-group-btn no-propagation">
-                        <ul id="dashboard-switch-menu" class="list-unstyled">
-                            {{range .AllUsers}}
-                            <li data-uid="{{.Id}}"{{if eq .Id $.ContextUser.Id}}class="checked"{{end}}>
-                                <a>
-                                    <i class="fa fa-check"></i>
-                                    <img src="{{.AvatarLink}}?s=28" alt="user-avatar" title="username">
-                                    {{.Name}}
-                                </a>
-                            </li>
-                            {{end}}
-                        </ul>
-                    </div>
+        <div class="panel-header"><h2>{{.i18n.Tr "new_repo"}}</h2></div>
+        <div class="panel-content">
+            {{template "ng/base/alert" .}}
+            <div class="field">
+                <label for="owner" class="req">{{.i18n.Tr "repo.owner"}}</label>
+                <input id="owner" type="hidden" name="uid" value="{{.ContextUser.Id}}" />
+                <div class="inline-block drop">
+                    <a href="#" class="drop-bottom">
+                        <img class="avatar" src="{{.ContextUser.AvatarLink}}" alt="user-avatar">
+                        <strong>{{.ContextUser.Name}}</strong>
+                    </a>
+                    <ul class="drop-down menu menu-vertical menu-radius switching-list" id="repo-create-owner-list">
+                        <li {{if eq $.ContextUser.Id .SignedUser.Id}}class="checked"{{end}}>
+                            <a href="#">
+                                <i class="octicon octicon-check"></i>
+                                <img class="avatar" src="{{.SignedUser.AvatarLink}}" alt="user-avatar">
+                                <strong>{{.SignedUser.Name}}</strong>
+                            </a>
+                        </li>
+                        {{range .Orgs}}
+                        <li {{if eq $.ContextUser.Id .Id}}class="checked"{{end}}>
+                            <a href="#">
+                                <i class="octicon octicon-check"></i>
+                                <img class="avatar" src="{{.AvatarLink}}" alt="user-avatar">
+                                <strong>{{.Name}}</strong>
+                            </a>
+                        </li>
+                        {{end}}
+                    </ul>
                 </div>
             </div>
-            <input type="hidden" value="{{.ContextUser.Id}}" name="uid" id="repo-owner-id"/>
-        </div>
-
-        <div class="form-group {{if .Err_RepoName}}has-error has-feedback{{end}}">
-            <label class="col-md-2 control-label">Repository<strong class="text-danger">*</strong></label>
-            <div class="col-md-8">
-                <input name="repo" type="text" class="form-control" placeholder="Type your repository name" value="{{.repo}}" required="required">
-                <span class="help-block">Great repository names are short and memorable. </span>
+            <div class="field">
+                <label class="req" for="repo-name">{{.i18n.Tr "repo.repo_name"}}</label>
+                <input class="ipt ipt-radius" id="repo-name" name="repo_name" type="text" value="{{.repo_name}}" required />
+                <span class="form-label"></span>
+                <span class="help">{{.i18n.Tr "repo.repo_name_helper" | Str2html}}</span>
             </div>
-        </div>
-
-        <div class="form-group">
-            <label class="col-md-2 control-label">Visibility</label>
-            <div class="col-md-8">
-                <div class="checkbox">
-                    <label>
-                        <input type="checkbox" name="private" {{if .private}}checked{{end}}>
-                        <strong>This repository is private</strong>
-                    </label>
-                </div>
+            <p class="field">
+                <label for="visibility">{{.i18n.Tr "repo.visibility"}}</label>
+                <input class="ipt-chk" id="visibility" name="private" type="checkbox" {{if .private}}checked{{end}} />
+                <span>{{.i18n.Tr "repo.visiblity_helper" | Str2html}}</span>
+            </p>
+            <div class="field clear">
+                <label class="left" for="desc">{{.i18n.Tr "repo.repo_desc"}}</label>
+                <textarea class="ipt ipt-radius" id="desc" name="desc">{{.desc}}</textarea>
             </div>
-        </div>
-
-        <div class="form-group {{if .Err_Description}}has-error has-feedback{{end}}">
-            <label class="col-md-2 control-label">Description</label>
-            <div class="col-md-8">
-                <textarea name="desc" class="form-control" placeholder="Type your repository description">{{.desc}}</textarea>
-            </div>
-        </div>
-
-        <div class="form-group">
-            <label class="col-md-2 control-label">Language</label>
-            <div class="col-md-8">
-                <select class="form-control" name="language">
-                    <option value="">Select a language</option>
-                    {{range .LanguageIgns}}<option value="{{.}}">{{.}}</option>{{end}}
+            <p class="field">
+                <label for="lang">{{.i18n.Tr "repo.repo_lang"}}</label>
+                <select id="lang" name="gitignore">
+                    <option>{{.i18n.Tr "repo.repo_lang_helper"}}</option>
+                    {{range .Gitignores}}
+                    <option value="{{.}}" {{if eq . $.gitignore}}selected{{end}}>{{.}}</option>
+                    {{end}}
                 </select>
-                <br>
-                <div>Need more .gitignore? Go <a href="http://www.gitignore.io/">gitignore.io</a>.</div>
-            </div>
-        </div>
-
-        <div class="form-group">
-            <label class="col-md-2 control-label">License</label>
-            <div class="col-md-8">
-                <select class="form-control" name="license">
-                    <option value="">Select a license</option>
-                    {{range .Licenses}}<option value="{{.}}">{{.}}</option>{{end}}
+                <label for="license">{{.i18n.Tr "repo.license"}}</label>
+                <select id="license" name="license">
+                    <option>{{.i18n.Tr "repo.license_helper"}}</option>
+                    {{range .Licenses}}
+                    <option value="{{.}}" {{if eq . $.license}}selected{{end}}>{{.}}</option>
+                    {{end}}
                 </select>
-            </div>
-        </div>
-
-        <div class="form-group">
-            <div class="col-md-8 col-md-offset-2">
-                <div class="checkbox">
-                    <label>
-                        <input type="checkbox" name="initReadme" {{if .initReadme}}checked{{end}}>
-                        <strong>Initialize this repository with a README</strong>
-                    </label>
-                </div>
-            </div>
-        </div>
-
-        <div class="form-group">
-            <div class="col-md-offset-2 col-md-8">
-                <button type="submit" class="btn btn-lg btn-primary">Create repository</button>
-                <a href="/" class="text-danger">Cancel</a>
-            </div>
+            </p>
+            <p class="field">
+                <label for="init-readme"></label>
+                <input class="ipt-chk" id="init-readme" name="init_readme" type="checkbox" {{if .init_readme}}checked{{end}} />
+                <strong>{{.i18n.Tr "repo.init_readme"}}</strong>
+            </p>
+            <p class="field">
+                <label for="repo-create-submit"></label>
+                <button class="btn btn-large btn-blue btn-radius" id="repo-create-submit">{{.i18n.Tr "repo.create_repo"}}</button>
+                <a class="btn btn-small btn-gray btn-radius" id="repo-create-cancel" href="/"><strong>{{.i18n.Tr "cancel"}}</strong></a>
+            </p>
         </div>
     </form>
 </div>
-{{template "base/footer" .}}
+{{template "ng/base/footer" .}}

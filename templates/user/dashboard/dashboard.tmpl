@@ -1,0 +1,101 @@
+{{template "ng/base/head" .}}
+{{template "ng/base/header" .}}
+{{template "user/dashboard/nav" .}}
+<div id="dashboard-wrapper">
+    <div id="dashboard" class="container">
+        <div id="dashboard-news" class="left grid-2-3">
+            {{range .Feeds}}
+            <div class="news clear">
+                <div class="avatar left">
+                    <img class="avatar-30" src="{{AvatarLink .GetActEmail}}" alt="">
+                </div>
+                <div class="content left {{if eq .GetOpType 5}}push-news{{end}}">
+                    <p class="text-bold">
+                        <a href="/{{.GetActUserName}}">{{.GetActUserName}}</a> 
+                        {{if eq .GetOpType 1}}
+                        {{$.i18n.Tr "action.create_repo" .GetRepoLink .GetRepoLink | Str2html}}
+                        {{else if eq .GetOpType 5}}
+                        {{$.i18n.Tr "action.commit_repo" .GetRepoLink .GetBranch .GetBranch .GetRepoLink .GetRepoLink | Str2html}}
+                        {{else if eq .GetOpType 6}}
+                        {{ $index := index .GetIssueInfos 0}}
+                        {{$.i18n.Tr "action.create_issue" .GetRepoLink $index .GetRepoLink $index | Str2html}}
+                        {{else if eq .GetOpType 10}}
+                        {{ $index := index .GetIssueInfos 0}}
+                        {{$.i18n.Tr "action.comment_issue" .GetRepoLink $index .GetRepoLink $index | Str2html}}
+                        {{end}}
+                    </p>
+                    {{if eq .GetOpType 5}}
+                    <div class="news-content content">
+                        <ul class="list-no-style">
+                            {{ $push := ActionContent2Commits .}}
+                            {{ $repoLink := .GetRepoLink}}
+                            {{range $push.Commits}}
+                            <li><img src="{{AvatarLink .AuthorEmail}}?s=16"> <a href="/{{$repoLink}}/commit/{{.Sha1}}">{{ShortSha .Sha1}}</a> {{.Message}}</li>
+                            {{end}}
+                        </ul>
+                    </div>
+                    {{else if eq .GetOpType 6}}
+                    <p class="news-content comment-news">{{index .GetIssueInfos 1}}</p>
+                    {{else if eq .GetOpType 10}}
+                    <p class="news-content comment-news">{{index .GetIssueInfos 1}}</p>
+                    {{end}}
+                    <p class="news-time text-italic">{{TimeSince .GetCreate $.i18n.Lang}}</p>
+                </div>
+                <i class="mega-octicon octicon-{{ActionIcon .GetOpType}} right"></i>
+            </div>
+            {{end}}
+        </div>
+        <div id="dashboard-sidebar" class="right grid-1-3">
+            <ul id="dashboard-sidebar-menu" class="menu menu-line">
+                <li class="js-tab-nav js-tab-nav-show first" data-tab-target="#dashboard-my-repo"><a href="#">{{.i18n.Tr "repository"}}</a></li>
+                <li class="js-tab-nav" data-tab-target="#dashboard-my-org"><a href="#">{{.i18n.Tr "organization"}}</a></li>
+                <li class="js-tab-nav last" data-tab-target="#dashboard-my-mirror"><a href="#">{{.i18n.Tr "mirror"}}</a></li>
+                <li class="drop right">
+                    <button class="btn btn-green text-bold" id="dashboard-new-repo">
+                        <i class="octicon octicon-plus"></i>
+                    </button>
+                    <ul class="menu menu-vertical drop-down" id="dashboard-new-repo-menu">
+                        <li><a href="/repo/create"><i class="octicon octicon-repo-create"></i>{{.i18n.Tr "new_repo"}}</a></li>
+                        <li><a href="/org/create"><i class="octicon octicon-organization"></i>{{.i18n.Tr "new_org"}}</a></li>
+                    </ul>
+                </li>
+            </ul>
+            <div class="panel" id="dashboard-my-repo">
+                <div class="panel-header">
+                    <h4 class="left">{{.i18n.Tr "home.my_repos"}}
+                        <span class="repo-count label label-gray label-radius">{{.ContextUser.NumRepos}}</span>
+                    </h4>
+                    &nbsp;
+                </div>
+                <div class="panel-body">
+                    <ul class="list-no-style">
+                        {{range .Repos}}
+                            {{template "user/dashboard/repo_list" .}}
+                        {{end}}
+                    </ul>
+                </div>
+                <div class="panel-header repo-contrib-header">
+                    <h4 class="text-bold">{{.i18n.Tr "home.collaborative_repos"}}</h4>
+                </div>
+                <div class="panel-body">
+                    <ul class="list-no-style">
+                        {{range .CollaborativeRepos}}
+                            {{template "user/dashboard/repo_list" .}}
+                        {{end}}
+                    </ul>
+                </div>
+            </div>
+            <div class="panel" id="dashboard-my-org">
+                <div class="panel-header">
+                    <h4 class="text-bold">{{.i18n.Tr "home.my_orgs"}}</h4>
+                </div>
+            </div>
+            <div class="panel" id="dashboard-my-mirror">
+                <div class="panel-header">
+                    <h4 class="text-bold">{{.i18n.Tr "home.my_mirrors"}}</h4>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{{template "ng/base/footer" .}}

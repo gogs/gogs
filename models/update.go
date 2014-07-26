@@ -10,9 +10,8 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/gogits/git"
-
 	"github.com/gogits/gogs/modules/base"
+	"github.com/gogits/gogs/modules/git"
 	"github.com/gogits/gogs/modules/log"
 )
 
@@ -47,8 +46,6 @@ func DelUpdateTasksByUuid(uuid string) error {
 }
 
 func Update(refName, oldCommitId, newCommitId, userName, repoUserName, repoName string, userId int64) error {
-	//fmt.Println(refName, oldCommitId, newCommitId)
-	//fmt.Println(userName, repoUserName, repoName)
 	isNew := strings.HasPrefix(oldCommitId, "0000000")
 	if isNew &&
 		strings.HasPrefix(newCommitId, "0000000") {
@@ -82,12 +79,12 @@ func Update(refName, oldCommitId, newCommitId, userName, repoUserName, repoName 
 		return fmt.Errorf("runUpdate.GetRepositoryByName userId: %v", err)
 	}
 
-	// if tags push
+	// Push tags.
 	if strings.HasPrefix(refName, "refs/tags/") {
 		tagName := git.RefEndName(refName)
 		tag, err := repo.GetTag(tagName)
 		if err != nil {
-			log.GitLogger.Fatal("runUpdate.GetTag: %v", err)
+			log.GitLogger.Fatal(4, "runUpdate.GetTag: %v", err)
 		}
 
 		var actEmail string
@@ -96,7 +93,7 @@ func Update(refName, oldCommitId, newCommitId, userName, repoUserName, repoName 
 		} else {
 			cmt, err := tag.Commit()
 			if err != nil {
-				log.GitLogger.Fatal("runUpdate.GetTag Commit: %v", err)
+				log.GitLogger.Fatal(4, "runUpdate.GetTag Commit: %v", err)
 			}
 			actEmail = cmt.Committer.Email
 		}
@@ -105,7 +102,7 @@ func Update(refName, oldCommitId, newCommitId, userName, repoUserName, repoName 
 
 		if err = CommitRepoAction(userId, ru.Id, userName, actEmail,
 			repos.Id, repoUserName, repoName, refName, commit); err != nil {
-			log.GitLogger.Fatal("runUpdate.models.CommitRepoAction: %s/%s:%v", repoUserName, repoName, err)
+			log.GitLogger.Fatal(4, "runUpdate.models.CommitRepoAction: %s/%s:%v", repoUserName, repoName, err)
 		}
 		return err
 	}
@@ -135,7 +132,7 @@ func Update(refName, oldCommitId, newCommitId, userName, repoUserName, repoName 
 
 	// if commits push
 	commits := make([]*base.PushCommit, 0)
-	var maxCommits = 3
+	var maxCommits = 2
 	var actEmail string
 	for e := l.Front(); e != nil; e = e.Next() {
 		commit := e.Value.(*git.Commit)

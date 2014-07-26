@@ -47,7 +47,7 @@ type Webhook struct {
 func (w *Webhook) GetEvent() {
 	w.HookEvent = &HookEvent{}
 	if err := json.Unmarshal([]byte(w.Events), w.HookEvent); err != nil {
-		log.Error("webhook.GetEvent(%d): %v", w.Id, err)
+		log.Error(4, "webhook.GetEvent(%d): %v", w.Id, err)
 	}
 }
 
@@ -193,13 +193,13 @@ func DeliverHooks() {
 			// Only support JSON now.
 			if _, err := httplib.Post(t.Url).SetTimeout(timeout, timeout).
 				Body([]byte(t.PayloadContent)).Response(); err != nil {
-				log.Error("webhook.DeliverHooks(Delivery): %v", err)
+				log.Error(4, "webhook.DeliverHooks(Delivery): %v", err)
 				return nil
 			}
 
 			t.IsDeliveried = true
 			if err := UpdateHookTask(t); err != nil {
-				log.Error("webhook.DeliverHooks(UpdateHookTask): %v", err)
+				log.Error(4, "webhook.DeliverHooks(UpdateHookTask): %v", err)
 				return nil
 			}
 

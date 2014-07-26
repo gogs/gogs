@@ -16,7 +16,8 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/go-martini/martini"
+	"github.com/Unknwon/macaron"
+	"github.com/macaron-contrib/i18n"
 )
 
 /*
@@ -37,44 +38,44 @@ import (
 // your own error handling, use Form or Json middleware directly.
 // An interface pointer can be added as a second argument in order
 // to map the struct to a specific interface.
-func Bind(obj interface{}, ifacePtr ...interface{}) martini.Handler {
-	return func(context martini.Context, req *http.Request) {
-		contentType := req.Header.Get("Content-Type")
+func Bind(obj interface{}, ifacePtr ...interface{}) macaron.Handler {
+	return func(ctx *macaron.Context) {
+		contentType := ctx.Req.Header.Get("Content-Type")
 
 		if strings.Contains(contentType, "form-urlencoded") {
-			context.Invoke(Form(obj, ifacePtr...))
+			ctx.Invoke(Form(obj, ifacePtr...))
 		} else if strings.Contains(contentType, "multipart/form-data") {
-			context.Invoke(MultipartForm(obj, ifacePtr...))
+			ctx.Invoke(MultipartForm(obj, ifacePtr...))
 		} else if strings.Contains(contentType, "json") {
-			context.Invoke(Json(obj, ifacePtr...))
+			ctx.Invoke(Json(obj, ifacePtr...))
 		} else {
-			context.Invoke(Json(obj, ifacePtr...))
-			if getErrors(context).Count() > 0 {
-				context.Invoke(Form(obj, ifacePtr...))
+			ctx.Invoke(Json(obj, ifacePtr...))
+			if getErrors(ctx).Count() > 0 {
+				ctx.Invoke(Form(obj, ifacePtr...))
 			}
 		}
 
-		context.Invoke(ErrorHandler)
+		ctx.Invoke(ErrorHandler)
 	}
 }
 
 // BindIgnErr will do the exactly same thing as Bind but without any
 // error handling, which user has freedom to deal with them.
 // This allows user take advantages of validation.
-func BindIgnErr(obj interface{}, ifacePtr ...interface{}) martini.Handler {
-	return func(context martini.Context, req *http.Request) {
+func BindIgnErr(obj interface{}, ifacePtr ...interface{}) macaron.Handler {
+	return func(ctx *macaron.Context, req *http.Request) {
 		contentType := req.Header.Get("Content-Type")
 
 		if strings.Contains(contentType, "form-urlencoded") {
-			context.Invoke(Form(obj, ifacePtr...))
+			ctx.Invoke(Form(obj, ifacePtr...))
 		} else if strings.Contains(contentType, "multipart/form-data") {
-			context.Invoke(MultipartForm(obj, ifacePtr...))
+			ctx.Invoke(MultipartForm(obj, ifacePtr...))
 		} else if strings.Contains(contentType, "json") {
-			context.Invoke(Json(obj, ifacePtr...))
+			ctx.Invoke(Json(obj, ifacePtr...))
 		} else {
-			context.Invoke(Json(obj, ifacePtr...))
-			if getErrors(context).Count() > 0 {
-				context.Invoke(Form(obj, ifacePtr...))
+			ctx.Invoke(Json(obj, ifacePtr...))
+			if getErrors(ctx).Count() > 0 {
+				ctx.Invoke(Form(obj, ifacePtr...))
 			}
 		}
 	}
@@ -89,12 +90,12 @@ func BindIgnErr(obj interface{}, ifacePtr ...interface{}) martini.Handler {
 // keys, for example: key=val1&key=val2&key=val3
 // An interface pointer can be added as a second argument in order
 // to map the struct to a specific interface.
-func Form(formStruct interface{}, ifacePtr ...interface{}) martini.Handler {
-	return func(context martini.Context, req *http.Request) {
+func Form(formStruct interface{}, ifacePtr ...interface{}) macaron.Handler {
+	return func(ctx *macaron.Context) {
 		ensureNotPointer(formStruct)
 		formStruct := reflect.New(reflect.TypeOf(formStruct))
 		errors := newErrors()
-		parseErr := req.ParseForm()
+		parseErr := ctx.Req.ParseForm()
 
 		// Format validation of the request body or the URL would add considerable overhead,
 		// and ParseForm does not complain when URL encoding is off.
@@ -104,14 +105,14 @@ func Form(formStruct interface{}, ifacePtr ...interface{}) martini.Handler {
 			errors.Overall[BindingDeserializationError] = parseErr.Error()
 		}
 
-		mapForm(formStruct, req.Form, errors)
+		mapForm(formStruct, ctx.Req.Form, errors)
 
-		validateAndMap(formStruct, context, errors, ifacePtr...)
+		validateAndMap(formStruct, ctx, errors, ifacePtr...)
 	}
 }
 
-func MultipartForm(formStruct interface{}, ifacePtr ...interface{}) martini.Handler {
-	return func(context martini.Context, req *http.Request) {
+func MultipartForm(formStruct interface{}, ifacePtr ...interface{}) macaron.Handler {
+	return func(ctx *macaron.Context) {
 		ensureNotPointer(formStruct)
 		formStruct := reflect.New(reflect.TypeOf(formStruct))
 		errors := newErrors()
@@ -119,7 +120,7 @@ func MultipartForm(formStruct interface{}, ifacePtr ...interface{}) martini.Hand
 		// Workaround for multipart forms returning nil instead of an error
 		// when content is not multipart
 		// https://code.google.com/p/go/issues/detail?id=6334
-		multipartReader, err := req.MultipartReader()
+		multipartReader, err := ctx.Req.MultipartReader()
 		if err != nil {
 			errors.Overall[BindingDeserializationError] = err.Error()
 		} else {
@@ -129,12 +130,12 @@ func MultipartForm(formStruct interface{}, ifacePtr ...interface{}) martini.Hand
 				errors.Overall[BindingDeserializationError] = parseErr.Error()
 			}
 
-			req.MultipartForm = form
+			ctx.Req.MultipartForm = form
 		}
 
-		mapForm(formStruct, req.MultipartForm.Value, errors)
+		mapForm(formStruct, ctx.Req.MultipartForm.Value, errors)
 
-		validateAndMap(formStruct, context, errors, ifacePtr...)
+		validateAndMap(formStruct, ctx, errors, ifacePtr...)
 	}
 }
 
@@ -143,21 +144,21 @@ func MultipartForm(formStruct interface{}, ifacePtr ...interface{}) martini.Hand
 // validated, but no error handling is actually performed here.
 // An interface pointer can be added as a second argument in order
 // to map the struct to a specific interface.
-func Json(jsonStruct interface{}, ifacePtr ...interface{}) martini.Handler {
-	return func(context martini.Context, req *http.Request) {
+func Json(jsonStruct interface{}, ifacePtr ...interface{}) macaron.Handler {
+	return func(ctx *macaron.Context) {
 		ensureNotPointer(jsonStruct)
 		jsonStruct := reflect.New(reflect.TypeOf(jsonStruct))
 		errors := newErrors()
 
-		if req.Body != nil {
-			defer req.Body.Close()
+		if ctx.Req.Body != nil {
+			defer ctx.Req.Body.Close()
 		}
 
-		if err := json.NewDecoder(req.Body).Decode(jsonStruct.Interface()); err != nil && err != io.EOF {
+		if err := json.NewDecoder(ctx.Req.Body).Decode(jsonStruct.Interface()); err != nil && err != io.EOF {
 			errors.Overall[BindingDeserializationError] = err.Error()
 		}
 
-		validateAndMap(jsonStruct, context, errors, ifacePtr...)
+		validateAndMap(jsonStruct, ctx, errors, ifacePtr...)
 	}
 }
 
@@ -165,15 +166,15 @@ func Json(jsonStruct interface{}, ifacePtr ...interface{}) martini.Handler {
 // passed in is a Validator, then the user-defined Validate method
 // is executed, and its errors are mapped to the context. This middleware
 // performs no error handling: it merely detects them and maps them.
-func Validate(obj interface{}) martini.Handler {
-	return func(context martini.Context, req *http.Request) {
+func Validate(obj interface{}) macaron.Handler {
+	return func(ctx *macaron.Context, l i18n.Locale) {
 		errors := newErrors()
 		validateStruct(errors, obj)
 
 		if validator, ok := obj.(Validator); ok {
-			validator.Validate(errors, req, context)
+			validator.Validate(ctx, errors, l)
 		}
-		context.Map(*errors)
+		ctx.Map(*errors)
 	}
 }
 
@@ -387,9 +388,7 @@ func setWithProperType(valueKind reflect.Kind, val string, structField reflect.V
 	}
 }
 
-// Don't pass in pointers to bind to. Can lead to bugs. See:
-// https://github.com/codegangsta/martini-contrib/issues/40
-// https://github.com/codegangsta/martini-contrib/pull/34#issuecomment-29683659
+// Don't pass in pointers to bind to. Can lead to bugs.
 func ensureNotPointer(obj interface{}) {
 	if reflect.TypeOf(obj).Kind() == reflect.Ptr {
 		panic("Pointers are not accepted as binding models")
@@ -399,13 +398,13 @@ func ensureNotPointer(obj interface{}) {
 // Performs validation and combines errors from validation
 // with errors from deserialization, then maps both the
 // resulting struct and the errors to the context.
-func validateAndMap(obj reflect.Value, context martini.Context, errors *Errors, ifacePtr ...interface{}) {
-	context.Invoke(Validate(obj.Interface()))
-	errors.Combine(getErrors(context))
-	context.Map(*errors)
-	context.Map(obj.Elem().Interface())
+func validateAndMap(obj reflect.Value, ctx *macaron.Context, errors *Errors, ifacePtr ...interface{}) {
+	ctx.Invoke(Validate(obj.Interface()))
+	errors.Combine(getErrors(ctx))
+	ctx.Map(*errors)
+	ctx.Map(obj.Elem().Interface())
 	if len(ifacePtr) > 0 {
-		context.MapTo(obj.Elem().Interface(), ifacePtr[0])
+		ctx.MapTo(obj.Elem().Interface(), ifacePtr[0])
 	}
 }
 
@@ -413,8 +412,8 @@ func newErrors() *Errors {
 	return &Errors{make(map[string]string), make(map[string]string)}
 }
 
-func getErrors(context martini.Context) Errors {
-	return context.Get(reflect.TypeOf(Errors{})).Interface().(Errors)
+func getErrors(ctx *macaron.Context) Errors {
+	return ctx.GetVal(reflect.TypeOf(Errors{})).Interface().(Errors)
 }
 
 type (
@@ -422,7 +421,7 @@ type (
 	// validation before the request even gets to your application.
 	// The Validate method will be executed during the validation phase.
 	Validator interface {
-		Validate(*Errors, *http.Request, martini.Context)
+		Validate(*macaron.Context, *Errors, i18n.Locale)
 	}
 )
 

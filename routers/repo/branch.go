@@ -5,8 +5,6 @@
 package repo
 
 import (
-	"github.com/go-martini/martini"
-
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/middleware"
 )
@@ -15,7 +13,7 @@ const (
 	BRANCH base.TplName = "repo/branch"
 )
 
-func Branches(ctx *middleware.Context, params martini.Params) {
+func Branches(ctx *middleware.Context) {
 	ctx.Data["Title"] = "Branches"
 	ctx.Data["IsRepoToolbarBranches"] = true
 

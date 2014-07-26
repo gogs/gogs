@@ -1,17 +1,15 @@
 Gogs - Go Git Service [![wercker status](https://app.wercker.com/status/ad0bdb0bc450ac6f09bc56b9640a50aa/s/ "wercker status")](https://app.wercker.com/project/bykey/ad0bdb0bc450ac6f09bc56b9640a50aa) [![Build Status](https://drone.io/github.com/gogits/gogs/status.png)](https://drone.io/github.com/gogits/gogs/latest)
 =====================
 
-Gogs(Go Git Service) 是一个由 Go 语言编写的自助 Git 托管服务。
+Gogs(Go Git Service) 是一个基于 Go 语言的自助 Git 服务。
 
 ![Demo](http://gowalker.org/public/gogs_demo.gif)
 
-##### 当前版本：0.4.5 Alpha
+##### 当前版本：0.4.7 Alpha
 
 ## 开发目的
 
-Gogs 完全使用 Go 语言来实现对 Git 数据的操作，实现 **零** 依赖，并且支持 Go 语言所支持的 **所有平台**，包括 Linux、Mac OS X 以及 Windows。
-
-更重要的是，您只需要一个可执行文件就能借助 Gogs 快速搭建属于您自己的代码托管服务！
+Gogs 的目标是打造一个最简单、最快速和最轻松的方式搭建自助 Git 服务。使用 Go 语言开发使得 Gogs 能够通过独立的二进制分发，并且支持 Go 语言支持的 **所有平台**，包括 Linux、Mac OS X 以及 Windows。
 
 ## 项目概览
 

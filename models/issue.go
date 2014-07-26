@@ -13,9 +13,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Unknwon/com"
 	"github.com/go-xorm/xorm"
 
-	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
 )
 
@@ -72,7 +72,7 @@ func (i *Issue) GetLabels() error {
 	strIds := strings.Split(strings.TrimSuffix(i.LabelIds[1:], "|"), "|$")
 	i.Labels = make([]*Label, 0, len(strIds))
 	for _, strId := range strIds {
-		id, _ := base.StrTo(strId).Int64()
+		id, _ := com.StrTo(strId).Int64()
 		if id > 0 {
 			l, err := GetLabelById(id)
 			if err != nil {
@@ -337,7 +337,7 @@ func GetIssueUserPairsByRepoIds(rids []int64, isClosed bool, page int) ([]*Issue
 	buf := bytes.NewBufferString("")
 	for _, rid := range rids {
 		buf.WriteString("repo_id=")
-		buf.WriteString(base.ToStr(rid))
+		buf.WriteString(com.ToStr(rid))
 		buf.WriteString(" OR ")
 	}
 	cond := strings.TrimSuffix(buf.String(), " OR ")
@@ -564,7 +564,7 @@ func UpdateLabel(l *Label) error {
 
 // DeleteLabel delete a label of given repository.
 func DeleteLabel(repoId int64, strId string) error {
-	id, _ := base.StrTo(strId).Int64()
+	id, _ := com.StrTo(strId).Int64()
 	l, err := GetLabelById(id)
 	if err != nil {
 		if err == ErrLabelNotExist {
@@ -768,7 +768,7 @@ func ChangeMilestoneAssign(oldMid, mid int64, issue *Issue) (err error) {
 			m.Completeness = 0
 		}
 
-		if _, err = sess.Id(m.Id).Update(m); err != nil {
+		if _, err = sess.Id(m.Id).Cols("num_issues,num_completeness,num_closed_issues").Update(m); err != nil {
 			sess.Rollback()
 			return err
 		}
@@ -796,7 +796,7 @@ func ChangeMilestoneAssign(oldMid, mid int64, issue *Issue) (err error) {
 		}
 
 		m.Completeness = m.NumClosedIssues * 100 / m.NumIssues
-		if _, err = sess.Id(m.Id).Update(m); err != nil {
+		if _, err = sess.Id(m.Id).Cols("num_issues,num_completeness,num_closed_issues").Update(m); err != nil {
 			sess.Rollback()
 			return err
 		}

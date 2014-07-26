@@ -5,76 +5,63 @@
 package user
 
 import (
-	"errors"
-	"fmt"
-	"io/ioutil"
-	"os"
-	"strconv"
-	"strings"
+	"github.com/Unknwon/com"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/middleware"
-	"github.com/gogits/gogs/modules/process"
 )
 
 const (
-	SETTING      base.TplName = "user/setting"
-	SOCIAL       base.TplName = "user/social"
-	PASSWORD     base.TplName = "user/password"
-	PUBLICKEY    base.TplName = "user/publickey"
-	NOTIFICATION base.TplName = "user/notification"
-	SECURITY     base.TplName = "user/security"
+	SETTINGS_PROFILE  base.TplName = "user/settings/profile"
+	SETTINGS_PASSWORD base.TplName = "user/settings/password"
+	SETTINGS_SSH_KEYS base.TplName = "user/settings/sshkeys"
+	SETTINGS_SOCIAL   base.TplName = "user/settings/social"
+	SETTINGS_ORGS     base.TplName = "user/settings/orgs"
+	SETTINGS_DELETE   base.TplName = "user/settings/delete"
+	NOTIFICATION      base.TplName = "user/notification"
+	SECURITY          base.TplName = "user/security"
 )
 
-var (
-	MinimumKeySize = map[string]int{
-		"(ED25519)": 256,
-		"(ECDSA)":   256,
-		"(NTRU)":    1087,
-		"(MCE)":     1702,
-		"(McE)":     1702,
-		"(RSA)":     2048,
-	}
-)
-
-func Setting(ctx *middleware.Context) {
-	ctx.Data["Title"] = "Setting"
-	ctx.Data["PageIsUserSetting"] = true
-	ctx.Data["IsUserPageSetting"] = true
-	ctx.Data["Owner"] = ctx.User
-	ctx.HTML(200, SETTING)
+func Settings(ctx *middleware.Context) {
+	ctx.Data["Title"] = ctx.Tr("settings")
+	ctx.Data["PageIsUserSettings"] = true
+	ctx.Data["PageIsSettingsProfile"] = true
+	ctx.HTML(200, SETTINGS_PROFILE)
 }
 
-func SettingPost(ctx *middleware.Context, form auth.UpdateProfileForm) {
-	ctx.Data["Title"] = "Setting"
-	ctx.Data["PageIsUserSetting"] = true
-	ctx.Data["IsUserPageSetting"] = true
+func SettingsPost(ctx *middleware.Context, form auth.UpdateProfileForm) {
+	ctx.Data["Title"] = ctx.Tr("settings")
+	ctx.Data["PageIsUserSettings"] = true
+	ctx.Data["PageIsSettingsProfile"] = true
 
 	if ctx.HasError() {
-		ctx.HTML(200, SETTING)
+		ctx.HTML(200, SETTINGS_PROFILE)
 		return
 	}
-
-	ctx.Data["Owner"] = ctx.User
 
 	// Check if user name has been changed.
 	if ctx.User.Name != form.UserName {
 		isExist, err := models.IsUserExist(form.UserName)
 		if err != nil {
-			ctx.Handle(500, "user.SettingPost(update: check existence)", err)
+			ctx.Handle(500, "IsUserExist", err)
 			return
 		} else if isExist {
-			ctx.RenderWithErr("User name has been taken.", SETTING, &form)
+			ctx.RenderWithErr(ctx.Tr("form.username_been_taken"), SETTINGS_PROFILE, &form)
 			return
 		} else if err = models.ChangeUserName(ctx.User, form.UserName); err != nil {
-			ctx.Handle(500, "user.SettingPost(change user name)", err)
+			if err == models.ErrUserNameIllegal {
+				ctx.Flash.Error(ctx.Tr("form.illegal_username"))
+				ctx.Redirect("/user/settings")
+				return
+			} else {
+				ctx.Handle(500, "ChangeUserName", err)
+			}
 			return
 		}
-		log.Trace("%s User name changed: %s -> %s", ctx.Req.RequestURI, ctx.User.Name, form.UserName)
-
+		log.Trace("User name changed: %s -> %s", ctx.User.Name, form.UserName)
 		ctx.User.Name = form.UserName
 	}
 
@@ -85,213 +72,204 @@ func SettingPost(ctx *middleware.Context, form auth.UpdateProfileForm) {
 	ctx.User.Avatar = base.EncodeMd5(form.Avatar)
 	ctx.User.AvatarEmail = form.Avatar
 	if err := models.UpdateUser(ctx.User); err != nil {
-		ctx.Handle(500, "setting.SettingPost(UpdateUser)", err)
+		ctx.Handle(500, "UpdateUser", err)
 		return
 	}
-	log.Trace("%s User setting updated: %s", ctx.Req.RequestURI, ctx.User.LowerName)
-	ctx.Flash.Success("Your profile has been successfully updated.")
+	log.Trace("User setting updated: %s", ctx.User.Name)
+	ctx.Flash.Success(ctx.Tr("settings.update_profile_success"))
 	ctx.Redirect("/user/settings")
 }
 
-func SettingSocial(ctx *middleware.Context) {
-	ctx.Data["Title"] = "Social Account"
-	ctx.Data["PageIsUserSetting"] = true
-	ctx.Data["IsUserPageSettingSocial"] = true
-
-	// Unbind social account.
-	remove, _ := base.StrTo(ctx.Query("remove")).Int64()
-	if remove > 0 {
-		if err := models.DeleteOauth2ById(remove); err != nil {
-			ctx.Handle(500, "user.SettingSocial(DeleteOauth2ById)", err)
-			return
-		}
-		ctx.Flash.Success("OAuth2 has been unbinded.")
-		ctx.Redirect("/user/settings/social")
-		return
-	}
-
-	var err error
-	ctx.Data["Socials"], err = models.GetOauthByUserId(ctx.User.Id)
-	if err != nil {
-		ctx.Handle(500, "user.SettingSocial(GetOauthByUserId)", err)
-		return
-	}
-	ctx.HTML(200, SOCIAL)
+func SettingsPassword(ctx *middleware.Context) {
+	ctx.Data["Title"] = ctx.Tr("settings")
+	ctx.Data["PageIsUserSettings"] = true
+	ctx.Data["PageIsSettingsPassword"] = true
+	ctx.HTML(200, SETTINGS_PASSWORD)
 }
 
-func SettingPassword(ctx *middleware.Context) {
-	ctx.Data["Title"] = "Password"
-	ctx.Data["PageIsUserSetting"] = true
-	ctx.Data["IsUserPageSettingPasswd"] = true
-	ctx.HTML(200, PASSWORD)
-}
-
-func SettingPasswordPost(ctx *middleware.Context, form auth.UpdatePasswdForm) {
-	ctx.Data["Title"] = "Password"
-	ctx.Data["PageIsUserSetting"] = true
-	ctx.Data["IsUserPageSettingPasswd"] = true
+func SettingsPasswordPost(ctx *middleware.Context, form auth.ChangePasswordForm) {
+	ctx.Data["Title"] = ctx.Tr("settings")
+	ctx.Data["PageIsUserSettings"] = true
+	ctx.Data["PageIsSettingsPassword"] = true
 
 	if ctx.HasError() {
-		ctx.HTML(200, PASSWORD)
+		ctx.HTML(200, SETTINGS_PASSWORD)
 		return
 	}
 
 	tmpUser := &models.User{
-		Passwd: form.OldPasswd,
+		Passwd: form.OldPassword,
 		Salt:   ctx.User.Salt,
 	}
 	tmpUser.EncodePasswd()
 	if ctx.User.Passwd != tmpUser.Passwd {
-		ctx.Flash.Error("Old password is not correct.")
-	} else if form.NewPasswd != form.RetypePasswd {
-		ctx.Flash.Error("New password and re-type password are not same.")
+		ctx.Flash.Error(ctx.Tr("settings.password_incorrect"))
+	} else if form.Password != form.Retype {
+		ctx.Flash.Error(ctx.Tr("form.password_not_match"))
 	} else {
-		ctx.User.Passwd = form.NewPasswd
+		ctx.User.Passwd = form.Password
 		ctx.User.Salt = models.GetUserSalt()
 		ctx.User.EncodePasswd()
 		if err := models.UpdateUser(ctx.User); err != nil {
-			ctx.Handle(200, "setting.SettingPassword", err)
+			ctx.Handle(500, "UpdateUser", err)
 			return
 		}
-		log.Trace("%s User password updated: %s", ctx.Req.RequestURI, ctx.User.LowerName)
-		ctx.Flash.Success("Password is changed successfully. You can now sign in via new password.")
+		log.Trace("User password updated: %s", ctx.User.Name)
+		ctx.Flash.Success(ctx.Tr("settings.change_password_success"))
 	}
+
 	ctx.Redirect("/user/settings/password")
 }
 
-// Checks if the given public key string is recognized by SSH.
-func CheckPublicKeyString(keyContent string) (ok bool, err error) {
-	if strings.ContainsAny(keyContent, "\n\r") {
-		return false, errors.New("Only a single line with a single key please")
-	}
-
-	// write the key to a file…
-	tmpFile, err := ioutil.TempFile(os.TempDir(), "keytest")
-	if err != nil {
-		return false, err
-	}
-	tmpPath := tmpFile.Name()
-	defer os.Remove(tmpPath)
-	tmpFile.WriteString(keyContent)
-	tmpFile.Close()
-
-	// … see if ssh-keygen recognizes its contents
-	stdout, stderr, err := process.Exec("CheckPublicKeyString", "ssh-keygen", "-l", "-f", tmpPath)
-	if err != nil {
-		return false, errors.New("ssh-keygen -l -f: " + stderr)
-	} else if len(stdout) < 2 {
-		return false, errors.New("ssh-keygen returned not enough output to evaluate the key")
-	}
-	sshKeygenOutput := strings.Split(stdout, " ")
-	if len(sshKeygenOutput) < 4 {
-		return false, errors.New("Not enough fields returned by ssh-keygen -l -f")
-	}
-	keySize, err := strconv.Atoi(sshKeygenOutput[0])
-	if err != nil {
-		return false, errors.New("Cannot get key size of the given key")
-	}
-	keyType := strings.TrimSpace(sshKeygenOutput[len(sshKeygenOutput)-1])
-
-	if minimumKeySize := MinimumKeySize[keyType]; minimumKeySize == 0 {
-		return false, errors.New("Sorry, unrecognized public key type")
-	} else {
-		if keySize < minimumKeySize {
-			return false, fmt.Errorf("The minimum accepted size of a public key %s is %d", keyType, minimumKeySize)
-		}
-	}
-
-	return true, nil
-}
-
-func SettingSSHKeys(ctx *middleware.Context, form auth.AddSSHKeyForm) {
-	ctx.Data["Title"] = "SSH Keys"
-	ctx.Data["PageIsUserSetting"] = true
-	ctx.Data["IsUserPageSettingSSH"] = true
-
-	// Delete SSH key.
-	if ctx.Req.Method == "DELETE" || ctx.Query("_method") == "DELETE" {
-		id, err := base.StrTo(ctx.Query("id")).Int64()
-		if err != nil {
-			log.Error("ssh.DelPublicKey: %v", err)
-			ctx.JSON(200, map[string]interface{}{
-				"ok":  false,
-				"err": err.Error(),
-			})
-			return
-		}
-
-		if err = models.DeletePublicKey(&models.PublicKey{Id: id}); err != nil {
-			log.Error("ssh.DelPublicKey: %v", err)
-			ctx.JSON(200, map[string]interface{}{
-				"ok":  false,
-				"err": err.Error(),
-			})
-		} else {
-			log.Trace("%s User SSH key deleted: %s", ctx.Req.RequestURI, ctx.User.LowerName)
-			ctx.JSON(200, map[string]interface{}{
-				"ok": true,
-			})
-		}
-		return
-	}
+func SettingsSSHKeys(ctx *middleware.Context) {
+	ctx.Data["Title"] = ctx.Tr("settings")
+	ctx.Data["PageIsUserSettings"] = true
+	ctx.Data["PageIsSettingsSSHKeys"] = true
 
 	var err error
-	// List existed SSH keys.
 	ctx.Data["Keys"], err = models.ListPublicKey(ctx.User.Id)
 	if err != nil {
 		ctx.Handle(500, "ssh.ListPublicKey", err)
 		return
 	}
 
-	// Add new SSH key.
-	if ctx.Req.Method == "POST" {
-		if ctx.HasError() {
-			ctx.HTML(200, "user/publickey")
+	ctx.HTML(200, SETTINGS_SSH_KEYS)
+}
+
+func SettingsSSHKeysPost(ctx *middleware.Context, form auth.AddSSHKeyForm) {
+	ctx.Data["Title"] = ctx.Tr("settings")
+	ctx.Data["PageIsUserSettings"] = true
+	ctx.Data["PageIsSettingsSSHKeys"] = true
+
+	var err error
+	ctx.Data["Keys"], err = models.ListPublicKey(ctx.User.Id)
+	if err != nil {
+		ctx.Handle(500, "ssh.ListPublicKey", err)
+		return
+	}
+
+	// Delete SSH key.
+	if ctx.Query("_method") == "DELETE" {
+		id := com.StrTo(ctx.Query("id")).MustInt64()
+		if id <= 0 {
 			return
 		}
 
-		if ok, err := CheckPublicKeyString(form.KeyContent); !ok {
-			ctx.Flash.Error(err.Error())
+		if err = models.DeletePublicKey(&models.PublicKey{Id: id}); err != nil {
+			ctx.Handle(500, "DeletePublicKey", err)
+		} else {
+			log.Trace("SSH key deleted: %s", ctx.User.Name)
+			ctx.Redirect("/user/settings/ssh")
+		}
+		return
+	}
+
+	// Add new SSH key.
+	if ctx.Req.Method == "POST" {
+		if ctx.HasError() {
+			ctx.HTML(200, SETTINGS_SSH_KEYS)
+			return
+		}
+
+		if ok, err := models.CheckPublicKeyString(form.Content); !ok {
+			ctx.Flash.Error(ctx.Tr("form.invalid_ssh_key", err.Error()))
 			ctx.Redirect("/user/settings/ssh")
 			return
 		}
 
 		k := &models.PublicKey{
 			OwnerId: ctx.User.Id,
-			Name:    form.KeyName,
-			Content: form.KeyContent,
+			Name:    form.SSHTitle,
+			Content: form.Content,
 		}
-
 		if err := models.AddPublicKey(k); err != nil {
-			if err.Error() == models.ErrKeyAlreadyExist.Error() {
-				ctx.RenderWithErr("Public key name has been used", "user/publickey", &form)
+			if err == models.ErrKeyAlreadyExist {
+				ctx.RenderWithErr(ctx.Tr("form.ssh_key_been_used"), SETTINGS_SSH_KEYS, &form)
 				return
 			}
 			ctx.Handle(500, "ssh.AddPublicKey", err)
 			return
 		} else {
-			log.Trace("%s User SSH key added: %s", ctx.Req.RequestURI, ctx.User.LowerName)
-			ctx.Flash.Success("New SSH Key has been added!")
+			log.Trace("SSH key added: %s", ctx.User.Name)
+			ctx.Flash.Success(ctx.Tr("settings.add_key_success"))
 			ctx.Redirect("/user/settings/ssh")
 			return
 		}
 	}
 
-	ctx.HTML(200, PUBLICKEY)
+	ctx.HTML(200, SETTINGS_SSH_KEYS)
 }
 
-func SettingNotification(ctx *middleware.Context) {
-	// TODO: user setting notification
-	ctx.Data["Title"] = "Notification"
-	ctx.Data["PageIsUserSetting"] = true
-	ctx.Data["IsUserPageSettingNotify"] = true
-	ctx.HTML(200, NOTIFICATION)
+// func SettingSocial(ctx *middleware.Context) {
+// 	ctx.Data["Title"] = "Social Account"
+// 	ctx.Data["PageIsUserSetting"] = true
+// 	ctx.Data["IsUserPageSettingSocial"] = true
+
+// 	// Unbind social account.
+// 	remove, _ := base.StrTo(ctx.Query("remove")).Int64()
+// 	if remove > 0 {
+// 		if err := models.DeleteOauth2ById(remove); err != nil {
+// 			ctx.Handle(500, "user.SettingSocial(DeleteOauth2ById)", err)
+// 			return
+// 		}
+// 		ctx.Flash.Success("OAuth2 has been unbinded.")
+// 		ctx.Redirect("/user/settings/social")
+// 		return
+// 	}
+
+// 	var err error
+// 	ctx.Data["Socials"], err = models.GetOauthByUserId(ctx.User.Id)
+// 	if err != nil {
+// 		ctx.Handle(500, "user.SettingSocial(GetOauthByUserId)", err)
+// 		return
+// 	}
+// 	ctx.HTML(200, SOCIAL)
+// }
+
+func SettingsSocial(ctx *middleware.Context) {
+	ctx.Data["Title"] = ctx.Tr("settings")
+	ctx.Data["PageIsUserSettings"] = true
+	ctx.Data["PageIsSettingsSocial"] = true
+	ctx.HTML(200, SETTINGS_SOCIAL)
 }
 
-func SettingSecurity(ctx *middleware.Context) {
-	// TODO: user setting security
-	ctx.Data["Title"] = "Security"
-	ctx.Data["PageIsUserSetting"] = true
-	ctx.Data["IsUserPageSettingSecurity"] = true
-	ctx.HTML(200, SECURITY)
+func SettingsOrgs(ctx *middleware.Context) {
+	ctx.Data["Title"] = ctx.Tr("settings")
+	ctx.Data["PageIsUserSettings"] = true
+	ctx.Data["PageIsSettingsOrgs"] = true
+	ctx.HTML(200, SETTINGS_ORGS)
+}
+
+func SettingsDelete(ctx *middleware.Context) {
+	ctx.Data["Title"] = ctx.Tr("settings")
+	ctx.Data["PageIsUserSettings"] = true
+	ctx.Data["PageIsSettingsDelete"] = true
+
+	if ctx.Req.Method == "POST" {
+		// tmpUser := models.User{
+		// 	Passwd: ctx.Query("password"),
+		// 	Salt:   ctx.User.Salt,
+		// }
+		// tmpUser.EncodePasswd()
+		// if tmpUser.Passwd != ctx.User.Passwd {
+		// 	ctx.Flash.Error("Password is not correct. Make sure you are owner of this account.")
+		// } else {
+		if err := models.DeleteUser(ctx.User); err != nil {
+			switch err {
+			case models.ErrUserOwnRepos:
+				ctx.Flash.Error(ctx.Tr("form.still_own_repo"))
+				ctx.Redirect("/user/settings/delete")
+				return
+			default:
+				ctx.Handle(500, "DeleteUser", err)
+				return
+			}
+		} else {
+			log.Trace("Account deleted: %s", ctx.User.Name)
+			ctx.Redirect("/")
+			return
+		}
+	}
+
+	ctx.HTML(200, SETTINGS_DELETE)
 }

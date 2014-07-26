@@ -5,12 +5,10 @@
 package org
 
 import (
-	"github.com/go-martini/martini"
-
 	"github.com/gogits/gogs/modules/middleware"
 )
 
-func Members(ctx *middleware.Context, params martini.Params) {
-	ctx.Data["Title"] = "Organization " + params["org"] + " Members"
+func Members(ctx *middleware.Context) {
+	ctx.Data["Title"] = "Organization " + ctx.Params(":org") + " Members"
 	ctx.HTML(200, "org/members")
 }

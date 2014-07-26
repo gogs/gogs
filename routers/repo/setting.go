@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-martini/martini"
+	"github.com/Unknwon/com"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
@@ -74,7 +74,7 @@ func SettingPost(ctx *middleware.Context, form auth.RepoSettingForm) {
 		ctx.Repo.Repository.IsPrivate = form.Private
 		ctx.Repo.Repository.IsGoget = form.GoGet
 		if err := models.UpdateRepository(ctx.Repo.Repository); err != nil {
-			ctx.Handle(404, "setting.SettingPost(update)", err)
+			ctx.Handle(404, "UpdateRepository", err)
 			return
 		}
 		log.Trace("%s Repository updated: %s/%s", ctx.Req.RequestURI, ctx.Repo.Owner.Name, ctx.Repo.Repository.Name)
@@ -84,7 +84,7 @@ func SettingPost(ctx *middleware.Context, form auth.RepoSettingForm) {
 				ctx.Repo.Mirror.Interval = form.Interval
 				ctx.Repo.Mirror.NextUpdate = time.Now().Add(time.Duration(form.Interval) * time.Hour)
 				if err := models.UpdateMirror(ctx.Repo.Mirror); err != nil {
-					log.Error("setting.SettingPost(UpdateMirror): %v", err)
+					log.Error(4, "UpdateMirror: %v", err)
 				}
 			}
 		}
@@ -227,7 +227,7 @@ func WebHooks(ctx *middleware.Context) {
 	ctx.Data["Title"] = strings.TrimPrefix(ctx.Repo.RepoLink, "/") + " - Webhooks"
 
 	// Delete webhook.
-	remove, _ := base.StrTo(ctx.Query("remove")).Int64()
+	remove := com.StrTo(ctx.Query("remove")).MustInt64()
 	if remove > 0 {
 		if err := models.DeleteWebhook(remove); err != nil {
 			ctx.Handle(500, "setting.WebHooks(DeleteWebhook)", err)
@@ -290,11 +290,11 @@ func WebHooksAddPost(ctx *middleware.Context, form auth.NewWebhookForm) {
 	ctx.Redirect(ctx.Repo.RepoLink + "/settings/hooks")
 }
 
-func WebHooksEdit(ctx *middleware.Context, params martini.Params) {
+func WebHooksEdit(ctx *middleware.Context) {
 	ctx.Data["IsRepoToolbarWebHooks"] = true
 	ctx.Data["Title"] = strings.TrimPrefix(ctx.Repo.RepoLink, "/") + " - Webhook"
 
-	hookId, _ := base.StrTo(params["id"]).Int64()
+	hookId := com.StrTo(ctx.Params(":id")).MustInt64()
 	if hookId == 0 {
 		ctx.Handle(404, "setting.WebHooksEdit", nil)
 		return
@@ -315,11 +315,11 @@ func WebHooksEdit(ctx *middleware.Context, params martini.Params) {
 	ctx.HTML(200, HOOK_EDIT)
 }
 
-func WebHooksEditPost(ctx *middleware.Context, params martini.Params, form auth.NewWebhookForm) {
+func WebHooksEditPost(ctx *middleware.Context, form auth.NewWebhookForm) {
 	ctx.Data["IsRepoToolbarWebHooks"] = true
 	ctx.Data["Title"] = strings.TrimPrefix(ctx.Repo.RepoLink, "/") + " - Webhook"
 
-	hookId, _ := base.StrTo(params["id"]).Int64()
+	hookId := com.StrTo(ctx.Params(":id")).MustInt64()
 	if hookId == 0 {
 		ctx.Handle(404, "setting.WebHooksEditPost", nil)
 		return
@@ -328,9 +328,9 @@ func WebHooksEditPost(ctx *middleware.Context, params martini.Params, form auth.
 	w, err := models.GetWebhookById(hookId)
 	if err != nil {
 		if err == models.ErrWebhookNotExist {
-			ctx.Handle(404, "setting.WebHooksEditPost(GetWebhookById)", nil)
+			ctx.Handle(404, "GetWebhookById", nil)
 		} else {
-			ctx.Handle(500, "setting.WebHooksEditPost(GetWebhookById)", err)
+			ctx.Handle(500, "GetWebhookById", err)
 		}
 		return
 	}
@@ -353,10 +353,10 @@ func WebHooksEditPost(ctx *middleware.Context, params martini.Params, form auth.
 	}
 	w.IsActive = form.Active
 	if err := w.UpdateEvent(); err != nil {
-		ctx.Handle(500, "setting.WebHooksEditPost(UpdateEvent)", err)
+		ctx.Handle(500, "UpdateEvent", err)
 		return
 	} else if err := models.UpdateWebhook(w); err != nil {
-		ctx.Handle(500, "setting.WebHooksEditPost(WebHooksEditPost)", err)
+		ctx.Handle(500, "WebHooksEditPost", err)
 		return
 	}
 

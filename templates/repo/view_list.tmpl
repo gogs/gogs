@@ -1,0 +1,46 @@
+<table id="repo-files-table" class="table-border table-block table-radius">
+    <thead>
+    <tr>
+        <th colspan="4" class="clear">
+            <span class="author left">
+                <img class="avatar-24 radius" src="{{AvatarLink .LastCommit.Author.Email}}" />
+                <a href="/user/email2user?email={{Md5 .LastCommit.Author.Email}}"><strong>{{.LastCommit.Author.Name}}</strong>:</a>
+            </span>
+            <span class="last-commit"><a href="{{.RepoLink}}/commit/{{.LastCommit.Id}}" rel="nofollow">
+                <strong>{{ShortSha .LastCommit.Id.String}}</strong></a>
+                <span class="text-truncate">{{.LastCommit.Summary}}</span>
+            </span>
+            <span class="age right">{{TimeSince .LastCommit.Author.When .i18n.Lang}}</span>
+        </th>
+    </tr>
+    </thead>
+    <tbody>
+        {{if .HasParentPath}}
+        <tr class="has-parent">
+            <td class="icon"></td>
+            <td class="name"><a href="{{.BranchLink}}{{.ParentPath}}">..</a></td>
+            <td class="msg"></td>
+            <td class="age"></td>
+        </tr>
+        {{end}}
+        {{range $item := .Files}}
+            {{$entry := index $item 0}}
+            {{$commit := index $item 1}}
+            <tr>
+                <td class="icon">
+                    <span class="octicon octicon-file-{{if $entry.IsDir}}directory{{else}}text{{end}}"></span>
+                </td>
+                <td class="name">
+                    <a href="{{$.BranchLink}}/{{$.TreePath}}{{$entry.Name}}" class="text-truncate">{{$entry.Name}}</a>
+                </td>
+                <td class="msg">
+                    <a class="text-truncate" href="/{{$.Username}}/{{$.Reponame}}/commit/{{$commit.Id}}" rel="nofollow">{{$commit.Summary}}</a>
+                </td>
+                <td class="age">{{TimeSince $commit.Committer.When $.i18n.Lang}}</td>
+            </tr>
+        {{end}}
+    </tbody>
+</table>
+{{if .ReadmeExist}}
+    {{template "repo/view_file" .}}
+{{end}}

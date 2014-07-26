@@ -5,13 +5,12 @@
 package apiv1
 
 import (
-	"net/http"
 	"reflect"
 
-	"github.com/go-martini/martini"
+	"github.com/Unknwon/macaron"
+	"github.com/macaron-contrib/i18n"
 
 	"github.com/gogits/gogs/modules/auth"
-	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/middleware/binding"
 )
@@ -22,17 +21,16 @@ type MarkdownForm struct {
 	Context string `form:"context"`
 }
 
-func (f *MarkdownForm) Validate(errs *binding.Errors, req *http.Request, ctx martini.Context) {
-	data := ctx.Get(reflect.TypeOf(base.TmplData{})).Interface().(base.TmplData)
-	validateApiReq(errs, data, f)
+func (f *MarkdownForm) Validate(ctx *macaron.Context, errs *binding.Errors, l i18n.Locale) {
+	validateApiReq(errs, ctx.Data, f, l)
 }
 
-func validateApiReq(errs *binding.Errors, data base.TmplData, f interface{}) {
+func validateApiReq(errs *binding.Errors, data map[string]interface{}, f interface{}, l i18n.Locale) {
 	if errs.Count() == 0 {
 		return
 	} else if len(errs.Overall) > 0 {
 		for _, err := range errs.Overall {
-			log.Error("%s: %v", reflect.TypeOf(f), err)
+			log.Error(4, "%s: %v", reflect.TypeOf(f), err)
 		}
 		return
 	}

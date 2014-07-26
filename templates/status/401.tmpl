@@ -1,6 +1,6 @@
-{{template "base/head" .}}
-{{template "base/navbar" .}}
+{{template "ng/base/head" .}}
+{{template "ng/base/header" .}}
 <div class="container">
-	401 Unauthorized
+	401 Unauthorized: {{.ErrorMsg}}
 </div>
-{{template "base/footer" .}}
+{{template "ng/base/footer" .}}

@@ -1,0 +1,61 @@
+{{template "ng/base/head" .}}
+{{template "ng/base/header" .}}
+<div id="setting-wrapper" class="main-wrapper">
+    <div id="user-profile-setting" class="container clear">
+        {{template "user/settings/nav" .}}
+        <div class="grid-4-5 left">
+            <div class="setting-content">
+                {{template "ng/base/alert" .}}
+                <div id="user-ssh-setting-content">
+                    <div id="user-ssh-panel" class="panel panel-radius">
+                        <p class="panel-header">
+                            <button class="btn btn-small btn-black btn-radius right" id="ssh-add">{{.i18n.Tr "settings.add_key"}}</button>
+                            <strong>{{.i18n.Tr "settings.manage_ssh_keys"}}</strong>
+                        </p>
+                        <ul class="panel-body menu menu-vertical switching-list">
+                            <li>{{.i18n.Tr "settings.ssh_desc"}}</li>
+                            {{range .Keys}}
+                            <li class="ssh clear">
+                                <span class="active-icon left label {{if .HasRecentActivity}}label-green{{end}} label-radius"></span>
+                                <i class="mega-octicon octicon-key left"></i>
+                                <div class="ssh-content left">
+                                    <p><strong>{{.Name}}</strong></p>
+                                    <p class="print">{{.Fingerprint}}</p>
+                                    <p class="activity"><i>{{$.i18n.Tr "settings.add_on"}} {{DateFormat .Created "M d, Y"}} —  <i class="octicon octicon-info"></i>{{if .HasUsed}}{{$.i18n.Tr "settings.last_used"}} {{DateFormat .Updated "M d, Y"}}{{else}}{{$.i18n.Tr "settings.no_activity"}}{{end}}</i></p>
+                                </div>
+                                <form action="/user/settings/ssh" method="post">
+                                    {{$.CsrfTokenHtml}}
+                                    <input name="_method" type="hidden" value="DELETE">
+                                    <input name="id" type="hidden" value="{{.Id}}">
+                                    <button class="right ssh-delete-btn btn btn-red btn-radius btn-small">{{$.i18n.Tr "settings.delete_key"}}</button>
+                                </form>
+                            </li>
+                            {{end}}
+                        </ul>
+                    </div>
+                    <p>{{.i18n.Tr "settings.ssh_helper" | Str2html}}</p>
+                    <br>
+                    <form class="panel panel-radius form form-align hide" id="user-ssh-add-form" action="/user/settings/ssh" method="post">
+                        {{.CsrfTokenHtml}}
+                        <p class="panel-header"><strong>{{.i18n.Tr "settings.add_new_key"}}</strong></p>
+                        <div class="panel-body">
+                            <p class="field">
+                                <label class="req" for="ssh-title">{{.i18n.Tr "settings.key_name"}}</label>
+                                <input class="ipt ipt-radius" id="ssh-title" name="title" type="text" required />
+                            </p>
+                            <p class="field clear">
+                                <label class="left req" for="ssh-key">{{.i18n.Tr "settings.key_content"}}</label>
+                                <textarea class="ipt ipt-radius left" name="content" id="ssh-key" required></textarea>
+                            </p>
+                            <p class="field">
+                                <label></label>
+                                <button class="btn btn-green btn-radius" id="ssh-add-btn">{{.i18n.Tr "settings.add_key"}}</button>
+                            </p>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{{template "ng/base/footer" .}}

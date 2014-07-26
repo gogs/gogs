@@ -1,0 +1,12 @@
+<li {{if .IsPrivate}}class="private"{{end}}>
+    <a href="{{.Owner.Name}}/{{.Name}}">
+        <i class="octicon octicon-{{if .IsPrivate}}lock{{else if .IsFork}}repo-forked{{else if .IsMirror}}repo-clone{{else}}repo{{end}}"></i>
+        <span class="repo-name">
+            <!-- <span class="repo-name-prefix">gogits / </span> -->
+            <strong class="repo">{{.Name}}</strong>
+        </span>
+        <span class="right repo-star">
+            <i class="octicon octicon-star"></i>{{.NumStars}}
+        </span>
+    </a>
+</li>

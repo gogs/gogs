@@ -14,9 +14,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gogits/git"
+	"github.com/Unknwon/com"
 
 	"github.com/gogits/gogs/modules/base"
+	"github.com/gogits/gogs/modules/git"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/setting"
 )
@@ -75,6 +76,14 @@ type User struct {
 	NumMembers  int
 	Teams       []*Team `xorm:"-"`
 	Members     []*User `xorm:"-"`
+}
+
+// DashboardLink returns the user dashboard page link.
+func (u *User) DashboardLink() string {
+	if u.IsOrganization() {
+		return "/org/" + u.Name + "/dashboard"
+	}
+	return "/"
 }
 
 // HomeLink returns the user home page link.
@@ -157,23 +166,23 @@ func GetUserSalt() string {
 }
 
 // CreateUser creates record of a new user.
-func CreateUser(u *User) (*User, error) {
+func CreateUser(u *User) error {
 	if !IsLegalName(u.Name) {
-		return nil, ErrUserNameIllegal
+		return ErrUserNameIllegal
 	}
 
 	isExist, err := IsUserExist(u.Name)
 	if err != nil {
-		return nil, err
+		return err
 	} else if isExist {
-		return nil, ErrUserAlreadyExist
+		return ErrUserAlreadyExist
 	}
 
 	isExist, err = IsEmailUsed(u.Email)
 	if err != nil {
-		return nil, err
+		return err
 	} else if isExist {
-		return nil, ErrEmailAlreadyUsed
+		return ErrEmailAlreadyUsed
 	}
 
 	u.LowerName = strings.ToLower(u.Name)
@@ -186,21 +195,17 @@ func CreateUser(u *User) (*User, error) {
 	sess := x.NewSession()
 	defer sess.Close()
 	if err = sess.Begin(); err != nil {
-		return nil, err
+		return err
 	}
 
 	if _, err = sess.Insert(u); err != nil {
 		sess.Rollback()
-		return nil, err
-	}
-
-	if err = os.MkdirAll(UserPath(u.Name), os.ModePerm); err != nil {
+		return err
+	} else if err = os.MkdirAll(UserPath(u.Name), os.ModePerm); err != nil {
 		sess.Rollback()
-		return nil, err
-	}
-
-	if err = sess.Commit(); err != nil {
-		return nil, err
+		return err
+	} else if err = sess.Commit(); err != nil {
+		return err
 	}
 
 	// Auto-set admin for user whose ID is 1.
@@ -209,7 +214,7 @@ func CreateUser(u *User) (*User, error) {
 		u.IsActive = true
 		_, err = x.Id(u.Id).UseBool().Update(u)
 	}
-	return u, err
+	return err
 }
 
 // CountUsers returns number of users.
@@ -237,7 +242,7 @@ func getVerifyUser(code string) (user *User) {
 		if user, err = GetUserByName(string(b)); user != nil {
 			return user
 		}
-		log.Error("user.getVerifyUser: %v", err)
+		log.Error(4, "user.getVerifyUser: %v", err)
 	}
 
 	return nil
@@ -250,7 +255,7 @@ func VerifyUserActiveCode(code string) (user *User) {
 	if user = getVerifyUser(code); user != nil {
 		// time limit code
 		prefix := code[:base.TimeLimitCodeLength]
-		data := base.ToStr(user.Id) + user.Email + user.LowerName + user.Passwd + user.Rands
+		data := com.ToStr(user.Id) + user.Email + user.LowerName + user.Passwd + user.Rands
 
 		if base.VerifyTimeLimitCode(data, minutes, prefix) {
 			return user
@@ -260,12 +265,16 @@ func VerifyUserActiveCode(code string) (user *User) {
 }
 
 // ChangeUserName changes all corresponding setting from old user name to new one.
-func ChangeUserName(user *User, newUserName string) (err error) {
+func ChangeUserName(u *User, newUserName string) (err error) {
+	if !IsLegalName(newUserName) {
+		return ErrUserNameIllegal
+	}
+
 	newUserName = strings.ToLower(newUserName)
 
 	// Update accesses of user.
 	accesses := make([]Access, 0, 10)
-	if err = x.Find(&accesses, &Access{UserName: user.LowerName}); err != nil {
+	if err = x.Find(&accesses, &Access{UserName: u.LowerName}); err != nil {
 		return err
 	}
 
@@ -277,28 +286,28 @@ func ChangeUserName(user *User, newUserName string) (err error) {
 
 	for i := range accesses {
 		accesses[i].UserName = newUserName
-		if strings.HasPrefix(accesses[i].RepoName, user.LowerName+"/") {
-			accesses[i].RepoName = strings.Replace(accesses[i].RepoName, user.LowerName, newUserName, 1)
+		if strings.HasPrefix(accesses[i].RepoName, u.LowerName+"/") {
+			accesses[i].RepoName = strings.Replace(accesses[i].RepoName, u.LowerName, newUserName, 1)
 		}
 		if err = UpdateAccessWithSession(sess, &accesses[i]); err != nil {
 			return err
 		}
 	}
 
-	repos, err := GetRepositories(user.Id, true)
+	repos, err := GetRepositories(u.Id, true)
 	if err != nil {
 		return err
 	}
 	for i := range repos {
 		accesses = make([]Access, 0, 10)
 		// Update accesses of user repository.
-		if err = x.Find(&accesses, &Access{RepoName: user.LowerName + "/" + repos[i].LowerName}); err != nil {
+		if err = x.Find(&accesses, &Access{RepoName: u.LowerName + "/" + repos[i].LowerName}); err != nil {
 			return err
 		}
 
 		for j := range accesses {
 			// if the access is not the user's access (already updated above)
-			if accesses[j].UserName != user.LowerName {
+			if accesses[j].UserName != u.LowerName {
 				accesses[j].RepoName = newUserName + "/" + repos[i].LowerName
 				if err = UpdateAccessWithSession(sess, &accesses[j]); err != nil {
 					return err
@@ -308,7 +317,7 @@ func ChangeUserName(user *User, newUserName string) (err error) {
 	}
 
 	// Change user directory name.
-	if err = os.Rename(UserPath(user.LowerName), UserPath(newUserName)); err != nil {
+	if err = os.Rename(UserPath(u.LowerName), UserPath(newUserName)); err != nil {
 		sess.Rollback()
 		return err
 	}
@@ -317,7 +326,7 @@ func ChangeUserName(user *User, newUserName string) (err error) {
 }
 
 // UpdateUser updates user's information.
-func UpdateUser(u *User) (err error) {
+func UpdateUser(u *User) error {
 	u.LowerName = strings.ToLower(u.Name)
 
 	if len(u.Location) > 255 {
@@ -330,7 +339,7 @@ func UpdateUser(u *User) (err error) {
 		u.Description = u.Description[:255]
 	}
 
-	_, err = x.Id(u.Id).AllCols().Update(u)
+	_, err := x.Id(u.Id).AllCols().Update(u)
 	return err
 }
 
@@ -340,7 +349,7 @@ func DeleteUser(u *User) error {
 	// Check ownership of repository.
 	count, err := GetRepositoryCount(u)
 	if err != nil {
-		return errors.New("modesl.GetRepositories(GetRepositoryCount): " + err.Error())
+		return errors.New("GetRepositoryCount: " + err.Error())
 	} else if count > 0 {
 		return ErrUserOwnRepos
 	}
@@ -561,4 +570,46 @@ func UnFollowUser(userId int64, unFollowId int64) (err error) {
 		return err
 	}
 	return session.Commit()
+}
+
+func UpdateMentions(userNames []string, issueId int64) error {
+	users := make([]*User, 0, len(userNames))
+
+	if err := x.Where("name IN (?)", strings.Join(userNames, "\",\"")).OrderBy("name ASC").Find(&users); err != nil {
+		return err
+	}
+
+	ids := make([]int64, 0, len(userNames))
+
+	for _, user := range users {
+		ids = append(ids, user.Id)
+
+		if user.Type == INDIVIDUAL {
+			continue
+		}
+
+		if user.NumMembers == 0 {
+			continue
+		}
+
+		tempIds := make([]int64, 0, user.NumMembers)
+
+		orgUsers, err := GetOrgUsersByOrgId(user.Id)
+
+		if err != nil {
+			return err
+		}
+
+		for _, orgUser := range orgUsers {
+			tempIds = append(tempIds, orgUser.Id)
+		}
+
+		ids = append(ids, tempIds...)
+	}
+
+	if err := UpdateIssueUserPairsByMentions(ids, issueId); err != nil {
+		return err
+	}
+
+	return nil
 }

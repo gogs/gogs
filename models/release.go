@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gogits/git"
+	"github.com/gogits/gogs/modules/git"
 )
 
 var (

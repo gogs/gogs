@@ -7,7 +7,7 @@ package repo
 import (
 	"path"
 
-	"github.com/go-martini/martini"
+	"github.com/Unknwon/com"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"
@@ -19,7 +19,7 @@ const (
 	DIFF    base.TplName = "repo/diff"
 )
 
-func Commits(ctx *middleware.Context, params martini.Params) {
+func Commits(ctx *middleware.Context) {
 	ctx.Data["IsRepoToolbarCommits"] = true
 
 	userName := ctx.Repo.Owner.Name
@@ -27,21 +27,21 @@ func Commits(ctx *middleware.Context, params martini.Params) {
 
 	brs, err := ctx.Repo.GitRepo.GetBranches()
 	if err != nil {
-		ctx.Handle(500, "repo.Commits(GetBranches)", err)
+		ctx.Handle(500, "GetBranches", err)
 		return
 	} else if len(brs) == 0 {
-		ctx.Handle(404, "repo.Commits(GetBranches)", nil)
+		ctx.Handle(404, "GetBranches", nil)
 		return
 	}
 
 	commitsCount, err := ctx.Repo.Commit.CommitsCount()
 	if err != nil {
-		ctx.Handle(500, "repo.Commits(GetCommitsCount)", err)
+		ctx.Handle(500, "GetCommitsCount", err)
 		return
 	}
 
 	// Calculate and validate page number.
-	page, _ := base.StrTo(ctx.Query("p")).Int()
+	page, _ := com.StrTo(ctx.Query("p")).Int()
 	if page < 1 {
 		page = 1
 	}
@@ -57,7 +57,7 @@ func Commits(ctx *middleware.Context, params martini.Params) {
 	// Both `git log branchName` and `git log commitId` work.
 	ctx.Data["Commits"], err = ctx.Repo.Commit.CommitsByRange(page)
 	if err != nil {
-		ctx.Handle(500, "repo.Commits(CommitsByRange)", err)
+		ctx.Handle(500, "CommitsByRange", err)
 		return
 	}
 
@@ -69,7 +69,7 @@ func Commits(ctx *middleware.Context, params martini.Params) {
 	ctx.HTML(200, COMMITS)
 }
 
-func SearchCommits(ctx *middleware.Context, params martini.Params) {
+func SearchCommits(ctx *middleware.Context) {
 	ctx.Data["IsSearchPage"] = true
 	ctx.Data["IsRepoToolbarCommits"] = true
 
@@ -79,15 +79,15 @@ func SearchCommits(ctx *middleware.Context, params martini.Params) {
 		return
 	}
 
-	userName := params["username"]
-	repoName := params["reponame"]
+	userName := ctx.Params(":username")
+	repoName := ctx.Params(":reponame")
 
 	brs, err := ctx.Repo.GitRepo.GetBranches()
 	if err != nil {
-		ctx.Handle(500, "repo.SearchCommits(GetBranches)", err)
+		ctx.Handle(500, "GetBranches", err)
 		return
 	} else if len(brs) == 0 {
-		ctx.Handle(404, "repo.SearchCommits(GetBranches)", nil)
+		ctx.Handle(404, "GetBranches", nil)
 		return
 	}
 
@@ -105,7 +105,7 @@ func SearchCommits(ctx *middleware.Context, params martini.Params) {
 	ctx.HTML(200, COMMITS)
 }
 
-func Diff(ctx *middleware.Context, params martini.Params) {
+func Diff(ctx *middleware.Context) {
 	ctx.Data["IsRepoToolbarCommits"] = true
 
 	userName := ctx.Repo.Owner.Name
@@ -116,7 +116,7 @@ func Diff(ctx *middleware.Context, params martini.Params) {
 
 	diff, err := models.GetDiff(models.RepoPath(userName, repoName), commitId)
 	if err != nil {
-		ctx.Handle(404, "repo.Diff(GetDiff)", err)
+		ctx.Handle(404, "GetDiff", err)
 		return
 	}
 
@@ -135,7 +135,6 @@ func Diff(ctx *middleware.Context, params martini.Params) {
 		if n > 0 {
 			buf = buf[:n]
 		}
-		dataRc.Close()
 		_, isImage := base.IsImageFile(buf)
 		return isImage
 	}
@@ -163,25 +162,25 @@ func Diff(ctx *middleware.Context, params martini.Params) {
 	ctx.HTML(200, DIFF)
 }
 
-func FileHistory(ctx *middleware.Context, params martini.Params) {
+func FileHistory(ctx *middleware.Context) {
 	ctx.Data["IsRepoToolbarCommits"] = true
 
-	fileName := params["_1"]
+	fileName := ctx.Params("*")
 	if len(fileName) == 0 {
-		Commits(ctx, params)
+		Commits(ctx)
 		return
 	}
 
 	userName := ctx.Repo.Owner.Name
 	repoName := ctx.Repo.Repository.Name
-	branchName := params["branchname"]
+	branchName := ctx.Params(":branchname")
 
 	brs, err := ctx.Repo.GitRepo.GetBranches()
 	if err != nil {
-		ctx.Handle(500, "repo.FileHistory", err)
+		ctx.Handle(500, "GetBranches", err)
 		return
 	} else if len(brs) == 0 {
-		ctx.Handle(404, "repo.FileHistory", nil)
+		ctx.Handle(404, "GetBranches", nil)
 		return
 	}
 
@@ -195,7 +194,7 @@ func FileHistory(ctx *middleware.Context, params martini.Params) {
 	}
 
 	// Calculate and validate page number.
-	page, _ := base.StrTo(ctx.Query("p")).Int()
+	page := com.StrTo(ctx.Query("p")).MustInt()
 	if page < 1 {
 		page = 1
 	}
