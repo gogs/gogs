@@ -5,8 +5,6 @@
 package repo
 
 import (
-	"github.com/go-martini/martini"
-
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/middleware"
 )
@@ -15,7 +13,7 @@ const (
 	PULLS base.TplName = "repo/pulls"
 )
 
-func Pulls(ctx *middleware.Context, params martini.Params) {
+func Pulls(ctx *middleware.Context) {
 	ctx.Data["IsRepoToolbarPulls"] = true
 	ctx.HTML(200, PULLS)
 }

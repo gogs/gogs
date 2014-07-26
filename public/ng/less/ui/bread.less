@@ -1,0 +1,18 @@
+@import "var";
+
+.breads {
+  .bread {
+    &:after {
+      content: "/";
+      font-weight: bold;
+      margin: 0 4px 0 7px;
+      color:@breadColor;
+    }
+  }
+  .bread:last-child {
+    &:after {
+      content: "";
+      margin: 0;
+    }
+  }
+}

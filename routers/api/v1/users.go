@@ -5,8 +5,9 @@
 package v1
 
 import (
+	"github.com/Unknwon/com"
+
 	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/middleware"
 )
 
@@ -17,7 +18,7 @@ type user struct {
 
 func SearchUsers(ctx *middleware.Context) {
 	q := ctx.Query("q")
-	limit, err := base.StrTo(ctx.Query("limit")).Int()
+	limit, err := com.StrTo(ctx.Query("limit")).Int()
 	if err != nil {
 		limit = 10
 	}

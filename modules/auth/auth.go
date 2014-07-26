@@ -7,49 +7,152 @@ package auth
 import (
 	"net/http"
 	"reflect"
+	"strings"
 
-	"github.com/go-martini/martini"
+	"github.com/macaron-contrib/i18n"
+	"github.com/macaron-contrib/session"
 
-	"github.com/gogits/gogs/modules/base"
+	"github.com/gogits/gogs/models"
+	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/middleware/binding"
+	"github.com/gogits/gogs/modules/setting"
 )
 
-type AuthenticationForm struct {
-	Id                int64  `form:"id"`
-	Type              int    `form:"type"`
-	AuthName          string `form:"name" binding:"Required;MaxSize(50)"`
-	Domain            string `form:"domain"`
-	Host              string `form:"host"`
-	Port              int    `form:"port"`
-	UseSSL            bool   `form:"usessl"`
-	BaseDN            string `form:"base_dn"`
-	Attributes        string `form:"attributes"`
-	Filter            string `form:"filter"`
-	MsAdSA            string `form:"ms_ad_sa"`
-	IsActived         bool   `form:"is_actived"`
-	SmtpAuth          string `form:"smtpauth"`
-	SmtpHost          string `form:"smtphost"`
-	SmtpPort          int    `form:"smtpport"`
-	Tls               bool   `form:"tls"`
-	AllowAutoRegister bool   `form:"allowautoregister"`
-}
-
-func (f *AuthenticationForm) Name(field string) string {
-	names := map[string]string{
-		"AuthName":   "Authentication's name",
-		"Domain":     "Domain name",
-		"Host":       "Host address",
-		"Port":       "Port Number",
-		"UseSSL":     "Use SSL",
-		"BaseDN":     "Base DN",
-		"Attributes": "Search attributes",
-		"Filter":     "Search filter",
-		"MsAdSA":     "Ms Ad SA",
+// SignedInId returns the id of signed in user.
+func SignedInId(header http.Header, sess session.Store) int64 {
+	if !models.HasEngine {
+		return 0
 	}
-	return names[field]
+
+	if setting.Service.EnableReverseProxyAuth {
+		webAuthUser := header.Get(setting.ReverseProxyAuthUser)
+		if len(webAuthUser) > 0 {
+			u, err := models.GetUserByName(webAuthUser)
+			if err != nil {
+				if err != models.ErrUserNotExist {
+					log.Error(4, "GetUserByName: %v", err)
+				}
+				return 0
+			}
+			return u.Id
+		}
+	}
+
+	uid := sess.Get("uid")
+	if uid == nil {
+		return 0
+	}
+	if id, ok := uid.(int64); ok {
+		if _, err := models.GetUserById(id); err != nil {
+			if err != models.ErrUserNotExist {
+				log.Error(4, "GetUserById: %v", err)
+			}
+			return 0
+		}
+		return id
+	}
+	return 0
 }
 
-func (f *AuthenticationForm) Validate(errors *binding.Errors, req *http.Request, context martini.Context) {
-	data := context.Get(reflect.TypeOf(base.TmplData{})).Interface().(base.TmplData)
-	validate(errors, data, f)
+// SignedInUser returns the user object of signed user.
+func SignedInUser(header http.Header, sess session.Store) *models.User {
+	uid := SignedInId(header, sess)
+	if uid <= 0 {
+		return nil
+	}
+
+	u, err := models.GetUserById(uid)
+	if err != nil {
+		log.Error(4, "GetUserById: %v", err)
+		return nil
+	}
+	return u
+}
+
+// AssignForm assign form values back to the template data.
+func AssignForm(form interface{}, data map[string]interface{}) {
+	typ := reflect.TypeOf(form)
+	val := reflect.ValueOf(form)
+
+	if typ.Kind() == reflect.Ptr {
+		typ = typ.Elem()
+		val = val.Elem()
+	}
+
+	for i := 0; i < typ.NumField(); i++ {
+		field := typ.Field(i)
+
+		fieldName := field.Tag.Get("form")
+		// Allow ignored fields in the struct
+		if fieldName == "-" {
+			continue
+		}
+
+		data[fieldName] = val.Field(i).Interface()
+	}
+}
+
+func GetMinMaxSize(field reflect.StructField) string {
+	for _, rule := range strings.Split(field.Tag.Get("binding"), ";") {
+		if strings.HasPrefix(rule, "MinSize(") || strings.HasPrefix(rule, "MaxSize(") {
+			return rule[8 : len(rule)-1]
+		}
+	}
+	return ""
+}
+
+func validate(errs *binding.Errors, data map[string]interface{}, f interface{}, l i18n.Locale) {
+	if errs.Count() == 0 {
+		return
+	} else if len(errs.Overall) > 0 {
+		for _, err := range errs.Overall {
+			log.Error(4, "%s: %v", reflect.TypeOf(f), err)
+		}
+		return
+	}
+
+	data["HasError"] = true
+	AssignForm(f, data)
+
+	typ := reflect.TypeOf(f)
+	val := reflect.ValueOf(f)
+
+	if typ.Kind() == reflect.Ptr {
+		typ = typ.Elem()
+		val = val.Elem()
+	}
+
+	for i := 0; i < typ.NumField(); i++ {
+		field := typ.Field(i)
+
+		fieldName := field.Tag.Get("form")
+		// Allow ignored fields in the struct
+		if fieldName == "-" {
+			continue
+		}
+
+		if err, ok := errs.Fields[field.Name]; ok {
+			data["Err_"+field.Name] = true
+			trName := l.Tr("form." + field.Name)
+			switch err {
+			case binding.BindingRequireError:
+				data["ErrorMsg"] = trName + l.Tr("form.require_error")
+			case binding.BindingAlphaDashError:
+				data["ErrorMsg"] = trName + l.Tr("form.alpha_dash_error")
+			case binding.BindingAlphaDashDotError:
+				data["ErrorMsg"] = trName + l.Tr("form.alpha_dash_dot_error")
+			case binding.BindingMinSizeError:
+				data["ErrorMsg"] = trName + l.Tr("form.min_size_error", GetMinMaxSize(field))
+			case binding.BindingMaxSizeError:
+				data["ErrorMsg"] = trName + l.Tr("form.max_size_error", GetMinMaxSize(field))
+			case binding.BindingEmailError:
+				data["ErrorMsg"] = trName + l.Tr("form.email_error")
+			case binding.BindingUrlError:
+				data["ErrorMsg"] = trName + l.Tr("form.url_error")
+			default:
+				data["ErrorMsg"] = l.Tr("form.unknown_error") + " " + err
+			}
+			return
+		}
+	}
 }

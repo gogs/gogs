@@ -18,7 +18,7 @@
                         <a class="btn btn-primary pull-right issue-edit-save hidden" href="#" data-ajax="{{.RepoLink}}/issues/{{.Issue.Index}}" data-ajax-name="issue-edit-save" data-ajax-method="post">Save</a>{{end}}
                         <span class="status label label-{{if .Issue.IsClosed}}danger{{else}}success{{end}}">{{if .Issue.IsClosed}}Closed{{else}}Open{{end}}</span>
                         <a href="/user/{{.Issue.Poster.Name}}" class="author"><strong>{{.Issue.Poster.Name}}</strong></a> opened this issue
-                        <span class="time">{{TimeSince .Issue.Created}}</span> · {{.Issue.NumComments}} comments
+                        <span class="time">{{TimeSince .Issue.Created $.Lang}}</span> · {{.Issue.NumComments}} comments
                     </p>
                 </div>
                 <div class="issue-main">
@@ -66,13 +66,17 @@
                         <a class="user pull-left" href="/user/{{.Poster.Name}}"><img class="avatar" src="{{.Poster.AvatarLink}}" alt=""/></a>
                         <div class="issue-content panel panel-default">
                             <div class="panel-heading">
-                                <a href="/user/{{.Poster.Name}}" class="user">{{.Poster.Name}}</a> commented <span class="time">{{TimeSince .Created}}</span>
+                                <a href="/user/{{.Poster.Name}}" class="user">{{.Poster.Name}}</a> commented <span class="time">{{TimeSince .Created $.Lang}}</span>
                                 <!-- <a class="issue-comment-del pull-right issue-action" href="#" title="Edit Comment"><i class="fa fa-times-circle"></i></a>
                                 <a class="issue-comment-edit pull-right issue-action" href="#" title="Remove Comment" data-url="{remove-link}"><i class="fa fa-edit"></i></a> -->
                                 <span class="role label label-default pull-right">Owner</span>
                             </div>
                             <div class="panel-body markdown">
+                                {{if len .Content}}
                                 {{str2html .Content}}
+                                {{else}}
+                                <i>No comment entered</i>
+                                {{end}}
                             </div>
                             {{with $attachments := .Attachments}}
                             {{if $attachments}}
@@ -91,14 +95,14 @@
                     <div class="issue-child issue-opened">
                         <a class="user pull-left" href="/user/{{.Poster.Name}}"><img class="avatar" src="{{.Poster.AvatarLink}}" alt="" /></a>
                         <div class="issue-content">
-                            <a class="user pull-left" href="/user/{{.Poster.Name}}">{{.Poster.Name}}</a> <span class="label label-success">Reopened</span> this issue <span class="time">{{TimeSince .Created}}</span>
+                            <a class="user pull-left" href="/user/{{.Poster.Name}}">{{.Poster.Name}}</a> <span class="label label-success">Reopened</span> this issue <span class="time">{{TimeSince .Created $.Lang}}</span>
                         </div>
                     </div>
                     {{else if eq .Type 2}}
                     <div class="issue-child issue-closed">
                         <a class="user pull-left" href="/user/{{.Poster.Name}}"><img class="avatar" src="{{.Poster.AvatarLink}}" alt=""/></a>
                         <div class="issue-content">
-                            <a class="user pull-left" href="/user/{{.Poster.Name}}">{{.Poster.Name}}</a> <span class="label label-danger">Closed</span> this issue <span class="time">{{TimeSince .Created}}</span>
+                            <a class="user pull-left" href="/user/{{.Poster.Name}}">{{.Poster.Name}}</a> <span class="label label-danger">Closed</span> this issue <span class="time">{{TimeSince .Created $.Lang}}</span>
                         </div>
                     </div>
                     {{else if eq .Type 4}}
@@ -130,6 +134,7 @@
                                 <div class="tab-content">
                                     <div class="tab-pane" id="issue-textarea">
                                         <div class="form-group">
+                                            <div id="submit-error" class="text-danger"></div>
                                             <input type="hidden" value="{{.Issue.Index}}" name="issueIndex"/>
                                             <textarea class="form-control" name="content" id="issue-reply-content" rows="10" placeholder="Write some content" data-ajax-rel="issue-preview" data-ajax-val="val" data-ajax-field="text">{{.content}}</textarea>
                                         </div>
@@ -139,7 +144,9 @@
                             </div>
                             {{if .AttachmentsEnabled}}
                             <div id="attached">
-                                <div id="attached-list"></div>
+                                <div id="attached-list">
+                                    <b>Attachments:</b> 
+                                </div>
                             </div>
                             {{end}}
                             <div class="text-right">

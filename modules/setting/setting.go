@@ -15,12 +15,12 @@ import (
 
 	"github.com/Unknwon/com"
 	"github.com/Unknwon/goconfig"
+	"github.com/macaron-contrib/session"
 
 	"github.com/gogits/cache"
-	"github.com/gogits/session"
 
-	"github.com/gogits/gogs/modules/bin"
 	"github.com/gogits/gogs/modules/log"
+	// "github.com/gogits/gogs-ng/modules/ssh"
 )
 
 type Scheme string
@@ -46,6 +46,7 @@ var (
 	DisableRouterLog   bool
 	CertFile, KeyFile  string
 	StaticRootPath     string
+	EnableGzip         bool
 
 	// Security settings.
 	InstallLock          bool
@@ -93,14 +94,21 @@ var (
 	// Session settings.
 	SessionProvider string
 	SessionConfig   *session.Config
-	SessionManager  *session.Manager
 
 	// Global setting objects.
-	Cfg        *goconfig.ConfigFile
-	CustomPath string // Custom directory path.
-	ProdMode   bool
-	RunUser    string
+	Cfg          *goconfig.ConfigFile
+	ConfRootPath string
+	CustomPath   string // Custom directory path.
+	ProdMode     bool
+	RunUser      string
+
+	// I18n settings.
+	Langs, Names []string
 )
+
+func init() {
+	log.NewLogger(0, "console", `{"level": 0}`)
+}
 
 func ExecPath() (string, error) {
 	file, err := exec.LookPath(os.Args[0])
@@ -125,16 +133,13 @@ func WorkDir() (string, error) {
 func NewConfigContext() {
 	workDir, err := WorkDir()
 	if err != nil {
-		log.Fatal("Fail to get work directory: %v", err)
+		log.Fatal(4, "Fail to get work directory: %v", err)
 	}
+	ConfRootPath = path.Join(workDir, "conf")
 
-	data, err := bin.Asset("conf/app.ini")
+	Cfg, err = goconfig.LoadConfigFile(path.Join(workDir, "conf/app.ini"))
 	if err != nil {
-		log.Fatal("Fail to read 'conf/app.ini': %v", err)
-	}
-	Cfg, err = goconfig.LoadFromData(data)
-	if err != nil {
-		log.Fatal("Fail to parse 'conf/app.ini': %v", err)
+		log.Fatal(4, "Fail to parse 'conf/app.ini': %v", err)
 	}
 
 	CustomPath = os.Getenv("GOGS_CUSTOM")
@@ -145,10 +150,10 @@ func NewConfigContext() {
 	cfgPath := path.Join(CustomPath, "conf/app.ini")
 	if com.IsFile(cfgPath) {
 		if err = Cfg.AppendFiles(cfgPath); err != nil {
-			log.Fatal("Fail to load custom 'conf/app.ini': %v", err)
+			log.Fatal(4, "Fail to load custom 'conf/app.ini': %v", err)
 		}
 	} else {
-		log.Warn("No custom 'conf/app.ini' found")
+		log.Warn("No custom 'conf/app.ini' found, please go to '/install'")
 	}
 
 	AppName = Cfg.MustValue("", "APP_NAME", "Gogs: Go Git Service")
@@ -169,6 +174,7 @@ func NewConfigContext() {
 	DisableRouterLog = Cfg.MustBool("server", "DISABLE_ROUTER_LOG")
 	StaticRootPath = Cfg.MustValue("server", "STATIC_ROOT_PATH", workDir)
 	LogRootPath = Cfg.MustValue("log", "ROOT_PATH", path.Join(workDir, "log"))
+	EnableGzip = Cfg.MustBool("server", "ENABLE_GZIP")
 
 	InstallLock = Cfg.MustBool("security", "INSTALL_LOCK")
 	SecretKey = Cfg.MustValue("security", "SECRET_KEY")
@@ -177,8 +183,8 @@ func NewConfigContext() {
 	CookieRememberName = Cfg.MustValue("security", "COOKIE_REMEMBER_NAME")
 	ReverseProxyAuthUser = Cfg.MustValue("security", "REVERSE_PROXY_AUTHENTICATION_USER", "X-WEBAUTH-USER")
 
-	AttachmentPath = Cfg.MustValue("attachment", "PATH", "files/attachments")
-	AttachmentAllowedTypes = Cfg.MustValue("attachment", "ALLOWED_TYPES", "*/*")
+	AttachmentPath = Cfg.MustValue("attachment", "PATH", "data/attachments")
+	AttachmentAllowedTypes = Cfg.MustValue("attachment", "ALLOWED_TYPES", "image/jpeg|image/png")
 	AttachmentMaxSize = Cfg.MustInt64("attachment", "MAX_SIZE", 32)
 	AttachmentMaxFiles = Cfg.MustInt("attachment", "MAX_FILES", 10)
 	AttachmentEnabled = Cfg.MustBool("attachment", "ENABLE", true)
@@ -233,7 +239,7 @@ func NewConfigContext() {
 	}
 
 	if err = os.MkdirAll(AttachmentPath, os.ModePerm); err != nil {
-		log.Fatal("Could not create directory %s: %s", AttachmentPath, err)
+		log.Fatal(4, "Could not create directory %s: %s", AttachmentPath, err)
 	}
 
 	RunUser = Cfg.MustValue("", "RUN_USER")
@@ -243,13 +249,13 @@ func NewConfigContext() {
 	}
 	// Does not check run user when the install lock is off.
 	if InstallLock && RunUser != curUser {
-		log.Fatal("Expect user(%s) but current user is: %s", RunUser, curUser)
+		log.Fatal(4, "Expect user(%s) but current user is: %s", RunUser, curUser)
 	}
 
 	// Determine and create root git reposiroty path.
 	homeDir, err := com.HomeDir()
 	if err != nil {
-		log.Fatal("Fail to get home directory: %v", err)
+		log.Fatal(4, "Fail to get home directory: %v", err)
 	}
 	RepoRootPath = Cfg.MustValue("repository", "ROOT", filepath.Join(homeDir, "gogs-repositories"))
 	if !filepath.IsAbs(RepoRootPath) {
@@ -259,13 +265,16 @@ func NewConfigContext() {
 	}
 
 	if err = os.MkdirAll(RepoRootPath, os.ModePerm); err != nil {
-		log.Fatal("Fail to create repository root path(%s): %v", RepoRootPath, err)
+		log.Fatal(4, "Fail to create repository root path(%s): %v", RepoRootPath, err)
 	}
 	ScriptType = Cfg.MustValue("repository", "SCRIPT_TYPE", "bash")
 
 	PictureService = Cfg.MustValueRange("picture", "SERVICE", "server",
 		[]string{"server"})
 	DisableGravatar = Cfg.MustBool("picture", "DISABLE_GRAVATAR")
+
+	Langs = Cfg.MustValueArray("i18n", "LANGS", ",")
+	Names = Cfg.MustValueArray("i18n", "NAMES", ",")
 }
 
 var Service struct {
@@ -308,7 +317,7 @@ func newLogService() {
 		mode = strings.TrimSpace(mode)
 		modeSec := "log." + mode
 		if _, err := Cfg.GetSection(modeSec); err != nil {
-			log.Fatal("Unknown log mode: %s", mode)
+			log.Fatal(4, "Unknown log mode: %s", mode)
 		}
 
 		// Log level.
@@ -316,7 +325,7 @@ func newLogService() {
 			[]string{"Trace", "Debug", "Info", "Warn", "Error", "Critical"})
 		level, ok := logLevels[levelName]
 		if !ok {
-			log.Fatal("Unknown log level: %s", levelName)
+			log.Fatal(4, "Unknown log level: %s", levelName)
 		}
 
 		// Generate log configuration.
@@ -371,15 +380,15 @@ func newCacheService() {
 	case "memory":
 		CacheConfig = fmt.Sprintf(`{"interval":%d}`, Cfg.MustInt("cache", "INTERVAL", 60))
 	case "redis", "memcache":
-		CacheConfig = fmt.Sprintf(`{"conn":"%s"}`, Cfg.MustValue("cache", "HOST"))
+		CacheConfig = fmt.Sprintf(`{"conn":"%s"}`, strings.Trim(Cfg.MustValue("cache", "HOST"), "\" "))
 	default:
-		log.Fatal("Unknown cache adapter: %s", CacheAdapter)
+		log.Fatal(4, "Unknown cache adapter: %s", CacheAdapter)
 	}
 
 	var err error
 	Cache, err = cache.NewCache(CacheAdapter, CacheConfig)
 	if err != nil {
-		log.Fatal("Init cache system failed, adapter: %s, config: %s, %v\n",
+		log.Fatal(4, "Init cache system failed, adapter: %s, config: %s, %v\n",
 			CacheAdapter, CacheConfig, err)
 	}
 
@@ -391,12 +400,12 @@ func newSessionService() {
 		[]string{"memory", "file", "redis", "mysql"})
 
 	SessionConfig = new(session.Config)
-	SessionConfig.ProviderConfig = Cfg.MustValue("session", "PROVIDER_CONFIG")
+	SessionConfig.ProviderConfig = strings.Trim(Cfg.MustValue("session", "PROVIDER_CONFIG"), "\" ")
 	SessionConfig.CookieName = Cfg.MustValue("session", "COOKIE_NAME", "i_like_gogits")
-	SessionConfig.CookieSecure = Cfg.MustBool("session", "COOKIE_SECURE")
+	SessionConfig.Secure = Cfg.MustBool("session", "COOKIE_SECURE")
 	SessionConfig.EnableSetCookie = Cfg.MustBool("session", "ENABLE_SET_COOKIE", true)
-	SessionConfig.GcIntervalTime = Cfg.MustInt64("session", "GC_INTERVAL_TIME", 86400)
-	SessionConfig.SessionLifeTime = Cfg.MustInt64("session", "SESSION_LIFE_TIME", 86400)
+	SessionConfig.Gclifetime = Cfg.MustInt64("session", "GC_INTERVAL_TIME", 86400)
+	SessionConfig.Maxlifetime = Cfg.MustInt64("session", "SESSION_LIFE_TIME", 86400)
 	SessionConfig.SessionIDHashFunc = Cfg.MustValueRange("session", "SESSION_ID_HASHFUNC",
 		"sha1", []string{"sha1", "sha256", "md5"})
 	SessionConfig.SessionIDHashKey = Cfg.MustValue("session", "SESSION_ID_HASHKEY")
@@ -404,14 +413,6 @@ func newSessionService() {
 	if SessionProvider == "file" {
 		os.MkdirAll(path.Dir(SessionConfig.ProviderConfig), os.ModePerm)
 	}
-
-	var err error
-	SessionManager, err = session.NewManager(SessionProvider, *SessionConfig)
-	if err != nil {
-		log.Fatal("Init session system failed, provider: %s, %v",
-			SessionProvider, err)
-	}
-	go SessionManager.GC()
 
 	log.Info("Session Service Enabled")
 }
@@ -494,4 +495,5 @@ func NewServices() {
 	newRegisterMailService()
 	newNotifyMailService()
 	newWebhookService()
+	// ssh.Listen("2022")
 }

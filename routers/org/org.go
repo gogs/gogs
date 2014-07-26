@@ -5,8 +5,6 @@
 package org
 
 import (
-	"github.com/go-martini/martini"
-
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/base"
@@ -21,10 +19,10 @@ const (
 	SETTINGS base.TplName = "org/settings"
 )
 
-func Home(ctx *middleware.Context, params martini.Params) {
-	ctx.Data["Title"] = "Organization " + params["org"]
+func Home(ctx *middleware.Context) {
+	ctx.Data["Title"] = "Organization " + ctx.Params(":org")
 
-	org, err := models.GetUserByName(params["org"])
+	org, err := models.GetUserByName(ctx.Params(":org"))
 	if err != nil {
 		if err == models.ErrUserNotExist {
 			ctx.Handle(404, "org.Home(GetUserByName)", err)
@@ -99,12 +97,12 @@ func NewPost(ctx *middleware.Context, form auth.CreateOrgForm) {
 	ctx.Redirect("/org/" + form.OrgName + "/dashboard")
 }
 
-func Dashboard(ctx *middleware.Context, params martini.Params) {
+func Dashboard(ctx *middleware.Context) {
 	ctx.Data["Title"] = "Dashboard"
 	ctx.Data["PageIsUserDashboard"] = true
 	ctx.Data["PageIsOrgDashboard"] = true
 
-	org, err := models.GetUserByName(params["org"])
+	org, err := models.GetUserByName(ctx.Params(":org"))
 	if err != nil {
 		if err == models.ErrUserNotExist {
 			ctx.Handle(404, "org.Dashboard(GetUserByName)", err)
@@ -137,10 +135,10 @@ func Dashboard(ctx *middleware.Context, params martini.Params) {
 	ctx.HTML(200, user.DASHBOARD)
 }
 
-func Settings(ctx *middleware.Context, params martini.Params) {
+func Settings(ctx *middleware.Context) {
 	ctx.Data["Title"] = "Settings"
 
-	org, err := models.GetUserByName(params["org"])
+	org, err := models.GetUserByName(ctx.Params(":org"))
 	if err != nil {
 		if err == models.ErrUserNotExist {
 			ctx.Handle(404, "org.Settings(GetUserByName)", err)
@@ -154,10 +152,10 @@ func Settings(ctx *middleware.Context, params martini.Params) {
 	ctx.HTML(200, SETTINGS)
 }
 
-func SettingsPost(ctx *middleware.Context, params martini.Params, form auth.OrgSettingForm) {
+func SettingsPost(ctx *middleware.Context, form auth.OrgSettingForm) {
 	ctx.Data["Title"] = "Settings"
 
-	org, err := models.GetUserByName(params["org"])
+	org, err := models.GetUserByName(ctx.Params(":org"))
 	if err != nil {
 		if err == models.ErrUserNotExist {
 			ctx.Handle(404, "org.SettingsPost(GetUserByName)", err)
@@ -187,10 +185,10 @@ func SettingsPost(ctx *middleware.Context, params martini.Params, form auth.OrgS
 	ctx.Redirect("/org/" + org.Name + "/settings")
 }
 
-func DeletePost(ctx *middleware.Context, params martini.Params) {
+func DeletePost(ctx *middleware.Context) {
 	ctx.Data["Title"] = "Settings"
 
-	org, err := models.GetUserByName(params["org"])
+	org, err := models.GetUserByName(ctx.Params(":org"))
 	if err != nil {
 		if err == models.ErrUserNotExist {
 			ctx.Handle(404, "org.DeletePost(GetUserByName)", err)

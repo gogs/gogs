@@ -5,8 +5,6 @@
 package repo
 
 import (
-	"github.com/go-martini/martini"
-
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/base"
@@ -54,7 +52,7 @@ func Releases(ctx *middleware.Context) {
 			if rel.TagName == rawTag {
 				rel.Publisher, err = models.GetUserById(rel.PublisherId)
 				if err != nil {
-					ctx.Handle(500, "release.Releases(GetUserById)", err)
+					ctx.Handle(500, "GetUserById", err)
 					return
 				}
 				// Get corresponding target if it's not the current branch.
@@ -63,12 +61,12 @@ func Releases(ctx *middleware.Context) {
 					if _, ok := countCache[rel.Target]; !ok {
 						commit, err := ctx.Repo.GitRepo.GetCommitOfTag(rel.TagName)
 						if err != nil {
-							ctx.Handle(500, "release.Releases(GetCommitOfTag)", err)
+							ctx.Handle(500, "GetCommitOfTag", err)
 							return
 						}
 						countCache[rel.Target], err = commit.CommitsCount()
 						if err != nil {
-							ctx.Handle(500, "release.Releases(CommitsCount2)", err)
+							ctx.Handle(500, "CommitsCount2", err)
 							return
 						}
 					}
@@ -86,7 +84,7 @@ func Releases(ctx *middleware.Context) {
 		if tags[i] == nil {
 			commit, err := ctx.Repo.GitRepo.GetCommitOfTag(rawTag)
 			if err != nil {
-				ctx.Handle(500, "release.Releases(GetCommitOfTag2)", err)
+				ctx.Handle(500, "GetCommitOfTag2", err)
 				return
 			}
 
@@ -98,7 +96,7 @@ func Releases(ctx *middleware.Context) {
 
 			tags[i].NumCommits, err = ctx.Repo.GitRepo.CommitsCount(commit.Id.String())
 			if err != nil {
-				ctx.Handle(500, "release.Releases(CommitsCount)", err)
+				ctx.Handle(500, "CommitsCount", err)
 				return
 			}
 			tags[i].NumCommitsBehind = commitsCount - tags[i].NumCommits
@@ -173,13 +171,13 @@ func NewReleasePost(ctx *middleware.Context, form auth.NewReleaseForm) {
 	ctx.Redirect(ctx.Repo.RepoLink + "/releases")
 }
 
-func EditRelease(ctx *middleware.Context, params martini.Params) {
+func EditRelease(ctx *middleware.Context) {
 	if !ctx.Repo.IsOwner {
 		ctx.Handle(403, "release.ReleasesEdit", nil)
 		return
 	}
 
-	tagName := params["tagname"]
+	tagName := ctx.Params(":tagname")
 	rel, err := models.GetRelease(ctx.Repo.Repository.Id, tagName)
 	if err != nil {
 		if err == models.ErrReleaseNotExist {
@@ -196,13 +194,13 @@ func EditRelease(ctx *middleware.Context, params martini.Params) {
 	ctx.HTML(200, RELEASE_EDIT)
 }
 
-func EditReleasePost(ctx *middleware.Context, params martini.Params, form auth.EditReleaseForm) {
+func EditReleasePost(ctx *middleware.Context, form auth.EditReleaseForm) {
 	if !ctx.Repo.IsOwner {
 		ctx.Handle(403, "release.EditReleasePost", nil)
 		return
 	}
 
-	tagName := params["tagname"]
+	tagName := ctx.Params(":tagname")
 	rel, err := models.GetRelease(ctx.Repo.Repository.Id, tagName)
 	if err != nil {
 		if err == models.ErrReleaseNotExist {

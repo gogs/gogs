@@ -11,8 +11,6 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/go-martini/martini"
-
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/middleware"
@@ -28,14 +26,14 @@ func extractPath(next string) string {
 	return n.Path
 }
 
-func SocialSignIn(ctx *middleware.Context, params martini.Params) {
+func SocialSignIn(ctx *middleware.Context) {
 	if setting.OauthService == nil {
 		ctx.Handle(404, "social.SocialSignIn(oauth service not enabled)", nil)
 		return
 	}
 
 	next := extractPath(ctx.Query("next"))
-	name := params["name"]
+	name := ctx.Params(":name")
 	connect, ok := social.SocialMap[name]
 	if !ok {
 		ctx.Handle(404, "social.SocialSignIn(social login not enabled)", errors.New(name))
@@ -81,7 +79,7 @@ func SocialSignIn(ctx *middleware.Context, params martini.Params) {
 		}
 		log.Trace("social.SocialSignIn(oa): %v", oa)
 		if err = models.AddOauth2(oa); err != nil {
-			log.Error("social.SocialSignIn(add oauth2): %v", err) // 501
+			log.Error(4, "social.SocialSignIn(add oauth2): %v", err) // 501
 			return
 		}
 	case models.ErrOauth2NotAssociated:

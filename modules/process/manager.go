@@ -78,7 +78,7 @@ func ExecDir(timeout time.Duration, dir, desc, cmdName string, args ...string) (
 	select {
 	case <-time.After(timeout):
 		if errKill := Kill(pid); errKill != nil {
-			log.Error("Exec(%d:%s): %v", pid, desc, errKill)
+			log.Error(4, "Exec(%d:%s): %v", pid, desc, errKill)
 		}
 		<-done
 		return "", ErrExecTimeout.Error(), ErrExecTimeout

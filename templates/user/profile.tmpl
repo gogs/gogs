@@ -50,8 +50,8 @@
                 <ul class="list-unstyled activity-list">
                 {{range .Feeds}}
                     <li>
-                        <i class="icon fa fa-{{ActionIcon .OpType}}"></i>
-                        <div class="info"><span class="meta">{{TimeSince .Created}}</span><br>{{ActionDesc . | str2html}}</div>
+                        <i class="icon fa fa-{{ActionIcon .GetOpType}}"></i>
+                        <div class="info"><span class="meta">{{TimeSince .Created $.Lang}}</span><br>{{ActionDesc . | str2html}}</div>
                         <span class="clearfix"></span>
                     </li>
                 {{else}}
@@ -69,7 +69,7 @@
                             <a href="/{{$.Owner.Name}}/{{.Name}}">{{.Name}}{{if .IsPrivate}} <span class="label label-default">Private</span>{{end}}</a>
                         </h4>
                         <p class="desc">{{.Description}}</p>
-                        <div class="info">Last updated {{.Updated|TimeSince}}</div>
+                        <div class="info">Last updated {{TimeSince .Updated $.Lang}}</div>
                     </li>
                 {{end}}
                 </ul>

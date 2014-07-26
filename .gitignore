@@ -36,3 +36,4 @@ gogs
 __pycache__
 *.pem
 output*
+config.codekit

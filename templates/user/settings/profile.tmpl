@@ -1,0 +1,50 @@
+{{template "ng/base/head" .}}
+{{template "ng/base/header" .}}
+<div id="setting-wrapper" class="main-wrapper">
+    <div id="user-profile-setting" class="container clear">
+        {{template "user/settings/nav" .}}
+        <div class="grid-4-5 left">
+            <div class="setting-content">
+                {{template "ng/base/alert" .}}
+                <div id="setting-content">
+                    <div id="user-profile-setting-content" class="panel panel-radius">
+                        <p class="panel-header"><strong>{{.i18n.Tr "settings.public_profile"}}</strong></p>
+                        <form class="form form-align panel-body" id="user-profile-form" action="/user/settings" method="post">
+                            {{.CsrfTokenHtml}}
+                        	<p class="text-center panel-desc">{{.i18n.Tr "settings.profile_desc"}}</p>
+                            <p class="field">
+                                <label class="req" for="username">{{.i18n.Tr "username"}}</label>
+                                <input class="ipt ipt-large ipt-radius {{if .Err_UserName}}ipt-error{{end}}" id="username" name="uname" type="text" value="{{.SignedUser.Name}}" data-uname="{{.SignedUser.Name}}" required />
+                            </p>
+                            <p class="field">
+                                <label for="full-name">{{.i18n.Tr "settings.full_name"}}</label>
+                                <input class="ipt ipt-large ipt-radius {{if .Err_FullName}}ipt-error{{end}}" id="full-name" name="fullname" type="text" value="{{.SignedUser.FullName}}" />
+                            </p>
+                            <p class="field">
+                                <label class="req" for="email">{{.i18n.Tr "email"}}</label>
+                                <input class="ipt ipt-large ipt-radius {{if .Err_Email}}ipt-error{{end}}" id="email" name="email" type="email" value="{{.SignedUser.Email}}" required />
+                            </p>
+                            <p class="field">
+                                <label for="website">{{.i18n.Tr "settings.website"}}</label>
+                                <input class="ipt ipt-large ipt-radius {{if .Err_Website}}ipt-error{{end}}" id="website" name="website" type="url" value="{{.SignedUser.Website}}" />
+                            </p>
+                            <p class="field">
+                                <label for="location">{{.i18n.Tr "settings.location"}}</label>
+                                <input class="ipt ipt-large ipt-radius {{if .Err_Location}}ipt-error{{end}}" id="location" name="location" type="text" value="{{.SignedUser.Location}}" />
+                            </p>
+                            <p class="field">
+                                <label for="gravatar-email">Gravatar {{.i18n.Tr "email"}}</label>
+                                <input class="ipt ipt-large ipt-radius {{if .Err_Avatar}}ipt-error{{end}}" id="gravatar-email" name="avatar" type="text" value="{{.SignedUser.AvatarEmail}}" />
+                            </p>
+                            <p class="field">
+                                <span class="form-label"></span>
+                                <button class="btn btn-green btn-large btn-radius">{{.i18n.Tr "settings.update_profile"}}</button>
+                            </p>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{{template "ng/base/footer" .}}

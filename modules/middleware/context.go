@@ -5,42 +5,33 @@
 package middleware
 
 import (
-	"crypto/hmac"
-	"crypto/sha1"
-	"encoding/base64"
 	"fmt"
 	"html/template"
 	"io"
 	"net/http"
-	"net/url"
-	"path/filepath"
-	"strconv"
+	"path"
 	"strings"
 	"time"
 
-	"github.com/go-martini/martini"
-
-	"github.com/gogits/cache"
-	"github.com/gogits/git"
-	"github.com/gogits/session"
+	"github.com/Unknwon/macaron"
+	"github.com/macaron-contrib/i18n"
+	"github.com/macaron-contrib/session"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/base"
+	"github.com/gogits/gogs/modules/git"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/setting"
 )
 
 // Context represents context of a request.
 type Context struct {
-	*Render
-	c        martini.Context
-	p        martini.Params
-	Req      *http.Request
-	Res      http.ResponseWriter
-	Flash    *Flash
-	Session  session.SessionStore
-	Cache    cache.Cache
+	*macaron.Context
+	i18n.Locale
+	Flash   *session.Flash
+	Session session.Store
+
 	User     *models.User
 	IsSigned bool
 
@@ -68,7 +59,8 @@ type Context struct {
 			HTTPS string
 			Git   string
 		}
-		Mirror *models.Mirror
+		CommitsCount int
+		Mirror       *models.Mirror
 	}
 }
 
@@ -107,12 +99,12 @@ func (ctx *Context) HasError() bool {
 }
 
 // HTML calls render.HTML underlying but reduce one argument.
-func (ctx *Context) HTML(status int, name base.TplName, htmlOpt ...HTMLOptions) {
-	ctx.Render.HTML(status, string(name), ctx.Data, htmlOpt...)
+func (ctx *Context) HTML(status int, name base.TplName) {
+	ctx.Render.HTML(status, string(name), ctx.Data)
 }
 
 // RenderWithErr used for page has form validation but need to prompt error to users.
-func (ctx *Context) RenderWithErr(msg string, tpl base.TplName, form auth.Form) {
+func (ctx *Context) RenderWithErr(msg string, tpl base.TplName, form interface{}) {
 	if form != nil {
 		auth.AssignForm(form, ctx.Data)
 	}
@@ -124,8 +116,8 @@ func (ctx *Context) RenderWithErr(msg string, tpl base.TplName, form auth.Form) 
 // Handle handles and logs error by given status.
 func (ctx *Context) Handle(status int, title string, err error) {
 	if err != nil {
-		log.Error("%s: %v", title, err)
-		if martini.Dev != martini.Prod {
+		log.Error(4, "%s: %v", title, err)
+		if macaron.Env != macaron.PROD {
 			ctx.Data["ErrorMsg"] = err
 		}
 	}
@@ -137,106 +129,6 @@ func (ctx *Context) Handle(status int, title string, err error) {
 		ctx.Data["Title"] = "Internal Server Error"
 	}
 	ctx.HTML(status, base.TplName(fmt.Sprintf("status/%d", status)))
-}
-
-func (ctx *Context) GetCookie(name string) string {
-	cookie, err := ctx.Req.Cookie(name)
-	if err != nil {
-		return ""
-	}
-	return cookie.Value
-}
-
-func (ctx *Context) SetCookie(name string, value string, others ...interface{}) {
-	cookie := http.Cookie{}
-	cookie.Name = name
-	cookie.Value = value
-
-	if len(others) > 0 {
-		switch v := others[0].(type) {
-		case int:
-			cookie.MaxAge = v
-		case int64:
-			cookie.MaxAge = int(v)
-		case int32:
-			cookie.MaxAge = int(v)
-		}
-	}
-
-	// default "/"
-	if len(others) > 1 {
-		if v, ok := others[1].(string); ok && len(v) > 0 {
-			cookie.Path = v
-		}
-	} else {
-		cookie.Path = "/"
-	}
-
-	// default empty
-	if len(others) > 2 {
-		if v, ok := others[2].(string); ok && len(v) > 0 {
-			cookie.Domain = v
-		}
-	}
-
-	// default empty
-	if len(others) > 3 {
-		switch v := others[3].(type) {
-		case bool:
-			cookie.Secure = v
-		default:
-			if others[3] != nil {
-				cookie.Secure = true
-			}
-		}
-	}
-
-	// default false. for session cookie default true
-	if len(others) > 4 {
-		if v, ok := others[4].(bool); ok && v {
-			cookie.HttpOnly = true
-		}
-	}
-
-	ctx.Res.Header().Add("Set-Cookie", cookie.String())
-}
-
-// Get secure cookie from request by a given key.
-func (ctx *Context) GetSecureCookie(Secret, key string) (string, bool) {
-	val := ctx.GetCookie(key)
-	if val == "" {
-		return "", false
-	}
-
-	parts := strings.SplitN(val, "|", 3)
-
-	if len(parts) != 3 {
-		return "", false
-	}
-
-	vs := parts[0]
-	timestamp := parts[1]
-	sig := parts[2]
-
-	h := hmac.New(sha1.New, []byte(Secret))
-	fmt.Fprintf(h, "%s%s", vs, timestamp)
-
-	if fmt.Sprintf("%02x", h.Sum(nil)) != sig {
-		return "", false
-	}
-	res, _ := base64.URLEncoding.DecodeString(vs)
-	return string(res), true
-}
-
-// Set Secure cookie for response.
-func (ctx *Context) SetSecureCookie(Secret, name, value string, others ...interface{}) {
-	vs := base64.URLEncoding.EncodeToString([]byte(value))
-	timestamp := strconv.FormatInt(time.Now().UnixNano(), 10)
-	h := hmac.New(sha1.New, []byte(Secret))
-	fmt.Fprintf(h, "%s%s", vs, timestamp)
-	sig := fmt.Sprintf("%02x", h.Sum(nil))
-	cookie := strings.Join([]string{vs, timestamp, sig}, "|")
-	ctx.SetCookie(name, cookie, others...)
 }
 
 func (ctx *Context) CsrfToken() string {
@@ -271,16 +163,16 @@ func (ctx *Context) ServeFile(file string, names ...string) {
 	if len(names) > 0 {
 		name = names[0]
 	} else {
-		name = filepath.Base(file)
+		name = path.Base(file)
 	}
-	ctx.Res.Header().Set("Content-Description", "File Transfer")
-	ctx.Res.Header().Set("Content-Type", "application/octet-stream")
-	ctx.Res.Header().Set("Content-Disposition", "attachment; filename="+name)
-	ctx.Res.Header().Set("Content-Transfer-Encoding", "binary")
-	ctx.Res.Header().Set("Expires", "0")
-	ctx.Res.Header().Set("Cache-Control", "must-revalidate")
-	ctx.Res.Header().Set("Pragma", "public")
-	http.ServeFile(ctx.Res, ctx.Req, file)
+	ctx.Resp.Header().Set("Content-Description", "File Transfer")
+	ctx.Resp.Header().Set("Content-Type", "application/octet-stream")
+	ctx.Resp.Header().Set("Content-Disposition", "attachment; filename="+name)
+	ctx.Resp.Header().Set("Content-Transfer-Encoding", "binary")
+	ctx.Resp.Header().Set("Expires", "0")
+	ctx.Resp.Header().Set("Cache-Control", "must-revalidate")
+	ctx.Resp.Header().Set("Pragma", "public")
+	http.ServeFile(ctx.Resp, ctx.Req, file)
 }
 
 func (ctx *Context) ServeContent(name string, r io.ReadSeeker, params ...interface{}) {
@@ -291,87 +183,52 @@ func (ctx *Context) ServeContent(name string, r io.ReadSeeker, params ...interfa
 			modtime = v
 		}
 	}
-	ctx.Res.Header().Set("Content-Description", "File Transfer")
-	ctx.Res.Header().Set("Content-Type", "application/octet-stream")
-	ctx.Res.Header().Set("Content-Disposition", "attachment; filename="+name)
-	ctx.Res.Header().Set("Content-Transfer-Encoding", "binary")
-	ctx.Res.Header().Set("Expires", "0")
-	ctx.Res.Header().Set("Cache-Control", "must-revalidate")
-	ctx.Res.Header().Set("Pragma", "public")
-	http.ServeContent(ctx.Res, ctx.Req, name, modtime, r)
+	ctx.Resp.Header().Set("Content-Description", "File Transfer")
+	ctx.Resp.Header().Set("Content-Type", "application/octet-stream")
+	ctx.Resp.Header().Set("Content-Disposition", "attachment; filename="+name)
+	ctx.Resp.Header().Set("Content-Transfer-Encoding", "binary")
+	ctx.Resp.Header().Set("Expires", "0")
+	ctx.Resp.Header().Set("Cache-Control", "must-revalidate")
+	ctx.Resp.Header().Set("Pragma", "public")
+	http.ServeContent(ctx.Resp, ctx.Req, name, modtime, r)
 }
 
-type Flash struct {
-	url.Values
-	ErrorMsg, SuccessMsg string
-}
-
-func (f *Flash) Error(msg string) {
-	f.Set("error", msg)
-	f.ErrorMsg = msg
-}
-
-func (f *Flash) Success(msg string) {
-	f.Set("success", msg)
-	f.SuccessMsg = msg
-}
-
-// InitContext initializes a classic context for a request.
-func InitContext() martini.Handler {
-	return func(res http.ResponseWriter, r *http.Request, c martini.Context, rd *Render) {
+// Contexter initializes a classic context for a request.
+func Contexter() macaron.Handler {
+	return func(c *macaron.Context, l i18n.Locale, sess session.Store, f *session.Flash) {
 		ctx := &Context{
-			c: c,
-			// p:      p,
-			Req:    r,
-			Res:    res,
-			Cache:  setting.Cache,
-			Render: rd,
+			Context: c,
+			Locale:  l,
+			Flash:   f,
+			Session: sess,
 		}
+		// Cache:  setting.Cache,
+
+		// Compute current URL for real-time change language.
+		link := ctx.Req.RequestURI
+		i := strings.Index(link, "?")
+		if i > -1 {
+			link = link[:i]
+		}
+		ctx.Data["Link"] = link
+
 		ctx.Data["PageStartTime"] = time.Now()
 
-		// start session
-		ctx.Session = setting.SessionManager.SessionStart(res, r)
-
-		// Get flash.
-		values, err := url.ParseQuery(ctx.GetCookie("gogs_flash"))
-		if err != nil {
-			log.Error("InitContext.ParseQuery(flash): %v", err)
-		} else if len(values) > 0 {
-			ctx.Flash = &Flash{Values: values}
-			ctx.Flash.ErrorMsg = ctx.Flash.Get("error")
-			ctx.Flash.SuccessMsg = ctx.Flash.Get("success")
-			ctx.Data["Flash"] = ctx.Flash
-			ctx.SetCookie("gogs_flash", "", -1)
-		}
-		ctx.Flash = &Flash{Values: url.Values{}}
-
-		rw := res.(martini.ResponseWriter)
-		rw.Before(func(martini.ResponseWriter) {
-			ctx.Session.SessionRelease(res)
-
-			if flash := ctx.Flash.Encode(); len(flash) > 0 {
-				ctx.SetCookie("gogs_flash", flash, 0)
-			}
-		})
-
 		// Get user from session if logined.
-		user := auth.SignedInUser(ctx.req.Header, ctx.Session)
-		ctx.User = user
-		ctx.IsSigned = user != nil
-
-		ctx.Data["IsSigned"] = ctx.IsSigned
-
-		if user != nil {
-			ctx.Data["SignedUser"] = user
-			ctx.Data["SignedUserId"] = user.Id
-			ctx.Data["SignedUserName"] = user.Name
+		ctx.User = auth.SignedInUser(ctx.Req.Header, ctx.Session)
+		if ctx.User != nil {
+			ctx.IsSigned = true
+			ctx.Data["IsSigned"] = ctx.IsSigned
+			ctx.Data["SignedUser"] = ctx.User
+			ctx.Data["SignedUserId"] = ctx.User.Id
+			ctx.Data["SignedUserName"] = ctx.User.Name
 			ctx.Data["IsAdmin"] = ctx.User.IsAdmin
 		}
 
 		// If request sends files, parse them here otherwise the Query() can't be parsed and the CsrfToken will be invalid.
-		if strings.Contains(r.Header.Get("Content-Type"), "multipart/form-data") {
-			if err = ctx.Req.ParseMultipartForm(setting.AttachmentMaxSize << 20); err != nil { // 32MB max size
-				ctx.Handle(500, "issue.Comment(ctx.Req.ParseMultipartForm)", err)
+		if ctx.Req.Method == "POST" && strings.Contains(ctx.Req.Header.Get("Content-Type"), "multipart/form-data") {
+			if err := ctx.Req.ParseMultipartForm(setting.AttachmentMaxSize << 20); err != nil && !strings.Contains(err.Error(), "EOF") { // 32MB max size
+				ctx.Handle(500, "ParseMultipartForm", err)
 				return
 			}
 		}
@@ -381,7 +238,5 @@ func InitContext() martini.Handler {
 		ctx.Data["CsrfTokenHtml"] = template.HTML(`<input type="hidden" name="_csrf" value="` + ctx.csrfToken + `">`)
 
 		c.Map(ctx)
-
-		c.Next()
 	}
 }

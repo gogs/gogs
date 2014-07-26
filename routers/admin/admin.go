@@ -10,7 +10,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-martini/martini"
+	"github.com/Unknwon/com"
+	"github.com/Unknwon/macaron"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"
@@ -126,7 +127,7 @@ func Dashboard(ctx *middleware.Context) {
 	ctx.Data["PageIsDashboard"] = true
 
 	// Run operation.
-	op, _ := base.StrTo(ctx.Query("op")).Int()
+	op, _ := com.StrTo(ctx.Query("op")).Int()
 	if op > 0 {
 		var err error
 		var success string
@@ -159,7 +160,7 @@ func Users(ctx *middleware.Context) {
 	ctx.Data["Title"] = "User Management"
 	ctx.Data["PageIsUsers"] = true
 
-	p := base.StrTo(ctx.Query("p")).MustInt()
+	p := com.StrTo(ctx.Query("p")).MustInt()
 	if p < 1 {
 		p = 1
 	}
@@ -188,7 +189,7 @@ func Repositories(ctx *middleware.Context) {
 	ctx.Data["Title"] = "Repository Management"
 	ctx.Data["PageIsRepos"] = true
 
-	p := base.StrTo(ctx.Query("p")).MustInt()
+	p := com.StrTo(ctx.Query("p")).MustInt()
 	if p < 1 {
 		p = 1
 	}
@@ -235,7 +236,7 @@ func Config(ctx *middleware.Context) {
 	ctx.Data["OfflineMode"] = setting.OfflineMode
 	ctx.Data["DisableRouterLog"] = setting.DisableRouterLog
 	ctx.Data["RunUser"] = setting.RunUser
-	ctx.Data["RunMode"] = strings.Title(martini.Env)
+	ctx.Data["RunMode"] = strings.Title(macaron.Env)
 	ctx.Data["RepoRootPath"] = setting.RepoRootPath
 	ctx.Data["StaticRootPath"] = setting.StaticRootPath
 	ctx.Data["LogRootPath"] = setting.LogRootPath

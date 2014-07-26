@@ -1,0 +1,29 @@
+<div class="panel panel-radius" id="repo-readme">
+    <p class="panel-header">
+        {{if .ReadmeExist}}
+            <i class="icon fa fa-book fa-lg"></i>
+	        {{if .ReadmeInHome}}
+	        <strong class="file-name">{{.FileName}}</strong>
+	        {{else}}
+	        <strong>{{.FileName}}</strong><span class="file-size">{{FileSize .FileSize}}</span>
+	        {{end}}
+	    {{else}}
+        <i class="icon fa fa-file-text-o"></i>
+        <strong class="file-name">{{.FileName}}</strong><span class="file-size">{{FileSize .FileSize}}</span>
+	    {{end}}
+    </p>
+    <div class="{{if .ReadmeExist}}panel-content markdown{{end}} code-view">
+    	{{if .ReadmeExist}}
+    	{{.FileContent | Str2html}}
+    	{{else if .FileSize}}
+        <table>
+            <tbody>
+                <tr>
+                    <td class="lines-num"></td>
+                    <td class="lines-code"><pre class="prettyprint linenums {{if .FileExt}}lang-{{.FileExt}}{{end}}"><code>{{.FileContent}}</code></pre></td>
+                </tr>
+            </tbody>
+        </table>
+    	{{end}}
+    </div>
+</div>

@@ -520,6 +520,50 @@ function initIssue() {
         });
     }());
 
+    // store unsend text in session storage.
+    (function() {
+        var $textArea = $("#issue-content,#issue-reply-content");
+        var current = "";
+
+        if ($textArea == null || !('sessionStorage' in window)) {
+            return;
+        }
+
+        var path = location.pathname.split("/");
+        var key = "issue-" + path[1] + "-" + path[2] + "-";
+
+        if (/\/issues\/\d+$/.test(location.pathname)) {
+            key = key + path[4];
+        } else {
+            key = key + "new";
+        }
+
+        if ($textArea.val() !== undefined && $textArea.val() !== "") {
+            sessionStorage.setItem(key, $textArea.val());
+        } else {
+            $textArea.val(sessionStorage.getItem(key) || "");
+
+            if ($textArea.attr("id") == "issue-reply-content") {
+                var $closeBtn = $('#issue-close-btn');
+                var $openBtn = $('#issue-open-btn');
+    
+                if ($textArea.val().length) {
+                    $closeBtn.val($closeBtn.data("text"));
+                    $openBtn.val($openBtn.data("text"));
+                } else {
+                    $closeBtn.val($closeBtn.data("origin"));
+                    $openBtn.val($openBtn.data("origin"));
+                }
+            }
+        }
+
+        $textArea.on("keyup", function() {
+            if ($textArea.val() !== current) {
+                sessionStorage.setItem(key, current = $textArea.val());
+            }
+        });
+    }());
+
     // Preview for images.
     (function() {
         var $hoverElement = $("<div></div>");
@@ -536,7 +580,7 @@ function initIssue() {
         var over = function() {
             var $this = $(this);
 
-            if ($this.text().match(/\.(png|jpg|jpeg|gif)$/i) == false) {
+            if ((/\.(png|jpg|jpeg|gif)$/i).test($this.text()) == false) {
                 return;
             }
 
@@ -579,23 +623,135 @@ function initIssue() {
         var $attachedList = $("#attached-list");
         var $addButton = $("#attachments-button");
 
-        var fileInput = $("#attachments-input")[0];
+        var files = [];
+
+        var fileInput = document.getElementById("attachments-input");
+        
+        if (fileInput === null) {
+            return;
+        }
+
+        $attachedList.on("click", "span.attachment-remove", function(event) {
+            var $parent = $(this).parent();
+
+            files.splice($parent.data("index"), 1);
+            $parent.remove();
+        });
+
+        var clickedButton = undefined;
+
+        $("button,input[type=\"submit\"]", fileInput.form).on("click", function() {
+            clickedButton = this;
+
+            var $button = $(this);
+
+            $button.removeClass("btn-success");
+            $button.addClass("btn-warning");
+
+            $button.text("Submiting...");
+        });
+
+         fileInput.form.addEventListener("submit", function(event) {
+            event.stopImmediatePropagation();
+            event.preventDefault();
+
+            //var data = new FormData(this);
+
+            // Internet Explorer ... -_-
+            var data = new FormData();
+
+            $.each($("[name]", this), function(i, e) {
+                if (e.name == "attachments" || e.type == "submit") {
+                    return;
+                }
+
+                data.append(e.name, $(e).val());
+            });
+
+            data.append(clickedButton.name, $(clickedButton).val());
+
+            files.forEach(function(file) {
+                data.append("attachments", file);
+            });
+
+            var xhr = new XMLHttpRequest();
+
+            xhr.addEventListener("error", function() {
+                debugger;
+            });
+
+            xhr.addEventListener("load", function() {
+                var response = xhr.response;
+
+                if (typeof response == "string") {
+                    try {
+                        response = JSON.parse(response);
+                    } catch (err) {
+                        response = { ok: false, error: "Could not parse JSON" };
+                    }
+                }
+
+                if (response.ok === false) {
+                    $("#submit-error").text(response.error);
+                    $("#submit-error").show();
+
+                    var $button = $(clickedButton);
+
+                    $button.removeClass("btn-warning");
+                    $button.addClass("btn-danger");
+
+                    $button.text("An error encoured!")
+
+                    return;
+                }
+
+                if (!('sessionStorage' in window)) {
+                    return;
+                }
+
+                var path = location.pathname.split("/");
+                var key = "issue-" + path[1] + "-" + path[2] + "-";
+
+                if (/\/issues\/\d+$/.test(location.pathname)) {
+                    key = key + path[4];
+                } else {
+                    key = key + "new";
+                }
+
+                sessionStorage.removeItem(key);
+                window.location.href = response.data;
+            });
+
+            xhr.open("POST", this.action, true);
+            xhr.send(data);
+            
+            return false;
+        });
 
         fileInput.addEventListener("change", function(event) {
-            $attachedList.empty();
-            $attachedList.append("<b>Attachments:</b> ");
-
             for (var index = 0; index < fileInput.files.length; index++) {
                 var file = fileInput.files[index];
+
+                if (files.indexOf(file) > -1) {
+                    continue;
+                }
 
                 var $span = $("<span></span>");
 
                 $span.addClass("label");
                 $span.addClass("label-default");
 
-                $span.append(file.name.toLowerCase());
+                $span.data("index", files.length);
+
+                $span.append(file.name);
+                $span.append(" <span class=\"attachment-remove fa fa-times-circle\"></span>");
+
                 $attachedList.append($span);
+
+                files.push(file);
             }
+
+            this.value = "";
         });
 
         $addButton.on("click", function() {
@@ -828,11 +984,17 @@ function initIssue() {
                     $(item).addClass("no-checked");
 
                     $("#label-" + id, $labels).remove();
+                    
+                    if ($labels.children(".label-item").length == 0) {
+                        $labels.append("<p>None yet</p>");
+                    }
                 } else {
                     $(item).prepend('<span class="check pull-left"><i class="fa fa-check"></i></span>');
 
                     $(item).removeClass("no-checked");
                     $(item).addClass("checked");
+                    
+                    $("p:not([class])", $labels).remove();
 
                     var $l = $("<p></p>");
                     var c = $("span.color", item).css("background-color");
