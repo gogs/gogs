@@ -470,8 +470,8 @@ function initRepository() {
 function initInstall() {
     // database type change
     (function () {
-        var mysql_default = '127.0.0.1:3306'
-        var postgres_default = '127.0.0.1:5432'
+        var mysql_default = '127.0.0.1:3306';
+        var postgres_default = '127.0.0.1:5432';
 
         $('#install-database').on("change", function () {
             var val = $(this).val();
@@ -621,11 +621,9 @@ function initIssue() {
     // Upload.
     (function() {
         var $attachedList = $("#attached-list");
-        var $addButton = $("#attachments-button");
-
-        var files = [];
-
-        var fileInput = document.getElementById("attachments-input");
+        var $addButton    = $("#attachments-button");
+        var files         = [];
+        var fileInput     = document.getElementById("attachments-input");
         
         if (fileInput === null) {
             return;
@@ -637,21 +635,21 @@ function initIssue() {
             files.splice($parent.data("index"), 1);
             $parent.remove();
         });
-
-        var clickedButton = undefined;
-
-        $("button,input[type=\"submit\"]", fileInput.form).on("click", function() {
+        
+        var clickedButton;
+        
+        $('#issue-reply-btn,input[type="submit"]', fileInput.form).on('click', function() {
             clickedButton = this;
 
             var $button = $(this);
 
-            $button.removeClass("btn-success");
+            $button.removeClass("btn-success btn-default");
             $button.addClass("btn-warning");
 
-            $button.text("Submiting...");
+            $button.text("Submitting&hellip;");
         });
 
-         fileInput.form.addEventListener("submit", function(event) {
+        fileInput.form.addEventListener("submit", function(event) {
             event.stopImmediatePropagation();
             event.preventDefault();
 
@@ -677,7 +675,7 @@ function initIssue() {
             var xhr = new XMLHttpRequest();
 
             xhr.addEventListener("error", function() {
-                debugger;
+                console.log("Issue submit request failed. xhr.status: " + xhr.status);
             });
 
             xhr.addEventListener("load", function() {
@@ -700,7 +698,7 @@ function initIssue() {
                     $button.removeClass("btn-warning");
                     $button.addClass("btn-danger");
 
-                    $button.text("An error encoured!")
+                    $button.text("An error occurred!");
 
                     return;
                 }
@@ -728,7 +726,7 @@ function initIssue() {
             return false;
         });
 
-        fileInput.addEventListener("change", function(event) {
+        fileInput.addEventListener("change", function() {
             for (var index = 0; index < fileInput.files.length; index++) {
                 var file = fileInput.files[index];
 
@@ -754,9 +752,9 @@ function initIssue() {
             this.value = "";
         });
 
-        $addButton.on("click", function() {
+        $addButton.on("click", function(evt) {
             fileInput.click();
-            return false;
+            evt.preventDefault();
         });
     }());
 
@@ -769,7 +767,7 @@ function initIssue() {
         $('.issue-edit-cancel').on("click", function () {
             $('#issue h1.title,#issue .issue-main > .issue-content .content,#issue-edit-btn').toggleShow();
             $('#issue-edit-title,.issue-edit-content,.issue-edit-cancel,.issue-edit-save').toggleHide();
-        })
+        });
     }());
 
     // issue ajax update
