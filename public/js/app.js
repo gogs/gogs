@@ -984,11 +984,17 @@ function initIssue() {
                     $(item).addClass("no-checked");
 
                     $("#label-" + id, $labels).remove();
+                    
+                    if ($labels.children(".label-item").length == 0) {
+                        $labels.append("<p>None yet</p>");
+                    }
                 } else {
                     $(item).prepend('<span class="check pull-left"><i class="fa fa-check"></i></span>');
 
                     $(item).removeClass("no-checked");
                     $(item).addClass("checked");
+                    
+                    $("p:not([class])", $labels).remove();
 
                     var $l = $("<p></p>");
                     var c = $("span.color", item).css("background-color");
