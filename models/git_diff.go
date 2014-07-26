@@ -13,9 +13,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Unknwon/com"
+
 	"github.com/gogits/git"
 
-	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/process"
 )
@@ -118,8 +119,8 @@ func ParsePatch(pid int64, cmd *exec.Cmd, reader io.Reader) (*Diff, error) {
 
 			// Parse line number.
 			ranges := strings.Split(ss[len(ss)-2][1:], " ")
-			leftLine, _ = base.StrTo(strings.Split(ranges[0], ",")[0][1:]).Int()
-			rightLine, _ = base.StrTo(strings.Split(ranges[1], ",")[0]).Int()
+			leftLine, _ = com.StrTo(strings.Split(ranges[0], ",")[0][1:]).Int()
+			rightLine, _ = com.StrTo(strings.Split(ranges[1], ",")[0]).Int()
 			continue
 		case line[0] == '+':
 			curFile.Addition++
@@ -214,7 +215,7 @@ func GetDiff(repoPath, commitid string) (*Diff, error) {
 		select {
 		case <-time.After(5 * time.Minute):
 			if errKill := process.Kill(pid); errKill != nil {
-				log.Error("git_diff.ParsePatch(Kill): %v", err)
+				log.Error(4, "git_diff.ParsePatch(Kill): %v", err)
 			}
 			<-done
 			// return "", ErrExecTimeout.Error(), ErrExecTimeout

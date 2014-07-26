@@ -7,7 +7,7 @@ package admin
 import (
 	"strings"
 
-	"github.com/go-martini/martini"
+	"github.com/Unknwon/com"
 	"github.com/go-xorm/core"
 
 	"github.com/gogits/gogs/models"
@@ -89,13 +89,13 @@ func NewAuthSourcePost(ctx *middleware.Context, form auth.AuthenticationForm) {
 	ctx.Redirect("/admin/auths")
 }
 
-func EditAuthSource(ctx *middleware.Context, params martini.Params) {
+func EditAuthSource(ctx *middleware.Context) {
 	ctx.Data["Title"] = "Edit Authentication"
 	ctx.Data["PageIsAuths"] = true
 	ctx.Data["LoginTypes"] = models.LoginTypes
 	ctx.Data["SMTPAuths"] = models.SMTPAuths
 
-	id, err := base.StrTo(params["authid"]).Int64()
+	id, err := com.StrTo(ctx.Params(":authid")).Int64()
 	if err != nil {
 		ctx.Handle(404, "admin.auths.EditAuthSource", err)
 		return
@@ -168,11 +168,11 @@ func EditAuthSourcePost(ctx *middleware.Context, form auth.AuthenticationForm) {
 	ctx.Redirect("/admin/auths")
 }
 
-func DeleteAuthSource(ctx *middleware.Context, params martini.Params) {
+func DeleteAuthSource(ctx *middleware.Context) {
 	ctx.Data["Title"] = "Delete Authentication"
 	ctx.Data["PageIsAuths"] = true
 
-	id, err := base.StrTo(params["authid"]).Int64()
+	id, err := com.StrTo(ctx.Params(":authid")).Int64()
 	if err != nil {
 		ctx.Handle(404, "admin.auths.DeleteAuth", err)
 		return
@@ -188,7 +188,7 @@ func DeleteAuthSource(ctx *middleware.Context, params martini.Params) {
 		switch err {
 		case models.ErrAuthenticationUserUsed:
 			ctx.Flash.Error("This authentication still has used by some users, you should move them and then delete again.")
-			ctx.Redirect("/admin/auths/" + params["authid"])
+			ctx.Redirect("/admin/auths/" + ctx.Params(":authid"))
 		default:
 			ctx.Handle(500, "admin.auths.DeleteAuth(DelLoginSource)", err)
 		}

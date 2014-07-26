@@ -7,7 +7,7 @@ package org
 import (
 	"github.com/go-martini/martini"
 
-	"github.com/gogits/gogs/models"
+	"github.com/gogits/gogs-ng/models"
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
@@ -114,11 +114,11 @@ func Dashboard(ctx *middleware.Context, params martini.Params) {
 		return
 	}
 
-	if err := ctx.User.GetOrganizations(); err != nil {
-		ctx.Handle(500, "home.Dashboard(GetOrganizations)", err)
-		return
-	}
-	ctx.Data["Orgs"] = ctx.User.Orgs
+	// if err := ctx.User.GetOrganizations(); err != nil {
+	// 	ctx.Handle(500, "home.Dashboard(GetOrganizations)", err)
+	// 	return
+	// }
+	// ctx.Data["Orgs"] = ctx.User.Orgs
 	ctx.Data["ContextUser"] = org
 
 	ctx.Data["MyRepos"], err = models.GetRepositories(org.Id, true)

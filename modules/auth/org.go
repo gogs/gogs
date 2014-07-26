@@ -5,12 +5,9 @@
 package auth
 
 import (
-	"net/http"
-	"reflect"
+	"github.com/Unknwon/macaron"
+	"github.com/macaron-contrib/i18n"
 
-	"github.com/go-martini/martini"
-
-	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/middleware/binding"
 )
 
@@ -26,17 +23,8 @@ type CreateOrgForm struct {
 	Email   string `form:"email" binding:"Required;Email;MaxSize(50)"`
 }
 
-func (f *CreateOrgForm) Name(field string) string {
-	names := map[string]string{
-		"OrgName": "Organization name",
-		"Email":   "E-mail address",
-	}
-	return names[field]
-}
-
-func (f *CreateOrgForm) Validate(errs *binding.Errors, req *http.Request, ctx martini.Context) {
-	data := ctx.Get(reflect.TypeOf(base.TmplData{})).Interface().(base.TmplData)
-	validate(errs, data, f)
+func (f *CreateOrgForm) Validate(ctx *macaron.Context, errs *binding.Errors, l i18n.Locale) {
+	validate(errs, ctx.Data, f, l)
 }
 
 type OrgSettingForm struct {
@@ -47,20 +35,8 @@ type OrgSettingForm struct {
 	Location    string `form:"location" binding:"MaxSize(50)"`
 }
 
-func (f *OrgSettingForm) Name(field string) string {
-	names := map[string]string{
-		"DisplayName": "Display name",
-		"Email":       "E-mail address",
-		"Description": "Description",
-		"Website":     "Website address",
-		"Location":    "Location",
-	}
-	return names[field]
-}
-
-func (f *OrgSettingForm) Validate(errors *binding.Errors, req *http.Request, context martini.Context) {
-	data := context.Get(reflect.TypeOf(base.TmplData{})).Interface().(base.TmplData)
-	validate(errors, data, f)
+func (f *OrgSettingForm) Validate(ctx *macaron.Context, errs *binding.Errors, l i18n.Locale) {
+	validate(errs, ctx.Data, f, l)
 }
 
 // ___________
@@ -76,15 +52,6 @@ type CreateTeamForm struct {
 	Permission  string `form:"permission"`
 }
 
-func (f *CreateTeamForm) Name(field string) string {
-	names := map[string]string{
-		"TeamName":    "Team name",
-		"Description": "Team description",
-	}
-	return names[field]
-}
-
-func (f *CreateTeamForm) Validate(errs *binding.Errors, req *http.Request, ctx martini.Context) {
-	data := ctx.Get(reflect.TypeOf(base.TmplData{})).Interface().(base.TmplData)
-	validate(errs, data, f)
+func (f *CreateTeamForm) Validate(ctx *macaron.Context, errs *binding.Errors, l i18n.Locale) {
+	validate(errs, ctx.Data, f, l)
 }

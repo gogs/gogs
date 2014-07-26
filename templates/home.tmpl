@@ -1,27 +1,72 @@
-{{template "base/head" .}}
-{{template "base/navbar" .}}
-<div id="body" class="container">
-	{{if not .Repos}}
-	<h4>Hey there, welcome to the land of Gogs!</h4>
-	<p>If you just got your Gogs server running, go to the <a href="/install">install</a> guide page, which will guide you through your initial setup.</p>
-	<img src="http://gowalker.org/public/gogs_demo.gif">
-	{{else}}
-	<h4>Hey there, welcome to the land of Gogs!</h4>
-	<h5>Here are some recent updated repositories:</h5>
-    <div class="tab-pane active">
-        <ul class="list-unstyled repo-list">
-            {{range .Repos}}
-            <li>
-                <div class="meta pull-right"><!-- <i class="fa fa-star"></i> {{.NumStars}} --> <i class="fa fa-code-fork"></i> {{.NumForks}}</div>
-                <h4>
-                    <a href="/{{.Owner.Name}}/{{.Name}}">{{.Name}}</a>
-                </h4>
-                <p class="desc">{{.Description}}</p>
-                <div class="info">Last updated {{.Updated|TimeSince}}</div>
-            </li>
-            {{end}}
-        </ul>
+{{template "ng/base/head" .}}
+{{template "ng/base/header" .}}
+<div id="promo-wrapper">
+    <div class="container clear">
+        <div id="promo-logo" class="left">
+            <img src="/img/gogs-lg.png" alt="logo"/>
+        </div>
+        <div id="promo-content">
+            <h1>Gogs</h1>
+            <h2>{{.i18n.Tr "app_desc"}}</h2>
+            <form id="promo-form" action="/user/login" method="post">
+                {{.CsrfTokenHtml}}
+                <input class="ipt ipt-large" id="username" name="uname" type="text" placeholder="{{.i18n.Tr "home.uname_holder"}}"/>
+                <input class="ipt ipt-large" name="password" type="password" placeholder="{{.i18n.Tr "home.password_holder"}}"/>
+                <input name="from" type="hidden" value="home">
+                <button class="btn btn-black btn-large">{{.i18n.Tr "sign_in"}}</button>
+                <button class="btn btn-green btn-large" id="register-button">{{.i18n.Tr "register"}}</button>
+            </form>
+            <div id="promo-social" class="social-buttons">
+                {{template "ng/base/social" .}}
+            </div>
+        </div>&nbsp;
     </div>
-	{{end}}
 </div>
-{{template "base/footer" .}}
+<div id="feature-wrapper">
+    <div class="container clear">
+        {{if eq .Lang "zh-CN"}}
+        <div class="grid-1-2 left">
+            <i class="octicon octicon-flame"></i>
+            <b>易安装</b>
+            <p>您除了可以根据操作系统平台通过 <a target="_blank" href="http://gogs.io/docs/installation/install_from_binary.html">二进制运行</a>，还可以通过 <a target="_blank" href="https://github.com/gogits/gogs/tree/master/dockerfiles">Docker</a> 或 <a target="_blank" href="https://github.com/geerlingguy/ansible-vagrant-examples/tree/master/gogs">Vagrant</a>，以及 <a target="_blank" href="http://gogs.io/docs/installation/install_from_packages.html">包管理</a> 安装。</p>
+        </div>
+        <div class="grid-1-2 left">
+            <i class="octicon octicon-device-desktop"></i>
+            <b>跨平台</b>
+            <p>任何 <a target="_blank" href="http://golang.org/">Go 语言</a> 支持的平台都可以运行 Gogs，包括 Windows、Mac、Linux 以及 ARM。挑一个您喜欢的就行！</p>
+        </div>
+        <div class="grid-1-2 left">
+            <i class="octicon octicon-rocket"></i>
+            <b>轻量级</b>
+            <p>一个廉价的树莓派的配置足以满足 Gogs 的最低系统硬件要求。最大程度上节省您的服务器资源！</p>
+        </div>
+        <div class="grid-1-2 left">
+            <i class="octicon octicon-code"></i>
+            <b>开源化</b>
+            <p>所有的代码都开源在 <a target="_blank" href="https://github.com/gogits/gogs/">GitHub</a> 上，赶快加入我们来共同发展这个伟大的项目！还等什么？成为贡献者吧！</p>
+        </div>
+        {{else}}
+        <div class="grid-1-2 left">
+            <i class="octicon octicon-flame"></i>
+            <b>Easy to install</b>
+            <p>Simply <a target="_blank" href="http://gogs.io/docs/installation/install_from_binary.html">run the binary</a> for your platform. Or ship Gogs with <a target="_blank" href="https://github.com/gogits/gogs/tree/master/dockerfiles">Docker</a> or <a target="_blank" href="https://github.com/geerlingguy/ansible-vagrant-examples/tree/master/gogs">Vagrant</a>, or get it <a target="_blank" href="http://gogs.io/docs/installation/install_from_packages.html">packaged</a>.</p>
+        </div>
+        <div class="grid-1-2 left">
+            <i class="octicon octicon-device-desktop"></i>
+            <b>Cross-platform</b>
+            <p>Gogs runs anywhere <a target="_blank" href="http://golang.org/">Go</a> can compile for: Windows, Mac OS X, Linux, ARM, etc. Choose the one you love!</p>
+        </div>
+        <div class="grid-1-2 left">
+            <i class="octicon octicon-rocket"></i>
+            <b>Lightweight</b>
+            <p>Gogs has low minimal requirements and can run on an inexpensive Raspberry Pi. Save your machine energy!</p>
+        </div>
+        <div class="grid-1-2 left">
+            <i class="octicon octicon-code"></i>
+            <b>Open Source</b>
+            <p>It's all on <a target="_blank" href="https://github.com/gogits/gogs/">GitHub</a>! Join us by contributing to make this project even better. Don't be shy to be a contributor!</p>
+        </div>
+        {{end}}
+    </div>
+</div>
+{{template "ng/base/footer" .}}

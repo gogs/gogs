@@ -1,0 +1,41 @@
+@import "var";
+.panel {
+    border: 1px solid@panelBorderColor;
+    .panel-header {
+        font-size: 16px;
+        padding: .6em 1.2em;
+        background-color: @panelHeaderBgColor;
+        border-bottom: 1px solid@panelBorderColor;
+    }
+    .panel-body {
+        .panel-desc {
+            margin-bottom: 20px;
+        }
+    }
+    .panel-content {
+        padding: 1em 1.2em;
+    }
+    .panel-footer {
+        padding: .6em 1.2em;
+        background-color: @panelFooterBgColor;
+        border-top: 1px solid@panelBorderColor;
+    }
+    &.panel-radius {
+        border-radius: .3em;
+        .panel-header {
+            border-top-left-radius: .3em;
+            border-top-right-radius: .3em;
+        }
+        .panel-footer {
+            border-bottom-left-radius: .3em;
+            border-bottom-right-radius: .3em;
+        }
+    }
+    &.panel-warning {
+        border-color: #F0C36D;
+        > .panel-header {
+            background-color: #F9EDBE;
+            border-color: #F0C36D;
+        }
+    }
+}

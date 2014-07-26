@@ -1,0 +1,28 @@
+{{template "ng/base/head" .}}
+{{template "ng/base/header" .}}
+<div id="setting-wrapper" class="main-wrapper">
+    <div id="user-profile-setting" class="container clear">
+        {{template "user/settings/nav" .}}
+        <div class="grid-4-5 left">
+            <div class="setting-content">
+                {{template "ng/base/alert" .}}
+                <div id="setting-content">
+                    <div id="user-profile-setting-content" class="panel panel-warning panel-radius">
+                        <p class="panel-header"><strong>{{.i18n.Tr "settings.delete_account"}}</strong></p>
+                        <div class="panel-body panel-content">
+                            <span class="alert alert-red alert-radius block"><i class="octicon octicon-alert"></i>{{.i18n.Tr "settings.delete_prompt" | Str2html}}</span>
+                            <form  action="/user/settings/delete" method="post">
+                                {{.CsrfTokenHtml}}
+                                <p class="field">
+                                    <span class="form-label"></span>
+                                    <button class="btn btn-red btn-large btn-radius" id="delete-account-button">{{.i18n.Tr "settings.confirm_delete_account"}}</button>
+                                </p>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{{template "ng/base/footer" .}}

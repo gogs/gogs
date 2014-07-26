@@ -6,6 +6,8 @@ package repo
 
 import (
 	"bytes"
+	"encoding/base64"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -19,16 +21,43 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-martini/martini"
 	"github.com/gogits/gogs/models"
+	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/middleware"
 	"github.com/gogits/gogs/modules/setting"
 )
 
-func Http(ctx *middleware.Context, params martini.Params) {
-	username := params["username"]
-	reponame := params["reponame"]
+func basicEncode(username, password string) string {
+	auth := username + ":" + password
+	return base64.StdEncoding.EncodeToString([]byte(auth))
+}
+
+func basicDecode(encoded string) (user string, name string, err error) {
+	var s []byte
+	s, err = base64.StdEncoding.DecodeString(encoded)
+	if err != nil {
+		return user, name, err
+	}
+
+	a := strings.Split(string(s), ":")
+	if len(a) == 2 {
+		user, name = a[0], a[1]
+	} else {
+		err = errors.New("decode failed")
+	}
+	return user, name, err
+}
+
+func authRequired(ctx *middleware.Context) {
+	ctx.Resp.Header().Set("WWW-Authenticate", "Basic realm=\".\"")
+	ctx.Data["ErrorMsg"] = "no basic auth and digit auth"
+	ctx.HTML(401, base.TplName("status/401"))
+}
+
+func Http(ctx *middleware.Context) {
+	username := ctx.Params(":username")
+	reponame := ctx.Params(":reponame")
 	if strings.HasSuffix(reponame, ".git") {
 		reponame = reponame[:len(reponame)-4]
 	}
@@ -50,7 +79,7 @@ func Http(ctx *middleware.Context, params martini.Params) {
 		if err == models.ErrUserNotExist {
 			ctx.Handle(404, "repo.Http(GetUserByName)", nil)
 		} else {
-			ctx.Handle(500, "repo.Http(GetUserByName)", nil)
+			ctx.Handle(500, "repo.Http(GetUserByName)", err)
 		}
 		return
 	}
@@ -60,7 +89,7 @@ func Http(ctx *middleware.Context, params martini.Params) {
 		if err == models.ErrRepoNotExist {
 			ctx.Handle(404, "repo.Http(GetRepositoryByName)", nil)
 		} else {
-			ctx.Handle(500, "repo.Http(GetRepositoryByName)", nil)
+			ctx.Handle(500, "repo.Http(GetRepositoryByName)", err)
 		}
 		return
 	}
@@ -75,7 +104,6 @@ func Http(ctx *middleware.Context, params martini.Params) {
 	if askAuth {
 		baHead := ctx.Req.Header.Get("Authorization")
 		if baHead == "" {
-			// ask auth
 			authRequired(ctx)
 			return
 		}
@@ -142,7 +170,7 @@ func Http(ctx *middleware.Context, params martini.Params) {
 				if head[0] == '0' && head[1] == '0' {
 					size, err := strconv.ParseInt(string(input[lastLine+2:lastLine+4]), 16, 32)
 					if err != nil {
-						log.Error("%v", err)
+						log.Error(4, "%v", err)
 						return
 					}
 
@@ -166,7 +194,6 @@ func Http(ctx *middleware.Context, params martini.Params) {
 					}
 					lastLine = lastLine + size
 				} else {
-					//fmt.Println("ddddddddddd")
 					break
 				}
 			}
@@ -176,7 +203,7 @@ func Http(ctx *middleware.Context, params martini.Params) {
 	config := Config{setting.RepoRootPath, "git", true, true, f}
 
 	handler := HttpBackend(&config)
-	handler(ctx.ResponseWriter, ctx.Req)
+	handler(ctx.Resp, ctx.Req)
 }
 
 type route struct {
@@ -229,7 +256,7 @@ func HttpBackend(config *Config) http.HandlerFunc {
 				dir, err := getGitDir(config, m[1])
 
 				if err != nil {
-					log.GitLogger.Error(err.Error())
+					log.GitLogger.Error(4, err.Error())
 					renderNotFound(w)
 					return
 				}
@@ -283,7 +310,7 @@ func serviceRpc(rpc string, hr handler) {
 
 	err := cmd.Run()
 	if err != nil {
-		log.GitLogger.Error(err.Error())
+		log.GitLogger.Error(4, err.Error())
 		return
 	}
 
@@ -366,7 +393,7 @@ func getGitDir(config *Config, fPath string) (string, error) {
 		cwd, err := os.Getwd()
 
 		if err != nil {
-			log.GitLogger.Error(err.Error())
+			log.GitLogger.Error(4, err.Error())
 			return "", err
 		}
 
@@ -443,7 +470,7 @@ func gitCommand(gitBinPath, dir string, args ...string) []byte {
 	out, err := command.Output()
 
 	if err != nil {
-		log.GitLogger.Error(err.Error())
+		log.GitLogger.Error(4, err.Error())
 	}
 
 	return out

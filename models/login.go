@@ -164,15 +164,14 @@ func UserSignIn(uname, passwd string) (*User, error) {
 	if u.LoginType == NOTYPE {
 		if has {
 			u.LoginType = PLAIN
+		} else {
+			return nil, ErrUserNotExist
 		}
 	}
 
-	// for plain login, user must have existed.
+	// For plain login, user must exist to reach this line.
+	// Now verify password.
 	if u.LoginType == PLAIN {
-		if !has {
-			return nil, ErrUserNotExist
-		}
-
 		newUser := &User{Passwd: passwd, Salt: u.Salt}
 		newUser.EncodePasswd()
 		if u.Passwd != newUser.Passwd {
@@ -233,18 +232,18 @@ func UserSignIn(uname, passwd string) (*User, error) {
 // Query if name/passwd can login against the LDAP direcotry pool
 // Create a local user if success
 // Return the same LoginUserPlain semantic
-func LoginUserLdapSource(user *User, name, passwd string, sourceId int64, cfg *LDAPConfig, autoRegister bool) (*User, error) {
+func LoginUserLdapSource(u *User, name, passwd string, sourceId int64, cfg *LDAPConfig, autoRegister bool) (*User, error) {
 	mail, logged := cfg.Ldapsource.SearchEntry(name, passwd)
 	if !logged {
 		// user not in LDAP, do nothing
 		return nil, ErrUserNotExist
 	}
 	if !autoRegister {
-		return user, nil
+		return u, nil
 	}
 
 	// fake a local user creation
-	user = &User{
+	u = &User{
 		LowerName:   strings.ToLower(name),
 		Name:        strings.ToLower(name),
 		LoginType:   LDAP,
@@ -255,7 +254,8 @@ func LoginUserLdapSource(user *User, name, passwd string, sourceId int64, cfg *L
 		Email:       mail,
 	}
 
-	return CreateUser(user)
+	err := CreateUser(u)
+	return u, err
 }
 
 type loginAuth struct {
@@ -322,7 +322,7 @@ func SmtpAuth(host string, port int, a smtp.Auth, useTls bool) error {
 // Query if name/passwd can login against the LDAP direcotry pool
 // Create a local user if success
 // Return the same LoginUserPlain semantic
-func LoginUserSMTPSource(user *User, name, passwd string, sourceId int64, cfg *SMTPConfig, autoRegister bool) (*User, error) {
+func LoginUserSMTPSource(u *User, name, passwd string, sourceId int64, cfg *SMTPConfig, autoRegister bool) (*User, error) {
 	var auth smtp.Auth
 	if cfg.Auth == SMTP_PLAIN {
 		auth = smtp.PlainAuth("", name, passwd, cfg.Host)
@@ -340,7 +340,7 @@ func LoginUserSMTPSource(user *User, name, passwd string, sourceId int64, cfg *S
 	}
 
 	if !autoRegister {
-		return user, nil
+		return u, nil
 	}
 
 	var loginName = name
@@ -349,7 +349,7 @@ func LoginUserSMTPSource(user *User, name, passwd string, sourceId int64, cfg *S
 		loginName = name[:idx]
 	}
 	// fake a local user creation
-	user = &User{
+	u = &User{
 		LowerName:   strings.ToLower(loginName),
 		Name:        strings.ToLower(loginName),
 		LoginType:   SMTP,
@@ -359,5 +359,6 @@ func LoginUserSMTPSource(user *User, name, passwd string, sourceId int64, cfg *S
 		Passwd:      passwd,
 		Email:       name,
 	}
-	return CreateUser(user)
+	err := CreateUser(u)
+	return u, err
 }
