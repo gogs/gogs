@@ -1,11 +1,11 @@
 Gogs - Go Git Service [![wercker status](https://app.wercker.com/status/ad0bdb0bc450ac6f09bc56b9640a50aa/s/ "wercker status")](https://app.wercker.com/project/bykey/ad0bdb0bc450ac6f09bc56b9640a50aa) [![Build Status](https://drone.io/github.com/gogits/gogs/status.png)](https://drone.io/github.com/gogits/gogs/latest)
 =====================
 
-Gogs(Go Git Service) is a Self Hosted Git Service in the Go Programming Language.
+Gogs(Go Git Service) is a painless self-hosted Git Service written in Go.
 
 ![Demo](http://gowalker.org/public/gogs_demo.gif)
 
-##### Current version: 0.4.5 Alpha
+##### Current version: 0.4.7 Alpha
 
 ### NOTICES
 
@@ -18,9 +18,7 @@ Gogs(Go Git Service) is a Self Hosted Git Service in the Go Programming Language
 
 ## Purpose
 
-Since we choose to use pure Go implementation of Git manipulation, Gogs certainly supports **ALL platforms**  that Go supports, including Linux, Mac OS X, and Windows with **ZERO** dependency. 
-
-More importantly, Gogs only needs one binary to setup your own project hosting on the fly!
+The goal of this project is to make the easiest, fastest and most painless way to set up a self-hosted Git service. With Go, this can be done in independent binary distribution across **ALL platforms** that Go supports, including Linux, Mac OS X, and Windows.
 
 ## Overview
 
