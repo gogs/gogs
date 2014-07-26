@@ -1,11 +1,12 @@
 filesets:
     includes:
-        - templates
+        - conf
+        - etc
         - public
+        - scripts
+        - templates
         - LICENSE
         - README.md
         - README_ZH.md
-        - start.bat
-        - start.sh
     excludes:
         - \.git
