@@ -17,8 +17,8 @@ import (
 
 const (
 	DASHBOARD base.TplName = "user/dashboard/dashboard"
+	PULLS     base.TplName = "user/dashboard/pulls"
 	ISSUES    base.TplName = "user/issues"
-	PULLS     base.TplName = "user/pulls"
 	STARS     base.TplName = "user/stars"
 	PROFILE   base.TplName = "user/profile"
 )
@@ -28,26 +28,59 @@ func Dashboard(ctx *middleware.Context) {
 	ctx.Data["PageIsDashboard"] = true
 	ctx.Data["PageIsNews"] = true
 
+	var ctxUser *models.User
+	// Check context type.
+	orgName := ctx.Params(":org")
+	if len(orgName) > 0 {
+		// Organization.
+		org, err := models.GetUserByName(orgName)
+		if err != nil {
+			if err == models.ErrUserNotExist {
+				ctx.Handle(404, "GetUserByName", err)
+			} else {
+				ctx.Handle(500, "GetUserByName", err)
+			}
+			return
+		}
+		ctxUser = org
+	} else {
+		// Normal user.
+		ctxUser = ctx.User
+		collaborates, err := models.GetCollaborativeRepos(ctxUser.Name)
+		if err != nil {
+			ctx.Handle(500, "GetCollaborativeRepos", err)
+			return
+		}
+		ctx.Data["CollaborateCount"] = len(collaborates)
+		ctx.Data["CollaborativeRepos"] = collaborates
+	}
+	ctx.Data["ContextUser"] = ctxUser
+
 	if err := ctx.User.GetOrganizations(); err != nil {
-		ctx.Handle(500, "home.Dashboard(GetOrganizations)", err)
+		ctx.Handle(500, "GetOrganizations", err)
 		return
 	}
-	ctx.Data["ContextUser"] = ctx.User
+	ctx.Data["Orgs"] = ctx.User.Orgs
 
-	repos, err := models.GetRepositories(ctx.User.Id, true)
+	repos, err := models.GetRepositories(ctxUser.Id, true)
 	if err != nil {
 		ctx.Handle(500, "GetRepositories", err)
 		return
 	}
 	ctx.Data["Repos"] = repos
 
-	ctx.Data["CollaborativeRepos"], err = models.GetCollaborativeRepos(ctx.User.Name)
-	if err != nil {
-		ctx.Handle(500, "GetCollaborativeRepos", err)
-		return
+	// Get mirror repositories.
+	mirrors := make([]*models.Repository, 0, len(repos)/2)
+	for _, repo := range repos {
+		if repo.IsMirror {
+			mirrors = append(mirrors, repo)
+		}
 	}
+	ctx.Data["MirrorCount"] = len(mirrors)
+	ctx.Data["Mirrors"] = mirrors
 
-	actions, err := models.GetFeeds(ctx.User.Id, 0, true)
+	// Get feeds.
+	actions, err := models.GetFeeds(ctxUser.Id, 0, false)
 	if err != nil {
 		ctx.Handle(500, "GetFeeds", err)
 		return
@@ -57,7 +90,7 @@ func Dashboard(ctx *middleware.Context) {
 	feeds := make([]*models.Action, 0, len(actions))
 	for _, act := range actions {
 		if act.IsPrivate {
-			if has, _ := models.HasAccess(ctx.User.Name, act.RepoUserName+"/"+act.RepoName,
+			if has, _ := models.HasAccess(ctxUser.Name, act.RepoUserName+"/"+act.RepoName,
 				models.READABLE); !has {
 				continue
 			}
@@ -66,6 +99,20 @@ func Dashboard(ctx *middleware.Context) {
 	}
 	ctx.Data["Feeds"] = feeds
 	ctx.HTML(200, DASHBOARD)
+}
+
+func Pulls(ctx *middleware.Context) {
+	ctx.Data["Title"] = ctx.Tr("pull_requests")
+	ctx.Data["PageIsDashboard"] = true
+	ctx.Data["PageIsPulls"] = true
+
+	if err := ctx.User.GetOrganizations(); err != nil {
+		ctx.Handle(500, "GetOrganizations", err)
+		return
+	}
+	ctx.Data["ContextUser"] = ctx.User
+
+	ctx.HTML(200, PULLS)
 }
 
 func Profile(ctx *middleware.Context) {
@@ -278,12 +325,4 @@ func Issues(ctx *middleware.Context) {
 		ctx.Data["ShowCount"] = issueStats.OpenCount
 	}
 	ctx.HTML(200, ISSUES)
-}
-
-func Pulls(ctx *middleware.Context) {
-	ctx.HTML(200, PULLS)
-}
-
-func Stars(ctx *middleware.Context) {
-	ctx.HTML(200, STARS)
 }

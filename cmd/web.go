@@ -104,9 +104,8 @@ func runWeb(*cli.Context) {
 	m.Get("/install", bindIgnErr(auth.InstallForm{}), routers.Install)
 	m.Post("/install", bindIgnErr(auth.InstallForm{}), routers.InstallPost)
 	m.Group("", func(r *macaron.Router) {
-		r.Get("/issues", user.Issues)
 		r.Get("/pulls", user.Pulls)
-		r.Get("/stars", user.Stars)
+		r.Get("/issues", user.Issues)
 	}, reqSignIn)
 
 	// API routers.
@@ -171,13 +170,6 @@ func runWeb(*cli.Context) {
 	m.Map(cpt)
 	m.Get("/captcha/*", cpt.Handler)
 
-	m.Group("/repo", func(r *macaron.Router) {
-		r.Get("/create", repo.Create)
-		r.Post("/create", bindIgnErr(auth.CreateRepoForm{}), repo.CreatePost)
-		r.Get("/migrate", repo.Migrate)
-		r.Post("/migrate", bindIgnErr(auth.MigrateRepoForm{}), repo.MigratePost)
-	}, reqSignIn)
-
 	adminReq := middleware.Toggle(&middleware.ToggleOptions{SignInRequire: true, AdminRequire: true})
 
 	m.Get("/admin", adminReq, admin.Dashboard)
@@ -215,10 +207,10 @@ func runWeb(*cli.Context) {
 
 	// Organization routers.
 	m.Group("/org", func(r *macaron.Router) {
-		r.Get("/create", org.New)
-		r.Post("/create", bindIgnErr(auth.CreateOrgForm{}), org.NewPost)
+		r.Get("/create", org.Create)
+		r.Post("/create", bindIgnErr(auth.CreateOrgForm{}), org.CreatePost)
 		r.Get("/:org", org.Home)
-		r.Get("/:org/dashboard", org.Dashboard)
+		r.Get("/:org/dashboard", user.Dashboard)
 		r.Get("/:org/members", org.Members)
 
 		r.Get("/:org/teams", org.Teams)
@@ -231,6 +223,14 @@ func runWeb(*cli.Context) {
 		r.Get("/:org/settings", org.Settings)
 		r.Post("/:org/settings", bindIgnErr(auth.OrgSettingForm{}), org.SettingsPost)
 		r.Post("/:org/settings/delete", org.DeletePost)
+	}, reqSignIn)
+
+	// Repository routers.
+	m.Group("/repo", func(r *macaron.Router) {
+		r.Get("/create", repo.Create)
+		r.Post("/create", bindIgnErr(auth.CreateRepoForm{}), repo.CreatePost)
+		r.Get("/migrate", repo.Migrate)
+		r.Post("/migrate", bindIgnErr(auth.MigrateRepoForm{}), repo.MigratePost)
 	}, reqSignIn)
 
 	m.Group("/:username/:reponame", func(r *macaron.Router) {

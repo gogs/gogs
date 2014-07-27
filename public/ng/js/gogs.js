@@ -1,8 +1,11 @@
 // @codekit-prepend "lib/jquery-1.11.1.min.js"
+// @codekit-prepend "lib/lib.js"
 // @codekit-prepend "lib/tabs.js"
 
+var Gogs = {};
+
 (function ($) {
-    // extend jQuery ajax, set csrf token value
+    // Extend jQuery ajax, set CSRF token value.
     var ajax = $.ajax;
     $.extend({
         ajax: function (url, options) {
@@ -51,15 +54,131 @@
     });
 }(jQuery));
 
+(function ($) {
+    // Render markdown.
+    Gogs.renderMarkdown = function () {
+        var $md = $('.markdown');
+        var $pre = $md.find('pre > code').parent();
+        $pre.addClass('prettyprint linenums');
+        prettyPrint();
+
+        // Set anchor.
+        var headers = {};
+        $md.find('h1, h2, h3, h4, h5, h6').each(function () {
+            var node = $(this);
+            var val = encodeURIComponent(node.text().toLowerCase().replace(/[^\w\- ]/g, '').replace(/[ ]/g, '-'));
+            var name = val;
+            if (headers[val] > 0) {
+                name = val + '-' + headers[val];
+            }
+            if (headers[val] == undefined) {
+                headers[val] = 1;
+            } else {
+                headers[val] += 1;
+            }
+            node = node.wrap('<div id="' + name + '" class="anchor-wrap" ></div>');
+            node.append('<a class="anchor" href="#' + name + '"><span class="octicon octicon-link"></span></a>');
+        });
+    };
+
+    // Render code view.
+    Gogs.renderCodeView = function () {
+        function selectRange($list, $select, $from) {
+            $list.removeClass('active');
+            if ($from) {
+                var a = parseInt($select.attr('rel').substr(1));
+                var b = parseInt($from.attr('rel').substr(1));
+                var c;
+                if (a != b) {
+                    if (a > b) {
+                        c = a;
+                        a = b;
+                        b = c;
+                    }
+                    var classes = [];
+                    for (i = a; i <= b; i++) {
+                        classes.push('.L' + i);
+                    }
+                    $list.filter(classes.join(',')).addClass('active');
+                    $.changeHash('#L' + a + '-' + 'L' + b);
+                    return
+                }
+            }
+            $select.addClass('active');
+            $.changeHash('#' + $select.attr('rel'));
+        }
+
+        $(document).on('click', '.lines-num span', function (e) {
+            var $select = $(this);
+            var $list = $select.parent().siblings('.lines-code').find('ol.linenums > li');
+            selectRange($list, $list.filter('[rel=' + $select.attr('rel') + ']'), (e.shiftKey ? $list.filter('.active').eq(0) : null));
+            $.deSelect();
+        });
+
+        $('.code-view .lines-code > pre').each(function () {
+            var $pre = $(this);
+            var $lineCode = $pre.parent();
+            var $lineNums = $lineCode.siblings('.lines-num');
+            if ($lineNums.length > 0) {
+                var nums = $pre.find('ol.linenums > li').length;
+                for (var i = 1; i <= nums; i++) {
+                    $lineNums.append('<span id="L' + i + '" rel="L' + i + '">' + i + '</span>');
+                }
+            }
+        });
+
+        $(window).on('hashchange', function (e) {
+            var m = window.location.hash.match(/^#(L\d+)\-(L\d+)$/);
+            var $list = $('.code-view ol.linenums > li');
+            if (m) {
+                var $first = $list.filter('.' + m[1]);
+                selectRange($list, $first, $list.filter('.' + m[2]));
+                $("html, body").scrollTop($first.offset().top - 200);
+                return;
+            }
+            m = window.location.hash.match(/^#(L\d+)$/);
+            if (m) {
+                var $first = $list.filter('.' + m[1]);
+                selectRange($list, $first);
+                $("html, body").scrollTop($first.offset().top - 200);
+            }
+        }).trigger('hashchange');
+    };
+})(jQuery);
+
+function initCore() {
+    Gogs.renderMarkdown();
+    Gogs.renderCodeView();
+}
+
+function initRepoCreate() {
+    // Owner switch menu click.
+    $('#repo-create-owner-list').on('click', 'li', function () {
+        if (!$(this).hasClass('checked')) {
+            var uid = $(this).data('uid');
+            $('#repo-owner-id').val(uid);
+            $('#repo-owner-avatar').attr("src", $(this).find('img').attr("src"));
+            $('#repo-owner-name').text($(this).text().trim());
+
+            $(this).parent().find('.checked').removeClass('checked');
+            $(this).addClass('checked');
+            console.log("set repo owner to uid :", uid, $(this).text().trim());
+        }
+    });
+}
+
 $(document).ready(function () {
+    initCore();
+    if ($('#repo-create-form').length) {
+        initRepoCreate();
+    }
+
     Tabs('#dashboard-sidebar-menu');
 
     homepage();
     settingsProfile();
     settingsSSHKeys();
     settingsDelete();
-    renderMarkdown();
-    renderCodeView();
 
     // Fix language drop-down menu height.
     var l = $('#footer-lang li').length;
@@ -114,92 +233,4 @@ function settingsDelete() {
             return true;
         }
     });
-}
-
-function renderMarkdown() {
-    var $md = $('.markdown');
-    var $pre = $md.find('pre > code').parent();
-    $pre.addClass('prettyprint linenums');
-    prettyPrint();
-
-    // Set anchor.
-    var headers = {};
-    $md.find('h1, h2, h3, h4, h5, h6').each(function () {
-        var node = $(this);
-        var val = encodeURIComponent(node.text().toLowerCase().replace(/[^\w\- ]/g, '').replace(/[ ]/g, '-'));
-        var name = val;
-        if (headers[val] > 0) {
-            name = val + '-' + headers[val];
-        }
-        if (headers[val] == undefined) {
-            headers[val] = 1;
-        } else {
-            headers[val] += 1;
-        }
-        node = node.wrap('<div id="' + name + '" class="anchor-wrap" ></div>');
-        node.append('<a class="anchor" href="#' + name + '"><span class="octicon octicon-link"></span></a>');
-    });
-}
-
-function renderCodeView() {
-    function selectRange($list, $select, $from) {
-        $list.removeClass('active');
-        if ($from) {
-            var a = parseInt($select.attr('rel').substr(1));
-            var b = parseInt($from.attr('rel').substr(1));
-            var c;
-            if (a != b) {
-                if (a > b) {
-                    c = a;
-                    a = b;
-                    b = c;
-                }
-                var classes = [];
-                for (i = a; i <= b; i++) {
-                    classes.push('.L' + i);
-                }
-                $list.filter(classes.join(',')).addClass('active');
-                $.changeHash('#L' + a + '-' + 'L' + b);
-                return
-            }
-        }
-        $select.addClass('active');
-        $.changeHash('#' + $select.attr('rel'));
-    }
-
-    $(document).on('click', '.lines-num span', function (e) {
-        var $select = $(this);
-        var $list = $select.parent().siblings('.lines-code').find('ol.linenums > li');
-        selectRange($list, $list.filter('[rel=' + $select.attr('rel') + ']'), (e.shiftKey ? $list.filter('.active').eq(0) : null));
-        $.deSelect();
-    });
-
-    $('.code-view .lines-code > pre').each(function () {
-        var $pre = $(this);
-        var $lineCode = $pre.parent();
-        var $lineNums = $lineCode.siblings('.lines-num');
-        if ($lineNums.length > 0) {
-            var nums = $pre.find('ol.linenums > li').length;
-            for (var i = 1; i <= nums; i++) {
-                $lineNums.append('<span id="L' + i + '" rel="L' + i + '">' + i + '</span>');
-            }
-        }
-    });
-
-    $(window).on('hashchange', function (e) {
-        var m = window.location.hash.match(/^#(L\d+)\-(L\d+)$/);
-        var $list = $('.code-view ol.linenums > li');
-        if (m) {
-            var $first = $list.filter('.' + m[1]);
-            selectRange($list, $first, $list.filter('.' + m[2]));
-            $("html, body").scrollTop($first.offset().top - 200);
-            return;
-        }
-        m = window.location.hash.match(/^#(L\d+)$/);
-        if (m) {
-            var $first = $list.filter('.' + m[1]);
-            selectRange($list, $first);
-            $("html, body").scrollTop($first.offset().top - 200);
-        }
-    }).trigger('hashchange');
 }

@@ -10,12 +10,11 @@ import (
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/middleware"
-	"github.com/gogits/gogs/routers/user"
 )
 
 const (
 	HOME     base.TplName = "org/home"
-	NEW      base.TplName = "org/new"
+	CREATE   base.TplName = "org/create"
 	SETTINGS base.TplName = "org/settings"
 )
 
@@ -55,23 +54,23 @@ func Home(ctx *middleware.Context) {
 	ctx.HTML(200, HOME)
 }
 
-func New(ctx *middleware.Context) {
-	ctx.Data["Title"] = "Create An Organization"
-	ctx.HTML(200, NEW)
+func Create(ctx *middleware.Context) {
+	ctx.Data["Title"] = ctx.Tr("new_org")
+	ctx.HTML(200, CREATE)
 }
 
-func NewPost(ctx *middleware.Context, form auth.CreateOrgForm) {
-	ctx.Data["Title"] = "Create An Organization"
+func CreatePost(ctx *middleware.Context, form auth.CreateOrgForm) {
+	ctx.Data["Title"] = ctx.Tr("new_org")
 
 	if ctx.HasError() {
-		ctx.HTML(200, NEW)
+		ctx.HTML(200, CREATE)
 		return
 	}
 
 	org := &models.User{
 		Name:     form.OrgName,
 		Email:    form.Email,
-		IsActive: true, // NOTE: may need to set false when require e-mail confirmation.
+		IsActive: true,
 		Type:     models.ORGANIZATION,
 	}
 
@@ -80,59 +79,21 @@ func NewPost(ctx *middleware.Context, form auth.CreateOrgForm) {
 		switch err {
 		case models.ErrUserAlreadyExist:
 			ctx.Data["Err_OrgName"] = true
-			ctx.RenderWithErr("Organization name has been already taken", NEW, &form)
+			ctx.RenderWithErr(ctx.Tr("form.org_name_been_taken"), CREATE, &form)
 		case models.ErrEmailAlreadyUsed:
 			ctx.Data["Err_Email"] = true
-			ctx.RenderWithErr("E-mail address has been already used", NEW, &form)
+			ctx.RenderWithErr(ctx.Tr("form.email_been_used"), CREATE, &form)
 		case models.ErrUserNameIllegal:
 			ctx.Data["Err_OrgName"] = true
-			ctx.RenderWithErr(models.ErrRepoNameIllegal.Error(), NEW, &form)
+			ctx.RenderWithErr(ctx.Tr("form.illegal_org_name"), CREATE, &form)
 		default:
-			ctx.Handle(500, "org.NewPost(CreateUser)", err)
+			ctx.Handle(500, "CreateUser", err)
 		}
 		return
 	}
-	log.Trace("%s Organization created: %s", ctx.Req.RequestURI, org.Name)
+	log.Trace("Organization created: %s", org.Name)
 
 	ctx.Redirect("/org/" + form.OrgName + "/dashboard")
-}
-
-func Dashboard(ctx *middleware.Context) {
-	ctx.Data["Title"] = "Dashboard"
-	ctx.Data["PageIsUserDashboard"] = true
-	ctx.Data["PageIsOrgDashboard"] = true
-
-	org, err := models.GetUserByName(ctx.Params(":org"))
-	if err != nil {
-		if err == models.ErrUserNotExist {
-			ctx.Handle(404, "org.Dashboard(GetUserByName)", err)
-		} else {
-			ctx.Handle(500, "org.Dashboard(GetUserByName)", err)
-		}
-		return
-	}
-
-	if err := ctx.User.GetOrganizations(); err != nil {
-		ctx.Handle(500, "home.Dashboard(GetOrganizations)", err)
-		return
-	}
-	ctx.Data["Orgs"] = ctx.User.Orgs
-	ctx.Data["ContextUser"] = org
-
-	ctx.Data["MyRepos"], err = models.GetRepositories(org.Id, true)
-	if err != nil {
-		ctx.Handle(500, "org.Dashboard(GetRepositories)", err)
-		return
-	}
-
-	actions, err := models.GetFeeds(org.Id, 0, false)
-	if err != nil {
-		ctx.Handle(500, "org.Dashboard(GetFeeds)", err)
-		return
-	}
-	ctx.Data["Feeds"] = actions
-
-	ctx.HTML(200, user.DASHBOARD)
 }
 
 func Settings(ctx *middleware.Context) {
