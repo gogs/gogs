@@ -15,7 +15,7 @@
                             {{.SignedUser.Name}}
                         </a>
                     </li>
-                    {{range .ContextUser.Orgs}}
+                    {{range .Orgs}}
                     <li class="org {{if eq $.ContextUser.Id .Id}}checked{{end}}">
                         <a href="{{.DashboardLink}}">
                             <i class="octicon octicon-check"></i>

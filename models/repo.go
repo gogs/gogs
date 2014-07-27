@@ -204,6 +204,22 @@ type Mirror struct {
 	NextUpdate time.Time
 }
 
+func GetMirror(repoId int64) (*Mirror, error) {
+	m := &Mirror{RepoId: repoId}
+	has, err := x.Get(m)
+	if err != nil {
+		return nil, err
+	} else if !has {
+		return nil, ErrMirrorNotExist
+	}
+	return m, nil
+}
+
+func UpdateMirror(m *Mirror) error {
+	_, err := x.Id(m.Id).Update(m)
+	return err
+}
+
 // MirrorRepository creates a mirror repository from source.
 func MirrorRepository(repoId int64, userName, repoName, repoPath, url string) error {
 	_, stderr, err := process.ExecTimeout(10*time.Minute,
@@ -224,22 +240,6 @@ func MirrorRepository(repoId int64, userName, repoName, repoPath, url string) er
 
 	// return git.UnpackRefs(repoPath)
 	return nil
-}
-
-func GetMirror(repoId int64) (*Mirror, error) {
-	m := &Mirror{RepoId: repoId}
-	has, err := x.Get(m)
-	if err != nil {
-		return nil, err
-	} else if !has {
-		return nil, ErrMirrorNotExist
-	}
-	return m, nil
-}
-
-func UpdateMirror(m *Mirror) error {
-	_, err := x.Id(m.Id).Update(m)
-	return err
 }
 
 // MirrorUpdate checks and updates mirror repositories.

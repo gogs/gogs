@@ -7,7 +7,7 @@
             <h2>{{.i18n.Tr "sign_in"}}</h2>
         </div>
         <div class="panel-content">
-            {{template "base/alert" .}}
+            {{template "ng/base/alert" .}}
             <p class="field">
                 <label class="req" for="username">{{.i18n.Tr "home.uname_holder"}}</label>
                 <input class="ipt ipt-large ipt-radius {{if .Err_UserName}}ipt-error{{end}}" id="username" name="uname" type="text" value="{{.uname}}" required/>

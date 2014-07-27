@@ -7,7 +7,7 @@
             <h2>{{.i18n.Tr "sign_up"}}</h2>
         </div>
         <div class="panel-content">
-            {{template "base/alert" .}}
+            {{template "ng/base/alert" .}}
 	        {{if .DisableRegistration}}
 	        <p>{{.i18n.Tr "auth.disable_register_prompt"}}</p>
 	        {{else}}

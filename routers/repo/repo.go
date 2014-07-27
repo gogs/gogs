@@ -36,11 +36,10 @@ func Create(ctx *middleware.Context) {
 	ctx.Data["Licenses"] = models.Licenses
 
 	ctxUser := ctx.User
-	orgId := com.StrTo(ctx.Query("org")).MustInt64()
-	if orgId > 0 {
+	if orgId := com.StrTo(ctx.Query("org")).MustInt64(); orgId > 0 {
 		org, err := models.GetUserById(orgId)
 		if err != nil && err != models.ErrUserNotExist {
-			ctx.Handle(500, "home.Dashboard(GetUserById)", err)
+			ctx.Handle(500, "GetUserById", err)
 			return
 		}
 		ctxUser = org
@@ -48,10 +47,10 @@ func Create(ctx *middleware.Context) {
 	ctx.Data["ContextUser"] = ctxUser
 
 	if err := ctx.User.GetOrganizations(); err != nil {
-		ctx.Handle(500, "home.Dashboard(GetOrganizations)", err)
+		ctx.Handle(500, "GetOrganizations", err)
 		return
 	}
-	ctx.Data["AllUsers"] = append([]*models.User{ctx.User}, ctx.User.Orgs...)
+	ctx.Data["Orgs"] = ctx.User.Orgs
 
 	ctx.HTML(200, CREATE)
 }
@@ -64,11 +63,11 @@ func CreatePost(ctx *middleware.Context, form auth.CreateRepoForm) {
 	ctx.Data["Licenses"] = models.Licenses
 
 	ctxUser := ctx.User
-	orgId := com.StrTo(ctx.Query("org")).MustInt64()
-	if orgId > 0 {
-		org, err := models.GetUserById(orgId)
+	// Not equal means current user is an organization.
+	if form.Uid != ctx.User.Id {
+		org, err := models.GetUserById(form.Uid)
 		if err != nil && err != models.ErrUserNotExist {
-			ctx.Handle(500, "home.Dashboard(GetUserById)", err)
+			ctx.Handle(500, "GetUserById", err)
 			return
 		}
 		ctxUser = org
@@ -76,7 +75,7 @@ func CreatePost(ctx *middleware.Context, form auth.CreateRepoForm) {
 	ctx.Data["ContextUser"] = ctxUser
 
 	if err := ctx.User.GetOrganizations(); err != nil {
-		ctx.Handle(500, "home.CreatePost(GetOrganizations)", err)
+		ctx.Handle(500, "GetOrganizations", err)
 		return
 	}
 	ctx.Data["Orgs"] = ctx.User.Orgs
@@ -86,32 +85,19 @@ func CreatePost(ctx *middleware.Context, form auth.CreateRepoForm) {
 		return
 	}
 
-	u := ctx.User
-	// Not equal means current user is an organization.
-	if u.Id != form.Uid {
-		var err error
-		u, err = models.GetUserById(form.Uid)
-		if err != nil {
-			if err == models.ErrUserNotExist {
-				ctx.Handle(404, "home.CreatePost(GetUserById)", err)
-			} else {
-				ctx.Handle(500, "home.CreatePost(GetUserById)", err)
-			}
-			return
-		}
-
+	if ctxUser.IsOrganization() {
 		// Check ownership of organization.
-		if !u.IsOrgOwner(ctx.User.Id) {
+		if !ctxUser.IsOrgOwner(ctx.User.Id) {
 			ctx.Error(403)
 			return
 		}
 	}
 
-	repo, err := models.CreateRepository(u, form.RepoName, form.Description,
+	repo, err := models.CreateRepository(ctxUser, form.RepoName, form.Description,
 		form.Gitignore, form.License, form.Private, false, form.InitReadme)
 	if err == nil {
-		log.Trace("Repository created: %s/%s", u.Name, form.RepoName)
-		ctx.Redirect("/" + u.Name + "/" + form.RepoName)
+		log.Trace("Repository created: %s/%s", ctxUser.Name, form.RepoName)
+		ctx.Redirect("/" + ctxUser.Name + "/" + form.RepoName)
 		return
 	} else if err == models.ErrRepoAlreadyExist {
 		ctx.RenderWithErr(ctx.Tr("form.repo_name_been_taken"), CREATE, &form)
@@ -122,7 +108,7 @@ func CreatePost(ctx *middleware.Context, form auth.CreateRepoForm) {
 	}
 
 	if repo != nil {
-		if errDelete := models.DeleteRepository(u.Id, repo.Id, u.Name); errDelete != nil {
+		if errDelete := models.DeleteRepository(ctxUser.Id, repo.Id, ctxUser.Name); errDelete != nil {
 			log.Error(4, "DeleteRepository: %v", errDelete)
 		}
 	}
@@ -134,7 +120,7 @@ func Migrate(ctx *middleware.Context) {
 	ctx.Data["PageIsNewRepo"] = true
 
 	if err := ctx.User.GetOrganizations(); err != nil {
-		ctx.Handle(500, "home.Migrate(GetOrganizations)", err)
+		ctx.Handle(500, "GetOrganizations", err)
 		return
 	}
 	ctx.Data["Orgs"] = ctx.User.Orgs
@@ -147,7 +133,7 @@ func MigratePost(ctx *middleware.Context, form auth.MigrateRepoForm) {
 	ctx.Data["PageIsNewRepo"] = true
 
 	if err := ctx.User.GetOrganizations(); err != nil {
-		ctx.Handle(500, "home.MigratePost(GetOrganizations)", err)
+		ctx.Handle(500, "GetOrganizations", err)
 		return
 	}
 	ctx.Data["Orgs"] = ctx.User.Orgs
@@ -164,9 +150,9 @@ func MigratePost(ctx *middleware.Context, form auth.MigrateRepoForm) {
 		u, err = models.GetUserById(form.Uid)
 		if err != nil {
 			if err == models.ErrUserNotExist {
-				ctx.Handle(404, "home.MigratePost(GetUserById)", err)
+				ctx.Handle(404, "GetUserById", err)
 			} else {
-				ctx.Handle(500, "home.MigratePost(GetUserById)", err)
+				ctx.Handle(500, "GetUserById", err)
 			}
 			return
 		}

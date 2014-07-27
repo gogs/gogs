@@ -73,7 +73,7 @@
                     <ul class="list-no-style">
                         {{range .Repos}}
                         <li {{if .IsPrivate}}class="private"{{end}}>
-                            <a href="{{$.ContextUser.Name}}/{{.Name}}">
+                            <a href="/{{$.ContextUser.Name}}/{{.Name}}">
                                 <i class="octicon octicon-{{if .IsPrivate}}lock{{else if .IsFork}}repo-forked{{else if .IsMirror}}repo-clone{{else}}repo{{end}}"></i>
                                 <span class="repo-name">
                                     <strong class="repo">{{.Name}}</strong>
@@ -88,7 +88,9 @@
                 </div>
                 {{if not .ContextUser.IsOrganization}}
                 <div class="panel-header repo-contrib-header">
-                    <h4 class="text-bold">{{.i18n.Tr "home.collaborative_repos"}}</h4>
+                    <h4 class="text-bold">{{.i18n.Tr "home.collaborative_repos"}}
+                        <span class="repo-count label label-gray label-radius">{{.CollaborateCount}}</span>
+                    </h4>
                 </div>
                 <div class="panel-body">
                     <ul class="list-no-style">
@@ -113,7 +115,9 @@
             {{if not .ContextUser.IsOrganization}}
             <div class="panel" id="dashboard-my-org">
                 <div class="panel-header">
-                    <h4 class="text-bold">{{.i18n.Tr "home.my_orgs"}}</h4>
+                    <h4 class="text-bold">{{.i18n.Tr "home.my_orgs"}}
+                        <span class="repo-count label label-gray label-radius">{{.ContextUser.GetOrganizationCount}}</span>
+                    </h4>
                 </div>
                 <div class="panel-body">
                     <ul class="list-no-style">
@@ -136,7 +140,26 @@
             {{end}}
             <div class="panel" id="dashboard-my-mirror">
                 <div class="panel-header">
-                    <h4 class="text-bold">{{.i18n.Tr "home.my_mirrors"}}</h4>
+                    <h4 class="text-bold">{{.i18n.Tr "home.my_mirrors"}}
+                        <span class="repo-count label label-gray label-radius">{{.MirrorCount}}</span>
+                    </h4>
+                </div>
+                <div class="panel-body">
+                    <ul class="list-no-style">
+                        {{range .Mirrors}}
+                        <li {{if .IsPrivate}}class="private"{{end}}>
+                            <a href="/{{$.ContextUser.Name}}/{{.Name}}">
+                                <i class="octicon octicon-repo-clone"></i>
+                                <span class="repo-name">
+                                    <strong class="repo">{{.Name}}</strong>
+                                </span>
+                                <span class="right repo-star">
+                                    <i class="octicon octicon-star"></i>{{.NumStars}}
+                                </span>
+                            </a>
+                        </li>
+                        {{end}}
+                    </ul>
                 </div>
             </div>
         </div>

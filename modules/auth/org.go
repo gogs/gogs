@@ -19,7 +19,7 @@ import (
 //         \/     /_____/     \/     \/         \/     \/                    \/
 
 type CreateOrgForm struct {
-	OrgName string `form:"orgname" binding:"Required;AlphaDashDot;MaxSize(30)"`
+	OrgName string `form:"org_name" binding:"Required;AlphaDashDot;MaxSize(30)"`
 	Email   string `form:"email" binding:"Required;Email;MaxSize(50)"`
 }
 

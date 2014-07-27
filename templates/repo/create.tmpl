@@ -8,23 +8,23 @@
             {{template "ng/base/alert" .}}
             <div class="field">
                 <label for="owner" class="req">{{.i18n.Tr "repo.owner"}}</label>
-                <input id="owner" type="hidden" name="uid" value="{{.ContextUser.Id}}" />
+                <input id="repo-owner-id" type="hidden" name="uid" value="{{.ContextUser.Id}}" />
                 <div class="inline-block drop">
                     <a href="#" class="drop-bottom">
-                        <img class="avatar" src="{{.ContextUser.AvatarLink}}" alt="user-avatar">
-                        <strong>{{.ContextUser.Name}}</strong>
+                        <img class="avatar" src="{{.ContextUser.AvatarLink}}" id="repo-owner-avatar" alt="user-avatar">
+                        <strong id="repo-owner-name">{{.ContextUser.Name}}</strong>
                     </a>
                     <ul class="drop-down menu menu-vertical menu-radius switching-list" id="repo-create-owner-list">
-                        <li {{if eq $.ContextUser.Id .SignedUser.Id}}class="checked"{{end}}>
-                            <a href="#">
+                        <li {{if eq $.ContextUser.Id .SignedUser.Id}}class="checked"{{end}} data-uid="{{.SignedUser.Id}}">
+                            <a>
                                 <i class="octicon octicon-check"></i>
                                 <img class="avatar" src="{{.SignedUser.AvatarLink}}" alt="user-avatar">
                                 <strong>{{.SignedUser.Name}}</strong>
                             </a>
                         </li>
                         {{range .Orgs}}
-                        <li {{if eq $.ContextUser.Id .Id}}class="checked"{{end}}>
-                            <a href="#">
+                        <li {{if eq $.ContextUser.Id .Id}}class="checked"{{end}} data-uid="{{.Id}}">
+                            <a>
                                 <i class="octicon octicon-check"></i>
                                 <img class="avatar" src="{{.AvatarLink}}" alt="user-avatar">
                                 <strong>{{.Name}}</strong>
