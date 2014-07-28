@@ -203,7 +203,7 @@ body {
     border-bottom: 1px solid #ccc;
 }
 #login-card {
-    width: 600px;
+    max-width: 600px;
 }
 #login-card .form-control {
     padding: 6px 12px;
@@ -214,7 +214,7 @@ body {
     line-height: 30px;
 }
 #install-card {
-    width: 800px;
+    max-width: 800px;
 }
 #install-card .form-group {
     margin-left: 0;
@@ -324,7 +324,7 @@ body {
 #org-create,
 #org-teams-create,
 #org-teams-edit {
-    width: 800px;
+    max-width: 800px;
 }
 #repo-create textarea[name=desc] {
     height: 8em;
