@@ -165,7 +165,7 @@ func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 		ctx.Data["IsRepositoryTrueOwner"] = ctx.Repo.IsTrueOwner
 
 		if setting.SshPort != 22 {
-			ctx.Repo.CloneLink.SSH = fmt.Sprintf("ssh://%s@%s/%s/%s.git", setting.RunUser, setting.Domain, u.LowerName, repo.LowerName)
+			ctx.Repo.CloneLink.SSH = fmt.Sprintf("ssh://%s@%s:%d/%s/%s.git", setting.RunUser, setting.Domain, setting.SshPort, u.LowerName, repo.LowerName)
 		} else {
 			ctx.Repo.CloneLink.SSH = fmt.Sprintf("%s@%s:%s/%s.git", setting.RunUser, setting.Domain, u.LowerName, repo.LowerName)
 		}
