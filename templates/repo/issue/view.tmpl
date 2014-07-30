@@ -109,7 +109,7 @@
                     <div class="issue-child issue-reference issue-reference-commit">
                         <a class="user pull-left" href="/user/{{.Poster.Name}}"><img class="avatar" src="{{.Poster.AvatarLink}}" alt=""/></a>
                         <div class="issue-content">
-                            <a class="user pull-left" href="/user/{{.Poster.Name}}">{{.Poster.Name}}</a> <span class="label label-primary">Referenced</span> this issue <span class="time">{{TimeSince .Created}}</span>
+                            <a class="user pull-left" href="/user/{{.Poster.Name}}">{{.Poster.Name}}</a> <span class="label label-primary">Referenced</span> this issue <span class="time">{{TimeSince .Created $.Lang}}</span>
                             <p>
                                 <a class="user pull-left" href="/user/{{.Poster.Name}}"><img class="avatar" src="{{.Poster.AvatarLink}}" alt=""/></a>
                                 {{.ContentHtml}}

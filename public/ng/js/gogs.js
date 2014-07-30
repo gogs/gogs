@@ -130,15 +130,16 @@ var Gogs = {};
         $(window).on('hashchange', function (e) {
             var m = window.location.hash.match(/^#(L\d+)\-(L\d+)$/);
             var $list = $('.code-view ol.linenums > li');
+            var $first;
             if (m) {
-                var $first = $list.filter('.' + m[1]);
+                $first = $list.filter('.' + m[1]);
                 selectRange($list, $first, $list.filter('.' + m[2]));
                 $("html, body").scrollTop($first.offset().top - 200);
                 return;
             }
             m = window.location.hash.match(/^#(L\d+)$/);
             if (m) {
-                var $first = $list.filter('.' + m[1]);
+                $first = $list.filter('.' + m[1]);
                 selectRange($list, $first);
                 $("html, body").scrollTop($first.offset().top - 200);
             }
@@ -211,7 +212,8 @@ function homepage() {
 function settingsProfile() {
     // Confirmation of change username in user profile page.
     $('#user-profile-form').submit(function (e) {
-        if (($('#username').data('uname') != $('#username').val()) && !confirm('Username has been changed, do you want to continue?')) {
+        var $username = $('#username');
+        if (($username.data('uname') != $username.val()) && !confirm('Username has been changed, do you want to continue?')) {
             e.preventDefault();
             return true;
         }
