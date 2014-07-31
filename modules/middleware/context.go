@@ -14,6 +14,8 @@ import (
 	"time"
 
 	"github.com/Unknwon/macaron"
+	"github.com/macaron-contrib/cache"
+	"github.com/macaron-contrib/csrf"
 	"github.com/macaron-contrib/i18n"
 	"github.com/macaron-contrib/session"
 
@@ -29,13 +31,13 @@ import (
 type Context struct {
 	*macaron.Context
 	i18n.Locale
+	Cache   cache.Cache
+	csrf    csrf.CSRF
 	Flash   *session.Flash
 	Session session.Store
 
 	User     *models.User
 	IsSigned bool
-
-	csrfToken string
 
 	Repo struct {
 		IsOwner     bool
@@ -69,10 +71,6 @@ func (ctx *Context) Query(name string) string {
 	ctx.Req.ParseForm()
 	return ctx.Req.Form.Get(name)
 }
-
-// func (ctx *Context) Param(name string) string {
-// 	return ctx.p[name]
-// }
 
 // HasError returns true if error occurs in form validation.
 func (ctx *Context) HasApiError() bool {
@@ -131,33 +129,6 @@ func (ctx *Context) Handle(status int, title string, err error) {
 	ctx.HTML(status, base.TplName(fmt.Sprintf("status/%d", status)))
 }
 
-func (ctx *Context) CsrfToken() string {
-	if len(ctx.csrfToken) > 0 {
-		return ctx.csrfToken
-	}
-
-	token := ctx.GetCookie("_csrf")
-	if len(token) == 0 {
-		token = base.GetRandomString(30)
-		ctx.SetCookie("_csrf", token)
-	}
-	ctx.csrfToken = token
-	return token
-}
-
-func (ctx *Context) CsrfTokenValid() bool {
-	token := ctx.Query("_csrf")
-	if token == "" {
-		token = ctx.Req.Header.Get("X-Csrf-Token")
-	}
-	if token == "" {
-		return false
-	} else if ctx.csrfToken != token {
-		return false
-	}
-	return true
-}
-
 func (ctx *Context) ServeFile(file string, names ...string) {
 	var name string
 	if len(names) > 0 {
@@ -195,14 +166,15 @@ func (ctx *Context) ServeContent(name string, r io.ReadSeeker, params ...interfa
 
 // Contexter initializes a classic context for a request.
 func Contexter() macaron.Handler {
-	return func(c *macaron.Context, l i18n.Locale, sess session.Store, f *session.Flash) {
+	return func(c *macaron.Context, l i18n.Locale, cache cache.Cache, sess session.Store, f *session.Flash, x csrf.CSRF) {
 		ctx := &Context{
 			Context: c,
 			Locale:  l,
+			Cache:   cache,
+			csrf:    x,
 			Flash:   f,
 			Session: sess,
 		}
-		// Cache:  setting.Cache,
 
 		// Compute current URL for real-time change language.
 		link := ctx.Req.RequestURI
@@ -231,9 +203,8 @@ func Contexter() macaron.Handler {
 			}
 		}
 
-		// get or create csrf token
-		ctx.Data["CsrfToken"] = ctx.CsrfToken()
-		ctx.Data["CsrfTokenHtml"] = template.HTML(`<input type="hidden" name="_csrf" value="` + ctx.csrfToken + `">`)
+		ctx.Data["CsrfToken"] = x.GetToken()
+		ctx.Data["CsrfTokenHtml"] = template.HTML(`<input type="hidden" name="_csrf" value="` + x.GetToken() + `">`)
 
 		c.Map(ctx)
 	}

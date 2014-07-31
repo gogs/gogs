@@ -14,6 +14,9 @@ import (
 
 	"github.com/Unknwon/macaron"
 	"github.com/codegangsta/cli"
+	"github.com/macaron-contrib/cache"
+	"github.com/macaron-contrib/captcha"
+	"github.com/macaron-contrib/csrf"
 	"github.com/macaron-contrib/i18n"
 	"github.com/macaron-contrib/session"
 
@@ -21,7 +24,6 @@ import (
 	"github.com/gogits/gogs/modules/auth/apiv1"
 	"github.com/gogits/gogs/modules/avatar"
 	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/modules/captcha"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/middleware"
 	"github.com/gogits/gogs/modules/middleware/binding"
@@ -78,9 +80,19 @@ func newMacaron() *macaron.Macaron {
 		Names:    setting.Names,
 		Redirect: true,
 	}))
+	m.Use(cache.Cacher(cache.Options{
+		Adapter:  setting.CacheAdapter,
+		Interval: setting.CacheInternal,
+		Conn:     setting.CacheConn,
+	}))
+	m.Use(captcha.Captchaer())
 	m.Use(session.Sessioner(session.Options{
 		Provider: setting.SessionProvider,
 		Config:   *setting.SessionConfig,
+	}))
+	m.Use(csrf.Generate(csrf.Options{
+		Secret:    setting.SecretKey,
+		SetCookie: true,
 	}))
 	m.Use(middleware.Contexter())
 	return m
@@ -121,15 +133,11 @@ func runWeb(*cli.Context) {
 			// Repositories.
 			r.Get("/orgs/:org/repos/search", v1.SearchOrgRepositoreis)
 
-			r.Any("**", func(ctx *middleware.Context) {
+			r.Any("/*", func(ctx *middleware.Context) {
 				ctx.JSON(404, &base.ApiJsonErr{"Not Found", v1.DOC_URL})
 			})
 		})
 	})
-
-	avt := avatar.CacheServer("public/img/avatar/", "public/img/avatar_default.jpg")
-	os.MkdirAll("public/img/avatar/", os.ModePerm)
-	m.Get("/avatar/:hash", avt.ServeHTTP)
 
 	// User routers.
 	m.Group("/user", func(r *macaron.Router) {
@@ -165,10 +173,10 @@ func runWeb(*cli.Context) {
 
 	m.Get("/user/:username", ignSignIn, user.Profile) // TODO: Legacy
 
-	// Captcha service.
-	cpt := captcha.NewCaptcha("/captcha/", setting.Cache)
-	m.Map(cpt)
-	m.Get("/captcha/*", cpt.Handler)
+	// Gravatar service.
+	avt := avatar.CacheServer("public/img/avatar/", "public/img/avatar_default.jpg")
+	os.MkdirAll("public/img/avatar/", os.ModePerm)
+	m.Get("/avatar/:hash", avt.ServeHTTP)
 
 	adminReq := middleware.Toggle(&middleware.ToggleOptions{SignInRequire: true, AdminRequire: true})
 
@@ -199,7 +207,7 @@ func runWeb(*cli.Context) {
 	m.Get("/:username", ignSignIn, user.Profile)
 
 	if macaron.Env == macaron.DEV {
-		m.Get("/template/**", dev.TemplatePreview)
+		m.Get("/template/*", dev.TemplatePreview)
 		dev.RegisterDebugRoutes(m)
 	}
 

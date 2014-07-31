@@ -103,7 +103,6 @@ var TemplateFuncs template.FuncMap = map[string]interface{}{
 	"ActionContent2Commits": ActionContent2Commits,
 	"Oauth2Icon":            Oauth2Icon,
 	"Oauth2Name":            Oauth2Name,
-	"CreateCaptcha":         func() string { return "" },
 }
 
 type Actioner interface {
