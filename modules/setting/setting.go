@@ -16,8 +16,6 @@ import (
 	"github.com/Unknwon/goconfig"
 	"github.com/macaron-contrib/session"
 
-	"github.com/gogits/cache"
-
 	"github.com/gogits/gogs/modules/log"
 	// "github.com/gogits/gogs-ng/modules/ssh"
 )
@@ -80,9 +78,9 @@ var (
 	AttachmentEnabled      bool
 
 	// Cache settings.
-	Cache        cache.Cache
-	CacheAdapter string
-	CacheConfig  string
+	CacheAdapter  string
+	CacheInternal int
+	CacheConn     string
 
 	EnableRedis    bool
 	EnableMemcache bool
@@ -325,18 +323,11 @@ func newCacheService() {
 
 	switch CacheAdapter {
 	case "memory":
-		CacheConfig = fmt.Sprintf(`{"interval":%d}`, Cfg.MustInt("cache", "INTERVAL", 60))
+		CacheInternal = Cfg.MustInt("cache", "INTERVAL", 60)
 	case "redis", "memcache":
-		CacheConfig = fmt.Sprintf(`{"conn":"%s"}`, strings.Trim(Cfg.MustValue("cache", "HOST"), "\" "))
+		CacheConn = strings.Trim(Cfg.MustValue("cache", "HOST"), "\" ")
 	default:
 		log.Fatal(4, "Unknown cache adapter: %s", CacheAdapter)
-	}
-
-	var err error
-	Cache, err = cache.NewCache(CacheAdapter, CacheConfig)
-	if err != nil {
-		log.Fatal(4, "Init cache system failed, adapter: %s, config: %s, %v\n",
-			CacheAdapter, CacheConfig, err)
 	}
 
 	log.Info("Cache Service Enabled")

@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/Unknwon/macaron"
+	"github.com/macaron-contrib/csrf"
 
 	"github.com/gogits/gogs/modules/setting"
 )
@@ -34,9 +35,11 @@ func Toggle(options *ToggleOptions) macaron.Handler {
 			return
 		}
 
-		if !options.DisableCsrf && ctx.Req.Method == "POST" && !ctx.CsrfTokenValid() {
-			ctx.Error(403, "CSRF token does not match")
-			return
+		if !options.SignOutRequire && !options.DisableCsrf && ctx.Req.Method == "POST" {
+			csrf.Validate(ctx.Context, ctx.csrf)
+			if ctx.Written() {
+				return
+			}
 		}
 
 		if options.SignInRequire {

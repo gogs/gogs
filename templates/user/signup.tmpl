@@ -2,7 +2,6 @@
 {{template "ng/base/header" .}}
 <div id="sign-wrapper">
     <form class="form-align form panel panel-radius sign-panel sign-form container" id="sign-up-form" action="/user/sign_up" method="post">
-        {{.CsrfTokenHtml}}
         <div class="panel-header">
             <h2>{{.i18n.Tr "sign_up"}}</h2>
         </div>
@@ -29,7 +28,7 @@
             </p>
             <p class="field">
                 <label></label>
-                {{CreateCaptcha}}
+                {{.Captcha.CreateHtml}}
             </p>
             <p class="field">
                 <label class="req" for="captcha">{{.i18n.Tr "captcha"}}</label>
