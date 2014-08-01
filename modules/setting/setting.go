@@ -187,54 +187,23 @@ func NewConfigContext() {
 	AttachmentMaxFiles = Cfg.MustInt("attachment", "MAX_FILES", 10)
 	AttachmentEnabled = Cfg.MustBool("attachment", "ENABLE", true)
 
-	TimeFormat = Cfg.MustValue("time", "FORMAT", time.RFC1123)
-
-	switch TimeFormat {
-	case "ANSIC":
-		TimeFormat = time.ANSIC
-
-	case "UnixDate":
-		TimeFormat = time.UnixDate
-
-	case "RubyDate":
-		TimeFormat = time.RubyDate
-
-	case "RFC822":
-		TimeFormat = time.RFC822
-
-	case "RFC822Z":
-		TimeFormat = time.RFC822Z
-
-	case "RFC850":
-		TimeFormat = time.RFC850
-
-	case "RFC1123":
-		TimeFormat = time.RFC1123
-
-	case "RFC1123Z":
-		TimeFormat = time.RFC1123Z
-
-	case "RFC3339":
-		TimeFormat = time.RFC3339
-
-	case "RFC3339Nano":
-		TimeFormat = time.RFC3339Nano
-
-	case "Kitchen":
-		TimeFormat = time.Kitchen
-
-	case "Stamp":
-		TimeFormat = time.Stamp
-
-	case "StampMilli":
-		TimeFormat = time.StampMilli
-
-	case "StampMicro":
-		TimeFormat = time.StampMicro
-
-	case "StampNano":
-		TimeFormat = time.StampNano
-	}
+	TimeFormat = map[string]string{
+		"ANSIC":       time.ANSIC,
+		"UnixDate":    time.UnixDate,
+		"RubyDate":    time.RubyDate,
+		"RFC822":      time.RFC822,
+		"RFC822Z":     time.RFC822Z,
+		"RFC850":      time.RFC850,
+		"RFC1123":     time.RFC1123,
+		"RFC1123Z":    time.RFC1123Z,
+		"RFC3339":     time.RFC3339,
+		"RFC3339Nano": time.RFC3339Nano,
+		"Kitchen":     time.Kitchen,
+		"Stamp":       time.Stamp,
+		"StampMilli":  time.StampMilli,
+		"StampMicro":  time.StampMicro,
+		"StampNano":   time.StampNano,
+	}[Cfg.MustValue("time", "FORMAT", "RFC1123")]
 
 	if err = os.MkdirAll(AttachmentPath, os.ModePerm); err != nil {
 		log.Fatal(4, "Could not create directory %s: %s", AttachmentPath, err)
