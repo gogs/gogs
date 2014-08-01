@@ -294,6 +294,8 @@ img.avatar-30 {
   border: 1px solid #ddd;
   border-radius: .25em;
   margin: 5px 0;
+  padding: 10px;
+  background-color: #f8f8f8;
 }
 .markdown > pre.linenums {
   padding: 0;
@@ -836,6 +838,9 @@ The register and sign-in page style
   margin-left: -15px;
 }
 /* repository main */
+#repo-wrapper {
+  padding-bottom: 100px;
+}
 #repo-header {
   height: 69px;
   border-bottom: 1px solid #d6d6d6;
@@ -1100,29 +1105,36 @@ The register and sign-in page style
   width: 520px;
 }
 /* repository create */
+#repo-migrate-form,
 #repo-create-form {
   width: 800px;
-  margin: 60px auto 150px auto;
+  margin: 60px auto auto auto;
   background: white;
 }
+#repo-migrate-form h2,
 #repo-create-form h2 {
   margin: .5em 1em;
 }
+#repo-migrate-form .field,
 #repo-create-form .field {
   margin: 1.2em 0 2em 0;
 }
+#repo-migrate-form .ipt,
 #repo-create-form .ipt {
   width: 540px;
 }
+#repo-migrate-form textarea,
 #repo-create-form textarea {
   height: 120px;
 }
+#repo-migrate-form .avatar,
 #repo-create-form .avatar {
   vertical-align: middle;
   margin-right: .6em;
   width: 28px;
   height: 28px;
 }
+#repo-migrate-form:hover,
 #repo-create-form:hover {
   box-shadow: 0px 0px 6px #CCC;
 }
