@@ -63,9 +63,9 @@ func validateApiReq(errs *binding.Errors, data map[string]interface{}, f interfa
 			case binding.BindingAlphaDashDotError:
 				data["ErrorMsg"] = fieldName + " must be valid alpha or numeric or dash(-_) or dot characters"
 			case binding.BindingMinSizeError:
-				data["ErrorMsg"] = fieldName + " must contain at least " + auth.GetMinMaxSize(field) + " characters"
+				data["ErrorMsg"] = fieldName + " must contain at least " + auth.GetMinSize(field) + " characters"
 			case binding.BindingMaxSizeError:
-				data["ErrorMsg"] = fieldName + " must contain at most " + auth.GetMinMaxSize(field) + " characters"
+				data["ErrorMsg"] = fieldName + " must contain at most " + auth.GetMaxSize(field) + " characters"
 			case binding.BindingEmailError:
 				data["ErrorMsg"] = fieldName + " is not a valid e-mail address"
 			case binding.BindingUrlError:

@@ -24,7 +24,7 @@ type InstallForm struct {
 	Domain          string `form:"domain"`
 	AppUrl          string `form:"app_url"`
 	AdminName       string `form:"admin_name" binding:"Required;AlphaDashDot;MaxSize(30)"`
-	AdminPasswd     string `form:"admin_pwd" binding:"Required;MinSize(6);MaxSize(30)"`
+	AdminPasswd     string `form:"admin_pwd" binding:"Required;MinSize(6);MaxSize(255)"`
 	AdminEmail      string `form:"admin_email" binding:"Required;Email;MaxSize(50)"`
 	SmtpHost        string `form:"smtp_host"`
 	SmtpEmail       string `form:"mailer_user"`
@@ -47,7 +47,7 @@ func (f *InstallForm) Validate(ctx *macaron.Context, errs *binding.Errors, l i18
 type RegisterForm struct {
 	UserName  string `form:"uname" binding:"Required;AlphaDashDot;MaxSize(35)"`
 	Email     string `form:"email" binding:"Required;Email;MaxSize(50)"`
-	Password  string `form:"password" binding:"Required;MinSize(6);MaxSize(30)"`
+	Password  string `form:"password" binding:"Required;MinSize(6);MaxSize(255)"`
 	Retype    string `form:"retype"`
 	LoginType string `form:"logintype"`
 	LoginName string `form:"loginname"`
@@ -59,7 +59,7 @@ func (f *RegisterForm) Validate(ctx *macaron.Context, errs *binding.Errors, l i1
 
 type SignInForm struct {
 	UserName string `form:"uname" binding:"Required;MaxSize(35)"`
-	Password string `form:"password" binding:"Required;MinSize(6);MaxSize(30)"`
+	Password string `form:"password" binding:"Required;MinSize(6);MaxSize(255)"`
 	Remember bool   `form:"remember"`
 }
 
@@ -88,8 +88,8 @@ func (f *UpdateProfileForm) Validate(ctx *macaron.Context, errs *binding.Errors,
 }
 
 type ChangePasswordForm struct {
-	OldPassword string `form:"old_password" binding:"Required;MinSize(6);MaxSize(30)"`
-	Password    string `form:"password" binding:"Required;MinSize(6);MaxSize(30)"`
+	OldPassword string `form:"old_password" binding:"Required;MinSize(6);MaxSize(255)"`
+	Password    string `form:"password" binding:"Required;MinSize(6);MaxSize(255)"`
 	Retype      string `form:"retype"`
 }
 
