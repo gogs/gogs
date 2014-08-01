@@ -237,8 +237,6 @@ func MirrorRepository(repoId int64, userName, repoName, repoPath, url string) er
 	}); err != nil {
 		return err
 	}
-
-	// return git.UnpackRefs(repoPath)
 	return nil
 }
 
@@ -255,9 +253,7 @@ func MirrorUpdate() {
 			repoPath, fmt.Sprintf("MirrorUpdate: %s", repoPath),
 			"git", "remote", "update"); err != nil {
 			return errors.New("git remote update: " + stderr)
-		} // else if err = git.UnpackRefs(repoPath); err != nil {
-		// 	return errors.New("UnpackRefs: " + err.Error())
-		// }
+		}
 
 		m.NextUpdate = time.Now().Add(time.Duration(m.Interval) * time.Hour)
 		return UpdateMirror(m)
