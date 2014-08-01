@@ -12,6 +12,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"hash"
+	"html/template"
 	"math"
 	"strings"
 	"time"
@@ -241,8 +242,7 @@ func TimeSincePro(then time.Time) string {
 	return strings.TrimPrefix(timeStr, ", ")
 }
 
-// TimeSince calculates the time interval and generate user-friendly string.
-func TimeSince(then time.Time, lang string) string {
+func timeSince(then time.Time, lang string) string {
 	now := time.Now()
 
 	lbl := i18n.Tr(lang, "tool.ago")
@@ -290,6 +290,11 @@ func TimeSince(then time.Time, lang string) string {
 	default:
 		return i18n.Tr(lang, "tool.years", diff/Year, lbl)
 	}
+}
+
+// TimeSince calculates the time interval and generate user-friendly string.
+func TimeSince(t time.Time, lang string) template.HTML {
+	return template.HTML(fmt.Sprintf(`<span class="time-since" title="%s">%s</span>`, t.Format(setting.TimeFormat), timeSince(t, lang)))
 }
 
 const (
