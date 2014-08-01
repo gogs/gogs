@@ -92,13 +92,21 @@ func AssignForm(form interface{}, data map[string]interface{}) {
 	}
 }
 
-func GetMinMaxSize(field reflect.StructField) string {
+func getSize(field reflect.StructField, prefix string) string {
 	for _, rule := range strings.Split(field.Tag.Get("binding"), ";") {
-		if strings.HasPrefix(rule, "MinSize(") || strings.HasPrefix(rule, "MaxSize(") {
+		if strings.HasPrefix(rule, prefix) {
 			return rule[8 : len(rule)-1]
 		}
 	}
 	return ""
+}
+
+func GetMinSize(field reflect.StructField) string {
+	return getSize(field, "MinSize(")
+}
+
+func GetMaxSize(field reflect.StructField) string {
+	return getSize(field, "MaxSize(")
 }
 
 func validate(errs *binding.Errors, data map[string]interface{}, f interface{}, l i18n.Locale) {
@@ -142,9 +150,9 @@ func validate(errs *binding.Errors, data map[string]interface{}, f interface{}, 
 			case binding.BindingAlphaDashDotError:
 				data["ErrorMsg"] = trName + l.Tr("form.alpha_dash_dot_error")
 			case binding.BindingMinSizeError:
-				data["ErrorMsg"] = trName + l.Tr("form.min_size_error", GetMinMaxSize(field))
+				data["ErrorMsg"] = trName + l.Tr("form.min_size_error", GetMinSize(field))
 			case binding.BindingMaxSizeError:
-				data["ErrorMsg"] = trName + l.Tr("form.max_size_error", GetMinMaxSize(field))
+				data["ErrorMsg"] = trName + l.Tr("form.max_size_error", GetMaxSize(field))
 			case binding.BindingEmailError:
 				data["ErrorMsg"] = trName + l.Tr("form.email_error")
 			case binding.BindingUrlError:
