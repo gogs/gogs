@@ -36,7 +36,7 @@
             </div>
             <div class="field">
                 <label class="req" for="repo-name">{{.i18n.Tr "repo.repo_name"}}</label>
-                <input class="ipt ipt-radius" id="repo-name" name="repo_name" type="text" value="{{.repo_name}}" required />
+                <input class="ipt ipt-radius {{if .Err_RepoName}}ipt-error{{end}}" id="repo-name" name="repo_name" type="text" value="{{.repo_name}}" required />
                 <span class="form-label"></span>
                 <span class="help">{{.i18n.Tr "repo.repo_name_helper" | Str2html}}</span>
             </div>
@@ -47,7 +47,7 @@
             </p>
             <div class="field clear">
                 <label class="left" for="desc">{{.i18n.Tr "repo.repo_desc"}}</label>
-                <textarea class="ipt ipt-radius" id="desc" name="desc">{{.desc}}</textarea>
+                <textarea class="ipt ipt-radius {{if .Err_Description}}ipt-error{{end}}" id="desc" name="desc">{{.desc}}</textarea>
             </div>
             <p class="field">
                 <label for="lang">{{.i18n.Tr "repo.repo_lang"}}</label>

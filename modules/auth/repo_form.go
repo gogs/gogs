@@ -33,11 +33,11 @@ func (f *CreateRepoForm) Validate(ctx *macaron.Context, errs *binding.Errors, l 
 }
 
 type MigrateRepoForm struct {
-	Url          string `form:"url" binding:"Url"`
+	HttpsUrl     string `form:"url" binding:"Url"`
 	AuthUserName string `form:"auth_username"`
 	AuthPasswd   string `form:"auth_password"`
 	Uid          int64  `form:"uid" binding:"Required"`
-	RepoName     string `form:"repo" binding:"Required;AlphaDash;MaxSize(100)"`
+	RepoName     string `form:"repo_name" binding:"Required;AlphaDash;MaxSize(100)"`
 	Mirror       bool   `form:"mirror"`
 	Private      bool   `form:"private"`
 	Description  string `form:"desc" binding:"MaxSize(255)"`

@@ -59,7 +59,7 @@ var Gogs = {};
     Gogs.renderMarkdown = function () {
         var $md = $('.markdown');
         var $pre = $md.find('pre > code').parent();
-        $pre.addClass('prettyprint linenums');
+        $pre.addClass('prettyprint');
         prettyPrint();
 
         // Set anchor.
@@ -166,11 +166,17 @@ function initRepoCreate() {
             console.log("set repo owner to uid :", uid, $(this).text().trim());
         }
     });
+
+    $('#auth-button').click(function (e) {
+        $('#repo-migrate-auth').slideToggle('fast');
+        e.preventDefault();
+    })
+    console.log('initRepoCreate');
 }
 
 $(document).ready(function () {
     initCore();
-    if ($('#repo-create-form').length) {
+    if ($('#repo-create-form').length || $('#repo-migrate-form').length) {
         initRepoCreate();
     }
 

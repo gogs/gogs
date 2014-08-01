@@ -27,7 +27,6 @@ const (
 
 func Create(ctx *middleware.Context) {
 	ctx.Data["Title"] = ctx.Tr("new_repo")
-	ctx.Data["PageIsRepoCreate"] = true
 
 	// Give default value for template to render.
 	ctx.Data["gitignore"] = "0"
@@ -57,7 +56,6 @@ func Create(ctx *middleware.Context) {
 
 func CreatePost(ctx *middleware.Context, form auth.CreateRepoForm) {
 	ctx.Data["Title"] = ctx.Tr("new_repo")
-	ctx.Data["PageIsRepoCreate"] = true
 
 	ctx.Data["Gitignores"] = models.Gitignores
 	ctx.Data["Licenses"] = models.Licenses
@@ -100,9 +98,11 @@ func CreatePost(ctx *middleware.Context, form auth.CreateRepoForm) {
 		ctx.Redirect("/" + ctxUser.Name + "/" + form.RepoName)
 		return
 	} else if err == models.ErrRepoAlreadyExist {
+		ctx.Data["Err_RepoName"] = true
 		ctx.RenderWithErr(ctx.Tr("form.repo_name_been_taken"), CREATE, &form)
 		return
 	} else if err == models.ErrRepoNameIllegal {
+		ctx.Data["Err_RepoName"] = true
 		ctx.RenderWithErr(ctx.Tr("form.illegal_repo_name"), CREATE, &form)
 		return
 	}
@@ -112,12 +112,22 @@ func CreatePost(ctx *middleware.Context, form auth.CreateRepoForm) {
 			log.Error(4, "DeleteRepository: %v", errDelete)
 		}
 	}
-	ctx.Handle(500, "CreateRepository", err)
+	ctx.Handle(500, "CreatePost", err)
 }
 
 func Migrate(ctx *middleware.Context) {
-	ctx.Data["Title"] = "Migrate repository"
-	ctx.Data["PageIsNewRepo"] = true
+	ctx.Data["Title"] = ctx.Tr("new_migrate")
+
+	ctxUser := ctx.User
+	if orgId := com.StrTo(ctx.Query("org")).MustInt64(); orgId > 0 {
+		org, err := models.GetUserById(orgId)
+		if err != nil && err != models.ErrUserNotExist {
+			ctx.Handle(500, "GetUserById", err)
+			return
+		}
+		ctxUser = org
+	}
+	ctx.Data["ContextUser"] = ctxUser
 
 	if err := ctx.User.GetOrganizations(); err != nil {
 		ctx.Handle(500, "GetOrganizations", err)
@@ -129,8 +139,18 @@ func Migrate(ctx *middleware.Context) {
 }
 
 func MigratePost(ctx *middleware.Context, form auth.MigrateRepoForm) {
-	ctx.Data["Title"] = "Migrate repository"
-	ctx.Data["PageIsNewRepo"] = true
+	ctx.Data["Title"] = ctx.Tr("new_migrate")
+
+	ctxUser := ctx.User
+	if orgId := com.StrTo(ctx.Query("org")).MustInt64(); orgId > 0 {
+		org, err := models.GetUserById(orgId)
+		if err != nil && err != models.ErrUserNotExist {
+			ctx.Handle(500, "GetUserById", err)
+			return
+		}
+		ctxUser = org
+	}
+	ctx.Data["ContextUser"] = ctxUser
 
 	if err := ctx.User.GetOrganizations(); err != nil {
 		ctx.Handle(500, "GetOrganizations", err)
@@ -143,49 +163,45 @@ func MigratePost(ctx *middleware.Context, form auth.MigrateRepoForm) {
 		return
 	}
 
-	u := ctx.User
-	// Not equal means current user is an organization.
-	if u.Id != form.Uid {
-		var err error
-		u, err = models.GetUserById(form.Uid)
-		if err != nil {
-			if err == models.ErrUserNotExist {
-				ctx.Handle(404, "GetUserById", err)
-			} else {
-				ctx.Handle(500, "GetUserById", err)
-			}
+	if ctxUser.IsOrganization() {
+		// Check ownership of organization.
+		if !ctxUser.IsOrgOwner(ctx.User.Id) {
+			ctx.Error(403)
 			return
 		}
 	}
 
 	authStr := strings.Replace(fmt.Sprintf("://%s:%s",
 		form.AuthUserName, form.AuthPasswd), "@", "%40", -1)
-	url := strings.Replace(form.Url, "://", authStr+"@", 1)
-	repo, err := models.MigrateRepository(u, form.RepoName, form.Description, form.Private,
+	url := strings.Replace(form.HttpsUrl, "://", authStr+"@", 1)
+	repo, err := models.MigrateRepository(ctxUser, form.RepoName, form.Description, form.Private,
 		form.Mirror, url)
 	if err == nil {
-		log.Trace("%s Repository migrated: %s/%s", ctx.Req.RequestURI, u.LowerName, form.RepoName)
-		ctx.Redirect("/" + u.Name + "/" + form.RepoName)
+		log.Trace("Repository migrated: %s/%s", ctxUser.Name, form.RepoName)
+		ctx.Redirect("/" + ctxUser.Name + "/" + form.RepoName)
 		return
 	} else if err == models.ErrRepoAlreadyExist {
-		ctx.RenderWithErr("Repository name has already been used", MIGRATE, &form)
+		ctx.Data["Err_RepoName"] = true
+		ctx.RenderWithErr(ctx.Tr("form.repo_name_been_taken"), MIGRATE, &form)
 		return
 	} else if err == models.ErrRepoNameIllegal {
-		ctx.RenderWithErr(models.ErrRepoNameIllegal.Error(), MIGRATE, &form)
+		ctx.Data["Err_RepoName"] = true
+		ctx.RenderWithErr(ctx.Tr("form.illegal_repo_name"), MIGRATE, &form)
 		return
 	}
 
 	if repo != nil {
-		if errDelete := models.DeleteRepository(u.Id, repo.Id, u.Name); errDelete != nil {
+		if errDelete := models.DeleteRepository(ctxUser.Id, repo.Id, ctxUser.Name); errDelete != nil {
 			log.Error(4, "DeleteRepository: %v", errDelete)
 		}
 	}
 
 	if strings.Contains(err.Error(), "Authentication failed") {
-		ctx.RenderWithErr(err.Error(), MIGRATE, &form)
+		ctx.Data["Err_Auth"] = true
+		ctx.RenderWithErr(ctx.Tr("form.auth_failed", err), MIGRATE, &form)
 		return
 	}
-	ctx.Handle(500, "MigrateRepository", err)
+	ctx.Handle(500, "MigratePost", err)
 }
 
 // func Action(ctx *middleware.Context, params martini.Params) {

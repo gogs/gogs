@@ -1,127 +1,82 @@
-{{template "base/head" .}}
-{{template "base/navbar" .}}
-<div class="container" id="body">
-    <form action="/repo/migrate" method="post" class="form-horizontal card" id="repo-create">
+{{template "ng/base/head" .}}
+{{template "ng/base/header" .}}
+<div id="repo-wrapper">
+    <form id="repo-migrate-form" class="form form-align panel panel-radius" action="/repo/migrate" method="post">
         {{.CsrfTokenHtml}}
-        <h3>Repository Migration</h3>
-        {{template "base/alert" .}}
-        <!-- <div class="form-group">
-            <label class="col-md-2 control-label">From<strong class="text-danger">*</strong></label>
-            <div class="col-md-8">
-                <select class="form-control" name="from">
-                    <option value="github">GitHub</option>
-                </select>
+        <div class="panel-header"><h2>{{.i18n.Tr "new_migrate"}}</h2></div>
+        <div class="panel-content">
+            {{template "ng/base/alert" .}}
+            <div class="field">
+                <label class="req" for="url">HTTPS URL</label>
+                <input class="ipt ipt-radius {{if .Err_HttpsUrl}}ipt-error{{end}}" id="url" name="url" type="text" value="{{.url}}" required />
             </div>
-        </div> -->
-
-        <div class="form-group">
-            <label class="col-md-2 control-label">HTTPS URL<strong class="text-danger">*</strong></label>
-            <div class="col-md-8">
-                <input name="url" type="text" class="form-control" placeholder="Type your migration repository HTTPS URL" value="{{.url}}" required="required" >
-            </div>
-        </div>
-
-        <div class="form-group">
-            <div class="col-md-offset-2 col-md-8">
-                <a class="btn btn-default" data-toggle="collapse" data-target="#repo-import-auth">Need Authorization</a>
-            </div>
-            <div id="repo-import-auth" class="collapse">
-                <div class="form-group">
-                    <label class="col-md-2 control-label">Username</label>
-                    <div class="col-md-8">
-                        <input name="auth_username" type="text" class="form-control" placeholder="Type your user name" value="{{.auth_username}}" >
+            <div class="field">
+                <span class="form-label"></span>
+                <button class="btn btn-large btn-gray btn-radius" id="auth-button" data-toggle="collapse" data-target="#repo-import-auth">{{.i18n.Tr "repo.need_auth"}}</button>
+                <div id="repo-migrate-auth" {{if not .Err_Auth}}class="hide"{{end}}>
+                    <div class="field">
+                        <label for="auth_username">{{.i18n.Tr "username"}}</label>
+                        <input class="ipt ipt-radius {{if .Err_Auth}}ipt-error{{end}}" id="auth_username" name="auth_username" type="text" value="{{.auth_username}}"  />
                     </div>
-                </div>
-                <div class="form-group">
-                    <label class="col-md-2 control-label">Password</label>
-                    <div class="col-md-8">
-                        <input name="auth_password" type="password" class="form-control" placeholder="Type your password" value="{{.auth_password}}" >
+                    <div class="field">
+                        <label for="auth_password">{{.i18n.Tr "password"}}</label>
+                        <input class="ipt ipt-radius {{if .Err_Auth}}ipt-error{{end}}" id="auth_password" name="auth_password" type="text" value="{{.auth_password}}"  />
                     </div>
                 </div>
             </div>
-        </div>
-        <hr/>
-        <div class="form-group">
-            <label class="col-md-2 control-label">Owner<strong class="text-danger">*</strong></label>
-            <div class="col-md-8">
-                <div class="btn-group" id="repo-owner-switch">
-                    <button type="button" class="btn btn-default" id="repo-owner-current">
-                        <img src="{{.SignedUser.AvatarLink}}?s=28" alt="user-avatar" title="username" id="repo-owner-avatar">
-                        <span id="repo-owner-name">{{.SignedUser.Name}}</span>
-                    </button>
-                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
-                        <span class="caret"></span>
-                    </button>
-                    <div class="dropdown-menu clone-group-btn no-propagation">
-                        <ul id="dashboard-switch-menu" class="list-unstyled">
-                            <li data-uid="{{.SignedUser.Id}}" class="checked">
-                                <a>
-                                    <i class="fa fa-check"></i>
-                                    <img src="{{.SignedUser.AvatarLink}}?s=28" alt="user-avatar" title="username">
-                                    {{.SignedUser.Name}}
-                                </a>
-                            </li>
-                            {{range .Orgs}}
-                            <li data-uid="{{.Id}}">
-                                <a>
-                                    <i class="fa fa-check"></i>
-                                    <img src="{{.AvatarLink}}?s=28" alt="user-avatar" title="username">
-                                    {{.Name}}
-                                </a>
-                            </li>
-                            {{end}}
-                        </ul>
-                    </div>
+            <hr/>
+            <div class="field">
+                <label for="owner" class="req">{{.i18n.Tr "repo.owner"}}</label>
+                <input id="repo-owner-id" type="hidden" name="uid" value="{{.ContextUser.Id}}" />
+                <div class="inline-block drop">
+                    <a href="#" class="drop-bottom">
+                        <img class="avatar" src="{{.ContextUser.AvatarLink}}" id="repo-owner-avatar" alt="user-avatar">
+                        <strong id="repo-owner-name">{{.ContextUser.Name}}</strong>
+                    </a>
+                    <ul class="drop-down menu menu-vertical menu-radius switching-list" id="repo-create-owner-list">
+                        <li {{if eq $.ContextUser.Id .SignedUser.Id}}class="checked"{{end}} data-uid="{{.SignedUser.Id}}">
+                            <a>
+                                <i class="octicon octicon-check"></i>
+                                <img class="avatar" src="{{.SignedUser.AvatarLink}}" alt="user-avatar">
+                                <strong>{{.SignedUser.Name}}</strong>
+                            </a>
+                        </li>
+                        {{range .Orgs}}
+                        <li {{if eq $.ContextUser.Id .Id}}class="checked"{{end}} data-uid="{{.Id}}">
+                            <a>
+                                <i class="octicon octicon-check"></i>
+                                <img class="avatar" src="{{.AvatarLink}}" alt="user-avatar">
+                                <strong>{{.Name}}</strong>
+                            </a>
+                        </li>
+                        {{end}}
+                    </ul>
                 </div>
             </div>
-            <input type="hidden" value="{{.SignedUserId}}" name="uid" id="repo-owner-id"/>
-        </div>
-
-        <div class="form-group {{if .Err_RepoName}}has-error has-feedback{{end}}">
-            <label class="col-md-2 control-label">Repository<strong class="text-danger">*</strong></label>
-            <div class="col-md-8">
-                <input name="repo" type="text" class="form-control" placeholder="Type your repository name" value="{{.repo}}" required="required">
-                <span class="help-block">Great repository names are short and memorable. </span>
+            <div class="field">
+                <label class="req" for="repo-name">{{.i18n.Tr "repo.repo_name"}}</label>
+                <input class="ipt ipt-radius {{if .Err_RepoName}}ipt-error{{end}}" id="repo-name" name="repo_name" type="text" value="{{.repo_name}}" required />
             </div>
-        </div>
-
-        <div class="form-group">
-            <label class="col-md-2 control-label">Migration Type</label>
-            <div class="col-md-8">
-                <div class="checkbox">
-                    <label>
-                        <input type="checkbox" name="mirror" {{if .mirror}}checked{{end}}>
-                        <strong>This repository is a mirror</strong>
-                    </label>
-                </div>
+            <p class="field">
+                <label for="visibility">{{.i18n.Tr "repo.visibility"}}</label>
+                <input class="ipt-chk" id="visibility" name="private" type="checkbox" {{if .private}}checked{{end}} />
+                <span>{{.i18n.Tr "repo.visiblity_helper" | Str2html}}</span>
+            </p>
+            <p class="field">
+                <label for="visibility">{{.i18n.Tr "repo.migrate_type"}}</label>
+                <input class="ipt-chk" id="visibility" name="mirror" type="checkbox" {{if .mirror}}checked{{end}} />
+                <span>{{.i18n.Tr "repo.migrate_type_helper" | Str2html}}</span>
+            </p>
+            <div class="field clear">
+                <label class="left" for="desc">{{.i18n.Tr "repo.repo_desc"}}</label>
+                <textarea class="ipt ipt-radius {{if .Err_Description}}ipt-error{{end}}" id="desc" name="desc">{{.desc}}</textarea>
             </div>
-        </div>
-
-        <div class="form-group">
-            <label class="col-md-2 control-label">Visibility</label>
-            <div class="col-md-8">
-                <div class="checkbox">
-                    <label>
-                        <input type="checkbox" name="private" {{if .private}}checked{{end}}>
-                        <strong>This repository is private</strong>
-                    </label>
-                </div>
-            </div>
-        </div>
-
-        <div class="form-group {{if .Err_Description}}has-error has-feedback{{end}}">
-            <label class="col-md-2 control-label">Description</label>
-            <div class="col-md-8">
-                <textarea name="desc" class="form-control" placeholder="Type your repository description">{{.desc}}</textarea>
-            </div>
-        </div>
-
-        <div class="form-group">
-            <div class="col-md-offset-2 col-md-8">
-                <button type="submit" class="btn btn-lg btn-primary">Migrate repository</button>
-                <a href="/" class="text-danger">Cancel</a>
-            </div>
+            <p class="field">
+                <label for="repo-create-submit"></label>
+                <button class="btn btn-large btn-blue btn-radius" id="repo-create-submit">{{.i18n.Tr "repo.migrate_repo"}}</button>
+                <a class="btn btn-small btn-gray btn-radius" id="repo-create-cancel" href="/"><strong>{{.i18n.Tr "cancel"}}</strong></a>
+            </p>
         </div>
     </form>
 </div>
-{{template "base/footer" .}}
+{{template "ng/base/footer" .}}
