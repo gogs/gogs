@@ -8,23 +8,23 @@
         </div>
         <div class="panel-content">
             {{template "ng/base/alert" .}}
-            <p class="field">
+            <div class="field">
                 <label class="req" for="org_name">{{.i18n.Tr "org.org_name_holder"}}</label>
                 <input class="ipt ipt-large ipt-radius {{if .Err_OrgName}}ipt-error{{end}}" id="org_name" name="org_name" type="text" value="{{.org_name}}" required/>
                 <label></label>
                 <span class="help">{{.i18n.Tr "org.org_name_helper"}}</span>
-            </p>
-            <p class="field">
+            </div>
+            <div class="field">
                 <label class="req" for="email">{{.i18n.Tr "email"}}</label>
                 <input class="ipt ipt-large ipt-radius {{if .Err_Email}}ipt-error{{end}}" id="email" name="email" type="email" value="{{.email}}" required/>
                 <label></label>
                 <span class="help">{{.i18n.Tr "org.org_email_helper"}}</span>
-            </p>
-            <p class="field">
+            </div>
+            <div class="field">
                 <span class="form-label"></span>
                 <button class="btn btn-large btn-blue btn-radius">{{.i18n.Tr "org.create_org"}}</button>
                 <a class="btn btn-small btn-gray btn-radius" id="repo-create-cancel" href="/"><strong>{{.i18n.Tr "cancel"}}</strong></a>
-            </p>
+            </div>
         </div>
     </form>
 </div>

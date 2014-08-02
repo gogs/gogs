@@ -851,6 +851,7 @@ The register and sign-in page style
   color: #888888;
   font-size: 1.6em;
   font-weight: normal;
+  margin-bottom: 0;
 }
 #repo-header-name i {
   margin-right: 12px;
@@ -1211,6 +1212,9 @@ The register and sign-in page style
 .code-view .lines-code > pre > ol.linenums > li.active {
   background: #ffffdd;
 }
+.repo-setting-zone {
+  padding: 30px;
+}
 #setting-wrapper {
   padding-bottom: 100px;
 }
@@ -1237,17 +1241,27 @@ The register and sign-in page style
 .setting-content {
   margin-left: 32px;
 }
+#repo-setting-form,
 #user-profile-form {
   background-color: #FFF;
   padding: 30px 0;
 }
+#repo-setting-form textarea,
+#user-profile-form textarea {
+  margin-left: 4px;
+  height: 100px;
+}
+#repo-setting-form label,
 #user-profile-form label,
+#repo-setting-form .form-label,
 #user-profile-form .form-label {
   width: 240px;
 }
+#repo-setting-form .ipt,
 #user-profile-form .ipt {
   width: 360px;
 }
+#repo-setting-form .field,
 #user-profile-form .field {
   margin-bottom: 24px;
 }
@@ -1297,4 +1311,102 @@ The register and sign-in page style
 }
 #user-ssh-add-form .field {
   margin-bottom: 24px;
+}
+.repo-issue-wrapper {
+  padding: 18px 0;
+}
+.pr-main {
+  padding-right: 40px;
+  box-sizing: border-box;
+}
+.pr-sidebar {
+  border-left: 1px solid #DDD;
+  box-sizing: border-box;
+}
+#pr-sidebar-nav {
+  margin-top: 6px;
+}
+#pr-sidebar-nav li {
+  margin-bottom: 4px;
+}
+#pr-sidebar-nav li > a {
+  border: 1px solid transparent;
+  border-left: none;
+}
+#pr-sidebar-nav li > a:hover {
+  background-color: #FFF;
+  border-color: #DDD;
+}
+#pr-sidebar-nav .label {
+  font-size: 12px;
+  line-height: 1.4em;
+  margin-top: 1px;
+}
+#pr-sidebar-nav li.current a {
+  background-color: #FFF;
+  border-color: #DDD;
+}
+.pr-title .pr-num {
+  font-weight: normal;
+  color: #888;
+}
+.pr-meta {
+  color: #888;
+}
+.pr-meta .pr-author {
+  margin: 0 8px;
+  color: #444;
+}
+.pr-meta .pr-author:hover {
+  text-decoration: underline;
+}
+.pr-meta .pr-branch {
+  margin: 0 4px;
+  font-size: 12px;
+  padding: 4px 6px;
+}
+.pr-nav {
+  border-bottom: 1px solid #DDD;
+  margin-top: 16px;
+}
+.pr-nav .octicon {
+  margin-right: 4px;
+}
+.pr-nav li > a {
+  padding: 3px 9px !important;
+  border: 1px solid transparent;
+  border-bottom: none;
+  border-top-left-radius: .2em;
+  border-top-right-radius: .2em;
+}
+.pr-nav li > a .label {
+  padding: 1px 5px;
+  font-size: 12px;
+  margin-left: 4px;
+}
+.pr-nav li.current > a {
+  background-color: #FFF;
+  border-color: #E6E6E6;
+}
+.diff-bar .diff-add {
+  color: #65ad4e;
+}
+.diff-bar .diff-delete {
+  color: #d9453d;
+}
+.diff-bar .diff-status {
+  width: 50px;
+  background-color: #d9453d;
+  height: 10px;
+  margin-top: 7px;
+  margin-left: 4px;
+  margin-right: 4px;
+  border-radius: .2em;
+}
+.diff-bar .diff-status-inner {
+  width: 45%;
+  background-color: #65ad4e;
+  height: 10px;
+  border-top-left-radius: .2em;
+  border-bottom-left-radius: .2em;
 }

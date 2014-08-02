@@ -96,9 +96,9 @@ func (ctx *Context) HasError() bool {
 	return hasErr.(bool)
 }
 
-// HTML calls render.HTML underlying but reduce one argument.
+// HTML calls Context.HTML and converts template name to string.
 func (ctx *Context) HTML(status int, name base.TplName) {
-	ctx.Render.HTML(status, string(name), ctx.Data)
+	ctx.Context.HTML(status, string(name))
 }
 
 // RenderWithErr used for page has form validation but need to prompt error to users.

@@ -21,27 +21,28 @@ import (
 )
 
 const (
-	SETTING       base.TplName = "repo/setting"
-	COLLABORATION base.TplName = "repo/collaboration"
+	SETTINGS_OPTIONS base.TplName = "repo/settings/options"
+	COLLABORATION    base.TplName = "repo/collaboration"
 
 	HOOKS     base.TplName = "repo/hooks"
 	HOOK_ADD  base.TplName = "repo/hook_add"
 	HOOK_EDIT base.TplName = "repo/hook_edit"
 )
 
-func Setting(ctx *middleware.Context) {
-	ctx.Data["IsRepoToolbarSetting"] = true
-	ctx.Data["Title"] = strings.TrimPrefix(ctx.Repo.RepoLink, "/") + " - settings"
-	ctx.HTML(200, SETTING)
+func Settings(ctx *middleware.Context) {
+	ctx.Data["Title"] = ctx.Tr("repo.settings")
+	ctx.Data["PageIsSettingsOptions"] = true
+	ctx.HTML(200, SETTINGS_OPTIONS)
 }
 
-func SettingPost(ctx *middleware.Context, form auth.RepoSettingForm) {
-	ctx.Data["IsRepoToolbarSetting"] = true
+func SettingsPost(ctx *middleware.Context, form auth.RepoSettingForm) {
+	ctx.Data["Title"] = ctx.Tr("repo.settings")
+	ctx.Data["PageIsSettingsOptions"] = true
 
 	switch ctx.Query("action") {
 	case "update":
 		if ctx.HasError() {
-			ctx.HTML(200, SETTING)
+			ctx.HTML(200, SETTINGS_OPTIONS)
 			return
 		}
 
@@ -50,17 +51,17 @@ func SettingPost(ctx *middleware.Context, form auth.RepoSettingForm) {
 		if ctx.Repo.Repository.Name != newRepoName {
 			isExist, err := models.IsRepositoryExist(ctx.Repo.Owner, newRepoName)
 			if err != nil {
-				ctx.Handle(500, "setting.SettingPost(update: check existence)", err)
+				ctx.Handle(500, "IsRepositoryExist", err)
 				return
 			} else if isExist {
-				ctx.RenderWithErr("Repository name has been taken in your repositories.", SETTING, nil)
+				ctx.Data["Err_RepoName"] = true
+				ctx.RenderWithErr(ctx.Tr("form.repo_name_been_taken"), SETTINGS_OPTIONS, nil)
 				return
 			} else if err = models.ChangeRepositoryName(ctx.Repo.Owner.Name, ctx.Repo.Repository.Name, newRepoName); err != nil {
-				ctx.Handle(500, "setting.SettingPost(change repository name)", err)
+				ctx.Handle(500, "ChangeRepositoryName", err)
 				return
 			}
-			log.Trace("%s Repository name changed: %s/%s -> %s", ctx.Req.RequestURI, ctx.User.Name, ctx.Repo.Repository.Name, newRepoName)
-
+			log.Trace("Repository name changed: %s/%s -> %s", ctx.Repo.Owner.Name, ctx.Repo.Repository.Name, newRepoName)
 			ctx.Repo.Repository.Name = newRepoName
 		}
 
@@ -77,7 +78,7 @@ func SettingPost(ctx *middleware.Context, form auth.RepoSettingForm) {
 			ctx.Handle(404, "UpdateRepository", err)
 			return
 		}
-		log.Trace("%s Repository updated: %s/%s", ctx.Req.RequestURI, ctx.Repo.Owner.Name, ctx.Repo.Repository.Name)
+		log.Trace("Repository updated: %s/%s", ctx.Repo.Owner.Name, ctx.Repo.Repository.Name)
 
 		if ctx.Repo.Repository.IsMirror {
 			if form.Interval > 0 {
@@ -89,51 +90,42 @@ func SettingPost(ctx *middleware.Context, form auth.RepoSettingForm) {
 			}
 		}
 
-		ctx.Flash.Success("Repository options has been successfully updated.")
+		ctx.Flash.Success(ctx.Tr("repo.settings.update_settings_success"))
 		ctx.Redirect(fmt.Sprintf("/%s/%s/settings", ctx.Repo.Owner.Name, ctx.Repo.Repository.Name))
 	case "transfer":
-		if len(ctx.Repo.Repository.Name) == 0 || ctx.Repo.Repository.Name != ctx.Query("repository") {
-			ctx.RenderWithErr("Please make sure you entered repository name is correct.", SETTING, nil)
-			return
-		} else if ctx.Repo.Repository.IsMirror {
-			ctx.Error(404)
+		if ctx.Repo.Repository.Name != form.RepoName {
+			ctx.RenderWithErr(ctx.Tr("form.enterred_invalid_repo_name"), SETTINGS_OPTIONS, nil)
 			return
 		}
 
-		newOwner := ctx.Query("owner")
-		// Check if new owner exists.
+		newOwner := ctx.Query("new_owner_name")
 		isExist, err := models.IsUserExist(newOwner)
 		if err != nil {
-			ctx.Handle(500, "setting.SettingPost(transfer: check existence)", err)
+			ctx.Handle(500, "IsUserExist", err)
 			return
 		} else if !isExist {
-			ctx.RenderWithErr("Please make sure you entered owner name is correct.", SETTING, nil)
+			ctx.RenderWithErr(ctx.Tr("form.enterred_invalid_owner_name"), SETTINGS_OPTIONS, nil)
 			return
 		} else if err = models.TransferOwnership(ctx.Repo.Owner, newOwner, ctx.Repo.Repository); err != nil {
-			ctx.Handle(500, "setting.SettingPost(transfer repository)", err)
+			ctx.Handle(500, "TransferOwnership", err)
 			return
 		}
-		log.Trace("%s Repository transfered: %s/%s -> %s", ctx.Req.RequestURI, ctx.User.Name, ctx.Repo.Repository.Name, newOwner)
-
+		log.Trace("Repository transfered: %s/%s -> %s", ctx.Repo.Owner.Name, ctx.Repo.Repository.Name, newOwner)
 		ctx.Redirect("/")
 	case "delete":
-		if len(ctx.Repo.Repository.Name) == 0 || ctx.Repo.Repository.Name != ctx.Query("repository") {
-			ctx.RenderWithErr("Please make sure you entered repository name is correct.", SETTING, nil)
+		if ctx.Repo.Repository.Name != form.RepoName {
+			ctx.RenderWithErr(ctx.Tr("form.enterred_invalid_repo_name"), SETTINGS_OPTIONS, nil)
 			return
-		}
-
-		if ctx.Repo.Owner.IsOrganization() &&
-			!ctx.Repo.Owner.IsOrgOwner(ctx.User.Id) {
-			ctx.Error(403)
+		} else if !ctx.Repo.Owner.ValidtePassword(ctx.Query("password")) {
+			ctx.RenderWithErr(ctx.Tr("form.enterred_invalid_password"), SETTINGS_OPTIONS, nil)
 			return
 		}
 
 		if err := models.DeleteRepository(ctx.Repo.Owner.Id, ctx.Repo.Repository.Id, ctx.Repo.Owner.Name); err != nil {
-			ctx.Handle(500, "setting.Delete(DeleteRepository)", err)
+			ctx.Handle(500, "DeleteRepository", err)
 			return
 		}
-		log.Trace("%s Repository deleted: %s/%s", ctx.Req.RequestURI, ctx.Repo.Owner.LowerName, ctx.Repo.Repository.LowerName)
-
+		log.Trace("Repository deleted: %s/%s", ctx.Repo.Owner.Name, ctx.Repo.Repository.Name)
 		if ctx.Repo.Owner.IsOrganization() {
 			ctx.Redirect("/org/" + ctx.Repo.Owner.Name + "/dashboard")
 		} else {

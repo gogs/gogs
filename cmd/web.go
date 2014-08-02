@@ -242,9 +242,8 @@ func runWeb(*cli.Context) {
 	}, reqSignIn)
 
 	m.Group("/:username/:reponame", func(r *macaron.Router) {
-		r.Get("/settings", repo.Setting)
-		r.Post("/settings", bindIgnErr(auth.RepoSettingForm{}), repo.SettingPost)
-
+		r.Get("/settings", repo.Settings)
+		r.Post("/settings", bindIgnErr(auth.RepoSettingForm{}), repo.SettingsPost)
 		m.Group("/settings", func(r *macaron.Router) {
 			r.Get("/collaboration", repo.Collaboration)
 			r.Post("/collaboration", repo.CollaborationPost)

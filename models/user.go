@@ -116,6 +116,13 @@ func (u *User) EncodePasswd() {
 	u.Passwd = fmt.Sprintf("%x", newPasswd)
 }
 
+// ValidtePassword checks if given password matches the one belongs to the user.
+func (u *User) ValidtePassword(passwd string) bool {
+	newUser := &User{Passwd: passwd, Salt: u.Salt}
+	newUser.EncodePasswd()
+	return u.Passwd == newUser.Passwd
+}
+
 // IsOrganization returns true if user is actually a organization.
 func (u *User) IsOrganization() bool {
 	return u.Type == ORGANIZATION
