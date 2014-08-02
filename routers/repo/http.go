@@ -77,9 +77,9 @@ func Http(ctx *middleware.Context) {
 	repoUser, err := models.GetUserByName(username)
 	if err != nil {
 		if err == models.ErrUserNotExist {
-			ctx.Handle(404, "repo.Http(GetUserByName)", nil)
+			ctx.Handle(404, "GetUserByName", nil)
 		} else {
-			ctx.Handle(500, "repo.Http(GetUserByName)", err)
+			ctx.Handle(500, "GetUserByName", err)
 		}
 		return
 	}
@@ -87,9 +87,9 @@ func Http(ctx *middleware.Context) {
 	repo, err := models.GetRepositoryByName(repoUser.Id, reponame)
 	if err != nil {
 		if err == models.ErrRepoNotExist {
-			ctx.Handle(404, "repo.Http(GetRepositoryByName)", nil)
+			ctx.Handle(404, "GetRepositoryByName", nil)
 		} else {
-			ctx.Handle(500, "repo.Http(GetRepositoryByName)", err)
+			ctx.Handle(500, "GetRepositoryByName", err)
 		}
 		return
 	}

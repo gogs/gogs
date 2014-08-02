@@ -174,10 +174,30 @@ function initRepoCreate() {
     console.log('initRepoCreate');
 }
 
+function initRepoSetting() {
+    // Confirmation of changing repository name.
+    $('#repo-setting-form').submit(function (e) {
+        var $reponame = $('#repo_name');
+        if (($reponame.data('repo-name') != $reponame.val()) && !confirm('Repository name has been changed, do you want to continue?')) {
+            e.preventDefault();
+            return true;
+        }
+    });
+    $('#transfer-button').click(function () {
+        $('#transfer-form').show();
+    });
+    $('#delete-button').click(function () {
+        $('#delete-form').show();
+    });
+}
+
 $(document).ready(function () {
     initCore();
     if ($('#repo-create-form').length || $('#repo-migrate-form').length) {
         initRepoCreate();
+    }
+    if ($('#repo-setting').length) {
+        initRepoSetting();
     }
 
     Tabs('#dashboard-sidebar-menu');

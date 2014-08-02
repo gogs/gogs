@@ -173,12 +173,14 @@ svg:not(:root) {
 label {
   font-weight: bold;
 }
+textarea,
 input,
 .ipt {
   padding: .6em;
   line-height: normal;
   border: 1px solid #bbbbbb;
 }
+textarea:focus,
 input:focus,
 .ipt:focus {
   background-color: #f2fffc;
@@ -289,6 +291,9 @@ pre {
   line-height: 1.6;
   overflow: auto;
   padding: 0;
+}
+dt {
+  font-weight: bold;
 }
 .left {
   float: left;
@@ -650,6 +655,9 @@ ul.menu-radius > li:last-child > a {
   padding: .6em 1.2em;
   background-color: #eeeeee;
   border-bottom: 1px solid #cccccc;
+}
+.panel .panel-body {
+  background-color: white;
 }
 .panel .panel-body .panel-desc {
   margin-bottom: 20px;
