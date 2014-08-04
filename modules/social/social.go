@@ -391,5 +391,4 @@ func (s *SocialWeibo) UserInfo(token *oauth.Token, _ *url.URL) (*BasicUserInfo, 
 		Identity: token.Extra["id_token"],
 		Name:     data.Name,
 	}, nil
-	return nil, nil
 }
