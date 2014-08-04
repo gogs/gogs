@@ -34,7 +34,7 @@ type FileLogWriter struct {
 
 	// Rotate daily
 	Daily          bool  `json:"daily"`
-	Maxdays        int64 `json:"maxdays`
+	Maxdays        int64 `json:"maxdays"`
 	daily_opendate int
 
 	Rotate bool `json:"rotate"`

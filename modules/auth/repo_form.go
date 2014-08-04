@@ -71,7 +71,7 @@ func (f *RepoSettingForm) Validate(ctx *macaron.Context, errs *binding.Errors, l
 type NewWebhookForm struct {
 	Url         string `form:"url" binding:"Required;Url"`
 	ContentType string `form:"content_type" binding:"Required"`
-	Secret      string `form:"secret""`
+	Secret      string `form:"secret"`
 	PushOnly    bool   `form:"push_only"`
 	Active      bool   `form:"active"`
 }
