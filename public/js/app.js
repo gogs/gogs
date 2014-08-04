@@ -638,7 +638,7 @@ function initIssue() {
         
         var clickedButton;
         
-        $('#issue-reply-btn,input[type="submit"]', fileInput.form).on('click', function() {
+        $('input[type="submit"],input[type="button"],button.btn-success', fileInput.form).on('click', function() {
             clickedButton = this;
 
             var $button = $(this);
@@ -646,7 +646,7 @@ function initIssue() {
             $button.removeClass("btn-success btn-default");
             $button.addClass("btn-warning");
 
-            $button.text("Submitting&hellip;");
+            $button.html("Submitting&hellip;");
         });
 
         fileInput.form.addEventListener("submit", function(event) {
