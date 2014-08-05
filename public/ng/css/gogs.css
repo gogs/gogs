@@ -190,7 +190,7 @@ img.avatar-30 {
 }
 .markdown {
   background-color: white;
-  font-size: 14px;
+  font-size: 16px;
   line-height: 24px;
 }
 .markdown .markdown-body {
@@ -234,10 +234,10 @@ img.avatar-30 {
   font-size: 18px;
 }
 .markdown h5 {
-  font-size: 14px;
+  font-size: 1em;
 }
 .markdown h6 {
-  font-size: 14px;
+  font-size: 1em;
 }
 .markdown table {
   border-collapse: collapse;
@@ -261,6 +261,9 @@ img.avatar-30 {
 }
 .markdown table tr:nth-child(2n) {
   background-color: #f8f8f8;
+}
+.markdown ul {
+  padding: 10px 0 0 15px;
 }
 .markdown ul li {
   list-style: inside;
@@ -289,6 +292,7 @@ img.avatar-30 {
   background-color: #f5f5f5;
 }
 .markdown > pre {
+  font-size: 14px;
   line-height: 1.6;
   overflow: auto;
   border: 1px solid #ddd;
@@ -346,6 +350,7 @@ img.avatar-30 {
   margin-bottom: 0;
 }
 .markdown img {
+  padding: 10px 0;
   max-width: 100%;
 }
 .markdown .btn {
