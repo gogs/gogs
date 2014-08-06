@@ -33,6 +33,7 @@ _testmain.go
 *.exe
 *.exe~
 /gogs
+profile/
 __pycache__
 *.pem
 output*

@@ -165,6 +165,10 @@ func GetStatistic() (stats Statistic) {
 	return
 }
 
+func Ping() error {
+	return x.Ping()
+}
+
 // DumpDatabase dumps all data from database to file system.
 func DumpDatabase(filePath string) error {
 	return x.DumpAllToFile(filePath)
