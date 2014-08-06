@@ -681,6 +681,10 @@ ul.menu-radius > li:last-child > a {
   border-bottom-left-radius: .3em;
   border-bottom-right-radius: .3em;
 }
+.panel.panel-radius .panel-content {
+  border-bottom-left-radius: .3em;
+  border-bottom-right-radius: .3em;
+}
 .panel.panel-warning {
   border-color: #F0C36D;
 }

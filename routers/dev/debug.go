@@ -14,5 +14,5 @@ func RegisterDebugRoutes(r *macaron.Macaron) {
 	r.Any("/debug/pprof/cmdline", pprof.Cmdline)
 	r.Any("/debug/pprof/profile", pprof.Profile)
 	r.Any("/debug/pprof/symbol", pprof.Symbol)
-	r.Any("/debug/pprof/**", pprof.Index)
+	r.Any("/debug/pprof/*", pprof.Index)
 }
