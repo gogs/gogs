@@ -19,7 +19,9 @@ import (
 	"github.com/macaron-contrib/csrf"
 	"github.com/macaron-contrib/i18n"
 	"github.com/macaron-contrib/session"
+	"github.com/macaron-contrib/toolbox"
 
+	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/auth/apiv1"
 	"github.com/gogits/gogs/modules/avatar"
@@ -62,20 +64,20 @@ func newMacaron() *macaron.Macaron {
 	m := macaron.New()
 	m.Use(macaron.Logger())
 	m.Use(macaron.Recovery())
-	if setting.EnableGzip {
-		m.Use(macaron.Gzip())
-	}
 	m.Use(macaron.Static("public",
 		macaron.StaticOptions{
 			SkipLogging: !setting.DisableRouterLog,
 		},
 	))
+	if setting.EnableGzip {
+		m.Use(macaron.Gzip())
+	}
 	m.Use(macaron.Renderer(macaron.RenderOptions{
 		Directory:  path.Join(setting.StaticRootPath, "templates"),
 		Funcs:      []template.FuncMap{base.TemplateFuncs},
 		IndentJSON: macaron.Env != macaron.PROD,
 	}))
-	m.Use(i18n.I18n(i18n.LocaleOptions{
+	m.Use(i18n.I18n(i18n.Options{
 		Langs:    setting.Langs,
 		Names:    setting.Names,
 		Redirect: true,
@@ -95,6 +97,14 @@ func newMacaron() *macaron.Macaron {
 		SetCookie: true,
 	}))
 	m.Use(middleware.Contexter())
+	m.Use(toolbox.Toolboxer(m, toolbox.Options{
+		HealthCheckFuncs: []*toolbox.HealthCheckFuncDesc{
+			&toolbox.HealthCheckFuncDesc{
+				Desc: "Database connection",
+				Func: models.Ping,
+			},
+		},
+	}))
 	return m
 }
 
@@ -208,7 +218,6 @@ func runWeb(*cli.Context) {
 
 	if macaron.Env == macaron.DEV {
 		m.Get("/template/*", dev.TemplatePreview)
-		dev.RegisterDebugRoutes(m)
 	}
 
 	reqTrueOwner := middleware.RequireTrueOwner()

@@ -119,12 +119,19 @@ func Profile(ctx *middleware.Context) {
 	ctx.Data["Title"] = "Profile"
 	ctx.Data["PageIsUserProfile"] = true
 
-	u, err := models.GetUserByName(ctx.Params(":username"))
+	uname := ctx.Params(":username")
+	// Special handle for FireFox requests favicon.ico.
+	if uname == "favicon.ico" {
+		ctx.Redirect("/img/favicon.png")
+		return
+	}
+
+	u, err := models.GetUserByName(uname)
 	if err != nil {
 		if err == models.ErrUserNotExist {
-			ctx.Handle(404, "user.Profile(GetUserByName)", err)
+			ctx.Handle(404, "GetUserByName", err)
 		} else {
-			ctx.Handle(500, "user.Profile(GetUserByName)", err)
+			ctx.Handle(500, "GetUserByName", err)
 		}
 		return
 	}
@@ -146,13 +153,13 @@ func Profile(ctx *middleware.Context) {
 	case "activity":
 		ctx.Data["Feeds"], err = models.GetFeeds(u.Id, 0, true)
 		if err != nil {
-			ctx.Handle(500, "user.Profile(GetFeeds)", err)
+			ctx.Handle(500, "GetFeeds", err)
 			return
 		}
 	default:
 		ctx.Data["Repos"], err = models.GetRepositories(u.Id, ctx.IsSigned && ctx.User.Id == u.Id)
 		if err != nil {
-			ctx.Handle(500, "user.Profile(GetRepositories)", err)
+			ctx.Handle(500, "GetRepositories", err)
 			return
 		}
 	}
