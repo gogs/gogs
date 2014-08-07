@@ -357,22 +357,33 @@
   margin-left: 4em;
 }
 
+#dashboard-switch-menu,
 #repo-create-owner-list {
-  .octicon {
-    margin-right: 12px;
-    opacity: 0;
-  }
-  top: 30px;
-  left: 0;
-  .avatar {
-    width: 20px;
-    height: 20px;
-  }
-  li.checked {
+    top: 30px;
+    left: 0;
+    width: auto;
+    max-width: 300px;
     .octicon {
-      opacity: 1;
+        margin-right: 12px;
+        opacity: 0;
     }
-  }
+    .avatar {
+        width: 20px;
+        height: 20px;
+    }
+    li {
+        white-space: nowrap;
+        &.checked {
+            .octicon {
+                opacity: 1;
+            }
+        }
+        a {
+            text-overflow: ellipsis; 
+            -o-text-overflow: ellipsis; 
+            overflow: hidden;
+        }
+    }
 }
 .file-name {
   margin-left: 1em;
