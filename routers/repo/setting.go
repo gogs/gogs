@@ -22,7 +22,7 @@ import (
 
 const (
 	SETTINGS_OPTIONS base.TplName = "repo/settings/options"
-	COLLABORATION    base.TplName = "repo/collaboration"
+	COLLABORATION    base.TplName = "repo/settings/collaboration"
 
 	HOOKS     base.TplName = "repo/hooks"
 	HOOK_ADD  base.TplName = "repo/hook_add"
@@ -134,26 +134,71 @@ func SettingsPost(ctx *middleware.Context, form auth.RepoSettingForm) {
 	}
 }
 
-func Collaboration(ctx *middleware.Context) {
+func SettingsCollaboration(ctx *middleware.Context) {
+	ctx.Data["Title"] = ctx.Tr("repo.settings")
+	ctx.Data["PageIsSettingsCollaboration"] = true
+
 	repoLink := strings.TrimPrefix(ctx.Repo.RepoLink, "/")
-	ctx.Data["IsRepoToolbarCollaboration"] = true
-	ctx.Data["Title"] = repoLink + " - collaboration"
+
+	if ctx.Req.Method == "POST" {
+		name := strings.ToLower(ctx.Query("collaborator"))
+		if len(name) == 0 || ctx.Repo.Owner.LowerName == name {
+			ctx.Redirect(ctx.Req.URL.Path)
+			return
+		}
+		has, err := models.HasAccess(name, repoLink, models.WRITABLE)
+		if err != nil {
+			ctx.Handle(500, "HasAccess", err)
+			return
+		} else if has {
+			ctx.Redirect(ctx.Req.URL.Path)
+			return
+		}
+
+		u, err := models.GetUserByName(name)
+		if err != nil {
+			if err == models.ErrUserNotExist {
+				ctx.Flash.Error(ctx.Tr("form.user_not_exist"))
+				ctx.Redirect(ctx.Req.URL.Path)
+			} else {
+				ctx.Handle(500, "GetUserByName", err)
+			}
+			return
+		}
+
+		if err = models.AddAccess(&models.Access{UserName: name, RepoName: repoLink,
+			Mode: models.WRITABLE}); err != nil {
+			ctx.Handle(500, "AddAccess2", err)
+			return
+		}
+
+		if setting.Service.EnableNotifyMail {
+			if err = mailer.SendCollaboratorMail(ctx.Render, u, ctx.User, ctx.Repo.Repository); err != nil {
+				ctx.Handle(500, "SendCollaboratorMail", err)
+				return
+			}
+		}
+
+		ctx.Flash.Success(ctx.Tr("repo.settings.add_collaborator_success"))
+		ctx.Redirect(ctx.Req.URL.Path)
+		return
+	}
 
 	// Delete collaborator.
 	remove := strings.ToLower(ctx.Query("remove"))
 	if len(remove) > 0 && remove != ctx.Repo.Owner.LowerName {
 		if err := models.DeleteAccess(&models.Access{UserName: remove, RepoName: repoLink}); err != nil {
-			ctx.Handle(500, "setting.Collaboration(DeleteAccess)", err)
+			ctx.Handle(500, "DeleteAccess", err)
 			return
 		}
-		ctx.Flash.Success("Collaborator has been removed.")
+		ctx.Flash.Success(ctx.Tr("repo.settings.remove_collaborator_success"))
 		ctx.Redirect(ctx.Repo.RepoLink + "/settings/collaboration")
 		return
 	}
 
 	names, err := models.GetCollaboratorNames(repoLink)
 	if err != nil {
-		ctx.Handle(500, "setting.Collaboration(GetCollaborators)", err)
+		ctx.Handle(500, "GetCollaborators", err)
 		return
 	}
 
@@ -161,7 +206,7 @@ func Collaboration(ctx *middleware.Context) {
 	for i, name := range names {
 		us[i], err = models.GetUserByName(name)
 		if err != nil {
-			ctx.Handle(500, "setting.Collaboration(GetUserByName)", err)
+			ctx.Handle(500, "GetUserByName", err)
 			return
 		}
 	}
@@ -170,7 +215,7 @@ func Collaboration(ctx *middleware.Context) {
 	ctx.HTML(200, COLLABORATION)
 }
 
-func CollaborationPost(ctx *middleware.Context) {
+func SettingsCollaborationPost(ctx *middleware.Context) {
 	repoLink := strings.TrimPrefix(ctx.Repo.RepoLink, "/")
 	name := strings.ToLower(ctx.Query("collaborator"))
 	if len(name) == 0 || ctx.Repo.Owner.LowerName == name {

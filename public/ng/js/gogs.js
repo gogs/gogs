@@ -52,6 +52,59 @@ var Gogs = {};
             }
         }
     });
+    $.fn.extend({
+        toggleHide: function () {
+            $(this).addClass("hidden");
+        },
+        toggleShow: function () {
+            $(this).removeClass("hidden");
+        },
+        toggleAjax: function (successCallback, errorCallback) {
+            var url = $(this).data("ajax");
+            var method = $(this).data('ajax-method') || 'get';
+            var ajaxName = $(this).data('ajax-name');
+            var data = {};
+
+            if (ajaxName.endsWith("preview")) {
+                data["mode"] = "gfm";
+                data["context"] = $(this).data('ajax-context');
+            }
+
+            $('[data-ajax-rel=' + ajaxName + ']').each(function () {
+                var field = $(this).data("ajax-field");
+                var t = $(this).data("ajax-val");
+                if (t == "val") {
+                    data[field] = $(this).val();
+                    return true;
+                }
+                if (t == "txt") {
+                    data[field] = $(this).text();
+                    return true;
+                }
+                if (t == "html") {
+                    data[field] = $(this).html();
+                    return true;
+                }
+                if (t == "data") {
+                    data[field] = $(this).data("ajax-data");
+                    return true;
+                }
+                return true;
+            });
+            console.log("toggleAjax:", method, url, data);
+            $.ajax({
+                url: url,
+                method: method.toUpperCase(),
+                data: data,
+                error: errorCallback,
+                success: function (d) {
+                    if (successCallback) {
+                        successCallback(d);
+                    }
+                }
+            })
+        }
+    });
 }(jQuery));
 
 (function ($) {
@@ -145,6 +198,26 @@ var Gogs = {};
             }
         }).trigger('hashchange');
     };
+
+    // Search users by keyword.
+    Gogs.searchUsers = function (val, $target) {
+        $.ajax({
+            url: '/api/v1/users/search?q=' + val,
+            dataType: "json",
+            success: function (json) {
+                if (json.ok && json.data.length) {
+                    var html = '';
+                    $.each(json.data, function (i, item) {
+                        html += '<li><a><img src="' + item.avatar + '">' + item.username + '</a></li>';
+                    });
+                    $target.html(html);
+                    $target.toggleShow();
+                } else {
+                    $target.toggleHide();
+                }
+            }
+        });
+    }
 })(jQuery);
 
 function initCore() {
@@ -175,6 +248,7 @@ function initRepoCreate() {
 }
 
 function initRepoSetting() {
+    // Options.
     // Confirmation of changing repository name.
     $('#repo-setting-form').submit(function (e) {
         var $reponame = $('#repo_name');
@@ -188,6 +262,27 @@ function initRepoSetting() {
     });
     $('#delete-button').click(function () {
         $('#delete-form').show();
+    });
+
+    // Collaboration.
+    $('#repo-collab-list hr:last-child').remove();
+    var $ul = $('#repo-collaborator').next().next().find('ul');
+    $('#repo-collaborator').on('keyup', function () {
+        var $this = $(this);
+        if (!$this.val()) {
+            $ul.toggleHide();
+            return;
+        }
+        Gogs.searchUsers($this.val(), $ul);
+    }).on('focus', function () {
+        if (!$(this).val()) {
+            $ul.toggleHide();
+        } else {
+            $ul.toggleShow();
+        }
+    }).next().next().find('ul').on("click", 'li', function () {
+        $('#repo-collaborator').val($(this).text());
+        $ul.toggleHide();
     });
 }
 

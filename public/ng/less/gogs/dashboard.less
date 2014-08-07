@@ -176,9 +176,24 @@ The dashboard page style
 }
 
 #dashboard-selection-menu {
-  > .drop-down {
-    top: 56px;
-  }
+    width: auto;
+    max-width: 300px;
+    > .drop-down {
+        top: 56px;
+    }
+    li {
+        white-space: nowrap;
+        &.checked {
+            .octicon {
+                opacity: 1;
+            }
+        }
+        a {
+            text-overflow: ellipsis; 
+            -o-text-overflow: ellipsis; 
+            overflow: hidden;
+        }
+    }
 }
 
 // the drop-down menu of #dashboard-selection-menu
