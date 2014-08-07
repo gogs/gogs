@@ -59,7 +59,8 @@ audio:not([controls]) {
   height: 0;
 }
 [hidden],
-template .hidden {
+template,
+.hidden {
   display: none;
 }
 .opacity {
@@ -72,6 +73,7 @@ a,
 .text-link {
   color: #428bca;
   text-decoration: none;
+  cursor: pointer;
 }
 a:hover,
 .text-link:hover {
@@ -600,6 +602,12 @@ ul.menu-down > li.head {
 ul.menu-down {
   position: absolute;
   display: none;
+  z-index: 99;
+  box-shadow: 0 0 2px #666666;
+  background-color: #ffffff;
+}
+ul.menu-down-show {
+  position: absolute;
   z-index: 99;
   box-shadow: 0 0 2px #666666;
   background-color: #ffffff;

@@ -96,7 +96,6 @@ func newMacaron() *macaron.Macaron {
 		Secret:    setting.SecretKey,
 		SetCookie: true,
 	}))
-	m.Use(middleware.Contexter())
 	m.Use(toolbox.Toolboxer(m, toolbox.Options{
 		HealthCheckFuncs: []*toolbox.HealthCheckFuncDesc{
 			&toolbox.HealthCheckFuncDesc{
@@ -105,6 +104,7 @@ func newMacaron() *macaron.Macaron {
 			},
 		},
 	}))
+	m.Use(middleware.Contexter())
 	return m
 }
 
@@ -254,8 +254,7 @@ func runWeb(*cli.Context) {
 		r.Get("/settings", repo.Settings)
 		r.Post("/settings", bindIgnErr(auth.RepoSettingForm{}), repo.SettingsPost)
 		m.Group("/settings", func(r *macaron.Router) {
-			r.Get("/collaboration", repo.Collaboration)
-			r.Post("/collaboration", repo.CollaborationPost)
+			r.Route("/collaboration", "GET,POST", repo.SettingsCollaboration)
 			r.Get("/hooks", repo.WebHooks)
 			r.Get("/hooks/add", repo.WebHooksAdd)
 			r.Post("/hooks/add", bindIgnErr(auth.NewWebhookForm{}), repo.WebHooksAddPost)

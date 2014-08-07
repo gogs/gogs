@@ -31,16 +31,16 @@ const (
 func SignIn(ctx *middleware.Context) {
 	ctx.Data["Title"] = ctx.Tr("sign_in")
 
-	// if _, ok := ctx.Session.Get("socialId").(int64); ok {
-	// 		ctx.Data["IsSocialLogin"] = true
-	// 		ctx.HTML(200, SIGNIN)
-	// 		return
-	// 	}
+	if _, ok := ctx.Session.Get("socialId").(int64); ok {
+		ctx.Data["IsSocialLogin"] = true
+		ctx.HTML(200, SIGNIN)
+		return
+	}
 
-	// if setting.OauthService != nil {
-	// 	ctx.Data["OauthEnabled"] = true
-	// 	ctx.Data["OauthService"] = setting.OauthService
-	// }
+	if setting.OauthService != nil {
+		ctx.Data["OauthEnabled"] = true
+		ctx.Data["OauthService"] = setting.OauthService
+	}
 
 	// Check auto-login.
 	uname := ctx.GetCookie(setting.CookieUserName)
@@ -89,13 +89,13 @@ func SignIn(ctx *middleware.Context) {
 func SignInPost(ctx *middleware.Context, form auth.SignInForm) {
 	ctx.Data["Title"] = ctx.Tr("sign_in")
 
-	// sid, isOauth := ctx.Session.Get("socialId").(int64)
-	// if isOauth {
-	// 	ctx.Data["IsSocialLogin"] = true
-	// } else if setting.OauthService != nil {
-	// 	ctx.Data["OauthEnabled"] = true
-	// 	ctx.Data["OauthService"] = setting.OauthService
-	// }
+	sid, isOauth := ctx.Session.Get("socialId").(int64)
+	if isOauth {
+		ctx.Data["IsSocialLogin"] = true
+	} else if setting.OauthService != nil {
+		ctx.Data["OauthEnabled"] = true
+		ctx.Data["OauthService"] = setting.OauthService
+	}
 
 	if ctx.HasError() {
 		ctx.HTML(200, SIGNIN)
@@ -121,18 +121,18 @@ func SignInPost(ctx *middleware.Context, form auth.SignInForm) {
 	}
 
 	// Bind with social account.
-	// if isOauth {
-	// 	if err = models.BindUserOauth2(user.Id, sid); err != nil {
-	// 		if err == models.ErrOauth2RecordNotExist {
-	// 			ctx.Handle(404, "user.SignInPost(GetOauth2ById)", err)
-	// 		} else {
-	// 			ctx.Handle(500, "user.SignInPost(GetOauth2ById)", err)
-	// 		}
-	// 		return
-	// 	}
-	// 	ctx.Session.Delete("socialId")
-	// 	log.Trace("%s OAuth binded: %s -> %d", ctx.Req.RequestURI, form.UserName, sid)
-	// }
+	if isOauth {
+		if err = models.BindUserOauth2(u.Id, sid); err != nil {
+			if err == models.ErrOauth2RecordNotExist {
+				ctx.Handle(404, "GetOauth2ById", err)
+			} else {
+				ctx.Handle(500, "GetOauth2ById", err)
+			}
+			return
+		}
+		ctx.Session.Delete("socialId")
+		log.Trace("%s OAuth binded: %s -> %d", ctx.Req.RequestURI, form.UserName, sid)
+	}
 
 	ctx.Session.Set("uid", u.Id)
 	ctx.Session.Set("uname", u.Name)
@@ -148,12 +148,32 @@ func SignInPost(ctx *middleware.Context, form auth.SignInForm) {
 func SignOut(ctx *middleware.Context) {
 	ctx.Session.Delete("uid")
 	ctx.Session.Delete("uname")
-	// ctx.Session.Delete("socialId")
-	// ctx.Session.Delete("socialName")
-	// ctx.Session.Delete("socialEmail")
+	ctx.Session.Delete("socialId")
+	ctx.Session.Delete("socialName")
+	ctx.Session.Delete("socialEmail")
 	ctx.SetCookie(setting.CookieUserName, "", -1)
 	ctx.SetCookie(setting.CookieRememberName, "", -1)
 	ctx.Redirect("/")
+}
+
+func oauthSignUp(ctx *middleware.Context, sid int64) {
+	// ctx.Data["Title"] = "OAuth Sign Up"
+	// ctx.Data["PageIsSignUp"] = true
+
+	// if _, err := models.GetOauth2ById(sid); err != nil {
+	// 	if err == models.ErrOauth2RecordNotExist {
+	// 		ctx.Handle(404, "user.oauthSignUp(GetOauth2ById)", err)
+	// 	} else {
+	// 		ctx.Handle(500, "user.oauthSignUp(GetOauth2ById)", err)
+	// 	}
+	// 	return
+	// }
+
+	// ctx.Data["IsSocialLogin"] = true
+	// ctx.Data["username"] = strings.Replace(ctx.Session.Get("socialName").(string), " ", "", -1)
+	// ctx.Data["email"] = ctx.Session.Get("socialEmail")
+	// log.Trace("user.oauthSignUp(social ID): %v", ctx.Session.Get("socialId"))
+	// ctx.HTML(200, SIGNUP)
 }
 
 func SignUp(ctx *middleware.Context) {
@@ -165,33 +185,13 @@ func SignUp(ctx *middleware.Context) {
 		return
 	}
 
-	// if sid, ok := ctx.Session.Get("socialId").(int64); ok {
-	// 	oauthSignUp(ctx, sid)
-	// 	return
-	// }
+	if sid, ok := ctx.Session.Get("socialId").(int64); ok {
+		oauthSignUp(ctx, sid)
+		return
+	}
 
 	ctx.HTML(200, SIGNUP)
 }
-
-// func oauthSignUp(ctx *middleware.Context, sid int64) {
-// 	ctx.Data["Title"] = "OAuth Sign Up"
-// 	ctx.Data["PageIsSignUp"] = true
-
-// 	if _, err := models.GetOauth2ById(sid); err != nil {
-// 		if err == models.ErrOauth2RecordNotExist {
-// 			ctx.Handle(404, "user.oauthSignUp(GetOauth2ById)", err)
-// 		} else {
-// 			ctx.Handle(500, "user.oauthSignUp(GetOauth2ById)", err)
-// 		}
-// 		return
-// 	}
-
-// 	ctx.Data["IsSocialLogin"] = true
-// 	ctx.Data["username"] = strings.Replace(ctx.Session.Get("socialName").(string), " ", "", -1)
-// 	ctx.Data["email"] = ctx.Session.Get("socialEmail")
-// 	log.Trace("user.oauthSignUp(social ID): %v", ctx.Session.Get("socialId"))
-// 	ctx.HTML(200, SIGNUP)
-// }
 
 func SignUpPost(ctx *middleware.Context, cpt *captcha.Captcha, form auth.RegisterForm) {
 	ctx.Data["Title"] = ctx.Tr("sign_up")

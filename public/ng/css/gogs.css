@@ -198,6 +198,22 @@ img.avatar-48 {
 .main-wrapper {
   padding: 20px 0 40px;
 }
+.user-list {
+  width: auto;
+  min-width: 180px;
+  max-width: 300px;
+}
+.user-list img {
+  width: 28px;
+  height: 28px;
+  margin-right: 1em;
+  margin-top: 1px;
+  vertical-align: middle;
+}
+.user-list li {
+  cursor: pointer;
+  font-weight: bold;
+}
 .markdown {
   background-color: white;
   font-size: 16px;
@@ -753,8 +769,23 @@ The dashboard page style
   margin-right: 6px;
   font-size: 1.1em;
 }
+#dashboard-selection-menu {
+  width: auto;
+  max-width: 300px;
+}
 #dashboard-selection-menu > .drop-down {
   top: 56px;
+}
+#dashboard-selection-menu li {
+  white-space: nowrap;
+}
+#dashboard-selection-menu li.checked .octicon {
+  opacity: 1;
+}
+#dashboard-selection-menu li a {
+  text-overflow: ellipsis;
+  -o-text-overflow: ellipsis;
+  overflow: hidden;
 }
 #dashboard-switch-menu {
   border-bottom-left-radius: .3em;
@@ -1155,32 +1186,26 @@ The register and sign-in page style
 #repo-create-cancel {
   margin-left: 4em;
 }
-#dashboard-switch-menu,
 #repo-create-owner-list {
   top: 30px;
   left: 0;
   width: auto;
   max-width: 300px;
 }
-#dashboard-switch-menu .octicon,
 #repo-create-owner-list .octicon {
   margin-right: 12px;
   opacity: 0;
 }
-#dashboard-switch-menu .avatar,
 #repo-create-owner-list .avatar {
   width: 20px;
   height: 20px;
 }
-#dashboard-switch-menu li,
 #repo-create-owner-list li {
   white-space: nowrap;
 }
-#dashboard-switch-menu li.checked .octicon,
 #repo-create-owner-list li.checked .octicon {
   opacity: 1;
 }
-#dashboard-switch-menu li a,
 #repo-create-owner-list li a {
   text-overflow: ellipsis;
   -o-text-overflow: ellipsis;
@@ -1243,6 +1268,34 @@ The register and sign-in page style
 }
 .repo-setting-zone {
   padding: 30px;
+}
+#repo-collab-list {
+  list-style: none;
+  padding: 10px 0 5px 0;
+}
+#repo-collab-list li.collab {
+  clear: both;
+  height: 50px;
+  padding: 0 15px 0 15px;
+}
+#repo-collab-list a.member {
+  color: #444;
+  height: 50px;
+  line-height: 50px;
+}
+#repo-collab-list a.member:hover {
+  color: #4183C4;
+}
+#repo-collab-list .avatar {
+  margin-right: 1em;
+  width: 40px;
+}
+#repo-collab-list .remove-collab {
+  color: #DD4B39;
+}
+.repo-user-list-block {
+  position: relative;
+  top: 5px;
 }
 #setting-wrapper {
   padding-bottom: 100px;
