@@ -1155,20 +1155,36 @@ The register and sign-in page style
 #repo-create-cancel {
   margin-left: 4em;
 }
+#dashboard-switch-menu,
 #repo-create-owner-list {
   top: 30px;
   left: 0;
+  width: auto;
+  max-width: 300px;
 }
+#dashboard-switch-menu .octicon,
 #repo-create-owner-list .octicon {
   margin-right: 12px;
   opacity: 0;
 }
+#dashboard-switch-menu .avatar,
 #repo-create-owner-list .avatar {
   width: 20px;
   height: 20px;
 }
+#dashboard-switch-menu li,
+#repo-create-owner-list li {
+  white-space: nowrap;
+}
+#dashboard-switch-menu li.checked .octicon,
 #repo-create-owner-list li.checked .octicon {
   opacity: 1;
+}
+#dashboard-switch-menu li a,
+#repo-create-owner-list li a {
+  text-overflow: ellipsis;
+  -o-text-overflow: ellipsis;
+  overflow: hidden;
 }
 .file-name {
   margin-left: 1em;
