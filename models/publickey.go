@@ -155,16 +155,18 @@ func saveAuthorizedKeyFile(key *PublicKey) error {
 	if err != nil {
 		return err
 	}
+	defer f.Close()
 	finfo, err := f.Stat()
 	if err != nil {
 		return err
 	}
 	if finfo.Mode().Perm() > 0600 {
 		log.Error(3, "authorized_keys file has unusual permission flags: %s - setting to -rw-------", finfo.Mode().Perm().String())
-		f.Chmod(0600)
+		err = f.Chmod(0600)
+		if err != nil {
+			return err
+		}
 	}
-
-	defer f.Close()
 
 	_, err = f.WriteString(key.GetAuthorizedString())
 	return err
