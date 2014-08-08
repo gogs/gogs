@@ -446,7 +446,9 @@ func initRepository(f string, u *User, repo *Repository, initReadme bool, repoLa
 	}
 
 	if len(fileName) == 0 {
-		return nil
+		repo.IsBare = true
+		repo.DefaultBranch = "master"
+		return UpdateRepository(repo)
 	}
 
 	// Apply changes and commit.
@@ -479,10 +481,6 @@ func CreateRepository(u *User, name, desc, lang, license string, private, mirror
 		LowerName:   strings.ToLower(name),
 		Description: desc,
 		IsPrivate:   private,
-		IsBare:      lang == "" && license == "" && !initReadme,
-	}
-	if !repo.IsBare {
-		repo.DefaultBranch = "master"
 	}
 
 	if _, err = sess.Insert(repo); err != nil {
@@ -550,11 +548,11 @@ func CreateRepository(u *User, name, desc, lang, license string, private, mirror
 	if u.IsOrganization() {
 		ous, err := GetOrgUsersByOrgId(u.Id)
 		if err != nil {
-			log.Error(4, "repo.CreateRepository(GetOrgUsersByOrgId): %v", err)
+			log.Error(4, "GetOrgUsersByOrgId: %v", err)
 		} else {
 			for _, ou := range ous {
 				if err = WatchRepo(ou.Uid, repo.Id, true); err != nil {
-					log.Error(4, "repo.CreateRepository(WatchRepo): %v", err)
+					log.Error(4, "WatchRepo: %v", err)
 				}
 			}
 		}

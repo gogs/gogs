@@ -245,8 +245,6 @@ func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 			ctx.Data["CommitsCount"] = ctx.Repo.CommitsCount
 		}
 
-		log.Debug("displayBare: %v; IsBare: %v", displayBare, ctx.Repo.Repository.IsBare)
-
 		// repo is bare and display enable
 		if displayBare && ctx.Repo.Repository.IsBare {
 			log.Debug("Bare repository: %s", ctx.Repo.RepoLink)

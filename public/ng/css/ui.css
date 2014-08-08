@@ -59,7 +59,8 @@ audio:not([controls]) {
   height: 0;
 }
 [hidden],
-template .hidden {
+template,
+.hidden {
   display: none;
 }
 .opacity {
@@ -72,6 +73,7 @@ a,
 .text-link {
   color: #428bca;
   text-decoration: none;
+  cursor: pointer;
 }
 a:hover,
 .text-link:hover {
@@ -604,6 +606,12 @@ ul.menu-down {
   box-shadow: 0 0 2px #666666;
   background-color: #ffffff;
 }
+ul.menu-down-show {
+  position: absolute;
+  z-index: 99;
+  box-shadow: 0 0 2px #666666;
+  background-color: #ffffff;
+}
 ul.menu-radius {
   border-radius: .3em;
 }
@@ -678,6 +686,10 @@ ul.menu-radius > li:last-child > a {
   border-top-right-radius: .3em;
 }
 .panel.panel-radius .panel-footer {
+  border-bottom-left-radius: .3em;
+  border-bottom-right-radius: .3em;
+}
+.panel.panel-radius .panel-content {
   border-bottom-left-radius: .3em;
   border-bottom-right-radius: .3em;
 }

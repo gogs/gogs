@@ -28,6 +28,11 @@ func Home(ctx *middleware.Context) {
 		return
 	}
 
+	if setting.OauthService != nil {
+		ctx.Data["OauthEnabled"] = true
+		ctx.Data["OauthService"] = setting.OauthService
+	}
+
 	ctx.Data["PageIsHome"] = true
 	ctx.HTML(200, HOME)
 }

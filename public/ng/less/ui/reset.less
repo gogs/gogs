@@ -81,17 +81,15 @@ audio:not([controls]) {
 // display hidden elements
 
 [hidden],
-template
+template,
 .hidden {
-  display: none;
+    display: none;
 }
-
 .opacity {
-  opacity: 0;
+    opacity: 0;
 }
-
 .opacity-half {
-  opacity: .5;
+    opacity: .5;
 }
 
 // links element
@@ -100,6 +98,7 @@ a,
 .text-link {
   color: @linkColor;
   text-decoration: none;
+  cursor: pointer;
   &:hover {
     color: @linkHoverColor;
     text-decoration: none;

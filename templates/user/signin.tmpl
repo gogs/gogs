@@ -28,10 +28,12 @@
                 <span class="form-label"></span>
                 <a href="/user/sign_up">{{.i18n.Tr "auth.sign_up_now" | Str2html}}</a>
             </p>
+            {{if .OauthEnabled}}
             <hr/>
             <div id="sign-social" class="text-center social-buttons">
                 {{template "ng/base/social" .}}
             </div>
+            {{end}}
         </div>
     </form>
 </div>

@@ -30,6 +30,16 @@ img.avatar-30 {
   height: 30px;
   vertical-align: middle;
 }
+img.avatar-40 {
+  width: 40px;
+  height: 40px;
+  vertical-align: middle;
+}
+img.avatar-48 {
+  width: 48px;
+  height: 48px;
+  vertical-align: middle;
+}
 #wrapper {
   padding: 0;
   margin: 0 0 -55px 0;
@@ -188,14 +198,64 @@ img.avatar-30 {
 .main-wrapper {
   padding: 20px 0 40px;
 }
+.user-list {
+  width: auto;
+  min-width: 180px;
+  max-width: 300px;
+}
+.user-list img {
+  width: 28px;
+  height: 28px;
+  margin-right: 1em;
+  margin-top: 1px;
+  vertical-align: middle;
+}
+.user-list li {
+  cursor: pointer;
+  font-weight: bold;
+}
 .markdown {
   background-color: white;
-  font-size: 14px;
+  font-size: 16px;
   line-height: 24px;
 }
 .markdown .markdown-body {
   padding-left: 24px;
   padding-right: 16px;
+}
+.markdown h5,
+.markdown h6 {
+  font-size: 1em;
+}
+.markdown ul {
+  padding: 10px 0 0 15px;
+}
+.markdown ul li {
+  list-style: inside;
+}
+.markdown ol li {
+  list-style: decimal inside;
+}
+.markdown li {
+  line-height: 1.6;
+  margin-top: 6px;
+}
+.markdown li:first-child {
+  margin-top: 0;
+}
+.markdown > pre {
+  font-size: 14px;
+  line-height: 1.6;
+  overflow: auto;
+  border: 1px solid #ddd;
+  border-radius: .25em;
+  margin: 5px 0;
+  padding: 10px;
+  background-color: #f8f8f8;
+}
+.markdown img {
+  padding: 10px 0;
+  max-width: 100%;
 }
 .markdown a {
   color: #428BCA;
@@ -233,12 +293,6 @@ img.avatar-30 {
 .markdown h4 {
   font-size: 18px;
 }
-.markdown h5 {
-  font-size: 14px;
-}
-.markdown h6 {
-  font-size: 14px;
-}
 .markdown table {
   border-collapse: collapse;
   border-spacing: 0;
@@ -262,19 +316,6 @@ img.avatar-30 {
 .markdown table tr:nth-child(2n) {
   background-color: #f8f8f8;
 }
-.markdown ul li {
-  list-style: inside;
-}
-.markdown ol li {
-  list-style: decimal inside;
-}
-.markdown li {
-  line-height: 1.6;
-  margin-top: 6px;
-}
-.markdown li:first-child {
-  margin-top: 0;
-}
 .markdown dl dt {
   font-style: italic;
   margin-top: 9px;
@@ -287,15 +328,6 @@ img.avatar-30 {
 .markdown blockquote p {
   font-size: 14px;
   background-color: #f5f5f5;
-}
-.markdown > pre {
-  line-height: 1.6;
-  overflow: auto;
-  border: 1px solid #ddd;
-  border-radius: .25em;
-  margin: 5px 0;
-  padding: 10px;
-  background-color: #f8f8f8;
 }
 .markdown > pre.linenums {
   padding: 0;
@@ -344,9 +376,6 @@ img.avatar-30 {
 .markdown > pre:last-child,
 .markdown p:last-child {
   margin-bottom: 0;
-}
-.markdown img {
-  max-width: 100%;
 }
 .markdown .btn {
   color: #fff;
@@ -740,8 +769,23 @@ The dashboard page style
   margin-right: 6px;
   font-size: 1.1em;
 }
+#dashboard-selection-menu {
+  width: auto;
+  max-width: 300px;
+}
 #dashboard-selection-menu > .drop-down {
   top: 56px;
+}
+#dashboard-selection-menu li {
+  white-space: nowrap;
+}
+#dashboard-selection-menu li.checked .octicon {
+  opacity: 1;
+}
+#dashboard-selection-menu li a {
+  text-overflow: ellipsis;
+  -o-text-overflow: ellipsis;
+  overflow: hidden;
 }
 #dashboard-switch-menu {
   border-bottom-left-radius: .3em;
@@ -1145,6 +1189,8 @@ The register and sign-in page style
 #repo-create-owner-list {
   top: 30px;
   left: 0;
+  width: auto;
+  max-width: 300px;
 }
 #repo-create-owner-list .octicon {
   margin-right: 12px;
@@ -1154,8 +1200,16 @@ The register and sign-in page style
   width: 20px;
   height: 20px;
 }
+#repo-create-owner-list li {
+  white-space: nowrap;
+}
 #repo-create-owner-list li.checked .octicon {
   opacity: 1;
+}
+#repo-create-owner-list li a {
+  text-overflow: ellipsis;
+  -o-text-overflow: ellipsis;
+  overflow: hidden;
 }
 .file-name {
   margin-left: 1em;
@@ -1214,6 +1268,34 @@ The register and sign-in page style
 }
 .repo-setting-zone {
   padding: 30px;
+}
+#repo-collab-list {
+  list-style: none;
+  padding: 10px 0 5px 0;
+}
+#repo-collab-list li.collab {
+  clear: both;
+  height: 50px;
+  padding: 0 15px 0 15px;
+}
+#repo-collab-list a.member {
+  color: #444;
+  height: 50px;
+  line-height: 50px;
+}
+#repo-collab-list a.member:hover {
+  color: #4183C4;
+}
+#repo-collab-list .avatar {
+  margin-right: 1em;
+  width: 40px;
+}
+#repo-collab-list .remove-collab {
+  color: #DD4B39;
+}
+.repo-user-list-block {
+  position: relative;
+  top: 5px;
 }
 #setting-wrapper {
   padding-bottom: 100px;
@@ -1368,6 +1450,7 @@ The register and sign-in page style
 .pr-nav {
   border-bottom: 1px solid #DDD;
   margin-top: 16px;
+  margin-bottom: 16px;
 }
 .pr-nav .octicon {
   margin-right: 4px;
@@ -1384,7 +1467,7 @@ The register and sign-in page style
   font-size: 12px;
   margin-left: 4px;
 }
-.pr-nav li.current > a {
+.pr-nav li.js-tab-nav-show > a {
   background-color: #FFF;
   border-color: #E6E6E6;
 }
@@ -1409,4 +1492,123 @@ The register and sign-in page style
   height: 10px;
   border-top-left-radius: .2em;
   border-bottom-left-radius: .2em;
+}
+#pr-commit,
+#pr-file-diff,
+#issue-add-comment-preview {
+  display: none;
+}
+#pr-conversation-list {
+  padding-right: 30px;
+  box-sizing: border-box;
+}
+.issue-comment,
+.issue-commit,
+.issue-line,
+.issue-merge,
+.issue-add-comment {
+  margin-bottom: 16px;
+}
+.issue-comment .author-avatar img {
+  margin-right: 12px;
+}
+.issue-comment .panel {
+  margin-left: 60px;
+  margin-top: -40px;
+}
+.issue-comment .panel-header {
+  font-size: 13px;
+}
+.issue-comment .author-name {
+  font-weight: bold;
+}
+.issue-comment .date {
+  margin-left: 4px;
+  font-style: italic;
+  color: #888;
+}
+.issue-comment .action > * {
+  margin-left: 4px;
+  font-size: 12px;
+}
+.issue-comment .action i {
+  font-size: 13px;
+}
+.issue-commit {
+  line-height: 32px;
+}
+.issue-commit i,
+.issue-commit .author-avatar img {
+  margin-right: 16px;
+}
+.issue-commit .sha {
+  margin-left: 24px;
+}
+.issue-commit .message {
+  display: block;
+  margin-left: 88px;
+  padding-top: 4px;
+  line-height: 24px;
+}
+.issue-merge .ico {
+  width: 40px;
+  height: 40px;
+  text-align: center;
+  color: #FFF;
+  margin-right: 12px;
+}
+.issue-merge .ico i {
+  margin-top: 8px;
+  font-size: 24px;
+}
+.issue-merge .panel {
+  margin-left: 60px;
+  margin-top: -40px;
+}
+.issue-merge .panel-header {
+  font-size: 13px;
+}
+.issue-merge-ok .ico {
+  background-color: #65AD4E;
+}
+.issue-merge-ok .panel,
+.issue-merge-ok .panel-content,
+.issue-merge-ok .panel-header {
+  border-color: #65AD4E;
+  background-color: #FFF;
+}
+.issue-merge-ok .panel-header {
+  color: #508a3e;
+}
+.issue-line {
+  height: 4px;
+  background-color: #E6E6E6;
+}
+.issue-add-comment .panel {
+  margin-left: 60px;
+  margin-top: -40px;
+}
+.issue-add-comment .panel-header {
+  font-size: 13px;
+  padding-bottom: 0;
+}
+.issue-add-comment .add-nav > li > a {
+  padding: 4px 12px;
+  color: #444;
+  border: 1px solid #CCC;
+  margin-bottom: -1px;
+  font-size: 14px;
+  border-top-left-radius: .3em;
+  border-top-right-radius: .3em;
+}
+.issue-add-comment .add-nav > li > a:hover {
+  background-color: #FFF;
+}
+.issue-add-comment .add-nav > li.js-tab-nav-show > a {
+  background-color: #FFF;
+}
+textarea#issue-add-content {
+  width: 100%;
+  box-sizing: border-box;
+  height: 120px;
 }

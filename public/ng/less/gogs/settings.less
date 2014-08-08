@@ -1,0 +1,103 @@
+@import "../ui/var";
+
+#setting-wrapper {
+    padding-bottom: 100px;
+}
+
+#setting-menu {
+  box-sizing: border-box;
+  li > a {
+    border-left: 2px solid #FFF;
+    background-color: #FFF;
+  }
+  li:hover {
+    a {
+      border-left: 2px solid #EFEFEF;
+      background-color: #EFEFEF !important;
+      color: #000 !important;
+    }
+    border-color: #EAEAEA;
+  }
+  li.current {
+    a {
+      color: #000 !important;
+      font-weight: bold;
+      border-left: 2px solid #d26911;
+    }
+  }
+}
+
+.setting-content {
+  margin-left: 32px;
+}
+
+#repo-setting-form,
+#user-profile-form {
+    background-color: #FFF;
+    padding: 30px 0;
+    textarea {
+        margin-left: 4px;
+        height: 100px;
+    }
+    label,
+    .form-label {
+        width: 240px;
+    }
+    .ipt {
+        width: 360px;
+    }
+    .field {
+        margin-bottom: 24px;
+    }
+}
+
+#user-ssh-panel {
+  margin-bottom: 20px;
+  .switching-list {
+    background-color: #FFF;
+    li {
+      padding: 8px 20px;
+      &.ssh:hover {
+        background-color: #ffffEE;
+      }
+    }
+  }
+  .active-icon {
+    width: 10px;
+    height: 10px;
+    border-radius: 6px;
+    padding: 0;
+    margin-right: 20px;
+    margin-top: 10px;
+  }
+  .ssh-content {
+    margin-left: 24px;
+    .octicon {
+      margin-right: 4px;
+    }
+    .print,
+    .activity {
+      color: #888;
+    }
+  }
+  .ssh-delete-btn {
+    margin-top: 6px;
+  }
+}
+
+#user-ssh-add-form {
+  .panel-body {
+    background-color: #FFF;
+    padding: 30px 0;
+  }
+  .ipt {
+    width: 500px;
+  }
+  textarea {
+    height: 120px;
+    margin-left: 3px;
+  }
+  .field {
+    margin-bottom: 24px;
+  }
+}

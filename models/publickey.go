@@ -69,7 +69,7 @@ func init() {
 
 	// Determine and create .ssh path.
 	SshPath = filepath.Join(homeDir(), ".ssh")
-	if err = os.MkdirAll(SshPath, os.ModePerm); err != nil {
+	if err = os.MkdirAll(SshPath, 0700); err != nil {
 		log.Fatal(4, "fail to create SshPath(%s): %v\n", SshPath, err)
 	}
 }
@@ -156,6 +156,16 @@ func saveAuthorizedKeyFile(key *PublicKey) error {
 		return err
 	}
 	defer f.Close()
+	finfo, err := f.Stat()
+	if err != nil {
+		return err
+	}
+	if finfo.Mode().Perm() > 0600 {
+		log.Error(4, "authorized_keys file has unusual permission flags: %s - setting to -rw-------", finfo.Mode().Perm().String())
+		if err = f.Chmod(0600); err != nil {
+			return err
+		}
+	}
 
 	_, err = f.WriteString(key.GetAuthorizedString())
 	return err
