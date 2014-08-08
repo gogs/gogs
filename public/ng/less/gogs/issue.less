@@ -1,0 +1,262 @@
+@import "../ui/var";
+
+.repo-issue-wrapper {
+  padding: 18px 0;
+}
+
+.pr-main {
+  padding-right: 40px;
+  box-sizing: border-box;
+}
+
+.pr-sidebar {
+  border-left: 1px solid #DDD;
+  box-sizing: border-box;
+}
+
+#pr-sidebar-nav {
+  margin-top: 6px;
+  li {
+    margin-bottom: 4px;
+  }
+  li > a {
+    border: 1px solid transparent;
+    border-left: none;
+    &:hover {
+      background-color: #FFF;
+      border-color: #DDD;
+    }
+  }
+  .label {
+    font-size: 12px;
+    line-height: 1.4em;
+    margin-top: 1px;
+  }
+  li.current {
+    a {
+      background-color: #FFF;
+      border-color: #DDD;
+    }
+  }
+}
+
+.pr-title {
+  .pr-num {
+    font-weight: normal;
+    color: #888;
+  }
+}
+
+.pr-meta {
+  color: #888;
+  .pr-author {
+    margin: 0 8px;
+    color: #444;
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+  .pr-branch {
+    margin: 0 4px;
+    font-size: 12px;
+    padding: 4px 6px;
+  }
+}
+
+.pr-nav {
+  border-bottom: 1px solid #DDD;
+  margin-top: 16px;
+  margin-bottom: 16px;
+  .octicon {
+    margin-right: 4px;
+  }
+  li > a {
+    padding: 3px 9px !important;
+    border: 1px solid transparent;
+    border-bottom: none;
+    .label {
+      padding: 1px 5px;
+      font-size: 12px;
+      margin-left: 4px;
+    }
+    border-top-left-radius: .2em;
+    border-top-right-radius: .2em;
+  }
+  li.js-tab-nav-show {
+    > a {
+      background-color: #FFF;
+      border-color: #E6E6E6;
+    }
+  }
+}
+
+.diff-bar {
+  .diff-add {
+    color: @btnGreenColor;
+  }
+  .diff-delete {
+    color: @btnRedColor;
+  }
+  .diff-status {
+    width: 50px;
+    background-color: @btnRedColor;
+    height: 10px;
+    margin-top: 7px;
+    margin-left: 4px;
+    margin-right: 4px;
+    border-radius: .2em;
+  }
+  .diff-status-inner {
+    width: 45%;
+    background-color: @btnGreenColor;
+    height: 10px;
+    border-top-left-radius: .2em;
+    border-bottom-left-radius: .2em;
+  }
+}
+
+#pr-commit,
+#pr-file-diff,
+#issue-add-comment-preview {
+  display: none;
+}
+
+#pr-conversation-list {
+  padding-right: 30px;
+  box-sizing: border-box;
+}
+
+.issue-comment,
+.issue-commit,
+.issue-line,
+.issue-merge,
+.issue-add-comment {
+  margin-bottom: 16px;
+}
+
+.issue-comment {
+  .author-avatar {
+    img {
+      margin-right: 12px;
+    }
+  }
+  .panel {
+    margin-left: 60px;
+    margin-top: -40px;
+  }
+  .panel-header {
+    font-size: 13px;
+  }
+  .author-name {
+    font-weight: bold;
+  }
+  .date {
+    margin-left: 4px;
+    font-style: italic;
+    color: #888;
+  }
+  .action {
+    > * {
+      margin-left: 4px;
+      font-size: 12px;
+    }
+    i {
+      font-size: 13px;
+    }
+  }
+}
+
+.issue-commit {
+  line-height: 32px;
+  i, .author-avatar img {
+    margin-right: 16px;
+  }
+  .sha {
+    margin-left: 24px;
+  }
+  .message {
+    display: block;
+    margin-left: 88px;
+    padding-top: 4px;
+    line-height: 24px;
+  }
+}
+
+.issue-merge {
+  .ico {
+    width: 40px;
+    height: 40px;
+    text-align: center;
+    color: #FFF;
+    i {
+      margin-top: 8px;
+      font-size: 24px;
+    }
+    margin-right: 12px;
+  }
+  .panel {
+    margin-left: 60px;
+    margin-top: -40px;
+  }
+  .panel-header {
+    font-size: 13px;
+  }
+}
+
+.issue-merge-ok {
+  .ico {
+    background-color: #65AD4E;
+  }
+  .panel,
+  .panel-content,
+  .panel-header {
+    border-color: #65AD4E;
+    background-color: #FFF;
+  }
+  .panel-header {
+    color: darken(#65AD4E, 10%);
+  }
+}
+
+.issue-line {
+  height: 4px;
+  background-color: #E6E6E6;
+}
+
+.issue-add-comment {
+  .panel {
+    margin-left: 60px;
+    margin-top: -40px;
+  }
+  .panel-header {
+    font-size: 13px;
+    padding-bottom: 0;
+  }
+  .add-nav {
+    > li {
+      > a {
+        padding: 4px 12px;
+        color: #444;
+        border: 1px solid #CCC;
+        margin-bottom: -1px;
+        font-size: 14px;
+        border-top-left-radius: .3em;
+        border-top-right-radius: .3em;
+        &:hover {
+          background-color: #FFF;
+        }
+      }
+      &.js-tab-nav-show {
+        > a {
+          background-color: #FFF;
+        }
+      }
+    }
+  }
+}
+
+textarea#issue-add-content {
+  width: 100%;
+  box-sizing: border-box;
+  height: 120px;
+}

@@ -94,12 +94,20 @@ ul.menu-down {
   }
 }
 
-ul.menu-down {
-  position: absolute;
-  display: none;
-  z-index: 99;
-  box-shadow: 0 0 2px @menuShadowColor;
-  background-color: @menuDownBgColor;
+ul {
+    &.menu-down {
+        position: absolute;
+        display: none;
+        z-index: 99;
+        box-shadow: 0 0 2px @menuShadowColor;
+        background-color: @menuDownBgColor;
+    }
+    &.menu-down-show {
+        position: absolute;
+        z-index: 99;
+        box-shadow: 0 0 2px @menuShadowColor;
+        background-color: @menuDownBgColor;
+    }
 }
 
 ul.menu-radius {
