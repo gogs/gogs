@@ -8,11 +8,11 @@
                 {{template "ng/base/alert" .}}
                 <div id="user-ssh-setting-content">
                     <div id="user-ssh-panel" class="panel panel-radius">
-                        <p class="panel-header">
-                            <button class="btn btn-small btn-black btn-radius right" id="ssh-add">{{.i18n.Tr "settings.add_key"}}</button>
+                        <div class="panel-header">
+                            <a class="btn btn-small btn-black btn-header btn-radius right" id="ssh-add">{{.i18n.Tr "settings.add_key"}}</a>
                             <strong>{{.i18n.Tr "settings.manage_ssh_keys"}}</strong>
-                        </p>
-                        <ul class="panel-body menu menu-vertical switching-list">
+                        </div>
+                        <ul class="panel-body setting-list">
                             <li>{{.i18n.Tr "settings.ssh_desc"}}</li>
                             {{range .Keys}}
                             <li class="ssh clear">

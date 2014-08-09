@@ -51,38 +51,43 @@
     }
 }
 
+#repo-hooks-panel,
 #user-ssh-panel {
-  margin-bottom: 20px;
-  .switching-list {
-    background-color: #FFF;
-    li {
-      padding: 8px 20px;
-      &.ssh:hover {
-        background-color: #ffffEE;
-      }
+    margin-bottom: 20px;
+    .setting-list {
+        background-color: #FFF;
+        li {
+            padding: 8px 20px;
+            border-bottom: 1px solid #eaeaea;
+            &.ssh:hover {
+                background-color: #ffffEE;
+            }
+            i {
+                padding-right: 5px;
+            }
+        }
     }
-  }
-  .active-icon {
-    width: 10px;
-    height: 10px;
-    border-radius: 6px;
-    padding: 0;
-    margin-right: 20px;
-    margin-top: 10px;
-  }
-  .ssh-content {
-    margin-left: 24px;
-    .octicon {
-      margin-right: 4px;
+    .active-icon {
+        width: 10px;
+        height: 10px;
+        border-radius: 6px;
+        padding: 0;
+        margin-right: 20px;
+        margin-top: 10px;
     }
-    .print,
-    .activity {
-      color: #888;
+    .ssh-content {
+        margin-left: 24px;
+        .octicon {
+            margin-right: 4px;
+        }
+        .print,
+        .activity {
+            color: #888;
+        }
     }
-  }
-  .ssh-delete-btn {
-    margin-top: 6px;
-  }
+    .ssh-delete-btn {
+        margin-top: 6px;
+    }
 }
 
 #user-ssh-add-form {

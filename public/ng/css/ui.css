@@ -427,6 +427,11 @@ dt {
 .btn-active {
   box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.1) inset, 0 0 4px rgba(0, 0, 0, 0.15) inset;
 }
+.btn-header {
+  margin-top: -1px;
+  color: white;
+  padding: 0 10px;
+}
 .btn-radius {
   border-radius: .25em;
 }

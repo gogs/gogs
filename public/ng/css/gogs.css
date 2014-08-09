@@ -214,6 +214,15 @@ img.avatar-48 {
   cursor: pointer;
   font-weight: bold;
 }
+.text-success {
+  color: #3c763d;
+}
+.text-blue {
+  color: #15c;
+}
+.text-red {
+  color: #DD4B39;
+}
 .markdown {
   background-color: white;
   font-size: 16px;
@@ -1297,6 +1306,10 @@ The register and sign-in page style
   position: relative;
   top: 5px;
 }
+.setting-list {
+  width: 100%;
+  list-style: none;
+}
 #setting-wrapper {
   padding-bottom: 100px;
 }
@@ -1347,18 +1360,28 @@ The register and sign-in page style
 #user-profile-form .field {
   margin-bottom: 24px;
 }
+#repo-hooks-panel,
 #user-ssh-panel {
   margin-bottom: 20px;
 }
-#user-ssh-panel .switching-list {
+#repo-hooks-panel .setting-list,
+#user-ssh-panel .setting-list {
   background-color: #FFF;
 }
-#user-ssh-panel .switching-list li {
+#repo-hooks-panel .setting-list li,
+#user-ssh-panel .setting-list li {
   padding: 8px 20px;
+  border-bottom: 1px solid #eaeaea;
 }
-#user-ssh-panel .switching-list li.ssh:hover {
+#repo-hooks-panel .setting-list li.ssh:hover,
+#user-ssh-panel .setting-list li.ssh:hover {
   background-color: #ffffEE;
 }
+#repo-hooks-panel .setting-list li i,
+#user-ssh-panel .setting-list li i {
+  padding-right: 5px;
+}
+#repo-hooks-panel .active-icon,
 #user-ssh-panel .active-icon {
   width: 10px;
   height: 10px;
@@ -1367,16 +1390,21 @@ The register and sign-in page style
   margin-right: 20px;
   margin-top: 10px;
 }
+#repo-hooks-panel .ssh-content,
 #user-ssh-panel .ssh-content {
   margin-left: 24px;
 }
+#repo-hooks-panel .ssh-content .octicon,
 #user-ssh-panel .ssh-content .octicon {
   margin-right: 4px;
 }
+#repo-hooks-panel .ssh-content .print,
 #user-ssh-panel .ssh-content .print,
+#repo-hooks-panel .ssh-content .activity,
 #user-ssh-panel .ssh-content .activity {
   color: #888;
 }
+#repo-hooks-panel .ssh-delete-btn,
 #user-ssh-panel .ssh-delete-btn {
   margin-top: 6px;
 }

@@ -255,8 +255,8 @@ func runWeb(*cli.Context) {
 		r.Post("/settings", bindIgnErr(auth.RepoSettingForm{}), repo.SettingsPost)
 		m.Group("/settings", func(r *macaron.Router) {
 			r.Route("/collaboration", "GET,POST", repo.SettingsCollaboration)
-			r.Get("/hooks", repo.WebHooks)
-			r.Get("/hooks/add", repo.WebHooksAdd)
+			r.Get("/hooks", repo.Webhooks)
+			r.Get("/hooks/new", repo.WebHooksAdd)
 			r.Post("/hooks/add", bindIgnErr(auth.NewWebhookForm{}), repo.WebHooksAddPost)
 			r.Get("/hooks/:id", repo.WebHooksEdit)
 			r.Post("/hooks/:id", bindIgnErr(auth.NewWebhookForm{}), repo.WebHooksEditPost)

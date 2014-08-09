@@ -23,8 +23,8 @@ import (
 const (
 	SETTINGS_OPTIONS base.TplName = "repo/settings/options"
 	COLLABORATION    base.TplName = "repo/settings/collaboration"
+	HOOKS            base.TplName = "repo/settings/hooks"
 
-	HOOKS     base.TplName = "repo/hooks"
 	HOOK_ADD  base.TplName = "repo/hook_add"
 	HOOK_EDIT base.TplName = "repo/hook_edit"
 )
@@ -215,69 +215,25 @@ func SettingsCollaboration(ctx *middleware.Context) {
 	ctx.HTML(200, COLLABORATION)
 }
 
-func SettingsCollaborationPost(ctx *middleware.Context) {
-	repoLink := strings.TrimPrefix(ctx.Repo.RepoLink, "/")
-	name := strings.ToLower(ctx.Query("collaborator"))
-	if len(name) == 0 || ctx.Repo.Owner.LowerName == name {
-		ctx.Redirect(ctx.Req.RequestURI)
-		return
-	}
-	has, err := models.HasAccess(name, repoLink, models.WRITABLE)
-	if err != nil {
-		ctx.Handle(500, "setting.CollaborationPost(HasAccess)", err)
-		return
-	} else if has {
-		ctx.Redirect(ctx.Req.RequestURI)
-		return
-	}
+func Webhooks(ctx *middleware.Context) {
+	ctx.Data["Title"] = ctx.Tr("repo.settings")
+	ctx.Data["PageIsSettingsHooks"] = true
 
-	u, err := models.GetUserByName(name)
-	if err != nil {
-		if err == models.ErrUserNotExist {
-			ctx.Flash.Error("Given user does not exist.")
-			ctx.Redirect(ctx.Req.RequestURI)
-		} else {
-			ctx.Handle(500, "setting.CollaborationPost(GetUserByName)", err)
-		}
-		return
-	}
-
-	if err = models.AddAccess(&models.Access{UserName: name, RepoName: repoLink,
-		Mode: models.WRITABLE}); err != nil {
-		ctx.Handle(500, "setting.CollaborationPost(AddAccess)", err)
-		return
-	}
-
-	if setting.Service.EnableNotifyMail {
-		if err = mailer.SendCollaboratorMail(ctx.Render, u, ctx.User, ctx.Repo.Repository); err != nil {
-			ctx.Handle(500, "setting.CollaborationPost(SendCollaboratorMail)", err)
-			return
-		}
-	}
-
-	ctx.Flash.Success("New collaborator has been added.")
-	ctx.Redirect(ctx.Req.RequestURI)
-}
-
-func WebHooks(ctx *middleware.Context) {
-	ctx.Data["IsRepoToolbarWebHooks"] = true
-	ctx.Data["Title"] = strings.TrimPrefix(ctx.Repo.RepoLink, "/") + " - Webhooks"
-
-	// Delete webhook.
+	// Delete web hook.
 	remove := com.StrTo(ctx.Query("remove")).MustInt64()
 	if remove > 0 {
 		if err := models.DeleteWebhook(remove); err != nil {
-			ctx.Handle(500, "setting.WebHooks(DeleteWebhook)", err)
+			ctx.Handle(500, "DeleteWebhook", err)
 			return
 		}
-		ctx.Flash.Success("Webhook has been removed.")
+		ctx.Flash.Success(ctx.Tr("repo.settings.remove_hook_success"))
 		ctx.Redirect(ctx.Repo.RepoLink + "/settings/hooks")
 		return
 	}
 
 	ws, err := models.GetWebhooksByRepoId(ctx.Repo.Repository.Id)
 	if err != nil {
-		ctx.Handle(500, "setting.WebHooks(GetWebhooksByRepoId)", err)
+		ctx.Handle(500, "GetWebhooksByRepoId", err)
 		return
 	}
 
