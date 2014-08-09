@@ -16,7 +16,7 @@
                             <li>{{.i18n.Tr "settings.ssh_desc"}}</li>
                             {{range .Keys}}
                             <li class="ssh clear">
-                                <span class="active-icon left label {{if .HasRecentActivity}}label-green{{end}} label-radius"></span>
+                                <span class="active-icon left label label-{{if .HasRecentActivity}}green{{else}}gray{{end}} label-radius"></span>
                                 <i class="mega-octicon octicon-key left"></i>
                                 <div class="ssh-content left">
                                     <p><strong>{{.Name}}</strong></p>

@@ -11,10 +11,10 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
-
-	"github.com/codegangsta/cli"
+	"time"
 
 	"github.com/Unknwon/com"
+	"github.com/codegangsta/cli"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/log"
@@ -184,19 +184,29 @@ func runServ(k *cli.Context) {
 	if isWrite {
 		tasks, err := models.GetUpdateTasksByUuid(uuid)
 		if err != nil {
-			log.GitLogger.Fatal(2, "Fail to get update task: %v", err)
+			log.GitLogger.Fatal(2, "GetUpdateTasksByUuid: %v", err)
 		}
 
 		for _, task := range tasks {
 			err = models.Update(task.RefName, task.OldCommitId, task.NewCommitId,
 				user.Name, repoUserName, repoName, user.Id)
 			if err != nil {
-				log.GitLogger.Fatal(2, "Fail to update: %v", err)
+				log.GitLogger.Error(2, "Fail to update: %v", err)
 			}
 		}
 
 		if err = models.DelUpdateTasksByUuid(uuid); err != nil {
-			log.GitLogger.Fatal(2, "Fail to del update task: %v", err)
+			log.GitLogger.Fatal(2, "DelUpdateTasksByUuid: %v", err)
 		}
+	}
+
+	// Update key activity.
+	key, err := models.GetPublicKeyById(keyId)
+	if err != nil {
+		log.GitLogger.Fatal(2, "GetPublicKeyById: %v", err)
+	}
+	key.Updated = time.Now()
+	if err = models.UpdatePublicKey(key); err != nil {
+		log.GitLogger.Fatal(2, "UpdatePublicKey: %v", err)
 	}
 }

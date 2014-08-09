@@ -209,6 +209,18 @@ func AddPublicKey(key *PublicKey) (err error) {
 	return nil
 }
 
+// GetPublicKeyById returns public key by given ID.
+func GetPublicKeyById(keyId int64) (*PublicKey, error) {
+	key := new(PublicKey)
+	has, err := x.Id(keyId).Get(key)
+	if err != nil {
+		return nil, err
+	} else if !has {
+		return nil, ErrKeyNotExist
+	}
+	return key, nil
+}
+
 // ListPublicKey returns a list of all public keys that user has.
 func ListPublicKey(uid int64) ([]*PublicKey, error) {
 	keys := make([]*PublicKey, 0, 5)
@@ -275,6 +287,12 @@ func rewriteAuthorizedKeys(key *PublicKey, p, tmpP string) error {
 		}
 	}
 	return nil
+}
+
+// UpdatePublicKey updates given public key.
+func UpdatePublicKey(key *PublicKey) error {
+	_, err := x.Id(key.Id).AllCols().Update(key)
+	return err
 }
 
 // DeletePublicKey deletes SSH key information both in database and authorized_keys file.

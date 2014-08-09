@@ -24,9 +24,7 @@ const (
 	SETTINGS_OPTIONS base.TplName = "repo/settings/options"
 	COLLABORATION    base.TplName = "repo/settings/collaboration"
 	HOOKS            base.TplName = "repo/settings/hooks"
-
-	HOOK_ADD  base.TplName = "repo/hook_add"
-	HOOK_EDIT base.TplName = "repo/hook_edit"
+	HOOK_NEW         base.TplName = "repo/settings/hook_new"
 )
 
 func Settings(ctx *middleware.Context) {
@@ -241,18 +239,22 @@ func Webhooks(ctx *middleware.Context) {
 	ctx.HTML(200, HOOKS)
 }
 
-func WebHooksAdd(ctx *middleware.Context) {
-	ctx.Data["IsRepoToolbarWebHooks"] = true
-	ctx.Data["Title"] = strings.TrimPrefix(ctx.Repo.RepoLink, "/") + " - Add Webhook"
-	ctx.HTML(200, HOOK_ADD)
+func WebHooksNew(ctx *middleware.Context) {
+	ctx.Data["Title"] = ctx.Tr("repo.settings")
+	ctx.Data["PageIsSettingsHooks"] = true
+	ctx.Data["PageIsSettingsHooksNew"] = true
+	ctx.Data["Webhook"] = models.Webhook{HookEvent: &models.HookEvent{}}
+	ctx.HTML(200, HOOK_NEW)
 }
 
-func WebHooksAddPost(ctx *middleware.Context, form auth.NewWebhookForm) {
-	ctx.Data["IsRepoToolbarWebHooks"] = true
-	ctx.Data["Title"] = strings.TrimPrefix(ctx.Repo.RepoLink, "/") + " - Add Webhook"
+func WebHooksNewPost(ctx *middleware.Context, form auth.NewWebhookForm) {
+	ctx.Data["Title"] = ctx.Tr("repo.settings")
+	ctx.Data["PageIsSettingsHooks"] = true
+	ctx.Data["PageIsSettingsHooksNew"] = true
+	ctx.Data["Webhook"] = models.Webhook{HookEvent: &models.HookEvent{}}
 
 	if ctx.HasError() {
-		ctx.HTML(200, HOOK_ADD)
+		ctx.HTML(200, HOOK_NEW)
 		return
 	}
 
@@ -263,7 +265,7 @@ func WebHooksAddPost(ctx *middleware.Context, form auth.NewWebhookForm) {
 
 	w := &models.Webhook{
 		RepoId:      ctx.Repo.Repository.Id,
-		Url:         form.Url,
+		Url:         form.PayloadUrl,
 		ContentType: ct,
 		Secret:      form.Secret,
 		HookEvent: &models.HookEvent{
@@ -272,20 +274,21 @@ func WebHooksAddPost(ctx *middleware.Context, form auth.NewWebhookForm) {
 		IsActive: form.Active,
 	}
 	if err := w.UpdateEvent(); err != nil {
-		ctx.Handle(500, "setting.WebHooksAddPost(UpdateEvent)", err)
+		ctx.Handle(500, "UpdateEvent", err)
 		return
 	} else if err := models.CreateWebhook(w); err != nil {
-		ctx.Handle(500, "setting.WebHooksAddPost(CreateWebhook)", err)
+		ctx.Handle(500, "CreateWebhook", err)
 		return
 	}
 
-	ctx.Flash.Success("New webhook has been added.")
+	ctx.Flash.Success(ctx.Tr("repo.settings.add_hook_success"))
 	ctx.Redirect(ctx.Repo.RepoLink + "/settings/hooks")
 }
 
 func WebHooksEdit(ctx *middleware.Context) {
-	ctx.Data["IsRepoToolbarWebHooks"] = true
-	ctx.Data["Title"] = strings.TrimPrefix(ctx.Repo.RepoLink, "/") + " - Webhook"
+	ctx.Data["Title"] = ctx.Tr("repo.settings")
+	ctx.Data["PageIsSettingsHooks"] = true
+	ctx.Data["PageIsSettingsHooksEdit"] = true
 
 	hookId := com.StrTo(ctx.Params(":id")).MustInt64()
 	if hookId == 0 {
@@ -296,21 +299,21 @@ func WebHooksEdit(ctx *middleware.Context) {
 	w, err := models.GetWebhookById(hookId)
 	if err != nil {
 		if err == models.ErrWebhookNotExist {
-			ctx.Handle(404, "setting.WebHooksEdit(GetWebhookById)", nil)
+			ctx.Handle(404, "GetWebhookById", nil)
 		} else {
-			ctx.Handle(500, "setting.WebHooksEdit(GetWebhookById)", err)
+			ctx.Handle(500, "GetWebhookById", err)
 		}
 		return
 	}
-
 	w.GetEvent()
 	ctx.Data["Webhook"] = w
-	ctx.HTML(200, HOOK_EDIT)
+	ctx.HTML(200, HOOK_NEW)
 }
 
 func WebHooksEditPost(ctx *middleware.Context, form auth.NewWebhookForm) {
-	ctx.Data["IsRepoToolbarWebHooks"] = true
-	ctx.Data["Title"] = strings.TrimPrefix(ctx.Repo.RepoLink, "/") + " - Webhook"
+	ctx.Data["Title"] = ctx.Tr("repo.settings")
+	ctx.Data["PageIsSettingsHooks"] = true
+	ctx.Data["PageIsSettingsHooksEdit"] = true
 
 	hookId := com.StrTo(ctx.Params(":id")).MustInt64()
 	if hookId == 0 {
@@ -327,9 +330,11 @@ func WebHooksEditPost(ctx *middleware.Context, form auth.NewWebhookForm) {
 		}
 		return
 	}
+	w.GetEvent()
+	ctx.Data["Webhook"] = w
 
 	if ctx.HasError() {
-		ctx.HTML(200, HOOK_EDIT)
+		ctx.HTML(200, HOOK_NEW)
 		return
 	}
 
@@ -338,7 +343,7 @@ func WebHooksEditPost(ctx *middleware.Context, form auth.NewWebhookForm) {
 		ct = models.FORM
 	}
 
-	w.Url = form.Url
+	w.Url = form.PayloadUrl
 	w.ContentType = ct
 	w.Secret = form.Secret
 	w.HookEvent = &models.HookEvent{
@@ -353,6 +358,6 @@ func WebHooksEditPost(ctx *middleware.Context, form auth.NewWebhookForm) {
 		return
 	}
 
-	ctx.Flash.Success("Webhook has been updated.")
+	ctx.Flash.Success(ctx.Tr("repo.settings.update_hook_success"))
 	ctx.Redirect(fmt.Sprintf("%s/settings/hooks/%d", ctx.Repo.RepoLink, hookId))
 }

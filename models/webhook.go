@@ -12,6 +12,7 @@ import (
 	"github.com/gogits/gogs/modules/httplib"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/setting"
+	"github.com/gogits/gogs/modules/uuid"
 )
 
 var (
@@ -122,6 +123,12 @@ const (
 	SERVICE
 )
 
+type HookEventType string
+
+const (
+	PUSH HookEventType = "push"
+)
+
 type PayloadAuthor struct {
 	Name  string `json:"name"`
 	Email string `json:"email"`
@@ -157,13 +164,16 @@ type Payload struct {
 // HookTask represents a hook task.
 type HookTask struct {
 	Id             int64
+	Uuid           string
 	Type           HookTaskType
 	Url            string
 	*Payload       `xorm:"-"`
 	PayloadContent string `xorm:"TEXT"`
 	ContentType    HookContentType
+	EventType      HookEventType
 	IsSsl          bool
 	IsDeliveried   bool
+	IsSucceed      bool
 }
 
 // CreateHookTask creates a new hook task,
@@ -173,6 +183,7 @@ func CreateHookTask(t *HookTask) error {
 	if err != nil {
 		return err
 	}
+	t.Uuid = uuid.NewV4().String()
 	t.PayloadContent = string(data)
 	_, err = x.Insert(t)
 	return err
@@ -190,20 +201,32 @@ func DeliverHooks() {
 	x.Where("is_deliveried=?", false).Iterate(new(HookTask),
 		func(idx int, bean interface{}) error {
 			t := bean.(*HookTask)
-			// Only support JSON now.
-			if _, err := httplib.Post(t.Url).SetTimeout(timeout, timeout).
-				Body([]byte(t.PayloadContent)).Response(); err != nil {
-				log.Error(4, "webhook.DeliverHooks(Delivery): %v", err)
-				return nil
+			req := httplib.Post(t.Url).SetTimeout(timeout, timeout).
+				Header("X-Gogs-Delivery", t.Uuid).
+				Header("X-Gogs-Event", string(t.EventType))
+
+			switch t.ContentType {
+			case JSON:
+				req = req.Header("Content-Type", "application/json").Body(t.PayloadContent)
+			case FORM:
+				req.Param("payload", t.PayloadContent)
 			}
 
 			t.IsDeliveried = true
+
+			// TODO: record response.
+			if _, err := req.Response(); err != nil {
+				log.Error(4, "Delivery: %v", err)
+			} else {
+				t.IsSucceed = true
+			}
+
 			if err := UpdateHookTask(t); err != nil {
-				log.Error(4, "webhook.DeliverHooks(UpdateHookTask): %v", err)
+				log.Error(4, "UpdateHookTask: %v", err)
 				return nil
 			}
 
-			log.Trace("Hook delivered: %s", t.PayloadContent)
+			log.Trace("Hook delivered(%s): %s", t.Uuid, t.PayloadContent)
 			return nil
 		})
 }
