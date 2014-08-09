@@ -18,7 +18,11 @@
                             	<li>{{.i18n.Tr "repo.settings.hooks_desc" | Str2html}}</li>
                             	{{range .Webhooks}}
 								<li>
-									{{if .IsActive}}<span class="left text-success"><i class="fa fa-check"></i></span>{{else}}<span class="pull-left status"><i class="fa fa-times"></i></span>{{end}}
+									{{if .IsActive}}
+									<span class="left text-success"><i class="octicon octicon-check"></i></span>
+									{{else}}
+									<span class="left text-grey"><i class="octicon octicon-primitive-dot"></i></span>
+									{{end}}
 									<a class="link" href="{{$.RepoLink}}/settings/hooks/{{.Id}}">{{.Url}}</a>
 									<a href="{{$.RepoLink}}/settings/hooks?remove={{.Id}}" class="text-red right"><i class="fa fa-times"></i></a>
                         			<a href="{{$.RepoLink}}/settings/hooks/{{.Id}}" class="text-blue right"><i class="fa fa-pencil"></i></a>

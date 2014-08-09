@@ -31,8 +31,8 @@
 	                            <hr>	
 	                            <br>
 					            <div class="field">
-					                <label for="lang">{{.i18n.Tr "repo.default_branch"}}</label>
-					                <select id="lang" name="gitignore">
+					                <label>{{.i18n.Tr "repo.default_branch"}}</label>
+					                <select name="branch">
 		                                {{if .Repository.DefaultBranch}}<option value="{{.Repository.DefaultBranch}}">{{.Repository.DefaultBranch}}</option>{{end}}
 		                                {{range .Branches}}
 		                                	{{if not (eq . $.Repository.DefaultBranch)}}<option value="{{.}}">{{.}}</option>{{end}}

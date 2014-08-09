@@ -112,7 +112,7 @@ func (repo *Repository) getCommit(id sha1) (*Commit, error) {
 
 	data, bytErr, err := com.ExecCmdDirBytes(repo.Path, "git", "cat-file", "-p", id.String())
 	if err != nil {
-		return nil, errors.New(string(bytErr))
+		return nil, errors.New(err.Error() + ": " + string(bytErr))
 	}
 
 	commit, err := parseCommitData(data)

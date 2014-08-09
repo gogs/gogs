@@ -392,6 +392,7 @@ dt {
   color: #FFF;
 }
 .btn-red {
+  color: #FFF;
   background-color: #d9453d;
   border: 1px solid #d9453d;
 }
@@ -431,6 +432,10 @@ dt {
   margin-top: -1px;
   color: white;
   padding: 0 10px;
+}
+.btn-link {
+  overflow: visible;
+  padding: .6em 1.2em;
 }
 .btn-radius {
   border-radius: .25em;
@@ -673,6 +678,7 @@ ul.menu-radius > li:last-child > a {
   background-color: white;
 }
 .panel .panel-body .panel-desc {
+  padding: 0 40px;
   margin-bottom: 20px;
 }
 .panel .panel-content {
