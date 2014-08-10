@@ -7,30 +7,30 @@
         </div>
         <div class="panel-content">
             {{template "ng/base/alert" .}}
-            <p class="field">
+            <div class="field">
                 <label class="req" for="username">{{.i18n.Tr "home.uname_holder"}}</label>
                 <input class="ipt ipt-large ipt-radius {{if .Err_UserName}}ipt-error{{end}}" id="username" name="uname" type="text" value="{{.uname}}" required/>
-            </p>
-            <p class="field">
+            </div>
+            <div class="field">
                 <label class="req" for="password">{{.i18n.Tr "password"}}</label>
                 <input class="ipt ipt-large ipt-radius {{if .Err_Password}}ipt-error{{end}}" id="password" name="password" type="password" required/>
-            </p>
+            </div>
             {{if not .IsSocialLogin}}
-            <p class="field">
+            <div class="field">
                 <span class="form-label"></span>
                 <input class="ipt-chk" id="remember" name="remember" type="checkbox"/>&nbsp;&nbsp;&nbsp;&nbsp;<strong>{{.i18n.Tr "auth.remember_me"}}</strong>
-            </p>
+            </div>
             {{end}}
-            <p class="field">
+            <div class="field">
                 <span class="form-label"></span>
                 <button class="btn btn-green btn-large btn-radius">{{.i18n.Tr "sign_in"}}</button>&nbsp;&nbsp;&nbsp;&nbsp;
                 {{if not .IsSocialLogin}}<a href="/user/forget_password">{{.i18n.Tr "auth.forget_password"}}</a>{{end}}
-            </p>
+            </div>
             {{if not .IsSocialLogin}}
-            <p class="field">
-                <span class="form-label"></span>
+            <div class="field">
+                <label></label>
                 <a href="/user/sign_up">{{.i18n.Tr "auth.sign_up_now" | Str2html}}</a>
-            </p>
+            </div>
             {{if .OauthEnabled}}
             <hr/>
             <div id="sign-social" class="text-center social-buttons">

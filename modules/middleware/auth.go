@@ -5,6 +5,7 @@
 package middleware
 
 import (
+	"fmt"
 	"net/url"
 	"strings"
 
@@ -43,6 +44,7 @@ func Toggle(options *ToggleOptions) macaron.Handler {
 		}
 
 		if options.SignInRequire {
+			fmt.Println(ctx.User.IsActive, setting.Service.RegisterEmailConfirm)
 			if !ctx.IsSigned {
 				// Ignore watch repository operation.
 				if strings.HasSuffix(ctx.Req.RequestURI, "watch") {
@@ -52,7 +54,7 @@ func Toggle(options *ToggleOptions) macaron.Handler {
 				ctx.Redirect("/user/login")
 				return
 			} else if !ctx.User.IsActive && setting.Service.RegisterEmailConfirm {
-				// ctx.Data["Title"] = "Activate Your Account"
+				ctx.Data["Title"] = ctx.Tr("auth.active_your_account")
 				ctx.HTML(200, "user/activate")
 				return
 			}
