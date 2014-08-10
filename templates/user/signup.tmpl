@@ -3,7 +3,7 @@
 <div id="sign-wrapper">
     <form class="form-align form panel panel-radius sign-panel sign-form container" id="sign-up-form" action="/user/sign_up" method="post">
         <div class="panel-header">
-            <h2>{{.i18n.Tr "sign_up"}}</h2>
+            <h2>{{if .IsSocialLogin}}{{.i18n.Tr "social_sign_in" | Str2html}}{{else}}{{.i18n.Tr "sign_up"}}{{end}}</h2>
         </div>
         <div class="panel-content">
             {{template "ng/base/alert" .}}
@@ -40,7 +40,7 @@
             </p>
             <p class="field">
                 <span class="form-label"></span>
-                <a href="/user/login">{{.i18n.Tr "auth.register_hepler_msg"}}</a>
+                <a href="/user/login">{{if .IsSocialLogin}}{{.i18n.Tr "auth.social_register_hepler_msg"}}{{else}}{{.i18n.Tr "auth.register_hepler_msg"}}{{end}}</a>
             </p>
         	{{end}}
         </div>

@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/log"
@@ -67,8 +68,8 @@ func SocialSignIn(ctx *middleware.Context) {
 	oa, err := models.GetOauth2(ui.Identity)
 	switch err {
 	case nil:
-		ctx.Session.Set("userId", oa.User.Id)
-		ctx.Session.Set("userName", oa.User.Name)
+		ctx.Session.Set("uid", oa.User.Id)
+		ctx.Session.Set("uname", oa.User.Name)
 	case models.ErrOauth2RecordNotExist:
 		raw, _ := json.Marshal(tk)
 		oa = &models.Oauth2{
@@ -87,6 +88,11 @@ func SocialSignIn(ctx *middleware.Context) {
 	default:
 		ctx.Handle(500, "social.SocialSignIn(GetOauth2)", err)
 		return
+	}
+
+	oa.Updated = time.Now()
+	if err = models.UpdateOauth2(oa); err != nil {
+		log.Error(4, "UpdateOauth2: %v", err)
 	}
 
 	ctx.Session.Set("socialId", oa.Id)

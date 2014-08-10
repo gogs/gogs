@@ -14,7 +14,7 @@ import (
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
-	// "github.com/gogits/gogs/modules/mailer"
+	"github.com/gogits/gogs/modules/mailer"
 	"github.com/gogits/gogs/modules/middleware"
 	"github.com/gogits/gogs/modules/setting"
 )
@@ -157,23 +157,22 @@ func SignOut(ctx *middleware.Context) {
 }
 
 func oauthSignUp(ctx *middleware.Context, sid int64) {
-	// ctx.Data["Title"] = "OAuth Sign Up"
-	// ctx.Data["PageIsSignUp"] = true
+	ctx.Data["Title"] = ctx.Tr("sign_up")
 
-	// if _, err := models.GetOauth2ById(sid); err != nil {
-	// 	if err == models.ErrOauth2RecordNotExist {
-	// 		ctx.Handle(404, "user.oauthSignUp(GetOauth2ById)", err)
-	// 	} else {
-	// 		ctx.Handle(500, "user.oauthSignUp(GetOauth2ById)", err)
-	// 	}
-	// 	return
-	// }
+	if _, err := models.GetOauth2ById(sid); err != nil {
+		if err == models.ErrOauth2RecordNotExist {
+			ctx.Handle(404, "GetOauth2ById", err)
+		} else {
+			ctx.Handle(500, "GetOauth2ById", err)
+		}
+		return
+	}
 
-	// ctx.Data["IsSocialLogin"] = true
-	// ctx.Data["username"] = strings.Replace(ctx.Session.Get("socialName").(string), " ", "", -1)
-	// ctx.Data["email"] = ctx.Session.Get("socialEmail")
-	// log.Trace("user.oauthSignUp(social ID): %v", ctx.Session.Get("socialId"))
-	// ctx.HTML(200, SIGNUP)
+	ctx.Data["IsSocialLogin"] = true
+	ctx.Data["uname"] = strings.Replace(ctx.Session.Get("socialName").(string), " ", "", -1)
+	ctx.Data["email"] = ctx.Session.Get("socialEmail")
+	log.Trace("social ID: %v", ctx.Session.Get("socialId"))
+	ctx.HTML(200, SIGNUP)
 }
 
 func SignUp(ctx *middleware.Context) {
@@ -202,10 +201,10 @@ func SignUpPost(ctx *middleware.Context, cpt *captcha.Captcha, form auth.Registe
 	}
 
 	isOauth := false
-	// sid, isOauth := ctx.Session.Get("socialId").(int64)
-	// if isOauth {
-	// 	ctx.Data["IsSocialLogin"] = true
-	// }
+	sid, isOauth := ctx.Session.Get("socialId").(int64)
+	if isOauth {
+		ctx.Data["IsSocialLogin"] = true
+	}
 
 	// May redirect from home page.
 	if ctx.Query("from") == "home" {
@@ -268,28 +267,28 @@ func SignUpPost(ctx *middleware.Context, cpt *captcha.Captcha, form auth.Registe
 	log.Trace("Account created: %s", u.Name)
 
 	// Bind social account.
-	// if isOauth {
-	// 	if err = models.BindUserOauth2(u.Id, sid); err != nil {
-	// 		ctx.Handle(500, "user.SignUp(BindUserOauth2)", err)
-	// 		return
-	// 	}
-	// 	ctx.Session.Delete("socialId")
-	// 	log.Trace("%s OAuth binded: %s -> %d", ctx.Req.RequestURI, form.UserName, sid)
-	// }
+	if isOauth {
+		if err := models.BindUserOauth2(u.Id, sid); err != nil {
+			ctx.Handle(500, "BindUserOauth2", err)
+			return
+		}
+		ctx.Session.Delete("socialId")
+		log.Trace("%s OAuth binded: %s -> %d", ctx.Req.RequestURI, form.UserName, sid)
+	}
 
 	// Send confirmation e-mail, no need for social account.
-	// if !isOauth && setting.Service.RegisterEmailConfirm && u.Id > 1 {
-	// 	mailer.SendRegisterMail(ctx.Render, u)
-	// 	ctx.Data["IsSendRegisterMail"] = true
-	// 	ctx.Data["Email"] = u.Email
-	// 	ctx.Data["Hours"] = setting.Service.ActiveCodeLives / 60
-	// 	ctx.HTML(200, "user/activate")
+	if !isOauth && setting.Service.RegisterEmailConfirm && u.Id > 1 {
+		mailer.SendRegisterMail(ctx.Render, u)
+		ctx.Data["IsSendRegisterMail"] = true
+		ctx.Data["Email"] = u.Email
+		ctx.Data["Hours"] = setting.Service.ActiveCodeLives / 60
+		ctx.HTML(200, "user/activate")
 
-	// 	if err = ctx.Cache.Put("MailResendLimit_"+u.LowerName, u.LowerName, 180); err != nil {
-	// 		log.Error("Set cache(MailResendLimit) fail: %v", err)
-	// 	}
-	// 	return
-	// }
+		if err := ctx.Cache.Put("MailResendLimit_"+u.LowerName, u.LowerName, 180); err != nil {
+			log.Error(4, "Set cache(MailResendLimit) fail: %v", err)
+		}
+		return
+	}
 
 	ctx.Redirect("/user/login")
 }

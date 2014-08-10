@@ -253,7 +253,10 @@ func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 		}
 
 		if ctx.IsSigned {
-			ctx.Repo.IsWatching = models.IsWatching(ctx.User.Id, repo.Id)
+			ctx.Data["IsWatchingRepo"] = models.IsWatching(ctx.User.Id, repo.Id)
+		}
+		if ctx.Repo.Repository.IsBare {
+			return
 		}
 
 		ctx.Data["TagName"] = ctx.Repo.TagName
@@ -276,7 +279,6 @@ func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 
 		ctx.Data["BranchName"] = ctx.Repo.BranchName
 		ctx.Data["CommitId"] = ctx.Repo.CommitId
-		ctx.Data["IsWatchingRepo"] = ctx.Repo.IsWatching
 	}
 }
 

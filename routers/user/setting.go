@@ -200,36 +200,29 @@ func SettingsSSHKeysPost(ctx *middleware.Context, form auth.AddSSHKeyForm) {
 	ctx.HTML(200, SETTINGS_SSH_KEYS)
 }
 
-// func SettingSocial(ctx *middleware.Context) {
-// 	ctx.Data["Title"] = "Social Account"
-// 	ctx.Data["PageIsUserSetting"] = true
-// 	ctx.Data["IsUserPageSettingSocial"] = true
-
-// 	// Unbind social account.
-// 	remove, _ := base.StrTo(ctx.Query("remove")).Int64()
-// 	if remove > 0 {
-// 		if err := models.DeleteOauth2ById(remove); err != nil {
-// 			ctx.Handle(500, "user.SettingSocial(DeleteOauth2ById)", err)
-// 			return
-// 		}
-// 		ctx.Flash.Success("OAuth2 has been unbinded.")
-// 		ctx.Redirect("/user/settings/social")
-// 		return
-// 	}
-
-// 	var err error
-// 	ctx.Data["Socials"], err = models.GetOauthByUserId(ctx.User.Id)
-// 	if err != nil {
-// 		ctx.Handle(500, "user.SettingSocial(GetOauthByUserId)", err)
-// 		return
-// 	}
-// 	ctx.HTML(200, SOCIAL)
-// }
-
 func SettingsSocial(ctx *middleware.Context) {
 	ctx.Data["Title"] = ctx.Tr("settings")
 	ctx.Data["PageIsUserSettings"] = true
 	ctx.Data["PageIsSettingsSocial"] = true
+
+	// Unbind social account.
+	remove, _ := com.StrTo(ctx.Query("remove")).Int64()
+	if remove > 0 {
+		if err := models.DeleteOauth2ById(remove); err != nil {
+			ctx.Handle(500, "DeleteOauth2ById", err)
+			return
+		}
+		ctx.Flash.Success(ctx.Tr("settings.unbind_success"))
+		ctx.Redirect("/user/settings/social")
+		return
+	}
+
+	socials, err := models.GetOauthByUserId(ctx.User.Id)
+	if err != nil {
+		ctx.Handle(500, "GetOauthByUserId", err)
+		return
+	}
+	ctx.Data["Socials"] = socials
 	ctx.HTML(200, SETTINGS_SOCIAL)
 }
 
