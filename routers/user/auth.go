@@ -106,10 +106,9 @@ func SignInPost(ctx *middleware.Context, form auth.SignInForm) {
 	if err != nil {
 		if err == models.ErrUserNotExist {
 			ctx.RenderWithErr(ctx.Tr("form.username_password_incorrect"), SIGNIN, &form)
-			return
+		} else {
+			ctx.Handle(500, "UserSignIn", err)
 		}
-
-		ctx.Handle(500, "UserSignIn", err)
 		return
 	}
 
@@ -294,55 +293,59 @@ func SignUpPost(ctx *middleware.Context, cpt *captcha.Captcha, form auth.Registe
 }
 
 func Activate(ctx *middleware.Context) {
-	// code := ctx.Query("code")
-	// if len(code) == 0 {
-	// 	ctx.Data["IsActivatePage"] = true
-	// 	if ctx.User.IsActive {
-	// 		ctx.Handle(404, "user.Activate", nil)
-	// 		return
-	// 	}
-	// 	// Resend confirmation e-mail.
-	// 	if setting.Service.RegisterEmailConfirm {
-	// 		if ctx.Cache.IsExist("MailResendLimit_" + ctx.User.LowerName) {
-	// 			ctx.Data["ResendLimited"] = true
-	// 		} else {
-	// 			ctx.Data["Hours"] = setting.Service.ActiveCodeLives / 60
-	// 			mailer.SendActiveMail(ctx.Render, ctx.User)
+	code := ctx.Query("code")
+	if len(code) == 0 {
+		ctx.Data["IsActivatePage"] = true
+		if ctx.User.IsActive {
+			ctx.Error(404)
+			return
+		}
+		// Resend confirmation e-mail.
+		if setting.Service.RegisterEmailConfirm {
+			if ctx.Cache.IsExist("MailResendLimit_" + ctx.User.LowerName) {
+				ctx.Data["ResendLimited"] = true
+			} else {
+				ctx.Data["Hours"] = setting.Service.ActiveCodeLives / 60
+				mailer.SendActiveMail(ctx.Render, ctx.User)
 
-	// 			if err := ctx.Cache.Put("MailResendLimit_"+ctx.User.LowerName, ctx.User.LowerName, 180); err != nil {
-	// 				log.Error("Set cache(MailResendLimit) fail: %v", err)
-	// 			}
-	// 		}
-	// 	} else {
-	// 		ctx.Data["ServiceNotEnabled"] = true
-	// 	}
-	// 	ctx.HTML(200, ACTIVATE)
-	// 	return
-	// }
+				if err := ctx.Cache.Put("MailResendLimit_"+ctx.User.LowerName, ctx.User.LowerName, 180); err != nil {
+					log.Error(4, "Set cache(MailResendLimit) fail: %v", err)
+				}
+			}
+		} else {
+			ctx.Data["ServiceNotEnabled"] = true
+		}
+		ctx.HTML(200, ACTIVATE)
+		return
+	}
 
-	// // Verify code.
-	// if user := models.VerifyUserActiveCode(code); user != nil {
-	// 	user.IsActive = true
-	// 	user.Rands = models.GetUserSalt()
-	// 	if err := models.UpdateUser(user); err != nil {
-	// 		ctx.Handle(404, "user.Activate", err)
-	// 		return
-	// 	}
+	// Verify code.
+	if user := models.VerifyUserActiveCode(code); user != nil {
+		user.IsActive = true
+		user.Rands = models.GetUserSalt()
+		if err := models.UpdateUser(user); err != nil {
+			if err == models.ErrUserNotExist {
+				ctx.Error(404)
+			} else {
+				ctx.Handle(500, "UpdateUser", err)
+			}
+			return
+		}
 
-	// 	log.Trace("%s User activated: %s", ctx.Req.RequestURI, user.Name)
+		log.Trace("User activated: %s", user.Name)
 
-	// 	ctx.Session.Set("userId", user.Id)
-	// 	ctx.Session.Set("userName", user.Name)
-	// 	ctx.Redirect("/")
-	// 	return
-	// }
+		ctx.Session.Set("uid", user.Id)
+		ctx.Session.Set("uname", user.Name)
+		ctx.Redirect("/")
+		return
+	}
 
-	// ctx.Data["IsActivateFailed"] = true
-	// ctx.HTML(200, ACTIVATE)
+	ctx.Data["IsActivateFailed"] = true
+	ctx.HTML(200, ACTIVATE)
 }
 
 func ForgotPasswd(ctx *middleware.Context) {
-	ctx.Data["Title"] = "Forgot Password"
+	ctx.Data["Title"] = ctx.Tr("auth.forgot_password")
 
 	if setting.MailService == nil {
 		ctx.Data["IsResetDisable"] = true
@@ -355,44 +358,45 @@ func ForgotPasswd(ctx *middleware.Context) {
 }
 
 func ForgotPasswdPost(ctx *middleware.Context) {
-	// ctx.Data["Title"] = "Forgot Password"
+	ctx.Data["Title"] = ctx.Tr("auth.forgot_password")
 
-	// if setting.MailService == nil {
-	// 	ctx.Handle(403, "user.ForgotPasswdPost", nil)
-	// 	return
-	// }
-	// ctx.Data["IsResetRequest"] = true
+	if setting.MailService == nil {
+		ctx.Handle(403, "user.ForgotPasswdPost", nil)
+		return
+	}
+	ctx.Data["IsResetRequest"] = true
 
-	// email := ctx.Query("email")
-	// u, err := models.GetUserByEmail(email)
-	// if err != nil {
-	// 	if err == models.ErrUserNotExist {
-	// 		ctx.RenderWithErr("This e-mail address does not associate to any account.", "user/forgot_passwd", nil)
-	// 	} else {
-	// 		ctx.Handle(500, "user.ResetPasswd(check existence)", err)
-	// 	}
-	// 	return
-	// }
+	email := ctx.Query("email")
+	u, err := models.GetUserByEmail(email)
+	if err != nil {
+		if err == models.ErrUserNotExist {
+			ctx.Data["Err_Email"] = true
+			ctx.RenderWithErr(ctx.Tr("auth.email_not_associate"), FORGOT_PASSWORD, nil)
+		} else {
+			ctx.Handle(500, "user.ResetPasswd(check existence)", err)
+		}
+		return
+	}
 
-	// if ctx.Cache.IsExist("MailResendLimit_" + u.LowerName) {
-	// 	ctx.Data["ResendLimited"] = true
-	// 	ctx.HTML(200, FORGOT_PASSWORD)
-	// 	return
-	// }
+	if ctx.Cache.IsExist("MailResendLimit_" + u.LowerName) {
+		ctx.Data["ResendLimited"] = true
+		ctx.HTML(200, FORGOT_PASSWORD)
+		return
+	}
 
-	// mailer.SendResetPasswdMail(ctx.Render, u)
-	// if err = ctx.Cache.Put("MailResendLimit_"+u.LowerName, u.LowerName, 180); err != nil {
-	// 	log.Error("Set cache(MailResendLimit) fail: %v", err)
-	// }
+	mailer.SendResetPasswdMail(ctx.Render, u)
+	if err = ctx.Cache.Put("MailResendLimit_"+u.LowerName, u.LowerName, 180); err != nil {
+		log.Error(4, "Set cache(MailResendLimit) fail: %v", err)
+	}
 
-	// ctx.Data["Email"] = email
-	// ctx.Data["Hours"] = setting.Service.ActiveCodeLives / 60
-	// ctx.Data["IsResetSent"] = true
-	// ctx.HTML(200, FORGOT_PASSWORD)
+	ctx.Data["Email"] = email
+	ctx.Data["Hours"] = setting.Service.ActiveCodeLives / 60
+	ctx.Data["IsResetSent"] = true
+	ctx.HTML(200, FORGOT_PASSWORD)
 }
 
 func ResetPasswd(ctx *middleware.Context) {
-	ctx.Data["Title"] = "Reset Password"
+	ctx.Data["Title"] = ctx.Tr("auth.reset_password")
 
 	code := ctx.Query("code")
 	if len(code) == 0 {
@@ -405,38 +409,39 @@ func ResetPasswd(ctx *middleware.Context) {
 }
 
 func ResetPasswdPost(ctx *middleware.Context) {
-	// ctx.Data["Title"] = "Reset Password"
+	ctx.Data["Title"] = ctx.Tr("auth.reset_password")
 
-	// code := ctx.Query("code")
-	// if len(code) == 0 {
-	// 	ctx.Error(404)
-	// 	return
-	// }
-	// ctx.Data["Code"] = code
+	code := ctx.Query("code")
+	if len(code) == 0 {
+		ctx.Error(404)
+		return
+	}
+	ctx.Data["Code"] = code
 
-	// if u := models.VerifyUserActiveCode(code); u != nil {
-	// 	// Validate password length.
-	// 	passwd := ctx.Query("passwd")
-	// 	if len(passwd) < 6 || len(passwd) > 30 {
-	// 		ctx.Data["IsResetForm"] = true
-	// 		ctx.RenderWithErr("Password length should be in 6 and 30.", "user/reset_passwd", nil)
-	// 		return
-	// 	}
+	if u := models.VerifyUserActiveCode(code); u != nil {
+		// Validate password length.
+		passwd := ctx.Query("password")
+		if len(passwd) < 6 {
+			ctx.Data["IsResetForm"] = true
+			ctx.Data["Err_Password"] = true
+			ctx.RenderWithErr(ctx.Tr("auth.password_too_short"), RESET_PASSWORD, nil)
+			return
+		}
 
-	// 	u.Passwd = passwd
-	// 	u.Rands = models.GetUserSalt()
-	// 	u.Salt = models.GetUserSalt()
-	// 	u.EncodePasswd()
-	// 	if err := models.UpdateUser(u); err != nil {
-	// 		ctx.Handle(500, "user.ResetPasswd(UpdateUser)", err)
-	// 		return
-	// 	}
+		u.Passwd = passwd
+		u.Rands = models.GetUserSalt()
+		u.Salt = models.GetUserSalt()
+		u.EncodePasswd()
+		if err := models.UpdateUser(u); err != nil {
+			ctx.Handle(500, "UpdateUser", err)
+			return
+		}
 
-	// 	log.Trace("%s User password reset: %s", ctx.Req.RequestURI, u.Name)
-	// 	ctx.Redirect("/user/login")
-	// 	return
-	// }
+		log.Trace("User password reset: %s", u.Name)
+		ctx.Redirect("/user/login")
+		return
+	}
 
-	// ctx.Data["IsResetFailed"] = true
-	// ctx.HTML(200, RESET_PASSWORD)
+	ctx.Data["IsResetFailed"] = true
+	ctx.HTML(200, RESET_PASSWORD)
 }

@@ -10,38 +10,38 @@
 	        {{if .DisableRegistration}}
 	        <p>{{.i18n.Tr "auth.disable_register_prompt"}}</p>
 	        {{else}}
-            <p class="field">
+            <div class="field">
                 <label class="req" for="username">{{.i18n.Tr "username"}}</label>
                 <input class="ipt ipt-large ipt-radius {{if .Err_UserName}}ipt-error{{end}}" id="username" name="uname" type="text" value="{{.uname}}" required/>
-            </p>
-            <p class="field">
+            </div>
+            <div class="field">
                 <label class="req" for="email">{{.i18n.Tr "email"}}</label>
                 <input class="ipt ipt-large ipt-radius {{if .Err_Email}}ipt-error{{end}}" id="email" name="email" type="email"  value="{{.email}}"required/>
-            </p>
-            <p class="field">
+            </div>
+            <div class="field">
                 <label class="req" for="password">{{.i18n.Tr "password"}}</label>
                 <input class="ipt ipt-large ipt-radius {{if .Err_Password}}ipt-error{{end}}" id="password" name="password" type="password" value="{{.password}}" required/>
-            </p>
-            <p class="field">
+            </div>
+            <div class="field">
                 <label class="req" for="re-type">{{.i18n.Tr "re_type"}}</label>
                 <input class="ipt ipt-large ipt-radius {{if .Err_Password}}ipt-error{{end}}" id="re-type" name="retype" type="password" required/>
-            </p>
-            <p class="field">
+            </div>
+            <div class="field">
                 <label></label>
                 {{.Captcha.CreateHtml}}
-            </p>
-            <p class="field">
+            </div>
+            <div class="field">
                 <label class="req" for="captcha">{{.i18n.Tr "captcha"}}</label>
                 <input class="ipt ipt-large ipt-radius {{if .Err_Captcha}}ipt-error{{end}}" id="captcha" name="captcha" type="text" required/>
-            </p>
-            <p class="field">
+            </div>
+            <div class="field">
                 <span class="form-label"></span>
                 <button class="btn btn-blue btn-large btn-radius">{{.i18n.Tr "auth.create_new_account"}}</button>
-            </p>
-            <p class="field">
+            </div>
+            <div class="field">
                 <span class="form-label"></span>
                 <a href="/user/login">{{if .IsSocialLogin}}{{.i18n.Tr "auth.social_register_hepler_msg"}}{{else}}{{.i18n.Tr "auth.register_hepler_msg"}}{{end}}</a>
-            </p>
+            </div>
         	{{end}}
         </div>
     </form>

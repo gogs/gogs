@@ -17,7 +17,12 @@ const (
 
 func Home(ctx *middleware.Context) {
 	if ctx.IsSigned {
-		user.Dashboard(ctx)
+		if !ctx.User.IsActive && setting.Service.RegisterEmailConfirm {
+			ctx.Data["Title"] = ctx.Tr("auth.active_your_account")
+			ctx.HTML(200, user.ACTIVATE)
+		} else {
+			user.Dashboard(ctx)
+		}
 		return
 	}
 

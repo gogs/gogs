@@ -38,3 +38,4 @@ __pycache__
 *.pem
 output*
 config.codekit
+.brackets.json
