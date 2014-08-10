@@ -241,7 +241,7 @@ func Oauth2Icon(t int) string {
 	case 3:
 		return "fa-twitter-square"
 	case 4:
-		return "fa-linux"
+		return "fa-qq"
 	case 5:
 		return "fa-weibo"
 	}
@@ -253,11 +253,11 @@ func Oauth2Name(t int) string {
 	case 1:
 		return "GitHub"
 	case 2:
-		return "Google"
+		return "Google+"
 	case 3:
 		return "Twitter"
 	case 4:
-		return "Tencent QQ"
+		return "腾讯 QQ"
 	case 5:
 		return "Weibo"
 	}

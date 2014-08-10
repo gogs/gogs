@@ -40,11 +40,15 @@ func SocialSignIn(ctx *middleware.Context) {
 		ctx.Handle(404, "social.SocialSignIn(social login not enabled)", errors.New(name))
 		return
 	}
+	appUrl := strings.TrimSuffix(setting.AppUrl, "/")
+	if name == "weibo" {
+		appUrl = strings.Replace(appUrl, "localhost", "127.0.0.1", 1)
+	}
 
 	code := ctx.Query("code")
 	if code == "" {
 		// redirect to social login page
-		connect.SetRedirectUrl(strings.TrimSuffix(setting.AppUrl, "/") + ctx.Req.URL.Path)
+		connect.SetRedirectUrl(appUrl + ctx.Req.URL.Path)
 		ctx.Redirect(connect.AuthCodeURL(next))
 		return
 	}
