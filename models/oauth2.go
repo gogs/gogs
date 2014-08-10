@@ -6,6 +6,7 @@ package models
 
 import (
 	"errors"
+	"time"
 )
 
 type OauthType int
@@ -26,12 +27,15 @@ var (
 )
 
 type Oauth2 struct {
-	Id       int64
-	Uid      int64  `xorm:"unique(s)"` // userId
-	User     *User  `xorm:"-"`
-	Type     int    `xorm:"unique(s) unique(oauth)"` // twitter,github,google...
-	Identity string `xorm:"unique(s) unique(oauth)"` // id..
-	Token    string `xorm:"TEXT not null"`
+	Id                int64
+	Uid               int64     `xorm:"unique(s)"` // userId
+	User              *User     `xorm:"-"`
+	Type              int       `xorm:"unique(s) unique(oauth)"` // twitter,github,google...
+	Identity          string    `xorm:"unique(s) unique(oauth)"` // id..
+	Token             string    `xorm:"TEXT not null"`
+	Created           time.Time `xorm:"CREATED"`
+	Updated           time.Time
+	HasRecentActivity bool `xorm:"-"`
 }
 
 func BindUserOauth2(userId, oauthId int64) error {
@@ -69,10 +73,24 @@ func GetOauth2ById(id int64) (oa *Oauth2, err error) {
 	return oa, nil
 }
 
+// UpdateOauth2 updates given OAuth2.
+func UpdateOauth2(oa *Oauth2) error {
+	_, err := x.Id(oa.Id).AllCols().Update(oa)
+	return err
+}
+
 // GetOauthByUserId returns list of oauthes that are releated to given user.
-func GetOauthByUserId(uid int64) (oas []*Oauth2, err error) {
-	err = x.Find(&oas, Oauth2{Uid: uid})
-	return oas, err
+func GetOauthByUserId(uid int64) ([]*Oauth2, error) {
+	socials := make([]*Oauth2, 0, 5)
+	err := x.Find(&socials, Oauth2{Uid: uid})
+	if err != nil {
+		return nil, err
+	}
+
+	for _, social := range socials {
+		social.HasRecentActivity = social.Updated.Add(7 * 24 * time.Hour).After(time.Now())
+	}
+	return socials, err
 }
 
 // DeleteOauth2ById deletes a oauth2 by ID.

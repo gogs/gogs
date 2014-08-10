@@ -30,6 +30,7 @@
 	                            </div>
 	                            <hr>	
 	                            <br>
+	                           	{{if not .Repository.IsBare}}
 					            <div class="field">
 					                <label>{{.i18n.Tr "repo.default_branch"}}</label>
 					                <select name="branch">
@@ -39,6 +40,7 @@
 		                                {{end}}
 					                </select>
 					            </div>
+					            {{end}}
 					            {{if .Repository.IsMirror}}
 	                            <div class="field">
 	                                <label for="interval">{{.i18n.Tr "repo.mirror_interval"}}</label>

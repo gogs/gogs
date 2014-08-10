@@ -7,8 +7,23 @@
             <div class="setting-content">
                 {{template "ng/base/alert" .}}
                 <div id="setting-content">
-                    <div id="user-profile-setting-content" class="panel panel-radius">
-                        <p class="panel-header"><strong>{{.i18n.Tr "settings.manage_social"}}</strong></p>
+                    <div id="user-social-panel" class="panel panel-radius">
+                        <div class="panel-header"><strong>{{.i18n.Tr "settings.manage_social"}}</strong></div>
+                        <ul class="panel-body setting-list">
+                            <li>{{.i18n.Tr "settings.social_desc"}}</li>
+                            {{range .Socials}}
+                            <li class="ssh clear">
+                                <span class="active-icon left label label-{{if .HasRecentActivity}}green{{else}}gray{{end}} label-radius"></span>
+                                <i class="fa {{Oauth2Icon .Type}} fa-2x left"></i>
+                                <div class="ssh-content left">
+                                    <p><strong>{{Oauth2Name .Type}}</strong></p>
+                                    <p class="print">{{.Identity}}</p>
+                                    <p class="activity"><i>{{$.i18n.Tr "settings.add_on"}} {{DateFormat .Created "M d, Y"}} —  <i class="octicon octicon-info"></i>{{$.i18n.Tr "settings.last_used"}} {{DateFormat .Updated "M d, Y"}}</i></p>
+                                </div>
+                                <a class="right btn btn-small btn-red btn-header btn-radius" href="/user/settings/social?remove={{.Id}}">{{$.i18n.Tr "settings.unbind"}}</a>
+                            </li>
+                            {{end}}
+                        </ul>
                     </div>
                 </div>
             </div>

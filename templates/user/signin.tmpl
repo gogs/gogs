@@ -3,7 +3,7 @@
 <div id="sign-wrapper">
     <form class="form-align form panel sign-panel sign-form container panel-radius" id="sign-up-form" action="/user/login" method="post">
         <div class="panel-header">
-            <h2>{{.i18n.Tr "sign_in"}}</h2>
+            <h2>{{if .IsSocialLogin}}{{.i18n.Tr "social_sign_in" | Str2html}}{{else}}{{.i18n.Tr "sign_in"}}{{end}}</h2>
         </div>
         <div class="panel-content">
             {{template "ng/base/alert" .}}
@@ -15,15 +15,18 @@
                 <label class="req" for="password">{{.i18n.Tr "password"}}</label>
                 <input class="ipt ipt-large ipt-radius {{if .Err_Password}}ipt-error{{end}}" id="password" name="password" type="password" required/>
             </p>
+            {{if not .IsSocialLogin}}
             <p class="field">
                 <span class="form-label"></span>
                 <input class="ipt-chk" id="remember" name="remember" type="checkbox"/>&nbsp;&nbsp;&nbsp;&nbsp;<strong>{{.i18n.Tr "auth.remember_me"}}</strong>
             </p>
+            {{end}}
             <p class="field">
                 <span class="form-label"></span>
                 <button class="btn btn-green btn-large btn-radius">{{.i18n.Tr "sign_in"}}</button>&nbsp;&nbsp;&nbsp;&nbsp;
-                <a href="/user/forget_password">{{.i18n.Tr "auth.forget_password"}}</a>
+                {{if not .IsSocialLogin}}<a href="/user/forget_password">{{.i18n.Tr "auth.forget_password"}}</a>{{end}}
             </p>
+            {{if not .IsSocialLogin}}
             <p class="field">
                 <span class="form-label"></span>
                 <a href="/user/sign_up">{{.i18n.Tr "auth.sign_up_now" | Str2html}}</a>
@@ -33,6 +36,7 @@
             <div id="sign-social" class="text-center social-buttons">
                 {{template "ng/base/social" .}}
             </div>
+            {{end}}
             {{end}}
         </div>
     </form>
