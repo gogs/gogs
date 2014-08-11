@@ -246,17 +246,17 @@ func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 		}
 
 		// repo is bare and display enable
-		if displayBare && ctx.Repo.Repository.IsBare {
+		if ctx.Repo.Repository.IsBare {
 			log.Debug("Bare repository: %s", ctx.Repo.RepoLink)
-			ctx.HTML(200, "repo/bare")
+			if displayBare {
+				ctx.HTML(200, "repo/bare")
+			}
 			return
 		}
 
 		if ctx.IsSigned {
 			ctx.Data["IsWatchingRepo"] = models.IsWatching(ctx.User.Id, repo.Id)
-		}
-		if ctx.Repo.Repository.IsBare {
-			return
+			ctx.Data["IsStaringRepo"] = models.IsStaring(ctx.User.Id, repo.Id)
 		}
 
 		ctx.Data["TagName"] = ctx.Repo.TagName

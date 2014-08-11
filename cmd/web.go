@@ -235,7 +235,7 @@ func runWeb(*cli.Context) {
 		r.Post("/:org/teams/new", bindIgnErr(auth.CreateTeamForm{}), org.NewTeamPost)
 		r.Get("/:org/teams/:team/edit", org.EditTeam)
 
-		r.Get("/:org/team/:team", org.SingleTeam)
+		r.Get("/:org/teams/:team", org.SingleTeam)
 
 		r.Get("/:org/settings", org.Settings)
 		r.Post("/:org/settings", bindIgnErr(auth.OrgSettingForm{}), org.SettingsPost)
@@ -264,7 +264,7 @@ func runWeb(*cli.Context) {
 	}, reqSignIn, middleware.RepoAssignment(true), reqTrueOwner)
 
 	m.Group("/:username/:reponame", func(r *macaron.Router) {
-		// r.Get("/action/:action", repo.Action)
+		r.Get("/action/:action", repo.Action)
 
 		m.Group("/issues", func(r *macaron.Router) {
 			r.Get("/new", repo.CreateIssue)

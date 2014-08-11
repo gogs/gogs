@@ -106,6 +106,7 @@ func CreateOrganization(org, owner *User) (*User, error) {
 	// Create default owner team.
 	t := &Team{
 		OrgId:      org.Id,
+		LowerName:  strings.ToLower(OWNER_TEAM),
 		Name:       OWNER_TEAM,
 		Authorize:  ORG_ADMIN,
 		NumMembers: 1,

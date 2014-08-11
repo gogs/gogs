@@ -73,6 +73,10 @@ func Dashboard(ctx *middleware.Context) {
 	mirrors := make([]*models.Repository, 0, len(repos)/2)
 	for _, repo := range repos {
 		if repo.IsMirror {
+			if err = repo.GetMirror(); err != nil {
+				ctx.Handle(500, "GetMirror: "+repo.Name, err)
+				return
+			}
 			mirrors = append(mirrors, repo)
 		}
 	}

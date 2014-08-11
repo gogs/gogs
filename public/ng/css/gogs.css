@@ -40,6 +40,11 @@ img.avatar-48 {
   height: 48px;
   vertical-align: middle;
 }
+img.avatar-100 {
+  width: 100px;
+  height: 100px;
+  vertical-align: middle;
+}
 #wrapper {
   padding: 0;
   margin: 0 0 -55px 0;
@@ -225,6 +230,9 @@ img.avatar-48 {
 }
 .text-grey {
   color: #999999;
+}
+.text-black {
+  color: #444444;
 }
 .markdown {
   background-color: white;
@@ -974,6 +982,7 @@ The register and sign-in page style
   border-left: none;
 }
 #repo-clone-help {
+  clear: both;
   line-height: 48px;
 }
 #repo-clone-zip {
@@ -1664,4 +1673,100 @@ textarea#issue-add-content {
   width: 100%;
   box-sizing: border-box;
   height: 120px;
+}
+.org-header {
+  padding: 16px 0;
+  background-color: #FFF;
+  border-bottom: 1px solid #DDD;
+}
+.org-header img {
+  padding-right: 10px;
+}
+#org-home-header {
+  min-height: 100px;
+}
+#org-home-header-info {
+  padding-top: 10px;
+}
+#org-home-header-info h2 {
+  font-size: 30px;
+}
+#org-home-header-info ul {
+  list-style: none;
+}
+#org-home-header-info ul li {
+  float: left;
+  padding-right: 5px;
+}
+#org-home-repo-list {
+  padding: 10px 0;
+}
+#org-repo-list {
+  padding: 10px 0;
+}
+#org-repo-list .org-repo-item {
+  border-top: 1px solid #eee;
+  padding: 30px 20px;
+}
+#org-repo-list .org-repo-item .org-repo-status {
+  list-style: none;
+  color: #888;
+}
+#org-repo-list .org-repo-item .org-repo-status li {
+  float: left;
+  margin-right: 6px;
+}
+#org-repo-list .org-repo-item h2 {
+  margin-bottom: 5px;
+}
+#org-repo-list .org-repo-item .org-repo-description {
+  margin: 0;
+  font-size: 14px;
+  color: #666;
+}
+#org-repo-list .org-repo-item .org-repo-updated {
+  font-size: 12px;
+  display: block;
+  margin: 5px 0 0;
+  color: #808080;
+}
+.org-sidebar {
+  margin: -80px 0 0 20px;
+}
+.org-sidebar .panel-footer {
+  padding: .8em 1.2em;
+}
+#org-member-avatar-group {
+  padding: 15px;
+}
+#org-member-avatar-group img {
+  width: 59px;
+  height: 59px;
+  border-radius: 3px;
+}
+#org-home-team-list {
+  padding: 0 15px;
+}
+#org-home-team-list ul {
+  list-style: none;
+  padding-top: 10px;
+}
+#org-home-team-list ul li {
+  padding: 10px 0;
+  border-bottom: 1px solid #eee;
+}
+#org-home-team-list ul li:last-child {
+  border-bottom: 0;
+}
+.team-name {
+  display: block;
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.team-meta {
+  margin-top: 0;
+  margin-bottom: 0;
+  color: #777;
 }

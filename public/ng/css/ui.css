@@ -372,6 +372,10 @@ dt {
   font-size: 10.8px;
   padding: .4em .9em;
 }
+.btn-medium {
+  font-size: 12px;
+  padding: .4em .9em;
+}
 .btn-large {
   font-size: 14.4px;
 }
