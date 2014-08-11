@@ -137,6 +137,7 @@ type Repository struct {
 	NumTags             int `xorm:"-"`
 	IsPrivate           bool
 	IsMirror            bool
+	*Mirror             `xorm:"-"`
 	IsFork              bool `xorm:"NOT NULL DEFAULT false"`
 	IsBare              bool
 	IsGoget             bool
@@ -147,6 +148,11 @@ type Repository struct {
 
 func (repo *Repository) GetOwner() (err error) {
 	repo.Owner, err = GetUserById(repo.OwnerId)
+	return err
+}
+
+func (repo *Repository) GetMirror() (err error) {
+	repo.Mirror, err = GetMirror(repo.Id)
 	return err
 }
 
@@ -953,19 +959,31 @@ type Watch struct {
 }
 
 // Watch or unwatch repository.
-func WatchRepo(uid, rid int64, watch bool) (err error) {
+func WatchRepo(uid, repoId int64, watch bool) (err error) {
 	if watch {
-		if _, err = x.Insert(&Watch{RepoId: rid, UserId: uid}); err != nil {
+		if IsWatching(uid, repoId) {
+			return nil
+		}
+		if _, err = x.Insert(&Watch{RepoId: repoId, UserId: uid}); err != nil {
 			return err
 		}
-		_, err = x.Exec("UPDATE `repository` SET num_watches = num_watches + 1 WHERE id = ?", rid)
+		_, err = x.Exec("UPDATE `repository` SET num_watches = num_watches + 1 WHERE id = ?", repoId)
 	} else {
-		if _, err = x.Delete(&Watch{0, uid, rid}); err != nil {
+		if !IsWatching(uid, repoId) {
+			return nil
+		}
+		if _, err = x.Delete(&Watch{0, uid, repoId}); err != nil {
 			return err
 		}
-		_, err = x.Exec("UPDATE `repository` SET num_watches = num_watches - 1 WHERE id = ?", rid)
+		_, err = x.Exec("UPDATE `repository` SET num_watches = num_watches - 1 WHERE id = ?", repoId)
 	}
 	return err
+}
+
+// IsWatching checks if user has watched given repository.
+func IsWatching(uid, rid int64) bool {
+	has, _ := x.Get(&Watch{0, uid, rid})
+	return has
 }
 
 // GetWatchers returns all watchers of given repository.
@@ -1003,9 +1021,37 @@ func NotifyWatchers(act *Action) error {
 	return nil
 }
 
-// IsWatching checks if user has watched given repository.
-func IsWatching(uid, rid int64) bool {
-	has, _ := x.Get(&Watch{0, uid, rid})
+type Star struct {
+	Id     int64
+	Uid    int64 `xorm:"UNIQUE(s)"`
+	RepoId int64 `xorm:"UNIQUE(s)"`
+}
+
+// Star or unstar repository.
+func StarRepo(uid, repoId int64, star bool) (err error) {
+	if star {
+		if IsStaring(uid, repoId) {
+			return nil
+		}
+		if _, err = x.Insert(&Star{Uid: uid, RepoId: repoId}); err != nil {
+			return err
+		}
+		_, err = x.Exec("UPDATE `repository` SET num_stars = num_stars + 1 WHERE id = ?", repoId)
+	} else {
+		if !IsStaring(uid, repoId) {
+			return nil
+		}
+		if _, err = x.Delete(&Star{0, uid, repoId}); err != nil {
+			return err
+		}
+		_, err = x.Exec("UPDATE `repository` SET num_stars = num_stars - 1 WHERE id = ?", repoId)
+	}
+	return err
+}
+
+// IsStaring checks if user has starred given repository.
+func IsStaring(uid, repoId int64) bool {
+	has, _ := x.Get(&Star{0, uid, repoId})
 	return has
 }
 

@@ -5,7 +5,6 @@
 package middleware
 
 import (
-	"fmt"
 	"net/url"
 	"strings"
 
@@ -44,7 +43,6 @@ func Toggle(options *ToggleOptions) macaron.Handler {
 		}
 
 		if options.SignInRequire {
-			fmt.Println(ctx.User.IsActive, setting.Service.RegisterEmailConfirm)
 			if !ctx.IsSigned {
 				// Ignore watch repository operation.
 				if strings.HasSuffix(ctx.Req.RequestURI, "watch") {

@@ -43,7 +43,7 @@
                         </p>
                     </div>
                     <div class="panel-footer">
-                        {{if .IsMember $.SignedUserId}}
+                        {{if .IsMember $.SignedUser.Id}}
                         <a class="pull-right btn btn-danger" href="/org/{{$.Org.Name}}/teams/{{.LowerName}}?action=leave">Leave</a>
                         {{else}}
                         <a class="pull-right btn btn-default" href="/org/{{$.Org.Name}}/teams/{{.LowerName}}?action=join">Join</a>

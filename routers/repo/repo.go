@@ -204,36 +204,42 @@ func MigratePost(ctx *middleware.Context, form auth.MigrateRepoForm) {
 	ctx.Handle(500, "MigratePost", err)
 }
 
-// func Action(ctx *middleware.Context, params martini.Params) {
-// 	var err error
-// 	switch params["action"] {
-// 	case "watch":
-// 		err = models.WatchRepo(ctx.User.Id, ctx.Repo.Repository.Id, true)
-// 	case "unwatch":
-// 		err = models.WatchRepo(ctx.User.Id, ctx.Repo.Repository.Id, false)
-// 	case "desc":
-// 		if !ctx.Repo.IsOwner {
-// 			ctx.Error(404)
-// 			return
-// 		}
+func Action(ctx *middleware.Context) {
+	var err error
+	switch ctx.Params(":action") {
+	case "watch":
+		err = models.WatchRepo(ctx.User.Id, ctx.Repo.Repository.Id, true)
+	case "unwatch":
+		err = models.WatchRepo(ctx.User.Id, ctx.Repo.Repository.Id, false)
+	case "star":
+		err = models.StarRepo(ctx.User.Id, ctx.Repo.Repository.Id, true)
+	case "unstar":
+		err = models.StarRepo(ctx.User.Id, ctx.Repo.Repository.Id, false)
+	case "desc":
+		if !ctx.Repo.IsOwner {
+			ctx.Error(404)
+			return
+		}
 
-// 		ctx.Repo.Repository.Description = ctx.Query("desc")
-// 		ctx.Repo.Repository.Website = ctx.Query("site")
-// 		err = models.UpdateRepository(ctx.Repo.Repository)
-// 	}
+		ctx.Repo.Repository.Description = ctx.Query("desc")
+		ctx.Repo.Repository.Website = ctx.Query("site")
+		err = models.UpdateRepository(ctx.Repo.Repository)
+	}
 
-// 	if err != nil {
-// 		log.Error("repo.Action(%s): %v", params["action"], err)
-// 		ctx.JSON(200, map[string]interface{}{
-// 			"ok":  false,
-// 			"err": err.Error(),
-// 		})
-// 		return
-// 	}
-// 	ctx.JSON(200, map[string]interface{}{
-// 		"ok": true,
-// 	})
-// }
+	if err != nil {
+		log.Error(4, "repo.Action(%s): %v", ctx.Params(":action"), err)
+		ctx.JSON(200, map[string]interface{}{
+			"ok":  false,
+			"err": err.Error(),
+		})
+		return
+	}
+	ctx.Redirect(ctx.Repo.RepoLink)
+	return
+	ctx.JSON(200, map[string]interface{}{
+		"ok": true,
+	})
+}
 
 func Download(ctx *middleware.Context) {
 	ext := "." + ctx.Params(":ext")

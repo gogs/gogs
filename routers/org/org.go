@@ -19,34 +19,33 @@ const (
 )
 
 func Home(ctx *middleware.Context) {
-	ctx.Data["Title"] = "Organization " + ctx.Params(":org")
+	ctx.Data["Title"] = ctx.Params(":org")
 
 	org, err := models.GetUserByName(ctx.Params(":org"))
 	if err != nil {
 		if err == models.ErrUserNotExist {
-			ctx.Handle(404, "org.Home(GetUserByName)", err)
+			ctx.Handle(404, "GetUserByName", err)
 		} else {
-			ctx.Handle(500, "org.Home(GetUserByName)", err)
+			ctx.Handle(500, "GetUserByName", err)
 		}
 		return
 	}
 	ctx.Data["Org"] = org
 
-	ctx.Data["Repos"], err = models.GetRepositories(org.Id,
-		ctx.IsSigned && org.IsOrgMember(ctx.User.Id))
+	ctx.Data["Repos"], err = models.GetRepositories(org.Id, ctx.IsSigned && org.IsOrgMember(ctx.User.Id))
 	if err != nil {
-		ctx.Handle(500, "org.Home(GetRepositories)", err)
+		ctx.Handle(500, "GetRepositories", err)
 		return
 	}
 
 	if err = org.GetMembers(); err != nil {
-		ctx.Handle(500, "org.Home(GetMembers)", err)
+		ctx.Handle(500, "GetMembers", err)
 		return
 	}
 	ctx.Data["Members"] = org.Members
 
 	if err = org.GetTeams(); err != nil {
-		ctx.Handle(500, "org.Home(GetTeams)", err)
+		ctx.Handle(500, "GetTeams", err)
 		return
 	}
 	ctx.Data["Teams"] = org.Teams
