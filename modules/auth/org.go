@@ -27,15 +27,17 @@ func (f *CreateOrgForm) Validate(ctx *macaron.Context, errs *binding.Errors, l i
 	validate(errs, ctx.Data, f, l)
 }
 
-type OrgSettingForm struct {
-	DisplayName string `form:"display_name" binding:"Required;MaxSize(100)"`
+type UpdateOrgSettingForm struct {
+	OrgUserName string `form:"uname" binding:"Required;MaxSize(35)"`
+	OrgFullName string `form:"fullname" binding:"MaxSize(100)"`
 	Email       string `form:"email" binding:"Required;Email;MaxSize(50)"`
 	Description string `form:"desc" binding:"MaxSize(255)"`
-	Website     string `form:"site" binding:"Url;MaxSize(100)"`
+	Website     string `form:"website" binding:"Url;MaxSize(100)"`
 	Location    string `form:"location" binding:"MaxSize(50)"`
+	Avatar      string `form:"avatar" binding:"Required;Email;MaxSize(50)"`
 }
 
-func (f *OrgSettingForm) Validate(ctx *macaron.Context, errs *binding.Errors, l i18n.Locale) {
+func (f *UpdateOrgSettingForm) Validate(ctx *macaron.Context, errs *binding.Errors, l i18n.Locale) {
 	validate(errs, ctx.Data, f, l)
 }
 

@@ -64,6 +64,12 @@ type Context struct {
 		CommitsCount int
 		Mirror       *models.Mirror
 	}
+
+	Org struct {
+		IsOwner      bool
+		IsMember     bool
+		Organization *models.User
+	}
 }
 
 // Query querys form parameter.

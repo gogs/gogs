@@ -76,9 +76,9 @@ func (f *SignInForm) Validate(ctx *macaron.Context, errs *binding.Errors, l i18n
 
 type UpdateProfileForm struct {
 	UserName string `form:"uname" binding:"Required;MaxSize(35)"`
-	FullName string `form:"fullname" binding:"MaxSize(40)"`
+	FullName string `form:"fullname" binding:"MaxSize(100)"`
 	Email    string `form:"email" binding:"Required;Email;MaxSize(50)"`
-	Website  string `form:"website" binding:"Url;MaxSize(50)"`
+	Website  string `form:"website" binding:"Url;MaxSize(100)"`
 	Location string `form:"location" binding:"MaxSize(50)"`
 	Avatar   string `form:"avatar" binding:"Required;Email;MaxSize(50)"`
 }
