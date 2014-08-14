@@ -252,16 +252,14 @@ func SettingsDelete(ctx *middleware.Context) {
 			case models.ErrUserOwnRepos:
 				ctx.Flash.Error(ctx.Tr("form.still_own_repo"))
 				ctx.Redirect("/user/settings/delete")
-				return
 			default:
 				ctx.Handle(500, "DeleteUser", err)
-				return
 			}
 		} else {
 			log.Trace("Account deleted: %s", ctx.User.Name)
 			ctx.Redirect("/")
-			return
 		}
+		return
 	}
 
 	ctx.HTML(200, SETTINGS_DELETE)

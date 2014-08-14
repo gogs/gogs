@@ -13,30 +13,20 @@ import (
 )
 
 const (
-	HOME     base.TplName = "org/home"
-	CREATE   base.TplName = "org/create"
-	SETTINGS base.TplName = "org/settings"
+	HOME   base.TplName = "org/home"
+	CREATE base.TplName = "org/create"
 )
 
 func Home(ctx *middleware.Context) {
-	ctx.Data["Title"] = ctx.Params(":org")
+	org := ctx.Org.Organization
+	ctx.Data["Title"] = org.Name
 
-	org, err := models.GetUserByName(ctx.Params(":org"))
-	if err != nil {
-		if err == models.ErrUserNotExist {
-			ctx.Handle(404, "GetUserByName", err)
-		} else {
-			ctx.Handle(500, "GetUserByName", err)
-		}
-		return
-	}
-	ctx.Data["Org"] = org
-
-	ctx.Data["Repos"], err = models.GetRepositories(org.Id, ctx.IsSigned && org.IsOrgMember(ctx.User.Id))
+	repos, err := models.GetRepositories(org.Id, ctx.IsSigned && org.IsOrgMember(ctx.User.Id))
 	if err != nil {
 		ctx.Handle(500, "GetRepositories", err)
 		return
 	}
+	ctx.Data["Repos"] = repos
 
 	if err = org.GetMembers(); err != nil {
 		ctx.Handle(500, "GetMembers", err)
@@ -93,98 +83,4 @@ func CreatePost(ctx *middleware.Context, form auth.CreateOrgForm) {
 	log.Trace("Organization created: %s", org.Name)
 
 	ctx.Redirect("/org/" + form.OrgName + "/dashboard")
-}
-
-func Settings(ctx *middleware.Context) {
-	ctx.Data["Title"] = "Settings"
-
-	org, err := models.GetUserByName(ctx.Params(":org"))
-	if err != nil {
-		if err == models.ErrUserNotExist {
-			ctx.Handle(404, "org.Settings(GetUserByName)", err)
-		} else {
-			ctx.Handle(500, "org.Settings(GetUserByName)", err)
-		}
-		return
-	}
-	ctx.Data["Org"] = org
-
-	ctx.HTML(200, SETTINGS)
-}
-
-func SettingsPost(ctx *middleware.Context, form auth.OrgSettingForm) {
-	ctx.Data["Title"] = "Settings"
-
-	org, err := models.GetUserByName(ctx.Params(":org"))
-	if err != nil {
-		if err == models.ErrUserNotExist {
-			ctx.Handle(404, "org.SettingsPost(GetUserByName)", err)
-		} else {
-			ctx.Handle(500, "org.SettingsPost(GetUserByName)", err)
-		}
-		return
-	}
-	ctx.Data["Org"] = org
-
-	if ctx.HasError() {
-		ctx.HTML(200, SETTINGS)
-		return
-	}
-
-	org.FullName = form.DisplayName
-	org.Email = form.Email
-	org.Description = form.Description
-	org.Website = form.Website
-	org.Location = form.Location
-	if err = models.UpdateUser(org); err != nil {
-		ctx.Handle(500, "org.SettingsPost(UpdateUser)", err)
-		return
-	}
-	log.Trace("%s Organization setting updated: %s", ctx.Req.RequestURI, org.LowerName)
-	ctx.Flash.Success("Organization profile has been successfully updated.")
-	ctx.Redirect("/org/" + org.Name + "/settings")
-}
-
-func DeletePost(ctx *middleware.Context) {
-	ctx.Data["Title"] = "Settings"
-
-	org, err := models.GetUserByName(ctx.Params(":org"))
-	if err != nil {
-		if err == models.ErrUserNotExist {
-			ctx.Handle(404, "org.DeletePost(GetUserByName)", err)
-		} else {
-			ctx.Handle(500, "org.DeletePost(GetUserByName)", err)
-		}
-		return
-	}
-	ctx.Data["Org"] = org
-
-	if !org.IsOrgOwner(ctx.User.Id) {
-		ctx.Error(403)
-		return
-	}
-
-	tmpUser := models.User{
-		Passwd: ctx.Query("password"),
-		Salt:   ctx.User.Salt,
-	}
-	tmpUser.EncodePasswd()
-	if tmpUser.Passwd != ctx.User.Passwd {
-		ctx.Flash.Error("Password is not correct. Make sure you are owner of this account.")
-	} else {
-		if err := models.DeleteOrganization(org); err != nil {
-			switch err {
-			case models.ErrUserOwnRepos:
-				ctx.Flash.Error("This organization still have ownership of repository, you have to delete or transfer them first.")
-			default:
-				ctx.Handle(500, "org.DeletePost(DeleteOrganization)", err)
-				return
-			}
-		} else {
-			ctx.Redirect("/")
-			return
-		}
-	}
-
-	ctx.Redirect("/org/" + org.Name + "/settings")
 }

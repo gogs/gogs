@@ -225,6 +225,30 @@ function initCore() {
     Gogs.renderCodeView();
 }
 
+function initUserSetting() {
+    // Confirmation of change username in user profile page.
+    $('#user-profile-form').submit(function (e) {
+        var $username = $('#username');
+        if (($username.data('uname') != $username.val()) && !confirm('Username has been changed, do you want to continue?')) {
+            e.preventDefault();
+            return true;
+        }
+    });
+
+    // Show add SSH key panel.
+    $('#ssh-add').click(function () {
+        $('#user-ssh-add-form').removeClass("hide");
+    });
+
+    // Confirmation of delete account.
+    $('#delete-account-button').click(function (e) {
+        if (!confirm('This account is going to be deleted, do you want to continue?')) {
+            e.preventDefault();
+            return true;
+        }
+    });
+}
+
 function initRepoCreate() {
     // Owner switch menu click.
     $('#repo-create-owner-list').on('click', 'li', function () {
@@ -286,21 +310,43 @@ function initRepoSetting() {
     });
 }
 
+function initOrgSetting() {
+    // Options.
+    // Confirmation of changing organization name.
+    $('#org-setting-form').submit(function (e) {
+        var $orgname = $('#orgname');
+        if (($orgname.data('orgname') != $orgname.val()) && !confirm('Organization name has been changed, do you want to continue?')) {
+            e.preventDefault();
+            return true;
+        }
+    });
+    // Confirmation of delete organization.
+    $('#delete-org-button').click(function (e) {
+        if (!confirm('This organization is going to be deleted, do you want to continue?')) {
+            e.preventDefault();
+            return true;
+        }
+    });
+}
+
 $(document).ready(function () {
     initCore();
+    if ($('#user-profile-setting').length) {
+        initUserSetting();
+    }
     if ($('#repo-create-form').length || $('#repo-migrate-form').length) {
         initRepoCreate();
     }
     if ($('#repo-setting').length) {
         initRepoSetting();
     }
+    if ($('#org-setting').length) {
+        initOrgSetting();
+    }
 
     Tabs('#dashboard-sidebar-menu');
 
     homepage();
-    settingsProfile();
-    settingsSSHKeys();
-    settingsDelete();
 
     // Fix language drop-down menu height.
     var l = $('#footer-lang li').length;
@@ -327,33 +373,5 @@ function homepage() {
             return true
         }
         $('#promo-form').attr('action', '/user/sign_up');
-    });
-}
-
-function settingsProfile() {
-    // Confirmation of change username in user profile page.
-    $('#user-profile-form').submit(function (e) {
-        var $username = $('#username');
-        if (($username.data('uname') != $username.val()) && !confirm('Username has been changed, do you want to continue?')) {
-            e.preventDefault();
-            return true;
-        }
-    });
-}
-
-function settingsSSHKeys() {
-    // Show add SSH key panel.
-    $('#ssh-add').click(function () {
-        $('#user-ssh-add-form').removeClass("hide");
-    });
-}
-
-function settingsDelete() {
-    // Confirmation of delete account.
-    $('#delete-account-button').click(function (e) {
-        if (!confirm('This account is going to deleted, do you want to continue?')) {
-            e.preventDefault();
-            return true;
-        }
     });
 }

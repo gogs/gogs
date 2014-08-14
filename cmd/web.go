@@ -159,18 +159,16 @@ func runWeb(*cli.Context) {
 		r.Get("/reset_password", user.ResetPasswd)
 		r.Post("/reset_password", user.ResetPasswdPost)
 	}, reqSignOut)
-	m.Group("/user", func(r *macaron.Router) {
-		r.Get("/settings", user.Settings)
-		r.Post("/settings", bindIgnErr(auth.UpdateProfileForm{}), user.SettingsPost)
-		m.Group("/settings", func(r *macaron.Router) {
-			r.Get("/password", user.SettingsPassword)
-			r.Post("/password", bindIgnErr(auth.ChangePasswordForm{}), user.SettingsPasswordPost)
-			r.Get("/ssh", user.SettingsSSHKeys)
-			r.Post("/ssh", bindIgnErr(auth.AddSSHKeyForm{}), user.SettingsSSHKeysPost)
-			r.Get("/social", user.SettingsSocial)
-			r.Get("/orgs", user.SettingsOrgs)
-			r.Route("/delete", "GET,POST", user.SettingsDelete)
-		})
+	m.Group("/user/settings", func(r *macaron.Router) {
+		r.Get("", user.Settings)
+		r.Post("", bindIgnErr(auth.UpdateProfileForm{}), user.SettingsPost)
+		r.Get("/password", user.SettingsPassword)
+		r.Post("/password", bindIgnErr(auth.ChangePasswordForm{}), user.SettingsPasswordPost)
+		r.Get("/ssh", user.SettingsSSHKeys)
+		r.Post("/ssh", bindIgnErr(auth.AddSSHKeyForm{}), user.SettingsSSHKeysPost)
+		r.Get("/social", user.SettingsSocial)
+		r.Get("/orgs", user.SettingsOrgs)
+		r.Route("/delete", "GET,POST", user.SettingsDelete)
 	}, reqSignIn)
 	m.Group("/user", func(r *macaron.Router) {
 		// r.Get("/feeds", binding.Bind(auth.FeedsForm{}), user.Feeds)
@@ -226,20 +224,30 @@ func runWeb(*cli.Context) {
 	m.Group("/org", func(r *macaron.Router) {
 		r.Get("/create", org.Create)
 		r.Post("/create", bindIgnErr(auth.CreateOrgForm{}), org.CreatePost)
-		r.Get("/:org", org.Home)
-		r.Get("/:org/dashboard", user.Dashboard)
-		r.Get("/:org/members", org.Members)
 
-		r.Get("/:org/teams", org.Teams)
-		r.Get("/:org/teams/new", org.NewTeam)
-		r.Post("/:org/teams/new", bindIgnErr(auth.CreateTeamForm{}), org.NewTeamPost)
-		r.Get("/:org/teams/:team/edit", org.EditTeam)
+		m.Group("/:org", func(r *macaron.Router) {
+			r.Get("", org.Home)
+		}, middleware.OrgAssignment(true))
 
-		r.Get("/:org/teams/:team", org.SingleTeam)
+		m.Group("/:org", func(r *macaron.Router) {
+			r.Get("/dashboard", user.Dashboard)
+			r.Get("/members", org.Members)
 
-		r.Get("/:org/settings", org.Settings)
-		r.Post("/:org/settings", bindIgnErr(auth.OrgSettingForm{}), org.SettingsPost)
-		r.Post("/:org/settings/delete", org.DeletePost)
+			r.Get("/teams", org.Teams)
+			r.Get("/teams/:team", org.SingleTeam)
+		}, middleware.OrgAssignment(true, true))
+
+		m.Group("/:org", func(r *macaron.Router) {
+			r.Get("/teams/new", org.NewTeam)
+			r.Post("/teams/new", bindIgnErr(auth.CreateTeamForm{}), org.NewTeamPost)
+			r.Get("/teams/:team/edit", org.EditTeam)
+
+			m.Group("/settings", func(r *macaron.Router) {
+				r.Get("", org.Settings)
+				r.Post("", bindIgnErr(auth.UpdateOrgSettingForm{}), org.SettingsPost)
+				r.Route("/delete", "GET,POST", org.SettingsDelete)
+			})
+		}, middleware.OrgAssignment(true, true, true))
 	}, reqSignIn)
 
 	// Repository routers.

@@ -20,15 +20,13 @@ import (
 
 func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 	return func(ctx *Context) {
-		// To valid brach name.
-		var validBranch bool
-		// To display bare quick start if it is a bare repo.
-		var displayBare bool
-
+		var (
+			validBranch bool // To valid brach name.
+			displayBare bool // To display bare page if it is a bare repo.
+		)
 		if len(args) >= 1 {
 			validBranch = args[0]
 		}
-
 		if len(args) >= 2 {
 			displayBare = args[1]
 		}
@@ -60,12 +58,11 @@ func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 			if err != nil {
 				if err == models.ErrUserNotExist {
 					ctx.Handle(404, "GetUserByName", err)
-					return
 				} else if redirect {
 					ctx.Redirect("/")
-					return
+				} else {
+					ctx.Handle(500, "GetUserByName", err)
 				}
-				ctx.Handle(500, "GetUserByName", err)
 				return
 			}
 		} else {
