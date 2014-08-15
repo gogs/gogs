@@ -59,6 +59,16 @@ func (org *User) GetMembers() error {
 	return nil
 }
 
+// AddMember adds new member to organization.
+func (org *User) AddMember(uid int64) error {
+	return AddOrgUser(org.Id, uid)
+}
+
+// RemoveMember removes member from organization.
+func (org *User) RemoveMember(uid int64) error {
+	return RemoveOrgUser(org.Id, uid)
+}
+
 // CreateOrganization creates record of a new organization.
 func CreateOrganization(org, owner *User) (*User, error) {
 	if !IsLegalName(org.Name) {
@@ -241,8 +251,7 @@ func NewTeam(t *Team) error {
 	}
 
 	// Update organization number of teams.
-	rawSql := "UPDATE `user` SET num_teams = num_teams + 1 WHERE id = ?"
-	if _, err = sess.Exec(rawSql, t.OrgId); err != nil {
+	if _, err = sess.Exec("UPDATE `user` SET num_teams = num_teams + 1 WHERE id = ?", t.OrgId); err != nil {
 		sess.Rollback()
 		return err
 	}
@@ -270,8 +279,8 @@ func UpdateTeam(t *Team) error {
 // OrgUser represents an organization-user relation.
 type OrgUser struct {
 	Id       int64
-	Uid      int64 `xorm:"INDEX"`
-	OrgId    int64 `xorm:"INDEX"`
+	Uid      int64 `xorm:"INDEX UNIQUE(s)"`
+	OrgId    int64 `xorm:"INDEX UNIQUE(s)"`
 	IsPublic bool
 	IsOwner  bool
 	NumTeam  int
@@ -289,6 +298,12 @@ func IsOrganizationMember(orgId, uid int64) bool {
 	return has
 }
 
+// IsPublicMembership returns ture if given user public his/her membership.
+func IsPublicMembership(orgId, uid int64) bool {
+	has, _ := x.Where("uid=?", uid).And("org_id=?", orgId).And("is_public=?", true).Get(new(OrgUser))
+	return has
+}
+
 // GetOrgUsersByUserId returns all organization-user relations by user ID.
 func GetOrgUsersByUserId(uid int64) ([]*OrgUser, error) {
 	ous := make([]*OrgUser, 0, 10)
@@ -301,6 +316,77 @@ func GetOrgUsersByOrgId(orgId int64) ([]*OrgUser, error) {
 	ous := make([]*OrgUser, 0, 10)
 	err := x.Where("org_id=?", orgId).Find(&ous)
 	return ous, err
+}
+
+// ChangeOrgUserStatus changes public or private membership status.
+func ChangeOrgUserStatus(orgId, uid int64, public bool) error {
+	ou := new(OrgUser)
+	has, err := x.Where("uid=?", uid).And("org_id=?", orgId).Get(ou)
+	if err != nil {
+		return err
+	} else if !has {
+		return nil
+	}
+
+	ou.IsPublic = public
+	_, err = x.Id(ou.Id).AllCols().Update(ou)
+	return err
+}
+
+// AddOrgUser adds new user to given organization.
+func AddOrgUser(orgId, uid int64) error {
+	if IsOrganizationMember(orgId, uid) {
+		return nil
+	}
+
+	ou := &OrgUser{
+		Uid:   uid,
+		OrgId: orgId,
+	}
+
+	sess := x.NewSession()
+	defer sess.Close()
+	if err := sess.Begin(); err != nil {
+		return err
+	}
+
+	if _, err := sess.Insert(ou); err != nil {
+		sess.Rollback()
+		return err
+	} else if _, err = sess.Exec("UPDATE `user` SET num_members = num_members + 1 WHERE id = ?", orgId); err != nil {
+		sess.Rollback()
+		return err
+	}
+
+	return sess.Commit()
+}
+
+// RemoveOrgUser removes user from given organization.
+func RemoveOrgUser(orgId, uid int64) error {
+	ou := new(OrgUser)
+
+	has, err := x.Where("uid=?", uid).And("org_id=?", orgId).Get(ou)
+	if err != nil {
+		return err
+	} else if !has {
+		return nil
+	}
+
+	sess := x.NewSession()
+	defer sess.Close()
+	if err := sess.Begin(); err != nil {
+		return err
+	}
+
+	if _, err := sess.Id(ou.Id).Delete(ou); err != nil {
+		sess.Rollback()
+		return err
+	} else if _, err = sess.Exec("UPDATE `user` SET num_members = num_members - 1 WHERE id = ?", orgId); err != nil {
+		sess.Rollback()
+		return err
+	}
+
+	return sess.Commit()
 }
 
 // ___________                    ____ ___

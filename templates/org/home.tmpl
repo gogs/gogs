@@ -17,7 +17,9 @@
 <div class="container">
     <div id="org-home-repo-list" class="left grid-2-3">
         <div class="clear">
+        	{{if .IsAdminTeam}}
             <a class="btn btn-green btn-large btn-link btn-radius right" href="/repo/create?org={{.Org.Id}}"><i class="octicon octicon-repo-create"></i> {{.i18n.Tr "new_repo"}}</a>
+        	{{end}}
         </div>
         <div id="org-repo-list">
 			{{range .Repos}}
@@ -45,9 +47,11 @@
 	    			<a href="/{{.Name}}"><img src="{{.AvatarLink}}"></a>
 	    			{{end}}
 	    		</div>
+	    		{{if .IsAdminTeam}}
 	    		<div class="panel-footer">
-	    			<a class="btn btn-medium btn-blue btn-link btn-radius" href="">{{.i18n.Tr "org.invite_someone"}}</a>
+	    			<a class="btn btn-medium btn-blue btn-link btn-radius" href="/org/{{.Org.LowerName}}/invitations/new">{{.i18n.Tr "org.invite_someone"}}</a>
 	    		</div>
+	    		{{end}}
 	    	</div>
 	    	<br>
 	    	<div class="panel panel-radius">
@@ -65,9 +69,12 @@
 		    			{{end}}
 	    			</ul>
 	    		</div>
+	    		{{if .IsOrganizationOwner}}
 	    		<div class="panel-footer">
 	    			<a class="btn btn-medium btn-blue btn-link btn-radius" href="/org/{{$.Org.LowerName}}/teams/new">{{.i18n.Tr "org.create_new_team"}}</a>
 	    		</div>
+
+	    		{{end}}
 	    	</div>
     	</div>
     </div>

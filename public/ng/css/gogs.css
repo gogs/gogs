@@ -851,6 +851,7 @@ The dashboard page style
   margin-left: 1em;
 }
 #dashboard-news .push-news .news-content li img {
+  vertical-align: inherit;
   margin-bottom: -2px;
 }
 /*
@@ -1691,6 +1692,30 @@ textarea#issue-add-content {
 #org-home-header {
   min-height: 100px;
 }
+#org-header {
+  height: 48px;
+}
+#org-header .org-name {
+  padding-left: 10px;
+  font-size: 1.4em;
+  height: 50px;
+  line-height: 50px;
+  margin-bottom: 0;
+}
+#org-header > div > .menu-line > li.right > a {
+  font-size: 1.2em;
+  color: #444444;
+}
+#org-header > div > .menu-line > li.right > a:hover {
+  background-color: transparent;
+  color: #d9453d;
+}
+#org-header > div > .menu-line > li.right > a .octicon {
+  margin-right: 6px;
+}
+#org-header > div > .menu-line > li.right .current {
+  border-bottom: 2px solid #D26911;
+}
 #org-home-header-info {
   padding-top: 10px;
 }
@@ -1775,4 +1800,31 @@ textarea#issue-add-content {
   margin-top: 0;
   margin-bottom: 0;
   color: #777;
+}
+#org-member-toolbar {
+  padding: 10px 0;
+}
+#org-member-list .org-member-item {
+  height: 50px;
+  line-height: 50px;
+  border-top: 1px solid #eee;
+  padding: 15px 20px;
+}
+#org-member-list .org-member-item .member-name {
+  padding-left: 15px;
+}
+#org-member-list .org-member-item ul {
+  list-style: none;
+}
+#org-member-list .org-member-item ul li {
+  text-align: center;
+  display: inline-block;
+}
+.invite-box {
+  padding: 50px 0;
+  min-height: 130px;
+  text-align: center;
+}
+.invite-box input {
+  width: 250px;
 }

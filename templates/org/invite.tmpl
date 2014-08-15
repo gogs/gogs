@@ -1,0 +1,15 @@
+{{template "ng/base/head" .}}
+{{template "ng/base/header" .}}
+{{template "org/header" .}}
+<div class="container">
+	<div class="invite-box">
+    	{{template "ng/base/alert" .}}
+		<h3>{{.i18n.Tr "org.members.invite_desc" .Org.FullName}}</h3>
+		<form action="{{.OrgLink}}/invitations/new" method="post">
+			{{.CsrfTokenHtml}}
+			<input class="ipt ipt-large ipt-radius" name="uname" required>
+			<button class="btn btn-blue btn-large btn-radius">{{.i18n.Tr "org.members.invite_now"}}</button>
+		</form>
+	</div>
+</div>
+{{template "ng/base/footer" .}}
