@@ -1823,8 +1823,12 @@ textarea#issue-add-content {
 .invite-box {
   padding: 50px 0;
   min-height: 130px;
-  text-align: center;
+  margin: 0 auto;
+  width: 50%;
 }
 .invite-box input {
-  width: 250px;
+  width: 300px;
+}
+#org-member-list-block {
+  padding-top: 2px;
 }
