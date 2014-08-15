@@ -128,6 +128,16 @@ func (u *User) IsOrganization() bool {
 	return u.Type == ORGANIZATION
 }
 
+// IsUserOrgOwner returns true if user is in the owner team of given organization.
+func (u *User) IsUserOrgOwner(orgId int64) bool {
+	return IsOrganizationOwner(orgId, u.Id)
+}
+
+// IsPublicMember returns true if user public his/her membership in give organization.
+func (u *User) IsPublicMember(orgId int64) bool {
+	return IsPublicMembership(orgId, u.Id)
+}
+
 // GetOrganizationCount returns count of membership of organization of user.
 func (u *User) GetOrganizationCount() (int64, error) {
 	return x.Where("uid=?", u.Id).Count(new(OrgUser))

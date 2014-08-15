@@ -9,6 +9,38 @@
 #org-home-header {
 	min-height: 100px;
 }
+#org-header {
+	height: 48px;
+	.org-name {
+		padding-left: 10px;
+		font-size: 1.4em;
+		height: 50px;
+		line-height: 50px;
+		margin-bottom: 0;
+	}
+	> div {
+		> .menu-line {
+			> li {
+				&.right {
+					> a {
+						font-size: 1.2em;
+						color: @dashboardHeaderLinkColor;
+						&:hover {
+							background-color: transparent;
+							color: @dashboardHeaderLinkHoverColor;
+						}
+						.octicon {
+							margin-right: 6px;
+						}
+					}
+					.current {
+						border-bottom: 2px solid #D26911;
+					}
+				}
+			}
+		}
+	}
+}
 #org-home-header-info {
 	padding-top: 10px;
 	h2 {
@@ -93,4 +125,33 @@
 	margin-top: 0;
 	margin-bottom: 0;
 	color: #777;
+}
+#org-member-toolbar {
+	padding: 10px 0;
+}
+#org-member-list {
+	.org-member-item {
+		height: 50px;
+		line-height: 50px;
+		border-top: 1px solid #eee;
+		padding: 15px 20px;
+		.member-name {
+			padding-left: 15px;
+		}
+		ul {
+			list-style: none;
+			li {
+				text-align: center;
+				display: inline-block;
+			}
+		}
+	}
+}
+.invite-box {
+	padding: 50px 0;
+	min-height: 130px;
+	text-align: center;
+	input {
+		width: 250px;
+	}
 }

@@ -227,7 +227,7 @@ func Action(ctx *middleware.Context) {
 	}
 
 	if err != nil {
-		log.Error(4, "repo.Action(%s): %v", ctx.Params(":action"), err)
+		log.Error(4, "Action(%s): %v", ctx.Params(":action"), err)
 		ctx.JSON(200, map[string]interface{}{
 			"ok":  false,
 			"err": err.Error(),

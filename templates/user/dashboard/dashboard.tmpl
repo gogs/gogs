@@ -30,7 +30,7 @@
                             {{ $push := ActionContent2Commits .}}
                             {{ $repoLink := .GetRepoLink}}
                             {{range $push.Commits}}
-                            <li><img src="{{AvatarLink .AuthorEmail}}?s=16"> <a href="/{{$repoLink}}/commit/{{.Sha1}}">{{ShortSha .Sha1}}</a> {{.Message}}</li>
+                            <li><img class="avatar-16" src="{{AvatarLink .AuthorEmail}}?s=16"> <a href="/{{$repoLink}}/commit/{{.Sha1}}">{{ShortSha .Sha1}}</a> {{.Message}}</li>
                             {{end}}
                         </ul>
                     </div>

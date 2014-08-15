@@ -1,56 +1,43 @@
-{{template "base/head" .}}
-{{template "base/navbar" .}}
-<div id="body-nav" class="org-nav org-nav-auto">
-    <div class="container clearfix">
-        <div id="org-nav-wrapper">
-            <ul class="nav nav-pills pull-right">
-                <li class="active"><a href="#"><i class="fa fa-users"></i>Members
-                    <span class="label label-default">5</span></a>
-                </li>
-                <li><a href="#"><i class="fa fa-tags"></i>Teams
-                    <span class="label label-default">2</span></a>
-                </li>
-            </ul>
-            <img class="pull-left org-small-logo" src="https://avatars3.githubusercontent.com/u/6656686?s=140" alt="" width="60"/>
-            <div id="org-nav-info">
-                <h2 class="org-name">Organization Name</h2>
-            </div>
-        </div>
-
-    </div>
+{{template "ng/base/head" .}}
+{{template "ng/base/header" .}}
+{{template "org/header" .}}
+<div class="container">
+	{{template "ng/base/alert" .}}
+	<div class="clear" id="org-member-toolbar">
+		{{if .IsAdminTeam}}
+        <a class="btn btn-green btn-large btn-link btn-radius right" href="{{.OrgLink}}/invitations/new"><i class="octicon octicon-repo-create"></i> {{.i18n.Tr "org.invite_someone"}}</a>
+		{{end}}
+	</div>
+	<div id="org-member-list">
+		{{range .Members}}
+		<div class="org-member-item">
+			<img class="avatar-48 left" src="{{.AvatarLink}}?s=100">
+			<a class="text-black" href="/{{.Name}}"><span class="member-name"><strong>{{.FullName}}</strong>({{.Name}})</span></a>
+			<ul class="grid-6-12 right">
+				<li class="grid-1-3">
+				{{ $isPublic := .IsPublicMember $.Org.Id}}
+				{{if $isPublic}}
+					{{$.i18n.Tr "org.members.public"}}
+					{{if eq $.SignedUser.Id .Id}}(<a href="{{$.OrgLink}}/members/action/private?uid={{.Id}}">{{$.i18n.Tr "org.members.public_helper"}}</a>){{end}}
+				{{else}}
+					{{$.i18n.Tr "org.members.private"}}
+					{{if eq $.SignedUser.Id .Id}}(<a href="{{$.OrgLink}}/members/action/public?uid={{.Id}}">{{$.i18n.Tr "org.members.private_helper"}}</a>){{end}}
+				{{end}}
+				</li>
+				<li class="grid-1-4">{{if .IsUserOrgOwner $.Org.Id}}<strong>{{$.i18n.Tr "org.members.owner"}}</strong>{{else}}{{$.i18n.Tr "org.members.member"}}{{end}}</li>
+				{{if $.IsOrganizationOwner}}
+				<li class="grid-1-6 right">
+					<a class="btn btn-red btn-link btn-radius" href="{{$.OrgLink}}/members/action/remove?uid={{.Id}}">{{$.i18n.Tr "org.members.remove"}}</a>
+				</li>
+				{{if $isPublic}}
+				<li class="grid-1-6 right">
+					<a class="btn btn-blue btn-link btn-radius" href="{{$.OrgLink}}/members/action/private?uid={{.Id}}">{{$.i18n.Tr "org.members.conceal"}}</a>
+				</li>
+				{{end}}
+				{{end}}
+			</ul>
+		</div>
+		{{end}}
+	</div>
 </div>
-<div id="body" class="container">
-    <div id="org">
-        <div id="org-members">
-            <div class="member">&nbsp;
-                <div class="avatar col-md-1">
-                    <img src="https://avatars3.githubusercontent.com/u/2142787?s=140" alt=""/>
-                </div>
-                <div class="name col-md-4">
-                    <a href="#"><strong>fuxiaohei</strong><span class="nick">傅小黑</span></a>
-                </div>
-                <div class="role col-md-2 pull-right">
-                    <strong>Member</strong>
-                </div>
-                <div class="status col-md-1 pull-right">
-                    <strong>Public</strong>
-                </div>
-            </div>
-            <div class="member">&nbsp;
-                <div class="avatar col-md-1">
-                    <img src="https://avatars3.githubusercontent.com/u/2142787?s=140" alt=""/>
-                </div>
-                <div class="name col-md-4">
-                    <a href="#"><strong>fuxiaohei</strong><span class="nick">傅小黑</span></a>
-                </div>
-                <div class="role col-md-2 pull-right">
-                    <strong><i class="fa fa-user"></i>Owner</strong>
-                </div>
-                <div class="status col-md-1 pull-right">
-                    <i class="fa fa-lock"></i>Private
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-{{template "base/footer" .}}
+{{template "ng/base/footer" .}}

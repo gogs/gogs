@@ -146,6 +146,7 @@ func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 		}
 		ctx.Repo.GitRepo = gitRepo
 		ctx.Repo.RepoLink = "/" + u.Name + "/" + repo.Name
+		ctx.Data["RepoLink"] = ctx.Repo.RepoLink
 
 		tags, err := ctx.Repo.GitRepo.GetTags()
 		if err != nil {
@@ -157,7 +158,6 @@ func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 		ctx.Data["Title"] = u.Name + "/" + repo.Name
 		ctx.Data["Repository"] = repo
 		ctx.Data["Owner"] = ctx.Repo.Repository.Owner
-		ctx.Data["RepoLink"] = ctx.Repo.RepoLink
 		ctx.Data["IsRepositoryOwner"] = ctx.Repo.IsOwner
 		ctx.Data["IsRepositoryTrueOwner"] = ctx.Repo.IsTrueOwner
 

@@ -232,6 +232,7 @@ func runWeb(*cli.Context) {
 		m.Group("/:org", func(r *macaron.Router) {
 			r.Get("/dashboard", user.Dashboard)
 			r.Get("/members", org.Members)
+			r.Get("/members/action/:action", org.MembersAction)
 
 			r.Get("/teams", org.Teams)
 			r.Get("/teams/:team", org.SingleTeam)
@@ -248,6 +249,10 @@ func runWeb(*cli.Context) {
 				r.Route("/delete", "GET,POST", org.SettingsDelete)
 			})
 		}, middleware.OrgAssignment(true, true, true))
+
+		m.Group("/:org", func(r *macaron.Router) {
+			r.Route("/invitations/new", "GET,POST", org.Invitation)
+		}, middleware.OrgAssignment(true, false, false, true))
 	}, reqSignIn)
 
 	// Repository routers.

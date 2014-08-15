@@ -68,7 +68,9 @@ type Context struct {
 	Org struct {
 		IsOwner      bool
 		IsMember     bool
+		IsAdminTeam  bool // In owner team or team that has admin permission level.
 		Organization *models.User
+		OrgLink      string
 	}
 }
 
@@ -181,7 +183,6 @@ func Contexter() macaron.Handler {
 			Flash:   f,
 			Session: sess,
 		}
-
 		// Compute current URL for real-time change language.
 		link := ctx.Req.RequestURI
 		i := strings.Index(link, "?")
