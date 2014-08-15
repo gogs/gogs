@@ -329,6 +329,28 @@ function initOrgSetting() {
     });
 }
 
+function initInvite() {
+    // Invitation.
+    var $ul = $('#org-member-invite-list');
+    $('#org-member-invite').on('keyup', function () {
+        var $this = $(this);
+        if (!$this.val()) {
+            $ul.toggleHide();
+            return;
+        }
+        Gogs.searchUsers($this.val(), $ul);
+    }).on('focus', function () {
+        if (!$(this).val()) {
+            $ul.toggleHide();
+        } else {
+            $ul.toggleShow();
+        }
+    }).next().next().find('ul').on("click", 'li', function () {
+        $('#org-member-invite').val($(this).text());
+        $ul.toggleHide();
+    });
+}
+
 $(document).ready(function () {
     initCore();
     if ($('#user-profile-setting').length) {
@@ -342,6 +364,9 @@ $(document).ready(function () {
     }
     if ($('#org-setting').length) {
         initOrgSetting();
+    }
+    if ($('#invite-box').length) {
+        initInvite();
     }
 
     Tabs('#dashboard-sidebar-menu');
