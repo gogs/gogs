@@ -49,7 +49,7 @@ func (f *UpdateOrgSettingForm) Validate(ctx *macaron.Context, errs *binding.Erro
 //              \/     \/      \/
 
 type CreateTeamForm struct {
-	TeamName    string `form:"name" binding:"Required;AlphaDashDot;MaxSize(30)"`
+	TeamName    string `form:"team_name" binding:"Required;AlphaDashDot;MaxSize(30)"`
 	Description string `form:"desc" binding:"MaxSize(255)"`
 	Permission  string `form:"permission"`
 }

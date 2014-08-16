@@ -71,6 +71,8 @@ type Context struct {
 		IsAdminTeam  bool // In owner team or team that has admin permission level.
 		Organization *models.User
 		OrgLink      string
+
+		Team *models.Team
 	}
 }
 

@@ -41,15 +41,16 @@ func OrgAssignment(redirect bool, args ...bool) macaron.Handler {
 			}
 			return
 		}
-		ctx.Data["Org"] = ctx.Org.Organization
+		org := ctx.Org.Organization
+		ctx.Data["Org"] = org
 
 		if ctx.IsSigned {
-			ctx.Org.IsOwner = ctx.Org.Organization.IsOrgOwner(ctx.User.Id)
+			ctx.Org.IsOwner = org.IsOrgOwner(ctx.User.Id)
 			if ctx.Org.IsOwner {
 				ctx.Org.IsMember = true
 				ctx.Org.IsAdminTeam = true
 			} else {
-				if ctx.Org.Organization.IsOrgMember(ctx.User.Id) {
+				if org.IsOrgMember(ctx.User.Id) {
 					ctx.Org.IsMember = true
 					// TODO: ctx.Org.IsAdminTeam
 				}
@@ -64,7 +65,24 @@ func OrgAssignment(redirect bool, args ...bool) macaron.Handler {
 		ctx.Data["IsAdminTeam"] = ctx.Org.IsAdminTeam
 		ctx.Data["IsOrganizationOwner"] = ctx.Org.IsOwner
 
-		ctx.Org.OrgLink = "/org/" + ctx.Org.Organization.Name
+		ctx.Org.OrgLink = "/org/" + org.Name
 		ctx.Data["OrgLink"] = ctx.Org.OrgLink
+
+		// Team.
+		teamName := ctx.Params(":team")
+		if len(teamName) > 0 {
+			ctx.Org.Team, err = org.GetTeam(teamName)
+			if err != nil {
+				if err == models.ErrTeamNotExist {
+					ctx.Handle(404, "GetTeam", err)
+				} else if redirect {
+					ctx.Redirect("/")
+				} else {
+					ctx.Handle(500, "GetTeam", err)
+				}
+				return
+			}
+			ctx.Data["Team"] = ctx.Org.Team
+		}
 	}
 }

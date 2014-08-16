@@ -20,12 +20,11 @@ import (
 )
 
 const (
-	SIGNIN          base.TplName = "user/signin"
-	SIGNUP          base.TplName = "user/signup"
-	DELETE          base.TplName = "user/delete"
-	ACTIVATE        base.TplName = "user/activate"
-	FORGOT_PASSWORD base.TplName = "user/forgot_passwd"
-	RESET_PASSWORD  base.TplName = "user/reset_passwd"
+	SIGNIN          base.TplName = "user/auth/signin"
+	SIGNUP          base.TplName = "user/auth/signup"
+	ACTIVATE        base.TplName = "user/auth/activate"
+	FORGOT_PASSWORD base.TplName = "user/auth/forgot_passwd"
+	RESET_PASSWORD  base.TplName = "user/auth/reset_passwd"
 )
 
 func SignIn(ctx *middleware.Context) {

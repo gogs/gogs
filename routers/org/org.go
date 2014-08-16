@@ -19,7 +19,7 @@ const (
 
 func Home(ctx *middleware.Context) {
 	org := ctx.Org.Organization
-	ctx.Data["Title"] = org.Name
+	ctx.Data["Title"] = org.FullName
 
 	repos, err := models.GetRepositories(org.Id, ctx.IsSigned && org.IsOrgMember(ctx.User.Id))
 	if err != nil {

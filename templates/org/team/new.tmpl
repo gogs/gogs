@@ -1,0 +1,48 @@
+{{template "ng/base/head" .}}
+{{template "ng/base/header" .}}
+{{template "org/base/header" .}}
+<div id="repo-wrapper">
+    <form id="team-create-form" class="form form-align panel panel-radius" action="{{.OrgLink}}/teams/new" method="post">
+        {{.CsrfTokenHtml}}
+        <div class="panel-header">
+            <h2>{{.i18n.Tr "org.create_new_team"}}</h2>
+        </div>
+        <div class="panel-content">
+            {{template "ng/base/alert" .}}
+            <div class="field">
+                <label class="req" for="team-name">{{.i18n.Tr "org.team_name"}}</label>
+                <input class="ipt ipt-large ipt-radius {{if .Err_TeamName}}ipt-error{{end}}" id="team-name" name="team_name" value="{{.team_name}}" required />
+                <span class="form-label"></span>
+                <span class="help">{{.i18n.Tr "org.team_name_helper"}}</span>
+            </div>
+            <div class="field">
+                <label for="desc">{{.i18n.Tr "org.team_desc"}}</label>
+                <input class="ipt ipt-large ipt-radius {{if .Err_Description}}ipt-error{{end}}" id="desc" name="desc" value="{{.desc}}" />
+                <span class="form-label"></span>
+                <span class="help">{{.i18n.Tr "org.team_desc_helper"}}</span>
+            </div>
+            <div class="field">
+                <h4 class="text-center">{{.i18n.Tr "org.team_permission_desc"}}</h4>
+                <label></label>
+                <input name="permission" type="radio" value="read" {{if or .PageIsOrgTeamsNew (eq .Team.Authorize 1)}}checked{{end}}> {{.i18n.Tr "org.teams.read_access"}} 
+                <label></label>
+                <p class="text-grey note">{{.i18n.Tr "org.teams.read_access_helper"}}</p>
+                <label></label>
+                <input name="permission" type="radio" value="write" {{if eq .Team.Authorize 2}}checked{{end}}> {{.i18n.Tr "org.teams.write_access"}} 
+                <label></label>
+                <p class="text-grey note">{{.i18n.Tr "org.teams.write_access_helper"}}</p>
+                <label></label>
+                <input name="permission" type="radio" value="admin" {{if eq .Team.Authorize 3}}checked{{end}}> {{.i18n.Tr "org.teams.admin_access"}} 
+                <label></label>
+                <p class="text-grey note">{{.i18n.Tr "org.teams.admin_access_helper"}}</p>
+            </div>
+            <hr>
+            <div class="field">
+                <label></label>
+                <button class="btn btn-large btn-blue btn-radius">{{.i18n.Tr "org.create_new_team"}}</button>
+                <a class="btn btn-small btn-gray btn-radius" id="repo-create-cancel" href="{{.OrgLink}}/teams"><strong>{{.i18n.Tr "cancel"}}</strong></a>
+            </div>
+        </div>
+    </form>
+</div>
+{{template "ng/base/footer" .}}

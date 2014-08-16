@@ -3,7 +3,9 @@
 <div id="repo-wrapper">
     <form id="repo-create-form" class="form form-align panel panel-radius" action="/repo/create" method="post">
         {{.CsrfTokenHtml}}
-        <div class="panel-header"><h2>{{.i18n.Tr "new_repo"}}</h2></div>
+        <div class="panel-header">
+            <h2>{{.i18n.Tr "new_repo"}}</h2>
+        </div>
         <div class="panel-content">
             {{template "ng/base/alert" .}}
             <div class="field">

@@ -1,3 +1,6 @@
+.org-header-alert .alert {
+	margin-top: 10px;
+}
 .org-header {
 	padding: 16px 0;
 	background-color: #FFF;
@@ -91,13 +94,13 @@
 	.panel-footer {
 		padding: .8em 1.2em;
 	}
-}
-#org-member-avatar-group {
-	padding: 15px;
-	img {
-		width: 59px;
-		height: 59px;
-		border-radius: 3px;
+	.member-avatar-group {
+		padding: 15px;
+		img {
+			width: 59px;
+			height: 59px;
+			border-radius: 3px;
+		}
 	}
 }
 #org-home-team-list {
@@ -126,14 +129,15 @@
 	margin-bottom: 0;
 	color: #777;
 }
-#org-member-toolbar {
+.org-toolbar {
 	padding: 10px 0;
+	border-bottom: 1px solid #eee;
 }
 #org-member-list {
 	.org-member-item {
 		height: 50px;
 		line-height: 50px;
-		border-top: 1px solid #eee;
+		border-bottom: 1px solid #eee;
 		padding: 15px 20px;
 		.member-name {
 			padding-left: 15px;
@@ -158,4 +162,24 @@
 }
 #org-member-list-block {
 	padding-top: 2px;
+}
+.org-team-list {
+	.org-team-list-item {
+		float: left;
+		padding: 15px;
+		width: 555px;
+		.member-avatar-group {
+			padding: 5px 15px;
+			img {
+				width: 38px;
+				height: 38px;
+				border-radius: 3px;
+			}
+		}
+	}
+}
+#team-create-form {
+	.note {
+		margin-left: 153px;
+	}
 }

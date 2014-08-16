@@ -13,31 +13,22 @@ import (
 )
 
 const (
-	TEAMS    base.TplName = "org/teams"
-	TEAM_NEW base.TplName = "org/team_new"
+	TEAMS    base.TplName = "org/team/teams"
+	TEAM_NEW base.TplName = "org/team/new"
 )
 
 func Teams(ctx *middleware.Context) {
-	ctx.Data["Title"] = "Organization " + ctx.Params(":org") + " Teams"
+	org := ctx.Org.Organization
+	ctx.Data["Title"] = org.FullName
+	ctx.Data["PageIsOrgTeams"] = true
 
-	org, err := models.GetUserByName(ctx.Params(":org"))
-	if err != nil {
-		if err == models.ErrUserNotExist {
-			ctx.Handle(404, "org.Teams(GetUserByName)", err)
-		} else {
-			ctx.Handle(500, "org.Teams(GetUserByName)", err)
-		}
-		return
-	}
-	ctx.Data["Org"] = org
-
-	if err = org.GetTeams(); err != nil {
-		ctx.Handle(500, "org.Teams(GetTeams)", err)
+	if err := org.GetTeams(); err != nil {
+		ctx.Handle(500, "GetTeams", err)
 		return
 	}
 	for _, t := range org.Teams {
-		if err = t.GetMembers(); err != nil {
-			ctx.Handle(500, "org.Home(GetMembers)", err)
+		if err := t.GetMembers(); err != nil {
+			ctx.Handle(500, "GetMembers", err)
 			return
 		}
 	}
@@ -46,44 +37,39 @@ func Teams(ctx *middleware.Context) {
 	ctx.HTML(200, TEAMS)
 }
 
-func NewTeam(ctx *middleware.Context) {
-	org, err := models.GetUserByName(ctx.Params(":org"))
+func TeamsAction(ctx *middleware.Context) {
+	var err error
+	switch ctx.Params(":action") {
+	case "join":
+		err = models.AddTeamMember(ctx.Org.Organization.Id, ctx.Org.Team.Id, ctx.User.Id)
+	case "leave":
+		err = models.RemoveMember(ctx.Org.Organization.Id, ctx.Org.Team.Id, ctx.User.Id)
+	}
+
 	if err != nil {
-		if err == models.ErrUserNotExist {
-			ctx.Handle(404, "org.NewTeam(GetUserByName)", err)
-		} else {
-			ctx.Handle(500, "org.NewTeam(GetUserByName)", err)
-		}
+		log.Error(4, "Action(%s): %v", ctx.Params(":action"), err)
+		ctx.JSON(200, map[string]interface{}{
+			"ok":  false,
+			"err": err.Error(),
+		})
 		return
 	}
-	ctx.Data["Org"] = org
+	ctx.Redirect(ctx.Org.OrgLink + "/teams")
+}
 
-	// Check ownership of organization.
-	if !org.IsOrgOwner(ctx.User.Id) {
-		ctx.Error(403)
-		return
-	}
-
+func NewTeam(ctx *middleware.Context) {
+	ctx.Data["Title"] = ctx.Org.Organization.FullName
+	ctx.Data["PageIsOrgTeams"] = true
+	ctx.Data["PageIsOrgTeamsNew"] = true
+	ctx.Data["Team"] = &models.Team{}
 	ctx.HTML(200, TEAM_NEW)
 }
 
 func NewTeamPost(ctx *middleware.Context, form auth.CreateTeamForm) {
-	org, err := models.GetUserByName(ctx.Params(":org"))
-	if err != nil {
-		if err == models.ErrUserNotExist {
-			ctx.Handle(404, "org.NewTeamPost(GetUserByName)", err)
-		} else {
-			ctx.Handle(500, "org.NewTeamPost(GetUserByName)", err)
-		}
-		return
-	}
-	ctx.Data["Org"] = org
-
-	// Check ownership of organization.
-	if !org.IsOrgOwner(ctx.User.Id) {
-		ctx.Error(403)
-		return
-	}
+	ctx.Data["Title"] = ctx.Org.Organization.FullName
+	ctx.Data["PageIsOrgTeams"] = true
+	ctx.Data["PageIsOrgTeamsNew"] = true
+	ctx.Data["Team"] = &models.Team{}
 
 	if ctx.HasError() {
 		ctx.HTML(200, TEAM_NEW)
@@ -104,23 +90,29 @@ func NewTeamPost(ctx *middleware.Context, form auth.CreateTeamForm) {
 		return
 	}
 
+	org := ctx.Org.Organization
+
 	t := &models.Team{
 		OrgId:       org.Id,
 		Name:        form.TeamName,
 		Description: form.Description,
 		Authorize:   auth,
 	}
-	if err = models.NewTeam(t); err != nil {
-		if err == models.ErrTeamAlreadyExist {
+	if err := models.NewTeam(t); err != nil {
+		switch err {
+		case models.ErrTeamNameIllegal:
 			ctx.Data["Err_TeamName"] = true
-			ctx.RenderWithErr("Team name has already been used", TEAM_NEW, &form)
-		} else {
-			ctx.Handle(500, "org.NewTeamPost(NewTeam)", err)
+			ctx.RenderWithErr(ctx.Tr("form.illegal_team_name"), TEAM_NEW, &form)
+		case models.ErrTeamAlreadyExist:
+			ctx.Data["Err_TeamName"] = true
+			ctx.RenderWithErr(ctx.Tr("form.team_name_been_taken"), TEAM_NEW, &form)
+		default:
+			ctx.Handle(500, "NewTeam", err)
 		}
 		return
 	}
-	log.Trace("%s Team created: %s/%s", ctx.Req.RequestURI, org.Name, t.Name)
-	ctx.Redirect("/org/" + org.LowerName + "/teams/" + t.LowerName)
+	log.Trace("Team created: %s/%s", org.Name, t.Name)
+	ctx.Redirect(ctx.Org.OrgLink + "/teams/" + t.LowerName)
 }
 
 func EditTeam(ctx *middleware.Context) {

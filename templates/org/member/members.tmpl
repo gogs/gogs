@@ -1,9 +1,11 @@
 {{template "ng/base/head" .}}
 {{template "ng/base/header" .}}
-{{template "org/header" .}}
+{{template "org/base/header" .}}
 <div class="container">
-	{{template "ng/base/alert" .}}
-	<div class="clear" id="org-member-toolbar">
+	<div class="org-header-alert">
+		{{template "ng/base/alert" .}}
+	</div>
+	<div class="org-toolbar clear">
 		{{if .IsAdminTeam}}
         <a class="btn btn-green btn-large btn-link btn-radius right" href="{{.OrgLink}}/invitations/new"><i class="octicon octicon-repo-create"></i> {{.i18n.Tr "org.invite_someone"}}</a>
 		{{end}}
@@ -25,15 +27,19 @@
 				{{end}}
 				</li>
 				<li class="grid-1-4">{{if .IsUserOrgOwner $.Org.Id}}<strong>{{$.i18n.Tr "org.members.owner"}}</strong>{{else}}{{$.i18n.Tr "org.members.member"}}{{end}}</li>
-				{{if $.IsOrganizationOwner}}
-				<li class="grid-1-6 right">
-					<a class="btn btn-red btn-link btn-radius" href="{{$.OrgLink}}/members/action/remove?uid={{.Id}}">{{$.i18n.Tr "org.members.remove"}}</a>
-				</li>
-				{{if $isPublic}}
-				<li class="grid-1-6 right">
-					<a class="btn btn-blue btn-link btn-radius" href="{{$.OrgLink}}/members/action/private?uid={{.Id}}">{{$.i18n.Tr "org.members.conceal"}}</a>
-				</li>
-				{{end}}
+				{{if eq $.SignedUser.Id .Id}}
+					<li class="grid-1-6 right">
+						<a class="btn btn-red btn-link btn-radius" href="{{$.OrgLink}}/members/action/leave?uid={{.Id}}">{{$.i18n.Tr "org.members.leave"}}</a>
+					</li>
+				{{else if $.IsOrganizationOwner}}
+					<li class="grid-1-6 right">
+						<a class="btn btn-red btn-link btn-radius" href="{{$.OrgLink}}/members/action/remove?uid={{.Id}}">{{$.i18n.Tr "org.members.remove"}}</a>
+					</li>
+					{{if $isPublic}}
+						<li class="grid-1-6 right">
+							<a class="btn btn-blue btn-link btn-radius" href="{{$.OrgLink}}/members/action/private?uid={{.Id}}">{{$.i18n.Tr "org.members.conceal"}}</a>
+						</li>
+					{{end}}
 				{{end}}
 			</ul>
 		</div>

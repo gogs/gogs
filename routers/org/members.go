@@ -14,13 +14,13 @@ import (
 )
 
 const (
-	MEMBERS base.TplName = "org/members"
-	INVITE  base.TplName = "org/invite"
+	MEMBERS       base.TplName = "org/member/members"
+	MEMBER_INVITE base.TplName = "org/member/invite"
 )
 
 func Members(ctx *middleware.Context) {
 	org := ctx.Org.Organization
-	ctx.Data["Title"] = org.Name
+	ctx.Data["Title"] = org.FullName
 	ctx.Data["PageIsOrgMembers"] = true
 
 	if err := org.GetMembers(); err != nil {
@@ -60,6 +60,18 @@ func MembersAction(ctx *middleware.Context) {
 			return
 		}
 		err = org.RemoveMember(uid)
+		if err == models.ErrLastOrgOwner {
+			ctx.Flash.Error(ctx.Tr("form.last_org_owner"))
+			ctx.Redirect(ctx.Org.OrgLink + "/members")
+			return
+		}
+	case "leave":
+		err = org.RemoveMember(ctx.User.Id)
+		if err == models.ErrLastOrgOwner {
+			ctx.Flash.Error(ctx.Tr("form.last_org_owner"))
+			ctx.Redirect(ctx.Org.OrgLink + "/members")
+			return
+		}
 	}
 
 	if err != nil {
@@ -75,7 +87,7 @@ func MembersAction(ctx *middleware.Context) {
 
 func Invitation(ctx *middleware.Context) {
 	org := ctx.Org.Organization
-	ctx.Data["Title"] = org.Name
+	ctx.Data["Title"] = org.FullName
 	ctx.Data["PageIsOrgMembers"] = true
 
 	if ctx.Req.Method == "POST" {
@@ -101,5 +113,5 @@ func Invitation(ctx *middleware.Context) {
 		return
 	}
 
-	ctx.HTML(200, INVITE)
+	ctx.HTML(200, MEMBER_INVITE)
 }
