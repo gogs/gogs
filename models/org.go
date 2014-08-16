@@ -15,6 +15,9 @@ import (
 var (
 	ErrOrgNotExist      = errors.New("Organization does not exist")
 	ErrTeamAlreadyExist = errors.New("Team already exist")
+	ErrTeamNotExist     = errors.New("Team does not exist")
+	ErrTeamNameIllegal  = errors.New("Team name contains illegal characters")
+	ErrLastOrgOwner     = errors.New("The user to remove is the last member in owner team")
 )
 
 // IsOrgOwner returns true if given user is in the owner team.
@@ -27,14 +30,14 @@ func (org *User) IsOrgMember(uid int64) bool {
 	return IsOrganizationMember(org.Id, uid)
 }
 
+// GetTeam returns named team of organization.
+func (org *User) GetTeam(name string) (*Team, error) {
+	return GetTeam(org.Id, name)
+}
+
 // GetOwnerTeam returns owner team of organization.
 func (org *User) GetOwnerTeam() (*Team, error) {
-	t := &Team{
-		OrgId: org.Id,
-		Name:  OWNER_TEAM,
-	}
-	_, err := x.Get(t)
-	return t, err
+	return org.GetTeam(OWNER_TEAM)
 }
 
 // GetTeams returns all teams that belong to organization.
@@ -179,96 +182,6 @@ func DeleteOrganization(org *User) (err error) {
 	return sess.Commit()
 }
 
-// ___________
-// \__    ___/___ _____    _____
-//   |    |_/ __ \\__  \  /     \
-//   |    |\  ___/ / __ \|  Y Y  \
-//   |____| \___  >____  /__|_|  /
-//              \/     \/      \/
-
-type AuthorizeType int
-
-const (
-	ORG_READABLE AuthorizeType = iota + 1
-	ORG_WRITABLE
-	ORG_ADMIN
-)
-
-const OWNER_TEAM = "Owners"
-
-// Team represents a organization team.
-type Team struct {
-	Id          int64
-	OrgId       int64 `xorm:"INDEX"`
-	LowerName   string
-	Name        string
-	Description string
-	Authorize   AuthorizeType
-	RepoIds     string `xorm:"TEXT"`
-	NumMembers  int
-	NumRepos    int
-	Members     []*User `xorm:"-"`
-}
-
-// IsTeamMember returns true if given user is a member of team.
-func (t *Team) IsMember(uid int64) bool {
-	return IsTeamMember(t.OrgId, t.Id, uid)
-}
-
-// GetMembers returns all members in given team of organization.
-func (t *Team) GetMembers() (err error) {
-	t.Members, err = GetTeamMembers(t.OrgId, t.Id)
-	return err
-}
-
-// NewTeam creates a record of new team.
-// It's caller's responsibility to assign organization ID.
-func NewTeam(t *Team) error {
-	has, err := x.Id(t.OrgId).Get(new(User))
-	if err != nil {
-		return err
-	} else if !has {
-		return ErrOrgNotExist
-	}
-
-	t.LowerName = strings.ToLower(t.Name)
-	has, err = x.Where("org_id=?", t.OrgId).And("lower_name=?", t.LowerName).Get(new(Team))
-	if err != nil {
-		return err
-	} else if has {
-		return ErrTeamAlreadyExist
-	}
-
-	sess := x.NewSession()
-	defer sess.Close()
-	if err = sess.Begin(); err != nil {
-		return err
-	}
-
-	if _, err = sess.Insert(t); err != nil {
-		sess.Rollback()
-		return err
-	}
-
-	// Update organization number of teams.
-	if _, err = sess.Exec("UPDATE `user` SET num_teams = num_teams + 1 WHERE id = ?", t.OrgId); err != nil {
-		sess.Rollback()
-		return err
-	}
-	return sess.Commit()
-}
-
-// UpdateTeam updates information of team.
-func UpdateTeam(t *Team) error {
-	if len(t.Description) > 255 {
-		t.Description = t.Description[:255]
-	}
-
-	t.LowerName = strings.ToLower(t.Name)
-	_, err := x.Id(t.Id).AllCols().Update(t)
-	return err
-}
-
 // ________                ____ ___
 // \_____  \_______  ____ |    |   \______ ___________
 //  /   |   \_  __ \/ ___\|    |   /  ___// __ \_  __ \
@@ -372,6 +285,21 @@ func RemoveOrgUser(orgId, uid int64) error {
 		return nil
 	}
 
+	// Check if the user to delete is the last member in owner team.
+	if IsOrganizationOwner(orgId, uid) {
+		org, err := GetUserById(orgId)
+		if err != nil {
+			return err
+		}
+		t, err := org.GetOwnerTeam()
+		if err != nil {
+			return err
+		}
+		if t.NumMembers == 1 {
+			return ErrLastOrgOwner
+		}
+	}
+
 	sess := x.NewSession()
 	defer sess.Close()
 	if err := sess.Begin(); err != nil {
@@ -387,6 +315,127 @@ func RemoveOrgUser(orgId, uid int64) error {
 	}
 
 	return sess.Commit()
+}
+
+// ___________
+// \__    ___/___ _____    _____
+//   |    |_/ __ \\__  \  /     \
+//   |    |\  ___/ / __ \|  Y Y  \
+//   |____| \___  >____  /__|_|  /
+//              \/     \/      \/
+
+type AuthorizeType int
+
+const (
+	ORG_READABLE AuthorizeType = iota + 1
+	ORG_WRITABLE
+	ORG_ADMIN
+)
+
+const OWNER_TEAM = "Owners"
+
+// Team represents a organization team.
+type Team struct {
+	Id          int64
+	OrgId       int64 `xorm:"INDEX"`
+	LowerName   string
+	Name        string
+	Description string
+	Authorize   AuthorizeType
+	RepoIds     string `xorm:"TEXT"`
+	NumMembers  int
+	NumRepos    int
+	Members     []*User `xorm:"-"`
+}
+
+// IsTeamMember returns true if given user is a member of team.
+func (t *Team) IsMember(uid int64) bool {
+	return IsTeamMember(t.OrgId, t.Id, uid)
+}
+
+// GetMembers returns all members in given team of organization.
+func (t *Team) GetMembers() (err error) {
+	t.Members, err = GetTeamMembers(t.OrgId, t.Id)
+	return err
+}
+
+// NewTeam creates a record of new team.
+// It's caller's responsibility to assign organization ID.
+func NewTeam(t *Team) error {
+	if !IsLegalName(t.Name) {
+		return ErrTeamNameIllegal
+	}
+
+	has, err := x.Id(t.OrgId).Get(new(User))
+	if err != nil {
+		return err
+	} else if !has {
+		return ErrOrgNotExist
+	}
+
+	t.LowerName = strings.ToLower(t.Name)
+	has, err = x.Where("org_id=?", t.OrgId).And("lower_name=?", t.LowerName).Get(new(Team))
+	if err != nil {
+		return err
+	} else if has {
+		return ErrTeamAlreadyExist
+	}
+
+	sess := x.NewSession()
+	defer sess.Close()
+	if err = sess.Begin(); err != nil {
+		return err
+	}
+
+	if _, err = sess.Insert(t); err != nil {
+		sess.Rollback()
+		return err
+	}
+
+	// Update organization number of teams.
+	if _, err = sess.Exec("UPDATE `user` SET num_teams = num_teams + 1 WHERE id = ?", t.OrgId); err != nil {
+		sess.Rollback()
+		return err
+	}
+	return sess.Commit()
+}
+
+// GetTeam returns team by given team name and organization.
+func GetTeam(orgId int64, name string) (*Team, error) {
+	t := &Team{
+		OrgId:     orgId,
+		LowerName: strings.ToLower(name),
+	}
+	has, err := x.Get(t)
+	if err != nil {
+		return nil, err
+	} else if !has {
+		return nil, ErrTeamNotExist
+	}
+	return t, nil
+}
+
+// GetTeamById returns team by given ID.
+func GetTeamById(teamId int64) (*Team, error) {
+	t := new(Team)
+	has, err := x.Id(teamId).Get(t)
+	if err != nil {
+		return nil, err
+	} else if !has {
+		return nil, ErrTeamNotExist
+	}
+	return t, nil
+}
+
+// UpdateTeam updates information of team.
+func UpdateTeam(t *Team) error {
+	if len(t.Description) > 255 {
+		t.Description = t.Description[:255]
+	}
+
+	t.LowerName = strings.ToLower(t.Name)
+	_, err := x.Id(t.Id).AllCols().Update(t)
+	return err
 }
 
 // ___________                    ____ ___
@@ -426,4 +475,69 @@ func GetTeamMembers(orgId, teamId int64) ([]*User, error) {
 		}
 	}
 	return us, nil
+}
+
+// AddTeamMember adds new member to given team of given organization.
+func AddTeamMember(orgId, teamId, uid int64) error {
+	if !IsOrganizationMember(orgId, uid) || IsTeamMember(orgId, teamId, uid) {
+		return nil
+	}
+
+	// We can use raw SQL here but we also want to vertify there is a such team.
+	t, err := GetTeamById(teamId)
+	if err != nil {
+		return err
+	}
+	t.NumMembers++
+
+	sess := x.NewSession()
+	defer sess.Close()
+	if err = sess.Begin(); err != nil {
+		return err
+	}
+
+	tu := &TeamUser{
+		Uid:    uid,
+		OrgId:  orgId,
+		TeamId: teamId,
+	}
+
+	if _, err = sess.Insert(tu); err != nil {
+		sess.Rollback()
+		return err
+	} else if _, err = sess.Id(t.Id).Update(t); err != nil {
+		sess.Rollback()
+		return err
+	}
+
+	return sess.Commit()
+}
+
+// RemoveMember removes member from given team of given organization.
+func RemoveMember(orgId, teamId, uid int64) error {
+	if !IsTeamMember(orgId, teamId, uid) {
+		return nil
+	}
+
+	sess := x.NewSession()
+	defer sess.Close()
+	if err := sess.Begin(); err != nil {
+		return err
+	}
+
+	tu := &TeamUser{
+		Uid:    uid,
+		OrgId:  orgId,
+		TeamId: teamId,
+	}
+
+	if _, err := sess.Delete(tu); err != nil {
+		sess.Rollback()
+		return err
+	} else if _, err = sess.Exec("UPDATE `team` SET num_members = num_members - 1 WHERE id = ?", teamId); err != nil {
+		sess.Rollback()
+		return err
+	}
+
+	return sess.Commit()
 }

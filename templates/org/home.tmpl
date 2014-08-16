@@ -4,7 +4,10 @@
 	<div class="container clear">
 		<img class="avatar-100 left" src="{{.Org.AvatarLink}}?s=140"/>
 		<div id="org-home-header-info">
-			<h2>{{.Org.FullName}} <a class="text-grey" href="/org/{{.Org.LowerName}}/settings"><span class="octicon octicon-gear"></span></a></h2>
+			<h2>
+				{{.Org.FullName}}
+				{{if .IsOrganizationOwner}}<a class="text-grey" href="{{.OrgLink}}/settings"><span class="octicon octicon-gear"></span></a>{{end}}
+			</h2>
 			{{if .Org.Description}}<p>{{.Org.Description}}</p>{{end}}
             <ul class="text-grey">
                 {{if .Org.Location}}<li><span class="octicon octicon-location"></span> <span>{{.Org.Location}}</span></li>{{end}}
@@ -17,7 +20,7 @@
 <div class="container">
     <div id="org-home-repo-list" class="left grid-2-3">
         <div class="clear">
-        	{{if .IsAdminTeam}}
+        	{{if .IsOrganizationOwner}}
             <a class="btn btn-green btn-large btn-link btn-radius right" href="/repo/create?org={{.Org.Id}}"><i class="octicon octicon-repo-create"></i> {{.i18n.Tr "new_repo"}}</a>
         	{{end}}
         </div>
@@ -42,12 +45,12 @@
 	    			<a class="text-grey right" href="/org/{{.Org.LowerName}}/members"><strong>{{.Org.NumMembers}}</strong><span class="octicon octicon-chevron-right"></span></a>
 	    			<strong>{{.i18n.Tr "org.people"}}</strong>
 	    		</div>
-	    		<div class="panel-body" id="org-member-avatar-group">
+	    		<div class="panel-body member-avatar-group">
 	    			{{range .Members}}
-	    			<a href="/{{.Name}}"><img src="{{.AvatarLink}}"></a>
+	    			<a href="/{{.Name}}" title="{{.Name}}"><img src="{{.AvatarLink}}"></a>
 	    			{{end}}
 	    		</div>
-	    		{{if .IsAdminTeam}}
+	    		{{if .IsOrganizationOwner}}
 	    		<div class="panel-footer">
 	    			<a class="btn btn-medium btn-blue btn-link btn-radius" href="/org/{{.Org.LowerName}}/invitations/new">{{.i18n.Tr "org.invite_someone"}}</a>
 	    		</div>
