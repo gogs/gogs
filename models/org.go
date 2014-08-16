@@ -7,7 +7,10 @@ package models
 import (
 	"errors"
 	"os"
+	"path"
 	"strings"
+
+	"github.com/Unknwon/com"
 
 	"github.com/gogits/gogs/modules/base"
 )
@@ -342,10 +345,11 @@ type Team struct {
 	Name        string
 	Description string
 	Authorize   AuthorizeType
-	RepoIds     string `xorm:"TEXT"`
-	NumMembers  int
+	RepoIds     string        `xorm:"TEXT"`
+	Repos       []*Repository `xorm:"-"`
+	Members     []*User       `xorm:"-"`
 	NumRepos    int
-	Members     []*User `xorm:"-"`
+	NumMembers  int
 }
 
 // IsTeamMember returns true if given user is a member of team.
@@ -353,10 +357,38 @@ func (t *Team) IsMember(uid int64) bool {
 	return IsTeamMember(t.OrgId, t.Id, uid)
 }
 
-// GetMembers returns all members in given team of organization.
+// GetRepositories returns all repositories in team of organization.
+func (t *Team) GetRepositories() error {
+	idStrs := strings.Split(t.RepoIds, "|")
+	t.Repos = make([]*Repository, 0, len(idStrs))
+	for _, str := range idStrs {
+		id := com.StrTo(str).MustInt64()
+		if id == 0 {
+			continue
+		}
+		repo, err := GetRepositoryById(id)
+		if err != nil {
+			return err
+		}
+		t.Repos = append(t.Repos, repo)
+	}
+	return nil
+}
+
+// GetMembers returns all members in team of organization.
 func (t *Team) GetMembers() (err error) {
 	t.Members, err = GetTeamMembers(t.OrgId, t.Id)
 	return err
+}
+
+// AddMember adds new member to team of organization.
+func (t *Team) AddMember(uid int64) error {
+	return AddTeamMember(t.OrgId, t.Id, uid)
+}
+
+// RemoveMember removes member from team of organization.
+func (t *Team) RemoveMember(uid int64) error {
+	return RemoveTeamMember(t.OrgId, t.Id, uid)
 }
 
 // NewTeam creates a record of new team.
@@ -483,12 +515,28 @@ func AddTeamMember(orgId, teamId, uid int64) error {
 		return nil
 	}
 
-	// We can use raw SQL here but we also want to vertify there is a such team.
+	// Get team and its repositories.
 	t, err := GetTeamById(teamId)
 	if err != nil {
 		return err
 	}
 	t.NumMembers++
+
+	if err = t.GetRepositories(); err != nil {
+		return err
+	}
+
+	// Get organization.
+	org, err := GetUserById(orgId)
+	if err != nil {
+		return err
+	}
+
+	// Get user.
+	u, err := GetUserById(uid)
+	if err != nil {
+		return err
+	}
 
 	sess := x.NewSession()
 	defer sess.Close()
@@ -502,6 +550,15 @@ func AddTeamMember(orgId, teamId, uid int64) error {
 		TeamId: teamId,
 	}
 
+	mode := READABLE
+	if t.Authorize > ORG_READABLE {
+		mode = WRITABLE
+	}
+	access := &Access{
+		UserName: u.LowerName,
+		Mode:     mode,
+	}
+
 	if _, err = sess.Insert(tu); err != nil {
 		sess.Rollback()
 		return err
@@ -510,13 +567,45 @@ func AddTeamMember(orgId, teamId, uid int64) error {
 		return err
 	}
 
+	// Give access to team repositories.
+	for _, repo := range t.Repos {
+		access.RepoName = path.Join(org.LowerName, repo.LowerName)
+		if _, err = sess.Insert(access); err != nil {
+			sess.Rollback()
+			return err
+		}
+	}
+
 	return sess.Commit()
 }
 
-// RemoveMember removes member from given team of given organization.
-func RemoveMember(orgId, teamId, uid int64) error {
+// RemoveTeamMember removes member from given team of given organization.
+func RemoveTeamMember(orgId, teamId, uid int64) error {
 	if !IsTeamMember(orgId, teamId, uid) {
 		return nil
+	}
+
+	// Get team and its repositories.
+	t, err := GetTeamById(teamId)
+	if err != nil {
+		return err
+	}
+	t.NumMembers--
+
+	if err = t.GetRepositories(); err != nil {
+		return err
+	}
+
+	// Get organization.
+	org, err := GetUserById(orgId)
+	if err != nil {
+		return err
+	}
+
+	// Get user.
+	u, err := GetUserById(uid)
+	if err != nil {
+		return err
 	}
 
 	sess := x.NewSession()
@@ -531,12 +620,25 @@ func RemoveMember(orgId, teamId, uid int64) error {
 		TeamId: teamId,
 	}
 
+	access := &Access{
+		UserName: u.LowerName,
+	}
+
 	if _, err := sess.Delete(tu); err != nil {
 		sess.Rollback()
 		return err
-	} else if _, err = sess.Exec("UPDATE `team` SET num_members = num_members - 1 WHERE id = ?", teamId); err != nil {
+	} else if _, err = sess.Id(t.Id).AllCols().Update(t); err != nil {
 		sess.Rollback()
 		return err
+	}
+
+	// Delete access to team repositories.
+	for _, repo := range t.Repos {
+		access.RepoName = path.Join(org.LowerName, repo.LowerName)
+		if _, err = sess.Delete(access); err != nil {
+			sess.Rollback()
+			return err
+		}
 	}
 
 	return sess.Commit()

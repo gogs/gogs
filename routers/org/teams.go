@@ -41,9 +41,9 @@ func TeamsAction(ctx *middleware.Context) {
 	var err error
 	switch ctx.Params(":action") {
 	case "join":
-		err = models.AddTeamMember(ctx.Org.Organization.Id, ctx.Org.Team.Id, ctx.User.Id)
+		err = ctx.Org.Team.AddMember(ctx.User.Id)
 	case "leave":
-		err = models.RemoveMember(ctx.Org.Organization.Id, ctx.Org.Team.Id, ctx.User.Id)
+		err = ctx.Org.Team.RemoveMember(ctx.User.Id)
 	}
 
 	if err != nil {

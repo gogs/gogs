@@ -502,7 +502,7 @@ func CreateRepository(u *User, name, desc, lang, license string, private, mirror
 	}
 	access := &Access{
 		UserName: u.LowerName,
-		RepoName: strings.ToLower(path.Join(u.Name, repo.Name)),
+		RepoName: path.Join(u.LowerName, repo.LowerName),
 		Mode:     mode,
 	}
 	// Give access to all members in owner team.
