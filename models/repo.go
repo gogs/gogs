@@ -110,6 +110,13 @@ func NewRepoContext() {
 			log.Fatal(4, "Fail to set git user.name: %s", stderr)
 		}
 	}
+
+	// Set git some configurations.
+	if _, stderr, err = process.Exec("NewRepoContext(git config --global core.quotepath false)",
+		"git", "config", "--global", "core.quotepath", "false"); err != nil {
+		log.Fatal(4, "Fail to execute 'git config --global core.quotepath false': %s", stderr)
+	}
+
 }
 
 // Repository represents a git repository.
