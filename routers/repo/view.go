@@ -6,7 +6,6 @@ package repo
 
 import (
 	"bytes"
-	"fmt"
 	"io/ioutil"
 	"path"
 	"path/filepath"
@@ -14,6 +13,7 @@ import (
 
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/git"
+	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/middleware"
 
 	"code.google.com/p/mahonia"
@@ -118,7 +118,9 @@ func Home(ctx *middleware.Context) {
 					ctx.Data["FileContent"] = string(base.RenderMarkdown(buf, ""))
 				} else {
 					if err, content := toUtf8(buf); err != nil {
-						fmt.Println("transfer encode error:", err)
+						if err != nil {
+							log.Error(4, "Convert content encoding: %s", err)
+						}
 						ctx.Data["FileContent"] = string(buf)
 					} else {
 						ctx.Data["FileContent"] = content
