@@ -1859,3 +1859,15 @@ textarea#issue-add-content {
 #team-create-form .note {
   margin-left: 153px;
 }
+#org-team-card .desc {
+  font-size: 14px;
+  padding: 10px 20px;
+}
+#org-team-card .team-stats {
+  padding: 0 20px 10px 20px;
+  text-transform: uppercase;
+  border-bottom: 1px solid #dddddd;
+}
+#org-team-card .panel-footer {
+  padding: 10px 20px;
+}
