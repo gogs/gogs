@@ -13,8 +13,9 @@ import (
 )
 
 const (
-	TEAMS    base.TplName = "org/team/teams"
-	TEAM_NEW base.TplName = "org/team/new"
+	TEAMS        base.TplName = "org/team/teams"
+	TEAM_NEW     base.TplName = "org/team/new"
+	TEAM_MEMBERS base.TplName = "org/team/members"
 )
 
 func Teams(ctx *middleware.Context) {
@@ -121,6 +122,7 @@ func EditTeam(ctx *middleware.Context) {
 }
 
 func SingleTeam(ctx *middleware.Context) {
-	ctx.Data["Title"] = "single-team" + ctx.Params(":org")
-	ctx.HTML(200, "org/team")
+	ctx.Data["Title"] = ctx.Org.Team.Name
+	ctx.Data["PageIsOrgTeams"] = true
+	ctx.HTML(200, TEAM_MEMBERS)
 }

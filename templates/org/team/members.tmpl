@@ -1,0 +1,18 @@
+{{template "ng/base/head" .}}
+{{template "ng/base/header" .}}
+{{template "org/base/header" .}}
+<div id="setting-wrapper" class="main-wrapper">
+    <div id="org-setting" class="container clear">
+		{{template "org/team/sidebar" .}}
+		<div class="grid-2-3 left">
+			<div class="setting-content">
+				<div class="panel panel-radius">
+					<div class="panel-header">
+						{{.i18n.Tr "org.teams.members"}}
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+{{template "ng/base/footer" .}}
