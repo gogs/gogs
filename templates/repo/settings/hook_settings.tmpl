@@ -1,0 +1,15 @@
+<div class="field">
+  <h4 class="text-center">{{.i18n.Tr "repo.settings.event_desc"}}</h4>
+  <label></label>
+  <input name="push_only" type="radio" {{if or .PageIsSettingsHooksNew .Webhook.PushOnly}}checked{{end}}> {{.i18n.Tr "repo.settings.event_push_only" | Str2html}}
+</div>
+<div class="field">
+  <label for="active">{{.i18n.Tr "repo.settings.active"}}</label>
+  <input class="ipt-chk" id="active" name="active" type="checkbox" {{if or .PageIsSettingsHooksNew .Webhook.IsActive}}checked{{end}} />
+<span>{{.i18n.Tr "repo.settings.active_helper"}}</span>
+</div>
+<div class="field">
+    <label></label>
+    <button class="btn btn-green btn-large btn-radius">{{if .PageIsSettingsHooksNew}}{{.i18n.Tr "repo.settings.add_webhook"}}{{else}}{{.i18n.Tr "repo.settings.update_webhook"}}{{end}}</button>
+    {{if .PageIsSettingsHooksEdit}}<a class="btn btn-red btn-large btn-link btn-radius" href="{{.RepoLink}}/settings/hooks?remove={{.Webhook.Id}}"><strong>{{.i18n.Tr "repo.settings.delete_webhook"}}</strong></a>{{end}}
+</div>
