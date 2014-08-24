@@ -48,7 +48,7 @@ and it takes care of all the other things for you`,
 	Flags:  []cli.Flag{},
 }
 
-// checkVersion checks if binary matches the version of temolate files.
+// checkVersion checks if binary matches the version of templates files.
 func checkVersion() {
 	data, err := ioutil.ReadFile(path.Join(setting.StaticRootPath, "templates/.VERSION"))
 	if err != nil {
@@ -235,7 +235,7 @@ func runWeb(*cli.Context) {
 			r.Get("/members/action/:action", org.MembersAction)
 
 			r.Get("/teams", org.Teams)
-			r.Get("/teams/:team", org.SingleTeam)
+			r.Get("/teams/:team", org.TeamMembers)
 			r.Get("/teams/:team/action/:action", org.TeamsAction)
 		}, middleware.OrgAssignment(true, true))
 
@@ -243,6 +243,8 @@ func runWeb(*cli.Context) {
 			r.Get("/teams/new", org.NewTeam)
 			r.Post("/teams/new", bindIgnErr(auth.CreateTeamForm{}), org.NewTeamPost)
 			r.Get("/teams/:team/edit", org.EditTeam)
+			r.Post("/teams/:team/edit", bindIgnErr(auth.CreateTeamForm{}), org.EditTeamPost)
+			r.Post("/teams/:team/delete", org.DeleteTeam)
 
 			m.Group("/settings", func(r *macaron.Router) {
 				r.Get("", org.Settings)

@@ -6,7 +6,7 @@
 		{{template "ng/base/alert" .}}
 	</div>
 	<div class="org-toolbar clear">
-		{{if .IsAdminTeam}}
+		{{if .IsOrganizationOwner}}
         <a class="btn btn-green btn-large btn-link btn-radius right" href="{{.OrgLink}}/invitations/new"><i class="octicon octicon-repo-create"></i> {{.i18n.Tr "org.invite_someone"}}</a>
 		{{end}}
 	</div>

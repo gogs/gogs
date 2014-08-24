@@ -351,6 +351,41 @@ function initInvite() {
     });
 }
 
+function initOrgTeamCreate() {
+    // Delete team.
+    $('#org-team-delete').click(function (e) {
+        if (!confirm('This team is going to be deleted, do you want to continue?')) {
+            e.preventDefault();
+            return true;
+        }
+        var $form = $('#team-create-form')
+        $form.attr('action', $form.data('delete-url'));
+    });
+}
+
+function initTeamMembersList() {
+    // Add team member.
+    var $ul = $('#org-team-members-list');
+    $('#org-team-members-add').on('keyup', function () {
+        var $this = $(this);
+        if (!$this.val()) {
+            $ul.toggleHide();
+            return;
+        }
+        Gogs.searchUsers($this.val(), $ul);
+    }).on('focus', function () {
+        if (!$(this).val()) {
+            $ul.toggleHide();
+        } else {
+            $ul.toggleShow();
+        }
+    }).next().next().find('ul').on("click", 'li', function () {
+        $('#org-team-members-add').val($(this).text());
+        $ul.toggleHide();
+    });
+
+}
+
 $(document).ready(function () {
     initCore();
     if ($('#user-profile-setting').length) {
@@ -367,6 +402,12 @@ $(document).ready(function () {
     }
     if ($('#invite-box').length) {
         initInvite();
+    }
+    if ($('#team-create-form').length) {
+        initOrgTeamCreate();
+    }
+    if ($('#team-members-list').length) {
+        initTeamMembersList();
     }
 
     Tabs('#dashboard-sidebar-menu');

@@ -82,7 +82,12 @@ func MembersAction(ctx *middleware.Context) {
 		})
 		return
 	}
-	ctx.Redirect(ctx.Org.OrgLink + "/members")
+
+	if ctx.Params(":action") != "leave" {
+		ctx.Redirect(ctx.Org.OrgLink + "/members")
+	} else {
+		ctx.Redirect("/")
+	}
 }
 
 func Invitation(ctx *middleware.Context) {
