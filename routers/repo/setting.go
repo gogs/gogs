@@ -5,6 +5,7 @@
 package repo
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -272,11 +273,17 @@ func Webhooks(ctx *middleware.Context) {
 	ctx.HTML(200, HOOKS)
 }
 
+func renderHookTypes(ctx *middleware.Context) {
+	ctx.Data["HookTypes"] = []string{"Gogs", "Slack"}
+	ctx.Data["HookType"] = "Gogs"
+}
+
 func WebHooksNew(ctx *middleware.Context) {
 	ctx.Data["Title"] = ctx.Tr("repo.settings")
 	ctx.Data["PageIsSettingsHooks"] = true
 	ctx.Data["PageIsSettingsHooksNew"] = true
 	ctx.Data["Webhook"] = models.Webhook{HookEvent: &models.HookEvent{}}
+	renderHookTypes(ctx)
 	ctx.HTML(200, HOOK_NEW)
 }
 
@@ -304,8 +311,11 @@ func WebHooksNewPost(ctx *middleware.Context, form auth.NewWebhookForm) {
 		HookEvent: &models.HookEvent{
 			PushOnly: form.PushOnly,
 		},
-		IsActive: form.Active,
+		IsActive:     form.Active,
+		HookTaskType: models.GOGS,
+		Meta:         "",
 	}
+
 	if err := w.UpdateEvent(); err != nil {
 		ctx.Handle(500, "UpdateEvent", err)
 		return
@@ -337,6 +347,19 @@ func WebHooksEdit(ctx *middleware.Context) {
 			ctx.Handle(500, "GetWebhookById", err)
 		}
 		return
+	}
+
+	// set data per HookTaskType
+	switch w.HookTaskType {
+	case models.SLACK:
+		{
+			ctx.Data["SlackHook"] = w.GetSlackHook()
+			ctx.Data["HookType"] = "slack"
+		}
+	default:
+		{
+			ctx.Data["HookType"] = "gogs"
+		}
 	}
 	w.GetEvent()
 	ctx.Data["Webhook"] = w
@@ -388,6 +411,107 @@ func WebHooksEditPost(ctx *middleware.Context, form auth.NewWebhookForm) {
 		return
 	} else if err := models.UpdateWebhook(w); err != nil {
 		ctx.Handle(500, "WebHooksEditPost", err)
+		return
+	}
+
+	ctx.Flash.Success(ctx.Tr("repo.settings.update_hook_success"))
+	ctx.Redirect(fmt.Sprintf("%s/settings/hooks/%d", ctx.Repo.RepoLink, hookId))
+}
+
+func SlackHooksNewPost(ctx *middleware.Context, form auth.NewSlackHookForm) {
+	ctx.Data["Title"] = ctx.Tr("repo.settings")
+	ctx.Data["PageIsSettingsHooks"] = true
+	ctx.Data["PageIsSettingsHooksNew"] = true
+	ctx.Data["Webhook"] = models.Webhook{HookEvent: &models.HookEvent{}}
+
+	if ctx.HasError() {
+		ctx.HTML(200, HOOK_NEW)
+		return
+	}
+
+	meta, err := json.Marshal(&models.Slack{
+		Domain:  form.Domain,
+		Channel: form.Channel,
+		Token:   form.Token,
+	})
+	if err != nil {
+		ctx.Handle(500, "SlackHooksNewPost: JSON marshal failed: ", err)
+		return
+	}
+
+	w := &models.Webhook{
+		RepoId:      ctx.Repo.Repository.Id,
+		Url:         models.GetSlackURL(form.Domain, form.Token),
+		ContentType: models.JSON,
+		Secret:      "",
+		HookEvent: &models.HookEvent{
+			PushOnly: form.PushOnly,
+		},
+		IsActive:     form.Active,
+		HookTaskType: models.SLACK,
+		Meta:         string(meta),
+	}
+	if err := w.UpdateEvent(); err != nil {
+		ctx.Handle(500, "UpdateEvent", err)
+		return
+	} else if err := models.CreateWebhook(w); err != nil {
+		ctx.Handle(500, "CreateWebhook", err)
+		return
+	}
+
+	ctx.Flash.Success(ctx.Tr("repo.settings.add_hook_success"))
+	ctx.Redirect(ctx.Repo.RepoLink + "/settings/hooks")
+}
+
+func SlackHooksEditPost(ctx *middleware.Context, form auth.NewSlackHookForm) {
+	ctx.Data["Title"] = ctx.Tr("repo.settings")
+	ctx.Data["PageIsSettingsHooks"] = true
+	ctx.Data["PageIsSettingsHooksEdit"] = true
+
+	hookId := com.StrTo(ctx.Params(":id")).MustInt64()
+	fmt.Println("hookId slack=%d", hookId)
+	if hookId == 0 {
+		ctx.Handle(404, "setting.WebHooksEditPost", nil)
+		return
+	}
+
+	w, err := models.GetWebhookById(hookId)
+	if err != nil {
+		if err == models.ErrWebhookNotExist {
+			ctx.Handle(404, "GetWebhookById", nil)
+		} else {
+			ctx.Handle(500, "GetWebhookById", err)
+		}
+		return
+	}
+	w.GetEvent()
+	ctx.Data["Webhook"] = w
+
+	if ctx.HasError() {
+		ctx.HTML(200, HOOK_NEW)
+		return
+	}
+	meta, err := json.Marshal(&models.Slack{
+		Domain:  form.Domain,
+		Channel: form.Channel,
+		Token:   form.Token,
+	})
+	if err != nil {
+		ctx.Handle(500, "SlackHooksNewPost: JSON marshal failed: ", err)
+		return
+	}
+
+	w.Url = models.GetSlackURL(form.Domain, form.Token)
+	w.Meta = string(meta)
+	w.HookEvent = &models.HookEvent{
+		PushOnly: form.PushOnly,
+	}
+	w.IsActive = form.Active
+	if err := w.UpdateEvent(); err != nil {
+		ctx.Handle(500, "UpdateEvent", err)
+		return
+	} else if err := models.UpdateWebhook(w); err != nil {
+		ctx.Handle(500, "SlackHooksEditPost", err)
 		return
 	}
 

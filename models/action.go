@@ -266,14 +266,33 @@ func CommitRepoAction(userId, repoUserId int64, userName, actEmail string,
 			continue
 		}
 
-		p.Secret = w.Secret
-		CreateHookTask(&HookTask{
-			Type:        WEBHOOK,
-			Url:         w.Url,
-			Payload:     p,
-			ContentType: w.ContentType,
-			IsSsl:       w.IsSsl,
-		})
+		switch w.HookTaskType {
+		case SLACK:
+			{
+				s, err := GetSlackPayload(p, w.Meta)
+				if err != nil {
+					return errors.New("action.GetSlackPayload: " + err.Error())
+				}
+				CreateHookTask(&HookTask{
+					Type:        w.HookTaskType,
+					Url:         w.Url,
+					BasePayload: s,
+					ContentType: w.ContentType,
+					IsSsl:       w.IsSsl,
+				})
+			}
+		default:
+			{
+				p.Secret = w.Secret
+				CreateHookTask(&HookTask{
+					Type:        w.HookTaskType,
+					Url:         w.Url,
+					BasePayload: p,
+					ContentType: w.ContentType,
+					IsSsl:       w.IsSsl,
+				})
+			}
+		}
 	}
 	return nil
 }

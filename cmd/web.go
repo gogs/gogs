@@ -284,9 +284,11 @@ func runWeb(*cli.Context) {
 			r.Route("/collaboration", "GET,POST", repo.SettingsCollaboration)
 			r.Get("/hooks", repo.Webhooks)
 			r.Get("/hooks/new", repo.WebHooksNew)
-			r.Post("/hooks/new", bindIgnErr(auth.NewWebhookForm{}), repo.WebHooksNewPost)
+			r.Post("/hooks/gogs/new", bindIgnErr(auth.NewWebhookForm{}), repo.WebHooksNewPost)
+			r.Post("/hooks/slack/new", bindIgnErr(auth.NewSlackHookForm{}), repo.SlackHooksNewPost)
 			r.Get("/hooks/:id", repo.WebHooksEdit)
-			r.Post("/hooks/:id", bindIgnErr(auth.NewWebhookForm{}), repo.WebHooksEditPost)
+			r.Post("/hooks/gogs/:id", bindIgnErr(auth.NewWebhookForm{}), repo.WebHooksEditPost)
+			r.Post("/hooks/slack/:id", bindIgnErr(auth.NewSlackHookForm{}), repo.SlackHooksEditPost)
 		})
 	}, reqSignIn, middleware.RepoAssignment(true), reqTrueOwner)
 
