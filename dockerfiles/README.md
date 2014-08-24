@@ -17,7 +17,7 @@ cd dockerfiles
 ./build.sh
 ```
 
-The build might take some time, just be paient. After it finishes, you will receive the message:
+The build might take some time, just be patient. After it finishes, you will receive the message:
 
 ```
 Now we have the MySQL image(running) and gogs image, use the follow command to start gogs service( the content might be different, according to your own configs):
