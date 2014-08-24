@@ -18,6 +18,7 @@
 	</div>
 </div>
 <div class="container">
+	{{$isMember := .Org.IsOrgMember $.SignedUser.Id}}
     <div id="org-home-repo-list" class="left grid-2-3">
         <div class="clear">
         	{{if .IsOrganizationOwner}}
@@ -26,6 +27,7 @@
         </div>
         <div id="org-repo-list">
 			{{range .Repos}}
+				{{if or $isMember (not .IsPrivate)}}
 				<div class="org-repo-item">
                     <ul class="org-repo-status right">
                         <li><i class="octicon octicon-star"></i> {{.NumStars}}</li>
@@ -35,6 +37,7 @@
 					<p class="org-repo-description">{{.Description}}</p>
 					<p class="org-repo-updated">{{$.i18n.Tr "org.repo_updated"}} {{TimeSince .Updated $.i18n.Lang}}</p>
 				</div>
+				{{end}}
 			{{end}}
         </div>
     </div>
@@ -42,12 +45,16 @@
     	<div class="org-sidebar">
 	    	<div class="panel panel-radius">
 	    		<div class="panel-header">
+	    			{{if $isMember}}
 	    			<a class="text-grey right" href="/org/{{.Org.LowerName}}/members"><strong>{{.Org.NumMembers}}</strong><span class="octicon octicon-chevron-right"></span></a>
+	    			{{end}}
 	    			<strong>{{.i18n.Tr "org.people"}}</strong>
 	    		</div>
 	    		<div class="panel-body member-avatar-group">
 	    			{{range .Members}}
-	    			<a href="/{{.Name}}" title="{{.Name}}"><img src="{{.AvatarLink}}"></a>
+						{{if or $isMember (.IsPublicMember $.Org.Id)}}
+	    				<a href="/{{.Name}}" title="{{.Name}}"><img src="{{.AvatarLink}}"></a>
+	    				{{end}}
 	    			{{end}}
 	    		</div>
 	    		{{if .IsOrganizationOwner}}
@@ -56,6 +63,7 @@
 	    		</div>
 	    		{{end}}
 	    	</div>
+	    	{{if $isMember}}
 	    	<br>
 	    	<div class="panel panel-radius">
 	    		<div class="panel-header">
@@ -76,9 +84,9 @@
 	    		<div class="panel-footer">
 	    			<a class="btn btn-medium btn-blue btn-link btn-radius" href="/org/{{$.Org.LowerName}}/teams/new">{{.i18n.Tr "org.create_new_team"}}</a>
 	    		</div>
-
 	    		{{end}}
 	    	</div>
+	    	{{end}}
     	</div>
     </div>
 </div>

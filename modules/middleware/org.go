@@ -8,6 +8,7 @@ import (
 	"github.com/Unknwon/macaron"
 
 	"github.com/gogits/gogs/models"
+	"github.com/gogits/gogs/modules/log"
 )
 
 func OrgAssignment(redirect bool, args ...bool) macaron.Handler {
@@ -35,6 +36,7 @@ func OrgAssignment(redirect bool, args ...bool) macaron.Handler {
 			if err == models.ErrUserNotExist {
 				ctx.Handle(404, "GetUserByName", err)
 			} else if redirect {
+				log.Error(4, "GetUserByName", err)
 				ctx.Redirect("/")
 			} else {
 				ctx.Handle(500, "GetUserByName", err)
@@ -52,17 +54,14 @@ func OrgAssignment(redirect bool, args ...bool) macaron.Handler {
 			} else {
 				if org.IsOrgMember(ctx.User.Id) {
 					ctx.Org.IsMember = true
-					// TODO: ctx.Org.IsAdminTeam
 				}
 			}
 		}
 		if (requireMember && !ctx.Org.IsMember) ||
-			(requireOwner && !ctx.Org.IsOwner) ||
-			(requireAdminTeam && !ctx.Org.IsAdminTeam) {
+			(requireOwner && !ctx.Org.IsOwner) {
 			ctx.Handle(404, "OrgAssignment", err)
 			return
 		}
-		ctx.Data["IsAdminTeam"] = ctx.Org.IsAdminTeam
 		ctx.Data["IsOrganizationOwner"] = ctx.Org.IsOwner
 
 		ctx.Org.OrgLink = "/org/" + org.Name
@@ -76,6 +75,7 @@ func OrgAssignment(redirect bool, args ...bool) macaron.Handler {
 				if err == models.ErrTeamNotExist {
 					ctx.Handle(404, "GetTeam", err)
 				} else if redirect {
+					log.Error(4, "GetTeam", err)
 					ctx.Redirect("/")
 				} else {
 					ctx.Handle(500, "GetTeam", err)
@@ -83,6 +83,12 @@ func OrgAssignment(redirect bool, args ...bool) macaron.Handler {
 				return
 			}
 			ctx.Data["Team"] = ctx.Org.Team
+			ctx.Org.IsAdminTeam = ctx.Org.Team.IsOwnerTeam() || ctx.Org.Team.Authorize == models.ORG_ADMIN
+		}
+		ctx.Data["IsAdminTeam"] = ctx.Org.IsAdminTeam
+		if requireAdminTeam && !ctx.Org.IsAdminTeam {
+			ctx.Handle(404, "OrgAssignment", err)
+			return
 		}
 	}
 }

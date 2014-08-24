@@ -5,6 +5,8 @@
 package org
 
 import (
+	"github.com/Unknwon/com"
+
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/base"
@@ -39,23 +41,71 @@ func Teams(ctx *middleware.Context) {
 }
 
 func TeamsAction(ctx *middleware.Context) {
+	uid := com.StrTo(ctx.Query("uid")).MustInt64()
+	if uid == 0 {
+		ctx.Redirect(ctx.Org.OrgLink + "/teams")
+		return
+	}
+
+	page := ctx.Query("page")
 	var err error
 	switch ctx.Params(":action") {
 	case "join":
+		if !ctx.Org.IsOwner {
+			ctx.Error(404)
+			return
+		}
 		err = ctx.Org.Team.AddMember(ctx.User.Id)
 	case "leave":
 		err = ctx.Org.Team.RemoveMember(ctx.User.Id)
+	case "remove":
+		if !ctx.Org.IsOwner {
+			ctx.Error(404)
+			return
+		}
+		err = ctx.Org.Team.RemoveMember(uid)
+		page = "team"
+	case "add":
+		if !ctx.Org.IsOwner {
+			ctx.Error(404)
+			return
+		}
+		uname := ctx.Query("uname")
+		var u *models.User
+		u, err = models.GetUserByName(uname)
+		if err != nil {
+			if err == models.ErrUserNotExist {
+				ctx.Flash.Error(ctx.Tr("form.user_not_exist"))
+				ctx.Redirect(ctx.Org.OrgLink + "/teams/" + ctx.Org.Team.LowerName)
+			} else {
+				ctx.Handle(500, " GetUserByName", err)
+			}
+			return
+		}
+
+		err = ctx.Org.Team.AddMember(u.Id)
+		page = "team"
 	}
 
 	if err != nil {
-		log.Error(4, "Action(%s): %v", ctx.Params(":action"), err)
-		ctx.JSON(200, map[string]interface{}{
-			"ok":  false,
-			"err": err.Error(),
-		})
-		return
+		if err == models.ErrLastOrgOwner {
+			ctx.Flash.Error(ctx.Tr("form.last_org_owner"))
+		} else {
+			log.Error(4, "Action(%s): %v", ctx.Params(":action"), err)
+			ctx.JSON(200, map[string]interface{}{
+				"ok":  false,
+				"err": err.Error(),
+			})
+			return
+		}
 	}
-	ctx.Redirect(ctx.Org.OrgLink + "/teams")
+
+	switch page {
+	case "team":
+		ctx.Redirect(ctx.Org.OrgLink + "/teams/" + ctx.Org.Team.LowerName)
+	default:
+		ctx.Redirect(ctx.Org.OrgLink + "/teams")
+	}
 }
 
 func NewTeam(ctx *middleware.Context) {
@@ -116,13 +166,76 @@ func NewTeamPost(ctx *middleware.Context, form auth.CreateTeamForm) {
 	ctx.Redirect(ctx.Org.OrgLink + "/teams/" + t.LowerName)
 }
 
-func EditTeam(ctx *middleware.Context) {
-	ctx.Data["Title"] = "Organization " + ctx.Params(":org") + " Edit Team"
-	ctx.HTML(200, "org/edit_team")
-}
-
-func SingleTeam(ctx *middleware.Context) {
+func TeamMembers(ctx *middleware.Context) {
 	ctx.Data["Title"] = ctx.Org.Team.Name
 	ctx.Data["PageIsOrgTeams"] = true
+	if err := ctx.Org.Team.GetMembers(); err != nil {
+		ctx.Handle(500, "GetMembers", err)
+		return
+	}
 	ctx.HTML(200, TEAM_MEMBERS)
+}
+
+func EditTeam(ctx *middleware.Context) {
+	ctx.Data["Title"] = ctx.Org.Organization.FullName
+	ctx.Data["PageIsOrgTeams"] = true
+	ctx.Data["team_name"] = ctx.Org.Team.Name
+	ctx.Data["desc"] = ctx.Org.Team.Description
+	ctx.HTML(200, TEAM_NEW)
+}
+
+func EditTeamPost(ctx *middleware.Context, form auth.CreateTeamForm) {
+	t := ctx.Org.Team
+	ctx.Data["Title"] = ctx.Org.Organization.FullName
+	ctx.Data["PageIsOrgTeams"] = true
+	ctx.Data["team_name"] = t.Name
+	ctx.Data["desc"] = t.Description
+
+	if ctx.HasError() {
+		ctx.HTML(200, TEAM_NEW)
+		return
+	}
+
+	isAuthChanged := false
+	if !t.IsOwnerTeam() {
+		// Validate permission level.
+		var auth models.AuthorizeType
+		switch form.Permission {
+		case "read":
+			auth = models.ORG_READABLE
+		case "write":
+			auth = models.ORG_WRITABLE
+		case "admin":
+			auth = models.ORG_ADMIN
+		default:
+			ctx.Error(401)
+			return
+		}
+
+		t.Name = form.TeamName
+		if t.Authorize != auth {
+			isAuthChanged = true
+			t.Authorize = auth
+		}
+	}
+	t.Description = form.Description
+	if err := models.UpdateTeam(t, isAuthChanged); err != nil {
+		if err == models.ErrTeamNameIllegal {
+			ctx.Data["Err_TeamName"] = true
+			ctx.RenderWithErr(ctx.Tr("form.illegal_team_name"), TEAM_NEW, &form)
+		} else {
+			ctx.Handle(500, "UpdateTeam", err)
+		}
+		return
+	}
+	ctx.Redirect(ctx.Org.OrgLink + "/teams/" + t.LowerName)
+}
+
+func DeleteTeam(ctx *middleware.Context) {
+	if err := models.DeleteTeam(ctx.Org.Team); err != nil {
+		ctx.Handle(500, "DeleteTeam", err)
+		return
+	}
+	ctx.Flash.Success(ctx.Tr("org.teams.delete_team_success"))
+	ctx.Redirect(ctx.Org.OrgLink + "/teams")
 }

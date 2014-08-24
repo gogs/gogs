@@ -525,6 +525,7 @@ func CreateRepository(u *User, name, desc, lang, license string, private, mirror
 			return nil, err
 		}
 		for _, u := range us {
+			access.Id = 0
 			access.UserName = u.LowerName
 			if _, err = sess.Insert(access); err != nil {
 				sess.Rollback()
@@ -707,6 +708,10 @@ func TransferOwnership(u *User, newOwner string, repo *Repository) (err error) {
 
 // ChangeRepositoryName changes all corresponding setting from old repository name to new one.
 func ChangeRepositoryName(userName, oldRepoName, newRepoName string) (err error) {
+	if !IsLegalName(newRepoName) {
+		return ErrRepoNameIllegal
+	}
+
 	// Update accesses.
 	accesses := make([]Access, 0, 10)
 	if err = x.Find(&accesses, &Access{RepoName: strings.ToLower(userName + "/" + oldRepoName)}); err != nil {

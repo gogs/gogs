@@ -54,7 +54,8 @@ type User struct {
 	LoginSource   int64 `xorm:"not null default 0"`
 	LoginName     string
 	Type          UserType
-	Orgs          []*User `xorm:"-"`
+	Orgs          []*User       `xorm:"-"`
+	Repos         []*Repository `xorm:"-"`
 	NumFollowers  int
 	NumFollowings int
 	NumStars      int
@@ -141,6 +142,12 @@ func (u *User) IsPublicMember(orgId int64) bool {
 // GetOrganizationCount returns count of membership of organization of user.
 func (u *User) GetOrganizationCount() (int64, error) {
 	return x.Where("uid=?", u.Id).Count(new(OrgUser))
+}
+
+// GetRepositories returns all repositories that user owns, including private repositories.
+func (u *User) GetRepositories() (err error) {
+	u.Repos, err = GetRepositories(u.Id, true)
+	return err
 }
 
 // GetOrganizations returns all organizations that user belongs to.

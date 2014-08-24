@@ -56,7 +56,12 @@ func SettingsPost(ctx *middleware.Context, form auth.RepoSettingForm) {
 				ctx.RenderWithErr(ctx.Tr("form.repo_name_been_taken"), SETTINGS_OPTIONS, nil)
 				return
 			} else if err = models.ChangeRepositoryName(ctx.Repo.Owner.Name, ctx.Repo.Repository.Name, newRepoName); err != nil {
-				ctx.Handle(500, "ChangeRepositoryName", err)
+				if err == models.ErrRepoNameIllegal {
+					ctx.Data["Err_RepoName"] = true
+					ctx.RenderWithErr(ctx.Tr("form.illegal_repo_name"), SETTINGS_OPTIONS, nil)
+				} else {
+					ctx.Handle(500, "ChangeRepositoryName", err)
+				}
 				return
 			}
 			log.Trace("Repository name changed: %s/%s -> %s", ctx.Repo.Owner.Name, ctx.Repo.Repository.Name, newRepoName)
@@ -185,9 +190,24 @@ func SettingsCollaboration(ctx *middleware.Context) {
 	// Delete collaborator.
 	remove := strings.ToLower(ctx.Query("remove"))
 	if len(remove) > 0 && remove != ctx.Repo.Owner.LowerName {
-		if err := models.DeleteAccess(&models.Access{UserName: remove, RepoName: repoLink}); err != nil {
-			ctx.Handle(500, "DeleteAccess", err)
-			return
+		needDelete := true
+		if ctx.User.IsOrganization() {
+			// Check if user belongs to a team that has access to this repository.
+			auth, err := models.GetHighestAuthorize(ctx.Repo.Owner.Id, ctx.User.Id, 0, ctx.Repo.Repository.Id)
+			if err != nil {
+				ctx.Handle(500, "GetHighestAuthorize", err)
+				return
+			}
+			if auth > 0 {
+				needDelete = false
+			}
+		}
+
+		if needDelete {
+			if err := models.DeleteAccess(&models.Access{UserName: remove, RepoName: repoLink}); err != nil {
+				ctx.Handle(500, "DeleteAccess", err)
+				return
+			}
 		}
 		ctx.Flash.Success(ctx.Tr("repo.settings.remove_collaborator_success"))
 		ctx.Redirect(ctx.Repo.RepoLink + "/settings/collaboration")

@@ -2,7 +2,8 @@
 {{template "ng/base/header" .}}
 {{template "org/base/header" .}}
 <div id="setting-wrapper" class="main-wrapper">
-    <div id="org-setting" class="container clear">
+    <div id="team-members-list" class="container clear">
+		{{template "ng/base/alert" .}}
 		{{template "org/team/sidebar" .}}
 		<div class="grid-2-3 left">
 			<div class="setting-content">
@@ -10,6 +11,32 @@
 					<div class="panel-header">
 						{{.i18n.Tr "org.teams.members"}}
 					</div>
+                    <ul class="panel-body setting-list" id="team-members-list">
+                    	{{if .IsOrganizationOwner}}
+						<li class="search">
+			                <form class="form form-align" action="{{$.OrgLink}}/teams/{{$.Team.LowerName}}/action/add" id="repo-collab-form">
+			                    {{.CsrfTokenHtml}}
+			                    <input type="hidden" name="uid" value="{{.SignedUser.Id}}">
+                                <input class="ipt ipt-large ipt-radius" id="org-team-members-add" name="uname" autocomplete="off" required />
+                                <button class="btn btn-blue btn-large btn-radius">{{.i18n.Tr "org.teams.add_team_member"}}</button>
+								<div class="repo-user-list-block">
+									<ul class="menu-down-show menu-vertical menu-radius switching-list user-list" id="org-team-members-list"></ul>
+								</div>
+			                </form>
+						</li>
+						{{end}}
+                		{{range .Team.Members}}
+                		<li class="collab">
+                			{{if $.IsOrganizationOwner}}
+							<a class="btn btn-small btn-red btn-radius right" href="{{$.OrgLink}}/teams/{{$.Team.LowerName}}/action/remove?uid={{.Id}}">{{$.i18n.Tr "org.members.remove"}}</a>
+							{{end}}
+							<a class="member" href="/{{.Name}}">
+							    <img alt="{{.Name}}" class="pull-left avatar" src="{{.AvatarLink}}">
+							    <strong>{{.FullName}}</strong> ({{.Name}})
+							</a>
+                		</li>
+                		{{end}}
+                    </ul>
 				</div>
 			</div>
 		</div>

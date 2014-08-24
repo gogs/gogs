@@ -2,16 +2,21 @@
 {{template "ng/base/header" .}}
 {{template "org/base/header" .}}
 <div id="repo-wrapper">
-    <form id="team-create-form" class="form form-align panel panel-radius" action="{{.OrgLink}}/teams/new" method="post">
+    <form id="team-create-form" class="form form-align panel panel-radius" action="{{if .PageIsOrgTeamsNew}}{{.OrgLink}}/teams/new{{else}}{{.OrgLink}}/teams/{{.Team.LowerName}}/edit{{end}}" data-delete-url="{{.OrgLink}}/teams/{{.Team.LowerName}}/delete" method="post">
         {{.CsrfTokenHtml}}
         <div class="panel-header">
-            <h2>{{.i18n.Tr "org.create_new_team"}}</h2>
+            <h2>
+                {{if .PageIsOrgTeamsNew}}{{.i18n.Tr "org.create_new_team"}}{{else}}{{.i18n.Tr "org.teams.settings"}}{{end}}
+            </h2>
         </div>
         <div class="panel-content">
             {{template "ng/base/alert" .}}
             <div class="field">
                 <label class="req" for="team-name">{{.i18n.Tr "org.team_name"}}</label>
-                <input class="ipt ipt-large ipt-radius {{if .Err_TeamName}}ipt-error{{end}}" id="team-name" name="team_name" value="{{.team_name}}" required />
+                {{if eq .Team.LowerName "owners"}}
+                <input type="hidden" name="team_name" value="{{.team_name}}">
+                {{end}}
+                <input class="ipt ipt-large ipt-radius {{if .Err_TeamName}}ipt-error{{end}}" id="team-name" name="team_name" value="{{.team_name}}" required {{if eq .Team.LowerName "owners"}}disabled{{end}} />
                 <span class="form-label"></span>
                 <span class="help">{{.i18n.Tr "org.team_name_helper"}}</span>
             </div>
@@ -21,6 +26,7 @@
                 <span class="form-label"></span>
                 <span class="help">{{.i18n.Tr "org.team_desc_helper"}}</span>
             </div>
+            {{if not (eq .Team.LowerName "owners")}}
             <div class="field">
                 <h4 class="text-center">{{.i18n.Tr "org.team_permission_desc"}}</h4>
                 <label></label>
@@ -37,10 +43,19 @@
                 <p class="text-grey note">{{.i18n.Tr "org.teams.admin_access_helper"}}</p>
             </div>
             <hr>
+            {{end}}
             <div class="field">
                 <label></label>
-                <button class="btn btn-large btn-blue btn-radius">{{.i18n.Tr "org.create_new_team"}}</button>
-                <a class="btn btn-small btn-gray btn-radius" id="repo-create-cancel" href="{{.OrgLink}}/teams"><strong>{{.i18n.Tr "cancel"}}</strong></a>
+                {{if .PageIsOrgTeamsNew}}
+                    <button class="btn btn-large btn-blue btn-radius">{{.i18n.Tr "org.create_new_team"}}</button>
+                    <a class="btn btn-small btn-gray btn-radius" id="repo-create-cancel" href="{{.OrgLink}}/teams"><strong>{{.i18n.Tr "cancel"}}</strong></a>
+                {{else}}
+                    <button class="btn btn-large btn-green btn-radius">{{.i18n.Tr "org.teams.update_settings"}}</button>
+                    {{if not (eq .Team.LowerName "owners")}}
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                    <button class="btn btn-large btn-red btn-radius" id="org-team-delete">{{.i18n.Tr "org.teams.delete_team"}}</button>
+                    {{end}}
+                {{end}}
             </div>
         </div>
     </form>

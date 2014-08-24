@@ -59,6 +59,7 @@ func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 				if err == models.ErrUserNotExist {
 					ctx.Handle(404, "GetUserByName", err)
 				} else if redirect {
+					log.Error(4, "GetUserByName", err)
 					ctx.Redirect("/")
 				} else {
 					ctx.Handle(500, "GetUserByName", err)
@@ -84,7 +85,7 @@ func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 			ctx.Repo.IsTrueOwner = true
 		}
 
-		// get repository
+		// Get repository.
 		repo, err := models.GetRepositoryByName(u.Id, repoName)
 		if err != nil {
 			if err == models.ErrRepoNotExist {
@@ -102,8 +103,22 @@ func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 		}
 
 		// Check if the mirror repository owner(mirror repository doesn't have access).
-		if ctx.IsSigned && !ctx.Repo.IsOwner && repo.OwnerId == ctx.User.Id {
-			ctx.Repo.IsOwner = true
+		if ctx.IsSigned && !ctx.Repo.IsOwner {
+			if repo.OwnerId == ctx.User.Id {
+				ctx.Repo.IsOwner = true
+			}
+			// Check if current user has admin permission to repository.
+			if u.IsOrganization() {
+				auth, err := models.GetHighestAuthorize(u.Id, ctx.User.Id, 0, repo.Id)
+				if err != nil {
+					ctx.Handle(500, "GetHighestAuthorize", err)
+					return
+				}
+				if auth == models.ORG_ADMIN {
+					ctx.Repo.IsOwner = true
+					ctx.Repo.IsAdmin = true
+				}
+			}
 		}
 
 		// Check access.
@@ -281,7 +296,7 @@ func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 
 func RequireTrueOwner() macaron.Handler {
 	return func(ctx *Context) {
-		if !ctx.Repo.IsTrueOwner {
+		if !ctx.Repo.IsTrueOwner && !ctx.Repo.IsAdmin {
 			if !ctx.IsSigned {
 				ctx.SetCookie("redirect_to", "/"+url.QueryEscape(ctx.Req.RequestURI))
 				ctx.Redirect("/user/login")

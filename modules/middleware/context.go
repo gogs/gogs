@@ -46,6 +46,7 @@ type Context struct {
 		IsBranch    bool
 		IsTag       bool
 		IsCommit    bool
+		IsAdmin     bool // Current user is admin level.
 		HasAccess   bool
 		Repository  *models.Repository
 		Owner       *models.User
