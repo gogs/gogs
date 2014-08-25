@@ -172,7 +172,7 @@ func SettingsSSHKeysPost(ctx *middleware.Context, form auth.AddSSHKeyForm) {
 		}
 
 		// Remove newline characters from form.KeyContent
-		cleanContent := strings.Replace(form.Content, "\n", "", -1)
+		cleanContent := string.Replace(form.Content, "\n", "", -1)
 
 		if ok, err := models.CheckPublicKeyString(cleanContent); !ok {
 			ctx.Flash.Error(ctx.Tr("form.invalid_ssh_key", err.Error()))
