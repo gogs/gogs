@@ -171,7 +171,10 @@ func SettingsSSHKeysPost(ctx *middleware.Context, form auth.AddSSHKeyForm) {
 			return
 		}
 
-		if ok, err := models.CheckPublicKeyString(form.Content); !ok {
+		// Remove newline characters from form.KeyContent
+		cleanKeyContent := strings.Replace(form.KeyContent, "\n", "", -1),
+
+		if ok, err := models.CheckPublicKeyString(cleanKeyContent); !ok {
 			ctx.Flash.Error(ctx.Tr("form.invalid_ssh_key", err.Error()))
 			ctx.Redirect("/user/settings/ssh")
 			return
@@ -180,7 +183,7 @@ func SettingsSSHKeysPost(ctx *middleware.Context, form auth.AddSSHKeyForm) {
 		k := &models.PublicKey{
 			OwnerId: ctx.User.Id,
 			Name:    form.SSHTitle,
-			Content: form.Content,
+			Content: cleanKeyContent,
 		}
 		if err := models.AddPublicKey(k); err != nil {
 			if err == models.ErrKeyAlreadyExist {
