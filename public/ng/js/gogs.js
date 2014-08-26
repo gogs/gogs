@@ -218,6 +218,26 @@ var Gogs = {};
             }
         });
     }
+
+    // Search repositories by keyword.
+    Gogs.searchRepos = function (val, $target, $param) {
+        $.ajax({
+            url: '/api/v1/repos/search?q=' + val + '&' + $param,
+            dataType: "json",
+            success: function (json) {
+                if (json.ok && json.data.length) {
+                    var html = '';
+                    $.each(json.data, function (i, item) {
+                        html += '<li><a><span class="octicon octicon-repo"></span> ' + item.repolink + '</a></li>';
+                    });
+                    $target.html(html);
+                    $target.toggleShow();
+                } else {
+                    $target.toggleHide();
+                }
+            }
+        });
+    }
 })(jQuery);
 
 function initCore() {
@@ -358,7 +378,7 @@ function initOrgTeamCreate() {
             e.preventDefault();
             return true;
         }
-        var $form = $('#team-create-form')
+        var $form = $('#team-create-form');
         $form.attr('action', $form.data('delete-url'));
     });
 }
@@ -383,7 +403,28 @@ function initTeamMembersList() {
         $('#org-team-members-add').val($(this).text());
         $ul.toggleHide();
     });
+}
 
+function initTeamRepositoriesList() {
+    // Add team repository.
+    var $ul = $('#org-team-repositories-list');
+    $('#org-team-repositories-add').on('keyup', function () {
+        var $this = $(this);
+        if (!$this.val()) {
+            $ul.toggleHide();
+            return;
+        }
+        Gogs.searchRepos($this.val(), $ul, 'uid=' + $this.data('uid'));
+    }).on('focus', function () {
+        if (!$(this).val()) {
+            $ul.toggleHide();
+        } else {
+            $ul.toggleShow();
+        }
+    }).next().next().find('ul').on("click", 'li', function () {
+        $('#org-team-repositories-add').val($(this).text());
+        $ul.toggleHide();
+    });
 }
 
 $(document).ready(function () {
@@ -408,6 +449,9 @@ $(document).ready(function () {
     }
     if ($('#team-members-list').length) {
         initTeamMembersList();
+    }
+    if ($('#team-repositories-list').length) {
+        initTeamRepositoriesList();
     }
 
     Tabs('#dashboard-sidebar-menu');

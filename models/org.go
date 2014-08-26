@@ -369,6 +369,13 @@ const (
 	ORG_ADMIN
 )
 
+func AuthorizeToAccessType(auth AuthorizeType) AccessType {
+	if auth == ORG_READABLE {
+		return READABLE
+	}
+	return WRITABLE
+}
+
 const OWNER_TEAM = "Owners"
 
 // Team represents a organization team.
@@ -431,6 +438,142 @@ func (t *Team) AddMember(uid int64) error {
 // RemoveMember removes member from team of organization.
 func (t *Team) RemoveMember(uid int64) error {
 	return RemoveTeamMember(t.OrgId, t.Id, uid)
+}
+
+// addAccessWithAuthorize inserts or updates access with given mode.
+func addAccessWithAuthorize(sess *xorm.Session, access *Access, mode AccessType) error {
+	has, err := x.Get(access)
+	if err != nil {
+		return fmt.Errorf("fail to get access: %v", err)
+	}
+	access.Mode = mode
+	if has {
+		if _, err = sess.Id(access.Id).Update(access); err != nil {
+			return fmt.Errorf("fail to update access: %v", err)
+		}
+	} else {
+		if _, err = sess.Insert(access); err != nil {
+			return fmt.Errorf("fail to insert access: %v", err)
+		}
+	}
+	return nil
+}
+
+// AddRepository adds new repository to team of organization.
+func (t *Team) AddRepository(repo *Repository) (err error) {
+	idStr := "$" + com.ToStr(repo.Id) + "|"
+	if repo.OwnerId != t.OrgId {
+		return errors.New("Repository not belong to organization")
+	} else if strings.Contains(t.RepoIds, idStr) {
+		return nil
+	}
+
+	if err = repo.GetOwner(); err != nil {
+		return err
+	} else if err = t.GetMembers(); err != nil {
+		return err
+	}
+
+	sess := x.NewSession()
+	defer sess.Close()
+	if err = sess.Begin(); err != nil {
+		return err
+	}
+
+	t.NumRepos++
+	t.RepoIds += idStr
+	if _, err = sess.Id(t.Id).AllCols().Update(t); err != nil {
+		sess.Rollback()
+		return err
+	}
+
+	// Give access to team members.
+	mode := AuthorizeToAccessType(t.Authorize)
+
+	for _, u := range t.Members {
+		auth, err := GetHighestAuthorize(t.OrgId, u.Id, t.Id, repo.Id)
+		if err != nil {
+			sess.Rollback()
+			return err
+		}
+
+		access := &Access{
+			UserName: u.LowerName,
+			RepoName: path.Join(repo.Owner.LowerName, repo.LowerName),
+		}
+		if auth == 0 {
+			access.Mode = mode
+			if _, err = sess.Insert(access); err != nil {
+				sess.Rollback()
+				return fmt.Errorf("fail to insert access: %v", err)
+			}
+		} else if auth < t.Authorize {
+			if err = addAccessWithAuthorize(sess, access, mode); err != nil {
+				sess.Rollback()
+				return err
+			}
+		}
+	}
+	return sess.Commit()
+}
+
+// RemoveRepository removes repository from team of organization.
+func (t *Team) RemoveRepository(repoId int64) error {
+	idStr := "$" + com.ToStr(repoId) + "|"
+	if !strings.Contains(t.RepoIds, idStr) {
+		return nil
+	}
+
+	repo, err := GetRepositoryById(repoId)
+	if err != nil {
+		return err
+	}
+
+	if err = repo.GetOwner(); err != nil {
+		return err
+	} else if err = t.GetMembers(); err != nil {
+		return err
+	}
+
+	sess := x.NewSession()
+	defer sess.Close()
+	if err = sess.Begin(); err != nil {
+		return err
+	}
+
+	t.NumRepos--
+	t.RepoIds = strings.Replace(t.RepoIds, idStr, "", 1)
+	if _, err = sess.Id(t.Id).AllCols().Update(t); err != nil {
+		sess.Rollback()
+		return err
+	}
+
+	// Remove access to team members.
+	for _, u := range t.Members {
+		auth, err := GetHighestAuthorize(t.OrgId, u.Id, t.Id, repo.Id)
+		if err != nil {
+			sess.Rollback()
+			return err
+		}
+
+		access := &Access{
+			UserName: u.LowerName,
+			RepoName: path.Join(repo.Owner.LowerName, repo.LowerName),
+		}
+		if auth == 0 {
+			if _, err = sess.Delete(access); err != nil {
+				sess.Rollback()
+				return fmt.Errorf("fail to delete access: %v", err)
+			}
+		} else if auth < t.Authorize {
+			if err = addAccessWithAuthorize(sess, access, AuthorizeToAccessType(auth)); err != nil {
+				sess.Rollback()
+				return err
+			}
+		}
+	}
+
+	return sess.Commit()
 }
 
 // NewTeam creates a record of new team.
@@ -554,16 +697,10 @@ func UpdateTeam(t *Team, authChanged bool) (err error) {
 			return err
 		}
 
-		mode := READABLE
-		if t.Authorize > ORG_READABLE {
-			mode = WRITABLE
-		}
-		access := &Access{
-			Mode: mode,
-		}
+		// Update access.
+		mode := AuthorizeToAccessType(t.Authorize)
 
 		for _, repo := range t.Repos {
-			access.RepoName = path.Join(org.LowerName, repo.LowerName)
 			for _, u := range t.Members {
 				// ORG_WRITABLE is the highest authorize level for now.
 				// Skip checking others if current team has this level.
@@ -578,8 +715,11 @@ func UpdateTeam(t *Team, authChanged bool) (err error) {
 					}
 				}
 
-				access.UserName = u.LowerName
-				if _, err = sess.Update(access); err != nil {
+				access := &Access{
+					UserName: u.LowerName,
+					RepoName: path.Join(org.LowerName, repo.LowerName),
+				}
+				if err = addAccessWithAuthorize(sess, access, mode); err != nil {
 					sess.Rollback()
 					return err
 				}
@@ -617,36 +757,26 @@ func DeleteTeam(t *Team) error {
 	}
 
 	// Delete all accesses.
-	mode := READABLE
-	if t.Authorize > ORG_READABLE {
-		mode = WRITABLE
-	}
-	access := new(Access)
-
 	for _, repo := range t.Repos {
-		access.RepoName = path.Join(org.LowerName, repo.LowerName)
 		for _, u := range t.Members {
-			access.UserName = u.LowerName
-			access.Mode = mode
 			auth, err := GetHighestAuthorize(org.Id, u.Id, t.Id, repo.Id)
 			if err != nil {
 				sess.Rollback()
 				return err
 			}
 
+			access := &Access{
+				UserName: u.LowerName,
+				RepoName: path.Join(org.LowerName, repo.LowerName),
+			}
 			if auth == 0 {
 				if _, err = sess.Delete(access); err != nil {
 					sess.Rollback()
-					return err
+					return fmt.Errorf("fail to delete access: %v", err)
 				}
 			} else if auth < t.Authorize {
 				// Downgrade authorize level.
-				mode := READABLE
-				if auth > ORG_READABLE {
-					mode = WRITABLE
-				}
-				access.Mode = mode
-				if _, err = sess.Update(access); err != nil {
+				if err = addAccessWithAuthorize(sess, access, AuthorizeToAccessType(auth)); err != nil {
 					sess.Rollback()
 					return err
 				}
@@ -779,15 +909,6 @@ func AddTeamMember(orgId, teamId, uid int64) error {
 		TeamId: teamId,
 	}
 
-	mode := READABLE
-	if t.Authorize > ORG_READABLE {
-		mode = WRITABLE
-	}
-	access := &Access{
-		UserName: u.LowerName,
-		Mode:     mode,
-	}
-
 	if _, err = sess.Insert(tu); err != nil {
 		sess.Rollback()
 		return err
@@ -797,6 +918,7 @@ func AddTeamMember(orgId, teamId, uid int64) error {
 	}
 
 	// Give access to team repositories.
+	mode := AuthorizeToAccessType(t.Authorize)
 	for _, repo := range t.Repos {
 		auth, err := GetHighestAuthorize(orgId, uid, teamId, repo.Id)
 		if err != nil {
@@ -804,22 +926,24 @@ func AddTeamMember(orgId, teamId, uid int64) error {
 			return err
 		}
 
-		access.Id = 0
-		access.RepoName = path.Join(org.LowerName, repo.LowerName)
+		access := &Access{
+			UserName: u.LowerName,
+			RepoName: path.Join(org.LowerName, repo.LowerName),
+		}
 		// Equal 0 means given access doesn't exist.
 		if auth == 0 {
+			access.Mode = mode
 			if _, err = sess.Insert(access); err != nil {
 				sess.Rollback()
-				return err
+				return fmt.Errorf("fail to insert access: %v", err)
 			}
 		} else if auth < t.Authorize {
-			if _, err = sess.Update(access); err != nil {
+			if err = addAccessWithAuthorize(sess, access, mode); err != nil {
 				sess.Rollback()
 				return err
 			}
 		}
 	}
-	fmt.Println("kao")
 
 	// We make sure it exists before.
 	ou := new(OrgUser)
@@ -889,10 +1013,6 @@ func removeTeamMemberWithSess(orgId, teamId, uid int64, sess *xorm.Session) erro
 	}
 
 	// Delete access to team repositories.
-	access := &Access{
-		UserName: u.LowerName,
-	}
-
 	for _, repo := range t.Repos {
 		auth, err := GetHighestAuthorize(orgId, uid, teamId, repo.Id)
 		if err != nil {
@@ -900,22 +1020,22 @@ func removeTeamMemberWithSess(orgId, teamId, uid int64, sess *xorm.Session) erro
 			return err
 		}
 
+		access := &Access{
+			UserName: u.LowerName,
+			RepoName: path.Join(org.LowerName, repo.LowerName),
+		}
 		// Delete access if this is the last team user belongs to.
 		if auth == 0 {
-			access.RepoName = path.Join(org.LowerName, repo.LowerName)
-			_, err = sess.Delete(access)
+			if _, err = sess.Delete(access); err != nil {
+				sess.Rollback()
+				return fmt.Errorf("fail to delete access: %v", err)
+			}
 		} else if auth < t.Authorize {
 			// Downgrade authorize level.
-			mode := READABLE
-			if auth > ORG_READABLE {
-				mode = WRITABLE
+			if err = addAccessWithAuthorize(sess, access, AuthorizeToAccessType(auth)); err != nil {
+				sess.Rollback()
+				return err
 			}
-			access.Mode = mode
-			_, err = sess.Update(access)
-		}
-		if err != nil {
-			sess.Rollback()
-			return err
 		}
 	}
 

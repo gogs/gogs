@@ -519,12 +519,11 @@ func CreateRepository(u *User, name, desc, lang, license string, private, mirror
 			sess.Rollback()
 			return nil, err
 		}
-		us, err := GetTeamMembers(u.Id, t.Id)
-		if err != nil {
+		if err = t.GetMembers(); err != nil {
 			sess.Rollback()
 			return nil, err
 		}
-		for _, u := range us {
+		for _, u := range t.Members {
 			access.Id = 0
 			access.UserName = u.LowerName
 			if _, err = sess.Insert(access); err != nil {
@@ -961,6 +960,37 @@ func GetCollaborators(repoName string) (us []*User, err error) {
 		}
 	}
 	return us, nil
+}
+
+type SearchOption struct {
+	Keyword string
+	Uid     int64
+	Limit   int
+}
+
+// SearchRepositoryByName returns given number of repositories whose name contains keyword.
+func SearchRepositoryByName(opt SearchOption) (repos []*Repository, err error) {
+	// Prevent SQL inject.
+	opt.Keyword = strings.TrimSpace(opt.Keyword)
+	if len(opt.Keyword) == 0 {
+		return repos, nil
+	}
+
+	opt.Keyword = strings.Split(opt.Keyword, " ")[0]
+	if len(opt.Keyword) == 0 {
+		return repos, nil
+	}
+	opt.Keyword = strings.ToLower(opt.Keyword)
+
+	repos = make([]*Repository, 0, opt.Limit)
+
+	// Append conditions.
+	sess := x.Limit(opt.Limit)
+	if opt.Uid > 0 {
+		sess.Where("owner_id=?", opt.Uid)
+	}
+	sess.And("lower_name like '%" + opt.Keyword + "%'").Find(&repos)
+	return repos, err
 }
 
 // Watch is connection request for receiving repository notifycation.

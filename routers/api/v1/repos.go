@@ -5,27 +5,29 @@
 package v1
 
 import (
+	"path"
+
 	"github.com/Unknwon/com"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/middleware"
 )
 
-type user struct {
-	UserName   string `json:"username"`
-	AvatarLink string `json:"avatar"`
+type repo struct {
+	RepoLink string `json:"repolink"`
 }
 
-func SearchUsers(ctx *middleware.Context) {
+func SearchRepos(ctx *middleware.Context) {
 	opt := models.SearchOption{
-		Keyword: ctx.Query("q"),
+		Keyword: path.Base(ctx.Query("q")),
+		Uid:     com.StrTo(ctx.Query("uid")).MustInt64(),
 		Limit:   com.StrTo(ctx.Query("limit")).MustInt(),
 	}
 	if opt.Limit == 0 {
 		opt.Limit = 10
 	}
 
-	us, err := models.SearchUserByName(opt)
+	repos, err := models.SearchRepositoryByName(opt)
 	if err != nil {
 		ctx.JSON(500, map[string]interface{}{
 			"ok":    false,
@@ -34,11 +36,17 @@ func SearchUsers(ctx *middleware.Context) {
 		return
 	}
 
-	results := make([]*user, len(us))
-	for i := range us {
-		results[i] = &user{
-			UserName:   us[i].Name,
-			AvatarLink: us[i].AvatarLink(),
+	results := make([]*repo, len(repos))
+	for i := range repos {
+		if err = repos[i].GetOwner(); err != nil {
+			ctx.JSON(500, map[string]interface{}{
+				"ok":    false,
+				"error": err.Error(),
+			})
+			return
+		}
+		results[i] = &repo{
+			RepoLink: path.Join(repos[i].Owner.Name, repos[i].Name),
 		}
 	}
 

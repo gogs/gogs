@@ -21,10 +21,10 @@ const (
 // Access represents the accessibility of user to repository.
 type Access struct {
 	Id       int64
-	UserName string     `xorm:"unique(s)"`
-	RepoName string     `xorm:"unique(s)"` // <user name>/<repo name>
-	Mode     AccessType `xorm:"unique(s)"`
-	Created  time.Time  `xorm:"created"`
+	UserName string     `xorm:"UNIQUE(s)"`
+	RepoName string     `xorm:"UNIQUE(s)"` // <user name>/<repo name>
+	Mode     AccessType `xorm:"UNIQUE(s)"`
+	Created  time.Time  `xorm:"CREATED"`
 }
 
 // AddAccess adds new access record.
