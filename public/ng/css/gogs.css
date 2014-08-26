@@ -1298,32 +1298,38 @@ The register and sign-in page style
 .repo-setting-zone {
   padding: 30px;
 }
+#team-repositories-list,
 #team-members-list,
 #repo-collab-list {
   list-style: none;
   padding: 10px 0 5px 0;
 }
+#team-repositories-list li.collab,
 #team-members-list li.collab,
 #repo-collab-list li.collab {
   clear: both;
   height: 50px;
   padding: 0 15px 0 15px;
 }
+#team-repositories-list a.member,
 #team-members-list a.member,
 #repo-collab-list a.member {
   color: #444;
   height: 50px;
   line-height: 50px;
 }
+#team-repositories-list a.member:hover,
 #team-members-list a.member:hover,
 #repo-collab-list a.member:hover {
   color: #4183C4;
 }
+#team-repositories-list .avatar,
 #team-members-list .avatar,
 #repo-collab-list .avatar {
   margin-right: 1em;
   width: 40px;
 }
+#team-repositories-list .remove-collab,
 #team-members-list .remove-collab,
 #repo-collab-list .remove-collab {
   color: #DD4B39;
@@ -1877,14 +1883,26 @@ textarea#issue-add-content {
 #org-team-card .panel-footer {
   padding: 10px 20px;
 }
+#team-repositories-list .panel-body .search,
 #team-members-list .panel-body .search {
   padding: 4px 0 10px 10px;
   border-bottom: 1px solid #dddddd;
 }
+#team-repositories-list li.collab,
 #team-members-list li.collab {
   padding-top: 10px !important;
   border-bottom: 1px solid #dddddd;
 }
-#team-members-list li.collab:last-child {
-  border-bottom: 0;
+#team-repositories-list li:last-child,
+#team-members-list li:last-child {
+  border-bottom: 0 !important;
+}
+#team-repositories-list li a .octicon {
+  color: #888;
+}
+#team-repositories-list li .member {
+  color: #428bca;
+  font-size: 14px;
+  height: 40px;
+  line-height: 40px;
 }

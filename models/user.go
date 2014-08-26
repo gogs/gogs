@@ -521,21 +521,21 @@ func GetUserByEmail(email string) (*User, error) {
 }
 
 // SearchUserByName returns given number of users whose name contains keyword.
-func SearchUserByName(key string, limit int) (us []*User, err error) {
+func SearchUserByName(opt SearchOption) (us []*User, err error) {
 	// Prevent SQL inject.
-	key = strings.TrimSpace(key)
-	if len(key) == 0 {
+	opt.Keyword = strings.TrimSpace(opt.Keyword)
+	if len(opt.Keyword) == 0 {
 		return us, nil
 	}
 
-	key = strings.Split(key, " ")[0]
-	if len(key) == 0 {
+	opt.Keyword = strings.Split(opt.Keyword, " ")[0]
+	if len(opt.Keyword) == 0 {
 		return us, nil
 	}
-	key = strings.ToLower(key)
+	opt.Keyword = strings.ToLower(opt.Keyword)
 
-	us = make([]*User, 0, limit)
-	err = x.Limit(limit).Where("type=0").And("lower_name like '%" + key + "%'").Find(&us)
+	us = make([]*User, 0, opt.Limit)
+	err = x.Limit(opt.Limit).Where("type=0").And("lower_name like '%" + opt.Keyword + "%'").Find(&us)
 	return us, err
 }
 

@@ -1,3 +1,4 @@
+@import "../ui/var";
 .org-header-alert .alert {
 	margin-top: 10px;
 }
@@ -197,18 +198,32 @@
 		padding: 10px 20px;
 	}
 }
+#team-repositories-list,
 #team-members-list {
 	.panel-body .search {
 		padding: 4px 0 10px 10px;
 		border-bottom: 1px solid #dddddd;
 	}
-}
-#team-members-list {
-	li.collab {
-		padding-top: 10px !important;
-		border-bottom: 1px solid #dddddd;
+	li {
+		&.collab {
+			padding-top: 10px !important;
+			border-bottom: 1px solid #dddddd;
+		}
 		&:last-child {
-			border-bottom: 0;
+			border-bottom: 0 !important;
+		}
+	}
+}
+#team-repositories-list {
+	li {
+		a .octicon {
+			color: #888;
+		}
+		.member {
+			color: @linkColor;
+			font-size: 14px;
+			height: 40px;
+			line-height: 40px;
 		}
 	}
 }

@@ -5,6 +5,8 @@
 package org
 
 import (
+	"path"
+
 	"github.com/Unknwon/com"
 
 	"github.com/gogits/gogs/models"
@@ -15,9 +17,10 @@ import (
 )
 
 const (
-	TEAMS        base.TplName = "org/team/teams"
-	TEAM_NEW     base.TplName = "org/team/new"
-	TEAM_MEMBERS base.TplName = "org/team/members"
+	TEAMS             base.TplName = "org/team/teams"
+	TEAM_NEW          base.TplName = "org/team/new"
+	TEAM_MEMBERS      base.TplName = "org/team/members"
+	TEAM_REPOSITORIES base.TplName = "org/team/repositories"
 )
 
 func Teams(ctx *middleware.Context) {
@@ -108,6 +111,38 @@ func TeamsAction(ctx *middleware.Context) {
 	}
 }
 
+func TeamsRepoAction(ctx *middleware.Context) {
+	if !ctx.Org.IsOwner {
+		ctx.Error(404)
+		return
+	}
+
+	var err error
+	switch ctx.Params(":action") {
+	case "add":
+		repoName := path.Base(ctx.Query("repo-name"))
+		var repo *models.Repository
+		repo, err = models.GetRepositoryByName(ctx.Org.Organization.Id, repoName)
+		if err != nil {
+			ctx.Handle(500, "GetRepositoryByName", err)
+			return
+		}
+		err = ctx.Org.Team.AddRepository(repo)
+	case "remove":
+		err = ctx.Org.Team.RemoveRepository(com.StrTo(ctx.Query("repoid")).MustInt64())
+	}
+
+	if err != nil {
+		log.Error(4, "Action(%s): %v", ctx.Params(":action"), err)
+		ctx.JSON(200, map[string]interface{}{
+			"ok":  false,
+			"err": err.Error(),
+		})
+		return
+	}
+	ctx.Redirect(ctx.Org.OrgLink + "/teams/" + ctx.Org.Team.LowerName + "/repositories")
+}
+
 func NewTeam(ctx *middleware.Context) {
 	ctx.Data["Title"] = ctx.Org.Organization.FullName
 	ctx.Data["PageIsOrgTeams"] = true
@@ -174,6 +209,16 @@ func TeamMembers(ctx *middleware.Context) {
 		return
 	}
 	ctx.HTML(200, TEAM_MEMBERS)
+}
+
+func TeamRepositories(ctx *middleware.Context) {
+	ctx.Data["Title"] = ctx.Org.Team.Name
+	ctx.Data["PageIsOrgTeams"] = true
+	if err := ctx.Org.Team.GetRepositories(); err != nil {
+		ctx.Handle(500, "GetRepositories", err)
+		return
+	}
+	ctx.HTML(200, TEAM_REPOSITORIES)
 }
 
 func EditTeam(ctx *middleware.Context) {

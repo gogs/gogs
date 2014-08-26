@@ -141,7 +141,7 @@ func runWeb(*cli.Context) {
 			r.Get("/users/search", v1.SearchUsers)
 
 			// Repositories.
-			r.Get("/orgs/:org/repos/search", v1.SearchOrgRepositoreis)
+			r.Get("/repos/search", v1.SearchRepos)
 
 			r.Any("/*", func(ctx *middleware.Context) {
 				ctx.JSON(404, &base.ApiJsonErr{"Not Found", v1.DOC_URL})
@@ -236,7 +236,9 @@ func runWeb(*cli.Context) {
 
 			r.Get("/teams", org.Teams)
 			r.Get("/teams/:team", org.TeamMembers)
+			r.Get("/teams/:team/repositories", org.TeamRepositories)
 			r.Get("/teams/:team/action/:action", org.TeamsAction)
+			r.Get("/teams/:team/action/repo/:action", org.TeamsRepoAction)
 		}, middleware.OrgAssignment(true, true))
 
 		m.Group("/:org", func(r *macaron.Router) {
