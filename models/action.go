@@ -172,7 +172,7 @@ func updateIssuesCommit(userId, repoId int64, repoUserName, repoName string, com
 
 // CommitRepoAction adds new action for committing repository.
 func CommitRepoAction(userId, repoUserId int64, userName, actEmail string,
-	repoId int64, repoUserName, repoName string, refFullName string, commit *base.PushCommits) error {
+	repoId int64, repoUserName, repoName string, refFullName string, commit *base.PushCommits, oldCommitId string, newCommitId string) error {
 
 	opType := COMMIT_REPO
 	// Check it's tag push or branch.
@@ -226,6 +226,7 @@ func CommitRepoAction(userId, repoUserId int64, userName, actEmail string,
 	}
 
 	repoLink := fmt.Sprintf("%s%s/%s", setting.AppUrl, repoUserName, repoName)
+	compareUrl := fmt.Sprintf("%s/compare/%s...%s", repoLink, oldCommitId, newCommitId)
 	commits := make([]*PayloadCommit, len(commit.Commits))
 	for i, cmt := range commit.Commits {
 		commits[i] = &PayloadCommit{
@@ -258,6 +259,9 @@ func CommitRepoAction(userId, repoUserId int64, userName, actEmail string,
 			Name:  repo.Owner.LowerName,
 			Email: repo.Owner.Email,
 		},
+		Before:     oldCommitId,
+		After:      newCommitId,
+		CompareUrl: compareUrl,
 	}
 
 	for _, w := range ws {

@@ -169,11 +169,14 @@ type BasePayload interface {
 
 // Payload represents a payload information of hook.
 type Payload struct {
-	Secret  string           `json:"secret"`
-	Ref     string           `json:"ref"`
-	Commits []*PayloadCommit `json:"commits"`
-	Repo    *PayloadRepo     `json:"repository"`
-	Pusher  *PayloadAuthor   `json:"pusher"`
+	Secret     string           `json:"secret"`
+	Ref        string           `json:"ref"`
+	Commits    []*PayloadCommit `json:"commits"`
+	Repo       *PayloadRepo     `json:"repository"`
+	Pusher     *PayloadAuthor   `json:"pusher"`
+	Before     string           `json:"before"`
+	After      string           `json:"after"`
+	CompareUrl string           `json:"compare_url"`
 }
 
 func (p Payload) GetJSONPayload() ([]byte, error) {

@@ -101,7 +101,7 @@ func Update(refName, oldCommitId, newCommitId, userName, repoUserName, repoName 
 		commit := &base.PushCommits{}
 
 		if err = CommitRepoAction(userId, ru.Id, userName, actEmail,
-			repos.Id, repoUserName, repoName, refName, commit); err != nil {
+			repos.Id, repoUserName, repoName, refName, commit, oldCommitId, newCommitId); err != nil {
 			log.GitLogger.Fatal(4, "runUpdate.models.CommitRepoAction: %s/%s:%v", repoUserName, repoName, err)
 		}
 		return err
@@ -152,7 +152,7 @@ func Update(refName, oldCommitId, newCommitId, userName, repoUserName, repoName 
 
 	//commits = append(commits, []string{lastCommit.Id().String(), lastCommit.Message()})
 	if err = CommitRepoAction(userId, ru.Id, userName, actEmail,
-		repos.Id, repoUserName, repoName, refName, &base.PushCommits{l.Len(), commits}); err != nil {
+		repos.Id, repoUserName, repoName, refName, &base.PushCommits{l.Len(), commits}, oldCommitId, newCommitId); err != nil {
 		return fmt.Errorf("runUpdate.models.CommitRepoAction: %s/%s:%v", repoUserName, repoName, err)
 	}
 	return nil
