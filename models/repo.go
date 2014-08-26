@@ -305,17 +305,17 @@ func MigrateRepository(u *User, name, desc string, private, mirror bool, url str
 		return repo, errors.New("git clone: " + stderr)
 	}
 
-	// Pull data from source.
+	// Add remote and fetch data.
 	if _, stderr, err = process.ExecDir(3*time.Minute,
 		tmpDir, fmt.Sprintf("MigrateRepository(git pull): %s", repoPath),
-		"git", "pull", url); err != nil {
-		return repo, errors.New("git pull: " + stderr)
+		"git", "remote", "add", "-f", "--tags", "upstream", url); err != nil {
+		return repo, errors.New("git remote: " + stderr)
 	}
 
 	// Push data to local repository.
 	if _, stderr, err = process.ExecDir(3*time.Minute,
 		tmpDir, fmt.Sprintf("MigrateRepository(git push): %s", repoPath),
-		"git", "push", "origin", "master"); err != nil {
+		"git", "push", "--tags", "origin", "refs/remotes/upstream/*:refs/heads/*"); err != nil {
 		return repo, errors.New("git push: " + stderr)
 	}
 
