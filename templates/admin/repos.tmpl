@@ -37,6 +37,10 @@
                         {{end}}
                     </tbody>
                 </table>
+                <ul class="pagination">
+                    {{if .LastPageNum}}<li><a href="/admin/repos?p={{.LastPageNum}}">&laquo; Prev.</a></li>{{end}}
+                    {{if .NextPageNum}}<li><a href="/admin/repos?p={{.NextPageNum}}">&raquo; Next</a></li>{{end}}
+                </ul>
             </div>
         </div>
     </div>

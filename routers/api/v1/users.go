@@ -15,7 +15,7 @@ type user struct {
 	AvatarLink string `json:"avatar"`
 }
 
-func SearchUser(ctx *middleware.Context) {
+func SearchUsers(ctx *middleware.Context) {
 	q := ctx.Query("q")
 	limit, err := base.StrTo(ctx.Query("limit")).Int()
 	if err != nil {

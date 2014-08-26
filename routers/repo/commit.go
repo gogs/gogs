@@ -114,11 +114,15 @@ func Diff(ctx *middleware.Context, params martini.Params) {
 
 	commit := ctx.Repo.Commit
 
-	diff, err := models.GetDiff(models.RepoPath(userName, repoName), commitId)
-	if err != nil {
-		ctx.Handle(404, "repo.Diff(GetDiff)", err)
-		return
-	}
+	var fileChan = make(chan *models.DiffFile)
+	go func() {
+		err := models.GetDiffChan(models.RepoPath(userName, repoName), commitId, fileChan)
+		if err != nil {
+			ctx.Handle(404, "repo.Diff(GetDiff)", err)
+			return
+		}
+		close(fileChan)
+	}()
 
 	isImageFile := func(name string) bool {
 		blob, err := ctx.Repo.Commit.GetBlobByPath(name)
@@ -155,11 +159,12 @@ func Diff(ctx *middleware.Context, params martini.Params) {
 	ctx.Data["IsImageFile"] = isImageFile
 	ctx.Data["Title"] = commit.Summary() + " · " + base.ShortSha(commitId)
 	ctx.Data["Commit"] = commit
-	ctx.Data["Diff"] = diff
+	//ctx.Data["Diff"] = diff
 	ctx.Data["Parents"] = parents
-	ctx.Data["DiffNotAvailable"] = diff.NumFiles() == 0
+	ctx.Data["DiffNotAvailable"] = false
 	ctx.Data["SourcePath"] = "/" + path.Join(userName, repoName, "src", commitId)
 	ctx.Data["RawPath"] = "/" + path.Join(userName, repoName, "raw", commitId)
+	ctx.Data["Diffs"] = fileChan
 	ctx.HTML(200, DIFF)
 }
 

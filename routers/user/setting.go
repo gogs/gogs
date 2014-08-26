@@ -47,13 +47,13 @@ func SettingPost(ctx *middleware.Context, form auth.UpdateProfileForm) {
 	if ctx.User.Name != form.UserName {
 		isExist, err := models.IsUserExist(form.UserName)
 		if err != nil {
-			ctx.Handle(500, "user.Setting(update: check existence)", err)
+			ctx.Handle(500, "user.SettingPost(update: check existence)", err)
 			return
 		} else if isExist {
-			ctx.RenderWithErr("User name has been taken.", "user/setting", &form)
+			ctx.RenderWithErr("User name has been taken.", SETTING, &form)
 			return
 		} else if err = models.ChangeUserName(ctx.User, form.UserName); err != nil {
-			ctx.Handle(500, "user.Setting(change user name)", err)
+			ctx.Handle(500, "user.SettingPost(change user name)", err)
 			return
 		}
 		log.Trace("%s User name changed: %s -> %s", ctx.Req.RequestURI, ctx.User.Name, form.UserName)
@@ -68,7 +68,7 @@ func SettingPost(ctx *middleware.Context, form auth.UpdateProfileForm) {
 	ctx.User.Avatar = base.EncodeMd5(form.Avatar)
 	ctx.User.AvatarEmail = form.Avatar
 	if err := models.UpdateUser(ctx.User); err != nil {
-		ctx.Handle(500, "setting.Setting(UpdateUser)", err)
+		ctx.Handle(500, "setting.SettingPost(UpdateUser)", err)
 		return
 	}
 	log.Trace("%s User setting updated: %s", ctx.Req.RequestURI, ctx.User.LowerName)

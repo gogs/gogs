@@ -82,7 +82,7 @@ func RepoAssignment(redirect bool, args ...bool) martini.Handler {
 		ctx.Repo.Owner = user
 
 		// Organization owner team members are true owners as well.
-		if ctx.Repo.Owner.IsOrganization() && ctx.Repo.Owner.IsOrgOwner(ctx.User.Id) {
+		if ctx.IsSigned && ctx.Repo.Owner.IsOrganization() && ctx.Repo.Owner.IsOrgOwner(ctx.User.Id) {
 			ctx.Repo.IsTrueOwner = true
 		}
 

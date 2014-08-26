@@ -11,6 +11,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"runtime"
 	"strings"
 
 	"github.com/codegangsta/cli"
@@ -93,9 +94,16 @@ func rewriteAuthorizedKeys(sshPath, oldPath, newPath string) error {
 }
 
 func rewriteUpdateHook(path, appPath string) error {
-	rp := strings.NewReplacer("\\", "/", " ", "\\ ")
+	if runtime.GOOS == "windows" {
+		rp := strings.NewReplacer("\\", "/")
+		appPath = "\"" + rp.Replace(appPath) + "\""
+	} else {
+		rp := strings.NewReplacer("\\", "/", " ", "\\ ")
+		appPath = rp.Replace(appPath)
+	}
+
 	if err := ioutil.WriteFile(path, []byte(fmt.Sprintf(models.TPL_UPDATE_HOOK,
-		setting.ScriptType, rp.Replace(appPath))), os.ModePerm); err != nil {
+		setting.ScriptType, appPath)), os.ModePerm); err != nil {
 		return err
 	}
 	return nil
