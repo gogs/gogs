@@ -56,6 +56,9 @@ func OrgAssignment(redirect bool, args ...bool) macaron.Handler {
 					ctx.Org.IsMember = true
 				}
 			}
+		} else {
+			// Fake data.
+			ctx.Data["SignedUser"] = &models.User{}
 		}
 		if (requireMember && !ctx.Org.IsMember) ||
 			(requireOwner && !ctx.Org.IsOwner) {

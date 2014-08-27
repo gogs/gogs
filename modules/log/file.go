@@ -210,13 +210,19 @@ func (w *FileLogWriter) DoRotate() error {
 
 func (w *FileLogWriter) deleteOldLog() {
 	dir := filepath.Dir(w.Filename)
-	filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+	filepath.Walk(dir, func(path string, info os.FileInfo, err error) (returnErr error) {
+		defer func() {
+			if r := recover(); r != nil {
+				returnErr = fmt.Errorf("Unable to delete old log '%s', error: %+v", path, r)
+			}
+		}()
+
 		if !info.IsDir() && info.ModTime().Unix() < (time.Now().Unix()-60*60*24*w.Maxdays) {
 			if strings.HasPrefix(filepath.Base(path), filepath.Base(w.Filename)) {
 				os.Remove(path)
 			}
 		}
-		return nil
+		return returnErr
 	})
 }
 

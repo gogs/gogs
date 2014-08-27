@@ -337,6 +337,9 @@ func RemoveOrgUser(orgId, uid int64) error {
 		if _, err = sess.Delete(access); err != nil {
 			sess.Rollback()
 			return err
+		} else if err = WatchRepo(u.Id, repo.Id, false); err != nil {
+			sess.Rollback()
+			return err
 		}
 	}
 
@@ -513,6 +516,10 @@ func (t *Team) AddRepository(repo *Repository) (err error) {
 				return err
 			}
 		}
+		if err = WatchRepo(u.Id, repo.Id, true); err != nil {
+			sess.Rollback()
+			return err
+		}
 	}
 	return sess.Commit()
 }
@@ -564,6 +571,9 @@ func (t *Team) RemoveRepository(repoId int64) error {
 			if _, err = sess.Delete(access); err != nil {
 				sess.Rollback()
 				return fmt.Errorf("fail to delete access: %v", err)
+			} else if err = WatchRepo(u.Id, repo.Id, false); err != nil {
+				sess.Rollback()
+				return err
 			}
 		} else if auth < t.Authorize {
 			if err = addAccessWithAuthorize(sess, access, AuthorizeToAccessType(auth)); err != nil {
@@ -1029,6 +1039,9 @@ func removeTeamMemberWithSess(orgId, teamId, uid int64, sess *xorm.Session) erro
 			if _, err = sess.Delete(access); err != nil {
 				sess.Rollback()
 				return fmt.Errorf("fail to delete access: %v", err)
+			} else if err = WatchRepo(u.Id, repo.Id, false); err != nil {
+				sess.Rollback()
+				return err
 			}
 		} else if auth < t.Authorize {
 			// Downgrade authorize level.
