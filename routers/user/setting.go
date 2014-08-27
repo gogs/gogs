@@ -21,7 +21,6 @@ const (
 	SETTINGS_PASSWORD base.TplName = "user/settings/password"
 	SETTINGS_SSH_KEYS base.TplName = "user/settings/sshkeys"
 	SETTINGS_SOCIAL   base.TplName = "user/settings/social"
-	SETTINGS_ORGS     base.TplName = "user/settings/orgs"
 	SETTINGS_DELETE   base.TplName = "user/settings/delete"
 	NOTIFICATION      base.TplName = "user/notification"
 	SECURITY          base.TplName = "user/security"
@@ -229,13 +228,6 @@ func SettingsSocial(ctx *middleware.Context) {
 	}
 	ctx.Data["Socials"] = socials
 	ctx.HTML(200, SETTINGS_SOCIAL)
-}
-
-func SettingsOrgs(ctx *middleware.Context) {
-	ctx.Data["Title"] = ctx.Tr("settings")
-	ctx.Data["PageIsUserSettings"] = true
-	ctx.Data["PageIsSettingsOrgs"] = true
-	ctx.HTML(200, SETTINGS_ORGS)
 }
 
 func SettingsDelete(ctx *middleware.Context) {

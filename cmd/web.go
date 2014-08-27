@@ -167,7 +167,6 @@ func runWeb(*cli.Context) {
 		r.Get("/ssh", user.SettingsSSHKeys)
 		r.Post("/ssh", bindIgnErr(auth.AddSSHKeyForm{}), user.SettingsSSHKeysPost)
 		r.Get("/social", user.SettingsSocial)
-		r.Get("/orgs", user.SettingsOrgs)
 		r.Route("/delete", "GET,POST", user.SettingsDelete)
 	}, reqSignIn)
 	m.Group("/user", func(r *macaron.Router) {
