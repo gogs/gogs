@@ -288,6 +288,16 @@ func MigrateRepository(u *User, name, desc string, private, mirror bool, url str
 
 	repoPath := RepoPath(u.Name, name)
 
+	if u.IsOrganization() {
+		t, err := u.GetOwnerTeam()
+		if err != nil {
+			return nil, err
+		}
+		repo.NumWatches = t.NumMembers
+	} else {
+		repo.NumWatches = 1
+	}
+
 	repo.IsBare = false
 	if mirror {
 		if err = MirrorRepository(repo.Id, u.Name, repo.Name, repoPath, url); err != nil {
@@ -559,19 +569,24 @@ func CreateRepository(u *User, name, desc, lang, license string, private, mirror
 	}
 
 	if u.IsOrganization() {
-		ous, err := GetOrgUsersByOrgId(u.Id)
+		t, err := u.GetOwnerTeam()
 		if err != nil {
-			log.Error(4, "GetOrgUsersByOrgId: %v", err)
+			log.Error(4, "GetOwnerTeam: %v", err)
 		} else {
-			for _, ou := range ous {
-				if err = WatchRepo(ou.Uid, repo.Id, true); err != nil {
-					log.Error(4, "WatchRepo: %v", err)
+			if err = t.GetMembers(); err != nil {
+				log.Error(4, "GetMembers: %v", err)
+			} else {
+				for _, u := range t.Members {
+					if err = WatchRepo(u.Id, repo.Id, true); err != nil {
+						log.Error(4, "WatchRepo2: %v", err)
+					}
 				}
 			}
 		}
-	}
-	if err = WatchRepo(u.Id, repo.Id, true); err != nil {
-		log.Error(4, "WatchRepo2: %v", err)
+	} else {
+		if err = WatchRepo(u.Id, repo.Id, true); err != nil {
+			log.Error(4, "WatchRepo3: %v", err)
+		}
 	}
 
 	if err = NewRepoAction(u, repo); err != nil {
@@ -669,16 +684,59 @@ func TransferOwnership(u *User, newOwner string, repo *Repository) (err error) {
 	}
 
 	// Update user repository number.
-	rawSql := "UPDATE `user` SET num_repos = num_repos + 1 WHERE id = ?"
-	if _, err = sess.Exec(rawSql, newUser.Id); err != nil {
+	if _, err = sess.Exec("UPDATE `user` SET num_repos = num_repos + 1 WHERE id = ?", newUser.Id); err != nil {
 		sess.Rollback()
 		return err
 	}
 
-	rawSql = "UPDATE `user` SET num_repos = num_repos - 1 WHERE id = ?"
-	if _, err = sess.Exec(rawSql, u.Id); err != nil {
+	if _, err = sess.Exec("UPDATE `user` SET num_repos = num_repos - 1 WHERE id = ?", u.Id); err != nil {
 		sess.Rollback()
 		return err
+	}
+
+	// New owner is organization.
+	if newUser.IsOrganization() {
+		mode := WRITABLE
+		if repo.IsMirror {
+			mode = READABLE
+		}
+		access := &Access{
+			RepoName: path.Join(newUser.LowerName, repo.LowerName),
+			Mode:     mode,
+		}
+
+		// Give access to all members in owner team.
+		t, err := newUser.GetOwnerTeam()
+		if err != nil {
+			sess.Rollback()
+			return err
+		}
+		if err = t.GetMembers(); err != nil {
+			sess.Rollback()
+			return err
+		}
+		for _, u := range t.Members {
+			access.Id = 0
+			access.UserName = u.LowerName
+			if _, err = sess.Insert(access); err != nil {
+				sess.Rollback()
+				return err
+			}
+		}
+
+		if _, err = sess.Exec(
+			"UPDATE `user` SET num_repos = num_repos + 1 WHERE id = ?", u.Id); err != nil {
+			sess.Rollback()
+			return err
+		}
+
+		// Update owner team info and count.
+		t.RepoIds += "$" + com.ToStr(repo.Id) + "|"
+		t.NumRepos++
+		if _, err = sess.Id(t.Id).AllCols().Update(t); err != nil {
+			sess.Rollback()
+			return err
+		}
 	}
 
 	// Change repository directory name.
@@ -692,10 +750,13 @@ func TransferOwnership(u *User, newOwner string, repo *Repository) (err error) {
 	}
 
 	// Add watch of new owner to repository.
-	if !IsWatching(newUser.Id, repo.Id) {
+	if !newUser.IsOrganization() {
 		if err = WatchRepo(newUser.Id, repo.Id, true); err != nil {
-			return err
+			log.Error(4, "WatchRepo", err)
 		}
+	}
+	if err = WatchRepo(u.Id, repo.Id, false); err != nil {
+		log.Error(4, "WatchRepo2", err)
 	}
 
 	if err = TransferRepoAction(u, newUser, repo); err != nil {
@@ -753,13 +814,24 @@ func UpdateRepository(repo *Repository) error {
 }
 
 // DeleteRepository deletes a repository for a user or orgnaztion.
-func DeleteRepository(userId, repoId int64, userName string) error {
-	repo := &Repository{Id: repoId, OwnerId: userId}
+func DeleteRepository(uid, repoId int64, userName string) error {
+	repo := &Repository{Id: repoId, OwnerId: uid}
 	has, err := x.Get(repo)
 	if err != nil {
 		return err
 	} else if !has {
 		return ErrRepoNotExist
+	}
+
+	// In case is a organization.
+	org, err := GetUserById(uid)
+	if err != nil {
+		return err
+	}
+	if org.IsOrganization() {
+		if err = org.GetTeams(); err != nil {
+			return err
+		}
 	}
 
 	sess := x.NewSession()
@@ -772,10 +844,27 @@ func DeleteRepository(userId, repoId int64, userName string) error {
 		sess.Rollback()
 		return err
 	}
+
+	// Delete all access.
 	if _, err := sess.Delete(&Access{RepoName: strings.ToLower(path.Join(userName, repo.Name))}); err != nil {
 		sess.Rollback()
 		return err
 	}
+	if org.IsOrganization() {
+		idStr := "$" + com.ToStr(repoId) + "|"
+		for _, t := range org.Teams {
+			if !strings.Contains(t.RepoIds, idStr) {
+				continue
+			}
+			t.NumRepos--
+			t.RepoIds = strings.Replace(t.RepoIds, idStr, "", 1)
+			if _, err = sess.Id(t.Id).AllCols().Update(t); err != nil {
+				sess.Rollback()
+				return err
+			}
+		}
+	}
+
 	if _, err := sess.Delete(&Action{RepoId: repo.Id}); err != nil {
 		sess.Rollback()
 		return err
@@ -819,8 +908,7 @@ func DeleteRepository(userId, repoId int64, userName string) error {
 		return err
 	}
 
-	rawSql := "UPDATE `user` SET num_repos = num_repos - 1 WHERE id = ?"
-	if _, err = sess.Exec(rawSql, userId); err != nil {
+	if _, err = sess.Exec("UPDATE `user` SET num_repos = num_repos - 1 WHERE id = ?", uid); err != nil {
 		sess.Rollback()
 		return err
 	}

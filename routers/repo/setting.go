@@ -119,9 +119,22 @@ func SettingsPost(ctx *middleware.Context, form auth.RepoSettingForm) {
 		if ctx.Repo.Repository.Name != form.RepoName {
 			ctx.RenderWithErr(ctx.Tr("form.enterred_invalid_repo_name"), SETTINGS_OPTIONS, nil)
 			return
-		} else if !ctx.Repo.Owner.ValidtePassword(ctx.Query("password")) {
-			ctx.RenderWithErr(ctx.Tr("form.enterred_invalid_password"), SETTINGS_OPTIONS, nil)
-			return
+		}
+
+		if ctx.Repo.Owner.IsOrganization() {
+			if !ctx.Repo.Owner.IsOrgOwner(ctx.User.Id) {
+				ctx.Error(404)
+				return
+			}
+			if !ctx.User.ValidtePassword(ctx.Query("password")) {
+				ctx.RenderWithErr(ctx.Tr("form.enterred_invalid_password"), SETTINGS_OPTIONS, nil)
+				return
+			}
+		} else {
+			if !ctx.Repo.Owner.ValidtePassword(ctx.Query("password")) {
+				ctx.RenderWithErr(ctx.Tr("form.enterred_invalid_password"), SETTINGS_OPTIONS, nil)
+				return
+			}
 		}
 
 		if err := models.DeleteRepository(ctx.Repo.Owner.Id, ctx.Repo.Repository.Id, ctx.Repo.Owner.Name); err != nil {

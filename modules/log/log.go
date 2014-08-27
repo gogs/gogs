@@ -225,7 +225,9 @@ func (l *Logger) StartLogger() {
 		select {
 		case bm := <-l.msg:
 			for _, l := range l.outputs {
-				l.WriteMsg(bm.msg, bm.skip, bm.level)
+				if err := l.WriteMsg(bm.msg, bm.skip, bm.level); err != nil {
+					fmt.Println("ERROR, unable to WriteMsg:", err)
+				}
 			}
 		case <-l.quit:
 			return
@@ -247,7 +249,9 @@ func (l *Logger) Close() {
 		if len(l.msg) > 0 {
 			bm := <-l.msg
 			for _, l := range l.outputs {
-				l.WriteMsg(bm.msg, bm.skip, bm.level)
+				if err := l.WriteMsg(bm.msg, bm.skip, bm.level); err != nil {
+					fmt.Println("ERROR, unable to WriteMsg:", err)
+				}
 			}
 		} else {
 			break
