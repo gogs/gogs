@@ -1,40 +1,19 @@
 ### Install Gogs With Docker
 
-Deploying gogs in [Docker](http://www.docker.io/) is just as easy as eating a pie, what you do is just open the `dockerfiles/build.sh` file, replace the configs:
+Deploying gogs in [Docker](http://www.docker.io/) is just as easy as eating a pie, what you do is just run `run_gogs.sh`.
+This will setup a MySQL container and a GoGS container.
+The MySQL container will be linked to the GoGS container and everything will be setup for you.
 
-```
-DB_TYPE="YOUR_DB_TYPE"            # type of database, support 'mysql' and 'postgres'
-MEM_TYPE="YOUR_MEM_TYPE"          # type of memory database, support 'redis' and 'memcache'
-DB_PASSWORD="YOUR_DB_PASSWORD"    # The database password.
-DB_RUN_NAME="YOUR_DB_RUN_NAME"    # The --name option value when run the database image.
-MEM_RUN_NAME="YOUR_MEM_RUN_NAME"  # The --name option value when run the mem database image.
-HOST_PORT="YOUR_HOST_PORT"        # The port on host, which will be redirected to the port 3000 inside gogs container.
-```
+After docker is done just visit http://localhost:3000 and setup the admin account and BAM you're done.
 
-And run:
-```
-cd dockerfiles
-./build.sh
-```
+If you want to change the database user, password etc. do so in `run_gogs.sh`
 
-The build might take some time, just be patient. After it finishes, you will receive the message:
+| command        | description                                                      |
+| -------------- | ---------------------------------------------------------------- |
+| run_gogs.sh    | calls `docker run` to get, build and run MySQL and GoGS images   |
+| stop_gogs.sh   | calls `docker stop` to stop MySQL and GoGS containers            |
+| start_gogs.sh  | calls `docker start` to start MySQL and GoGS containers          |
+| rm_gogs.sh     | calls `docker rm` to remove MySQL and GoGS containers            |
+| rmi_gogs.sh    | calls `docker rmi` to remove GoGS image (leaves MySQL container) |
 
-```
-Now we have the MySQL image(running) and gogs image, use the follow command to start gogs service( the content might be different, according to your own configs):
- docker run -i -t --link YOUR_DB_RUN_NAME:db  --link YOUR_MEM_RUN_NAME:mem  -p YOUR_HOST_PORT:3000 gogits/gogs 
-```
-
-Just follow the message, run:
-
-```
- docker run -i -t --link YOUR_DB_RUN_NAME:db  --link YOUR_MEM_RUN_NAME:mem  -p YOUR_HOST_PORT:3000 gogits/gogs 
-```
-
-Now we have gogs running! Open the browser and navigate to:
-
-```
-http://YOUR_HOST_IP:YOUR_HOST_PORT
-```
-
-Let's 'gogs'!
-Ouya~
+Have fun!
