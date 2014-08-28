@@ -19,7 +19,7 @@
             <a href="/user/settings" title="{{.i18n.Tr "account_settings"}}"><i class="octicon octicon-settings"></i></a>
         </li>
             {{if .IsAdmin}}
-            <li class="right">
+            <li class="right {{if .PageIsAdmin}}current{{end}}">
                 <a href="/admin" title="{{.i18n.Tr "admin_panel"}}"><i class="octicon octicon-circuit-board"></i></a>
             </li>
             {{end}}

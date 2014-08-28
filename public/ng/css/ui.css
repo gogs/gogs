@@ -261,6 +261,7 @@ optgroup {
   font-weight: bold;
 }
 table {
+  background-color: transparent;
   border-collapse: collapse;
   border-spacing: 0;
 }
@@ -683,8 +684,7 @@ ul.menu-radius > li:last-child > a {
   background-color: white;
 }
 .panel .panel-body .panel-desc {
-  padding: 0 40px;
-  margin-bottom: 20px;
+  padding: 0 40px 20px 40px;
 }
 .panel .panel-content {
   padding: 1em 1.2em;
