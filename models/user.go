@@ -45,13 +45,13 @@ var (
 // User represents the object of individual and member of organization.
 type User struct {
 	Id            int64
-	LowerName     string `xorm:"unique not null"`
-	Name          string `xorm:"unique not null"`
+	LowerName     string `xorm:"UNIQUE NOT NULL"`
+	Name          string `xorm:"UNIQUE NOT NULL"`
 	FullName      string
-	Email         string `xorm:"unique not null"`
-	Passwd        string `xorm:"not null"`
+	Email         string `xorm:"UNIQUE NOT NULL"`
+	Passwd        string `xorm:"NOT NULL"`
 	LoginType     LoginType
-	LoginSource   int64 `xorm:"not null default 0"`
+	LoginSource   int64 `xorm:"NOT NULL DEFAULT 0"`
 	LoginName     string
 	Type          UserType
 	Orgs          []*User       `xorm:"-"`
@@ -60,16 +60,16 @@ type User struct {
 	NumFollowings int
 	NumStars      int
 	NumRepos      int
-	Avatar        string `xorm:"varchar(2048) not null"`
-	AvatarEmail   string `xorm:"not null"`
+	Avatar        string `xorm:"VARCHAR(2048) NOT NULL"`
+	AvatarEmail   string `xorm:"NOT NULL"`
 	Location      string
 	Website       string
 	IsActive      bool
 	IsAdmin       bool
 	Rands         string    `xorm:"VARCHAR(10)"`
 	Salt          string    `xorm:"VARCHAR(10)"`
-	Created       time.Time `xorm:"created"`
-	Updated       time.Time `xorm:"updated"`
+	Created       time.Time `xorm:"CREATED"`
+	Updated       time.Time `xorm:"UPDATED"`
 
 	// For organization.
 	Description string

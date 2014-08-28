@@ -159,6 +159,12 @@ func CreateOrganization(org, owner *User) (*User, error) {
 	return org, sess.Commit()
 }
 
+// CountOrganizations returns number of organizations.
+func CountOrganizations() int64 {
+	count, _ := x.Where("type=1").Count(new(User))
+	return count
+}
+
 // TODO: need some kind of mechanism to record failure.
 // DeleteOrganization completely and permanently deletes everything of organization.
 func DeleteOrganization(org *User) (err error) {

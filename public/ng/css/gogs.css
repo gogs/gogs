@@ -234,6 +234,24 @@ img.avatar-100 {
 .text-black {
   color: #444444;
 }
+.table {
+  width: 100%;
+  max-width: 100%;
+}
+.table > thead > tr > th,
+.table > tbody > tr > th,
+.table > tfoot > tr > th,
+.table > thead > tr > td,
+.table > tbody > tr > td,
+.table > tfoot > tr > td {
+  border-top: 1px solid #e7eaec;
+  line-height: 1.42857;
+  padding: 8px;
+  vertical-align: top;
+}
+th {
+  text-align: left;
+}
 .markdown {
   background-color: white;
   font-size: 16px;
@@ -1342,6 +1360,7 @@ The register and sign-in page style
   width: 100%;
   list-style: none;
 }
+#admin-wrapper,
 #setting-wrapper {
   padding-bottom: 100px;
 }
@@ -1905,4 +1924,27 @@ textarea#issue-add-content {
   font-size: 14px;
   height: 40px;
   line-height: 40px;
+}
+.admin-desc {
+  padding: 10px 20px;
+}
+.admin-table {
+  padding: 15px 20px 5px 20px;
+}
+.dl-horizontal dt {
+  float: left;
+  width: 160px;
+  clear: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.admin-dl-horizontal {
+  padding: 20px;
+}
+.admin-dl-horizontal > dt {
+  width: 250px;
+}
+.admin-dl-horizontal > dd {
+  margin-left: 240px;
 }

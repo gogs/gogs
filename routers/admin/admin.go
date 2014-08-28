@@ -123,8 +123,9 @@ const (
 )
 
 func Dashboard(ctx *middleware.Context) {
-	ctx.Data["Title"] = "Admin Dashboard"
-	ctx.Data["PageIsDashboard"] = true
+	ctx.Data["Title"] = ctx.Tr("admin.dashboard")
+	ctx.Data["PageIsAdmin"] = true
+	ctx.Data["PageIsAdminDashboard"] = true
 
 	// Run operation.
 	op, _ := com.StrTo(ctx.Query("op")).Int()
