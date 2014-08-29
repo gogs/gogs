@@ -27,7 +27,9 @@
                 <img src="{{.SignedUser.AvatarLink}}?s=28" alt="user-avatar" title="username"/>
             </a>
             <a class="navbar-right nav-item{{if .PageIsUserSetting}} active{{end}}" href="/user/settings"  data-toggle="tooltip" data-placement="bottom" title="Settings"><i class="fa fa-cogs fa-lg"></i></a>
-            {{if .IsAdmin}}<a class="navbar-right nav-item{{if .PageIsAdmin}} active{{end}}" href="/admin"  data-toggle="tooltip" data-placement="bottom" title="Admin"><i class="fa fa-gear fa-lg"></i></a>{{end}}
+            {{if .IsAdmin}}
+            <a class="navbar-right nav-item{{if .PageIsAdmin}} active{{end}}" href="/admin"  data-toggle="tooltip" data-placement="bottom" title="Admin"><i class="fa fa-gear fa-lg"></i></a>
+            {{end}}
             <div class="navbar-right nav-item pull-right{{if .PageIsNewRepo}} active{{end}}" id="nav-repo-new" data-toggle="tooltip" data-placement="bottom" title="New Repo">
                 <button type="button" class="dropdown-toggle" data-toggle="dropdown"><i class="fa fa-plus-square fa-lg"></i></button>
                 <div class="dropdown-menu">
@@ -45,21 +47,3 @@
         </nav>
     </div>
 </div>
-<!--<nav class="navbar navbar-inverse navbar-fixed-top">
-	<div class="container">
-		<div class="navbar-header">
-			<button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#navbar-collapse">
-				<i class="fa fa-bars"></i>
-			</button>
-			<a class="navbar-brand" href="/"><img src="/img/favicon.png" alt="Gogs Logo"></a>
-		</div>
-
-		<div class="collapse navbar-collapse" id="gopmweb-navbar-collapse">
-			<ul class="nav navbar-nav">
-				<li><a>{{.Title}}</a></li>
-			</ul>
-			
-			<a href="/user/signin" class="navbar-right btn btn-success navbar-btn">Sign In</a>
-		</div>
-	</div>
-</nav>-->
