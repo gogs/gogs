@@ -1,178 +1,110 @@
-{{template "base/head" .}}
-{{template "base/navbar" .}}
-<div id="body" class="container" data-page="admin">
-    {{template "admin/nav" .}}
-    <div id="admin-container" class="col-md-9">
-        <div class="panel panel-default">
-            <div class="panel-heading">
-                New Authentication
-            </div>
-
-            <div class="panel-body">
-            	<br/>
-				<form action="/admin/auths/new" method="post" class="form-horizontal">
-					{{.CsrfTokenHtml}}
-				    {{template "base/alert" .}}
-				    <div class="form-group">
-					    <label class="col-md-3 control-label">Auth Type: </label>
-					    <div class="col-md-7">
-						    <select name="type" class="form-control" id="auth-type">
-						    {{range $key, $val := .LoginTypes}}
-		  					<option value="{{$key}}">{{$val}}</option>
-		  					{{end}}
-							</select>
-						</div>
-					</div>
-                    <div class="form-group {{if .Err_AuthName}}has-error has-feedback{{end}}">
-                            <label class="col-md-3 control-label">Name: </label>
-                            <div class="col-md-7">
-                                <input name="name" class="form-control" placeholder="Type authentication's name" value="{{.name}}">
+{{template "ng/base/head" .}}
+{{template "ng/base/header" .}}
+<div id="admin-wrapper">
+    <div id="setting-wrapper" class="main-wrapper">
+        <div id="admin-setting" class="container clear">
+            {{template "admin/nav" .}}
+            <div class="grid-4-5 left">
+                <div class="setting-content">
+                    {{template "ng/base/alert" .}}
+                    <div id="setting-content">
+                        <div class="panel panel-radius">
+                            <div class="panel-header">
+                                <strong>{{.i18n.Tr "admin.auths.new"}}</strong>
                             </div>
-                        </div>
-                    <div class="ldap">
-                        <div class="form-group {{if .Err_Domain}}has-error has-feedback{{end}}">
-                            <label class="col-md-3 control-label">Domain: </label>
-                            <div class="col-md-7">
-                                <input name="domain" class="form-control" placeholder="Type domain name" value="{{.domain}}">
-                            </div>
-                        </div>
-
-                        <div class="form-group {{if .Err_Host}}has-error has-feedback{{end}}">
-                            <label class="col-md-3 control-label">Host: </label>
-                            <div class="col-md-7">
-                                <input name="host" class="form-control" placeholder="Type host address" value="{{.host}}">
-                            </div>
-                        </div>
-
-                        <div class="form-group {{if .Err_Port}}has-error has-feedback{{end}}">
-                            <label class="col-md-3 control-label">Port: </label>
-                            <div class="col-md-7">
-                                <input name="port" class="form-control" placeholder="Type port number" value="{{.port}}">
-                            </div>
-                        </div>
-
-                        <div class="form-group {{if .Err_UseSSL}}has-error has-feedback{{end}}">
-                             <label class="col-md-3 control-label">Use SSL: </label>
-                             <div class="col-md-7">
-                                  <input name="usessl" class="form-control" type="checkbox" {{if .usessl}}checked{{end}}>
-                             </div>
-                        </div>
-
-                        <div class="form-group {{if .Err_BaseDN}}has-error has-feedback{{end}}">
-                            <label class="col-md-3 control-label">Base DN: </label>
-                            <div class="col-md-7">
-                                <input name="base_dn" class="form-control" placeholder="Type base DN" value="{{.base_dn}}">
-                            </div>
-                        </div>
-
-                        <div class="form-group {{if .Err_Attributes}}has-error has-feedback{{end}}">
-                            <label class="col-md-3 control-label">Search Attributes: </label>
-                            <div class="col-md-7">
-                                <input name="attributes" class="form-control" placeholder="Type search attributes" value="{{.attributes}}">
-                            </div>
-                        </div>
-
-                        <div class="form-group {{if .Err_Filter}}has-error has-feedback{{end}}">
-                            <label class="col-md-3 control-label">Search Filter: </label>
-                            <div class="col-md-7">
-                                <input name="filter" class="form-control" placeholder="Type search filter" value="{{.filter}}">
-                            </div>
-                        </div>
-
-                        <div class="form-group {{if .Err_MsAdSA}}has-error has-feedback{{end}}">
-                            <label class="col-md-3 control-label">Ms Ad SA: </label>
-                            <div class="col-md-7">
-                                <input name="ms_ad_sa" class="form-control" placeholder="Type Ms Ad SA" value="{{.ms_ad_sa}}">
-                            </div>
-                        </div>
-
-                    </div>
-
-                    <div class="smtp hidden">
-                        <div class="form-group">
-                            <label class="col-md-3 control-label">SMTP Auth: </label>
-                            <div class="col-md-7">
-                                <select name="smtpauth" class="form-control">
-                                    {{range .SMTPAuths}}
-                                    <option value="{{.}}">{{.}}</option>
-                                    {{end}}
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="form-group {{if .Err_SmtpHost}}has-error has-feedback{{end}}">
-                            <label class="col-md-3 control-label">Host: </label>
-                            <div class="col-md-7">
-                                <input name="smtphost" class="form-control" placeholder="Type host address" value="{{.smtphost}}">
-                            </div>
-                        </div>
-
-                        <div class="form-group {{if .Err_SmtpPort}}has-error has-feedback{{end}}">
-                            <label class="col-md-3 control-label">Port: </label>
-                            <div class="col-md-7">
-                                <input name="smtpport" class="form-control" placeholder="Type port number" value="{{.smtpport}}">
-                            </div>
-                        </div>
-
-                        <div class="form-group">
-                            <div class="col-md-offset-3 col-md-7">
-                                <div class="checkbox">
-                                    <label>
-                                        <input name="tls" type="checkbox" {{if .tls}}checked{{end}}>
-                                        <strong>Enable TLS Encryption</strong>
-                                    </label>
+                            <form class="form form-align panel-body" id="repo-setting-form" action="/admin/auths/new" method="post">
+                                {{.CsrfTokenHtml}}
+                                <div class="field">
+                                    <label class="req">{{.i18n.Tr "admin.auths.auth_type"}}</label>
+                                    <select id="auth-type" name="type">
+                                        {{range $key, $val := .LoginTypes}}
+                                        <option value="{{$key}}">{{$val}}</option>
+                                        {{end}}
+                                    </select>
                                 </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <div class="col-md-offset-3 col-md-7">
-                            <div class="checkbox">
-                                <label>
+                                <div class="field">
+                                    <label class="req" for="name">{{.i18n.Tr "admin.auths.auth_name"}}</label>
+                                    <input class="ipt ipt-large ipt-radius {{if .Err_AuthName}}ipt-error{{end}}" id="name" name="name" value="{{.name}}" required />
+                                </div>
+                                <div class="ldap"> 
+                                    <div class="field">
+                                        <label class="req" for="domain">{{.i18n.Tr "admin.auths.domain"}}</label>
+                                        <input class="ipt ipt-large ipt-radius {{if .Err_Domain}}ipt-error{{end}}" id="domain" name="domain" value="{{.domain}}" />
+                                    </div>
+                                    <div class="field">
+                                        <label class="req" for="host">{{.i18n.Tr "admin.auths.host"}}</label>
+                                        <input class="ipt ipt-large ipt-radius {{if .Err_Host}}ipt-error{{end}}" id="host" name="host" value="{{.host}}" />
+                                    </div>
+                                    <div class="field">
+                                        <label class="req" for="port">{{.i18n.Tr "admin.auths.port"}}</label>
+                                        <input class="ipt ipt-large ipt-radius {{if .Err_Port}}ipt-error{{end}}" id="port" name="port" value="{{.port}}" />
+                                    </div>
+                                    <div class="field">
+                                        <label class="req" for="base_dn">{{.i18n.Tr "admin.auths.base_dn"}}</label>
+                                        <input class="ipt ipt-large ipt-radius {{if .Err_BaseDN}}ipt-error{{end}}" id="base_dn" name="base_dn" value="{{.base_dn}}" />
+                                    </div>
+                                    <div class="field">
+                                        <label class="req" for="attributes">{{.i18n.Tr "admin.auths.attributes"}}</label>
+                                        <input class="ipt ipt-large ipt-radius {{if .Err_Attributes}}ipt-error{{end}}" id="attributes" name="attributes" value="{{.attributes}}" />
+                                    </div>
+                                    <div class="field">
+                                        <label class="req" for="filter">{{.i18n.Tr "admin.auths.filter"}}</label>
+                                        <input class="ipt ipt-large ipt-radius {{if .Err_Filter}}ipt-error{{end}}" id="filter" name="filter" value="{{.filter}}" />
+                                    </div>
+                                    <div class="field">
+                                        <label class="req" for="ms_ad_sa">{{.i18n.Tr "admin.auths.ms_ad_sa"}}</label>
+                                        <input class="ipt ipt-large ipt-radius {{if .Err_MsAdSA}}ipt-error{{end}}" id="ms_ad_sa" name="ms_ad_sa" value="{{.ms_ad_sa}}" />
+                                    </div>
+                                </div>
+                                <div class="smtp hidden">
+                                    <div class="field">
+                                        <label class="req">{{.i18n.Tr "admin.auths.smtp_auth"}}</label>
+                                        <select name="smtpauth">
+                                            {{range .SMTPAuths}}
+                                            <option value="{{.}}">{{.}}</option>
+                                            {{end}}
+                                        </select>
+                                    </div>
+                                    <div class="field">
+                                        <label class="req" for="smtphost">{{.i18n.Tr "admin.auths.smtphost"}}</label>
+                                        <input class="ipt ipt-large ipt-radius {{if .Err_SmtpHost}}ipt-error{{end}}" id="smtphost" name="smtphost" value="{{.smtphost}}" />
+                                    </div>
+                                    <div class="field">
+                                        <label class="req" for="smtpport">{{.i18n.Tr "admin.auths.smtpport"}}</label>
+                                        <input class="ipt ipt-large ipt-radius {{if .Err_SmtpPort}}ipt-error{{end}}" id="smtpport" name="smtpport" value="{{.smtpport}}" />
+                                    </div>
+                                </div>
+                                <div class="field">
+                                    <div class="smtp hidden">
+                                        <label></label>
+                                        <input name="tls" type="checkbox" {{if .tls}}checked{{end}}>
+                                        <strong>{{.i18n.Tr "admin.auths.enable_tls"}}</strong>
+                                        <br>
+                                    </div>
+                                    <label></label>
                                     <input name="allowautoregister" type="checkbox" {{if .allowautoregister}}checked{{end}}>
-                                    <strong>Enable Auto Registration</strong>
-                                </label>
+                                    <strong>{{.i18n.Tr "admin.auths.enable_auto_register"}}</strong>
+                                </div>
+                                <div class="field">
+                                    <label></label>
+                                    <button class="btn btn-blue btn-large btn-radius">{{.i18n.Tr "admin.auths.new"}}</button>
+                                </div>
+                            </form>
+                        </div>
+                        <br>
+                        <div class="panel panel-radius">
+                            <div class="panel-header">
+                                {{.i18n.Tr "admin.auths.tips"}}
+                            </div>
+                            <div class="panel-body admin-panel">
+                                <h5>GMail Setting:</h5>
+                                <p>Host: smtp.gmail.com, Post: 587, Enable TLS Encryption: true</p>
                             </div>
                         </div>
                     </div>
-
-					<hr/>
-
-					<div class="form-group">
-					    <div class="col-md-offset-3 col-md-7">
-					    	<button type="submit" class="btn btn-lg btn-primary">Create new authentication</button>
-					    </div>
-					</div>
-				</form>
-            </div>
-        </div>
-
-        <div class="panel panel-info">
-            <div class="panel-heading">
-                Tips
-            </div>
-
-            <div class="panel-body">
-                <h5>GMail Setting:</h5>
-                <p>Host: smtp.gmail.com, Post: 587, Enable TLS Encryption: true</p>
+                </div>
             </div>
         </div>
 	</div>
 </div>
-<script>
-    $(function () {
-        $('#auth-type').on("change", function () {
-            var v = $(this).val();
-            if (v == 2) {
-                $('.ldap').toggleShow();
-                $('.smtp').toggleHide();
-            }
-            if (v == 3) {
-                $('.smtp').toggleShow();
-                $('.ldap').toggleHide();
-            }
-        });
-    });
-</script>
-{{template "base/footer" .}}
+{{template "ng/base/footer" .}}

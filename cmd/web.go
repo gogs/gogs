@@ -192,28 +192,36 @@ func runWeb(*cli.Context) {
 
 	adminReq := middleware.Toggle(&middleware.ToggleOptions{SignInRequire: true, AdminRequire: true})
 
-	m.Get("/admin", adminReq, admin.Dashboard)
 	m.Group("/admin", func(r *macaron.Router) {
-		r.Get("/users", admin.Users)
-		r.Get("/repos", admin.Repositories)
-		r.Get("/auths", admin.Auths)
+		m.Get("", adminReq, admin.Dashboard)
 		r.Get("/config", admin.Config)
 		r.Get("/monitor", admin.Monitor)
-	}, adminReq)
-	m.Group("/admin/users", func(r *macaron.Router) {
-		r.Get("/new", admin.NewUser)
-		r.Post("/new", bindIgnErr(auth.RegisterForm{}), admin.NewUserPost)
-		r.Get("/:userid", admin.EditUser)
-		r.Post("/:userid", bindIgnErr(auth.AdminEditUserForm{}), admin.EditUserPost)
-		r.Post("/:userid/delete", admin.DeleteUser)
-	}, adminReq)
 
-	m.Group("/admin/auths", func(r *macaron.Router) {
-		r.Get("/new", admin.NewAuthSource)
-		r.Post("/new", bindIgnErr(auth.AuthenticationForm{}), admin.NewAuthSourcePost)
-		r.Get("/:authid", admin.EditAuthSource)
-		r.Post("/:authid", bindIgnErr(auth.AuthenticationForm{}), admin.EditAuthSourcePost)
-		r.Get("/:authid/delete", admin.DeleteAuthSource)
+		m.Group("/users", func(r *macaron.Router) {
+			r.Get("", admin.Users)
+			r.Get("/new", admin.NewUser)
+			r.Post("/new", bindIgnErr(auth.RegisterForm{}), admin.NewUserPost)
+			r.Get("/:userid", admin.EditUser)
+			r.Post("/:userid", bindIgnErr(auth.AdminEditUserForm{}), admin.EditUserPost)
+			r.Post("/:userid/delete", admin.DeleteUser)
+		})
+
+		m.Group("/orgs", func(r *macaron.Router) {
+			r.Get("", admin.Organizations)
+		})
+
+		m.Group("/repos", func(r *macaron.Router) {
+			r.Get("", admin.Repositories)
+		})
+
+		m.Group("/auths", func(r *macaron.Router) {
+			r.Get("", admin.Authentications)
+			r.Get("/new", admin.NewAuthSource)
+			r.Post("/new", bindIgnErr(auth.AuthenticationForm{}), admin.NewAuthSourcePost)
+			r.Get("/:authid", admin.EditAuthSource)
+			r.Post("/:authid", bindIgnErr(auth.AuthenticationForm{}), admin.EditAuthSourcePost)
+			r.Post("/:authid/delete", admin.DeleteAuthSource)
+		})
 	}, adminReq)
 
 	m.Get("/:username", ignSignIn, user.Profile)

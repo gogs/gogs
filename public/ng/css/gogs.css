@@ -1400,31 +1400,37 @@ The register and sign-in page style
 .setting-content {
   margin-left: 32px;
 }
+#auth-setting-form,
 #org-setting-form,
 #repo-setting-form,
 #user-profile-form {
   background-color: #FFF;
   padding: 30px 0;
 }
+#auth-setting-form textarea,
 #org-setting-form textarea,
 #repo-setting-form textarea,
 #user-profile-form textarea {
   margin-left: 4px;
   height: 100px;
 }
+#auth-setting-form label,
 #org-setting-form label,
 #repo-setting-form label,
 #user-profile-form label,
+#auth-setting-form .form-label,
 #org-setting-form .form-label,
 #repo-setting-form .form-label,
 #user-profile-form .form-label {
   width: 240px;
 }
+#auth-setting-form .ipt,
 #org-setting-form .ipt,
 #repo-setting-form .ipt,
 #user-profile-form .ipt {
   width: 360px;
 }
+#auth-setting-form .field,
 #org-setting-form .field,
 #repo-setting-form .field,
 #user-profile-form .field {

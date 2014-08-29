@@ -165,6 +165,13 @@ func CountOrganizations() int64 {
 	return count
 }
 
+// GetOrganizations returns given number of organizations with offset.
+func GetOrganizations(num, offset int) ([]*User, error) {
+	orgs := make([]*User, 0, num)
+	err := x.Limit(num, offset).Where("type=1").Asc("id").Find(&orgs)
+	return orgs, err
+}
+
 // TODO: need some kind of mechanism to record failure.
 // DeleteOrganization completely and permanently deletes everything of organization.
 func DeleteOrganization(org *User) (err error) {
