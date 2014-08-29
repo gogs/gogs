@@ -5,11 +5,15 @@
 package v1
 
 import (
+	"fmt"
 	"path"
+	"strings"
 
 	"github.com/Unknwon/com"
 
 	"github.com/gogits/gogs/models"
+	"github.com/gogits/gogs/modules/auth"
+	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/middleware"
 )
 
@@ -53,5 +57,87 @@ func SearchRepos(ctx *middleware.Context) {
 	ctx.Render.JSON(200, map[string]interface{}{
 		"ok":   true,
 		"data": results,
+	})
+}
+
+func Migrate(ctx *middleware.Context, form auth.MigrateRepoForm) {
+	ctxUser := ctx.User
+	// Not equal means current user is an organization.
+	if form.Uid != ctx.User.Id {
+		org, err := models.GetUserById(form.Uid)
+		if err != nil && err != models.ErrUserNotExist {
+			ctx.JSON(500, map[string]interface{}{
+				"ok":   false,
+				"data": err.Error(),
+			})
+			return
+		}
+		ctxUser = org
+	}
+
+	if err := ctx.User.GetOrganizations(); err != nil {
+		ctx.JSON(500, map[string]interface{}{
+			"ok":   false,
+			"data": err.Error(),
+		})
+		return
+	}
+
+	if ctx.HasError() {
+		ctx.JSON(500, map[string]interface{}{
+			"ok":   false,
+			"data": ctx.GetErrMsg(),
+		})
+		return
+	}
+
+	if ctxUser.IsOrganization() {
+		// Check ownership of organization.
+		if !ctxUser.IsOrgOwner(ctx.User.Id) {
+			ctx.JSON(403, map[string]interface{}{
+				"ok":   false,
+				"data": "Not allowed",
+			})
+			return
+		}
+	}
+
+	authStr := strings.Replace(fmt.Sprintf("://%s:%s",
+		form.AuthUserName, form.AuthPasswd), "@", "%40", -1)
+	url := strings.Replace(form.HttpsUrl, "://", authStr+"@", 1)
+	repo, err := models.MigrateRepository(ctxUser, form.RepoName, form.Description, form.Private,
+		form.Mirror, url)
+	if err == nil {
+		log.Trace("Repository migrated: %s/%s", ctxUser.Name, form.RepoName)
+		ctx.JSON(200,
+			map[string]interface{}{
+				"ok":   true,
+				"data": "/" + ctxUser.Name + "/" + form.RepoName,
+			})
+		return
+	} else if err == models.ErrRepoAlreadyExist {
+		ctx.JSON(500,
+			map[string]interface{}{
+				"ok":   false,
+				"data": err.Error(),
+			})
+		return
+	} else if err == models.ErrRepoNameIllegal {
+		ctx.JSON(500, map[string]interface{}{
+			"ok":   false,
+			"data": err.Error(),
+		})
+		return
+	}
+
+	if repo != nil {
+		if errDelete := models.DeleteRepository(ctxUser.Id, repo.Id, ctxUser.Name); errDelete != nil {
+			log.Error(4, "DeleteRepository: %v", errDelete)
+		}
+	}
+
+	ctx.JSON(500, map[string]interface{}{
+		"ok":   false,
+		"data": err.Error(),
 	})
 }
