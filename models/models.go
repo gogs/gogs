@@ -127,6 +127,7 @@ func SetEngine() (err error) {
 	x.ShowSQL = true
 	x.ShowDebug = true
 	x.ShowErr = true
+	x.ShowWarn = true
 	return nil
 }
 
