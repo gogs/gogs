@@ -429,13 +429,13 @@ function initTeamRepositoriesList() {
 
 function initAdmin() {
     // Create account.
-    $('#login-type').on("change",function(){
+    $('#login-type').on("change", function () {
         var v = $(this).val();
-        if(v.indexOf("0-")+1){
+        if (v.indexOf("0-") + 1) {
             $('.auth-name').toggleHide();
-            $(".pwd").find("input").attr("required","required")
+            $(".pwd").find("input").attr("required", "required")
                 .end().toggleShow();
-        }else{
+        } else {
             $(".pwd").find("input").removeAttr("required")
                 .end().toggleHide();
             $('.auth-name').toggleShow();
@@ -448,6 +448,27 @@ function initAdmin() {
             return true;
         }
         var $form = $('user-profile-form');
+        $form.attr('action', $form.data('delete-url'));
+    });
+    // Create authorization.
+    $('#auth-type').on("change", function () {
+        var v = $(this).val();
+        if (v == 2) {
+            $('.ldap').toggleShow();
+            $('.smtp').toggleHide();
+        }
+        if (v == 3) {
+            $('.smtp').toggleShow();
+            $('.ldap').toggleHide();
+        }
+    });
+    // Delete authorization.
+    $('#auth-delete').click(function (e) {
+        if (!confirm('This authorization is going to be deleted, do you want to continue?')) {
+            e.preventDefault();
+            return true;
+        }
+        var $form = $('auth-setting-form');
         $form.attr('action', $form.data('delete-url'));
     });
 }

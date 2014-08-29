@@ -22,17 +22,11 @@ const (
 	USER_EDIT base.TplName = "admin/user/edit"
 )
 
-func Users(ctx *middleware.Context) {
-	ctx.Data["Title"] = ctx.Tr("admin.users")
-	ctx.Data["PageIsAdmin"] = true
-	ctx.Data["PageIsAdminUsers"] = true
-
+func pagination(ctx *middleware.Context, count int64, pageNum int) int {
 	p := com.StrTo(ctx.Query("p")).MustInt()
 	if p < 1 {
 		p = 1
 	}
-	pageNum := 50
-	count := models.CountUsers()
 	curCount := int64((p-1)*pageNum + pageNum)
 	if curCount > count {
 		p = int(count) / pageNum
@@ -42,11 +36,21 @@ func Users(ctx *middleware.Context) {
 	if p > 1 {
 		ctx.Data["LastPageNum"] = p - 1
 	}
+	return p
+}
+
+func Users(ctx *middleware.Context) {
+	ctx.Data["Title"] = ctx.Tr("admin.users")
+	ctx.Data["PageIsAdmin"] = true
+	ctx.Data["PageIsAdminUsers"] = true
+
+	pageNum := 50
+	p := pagination(ctx, models.CountUsers(), pageNum)
 
 	var err error
 	ctx.Data["Users"], err = models.GetUsers(pageNum, (p-1)*pageNum)
 	if err != nil {
-		ctx.Handle(500, "admin.Users(GetUsers)", err)
+		ctx.Handle(500, "GetUsers", err)
 		return
 	}
 	ctx.HTML(200, USERS)

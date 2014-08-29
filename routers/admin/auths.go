@@ -5,8 +5,6 @@
 package admin
 
 import (
-	"strings"
-
 	"github.com/Unknwon/com"
 	"github.com/go-xorm/core"
 
@@ -19,21 +17,38 @@ import (
 )
 
 const (
+	AUTHS     base.TplName = "admin/auth/list"
 	AUTH_NEW  base.TplName = "admin/auth/new"
 	AUTH_EDIT base.TplName = "admin/auth/edit"
 )
 
+func Authentications(ctx *middleware.Context) {
+	ctx.Data["Title"] = ctx.Tr("admin.authentication")
+	ctx.Data["PageIsAdmin"] = true
+	ctx.Data["PageIsAdminAuthentications"] = true
+
+	var err error
+	ctx.Data["Sources"], err = models.GetAuths()
+	if err != nil {
+		ctx.Handle(500, "GetAuths", err)
+		return
+	}
+	ctx.HTML(200, AUTHS)
+}
+
 func NewAuthSource(ctx *middleware.Context) {
-	ctx.Data["Title"] = "New Authentication"
-	ctx.Data["PageIsAuths"] = true
+	ctx.Data["Title"] = ctx.Tr("admin.auths.new")
+	ctx.Data["PageIsAdmin"] = true
+	ctx.Data["PageIsAdminAuthentications"] = true
 	ctx.Data["LoginTypes"] = models.LoginTypes
 	ctx.Data["SMTPAuths"] = models.SMTPAuths
 	ctx.HTML(200, AUTH_NEW)
 }
 
 func NewAuthSourcePost(ctx *middleware.Context, form auth.AuthenticationForm) {
-	ctx.Data["Title"] = "New Authentication"
-	ctx.Data["PageIsAuths"] = true
+	ctx.Data["Title"] = ctx.Tr("admin.auths.new")
+	ctx.Data["PageIsAdmin"] = true
+	ctx.Data["PageIsAdminAuthentications"] = true
 	ctx.Data["LoginTypes"] = models.LoginTypes
 	ctx.Data["SMTPAuths"] = models.SMTPAuths
 
@@ -79,30 +94,29 @@ func NewAuthSourcePost(ctx *middleware.Context, form auth.AuthenticationForm) {
 	}
 
 	if err := models.CreateSource(source); err != nil {
-		ctx.Handle(500, "admin.auths.NewAuth(CreateSource)", err)
+		ctx.Handle(500, "CreateSource", err)
 		return
 	}
 
-	log.Trace("%s Authentication created by admin(%s): %s", ctx.Req.RequestURI,
-		ctx.User.LowerName, strings.ToLower(form.AuthName))
-
+	log.Trace("Authentication created by admin(%s): %s", ctx.User.Name, form.AuthName)
 	ctx.Redirect("/admin/auths")
 }
 
 func EditAuthSource(ctx *middleware.Context) {
-	ctx.Data["Title"] = "Edit Authentication"
-	ctx.Data["PageIsAuths"] = true
+	ctx.Data["Title"] = ctx.Tr("admin.auths.edit")
+	ctx.Data["PageIsAdmin"] = true
+	ctx.Data["PageIsAdminAuthentications"] = true
 	ctx.Data["LoginTypes"] = models.LoginTypes
 	ctx.Data["SMTPAuths"] = models.SMTPAuths
 
-	id, err := com.StrTo(ctx.Params(":authid")).Int64()
-	if err != nil {
-		ctx.Handle(404, "admin.auths.EditAuthSource", err)
+	id := com.StrTo(ctx.Params(":authid")).MustInt64()
+	if id == 0 {
+		ctx.Handle(404, "EditAuthSource", nil)
 		return
 	}
 	u, err := models.GetLoginSourceById(id)
 	if err != nil {
-		ctx.Handle(500, "admin.user.EditUser(GetLoginSourceById)", err)
+		ctx.Handle(500, "GetLoginSourceById", err)
 		return
 	}
 	ctx.Data["Source"] = u
@@ -110,7 +124,9 @@ func EditAuthSource(ctx *middleware.Context) {
 }
 
 func EditAuthSourcePost(ctx *middleware.Context, form auth.AuthenticationForm) {
-	ctx.Data["Title"] = "Edit Authentication"
+	ctx.Data["Title"] = ctx.Tr("admin.auths.edit")
+	ctx.Data["PageIsAdmin"] = true
+	ctx.Data["PageIsAdminAuthentications"] = true
 	ctx.Data["PageIsAuths"] = true
 	ctx.Data["LoginTypes"] = models.LoginTypes
 	ctx.Data["SMTPAuths"] = models.SMTPAuths
@@ -158,44 +174,38 @@ func EditAuthSourcePost(ctx *middleware.Context, form auth.AuthenticationForm) {
 	}
 
 	if err := models.UpdateSource(&u); err != nil {
-		ctx.Handle(500, "admin.auths.EditAuth(UpdateSource)", err)
+		ctx.Handle(500, "UpdateSource", err)
 		return
 	}
 
-	log.Trace("%s Authentication changed by admin(%s): %s", ctx.Req.RequestURI,
-		ctx.User.LowerName, form.AuthName)
-
-	ctx.Redirect("/admin/auths")
+	log.Trace("Authentication changed by admin(%s): %s", ctx.User.Name, form.AuthName)
+	ctx.Flash.Success(ctx.Tr("admin.auths.update_success"))
+	ctx.Redirect("/admin/auths/" + ctx.Params(":authid"))
 }
 
 func DeleteAuthSource(ctx *middleware.Context) {
-	ctx.Data["Title"] = "Delete Authentication"
-	ctx.Data["PageIsAuths"] = true
-
-	id, err := com.StrTo(ctx.Params(":authid")).Int64()
-	if err != nil {
-		ctx.Handle(404, "admin.auths.DeleteAuth", err)
+	id := com.StrTo(ctx.Params(":authid")).MustInt64()
+	if id == 0 {
+		ctx.Handle(404, "DeleteAuthSource", nil)
 		return
 	}
 
 	a, err := models.GetLoginSourceById(id)
 	if err != nil {
-		ctx.Handle(500, "admin.auths.DeleteAuth(GetLoginSourceById)", err)
+		ctx.Handle(500, "GetLoginSourceById", err)
 		return
 	}
 
 	if err = models.DelLoginSource(a); err != nil {
 		switch err {
 		case models.ErrAuthenticationUserUsed:
-			ctx.Flash.Error("This authentication still has used by some users, you should move them and then delete again.")
+			ctx.Flash.Error("form.still_own_user")
 			ctx.Redirect("/admin/auths/" + ctx.Params(":authid"))
 		default:
-			ctx.Handle(500, "admin.auths.DeleteAuth(DelLoginSource)", err)
+			ctx.Handle(500, "DelLoginSource", err)
 		}
 		return
 	}
-	log.Trace("%s Authentication deleted by admin(%s): %s", ctx.Req.RequestURI,
-		ctx.User.LowerName, ctx.User.LowerName)
-
+	log.Trace("Authentication deleted by admin(%s): %s", ctx.User.Name, a.Name)
 	ctx.Redirect("/admin/auths")
 }
