@@ -138,10 +138,15 @@ func runWeb(*cli.Context) {
 			r.Post("/markdown/raw", v1.MarkdownRaw)
 
 			// Users.
-			r.Get("/users/search", v1.SearchUsers)
+			m.Group("/users", func(r *macaron.Router) {
+				r.Get("/search", v1.SearchUsers)
+			})
 
 			// Repositories.
-			r.Get("/repos/search", v1.SearchRepos)
+			m.Group("/repos", func(r *macaron.Router) {
+				r.Get("/search", v1.SearchRepos)
+				r.Post("/migrate", bindIgnErr(auth.MigrateRepoForm{}), v1.Migrate)
+			})
 
 			r.Any("/*", func(ctx *middleware.Context) {
 				ctx.JSON(404, &base.ApiJsonErr{"Not Found", v1.DOC_URL})

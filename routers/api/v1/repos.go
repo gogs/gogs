@@ -61,42 +61,50 @@ func SearchRepos(ctx *middleware.Context) {
 }
 
 func Migrate(ctx *middleware.Context, form auth.MigrateRepoForm) {
-	ctxUser := ctx.User
+	u, err := models.GetUserByName(ctx.Query("username"))
+	if err != nil {
+		ctx.JSON(500, map[string]interface{}{
+			"ok":    false,
+			"error": err.Error(),
+		})
+		return
+	}
+	if !u.ValidtePassword(ctx.Query("password")) {
+		ctx.JSON(500, map[string]interface{}{
+			"ok":    false,
+			"error": "username or password is not correct",
+		})
+		return
+	}
+
+	ctxUser := u
 	// Not equal means current user is an organization.
-	if form.Uid != ctx.User.Id {
+	if form.Uid != u.Id {
 		org, err := models.GetUserById(form.Uid)
-		if err != nil && err != models.ErrUserNotExist {
+		if err != nil {
 			ctx.JSON(500, map[string]interface{}{
-				"ok":   false,
-				"data": err.Error(),
+				"ok":    false,
+				"error": err.Error(),
 			})
 			return
 		}
 		ctxUser = org
 	}
 
-	if err := ctx.User.GetOrganizations(); err != nil {
-		ctx.JSON(500, map[string]interface{}{
-			"ok":   false,
-			"data": err.Error(),
-		})
-		return
-	}
-
 	if ctx.HasError() {
 		ctx.JSON(500, map[string]interface{}{
-			"ok":   false,
-			"data": ctx.GetErrMsg(),
+			"ok":    false,
+			"error": ctx.GetErrMsg(),
 		})
 		return
 	}
 
 	if ctxUser.IsOrganization() {
 		// Check ownership of organization.
-		if !ctxUser.IsOrgOwner(ctx.User.Id) {
+		if !ctxUser.IsOrgOwner(u.Id) {
 			ctx.JSON(403, map[string]interface{}{
-				"ok":   false,
-				"data": "Not allowed",
+				"ok":    false,
+				"error": "given user is not owner of organization",
 			})
 			return
 		}
@@ -109,23 +117,9 @@ func Migrate(ctx *middleware.Context, form auth.MigrateRepoForm) {
 		form.Mirror, url)
 	if err == nil {
 		log.Trace("Repository migrated: %s/%s", ctxUser.Name, form.RepoName)
-		ctx.JSON(200,
-			map[string]interface{}{
-				"ok":   true,
-				"data": "/" + ctxUser.Name + "/" + form.RepoName,
-			})
-		return
-	} else if err == models.ErrRepoAlreadyExist {
-		ctx.JSON(500,
-			map[string]interface{}{
-				"ok":   false,
-				"data": err.Error(),
-			})
-		return
-	} else if err == models.ErrRepoNameIllegal {
-		ctx.JSON(500, map[string]interface{}{
-			"ok":   false,
-			"data": err.Error(),
+		ctx.JSON(200, map[string]interface{}{
+			"ok":   true,
+			"data": "/" + ctxUser.Name + "/" + form.RepoName,
 		})
 		return
 	}
@@ -137,7 +131,7 @@ func Migrate(ctx *middleware.Context, form auth.MigrateRepoForm) {
 	}
 
 	ctx.JSON(500, map[string]interface{}{
-		"ok":   false,
-		"data": err.Error(),
+		"ok":    false,
+		"error": err.Error(),
 	})
 }
