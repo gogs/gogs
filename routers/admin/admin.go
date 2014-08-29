@@ -23,7 +23,6 @@ import (
 
 const (
 	DASHBOARD       base.TplName = "admin/dashboard"
-	USERS           base.TplName = "admin/users"
 	REPOS           base.TplName = "admin/repos"
 	AUTHS           base.TplName = "admin/auths"
 	CONFIG          base.TplName = "admin/config"
@@ -155,35 +154,6 @@ func Dashboard(ctx *middleware.Context) {
 	updateSystemStatus()
 	ctx.Data["SysStatus"] = sysStatus
 	ctx.HTML(200, DASHBOARD)
-}
-
-func Users(ctx *middleware.Context) {
-	ctx.Data["Title"] = "User Management"
-	ctx.Data["PageIsUsers"] = true
-
-	p := com.StrTo(ctx.Query("p")).MustInt()
-	if p < 1 {
-		p = 1
-	}
-	pageNum := 50
-	count := models.CountUsers()
-	curCount := int64((p-1)*pageNum + pageNum)
-	if curCount > count {
-		p = int(count) / pageNum
-	} else if count > curCount {
-		ctx.Data["NextPageNum"] = p + 1
-	}
-	if p > 1 {
-		ctx.Data["LastPageNum"] = p - 1
-	}
-
-	var err error
-	ctx.Data["Users"], err = models.GetUsers(pageNum, (p-1)*pageNum)
-	if err != nil {
-		ctx.Handle(500, "admin.Users(GetUsers)", err)
-		return
-	}
-	ctx.HTML(200, USERS)
 }
 
 func Repositories(ctx *middleware.Context) {

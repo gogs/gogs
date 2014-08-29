@@ -249,8 +249,21 @@ img.avatar-100 {
   padding: 8px;
   vertical-align: top;
 }
-th {
+.table th {
   text-align: left;
+}
+.table-striped > tbody > tr:nth-child(odd) > td,
+.table-striped > tbody > tr:nth-child(odd) > th {
+  background-color: #f9f9f9;
+}
+.pagination {
+  display: inline-block;
+  padding-left: 0;
+  margin: 20px 0;
+  border-radius: 4px;
+}
+.pagination li {
+  display: inline;
 }
 .markdown {
   background-color: white;
@@ -1925,11 +1938,14 @@ textarea#issue-add-content {
   height: 40px;
   line-height: 40px;
 }
+.admin-panel {
+  padding: 10px 20px;
+}
 .admin-desc {
   padding: 10px 20px;
 }
 .admin-table {
-  padding: 15px 20px 5px 20px;
+  padding: 15px 0 5px 0;
 }
 .dl-horizontal dt {
   float: left;

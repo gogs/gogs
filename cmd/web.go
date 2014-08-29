@@ -200,7 +200,7 @@ func runWeb(*cli.Context) {
 		r.Post("/new", bindIgnErr(auth.RegisterForm{}), admin.NewUserPost)
 		r.Get("/:userid", admin.EditUser)
 		r.Post("/:userid", bindIgnErr(auth.AdminEditUserForm{}), admin.EditUserPost)
-		r.Get("/:userid/delete", admin.DeleteUser)
+		r.Post("/:userid/delete", admin.DeleteUser)
 	}, adminReq)
 
 	m.Group("/admin/auths", func(r *macaron.Router) {
