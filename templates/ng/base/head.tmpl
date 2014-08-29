@@ -7,19 +7,26 @@
 		<meta name="description" content="Gogs(Go Git Service) a painless self-hosted Git Service written in Go" />
 		<meta name="keywords" content="go, git, self-hosted, gogs">
 		<meta name="_csrf" content="{{.CsrfToken}}" />
+		{{if .Repository.IsGoget}}<meta name="go-import" content="{{.GoGetImport}} git {{.CloneLink.HTTPS}}">{{end}}
 
 		<link rel="shortcut icon" href="/img/favicon.png" />
 
+		{{if CdnMode}}
+		<link href="//maxcdn.bootstrapcdn.com/font-awesome/4.2.0/css/font-awesome.min.css">
+
+		<script src="//code.jquery.com/jquery-1.11.1.min.js"></script>
+		{{else}}
+		<link rel="stylesheet" href="/css/font-awesome.min.css">
+		
+		<script src="/ng/js/lib/jquery-1.11.1.min.js"></script>
+		{{end}}
 		<!-- Stylesheet -->
 		<link rel="stylesheet" href="/ng/css/ui.css">
 		<link rel="stylesheet" href="/ng/css/gogs.css">
-		<link rel="stylesheet" href="/css/font-awesome.min.css">
 		<link rel="stylesheet" href="/ng/fonts/octicons.css">
-		<!-- <link rel="stylesheet" href="http://cdn.bootcss.com/highlight.js/8.1/styles/github.min.css"> -->
 		<link rel="stylesheet" href="/css/github.min.css">
 
 		<!-- JavaScript -->
-		<script src="/ng/js/lib/jquery-1.11.1.min.js"></script>
 		<script src="/ng/js/lib/tabs.js"></script>
     	<script src="/ng/js/lib/lib.js"></script>
 		<script src="/ng/js/gogs.js"></script>

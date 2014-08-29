@@ -254,18 +254,33 @@ clear: both;
 .table {
     width: 100%;
     max-width: 100%;
+    > thead > tr > th, 
+    > tbody > tr > th, 
+    > tfoot > tr > th, 
+    > thead > tr > td, 
+    > tbody > tr > td, 
+    > tfoot > tr > td {
+        border-top: 1px solid #e7eaec;
+        line-height: 1.42857;
+        padding: 8px;
+        vertical-align: top;
+    }
+    th {
+        text-align: left;
+    }
+} 
+.table-striped {
+    >tbody>tr:nth-child(odd)>td,
+    >tbody>tr:nth-child(odd)>th {
+        background-color: #f9f9f9;
+    }
 }
-.table > thead > tr > th, 
-.table > tbody > tr > th, 
-.table > tfoot > tr > th, 
-.table > thead > tr > td, 
-.table > tbody > tr > td, 
-.table > tfoot > tr > td {
-    border-top: 1px solid #e7eaec;
-    line-height: 1.42857;
-    padding: 8px;
-    vertical-align: top;
-}
-th {
-    text-align: left;
+.pagination {
+    display: inline-block;
+    padding-left: 0;
+    margin: 20px 0;
+    border-radius: 4px;
+    li {
+        display: inline;
+    }
 }

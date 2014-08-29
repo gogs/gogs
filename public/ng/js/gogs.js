@@ -427,6 +427,31 @@ function initTeamRepositoriesList() {
     });
 }
 
+function initAdmin() {
+    // Create account.
+    $('#login-type').on("change",function(){
+        var v = $(this).val();
+        if(v.indexOf("0-")+1){
+            $('.auth-name').toggleHide();
+            $(".pwd").find("input").attr("required","required")
+                .end().toggleShow();
+        }else{
+            $(".pwd").find("input").removeAttr("required")
+                .end().toggleHide();
+            $('.auth-name').toggleShow();
+        }
+    });
+    // Delete account.
+    $('#user-delete').click(function (e) {
+        if (!confirm('This account is going to be deleted, do you want to continue?')) {
+            e.preventDefault();
+            return true;
+        }
+        var $form = $('user-profile-form');
+        $form.attr('action', $form.data('delete-url'));
+    });
+}
+
 $(document).ready(function () {
     initCore();
     if ($('#user-profile-setting').length) {
@@ -452,6 +477,9 @@ $(document).ready(function () {
     }
     if ($('#team-repositories-list').length) {
         initTeamRepositoriesList();
+    }
+    if ($('#admin-setting').length) {
+        initAdmin();
     }
 
     Tabs('#dashboard-sidebar-menu');
