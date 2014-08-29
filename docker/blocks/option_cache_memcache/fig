@@ -1,0 +1,2 @@
+cache:
+    image: sylvainlasnier/memcached:latest

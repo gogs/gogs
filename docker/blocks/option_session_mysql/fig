@@ -1,0 +1,7 @@
+session:
+  image: mysql:latest
+  environment:
+    MYSQL_ROOT_PASSWORD: rootpass
+    MYSQL_DATABASE: gogs_session
+    MYSQL_USER: gogs
+    MYSQL_PASSWORD: password
