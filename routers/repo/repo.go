@@ -145,7 +145,7 @@ func MigratePost(ctx *middleware.Context, form auth.MigrateRepoForm) {
 	// Not equal means current user is an organization.
 	if form.Uid != ctx.User.Id {
 		org, err := models.GetUserById(form.Uid)
-		if err != nil && err != models.ErrUserNotExist {
+		if err != nil {
 			ctx.Handle(500, "GetUserById", err)
 			return
 		}
