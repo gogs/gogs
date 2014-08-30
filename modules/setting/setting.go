@@ -371,7 +371,7 @@ func newSessionService() {
 	SessionConfig.Maxlifetime = Cfg.MustInt64("session", "SESSION_LIFE_TIME", 86400)
 	SessionConfig.SessionIDHashFunc = Cfg.MustValueRange("session", "SESSION_ID_HASHFUNC",
 		"sha1", []string{"sha1", "sha256", "md5"})
-	SessionConfig.SessionIDHashKey = Cfg.MustValue("session", "SESSION_ID_HASHKEY")
+	SessionConfig.SessionIDHashKey = Cfg.MustValue("session", "SESSION_ID_HASHKEY", string(com.RandomCreateBytes(16)))
 
 	if SessionProvider == "file" {
 		os.MkdirAll(path.Dir(SessionConfig.ProviderConfig), os.ModePerm)

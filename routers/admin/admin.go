@@ -22,10 +22,9 @@ import (
 )
 
 const (
-	DASHBOARD       base.TplName = "admin/dashboard"
-	CONFIG          base.TplName = "admin/config"
-	MONITOR_PROCESS base.TplName = "admin/monitor/process"
-	MONITOR_CRON    base.TplName = "admin/monitor/cron"
+	DASHBOARD base.TplName = "admin/dashboard"
+	CONFIG    base.TplName = "admin/config"
+	MONITOR   base.TplName = "admin/monitor"
 )
 
 var (
@@ -155,8 +154,9 @@ func Dashboard(ctx *middleware.Context) {
 }
 
 func Config(ctx *middleware.Context) {
-	ctx.Data["Title"] = "Server Configuration"
-	ctx.Data["PageIsConfig"] = true
+	ctx.Data["Title"] = ctx.Tr("admin.users")
+	ctx.Data["PageIsAdmin"] = true
+	ctx.Data["PageIsAdminConfig"] = true
 
 	ctx.Data["AppUrl"] = setting.AppUrl
 	ctx.Data["Domain"] = setting.Domain
@@ -212,18 +212,10 @@ func Config(ctx *middleware.Context) {
 }
 
 func Monitor(ctx *middleware.Context) {
-	ctx.Data["Title"] = "Monitoring Center"
-	ctx.Data["PageIsMonitor"] = true
-
-	tab := ctx.Query("tab")
-	switch tab {
-	case "process":
-		ctx.Data["PageIsMonitorProcess"] = true
-		ctx.Data["Processes"] = process.Processes
-		ctx.HTML(200, MONITOR_PROCESS)
-	default:
-		ctx.Data["PageIsMonitorCron"] = true
-		ctx.Data["Entries"] = cron.ListEntries()
-		ctx.HTML(200, MONITOR_CRON)
-	}
+	ctx.Data["Title"] = ctx.Tr("admin.monitor")
+	ctx.Data["PageIsAdmin"] = true
+	ctx.Data["PageIsAdminMonitor"] = true
+	ctx.Data["Processes"] = process.Processes
+	ctx.Data["Entries"] = cron.ListEntries()
+	ctx.HTML(200, MONITOR)
 }
