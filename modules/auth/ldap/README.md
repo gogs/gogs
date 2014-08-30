@@ -13,7 +13,7 @@ If there's connection error, the server will be disabled and won't be checked ag
 
 ## Usage
 
-In the [security] section, set 
+In the [security] section, set
 >  LDAP_AUTH = true
 
 then for each LDAP source, set

@@ -5,7 +5,7 @@
 #
 # start gogs web
 #
-IFS=' 
+IFS='
 	'
 PATH=/bin:/usr/bin:/usr/local/bin
 USER=$(whoami)

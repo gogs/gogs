@@ -546,7 +546,7 @@ function initIssue() {
             if ($textArea.attr("id") == "issue-reply-content") {
                 var $closeBtn = $('#issue-close-btn');
                 var $openBtn = $('#issue-open-btn');
-    
+
                 if ($textArea.val().length) {
                     $closeBtn.val($closeBtn.data("text"));
                     $openBtn.val($openBtn.data("text"));
@@ -575,7 +575,7 @@ function initIssue() {
         $hoverImage.addClass("attachment-preview-img");
 
         $hoverElement.append($hoverImage);
-        $(document.body).append($hoverElement); 
+        $(document.body).append($hoverElement);
 
         var over = function() {
             var $this = $(this);
@@ -605,7 +605,7 @@ function initIssue() {
                     $hoverElement.css({"top": top + "px", "left": left + "px"});
                     $hoverElement.css({"height": height + 16, "width": width + 16});
                     $hoverElement.show();
-                });            
+                });
             } else {
                 $hoverElement.show();
             }
@@ -624,7 +624,7 @@ function initIssue() {
         var $addButton    = $("#attachments-button");
         var files         = [];
         var fileInput     = document.getElementById("attachments-input");
-        
+
         if (fileInput === null) {
             return;
         }
@@ -635,9 +635,9 @@ function initIssue() {
             files.splice($parent.data("index"), 1);
             $parent.remove();
         });
-        
+
         var clickedButton;
-        
+
         $('input[type="submit"],input[type="button"],button.btn-success', fileInput.form).on('click', function() {
             clickedButton = this;
 
@@ -722,7 +722,7 @@ function initIssue() {
 
             xhr.open("POST", this.action, true);
             xhr.send(data);
-            
+
             return false;
         });
 
@@ -826,7 +826,7 @@ function initIssue() {
                         //window.location.reload();
                         $a.data("assigned", uid);
 
-                        if (uid > 0) {    
+                        if (uid > 0) {
                             $('.clear-assignee').toggleShow();
                             $(".assignee > p").html('<img src="' + img + '"><strong>' + text + '</strong>');
                         } else {
@@ -862,12 +862,12 @@ function initIssue() {
         $('.clear-milestone').toggleShow();
     }
     $('.milestone', '#issue').on('click', 'li.milestone-item', function () {
-        var id = $(this).data("id");    
+        var id = $(this).data("id");
         if (is_issue_bar) {
             var m = $m.data("milestone");
             if (id != m) {
                 var text = $(this).text();
-                
+
                 $.post($m.data("ajax"), {
                     issue: $('#issue').data("id"),
                     milestone: id
@@ -876,7 +876,7 @@ function initIssue() {
                         //window.location.reload();
                         $m.data("milestone", id);
 
-                        if (id > 0) {    
+                        if (id > 0) {
                             $('.clear-milestone').toggleShow();
                             $(".milestone > .name").html('<a href="' + location.pathname + '?milestone=' + id + '"><strong>' + text + '</strong></a>');
                         } else {
@@ -982,7 +982,7 @@ function initIssue() {
                     $(item).addClass("no-checked");
 
                     $("#label-" + id, $labels).remove();
-                    
+
                     if ($labels.children(".label-item").length == 0) {
                         $labels.append("<p>None yet</p>");
                     }
@@ -991,7 +991,7 @@ function initIssue() {
 
                     $(item).removeClass("no-checked");
                     $(item).addClass("checked");
-                    
+
                     $("p:not([class])", $labels).remove();
 
                     var $l = $("<p></p>");
