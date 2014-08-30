@@ -21,13 +21,13 @@ fi
 
 # Replace the database root password in database image Dockerfile.
 sed -i "s/THE_DB_PASSWORD/$DB_PASSWORD/g" images/$DB_TYPE/Dockerfile
-# Replace the database root password in gogits image deploy.sh file. 
+# Replace the database root password in gogits image deploy.sh file.
 sed -i "s/THE_DB_PASSWORD/$DB_PASSWORD/g" images/gogits/deploy.sh
-# Replace the apt source in gogits image Dockerfile. 
+# Replace the apt source in gogits image Dockerfile.
 sed -i "s/#$APT_SOURCE#//" images/gogits/Dockerfile
 # Uncomment the installation of database lib in gogs Dockerfile
 sed -i "s/#$DB_TYPE#//" images/gogits/Dockerfile
-# Replace the database type in gogits image deploy.sh file. 
+# Replace the database type in gogits image deploy.sh file.
 sed -i "s/THE_DB_TYPE/$DB_TYPE/g" images/gogits/deploy.sh
 
 if [ $MEM_TYPE != "" ]
