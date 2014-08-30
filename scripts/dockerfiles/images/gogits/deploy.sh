@@ -9,15 +9,15 @@ MEM_TYPE=THE_MEM_TYPE
 DB_TYPE_LINE=`awk '$0 ~ str{print NR}' str="DB_TYPE = mysql" $GOPATH/src/github.com/gogits/gogs/conf/app.ini`
 DB_PASSWORD_LINE=`awk '$0 ~ str{print NR+1}' str="USER = root" $GOPATH/src/github.com/gogits/gogs/conf/app.ini`
 
-sed -i "${DB_TYPE_LINE}s/.*$/DB_TYPE = $DB_TYPE/g" $GOPATH/src/github.com/gogits/gogs/conf/app.ini 
-sed -i "${DB_PASSWORD_LINE}s/.*$/PASSWD = $DB_PASSWORD/g" $GOPATH/src/github.com/gogits/gogs/conf/app.ini 
+sed -i "${DB_TYPE_LINE}s/.*$/DB_TYPE = $DB_TYPE/g" $GOPATH/src/github.com/gogits/gogs/conf/app.ini
+sed -i "${DB_PASSWORD_LINE}s/.*$/PASSWD = $DB_PASSWORD/g" $GOPATH/src/github.com/gogits/gogs/conf/app.ini
 
 
 
 if [ $MEM_TYPE != "" ]
   then
   MEM_HOST_LINE=`awk '$0 ~ str{print NR+6}' str="ADAPTER = memory" $GOPATH/src/github.com/gogits/gogs/conf/app.ini`
-                
+
   _MEM_ADDR=`echo $MEM_PORT | cut -d '/' -f 3 | cut -d ':' -f 1`
   _MEM_PORT=`echo $MEM_PORT | cut -d '/' -f 3 | cut -d ':' -f 2`
 
@@ -54,7 +54,7 @@ fi
 #sed -i "/HOST = 127.0.0.1:3306/c\HOST = $DB_PORT_3306_TCP_ADDR:$DB_PORT_3306_TCP_PORT" $GOPATH/src/github.com/gogits/gogs/conf/app.ini
 sed -i "/HOST = 127.0.0.1:3306/c\HOST = `echo $DB_PORT | cut -d '/' -f 3`" $GOPATH/src/github.com/gogits/gogs/conf/app.ini
 
-cd $GOPATH/src/github.com/gogits/gogs/ 
+cd $GOPATH/src/github.com/gogits/gogs/
 
 # The sudo is a must here, or the go within docker container won't get the current user by os.Getenv("USERNAME")
 sudo ./gogs web

@@ -45,19 +45,19 @@
                                         <div class="tab-pane issue-preview-content" id="issue-edit-preview">Loading...</div>
                                     </div>
                                 </div>
-                            </div>                        
+                            </div>
                         </div>
                         {{with $attachments := .Issue.Attachments}}
                         {{if $attachments}}
                         <div class="attachments">
                             <span class="attachment-label label label-info">Attachments:</span>
-                                
+
                             {{range $attachments}}
                             <a class="attachment label label-default" href="{{.IssueId}}/attachment/{{.Id}}">{{.Name}}</a>
                             {{end}}
                         </div>
                         {{end}}
-                        {{end}}    
+                        {{end}}
                     </div>
                     {{range .Comments}}
                     {{/* 0 = COMMENT, 1 = REOPEN, 2 = CLOSE, 3 = ISSUE, 4 = COMMIT, 5 = PULL */}}
@@ -145,7 +145,7 @@
                             {{if .AttachmentsEnabled}}
                             <div id="attached">
                                 <div id="attached-list">
-                                    <b>Attachments:</b> 
+                                    <b>Attachments:</b>
                                 </div>
                             </div>
                             {{end}}
