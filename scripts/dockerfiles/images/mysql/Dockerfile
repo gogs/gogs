@@ -6,20 +6,20 @@ MAINTAINER  Meaglith Ma <genedna@gmail.com> (@genedna)
 RUN apt-get install -y --force-yes software-properties-common
 RUN add-apt-repository -y "deb http://archive.ubuntu.com/ubuntu $(lsb_release -sc) universe"
 RUN apt-get --yes --force-yes update
-RUN apt-get --yes --force-yes upgrade 
+RUN apt-get --yes --force-yes upgrade
 
 ENV MYSQL_PASSWORD THE_DB_PASSWORD
 
-RUN echo "mysql-server mysql-server/root_password password $MYSQL_PASSWORD" | debconf-set-selections  
+RUN echo "mysql-server mysql-server/root_password password $MYSQL_PASSWORD" | debconf-set-selections
 RUN echo "mysql-server mysql-server/root_password_again password $MYSQL_PASSWORD" | debconf-set-selections
 
-RUN apt-get update && apt-get install -y --force-yes mysql-server 
+RUN apt-get update && apt-get install -y --force-yes mysql-server
 RUN sed -i -e"s/^bind-address\s*=\s*127.0.0.1/bind-address = 0.0.0.0/" /etc/mysql/my.cnf
 
 RUN service mysql restart
 
-RUN echo "mysql -uroot -p$MYSQL_PASSWORD -e 'drop database if exists gogs;'" >> import.sh  
-RUN echo "mysql -uroot -p$MYSQL_PASSWORD -e 'create database gogs;'" >> import.sh  
+RUN echo "mysql -uroot -p$MYSQL_PASSWORD -e 'drop database if exists gogs;'" >> import.sh
+RUN echo "mysql -uroot -p$MYSQL_PASSWORD -e 'create database gogs;'" >> import.sh
 RUN chmod +x import.sh
 
 RUN apt-get autoremove -y
@@ -32,4 +32,4 @@ RUN    /usr/sbin/mysqld & \
 
 EXPOSE 3306
 
-CMD ["/usr/bin/mysqld_safe", "--skip-syslog", "--log-error=/dev/null"]  
+CMD ["/usr/bin/mysqld_safe", "--skip-syslog", "--log-error=/dev/null"]

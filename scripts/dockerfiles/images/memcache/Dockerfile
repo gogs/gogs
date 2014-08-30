@@ -13,7 +13,7 @@ RUN apt-get install -y memcached
 EXPOSE 11211
 
 # Default Memcached run command arguments
-# Change to limit memory when creating container in Tutum 
+# Change to limit memory when creating container in Tutum
 CMD ["-m", "64"]
 
 # Set the user to run Memcached daemon

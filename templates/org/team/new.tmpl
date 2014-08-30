@@ -30,15 +30,15 @@
             <div class="field">
                 <h4 class="text-center">{{.i18n.Tr "org.team_permission_desc"}}</h4>
                 <label></label>
-                <input name="permission" type="radio" value="read" {{if or .PageIsOrgTeamsNew (eq .Team.Authorize 1)}}checked{{end}}> {{.i18n.Tr "org.teams.read_access"}} 
+                <input name="permission" type="radio" value="read" {{if or .PageIsOrgTeamsNew (eq .Team.Authorize 1)}}checked{{end}}> {{.i18n.Tr "org.teams.read_access"}}
                 <label></label>
                 <p class="text-grey note">{{.i18n.Tr "org.teams.read_access_helper"}}</p>
                 <label></label>
-                <input name="permission" type="radio" value="write" {{if eq .Team.Authorize 2}}checked{{end}}> {{.i18n.Tr "org.teams.write_access"}} 
+                <input name="permission" type="radio" value="write" {{if eq .Team.Authorize 2}}checked{{end}}> {{.i18n.Tr "org.teams.write_access"}}
                 <label></label>
                 <p class="text-grey note">{{.i18n.Tr "org.teams.write_access_helper"}}</p>
                 <label></label>
-                <input name="permission" type="radio" value="admin" {{if eq .Team.Authorize 3}}checked{{end}}> {{.i18n.Tr "org.teams.admin_access"}} 
+                <input name="permission" type="radio" value="admin" {{if eq .Team.Authorize 3}}checked{{end}}> {{.i18n.Tr "org.teams.admin_access"}}
                 <label></label>
                 <p class="text-grey note">{{.i18n.Tr "org.teams.admin_access_helper"}}</p>
             </div>
