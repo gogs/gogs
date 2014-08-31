@@ -2,6 +2,7 @@
 path = github.com/gogits/gogs
 
 [deps]
+code.google.com/p/mahonia = 
 github.com/Unknwon/cae = 
 github.com/Unknwon/com = 
 github.com/Unknwon/goconfig = 
@@ -20,9 +21,10 @@ github.com/macaron-contrib/cache =
 github.com/macaron-contrib/captcha = 
 github.com/macaron-contrib/csrf = 
 github.com/macaron-contrib/i18n = 
-github.com/macaron-contrib/session =
+github.com/macaron-contrib/session = 
 github.com/macaron-contrib/toolbox = 
 github.com/nfnt/resize = 
+github.com/saintfish/chardet = 
 
 [res]
 include = conf|etc|public|scripts|templates
