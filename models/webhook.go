@@ -7,6 +7,7 @@ package models
 import (
 	"encoding/json"
 	"errors"
+	"io/ioutil"
 	"time"
 
 	"github.com/gogits/gogs/modules/httplib"
@@ -33,15 +34,17 @@ type HookEvent struct {
 
 // Webhook represents a web hook object.
 type Webhook struct {
-	Id          int64
-	RepoId      int64
-	Url         string `xorm:"TEXT"`
-	ContentType HookContentType
-	Secret      string `xorm:"TEXT"`
-	Events      string `xorm:"TEXT"`
-	*HookEvent  `xorm:"-"`
-	IsSsl       bool
-	IsActive    bool
+	Id           int64
+	RepoId       int64
+	Url          string `xorm:"TEXT"`
+	ContentType  HookContentType
+	Secret       string `xorm:"TEXT"`
+	Events       string `xorm:"TEXT"`
+	*HookEvent   `xorm:"-"`
+	IsSsl        bool
+	IsActive     bool
+	HookTaskType HookTaskType
+	Meta         string `xorm:"TEXT"` // store hook-specific attributes
 }
 
 // GetEvent handles conversion from Events to HookEvent.
@@ -50,6 +53,14 @@ func (w *Webhook) GetEvent() {
 	if err := json.Unmarshal([]byte(w.Events), w.HookEvent); err != nil {
 		log.Error(4, "webhook.GetEvent(%d): %v", w.Id, err)
 	}
+}
+
+func (w *Webhook) GetSlackHook() *Slack {
+	s := &Slack{}
+	if err := json.Unmarshal([]byte(w.Meta), s); err != nil {
+		log.Error(4, "webhook.GetSlackHook(%d): %v", w.Id, err)
+	}
+	return s
 }
 
 // UpdateEvent handles conversion from HookEvent to Events.
@@ -119,8 +130,8 @@ func DeleteWebhook(hookId int64) error {
 type HookTaskType int
 
 const (
-	WEBHOOK HookTaskType = iota + 1
-	SERVICE
+	GOGS HookTaskType = iota + 1
+	SLACK
 )
 
 type HookEventType string
@@ -152,6 +163,10 @@ type PayloadRepo struct {
 	Private     bool           `json:"private"`
 }
 
+type BasePayload interface {
+	GetJSONPayload() ([]byte, error)
+}
+
 // Payload represents a payload information of hook.
 type Payload struct {
 	Secret  string           `json:"secret"`
@@ -161,25 +176,33 @@ type Payload struct {
 	Pusher  *PayloadAuthor   `json:"pusher"`
 }
 
+func (p Payload) GetJSONPayload() ([]byte, error) {
+	data, err := json.Marshal(p)
+	if err != nil {
+		return []byte{}, err
+	}
+	return data, nil
+}
+
 // HookTask represents a hook task.
 type HookTask struct {
 	Id             int64
 	Uuid           string
 	Type           HookTaskType
 	Url            string
-	*Payload       `xorm:"-"`
+	BasePayload    `xorm:"-"`
 	PayloadContent string `xorm:"TEXT"`
 	ContentType    HookContentType
 	EventType      HookEventType
 	IsSsl          bool
-	IsDeliveried   bool
+	IsDelivered    bool
 	IsSucceed      bool
 }
 
 // CreateHookTask creates a new hook task,
 // it handles conversion from Payload to PayloadContent.
 func CreateHookTask(t *HookTask) error {
-	data, err := json.Marshal(t.Payload)
+	data, err := t.BasePayload.GetJSONPayload()
 	if err != nil {
 		return err
 	}
@@ -198,7 +221,7 @@ func UpdateHookTask(t *HookTask) error {
 // DeliverHooks checks and delivers undelivered hooks.
 func DeliverHooks() {
 	timeout := time.Duration(setting.WebhookDeliverTimeout) * time.Second
-	x.Where("is_deliveried=?", false).Iterate(new(HookTask),
+	x.Where("is_delivered=?", false).Iterate(new(HookTask),
 		func(idx int, bean interface{}) error {
 			t := bean.(*HookTask)
 			req := httplib.Post(t.Url).SetTimeout(timeout, timeout).
@@ -212,13 +235,36 @@ func DeliverHooks() {
 				req.Param("payload", t.PayloadContent)
 			}
 
-			t.IsDeliveried = true
+			t.IsDelivered = true
 
 			// TODO: record response.
-			if _, err := req.Response(); err != nil {
-				log.Error(4, "Delivery: %v", err)
-			} else {
-				t.IsSucceed = true
+			switch t.Type {
+			case GOGS:
+				{
+					if _, err := req.Response(); err != nil {
+						log.Error(4, "Delivery: %v", err)
+					} else {
+						t.IsSucceed = true
+					}
+				}
+			case SLACK:
+				{
+					if res, err := req.Response(); err != nil {
+						log.Error(4, "Delivery: %v", err)
+					} else {
+						defer res.Body.Close()
+						contents, err := ioutil.ReadAll(res.Body)
+						if err != nil {
+							log.Error(4, "%s", err)
+						} else {
+							if string(contents) != "ok" {
+								log.Error(4, "slack failed with: %s", string(contents))
+							} else {
+								t.IsSucceed = true
+							}
+						}
+					}
+				}
 			}
 
 			if err := UpdateHookTask(t); err != nil {
