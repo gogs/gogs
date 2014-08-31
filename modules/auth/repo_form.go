@@ -69,14 +69,28 @@ func (f *RepoSettingForm) Validate(ctx *macaron.Context, errs *binding.Errors, l
 //        \/       \/    \/     \/     \/            \/
 
 type NewWebhookForm struct {
-	PayloadUrl  string `form:"payload_url" binding:"Required;Url"`
-	ContentType string `form:"content_type" binding:"Required"`
-	Secret      string `form:"secret"`
-	PushOnly    bool   `form:"push_only"`
-	Active      bool   `form:"active"`
+	HookTaskType string `form:"hook_type" binding:"Required"`
+	PayloadUrl   string `form:"payload_url" binding:"Required;Url"`
+	ContentType  string `form:"content_type" binding:"Required"`
+	Secret       string `form:"secret"`
+	PushOnly     bool   `form:"push_only"`
+	Active       bool   `form:"active"`
 }
 
 func (f *NewWebhookForm) Validate(ctx *macaron.Context, errs *binding.Errors, l i18n.Locale) {
+	validate(errs, ctx.Data, f, l)
+}
+
+type NewSlackHookForm struct {
+	HookTaskType string `form:"hook_type" binding:"Required"`
+	Domain       string `form:"domain" binding:"Required`
+	Token        string `form:"token" binding:"Required"`
+	Channel      string `form:"channel" binding:"Required"`
+	PushOnly     bool   `form:"push_only"`
+	Active       bool   `form:"active"`
+}
+
+func (f *NewSlackHookForm) Validate(ctx *macaron.Context, errs *binding.Errors, l i18n.Locale) {
 	validate(errs, ctx.Data, f, l)
 }
 

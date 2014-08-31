@@ -359,6 +359,22 @@ function initRepoSetting() {
             return true;
         }
     });
+
+    // web hook type change
+    $('select#hook-type').on("change", function () {
+      hookTypes = ['Gogs','Slack'];
+
+      var curHook = $(this).val();
+      hookTypes.forEach(function(hookType) {
+        if (curHook === hookType) {
+          $('div#'+hookType.toLowerCase()).toggleShow();
+        }
+        else {
+          $('div#'+hookType.toLowerCase()).toggleHide();
+        }
+      });
+    });
+
     $('#transfer-button').click(function () {
         $('#transfer-form').show();
     });

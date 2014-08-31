@@ -1404,14 +1404,16 @@ The register and sign-in page style
 #auth-setting-form,
 #org-setting-form,
 #repo-setting-form,
-#user-profile-form {
+#user-profile-form,
+.repo-setting-form {
   background-color: #FFF;
   padding: 30px 0;
 }
 #auth-setting-form textarea,
 #org-setting-form textarea,
 #repo-setting-form textarea,
-#user-profile-form textarea {
+#user-profile-form textarea,
+.repo-setting-form textarea {
   margin-left: 4px;
   height: 100px;
 }
@@ -1419,23 +1421,37 @@ The register and sign-in page style
 #org-setting-form label,
 #repo-setting-form label,
 #user-profile-form label,
+.repo-setting-form label,
 #auth-setting-form .form-label,
 #org-setting-form .form-label,
 #repo-setting-form .form-label,
-#user-profile-form .form-label {
+#user-profile-form .form-label,
+.repo-setting-form .form-label {
   width: 240px;
 }
 #auth-setting-form .ipt,
 #org-setting-form .ipt,
 #repo-setting-form .ipt,
-#user-profile-form .ipt {
+#user-profile-form .ipt,
+.repo-setting-form .ipt {
   width: 360px;
 }
 #auth-setting-form .field,
 #org-setting-form .field,
 #repo-setting-form .field,
-#user-profile-form .field {
+#user-profile-form .field,
+.repo-setting-form .field {
   margin-bottom: 24px;
+}
+#hook-type {
+  padding: 10px 0 0 0;
+  background-color: #fff;
+}
+#hook-type .field {
+  margin-bottom: 24px;
+}
+#hook-type label {
+  width: 240px;
 }
 #repo-hooks-panel,
 #repo-hooks-history-panel,
