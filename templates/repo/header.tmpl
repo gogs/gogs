@@ -16,10 +16,10 @@
                 </a>
                 <div id="repo-header-download-drop" class="drop-down">
                     <div id="repo-clone" class="clear">
-                        <button id="repo-clone-ssh" class="btn btn-blue current left left btn-left-radius">SSH</button>
-                        <button id="repo-clone-https" class="btn btn-gray left">HTTPS</button>
-                        <input id="repo-clone-url" type="text" class="ipt ipt-disabled left" value="{{.CloneLink.SSH}}" />
-                        <button id="repo-clone-copy" class="btn btn-black left btn-right-radius">Copy</button>
+                        <button class="btn btn-blue left left btn-left-radius" id="repo-clone-ssh" data-link="{{.CloneLink.SSH}}">SSH</button>
+                        <button class="btn btn-gray left" id="repo-clone-https" data-link="{{.CloneLink.HTTPS}}">HTTPS</button>
+                        <input id="repo-clone-url" class="ipt ipt-disabled left" value="{{.CloneLink.SSH}}" readonly />
+                        <button id="repo-clone-copy" class="btn btn-black left btn-right-radius" data-copy-val="val" data-copy-from="#repo-clone-url">{{.i18n.Tr "repo.copy_link"}}</button>
                         <p class="text-center" id="repo-clone-help">{{.i18n.Tr "repo.clone_helper" | Str2html}}</p>
                         <hr/>
                         <div class="text-center" id="repo-clone-zip">
