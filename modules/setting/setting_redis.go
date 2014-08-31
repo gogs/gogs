@@ -7,8 +7,8 @@
 package setting
 
 import (
-	_ "github.com/gogits/cache/redis"
-	_ "github.com/gogits/session/redis"
+	_ "github.com/macaron-contrib/cache/redis"
+	_ "github.com/macaron-contrib/session/redis"
 )
 
 func init() {
