@@ -238,6 +238,44 @@ var Gogs = {};
             }
         });
     }
+
+    // Copy util.
+    Gogs.bindCopy = function (selector) {
+        if ($(selector).hasClass('js-copy-bind')) {
+            return;
+        }
+        $(selector).zclip({
+            path: "/js/ZeroClipboard.swf",
+            copy: function () {
+                var t = $(this).data("copy-val");
+                var to = $($(this).data("copy-from"));
+                var str = "";
+                if (t == "txt") {
+                    str = to.text();
+                }
+                if (t == 'val') {
+                    str = to.val();
+                }
+                if (t == 'html') {
+                    str = to.html();
+                }
+                return str;
+            },
+            afterCopy: function () {
+                alert("Clone URL has copied!");
+//                var $this = $(this);
+//                $this.tooltip('hide')
+//                    .attr('data-original-title', 'Copied OK');
+//                setTimeout(function () {
+//                    $this.tooltip("show");
+//                }, 200);
+//                setTimeout(function () {
+//                    $this.tooltip('hide')
+//                        .attr('data-original-title', 'Copy to Clipboard');
+//                }, 3000);
+            }
+        }).addClass("js-copy-bind");
+    }
 })(jQuery);
 
 function initCore() {
@@ -289,6 +327,26 @@ function initRepoCreate() {
         e.preventDefault();
     })
     console.log('initRepoCreate');
+}
+
+function initRepo() {
+    // Clone link switch button.
+    $('#repo-clone-ssh').click(function () {
+        $(this).removeClass('btn-gray').addClass('btn-blue');
+        $('#repo-clone-https').removeClass('btn-blue').addClass('btn-gray');
+        $('#repo-clone-url').val($(this).data('link'));
+        $('.clone-url').text($(this).data('link'))
+    });
+    $('#repo-clone-https').click(function () {
+        $(this).removeClass('btn-gray').addClass('btn-blue');
+        $('#repo-clone-ssh').removeClass('btn-blue').addClass('btn-gray');
+        $('#repo-clone-url').val($(this).data('link'));
+        $('.clone-url').text($(this).data('link'))
+    });
+    // Copy URL.
+    $('#repo-clone-copy').hover(function () {
+        Gogs.bindCopy($(this));
+    })
 }
 
 function initRepoSetting() {
@@ -480,6 +538,9 @@ $(document).ready(function () {
     }
     if ($('#repo-create-form').length || $('#repo-migrate-form').length) {
         initRepoCreate();
+    }
+    if ($('#repo-header').length) {
+        initRepo();
     }
     if ($('#repo-setting').length) {
         initRepoSetting();
