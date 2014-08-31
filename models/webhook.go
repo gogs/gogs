@@ -99,7 +99,7 @@ func GetWebhooksByRepoId(repoId int64) (ws []*Webhook, err error) {
 
 // UpdateWebhook updates information of webhook.
 func UpdateWebhook(w *Webhook) error {
-	_, err := x.AllCols().Update(w)
+	_, err := x.Id(w.Id).AllCols().Update(w)
 	return err
 }
 
