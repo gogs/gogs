@@ -3,23 +3,23 @@
         <li>
             <a class="radius" href="{{.RepoLink}}/issues"><i class="octicon octicon-issue-opened"></i>Issues<span class="num right label label-blue label-radius">{{.Repository.NumOpenIssues}}</span></a>
         </li>
-        <li>
+        <!-- <li>
             <a class="radius" href="{{.RepoLink}}/pulls"><i class="octicon octicon-git-pull-request"></i>Pull Requests<span class="num right label label-blue label-radius">{{.Repository.NumOpenPulls}}</span></a>
-        </li>
+        </li> -->
         <li class="border-bottom"></li>
         <li class="head">{{if .IsViewBranch}}{{.BranchName}}{{else}}{{ShortSha .BranchName}}{{end}}</li>
         <li>
             <a class="radius" href="{{.RepoLink}}/commits/{{.BranchName}}"><i class="octicon octicon-history"></i>Commits <span class="num right label label-gray label-radius">{{.CommitsCount}}</span></a>
         </li>
-        <li>
+        <!-- <li>
             <a class="radius" href="{{.RepoLink}}/branches"><i class="octicon octicon-git-branch"></i>Branches<span class="num right label label-gray label-radius">{{.BrancheCount}}</span></a>
-        </li>
+        </li> -->
         <li>
             <a class="radius" href="{{.RepoLink}}/releases"><i class="octicon octicon-tag"></i>Releases <span class="num right label label-gray label-radius">{{.Repository.NumTags}}</span></a>
         </li>
-        <li>
+        <!-- <li>
             <a class="radius" href="#"><i class="octicon octicon-organization"></i>contributors <span class="num right label label-gray label-radius">43</span></a>
-        </li>
+        </li> -->
         <li class="border-bottom"></li>
         <li>
             <a class="radius" href="{{.RepoLink}}/settings"><i class="octicon octicon-tools"></i>settings</a>

@@ -1,4 +1,4 @@
-<div id="gogs" class="{{if (and .PageIsSettingsHooksEdit (not (eq .HookType "gogs")))}}hidden{{end}}">
+<div id="gogs" class="{{if (and .PageIsSettingsHooksEdit (not (eq .HookType "Gogs")))}}hidden{{end}}">
   <form class="form form-align panel-body repo-setting-form" id="repo-setting-form-gogs"  action="{{.RepoLink}}/settings/hooks/gogs/{{if .PageIsSettingsHooksNew}}new{{else}}{{.Webhook.Id}}{{end}}" method="post">
     {{.CsrfTokenHtml}}
     <input type="hidden" name="hook_type" value="gogs">
