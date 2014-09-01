@@ -226,7 +226,11 @@ func CommitRepoAction(userId, repoUserId int64, userName, actEmail string,
 	}
 
 	repoLink := fmt.Sprintf("%s%s/%s", setting.AppUrl, repoUserName, repoName)
-	compareUrl := fmt.Sprintf("%s/compare/%s...%s", repoLink, oldCommitId, newCommitId)
+	compareUrl := ""
+	// if not the first commit, set the compareUrl
+	if !strings.HasPrefix(oldCommitId, "0000000") {
+		compareUrl = fmt.Sprintf("%s/compare/%s...%s", repoLink, oldCommitId, newCommitId)
+	}
 	commits := make([]*PayloadCommit, len(commit.Commits))
 	for i, cmt := range commit.Commits {
 		commits[i] = &PayloadCommit{
