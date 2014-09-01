@@ -72,9 +72,14 @@ func getSlackPushPayload(p *Payload, slack *Slack) (*SlackPayload, error) {
 
 	if len(p.Commits) == 1 {
 		commitString = "1 new commit"
+		if p.CompareUrl != "" {
+			commitString = SlackLinkFormatter(p.CompareUrl, commitString)
+		}
 	} else {
 		commitString = fmt.Sprintf("%d new commits", len(p.Commits))
-		commitString = SlackLinkFormatter(p.CompareUrl, commitString)
+		if p.CompareUrl != "" {
+			commitString = SlackLinkFormatter(p.CompareUrl, commitString)
+		}
 	}
 
 	repoLink := SlackLinkFormatter(p.Repo.Url, p.Repo.Name)
