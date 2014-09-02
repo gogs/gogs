@@ -70,19 +70,26 @@ func getSlackPushPayload(p *Payload, slack *Slack) (*SlackPayload, error) {
 	branchName := refSplit[len(refSplit)-1]
 	var commitString string
 
-	// TODO: add commit compare before/after link when gogs adds it
 	if len(p.Commits) == 1 {
 		commitString = "1 new commit"
+		if p.CompareUrl != "" {
+			commitString = SlackLinkFormatter(p.CompareUrl, commitString)
+		}
 	} else {
 		commitString = fmt.Sprintf("%d new commits", len(p.Commits))
+		if p.CompareUrl != "" {
+			commitString = SlackLinkFormatter(p.CompareUrl, commitString)
+		}
 	}
 
-	text := fmt.Sprintf("[%s:%s] %s pushed by %s", p.Repo.Name, branchName, commitString, p.Pusher.Name)
+	repoLink := SlackLinkFormatter(p.Repo.Url, p.Repo.Name)
+	branchLink := SlackLinkFormatter(p.Repo.Url+"/src/"+branchName, branchName)
+	text := fmt.Sprintf("[%s:%s] %s pushed by %s", repoLink, branchLink, commitString, p.Pusher.Name)
 	var attachmentText string
 
 	// for each commit, generate attachment text
 	for i, commit := range p.Commits {
-		attachmentText += fmt.Sprintf("<%s|%s>: %s - %s", commit.Url, commit.Id[:7], SlackFormatter(commit.Message), commit.Author.Name)
+		attachmentText += fmt.Sprintf("%s: %s - %s", SlackLinkFormatter(commit.Url, commit.Id[:7]), SlackTextFormatter(commit.Message), SlackTextFormatter(commit.Author.Name))
 		// add linebreak to each commit but the last
 		if i < len(p.Commits)-1 {
 			attachmentText += "\n"
@@ -103,7 +110,7 @@ func getSlackPushPayload(p *Payload, slack *Slack) (*SlackPayload, error) {
 }
 
 // see: https://api.slack.com/docs/formatting
-func SlackFormatter(s string) string {
+func SlackTextFormatter(s string) string {
 	// take only first line of commit
 	first := strings.Split(s, "\n")[0]
 	// replace & < >
@@ -111,4 +118,8 @@ func SlackFormatter(s string) string {
 	first = strings.Replace(first, "<", "&lt;", -1)
 	first = strings.Replace(first, ">", "&gt;", -1)
 	return first
+}
+
+func SlackLinkFormatter(url string, text string) string {
+	return fmt.Sprintf("<%s|%s>", url, SlackTextFormatter(text))
 }
