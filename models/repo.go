@@ -277,7 +277,7 @@ func MirrorUpdate() {
 
 // MigrateRepository migrates a existing repository from other project hosting.
 func MigrateRepository(u *User, name, desc string, private, mirror bool, url string) (*Repository, error) {
-	repo, err := CreateRepository(u, name, desc, "", "", private, mirror, false)
+	repo, err := CreateRepository(u, name, desc, "", "", private, true, false)
 	if err != nil {
 		return nil, err
 	}
@@ -307,8 +307,15 @@ func MigrateRepository(u *User, name, desc string, private, mirror bool, url str
 		return repo, UpdateRepository(repo)
 	}
 
-	// Clone from local repository.
+	// this command could for both migrate and mirror
 	_, stderr, err := process.ExecTimeout(10*time.Minute,
+		fmt.Sprintf("MigrateRepository: %s", repoPath),
+		"git", "clone", "--mirror", "--bare", url, repoPath)
+	if err != nil {
+		return repo, errors.New("git clone: " + stderr)
+	}
+	// Clone from local repository.
+	/*_, stderr, err := process.ExecTimeout(10*time.Minute,
 		fmt.Sprintf("MigrateRepository(git clone): %s", repoPath),
 		"git", "clone", repoPath, tmpDir)
 	if err != nil {
@@ -327,7 +334,7 @@ func MigrateRepository(u *User, name, desc string, private, mirror bool, url str
 		tmpDir, fmt.Sprintf("MigrateRepository(git push): %s", repoPath),
 		"git", "push", "--tags", "origin", "refs/remotes/upstream/*:refs/heads/*"); err != nil {
 		return repo, errors.New("git push: " + stderr)
-	}
+	}*/
 
 	return repo, UpdateRepository(repo)
 }
