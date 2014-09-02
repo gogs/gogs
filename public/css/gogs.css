@@ -968,6 +968,13 @@ body {
 .guide-box .zclip {
     left: auto !important;
 }
+div.compare div#commits {
+    margin-top: 5px;
+}
+div.compare div#commits h4 {
+  margin: 10px 0;
+  line-height: 1.1;
+}
 .diff-head-box h4 {
     margin-top: 0;
     margin-bottom: 0;

@@ -1,0 +1,42 @@
+<div id="commits">
+    <div class="panel panel-default commit-box info-box">
+        <div class="panel-heading info-head">
+            <form class="search pull-right col-md-3" action="{{.RepoLink}}/commits/{{.BranchName}}/search" method="get" id="commits-search-form">
+                <div class="input-group">
+                    <input class="form-control search" type="search" placeholder="search commit" name="q" value="{{.Keyword}}" />
+                    <div class="input-group-btn">
+                        <button type="submit" class="btn btn-default">Find</button>
+                    </div>
+                </div>
+            </form>
+            <h4>{{.CommitCount}} Commits</h4>
+        </div>
+        <table class="panel-footer table commit-list table table-striped">
+            <thead>
+                <tr>
+                    <th class="author">Author</th>
+                    <th class="sha">SHA1</th>
+                    <th class="message">Message</th>
+                    <th class="date">Date</th>
+                </tr>
+            </thead>
+            <tbody>
+            {{ $username := .Username}}
+            {{ $reponame := .Reponame}}
+            {{$r := List .Commits}}
+            {{range $r}}
+            <tr>
+                <td class="author"><img class="avatar" src="{{AvatarLink .Author.Email}}" alt=""/><a href="/user/email2user?email={{.Author.Email}}">{{.Author.Name}}</a></td>
+                <td class="sha"><a rel="nofollow" class="label label-success" href="/{{$username}}/{{$reponame}}/commit/{{.Id}} ">{{SubStr .Id.String 0 10}} </a></td>
+                <td class="message">{{.Summary}} </td>
+                <td class="date">{{TimeSince .Author.When $.Lang}}</td>
+            </tr>
+            {{end}}
+            </tbody>
+        </table>
+    </div>
+    {{if not .IsSearchPage}}<ul class="pagination" id="commits-pager">
+        {{if .LastPageNum}}<li><a href="{{.RepoLink}}/commits/{{.BranchName}}{{if .FileName}}/{{.FileName}}{{end}}?p={{.LastPageNum}}" rel="nofollow">&laquo; Newer</a></li>{{end}}
+        {{if .NextPageNum}}<li><a href="{{.RepoLink}}/commits/{{.BranchName}}{{if .FileName}}/{{.FileName}}{{end}}?p={{.NextPageNum}}" rel="nofollow">&raquo; Older</a></li>{{end}}
+    </ul>{{end}}
+</div>

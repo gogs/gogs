@@ -175,25 +175,30 @@ func ParsePatch(pid int64, cmd *exec.Cmd, reader io.Reader) (*Diff, error) {
 	return diff, nil
 }
 
-func GetDiff(repoPath, commitid string) (*Diff, error) {
+func GetDiffRange(repoPath, beforeCommitId string, afterCommitId string) (*Diff, error) {
 	repo, err := git.OpenRepository(repoPath)
 	if err != nil {
 		return nil, err
 	}
 
-	commit, err := repo.GetCommit(commitid)
+	commit, err := repo.GetCommit(afterCommitId)
 	if err != nil {
 		return nil, err
 	}
 
 	rd, wr := io.Pipe()
 	var cmd *exec.Cmd
-	// First commit of repository.
-	if commit.ParentCount() == 0 {
-		cmd = exec.Command("git", "show", commitid)
+	// if "after" commit given
+	if beforeCommitId == "" {
+		// First commit of repository.
+		if commit.ParentCount() == 0 {
+			cmd = exec.Command("git", "show", afterCommitId)
+		} else {
+			c, _ := commit.Parent(0)
+			cmd = exec.Command("git", "diff", c.Id.String(), afterCommitId)
+		}
 	} else {
-		c, _ := commit.Parent(0)
-		cmd = exec.Command("git", "diff", c.Id.String(), commitid)
+		cmd = exec.Command("git", "diff", beforeCommitId, afterCommitId)
 	}
 	cmd.Dir = repoPath
 	cmd.Stdout = wr
@@ -208,7 +213,7 @@ func GetDiff(repoPath, commitid string) (*Diff, error) {
 	}()
 	defer rd.Close()
 
-	desc := fmt.Sprintf("GetDiff(%s)", repoPath)
+	desc := fmt.Sprintf("GetDiffRange(%s)", repoPath)
 	pid := process.Add(desc, cmd)
 	go func() {
 		// In case process became zombie.
@@ -225,4 +230,8 @@ func GetDiff(repoPath, commitid string) (*Diff, error) {
 	}()
 
 	return ParsePatch(pid, cmd, rd)
+}
+
+func GetDiffCommit(repoPath, commitId string) (*Diff, error) {
+	return GetDiffRange(repoPath, "", commitId)
 }
