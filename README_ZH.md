@@ -31,6 +31,7 @@ Gogs 的目标是打造一个最简单、最快速和最轻松的方式搭建自
 - Gravatar 以及缓存支持
 - 邮件服务（注册、Issue）
 - 管理员面板
+- Slack Web 钩子集成
 - 支持 MySQL、PostgreSQL 以及 SQLite3 数据库
 - 社交帐号登录（GitHub、Google、QQ、微博）
 - 多语言支持（英文、简体中文、德语等等）
