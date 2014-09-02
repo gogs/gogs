@@ -53,7 +53,7 @@ func Toggle(options *ToggleOptions) macaron.Handler {
 				return
 			} else if !ctx.User.IsActive && setting.Service.RegisterEmailConfirm {
 				ctx.Data["Title"] = ctx.Tr("auth.active_your_account")
-				ctx.HTML(200, "user/activate")
+				ctx.HTML(200, "user/auth/activate")
 				return
 			}
 		}
