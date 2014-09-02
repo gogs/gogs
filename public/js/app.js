@@ -870,7 +870,7 @@ function initIssue() {
 
                 $.post($m.data("ajax"), {
                     issue: $('#issue').data("id"),
-                    milestone: id
+                    milestoneid: id
                 }, function (json) {
                     if (json.ok) {
                         //window.location.reload();
