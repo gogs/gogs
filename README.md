@@ -40,6 +40,7 @@ The goal of this project is to make the easiest, fastest and most painless way t
 - Gravatar and cache support
 - Mail service(register, issue)
 - Administration panel
+- Slack webhook integration
 - Supports MySQL, PostgreSQL and SQLite3
 - Social account login(GitHub, Google, QQ, Weibo)
 - Multi-language support(English, Chinese, Germany etc.)
@@ -69,7 +70,7 @@ There are 5 ways to install Gogs:
 - Usage and modification from [beego](http://beego.me) modules.
 - Thanks [lavachen](http://www.lavachen.cn/) and [Rocker](http://weibo.com/rocker1989) for designing Logo.
 - Thanks [gobuild.io](http://gobuild.io) for providing binary compile and download service.
-- Great thanks to [Docker China](http://www.dockboard.org/) for providing [dockerfiles](https://github.com/gogits/gogs/tree/master/dockerfiles).
+- Thanks [Docker China](http://www.dockboard.org/) for providing [dockerfiles](https://github.com/gogits/gogs/tree/master/dockerfiles).
 
 ## Contributors
 
