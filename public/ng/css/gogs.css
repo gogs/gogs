@@ -1010,9 +1010,10 @@ The register and sign-in page style
   padding: 18px 0;
 }
 #repo-clone-url {
-  border-right: none;
-  width: 196px;
-  border-left: none;
+  cursor: text;
+  display:block;
+  margin:10px 0 10px 0;
+  width: 90%;
 }
 #repo-clone-help {
   clear: both;
