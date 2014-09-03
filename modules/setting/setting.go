@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"os/user"
 	"path"
 	"path/filepath"
 	"strings"
@@ -213,13 +214,13 @@ func NewConfigContext() {
 	}
 
 	RunUser = Cfg.MustValue("", "RUN_USER")
-	curUser := os.Getenv("USER")
-	if len(curUser) == 0 {
-		curUser = os.Getenv("USERNAME")
+	curUser, err := user.Current()
+	if err != nil {
+		log.Fatal(4, "Couldn't determine current User", err)
 	}
 	// Does not check run user when the install lock is off.
-	if InstallLock && RunUser != curUser {
-		log.Fatal(4, "Expect user(%s) but current user is: %s", RunUser, curUser)
+	if InstallLock && RunUser != curUser.Username {
+		log.Fatal(4, "Expect user(%s) but current user is: %s", RunUser, curUser.Username)
 	}
 
 	// Determine and create root git reposiroty path.

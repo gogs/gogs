@@ -8,6 +8,7 @@ import (
 	"errors"
 	"os"
 	"os/exec"
+	"os/user"
 	"path"
 	"strings"
 
@@ -181,14 +182,13 @@ func InstallPost(ctx *middleware.Context, form auth.InstallForm) {
 		return
 	}
 
-	// Check run user.
-	curUser := os.Getenv("USER")
-	if len(curUser) == 0 {
-		curUser = os.Getenv("USERNAME")
+	curUser, err := user.Current()
+	if err != nil {
+		log.Fatal(4, "Couldn't determine current User", err)
 	}
 	// Does not check run user when the install lock is off.
-	if form.RunUser != curUser {
-		ctx.RenderWithErr("Run user isn't the current user: "+form.RunUser+" -> "+curUser, INSTALL, &form)
+	if form.RunUser != curUser.Username {
+		ctx.RenderWithErr("Run user isn't the current user: "+form.RunUser+" -> "+curUser.Username, INSTALL, &form)
 		return
 	}
 
