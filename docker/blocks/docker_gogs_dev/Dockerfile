@@ -32,7 +32,7 @@ ENV GOGS_PATH $GOPATH/src/github.com/gogits/gogs
 ENV GOGS_CUSTOM_CONF_PATH $GOGS_PATH/custom/conf
 ENV GOGS_CUSTOM_CONF $GOGS_CUSTOM_CONF_PATH/app.ini
 
-RUN git clone -b dev https://github.com/gogits/gogs.git $GOPATH/src/github.com/gogits/gogs
+RUN git clone -b dev https://github.com/gogits/gogs.git $GOGS_PATH
 # WORKDIR $GOGS_PATH
 WORKDIR /go/src/github.com/gogits/gogs
 RUN go get -d && go build
