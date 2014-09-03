@@ -582,7 +582,7 @@ func UpdateIssueMilestone(ctx *middleware.Context) {
 	}
 
 	oldMid := issue.MilestoneId
-	mid := com.StrTo(ctx.Params(":milestone")).MustInt64()
+	mid := com.StrTo(ctx.Query("milestoneid")).MustInt64()
 	if oldMid == mid {
 		ctx.JSON(200, map[string]interface{}{
 			"ok": true,
@@ -627,7 +627,7 @@ func UpdateAssignee(ctx *middleware.Context) {
 		return
 	}
 
-	aid := com.StrTo(ctx.Params(":assigneeid")).MustInt64()
+	aid := com.StrTo(ctx.Query("assigneeid")).MustInt64()
 	// Not check for invalid assignne id and give responsibility to owners.
 	issue.AssigneeId = aid
 	if err = models.UpdateIssueUserPairByAssignee(aid, issue.Id); err != nil {
