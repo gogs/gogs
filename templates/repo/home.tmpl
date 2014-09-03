@@ -17,7 +17,7 @@
                 <li id="repo-branch-switch" class="down drop">
                     <a href="#">
                         <button class="btn btn-gray btn-small btn-radius">
-                            <i class="octicon octicon-git-branch"></i> Branch :
+                            <i class="octicon octicon-git-branch"></i> {{if .IsViewBranch}}Branch{{else}}Tree{{end}}:
                             <strong id="repo-branch-current">{{if .IsViewBranch}}{{.BranchName}}{{else}}{{ShortSha .BranchName}}{{end}}</strong>
                         </button>
                     </a>
