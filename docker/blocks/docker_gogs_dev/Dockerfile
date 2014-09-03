@@ -1,8 +1,9 @@
 FROM ubuntu:14.04
 
-# This part is taken from the official docker image --------------------
+# This part is derived from the official docker image ------------------
 
-RUN apt-get update && apt-get install -y \
+RUN DEBIAN_FRONTEND=noninteractive apt-get update && \
+		apt-get install -qy \
 		build-essential ca-certificates curl \
 		bzr git mercurial \
 		--no-install-recommends
@@ -31,10 +32,10 @@ ENV GOGS_PATH $GOPATH/src/github.com/gogits/gogs
 ENV GOGS_CUSTOM_CONF_PATH $GOGS_PATH/custom/conf
 ENV GOGS_CUSTOM_CONF $GOGS_CUSTOM_CONF_PATH/app.ini
 
-RUN go get -u -d github.com/gogits/gogs
+RUN git clone -b dev https://github.com/gogits/gogs.git $GOPATH/src/github.com/gogits/gogs
 # WORKDIR $GOGS_PATH
 WORKDIR /go/src/github.com/gogits/gogs
-RUN git checkout dev; go get -u; git checkout dev; go build
+RUN go get -d && go build
 RUN chown -R git $GOGS_PATH
 
 ADD init_gogs.sh /tmp/
