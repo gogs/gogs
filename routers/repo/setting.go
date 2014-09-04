@@ -354,11 +354,11 @@ func WebHooksEdit(ctx *middleware.Context) {
 	case models.SLACK:
 		{
 			ctx.Data["SlackHook"] = w.GetSlackHook()
-			ctx.Data["HookType"] = "slack"
+			ctx.Data["HookType"] = "Slack"
 		}
 	default:
 		{
-			ctx.Data["HookType"] = "gogs"
+			ctx.Data["HookType"] = "Gogs"
 		}
 	}
 	w.GetEvent()
