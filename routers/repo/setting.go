@@ -286,14 +286,13 @@ func WebHooksNew(ctx *middleware.Context) {
 	ctx.Data["PageIsSettingsHooksNew"] = true
 	ctx.Data["Webhook"] = models.Webhook{HookEvent: &models.HookEvent{}}
 	renderHookTypes(ctx)
-	orgId, repoId, _ := getOrgRepoCtx(ctx)
-	if repoId > 0 {
-		ctx.HTML(200, HOOK_NEW)
-	} else if orgId > 0 {
-		ctx.HTML(200, ORG_HOOK_NEW)
-	} else {
-		ctx.Handle(500, "WebHooksEdit(DetermineContext)", errors.New("Can't determine hook context"))
+	orCtx, err := getOrgRepoCtx(ctx)
+	if err != nil {
+		ctx.Handle(500, "WebHooksNew(getOrgRepoCtx)", err)
+		return
 	}
+
+	ctx.HTML(200, orCtx.NewTemplate)
 }
 
 func WebHooksNewPost(ctx *middleware.Context, form auth.NewWebhookForm) {
@@ -302,10 +301,14 @@ func WebHooksNewPost(ctx *middleware.Context, form auth.NewWebhookForm) {
 	ctx.Data["PageIsSettingsHooksNew"] = true
 	ctx.Data["Webhook"] = models.Webhook{HookEvent: &models.HookEvent{}}
 
-	orgId, repoId, link := getOrgRepoCtx(ctx)
+	orCtx, err := getOrgRepoCtx(ctx)
+	if err != nil {
+		ctx.Handle(500, "WebHooksNewPost(getOrgRepoCtx)", err)
+		return
+	}
 
 	if ctx.HasError() {
-		ctx.HTML(200, HOOK_NEW)
+		ctx.HTML(200, orCtx.NewTemplate)
 		return
 	}
 
@@ -315,7 +318,7 @@ func WebHooksNewPost(ctx *middleware.Context, form auth.NewWebhookForm) {
 	}
 
 	w := &models.Webhook{
-		RepoId:      repoId,
+		RepoId:      orCtx.RepoId,
 		Url:         form.PayloadUrl,
 		ContentType: ct,
 		Secret:      form.Secret,
@@ -325,7 +328,7 @@ func WebHooksNewPost(ctx *middleware.Context, form auth.NewWebhookForm) {
 		IsActive:     form.Active,
 		HookTaskType: models.GOGS,
 		Meta:         "",
-		OrgId:        orgId,
+		OrgId:        orCtx.OrgId,
 	}
 
 	if err := w.UpdateEvent(); err != nil {
@@ -337,7 +340,7 @@ func WebHooksNewPost(ctx *middleware.Context, form auth.NewWebhookForm) {
 	}
 
 	ctx.Flash.Success(ctx.Tr("repo.settings.add_hook_success"))
-	ctx.Redirect(link + "/settings/hooks")
+	ctx.Redirect(orCtx.Link + "/settings/hooks")
 }
 
 func WebHooksEdit(ctx *middleware.Context) {
@@ -375,14 +378,12 @@ func WebHooksEdit(ctx *middleware.Context) {
 	}
 	w.GetEvent()
 	ctx.Data["Webhook"] = w
-	orgId, repoId, _ := getOrgRepoCtx(ctx)
-	if repoId > 0 {
-		ctx.HTML(200, HOOK_NEW)
-	} else if orgId > 0 {
-		ctx.HTML(200, ORG_HOOK_NEW)
-	} else {
-		ctx.Handle(500, "WebHooksEdit(DetermineContext)", errors.New("Can't determine hook context"))
+	orCtx, err := getOrgRepoCtx(ctx)
+	if err != nil {
+		ctx.Handle(500, "WebHooksEdit(getOrgRepoCtx)", err)
+		return
 	}
+	ctx.HTML(200, orCtx.NewTemplate)
 }
 
 func WebHooksEditPost(ctx *middleware.Context, form auth.NewWebhookForm) {
@@ -408,8 +409,13 @@ func WebHooksEditPost(ctx *middleware.Context, form auth.NewWebhookForm) {
 	w.GetEvent()
 	ctx.Data["Webhook"] = w
 
+	orCtx, err := getOrgRepoCtx(ctx)
+	if err != nil {
+		ctx.Handle(500, "WebHooksEditPost(getOrgRepoCtx)", err)
+		return
+	}
 	if ctx.HasError() {
-		ctx.HTML(200, HOOK_NEW)
+		ctx.HTML(200, orCtx.NewTemplate)
 		return
 	}
 
@@ -432,10 +438,9 @@ func WebHooksEditPost(ctx *middleware.Context, form auth.NewWebhookForm) {
 		ctx.Handle(500, "WebHooksEditPost", err)
 		return
 	}
-	_, _, link := getOrgRepoCtx(ctx)
 
 	ctx.Flash.Success(ctx.Tr("repo.settings.update_hook_success"))
-	ctx.Redirect(fmt.Sprintf("%s/settings/hooks/%d", link, hookId))
+	ctx.Redirect(fmt.Sprintf("%s/settings/hooks/%d", orCtx.Link, hookId))
 }
 
 func SlackHooksNewPost(ctx *middleware.Context, form auth.NewSlackHookForm) {
@@ -444,11 +449,16 @@ func SlackHooksNewPost(ctx *middleware.Context, form auth.NewSlackHookForm) {
 	ctx.Data["PageIsSettingsHooksNew"] = true
 	ctx.Data["Webhook"] = models.Webhook{HookEvent: &models.HookEvent{}}
 
-	if ctx.HasError() {
-		ctx.HTML(200, HOOK_NEW)
+	orCtx, err := getOrgRepoCtx(ctx)
+	if err != nil {
+		ctx.Handle(500, "SlackHooksNewPost(getOrgRepoCtx)", err)
 		return
 	}
-	orgId, repoId, link := getOrgRepoCtx(ctx)
+
+	if ctx.HasError() {
+		ctx.HTML(200, orCtx.NewTemplate)
+		return
+	}
 
 	meta, err := json.Marshal(&models.Slack{
 		Domain:  form.Domain,
@@ -461,7 +471,7 @@ func SlackHooksNewPost(ctx *middleware.Context, form auth.NewSlackHookForm) {
 	}
 
 	w := &models.Webhook{
-		RepoId:      repoId,
+		RepoId:      orCtx.RepoId,
 		Url:         models.GetSlackURL(form.Domain, form.Token),
 		ContentType: models.JSON,
 		Secret:      "",
@@ -471,7 +481,7 @@ func SlackHooksNewPost(ctx *middleware.Context, form auth.NewSlackHookForm) {
 		IsActive:     form.Active,
 		HookTaskType: models.SLACK,
 		Meta:         string(meta),
-		OrgId:        orgId,
+		OrgId:        orCtx.OrgId,
 	}
 	if err := w.UpdateEvent(); err != nil {
 		ctx.Handle(500, "UpdateEvent", err)
@@ -482,7 +492,7 @@ func SlackHooksNewPost(ctx *middleware.Context, form auth.NewSlackHookForm) {
 	}
 
 	ctx.Flash.Success(ctx.Tr("repo.settings.add_hook_success"))
-	ctx.Redirect(link + "/settings/hooks")
+	ctx.Redirect(orCtx.Link + "/settings/hooks")
 }
 
 func SlackHooksEditPost(ctx *middleware.Context, form auth.NewSlackHookForm) {
@@ -491,9 +501,14 @@ func SlackHooksEditPost(ctx *middleware.Context, form auth.NewSlackHookForm) {
 	ctx.Data["PageIsSettingsHooksEdit"] = true
 
 	hookId := com.StrTo(ctx.Params(":id")).MustInt64()
-	fmt.Println("hookId slack=%d", hookId)
 	if hookId == 0 {
-		ctx.Handle(404, "setting.WebHooksEditPost", nil)
+		ctx.Handle(404, "SlackHooksEditPost(hookId)", nil)
+		return
+	}
+
+	orCtx, err := getOrgRepoCtx(ctx)
+	if err != nil {
+		ctx.Handle(500, "SlackHooksEditPost(getOrgRepoCtx)", err)
 		return
 	}
 
@@ -510,7 +525,7 @@ func SlackHooksEditPost(ctx *middleware.Context, form auth.NewSlackHookForm) {
 	ctx.Data["Webhook"] = w
 
 	if ctx.HasError() {
-		ctx.HTML(200, HOOK_NEW)
+		ctx.HTML(200, orCtx.NewTemplate)
 		return
 	}
 	meta, err := json.Marshal(&models.Slack{
@@ -536,25 +551,35 @@ func SlackHooksEditPost(ctx *middleware.Context, form auth.NewSlackHookForm) {
 		ctx.Handle(500, "SlackHooksEditPost", err)
 		return
 	}
-	_, _, link := getOrgRepoCtx(ctx)
 
 	ctx.Flash.Success(ctx.Tr("repo.settings.update_hook_success"))
-	ctx.Redirect(fmt.Sprintf("%s/settings/hooks/%d", link, hookId))
+	ctx.Redirect(fmt.Sprintf("%s/settings/hooks/%d", orCtx.Link, hookId))
 }
 
-func getOrgRepoCtx(ctx *middleware.Context) (int64, int64, string) {
-	orgId := int64(0)
-	repoId := int64(0)
-	link := ""
+type OrgRepoCtx struct {
+	OrgId       int64
+	RepoId      int64
+	Link        string
+	NewTemplate base.TplName
+}
+
+// determines whether this is a repo context or organization context
+func getOrgRepoCtx(ctx *middleware.Context) (*OrgRepoCtx, error) {
 	if _, ok := ctx.Data["RepoLink"]; ok {
-		repoId = ctx.Repo.Repository.Id
-		link = ctx.Repo.RepoLink
+		return &OrgRepoCtx{
+			OrgId:       int64(0),
+			RepoId:      ctx.Repo.Repository.Id,
+			Link:        ctx.Repo.RepoLink,
+			NewTemplate: HOOK_NEW,
+		}, nil
+	} else if _, ok := ctx.Data["OrgLink"]; ok {
+		return &OrgRepoCtx{
+			OrgId:       ctx.Org.Organization.Id,
+			RepoId:      int64(0),
+			Link:        ctx.Org.OrgLink,
+			NewTemplate: ORG_HOOK_NEW,
+		}, nil
+	} else {
+		return &OrgRepoCtx{}, errors.New("Unable to set OrgRepo context")
 	}
-
-	if _, ok := ctx.Data["OrgLink"]; ok {
-		orgId = ctx.Org.Organization.Id
-		link = ctx.Org.OrgLink
-	}
-
-	return orgId, repoId, link
 }
