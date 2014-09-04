@@ -349,17 +349,8 @@ function initRepo() {
     })
 }
 
-function initRepoSetting() {
-    // Options.
-    // Confirmation of changing repository name.
-    $('#repo-setting-form').submit(function (e) {
-        var $reponame = $('#repo_name');
-        if (($reponame.data('repo-name') != $reponame.val()) && !confirm('Repository name has been changed, do you want to continue?')) {
-            e.preventDefault();
-            return true;
-        }
-    });
-
+// when user changes hook type, hide/show proper divs
+function initHookTypeChange() {
     // web hook type change
     $('select#hook-type').on("change", function () {
       hookTypes = ['Gogs','Slack'];
@@ -374,6 +365,20 @@ function initRepoSetting() {
         }
       });
     });
+}
+
+function initRepoSetting() {
+    // Options.
+    // Confirmation of changing repository name.
+    $('#repo-setting-form').submit(function (e) {
+        var $reponame = $('#repo_name');
+        if (($reponame.data('repo-name') != $reponame.val()) && !confirm('Repository name has been changed, do you want to continue?')) {
+            e.preventDefault();
+            return true;
+        }
+    });
+
+    initHookTypeChange();
 
     $('#transfer-button').click(function () {
         $('#transfer-form').show();
@@ -421,6 +426,8 @@ function initOrgSetting() {
             return true;
         }
     });
+
+    initHookTypeChange();
 }
 
 function initInvite() {
