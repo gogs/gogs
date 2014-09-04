@@ -220,8 +220,20 @@ func CommitRepoAction(userId, repoUserId int64, userName, actEmail string,
 
 	ws, err := GetActiveWebhooksByRepoId(repoId)
 	if err != nil {
-		return errors.New("action.CommitRepoAction(GetWebhooksByRepoId): " + err.Error())
-	} else if len(ws) == 0 {
+		return errors.New("action.CommitRepoAction(GetActiveWebhooksByRepoId): " + err.Error())
+	}
+
+	// check if repo belongs to org and append additional webhooks
+	if repo.Owner.IsOrganization() {
+		// get hooks for org
+		orgws, err := GetActiveWebhooksByOrgId(repo.OwnerId)
+		if err != nil {
+			return errors.New("action.CommitRepoAction(GetActiveWebhooksByOrgId): " + err.Error())
+		}
+		ws = append(ws, orgws...)
+	}
+
+	if len(ws) == 0 {
 		return nil
 	}
 

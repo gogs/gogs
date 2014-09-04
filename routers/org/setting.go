@@ -5,6 +5,7 @@
 package org
 
 import (
+	"github.com/Unknwon/com"
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/base"
@@ -15,6 +16,7 @@ import (
 const (
 	SETTINGS_OPTIONS base.TplName = "org/settings/options"
 	SETTINGS_DELETE  base.TplName = "org/settings/delete"
+	SETTINGS_HOOKS   base.TplName = "org/settings/hooks"
 )
 
 func Settings(ctx *middleware.Context) {
@@ -96,4 +98,30 @@ func SettingsDelete(ctx *middleware.Context) {
 	}
 
 	ctx.HTML(200, SETTINGS_DELETE)
+}
+
+func SettingsHooks(ctx *middleware.Context) {
+	ctx.Data["Title"] = ctx.Tr("org.settings")
+	ctx.Data["PageIsSettingsHooks"] = true
+
+	// Delete web hook.
+	remove := com.StrTo(ctx.Query("remove")).MustInt64()
+	if remove > 0 {
+		if err := models.DeleteWebhook(remove); err != nil {
+			ctx.Handle(500, "DeleteWebhook", err)
+			return
+		}
+		ctx.Flash.Success(ctx.Tr("repo.settings.remove_hook_success"))
+		ctx.Redirect(ctx.Org.OrgLink + "/settings/hooks")
+		return
+	}
+
+	ws, err := models.GetWebhooksByOrgId(ctx.Org.Organization.Id)
+	if err != nil {
+		ctx.Handle(500, "GetWebhooksByOrgId", err)
+		return
+	}
+
+	ctx.Data["Webhooks"] = ws
+	ctx.HTML(200, SETTINGS_HOOKS)
 }
