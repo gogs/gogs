@@ -612,7 +612,7 @@ type Milestone struct {
 	RepoId          int64 `xorm:"INDEX"`
 	Index           int64
 	Name            string
-	Content         string
+	Content         string `xorm:"TEXT"`
 	RenderedContent string `xorm:"-"`
 	IsClosed        bool
 	NumIssues       int

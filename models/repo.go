@@ -99,20 +99,26 @@ func NewRepoContext() {
 		log.Fatal(4, "Gogs requires Git version greater or equal to 1.8.0")
 	}
 
-	// Check if server has basic git setting.
-	stdout, stderr, err := process.Exec("NewRepoContext(get setting)", "git", "config", "--get", "user.name")
-	if err != nil {
-		log.Fatal(4, "Fail to get git user.name: %s", stderr)
-	} else if err != nil || len(strings.TrimSpace(stdout)) == 0 {
-		if _, stderr, err = process.Exec("NewRepoContext(set email)", "git", "config", "--global", "user.email", "gogitservice@gmail.com"); err != nil {
-			log.Fatal(4, "Fail to set git user.email: %s", stderr)
-		} else if _, stderr, err = process.Exec("NewRepoContext(set name)", "git", "config", "--global", "user.name", "Gogs"); err != nil {
-			log.Fatal(4, "Fail to set git user.name: %s", stderr)
+	// Check if server has basic git setting and set if not.
+	if stdout, stderr, err := process.Exec("NewRepoContext(get setting)", "git", "config", "--get", "user.name"); err != nil || strings.TrimSpace(stdout) == "" {
+		// ExitError indicates user.name is not set
+		if _, ok := err.(*exec.ExitError); ok || strings.TrimSpace(stdout) == "" {
+			stndrdUserName := "Gogs"
+			stndrdUserEmail := "gogitservice@gmail.com"
+			if _, stderr, gerr := process.Exec("NewRepoContext(set name)", "git", "config", "--global", "user.name", stndrdUserName); gerr != nil {
+				log.Fatal(4, "Fail to set git user.name(%s): %s", gerr, stderr)
+			}
+			if _, stderr, gerr := process.Exec("NewRepoContext(set email)", "git", "config", "--global", "user.email", stndrdUserEmail); gerr != nil {
+				log.Fatal(4, "Fail to set git user.email(%s): %s", gerr, stderr)
+			}
+			log.Info("Git user.name and user.email set to %s <%s>", stndrdUserName, stndrdUserEmail)
+		} else {
+			log.Fatal(4, "Fail to get git user.name(%s): %s", err, stderr)
 		}
 	}
 
 	// Set git some configurations.
-	if _, stderr, err = process.Exec("NewRepoContext(git config --global core.quotepath false)",
+	if _, stderr, err := process.Exec("NewRepoContext(git config --global core.quotepath false)",
 		"git", "config", "--global", "core.quotepath", "false"); err != nil {
 		log.Fatal(4, "Fail to execute 'git config --global core.quotepath false': %s", stderr)
 	}
