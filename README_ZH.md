@@ -50,7 +50,7 @@ Gogs 的目标是打造一个最简单、最快速和最轻松的方式搭建自
 - [二进制安装](http://gogs.io/docs/installation/install_from_binary.md): **强烈推荐**
 - [源码安装](http://gogs.io/docs/installation/install_from_source.md)
 - [包管理安装](http://gogs.io/docs/installation/install_from_packages.md)
-- [采用 Docker 部署](https://github.com/gogits/gogs/tree/master/dockerfiles)
+- [采用 Docker 部署](https://github.com/gogits/gogs/tree/master/docker)
 - [通过 Vagrant 安装](https://github.com/geerlingguy/ansible-vagrant-examples/tree/master/gogs)
 
 ## 特别鸣谢
@@ -61,7 +61,6 @@ Gogs 的目标是打造一个最简单、最快速和最轻松的方式搭建自
 - [martini](http://martini.codegangsta.io/) 的路由与中间件机制。
 - 感谢 [gobuild.io](http://gobuild.io) 提供二进制编译与下载服务。
 - 感谢 [lavachen](http://www.lavachen.cn/) 和 [Rocker](http://weibo.com/rocker1989) 设计的 Logo。
-- 感谢 [Docker 中文社区](http://www.dockboard.org/) 提供的 [dockerfiles](https://github.com/gogits/gogs/tree/master/dockerfiles)。
 
 ## 贡献成员
 

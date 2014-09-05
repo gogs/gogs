@@ -59,7 +59,7 @@ There are 5 ways to install Gogs:
 - [Install from binary](http://gogs.io/docs/installation/install_from_binary.md): **STRONGLY RECOMMENDED**
 - [Install from source](http://gogs.io/docs/installation/install_from_source.md)
 - [Install from packages](http://gogs.io/docs/installation/install_from_packages.md)
-- [Ship with Docker](https://github.com/gogits/gogs/tree/master/dockerfiles)
+- [Ship with Docker](https://github.com/gogits/gogs/tree/master/docker)
 - [Install with Vagrant](https://github.com/geerlingguy/ansible-vagrant-examples/tree/master/gogs)
 
 ## Acknowledgments
@@ -70,7 +70,6 @@ There are 5 ways to install Gogs:
 - Usage and modification from [beego](http://beego.me) modules.
 - Thanks [lavachen](http://www.lavachen.cn/) and [Rocker](http://weibo.com/rocker1989) for designing Logo.
 - Thanks [gobuild.io](http://gobuild.io) for providing binary compile and download service.
-- Thanks [Docker China](http://www.dockboard.org/) for providing [dockerfiles](https://github.com/gogits/gogs/tree/master/dockerfiles).
 
 ## Contributors
 
