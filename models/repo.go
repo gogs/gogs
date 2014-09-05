@@ -972,8 +972,8 @@ func GetRepositories(uid int64, private bool) ([]*Repository, error) {
 }
 
 // GetRecentUpdatedRepositories returns the list of repositories that are recently updated.
-func GetRecentUpdatedRepositories() (repos []*Repository, err error) {
-	err = x.Where("is_private=?", false).Limit(5).Desc("updated").Find(&repos)
+func GetRecentUpdatedRepositories(num int) (repos []*Repository, err error) {
+	err = x.Where("is_private=?", false).Limit(num).Desc("updated").Find(&repos)
 	return repos, err
 }
 

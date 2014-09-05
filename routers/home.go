@@ -5,6 +5,9 @@
 package routers
 
 import (
+	"fmt"
+
+	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/middleware"
 	"github.com/gogits/gogs/modules/setting"
@@ -12,7 +15,8 @@ import (
 )
 
 const (
-	HOME base.TplName = "home"
+	HOME          base.TplName = "home"
+	EXPLORE_REPOS base.TplName = "explore/repos"
 )
 
 func Home(ctx *middleware.Context) {
@@ -40,6 +44,26 @@ func Home(ctx *middleware.Context) {
 
 	ctx.Data["PageIsHome"] = true
 	ctx.HTML(200, HOME)
+}
+
+func Explore(ctx *middleware.Context) {
+	ctx.Data["Title"] = ctx.Tr("explore")
+	ctx.Data["PageIsExploreRepositories"] = true
+
+	repos, err := models.GetRecentUpdatedRepositories(20)
+	if err != nil {
+		ctx.Handle(500, "GetRecentUpdatedRepositories", err)
+		return
+	}
+	for _, repo := range repos {
+		if err = repo.GetOwner(); err != nil {
+			ctx.Handle(500, "GetOwner", fmt.Errorf("%d: %v", repo.Id, err))
+			return
+		}
+	}
+	ctx.Data["Repos"] = repos
+
+	ctx.HTML(200, EXPLORE_REPOS)
 }
 
 func NotFound(ctx *middleware.Context) {
