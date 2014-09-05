@@ -940,7 +940,7 @@ func Milestones(ctx *middleware.Context) {
 		return
 	}
 	for _, m := range miles {
-		m.RenderedContent = string(base.RenderSpecialLink([]byte(m.Content), ctx.Repo.RepoLink))
+		m.RenderedContent = string(base.RenderMarkdown([]byte(m.Content), ctx.Repo.RepoLink))
 		m.CalOpenIssues()
 	}
 	ctx.Data["Milestones"] = miles
