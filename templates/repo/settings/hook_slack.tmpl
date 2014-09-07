@@ -1,5 +1,5 @@
 <div id="slack" class="{{if or .PageIsSettingsHooksNew (and .PageIsSettingsHooksEdit (not (eq .HookType "Slack")))}}hidden{{end}}">
-  <form class="form form-align panel-body repo-setting-form" id="repo-setting-form-slack" action="{{.RepoLink}}/settings/hooks/slack/{{if .PageIsSettingsHooksNew}}new{{else}}{{.Webhook.Id}}{{end}}" method="post">
+  <form class="form form-align panel-body repo-setting-form" id="repo-setting-form-slack" action="{{if .RepoLink}}{{.RepoLink}}{{else if .OrgLink}}{{.OrgLink}}{{end}}/settings/hooks/slack/{{if .PageIsSettingsHooksNew}}new{{else}}{{.Webhook.Id}}{{end}}" method="post">
     {{.CsrfTokenHtml}}
     <input type="hidden" name="hook_type" value="slack">
     <div class="text-center panel-desc">{{.i18n.Tr "repo.settings.add_slack_hook_desc" | Str2html}}</div>

@@ -261,6 +261,13 @@ func runWeb(*cli.Context) {
 			m.Group("/settings", func(r *macaron.Router) {
 				r.Get("", org.Settings)
 				r.Post("", bindIgnErr(auth.UpdateOrgSettingForm{}), org.SettingsPost)
+				r.Get("/hooks", org.SettingsHooks)
+				r.Get("/hooks/new", repo.WebHooksNew)
+				r.Post("/hooks/gogs/new", bindIgnErr(auth.NewWebhookForm{}), repo.WebHooksNewPost)
+				r.Post("/hooks/slack/new", bindIgnErr(auth.NewSlackHookForm{}), repo.SlackHooksNewPost)
+				r.Get("/hooks/:id", repo.WebHooksEdit)
+				r.Post("/hooks/gogs/:id", bindIgnErr(auth.NewWebhookForm{}), repo.WebHooksEditPost)
+				r.Post("/hooks/slack/:id", bindIgnErr(auth.NewSlackHookForm{}), repo.SlackHooksEditPost)
 				r.Route("/delete", "GET,POST", org.SettingsDelete)
 			})
 

@@ -1,0 +1,37 @@
+{{template "ng/base/head" .}}
+{{template "ng/base/header" .}}
+{{template "org/base/header" .}}
+<div id="setting-wrapper" class="main-wrapper">
+    <div id="org-setting" class="container clear">
+        {{template "org/settings/nav" .}}
+        <div class="grid-4-5 left">
+            <div class="setting-content">
+                {{template "ng/base/alert" .}}
+                <div id="setting-content">
+                    <div id="repo-hooks-panel" class="panel panel-radius">
+                        <div class="panel-header">
+                          <strong>{{if .PageIsSettingsHooksNew}}{{.i18n.Tr "repo.settings.add_webhook"}}{{else}}{{.i18n.Tr "repo.settings.update_webhook"}}{{end}}</strong>
+                        </div>
+                        {{template "repo/settings/hook_types" .}}
+                        {{template "repo/settings/hook_gogs" .}}
+                        {{template "repo/settings/hook_slack" .}}
+                    </div>
+                </div>
+                {{if .PageIsSettingsHooksEdit}}
+              <br>
+                <div id="setting-content">
+                    <div id="repo-hooks-history-panel" class="panel panel-radius">
+                        <div class="panel-header">
+                          <strong>{{.i18n.Tr "repo.settings.recent_deliveries"}}</strong>
+                        </div>
+                        <ul class="panel-body setting-list">
+                            <li>Coming soon!</li>
+                        </ul>
+                    </div>
+              </div>
+              {{end}}
+            </div>
+        </div>
+  </div>
+</div>
+{{template "ng/base/footer" .}}

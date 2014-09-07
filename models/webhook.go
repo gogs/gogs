@@ -45,6 +45,7 @@ type Webhook struct {
 	IsActive     bool
 	HookTaskType HookTaskType
 	Meta         string `xorm:"TEXT"` // store hook-specific attributes
+	OrgId        int64
 }
 
 // GetEvent handles conversion from Events to HookEvent.
@@ -118,6 +119,18 @@ func UpdateWebhook(w *Webhook) error {
 func DeleteWebhook(hookId int64) error {
 	_, err := x.Delete(&Webhook{Id: hookId})
 	return err
+}
+
+// GetWebhooksByOrgId returns all webhooks for an organization.
+func GetWebhooksByOrgId(orgId int64) (ws []*Webhook, err error) {
+	err = x.Find(&ws, &Webhook{OrgId: orgId})
+	return ws, err
+}
+
+// GetActiveWebhooksByOrgId returns all active webhooks for an organization.
+func GetActiveWebhooksByOrgId(orgId int64) (ws []*Webhook, err error) {
+	err = x.Find(&ws, &Webhook{OrgId: orgId, IsActive: true})
+	return ws, err
 }
 
 //   ___ ___                __   ___________              __
