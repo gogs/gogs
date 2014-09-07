@@ -1,5 +1,5 @@
 <div id="gogs" class="{{if (and .PageIsSettingsHooksEdit (not (eq .HookType "Gogs")))}}hidden{{end}}">
-  <form class="form form-align panel-body repo-setting-form" id="repo-setting-form-gogs"  action="{{.RepoLink}}/settings/hooks/gogs/{{if .PageIsSettingsHooksNew}}new{{else}}{{.Webhook.Id}}{{end}}" method="post">
+  <form class="form form-align panel-body repo-setting-form" id="repo-setting-form-gogs" action="{{if .RepoLink}}{{.RepoLink}}{{else if .OrgLink}}{{.OrgLink}}{{end}}/settings/hooks/gogs/{{if .PageIsSettingsHooksNew}}new{{else}}{{.Webhook.Id}}{{end}}" method="post">
     {{.CsrfTokenHtml}}
     <input type="hidden" name="hook_type" value="gogs">
     <div class="text-center panel-desc">{{.i18n.Tr "repo.settings.add_webhook_desc" | Str2html}}</div>
