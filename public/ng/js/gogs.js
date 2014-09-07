@@ -521,7 +521,7 @@ function initAdmin() {
             e.preventDefault();
             return true;
         }
-        var $form = $('user-profile-form');
+        var $form = $('#user-profile-form');
         $form.attr('action', $form.data('delete-url'));
     });
     // Create authorization.
@@ -545,6 +545,43 @@ function initAdmin() {
         var $form = $('auth-setting-form');
         $form.attr('action', $form.data('delete-url'));
     });
+}
+
+function initInstall() {
+    // Change database type.
+    (function () {
+        var mysql_default = '127.0.0.1:3306';
+        var postgres_default = '127.0.0.1:5432';
+
+        $('#install-database').on("change", function () {
+            var val = $(this).val();
+            if (val != "SQLite3") {
+                $('.server-sql').show();
+                $('.sqlite-setting').addClass("hide");
+                if (val == "PostgreSQL") {
+                    $('.pgsql-setting').removeClass("hide");
+
+                    // Change the host value to the Postgres default, but only
+                    // if the user hasn't already changed it from the MySQL
+                    // default.
+                    if ($('#database-host').val() == mysql_default) {
+                        $('#database-host').val(postgres_default);
+                    }
+                } else if (val == 'MySQL') {
+                    $('.pgsql-setting').addClass("hide");
+                    if ($('#database-host').val() == postgres_default) {
+                        $('#database-host').val(mysql_default);
+                    }
+                } else {
+                    $('.pgsql-setting').addClass("hide");
+                }
+            } else {
+                $('.server-sql').hide();
+                $('.pgsql-setting').hide();
+                $('.sqlite-setting').removeClass("hide");
+            }
+        });
+    }());
 }
 
 $(document).ready(function () {
@@ -578,6 +615,9 @@ $(document).ready(function () {
     }
     if ($('#admin-setting').length) {
         initAdmin();
+    }
+    if ($('#install-form').length) {
+        initInstall();
     }
 
     Tabs('#dashboard-sidebar-menu');
