@@ -5,7 +5,7 @@ Gogs(Go Git Service) is a painless self-hosted Git Service written in Go.
 
 ![Demo](http://gowalker.org/public/gogs_demo.gif)
 
-##### Current version: 0.4.9 Beta
+##### Current version: 0.5.0 Beta
 
 ### NOTICES
 
@@ -35,7 +35,8 @@ The goal of this project is to make the easiest, fastest and most painless way t
 - Register/delete/rename account
 - Create/manage/delete organization with team management
 - Create/migrate/mirror/delete/watch/rename/transfer public/private repository
-- Repository viewer/release/issue tracker/webhooks
+- Repository viewer/release/issue tracker
+- Repository and Organization level webhooks
 - Add/remove repository collaborators
 - Gravatar and cache support
 - Mail service(register, issue)

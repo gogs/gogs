@@ -69,9 +69,9 @@ func newMacaron() *macaron.Macaron {
 			SkipLogging: !setting.DisableRouterLog,
 		},
 	))
-	if setting.EnableGzip {
-		m.Use(macaron.Gzip())
-	}
+	// if setting.EnableGzip {
+	// 	m.Use(macaron.Gzip())
+	// }
 	m.Use(macaron.Renderer(macaron.RenderOptions{
 		Directory:  path.Join(setting.StaticRootPath, "templates"),
 		Funcs:      []template.FuncMap{base.TemplateFuncs},

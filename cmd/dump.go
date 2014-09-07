@@ -24,16 +24,18 @@ var CmdDump = cli.Command{
 	Description: `Dump compresses all related files and database into zip file.
 It can be used for backup and capture Gogs server image to send to maintainer`,
 	Action: runDump,
-	Flags:  []cli.Flag{},
+	Flags: []cli.Flag{
+		cli.BoolFlag{"verbose, v", "show process details", ""},
+	},
 }
 
-func runDump(*cli.Context) {
+func runDump(ctx *cli.Context) {
 	setting.NewConfigContext()
 	models.LoadModelsConfig()
 	models.SetEngine()
 
 	log.Printf("Dumping local repositories...%s", setting.RepoRootPath)
-	zip.Verbose = false
+	zip.Verbose = ctx.Bool("verbose")
 	defer os.Remove("gogs-repo.zip")
 	if err := zip.PackTo(setting.RepoRootPath, "gogs-repo.zip", true); err != nil {
 		log.Fatalf("Fail to dump local repositories: %v", err)
