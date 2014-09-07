@@ -11,13 +11,13 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/saintfish/chardet"
+
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/git"
 	"github.com/gogits/gogs/modules/log"
+	"github.com/gogits/gogs/modules/mahonia"
 	"github.com/gogits/gogs/modules/middleware"
-
-	"code.google.com/p/mahonia"
-	"github.com/saintfish/chardet"
 )
 
 const (

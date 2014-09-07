@@ -2,9 +2,6 @@
 path = github.com/gogits/gogs
 
 [deps]
-code.google.com/p/mahonia = 
-github.com/beego/memcache = 
-github.com/beego/redigo = 
 github.com/Unknwon/cae = 
 github.com/Unknwon/com = 
 github.com/Unknwon/goconfig = 
@@ -18,7 +15,6 @@ github.com/gogits/gfm =
 github.com/gogits/git = 
 github.com/gogits/oauth2 = 
 github.com/juju2013/goldap = 
-github.com/johnweldon/asn1-ber = 
 github.com/lib/pq = 
 github.com/macaron-contrib/cache = 
 github.com/macaron-contrib/captcha = 
@@ -26,7 +22,6 @@ github.com/macaron-contrib/csrf =
 github.com/macaron-contrib/i18n = 
 github.com/macaron-contrib/session = 
 github.com/macaron-contrib/toolbox = 
-github.com/mattn/go-sqlite3 = 
 github.com/nfnt/resize = 
 github.com/saintfish/chardet = 
 
