@@ -81,22 +81,22 @@ func renderDbOption(ctx *middleware.Context) {
 // @router /install [get]
 func Install(ctx *middleware.Context, form auth.InstallForm) {
 	if setting.InstallLock {
-		ctx.Handle(404, "install.Install", errors.New("Installation is prohibited"))
+		ctx.Handle(404, "Install", errors.New("Installation is prohibited"))
 		return
 	}
 
-	ctx.Data["Title"] = "Install"
+	ctx.Data["Title"] = ctx.Tr("install.install")
 	ctx.Data["PageIsInstall"] = true
 
 	// Get and assign values to install form.
-	if len(form.Host) == 0 {
-		form.Host = models.DbCfg.Host
+	if len(form.DbHost) == 0 {
+		form.DbHost = models.DbCfg.Host
 	}
-	if len(form.User) == 0 {
-		form.User = models.DbCfg.User
+	if len(form.DbUser) == 0 {
+		form.DbUser = models.DbCfg.User
 	}
-	if len(form.Passwd) == 0 {
-		form.Passwd = models.DbCfg.Pwd
+	if len(form.DbPasswd) == 0 {
+		form.DbPasswd = models.DbCfg.Pwd
 	}
 	if len(form.DatabaseName) == 0 {
 		form.DatabaseName = models.DbCfg.Name
@@ -131,11 +131,11 @@ func Install(ctx *middleware.Context, form auth.InstallForm) {
 
 func InstallPost(ctx *middleware.Context, form auth.InstallForm) {
 	if setting.InstallLock {
-		ctx.Handle(404, "install.InstallPost", errors.New("Installation is prohibited"))
+		ctx.Handle(404, "InstallPost", errors.New("Installation is prohibited"))
 		return
 	}
 
-	ctx.Data["Title"] = "Install"
+	ctx.Data["Title"] = ctx.Tr("install.install")
 	ctx.Data["PageIsInstall"] = true
 
 	renderDbOption(ctx)
@@ -147,7 +147,7 @@ func InstallPost(ctx *middleware.Context, form auth.InstallForm) {
 	}
 
 	if _, err := exec.LookPath("git"); err != nil {
-		ctx.RenderWithErr("Fail to test 'git' command: "+err.Error(), INSTALL, &form)
+		ctx.RenderWithErr(ctx.Tr("install.test_git_failed", err), INSTALL, &form)
 		return
 	}
 
@@ -155,9 +155,9 @@ func InstallPost(ctx *middleware.Context, form auth.InstallForm) {
 	// Test database setting.
 	dbTypes := map[string]string{"MySQL": "mysql", "PostgreSQL": "postgres", "SQLite3": "sqlite3"}
 	models.DbCfg.Type = dbTypes[form.Database]
-	models.DbCfg.Host = form.Host
-	models.DbCfg.User = form.User
-	models.DbCfg.Pwd = form.Passwd
+	models.DbCfg.Host = form.DbHost
+	models.DbCfg.User = form.DbUser
+	models.DbCfg.Pwd = form.DbPasswd
 	models.DbCfg.Name = form.DatabaseName
 	models.DbCfg.SslMode = form.SslMode
 	models.DbCfg.Path = form.DatabasePath
@@ -167,17 +167,16 @@ func InstallPost(ctx *middleware.Context, form auth.InstallForm) {
 	if err := models.NewTestEngine(x); err != nil {
 		// NOTE: should use core.QueryDriver (github.com/go-xorm/core)
 		if strings.Contains(err.Error(), `Unknown database type: sqlite3`) {
-			ctx.RenderWithErr("Your release version does not support SQLite3, please download the official binary version "+
-				"from http://gogs.io/docs/installation/install_from_binary.md, NOT the gobuild version.", INSTALL, &form)
+			ctx.RenderWithErr(ctx.Tr("install.sqlite3_not_available"), INSTALL, &form)
 		} else {
-			ctx.RenderWithErr("Database setting is not correct: "+err.Error(), INSTALL, &form)
+			ctx.RenderWithErr(ctx.Tr("install.invalid_db_setting", err), INSTALL, &form)
 		}
 		return
 	}
 
 	// Test repository root path.
 	if err := os.MkdirAll(form.RepoRootPath, os.ModePerm); err != nil {
-		ctx.RenderWithErr("Repository root path is invalid: "+err.Error(), INSTALL, &form)
+		ctx.RenderWithErr(ctx.Tr("install.invalid_repo_path", err), INSTALL, &form)
 		return
 	}
 
@@ -188,7 +187,13 @@ func InstallPost(ctx *middleware.Context, form auth.InstallForm) {
 	}
 	// Does not check run user when the install lock is off.
 	if form.RunUser != curUser {
-		ctx.RenderWithErr("Run user isn't the current user: "+form.RunUser+" -> "+curUser, INSTALL, &form)
+		ctx.RenderWithErr(ctx.Tr("install.run_user_not_match", form.RunUser, curUser), INSTALL, &form)
+		return
+	}
+
+	// Check admin password.
+	if form.AdminPasswd != form.ConfirmPasswd {
+		ctx.RenderWithErr(ctx.Tr("form.password_not_match"), INSTALL, form)
 		return
 	}
 
@@ -224,7 +229,7 @@ func InstallPost(ctx *middleware.Context, form auth.InstallForm) {
 
 	os.MkdirAll("custom/conf", os.ModePerm)
 	if err := goconfig.SaveConfigFile(setting.Cfg, path.Join(setting.CustomPath, "conf/app.ini")); err != nil {
-		ctx.RenderWithErr("Fail to save configuration: "+err.Error(), INSTALL, &form)
+		ctx.RenderWithErr(ctx.Tr("install.save_config_failed", err), INSTALL, &form)
 		return
 	}
 
@@ -235,13 +240,13 @@ func InstallPost(ctx *middleware.Context, form auth.InstallForm) {
 		IsAdmin: true, IsActive: true}); err != nil {
 		if err != models.ErrUserAlreadyExist {
 			setting.InstallLock = false
-			ctx.RenderWithErr("Admin account setting is invalid: "+err.Error(), INSTALL, &form)
+			ctx.RenderWithErr(ctx.Tr("install.invalid_admin_setting", err), INSTALL, &form)
 			return
 		}
 		log.Info("Admin account already exist")
 	}
 
 	log.Info("First-time run install finished!")
-	ctx.Flash.Success("Welcome! We're glad that you choose Gogs, have fun and take care.")
+	ctx.Flash.Success(ctx.Tr("install.install_success"))
 	ctx.Redirect("/user/login")
 }

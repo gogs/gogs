@@ -669,6 +669,19 @@ ol.linenums {
 #feature-wrapper .grid-1-2 {
   margin-bottom: 30px;
 }
+#install-form {
+  padding: 15px;
+}
+#install-form label {
+  width: 35%;
+}
+#install-form input {
+  width: 30%;
+}
+#install-form input[type="checkbox"],
+#install-form input[type="radio"] {
+  width: auto;
+}
 /*
 The dashboard page style
 */
