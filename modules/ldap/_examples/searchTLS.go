@@ -8,21 +8,21 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/juju2013/goldap"
+	"github.com/gogits/gogs/modules/ldap"
 )
 
 var (
 	LdapServer string   = "localhost"
-	LdapPort   uint16   = 636
+	LdapPort   uint16   = 389
 	BaseDN     string   = "dc=enterprise,dc=org"
 	Filter     string   = "(cn=kirkj)"
 	Attributes []string = []string{"mail"}
 )
 
 func main() {
-	l, err := ldap.DialSSL("tcp", fmt.Sprintf("%s:%d", LdapServer, LdapPort), nil)
+	l, err := ldap.DialTLS("tcp", fmt.Sprintf("%s:%d", LdapServer, LdapPort), nil)
 	if err != nil {
-		log.Fatalf("ERROR: %s\n", err.String())
+		log.Fatalf("ERROR: %s\n", err.Error())
 	}
 	defer l.Close()
 	// l.Debug = true
@@ -36,7 +36,7 @@ func main() {
 
 	sr, err := l.Search(search)
 	if err != nil {
-		log.Fatalf("ERROR: %s\n", err.String())
+		log.Fatalf("ERROR: %s\n", err.Error())
 		return
 	}
 

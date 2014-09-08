@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/juju2013/goldap"
+	"github.com/gogits/gogs/modules/ldap"
 )
 
 var (
