@@ -111,6 +111,7 @@ func SetEngine() (err error) {
 	x.Logger = xorm.NewSimpleLogger(f)
 
 	x.ShowSQL = true
+	x.ShowInfo = true
 	x.ShowDebug = true
 	x.ShowErr = true
 	x.ShowWarn = true
