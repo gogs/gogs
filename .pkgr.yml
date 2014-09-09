@@ -1,0 +1,14 @@
+buildpack: "https://github.com/kr/heroku-buildpack-go.git"
+targets:
+  ubuntu-14.04:
+build_dependencies:
+  - mercurial
+  - bzr
+dependencies:
+  - git
+before:
+  - mv packager/Procfile .
+  - mv packager/.godir .
+after:
+  - mv bin/main gogs
+after_install: ./packager/debian/postinst

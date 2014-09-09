@@ -1,0 +1,51 @@
+#!/bin/sh
+
+set -e
+
+# summary of how this script can be called:
+#        * <postinst> `configure' <most-recently-configured-version>
+#        * <old-postinst> `abort-upgrade' <new version>
+#        * <conflictor's-postinst> `abort-remove' `in-favour' <package>
+#          <new-version>
+#        * <postinst> `abort-remove'
+#        * <deconfigured's-postinst> `abort-deconfigure' `in-favour'
+#          <failed-install-package> <version> `removing'
+#          <conflicting-package> <version>
+# for details, see http://www.debian.org/doc/debian-policy/ or
+# the debian-policy package
+
+APP_NAME="gogs"
+CLI="${APP_NAME}"
+APP_USER=$(${CLI} config:get APP_USER)
+APP_GROUP=$(${CLI} config:get APP_GROUP)
+APP_CONFIG="/etc/${APP_NAME}/conf/app.ini"
+
+# source debconf library
+. /usr/share/debconf/confmodule
+
+case "$1" in
+
+  configure)
+    mkdir -p $(dirname ${APP_CONFIG})
+    chown ${APP_USER}.${APP_GROUP} $(dirname ${APP_CONFIG})
+    [ -f ${APP_CONFIG} ] || ${CLI} run cp conf/app.ini ${APP_CONFIG}
+    ${CLI} config:set USER=${APP_USER}
+    ${CLI} config:set GOGS_CUSTOM="/etc/${APP_NAME}"
+    PORT=$(${CLI} config:get PORT || echo "6000")
+    sed -i "s|HTTP_PORT = 3000|HTTP_PORT = ${PORT}|" ${APP_CONFIG}
+    sed -i "s|RUN_USER = git|RUN_USER = ${APP_USER}|" ${APP_CONFIG}
+    sed -i "s|RUN_MODE = dev|RUN_MODE = prod|" ${APP_CONFIG}
+
+    # scale
+    ${CLI} scale web=1 || true
+  ;;
+
+  abort-upgrade|abort-remove|abort-deconfigure)
+    exit 0
+  ;;
+
+  *)
+    echo "postinst called with unknown argument \`$1'" >&2
+    exit 1
+  ;;
+esac
