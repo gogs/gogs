@@ -99,7 +99,7 @@ func GetWebhookById(hookId int64) (*Webhook, error) {
 
 // GetActiveWebhooksByRepoId returns all active webhooks of repository.
 func GetActiveWebhooksByRepoId(repoId int64) (ws []*Webhook, err error) {
-	err = x.Find(&ws, &Webhook{RepoId: repoId, IsActive: true})
+	err = x.Where("repo_id=?", repoId).And("is_active=?", true).Find(&ws)
 	return ws, err
 }
 
@@ -129,7 +129,7 @@ func GetWebhooksByOrgId(orgId int64) (ws []*Webhook, err error) {
 
 // GetActiveWebhooksByOrgId returns all active webhooks for an organization.
 func GetActiveWebhooksByOrgId(orgId int64) (ws []*Webhook, err error) {
-	err = x.Find(&ws, &Webhook{OrgId: orgId, IsActive: true})
+	err = x.Where("org_id=?", orgId).And("is_active=?", true).Find(&ws)
 	return ws, err
 }
 
