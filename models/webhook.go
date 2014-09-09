@@ -230,7 +230,7 @@ func CreateHookTask(t *HookTask) error {
 
 // UpdateHookTask updates information of hook task.
 func UpdateHookTask(t *HookTask) error {
-	_, err := x.AllCols().Update(t)
+	_, err := x.Id(t.Id).AllCols().Update(t)
 	return err
 }
 
