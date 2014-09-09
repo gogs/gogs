@@ -20,7 +20,7 @@ import (
 
 type CreateRepoForm struct {
 	Uid         int64  `form:"uid" binding:"Required"`
-	RepoName    string `form:"repo_name" binding:"Required;AlphaDash;MaxSize(100)"`
+	RepoName    string `form:"repo_name" binding:"Required;AlphaDashDot;MaxSize(100)"`
 	Private     bool   `form:"private"`
 	Description string `form:"desc" binding:"MaxSize(255)"`
 	Gitignore   string `form:"gitignore"`
@@ -37,7 +37,7 @@ type MigrateRepoForm struct {
 	AuthUserName string `form:"auth_username"`
 	AuthPasswd   string `form:"auth_password"`
 	Uid          int64  `form:"uid" binding:"Required"`
-	RepoName     string `form:"repo_name" binding:"Required;AlphaDash;MaxSize(100)"`
+	RepoName     string `form:"repo_name" binding:"Required;AlphaDashDot;MaxSize(100)"`
 	Mirror       bool   `form:"mirror"`
 	Private      bool   `form:"private"`
 	Description  string `form:"desc" binding:"MaxSize(255)"`
@@ -48,7 +48,7 @@ func (f *MigrateRepoForm) Validate(ctx *macaron.Context, errs *binding.Errors, l
 }
 
 type RepoSettingForm struct {
-	RepoName    string `form:"repo_name" binding:"Required;AlphaDash;MaxSize(100)"`
+	RepoName    string `form:"repo_name" binding:"Required;AlphaDashDot;MaxSize(100)"`
 	Description string `form:"desc" binding:"MaxSize(255)"`
 	Website     string `form:"site" binding:"Url;MaxSize(100)"`
 	Branch      string `form:"branch"`
