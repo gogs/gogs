@@ -1,7 +1,6 @@
 html,
 body {
   height: 100%;
-  overflow-y: scroll;
 }
 .octicon,
 .fa {
@@ -1015,6 +1014,7 @@ The register and sign-in page style
   left: -354px;
   padding: 20px;
   box-sizing: border-box;
+  z-index: 1;
 }
 #repo-header-download-drop .btn > i {
   margin-right: 6px;
