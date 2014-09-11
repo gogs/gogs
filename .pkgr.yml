@@ -1,6 +1,7 @@
-buildpack: "https://github.com/kr/heroku-buildpack-go.git"
 targets:
   ubuntu-14.04:
+  ubuntu-12.04:
+  debian-7:
 build_dependencies:
   - mercurial
   - bzr
