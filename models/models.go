@@ -77,7 +77,7 @@ func getEngine() (*xorm.Engine, error) {
 			return nil, fmt.Errorf("Unknown database type: %s", DbCfg.Type)
 		}
 		os.MkdirAll(path.Dir(DbCfg.Path), os.ModePerm)
-		cnnstr = DbCfg.Path
+		cnnstr = "file:" + DbCfg.Path + "?cache=shared&mode=rwc"
 	default:
 		return nil, fmt.Errorf("Unknown database type: %s", DbCfg.Type)
 	}

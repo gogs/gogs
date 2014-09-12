@@ -236,6 +236,7 @@ func UpdateHookTask(t *HookTask) error {
 
 // DeliverHooks checks and delivers undelivered hooks.
 func DeliverHooks() {
+	tasks := make([]*HookTask, 0, 10)
 	timeout := time.Duration(setting.WebhookDeliverTimeout) * time.Second
 	x.Where("is_delivered=?", false).Iterate(new(HookTask),
 		func(idx int, bean interface{}) error {
@@ -283,12 +284,18 @@ func DeliverHooks() {
 				}
 			}
 
-			if err := UpdateHookTask(t); err != nil {
-				log.Error(4, "UpdateHookTask: %v", err)
-				return nil
-			}
+			tasks = append(tasks, t)
 
-			log.Trace("Hook delivered(%s): %s", t.Uuid, t.PayloadContent)
+			if t.IsSucceed {
+				log.Trace("Hook delivered(%s): %s", t.Uuid, t.PayloadContent)
+			}
 			return nil
 		})
+
+	// Update hook task status.
+	for _, t := range tasks {
+		if err := UpdateHookTask(t); err != nil {
+			log.Error(4, "UpdateHookTask(%d): %v", t.Id, err)
+		}
+	}
 }
