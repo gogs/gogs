@@ -14,7 +14,7 @@
     </p>
     <div class="{{if .ReadmeExist}}panel-content markdown{{end}} code-view">
     	{{if .ReadmeExist}}
-    	{{.FileContent | Str2html}}
+    	{{if .FileContent}}{{.FileContent | Str2html}}{{end}}
         {{else if not .IsFileText}}
         <div class="view-raw">
             {{if .IsImageFile}}

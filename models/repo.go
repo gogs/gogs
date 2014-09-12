@@ -644,10 +644,18 @@ func RepoPath(userName, repoName string) string {
 }
 
 // TransferOwnership transfers all corresponding setting from old user to new one.
-func TransferOwnership(u *User, newOwner string, repo *Repository) (err error) {
+func TransferOwnership(u *User, newOwner string, repo *Repository) error {
 	newUser, err := GetUserByName(newOwner)
 	if err != nil {
 		return err
+	}
+
+	// Check if new owner has repository with same name.
+	has, err := IsRepositoryExist(u, repo.Name)
+	if err != nil {
+		return err
+	} else if has {
+		return ErrRepoAlreadyExist
 	}
 
 	sess := x.NewSession()
@@ -715,12 +723,6 @@ func TransferOwnership(u *User, newOwner string, repo *Repository) (err error) {
 				sess.Rollback()
 				return err
 			}
-		}
-
-		if _, err = sess.Exec(
-			"UPDATE `user` SET num_repos = num_repos + 1 WHERE id = ?", u.Id); err != nil {
-			sess.Rollback()
-			return err
 		}
 
 		// Update owner team info and count.
@@ -933,9 +935,9 @@ func GetRepositoryByRef(ref string) (*Repository, error) {
 }
 
 // GetRepositoryByName returns the repository by given name under user if exists.
-func GetRepositoryByName(userId int64, repoName string) (*Repository, error) {
+func GetRepositoryByName(uid int64, repoName string) (*Repository, error) {
 	repo := &Repository{
-		OwnerId:   userId,
+		OwnerId:   uid,
 		LowerName: strings.ToLower(repoName),
 	}
 	has, err := x.Get(repo)

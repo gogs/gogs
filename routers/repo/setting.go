@@ -113,7 +113,11 @@ func SettingsPost(ctx *middleware.Context, form auth.RepoSettingForm) {
 			ctx.RenderWithErr(ctx.Tr("form.enterred_invalid_owner_name"), SETTINGS_OPTIONS, nil)
 			return
 		} else if err = models.TransferOwnership(ctx.Repo.Owner, newOwner, ctx.Repo.Repository); err != nil {
-			ctx.Handle(500, "TransferOwnership", err)
+			if err == models.ErrRepoAlreadyExist {
+				ctx.RenderWithErr(ctx.Tr("repo.settings.new_owner_has_same_repo"), SETTINGS_OPTIONS, nil)
+			} else {
+				ctx.Handle(500, "TransferOwnership", err)
+			}
 			return
 		}
 		log.Trace("Repository transfered: %s/%s -> %s", ctx.Repo.Owner.Name, ctx.Repo.Repository.Name, newOwner)
