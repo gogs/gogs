@@ -1316,6 +1316,7 @@ The register and sign-in page style
   padding: 0;
 }
 .code-view .lines-num {
+  vertical-align: top;
   text-align: right;
   color: #999;
   background: #f5f5f5;
