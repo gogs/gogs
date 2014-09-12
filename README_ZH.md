@@ -3,7 +3,7 @@ Gogs - Go Git Service [![wercker status](https://app.wercker.com/status/ad0bdb0b
 
 Gogs(Go Git Service) 是一个基于 Go 语言的自助 Git 服务。
 
-![Demo](http://gowalker.org/public/gogs_demo.gif)
+![Demo](https://gowalker.org/public/gogs_demo.gif)
 
 ##### 当前版本：0.5.0 Beta
 
