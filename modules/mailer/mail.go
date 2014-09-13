@@ -45,7 +45,6 @@ func GetMailTmplData(u *models.User) map[interface{}]interface{} {
 	data["AppName"] = setting.AppName
 	data["AppVer"] = setting.AppVer
 	data["AppUrl"] = setting.AppUrl
-	data["AppLogo"] = setting.AppLogo
 	data["ActiveCodeLives"] = setting.Service.ActiveCodeLives / 60
 	data["ResetPwdCodeLives"] = setting.Service.ResetPwdCodeLives / 60
 	if u != nil {
