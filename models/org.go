@@ -507,7 +507,7 @@ func (t *Team) AddRepository(repo *Repository) (err error) {
 	mode := AuthorizeToAccessType(t.Authorize)
 
 	for _, u := range t.Members {
-		auth, err := GetHighestAuthorize(t.OrgId, u.Id, t.Id, repo.Id)
+		auth, err := GetHighestAuthorize(t.OrgId, u.Id, repo.Id, t.Id)
 		if err != nil {
 			sess.Rollback()
 			return err
@@ -517,13 +517,7 @@ func (t *Team) AddRepository(repo *Repository) (err error) {
 			UserName: u.LowerName,
 			RepoName: path.Join(repo.Owner.LowerName, repo.LowerName),
 		}
-		if auth == 0 {
-			access.Mode = mode
-			if _, err = sess.Insert(access); err != nil {
-				sess.Rollback()
-				return fmt.Errorf("fail to insert access: %v", err)
-			}
-		} else if auth < t.Authorize {
+		if auth < t.Authorize {
 			if err = addAccessWithAuthorize(sess, access, mode); err != nil {
 				sess.Rollback()
 				return err
@@ -570,7 +564,7 @@ func (t *Team) RemoveRepository(repoId int64) error {
 
 	// Remove access to team members.
 	for _, u := range t.Members {
-		auth, err := GetHighestAuthorize(t.OrgId, u.Id, t.Id, repo.Id)
+		auth, err := GetHighestAuthorize(t.OrgId, u.Id, repo.Id, t.Id)
 		if err != nil {
 			sess.Rollback()
 			return err
@@ -668,7 +662,7 @@ func GetTeamById(teamId int64) (*Team, error) {
 }
 
 // GetHighestAuthorize returns highest repository authorize level for given user and team.
-func GetHighestAuthorize(orgId, uid, teamId, repoId int64) (AuthorizeType, error) {
+func GetHighestAuthorize(orgId, uid, repoId, teamId int64) (AuthorizeType, error) {
 	ts, err := GetUserTeams(orgId, uid)
 	if err != nil {
 		return 0, err
@@ -687,6 +681,7 @@ func GetHighestAuthorize(orgId, uid, teamId, repoId int64) (AuthorizeType, error
 			}
 		}
 	}
+
 	return auth, nil
 }
 
@@ -728,7 +723,7 @@ func UpdateTeam(t *Team, authChanged bool) (err error) {
 				// ORG_WRITABLE is the highest authorize level for now.
 				// Skip checking others if current team has this level.
 				if t.Authorize < ORG_WRITABLE {
-					auth, err := GetHighestAuthorize(org.Id, u.Id, t.Id, repo.Id)
+					auth, err := GetHighestAuthorize(t.OrgId, u.Id, repo.Id, t.Id)
 					if err != nil {
 						sess.Rollback()
 						return err
@@ -782,7 +777,7 @@ func DeleteTeam(t *Team) error {
 	// Delete all accesses.
 	for _, repo := range t.Repos {
 		for _, u := range t.Members {
-			auth, err := GetHighestAuthorize(org.Id, u.Id, t.Id, repo.Id)
+			auth, err := GetHighestAuthorize(t.OrgId, u.Id, repo.Id, t.Id)
 			if err != nil {
 				sess.Rollback()
 				return err
@@ -943,7 +938,7 @@ func AddTeamMember(orgId, teamId, uid int64) error {
 	// Give access to team repositories.
 	mode := AuthorizeToAccessType(t.Authorize)
 	for _, repo := range t.Repos {
-		auth, err := GetHighestAuthorize(orgId, uid, teamId, repo.Id)
+		auth, err := GetHighestAuthorize(t.OrgId, u.Id, repo.Id, teamId)
 		if err != nil {
 			sess.Rollback()
 			return err
@@ -953,14 +948,7 @@ func AddTeamMember(orgId, teamId, uid int64) error {
 			UserName: u.LowerName,
 			RepoName: path.Join(org.LowerName, repo.LowerName),
 		}
-		// Equal 0 means given access doesn't exist.
-		if auth == 0 {
-			access.Mode = mode
-			if _, err = sess.Insert(access); err != nil {
-				sess.Rollback()
-				return fmt.Errorf("fail to insert access: %v", err)
-			}
-		} else if auth < t.Authorize {
+		if auth < t.Authorize {
 			if err = addAccessWithAuthorize(sess, access, mode); err != nil {
 				sess.Rollback()
 				return err
@@ -1037,7 +1025,7 @@ func removeTeamMemberWithSess(orgId, teamId, uid int64, sess *xorm.Session) erro
 
 	// Delete access to team repositories.
 	for _, repo := range t.Repos {
-		auth, err := GetHighestAuthorize(orgId, uid, teamId, repo.Id)
+		auth, err := GetHighestAuthorize(t.OrgId, u.Id, repo.Id, teamId)
 		if err != nil {
 			sess.Rollback()
 			return err
