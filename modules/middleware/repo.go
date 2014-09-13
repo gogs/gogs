@@ -109,7 +109,7 @@ func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 			}
 			// Check if current user has admin permission to repository.
 			if u.IsOrganization() {
-				auth, err := models.GetHighestAuthorize(u.Id, ctx.User.Id, 0, repo.Id)
+				auth, err := models.GetHighestAuthorize(u.Id, ctx.User.Id, repo.Id, 0)
 				if err != nil {
 					ctx.Handle(500, "GetHighestAuthorize", err)
 					return

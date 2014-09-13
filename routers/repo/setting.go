@@ -213,7 +213,7 @@ func SettingsCollaboration(ctx *middleware.Context) {
 		needDelete := true
 		if ctx.User.IsOrganization() {
 			// Check if user belongs to a team that has access to this repository.
-			auth, err := models.GetHighestAuthorize(ctx.Repo.Owner.Id, ctx.User.Id, 0, ctx.Repo.Repository.Id)
+			auth, err := models.GetHighestAuthorize(ctx.Repo.Owner.Id, ctx.User.Id, ctx.Repo.Repository.Id, 0)
 			if err != nil {
 				ctx.Handle(500, "GetHighestAuthorize", err)
 				return

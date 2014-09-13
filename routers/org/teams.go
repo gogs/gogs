@@ -94,7 +94,7 @@ func TeamsAction(ctx *middleware.Context) {
 		if err == models.ErrLastOrgOwner {
 			ctx.Flash.Error(ctx.Tr("form.last_org_owner"))
 		} else {
-			log.Error(4, "Action(%s): %v", ctx.Params(":action"), err)
+			log.Error(3, "Action(%s): %v", ctx.Params(":action"), err)
 			ctx.JSON(200, map[string]interface{}{
 				"ok":  false,
 				"err": err.Error(),
@@ -133,7 +133,7 @@ func TeamsRepoAction(ctx *middleware.Context) {
 	}
 
 	if err != nil {
-		log.Error(4, "Action(%s): %v", ctx.Params(":action"), err)
+		log.Error(3, "Action(%s): %v", ctx.Params(":action"), err)
 		ctx.JSON(200, map[string]interface{}{
 			"ok":  false,
 			"err": err.Error(),
