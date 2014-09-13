@@ -32,7 +32,6 @@ var (
 	// App settings.
 	AppVer  string
 	AppName string
-	AppLogo string
 	AppUrl  string
 
 	// Server settings.
@@ -155,7 +154,6 @@ func NewConfigContext() {
 	}
 
 	AppName = Cfg.MustValue("", "APP_NAME", "Gogs: Go Git Service")
-	AppLogo = Cfg.MustValue("", "APP_LOGO", "img/favicon.png")
 	AppUrl = Cfg.MustValue("server", "ROOT_URL", "http://localhost:3000/")
 	if AppUrl[len(AppUrl)-1] != '/' {
 		AppUrl += "/"
