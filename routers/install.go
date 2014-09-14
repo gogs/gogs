@@ -176,6 +176,7 @@ func InstallPost(ctx *middleware.Context, form auth.InstallForm) {
 
 	// Test repository root path.
 	if err := os.MkdirAll(form.RepoRootPath, os.ModePerm); err != nil {
+		ctx.Data["Err_RepoRootPath"] = true
 		ctx.RenderWithErr(ctx.Tr("install.invalid_repo_path", err), INSTALL, &form)
 		return
 	}
@@ -187,12 +188,14 @@ func InstallPost(ctx *middleware.Context, form auth.InstallForm) {
 	}
 	// Does not check run user when the install lock is off.
 	if form.RunUser != curUser {
+		ctx.Data["Err_RunUser"] = true
 		ctx.RenderWithErr(ctx.Tr("install.run_user_not_match", form.RunUser, curUser), INSTALL, &form)
 		return
 	}
 
 	// Check admin password.
 	if form.AdminPasswd != form.ConfirmPasswd {
+		ctx.Data["Err_AdminPasswd"] = true
 		ctx.RenderWithErr(ctx.Tr("form.password_not_match"), INSTALL, form)
 		return
 	}
@@ -240,6 +243,8 @@ func InstallPost(ctx *middleware.Context, form auth.InstallForm) {
 		IsAdmin: true, IsActive: true}); err != nil {
 		if err != models.ErrUserAlreadyExist {
 			setting.InstallLock = false
+			ctx.Data["Err_AdminName"] = true
+			ctx.Data["Err_AdminEmail"] = true
 			ctx.RenderWithErr(ctx.Tr("install.invalid_admin_setting", err), INSTALL, &form)
 			return
 		}
