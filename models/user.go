@@ -82,14 +82,14 @@ type User struct {
 // DashboardLink returns the user dashboard page link.
 func (u *User) DashboardLink() string {
 	if u.IsOrganization() {
-		return "/org/" + u.Name + "/dashboard/"
+		return setting.AppRootSubUrl + "/org/" + u.Name + "/dashboard/"
 	}
-	return "/"
+	return setting.AppRootSubUrl + "/"
 }
 
 // HomeLink returns the user home page link.
 func (u *User) HomeLink() string {
-	return "/user/" + u.Name
+	return setting.AppRootSubUrl + "/user/" + u.Name
 }
 
 // AvatarLink returns user gravatar link.

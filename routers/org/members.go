@@ -11,6 +11,7 @@ import (
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/middleware"
+	"github.com/gogits/gogs/modules/setting"
 )
 
 const (
@@ -86,7 +87,7 @@ func MembersAction(ctx *middleware.Context) {
 	if ctx.Params(":action") != "leave" {
 		ctx.Redirect(ctx.Org.OrgLink + "/members")
 	} else {
-		ctx.Redirect("/")
+		ctx.Redirect(setting.AppRootSubUrl + "/")
 	}
 }
 

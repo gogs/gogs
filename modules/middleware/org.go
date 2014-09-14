@@ -9,6 +9,7 @@ import (
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/log"
+	"github.com/gogits/gogs/modules/setting"
 )
 
 func OrgAssignment(redirect bool, args ...bool) macaron.Handler {
@@ -37,7 +38,7 @@ func OrgAssignment(redirect bool, args ...bool) macaron.Handler {
 				ctx.Handle(404, "GetUserByName", err)
 			} else if redirect {
 				log.Error(4, "GetUserByName", err)
-				ctx.Redirect("/")
+				ctx.Redirect(setting.AppRootSubUrl + "/")
 			} else {
 				ctx.Handle(500, "GetUserByName", err)
 			}
@@ -67,7 +68,7 @@ func OrgAssignment(redirect bool, args ...bool) macaron.Handler {
 		}
 		ctx.Data["IsOrganizationOwner"] = ctx.Org.IsOwner
 
-		ctx.Org.OrgLink = "/org/" + org.Name
+		ctx.Org.OrgLink = setting.AppRootSubUrl + "/org/" + org.Name
 		ctx.Data["OrgLink"] = ctx.Org.OrgLink
 
 		// Team.
@@ -79,7 +80,7 @@ func OrgAssignment(redirect bool, args ...bool) macaron.Handler {
 					ctx.Handle(404, "GetTeam", err)
 				} else if redirect {
 					log.Error(4, "GetTeam", err)
-					ctx.Redirect("/")
+					ctx.Redirect(setting.AppRootSubUrl + "/")
 				} else {
 					ctx.Handle(500, "GetTeam", err)
 				}

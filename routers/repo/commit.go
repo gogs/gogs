@@ -159,8 +159,8 @@ func Diff(ctx *middleware.Context) {
 	ctx.Data["Diff"] = diff
 	ctx.Data["Parents"] = parents
 	ctx.Data["DiffNotAvailable"] = diff.NumFiles() == 0
-	ctx.Data["SourcePath"] = "/" + path.Join(userName, repoName, "src", commitId)
-	ctx.Data["RawPath"] = "/" + path.Join(userName, repoName, "raw", commitId)
+	ctx.Data["SourcePath"] = setting.AppRootSubUrl + "/" + path.Join(userName, repoName, "src", commitId)
+	ctx.Data["RawPath"] = setting.AppRootSubUrl + "/" + path.Join(userName, repoName, "raw", commitId)
 	ctx.HTML(200, DIFF)
 }
 

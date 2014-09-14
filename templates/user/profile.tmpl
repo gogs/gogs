@@ -66,7 +66,7 @@
                     <li>
                         <div class="meta pull-right"><!-- <i class="fa fa-star"></i> {{.NumStars}} --> <i class="fa fa-code-fork"></i> {{.NumForks}}</div>
                         <h4>
-                            <a href="/{{$.Owner.Name}}/{{.Name}}">{{.Name}}{{if .IsPrivate}} <span class="label label-default">Private</span>{{end}}</a>
+                            <a href="{{AppRootSubUrl}}/{{$.Owner.Name}}/{{.Name}}">{{.Name}}{{if .IsPrivate}} <span class="label label-default">Private</span>{{end}}</a>
                         </h4>
                         <p class="desc">{{.Description}}</p>
                         <div class="info">Last updated {{TimeSince .Updated $.Lang}}</div>

@@ -202,7 +202,7 @@ var Gogs = {};
     // Search users by keyword.
     Gogs.searchUsers = function (val, $target) {
         $.ajax({
-            url: '/api/v1/users/search?q=' + val,
+            url: Gogs.AppRootSubUrl + '/api/v1/users/search?q=' + val,
             dataType: "json",
             success: function (json) {
                 if (json.ok && json.data.length) {
@@ -222,7 +222,7 @@ var Gogs = {};
     // Search repositories by keyword.
     Gogs.searchRepos = function (val, $target, $param) {
         $.ajax({
-            url: '/api/v1/repos/search?q=' + val + '&' + $param,
+            url: Gogs.AppRootSubUrl + '/api/v1/repos/search?q=' + val + '&' + $param,
             dataType: "json",
             success: function (json) {
                 if (json.ok && json.data.length) {
@@ -245,7 +245,7 @@ var Gogs = {};
             return;
         }
         $(selector).zclip({
-            path: "/js/ZeroClipboard.swf",
+            path: Gogs.AppRootSubUrl + "/js/ZeroClipboard.swf",
             copy: function () {
                 var t = $(this).data("copy-val");
                 var to = $($(this).data("copy-from"));
@@ -592,6 +592,7 @@ function initInstall() {
 }
 
 $(document).ready(function () {
+	Gogs.AppRootSubUrl = $('head').data('suburl');
     initCore();
     if ($('#user-profile-setting').length) {
         initUserSetting();
@@ -644,7 +645,7 @@ function homepage() {
     $('#promo-form').submit(function (e) {
         if ($('#username').val() === "") {
             e.preventDefault();
-            window.location.href = '/user/login';
+            window.location.href = Gogs.AppRootSubUrl + '/user/login';
             return true
         }
     });
@@ -652,9 +653,9 @@ function homepage() {
     $('#register-button').click(function (e) {
         if ($('#username').val() === "") {
             e.preventDefault();
-            window.location.href = '/user/sign_up';
+            window.location.href = Gogs.AppRootSubUrl + '/user/sign_up';
             return true
         }
-        $('#promo-form').attr('action', '/user/sign_up');
+        $('#promo-form').attr('action', Gogs.AppRootSubUrl + '/user/sign_up');
     });
 }
