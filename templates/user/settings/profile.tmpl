@@ -15,6 +15,10 @@
                             {{.CsrfTokenHtml}}
                         	<div class="text-center panel-desc">{{.i18n.Tr "settings.profile_desc"}}</div>
                             <div class="field">
+                                <label>{{.i18n.Tr "settings.uid"}}</label>
+                                <label class="text-left">{{.SignedUser.Id}}</label>
+                            </div>
+                            <div class="field">
                                 <label class="req" for="username">{{.i18n.Tr "username"}}</label>
                                 <input class="ipt ipt-large ipt-radius {{if .Err_UserName}}ipt-error{{end}}" id="username" name="uname" type="text" value="{{.SignedUser.Name}}" data-uname="{{.SignedUser.Name}}" required />
                             </div>

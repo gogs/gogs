@@ -11,8 +11,8 @@
     	<p class="desc">{{if .Team.Description}}{{.Team.Description}}{{else}}{{.i18n.Tr "org.teams.no_desc"}}{{end}}</p>
     	<hr>
     	<div class="team-stats">
-    		<a class="text-black" href="{{.OrgLink}}/teams/{{.Team.LowerName}}"><span class="octicon octicon-person"></span> <strong>{{.Team.NumMembers}}</strong> {{$.i18n.Tr "org.lower_members"}}</a> ·
-    		<a class="text-black" href="{{.OrgLink}}/teams/{{.Team.LowerName}}/repositories"><span class="octicon octicon-repo"></span> <strong>{{.Team.NumRepos}}</strong> {{$.i18n.Tr "org.lower_repositories"}}</a>
+    		<a href="{{.OrgLink}}/teams/{{.Team.LowerName}}"><span class="octicon octicon-person"></span> <strong>{{.Team.NumMembers}}</strong> {{$.i18n.Tr "org.lower_members"}}</a> ·
+    		<a href="{{.OrgLink}}/teams/{{.Team.LowerName}}/repositories"><span class="octicon octicon-repo"></span> <strong>{{.Team.NumRepos}}</strong> {{$.i18n.Tr "org.lower_repositories"}}</a>
     	</div>
     	<p class="desc">
     		{{if eq .Team.LowerName "owners"}}

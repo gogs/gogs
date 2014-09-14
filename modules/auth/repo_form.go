@@ -33,7 +33,7 @@ func (f *CreateRepoForm) Validate(ctx *macaron.Context, errs *binding.Errors, l 
 }
 
 type MigrateRepoForm struct {
-	HttpsUrl     string `form:"url" binding:"Url"`
+	HttpsUrl     string `form:"url" binding:"Required;Url"`
 	AuthUserName string `form:"auth_username"`
 	AuthPasswd   string `form:"auth_password"`
 	Uid          int64  `form:"uid" binding:"Required"`

@@ -525,6 +525,9 @@ input[readonly]:focus {
 .form-align .field {
   margin-bottom: 1em;
 }
+label.text-left {
+  text-align: left;
+}
 label.req:after {
   content: "*";
   color: #d9453d;
