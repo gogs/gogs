@@ -253,5 +253,5 @@ func InstallPost(ctx *middleware.Context, form auth.InstallForm) {
 
 	log.Info("First-time run install finished!")
 	ctx.Flash.Success(ctx.Tr("install.install_success"))
-	ctx.Redirect("/user/login")
+	ctx.Redirect(setting.AppRootSubUrl + "/user/login")
 }

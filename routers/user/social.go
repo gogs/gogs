@@ -22,7 +22,7 @@ import (
 func extractPath(next string) string {
 	n, err := url.Parse(next)
 	if err != nil {
-		return "/"
+		return setting.AppRootSubUrl + "/"
 	}
 	return n.Path
 }
@@ -88,7 +88,7 @@ func SocialSignIn(ctx *middleware.Context) {
 			return
 		}
 	case models.ErrOauth2NotAssociated:
-		next = "/user/sign_up"
+		next = setting.AppRootSubUrl + "/user/sign_up"
 	default:
 		ctx.Handle(500, "social.SocialSignIn(GetOauth2)", err)
 		return

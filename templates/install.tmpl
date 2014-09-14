@@ -8,7 +8,7 @@
                     <div class="panel-header">
                         <strong>{{.i18n.Tr "install.title"}}</strong>
                     </div>
-                    <form class="form form-align panel-body" id="install-form" action="/install" method="post">
+                    <form class="form form-align panel-body" id="install-form" action="{{AppRootSubUrl}}/install" method="post">
                         {{.CsrfTokenHtml}}
                         <div class="text-center panel-desc">{{.i18n.Tr "install.requite_db_desc"}}</div>
                         <div class="field">

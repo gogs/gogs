@@ -1,7 +1,7 @@
 {{template "ng/base/head" .}}
 {{template "ng/base/header" .}}
 <div id="sign-wrapper">
-    <form class="form-align form panel sign-panel sign-form container panel-radius" id="sign-up-form" action="/user/login" method="post">
+    <form class="form-align form panel sign-panel sign-form container panel-radius" id="sign-up-form" action="{{AppRootSubUrl}}/user/login" method="post">
         <div class="panel-header">
             <h2>{{if .IsSocialLogin}}{{.i18n.Tr "social_sign_in" | Str2html}}{{else}}{{.i18n.Tr "sign_in"}}{{end}}</h2>
         </div>
@@ -24,12 +24,12 @@
             <div class="field">
                 <span class="form-label"></span>
                 <button class="btn btn-green btn-large btn-radius">{{.i18n.Tr "sign_in"}}</button>&nbsp;&nbsp;&nbsp;&nbsp;
-                {{if not .IsSocialLogin}}<a href="/user/forget_password">{{.i18n.Tr "auth.forget_password"}}</a>{{end}}
+                {{if not .IsSocialLogin}}<a href="{{AppRootSubUrl}}/user/forget_password">{{.i18n.Tr "auth.forget_password"}}</a>{{end}}
             </div>
             {{if not .IsSocialLogin}}
             <div class="field">
                 <label></label>
-                <a href="/user/sign_up">{{.i18n.Tr "auth.sign_up_now" | Str2html}}</a>
+                <a href="{{AppRootSubUrl}}/user/sign_up">{{.i18n.Tr "auth.sign_up_now" | Str2html}}</a>
             </div>
             {{if .OauthEnabled}}
             <hr/>
