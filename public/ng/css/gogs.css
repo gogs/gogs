@@ -983,9 +983,9 @@ The register and sign-in page style
   background-color: transparent;
 }
 #repo-header-meta a > .btn {
+  line-height: 16px;
   font-size: 1.05em;
   margin-left: 16px;
-  line-height: 16px;
 }
 #repo-header-meta a > .btn i {
   margin-right: 6px;
@@ -1015,7 +1015,7 @@ The register and sign-in page style
   line-height: 24px;
   width: 440px;
   top: 50px;
-  left: -354px;
+  left: -370px;
   padding: 20px;
   box-sizing: border-box;
   z-index: 1;
@@ -1023,12 +1023,16 @@ The register and sign-in page style
 #repo-header-download-drop .btn > i {
   margin-right: 6px;
 }
+#repo-header-download-drop button,
+#repo-header-download-drop input {
+  font-size: 11px;
+}
 #repo-content {
   padding: 18px 0;
 }
 #repo-clone-url {
   border-right: none;
-  width: 196px;
+  width: 200px;
   border-left: none;
 }
 #repo-clone-help {
