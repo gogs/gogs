@@ -64,7 +64,8 @@ func newMacaron() *macaron.Macaron {
 	m := macaron.New()
 	m.Use(macaron.Logger())
 	m.Use(macaron.Recovery())
-	m.Use(macaron.Static("public",
+	m.Use(macaron.Static(
+		path.Join(setting.StaticRootPath, "public"),
 		macaron.StaticOptions{
 			SkipLogging: !setting.DisableRouterLog,
 		},
