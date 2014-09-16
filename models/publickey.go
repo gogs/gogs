@@ -14,6 +14,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -160,10 +161,14 @@ func saveAuthorizedKeyFile(key *PublicKey) error {
 	if err != nil {
 		return err
 	}
-	if finfo.Mode().Perm() > 0600 {
-		log.Error(4, "authorized_keys file has unusual permission flags: %s - setting to -rw-------", finfo.Mode().Perm().String())
-		if err = f.Chmod(0600); err != nil {
-			return err
+
+	// FIXME: following command does not support in Windows.
+	if runtime.GOOS != "windows" {
+		if finfo.Mode().Perm() > 0600 {
+			log.Error(4, "authorized_keys file has unusual permission flags: %s - setting to -rw-------", finfo.Mode().Perm().String())
+			if err = f.Chmod(0600); err != nil {
+				return err
+			}
 		}
 	}
 
