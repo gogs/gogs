@@ -137,7 +137,7 @@ func (repo *Repository) GetCommit(commitId string) (*Commit, error) {
 }
 
 func (repo *Repository) commitsCount(id sha1) (int, error) {
-	if gitVer.Compare(MustParseVersion("1.8.0")) == -1 {
+	if gitVer.LessThan(MustParseVersion("1.8.0")) {
 		stdout, stderr, err := com.ExecCmdDirBytes(repo.Path, "git", "log", "--pretty=format:''", id.String())
 		if err != nil {
 			return 0, errors.New(string(stderr))
