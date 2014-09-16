@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 
@@ -98,12 +99,14 @@ var (
 	CustomPath   string // Custom directory path.
 	ProdMode     bool
 	RunUser      string
+	IsWindows    bool
 
 	// I18n settings.
 	Langs, Names []string
 )
 
 func init() {
+	IsWindows = runtime.GOOS == "windows"
 	log.NewLogger(0, "console", `{"level": 0}`)
 }
 

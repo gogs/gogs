@@ -14,7 +14,6 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -23,6 +22,7 @@ import (
 
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/process"
+	"github.com/gogits/gogs/modules/setting"
 )
 
 const (
@@ -120,23 +120,30 @@ func CheckPublicKeyString(content string) (bool, error) {
 	tmpFile.WriteString(content)
 	tmpFile.Close()
 
-	// … see if ssh-keygen recognizes its contents
+	// Check if ssh-keygen recognizes its contents.
 	stdout, stderr, err := process.Exec("CheckPublicKeyString", "ssh-keygen", "-l", "-f", tmpPath)
 	if err != nil {
 		return false, errors.New("ssh-keygen -l -f: " + stderr)
 	} else if len(stdout) < 2 {
 		return false, errors.New("ssh-keygen returned not enough output to evaluate the key")
 	}
+
+	// The ssh-keygen in Windows does not print key type, so no need go further.
+	if setting.IsWindows {
+		return true, nil
+	}
+
 	sshKeygenOutput := strings.Split(stdout, " ")
 	if len(sshKeygenOutput) < 4 {
 		return false, errors.New("Not enough fields returned by ssh-keygen -l -f")
 	}
+
+	// Check if key type and key size match.
 	keySize, err := com.StrTo(sshKeygenOutput[0]).Int()
 	if err != nil {
 		return false, errors.New("Cannot get key size of the given key")
 	}
 	keyType := strings.TrimSpace(sshKeygenOutput[len(sshKeygenOutput)-1])
-
 	if minimumKeySize := MinimumKeySize[keyType]; minimumKeySize == 0 {
 		return false, errors.New("Sorry, unrecognized public key type")
 	} else if keySize < minimumKeySize {
@@ -163,7 +170,7 @@ func saveAuthorizedKeyFile(key *PublicKey) error {
 	}
 
 	// FIXME: following command does not support in Windows.
-	if runtime.GOOS != "windows" {
+	if !setting.IsWindows {
 		if finfo.Mode().Perm() > 0600 {
 			log.Error(4, "authorized_keys file has unusual permission flags: %s - setting to -rw-------", finfo.Mode().Perm().String())
 			if err = f.Chmod(0600); err != nil {
