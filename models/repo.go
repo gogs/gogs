@@ -95,8 +95,13 @@ func NewRepoContext() {
 	if err != nil {
 		log.Fatal(4, "Fail to get Git version: %v", err)
 	}
-	if ver.Major < 2 && ver.Minor < 8 {
-		log.Fatal(4, "Gogs requires Git version greater or equal to 1.8.0")
+
+	reqVer, err := git.ParseVersion("1.7.1")
+	if err != nil {
+		log.Fatal(4, "Fail to parse required Git version: %v", err)
+	}
+	if ver.Compare(reqVer) == -1 {
+		log.Fatal(4, "Gogs requires Git version greater or equal to 1.7.1")
 	}
 
 	// Check if server has basic git setting and set if not.
