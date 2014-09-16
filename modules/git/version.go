@@ -47,7 +47,7 @@ func MustParseVersion(verStr string) *Version {
 }
 
 // Compare compares two versions,
-// it returns 1 if original is greater, 1 if original is smaller, 0 if equal.
+// it returns 1 if original is greater, -1 if original is smaller, 0 if equal.
 func (v *Version) Compare(that *Version) int {
 	if v.Major > that.Major {
 		return 1
@@ -68,6 +68,10 @@ func (v *Version) Compare(that *Version) int {
 	}
 
 	return 0
+}
+
+func (v *Version) LessThan(that *Version) bool {
+	return v.Compare(that) < 0
 }
 
 // GetVersion returns current Git version installed.

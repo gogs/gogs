@@ -100,7 +100,7 @@ func NewRepoContext() {
 	if err != nil {
 		log.Fatal(4, "Fail to parse required Git version: %v", err)
 	}
-	if ver.Compare(reqVer) == -1 {
+	if ver.LessThan(reqVer) {
 		log.Fatal(4, "Gogs requires Git version greater or equal to 1.7.1")
 	}
 
