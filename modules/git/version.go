@@ -35,7 +35,7 @@ func ParseVersion(verStr string) (*Version, error) {
 		case 1:
 			v.Minor, _ = com.StrTo(s).Int()
 		case 2:
-			v.Patch, _ = com.StrTo(s).Int()
+			v.Patch, _ = com.StrTo(strings.TrimSpace(s)).Int()
 		}
 	}
 	return v, nil
