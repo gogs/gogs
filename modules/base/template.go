@@ -8,13 +8,16 @@ import (
 	"bytes"
 	"container/list"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"html/template"
 	"runtime"
 	"strings"
 	"time"
+	"code.google.com/p/mahonia"
 
 	"github.com/gogits/gogs/modules/setting"
+	"github.com/saintfish/chardet"
 )
 
 func Str2html(raw string) template.HTML {
@@ -43,6 +46,29 @@ func ShortSha(sha1 string) string {
 		return sha1[:10]
 	}
 	return sha1
+}
+
+func ToUtf8WithErr(content []byte) (error, string) {
+	detector := chardet.NewTextDetector()
+	result, err := detector.DetectBest(content)
+	if err != nil {
+		return err, ""
+	}
+
+	if result.Charset == "utf8" {
+		return nil, string(content)
+	}
+
+	decoder := mahonia.NewDecoder(result.Charset)
+	if decoder != nil {
+		return nil, decoder.ConvertString(string(content))
+	}
+	return errors.New("unknow char decoder"), string(content)
+}
+
+func ToUtf8(content string) string {
+	_, res := ToUtf8WithErr([]byte(content))
+	return res
 }
 
 var mailDomains = map[string]string{
@@ -103,6 +129,7 @@ var TemplateFuncs template.FuncMap = map[string]interface{}{
 	"ActionContent2Commits": ActionContent2Commits,
 	"Oauth2Icon":            Oauth2Icon,
 	"Oauth2Name":            Oauth2Name,
+	"ToUtf8":                ToUtf8,
 }
 
 type Actioner interface {
