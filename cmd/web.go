@@ -64,7 +64,8 @@ func newMacaron() *macaron.Macaron {
 	m := macaron.New()
 	m.Use(macaron.Logger())
 	m.Use(macaron.Recovery())
-	m.Use(macaron.Static("public",
+	m.Use(macaron.Static(
+		path.Join(setting.StaticRootPath, "public"),
 		macaron.StaticOptions{
 			SkipLogging: !setting.DisableRouterLog,
 		},
@@ -124,7 +125,7 @@ func runWeb(*cli.Context) {
 
 	// Routers.
 	m.Get("/", ignSignIn, routers.Home)
-	m.Get("/explore", routers.Explore)
+	m.Get("/explore", ignSignIn, routers.Explore)
 	m.Get("/install", bindIgnErr(auth.InstallForm{}), routers.Install)
 	m.Post("/install", bindIgnErr(auth.InstallForm{}), routers.InstallPost)
 	m.Group("", func(r *macaron.Router) {
@@ -355,11 +356,9 @@ func runWeb(*cli.Context) {
 	}, ignSignIn, middleware.RepoAssignment(true, true))
 
 	m.Group("/:username", func(r *macaron.Router) {
-		r.Get("/:reponame", middleware.RepoAssignment(true, true, true), repo.Home)
-		m.Group("/:reponame", func(r *macaron.Router) {
-			r.Any("/*", repo.Http)
-		})
-	}, ignSignInAndCsrf)
+		r.Get("/:reponame", ignSignIn, middleware.RepoAssignment(true, true, true), repo.Home)
+		r.Any("/:reponame/*", ignSignInAndCsrf, repo.Http)
+	})
 
 	// Not found handler.
 	m.NotFound(routers.NotFound)

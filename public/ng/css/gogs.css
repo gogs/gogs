@@ -686,7 +686,7 @@ ol.linenums {
   width: auto;
 }
 /*
-The dashboard page style
+    The dashboard page style
 */
 #dashboard-header {
   border-bottom: 1px solid #d6d6d6;
@@ -1032,7 +1032,7 @@ The register and sign-in page style
 }
 #repo-clone-url {
   border-right: none;
-  width: 200px;
+  width: 190px;
   border-left: none;
 }
 #repo-clone-help {
