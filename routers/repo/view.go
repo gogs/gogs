@@ -11,33 +11,15 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/saintfish/chardet"
-
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/git"
 	"github.com/gogits/gogs/modules/log"
-	"github.com/gogits/gogs/modules/mahonia"
 	"github.com/gogits/gogs/modules/middleware"
 )
 
 const (
 	HOME base.TplName = "repo/home"
 )
-
-func toUtf8(content []byte) (error, string) {
-	detector := chardet.NewTextDetector()
-	result, err := detector.DetectBest(content)
-	if err != nil {
-		return err, ""
-	}
-
-	if result.Charset == "utf8" {
-		return nil, string(content)
-	}
-
-	decoder := mahonia.NewDecoder(result.Charset)
-	return nil, decoder.ConvertString(string(content))
-}
 
 func Home(ctx *middleware.Context) {
 	ctx.Data["Title"] = ctx.Repo.Repository.Name
@@ -117,7 +99,7 @@ func Home(ctx *middleware.Context) {
 				if readmeExist {
 					ctx.Data["FileContent"] = string(base.RenderMarkdown(buf, ""))
 				} else {
-					if err, content := toUtf8(buf); err != nil {
+					if err, content := base.ToUtf8WithErr(buf); err != nil {
 						if err != nil {
 							log.Error(4, "Convert content encoding: %s", err)
 						}

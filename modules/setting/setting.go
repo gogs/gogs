@@ -64,6 +64,7 @@ var (
 	// Picture settings.
 	PictureService  string
 	DisableGravatar bool
+	MaxGitDiffLines int
 
 	// Log settings.
 	LogRootPath string
@@ -240,6 +241,8 @@ func NewConfigContext() {
 	PictureService = Cfg.MustValueRange("picture", "SERVICE", "server",
 		[]string{"server"})
 	DisableGravatar = Cfg.MustBool("picture", "DISABLE_GRAVATAR")
+
+	MaxGitDiffLines = Cfg.MustInt("git", "MAX_GITDIFF_LINES", 5000)
 
 	Langs = Cfg.MustValueArray("i18n", "LANGS", ",")
 	Names = Cfg.MustValueArray("i18n", "NAMES", ",")

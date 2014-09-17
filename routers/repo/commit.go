@@ -12,6 +12,7 @@ import (
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/middleware"
+	"github.com/gogits/gogs/modules/setting"
 )
 
 const (
@@ -114,7 +115,8 @@ func Diff(ctx *middleware.Context) {
 
 	commit := ctx.Repo.Commit
 
-	diff, err := models.GetDiffCommit(models.RepoPath(userName, repoName), commitId)
+	diff, err := models.GetDiffCommit(models.RepoPath(userName, repoName),
+		commitId, setting.MaxGitDiffLines)
 	if err != nil {
 		ctx.Handle(404, "GetDiffCommit", err)
 		return
@@ -176,7 +178,8 @@ func CompareDiff(ctx *middleware.Context) {
 		return
 	}
 
-	diff, err := models.GetDiffRange(models.RepoPath(userName, repoName), beforeCommitId, afterCommitId)
+	diff, err := models.GetDiffRange(models.RepoPath(userName, repoName), beforeCommitId,
+		afterCommitId, setting.MaxGitDiffLines)
 	if err != nil {
 		ctx.Handle(404, "GetDiffRange", err)
 		return
