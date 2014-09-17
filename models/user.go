@@ -167,6 +167,14 @@ func (u *User) GetOrganizations() error {
 	return nil
 }
 
+// GetFullNameFallback returns Full Name if set, otherwise username
+func (u *User) GetFullNameFallback() string {
+	if u.FullName == "" {
+		return u.Name
+	}
+	return u.FullName
+}
+
 // IsUserExist checks if given user name exist,
 // the user name should be noncased unique.
 func IsUserExist(name string) (bool, error) {
