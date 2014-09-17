@@ -154,8 +154,9 @@ const (
 )
 
 type PayloadAuthor struct {
-	Name  string `json:"name"`
-	Email string `json:"email"`
+	Name     string `json:"name"`
+	Email    string `json:"email"`
+	UserName string `json:"username"`
 }
 
 type PayloadCommit struct {
@@ -172,7 +173,7 @@ type PayloadRepo struct {
 	Description string         `json:"description"`
 	Website     string         `json:"website"`
 	Watchers    int            `json:"watchers"`
-	Owner       *PayloadAuthor `json:"author"`
+	Owner       *PayloadAuthor `json:"owner"`
 	Private     bool           `json:"private"`
 }
 

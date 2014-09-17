@@ -243,15 +243,29 @@ func CommitRepoAction(userId, repoUserId int64, userName, actEmail string,
 	if !strings.HasPrefix(oldCommitId, "0000000") {
 		compareUrl = fmt.Sprintf("%s/compare/%s...%s", repoLink, oldCommitId, newCommitId)
 	}
+
+	pusher_email, pusher_name := "", ""
+	pusher, err := GetUserByName(userName)
+	if err == nil {
+		pusher_email = pusher.Email
+		pusher_name = pusher.GetFullNameFallback()
+	}
+
 	commits := make([]*PayloadCommit, len(commit.Commits))
 	for i, cmt := range commit.Commits {
+		author_username := ""
+		author, err := GetUserByEmail(cmt.AuthorEmail)
+		if err == nil {
+			author_username = author.Name
+		}
 		commits[i] = &PayloadCommit{
 			Id:      cmt.Sha1,
 			Message: cmt.Message,
 			Url:     fmt.Sprintf("%s/commit/%s", repoLink, cmt.Sha1),
 			Author: &PayloadAuthor{
-				Name:  cmt.AuthorName,
-				Email: cmt.AuthorEmail,
+				Name:     cmt.AuthorName,
+				Email:    cmt.AuthorEmail,
+				UserName: author_username,
 			},
 		}
 	}
@@ -266,14 +280,16 @@ func CommitRepoAction(userId, repoUserId int64, userName, actEmail string,
 			Website:     repo.Website,
 			Watchers:    repo.NumWatches,
 			Owner: &PayloadAuthor{
-				Name:  repoUserName,
-				Email: actEmail,
+				Name:     repo.Owner.GetFullNameFallback(),
+				Email:    repo.Owner.Email,
+				UserName: repo.Owner.Name,
 			},
 			Private: repo.IsPrivate,
 		},
 		Pusher: &PayloadAuthor{
-			Name:  repo.Owner.LowerName,
-			Email: repo.Owner.Email,
+			Name:     pusher_name,
+			Email:    pusher_email,
+			UserName: userName,
 		},
 		Before:     oldCommitId,
 		After:      newCommitId,
