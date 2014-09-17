@@ -121,6 +121,7 @@ func SettingsPost(ctx *middleware.Context, form auth.RepoSettingForm) {
 			return
 		}
 		log.Trace("Repository transfered: %s/%s -> %s", ctx.Repo.Owner.Name, ctx.Repo.Repository.Name, newOwner)
+		ctx.Flash.Success(ctx.Tr("repo.settings.transfer_succeed"))
 		ctx.Redirect("/")
 	case "delete":
 		if ctx.Repo.Repository.Name != form.RepoName {
