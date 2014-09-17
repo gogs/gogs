@@ -9,7 +9,7 @@
                 <div class="avatar left">
                     <img class="avatar-30" src="{{AvatarLink .GetActEmail}}" alt="">
                 </div>
-                <div class="content left {{if eq .GetOpType 5}}push-news{{end}}">
+                <div class="content left {{if eq .GetOpType 5}}push-news{{end}} grid-4-5">
                     <p class="text-bold">
                         <a href="/{{.GetActUserName}}">{{.GetActUserName}}</a>
                         {{if eq .GetOpType 1}}
@@ -30,7 +30,7 @@
                             {{ $push := ActionContent2Commits .}}
                             {{ $repoLink := .GetRepoLink}}
                             {{range $push.Commits}}
-                            <li><img class="avatar-16" src="{{AvatarLink .AuthorEmail}}?s=16"> <a href="/{{$repoLink}}/commit/{{.Sha1}}">{{ShortSha .Sha1}}</a> {{.Message}}</li>
+                            <li><img class="avatar-16" src="{{AvatarLink .AuthorEmail}}?s=16"> <a href="/{{$repoLink}}/commit/{{.Sha1}}">{{ShortSha .Sha1}}</a> <span class="text-truncate grid-4-5">{{.Message}}</span></li>
                             {{end}}
                         </ul>
                     </div>

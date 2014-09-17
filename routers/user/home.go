@@ -94,7 +94,7 @@ func Dashboard(ctx *middleware.Context) {
 	feeds := make([]*models.Action, 0, len(actions))
 	for _, act := range actions {
 		if act.IsPrivate {
-			if has, _ := models.HasAccess(ctxUser.Name, act.RepoUserName+"/"+act.RepoName,
+			if has, _ := models.HasAccess(ctx.User.Name, act.RepoUserName+"/"+act.RepoName,
 				models.READABLE); !has {
 				continue
 			}

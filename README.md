@@ -5,12 +5,12 @@ Gogs(Go Git Service) is a painless self-hosted Git Service written in Go.
 
 ![Demo](https://gowalker.org/public/gogs_demo.gif)
 
-##### Current version: 0.5.0 Beta
+##### Current version: 0.5.2 Beta
 
 ### NOTICES
 
-- Due to testing purpose, data of [try.gogits.org](http://try.gogits.org) has been reset in **June 21, 2014** and will reset multiple times after. Please do **NOT** put your important data on the site.
-- Demo site [try.gogits.org](http://try.gogits.org) is running under `dev` branch.
+- Due to testing purpose, data of [try.gogs.io](https://try.gogs.io) has been reset in **June 21, 2014** and will reset multiple times after. Please do **NOT** put your important data on the site.
+- Demo site [try.gogs.io](https://try.gogs.io) is running under `dev` branch.
 
 #### Other language version
 
@@ -24,7 +24,7 @@ The goal of this project is to make the easiest, fastest and most painless way t
 
 - Please see [Documentation](http://gogs.io/docs/intro/) for project design, known issues, and change log.
 - See [Trello Board](https://trello.com/b/uxAoeLUl/gogs-go-git-service) to follow the develop team.
-- Try it before anything? Do it [online](http://try.gogits.org/Unknown/gogs) or go down to **Installation -> Install from binary** section!
+- Try it before anything? Do it [online](https://try.gogs.io/Unknown/gogs) or go down to **Installation -> Install from binary** section!
 - Having troubles? Get help from [Troubleshooting](http://gogs.io/docs/intro/troubleshooting.md).
 
 ## Features

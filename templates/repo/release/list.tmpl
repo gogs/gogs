@@ -29,7 +29,7 @@
                     <p class="info">
                         <span class="author"><img class="avatar" src="{{.Publisher.AvatarLink}}" alt="" width="20">&nbsp;&nbsp;
                         <a href="/user/{{.Publisher.Name}}">{{.Publisher.Name}}</a></span>
-                        {{if .Created}}<span class="time">{{TimeSince .Created}}</span>{{end}}
+                        {{if .Created}}<span class="time">{{TimeSince .Created $.Lang}}</span>{{end}}
                         <span class="ahead"><strong>{{.NumCommitsBehind}}</strong> commits to {{.Target}} since this release</span>
                     </p>
                     <div class="markdown desc">
