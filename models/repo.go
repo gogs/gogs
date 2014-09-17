@@ -656,7 +656,7 @@ func TransferOwnership(u *User, newOwner string, repo *Repository) error {
 	}
 
 	// Check if new owner has repository with same name.
-	has, err := IsRepositoryExist(u, repo.Name)
+	has, err := IsRepositoryExist(newUser, repo.Name)
 	if err != nil {
 		return err
 	} else if has {

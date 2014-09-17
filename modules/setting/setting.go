@@ -65,7 +65,6 @@ var (
 	// Picture settings.
 	PictureService  string
 	DisableGravatar bool
-	MaxGitDiffLines int
 
 	// Log settings.
 	LogRootPath string
@@ -94,6 +93,12 @@ var (
 	SessionProvider string
 	SessionConfig   *session.Config
 
+	// Git settings.
+	MaxGitDiffLines int
+
+	// I18n settings.
+	Langs, Names []string
+
 	// Global setting objects.
 	Cfg          *goconfig.ConfigFile
 	ConfRootPath string
@@ -101,9 +106,6 @@ var (
 	ProdMode     bool
 	RunUser      string
 	IsWindows    bool
-
-	// I18n settings.
-	Langs, Names []string
 )
 
 func init() {
@@ -245,7 +247,7 @@ func NewConfigContext() {
 		[]string{"server"})
 	DisableGravatar = Cfg.MustBool("picture", "DISABLE_GRAVATAR")
 
-	MaxGitDiffLines = Cfg.MustInt("git", "MAX_GITDIFF_LINES", 5000)
+	MaxGitDiffLines = Cfg.MustInt("git", "MAX_GITDIFF_LINES", 10000)
 
 	Langs = Cfg.MustValueArray("i18n", "LANGS", ",")
 	Names = Cfg.MustValueArray("i18n", "NAMES", ",")
