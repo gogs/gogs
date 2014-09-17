@@ -3,6 +3,7 @@
 {{template "user/dashboard/nav" .}}
 <div id="dashboard-wrapper">
     <div id="dashboard" class="container">
+        {{template "ng/base/alert" .}}
         <div id="dashboard-news" class="left grid-2-3">
             {{range .Feeds}}
             <div class="news clear">
