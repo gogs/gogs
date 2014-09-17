@@ -14,8 +14,8 @@ import (
 	"runtime"
 	"strings"
 	"time"
-	"code.google.com/p/mahonia"
 
+	"github.com/gogits/gogs/modules/mahonia"
 	"github.com/gogits/gogs/modules/setting"
 	"github.com/saintfish/chardet"
 )

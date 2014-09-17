@@ -44,7 +44,7 @@ The goal of this project is to make the easiest, fastest and most painless way t
 - Slack webhook integration
 - Supports MySQL, PostgreSQL and SQLite3
 - Social account login(GitHub, Google, QQ, Weibo)
-- Multi-language support(English, Chinese, Germany etc.)
+- Multi-language support(English, Chinese, Germany, French etc.)
 
 ## System Requirements
 
