@@ -20,9 +20,6 @@ APP_USER=$(${CLI} config:get APP_USER)
 APP_GROUP=$(${CLI} config:get APP_GROUP)
 APP_CONFIG="/etc/${APP_NAME}/conf/app.ini"
 
-# source debconf library
-. /usr/share/debconf/confmodule
-
 case "$1" in
 
   configure)
