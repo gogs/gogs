@@ -187,7 +187,7 @@ func Contexter() macaron.Handler {
 			Session: sess,
 		}
 		// Compute current URL for real-time change language.
-		link := ctx.Req.RequestURI
+		link := setting.AppRootSubUrl + ctx.Req.RequestURI
 		i := strings.Index(link, "?")
 		if i > -1 {
 			link = link[:i]

@@ -5,7 +5,7 @@
         <div class="container clear">
             <h1 id="repo-header-name" class="left public">
                 <i class="mega-octicon octicon-{{if .Repository.IsPrivate}}lock{{else}}repo{{end}}"></i>
-                <a class="author" href="/{{.Repository.Owner.Name}}">{{.Repository.Owner.Name}}</a>
+                <a class="author" href="{{AppRootSubUrl}}/{{.Repository.Owner.Name}}">{{.Repository.Owner.Name}}</a>
                 <span class="divider">/</span>
                 <a class="repo text-bold" href="{{.RepoLink}}">{{.Repository.Name}}</a>
             </h1>

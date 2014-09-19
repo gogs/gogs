@@ -12,7 +12,7 @@
                             <div class="panel-header">
                                 <strong>{{.i18n.Tr "admin.auths.new"}}</strong>
                             </div>
-                            <form class="form form-align panel-body" id="repo-setting-form" action="/admin/auths/new" method="post">
+                            <form class="form form-align panel-body" id="repo-setting-form" action="{{AppRootSubUrl}}/admin/auths/new" method="post">
                                 {{.CsrfTokenHtml}}
                                 <div class="field">
                                     <label class="req">{{.i18n.Tr "admin.auths.auth_type"}}</label>

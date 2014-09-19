@@ -1,7 +1,7 @@
 {{template "ng/base/head" .}}
 {{template "ng/base/header" .}}
 <div id="repo-wrapper">
-    <form id="repo-create-form" class="form form-align panel panel-radius" action="/repo/create" method="post">
+    <form id="repo-create-form" class="form form-align panel panel-radius" action="{{AppRootSubUrl}}/repo/create" method="post">
         {{.CsrfTokenHtml}}
         <div class="panel-header">
             <h2>{{.i18n.Tr "new_repo"}}</h2>
@@ -75,7 +75,7 @@
             <div class="field">
                 <label></label>
                 <button class="btn btn-large btn-blue btn-radius">{{.i18n.Tr "repo.create_repo"}}</button>
-                <a class="btn btn-small btn-gray btn-radius" id="repo-create-cancel" href="/"><strong>{{.i18n.Tr "cancel"}}</strong></a>
+                <a class="btn btn-small btn-gray btn-radius" id="repo-create-cancel" href="{{AppRootSubUrl}}/"><strong>{{.i18n.Tr "cancel"}}</strong></a>
             </div>
         </div>
     </form>

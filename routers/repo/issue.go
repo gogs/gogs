@@ -54,8 +54,8 @@ func Issues(ctx *middleware.Context) {
 	isShowClosed := ctx.Query("state") == "closed"
 
 	if viewType != "all" && !ctx.IsSigned {
-		ctx.SetCookie("redirect_to", "/"+url.QueryEscape(ctx.Req.RequestURI))
-		ctx.Redirect("/user/login")
+		ctx.SetCookie("redirect_to", "/"+url.QueryEscape(setting.AppRootSubUrl + ctx.Req.RequestURI))
+		ctx.Redirect(setting.AppRootSubUrl + "/user/login")
 		return
 	}
 
@@ -312,7 +312,7 @@ func CreateIssuePost(ctx *middleware.Context, form auth.CreateIssueForm) {
 	}
 	log.Trace("%d Issue created: %d", ctx.Repo.Repository.Id, issue.Id)
 
-	send(200, fmt.Sprintf("/%s/%s/issues/%d", ctx.Params(":username"), ctx.Params(":reponame"), issue.Index), nil)
+	send(200, fmt.Sprintf("%s/%s/%s/issues/%d", setting.AppRootSubUrl, ctx.Params(":username"), ctx.Params(":reponame"), issue.Index), nil)
 }
 
 func checkLabels(labels, allLabels []*models.Label) {

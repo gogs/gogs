@@ -12,17 +12,17 @@
                 </div>
                 <div class="content left {{if eq .GetOpType 5}}push-news{{end}} grid-4-5">
                     <p class="text-bold">
-                        <a href="/{{.GetActUserName}}">{{.GetActUserName}}</a>
+                        <a href="{{AppRootSubUrl}}/{{.GetActUserName}}">{{.GetActUserName}}</a>
                         {{if eq .GetOpType 1}}
-                        {{$.i18n.Tr "action.create_repo" .GetRepoLink .GetRepoLink | Str2html}}
+                        {{$.i18n.Tr "action.create_repo" AppRootSubUrl .GetRepoLink .GetRepoLink | Str2html}}
                         {{else if eq .GetOpType 5}}
-                        {{$.i18n.Tr "action.commit_repo" .GetRepoLink .GetBranch .GetBranch .GetRepoLink .GetRepoLink | Str2html}}
+                        {{$.i18n.Tr "action.commit_repo" AppRootSubUrl .GetRepoLink .GetBranch .GetBranch AppRootSubUrl .GetRepoLink .GetRepoLink | Str2html}}
                         {{else if eq .GetOpType 6}}
                         {{ $index := index .GetIssueInfos 0}}
-                        {{$.i18n.Tr "action.create_issue" .GetRepoLink $index .GetRepoLink $index | Str2html}}
+                        {{$.i18n.Tr "action.create_issue" AppRootSubUrl .GetRepoLink $index .GetRepoLink $index | Str2html}}
                         {{else if eq .GetOpType 10}}
                         {{ $index := index .GetIssueInfos 0}}
-                        {{$.i18n.Tr "action.comment_issue" .GetRepoLink $index .GetRepoLink $index | Str2html}}
+                        {{$.i18n.Tr "action.comment_issue" AppRootSubUrl .GetRepoLink $index .GetRepoLink $index | Str2html}}
                         {{end}}
                     </p>
                     {{if eq .GetOpType 5}}
@@ -31,7 +31,7 @@
                             {{ $push := ActionContent2Commits .}}
                             {{ $repoLink := .GetRepoLink}}
                             {{range $push.Commits}}
-                            <li><img class="avatar-16" src="{{AvatarLink .AuthorEmail}}?s=16"> <a href="/{{$repoLink}}/commit/{{.Sha1}}">{{ShortSha .Sha1}}</a> <span class="text-truncate grid-4-5">{{.Message}}</span></li>
+                            <li><img class="avatar-16" src="{{AvatarLink .AuthorEmail}}?s=16"> <a href="{{AppRootSubUrl}}/{{$repoLink}}/commit/{{.Sha1}}">{{ShortSha .Sha1}}</a> <span class="text-truncate grid-4-5">{{.Message}}</span></li>
                             {{end}}
                         </ul>
                     </div>
@@ -58,9 +58,9 @@
                         <i class="octicon octicon-plus"></i>
                     </button>
                     <ul class="menu menu-vertical drop-down" id="dashboard-new-repo-menu">
-                        <li><a href="/repo/create"><i class="octicon octicon-repo-create"></i>{{.i18n.Tr "new_repo"}}</a></li>
-                        <li><a href="/repo/migrate"><i class="octicon octicon-repo-clone"></i>{{.i18n.Tr "new_migrate"}}</a></li>
-                        <li><a href="/org/create"><i class="octicon octicon-organization"></i>{{.i18n.Tr "new_org"}}</a></li>
+                        <li><a href="{{AppRootSubUrl}}/repo/create"><i class="octicon octicon-repo-create"></i>{{.i18n.Tr "new_repo"}}</a></li>
+                        <li><a href="{{AppRootSubUrl}}/repo/migrate"><i class="octicon octicon-repo-clone"></i>{{.i18n.Tr "new_migrate"}}</a></li>
+                        <li><a href="{{AppRootSubUrl}}/org/create"><i class="octicon octicon-organization"></i>{{.i18n.Tr "new_org"}}</a></li>
                     </ul>
                 </li>
             </ul>
@@ -75,7 +75,7 @@
                     <ul class="list-no-style">
                         {{range .Repos}}
                         <li {{if .IsPrivate}}class="private"{{end}}>
-                            <a href="/{{$.ContextUser.Name}}/{{.Name}}">
+                            <a href="{{AppRootSubUrl}}/{{$.ContextUser.Name}}/{{.Name}}">
                                 <i class="octicon octicon-{{if .IsPrivate}}lock{{else if .IsFork}}repo-forked{{else if .IsMirror}}repo-clone{{else}}repo{{end}}"></i>
                                 <span class="repo-name">
                                     <strong class="repo">{{.Name}}</strong>
@@ -125,7 +125,7 @@
                     <ul class="list-no-style">
                         {{range .ContextUser.Orgs}}
                         <li>
-                            <a href="/{{.Name}}">
+                            <a href="{{AppRootSubUrl}}/{{.Name}}">
                                 <i class="octicon octicon-organization"></i>
                                 <span class="repo-name">
                                     <strong class="repo">{{.Name}}</strong>
@@ -150,7 +150,7 @@
                     <ul class="list-no-style">
                         {{range .Mirrors}}
                         <li {{if .IsPrivate}}class="private"{{end}}>
-                            <a href="/{{$.ContextUser.Name}}/{{.Name}}">
+                            <a href="{{AppRootSubUrl}}/{{$.ContextUser.Name}}/{{.Name}}">
                                 <i class="octicon octicon-repo-clone"></i>
                                 <span class="repo-name">
                                     <strong class="repo">{{.Name}}</strong>

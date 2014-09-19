@@ -18,6 +18,7 @@ import (
 	"github.com/gogits/gogs/modules/git"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/middleware"
+	"github.com/gogits/gogs/modules/setting"
 )
 
 const (
@@ -95,7 +96,7 @@ func CreatePost(ctx *middleware.Context, form auth.CreateRepoForm) {
 		form.Gitignore, form.License, form.Private, false, form.InitReadme)
 	if err == nil {
 		log.Trace("Repository created: %s/%s", ctxUser.Name, form.RepoName)
-		ctx.Redirect("/" + ctxUser.Name + "/" + form.RepoName)
+		ctx.Redirect(setting.AppRootSubUrl + "/" + ctxUser.Name + "/" + form.RepoName)
 		return
 	} else if err == models.ErrRepoAlreadyExist {
 		ctx.Data["Err_RepoName"] = true
@@ -179,7 +180,7 @@ func MigratePost(ctx *middleware.Context, form auth.MigrateRepoForm) {
 		form.Mirror, url)
 	if err == nil {
 		log.Trace("Repository migrated: %s/%s", ctxUser.Name, form.RepoName)
-		ctx.Redirect("/" + ctxUser.Name + "/" + form.RepoName)
+		ctx.Redirect(setting.AppRootSubUrl + "/" + ctxUser.Name + "/" + form.RepoName)
 		return
 	} else if err == models.ErrRepoAlreadyExist {
 		ctx.Data["Err_RepoName"] = true
