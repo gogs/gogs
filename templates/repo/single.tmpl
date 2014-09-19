@@ -12,7 +12,7 @@
                     <b class="caret"></b></a>
                 <ul class="dropdown-menu">
                     {{range .Branches}}
-                    <li><a {{if eq . $.BranchName}}class="current" {{end}}href="/{{$.Username}}/{{$.Reponame}}/src/{{.}}">{{.}}</a></li>
+                    <li><a {{if eq . $.BranchName}}class="current" {{end}}href="{{AppRootSubUrl}}/{{$.Username}}/{{$.Reponame}}/src/{{.}}">{{.}}</a></li>
                     {{end}}
                 </ul>
             </div>

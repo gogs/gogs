@@ -1,7 +1,7 @@
 {{template "ng/base/head" .}}
 {{template "ng/base/header" .}}
 <div id="repo-wrapper">
-    <form id="repo-migrate-form" class="form form-align panel panel-radius" action="/repo/migrate" method="post">
+    <form id="repo-migrate-form" class="form form-align panel panel-radius" action="{{AppRootSubUrl}}/repo/migrate" method="post">
         {{.CsrfTokenHtml}}
         <div class="panel-header"><h2>{{.i18n.Tr "new_migrate"}}</h2></div>
         <div class="panel-content">
@@ -74,7 +74,7 @@
             <div class="field">
                 <label for="repo-create-submit"></label>
                 <button class="btn btn-large btn-blue btn-radius" id="repo-create-submit">{{.i18n.Tr "repo.migrate_repo"}}</button>
-                <a class="btn btn-small btn-gray btn-radius" id="repo-create-cancel" href="/"><strong>{{.i18n.Tr "cancel"}}</strong></a>
+                <a class="btn btn-small btn-gray btn-radius" id="repo-create-cancel" href="{{AppRootSubUrl}}/"><strong>{{.i18n.Tr "cancel"}}</strong></a>
             </div>
         </div>
     </form>

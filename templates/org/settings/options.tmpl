@@ -12,7 +12,7 @@
                         <div class="panel-header">
                         	<strong>{{.i18n.Tr "org.settings.options"}}</strong>
                         </div>
-                        <form class="form form-align panel-body" id="org-setting-form" action="/org/{{.Org.LowerName}}/settings" method="post">
+                        <form class="form form-align panel-body" id="org-setting-form" action="{{AppRootSubUrl}}/org/{{.Org.LowerName}}/settings" method="post">
                             {{.CsrfTokenHtml}}
                 			<input type="hidden" name="action" value="update">
                             <div class="field">

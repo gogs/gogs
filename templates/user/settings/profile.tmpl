@@ -11,7 +11,7 @@
                         <div class="panel-header">
                             <strong>{{.i18n.Tr "settings.public_profile"}}</strong>
                         </div>
-                        <form class="form form-align panel-body" id="user-profile-form" action="/user/settings" method="post">
+                        <form class="form form-align panel-body" id="user-profile-form" action="{{AppRootSubUrl}}/user/settings" method="post">
                             {{.CsrfTokenHtml}}
                         	<div class="text-center panel-desc">{{.i18n.Tr "settings.profile_desc"}}</div>
                             <div class="field">

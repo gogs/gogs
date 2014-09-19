@@ -6,6 +6,7 @@ package setting
 
 import (
 	"fmt"
+	"net/url"
 	"os"
 	"os/exec"
 	"path"
@@ -31,9 +32,10 @@ const (
 
 var (
 	// App settings.
-	AppVer  string
-	AppName string
-	AppUrl  string
+	AppVer        string
+	AppName       string
+	AppUrl        string
+	AppRootSubUrl string
 
 	// Server settings.
 	Protocol           Scheme
@@ -164,6 +166,12 @@ func NewConfigContext() {
 	if AppUrl[len(AppUrl)-1] != '/' {
 		AppUrl += "/"
 	}
+
+	url, err := url.Parse(AppUrl)
+	if err != nil {
+		log.Fatal(4, "Invalid ROOT_URL %s: %s", AppUrl, err)
+	}
+	AppRootSubUrl = strings.TrimSuffix(url.Path, "/")
 
 	Protocol = HTTP
 	if Cfg.MustValue("server", "PROTOCOL") == "https" {
