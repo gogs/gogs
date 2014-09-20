@@ -127,7 +127,7 @@ func Profile(ctx *middleware.Context) {
 	uname := ctx.Params(":username")
 	// Special handle for FireFox requests favicon.ico.
 	if uname == "favicon.ico" {
-		ctx.Redirect(setting.AppRootSubUrl + "/img/favicon.png")
+		ctx.Redirect(setting.AppSubUrl + "/img/favicon.png")
 		return
 	}
 
@@ -142,7 +142,7 @@ func Profile(ctx *middleware.Context) {
 	}
 
 	if u.IsOrganization() {
-		ctx.Redirect(setting.AppRootSubUrl + "/org/" + u.Name)
+		ctx.Redirect(setting.AppSubUrl + "/org/" + u.Name)
 		return
 	}
 
@@ -182,7 +182,7 @@ func Email2User(ctx *middleware.Context) {
 		}
 		return
 	}
-	ctx.Redirect(setting.AppRootSubUrl + "/user/" + u.Name)
+	ctx.Redirect(setting.AppSubUrl + "/user/" + u.Name)
 }
 
 const (

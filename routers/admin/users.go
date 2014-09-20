@@ -121,7 +121,7 @@ func NewUserPost(ctx *middleware.Context, form auth.RegisterForm) {
 		return
 	}
 	log.Trace("Account created by admin(%s): %s", ctx.User.Name, u.Name)
-	ctx.Redirect(setting.AppRootSubUrl + "/admin/users")
+	ctx.Redirect(setting.AppSubUrl + "/admin/users")
 }
 
 func EditUser(ctx *middleware.Context) {
@@ -198,7 +198,7 @@ func EditUserPost(ctx *middleware.Context, form auth.AdminEditUserForm) {
 
 	ctx.Data["User"] = u
 	ctx.Flash.Success(ctx.Tr("admin.users.update_profile_success"))
-	ctx.Redirect(setting.AppRootSubUrl + "/admin/users/" + ctx.Params(":userid"))
+	ctx.Redirect(setting.AppSubUrl + "/admin/users/" + ctx.Params(":userid"))
 }
 
 func DeleteUser(ctx *middleware.Context) {
@@ -218,12 +218,12 @@ func DeleteUser(ctx *middleware.Context) {
 		switch err {
 		case models.ErrUserOwnRepos:
 			ctx.Flash.Error(ctx.Tr("admin.users.still_own_repo"))
-			ctx.Redirect(setting.AppRootSubUrl + "/admin/users/" + ctx.Params(":userid"))
+			ctx.Redirect(setting.AppSubUrl + "/admin/users/" + ctx.Params(":userid"))
 		default:
 			ctx.Handle(500, "DeleteUser", err)
 		}
 		return
 	}
 	log.Trace("Account deleted by admin(%s): %s", ctx.User.Name, u.Name)
-	ctx.Redirect(setting.AppRootSubUrl + "/admin/users")
+	ctx.Redirect(setting.AppSubUrl + "/admin/users")
 }

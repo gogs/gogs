@@ -14,7 +14,7 @@
 		{{range .Members}}
 		<div class="org-member-item">
 			<img class="avatar-48 left" src="{{.AvatarLink}}?s=100">
-			<a class="text-black" href="{{AppRootSubUrl}}/{{.Name}}"><span class="member-name"><strong>{{.FullName}}</strong>({{.Name}})</span></a>
+			<a class="text-black" href="{{AppSubUrl}}/{{.Name}}"><span class="member-name"><strong>{{.FullName}}</strong>({{.Name}})</span></a>
 			<ul class="grid-6-12 right">
 				<li class="grid-1-3">
 				{{ $isPublic := .IsPublicMember $.Org.Id}}

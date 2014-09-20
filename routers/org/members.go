@@ -87,7 +87,7 @@ func MembersAction(ctx *middleware.Context) {
 	if ctx.Params(":action") != "leave" {
 		ctx.Redirect(ctx.Org.OrgLink + "/members")
 	} else {
-		ctx.Redirect(setting.AppRootSubUrl + "/")
+		ctx.Redirect(setting.AppSubUrl + "/")
 	}
 }
 

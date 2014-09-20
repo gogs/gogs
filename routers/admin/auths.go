@@ -100,7 +100,7 @@ func NewAuthSourcePost(ctx *middleware.Context, form auth.AuthenticationForm) {
 	}
 
 	log.Trace("Authentication created by admin(%s): %s", ctx.User.Name, form.AuthName)
-	ctx.Redirect(setting.AppRootSubUrl + "/admin/auths")
+	ctx.Redirect(setting.AppSubUrl + "/admin/auths")
 }
 
 func EditAuthSource(ctx *middleware.Context) {
@@ -181,7 +181,7 @@ func EditAuthSourcePost(ctx *middleware.Context, form auth.AuthenticationForm) {
 
 	log.Trace("Authentication changed by admin(%s): %s", ctx.User.Name, form.AuthName)
 	ctx.Flash.Success(ctx.Tr("admin.auths.update_success"))
-	ctx.Redirect(setting.AppRootSubUrl + "/admin/auths/" + ctx.Params(":authid"))
+	ctx.Redirect(setting.AppSubUrl + "/admin/auths/" + ctx.Params(":authid"))
 }
 
 func DeleteAuthSource(ctx *middleware.Context) {
@@ -201,12 +201,12 @@ func DeleteAuthSource(ctx *middleware.Context) {
 		switch err {
 		case models.ErrAuthenticationUserUsed:
 			ctx.Flash.Error("form.still_own_user")
-			ctx.Redirect(setting.AppRootSubUrl + "/admin/auths/" + ctx.Params(":authid"))
+			ctx.Redirect(setting.AppSubUrl + "/admin/auths/" + ctx.Params(":authid"))
 		default:
 			ctx.Handle(500, "DelLoginSource", err)
 		}
 		return
 	}
 	log.Trace("Authentication deleted by admin(%s): %s", ctx.User.Name, a.Name)
-	ctx.Redirect(setting.AppRootSubUrl + "/admin/auths")
+	ctx.Redirect(setting.AppSubUrl + "/admin/auths")
 }

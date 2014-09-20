@@ -82,7 +82,7 @@ func SignIn(ctx *middleware.Context) {
 		return
 	}
 
-	ctx.Redirect(setting.AppRootSubUrl + "/")
+	ctx.Redirect(setting.AppSubUrl + "/")
 }
 
 func SignInPost(ctx *middleware.Context, form auth.SignInForm) {
@@ -140,7 +140,7 @@ func SignInPost(ctx *middleware.Context, form auth.SignInForm) {
 		return
 	}
 
-	ctx.Redirect(setting.AppRootSubUrl + "/")
+	ctx.Redirect(setting.AppSubUrl + "/")
 }
 
 func SignOut(ctx *middleware.Context) {
@@ -151,7 +151,7 @@ func SignOut(ctx *middleware.Context) {
 	ctx.Session.Delete("socialEmail")
 	ctx.SetCookie(setting.CookieUserName, "", -1)
 	ctx.SetCookie(setting.CookieRememberName, "", -1)
-	ctx.Redirect(setting.AppRootSubUrl + "/")
+	ctx.Redirect(setting.AppSubUrl + "/")
 }
 
 func oauthSignUp(ctx *middleware.Context, sid int64) {
@@ -288,7 +288,7 @@ func SignUpPost(ctx *middleware.Context, cpt *captcha.Captcha, form auth.Registe
 		return
 	}
 
-	ctx.Redirect(setting.AppRootSubUrl + "/user/login")
+	ctx.Redirect(setting.AppSubUrl + "/user/login")
 }
 
 func Activate(ctx *middleware.Context) {
@@ -335,7 +335,7 @@ func Activate(ctx *middleware.Context) {
 
 		ctx.Session.Set("uid", user.Id)
 		ctx.Session.Set("uname", user.Name)
-		ctx.Redirect(setting.AppRootSubUrl + "/")
+		ctx.Redirect(setting.AppSubUrl + "/")
 		return
 	}
 
@@ -437,7 +437,7 @@ func ResetPasswdPost(ctx *middleware.Context) {
 		}
 
 		log.Trace("User password reset: %s", u.Name)
-		ctx.Redirect(setting.AppRootSubUrl + "/user/login")
+		ctx.Redirect(setting.AppSubUrl + "/user/login")
 		return
 	}
 

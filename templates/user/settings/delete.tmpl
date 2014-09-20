@@ -11,7 +11,7 @@
                         <p class="panel-header"><strong>{{.i18n.Tr "settings.delete_account"}}</strong></p>
                         <div class="panel-body panel-content">
                             <span class="alert alert-red alert-radius block"><i class="octicon octicon-alert"></i>{{.i18n.Tr "settings.delete_prompt" | Str2html}}</span>
-                            <form  action="{{AppRootSubUrl}}/user/settings/delete" method="post">
+                            <form  action="{{AppSubUrl}}/user/settings/delete" method="post">
                                 {{.CsrfTokenHtml}}
                                 <p class="field">
                                     <span class="form-label"></span>

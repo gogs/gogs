@@ -143,7 +143,7 @@ func Dashboard(ctx *middleware.Context) {
 		} else {
 			ctx.Flash.Success(success)
 		}
-		ctx.Redirect(setting.AppRootSubUrl + "/admin")
+		ctx.Redirect(setting.AppSubUrl + "/admin")
 		return
 	}
 

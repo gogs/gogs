@@ -31,8 +31,8 @@
 					                        {{range .Repos}}
 					                        <tr>
 					                            <td>{{.Id}}</td>
-					                            <td><a href="{{AppRootSubUrl}}/user/{{.Owner.Name}}">{{.Owner.Name}}</a></td>
-                            					<td><a href="{{AppRootSubUrl}}/{{.Owner.Name}}/{{.Name}}">{{.Name}}</a></td>
+					                            <td><a href="{{AppSubUrl}}/user/{{.Owner.Name}}">{{.Owner.Name}}</a></td>
+                            					<td><a href="{{AppSubUrl}}/{{.Owner.Name}}/{{.Name}}">{{.Name}}</a></td>
 					                            <td><i class="fa fa{{if .IsPrivate}}-check{{end}}-square-o"></i></td>
 					                            <td>{{.NumWatches}}</td>
 					                            <td>{{.NumIssues}}</td>
@@ -44,8 +44,8 @@
 					                </table>
 					                {{if or .LastPageNum .NextPageNum}}
 					                <ul class="pagination">
-					                    {{if .LastPageNum}}<li><a class="btn btn-medium btn-gray btn-radius" href="{{AppRootSubUrl}}/admin/repos?p={{.LastPageNum}}">&laquo; Prev.</a></li>{{end}}
-					                    {{if .NextPageNum}}<li><a class="btn btn-medium btn-gray btn-radius" href="{{AppRootSubUrl}}/admin/repos?p={{.NextPageNum}}">&raquo; Next</a></li>{{end}}
+					                    {{if .LastPageNum}}<li><a class="btn btn-medium btn-gray btn-radius" href="{{AppSubUrl}}/admin/repos?p={{.LastPageNum}}">&laquo; Prev.</a></li>{{end}}
+					                    {{if .NextPageNum}}<li><a class="btn btn-medium btn-gray btn-radius" href="{{AppSubUrl}}/admin/repos?p={{.NextPageNum}}">&raquo; Next</a></li>{{end}}
 					                </ul>
 					                {{end}}
 				                </div>

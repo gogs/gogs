@@ -49,7 +49,7 @@ func SettingsPost(ctx *middleware.Context, form auth.UpdateOrgSettingForm) {
 		} else if err = models.ChangeUserName(org, form.OrgUserName); err != nil {
 			if err == models.ErrUserNameIllegal {
 				ctx.Flash.Error(ctx.Tr("form.illegal_username"))
-				ctx.Redirect(setting.AppRootSubUrl + "/org/" + org.LowerName + "/settings")
+				ctx.Redirect(setting.AppSubUrl + "/org/" + org.LowerName + "/settings")
 				return
 			} else {
 				ctx.Handle(500, "ChangeUserName", err)
@@ -73,7 +73,7 @@ func SettingsPost(ctx *middleware.Context, form auth.UpdateOrgSettingForm) {
 	}
 	log.Trace("Organization setting updated: %s", org.Name)
 	ctx.Flash.Success(ctx.Tr("org.settings.update_setting_success"))
-	ctx.Redirect(setting.AppRootSubUrl + "/org/" + org.Name + "/settings")
+	ctx.Redirect(setting.AppSubUrl + "/org/" + org.Name + "/settings")
 }
 
 func SettingsDelete(ctx *middleware.Context) {
@@ -87,13 +87,13 @@ func SettingsDelete(ctx *middleware.Context) {
 			switch err {
 			case models.ErrUserOwnRepos:
 				ctx.Flash.Error(ctx.Tr("form.org_still_own_repo"))
-				ctx.Redirect(setting.AppRootSubUrl + "/org/" + org.LowerName + "/settings/delete")
+				ctx.Redirect(setting.AppSubUrl + "/org/" + org.LowerName + "/settings/delete")
 			default:
 				ctx.Handle(500, "DeleteOrganization", err)
 			}
 		} else {
 			log.Trace("Organization deleted: %s", ctx.User.Name)
-			ctx.Redirect(setting.AppRootSubUrl + "/")
+			ctx.Redirect(setting.AppSubUrl + "/")
 		}
 		return
 	}

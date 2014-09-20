@@ -2,7 +2,7 @@
     <div class="container clear">
         <h1 id="repo-header-name" class="left public">
             <i class="mega-octicon octicon-{{if .Repository.IsPrivate}}lock{{else if .Repository.IsMirror}}repo-clone{{else}}repo{{end}}"></i>
-            <a class="author" href="{{AppRootSubUrl}}/{{.Owner.Name}}">{{.Owner.Name}}</a>
+            <a class="author" href="{{AppSubUrl}}/{{.Owner.Name}}">{{.Owner.Name}}</a>
             <span class="divider">/</span>
             <a class="repo text-bold" href="{{.RepoLink}}">{{.Repository.Name}}</a>
             {{if .Repository.IsMirror}}<span class="label label-gray">{{.i18n.Tr "mirror"}}</span>{{end}}
