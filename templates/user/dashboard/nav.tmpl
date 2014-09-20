@@ -9,7 +9,7 @@
                 <p class="panel-header"><strong>{{.i18n.Tr "home.switch_dashboard_context"}}</strong></p>
                 <ul class="menu menu-vertical switching-list" id="dashboard-switch-menu">
                     <li class="org {{if eq .ContextUser.Id .SignedUser.Id}}checked{{end}}">
-                        <a href="{{AppRootSubUrl}}/">
+                        <a href="{{AppSubUrl}}/">
                             <i class="octicon octicon-check"></i>
                             <img class="avatar-24" src="{{.SignedUser.AvatarLink}}" alt="user-avatar" />
                             {{.SignedUser.Name}}
@@ -25,10 +25,10 @@
                     </li>
                     {{end}}
                     <!-- <li>
-                        <a href="{{AppRootSubUrl}}/user/settings/orgs"><i class="octicon octicon-organization"></i>{{.i18n.Tr "manage_org"}}</a>
+                        <a href="{{AppSubUrl}}/user/settings/orgs"><i class="octicon octicon-organization"></i>{{.i18n.Tr "manage_org"}}</a>
                     </li> -->
                     <li>
-                        <a href="{{AppRootSubUrl}}/org/create"><i class="octicon octicon-plus"></i>{{.i18n.Tr "new_org"}}</a>
+                        <a href="{{AppSubUrl}}/org/create"><i class="octicon octicon-plus"></i>{{.i18n.Tr "new_org"}}</a>
                     </li>
                 </ul>
             </div>

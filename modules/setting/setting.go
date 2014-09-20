@@ -32,10 +32,10 @@ const (
 
 var (
 	// App settings.
-	AppVer        string
-	AppName       string
-	AppUrl        string
-	AppRootSubUrl string
+	AppVer    string
+	AppName   string
+	AppUrl    string
+	AppSubUrl string
 
 	// Server settings.
 	Protocol           Scheme
@@ -167,11 +167,12 @@ func NewConfigContext() {
 		AppUrl += "/"
 	}
 
+	// Check if has app suburl.
 	url, err := url.Parse(AppUrl)
 	if err != nil {
-		log.Fatal(4, "Invalid ROOT_URL %s: %s", AppUrl, err)
+		log.Fatal(4, "Invalid ROOT_URL(%s): %s", AppUrl, err)
 	}
-	AppRootSubUrl = strings.TrimSuffix(url.Path, "/")
+	AppSubUrl = strings.TrimSuffix(url.Path, "/")
 
 	Protocol = HTTP
 	if Cfg.MustValue("server", "PROTOCOL") == "https" {

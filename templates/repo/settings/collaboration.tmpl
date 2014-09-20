@@ -18,7 +18,7 @@
 	                        		{{range .Collaborators}}
 	                        		<li class="collab">
 	                        			{{if not (eq .Id $.Owner.Id)}}<a href="{{$.RepoLink}}/settings/collaboration?remove={{.Name}}" class="remove-collab right"><i class="fa fa-times"></i></a>{{end}}
-										<a class="member" href="{{AppRootSubUrl}}/{{.Name}}">
+										<a class="member" href="{{AppSubUrl}}/{{.Name}}">
 										    <img alt="{{.Name}}" class="pull-left avatar" src="{{.AvatarLink}}">
 										    <strong>{{.FullName}}</strong> ({{.Name}})
 										</a>

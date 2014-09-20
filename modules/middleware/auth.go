@@ -25,13 +25,13 @@ func Toggle(options *ToggleOptions) macaron.Handler {
 	return func(ctx *Context) {
 		// Cannot view any page before installation.
 		if !setting.InstallLock {
-			ctx.Redirect(setting.AppRootSubUrl + "/install")
+			ctx.Redirect(setting.AppSubUrl + "/install")
 			return
 		}
 
 		// Redirect to dashboard if user tries to visit any non-login page.
 		if options.SignOutRequire && ctx.IsSigned && ctx.Req.RequestURI != "/" {
-			ctx.Redirect(setting.AppRootSubUrl + "/")
+			ctx.Redirect(setting.AppSubUrl + "/")
 			return
 		}
 
@@ -48,8 +48,8 @@ func Toggle(options *ToggleOptions) macaron.Handler {
 				if strings.HasSuffix(ctx.Req.RequestURI, "watch") {
 					return
 				}
-				ctx.SetCookie("redirect_to", "/"+url.QueryEscape(setting.AppRootSubUrl + ctx.Req.RequestURI))
-				ctx.Redirect(setting.AppRootSubUrl + "/user/login")
+				ctx.SetCookie("redirect_to", "/"+url.QueryEscape(setting.AppSubUrl+ctx.Req.RequestURI))
+				ctx.Redirect(setting.AppSubUrl + "/user/login")
 				return
 			} else if !ctx.User.IsActive && setting.Service.RegisterEmailConfirm {
 				ctx.Data["Title"] = ctx.Tr("auth.active_your_account")

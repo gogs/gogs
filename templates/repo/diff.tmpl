@@ -30,7 +30,7 @@
                 </span>
                 <p class="author">
                     <img class="avatar" src="{{AvatarLink .Commit.Author.Email}}" alt=""/>
-                    <a class="name" href="{{AppRootSubUrl}}/user/email2user?email={{.Commit.Author.Email}}"><strong>{{.Commit.Author.Name}}</strong></a>
+                    <a class="name" href="{{AppSubUrl}}/user/email2user?email={{.Commit.Author.Email}}"><strong>{{.Commit.Author.Name}}</strong></a>
                     <span class="time">{{TimeSince .Commit.Author.When $.Lang}}</span>
                 </p>
           </div>

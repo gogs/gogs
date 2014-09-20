@@ -1,9 +1,9 @@
 <div class="panel panel-default info-box">
     <div class="panel-heading info-head">
-        <a href="{{AppRootSubUrl}}/{{.Username}}/{{.Reponame}}/commit/{{.LastCommit.Id}}" rel="nofollow">{{.LastCommit.Summary}}</a>
+        <a href="{{AppSubUrl}}/{{.Username}}/{{.Reponame}}/commit/{{.LastCommit.Id}}" rel="nofollow">{{.LastCommit.Summary}}</a>
     </div>
     <div class="panel-body info-content">
-        <a href="{{AppRootSubUrl}}/user/{{.LastCommit.Author.Name}}">{{.LastCommit.Author.Name}}</a> <span class="text-muted">{{TimeSince .LastCommit.Author.When}}</span>
+        <a href="{{AppSubUrl}}/user/{{.LastCommit.Author.Name}}">{{.LastCommit.Author.Name}}</a> <span class="text-muted">{{TimeSince .LastCommit.Author.When}}</span>
     </div>
     <table class="panel-footer table file-list">
         <thead class="hidden">
@@ -36,7 +36,7 @@
                         </span>
                     </td>
                     <td class="text">
-                        <span class="wrap"><a rel="nofollow" href="{{AppRootSubUrl}}/{{$.Username}}/{{$.Reponame}}/commit/{{$commit.Id}}">{{$commit.Summary}}</a></span>
+                        <span class="wrap"><a rel="nofollow" href="{{AppSubUrl}}/{{$.Username}}/{{$.Reponame}}/commit/{{$commit.Id}}">{{$commit.Summary}}</a></span>
                     </td>
                     <td class="date">
                         <span class="wrap">{{TimeSince $commit.Committer.When}}</span>

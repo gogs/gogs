@@ -82,8 +82,8 @@ var TemplateFuncs template.FuncMap = map[string]interface{}{
 	"AppName": func() string {
 		return setting.AppName
 	},
-	"AppRootSubUrl": func() string {
-		return setting.AppRootSubUrl
+	"AppSubUrl": func() string {
+		return setting.AppSubUrl
 	},
 	"AppVer": func() string {
 		return setting.AppVer
@@ -210,7 +210,7 @@ func ActionDesc(act Actioner) string {
 	content := act.GetContent()
 	switch act.GetOpType() {
 	case 1: // Create repository.
-		return fmt.Sprintf(TPL_CREATE_REPO, setting.AppRootSubUrl, actUserName, actUserName, repoLink, repoName)
+		return fmt.Sprintf(TPL_CREATE_REPO, setting.AppSubUrl, actUserName, actUserName, repoLink, repoName)
 	case 5: // Commit repository.
 		var push *PushCommits
 		if err := json.Unmarshal([]byte(content), &push); err != nil {
@@ -223,20 +223,20 @@ func ActionDesc(act Actioner) string {
 		if push.Len > 3 {
 			buf.WriteString(fmt.Sprintf(`<div><a href="{{AppRootSubUrl}}/%s/%s/commits/%s" rel="nofollow">%d other commits >></a></div>`, actUserName, repoName, branch, push.Len))
 		}
-		return fmt.Sprintf(TPL_COMMIT_REPO, setting.AppRootSubUrl, actUserName, actUserName, repoLink, branch, branch, repoLink, repoLink,
+		return fmt.Sprintf(TPL_COMMIT_REPO, setting.AppSubUrl, actUserName, actUserName, repoLink, branch, branch, repoLink, repoLink,
 			buf.String())
 	case 6: // Create issue.
 		infos := strings.SplitN(content, "|", 2)
-		return fmt.Sprintf(TPL_CREATE_ISSUE, setting.AppRootSubUrl, actUserName, actUserName, repoLink, infos[0], repoLink, infos[0],
+		return fmt.Sprintf(TPL_CREATE_ISSUE, setting.AppSubUrl, actUserName, actUserName, repoLink, infos[0], repoLink, infos[0],
 			AvatarLink(email), infos[1])
 	case 8: // Transfer repository.
 		newRepoLink := content + "/" + repoName
-		return fmt.Sprintf(TPL_TRANSFER_REPO, setting.AppRootSubUrl, actUserName, actUserName, repoLink, newRepoLink, newRepoLink)
+		return fmt.Sprintf(TPL_TRANSFER_REPO, setting.AppSubUrl, actUserName, actUserName, repoLink, newRepoLink, newRepoLink)
 	case 9: // Push tag.
-		return fmt.Sprintf(TPL_PUSH_TAG, setting.AppRootSubUrl, actUserName, actUserName, repoLink, branch, branch, repoLink, repoLink)
+		return fmt.Sprintf(TPL_PUSH_TAG, setting.AppSubUrl, actUserName, actUserName, repoLink, branch, branch, repoLink, repoLink)
 	case 10: // Comment issue.
 		infos := strings.SplitN(content, "|", 2)
-		return fmt.Sprintf(TPL_COMMENT_ISSUE, setting.AppRootSubUrl, actUserName, actUserName, repoLink, infos[0], repoLink, infos[0],
+		return fmt.Sprintf(TPL_COMMENT_ISSUE, setting.AppSubUrl, actUserName, actUserName, repoLink, infos[0], repoLink, infos[0],
 			AvatarLink(email), infos[1])
 	default:
 		return "invalid type"

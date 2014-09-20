@@ -33,7 +33,7 @@ func Home(ctx *middleware.Context) {
 	// Check auto-login.
 	uname := ctx.GetCookie(setting.CookieUserName)
 	if len(uname) != 0 {
-		ctx.Redirect(setting.AppRootSubUrl + "/user/login")
+		ctx.Redirect(setting.AppSubUrl + "/user/login")
 		return
 	}
 

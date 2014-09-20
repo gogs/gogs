@@ -1,7 +1,7 @@
 {{template "ng/base/head" .}}
 {{template "ng/base/header" .}}
 <div id="sign-wrapper">
-    <form class="form-align form panel sign-panel sign-form container panel-radius" id="sign-up-form" action="{{AppRootSubUrl}}/org/create" method="post">
+    <form class="form-align form panel sign-panel sign-form container panel-radius" id="sign-up-form" action="{{AppSubUrl}}/org/create" method="post">
         {{.CsrfTokenHtml}}
         <div class="panel-header">
             <h2>{{.i18n.Tr "new_org"}}</h2>
@@ -23,7 +23,7 @@
             <div class="field">
                 <span class="form-label"></span>
                 <button class="btn btn-large btn-blue btn-radius">{{.i18n.Tr "org.create_org"}}</button>
-                <a class="btn btn-small btn-gray btn-radius" id="repo-create-cancel" href="{{AppRootSubUrl}}/"><strong>{{.i18n.Tr "cancel"}}</strong></a>
+                <a class="btn btn-small btn-gray btn-radius" id="repo-create-cancel" href="{{AppSubUrl}}/"><strong>{{.i18n.Tr "cancel"}}</strong></a>
             </div>
         </div>
     </form>

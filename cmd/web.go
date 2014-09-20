@@ -79,6 +79,7 @@ func newMacaron() *macaron.Macaron {
 		IndentJSON: macaron.Env != macaron.PROD,
 	}))
 	m.Use(i18n.I18n(i18n.Options{
+		SubURL:   setting.AppSubUrl,
 		Langs:    setting.Langs,
 		Names:    setting.Names,
 		Redirect: true,
@@ -88,7 +89,9 @@ func newMacaron() *macaron.Macaron {
 		Interval: setting.CacheInternal,
 		Conn:     setting.CacheConn,
 	}))
-	m.Use(captcha.Captchaer())
+	m.Use(captcha.Captchaer(captcha.Options{
+		SubURL: setting.AppSubUrl,
+	}))
 	m.Use(session.Sessioner(session.Options{
 		Provider: setting.SessionProvider,
 		Config:   *setting.SessionConfig,
@@ -365,7 +368,7 @@ func runWeb(*cli.Context) {
 
 	var err error
 	listenAddr := fmt.Sprintf("%s:%s", setting.HttpAddr, setting.HttpPort)
-	log.Info("Listen: %v://%s", setting.Protocol, listenAddr)
+	log.Info("Listen: %v://%s%s", setting.Protocol, listenAddr, setting.AppSubUrl)
 	switch setting.Protocol {
 	case setting.HTTP:
 		err = http.ListenAndServe(listenAddr, m)

@@ -137,7 +137,7 @@ func updateIssuesCommit(userId, repoId int64, repoUserName, repoName string, com
 				return err
 			}
 
-			url := fmt.Sprintf("%s/%s/%s/commit/%s", setting.AppRootSubUrl, repoUserName, repoName, c.Sha1)
+			url := fmt.Sprintf("%s/%s/%s/commit/%s", setting.AppSubUrl, repoUserName, repoName, c.Sha1)
 			message := fmt.Sprintf(`<a href="%s">%s</a>`, url, c.Message)
 
 			if _, err = CreateComment(userId, issue.RepoId, issue.Id, 0, 0, COMMIT, message, nil); err != nil {

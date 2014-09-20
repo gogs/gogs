@@ -60,7 +60,7 @@ func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 					ctx.Handle(404, "GetUserByName", err)
 				} else if redirect {
 					log.Error(4, "GetUserByName", err)
-					ctx.Redirect(setting.AppRootSubUrl + "/")
+					ctx.Redirect(setting.AppSubUrl + "/")
 				} else {
 					ctx.Handle(500, "GetUserByName", err)
 				}
@@ -72,7 +72,7 @@ func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 
 		if u == nil {
 			if redirect {
-				ctx.Redirect(setting.AppRootSubUrl + "/")
+				ctx.Redirect(setting.AppSubUrl + "/")
 				return
 			}
 			ctx.Handle(404, "RepoAssignment", errors.New("invliad user account for single repository"))
@@ -92,7 +92,7 @@ func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 				ctx.Handle(404, "GetRepositoryByName", err)
 				return
 			} else if redirect {
-				ctx.Redirect(setting.AppRootSubUrl + "/")
+				ctx.Redirect(setting.AppSubUrl + "/")
 				return
 			}
 			ctx.Handle(500, "GetRepositoryByName", err)
@@ -160,7 +160,7 @@ func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 			return
 		}
 		ctx.Repo.GitRepo = gitRepo
-		ctx.Repo.RepoLink = setting.AppRootSubUrl + "/" + u.Name + "/" + repo.Name
+		ctx.Repo.RepoLink = setting.AppSubUrl + "/" + u.Name + "/" + repo.Name
 		ctx.Data["RepoLink"] = ctx.Repo.RepoLink
 
 		tags, err := ctx.Repo.GitRepo.GetTags()
@@ -298,8 +298,8 @@ func RequireTrueOwner() macaron.Handler {
 	return func(ctx *Context) {
 		if !ctx.Repo.IsTrueOwner && !ctx.Repo.IsAdmin {
 			if !ctx.IsSigned {
-				ctx.SetCookie("redirect_to", "/"+url.QueryEscape(setting.AppRootSubUrl + ctx.Req.RequestURI))
-				ctx.Redirect(setting.AppRootSubUrl + "/user/login")
+				ctx.SetCookie("redirect_to", "/"+url.QueryEscape(setting.AppSubUrl+ctx.Req.RequestURI))
+				ctx.Redirect(setting.AppSubUrl + "/user/login")
 				return
 			}
 			ctx.Handle(404, ctx.Req.RequestURI, nil)

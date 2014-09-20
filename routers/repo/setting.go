@@ -97,7 +97,7 @@ func SettingsPost(ctx *middleware.Context, form auth.RepoSettingForm) {
 		}
 
 		ctx.Flash.Success(ctx.Tr("repo.settings.update_settings_success"))
-		ctx.Redirect(fmt.Sprintf("%s/%s/%s/settings", setting.AppRootSubUrl, ctx.Repo.Owner.Name, ctx.Repo.Repository.Name))
+		ctx.Redirect(fmt.Sprintf("%s/%s/%s/settings", setting.AppSubUrl, ctx.Repo.Owner.Name, ctx.Repo.Repository.Name))
 	case "transfer":
 		if ctx.Repo.Repository.Name != form.RepoName {
 			ctx.RenderWithErr(ctx.Tr("form.enterred_invalid_repo_name"), SETTINGS_OPTIONS, nil)
@@ -122,7 +122,7 @@ func SettingsPost(ctx *middleware.Context, form auth.RepoSettingForm) {
 		}
 		log.Trace("Repository transfered: %s/%s -> %s", ctx.Repo.Owner.Name, ctx.Repo.Repository.Name, newOwner)
 		ctx.Flash.Success(ctx.Tr("repo.settings.transfer_succeed"))
-		ctx.Redirect(setting.AppRootSubUrl + "/")
+		ctx.Redirect(setting.AppSubUrl + "/")
 	case "delete":
 		if ctx.Repo.Repository.Name != form.RepoName {
 			ctx.RenderWithErr(ctx.Tr("form.enterred_invalid_repo_name"), SETTINGS_OPTIONS, nil)
@@ -151,9 +151,9 @@ func SettingsPost(ctx *middleware.Context, form auth.RepoSettingForm) {
 		}
 		log.Trace("Repository deleted: %s/%s", ctx.Repo.Owner.Name, ctx.Repo.Repository.Name)
 		if ctx.Repo.Owner.IsOrganization() {
-			ctx.Redirect(setting.AppRootSubUrl + "/org/" + ctx.Repo.Owner.Name + "/dashboard")
+			ctx.Redirect(setting.AppSubUrl + "/org/" + ctx.Repo.Owner.Name + "/dashboard")
 		} else {
-			ctx.Redirect(setting.AppRootSubUrl + "/")
+			ctx.Redirect(setting.AppSubUrl + "/")
 		}
 	}
 }
@@ -167,7 +167,7 @@ func SettingsCollaboration(ctx *middleware.Context) {
 	if ctx.Req.Method == "POST" {
 		name := strings.ToLower(ctx.Query("collaborator"))
 		if len(name) == 0 || ctx.Repo.Owner.LowerName == name {
-			ctx.Redirect(setting.AppRootSubUrl + ctx.Req.URL.Path)
+			ctx.Redirect(setting.AppSubUrl + ctx.Req.URL.Path)
 			return
 		}
 		has, err := models.HasAccess(name, repoLink, models.WRITABLE)
@@ -175,7 +175,7 @@ func SettingsCollaboration(ctx *middleware.Context) {
 			ctx.Handle(500, "HasAccess", err)
 			return
 		} else if has {
-			ctx.Redirect(setting.AppRootSubUrl + ctx.Req.URL.Path)
+			ctx.Redirect(setting.AppSubUrl + ctx.Req.URL.Path)
 			return
 		}
 
@@ -183,7 +183,7 @@ func SettingsCollaboration(ctx *middleware.Context) {
 		if err != nil {
 			if err == models.ErrUserNotExist {
 				ctx.Flash.Error(ctx.Tr("form.user_not_exist"))
-				ctx.Redirect(setting.AppRootSubUrl + ctx.Req.URL.Path)
+				ctx.Redirect(setting.AppSubUrl + ctx.Req.URL.Path)
 			} else {
 				ctx.Handle(500, "GetUserByName", err)
 			}
@@ -204,7 +204,7 @@ func SettingsCollaboration(ctx *middleware.Context) {
 		}
 
 		ctx.Flash.Success(ctx.Tr("repo.settings.add_collaborator_success"))
-		ctx.Redirect(setting.AppRootSubUrl + ctx.Req.URL.Path)
+		ctx.Redirect(setting.AppSubUrl + ctx.Req.URL.Path)
 		return
 	}
 
