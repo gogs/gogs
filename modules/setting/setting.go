@@ -108,6 +108,7 @@ var (
 	ProdMode     bool
 	RunUser      string
 	IsWindows    bool
+	HasRobotsTxt bool
 )
 
 func init() {
@@ -260,6 +261,8 @@ func NewConfigContext() {
 
 	Langs = Cfg.MustValueArray("i18n", "LANGS", ",")
 	Names = Cfg.MustValueArray("i18n", "NAMES", ",")
+
+	HasRobotsTxt = com.IsFile(path.Join(CustomPath, "robots.txt"))
 }
 
 var Service struct {

@@ -364,6 +364,15 @@ func runWeb(*cli.Context) {
 		r.Any("/:reponame/*", ignSignInAndCsrf, repo.Http)
 	})
 
+	// robots.txt
+	m.Get("/robots.txt", func(ctx *middleware.Context) {
+		if setting.HasRobotsTxt {
+			ctx.ServeFile(path.Join(setting.CustomPath, "robots.txt"))
+		} else {
+			ctx.Error(404)
+		}
+	})
+
 	// Not found handler.
 	m.NotFound(routers.NotFound)
 
