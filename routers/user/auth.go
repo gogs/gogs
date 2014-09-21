@@ -52,8 +52,8 @@ func SignIn(ctx *middleware.Context) {
 	defer func() {
 		if !isSucceed {
 			log.Trace("auto-login cookie cleared: %s", uname)
-			ctx.SetCookie(setting.CookieUserName, "", -1)
-			ctx.SetCookie(setting.CookieRememberName, "", -1)
+			ctx.SetCookie(setting.CookieUserName, "", -1, setting.AppSubUrl)
+			ctx.SetCookie(setting.CookieRememberName, "", -1, setting.AppSubUrl)
 			return
 		}
 	}()
@@ -77,7 +77,7 @@ func SignIn(ctx *middleware.Context) {
 	ctx.Session.Set("uid", u.Id)
 	ctx.Session.Set("uname", u.Name)
 	if redirectTo, _ := url.QueryUnescape(ctx.GetCookie("redirect_to")); len(redirectTo) > 0 {
-		ctx.SetCookie("redirect_to", "", -1)
+		ctx.SetCookie("redirect_to", "", -1, setting.AppSubUrl)
 		ctx.Redirect(redirectTo)
 		return
 	}
@@ -113,9 +113,9 @@ func SignInPost(ctx *middleware.Context, form auth.SignInForm) {
 
 	if form.Remember {
 		days := 86400 * setting.LogInRememberDays
-		ctx.SetCookie(setting.CookieUserName, u.Name, days)
+		ctx.SetCookie(setting.CookieUserName, u.Name, days, setting.AppSubUrl)
 		ctx.SetSuperSecureCookie(base.EncodeMd5(u.Rands+u.Passwd),
-			setting.CookieRememberName, u.Name, days)
+			setting.CookieRememberName, u.Name, days, setting.AppSubUrl)
 	}
 
 	// Bind with social account.
@@ -135,7 +135,7 @@ func SignInPost(ctx *middleware.Context, form auth.SignInForm) {
 	ctx.Session.Set("uid", u.Id)
 	ctx.Session.Set("uname", u.Name)
 	if redirectTo, _ := url.QueryUnescape(ctx.GetCookie("redirect_to")); len(redirectTo) > 0 {
-		ctx.SetCookie("redirect_to", "", -1)
+		ctx.SetCookie("redirect_to", "", -1, setting.AppSubUrl)
 		ctx.Redirect(redirectTo)
 		return
 	}
@@ -149,8 +149,8 @@ func SignOut(ctx *middleware.Context) {
 	ctx.Session.Delete("socialId")
 	ctx.Session.Delete("socialName")
 	ctx.Session.Delete("socialEmail")
-	ctx.SetCookie(setting.CookieUserName, "", -1)
-	ctx.SetCookie(setting.CookieRememberName, "", -1)
+	ctx.SetCookie(setting.CookieUserName, "", -1, setting.AppSubUrl)
+	ctx.SetCookie(setting.CookieRememberName, "", -1, setting.AppSubUrl)
 	ctx.Redirect(setting.AppSubUrl + "/")
 }
 
