@@ -21,13 +21,6 @@ const (
 	HOME base.TplName = "repo/home"
 )
 
-type fakeCommit struct {
-	*git.Commit
-
-	RefUrl string
-	RefId  string
-}
-
 func Home(ctx *middleware.Context) {
 	ctx.Data["Title"] = ctx.Repo.Repository.Name
 
@@ -153,14 +146,7 @@ func Home(ctx *middleware.Context) {
 					ctx.Handle(404, "GetCommitOfRelPath", err)
 					return
 				}
-
-				commit := fakeCommit{
-					Commit: c,
-					RefUrl: strings.TrimRight(sm.Url, ".git"),
-					RefId:  te.Id.String(),
-				}
-
-				files = append(files, []interface{}{te, &commit})
+				files = append(files, []interface{}{te, git.NewSubModuleFile(c, sm.Url, te.Id.String())})
 			}
 		}
 
