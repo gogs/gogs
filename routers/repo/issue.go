@@ -54,7 +54,7 @@ func Issues(ctx *middleware.Context) {
 	isShowClosed := ctx.Query("state") == "closed"
 
 	if viewType != "all" && !ctx.IsSigned {
-		ctx.SetCookie("redirect_to", "/"+url.QueryEscape(setting.AppSubUrl+ctx.Req.RequestURI))
+		ctx.SetCookie("redirect_to", "/"+url.QueryEscape(setting.AppSubUrl+ctx.Req.RequestURI), 0, setting.AppSubUrl)
 		ctx.Redirect(setting.AppSubUrl + "/user/login")
 		return
 	}

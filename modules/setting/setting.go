@@ -108,6 +108,7 @@ var (
 	ProdMode     bool
 	RunUser      string
 	IsWindows    bool
+	HasRobotsTxt bool
 )
 
 func init() {
@@ -260,6 +261,8 @@ func NewConfigContext() {
 
 	Langs = Cfg.MustValueArray("i18n", "LANGS", ",")
 	Names = Cfg.MustValueArray("i18n", "NAMES", ",")
+
+	HasRobotsTxt = com.IsFile(path.Join(CustomPath, "robots.txt"))
 }
 
 var Service struct {
@@ -380,6 +383,7 @@ func newSessionService() {
 	SessionConfig = new(session.Config)
 	SessionConfig.ProviderConfig = strings.Trim(Cfg.MustValue("session", "PROVIDER_CONFIG"), "\" ")
 	SessionConfig.CookieName = Cfg.MustValue("session", "COOKIE_NAME", "i_like_gogits")
+	SessionConfig.CookiePath = AppSubUrl
 	SessionConfig.Secure = Cfg.MustBool("session", "COOKIE_SECURE")
 	SessionConfig.EnableSetCookie = Cfg.MustBool("session", "ENABLE_SET_COOKIE", true)
 	SessionConfig.Gclifetime = Cfg.MustInt64("session", "GC_INTERVAL_TIME", 86400)
