@@ -51,6 +51,8 @@ func parseTreeData(tree *Tree, data []byte) ([]*TreeEntry, error) {
 		case "160000":
 			entry.mode = ModeCommit
 			entry.Type = COMMIT
+
+			step = 8
 		case "040000":
 			entry.mode = ModeTree
 			entry.Type = TREE
