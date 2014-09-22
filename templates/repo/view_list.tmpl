@@ -32,12 +32,8 @@
                     <span class="octicon octicon-file-submodule"></span>
                 </td>
                 <td class="name">
-                    <a href="{{$commit.CommitMessage}}" class="text-truncate">{{$entry.Name}}</a> @ <a href="{{$commit.CommitMessage}}/commit/{{$commit.Id}}">{{ShortSha $commit.Id.String}}</a>
+                    <a href="{{$commit.RefUrl}}" class="text-truncate">{{$entry.Name}}</a> @ <a href="{{$commit.RefUrl}}/commit/{{$commit.RefId}}">{{ShortSha $commit.RefId}}</a>
                 </td>
-                <td class="msg">
-                    <a class="text-truncate" href="{{$commit.CommitMessage}}/commit/{{$commit.Id}}" rel="nofollow">{{$commit.Summary}}</a>
-                </td>
-                <td class="age">{{TimeSince $commit.Committer.When $.i18n.Lang}}</td>
             {{else}}
             <td class="icon">
                     <span class="octicon octicon-file-{{if or $entry.IsDir}}directory{{else}}text{{end}}"></span>
@@ -45,11 +41,11 @@
                 <td class="name">
                     <a href="{{$.BranchLink}}/{{$.TreePath}}{{$entry.Name}}" class="text-truncate">{{$entry.Name}}</a>
                 </td>
+                {{end}}
                 <td class="msg">
                     <a class="text-truncate" href="{{AppSubUrl}}/{{$.Username}}/{{$.Reponame}}/commit/{{$commit.Id}}" rel="nofollow">{{$commit.Summary}}</a>
                 </td>
                 <td class="age">{{TimeSince $commit.Committer.When $.i18n.Lang}}</td>
-            {{end}}
             </tr>
         {{end}}
     </tbody>
