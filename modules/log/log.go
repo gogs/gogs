@@ -87,6 +87,12 @@ func Fatal(skip int, format string, v ...interface{}) {
 	os.Exit(1)
 }
 
+func Close() {
+	for _, l := range loggers {
+		l.Close()
+	}
+}
+
 // .___        __                 _____
 // |   | _____/  |_  ____________/ ____\____    ____  ____
 // |   |/    \   __\/ __ \_  __ \   __\\__  \ _/ ___\/ __ \

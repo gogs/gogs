@@ -35,6 +35,7 @@ func main() {
 		cmd.CmdUpdate,
 		cmd.CmdFix,
 		cmd.CmdDump,
+		cmd.CmdCert,
 	}
 	app.Flags = append(app.Flags, []cli.Flag{}...)
 	app.Run(os.Args)
