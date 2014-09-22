@@ -10,7 +10,6 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/git"
@@ -23,12 +22,10 @@ const (
 )
 
 type fakeCommit struct {
-	Id        string
-	Summary   string
-	Url       string
-	Committer struct {
-		When time.Time
-	}
+	*git.Commit
+
+	RefUrl string
+	RefId  string
 }
 
 func Home(ctx *middleware.Context) {
@@ -151,13 +148,16 @@ func Home(ctx *middleware.Context) {
 					return
 				}
 
-				commit := git.Commit{
-					Tree: *tree,
-					Id:   te.Id,
-					Committer: &git.Signature{
-						When: time.Now(),
-					},
-					CommitMessage: sm.Url,
+				c, err := ctx.Repo.Commit.GetCommitOfRelPath(filepath.Join(treePath, te.Name()))
+				if err != nil {
+					ctx.Handle(404, "GetCommitOfRelPath", err)
+					return
+				}
+
+				commit := fakeCommit{
+					Commit: c,
+					RefUrl: strings.TrimRight(sm.Url, ".git"),
+					RefId:  te.Id.String(),
 				}
 
 				files = append(files, []interface{}{te, &commit})
