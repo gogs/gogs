@@ -10,6 +10,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/git"
@@ -20,6 +21,15 @@ import (
 const (
 	HOME base.TplName = "repo/home"
 )
+
+type fakeCommit struct {
+	Id        string
+	Summary   string
+	Url       string
+	Committer struct {
+		When time.Time
+	}
+}
 
 func Home(ctx *middleware.Context) {
 	ctx.Data["Title"] = ctx.Repo.Repository.Name
@@ -127,13 +137,31 @@ func Home(ctx *middleware.Context) {
 		files := make([][]interface{}, 0, len(entries))
 
 		for _, te := range entries {
-			c, err := ctx.Repo.Commit.GetCommitOfRelPath(filepath.Join(treePath, te.Name()))
-			if err != nil {
-				ctx.Handle(404, "GetCommitOfRelPath", err)
-				return
-			}
+			if te.Type != git.COMMIT {
+				c, err := ctx.Repo.Commit.GetCommitOfRelPath(filepath.Join(treePath, te.Name()))
+				if err != nil {
+					ctx.Handle(404, "GetCommitOfRelPath", err)
+					return
+				}
+				files = append(files, []interface{}{te, c})
+			} else {
+				sm, err := ctx.Repo.Commit.GetSubModule(path.Join(treename, te.Name()))
+				if err != nil {
+					ctx.Handle(404, "GetSubModule", err)
+					return
+				}
 
-			files = append(files, []interface{}{te, c})
+				commit := git.Commit{
+					Tree: *tree,
+					Id:   te.Id,
+					Committer: &git.Signature{
+						When: time.Now(),
+					},
+					CommitMessage: sm.Url,
+				}
+
+				files = append(files, []interface{}{te, &commit})
+			}
 		}
 
 		ctx.Data["Files"] = files

@@ -103,6 +103,7 @@ func Http(ctx *middleware.Context) {
 	// check access
 	if askAuth {
 		baHead := ctx.Req.Header.Get("Authorization")
+		fmt.Println("auth:", baHead)
 		if baHead == "" {
 			authRequired(ctx)
 			return
@@ -121,6 +122,8 @@ func Http(ctx *middleware.Context) {
 			return
 		}
 
+		fmt.Println("auth2:", authUsername, passwd)
+
 		authUser, err = models.GetUserByName(authUsername)
 		if err != nil {
 			ctx.Handle(401, "no basic auth and digit auth", nil)
@@ -133,6 +136,8 @@ func Http(ctx *middleware.Context) {
 			ctx.Handle(401, "no basic auth and digit auth", nil)
 			return
 		}
+
+		fmt.Println("passwd is right")
 
 		if !isPublicPull {
 			var tp = models.WRITABLE

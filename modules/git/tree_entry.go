@@ -61,6 +61,10 @@ func (te *TreeEntry) Size() int64 {
 	return te.size
 }
 
+func (te *TreeEntry) IsSubModule() bool {
+	return te.mode == ModeCommit
+}
+
 func (te *TreeEntry) IsDir() bool {
 	return te.mode == ModeTree
 }

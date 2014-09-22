@@ -5,6 +5,7 @@
 package git
 
 import (
+	"bufio"
 	"container/list"
 	"strings"
 )
@@ -17,7 +18,8 @@ type Commit struct {
 	Committer     *Signature
 	CommitMessage string
 
-	parents []sha1 // sha1 strings
+	parents    []sha1 // sha1 strings
+	submodules map[string]*SubModule
 }
 
 // Return the commit message. Same as retrieving CommitMessage directly.
@@ -83,4 +85,50 @@ func (c *Commit) CommitsByRange(page int) (*list.List, error) {
 
 func (c *Commit) GetCommitOfRelPath(relPath string) (*Commit, error) {
 	return c.repo.getCommitOfRelPath(c.Id, relPath)
+}
+
+func (c *Commit) GetSubModule(entryname string) (*SubModule, error) {
+	moduels, err := c.GetSubModules()
+	if err != nil {
+		return nil, err
+	}
+	return moduels[entryname], nil
+}
+
+func (c *Commit) GetSubModules() (map[string]*SubModule, error) {
+	if c.submodules != nil {
+		return c.submodules, nil
+	}
+
+	entry, err := c.GetTreeEntryByPath(".gitmodules")
+	if err != nil {
+		return nil, err
+	}
+	rd, err := entry.Blob().Data()
+	if err != nil {
+		return nil, err
+	}
+
+	scanner := bufio.NewScanner(rd)
+	c.submodules = make(map[string]*SubModule)
+	var ismodule bool
+	var path string
+	for scanner.Scan() {
+		if strings.HasPrefix(scanner.Text(), "[submodule") {
+			ismodule = true
+			continue
+		}
+		if ismodule {
+			fields := strings.Split(scanner.Text(), "=")
+			k := strings.TrimSpace(fields[0])
+			if k == "path" {
+				path = strings.TrimSpace(fields[1])
+			} else if k == "url" {
+				c.submodules[path] = &SubModule{path, strings.TrimSpace(fields[1])}
+				ismodule = false
+			}
+		}
+	}
+
+	return c.submodules, nil
 }
