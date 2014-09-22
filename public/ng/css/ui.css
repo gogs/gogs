@@ -151,8 +151,7 @@ code,
 kbd,
 pre,
 samp {
-  font-family: monospace, monospace;
-  font-size: 1em;
+  font: 14px Consolas, "Liberation Mono", Menlo, Courier, monospace;
 }
 .text-left {
   text-align: left;
@@ -276,9 +275,6 @@ hr {
   border: none;
   border-bottom: 1px solid #dddddd;
   margin-bottom: .75em;
-}
-p code {
-  color: #b63b2c;
 }
 .radius {
   border-radius: .25em;

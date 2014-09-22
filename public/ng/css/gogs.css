@@ -294,6 +294,12 @@ img.avatar-100 {
 .markdown li:first-child {
   margin-top: 0;
 }
+.markdown code {
+  padding: 0.2em 0.5em;
+  margin: 0;
+  background-color: rgba(0, 0, 0, 0.04);
+  border-radius: 3px;
+}
 .markdown > pre {
   font-size: 14px;
   line-height: 1.6;
@@ -303,6 +309,10 @@ img.avatar-100 {
   margin: 5px 0;
   padding: 10px;
   background-color: #f8f8f8;
+}
+.markdown > pre code {
+  padding: 0;
+  background-color: inherit;
 }
 .markdown img {
   padding: 10px 0;
