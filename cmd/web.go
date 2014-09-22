@@ -97,9 +97,10 @@ func newMacaron() *macaron.Macaron {
 		Config:   *setting.SessionConfig,
 	}))
 	m.Use(csrf.Generate(csrf.Options{
-		Secret:    setting.SecretKey,
-		SetCookie: true,
-		Header:    "X-Csrf-Token",
+		Secret:     setting.SecretKey,
+		SetCookie:  true,
+		Header:     "X-Csrf-Token",
+		CookiePath: setting.AppSubUrl,
 	}))
 	m.Use(toolbox.Toolboxer(m, toolbox.Options{
 		HealthCheckFuncs: []*toolbox.HealthCheckFuncDesc{
@@ -361,6 +362,15 @@ func runWeb(*cli.Context) {
 	m.Group("/:username", func(r *macaron.Router) {
 		r.Get("/:reponame", ignSignIn, middleware.RepoAssignment(true, true, true), repo.Home)
 		r.Any("/:reponame/*", ignSignInAndCsrf, repo.Http)
+	})
+
+	// robots.txt
+	m.Get("/robots.txt", func(ctx *middleware.Context) {
+		if setting.HasRobotsTxt {
+			ctx.ServeFile(path.Join(setting.CustomPath, "robots.txt"))
+		} else {
+			ctx.Error(404)
+		}
 	})
 
 	// Not found handler.
