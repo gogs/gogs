@@ -23,6 +23,10 @@ type UpdateTask struct {
 	NewCommitId string
 }
 
+const (
+	MAX_COMMITS int = 5
+)
+
 func AddUpdateTask(task *UpdateTask) error {
 	_, err := x.Insert(task)
 	return err
@@ -132,7 +136,6 @@ func Update(refName, oldCommitId, newCommitId, userName, repoUserName, repoName 
 
 	// if commits push
 	commits := make([]*base.PushCommit, 0)
-	var maxCommits = 2
 	var actEmail string
 	for e := l.Front(); e != nil; e = e.Next() {
 		commit := e.Value.(*git.Commit)
@@ -145,7 +148,7 @@ func Update(refName, oldCommitId, newCommitId, userName, repoUserName, repoName 
 				commit.Message(),
 				commit.Author.Email,
 				commit.Author.Name})
-		if len(commits) >= maxCommits {
+		if len(commits) >= MAX_COMMITS {
 			break
 		}
 	}
