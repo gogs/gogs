@@ -1,6 +1,7 @@
 // @codekit-prepend "lib/jquery-1.11.1.min.js"
 // @codekit-prepend "lib/lib.js"
 // @codekit-prepend "lib/tabs.js"
+// @codekit-prepend "lib/jquery.tipsy.js"
 
 var Gogs = {};
 
@@ -202,7 +203,7 @@ var Gogs = {};
     // Search users by keyword.
     Gogs.searchUsers = function (val, $target) {
         $.ajax({
-            url: Gogs.AppRootSubUrl + '/api/v1/users/search?q=' + val,
+            url: Gogs.AppSubUrl + '/api/v1/users/search?q=' + val,
             dataType: "json",
             success: function (json) {
                 if (json.ok && json.data.length) {
@@ -222,7 +223,7 @@ var Gogs = {};
     // Search repositories by keyword.
     Gogs.searchRepos = function (val, $target, $param) {
         $.ajax({
-            url: Gogs.AppRootSubUrl + '/api/v1/repos/search?q=' + val + '&' + $param,
+            url: Gogs.AppSubUrl + '/api/v1/repos/search?q=' + val + '&' + $param,
             dataType: "json",
             success: function (json) {
                 if (json.ok && json.data.length) {
@@ -245,7 +246,7 @@ var Gogs = {};
             return;
         }
         $(selector).zclip({
-            path: Gogs.AppRootSubUrl + "/js/ZeroClipboard.swf",
+            path: Gogs.AppSubUrl + "/js/ZeroClipboard.swf",
             copy: function () {
                 var t = $(this).data("copy-val");
                 var to = $($(this).data("copy-from"));
@@ -262,17 +263,14 @@ var Gogs = {};
                 return str;
             },
             afterCopy: function () {
-                alert("Clone URL has copied!");
-//                var $this = $(this);
-//                $this.tooltip('hide')
-//                    .attr('data-original-title', 'Copied OK');
-//                setTimeout(function () {
-//                    $this.tooltip("show");
-//                }, 200);
-//                setTimeout(function () {
-//                    $this.tooltip('hide')
-//                        .attr('data-original-title', 'Copy to Clipboard');
-//                }, 3000);
+                var $this = $(this);
+                $this.tipsy("hide").attr('original-title', $this.data('after-title'));
+                setTimeout(function () {
+                    $this.tipsy("show");
+                }, 200);
+                setTimeout(function () {
+                    $this.tipsy('hide').attr('original-title', $this.data('original-title'));
+                }, 3000);
             }
         }).addClass("js-copy-bind");
     }
@@ -344,26 +342,30 @@ function initRepo() {
         $('.clone-url').text($(this).data('link'))
     });
     // Copy URL.
-    $('#repo-clone-copy').hover(function () {
+    var $clone_btn = $('#repo-clone-copy');
+    $clone_btn.hover(function () {
         Gogs.bindCopy($(this));
     })
+    $clone_btn.tipsy({
+        fade: true
+    });
 }
 
 // when user changes hook type, hide/show proper divs
 function initHookTypeChange() {
     // web hook type change
     $('select#hook-type').on("change", function () {
-      hookTypes = ['Gogs','Slack'];
+        hookTypes = ['Gogs', 'Slack'];
 
-      var curHook = $(this).val();
-      hookTypes.forEach(function(hookType) {
-        if (curHook === hookType) {
-          $('div#'+hookType.toLowerCase()).toggleShow();
-        }
-        else {
-          $('div#'+hookType.toLowerCase()).toggleHide();
-        }
-      });
+        var curHook = $(this).val();
+        hookTypes.forEach(function (hookType) {
+            if (curHook === hookType) {
+                $('div#' + hookType.toLowerCase()).toggleShow();
+            }
+            else {
+                $('div#' + hookType.toLowerCase()).toggleHide();
+            }
+        });
     });
 }
 
@@ -592,7 +594,7 @@ function initInstall() {
 }
 
 $(document).ready(function () {
-	Gogs.AppRootSubUrl = $('head').data('suburl');
+    Gogs.AppSubUrl = $('head').data('suburl');
     initCore();
     if ($('#user-profile-setting').length) {
         initUserSetting();
@@ -645,7 +647,7 @@ function homepage() {
     $('#promo-form').submit(function (e) {
         if ($('#username').val() === "") {
             e.preventDefault();
-            window.location.href = Gogs.AppRootSubUrl + '/user/login';
+            window.location.href = Gogs.AppSubUrl + '/user/login';
             return true
         }
     });
@@ -653,9 +655,9 @@ function homepage() {
     $('#register-button').click(function (e) {
         if ($('#username').val() === "") {
             e.preventDefault();
-            window.location.href = Gogs.AppRootSubUrl + '/user/sign_up';
+            window.location.href = Gogs.AppSubUrl + '/user/sign_up';
             return true
         }
-        $('#promo-form').attr('action', Gogs.AppRootSubUrl + '/user/sign_up');
+        $('#promo-form').attr('action', Gogs.AppSubUrl + '/user/sign_up');
     });
 }
