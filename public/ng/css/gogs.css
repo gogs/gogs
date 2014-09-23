@@ -728,7 +728,6 @@ ol.linenums {
 }
 #dashboard {
   padding: 24px 0;
-  margin-bottom: 60px;
 }
 #dashboard-sidebar .panel-header h4 {
   margin: 0;
@@ -893,6 +892,9 @@ ol.linenums {
 }
 #dashboard-switch-menu > li.checked > a .octicon {
   opacity: 1;
+}
+#dashboard-news {
+  padding-bottom: 60px;
 }
 #dashboard-news .news {
   margin-right: 2.4em;
