@@ -5,6 +5,7 @@
 package models
 
 import (
+	"container/list"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
@@ -511,6 +512,34 @@ func GetUserIdsByNames(names []string) []int64 {
 		ids = append(ids, u.Id)
 	}
 	return ids
+}
+
+// UserCommit represtns a commit with validation of user.
+type UserCommit struct {
+	UserName string
+	*git.Commit
+}
+
+// ValidCommitsWithEmails checks if authors' e-mails of commits are correcponding to users.
+func ValidCommitsWithEmails(oldCommits *list.List) *list.List {
+	newCommits := list.New()
+	e := oldCommits.Front()
+	for e != nil {
+		c := e.Value.(*git.Commit)
+
+		uname := ""
+		u, err := GetUserByEmail(c.Author.Email)
+		if err == nil {
+			uname = u.Name
+		}
+
+		newCommits.PushBack(UserCommit{
+			UserName: uname,
+			Commit:   c,
+		})
+		e = e.Next()
+	}
+	return newCommits
 }
 
 // GetUserByEmail returns the user object by given e-mail if exists.

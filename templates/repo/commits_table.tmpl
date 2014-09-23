@@ -1,23 +1,19 @@
-<div id="commits">
-    <div class="panel panel-default commit-box info-box">
-        <div class="panel-heading info-head">
-            <form class="search pull-right col-md-3" action="{{.RepoLink}}/commits/{{.BranchName}}/search" method="get" id="commits-search-form">
-                <div class="input-group">
-                    <input class="form-control search" type="search" placeholder="search commit" name="q" value="{{.Keyword}}" />
-                    <div class="input-group-btn">
-                        <button type="submit" class="btn btn-default">Find</button>
-                    </div>
-                </div>
+<div id="commits-list">
+    <div class="panel panel-radius">
+        <div class="panel-header">
+            <form class="search pull-right" action="{{.RepoLink}}/commits/{{.BranchName}}/search" method="get" id="commits-search-form">
+                <input class="ipt ipt-radius" type="search" name="q" placeholder="{{.i18n.Tr "repo.commits.search"}}" value="{{.Keyword}}" />
+                <button class="btn btn-black btn-small btn-radius">{{.i18n.Tr "repo.commits.find"}}</button>
             </form>
-            <h4>{{.CommitCount}} Commits</h4>
+            <h4>{{.CommitCount}} {{.i18n.Tr "repo.commits.commits"}}</h4>
         </div>
-        <table class="panel-footer table commit-list table table-striped">
+        <table class="panel-body table commit-list table-striped">
             <thead>
                 <tr>
-                    <th class="author">Author</th>
+                    <th class="author">{{.i18n.Tr "repo.commits.author"}}</th>
                     <th class="sha">SHA1</th>
-                    <th class="message">Message</th>
-                    <th class="date">Date</th>
+                    <th class="message">{{.i18n.Tr "repo.commits.message"}}</th>
+                    <th class="date">{{.i18n.Tr "repo.commits.date"}}</th>
                 </tr>
             </thead>
             <tbody>
@@ -26,8 +22,8 @@
             {{$r := List .Commits}}
             {{range $r}}
             <tr>
-                <td class="author"><img class="avatar" src="{{AvatarLink .Author.Email}}" alt=""/><a href="{{AppSubUrl}}/user/email2user?email={{.Author.Email}}">{{.Author.Name}}</a></td>
-                <td class="sha"><a rel="nofollow" class="label label-success" href="{{AppSubUrl}}/{{$username}}/{{$reponame}}/commit/{{.Id}} ">{{SubStr .Id.String 0 10}} </a></td>
+                <td class="author"><img class="avatar-20" src="{{AvatarLink .Author.Email}}" alt=""/>&nbsp;&nbsp;&nbsp;{{if .UserName}}<a href="{{AppSubUrl}}/{{.UserName}}">{{.Author.Name}}</a>{{else}}{{.Author.Name}}{{end}}</td>
+                <td class="sha"><a rel="nofollow" class="label label-green" href="{{AppSubUrl}}/{{$username}}/{{$reponame}}/commit/{{.Id}} ">{{SubStr .Id.String 0 10}} </a></td>
                 <td class="message">{{.Summary}} </td>
                 <td class="date">{{TimeSince .Author.When $.Lang}}</td>
             </tr>
@@ -35,8 +31,10 @@
             </tbody>
         </table>
     </div>
-    {{if not .IsSearchPage}}<ul class="pagination" id="commits-pager">
-        {{if .LastPageNum}}<li><a href="{{.RepoLink}}/commits/{{.BranchName}}{{if .FileName}}/{{.FileName}}{{end}}?p={{.LastPageNum}}" rel="nofollow">&laquo; Newer</a></li>{{end}}
-        {{if .NextPageNum}}<li><a href="{{.RepoLink}}/commits/{{.BranchName}}{{if .FileName}}/{{.FileName}}{{end}}?p={{.NextPageNum}}" rel="nofollow">&raquo; Older</a></li>{{end}}
-    </ul>{{end}}
+    {{if not .IsSearchPage}}
+    <ul class="pagination">
+        {{if .LastPageNum}}<li><a class="btn btn-medium btn-gray btn-radius" href="{{.RepoLink}}/commits/{{.BranchName}}{{if .FileName}}/{{.FileName}}{{end}}?p={{.LastPageNum}}" rel="nofollow">&laquo; {{.i18n.Tr "repo.commits.newer"}}</a></li>{{end}}
+        {{if .NextPageNum}}<li><a class="btn btn-medium btn-gray btn-radius" href="{{.RepoLink}}/commits/{{.BranchName}}{{if .FileName}}/{{.FileName}}{{end}}?p={{.NextPageNum}}" rel="nofollow">&raquo; {{.i18n.Tr "repo.commits.older"}}</a></li>{{end}}
+    </ul>
+    {{end}}
 </div>

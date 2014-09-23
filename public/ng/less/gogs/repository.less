@@ -6,14 +6,12 @@
 /* repository main */
 
 #repo-wrapper {
-  padding-bottom: 100px;
+    padding-bottom: 100px;
 }
 #repo-header {
-  height: 69px;
-  border-bottom: 1px solid@repoHeaderBorderColor;
-
-  background-color: @repoHeaderBgColor;
-
+    height: 69px;
+    border-bottom: 1px solid@repoHeaderBorderColor;
+    background-color: @repoHeaderBgColor;
 }
 #repo-header-name {
   line-height: 66px;
@@ -494,4 +492,27 @@
 .setting-list {
   width: 100%;
   list-style: none;
+}
+#commits-list {
+    padding-top: 20px;
+}
+.commit-list {
+    th {
+        background-color: #FFF;
+        line-height: 28px !important;
+    }
+    .date {
+        width: 120px;
+    }
+    .author {
+        padding-left: 20px;
+        min-width: 180px;
+        img {
+            margin-top: -4px;
+        }
+    }
+    .sha a {
+        font-family: Consolas, Menlo, Monaco, "Lucida Console", monospace;
+        font-size: 14px;
+    }
 }
