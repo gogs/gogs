@@ -893,6 +893,9 @@ ol.linenums {
 #dashboard-switch-menu > li.checked > a .octicon {
   opacity: 1;
 }
+#dashboard-news {
+  padding-bottom: 60px;
+}
 #dashboard-news .news {
   margin-right: 2.4em;
   padding-bottom: 1em;
