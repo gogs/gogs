@@ -1,40 +1,23 @@
 @import "../ui/var";
 .repo-issue-wrapper {
   padding: 18px 0;
+  position: relative;
 }
+
+// pull request main content
 .pr-main {
-  padding-right: 40px;
-  box-sizing: border-box;
+  margin-right: 100px;
 }
+
+// right bar in pull request page
 .pr-sidebar {
   border-left: 1px solid #DDD;
   box-sizing: border-box;
+  position: absolute;
+  right:0;
+  top:12px;
 }
-#pr-sidebar-nav {
-  margin-top: 6px;
-  li {
-    margin-bottom: 4px;
-  }
-  li > a {
-    border: 1px solid transparent;
-    border-left: none;
-    &:hover {
-      background-color: #FFF;
-      border-color: #DDD;
-    }
-  }
-  .label {
-    font-size: 12px;
-    line-height: 1.4em;
-    margin-top: 1px;
-  }
-  li.current {
-    a {
-      background-color: #FFF;
-      border-color: #DDD;
-    }
-  }
-}
+
 .pr-title {
   .pr-num {
     font-weight: normal;
