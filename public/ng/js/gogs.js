@@ -263,13 +263,14 @@ var Gogs = {};
                 return str;
             },
             afterCopy: function () {
-                $(this).tipsy("hide").attr('original-title', $this.data('after-title'));
+                var $this = $(this);
+                $this.tipsy("hide").attr('original-title', $this.data('after-title'));
                 setTimeout(function () {
-                    $(this).tipsy("show");
+                    $this.tipsy("show");
                 }, 200);
                 setTimeout(function () {
-                    $(this).tipsy('hide').attr('original-title', $this.data('original-title'));
-                }, 3000);
+                    $this.tipsy('hide').attr('original-title', $this.data('original-title'));
+                }, 2000);
             }
         }).addClass("js-copy-bind");
     }
