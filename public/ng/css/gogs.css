@@ -1156,6 +1156,10 @@ The register and sign-in page style
   background-color: #EEE;
   font-weight: bold;
 }
+#repo-branch-tag .switching-list {
+  max-height: 300px;
+  overflow-y: auto;
+}
 #repo-branch-list li i,
 #repo-tag-list li i {
   margin-right: 12px;
@@ -1164,9 +1168,6 @@ The register and sign-in page style
 #repo-branch-list li.checked i,
 #repo-tag-list li.checked i {
   opacity: 1;
-}
-#repo-tag-list {
-  display: none;
 }
 #repo-bread .bread {
   padding-right: 0;
