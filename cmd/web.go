@@ -355,7 +355,7 @@ func runWeb(*cli.Context) {
 		r.Get("/commit/:branchname", repo.Diff)
 		r.Get("/commit/:branchname/*", repo.Diff)
 		r.Get("/releases", repo.Releases)
-		r.Get("/archive/*.*", repo.Download)
+		r.Get("/archive/:branchname/*.*", repo.Download)
 		r.Get("/compare/:before([a-z0-9]+)...:after([a-z0-9]+)", repo.CompareDiff)
 	}, ignSignIn, middleware.RepoAssignment(true, true))
 

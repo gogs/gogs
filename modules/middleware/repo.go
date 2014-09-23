@@ -213,7 +213,11 @@ func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 						ctx.Handle(404, "RepoAssignment invalid tag", nil)
 						return
 					}
-					ctx.Repo.Commit, _ = ctx.Repo.Tag.Commit()
+					ctx.Repo.Commit, err = ctx.Repo.Tag.Commit()
+					if err != nil {
+						ctx.Handle(500, "RepoAssignment", fmt.Errorf("fail to get tag commit(%s): %v", refName, err))
+						return
+					}
 					ctx.Repo.CommitId = ctx.Repo.Commit.Id.String()
 				} else if len(refName) == 40 {
 					ctx.Repo.IsCommit = true
@@ -226,7 +230,7 @@ func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 						return
 					}
 				} else {
-					ctx.Handle(404, "RepoAssignment invalid repo", errors.New("branch or tag not exist"))
+					ctx.Handle(404, "RepoAssignment invalid repo", fmt.Errorf("branch or tag not exist: %s", refName))
 					return
 				}
 
