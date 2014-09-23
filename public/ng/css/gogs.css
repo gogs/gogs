@@ -728,7 +728,6 @@ ol.linenums {
 }
 #dashboard {
   padding: 24px 0;
-  margin-bottom: 60px;
 }
 #dashboard-sidebar .panel-header h4 {
   margin: 0;
@@ -1608,12 +1607,16 @@ The register and sign-in page style
   background-color: #FFF;
   border-color: #DDD;
 }
+.pr-title {
+  padding: 4px 0;
+}
 .pr-title .pr-num {
   font-weight: normal;
   color: #888;
 }
 .pr-meta {
   color: #888;
+  padding: 4px 0 8px 0;
 }
 .pr-meta .pr-author {
   margin: 0 8px;
@@ -1687,7 +1690,7 @@ The register and sign-in page style
 .issue-line,
 .issue-merge,
 .issue-add-comment {
-  margin-bottom: 16px;
+  margin-bottom: 24px;
 }
 .issue-comment .author-avatar img {
   margin-right: 12px;
@@ -1791,6 +1794,7 @@ textarea#issue-add-content {
   width: 100%;
   box-sizing: border-box;
   height: 120px;
+  resize: vertical;
 }
 .org-header-alert .alert {
   margin-top: 10px;
@@ -1825,7 +1829,11 @@ textarea#issue-add-content {
   color: #d9453d;
 }
 #org-header > div > .menu-line > li.right > a .octicon {
-  margin-right: 6px;
+  margin-right: 4px;
+}
+#org-header > div > .menu-line > li.right > a .label {
+  margin-left: 4px;
+  font-size: .6em;
 }
 #org-header > div > .menu-line > li.right .current {
   border-bottom: 2px solid #D26911;
