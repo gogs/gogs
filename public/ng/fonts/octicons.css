@@ -14,22 +14,20 @@
 .mega-octicon is optimized for 32px but can be used larger.
 
 */
-.octicon {
-  font: normal normal 16px octicons;
-  line-height: 1;
+.octicon, .mega-octicon {
+  font: normal normal normal 16px/1 octicons;
   display: inline-block;
   text-decoration: none;
+  text-rendering: auto;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
 }
-.mega-octicon {
-  font: normal normal 32px octicons;
-  line-height: 1;
-  display: inline-block;
-  text-decoration: none;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
+.mega-octicon { font-size: 32px; }
+
 
 .octicon-alert:before { content: '\f02d'} /*  */
 .octicon-alignment-align:before { content: '\f08a'} /*  */
