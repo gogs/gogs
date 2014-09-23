@@ -45,6 +45,9 @@ img.avatar-100 {
   height: 100px;
   vertical-align: middle;
 }
+.drop-down .panel-header {
+  font-size: 14px;
+}
 #wrapper {
   padding: 0;
   margin: 0 0 -55px 0;
@@ -703,11 +706,12 @@ ol.linenums {
   height: 69px;
 }
 #dashboard-header > .menu-line > li {
-  padding: 12px 0;
+  padding: 12px 6px;
 }
 #dashboard-header > .menu-line > li.right > a {
   font-size: 1.2em;
   color: #444444;
+  padding: .4em .8em;
 }
 #dashboard-header > .menu-line > li.right > a:hover {
   background-color: transparent;
@@ -724,6 +728,7 @@ ol.linenums {
 }
 #dashboard {
   padding: 24px 0;
+  margin-bottom: 60px;
 }
 #dashboard-sidebar .panel-header h4 {
   margin: 0;
@@ -737,7 +742,7 @@ ol.linenums {
   border-top-left-radius: .3em;
   border-top-right-radius: .3em;
   width: 100%;
-  height: 35px;
+  height: 32px;
 }
 #dashboard-sidebar-menu > li {
   border: 1px solid #d6d6d6;
@@ -746,8 +751,8 @@ ol.linenums {
   border-bottom: none;
 }
 #dashboard-sidebar-menu > li > a {
-  padding-top: .4em;
-  padding-bottom: .4em;
+  padding-top: .3em;
+  padding-bottom: .3em;
 }
 #dashboard-sidebar-menu > li.first {
   border-top-left-radius: .3em;
@@ -821,6 +826,7 @@ ol.linenums {
 }
 #dashboard-my-repo .repo-count {
   margin-left: 4px;
+  font-size: .8em;
 }
 #dashboard-my-org,
 #dashboard-my-mirror {
@@ -828,7 +834,7 @@ ol.linenums {
 }
 #dashboard-new-repo {
   width: 50px;
-  height: 35px;
+  height: 33px;
   padding-top: 6px;
   margin-right: 1px;
   border-top-left-radius: .3em;
@@ -994,7 +1000,6 @@ The register and sign-in page style
 }
 #repo-header-meta a > .btn {
   line-height: 16px;
-  font-size: 1.05em;
   margin-left: 16px;
 }
 #repo-header-meta a > .btn i {
