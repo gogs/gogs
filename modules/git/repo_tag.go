@@ -77,6 +77,7 @@ func (repo *Repository) getTag(id sha1) (*Tag, error) {
 	}
 
 	tag.Id = id
+	tag.Object = id
 	tag.repo = repo
 
 	repo.tagCache[id] = tag
