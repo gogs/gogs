@@ -263,13 +263,12 @@ var Gogs = {};
                 return str;
             },
             afterCopy: function () {
-                var $this = $(this);
-                $this.tipsy("hide").attr('original-title', $this.data('after-title'));
+                $(this).tipsy("hide").attr('original-title', $this.data('after-title'));
                 setTimeout(function () {
-                    $this.tipsy("show");
+                    $(this).tipsy("show");
                 }, 200);
                 setTimeout(function () {
-                    $this.tipsy('hide').attr('original-title', $this.data('original-title'));
+                    $(this).tipsy('hide').attr('original-title', $this.data('original-title'));
                 }, 3000);
             }
         }).addClass("js-copy-bind");
@@ -279,6 +278,18 @@ var Gogs = {};
 function initCore() {
     Gogs.renderMarkdown();
     Gogs.renderCodeView();
+
+    // Switch list.
+    $('.js-tab-nav').click(function (e) {
+        if (!$(this).hasClass('js-tab-nav-show')) {
+            $(this).parent().find('.js-tab-nav-show').each(function () {
+                $(this).removeClass('js-tab-nav-show');
+                $($(this).data('tab-target')).hide();
+            });
+            $(this).addClass('js-tab-nav-show');
+            $($(this).data('tab-target')).show();
+        }
+    });
 }
 
 function initUserSetting() {
@@ -341,6 +352,7 @@ function initRepo() {
         $('#repo-clone-url').val($(this).data('link'));
         $('.clone-url').text($(this).data('link'))
     });
+
     // Copy URL.
     var $clone_btn = $('#repo-clone-copy');
     $clone_btn.hover(function () {

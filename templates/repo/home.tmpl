@@ -15,31 +15,30 @@
                     </a>
                 </li> -->
                 <li id="repo-branch-switch" class="down drop">
-                    <a href="#">
-                        <button class="btn btn-gray btn-small btn-radius">
-                            <i class="octicon octicon-git-branch"></i> {{if .IsViewBranch}}Branch{{else}}Tree{{end}}:
+                    <a>
+                        <button class="btn btn-gray btn-medium btn-radius">
+                            <i class="octicon octicon-git-branch"></i> {{if .IsViewBranch}}{{.i18n.Tr "repo.branch"}}{{else}}{{.i18n.Tr "repo.tree"}}{{end}}:
                             <strong id="repo-branch-current">{{if .IsViewBranch}}{{.BranchName}}{{else}}{{ShortSha .BranchName}}{{end}}</strong>
                         </button>
                     </a>
                     <div class="drop-down panel">
-                        <p class="panel-header text-bold">Branches <!-- & Tags --></p>
+                        <p class="panel-header text-bold">{{.i18n.Tr "repo.branch_and_tags"}}</p>
                         <!-- <input id="repo-branch-filter-ipt" class="ipt ipt-large" type="text" placeholder="find branches / tags"/> -->
                         <div id="repo-branch-tag">
                             <ul class="menu menu-line tab-nav clear" id="repo-branch-tab-nav">
-                                <li class="js-tab-nav js-tab-nav-show left" data-tab-target="#repo-branch-list"><a href="#">Branches</a></li>
-                                <!-- <li class="js-tab-nav left" data-tab-target="#repo-tag-list"><a href="#">Tags</a></li> -->
+                                <li class="js-tab-nav {{if not .IsTag}}js-tab-nav-show{{end}} left" data-tab-target="#repo-branch-list"><a>{{.i18n.Tr "repo.branches"}}</a></li>
+                                <li class="js-tab-nav {{if .IsTag}}js-tab-nav-show{{end}} left" data-tab-target="#repo-tag-list"><a>{{.i18n.Tr "repo.tags"}}</a></li>
                             </ul>
-                            <ul class="menu menu-vertical switching-list" id="repo-branch-list">
+                            <ul class="menu menu-vertical switching-list {{if .IsTag}}hide{{end}}" id="repo-branch-list">
                                 {{range .Branches}}
                                 <li {{if eq . $.BranchName}}class="checked"{{end}}><a href="{{$.RepoLink}}/src/{{.}}"><i class="octicon octicon-check"></i>{{.}}</a></li>
                                 {{end}}
                             </ul>
-                            <!-- <ul class="menu menu-vertical switching-list" id="repo-tag-list">
-                                <li><a href="#"><i class="octicon octicon-check"></i>0.3.3</a></li>
-                                <li><a href="#"><i class="octicon octicon-check"></i>0.4.4</a></li>
-                                <li class="checked"><a href="#"><i class="octicon octicon-check"></i>0.1</a></li>
-                                <li><a href="#"><i class="octicon octicon-check"></i>0.1 beta</a></li>
-                            </ul> -->
+                            <ul class="menu menu-vertical switching-list {{if not .IsTag}}hide{{end}}" id="repo-tag-list">
+                                {{range .Tags}}
+                                <li {{if eq . $.BranchName}}class="checked"{{end}}><a href="{{$.RepoLink}}/src/{{.}}"><i class="octicon octicon-check"></i>{{.}}</a></li>
+                                {{end}}
+                            </ul>
                         </div>
                     </div>
                 </li>

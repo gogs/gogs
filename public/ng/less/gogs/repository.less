@@ -199,33 +199,34 @@
   box-sizing: border-box;
 }
 #repo-branch-tag {
-  .tab-nav {
-    border-bottom: 1px solid #EAEAEA;
-    a {
-      padding: .3em .8em;
+    .tab-nav {
+        border-bottom: 1px solid #EAEAEA;
+        a {
+            padding: .3em .8em;
+        }
+        .js-tab-nav-show {
+            background-color: #EEE;
+            font-weight: bold;
+        }
     }
-    .js-tab-nav-show {
-      background-color: #EEE;
-      font-weight: bold;
+    .switching-list {
+        max-height: 300px;
+        overflow-y: auto;
     }
-  }
 }
 #repo-branch-list,
 #repo-tag-list {
-  li {
-    i {
-      margin-right: 12px;
-      opacity: 0;
+    li {
+        i {
+            margin-right: 12px;
+            opacity: 0;
+        }
     }
-  }
-  li.checked {
-    i {
-      opacity: 1;
+    li.checked {
+        i {
+            opacity: 1;
+        }
     }
-  }
-}
-#repo-tag-list {
-  display: none;
 }
 #repo-bread {
   .bread {
