@@ -3,7 +3,7 @@
 <div id="repo-wrapper">
     {{template "repo/header" .}}
     <div class="clear container repo-issue-wrapper repo-pr">
-        <div class="pr-main grid-11-12 left">
+        <div class="pr-main">
             <div class="pr-title clear">
                 <h2 class="pr-title grid-5-6 left">Fix: Repo Name can not be converted to lower in some cases <span class="pr-num">#256</span></h2>
                 <div class="pr-title-btn grid-1-6 right text-right">
@@ -16,7 +16,10 @@
                     <i class="octicon octicon-git-pull-request"></i> Open
                 </button>
             <span class="msg">
-                <a href="#" class="text-bold pr-author">eryx</a>wants to merge 2 commits into <span class="pr-branch label label-gray radius">gogits:master</span> from <span class="pr-branch label label-gray radius">unknown repository</span>
+                <a href="#" class="text-bold pr-author">eryx</a> <span class="label radius label-blue">2</span> commits
+                <span class="pr-branch label label-gray radius">gogits:master</span>
+                <i class="octicon octicon-arrow-right"></i>
+                <span class="pr-branch label label-gray radius">unknown repository</span>
             </span>
             </div>
             <div class="pr-nav clear">
@@ -109,20 +112,8 @@
             <div id="pr-commit">commit</div>
             <div id="pr-file-diff">file diff</div>
         </div>
-        <div class="pr-sidebar grid-1-12 right">
-            <ul class="menu menu-vertical" id="pr-sidebar-nav">
-                <li><a href="#" class="btn-right-radius"><i class="octicon octicon-code"></i>
-                    <span class="right">code</span></a></li>
-                <li class="border-bottom"></li>
-                <li><a href="#" class="btn-right-radius"><i class="octicon octicon-issue-opened"></i>
-                    <span class="num right label label-blue label-radius">12</span>
-                </a></li>
-                <li class="current"><a href="#" class="btn-right-radius"><i class="octicon octicon-git-pull-request"></i>
-                    <span class="num right label label-black label-radius">12</span>
-                </a></li>
-                <li class="border-bottom"></li>
-                <li><a href="#" class="btn-right-radius"><i class="octicon octicon-tools"></i></a></li>
-            </ul>
+        <div class="pr-sidebar">
+            {{template "repo/sidebar_mini" .}}
         </div>
     </div>
 </div>

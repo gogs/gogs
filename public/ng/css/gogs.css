@@ -1076,6 +1076,35 @@ The register and sign-in page style
 #repo-sidebar-nav i {
   margin-right: 6px;
 }
+#repo-sidebar-mini {
+  margin-top: 6px;
+  width: 60px;
+}
+#repo-sidebar-mini li {
+  margin-bottom: 4px;
+}
+#repo-sidebar-mini li > a {
+  position: relative;
+}
+#repo-sidebar-mini li > a > i.octicon {
+  font-size: 21px;
+}
+#repo-sidebar-mini .num {
+  position: absolute;
+  font-size: 12px;
+  top: 0;
+  left: 40px;
+  width: 20px;
+  height: 20px;
+  padding-left: 0;
+  padding-right: 0;
+  text-align: center;
+  line-height: 20px;
+  border-radius: 4px;
+  opacity: 0.7;
+  -webkit-transform: scale(0.85);
+  font-weight: bold;
+}
 #repo-file-nav {
   padding: .6em 0 1em 0;
 }
@@ -1575,37 +1604,17 @@ The register and sign-in page style
 }
 .repo-issue-wrapper {
   padding: 18px 0;
+  position: relative;
 }
 .pr-main {
-  padding-right: 40px;
-  box-sizing: border-box;
+  margin-right: 100px;
 }
 .pr-sidebar {
   border-left: 1px solid #DDD;
   box-sizing: border-box;
-}
-#pr-sidebar-nav {
-  margin-top: 6px;
-}
-#pr-sidebar-nav li {
-  margin-bottom: 4px;
-}
-#pr-sidebar-nav li > a {
-  border: 1px solid transparent;
-  border-left: none;
-}
-#pr-sidebar-nav li > a:hover {
-  background-color: #FFF;
-  border-color: #DDD;
-}
-#pr-sidebar-nav .label {
-  font-size: 12px;
-  line-height: 1.4em;
-  margin-top: 1px;
-}
-#pr-sidebar-nav li.current a {
-  background-color: #FFF;
-  border-color: #DDD;
+  position: absolute;
+  right: 0;
+  top: 12px;
 }
 .pr-title {
   padding: 4px 0;
