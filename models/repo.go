@@ -1081,6 +1081,13 @@ func SearchRepositoryByName(opt SearchOption) (repos []*Repository, err error) {
 	return repos, err
 }
 
+//  __      __         __         .__
+// /  \    /  \_____ _/  |_  ____ |  |__
+// \   \/\/   /\__  \\   __\/ ___\|  |  \
+//  \        /  / __ \|  | \  \___|   Y  \
+//   \__/\  /  (____  /__|  \___  >___|  /
+//        \/        \/          \/     \/
+
 // Watch is connection request for receiving repository notifycation.
 type Watch struct {
 	Id     int64
@@ -1150,6 +1157,13 @@ func NotifyWatchers(act *Action) error {
 	}
 	return nil
 }
+
+//   _________ __
+//  /   _____//  |______ _______
+//  \_____  \\   __\__  \\_  __ \
+//  /        \|  |  / __ \|  | \/
+// /_______  /|__| (____  /__|
+//         \/           \/
 
 type Star struct {
 	Id     int64
