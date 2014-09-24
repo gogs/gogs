@@ -343,6 +343,7 @@ func runWeb(*cli.Context) {
 		r.Get("/issues/:index", repo.ViewIssue)
 		r.Get("/pulls", repo.Pulls)
 		r.Get("/branches", repo.Branches)
+		r.Get("/archive/*", repo.Download)
 	}, ignSignIn, middleware.RepoAssignment(true))
 
 	m.Group("/:username/:reponame", func(r *macaron.Router) {
@@ -355,8 +356,6 @@ func runWeb(*cli.Context) {
 		r.Get("/commit/:branchname", repo.Diff)
 		r.Get("/commit/:branchname/*", repo.Diff)
 		r.Get("/releases", repo.Releases)
-		r.Get("/archive/:branchname/*.*", repo.Download)
-		r.Get("/archive/*.*", repo.Download)
 		r.Get("/compare/:before([a-z0-9]+)...:after([a-z0-9]+)", repo.CompareDiff)
 	}, ignSignIn, middleware.RepoAssignment(true, true))
 

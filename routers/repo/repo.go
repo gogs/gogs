@@ -244,18 +244,25 @@ func Action(ctx *middleware.Context) {
 }
 
 func Download(ctx *middleware.Context) {
-	ext := "." + ctx.Params(":ext")
+	var (
+		uri         = ctx.Params("*")
+		refName     string
+		ext         string
+		archivePath string
+	)
 
-	var archivePath string
-	switch ext {
-	case ".zip":
+	switch {
+	case strings.HasSuffix(uri, ".zip"):
+		ext = ".zip"
 		archivePath = path.Join(ctx.Repo.GitRepo.Path, "archives/zip")
-	case ".tar.gz":
+	case strings.HasSuffix(uri, ".tar.gz"):
+		ext = ".tar.gz"
 		archivePath = path.Join(ctx.Repo.GitRepo.Path, "archives/targz")
 	default:
 		ctx.Error(404)
 		return
 	}
+	refName = strings.TrimSuffix(uri, ext)
 
 	if !com.IsDir(archivePath) {
 		if err := os.MkdirAll(archivePath, os.ModePerm); err != nil {
@@ -264,13 +271,42 @@ func Download(ctx *middleware.Context) {
 		}
 	}
 
+	// Get corresponding commit.
+	var (
+		commit *git.Commit
+		err    error
+	)
+	gitRepo := ctx.Repo.GitRepo
+	if gitRepo.IsBranchExist(refName) {
+		commit, err = gitRepo.GetCommitOfBranch(refName)
+		if err != nil {
+			ctx.Handle(500, "Download", err)
+			return
+		}
+	} else if gitRepo.IsTagExist(refName) {
+		commit, err = gitRepo.GetCommitOfTag(refName)
+		if err != nil {
+			ctx.Handle(500, "Download", err)
+			return
+		}
+	} else if len(refName) == 40 {
+		commit, err = gitRepo.GetCommit(refName)
+		if err != nil {
+			ctx.Handle(404, "Download", nil)
+			return
+		}
+	} else {
+		ctx.Error(404)
+		return
+	}
+
 	archivePath = path.Join(archivePath, ctx.Repo.CommitId+ext)
 	if !com.IsFile(archivePath) {
-		if err := ctx.Repo.Commit.CreateArchive(archivePath, git.ZIP); err != nil {
+		if err := commit.CreateArchive(archivePath, git.ZIP); err != nil {
 			ctx.Handle(500, "Download -> CreateArchive "+archivePath, err)
 			return
 		}
 	}
 
-	ctx.ServeFile(archivePath, ctx.Repo.Repository.Name+"-"+base.ShortSha(ctx.Repo.CommitId)+ext)
+	ctx.ServeFile(archivePath, ctx.Repo.Repository.Name+"-"+base.ShortSha(commit.Id.String())+ext)
 }
