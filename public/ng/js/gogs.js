@@ -1,6 +1,7 @@
 // @codekit-prepend "lib/jquery-1.11.1.min.js"
 // @codekit-prepend "lib/lib.js"
-// @codekit-prepend "lib/tabs.js"
+// @codekit-prepend "utils/tabs.js"
+// @codekit-prepend "utils/preview.js"
 // @codekit-prepend "lib/jquery.tipsy.js"
 
 var Gogs = {};
@@ -290,6 +291,7 @@ function initCore() {
             $(this).addClass('js-tab-nav-show');
             $($(this).data('tab-target')).show();
         }
+        e.preventDefault();
     });
 }
 
@@ -643,7 +645,8 @@ $(document).ready(function () {
         initInstall();
     }
 
-    Tabs('#dashboard-sidebar-menu');
+    $('#dashboard-sidebar-menu').tabs();
+    $('#pull-issue-preview').markdown_preview(".issue-add-comment");
 
     homepage();
 
