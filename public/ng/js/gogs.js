@@ -608,6 +608,13 @@ function initInstall() {
     }());
 }
 
+function initProfile() {
+    // Avatar.
+    $('#profile-avatar').tipsy({
+        fade: true
+    });
+}
+
 $(document).ready(function () {
     Gogs.AppSubUrl = $('head').data('suburl');
     initCore();
@@ -643,6 +650,9 @@ $(document).ready(function () {
     }
     if ($('#install-form').length) {
         initInstall();
+    }
+    if ($('#user-profile-page').length) {
+        initProfile();
     }
 
     $('#dashboard-sidebar-menu').tabs();

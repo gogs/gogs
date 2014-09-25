@@ -1197,16 +1197,20 @@ func StarRepo(uid, repoId int64, star bool) (err error) {
 		}
 		if _, err = x.Insert(&Star{Uid: uid, RepoId: repoId}); err != nil {
 			return err
+		} else if _, err = x.Exec("UPDATE `repository` SET num_stars = num_stars + 1 WHERE id = ?", repoId); err != nil {
+			return err
 		}
-		_, err = x.Exec("UPDATE `repository` SET num_stars = num_stars + 1 WHERE id = ?", repoId)
+		_, err = x.Exec("UPDATE `user` SET num_stars = num_stars + 1 WHERE id = ?", uid)
 	} else {
 		if !IsStaring(uid, repoId) {
 			return nil
 		}
 		if _, err = x.Delete(&Star{0, uid, repoId}); err != nil {
 			return err
+		} else if _, err = x.Exec("UPDATE `repository` SET num_stars = num_stars - 1 WHERE id = ?", repoId); err != nil {
+			return err
 		}
-		_, err = x.Exec("UPDATE `repository` SET num_stars = num_stars - 1 WHERE id = ?", repoId)
+		_, err = x.Exec("UPDATE `user` SET num_stars = num_stars - 1 WHERE id = ?", uid)
 	}
 	return err
 }
