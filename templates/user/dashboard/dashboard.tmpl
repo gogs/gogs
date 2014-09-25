@@ -48,7 +48,7 @@
             </div>
             {{end}}
         </div>
-        <div id="dashboard-sidebar" class="right grid-1-3">
+        <div class="right grid-1-3" id="dashboard-sidebar">
             <ul id="dashboard-sidebar-menu" class="menu menu-line">
                 <li class="js-tab-nav js-tab-nav-show first" data-tab-target="#dashboard-my-repo"><a href="#">{{.i18n.Tr "repository"}}</a></li>
                 {{if not .ContextUser.IsOrganization}}
