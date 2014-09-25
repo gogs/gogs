@@ -190,7 +190,8 @@ func runWeb(*cli.Context) {
 		r.Get("/logout", user.SignOut)
 	})
 
-	m.Get("/user/:username", ignSignIn, user.Profile) // TODO: Legacy
+	// FIXME: Legacy
+	m.Get("/user/:username", ignSignIn, user.Profile)
 
 	// Gravatar service.
 	avt := avatar.CacheServer("public/img/avatar/", "public/img/avatar_default.jpg")
