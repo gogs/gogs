@@ -669,15 +669,23 @@ func TransferOwnership(u *User, newOwner string, repo *Repository) error {
 		return err
 	}
 
-	if _, err = sess.Where("repo_name = ?", u.LowerName+"/"+repo.LowerName).
-		And("user_name = ?", u.LowerName).Update(&Access{UserName: newUser.LowerName}); err != nil {
-		sess.Rollback()
-		return err
+	curRepoLink := path.Join(u.LowerName, repo.LowerName)
+	// Delete all access first if current owner is an organization.
+	if u.IsOrganization() {
+		if _, err = sess.Where("repo_name=?", curRepoLink).Delete(new(Access)); err != nil {
+			sess.Rollback()
+			return fmt.Errorf("fail to delete current accesses: %v", err)
+		}
+	} else {
+		if _, err = sess.Where("repo_name=?", curRepoLink).And("user_name=?", u.LowerName).
+			Update(&Access{UserName: newUser.LowerName}); err != nil {
+			sess.Rollback()
+			return err
+		}
 	}
 
-	if _, err = sess.Where("repo_name = ?", u.LowerName+"/"+repo.LowerName).Update(&Access{
-		RepoName: newUser.LowerName + "/" + repo.LowerName,
-	}); err != nil {
+	if _, err = sess.Where("repo_name=?", curRepoLink).
+		Update(&Access{RepoName: path.Join(newUser.LowerName, repo.LowerName)}); err != nil {
 		sess.Rollback()
 		return err
 	}
@@ -700,12 +708,12 @@ func TransferOwnership(u *User, newOwner string, repo *Repository) error {
 		return err
 	}
 
+	mode := WRITABLE
+	if repo.IsMirror {
+		mode = READABLE
+	}
 	// New owner is organization.
 	if newUser.IsOrganization() {
-		mode := WRITABLE
-		if repo.IsMirror {
-			mode = READABLE
-		}
 		access := &Access{
 			RepoName: path.Join(newUser.LowerName, repo.LowerName),
 			Mode:     mode,
@@ -734,6 +742,16 @@ func TransferOwnership(u *User, newOwner string, repo *Repository) error {
 		t.RepoIds += "$" + com.ToStr(repo.Id) + "|"
 		t.NumRepos++
 		if _, err = sess.Id(t.Id).AllCols().Update(t); err != nil {
+			sess.Rollback()
+			return err
+		}
+	} else {
+		access := &Access{
+			RepoName: path.Join(newUser.LowerName, repo.LowerName),
+			UserName: newUser.LowerName,
+			Mode:     mode,
+		}
+		if _, err = sess.Insert(access); err != nil {
 			sess.Rollback()
 			return err
 		}

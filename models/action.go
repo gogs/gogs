@@ -351,8 +351,8 @@ func NewRepoAction(u *User, repo *Repository) (err error) {
 // TransferRepoAction adds new action for transfering repository.
 func TransferRepoAction(u, newUser *User, repo *Repository) (err error) {
 	if err = NotifyWatchers(&Action{ActUserId: u.Id, ActUserName: u.Name, ActEmail: u.Email,
-		OpType: TRANSFER_REPO, RepoId: repo.Id, RepoUserName: repo.Owner.Name,
-		RepoName: repo.Name, Content: newUser.Name,
+		OpType: TRANSFER_REPO, RepoId: repo.Id, RepoUserName: newUser.Name,
+		RepoName:  repo.Name,
 		IsPrivate: repo.IsPrivate}); err != nil {
 		log.Error(4, "NotifyWatchers: %d/%s", u.Id, repo.Name)
 		return err
