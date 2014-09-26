@@ -669,15 +669,24 @@ func TransferOwnership(u *User, newOwner string, repo *Repository) error {
 		return err
 	}
 
-	if _, err = sess.Where("repo_name = ?", u.LowerName+"/"+repo.LowerName).
-		And("user_name = ?", u.LowerName).Update(&Access{UserName: newUser.LowerName}); err != nil {
-		sess.Rollback()
-		return err
+	owner := repo.Owner
+	oldRepoLink := path.Join(owner.LowerName, repo.LowerName)
+	// Delete all access first if current owner is an organization.
+	if owner.IsOrganization() {
+		if _, err = sess.Where("repo_name=?", oldRepoLink).Delete(new(Access)); err != nil {
+			sess.Rollback()
+			return fmt.Errorf("fail to delete current accesses: %v", err)
+		}
+	} else {
+		if _, err = sess.Where("repo_name=?", oldRepoLink).And("user_name=?", owner.LowerName).
+			Update(&Access{UserName: newUser.LowerName}); err != nil {
+			sess.Rollback()
+			return err
+		}
 	}
 
-	if _, err = sess.Where("repo_name = ?", u.LowerName+"/"+repo.LowerName).Update(&Access{
-		RepoName: newUser.LowerName + "/" + repo.LowerName,
-	}); err != nil {
+	if _, err = sess.Where("repo_name=?", oldRepoLink).
+		Update(&Access{RepoName: path.Join(newUser.LowerName, repo.LowerName)}); err != nil {
 		sess.Rollback()
 		return err
 	}
@@ -695,17 +704,17 @@ func TransferOwnership(u *User, newOwner string, repo *Repository) error {
 		return err
 	}
 
-	if _, err = sess.Exec("UPDATE `user` SET num_repos = num_repos - 1 WHERE id = ?", u.Id); err != nil {
+	if _, err = sess.Exec("UPDATE `user` SET num_repos = num_repos - 1 WHERE id = ?", owner.Id); err != nil {
 		sess.Rollback()
 		return err
 	}
 
+	mode := WRITABLE
+	if repo.IsMirror {
+		mode = READABLE
+	}
 	// New owner is organization.
 	if newUser.IsOrganization() {
-		mode := WRITABLE
-		if repo.IsMirror {
-			mode = READABLE
-		}
 		access := &Access{
 			RepoName: path.Join(newUser.LowerName, repo.LowerName),
 			Mode:     mode,
@@ -737,10 +746,20 @@ func TransferOwnership(u *User, newOwner string, repo *Repository) error {
 			sess.Rollback()
 			return err
 		}
+	} else {
+		access := &Access{
+			RepoName: path.Join(newUser.LowerName, repo.LowerName),
+			UserName: newUser.LowerName,
+			Mode:     mode,
+		}
+		if _, err = sess.Insert(access); err != nil {
+			sess.Rollback()
+			return err
+		}
 	}
 
 	// Change repository directory name.
-	if err = os.Rename(RepoPath(u.Name, repo.Name), RepoPath(newUser.Name, repo.Name)); err != nil {
+	if err = os.Rename(RepoPath(owner.Name, repo.Name), RepoPath(newUser.Name, repo.Name)); err != nil {
 		sess.Rollback()
 		return err
 	}
@@ -749,14 +768,8 @@ func TransferOwnership(u *User, newOwner string, repo *Repository) error {
 		return err
 	}
 
-	// Add watch of new owner to repository.
-	if !newUser.IsOrganization() {
-		if err = WatchRepo(newUser.Id, repo.Id, true); err != nil {
-			log.Error(4, "WatchRepo", err)
-		}
-	}
-	if err = WatchRepo(u.Id, repo.Id, false); err != nil {
-		log.Error(4, "WatchRepo2", err)
+	if err = WatchRepo(newUser.Id, repo.Id, true); err != nil {
+		log.Error(4, "WatchRepo", err)
 	}
 
 	if err = TransferRepoAction(u, newUser, repo); err != nil {
@@ -1081,6 +1094,13 @@ func SearchRepositoryByName(opt SearchOption) (repos []*Repository, err error) {
 	return repos, err
 }
 
+//  __      __         __         .__
+// /  \    /  \_____ _/  |_  ____ |  |__
+// \   \/\/   /\__  \\   __\/ ___\|  |  \
+//  \        /  / __ \|  | \  \___|   Y  \
+//   \__/\  /  (____  /__|  \___  >___|  /
+//        \/        \/          \/     \/
+
 // Watch is connection request for receiving repository notifycation.
 type Watch struct {
 	Id     int64
@@ -1151,6 +1171,13 @@ func NotifyWatchers(act *Action) error {
 	return nil
 }
 
+//   _________ __
+//  /   _____//  |______ _______
+//  \_____  \\   __\__  \\_  __ \
+//  /        \|  |  / __ \|  | \/
+// /_______  /|__| (____  /__|
+//         \/           \/
+
 type Star struct {
 	Id     int64
 	Uid    int64 `xorm:"UNIQUE(s)"`
@@ -1165,16 +1192,20 @@ func StarRepo(uid, repoId int64, star bool) (err error) {
 		}
 		if _, err = x.Insert(&Star{Uid: uid, RepoId: repoId}); err != nil {
 			return err
+		} else if _, err = x.Exec("UPDATE `repository` SET num_stars = num_stars + 1 WHERE id = ?", repoId); err != nil {
+			return err
 		}
-		_, err = x.Exec("UPDATE `repository` SET num_stars = num_stars + 1 WHERE id = ?", repoId)
+		_, err = x.Exec("UPDATE `user` SET num_stars = num_stars + 1 WHERE id = ?", uid)
 	} else {
 		if !IsStaring(uid, repoId) {
 			return nil
 		}
 		if _, err = x.Delete(&Star{0, uid, repoId}); err != nil {
 			return err
+		} else if _, err = x.Exec("UPDATE `repository` SET num_stars = num_stars - 1 WHERE id = ?", repoId); err != nil {
+			return err
 		}
-		_, err = x.Exec("UPDATE `repository` SET num_stars = num_stars - 1 WHERE id = ?", repoId)
+		_, err = x.Exec("UPDATE `user` SET num_stars = num_stars - 1 WHERE id = ?", uid)
 	}
 	return err
 }

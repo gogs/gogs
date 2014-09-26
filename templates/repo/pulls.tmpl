@@ -87,18 +87,18 @@
                             <div class="panel-header">
                                 <ul class="menu menu-line add-nav">
                                     <li class="js-tab-nav js-tab-nav-show" data-tab-target="#issue-add-comment-form"><a href="#">Write</a></li>
-                                    <li class="js-tab-nav" data-tab-target="#issue-add-comment-preview"><a href="#">Preview</a></li>
+                                    <li class="js-tab-nav" data-tab-target="#issue-add-comment-preview"><a href="#" id="pull-issue-preview">Preview</a></li>
                                 </ul>
                             </div>
                             <div class="panel-content content">
                                 <form id="issue-add-comment-form" action="#" method="post">
-                                    <textarea class="ipt ipt-radius" name="content" id="issue-add-content"></textarea>
+                                    <textarea class="ipt ipt-radius js-preview-input" name="content" id="issue-add-content"></textarea>
                                     <p class="submit text-right">
                                         <button class="btn btn-gray btn-radius text-bold" name="submit" value="close">Close pull request</button>&nbsp;&nbsp;
                                         <button class="btn btn-green btn-radius text-bold" name="submit" value="comment">Comment</button>
                                     </p>
                                 </form>
-                                <div id="issue-add-comment-preview">
+                                <div id="issue-add-comment-preview" class="js-preview-container">
                                     preview
                                 </div>
                             </div>

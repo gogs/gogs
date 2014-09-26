@@ -350,11 +350,27 @@ func NewRepoAction(u *User, repo *Repository) (err error) {
 
 // TransferRepoAction adds new action for transfering repository.
 func TransferRepoAction(u, newUser *User, repo *Repository) (err error) {
-	if err = NotifyWatchers(&Action{ActUserId: u.Id, ActUserName: u.Name, ActEmail: u.Email,
-		OpType: TRANSFER_REPO, RepoId: repo.Id, RepoName: repo.Name, Content: newUser.Name,
-		IsPrivate: repo.IsPrivate}); err != nil {
+	action := &Action{
+		ActUserId:    u.Id,
+		ActUserName:  u.Name,
+		ActEmail:     u.Email,
+		OpType:       TRANSFER_REPO,
+		RepoId:       repo.Id,
+		RepoUserName: newUser.Name,
+		RepoName:     repo.Name,
+		IsPrivate:    repo.IsPrivate,
+		Content:      path.Join(repo.Owner.LowerName, repo.LowerName),
+	}
+	if err = NotifyWatchers(action); err != nil {
 		log.Error(4, "NotifyWatchers: %d/%s", u.Id, repo.Name)
 		return err
+	}
+
+	// Remove watch for organization.
+	if repo.Owner.IsOrganization() {
+		if err = WatchRepo(repo.Owner.Id, repo.Id, false); err != nil {
+			log.Error(4, "WatchRepo", err)
+		}
 	}
 
 	log.Trace("action.TransferRepoAction: %s/%s", u.Name, repo.Name)

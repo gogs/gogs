@@ -168,6 +168,7 @@ func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 			ctx.Handle(500, "GetTags", err)
 			return
 		}
+		ctx.Data["Tags"] = tags
 		ctx.Repo.Repository.NumTags = len(tags)
 
 		ctx.Data["Title"] = u.Name + "/" + repo.Name
@@ -199,7 +200,7 @@ func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 
 					ctx.Repo.Commit, err = gitRepo.GetCommitOfBranch(refName)
 					if err != nil {
-						ctx.Handle(404, "RepoAssignment invalid branch", nil)
+						ctx.Handle(500, "RepoAssignment invalid branch", err)
 						return
 					}
 					ctx.Repo.CommitId = ctx.Repo.Commit.Id.String()
@@ -208,14 +209,9 @@ func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 					ctx.Repo.IsTag = true
 					ctx.Repo.BranchName = refName
 
-					ctx.Repo.Tag, err = gitRepo.GetTag(refName)
+					ctx.Repo.Commit, err = gitRepo.GetCommitOfTag(refName)
 					if err != nil {
-						ctx.Handle(404, "RepoAssignment invalid tag", nil)
-						return
-					}
-					ctx.Repo.Commit, err = ctx.Repo.Tag.Commit()
-					if err != nil {
-						ctx.Handle(500, "RepoAssignment", fmt.Errorf("fail to get tag commit(%s): %v", refName, err))
+						ctx.Handle(500, "RepoAssignment invalid tag", err)
 						return
 					}
 					ctx.Repo.CommitId = ctx.Repo.Commit.Id.String()
@@ -251,6 +247,7 @@ func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 			}
 
 			ctx.Data["IsBranch"] = ctx.Repo.IsBranch
+			ctx.Data["IsTag"] = ctx.Repo.IsTag
 			ctx.Data["IsCommit"] = ctx.Repo.IsCommit
 
 			ctx.Repo.CommitsCount, err = ctx.Repo.Commit.CommitsCount()
@@ -278,7 +275,8 @@ func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 		ctx.Data["TagName"] = ctx.Repo.TagName
 		brs, err := ctx.Repo.GitRepo.GetBranches()
 		if err != nil {
-			log.Error(4, "GetBranches: %v", err)
+			ctx.Handle(500, "GetBranches", err)
+			return
 		}
 		ctx.Data["Branches"] = brs
 		ctx.Data["BrancheCount"] = len(brs)

@@ -732,6 +732,10 @@ ul.menu-radius > li:last-child > a {
 .label-green {
   background-color: #65ad4e;
 }
+.label-green:hover {
+  background-color: #71bf57;
+  color: #FFF;
+}
 .label-orange {
   background-color: #df7514;
 }

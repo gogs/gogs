@@ -1,7 +1,6 @@
-/**
- * Created by fuxiaohei on 14-6-26.
+/*
+ js tabs and tabbed content plugin
  */
-
 function Tabs(selector) {
 
     function hide($nav) {
@@ -24,7 +23,8 @@ function Tabs(selector) {
             $($current.data("tab-target")).addClass("js-tab-show");
         }
         // bind nav click
-        $e.on("click", ".js-tab-nav", function () {
+        $e.on("click", ".js-tab-nav", function (e) {
+            e.preventDefault();
             var $this = $(this);
             // is showing, not change.
             if ($this.hasClass("js-tab-nav-show")) {
@@ -37,3 +37,9 @@ function Tabs(selector) {
         console.log("init tabs @", selector)
     }
 }
+
+$.fn.extend({
+    tabs: function () {
+        Tabs(this);
+    }
+});
