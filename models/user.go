@@ -521,8 +521,17 @@ type UserCommit struct {
 	*git.Commit
 }
 
-// ValidCommitsWithEmails checks if authors' e-mails of commits are correcponding to users.
-func ValidCommitsWithEmails(oldCommits *list.List) *list.List {
+// ValidateCommitWithEmail chceck if author's e-mail of commit is corresponsind to a user.
+func ValidateCommitWithEmail(c *git.Commit) (uname string) {
+	u, err := GetUserByEmail(c.Author.Email)
+	if err == nil {
+		uname = u.Name
+	}
+	return uname
+}
+
+// ValidateCommitsWithEmails checks if authors' e-mails of commits are corresponding to users.
+func ValidateCommitsWithEmails(oldCommits *list.List) *list.List {
 	emails := map[string]string{}
 	newCommits := list.New()
 	e := oldCommits.Front()
