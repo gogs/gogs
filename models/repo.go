@@ -669,22 +669,23 @@ func TransferOwnership(u *User, newOwner string, repo *Repository) error {
 		return err
 	}
 
-	curRepoLink := path.Join(u.LowerName, repo.LowerName)
+	owner := repo.Owner
+	oldRepoLink := path.Join(owner.LowerName, repo.LowerName)
 	// Delete all access first if current owner is an organization.
-	if u.IsOrganization() {
-		if _, err = sess.Where("repo_name=?", curRepoLink).Delete(new(Access)); err != nil {
+	if owner.IsOrganization() {
+		if _, err = sess.Where("repo_name=?", oldRepoLink).Delete(new(Access)); err != nil {
 			sess.Rollback()
 			return fmt.Errorf("fail to delete current accesses: %v", err)
 		}
 	} else {
-		if _, err = sess.Where("repo_name=?", curRepoLink).And("user_name=?", u.LowerName).
+		if _, err = sess.Where("repo_name=?", oldRepoLink).And("user_name=?", owner.LowerName).
 			Update(&Access{UserName: newUser.LowerName}); err != nil {
 			sess.Rollback()
 			return err
 		}
 	}
 
-	if _, err = sess.Where("repo_name=?", curRepoLink).
+	if _, err = sess.Where("repo_name=?", oldRepoLink).
 		Update(&Access{RepoName: path.Join(newUser.LowerName, repo.LowerName)}); err != nil {
 		sess.Rollback()
 		return err
@@ -703,7 +704,7 @@ func TransferOwnership(u *User, newOwner string, repo *Repository) error {
 		return err
 	}
 
-	if _, err = sess.Exec("UPDATE `user` SET num_repos = num_repos - 1 WHERE id = ?", u.Id); err != nil {
+	if _, err = sess.Exec("UPDATE `user` SET num_repos = num_repos - 1 WHERE id = ?", owner.Id); err != nil {
 		sess.Rollback()
 		return err
 	}
@@ -758,7 +759,7 @@ func TransferOwnership(u *User, newOwner string, repo *Repository) error {
 	}
 
 	// Change repository directory name.
-	if err = os.Rename(RepoPath(u.Name, repo.Name), RepoPath(newUser.Name, repo.Name)); err != nil {
+	if err = os.Rename(RepoPath(owner.Name, repo.Name), RepoPath(newUser.Name, repo.Name)); err != nil {
 		sess.Rollback()
 		return err
 	}
@@ -767,14 +768,8 @@ func TransferOwnership(u *User, newOwner string, repo *Repository) error {
 		return err
 	}
 
-	// Add watch of new owner to repository.
-	if !newUser.IsOrganization() {
-		if err = WatchRepo(newUser.Id, repo.Id, true); err != nil {
-			log.Error(4, "WatchRepo", err)
-		}
-	}
-	if err = WatchRepo(u.Id, repo.Id, false); err != nil {
-		log.Error(4, "WatchRepo2", err)
+	if err = WatchRepo(newUser.Id, repo.Id, true); err != nil {
+		log.Error(4, "WatchRepo", err)
 	}
 
 	if err = TransferRepoAction(u, newUser, repo); err != nil {
