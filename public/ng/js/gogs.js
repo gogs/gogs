@@ -616,7 +616,7 @@ function initProfile() {
 }
 
 $(document).ready(function () {
-    Gogs.AppSubUrl = $('head').data('suburl');
+    Gogs.AppSubUrl = $('head').data('suburl') || '';
     initCore();
     if ($('#user-profile-setting').length) {
         initUserSetting();
