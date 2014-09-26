@@ -56,12 +56,14 @@ func Commits(ctx *middleware.Context) {
 	}
 
 	// Both `git log branchName` and `git log commitId` work.
-	ctx.Data["Commits"], err = ctx.Repo.Commit.CommitsByRange(page)
+	commits, err := ctx.Repo.Commit.CommitsByRange(page)
 	if err != nil {
 		ctx.Handle(500, "CommitsByRange", err)
 		return
 	}
+	commits = models.ValidCommitsWithEmails(commits)
 
+	ctx.Data["Commits"] = commits
 	ctx.Data["Username"] = userName
 	ctx.Data["Reponame"] = repoName
 	ctx.Data["CommitCount"] = commitsCount
@@ -94,9 +96,10 @@ func SearchCommits(ctx *middleware.Context) {
 
 	commits, err := ctx.Repo.Commit.SearchCommits(keyword)
 	if err != nil {
-		ctx.Handle(500, "repo.SearchCommits(SearchCommits)", err)
+		ctx.Handle(500, "SearchCommits", err)
 		return
 	}
+	commits = models.ValidCommitsWithEmails(commits)
 
 	ctx.Data["Keyword"] = keyword
 	ctx.Data["Username"] = userName

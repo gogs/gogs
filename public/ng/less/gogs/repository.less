@@ -6,14 +6,12 @@
 /* repository main */
 
 #repo-wrapper {
-  padding-bottom: 100px;
+    padding-bottom: 100px;
 }
 #repo-header {
-  height: 69px;
-  border-bottom: 1px solid@repoHeaderBorderColor;
-
-  background-color: @repoHeaderBgColor;
-
+    height: 69px;
+    border-bottom: 1px solid@repoHeaderBorderColor;
+    background-color: @repoHeaderBgColor;
 }
 #repo-header-name {
   line-height: 66px;
@@ -199,33 +197,34 @@
   box-sizing: border-box;
 }
 #repo-branch-tag {
-  .tab-nav {
-    border-bottom: 1px solid #EAEAEA;
-    a {
-      padding: .3em .8em;
+    .tab-nav {
+        border-bottom: 1px solid #EAEAEA;
+        a {
+            padding: .3em .8em;
+        }
+        .js-tab-nav-show {
+            background-color: #EEE;
+            font-weight: bold;
+        }
     }
-    .js-tab-nav-show {
-      background-color: #EEE;
-      font-weight: bold;
+    .switching-list {
+        max-height: 300px;
+        overflow-y: auto;
     }
-  }
 }
 #repo-branch-list,
 #repo-tag-list {
-  li {
-    i {
-      margin-right: 12px;
-      opacity: 0;
+    li {
+        i {
+            margin-right: 12px;
+            opacity: 0;
+        }
     }
-  }
-  li.checked {
-    i {
-      opacity: 1;
+    li.checked {
+        i {
+            opacity: 1;
+        }
     }
-  }
-}
-#repo-tag-list {
-  display: none;
 }
 #repo-bread {
   .bread {
@@ -493,4 +492,27 @@
 .setting-list {
   width: 100%;
   list-style: none;
+}
+#commits-list {
+    padding-top: 20px;
+}
+.commit-list {
+    th {
+        background-color: #FFF;
+        line-height: 28px !important;
+    }
+    .date {
+        width: 120px;
+    }
+    .author {
+        padding-left: 20px;
+        min-width: 180px;
+        img {
+            margin-top: -4px;
+        }
+    }
+    .sha a {
+        font-family: Consolas, Menlo, Monaco, "Lucida Console", monospace;
+        font-size: 14px;
+    }
 }

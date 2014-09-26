@@ -149,14 +149,12 @@ type Actioner interface {
 // and returns a icon class name.
 func ActionIcon(opType int) string {
 	switch opType {
-	case 1: // Create repository.
+	case 1, 8: // Create, transfer repository.
 		return "repo"
 	case 5, 9: // Commit repository.
 		return "git-commit"
 	case 6: // Create issue.
 		return "issue-opened"
-	case 8: // Transfer repository.
-		return "share"
 	case 10: // Comment issue.
 		return "comment"
 	default:
@@ -164,7 +162,7 @@ func ActionIcon(opType int) string {
 	}
 }
 
-// TODO: Legacy
+// FIXME: Legacy
 const (
 	TPL_CREATE_REPO    = `<a href="%s/user/%s">%s</a> created repository <a href="%s">%s</a>`
 	TPL_COMMIT_REPO    = `<a href="%s/user/%s">%s</a> pushed to <a href="%s/src/%s">%s</a> at <a href="%s">%s</a>%s`
@@ -197,7 +195,7 @@ func ActionContent2Commits(act Actioner) *PushCommits {
 	return push
 }
 
-// TODO: Legacy
+// FIXME: Legacy
 // ActionDesc accepts int that represents action operation type
 // and returns the description.
 func ActionDesc(act Actioner) string {

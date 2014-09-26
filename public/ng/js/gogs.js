@@ -1,6 +1,7 @@
 // @codekit-prepend "lib/jquery-1.11.1.min.js"
 // @codekit-prepend "lib/lib.js"
-// @codekit-prepend "lib/tabs.js"
+// @codekit-prepend "utils/tabs.js"
+// @codekit-prepend "utils/preview.js"
 // @codekit-prepend "lib/jquery.tipsy.js"
 
 var Gogs = {};
@@ -270,7 +271,7 @@ var Gogs = {};
                 }, 200);
                 setTimeout(function () {
                     $this.tipsy('hide').attr('original-title', $this.data('original-title'));
-                }, 3000);
+                }, 2000);
             }
         }).addClass("js-copy-bind");
     }
@@ -279,6 +280,19 @@ var Gogs = {};
 function initCore() {
     Gogs.renderMarkdown();
     Gogs.renderCodeView();
+
+    // Switch list.
+    $('.js-tab-nav').click(function (e) {
+        if (!$(this).hasClass('js-tab-nav-show')) {
+            $(this).parent().find('.js-tab-nav-show').each(function () {
+                $(this).removeClass('js-tab-nav-show');
+                $($(this).data('tab-target')).hide();
+            });
+            $(this).addClass('js-tab-nav-show');
+            $($(this).data('tab-target')).show();
+        }
+        e.preventDefault();
+    });
 }
 
 function initUserSetting() {
@@ -341,6 +355,7 @@ function initRepo() {
         $('#repo-clone-url').val($(this).data('link'));
         $('.clone-url').text($(this).data('link'))
     });
+
     // Copy URL.
     var $clone_btn = $('#repo-clone-copy');
     $clone_btn.hover(function () {
@@ -593,8 +608,15 @@ function initInstall() {
     }());
 }
 
+function initProfile() {
+    // Avatar.
+    $('#profile-avatar').tipsy({
+        fade: true
+    });
+}
+
 $(document).ready(function () {
-    Gogs.AppSubUrl = $('head').data('suburl');
+    Gogs.AppSubUrl = $('head').data('suburl') || '';
     initCore();
     if ($('#user-profile-setting').length) {
         initUserSetting();
@@ -629,8 +651,12 @@ $(document).ready(function () {
     if ($('#install-form').length) {
         initInstall();
     }
+    if ($('#user-profile-page').length) {
+        initProfile();
+    }
 
-    Tabs('#dashboard-sidebar-menu');
+    $('#dashboard-sidebar-menu').tabs();
+    $('#pull-issue-preview').markdown_preview(".issue-add-comment");
 
     homepage();
 

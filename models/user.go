@@ -5,11 +5,13 @@
 package models
 
 import (
+	"container/list"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -89,7 +91,7 @@ func (u *User) DashboardLink() string {
 
 // HomeLink returns the user home page link.
 func (u *User) HomeLink() string {
-	return setting.AppSubUrl + "/user/" + u.Name
+	return "/" + path.Join(setting.AppSubUrl, u.Name)
 }
 
 // AvatarLink returns user gravatar link.
@@ -511,6 +513,40 @@ func GetUserIdsByNames(names []string) []int64 {
 		ids = append(ids, u.Id)
 	}
 	return ids
+}
+
+// UserCommit represtns a commit with validation of user.
+type UserCommit struct {
+	UserName string
+	*git.Commit
+}
+
+// ValidCommitsWithEmails checks if authors' e-mails of commits are correcponding to users.
+func ValidCommitsWithEmails(oldCommits *list.List) *list.List {
+	emails := map[string]string{}
+	newCommits := list.New()
+	e := oldCommits.Front()
+	for e != nil {
+		c := e.Value.(*git.Commit)
+
+		uname := ""
+		if v, ok := emails[c.Author.Email]; !ok {
+			u, err := GetUserByEmail(c.Author.Email)
+			if err == nil {
+				uname = u.Name
+			}
+			emails[c.Author.Email] = uname
+		} else {
+			uname = v
+		}
+
+		newCommits.PushBack(UserCommit{
+			UserName: uname,
+			Commit:   c,
+		})
+		e = e.Next()
+	}
+	return newCommits
 }
 
 // GetUserByEmail returns the user object by given e-mail if exists.
