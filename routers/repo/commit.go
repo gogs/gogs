@@ -61,7 +61,7 @@ func Commits(ctx *middleware.Context) {
 		ctx.Handle(500, "CommitsByRange", err)
 		return
 	}
-	commits = models.ValidCommitsWithEmails(commits)
+	commits = models.ValidateCommitsWithEmails(commits)
 
 	ctx.Data["Commits"] = commits
 	ctx.Data["Username"] = userName
@@ -99,7 +99,7 @@ func SearchCommits(ctx *middleware.Context) {
 		ctx.Handle(500, "SearchCommits", err)
 		return
 	}
-	commits = models.ValidCommitsWithEmails(commits)
+	commits = models.ValidateCommitsWithEmails(commits)
 
 	ctx.Data["Keyword"] = keyword
 	ctx.Data["Username"] = userName

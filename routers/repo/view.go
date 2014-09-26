@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/git"
 	"github.com/gogits/gogs/modules/log"
@@ -130,20 +131,20 @@ func Home(ctx *middleware.Context) {
 			if te.Type != git.COMMIT {
 				c, err := ctx.Repo.Commit.GetCommitOfRelPath(filepath.Join(treePath, te.Name()))
 				if err != nil {
-					ctx.Handle(404, "GetCommitOfRelPath", err)
+					ctx.Handle(500, "GetCommitOfRelPath", err)
 					return
 				}
 				files = append(files, []interface{}{te, c})
 			} else {
 				sm, err := ctx.Repo.Commit.GetSubModule(path.Join(treename, te.Name()))
 				if err != nil {
-					ctx.Handle(404, "GetSubModule", err)
+					ctx.Handle(500, "GetSubModule", err)
 					return
 				}
 
 				c, err := ctx.Repo.Commit.GetCommitOfRelPath(filepath.Join(treePath, te.Name()))
 				if err != nil {
-					ctx.Handle(404, "GetCommitOfRelPath", err)
+					ctx.Handle(500, "GetCommitOfRelPath", err)
 					return
 				}
 				files = append(files, []interface{}{te, git.NewSubModuleFile(c, sm.Url, te.Id.String())})
@@ -195,6 +196,18 @@ func Home(ctx *middleware.Context) {
 				}
 			}
 		}
+
+		lastCommit := ctx.Repo.Commit
+		if len(treePath) > 0 {
+			c, err := ctx.Repo.Commit.GetCommitOfRelPath(treePath)
+			if err != nil {
+				ctx.Handle(500, "GetCommitOfRelPath", err)
+				return
+			}
+			lastCommit = c
+		}
+		ctx.Data["LastCommit"] = lastCommit
+		ctx.Data["LastCommitUser"] = models.ValidateCommitWithEmail(lastCommit)
 	}
 
 	ctx.Data["Username"] = userName
@@ -215,7 +228,6 @@ func Home(ctx *middleware.Context) {
 		}
 	}
 
-	ctx.Data["LastCommit"] = ctx.Repo.Commit
 	ctx.Data["Paths"] = Paths
 	ctx.Data["TreeName"] = treename
 	ctx.Data["Treenames"] = treenames
