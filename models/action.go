@@ -366,6 +366,13 @@ func TransferRepoAction(u, newUser *User, repo *Repository) (err error) {
 		return err
 	}
 
+	// Remove watch for organization.
+	if repo.Owner.IsOrganization() {
+		if err = WatchRepo(repo.Owner.Id, repo.Id, false); err != nil {
+			log.Error(4, "WatchRepo", err)
+		}
+	}
+
 	log.Trace("action.TransferRepoAction: %s/%s", u.Name, repo.Name)
 	return err
 }
