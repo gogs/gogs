@@ -4,7 +4,7 @@
         <th colspan="4" class="clear">
             <span class="author left">
                 <img class="avatar-24 radius" src="{{AvatarLink .LastCommit.Author.Email}}" />
-                <a href="{{AppSubUrl}}/user/email2user?email={{Md5 .LastCommit.Author.Email}}"><strong>{{.LastCommit.Author.Name}}</strong>:</a>
+                <a href="{{AppSubUrl}}/user/email2user?email={{.LastCommit.Author.Email}}"><strong>{{.LastCommit.Author.Name}}</strong>:</a>
             </span>
             <span class="last-commit"><a href="{{.RepoLink}}/commit/{{.LastCommit.Id}}" rel="nofollow">
                 <strong>{{ShortSha .LastCommit.Id.String}}</strong></a>
