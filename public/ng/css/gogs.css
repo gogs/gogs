@@ -709,6 +709,7 @@ ol.linenums {
 #dashboard-header {
   border-bottom: 1px solid #d6d6d6;
   height: 69px;
+  background-color: #FFF;
 }
 #dashboard-header > .menu-line > li {
   padding: 12px 6px;
@@ -823,6 +824,11 @@ ol.linenums {
 #dashboard-my-org .repo-contrib-header,
 #dashboard-my-repo .repo-contrib-header {
   border-top: 1px solid #d6d6d6;
+}
+#dashboard-my-mirror .panel-header,
+#dashboard-my-org .panel-header,
+#dashboard-my-repo .panel-header {
+  font-size: 14px;
 }
 #dashboard-my-repo .panel-header .octicon {
   margin-right: 6px;
@@ -1244,7 +1250,8 @@ The register and sign-in page style
   font-weight: normal;
   color: #888;
 }
-#repo-readme {
+#repo-readme,
+#repo-read-file {
   margin-bottom: 80px;
 }
 #repo-bare-start {
