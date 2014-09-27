@@ -345,6 +345,7 @@ func runWeb(*cli.Context) {
 		r.Get("/pulls", repo.Pulls)
 		r.Get("/branches", repo.Branches)
 		r.Get("/archive/*", repo.Download)
+		r.Get("/issues2/",repo.Issues2)
 	}, ignSignIn, middleware.RepoAssignment(true))
 
 	m.Group("/:username/:reponame", func(r *macaron.Router) {
