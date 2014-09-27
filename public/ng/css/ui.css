@@ -796,6 +796,17 @@ ul.menu-radius > li:last-child > a {
   border: 1px solid #b05c10;
   background-color: #fcecdd;
 }
+.white-popup-block {
+  background: #FFF;
+  padding: 20px 30px;
+  text-align: left;
+  max-width: 650px;
+  margin: 40px auto;
+  position: relative;
+}
+.white-popup-block p {
+  font-size: 14px;
+}
 table th,
 table td {
   padding: .3em .6em;
