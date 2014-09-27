@@ -4,9 +4,11 @@
     {{template "repo/header" .}}
     <div id="repo-content" class="clear container">
         <div id="repo-main" class="left grid-5-6">
-            <p id="repo-desc">
+            <p id="repo-desc">{{if .Repository.DescriptionHtml}}
                 <span class="description">{{.Repository.DescriptionHtml}}</span>
-                <a class="link" href="{{.Repository.Website}}">{{.Repository.Website}}</a>
+                <a class="link" href="{{.Repository.Website}}">{{.Repository.Website}}</a>{{else}}
+                <span class="no-description text-italic"><i>No Description</i></span>
+                {{end}}
             </p>
             <ul id="repo-file-nav" class="clear menu menu-line">
                 <!-- <li>

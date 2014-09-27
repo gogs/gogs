@@ -1059,6 +1059,10 @@ The register and sign-in page style
 #repo-content {
   padding: 18px 0;
 }
+.repo-wide-wrapper {
+  padding: 18px 0;
+  position: relative;
+}
 #repo-clone-url {
   border-right: none;
   width: 190px;
@@ -1082,6 +1086,9 @@ The register and sign-in page style
 }
 #repo-desc {
   font-size: 1.2em;
+}
+#repo-desc .no-description {
+  color: #999;
 }
 #repo-sidebar-nav .label {
   font-size: 12px;
@@ -1461,6 +1468,10 @@ The register and sign-in page style
 #commits-list {
   padding-top: 20px;
 }
+#commits-list h4 {
+  line-height: 30px;
+  margin-bottom: 0;
+}
 .commit-list th {
   background-color: #FFF;
   line-height: 28px !important;
@@ -1641,10 +1652,6 @@ The register and sign-in page style
 }
 #user-ssh-add-form .field {
   margin-bottom: 24px;
-}
-.repo-issue-wrapper {
-  padding: 18px 0;
-  position: relative;
 }
 .pr-main {
   margin-right: 100px;
