@@ -297,9 +297,31 @@ function initCore() {
 
 function initUserSetting() {
     // Confirmation of change username in user profile page.
-    $('#user-profile-form').submit(function (e) {
-        var $username = $('#username');
-        if (($username.data('uname') != $username.val()) && !confirm('Username has been changed, do you want to continue?')) {
+    var $username = $('#username');
+    var $form = $('#user-profile-form');
+    var confimed = false;
+    $('.popup-modal').magnificPopup({
+        modal: true,
+        callbacks: {
+            open: function () {
+                if (($username.data('uname') == $username.val())) {
+                    $.magnificPopup.close();
+                    $form.submit();
+                }
+            }
+        }
+    });
+    $(document).on('click', '.popup-modal-dismiss', function (e) {
+        e.preventDefault();
+        $.magnificPopup.close();
+    });
+    $('#modal-submit').click(function(){
+        $.magnificPopup.close();
+        confimed = true;
+        $form.submit();
+    });
+    $form.submit(function (e) {
+        if (($username.data('uname') != $username.val()) && !confimed) {
             e.preventDefault();
             return true;
         }
