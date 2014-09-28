@@ -97,9 +97,9 @@ func (u *User) HomeLink() string {
 // AvatarLink returns user gravatar link.
 func (u *User) AvatarLink() string {
 	if setting.DisableGravatar {
-		return "/img/avatar_default.jpg"
+		return setting.AppSubUrl + "/img/avatar_default.jpg"
 	} else if setting.Service.EnableCacheAvatar {
-		return "/avatar/" + u.Avatar
+		return setting.AppSubUrl + "/avatar/" + u.Avatar
 	}
 	return "//1.gravatar.com/avatar/" + u.Avatar
 }
