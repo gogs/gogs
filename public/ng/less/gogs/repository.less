@@ -6,12 +6,12 @@
 /* repository main */
 
 #repo-wrapper {
-    padding-bottom: 100px;
+  padding-bottom: 100px;
 }
 #repo-header {
-    height: 69px;
-    border-bottom: 1px solid@repoHeaderBorderColor;
-    background-color: @repoHeaderBgColor;
+  height: 69px;
+  border-bottom: 1px solid@repoHeaderBorderColor;
+  background-color: @repoHeaderBgColor;
 }
 #repo-header-name {
   line-height: 66px;
@@ -91,6 +91,10 @@
 #repo-content {
   padding: 18px 0;
 }
+.repo-wide-wrapper {
+  padding: 18px 0;
+  position: relative;
+}
 #repo-clone-url {
   border-right: none;
   width: 190px;
@@ -114,6 +118,9 @@
 }
 #repo-desc {
   font-size: 1.2em;
+  .no-description{
+    color: #999;
+  }
 }
 #repo-sidebar-nav {
   .label {
@@ -136,14 +143,14 @@
     padding-left: 12px;
     width: 24px;
     text-align: center;
-    > i.octicon{
+    > i.octicon {
       font-size: 21px;
     }
   }
-  .num{
+  .num {
     position: absolute;
     font-size: 12px;
-    top:0;
+    top: 0;
     left: 36px;
     padding: 0 2px;
     min-width: 16px;
@@ -197,34 +204,34 @@
   box-sizing: border-box;
 }
 #repo-branch-tag {
-    .tab-nav {
-        border-bottom: 1px solid #EAEAEA;
-        a {
-            padding: .3em .8em;
-        }
-        .js-tab-nav-show {
-            background-color: #EEE;
-            font-weight: bold;
-        }
+  .tab-nav {
+    border-bottom: 1px solid #EAEAEA;
+    a {
+      padding: .3em .8em;
     }
-    .switching-list {
-        max-height: 300px;
-        overflow-y: auto;
+    .js-tab-nav-show {
+      background-color: #EEE;
+      font-weight: bold;
     }
+  }
+  .switching-list {
+    max-height: 300px;
+    overflow-y: auto;
+  }
 }
 #repo-branch-list,
 #repo-tag-list {
-    li {
-        i {
-            margin-right: 12px;
-            opacity: 0;
-        }
+  li {
+    i {
+      margin-right: 12px;
+      opacity: 0;
     }
-    li.checked {
-        i {
-            opacity: 1;
-        }
+  }
+  li.checked {
+    i {
+      opacity: 1;
     }
+  }
 }
 #repo-bread {
   .bread {
@@ -301,7 +308,8 @@
     }
   }
 }
-#repo-readme {
+#repo-readme,
+#repo-read-file {
   margin-bottom: 80px;
 }
 #repo-bare-start {
@@ -494,29 +502,29 @@
   list-style: none;
 }
 #commits-list {
-    padding-top: 20px;
+  padding-top: 20px;
+  h4{
+    line-height: 30px;
+    margin-bottom: 0;
+  }
 }
 .commit-list {
-    th {
-        background-color: #FFF;
-        line-height: 28px !important;
+  th {
+    background-color: #FFF;
+    line-height: 28px !important;
+  }
+  .date {
+    width: 120px;
+  }
+  .author {
+    padding-left: 20px;
+    min-width: 180px;
+    img {
+      margin-top: -4px;
     }
-    .date {
-        width: 120px;
-    }
-    .author {
-        padding-left: 20px;
-        min-width: 180px;
-        img {
-            margin-top: -4px;
-        }
-    }
-    .sha a {
-        font-family: Consolas, Menlo, Monaco, "Lucida Console", monospace;
-        font-size: 14px;
-    }
-}
-.no-desc {
-    color: #888;
-    font-style: italic;
+  }
+  .sha a {
+    font-family: Consolas, Menlo, Monaco, "Lucida Console", monospace;
+    font-size: 14px;
+  }
 }
