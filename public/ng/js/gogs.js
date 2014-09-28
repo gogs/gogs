@@ -293,38 +293,37 @@ function initCore() {
         }
         e.preventDefault();
     });
+
+    // Popup.
+    $(document).on('click', '.popup-modal-dismiss', function (e) {
+        e.preventDefault();
+        $.magnificPopup.close();
+    });
 }
 
 function initUserSetting() {
     // Confirmation of change username in user profile page.
     var $username = $('#username');
-    var $form = $('#user-profile-form');
-    var confimed = false;
-    $('.popup-modal').magnificPopup({
+    var $profile_form = $('#user-profile-form');
+    $('#change-username-btn').magnificPopup({
         modal: true,
         callbacks: {
             open: function () {
                 if (($username.data('uname') == $username.val())) {
                     $.magnificPopup.close();
-                    $form.submit();
+                    $profile_form.submit();
                 }
             }
         }
-    });
-    $(document).on('click', '.popup-modal-dismiss', function (e) {
-        e.preventDefault();
-        $.magnificPopup.close();
-    });
-    $('#modal-submit').click(function(){
-        $.magnificPopup.close();
-        confimed = true;
-        $form.submit();
-    });
-    $form.submit(function (e) {
-        if (($username.data('uname') != $username.val()) && !confimed) {
+    }).click(function () {
+        if (($username.data('uname') != $username.val())) {
             e.preventDefault();
             return true;
         }
+    });
+    $('#change-username-submit').click(function () {
+        $.magnificPopup.close();
+        $profile_form.submit();
     });
 
     // Show add SSH key panel.
@@ -333,11 +332,15 @@ function initUserSetting() {
     });
 
     // Confirmation of delete account.
-    $('#delete-account-button').click(function (e) {
-        if (!confirm('This account is going to be deleted, do you want to continue?')) {
-            e.preventDefault();
-            return true;
-        }
+    $('#delete-account-btn').magnificPopup({
+        modal: true
+    }).click(function (e) {
+        e.preventDefault();
+        return true;
+    });
+    $('#delete-account-submit').click(function () {
+        $.magnificPopup.close();
+        $('#delete-account-form').submit();
     });
 }
 
@@ -409,12 +412,27 @@ function initHookTypeChange() {
 function initRepoSetting() {
     // Options.
     // Confirmation of changing repository name.
-    $('#repo-setting-form').submit(function (e) {
-        var $reponame = $('#repo_name');
-        if (($reponame.data('repo-name') != $reponame.val()) && !confirm('Repository name has been changed, do you want to continue?')) {
+    var $reponame = $('#repo_name');
+    var $setting_form = $('#repo-setting-form');
+    $('#change-reponame-btn').magnificPopup({
+        modal: true,
+        callbacks: {
+            open: function () {
+                if (($reponame.data('repo-name') == $reponame.val())) {
+                    $.magnificPopup.close();
+                    $setting_form.submit();
+                }
+            }
+        }
+    }).click(function () {
+        if (($reponame.data('repo-name') != $reponame.val())) {
             e.preventDefault();
             return true;
         }
+    });
+    $('#change-reponame-submit').click(function () {
+        $.magnificPopup.close();
+        $setting_form.submit();
     });
 
     initHookTypeChange();
@@ -451,19 +469,39 @@ function initRepoSetting() {
 function initOrgSetting() {
     // Options.
     // Confirmation of changing organization name.
-    $('#org-setting-form').submit(function (e) {
-        var $orgname = $('#orgname');
-        if (($orgname.data('orgname') != $orgname.val()) && !confirm('Organization name has been changed, do you want to continue?')) {
+    var $orgname = $('#orgname');
+    var $setting_form = $('#org-setting-form');
+    $('#change-orgname-btn').magnificPopup({
+        modal: true,
+        callbacks: {
+            open: function () {
+                if (($orgname.data('orgname') == $orgname.val())) {
+                    $.magnificPopup.close();
+                    $setting_form.submit();
+                }
+            }
+        }
+    }).click(function () {
+        if (($orgname.data('orgname') != $orgname.val())) {
             e.preventDefault();
             return true;
         }
     });
+    $('#change-orgname-submit').click(function () {
+        $.magnificPopup.close();
+        $setting_form.submit();
+    });
+
     // Confirmation of delete organization.
-    $('#delete-org-button').click(function (e) {
-        if (!confirm('This organization is going to be deleted, do you want to continue?')) {
-            e.preventDefault();
-            return true;
-        }
+    $('#delete-org-btn').magnificPopup({
+        modal: true
+    }).click(function (e) {
+        e.preventDefault();
+        return true;
+    });
+    $('#delete-org-submit').click(function () {
+        $.magnificPopup.close();
+        $('#delete-org-form').submit();
     });
 
     initHookTypeChange();
@@ -493,11 +531,14 @@ function initInvite() {
 
 function initOrgTeamCreate() {
     // Delete team.
-    $('#org-team-delete').click(function (e) {
-        if (!confirm('This team is going to be deleted, do you want to continue?')) {
-            e.preventDefault();
-            return true;
-        }
+    $('#org-team-delete').magnificPopup({
+        modal: true
+    }).click(function (e) {
+        e.preventDefault();
+        return true;
+    });
+    $('#delete-team-submit').click(function () {
+        $.magnificPopup.close();
         var $form = $('#team-create-form');
         $form.attr('action', $form.data('delete-url'));
     });
@@ -561,15 +602,20 @@ function initAdmin() {
             $('.auth-name').toggleShow();
         }
     });
+
     // Delete account.
-    $('#user-delete').click(function (e) {
-        if (!confirm('This account is going to be deleted, do you want to continue?')) {
-            e.preventDefault();
-            return true;
-        }
+    $('#delete-account-btn').magnificPopup({
+        modal: true
+    }).click(function (e) {
+        e.preventDefault();
+        return true;
+    });
+    $('#delete-account-submit').click(function () {
+        $.magnificPopup.close();
         var $form = $('#user-profile-form');
         $form.attr('action', $form.data('delete-url'));
     });
+
     // Create authorization.
     $('#auth-type').on("change", function () {
         var v = $(this).val();
@@ -582,13 +628,17 @@ function initAdmin() {
             $('.ldap').toggleHide();
         }
     });
+
     // Delete authorization.
-    $('#auth-delete').click(function (e) {
-        if (!confirm('This authorization is going to be deleted, do you want to continue?')) {
-            e.preventDefault();
-            return true;
-        }
-        var $form = $('auth-setting-form');
+    $('#delete-auth-btn').magnificPopup({
+        modal: true
+    }).click(function (e) {
+        e.preventDefault();
+        return true;
+    });
+    $('#delete-auth-submit').click(function () {
+        $.magnificPopup.close();
+        var $form = $('#auth-setting-form');
         $form.attr('action', $form.data('delete-url'));
     });
 }

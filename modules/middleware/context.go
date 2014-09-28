@@ -9,7 +9,6 @@ import (
 	"html/template"
 	"io"
 	"net/http"
-	"path"
 	"strings"
 	"time"
 
@@ -138,23 +137,6 @@ func (ctx *Context) Handle(status int, title string, err error) {
 		ctx.Data["Title"] = "Internal Server Error"
 	}
 	ctx.HTML(status, base.TplName(fmt.Sprintf("status/%d", status)))
-}
-
-func (ctx *Context) ServeFile(file string, names ...string) {
-	var name string
-	if len(names) > 0 {
-		name = names[0]
-	} else {
-		name = path.Base(file)
-	}
-	ctx.Resp.Header().Set("Content-Description", "File Transfer")
-	ctx.Resp.Header().Set("Content-Type", "application/octet-stream")
-	ctx.Resp.Header().Set("Content-Disposition", "attachment; filename="+name)
-	ctx.Resp.Header().Set("Content-Transfer-Encoding", "binary")
-	ctx.Resp.Header().Set("Expires", "0")
-	ctx.Resp.Header().Set("Cache-Control", "must-revalidate")
-	ctx.Resp.Header().Set("Pragma", "public")
-	http.ServeFile(ctx.Resp, ctx.Req, file)
 }
 
 func (ctx *Context) ServeContent(name string, r io.ReadSeeker, params ...interface{}) {

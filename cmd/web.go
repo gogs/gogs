@@ -50,12 +50,18 @@ and it takes care of all the other things for you`,
 
 // checkVersion checks if binary matches the version of templates files.
 func checkVersion() {
+	// Templates.
 	data, err := ioutil.ReadFile(path.Join(setting.StaticRootPath, "templates/.VERSION"))
 	if err != nil {
 		log.Fatal(4, "Fail to read 'templates/.VERSION': %v", err)
 	}
 	if string(data) != setting.AppVer {
 		log.Fatal(4, "Binary and template file version does not match, did you forget to recompile?")
+	}
+
+	// Macaron.
+	if macaron.Version() != "0.1.8.0927" {
+		log.Fatal(4, "Macaron version does not match, did you forget to update?(github.com/Unknwon/macaron)")
 	}
 }
 
