@@ -1490,10 +1490,6 @@ The register and sign-in page style
   font-family: Consolas, Menlo, Monaco, "Lucida Console", monospace;
   font-size: 14px;
 }
-.no-desc {
-  color: #888;
-  font-style: italic;
-}
 #admin-wrapper,
 #setting-wrapper {
   padding-bottom: 100px;
