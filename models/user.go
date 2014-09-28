@@ -11,7 +11,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -91,7 +90,7 @@ func (u *User) DashboardLink() string {
 
 // HomeLink returns the user home page link.
 func (u *User) HomeLink() string {
-	return "/" + path.Join(setting.AppSubUrl, u.Name)
+	return setting.AppSubUrl + "/" + u.Name
 }
 
 // AvatarLink returns user gravatar link.
