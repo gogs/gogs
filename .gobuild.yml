@@ -10,3 +10,12 @@ filesets:
         - README_ZH.md
     excludes:
         - \.git
+settings:
+        build: |
+            if test "$GOOS" = "windows" -a "$GOARCH" = "386"
+            then
+                go install -v
+            else
+                go get -v -tags "sqlite redis memecache" github.com/gogits/gogs
+                go install -v -tags "sqlite redis memecache"
+            fi
