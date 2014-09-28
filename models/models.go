@@ -87,7 +87,7 @@ func getEngine() (*xorm.Engine, error) {
 func NewTestEngine(x *xorm.Engine) (err error) {
 	x, err = getEngine()
 	if err != nil {
-		return fmt.Errorf("models.init(fail to conntect database): %v", err)
+		return fmt.Errorf("models.init(fail to connect to database): %v", err)
 	}
 
 	return x.Sync(tables...)
@@ -96,7 +96,7 @@ func NewTestEngine(x *xorm.Engine) (err error) {
 func SetEngine() (err error) {
 	x, err = getEngine()
 	if err != nil {
-		return fmt.Errorf("models.init(fail to conntect database): %v", err)
+		return fmt.Errorf("models.init(fail to connect to database): %v", err)
 	}
 
 	// WARNNING: for serv command, MUST remove the output to os.stdout,
