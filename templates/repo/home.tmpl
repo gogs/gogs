@@ -3,7 +3,7 @@
 <div id="repo-wrapper">
     {{template "repo/header" .}}
     <div id="repo-content" class="clear container">
-        <div id="repo-main" class="left grid-4-5">
+        <div id="repo-main" class="left grid-5-6">
             <p id="repo-desc">
                 {{if .Repository.DescriptionHtml}}<span class="description">{{.Repository.DescriptionHtml}}</span>{{else}}<span class="no-desc">{{.i18n.Tr "repo.no_desc"}}</span>{{end}}
                 <a class="link" href="{{.Repository.Website}}">{{.Repository.Website}}</a>
