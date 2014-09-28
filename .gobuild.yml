@@ -10,3 +10,7 @@ filesets:
         - README_ZH.md
     excludes:
         - \.git
+settings:
+        build: |
+            go get -u -tags "sqlite redis memecache" github.com/gogits/gogs
+            go install -tags "sqlite redis memecache"
