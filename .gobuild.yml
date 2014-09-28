@@ -13,5 +13,10 @@ filesets:
         - \.git
 settings:
         build: |
-            go get -u -tags "sqlite redis memecache" github.com/gogits/gogs
-            go install -tags "sqlite redis memecache"
+            if test "$GOOS" = "windows" -a "$GOARCH" = "386"
+            then
+                go install -v
+            else
+                go get -v -tags "sqlite redis memecache" github.com/gogits/gogs
+                go install -v -tags "sqlite redis memecache"
+            fi
