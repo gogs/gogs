@@ -7,9 +7,6 @@ body {
   width: 16px;
   text-align: center;
 }
-.fa {
-  font-size: 14px;
-}
 .container {
   max-width: 1170px;
   padding: 0 1.5em;
@@ -854,7 +851,7 @@ ol.linenums {
   font-size: 2em;
 }
 #dashboard-new-repo-menu {
-  top: 35px;
+  top: 33px;
   width: 180px;
   background-color: #FFF;
   left: -132px;
@@ -1889,7 +1886,6 @@ textarea#issue-add-content {
 }
 #org-header > div > .menu-line > li.right > a .label {
   margin-left: 4px;
-  font-size: .6em;
 }
 #org-header > div > .menu-line > li.right .current {
   border-bottom: 2px solid #D26911;

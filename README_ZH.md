@@ -56,10 +56,10 @@ Gogs 的目标是打造一个最简单、最快速和最轻松的方式搭建自
 
 ## 特别鸣谢
 
+- [Macaron](https://github.com/Unknwon/macaron) 的路由与中间件机制。
+- [beego](http://beego.me) 模块的使用与修改。
 - 基于 [WeTalk](https://github.com/beego/wetalk) 修改的邮件服务和模块设计。
 - 基于 [GoBlog](https://github.com/fuxiaohei/goblog) 修改的系统监视状态。
-- [beego](http://beego.me) 模块的使用与修改。
-- [martini](http://martini.codegangsta.io/) 的路由与中间件机制。
 - 感谢 [gobuild.io](http://gobuild.io) 提供二进制编译与下载服务。
 - 感谢 [lavachen](http://www.lavachen.cn/) 和 [Rocker](http://weibo.com/rocker1989) 设计的 Logo。
 
