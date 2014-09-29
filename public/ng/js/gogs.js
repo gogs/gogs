@@ -437,11 +437,22 @@ function initRepoSetting() {
 
     initHookTypeChange();
 
-    $('#transfer-button').click(function () {
-        $('#transfer-form').show();
+    // Transfer repository.
+    $('#transfer-repo-btn').magnificPopup({
+        modal: true
     });
-    $('#delete-button').click(function () {
-        $('#delete-form').show();
+    $('#transfer-repo-submit').click(function () {
+        $.magnificPopup.close();
+        $('#transfer-repo-form').submit();
+    });
+
+    // Delete repository.
+    $('#delete-repo-btn').magnificPopup({
+        modal: true
+    });
+    $('#delete-repo-submit').click(function () {
+        $.magnificPopup.close();
+        $('#delete-repo-form').submit();
     });
 
     // Collaboration.
