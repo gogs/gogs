@@ -42,7 +42,7 @@ RETVAL=0
 DAEMON_OPTS=""
 
 # Set additional options, if any
-[ ! -z "$GOGS_USER" ] && DAEMON_OPTS="$DAEMON_OPTS --user=${USER}"
+[ ! -z "$GOGS_USER" ] && DAEMON_OPTS="$DAEMON_OPTS --user=${GOGS_USER}"
 
 start() {
   cd ${GOGS_HOME}
