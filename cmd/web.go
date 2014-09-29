@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"strings"
 
 	"github.com/Unknwon/macaron"
 	"github.com/codegangsta/cli"
@@ -26,6 +27,7 @@ import (
 	"github.com/gogits/gogs/modules/auth/apiv1"
 	"github.com/gogits/gogs/modules/avatar"
 	"github.com/gogits/gogs/modules/base"
+	"github.com/gogits/gogs/modules/git"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/middleware"
 	"github.com/gogits/gogs/modules/middleware/binding"
@@ -60,7 +62,8 @@ func checkVersion() {
 	}
 
 	// Macaron.
-	if macaron.Version() != "0.1.8.0927" {
+	macaronVer := git.MustParseVersion(strings.Join(strings.Split(macaron.Version(), ".")[:3], "."))
+	if macaronVer.LessThan(git.MustParseVersion("0.1.8")) {
 		log.Fatal(4, "Macaron version does not match, did you forget to update?(github.com/Unknwon/macaron)")
 	}
 }
@@ -351,7 +354,7 @@ func runWeb(*cli.Context) {
 		r.Get("/pulls", repo.Pulls)
 		r.Get("/branches", repo.Branches)
 		r.Get("/archive/*", repo.Download)
-		r.Get("/issues2/",repo.Issues2)
+		r.Get("/issues2/", repo.Issues2)
 	}, ignSignIn, middleware.RepoAssignment(true))
 
 	m.Group("/:username/:reponame", func(r *macaron.Router) {
