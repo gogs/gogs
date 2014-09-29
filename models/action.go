@@ -382,7 +382,7 @@ func GetFeeds(uid, offset int64, isProfile bool) ([]*Action, error) {
 	actions := make([]*Action, 0, 20)
 	sess := x.Limit(20, int(offset)).Desc("id").Where("user_id=?", uid)
 	if isProfile {
-		sess.Where("is_private=?", false).And("act_user_id=?", uid)
+		sess.And("is_private=?", false).And("act_user_id=?", uid)
 	}
 	err := sess.Find(&actions)
 	return actions, err
