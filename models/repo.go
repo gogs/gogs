@@ -678,17 +678,25 @@ func TransferOwnership(u *User, newOwner string, repo *Repository) error {
 			return fmt.Errorf("fail to delete current accesses: %v", err)
 		}
 	} else {
+		// Delete current owner access.
 		if _, err = sess.Where("repo_name=?", oldRepoLink).And("user_name=?", owner.LowerName).
-			Update(&Access{UserName: newUser.LowerName}); err != nil {
+			Delete(new(Access)); err != nil {
 			sess.Rollback()
-			return err
+			return fmt.Errorf("fail to delete access(owner): %v", err)
+		}
+		// In case new owner has access.
+		if _, err = sess.Where("repo_name=?", oldRepoLink).And("user_name=?", newUser.LowerName).
+			Delete(new(Access)); err != nil {
+			sess.Rollback()
+			return fmt.Errorf("fail to delete access(new user): %v", err)
 		}
 	}
 
+	// Change accesses to new repository path.
 	if _, err = sess.Where("repo_name=?", oldRepoLink).
 		Update(&Access{RepoName: path.Join(newUser.LowerName, repo.LowerName)}); err != nil {
 		sess.Rollback()
-		return err
+		return fmt.Errorf("fail to update access(change reponame): %v", err)
 	}
 
 	// Update repository.
@@ -754,7 +762,7 @@ func TransferOwnership(u *User, newOwner string, repo *Repository) error {
 		}
 		if _, err = sess.Insert(access); err != nil {
 			sess.Rollback()
-			return err
+			return fmt.Errorf("fail to insert access: %v", err)
 		}
 	}
 
