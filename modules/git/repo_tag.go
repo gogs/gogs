@@ -52,6 +52,7 @@ func (repo *Repository) getTag(id sha1) (*Tag, error) {
 	if err != nil {
 		return nil, errors.New(stderr)
 	}
+	tp = strings.TrimSpace(tp)
 
 	// Tag is a commit.
 	if ObjectType(tp) == COMMIT {
@@ -77,7 +78,6 @@ func (repo *Repository) getTag(id sha1) (*Tag, error) {
 	}
 
 	tag.Id = id
-	tag.Object = id
 	tag.repo = repo
 
 	repo.tagCache[id] = tag

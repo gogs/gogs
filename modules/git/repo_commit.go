@@ -40,11 +40,11 @@ func (repo *Repository) GetCommitIdOfTag(tagName string) (string, error) {
 }
 
 func (repo *Repository) GetCommitOfTag(tagName string) (*Commit, error) {
-	commitId, err := repo.GetCommitIdOfTag(tagName)
+	tag, err := repo.GetTag(tagName)
 	if err != nil {
 		return nil, err
 	}
-	return repo.GetCommit(commitId)
+	return tag.Commit()
 }
 
 // Parse commit information from the (uncompressed) raw

@@ -118,6 +118,7 @@ func Home(ctx *middleware.Context) {
 			ctx.Handle(404, "SubTree", err)
 			return
 		}
+
 		entries, err := tree.ListEntries(treename)
 		if err != nil {
 			ctx.Handle(500, "ListEntries", err)

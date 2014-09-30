@@ -208,10 +208,9 @@ func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 				} else if gitRepo.IsTagExist(refName) {
 					ctx.Repo.IsTag = true
 					ctx.Repo.BranchName = refName
-
-					ctx.Repo.Commit, err = gitRepo.GetCommitOfTag(refName)
+					ctx.Repo.Commit, err = ctx.Repo.GitRepo.GetCommitOfTag(refName)
 					if err != nil {
-						ctx.Handle(500, "RepoAssignment invalid tag", err)
+						ctx.Handle(500, "Fail to get tag commit", err)
 						return
 					}
 					ctx.Repo.CommitId = ctx.Repo.Commit.Id.String()
