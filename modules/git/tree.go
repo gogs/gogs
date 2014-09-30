@@ -109,9 +109,12 @@ func (t *Tree) ListEntries(relpath string) (Entries, error) {
 	}
 	t.entriesParsed = true
 
-	stdout, _, err := com.ExecCmdDirBytes(t.repo.Path,
+	stdout, stderr, err := com.ExecCmdDirBytes(t.repo.Path,
 		"git", "ls-tree", t.Id.String())
 	if err != nil {
+		if strings.Contains(err.Error(), "exit status 128") {
+			return nil, errors.New(strings.TrimSpace(string(stderr)))
+		}
 		return nil, err
 	}
 	t.entries, err = parseTreeData(t, stdout)
