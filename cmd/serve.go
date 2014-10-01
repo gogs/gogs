@@ -171,7 +171,13 @@ func runServ(k *cli.Context) {
 	uuid := uuid.NewV4().String()
 	os.Setenv("uuid", uuid)
 
-	gitcmd := exec.Command(verb, repoPath)
+	var gitcmd *exec.Cmd
+	verbs := strings.Split(verb, " ")
+	if len(verbs) == 2 {
+		gitcmd = exec.Command(verbs[0], verbs[1], repoPath)
+	} else {
+		gitcmd = exec.Command(verb, repoPath)
+	}
 	gitcmd.Dir = setting.RepoRootPath
 	gitcmd.Stdout = os.Stdout
 	gitcmd.Stdin = os.Stdin
