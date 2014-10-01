@@ -31,11 +31,6 @@ USER=git
 # Exit if the package is not installed
 [ -x "$DAEMON" ] || exit 0
 
-# Prepare the starting daemon command depending on available non-mandatory variables
-STARTDEAMONEVALOPTS=""
-[ ! -z "$USER" ] && STARTDEAMONEVALOPTS="$STARTDEAMONEVALOPTS --chuid $USER "
-[ ! -z "$WORKINGDIR" ] && STARTDEAMONEVALOPTS="$STARTDEAMONEVALOPTS --chdir \"$WORKINGDIR\" "
-
 # Load the VERBOSE setting and other rcS variables
 . /lib/init/vars.sh
 
@@ -54,10 +49,10 @@ do_start()
 	#   1 if daemon was already running
 	#   2 if daemon could not be started
 	sh -c "start-stop-daemon --start --quiet --pidfile $PIDFILE --make-pidfile \\
-			$STARTDEAMONEVALOPTS --exec $DAEMON -- $DAEMON_ARGS --test > /dev/null \\
+			--exec $DAEMON -- $DAEMON_ARGS --test > /dev/null \\
 			|| return 1"
 	sh -c "start-stop-daemon --start --quiet --pidfile $PIDFILE --make-pidfile \\
-			$STARTDEAMONEVALOPTS --background --exec $DAEMON -- $DAEMON_ARGS \\
+			--background --exec /bin/su -- - $USER -c \"cd \\\"$WORKINGDIR\\\" && $DAEMON -- $DAEMON_ARGS\" \\
 			|| return 2"
 }
 
@@ -71,10 +66,10 @@ do_stop()
 	#   1 if daemon was already stopped
 	#   2 if daemon could not be stopped
 	#   other if a failure occurred
-	start-stop-daemon --stop --quiet --retry=TERM/10/KILL/5 --pidfile $PIDFILE --name $NAME
+	start-stop-daemon --stop --quiet --retry=TERM/1/KILL/5 --pidfile $PIDFILE --name $NAME
 	RETVAL="$?"
 	[ "$RETVAL" = 2 ] && return 2
-	start-stop-daemon --stop --quiet --oknodo --retry=0/10/KILL/5 --exec $DAEMON
+	start-stop-daemon --stop --quiet --oknodo --retry=0/1/KILL/5 --exec $DAEMON
 	[ "$?" = 2 ] && return 2
 	# Many daemons don't delete their pidfiles when they exit.
 	rm -f $PIDFILE
