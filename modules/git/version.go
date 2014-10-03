@@ -74,6 +74,10 @@ func (v *Version) LessThan(that *Version) bool {
 	return v.Compare(that) < 0
 }
 
+func (v *Version) AtLeast(that *Version) bool {
+	return v.Compare(that) >= 0
+}
+
 // GetVersion returns current Git version installed.
 func GetVersion() (*Version, error) {
 	if gitVer != nil {
