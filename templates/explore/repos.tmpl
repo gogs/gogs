@@ -1,0 +1,25 @@
+{{template "ng/base/head" .}}
+{{template "ng/base/header" .}}
+<div id="setting-wrapper" class="main-wrapper">
+    <div id="org-setting" class="container clear">
+	    {{template "explore/nav" .}}
+        <div class="grid-4-5 left">
+            <div class="setting-content">
+            	<div id="org-repo-list">
+					{{range .Repos}}
+					<div class="org-repo-item">
+			            <ul class="org-repo-status right">
+			                <li><i class="octicon octicon-star"></i> {{.NumStars}}</li>
+			                <li><i class="octicon octicon-git-branch"></i> {{.NumForks}}</li>
+			            </ul>
+						<h2><a href="{{AppSubUrl}}/{{.Owner.Name}}/{{.Name}}">{{.Name}}</a></h2>
+						<p class="org-repo-description">{{.Description}}</p>
+						<p class="org-repo-updated">{{$.i18n.Tr "org.repo_updated"}} {{TimeSince .Updated $.i18n.Lang}}</p>
+					</div>
+					{{end}}
+            	</div>
+			</div>
+        </div>
+    </div>
+</div>
+{{template "ng/base/footer" .}}

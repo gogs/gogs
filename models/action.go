@@ -137,7 +137,7 @@ func updateIssuesCommit(userId, repoId int64, repoUserName, repoName string, com
 				return err
 			}
 
-			url := fmt.Sprintf("/%s/%s/commit/%s", repoUserName, repoName, c.Sha1)
+			url := fmt.Sprintf("%s/%s/%s/commit/%s", setting.AppSubUrl, repoUserName, repoName, c.Sha1)
 			message := fmt.Sprintf(`<a href="%s">%s</a>`, url, c.Message)
 
 			if _, err = CreateComment(userId, issue.RepoId, issue.Id, 0, 0, COMMIT, message, nil); err != nil {
@@ -172,7 +172,7 @@ func updateIssuesCommit(userId, repoId int64, repoUserName, repoName string, com
 
 // CommitRepoAction adds new action for committing repository.
 func CommitRepoAction(userId, repoUserId int64, userName, actEmail string,
-	repoId int64, repoUserName, repoName string, refFullName string, commit *base.PushCommits) error {
+	repoId int64, repoUserName, repoName string, refFullName string, commit *base.PushCommits, oldCommitId string, newCommitId string) error {
 
 	opType := COMMIT_REPO
 	// Check it's tag push or branch.
@@ -220,21 +220,52 @@ func CommitRepoAction(userId, repoUserId int64, userName, actEmail string,
 
 	ws, err := GetActiveWebhooksByRepoId(repoId)
 	if err != nil {
-		return errors.New("action.CommitRepoAction(GetWebhooksByRepoId): " + err.Error())
-	} else if len(ws) == 0 {
+		return errors.New("action.CommitRepoAction(GetActiveWebhooksByRepoId): " + err.Error())
+	}
+
+	// check if repo belongs to org and append additional webhooks
+	if repo.Owner.IsOrganization() {
+		// get hooks for org
+		orgws, err := GetActiveWebhooksByOrgId(repo.OwnerId)
+		if err != nil {
+			return errors.New("action.CommitRepoAction(GetActiveWebhooksByOrgId): " + err.Error())
+		}
+		ws = append(ws, orgws...)
+	}
+
+	if len(ws) == 0 {
 		return nil
 	}
 
 	repoLink := fmt.Sprintf("%s%s/%s", setting.AppUrl, repoUserName, repoName)
+	compareUrl := ""
+	// if not the first commit, set the compareUrl
+	if !strings.HasPrefix(oldCommitId, "0000000") {
+		compareUrl = fmt.Sprintf("%s/compare/%s...%s", repoLink, oldCommitId, newCommitId)
+	}
+
+	pusher_email, pusher_name := "", ""
+	pusher, err := GetUserByName(userName)
+	if err == nil {
+		pusher_email = pusher.Email
+		pusher_name = pusher.GetFullNameFallback()
+	}
+
 	commits := make([]*PayloadCommit, len(commit.Commits))
 	for i, cmt := range commit.Commits {
+		author_username := ""
+		author, err := GetUserByEmail(cmt.AuthorEmail)
+		if err == nil {
+			author_username = author.Name
+		}
 		commits[i] = &PayloadCommit{
 			Id:      cmt.Sha1,
 			Message: cmt.Message,
 			Url:     fmt.Sprintf("%s/commit/%s", repoLink, cmt.Sha1),
 			Author: &PayloadAuthor{
-				Name:  cmt.AuthorName,
-				Email: cmt.AuthorEmail,
+				Name:     cmt.AuthorName,
+				Email:    cmt.AuthorEmail,
+				UserName: author_username,
 			},
 		}
 	}
@@ -249,15 +280,20 @@ func CommitRepoAction(userId, repoUserId int64, userName, actEmail string,
 			Website:     repo.Website,
 			Watchers:    repo.NumWatches,
 			Owner: &PayloadAuthor{
-				Name:  repoUserName,
-				Email: actEmail,
+				Name:     repo.Owner.GetFullNameFallback(),
+				Email:    repo.Owner.Email,
+				UserName: repo.Owner.Name,
 			},
 			Private: repo.IsPrivate,
 		},
 		Pusher: &PayloadAuthor{
-			Name:  repo.Owner.LowerName,
-			Email: repo.Owner.Email,
+			Name:     pusher_name,
+			Email:    pusher_email,
+			UserName: userName,
 		},
+		Before:     oldCommitId,
+		After:      newCommitId,
+		CompareUrl: compareUrl,
 	}
 
 	for _, w := range ws {
@@ -266,15 +302,36 @@ func CommitRepoAction(userId, repoUserId int64, userName, actEmail string,
 			continue
 		}
 
-		p.Secret = w.Secret
-		CreateHookTask(&HookTask{
-			Type:        WEBHOOK,
-			Url:         w.Url,
-			Payload:     p,
-			ContentType: w.ContentType,
-			IsSsl:       w.IsSsl,
-		})
+		switch w.HookTaskType {
+		case SLACK:
+			{
+				s, err := GetSlackPayload(p, w.Meta)
+				if err != nil {
+					return errors.New("action.GetSlackPayload: " + err.Error())
+				}
+				CreateHookTask(&HookTask{
+					Type:        w.HookTaskType,
+					Url:         w.Url,
+					BasePayload: s,
+					ContentType: w.ContentType,
+					IsSsl:       w.IsSsl,
+				})
+			}
+		default:
+			{
+				p.Secret = w.Secret
+				CreateHookTask(&HookTask{
+					Type:        w.HookTaskType,
+					Url:         w.Url,
+					BasePayload: p,
+					ContentType: w.ContentType,
+					IsSsl:       w.IsSsl,
+				})
+			}
+		}
 	}
+
+	go DeliverHooks()
 	return nil
 }
 
@@ -293,11 +350,27 @@ func NewRepoAction(u *User, repo *Repository) (err error) {
 
 // TransferRepoAction adds new action for transfering repository.
 func TransferRepoAction(u, newUser *User, repo *Repository) (err error) {
-	if err = NotifyWatchers(&Action{ActUserId: u.Id, ActUserName: u.Name, ActEmail: u.Email,
-		OpType: TRANSFER_REPO, RepoId: repo.Id, RepoName: repo.Name, Content: newUser.Name,
-		IsPrivate: repo.IsPrivate}); err != nil {
+	action := &Action{
+		ActUserId:    u.Id,
+		ActUserName:  u.Name,
+		ActEmail:     u.Email,
+		OpType:       TRANSFER_REPO,
+		RepoId:       repo.Id,
+		RepoUserName: newUser.Name,
+		RepoName:     repo.Name,
+		IsPrivate:    repo.IsPrivate,
+		Content:      path.Join(repo.Owner.LowerName, repo.LowerName),
+	}
+	if err = NotifyWatchers(action); err != nil {
 		log.Error(4, "NotifyWatchers: %d/%s", u.Id, repo.Name)
 		return err
+	}
+
+	// Remove watch for organization.
+	if repo.Owner.IsOrganization() {
+		if err = WatchRepo(repo.Owner.Id, repo.Id, false); err != nil {
+			log.Error(4, "WatchRepo", err)
+		}
 	}
 
 	log.Trace("action.TransferRepoAction: %s/%s", u.Name, repo.Name)
@@ -309,7 +382,7 @@ func GetFeeds(uid, offset int64, isProfile bool) ([]*Action, error) {
 	actions := make([]*Action, 0, 20)
 	sess := x.Limit(20, int(offset)).Desc("id").Where("user_id=?", uid)
 	if isProfile {
-		sess.Where("is_private=?", false).And("act_user_id=?", uid)
+		sess.And("is_private=?", false).And("act_user_id=?", uid)
 	}
 	err := sess.Find(&actions)
 	return actions, err

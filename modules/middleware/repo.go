@@ -60,7 +60,7 @@ func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 					ctx.Handle(404, "GetUserByName", err)
 				} else if redirect {
 					log.Error(4, "GetUserByName", err)
-					ctx.Redirect("/")
+					ctx.Redirect(setting.AppSubUrl + "/")
 				} else {
 					ctx.Handle(500, "GetUserByName", err)
 				}
@@ -72,7 +72,7 @@ func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 
 		if u == nil {
 			if redirect {
-				ctx.Redirect("/")
+				ctx.Redirect(setting.AppSubUrl + "/")
 				return
 			}
 			ctx.Handle(404, "RepoAssignment", errors.New("invliad user account for single repository"))
@@ -92,7 +92,7 @@ func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 				ctx.Handle(404, "GetRepositoryByName", err)
 				return
 			} else if redirect {
-				ctx.Redirect("/")
+				ctx.Redirect(setting.AppSubUrl + "/")
 				return
 			}
 			ctx.Handle(500, "GetRepositoryByName", err)
@@ -109,7 +109,7 @@ func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 			}
 			// Check if current user has admin permission to repository.
 			if u.IsOrganization() {
-				auth, err := models.GetHighestAuthorize(u.Id, ctx.User.Id, 0, repo.Id)
+				auth, err := models.GetHighestAuthorize(u.Id, ctx.User.Id, repo.Id, 0)
 				if err != nil {
 					ctx.Handle(500, "GetHighestAuthorize", err)
 					return
@@ -160,7 +160,7 @@ func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 			return
 		}
 		ctx.Repo.GitRepo = gitRepo
-		ctx.Repo.RepoLink = "/" + u.Name + "/" + repo.Name
+		ctx.Repo.RepoLink = setting.AppSubUrl + "/" + u.Name + "/" + repo.Name
 		ctx.Data["RepoLink"] = ctx.Repo.RepoLink
 
 		tags, err := ctx.Repo.GitRepo.GetTags()
@@ -168,6 +168,7 @@ func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 			ctx.Handle(500, "GetTags", err)
 			return
 		}
+		ctx.Data["Tags"] = tags
 		ctx.Repo.Repository.NumTags = len(tags)
 
 		ctx.Data["Title"] = u.Name + "/" + repo.Name
@@ -199,7 +200,7 @@ func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 
 					ctx.Repo.Commit, err = gitRepo.GetCommitOfBranch(refName)
 					if err != nil {
-						ctx.Handle(404, "RepoAssignment invalid branch", nil)
+						ctx.Handle(500, "RepoAssignment invalid branch", err)
 						return
 					}
 					ctx.Repo.CommitId = ctx.Repo.Commit.Id.String()
@@ -207,13 +208,11 @@ func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 				} else if gitRepo.IsTagExist(refName) {
 					ctx.Repo.IsTag = true
 					ctx.Repo.BranchName = refName
-
-					ctx.Repo.Tag, err = gitRepo.GetTag(refName)
+					ctx.Repo.Commit, err = ctx.Repo.GitRepo.GetCommitOfTag(refName)
 					if err != nil {
-						ctx.Handle(404, "RepoAssignment invalid tag", nil)
+						ctx.Handle(500, "Fail to get tag commit", err)
 						return
 					}
-					ctx.Repo.Commit, _ = ctx.Repo.Tag.Commit()
 					ctx.Repo.CommitId = ctx.Repo.Commit.Id.String()
 				} else if len(refName) == 40 {
 					ctx.Repo.IsCommit = true
@@ -226,7 +225,7 @@ func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 						return
 					}
 				} else {
-					ctx.Handle(404, "RepoAssignment invalid repo", errors.New("branch or tag not exist"))
+					ctx.Handle(404, "RepoAssignment invalid repo", fmt.Errorf("branch or tag not exist: %s", refName))
 					return
 				}
 
@@ -247,6 +246,7 @@ func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 			}
 
 			ctx.Data["IsBranch"] = ctx.Repo.IsBranch
+			ctx.Data["IsTag"] = ctx.Repo.IsTag
 			ctx.Data["IsCommit"] = ctx.Repo.IsCommit
 
 			ctx.Repo.CommitsCount, err = ctx.Repo.Commit.CommitsCount()
@@ -274,7 +274,8 @@ func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 		ctx.Data["TagName"] = ctx.Repo.TagName
 		brs, err := ctx.Repo.GitRepo.GetBranches()
 		if err != nil {
-			log.Error(4, "GetBranches: %v", err)
+			ctx.Handle(500, "GetBranches", err)
+			return
 		}
 		ctx.Data["Branches"] = brs
 		ctx.Data["BrancheCount"] = len(brs)
@@ -298,8 +299,8 @@ func RequireTrueOwner() macaron.Handler {
 	return func(ctx *Context) {
 		if !ctx.Repo.IsTrueOwner && !ctx.Repo.IsAdmin {
 			if !ctx.IsSigned {
-				ctx.SetCookie("redirect_to", "/"+url.QueryEscape(ctx.Req.RequestURI))
-				ctx.Redirect("/user/login")
+				ctx.SetCookie("redirect_to", "/"+url.QueryEscape(setting.AppSubUrl+ctx.Req.RequestURI), 0, setting.AppSubUrl)
+				ctx.Redirect(setting.AppSubUrl + "/user/login")
 				return
 			}
 			ctx.Handle(404, ctx.Req.RequestURI, nil)

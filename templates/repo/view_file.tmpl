@@ -1,4 +1,4 @@
-<div class="panel panel-radius" id="repo-readme">
+<div class="panel panel-radius" id="{{if .ReadmeExist}}repo-readme{{else}}repo-read-file{{end}}">
     <p class="panel-header">
         {{if .ReadmeExist}}
             <i class="icon fa fa-book fa-lg"></i>
@@ -12,9 +12,9 @@
         <strong class="file-name">{{.FileName}}</strong><span class="file-size">{{FileSize .FileSize}}</span>
 	    {{end}}
     </p>
-    <div class="{{if .ReadmeExist}}panel-content markdown{{end}} code-view">
+    <div class="{{if .ReadmeExist}}panel-content markdown{{end}} code-view" id="repo-code-view">
     	{{if .ReadmeExist}}
-    	{{.FileContent | Str2html}}
+    	{{if .FileContent}}{{.FileContent | Str2html}}{{end}}
         {{else if not .IsFileText}}
         <div class="view-raw">
             {{if .IsImageFile}}

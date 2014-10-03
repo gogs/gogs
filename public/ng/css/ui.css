@@ -277,9 +277,6 @@ hr {
   border-bottom: 1px solid #dddddd;
   margin-bottom: .75em;
 }
-p code {
-  color: #b63b2c;
-}
 .radius {
   border-radius: .25em;
 }
@@ -525,6 +522,9 @@ input[readonly]:focus {
 .form-align .field {
   margin-bottom: 1em;
 }
+label.text-left {
+  text-align: left;
+}
 label.req:after {
   content: "*";
   color: #d9453d;
@@ -732,6 +732,10 @@ ul.menu-radius > li:last-child > a {
 .label-green {
   background-color: #65ad4e;
 }
+.label-green:hover {
+  background-color: #71bf57;
+  color: #FFF;
+}
 .label-orange {
   background-color: #df7514;
 }
@@ -791,6 +795,17 @@ ul.menu-radius > li:last-child > a {
   color: #df7514;
   border: 1px solid #b05c10;
   background-color: #fcecdd;
+}
+.white-popup-block {
+  background: #FFF;
+  padding: 20px 30px;
+  text-align: left;
+  max-width: 650px;
+  margin: 40px auto;
+  position: relative;
+}
+.white-popup-block p {
+  font-size: 14px;
 }
 table th,
 table td {

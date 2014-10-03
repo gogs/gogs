@@ -40,11 +40,11 @@ func (repo *Repository) GetCommitIdOfTag(tagName string) (string, error) {
 }
 
 func (repo *Repository) GetCommitOfTag(tagName string) (*Commit, error) {
-	commitId, err := repo.GetCommitIdOfTag(tagName)
+	tag, err := repo.GetTag(tagName)
 	if err != nil {
 		return nil, err
 	}
-	return repo.GetCommit(commitId)
+	return tag.Commit()
 }
 
 // Parse commit information from the (uncompressed) raw
@@ -137,6 +137,14 @@ func (repo *Repository) GetCommit(commitId string) (*Commit, error) {
 }
 
 func (repo *Repository) commitsCount(id sha1) (int, error) {
+	if gitVer.LessThan(MustParseVersion("1.8.0")) {
+		stdout, stderr, err := com.ExecCmdDirBytes(repo.Path, "git", "log", "--pretty=format:''", id.String())
+		if err != nil {
+			return 0, errors.New(string(stderr))
+		}
+		return len(bytes.Split(stdout, []byte("\n"))), nil
+	}
+
 	stdout, stderr, err := com.ExecCmdDir(repo.Path, "git", "rev-list", "--count", id.String())
 	if err != nil {
 		return 0, errors.New(stderr)

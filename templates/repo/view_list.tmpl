@@ -4,7 +4,7 @@
         <th colspan="4" class="clear">
             <span class="author left">
                 <img class="avatar-24 radius" src="{{AvatarLink .LastCommit.Author.Email}}" />
-                <a href="/user/email2user?email={{Md5 .LastCommit.Author.Email}}"><strong>{{.LastCommit.Author.Name}}</strong>:</a>
+                {{if .LastCommitUser}}<a href="{{AppSubUrl}}/{{.LastCommitUser}}">{{end}}<strong>{{.LastCommit.Author.Name}}</strong>:{{if .LastCommitUser}}</a>{{end}}
             </span>
             <span class="last-commit"><a href="{{.RepoLink}}/commit/{{.LastCommit.Id}}" rel="nofollow">
                 <strong>{{ShortSha .LastCommit.Id.String}}</strong></a>
@@ -27,14 +27,23 @@
             {{$entry := index $item 0}}
             {{$commit := index $item 1}}
             <tr>
-                <td class="icon">
-                    <span class="octicon octicon-file-{{if $entry.IsDir}}directory{{else}}text{{end}}"></span>
+            {{if $entry.IsSubModule}}
+            <td class="icon">
+                    <span class="octicon octicon-file-submodule"></span>
+                </td>
+                <td class="name">
+                    <a href="{{$commit.RefUrl}}" class="text-truncate">{{$entry.Name}}</a> @ <a href="{{$commit.RefUrl}}/commit/{{$commit.RefId}}">{{ShortSha $commit.RefId}}</a>
+                </td>
+            {{else}}
+            <td class="icon">
+                    <span class="octicon octicon-file-{{if or $entry.IsDir}}directory{{else}}text{{end}}"></span>
                 </td>
                 <td class="name">
                     <a href="{{$.BranchLink}}/{{$.TreePath}}{{$entry.Name}}" class="text-truncate">{{$entry.Name}}</a>
                 </td>
+                {{end}}
                 <td class="msg">
-                    <a class="text-truncate" href="/{{$.Username}}/{{$.Reponame}}/commit/{{$commit.Id}}" rel="nofollow">{{$commit.Summary}}</a>
+                    <a class="text-truncate" href="{{AppSubUrl}}/{{$.Username}}/{{$.Reponame}}/commit/{{$commit.Id}}" rel="nofollow">{{$commit.Summary}}</a>
                 </td>
                 <td class="age">{{TimeSince $commit.Committer.When $.i18n.Lang}}</td>
             </tr>

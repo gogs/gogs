@@ -61,6 +61,10 @@ func (te *TreeEntry) Size() int64 {
 	return te.size
 }
 
+func (te *TreeEntry) IsSubModule() bool {
+	return te.mode == ModeCommit
+}
+
 func (te *TreeEntry) IsDir() bool {
 	return te.mode == ModeTree
 }
@@ -80,7 +84,7 @@ type Entries []*TreeEntry
 
 var sorter = []func(t1, t2 *TreeEntry) bool{
 	func(t1, t2 *TreeEntry) bool {
-		return t1.IsDir() && !t2.IsDir()
+		return (t1.IsDir() || t1.IsSubModule()) && !t2.IsDir() && !t2.IsSubModule()
 	},
 	func(t1, t2 *TreeEntry) bool {
 		return t1.name < t2.name

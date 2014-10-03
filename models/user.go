@@ -5,6 +5,7 @@
 package models
 
 import (
+	"container/list"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
@@ -82,22 +83,22 @@ type User struct {
 // DashboardLink returns the user dashboard page link.
 func (u *User) DashboardLink() string {
 	if u.IsOrganization() {
-		return "/org/" + u.Name + "/dashboard/"
+		return setting.AppSubUrl + "/org/" + u.Name + "/dashboard/"
 	}
-	return "/"
+	return setting.AppSubUrl + "/"
 }
 
 // HomeLink returns the user home page link.
 func (u *User) HomeLink() string {
-	return "/user/" + u.Name
+	return setting.AppSubUrl + "/" + u.Name
 }
 
 // AvatarLink returns user gravatar link.
 func (u *User) AvatarLink() string {
 	if setting.DisableGravatar {
-		return "/img/avatar_default.jpg"
+		return setting.AppSubUrl + "/img/avatar_default.jpg"
 	} else if setting.Service.EnableCacheAvatar {
-		return "/avatar/" + u.Avatar
+		return setting.AppSubUrl + "/avatar/" + u.Avatar
 	}
 	return "//1.gravatar.com/avatar/" + u.Avatar
 }
@@ -165,6 +166,14 @@ func (u *User) GetOrganizations() error {
 		}
 	}
 	return nil
+}
+
+// GetFullNameFallback returns Full Name if set, otherwise username
+func (u *User) GetFullNameFallback() string {
+	if u.FullName == "" {
+		return u.Name
+	}
+	return u.FullName
 }
 
 // IsUserExist checks if given user name exist,
@@ -505,6 +514,49 @@ func GetUserIdsByNames(names []string) []int64 {
 	return ids
 }
 
+// UserCommit represtns a commit with validation of user.
+type UserCommit struct {
+	UserName string
+	*git.Commit
+}
+
+// ValidateCommitWithEmail chceck if author's e-mail of commit is corresponsind to a user.
+func ValidateCommitWithEmail(c *git.Commit) (uname string) {
+	u, err := GetUserByEmail(c.Author.Email)
+	if err == nil {
+		uname = u.Name
+	}
+	return uname
+}
+
+// ValidateCommitsWithEmails checks if authors' e-mails of commits are corresponding to users.
+func ValidateCommitsWithEmails(oldCommits *list.List) *list.List {
+	emails := map[string]string{}
+	newCommits := list.New()
+	e := oldCommits.Front()
+	for e != nil {
+		c := e.Value.(*git.Commit)
+
+		uname := ""
+		if v, ok := emails[c.Author.Email]; !ok {
+			u, err := GetUserByEmail(c.Author.Email)
+			if err == nil {
+				uname = u.Name
+			}
+			emails[c.Author.Email] = uname
+		} else {
+			uname = v
+		}
+
+		newCommits.PushBack(UserCommit{
+			UserName: uname,
+			Commit:   c,
+		})
+		e = e.Next()
+	}
+	return newCommits
+}
+
 // GetUserByEmail returns the user object by given e-mail if exists.
 func GetUserByEmail(email string) (*User, error) {
 	if len(email) == 0 {
@@ -548,27 +600,27 @@ type Follow struct {
 
 // FollowUser marks someone be another's follower.
 func FollowUser(userId int64, followId int64) (err error) {
-	session := x.NewSession()
-	defer session.Close()
-	session.Begin()
+	sess := x.NewSession()
+	defer sess.Close()
+	sess.Begin()
 
-	if _, err = session.Insert(&Follow{UserId: userId, FollowId: followId}); err != nil {
-		session.Rollback()
+	if _, err = sess.Insert(&Follow{UserId: userId, FollowId: followId}); err != nil {
+		sess.Rollback()
 		return err
 	}
 
 	rawSql := "UPDATE `user` SET num_followers = num_followers + 1 WHERE id = ?"
-	if _, err = session.Exec(rawSql, followId); err != nil {
-		session.Rollback()
+	if _, err = sess.Exec(rawSql, followId); err != nil {
+		sess.Rollback()
 		return err
 	}
 
 	rawSql = "UPDATE `user` SET num_followings = num_followings + 1 WHERE id = ?"
-	if _, err = session.Exec(rawSql, userId); err != nil {
-		session.Rollback()
+	if _, err = sess.Exec(rawSql, userId); err != nil {
+		sess.Rollback()
 		return err
 	}
-	return session.Commit()
+	return sess.Commit()
 }
 
 // UnFollowUser unmarks someone be another's follower.

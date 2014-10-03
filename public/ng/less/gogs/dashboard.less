@@ -1,9 +1,7 @@
 @import "../ui/var";
-
 /*
-The dashboard page style
+    The dashboard page style
 */
-
 @dashboardHeaderBorderColor: #D6D6D6;
 @dashboardHeaderLinkColor: #444;
 @dashboardHeaderLinkHoverColor: #D9453D;
@@ -14,14 +12,16 @@ The dashboard page style
 #dashboard-header {
   border-bottom: 1px solid @dashboardHeaderBorderColor;
   height: 69px;
+  background-color: #FFF;
   > .menu-line {
     > li {
-      padding: 12px 0;
+      padding: 12px 6px;
     }
     > li.right {
       > a {
         font-size: 1.2em;
         color: @dashboardHeaderLinkColor;
+        padding: .4em .8em;
         &:hover {
           background-color: transparent;
           color: @dashboardHeaderLinkHoverColor;
@@ -36,18 +36,15 @@ The dashboard page style
     }
   }
 }
-
 // dashboard context switch selection
 #dashboard-selection-menu {
   a img {
     margin: -4px 10px 0 0;
   }
 }
-
 #dashboard {
   padding: 24px 0;
 }
-
 // dashboard sidebar contains contributed repositories panel,
 // and my repositories panel
 #dashboard-sidebar {
@@ -60,7 +57,6 @@ The dashboard page style
     border-bottom-right-radius: .3em;
   }
 }
-
 #dashboard-sidebar-menu {
   border-top-left-radius: .3em;
   border-top-right-radius: .3em;
@@ -70,8 +66,8 @@ The dashboard page style
     margin-right: -1px;
     border-bottom: none;
     > a {
-      padding-top: .4em;
-      padding-bottom: .4em;
+      padding-top: .3em;
+      padding-bottom: .3em;
     }
   }
   > li.first {
@@ -85,7 +81,7 @@ The dashboard page style
     float: right;
   }
   width: 100%;
-  height: 35px;
+  height: 32px;
   > li.js-tab-nav-show {
     background-color: #EEEEEE;
   }
@@ -96,7 +92,6 @@ The dashboard page style
     }
   }
 }
-
 #dashboard-my-mirror,
 #dashboard-my-org,
 #dashboard-my-repo {
@@ -131,8 +126,10 @@ The dashboard page style
   .repo-contrib-header {
     border-top: 1px solid #d6d6d6;
   }
+  .panel-header{
+    font-size: 14px;
+  }
 }
-
 #dashboard-my-repo {
   .panel-header {
     .octicon {
@@ -144,16 +141,14 @@ The dashboard page style
     margin-left: 4px;
   }
 }
-
 #dashboard-my-org,
 #dashboard-my-mirror {
   display: none;
 }
-
 // the button of new repository in my repositories panel
 #dashboard-new-repo {
   width: 50px;
-  height: 35px;
+  height: 33px;
   padding-top: 6px;
   margin-right: 1px;
   .octicon {
@@ -162,10 +157,9 @@ The dashboard page style
   border-top-left-radius: .3em;
   border-top-right-radius: .3em;
 }
-
 // the drop-down menu of #dashboard-new-repo
 #dashboard-new-repo-menu {
-  top: 35px;
+  top: 33px;
   width: 180px;
   background-color: #FFF;
   left: -132px;
@@ -174,28 +168,26 @@ The dashboard page style
     font-size: 1.1em;
   }
 }
-
 #dashboard-selection-menu {
-    width: auto;
-    max-width: 300px;
-    > .drop-down {
-        top: 56px;
+  width: auto;
+  max-width: 300px;
+  > .drop-down {
+    top: 56px;
+  }
+  li {
+    white-space: nowrap;
+    &.checked {
+      .octicon {
+        opacity: 1;
+      }
     }
-    li {
-        white-space: nowrap;
-        &.checked {
-            .octicon {
-                opacity: 1;
-            }
-        }
-        a {
-            text-overflow: ellipsis;
-            -o-text-overflow: ellipsis;
-            overflow: hidden;
-        }
+    a {
+      text-overflow: ellipsis;
+      -o-text-overflow: ellipsis;
+      overflow: hidden;
     }
+  }
 }
-
 // the drop-down menu of #dashboard-selection-menu
 #dashboard-switch-menu {
   > li {
@@ -228,8 +220,8 @@ The dashboard page style
   border-bottom-left-radius: .3em;
   border-bottom-right-radius: .3em;
 }
-
 #dashboard-news {
+    padding-bottom: 60px;
   .news {
     margin-right: 2.4em;
     .mega-octicon {

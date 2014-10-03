@@ -12,6 +12,7 @@ import (
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/middleware"
+	"github.com/gogits/gogs/modules/setting"
 )
 
 const (
@@ -55,12 +56,14 @@ func Commits(ctx *middleware.Context) {
 	}
 
 	// Both `git log branchName` and `git log commitId` work.
-	ctx.Data["Commits"], err = ctx.Repo.Commit.CommitsByRange(page)
+	commits, err := ctx.Repo.Commit.CommitsByRange(page)
 	if err != nil {
 		ctx.Handle(500, "CommitsByRange", err)
 		return
 	}
+	commits = models.ValidateCommitsWithEmails(commits)
 
+	ctx.Data["Commits"] = commits
 	ctx.Data["Username"] = userName
 	ctx.Data["Reponame"] = repoName
 	ctx.Data["CommitCount"] = commitsCount
@@ -93,9 +96,10 @@ func SearchCommits(ctx *middleware.Context) {
 
 	commits, err := ctx.Repo.Commit.SearchCommits(keyword)
 	if err != nil {
-		ctx.Handle(500, "repo.SearchCommits(SearchCommits)", err)
+		ctx.Handle(500, "SearchCommits", err)
 		return
 	}
+	commits = models.ValidateCommitsWithEmails(commits)
 
 	ctx.Data["Keyword"] = keyword
 	ctx.Data["Username"] = userName
@@ -114,9 +118,10 @@ func Diff(ctx *middleware.Context) {
 
 	commit := ctx.Repo.Commit
 
-	diff, err := models.GetDiff(models.RepoPath(userName, repoName), commitId)
+	diff, err := models.GetDiffCommit(models.RepoPath(userName, repoName),
+		commitId, setting.MaxGitDiffLines)
 	if err != nil {
-		ctx.Handle(404, "GetDiff", err)
+		ctx.Handle(404, "GetDiffCommit", err)
 		return
 	}
 
@@ -157,8 +162,70 @@ func Diff(ctx *middleware.Context) {
 	ctx.Data["Diff"] = diff
 	ctx.Data["Parents"] = parents
 	ctx.Data["DiffNotAvailable"] = diff.NumFiles() == 0
-	ctx.Data["SourcePath"] = "/" + path.Join(userName, repoName, "src", commitId)
-	ctx.Data["RawPath"] = "/" + path.Join(userName, repoName, "raw", commitId)
+	ctx.Data["SourcePath"] = setting.AppSubUrl + "/" + path.Join(userName, repoName, "src", commitId)
+	ctx.Data["RawPath"] = setting.AppSubUrl + "/" + path.Join(userName, repoName, "raw", commitId)
+	ctx.HTML(200, DIFF)
+}
+
+func CompareDiff(ctx *middleware.Context) {
+	ctx.Data["IsRepoToolbarCommits"] = true
+	ctx.Data["IsDiffCompare"] = true
+	userName := ctx.Repo.Owner.Name
+	repoName := ctx.Repo.Repository.Name
+	beforeCommitId := ctx.Params(":before")
+	afterCommitId := ctx.Params(":after")
+
+	commit, err := ctx.Repo.GitRepo.GetCommit(afterCommitId)
+	if err != nil {
+		ctx.Handle(404, "GetCommit", err)
+		return
+	}
+
+	diff, err := models.GetDiffRange(models.RepoPath(userName, repoName), beforeCommitId,
+		afterCommitId, setting.MaxGitDiffLines)
+	if err != nil {
+		ctx.Handle(404, "GetDiffRange", err)
+		return
+	}
+
+	isImageFile := func(name string) bool {
+		blob, err := commit.GetBlobByPath(name)
+		if err != nil {
+			return false
+		}
+
+		dataRc, err := blob.Data()
+		if err != nil {
+			return false
+		}
+		buf := make([]byte, 1024)
+		n, _ := dataRc.Read(buf)
+		if n > 0 {
+			buf = buf[:n]
+		}
+		_, isImage := base.IsImageFile(buf)
+		return isImage
+	}
+
+	commits, err := commit.CommitsBeforeUntil(beforeCommitId)
+	if err != nil {
+		ctx.Handle(500, "CommitsBeforeUntil", err)
+		return
+	}
+
+	ctx.Data["Commits"] = commits
+	ctx.Data["CommitCount"] = commits.Len()
+	ctx.Data["BeforeCommitId"] = beforeCommitId
+	ctx.Data["AfterCommitId"] = afterCommitId
+	ctx.Data["Username"] = userName
+	ctx.Data["Reponame"] = repoName
+	ctx.Data["IsImageFile"] = isImageFile
+	ctx.Data["Title"] = "Comparing " + base.ShortSha(beforeCommitId) + "..." + base.ShortSha(afterCommitId) + " · " + userName + "/" + repoName
+	ctx.Data["Commit"] = commit
+	ctx.Data["Diff"] = diff
+	ctx.Data["DiffNotAvailable"] = diff.NumFiles() == 0
+	ctx.Data["SourcePath"] = "/" + path.Join(userName, repoName, "src", afterCommitId)
+	ctx.Data["RawPath"] = "/" + path.Join(userName, repoName, "raw", afterCommitId)
 	ctx.HTML(200, DIFF)
 }
 

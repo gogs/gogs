@@ -5,7 +5,7 @@
         <div class="container clear">
             <h1 id="repo-header-name" class="left public">
                 <i class="mega-octicon octicon-{{if .Repository.IsPrivate}}lock{{else}}repo{{end}}"></i>
-                <a class="author" href="/{{.Repository.Owner.Name}}">{{.Repository.Owner.Name}}</a>
+                <a class="author" href="{{AppSubUrl}}/{{.Repository.Owner.Name}}">{{.Repository.Owner.Name}}</a>
                 <span class="divider">/</span>
                 <a class="repo text-bold" href="{{.RepoLink}}">{{.Repository.Name}}</a>
             </h1>
@@ -16,20 +16,20 @@
             <div id="repo-bare-start" class="panel panel-radius">
                 <div class="panel-header">
                     <a class="btn btn-small btn-black btn-header btn-radius right" href="{{.RepoLink}}/settings">{{.i18n.Tr "repo.settings"}}</a>
-                    <strong>Quick Start</strong>
+                    <strong>{{.i18n.Tr "repo.quick_guide"}}</strong>
                 </div>
                 <div class="panel-content">
                     <div id="repo-clone" class="clear text-center">
-                        <h2>Clone this repository</h2>
-                        <button id="repo-clone-ssh" class="btn btn-blue current left btn-left-radius">SSH</button>
-                        <button id="repo-clone-https" class="btn btn-gray left">HTTPS</button>
-                        <input id="repo-clone-url" type="text" class="ipt ipt-disabled left" value="{{.CloneLink.SSH}}" />
-                        <button id="repo-clone-copy" class="btn btn-black left btn-right-radius">Copy</button>
-                        <p class="text-center" id="repo-clone-help">Need help cloning? Visit <a href="#">Help</a>!</p>
+                        <h2>{{.i18n.Tr "repo.clone_this_repo"}}</h2>
+                        <button class="btn btn-blue current left btn-left-radius" id="repo-clone-ssh" data-link="{{.CloneLink.SSH}}">SSH</button>
+                        <button class="btn btn-gray left" id="repo-clone-https" data-link="{{.CloneLink.HTTPS}}">HTTPS</button>
+                        <input id="repo-clone-url" type="text" class="ipt ipt-disabled left" value="{{.CloneLink.SSH}}" readonly />
+                        <button class="btn btn-black left btn-right-radius" id="repo-clone-copy" data-copy-val="val" data-copy-from="#repo-clone-url">{{.i18n.Tr "repo.copy_link"}}</button>
+                        <p class="text-center" id="repo-clone-help">{{.i18n.Tr "repo.clone_helper" | Str2html}}</p>
                         <hr/>
                     </div>
                     <div id="repo-bare-cmd" class="text-center">
-                        <h2>Create a new repository on the command line</h2>
+                        <h2>{{.i18n.Tr "repo.create_new_repo_command"}}</h2>
                         <pre class="text-left radius"><code>touch README.md
 git init
 git add README.md
@@ -40,7 +40,7 @@ git push -u origin master</code></pre>
                         <hr/>
                     </div>
                     <div id="repo-bare-remote" class="text-center">
-                        <h2>Push an existing repository from the command line</h2>
+                        <h2>{{.i18n.Tr "repo.push_exist_repo"}}</h2>
                         <pre class="text-left radius"><code>git remote add origin <span class="clone-url">{{.CloneLink.SSH}}</span>
 git push -u origin master</code></pre>
                         <br/>

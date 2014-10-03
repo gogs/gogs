@@ -1,7 +1,7 @@
 {{template "ng/base/head" .}}
 {{template "ng/base/header" .}}
 <div id="body" class="container text-center">
-    <p style="margin-top: 100px"><img src="/img/500.png" alt="500"/></p>
+    <p style="margin-top: 100px"><img src="{{AppSubUrl}}/img/500.png" alt="500"/></p>
     <hr/>
     <br>
     {{if .ErrorMsg}}<p>An error has occurred : {{.ErrorMsg}}</p>{{end}}

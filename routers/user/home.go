@@ -13,6 +13,7 @@ import (
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/middleware"
+	"github.com/gogits/gogs/modules/setting"
 )
 
 const (
@@ -94,7 +95,7 @@ func Dashboard(ctx *middleware.Context) {
 	feeds := make([]*models.Action, 0, len(actions))
 	for _, act := range actions {
 		if act.IsPrivate {
-			if has, _ := models.HasAccess(ctxUser.Name, act.RepoUserName+"/"+act.RepoName,
+			if has, _ := models.HasAccess(ctx.User.Name, act.RepoUserName+"/"+act.RepoName,
 				models.READABLE); !has {
 				continue
 			}
@@ -126,7 +127,7 @@ func Profile(ctx *middleware.Context) {
 	uname := ctx.Params(":username")
 	// Special handle for FireFox requests favicon.ico.
 	if uname == "favicon.ico" {
-		ctx.Redirect("/img/favicon.png")
+		ctx.Redirect(setting.AppSubUrl + "/img/favicon.png")
 		return
 	}
 
@@ -141,7 +142,7 @@ func Profile(ctx *middleware.Context) {
 	}
 
 	if u.IsOrganization() {
-		ctx.Redirect("/org/" + u.Name)
+		ctx.Redirect(setting.AppSubUrl + "/org/" + u.Name)
 		return
 	}
 
@@ -181,7 +182,7 @@ func Email2User(ctx *middleware.Context) {
 		}
 		return
 	}
-	ctx.Redirect("/user/" + u.Name)
+	ctx.Redirect(setting.AppSubUrl + "/user/" + u.Name)
 }
 
 const (

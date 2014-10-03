@@ -1,7 +1,7 @@
 {{template "base/head" .}}
 {{template "base/navbar" .}}
 <div class="container" id="body">
-    <form action="/org/create" method="post" class="form-horizontal card" id="org-create">
+    <form action="{{AppSubUrl}}/org/create" method="post" class="form-horizontal card" id="org-create">
         {{.CsrfTokenHtml}}
         <h3>Create New Organization</h3>
         {{template "base/alert" .}}
@@ -24,7 +24,7 @@
         <div class="form-group">
             <div class="col-md-offset-2 col-md-8">
                 <button type="submit" class="btn btn-lg btn-primary">Create An Organization</button>
-                <a href="/" class="text-danger">Cancel</a>
+                <a href="{{AppSubUrl}}/" class="text-danger">Cancel</a>
             </div>
         </div>
     </form>

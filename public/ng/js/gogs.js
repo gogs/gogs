@@ -1,6 +1,8 @@
 // @codekit-prepend "lib/jquery-1.11.1.min.js"
 // @codekit-prepend "lib/lib.js"
-// @codekit-prepend "lib/tabs.js"
+// @codekit-prepend "utils/tabs.js"
+// @codekit-prepend "utils/preview.js"
+// @codekit-prepend "lib/jquery.tipsy.js"
 
 var Gogs = {};
 
@@ -202,7 +204,7 @@ var Gogs = {};
     // Search users by keyword.
     Gogs.searchUsers = function (val, $target) {
         $.ajax({
-            url: '/api/v1/users/search?q=' + val,
+            url: Gogs.AppSubUrl + '/api/v1/users/search?q=' + val,
             dataType: "json",
             success: function (json) {
                 if (json.ok && json.data.length) {
@@ -222,7 +224,7 @@ var Gogs = {};
     // Search repositories by keyword.
     Gogs.searchRepos = function (val, $target, $param) {
         $.ajax({
-            url: '/api/v1/repos/search?q=' + val + '&' + $param,
+            url: Gogs.AppSubUrl + '/api/v1/repos/search?q=' + val + '&' + $param,
             dataType: "json",
             success: function (json) {
                 if (json.ok && json.data.length) {
@@ -238,21 +240,90 @@ var Gogs = {};
             }
         });
     }
+
+    // Copy util.
+    Gogs.bindCopy = function (selector) {
+        if ($(selector).hasClass('js-copy-bind')) {
+            return;
+        }
+        $(selector).zclip({
+            path: Gogs.AppSubUrl + "/js/ZeroClipboard.swf",
+            copy: function () {
+                var t = $(this).data("copy-val");
+                var to = $($(this).data("copy-from"));
+                var str = "";
+                if (t == "txt") {
+                    str = to.text();
+                }
+                if (t == 'val') {
+                    str = to.val();
+                }
+                if (t == 'html') {
+                    str = to.html();
+                }
+                return str;
+            },
+            afterCopy: function () {
+                var $this = $(this);
+                $this.tipsy("hide").attr('original-title', $this.data('after-title'));
+                setTimeout(function () {
+                    $this.tipsy("show");
+                }, 200);
+                setTimeout(function () {
+                    $this.tipsy('hide').attr('original-title', $this.data('original-title'));
+                }, 2000);
+            }
+        }).addClass("js-copy-bind");
+    }
 })(jQuery);
 
 function initCore() {
     Gogs.renderMarkdown();
     Gogs.renderCodeView();
+
+    // Switch list.
+    $('.js-tab-nav').click(function (e) {
+        if (!$(this).hasClass('js-tab-nav-show')) {
+            $(this).parent().find('.js-tab-nav-show').each(function () {
+                $(this).removeClass('js-tab-nav-show');
+                $($(this).data('tab-target')).hide();
+            });
+            $(this).addClass('js-tab-nav-show');
+            $($(this).data('tab-target')).show();
+        }
+        e.preventDefault();
+    });
+
+    // Popup.
+    $(document).on('click', '.popup-modal-dismiss', function (e) {
+        e.preventDefault();
+        $.magnificPopup.close();
+    });
 }
 
 function initUserSetting() {
     // Confirmation of change username in user profile page.
-    $('#user-profile-form').submit(function (e) {
-        var $username = $('#username');
-        if (($username.data('uname') != $username.val()) && !confirm('Username has been changed, do you want to continue?')) {
+    var $username = $('#username');
+    var $profile_form = $('#user-profile-form');
+    $('#change-username-btn').magnificPopup({
+        modal: true,
+        callbacks: {
+            open: function () {
+                if (($username.data('uname') == $username.val())) {
+                    $.magnificPopup.close();
+                    $profile_form.submit();
+                }
+            }
+        }
+    }).click(function () {
+        if (($username.data('uname') != $username.val())) {
             e.preventDefault();
             return true;
         }
+    });
+    $('#change-username-submit').click(function () {
+        $.magnificPopup.close();
+        $profile_form.submit();
     });
 
     // Show add SSH key panel.
@@ -261,11 +332,15 @@ function initUserSetting() {
     });
 
     // Confirmation of delete account.
-    $('#delete-account-button').click(function (e) {
-        if (!confirm('This account is going to be deleted, do you want to continue?')) {
-            e.preventDefault();
-            return true;
-        }
+    $('#delete-account-btn').magnificPopup({
+        modal: true
+    }).click(function (e) {
+        e.preventDefault();
+        return true;
+    });
+    $('#delete-account-submit').click(function () {
+        $.magnificPopup.close();
+        $('#delete-account-form').submit();
     });
 }
 
@@ -291,21 +366,93 @@ function initRepoCreate() {
     console.log('initRepoCreate');
 }
 
+function initRepo() {
+    // Clone link switch button.
+    $('#repo-clone-ssh').click(function () {
+        $(this).removeClass('btn-gray').addClass('btn-blue');
+        $('#repo-clone-https').removeClass('btn-blue').addClass('btn-gray');
+        $('#repo-clone-url').val($(this).data('link'));
+        $('.clone-url').text($(this).data('link'))
+    });
+    $('#repo-clone-https').click(function () {
+        $(this).removeClass('btn-gray').addClass('btn-blue');
+        $('#repo-clone-ssh').removeClass('btn-blue').addClass('btn-gray');
+        $('#repo-clone-url').val($(this).data('link'));
+        $('.clone-url').text($(this).data('link'))
+    });
+
+    // Copy URL.
+    var $clone_btn = $('#repo-clone-copy');
+    $clone_btn.hover(function () {
+        Gogs.bindCopy($(this));
+    })
+    $clone_btn.tipsy({
+        fade: true
+    });
+}
+
+// when user changes hook type, hide/show proper divs
+function initHookTypeChange() {
+    // web hook type change
+    $('select#hook-type').on("change", function () {
+        hookTypes = ['Gogs', 'Slack'];
+
+        var curHook = $(this).val();
+        hookTypes.forEach(function (hookType) {
+            if (curHook === hookType) {
+                $('div#' + hookType.toLowerCase()).toggleShow();
+            }
+            else {
+                $('div#' + hookType.toLowerCase()).toggleHide();
+            }
+        });
+    });
+}
+
 function initRepoSetting() {
     // Options.
     // Confirmation of changing repository name.
-    $('#repo-setting-form').submit(function (e) {
-        var $reponame = $('#repo_name');
-        if (($reponame.data('repo-name') != $reponame.val()) && !confirm('Repository name has been changed, do you want to continue?')) {
+    var $reponame = $('#repo_name');
+    var $setting_form = $('#repo-setting-form');
+    $('#change-reponame-btn').magnificPopup({
+        modal: true,
+        callbacks: {
+            open: function () {
+                if (($reponame.data('repo-name') == $reponame.val())) {
+                    $.magnificPopup.close();
+                    $setting_form.submit();
+                }
+            }
+        }
+    }).click(function () {
+        if (($reponame.data('repo-name') != $reponame.val())) {
             e.preventDefault();
             return true;
         }
     });
-    $('#transfer-button').click(function () {
-        $('#transfer-form').show();
+    $('#change-reponame-submit').click(function () {
+        $.magnificPopup.close();
+        $setting_form.submit();
     });
-    $('#delete-button').click(function () {
-        $('#delete-form').show();
+
+    initHookTypeChange();
+
+    // Transfer repository.
+    $('#transfer-repo-btn').magnificPopup({
+        modal: true
+    });
+    $('#transfer-repo-submit').click(function () {
+        $.magnificPopup.close();
+        $('#transfer-repo-form').submit();
+    });
+
+    // Delete repository.
+    $('#delete-repo-btn').magnificPopup({
+        modal: true
+    });
+    $('#delete-repo-submit').click(function () {
+        $.magnificPopup.close();
+        $('#delete-repo-form').submit();
     });
 
     // Collaboration.
@@ -333,20 +480,42 @@ function initRepoSetting() {
 function initOrgSetting() {
     // Options.
     // Confirmation of changing organization name.
-    $('#org-setting-form').submit(function (e) {
-        var $orgname = $('#orgname');
-        if (($orgname.data('orgname') != $orgname.val()) && !confirm('Organization name has been changed, do you want to continue?')) {
+    var $orgname = $('#orgname');
+    var $setting_form = $('#org-setting-form');
+    $('#change-orgname-btn').magnificPopup({
+        modal: true,
+        callbacks: {
+            open: function () {
+                if (($orgname.data('orgname') == $orgname.val())) {
+                    $.magnificPopup.close();
+                    $setting_form.submit();
+                }
+            }
+        }
+    }).click(function () {
+        if (($orgname.data('orgname') != $orgname.val())) {
             e.preventDefault();
             return true;
         }
     });
+    $('#change-orgname-submit').click(function () {
+        $.magnificPopup.close();
+        $setting_form.submit();
+    });
+
     // Confirmation of delete organization.
-    $('#delete-org-button').click(function (e) {
-        if (!confirm('This organization is going to be deleted, do you want to continue?')) {
-            e.preventDefault();
-            return true;
-        }
+    $('#delete-org-btn').magnificPopup({
+        modal: true
+    }).click(function (e) {
+        e.preventDefault();
+        return true;
     });
+    $('#delete-org-submit').click(function () {
+        $.magnificPopup.close();
+        $('#delete-org-form').submit();
+    });
+
+    initHookTypeChange();
 }
 
 function initInvite() {
@@ -373,11 +542,14 @@ function initInvite() {
 
 function initOrgTeamCreate() {
     // Delete team.
-    $('#org-team-delete').click(function (e) {
-        if (!confirm('This team is going to be deleted, do you want to continue?')) {
-            e.preventDefault();
-            return true;
-        }
+    $('#org-team-delete').magnificPopup({
+        modal: true
+    }).click(function (e) {
+        e.preventDefault();
+        return true;
+    });
+    $('#delete-team-submit').click(function () {
+        $.magnificPopup.close();
         var $form = $('#team-create-form');
         $form.attr('action', $form.data('delete-url'));
     });
@@ -441,15 +613,20 @@ function initAdmin() {
             $('.auth-name').toggleShow();
         }
     });
+
     // Delete account.
-    $('#user-delete').click(function (e) {
-        if (!confirm('This account is going to be deleted, do you want to continue?')) {
-            e.preventDefault();
-            return true;
-        }
-        var $form = $('user-profile-form');
+    $('#delete-account-btn').magnificPopup({
+        modal: true
+    }).click(function (e) {
+        e.preventDefault();
+        return true;
+    });
+    $('#delete-account-submit').click(function () {
+        $.magnificPopup.close();
+        var $form = $('#user-profile-form');
         $form.attr('action', $form.data('delete-url'));
     });
+
     // Create authorization.
     $('#auth-type').on("change", function () {
         var v = $(this).val();
@@ -462,24 +639,76 @@ function initAdmin() {
             $('.ldap').toggleHide();
         }
     });
+
     // Delete authorization.
-    $('#auth-delete').click(function (e) {
-        if (!confirm('This authorization is going to be deleted, do you want to continue?')) {
-            e.preventDefault();
-            return true;
-        }
-        var $form = $('auth-setting-form');
+    $('#delete-auth-btn').magnificPopup({
+        modal: true
+    }).click(function (e) {
+        e.preventDefault();
+        return true;
+    });
+    $('#delete-auth-submit').click(function () {
+        $.magnificPopup.close();
+        var $form = $('#auth-setting-form');
         $form.attr('action', $form.data('delete-url'));
     });
 }
 
+function initInstall() {
+    // Change database type.
+    (function () {
+        var mysql_default = '127.0.0.1:3306';
+        var postgres_default = '127.0.0.1:5432';
+
+        $('#install-database').on("change", function () {
+            var val = $(this).val();
+            if (val != "SQLite3") {
+                $('.server-sql').show();
+                $('.sqlite-setting').addClass("hide");
+                if (val == "PostgreSQL") {
+                    $('.pgsql-setting').removeClass("hide");
+
+                    // Change the host value to the Postgres default, but only
+                    // if the user hasn't already changed it from the MySQL
+                    // default.
+                    if ($('#database-host').val() == mysql_default) {
+                        $('#database-host').val(postgres_default);
+                    }
+                } else if (val == 'MySQL') {
+                    $('.pgsql-setting').addClass("hide");
+                    if ($('#database-host').val() == postgres_default) {
+                        $('#database-host').val(mysql_default);
+                    }
+                } else {
+                    $('.pgsql-setting').addClass("hide");
+                }
+            } else {
+                $('.server-sql').hide();
+                $('.pgsql-setting').hide();
+                $('.sqlite-setting').removeClass("hide");
+            }
+        });
+    }());
+}
+
+function initProfile() {
+    // Avatar.
+    $('#profile-avatar').tipsy({
+        fade: true
+    });
+}
+
 $(document).ready(function () {
+    Gogs.AppSubUrl = $('head').data('suburl') || '';
     initCore();
     if ($('#user-profile-setting').length) {
         initUserSetting();
     }
     if ($('#repo-create-form').length || $('#repo-migrate-form').length) {
         initRepoCreate();
+    }
+    if ($('#repo-header').length) {
+        initRepo();
     }
     if ($('#repo-setting').length) {
         initRepoSetting();
@@ -502,8 +731,15 @@ $(document).ready(function () {
     if ($('#admin-setting').length) {
         initAdmin();
     }
+    if ($('#install-form').length) {
+        initInstall();
+    }
+    if ($('#user-profile-page').length) {
+        initProfile();
+    }
 
-    Tabs('#dashboard-sidebar-menu');
+    $('#dashboard-sidebar-menu').tabs();
+    $('#pull-issue-preview').markdown_preview(".issue-add-comment");
 
     homepage();
 
@@ -520,7 +756,7 @@ function homepage() {
     $('#promo-form').submit(function (e) {
         if ($('#username').val() === "") {
             e.preventDefault();
-            window.location.href = '/user/login';
+            window.location.href = Gogs.AppSubUrl + '/user/login';
             return true
         }
     });
@@ -528,9 +764,9 @@ function homepage() {
     $('#register-button').click(function (e) {
         if ($('#username').val() === "") {
             e.preventDefault();
-            window.location.href = '/user/sign_up';
+            window.location.href = Gogs.AppSubUrl + '/user/sign_up';
             return true
         }
-        $('#promo-form').attr('action', '/user/sign_up');
+        $('#promo-form').attr('action', Gogs.AppSubUrl + '/user/sign_up');
     });
 }

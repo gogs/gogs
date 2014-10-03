@@ -10,6 +10,7 @@ import (
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/middleware"
+	"github.com/gogits/gogs/modules/setting"
 )
 
 const (
@@ -82,5 +83,5 @@ func CreatePost(ctx *middleware.Context, form auth.CreateOrgForm) {
 	}
 	log.Trace("Organization created: %s", org.Name)
 
-	ctx.Redirect("/org/" + form.OrgName + "/dashboard")
+	ctx.Redirect(setting.AppSubUrl + "/org/" + form.OrgName + "/dashboard")
 }

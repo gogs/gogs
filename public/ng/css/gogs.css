@@ -7,9 +7,6 @@ body {
   width: 16px;
   text-align: center;
 }
-.fa {
-  font-size: 14px;
-}
 .container {
   max-width: 1170px;
   padding: 0 1.5em;
@@ -18,6 +15,11 @@ body {
 img.avatar-16 {
   width: 16px;
   height: 16px;
+  vertical-align: middle;
+}
+img.avatar-20 {
+  width: 20px;
+  height: 20px;
   vertical-align: middle;
 }
 img.avatar-24 {
@@ -44,6 +46,9 @@ img.avatar-100 {
   width: 100px;
   height: 100px;
   vertical-align: middle;
+}
+.drop-down .panel-header {
+  font-size: 14px;
 }
 #wrapper {
   padding: 0;
@@ -294,6 +299,12 @@ img.avatar-100 {
 .markdown li:first-child {
   margin-top: 0;
 }
+.markdown code {
+  padding: 0.2em 0.5em;
+  margin: 0;
+  background-color: rgba(0, 0, 0, 0.04);
+  border-radius: 3px;
+}
 .markdown > pre {
   font-size: 14px;
   line-height: 1.6;
@@ -304,9 +315,22 @@ img.avatar-100 {
   padding: 10px;
   background-color: #f8f8f8;
 }
+.markdown > pre code {
+  padding: 0;
+  background-color: inherit;
+}
 .markdown img {
   padding: 10px 0;
   max-width: 100%;
+}
+.markdown blockquote {
+  border-left: 4px solid #ddd;
+  margin-bottom: 16px;
+}
+.markdown blockquote p {
+  font-size: 14px;
+  padding: 5px 15px;
+  color: #777;
 }
 .markdown a {
   color: #428BCA;
@@ -374,11 +398,6 @@ img.avatar-100 {
 .markdown dl dd {
   margin: 0 0 9px;
   padding: 0 9px;
-}
-.markdown blockquote,
-.markdown blockquote p {
-  font-size: 14px;
-  background-color: #f5f5f5;
 }
 .markdown > pre.linenums {
   padding: 0;
@@ -668,19 +687,34 @@ ol.linenums {
 #feature-wrapper .grid-1-2 {
   margin-bottom: 30px;
 }
+#install-form {
+  padding: 15px;
+}
+#install-form label {
+  width: 35%;
+}
+#install-form input {
+  width: 30%;
+}
+#install-form input[type="checkbox"],
+#install-form input[type="radio"] {
+  width: auto;
+}
 /*
-The dashboard page style
+    The dashboard page style
 */
 #dashboard-header {
   border-bottom: 1px solid #d6d6d6;
   height: 69px;
+  background-color: #FFF;
 }
 #dashboard-header > .menu-line > li {
-  padding: 12px 0;
+  padding: 12px 6px;
 }
 #dashboard-header > .menu-line > li.right > a {
   font-size: 1.2em;
   color: #444444;
+  padding: .4em .8em;
 }
 #dashboard-header > .menu-line > li.right > a:hover {
   background-color: transparent;
@@ -710,7 +744,7 @@ The dashboard page style
   border-top-left-radius: .3em;
   border-top-right-radius: .3em;
   width: 100%;
-  height: 35px;
+  height: 32px;
 }
 #dashboard-sidebar-menu > li {
   border: 1px solid #d6d6d6;
@@ -719,8 +753,8 @@ The dashboard page style
   border-bottom: none;
 }
 #dashboard-sidebar-menu > li > a {
-  padding-top: .4em;
-  padding-bottom: .4em;
+  padding-top: .3em;
+  padding-bottom: .3em;
 }
 #dashboard-sidebar-menu > li.first {
   border-top-left-radius: .3em;
@@ -788,6 +822,11 @@ The dashboard page style
 #dashboard-my-repo .repo-contrib-header {
   border-top: 1px solid #d6d6d6;
 }
+#dashboard-my-mirror .panel-header,
+#dashboard-my-org .panel-header,
+#dashboard-my-repo .panel-header {
+  font-size: 14px;
+}
 #dashboard-my-repo .panel-header .octicon {
   margin-right: 6px;
   font-size: 12px;
@@ -801,7 +840,7 @@ The dashboard page style
 }
 #dashboard-new-repo {
   width: 50px;
-  height: 35px;
+  height: 33px;
   padding-top: 6px;
   margin-right: 1px;
   border-top-left-radius: .3em;
@@ -811,7 +850,7 @@ The dashboard page style
   font-size: 2em;
 }
 #dashboard-new-repo-menu {
-  top: 35px;
+  top: 33px;
   width: 180px;
   background-color: #FFF;
   left: -132px;
@@ -860,6 +899,9 @@ The dashboard page style
 }
 #dashboard-switch-menu > li.checked > a .octicon {
   opacity: 1;
+}
+#dashboard-news {
+  padding-bottom: 60px;
 }
 #dashboard-news .news {
   margin-right: 2.4em;
@@ -966,9 +1008,9 @@ The register and sign-in page style
   background-color: transparent;
 }
 #repo-header-meta a > .btn {
-  font-size: 1.05em;
-  margin-left: 16px;
   line-height: 16px;
+  margin-left: 16px;
+  font-size: 13px;
 }
 #repo-header-meta a > .btn i {
   margin-right: 6px;
@@ -998,19 +1040,28 @@ The register and sign-in page style
   line-height: 24px;
   width: 440px;
   top: 50px;
-  left: -354px;
+  left: -370px;
   padding: 20px;
   box-sizing: border-box;
+  z-index: 1;
 }
 #repo-header-download-drop .btn > i {
   margin-right: 6px;
 }
+#repo-header-download-drop button,
+#repo-header-download-drop input {
+  font-size: 11px;
+}
 #repo-content {
   padding: 18px 0;
 }
+.repo-wide-wrapper {
+  padding: 18px 0;
+  position: relative;
+}
 #repo-clone-url {
   border-right: none;
-  width: 196px;
+  width: 190px;
   border-left: none;
 }
 #repo-clone-help {
@@ -1032,6 +1083,9 @@ The register and sign-in page style
 #repo-desc {
   font-size: 1.2em;
 }
+#repo-desc .no-description {
+  color: #999;
+}
 #repo-sidebar-nav .label {
   font-size: 12px;
   line-height: 1.4em;
@@ -1039,6 +1093,37 @@ The register and sign-in page style
 }
 #repo-sidebar-nav i {
   margin-right: 6px;
+}
+#repo-sidebar-mini {
+  margin-top: 6px;
+  width: 60px;
+}
+#repo-sidebar-mini li {
+  margin-bottom: 4px;
+}
+#repo-sidebar-mini li > a {
+  position: relative;
+  padding-left: 12px;
+  width: 24px;
+  text-align: center;
+}
+#repo-sidebar-mini li > a > i.octicon {
+  font-size: 21px;
+}
+#repo-sidebar-mini .num {
+  position: absolute;
+  font-size: 12px;
+  top: 0;
+  left: 36px;
+  padding: 0 2px;
+  min-width: 16px;
+  height: 16px;
+  text-align: center;
+  line-height: 16px;
+  border-radius: 4px;
+  opacity: 0.7;
+  -webkit-transform: scale(0.9);
+  font-weight: bold;
 }
 #repo-file-nav {
   padding: .6em 0 1em 0;
@@ -1085,6 +1170,10 @@ The register and sign-in page style
   background-color: #EEE;
   font-weight: bold;
 }
+#repo-branch-tag .switching-list {
+  max-height: 300px;
+  overflow-y: auto;
+}
 #repo-branch-list li i,
 #repo-tag-list li i {
   margin-right: 12px;
@@ -1093,9 +1182,6 @@ The register and sign-in page style
 #repo-branch-list li.checked i,
 #repo-tag-list li.checked i {
   opacity: 1;
-}
-#repo-tag-list {
-  display: none;
 }
 #repo-bread .bread {
   padding-right: 0;
@@ -1167,7 +1253,8 @@ The register and sign-in page style
   font-weight: normal;
   color: #888;
 }
-#repo-readme {
+#repo-readme,
+#repo-read-file {
   margin-bottom: 80px;
 }
 #repo-bare-start {
@@ -1302,6 +1389,7 @@ The register and sign-in page style
   padding: 0;
 }
 .code-view .lines-num {
+  vertical-align: top;
   text-align: right;
   color: #999;
   background: #f5f5f5;
@@ -1373,6 +1461,31 @@ The register and sign-in page style
   width: 100%;
   list-style: none;
 }
+#commits-list {
+  padding-top: 20px;
+}
+#commits-list h4 {
+  line-height: 30px;
+  margin-bottom: 0;
+}
+.commit-list th {
+  background-color: #FFF;
+  line-height: 28px !important;
+}
+.commit-list .date {
+  width: 120px;
+}
+.commit-list .author {
+  padding-left: 20px;
+  min-width: 180px;
+}
+.commit-list .author img {
+  margin-top: -4px;
+}
+.commit-list .sha a {
+  font-family: Consolas, Menlo, Monaco, "Lucida Console", monospace;
+  font-size: 14px;
+}
 #admin-wrapper,
 #setting-wrapper {
   padding-bottom: 100px;
@@ -1403,14 +1516,16 @@ The register and sign-in page style
 #auth-setting-form,
 #org-setting-form,
 #repo-setting-form,
-#user-profile-form {
+#user-profile-form,
+.repo-setting-form {
   background-color: #FFF;
   padding: 30px 0;
 }
 #auth-setting-form textarea,
 #org-setting-form textarea,
 #repo-setting-form textarea,
-#user-profile-form textarea {
+#user-profile-form textarea,
+.repo-setting-form textarea {
   margin-left: 4px;
   height: 100px;
 }
@@ -1418,23 +1533,37 @@ The register and sign-in page style
 #org-setting-form label,
 #repo-setting-form label,
 #user-profile-form label,
+.repo-setting-form label,
 #auth-setting-form .form-label,
 #org-setting-form .form-label,
 #repo-setting-form .form-label,
-#user-profile-form .form-label {
+#user-profile-form .form-label,
+.repo-setting-form .form-label {
   width: 240px;
 }
 #auth-setting-form .ipt,
 #org-setting-form .ipt,
 #repo-setting-form .ipt,
-#user-profile-form .ipt {
+#user-profile-form .ipt,
+.repo-setting-form .ipt {
   width: 360px;
 }
 #auth-setting-form .field,
 #org-setting-form .field,
 #repo-setting-form .field,
-#user-profile-form .field {
+#user-profile-form .field,
+.repo-setting-form .field {
   margin-bottom: 24px;
+}
+#hook-type {
+  padding: 10px 0 0 0;
+  background-color: #fff;
+}
+#hook-type .field {
+  margin-bottom: 24px;
+}
+#hook-type label {
+  width: 240px;
 }
 #repo-hooks-panel,
 #repo-hooks-history-panel,
@@ -1520,39 +1649,18 @@ The register and sign-in page style
 #user-ssh-add-form .field {
   margin-bottom: 24px;
 }
-.repo-issue-wrapper {
-  padding: 18px 0;
-}
 .pr-main {
-  padding-right: 40px;
-  box-sizing: border-box;
+  margin-right: 100px;
 }
 .pr-sidebar {
   border-left: 1px solid #DDD;
   box-sizing: border-box;
+  position: absolute;
+  right: 0;
+  top: 12px;
 }
-#pr-sidebar-nav {
-  margin-top: 6px;
-}
-#pr-sidebar-nav li {
-  margin-bottom: 4px;
-}
-#pr-sidebar-nav li > a {
-  border: 1px solid transparent;
-  border-left: none;
-}
-#pr-sidebar-nav li > a:hover {
-  background-color: #FFF;
-  border-color: #DDD;
-}
-#pr-sidebar-nav .label {
-  font-size: 12px;
-  line-height: 1.4em;
-  margin-top: 1px;
-}
-#pr-sidebar-nav li.current a {
-  background-color: #FFF;
-  border-color: #DDD;
+.pr-title {
+  padding: 4px 0;
 }
 .pr-title .pr-num {
   font-weight: normal;
@@ -1560,6 +1668,7 @@ The register and sign-in page style
 }
 .pr-meta {
   color: #888;
+  padding: 4px 0 8px 0;
 }
 .pr-meta .pr-author {
   margin: 0 8px;
@@ -1633,7 +1742,7 @@ The register and sign-in page style
 .issue-line,
 .issue-merge,
 .issue-add-comment {
-  margin-bottom: 16px;
+  margin-bottom: 24px;
 }
 .issue-comment .author-avatar img {
   margin-right: 12px;
@@ -1737,6 +1846,7 @@ textarea#issue-add-content {
   width: 100%;
   box-sizing: border-box;
   height: 120px;
+  resize: vertical;
 }
 .org-header-alert .alert {
   margin-top: 10px;
@@ -1771,7 +1881,10 @@ textarea#issue-add-content {
   color: #d9453d;
 }
 #org-header > div > .menu-line > li.right > a .octicon {
-  margin-right: 6px;
+  margin-right: 4px;
+}
+#org-header > div > .menu-line > li.right > a .label {
+  margin-left: 4px;
 }
 #org-header > div > .menu-line > li.right .current {
   border-bottom: 2px solid #D26911;
@@ -1969,4 +2082,57 @@ textarea#issue-add-content {
 }
 .admin-dl-horizontal > dd {
   margin-left: 240px;
+}
+.profile-avatar {
+  width: 200px;
+  height: 200px;
+  border-radius: 6px;
+}
+#profile-name {
+  padding: 10px 0;
+}
+#profile-fullname {
+  font-size: 1.6em;
+}
+#profile-username {
+  font-size: 1.6em;
+  font-weight: bold;
+}
+.profile-info {
+  padding: 0 50px;
+  font-size: 14px;
+}
+.profile-info ul {
+  padding-bottom: 10px;
+}
+.profile-info ul .list-group-item {
+  background-color: transparent;
+  padding-top: 5px;
+  color: #666;
+}
+.profile-info ul .profile-rel {
+  width: 31%;
+  text-align: center;
+  display: inline-block;
+}
+.profile-info ul .profile-rel strong {
+  display: block;
+  font-size: 28px;
+  font-weight: bold;
+  line-height: 1;
+}
+.profile-info ul .profile-rel p {
+  font-size: 12px;
+}
+#profile-header li a {
+  font-size: 1.2em;
+  color: #444444;
+  padding: .4em .8em;
+}
+#profile-header li a:hover {
+  background-color: transparent;
+  color: #d9453d;
+}
+#profile-header li .current {
+  border-bottom: 2px solid #D26911;
 }

@@ -14,6 +14,7 @@ import (
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/middleware"
+	"github.com/gogits/gogs/modules/setting"
 )
 
 const (
@@ -55,7 +56,7 @@ func SettingsPost(ctx *middleware.Context, form auth.UpdateProfileForm) {
 		} else if err = models.ChangeUserName(ctx.User, form.UserName); err != nil {
 			if err == models.ErrUserNameIllegal {
 				ctx.Flash.Error(ctx.Tr("form.illegal_username"))
-				ctx.Redirect("/user/settings")
+				ctx.Redirect(setting.AppSubUrl + "/user/settings")
 				return
 			} else {
 				ctx.Handle(500, "ChangeUserName", err)
@@ -78,7 +79,7 @@ func SettingsPost(ctx *middleware.Context, form auth.UpdateProfileForm) {
 	}
 	log.Trace("User setting updated: %s", ctx.User.Name)
 	ctx.Flash.Success(ctx.Tr("settings.update_profile_success"))
-	ctx.Redirect("/user/settings")
+	ctx.Redirect(setting.AppSubUrl + "/user/settings")
 }
 
 func SettingsPassword(ctx *middleware.Context) {
@@ -119,7 +120,7 @@ func SettingsPasswordPost(ctx *middleware.Context, form auth.ChangePasswordForm)
 		ctx.Flash.Success(ctx.Tr("settings.change_password_success"))
 	}
 
-	ctx.Redirect("/user/settings/password")
+	ctx.Redirect(setting.AppSubUrl + "/user/settings/password")
 }
 
 func SettingsSSHKeys(ctx *middleware.Context) {
@@ -160,7 +161,7 @@ func SettingsSSHKeysPost(ctx *middleware.Context, form auth.AddSSHKeyForm) {
 			ctx.Handle(500, "DeletePublicKey", err)
 		} else {
 			log.Trace("SSH key deleted: %s", ctx.User.Name)
-			ctx.Redirect("/user/settings/ssh")
+			ctx.Redirect(setting.AppSubUrl + "/user/settings/ssh")
 		}
 		return
 	}
@@ -177,7 +178,7 @@ func SettingsSSHKeysPost(ctx *middleware.Context, form auth.AddSSHKeyForm) {
 
 		if ok, err := models.CheckPublicKeyString(cleanContent); !ok {
 			ctx.Flash.Error(ctx.Tr("form.invalid_ssh_key", err.Error()))
-			ctx.Redirect("/user/settings/ssh")
+			ctx.Redirect(setting.AppSubUrl + "/user/settings/ssh")
 			return
 		}
 
@@ -196,7 +197,7 @@ func SettingsSSHKeysPost(ctx *middleware.Context, form auth.AddSSHKeyForm) {
 		} else {
 			log.Trace("SSH key added: %s", ctx.User.Name)
 			ctx.Flash.Success(ctx.Tr("settings.add_key_success"))
-			ctx.Redirect("/user/settings/ssh")
+			ctx.Redirect(setting.AppSubUrl + "/user/settings/ssh")
 			return
 		}
 	}
@@ -217,7 +218,7 @@ func SettingsSocial(ctx *middleware.Context) {
 			return
 		}
 		ctx.Flash.Success(ctx.Tr("settings.unbind_success"))
-		ctx.Redirect("/user/settings/social")
+		ctx.Redirect(setting.AppSubUrl + "/user/settings/social")
 		return
 	}
 
@@ -248,13 +249,13 @@ func SettingsDelete(ctx *middleware.Context) {
 			switch err {
 			case models.ErrUserOwnRepos:
 				ctx.Flash.Error(ctx.Tr("form.still_own_repo"))
-				ctx.Redirect("/user/settings/delete")
+				ctx.Redirect(setting.AppSubUrl + "/user/settings/delete")
 			default:
 				ctx.Handle(500, "DeleteUser", err)
 			}
 		} else {
 			log.Trace("Account deleted: %s", ctx.User.Name)
-			ctx.Redirect("/")
+			ctx.Redirect(setting.AppSubUrl + "/")
 		}
 		return
 	}

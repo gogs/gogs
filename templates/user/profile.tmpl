@@ -1,81 +1,91 @@
-{{template "base/head" .}}
-{{template "base/navbar" .}}
-<div id="body" class="container" data-page="user">
-    <div id="user-profile" class="col-md-3">
-        <div class="profile-avatar text-center">
-            <a href="http://gravatar.com/emails/" class="center-block" data-toggle="tooltip" data-placement="bottom" title="Change your avatar at gravatar.com">
-                <img id="user-avatar" src="{{.Owner.AvatarLink}}?s=200" alt="user-avatar" title="{{.Owner.Name}}"/>
-            </a>
-            {{if .Owner.FullName}}<span id="user-full-name" class="center-block">{{.Owner.FullName}}</span>{{end}}
-            <span id="user-name" class="center-block">{{.Owner.Name}}</span>
+{{template "ng/base/head" .}}
+{{template "ng/base/header" .}}
+<div class="main-wrapper">
+    <div id="user-profile-page" class="container clear">
+        <div class="grid-1-4 left">
+            <div class="text-center">
+                <a href="http://gravatar.com/emails/" id="profile-avatar" original-title="{{.i18n.Tr "user.change_avatar"}}">
+                    <img class="profile-avatar" src="{{.Owner.AvatarLink}}?s=200"title="{{.Owner.Name}}"/>
+                </a>
+                <div id="profile-name">
+                    {{if .Owner.FullName}}<span id="profile-fullname" class="center-block">{{.Owner.FullName}}</span><br>{{end}}
+                    <span class="center-block" id="profile-username">{{.Owner.Name}}</span>
+                </div>
+            </div>
+            <div class="profile-info">
+                <hr> 
+                <ul class="list-no-style">
+                    {{if .Owner.Location}}
+                    <li class="list-group-item"><i class="octicon octicon-location"></i>&nbsp;&nbsp;{{.Owner.Location}}</li>
+                    {{end}}
+                    {{if .Owner.Email}}
+                    <li class="list-group-item"><i class="octicon octicon-mail"></i>&nbsp;&nbsp;<a href="mailto:{{.Owner.Email}}" rel="nofollow">{{.Owner.Email}}</a></li>
+                    {{end}}
+                    {{if .Owner.Website}}
+                    <li class="list-group-item"><i class="octicon octicon-link"></i>&nbsp;&nbsp;<a target="_blank" href="{{.Owner.Website}}">{{.Owner.Website}}</a></li>
+                    {{end}}
+                    <li class="list-group-item"><i class="octicon octicon-clock"></i>&nbsp;&nbsp;{{.i18n.Tr "user.join_on"}} {{DateFormat .Owner.Created "M d, Y"}}</li>
+                </ul>
+                <hr>
+                <ul class="list-no-style">
+                    <li class="list-group-item profile-rel">
+                        <a class="text-black" href="">
+                            <strong>{{.Owner.NumFollowers}}</strong>
+                            <p>{{.i18n.Tr "user.followers"}}</p>
+                        </a>
+                    </li>
+                    <li class="list-group-item profile-rel">
+                        <a class="text-black" href="">
+                            <strong>{{.Owner.NumStars}}</strong>
+                            <p>{{.i18n.Tr "user.starred"}}</p>
+                        </a>
+                    </li>
+                    <li class="list-group-item profile-rel">
+                        <a class="text-black" href="">
+                            <strong>{{.Owner.NumFollowings}}</strong>
+                            <p>{{.i18n.Tr "user.following"}}</p>
+                        </a>
+                    </li>
+                </ul>
+                <hr>
+            </div>
         </div>
-
-        <div class="profile-info">
-            <ul class="list-group">
-                {{if .Owner.Location}}
-                <li class="list-group-item"><i class="fa fa-thumb-tack"></i>{{.Owner.Location}}</li>
-                {{end}}
-                {{if .Owner.Email}}
-                <li class="list-group-item"><i class="fa fa-envelope"></i><a href="mailto:{{.Owner.Email}}" rel="nofollow">{{.Owner.Email}}</a></li>
-                {{end}}
-                {{if .Owner.Website}}
-                <li class="list-group-item"><i class="fa fa-link"></i><a target="_blank" href="{{.Owner.Website}}">{{.Owner.Website}}</a></li>
-                {{end}}
-                <li class="list-group-item"><i class="fa fa-clock-o"></i>Joined on {{DateFormat .Owner.Created "M d, Y"}}</li>
-                <!-- <hr> -->
-                <!-- <li class="list-group-item" style="padding-top: 5px;">
-                    <div class="profile-rel">
-                        <div class="col-md-6 followers">
-                            <strong>123</strong>
-                            <p>followers</p>
-                        </div>
-                        <div class="col-md-6 following">
-                            <strong>123</strong>
-                            <p>following</p>
-                        </div>
-                    </div>
+        <div class="grid-3-4 left">
+            <ul class="menu menu-line" id="profile-header">
+                <li>
+                    <a {{if not .TabName}}class="current"{{end}} href="{{.Owner.HomeLink}}"><i class="octicon octicon-repo"></i> {{.i18n.Tr "user.repositories"}}</a>
                 </li>
-                <hr> -->
+                <li>
+                    <a {{if eq .TabName "activity"}}class="current"{{end}} href="{{.Owner.HomeLink}}?tab=activity"><i class="octicon octicon-repo"></i> {{.i18n.Tr "user.activity"}}</a>
+                </li>
             </ul>
-        </div>
-    </div>
-    <div id="user-activity" class="col-md-9">
-        <ul class="nav nav-tabs" id="user-act-tabs">
-            <li{{if not .TabName}} class="active"{{end}}><a href="{{.Owner.HomeLink}}"><i class="fa fa-gittip"></i>Repositories</a></li>
-            <li{{if eq .TabName "activity"}} class="active"{{end}}><a href="{{.Owner.HomeLink}}?tab=activity"><i class="fa fa-rss"></i>Public Activity</a></li>
-        </ul>
-        <div class="tab-content">
-            {{if eq .TabName "activity"}}
-            <div class="tab-pane active">
-                <ul class="list-unstyled activity-list">
-                {{range .Feeds}}
-                    <li>
-                        <i class="icon fa fa-{{ActionIcon .GetOpType}}"></i>
-                        <div class="info"><span class="meta">{{TimeSince .Created $.Lang}}</span><br>{{ActionDesc . | str2html}}</div>
-                        <span class="clearfix"></span>
-                    </li>
+            <div class="tab-content">
+                {{if eq .TabName "activity"}}
+                <div class="tab-pane active" id="dashboard-news">
+                <br>
+                {{template "user/dashboard/feeds" .}}
+                </div>
                 {{else}}
-                    <li>No public activity yet.</li>
+                <div class="tab-pane active">
+                    <div id="org-repo-list">
+                        {{range .Repos}}
+                            {{if not .IsPrivate}}
+                            <div class="org-repo-item">
+                                <ul class="org-repo-status right">
+                                    <li><i class="octicon octicon-star"></i> {{.NumStars}}</li>
+                                    <li><i class="octicon octicon-git-branch"></i> {{.NumForks}}</li>
+                                </ul>
+                                <h2><a href="{{AppSubUrl}}/{{$.Owner.Name}}/{{.Name}}">{{.Name}}</a></h2>
+                                <p class="org-repo-description">{{.Description}}</p>
+                                <p class="org-repo-updated">{{$.i18n.Tr "org.repo_updated"}} {{TimeSince .Updated $.i18n.Lang}}</p>
+                            </div>
+                            {{end}}
+                        {{end}}
+                    </div>
+                </div>
                 {{end}}
-                </ul>
             </div>
-            {{else}}
-            <div class="tab-pane active">
-                <ul class="list-unstyled repo-list">
-                {{range .Repos}}
-                    <li>
-                        <div class="meta pull-right"><!-- <i class="fa fa-star"></i> {{.NumStars}} --> <i class="fa fa-code-fork"></i> {{.NumForks}}</div>
-                        <h4>
-                            <a href="/{{$.Owner.Name}}/{{.Name}}">{{.Name}}{{if .IsPrivate}} <span class="label label-default">Private</span>{{end}}</a>
-                        </h4>
-                        <p class="desc">{{.Description}}</p>
-                        <div class="info">Last updated {{TimeSince .Updated $.Lang}}</div>
-                    </li>
-                {{end}}
-                </ul>
-            </div>
-            {{end}}
         </div>
     </div>
 </div>
-{{template "base/footer" .}}
+{{template "ng/base/footer" .}}

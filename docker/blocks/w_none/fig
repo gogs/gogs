@@ -1,0 +1,4 @@
+gogs:
+  build: docker
+  ports:
+    - "3000:3000"

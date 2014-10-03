@@ -95,24 +95,35 @@ func NewRepoContext() {
 	if err != nil {
 		log.Fatal(4, "Fail to get Git version: %v", err)
 	}
-	if ver.Major < 2 && ver.Minor < 8 {
-		log.Fatal(4, "Gogs requires Git version greater or equal to 1.8.0")
+
+	reqVer, err := git.ParseVersion("1.7.1")
+	if err != nil {
+		log.Fatal(4, "Fail to parse required Git version: %v", err)
+	}
+	if ver.LessThan(reqVer) {
+		log.Fatal(4, "Gogs requires Git version greater or equal to 1.7.1")
 	}
 
-	// Check if server has basic git setting.
-	stdout, stderr, err := process.Exec("NewRepoContext(get setting)", "git", "config", "--get", "user.name")
-	if err != nil {
-		log.Fatal(4, "Fail to get git user.name: %s", stderr)
-	} else if err != nil || len(strings.TrimSpace(stdout)) == 0 {
-		if _, stderr, err = process.Exec("NewRepoContext(set email)", "git", "config", "--global", "user.email", "gogitservice@gmail.com"); err != nil {
-			log.Fatal(4, "Fail to set git user.email: %s", stderr)
-		} else if _, stderr, err = process.Exec("NewRepoContext(set name)", "git", "config", "--global", "user.name", "Gogs"); err != nil {
-			log.Fatal(4, "Fail to set git user.name: %s", stderr)
+	// Check if server has basic git setting and set if not.
+	if stdout, stderr, err := process.Exec("NewRepoContext(get setting)", "git", "config", "--get", "user.name"); err != nil || strings.TrimSpace(stdout) == "" {
+		// ExitError indicates user.name is not set
+		if _, ok := err.(*exec.ExitError); ok || strings.TrimSpace(stdout) == "" {
+			stndrdUserName := "Gogs"
+			stndrdUserEmail := "gogitservice@gmail.com"
+			if _, stderr, gerr := process.Exec("NewRepoContext(set name)", "git", "config", "--global", "user.name", stndrdUserName); gerr != nil {
+				log.Fatal(4, "Fail to set git user.name(%s): %s", gerr, stderr)
+			}
+			if _, stderr, gerr := process.Exec("NewRepoContext(set email)", "git", "config", "--global", "user.email", stndrdUserEmail); gerr != nil {
+				log.Fatal(4, "Fail to set git user.email(%s): %s", gerr, stderr)
+			}
+			log.Info("Git user.name and user.email set to %s <%s>", stndrdUserName, stndrdUserEmail)
+		} else {
+			log.Fatal(4, "Fail to get git user.name(%s): %s", err, stderr)
 		}
 	}
 
 	// Set git some configurations.
-	if _, stderr, err = process.Exec("NewRepoContext(git config --global core.quotepath false)",
+	if _, stderr, err := process.Exec("NewRepoContext(git config --global core.quotepath false)",
 		"git", "config", "--global", "core.quotepath", "false"); err != nil {
 		log.Fatal(4, "Fail to execute 'git config --global core.quotepath false': %s", stderr)
 	}
@@ -305,30 +316,17 @@ func MigrateRepository(u *User, name, desc string, private, mirror bool, url str
 		}
 		repo.IsMirror = true
 		return repo, UpdateRepository(repo)
+	} else {
+		os.RemoveAll(repoPath)
 	}
 
-	// Clone from local repository.
+	// this command could for both migrate and mirror
 	_, stderr, err := process.ExecTimeout(10*time.Minute,
-		fmt.Sprintf("MigrateRepository(git clone): %s", repoPath),
-		"git", "clone", repoPath, tmpDir)
+		fmt.Sprintf("MigrateRepository: %s", repoPath),
+		"git", "clone", "--mirror", "--bare", url, repoPath)
 	if err != nil {
 		return repo, errors.New("git clone: " + stderr)
 	}
-
-	// Add remote and fetch data.
-	if _, stderr, err = process.ExecDir(3*time.Minute,
-		tmpDir, fmt.Sprintf("MigrateRepository(git pull): %s", repoPath),
-		"git", "remote", "add", "-f", "--tags", "upstream", url); err != nil {
-		return repo, errors.New("git remote: " + stderr)
-	}
-
-	// Push data to local repository.
-	if _, stderr, err = process.ExecDir(3*time.Minute,
-		tmpDir, fmt.Sprintf("MigrateRepository(git push): %s", repoPath),
-		"git", "push", "--tags", "origin", "refs/remotes/upstream/*:refs/heads/*"); err != nil {
-		return repo, errors.New("git push: " + stderr)
-	}
-
 	return repo, UpdateRepository(repo)
 }
 
@@ -651,10 +649,18 @@ func RepoPath(userName, repoName string) string {
 }
 
 // TransferOwnership transfers all corresponding setting from old user to new one.
-func TransferOwnership(u *User, newOwner string, repo *Repository) (err error) {
+func TransferOwnership(u *User, newOwner string, repo *Repository) error {
 	newUser, err := GetUserByName(newOwner)
 	if err != nil {
 		return err
+	}
+
+	// Check if new owner has repository with same name.
+	has, err := IsRepositoryExist(newUser, repo.Name)
+	if err != nil {
+		return err
+	} else if has {
+		return ErrRepoAlreadyExist
 	}
 
 	sess := x.NewSession()
@@ -663,17 +669,34 @@ func TransferOwnership(u *User, newOwner string, repo *Repository) (err error) {
 		return err
 	}
 
-	if _, err = sess.Where("repo_name = ?", u.LowerName+"/"+repo.LowerName).
-		And("user_name = ?", u.LowerName).Update(&Access{UserName: newUser.LowerName}); err != nil {
-		sess.Rollback()
-		return err
+	owner := repo.Owner
+	oldRepoLink := path.Join(owner.LowerName, repo.LowerName)
+	// Delete all access first if current owner is an organization.
+	if owner.IsOrganization() {
+		if _, err = sess.Where("repo_name=?", oldRepoLink).Delete(new(Access)); err != nil {
+			sess.Rollback()
+			return fmt.Errorf("fail to delete current accesses: %v", err)
+		}
+	} else {
+		// Delete current owner access.
+		if _, err = sess.Where("repo_name=?", oldRepoLink).And("user_name=?", owner.LowerName).
+			Delete(new(Access)); err != nil {
+			sess.Rollback()
+			return fmt.Errorf("fail to delete access(owner): %v", err)
+		}
+		// In case new owner has access.
+		if _, err = sess.Where("repo_name=?", oldRepoLink).And("user_name=?", newUser.LowerName).
+			Delete(new(Access)); err != nil {
+			sess.Rollback()
+			return fmt.Errorf("fail to delete access(new user): %v", err)
+		}
 	}
 
-	if _, err = sess.Where("repo_name = ?", u.LowerName+"/"+repo.LowerName).Update(&Access{
-		RepoName: newUser.LowerName + "/" + repo.LowerName,
-	}); err != nil {
+	// Change accesses to new repository path.
+	if _, err = sess.Where("repo_name=?", oldRepoLink).
+		Update(&Access{RepoName: path.Join(newUser.LowerName, repo.LowerName)}); err != nil {
 		sess.Rollback()
-		return err
+		return fmt.Errorf("fail to update access(change reponame): %v", err)
 	}
 
 	// Update repository.
@@ -689,17 +712,17 @@ func TransferOwnership(u *User, newOwner string, repo *Repository) (err error) {
 		return err
 	}
 
-	if _, err = sess.Exec("UPDATE `user` SET num_repos = num_repos - 1 WHERE id = ?", u.Id); err != nil {
+	if _, err = sess.Exec("UPDATE `user` SET num_repos = num_repos - 1 WHERE id = ?", owner.Id); err != nil {
 		sess.Rollback()
 		return err
 	}
 
+	mode := WRITABLE
+	if repo.IsMirror {
+		mode = READABLE
+	}
 	// New owner is organization.
 	if newUser.IsOrganization() {
-		mode := WRITABLE
-		if repo.IsMirror {
-			mode = READABLE
-		}
 		access := &Access{
 			RepoName: path.Join(newUser.LowerName, repo.LowerName),
 			Mode:     mode,
@@ -724,12 +747,6 @@ func TransferOwnership(u *User, newOwner string, repo *Repository) (err error) {
 			}
 		}
 
-		if _, err = sess.Exec(
-			"UPDATE `user` SET num_repos = num_repos + 1 WHERE id = ?", u.Id); err != nil {
-			sess.Rollback()
-			return err
-		}
-
 		// Update owner team info and count.
 		t.RepoIds += "$" + com.ToStr(repo.Id) + "|"
 		t.NumRepos++
@@ -737,10 +754,20 @@ func TransferOwnership(u *User, newOwner string, repo *Repository) (err error) {
 			sess.Rollback()
 			return err
 		}
+	} else {
+		access := &Access{
+			RepoName: path.Join(newUser.LowerName, repo.LowerName),
+			UserName: newUser.LowerName,
+			Mode:     mode,
+		}
+		if _, err = sess.Insert(access); err != nil {
+			sess.Rollback()
+			return fmt.Errorf("fail to insert access: %v", err)
+		}
 	}
 
 	// Change repository directory name.
-	if err = os.Rename(RepoPath(u.Name, repo.Name), RepoPath(newUser.Name, repo.Name)); err != nil {
+	if err = os.Rename(RepoPath(owner.Name, repo.Name), RepoPath(newUser.Name, repo.Name)); err != nil {
 		sess.Rollback()
 		return err
 	}
@@ -749,14 +776,8 @@ func TransferOwnership(u *User, newOwner string, repo *Repository) (err error) {
 		return err
 	}
 
-	// Add watch of new owner to repository.
-	if !newUser.IsOrganization() {
-		if err = WatchRepo(newUser.Id, repo.Id, true); err != nil {
-			log.Error(4, "WatchRepo", err)
-		}
-	}
-	if err = WatchRepo(u.Id, repo.Id, false); err != nil {
-		log.Error(4, "WatchRepo2", err)
+	if err = WatchRepo(newUser.Id, repo.Id, true); err != nil {
+		log.Error(4, "WatchRepo", err)
 	}
 
 	if err = TransferRepoAction(u, newUser, repo); err != nil {
@@ -940,9 +961,9 @@ func GetRepositoryByRef(ref string) (*Repository, error) {
 }
 
 // GetRepositoryByName returns the repository by given name under user if exists.
-func GetRepositoryByName(userId int64, repoName string) (*Repository, error) {
+func GetRepositoryByName(uid int64, repoName string) (*Repository, error) {
 	repo := &Repository{
-		OwnerId:   userId,
+		OwnerId:   uid,
 		LowerName: strings.ToLower(repoName),
 	}
 	has, err := x.Get(repo)
@@ -979,8 +1000,8 @@ func GetRepositories(uid int64, private bool) ([]*Repository, error) {
 }
 
 // GetRecentUpdatedRepositories returns the list of repositories that are recently updated.
-func GetRecentUpdatedRepositories() (repos []*Repository, err error) {
-	err = x.Where("is_private=?", false).Limit(5).Desc("updated").Find(&repos)
+func GetRecentUpdatedRepositories(num int) (repos []*Repository, err error) {
+	err = x.Where("is_private=?", false).Limit(num).Desc("updated").Find(&repos)
 	return repos, err
 }
 
@@ -1081,6 +1102,13 @@ func SearchRepositoryByName(opt SearchOption) (repos []*Repository, err error) {
 	return repos, err
 }
 
+//  __      __         __         .__
+// /  \    /  \_____ _/  |_  ____ |  |__
+// \   \/\/   /\__  \\   __\/ ___\|  |  \
+//  \        /  / __ \|  | \  \___|   Y  \
+//   \__/\  /  (____  /__|  \___  >___|  /
+//        \/        \/          \/     \/
+
 // Watch is connection request for receiving repository notifycation.
 type Watch struct {
 	Id     int64
@@ -1151,6 +1179,13 @@ func NotifyWatchers(act *Action) error {
 	return nil
 }
 
+//   _________ __
+//  /   _____//  |______ _______
+//  \_____  \\   __\__  \\_  __ \
+//  /        \|  |  / __ \|  | \/
+// /_______  /|__| (____  /__|
+//         \/           \/
+
 type Star struct {
 	Id     int64
 	Uid    int64 `xorm:"UNIQUE(s)"`
@@ -1165,16 +1200,20 @@ func StarRepo(uid, repoId int64, star bool) (err error) {
 		}
 		if _, err = x.Insert(&Star{Uid: uid, RepoId: repoId}); err != nil {
 			return err
+		} else if _, err = x.Exec("UPDATE `repository` SET num_stars = num_stars + 1 WHERE id = ?", repoId); err != nil {
+			return err
 		}
-		_, err = x.Exec("UPDATE `repository` SET num_stars = num_stars + 1 WHERE id = ?", repoId)
+		_, err = x.Exec("UPDATE `user` SET num_stars = num_stars + 1 WHERE id = ?", uid)
 	} else {
 		if !IsStaring(uid, repoId) {
 			return nil
 		}
 		if _, err = x.Delete(&Star{0, uid, repoId}); err != nil {
 			return err
+		} else if _, err = x.Exec("UPDATE `repository` SET num_stars = num_stars - 1 WHERE id = ?", repoId); err != nil {
+			return err
 		}
-		_, err = x.Exec("UPDATE `repository` SET num_stars = num_stars - 1 WHERE id = ?", repoId)
+		_, err = x.Exec("UPDATE `user` SET num_stars = num_stars - 1 WHERE id = ?", uid)
 	}
 	return err
 }

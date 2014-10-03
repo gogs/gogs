@@ -1,7 +1,7 @@
 {{template "ng/base/head" .}}
 {{template "ng/base/header" .}}
 <div id="sign-wrapper">
-    <form class="form-align form panel sign-panel sign-form container panel-radius" id="sign-up-form" action="/user/activate" method="post">
+    <form class="form-align form panel sign-panel sign-form container panel-radius" id="sign-up-form" action="{{AppSubUrl}}/user/activate" method="post">
         {{.CsrfTokenHtml}}
         <div class="panel-header">
             <h2>{{.i18n.Tr "auth.active_your_account"}}</h2>

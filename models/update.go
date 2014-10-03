@@ -23,6 +23,10 @@ type UpdateTask struct {
 	NewCommitId string
 }
 
+const (
+	MAX_COMMITS int = 5
+)
+
 func AddUpdateTask(task *UpdateTask) error {
 	_, err := x.Insert(task)
 	return err
@@ -101,7 +105,7 @@ func Update(refName, oldCommitId, newCommitId, userName, repoUserName, repoName 
 		commit := &base.PushCommits{}
 
 		if err = CommitRepoAction(userId, ru.Id, userName, actEmail,
-			repos.Id, repoUserName, repoName, refName, commit); err != nil {
+			repos.Id, repoUserName, repoName, refName, commit, oldCommitId, newCommitId); err != nil {
 			log.GitLogger.Fatal(4, "runUpdate.models.CommitRepoAction: %s/%s:%v", repoUserName, repoName, err)
 		}
 		return err
@@ -132,7 +136,6 @@ func Update(refName, oldCommitId, newCommitId, userName, repoUserName, repoName 
 
 	// if commits push
 	commits := make([]*base.PushCommit, 0)
-	var maxCommits = 2
 	var actEmail string
 	for e := l.Front(); e != nil; e = e.Next() {
 		commit := e.Value.(*git.Commit)
@@ -145,14 +148,14 @@ func Update(refName, oldCommitId, newCommitId, userName, repoUserName, repoName 
 				commit.Message(),
 				commit.Author.Email,
 				commit.Author.Name})
-		if len(commits) >= maxCommits {
+		if len(commits) >= MAX_COMMITS {
 			break
 		}
 	}
 
 	//commits = append(commits, []string{lastCommit.Id().String(), lastCommit.Message()})
 	if err = CommitRepoAction(userId, ru.Id, userName, actEmail,
-		repos.Id, repoUserName, repoName, refName, &base.PushCommits{l.Len(), commits}); err != nil {
+		repos.Id, repoUserName, repoName, refName, &base.PushCommits{l.Len(), commits}, oldCommitId, newCommitId); err != nil {
 		return fmt.Errorf("runUpdate.models.CommitRepoAction: %s/%s:%v", repoUserName, repoName, err)
 	}
 	return nil

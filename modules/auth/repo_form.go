@@ -20,7 +20,7 @@ import (
 
 type CreateRepoForm struct {
 	Uid         int64  `form:"uid" binding:"Required"`
-	RepoName    string `form:"repo_name" binding:"Required;AlphaDash;MaxSize(100)"`
+	RepoName    string `form:"repo_name" binding:"Required;AlphaDashDot;MaxSize(100)"`
 	Private     bool   `form:"private"`
 	Description string `form:"desc" binding:"MaxSize(255)"`
 	Gitignore   string `form:"gitignore"`
@@ -33,11 +33,11 @@ func (f *CreateRepoForm) Validate(ctx *macaron.Context, errs *binding.Errors, l 
 }
 
 type MigrateRepoForm struct {
-	HttpsUrl     string `form:"url" binding:"Url"`
+	HttpsUrl     string `form:"url" binding:"Required;Url"`
 	AuthUserName string `form:"auth_username"`
 	AuthPasswd   string `form:"auth_password"`
 	Uid          int64  `form:"uid" binding:"Required"`
-	RepoName     string `form:"repo_name" binding:"Required;AlphaDash;MaxSize(100)"`
+	RepoName     string `form:"repo_name" binding:"Required;AlphaDashDot;MaxSize(100)"`
 	Mirror       bool   `form:"mirror"`
 	Private      bool   `form:"private"`
 	Description  string `form:"desc" binding:"MaxSize(255)"`
@@ -48,7 +48,7 @@ func (f *MigrateRepoForm) Validate(ctx *macaron.Context, errs *binding.Errors, l
 }
 
 type RepoSettingForm struct {
-	RepoName    string `form:"repo_name" binding:"Required;AlphaDash;MaxSize(100)"`
+	RepoName    string `form:"repo_name" binding:"Required;AlphaDashDot;MaxSize(100)"`
 	Description string `form:"desc" binding:"MaxSize(255)"`
 	Website     string `form:"site" binding:"Url;MaxSize(100)"`
 	Branch      string `form:"branch"`
@@ -69,14 +69,28 @@ func (f *RepoSettingForm) Validate(ctx *macaron.Context, errs *binding.Errors, l
 //        \/       \/    \/     \/     \/            \/
 
 type NewWebhookForm struct {
-	PayloadUrl  string `form:"payload_url" binding:"Required;Url"`
-	ContentType string `form:"content_type" binding:"Required"`
-	Secret      string `form:"secret"`
-	PushOnly    bool   `form:"push_only"`
-	Active      bool   `form:"active"`
+	HookTaskType string `form:"hook_type" binding:"Required"`
+	PayloadUrl   string `form:"payload_url" binding:"Required;Url"`
+	ContentType  string `form:"content_type" binding:"Required"`
+	Secret       string `form:"secret"`
+	PushOnly     bool   `form:"push_only"`
+	Active       bool   `form:"active"`
 }
 
 func (f *NewWebhookForm) Validate(ctx *macaron.Context, errs *binding.Errors, l i18n.Locale) {
+	validate(errs, ctx.Data, f, l)
+}
+
+type NewSlackHookForm struct {
+	HookTaskType string `form:"hook_type" binding:"Required"`
+	Domain       string `form:"domain" binding:"Required`
+	Token        string `form:"token" binding:"Required"`
+	Channel      string `form:"channel" binding:"Required"`
+	PushOnly     bool   `form:"push_only"`
+	Active       bool   `form:"active"`
+}
+
+func (f *NewSlackHookForm) Validate(ctx *macaron.Context, errs *binding.Errors, l i18n.Locale) {
 	validate(errs, ctx.Data, f, l)
 }
 

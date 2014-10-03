@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	"github.com/gogits/gfm"
+	"github.com/gogits/gogs/modules/setting"
 )
 
 func isletter(c byte) bool {
@@ -112,7 +113,7 @@ func RenderSpecialLink(rawBytes []byte, urlPrefix string) []byte {
 			ms := MentionPattern.FindAll(line, -1)
 			for _, m := range ms {
 				line = bytes.Replace(line, m,
-					[]byte(fmt.Sprintf(`<a href="/user/%s">%s</a>`, m[1:], m)), -1)
+					[]byte(fmt.Sprintf(`<a href="%s/user/%s">%s</a>`, setting.AppSubUrl, m[1:], m)), -1)
 			}
 		}
 

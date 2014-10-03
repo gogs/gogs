@@ -5,16 +5,19 @@
 package org
 
 import (
+	"github.com/Unknwon/com"
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/middleware"
+	"github.com/gogits/gogs/modules/setting"
 )
 
 const (
 	SETTINGS_OPTIONS base.TplName = "org/settings/options"
 	SETTINGS_DELETE  base.TplName = "org/settings/delete"
+	SETTINGS_HOOKS   base.TplName = "org/settings/hooks"
 )
 
 func Settings(ctx *middleware.Context) {
@@ -46,7 +49,7 @@ func SettingsPost(ctx *middleware.Context, form auth.UpdateOrgSettingForm) {
 		} else if err = models.ChangeUserName(org, form.OrgUserName); err != nil {
 			if err == models.ErrUserNameIllegal {
 				ctx.Flash.Error(ctx.Tr("form.illegal_username"))
-				ctx.Redirect("/org/" + org.LowerName + "/settings")
+				ctx.Redirect(setting.AppSubUrl + "/org/" + org.LowerName + "/settings")
 				return
 			} else {
 				ctx.Handle(500, "ChangeUserName", err)
@@ -70,7 +73,7 @@ func SettingsPost(ctx *middleware.Context, form auth.UpdateOrgSettingForm) {
 	}
 	log.Trace("Organization setting updated: %s", org.Name)
 	ctx.Flash.Success(ctx.Tr("org.settings.update_setting_success"))
-	ctx.Redirect("/org/" + org.Name + "/settings")
+	ctx.Redirect(setting.AppSubUrl + "/org/" + org.Name + "/settings")
 }
 
 func SettingsDelete(ctx *middleware.Context) {
@@ -84,16 +87,42 @@ func SettingsDelete(ctx *middleware.Context) {
 			switch err {
 			case models.ErrUserOwnRepos:
 				ctx.Flash.Error(ctx.Tr("form.org_still_own_repo"))
-				ctx.Redirect("/org/" + org.LowerName + "/settings/delete")
+				ctx.Redirect(setting.AppSubUrl + "/org/" + org.LowerName + "/settings/delete")
 			default:
 				ctx.Handle(500, "DeleteOrganization", err)
 			}
 		} else {
 			log.Trace("Organization deleted: %s", ctx.User.Name)
-			ctx.Redirect("/")
+			ctx.Redirect(setting.AppSubUrl + "/")
 		}
 		return
 	}
 
 	ctx.HTML(200, SETTINGS_DELETE)
+}
+
+func SettingsHooks(ctx *middleware.Context) {
+	ctx.Data["Title"] = ctx.Tr("org.settings")
+	ctx.Data["PageIsSettingsHooks"] = true
+
+	// Delete web hook.
+	remove := com.StrTo(ctx.Query("remove")).MustInt64()
+	if remove > 0 {
+		if err := models.DeleteWebhook(remove); err != nil {
+			ctx.Handle(500, "DeleteWebhook", err)
+			return
+		}
+		ctx.Flash.Success(ctx.Tr("repo.settings.remove_hook_success"))
+		ctx.Redirect(ctx.Org.OrgLink + "/settings/hooks")
+		return
+	}
+
+	ws, err := models.GetWebhooksByOrgId(ctx.Org.Organization.Id)
+	if err != nil {
+		ctx.Handle(500, "GetWebhooksByOrgId", err)
+		return
+	}
+
+	ctx.Data["Webhooks"] = ws
+	ctx.HTML(200, SETTINGS_HOOKS)
 }
