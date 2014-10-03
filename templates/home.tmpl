@@ -3,12 +3,12 @@
 <div id="promo-wrapper">
     <div class="container clear">
         <div id="promo-logo" class="left">
-            <img src="/img/gogs-lg.png" alt="logo" />
+            <img src="{{AppSubUrl}}/img/gogs-lg.png" alt="logo" />
         </div>
         <div id="promo-content">
             <h1>Gogs</h1>
             <h2>{{.i18n.Tr "app_desc"}}</h2>
-            <form id="promo-form" action="/user/login" method="post">
+            <form id="promo-form" action="{{AppSubUrl}}/user/login" method="post">
                 {{.CsrfTokenHtml}}
                 <input class="ipt ipt-large" id="username" name="uname" type="text" placeholder="{{.i18n.Tr "home.uname_holder"}}"/>
                 <input class="ipt ipt-large" name="password" type="password" placeholder="{{.i18n.Tr "home.password_holder"}}"/>

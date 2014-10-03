@@ -11,33 +11,16 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/git"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/middleware"
-
-	"code.google.com/p/mahonia"
-	"github.com/saintfish/chardet"
 )
 
 const (
 	HOME base.TplName = "repo/home"
 )
-
-func toUtf8(content []byte) (error, string) {
-	detector := chardet.NewTextDetector()
-	result, err := detector.DetectBest(content)
-	if err != nil {
-		return err, ""
-	}
-
-	if result.Charset == "utf8" {
-		return nil, string(content)
-	}
-
-	decoder := mahonia.NewDecoder(result.Charset)
-	return nil, decoder.ConvertString(string(content))
-}
 
 func Home(ctx *middleware.Context) {
 	ctx.Data["Title"] = ctx.Repo.Repository.Name
@@ -117,7 +100,7 @@ func Home(ctx *middleware.Context) {
 				if readmeExist {
 					ctx.Data["FileContent"] = string(base.RenderMarkdown(buf, ""))
 				} else {
-					if err, content := toUtf8(buf); err != nil {
+					if err, content := base.ToUtf8WithErr(buf); err != nil {
 						if err != nil {
 							log.Error(4, "Convert content encoding: %s", err)
 						}
@@ -135,6 +118,7 @@ func Home(ctx *middleware.Context) {
 			ctx.Handle(404, "SubTree", err)
 			return
 		}
+
 		entries, err := tree.ListEntries(treename)
 		if err != nil {
 			ctx.Handle(500, "ListEntries", err)
@@ -145,13 +129,27 @@ func Home(ctx *middleware.Context) {
 		files := make([][]interface{}, 0, len(entries))
 
 		for _, te := range entries {
-			c, err := ctx.Repo.Commit.GetCommitOfRelPath(filepath.Join(treePath, te.Name()))
-			if err != nil {
-				ctx.Handle(404, "GetCommitOfRelPath", err)
-				return
-			}
+			if te.Type != git.COMMIT {
+				c, err := ctx.Repo.Commit.GetCommitOfRelPath(filepath.Join(treePath, te.Name()))
+				if err != nil {
+					ctx.Handle(500, "GetCommitOfRelPath", err)
+					return
+				}
+				files = append(files, []interface{}{te, c})
+			} else {
+				sm, err := ctx.Repo.Commit.GetSubModule(path.Join(treename, te.Name()))
+				if err != nil {
+					ctx.Handle(500, "GetSubModule", err)
+					return
+				}
 
-			files = append(files, []interface{}{te, c})
+				c, err := ctx.Repo.Commit.GetCommitOfRelPath(filepath.Join(treePath, te.Name()))
+				if err != nil {
+					ctx.Handle(500, "GetCommitOfRelPath", err)
+					return
+				}
+				files = append(files, []interface{}{te, git.NewSubModuleFile(c, sm.Url, te.Id.String())})
+			}
 		}
 
 		ctx.Data["Files"] = files
@@ -199,6 +197,18 @@ func Home(ctx *middleware.Context) {
 				}
 			}
 		}
+
+		lastCommit := ctx.Repo.Commit
+		if len(treePath) > 0 {
+			c, err := ctx.Repo.Commit.GetCommitOfRelPath(treePath)
+			if err != nil {
+				ctx.Handle(500, "GetCommitOfRelPath", err)
+				return
+			}
+			lastCommit = c
+		}
+		ctx.Data["LastCommit"] = lastCommit
+		ctx.Data["LastCommitUser"] = models.ValidateCommitWithEmail(lastCommit)
 	}
 
 	ctx.Data["Username"] = userName
@@ -219,7 +229,6 @@ func Home(ctx *middleware.Context) {
 		}
 	}
 
-	ctx.Data["LastCommit"] = ctx.Repo.Commit
 	ctx.Data["Paths"] = Paths
 	ctx.Data["TreeName"] = treename
 	ctx.Data["Treenames"] = treenames

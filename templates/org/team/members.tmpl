@@ -30,7 +30,7 @@
                 			{{if $.IsOrganizationOwner}}
 							<a class="btn btn-small btn-red btn-radius right" href="{{$.OrgLink}}/teams/{{$.Team.LowerName}}/action/remove?uid={{.Id}}">{{$.i18n.Tr "org.members.remove"}}</a>
 							{{end}}
-							<a class="member" href="/{{.Name}}">
+							<a class="member" href="{{AppSubUrl}}/{{.Name}}">
 							    <img alt="{{.Name}}" class="pull-left avatar" src="{{.AvatarLink}}">
 							    <strong>{{.FullName}}</strong> ({{.Name}})
 							</a>

@@ -7,6 +7,7 @@ package models
 import (
 	"encoding/json"
 	"errors"
+	"io/ioutil"
 	"time"
 
 	"github.com/gogits/gogs/modules/httplib"
@@ -33,15 +34,18 @@ type HookEvent struct {
 
 // Webhook represents a web hook object.
 type Webhook struct {
-	Id          int64
-	RepoId      int64
-	Url         string `xorm:"TEXT"`
-	ContentType HookContentType
-	Secret      string `xorm:"TEXT"`
-	Events      string `xorm:"TEXT"`
-	*HookEvent  `xorm:"-"`
-	IsSsl       bool
-	IsActive    bool
+	Id           int64
+	RepoId       int64
+	Url          string `xorm:"TEXT"`
+	ContentType  HookContentType
+	Secret       string `xorm:"TEXT"`
+	Events       string `xorm:"TEXT"`
+	*HookEvent   `xorm:"-"`
+	IsSsl        bool
+	IsActive     bool
+	HookTaskType HookTaskType
+	Meta         string `xorm:"TEXT"` // store hook-specific attributes
+	OrgId        int64
 }
 
 // GetEvent handles conversion from Events to HookEvent.
@@ -50,6 +54,14 @@ func (w *Webhook) GetEvent() {
 	if err := json.Unmarshal([]byte(w.Events), w.HookEvent); err != nil {
 		log.Error(4, "webhook.GetEvent(%d): %v", w.Id, err)
 	}
+}
+
+func (w *Webhook) GetSlackHook() *Slack {
+	s := &Slack{}
+	if err := json.Unmarshal([]byte(w.Meta), s); err != nil {
+		log.Error(4, "webhook.GetSlackHook(%d): %v", w.Id, err)
+	}
+	return s
 }
 
 // UpdateEvent handles conversion from HookEvent to Events.
@@ -87,7 +99,7 @@ func GetWebhookById(hookId int64) (*Webhook, error) {
 
 // GetActiveWebhooksByRepoId returns all active webhooks of repository.
 func GetActiveWebhooksByRepoId(repoId int64) (ws []*Webhook, err error) {
-	err = x.Find(&ws, &Webhook{RepoId: repoId, IsActive: true})
+	err = x.Where("repo_id=?", repoId).And("is_active=?", true).Find(&ws)
 	return ws, err
 }
 
@@ -109,6 +121,18 @@ func DeleteWebhook(hookId int64) error {
 	return err
 }
 
+// GetWebhooksByOrgId returns all webhooks for an organization.
+func GetWebhooksByOrgId(orgId int64) (ws []*Webhook, err error) {
+	err = x.Find(&ws, &Webhook{OrgId: orgId})
+	return ws, err
+}
+
+// GetActiveWebhooksByOrgId returns all active webhooks for an organization.
+func GetActiveWebhooksByOrgId(orgId int64) (ws []*Webhook, err error) {
+	err = x.Where("org_id=?", orgId).And("is_active=?", true).Find(&ws)
+	return ws, err
+}
+
 //   ___ ___                __   ___________              __
 //  /   |   \  ____   ____ |  | _\__    ___/____    _____|  | __
 // /    ~    \/  _ \ /  _ \|  |/ / |    |  \__  \  /  ___/  |/ /
@@ -119,8 +143,8 @@ func DeleteWebhook(hookId int64) error {
 type HookTaskType int
 
 const (
-	WEBHOOK HookTaskType = iota + 1
-	SERVICE
+	GOGS HookTaskType = iota + 1
+	SLACK
 )
 
 type HookEventType string
@@ -130,8 +154,9 @@ const (
 )
 
 type PayloadAuthor struct {
-	Name  string `json:"name"`
-	Email string `json:"email"`
+	Name     string `json:"name"`
+	Email    string `json:"email"`
+	UserName string `json:"username"`
 }
 
 type PayloadCommit struct {
@@ -148,17 +173,32 @@ type PayloadRepo struct {
 	Description string         `json:"description"`
 	Website     string         `json:"website"`
 	Watchers    int            `json:"watchers"`
-	Owner       *PayloadAuthor `json:"author"`
+	Owner       *PayloadAuthor `json:"owner"`
 	Private     bool           `json:"private"`
+}
+
+type BasePayload interface {
+	GetJSONPayload() ([]byte, error)
 }
 
 // Payload represents a payload information of hook.
 type Payload struct {
-	Secret  string           `json:"secret"`
-	Ref     string           `json:"ref"`
-	Commits []*PayloadCommit `json:"commits"`
-	Repo    *PayloadRepo     `json:"repository"`
-	Pusher  *PayloadAuthor   `json:"pusher"`
+	Secret     string           `json:"secret"`
+	Ref        string           `json:"ref"`
+	Commits    []*PayloadCommit `json:"commits"`
+	Repo       *PayloadRepo     `json:"repository"`
+	Pusher     *PayloadAuthor   `json:"pusher"`
+	Before     string           `json:"before"`
+	After      string           `json:"after"`
+	CompareUrl string           `json:"compare_url"`
+}
+
+func (p Payload) GetJSONPayload() ([]byte, error) {
+	data, err := json.Marshal(p)
+	if err != nil {
+		return []byte{}, err
+	}
+	return data, nil
 }
 
 // HookTask represents a hook task.
@@ -167,19 +207,19 @@ type HookTask struct {
 	Uuid           string
 	Type           HookTaskType
 	Url            string
-	*Payload       `xorm:"-"`
+	BasePayload    `xorm:"-"`
 	PayloadContent string `xorm:"TEXT"`
 	ContentType    HookContentType
 	EventType      HookEventType
 	IsSsl          bool
-	IsDeliveried   bool
+	IsDelivered    bool
 	IsSucceed      bool
 }
 
 // CreateHookTask creates a new hook task,
 // it handles conversion from Payload to PayloadContent.
 func CreateHookTask(t *HookTask) error {
-	data, err := json.Marshal(t.Payload)
+	data, err := t.BasePayload.GetJSONPayload()
 	if err != nil {
 		return err
 	}
@@ -191,14 +231,15 @@ func CreateHookTask(t *HookTask) error {
 
 // UpdateHookTask updates information of hook task.
 func UpdateHookTask(t *HookTask) error {
-	_, err := x.AllCols().Update(t)
+	_, err := x.Id(t.Id).AllCols().Update(t)
 	return err
 }
 
 // DeliverHooks checks and delivers undelivered hooks.
 func DeliverHooks() {
+	tasks := make([]*HookTask, 0, 10)
 	timeout := time.Duration(setting.WebhookDeliverTimeout) * time.Second
-	x.Where("is_deliveried=?", false).Iterate(new(HookTask),
+	x.Where("is_delivered=?", false).Iterate(new(HookTask),
 		func(idx int, bean interface{}) error {
 			t := bean.(*HookTask)
 			req := httplib.Post(t.Url).SetTimeout(timeout, timeout).
@@ -212,21 +253,50 @@ func DeliverHooks() {
 				req.Param("payload", t.PayloadContent)
 			}
 
-			t.IsDeliveried = true
+			t.IsDelivered = true
 
 			// TODO: record response.
-			if _, err := req.Response(); err != nil {
-				log.Error(4, "Delivery: %v", err)
-			} else {
-				t.IsSucceed = true
+			switch t.Type {
+			case GOGS:
+				{
+					if _, err := req.Response(); err != nil {
+						log.Error(4, "Delivery: %v", err)
+					} else {
+						t.IsSucceed = true
+					}
+				}
+			case SLACK:
+				{
+					if res, err := req.Response(); err != nil {
+						log.Error(4, "Delivery: %v", err)
+					} else {
+						defer res.Body.Close()
+						contents, err := ioutil.ReadAll(res.Body)
+						if err != nil {
+							log.Error(4, "%s", err)
+						} else {
+							if string(contents) != "ok" {
+								log.Error(4, "slack failed with: %s", string(contents))
+							} else {
+								t.IsSucceed = true
+							}
+						}
+					}
+				}
 			}
 
-			if err := UpdateHookTask(t); err != nil {
-				log.Error(4, "UpdateHookTask: %v", err)
-				return nil
-			}
+			tasks = append(tasks, t)
 
-			log.Trace("Hook delivered(%s): %s", t.Uuid, t.PayloadContent)
+			if t.IsSucceed {
+				log.Trace("Hook delivered(%s): %s", t.Uuid, t.PayloadContent)
+			}
 			return nil
 		})
+
+	// Update hook task status.
+	for _, t := range tasks {
+		if err := UpdateHookTask(t); err != nil {
+			log.Error(4, "UpdateHookTask(%d): %v", t.Id, err)
+		}
+	}
 }

@@ -2,29 +2,29 @@
 path = github.com/gogits/gogs
 
 [deps]
-code.google.com/p/mahonia = 
-github.com/Unknwon/cae = 
-github.com/Unknwon/com = 
-github.com/Unknwon/goconfig = 
-github.com/Unknwon/i18n = 
+github.com/beego/memcache = commit:2aea774416
+github.com/beego/redigo = commit:856744a0d5
+github.com/Unknwon/cae = commit:2e70a1351b
+github.com/Unknwon/com = commit:2cbcbc6916
+github.com/Unknwon/goconfig = commit:0f8d8dc1c0
+github.com/Unknwon/i18n = commit:47baeff8d0
 github.com/Unknwon/macaron = 
-github.com/codegangsta/cli = 
-github.com/go-sql-driver/mysql = 
-github.com/go-xorm/core = 
-github.com/go-xorm/xorm = 
-github.com/gogits/gfm = 
-github.com/gogits/git = 
-github.com/gogits/oauth2 = 
-github.com/juju2013/goldap = 
-github.com/lib/pq = 
-github.com/macaron-contrib/cache = 
+github.com/codegangsta/cli = commit:7381bc4e62
+github.com/go-sql-driver/mysql = commit:8111ee3ec3
+github.com/go-xorm/core = commit:750aae0fa5
+github.com/go-xorm/xorm = commit:2d8b3135b1
+github.com/gogits/gfm = commit:40f747a9c0
+github.com/gogits/oauth2 = commit:99cbec870a
+github.com/lib/pq = commit:b021d0ef20
+github.com/macaron-contrib/cache = commit:204d8e5137
 github.com/macaron-contrib/captcha = 
 github.com/macaron-contrib/csrf = 
 github.com/macaron-contrib/i18n = 
 github.com/macaron-contrib/session = 
-github.com/macaron-contrib/toolbox = 
-github.com/nfnt/resize = 
-github.com/saintfish/chardet = 
+github.com/macaron-contrib/toolbox = commit:57127bcc89
+github.com/mattn/go-sqlite3 = commit:a80c27ba33
+github.com/nfnt/resize = commit:581d15cb53
+github.com/saintfish/chardet = commit:3af4cd4741
 
 [res]
 include = conf|etc|public|scripts|templates

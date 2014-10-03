@@ -22,7 +22,7 @@
     <div id="org-home-repo-list" class="left grid-2-3">
         <div class="clear">
         	{{if .IsOrganizationOwner}}
-            <a class="btn btn-green btn-large btn-link btn-radius right" href="/repo/create?org={{.Org.Id}}"><i class="octicon octicon-repo-create"></i> {{.i18n.Tr "new_repo"}}</a>
+            <a class="btn btn-green btn-large btn-link btn-radius right" href="{{AppSubUrl}}/repo/create?org={{.Org.Id}}"><i class="octicon octicon-repo-create"></i> {{.i18n.Tr "new_repo"}}</a>
         	{{end}}
         </div>
         <div id="org-repo-list">
@@ -33,7 +33,7 @@
                         <li><i class="octicon octicon-star"></i> {{.NumStars}}</li>
                         <li><i class="octicon octicon-git-branch"></i> {{.NumForks}}</li>
                     </ul>
-					<h2><a href="/{{$.Org.Name}}/{{.Name}}">{{.Name}}</a></h2>
+					<h2><a href="{{AppSubUrl}}/{{$.Org.Name}}/{{.Name}}">{{.Name}}</a></h2>
 					<p class="org-repo-description">{{.Description}}</p>
 					<p class="org-repo-updated">{{$.i18n.Tr "org.repo_updated"}} {{TimeSince .Updated $.i18n.Lang}}</p>
 				</div>
@@ -46,20 +46,20 @@
 	    	<div class="panel panel-radius">
 	    		<div class="panel-header">
 	    			{{if $isMember}}
-	    			<a class="text-grey right" href="/org/{{.Org.LowerName}}/members"><strong>{{.Org.NumMembers}}</strong><span class="octicon octicon-chevron-right"></span></a>
+	    			<a class="text-grey right" href="{{AppSubUrl}}/org/{{.Org.LowerName}}/members"><strong>{{.Org.NumMembers}}</strong><span class="octicon octicon-chevron-right"></span></a>
 	    			{{end}}
 	    			<strong>{{.i18n.Tr "org.people"}}</strong>
 	    		</div>
 	    		<div class="panel-body member-avatar-group">
 	    			{{range .Members}}
 						{{if or $isMember (.IsPublicMember $.Org.Id)}}
-	    				<a href="/{{.Name}}" title="{{.Name}}"><img src="{{.AvatarLink}}"></a>
+	    				<a href="{{AppSubUrl}}/{{.Name}}" title="{{.Name}}"><img src="{{.AvatarLink}}"></a>
 	    				{{end}}
 	    			{{end}}
 	    		</div>
 	    		{{if .IsOrganizationOwner}}
 	    		<div class="panel-footer">
-	    			<a class="btn btn-medium btn-blue btn-link btn-radius" href="/org/{{.Org.LowerName}}/invitations/new">{{.i18n.Tr "org.invite_someone"}}</a>
+	    			<a class="btn btn-medium btn-blue btn-link btn-radius" href="{{AppSubUrl}}/org/{{.Org.LowerName}}/invitations/new">{{.i18n.Tr "org.invite_someone"}}</a>
 	    		</div>
 	    		{{end}}
 	    	</div>
@@ -67,14 +67,14 @@
 	    	<br>
 	    	<div class="panel panel-radius">
 	    		<div class="panel-header">
-	    			<a class="text-grey right" href="/org/{{.Org.LowerName}}/teams"><strong>{{.Org.NumTeams}}</strong><span class="octicon octicon-chevron-right"></span></a>
+	    			<a class="text-grey right" href="{{AppSubUrl}}/org/{{.Org.LowerName}}/teams"><strong>{{.Org.NumTeams}}</strong><span class="octicon octicon-chevron-right"></span></a>
 	    			<strong>{{.i18n.Tr "org.teams"}}</strong>
 	    		</div>
 	    		<div class="panel-body" id="org-home-team-list">
 	    			<ul>
 		    			{{range .Teams}}
 	    				<li>
-	    					<a class="text-black" href="/org/{{$.Org.LowerName}}/teams/{{.LowerName}}"><strong class="team-name">{{.Name}}</strong></a>
+	    					<a class="text-black" href="{{AppSubUrl}}/org/{{$.Org.LowerName}}/teams/{{.LowerName}}"><strong class="team-name">{{.Name}}</strong></a>
 	    					<p class="team-meta">{{.NumMembers}} {{$.i18n.Tr "org.lower_members"}} · {{.NumRepos}} {{$.i18n.Tr "org.lower_repositories"}}</p>
 	    				</li>
 		    			{{end}}
@@ -82,7 +82,7 @@
 	    		</div>
 	    		{{if .IsOrganizationOwner}}
 	    		<div class="panel-footer">
-	    			<a class="btn btn-medium btn-blue btn-link btn-radius" href="/org/{{$.Org.LowerName}}/teams/new">{{.i18n.Tr "org.create_new_team"}}</a>
+	    			<a class="btn btn-medium btn-blue btn-link btn-radius" href="{{AppSubUrl}}/org/{{$.Org.LowerName}}/teams/new">{{.i18n.Tr "org.create_new_team"}}</a>
 	    		</div>
 	    		{{end}}
 	    	</div>

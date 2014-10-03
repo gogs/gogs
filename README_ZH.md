@@ -3,9 +3,9 @@ Gogs - Go Git Service [![wercker status](https://app.wercker.com/status/ad0bdb0b
 
 Gogs(Go Git Service) 是一个基于 Go 语言的自助 Git 服务。
 
-![Demo](http://gowalker.org/public/gogs_demo.gif)
+![Demo](https://gowalker.org/public/gogs_demo.gif)
 
-##### 当前版本：0.4.9 Beta
+##### 当前版本：0.5.4 Beta
 
 ## 开发目的
 
@@ -15,7 +15,7 @@ Gogs 的目标是打造一个最简单、最快速和最轻松的方式搭建自
 
 - 有关项目设计、已知问题和变更日志，请通过  [使用手册](http://gogs.io/docs/intro/) 查看。
 - 您可以到 [Trello Board](https://trello.com/b/uxAoeLUl/gogs-go-git-service) 跟随开发团队的脚步。
-- 想要先睹为快？通过 [在线体验](http://try.gogits.org/Unknown/gogs) 或查看 **安装部署 -> 二进制安装** 小节。
+- 想要先睹为快？通过 [在线体验](https://try.gogs.io/Unknown/gogs) 或查看 **安装部署 -> 二进制安装** 小节。
 - 使用过程中遇到问题？尝试从 [故障排查](http://gogs.io/docs/intro/troubleshooting.md) 页面获取帮助。
 
 ## 功能特性
@@ -26,14 +26,16 @@ Gogs 的目标是打造一个最简单、最快速和最轻松的方式搭建自
 - 注册/删除/重命名 用户
 - 创建/管理/删除 组织以及团队管理功能
 - 创建/迁移/镜像/删除/关注/重命名/转移 公开/私有 仓库
-- 仓库 浏览/发布/工单管理/Web 钩子
+- 仓库 浏览/发布/工单管理
+- 仓库和组织级别 Web 钩子
 - 添加/删除 仓库协作者
 - Gravatar 以及缓存支持
 - 邮件服务（注册、Issue）
 - 管理员面板
+- Slack Web 钩子集成
 - 支持 MySQL、PostgreSQL 以及 SQLite3 数据库
 - 社交帐号登录（GitHub、Google、QQ、微博）
-- 多语言支持（英文、简体中文、德语等等）
+- 多语言支持（英文、简体中文、德语、法语等等）
 
 ## 系统要求
 
@@ -49,18 +51,17 @@ Gogs 的目标是打造一个最简单、最快速和最轻松的方式搭建自
 - [二进制安装](http://gogs.io/docs/installation/install_from_binary.md): **强烈推荐**
 - [源码安装](http://gogs.io/docs/installation/install_from_source.md)
 - [包管理安装](http://gogs.io/docs/installation/install_from_packages.md)
-- [采用 Docker 部署](https://github.com/gogits/gogs/tree/master/dockerfiles)
+- [采用 Docker 部署](https://github.com/gogits/gogs/tree/master/docker)
 - [通过 Vagrant 安装](https://github.com/geerlingguy/ansible-vagrant-examples/tree/master/gogs)
 
 ## 特别鸣谢
 
+- [Macaron](https://github.com/Unknwon/macaron) 的路由与中间件机制。
+- [beego](http://beego.me) 模块的使用与修改。
 - 基于 [WeTalk](https://github.com/beego/wetalk) 修改的邮件服务和模块设计。
 - 基于 [GoBlog](https://github.com/fuxiaohei/goblog) 修改的系统监视状态。
-- [beego](http://beego.me) 模块的使用与修改。
-- [martini](http://martini.codegangsta.io/) 的路由与中间件机制。
 - 感谢 [gobuild.io](http://gobuild.io) 提供二进制编译与下载服务。
 - 感谢 [lavachen](http://www.lavachen.cn/) 和 [Rocker](http://weibo.com/rocker1989) 设计的 Logo。
-- 感谢 [Docker 中文社区](http://www.dockboard.org/) 提供的 [dockerfiles](https://github.com/gogits/gogs/tree/master/dockerfiles)。
 
 ## 贡献成员
 

@@ -1,7 +1,7 @@
 {{template "ng/base/head" .}}
 {{template "ng/base/header" .}}
 <div id="sign-wrapper">
-    <form class="form-align form panel sign-panel sign-form container panel-radius" id="sign-up-form" action="/user/reset_password?code={{.Code}}" method="post">
+    <form class="form-align form panel sign-panel sign-form container panel-radius" id="sign-up-form" action="{{AppSubUrl}}/user/reset_password?code={{.Code}}" method="post">
         {{.CsrfTokenHtml}}
         <div class="panel-header">
             <h2>{{.i18n.Tr "auth.reset_password"}}</h2>

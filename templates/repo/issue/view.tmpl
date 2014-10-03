@@ -8,7 +8,7 @@
             <div class="issue-wrap col-md-10">
                 <div class="issue-head clearfix">
                     <div class="number pull-right">#{{.Issue.Index}}</div>
-                    <a class="author pull-left" href="/user/{{.Issue.Poster.Name}}"><img class="avatar" src="{{.Issue.Poster.AvatarLink}}" alt="" width="30"/></a>
+                    <a class="author pull-left" href="{{AppSubUrl}}/user/{{.Issue.Poster.Name}}"><img class="avatar" src="{{.Issue.Poster.AvatarLink}}" alt="" width="30"/></a>
                     <h1 class="title pull-left">{{.Issue.Name}}</h1>
                     <input id="issue-edit-title" class="form-control input-lg pull-left hidden" type="text" value="{{.Issue.Name}}" data-ajax-rel="issue-edit-save" data-ajax-val="val" data-ajax-field="title"/>
                     <input type="hidden" value="{{.Issue.Id}}" data-ajax-rel="issue-edit-save" data-ajax-val="val" data-ajax-field="issue_id"/>
@@ -17,7 +17,7 @@
                         <a class="btn btn-danger pull-right issue-edit-cancel hidden" href="#">Cancel</a>
                         <a class="btn btn-primary pull-right issue-edit-save hidden" href="#" data-ajax="{{.RepoLink}}/issues/{{.Issue.Index}}" data-ajax-name="issue-edit-save" data-ajax-method="post">Save</a>{{end}}
                         <span class="status label label-{{if .Issue.IsClosed}}danger{{else}}success{{end}}">{{if .Issue.IsClosed}}Closed{{else}}Open{{end}}</span>
-                        <a href="/user/{{.Issue.Poster.Name}}" class="author"><strong>{{.Issue.Poster.Name}}</strong></a> opened this issue
+                        <a href="{{AppSubUrl}}/user/{{.Issue.Poster.Name}}" class="author"><strong>{{.Issue.Poster.Name}}</strong></a> opened this issue
                         <span class="time">{{TimeSince .Issue.Created $.Lang}}</span> · {{.Issue.NumComments}} comments
                     </p>
                 </div>
@@ -63,10 +63,10 @@
                     {{/* 0 = COMMENT, 1 = REOPEN, 2 = CLOSE, 3 = ISSUE, 4 = COMMIT, 5 = PULL */}}
                     {{if eq .Type 0}}
                     <div class="issue-child" id="issue-comment-{{.Id}}">
-                        <a class="user pull-left" href="/user/{{.Poster.Name}}"><img class="avatar" src="{{.Poster.AvatarLink}}" alt=""/></a>
+                        <a class="user pull-left" href="{{AppSubUrl}}/user/{{.Poster.Name}}"><img class="avatar" src="{{.Poster.AvatarLink}}" alt=""/></a>
                         <div class="issue-content panel panel-default">
                             <div class="panel-heading">
-                                <a href="/user/{{.Poster.Name}}" class="user">{{.Poster.Name}}</a> commented <span class="time">{{TimeSince .Created $.Lang}}</span>
+                                <a href="{{AppSubUrl}}/user/{{.Poster.Name}}" class="user">{{.Poster.Name}}</a> commented <span class="time">{{TimeSince .Created $.Lang}}</span>
                                 <!-- <a class="issue-comment-del pull-right issue-action" href="#" title="Edit Comment"><i class="fa fa-times-circle"></i></a>
                                 <a class="issue-comment-edit pull-right issue-action" href="#" title="Remove Comment" data-url="{remove-link}"><i class="fa fa-edit"></i></a> -->
                                 <span class="role label label-default pull-right">Owner</span>
@@ -93,25 +93,25 @@
                     </div>
                     {{else if eq .Type 1}}
                     <div class="issue-child issue-opened">
-                        <a class="user pull-left" href="/user/{{.Poster.Name}}"><img class="avatar" src="{{.Poster.AvatarLink}}" alt="" /></a>
+                        <a class="user pull-left" href="{{AppSubUrl}}/user/{{.Poster.Name}}"><img class="avatar" src="{{.Poster.AvatarLink}}" alt="" /></a>
                         <div class="issue-content">
-                            <a class="user pull-left" href="/user/{{.Poster.Name}}">{{.Poster.Name}}</a> <span class="label label-success">Reopened</span> this issue <span class="time">{{TimeSince .Created $.Lang}}</span>
+                            <a class="user pull-left" href="{{AppSubUrl}}/user/{{.Poster.Name}}">{{.Poster.Name}}</a> <span class="label label-success">Reopened</span> this issue <span class="time">{{TimeSince .Created $.Lang}}</span>
                         </div>
                     </div>
                     {{else if eq .Type 2}}
                     <div class="issue-child issue-closed">
-                        <a class="user pull-left" href="/user/{{.Poster.Name}}"><img class="avatar" src="{{.Poster.AvatarLink}}" alt=""/></a>
+                        <a class="user pull-left" href="{{AppSubUrl}}/user/{{.Poster.Name}}"><img class="avatar" src="{{.Poster.AvatarLink}}" alt=""/></a>
                         <div class="issue-content">
-                            <a class="user pull-left" href="/user/{{.Poster.Name}}">{{.Poster.Name}}</a> <span class="label label-danger">Closed</span> this issue <span class="time">{{TimeSince .Created $.Lang}}</span>
+                            <a class="user pull-left" href="{{AppSubUrl}}/user/{{.Poster.Name}}">{{.Poster.Name}}</a> <span class="label label-danger">Closed</span> this issue <span class="time">{{TimeSince .Created $.Lang}}</span>
                         </div>
                     </div>
                     {{else if eq .Type 4}}
                     <div class="issue-child issue-reference issue-reference-commit">
-                        <a class="user pull-left" href="/user/{{.Poster.Name}}"><img class="avatar" src="{{.Poster.AvatarLink}}" alt=""/></a>
+                        <a class="user pull-left" href="{{AppSubUrl}}/user/{{.Poster.Name}}"><img class="avatar" src="{{.Poster.AvatarLink}}" alt=""/></a>
                         <div class="issue-content">
-                            <a class="user pull-left" href="/user/{{.Poster.Name}}">{{.Poster.Name}}</a> <span class="label label-primary">Referenced</span> this issue <span class="time">{{TimeSince .Created $.Lang}}</span>
+                            <a class="user pull-left" href="{{AppSubUrl}}/user/{{.Poster.Name}}">{{.Poster.Name}}</a> <span class="label label-primary">Referenced</span> this issue <span class="time">{{TimeSince .Created $.Lang}}</span>
                             <p>
-                                <a class="user pull-left" href="/user/{{.Poster.Name}}"><img class="avatar" src="{{.Poster.AvatarLink}}" alt=""/></a>
+                                <a class="user pull-left" href="{{AppSubUrl}}/user/{{.Poster.Name}}"><img class="avatar" src="{{.Poster.AvatarLink}}" alt=""/></a>
                                 {{.ContentHtml}}
                             </p>
                         </div>
@@ -120,7 +120,7 @@
                     {{end}}
                     <hr class="issue-line"/>
                     {{if .SignedUser}}<div class="issue-child issue-reply">
-                    <a class="user pull-left" href="/user/{{.SignedUser.Name}}"><img class="avatar" src="{{.SignedUser.AvatarLink}}" alt=""/></a>
+                    <a class="user pull-left" href="{{AppSubUrl}}/user/{{.SignedUser.Name}}"><img class="avatar" src="{{.SignedUser.AvatarLink}}" alt=""/></a>
                     <form class="panel panel-default issue-content" action="{{.RepoLink}}/comment/new" method="post" enctype="multipart/form-data">
                         {{.CsrfTokenHtml}}
                         <div class="panel-body">
@@ -163,7 +163,7 @@
                             </div>
                         </div>
                     </form>
-                </div>{{else}}<div class="alert alert-warning"><a class="btn btn-success btn-lg" href="/user/sign_up">Sign up for free</a> to join this conversation. Already have an account? <a href="/user/login">Sign in to comment</a></div>{{end}}
+                </div>{{else}}<div class="alert alert-warning"><a class="btn btn-success btn-lg" href="{{AppSubUrl}}/user/sign_up">Sign up for free</a> to join this conversation. Already have an account? <a href="{{AppSubUrl}}/user/login">Sign in to comment</a></div>{{end}}
                 </div>
             </div>
 

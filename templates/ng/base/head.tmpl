@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html>
-	<head>
+	<head data-suburl="{{AppSubUrl}}">
 		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
         <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
         <meta name="author" content="Gogs - Go Git Service" />
@@ -9,27 +9,32 @@
 		<meta name="_csrf" content="{{.CsrfToken}}" />
 		{{if .Repository.IsGoget}}<meta name="go-import" content="{{.GoGetImport}} git {{.CloneLink.HTTPS}}">{{end}}
 
-		<link rel="shortcut icon" href="/img/favicon.png" />
+		<link rel="shortcut icon" href="{{AppSubUrl}}/img/favicon.png" />
 
 		{{if CdnMode}}
-		<link href="//maxcdn.bootstrapcdn.com/font-awesome/4.2.0/css/font-awesome.min.css">
+		<link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/font-awesome/4.2.0/css/font-awesome.min.css">
 
 		<script src="//code.jquery.com/jquery-1.11.1.min.js"></script>
 		{{else}}
-		<link rel="stylesheet" href="/css/font-awesome.min.css">
+		<link rel="stylesheet" href="{{AppSubUrl}}/css/font-awesome.min.css">
 		
-		<script src="/ng/js/lib/jquery-1.11.1.min.js"></script>
+		<script src="{{AppSubUrl}}/ng/js/lib/jquery-1.11.1.min.js"></script>
 		{{end}}
 		<!-- Stylesheet -->
-		<link rel="stylesheet" href="/ng/css/ui.css">
-		<link rel="stylesheet" href="/ng/css/gogs.css">
-		<link rel="stylesheet" href="/ng/fonts/octicons.css">
-		<link rel="stylesheet" href="/css/github.min.css">
+		<link rel="stylesheet" href="{{AppSubUrl}}/ng/css/ui.css">
+		<link rel="stylesheet" href="{{AppSubUrl}}/ng/css/gogs.css">
+		<link rel="stylesheet" href="{{AppSubUrl}}/ng/css/tipsy.css">
+		<link rel="stylesheet" href="{{AppSubUrl}}/ng/css/magnific-popup.css">
+		<link rel="stylesheet" href="{{AppSubUrl}}/ng/fonts/octicons.css">
+		<link rel="stylesheet" href="{{AppSubUrl}}/css/github.min.css">
 
 		<!-- JavaScript -->
-		<script src="/ng/js/lib/tabs.js"></script>
-    	<script src="/ng/js/lib/lib.js"></script>
-		<script src="/ng/js/gogs.js"></script>
+    	<script src="{{AppSubUrl}}/ng/js/lib/lib.js"></script>
+    	<script src="{{AppSubUrl}}/ng/js/lib/jquery.tipsy.js"></script>
+    	<script src="{{AppSubUrl}}/ng/js/lib/jquery.magnific-popup.min.js"></script>
+        <script src="{{AppSubUrl}}/ng/js/utils/tabs.js"></script>
+        <script src="{{AppSubUrl}}/ng/js/utils/preview.js"></script>
+		<script src="{{AppSubUrl}}/ng/js/gogs.js"></script>
 
 		<title>{{if .Title}}{{.Title}} - {{end}}{{AppName}}</title>
 	</head>

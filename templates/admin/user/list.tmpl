@@ -13,7 +13,7 @@
                                 <strong>{{.i18n.Tr "admin.users.user_manage_panel"}}</strong>
                             </div>
                             <div class="panel-body admin-panel">
-								<a class="btn-blue btn-medium btn-link btn-radius" href="/admin/users/new">{{.i18n.Tr "admin.users.new_account"}}</a>
+								<a class="btn-blue btn-medium btn-link btn-radius" href="{{AppSubUrl}}/admin/users/new">{{.i18n.Tr "admin.users.new_account"}}</a>
                                 <div class="admin-table">
 					                <table class="table table-striped">
 					                    <thead>
@@ -32,21 +32,21 @@
 					                        {{range .Users}}
 					                        <tr>
 					                            <td>{{.Id}}</td>
-					                            <td><a href="/user/{{.Name}}">{{.Name}}</a></td>
+					                            <td><a href="{{AppSubUrl}}/user/{{.Name}}">{{.Name}}</a></td>
 					                            <td>{{.Email}}</td>
 					                            <td><i class="fa fa{{if .IsActive}}-check{{end}}-square-o"></i></td>
 					                            <td><i class="fa fa{{if .IsAdmin}}-check{{end}}-square-o"></i></td>
 					                            <td>{{.NumRepos}}</td>
 					                            <td>{{DateFormat .Created "M d, Y"}}</td>
-					                            <td><a href="/admin/users/{{.Id}}"><i class="fa fa-pencil-square-o"></i></a></td>
+					                            <td><a href="{{AppSubUrl}}/admin/users/{{.Id}}"><i class="fa fa-pencil-square-o"></i></a></td>
 					                        </tr>
 					                        {{end}}
 					                    </tbody>
 					                </table>
 					                {{if or .LastPageNum .NextPageNum}}
 					                <ul class="pagination">
-					                    {{if .LastPageNum}}<li><a class="btn btn-medium btn-gray btn-radius" href="/admin/users?p={{.LastPageNum}}">&laquo; Prev.</a></li>{{end}}
-					                    {{if .NextPageNum}}<li><a class="btn btn-medium btn-gray btn-radius" href="/admin/users?p={{.NextPageNum}}">&raquo; Next</a></li>{{end}}
+					                    {{if .LastPageNum}}<li><a class="btn btn-medium btn-gray btn-radius" href="{{AppSubUrl}}/admin/users?p={{.LastPageNum}}">&laquo; {{.i18n.Tr "admin.prev"}}</a></li>{{end}}
+					                    {{if .NextPageNum}}<li><a class="btn btn-medium btn-gray btn-radius" href="{{AppSubUrl}}/admin/users?p={{.NextPageNum}}">&raquo; {{.i18n.Tr "admin.next"}}</a></li>{{end}}
 					                </ul>
 					                {{end}}
 				                </div>

@@ -1,0 +1,38 @@
+{{template "ng/base/head" .}}
+{{template "ng/base/header" .}}
+{{template "org/base/header" .}}
+<div id="setting-wrapper" class="main-wrapper">
+    <div id="org-setting" class="container clear">
+	        {{template "org/settings/nav" .}}
+	        <div class="grid-4-5 left">
+	            <div class="setting-content">
+	                {{template "ng/base/alert" .}}
+	                <div id="setting-content">
+                      <div id="repo-hooks-panel" class="panel panel-radius">
+                          <div class="panel-header">
+                              <a class="btn btn-small btn-black btn-header btn-radius right" href="{{.OrgLink}}/settings/hooks/new">{{.i18n.Tr "repo.settings.add_webhook"}}</a>
+                            <strong>{{.i18n.Tr "repo.settings.hooks"}}</strong>
+                          </div>
+                          <ul class="panel-body setting-list">
+                              <li>{{.i18n.Tr "org.settings.hooks_desc" | Str2html}}</li>
+                              {{range .Webhooks}}
+                              <li>
+                                {{if .IsActive}}
+                                <span class="left text-success"><i class="octicon octicon-check"></i></span>
+                                {{else}}
+                                <span class="left text-grey"><i class="octicon octicon-primitive-dot"></i></span>
+                                {{end}}
+                                <a class="link" href="{{$.OrgLink}}/settings/hooks/{{.Id}}">{{.Url}}</a>
+                                <a href="{{$.OrgLink}}/settings/hooks?remove={{.Id}}" class="text-red right"><i class="fa fa-times"></i></a>
+                                <a href="{{$.OrgLink}}/settings/hooks/{{.Id}}" class="text-blue right"><i class="fa fa-pencil"></i></a>
+                              </li>
+                              {{end}}
+                          </ul>
+                      </div>
+                  </div>
+              </div>
+          </div>
+      </div>
+  </div>
+</div>
+{{template "ng/base/footer" .}}

@@ -1,7 +1,7 @@
 {{template "ng/base/head" .}}
 {{template "ng/base/header" .}}
 <div id="sign-wrapper">
-    <form class="form-align form panel panel-radius sign-panel sign-form container" id="sign-up-form" action="/user/sign_up" method="post">
+    <form class="form-align form panel panel-radius sign-panel sign-form container" id="sign-up-form" action="{{AppSubUrl}}/user/sign_up" method="post">
         <div class="panel-header">
             <h2>{{if .IsSocialLogin}}{{.i18n.Tr "social_sign_in" | Str2html}}{{else}}{{.i18n.Tr "sign_up"}}{{end}}</h2>
         </div>
@@ -40,7 +40,7 @@
             </div>
             <div class="field">
                 <span class="form-label"></span>
-                <a href="/user/login">{{if .IsSocialLogin}}{{.i18n.Tr "auth.social_register_hepler_msg"}}{{else}}{{.i18n.Tr "auth.register_hepler_msg"}}{{end}}</a>
+                <a href="{{AppSubUrl}}/user/login">{{if .IsSocialLogin}}{{.i18n.Tr "auth.social_register_hepler_msg"}}{{else}}{{.i18n.Tr "auth.register_hepler_msg"}}{{end}}</a>
             </div>
         	{{end}}
         </div>

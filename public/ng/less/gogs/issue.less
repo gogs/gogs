@@ -1,54 +1,26 @@
 @import "../ui/var";
-
-.repo-issue-wrapper {
-  padding: 18px 0;
-}
-
+// pull request main content
 .pr-main {
-  padding-right: 40px;
-  box-sizing: border-box;
+  margin-right: 100px;
 }
-
+// right bar in pull request page
 .pr-sidebar {
   border-left: 1px solid #DDD;
   box-sizing: border-box;
+  position: absolute;
+  right: 0;
+  top: 12px;
 }
-
-#pr-sidebar-nav {
-  margin-top: 6px;
-  li {
-    margin-bottom: 4px;
-  }
-  li > a {
-    border: 1px solid transparent;
-    border-left: none;
-    &:hover {
-      background-color: #FFF;
-      border-color: #DDD;
-    }
-  }
-  .label {
-    font-size: 12px;
-    line-height: 1.4em;
-    margin-top: 1px;
-  }
-  li.current {
-    a {
-      background-color: #FFF;
-      border-color: #DDD;
-    }
-  }
-}
-
 .pr-title {
   .pr-num {
     font-weight: normal;
     color: #888;
   }
+  padding: 4px 0;
 }
-
 .pr-meta {
   color: #888;
+  padding: 4px 0 8px 0;
   .pr-author {
     margin: 0 8px;
     color: #444;
@@ -62,7 +34,6 @@
     padding: 4px 6px;
   }
 }
-
 .pr-nav {
   border-bottom: 1px solid #DDD;
   margin-top: 16px;
@@ -89,7 +60,6 @@
     }
   }
 }
-
 .diff-bar {
   .diff-add {
     color: @btnGreenColor;
@@ -114,26 +84,22 @@
     border-bottom-left-radius: .2em;
   }
 }
-
 #pr-commit,
 #pr-file-diff,
 #issue-add-comment-preview {
   display: none;
 }
-
 #pr-conversation-list {
   padding-right: 30px;
   box-sizing: border-box;
 }
-
 .issue-comment,
 .issue-commit,
 .issue-line,
 .issue-merge,
 .issue-add-comment {
-  margin-bottom: 16px;
+  margin-bottom: 24px;
 }
-
 .issue-comment {
   .author-avatar {
     img {
@@ -165,7 +131,6 @@
     }
   }
 }
-
 .issue-commit {
   line-height: 32px;
   i, .author-avatar img {
@@ -181,7 +146,6 @@
     line-height: 24px;
   }
 }
-
 .issue-merge {
   .ico {
     width: 40px;
@@ -202,7 +166,6 @@
     font-size: 13px;
   }
 }
-
 .issue-merge-ok {
   .ico {
     background-color: #65AD4E;
@@ -217,12 +180,10 @@
     color: darken(#65AD4E, 10%);
   }
 }
-
 .issue-line {
   height: 4px;
   background-color: #E6E6E6;
 }
-
 .issue-add-comment {
   .panel {
     margin-left: 60px;
@@ -254,9 +215,9 @@
     }
   }
 }
-
 textarea#issue-add-content {
   width: 100%;
   box-sizing: border-box;
   height: 120px;
+  resize: vertical;
 }

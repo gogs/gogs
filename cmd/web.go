@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"strings"
 
 	"github.com/Unknwon/macaron"
 	"github.com/codegangsta/cli"
@@ -26,6 +27,7 @@ import (
 	"github.com/gogits/gogs/modules/auth/apiv1"
 	"github.com/gogits/gogs/modules/avatar"
 	"github.com/gogits/gogs/modules/base"
+	"github.com/gogits/gogs/modules/git"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/middleware"
 	"github.com/gogits/gogs/modules/middleware/binding"
@@ -50,12 +52,19 @@ and it takes care of all the other things for you`,
 
 // checkVersion checks if binary matches the version of templates files.
 func checkVersion() {
+	// Templates.
 	data, err := ioutil.ReadFile(path.Join(setting.StaticRootPath, "templates/.VERSION"))
 	if err != nil {
 		log.Fatal(4, "Fail to read 'templates/.VERSION': %v", err)
 	}
 	if string(data) != setting.AppVer {
 		log.Fatal(4, "Binary and template file version does not match, did you forget to recompile?")
+	}
+
+	// Macaron.
+	macaronVer := git.MustParseVersion(strings.Join(strings.Split(macaron.Version(), ".")[:3], "."))
+	if macaronVer.LessThan(git.MustParseVersion("0.1.8")) {
+		log.Fatal(4, "Macaron version does not match, did you forget to update?(github.com/Unknwon/macaron)")
 	}
 }
 
@@ -64,20 +73,22 @@ func newMacaron() *macaron.Macaron {
 	m := macaron.New()
 	m.Use(macaron.Logger())
 	m.Use(macaron.Recovery())
-	m.Use(macaron.Static("public",
+	m.Use(macaron.Static(
+		path.Join(setting.StaticRootPath, "public"),
 		macaron.StaticOptions{
 			SkipLogging: !setting.DisableRouterLog,
 		},
 	))
-	if setting.EnableGzip {
-		m.Use(macaron.Gzip())
-	}
+	// if setting.EnableGzip {
+	// 	m.Use(macaron.Gzip())
+	// }
 	m.Use(macaron.Renderer(macaron.RenderOptions{
 		Directory:  path.Join(setting.StaticRootPath, "templates"),
 		Funcs:      []template.FuncMap{base.TemplateFuncs},
 		IndentJSON: macaron.Env != macaron.PROD,
 	}))
 	m.Use(i18n.I18n(i18n.Options{
+		SubURL:   setting.AppSubUrl,
 		Langs:    setting.Langs,
 		Names:    setting.Names,
 		Redirect: true,
@@ -87,14 +98,18 @@ func newMacaron() *macaron.Macaron {
 		Interval: setting.CacheInternal,
 		Conn:     setting.CacheConn,
 	}))
-	m.Use(captcha.Captchaer())
+	m.Use(captcha.Captchaer(captcha.Options{
+		SubURL: setting.AppSubUrl,
+	}))
 	m.Use(session.Sessioner(session.Options{
 		Provider: setting.SessionProvider,
 		Config:   *setting.SessionConfig,
 	}))
 	m.Use(csrf.Generate(csrf.Options{
-		Secret:    setting.SecretKey,
-		SetCookie: true,
+		Secret:     setting.SecretKey,
+		SetCookie:  true,
+		Header:     "X-Csrf-Token",
+		CookiePath: setting.AppSubUrl,
 	}))
 	m.Use(toolbox.Toolboxer(m, toolbox.Options{
 		HealthCheckFuncs: []*toolbox.HealthCheckFuncDesc{
@@ -123,6 +138,7 @@ func runWeb(*cli.Context) {
 
 	// Routers.
 	m.Get("/", ignSignIn, routers.Home)
+	m.Get("/explore", ignSignIn, routers.Explore)
 	m.Get("/install", bindIgnErr(auth.InstallForm{}), routers.Install)
 	m.Post("/install", bindIgnErr(auth.InstallForm{}), routers.InstallPost)
 	m.Group("", func(r *macaron.Router) {
@@ -183,7 +199,8 @@ func runWeb(*cli.Context) {
 		r.Get("/logout", user.SignOut)
 	})
 
-	m.Get("/user/:username", ignSignIn, user.Profile) // TODO: Legacy
+	// FIXME: Legacy
+	m.Get("/user/:username", ignSignIn, user.Profile)
 
 	// Gravatar service.
 	avt := avatar.CacheServer("public/img/avatar/", "public/img/avatar_default.jpg")
@@ -259,6 +276,13 @@ func runWeb(*cli.Context) {
 			m.Group("/settings", func(r *macaron.Router) {
 				r.Get("", org.Settings)
 				r.Post("", bindIgnErr(auth.UpdateOrgSettingForm{}), org.SettingsPost)
+				r.Get("/hooks", org.SettingsHooks)
+				r.Get("/hooks/new", repo.WebHooksNew)
+				r.Post("/hooks/gogs/new", bindIgnErr(auth.NewWebhookForm{}), repo.WebHooksNewPost)
+				r.Post("/hooks/slack/new", bindIgnErr(auth.NewSlackHookForm{}), repo.SlackHooksNewPost)
+				r.Get("/hooks/:id", repo.WebHooksEdit)
+				r.Post("/hooks/gogs/:id", bindIgnErr(auth.NewWebhookForm{}), repo.WebHooksEditPost)
+				r.Post("/hooks/slack/:id", bindIgnErr(auth.NewSlackHookForm{}), repo.SlackHooksEditPost)
 				r.Route("/delete", "GET,POST", org.SettingsDelete)
 			})
 
@@ -284,9 +308,11 @@ func runWeb(*cli.Context) {
 			r.Route("/collaboration", "GET,POST", repo.SettingsCollaboration)
 			r.Get("/hooks", repo.Webhooks)
 			r.Get("/hooks/new", repo.WebHooksNew)
-			r.Post("/hooks/new", bindIgnErr(auth.NewWebhookForm{}), repo.WebHooksNewPost)
+			r.Post("/hooks/gogs/new", bindIgnErr(auth.NewWebhookForm{}), repo.WebHooksNewPost)
+			r.Post("/hooks/slack/new", bindIgnErr(auth.NewSlackHookForm{}), repo.SlackHooksNewPost)
 			r.Get("/hooks/:id", repo.WebHooksEdit)
-			r.Post("/hooks/:id", bindIgnErr(auth.NewWebhookForm{}), repo.WebHooksEditPost)
+			r.Post("/hooks/gogs/:id", bindIgnErr(auth.NewWebhookForm{}), repo.WebHooksEditPost)
+			r.Post("/hooks/slack/:id", bindIgnErr(auth.NewSlackHookForm{}), repo.SlackHooksEditPost)
 		})
 	}, reqSignIn, middleware.RepoAssignment(true), reqTrueOwner)
 
@@ -327,6 +353,8 @@ func runWeb(*cli.Context) {
 		r.Get("/issues/:index", repo.ViewIssue)
 		r.Get("/pulls", repo.Pulls)
 		r.Get("/branches", repo.Branches)
+		r.Get("/archive/*", repo.Download)
+		r.Get("/issues2/", repo.Issues2)
 	}, ignSignIn, middleware.RepoAssignment(true))
 
 	m.Group("/:username/:reponame", func(r *macaron.Router) {
@@ -339,22 +367,29 @@ func runWeb(*cli.Context) {
 		r.Get("/commit/:branchname", repo.Diff)
 		r.Get("/commit/:branchname/*", repo.Diff)
 		r.Get("/releases", repo.Releases)
-		r.Get("/archive/*.*", repo.Download)
+		r.Get("/compare/:before([a-z0-9]+)...:after([a-z0-9]+)", repo.CompareDiff)
 	}, ignSignIn, middleware.RepoAssignment(true, true))
 
 	m.Group("/:username", func(r *macaron.Router) {
-		r.Get("/:reponame", middleware.RepoAssignment(true, true, true), repo.Home)
-		m.Group("/:reponame", func(r *macaron.Router) {
-			r.Any("/*", repo.Http)
-		})
-	}, ignSignInAndCsrf)
+		r.Get("/:reponame", ignSignIn, middleware.RepoAssignment(true, true, true), repo.Home)
+		r.Any("/:reponame/*", ignSignInAndCsrf, repo.Http)
+	})
+
+	// robots.txt
+	m.Get("/robots.txt", func(ctx *middleware.Context) {
+		if setting.HasRobotsTxt {
+			ctx.ServeFile(path.Join(setting.CustomPath, "robots.txt"))
+		} else {
+			ctx.Error(404)
+		}
+	})
 
 	// Not found handler.
 	m.NotFound(routers.NotFound)
 
 	var err error
 	listenAddr := fmt.Sprintf("%s:%s", setting.HttpAddr, setting.HttpPort)
-	log.Info("Listen: %v://%s", setting.Protocol, listenAddr)
+	log.Info("Listen: %v://%s%s", setting.Protocol, listenAddr, setting.AppSubUrl)
 	switch setting.Protocol {
 	case setting.HTTP:
 		err = http.ListenAndServe(listenAddr, m)

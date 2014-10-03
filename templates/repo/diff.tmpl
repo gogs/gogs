@@ -3,7 +3,18 @@
 {{template "repo/nav" .}}
 <div id="body" class="container" data-page="repo">
     <div id="source">
+      {{if .IsDiffCompare }}
         <div class="panel panel-info diff-box diff-head-box">
+            <div class="panel-heading">
+                <a class="pull-right btn btn-primary btn-sm" rel="nofollow" href="{{.SourcePath}}">Browse Source</a>
+                <h4><a href="{{$.RepoLink}}/commit/{{.BeforeCommitId}}" class="label label-success">{{ShortSha .BeforeCommitId}}</a> ... <a href="{{$.RepoLink}}/commit/{{.AfterCommitId}}" class="label label-success">{{ShortSha .AfterCommitId}}</a></h4>
+            </div>
+            <div class="panel-body compare">
+              {{template "repo/commits_table" .}}
+            </div>
+        </div>
+      {{else}}
+          <div class="panel panel-info diff-box diff-head-box">
             <div class="panel-heading">
                 <a class="pull-right btn btn-primary btn-sm" rel="nofollow" href="{{.SourcePath}}">Browse Source</a>
                 <h4>{{.Commit.Message}}</h4>
@@ -19,12 +30,12 @@
                 </span>
                 <p class="author">
                     <img class="avatar" src="{{AvatarLink .Commit.Author.Email}}" alt=""/>
-                    <a class="name" href="/user/email2user?email={{.Commit.Author.Email}}"><strong>{{.Commit.Author.Name}}</strong></a>
+                    <a class="name" href="{{AppSubUrl}}/user/email2user?email={{.Commit.Author.Email}}"><strong>{{.Commit.Author.Name}}</strong></a>
                     <span class="time">{{TimeSince .Commit.Author.When $.Lang}}</span>
                 </p>
-            </div>
+          </div>
         </div>
-
+      {{end}}
         {{if .DiffNotAvailable}}
         <h4>Diff Data Not Available.</h4>
         {{else}}
@@ -94,7 +105,7 @@
                                 <span rel="L1">{{if .RightIdx}}{{.RightIdx}}{{end}}</span>
                             </td>
                             <td class="lines-code">
-                                <pre>{{.Content}}</pre>
+                                <pre>{{ToUtf8 .Content}}</pre>
                             </td>
                         </tr>
                         {{end}}

@@ -9,8 +9,8 @@ package ldap
 import (
 	"fmt"
 
+	"github.com/gogits/gogs/modules/ldap"
 	"github.com/gogits/gogs/modules/log"
-	goldap "github.com/juju2013/goldap"
 )
 
 // Basic LDAP authentication service
@@ -68,9 +68,9 @@ func (ls Ldapsource) SearchEntry(name, passwd string) (string, bool) {
 		return "", false
 	}
 
-	search := goldap.NewSearchRequest(
+	search := ldap.NewSearchRequest(
 		ls.BaseDN,
-		goldap.ScopeWholeSubtree, goldap.NeverDerefAliases, 0, 0, false,
+		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
 		fmt.Sprintf(ls.Filter, name),
 		[]string{ls.Attributes},
 		nil)
@@ -87,10 +87,10 @@ func (ls Ldapsource) SearchEntry(name, passwd string) (string, bool) {
 	return "", true
 }
 
-func ldapDial(ls Ldapsource) (*goldap.Conn, error) {
+func ldapDial(ls Ldapsource) (*ldap.Conn, error) {
 	if ls.UseSSL {
-		return goldap.DialTLS("tcp", fmt.Sprintf("%s:%d", ls.Host, ls.Port), nil)
+		return ldap.DialTLS("tcp", fmt.Sprintf("%s:%d", ls.Host, ls.Port), nil)
 	} else {
-		return goldap.Dial("tcp", fmt.Sprintf("%s:%d", ls.Host, ls.Port))
+		return ldap.Dial("tcp", fmt.Sprintf("%s:%d", ls.Host, ls.Port))
 	}
 }

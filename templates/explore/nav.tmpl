@@ -1,0 +1,8 @@
+<div id="setting-menu" class="grid-1-5 panel panel-radius left">
+    <p class="panel-header"><strong>{{.i18n.Tr "explore"}}</strong></p>
+    <div class="panel-body">
+        <ul class="menu menu-vertical switching-list grid-1-5 left">
+            <li {{if .PageIsExploreRepositories}}class="current"{{end}}><a href="{{AppSubUrl}}/explore">{{.i18n.Tr "explore.repos"}}</a></li>
+        </ul>
+    </div>
+</div>

@@ -1,0 +1,18 @@
+[Unit]
+Description=Gogs (Go Git Service) server
+After=syslog.target
+After=network.target
+#After=mysqld.service
+#After=postgresql.service
+#After=memcached.service
+#After=redis.service
+
+[Service]
+Type=simple
+User=git
+Group=git
+ExecStart=/home/git/gogs/gogs/start.sh
+WorkingDirectory=/home/git/gogs
+
+[Install]
+WantedBy=multi-user.target

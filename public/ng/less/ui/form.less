@@ -176,7 +176,6 @@ input[readonly] {
     margin-bottom: 1em;
   }
 }
-
 .form-align {
   label,
   .form-label {
@@ -189,10 +188,14 @@ input[readonly] {
     margin-bottom: 1em;
   }
 }
-
-label.req {
-  &:after {
-    content: "*";
-    color: @labelRedColor;
-  }
+label {
+    &.text-left {
+        text-align: left;
+    }
+    &.req {
+        &:after {
+            content: "*";
+            color: @labelRedColor;
+        }
+    }
 }

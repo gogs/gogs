@@ -6,10 +6,12 @@ package setting
 
 import (
 	"fmt"
+	"net/url"
 	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 
@@ -30,10 +32,10 @@ const (
 
 var (
 	// App settings.
-	AppVer  string
-	AppName string
-	AppLogo string
-	AppUrl  string
+	AppVer    string
+	AppName   string
+	AppUrl    string
+	AppSubUrl string
 
 	// Server settings.
 	Protocol           Scheme
@@ -93,18 +95,24 @@ var (
 	SessionProvider string
 	SessionConfig   *session.Config
 
+	// Git settings.
+	MaxGitDiffLines int
+
+	// I18n settings.
+	Langs, Names []string
+
 	// Global setting objects.
 	Cfg          *goconfig.ConfigFile
 	ConfRootPath string
 	CustomPath   string // Custom directory path.
 	ProdMode     bool
 	RunUser      string
-
-	// I18n settings.
-	Langs, Names []string
+	IsWindows    bool
+	HasRobotsTxt bool
 )
 
 func init() {
+	IsWindows = runtime.GOOS == "windows"
 	log.NewLogger(0, "console", `{"level": 0}`)
 }
 
@@ -155,11 +163,17 @@ func NewConfigContext() {
 	}
 
 	AppName = Cfg.MustValue("", "APP_NAME", "Gogs: Go Git Service")
-	AppLogo = Cfg.MustValue("", "APP_LOGO", "img/favicon.png")
 	AppUrl = Cfg.MustValue("server", "ROOT_URL", "http://localhost:3000/")
 	if AppUrl[len(AppUrl)-1] != '/' {
 		AppUrl += "/"
 	}
+
+	// Check if has app suburl.
+	url, err := url.Parse(AppUrl)
+	if err != nil {
+		log.Fatal(4, "Invalid ROOT_URL(%s): %s", AppUrl, err)
+	}
+	AppSubUrl = strings.TrimSuffix(url.Path, "/")
 
 	Protocol = HTTP
 	if Cfg.MustValue("server", "PROTOCOL") == "https" {
@@ -243,8 +257,12 @@ func NewConfigContext() {
 		[]string{"server"})
 	DisableGravatar = Cfg.MustBool("picture", "DISABLE_GRAVATAR")
 
+	MaxGitDiffLines = Cfg.MustInt("git", "MAX_GITDIFF_LINES", 10000)
+
 	Langs = Cfg.MustValueArray("i18n", "LANGS", ",")
 	Names = Cfg.MustValueArray("i18n", "NAMES", ",")
+
+	HasRobotsTxt = com.IsFile(path.Join(CustomPath, "robots.txt"))
 }
 
 var Service struct {
@@ -365,6 +383,7 @@ func newSessionService() {
 	SessionConfig = new(session.Config)
 	SessionConfig.ProviderConfig = strings.Trim(Cfg.MustValue("session", "PROVIDER_CONFIG"), "\" ")
 	SessionConfig.CookieName = Cfg.MustValue("session", "COOKIE_NAME", "i_like_gogits")
+	SessionConfig.CookiePath = AppSubUrl
 	SessionConfig.Secure = Cfg.MustBool("session", "COOKIE_SECURE")
 	SessionConfig.EnableSetCookie = Cfg.MustBool("session", "ENABLE_SET_COOKIE", true)
 	SessionConfig.Gclifetime = Cfg.MustInt64("session", "GC_INTERVAL_TIME", 86400)

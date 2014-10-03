@@ -2,13 +2,13 @@
     <div class="container clear">
         <h1 id="repo-header-name" class="left public">
             <i class="mega-octicon octicon-{{if .Repository.IsPrivate}}lock{{else if .Repository.IsMirror}}repo-clone{{else}}repo{{end}}"></i>
-            <a class="author" href="/{{.Owner.Name}}">{{.Owner.Name}}</a>
+            <a class="author" href="{{AppSubUrl}}/{{.Owner.Name}}">{{.Owner.Name}}</a>
             <span class="divider">/</span>
             <a class="repo text-bold" href="{{.RepoLink}}">{{.Repository.Name}}</a>
             {{if .Repository.IsMirror}}<span class="label label-gray">{{.i18n.Tr "mirror"}}</span>{{end}}
         </h1>
         <ul id="repo-header-meta" class="right menu menu-line">
-            <li id="repo-header-download" class="inline-block down drop">
+            <li id="repo-header-download" class="drop">
                 <a id="repo-header-download-btn" href="#">
                     <button class="btn btn-black text-bold btn-radius">
                         <i class="octicon octicon-cloud-download"></i>
@@ -16,10 +16,10 @@
                 </a>
                 <div id="repo-header-download-drop" class="drop-down">
                     <div id="repo-clone" class="clear">
-                        <button id="repo-clone-ssh" class="btn btn-blue current left left btn-left-radius">SSH</button>
-                        <button id="repo-clone-https" class="btn btn-gray left">HTTPS</button>
-                        <input id="repo-clone-url" type="text" class="ipt ipt-disabled left" value="{{.CloneLink.SSH}}" />
-                        <button id="repo-clone-copy" class="btn btn-black left btn-right-radius">Copy</button>
+                        <button class="btn btn-blue left left btn-left-radius" id="repo-clone-ssh" data-link="{{.CloneLink.SSH}}">SSH</button>
+                        <button class="btn btn-gray left" id="repo-clone-https" data-link="{{.CloneLink.HTTPS}}">HTTPS</button>
+                        <input id="repo-clone-url" class="ipt ipt-disabled left" value="{{.CloneLink.SSH}}" readonly />
+                        <button id="repo-clone-copy" class="btn btn-black left btn-right-radius" data-copy-val="val" data-copy-from="#repo-clone-url" original-title="{{.i18n.Tr "repo.click_to_copy"}}" data-original-title="{{.i18n.Tr "repo.click_to_copy"}}" data-after-title="{{.i18n.Tr "repo.copied"}}">{{.i18n.Tr "repo.copy_link"}}</button>
                         <p class="text-center" id="repo-clone-help">{{.i18n.Tr "repo.clone_helper" | Str2html}}</p>
                         <hr/>
                         <div class="text-center" id="repo-clone-zip">
@@ -44,14 +44,14 @@
                     </button>
                 </a>
             </li>
-            <li id="repo-header-fork">
+            <!-- <li id="repo-header-fork">
                 <a id="repo-header-fork-btn" href="{{.RepoLink}}/action/fork">
                     <button class="btn btn-gray text-bold btn-radius">
                         <i class="octicon octicon-repo-forked"></i>{{.i18n.Tr "repo.fork"}}
                         <span class="num">{{.Repository.NumForks}}</span>
                     </button>
                 </a>
-            </li>
+            </li> -->
         </ul>
     </div>
 </div>

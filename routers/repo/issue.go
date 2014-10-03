@@ -54,8 +54,8 @@ func Issues(ctx *middleware.Context) {
 	isShowClosed := ctx.Query("state") == "closed"
 
 	if viewType != "all" && !ctx.IsSigned {
-		ctx.SetCookie("redirect_to", "/"+url.QueryEscape(ctx.Req.RequestURI))
-		ctx.Redirect("/user/login")
+		ctx.SetCookie("redirect_to", "/"+url.QueryEscape(setting.AppSubUrl+ctx.Req.RequestURI), 0, setting.AppSubUrl)
+		ctx.Redirect(setting.AppSubUrl + "/user/login")
 		return
 	}
 
@@ -312,7 +312,7 @@ func CreateIssuePost(ctx *middleware.Context, form auth.CreateIssueForm) {
 	}
 	log.Trace("%d Issue created: %d", ctx.Repo.Repository.Id, issue.Id)
 
-	send(200, fmt.Sprintf("/%s/%s/issues/%d", ctx.Params(":username"), ctx.Params(":reponame"), issue.Index), nil)
+	send(200, fmt.Sprintf("%s/%s/%s/issues/%d", setting.AppSubUrl, ctx.Params(":username"), ctx.Params(":reponame"), issue.Index), nil)
 }
 
 func checkLabels(labels, allLabels []*models.Label) {
@@ -582,7 +582,7 @@ func UpdateIssueMilestone(ctx *middleware.Context) {
 	}
 
 	oldMid := issue.MilestoneId
-	mid := com.StrTo(ctx.Params(":milestone")).MustInt64()
+	mid := com.StrTo(ctx.Query("milestoneid")).MustInt64()
 	if oldMid == mid {
 		ctx.JSON(200, map[string]interface{}{
 			"ok": true,
@@ -627,7 +627,7 @@ func UpdateAssignee(ctx *middleware.Context) {
 		return
 	}
 
-	aid := com.StrTo(ctx.Params(":assigneeid")).MustInt64()
+	aid := com.StrTo(ctx.Query("assigneeid")).MustInt64()
 	// Not check for invalid assignne id and give responsibility to owners.
 	issue.AssigneeId = aid
 	if err = models.UpdateIssueUserPairByAssignee(aid, issue.Id); err != nil {
@@ -940,7 +940,7 @@ func Milestones(ctx *middleware.Context) {
 		return
 	}
 	for _, m := range miles {
-		m.RenderedContent = string(base.RenderSpecialLink([]byte(m.Content), ctx.Repo.RepoLink))
+		m.RenderedContent = string(base.RenderMarkdown([]byte(m.Content), ctx.Repo.RepoLink))
 		m.CalOpenIssues()
 	}
 	ctx.Data["Milestones"] = miles
@@ -1118,4 +1118,10 @@ func IssueGetAttachment(ctx *middleware.Context) {
 	// Fix #312. Attachments with , in their name are not handled correctly by Google Chrome.
 	// We must put the name in " manually.
 	ctx.ServeFile(attachment.Path, "\""+attachment.Name+"\"")
+}
+
+// testing route handler for new issue ui page
+// todo : move to Issue() function
+func Issues2(ctx *middleware.Context){
+	ctx.HTML(200,"repo/issue2/list")
 }

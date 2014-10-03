@@ -15,8 +15,7 @@ import (
 
 	"github.com/Unknwon/com"
 
-	"github.com/gogits/git"
-
+	"github.com/gogits/gogs/modules/git"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/process"
 )
@@ -71,7 +70,7 @@ func (diff *Diff) NumFiles() int {
 
 const DIFF_HEAD = "diff --git "
 
-func ParsePatch(pid int64, cmd *exec.Cmd, reader io.Reader) (*Diff, error) {
+func ParsePatch(pid int64, maxlines int, cmd *exec.Cmd, reader io.Reader) (*Diff, error) {
 	scanner := bufio.NewScanner(reader)
 	var (
 		curFile    *DiffFile
@@ -80,6 +79,7 @@ func ParsePatch(pid int64, cmd *exec.Cmd, reader io.Reader) (*Diff, error) {
 		}
 
 		leftLine, rightLine int
+		isTooLong           bool
 	)
 
 	diff := &Diff{Files: make([]*DiffFile, 0)}
@@ -91,16 +91,17 @@ func ParsePatch(pid int64, cmd *exec.Cmd, reader io.Reader) (*Diff, error) {
 			continue
 		}
 
-		i = i + 1
-
-		// Diff data too large.
-		if i == 5000 {
-			log.Warn("Diff data too large")
-			return &Diff{}, nil
-		}
-
 		if line == "" {
 			continue
+		}
+
+		i = i + 1
+
+		// Diff data too large, we only show the first about maxlines lines
+		if i == maxlines {
+			isTooLong = true
+			log.Warn("Diff data too large")
+			//return &Diff{}, nil
 		}
 
 		switch {
@@ -111,6 +112,10 @@ func ParsePatch(pid int64, cmd *exec.Cmd, reader io.Reader) (*Diff, error) {
 			curSection.Lines = append(curSection.Lines, diffLine)
 			continue
 		case line[0] == '@':
+			if isTooLong {
+				return diff, nil
+			}
+
 			curSection = &DiffSection{}
 			curFile.Sections = append(curFile.Sections, curSection)
 			ss := strings.Split(line, "@@")
@@ -144,6 +149,10 @@ func ParsePatch(pid int64, cmd *exec.Cmd, reader io.Reader) (*Diff, error) {
 
 		// Get new file.
 		if strings.HasPrefix(line, DIFF_HEAD) {
+			if isTooLong {
+				return diff, nil
+			}
+
 			fs := strings.Split(line[len(DIFF_HEAD):], " ")
 			a := fs[0]
 
@@ -175,25 +184,30 @@ func ParsePatch(pid int64, cmd *exec.Cmd, reader io.Reader) (*Diff, error) {
 	return diff, nil
 }
 
-func GetDiff(repoPath, commitid string) (*Diff, error) {
+func GetDiffRange(repoPath, beforeCommitId string, afterCommitId string, maxlines int) (*Diff, error) {
 	repo, err := git.OpenRepository(repoPath)
 	if err != nil {
 		return nil, err
 	}
 
-	commit, err := repo.GetCommit(commitid)
+	commit, err := repo.GetCommit(afterCommitId)
 	if err != nil {
 		return nil, err
 	}
 
 	rd, wr := io.Pipe()
 	var cmd *exec.Cmd
-	// First commit of repository.
-	if commit.ParentCount() == 0 {
-		cmd = exec.Command("git", "show", commitid)
+	// if "after" commit given
+	if beforeCommitId == "" {
+		// First commit of repository.
+		if commit.ParentCount() == 0 {
+			cmd = exec.Command("git", "show", afterCommitId)
+		} else {
+			c, _ := commit.Parent(0)
+			cmd = exec.Command("git", "diff", c.Id.String(), afterCommitId)
+		}
 	} else {
-		c, _ := commit.Parent(0)
-		cmd = exec.Command("git", "diff", c.Id.String(), commitid)
+		cmd = exec.Command("git", "diff", beforeCommitId, afterCommitId)
 	}
 	cmd.Dir = repoPath
 	cmd.Stdout = wr
@@ -208,7 +222,7 @@ func GetDiff(repoPath, commitid string) (*Diff, error) {
 	}()
 	defer rd.Close()
 
-	desc := fmt.Sprintf("GetDiff(%s)", repoPath)
+	desc := fmt.Sprintf("GetDiffRange(%s)", repoPath)
 	pid := process.Add(desc, cmd)
 	go func() {
 		// In case process became zombie.
@@ -224,5 +238,9 @@ func GetDiff(repoPath, commitid string) (*Diff, error) {
 		}
 	}()
 
-	return ParsePatch(pid, cmd, rd)
+	return ParsePatch(pid, maxlines, cmd, rd)
+}
+
+func GetDiffCommit(repoPath, commitId string, maxlines int) (*Diff, error) {
+	return GetDiffRange(repoPath, "", commitId, maxlines)
 }

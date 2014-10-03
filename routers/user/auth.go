@@ -52,8 +52,8 @@ func SignIn(ctx *middleware.Context) {
 	defer func() {
 		if !isSucceed {
 			log.Trace("auto-login cookie cleared: %s", uname)
-			ctx.SetCookie(setting.CookieUserName, "", -1)
-			ctx.SetCookie(setting.CookieRememberName, "", -1)
+			ctx.SetCookie(setting.CookieUserName, "", -1, setting.AppSubUrl)
+			ctx.SetCookie(setting.CookieRememberName, "", -1, setting.AppSubUrl)
 			return
 		}
 	}()
@@ -77,12 +77,12 @@ func SignIn(ctx *middleware.Context) {
 	ctx.Session.Set("uid", u.Id)
 	ctx.Session.Set("uname", u.Name)
 	if redirectTo, _ := url.QueryUnescape(ctx.GetCookie("redirect_to")); len(redirectTo) > 0 {
-		ctx.SetCookie("redirect_to", "", -1)
+		ctx.SetCookie("redirect_to", "", -1, setting.AppSubUrl)
 		ctx.Redirect(redirectTo)
 		return
 	}
 
-	ctx.Redirect("/")
+	ctx.Redirect(setting.AppSubUrl + "/")
 }
 
 func SignInPost(ctx *middleware.Context, form auth.SignInForm) {
@@ -113,9 +113,9 @@ func SignInPost(ctx *middleware.Context, form auth.SignInForm) {
 
 	if form.Remember {
 		days := 86400 * setting.LogInRememberDays
-		ctx.SetCookie(setting.CookieUserName, u.Name, days)
+		ctx.SetCookie(setting.CookieUserName, u.Name, days, setting.AppSubUrl)
 		ctx.SetSuperSecureCookie(base.EncodeMd5(u.Rands+u.Passwd),
-			setting.CookieRememberName, u.Name, days)
+			setting.CookieRememberName, u.Name, days, setting.AppSubUrl)
 	}
 
 	// Bind with social account.
@@ -135,12 +135,12 @@ func SignInPost(ctx *middleware.Context, form auth.SignInForm) {
 	ctx.Session.Set("uid", u.Id)
 	ctx.Session.Set("uname", u.Name)
 	if redirectTo, _ := url.QueryUnescape(ctx.GetCookie("redirect_to")); len(redirectTo) > 0 {
-		ctx.SetCookie("redirect_to", "", -1)
+		ctx.SetCookie("redirect_to", "", -1, setting.AppSubUrl)
 		ctx.Redirect(redirectTo)
 		return
 	}
 
-	ctx.Redirect("/")
+	ctx.Redirect(setting.AppSubUrl + "/")
 }
 
 func SignOut(ctx *middleware.Context) {
@@ -149,9 +149,9 @@ func SignOut(ctx *middleware.Context) {
 	ctx.Session.Delete("socialId")
 	ctx.Session.Delete("socialName")
 	ctx.Session.Delete("socialEmail")
-	ctx.SetCookie(setting.CookieUserName, "", -1)
-	ctx.SetCookie(setting.CookieRememberName, "", -1)
-	ctx.Redirect("/")
+	ctx.SetCookie(setting.CookieUserName, "", -1, setting.AppSubUrl)
+	ctx.SetCookie(setting.CookieRememberName, "", -1, setting.AppSubUrl)
+	ctx.Redirect(setting.AppSubUrl + "/")
 }
 
 func oauthSignUp(ctx *middleware.Context, sid int64) {
@@ -280,7 +280,7 @@ func SignUpPost(ctx *middleware.Context, cpt *captcha.Captcha, form auth.Registe
 		ctx.Data["IsSendRegisterMail"] = true
 		ctx.Data["Email"] = u.Email
 		ctx.Data["Hours"] = setting.Service.ActiveCodeLives / 60
-		ctx.HTML(200, "user/activate")
+		ctx.HTML(200, ACTIVATE)
 
 		if err := ctx.Cache.Put("MailResendLimit_"+u.LowerName, u.LowerName, 180); err != nil {
 			log.Error(4, "Set cache(MailResendLimit) fail: %v", err)
@@ -288,7 +288,7 @@ func SignUpPost(ctx *middleware.Context, cpt *captcha.Captcha, form auth.Registe
 		return
 	}
 
-	ctx.Redirect("/user/login")
+	ctx.Redirect(setting.AppSubUrl + "/user/login")
 }
 
 func Activate(ctx *middleware.Context) {
@@ -335,7 +335,7 @@ func Activate(ctx *middleware.Context) {
 
 		ctx.Session.Set("uid", user.Id)
 		ctx.Session.Set("uname", user.Name)
-		ctx.Redirect("/")
+		ctx.Redirect(setting.AppSubUrl + "/")
 		return
 	}
 
@@ -437,7 +437,7 @@ func ResetPasswdPost(ctx *middleware.Context) {
 		}
 
 		log.Trace("User password reset: %s", u.Name)
-		ctx.Redirect("/user/login")
+		ctx.Redirect(setting.AppSubUrl + "/user/login")
 		return
 	}
 
