@@ -600,27 +600,27 @@ type Follow struct {
 
 // FollowUser marks someone be another's follower.
 func FollowUser(userId int64, followId int64) (err error) {
-	session := x.NewSession()
-	defer session.Close()
-	session.Begin()
+	sess := x.NewSession()
+	defer sess.Close()
+	sess.Begin()
 
-	if _, err = session.Insert(&Follow{UserId: userId, FollowId: followId}); err != nil {
-		session.Rollback()
+	if _, err = sess.Insert(&Follow{UserId: userId, FollowId: followId}); err != nil {
+		sess.Rollback()
 		return err
 	}
 
 	rawSql := "UPDATE `user` SET num_followers = num_followers + 1 WHERE id = ?"
-	if _, err = session.Exec(rawSql, followId); err != nil {
-		session.Rollback()
+	if _, err = sess.Exec(rawSql, followId); err != nil {
+		sess.Rollback()
 		return err
 	}
 
 	rawSql = "UPDATE `user` SET num_followings = num_followings + 1 WHERE id = ?"
-	if _, err = session.Exec(rawSql, userId); err != nil {
-		session.Rollback()
+	if _, err = sess.Exec(rawSql, userId); err != nil {
+		sess.Rollback()
 		return err
 	}
-	return session.Commit()
+	return sess.Commit()
 }
 
 // UnFollowUser unmarks someone be another's follower.

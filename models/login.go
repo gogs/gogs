@@ -161,12 +161,8 @@ func UserSignIn(uname, passwd string) (*User, error) {
 		return nil, err
 	}
 
-	if u.LoginType == NOTYPE {
-		if has {
-			u.LoginType = PLAIN
-		} else {
-			return nil, ErrUserNotExist
-		}
+	if u.LoginType == NOTYPE && has {
+		u.LoginType = PLAIN
 	}
 
 	// For plain login, user must exist to reach this line.
