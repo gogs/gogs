@@ -16,6 +16,6 @@ settings:
             then
                 go install -v
             else
-                go get -v -tags "sqlite redis memecache" github.com/gogits/gogs
-                go install -v -tags "sqlite redis memecache"
+                go get -v -tags "sqlite redis memcache" github.com/gogits/gogs
+                go install -v -tags "sqlite redis memcache"
             fi
