@@ -13,7 +13,8 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/gogits/gfm"
+	"github.com/russross/blackfriday"
+
 	"github.com/gogits/gogs/modules/setting"
 )
 
@@ -74,7 +75,7 @@ func IsReadmeFile(name string) bool {
 }
 
 type CustomRender struct {
-	gfm.Renderer
+	blackfriday.Renderer
 	urlPrefix string
 }
 
@@ -154,39 +155,40 @@ func RenderSpecialLink(rawBytes []byte, urlPrefix string) []byte {
 
 func RenderRawMarkdown(body []byte, urlPrefix string) []byte {
 	htmlFlags := 0
-	// htmlFlags |= gfm.HTML_USE_XHTML
-	// htmlFlags |= gfm.HTML_USE_SMARTYPANTS
-	// htmlFlags |= gfm.HTML_SMARTYPANTS_FRACTIONS
-	// htmlFlags |= gfm.HTML_SMARTYPANTS_LATEX_DASHES
-	// htmlFlags |= gfm.HTML_SKIP_HTML
-	htmlFlags |= gfm.HTML_SKIP_STYLE
-	htmlFlags |= gfm.HTML_SKIP_SCRIPT
-	htmlFlags |= gfm.HTML_GITHUB_BLOCKCODE
-	htmlFlags |= gfm.HTML_OMIT_CONTENTS
-	// htmlFlags |= gfm.HTML_COMPLETE_PAGE
+	// htmlFlags |= blackfriday.HTML_USE_XHTML
+	// htmlFlags |= blackfriday.HTML_USE_SMARTYPANTS
+	// htmlFlags |= blackfriday.HTML_SMARTYPANTS_FRACTIONS
+	// htmlFlags |= blackfriday.HTML_SMARTYPANTS_LATEX_DASHES
+	// htmlFlags |= blackfriday.HTML_SKIP_HTML
+	htmlFlags |= blackfriday.HTML_SKIP_STYLE
+	// htmlFlags |= blackfriday.HTML_SKIP_SCRIPT
+	// htmlFlags |= blackfriday.HTML_GITHUB_BLOCKCODE
+	htmlFlags |= blackfriday.HTML_OMIT_CONTENTS
+	// htmlFlags |= blackfriday.HTML_COMPLETE_PAGE
 	renderer := &CustomRender{
-		Renderer:  gfm.HtmlRenderer(htmlFlags, "", ""),
+		Renderer:  blackfriday.HtmlRenderer(htmlFlags, "", ""),
 		urlPrefix: urlPrefix,
 	}
 
 	// set up the parser
 	extensions := 0
-	extensions |= gfm.EXTENSION_NO_INTRA_EMPHASIS
-	extensions |= gfm.EXTENSION_TABLES
-	extensions |= gfm.EXTENSION_FENCED_CODE
-	extensions |= gfm.EXTENSION_AUTOLINK
-	extensions |= gfm.EXTENSION_STRIKETHROUGH
-	extensions |= gfm.EXTENSION_HARD_LINE_BREAK
-	extensions |= gfm.EXTENSION_SPACE_HEADERS
-	extensions |= gfm.EXTENSION_NO_EMPTY_LINE_BEFORE_BLOCK
+	extensions |= blackfriday.EXTENSION_NO_INTRA_EMPHASIS
+	extensions |= blackfriday.EXTENSION_TABLES
+	extensions |= blackfriday.EXTENSION_FENCED_CODE
+	extensions |= blackfriday.EXTENSION_AUTOLINK
+	extensions |= blackfriday.EXTENSION_STRIKETHROUGH
+	extensions |= blackfriday.EXTENSION_HARD_LINE_BREAK
+	extensions |= blackfriday.EXTENSION_SPACE_HEADERS
+	extensions |= blackfriday.EXTENSION_NO_EMPTY_LINE_BEFORE_BLOCK
 
-	body = gfm.Markdown(body, renderer, extensions)
+	body = blackfriday.Markdown(body, renderer, extensions)
 	return body
 }
 
 func RenderMarkdown(rawBytes []byte, urlPrefix string) []byte {
 	body := RenderSpecialLink(rawBytes, urlPrefix)
 	body = RenderRawMarkdown(body, urlPrefix)
+	body = XSS(body)
 	return body
 }
 

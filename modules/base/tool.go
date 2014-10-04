@@ -14,6 +14,7 @@ import (
 	"hash"
 	"html/template"
 	"math"
+	"regexp"
 	"strings"
 	"time"
 
@@ -445,4 +446,30 @@ func DateFormat(t time.Time, format string) string {
 	replacer := strings.NewReplacer(datePatterns...)
 	format = replacer.Replace(format)
 	return t.Format(format)
+}
+
+type xssFilter struct {
+	reg  *regexp.Regexp
+	repl []byte
+}
+
+var (
+	whiteSpace = []byte(" ")
+	xssFilters = []xssFilter{
+		{regexp.MustCompile(`\ [ONon]\w*=["]*`), whiteSpace},
+		{regexp.MustCompile(`<[SCRIPTscript]{6}`), whiteSpace},
+		{regexp.MustCompile(`=[` + "`" + `'"]*[JAVASCRIPTjavascript \t\0&#x0D;]*:`), whiteSpace},
+	}
+)
+
+// XSS goes through all the XSS filters to make user input content as safe as possible.
+func XSS(in []byte) []byte {
+	for _, filter := range xssFilters {
+		in = filter.reg.ReplaceAll(in, filter.repl)
+	}
+	return in
+}
+
+func XSSString(in string) string {
+	return string(XSS([]byte(in)))
 }

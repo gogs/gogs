@@ -24,6 +24,7 @@ github.com/macaron-contrib/session =
 github.com/macaron-contrib/toolbox = commit:57127bcc89
 github.com/mattn/go-sqlite3 = commit:a80c27ba33
 github.com/nfnt/resize = commit:581d15cb53
+github.com/russross/blackfriday = 
 github.com/saintfish/chardet = commit:3af4cd4741
 
 [res]

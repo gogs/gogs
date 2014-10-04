@@ -23,6 +23,7 @@ import (
 	"github.com/Unknwon/cae/zip"
 	"github.com/Unknwon/com"
 
+	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/git"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/process"
@@ -48,7 +49,7 @@ var (
 )
 
 var (
-	DescriptionPattern = regexp.MustCompile(`https?://\S+`)
+	DescPattern = regexp.MustCompile(`https?://\S+`)
 )
 
 func LoadRepoConfig() {
@@ -181,7 +182,7 @@ func (repo *Repository) DescriptionHtml() template.HTML {
 		ss := html.EscapeString(s)
 		return fmt.Sprintf(`<a href="%s" target="_blank">%s</a>`, ss, ss)
 	}
-	return template.HTML(DescriptionPattern.ReplaceAllStringFunc(repo.Description, sanitize))
+	return template.HTML(DescPattern.ReplaceAllStringFunc(base.XSSString(repo.Description), sanitize))
 }
 
 // IsRepositoryExist returns true if the repository with given name under user has already existed.
