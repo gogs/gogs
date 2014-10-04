@@ -24,7 +24,28 @@
 </div>
 <div id="feature-wrapper">
     <div class="container clear">
-        {{if eq .Lang "zh-CN"}}
+        {{if eq .Lang "de-DE"}}
+        <div class="grid-1-2 left">
+            <i class="octicon octicon-flame"></i>
+            <b>Einfach zu installieren</b>
+            <p>Starte einfach <a target="_blank" href="http://gogs.io/docs/installation/install_from_binary.html">die Anwendung</a> für deine Plattform. Gogs gibt es auch für <a target="_blank" href="https://github.com/gogits/gogs/tree/master/dockerfiles">Docker</a>, <a target="_blank" href="https://github.com/geerlingguy/ansible-vagrant-examples/tree/master/gogs">Vagrant</a> oder als <a target="_blank" href="http://gogs.io/docs/installation/install_from_packages.html">Installationspaket</a>.</p>
+        </div>
+        <div class="grid-1-2 left">
+            <i class="octicon octicon-device-desktop"></i>
+            <b>Plattformübergreifend</b>
+            <p>Gogs läuft überall. <a target="_blank" href="http://golang.org/">Go</a> kompiliert für: Windows, Mac OS X, Linux, ARM, etc. Wähle dasjenige System, was dir am meisten gefällt!</p>
+        </div>
+        <div class="grid-1-2 left">
+            <i class="octicon octicon-rocket"></i>
+            <b>Leichtgewicht</b>
+            <p>Gogs hat minimale Systemanforderungen und kann selbst auf einem günstigen und stromsparenden Raspberry Pi betrieben werden.</p>
+        </div>
+        <div class="grid-1-2 left">
+            <i class="octicon octicon-code"></i>
+            <b>Quelloffen</b>
+            <p>Der komplette Code befindet sich auf <a target="_blank" href="https://github.com/gogits/gogs/">GitHub</a>! Unterstütze uns bei der Verbesserung dieses Projekts. Trau dich!</p>
+        </div>
+        {{else if eq .Lang "zh-CN"}}
         <div class="grid-1-2 left">
             <i class="octicon octicon-flame"></i>
             <b>易安装</b>
