@@ -217,6 +217,15 @@ func Action(ctx *middleware.Context) {
 		err = models.StarRepo(ctx.User.Id, ctx.Repo.Repository.Id, true)
 	case "unstar":
 		err = models.StarRepo(ctx.User.Id, ctx.Repo.Repository.Id, false)
+        case "fork":
+                repo, error := models.ForkRepository(ctx.User, ctx.Repo.Repository)
+                log.Info("Tried to fork a repo!")
+                log.Info("Repo thing is " + repo.Name)
+                if error != nil {
+                        
+                        ctx.Redirect(setting.AppSubUrl + "/" + ctx.User.Name + "/" + repo.Name)
+                        return
+                }
 	case "desc":
 		if !ctx.Repo.IsOwner {
 			ctx.Error(404)
