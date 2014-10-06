@@ -480,6 +480,10 @@ dt {
 .ipt-large {
   font-size: 14.4px;
 }
+.ipt-textarea {
+  height: auto !important;
+  width: auto;
+}
 .ipt-disabled,
 input[disabled] {
   background-color: #f2f2f2 !important;

@@ -5,7 +5,7 @@ Gogs(Go Git Service) is a painless self-hosted Git Service written in Go.
 
 ![Demo](https://gowalker.org/public/gogs_demo.gif)
 
-##### Current version: 0.5.4 Beta
+##### Current version: 0.5.5 Beta
 
 ### NOTICES
 
@@ -44,7 +44,7 @@ The goal of this project is to make the easiest, fastest and most painless way t
 - Slack webhook integration
 - Supports MySQL, PostgreSQL and SQLite3
 - Social account login(GitHub, Google, QQ, Weibo)
-- Multi-language support(English, Chinese, Germany, French etc.)
+- Multi-language support(English, Chinese, Germany, French, Dutch etc.)
 
 ## System Requirements
 

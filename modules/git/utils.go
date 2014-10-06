@@ -7,6 +7,7 @@ package git
 import (
 	"bytes"
 	"container/list"
+	"os"
 	"path/filepath"
 	"strings"
 )
@@ -45,4 +46,24 @@ func RefEndName(refStr string) string {
 // It does not test if the file exists.
 func filepathFromSHA1(rootdir, sha1 string) string {
 	return filepath.Join(rootdir, "objects", sha1[:2], sha1[2:])
+}
+
+// isDir returns true if given path is a directory,
+// or returns false when it's a file or does not exist.
+func isDir(dir string) bool {
+	f, e := os.Stat(dir)
+	if e != nil {
+		return false
+	}
+	return f.IsDir()
+}
+
+// isFile returns true if given path is a file,
+// or returns false when it's a directory or does not exist.
+func isFile(filePath string) bool {
+	f, e := os.Stat(filePath)
+	if e != nil {
+		return false
+	}
+	return !f.IsDir()
 }
