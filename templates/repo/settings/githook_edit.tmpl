@@ -1,0 +1,41 @@
+{{template "ng/base/head" .}}
+{{template "ng/base/header" .}}
+<div id="repo-wrapper">
+    {{template "repo/header" .}}
+	<div id="setting-wrapper" class="main-wrapper">
+	    <div id="repo-setting" class="container clear">
+	        {{template "repo/settings/nav" .}}
+	        <div class="grid-4-5 left">
+	            <div class="setting-content">
+	                {{template "ng/base/alert" .}}
+	                <div id="setting-content">
+	                    <div id="repo-hooks-panel" class="panel panel-radius">
+	                        <div class="panel-header">
+	                        	<strong>{{.i18n.Tr "repo.settings.githooks"}}</strong>
+	                        </div>
+	                        <form class="form form-align panel-body" id="repo-setting-form" action="{{.RepoLink}}/settings/hooks/git/{{.Hook.Name}}" method="post">
+	                            {{.CsrfTokenHtml}}
+                        		<div class="text-center panel-desc">{{.i18n.Tr "repo.settings.githook_edit_desc"}}</div>
+	                            {{with .Hook}}
+	                            <div class="field">
+	                                <label>{{$.i18n.Tr "repo.settings.githook_name"}}</label>
+	                                <label class="text-left">{{.Name}}</label>
+	                            </div>
+					            <div class="field clear">
+					                <label class="left" for="content">{{$.i18n.Tr "repo.settings.githook_content"}}</label>
+					                <textarea class="ipt-textarea ipt-large ipt-radius" id="content" name="content" cols="60" rows="20" wrap="off">{{if .IsActive}}{{.Content}}{{else}}{{.Sample}}{{end}}</textarea>
+					            </div>
+	                            <div class="field">
+	                                <span class="form-label"></span>
+	                                <button class="btn btn-green btn-large btn-radius" id="change-reponame-btn" href="#change-reponame-modal">{{$.i18n.Tr "repo.settings.update_githook"}}</button>
+	                            </div>
+	                            {{end}}
+	                        </form>
+	                    </div>
+	                </div>
+	            </div>
+	        </div>
+	    </div>
+	</div>
+</div>
+{{template "ng/base/footer" .}}

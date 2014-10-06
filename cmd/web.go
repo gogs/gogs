@@ -313,6 +313,12 @@ func runWeb(*cli.Context) {
 			r.Get("/hooks/:id", repo.WebHooksEdit)
 			r.Post("/hooks/gogs/:id", bindIgnErr(auth.NewWebhookForm{}), repo.WebHooksEditPost)
 			r.Post("/hooks/slack/:id", bindIgnErr(auth.NewSlackHookForm{}), repo.SlackHooksEditPost)
+
+			m.Group("/hooks/git", func(r *macaron.Router) {
+				r.Get("", repo.GitHooks)
+				r.Get("/:name", repo.GitHooksEdit)
+				r.Post("/:name", repo.GitHooksEditPost)
+			}, middleware.GitHookService())
 		})
 	}, reqSignIn, middleware.RepoAssignment(true), reqTrueOwner)
 

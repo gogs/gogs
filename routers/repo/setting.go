@@ -16,6 +16,7 @@ import (
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/base"
+	"github.com/gogits/gogs/modules/git"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/mailer"
 	"github.com/gogits/gogs/modules/middleware"
@@ -26,6 +27,8 @@ const (
 	SETTINGS_OPTIONS base.TplName = "repo/settings/options"
 	COLLABORATION    base.TplName = "repo/settings/collaboration"
 	HOOKS            base.TplName = "repo/settings/hooks"
+	GITHOOKS         base.TplName = "repo/settings/githooks"
+	GITHOOK_EDIT     base.TplName = "repo/settings/githook_edit"
 	HOOK_NEW         base.TplName = "repo/settings/hook_new"
 	ORG_HOOK_NEW     base.TplName = "org/settings/hook_new"
 )
@@ -590,4 +593,55 @@ func getOrgRepoCtx(ctx *middleware.Context) (*OrgRepoCtx, error) {
 	} else {
 		return &OrgRepoCtx{}, errors.New("Unable to set OrgRepo context")
 	}
+}
+
+func GitHooks(ctx *middleware.Context) {
+	ctx.Data["Title"] = ctx.Tr("repo.settings")
+	ctx.Data["PageIsSettingsGitHooks"] = true
+
+	hooks, err := ctx.Repo.GitRepo.Hooks()
+	if err != nil {
+		ctx.Handle(500, "Hooks", err)
+		return
+	}
+	ctx.Data["Hooks"] = hooks
+
+	ctx.HTML(200, GITHOOKS)
+}
+
+func GitHooksEdit(ctx *middleware.Context) {
+	ctx.Data["Title"] = ctx.Tr("repo.settings")
+	ctx.Data["PageIsSettingsGitHooks"] = true
+
+	name := ctx.Params(":name")
+	hook, err := ctx.Repo.GitRepo.GetHook(name)
+	if err != nil {
+		if err == git.ErrNotValidHook {
+			ctx.Handle(404, "GetHook", err)
+		} else {
+			ctx.Handle(500, "GetHook", err)
+		}
+		return
+	}
+	ctx.Data["Hook"] = hook
+	ctx.HTML(200, GITHOOK_EDIT)
+}
+
+func GitHooksEditPost(ctx *middleware.Context) {
+	name := ctx.Params(":name")
+	hook, err := ctx.Repo.GitRepo.GetHook(name)
+	if err != nil {
+		if err == git.ErrNotValidHook {
+			ctx.Handle(404, "GetHook", err)
+		} else {
+			ctx.Handle(500, "GetHook", err)
+		}
+		return
+	}
+	hook.Content = ctx.Query("content")
+	if err = hook.Update(); err != nil {
+		ctx.Handle(500, "hook.Update", err)
+		return
+	}
+	ctx.Redirect(ctx.Repo.RepoLink + "/settings/hooks/git")
 }
