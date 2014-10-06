@@ -29,7 +29,6 @@ import (
 // Context represents context of a request.
 type Context struct {
 	*macaron.Context
-	i18n.Locale
 	Cache   cache.Cache
 	csrf    csrf.CSRF
 	Flash   *session.Flash
@@ -162,7 +161,6 @@ func Contexter() macaron.Handler {
 	return func(c *macaron.Context, l i18n.Locale, cache cache.Cache, sess session.Store, f *session.Flash, x csrf.CSRF) {
 		ctx := &Context{
 			Context: c,
-			Locale:  l,
 			Cache:   cache,
 			csrf:    x,
 			Flash:   f,
