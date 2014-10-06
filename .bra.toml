@@ -11,7 +11,7 @@ watch_dirs = [
 watch_exts = [".go", ".ini"]
 build_delay = 1500
 cmds = [
-	["go", "install"],
-	["go", "build"],
+	["go", "install", "-tags", "sqlite"],
+	["go", "build", "-tags", "sqlite"],
 	["./gogs", "web"]
 ]
