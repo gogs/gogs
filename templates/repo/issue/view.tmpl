@@ -236,7 +236,7 @@
                                                 {{range .ClosedMilestones}}
                                                 <li class="milestone-item" data-id="{{.Id}}">
                                                     <p><strong>{{.Name}}</strong></p>
-                                                    <p>Closed {{TimeSince .ClosedDate}}</p>
+                                                    <p>Closed {{TimeSince .ClosedDate $.Lang}}</p>
                                                 </li>
                                                 {{end}}
                                             </ul>
