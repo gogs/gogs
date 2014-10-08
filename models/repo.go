@@ -934,9 +934,14 @@ func DeleteRepository(uid, repoId int64, userName string) error {
 		sess.Rollback()
 		return err
 	}
+
+	// Remove repository files.
 	if err = os.RemoveAll(RepoPath(userName, repo.Name)); err != nil {
-		sess.Rollback()
-		return err
+		desc := fmt.Sprintf("Fail to delete repository files(%s/%s): %v", userName, repo.Name, err)
+		log.Warn(desc)
+		if err = CreateRepositoryNotice(desc); err != nil {
+			log.Error(4, "Fail to add notice: %v", err)
+		}
 	}
 	return sess.Commit()
 }

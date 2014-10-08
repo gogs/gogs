@@ -48,12 +48,12 @@ func Users(ctx *middleware.Context) {
 	pageNum := 50
 	p := pagination(ctx, models.CountUsers(), pageNum)
 
-	var err error
-	ctx.Data["Users"], err = models.GetUsers(pageNum, (p-1)*pageNum)
+	users, err := models.GetUsers(pageNum, (p-1)*pageNum)
 	if err != nil {
 		ctx.Handle(500, "GetUsers", err)
 		return
 	}
+	ctx.Data["Users"] = users
 	ctx.HTML(200, USERS)
 }
 

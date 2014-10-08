@@ -243,6 +243,11 @@ func runWeb(*cli.Context) {
 			r.Post("/:authid", bindIgnErr(auth.AuthenticationForm{}), admin.EditAuthSourcePost)
 			r.Post("/:authid/delete", admin.DeleteAuthSource)
 		})
+
+		m.Group("/notices", func(r *macaron.Router) {
+			r.Get("", admin.Notices)
+			r.Get("/:id:int/delete", admin.DeleteNotice)
+		})
 	}, adminReq)
 
 	m.Get("/:username", ignSignIn, user.Profile)

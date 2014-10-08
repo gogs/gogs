@@ -32,12 +32,12 @@ var (
 )
 
 func init() {
-	tables = append(tables, new(User), new(PublicKey),
+	tables = append(tables, new(User), new(PublicKey), new(Follow), new(Oauth2),
 		new(Repository), new(Watch), new(Star), new(Action), new(Access),
-		new(Issue), new(Comment), new(Oauth2), new(Follow),
-		new(Mirror), new(Release), new(LoginSource), new(Webhook), new(IssueUser),
-		new(Milestone), new(Label), new(HookTask), new(Team), new(OrgUser), new(TeamUser),
-		new(UpdateTask), new(Attachment))
+		new(Issue), new(Comment), new(Attachment), new(IssueUser), new(Label), new(Milestone),
+		new(Mirror), new(Release), new(LoginSource), new(Webhook),
+		new(UpdateTask), new(HookTask), new(Team), new(OrgUser), new(TeamUser),
+		new(Notice))
 }
 
 func LoadModelsConfig() {
