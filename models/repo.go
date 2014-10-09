@@ -1307,9 +1307,7 @@ func ForkRepository(u *User, oldRepo *Repository) (*Repository, error) {
             }
         }
     
-        if err = sess.Commit(); err != nil {
-            return nil, err
-        }
+        
     
         if u.IsOrganization() {
             t, err := u.GetOwnerTeam()
@@ -1335,7 +1333,16 @@ func ForkRepository(u *User, oldRepo *Repository) (*Repository, error) {
         if err = NewRepoAction(u, repo); err != nil {
             log.Error(4, "NewRepoAction: %v", err)
         }
-   
+        
+        if _, err = sess.Exec(
+            "UPDATE `repository` SET num_forks = num_forks + 1 WHERE id = ?", oldRepo.Id); err != nil {
+            sess.Rollback()
+            return nil, err
+        }
+        
+        if err = sess.Commit(); err != nil {
+            return nil, err
+        }
     
         repoPath := RepoPath(u.Name, repo.Name)
         _, stderr, err := process.ExecTimeout(10*time.Minute,
@@ -1350,5 +1357,6 @@ func ForkRepository(u *User, oldRepo *Repository) (*Repository, error) {
         }
     
         return repo, nil
+   
 
 }
