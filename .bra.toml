@@ -1,5 +1,8 @@
 [run]
-init_cmds = [["./gogs", "web"]]
+init_cmds = [
+	["grep", "-rn", "FIXME", "."],
+	["./gogs", "web"]
+]
 watch_all = true
 watch_dirs = [
 	"$WORKDIR/conf/locale",

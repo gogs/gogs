@@ -166,13 +166,23 @@ type Repository struct {
 }
 
 func (repo *Repository) GetOwner() (err error) {
-	repo.Owner, err = GetUserById(repo.OwnerId)
+	if repo.Owner == nil {
+		repo.Owner, err = GetUserById(repo.OwnerId)
+	}
 	return err
 }
 
 func (repo *Repository) GetMirror() (err error) {
 	repo.Mirror, err = GetMirror(repo.Id)
 	return err
+}
+
+func (repo *Repository) HasAccess(uname string) bool {
+	if err := repo.GetOwner(); err != nil {
+		return false
+	}
+	has, _ := HasAccess(uname, path.Join(repo.Owner.Name, repo.Name), READABLE)
+	return has
 }
 
 // DescriptionHtml does special handles to description and return HTML string.
