@@ -219,11 +219,17 @@ func Action(ctx *middleware.Context) {
 		err = models.StarRepo(ctx.User.Id, ctx.Repo.Repository.Id, false)
         case "fork":
                 repo, error := models.ForkRepository(ctx.User, ctx.Repo.Repository)
-                log.Info("Tried to fork a repo!")
-                log.Info("Repo thing is " + repo.Name)
                 if error != nil {
+                    log.Error(4, "Action(%s): %v", ctx.Params(":action"), error)
+                    ctx.JSON(200, map[string]interface{}{
+                        "ok":  false,
+                        "err": error.Error(),
+                    })
+                    return
+                }
+                if error == nil {
+                        ctx.Redirect(setting.AppSubUrl + "/" + repo.Owner.Name + "/" + repo.Name)
                         
-                        ctx.Redirect(setting.AppSubUrl + "/" + ctx.User.Name + "/" + repo.Name)
                         return
                 }
 	case "desc":
