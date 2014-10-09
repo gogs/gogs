@@ -67,7 +67,7 @@ func checkVersion() {
 		log.Fatal(4, "Macaron version is too old, did you forget to update?(github.com/Unknwon/macaron)")
 	}
 	i18nVer := git.MustParseVersion(i18n.Version())
-	if i18nVer.LessThan(git.MustParseVersion("0.0.1")) {
+	if i18nVer.LessThan(git.MustParseVersion("0.0.2")) {
 		log.Fatal(4, "i18n version is too old, did you forget to update?(github.com/macaron-contrib/i18n)")
 	}
 }
@@ -92,10 +92,12 @@ func newMacaron() *macaron.Macaron {
 		IndentJSON: macaron.Env != macaron.PROD,
 	}))
 	m.Use(i18n.I18n(i18n.Options{
-		SubURL:   setting.AppSubUrl,
-		Langs:    setting.Langs,
-		Names:    setting.Names,
-		Redirect: true,
+		SubURL:          setting.AppSubUrl,
+		Directory:       path.Join(setting.ConfRootPath, "locale"),
+		CustomDirectory: path.Join(setting.CustomPath, "conf/locale"),
+		Langs:           setting.Langs,
+		Names:           setting.Names,
+		Redirect:        true,
 	}))
 	m.Use(cache.Cacher(cache.Options{
 		Adapter:  setting.CacheAdapter,
