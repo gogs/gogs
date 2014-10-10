@@ -35,7 +35,7 @@ Gogs 的目标是打造一个最简单、最快速和最轻松的方式搭建自
 - Slack Web 钩子集成
 - 支持 MySQL、PostgreSQL 以及 SQLite3 数据库
 - 社交帐号登录（GitHub、Google、QQ、微博）
-- 多语言支持（英文、简体中文、德语、法语、荷兰语等等）
+- 多语言支持（英文、简体中文、繁体中文、德语、法语、荷兰语等等）
 
 ## 系统要求
 
@@ -48,7 +48,7 @@ Gogs 的目标是打造一个最简单、最快速和最轻松的方式搭建自
 
 然后，您可以通过以下 5 种方式来安装 Gogs：
 
-- [二进制安装](http://gogs.io/docs/installation/install_from_binary.md): **强烈推荐**
+- [二进制安装](http://gogs.io/docs/installation/install_from_binary.md)
 - [源码安装](http://gogs.io/docs/installation/install_from_source.md)
 - [包管理安装](http://gogs.io/docs/installation/install_from_packages.md)
 - [采用 Docker 部署](https://github.com/gogits/gogs/tree/master/docker)
