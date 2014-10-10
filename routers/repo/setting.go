@@ -196,9 +196,16 @@ func SettingsCollaboration(ctx *middleware.Context) {
 			return
 		}
 
+		// Check if user is organization member.
+		if ctx.Repo.Owner.IsOrganization() && ctx.Repo.Owner.IsOrgMember(u.Id) {
+			ctx.Flash.Info(ctx.Tr("repo.settings.user_is_org_member"))
+			ctx.Redirect(ctx.Repo.RepoLink + "/settings/collaboration")
+			return
+		}
+
 		if err = models.AddAccess(&models.Access{UserName: name, RepoName: repoLink,
 			Mode: models.WRITABLE}); err != nil {
-			ctx.Handle(500, "AddAccess2", err)
+			ctx.Handle(500, "AddAccess", err)
 			return
 		}
 
@@ -247,16 +254,20 @@ func SettingsCollaboration(ctx *middleware.Context) {
 		return
 	}
 
-	us := make([]*models.User, len(names))
-	for i, name := range names {
-		us[i], err = models.GetUserByName(name)
+	collaborators := make([]*models.User, 0, len(names))
+	for _, name := range names {
+		u, err := models.GetUserByName(name)
 		if err != nil {
 			ctx.Handle(500, "GetUserByName", err)
 			return
 		}
+		// Does not show organization members.
+		if ctx.Repo.Owner.IsOrganization() && ctx.Repo.Owner.IsOrgMember(u.Id) {
+			continue
+		}
+		collaborators = append(collaborators, u)
 	}
-
-	ctx.Data["Collaborators"] = us
+	ctx.Data["Collaborators"] = collaborators
 	ctx.HTML(200, COLLABORATION)
 }
 

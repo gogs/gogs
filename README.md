@@ -44,7 +44,7 @@ The goal of this project is to make the easiest, fastest and most painless way t
 - Slack webhook integration
 - Supports MySQL, PostgreSQL and SQLite3
 - Social account login(GitHub, Google, QQ, Weibo)
-- Multi-language support(English, Chinese, Germany, French, Dutch etc.)
+- Multi-language support(English, Simplified Chinese, Traditional Chinese, Germany, French, Dutch etc.)
 
 ## System Requirements
 
@@ -57,7 +57,7 @@ Make sure you install [Prerequirements](http://gogs.io/docs/installation/) first
 
 There are 5 ways to install Gogs:
 
-- [Install from binary](http://gogs.io/docs/installation/install_from_binary.md): **STRONGLY RECOMMENDED**
+- [Install from binary](http://gogs.io/docs/installation/install_from_binary.md)
 - [Install from source](http://gogs.io/docs/installation/install_from_source.md)
 - [Install from packages](http://gogs.io/docs/installation/install_from_packages.md)
 - [Ship with Docker](https://github.com/gogits/gogs/tree/master/docker)

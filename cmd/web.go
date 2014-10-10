@@ -64,11 +64,15 @@ func checkVersion() {
 	// Check dependency version.
 	macaronVer := git.MustParseVersion(strings.Join(strings.Split(macaron.Version(), ".")[:3], "."))
 	if macaronVer.LessThan(git.MustParseVersion("0.2.0")) {
-		log.Fatal(4, "Macaron version is too old, did you forget to update?(github.com/Unknwon/macaron)")
+		log.Fatal(4, "Package macaron version is too old, did you forget to update?(github.com/Unknwon/macaron)")
 	}
 	i18nVer := git.MustParseVersion(i18n.Version())
 	if i18nVer.LessThan(git.MustParseVersion("0.0.2")) {
-		log.Fatal(4, "i18n version is too old, did you forget to update?(github.com/macaron-contrib/i18n)")
+		log.Fatal(4, "Package i18n version is too old, did you forget to update?(github.com/macaron-contrib/i18n)")
+	}
+	sessionVer := git.MustParseVersion(session.Version())
+	if sessionVer.LessThan(git.MustParseVersion("0.0.1")) {
+		log.Fatal(4, "Package session version is too old, did you forget to update?(github.com/macaron-contrib/session)")
 	}
 }
 
