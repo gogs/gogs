@@ -25,7 +25,7 @@ func Organizations(ctx *middleware.Context) {
 	var err error
 	ctx.Data["Orgs"], err = models.GetOrganizations(pageNum, (p-1)*pageNum)
 	if err != nil {
-		ctx.Handle(500, "GetUsers", err)
+		ctx.Handle(500, "GetOrganizations", err)
 		return
 	}
 	ctx.HTML(200, ORGS)
