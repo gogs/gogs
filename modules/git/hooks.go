@@ -83,7 +83,7 @@ func (h *Hook) Update() error {
 	if len(strings.TrimSpace(h.Content)) == 0 {
 		return os.Remove(h.path)
 	}
-	return ioutil.WriteFile(h.path, []byte(h.Content), os.ModePerm)
+	return ioutil.WriteFile(h.path, []byte(strings.Replace(h.Content, "\r", "", -1)), os.ModePerm)
 }
 
 // ListHooks returns a list of Git hooks of given repository.
