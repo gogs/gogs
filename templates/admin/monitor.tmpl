@@ -58,7 +58,7 @@
                                             <td>{{.Pid}}</td>
                                             <td>{{.Description}}</td>
                                             <td>{{.Start}}</td>
-                                            <td>{{TimeSince .Start .i18n.Lang}}</td>
+                                            <td>{{TimeSince .Start $.Lang}}</td>
                                         </tr>
                                         {{end}}
                                     </tbody>

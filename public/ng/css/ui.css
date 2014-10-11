@@ -457,6 +457,9 @@ dt {
   box-sizing: content-box;
   text-align: center;
 }
+.btn-comb {
+  margin-left: -1px;
+}
 .btn-disabled {
   opacity: .6;
   cursor: not-allowed;

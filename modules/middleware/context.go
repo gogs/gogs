@@ -75,12 +75,6 @@ type Context struct {
 	}
 }
 
-// Query querys form parameter.
-func (ctx *Context) Query(name string) string {
-	ctx.Req.ParseForm()
-	return ctx.Req.Form.Get(name)
-}
-
 // HasError returns true if error occurs in form validation.
 func (ctx *Context) HasApiError() bool {
 	hasErr, ok := ctx.Data["HasError"]

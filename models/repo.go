@@ -663,7 +663,7 @@ func RepoPath(userName, repoName string) string {
 func TransferOwnership(u *User, newOwner string, repo *Repository) error {
 	newUser, err := GetUserByName(newOwner)
 	if err != nil {
-		return err
+		return fmt.Errorf("fail to get new owner(%s): %v", newOwner, err)
 	}
 
 	// Check if new owner has repository with same name.
