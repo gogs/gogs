@@ -32,6 +32,7 @@ The goal of this project is to make the easiest, fastest and most painless way t
 - Activity timeline
 - SSH/HTTP(S) protocol support
 - SMTP/LDAP/reverse proxy authentication support
+- Reverse proxy suburl support
 - Register/delete/rename account
 - Create/manage/delete organization with team management
 - Create/migrate/mirror/delete/watch/rename/transfer public/private repository

@@ -271,6 +271,10 @@ img.avatar-100 {
 .pagination li {
   display: inline;
 }
+.list-unstyled {
+  padding-left: 0;
+  list-style: none;
+}
 .markdown {
   background-color: white;
   font-size: 16px;
@@ -1486,6 +1490,106 @@ The register and sign-in page style
 .commit-list .sha a {
   font-family: Consolas, Menlo, Monaco, "Lucida Console", monospace;
   font-size: 14px;
+}
+.diff-head-box {
+  margin-top: 10px;
+}
+.diff-head-box .panel-body {
+  padding: 10px 15px 5px 10px;
+}
+.diff-head-box .author img {
+  margin-top: -7px;
+}
+.diff-detail-box {
+  margin: 15px 0;
+  line-height: 30px;
+}
+.diff-detail-box ol {
+  clear: both;
+  padding-left: 0;
+  margin-bottom: 28px;
+}
+.diff-detail-box ol li {
+  list-style: none;
+  padding-bottom: 4px;
+  margin-bottom: 4px;
+  border-bottom: 1px dashed #DDD;
+  padding-left: 6px;
+}
+.diff-detail-box span.status {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  margin-right: 8px;
+  vertical-align: middle;
+}
+.diff-detail-box span.status.modify {
+  background-color: #f0db88;
+}
+.diff-detail-box span.status.add {
+  background-color: #b4e2b4;
+}
+.diff-detail-box span.status.del {
+  background-color: #e9aeae;
+}
+.diff-detail-box span.status.rename {
+  background-color: #dad8ff;
+}
+.diff-box .count {
+  margin-right: 12px;
+}
+.diff-box .count .bar {
+  background-color: #e75316;
+  height: 12px;
+  width: 40px;
+  display: inline-block;
+  margin: 2px 4px 0 4px;
+  vertical-align: text-top;
+}
+.diff-box .count .bar .add {
+  background-color: #77c64a;
+  height: 12px;
+}
+.diff-box .file {
+  color: #888;
+}
+.diff-box .panel-header {
+  font-size: 14px;
+}
+.diff-file-box .code-diff tbody tr:hover td,
+.diff-file-box .code-diff tbody tr:hover pre {
+  background-color: #FFF8D2 !important;
+  border-color: #F0DB88 !important;
+}
+.diff-file-box .file-body.file-code .lines-num-old {
+  border-right: 1px solid #DDD;
+}
+.file-content .file-body.file-code .lines-num {
+  text-align: right;
+  color: #999;
+  background: #fafafa;
+  width: 1%;
+}
+.diff-file-box .code-diff tbody tr.tag-code td,
+.diff-file-box .code-diff tbody tr.tag-code pre {
+  background-color: #E0E0E0 !important;
+  border-color: #ADADAD !important;
+}
+.diff-file-box .code-diff tbody tr.del-code td,
+.diff-file-box .code-diff tbody tr.del-code pre {
+  background-color: #ffe2dd !important;
+  border-color: #e9aeae !important;
+}
+.diff-file-box .code-diff tbody tr.add-code td,
+.diff-file-box .code-diff tbody tr.add-code pre {
+  background-color: #d1ffd6 !important;
+  border-color: #b4e2b4 !important;
+}
+.compare-head-box {
+  margin-top: 10px;
+}
+.compare-head-box .compare {
+  padding: 0 15px 15px 15px;
 }
 #admin-wrapper,
 #setting-wrapper {
