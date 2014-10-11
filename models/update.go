@@ -106,7 +106,7 @@ func Update(refName, oldCommitId, newCommitId, userName, repoUserName, repoName 
 
 		if err = CommitRepoAction(userId, ru.Id, userName, actEmail,
 			repos.Id, repoUserName, repoName, refName, commit, oldCommitId, newCommitId); err != nil {
-			log.GitLogger.Fatal(4, "runUpdate.models.CommitRepoAction: %s/%s:%v", repoUserName, repoName, err)
+			log.GitLogger.Fatal(4, "CommitRepoAction: %s/%s:%v", repoUserName, repoName, err)
 		}
 		return err
 	}
@@ -116,8 +116,8 @@ func Update(refName, oldCommitId, newCommitId, userName, repoUserName, repoName 
 		return fmt.Errorf("runUpdate GetCommit of newCommitId: %v", err)
 	}
 
+	// Push new branch.
 	var l *list.List
-	// if a new branch
 	if isNew {
 		l, err = newCommit.CommitsBefore()
 		if err != nil {
@@ -134,7 +134,7 @@ func Update(refName, oldCommitId, newCommitId, userName, repoUserName, repoName 
 		return fmt.Errorf("runUpdate.Commit repoId: %v", err)
 	}
 
-	// if commits push
+	// Push commits.
 	commits := make([]*base.PushCommit, 0)
 	var actEmail string
 	for e := l.Front(); e != nil; e = e.Next() {
@@ -153,9 +153,8 @@ func Update(refName, oldCommitId, newCommitId, userName, repoUserName, repoName 
 		}
 	}
 
-	//commits = append(commits, []string{lastCommit.Id().String(), lastCommit.Message()})
 	if err = CommitRepoAction(userId, ru.Id, userName, actEmail,
-		repos.Id, repoUserName, repoName, refName, &base.PushCommits{l.Len(), commits}, oldCommitId, newCommitId); err != nil {
+		repos.Id, repoUserName, repoName, refName, &base.PushCommits{l.Len(), commits, ""}, oldCommitId, newCommitId); err != nil {
 		return fmt.Errorf("runUpdate.models.CommitRepoAction: %s/%s:%v", repoUserName, repoName, err)
 	}
 	return nil
