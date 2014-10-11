@@ -38,6 +38,7 @@ The goal of this project is to make the easiest, fastest and most painless way t
 - Create/migrate/mirror/delete/watch/rename/transfer public/private repository
 - Repository viewer/release/issue tracker
 - Repository and Organization level webhooks
+- Repository Git hooks
 - Add/remove repository collaborators
 - Gravatar and cache support
 - Mail service(register, issue)

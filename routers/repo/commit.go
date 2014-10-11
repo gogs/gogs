@@ -276,13 +276,15 @@ func FileHistory(ctx *middleware.Context) {
 		nextPage = 0
 	}
 
-	ctx.Data["Commits"], err = ctx.Repo.GitRepo.CommitsByFileAndRange(
+	commits, err := ctx.Repo.GitRepo.CommitsByFileAndRange(
 		branchName, fileName, page)
 	if err != nil {
 		ctx.Handle(500, "repo.FileHistory(CommitsByRange)", err)
 		return
 	}
+	commits = models.ValidateCommitsWithEmails(commits)
 
+	ctx.Data["Commits"] = commits
 	ctx.Data["Username"] = userName
 	ctx.Data["Reponame"] = repoName
 	ctx.Data["FileName"] = fileName
