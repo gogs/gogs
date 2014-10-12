@@ -126,7 +126,7 @@ func CheckPublicKeyString(content string) (bool, error) {
 	if err != nil {
 		return false, errors.New("ssh-keygen -l -f: " + stderr)
 	} else if len(stdout) < 2 {
-		return false, errors.New("ssh-keygen returned not enough output to evaluate the key")
+		return false, errors.New("ssh-keygen returned not enough output to evaluate the key: " + stdout)
 	}
 
 	// The ssh-keygen in Windows does not print key type, so no need go further.
