@@ -718,7 +718,7 @@ function initDiff() {
     $('.diff-detail-box>a').click(function () {
         $($(this).data('target')).slideToggle(100);
     })
-    
+
     var $counter = $('.diff-counter');
     if ($counter.length < 1) {
         return;
