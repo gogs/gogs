@@ -108,7 +108,7 @@ var (
 // CheckPublicKeyString checks if the given public key string is recognized by SSH.
 func CheckPublicKeyString(content string) (bool, error) {
 	if strings.ContainsAny(content, "\n\r") {
-		return false, errors.New("Only a single line with a single key please")
+		return false, errors.New("only a single line with a single key please")
 	}
 
 	// write the key to a file…
@@ -136,19 +136,19 @@ func CheckPublicKeyString(content string) (bool, error) {
 
 	sshKeygenOutput := strings.Split(stdout, " ")
 	if len(sshKeygenOutput) < 4 {
-		return false, errors.New("Not enough fields returned by ssh-keygen -l -f")
+		return false, fmt.Errorf("not enough fields returned by ssh-keygen -l -f: %v", sshKeygenOutput)
 	}
 
 	// Check if key type and key size match.
-	keySize, err := com.StrTo(sshKeygenOutput[0]).Int()
-	if err != nil {
-		return false, errors.New("Cannot get key size of the given key")
+	keySize := com.StrTo(sshKeygenOutput[0]).MustInt()
+	if keySize == 0 {
+		return false, errors.New("cannot get key size of the given key")
 	}
 	keyType := strings.TrimSpace(sshKeygenOutput[len(sshKeygenOutput)-1])
 	if minimumKeySize := MinimumKeySize[keyType]; minimumKeySize == 0 {
-		return false, errors.New("Sorry, unrecognized public key type")
+		return false, errors.New("sorry, unrecognized public key type")
 	} else if keySize < minimumKeySize {
-		return false, fmt.Errorf("The minimum accepted size of a public key %s is %d", keyType, minimumKeySize)
+		return false, fmt.Errorf("the minimum accepted size of a public key %s is %d", keyType, minimumKeySize)
 	}
 
 	return true, nil
@@ -204,7 +204,7 @@ func AddPublicKey(key *PublicKey) (err error) {
 	if err != nil {
 		return errors.New("ssh-keygen -l -f: " + stderr)
 	} else if len(stdout) < 2 {
-		return errors.New("Not enough output for calculating fingerprint")
+		return errors.New("not enough output for calculating fingerprint: " + stdout)
 	}
 	key.Fingerprint = strings.Split(stdout, " ")[1]
 
