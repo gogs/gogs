@@ -177,9 +177,13 @@ func SettingsSSHKeysPost(ctx *middleware.Context, form auth.AddSSHKeyForm) {
 		cleanContent := strings.Replace(form.Content, "\n", "", -1)
 
 		if ok, err := models.CheckPublicKeyString(cleanContent); !ok {
-			ctx.Flash.Error(ctx.Tr("form.invalid_ssh_key", err.Error()))
-			ctx.Redirect(setting.AppSubUrl + "/user/settings/ssh")
-			return
+			if err == models.ErrKeyUnableVerify {
+				ctx.Flash.Info(ctx.Tr("form.unable_verify_ssh_key"))
+			} else {
+				ctx.Flash.Error(ctx.Tr("form.invalid_ssh_key", err.Error()))
+				ctx.Redirect(setting.AppSubUrl + "/user/settings/ssh")
+				return
+			}
 		}
 
 		k := &models.PublicKey{

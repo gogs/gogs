@@ -33,6 +33,7 @@ const (
 var (
 	ErrKeyAlreadyExist = errors.New("Public key already exist")
 	ErrKeyNotExist     = errors.New("Public key does not exist")
+	ErrKeyUnableVerify = errors.New("Unable to verify public key")
 )
 
 var sshOpLocker = sync.Mutex{}
@@ -134,9 +135,10 @@ func CheckPublicKeyString(content string) (bool, error) {
 		return true, nil
 	}
 
+	fmt.Println(stdout)
 	sshKeygenOutput := strings.Split(stdout, " ")
 	if len(sshKeygenOutput) < 4 {
-		return false, fmt.Errorf("not enough fields returned by ssh-keygen -l -f: %v", sshKeygenOutput)
+		return false, ErrKeyUnableVerify
 	}
 
 	// Check if key type and key size match.
