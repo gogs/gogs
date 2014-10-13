@@ -178,6 +178,10 @@ func (repo *Repository) GetPath() string {
         return RepoPath(repo.Owner.Name, repo.Name)
 }
 
+func (repo *Repository) IsOwnedBy(u *User) bool {
+        return repo.OwnerId == u.Id
+}
+
 // DescriptionHtml does special handles to description and return HTML string.
 func (repo *Repository) DescriptionHtml() template.HTML {
 	sanitize := func(s string) string {
@@ -932,6 +936,13 @@ func DeleteRepository(uid, repoId int64, userName string) error {
 		sess.Rollback()
 		return err
 	}
+	
+	if repo.IsFork {
+                if _, err = sess.Exec("UPDATE `repository` SET num_forks = num_forks - 1 WHERE id = ?", repo.ForkId); err != nil {
+                    sess.Rollback()
+                    return err
+                }
+	}
 
 	if _, err = sess.Exec("UPDATE `user` SET num_repos = num_repos - 1 WHERE id = ?", uid); err != nil {
 		sess.Rollback()
@@ -1249,6 +1260,8 @@ func ForkRepository(u *User, oldRepo *Repository) (*Repository, error) {
             LowerName:   oldRepo.LowerName,
             Description: oldRepo.Description,
             IsPrivate:   oldRepo.IsPrivate,
+            IsFork:      true,
+            ForkId:      oldRepo.Id,
         }
     
         if _, err = sess.Insert(repo); err != nil {
