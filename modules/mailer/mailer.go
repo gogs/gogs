@@ -5,7 +5,9 @@
 package mailer
 
 import (
+	"crypto/tls"
 	"fmt"
+	"net"
 	"net/smtp"
 	"strings"
 
@@ -33,7 +35,7 @@ func (m Message) Content() string {
 	}
 
 	// create mail content
-	content := "From: " + m.From + "<" + m.User +
+	content := "From: \"" + m.From + "\" <" + m.User +
 		">\r\nSubject: " + m.Subject + "\r\nContent-Type: " + contentType + "\r\n\r\n" + m.Body
 	return content
 }
@@ -64,6 +66,53 @@ func processMailQueue() {
 	}
 }
 
+// sendMail allows mail with self-signed certificates.
+func sendMail(hostAddressWithPort string, auth smtp.Auth, from string, recipients []string, msgContent []byte) error {
+	client, err := smtp.Dial(hostAddressWithPort)
+	if err != nil {
+		return err
+	}
+
+	host, _, _ := net.SplitHostPort(hostAddressWithPort)
+	tlsConn := &tls.Config{
+		InsecureSkipVerify: true,
+		ServerName:         host,
+	}
+	if err = client.StartTLS(tlsConn); err != nil {
+		return err
+	}
+
+	if auth != nil {
+		if err = client.Auth(auth); err != nil {
+			return err
+		}
+	}
+
+	if err = client.Mail(from); err != nil {
+		return err
+	}
+
+	for _, rec := range recipients {
+		if err = client.Rcpt(rec); err != nil {
+			return err
+		}
+	}
+
+	w, err := client.Data()
+	if err != nil {
+		return err
+	}
+	if _, err = w.Write([]byte(msgContent)); err != nil {
+		return err
+	}
+
+	if err = w.Close(); err != nil {
+		return err
+	}
+
+	return client.Quit()
+}
+
 // Direct Send mail message
 func Send(msg *Message) (int, error) {
 	log.Trace("Sending mails to: %s", strings.Join(msg.To, "; "))
@@ -85,7 +134,7 @@ func Send(msg *Message) (int, error) {
 		num := 0
 		for _, to := range msg.To {
 			body := []byte("To: " + to + "\r\n" + content)
-			err := smtp.SendMail(setting.MailService.Host, auth, msg.From, []string{to}, body)
+			err := sendMail(setting.MailService.Host, auth, msg.From, []string{to}, body)
 			if err != nil {
 				return num, err
 			}
@@ -96,7 +145,7 @@ func Send(msg *Message) (int, error) {
 		body := []byte("To: " + strings.Join(msg.To, ";") + "\r\n" + content)
 
 		// send to multiple emails in one message
-		err := smtp.SendMail(setting.MailService.Host, auth, msg.From, msg.To, body)
+		err := sendMail(setting.MailService.Host, auth, msg.From, msg.To, body)
 		if err != nil {
 			return 0, err
 		} else {

@@ -61,10 +61,18 @@ func checkVersion() {
 		log.Fatal(4, "Binary and template file version does not match, did you forget to recompile?")
 	}
 
-	// Macaron.
+	// Check dependency version.
 	macaronVer := git.MustParseVersion(strings.Join(strings.Split(macaron.Version(), ".")[:3], "."))
-	if macaronVer.LessThan(git.MustParseVersion("0.1.8")) {
-		log.Fatal(4, "Macaron version does not match, did you forget to update?(github.com/Unknwon/macaron)")
+	if macaronVer.LessThan(git.MustParseVersion("0.2.0")) {
+		log.Fatal(4, "Package macaron version is too old, did you forget to update?(github.com/Unknwon/macaron)")
+	}
+	i18nVer := git.MustParseVersion(i18n.Version())
+	if i18nVer.LessThan(git.MustParseVersion("0.0.2")) {
+		log.Fatal(4, "Package i18n version is too old, did you forget to update?(github.com/macaron-contrib/i18n)")
+	}
+	sessionVer := git.MustParseVersion(session.Version())
+	if sessionVer.LessThan(git.MustParseVersion("0.0.1")) {
+		log.Fatal(4, "Package session version is too old, did you forget to update?(github.com/macaron-contrib/session)")
 	}
 }
 
@@ -88,10 +96,12 @@ func newMacaron() *macaron.Macaron {
 		IndentJSON: macaron.Env != macaron.PROD,
 	}))
 	m.Use(i18n.I18n(i18n.Options{
-		SubURL:   setting.AppSubUrl,
-		Langs:    setting.Langs,
-		Names:    setting.Names,
-		Redirect: true,
+		SubURL:          setting.AppSubUrl,
+		Directory:       path.Join(setting.ConfRootPath, "locale"),
+		CustomDirectory: path.Join(setting.CustomPath, "conf/locale"),
+		Langs:           setting.Langs,
+		Names:           setting.Names,
+		Redirect:        true,
 	}))
 	m.Use(cache.Cacher(cache.Options{
 		Adapter:  setting.CacheAdapter,
@@ -239,6 +249,11 @@ func runWeb(*cli.Context) {
 			r.Post("/:authid", bindIgnErr(auth.AuthenticationForm{}), admin.EditAuthSourcePost)
 			r.Post("/:authid/delete", admin.DeleteAuthSource)
 		})
+
+		m.Group("/notices", func(r *macaron.Router) {
+			r.Get("", admin.Notices)
+			r.Get("/:id:int/delete", admin.DeleteNotice)
+		})
 	}, adminReq)
 
 	m.Get("/:username", ignSignIn, user.Profile)
@@ -313,6 +328,12 @@ func runWeb(*cli.Context) {
 			r.Get("/hooks/:id", repo.WebHooksEdit)
 			r.Post("/hooks/gogs/:id", bindIgnErr(auth.NewWebhookForm{}), repo.WebHooksEditPost)
 			r.Post("/hooks/slack/:id", bindIgnErr(auth.NewSlackHookForm{}), repo.SlackHooksEditPost)
+
+			m.Group("/hooks/git", func(r *macaron.Router) {
+				r.Get("", repo.GitHooks)
+				r.Get("/:name", repo.GitHooksEdit)
+				r.Post("/:name", repo.GitHooksEditPost)
+			}, middleware.GitHookService())
 		})
 	}, reqSignIn, middleware.RepoAssignment(true), reqTrueOwner)
 

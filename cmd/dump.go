@@ -60,6 +60,7 @@ func runDump(ctx *cli.Context) {
 	z.AddFile("gogs-db.sql", path.Join(workDir, "gogs-db.sql"))
 	z.AddFile("custom/conf/app.ini", path.Join(workDir, "custom/conf/app.ini"))
 	z.AddDir("log", path.Join(workDir, "log"))
+	// FIXME: SSH key file.
 	if err = z.Close(); err != nil {
 		os.Remove(fileName)
 		log.Fatalf("Fail to save %s: %v", fileName, err)

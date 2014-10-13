@@ -275,6 +275,7 @@ var Service struct {
 	LdapAuth               bool
 	ActiveCodeLives        int
 	ResetPwdCodeLives      int
+	EnableGitHooks         bool
 }
 
 func newService() {
@@ -284,6 +285,7 @@ func newService() {
 	Service.RequireSignInView = Cfg.MustBool("service", "REQUIRE_SIGNIN_VIEW")
 	Service.EnableCacheAvatar = Cfg.MustBool("service", "ENABLE_CACHE_AVATAR")
 	Service.EnableReverseProxyAuth = Cfg.MustBool("service", "ENABLE_REVERSE_PROXY_AUTHENTICATION")
+	Service.EnableGitHooks = Cfg.MustBool("service", "ENABLE_GIT_HOOKS")
 }
 
 var logLevels = map[string]string{

@@ -1,11 +1,11 @@
-Gogs - Go Git Service [![wercker status](https://app.wercker.com/status/ad0bdb0bc450ac6f09bc56b9640a50aa/s/ "wercker status")](https://app.wercker.com/project/bykey/ad0bdb0bc450ac6f09bc56b9640a50aa) [![Build Status](https://drone.io/github.com/gogits/gogs/status.png)](https://drone.io/github.com/gogits/gogs/latest)
+Gogs - Go Git Service [![wercker status](https://app.wercker.com/status/ad0bdb0bc450ac6f09bc56b9640a50aa/s/ "wercker status")](https://app.wercker.com/project/bykey/ad0bdb0bc450ac6f09bc56b9640a50aa) [![Build Status](https://travis-ci.org/gogits/gogs.svg?branch=master)](https://travis-ci.org/gogits/gogs)
 =====================
 
 Gogs(Go Git Service) 是一个基于 Go 语言的自助 Git 服务。
 
 ![Demo](https://gowalker.org/public/gogs_demo.gif)
 
-##### 当前版本：0.5.4 Beta
+##### 当前版本：0.5.5 Beta
 
 ## 开发目的
 
@@ -23,19 +23,21 @@ Gogs 的目标是打造一个最简单、最快速和最轻松的方式搭建自
 - 活动时间线
 - 支持 SSH/HTTP(S) 协议
 - 支持 SMTP/LDAP/反向代理 用户认证
-- 注册/删除/重命名 用户
-- 创建/管理/删除 组织以及团队管理功能
-- 创建/迁移/镜像/删除/关注/重命名/转移 公开/私有 仓库
-- 仓库 浏览/发布/工单管理
-- 仓库和组织级别 Web 钩子
-- 添加/删除 仓库协作者
-- Gravatar 以及缓存支持
-- 邮件服务（注册、Issue）
+- 支持反向代理子路径
+- 支持 注册/删除/重命名 用户
+- 支持 创建/管理/删除 组织以及团队管理功能
+- 支持 创建/迁移/镜像/删除/关注/重命名/转移 公开/私有 仓库
+- 支持仓库 浏览/发布/工单管理
+- 支持仓库和组织级别 Web 钩子
+- 支持仓库 Git 钩子
+- 支持 添加/删除 仓库协作者
+- 支持 Gravatar 以及本地缓存
+- 支持邮件服务（注册、Issue）
 - 管理员面板
 - Slack Web 钩子集成
 - 支持 MySQL、PostgreSQL 以及 SQLite3 数据库
 - 社交帐号登录（GitHub、Google、QQ、微博）
-- 多语言支持（英文、简体中文、德语、法语等等）
+- 多语言支持（英文、简体中文、繁体中文、德语、法语、荷兰语等等）
 
 ## 系统要求
 
@@ -48,7 +50,7 @@ Gogs 的目标是打造一个最简单、最快速和最轻松的方式搭建自
 
 然后，您可以通过以下 5 种方式来安装 Gogs：
 
-- [二进制安装](http://gogs.io/docs/installation/install_from_binary.md): **强烈推荐**
+- [二进制安装](http://gogs.io/docs/installation/install_from_binary.md)
 - [源码安装](http://gogs.io/docs/installation/install_from_source.md)
 - [包管理安装](http://gogs.io/docs/installation/install_from_packages.md)
 - [采用 Docker 部署](https://github.com/gogits/gogs/tree/master/docker)

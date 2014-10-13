@@ -1,9 +1,8 @@
 @import "var";
 
-// colored buttons
+// Button.
 .btn {
-  &:hover {
-  }
+    white-space: nowrap;
 }
 .btn-small {
   font-size: 0.9*@baseFontSize;
@@ -102,6 +101,9 @@
     box-sizing: content-box;
     text-align: center;
 }
+.btn-comb {
+    margin-left: -1px;
+}
 
 .btn-disabled {
   opacity: .6;
@@ -116,25 +118,24 @@
 }
 
 // input form elements
-
 .ipt {
-  &:focus {
-    border-color: @iptFocusBorderColor;
-  }
+    &:focus {
+        border-color: @iptFocusBorderColor;
+    }
 }
-
 .ipt-radius {
-  border-radius: .25em;
+    border-radius: .25em;
 }
-
 .ipt-small {
-  font-size: .8*@baseFontSize;
+    font-size: .8*@baseFontSize;
 }
-
 .ipt-large {
-  font-size: 1.2*@baseFontSize;
+    font-size: 1.2*@baseFontSize;
 }
-
+.ipt-textarea {
+    height: auto !important;
+    width: auto;
+}
 .ipt-disabled,
 input[disabled] {
   background-color: @iptDisabledColor !important;
@@ -144,14 +145,12 @@ input[disabled] {
   color: #888;
   cursor: not-allowed;
 }
-
 .ipt-readonly,
 input[readonly] {
   &:focus {
     background-color: @iptDisabledColor !important;
   }
 }
-
 .ipt-error {
   border-color: @iptErrorBorderColor !important;
   background-color: @iptErrorFocusColor !important;

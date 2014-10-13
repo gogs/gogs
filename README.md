@@ -1,11 +1,11 @@
-Gogs - Go Git Service [![wercker status](https://app.wercker.com/status/ad0bdb0bc450ac6f09bc56b9640a50aa/s/ "wercker status")](https://app.wercker.com/project/bykey/ad0bdb0bc450ac6f09bc56b9640a50aa) [![Build Status](https://drone.io/github.com/gogits/gogs/status.png)](https://drone.io/github.com/gogits/gogs/latest) 
+Gogs - Go Git Service [![wercker status](https://app.wercker.com/status/ad0bdb0bc450ac6f09bc56b9640a50aa/s/ "wercker status")](https://app.wercker.com/project/bykey/ad0bdb0bc450ac6f09bc56b9640a50aa) [![Build Status](https://travis-ci.org/gogits/gogs.svg?branch=master)](https://travis-ci.org/gogits/gogs)
 =====================
 
 Gogs(Go Git Service) is a painless self-hosted Git Service written in Go.
 
 ![Demo](https://gowalker.org/public/gogs_demo.gif)
 
-##### Current version: 0.5.4 Beta
+##### Current version: 0.5.5 Beta
 
 ### NOTICES
 
@@ -32,11 +32,13 @@ The goal of this project is to make the easiest, fastest and most painless way t
 - Activity timeline
 - SSH/HTTP(S) protocol support
 - SMTP/LDAP/reverse proxy authentication support
+- Reverse proxy suburl support
 - Register/delete/rename account
 - Create/manage/delete organization with team management
 - Create/migrate/mirror/delete/watch/rename/transfer public/private repository
 - Repository viewer/release/issue tracker
 - Repository and Organization level webhooks
+- Repository Git hooks
 - Add/remove repository collaborators
 - Gravatar and cache support
 - Mail service(register, issue)
@@ -44,7 +46,7 @@ The goal of this project is to make the easiest, fastest and most painless way t
 - Slack webhook integration
 - Supports MySQL, PostgreSQL and SQLite3
 - Social account login(GitHub, Google, QQ, Weibo)
-- Multi-language support(English, Chinese, Germany, French etc.)
+- Multi-language support(English, Simplified Chinese, Traditional Chinese, Germany, French, Dutch etc.)
 
 ## System Requirements
 
@@ -57,7 +59,7 @@ Make sure you install [Prerequirements](http://gogs.io/docs/installation/) first
 
 There are 5 ways to install Gogs:
 
-- [Install from binary](http://gogs.io/docs/installation/install_from_binary.md): **STRONGLY RECOMMENDED**
+- [Install from binary](http://gogs.io/docs/installation/install_from_binary.md)
 - [Install from source](http://gogs.io/docs/installation/install_from_source.md)
 - [Install from packages](http://gogs.io/docs/installation/install_from_packages.md)
 - [Ship with Docker](https://github.com/gogits/gogs/tree/master/docker)

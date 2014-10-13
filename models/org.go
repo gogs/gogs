@@ -845,20 +845,9 @@ func IsTeamMember(orgId, teamId, uid int64) bool {
 
 // GetTeamMembers returns all members in given team of organization.
 func GetTeamMembers(orgId, teamId int64) ([]*User, error) {
-	tus := make([]*TeamUser, 0, 10)
-	err := x.Where("org_id=?", orgId).And("team_id=?", teamId).Find(&tus)
-	if err != nil {
-		return nil, err
-	}
-
-	us := make([]*User, len(tus))
-	for i, tu := range tus {
-		us[i], err = GetUserById(tu.Uid)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return us, nil
+	us := make([]*User, 0, 10)
+	err := x.Sql("SELECT * FROM `user` JOIN `team_user` ON `team_user`.`team_id` = ? AND `team_user`.`uid` = `user`.`id`", teamId).Find(&us)
+	return us, err
 }
 
 // GetUserTeams returns all teams that user belongs to in given origanization.

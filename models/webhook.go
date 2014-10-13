@@ -235,8 +235,22 @@ func UpdateHookTask(t *HookTask) error {
 	return err
 }
 
+var (
+	// Prevent duplicate deliveries.
+	// This happens with massive hook tasks cannot finish delivering
+	// before next shooting starts.
+	isShooting = false
+)
+
 // DeliverHooks checks and delivers undelivered hooks.
+// FIXME: maybe can use goroutine to shoot a number of them at same time?
 func DeliverHooks() {
+	if isShooting {
+		return
+	}
+	isShooting = true
+	defer func() { isShooting = false }()
+
 	tasks := make([]*HookTask, 0, 10)
 	timeout := time.Duration(setting.WebhookDeliverTimeout) * time.Second
 	x.Where("is_delivered=?", false).Iterate(new(HookTask),
@@ -255,7 +269,7 @@ func DeliverHooks() {
 
 			t.IsDelivered = true
 
-			// TODO: record response.
+			// FIXME: record response.
 			switch t.Type {
 			case GOGS:
 				{

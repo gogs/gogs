@@ -1,5 +1,8 @@
 [run]
-init_cmds = [["./gogs", "web"]]
+init_cmds = [
+	["grep", "-rn", "FIXME", "."],
+	["./gogs", "web"]
+]
 watch_all = true
 watch_dirs = [
 	"$WORKDIR/conf/locale",
@@ -11,7 +14,7 @@ watch_dirs = [
 watch_exts = [".go", ".ini"]
 build_delay = 1500
 cmds = [
-	["go", "install"],
-	["go", "build"],
+	["go", "install", "-tags", "sqlite cert"],
+	["go", "build", "-tags", "sqlite cert"],
 	["./gogs", "web"]
 ]

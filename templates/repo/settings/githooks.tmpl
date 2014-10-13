@@ -1,0 +1,37 @@
+{{template "ng/base/head" .}}
+{{template "ng/base/header" .}}
+<div id="repo-wrapper">
+    {{template "repo/header" .}}
+	<div id="setting-wrapper" class="main-wrapper">
+	    <div id="repo-setting" class="container clear">
+	        {{template "repo/settings/nav" .}}
+	        <div class="grid-4-5 left">
+	            <div class="setting-content">
+	                {{template "ng/base/alert" .}}
+	                <div id="setting-content">
+	                    <div id="repo-hooks-panel" class="panel panel-radius">
+	                        <div class="panel-header">
+	                        	<strong>{{.i18n.Tr "repo.settings.githooks"}}</strong>
+	                        </div>
+	                        <ul class="panel-body setting-list">
+                            	<li>{{.i18n.Tr "repo.settings.githooks_desc" | Str2html}}</li>
+                            	{{range .Hooks}}
+								<li>
+									{{if .IsActive}}
+									<span class="left text-success"><i class="octicon octicon-check"></i></span>
+									{{else}}
+									<span class="left text-grey"><i class="octicon octicon-primitive-dot"></i></span>
+									{{end}}
+									<span>{{.Name}}</span>
+                        			<a href="{{$.RepoLink}}/settings/hooks/git/{{.Name}}" class="text-blue right"><i class="fa fa-pencil"></i></a>
+								</li>
+                            	{{end}}
+	                       	</ul>
+	                    </div>
+	                </div>
+	            </div>
+	        </div>
+	    </div>
+	</div>
+</div>
+{{template "ng/base/footer" .}}

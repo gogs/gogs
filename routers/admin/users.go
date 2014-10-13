@@ -24,14 +24,14 @@ const (
 )
 
 func pagination(ctx *middleware.Context, count int64, pageNum int) int {
-	p := com.StrTo(ctx.Query("p")).MustInt()
+	p := ctx.QueryInt("p")
 	if p < 1 {
 		p = 1
 	}
 	curCount := int64((p-1)*pageNum + pageNum)
-	if curCount > count {
+	if curCount >= count {
 		p = int(count) / pageNum
-	} else if count > curCount {
+	} else {
 		ctx.Data["NextPageNum"] = p + 1
 	}
 	if p > 1 {
@@ -48,12 +48,12 @@ func Users(ctx *middleware.Context) {
 	pageNum := 50
 	p := pagination(ctx, models.CountUsers(), pageNum)
 
-	var err error
-	ctx.Data["Users"], err = models.GetUsers(pageNum, (p-1)*pageNum)
+	users, err := models.GetUsers(pageNum, (p-1)*pageNum)
 	if err != nil {
 		ctx.Handle(500, "GetUsers", err)
 		return
 	}
+	ctx.Data["Users"] = users
 	ctx.HTML(200, USERS)
 }
 
