@@ -23,6 +23,7 @@ import (
 	"github.com/Unknwon/cae/zip"
 	"github.com/Unknwon/com"
 
+	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/git"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/process"
@@ -48,7 +49,7 @@ var (
 )
 
 var (
-	DescriptionPattern = regexp.MustCompile(`https?://\S+`)
+	DescPattern = regexp.MustCompile(`https?://\S+`)
 )
 
 func LoadRepoConfig() {
@@ -165,7 +166,9 @@ type Repository struct {
 }
 
 func (repo *Repository) GetOwner() (err error) {
-	repo.Owner, err = GetUserById(repo.OwnerId)
+	if repo.Owner == nil {
+		repo.Owner, err = GetUserById(repo.OwnerId)
+	}
 	return err
 }
 
@@ -182,6 +185,14 @@ func (repo *Repository) IsOwnedBy(u *User) bool {
         return repo.OwnerId == u.Id
 }
 
+func (repo *Repository) HasAccess(uname string) bool {
+	if err := repo.GetOwner(); err != nil {
+		return false
+	}
+	has, _ := HasAccess(uname, path.Join(repo.Owner.Name, repo.Name), READABLE)
+	return has
+}
+
 // DescriptionHtml does special handles to description and return HTML string.
 func (repo *Repository) DescriptionHtml() template.HTML {
 	sanitize := func(s string) string {
@@ -189,7 +200,7 @@ func (repo *Repository) DescriptionHtml() template.HTML {
 		ss := html.EscapeString(s)
 		return fmt.Sprintf(`<a href="%s" target="_blank">%s</a>`, ss, ss)
 	}
-	return template.HTML(DescriptionPattern.ReplaceAllStringFunc(repo.Description, sanitize))
+	return template.HTML(DescPattern.ReplaceAllStringFunc(base.XSSString(repo.Description), sanitize))
 }
 
 // IsRepositoryExist returns true if the repository with given name under user has already existed.
@@ -660,7 +671,7 @@ func RepoPath(userName, repoName string) string {
 func TransferOwnership(u *User, newOwner string, repo *Repository) error {
 	newUser, err := GetUserByName(newOwner)
 	if err != nil {
-		return err
+		return fmt.Errorf("fail to get new owner(%s): %v", newOwner, err)
 	}
 
 	// Check if new owner has repository with same name.
@@ -948,9 +959,14 @@ func DeleteRepository(uid, repoId int64, userName string) error {
 		sess.Rollback()
 		return err
 	}
+
+	// Remove repository files.
 	if err = os.RemoveAll(RepoPath(userName, repo.Name)); err != nil {
-		sess.Rollback()
-		return err
+		desc := fmt.Sprintf("Fail to delete repository files(%s/%s): %v", userName, repo.Name, err)
+		log.Warn(desc)
+		if err = CreateRepositoryNotice(desc); err != nil {
+			log.Error(4, "Fail to add notice: %v", err)
+		}
 	}
 	return sess.Commit()
 }

@@ -488,7 +488,7 @@ func GetUserByName(name string) (*User, error) {
 	return user, nil
 }
 
-// GetUserEmailsByNames returns a slice of e-mails corresponds to names.
+// GetUserEmailsByNames returns a list of e-mails corresponds to names.
 func GetUserEmailsByNames(names []string) []string {
 	mails := make([]string, 0, len(names))
 	for _, name := range names {

@@ -92,7 +92,7 @@ func SettingsDelete(ctx *middleware.Context) {
 				ctx.Handle(500, "DeleteOrganization", err)
 			}
 		} else {
-			log.Trace("Organization deleted: %s", ctx.User.Name)
+			log.Trace("Organization deleted: %s", org.Name)
 			ctx.Redirect(setting.AppSubUrl + "/")
 		}
 		return

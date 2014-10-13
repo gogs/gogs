@@ -444,13 +444,11 @@
     background: #f5f5f5;
     width: 1%;
     span {
-      font-family: Monaco, Menlo, Consolas, "Courier New", monospace;
-      line-height: 18px;
-      padding: 0 8px 0 10px;
-      cursor: pointer;
-      display: block;
-      margin-top: 2px;
-      font-size: 12px;
+        font-family: Monaco,Menlo,Consolas,"Courier New",monospace;
+        line-height: 1.6;
+        padding: 0 10px;  
+        cursor: pointer;
+        display: block;
     }
   }
   .lines-code > pre {
@@ -494,37 +492,138 @@
   }
 }
 .repo-user-list-block {
-  position: relative;
-  top: 5px;
+    position: relative;
+    top: 5px;
 }
 .setting-list {
-  width: 100%;
-  list-style: none;
+    width: 100%;
+    list-style: none;
 }
 #commits-list {
-  padding-top: 20px;
-  h4{
-    line-height: 30px;
-    margin-bottom: 0;
-  }
+    padding-top: 20px;
+    h4{
+        line-height: 30px;
+        margin-bottom: 0;
+    }
 }
 .commit-list {
-  th {
-    background-color: #FFF;
-    line-height: 28px !important;
-  }
-  .date {
-    width: 120px;
-  }
-  .author {
-    padding-left: 20px;
-    min-width: 180px;
-    img {
-      margin-top: -4px;
+    th {
+        background-color: #FFF;
+        line-height: 28px !important;
     }
-  }
-  .sha a {
-    font-family: Consolas, Menlo, Monaco, "Lucida Console", monospace;
-    font-size: 14px;
-  }
+    .date {
+        width: 120px;
+    }
+    .author {
+        padding-left: 20px;
+        min-width: 180px;
+        img {
+            margin-top: -4px;
+        }
+    }
+    .sha a {
+        font-family: Consolas, Menlo, Monaco, "Lucida Console", monospace;
+        font-size: 14px;
+    }
+}
+.diff-head-box {
+    margin-top: 10px;
+    .panel-body {
+        padding: 10px 15px 5px 10px;
+    }
+    .author {
+        img {
+            margin-top: -7px;
+        }
+    }
+}
+.diff-detail-box {
+    margin: 15px 0;
+    line-height: 30px;
+    ol {
+        clear: both;
+        padding-left: 0;
+        margin-bottom: 28px;
+        li {
+            list-style: none;
+            padding-bottom: 4px;
+            margin-bottom: 4px;
+            border-bottom: 1px dashed #DDD;
+            padding-left: 6px;
+        }
+    }
+    span.status{
+        display: inline-block;
+        width: 12px;
+        height: 12px;
+        margin-right: 8px;
+        vertical-align: middle;
+        &.modify {
+            background-color: #f0db88;
+        }
+        &.add {
+            background-color: #b4e2b4;
+        }
+        &.del {
+            background-color: #e9aeae;
+        }
+        &.rename {
+            background-color: #dad8ff;
+        }
+    }
+}
+.diff-box {
+    .count {
+        margin-right: 12px;
+        .bar {
+            background-color: #e75316;
+            height: 12px;
+            width: 40px;
+            display: inline-block;
+            margin: 2px 4px 0 4px;
+            vertical-align: text-top;
+            .add {
+                background-color: #77c64a;
+                height: 12px;
+            }
+        }
+    }
+    .file {
+        color: #888;
+    }
+    .panel-header {
+        font-size: 14px;
+    }
+}
+.diff-file-box .code-diff tbody tr:hover td, .diff-file-box .code-diff tbody tr:hover pre {
+    background-color: #FFF8D2 !important;
+    border-color: #F0DB88 !important;
+}
+.diff-file-box .file-body.file-code .lines-num-old {
+border-right: 1px solid #DDD;
+}
+.file-content .file-body.file-code .lines-num {
+text-align: right;
+color: #999;
+background: #fafafa;
+width: 1%;
+}
+.diff-file-box .code-diff tbody tr.tag-code td, .diff-file-box .code-diff tbody tr.tag-code pre {
+background-color: #E0E0E0 !important;
+border-color: #ADADAD !important;
+}
+.diff-file-box .code-diff tbody tr.del-code td, .diff-file-box .code-diff tbody tr.del-code pre {
+background-color: #ffe2dd !important;
+border-color: #e9aeae !important;
+}
+.diff-file-box .code-diff tbody tr.add-code td, .diff-file-box .code-diff tbody tr.add-code pre {
+background-color: #d1ffd6 !important;
+border-color: #b4e2b4 !important;
+}
+
+.compare-head-box {
+    margin-top: 10px;
+    .compare {
+        padding: 0 15px 15px 15px;
+    }
 }

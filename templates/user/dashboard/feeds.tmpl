@@ -15,6 +15,8 @@
             {{$.i18n.Tr "action.create_issue" AppSubUrl .GetRepoLink $index .GetRepoLink $index | Str2html}}
             {{else if eq .GetOpType 8}}
             {{$.i18n.Tr "action.transfer_repo" .GetContent AppSubUrl .GetRepoLink .GetRepoLink | Str2html}}
+            {{else if eq .GetOpType 9}}
+            {{$.i18n.Tr "action.push_tag" AppSubUrl .GetRepoLink .GetBranch .GetBranch AppSubUrl .GetRepoLink .GetRepoLink | Str2html}}
             {{else if eq .GetOpType 10}}
             {{ $index := index .GetIssueInfos 0}}
             {{$.i18n.Tr "action.comment_issue" AppSubUrl .GetRepoLink $index .GetRepoLink $index | Str2html}}
@@ -28,6 +30,7 @@
                 {{range $push.Commits}}
                 <li><img class="avatar-16" src="{{AvatarLink .AuthorEmail}}?s=16"> <a href="{{AppSubUrl}}/{{$repoLink}}/commit/{{.Sha1}}">{{ShortSha .Sha1}}</a> <span class="text-truncate grid-4-5">{{.Message}}</span></li>
                 {{end}}
+                {{if $push.CompareUrl}}<li><a href="{{$push.CompareUrl}}">{{$.i18n.Tr "action.compare_2_commits"}} »</a></li>{{end}}
             </ul>
         </div>
         {{else if eq .GetOpType 6}}

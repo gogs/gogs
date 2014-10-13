@@ -159,6 +159,7 @@ func Diff(ctx *middleware.Context) {
 	ctx.Data["IsImageFile"] = isImageFile
 	ctx.Data["Title"] = commit.Summary() + " · " + base.ShortSha(commitId)
 	ctx.Data["Commit"] = commit
+	ctx.Data["Author"] = models.ValidateCommitWithEmail(commit)
 	ctx.Data["Diff"] = diff
 	ctx.Data["Parents"] = parents
 	ctx.Data["DiffNotAvailable"] = diff.NumFiles() == 0
@@ -212,6 +213,7 @@ func CompareDiff(ctx *middleware.Context) {
 		ctx.Handle(500, "CommitsBeforeUntil", err)
 		return
 	}
+	commits = models.ValidateCommitsWithEmails(commits)
 
 	ctx.Data["Commits"] = commits
 	ctx.Data["CommitCount"] = commits.Len()
@@ -274,13 +276,15 @@ func FileHistory(ctx *middleware.Context) {
 		nextPage = 0
 	}
 
-	ctx.Data["Commits"], err = ctx.Repo.GitRepo.CommitsByFileAndRange(
+	commits, err := ctx.Repo.GitRepo.CommitsByFileAndRange(
 		branchName, fileName, page)
 	if err != nil {
 		ctx.Handle(500, "repo.FileHistory(CommitsByRange)", err)
 		return
 	}
+	commits = models.ValidateCommitsWithEmails(commits)
 
+	ctx.Data["Commits"] = commits
 	ctx.Data["Username"] = userName
 	ctx.Data["Reponame"] = repoName
 	ctx.Data["FileName"] = fileName

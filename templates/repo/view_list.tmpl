@@ -10,7 +10,7 @@
                 <strong>{{ShortSha .LastCommit.Id.String}}</strong></a>
                 <span class="text-truncate">{{.LastCommit.Summary}}</span>
             </span>
-            <span class="age right">{{TimeSince .LastCommit.Author.When .i18n.Lang}}</span>
+            <span class="age right">{{TimeSince .LastCommit.Author.When $.Lang}}</span>
         </th>
     </tr>
     </thead>
@@ -45,7 +45,7 @@
                 <td class="msg">
                     <a class="text-truncate" href="{{AppSubUrl}}/{{$.Username}}/{{$.Reponame}}/commit/{{$commit.Id}}" rel="nofollow">{{$commit.Summary}}</a>
                 </td>
-                <td class="age">{{TimeSince $commit.Committer.When $.i18n.Lang}}</td>
+                <td class="age">{{TimeSince $commit.Committer.When $.Lang}}</td>
             </tr>
         {{end}}
     </tbody>

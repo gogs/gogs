@@ -2,15 +2,23 @@
     <p class="panel-header">
         {{if .ReadmeExist}}
             <i class="icon fa fa-book fa-lg"></i>
-	        {{if .ReadmeInHome}}
+	        {{if .ReadmeInList}}
 	        <strong class="file-name">{{.FileName}}</strong>
 	        {{else}}
 	        <strong>{{.FileName}}</strong><span class="file-size">{{FileSize .FileSize}}</span>
 	        {{end}}
 	    {{else}}
-        <i class="icon fa fa-file-text-o"></i>
-        <strong class="file-name">{{.FileName}}</strong><span class="file-size">{{FileSize .FileSize}}</span>
+            <i class="icon fa fa-file-text-o"></i>
+            <strong class="file-name">{{.FileName}}</strong><span class="file-size">{{FileSize .FileSize}}</span>
 	    {{end}}
+        {{if not .ReadmeInList}}
+            <a class="right" href="{{.RepoLink}}/commits/{{.BranchName}}/{{.TreeName}}">
+                <button class="btn btn-medium btn-gray btn-right-radius btn-comb">{{.i18n.Tr "repo.file_history"}}</button>
+            </a>
+            <a class="right" href="{{.FileLink}}">
+                <button class="btn btn-medium btn-gray btn-left-radius btn-comb">{{.i18n.Tr "repo.file_raw"}}</button>
+            </a>
+        {{end}}
     </p>
     <div class="{{if .ReadmeExist}}panel-content markdown{{end}} code-view" id="repo-code-view">
     	{{if .ReadmeExist}}
@@ -20,7 +28,7 @@
             {{if .IsImageFile}}
             <img src="{{.FileLink}}">
             {{else}}
-            <a href="{{.FileLink}}" rel="nofollow" class="btn btn-gray btn-radius">View Raw</a>
+            <a href="{{.FileLink}}" rel="nofollow" class="btn btn-gray btn-radius">{{.i18n.Tr "repo.file_view_raw"}}</a>
             {{end}}
         </div>
     	{{else if .FileSize}}

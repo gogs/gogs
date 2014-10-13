@@ -181,12 +181,18 @@ func CommitRepoAction(userId, repoUserId int64, userName, actEmail string,
 		commit = &base.PushCommits{}
 	}
 
-	refName := git.RefEndName(refFullName)
+	repoLink := fmt.Sprintf("%s%s/%s", setting.AppUrl, repoUserName, repoName)
+	// if not the first commit, set the compareUrl
+	if !strings.HasPrefix(oldCommitId, "0000000") {
+		commit.CompareUrl = fmt.Sprintf("%s/compare/%s...%s", repoLink, oldCommitId, newCommitId)
+	}
 
 	bs, err := json.Marshal(commit)
 	if err != nil {
 		return errors.New("action.CommitRepoAction(json): " + err.Error())
 	}
+
+	refName := git.RefEndName(refFullName)
 
 	// Change repository bare status and update last updated time.
 	repo, err := GetRepositoryByName(repoUserId, repoName)
@@ -211,7 +217,6 @@ func CommitRepoAction(userId, repoUserId int64, userName, actEmail string,
 		return errors.New("action.CommitRepoAction(NotifyWatchers): " + err.Error())
 
 	}
-	//qlog.Info("action.CommitRepoAction(end): %d/%s", repoUserId, repoName)
 
 	// New push event hook.
 	if err := repo.GetOwner(); err != nil {
@@ -235,13 +240,6 @@ func CommitRepoAction(userId, repoUserId int64, userName, actEmail string,
 
 	if len(ws) == 0 {
 		return nil
-	}
-
-	repoLink := fmt.Sprintf("%s%s/%s", setting.AppUrl, repoUserName, repoName)
-	compareUrl := ""
-	// if not the first commit, set the compareUrl
-	if !strings.HasPrefix(oldCommitId, "0000000") {
-		compareUrl = fmt.Sprintf("%s/compare/%s...%s", repoLink, oldCommitId, newCommitId)
 	}
 
 	pusher_email, pusher_name := "", ""
@@ -293,7 +291,7 @@ func CommitRepoAction(userId, repoUserId int64, userName, actEmail string,
 		},
 		Before:     oldCommitId,
 		After:      newCommitId,
-		CompareUrl: compareUrl,
+		CompareUrl: commit.CompareUrl,
 	}
 
 	for _, w := range ws {
