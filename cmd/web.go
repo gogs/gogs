@@ -63,7 +63,7 @@ func checkVersion() {
 
 	// Check dependency version.
 	macaronVer := git.MustParseVersion(strings.Join(strings.Split(macaron.Version(), ".")[:3], "."))
-	if macaronVer.LessThan(git.MustParseVersion("0.2.0")) {
+	if macaronVer.LessThan(git.MustParseVersion("0.2.3")) {
 		log.Fatal(4, "Package macaron version is too old, did you forget to update?(github.com/Unknwon/macaron)")
 	}
 	i18nVer := git.MustParseVersion(i18n.Version())
@@ -81,15 +81,15 @@ func newMacaron() *macaron.Macaron {
 	m := macaron.New()
 	m.Use(macaron.Logger())
 	m.Use(macaron.Recovery())
+	if setting.EnableGzip {
+		m.Use(macaron.Gziper())
+	}
 	m.Use(macaron.Static(
 		path.Join(setting.StaticRootPath, "public"),
 		macaron.StaticOptions{
 			SkipLogging: !setting.DisableRouterLog,
 		},
 	))
-	// if setting.EnableGzip {
-	// 	m.Use(macaron.Gzip())
-	// }
 	m.Use(macaron.Renderer(macaron.RenderOptions{
 		Directory:  path.Join(setting.StaticRootPath, "templates"),
 		Funcs:      []template.FuncMap{base.TemplateFuncs},
