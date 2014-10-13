@@ -366,6 +366,9 @@ dt {
 .grid-4-5 {
   width: 80%;
 }
+.btn {
+  white-space: nowrap;
+}
 .btn-small {
   font-size: 10.8px;
   padding: .4em .9em;
