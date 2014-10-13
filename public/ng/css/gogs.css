@@ -1380,13 +1380,15 @@ The register and sign-in page style
   width: 1%;
 }
 .code-view .lines-num span {
-  font-family: Monaco, Menlo, Consolas, "Courier New", monospace;
-  line-height: 18px;
-  padding: 0 8px 0 10px;
+  font-family: Monaco,Menlo,Consolas,"Courier New",monospace;
+  line-height: 1.6;
+  padding: 0 10px;  
   cursor: pointer;
   display: block;
-  margin-top: 2px;
-  font-size: 12px;
+}
+.code-view .lines-num span:hover {
+  background-color: #FFFFDD;
+  color: #000000;
 }
 .code-view .lines-code > pre {
   border: none;
