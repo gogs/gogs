@@ -1,9 +1,14 @@
 #!/bin/sh
 
-echo 'plase remember to modify the command path in etc/supervisord.conf(line 23)'
-
-PID="/tmp/supervisord.pid"
+PID="log/supervisord.pid"
 CONF="etc/supervisord.conf"
+
+EXEPATH='/usr/bin/gogs_start'
+if [ ! -f $EXEPATH ]; then
+    gogs_scripts_path=$(cd `dirname $0`; pwd)
+    echo $gogs_scripts_path
+    sudo ln -s $gogs_scripts_path'/start.sh' /usr/bin/gogs_start
+fi
 
 LOGDIR="log"
 if [ ! -d $LOGDIR ]; then
