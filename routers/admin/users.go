@@ -5,6 +5,7 @@
 package admin
 
 import (
+	"math"
 	"strings"
 
 	"github.com/Unknwon/com"
@@ -30,7 +31,7 @@ func pagination(ctx *middleware.Context, count int64, pageNum int) int {
 	}
 	curCount := int64((p-1)*pageNum + pageNum)
 	if curCount >= count {
-		p = int(count) / pageNum
+		p = int(math.Ceil(float64(count) / float64(pageNum)))
 	} else {
 		ctx.Data["NextPageNum"] = p + 1
 	}
