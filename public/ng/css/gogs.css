@@ -1250,6 +1250,7 @@ The register and sign-in page style
   color: #444;
 }
 #repo-files-table thead .last-commit .text-truncate {
+  max-width: 440px;
   margin-left: .4em;
 }
 #repo-files-table thead .last-commit .text-truncate,
