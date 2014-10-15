@@ -980,7 +980,6 @@ The register and sign-in page style
   background-color: #FFF;
   margin-left: -15px;
 }
-/* repository main */
 #repo-wrapper {
   padding-bottom: 100px;
 }
@@ -1554,19 +1553,14 @@ The register and sign-in page style
 .diff-box .panel-header {
   font-size: 14px;
 }
-.diff-file-box .code-diff tbody tr:hover td,
-.diff-file-box .code-diff tbody tr:hover pre {
-  background-color: #FFF8D2 !important;
-  border-color: #F0DB88 !important;
-}
-.diff-file-box .file-body.file-code .lines-num-old {
-  border-right: 1px solid #DDD;
-}
-.file-content .file-body.file-code .lines-num {
+.diff-file-box .file-body.file-code .lines-num {
   text-align: right;
   color: #999;
   background: #fafafa;
   width: 1%;
+}
+.diff-file-box .file-body.file-code .lines-num-old {
+  border-right: 1px solid #DDD;
 }
 .diff-file-box .code-diff tbody tr.tag-code td,
 .diff-file-box .code-diff tbody tr.tag-code pre {
@@ -1582,6 +1576,11 @@ The register and sign-in page style
 .diff-file-box .code-diff tbody tr.add-code pre {
   background-color: #d1ffd6 !important;
   border-color: #b4e2b4 !important;
+}
+.diff-file-box .code-diff tbody tr:hover td,
+.diff-file-box .code-diff tbody tr:hover pre {
+  background-color: #FFF8D2 !important;
+  border-color: #F0DB88 !important;
 }
 .compare-head-box {
   margin-top: 10px;
