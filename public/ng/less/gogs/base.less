@@ -110,10 +110,10 @@ clear: both;
 }
 #header {
     background-color: @headerBgColor;
-    height: 44px;
     > .menu-line {
         > li > a {
-            display: inline-block;
+            line-height: 44px;
+            padding: 0 1.2em;
             color:@headerLinkFontColor;
             &:hover {
                 background-color: transparent;
@@ -144,7 +144,8 @@ clear: both;
     color: @headerSignOutColor !important;
 }
 #header-nav-logo {
-    padding: 6px 1.2em;
+    line-height: 44px;
+    padding: 0 1.2em;
 }
 #header-nav-explore,
 #header-nav-help {
