@@ -91,6 +91,14 @@ func (options *CustomRender) Link(out *bytes.Buffer, link []byte, title []byte, 
 	options.Renderer.Link(out, link, title, content)
 }
 
+func (options *CustomRender) Image(out *bytes.Buffer, link []byte, title []byte, alt []byte) {
+	if len(link) > 0 && !isLink(link) {
+		link = []byte(path.Join(strings.Replace(options.urlPrefix, "/src/", "/raw/", 1), string(link)))
+	}
+
+	options.Renderer.Image(out, link, title, alt)
+}
+
 var (
 	MentionPattern    = regexp.MustCompile(`@[0-9a-zA-Z_]{1,}`)
 	commitPattern     = regexp.MustCompile(`(\s|^)https?.*commit/[0-9a-zA-Z]+(#+[0-9a-zA-Z-]*)?`)

@@ -50,7 +50,7 @@
                 <i class="fa fa-retweet"></i>
                 {{.i18n.Tr "repo.diff.stats_desc" .Diff.NumFiles .Diff.TotalAddition .Diff.TotalDeletion | Str2html}}
             </p>
-            <ol class="detail-files collapse" id="diff-files">
+            <ol class="detail-files collapse hide" id="diff-files">
                 {{range .Diff.Files}}
                 <li>
                     <div class="diff-counter count pull-right">
