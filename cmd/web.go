@@ -15,6 +15,7 @@ import (
 
 	"github.com/Unknwon/macaron"
 	"github.com/codegangsta/cli"
+	"github.com/macaron-contrib/binding"
 	"github.com/macaron-contrib/cache"
 	"github.com/macaron-contrib/captcha"
 	"github.com/macaron-contrib/csrf"
@@ -30,7 +31,6 @@ import (
 	"github.com/gogits/gogs/modules/git"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/middleware"
-	"github.com/gogits/gogs/modules/middleware/binding"
 	"github.com/gogits/gogs/modules/setting"
 	"github.com/gogits/gogs/routers"
 	"github.com/gogits/gogs/routers/admin"
