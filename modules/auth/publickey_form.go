@@ -6,9 +6,7 @@ package auth
 
 import (
 	"github.com/Unknwon/macaron"
-	"github.com/macaron-contrib/i18n"
-
-	"github.com/gogits/gogs/modules/middleware/binding"
+	"github.com/macaron-contrib/binding"
 )
 
 type AddSSHKeyForm struct {
@@ -16,6 +14,6 @@ type AddSSHKeyForm struct {
 	Content  string `form:"content" binding:"Required"`
 }
 
-func (f *AddSSHKeyForm) Validate(ctx *macaron.Context, errs *binding.Errors, l i18n.Locale) {
-	validate(errs, ctx.Data, f, l)
+func (f *AddSSHKeyForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
+	return validate(errs, ctx.Data, f, ctx.Locale)
 }

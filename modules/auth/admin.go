@@ -6,9 +6,8 @@ package auth
 
 import (
 	"github.com/Unknwon/macaron"
-	"github.com/macaron-contrib/i18n"
 
-	"github.com/gogits/gogs/modules/middleware/binding"
+	"github.com/macaron-contrib/binding"
 )
 
 type AdminEditUserForm struct {
@@ -22,6 +21,6 @@ type AdminEditUserForm struct {
 	LoginType int    `form:"login_type"`
 }
 
-func (f *AdminEditUserForm) Validate(ctx *macaron.Context, errs *binding.Errors, l i18n.Locale) {
-	validate(errs, ctx.Data, f, l)
+func (f *AdminEditUserForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
+	return validate(errs, ctx.Data, f, ctx.Locale)
 }

@@ -9,12 +9,12 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/macaron-contrib/i18n"
+	"github.com/Unknwon/macaron"
+	"github.com/macaron-contrib/binding"
 	"github.com/macaron-contrib/session"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/log"
-	"github.com/gogits/gogs/modules/middleware/binding"
 	"github.com/gogits/gogs/modules/setting"
 )
 
@@ -69,6 +69,10 @@ func SignedInUser(header http.Header, sess session.Store) *models.User {
 	return u
 }
 
+type Form interface {
+	binding.Validator
+}
+
 // AssignForm assign form values back to the template data.
 func AssignForm(form interface{}, data map[string]interface{}) {
 	typ := reflect.TypeOf(form)
@@ -109,14 +113,9 @@ func GetMaxSize(field reflect.StructField) string {
 	return getSize(field, "MaxSize(")
 }
 
-func validate(errs *binding.Errors, data map[string]interface{}, f interface{}, l i18n.Locale) {
-	if errs.Count() == 0 {
-		return
-	} else if len(errs.Overall) > 0 {
-		for _, err := range errs.Overall {
-			log.Error(4, "%s: %v", reflect.TypeOf(f), err)
-		}
-		return
+func validate(errs binding.Errors, data map[string]interface{}, f Form, l macaron.Locale) binding.Errors {
+	if errs.Len() == 0 {
+		return errs
 	}
 
 	data["HasError"] = true
@@ -139,28 +138,29 @@ func validate(errs *binding.Errors, data map[string]interface{}, f interface{}, 
 			continue
 		}
 
-		if err, ok := errs.Fields[field.Name]; ok {
+		if errs[0].FieldNames[0] == field.Name {
 			data["Err_"+field.Name] = true
 			trName := l.Tr("form." + field.Name)
-			switch err {
-			case binding.BindingRequireError:
+			switch errs[0].Classification {
+			case binding.RequiredError:
 				data["ErrorMsg"] = trName + l.Tr("form.require_error")
-			case binding.BindingAlphaDashError:
+			case binding.AlphaDashError:
 				data["ErrorMsg"] = trName + l.Tr("form.alpha_dash_error")
-			case binding.BindingAlphaDashDotError:
+			case binding.AlphaDashDotError:
 				data["ErrorMsg"] = trName + l.Tr("form.alpha_dash_dot_error")
-			case binding.BindingMinSizeError:
+			case binding.MinSizeError:
 				data["ErrorMsg"] = trName + l.Tr("form.min_size_error", GetMinSize(field))
-			case binding.BindingMaxSizeError:
+			case binding.MaxSizeError:
 				data["ErrorMsg"] = trName + l.Tr("form.max_size_error", GetMaxSize(field))
-			case binding.BindingEmailError:
+			case binding.EmailError:
 				data["ErrorMsg"] = trName + l.Tr("form.email_error")
-			case binding.BindingUrlError:
+			case binding.UrlError:
 				data["ErrorMsg"] = trName + l.Tr("form.url_error")
 			default:
-				data["ErrorMsg"] = l.Tr("form.unknown_error") + " " + err
+				data["ErrorMsg"] = l.Tr("form.unknown_error") + " " + errs[0].Classification
 			}
-			return
+			return errs
 		}
 	}
+	return errs
 }

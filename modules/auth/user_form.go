@@ -6,9 +6,7 @@ package auth
 
 import (
 	"github.com/Unknwon/macaron"
-	"github.com/macaron-contrib/i18n"
-
-	"github.com/gogits/gogs/modules/middleware/binding"
+	"github.com/macaron-contrib/binding"
 )
 
 type InstallForm struct {
@@ -34,8 +32,8 @@ type InstallForm struct {
 	AdminEmail      string `form:"admin_email" binding:"Required;Email;MaxSize(50)"`
 }
 
-func (f *InstallForm) Validate(ctx *macaron.Context, errs *binding.Errors, l i18n.Locale) {
-	validate(errs, ctx.Data, f, l)
+func (f *InstallForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
+	return validate(errs, ctx.Data, f, ctx.Locale)
 }
 
 //    _____   ____ _________________ ___
@@ -54,8 +52,8 @@ type RegisterForm struct {
 	LoginName string `form:"loginname"`
 }
 
-func (f *RegisterForm) Validate(ctx *macaron.Context, errs *binding.Errors, l i18n.Locale) {
-	validate(errs, ctx.Data, f, l)
+func (f *RegisterForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
+	return validate(errs, ctx.Data, f, ctx.Locale)
 }
 
 type SignInForm struct {
@@ -64,8 +62,8 @@ type SignInForm struct {
 	Remember bool   `form:"remember"`
 }
 
-func (f *SignInForm) Validate(ctx *macaron.Context, errs *binding.Errors, l i18n.Locale) {
-	validate(errs, ctx.Data, f, l)
+func (f *SignInForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
+	return validate(errs, ctx.Data, f, ctx.Locale)
 }
 
 //   __________________________________________.___ _______    ________  _________
@@ -84,8 +82,8 @@ type UpdateProfileForm struct {
 	Avatar   string `form:"avatar" binding:"Required;Email;MaxSize(50)"`
 }
 
-func (f *UpdateProfileForm) Validate(ctx *macaron.Context, errs *binding.Errors, l i18n.Locale) {
-	validate(errs, ctx.Data, f, l)
+func (f *UpdateProfileForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
+	return validate(errs, ctx.Data, f, ctx.Locale)
 }
 
 type ChangePasswordForm struct {
@@ -94,6 +92,6 @@ type ChangePasswordForm struct {
 	Retype      string `form:"retype"`
 }
 
-func (f *ChangePasswordForm) Validate(ctx *macaron.Context, errs *binding.Errors, l i18n.Locale) {
-	validate(errs, ctx.Data, f, l)
+func (f *ChangePasswordForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
+	return validate(errs, ctx.Data, f, ctx.Locale)
 }

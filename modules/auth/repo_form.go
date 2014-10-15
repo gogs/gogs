@@ -6,9 +6,7 @@ package auth
 
 import (
 	"github.com/Unknwon/macaron"
-	"github.com/macaron-contrib/i18n"
-
-	"github.com/gogits/gogs/modules/middleware/binding"
+	"github.com/macaron-contrib/binding"
 )
 
 // _______________________________________    _________.______________________ _______________.___.
@@ -28,8 +26,8 @@ type CreateRepoForm struct {
 	InitReadme  bool   `form:"init_readme"`
 }
 
-func (f *CreateRepoForm) Validate(ctx *macaron.Context, errs *binding.Errors, l i18n.Locale) {
-	validate(errs, ctx.Data, f, l)
+func (f *CreateRepoForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
+	return validate(errs, ctx.Data, f, ctx.Locale)
 }
 
 type MigrateRepoForm struct {
@@ -43,8 +41,8 @@ type MigrateRepoForm struct {
 	Description  string `form:"desc" binding:"MaxSize(255)"`
 }
 
-func (f *MigrateRepoForm) Validate(ctx *macaron.Context, errs *binding.Errors, l i18n.Locale) {
-	validate(errs, ctx.Data, f, l)
+func (f *MigrateRepoForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
+	return validate(errs, ctx.Data, f, ctx.Locale)
 }
 
 type RepoSettingForm struct {
@@ -57,8 +55,8 @@ type RepoSettingForm struct {
 	GoGet       bool   `form:"goget"`
 }
 
-func (f *RepoSettingForm) Validate(ctx *macaron.Context, errs *binding.Errors, l i18n.Locale) {
-	validate(errs, ctx.Data, f, l)
+func (f *RepoSettingForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
+	return validate(errs, ctx.Data, f, ctx.Locale)
 }
 
 //  __      __      ___.   .__    .__            __
@@ -77,8 +75,8 @@ type NewWebhookForm struct {
 	Active       bool   `form:"active"`
 }
 
-func (f *NewWebhookForm) Validate(ctx *macaron.Context, errs *binding.Errors, l i18n.Locale) {
-	validate(errs, ctx.Data, f, l)
+func (f *NewWebhookForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
+	return validate(errs, ctx.Data, f, ctx.Locale)
 }
 
 type NewSlackHookForm struct {
@@ -90,8 +88,8 @@ type NewSlackHookForm struct {
 	Active       bool   `form:"active"`
 }
 
-func (f *NewSlackHookForm) Validate(ctx *macaron.Context, errs *binding.Errors, l i18n.Locale) {
-	validate(errs, ctx.Data, f, l)
+func (f *NewSlackHookForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
+	return validate(errs, ctx.Data, f, ctx.Locale)
 }
 
 // .___
@@ -109,8 +107,8 @@ type CreateIssueForm struct {
 	Content     string `form:"content"`
 }
 
-func (f *CreateIssueForm) Validate(ctx *macaron.Context, errs *binding.Errors, l i18n.Locale) {
-	validate(errs, ctx.Data, f, l)
+func (f *CreateIssueForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
+	return validate(errs, ctx.Data, f, ctx.Locale)
 }
 
 //    _____  .__.__                   __
@@ -126,8 +124,8 @@ type CreateMilestoneForm struct {
 	Deadline string `form:"due_date"`
 }
 
-func (f *CreateMilestoneForm) Validate(ctx *macaron.Context, errs *binding.Errors, l i18n.Locale) {
-	validate(errs, ctx.Data, f, l)
+func (f *CreateMilestoneForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
+	return validate(errs, ctx.Data, f, ctx.Locale)
 }
 
 // .____          ___.          .__
@@ -142,8 +140,8 @@ type CreateLabelForm struct {
 	Color string `form:"color" binding:"Required;Size(7)"`
 }
 
-func (f *CreateLabelForm) Validate(ctx *macaron.Context, errs *binding.Errors, l i18n.Locale) {
-	validate(errs, ctx.Data, f, l)
+func (f *CreateLabelForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
+	return validate(errs, ctx.Data, f, ctx.Locale)
 }
 
 // __________       .__
@@ -162,8 +160,8 @@ type NewReleaseForm struct {
 	Prerelease bool   `form:"prerelease"`
 }
 
-func (f *NewReleaseForm) Validate(ctx *macaron.Context, errs *binding.Errors, l i18n.Locale) {
-	validate(errs, ctx.Data, f, l)
+func (f *NewReleaseForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
+	return validate(errs, ctx.Data, f, ctx.Locale)
 }
 
 type EditReleaseForm struct {
@@ -174,6 +172,6 @@ type EditReleaseForm struct {
 	Prerelease bool   `form:"prerelease"`
 }
 
-func (f *EditReleaseForm) Validate(ctx *macaron.Context, errs *binding.Errors, l i18n.Locale) {
-	validate(errs, ctx.Data, f, l)
+func (f *EditReleaseForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
+	return validate(errs, ctx.Data, f, ctx.Locale)
 }

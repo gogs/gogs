@@ -6,9 +6,7 @@ package auth
 
 import (
 	"github.com/Unknwon/macaron"
-	"github.com/macaron-contrib/i18n"
-
-	"github.com/gogits/gogs/modules/middleware/binding"
+	"github.com/macaron-contrib/binding"
 )
 
 // ________                            .__                __  .__
@@ -23,8 +21,8 @@ type CreateOrgForm struct {
 	Email   string `form:"email" binding:"Required;Email;MaxSize(50)"`
 }
 
-func (f *CreateOrgForm) Validate(ctx *macaron.Context, errs *binding.Errors, l i18n.Locale) {
-	validate(errs, ctx.Data, f, l)
+func (f *CreateOrgForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
+	return validate(errs, ctx.Data, f, ctx.Locale)
 }
 
 type UpdateOrgSettingForm struct {
@@ -37,8 +35,8 @@ type UpdateOrgSettingForm struct {
 	Avatar      string `form:"avatar" binding:"Required;Email;MaxSize(50)"`
 }
 
-func (f *UpdateOrgSettingForm) Validate(ctx *macaron.Context, errs *binding.Errors, l i18n.Locale) {
-	validate(errs, ctx.Data, f, l)
+func (f *UpdateOrgSettingForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
+	return validate(errs, ctx.Data, f, ctx.Locale)
 }
 
 // ___________
@@ -54,6 +52,6 @@ type CreateTeamForm struct {
 	Permission  string `form:"permission"`
 }
 
-func (f *CreateTeamForm) Validate(ctx *macaron.Context, errs *binding.Errors, l i18n.Locale) {
-	validate(errs, ctx.Data, f, l)
+func (f *CreateTeamForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
+	return validate(errs, ctx.Data, f, ctx.Locale)
 }
