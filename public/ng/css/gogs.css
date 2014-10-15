@@ -1489,6 +1489,12 @@ The register and sign-in page style
   font-family: Consolas, Menlo, Monaco, "Lucida Console", monospace;
   font-size: 14px;
 }
+.commit-list .message {
+  width: 60%;
+}
+.commit-list .message span {
+  max-width: 500px;
+}
 .diff-head-box {
   margin-top: 10px;
 }
