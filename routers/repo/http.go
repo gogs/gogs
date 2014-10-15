@@ -6,6 +6,7 @@ package repo
 
 import (
 	"bytes"
+	"compress/gzip"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -283,23 +284,42 @@ func serviceReceivePack(hr handler) {
 
 func serviceRpc(rpc string, hr handler) {
 	w, r, dir := hr.w, hr.r, hr.Dir
-	access := hasAccess(r, hr.Config, dir, rpc, true)
 
+	access := hasAccess(r, hr.Config, dir, rpc, true)
 	if access == false {
 		renderNoAccess(w)
 		return
 	}
 
 	w.Header().Set("Content-Type", fmt.Sprintf("application/x-git-%s-result", rpc))
-	w.WriteHeader(http.StatusOK)
 
-	var input []byte
-	var br io.Reader
+	var (
+		reqBody = r.Body
+		input   []byte
+		br      io.Reader
+		err     error
+	)
+
+	// Handle GZIP.
+	if r.Header.Get("Content-Encoding") == "gzip" {
+		reqBody, err = gzip.NewReader(reqBody)
+		if err != nil {
+			log.GitLogger.Error(2, "fail to create gzip reader: %v", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+	}
+
 	if hr.Config.OnSucceed != nil {
-		input, _ = ioutil.ReadAll(r.Body)
+		input, err = ioutil.ReadAll(reqBody)
+		if err != nil {
+			log.GitLogger.Error(2, "fail to read request body: %v", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 		br = bytes.NewReader(input)
 	} else {
-		br = r.Body
+		br = reqBody
 	}
 
 	args := []string{rpc, "--stateless-rpc", dir}
@@ -308,15 +328,16 @@ func serviceRpc(rpc string, hr handler) {
 	cmd.Stdout = w
 	cmd.Stdin = br
 
-	err := cmd.Run()
-	if err != nil {
-		log.GitLogger.Error(4, err.Error())
+	if err := cmd.Run(); err != nil {
+		log.GitLogger.Error(2, "fail to serve RPC(%s): %v", rpc, err)
+		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
 	if hr.Config.OnSucceed != nil {
 		hr.Config.OnSucceed(rpc, input)
 	}
+	w.WriteHeader(http.StatusOK)
 }
 
 func getInfoRefs(hr handler) {
@@ -372,7 +393,7 @@ func sendFile(contentType string, hr handler) {
 	w, r := hr.w, hr.r
 	reqFile := path.Join(hr.Dir, hr.File)
 
-	//fmt.Println("sendFile:", reqFile)
+	// fmt.Println("sendFile:", reqFile)
 
 	f, err := os.Stat(reqFile)
 	if os.IsNotExist(err) {
