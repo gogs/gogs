@@ -17,6 +17,12 @@
     > li {
       padding: 12px 6px;
     }
+    > li.drop{
+      margin-left: -22px;
+      &:hover a {
+        background-color: transparent;
+      }
+    }
     > li.right {
       > a {
         font-size: 1.2em;
@@ -126,7 +132,7 @@
   .repo-contrib-header {
     border-top: 1px solid #d6d6d6;
   }
-  .panel-header{
+  .panel-header {
     font-size: 14px;
   }
 }
@@ -173,6 +179,7 @@
   max-width: 300px;
   > .drop-down {
     top: 56px;
+    left: 22px;
   }
   li {
     white-space: nowrap;
@@ -221,14 +228,14 @@
   border-bottom-right-radius: .3em;
 }
 #dashboard-news {
-    padding-bottom: 60px;
+  padding-bottom: 60px;
   .news {
     margin-right: 2.4em;
     .mega-octicon {
       color: #CCC;
     }
     .avatar {
-      margin: 0 1.2em;
+      margin-right: 1.2em;
     }
     .news-content,
     .news-time {
