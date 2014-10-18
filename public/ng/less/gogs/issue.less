@@ -221,3 +221,33 @@ textarea#issue-add-content {
   height: 120px;
   resize: vertical;
 }
+// #issue list navigator
+#issue-list-nav {
+  li {
+    > a {
+      font-size: 13px;
+      font-weight: bold;
+      padding: .4em .9em;
+      border-radius: .3em;
+    }
+  }
+  li.current {
+    > a {
+      background-color: #0079bc;
+      color: #FAFAFA;
+      border-radius: .3em;
+    }
+  }
+  li.right {
+    margin-left: 4px;
+  }
+}
+// new issue button
+#issue-new {
+  > a {
+    padding: 0 !important;
+    button {
+      height: 34px;
+    }
+  }
+}
