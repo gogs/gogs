@@ -1964,6 +1964,26 @@ textarea#issue-add-content {
   height: 120px;
   resize: vertical;
 }
+#issue-list-nav li > a {
+  font-size: 13px;
+  font-weight: bold;
+  padding: .4em .9em;
+  border-radius: .3em;
+}
+#issue-list-nav li.current > a {
+  background-color: #0079bc;
+  color: #FAFAFA;
+  border-radius: .3em;
+}
+#issue-list-nav li.right {
+  margin-left: 4px;
+}
+#issue-new > a {
+  padding: 0 !important;
+}
+#issue-new > a button {
+  height: 34px;
+}
 .org-header-alert .alert {
   margin-top: 10px;
 }

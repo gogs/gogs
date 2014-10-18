@@ -2,5 +2,15 @@
 {{template "ng/base/header" .}}
 <div id="repo-wrapper">
     {{template "repo/header" .}}
+    <div class="issue-main container repo-wide-wrapper">
+        <ul id="issue-list-nav" class="menu menu-line">
+            <li class="current"><a href="#">Issue</a></li>
+            <li><a href="#">Pull Request</a></li>
+            <li><a href="#">Labels</a></li>
+            <li><a href="#">Milestones</a></li>
+            <li class="right" id="issue-new"><a href="#"><button id="issue-new-btn" class="btn btn-green btn-radius text-bold">New Issue</button></a></li>
+            <li class="right"><a href="#">Filter</a></li>
+        </ul>
+    </div>
 </div>
 {{template "ng/base/footer" .}}
