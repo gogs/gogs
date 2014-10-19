@@ -46,7 +46,7 @@ The goal of this project is to make the easiest, fastest and most painless way t
 - Slack webhook integration
 - Supports MySQL, PostgreSQL and SQLite3
 - Social account login(GitHub, Google, QQ, Weibo)
-- Multi-language support(English, Simplified Chinese, Traditional Chinese, Germany, French, Dutch etc.)
+- Multi-language support(English, Simplified Chinese, Traditional Chinese, Germany, French, Dutch, and [more](https://crowdin.com/project/gogs))
 
 ## System Requirements
 
@@ -73,6 +73,7 @@ There are 5 ways to install Gogs:
 - Usage and modification from [beego](http://beego.me) modules.
 - Thanks [lavachen](http://www.lavachen.cn/) and [Rocker](http://weibo.com/rocker1989) for designing Logo.
 - Thanks [gobuild.io](http://gobuild.io) for providing binary compile and download service.
+- Thanks to [Crowdin](https://crowdin.com/project/gogs) for providing open source translation plan.
 
 ## Contributors
 

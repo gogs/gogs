@@ -5,7 +5,6 @@
 package v1
 
 import (
-	"io/ioutil"
 	"strings"
 
 	"github.com/gogits/gogs/modules/auth/apiv1"
@@ -34,7 +33,7 @@ func Markdown(ctx *middleware.Context, form apiv1.MarkdownForm) {
 
 // Render a Markdown document in raw mode.
 func MarkdownRaw(ctx *middleware.Context) {
-	body, err := ioutil.ReadAll(ctx.Req.Body)
+	body, err := ctx.Req.Body().Bytes()
 	if err != nil {
 		ctx.JSON(422, base.ApiJsonErr{err.Error(), DOC_URL})
 		return
