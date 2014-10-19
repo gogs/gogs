@@ -20,7 +20,6 @@ import (
 var (
 	x      *xorm.Engine
 	tables []interface{}
-
 	HasEngine bool
 
 	DbCfg struct {

@@ -101,6 +101,7 @@
                 <table>
                     <tbody>
                         {{range .Sections}}
+                        Test: {{ .NumLines}}
                         {{range .Lines}}
                         <tr class="{{DiffLineTypeToStr .Type}}-code nl-1 ol-1">
                             <td class="lines-num lines-num-old">
@@ -109,6 +110,7 @@
                             <td class="lines-num lines-num-new">
                                 <span rel="L1">{{if .RightIdx}}{{.RightIdx}}{{end}}</span>
                             </td>
+                            
                             <td class="lines-code">
                                 <pre>{{ToUtf8 .Content}}</pre>
                             </td>
