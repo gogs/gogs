@@ -5,6 +5,7 @@
 package models
 
 import (
+	"database/sql"
 	"fmt"
 	"os"
 	"path"
@@ -17,9 +18,16 @@ import (
 	"github.com/gogits/gogs/modules/setting"
 )
 
+// Engine represents a xorm engine or session.
+type Engine interface {
+	Delete(interface{}) (int64, error)
+	Exec(string, ...interface{}) (sql.Result, error)
+	Insert(...interface{}) (int64, error)
+}
+
 var (
-	x      *xorm.Engine
-	tables []interface{}
+	x         *xorm.Engine
+	tables    []interface{}
 	HasEngine bool
 
 	DbCfg struct {

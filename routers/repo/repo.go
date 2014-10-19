@@ -217,21 +217,20 @@ func Action(ctx *middleware.Context) {
 		err = models.StarRepo(ctx.User.Id, ctx.Repo.Repository.Id, true)
 	case "unstar":
 		err = models.StarRepo(ctx.User.Id, ctx.Repo.Repository.Id, false)
-        case "fork":
-                repo, error := models.ForkRepository(ctx.User, ctx.Repo.Repository)
-                if error != nil {
-                    log.Error(4, "Action(%s): %v", ctx.Params(":action"), error)
-                    ctx.JSON(200, map[string]interface{}{
-                        "ok":  false,
-                        "err": error.Error(),
-                    })
-                    return
-                }
-                if error == nil {
-                        ctx.Redirect(setting.AppSubUrl + "/" + repo.Owner.Name + "/" + repo.Name)
-                        
-                        return
-                }
+	case "fork":
+		repo, err := models.ForkRepository(ctx.User, ctx.Repo.Repository)
+		if err != nil {
+			if err != models.ErrRepoAlreadyExist {
+				log.Error(4, "Action(%s): %v", ctx.Params(":action"), err)
+				ctx.JSON(200, map[string]interface{}{
+					"ok":  false,
+					"err": err.Error(),
+				})
+				return
+			}
+		}
+		ctx.Redirect(setting.AppSubUrl + "/" + repo.Owner.Name + "/" + repo.Name)
+		return
 	case "desc":
 		if !ctx.Repo.IsOwner {
 			ctx.Error(404)

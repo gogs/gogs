@@ -110,7 +110,7 @@ var TemplateFuncs template.FuncMap = map[string]interface{}{
 	"List":       List,
 	"Mail2Domain": func(mail string) string {
 		if !strings.Contains(mail, "@") {
-			return "try.gogits.org"
+			return "try.gogs.io"
 		}
 
 		suffix := strings.SplitN(mail, "@", 2)[1]
@@ -121,7 +121,17 @@ var TemplateFuncs template.FuncMap = map[string]interface{}{
 		return domain
 	},
 	"SubStr": func(str string, start, length int) string {
-		return str[start : start+length]
+		if len(str) == 0 {
+			return ""
+		}
+		end := start + length
+		if length == -1 {
+			end = len(str)
+		}
+		if len(str) < end {
+			return str
+		}
+		return str[start:end]
 	},
 	"DiffTypeToStr":     DiffTypeToStr,
 	"DiffLineTypeToStr": DiffLineTypeToStr,
