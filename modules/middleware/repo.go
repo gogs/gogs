@@ -160,7 +160,11 @@ func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 			return
 		}
 		ctx.Repo.GitRepo = gitRepo
-		ctx.Repo.RepoLink = setting.AppSubUrl + "/" + u.Name + "/" + repo.Name
+		ctx.Repo.RepoLink, err = repo.RepoLink()
+		if err != nil {
+			ctx.Handle(500, "RepoLink", err)
+			return
+		}
 		ctx.Data["RepoLink"] = ctx.Repo.RepoLink
 
 		tags, err := ctx.Repo.GitRepo.GetTags()
@@ -170,6 +174,12 @@ func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 		}
 		ctx.Data["Tags"] = tags
 		ctx.Repo.Repository.NumTags = len(tags)
+
+		// Non-fork repository will not return error in this method.
+		if err = repo.GetForkRepo(); err != nil {
+			ctx.Handle(500, "GetForkRepo", err)
+			return
+		}
 
 		ctx.Data["Title"] = u.Name + "/" + repo.Name
 		ctx.Data["Repository"] = repo

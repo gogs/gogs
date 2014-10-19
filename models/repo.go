@@ -133,14 +133,15 @@ func NewRepoContext() {
 
 // Repository represents a git repository.
 type Repository struct {
-	Id                  int64
-	OwnerId             int64 `xorm:"UNIQUE(s)"`
-	Owner               *User `xorm:"-"`
-	ForkId              int64
-	LowerName           string `xorm:"UNIQUE(s) INDEX NOT NULL"`
-	Name                string `xorm:"INDEX NOT NULL"`
-	Description         string
-	Website             string
+	Id            int64
+	OwnerId       int64  `xorm:"UNIQUE(s)"`
+	Owner         *User  `xorm:"-"`
+	LowerName     string `xorm:"UNIQUE(s) INDEX NOT NULL"`
+	Name          string `xorm:"INDEX NOT NULL"`
+	Description   string
+	Website       string
+	DefaultBranch string
+
 	NumWatches          int
 	NumStars            int
 	NumForks            int
@@ -154,15 +155,20 @@ type Repository struct {
 	NumClosedMilestones int `xorm:"NOT NULL DEFAULT 0"`
 	NumOpenMilestones   int `xorm:"-"`
 	NumTags             int `xorm:"-"`
-	IsPrivate           bool
-	IsMirror            bool
-	*Mirror             `xorm:"-"`
-	IsFork              bool `xorm:"NOT NULL DEFAULT false"`
-	IsBare              bool
-	IsGoget             bool
-	DefaultBranch       string
-	Created             time.Time `xorm:"CREATED"`
-	Updated             time.Time `xorm:"UPDATED"`
+
+	IsPrivate bool
+	IsBare    bool
+	IsGoget   bool
+
+	IsMirror bool
+	*Mirror  `xorm:"-"`
+
+	IsFork   bool `xorm:"NOT NULL DEFAULT false"`
+	ForkId   int64
+	ForkRepo *Repository `xorm:"-"`
+
+	Created time.Time `xorm:"CREATED"`
+	Updated time.Time `xorm:"UPDATED"`
 }
 
 func (repo *Repository) GetOwner() (err error) {
@@ -177,12 +183,31 @@ func (repo *Repository) GetMirror() (err error) {
 	return err
 }
 
-func (repo *Repository) GetPath() string {
-        return RepoPath(repo.Owner.Name, repo.Name)
+func (repo *Repository) GetForkRepo() (err error) {
+	if !repo.IsFork {
+		return nil
+	}
+
+	repo.ForkRepo, err = GetRepositoryById(repo.ForkId)
+	return err
+}
+
+func (repo *Repository) RepoPath() (string, error) {
+	if err := repo.GetOwner(); err != nil {
+		return "", err
+	}
+	return RepoPath(repo.Owner.Name, repo.Name), nil
+}
+
+func (repo *Repository) RepoLink() (string, error) {
+	if err := repo.GetOwner(); err != nil {
+		return "", err
+	}
+	return setting.AppSubUrl + "/" + repo.Owner.Name + "/" + repo.Name, nil
 }
 
 func (repo *Repository) IsOwnedBy(u *User) bool {
-        return repo.OwnerId == u.Id
+	return repo.OwnerId == u.Id
 }
 
 func (repo *Repository) HasAccess(uname string) bool {
@@ -947,12 +972,12 @@ func DeleteRepository(uid, repoId int64, userName string) error {
 		sess.Rollback()
 		return err
 	}
-	
+
 	if repo.IsFork {
-                if _, err = sess.Exec("UPDATE `repository` SET num_forks = num_forks - 1 WHERE id = ?", repo.ForkId); err != nil {
-                    sess.Rollback()
-                    return err
-                }
+		if _, err = sess.Exec("UPDATE `repository` SET num_forks = num_forks - 1 WHERE id = ?", repo.ForkId); err != nil {
+			sess.Rollback()
+			return err
+		}
 	}
 
 	if _, err = sess.Exec("UPDATE `user` SET num_repos = num_repos - 1 WHERE id = ?", uid); err != nil {
@@ -1147,32 +1172,36 @@ type Watch struct {
 	RepoId int64 `xorm:"UNIQUE(watch)"`
 }
 
-// Watch or unwatch repository.
-func WatchRepo(uid, repoId int64, watch bool) (err error) {
+// IsWatching checks if user has watched given repository.
+func IsWatching(uid, repoId int64) bool {
+	has, _ := x.Get(&Watch{0, uid, repoId})
+	return has
+}
+
+func watchRepoWithEngine(e Engine, uid, repoId int64, watch bool) (err error) {
 	if watch {
 		if IsWatching(uid, repoId) {
 			return nil
 		}
-		if _, err = x.Insert(&Watch{RepoId: repoId, UserId: uid}); err != nil {
+		if _, err = e.Insert(&Watch{RepoId: repoId, UserId: uid}); err != nil {
 			return err
 		}
-		_, err = x.Exec("UPDATE `repository` SET num_watches = num_watches + 1 WHERE id = ?", repoId)
+		_, err = e.Exec("UPDATE `repository` SET num_watches = num_watches + 1 WHERE id = ?", repoId)
 	} else {
 		if !IsWatching(uid, repoId) {
 			return nil
 		}
-		if _, err = x.Delete(&Watch{0, uid, repoId}); err != nil {
+		if _, err = e.Delete(&Watch{0, uid, repoId}); err != nil {
 			return err
 		}
-		_, err = x.Exec("UPDATE `repository` SET num_watches = num_watches - 1 WHERE id = ?", repoId)
+		_, err = e.Exec("UPDATE `repository` SET num_watches = num_watches - 1 WHERE id = ?", repoId)
 	}
 	return err
 }
 
-// IsWatching checks if user has watched given repository.
-func IsWatching(uid, rid int64) bool {
-	has, _ := x.Get(&Watch{0, uid, rid})
-	return has
+// Watch or unwatch repository.
+func WatchRepo(uid, repoId int64, watch bool) (err error) {
+	return watchRepoWithEngine(x, uid, repoId, watch)
 }
 
 // GetWatchers returns all watchers of given repository.
@@ -1255,137 +1284,157 @@ func IsStaring(uid, repoId int64) bool {
 	return has
 }
 
-func ForkRepository(u *User, oldRepo *Repository) (*Repository, error) {
-        isExist, err := IsRepositoryExist(u, oldRepo.Name)
-        if err != nil {
-            return nil, err
-        } else if isExist {
-            return nil, ErrRepoAlreadyExist
-        }
-    
-        sess := x.NewSession()
-        defer sess.Close()
-        if err = sess.Begin(); err != nil {
-            return nil, err
-        }
-    
-        repo := &Repository{
-            OwnerId:     u.Id,
-            Owner:       u,
-            Name:        oldRepo.Name,
-            LowerName:   oldRepo.LowerName,
-            Description: oldRepo.Description,
-            IsPrivate:   oldRepo.IsPrivate,
-            IsFork:      true,
-            ForkId:      oldRepo.Id,
-        }
-    
-        if _, err = sess.Insert(repo); err != nil {
-            sess.Rollback()
-            return nil, err
-        }
-    
-        var t *Team // Owner team.
-    
-        mode := WRITABLE
-        
-        access := &Access{
-            UserName: u.LowerName,
-            RepoName: path.Join(u.LowerName, repo.LowerName),
-            Mode:     mode,
-        }
-        // Give access to all members in owner team.
-        if u.IsOrganization() {
-            t, err = u.GetOwnerTeam()
-            if err != nil {
-                sess.Rollback()
-                return nil, err
-            }
-            if err = t.GetMembers(); err != nil {
-                sess.Rollback()
-                return nil, err
-            }
-            for _, u := range t.Members {
-                access.Id = 0
-                access.UserName = u.LowerName
-                if _, err = sess.Insert(access); err != nil {
-                    sess.Rollback()
-                    return nil, err
-                }
-            }
-        } else {
-            if _, err = sess.Insert(access); err != nil {
-                sess.Rollback()
-                return nil, err
-            }
-        }
-    
-        if _, err = sess.Exec(
-            "UPDATE `user` SET num_repos = num_repos + 1 WHERE id = ?", u.Id); err != nil {
-            sess.Rollback()
-            return nil, err
-        }
-    
-        // Update owner team info and count.
-        if u.IsOrganization() {
-            t.RepoIds += "$" + com.ToStr(repo.Id) + "|"
-            t.NumRepos++
-            if _, err = sess.Id(t.Id).AllCols().Update(t); err != nil {
-                sess.Rollback()
-                return nil, err
-            }
-        }
-    
-        
-    
-        if u.IsOrganization() {
-            t, err := u.GetOwnerTeam()
-            if err != nil {
-                log.Error(4, "GetOwnerTeam: %v", err)
-            } else {
-                if err = t.GetMembers(); err != nil {
-                    log.Error(4, "GetMembers: %v", err)
-                } else {
-                    for _, u := range t.Members {
-                        if err = WatchRepo(u.Id, repo.Id, true); err != nil {
-                            log.Error(4, "WatchRepo2: %v", err)
-                        }
-                    }
-                }
-            }
-        } else {
-            if err = WatchRepo(u.Id, repo.Id, true); err != nil {
-                log.Error(4, "WatchRepo3: %v", err)
-            }
-        }
-    
-        if err = NewRepoAction(u, repo); err != nil {
-            log.Error(4, "NewRepoAction: %v", err)
-        }
-        
-        if _, err = sess.Exec(
-            "UPDATE `repository` SET num_forks = num_forks + 1 WHERE id = ?", oldRepo.Id); err != nil {
-            sess.Rollback()
-            return nil, err
-        }
-        
-        if err = sess.Commit(); err != nil {
-            return nil, err
-        }
-    
-        repoPath := RepoPath(u.Name, repo.Name)
-        _, stderr, err := process.ExecTimeout(10*time.Minute,
-                fmt.Sprintf("ForkRepository: %s/%s", u.Name, repo.Name),
-                "git", "clone", oldRepo.GetPath(), repoPath)
-    
-        _, stderr, err = process.ExecDir(-1,
-            repoPath, fmt.Sprintf("CreateRepository(git update-server-info): %s", repoPath),
-            "git", "update-server-info")
-        if err != nil {
-            return nil, errors.New("CreateRepository(git update-server-info): " + stderr)
-        }
-    
-        return repo, nil
-   
+// ___________           __
+// \_   _____/__________|  | __
+//  |    __)/  _ \_  __ \  |/ /
+//  |     \(  <_> )  | \/    <
+//  \___  / \____/|__|  |__|_ \
+//      \/                   \/
 
+func ForkRepository(u *User, oldRepo *Repository) (*Repository, error) {
+	isExist, err := IsRepositoryExist(u, oldRepo.Name)
+	if err != nil {
+		return nil, err
+	} else if isExist {
+		return nil, ErrRepoAlreadyExist
+	}
+
+	// In case the old repository is a fork.
+	if oldRepo.IsFork {
+		oldRepo, err = GetRepositoryById(oldRepo.ForkId)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	sess := x.NewSession()
+	defer sess.Close()
+	if err = sess.Begin(); err != nil {
+		return nil, err
+	}
+
+	repo := &Repository{
+		OwnerId:     u.Id,
+		Owner:       u,
+		Name:        oldRepo.Name,
+		LowerName:   oldRepo.LowerName,
+		Description: oldRepo.Description,
+		IsPrivate:   oldRepo.IsPrivate,
+		IsFork:      true,
+		ForkId:      oldRepo.Id,
+	}
+
+	if _, err = sess.Insert(repo); err != nil {
+		sess.Rollback()
+		return nil, err
+	}
+
+	var t *Team // Owner team.
+
+	mode := WRITABLE
+
+	access := &Access{
+		UserName: u.LowerName,
+		RepoName: path.Join(u.LowerName, repo.LowerName),
+		Mode:     mode,
+	}
+	// Give access to all members in owner team.
+	if u.IsOrganization() {
+		t, err = u.GetOwnerTeam()
+		if err != nil {
+			sess.Rollback()
+			return nil, err
+		}
+		if err = t.GetMembers(); err != nil {
+			sess.Rollback()
+			return nil, err
+		}
+		for _, u := range t.Members {
+			access.Id = 0
+			access.UserName = u.LowerName
+			if _, err = sess.Insert(access); err != nil {
+				sess.Rollback()
+				return nil, err
+			}
+		}
+	} else {
+		if _, err = sess.Insert(access); err != nil {
+			sess.Rollback()
+			return nil, err
+		}
+	}
+
+	if _, err = sess.Exec(
+		"UPDATE `user` SET num_repos = num_repos + 1 WHERE id = ?", u.Id); err != nil {
+		sess.Rollback()
+		return nil, err
+	}
+
+	// Update owner team info and count.
+	if u.IsOrganization() {
+		t.RepoIds += "$" + com.ToStr(repo.Id) + "|"
+		t.NumRepos++
+		if _, err = sess.Id(t.Id).AllCols().Update(t); err != nil {
+			sess.Rollback()
+			return nil, err
+		}
+	}
+
+	if u.IsOrganization() {
+		t, err := u.GetOwnerTeam()
+		if err != nil {
+			log.Error(4, "GetOwnerTeam: %v", err)
+		} else {
+			if err = t.GetMembers(); err != nil {
+				log.Error(4, "GetMembers: %v", err)
+			} else {
+				for _, u := range t.Members {
+					if err = watchRepoWithEngine(sess, u.Id, repo.Id, true); err != nil {
+						log.Error(4, "WatchRepo2: %v", err)
+					}
+				}
+			}
+		}
+	} else {
+		if err = watchRepoWithEngine(sess, u.Id, repo.Id, true); err != nil {
+			log.Error(4, "WatchRepo3: %v", err)
+		}
+	}
+
+	if err = NewRepoAction(u, repo); err != nil {
+		log.Error(4, "NewRepoAction: %v", err)
+	}
+
+	if _, err = sess.Exec(
+		"UPDATE `repository` SET num_forks = num_forks + 1 WHERE id = ?", oldRepo.Id); err != nil {
+		sess.Rollback()
+		return nil, err
+	}
+
+	oldRepoPath, err := oldRepo.RepoPath()
+	if err != nil {
+		sess.Rollback()
+		return nil, fmt.Errorf("fail to get repo path(%s): %v", oldRepo.Name, err)
+	}
+
+	if err = sess.Commit(); err != nil {
+		return nil, err
+	}
+
+	repoPath := RepoPath(u.Name, repo.Name)
+	_, stderr, err := process.ExecTimeout(10*time.Minute,
+		fmt.Sprintf("ForkRepository(git clone): %s/%s", u.Name, repo.Name),
+		"git", "clone", oldRepoPath, repoPath)
+	if err != nil {
+		return nil, errors.New("ForkRepository(git clone): " + stderr)
+	}
+
+	_, stderr, err = process.ExecDir(-1,
+		repoPath, fmt.Sprintf("ForkRepository(git update-server-info): %s", repoPath),
+		"git", "update-server-info")
+	if err != nil {
+		return nil, errors.New("ForkRepository(git update-server-info): " + stderr)
+	}
+
+	return repo, nil
 }
