@@ -229,7 +229,7 @@ func SignUpPost(ctx *middleware.Context, cpt *captcha.Captcha, form auth.Registe
 		return
 	}
 
-	if !cpt.VerifyReq(ctx.Req.Request) {
+	if !cpt.VerifyReq(ctx.Req) {
 		ctx.Data["Err_Captcha"] = true
 		ctx.RenderWithErr(ctx.Tr("form.captcha_incorrect"), SIGNUP, &form)
 		return
