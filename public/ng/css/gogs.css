@@ -2228,8 +2228,7 @@ textarea#issue-add-content {
   margin-left: 240px;
 }
 .profile-avatar {
-  width: 200px;
-  height: 200px;
+  width: 100%;
   border-radius: 6px;
 }
 #profile-name {
@@ -2243,7 +2242,6 @@ textarea#issue-add-content {
   font-weight: bold;
 }
 .profile-info {
-  padding: 0 50px;
   font-size: 14px;
 }
 .profile-info ul {
@@ -2279,4 +2277,7 @@ textarea#issue-add-content {
 }
 #profile-header li .current {
   border-bottom: 2px solid #D26911;
+}
+#profile-body {
+  margin-left: 10px;
 }
