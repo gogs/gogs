@@ -204,7 +204,7 @@ func Http(ctx *middleware.Context) {
 	config := Config{setting.RepoRootPath, "git", true, true, f}
 
 	handler := HttpBackend(&config)
-	handler(ctx.Resp, ctx.Req)
+	handler(ctx.Resp, ctx.Req.Request)
 }
 
 type route struct {

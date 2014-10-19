@@ -229,6 +229,7 @@ func InstallPost(ctx *middleware.Context, form auth.InstallForm) {
 	setting.Cfg.SetValue("log", "MODE", "file")
 
 	setting.Cfg.SetValue("security", "INSTALL_LOCK", "true")
+	setting.Cfg.SetValue("security", "SECRET_KEY", base.GetRandomString(15))
 
 	os.MkdirAll("custom/conf", os.ModePerm)
 	if err := goconfig.SaveConfigFile(setting.Cfg, path.Join(setting.CustomPath, "conf/app.ini")); err != nil {

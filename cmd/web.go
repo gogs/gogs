@@ -71,7 +71,7 @@ func checkVersion() {
 		log.Fatal(4, "Package i18n version is too old, did you forget to update?(github.com/macaron-contrib/i18n)")
 	}
 	sessionVer := git.MustParseVersion(session.Version())
-	if sessionVer.LessThan(git.MustParseVersion("0.0.1")) {
+	if sessionVer.LessThan(git.MustParseVersion("0.0.3")) {
 		log.Fatal(4, "Package session version is too old, did you forget to update?(github.com/macaron-contrib/session)")
 	}
 }
