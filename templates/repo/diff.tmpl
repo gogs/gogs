@@ -101,7 +101,6 @@
                 <table>
                     <tbody>
                         {{range .Sections}}
-                        Test: {{ .NumLines}}
                         {{range .Lines}}
                         <tr class="{{DiffLineTypeToStr .Type}}-code nl-1 ol-1">
                             <td class="lines-num lines-num-old">
