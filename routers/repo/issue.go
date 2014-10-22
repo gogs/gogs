@@ -463,9 +463,9 @@ func UpdateIssue(ctx *middleware.Context, form auth.CreateIssueForm) {
 	}
 
 	issue.Name = form.IssueName
-	issue.MilestoneId = form.MilestoneId
-	issue.AssigneeId = form.AssigneeId
-	issue.LabelIds = form.Labels
+	//issue.MilestoneId = form.MilestoneId
+	//issue.AssigneeId = form.AssigneeId
+	//issue.LabelIds = form.Labels
 	issue.Content = form.Content
 	// try get content from text, ignore conflict with preview ajax
 	if form.Content == "" {
