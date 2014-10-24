@@ -4,12 +4,8 @@
     <input type="hidden" name="hook_type" value="slack">
     <div class="text-center panel-desc">{{.i18n.Tr "repo.settings.add_slack_hook_desc" | Str2html}}</div>
     <div class="field">
-        <label class="req" for="domain">{{.i18n.Tr "repo.settings.slack_domain"}}</label>
-        <input class="ipt ipt-large ipt-radius {{if .Err_UserName}}ipt-error{{end}}" id="domain" name="domain" type="text" value="{{.SlackHook.Domain}}" placeholde="myslack" required />
-    </div>
-    <div class="field">
-        <label class="req" for="token">{{.i18n.Tr "repo.settings.slack_token"}}</label>
-        <input class="ipt ipt-large ipt-radius {{if .Err_UserName}}ipt-error{{end}}" id="token" name="token" type="text" value="{{.SlackHook.Token}}" autocomplete="off" required />
+        <label class="req" for="payload-url">{{.i18n.Tr "repo.settings.payload_url"}}</label>
+        <input class="ipt ipt-large ipt-radius {{if .Err_UserName}}ipt-error{{end}}" id="payload-url" name="payload_url" type="url" value="{{.Webhook.Url}}" required />
     </div>
     <div class="field">
         <label class="req" for="channel">{{.i18n.Tr "repo.settings.slack_channel"}}</label>
