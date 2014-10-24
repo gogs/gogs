@@ -24,7 +24,7 @@ import (
 	"github.com/gogits/gogs/modules/setting"
 )
 
-// Encode string to md5 hex value
+// Encode string to md5 hex value.
 func EncodeMd5(str string) string {
 	m := md5.New()
 	m.Write([]byte(str))

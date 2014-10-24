@@ -151,62 +151,62 @@ func runWeb(*cli.Context) {
 	m.Get("/explore", ignSignIn, routers.Explore)
 	m.Get("/install", bindIgnErr(auth.InstallForm{}), routers.Install)
 	m.Post("/install", bindIgnErr(auth.InstallForm{}), routers.InstallPost)
-	m.Group("", func(r *macaron.Router) {
-		r.Get("/pulls", user.Pulls)
-		r.Get("/issues", user.Issues)
+	m.Group("", func() {
+		m.Get("/pulls", user.Pulls)
+		m.Get("/issues", user.Issues)
 	}, reqSignIn)
 
 	// API routers.
-	m.Group("/api", func(_ *macaron.Router) {
-		m.Group("/v1", func(r *macaron.Router) {
+	m.Group("/api", func() {
+		m.Group("/v1", func() {
 			// Miscellaneous.
-			r.Post("/markdown", bindIgnErr(apiv1.MarkdownForm{}), v1.Markdown)
-			r.Post("/markdown/raw", v1.MarkdownRaw)
+			m.Post("/markdown", bindIgnErr(apiv1.MarkdownForm{}), v1.Markdown)
+			m.Post("/markdown/raw", v1.MarkdownRaw)
 
 			// Users.
-			m.Group("/users", func(r *macaron.Router) {
-				r.Get("/search", v1.SearchUsers)
+			m.Group("/users", func() {
+				m.Get("/search", v1.SearchUsers)
 			})
 
 			// Repositories.
-			m.Group("/repos", func(r *macaron.Router) {
-				r.Get("/search", v1.SearchRepos)
-				r.Post("/migrate", bindIgnErr(auth.MigrateRepoForm{}), v1.Migrate)
+			m.Group("/repos", func() {
+				m.Get("/search", v1.SearchRepos)
+				m.Post("/migrate", bindIgnErr(auth.MigrateRepoForm{}), v1.Migrate)
 			})
 
-			r.Any("/*", func(ctx *middleware.Context) {
+			m.Any("/*", func(ctx *middleware.Context) {
 				ctx.JSON(404, &base.ApiJsonErr{"Not Found", v1.DOC_URL})
 			})
 		})
 	})
 
 	// User routers.
-	m.Group("/user", func(r *macaron.Router) {
-		r.Get("/login", user.SignIn)
-		r.Post("/login", bindIgnErr(auth.SignInForm{}), user.SignInPost)
-		r.Get("/login/:name", user.SocialSignIn)
-		r.Get("/sign_up", user.SignUp)
-		r.Post("/sign_up", bindIgnErr(auth.RegisterForm{}), user.SignUpPost)
-		r.Get("/reset_password", user.ResetPasswd)
-		r.Post("/reset_password", user.ResetPasswdPost)
+	m.Group("/user", func() {
+		m.Get("/login", user.SignIn)
+		m.Post("/login", bindIgnErr(auth.SignInForm{}), user.SignInPost)
+		m.Get("/login/:name", user.SocialSignIn)
+		m.Get("/sign_up", user.SignUp)
+		m.Post("/sign_up", bindIgnErr(auth.RegisterForm{}), user.SignUpPost)
+		m.Get("/reset_password", user.ResetPasswd)
+		m.Post("/reset_password", user.ResetPasswdPost)
 	}, reqSignOut)
-	m.Group("/user/settings", func(r *macaron.Router) {
-		r.Get("", user.Settings)
-		r.Post("", bindIgnErr(auth.UpdateProfileForm{}), user.SettingsPost)
-		r.Get("/password", user.SettingsPassword)
-		r.Post("/password", bindIgnErr(auth.ChangePasswordForm{}), user.SettingsPasswordPost)
-		r.Get("/ssh", user.SettingsSSHKeys)
-		r.Post("/ssh", bindIgnErr(auth.AddSSHKeyForm{}), user.SettingsSSHKeysPost)
-		r.Get("/social", user.SettingsSocial)
-		r.Route("/delete", "GET,POST", user.SettingsDelete)
+	m.Group("/user/settings", func() {
+		m.Get("", user.Settings)
+		m.Post("", bindIgnErr(auth.UpdateProfileForm{}), user.SettingsPost)
+		m.Get("/password", user.SettingsPassword)
+		m.Post("/password", bindIgnErr(auth.ChangePasswordForm{}), user.SettingsPasswordPost)
+		m.Get("/ssh", user.SettingsSSHKeys)
+		m.Post("/ssh", bindIgnErr(auth.AddSSHKeyForm{}), user.SettingsSSHKeysPost)
+		m.Get("/social", user.SettingsSocial)
+		m.Route("/delete", "GET,POST", user.SettingsDelete)
 	}, reqSignIn)
-	m.Group("/user", func(r *macaron.Router) {
+	m.Group("/user", func() {
 		// r.Get("/feeds", binding.Bind(auth.FeedsForm{}), user.Feeds)
-		r.Any("/activate", user.Activate)
-		r.Get("/email2user", user.Email2User)
-		r.Get("/forget_password", user.ForgotPasswd)
-		r.Post("/forget_password", user.ForgotPasswdPost)
-		r.Get("/logout", user.SignOut)
+		m.Any("/activate", user.Activate)
+		m.Get("/email2user", user.Email2User)
+		m.Get("/forget_password", user.ForgotPasswd)
+		m.Post("/forget_password", user.ForgotPasswdPost)
+		m.Get("/logout", user.SignOut)
 	})
 
 	// FIXME: Legacy
@@ -219,40 +219,40 @@ func runWeb(*cli.Context) {
 
 	adminReq := middleware.Toggle(&middleware.ToggleOptions{SignInRequire: true, AdminRequire: true})
 
-	m.Group("/admin", func(r *macaron.Router) {
+	m.Group("/admin", func() {
 		m.Get("", adminReq, admin.Dashboard)
-		r.Get("/config", admin.Config)
-		r.Get("/monitor", admin.Monitor)
+		m.Get("/config", admin.Config)
+		m.Get("/monitor", admin.Monitor)
 
-		m.Group("/users", func(r *macaron.Router) {
-			r.Get("", admin.Users)
-			r.Get("/new", admin.NewUser)
-			r.Post("/new", bindIgnErr(auth.RegisterForm{}), admin.NewUserPost)
-			r.Get("/:userid", admin.EditUser)
-			r.Post("/:userid", bindIgnErr(auth.AdminEditUserForm{}), admin.EditUserPost)
-			r.Post("/:userid/delete", admin.DeleteUser)
+		m.Group("/users", func() {
+			m.Get("", admin.Users)
+			m.Get("/new", admin.NewUser)
+			m.Post("/new", bindIgnErr(auth.RegisterForm{}), admin.NewUserPost)
+			m.Get("/:userid", admin.EditUser)
+			m.Post("/:userid", bindIgnErr(auth.AdminEditUserForm{}), admin.EditUserPost)
+			m.Post("/:userid/delete", admin.DeleteUser)
 		})
 
-		m.Group("/orgs", func(r *macaron.Router) {
-			r.Get("", admin.Organizations)
+		m.Group("/orgs", func() {
+			m.Get("", admin.Organizations)
 		})
 
-		m.Group("/repos", func(r *macaron.Router) {
-			r.Get("", admin.Repositories)
+		m.Group("/repos", func() {
+			m.Get("", admin.Repositories)
 		})
 
-		m.Group("/auths", func(r *macaron.Router) {
-			r.Get("", admin.Authentications)
-			r.Get("/new", admin.NewAuthSource)
-			r.Post("/new", bindIgnErr(auth.AuthenticationForm{}), admin.NewAuthSourcePost)
-			r.Get("/:authid", admin.EditAuthSource)
-			r.Post("/:authid", bindIgnErr(auth.AuthenticationForm{}), admin.EditAuthSourcePost)
-			r.Post("/:authid/delete", admin.DeleteAuthSource)
+		m.Group("/auths", func() {
+			m.Get("", admin.Authentications)
+			m.Get("/new", admin.NewAuthSource)
+			m.Post("/new", bindIgnErr(auth.AuthenticationForm{}), admin.NewAuthSourcePost)
+			m.Get("/:authid", admin.EditAuthSource)
+			m.Post("/:authid", bindIgnErr(auth.AuthenticationForm{}), admin.EditAuthSourcePost)
+			m.Post("/:authid/delete", admin.DeleteAuthSource)
 		})
 
-		m.Group("/notices", func(r *macaron.Router) {
-			r.Get("", admin.Notices)
-			r.Get("/:id:int/delete", admin.DeleteNotice)
+		m.Group("/notices", func() {
+			m.Get("", admin.Notices)
+			m.Get("/:id:int/delete", admin.DeleteNotice)
 		})
 	}, adminReq)
 
@@ -265,135 +265,135 @@ func runWeb(*cli.Context) {
 	reqTrueOwner := middleware.RequireTrueOwner()
 
 	// Organization routers.
-	m.Group("/org", func(r *macaron.Router) {
-		r.Get("/create", org.Create)
-		r.Post("/create", bindIgnErr(auth.CreateOrgForm{}), org.CreatePost)
+	m.Group("/org", func() {
+		m.Get("/create", org.Create)
+		m.Post("/create", bindIgnErr(auth.CreateOrgForm{}), org.CreatePost)
 
-		m.Group("/:org", func(r *macaron.Router) {
-			r.Get("/dashboard", user.Dashboard)
-			r.Get("/members", org.Members)
-			r.Get("/members/action/:action", org.MembersAction)
+		m.Group("/:org", func() {
+			m.Get("/dashboard", user.Dashboard)
+			m.Get("/members", org.Members)
+			m.Get("/members/action/:action", org.MembersAction)
 
-			r.Get("/teams", org.Teams)
-			r.Get("/teams/:team", org.TeamMembers)
-			r.Get("/teams/:team/repositories", org.TeamRepositories)
-			r.Get("/teams/:team/action/:action", org.TeamsAction)
-			r.Get("/teams/:team/action/repo/:action", org.TeamsRepoAction)
+			m.Get("/teams", org.Teams)
+			m.Get("/teams/:team", org.TeamMembers)
+			m.Get("/teams/:team/repositories", org.TeamRepositories)
+			m.Get("/teams/:team/action/:action", org.TeamsAction)
+			m.Get("/teams/:team/action/repo/:action", org.TeamsRepoAction)
 		}, middleware.OrgAssignment(true, true))
 
-		m.Group("/:org", func(r *macaron.Router) {
-			r.Get("/teams/new", org.NewTeam)
-			r.Post("/teams/new", bindIgnErr(auth.CreateTeamForm{}), org.NewTeamPost)
-			r.Get("/teams/:team/edit", org.EditTeam)
-			r.Post("/teams/:team/edit", bindIgnErr(auth.CreateTeamForm{}), org.EditTeamPost)
-			r.Post("/teams/:team/delete", org.DeleteTeam)
+		m.Group("/:org", func() {
+			m.Get("/teams/new", org.NewTeam)
+			m.Post("/teams/new", bindIgnErr(auth.CreateTeamForm{}), org.NewTeamPost)
+			m.Get("/teams/:team/edit", org.EditTeam)
+			m.Post("/teams/:team/edit", bindIgnErr(auth.CreateTeamForm{}), org.EditTeamPost)
+			m.Post("/teams/:team/delete", org.DeleteTeam)
 
-			m.Group("/settings", func(r *macaron.Router) {
-				r.Get("", org.Settings)
-				r.Post("", bindIgnErr(auth.UpdateOrgSettingForm{}), org.SettingsPost)
-				r.Get("/hooks", org.SettingsHooks)
-				r.Get("/hooks/new", repo.WebHooksNew)
-				r.Post("/hooks/gogs/new", bindIgnErr(auth.NewWebhookForm{}), repo.WebHooksNewPost)
-				r.Post("/hooks/slack/new", bindIgnErr(auth.NewSlackHookForm{}), repo.SlackHooksNewPost)
-				r.Get("/hooks/:id", repo.WebHooksEdit)
-				r.Post("/hooks/gogs/:id", bindIgnErr(auth.NewWebhookForm{}), repo.WebHooksEditPost)
-				r.Post("/hooks/slack/:id", bindIgnErr(auth.NewSlackHookForm{}), repo.SlackHooksEditPost)
-				r.Route("/delete", "GET,POST", org.SettingsDelete)
+			m.Group("/settings", func() {
+				m.Get("", org.Settings)
+				m.Post("", bindIgnErr(auth.UpdateOrgSettingForm{}), org.SettingsPost)
+				m.Get("/hooks", org.SettingsHooks)
+				m.Get("/hooks/new", repo.WebHooksNew)
+				m.Post("/hooks/gogs/new", bindIgnErr(auth.NewWebhookForm{}), repo.WebHooksNewPost)
+				m.Post("/hooks/slack/new", bindIgnErr(auth.NewSlackHookForm{}), repo.SlackHooksNewPost)
+				m.Get("/hooks/:id", repo.WebHooksEdit)
+				m.Post("/hooks/gogs/:id", bindIgnErr(auth.NewWebhookForm{}), repo.WebHooksEditPost)
+				m.Post("/hooks/slack/:id", bindIgnErr(auth.NewSlackHookForm{}), repo.SlackHooksEditPost)
+				m.Route("/delete", "GET,POST", org.SettingsDelete)
 			})
 
-			r.Route("/invitations/new", "GET,POST", org.Invitation)
+			m.Route("/invitations/new", "GET,POST", org.Invitation)
 		}, middleware.OrgAssignment(true, true, true))
 	}, reqSignIn)
-	m.Group("/org", func(r *macaron.Router) {
-		r.Get("/:org", org.Home)
+	m.Group("/org", func() {
+		m.Get("/:org", org.Home)
 	}, middleware.OrgAssignment(true))
 
 	// Repository routers.
-	m.Group("/repo", func(r *macaron.Router) {
-		r.Get("/create", repo.Create)
-		r.Post("/create", bindIgnErr(auth.CreateRepoForm{}), repo.CreatePost)
-		r.Get("/migrate", repo.Migrate)
-		r.Post("/migrate", bindIgnErr(auth.MigrateRepoForm{}), repo.MigratePost)
+	m.Group("/repo", func() {
+		m.Get("/create", repo.Create)
+		m.Post("/create", bindIgnErr(auth.CreateRepoForm{}), repo.CreatePost)
+		m.Get("/migrate", repo.Migrate)
+		m.Post("/migrate", bindIgnErr(auth.MigrateRepoForm{}), repo.MigratePost)
 	}, reqSignIn)
 
-	m.Group("/:username/:reponame", func(r *macaron.Router) {
-		r.Get("/settings", repo.Settings)
-		r.Post("/settings", bindIgnErr(auth.RepoSettingForm{}), repo.SettingsPost)
-		m.Group("/settings", func(r *macaron.Router) {
-			r.Route("/collaboration", "GET,POST", repo.SettingsCollaboration)
-			r.Get("/hooks", repo.Webhooks)
-			r.Get("/hooks/new", repo.WebHooksNew)
-			r.Post("/hooks/gogs/new", bindIgnErr(auth.NewWebhookForm{}), repo.WebHooksNewPost)
-			r.Post("/hooks/slack/new", bindIgnErr(auth.NewSlackHookForm{}), repo.SlackHooksNewPost)
-			r.Get("/hooks/:id", repo.WebHooksEdit)
-			r.Post("/hooks/gogs/:id", bindIgnErr(auth.NewWebhookForm{}), repo.WebHooksEditPost)
-			r.Post("/hooks/slack/:id", bindIgnErr(auth.NewSlackHookForm{}), repo.SlackHooksEditPost)
+	m.Group("/:username/:reponame", func() {
+		m.Get("/settings", repo.Settings)
+		m.Post("/settings", bindIgnErr(auth.RepoSettingForm{}), repo.SettingsPost)
+		m.Group("/settings", func() {
+			m.Route("/collaboration", "GET,POST", repo.SettingsCollaboration)
+			m.Get("/hooks", repo.Webhooks)
+			m.Get("/hooks/new", repo.WebHooksNew)
+			m.Post("/hooks/gogs/new", bindIgnErr(auth.NewWebhookForm{}), repo.WebHooksNewPost)
+			m.Post("/hooks/slack/new", bindIgnErr(auth.NewSlackHookForm{}), repo.SlackHooksNewPost)
+			m.Get("/hooks/:id", repo.WebHooksEdit)
+			m.Post("/hooks/gogs/:id", bindIgnErr(auth.NewWebhookForm{}), repo.WebHooksEditPost)
+			m.Post("/hooks/slack/:id", bindIgnErr(auth.NewSlackHookForm{}), repo.SlackHooksEditPost)
 
-			m.Group("/hooks/git", func(r *macaron.Router) {
-				r.Get("", repo.GitHooks)
-				r.Get("/:name", repo.GitHooksEdit)
-				r.Post("/:name", repo.GitHooksEditPost)
+			m.Group("/hooks/git", func() {
+				m.Get("", repo.GitHooks)
+				m.Get("/:name", repo.GitHooksEdit)
+				m.Post("/:name", repo.GitHooksEditPost)
 			}, middleware.GitHookService())
 		})
 	}, reqSignIn, middleware.RepoAssignment(true), reqTrueOwner)
 
-	m.Group("/:username/:reponame", func(r *macaron.Router) {
-		r.Get("/action/:action", repo.Action)
+	m.Group("/:username/:reponame", func() {
+		m.Get("/action/:action", repo.Action)
 
-		m.Group("/issues", func(r *macaron.Router) {
-			r.Get("/new", repo.CreateIssue)
-			r.Post("/new", bindIgnErr(auth.CreateIssueForm{}), repo.CreateIssuePost)
-			r.Post("/:index", bindIgnErr(auth.CreateIssueForm{}), repo.UpdateIssue)
-			r.Post("/:index/label", repo.UpdateIssueLabel)
-			r.Post("/:index/milestone", repo.UpdateIssueMilestone)
-			r.Post("/:index/assignee", repo.UpdateAssignee)
-			r.Get("/:index/attachment/:id", repo.IssueGetAttachment)
-			r.Post("/labels/new", bindIgnErr(auth.CreateLabelForm{}), repo.NewLabel)
-			r.Post("/labels/edit", bindIgnErr(auth.CreateLabelForm{}), repo.UpdateLabel)
-			r.Post("/labels/delete", repo.DeleteLabel)
-			r.Get("/milestones", repo.Milestones)
-			r.Get("/milestones/new", repo.NewMilestone)
-			r.Post("/milestones/new", bindIgnErr(auth.CreateMilestoneForm{}), repo.NewMilestonePost)
-			r.Get("/milestones/:index/edit", repo.UpdateMilestone)
-			r.Post("/milestones/:index/edit", bindIgnErr(auth.CreateMilestoneForm{}), repo.UpdateMilestonePost)
-			r.Get("/milestones/:index/:action", repo.UpdateMilestone)
+		m.Group("/issues", func() {
+			m.Get("/new", repo.CreateIssue)
+			m.Post("/new", bindIgnErr(auth.CreateIssueForm{}), repo.CreateIssuePost)
+			m.Post("/:index", bindIgnErr(auth.CreateIssueForm{}), repo.UpdateIssue)
+			m.Post("/:index/label", repo.UpdateIssueLabel)
+			m.Post("/:index/milestone", repo.UpdateIssueMilestone)
+			m.Post("/:index/assignee", repo.UpdateAssignee)
+			m.Get("/:index/attachment/:id", repo.IssueGetAttachment)
+			m.Post("/labels/new", bindIgnErr(auth.CreateLabelForm{}), repo.NewLabel)
+			m.Post("/labels/edit", bindIgnErr(auth.CreateLabelForm{}), repo.UpdateLabel)
+			m.Post("/labels/delete", repo.DeleteLabel)
+			m.Get("/milestones", repo.Milestones)
+			m.Get("/milestones/new", repo.NewMilestone)
+			m.Post("/milestones/new", bindIgnErr(auth.CreateMilestoneForm{}), repo.NewMilestonePost)
+			m.Get("/milestones/:index/edit", repo.UpdateMilestone)
+			m.Post("/milestones/:index/edit", bindIgnErr(auth.CreateMilestoneForm{}), repo.UpdateMilestonePost)
+			m.Get("/milestones/:index/:action", repo.UpdateMilestone)
 		})
 
-		r.Post("/comment/:action", repo.Comment)
-		r.Get("/releases/new", repo.NewRelease)
-		r.Get("/releases/edit/:tagname", repo.EditRelease)
+		m.Post("/comment/:action", repo.Comment)
+		m.Get("/releases/new", repo.NewRelease)
+		m.Get("/releases/edit/:tagname", repo.EditRelease)
 	}, reqSignIn, middleware.RepoAssignment(true))
 
-	m.Group("/:username/:reponame", func(r *macaron.Router) {
-		r.Post("/releases/new", bindIgnErr(auth.NewReleaseForm{}), repo.NewReleasePost)
-		r.Post("/releases/edit/:tagname", bindIgnErr(auth.EditReleaseForm{}), repo.EditReleasePost)
+	m.Group("/:username/:reponame", func() {
+		m.Post("/releases/new", bindIgnErr(auth.NewReleaseForm{}), repo.NewReleasePost)
+		m.Post("/releases/edit/:tagname", bindIgnErr(auth.EditReleaseForm{}), repo.EditReleasePost)
 	}, reqSignIn, middleware.RepoAssignment(true, true))
 
-	m.Group("/:username/:reponame", func(r *macaron.Router) {
-		r.Get("/issues", repo.Issues)
-		r.Get("/issues/:index", repo.ViewIssue)
-		r.Get("/pulls", repo.Pulls)
-		r.Get("/branches", repo.Branches)
-		r.Get("/archive/*", repo.Download)
-		r.Get("/issues2/", repo.Issues2)
+	m.Group("/:username/:reponame", func() {
+		m.Get("/issues", repo.Issues)
+		m.Get("/issues/:index", repo.ViewIssue)
+		m.Get("/pulls", repo.Pulls)
+		m.Get("/branches", repo.Branches)
+		m.Get("/archive/*", repo.Download)
+		m.Get("/issues2/", repo.Issues2)
 	}, ignSignIn, middleware.RepoAssignment(true))
 
-	m.Group("/:username/:reponame", func(r *macaron.Router) {
-		r.Get("/src/:branchname", repo.Home)
-		r.Get("/src/:branchname/*", repo.Home)
-		r.Get("/raw/:branchname/*", repo.SingleDownload)
-		r.Get("/commits/:branchname", repo.Commits)
-		r.Get("/commits/:branchname/search", repo.SearchCommits)
-		r.Get("/commits/:branchname/*", repo.FileHistory)
-		r.Get("/commit/:branchname", repo.Diff)
-		r.Get("/commit/:branchname/*", repo.Diff)
-		r.Get("/releases", repo.Releases)
-		r.Get("/compare/:before([a-z0-9]+)...:after([a-z0-9]+)", repo.CompareDiff)
+	m.Group("/:username/:reponame", func() {
+		m.Get("/src/:branchname", repo.Home)
+		m.Get("/src/:branchname/*", repo.Home)
+		m.Get("/raw/:branchname/*", repo.SingleDownload)
+		m.Get("/commits/:branchname", repo.Commits)
+		m.Get("/commits/:branchname/search", repo.SearchCommits)
+		m.Get("/commits/:branchname/*", repo.FileHistory)
+		m.Get("/commit/:branchname", repo.Diff)
+		m.Get("/commit/:branchname/*", repo.Diff)
+		m.Get("/releases", repo.Releases)
+		m.Get("/compare/:before([a-z0-9]+)...:after([a-z0-9]+)", repo.CompareDiff)
 	}, ignSignIn, middleware.RepoAssignment(true, true))
 
-	m.Group("/:username", func(r *macaron.Router) {
-		r.Get("/:reponame", ignSignIn, middleware.RepoAssignment(true, true, true), repo.Home)
-		r.Any("/:reponame/*", ignSignInAndCsrf, repo.Http)
+	m.Group("/:username", func() {
+		m.Get("/:reponame", ignSignIn, middleware.RepoAssignment(true, true, true), repo.Home)
+		m.Any("/:reponame/*", ignSignInAndCsrf, repo.Http)
 	})
 
 	// robots.txt

@@ -193,7 +193,7 @@ func IsEmailUsed(email string) (bool, error) {
 	return x.Get(&User{Email: email})
 }
 
-// GetUserSalt returns a user salt token
+// GetUserSalt returns a ramdom user salt token.
 func GetUserSalt() string {
 	return base.GetRandomString(10)
 }
@@ -473,19 +473,19 @@ func GetUserById(id int64) (*User, error) {
 	return u, nil
 }
 
-// GetUserByName returns the user object by given name if exists.
+// GetUserByName returns user by given name.
 func GetUserByName(name string) (*User, error) {
 	if len(name) == 0 {
 		return nil, ErrUserNotExist
 	}
-	user := &User{LowerName: strings.ToLower(name)}
-	has, err := x.Get(user)
+	u := &User{LowerName: strings.ToLower(name)}
+	has, err := x.Get(u)
 	if err != nil {
 		return nil, err
 	} else if !has {
 		return nil, ErrUserNotExist
 	}
-	return user, nil
+	return u, nil
 }
 
 // GetUserEmailsByNames returns a list of e-mails corresponds to names.
