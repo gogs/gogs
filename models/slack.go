@@ -16,8 +16,6 @@ const (
 )
 
 type Slack struct {
-	Domain  string `json:"domain"`
-	Token   string `json:"token"`
 	Channel string `json:"channel"`
 }
 
@@ -34,14 +32,6 @@ type SlackPayload struct {
 type SlackAttachment struct {
 	Color string `json:"color"`
 	Text  string `json:"text"`
-}
-
-func GetSlackURL(domain string, token string) string {
-	return fmt.Sprintf(
-		"https://%s.slack.com/services/hooks/incoming-webhook?token=%s",
-		domain,
-		token,
-	)
 }
 
 func (p SlackPayload) GetJSONPayload() ([]byte, error) {

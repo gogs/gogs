@@ -483,9 +483,7 @@ func SlackHooksNewPost(ctx *middleware.Context, form auth.NewSlackHookForm) {
 	}
 
 	meta, err := json.Marshal(&models.Slack{
-		Domain:  form.Domain,
 		Channel: form.Channel,
-		Token:   form.Token,
 	})
 	if err != nil {
 		ctx.Handle(500, "SlackHooksNewPost: JSON marshal failed: ", err)
@@ -494,7 +492,7 @@ func SlackHooksNewPost(ctx *middleware.Context, form auth.NewSlackHookForm) {
 
 	w := &models.Webhook{
 		RepoId:      orCtx.RepoId,
-		Url:         models.GetSlackURL(form.Domain, form.Token),
+		Url:         form.PayloadUrl,
 		ContentType: models.JSON,
 		Secret:      "",
 		HookEvent: &models.HookEvent{
@@ -551,16 +549,14 @@ func SlackHooksEditPost(ctx *middleware.Context, form auth.NewSlackHookForm) {
 		return
 	}
 	meta, err := json.Marshal(&models.Slack{
-		Domain:  form.Domain,
 		Channel: form.Channel,
-		Token:   form.Token,
 	})
 	if err != nil {
 		ctx.Handle(500, "SlackHooksNewPost: JSON marshal failed: ", err)
 		return
 	}
 
-	w.Url = models.GetSlackURL(form.Domain, form.Token)
+	w.Url = form.PayloadUrl
 	w.Meta = string(meta)
 	w.HookEvent = &models.HookEvent{
 		PushOnly: form.PushOnly,
