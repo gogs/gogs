@@ -1131,17 +1131,21 @@ type SearchOption struct {
 	Keyword string
 	Uid     int64
 	Limit   int
+	Private bool
+}
+
+// FilterSQLInject tries to prevent SQL injection.
+func FilterSQLInject(key string) string {
+	key = strings.TrimSpace(key)
+	key = strings.Split(key, " ")[0]
+	key = strings.Replace(key, ",", "", -1)
+	return key
 }
 
 // SearchRepositoryByName returns given number of repositories whose name contains keyword.
 func SearchRepositoryByName(opt SearchOption) (repos []*Repository, err error) {
 	// Prevent SQL inject.
-	opt.Keyword = strings.TrimSpace(opt.Keyword)
-	if len(opt.Keyword) == 0 {
-		return repos, nil
-	}
-
-	opt.Keyword = strings.Split(opt.Keyword, " ")[0]
+	opt.Keyword = FilterSQLInject(opt.Keyword)
 	if len(opt.Keyword) == 0 {
 		return repos, nil
 	}
@@ -1153,6 +1157,9 @@ func SearchRepositoryByName(opt SearchOption) (repos []*Repository, err error) {
 	sess := x.Limit(opt.Limit)
 	if opt.Uid > 0 {
 		sess.Where("owner_id=?", opt.Uid)
+	}
+	if !opt.Private {
+		sess.And("is_private=false")
 	}
 	sess.And("lower_name like '%" + opt.Keyword + "%'").Find(&repos)
 	return repos, err
