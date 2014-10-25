@@ -31,6 +31,26 @@ func SearchRepos(ctx *middleware.Context) {
 		opt.Limit = 10
 	}
 
+	// Check visibility.
+	if ctx.IsSigned && opt.Uid > 0 {
+		if ctx.User.Id == opt.Uid {
+			opt.Private = true
+		} else {
+			u, err := models.GetUserById(opt.Uid)
+			if err != nil {
+				ctx.JSON(500, map[string]interface{}{
+					"ok":    false,
+					"error": err.Error(),
+				})
+				return
+			}
+			if u.IsOrganization() && u.IsOrgOwner(ctx.User.Id) {
+				opt.Private = true
+			}
+			// FIXME: how about collaborators?
+		}
+	}
+
 	repos, err := models.SearchRepositoryByName(opt)
 	if err != nil {
 		ctx.JSON(500, map[string]interface{}{

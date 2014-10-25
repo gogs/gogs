@@ -211,7 +211,10 @@ func GetIssues(uid, rid, pid, mid int64, page int, isClosed bool, labelIds, sort
 
 	if len(labelIds) > 0 {
 		for _, label := range strings.Split(labelIds, ",") {
-			sess.And("label_ids like '%$" + label + "|%'")
+			// Prevent SQL inject.
+			if com.StrTo(label).MustInt() > 0 {
+				sess.And("label_ids like '%$" + label + "|%'")
+			}
 		}
 	}
 
