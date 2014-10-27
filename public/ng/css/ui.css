@@ -4,7 +4,7 @@
 }
 html {
   font-size: 13px;
-  font-family: Helvetica, "Microsoft Yahei", Menlo, Monaco, Consolas, "Courier New", monospace;
+  font-family: Helvetica, "Microsoft Yahei", Arial, sans-serif;
   -ms-text-size-adjust: 100%;
   -webkit-text-size-adjust: 100%;
   line-height: 24px;
@@ -16,7 +16,7 @@ textarea,
 select,
 option,
 button {
-  font-family: Helvetica, "Microsoft Yahei", Menlo, Monaco, Consolas, "Courier New", monospace;
+  font-family: Helvetica, "Microsoft Yahei", Arial, sans-serif;
 }
 article,
 aside,
@@ -151,7 +151,7 @@ code,
 kbd,
 pre,
 samp {
-  font-family: monospace, monospace;
+  font-family: monospace;
   font-size: 1em;
 }
 .text-left {
