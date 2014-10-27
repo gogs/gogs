@@ -54,11 +54,11 @@
 	                            </div>
 	                            <div class="field">
 	                                <label></label>
-			                        <input type="checkbox" name="active" {{if .User.IsActive}}checked{{end}}>
+			                        <input type="checkbox" name="active" value="1" {{if .User.IsActive}}checked{{end}}>
 			                        <strong>{{.i18n.Tr "admin.users.is_activated"}}</strong>
 			                        <br>
 	                                <label></label>
-			                        <input type="checkbox" name="admin" {{if .User.IsAdmin}}checked{{end}}>
+			                        <input type="checkbox" name="admin" value="1" {{if .User.IsAdmin}}checked{{end}}>
 			                        <strong>{{.i18n.Tr "admin.users.is_admin"}}</strong>
 	                            </div>
 					            <div class="field">
