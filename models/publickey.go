@@ -79,9 +79,9 @@ func init() {
 // PublicKey represents a SSH key.
 type PublicKey struct {
 	Id                int64
-	OwnerId           int64  `xorm:"UNIQUE(s) INDEX NOT NULL"`
-	Name              string `xorm:"UNIQUE(s) NOT NULL"`
-	Fingerprint       string
+	OwnerId           int64     `xorm:"UNIQUE(s) INDEX NOT NULL"`
+	Name              string    `xorm:"UNIQUE(s) NOT NULL"`
+	Fingerprint       string    `xorm:"INDEX NOT NULL"`
 	Content           string    `xorm:"TEXT NOT NULL"`
 	Created           time.Time `xorm:"CREATED"`
 	Updated           time.Time
@@ -209,6 +209,9 @@ func AddPublicKey(key *PublicKey) (err error) {
 		return errors.New("not enough output for calculating fingerprint: " + stdout)
 	}
 	key.Fingerprint = strings.Split(stdout, " ")[1]
+	if has, err := x.Get(&PublicKey{Fingerprint: key.Fingerprint}); err == nil && has {
+		return ErrKeyAlreadyExist
+	}
 
 	// Save SSH key.
 	if _, err = x.Insert(key); err != nil {
