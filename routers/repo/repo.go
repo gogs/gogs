@@ -314,7 +314,7 @@ func Download(ctx *middleware.Context) {
 		return
 	}
 
-	archivePath = path.Join(archivePath, ctx.Repo.CommitId+ext)
+	archivePath = path.Join(archivePath, base.ShortSha(commit.Id.String())+ext)
 	if !com.IsFile(archivePath) {
 		if err := commit.CreateArchive(archivePath, git.ZIP); err != nil {
 			ctx.Handle(500, "Download -> CreateArchive "+archivePath, err)
