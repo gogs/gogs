@@ -82,7 +82,7 @@ func sendMail(hostAddressWithPort string, auth smtp.Auth, from string, recipient
 		return err
 	}
 
-	if auth != nil {
+	if ok, _ := client.Extension("AUTH"); ok && auth != nil {
 		if err = client.Auth(auth); err != nil {
 			return err
 		}
