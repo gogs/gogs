@@ -263,15 +263,18 @@ func Download(ctx *middleware.Context) {
 		refName     string
 		ext         string
 		archivePath string
+		archiveType git.ArchiveType
 	)
 
 	switch {
 	case strings.HasSuffix(uri, ".zip"):
 		ext = ".zip"
 		archivePath = path.Join(ctx.Repo.GitRepo.Path, "archives/zip")
+		archiveType = git.ZIP
 	case strings.HasSuffix(uri, ".tar.gz"):
 		ext = ".tar.gz"
 		archivePath = path.Join(ctx.Repo.GitRepo.Path, "archives/targz")
+		archiveType = git.TARGZ
 	default:
 		ctx.Error(404)
 		return
@@ -316,7 +319,7 @@ func Download(ctx *middleware.Context) {
 
 	archivePath = path.Join(archivePath, base.ShortSha(commit.Id.String())+ext)
 	if !com.IsFile(archivePath) {
-		if err := commit.CreateArchive(archivePath, git.ZIP); err != nil {
+		if err := commit.CreateArchive(archivePath, archiveType); err != nil {
 			ctx.Handle(500, "Download -> CreateArchive "+archivePath, err)
 			return
 		}
