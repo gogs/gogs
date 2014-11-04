@@ -10,6 +10,7 @@ filesets:
         - README_ZH.md
     excludes:
         - \.git
+    depth: 5
 settings:
         build: |
             if test "$GOOS" = "windows" -a "$GOARCH" = "386"
