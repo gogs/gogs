@@ -9,6 +9,7 @@ import (
 	"html/template"
 	"io/ioutil"
 	"net/http"
+	"net/http/fcgi"
 	"os"
 	"path"
 	"strings"
@@ -416,6 +417,8 @@ func runWeb(*cli.Context) {
 		err = http.ListenAndServe(listenAddr, m)
 	case setting.HTTPS:
 		err = http.ListenAndServeTLS(listenAddr, setting.CertFile, setting.KeyFile, m)
+	case setting.FCGI:
+		err = fcgi.Serve(nil, m)
 	default:
 		log.Fatal(4, "Invalid protocol: %s", setting.Protocol)
 	}
