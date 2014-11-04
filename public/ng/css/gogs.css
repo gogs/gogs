@@ -1067,7 +1067,7 @@ The register and sign-in page style
   padding: 18px 0;
 }
 .repo-wide-wrapper {
-  padding: 18px 0;
+  padding: 18px;
   position: relative;
 }
 #repo-clone-url {
