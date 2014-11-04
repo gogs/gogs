@@ -11,6 +11,61 @@
             <li class="right" id="issue-new"><a href="#"><button id="issue-new-btn" class="btn btn-green btn-radius text-bold">New Issue</button></a></li>
             <li class="right"><a href="#">Filter</a></li>
         </ul>
+        <div id="issue-list-container">
+            <div id="issue-list-menu">
+                <div class="left">
+                    <span class="mark open hover"><a href="#">
+                        <i class="octicon octicon-issue-opened"></i> 88 Open
+                    </a></span>
+                    <span class="mark close"><a href="">
+                        <i class="octicon octicon-issue-closed"></i> 12 Close
+                    </a></span>
+                </div>
+                <div class="clear"></div>
+            </div>
+            <ul id="issue-list" class="list-no-style">
+                <li class="item" id="issue-id">
+                    <a class="comment" href="#">
+                        <i class="octicon octicon-comment"></i> 7
+                    </a>
+                    <p class="title text-bold">
+                        <span class="label label-black label-radius index-num">#588</span>
+                        <a href="#" class="title-text">Delete account text and/or translations missing</a>
+                        <span class="label label-radius label-red issue-label"><a href="#">bug</a></span>
+                    </p>
+                    <p class="desc">opened 7 days ago by <a href="#">marcuspoehls</a></p>
+                </li>
+                <li class="item" id="issue-id2">
+                    <a class="comment" href="#">
+                        <i class="octicon octicon-comment"></i> 7
+                    </a>
+                    <p class="title text-bold">
+                        <span class="label label-black label-radius index-num">#588</span>
+                        <a href="#" class="title-text">Delete account text and/or translations missing</a>
+                        <span class="label label-radius label-red issue-label"><a href="#">bug</a></span>
+                    </p>
+                    <p class="desc">opened 7 days ago by <a href="#">marcuspoehls</a></p>
+                </li>
+                <li class="item" id="issue-id3">
+                    <a class="comment" href="#">
+                        <i class="octicon octicon-comment"></i> 7
+                    </a>
+                    <p class="title text-bold">
+                        <span class="label label-black label-radius index-num">#588</span>
+                        <a href="#" class="title-text">Disabling attachments breaks issues and comments ajax submit</a>
+                        <span class="label label-radius label-red issue-label"><a href="#">bug</a></span>
+                    </p>
+                    <p class="desc">opened 7 days ago by <a href="#">marcuspoehls</a></p>
+                </li>
+            </ul>
+            <div id="issue-list-pager" class="pager text-center">
+                <a class="prev page-radius invalid" href="#">Prev</a>
+                <a class="page page-radius" href="#">1</a>
+                <a class="page page-radius hover" href="#">2</a>
+                <a class="page page-radius" href="#">3</a>
+                <a class="next page-radius" href="#">Next</a>
+            </div>
+        </div>
     </div>
 </div>
 {{template "ng/base/footer" .}}

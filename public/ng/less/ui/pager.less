@@ -1,0 +1,28 @@
+@import "var";
+
+.pager{
+  .page{
+    padding: 2px 6px;
+    margin: 0 3px;
+    background-color: @pagerPageBgColor;
+    color: @pagerPageColor;
+    &:hover,&.hover{
+      background-color: @pagerHoverBgColor;
+      color: @pagerHoverColor;
+    }
+  }
+  .prev,.next{
+    padding: 2px 8px;
+    margin: 0 4px;
+    background-color: @pagerDirectionBgColor;
+    color: @pagerDirectionColor;
+    &.invalid{
+      background-color: @pagerInvalidBgColor;
+      color: @pagerInvalidColor;
+      cursor: not-allowed;
+    }
+  }
+  .page-radius{
+    border-radius: .2em;
+  }
+}

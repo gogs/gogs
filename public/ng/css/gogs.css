@@ -1067,7 +1067,7 @@ The register and sign-in page style
   padding: 18px 0;
 }
 .repo-wide-wrapper {
-  padding: 18px 0;
+  padding: 18px;
   position: relative;
 }
 #repo-clone-url {
@@ -1991,6 +1991,60 @@ textarea#issue-add-content {
 }
 #issue-new > a button {
   height: 34px;
+}
+#issue-list-menu {
+  padding: 16px 0 12px 0;
+  border-bottom: 1px solid #BBB;
+  margin-bottom: 12px;
+}
+#issue-list-menu .mark a {
+  color: #AAA;
+}
+#issue-list-menu .mark a:hover {
+  color: #444;
+}
+#issue-list-menu .mark.hover a {
+  color: #222;
+  font-weight: bold;
+}
+#issue-list-menu > .left .mark {
+  margin-right: 12px;
+}
+#issue-list-menu > .right .mark {
+  margin-left: 12px;
+}
+#issue-list .item {
+  position: relative;
+  padding-bottom: 12px;
+  margin-bottom: 12px;
+  border-bottom: 1px dashed #AAA;
+}
+#issue-list .item .title > .title-text {
+  color: #444;
+  font-size: 15px;
+  margin: 0 6px;
+}
+#issue-list .comment {
+  color: #666;
+  position: absolute;
+  top: 6px;
+  right: 0;
+}
+#issue-list .issue-label a {
+  color: #FFF;
+}
+#issue-list .desc {
+  color: #999;
+}
+#issue-list .desc a {
+  color: #999;
+}
+#issue-list .desc a:hover {
+  color: #03a2ef;
+}
+#issue-list-pager {
+  margin: 18px 0 24px 0;
+  font-size: 14px;
 }
 .org-header-alert .alert {
   margin-top: 10px;

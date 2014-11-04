@@ -251,3 +251,72 @@ textarea#issue-add-content {
     }
   }
 }
+// issue list menu
+#issue-list-menu {
+  padding: 16px 0 12px 0;
+  border-bottom: 1px solid #BBB;
+  margin-bottom: 12px;
+  .mark {
+    a {
+      color: #AAA;
+      &:hover {
+        color: #444;
+      }
+    }
+    &.hover {
+      a {
+        color: #222;
+        font-weight: bold;
+      }
+    }
+  }
+  > .left {
+    .mark {
+      margin-right: 12px;
+    }
+  }
+  > .right {
+    .mark {
+      margin-left: 12px;
+    }
+  }
+}
+// each issue list item
+#issue-list {
+  .item {
+    position: relative;
+    padding-bottom: 12px;
+    margin-bottom: 12px;
+    border-bottom: 1px dashed #AAA;
+    .title > .title-text {
+      color: #444;
+      font-size: 15px;
+      margin: 0 6px;
+    }
+  }
+  .comment {
+    color: #666;
+    position: absolute;
+    top: 6px;
+    right: 0;
+  }
+  .issue-label {
+    a {
+      color: #FFF;
+    }
+  }
+  .desc {
+    color: #999;
+    a {
+      color: #999;
+      &:hover {
+        color: #03a2ef;
+      }
+    }
+  }
+}
+// issue list pager
+#issue-list-pager {
+  margin: 18px 0 24px 0;
+  font-size: 14px;
+}

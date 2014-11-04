@@ -881,3 +881,30 @@ table td {
 .table-radius tbody tr:last-child > td:last-child {
   border-bottom-right-radius: .3em;
 }
+.pager .page {
+  padding: 2px 6px;
+  margin: 0 3px;
+  background-color: #cccccc;
+  color: #444444;
+}
+.pager .page:hover,
+.pager .page.hover {
+  background-color: #428bca;
+  color: #ffffff;
+}
+.pager .prev,
+.pager .next {
+  padding: 2px 8px;
+  margin: 0 4px;
+  background-color: #505050;
+  color: #fafafa;
+}
+.pager .prev.invalid,
+.pager .next.invalid {
+  background-color: #eeeeee;
+  color: #aaaaaa;
+  cursor: not-allowed;
+}
+.pager .page-radius {
+  border-radius: .2em;
+}
