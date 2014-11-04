@@ -581,7 +581,7 @@ func SearchUserByName(opt SearchOption) (us []*User, err error) {
 	opt.Keyword = strings.ToLower(opt.Keyword)
 
 	us = make([]*User, 0, opt.Limit)
-	err = x.Limit(opt.Limit).Where("type=0").And("lower_name like '%" + opt.Keyword + "%'").Find(&us)
+	err = x.Limit(opt.Limit).Where("type=0").And("lower_name like ?", "%"+opt.Keyword+"%").Find(&us)
 	return us, err
 }
 
