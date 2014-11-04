@@ -28,6 +28,7 @@ type Scheme string
 const (
 	HTTP  Scheme = "http"
 	HTTPS Scheme = "https"
+	FCGI  Scheme = "fcgi"
 )
 
 var (
@@ -180,6 +181,9 @@ func NewConfigContext() {
 		Protocol = HTTPS
 		CertFile = Cfg.MustValue("server", "CERT_FILE")
 		KeyFile = Cfg.MustValue("server", "KEY_FILE")
+	}
+	if Cfg.MustValue("server", "PROTOCOL") == "fcgi" {
+		Protocol = FCGI
 	}
 	Domain = Cfg.MustValue("server", "DOMAIN", "localhost")
 	HttpAddr = Cfg.MustValue("server", "HTTP_ADDR", "0.0.0.0")
