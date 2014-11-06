@@ -1298,8 +1298,8 @@ func IsStaring(uid, repoId int64) bool {
 //  \___  / \____/|__|  |__|_ \
 //      \/                   \/
 
-func ForkRepository(u *User, oldRepo *Repository) (*Repository, error) {
-	isExist, err := IsRepositoryExist(u, oldRepo.Name)
+func ForkRepository(u *User, oldRepo *Repository, name, desc string) (*Repository, error) {
+	isExist, err := IsRepositoryExist(u, name)
 	if err != nil {
 		return nil, err
 	} else if isExist {
@@ -1323,9 +1323,9 @@ func ForkRepository(u *User, oldRepo *Repository) (*Repository, error) {
 	repo := &Repository{
 		OwnerId:     u.Id,
 		Owner:       u,
-		Name:        oldRepo.Name,
-		LowerName:   oldRepo.LowerName,
-		Description: oldRepo.Description,
+		Name:        name,
+		LowerName:   strings.ToLower(name),
+		Description: desc,
 		IsPrivate:   oldRepo.IsPrivate,
 		IsFork:      true,
 		ForkId:      oldRepo.Id,

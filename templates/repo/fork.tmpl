@@ -1,0 +1,65 @@
+{{template "ng/base/head" .}}
+{{template "ng/base/header" .}}
+<div id="repo-wrapper">
+    <form id="repo-create-form" class="form form-align panel panel-radius" action="{{AppSubUrl}}/repo/fork?fork_id={{.ForkId}}" method="post">
+        {{.CsrfTokenHtml}}
+        <div class="panel-header">
+            <h2>{{.i18n.Tr "new_fork"}}</h2>
+        </div>
+        <div class="panel-content">
+            {{template "ng/base/alert" .}}
+            <div class="field">
+                <label for="owner" class="req">{{.i18n.Tr "repo.owner"}}</label>
+                <input id="repo-owner-id" type="hidden" name="uid" value="{{.ContextUser.Id}}" />
+                <div class="inline-block drop">
+                    <a class="drop-bottom">
+                        <img class="avatar" src="{{.ContextUser.AvatarLink}}" id="repo-owner-avatar" alt="user-avatar">
+                        <strong id="repo-owner-name">{{.ContextUser.Name}}</strong>
+                    </a>
+                    <ul class="drop-down menu menu-vertical menu-radius switching-list" id="repo-create-owner-list">
+                        <li {{if eq $.ContextUser.Id .SignedUser.Id}}class="checked"{{end}} data-uid="{{.SignedUser.Id}}">
+                            <a>
+                                <i class="octicon octicon-check"></i>
+                                <img class="avatar" src="{{.SignedUser.AvatarLink}}" alt="user-avatar">
+                                <strong>{{.SignedUser.Name}}</strong>
+                            </a>
+                        </li>
+                        {{range .Orgs}}
+                        <li {{if eq $.ContextUser.Id .Id}}class="checked"{{end}} data-uid="{{.Id}}">
+                            <a>
+                                <i class="octicon octicon-check"></i>
+                                <img class="avatar" src="{{.AvatarLink}}" alt="user-avatar">
+                                <strong>{{.Name}}</strong>
+                            </a>
+                        </li>
+                        {{end}}
+                    </ul>
+                </div>
+            </div>
+            <div class="field">
+                <label>{{.i18n.Tr "repo.fork_from"}}</label>
+                <span><a target="_blank" href="{{AppSubUrl}}/{{.ForkFrom}}">{{.ForkFrom}}</a></span>
+            </div>
+            <div class="field">
+                <label class="req" for="repo-name">{{.i18n.Tr "repo.repo_name"}}</label>
+                <input class="ipt ipt-large ipt-radius {{if .Err_RepoName}}ipt-error{{end}}" id="repo-name" name="repo_name" type="text" value="{{.repo_name}}" required />
+                <span class="form-label"></span>
+                <span class="help">{{.i18n.Tr "repo.repo_name_helper" | Str2html}}</span>
+            </div>
+            <div class="field">
+                <label for="visibility">{{.i18n.Tr "repo.visibility"}}</label>
+                <span>{{.i18n.Tr "repo.fork_visiblity_helper"}}</span>
+            </div>
+            <div class="field clear">
+                <label class="left" for="desc">{{.i18n.Tr "repo.repo_desc"}}</label>
+                <textarea class="ipt ipt-large ipt-radius {{if .Err_Description}}ipt-error{{end}}" id="desc" name="desc">{{.desc}}</textarea>
+            </div>
+            <div class="field">
+                <label></label>
+                <button class="btn btn-large btn-blue btn-radius">{{.i18n.Tr "repo.fork_repo"}}</button>
+                <a class="btn btn-small btn-gray btn-radius" id="repo-create-cancel" href="{{AppSubUrl}}/"><strong>{{.i18n.Tr "cancel"}}</strong></a>
+            </div>
+        </div>
+    </form>
+</div>
+{{template "ng/base/footer" .}}

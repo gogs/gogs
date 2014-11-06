@@ -265,7 +265,7 @@ func runWeb(*cli.Context) {
 
 	reqTrueOwner := middleware.RequireTrueOwner()
 
-	// Organization routers.
+	// Organization.
 	m.Group("/org", func() {
 		m.Get("/create", org.Create)
 		m.Post("/create", bindIgnErr(auth.CreateOrgForm{}), org.CreatePost)
@@ -309,12 +309,14 @@ func runWeb(*cli.Context) {
 		m.Get("/:org", org.Home)
 	}, middleware.OrgAssignment(true))
 
-	// Repository routers.
+	// Repository.
 	m.Group("/repo", func() {
 		m.Get("/create", repo.Create)
 		m.Post("/create", bindIgnErr(auth.CreateRepoForm{}), repo.CreatePost)
 		m.Get("/migrate", repo.Migrate)
 		m.Post("/migrate", bindIgnErr(auth.MigrateRepoForm{}), repo.MigratePost)
+		m.Get("/fork", repo.Fork)
+		m.Post("/fork", bindIgnErr(auth.CreateRepoForm{}), repo.ForkPost)
 	}, reqSignIn)
 
 	m.Group("/:username/:reponame", func() {
