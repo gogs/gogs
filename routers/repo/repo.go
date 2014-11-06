@@ -24,7 +24,22 @@ import (
 const (
 	CREATE  base.TplName = "repo/create"
 	MIGRATE base.TplName = "repo/migrate"
+	FORK    base.TplName = "repo/fork"
 )
+
+func checkContextUser(ctx *middleware.Context, uid int64) (*models.User, error) {
+	ctxUser := ctx.User
+	if uid > 0 {
+		org, err := models.GetUserById(uid)
+		if err != models.ErrUserNotExist {
+			if err != nil {
+				return nil, fmt.Errorf("GetUserById: %v", err)
+			}
+			ctxUser = org
+		}
+	}
+	return ctxUser, nil
+}
 
 func Create(ctx *middleware.Context) {
 	ctx.Data["Title"] = ctx.Tr("new_repo")
@@ -35,14 +50,10 @@ func Create(ctx *middleware.Context) {
 	ctx.Data["Gitignores"] = models.Gitignores
 	ctx.Data["Licenses"] = models.Licenses
 
-	ctxUser := ctx.User
-	if orgId := com.StrTo(ctx.Query("org")).MustInt64(); orgId > 0 {
-		org, err := models.GetUserById(orgId)
-		if err != nil && err != models.ErrUserNotExist {
-			ctx.Handle(500, "GetUserById", err)
-			return
-		}
-		ctxUser = org
+	ctxUser, err := checkContextUser(ctx, ctx.QueryInt64("org"))
+	if err != nil {
+		ctx.Handle(500, "checkContextUser", err)
+		return
 	}
 	ctx.Data["ContextUser"] = ctxUser
 
@@ -64,12 +75,12 @@ func CreatePost(ctx *middleware.Context, form auth.CreateRepoForm) {
 	ctxUser := ctx.User
 	// Not equal means current user is an organization.
 	if form.Uid != ctx.User.Id {
-		org, err := models.GetUserById(form.Uid)
-		if err != nil && err != models.ErrUserNotExist {
-			ctx.Handle(500, "GetUserById", err)
+		var err error
+		ctxUser, err = checkContextUser(ctx, form.Uid)
+		if err != nil {
+			ctx.Handle(500, "checkContextUser", err)
 			return
 		}
-		ctxUser = org
 	}
 	ctx.Data["ContextUser"] = ctxUser
 
@@ -95,8 +106,8 @@ func CreatePost(ctx *middleware.Context, form auth.CreateRepoForm) {
 	repo, err := models.CreateRepository(ctxUser, form.RepoName, form.Description,
 		form.Gitignore, form.License, form.Private, false, form.InitReadme)
 	if err == nil {
-		log.Trace("Repository created: %s/%s", ctxUser.Name, form.RepoName)
-		ctx.Redirect(setting.AppSubUrl + "/" + ctxUser.Name + "/" + form.RepoName)
+		log.Trace("Repository created: %s/%s", ctxUser.Name, repo.Name)
+		ctx.Redirect(setting.AppSubUrl + "/" + ctxUser.Name + "/" + repo.Name)
 		return
 	} else if err == models.ErrRepoAlreadyExist {
 		ctx.Data["Err_RepoName"] = true
@@ -119,14 +130,10 @@ func CreatePost(ctx *middleware.Context, form auth.CreateRepoForm) {
 func Migrate(ctx *middleware.Context) {
 	ctx.Data["Title"] = ctx.Tr("new_migrate")
 
-	ctxUser := ctx.User
-	if orgId := com.StrTo(ctx.Query("org")).MustInt64(); orgId > 0 {
-		org, err := models.GetUserById(orgId)
-		if err != nil && err != models.ErrUserNotExist {
-			ctx.Handle(500, "GetUserById", err)
-			return
-		}
-		ctxUser = org
+	ctxUser, err := checkContextUser(ctx, ctx.QueryInt64("org"))
+	if err != nil {
+		ctx.Handle(500, "checkContextUser", err)
+		return
 	}
 	ctx.Data["ContextUser"] = ctxUser
 
@@ -145,12 +152,12 @@ func MigratePost(ctx *middleware.Context, form auth.MigrateRepoForm) {
 	ctxUser := ctx.User
 	// Not equal means current user is an organization.
 	if form.Uid != ctx.User.Id {
-		org, err := models.GetUserById(form.Uid)
+		var err error
+		ctxUser, err = checkContextUser(ctx, form.Uid)
 		if err != nil {
-			ctx.Handle(500, "GetUserById", err)
+			ctx.Handle(500, "checkContextUser", err)
 			return
 		}
-		ctxUser = org
 	}
 	ctx.Data["ContextUser"] = ctxUser
 
@@ -206,6 +213,114 @@ func MigratePost(ctx *middleware.Context, form auth.MigrateRepoForm) {
 	ctx.Handle(500, "MigratePost", err)
 }
 
+func getForkRepository(ctx *middleware.Context) (*models.Repository, error) {
+	forkId := ctx.QueryInt64("fork_id")
+	ctx.Data["ForkId"] = forkId
+
+	forkRepo, err := models.GetRepositoryById(forkId)
+	if err != nil {
+		return nil, fmt.Errorf("GetRepositoryById: %v", err)
+	}
+	ctx.Data["repo_name"] = forkRepo.Name
+	ctx.Data["desc"] = forkRepo.Description
+
+	if err = forkRepo.GetOwner(); err != nil {
+		return nil, fmt.Errorf("GetOwner: %v", err)
+	}
+	ctx.Data["ForkFrom"] = forkRepo.Owner.Name + "/" + forkRepo.Name
+	return forkRepo, nil
+}
+
+func Fork(ctx *middleware.Context) {
+	ctx.Data["Title"] = ctx.Tr("new_fork")
+
+	if _, err := getForkRepository(ctx); err != nil {
+		if err == models.ErrRepoNotExist {
+			ctx.Redirect(setting.AppSubUrl + "/")
+		} else {
+			ctx.Handle(500, "getForkRepository", err)
+		}
+		return
+	}
+
+	// FIXME: maybe sometime can directly fork to organization?
+	ctx.Data["ContextUser"] = ctx.User
+	if err := ctx.User.GetOrganizations(); err != nil {
+		ctx.Handle(500, "GetOrganizations", err)
+		return
+	}
+	ctx.Data["Orgs"] = ctx.User.Orgs
+
+	ctx.HTML(200, FORK)
+}
+
+func ForkPost(ctx *middleware.Context, form auth.CreateRepoForm) {
+	ctx.Data["Title"] = ctx.Tr("new_fork")
+
+	forkRepo, err := getForkRepository(ctx)
+	if err != nil {
+		if err == models.ErrRepoNotExist {
+			ctx.Redirect(setting.AppSubUrl + "/")
+		} else {
+			ctx.Handle(500, "getForkRepository", err)
+		}
+		return
+	}
+
+	ctxUser := ctx.User
+	// Not equal means current user is an organization.
+	if form.Uid != ctx.User.Id {
+		var err error
+		ctxUser, err = checkContextUser(ctx, form.Uid)
+		if err != nil {
+			ctx.Handle(500, "checkContextUser", err)
+			return
+		}
+	}
+	ctx.Data["ContextUser"] = ctxUser
+
+	if err := ctx.User.GetOrganizations(); err != nil {
+		ctx.Handle(500, "GetOrganizations", err)
+		return
+	}
+	ctx.Data["Orgs"] = ctx.User.Orgs
+
+	if ctx.HasError() {
+		ctx.HTML(200, CREATE)
+		return
+	}
+
+	if ctxUser.IsOrganization() {
+		// Check ownership of organization.
+		if !ctxUser.IsOrgOwner(ctx.User.Id) {
+			ctx.Error(403)
+			return
+		}
+	}
+
+	repo, err := models.ForkRepository(ctxUser, forkRepo, form.RepoName, form.Description)
+	if err == nil {
+		log.Trace("Repository forked: %s/%s", ctxUser.Name, repo.Name)
+		ctx.Redirect(setting.AppSubUrl + "/" + ctxUser.Name + "/" + repo.Name)
+		return
+	} else if err == models.ErrRepoAlreadyExist {
+		ctx.Data["Err_RepoName"] = true
+		ctx.RenderWithErr(ctx.Tr("form.repo_name_been_taken"), FORK, &form)
+		return
+	} else if err == models.ErrRepoNameIllegal {
+		ctx.Data["Err_RepoName"] = true
+		ctx.RenderWithErr(ctx.Tr("form.illegal_repo_name"), CREATE, &form)
+		return
+	}
+
+	if repo != nil {
+		if errDelete := models.DeleteRepository(ctxUser.Id, repo.Id, ctxUser.Name); errDelete != nil {
+			log.Error(4, "DeleteRepository: %v", errDelete)
+		}
+	}
+	ctx.Handle(500, "ForkPost", err)
+}
+
 func Action(ctx *middleware.Context) {
 	var err error
 	switch ctx.Params(":action") {
@@ -217,20 +332,6 @@ func Action(ctx *middleware.Context) {
 		err = models.StarRepo(ctx.User.Id, ctx.Repo.Repository.Id, true)
 	case "unstar":
 		err = models.StarRepo(ctx.User.Id, ctx.Repo.Repository.Id, false)
-	case "fork":
-		repo, err := models.ForkRepository(ctx.User, ctx.Repo.Repository)
-		if err != nil {
-			if err != models.ErrRepoAlreadyExist {
-				log.Error(4, "Action(%s): %v", ctx.Params(":action"), err)
-				ctx.JSON(200, map[string]interface{}{
-					"ok":  false,
-					"err": err.Error(),
-				})
-				return
-			}
-		}
-		ctx.Redirect(setting.AppSubUrl + "/" + repo.Owner.Name + "/" + repo.Name)
-		return
 	case "desc":
 		if !ctx.Repo.IsOwner {
 			ctx.Error(404)
