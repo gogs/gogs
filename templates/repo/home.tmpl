@@ -31,26 +31,26 @@
                             </ul>
                             <ul class="menu menu-vertical switching-list {{if .IsTag}}hide{{end}}" id="repo-branch-list">
                                 {{range .Branches}}
-                                <li {{if eq . $.BranchName}}class="checked"{{end}}><a href="{{$.RepoLink}}/src/{{.}}"><i class="octicon octicon-check"></i>{{.}}</a></li>
+                                <li {{if eq . $.BranchName}}class="checked"{{end}}><a href="{{$.RepoLink}}/src/{{EscapePound .}}"><i class="octicon octicon-check"></i>{{.}}</a></li>
                                 {{end}}
                             </ul>
                             <ul class="menu menu-vertical switching-list {{if not .IsTag}}hide{{end}}" id="repo-tag-list">
                                 {{range .Tags}}
-                                <li {{if eq . $.BranchName}}class="checked"{{end}}><a href="{{$.RepoLink}}/src/{{.}}"><i class="octicon octicon-check"></i>{{.}}</a></li>
+                                <li {{if eq . $.BranchName}}class="checked"{{end}}><a href="{{$.RepoLink}}/src/{{EscapePound .}}"><i class="octicon octicon-check"></i>{{.}}</a></li>
                                 {{end}}
                             </ul>
                         </div>
                     </div>
                 </li>
                 <li id="repo-bread" class="breads">
-                    <a class="title bread" href="{{.RepoLink}}">{{.Repository.Name}}</a>
+                    <a class="title bread" href="{{.RepoLink}}/src/{{EscapePound .BranchName}}">{{.Repository.Name}}</a>
                     {{ $n := len .Treenames}}
                     {{ $l := Subtract $n 1}}
                     {{range $i, $v := .Treenames}}
                         {{if eq $i $l}}
-                        <span class="bread">{{$v}}</span>
+                        <span class="bread">{{EscapePound $v}}</span>
                         {{else}}
-                        <span class="bread"><a href="{{$.BranchLink}}/{{index $.Paths $i}}">{{$v}}</a></span>
+                        <span class="bread"><a href="{{EscapePound $.BranchLink}}/{{index $.Paths $i}}">{{$v}}</a></span>
                         {{end}}
                     {{end}}
                 </li>

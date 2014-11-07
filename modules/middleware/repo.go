@@ -44,7 +44,6 @@ func RepoRef() macaron.Handler {
 			}
 			ctx.Repo.CommitId = ctx.Repo.Commit.Id.String()
 			ctx.Repo.IsBranch = true
-			ctx.Repo.BranchName = refName
 
 		} else {
 			hasMatched := false
@@ -292,73 +291,6 @@ func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 			ctx.Data["GoGetLink"] = fmt.Sprintf("%s%s/%s", setting.AppUrl, u.LowerName, repo.LowerName)
 			ctx.Data["GoGetImport"] = fmt.Sprintf("%s/%s/%s", setting.Domain, u.LowerName, repo.LowerName)
 		}
-
-		// when repo is bare, not valid branch
-		// if !ctx.Repo.Repository.IsBare && validBranch {
-		// detect:
-		// 	if len(refName) > 0 {
-		// 		if gitRepo.IsBranchExist(refName) {
-		// 			ctx.Repo.IsBranch = true
-		// 			ctx.Repo.BranchName = refName
-
-		// 			ctx.Repo.Commit, err = gitRepo.GetCommitOfBranch(refName)
-		// 			if err != nil {
-		// 				ctx.Handle(500, "RepoAssignment invalid branch", err)
-		// 				return
-		// 			}
-		// 			ctx.Repo.CommitId = ctx.Repo.Commit.Id.String()
-
-		// 		} else if gitRepo.IsTagExist(refName) {
-		// 			ctx.Repo.IsTag = true
-		// 			ctx.Repo.BranchName = refName
-		// 			ctx.Repo.Commit, err = ctx.Repo.GitRepo.GetCommitOfTag(refName)
-		// 			if err != nil {
-		// 				ctx.Handle(500, "Fail to get tag commit", err)
-		// 				return
-		// 			}
-		// 			ctx.Repo.CommitId = ctx.Repo.Commit.Id.String()
-		// 		} else if len(refName) == 40 {
-		// 			ctx.Repo.IsCommit = true
-		// 			ctx.Repo.CommitId = refName
-		// 			ctx.Repo.BranchName = refName
-
-		// 			ctx.Repo.Commit, err = gitRepo.GetCommit(refName)
-		// 			if err != nil {
-		// 				ctx.Handle(404, "RepoAssignment invalid commit", nil)
-		// 				return
-		// 			}
-		// 		} else {
-		// 			ctx.Handle(404, "RepoAssignment invalid repo", fmt.Errorf("branch or tag not exist: %s", refName))
-		// 			return
-		// 		}
-
-		// 	} else {
-		// 		if len(refName) == 0 {
-		// 			if gitRepo.IsBranchExist(ctx.Repo.Repository.DefaultBranch) {
-		// 				refName = ctx.Repo.Repository.DefaultBranch
-		// 			} else {
-		// 				brs, err := gitRepo.GetBranches()
-		// 				if err != nil {
-		// 					ctx.Handle(500, "GetBranches", err)
-		// 					return
-		// 				}
-		// 				refName = brs[0]
-		// 			}
-		// 		}
-		// 		goto detect
-		// 	}
-
-		// 	ctx.Data["IsBranch"] = ctx.Repo.IsBranch
-		// 	ctx.Data["IsTag"] = ctx.Repo.IsTag
-		// 	ctx.Data["IsCommit"] = ctx.Repo.IsCommit
-
-		// 	ctx.Repo.CommitsCount, err = ctx.Repo.Commit.CommitsCount()
-		// 	if err != nil {
-		// 		ctx.Handle(500, "CommitsCount", err)
-		// 		return
-		// 	}
-		// 	ctx.Data["CommitsCount"] = ctx.Repo.CommitsCount
-		// }
 
 		// repo is bare and display enable
 		if ctx.Repo.Repository.IsBare {

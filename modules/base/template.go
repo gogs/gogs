@@ -141,6 +141,9 @@ var TemplateFuncs template.FuncMap = map[string]interface{}{
 	"Oauth2Icon":            Oauth2Icon,
 	"Oauth2Name":            Oauth2Name,
 	"ToUtf8":                ToUtf8,
+	"EscapePound": func(str string) string {
+		return strings.Replace(str, "#", "%23", -1)
+	},
 }
 
 type Actioner interface {
