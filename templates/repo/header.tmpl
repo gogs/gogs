@@ -25,8 +25,8 @@
                         <p class="text-center" id="repo-clone-help">{{$.i18n.Tr "repo.clone_helper" | Str2html}}</p>
                         <hr/>
                         <div class="text-center" id="repo-clone-zip">
-                            <a class="btn btn-green btn-radius" href="{{$.RepoLink}}/archive/{{$.BranchName}}.zip"><i class="octicon octicon-file-zip"></i>ZIP</a>
-                            <a class="btn btn-green btn-radius" href="{{$.RepoLink}}/archive/{{$.BranchName}}.tar.gz"><i class="octicon octicon-file-zip"></i>TAR.GZ</a>
+                            <a class="btn btn-green btn-radius" href="{{$.RepoLink}}/archive/{{EscapePound $.BranchName}}.zip"><i class="octicon octicon-file-zip"></i>ZIP</a>
+                            <a class="btn btn-green btn-radius" href="{{$.RepoLink}}/archive/{{EscapePound $.BranchName}}.tar.gz"><i class="octicon octicon-file-zip"></i>TAR.GZ</a>
                         </div>
                     </div>
                 </div>
