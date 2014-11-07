@@ -2,6 +2,7 @@ targets:
   ubuntu-14.04:
   ubuntu-12.04:
   debian-7:
+  centos6:
 build_dependencies:
   - mercurial
   - bzr
