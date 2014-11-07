@@ -9,7 +9,9 @@ import (
 	"crypto/md5"
 	"crypto/rand"
 	"crypto/sha1"
+	"encoding/base64"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"hash"
 	"html/template"
@@ -29,6 +31,26 @@ func EncodeMd5(str string) string {
 	m := md5.New()
 	m.Write([]byte(str))
 	return hex.EncodeToString(m.Sum(nil))
+}
+
+func BasicAuthDecode(encoded string) (user string, name string, err error) {
+	var s []byte
+	s, err = base64.StdEncoding.DecodeString(encoded)
+	if err != nil {
+		return user, name, err
+	}
+
+	a := strings.Split(string(s), ":")
+	if len(a) == 2 {
+		user, name = a[0], a[1]
+	} else {
+		err = errors.New("decode failed")
+	}
+	return user, name, err
+}
+
+func BasicAuthEncode(username, password string) string {
+	return base64.StdEncoding.EncodeToString([]byte(username + ":" + password))
 }
 
 // GetRandomString generate random string by specify chars.

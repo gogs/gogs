@@ -173,6 +173,27 @@ func Contexter() macaron.Handler {
 
 		// Get user from session if logined.
 		ctx.User = auth.SignedInUser(ctx.Req.Header, ctx.Session)
+
+		// Check with basic auth again.
+		if ctx.User == nil {
+			baHead := ctx.Req.Header.Get("Authorization")
+			auths := strings.Fields(baHead)
+			if len(auths) == 2 && auths[0] == "Basic" {
+				uname, passwd, _ := base.BasicAuthDecode(auths[1])
+				u, err := models.GetUserByName(uname)
+				if err != nil {
+					if err != models.ErrUserNotExist {
+						ctx.Handle(500, "GetUserByName", err)
+						return
+					}
+				} else {
+					if u.ValidtePassword(passwd) {
+						ctx.User = u
+					}
+				}
+			}
+		}
+
 		if ctx.User != nil {
 			ctx.IsSigned = true
 			ctx.Data["IsSigned"] = ctx.IsSigned

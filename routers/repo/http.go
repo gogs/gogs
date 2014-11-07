@@ -7,8 +7,6 @@ package repo
 import (
 	"bytes"
 	"compress/gzip"
-	"encoding/base64"
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -16,6 +14,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -28,27 +27,6 @@ import (
 	"github.com/gogits/gogs/modules/middleware"
 	"github.com/gogits/gogs/modules/setting"
 )
-
-func basicEncode(username, password string) string {
-	auth := username + ":" + password
-	return base64.StdEncoding.EncodeToString([]byte(auth))
-}
-
-func basicDecode(encoded string) (user string, name string, err error) {
-	var s []byte
-	s, err = base64.StdEncoding.DecodeString(encoded)
-	if err != nil {
-		return user, name, err
-	}
-
-	a := strings.Split(string(s), ":")
-	if len(a) == 2 {
-		user, name = a[0], a[1]
-	} else {
-		err = errors.New("decode failed")
-	}
-	return user, name, err
-}
 
 func authRequired(ctx *middleware.Context) {
 	ctx.Resp.Header().Set("WWW-Authenticate", "Basic realm=\".\"")
@@ -112,11 +90,12 @@ func Http(ctx *middleware.Context) {
 		auths := strings.Fields(baHead)
 		// currently check basic auth
 		// TODO: support digit auth
+		// FIXME: middlewares/context.go did basic auth check already
 		if len(auths) != 2 || auths[0] != "Basic" {
 			ctx.Handle(401, "no basic auth and digit auth", nil)
 			return
 		}
-		authUsername, passwd, err = basicDecode(auths[1])
+		authUsername, passwd, err = base.BasicAuthDecode(auths[1])
 		if err != nil {
 			ctx.Handle(401, "no basic auth and digit auth", nil)
 			return
