@@ -70,13 +70,18 @@
                     <div class="tab-pane active">
                         <div id="org-repo-list">
                             {{range .Repos}}
-                                {{if not .IsPrivate}}
+                                {{if or (not .IsPrivate) (.HasAccess $.SignedUserName)}}
                                 <div class="org-repo-item">
                                     <ul class="org-repo-status right">
                                         <li><i class="octicon octicon-star"></i> {{.NumStars}}</li>
                                         <li><i class="octicon octicon-git-branch"></i> {{.NumForks}}</li>
                                     </ul>
-                                    <h2><a href="{{AppSubUrl}}/{{$.Owner.Name}}/{{.Name}}">{{.Name}}</a></h2>
+                                    <h2>
+                                        <a href="{{AppSubUrl}}/{{$.Owner.Name}}/{{.Name}}">{{.Name}}</a>
+                                        {{if .IsPrivate}}
+                                        <span class="text-gold"><i class="octicon octicon-lock"></i></span>
+                                        {{end}}
+                                    </h2>
                                     <p class="org-repo-description">{{.Description}}</p>
                                     <p class="org-repo-updated">{{$.i18n.Tr "org.repo_updated"}} {{TimeSince .Updated $.i18n.Lang}}</p>
                                 </div>
