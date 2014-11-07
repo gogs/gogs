@@ -64,7 +64,7 @@ func checkVersion() {
 
 	// Check dependency version.
 	macaronVer := git.MustParseVersion(strings.Join(strings.Split(macaron.Version(), ".")[:3], "."))
-	if macaronVer.LessThan(git.MustParseVersion("0.2.3")) {
+	if macaronVer.LessThan(git.MustParseVersion("0.4.0")) {
 		log.Fatal(4, "Package macaron version is too old, did you forget to update?(github.com/Unknwon/macaron)")
 	}
 	i18nVer := git.MustParseVersion(i18n.Version())
@@ -354,7 +354,6 @@ func runWeb(*cli.Context) {
 			m.Post("/labels/new", bindIgnErr(auth.CreateLabelForm{}), repo.NewLabel)
 			m.Post("/labels/edit", bindIgnErr(auth.CreateLabelForm{}), repo.UpdateLabel)
 			m.Post("/labels/delete", repo.DeleteLabel)
-			m.Get("/milestones", repo.Milestones)
 			m.Get("/milestones/new", repo.NewMilestone)
 			m.Post("/milestones/new", bindIgnErr(auth.CreateMilestoneForm{}), repo.NewMilestonePost)
 			m.Get("/milestones/:index/edit", repo.UpdateMilestone)
@@ -364,31 +363,28 @@ func runWeb(*cli.Context) {
 
 		m.Post("/comment/:action", repo.Comment)
 		m.Get("/releases/new", repo.NewRelease)
-		m.Get("/releases/edit/:tagname", repo.EditRelease)
-	}, reqSignIn, middleware.RepoAssignment(true))
-
-	m.Group("/:username/:reponame", func() {
 		m.Post("/releases/new", bindIgnErr(auth.NewReleaseForm{}), repo.NewReleasePost)
+		m.Get("/releases/edit/:tagname", repo.EditRelease)
 		m.Post("/releases/edit/:tagname", bindIgnErr(auth.EditReleaseForm{}), repo.EditReleasePost)
 	}, reqSignIn, middleware.RepoAssignment(true))
 
 	m.Group("/:username/:reponame", func() {
+		m.Get("/releases", repo.Releases)
 		m.Get("/issues", repo.Issues)
 		m.Get("/issues/:index", repo.ViewIssue)
+		m.Get("/issues/milestones", repo.Milestones)
 		m.Get("/pulls", repo.Pulls)
 		m.Get("/branches", repo.Branches)
 		m.Get("/archive/*", repo.Download)
 		m.Get("/issues2/", repo.Issues2)
-	}, ignSignIn, middleware.RepoAssignment(true))
 
-	m.Group("/:username/:reponame", func() {
 		m.Group("", func() {
 			m.Get("/src/*", repo.Home)
 			m.Get("/raw/*", repo.SingleDownload)
 			m.Get("/commits/*", repo.RefCommits)
 			m.Get("/commit/*", repo.Diff)
 		}, middleware.RepoRef())
-		m.Get("/releases", repo.Releases)
+
 		m.Get("/compare/:before([a-z0-9]+)...:after([a-z0-9]+)", repo.CompareDiff)
 	}, ignSignIn, middleware.RepoAssignment(true))
 
