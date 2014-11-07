@@ -18,17 +18,110 @@ import (
 	"github.com/gogits/gogs/modules/setting"
 )
 
+// RepoRef handles repository reference name including those contain `/`.
+func RepoRef() macaron.Handler {
+	return func(ctx *Context) {
+		var (
+			refName string
+			err     error
+		)
+
+		// Get default branch.
+		if len(ctx.Params("*")) == 0 {
+			refName = ctx.Repo.Repository.DefaultBranch
+			if !ctx.Repo.GitRepo.IsBranchExist(refName) {
+				brs, err := ctx.Repo.GitRepo.GetBranches()
+				if err != nil {
+					ctx.Handle(500, "GetBranches", err)
+					return
+				}
+				refName = brs[0]
+			}
+			ctx.Repo.Commit, err = ctx.Repo.GitRepo.GetCommitOfBranch(refName)
+			if err != nil {
+				ctx.Handle(500, "GetCommitOfBranch", err)
+				return
+			}
+			ctx.Repo.CommitId = ctx.Repo.Commit.Id.String()
+			ctx.Repo.IsBranch = true
+			ctx.Repo.BranchName = refName
+
+		} else {
+			hasMatched := false
+			parts := strings.Split(ctx.Params("*"), "/")
+			for i, part := range parts {
+				refName = strings.TrimPrefix(refName+"/"+part, "/")
+
+				if ctx.Repo.GitRepo.IsBranchExist(refName) ||
+					ctx.Repo.GitRepo.IsTagExist(refName) {
+					if i < len(parts)-1 {
+						ctx.Repo.TreeName = strings.Join(parts[i+1:], "/")
+					}
+					hasMatched = true
+					break
+				}
+			}
+			if !hasMatched && len(parts[0]) == 40 {
+				refName = parts[0]
+				ctx.Repo.TreeName = strings.Join(parts[1:], "/")
+			}
+
+			if ctx.Repo.GitRepo.IsBranchExist(refName) {
+				ctx.Repo.IsBranch = true
+
+				ctx.Repo.Commit, err = ctx.Repo.GitRepo.GetCommitOfBranch(refName)
+				if err != nil {
+					ctx.Handle(500, "GetCommitOfBranch", err)
+					return
+				}
+				ctx.Repo.CommitId = ctx.Repo.Commit.Id.String()
+
+			} else if ctx.Repo.GitRepo.IsTagExist(refName) {
+				ctx.Repo.IsTag = true
+				ctx.Repo.Commit, err = ctx.Repo.GitRepo.GetCommitOfTag(refName)
+				if err != nil {
+					ctx.Handle(500, "GetCommitOfTag", err)
+					return
+				}
+				ctx.Repo.CommitId = ctx.Repo.Commit.Id.String()
+			} else if len(refName) == 40 {
+				ctx.Repo.IsCommit = true
+				ctx.Repo.CommitId = refName
+
+				ctx.Repo.Commit, err = ctx.Repo.GitRepo.GetCommit(refName)
+				if err != nil {
+					ctx.Handle(404, "GetCommit", nil)
+					return
+				}
+			} else {
+				ctx.Handle(404, "RepoRef invalid repo", fmt.Errorf("branch or tag not exist: %s", refName))
+				return
+			}
+		}
+
+		ctx.Repo.BranchName = refName
+		ctx.Data["BranchName"] = ctx.Repo.BranchName
+		ctx.Data["CommitId"] = ctx.Repo.CommitId
+		ctx.Data["IsBranch"] = ctx.Repo.IsBranch
+		ctx.Data["IsTag"] = ctx.Repo.IsTag
+		ctx.Data["IsCommit"] = ctx.Repo.IsCommit
+
+		ctx.Repo.CommitsCount, err = ctx.Repo.Commit.CommitsCount()
+		if err != nil {
+			ctx.Handle(500, "CommitsCount", err)
+			return
+		}
+		ctx.Data["CommitsCount"] = ctx.Repo.CommitsCount
+	}
+}
+
 func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 	return func(ctx *Context) {
 		var (
-			validBranch bool // To valid brach name.
 			displayBare bool // To display bare page if it is a bare repo.
 		)
 		if len(args) >= 1 {
-			validBranch = args[0]
-		}
-		if len(args) >= 2 {
-			displayBare = args[1]
+			displayBare = args[0]
 		}
 
 		var (
@@ -201,71 +294,71 @@ func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 		}
 
 		// when repo is bare, not valid branch
-		if !ctx.Repo.Repository.IsBare && validBranch {
-		detect:
-			if len(refName) > 0 {
-				if gitRepo.IsBranchExist(refName) {
-					ctx.Repo.IsBranch = true
-					ctx.Repo.BranchName = refName
+		// if !ctx.Repo.Repository.IsBare && validBranch {
+		// detect:
+		// 	if len(refName) > 0 {
+		// 		if gitRepo.IsBranchExist(refName) {
+		// 			ctx.Repo.IsBranch = true
+		// 			ctx.Repo.BranchName = refName
 
-					ctx.Repo.Commit, err = gitRepo.GetCommitOfBranch(refName)
-					if err != nil {
-						ctx.Handle(500, "RepoAssignment invalid branch", err)
-						return
-					}
-					ctx.Repo.CommitId = ctx.Repo.Commit.Id.String()
+		// 			ctx.Repo.Commit, err = gitRepo.GetCommitOfBranch(refName)
+		// 			if err != nil {
+		// 				ctx.Handle(500, "RepoAssignment invalid branch", err)
+		// 				return
+		// 			}
+		// 			ctx.Repo.CommitId = ctx.Repo.Commit.Id.String()
 
-				} else if gitRepo.IsTagExist(refName) {
-					ctx.Repo.IsTag = true
-					ctx.Repo.BranchName = refName
-					ctx.Repo.Commit, err = ctx.Repo.GitRepo.GetCommitOfTag(refName)
-					if err != nil {
-						ctx.Handle(500, "Fail to get tag commit", err)
-						return
-					}
-					ctx.Repo.CommitId = ctx.Repo.Commit.Id.String()
-				} else if len(refName) == 40 {
-					ctx.Repo.IsCommit = true
-					ctx.Repo.CommitId = refName
-					ctx.Repo.BranchName = refName
+		// 		} else if gitRepo.IsTagExist(refName) {
+		// 			ctx.Repo.IsTag = true
+		// 			ctx.Repo.BranchName = refName
+		// 			ctx.Repo.Commit, err = ctx.Repo.GitRepo.GetCommitOfTag(refName)
+		// 			if err != nil {
+		// 				ctx.Handle(500, "Fail to get tag commit", err)
+		// 				return
+		// 			}
+		// 			ctx.Repo.CommitId = ctx.Repo.Commit.Id.String()
+		// 		} else if len(refName) == 40 {
+		// 			ctx.Repo.IsCommit = true
+		// 			ctx.Repo.CommitId = refName
+		// 			ctx.Repo.BranchName = refName
 
-					ctx.Repo.Commit, err = gitRepo.GetCommit(refName)
-					if err != nil {
-						ctx.Handle(404, "RepoAssignment invalid commit", nil)
-						return
-					}
-				} else {
-					ctx.Handle(404, "RepoAssignment invalid repo", fmt.Errorf("branch or tag not exist: %s", refName))
-					return
-				}
+		// 			ctx.Repo.Commit, err = gitRepo.GetCommit(refName)
+		// 			if err != nil {
+		// 				ctx.Handle(404, "RepoAssignment invalid commit", nil)
+		// 				return
+		// 			}
+		// 		} else {
+		// 			ctx.Handle(404, "RepoAssignment invalid repo", fmt.Errorf("branch or tag not exist: %s", refName))
+		// 			return
+		// 		}
 
-			} else {
-				if len(refName) == 0 {
-					if gitRepo.IsBranchExist(ctx.Repo.Repository.DefaultBranch) {
-						refName = ctx.Repo.Repository.DefaultBranch
-					} else {
-						brs, err := gitRepo.GetBranches()
-						if err != nil {
-							ctx.Handle(500, "GetBranches", err)
-							return
-						}
-						refName = brs[0]
-					}
-				}
-				goto detect
-			}
+		// 	} else {
+		// 		if len(refName) == 0 {
+		// 			if gitRepo.IsBranchExist(ctx.Repo.Repository.DefaultBranch) {
+		// 				refName = ctx.Repo.Repository.DefaultBranch
+		// 			} else {
+		// 				brs, err := gitRepo.GetBranches()
+		// 				if err != nil {
+		// 					ctx.Handle(500, "GetBranches", err)
+		// 					return
+		// 				}
+		// 				refName = brs[0]
+		// 			}
+		// 		}
+		// 		goto detect
+		// 	}
 
-			ctx.Data["IsBranch"] = ctx.Repo.IsBranch
-			ctx.Data["IsTag"] = ctx.Repo.IsTag
-			ctx.Data["IsCommit"] = ctx.Repo.IsCommit
+		// 	ctx.Data["IsBranch"] = ctx.Repo.IsBranch
+		// 	ctx.Data["IsTag"] = ctx.Repo.IsTag
+		// 	ctx.Data["IsCommit"] = ctx.Repo.IsCommit
 
-			ctx.Repo.CommitsCount, err = ctx.Repo.Commit.CommitsCount()
-			if err != nil {
-				ctx.Handle(500, "CommitsCount", err)
-				return
-			}
-			ctx.Data["CommitsCount"] = ctx.Repo.CommitsCount
-		}
+		// 	ctx.Repo.CommitsCount, err = ctx.Repo.Commit.CommitsCount()
+		// 	if err != nil {
+		// 		ctx.Handle(500, "CommitsCount", err)
+		// 		return
+		// 	}
+		// 	ctx.Data["CommitsCount"] = ctx.Repo.CommitsCount
+		// }
 
 		// repo is bare and display enable
 		if ctx.Repo.Repository.IsBare {

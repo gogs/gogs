@@ -370,7 +370,7 @@ func runWeb(*cli.Context) {
 	m.Group("/:username/:reponame", func() {
 		m.Post("/releases/new", bindIgnErr(auth.NewReleaseForm{}), repo.NewReleasePost)
 		m.Post("/releases/edit/:tagname", bindIgnErr(auth.EditReleaseForm{}), repo.EditReleasePost)
-	}, reqSignIn, middleware.RepoAssignment(true, true))
+	}, reqSignIn, middleware.RepoAssignment(true))
 
 	m.Group("/:username/:reponame", func() {
 		m.Get("/issues", repo.Issues)
@@ -382,20 +382,18 @@ func runWeb(*cli.Context) {
 	}, ignSignIn, middleware.RepoAssignment(true))
 
 	m.Group("/:username/:reponame", func() {
-		m.Get("/src/:branchname", repo.Home)
-		m.Get("/src/:branchname/*", repo.Home)
-		m.Get("/raw/:branchname/*", repo.SingleDownload)
-		m.Get("/commits/:branchname", repo.Commits)
-		m.Get("/commits/:branchname/search", repo.SearchCommits)
-		m.Get("/commits/:branchname/*", repo.FileHistory)
-		m.Get("/commit/:branchname", repo.Diff)
-		m.Get("/commit/:branchname/*", repo.Diff)
+		m.Group("", func() {
+			m.Get("/src/*", repo.Home)
+			m.Get("/raw/*", repo.SingleDownload)
+			m.Get("/commits/*", repo.RefCommits)
+			m.Get("/commit/*", repo.Diff)
+		}, middleware.RepoRef())
 		m.Get("/releases", repo.Releases)
 		m.Get("/compare/:before([a-z0-9]+)...:after([a-z0-9]+)", repo.CompareDiff)
-	}, ignSignIn, middleware.RepoAssignment(true, true))
+	}, ignSignIn, middleware.RepoAssignment(true))
 
 	m.Group("/:username", func() {
-		m.Get("/:reponame", ignSignIn, middleware.RepoAssignment(true, true, true), repo.Home)
+		m.Get("/:reponame", ignSignIn, middleware.RepoAssignment(true, true), middleware.RepoRef(), repo.Home)
 		m.Any("/:reponame/*", ignSignInAndCsrf, repo.Http)
 	})
 

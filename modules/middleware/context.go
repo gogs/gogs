@@ -53,6 +53,7 @@ type Context struct {
 		GitRepo     *git.Repository
 		BranchName  string
 		TagName     string
+		TreeName    string
 		CommitId    string
 		RepoLink    string
 		CloneLink   struct {
@@ -176,7 +177,10 @@ func Contexter() macaron.Handler {
 			ctx.IsSigned = true
 			ctx.Data["IsSigned"] = ctx.IsSigned
 			ctx.Data["SignedUser"] = ctx.User
+			ctx.Data["SignedUserName"] = ctx.User.Name
 			ctx.Data["IsAdmin"] = ctx.User.IsAdmin
+		} else {
+			ctx.Data["SignedUserName"] = ""
 		}
 
 		// If request sends files, parse them here otherwise the Query() can't be parsed and the CsrfToken will be invalid.

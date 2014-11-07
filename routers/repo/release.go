@@ -22,21 +22,38 @@ func Releases(ctx *middleware.Context) {
 	ctx.Data["Title"] = "Releases"
 	ctx.Data["IsRepoToolbarReleases"] = true
 	ctx.Data["IsRepoReleaseNew"] = false
+
 	rawTags, err := ctx.Repo.GitRepo.GetTags()
 	if err != nil {
-		ctx.Handle(500, "release.Releases(GetTags)", err)
+		ctx.Handle(500, "GetTags", err)
 		return
 	}
 
 	rels, err := models.GetReleasesByRepoId(ctx.Repo.Repository.Id)
 	if err != nil {
-		ctx.Handle(500, "release.Releases(GetReleasesByRepoId)", err)
+		ctx.Handle(500, "GetReleasesByRepoId", err)
 		return
 	}
 
-	commitsCount, err := ctx.Repo.Commit.CommitsCount()
+	// Get default branch.
+	refName := ctx.Repo.Repository.DefaultBranch
+	if !ctx.Repo.GitRepo.IsBranchExist(refName) {
+		brs, err := ctx.Repo.GitRepo.GetBranches()
+		if err != nil {
+			ctx.Handle(500, "GetBranches", err)
+			return
+		}
+		refName = brs[0]
+	}
+	commit, err := ctx.Repo.GitRepo.GetCommitOfBranch(refName)
 	if err != nil {
-		ctx.Handle(500, "release.Releases(CommitsCount)", err)
+		ctx.Handle(500, "GetCommitOfBranch", err)
+		return
+	}
+
+	commitsCount, err := commit.CommitsCount()
+	if err != nil {
+		ctx.Handle(500, "CommitsCount", err)
 		return
 	}
 
@@ -59,18 +76,18 @@ func Releases(ctx *middleware.Context) {
 				if ctx.Repo.BranchName != rel.Target {
 					// Get count if not exists.
 					if _, ok := countCache[rel.Target]; !ok {
-						commit, err := ctx.Repo.GitRepo.GetCommitOfTag(rel.TagName)
+						commit, err := ctx.Repo.GitRepo.GetCommitOfBranch(ctx.Repo.BranchName)
 						if err != nil {
-							ctx.Handle(500, "GetCommitOfTag", err)
+							ctx.Handle(500, "GetCommitOfBranch", err)
 							return
 						}
-						countCache[rel.Target], err = commit.CommitsCount()
+						countCache[ctx.Repo.BranchName], err = commit.CommitsCount()
 						if err != nil {
 							ctx.Handle(500, "CommitsCount2", err)
 							return
 						}
 					}
-					rel.NumCommitsBehind = countCache[rel.Target] - rel.NumCommits
+					rel.NumCommitsBehind = countCache[ctx.Repo.BranchName] - rel.NumCommits
 				} else {
 					rel.NumCommitsBehind = commitsCount - rel.NumCommits
 				}
@@ -134,14 +151,20 @@ func NewReleasePost(ctx *middleware.Context, form auth.NewReleaseForm) {
 		return
 	}
 
-	commitsCount, err := ctx.Repo.Commit.CommitsCount()
-	if err != nil {
-		ctx.Handle(500, "release.ReleasesNewPost(CommitsCount)", err)
+	if !ctx.Repo.GitRepo.IsBranchExist(form.Target) {
+		ctx.RenderWithErr(ctx.Tr("form.target_branch_not_exist"), RELEASE_NEW, &form)
 		return
 	}
 
-	if !ctx.Repo.GitRepo.IsBranchExist(form.Target) {
-		ctx.RenderWithErr("Target branch does not exist", "release/new", &form)
+	commit, err := ctx.Repo.GitRepo.GetCommitOfBranch(form.Target)
+	if err != nil {
+		ctx.Handle(500, "GetCommitOfBranch", err)
+		return
+	}
+
+	commitsCount, err := commit.CommitsCount()
+	if err != nil {
+		ctx.Handle(500, "CommitsCount", err)
 		return
 	}
 
@@ -151,7 +174,7 @@ func NewReleasePost(ctx *middleware.Context, form auth.NewReleaseForm) {
 		Title:        form.Title,
 		TagName:      form.TagName,
 		Target:       form.Target,
-		Sha1:         ctx.Repo.Commit.Id.String(),
+		Sha1:         commit.Id.String(),
 		NumCommits:   commitsCount,
 		Note:         form.Content,
 		IsDraft:      len(form.Draft) > 0,

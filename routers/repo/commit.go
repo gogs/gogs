@@ -20,6 +20,17 @@ const (
 	DIFF    base.TplName = "repo/diff"
 )
 
+func RefCommits(ctx *middleware.Context) {
+	switch {
+	case len(ctx.Repo.TreeName) == 0:
+		Commits(ctx)
+	case ctx.Repo.TreeName == "search":
+		SearchCommits(ctx)
+	default:
+		FileHistory(ctx)
+	}
+}
+
 func Commits(ctx *middleware.Context) {
 	ctx.Data["IsRepoToolbarCommits"] = true
 
@@ -106,6 +117,69 @@ func SearchCommits(ctx *middleware.Context) {
 	ctx.Data["Reponame"] = repoName
 	ctx.Data["CommitCount"] = commits.Len()
 	ctx.Data["Commits"] = commits
+	ctx.HTML(200, COMMITS)
+}
+
+func FileHistory(ctx *middleware.Context) {
+	ctx.Data["IsRepoToolbarCommits"] = true
+
+	fileName := ctx.Repo.TreeName
+	if len(fileName) == 0 {
+		Commits(ctx)
+		return
+	}
+
+	userName := ctx.Repo.Owner.Name
+	repoName := ctx.Repo.Repository.Name
+	branchName := ctx.Repo.BranchName
+
+	brs, err := ctx.Repo.GitRepo.GetBranches()
+	if err != nil {
+		ctx.Handle(500, "GetBranches", err)
+		return
+	} else if len(brs) == 0 {
+		ctx.Handle(404, "GetBranches", nil)
+		return
+	}
+
+	commitsCount, err := ctx.Repo.GitRepo.FileCommitsCount(branchName, fileName)
+	if err != nil {
+		ctx.Handle(500, "repo.FileHistory(GetCommitsCount)", err)
+		return
+	} else if commitsCount == 0 {
+		ctx.Handle(404, "repo.FileHistory", nil)
+		return
+	}
+
+	// Calculate and validate page number.
+	page := com.StrTo(ctx.Query("p")).MustInt()
+	if page < 1 {
+		page = 1
+	}
+	lastPage := page - 1
+	if lastPage < 0 {
+		lastPage = 0
+	}
+	nextPage := page + 1
+	if nextPage*50 > commitsCount {
+		nextPage = 0
+	}
+
+	commits, err := ctx.Repo.GitRepo.CommitsByFileAndRange(
+		branchName, fileName, page)
+	if err != nil {
+		ctx.Handle(500, "repo.FileHistory(CommitsByRange)", err)
+		return
+	}
+	commits = models.ValidateCommitsWithEmails(commits)
+
+	ctx.Data["Commits"] = commits
+	ctx.Data["Username"] = userName
+	ctx.Data["Reponame"] = repoName
+	ctx.Data["FileName"] = fileName
+	ctx.Data["CommitCount"] = commitsCount
+	ctx.Data["LastPageNum"] = lastPage
+	ctx.Data["NextPageNum"] = nextPage
 	ctx.HTML(200, COMMITS)
 }
 
@@ -229,67 +303,4 @@ func CompareDiff(ctx *middleware.Context) {
 	ctx.Data["SourcePath"] = "/" + path.Join(userName, repoName, "src", afterCommitId)
 	ctx.Data["RawPath"] = "/" + path.Join(userName, repoName, "raw", afterCommitId)
 	ctx.HTML(200, DIFF)
-}
-
-func FileHistory(ctx *middleware.Context) {
-	ctx.Data["IsRepoToolbarCommits"] = true
-
-	fileName := ctx.Params("*")
-	if len(fileName) == 0 {
-		Commits(ctx)
-		return
-	}
-
-	userName := ctx.Repo.Owner.Name
-	repoName := ctx.Repo.Repository.Name
-	branchName := ctx.Params(":branchname")
-
-	brs, err := ctx.Repo.GitRepo.GetBranches()
-	if err != nil {
-		ctx.Handle(500, "GetBranches", err)
-		return
-	} else if len(brs) == 0 {
-		ctx.Handle(404, "GetBranches", nil)
-		return
-	}
-
-	commitsCount, err := ctx.Repo.GitRepo.FileCommitsCount(branchName, fileName)
-	if err != nil {
-		ctx.Handle(500, "repo.FileHistory(GetCommitsCount)", err)
-		return
-	} else if commitsCount == 0 {
-		ctx.Handle(404, "repo.FileHistory", nil)
-		return
-	}
-
-	// Calculate and validate page number.
-	page := com.StrTo(ctx.Query("p")).MustInt()
-	if page < 1 {
-		page = 1
-	}
-	lastPage := page - 1
-	if lastPage < 0 {
-		lastPage = 0
-	}
-	nextPage := page + 1
-	if nextPage*50 > commitsCount {
-		nextPage = 0
-	}
-
-	commits, err := ctx.Repo.GitRepo.CommitsByFileAndRange(
-		branchName, fileName, page)
-	if err != nil {
-		ctx.Handle(500, "repo.FileHistory(CommitsByRange)", err)
-		return
-	}
-	commits = models.ValidateCommitsWithEmails(commits)
-
-	ctx.Data["Commits"] = commits
-	ctx.Data["Username"] = userName
-	ctx.Data["Reponame"] = repoName
-	ctx.Data["FileName"] = fileName
-	ctx.Data["CommitCount"] = commitsCount
-	ctx.Data["LastPageNum"] = lastPage
-	ctx.Data["NextPageNum"] = nextPage
-	ctx.HTML(200, COMMITS)
 }

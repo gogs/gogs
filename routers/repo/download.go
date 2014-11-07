@@ -13,9 +13,7 @@ import (
 )
 
 func SingleDownload(ctx *middleware.Context) {
-	treename := ctx.Params("*")
-
-	blob, err := ctx.Repo.Commit.GetBlobByPath(treename)
+	blob, err := ctx.Repo.Commit.GetBlobByPath(ctx.Repo.TreeName)
 	if err != nil {
 		ctx.Handle(500, "GetBlobByPath", err)
 		return
@@ -23,7 +21,7 @@ func SingleDownload(ctx *middleware.Context) {
 
 	dataRc, err := blob.Data()
 	if err != nil {
-		ctx.Handle(500, "repo.SingleDownload(Data)", err)
+		ctx.Handle(500, "Data", err)
 		return
 	}
 
@@ -37,7 +35,7 @@ func SingleDownload(ctx *middleware.Context) {
 	_, isImageFile := base.IsImageFile(buf)
 	ctx.Resp.Header().Set("Content-Type", contentType)
 	if !isTextFile && !isImageFile {
-		ctx.Resp.Header().Set("Content-Disposition", "attachment; filename="+path.Base(treename))
+		ctx.Resp.Header().Set("Content-Disposition", "attachment; filename="+path.Base(ctx.Repo.TreeName))
 		ctx.Resp.Header().Set("Content-Transfer-Encoding", "binary")
 	}
 	ctx.Resp.Write(buf)
