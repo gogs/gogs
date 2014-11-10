@@ -15,7 +15,7 @@
 	                        	<strong>{{.i18n.Tr "repo.settings.hooks"}}</strong>
 	                        </div>
 	                        <ul class="panel-body setting-list">
-                            	<li>{{.i18n.Tr "repo.settings.hooks_desc" | Str2html}}</li>
+                            	<li>{{.i18n.Tr "repo.settings.hooks_desc" "http://gogs.io/docs/features/webhook.html" | Str2html}}</li>
                             	{{range .Webhooks}}
 								<li>
 									{{if .IsActive}}

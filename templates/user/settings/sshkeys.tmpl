@@ -33,7 +33,7 @@
                             {{end}}
                         </ul>
                     </div>
-                    <p>{{.i18n.Tr "settings.ssh_helper" | Str2html}}</p>
+                    <p>{{.i18n.Tr "settings.ssh_helper" "https://help.github.com/articles/generating-ssh-keys" "https://help.github.com/ssh-issues/" | Str2html}}</p>
                     <br>
                     <form class="panel panel-radius form form-align hide" id="user-ssh-add-form" action="{{AppSubUrl}}/user/settings/ssh" method="post">
                         {{.CsrfTokenHtml}}

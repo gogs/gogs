@@ -14,6 +14,7 @@ import (
 	"github.com/macaron-contrib/session"
 
 	"github.com/gogits/gogs/models"
+	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/setting"
 )
@@ -22,20 +23,6 @@ import (
 func SignedInId(header http.Header, sess session.Store) int64 {
 	if !models.HasEngine {
 		return 0
-	}
-
-	if setting.Service.EnableReverseProxyAuth {
-		webAuthUser := header.Get(setting.ReverseProxyAuthUser)
-		if len(webAuthUser) > 0 {
-			u, err := models.GetUserByName(webAuthUser)
-			if err != nil {
-				if err != models.ErrUserNotExist {
-					log.Error(4, "GetUserByName: %v", err)
-				}
-				return 0
-			}
-			return u.Id
-		}
 	}
 
 	uid := sess.Get("uid")
@@ -56,8 +43,46 @@ func SignedInId(header http.Header, sess session.Store) int64 {
 
 // SignedInUser returns the user object of signed user.
 func SignedInUser(header http.Header, sess session.Store) *models.User {
+	if !models.HasEngine {
+		return nil
+	}
+
 	uid := SignedInId(header, sess)
+
 	if uid <= 0 {
+		if setting.Service.EnableReverseProxyAuth {
+			webAuthUser := header.Get(setting.ReverseProxyAuthUser)
+			if len(webAuthUser) > 0 {
+				u, err := models.GetUserByName(webAuthUser)
+				if err != nil {
+					if err != models.ErrUserNotExist {
+						log.Error(4, "GetUserByName: %v", err)
+					}
+					return nil
+				}
+				return u
+			}
+		}
+
+		// Check with basic auth.
+		baHead := header.Get("Authorization")
+		if len(baHead) > 0 {
+			auths := strings.Fields(baHead)
+			if len(auths) == 2 && auths[0] == "Basic" {
+				uname, passwd, _ := base.BasicAuthDecode(auths[1])
+				u, err := models.GetUserByName(uname)
+				if err != nil {
+					if err != models.ErrUserNotExist {
+						log.Error(4, "GetUserByName: %v", err)
+					}
+					return nil
+				}
+
+				if u.ValidtePassword(passwd) {
+					return u
+				}
+			}
+		}
 		return nil
 	}
 

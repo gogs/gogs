@@ -2,7 +2,7 @@
   <form class="form form-align panel-body repo-setting-form" id="repo-setting-form-slack" action="{{if .RepoLink}}{{.RepoLink}}{{else if .OrgLink}}{{.OrgLink}}{{end}}/settings/hooks/slack/{{if .PageIsSettingsHooksNew}}new{{else}}{{.Webhook.Id}}{{end}}" method="post">
     {{.CsrfTokenHtml}}
     <input type="hidden" name="hook_type" value="slack">
-    <div class="text-center panel-desc">{{.i18n.Tr "repo.settings.add_slack_hook_desc" | Str2html}}</div>
+    <div class="text-center panel-desc">{{.i18n.Tr "repo.settings.add_slack_hook_desc" "http://slack.com" | Str2html}}</div>
     <div class="field">
         <label class="req" for="payload-url">{{.i18n.Tr "repo.settings.payload_url"}}</label>
         <input class="ipt ipt-large ipt-radius {{if .Err_UserName}}ipt-error{{end}}" id="payload-url" name="payload_url" type="url" value="{{.Webhook.Url}}" required />
