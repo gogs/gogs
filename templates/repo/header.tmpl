@@ -22,7 +22,7 @@
                         <button class="btn btn-gray left" id="repo-clone-https" data-link="{{$.CloneLink.HTTPS}}">HTTPS</button>
                         <input id="repo-clone-url" class="ipt ipt-disabled left" value="{{$.CloneLink.SSH}}" readonly />
                         <button id="repo-clone-copy" class="btn btn-black left btn-right-radius" data-copy-val="val" data-copy-from="#repo-clone-url" original-title="{{$.i18n.Tr "repo.click_to_copy"}}" data-original-title="{{$.i18n.Tr "repo.click_to_copy"}}" data-after-title="{{$.i18n.Tr "repo.copied"}}">{{$.i18n.Tr "repo.copy_link"}}</button>
-                        <p class="text-center" id="repo-clone-help">{{$.i18n.Tr "repo.clone_helper" | Str2html}}</p>
+                        <p class="text-center" id="repo-clone-help">{{$.i18n.Tr "repo.clone_helper" "http://git-scm.com/book/en/Git-Basics-Getting-a-Git-Repository" | Str2html}}</p>
                         <hr/>
                         <div class="text-center" id="repo-clone-zip">
                             <a class="btn btn-green btn-radius" href="{{$.RepoLink}}/archive/{{EscapePound $.BranchName}}.zip"><i class="octicon octicon-file-zip"></i>ZIP</a>

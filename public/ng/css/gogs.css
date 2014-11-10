@@ -1052,9 +1052,9 @@ The register and sign-in page style
 }
 #repo-header-download-drop {
   line-height: 24px;
-  width: 440px;
+  width: 460px;
   top: 50px;
-  left: -370px;
+  left: -390px;
   padding: 20px;
   box-sizing: border-box;
   z-index: 1;
@@ -1065,6 +1065,9 @@ The register and sign-in page style
 #repo-header-download-drop button,
 #repo-header-download-drop input {
   font-size: 11px;
+}
+#repo-clone {
+  width: inherit;
 }
 #repo-content {
   padding: 18px 0;
