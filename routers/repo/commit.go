@@ -300,7 +300,7 @@ func CompareDiff(ctx *middleware.Context) {
 	ctx.Data["Commit"] = commit
 	ctx.Data["Diff"] = diff
 	ctx.Data["DiffNotAvailable"] = diff.NumFiles() == 0
-	ctx.Data["SourcePath"] = "/" + path.Join(userName, repoName, "src", afterCommitId)
-	ctx.Data["RawPath"] = "/" + path.Join(userName, repoName, "raw", afterCommitId)
+	ctx.Data["SourcePath"] = setting.AppSubUrl + "/" + path.Join(userName, repoName, "src", afterCommitId)
+	ctx.Data["RawPath"] = setting.AppSubUrl + "/" + path.Join(userName, repoName, "raw", afterCommitId)
 	ctx.HTML(200, DIFF)
 }
