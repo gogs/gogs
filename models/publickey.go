@@ -236,10 +236,10 @@ func GetPublicKeyById(keyId int64) (*PublicKey, error) {
 	return key, nil
 }
 
-// ListPublicKey returns a list of all public keys that user has.
-func ListPublicKey(uid int64) ([]*PublicKey, error) {
+// ListPublicKeys returns a list of public keys belongs to given user.
+func ListPublicKeys(uid int64) ([]*PublicKey, error) {
 	keys := make([]*PublicKey, 0, 5)
-	err := x.Find(&keys, &PublicKey{OwnerId: uid})
+	err := x.Where("owner_id=?", uid).Find(&keys)
 	if err != nil {
 		return nil, err
 	}

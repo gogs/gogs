@@ -33,6 +33,13 @@ func EncodeMd5(str string) string {
 	return hex.EncodeToString(m.Sum(nil))
 }
 
+// Encode string to sha1 hex value.
+func EncodeSha1(str string) string {
+	h := sha1.New()
+	h.Write([]byte(str))
+	return hex.EncodeToString(h.Sum(nil))
+}
+
 func BasicAuthDecode(encoded string) (user string, name string, err error) {
 	var s []byte
 	s, err = base64.StdEncoding.DecodeString(encoded)

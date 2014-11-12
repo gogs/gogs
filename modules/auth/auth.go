@@ -20,7 +20,7 @@ import (
 )
 
 // SignedInId returns the id of signed in user.
-func SignedInId(header http.Header, sess session.Store) int64 {
+func SignedInId(req *http.Request, sess session.Store) int64 {
 	if !models.HasEngine {
 		return 0
 	}
@@ -38,20 +38,38 @@ func SignedInId(header http.Header, sess session.Store) int64 {
 		}
 		return id
 	}
+
+	// API calls also need to check access token.
+	if strings.HasPrefix(req.URL.Path, "/api/") {
+		auHead := req.Header.Get("Authorization")
+		if len(auHead) > 0 {
+			auths := strings.Fields(auHead)
+			if len(auths) == 2 && auths[0] == "token" {
+				t, err := models.GetAccessTokenBySha(auths[1])
+				if err != nil {
+					if err != models.ErrAccessTokenNotExist {
+						log.Error(4, "GetAccessTokenBySha: %v", err)
+					}
+					return 0
+				}
+				return t.Uid
+			}
+		}
+	}
 	return 0
 }
 
 // SignedInUser returns the user object of signed user.
-func SignedInUser(header http.Header, sess session.Store) *models.User {
+func SignedInUser(req *http.Request, sess session.Store) *models.User {
 	if !models.HasEngine {
 		return nil
 	}
 
-	uid := SignedInId(header, sess)
+	uid := SignedInId(req, sess)
 
 	if uid <= 0 {
 		if setting.Service.EnableReverseProxyAuth {
-			webAuthUser := header.Get(setting.ReverseProxyAuthUser)
+			webAuthUser := req.Header.Get(setting.ReverseProxyAuthUser)
 			if len(webAuthUser) > 0 {
 				u, err := models.GetUserByName(webAuthUser)
 				if err != nil {
@@ -65,7 +83,7 @@ func SignedInUser(header http.Header, sess session.Store) *models.User {
 		}
 
 		// Check with basic auth.
-		baHead := header.Get("Authorization")
+		baHead := req.Header.Get("Authorization")
 		if len(baHead) > 0 {
 			auths := strings.Fields(baHead)
 			if len(auths) == 2 && auths[0] == "Basic" {

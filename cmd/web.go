@@ -64,7 +64,7 @@ func checkVersion() {
 
 	// Check dependency version.
 	macaronVer := git.MustParseVersion(strings.Join(strings.Split(macaron.Version(), ".")[:3], "."))
-	if macaronVer.LessThan(git.MustParseVersion("0.4.0")) {
+	if macaronVer.LessThan(git.MustParseVersion("0.4.2")) {
 		log.Fatal(4, "Package macaron version is too old, did you forget to update?(github.com/Unknwon/macaron)")
 	}
 	i18nVer := git.MustParseVersion(i18n.Version())
@@ -199,6 +199,7 @@ func runWeb(*cli.Context) {
 		m.Get("/ssh", user.SettingsSSHKeys)
 		m.Post("/ssh", bindIgnErr(auth.AddSSHKeyForm{}), user.SettingsSSHKeysPost)
 		m.Get("/social", user.SettingsSocial)
+		m.Combo("/applications").Get(user.SettingsApplications).Post(bindIgnErr(auth.NewAccessTokenForm{}), user.SettingsApplicationsPost)
 		m.Route("/delete", "GET,POST", user.SettingsDelete)
 	}, reqSignIn)
 	m.Group("/user", func() {
@@ -209,9 +210,6 @@ func runWeb(*cli.Context) {
 		m.Post("/forget_password", user.ForgotPasswdPost)
 		m.Get("/logout", user.SignOut)
 	})
-
-	// FIXME: Legacy
-	m.Get("/user/:username", ignSignIn, user.Profile)
 
 	// Gravatar service.
 	avt := avatar.CacheServer("public/img/avatar/", "public/img/avatar_default.jpg")

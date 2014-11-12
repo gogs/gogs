@@ -1699,18 +1699,21 @@ The register and sign-in page style
 #repo-hooks-panel,
 #repo-hooks-history-panel,
 #user-social-panel,
+#user-applications-panel,
 #user-ssh-panel {
   margin-bottom: 20px;
 }
 #repo-hooks-panel .setting-list,
 #repo-hooks-history-panel .setting-list,
 #user-social-panel .setting-list,
+#user-applications-panel .setting-list,
 #user-ssh-panel .setting-list {
   background-color: #FFF;
 }
 #repo-hooks-panel .setting-list li,
 #repo-hooks-history-panel .setting-list li,
 #user-social-panel .setting-list li,
+#user-applications-panel .setting-list li,
 #user-ssh-panel .setting-list li {
   padding: 8px 20px;
   border-bottom: 1px solid #eaeaea;
@@ -1718,18 +1721,21 @@ The register and sign-in page style
 #repo-hooks-panel .setting-list li.ssh:hover,
 #repo-hooks-history-panel .setting-list li.ssh:hover,
 #user-social-panel .setting-list li.ssh:hover,
+#user-applications-panel .setting-list li.ssh:hover,
 #user-ssh-panel .setting-list li.ssh:hover {
   background-color: #ffffEE;
 }
 #repo-hooks-panel .setting-list li i,
 #repo-hooks-history-panel .setting-list li i,
 #user-social-panel .setting-list li i,
+#user-applications-panel .setting-list li i,
 #user-ssh-panel .setting-list li i {
   padding-right: 5px;
 }
 #repo-hooks-panel .active-icon,
 #repo-hooks-history-panel .active-icon,
 #user-social-panel .active-icon,
+#user-applications-panel .active-icon,
 #user-ssh-panel .active-icon {
   width: 10px;
   height: 10px;
@@ -1741,43 +1747,60 @@ The register and sign-in page style
 #repo-hooks-panel .ssh-content,
 #repo-hooks-history-panel .ssh-content,
 #user-social-panel .ssh-content,
+#user-applications-panel .ssh-content,
 #user-ssh-panel .ssh-content {
   margin-left: 24px;
 }
 #repo-hooks-panel .ssh-content .octicon,
 #repo-hooks-history-panel .ssh-content .octicon,
 #user-social-panel .ssh-content .octicon,
+#user-applications-panel .ssh-content .octicon,
 #user-ssh-panel .ssh-content .octicon {
   margin-right: 4px;
 }
 #repo-hooks-panel .ssh-content .print,
 #repo-hooks-history-panel .ssh-content .print,
 #user-social-panel .ssh-content .print,
+#user-applications-panel .ssh-content .print,
 #user-ssh-panel .ssh-content .print,
+#repo-hooks-panel .ssh-content .access,
+#repo-hooks-history-panel .ssh-content .access,
+#user-social-panel .ssh-content .access,
+#user-applications-panel .ssh-content .access,
+#user-ssh-panel .ssh-content .access,
 #repo-hooks-panel .ssh-content .activity,
 #repo-hooks-history-panel .ssh-content .activity,
 #user-social-panel .ssh-content .activity,
+#user-applications-panel .ssh-content .activity,
 #user-ssh-panel .ssh-content .activity {
   color: #888;
 }
-#repo-hooks-panel .ssh-delete-btn,
-#repo-hooks-history-panel .ssh-delete-btn,
-#user-social-panel .ssh-delete-btn,
-#user-ssh-panel .ssh-delete-btn {
+#repo-hooks-panel .ssh-content .access,
+#repo-hooks-history-panel .ssh-content .access,
+#user-social-panel .ssh-content .access,
+#user-applications-panel .ssh-content .access,
+#user-ssh-panel .ssh-content .access {
+  max-width: 500px;
+}
+#repo-hooks-panel .ssh-btn,
+#repo-hooks-history-panel .ssh-btn,
+#user-social-panel .ssh-btn,
+#user-applications-panel .ssh-btn,
+#user-ssh-panel .ssh-btn {
   margin-top: 6px;
 }
-#user-ssh-add-form .panel-body {
+.form-settings-add .panel-body {
   background-color: #FFF;
   padding: 30px 0;
 }
-#user-ssh-add-form .ipt {
+.form-settings-add .ipt {
   width: 500px;
 }
-#user-ssh-add-form textarea {
+.form-settings-add textarea {
   height: 120px;
   margin-left: 3px;
 }
-#user-ssh-add-form .field {
+.form-settings-add .field {
   margin-bottom: 24px;
 }
 .pr-main {

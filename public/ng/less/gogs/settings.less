@@ -68,6 +68,7 @@
 #repo-hooks-panel,
 #repo-hooks-history-panel,
 #user-social-panel,
+#user-applications-panel,
 #user-ssh-panel {
     margin-bottom: 20px;
     .setting-list {
@@ -97,16 +98,20 @@
             margin-right: 4px;
         }
         .print,
+        .access,
         .activity {
             color: #888;
         }
+        .access {
+            max-width: 500px;
+        }
     }
-    .ssh-delete-btn {
+    .ssh-btn {
         margin-top: 6px;
     }
 }
 
-#user-ssh-add-form {
+.form-settings-add {
   .panel-body {
     background-color: #FFF;
     padding: 30px 0;

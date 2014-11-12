@@ -39,7 +39,8 @@ var (
 )
 
 func init() {
-	tables = append(tables, new(User), new(PublicKey), new(Follow), new(Oauth2),
+	tables = append(tables,
+		new(User), new(PublicKey), new(Follow), new(Oauth2), new(AccessToken),
 		new(Repository), new(Watch), new(Star), new(Action), new(Access),
 		new(Issue), new(Comment), new(Attachment), new(IssueUser), new(Label), new(Milestone),
 		new(Mirror), new(Release), new(LoginSource), new(Webhook),
