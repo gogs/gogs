@@ -95,3 +95,20 @@ type ChangePasswordForm struct {
 func (f *ChangePasswordForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
 	return validate(errs, ctx.Data, f, ctx.Locale)
 }
+
+type AddSSHKeyForm struct {
+	SSHTitle string `form:"title" binding:"Required"`
+	Content  string `form:"content" binding:"Required"`
+}
+
+func (f *AddSSHKeyForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
+	return validate(errs, ctx.Data, f, ctx.Locale)
+}
+
+type NewAccessTokenForm struct {
+	Name string `form:"name" binding:"Required"`
+}
+
+func (f *NewAccessTokenForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
+	return validate(errs, ctx.Data, f, ctx.Locale)
+}

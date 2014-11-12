@@ -1,0 +1,56 @@
+{{template "ng/base/head" .}}
+{{template "ng/base/header" .}}
+<div id="setting-wrapper" class="main-wrapper">
+    <div id="user-profile-setting" class="container clear">
+        {{template "user/settings/nav" .}}
+        <div class="grid-4-5 left">
+            <div class="setting-content">
+                {{template "ng/base/alert" .}}
+                <div id="setting-content">
+                    <div id="user-applications-panel" class="panel panel-radius">
+                        <div class="panel-header">
+                        	<a class="show-form-btn" data-target-form="#access-add-form">
+                        		<button class="btn btn-medium btn-black btn-radius right">{{.i18n.Tr "settings.generate_new_token"}}</button>
+                        	</a>
+                        	<strong>{{.i18n.Tr "settings.manage_access_token"}}</strong>
+                        </div>
+                        <ul class="panel-body setting-list">
+                            <li>{{.i18n.Tr "settings.tokens_desc"}}</li>
+                            {{range .Tokens}}
+                            <li class="ssh clear">
+                                <span class="active-icon left label label-{{if .HasRecentActivity}}green{{else}}gray{{end}} label-radius"></span>
+                                <i class="fa fa-send fa-2x left"></i>
+                                <div class="ssh-content left">
+                                    <p><strong>{{.Name}}</strong></p>
+                                    <p class="activity"><i>{{$.i18n.Tr "settings.add_on"}} {{DateFormat .Created "M d, Y"}} —  <i class="octicon octicon-info"></i>{{if .HasUsed}}{{$.i18n.Tr "settings.last_used"}} {{DateFormat .Updated "M d, Y"}}{{else}}{{$.i18n.Tr "settings.no_activity"}}{{end}}</i></p>
+                                </div>
+                                <a href="{{AppSubUrl}}/user/settings/applications?remove={{.Id}}">
+                                	<button class="btn btn-small btn-red btn-radius ssh-btn right">{{$.i18n.Tr "settings.delete_token"}}</button>
+                                </a>
+                            </li>
+                            {{end}}
+                        </ul>
+                    </div>
+                    <br>
+                    <form class="panel panel-radius form form-align form-settings-add hide" id="access-add-form" action="{{AppSubUrl}}/user/settings/applications" method="post">
+                        {{.CsrfTokenHtml}}
+                        <p class="panel-header"><strong>{{.i18n.Tr "settings.generate_new_token"}}</strong></p>
+                        <div class="panel-body">
+                        	<div class="text-center panel-desc">{{.i18n.Tr "settings.new_token_desc"}}</div>
+                        	<input type="hidden" name="type" value="token">
+                            <p class="field">
+                                <label class="req" for="token-name">{{.i18n.Tr "settings.token_name"}}</label>
+                                <input class="ipt ipt-radius" id="token-name" name="name" required />
+                            </p>
+                            <p class="field">
+                                <label></label>
+                                <button class="btn btn-green btn-medium btn-radius" id="ssh-add-btn">{{.i18n.Tr "settings.generate_token"}}</button>
+                            </p>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{{template "ng/base/footer" .}}

@@ -9,7 +9,9 @@
                 <div id="user-ssh-setting-content">
                     <div id="user-ssh-panel" class="panel panel-radius">
                         <div class="panel-header">
-                            <a class="btn btn-small btn-black btn-header btn-radius right" id="ssh-add">{{.i18n.Tr "settings.add_key"}}</a>
+                            <a class="show-form-btn" data-target-form="#user-ssh-add-form">
+                                <button class="btn btn-medium btn-black btn-radius right">{{.i18n.Tr "settings.add_key"}}</button>
+                            </a>
                             <strong>{{.i18n.Tr "settings.manage_ssh_keys"}}</strong>
                         </div>
                         <ul class="panel-body setting-list">
@@ -27,7 +29,7 @@
                                     {{$.CsrfTokenHtml}}
                                     <input name="_method" type="hidden" value="DELETE">
                                     <input name="id" type="hidden" value="{{.Id}}">
-                                    <button class="right ssh-delete-btn btn btn-red btn-radius btn-small">{{$.i18n.Tr "settings.delete_key"}}</button>
+                                    <button class="right ssh-btn btn btn-red btn-radius btn-small">{{$.i18n.Tr "settings.delete_key"}}</button>
                                 </form>
                             </li>
                             {{end}}
@@ -35,7 +37,7 @@
                     </div>
                     <p>{{.i18n.Tr "settings.ssh_helper" "https://help.github.com/articles/generating-ssh-keys" "https://help.github.com/ssh-issues/" | Str2html}}</p>
                     <br>
-                    <form class="panel panel-radius form form-align hide" id="user-ssh-add-form" action="{{AppSubUrl}}/user/settings/ssh" method="post">
+                    <form class="panel panel-radius form form-align form-settings-add hide" id="user-ssh-add-form" action="{{AppSubUrl}}/user/settings/ssh" method="post">
                         {{.CsrfTokenHtml}}
                         <p class="panel-header"><strong>{{.i18n.Tr "settings.add_new_key"}}</strong></p>
                         <div class="panel-body">

@@ -300,8 +300,11 @@ function initCore() {
         $.magnificPopup.close();
     });
 
-    // Collapse.
+    // Plugins.
     $('.collapse').hide();
+    $('.tipsy-tooltip').tipsy({
+        fade: true
+    });
 }
 
 function initUserSetting() {
@@ -329,9 +332,9 @@ function initUserSetting() {
         $profile_form.submit();
     });
 
-    // Show add SSH key panel.
-    $('#ssh-add').click(function () {
-        $('#user-ssh-add-form').removeClass("hide");
+    // Show panels.
+    $('.show-form-btn').click(function () {
+        $($(this).data('target-form')).removeClass("hide");
     });
 
     // Confirmation of delete account.

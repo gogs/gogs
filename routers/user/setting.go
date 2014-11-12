@@ -18,13 +18,14 @@ import (
 )
 
 const (
-	SETTINGS_PROFILE  base.TplName = "user/settings/profile"
-	SETTINGS_PASSWORD base.TplName = "user/settings/password"
-	SETTINGS_SSH_KEYS base.TplName = "user/settings/sshkeys"
-	SETTINGS_SOCIAL   base.TplName = "user/settings/social"
-	SETTINGS_DELETE   base.TplName = "user/settings/delete"
-	NOTIFICATION      base.TplName = "user/notification"
-	SECURITY          base.TplName = "user/security"
+	SETTINGS_PROFILE      base.TplName = "user/settings/profile"
+	SETTINGS_PASSWORD     base.TplName = "user/settings/password"
+	SETTINGS_SSH_KEYS     base.TplName = "user/settings/sshkeys"
+	SETTINGS_SOCIAL       base.TplName = "user/settings/social"
+	SETTINGS_APPLICATIONS base.TplName = "user/settings/applications"
+	SETTINGS_DELETE       base.TplName = "user/settings/delete"
+	NOTIFICATION          base.TplName = "user/notification"
+	SECURITY              base.TplName = "user/security"
 )
 
 func Settings(ctx *middleware.Context) {
@@ -129,7 +130,7 @@ func SettingsSSHKeys(ctx *middleware.Context) {
 	ctx.Data["PageIsSettingsSSHKeys"] = true
 
 	var err error
-	ctx.Data["Keys"], err = models.ListPublicKey(ctx.User.Id)
+	ctx.Data["Keys"], err = models.ListPublicKeys(ctx.User.Id)
 	if err != nil {
 		ctx.Handle(500, "ssh.ListPublicKey", err)
 		return
@@ -144,7 +145,7 @@ func SettingsSSHKeysPost(ctx *middleware.Context, form auth.AddSSHKeyForm) {
 	ctx.Data["PageIsSettingsSSHKeys"] = true
 
 	var err error
-	ctx.Data["Keys"], err = models.ListPublicKey(ctx.User.Id)
+	ctx.Data["Keys"], err = models.ListPublicKeys(ctx.User.Id)
 	if err != nil {
 		ctx.Handle(500, "ssh.ListPublicKey", err)
 		return
@@ -233,6 +234,62 @@ func SettingsSocial(ctx *middleware.Context) {
 	}
 	ctx.Data["Socials"] = socials
 	ctx.HTML(200, SETTINGS_SOCIAL)
+}
+
+func SettingsApplications(ctx *middleware.Context) {
+	ctx.Data["Title"] = ctx.Tr("settings")
+	ctx.Data["PageIsUserSettings"] = true
+	ctx.Data["PageIsSettingsApplications"] = true
+
+	// Delete access token.
+	remove, _ := com.StrTo(ctx.Query("remove")).Int64()
+	if remove > 0 {
+		if err := models.DeleteAccessTokenById(remove); err != nil {
+			ctx.Handle(500, "DeleteAccessTokenById", err)
+			return
+		}
+		ctx.Flash.Success(ctx.Tr("settings.delete_token_success"))
+		ctx.Redirect(setting.AppSubUrl + "/user/settings/applications")
+		return
+	}
+
+	tokens, err := models.ListAccessTokens(ctx.User.Id)
+	if err != nil {
+		ctx.Handle(500, "ListAccessTokens", err)
+		return
+	}
+	ctx.Data["Tokens"] = tokens
+
+	ctx.HTML(200, SETTINGS_APPLICATIONS)
+}
+
+// FIXME: split to two different functions and pages to handle access token and oauth2
+func SettingsApplicationsPost(ctx *middleware.Context, form auth.NewAccessTokenForm) {
+	ctx.Data["Title"] = ctx.Tr("settings")
+	ctx.Data["PageIsUserSettings"] = true
+	ctx.Data["PageIsSettingsApplications"] = true
+
+	switch ctx.Query("type") {
+	case "token":
+		if ctx.HasError() {
+			ctx.HTML(200, SETTINGS_APPLICATIONS)
+			return
+		}
+
+		t := &models.AccessToken{
+			Uid:  ctx.User.Id,
+			Name: form.Name,
+		}
+		if err := models.NewAccessToken(t); err != nil {
+			ctx.Handle(500, "NewAccessToken", err)
+			return
+		}
+
+		ctx.Flash.Success(ctx.Tr("settings.generate_token_succees"))
+		ctx.Flash.Info(t.Sha1)
+	}
+
+	ctx.Redirect(setting.AppSubUrl + "/user/settings/applications")
 }
 
 func SettingsDelete(ctx *middleware.Context) {
