@@ -25,21 +25,7 @@ func SignedInId(req *http.Request, sess session.Store) int64 {
 		return 0
 	}
 
-	uid := sess.Get("uid")
-	if uid == nil {
-		return 0
-	}
-	if id, ok := uid.(int64); ok {
-		if _, err := models.GetUserById(id); err != nil {
-			if err != models.ErrUserNotExist {
-				log.Error(4, "GetUserById: %v", err)
-			}
-			return 0
-		}
-		return id
-	}
-
-	// API calls also need to check access token.
+	// API calls need to check access token.
 	if strings.HasPrefix(req.URL.Path, "/api/") {
 		auHead := req.Header.Get("Authorization")
 		if len(auHead) > 0 {
@@ -55,6 +41,20 @@ func SignedInId(req *http.Request, sess session.Store) int64 {
 				return t.Uid
 			}
 		}
+	}
+
+	uid := sess.Get("uid")
+	if uid == nil {
+		return 0
+	}
+	if id, ok := uid.(int64); ok {
+		if _, err := models.GetUserById(id); err != nil {
+			if err != models.ErrUserNotExist {
+				log.Error(4, "GetUserById: %v", err)
+			}
+			return 0
+		}
+		return id
 	}
 	return 0
 }

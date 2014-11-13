@@ -1080,15 +1080,21 @@ func GetCollaboratorNames(repoName string) ([]string, error) {
 	return names, nil
 }
 
+// CollaborativeRepository represents a repository with collaborative information.
+type CollaborativeRepository struct {
+	*Repository
+	CanPush bool
+}
+
 // GetCollaborativeRepos returns a list of repositories that user is collaborator.
-func GetCollaborativeRepos(uname string) ([]*Repository, error) {
+func GetCollaborativeRepos(uname string) ([]*CollaborativeRepository, error) {
 	uname = strings.ToLower(uname)
 	accesses := make([]*Access, 0, 10)
 	if err := x.Find(&accesses, &Access{UserName: uname}); err != nil {
 		return nil, err
 	}
 
-	repos := make([]*Repository, 0, 10)
+	repos := make([]*CollaborativeRepository, 0, 10)
 	for _, access := range accesses {
 		infos := strings.Split(access.RepoName, "/")
 		if infos[0] == uname {
@@ -1105,7 +1111,7 @@ func GetCollaborativeRepos(uname string) ([]*Repository, error) {
 			return nil, err
 		}
 		repo.Owner = u
-		repos = append(repos, repo)
+		repos = append(repos, &CollaborativeRepository{repo, access.Mode == WRITABLE})
 	}
 	return repos, nil
 }

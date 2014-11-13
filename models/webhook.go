@@ -27,6 +27,16 @@ const (
 	FORM
 )
 
+func (t HookContentType) Name() string {
+	switch t {
+	case JSON:
+		return "json"
+	case FORM:
+		return "form"
+	}
+	return ""
+}
+
 // HookEvent represents events that will delivery hook.
 type HookEvent struct {
 	PushOnly bool `json:"push_only"`
@@ -146,6 +156,16 @@ const (
 	GOGS HookTaskType = iota + 1
 	SLACK
 )
+
+func (t HookTaskType) Name() string {
+	switch t {
+	case GOGS:
+		return "gogs"
+	case SLACK:
+		return "slack"
+	}
+	return ""
+}
 
 type HookEventType string
 

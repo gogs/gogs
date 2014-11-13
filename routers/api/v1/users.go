@@ -11,9 +11,10 @@ import (
 	"github.com/gogits/gogs/modules/middleware"
 )
 
-type user struct {
-	UserName   string `json:"username"`
-	AvatarLink string `json:"avatar"`
+type ApiUser struct {
+	Id        int64  `json:"id"`
+	UserName  string `json:"username"`
+	AvatarUrl string `json:"avatar_url"`
 }
 
 func SearchUsers(ctx *middleware.Context) {
@@ -34,11 +35,11 @@ func SearchUsers(ctx *middleware.Context) {
 		return
 	}
 
-	results := make([]*user, len(us))
+	results := make([]*ApiUser, len(us))
 	for i := range us {
-		results[i] = &user{
-			UserName:   us[i].Name,
-			AvatarLink: us[i].AvatarLink(),
+		results[i] = &ApiUser{
+			UserName:  us[i].Name,
+			AvatarUrl: us[i].AvatarLink(),
 		}
 	}
 
