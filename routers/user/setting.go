@@ -311,6 +311,9 @@ func SettingsDelete(ctx *middleware.Context) {
 			case models.ErrUserOwnRepos:
 				ctx.Flash.Error(ctx.Tr("form.still_own_repo"))
 				ctx.Redirect(setting.AppSubUrl + "/user/settings/delete")
+			case models.ErrUserHasOrgs:
+				ctx.Flash.Error(ctx.Tr("form.still_has_org"))
+				ctx.Redirect(setting.AppSubUrl + "/user/settings/delete")
 			default:
 				ctx.Handle(500, "DeleteUser", err)
 			}

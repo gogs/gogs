@@ -14,7 +14,7 @@ watch_dirs = [
 watch_exts = [".go", ".ini"]
 build_delay = 1500
 cmds = [
-	["go", "install", "-tags", "sqlite redis cert"],
-	["go", "build", "-tags", "sqlite redis cert"],
+	["go", "install", "-tags", "sqlite cert"],# redis memcache
+	["go", "build", "-tags", "sqlite cert"],
 	["./gogs", "web"]
 ]
