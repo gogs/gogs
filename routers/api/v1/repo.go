@@ -172,13 +172,9 @@ func Migrate(ctx *middleware.Context, form auth.MigrateRepoForm) {
 	})
 }
 
-// /user/repos: https://developer.github.com/v3/repos/#list-your-repositories
+// GET /user/repos
+// https://developer.github.com/v3/repos/#list-your-repositories
 func ListMyRepos(ctx *middleware.Context) {
-	if !ctx.IsSigned {
-		ctx.Error(403)
-		return
-	}
-
 	ownRepos, err := models.GetRepositories(ctx.User.Id, true)
 	if err != nil {
 		ctx.JSON(500, map[string]interface{}{

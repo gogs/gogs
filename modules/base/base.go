@@ -9,7 +9,7 @@ type (
 
 	ApiJsonErr struct {
 		Message string `json:"message"`
-		DocUrl  string `json:"documentation_url"`
+		DocUrl  string `json:"url"`
 	}
 )
 

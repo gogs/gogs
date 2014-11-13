@@ -27,6 +27,16 @@ const (
 	FORM
 )
 
+var hookContentTypes = map[string]HookContentType{
+	"json": JSON,
+	"form": FORM,
+}
+
+// ToHookContentType returns HookContentType by given name.
+func ToHookContentType(name string) HookContentType {
+	return hookContentTypes[name]
+}
+
 func (t HookContentType) Name() string {
 	switch t {
 	case JSON:
@@ -35,6 +45,12 @@ func (t HookContentType) Name() string {
 		return "form"
 	}
 	return ""
+}
+
+// IsValidHookContentType returns true if given name is a valid hook content type.
+func IsValidHookContentType(name string) bool {
+	_, ok := hookContentTypes[name]
+	return ok
 }
 
 // HookEvent represents events that will delivery hook.
@@ -157,6 +173,16 @@ const (
 	SLACK
 )
 
+var hookTaskTypes = map[string]HookTaskType{
+	"gogs":  GOGS,
+	"slack": SLACK,
+}
+
+// ToHookTaskType returns HookTaskType by given name.
+func ToHookTaskType(name string) HookTaskType {
+	return hookTaskTypes[name]
+}
+
 func (t HookTaskType) Name() string {
 	switch t {
 	case GOGS:
@@ -165,6 +191,12 @@ func (t HookTaskType) Name() string {
 		return "slack"
 	}
 	return ""
+}
+
+// IsValidHookTaskType returns true if given name is a valid hook task type.
+func IsValidHookTaskType(name string) bool {
+	_, ok := hookTaskTypes[name]
+	return ok
 }
 
 type HookEventType string

@@ -145,6 +145,7 @@ func runWeb(*cli.Context) {
 	ignSignInAndCsrf := middleware.Toggle(&middleware.ToggleOptions{DisableCsrf: true})
 	reqSignOut := middleware.Toggle(&middleware.ToggleOptions{SignOutRequire: true})
 
+	bind := binding.Bind
 	bindIgnErr := binding.BindIgnErr
 
 	// Routers.
@@ -158,6 +159,7 @@ func runWeb(*cli.Context) {
 	}, reqSignIn)
 
 	// API.
+	// FIXME: custom form error response.
 	m.Group("/api", func() {
 		m.Group("/v1", func() {
 			// Miscellaneous.
@@ -170,14 +172,15 @@ func runWeb(*cli.Context) {
 			})
 
 			// Repositories.
-			m.Get("/user/repos", v1.ListMyRepos)
+			m.Get("/user/repos", middleware.ApiReqToken(), v1.ListMyRepos)
 			m.Group("/repos", func() {
 				m.Get("/search", v1.SearchRepos)
 				m.Post("/migrate", bindIgnErr(auth.MigrateRepoForm{}), v1.Migrate)
 
 				m.Group("/:username/:reponame", func() {
-					m.Combo("/hooks").Get(v1.ListRepoHooks)
-				}, middleware.ApiRepoAssignment())
+					m.Combo("/hooks").Get(v1.ListRepoHooks).Post(bind(v1.CreateRepoHookForm{}), v1.CreateRepoHook)
+					m.Patch("/hooks/:id:int", bind(v1.EditRepoHookForm{}), v1.EditRepoHook)
+				}, middleware.ApiRepoAssignment(), middleware.ApiReqToken())
 			})
 
 			m.Any("/*", func(ctx *middleware.Context) {
