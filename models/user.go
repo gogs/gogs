@@ -376,7 +376,7 @@ func UpdateUser(u *User) error {
 	return err
 }
 
-// TODO: need some kind of mechanism to record failure.
+// FIXME: need some kind of mechanism to record failure. HINT: system notice
 // DeleteUser completely and permanently deletes everything of user.
 func DeleteUser(u *User) error {
 	// Check ownership of repository.
@@ -390,13 +390,13 @@ func DeleteUser(u *User) error {
 	// Check membership of organization.
 	count, err = u.GetOrganizationCount()
 	if err != nil {
-		return errors.New("modesl.GetRepositories(GetOrganizationCount): " + err.Error())
+		return errors.New("GetOrganizationCount: " + err.Error())
 	} else if count > 0 {
 		return ErrUserHasOrgs
 	}
 
-	// TODO: check issues, other repos' commits
-	// TODO: roll backable in some point.
+	// FIXME: check issues, other repos' commits
+	// FIXME: roll backable in some point.
 
 	// Delete all followers.
 	if _, err = x.Delete(&Follow{FollowId: u.Id}); err != nil {

@@ -96,7 +96,7 @@ func runServ(k *cli.Context) {
 			println("Gogs: you are not the owner of SSH key")
 			log.GitLogger.Fatal(2, "Invalid owner of SSH key: %d", keyId)
 		}
-		println("Gogs: internal error:", err)
+		println("Gogs: internal error:", err.Error())
 		log.GitLogger.Fatal(2, "Fail to get user by key ID(%d): %v", keyId, err)
 	}
 
@@ -125,7 +125,7 @@ func runServ(k *cli.Context) {
 			println("Gogs: given repository owner are not registered")
 			log.GitLogger.Fatal(2, "Unregistered owner: %s", repoUserName)
 		}
-		println("Gogs: internal error:", err)
+		println("Gogs: internal error:", err.Error())
 		log.GitLogger.Fatal(2, "Fail to get repository owner(%s): %v", repoUserName, err)
 	}
 
@@ -134,7 +134,7 @@ func runServ(k *cli.Context) {
 	case isWrite:
 		has, err := models.HasAccess(user.Name, path.Join(repoUserName, repoName), models.WRITABLE)
 		if err != nil {
-			println("Gogs: internal error:", err)
+			println("Gogs: internal error:", err.Error())
 			log.GitLogger.Fatal(2, "Fail to check write access:", err)
 		} else if !has {
 			println("You have no right to write this repository")
@@ -147,7 +147,7 @@ func runServ(k *cli.Context) {
 				println("Gogs: given repository does not exist")
 				log.GitLogger.Fatal(2, "Repository does not exist: %s/%s", repoUser.Name, repoName)
 			}
-			println("Gogs: internal error:", err)
+			println("Gogs: internal error:", err.Error())
 			log.GitLogger.Fatal(2, "Fail to get repository: %v", err)
 		}
 
@@ -157,7 +157,7 @@ func runServ(k *cli.Context) {
 
 		has, err := models.HasAccess(user.Name, path.Join(repoUserName, repoName), models.READABLE)
 		if err != nil {
-			println("Gogs: internal error:", err)
+			println("Gogs: internal error:", err.Error())
 			log.GitLogger.Fatal(2, "Fail to check read access:", err)
 		} else if !has {
 			println("You have no right to access this repository")
