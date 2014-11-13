@@ -334,6 +334,7 @@ func WebHooksNewPost(ctx *middleware.Context, form auth.NewWebhookForm) {
 		return
 	}
 
+	// FIXME: code too old here, sync with APIs
 	ct := models.JSON
 	if form.ContentType == "2" {
 		ct = models.FORM

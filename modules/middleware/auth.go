@@ -67,3 +67,12 @@ func Toggle(options *ToggleOptions) macaron.Handler {
 		}
 	}
 }
+
+func ApiReqToken() macaron.Handler {
+	return func(ctx *Context) {
+		if !ctx.IsSigned {
+			ctx.Error(403)
+			return
+		}
+	}
+}
