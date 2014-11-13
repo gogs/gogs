@@ -15,10 +15,25 @@ import (
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/middleware"
+	"github.com/gogits/gogs/modules/setting"
 )
 
-type repo struct {
-	RepoLink string `json:"repolink"`
+type ApiPermission struct {
+	Admin bool `json:"admin"`
+	Push  bool `json:"push"`
+	Pull  bool `json:"pull"`
+}
+
+type ApiRepository struct {
+	Id          int64         `json:"id"`
+	Owner       ApiUser       `json:"owner"`
+	FullName    string        `json:"full_name"`
+	Private     bool          `json:"private"`
+	Fork        bool          `json:"fork"`
+	HtmlUrl     string        `json:"html_url"`
+	CloneUrl    string        `json:"clone_url"`
+	SshUrl      string        `json:"ssh_url"`
+	Permissions ApiPermission `json:"permissions"`
 }
 
 func SearchRepos(ctx *middleware.Context) {
@@ -60,7 +75,7 @@ func SearchRepos(ctx *middleware.Context) {
 		return
 	}
 
-	results := make([]*repo, len(repos))
+	results := make([]*ApiRepository, len(repos))
 	for i := range repos {
 		if err = repos[i].GetOwner(); err != nil {
 			ctx.JSON(500, map[string]interface{}{
@@ -69,8 +84,9 @@ func SearchRepos(ctx *middleware.Context) {
 			})
 			return
 		}
-		results[i] = &repo{
-			RepoLink: path.Join(repos[i].Owner.Name, repos[i].Name),
+		results[i] = &ApiRepository{
+			Id:       repos[i].Id,
+			FullName: path.Join(repos[i].Owner.Name, repos[i].Name),
 		}
 	}
 
@@ -154,4 +170,88 @@ func Migrate(ctx *middleware.Context, form auth.MigrateRepoForm) {
 		"ok":    false,
 		"error": err.Error(),
 	})
+}
+
+// /user/repos: https://developer.github.com/v3/repos/#list-your-repositories
+func ListMyRepos(ctx *middleware.Context) {
+	if !ctx.IsSigned {
+		ctx.Error(403)
+		return
+	}
+
+	ownRepos, err := models.GetRepositories(ctx.User.Id, true)
+	if err != nil {
+		ctx.JSON(500, map[string]interface{}{
+			"ok":    false,
+			"error": err.Error(),
+		})
+		return
+	}
+	numOwnRepos := len(ownRepos)
+
+	collaRepos, err := models.GetCollaborativeRepos(ctx.User.Name)
+	if err != nil {
+		ctx.JSON(500, map[string]interface{}{
+			"ok":    false,
+			"error": err.Error(),
+		})
+		return
+	}
+
+	sshUrlFmt := "%s@%s:%s/%s.git"
+	if setting.SshPort != 22 {
+		sshUrlFmt = "ssh://%s@%s:%d/%s/%s.git"
+	}
+
+	repos := make([]*ApiRepository, numOwnRepos+len(collaRepos))
+	// FIXME: make only one loop
+	for i := range ownRepos {
+		repos[i] = &ApiRepository{
+			Id: ownRepos[i].Id,
+			Owner: ApiUser{
+				Id:        ctx.User.Id,
+				UserName:  ctx.User.Name,
+				AvatarUrl: string(setting.Protocol) + ctx.User.AvatarLink(),
+			},
+			FullName:    ctx.User.Name + "/" + ownRepos[i].Name,
+			Private:     ownRepos[i].IsPrivate,
+			Fork:        ownRepos[i].IsFork,
+			HtmlUrl:     setting.AppUrl + ctx.User.Name + "/" + ownRepos[i].Name,
+			SshUrl:      fmt.Sprintf(sshUrlFmt, setting.RunUser, setting.Domain, ctx.User.LowerName, ownRepos[i].LowerName),
+			Permissions: ApiPermission{true, true, true},
+		}
+		repos[i].CloneUrl = repos[i].HtmlUrl + ".git"
+	}
+	for i := range collaRepos {
+		if err = collaRepos[i].GetOwner(); err != nil {
+			ctx.JSON(500, map[string]interface{}{
+				"ok":    false,
+				"error": err.Error(),
+			})
+			return
+		}
+		j := i + numOwnRepos
+		repos[j] = &ApiRepository{
+			Id: collaRepos[i].Id,
+			Owner: ApiUser{
+				Id:        collaRepos[i].Owner.Id,
+				UserName:  collaRepos[i].Owner.Name,
+				AvatarUrl: string(setting.Protocol) + collaRepos[i].Owner.AvatarLink(),
+			},
+			FullName:    collaRepos[i].Owner.Name + "/" + collaRepos[i].Name,
+			Private:     collaRepos[i].IsPrivate,
+			Fork:        collaRepos[i].IsFork,
+			HtmlUrl:     setting.AppUrl + collaRepos[i].Owner.Name + "/" + collaRepos[i].Name,
+			SshUrl:      fmt.Sprintf(sshUrlFmt, setting.RunUser, setting.Domain, collaRepos[i].Owner.LowerName, collaRepos[i].LowerName),
+			Permissions: ApiPermission{false, collaRepos[i].CanPush, true},
+		}
+		repos[j].CloneUrl = repos[j].HtmlUrl + ".git"
+
+		// FIXME: cache result to reduce DB query?
+		if collaRepos[i].Owner.IsOrganization() && collaRepos[i].Owner.IsOrgOwner(ctx.User.Id) {
+			repos[j].Permissions.Admin = true
+		}
+	}
+
+	ctx.JSON(200, &repos)
 }

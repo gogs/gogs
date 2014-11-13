@@ -157,7 +157,7 @@ func runWeb(*cli.Context) {
 		m.Get("/issues", user.Issues)
 	}, reqSignIn)
 
-	// API routers.
+	// API.
 	m.Group("/api", func() {
 		m.Group("/v1", func() {
 			// Miscellaneous.
@@ -170,9 +170,14 @@ func runWeb(*cli.Context) {
 			})
 
 			// Repositories.
+			m.Get("/user/repos", v1.ListMyRepos)
 			m.Group("/repos", func() {
 				m.Get("/search", v1.SearchRepos)
 				m.Post("/migrate", bindIgnErr(auth.MigrateRepoForm{}), v1.Migrate)
+
+				m.Group("/:username/:reponame", func() {
+					m.Combo("/hooks").Get(v1.ListRepoHooks)
+				}, middleware.ApiRepoAssignment())
 			})
 
 			m.Any("/*", func(ctx *middleware.Context) {
@@ -181,7 +186,7 @@ func runWeb(*cli.Context) {
 		})
 	})
 
-	// User routers.
+	// User.
 	m.Group("/user", func() {
 		m.Get("/login", user.SignIn)
 		m.Post("/login", bindIgnErr(auth.SignInForm{}), user.SignInPost)

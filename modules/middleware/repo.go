@@ -18,6 +18,102 @@ import (
 	"github.com/gogits/gogs/modules/setting"
 )
 
+// FIXME: response error in JSON.
+func ApiRepoAssignment() macaron.Handler {
+	return func(ctx *Context) {
+		userName := ctx.Params(":username")
+		repoName := ctx.Params(":reponame")
+
+		var (
+			u   *models.User
+			err error
+		)
+
+		// Collaborators who have write access can be seen as owners.
+		if ctx.IsSigned {
+			ctx.Repo.IsOwner, err = models.HasAccess(ctx.User.Name, userName+"/"+repoName, models.WRITABLE)
+			if err != nil {
+				ctx.Handle(500, "HasAccess", err)
+				return
+			}
+			ctx.Repo.IsTrueOwner = ctx.User.LowerName == strings.ToLower(userName)
+		}
+
+		if !ctx.Repo.IsTrueOwner {
+			u, err = models.GetUserByName(userName)
+			if err != nil {
+				if err == models.ErrUserNotExist {
+					ctx.Error(404)
+				} else {
+					ctx.Handle(500, "GetUserByName", err)
+				}
+				return
+			}
+		} else {
+			u = ctx.User
+		}
+		ctx.Repo.Owner = u
+
+		// Organization owner team members are true owners as well.
+		if ctx.IsSigned && ctx.Repo.Owner.IsOrganization() && ctx.Repo.Owner.IsOrgOwner(ctx.User.Id) {
+			ctx.Repo.IsTrueOwner = true
+		}
+
+		// Get repository.
+		repo, err := models.GetRepositoryByName(u.Id, repoName)
+		if err != nil {
+			if err == models.ErrRepoNotExist {
+				ctx.Error(404)
+				return
+			}
+			ctx.Handle(500, "GetRepositoryByName", err)
+			return
+		} else if err = repo.GetOwner(); err != nil {
+			ctx.Handle(500, "GetOwner", err)
+			return
+		}
+
+		// Check if the mirror repository owner(mirror repository doesn't have access).
+		if ctx.IsSigned && !ctx.Repo.IsOwner {
+			if repo.OwnerId == ctx.User.Id {
+				ctx.Repo.IsOwner = true
+			}
+			// Check if current user has admin permission to repository.
+			if u.IsOrganization() {
+				auth, err := models.GetHighestAuthorize(u.Id, ctx.User.Id, repo.Id, 0)
+				if err != nil {
+					ctx.Handle(500, "GetHighestAuthorize", err)
+					return
+				}
+				if auth == models.ORG_ADMIN {
+					ctx.Repo.IsOwner = true
+					ctx.Repo.IsAdmin = true
+				}
+			}
+		}
+
+		// Check access.
+		if repo.IsPrivate && !ctx.Repo.IsOwner {
+			if ctx.User == nil {
+				ctx.Error(404)
+				return
+			}
+
+			hasAccess, err := models.HasAccess(ctx.User.Name, ctx.Repo.Owner.Name+"/"+repo.Name, models.READABLE)
+			if err != nil {
+				ctx.Handle(500, "HasAccess", err)
+				return
+			} else if !hasAccess {
+				ctx.Error(404)
+				return
+			}
+		}
+		ctx.Repo.HasAccess = true
+
+		ctx.Repo.Repository = repo
+	}
+}
+
 // RepoRef handles repository reference name including those contain `/`.
 func RepoRef() macaron.Handler {
 	return func(ctx *Context) {

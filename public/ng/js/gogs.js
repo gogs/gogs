@@ -210,7 +210,7 @@ var Gogs = {};
                 if (json.ok && json.data.length) {
                     var html = '';
                     $.each(json.data, function (i, item) {
-                        html += '<li><a><img src="' + item.avatar + '">' + item.username + '</a></li>';
+                        html += '<li><a><img src="' + item.avatar_url + '">' + item.username + '</a></li>';
                     });
                     $target.html(html);
                     $target.toggleShow();
@@ -230,7 +230,7 @@ var Gogs = {};
                 if (json.ok && json.data.length) {
                     var html = '';
                     $.each(json.data, function (i, item) {
-                        html += '<li><a><span class="octicon octicon-repo"></span> ' + item.repolink + '</a></li>';
+                        html += '<li><a><span class="octicon octicon-repo"></span> ' + item.full_name + '</a></li>';
                     });
                     $target.html(html);
                     $target.toggleShow();
