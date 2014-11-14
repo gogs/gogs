@@ -72,6 +72,8 @@ type Webhook struct {
 	HookTaskType HookTaskType
 	Meta         string `xorm:"TEXT"` // store hook-specific attributes
 	OrgId        int64
+	Created      time.Time `xorm:"CREATED"`
+	Updated      time.Time `xorm:"UPDATED"`
 }
 
 // GetEvent handles conversion from Events to HookEvent.

@@ -13,12 +13,12 @@ import (
 	"github.com/Unknwon/macaron"
 
 	"github.com/gogits/gogs/models"
+	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/git"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/setting"
 )
 
-// FIXME: response error in JSON.
 func ApiRepoAssignment() macaron.Handler {
 	return func(ctx *Context) {
 		userName := ctx.Params(":username")
@@ -33,7 +33,7 @@ func ApiRepoAssignment() macaron.Handler {
 		if ctx.IsSigned {
 			ctx.Repo.IsOwner, err = models.HasAccess(ctx.User.Name, userName+"/"+repoName, models.WRITABLE)
 			if err != nil {
-				ctx.Handle(500, "HasAccess", err)
+				ctx.JSON(500, &base.ApiJsonErr{"HasAccess: " + err.Error(), base.DOC_URL})
 				return
 			}
 			ctx.Repo.IsTrueOwner = ctx.User.LowerName == strings.ToLower(userName)
@@ -45,7 +45,7 @@ func ApiRepoAssignment() macaron.Handler {
 				if err == models.ErrUserNotExist {
 					ctx.Error(404)
 				} else {
-					ctx.Handle(500, "GetUserByName", err)
+					ctx.JSON(500, &base.ApiJsonErr{"GetUserByName: " + err.Error(), base.DOC_URL})
 				}
 				return
 			}
@@ -66,10 +66,10 @@ func ApiRepoAssignment() macaron.Handler {
 				ctx.Error(404)
 				return
 			}
-			ctx.Handle(500, "GetRepositoryByName", err)
+			ctx.JSON(500, &base.ApiJsonErr{"GetRepositoryByName: " + err.Error(), base.DOC_URL})
 			return
 		} else if err = repo.GetOwner(); err != nil {
-			ctx.Handle(500, "GetOwner", err)
+			ctx.JSON(500, &base.ApiJsonErr{"GetOwner: " + err.Error(), base.DOC_URL})
 			return
 		}
 
@@ -82,7 +82,7 @@ func ApiRepoAssignment() macaron.Handler {
 			if u.IsOrganization() {
 				auth, err := models.GetHighestAuthorize(u.Id, ctx.User.Id, repo.Id, 0)
 				if err != nil {
-					ctx.Handle(500, "GetHighestAuthorize", err)
+					ctx.JSON(500, &base.ApiJsonErr{"GetHighestAuthorize: " + err.Error(), base.DOC_URL})
 					return
 				}
 				if auth == models.ORG_ADMIN {
@@ -101,7 +101,7 @@ func ApiRepoAssignment() macaron.Handler {
 
 			hasAccess, err := models.HasAccess(ctx.User.Name, ctx.Repo.Owner.Name+"/"+repo.Name, models.READABLE)
 			if err != nil {
-				ctx.Handle(500, "HasAccess", err)
+				ctx.JSON(500, &base.ApiJsonErr{"HasAccess: " + err.Error(), base.DOC_URL})
 				return
 			} else if !hasAccess {
 				ctx.Error(404)

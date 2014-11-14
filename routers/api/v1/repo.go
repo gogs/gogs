@@ -11,30 +11,14 @@ import (
 
 	"github.com/Unknwon/com"
 
+	api "github.com/gogits/go-gogs-client"
+
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/middleware"
 	"github.com/gogits/gogs/modules/setting"
 )
-
-type ApiPermission struct {
-	Admin bool `json:"admin"`
-	Push  bool `json:"push"`
-	Pull  bool `json:"pull"`
-}
-
-type ApiRepository struct {
-	Id          int64         `json:"id"`
-	Owner       ApiUser       `json:"owner"`
-	FullName    string        `json:"full_name"`
-	Private     bool          `json:"private"`
-	Fork        bool          `json:"fork"`
-	HtmlUrl     string        `json:"html_url"`
-	CloneUrl    string        `json:"clone_url"`
-	SshUrl      string        `json:"ssh_url"`
-	Permissions ApiPermission `json:"permissions"`
-}
 
 func SearchRepos(ctx *middleware.Context) {
 	opt := models.SearchOption{
@@ -75,7 +59,7 @@ func SearchRepos(ctx *middleware.Context) {
 		return
 	}
 
-	results := make([]*ApiRepository, len(repos))
+	results := make([]*api.Repository, len(repos))
 	for i := range repos {
 		if err = repos[i].GetOwner(); err != nil {
 			ctx.JSON(500, map[string]interface{}{
@@ -84,7 +68,7 @@ func SearchRepos(ctx *middleware.Context) {
 			})
 			return
 		}
-		results[i] = &ApiRepository{
+		results[i] = &api.Repository{
 			Id:       repos[i].Id,
 			FullName: path.Join(repos[i].Owner.Name, repos[i].Name),
 		}
@@ -199,12 +183,12 @@ func ListMyRepos(ctx *middleware.Context) {
 		sshUrlFmt = "ssh://%s@%s:%d/%s/%s.git"
 	}
 
-	repos := make([]*ApiRepository, numOwnRepos+len(collaRepos))
+	repos := make([]*api.Repository, numOwnRepos+len(collaRepos))
 	// FIXME: make only one loop
 	for i := range ownRepos {
-		repos[i] = &ApiRepository{
+		repos[i] = &api.Repository{
 			Id: ownRepos[i].Id,
-			Owner: ApiUser{
+			Owner: api.User{
 				Id:        ctx.User.Id,
 				UserName:  ctx.User.Name,
 				AvatarUrl: string(setting.Protocol) + ctx.User.AvatarLink(),
@@ -214,7 +198,7 @@ func ListMyRepos(ctx *middleware.Context) {
 			Fork:        ownRepos[i].IsFork,
 			HtmlUrl:     setting.AppUrl + ctx.User.Name + "/" + ownRepos[i].Name,
 			SshUrl:      fmt.Sprintf(sshUrlFmt, setting.RunUser, setting.Domain, ctx.User.LowerName, ownRepos[i].LowerName),
-			Permissions: ApiPermission{true, true, true},
+			Permissions: api.Permission{true, true, true},
 		}
 		repos[i].CloneUrl = repos[i].HtmlUrl + ".git"
 	}
@@ -227,9 +211,9 @@ func ListMyRepos(ctx *middleware.Context) {
 			return
 		}
 		j := i + numOwnRepos
-		repos[j] = &ApiRepository{
+		repos[j] = &api.Repository{
 			Id: collaRepos[i].Id,
-			Owner: ApiUser{
+			Owner: api.User{
 				Id:        collaRepos[i].Owner.Id,
 				UserName:  collaRepos[i].Owner.Name,
 				AvatarUrl: string(setting.Protocol) + collaRepos[i].Owner.AvatarLink(),
@@ -239,7 +223,7 @@ func ListMyRepos(ctx *middleware.Context) {
 			Fork:        collaRepos[i].IsFork,
 			HtmlUrl:     setting.AppUrl + collaRepos[i].Owner.Name + "/" + collaRepos[i].Name,
 			SshUrl:      fmt.Sprintf(sshUrlFmt, setting.RunUser, setting.Domain, collaRepos[i].Owner.LowerName, collaRepos[i].LowerName),
-			Permissions: ApiPermission{false, collaRepos[i].CanPush, true},
+			Permissions: api.Permission{false, collaRepos[i].CanPush, true},
 		}
 		repos[j].CloneUrl = repos[j].HtmlUrl + ".git"
 
