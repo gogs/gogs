@@ -13,6 +13,7 @@ github.com/codegangsta/cli = commit:7381bc4e62
 github.com/go-sql-driver/mysql = commit:8111ee3ec3
 github.com/go-xorm/core = 
 github.com/go-xorm/xorm = 
+github.com/gogits/go-gogs-client = 
 github.com/gogits/oauth2 = commit:99cbec870a
 github.com/lib/pq = commit:b021d0ef20
 github.com/macaron-contrib/binding = 

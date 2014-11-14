@@ -4,6 +4,8 @@
 
 package base
 
+const DOC_URL = "http://gogs.io/docs"
+
 type (
 	TplName string
 

@@ -184,7 +184,7 @@ func runWeb(*cli.Context) {
 			})
 
 			m.Any("/*", func(ctx *middleware.Context) {
-				ctx.JSON(404, &base.ApiJsonErr{"Not Found", v1.DOC_URL})
+				ctx.JSON(404, &base.ApiJsonErr{"Not Found", base.DOC_URL})
 			})
 		})
 	})

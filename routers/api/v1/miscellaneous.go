@@ -13,12 +13,10 @@ import (
 	"github.com/gogits/gogs/modules/setting"
 )
 
-const DOC_URL = "http://gogs.io/docs"
-
 // Render an arbitrary Markdown document.
 func Markdown(ctx *middleware.Context, form apiv1.MarkdownForm) {
 	if ctx.HasApiError() {
-		ctx.JSON(422, base.ApiJsonErr{ctx.GetErrMsg(), DOC_URL})
+		ctx.JSON(422, base.ApiJsonErr{ctx.GetErrMsg(), base.DOC_URL})
 		return
 	}
 
@@ -35,7 +33,7 @@ func Markdown(ctx *middleware.Context, form apiv1.MarkdownForm) {
 func MarkdownRaw(ctx *middleware.Context) {
 	body, err := ctx.Req.Body().Bytes()
 	if err != nil {
-		ctx.JSON(422, base.ApiJsonErr{err.Error(), DOC_URL})
+		ctx.JSON(422, base.ApiJsonErr{err.Error(), base.DOC_URL})
 		return
 	}
 	ctx.Write(base.RenderRawMarkdown(body, ""))

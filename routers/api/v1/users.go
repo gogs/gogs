@@ -7,15 +7,11 @@ package v1
 import (
 	"github.com/Unknwon/com"
 
+	api "github.com/gogits/go-gogs-client"
+
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/middleware"
 )
-
-type ApiUser struct {
-	Id        int64  `json:"id"`
-	UserName  string `json:"username"`
-	AvatarUrl string `json:"avatar_url"`
-}
 
 func SearchUsers(ctx *middleware.Context) {
 	opt := models.SearchOption{
@@ -35,9 +31,9 @@ func SearchUsers(ctx *middleware.Context) {
 		return
 	}
 
-	results := make([]*ApiUser, len(us))
+	results := make([]*api.User, len(us))
 	for i := range us {
-		results[i] = &ApiUser{
+		results[i] = &api.User{
 			UserName:  us[i].Name,
 			AvatarUrl: us[i].AvatarLink(),
 		}
