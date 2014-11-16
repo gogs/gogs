@@ -85,6 +85,9 @@ func newMacaron() *macaron.Macaron {
 	if setting.EnableGzip {
 		m.Use(macaron.Gziper())
 	}
+	if setting.Protocol == setting.FCGI {
+		m.SetURLPrefix(setting.AppSubUrl)
+	}
 	m.Use(macaron.Static(
 		path.Join(setting.StaticRootPath, "public"),
 		macaron.StaticOptions{
