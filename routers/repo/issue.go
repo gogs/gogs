@@ -1125,3 +1125,11 @@ func IssueGetAttachment(ctx *middleware.Context) {
 func Issues2(ctx *middleware.Context){
 	ctx.HTML(200,"repo/issue2/list")
 }
+
+func PullRequest2(ctx *middleware.Context){
+	ctx.HTML(200,"repo/pr2/list")
+}
+
+func Labels2(ctx *middleware.Context){
+	ctx.HTML(200,"repo/issue2/labels")
+}
