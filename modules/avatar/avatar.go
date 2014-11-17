@@ -33,11 +33,17 @@ import (
 	"github.com/nfnt/resize"
 
 	"github.com/gogits/gogs/modules/log"
+	"github.com/gogits/gogs/modules/setting"
 )
 
-var (
-	gravatar = "http://www.gravatar.com/avatar"
-)
+var gravatarSource string
+
+func init() {
+	gravatarSource = setting.GravatarSource
+	if !strings.HasPrefix(gravatarSource, "http:") {
+		gravatarSource = "http:" + gravatarSource
+	}
+}
 
 // hash email to md5 string
 // keep this func in order to make this package indenpent
@@ -121,7 +127,7 @@ func (this *Avatar) Encode(wr io.Writer, size int) (err error) {
 
 // get image from gravatar.com
 func (this *Avatar) Update() {
-	thunder.Fetch(gravatar+"/"+this.Hash+"?"+this.reqParams,
+	thunder.Fetch(gravatarSource+this.Hash+"?"+this.reqParams,
 		this.imagePath)
 }
 
@@ -129,7 +135,7 @@ func (this *Avatar) UpdateTimeout(timeout time.Duration) (err error) {
 	select {
 	case <-time.After(timeout):
 		err = fmt.Errorf("get gravatar image %s timeout", this.Hash)
-	case err = <-thunder.GoFetch(gravatar+"/"+this.Hash+"?"+this.reqParams,
+	case err = <-thunder.GoFetch(gravatarSource+this.Hash+"?"+this.reqParams,
 		this.imagePath):
 	}
 	return err

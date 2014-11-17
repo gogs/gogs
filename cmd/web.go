@@ -183,6 +183,7 @@ func runWeb(*cli.Context) {
 				m.Group("/:username/:reponame", func() {
 					m.Combo("/hooks").Get(v1.ListRepoHooks).Post(bind(v1.CreateRepoHookForm{}), v1.CreateRepoHook)
 					m.Patch("/hooks/:id:int", bind(v1.EditRepoHookForm{}), v1.EditRepoHook)
+					m.Get("/raw/*", middleware.RepoRef(), v1.GetRepoRawFile)
 				}, middleware.ApiRepoAssignment(), middleware.ApiReqToken())
 			})
 

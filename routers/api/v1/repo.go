@@ -15,6 +15,7 @@ import (
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
+	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/middleware"
 	"github.com/gogits/gogs/modules/setting"
@@ -161,20 +162,14 @@ func Migrate(ctx *middleware.Context, form auth.MigrateRepoForm) {
 func ListMyRepos(ctx *middleware.Context) {
 	ownRepos, err := models.GetRepositories(ctx.User.Id, true)
 	if err != nil {
-		ctx.JSON(500, map[string]interface{}{
-			"ok":    false,
-			"error": err.Error(),
-		})
+		ctx.JSON(500, &base.ApiJsonErr{"GetRepositories: " + err.Error(), base.DOC_URL})
 		return
 	}
 	numOwnRepos := len(ownRepos)
 
 	collaRepos, err := models.GetCollaborativeRepos(ctx.User.Name)
 	if err != nil {
-		ctx.JSON(500, map[string]interface{}{
-			"ok":    false,
-			"error": err.Error(),
-		})
+		ctx.JSON(500, &base.ApiJsonErr{"GetCollaborativeRepos: " + err.Error(), base.DOC_URL})
 		return
 	}
 
@@ -204,10 +199,7 @@ func ListMyRepos(ctx *middleware.Context) {
 	}
 	for i := range collaRepos {
 		if err = collaRepos[i].GetOwner(); err != nil {
-			ctx.JSON(500, map[string]interface{}{
-				"ok":    false,
-				"error": err.Error(),
-			})
+			ctx.JSON(500, &base.ApiJsonErr{"GetOwner: " + err.Error(), base.DOC_URL})
 			return
 		}
 		j := i + numOwnRepos
