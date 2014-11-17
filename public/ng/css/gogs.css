@@ -1427,6 +1427,7 @@ The register and sign-in page style
 }
 .code-view .lines-code > pre > ol.linenums > li {
   padding: 0 10px;
+  line-height: 20px;
 }
 .code-view .lines-code > pre > ol.linenums > li.active {
   background: #ffffdd;
