@@ -67,6 +67,7 @@ type User struct {
 	Website       string
 	IsActive      bool
 	IsAdmin       bool
+	AllowGitHook  bool
 	Rands         string    `xorm:"VARCHAR(10)"`
 	Salt          string    `xorm:"VARCHAR(10)"`
 	Created       time.Time `xorm:"CREATED"`

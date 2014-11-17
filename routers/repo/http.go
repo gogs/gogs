@@ -14,9 +14,9 @@ import (
 	"os"
 	"os/exec"
 	"path"
-
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -184,6 +184,7 @@ func Http(ctx *middleware.Context) {
 
 	handler := HttpBackend(&config)
 	handler(ctx.Resp, ctx.Req.Request)
+	runtime.GC()
 }
 
 type route struct {

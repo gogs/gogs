@@ -454,7 +454,7 @@ func RequireTrueOwner() macaron.Handler {
 // GitHookService checks if repsitory Git hooks service has been enabled.
 func GitHookService() macaron.Handler {
 	return func(ctx *Context) {
-		if !setting.Service.EnableGitHooks {
+		if !ctx.User.AllowGitHook && !ctx.User.IsAdmin {
 			ctx.Handle(404, "GitHookService", nil)
 			return
 		}

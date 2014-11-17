@@ -174,7 +174,7 @@ func EditUserPost(ctx *middleware.Context, form auth.AdminEditUserForm) {
 		return
 	}
 
-	// NOTE: need password length check?
+	// FIXME: need password length check
 	if len(form.Passwd) > 0 {
 		u.Passwd = form.Passwd
 		u.Salt = models.GetUserSalt()
@@ -191,6 +191,7 @@ func EditUserPost(ctx *middleware.Context, form auth.AdminEditUserForm) {
 	u.AvatarEmail = form.Avatar
 	u.IsActive = form.Active
 	u.IsAdmin = form.Admin
+	u.AllowGitHook = form.AllowGitHook
 	if err := models.UpdateUser(u); err != nil {
 		ctx.Handle(500, "UpdateUser", err)
 		return
