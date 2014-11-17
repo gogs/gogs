@@ -122,6 +122,17 @@ func RepoRef() macaron.Handler {
 			err     error
 		)
 
+		// For API calls.
+		if ctx.Repo.GitRepo == nil {
+			repoPath := models.RepoPath(ctx.Repo.Owner.Name, ctx.Repo.Repository.Name)
+			gitRepo, err := git.OpenRepository(repoPath)
+			if err != nil {
+				ctx.Handle(500, "RepoRef Invalid repo "+repoPath, err)
+				return
+			}
+			ctx.Repo.GitRepo = gitRepo
+		}
+
 		// Get default branch.
 		if len(ctx.Params("*")) == 0 {
 			refName = ctx.Repo.Repository.DefaultBranch

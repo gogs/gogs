@@ -9,20 +9,14 @@ import (
 	"path"
 
 	"github.com/gogits/gogs/modules/base"
+	"github.com/gogits/gogs/modules/git"
 	"github.com/gogits/gogs/modules/middleware"
 )
 
-func SingleDownload(ctx *middleware.Context) {
-	blob, err := ctx.Repo.Commit.GetBlobByPath(ctx.Repo.TreeName)
-	if err != nil {
-		ctx.Handle(500, "GetBlobByPath", err)
-		return
-	}
-
+func ServeBlob(ctx *middleware.Context, blob *git.Blob) error {
 	dataRc, err := blob.Data()
 	if err != nil {
-		ctx.Handle(500, "Data", err)
-		return
+		return err
 	}
 
 	buf := make([]byte, 1024)
@@ -40,4 +34,20 @@ func SingleDownload(ctx *middleware.Context) {
 	}
 	ctx.Resp.Write(buf)
 	io.Copy(ctx.Resp, dataRc)
+	return nil
+}
+
+func SingleDownload(ctx *middleware.Context) {
+	blob, err := ctx.Repo.Commit.GetBlobByPath(ctx.Repo.TreeName)
+	if err != nil {
+		if err == git.ErrNotExist {
+			ctx.Handle(404, "GetBlobByPath", nil)
+		} else {
+			ctx.Handle(500, "GetBlobByPath", err)
+		}
+		return
+	}
+	if err = ServeBlob(ctx, blob); err != nil {
+		ctx.Handle(500, "ServeBlob", err)
+	}
 }
