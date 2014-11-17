@@ -1,0 +1,36 @@
+{{template "ng/base/head" .}}
+{{template "ng/base/header" .}}
+<div id="repo-wrapper">
+    {{template "repo/header" .}}
+    <div class="issue-main container repo-wide-wrapper">
+        <ul id="issue-list-nav" class="menu menu-line">
+            <li><a href="#">Issue</a></li>
+            <li><a href="#">Pull Request</a></li>
+            <li class="current"><a href="#">Labels</a></li>
+            <li><a href="#">Milestones</a></li>
+            <li class="right" id="issue-new"><a href="#"><button id="issue-new-btn" class="btn btn-green text-bold">New Issue</button></a></li>
+            <li class="right"><a href="#">Filter</a></li>
+        </ul>
+        <div id="issue-list-container">
+            <div id="issue-list-menu">
+                <div class="left"><span class="label label-black" id="labels-num">6</span><strong>Labels</strong></div>
+                <div class="clear"></div>
+            </div>
+            <ul id="label-list" class="list-no-style">
+                <li class="item" id="label-id">
+                    <a class="right" href="#"><i class="octicon octicon-x"></i>Delete</a>
+                    <a class="right" href="#"><i class="octicon octicon-pencil"></i>Edit</a>
+                    <a class="right issue-num" href="#"><i class="octicon octicon-issue-opened"></i><strong class="num">12</strong>Issues</a>
+                    <a class="left label clear" href="#" style="background-color: red"><i class="octicon octicon-tag"></i><strong>bug</strong></a>
+                </li>
+                <li class="item" id="label-id">
+                    <a class="right" href="#"><i class="octicon octicon-x"></i>Delete</a>
+                    <a class="right" href="#"><i class="octicon octicon-pencil"></i>Edit</a>
+                    <a class="right issue-num" href="#"><i class="octicon octicon-issue-opened"></i><strong class="num">12</strong>Issues</a>
+                    <a class="left label clear" href="#" style="background-color: red"><i class="octicon octicon-tag"></i><strong>bug</strong></a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</div>
+{{template "ng/base/footer" .}}

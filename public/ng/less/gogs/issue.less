@@ -223,19 +223,19 @@ textarea#issue-add-content {
 }
 // #issue list navigator
 #issue-list-nav {
+  border-bottom: 1px solid #DDD;
+  padding-bottom: 12px;
   li {
     > a {
       font-size: 13px;
       font-weight: bold;
-      padding: .4em .9em;
-      border-radius: .3em;
+      padding: .2em .8em;
     }
   }
   li.current {
     > a {
       background-color: #0079bc;
       color: #FAFAFA;
-      border-radius: .3em;
     }
   }
   li.right {
@@ -247,7 +247,7 @@ textarea#issue-add-content {
   > a {
     padding: 0 !important;
     button {
-      height: 34px;
+      height: 29px;
     }
   }
 }
@@ -282,7 +282,8 @@ textarea#issue-add-content {
   }
 }
 // each issue list item
-#issue-list {
+#issue-list,
+#pull-list {
   .item {
     position: relative;
     padding-bottom: 12px;
@@ -293,6 +294,9 @@ textarea#issue-add-content {
       font-size: 15px;
       margin: 0 6px;
     }
+    .index-num {
+      padding: .25em .6em;
+    }
   }
   .comment {
     color: #666;
@@ -301,6 +305,7 @@ textarea#issue-add-content {
     right: 0;
   }
   .issue-label {
+    padding: .25em .6em;
     a {
       color: #FFF;
     }
@@ -319,4 +324,43 @@ textarea#issue-add-content {
 #issue-list-pager {
   margin: 18px 0 24px 0;
   font-size: 14px;
+  line-height: 24px;
+}
+// labels numbers
+#labels-num {
+  margin-right: 1em;
+}
+// labels list
+#label-list {
+  .right {
+    margin-left: 1em;
+    color: #999;
+    i {
+      margin-right: 3px;
+    }
+    line-height: 30px;
+    &:hover {
+      color: #444444;
+    }
+  }
+  .num {
+    margin-right: 3px;
+  }
+  .issue-num {
+    margin-right: 4em;
+  }
+  .label {
+    &:hover {
+      color: #FFF;
+    }
+    i {
+      margin-right: 6px;
+    }
+  }
+  .item {
+    height: 30px;
+    padding-bottom: 12px;
+    margin-bottom: 12px;
+    border-bottom: 1px dashed #AAA;
+  }
 }

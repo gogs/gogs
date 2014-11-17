@@ -735,7 +735,7 @@ ul.menu-radius > li:last-child > a {
   border-color: #F0C36D;
 }
 .label {
-  padding: 2px 6px;
+  padding: .3em .6em .2em .6em;
   color: #ffffff;
 }
 .label-red {
@@ -882,8 +882,8 @@ table td {
   border-bottom-right-radius: .3em;
 }
 .pager .page {
-  padding: 2px 6px;
-  margin: 0 3px;
+  padding: .3em .5em .2em .5em;
+  margin: 0 .3em;
   background-color: #cccccc;
   color: #444444;
 }
@@ -894,8 +894,8 @@ table td {
 }
 .pager .prev,
 .pager .next {
-  padding: 2px 8px;
-  margin: 0 4px;
+  padding: .4em .6em;
+  margin: 0 .3em;
   background-color: #505050;
   color: #fafafa;
 }
