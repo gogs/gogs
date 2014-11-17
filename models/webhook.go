@@ -207,6 +207,7 @@ const (
 	PUSH HookEventType = "push"
 )
 
+// FIXME: just use go-gogs-client structs maybe?
 type PayloadAuthor struct {
 	Name     string `json:"name"`
 	Email    string `json:"email"`

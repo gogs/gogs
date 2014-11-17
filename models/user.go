@@ -100,7 +100,7 @@ func (u *User) AvatarLink() string {
 	} else if setting.Service.EnableCacheAvatar {
 		return setting.AppSubUrl + "/avatar/" + u.Avatar
 	}
-	return "//1.gravatar.com/avatar/" + u.Avatar
+	return setting.GravatarSource + u.Avatar
 }
 
 // NewGitSig generates and returns the signature of given user.
