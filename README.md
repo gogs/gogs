@@ -74,7 +74,7 @@ There are 5 ways to install Gogs:
 - Usage and modification from [beego](http://beego.me) modules.
 - Thanks [lavachen](http://www.lavachen.cn/) and [Rocker](http://weibo.com/rocker1989) for designing Logo.
 - Thanks [gobuild.io](http://gobuild.io) for providing binary compile and download service.
-- Thanks to [Crowdin](https://crowdin.com/project/gogs) for providing open source translation plan.
+- Thanks [Crowdin](https://crowdin.com/project/gogs) for providing open source translation plan.
 
 ## Contributors
 
