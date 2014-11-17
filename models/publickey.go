@@ -81,7 +81,7 @@ type PublicKey struct {
 	Id                int64
 	OwnerId           int64     `xorm:"UNIQUE(s) INDEX NOT NULL"`
 	Name              string    `xorm:"UNIQUE(s) NOT NULL"`
-	Fingerprint       string    `xorm:"INDEX NOT NULL"`
+	Fingerprint       string    `xorm:"UNIQUE NOT NULL"`
 	Content           string    `xorm:"TEXT NOT NULL"`
 	Created           time.Time `xorm:"CREATED"`
 	Updated           time.Time
