@@ -56,15 +56,19 @@
 	                                <label></label>
 			                        <input type="checkbox" name="active" {{if .User.IsActive}}checked{{end}}>
 			                        <strong>{{.i18n.Tr "admin.users.is_activated"}}</strong>
-			                        <br>
-	                                <label></label>
-			                        <input type="checkbox" name="admin" {{if .User.IsAdmin}}checked{{end}}>
-			                        <strong>{{.i18n.Tr "admin.users.is_admin"}}</strong>
+                                    <br>
+                                    <label></label>
+                                    <input type="checkbox" name="admin" {{if .User.IsAdmin}}checked{{end}}>
+                                    <strong>{{.i18n.Tr "admin.users.is_admin"}}</strong>
+                                    <br>
+                                    <label></label>
+                                    <input type="checkbox" name="allow_git_hook" {{if .User.AllowGitHook}}checked{{end}}>
+                                    <strong>{{.i18n.Tr "admin.users.allow_git_hook"}}</strong>
 	                            </div>
 					            <div class="field">
 					                <label></label>
                                 	<button class="btn btn-green btn-large btn-radius">{{.i18n.Tr "admin.users.update_profile"}}</button>
-					                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+					                &nbsp;&nbsp;&nbsp;&nbsp;
 					                <button class="btn btn-large btn-red btn-radius" id="delete-account-btn" href="#delete-account-modal">{{.i18n.Tr "admin.users.delete_account"}}</button>
 					            </div>
                                 <div class="white-popup-block mfp-hide" id="delete-account-modal">
