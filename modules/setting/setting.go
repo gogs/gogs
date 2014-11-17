@@ -67,6 +67,7 @@ var (
 
 	// Picture settings.
 	PictureService  string
+	GravatarSource  string
 	DisableGravatar bool
 
 	// Log settings.
@@ -257,8 +258,13 @@ func NewConfigContext() {
 	}
 	ScriptType = Cfg.MustValue("repository", "SCRIPT_TYPE", "bash")
 
-	PictureService = Cfg.MustValueRange("picture", "SERVICE", "server",
-		[]string{"server"})
+	PictureService = Cfg.MustValueRange("picture", "SERVICE", "server", []string{"server"})
+	switch Cfg.MustValue("picture", "GRAVATAR_SOURCE", "gravatar") {
+	case "duoshuo":
+		GravatarSource = "http://gravatar.duoshuo.com/avatar/"
+	default:
+		GravatarSource = "//1.gravatar.com/avatar/"
+	}
 	DisableGravatar = Cfg.MustBool("picture", "DISABLE_GRAVATAR")
 
 	MaxGitDiffLines = Cfg.MustInt("git", "MAX_GITDIFF_LINES", 10000)
