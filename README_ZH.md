@@ -35,6 +35,7 @@ Gogs 的目标是打造一个最简单、最快速和最轻松的方式搭建自
 - 支持邮件服务（注册、Issue）
 - 管理员面板
 - Slack Web 钩子集成
+- Drone CI 持续部署集成
 - 支持 MySQL、PostgreSQL 以及 SQLite3 数据库
 - 社交帐号登录（GitHub、Google、QQ、微博）
 - 多语言支持（英文、简体中文、繁体中文、德语、法语、荷兰语以及 [更多]([more](https://crowdin.com/project/gogs))）

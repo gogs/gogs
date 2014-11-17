@@ -44,6 +44,7 @@ The goal of this project is to make the easiest, fastest and most painless way t
 - Mail service(register, issue)
 - Administration panel
 - Slack webhook integration
+- Drone CI integration
 - Supports MySQL, PostgreSQL and SQLite3
 - Social account login(GitHub, Google, QQ, Weibo)
 - Multi-language support(English, Simplified Chinese, Traditional Chinese, Germany, French, Dutch, and [more](https://crowdin.com/project/gogs))
