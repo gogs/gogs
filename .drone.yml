@@ -2,5 +2,6 @@ image: go1.3
 env:
   - GOPATH=/var/cache/drone
 script:
+  - go get -v
   - go build -v
   - go test -v ./...
