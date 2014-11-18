@@ -172,6 +172,14 @@ func runWeb(*cli.Context) {
 			// Users.
 			m.Group("/users", func() {
 				m.Get("/search", v1.SearchUsers)
+
+				m.Group("/:username", func() {
+					m.Get("", v1.GetUserInfo)
+
+					m.Group("/tokens", func() {
+						m.Combo("").Get(v1.ListAccessTokens).Post(bind(v1.CreateAccessTokenForm{}), v1.CreateAccessToken)
+					}, middleware.ApiReqBasicAuth())
+				})
 			})
 
 			// Repositories.
@@ -388,7 +396,7 @@ func runWeb(*cli.Context) {
 		m.Get("/archive/*", repo.Download)
 		m.Get("/issues2/", repo.Issues2)
 		m.Get("/pulls2/", repo.PullRequest2)
-		m.Get("/labels2/",repo.Labels2)
+		m.Get("/labels2/", repo.Labels2)
 
 		m.Group("", func() {
 			m.Get("/src/*", repo.Home)

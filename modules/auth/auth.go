@@ -60,9 +60,9 @@ func SignedInId(req *http.Request, sess session.Store) int64 {
 }
 
 // SignedInUser returns the user object of signed user.
-func SignedInUser(req *http.Request, sess session.Store) *models.User {
+func SignedInUser(req *http.Request, sess session.Store) (*models.User, bool) {
 	if !models.HasEngine {
-		return nil
+		return nil, false
 	}
 
 	uid := SignedInId(req, sess)
@@ -76,9 +76,9 @@ func SignedInUser(req *http.Request, sess session.Store) *models.User {
 					if err != models.ErrUserNotExist {
 						log.Error(4, "GetUserByName: %v", err)
 					}
-					return nil
+					return nil, false
 				}
-				return u
+				return u, false
 			}
 		}
 
@@ -93,23 +93,23 @@ func SignedInUser(req *http.Request, sess session.Store) *models.User {
 					if err != models.ErrUserNotExist {
 						log.Error(4, "GetUserByName: %v", err)
 					}
-					return nil
+					return nil, false
 				}
 
 				if u.ValidtePassword(passwd) {
-					return u
+					return u, true
 				}
 			}
 		}
-		return nil
+		return nil, false
 	}
 
 	u, err := models.GetUserById(uid)
 	if err != nil {
 		log.Error(4, "GetUserById: %v", err)
-		return nil
+		return nil, false
 	}
-	return u
+	return u, false
 }
 
 type Form interface {

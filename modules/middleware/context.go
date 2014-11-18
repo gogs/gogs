@@ -34,8 +34,9 @@ type Context struct {
 	Flash   *session.Flash
 	Session session.Store
 
-	User     *models.User
-	IsSigned bool
+	User        *models.User
+	IsSigned    bool
+	IsBasicAuth bool
 
 	Repo struct {
 		IsOwner     bool
@@ -172,7 +173,7 @@ func Contexter() macaron.Handler {
 		ctx.Data["PageStartTime"] = time.Now()
 
 		// Get user from session if logined.
-		ctx.User = auth.SignedInUser(ctx.Req.Request, ctx.Session)
+		ctx.User, ctx.IsBasicAuth = auth.SignedInUser(ctx.Req.Request, ctx.Session)
 
 		if ctx.User != nil {
 			ctx.IsSigned = true
