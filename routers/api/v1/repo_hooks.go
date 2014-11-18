@@ -107,9 +107,21 @@ func CreateRepoHook(ctx *middleware.Context, form CreateRepoHookForm) {
 		return
 	}
 
-	ctx.JSON(201, map[string]interface{}{
-		"ok": true,
-	})
+	apiHook := &api.Hook{
+		Id:     w.Id,
+		Type:   w.HookTaskType.Name(),
+		Events: []string{"push"},
+		Active: w.IsActive,
+		Config: map[string]string{
+			"url":          w.Url,
+			"content_type": w.ContentType.Name(),
+		},
+	}
+	if w.HookTaskType == models.SLACK {
+		s := w.GetSlackHook()
+		apiHook.Config["channel"] = s.Channel
+	}
+	ctx.JSON(201, apiHook)
 }
 
 type EditRepoHookForm struct {

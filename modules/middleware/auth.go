@@ -76,3 +76,12 @@ func ApiReqToken() macaron.Handler {
 		}
 	}
 }
+
+func ApiReqBasicAuth() macaron.Handler {
+	return func(ctx *Context) {
+		if !ctx.IsBasicAuth {
+			ctx.Error(403)
+			return
+		}
+	}
+}

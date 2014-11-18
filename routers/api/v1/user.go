@@ -10,6 +10,7 @@ import (
 	api "github.com/gogits/go-gogs-client"
 
 	"github.com/gogits/gogs/models"
+	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/middleware"
 )
 
@@ -43,4 +44,18 @@ func SearchUsers(ctx *middleware.Context) {
 		"ok":   true,
 		"data": results,
 	})
+}
+
+// GET /users/:username
+func GetUserInfo(ctx *middleware.Context) {
+	u, err := models.GetUserByName(ctx.Params(":username"))
+	if err != nil {
+		if err == models.ErrUserNotExist {
+			ctx.Error(404)
+		} else {
+			ctx.JSON(500, &base.ApiJsonErr{"GetUserByName: " + err.Error(), base.DOC_URL})
+		}
+		return
+	}
+	ctx.JSON(200, &api.User{u.Id, u.Name, u.FullName, u.Email, u.AvatarLink()})
 }
