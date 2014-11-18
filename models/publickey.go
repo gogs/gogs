@@ -108,6 +108,7 @@ var (
 
 // CheckPublicKeyString checks if the given public key string is recognized by SSH.
 func CheckPublicKeyString(content string) (bool, error) {
+	content = strings.TrimRight(content, "\n\r")
 	if strings.ContainsAny(content, "\n\r") {
 		return false, errors.New("only a single line with a single key please")
 	}
