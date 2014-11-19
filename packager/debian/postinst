@@ -2,18 +2,6 @@
 
 set -e
 
-# summary of how this script can be called:
-#        * <postinst> `configure' <most-recently-configured-version>
-#        * <old-postinst> `abort-upgrade' <new version>
-#        * <conflictor's-postinst> `abort-remove' `in-favour' <package>
-#          <new-version>
-#        * <postinst> `abort-remove'
-#        * <deconfigured's-postinst> `abort-deconfigure' `in-favour'
-#          <failed-install-package> <version> `removing'
-#          <conflicting-package> <version>
-# for details, see http://www.debian.org/doc/debian-policy/ or
-# the debian-policy package
-
 APP_NAME="gogs"
 CLI="${APP_NAME}"
 APP_USER=$(${CLI} config:get APP_USER)
@@ -21,8 +9,11 @@ APP_GROUP=$(${CLI} config:get APP_GROUP)
 APP_CONFIG="/etc/${APP_NAME}/conf/app.ini"
 
 case "$1" in
+  abort-upgrade|abort-remove|abort-deconfigure)
+    exit 0
+  ;;
 
-  configure)
+  configure|*)
     mkdir -p $(dirname ${APP_CONFIG})
     chown ${APP_USER}.${APP_GROUP} $(dirname ${APP_CONFIG})
     [ -f ${APP_CONFIG} ] || ${CLI} run cp conf/app.ini ${APP_CONFIG}
@@ -41,12 +32,4 @@ case "$1" in
     ${CLI} scale web=1 || true
   ;;
 
-  abort-upgrade|abort-remove|abort-deconfigure)
-    exit 0
-  ;;
-
-  *)
-    echo "postinst called with unknown argument \`$1'" >&2
-    exit 1
-  ;;
 esac
