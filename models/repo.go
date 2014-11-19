@@ -1171,6 +1171,18 @@ func SearchRepositoryByName(opt SearchOption) (repos []*Repository, err error) {
 	return repos, err
 }
 
+// DeleteRepositoryArchives deletes all repositories' archives.
+func DeleteRepositoryArchives() error {
+	return x.Where("id > 0").Iterate(new(Repository),
+		func(idx int, bean interface{}) error {
+			repo := bean.(*Repository)
+			if err := repo.GetOwner(); err != nil {
+				return err
+			}
+			return os.RemoveAll(filepath.Join(RepoPath(repo.Owner.Name, repo.Name), "archives"))
+		})
+}
+
 //  __      __         __         .__
 // /  \    /  \_____ _/  |_  ____ |  |__
 // \   \/\/   /\__  \\   __\/ ___\|  |  \

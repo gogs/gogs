@@ -116,6 +116,7 @@ type AdminOperation int
 const (
 	CLEAN_UNBIND_OAUTH AdminOperation = iota + 1
 	CLEAN_INACTIVATE_USER
+	CLEAN_REPO_ARCHIVES
 )
 
 func Dashboard(ctx *middleware.Context) {
@@ -131,11 +132,14 @@ func Dashboard(ctx *middleware.Context) {
 
 		switch AdminOperation(op) {
 		case CLEAN_UNBIND_OAUTH:
-			success = "All unbind OAuthes have been deleted."
+			success = ctx.Tr("admin.dashboard.clean_unbind_oauth_success")
 			err = models.CleanUnbindOauth()
 		case CLEAN_INACTIVATE_USER:
-			success = "All inactivate accounts have been deleted."
+			success = ctx.Tr("admin.dashboard.delete_inactivate_accounts_success")
 			err = models.DeleteInactivateUsers()
+		case CLEAN_REPO_ARCHIVES:
+			success = ctx.Tr("admin.dashboard.delete_repo_archives_success")
+			err = models.DeleteRepositoryArchives()
 		}
 
 		if err != nil {
@@ -148,6 +152,7 @@ func Dashboard(ctx *middleware.Context) {
 	}
 
 	ctx.Data["Stats"] = models.GetStatistic()
+	// FIXME: update periodically
 	updateSystemStatus()
 	ctx.Data["SysStatus"] = sysStatus
 	ctx.HTML(200, DASHBOARD)
