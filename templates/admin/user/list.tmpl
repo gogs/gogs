@@ -32,7 +32,7 @@
 					                        {{range .Users}}
 					                        <tr>
 					                            <td>{{.Id}}</td>
-					                            <td><a href="{{AppSubUrl}}/user/{{.Name}}">{{.Name}}</a></td>
+					                            <td><a href="{{AppSubUrl}}/{{.Name}}">{{.Name}}</a></td>
 					                            <td>{{.Email}}</td>
 					                            <td><i class="fa fa{{if .IsActive}}-check{{end}}-square-o"></i></td>
 					                            <td><i class="fa fa{{if .IsAdmin}}-check{{end}}-square-o"></i></td>
