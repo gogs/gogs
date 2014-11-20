@@ -402,6 +402,8 @@ func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 		// repo is bare and display enable
 		if ctx.Repo.Repository.IsBare {
 			log.Debug("Bare repository: %s", ctx.Repo.RepoLink)
+			// NOTE: to prevent templating error
+			ctx.Data["BranchName"] = ""
 			if displayBare {
 				ctx.HTML(200, "repo/bare")
 			}
