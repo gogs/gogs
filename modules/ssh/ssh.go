@@ -13,9 +13,8 @@ import (
 	"os/exec"
 	"strings"
 
-	"code.google.com/p/go.crypto/ssh"
-
 	"github.com/Unknwon/com"
+	"golang.org/x/crypto/ssh"
 
 	"github.com/gogits/gogs/modules/log"
 )
@@ -35,8 +34,11 @@ func handleServerConn(keyId string, chans <-chan ssh.NewChannel) {
 		go func(in <-chan *ssh.Request) {
 			defer channel.Close()
 			for req := range in {
-				ok, payload := false, strings.TrimLeft(string(req.Payload), "\x00")
+				ok, payload := false, strings.TrimLeft(string(req.Payload), "\x00&")
 				fmt.Println("Request:", req.Type, req.WantReply, payload)
+				if req.WantReply {
+					fmt.Println(req.Reply(true, nil))
+				}
 				switch req.Type {
 				case "env":
 					args := strings.Split(strings.Replace(payload, "\x00", "", -1), "\v")
@@ -54,7 +56,7 @@ func handleServerConn(keyId string, chans <-chan ssh.NewChannel) {
 				case "exec":
 					os.Setenv("SSH_ORIGINAL_COMMAND", strings.TrimLeft(payload, "'("))
 					log.Info("Payload: %v", strings.TrimLeft(payload, "'("))
-					cmd := exec.Command("/Users/jiahuachen/Applications/Go/src/github.com/gogits/gogs-ng/gogs-ng", "serv", "key-"+keyId)
+					cmd := exec.Command("/Users/jiahuachen/Applications/Go/src/github.com/gogits/gogs/gogs", "serv", "key-"+keyId)
 					cmd.Stdout = channel
 					cmd.Stdin = channel
 					cmd.Stderr = channel.Stderr()
@@ -65,7 +67,6 @@ func handleServerConn(keyId string, chans <-chan ssh.NewChannel) {
 					}
 				}
 				fmt.Println("Done:", ok)
-				req.Reply(ok, nil) // BUG: Git on Mac seems not know this reply and hang?
 			}
 			fmt.Println("Done!!!")
 		}(requests)
@@ -101,7 +102,7 @@ func Listen(port string) {
 	config := &ssh.ServerConfig{
 		PublicKeyCallback: func(conn ssh.ConnMetadata, key ssh.PublicKey) (*ssh.Permissions, error) {
 			// keyCache[string(ssh.MarshalAuthorizedKey(key))] = 2
-			return &ssh.Permissions{Extensions: map[string]string{"key-id": "2"}}, nil
+			return &ssh.Permissions{Extensions: map[string]string{"key-id": "1"}}, nil
 		},
 	}
 

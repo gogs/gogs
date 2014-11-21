@@ -89,7 +89,8 @@ func (f *UpdateProfileForm) Validate(ctx *macaron.Context, errs binding.Errors) 
 }
 
 type UploadAvatarForm struct {
-	Avatar *multipart.FileHeader `form:"avatar" binding:"Required"`
+	Enable bool                  `form:"enable"`
+	Avatar *multipart.FileHeader `form:"avatar"`
 }
 
 func (f *UploadAvatarForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
