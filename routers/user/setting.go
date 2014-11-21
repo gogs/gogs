@@ -5,6 +5,7 @@
 package user
 
 import (
+	"io/ioutil"
 	"strings"
 
 	"github.com/Unknwon/com"
@@ -81,6 +82,34 @@ func SettingsPost(ctx *middleware.Context, form auth.UpdateProfileForm) {
 	log.Trace("User setting updated: %s", ctx.User.Name)
 	ctx.Flash.Success(ctx.Tr("settings.update_profile_success"))
 	ctx.Redirect(setting.AppSubUrl + "/user/settings")
+}
+
+// FIXME: limit size.
+func SettingsAvatar(ctx *middleware.Context, form auth.UploadAvatarForm) {
+	defer ctx.Redirect(setting.AppSubUrl + "/user/settings")
+
+	if form.Avatar != nil {
+		fr, err := form.Avatar.Open()
+		if err != nil {
+			ctx.Flash.Error(err.Error())
+			return
+		}
+
+		data, err := ioutil.ReadAll(fr)
+		if err != nil {
+			ctx.Flash.Error(err.Error())
+			return
+		}
+		if _, ok := base.IsImageFile(data); !ok {
+			ctx.Flash.Error(ctx.Tr("settings.uploaded_avatar_not_a_image"))
+			return
+		}
+		if err = ctx.User.UploadAvatar(data); err != nil {
+			ctx.Flash.Error(err.Error())
+			return
+		}
+		ctx.Flash.Success(ctx.Tr("settings.upload_avatar_success"))
+	}
 }
 
 func SettingsPassword(ctx *middleware.Context) {

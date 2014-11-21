@@ -3,8 +3,14 @@
     <tr>
         <th colspan="4" class="clear">
             <span class="author left">
+                {{if .LastCommitUser}}
+                <img class="avatar-24 radius" src="{{.LastCommitUser.AvatarLink}}" />
+                <a href="{{AppSubUrl}}/{{.LastCommitUser.Name}}"><strong>{{.LastCommit.Author.Name}}</strong></a>:
+                {{else}}
                 <img class="avatar-24 radius" src="{{AvatarLink .LastCommit.Author.Email}}" />
-                {{if .LastCommitUser}}<a href="{{AppSubUrl}}/{{.LastCommitUser}}">{{end}}<strong>{{.LastCommit.Author.Name}}</strong>:{{if .LastCommitUser}}</a>{{end}}
+                <strong>{{.LastCommit.Author.Name}}</strong>:
+                {{end}}
+                &nbsp;
             </span>
             <span class="last-commit"><a href="{{.RepoLink}}/commit/{{.LastCommit.Id}}" rel="nofollow">
                 <strong>{{ShortSha .LastCommit.Id.String}}</strong></a>

@@ -94,6 +94,13 @@ func newMacaron() *macaron.Macaron {
 			SkipLogging: !setting.DisableRouterLog,
 		},
 	))
+	m.Use(macaron.Static(
+		setting.AvatarUploadPath,
+		macaron.StaticOptions{
+			Prefix:      "avatars",
+			SkipLogging: !setting.DisableRouterLog,
+		},
+	))
 	m.Use(macaron.Renderer(macaron.RenderOptions{
 		Directory:  path.Join(setting.StaticRootPath, "templates"),
 		Funcs:      []template.FuncMap{base.TemplateFuncs},
@@ -214,6 +221,7 @@ func runWeb(*cli.Context) {
 	m.Group("/user/settings", func() {
 		m.Get("", user.Settings)
 		m.Post("", bindIgnErr(auth.UpdateProfileForm{}), user.SettingsPost)
+		m.Post("/avatar", binding.MultipartForm(auth.UploadAvatarForm{}), user.SettingsAvatar)
 		m.Get("/password", user.SettingsPassword)
 		m.Post("/password", bindIgnErr(auth.ChangePasswordForm{}), user.SettingsPasswordPost)
 		m.Get("/ssh", user.SettingsSSHKeys)

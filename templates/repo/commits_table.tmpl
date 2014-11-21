@@ -24,7 +24,13 @@
             {{$r := List .Commits}}
             {{range $r}}
             <tr>
-                <td class="author"><img class="avatar-20" src="{{AvatarLink .Author.Email}}" alt=""/>&nbsp;&nbsp;&nbsp;{{if .UserName}}<a href="{{AppSubUrl}}/{{.UserName}}">{{.Author.Name}}</a>{{else}}{{.Author.Name}}{{end}}</td>
+                <td class="author">
+                    {{if .User}}
+                    <img class="avatar-20" src="{{.User.AvatarLink}}" alt=""/>&nbsp;&nbsp;&nbsp;<a href="{{AppSubUrl}}/{{.User.Name}}">{{.Author.Name}}</a>
+                    {{else}}
+                    <img class="avatar-20" src="{{AvatarLink .Author.Email}}" alt=""/>&nbsp;&nbsp;&nbsp;{{.Author.Name}}
+                    {{end}}
+                </td>
                 <td class="sha"><a rel="nofollow" class="label label-green" href="{{AppSubUrl}}/{{$username}}/{{$reponame}}/commit/{{.Id}} ">{{SubStr .Id.String 0 10}} </a></td>
                 <td class="message"><span class="text-truncate">{{.Summary}}</span></td>
                 <td class="date">{{TimeSince .Author.When $.Lang}}</td>
