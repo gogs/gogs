@@ -66,9 +66,10 @@ var (
 	ScriptType   string
 
 	// Picture settings.
-	PictureService  string
-	GravatarSource  string
-	DisableGravatar bool
+	PictureService   string
+	AvatarUploadPath string
+	GravatarSource   string
+	DisableGravatar  bool
 
 	// Log settings.
 	LogRootPath string
@@ -259,6 +260,9 @@ func NewConfigContext() {
 	ScriptType = Cfg.MustValue("repository", "SCRIPT_TYPE", "bash")
 
 	PictureService = Cfg.MustValueRange("picture", "SERVICE", "server", []string{"server"})
+	AvatarUploadPath = Cfg.MustValue("picture", "AVATAR_UPLOAD_PATH", "data/avatars")
+	os.MkdirAll(AvatarUploadPath, os.ModePerm)
+
 	switch Cfg.MustValue("picture", "GRAVATAR_SOURCE", "gravatar") {
 	case "duoshuo":
 		GravatarSource = "http://gravatar.duoshuo.com/avatar/"

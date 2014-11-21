@@ -5,6 +5,8 @@
 package auth
 
 import (
+	"mime/multipart"
+
 	"github.com/Unknwon/macaron"
 	"github.com/macaron-contrib/binding"
 )
@@ -83,6 +85,14 @@ type UpdateProfileForm struct {
 }
 
 func (f *UpdateProfileForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
+	return validate(errs, ctx.Data, f, ctx.Locale)
+}
+
+type UploadAvatarForm struct {
+	Avatar *multipart.FileHeader `form:"avatar" binding:"Required"`
+}
+
+func (f *UploadAvatarForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
 	return validate(errs, ctx.Data, f, ctx.Locale)
 }
 

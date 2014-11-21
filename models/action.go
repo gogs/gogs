@@ -58,6 +58,7 @@ type Action struct {
 	ActUserId    int64  // Action user id.
 	ActUserName  string // Action user name.
 	ActEmail     string
+	ActAvatar    string `xorm:"-"`
 	RepoId       int64
 	RepoUserName string
 	RepoName     string

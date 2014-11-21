@@ -4,7 +4,11 @@
     <div id="user-profile-page" class="container clear">
         <div class="grid-1-5 left">
             <div>
+                {{if .Owner.UseCustomAvatar}}
+                <a href="{{AppSubUrl}}/user/settings" id="profile-avatar" original-title="{{.i18n.Tr "user.change_custom_avatar"}}">
+                {{else}}
                 <a href="http://gravatar.com/emails/" id="profile-avatar" original-title="{{.i18n.Tr "user.change_avatar"}}">
+                {{end}}
                     <img class="profile-avatar" src="{{.Owner.AvatarLink}}?s=200"title="{{.Owner.Name}}"/>
                 </a>
                 <div class="text-center" id="profile-name">

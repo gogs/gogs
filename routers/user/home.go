@@ -100,6 +100,13 @@ func Dashboard(ctx *middleware.Context) {
 				continue
 			}
 		}
+		// FIXME: cache results?
+		u, err := models.GetUserByName(act.ActUserName)
+		if err != nil {
+			ctx.Handle(500, "GetUserByName", err)
+			return
+		}
+		act.ActAvatar = u.AvatarLink()
 		feeds = append(feeds, act)
 	}
 	ctx.Data["Feeds"] = feeds

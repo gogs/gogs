@@ -1,7 +1,7 @@
 {{range .Feeds}}
 <div class="news clear">
     <div class="avatar left">
-        <img class="avatar-30" src="{{AvatarLink .GetActEmail}}" alt="">
+        <img class="avatar-30" src="{{.ActAvatar}}" alt="">
     </div>
     <div class="content left {{if eq .GetOpType 5}}push-news{{end}} grid-4-5">
         <p class="text-bold">

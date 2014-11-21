@@ -71,7 +71,6 @@ There are 5 ways to install Gogs:
 - Router and middleware mechanism of [Macaron](https://github.com/Unknwon/macaron).
 - Mail Service, modules design is inspired by [WeTalk](https://github.com/beego/wetalk).
 - System Monitor Status is inspired by [GoBlog](https://github.com/fuxiaohei/goblog).
-- Usage and modification from [beego](http://beego.me) modules.
 - Thanks [lavachen](http://www.lavachen.cn/) and [Rocker](http://weibo.com/rocker1989) for designing Logo.
 - Thanks [gobuild.io](http://gobuild.io) for providing binary compile and download service.
 - Thanks [Crowdin](https://crowdin.com/project/gogs) for providing open source translation plan.

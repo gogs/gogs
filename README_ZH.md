@@ -59,8 +59,7 @@ Gogs 的目标是打造一个最简单、最快速和最轻松的方式搭建自
 
 ## 特别鸣谢
 
-- [Macaron](https://github.com/Unknwon/macaron) 的路由与中间件机制。
-- [beego](http://beego.me) 模块的使用与修改。
+- 基于 [Macaron](https://github.com/Unknwon/macaron) 的路由与中间件机制。
 - 基于 [WeTalk](https://github.com/beego/wetalk) 修改的邮件服务和模块设计。
 - 基于 [GoBlog](https://github.com/fuxiaohei/goblog) 修改的系统监视状态。
 - 感谢 [gobuild.io](http://gobuild.io) 提供二进制编译与下载服务。

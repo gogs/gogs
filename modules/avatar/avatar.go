@@ -121,7 +121,7 @@ func (this *Avatar) Encode(wr io.Writer, size int) (err error) {
 	if img, err = decodeImageFile(imgPath); err != nil {
 		return
 	}
-	m := resize.Resize(uint(size), 0, img, resize.Lanczos3)
+	m := resize.Resize(uint(size), 0, img, resize.NearestNeighbor)
 	return jpeg.Encode(wr, m, nil)
 }
 

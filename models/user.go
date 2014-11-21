@@ -5,17 +5,21 @@
 package models
 
 import (
+	"bytes"
 	"container/list"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"image"
+	"image/jpeg"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/Unknwon/com"
+	"github.com/nfnt/resize"
 
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/git"
@@ -45,33 +49,40 @@ var (
 
 // User represents the object of individual and member of organization.
 type User struct {
-	Id            int64
-	LowerName     string `xorm:"UNIQUE NOT NULL"`
-	Name          string `xorm:"UNIQUE NOT NULL"`
-	FullName      string
-	Email         string `xorm:"UNIQUE NOT NULL"`
-	Passwd        string `xorm:"NOT NULL"`
-	LoginType     LoginType
-	LoginSource   int64 `xorm:"NOT NULL DEFAULT 0"`
-	LoginName     string
-	Type          UserType
-	Orgs          []*User       `xorm:"-"`
-	Repos         []*Repository `xorm:"-"`
+	Id          int64
+	LowerName   string `xorm:"UNIQUE NOT NULL"`
+	Name        string `xorm:"UNIQUE NOT NULL"`
+	FullName    string
+	Email       string `xorm:"UNIQUE NOT NULL"`
+	Passwd      string `xorm:"NOT NULL"`
+	LoginType   LoginType
+	LoginSource int64 `xorm:"NOT NULL DEFAULT 0"`
+	LoginName   string
+	Type        UserType
+	Orgs        []*User       `xorm:"-"`
+	Repos       []*Repository `xorm:"-"`
+	Location    string
+	Website     string
+	Rands       string    `xorm:"VARCHAR(10)"`
+	Salt        string    `xorm:"VARCHAR(10)"`
+	Created     time.Time `xorm:"CREATED"`
+	Updated     time.Time `xorm:"UPDATED"`
+
+	// Permissions.
+	IsActive     bool
+	IsAdmin      bool
+	AllowGitHook bool
+
+	// Avatar.
+	Avatar          string `xorm:"VARCHAR(2048) NOT NULL"`
+	AvatarEmail     string `xorm:"NOT NULL"`
+	UseCustomAvatar bool
+
+	// Counters.
 	NumFollowers  int
 	NumFollowings int
 	NumStars      int
 	NumRepos      int
-	Avatar        string `xorm:"VARCHAR(2048) NOT NULL"`
-	AvatarEmail   string `xorm:"NOT NULL"`
-	Location      string
-	Website       string
-	IsActive      bool
-	IsAdmin       bool
-	AllowGitHook  bool
-	Rands         string    `xorm:"VARCHAR(10)"`
-	Salt          string    `xorm:"VARCHAR(10)"`
-	Created       time.Time `xorm:"CREATED"`
-	Updated       time.Time `xorm:"UPDATED"`
 
 	// For organization.
 	Description string
@@ -96,9 +107,12 @@ func (u *User) HomeLink() string {
 
 // AvatarLink returns user gravatar link.
 func (u *User) AvatarLink() string {
-	if setting.DisableGravatar {
+	switch {
+	case u.UseCustomAvatar:
+		return setting.AppSubUrl + "/avatars/" + com.ToStr(u.Id)
+	case setting.DisableGravatar:
 		return setting.AppSubUrl + "/img/avatar_default.jpg"
-	} else if setting.Service.EnableCacheAvatar {
+	case setting.Service.EnableCacheAvatar:
 		return setting.AppSubUrl + "/avatar/" + u.Avatar
 	}
 	return setting.GravatarSource + u.Avatar
@@ -124,6 +138,43 @@ func (u *User) ValidtePassword(passwd string) bool {
 	newUser := &User{Passwd: passwd, Salt: u.Salt}
 	newUser.EncodePasswd()
 	return u.Passwd == newUser.Passwd
+}
+
+// UploadAvatar saves custom avatar for user.
+// FIXME: splite uploads to different subdirs in case we have massive users.
+func (u *User) UploadAvatar(data []byte) error {
+	savePath := filepath.Join(setting.AvatarUploadPath, com.ToStr(u.Id))
+	u.UseCustomAvatar = true
+
+	img, _, err := image.Decode(bytes.NewReader(data))
+	if err != nil {
+		return err
+	}
+	m := resize.Resize(200, 200, img, resize.NearestNeighbor)
+
+	sess := x.NewSession()
+	defer sess.Close()
+	if err = sess.Begin(); err != nil {
+		return err
+	}
+
+	if _, err = sess.Id(u.Id).AllCols().Update(u); err != nil {
+		sess.Rollback()
+		return err
+	}
+
+	fw, err := os.Create(savePath)
+	if err != nil {
+		sess.Rollback()
+		return err
+	}
+	defer fw.Close()
+	if err = jpeg.Encode(fw, m, nil); err != nil {
+		sess.Rollback()
+		return err
+	}
+
+	return sess.Commit()
 }
 
 // IsOrganization returns true if user is actually a organization.
@@ -517,41 +568,38 @@ func GetUserIdsByNames(names []string) []int64 {
 
 // UserCommit represtns a commit with validation of user.
 type UserCommit struct {
-	UserName string
+	User *User
 	*git.Commit
 }
 
 // ValidateCommitWithEmail chceck if author's e-mail of commit is corresponsind to a user.
-func ValidateCommitWithEmail(c *git.Commit) (uname string) {
+func ValidateCommitWithEmail(c *git.Commit) *User {
 	u, err := GetUserByEmail(c.Author.Email)
-	if err == nil {
-		uname = u.Name
+	if err != nil {
+		return nil
 	}
-	return uname
+	return u
 }
 
 // ValidateCommitsWithEmails checks if authors' e-mails of commits are corresponding to users.
 func ValidateCommitsWithEmails(oldCommits *list.List) *list.List {
-	emails := map[string]string{}
+	emails := map[string]*User{}
 	newCommits := list.New()
 	e := oldCommits.Front()
 	for e != nil {
 		c := e.Value.(*git.Commit)
 
-		uname := ""
+		var u *User
 		if v, ok := emails[c.Author.Email]; !ok {
-			u, err := GetUserByEmail(c.Author.Email)
-			if err == nil {
-				uname = u.Name
-			}
-			emails[c.Author.Email] = uname
+			u, _ = GetUserByEmail(c.Author.Email)
+			emails[c.Author.Email] = u
 		} else {
-			uname = v
+			u = v
 		}
 
 		newCommits.PushBack(UserCommit{
-			UserName: uname,
-			Commit:   c,
+			User:   u,
+			Commit: c,
 		})
 		e = e.Next()
 	}
