@@ -88,6 +88,11 @@ func SettingsPost(ctx *middleware.Context, form auth.UpdateProfileForm) {
 func SettingsAvatar(ctx *middleware.Context, form auth.UploadAvatarForm) {
 	defer ctx.Redirect(setting.AppSubUrl + "/user/settings")
 
+	ctx.User.UseCustomAvatar = form.Enable
+	if err := models.UpdateUser(ctx.User); err != nil {
+		ctx.Flash.Error(err.Error())
+	}
+
 	if form.Avatar != nil {
 		fr, err := form.Avatar.Open()
 		if err != nil {
@@ -108,8 +113,8 @@ func SettingsAvatar(ctx *middleware.Context, form auth.UploadAvatarForm) {
 			ctx.Flash.Error(err.Error())
 			return
 		}
-		ctx.Flash.Success(ctx.Tr("settings.upload_avatar_success"))
 	}
+	ctx.Flash.Success(ctx.Tr("settings.update_avatar_success"))
 }
 
 func SettingsPassword(ctx *middleware.Context) {

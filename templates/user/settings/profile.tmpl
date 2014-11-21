@@ -59,12 +59,17 @@
                             <form class="form form-align" id="user-profile-form" action="{{AppSubUrl}}/user/settings/avatar" method="post" enctype="multipart/form-data">
                                 {{.CsrfTokenHtml}}
                                 <div class="field">
+                                    <label for="enable">{{.i18n.Tr "settings.enable_custom_avatar"}}</label>
+                                    <input class="ipt-chk" id="enable" name="enable" type="checkbox" {{if .SignedUser.UseCustomAvatar}}checked{{end}} />
+                                    <span>{{.i18n.Tr "settings.enable_custom_avatar_helper"}}</span>
+                                </div>
+                                <div class="field">
                                     <label>{{.i18n.Tr "settings.choose_new_avatar"}}</label>
-                                    <input name="avatar" type="file" required />
+                                    <input name="avatar" type="file" />
                                 </div>
                                 <div class="field">
                                     <label></label>
-                                    <button class="btn btn-green btn-large btn-radius">{{.i18n.Tr "settings.upload_avatar"}}</button>
+                                    <button class="btn btn-green btn-large btn-radius">{{.i18n.Tr "settings.update_avatar"}}</button>
                                 </div>
                             </form>
                         </div>

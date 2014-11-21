@@ -20,7 +20,7 @@ import (
 	"github.com/macaron-contrib/session"
 
 	"github.com/gogits/gogs/modules/log"
-	// "github.com/gogits/gogs-ng/modules/ssh"
+	// "github.com/gogits/gogs/modules/ssh"
 )
 
 type Scheme string
@@ -488,5 +488,5 @@ func NewServices() {
 	newRegisterMailService()
 	newNotifyMailService()
 	newWebhookService()
-	// ssh.Listen("2022")
+	// ssh.Listen("2222")
 }

@@ -164,7 +164,7 @@ func runServ(k *cli.Context) {
 			log.GitLogger.Fatal(2, "User %s has no right to read repository %s", user.Name, repoPath)
 		}
 	default:
-		println("Unknown command")
+		println("Unknown command: " + cmd)
 		return
 	}
 

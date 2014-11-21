@@ -163,6 +163,7 @@ func (u *User) UploadAvatar(data []byte) error {
 		return err
 	}
 
+	os.MkdirAll(setting.AvatarUploadPath, os.ModePerm)
 	fw, err := os.Create(savePath)
 	if err != nil {
 		sess.Rollback()
