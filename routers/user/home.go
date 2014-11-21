@@ -163,11 +163,23 @@ func Profile(ctx *middleware.Context) {
 	ctx.Data["TabName"] = tab
 	switch tab {
 	case "activity":
-		ctx.Data["Feeds"], err = models.GetFeeds(u.Id, 0, true)
+		actions, err := models.GetFeeds(u.Id, 0, false)
 		if err != nil {
 			ctx.Handle(500, "GetFeeds", err)
 			return
 		}
+		feeds := make([]*models.Action, 0, len(actions))
+		for _, act := range actions {
+			// FIXME: cache results?
+			u, err := models.GetUserByName(act.ActUserName)
+			if err != nil {
+				ctx.Handle(500, "GetUserByName", err)
+				return
+			}
+			act.ActAvatar = u.AvatarLink()
+			feeds = append(feeds, act)
+		}
+		ctx.Data["Feeds"] = feeds
 	default:
 		ctx.Data["Repos"], err = models.GetRepositories(u.Id, ctx.IsSigned && ctx.User.Id == u.Id)
 		if err != nil {
