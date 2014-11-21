@@ -77,6 +77,17 @@ func (org *User) RemoveMember(uid int64) error {
 	return RemoveOrgUser(org.Id, uid)
 }
 
+// IsOrgEmailUsed returns true if the e-mail has been used in organization account.
+func IsOrgEmailUsed(email string) (bool, error) {
+	if len(email) == 0 {
+		return false, nil
+	}
+	return x.Get(&User{
+		Email: email,
+		Type:  ORGANIZATION,
+	})
+}
+
 // CreateOrganization creates record of a new organization.
 func CreateOrganization(org, owner *User) (*User, error) {
 	if !IsLegalName(org.Name) {
@@ -90,7 +101,7 @@ func CreateOrganization(org, owner *User) (*User, error) {
 		return nil, ErrUserAlreadyExist
 	}
 
-	isExist, err = IsEmailUsed(org.Email)
+	isExist, err = IsOrgEmailUsed(org.Email)
 	if err != nil {
 		return nil, err
 	} else if isExist {

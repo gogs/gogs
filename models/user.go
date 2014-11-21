@@ -53,12 +53,12 @@ type User struct {
 	LowerName   string `xorm:"UNIQUE NOT NULL"`
 	Name        string `xorm:"UNIQUE NOT NULL"`
 	FullName    string
-	Email       string `xorm:"UNIQUE NOT NULL"`
+	Email       string `xorm:"UNIQUE(s) NOT NULL"`
 	Passwd      string `xorm:"NOT NULL"`
 	LoginType   LoginType
 	LoginSource int64 `xorm:"NOT NULL DEFAULT 0"`
 	LoginName   string
-	Type        UserType
+	Type        UserType      `xorm:"UNIQUE(s)"`
 	Orgs        []*User       `xorm:"-"`
 	Repos       []*Repository `xorm:"-"`
 	Location    string
