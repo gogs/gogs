@@ -140,10 +140,14 @@ func (u *User) ValidtePassword(passwd string) bool {
 	return u.Passwd == newUser.Passwd
 }
 
+// CustomAvatarPath returns user custom avatar file path.
+func (u *User) CustomAvatarPath() string {
+	return filepath.Join(setting.AvatarUploadPath, com.ToStr(u.Id))
+}
+
 // UploadAvatar saves custom avatar for user.
 // FIXME: splite uploads to different subdirs in case we have massive users.
 func (u *User) UploadAvatar(data []byte) error {
-	savePath := filepath.Join(setting.AvatarUploadPath, com.ToStr(u.Id))
 	u.UseCustomAvatar = true
 
 	img, _, err := image.Decode(bytes.NewReader(data))
@@ -164,7 +168,7 @@ func (u *User) UploadAvatar(data []byte) error {
 	}
 
 	os.MkdirAll(setting.AvatarUploadPath, os.ModePerm)
-	fw, err := os.Create(savePath)
+	fw, err := os.Create(u.CustomAvatarPath())
 	if err != nil {
 		sess.Rollback()
 		return err
