@@ -89,9 +89,6 @@ func SettingsAvatar(ctx *middleware.Context, form auth.UploadAvatarForm) {
 	defer ctx.Redirect(setting.AppSubUrl + "/user/settings")
 
 	ctx.User.UseCustomAvatar = form.Enable
-	if err := models.UpdateUser(ctx.User); err != nil {
-		ctx.Flash.Error(err.Error())
-	}
 
 	if form.Avatar != nil {
 		fr, err := form.Avatar.Open()
@@ -113,7 +110,19 @@ func SettingsAvatar(ctx *middleware.Context, form auth.UploadAvatarForm) {
 			ctx.Flash.Error(err.Error())
 			return
 		}
+	} else {
+		// In case no avatar at all.
+		if form.Enable && !com.IsFile(ctx.User.CustomAvatarPath()) {
+			ctx.Flash.Error(ctx.Tr("settings.no_custom_avatar_available"))
+			return
+		}
 	}
+
+	if err := models.UpdateUser(ctx.User); err != nil {
+		ctx.Flash.Error(err.Error())
+		return
+	}
+
 	ctx.Flash.Success(ctx.Tr("settings.update_avatar_success"))
 }
 

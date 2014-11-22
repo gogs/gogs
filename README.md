@@ -77,7 +77,9 @@ There are 5 ways to install Gogs:
 
 ## Contributors
 
-The [core team](http://gogs.io/team) of this project. See [contributors page](https://github.com/gogits/gogs/graphs/contributors) for full list of contributors.
+- The [core team](http://gogs.io/team) of this project. 
+- See [contributors page](https://github.com/gogits/gogs/graphs/contributors) for full list of contributors.
+- See [TRANSLATORS](conf/locale/TRANSLATORS) for full list of translators.
 
 ## License
 
