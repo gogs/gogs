@@ -89,6 +89,11 @@ type PublicKey struct {
 	HasUsed           bool `xorm:"-"`
 }
 
+// OmitEmail returns content of public key but without e-mail address.
+func (k *PublicKey) OmitEmail() string {
+	return strings.Join(strings.Split(k.Content, " ")[:2], " ")
+}
+
 // GetAuthorizedString generates and returns formatted public key string for authorized_keys file.
 func (key *PublicKey) GetAuthorizedString() string {
 	return fmt.Sprintf(_TPL_PUBLICK_KEY, appPath, key.Id, key.Content)

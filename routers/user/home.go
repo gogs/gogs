@@ -5,7 +5,9 @@
 package user
 
 import (
+	"bytes"
 	"fmt"
+	"strings"
 
 	"github.com/Unknwon/com"
 
@@ -127,6 +129,20 @@ func Pulls(ctx *middleware.Context) {
 	ctx.HTML(200, PULLS)
 }
 
+func ShowSSHKeys(ctx *middleware.Context, uid int64) {
+	keys, err := models.ListPublicKeys(uid)
+	if err != nil {
+		ctx.Handle(500, "ListPublicKeys", err)
+		return
+	}
+
+	var buf bytes.Buffer
+	for i := range keys {
+		buf.WriteString(keys[i].OmitEmail())
+	}
+	ctx.RenderData(200, buf.Bytes())
+}
+
 func Profile(ctx *middleware.Context) {
 	ctx.Data["Title"] = "Profile"
 	ctx.Data["PageIsUserProfile"] = true
@@ -138,6 +154,12 @@ func Profile(ctx *middleware.Context) {
 		return
 	}
 
+	isShowKeys := false
+	if strings.HasSuffix(uname, ".keys") {
+		isShowKeys = true
+		uname = strings.TrimSuffix(uname, ".keys")
+	}
+
 	u, err := models.GetUserByName(uname)
 	if err != nil {
 		if err == models.ErrUserNotExist {
@@ -145,6 +167,12 @@ func Profile(ctx *middleware.Context) {
 		} else {
 			ctx.Handle(500, "GetUserByName", err)
 		}
+		return
+	}
+
+	// Show SSH keys.
+	if isShowKeys {
+		ShowSSHKeys(ctx, u.Id)
 		return
 	}
 
@@ -203,32 +231,6 @@ func Email2User(ctx *middleware.Context) {
 	}
 	ctx.Redirect(setting.AppSubUrl + "/user/" + u.Name)
 }
-
-const (
-	TPL_FEED = `<i class="icon fa fa-%s"></i>
-                        <div class="info"><span class="meta">%s</span><br>%s</div>`
-)
-
-// func Feeds(ctx *middleware.Context, form auth.FeedsForm) {
-// 	actions, err := models.GetFeeds(form.UserId, form.Page*20, false)
-// 	if err != nil {
-// 		ctx.JSON(500, err)
-// 		return
-// 	}
-
-// 	feeds := make([]string, 0, len(actions))
-// 	for _, act := range actions {
-// 		if act.IsPrivate {
-// 			if has, _ := models.HasAccess(ctx.User.Name, act.RepoUserName+"/"+act.RepoName,
-// 				models.READABLE); !has {
-// 				continue
-// 			}
-// 		}
-// 		feeds = append(feeds, fmt.Sprintf(TPL_FEED, base.ActionIcon(act.OpType),
-// 			base.TimeSince(act.Created), base.ActionDesc(act)))
-// 	}
-// 	ctx.JSON(200, &feeds)
-// }
 
 func Issues(ctx *middleware.Context) {
 	ctx.Data["Title"] = "Your Issues"
