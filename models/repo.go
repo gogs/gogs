@@ -243,7 +243,7 @@ func IsRepositoryExist(u *User, repoName string) (bool, error) {
 
 var (
 	illegalEquals  = []string{"debug", "raw", "install", "api", "avatar", "user", "org", "help", "stars", "issues", "pulls", "commits", "repo", "template", "admin", "new"}
-	illegalSuffixs = []string{".git"}
+	illegalSuffixs = []string{".git", ".keys"}
 )
 
 // IsLegalName returns false if name contains illegal characters.
