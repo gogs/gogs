@@ -31,6 +31,13 @@ const (
 	FCGI  Scheme = "fcgi"
 )
 
+type LandingPage string
+
+const (
+	LANDING_PAGE_HOME    LandingPage = "/"
+	LANDING_PAGE_EXPLORE LandingPage = "/explore"
+)
+
 var (
 	// App settings.
 	AppVer    string
@@ -48,6 +55,7 @@ var (
 	CertFile, KeyFile  string
 	StaticRootPath     string
 	EnableGzip         bool
+	LandingPageUrl     LandingPage
 
 	// Security settings.
 	InstallLock          bool
@@ -196,6 +204,13 @@ func NewConfigContext() {
 	StaticRootPath = Cfg.MustValue("server", "STATIC_ROOT_PATH", workDir)
 	LogRootPath = Cfg.MustValue("log", "ROOT_PATH", path.Join(workDir, "log"))
 	EnableGzip = Cfg.MustBool("server", "ENABLE_GZIP")
+
+	switch Cfg.MustValue("server", "LANDING_PAGE", "home") {
+	case "explore":
+		LandingPageUrl = LANDING_PAGE_EXPLORE
+	default:
+		LandingPageUrl = LANDING_PAGE_HOME
+	}
 
 	InstallLock = Cfg.MustBool("security", "INSTALL_LOCK")
 	SecretKey = Cfg.MustValue("security", "SECRET_KEY")
