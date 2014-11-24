@@ -161,6 +161,7 @@ func runWeb(*cli.Context) {
 	// Routers.
 	m.Get("/", ignSignIn, routers.Home)
 	m.Get("/explore", ignSignIn, routers.Explore)
+	// FIXME: when i'm binding form here???
 	m.Get("/install", bindIgnErr(auth.InstallForm{}), routers.Install)
 	m.Post("/install", bindIgnErr(auth.InstallForm{}), routers.InstallPost)
 	m.Group("", func() {
