@@ -243,7 +243,8 @@ textarea#issue-add-content {
   }
 }
 // new issue button
-#issue-new {
+#issue-new,
+#milestone-new{
   > a {
     padding: 0 !important;
     button {
@@ -362,5 +363,47 @@ textarea#issue-add-content {
     padding-bottom: 12px;
     margin-bottom: 12px;
     border-bottom: 1px dashed #AAA;
+  }
+}
+// milestone items
+#milestone-list{
+  padding-top: 6px;
+  .title-text{
+    font-size: 16px;
+  }
+  .desc {
+    color: #999;
+  }
+  .item {
+    padding-bottom: 18px;
+    margin-bottom: 18px;
+    border-bottom: 1px dashed #AAA;
+    position: relative;
+  }
+  .action{
+    position: absolute;
+    top: 0;
+    right: 0;
+  }
+  .status-bar {
+    > .bar {
+      margin: -2px 8px 0 8px;
+      width: 360px;
+      background-color: #DDD;
+      height: 14px;
+      vertical-align:middle;
+    }
+    .opening{
+      background-color: #65ad4e;
+      width: 40%;
+      height: 14px;
+      vertical-align: top;
+    }
+  }
+  .action-bar{
+    margin-top: 8px;
+    a{
+      margin-left: 12px;
+    }
   }
 }

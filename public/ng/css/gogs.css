@@ -2019,10 +2019,12 @@ textarea#issue-add-content {
 #issue-list-nav li.right {
   margin-left: 4px;
 }
-#issue-new > a {
+#issue-new > a,
+#milestone-new > a {
   padding: 0 !important;
 }
-#issue-new > a button {
+#issue-new > a button,
+#milestone-new > a button {
   height: 29px;
 }
 #issue-list-menu {
@@ -2126,6 +2128,45 @@ textarea#issue-add-content {
   padding-bottom: 12px;
   margin-bottom: 12px;
   border-bottom: 1px dashed #AAA;
+}
+#milestone-list {
+  padding-top: 6px;
+}
+#milestone-list .title-text {
+  font-size: 16px;
+}
+#milestone-list .desc {
+  color: #999;
+}
+#milestone-list .item {
+  padding-bottom: 18px;
+  margin-bottom: 18px;
+  border-bottom: 1px dashed #AAA;
+  position: relative;
+}
+#milestone-list .action {
+  position: absolute;
+  top: 0;
+  right: 0;
+}
+#milestone-list .status-bar > .bar {
+  margin: -2px 8px 0 8px;
+  width: 360px;
+  background-color: #DDD;
+  height: 14px;
+  vertical-align: middle;
+}
+#milestone-list .status-bar .opening {
+  background-color: #65ad4e;
+  width: 40%;
+  height: 14px;
+  vertical-align: top;
+}
+#milestone-list .action-bar {
+  margin-top: 8px;
+}
+#milestone-list .action-bar a {
+  margin-left: 12px;
 }
 .org-header-alert .alert {
   margin-top: 10px;
