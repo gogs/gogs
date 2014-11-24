@@ -58,7 +58,7 @@ func runDump(ctx *cli.Context) {
 	workDir, _ := setting.WorkDir()
 	z.AddFile("gogs-repo.zip", path.Join(workDir, "gogs-repo.zip"))
 	z.AddFile("gogs-db.sql", path.Join(workDir, "gogs-db.sql"))
-	z.AddFile("custom/conf/app.ini", path.Join(workDir, "custom/conf/app.ini"))
+	z.AddDir("custom", path.Join(workDir, "custom"))
 	z.AddDir("log", path.Join(workDir, "log"))
 	// FIXME: SSH key file.
 	if err = z.Close(); err != nil {
