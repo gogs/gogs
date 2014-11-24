@@ -1133,3 +1133,7 @@ func PullRequest2(ctx *middleware.Context){
 func Labels2(ctx *middleware.Context){
 	ctx.HTML(200,"repo/issue2/labels")
 }
+
+func Milestones2(ctx *middleware.Context){
+	ctx.HTML(200,"repo/milestone2/list")
+}

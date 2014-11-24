@@ -405,6 +405,7 @@ func runWeb(*cli.Context) {
 		m.Get("/issues2/", repo.Issues2)
 		m.Get("/pulls2/", repo.PullRequest2)
 		m.Get("/labels2/", repo.Labels2)
+		m.Get("/milestone2/",repo.Milestones2)
 
 		m.Group("", func() {
 			m.Get("/src/*", repo.Home)
