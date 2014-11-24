@@ -88,6 +88,7 @@ func Install(ctx *middleware.Context, form auth.InstallForm) {
 	ctx.Data["Title"] = ctx.Tr("install.install")
 	ctx.Data["PageIsInstall"] = true
 
+	// FIXME: when i'm ckeching length here? should they all be 0 no matter when?
 	// Get and assign values to install form.
 	if len(form.DbHost) == 0 {
 		form.DbHost = models.DbCfg.Host
@@ -109,7 +110,15 @@ func Install(ctx *middleware.Context, form auth.InstallForm) {
 		form.RepoRootPath = setting.RepoRootPath
 	}
 	if len(form.RunUser) == 0 {
-		form.RunUser = setting.RunUser
+		// Note: it's not normall to use SSH in windows so current user can be first option(not git).
+		if setting.IsWindows && setting.RunUser == "git" {
+			form.RunUser = os.Getenv("USER")
+			if len(form.RunUser) == 0 {
+				form.RunUser = os.Getenv("USERNAME")
+			}
+		} else {
+			form.RunUser = setting.RunUser
+		}
 	}
 	if len(form.Domain) == 0 {
 		form.Domain = setting.Domain
