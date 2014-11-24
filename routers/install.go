@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"runtime"
 	"strings"
 
 	"github.com/Unknwon/com"
@@ -116,6 +117,15 @@ func Install(ctx *middleware.Context, form auth.InstallForm) {
 	}
 	if len(form.AppUrl) == 0 {
 		form.AppUrl = setting.AppUrl
+	}
+
+	// windows: should use current user, not `git`,
+	// use `git` will cause `run_user_not_match` error.
+	if runtime.GOOS == "windows" && form.RunUser == "git" {
+		form.RunUser = os.Getenv("USER")
+		if len(form.RunUser) == 0 {
+			form.RunUser = os.Getenv("USERNAME")
+		}
 	}
 
 	renderDbOption(ctx)
