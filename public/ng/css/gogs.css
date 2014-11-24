@@ -2137,6 +2137,10 @@ textarea#issue-add-content {
 }
 #milestone-list .desc {
   color: #999;
+  line-height: 30px;
+}
+#milestone-list .content {
+  width: 400px;
 }
 #milestone-list .item {
   padding-bottom: 18px;
