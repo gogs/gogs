@@ -62,7 +62,7 @@ func Commits(ctx *middleware.Context) {
 		lastPage = 0
 	}
 	nextPage := page + 1
-	if nextPage*50 > commitsCount {
+	if page*50 > commitsCount {
 		nextPage = 0
 	}
 
