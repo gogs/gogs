@@ -14,6 +14,7 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/Unknwon/com"
 	"github.com/codegangsta/cli"
 
 	"github.com/gogits/gogs/models"
@@ -164,10 +165,12 @@ func runFixLocation(ctx *cli.Context) {
 
 	// Fix in authorized_keys file.
 	sshPath := path.Join(models.SshPath, "authorized_keys")
-	fmt.Printf("Fixing pathes in file: %s\n", sshPath)
-	if err := rewriteAuthorizedKeys(sshPath, oldPath, execPath); err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+	if com.IsFile(sshPath) {
+		fmt.Printf("Fixing pathes in file: %s\n", sshPath)
+		if err := rewriteAuthorizedKeys(sshPath, oldPath, execPath); err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
 	}
 
 	// Fix position in gogs-repositories.
