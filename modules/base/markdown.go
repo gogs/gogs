@@ -104,7 +104,7 @@ var (
 	commitPattern      = regexp.MustCompile(`(\s|^)https?.*commit/[0-9a-zA-Z]+(#+[0-9a-zA-Z-]*)?`)
 	issueFullPattern   = regexp.MustCompile(`(\s|^)https?.*issues/[0-9]+(#+[0-9a-zA-Z-]*)?`)
 	issueIndexPattern  = regexp.MustCompile(`#[0-9]+`)
-	sha1CurrentPattern = regexp.MustCompile(`\b[0-9a-f]{5,40}\b`)
+	sha1CurrentPattern = regexp.MustCompile(`\b[0-9a-f]{40}\b`)
 )
 
 func RenderSpecialLink(rawBytes []byte, urlPrefix string) []byte {
