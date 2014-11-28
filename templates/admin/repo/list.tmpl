@@ -35,8 +35,8 @@
                             					<td><a href="{{AppSubUrl}}/{{.Owner.Name}}/{{.Name}}">{{.Name}}</a></td>
 					                            <td><i class="fa fa{{if .IsPrivate}}-check{{end}}-square-o"></i></td>
 					                            <td>{{.NumWatches}}</td>
-					                            <td>{{.NumIssues}}</td>
 					                            <td>{{.NumStars}}</td>
+					                            <td>{{.NumIssues}}</td>
 					                            <td>{{DateFormat .Created "M d, Y"}}</td>
 					                        </tr>
 					                        {{end}}
