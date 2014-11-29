@@ -51,6 +51,10 @@ func SocialSignIn(ctx *middleware.Context) {
 		ctx.Handle(500, fmt.Sprintf("UserInfo(%s)", name), err)
 		return
 	}
+	if len(ui.Identity) == 0 {
+		ctx.Handle(404, "no identity is presented", errors.New(name))
+		return
+	}
 	log.Info("social.SocialSignIn(social login): %s", ui)
 
 	oa, err := models.GetOauth2(ui.Identity)
