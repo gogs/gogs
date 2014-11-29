@@ -17,6 +17,7 @@ import (
 
 	"github.com/Unknwon/com"
 	"github.com/Unknwon/goconfig"
+	"github.com/macaron-contrib/oauth2"
 	"github.com/macaron-contrib/session"
 
 	"github.com/gogits/gogs/modules/log"
@@ -434,9 +435,8 @@ type Mailer struct {
 }
 
 type OauthInfo struct {
-	ClientId, ClientSecret string
-	Scopes                 string
-	AuthUrl, TokenUrl      string
+	oauth2.Options
+	AuthUrl, TokenUrl string
 }
 
 // Oauther represents oauth service.
