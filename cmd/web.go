@@ -21,6 +21,7 @@ import (
 	"github.com/macaron-contrib/captcha"
 	"github.com/macaron-contrib/csrf"
 	"github.com/macaron-contrib/i18n"
+	"github.com/macaron-contrib/oauth2"
 	"github.com/macaron-contrib/session"
 	"github.com/macaron-contrib/toolbox"
 
@@ -140,6 +141,11 @@ func newMacaron() *macaron.Macaron {
 			},
 		},
 	}))
+
+	// OAuth 2.
+	for _, info := range setting.OauthService.OauthInfos {
+		m.Use(oauth2.NewOAuth2Provider(info.Options, info.AuthUrl, info.TokenUrl))
+	}
 	m.Use(middleware.Contexter())
 	return m
 }
@@ -213,7 +219,7 @@ func runWeb(*cli.Context) {
 	m.Group("/user", func() {
 		m.Get("/login", user.SignIn)
 		m.Post("/login", bindIgnErr(auth.SignInForm{}), user.SignInPost)
-		m.Get("/login/:name", user.SocialSignIn)
+		m.Get("/info/:name", user.SocialSignIn)
 		m.Get("/sign_up", user.SignUp)
 		m.Post("/sign_up", bindIgnErr(auth.RegisterForm{}), user.SignUpPost)
 		m.Get("/reset_password", user.ResetPasswd)
@@ -406,7 +412,7 @@ func runWeb(*cli.Context) {
 		m.Get("/issues2/", repo.Issues2)
 		m.Get("/pulls2/", repo.PullRequest2)
 		m.Get("/labels2/", repo.Labels2)
-		m.Get("/milestone2/",repo.Milestones2)
+		m.Get("/milestone2/", repo.Milestones2)
 
 		m.Group("", func() {
 			m.Get("/src/*", repo.Home)

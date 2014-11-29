@@ -7,12 +7,12 @@ package social
 
 import (
 	"encoding/json"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strconv"
-	"strings"
 
-	oauth "github.com/gogits/oauth2"
+	"github.com/macaron-contrib/oauth2"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/log"
@@ -27,16 +27,11 @@ type BasicUserInfo struct {
 
 type SocialConnector interface {
 	Type() int
-	SetRedirectUrl(string)
-	UserInfo(*oauth.Token, *url.URL) (*BasicUserInfo, error)
-
-	AuthCodeURL(string) string
-	Exchange(string) (*oauth.Token, error)
+	UserInfo(*oauth2.Token, *url.URL) (*BasicUserInfo, error)
 }
 
 var (
-	SocialBaseUrl = "/user/login"
-	SocialMap     = make(map[string]SocialConnector)
+	SocialMap = make(map[string]SocialConnector)
 )
 
 func NewOauthService() {
@@ -47,24 +42,29 @@ func NewOauthService() {
 	setting.OauthService = &setting.Oauther{}
 	setting.OauthService.OauthInfos = make(map[string]*setting.OauthInfo)
 
-	socialConfigs := make(map[string]*oauth.Config)
+	socialConfigs := make(map[string]*oauth2.Options)
 	allOauthes := []string{"github", "google", "qq", "twitter", "weibo"}
 	// Load all OAuth config data.
 	for _, name := range allOauthes {
-		setting.OauthService.OauthInfos[name] = &setting.OauthInfo{
-			ClientId:     setting.Cfg.MustValue("oauth."+name, "CLIENT_ID"),
-			ClientSecret: setting.Cfg.MustValue("oauth."+name, "CLIENT_SECRET"),
-			Scopes:       setting.Cfg.MustValue("oauth."+name, "SCOPES"),
-			AuthUrl:      setting.Cfg.MustValue("oauth."+name, "AUTH_URL"),
-			TokenUrl:     setting.Cfg.MustValue("oauth."+name, "TOKEN_URL"),
+		if !setting.Cfg.MustBool("oauth."+name, "ENABLED") {
+			continue
 		}
-		socialConfigs[name] = &oauth.Config{
-			ClientId:     setting.OauthService.OauthInfos[name].ClientId,
+		setting.OauthService.OauthInfos[name] = &setting.OauthInfo{
+			Options: oauth2.Options{
+				ClientID:     setting.Cfg.MustValue("oauth."+name, "CLIENT_ID"),
+				ClientSecret: setting.Cfg.MustValue("oauth."+name, "CLIENT_SECRET"),
+				Scopes:       setting.Cfg.MustValueArray("oauth."+name, "SCOPES", " "),
+				PathLogin:    "/user/login/oauth2/" + name,
+				PathCallback: setting.AppSubUrl + "/user/login/" + name,
+				RedirectURL:  setting.AppUrl + "user/login/" + name,
+			},
+			AuthUrl:  setting.Cfg.MustValue("oauth."+name, "AUTH_URL"),
+			TokenUrl: setting.Cfg.MustValue("oauth."+name, "TOKEN_URL"),
+		}
+		socialConfigs[name] = &oauth2.Options{
+			ClientID:     setting.OauthService.OauthInfos[name].ClientID,
 			ClientSecret: setting.OauthService.OauthInfos[name].ClientSecret,
-			RedirectURL:  strings.TrimSuffix(setting.AppUrl, "/") + SocialBaseUrl + name,
-			Scope:        setting.OauthService.OauthInfos[name].Scopes,
-			AuthURL:      setting.OauthService.OauthInfos[name].AuthUrl,
-			TokenURL:     setting.OauthService.OauthInfos[name].TokenUrl,
+			Scopes:       setting.OauthService.OauthInfos[name].Scopes,
 		}
 	}
 	enabledOauths := make([]string, 0, 10)
@@ -91,11 +91,11 @@ func NewOauthService() {
 	}
 
 	// Twitter.
-	if setting.Cfg.MustBool("oauth.twitter", "ENABLED") {
-		setting.OauthService.Twitter = true
-		newTwitterOauth(socialConfigs["twitter"])
-		enabledOauths = append(enabledOauths, "Twitter")
-	}
+	// if setting.Cfg.MustBool("oauth.twitter", "ENABLED") {
+	// 	setting.OauthService.Twitter = true
+	// 	newTwitterOauth(socialConfigs["twitter"])
+	// 	enabledOauths = append(enabledOauths, "Twitter")
+	// }
 
 	// Weibo.
 	if setting.Cfg.MustBool("oauth.weibo", "ENABLED") {
@@ -115,38 +115,25 @@ func NewOauthService() {
 //         \/                 \/           \/
 
 type SocialGithub struct {
-	Token *oauth.Token
-	*oauth.Transport
+	opts *oauth2.Options
+}
+
+func newGitHubOauth(opts *oauth2.Options) {
+	SocialMap["github"] = &SocialGithub{opts}
 }
 
 func (s *SocialGithub) Type() int {
 	return int(models.GITHUB)
 }
 
-func newGitHubOauth(config *oauth.Config) {
-	SocialMap["github"] = &SocialGithub{
-		Transport: &oauth.Transport{
-			Config:    config,
-			Transport: http.DefaultTransport,
-		},
-	}
-}
-
-func (s *SocialGithub) SetRedirectUrl(url string) {
-	s.Transport.Config.RedirectURL = url
-}
-
-func (s *SocialGithub) UserInfo(token *oauth.Token, _ *url.URL) (*BasicUserInfo, error) {
-	transport := &oauth.Transport{
-		Token: token,
-	}
+func (s *SocialGithub) UserInfo(token *oauth2.Token, _ *url.URL) (*BasicUserInfo, error) {
+	transport := s.opts.NewTransportFromToken(token)
 	var data struct {
 		Id    int    `json:"id"`
 		Name  string `json:"login"`
 		Email string `json:"email"`
 	}
-	var err error
-	r, err := transport.Client().Get(s.Transport.Scope)
+	r, err := transport.Client().Get("https://api.github.com/user")
 	if err != nil {
 		return nil, err
 	}
@@ -169,38 +156,25 @@ func (s *SocialGithub) UserInfo(token *oauth.Token, _ *url.URL) (*BasicUserInfo,
 //         \/             /_____/           \/
 
 type SocialGoogle struct {
-	Token *oauth.Token
-	*oauth.Transport
+	opts *oauth2.Options
 }
 
 func (s *SocialGoogle) Type() int {
 	return int(models.GOOGLE)
 }
 
-func newGoogleOauth(config *oauth.Config) {
-	SocialMap["google"] = &SocialGoogle{
-		Transport: &oauth.Transport{
-			Config:    config,
-			Transport: http.DefaultTransport,
-		},
-	}
+func newGoogleOauth(opts *oauth2.Options) {
+	SocialMap["google"] = &SocialGoogle{opts}
 }
 
-func (s *SocialGoogle) SetRedirectUrl(url string) {
-	s.Transport.Config.RedirectURL = url
-}
-
-func (s *SocialGoogle) UserInfo(token *oauth.Token, _ *url.URL) (*BasicUserInfo, error) {
-	transport := &oauth.Transport{Token: token}
+func (s *SocialGoogle) UserInfo(token *oauth2.Token, _ *url.URL) (*BasicUserInfo, error) {
+	transport := s.opts.NewTransportFromToken(token)
 	var data struct {
 		Id    string `json:"id"`
 		Name  string `json:"name"`
 		Email string `json:"email"`
 	}
-	var err error
-
-	reqUrl := "https://www.googleapis.com/oauth2/v1/userinfo"
-	r, err := transport.Client().Get(reqUrl)
+	r, err := transport.Client().Get("https://www.googleapis.com/userinfo/v2/me")
 	if err != nil {
 		return nil, err
 	}
@@ -223,62 +197,35 @@ func (s *SocialGoogle) UserInfo(token *oauth.Token, _ *url.URL) (*BasicUserInfo,
 //        \__>       \__>
 
 type SocialTencent struct {
-	Token *oauth.Token
-	*oauth.Transport
-	reqUrl string
+	opts *oauth2.Options
+}
+
+func newTencentOauth(opts *oauth2.Options) {
+	SocialMap["qq"] = &SocialTencent{opts}
 }
 
 func (s *SocialTencent) Type() int {
 	return int(models.QQ)
 }
 
-func newTencentOauth(config *oauth.Config) {
-	SocialMap["qq"] = &SocialTencent{
-		reqUrl: "https://open.t.qq.com/api/user/info",
-		Transport: &oauth.Transport{
-			Config:    config,
-			Transport: http.DefaultTransport,
-		},
-	}
-}
-
-func (s *SocialTencent) SetRedirectUrl(url string) {
-	s.Transport.Config.RedirectURL = url
-}
-
-func (s *SocialTencent) UserInfo(token *oauth.Token, URL *url.URL) (*BasicUserInfo, error) {
-	var data struct {
-		Data struct {
-			Id    string `json:"openid"`
-			Name  string `json:"name"`
-			Email string `json:"email"`
-		} `json:"data"`
-	}
-	var err error
-	// https://open.t.qq.com/api/user/info?
-	//oauth_consumer_key=APP_KEY&
-	//access_token=ACCESSTOKEN&openid=openid
-	//clientip=CLIENTIP&oauth_version=2.a
-	//scope=all
-	var urls = url.Values{
-		"oauth_consumer_key": {s.Transport.Config.ClientId},
-		"access_token":       {token.AccessToken},
-		"openid":             URL.Query()["openid"],
-		"oauth_version":      {"2.a"},
-		"scope":              {"all"},
-	}
-	r, err := http.Get(s.reqUrl + "?" + urls.Encode())
+func (s *SocialTencent) UserInfo(token *oauth2.Token, URL *url.URL) (*BasicUserInfo, error) {
+	r, err := http.Get("https://graph.z.qq.com/moc2/me?access_token=" + url.QueryEscape(token.AccessToken))
 	if err != nil {
 		return nil, err
 	}
 	defer r.Body.Close()
-	if err = json.NewDecoder(r.Body).Decode(&data); err != nil {
+
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
 		return nil, err
 	}
+	vals, err := url.ParseQuery(string(body))
+	if err != nil {
+		return nil, err
+	}
+
 	return &BasicUserInfo{
-		Identity: data.Data.Id,
-		Name:     data.Data.Name,
-		Email:    data.Data.Email,
+		Identity: vals.Get("openid"),
 	}, nil
 }
 
@@ -289,54 +236,54 @@ func (s *SocialTencent) UserInfo(token *oauth.Token, URL *url.URL) (*BasicUserIn
 //   |____|    \/\_/ |__||__|  |__|  \___  >__|
 //                                       \/
 
-type SocialTwitter struct {
-	Token *oauth.Token
-	*oauth.Transport
-}
+// type SocialTwitter struct {
+// 	Token *oauth2.Token
+// 	*oauth2.Transport
+// }
 
-func (s *SocialTwitter) Type() int {
-	return int(models.TWITTER)
-}
+// func (s *SocialTwitter) Type() int {
+// 	return int(models.TWITTER)
+// }
 
-func newTwitterOauth(config *oauth.Config) {
-	SocialMap["twitter"] = &SocialTwitter{
-		Transport: &oauth.Transport{
-			Config:    config,
-			Transport: http.DefaultTransport,
-		},
-	}
-}
+// func newTwitterOauth(config *oauth2.Config) {
+// 	SocialMap["twitter"] = &SocialTwitter{
+// 		Transport: &oauth.Transport{
+// 			Config:    config,
+// 			Transport: http.DefaultTransport,
+// 		},
+// 	}
+// }
 
-func (s *SocialTwitter) SetRedirectUrl(url string) {
-	s.Transport.Config.RedirectURL = url
-}
+// func (s *SocialTwitter) SetRedirectUrl(url string) {
+// 	s.Transport.Config.RedirectURL = url
+// }
 
-//https://github.com/mrjones/oauth
-func (s *SocialTwitter) UserInfo(token *oauth.Token, _ *url.URL) (*BasicUserInfo, error) {
-	// transport := &oauth.Transport{Token: token}
-	// var data struct {
-	// 	Id    string `json:"id"`
-	// 	Name  string `json:"name"`
-	// 	Email string `json:"email"`
-	// }
-	// var err error
+// //https://github.com/mrjones/oauth
+// func (s *SocialTwitter) UserInfo(token *oauth2.Token, _ *url.URL) (*BasicUserInfo, error) {
+// 	// transport := &oauth.Transport{Token: token}
+// 	// var data struct {
+// 	// 	Id    string `json:"id"`
+// 	// 	Name  string `json:"name"`
+// 	// 	Email string `json:"email"`
+// 	// }
+// 	// var err error
 
-	// reqUrl := "https://www.googleapis.com/oauth2/v1/userinfo"
-	// r, err := transport.Client().Get(reqUrl)
-	// if err != nil {
-	// 	return nil, err
-	// }
-	// defer r.Body.Close()
-	// if err = json.NewDecoder(r.Body).Decode(&data); err != nil {
-	// 	return nil, err
-	// }
-	// return &BasicUserInfo{
-	// 	Identity: data.Id,
-	// 	Name:     data.Name,
-	// 	Email:    data.Email,
-	// }, nil
-	return nil, nil
-}
+// 	// reqUrl := "https://www.googleapis.com/oauth2/v1/userinfo"
+// 	// r, err := transport.Client().Get(reqUrl)
+// 	// if err != nil {
+// 	// 	return nil, err
+// 	// }
+// 	// defer r.Body.Close()
+// 	// if err = json.NewDecoder(r.Body).Decode(&data); err != nil {
+// 	// 	return nil, err
+// 	// }
+// 	// return &BasicUserInfo{
+// 	// 	Identity: data.Id,
+// 	// 	Name:     data.Name,
+// 	// 	Email:    data.Email,
+// 	// }, nil
+// 	return nil, nil
+// }
 
 //  __      __       ._____.
 // /  \    /  \ ____ |__\_ |__   ____
@@ -346,37 +293,25 @@ func (s *SocialTwitter) UserInfo(token *oauth.Token, _ *url.URL) (*BasicUserInfo
 //        \/       \/        \/
 
 type SocialWeibo struct {
-	Token *oauth.Token
-	*oauth.Transport
+	opts *oauth2.Options
+}
+
+func newWeiboOauth(opts *oauth2.Options) {
+	SocialMap["weibo"] = &SocialWeibo{opts}
 }
 
 func (s *SocialWeibo) Type() int {
 	return int(models.WEIBO)
 }
 
-func newWeiboOauth(config *oauth.Config) {
-	SocialMap["weibo"] = &SocialWeibo{
-		Transport: &oauth.Transport{
-			Config:    config,
-			Transport: http.DefaultTransport,
-		},
-	}
-}
-
-func (s *SocialWeibo) SetRedirectUrl(url string) {
-	s.Transport.Config.RedirectURL = url
-}
-
-func (s *SocialWeibo) UserInfo(token *oauth.Token, _ *url.URL) (*BasicUserInfo, error) {
-	transport := &oauth.Transport{Token: token}
+func (s *SocialWeibo) UserInfo(token *oauth2.Token, _ *url.URL) (*BasicUserInfo, error) {
+	transport := s.opts.NewTransportFromToken(token)
 	var data struct {
 		Name string `json:"name"`
 	}
-	var err error
-
 	var urls = url.Values{
 		"access_token": {token.AccessToken},
-		"uid":          {token.Extra["id_token"]},
+		"uid":          {token.Extra("uid")},
 	}
 	reqUrl := "https://api.weibo.com/2/users/show.json"
 	r, err := transport.Client().Get(reqUrl + "?" + urls.Encode())
@@ -384,11 +319,12 @@ func (s *SocialWeibo) UserInfo(token *oauth.Token, _ *url.URL) (*BasicUserInfo, 
 		return nil, err
 	}
 	defer r.Body.Close()
+
 	if err = json.NewDecoder(r.Body).Decode(&data); err != nil {
 		return nil, err
 	}
 	return &BasicUserInfo{
-		Identity: token.Extra["id_token"],
+		Identity: token.Extra("uid"),
 		Name:     data.Name,
 	}, nil
 }
