@@ -39,6 +39,8 @@ func NewOauthService() {
 		return
 	}
 
+	oauth2.AppSubUrl = setting.AppSubUrl
+
 	setting.OauthService = &setting.Oauther{}
 	setting.OauthService.OauthInfos = make(map[string]*setting.OauthInfo)
 
