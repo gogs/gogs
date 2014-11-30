@@ -17,7 +17,7 @@
         <div class="panel panel-info panel-radius diff-head-box">
             <div class="panel-header">
                 <a class="pull-right btn btn-blue btn-header btn-medium btn-radius" rel="nofollow" href="{{.SourcePath}}">{{.i18n.Tr "repo.diff.browse_source"}}</a>
-                <h4>{{.Commit.Message}}</h4>
+                <h4>{{Str2html .Commit.Message}}</h4>
             </div>
             <div class="panel-body">
                 <span class="pull-right">
@@ -37,7 +37,7 @@
                     <img class="avatar-30" src="{{AvatarLink .Commit.Author.Email}}" />
                     <strong>{{.Commit.Author.Name}}</strong>
                     {{end}}
-                    <span class="text-grey" id="authored-time">{{TimeSince .Commit.Author.When $.Lang}}</span> 
+                    <span class="text-grey" id="authored-time">{{TimeSince .Commit.Author.When $.Lang}}</span>
                 </p>
             </div>
         </div>
@@ -110,7 +110,7 @@
                             <td class="lines-num lines-num-new">
                                 <span rel="L1">{{if .RightIdx}}{{.RightIdx}}{{end}}</span>
                             </td>
-                            
+
                             <td class="lines-code">
                                 <pre>{{ToUtf8 .Content}}</pre>
                             </td>
@@ -122,7 +122,7 @@
                 {{end}}
             </div>
         </div>
-        <br> 
+        <br>
         {{end}}
         {{end}}
     </div>
