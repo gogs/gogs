@@ -417,6 +417,13 @@ func ChangeUserName(u *User, newUserName string) (err error) {
 
 // UpdateUser updates user's information.
 func UpdateUser(u *User) error {
+	has, err := x.Where("id != ?", u.Id).And("email = ?", u.Email).Get(new(User))
+	if err != nil {
+		return err
+	} else if has {
+		return ErrEmailAlreadyUsed
+	}
+
 	u.LowerName = strings.ToLower(u.Name)
 
 	if len(u.Location) > 255 {
@@ -429,7 +436,7 @@ func UpdateUser(u *User) error {
 		u.Description = u.Description[:255]
 	}
 
-	_, err := x.Id(u.Id).AllCols().Update(u)
+	_, err = x.Id(u.Id).AllCols().Update(u)
 	return err
 }
 
