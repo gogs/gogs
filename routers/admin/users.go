@@ -192,13 +192,19 @@ func EditUserPost(ctx *middleware.Context, form auth.AdminEditUserForm) {
 	u.IsActive = form.Active
 	u.IsAdmin = form.Admin
 	u.AllowGitHook = form.AllowGitHook
+
+	ctx.Data["User"] = u
+
 	if err := models.UpdateUser(u); err != nil {
-		ctx.Handle(500, "UpdateUser", err)
+		if err == models.ErrEmailAlreadyUsed {
+			ctx.Data["Err_Email"] = true
+			ctx.RenderWithErr(ctx.Tr("form.email_been_used"), USER_EDIT, &form)
+		} else {
+			ctx.Handle(500, "UpdateUser", err)
+		}
 		return
 	}
 	log.Trace("Account profile updated by admin(%s): %s", ctx.User.Name, u.Name)
-
-	ctx.Data["User"] = u
 	ctx.Flash.Success(ctx.Tr("admin.users.update_profile_success"))
 	ctx.Redirect(setting.AppSubUrl + "/admin/users/" + ctx.Params(":userid"))
 }
