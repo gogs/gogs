@@ -1140,18 +1140,8 @@ type SearchOption struct {
 	Private bool
 }
 
-// FilterSQLInject tries to prevent SQL injection.
-func FilterSQLInject(key string) string {
-	key = strings.TrimSpace(key)
-	key = strings.Split(key, " ")[0]
-	key = strings.Replace(key, ",", "", -1)
-	return key
-}
-
 // SearchRepositoryByName returns given number of repositories whose name contains keyword.
 func SearchRepositoryByName(opt SearchOption) (repos []*Repository, err error) {
-	// Prevent SQL inject.
-	opt.Keyword = FilterSQLInject(opt.Keyword)
 	if len(opt.Keyword) == 0 {
 		return repos, nil
 	}
@@ -1180,6 +1170,47 @@ func DeleteRepositoryArchives() error {
 				return err
 			}
 			return os.RemoveAll(filepath.Join(RepoPath(repo.Owner.Name, repo.Name), "archives"))
+		})
+}
+
+// GitFsck calls 'git fsck' to check repository health.
+func GitFsck() {
+	args := append([]string{"fsck"}, setting.GitFsckArgs...)
+	if err := x.Where("id > 0").Iterate(new(Repository),
+		func(idx int, bean interface{}) error {
+			repo := bean.(*Repository)
+			if err := repo.GetOwner(); err != nil {
+				return err
+			}
+
+			repoPath := RepoPath(repo.Owner.Name, repo.Name)
+			_, _, err := process.ExecDir(-1, repoPath, "Repository health check", "git", args...)
+			if err != nil {
+				desc := fmt.Sprintf("Fail to health check repository(%s)", repoPath)
+				log.Warn(desc)
+				if err = CreateRepositoryNotice(desc); err != nil {
+					log.Error(4, "Fail to add notice: %v", err)
+				}
+			}
+			return nil
+		}); err != nil {
+		log.Error(4, "repo.Fsck: %v", err)
+	}
+}
+
+func GitGcRepos() error {
+	args := append([]string{"gc"}, setting.GitGcArgs...)
+	return x.Where("id > 0").Iterate(new(Repository),
+		func(idx int, bean interface{}) error {
+			repo := bean.(*Repository)
+			if err := repo.GetOwner(); err != nil {
+				return err
+			}
+			_, stderr, err := process.ExecDir(-1, RepoPath(repo.Owner.Name, repo.Name), "Repository garbage collection", "git", args...)
+			if err != nil {
+				return fmt.Errorf("%v: %v", err, stderr)
+			}
+			return nil
 		})
 }
 
