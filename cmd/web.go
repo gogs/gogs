@@ -143,8 +143,10 @@ func newMacaron() *macaron.Macaron {
 	}))
 
 	// OAuth 2.
-	for _, info := range setting.OauthService.OauthInfos {
-		m.Use(oauth2.NewOAuth2Provider(info.Options, info.AuthUrl, info.TokenUrl))
+	if setting.OauthService != nil {
+		for _, info := range setting.OauthService.OauthInfos {
+			m.Use(oauth2.NewOAuth2Provider(info.Options, info.AuthUrl, info.TokenUrl))
+		}
 	}
 	m.Use(middleware.Contexter())
 	return m
