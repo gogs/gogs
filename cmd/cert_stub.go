@@ -8,6 +8,7 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/codegangsta/cli"
@@ -31,4 +32,5 @@ Outputs to 'cert.pem' and 'key.pem' and will overwrite existing files.`,
 
 func runCert(ctx *cli.Context) {
 	fmt.Println("Command cert not available, please use build tags 'cert' to rebuild.")
+	os.Exit(1)
 }
