@@ -628,7 +628,6 @@ func GetUserByEmail(email string) (*User, error) {
 
 // SearchUserByName returns given number of users whose name contains keyword.
 func SearchUserByName(opt SearchOption) (us []*User, err error) {
-	opt.Keyword = FilterSQLInject(opt.Keyword)
 	if len(opt.Keyword) == 0 {
 		return us, nil
 	}

@@ -109,6 +109,8 @@ var (
 
 	// Git settings.
 	MaxGitDiffLines int
+	GitFsckArgs     []string
+	GitGcArgs       []string
 
 	// I18n settings.
 	Langs, Names []string
@@ -288,6 +290,8 @@ func NewConfigContext() {
 	DisableGravatar = Cfg.MustBool("picture", "DISABLE_GRAVATAR")
 
 	MaxGitDiffLines = Cfg.MustInt("git", "MAX_GITDIFF_LINES", 10000)
+	GitFsckArgs = Cfg.MustValueArray("git", "FSCK_ARGS", " ")
+	GitGcArgs = Cfg.MustValueArray("git", "GC_ARGS", " ")
 
 	Langs = Cfg.MustValueArray("i18n", "LANGS", ",")
 	Names = Cfg.MustValueArray("i18n", "NAMES", ",")

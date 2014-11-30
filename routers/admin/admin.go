@@ -117,6 +117,7 @@ const (
 	CLEAN_UNBIND_OAUTH AdminOperation = iota + 1
 	CLEAN_INACTIVATE_USER
 	CLEAN_REPO_ARCHIVES
+	GIT_GC_REPOS
 )
 
 func Dashboard(ctx *middleware.Context) {
@@ -140,6 +141,9 @@ func Dashboard(ctx *middleware.Context) {
 		case CLEAN_REPO_ARCHIVES:
 			success = ctx.Tr("admin.dashboard.delete_repo_archives_success")
 			err = models.DeleteRepositoryArchives()
+		case GIT_GC_REPOS:
+			success = ctx.Tr("admin.dashboard.git_gc_repos_success")
+			err = models.GitGcRepos()
 		}
 
 		if err != nil {
