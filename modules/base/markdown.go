@@ -100,10 +100,11 @@ func (options *CustomRender) Image(out *bytes.Buffer, link []byte, title []byte,
 }
 
 var (
-	MentionPattern    = regexp.MustCompile(`@[0-9a-zA-Z_]{1,}`)
-	commitPattern     = regexp.MustCompile(`(\s|^)https?.*commit/[0-9a-zA-Z]+(#+[0-9a-zA-Z-]*)?`)
-	issueFullPattern  = regexp.MustCompile(`(\s|^)https?.*issues/[0-9]+(#+[0-9a-zA-Z-]*)?`)
-	issueIndexPattern = regexp.MustCompile(`#[0-9]+`)
+	MentionPattern     = regexp.MustCompile(`@[0-9a-zA-Z_]{1,}`)
+	commitPattern      = regexp.MustCompile(`(\s|^)https?.*commit/[0-9a-zA-Z]+(#+[0-9a-zA-Z-]*)?`)
+	issueFullPattern   = regexp.MustCompile(`(\s|^)https?.*issues/[0-9]+(#+[0-9a-zA-Z-]*)?`)
+	issueIndexPattern  = regexp.MustCompile(`#[0-9]+`)
+	sha1CurrentPattern = regexp.MustCompile(`\b[0-9a-f]{40}\b`)
 )
 
 func RenderSpecialLink(rawBytes []byte, urlPrefix string) []byte {
@@ -153,7 +154,22 @@ func RenderSpecialLink(rawBytes []byte, urlPrefix string) []byte {
 		rawBytes = bytes.Replace(rawBytes, m, []byte(fmt.Sprintf(
 			` <a href="%s">#%s</a>`, m, ShortSha(string(m[i+7:j])))), -1)
 	}
-	ms = issueIndexPattern.FindAll(rawBytes, -1)
+	rawBytes = RenderissueIndexPattern(rawBytes, urlPrefix)
+	rawBytes = RenderSha1CurrentPattern(rawBytes, urlPrefix)
+	return rawBytes
+}
+
+func RenderSha1CurrentPattern(rawBytes []byte, urlPrefix string) []byte {
+	ms := sha1CurrentPattern.FindAll(rawBytes, -1)
+	for _, m := range ms {
+		rawBytes = bytes.Replace(rawBytes, m, []byte(fmt.Sprintf(
+			`<a href="%s/commit/%s"><code>%s</code></a>`, urlPrefix, m, ShortSha(string(m)))), -1)
+	}
+	return rawBytes
+}
+
+func RenderissueIndexPattern(rawBytes []byte, urlPrefix string) []byte {
+	ms := issueIndexPattern.FindAll(rawBytes, -1)
 	for _, m := range ms {
 		rawBytes = bytes.Replace(rawBytes, m, []byte(fmt.Sprintf(
 			`<a href="%s/issues/%s">%s</a>`, urlPrefix, m[1:], m)), -1)
