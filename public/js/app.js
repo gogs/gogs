@@ -303,6 +303,9 @@ var Gogits = {};
 
     // api working
     Gogits.getUsers = function (val, $target) {
+        var notEmpty = function (str) {
+          return str && str.length > 0;
+        }
         $.ajax({
             url: '/api/v1/users/search?q=' + val,
             dataType: "json",
@@ -310,7 +313,11 @@ var Gogits = {};
                 if (json.ok && json.data.length) {
                     var html = '';
                     $.each(json.data, function (i, item) {
-                        html += '<li><img src="' + item.avatar + '">' + item.username + '</li>';
+                        html += '<li><img src="' + item.avatar + '">' + item.username;
+                        if (notEmpty(item.full_name)) {
+                          html += ' (' + item.full_name + ')';
+                        }
+                        html += '</li>';
                     });
                     $target.toggleShow();
                     $target.find('ul').html(html);
