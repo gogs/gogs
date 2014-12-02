@@ -37,6 +37,7 @@ func SearchUsers(ctx *middleware.Context) {
 		results[i] = &api.User{
 			UserName:  us[i].Name,
 			AvatarUrl: us[i].AvatarLink(),
+			FullName:  us[i].FullName,
 		}
 	}
 
