@@ -203,6 +203,9 @@ var Gogs = {};
 
     // Search users by keyword.
     Gogs.searchUsers = function (val, $target) {
+        var notEmpty = function (str) {
+          return str && str.length > 0;
+        }
         $.ajax({
             url: Gogs.AppSubUrl + '/api/v1/users/search?q=' + val,
             dataType: "json",
@@ -210,7 +213,11 @@ var Gogs = {};
                 if (json.ok && json.data.length) {
                     var html = '';
                     $.each(json.data, function (i, item) {
-                        html += '<li><a><img src="' + item.avatar_url + '">' + item.username + '</a></li>';
+                        html += '<li><a><img src="' + item.avatar_url + '">' + item.username;
+                        if (notEmpty(item.full_name)) {
+                          html += ' (' + item.full_name + ')';
+                        }
+                        html += '</a></li>';
                     });
                     $target.html(html);
                     $target.toggleShow();
