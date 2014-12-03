@@ -21,6 +21,7 @@ import (
 	"github.com/Unknwon/com"
 	"github.com/nfnt/resize"
 
+	"github.com/gogits/gogs/modules/avatar"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/git"
 	"github.com/gogits/gogs/modules/log"
@@ -276,8 +277,8 @@ func CreateUser(u *User) error {
 	}
 
 	u.LowerName = strings.ToLower(u.Name)
-	u.Avatar = base.EncodeMd5(u.Email)
 	u.AvatarEmail = u.Email
+	u.Avatar = avatar.HashEmail(u.AvatarEmail)
 	u.Rands = GetUserSalt()
 	u.Salt = GetUserSalt()
 	u.EncodePasswd()
@@ -435,6 +436,11 @@ func UpdateUser(u *User) error {
 	if len(u.Description) > 255 {
 		u.Description = u.Description[:255]
 	}
+
+	if u.AvatarEmail == "" {
+		u.AvatarEmail = u.Email
+	}
+	u.Avatar = avatar.HashEmail(u.AvatarEmail)
 
 	_, err = x.Id(u.Id).AllCols().Update(u)
 	return err
