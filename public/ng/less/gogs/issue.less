@@ -295,9 +295,6 @@ textarea#issue-add-content {
       font-size: 15px;
       margin: 0 6px;
     }
-    .index-num {
-      padding: .25em .6em;
-    }
   }
   .comment {
     color: #666;
@@ -306,7 +303,6 @@ textarea#issue-add-content {
     right: 0;
   }
   .issue-label {
-    padding: .25em .6em;
     a {
       color: #FFF;
     }
@@ -318,6 +314,60 @@ textarea#issue-add-content {
       &:hover {
         color: #03a2ef;
       }
+    }
+  }
+}
+// issue list filter
+#issue-list-filter{
+  .drop > a{
+    width: 90px;
+    padding: 0;
+    margin-left: 12px;
+    text-align: center;
+  }
+  .drop-down{
+    z-index: 999;
+    width: 236px;
+    left:-158px; // 260 - 90 - 12
+    top:22px;
+    padding: 0 12px;
+    h4{
+      line-height: 40px;
+      border-bottom: 1px solid #CCC;
+      margin-bottom: 0;
+    }
+    li{
+      line-height: 30px;
+      border-bottom: 1px dashed #EEE;
+      padding-left: 9px;
+      &:hover{
+        background-color: #fcffec;
+      }
+    }
+    > ul > li > a{
+      display: block;
+    }
+  }
+  .labels{
+    .color{
+      margin-top: 8px;
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      background-color: red;
+      margin-right: 9px;
+      margin-left: 9px;
+    }
+    .name{
+      vertical-align: top;
+      display: inline-block;
+      color: #444;
+    }
+  }
+  .milestones{
+    a{
+      color: #444;
+      font-weight: bold;
     }
   }
 }

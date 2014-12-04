@@ -2061,20 +2061,12 @@ textarea#issue-add-content {
   font-size: 15px;
   margin: 0 6px;
 }
-#issue-list .item .index-num,
-#pull-list .item .index-num {
-  padding: .25em .6em;
-}
 #issue-list .comment,
 #pull-list .comment {
   color: #666;
   position: absolute;
   top: 6px;
   right: 0;
-}
-#issue-list .issue-label,
-#pull-list .issue-label {
-  padding: .25em .6em;
 }
 #issue-list .issue-label a,
 #pull-list .issue-label a {
@@ -2091,6 +2083,53 @@ textarea#issue-add-content {
 #issue-list .desc a:hover,
 #pull-list .desc a:hover {
   color: #03a2ef;
+}
+#issue-list-filter .drop > a {
+  width: 90px;
+  padding: 0;
+  margin-left: 12px;
+  text-align: center;
+}
+#issue-list-filter .drop-down {
+  z-index: 999;
+  width: 236px;
+  left: -158px;
+  top: 22px;
+  padding: 0 12px;
+}
+#issue-list-filter .drop-down h4 {
+  line-height: 40px;
+  border-bottom: 1px solid #CCC;
+  margin-bottom: 0;
+}
+#issue-list-filter .drop-down li {
+  line-height: 30px;
+  border-bottom: 1px dashed #EEE;
+  padding-left: 9px;
+}
+#issue-list-filter .drop-down li:hover {
+  background-color: #fcffec;
+}
+#issue-list-filter .drop-down > ul > li > a {
+  display: block;
+}
+#issue-list-filter .labels .color {
+  margin-top: 8px;
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  background-color: red;
+  margin-right: 9px;
+  margin-left: 9px;
+}
+#issue-list-filter .labels .name {
+  vertical-align: top;
+  display: inline-block;
+  color: #444;
+}
+#issue-list-filter .milestones a {
+  color: #444;
+  font-weight: bold;
 }
 #issue-list-pager {
   margin: 18px 0 24px 0;
