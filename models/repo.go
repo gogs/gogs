@@ -308,28 +308,6 @@ func MirrorRepository(repoId int64, userName, repoName, repoPath, url string) er
 	return nil
 }
 
-// MirrorUpdate checks and updates mirror repositories.
-func MirrorUpdate() {
-	if err := x.Iterate(new(Mirror), func(idx int, bean interface{}) error {
-		m := bean.(*Mirror)
-		if m.NextUpdate.After(time.Now()) {
-			return nil
-		}
-
-		repoPath := filepath.Join(setting.RepoRootPath, m.RepoName+".git")
-		if _, stderr, err := process.ExecDir(10*time.Minute,
-			repoPath, fmt.Sprintf("MirrorUpdate: %s", repoPath),
-			"git", "remote", "update"); err != nil {
-			return errors.New("git remote update: " + stderr)
-		}
-
-		m.NextUpdate = time.Now().Add(time.Duration(m.Interval) * time.Hour)
-		return UpdateMirror(m)
-	}); err != nil {
-		log.Error(4, "repo.MirrorUpdate: %v", err)
-	}
-}
-
 // MigrateRepository migrates a existing repository from other project hosting.
 func MigrateRepository(u *User, name, desc string, private, mirror bool, url string) (*Repository, error) {
 	repo, err := CreateRepository(u, name, desc, "", "", private, mirror, false)
@@ -1173,8 +1151,48 @@ func DeleteRepositoryArchives() error {
 		})
 }
 
+var (
+	// Prevent duplicate tasks.
+	isMirrorUpdating = false
+	isGitFscking     = false
+)
+
+// MirrorUpdate checks and updates mirror repositories.
+func MirrorUpdate() {
+	if isMirrorUpdating {
+		return
+	}
+	isMirrorUpdating = true
+	defer func() { isMirrorUpdating = false }()
+
+	if err := x.Iterate(new(Mirror), func(idx int, bean interface{}) error {
+		m := bean.(*Mirror)
+		if m.NextUpdate.After(time.Now()) {
+			return nil
+		}
+
+		repoPath := filepath.Join(setting.RepoRootPath, m.RepoName+".git")
+		if _, stderr, err := process.ExecDir(10*time.Minute,
+			repoPath, fmt.Sprintf("MirrorUpdate: %s", repoPath),
+			"git", "remote", "update"); err != nil {
+			return errors.New("git remote update: " + stderr)
+		}
+
+		m.NextUpdate = time.Now().Add(time.Duration(m.Interval) * time.Hour)
+		return UpdateMirror(m)
+	}); err != nil {
+		log.Error(4, "repo.MirrorUpdate: %v", err)
+	}
+}
+
 // GitFsck calls 'git fsck' to check repository health.
 func GitFsck() {
+	if isGitFscking {
+		return
+	}
+	isGitFscking = true
+	defer func() { isGitFscking = false }()
+
 	args := append([]string{"fsck"}, setting.GitFsckArgs...)
 	if err := x.Where("id > 0").Iterate(new(Repository),
 		func(idx int, bean interface{}) error {
