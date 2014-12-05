@@ -14,7 +14,7 @@
             </span>
             <span class="last-commit"><a href="{{.RepoLink}}/commit/{{.LastCommit.Id}}" rel="nofollow">
                 <strong>{{ShortSha .LastCommit.Id.String}}</strong></a>
-                <span class="text-truncate">{{.LastCommit.Summary}}</span>
+                <span class="text-truncate">{{Str2html .LastCommit.Summary}}</span>
             </span>
             <span class="age right">{{TimeSince .LastCommit.Author.When $.Lang}}</span>
         </th>
@@ -25,6 +25,7 @@
         <tr class="has-parent">
             <td class="icon"></td>
             <td class="name"><a href="{{EscapePound .BranchLink}}{{.ParentPath}}">..</a></td>
+            <th class="sha">SHA1</th>
             <td class="msg"></td>
             <td class="age"></td>
         </tr>
@@ -48,8 +49,11 @@
                     <a href="{{EscapePound $.BranchLink}}/{{$.TreePath}}{{$entry.Name}}" class="text-truncate">{{$entry.Name}}</a>
                 </td>
                 {{end}}
-                <td class="msg">
-                    <a class="text-truncate" href="{{AppSubUrl}}/{{$.Username}}/{{$.Reponame}}/commit/{{$commit.Id}}" rel="nofollow">{{$commit.Summary}}</a>
+                <td class="sha">
+                  <a rel="nofollow" class="label label-green" href="{{AppSubUrl}}/{{$.Username}}/{{$.Reponame}}/commit/{{$commit.Id}} ">{{SubStr $commit.Id.String 0 10}} </a>
+                </td>
+                <td class="message">
+                  <span class="text-truncate">{{Str2html $commit.Summary}}</span>
                 </td>
                 <td class="age">{{TimeSince $commit.Committer.When $.Lang}}</td>
             </tr>
