@@ -23,6 +23,7 @@ import (
 	"github.com/Unknwon/com"
 	"github.com/Unknwon/i18n"
 
+	"github.com/gogits/gogs/modules/avatar"
 	"github.com/gogits/gogs/modules/setting"
 )
 
@@ -177,10 +178,13 @@ func CreateTimeLimitCode(data string, minutes int, startInf interface{}) string 
 func AvatarLink(email string) string {
 	if setting.DisableGravatar {
 		return setting.AppSubUrl + "/img/avatar_default.jpg"
-	} else if setting.Service.EnableCacheAvatar {
-		return setting.AppSubUrl + "/avatar/" + EncodeMd5(email)
 	}
-	return setting.GravatarSource + EncodeMd5(email)
+
+	gravatarHash := avatar.HashEmail(email)
+	if setting.Service.EnableCacheAvatar {
+		return setting.AppSubUrl + "/avatar/" + gravatarHash
+	}
+	return setting.GravatarSource + gravatarHash
 }
 
 // Seconds-based time units
