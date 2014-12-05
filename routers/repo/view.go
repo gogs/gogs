@@ -199,6 +199,7 @@ func Home(ctx *middleware.Context) {
 		}
 
 		lastCommit := ctx.Repo.Commit
+		lastCommit.CommitMessage = string(base.RenderissueIndexPattern([]byte(lastCommit.CommitMessage), ctx.Repo.RepoLink))
 		if len(treePath) > 0 {
 			c, err := ctx.Repo.Commit.GetCommitOfRelPath(treePath)
 			if err != nil {
