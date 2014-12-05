@@ -17,6 +17,7 @@ import (
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/setting"
+	"github.com/gogits/gogs/modules/uuid"
 )
 
 // SignedInId returns the id of signed in user.
@@ -83,7 +84,7 @@ func SignedInUser(req *http.Request, sess session.Store) (*models.User, bool) {
 					if setting.Service.EnableReverseProxyAutoRegister {
 						u := &models.User{
 							Name:     webAuthUser,
-							Email:    webAuthUser + "@gogs.io",
+							Email:    uuid.NewV4().String() + "@localhost",
 							Passwd:   webAuthUser,
 							IsActive: true,
 						}
