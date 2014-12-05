@@ -5,12 +5,14 @@
 package repo
 
 import (
+	"container/list"
 	"path"
 
 	"github.com/Unknwon/com"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"
+	"github.com/gogits/gogs/modules/git"
 	"github.com/gogits/gogs/modules/middleware"
 	"github.com/gogits/gogs/modules/setting"
 )
@@ -72,6 +74,7 @@ func Commits(ctx *middleware.Context) {
 		ctx.Handle(500, "CommitsByRange", err)
 		return
 	}
+	commits = RenderIssueLinks(commits, ctx.Repo.RepoLink)
 	commits = models.ValidateCommitsWithEmails(commits)
 
 	ctx.Data["Commits"] = commits
@@ -81,6 +84,16 @@ func Commits(ctx *middleware.Context) {
 	ctx.Data["LastPageNum"] = lastPage
 	ctx.Data["NextPageNum"] = nextPage
 	ctx.HTML(200, COMMITS)
+}
+
+func RenderIssueLinks(oldCommits *list.List, repoLink string) *list.List {
+	newCommits := list.New()
+	for e := oldCommits.Front(); e != nil; e = e.Next() {
+		c := e.Value.(*git.Commit)
+		c.CommitMessage = string(base.RenderissueIndexPattern([]byte(c.CommitMessage), repoLink))
+		newCommits.PushBack(c)
+	}
+	return newCommits
 }
 
 func SearchCommits(ctx *middleware.Context) {
@@ -110,6 +123,7 @@ func SearchCommits(ctx *middleware.Context) {
 		ctx.Handle(500, "SearchCommits", err)
 		return
 	}
+	commits = RenderIssueLinks(commits, ctx.Repo.RepoLink)
 	commits = models.ValidateCommitsWithEmails(commits)
 
 	ctx.Data["Keyword"] = keyword
@@ -171,6 +185,7 @@ func FileHistory(ctx *middleware.Context) {
 		ctx.Handle(500, "repo.FileHistory(CommitsByRange)", err)
 		return
 	}
+	commits = RenderIssueLinks(commits, ctx.Repo.RepoLink)
 	commits = models.ValidateCommitsWithEmails(commits)
 
 	ctx.Data["Commits"] = commits
@@ -191,7 +206,7 @@ func Diff(ctx *middleware.Context) {
 	commitId := ctx.Repo.CommitId
 
 	commit := ctx.Repo.Commit
-
+	commit.CommitMessage = string(base.RenderissueIndexPattern([]byte(commit.CommitMessage), ctx.Repo.RepoLink))
 	diff, err := models.GetDiffCommit(models.RepoPath(userName, repoName),
 		commitId, setting.MaxGitDiffLines)
 	if err != nil {
