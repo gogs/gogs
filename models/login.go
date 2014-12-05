@@ -18,6 +18,7 @@ import (
 
 	"github.com/gogits/gogs/modules/auth/ldap"
 	"github.com/gogits/gogs/modules/log"
+	"github.com/gogits/gogs/modules/uuid"
 )
 
 type LoginType int
@@ -228,30 +229,32 @@ func UserSignIn(uname, passwd string) (*User, error) {
 // Query if name/passwd can login against the LDAP direcotry pool
 // Create a local user if success
 // Return the same LoginUserPlain semantic
+// FIXME: https://github.com/gogits/gogs/issues/672
 func LoginUserLdapSource(u *User, name, passwd string, sourceId int64, cfg *LDAPConfig, autoRegister bool) (*User, error) {
 	mail, logged := cfg.Ldapsource.SearchEntry(name, passwd)
 	if !logged {
-		// user not in LDAP, do nothing
+		// User not in LDAP, do nothing
 		return nil, ErrUserNotExist
 	}
 	if !autoRegister {
 		return u, nil
 	}
 
-	// fake a local user creation
+	// Fallback.
+	if len(mail) == 0 {
+		mail = uuid.NewV4().String() + "@localhost"
+	}
+
 	u = &User{
-		LowerName:   strings.ToLower(name),
-		Name:        strings.ToLower(name),
+		Name:        name,
 		LoginType:   LDAP,
 		LoginSource: sourceId,
 		LoginName:   name,
-		IsActive:    true,
 		Passwd:      passwd,
 		Email:       mail,
+		IsActive:    true,
 	}
-
-	err := CreateUser(u)
-	return u, err
+	return u, CreateUser(u)
 }
 
 type loginAuth struct {
