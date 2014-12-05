@@ -48,8 +48,12 @@ func init() {
 // hash email to md5 string
 // keep this func in order to make this package indenpent
 func HashEmail(email string) string {
+	// https://en.gravatar.com/site/implement/hash/
+	email = strings.TrimSpace(email)
+	email = strings.ToLower(email)
+
 	h := md5.New()
-	h.Write([]byte(strings.ToLower(email)))
+	h.Write([]byte(email))
 	return hex.EncodeToString(h.Sum(nil))
 }
 
