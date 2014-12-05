@@ -1510,6 +1510,9 @@ The register and sign-in page style
 .commit-list .message span {
   max-width: 500px;
 }
+.commit-message {
+  white-space: pre-wrap;
+}
 .diff-head-box {
   margin-top: 10px;
 }
