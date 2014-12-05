@@ -26,6 +26,7 @@ The goal of this project is to make the easiest, fastest and most painless way t
 - See [Trello Board](https://trello.com/b/uxAoeLUl/gogs-go-git-service) to follow the develop team.
 - Try it before anything? Do it [online](https://try.gogs.io/Unknown/gogs) or go down to **Installation -> Install from binary** section!
 - Having troubles? Get help from [Troubleshooting](http://gogs.io/docs/intro/troubleshooting.md).
+- Want to help on localization? Check out [Crowdin](https://crowdin.com/project/gogs)!
 
 ## Features
 
