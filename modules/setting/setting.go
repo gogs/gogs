@@ -300,15 +300,15 @@ func NewConfigContext() {
 }
 
 var Service struct {
-	RegisterEmailConfirm   bool
-	DisableRegistration    bool
-	RequireSignInView      bool
-	EnableCacheAvatar      bool
-	EnableNotifyMail       bool
-	EnableReverseProxyAuth bool
-	LdapAuth               bool
-	ActiveCodeLives        int
-	ResetPwdCodeLives      int
+	RegisterEmailConfirm           bool
+	DisableRegistration            bool
+	RequireSignInView              bool
+	EnableCacheAvatar              bool
+	EnableNotifyMail               bool
+	EnableReverseProxyAuth         bool
+	EnableReverseProxyAutoRegister bool
+	ActiveCodeLives                int
+	ResetPwdCodeLives              int
 }
 
 func newService() {
@@ -318,6 +318,7 @@ func newService() {
 	Service.RequireSignInView = Cfg.MustBool("service", "REQUIRE_SIGNIN_VIEW")
 	Service.EnableCacheAvatar = Cfg.MustBool("service", "ENABLE_CACHE_AVATAR")
 	Service.EnableReverseProxyAuth = Cfg.MustBool("service", "ENABLE_REVERSE_PROXY_AUTHENTICATION")
+	Service.EnableReverseProxyAutoRegister = Cfg.MustBool("service", "ENABLE_REVERSE_PROXY_AUTO_REGISTERATION")
 }
 
 var logLevels = map[string]string{

@@ -60,6 +60,7 @@ func SignedInId(req *http.Request, sess session.Store) int64 {
 }
 
 // SignedInUser returns the user object of signed user.
+// It returns a bool value to indicate whether user uses basic auth or not.
 func SignedInUser(req *http.Request, sess session.Store) (*models.User, bool) {
 	if !models.HasEngine {
 		return nil, false
@@ -75,8 +76,25 @@ func SignedInUser(req *http.Request, sess session.Store) (*models.User, bool) {
 				if err != nil {
 					if err != models.ErrUserNotExist {
 						log.Error(4, "GetUserByName: %v", err)
+						return nil, false
 					}
-					return nil, false
+
+					// Check if enabled auto-registeration.
+					if setting.Service.EnableReverseProxyAutoRegister {
+						u := &models.User{
+							Name:     webAuthUser,
+							Email:    webAuthUser + "@gogs.io",
+							Passwd:   webAuthUser,
+							IsActive: true,
+						}
+						if err = models.CreateUser(u); err != nil {
+							// FIXME: should I create a system notice?
+							log.Error(4, "CreateUser: %v", err)
+							return nil, false
+						} else {
+							return u, false
+						}
+					}
 				}
 				return u, false
 			}
