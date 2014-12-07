@@ -856,7 +856,7 @@ func UpdateRepository(repo *Repository) error {
 	return err
 }
 
-// DeleteRepository deletes a repository for a user or orgnaztion.
+// DeleteRepository deletes a repository for a user or organization.
 func DeleteRepository(uid, repoId int64, userName string) error {
 	repo := &Repository{Id: repoId, OwnerId: uid}
 	has, err := x.Get(repo)
@@ -1239,7 +1239,7 @@ func GitGcRepos() error {
 //   \__/\  /  (____  /__|  \___  >___|  /
 //        \/        \/          \/     \/
 
-// Watch is connection request for receiving repository notifycation.
+// Watch is connection request for receiving repository notification.
 type Watch struct {
 	Id     int64
 	UserId int64 `xorm:"UNIQUE(watch)"`

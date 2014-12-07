@@ -20,7 +20,7 @@ type Ldapsource struct {
 	Port         int    // port number
 	UseSSL       bool   // Use SSL
 	BaseDN       string // Base DN
-	Attributes   string // Attribut to search
+	Attributes   string // Attribute to search
 	Filter       string // Query filter to validate entry
 	MsAdSAFormat string // in the case of MS AD Simple Authen, the format to use (see: http://msdn.microsoft.com/en-us/library/cc223499.aspx)
 	Enabled      bool   // if this source is disabled
@@ -37,7 +37,7 @@ func AddSource(name string, host string, port int, usessl bool, basedn string, a
 	Authensource = append(Authensource, ldaphost)
 }
 
-//LoginUser : try to login an user to LDAP sources, return requested (attribut,true) if ok, ("",false) other wise
+//LoginUser : try to login an user to LDAP sources, return requested (attribute,true) if ok, ("",false) other wise
 //First match wins
 //Returns first attribute if exists
 func LoginUser(name, passwd string) (a string, r bool) {

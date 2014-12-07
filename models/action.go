@@ -349,7 +349,7 @@ func NewRepoAction(u *User, repo *Repository) (err error) {
 	return err
 }
 
-// TransferRepoAction adds new action for transfering repository.
+// TransferRepoAction adds new action for transferring repository.
 func TransferRepoAction(u, newUser *User, repo *Repository) (err error) {
 	action := &Action{
 		ActUserId:    u.Id,

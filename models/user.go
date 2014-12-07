@@ -147,7 +147,7 @@ func (u *User) CustomAvatarPath() string {
 }
 
 // UploadAvatar saves custom avatar for user.
-// FIXME: splite uploads to different subdirs in case we have massive users.
+// FIXME: split uploads to different subdirs in case we have massive users.
 func (u *User) UploadAvatar(data []byte) error {
 	u.UseCustomAvatar = true
 
@@ -584,7 +584,7 @@ func GetUserIdsByNames(names []string) []int64 {
 	return ids
 }
 
-// UserCommit represtns a commit with validation of user.
+// UserCommit represents a commit with validation of user.
 type UserCommit struct {
 	User *User
 	*git.Commit
@@ -651,7 +651,7 @@ func SearchUserByName(opt SearchOption) (us []*User, err error) {
 	return us, err
 }
 
-// Follow is connection request for receiving user notifycation.
+// Follow is connection request for receiving user notification.
 type Follow struct {
 	Id       int64
 	UserId   int64 `xorm:"unique(follow)"`

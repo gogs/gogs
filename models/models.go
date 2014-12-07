@@ -107,7 +107,7 @@ func SetEngine() (err error) {
 		return fmt.Errorf("models.init(fail to connect to database): %v", err)
 	}
 
-	// WARNNING: for serv command, MUST remove the output to os.stdout,
+	// WARNING: for serv command, MUST remove the output to os.stdout,
 	// so use log file to instead print to stdout.
 	logPath := path.Join(setting.LogRootPath, "xorm.log")
 	os.MkdirAll(path.Dir(logPath), os.ModePerm)

@@ -162,7 +162,7 @@ func newLogger(buffer int64) *Logger {
 	return l
 }
 
-// SetLogger sets new logger instanse with given logger adapter and config.
+// SetLogger sets new logger instance with given logger adapter and config.
 func (l *Logger) SetLogger(adapter string, config string) error {
 	l.lock.Lock()
 	defer l.lock.Unlock()
