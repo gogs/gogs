@@ -46,7 +46,7 @@ func init() {
 }
 
 // hash email to md5 string
-// keep this func in order to make this package indenpent
+// keep this func in order to make this package independent
 func HashEmail(email string) string {
 	// https://en.gravatar.com/site/implement/hash/
 	email = strings.TrimSpace(email)

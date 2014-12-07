@@ -6,7 +6,7 @@ import (
 	"github.com/gogits/gogs/modules/asn1-ber"
 )
 
-// debbuging type
+// debugging type
 //     - has a Printf method to write the debug output
 type debugging bool
 

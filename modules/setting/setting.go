@@ -260,7 +260,7 @@ func NewConfigContext() {
 		log.Fatal(4, "Expect user(%s) but current user is: %s", RunUser, curUser)
 	}
 
-	// Determine and create root git reposiroty path.
+	// Determine and create root git repository path.
 	homeDir, err := com.HomeDir()
 	if err != nil {
 		log.Fatal(4, "Fail to get home directory: %v", err)

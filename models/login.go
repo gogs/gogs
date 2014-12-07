@@ -41,7 +41,7 @@ var LoginTypes = map[LoginType]string{
 	SMTP: "SMTP",
 }
 
-// Ensure structs implmented interface.
+// Ensure structs implemented interface.
 var (
 	_ core.Conversion = &LDAPConfig{}
 	_ core.Conversion = &SMTPConfig{}
@@ -226,7 +226,7 @@ func UserSignIn(uname, passwd string) (*User, error) {
 	}
 }
 
-// Query if name/passwd can login against the LDAP direcotry pool
+// Query if name/passwd can login against the LDAP directory pool
 // Create a local user if success
 // Return the same LoginUserPlain semantic
 // FIXME: https://github.com/gogits/gogs/issues/672
@@ -318,7 +318,7 @@ func SmtpAuth(host string, port int, a smtp.Auth, useTls bool) error {
 	return ErrUnsupportedLoginType
 }
 
-// Query if name/passwd can login against the LDAP direcotry pool
+// Query if name/passwd can login against the LDAP directory pool
 // Create a local user if success
 // Return the same LoginUserPlain semantic
 func LoginUserSMTPSource(u *User, name, passwd string, sourceId int64, cfg *SMTPConfig, autoRegister bool) (*User, error) {
