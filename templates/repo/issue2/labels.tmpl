@@ -8,9 +8,21 @@
             <li><a href="#">Pull Request</a></li>
             <li class="current"><a href="#">Labels</a></li>
             <li><a href="#">Milestones</a></li>
-            <li class="right" id="issue-new"><a href="#"><button id="issue-new-btn" class="btn btn-green text-bold">New Issue</button></a></li>
-            <li class="right"><a href="#">Filter</a></li>
+            <li class="right" id="label-new"><a href="#"><button id="label-new-btn" class="btn btn-green text-bold">New Label</button></a></li>
         </ul>
+        <form id="label-add-form" action="#" class="form clear hidden">
+            <input type="text" class="ipt" name="name" placeholder="label name" id="label-add-name"/>
+            <div class="inline down drop" id="label-color-drop">
+                <label for="label-add-color"></label>
+                <input class="ipt" name="color" type="text" placeholder="color" id="label-add-color"/>
+                <div class="drop-down">
+                    <a href="#" class="color" style="background: red"></a>
+                    <a href="#" class="color" style="background: green"></a>
+                </div>
+            </div>
+            <button class="btn btn-gray right" type="button" id="label-cancel-btn">Cancel</button>
+            <button class="btn btn-green right" id="label-add-btn">Create</button>
+        </form>
         <div id="issue-list-container">
             <div id="issue-list-menu">
                 <div class="left"><span class="label label-black" id="labels-num">6</span><strong>Labels</strong></div>

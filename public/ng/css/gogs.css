@@ -2023,10 +2023,12 @@ textarea#issue-add-content {
   margin-left: 4px;
 }
 #issue-new > a,
+#label-new > a,
 #milestone-new > a {
   padding: 0 !important;
 }
 #issue-new > a button,
+#label-new > a button,
 #milestone-new > a button {
   height: 29px;
 }
@@ -2170,6 +2172,43 @@ textarea#issue-add-content {
   padding-bottom: 12px;
   margin-bottom: 12px;
   border-bottom: 1px dashed #AAA;
+}
+#label-add-form {
+  padding: 18px 0;
+  border-bottom: 1px solid #DDD;
+}
+#label-add-form .ipt {
+  font-size: 14px;
+}
+#label-add-form .ipt[name=name] {
+  width: 300px;
+}
+#label-add-form .btn {
+  height: 33px;
+  font-size: 14px;
+  margin-left: 12px;
+}
+#label-color-drop .ipt {
+  width: 100px;
+}
+#label-color-drop .drop-down {
+  width: 128px;
+  top: 22px;
+  left: 50px;
+  padding: 12px;
+  line-height: 16px;
+}
+#label-color-drop .drop-down a.color {
+  width: 16px;
+  height: 16px;
+  display: inline-block;
+}
+#label-color-drop label {
+  width: 24px;
+  height: 24px;
+  display: inline-block;
+  margin: 0 1em;
+  vertical-align: middle;
 }
 #milestone-list {
   padding-top: 6px;
