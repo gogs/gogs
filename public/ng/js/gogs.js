@@ -2,6 +2,7 @@
 // @codekit-prepend "lib/lib.js"
 // @codekit-prepend "utils/tabs.js"
 // @codekit-prepend "utils/preview.js"
+// @codekit-prepend "gogs/issue_label.js"
 // @codekit-prepend "lib/jquery.tipsy.js"
 
 var Gogs = {};
