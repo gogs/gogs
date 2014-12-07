@@ -99,7 +99,7 @@ func (w *Webhook) UpdateEvent() error {
 	return err
 }
 
-// HasPushEvent returns true if hook enbaled push event.
+// HasPushEvent returns true if hook enabled push event.
 func (w *Webhook) HasPushEvent() bool {
 	if w.PushOnly {
 		return true

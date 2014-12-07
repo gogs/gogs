@@ -79,7 +79,7 @@ func UpdateOauth2(oa *Oauth2) error {
 	return err
 }
 
-// GetOauthByUserId returns list of oauthes that are releated to given user.
+// GetOauthByUserId returns list of oauthes that are related to given user.
 func GetOauthByUserId(uid int64) ([]*Oauth2, error) {
 	socials := make([]*Oauth2, 0, 5)
 	err := x.Find(&socials, Oauth2{Uid: uid})
