@@ -240,7 +240,7 @@ func IsOrganizationMember(orgId, uid int64) bool {
 	return has
 }
 
-// IsPublicMembership returns ture if given user public his/her membership.
+// IsPublicMembership returns true if given user public his/her membership.
 func IsPublicMembership(orgId, uid int64) bool {
 	has, _ := x.Where("uid=?", uid).And("org_id=?", orgId).And("is_public=?", true).Get(new(OrgUser))
 	return has
@@ -861,7 +861,7 @@ func GetTeamMembers(orgId, teamId int64) ([]*User, error) {
 	return us, err
 }
 
-// GetUserTeams returns all teams that user belongs to in given origanization.
+// GetUserTeams returns all teams that user belongs to in given organization.
 func GetUserTeams(orgId, uid int64) ([]*Team, error) {
 	tus := make([]*TeamUser, 0, 5)
 	if err := x.Where("uid=?", uid).And("org_id=?", orgId).Find(&tus); err != nil {

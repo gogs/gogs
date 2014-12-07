@@ -80,7 +80,7 @@ func SignedInUser(req *http.Request, sess session.Store) (*models.User, bool) {
 						return nil, false
 					}
 
-					// Check if enabled auto-registeration.
+					// Check if enabled auto-registration.
 					if setting.Service.EnableReverseProxyAutoRegister {
 						u := &models.User{
 							Name:     webAuthUser,

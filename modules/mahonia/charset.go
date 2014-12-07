@@ -32,7 +32,7 @@ const (
 )
 
 // A Decoder is a function that decodes a character set, one character at a time.
-// It works much like utf8.DecodeRune, but has an aditional status return value.
+// It works much like utf8.DecodeRune, but has an additional status return value.
 type Decoder func(p []byte) (c rune, size int, status Status)
 
 // An Encoder is a function that encodes a character set, one character at a time.

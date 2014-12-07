@@ -628,7 +628,7 @@ func UpdateAssignee(ctx *middleware.Context) {
 	}
 
 	aid := com.StrTo(ctx.Query("assigneeid")).MustInt64()
-	// Not check for invalid assignne id and give responsibility to owners.
+	// Not check for invalid assignee id and give responsibility to owners.
 	issue.AssigneeId = aid
 	if err = models.UpdateIssueUserPairByAssignee(aid, issue.Id); err != nil {
 		ctx.Handle(500, "UpdateIssueUserPairByAssignee: %v", err)
