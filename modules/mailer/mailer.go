@@ -127,7 +127,10 @@ func Send(msg *Message) (int, error) {
 		return 0, fmt.Errorf("empty email body")
 	}
 
-	auth := smtp.PlainAuth("", setting.MailService.User, setting.MailService.Passwd, host[0])
+	var auth smtp.Auth
+	if len(setting.MailService.Passwd) > 0 {
+		auth = smtp.PlainAuth("", setting.MailService.User, setting.MailService.Passwd, host[0])
+	}
 
 	if msg.Massive {
 		// send mail to multiple emails one by one
