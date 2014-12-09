@@ -152,6 +152,11 @@ func Home(ctx *middleware.Context) {
 			}
 		}
 
+		// Render issue index links.
+		for _, f := range files {
+			c := f[1].(*git.Commit)
+			c.CommitMessage = string(base.RenderIssueIndexPattern([]byte(c.CommitMessage), ctx.Repo.RepoLink))
+		}
 		ctx.Data["Files"] = files
 
 		var readmeFile *git.Blob
@@ -199,7 +204,7 @@ func Home(ctx *middleware.Context) {
 		}
 
 		lastCommit := ctx.Repo.Commit
-		lastCommit.CommitMessage = string(base.RenderissueIndexPattern([]byte(lastCommit.CommitMessage), ctx.Repo.RepoLink))
+		lastCommit.CommitMessage = string(base.RenderIssueIndexPattern([]byte(lastCommit.CommitMessage), ctx.Repo.RepoLink))
 		if len(treePath) > 0 {
 			c, err := ctx.Repo.Commit.GetCommitOfRelPath(treePath)
 			if err != nil {

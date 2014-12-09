@@ -33,6 +33,16 @@ func RefCommits(ctx *middleware.Context) {
 	}
 }
 
+func RenderIssueLinks(oldCommits *list.List, repoLink string) *list.List {
+	newCommits := list.New()
+	for e := oldCommits.Front(); e != nil; e = e.Next() {
+		c := e.Value.(*git.Commit)
+		c.CommitMessage = string(base.RenderIssueIndexPattern([]byte(c.CommitMessage), repoLink))
+		newCommits.PushBack(c)
+	}
+	return newCommits
+}
+
 func Commits(ctx *middleware.Context) {
 	ctx.Data["IsRepoToolbarCommits"] = true
 
@@ -84,16 +94,6 @@ func Commits(ctx *middleware.Context) {
 	ctx.Data["LastPageNum"] = lastPage
 	ctx.Data["NextPageNum"] = nextPage
 	ctx.HTML(200, COMMITS)
-}
-
-func RenderIssueLinks(oldCommits *list.List, repoLink string) *list.List {
-	newCommits := list.New()
-	for e := oldCommits.Front(); e != nil; e = e.Next() {
-		c := e.Value.(*git.Commit)
-		c.CommitMessage = string(base.RenderissueIndexPattern([]byte(c.CommitMessage), repoLink))
-		newCommits.PushBack(c)
-	}
-	return newCommits
 }
 
 func SearchCommits(ctx *middleware.Context) {
@@ -206,7 +206,7 @@ func Diff(ctx *middleware.Context) {
 	commitId := ctx.Repo.CommitId
 
 	commit := ctx.Repo.Commit
-	commit.CommitMessage = string(base.RenderissueIndexPattern([]byte(commit.CommitMessage), ctx.Repo.RepoLink))
+	commit.CommitMessage = string(base.RenderIssueIndexPattern([]byte(commit.CommitMessage), ctx.Repo.RepoLink))
 	diff, err := models.GetDiffCommit(models.RepoPath(userName, repoName),
 		commitId, setting.MaxGitDiffLines)
 	if err != nil {

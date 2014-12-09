@@ -154,7 +154,7 @@ func RenderSpecialLink(rawBytes []byte, urlPrefix string) []byte {
 		rawBytes = bytes.Replace(rawBytes, m, []byte(fmt.Sprintf(
 			` <a href="%s">#%s</a>`, m, ShortSha(string(m[i+7:j])))), -1)
 	}
-	rawBytes = RenderissueIndexPattern(rawBytes, urlPrefix)
+	rawBytes = RenderIssueIndexPattern(rawBytes, urlPrefix)
 	rawBytes = RenderSha1CurrentPattern(rawBytes, urlPrefix)
 	return rawBytes
 }
@@ -168,7 +168,7 @@ func RenderSha1CurrentPattern(rawBytes []byte, urlPrefix string) []byte {
 	return rawBytes
 }
 
-func RenderissueIndexPattern(rawBytes []byte, urlPrefix string) []byte {
+func RenderIssueIndexPattern(rawBytes []byte, urlPrefix string) []byte {
 	ms := issueIndexPattern.FindAll(rawBytes, -1)
 	for _, m := range ms {
 		rawBytes = bytes.Replace(rawBytes, m, []byte(fmt.Sprintf(

@@ -6,6 +6,7 @@ package models
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"io"
 	"os"
@@ -15,8 +16,10 @@ import (
 
 	"github.com/Unknwon/com"
 
+	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/git"
 	"github.com/gogits/gogs/modules/log"
+	"github.com/gogits/gogs/modules/mahonia"
 	"github.com/gogits/gogs/modules/process"
 )
 
@@ -80,6 +83,8 @@ func ParsePatch(pid int64, maxlines int, cmd *exec.Cmd, reader io.Reader) (*Diff
 
 		leftLine, rightLine int
 		isTooLong           bool
+		// FIXME: use first 30 lines to detect file encoding. Should use cache in the future.
+		buf bytes.Buffer
 	)
 
 	diff := &Diff{Files: make([]*DiffFile, 0)}
@@ -96,6 +101,11 @@ func ParsePatch(pid int64, maxlines int, cmd *exec.Cmd, reader io.Reader) (*Diff
 		}
 
 		i = i + 1
+
+		// FIXME: use first 30 lines to detect file encoding.
+		if i <= 30 {
+			buf.WriteString(line)
+		}
 
 		// Diff data too large, we only show the first about maxlines lines
 		if i == maxlines {
@@ -176,6 +186,21 @@ func ParsePatch(pid int64, maxlines int, cmd *exec.Cmd, reader io.Reader) (*Diff
 				}
 				if curFile.Type > 0 {
 					break
+				}
+			}
+		}
+	}
+
+	// FIXME: use first 30 lines to detect file encoding.
+	charset, err := base.DetectEncoding(buf.Bytes())
+	if charset != "utf8" && err == nil {
+		decoder := mahonia.NewDecoder(charset)
+		if decoder != nil {
+			for _, f := range diff.Files {
+				for _, sec := range f.Sections {
+					for _, l := range sec.Lines {
+						l.Content = decoder.ConvertString(l.Content)
+					}
 				}
 			}
 		}
