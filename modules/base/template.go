@@ -47,18 +47,23 @@ func ShortSha(sha1 string) string {
 	return sha1
 }
 
-func ToUtf8WithErr(content []byte) (error, string) {
+func DetectEncoding(content []byte) (string, error) {
 	detector := chardet.NewTextDetector()
 	result, err := detector.DetectBest(content)
+	return result.Charset, err
+}
+
+func ToUtf8WithErr(content []byte) (error, string) {
+	charset, err := DetectEncoding(content)
 	if err != nil {
 		return err, ""
 	}
 
-	if result.Charset == "utf8" {
+	if charset == "utf8" {
 		return nil, string(content)
 	}
 
-	decoder := mahonia.NewDecoder(result.Charset)
+	decoder := mahonia.NewDecoder(charset)
 	if decoder != nil {
 		return nil, decoder.ConvertString(string(content))
 	}
