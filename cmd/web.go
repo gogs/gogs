@@ -397,14 +397,17 @@ func runWeb(*cli.Context) {
 		})
 
 		m.Post("/comment/:action", repo.Comment)
-		m.Get("/releases/new", repo.NewRelease)
-		m.Post("/releases/new", bindIgnErr(auth.NewReleaseForm{}), repo.NewReleasePost)
-		m.Get("/releases/edit/:tagname", repo.EditRelease)
-		m.Post("/releases/edit/:tagname", bindIgnErr(auth.EditReleaseForm{}), repo.EditReleasePost)
+
+		m.Group("/releases", func() {
+			m.Get("/new", repo.NewRelease)
+			m.Post("/new", bindIgnErr(auth.NewReleaseForm{}), repo.NewReleasePost)
+			m.Get("/edit/:tagname", repo.EditRelease)
+			m.Post("/edit/:tagname", bindIgnErr(auth.EditReleaseForm{}), repo.EditReleasePost)
+		}, middleware.RepoRef())
 	}, reqSignIn, middleware.RepoAssignment(true))
 
 	m.Group("/:username/:reponame", func() {
-		m.Get("/releases", repo.Releases)
+		m.Get("/releases", middleware.RepoRef(), repo.Releases)
 		m.Get("/issues", repo.Issues)
 		m.Get("/issues/:index", repo.ViewIssue)
 		m.Get("/issues/milestones", repo.Milestones)

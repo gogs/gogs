@@ -379,6 +379,7 @@ dt {
 }
 .btn-large {
   font-size: 14.4px;
+  padding: .4em .9em;
 }
 .btn-green {
   background-color: #65ad4e;

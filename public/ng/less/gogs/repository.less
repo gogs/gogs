@@ -90,7 +90,8 @@
     }
 }
 #repo-content {
-    padding: 18px 0;
+    padding-top: 18px;
+    padding-bottom: 18px;
 }
 .repo-wide-wrapper {
     padding: 18px;
@@ -383,6 +384,7 @@
 #repo-create-cancel {
     margin-left: 4em;
 }
+#release-new-target-branch-list,
 #repo-create-owner-list {
     top: 30px;
     left: 0;
@@ -409,6 +411,23 @@
             overflow: hidden;
         }
     }
+}
+#release-new-target-branch-list {
+    margin-top: -1px;
+    min-width: 150px;
+}
+#release-new-title {
+    margin-top: 10px;
+}
+#release-new-content {
+    width: 100%;
+}
+#release-preview-btn .btn {
+    border-left: 0;
+}
+#release-preview.markdown {
+    margin-top: 5px;
+    background-color: transparent;
 }
 .file-name {
     margin-left: 1em;
@@ -665,4 +684,91 @@
     white-space: nowrap;
     margin-left: 44px;
     margin-top: -15px;
+}
+#release {
+    h4 {
+        font-size: 18px;
+        small {
+            font-weight: 400;
+            line-height: 1;
+            color: #999;
+        }
+    }
+    #release-head {
+        margin-top: 0;
+        margin-bottom: 0;
+        padding-bottom: 20px;
+        border-bottom: 1px solid #DDD;
+        .btn {
+            margin-left: 10px;
+        }
+    }
+    .release-item {
+        &>div {
+            padding-top: 20px;
+            padding-bottom: 20px;
+        }
+        .label-green:hover {
+            background-color: @labelGreenColor;
+        }
+        .release-meta {
+            position: relative;
+            float: left;
+            padding-right: 15px;
+        }
+        .tag, 
+        .commit {
+            display: block;
+            margin-top: 12px;
+            line-height: 20px;
+        }
+        .release-detail {
+            margin-top: -1px;
+            border-left: 1px solid #DDD;
+            position: relative;
+            float: left;
+            padding-left: 15px;
+        }
+        .title {
+            line-height: 25px;
+            margin-top: 0;
+        }
+        p.info {
+            line-height: 20px;
+            color: #666;
+            margin-bottom: 15px;
+            >* {
+                margin-right: 10px;
+            }
+        }
+        .author {
+            img {
+                margin-top: -3px;
+            }
+        }
+        div.desc {
+            margin-bottom: 25px;
+            &.markdown {
+                background-color: transparent;
+            }
+        }
+        .download a {
+            margin-right: 10px;
+        }
+        .dot {
+            width: 9px;
+            height: 9px;
+            background-color: #ccc;
+            z-index: 999;
+            position: absolute;
+            display: block;
+            left: -6px;
+            top: 27px;
+            border-radius: 6px;
+            border: 1px solid #FFF;
+        }
+    }
+    #release-new-form {
+        padding-top: 15px;
+    }
 }
