@@ -11,7 +11,6 @@ import (
 	"crypto/sha1"
 	"encoding/base64"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"hash"
 	"html/template"
@@ -41,15 +40,14 @@ func EncodeSha1(str string) string {
 	return hex.EncodeToString(h.Sum(nil))
 }
 
-func BasicAuthDecode(encoded string) (user string, name string, err error) {
-	var s []byte
-	s, err = base64.StdEncoding.DecodeString(encoded)
+func BasicAuthDecode(encoded string) (string, string, error) {
+	s, err := base64.StdEncoding.DecodeString(encoded)
 	if err != nil {
-		return user, name, err
+		return "", "", err
 	}
 
 	auth := strings.SplitN(string(s), ":", 2)
-	return auth[0], auth[1], err
+	return auth[0], auth[1], nil
 }
 
 func BasicAuthEncode(username, password string) string {
