@@ -435,8 +435,13 @@ function initHookTypeChange() {
 
 function initRepoRelease() {
     $('#release-new-target-branch-list li').click(function() {
-        $('#repo-branch-current').text($(this).text());
-        $('#tag-target').val($(this).text());
+        if (!$(this).hasClass('checked')) {
+            $('#repo-branch-current').text($(this).text());
+            $('#tag-target').val($(this).text());
+
+            $(this).parent().find('.checked').removeClass('checked');
+            $(this).addClass('checked');
+        }
     })
 }
 
