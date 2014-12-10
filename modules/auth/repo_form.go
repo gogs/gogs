@@ -164,7 +164,6 @@ func (f *NewReleaseForm) Validate(ctx *macaron.Context, errs binding.Errors) bin
 }
 
 type EditReleaseForm struct {
-	Target     string `form:"tag_target" binding:"Required"`
 	Title      string `form:"title" binding:"Required"`
 	Content    string `form:"content" binding:"Required"`
 	Draft      string `form:"draft"`

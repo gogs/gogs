@@ -403,6 +403,16 @@ function initRepo() {
     $clone_btn.tipsy({
         fade: true
     });
+
+    // Markdown preview.
+    $('.markdown-preview').click(function() {
+        var $this = $(this);
+        $this.toggleAjax(function (resp) {
+            $($this.data("preview")).html(resp);
+        }, function () {
+            $($this.data("preview")).html("no content");
+        })
+    });
 }
 
 // when user changes hook type, hide/show proper divs
@@ -421,6 +431,13 @@ function initHookTypeChange() {
             }
         });
     });
+}
+
+function initRepoRelease() {
+    $('#release-new-target-branch-list li').click(function() {
+        $('#repo-branch-current').text($(this).text());
+        $('#tag-target').val($(this).text());
+    })
 }
 
 function initRepoSetting() {
@@ -753,7 +770,11 @@ $(document).ready(function () {
         initRepoCreate();
     }
     if ($('#repo-header').length) {
+        initTimeSwitch();
         initRepo();
+    }
+    if ($('#release').length) {
+        initRepoRelease();
     }
     if ($('#repo-setting').length) {
         initRepoSetting();
@@ -819,3 +840,7 @@ function homepage() {
         $('#promo-form').attr('action', Gogs.AppSubUrl + '/user/sign_up');
     });
 }
+
+String.prototype.endsWith = function (suffix) {
+    return this.indexOf(suffix, this.length - suffix.length) !== -1;
+};

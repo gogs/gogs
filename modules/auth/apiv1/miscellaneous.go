@@ -14,7 +14,7 @@ import (
 )
 
 type MarkdownForm struct {
-	Text    string `form:"text" binding:"Required"`
+	Text    string `form:"text"`
 	Mode    string `form:"mode"`
 	Context string `form:"context"`
 }

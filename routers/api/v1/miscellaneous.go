@@ -20,6 +20,11 @@ func Markdown(ctx *middleware.Context, form apiv1.MarkdownForm) {
 		return
 	}
 
+	if len(form.Text) == 0 {
+		ctx.Write([]byte(""))
+		return
+	}
+
 	switch form.Mode {
 	case "gfm":
 		ctx.Write(base.RenderMarkdown([]byte(form.Text),
