@@ -48,13 +48,8 @@ func BasicAuthDecode(encoded string) (user string, name string, err error) {
 		return user, name, err
 	}
 
-	a := strings.Split(string(s), ":")
-	if len(a) == 2 {
-		user, name = a[0], a[1]
-	} else {
-		err = errors.New("decode failed")
-	}
-	return user, name, err
+	auth := strings.SplitN(string(s), ":", 2)
+	return auth[0], auth[1], err
 }
 
 func BasicAuthEncode(username, password string) string {
