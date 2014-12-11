@@ -454,8 +454,7 @@ func runWeb(*cli.Context) {
 	case setting.HTTP:
 		err = http.ListenAndServe(listenAddr, m)
 	case setting.HTTPS:
-		cfg := &tls.Config{MinVersion: tls.VersionTLS10}
-		server := &http.Server{Addr: listenAddr, TLSConfig: cfg, Handler: m}
+		server := &http.Server{Addr: listenAddr, TLSConfig: &tls.Config{MinVersion: tls.VersionTLS10}, Handler: m}
 		err = server.ListenAndServeTLS(setting.CertFile, setting.KeyFile)
 	case setting.FCGI:
 		err = fcgi.Serve(nil, m)
