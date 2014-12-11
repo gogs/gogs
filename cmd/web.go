@@ -5,6 +5,7 @@
 package cmd
 
 import (
+	"crypto/tls"
 	"fmt"
 	"html/template"
 	"io/ioutil"
@@ -453,7 +454,9 @@ func runWeb(*cli.Context) {
 	case setting.HTTP:
 		err = http.ListenAndServe(listenAddr, m)
 	case setting.HTTPS:
-		err = http.ListenAndServeTLS(listenAddr, setting.CertFile, setting.KeyFile, m)
+		cfg := &tls.Config{MinVersion: tls.VersionTLS10}
+		server := &http.Server{Addr: listenAddr, TLSConfig: cfg, Handler: m}
+		err = server.ListenAndServeTLS(setting.CertFile, setting.KeyFile)
 	case setting.FCGI:
 		err = fcgi.Serve(nil, m)
 	default:
