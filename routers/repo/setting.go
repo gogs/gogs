@@ -72,6 +72,7 @@ func SettingsPost(ctx *middleware.Context, form auth.RepoSettingForm) {
 			}
 			log.Trace("Repository name changed: %s/%s -> %s", ctx.Repo.Owner.Name, ctx.Repo.Repository.Name, newRepoName)
 			ctx.Repo.Repository.Name = newRepoName
+			ctx.Repo.Repository.LowerName = strings.ToLower(newRepoName)
 		}
 
 		br := form.Branch

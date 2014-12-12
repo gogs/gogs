@@ -49,7 +49,7 @@
                                 <textarea class="ipt ipt-large ipt-radius" name="content" id="release-new-content" rows="10" placeholder="{{.i18n.Tr "repo.release.content_placeholder"}}" data-ajax-rel="release-preview" data-ajax-val="val" data-ajax-field="text" required>{{.content}}</textarea>
                             </div>
                         </div>
-                        <div class="markdown hide" id="release-preview">{{.i18n.Tr "repo.release.loading"}}...</div>
+                        <div class="markdown hide" id="release-preview">{{.i18n.Tr "repo.release.loading"}}</div>
                         <hr>
                         <div class="text-right">
                             <input class="ipt-chk" name="prerelease" type="checkbox" {{if .prerelease}}checked{{end}}/>
