@@ -12,7 +12,17 @@ import (
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/middleware"
+	"github.com/gogits/gogs/modules/setting"
 )
+
+// ToApiUser converts user to API format.
+func ToApiUser(u *models.User) *api.User {
+	return &api.User{
+		Id:        u.Id,
+		UserName:  u.Name,
+		AvatarUrl: string(setting.Protocol) + u.AvatarLink(),
+	}
+}
 
 func SearchUsers(ctx *middleware.Context) {
 	opt := models.SearchOption{

@@ -21,6 +21,26 @@ import (
 	"github.com/gogits/gogs/modules/setting"
 )
 
+// ToApiRepository converts repository to API format.
+func ToApiRepository(owner *models.User, repo *models.Repository, permission api.Permission) *api.Repository {
+	sshUrlFmt := "%s@%s:%s/%s.git"
+	if setting.SshPort != 22 {
+		sshUrlFmt = "ssh://%s@%s:%d/%s/%s.git"
+	}
+	htmlUrl := setting.AppUrl + owner.Name + "/" + repo.Name
+	return &api.Repository{
+		Id:          repo.Id,
+		Owner:       *ToApiUser(owner),
+		FullName:    owner.Name + "/" + repo.Name,
+		Private:     repo.IsPrivate,
+		Fork:        repo.IsFork,
+		HtmlUrl:     htmlUrl,
+		SshUrl:      fmt.Sprintf(sshUrlFmt, setting.RunUser, setting.Domain, owner.LowerName, repo.LowerName),
+		CloneUrl:    htmlUrl + ".git",
+		Permissions: permission,
+	}
+}
+
 func SearchRepos(ctx *middleware.Context) {
 	opt := models.SearchOption{
 		Keyword: path.Base(ctx.Query("q")),
@@ -44,7 +64,7 @@ func SearchRepos(ctx *middleware.Context) {
 				})
 				return
 			}
-			if u.IsOrganization() && u.IsOrgOwner(ctx.User.Id) {
+			if u.IsOrganization() && u.IsOwnedBy(ctx.User.Id) {
 				opt.Private = true
 			}
 			// FIXME: how about collaborators?
@@ -75,13 +95,66 @@ func SearchRepos(ctx *middleware.Context) {
 		}
 	}
 
-	ctx.Render.JSON(200, map[string]interface{}{
+	ctx.JSON(200, map[string]interface{}{
 		"ok":   true,
 		"data": results,
 	})
 }
 
-func Migrate(ctx *middleware.Context, form auth.MigrateRepoForm) {
+func createRepo(ctx *middleware.Context, owner *models.User, opt api.CreateRepoOption) {
+	repo, err := models.CreateRepository(owner, opt.Name, opt.Description,
+		opt.Gitignore, opt.License, opt.Private, false, opt.AutoInit)
+	if err != nil {
+		if err == models.ErrRepoAlreadyExist ||
+			err == models.ErrRepoNameIllegal {
+			ctx.JSON(422, &base.ApiJsonErr{err.Error(), base.DOC_URL})
+		} else {
+			log.Error(4, "CreateRepository: %v", err)
+			if repo != nil {
+				if err = models.DeleteRepository(ctx.User.Id, repo.Id, ctx.User.Name); err != nil {
+					log.Error(4, "DeleteRepository: %v", err)
+				}
+			}
+			ctx.Error(500)
+		}
+		return
+	}
+
+	ctx.JSON(200, ToApiRepository(owner, repo, api.Permission{true, true, true}))
+}
+
+// POST /user/repos
+// https://developer.github.com/v3/repos/#create
+func CreateRepo(ctx *middleware.Context, opt api.CreateRepoOption) {
+	// Shouldn't reach this condition, but just in case.
+	if ctx.User.IsOrganization() {
+		ctx.JSON(422, "not allowed creating repository for organization")
+		return
+	}
+	createRepo(ctx, ctx.User, opt)
+}
+
+// POST /orgs/:org/repos
+// https://developer.github.com/v3/repos/#create
+func CreateOrgRepo(ctx *middleware.Context, opt api.CreateRepoOption) {
+	org, err := models.GetOrgByName(ctx.Params(":org"))
+	if err != nil {
+		if err == models.ErrUserNotExist {
+			ctx.Error(404)
+		} else {
+			ctx.Error(500)
+		}
+		return
+	}
+
+	if !org.IsOwnedBy(ctx.User.Id) {
+		ctx.Error(403)
+		return
+	}
+	createRepo(ctx, org, opt)
+}
+
+func MigrateRepo(ctx *middleware.Context, form auth.MigrateRepoForm) {
 	u, err := models.GetUserByName(ctx.Query("username"))
 	if err != nil {
 		ctx.JSON(500, map[string]interface{}{
@@ -103,17 +176,15 @@ func Migrate(ctx *middleware.Context, form auth.MigrateRepoForm) {
 	if form.Uid != u.Id {
 		org, err := models.GetUserById(form.Uid)
 		if err != nil {
-			ctx.JSON(500, map[string]interface{}{
-				"ok":    false,
-				"error": err.Error(),
-			})
+			log.Error(4, "GetUserById: %v", err)
+			ctx.Error(500)
 			return
 		}
 		ctxUser = org
 	}
 
 	if ctx.HasError() {
-		ctx.JSON(500, map[string]interface{}{
+		ctx.JSON(422, map[string]interface{}{
 			"ok":    false,
 			"error": ctx.GetErrMsg(),
 		})
@@ -122,7 +193,7 @@ func Migrate(ctx *middleware.Context, form auth.MigrateRepoForm) {
 
 	if ctxUser.IsOrganization() {
 		// Check ownership of organization.
-		if !ctxUser.IsOrgOwner(u.Id) {
+		if !ctxUser.IsOwnedBy(u.Id) {
 			ctx.JSON(403, map[string]interface{}{
 				"ok":    false,
 				"error": "given user is not owner of organization",
@@ -173,29 +244,9 @@ func ListMyRepos(ctx *middleware.Context) {
 		return
 	}
 
-	sshUrlFmt := "%s@%s:%s/%s.git"
-	if setting.SshPort != 22 {
-		sshUrlFmt = "ssh://%s@%s:%d/%s/%s.git"
-	}
-
 	repos := make([]*api.Repository, numOwnRepos+len(collaRepos))
-	// FIXME: make only one loop
 	for i := range ownRepos {
-		repos[i] = &api.Repository{
-			Id: ownRepos[i].Id,
-			Owner: api.User{
-				Id:        ctx.User.Id,
-				UserName:  ctx.User.Name,
-				AvatarUrl: string(setting.Protocol) + ctx.User.AvatarLink(),
-			},
-			FullName:    ctx.User.Name + "/" + ownRepos[i].Name,
-			Private:     ownRepos[i].IsPrivate,
-			Fork:        ownRepos[i].IsFork,
-			HtmlUrl:     setting.AppUrl + ctx.User.Name + "/" + ownRepos[i].Name,
-			SshUrl:      fmt.Sprintf(sshUrlFmt, setting.RunUser, setting.Domain, ctx.User.LowerName, ownRepos[i].LowerName),
-			Permissions: api.Permission{true, true, true},
-		}
-		repos[i].CloneUrl = repos[i].HtmlUrl + ".git"
+		repos[i] = ToApiRepository(ctx.User, ownRepos[i], api.Permission{true, true, true})
 	}
 	for i := range collaRepos {
 		if err = collaRepos[i].GetOwner(); err != nil {
@@ -203,24 +254,10 @@ func ListMyRepos(ctx *middleware.Context) {
 			return
 		}
 		j := i + numOwnRepos
-		repos[j] = &api.Repository{
-			Id: collaRepos[i].Id,
-			Owner: api.User{
-				Id:        collaRepos[i].Owner.Id,
-				UserName:  collaRepos[i].Owner.Name,
-				AvatarUrl: string(setting.Protocol) + collaRepos[i].Owner.AvatarLink(),
-			},
-			FullName:    collaRepos[i].Owner.Name + "/" + collaRepos[i].Name,
-			Private:     collaRepos[i].IsPrivate,
-			Fork:        collaRepos[i].IsFork,
-			HtmlUrl:     setting.AppUrl + collaRepos[i].Owner.Name + "/" + collaRepos[i].Name,
-			SshUrl:      fmt.Sprintf(sshUrlFmt, setting.RunUser, setting.Domain, collaRepos[i].Owner.LowerName, collaRepos[i].LowerName),
-			Permissions: api.Permission{false, collaRepos[i].CanPush, true},
-		}
-		repos[j].CloneUrl = repos[j].HtmlUrl + ".git"
+		repos[j] = ToApiRepository(collaRepos[i].Owner, collaRepos[i].Repository, api.Permission{false, collaRepos[i].CanPush, true})
 
 		// FIXME: cache result to reduce DB query?
-		if collaRepos[i].Owner.IsOrganization() && collaRepos[i].Owner.IsOrgOwner(ctx.User.Id) {
+		if collaRepos[i].Owner.IsOrganization() && collaRepos[i].Owner.IsOwnedBy(ctx.User.Id) {
 			repos[j].Permissions.Admin = true
 		}
 	}

@@ -97,14 +97,14 @@ func CreatePost(ctx *middleware.Context, form auth.CreateRepoForm) {
 
 	if ctxUser.IsOrganization() {
 		// Check ownership of organization.
-		if !ctxUser.IsOrgOwner(ctx.User.Id) {
+		if !ctxUser.IsOwnedBy(ctx.User.Id) {
 			ctx.Error(403)
 			return
 		}
 	}
 
 	repo, err := models.CreateRepository(ctxUser, form.RepoName, form.Description,
-		form.Gitignore, form.License, form.Private, false, form.InitReadme)
+		form.Gitignore, form.License, form.Private, false, form.AutoInit)
 	if err == nil {
 		log.Trace("Repository created: %s/%s", ctxUser.Name, repo.Name)
 		ctx.Redirect(setting.AppSubUrl + "/" + ctxUser.Name + "/" + repo.Name)
@@ -174,7 +174,7 @@ func MigratePost(ctx *middleware.Context, form auth.MigrateRepoForm) {
 
 	if ctxUser.IsOrganization() {
 		// Check ownership of organization.
-		if !ctxUser.IsOrgOwner(ctx.User.Id) {
+		if !ctxUser.IsOwnedBy(ctx.User.Id) {
 			ctx.Error(403)
 			return
 		}
@@ -292,7 +292,7 @@ func ForkPost(ctx *middleware.Context, form auth.CreateRepoForm) {
 
 	if ctxUser.IsOrganization() {
 		// Check ownership of organization.
-		if !ctxUser.IsOrgOwner(ctx.User.Id) {
+		if !ctxUser.IsOwnedBy(ctx.User.Id) {
 			ctx.Error(403)
 			return
 		}

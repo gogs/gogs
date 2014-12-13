@@ -25,8 +25,8 @@ var (
 	ErrLastOrgOwner     = errors.New("The user to remove is the last member in owner team")
 )
 
-// IsOrgOwner returns true if given user is in the owner team.
-func (org *User) IsOrgOwner(uid int64) bool {
+// IsOwnedBy returns true if given user is in the owner team.
+func (org *User) IsOwnedBy(uid int64) bool {
 	return IsOrganizationOwner(org.Id, uid)
 }
 
@@ -168,6 +168,24 @@ func CreateOrganization(org, owner *User) (*User, error) {
 	}
 
 	return org, sess.Commit()
+}
+
+// GetOrgByName returns organization by given name.
+func GetOrgByName(name string) (*User, error) {
+	if len(name) == 0 {
+		return nil, ErrOrgNotExist
+	}
+	u := &User{
+		LowerName: strings.ToLower(name),
+		Type:      ORGANIZATION,
+	}
+	has, err := x.Get(u)
+	if err != nil {
+		return nil, err
+	} else if !has {
+		return nil, ErrOrgNotExist
+	}
+	return u, nil
 }
 
 // CountOrganizations returns number of organizations.

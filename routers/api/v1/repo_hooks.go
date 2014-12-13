@@ -48,15 +48,9 @@ func ListRepoHooks(ctx *middleware.Context) {
 	ctx.JSON(200, &apiHooks)
 }
 
-type CreateRepoHookForm struct {
-	Type   string            `json:"type" binding:"Required"`
-	Config map[string]string `json:"config" binding:"Required"`
-	Active bool              `json:"active"`
-}
-
 // POST /repos/:username/:reponame/hooks
 // https://developer.github.com/v3/repos/hooks/#create-a-hook
-func CreateRepoHook(ctx *middleware.Context, form CreateRepoHookForm) {
+func CreateRepoHook(ctx *middleware.Context, form api.CreateHookOption) {
 	if !models.IsValidHookTaskType(form.Type) {
 		ctx.JSON(422, &base.ApiJsonErr{"invalid hook type", base.DOC_URL})
 		return
@@ -124,14 +118,9 @@ func CreateRepoHook(ctx *middleware.Context, form CreateRepoHookForm) {
 	ctx.JSON(201, apiHook)
 }
 
-type EditRepoHookForm struct {
-	Config map[string]string `json:"config"`
-	Active *bool             `json:"active"`
-}
-
 // PATCH /repos/:username/:reponame/hooks/:id
 // https://developer.github.com/v3/repos/hooks/#edit-a-hook
-func EditRepoHook(ctx *middleware.Context, form EditRepoHookForm) {
+func EditRepoHook(ctx *middleware.Context, form api.EditHookOption) {
 	w, err := models.GetWebhookById(ctx.ParamsInt64(":id"))
 	if err != nil {
 		ctx.JSON(500, &base.ApiJsonErr{"GetWebhookById: " + err.Error(), base.DOC_URL})
