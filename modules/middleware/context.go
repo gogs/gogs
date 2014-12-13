@@ -39,29 +39,25 @@ type Context struct {
 	IsBasicAuth bool
 
 	Repo struct {
-		IsOwner     bool
-		IsTrueOwner bool
-		IsWatching  bool
-		IsBranch    bool
-		IsTag       bool
-		IsCommit    bool
-		IsAdmin     bool // Current user is admin level.
-		HasAccess   bool
-		Repository  *models.Repository
-		Owner       *models.User
-		Commit      *git.Commit
-		Tag         *git.Tag
-		GitRepo     *git.Repository
-		BranchName  string
-		TagName     string
-		TreeName    string
-		CommitId    string
-		RepoLink    string
-		CloneLink   struct {
-			SSH   string
-			HTTPS string
-			Git   string
-		}
+		IsOwner      bool
+		IsTrueOwner  bool
+		IsWatching   bool
+		IsBranch     bool
+		IsTag        bool
+		IsCommit     bool
+		IsAdmin      bool // Current user is admin level.
+		HasAccess    bool
+		Repository   *models.Repository
+		Owner        *models.User
+		Commit       *git.Commit
+		Tag          *git.Tag
+		GitRepo      *git.Repository
+		BranchName   string
+		TagName      string
+		TreeName     string
+		CommitId     string
+		RepoLink     string
+		CloneLink    models.CloneLink
 		CommitsCount int
 		Mirror       *models.Mirror
 	}
