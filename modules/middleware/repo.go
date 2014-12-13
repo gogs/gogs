@@ -55,7 +55,7 @@ func ApiRepoAssignment() macaron.Handler {
 		ctx.Repo.Owner = u
 
 		// Organization owner team members are true owners as well.
-		if ctx.IsSigned && ctx.Repo.Owner.IsOrganization() && ctx.Repo.Owner.IsOrgOwner(ctx.User.Id) {
+		if ctx.IsSigned && ctx.Repo.Owner.IsOrganization() && ctx.Repo.Owner.IsOwnedBy(ctx.User.Id) {
 			ctx.Repo.IsTrueOwner = true
 		}
 
@@ -280,7 +280,7 @@ func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 		ctx.Repo.Owner = u
 
 		// Organization owner team members are true owners as well.
-		if ctx.IsSigned && ctx.Repo.Owner.IsOrganization() && ctx.Repo.Owner.IsOrgOwner(ctx.User.Id) {
+		if ctx.IsSigned && ctx.Repo.Owner.IsOrganization() && ctx.Repo.Owner.IsOwnedBy(ctx.User.Id) {
 			ctx.Repo.IsTrueOwner = true
 		}
 

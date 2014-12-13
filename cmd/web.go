@@ -26,6 +26,8 @@ import (
 	"github.com/macaron-contrib/session"
 	"github.com/macaron-contrib/toolbox"
 
+	api "github.com/gogits/go-gogs-client"
+
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/auth/apiv1"
@@ -66,7 +68,7 @@ func checkVersion() {
 
 	// Check dependency version.
 	macaronVer := git.MustParseVersion(strings.Join(strings.Split(macaron.Version(), ".")[:3], "."))
-	if macaronVer.LessThan(git.MustParseVersion("0.4.2")) {
+	if macaronVer.LessThan(git.MustParseVersion("0.4.7")) {
 		log.Fatal(4, "Package macaron version is too old, did you forget to update?(github.com/Unknwon/macaron)")
 	}
 	i18nVer := git.MustParseVersion(i18n.Version())
@@ -200,14 +202,15 @@ func runWeb(*cli.Context) {
 			})
 
 			// Repositories.
-			m.Get("/user/repos", middleware.ApiReqToken(), v1.ListMyRepos)
+			m.Combo("/user/repos", middleware.ApiReqToken()).Get(v1.ListMyRepos).Post(bind(api.CreateRepoOption{}), v1.CreateRepo)
+			m.Post("/org/:org/repos", middleware.ApiReqToken(), bind(api.CreateRepoOption{}), v1.CreateOrgRepo)
 			m.Group("/repos", func() {
 				m.Get("/search", v1.SearchRepos)
-				m.Post("/migrate", bindIgnErr(auth.MigrateRepoForm{}), v1.Migrate)
+				m.Post("/migrate", bindIgnErr(auth.MigrateRepoForm{}), v1.MigrateRepo)
 
 				m.Group("/:username/:reponame", func() {
-					m.Combo("/hooks").Get(v1.ListRepoHooks).Post(bind(v1.CreateRepoHookForm{}), v1.CreateRepoHook)
-					m.Patch("/hooks/:id:int", bind(v1.EditRepoHookForm{}), v1.EditRepoHook)
+					m.Combo("/hooks").Get(v1.ListRepoHooks).Post(bind(api.CreateHookOption{}), v1.CreateRepoHook)
+					m.Patch("/hooks/:id:int", bind(api.EditHookOption{}), v1.EditRepoHook)
 					m.Get("/raw/*", middleware.RepoRef(), v1.GetRepoRawFile)
 				}, middleware.ApiRepoAssignment(), middleware.ApiReqToken())
 			})

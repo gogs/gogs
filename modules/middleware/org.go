@@ -48,7 +48,7 @@ func OrgAssignment(redirect bool, args ...bool) macaron.Handler {
 		ctx.Data["Org"] = org
 
 		if ctx.IsSigned {
-			ctx.Org.IsOwner = org.IsOrgOwner(ctx.User.Id)
+			ctx.Org.IsOwner = org.IsOwnedBy(ctx.User.Id)
 			if ctx.Org.IsOwner {
 				ctx.Org.IsMember = true
 				ctx.Org.IsAdminTeam = true
