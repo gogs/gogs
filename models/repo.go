@@ -241,6 +241,27 @@ func IsRepositoryExist(u *User, repoName string) (bool, error) {
 	return com.IsDir(RepoPath(u.Name, repoName)), nil
 }
 
+// CloneLink represents different types of clone URLs of repository.
+type CloneLink struct {
+	SSH   string
+	HTTPS string
+	Git   string
+}
+
+// CloneLink returns clone URLs of repository.
+func (repo *Repository) CloneLink() (cl CloneLink, err error) {
+	if err = repo.GetOwner(); err != nil {
+		return cl, err
+	}
+	if setting.SshPort != 22 {
+		cl.SSH = fmt.Sprintf("ssh://%s@%s:%d/%s/%s.git", setting.RunUser, setting.Domain, setting.SshPort, repo.Owner.LowerName, repo.LowerName)
+	} else {
+		cl.SSH = fmt.Sprintf("%s@%s:%s/%s.git", setting.RunUser, setting.Domain, repo.Owner.LowerName, repo.LowerName)
+	}
+	cl.HTTPS = fmt.Sprintf("%s%s/%s.git", setting.AppUrl, repo.Owner.LowerName, repo.LowerName)
+	return cl, nil
+}
+
 var (
 	illegalEquals  = []string{"debug", "raw", "install", "api", "avatar", "user", "org", "help", "stars", "issues", "pulls", "commits", "repo", "template", "admin", "new"}
 	illegalSuffixs = []string{".git", ".keys"}

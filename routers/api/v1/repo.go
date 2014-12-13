@@ -23,20 +23,19 @@ import (
 
 // ToApiRepository converts repository to API format.
 func ToApiRepository(owner *models.User, repo *models.Repository, permission api.Permission) *api.Repository {
-	sshUrlFmt := "%s@%s:%s/%s.git"
-	if setting.SshPort != 22 {
-		sshUrlFmt = "ssh://%s@%s:%d/%s/%s.git"
+	cl, err := repo.CloneLink()
+	if err != nil {
+		log.Error(4, "CloneLink: %v", err)
 	}
-	htmlUrl := setting.AppUrl + owner.Name + "/" + repo.Name
 	return &api.Repository{
 		Id:          repo.Id,
 		Owner:       *ToApiUser(owner),
 		FullName:    owner.Name + "/" + repo.Name,
 		Private:     repo.IsPrivate,
 		Fork:        repo.IsFork,
-		HtmlUrl:     htmlUrl,
-		SshUrl:      fmt.Sprintf(sshUrlFmt, setting.RunUser, setting.Domain, owner.LowerName, repo.LowerName),
-		CloneUrl:    htmlUrl + ".git",
+		HtmlUrl:     setting.AppUrl + owner.Name + "/" + repo.Name,
+		CloneUrl:    cl.HTTPS,
+		SshUrl:      cl.SSH,
 		Permissions: permission,
 	}
 }
