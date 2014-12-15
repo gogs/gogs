@@ -49,19 +49,19 @@ func validateApiReq(errs binding.Errors, data map[string]interface{}, f auth.For
 
 		if errs[0].FieldNames[0] == field.Name {
 			switch errs[0].Classification {
-			case binding.RequiredError:
+			case binding.ERR_REQUIRED:
 				data["ErrorMsg"] = fieldName + " cannot be empty"
-			case binding.AlphaDashError:
+			case binding.ERR_ALPHA_DASH:
 				data["ErrorMsg"] = fieldName + " must be valid alpha or numeric or dash(-_) characters"
-			case binding.AlphaDashDotError:
+			case binding.ERR_ALPHA_DASH_DOT:
 				data["ErrorMsg"] = fieldName + " must be valid alpha or numeric or dash(-_) or dot characters"
-			case binding.MinSizeError:
+			case binding.ERR_MIN_SIZE:
 				data["ErrorMsg"] = fieldName + " must contain at least " + auth.GetMinSize(field) + " characters"
-			case binding.MaxSizeError:
+			case binding.ERR_MAX_SIZE:
 				data["ErrorMsg"] = fieldName + " must contain at most " + auth.GetMaxSize(field) + " characters"
-			case binding.EmailError:
+			case binding.ERR_EMAIL:
 				data["ErrorMsg"] = fieldName + " is not a valid e-mail address"
-			case binding.UrlError:
+			case binding.ERR_URL:
 				data["ErrorMsg"] = fieldName + " is not a valid URL"
 			default:
 				data["ErrorMsg"] = "Unknown error: " + errs[0].Classification
