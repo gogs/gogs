@@ -55,6 +55,12 @@ and it takes care of all the other things for you`,
 	Flags:  []cli.Flag{},
 }
 
+type VerChecker struct {
+	ImportPath string
+	Version    func() string
+	Expected   string
+}
+
 // checkVersion checks if binary matches the version of templates files.
 func checkVersion() {
 	// Templates.
@@ -67,17 +73,17 @@ func checkVersion() {
 	}
 
 	// Check dependency version.
-	macaronVer := git.MustParseVersion(strings.Join(strings.Split(macaron.Version(), ".")[:3], "."))
-	if macaronVer.LessThan(git.MustParseVersion("0.4.7")) {
-		log.Fatal(4, "Package macaron version is too old, did you forget to update?(github.com/Unknwon/macaron)")
+	checkers := []VerChecker{
+		{"github.com/Unknwon/macaron", macaron.Version, "0.4.7"},
+		{"github.com/macaron-contrib/binding", binding.Version, "0.0.2"},
+		{"github.com/macaron-contrib/i18n", i18n.Version, "0.0.3"},
+		{"github.com/macaron-contrib/session", session.Version, "0.0.5"},
 	}
-	i18nVer := git.MustParseVersion(i18n.Version())
-	if i18nVer.LessThan(git.MustParseVersion("0.0.2")) {
-		log.Fatal(4, "Package i18n version is too old, did you forget to update?(github.com/macaron-contrib/i18n)")
-	}
-	sessionVer := git.MustParseVersion(session.Version())
-	if sessionVer.LessThan(git.MustParseVersion("0.0.5")) {
-		log.Fatal(4, "Package session version is too old, did you forget to update?(github.com/macaron-contrib/session)")
+	for _, c := range checkers {
+		ver := strings.Join(strings.Split(c.Version(), ".")[:3], ".")
+		if git.MustParseVersion(ver).LessThan(git.MustParseVersion(c.Expected)) {
+			log.Fatal(4, "Package '%s' version is too old(%s -> %s), did you forget to update?", c.ImportPath, ver, c.Expected)
+		}
 	}
 }
 

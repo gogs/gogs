@@ -204,19 +204,19 @@ func validate(errs binding.Errors, data map[string]interface{}, f Form, l macaro
 			data["Err_"+field.Name] = true
 			trName := l.Tr("form." + field.Name)
 			switch errs[0].Classification {
-			case binding.RequiredError:
+			case binding.ERR_REQUIRED:
 				data["ErrorMsg"] = trName + l.Tr("form.require_error")
-			case binding.AlphaDashError:
+			case binding.ERR_ALPHA_DASH:
 				data["ErrorMsg"] = trName + l.Tr("form.alpha_dash_error")
-			case binding.AlphaDashDotError:
+			case binding.ERR_ALPHA_DASH_DOT:
 				data["ErrorMsg"] = trName + l.Tr("form.alpha_dash_dot_error")
-			case binding.MinSizeError:
+			case binding.ERR_MIN_SIZE:
 				data["ErrorMsg"] = trName + l.Tr("form.min_size_error", GetMinSize(field))
-			case binding.MaxSizeError:
+			case binding.ERR_MAX_SIZE:
 				data["ErrorMsg"] = trName + l.Tr("form.max_size_error", GetMaxSize(field))
-			case binding.EmailError:
+			case binding.ERR_EMAIL:
 				data["ErrorMsg"] = trName + l.Tr("form.email_error")
-			case binding.UrlError:
+			case binding.ERR_URL:
 				data["ErrorMsg"] = trName + l.Tr("form.url_error")
 			default:
 				data["ErrorMsg"] = l.Tr("form.unknown_error") + " " + errs[0].Classification
