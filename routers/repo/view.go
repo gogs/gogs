@@ -154,8 +154,12 @@ func Home(ctx *middleware.Context) {
 
 		// Render issue index links.
 		for _, f := range files {
-			c := f[1].(*git.Commit)
-			c.CommitMessage = string(base.RenderIssueIndexPattern([]byte(c.CommitMessage), ctx.Repo.RepoLink))
+			switch c := f[1].(type) {
+			case *git.Commit:
+				c.CommitMessage = string(base.RenderIssueIndexPattern([]byte(c.CommitMessage), ctx.Repo.RepoLink))
+			case *git.SubModuleFile:
+				c.CommitMessage = string(base.RenderIssueIndexPattern([]byte(c.CommitMessage), ctx.Repo.RepoLink))
+			}
 		}
 		ctx.Data["Files"] = files
 

@@ -64,8 +64,17 @@ Before open any new issue, please check your problem on [Troubleshooting](http:/
 
 Please take a moment to check that an issue on [GitHub](https://github.com/gogits/gogs/issues) or card on [Trello](https://trello.com/b/uxAoeLUl/gogs-go-git-service) doesn't already exist documenting your bug report or improvement proposal. If it does, it never hurts to add a quick "+1" or "I have this problem too". This will help prioritize the most common problems and requests.
 
-### Discuss your design on the mailing list
+## Code of conduct
 
-We recommend discussing your plans [on the mailing list](https://groups.google.com/forum/#!forum/gogits) before starting to code - especially for more ambitious contributions. This gives other contributors a chance to point you in the right direction, give feedback on your design, and maybe point out if someone else is working on the same thing.
+As contributors and maintainers of this project, we pledge to respect all people who contribute through reporting issues, posting feature requests, updating documentation, submitting pull requests or patches, and other activities.
 
-We may close your pull request if not first discussed on the mailing list. We aren't doing this to be jerks. We are doing this to prevent people from spending large amounts of time on changes that may need to be designed or architected in a specific way, or may not align with the vision of the project.
+We are committed to making participation in this project a harassment-free experience for everyone, regardless of level of experience, gender, gender identity and expression, sexual orientation, disability, personal appearance, body size, race, age, or religion.
+
+Examples of unacceptable behavior by participants include the use of sexual language or imagery, derogatory comments or personal attacks, trolling, public or private harassment, insults, or other unprofessional conduct.
+
+Project maintainers have the right and responsibility to remove, edit, or reject comments, commits, code, wiki edits, issues, and other contributions that are not aligned to this Code of Conduct. Project maintainers who do not follow the Code of Conduct may be removed from the project team.
+
+Instances of abusive, harassing, or otherwise unacceptable behavior can be
+reported by emailing contact@gitlab.com
+
+This Code of Conduct is adapted from the [Contributor Covenant](http:contributor-covenant.org), version 1.0.0, available at [http://contributor-covenant.org/version/1/0/0/](http://contributor-covenant.org/version/1/0/0/)
