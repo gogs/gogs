@@ -45,7 +45,7 @@ func init() {
 		new(Issue), new(Comment), new(Attachment), new(IssueUser), new(Label), new(Milestone),
 		new(Mirror), new(Release), new(LoginSource), new(Webhook),
 		new(UpdateTask), new(HookTask), new(Team), new(OrgUser), new(TeamUser),
-		new(Notice))
+		new(Notice), new(EmailAddress))
 }
 
 func LoadModelsConfig() {
