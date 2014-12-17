@@ -241,6 +241,8 @@ func runWeb(*cli.Context) {
 		m.Get("", user.Settings)
 		m.Post("", bindIgnErr(auth.UpdateProfileForm{}), user.SettingsPost)
 		m.Post("/avatar", binding.MultipartForm(auth.UploadAvatarForm{}), user.SettingsAvatar)
+		m.Get("/email", user.SettingsEmails)
+		m.Post("/email", bindIgnErr(auth.AddEmailForm{}), user.SettingsEmailPost)
 		m.Get("/password", user.SettingsPassword)
 		m.Post("/password", bindIgnErr(auth.ChangePasswordForm{}), user.SettingsPasswordPost)
 		m.Get("/ssh", user.SettingsSSHKeys)
@@ -252,6 +254,7 @@ func runWeb(*cli.Context) {
 	m.Group("/user", func() {
 		// r.Get("/feeds", binding.Bind(auth.FeedsForm{}), user.Feeds)
 		m.Any("/activate", user.Activate)
+		m.Any("/activate_email", user.ActivateEmail)
 		m.Get("/email2user", user.Email2User)
 		m.Get("/forget_password", user.ForgotPasswd)
 		m.Post("/forget_password", user.ForgotPasswdPost)
