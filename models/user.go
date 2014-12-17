@@ -50,10 +50,11 @@ var (
 
 // User represents the object of individual and member of organization.
 type User struct {
-	Id          int64
-	LowerName   string `xorm:"UNIQUE NOT NULL"`
-	Name        string `xorm:"UNIQUE NOT NULL"`
-	FullName    string
+	Id        int64
+	LowerName string `xorm:"UNIQUE NOT NULL"`
+	Name      string `xorm:"UNIQUE NOT NULL"`
+	FullName  string
+	// Email is the primary email address (to be used for communication).
 	Email       string `xorm:"UNIQUE(s) NOT NULL"`
 	Passwd      string `xorm:"NOT NULL"`
 	LoginType   LoginType
@@ -91,6 +92,15 @@ type User struct {
 	NumMembers  int
 	Teams       []*Team `xorm:"-"`
 	Members     []*User `xorm:"-"`
+}
+
+// EmailAdresses is the list of all email addresses of a user. Can contain the
+// primary email address, but is not obligatory
+type EmailAddress struct {
+	Id          int64
+	OwnerId     int64  `xorm:"INDEX NOT NULL"`
+	Email       string `xorm:"UNIQUE NOT NULL"`
+	IsActivated bool
 }
 
 // DashboardLink returns the user dashboard page link.
@@ -247,6 +257,9 @@ func IsUserExist(name string) (bool, error) {
 func IsEmailUsed(email string) (bool, error) {
 	if len(email) == 0 {
 		return false, nil
+	}
+	if used, err := x.Get(&EmailAddress{Email: email}); used || err != nil {
+		return used, err
 	}
 	return x.Get(&User{Email: email})
 }
@@ -488,6 +501,10 @@ func DeleteUser(u *User) error {
 	if _, err = x.Delete(&Access{UserName: u.LowerName}); err != nil {
 		return err
 	}
+	// Delete all alternative email addresses
+	if _, err = x.Delete(&EmailAddress{OwnerId: u.Id}); err != nil {
+		return err
+	}
 	// Delete all SSH keys.
 	keys := make([]*PublicKey, 0, 10)
 	if err = x.Find(&keys, &PublicKey{OwnerId: u.Id}); err != nil {
@@ -508,9 +525,12 @@ func DeleteUser(u *User) error {
 	return err
 }
 
-// DeleteInactivateUsers deletes all inactivate users.
+// DeleteInactivateUsers deletes all inactivate users and email addresses.
 func DeleteInactivateUsers() error {
 	_, err := x.Where("is_active=?", false).Delete(new(User))
+	if err == nil {
+		_, err = x.Delete(&EmailAddress{IsActivated: false})
+	}
 	return err
 }
 
@@ -629,14 +649,27 @@ func GetUserByEmail(email string) (*User, error) {
 	if len(email) == 0 {
 		return nil, ErrUserNotExist
 	}
+	// First try to find the user by primary email
 	user := &User{Email: strings.ToLower(email)}
 	has, err := x.Get(user)
 	if err != nil {
 		return nil, err
-	} else if !has {
-		return nil, ErrUserNotExist
 	}
-	return user, nil
+	if has {
+		return user, nil
+	}
+
+	// Otherwise, check in alternative list for activated email addresses
+	emailAddress := &EmailAddress{Email: strings.ToLower(email), IsActivated: true}
+	has, err = x.Get(emailAddress)
+	if err != nil {
+		return nil, err
+	}
+	if has {
+		return GetUserById(emailAddress.OwnerId)
+	}
+
+	return nil, ErrUserNotExist
 }
 
 // SearchUserByName returns given number of users whose name contains keyword.
