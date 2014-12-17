@@ -97,6 +97,14 @@ func (f *UploadAvatarForm) Validate(ctx *macaron.Context, errs binding.Errors) b
 	return validate(errs, ctx.Data, f, ctx.Locale)
 }
 
+type AddEmailForm struct {
+	Email string `form:"email" binding:"Required;Email;MaxSize(50)"`
+}
+
+func (f *AddEmailForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
+	return validate(errs, ctx.Data, f, ctx.Locale)
+}
+
 type ChangePasswordForm struct {
 	OldPassword string `form:"old_password" binding:"Required;MinSize(6);MaxSize(255)"`
 	Password    string `form:"password" binding:"Required;MinSize(6);MaxSize(255)"`

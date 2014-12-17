@@ -1,0 +1,58 @@
+{{template "ng/base/head" .}}
+{{template "ng/base/header" .}}
+<div id="setting-wrapper" class="main-wrapper">
+    <div id="user-profile-setting" class="container clear">
+        {{template "user/settings/nav" .}}
+        <div class="grid-4-5 left">
+            <div class="setting-content">
+                {{template "ng/base/alert" .}}
+                <div id="user-email-setting-content">
+                    <div id="user-email-panel" class="panel panel-radius">
+                        <div class="panel-header">
+                             <strong>{{.i18n.Tr "settings.manage_emails"}}</strong>
+                        </div>
+                        <ul class="panel-body setting-list">
+                            <li>{{.i18n.Tr "settings.email_desc"}}</li>
+                            {{range .Emails}}
+                            <li class="email clear">
+                                <div class="email-content left">
+									<p><strong>{{.Email}}</strong></p>
+							   </div>
+							   {{if not .IsPrimary}}
+							   {{if .IsActivated}}
+							   <form action="{{AppSubUrl}}/user/settings/email" method="post">
+                                    {{$.CsrfTokenHtml}}
+                                    <input name="_method" type="hidden" value="PRIMARY">
+                                    <input name="id" type="hidden" value="{{.Id}}">
+                                    <button class="right email-btn btn btn-green btn-radius btn-small">{{$.i18n.Tr "settings.primary_email"}}</button>
+                                </form>
+								{{end}}
+                                <form action="{{AppSubUrl}}/user/settings/email" method="post">
+                                    {{$.CsrfTokenHtml}}
+                                    <input name="_method" type="hidden" value="DELETE">
+                                    <input name="id" type="hidden" value="{{.Id}}">
+                                    <button class="right email-btn btn btn-red btn-radius btn-small">{{$.i18n.Tr "settings.delete_email"}}</button>
+                                </form>
+							   {{end}}
+                            </li>
+                            {{end}}
+                             <form action="{{AppSubUrl}}/user/settings/email" method="post">
+							{{.CsrfTokenHtml}}
+							<p class="panel-header"><strong>{{.i18n.Tr "settings.add_new_email"}}</strong></p>
+							<p class="field">
+                                <label class="req" for="email">{{.i18n.Tr "settings.email"}}</label>
+                                <input class="ipt ipt-radius" id="email" name="email" type="text" required />
+                            </p>
+                            <p class="field">
+                                <label></label>
+                                <button class="btn btn-green btn-radius" id="email-add-btn">{{.i18n.Tr "settings.add_email"}}</button>
+                            </p>
+							</form>
+                        </ul>
+                    </div>                    
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{{template "ng/base/footer" .}}
