@@ -42,6 +42,8 @@ var (
 	ErrUserNotExist          = errors.New("User does not exist")
 	ErrUserNotKeyOwner       = errors.New("User does not the owner of public key")
 	ErrEmailAlreadyUsed      = errors.New("E-mail already used")
+	ErrEmailNotExist         = errors.New("E-mail does not exist")
+	ErrEmailNotActivated     = errors.New("E-mail address has not been activated")
 	ErrUserNameIllegal       = errors.New("User name contains illegal characters")
 	ErrLoginSourceNotExist   = errors.New("Login source does not exist")
 	ErrLoginSourceNotActived = errors.New("Login source is not actived")
@@ -101,6 +103,7 @@ type EmailAddress struct {
 	OwnerId     int64  `xorm:"INDEX NOT NULL"`
 	Email       string `xorm:"UNIQUE NOT NULL"`
 	IsActivated bool
+	IsPrimary   bool `xorm:"-"`
 }
 
 // DashboardLink returns the user dashboard page link.
@@ -368,6 +371,25 @@ func VerifyUserActiveCode(code string) (user *User) {
 	return nil
 }
 
+// verify active code when active account
+func VerifyActiveEmailCode(code, email string) *EmailAddress {
+	minutes := setting.Service.ActiveCodeLives
+
+	if user := getVerifyUser(code); user != nil {
+		// time limit code
+		prefix := code[:base.TimeLimitCodeLength]
+		data := com.ToStr(user.Id) + email + user.LowerName + user.Passwd + user.Rands
+
+		if base.VerifyTimeLimitCode(data, minutes, prefix) {
+			emailAddress := &EmailAddress{Email: email}
+			if has, _ := x.Get(emailAddress); has {
+				return emailAddress
+			}
+		}
+	}
+	return nil
+}
+
 // ChangeUserName changes all corresponding setting from old user name to new one.
 func ChangeUserName(u *User, newUserName string) (err error) {
 	if !IsLegalName(newUserName) {
@@ -602,6 +624,117 @@ func GetUserIdsByNames(names []string) []int64 {
 		ids = append(ids, u.Id)
 	}
 	return ids
+}
+
+// Get all email addresses
+func GetEmailAddresses(uid int64) ([]*EmailAddress, error) {
+	emails := make([]*EmailAddress, 0, 5)
+	err := x.Where("owner_id=?", uid).Find(&emails)
+	if err != nil {
+		return nil, err
+	}
+
+	u, err := GetUserById(uid)
+	if err != nil {
+		return nil, err
+	}
+
+	primary_email_found := false
+
+	for _, email := range emails {
+		if email.Email == u.Email {
+			primary_email_found = true
+			email.IsPrimary = true
+		} else {
+			email.IsPrimary = false
+		}
+	}
+
+	// We alway want the primary email address displayed, even if it's not in
+	// the emailaddress table (yet)
+	if !primary_email_found {
+		emails = append(emails, &EmailAddress{Email: u.Email, IsActivated: true, IsPrimary: true})
+	}
+	return emails, nil
+}
+
+func AddEmailAddress(email *EmailAddress) error {
+	used, err := IsEmailUsed(email.Email)
+	if err != nil {
+		return err
+	} else if used {
+		return ErrEmailAlreadyUsed
+	}
+
+	_, err = x.Insert(email)
+	return err
+}
+
+func (email *EmailAddress) Activate() error {
+	email.IsActivated = true
+	if _, err := x.Id(email.Id).AllCols().Update(email); err != nil {
+		return err
+	}
+
+	if user, err := GetUserById(email.OwnerId); err != nil {
+		return err
+	} else {
+		user.Rands = GetUserSalt()
+		return UpdateUser(user)
+	}
+}
+
+func DeleteEmailAddress(email *EmailAddress) error {
+	has, err := x.Get(email)
+	if err != nil {
+		return err
+	} else if !has {
+		return ErrEmailNotExist
+	}
+
+	if _, err = x.Delete(email); err != nil {
+		return err
+	}
+
+	return nil
+
+}
+
+func MakeEmailPrimary(email *EmailAddress) error {
+	has, err := x.Get(email)
+	if err != nil {
+		return err
+	} else if !has {
+		return ErrEmailNotExist
+	}
+
+	if !email.IsActivated {
+		return ErrEmailNotActivated
+	}
+
+	user := &User{Id: email.OwnerId}
+	has, err = x.Get(user)
+	if err != nil {
+		return err
+	} else if !has {
+		return ErrUserNotExist
+	}
+
+	// Make sure the former primary email doesn't disappear
+	former_primary_email := &EmailAddress{Email: user.Email}
+	has, err = x.Get(former_primary_email)
+	if err != nil {
+		return err
+	} else if !has {
+		former_primary_email.OwnerId = user.Id
+		former_primary_email.IsActivated = user.IsActive
+		x.Insert(former_primary_email)
+	}
+
+	user.Email = email.Email
+	_, err = x.Id(user.Id).AllCols().Update(user)
+
+	return err
 }
 
 // UserCommit represents a commit with validation of user.
