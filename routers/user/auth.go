@@ -343,6 +343,27 @@ func Activate(ctx *middleware.Context) {
 	ctx.HTML(200, ACTIVATE)
 }
 
+func ActivateEmail(ctx *middleware.Context) {
+	code := ctx.Query("code")
+	email_string := ctx.Query("email")
+
+	// Verify code.
+	if email := models.VerifyActiveEmailCode(code, email_string); email != nil {
+		err := email.Activate()
+		if err != nil {
+			ctx.Handle(500, "ActivateEmail", err)
+		}
+
+		log.Trace("Email activated: %s", email.Email)
+
+		ctx.Flash.Success(ctx.Tr("settings.activate_email_success"))
+
+	}
+
+	ctx.Redirect(setting.AppSubUrl + "/user/settings/email")
+	return
+}
+
 func ForgotPasswd(ctx *middleware.Context) {
 	ctx.Data["Title"] = ctx.Tr("auth.forgot_password")
 
