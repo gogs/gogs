@@ -113,10 +113,10 @@ func sendMail(settings *setting.Mailer, from string, recipients []string, msgCon
 	if auth_available && len(settings.User) > 0 {
 		var auth smtp.Auth
 
-		if strings.Contains(options, "PLAIN") {
-			auth = smtp.PlainAuth("", settings.User, settings.Passwd, host)
-		} else if strings.Contains(options, "CRAM-MD5") {
+		if strings.Contains(options, "CRAM-MD5") {
 			auth = smtp.CRAMMD5Auth(settings.User, settings.Passwd)
+		} else if strings.Contains(options, "PLAIN") {
+			auth = smtp.PlainAuth("", settings.User, settings.Passwd, host)
 		}
 
 		if auth != nil {
