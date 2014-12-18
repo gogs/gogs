@@ -62,6 +62,8 @@ func SignIn(ctx *middleware.Context) {
 	if err != nil {
 		if err != models.ErrUserNotExist {
 			ctx.Handle(500, "GetUserByName", err)
+		} else {
+			ctx.HTML(200, SIGNIN)
 		}
 		return
 	}
