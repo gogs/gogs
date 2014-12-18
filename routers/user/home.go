@@ -213,6 +213,9 @@ func Profile(ctx *middleware.Context) {
 			// FIXME: cache results?
 			u, err := models.GetUserByName(act.ActUserName)
 			if err != nil {
+				if err == models.ErrUserNotExist {
+					continue
+				}
 				ctx.Handle(500, "GetUserByName", err)
 				return
 			}
