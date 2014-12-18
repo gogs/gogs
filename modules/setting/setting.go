@@ -437,6 +437,7 @@ type Mailer struct {
 	Host         string
 	From         string
 	User, Passwd string
+	SkipVerify   bool
 }
 
 type OauthInfo struct {
@@ -463,10 +464,11 @@ func newMailService() {
 	}
 
 	MailService = &Mailer{
-		Name:   Cfg.MustValue("mailer", "NAME", AppName),
-		Host:   Cfg.MustValue("mailer", "HOST"),
-		User:   Cfg.MustValue("mailer", "USER"),
-		Passwd: Cfg.MustValue("mailer", "PASSWD"),
+		Name:       Cfg.MustValue("mailer", "NAME", AppName),
+		Host:       Cfg.MustValue("mailer", "HOST"),
+		User:       Cfg.MustValue("mailer", "USER"),
+		Passwd:     Cfg.MustValue("mailer", "PASSWD"),
+		SkipVerify: Cfg.MustBool("mailer", "SKIP_VERIFY", false),
 	}
 	MailService.From = Cfg.MustValue("mailer", "FROM", MailService.User)
 	log.Info("Mail Service Enabled")
