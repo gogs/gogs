@@ -418,7 +418,7 @@ func ChangeUserName(u *User, newUserName string) (err error) {
 
 // UpdateUser updates user's information.
 func UpdateUser(u *User) error {
-	has, err := x.Where("id != ?", u.Id).And("email = ?", u.Email).Get(new(User))
+	has, err := x.Where("id!=?", u.Id).And("email=?", u.Email).Get(new(User))
 	if err != nil {
 		return err
 	} else if has {
