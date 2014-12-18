@@ -108,14 +108,21 @@ func sendMail(settings *setting.Mailer, from string, recipients []string, msgCon
 		}
 	}
 
-	auth_available, _ := client.Extension("AUTH")
+	auth_available, options := client.Extension("AUTH")
 
-	// Possible improvement: only plain authentication is now available.
-	// Maybe in future CRAM MD5 as well?
 	if auth_available && len(settings.User) > 0 {
-		auth := smtp.PlainAuth("", settings.User, settings.Passwd, host)
-		if err = client.Auth(auth); err != nil {
-			return err
+		var auth smtp.Auth
+
+		if strings.Contains(options, "CRAM-MD5") {
+			auth = smtp.CRAMMD5Auth(settings.User, settings.Passwd)
+		} else if strings.Contains(options, "PLAIN") {
+			auth = smtp.PlainAuth("", settings.User, settings.Passwd, host)
+		}
+
+		if auth != nil {
+			if err = client.Auth(auth); err != nil {
+				return err
+			}
 		}
 	}
 
