@@ -30,9 +30,7 @@ const (
 
 // Create New mail message use MailFrom and MailUser
 func NewMailMessageFrom(To []string, from, subject, body string) Message {
-	msg := NewHtmlMessage(To, from, subject, body)
-	msg.User = setting.MailService.User
-	return msg
+	return NewHtmlMessage(To, from, subject, body)
 }
 
 // Create New mail message use MailFrom and MailUser
