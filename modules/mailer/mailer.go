@@ -82,35 +82,35 @@ func sendMail(settings *setting.Mailer, from string, recipients []string, msgCon
 		ServerName:         host,
 	}
 
-	var conn net.Conn
-	if conn, err = net.Dial("tcp", net.JoinHostPort(host, port)); err != nil {
+	conn, err := net.Dial("tcp", net.JoinHostPort(host, port))
+	if err != nil {
 		return err
 	}
 	defer conn.Close()
 
-	connection_secure := false
+	isSecureConn := false
 	// Start TLS directly if the port ends with 465 (SMTPS protocol)
 	if strings.HasSuffix(port, "465") {
 		conn = tls.Client(conn, tlsconfig)
-		connection_secure = true
+		isSecureConn = true
 	}
 
-	var client *smtp.Client
-	if client, err = smtp.NewClient(conn, host); err != nil {
+	client, err := smtp.NewClient(conn, host)
+	if err != nil {
 		return err
 	}
 
 	// If not using SMTPS, alway use STARTTLS if available
-	has_starttls, _ := client.Extension("STARTTLS")
-	if !connection_secure && has_starttls {
+	hasStartTLS, _ := client.Extension("STARTTLS")
+	if !isSecureConn && hasStartTLS {
 		if err = client.StartTLS(tlsconfig); err != nil {
 			return err
 		}
 	}
 
-	auth_available, options := client.Extension("AUTH")
+	canAuth, options := client.Extension("AUTH")
 
-	if auth_available && len(settings.User) > 0 {
+	if canAuth && len(settings.User) > 0 {
 		var auth smtp.Auth
 
 		if strings.Contains(options, "CRAM-MD5") {
