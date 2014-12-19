@@ -8,6 +8,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"net"
+	"net/mail"
 	"net/smtp"
 	"strings"
 
@@ -124,8 +125,12 @@ func sendMail(settings *setting.Mailer, recipients []string, msgContent []byte) 
 		}
 	}
 
-	if err = client.Mail(settings.From); err != nil {
+	if fromAddress, err := mail.ParseAddress(settings.From); err != nil {
 		return err
+	} else {
+		if err = client.Mail(fromAddress.Address); err != nil {
+			return err
+		}
 	}
 
 	for _, rec := range recipients {
