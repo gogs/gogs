@@ -73,10 +73,6 @@ func sendMail(settings *setting.Mailer, from string, recipients []string, msgCon
 		return err
 	}
 
-	if len(port) == 0 {
-		port = "587"
-	}
-
 	tlsconfig := &tls.Config{
 		InsecureSkipVerify: settings.SkipVerify,
 		ServerName:         host,
