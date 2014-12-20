@@ -197,7 +197,7 @@ func SettingsEmailPost(ctx *middleware.Context, form auth.AddEmailForm) {
 
 		cleanEmail := strings.Replace(form.Email, "\n", "", -1)
 		e := &models.EmailAddress{
-			OwnerId:     ctx.User.Id,
+			Uid:         ctx.User.Id,
 			Email:       cleanEmail,
 			IsActivated: !setting.Service.RegisterEmailConfirm,
 		}

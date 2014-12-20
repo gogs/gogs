@@ -100,7 +100,7 @@ type User struct {
 // primary email address, but is not obligatory
 type EmailAddress struct {
 	Id          int64
-	OwnerId     int64  `xorm:"INDEX NOT NULL"`
+	Uid         int64  `xorm:"INDEX NOT NULL"`
 	Email       string `xorm:"UNIQUE NOT NULL"`
 	IsActivated bool
 	IsPrimary   bool `xorm:"-"`
@@ -261,8 +261,8 @@ func IsEmailUsed(email string) (bool, error) {
 	if len(email) == 0 {
 		return false, nil
 	}
-	if used, err := x.Get(&EmailAddress{Email: email}); used || err != nil {
-		return used, err
+	if has, err := x.Get(&EmailAddress{Email: email}); has || err != nil {
+		return has, err
 	}
 	return x.Get(&User{Email: email})
 }
@@ -524,7 +524,7 @@ func DeleteUser(u *User) error {
 		return err
 	}
 	// Delete all alternative email addresses
-	if _, err = x.Delete(&EmailAddress{OwnerId: u.Id}); err != nil {
+	if _, err = x.Delete(&EmailAddress{Uid: u.Id}); err != nil {
 		return err
 	}
 	// Delete all SSH keys.
@@ -551,7 +551,7 @@ func DeleteUser(u *User) error {
 func DeleteInactivateUsers() error {
 	_, err := x.Where("is_active=?", false).Delete(new(User))
 	if err == nil {
-		_, err = x.Delete(&EmailAddress{IsActivated: false})
+		_, err = x.Where("is_activated=?", false).Delete(new(EmailAddress))
 	}
 	return err
 }
@@ -639,11 +639,11 @@ func GetEmailAddresses(uid int64) ([]*EmailAddress, error) {
 		return nil, err
 	}
 
-	primary_email_found := false
+	isPrimaryFound := false
 
 	for _, email := range emails {
 		if email.Email == u.Email {
-			primary_email_found = true
+			isPrimaryFound = true
 			email.IsPrimary = true
 		} else {
 			email.IsPrimary = false
@@ -652,7 +652,7 @@ func GetEmailAddresses(uid int64) ([]*EmailAddress, error) {
 
 	// We alway want the primary email address displayed, even if it's not in
 	// the emailaddress table (yet)
-	if !primary_email_found {
+	if !isPrimaryFound {
 		emails = append(emails, &EmailAddress{Email: u.Email, IsActivated: true, IsPrimary: true})
 	}
 	return emails, nil
@@ -676,7 +676,7 @@ func (email *EmailAddress) Activate() error {
 		return err
 	}
 
-	if user, err := GetUserById(email.OwnerId); err != nil {
+	if user, err := GetUserById(email.Uid); err != nil {
 		return err
 	} else {
 		user.Rands = GetUserSalt()
@@ -712,7 +712,7 @@ func MakeEmailPrimary(email *EmailAddress) error {
 		return ErrEmailNotActivated
 	}
 
-	user := &User{Id: email.OwnerId}
+	user := &User{Id: email.Uid}
 	has, err = x.Get(user)
 	if err != nil {
 		return err
@@ -726,7 +726,7 @@ func MakeEmailPrimary(email *EmailAddress) error {
 	if err != nil {
 		return err
 	} else if !has {
-		former_primary_email.OwnerId = user.Id
+		former_primary_email.Uid = user.Id
 		former_primary_email.IsActivated = user.IsActive
 		x.Insert(former_primary_email)
 	}
@@ -799,7 +799,7 @@ func GetUserByEmail(email string) (*User, error) {
 		return nil, err
 	}
 	if has {
-		return GetUserById(emailAddress.OwnerId)
+		return GetUserById(emailAddress.Uid)
 	}
 
 	return nil, ErrUserNotExist
