@@ -8,6 +8,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"net"
+	"net/mail"
 	"net/smtp"
 	"strings"
 
@@ -20,7 +21,6 @@ type Message struct {
 	From    string
 	Subject string
 	Body    string
-	User    string
 	Type    string
 	Massive bool
 	Info    string
@@ -35,8 +35,7 @@ func (m Message) Content() string {
 	}
 
 	// create mail content
-	content := "From: \"" + m.From + "\" <" + m.User +
-		">\r\nSubject: " + m.Subject + "\r\nContent-Type: " + contentType + "\r\n\r\n" + m.Body
+	content := "From: " + m.From + "\r\nSubject: " + m.Subject + "\r\nContent-Type: " + contentType + "\r\n\r\n" + m.Body
 	return content
 }
 
@@ -67,7 +66,7 @@ func processMailQueue() {
 }
 
 // sendMail allows mail with self-signed certificates.
-func sendMail(settings *setting.Mailer, from string, recipients []string, msgContent []byte) error {
+func sendMail(settings *setting.Mailer, recipients []string, msgContent []byte) error {
 	host, port, err := net.SplitHostPort(settings.Host)
 	if err != nil {
 		return err
@@ -122,8 +121,12 @@ func sendMail(settings *setting.Mailer, from string, recipients []string, msgCon
 		}
 	}
 
-	if err = client.Mail(from); err != nil {
+	if fromAddress, err := mail.ParseAddress(settings.From); err != nil {
 		return err
+	} else {
+		if err = client.Mail(fromAddress.Address); err != nil {
+			return err
+		}
 	}
 
 	for _, rec := range recipients {
@@ -165,7 +168,7 @@ func Send(msg *Message) (int, error) {
 		num := 0
 		for _, to := range msg.To {
 			body := []byte("To: " + to + "\r\n" + content)
-			err := sendMail(setting.MailService, msg.From, []string{to}, body)
+			err := sendMail(setting.MailService, []string{to}, body)
 			if err != nil {
 				return num, err
 			}
@@ -176,7 +179,7 @@ func Send(msg *Message) (int, error) {
 		body := []byte("To: " + strings.Join(msg.To, ";") + "\r\n" + content)
 
 		// send to multiple emails in one message
-		err := sendMail(setting.MailService, msg.From, msg.To, body)
+		err := sendMail(setting.MailService, msg.To, body)
 		if err != nil {
 			return 0, err
 		} else {
