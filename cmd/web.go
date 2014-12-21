@@ -136,7 +136,7 @@ func newMacaron() *macaron.Macaron {
 		Provider: setting.SessionProvider,
 		Config:   *setting.SessionConfig,
 	}))
-	m.Use(csrf.Generate(csrf.Options{
+	m.Use(csrf.Csrfer(csrf.Options{
 		Secret:     setting.SecretKey,
 		SetCookie:  true,
 		Header:     "X-Csrf-Token",
