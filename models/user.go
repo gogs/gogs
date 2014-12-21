@@ -629,7 +629,7 @@ func GetUserIdsByNames(names []string) []int64 {
 // Get all email addresses
 func GetEmailAddresses(uid int64) ([]*EmailAddress, error) {
 	emails := make([]*EmailAddress, 0, 5)
-	err := x.Where("owner_id=?", uid).Find(&emails)
+	err := x.Where("uid=?", uid).Find(&emails)
 	if err != nil {
 		return nil, err
 	}
