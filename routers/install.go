@@ -235,6 +235,8 @@ func InstallPost(ctx *middleware.Context, form auth.InstallForm) {
 
 	setting.Cfg.SetValue("", "RUN_MODE", "prod")
 
+	setting.Cfg.SetValue("session", "PROVIDER", "file")
+
 	setting.Cfg.SetValue("log", "MODE", "file")
 
 	setting.Cfg.SetValue("security", "INSTALL_LOCK", "true")
