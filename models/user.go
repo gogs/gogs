@@ -42,6 +42,8 @@ var (
 	ErrUserNotExist          = errors.New("User does not exist")
 	ErrUserNotKeyOwner       = errors.New("User does not the owner of public key")
 	ErrEmailAlreadyUsed      = errors.New("E-mail already used")
+	ErrEmailNotExist         = errors.New("E-mail does not exist")
+	ErrEmailNotActivated     = errors.New("E-mail address has not been activated")
 	ErrUserNameIllegal       = errors.New("User name contains illegal characters")
 	ErrLoginSourceNotExist   = errors.New("Login source does not exist")
 	ErrLoginSourceNotActived = errors.New("Login source is not actived")
@@ -50,10 +52,11 @@ var (
 
 // User represents the object of individual and member of organization.
 type User struct {
-	Id          int64
-	LowerName   string `xorm:"UNIQUE NOT NULL"`
-	Name        string `xorm:"UNIQUE NOT NULL"`
-	FullName    string
+	Id        int64
+	LowerName string `xorm:"UNIQUE NOT NULL"`
+	Name      string `xorm:"UNIQUE NOT NULL"`
+	FullName  string
+	// Email is the primary email address (to be used for communication).
 	Email       string `xorm:"UNIQUE(s) NOT NULL"`
 	Passwd      string `xorm:"NOT NULL"`
 	LoginType   LoginType
@@ -91,6 +94,16 @@ type User struct {
 	NumMembers  int
 	Teams       []*Team `xorm:"-"`
 	Members     []*User `xorm:"-"`
+}
+
+// EmailAdresses is the list of all email addresses of a user. Can contain the
+// primary email address, but is not obligatory
+type EmailAddress struct {
+	Id          int64
+	Uid         int64  `xorm:"INDEX NOT NULL"`
+	Email       string `xorm:"UNIQUE NOT NULL"`
+	IsActivated bool
+	IsPrimary   bool `xorm:"-"`
 }
 
 // DashboardLink returns the user dashboard page link.
@@ -248,6 +261,9 @@ func IsEmailUsed(email string) (bool, error) {
 	if len(email) == 0 {
 		return false, nil
 	}
+	if has, err := x.Get(&EmailAddress{Email: email}); has || err != nil {
+		return has, err
+	}
 	return x.Get(&User{Email: email})
 }
 
@@ -350,6 +366,25 @@ func VerifyUserActiveCode(code string) (user *User) {
 
 		if base.VerifyTimeLimitCode(data, minutes, prefix) {
 			return user
+		}
+	}
+	return nil
+}
+
+// verify active code when active account
+func VerifyActiveEmailCode(code, email string) *EmailAddress {
+	minutes := setting.Service.ActiveCodeLives
+
+	if user := getVerifyUser(code); user != nil {
+		// time limit code
+		prefix := code[:base.TimeLimitCodeLength]
+		data := com.ToStr(user.Id) + email + user.LowerName + user.Passwd + user.Rands
+
+		if base.VerifyTimeLimitCode(data, minutes, prefix) {
+			emailAddress := &EmailAddress{Email: email}
+			if has, _ := x.Get(emailAddress); has {
+				return emailAddress
+			}
 		}
 	}
 	return nil
@@ -488,6 +523,10 @@ func DeleteUser(u *User) error {
 	if _, err = x.Delete(&Access{UserName: u.LowerName}); err != nil {
 		return err
 	}
+	// Delete all alternative email addresses
+	if _, err = x.Delete(&EmailAddress{Uid: u.Id}); err != nil {
+		return err
+	}
 	// Delete all SSH keys.
 	keys := make([]*PublicKey, 0, 10)
 	if err = x.Find(&keys, &PublicKey{OwnerId: u.Id}); err != nil {
@@ -508,9 +547,12 @@ func DeleteUser(u *User) error {
 	return err
 }
 
-// DeleteInactivateUsers deletes all inactivate users.
+// DeleteInactivateUsers deletes all inactivate users and email addresses.
 func DeleteInactivateUsers() error {
 	_, err := x.Where("is_active=?", false).Delete(new(User))
+	if err == nil {
+		_, err = x.Where("is_activated=?", false).Delete(new(EmailAddress))
+	}
 	return err
 }
 
@@ -584,6 +626,117 @@ func GetUserIdsByNames(names []string) []int64 {
 	return ids
 }
 
+// Get all email addresses
+func GetEmailAddresses(uid int64) ([]*EmailAddress, error) {
+	emails := make([]*EmailAddress, 0, 5)
+	err := x.Where("owner_id=?", uid).Find(&emails)
+	if err != nil {
+		return nil, err
+	}
+
+	u, err := GetUserById(uid)
+	if err != nil {
+		return nil, err
+	}
+
+	isPrimaryFound := false
+
+	for _, email := range emails {
+		if email.Email == u.Email {
+			isPrimaryFound = true
+			email.IsPrimary = true
+		} else {
+			email.IsPrimary = false
+		}
+	}
+
+	// We alway want the primary email address displayed, even if it's not in
+	// the emailaddress table (yet)
+	if !isPrimaryFound {
+		emails = append(emails, &EmailAddress{Email: u.Email, IsActivated: true, IsPrimary: true})
+	}
+	return emails, nil
+}
+
+func AddEmailAddress(email *EmailAddress) error {
+	used, err := IsEmailUsed(email.Email)
+	if err != nil {
+		return err
+	} else if used {
+		return ErrEmailAlreadyUsed
+	}
+
+	_, err = x.Insert(email)
+	return err
+}
+
+func (email *EmailAddress) Activate() error {
+	email.IsActivated = true
+	if _, err := x.Id(email.Id).AllCols().Update(email); err != nil {
+		return err
+	}
+
+	if user, err := GetUserById(email.Uid); err != nil {
+		return err
+	} else {
+		user.Rands = GetUserSalt()
+		return UpdateUser(user)
+	}
+}
+
+func DeleteEmailAddress(email *EmailAddress) error {
+	has, err := x.Get(email)
+	if err != nil {
+		return err
+	} else if !has {
+		return ErrEmailNotExist
+	}
+
+	if _, err = x.Delete(email); err != nil {
+		return err
+	}
+
+	return nil
+
+}
+
+func MakeEmailPrimary(email *EmailAddress) error {
+	has, err := x.Get(email)
+	if err != nil {
+		return err
+	} else if !has {
+		return ErrEmailNotExist
+	}
+
+	if !email.IsActivated {
+		return ErrEmailNotActivated
+	}
+
+	user := &User{Id: email.Uid}
+	has, err = x.Get(user)
+	if err != nil {
+		return err
+	} else if !has {
+		return ErrUserNotExist
+	}
+
+	// Make sure the former primary email doesn't disappear
+	former_primary_email := &EmailAddress{Email: user.Email}
+	has, err = x.Get(former_primary_email)
+	if err != nil {
+		return err
+	} else if !has {
+		former_primary_email.Uid = user.Id
+		former_primary_email.IsActivated = user.IsActive
+		x.Insert(former_primary_email)
+	}
+
+	user.Email = email.Email
+	_, err = x.Id(user.Id).AllCols().Update(user)
+
+	return err
+}
+
 // UserCommit represents a commit with validation of user.
 type UserCommit struct {
 	User *User
@@ -629,14 +782,27 @@ func GetUserByEmail(email string) (*User, error) {
 	if len(email) == 0 {
 		return nil, ErrUserNotExist
 	}
+	// First try to find the user by primary email
 	user := &User{Email: strings.ToLower(email)}
 	has, err := x.Get(user)
 	if err != nil {
 		return nil, err
-	} else if !has {
-		return nil, ErrUserNotExist
 	}
-	return user, nil
+	if has {
+		return user, nil
+	}
+
+	// Otherwise, check in alternative list for activated email addresses
+	emailAddress := &EmailAddress{Email: strings.ToLower(email), IsActivated: true}
+	has, err = x.Get(emailAddress)
+	if err != nil {
+		return nil, err
+	}
+	if has {
+		return GetUserById(emailAddress.Uid)
+	}
+
+	return nil, ErrUserNotExist
 }
 
 // SearchUserByName returns given number of users whose name contains keyword.

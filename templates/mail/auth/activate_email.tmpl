@@ -1,0 +1,30 @@
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>{{.User.Name}}, please activate your e-mail address</title>
+</head>
+<body style="background:#eee;">
+<div style="color:#333; font:12px/1.5 Tahoma,Arial,sans-serif;; text-shadow:1px 1px #fff; padding:0; margin:0;">
+    <div style="width:600px;margin:0 auto; padding:40px 0 20px;">
+        <div style="border:1px solid #d9d9d9;border-radius:3px; background:#fff; box-shadow: 0px 2px 5px rgba(0, 0, 0,.05); -webkit-box-shadow: 0px 2px 5px rgba(0, 0, 0,.05);">
+            <div style="padding: 20px 15px;">
+                <h1 style="font-size:20px; padding:10px 0 20px; margin:0; border-bottom:1px solid #ddd;"><img src="{{.AppUrl}}/img/favicon.png" style="height: 32px; margin-bottom: -10px;"> <a style="color:#333;text-decoration:none;" target="_blank" href="{{.AppUrl}}">{{.AppName}}</a></h1>
+                <div style="padding:40px 15px;">
+                    <div style="font-size:16px; padding-bottom:30px; font-weight:bold;">
+                        Hi <span style="color: #00BFFF;">{{.User.Name}}</span>,
+                    </div>
+                    <div style="font-size:14px; padding:0 15px;">
+						<p style="margin:0;padding:0 0 9px 0;">Please click the following link to verify your e-mail address within <b>{{.ActiveCodeLives}} hours</b>.</p>
+						<p style="margin:0;padding:0 0 9px 0;">
+							<a href="{{.AppUrl}}user/activate_email?code={{.Code}}&email={{.Email}}">{{.AppUrl}}user/activate_email?code={{.Code}}&email={{.Email}}</a>
+						</p>
+						<p style="margin:0;padding:0 0 9px 0;">Not working? Try copying and pasting it to your browser.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div style="color:#aaa;padding:10px;text-align:center;">
+            © 2014 <a style="color:#888;text-decoration:none;" target="_blank" href="http://gogits.org">Gogs: Go Git Service</a>
+        </div>
+    </div>
+</div>
+</body>
+</html>
