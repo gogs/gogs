@@ -7,14 +7,15 @@ package base
 import (
 	"container/list"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"html/template"
 	"runtime"
 	"strings"
 	"time"
 
-	"github.com/gogits/gogs/modules/mahonia"
+	"golang.org/x/net/html/charset"
+	"golang.org/x/text/transform"
+
 	"github.com/gogits/gogs/modules/setting"
 	"github.com/saintfish/chardet"
 )
@@ -54,20 +55,30 @@ func DetectEncoding(content []byte) (string, error) {
 }
 
 func ToUtf8WithErr(content []byte) (error, string) {
-	charset, err := DetectEncoding(content)
+	charsetLabel, err := DetectEncoding(content)
 	if err != nil {
 		return err, ""
 	}
 
-	if charset == "utf8" {
+	if charsetLabel == "utf8" {
 		return nil, string(content)
 	}
 
-	decoder := mahonia.NewDecoder(charset)
-	if decoder != nil {
-		return nil, decoder.ConvertString(string(content))
+	encoding, _ := charset.Lookup(charsetLabel)
+
+	if encoding == nil {
+		return fmt.Errorf("unknow char decoder %s", charsetLabel), string(content)
 	}
-	return errors.New("unknow char decoder"), string(content)
+
+	result, n, err := transform.String(encoding.NewDecoder(), string(content))
+
+	// If there is an error, we concatenate the nicely decoded part and the
+	// original left over. This way we won't loose data.
+	if err != nil {
+		result = result + string(content[n:])
+	}
+
+	return err, result
 }
 
 func ToUtf8(content string) string {
