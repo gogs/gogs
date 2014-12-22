@@ -214,7 +214,7 @@ var Gogs = {};
                 if (json.ok && json.data.length) {
                     var html = '';
                     $.each(json.data, function (i, item) {
-                        html += '<li><a><img src="' + item.avatar_url + '">' + item.username;
+                        html += '<li><a><img src="' + item.avatar_url + '"><span class="username">' + item.username + '</span>';
                         if (notEmpty(item.full_name)) {
                           html += ' (' + item.full_name + ')';
                         }
@@ -571,7 +571,7 @@ function initInvite() {
             $ul.toggleShow();
         }
     }).next().next().find('ul').on("click", 'li', function () {
-        $('#org-member-invite').val($(this).text());
+        $('#org-member-invite').val($(this).find('.username').text());
         $ul.toggleHide();
     });
 }
