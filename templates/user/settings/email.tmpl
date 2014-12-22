@@ -16,7 +16,7 @@
                             {{range .Emails}}
                             <li class="email clear">
                                 <div class="email-content left">
-									<p><strong>{{.Email}}</strong></p>
+									<p><strong>{{.Email}}</strong> {{if .IsPrimary}} <span class="email-primary">Primary</span> {{end}}</p>
 							   </div>
 							   {{if not .IsPrimary}}
 							   {{if .IsActivated}}
@@ -40,7 +40,7 @@
 							{{.CsrfTokenHtml}}
 							<p class="panel-header"><strong>{{.i18n.Tr "settings.add_new_email"}}</strong></p>
 							<p class="field">
-                                <label class="req" for="email">{{.i18n.Tr "settings.email"}}</label>
+                                <label class="req" for="email">{{.i18n.Tr "email"}}</label>
                                 <input class="ipt ipt-radius" id="email" name="email" type="text" required />
                             </p>
                             <p class="field">
