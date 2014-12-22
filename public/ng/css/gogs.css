@@ -2250,15 +2250,15 @@ textarea#issue-add-content {
 #labels-num {
   margin-right: 1em;
 }
-#label-list .right {
+#label-list a.right {
   margin-left: 1em;
   color: #999;
   line-height: 30px;
 }
-#label-list .right i {
+#label-list a.right i {
   margin-right: 3px;
 }
-#label-list .right:hover {
+#label-list a.right:hover {
   color: #444444;
 }
 #label-list .num {
@@ -2279,37 +2279,46 @@ textarea#issue-add-content {
   margin-bottom: 12px;
   border-bottom: 1px dashed #AAA;
 }
-#label-add-form {
-  padding: 18px 0;
-  border-bottom: 1px solid #DDD;
-}
-#label-add-form .ipt {
+#label-add-form .ipt,
+#label-edit-form .ipt,
+#label-delete-form .ipt {
   font-size: 14px;
 }
-#label-add-form .ipt[name=name] {
+#label-add-form .ipt[name=name],
+#label-edit-form .ipt[name=name],
+#label-delete-form .ipt[name=name] {
   width: 300px;
 }
-#label-add-form .btn {
+#label-add-form .btn,
+#label-edit-form .btn,
+#label-delete-form .btn {
   height: 33px;
   font-size: 14px;
   margin-left: 12px;
 }
-#label-color-drop .ipt {
+#label-add-form {
+  padding: 18px 0;
+  border-bottom: 1px solid #DDD;
+}
+#label-delete-form span {
+  line-height: 33px;
+}
+.label-color-drop .ipt {
   width: 100px;
 }
-#label-color-drop .drop-down {
-  width: 128px;
-  top: 22px;
-  left: 50px;
+.label-color-drop .drop-down {
+  width: 128px !important;
+  top: 22px !important;
+  left: 50px !important;
   padding: 12px;
   line-height: 16px;
 }
-#label-color-drop .drop-down a.color {
+.label-color-drop .drop-down a.color {
   width: 16px;
   height: 16px;
   display: inline-block;
 }
-#label-color-drop label {
+.label-color-drop label {
   width: 24px;
   height: 24px;
   display: inline-block;
