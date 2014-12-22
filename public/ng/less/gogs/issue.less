@@ -384,7 +384,7 @@ textarea#issue-add-content {
 }
 // labels list
 #label-list {
-  .right {
+  a.right {
     margin-left: 1em;
     color: #999;
     i {
@@ -416,10 +416,10 @@ textarea#issue-add-content {
     border-bottom: 1px dashed #AAA;
   }
 }
-// label add form
-#label-add-form{
-  padding: 18px 0;
-  border-bottom: 1px solid #DDD;
+// label add form, label edit form
+#label-add-form,
+#label-edit-form,
+#label-delete-form{
   .ipt{
     font-size: 14px;
   }
@@ -432,15 +432,24 @@ textarea#issue-add-content {
     margin-left: 12px;
   }
 }
+#label-add-form{
+  padding: 18px 0;
+  border-bottom: 1px solid #DDD;
+}
+#label-delete-form{
+  span{
+    line-height: 33px;
+  }
+}
 // label color drop
-#label-color-drop{
+.label-color-drop{
   .ipt{
     width:100px;
   }
   .drop-down{
-    width:128px;
-    top:22px;
-    left:50px;
+    width:128px !important;
+    top:22px !important;
+    left:50px !important;
     padding: 12px;
     line-height: 16px;
     a.color{
