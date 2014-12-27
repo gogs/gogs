@@ -30,7 +30,7 @@ The `config` file contains lines which will in the gogs docker container end up 
 Here you can define things like the MySQL server for your database block.
 
 The `fig` file will just be added to `fig.yml`, which is used by fig to manage your containers.
-This inculdes container linking!
+This includes container linking!
 
 Just have a look at them and it will be clear how to write your own blocks.
 
@@ -53,7 +53,7 @@ Example:
 More sophisticated Example
 --------------------------
 
-Her is a more elaborated example
+Here is a more elaborated example
 
 ```sh
 ./assemble_blocks.sh docker_gogs w_db_cache_session option_db_postgresql option_cache_redis option_session_mysql
