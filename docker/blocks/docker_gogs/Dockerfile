@@ -46,7 +46,7 @@ ENV HOME /home/git
 ENV USER git
 ENV PATH $GOGS_PATH:$PATH
 
-RUN git config --global user.name "GoGS"
+RUN git config --global user.name "GoGS" && git config --global user.email "gogitservice@gmail.com"
 
 ENTRYPOINT ["/tmp/init_gogs.sh"]
 CMD ["gogs", "web"]
