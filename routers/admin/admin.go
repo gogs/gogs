@@ -202,7 +202,6 @@ func Config(ctx *middleware.Context) {
 	ctx.Data["CacheInternal"] = setting.CacheInternal
 	ctx.Data["CacheConn"] = setting.CacheConn
 
-	ctx.Data["SessionProvider"] = setting.SessionProvider
 	ctx.Data["SessionConfig"] = setting.SessionConfig
 
 	ctx.Data["PictureService"] = setting.PictureService

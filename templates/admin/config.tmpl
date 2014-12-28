@@ -169,13 +169,11 @@
                             <div class="panel-body">
                                 <dl class="dl-horizontal admin-dl-horizontal">
                                     <dt>{{.i18n.Tr "admin.config.session_provider"}}</dt>
-                                    <dd>{{.SessionProvider}}</dd>
+                                    <dd>{{.SessionConfig.Provider}}</dd>
                                     <dt>{{.i18n.Tr "admin.config.provider_config"}}</dt>
                                     <dd><pre>{{.SessionConfig.ProviderConfig}}</pre></dd>
                                     <dt>{{.i18n.Tr "admin.config.cookie_name"}}</dt>
                                     <dd>{{.SessionConfig.CookieName}}</dd>
-                                    <dt>{{.i18n.Tr "admin.config.enable_set_cookie"}}</dt>
-                                    <dd><i class="fa fa{{if .SessionConfig.EnableSetCookie}}-check{{end}}-square-o"></i></dd>
                                     <dt>{{.i18n.Tr "admin.config.gc_interval_time"}}</dt>
                                     <dd>{{.SessionConfig.Gclifetime}} {{.i18n.Tr "tool.raw_seconds"}}</dd>
                                     <dt>{{.i18n.Tr "admin.config.session_life_time"}}</dt>

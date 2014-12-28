@@ -104,8 +104,7 @@ var (
 	EnableMemcache bool
 
 	// Session settings.
-	SessionProvider string
-	SessionConfig   *session.Config
+	SessionConfig session.Options
 
 	// Git settings.
 	MaxGitDiffLines int
@@ -412,21 +411,14 @@ func newCacheService() {
 }
 
 func newSessionService() {
-	SessionProvider = Cfg.MustValueRange("session", "PROVIDER", "memory",
+	SessionConfig.Provider = Cfg.MustValueRange("session", "PROVIDER", "memory",
 		[]string{"memory", "file", "redis", "mysql"})
-
-	SessionConfig = new(session.Config)
 	SessionConfig.ProviderConfig = strings.Trim(Cfg.MustValue("session", "PROVIDER_CONFIG"), "\" ")
 	SessionConfig.CookieName = Cfg.MustValue("session", "COOKIE_NAME", "i_like_gogits")
 	SessionConfig.CookiePath = AppSubUrl
 	SessionConfig.Secure = Cfg.MustBool("session", "COOKIE_SECURE")
-	SessionConfig.EnableSetCookie = Cfg.MustBool("session", "ENABLE_SET_COOKIE", true)
 	SessionConfig.Gclifetime = Cfg.MustInt64("session", "GC_INTERVAL_TIME", 86400)
 	SessionConfig.Maxlifetime = Cfg.MustInt64("session", "SESSION_LIFE_TIME", 86400)
-
-	if SessionProvider == "file" {
-		os.MkdirAll(path.Dir(SessionConfig.ProviderConfig), os.ModePerm)
-	}
 
 	log.Info("Session Service Enabled")
 }
