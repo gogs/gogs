@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"strings"
 	"time"
+	"path"
 
 	"github.com/Unknwon/com"
 
@@ -169,7 +170,7 @@ func SettingsCollaboration(ctx *middleware.Context) {
 	ctx.Data["Title"] = ctx.Tr("repo.settings")
 	ctx.Data["PageIsSettingsCollaboration"] = true
 
-	repoLink := strings.TrimPrefix(ctx.Repo.RepoLink, "/")
+	repoLink := path.Join(ctx.Repo.Owner.LowerName, ctx.Repo.Repository.LowerName)
 
 	if ctx.Req.Method == "POST" {
 		name := strings.ToLower(ctx.Query("collaborator"))
