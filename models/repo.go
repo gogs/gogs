@@ -105,21 +105,18 @@ func NewRepoContext() {
 		log.Fatal(4, "Gogs requires Git version greater or equal to 1.7.1")
 	}
 
-	// Check if server has basic git setting and set if not.
-	if stdout, stderr, err := process.Exec("NewRepoContext(get setting)", "git", "config", "--get", "user.name"); err != nil || strings.TrimSpace(stdout) == "" {
-		// ExitError indicates user.name is not set
-		if _, ok := err.(*exec.ExitError); ok || strings.TrimSpace(stdout) == "" {
-			stndrdUserName := "Gogs"
-			stndrdUserEmail := "gogitservice@gmail.com"
-			if _, stderr, gerr := process.Exec("NewRepoContext(set name)", "git", "config", "--global", "user.name", stndrdUserName); gerr != nil {
-				log.Fatal(4, "Fail to set git user.name(%s): %s", gerr, stderr)
+	// Check if server has user.email and user.name set correctly and set if they're not.
+	for configKey, defaultValue := range map[string]string{"user.name": "Gogs", "user.email": "gogitservice@gmail.com"} {
+		if stdout, stderr, err := process.Exec("NewRepoContext(get setting)", "git", "config", "--get", configKey); err != nil || strings.TrimSpace(stdout) == "" {
+			// ExitError indicates this config is not set
+			if _, ok := err.(*exec.ExitError); ok || strings.TrimSpace(stdout) == "" {
+				if _, stderr, gerr := process.Exec("NewRepoContext(set "+configKey+")", "git", "config", "--global", configKey, defaultValue); gerr != nil {
+					log.Fatal(4, "Fail to set git %s(%s): %s", configKey, gerr, stderr)
+				}
+				log.Info("Git config %s set to %s", configKey, defaultValue)
+			} else {
+				log.Fatal(4, "Fail to get git %s(%s): %s", configKey, err, stderr)
 			}
-			if _, stderr, gerr := process.Exec("NewRepoContext(set email)", "git", "config", "--global", "user.email", stndrdUserEmail); gerr != nil {
-				log.Fatal(4, "Fail to set git user.email(%s): %s", gerr, stderr)
-			}
-			log.Info("Git user.name and user.email set to %s <%s>", stndrdUserName, stndrdUserEmail)
-		} else {
-			log.Fatal(4, "Fail to get git user.name(%s): %s", err, stderr)
 		}
 	}
 
