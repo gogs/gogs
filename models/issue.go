@@ -472,8 +472,8 @@ func UpdateIssueUserPairByAssignee(aid, iid int64) error {
 	if aid == 0 {
 		return nil
 	}
-	rawSql = "UPDATE `issue_user` SET is_assigned = true WHERE uid = ? AND issue_id = ?"
-	_, err := x.Exec(rawSql, aid, iid)
+	rawSql = "UPDATE `issue_user` SET is_assigned = ? WHERE uid = ? AND issue_id = ?"
+	_, err := x.Exec(rawSql, true, aid, iid)
 	return err
 }
 
