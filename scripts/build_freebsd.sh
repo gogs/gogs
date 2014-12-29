@@ -1,4 +1,4 @@
-outPlattform=linux
+outPlattform=freebsd
 outArch=amd64
 outPath=./output_$outPlattform_$outArch
 
