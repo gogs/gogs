@@ -49,18 +49,19 @@ func init() {
 }
 
 func LoadModelsConfig() {
-	DbCfg.Type = setting.Cfg.MustValue("database", "DB_TYPE")
+	sec := setting.Cfg.Section("database")
+	DbCfg.Type = sec.Key("DB_TYPE").String()
 	if DbCfg.Type == "sqlite3" {
 		UseSQLite3 = true
 	}
-	DbCfg.Host = setting.Cfg.MustValue("database", "HOST")
-	DbCfg.Name = setting.Cfg.MustValue("database", "NAME")
-	DbCfg.User = setting.Cfg.MustValue("database", "USER")
+	DbCfg.Host = sec.Key("HOST").String()
+	DbCfg.Name = sec.Key("NAME").String()
+	DbCfg.User = sec.Key("USER").String()
 	if len(DbCfg.Pwd) == 0 {
-		DbCfg.Pwd = setting.Cfg.MustValue("database", "PASSWD")
+		DbCfg.Pwd = sec.Key("PASSWD").String()
 	}
-	DbCfg.SslMode = setting.Cfg.MustValue("database", "SSL_MODE")
-	DbCfg.Path = setting.Cfg.MustValue("database", "PATH", "data/gogs.db")
+	DbCfg.SslMode = sec.Key("SSL_MODE").String()
+	DbCfg.Path = sec.Key("PATH").MustString("data/gogs.db")
 }
 
 func getEngine() (*xorm.Engine, error) {

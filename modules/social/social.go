@@ -35,7 +35,7 @@ var (
 )
 
 func NewOauthService() {
-	if !setting.Cfg.MustBool("oauth", "ENABLED") {
+	if !setting.Cfg.Section("oauth").Key("ENABLED").MustBool() {
 		return
 	}
 
@@ -48,20 +48,21 @@ func NewOauthService() {
 	allOauthes := []string{"github", "google", "qq", "twitter", "weibo"}
 	// Load all OAuth config data.
 	for _, name := range allOauthes {
-		if !setting.Cfg.MustBool("oauth."+name, "ENABLED") {
+		sec := setting.Cfg.Section("oauth." + name)
+		if !sec.Key("ENABLED").MustBool() {
 			continue
 		}
 		setting.OauthService.OauthInfos[name] = &setting.OauthInfo{
 			Options: oauth2.Options{
-				ClientID:     setting.Cfg.MustValue("oauth."+name, "CLIENT_ID"),
-				ClientSecret: setting.Cfg.MustValue("oauth."+name, "CLIENT_SECRET"),
-				Scopes:       setting.Cfg.MustValueArray("oauth."+name, "SCOPES", " "),
+				ClientID:     sec.Key("CLIENT_ID").String(),
+				ClientSecret: sec.Key("CLIENT_SECRET").String(),
+				Scopes:       sec.Key("SCOPES").Strings(" "),
 				PathLogin:    "/user/login/oauth2/" + name,
 				PathCallback: setting.AppSubUrl + "/user/login/" + name,
 				RedirectURL:  setting.AppUrl + "user/login/" + name,
 			},
-			AuthUrl:  setting.Cfg.MustValue("oauth."+name, "AUTH_URL"),
-			TokenUrl: setting.Cfg.MustValue("oauth."+name, "TOKEN_URL"),
+			AuthUrl:  sec.Key("AUTH_URL").String(),
+			TokenUrl: sec.Key("TOKEN_URL").String(),
 		}
 		socialConfigs[name] = &oauth2.Options{
 			ClientID:     setting.OauthService.OauthInfos[name].ClientID,
@@ -72,35 +73,35 @@ func NewOauthService() {
 	enabledOauths := make([]string, 0, 10)
 
 	// GitHub.
-	if setting.Cfg.MustBool("oauth.github", "ENABLED") {
+	if setting.Cfg.Section("oauth.github").Key("ENABLED").MustBool() {
 		setting.OauthService.GitHub = true
 		newGitHubOauth(socialConfigs["github"])
 		enabledOauths = append(enabledOauths, "GitHub")
 	}
 
 	// Google.
-	if setting.Cfg.MustBool("oauth.google", "ENABLED") {
+	if setting.Cfg.Section("oauth.google").Key("ENABLED").MustBool() {
 		setting.OauthService.Google = true
 		newGoogleOauth(socialConfigs["google"])
 		enabledOauths = append(enabledOauths, "Google")
 	}
 
 	// QQ.
-	if setting.Cfg.MustBool("oauth.qq", "ENABLED") {
+	if setting.Cfg.Section("oauth.qq").Key("ENABLED").MustBool() {
 		setting.OauthService.Tencent = true
 		newTencentOauth(socialConfigs["qq"])
 		enabledOauths = append(enabledOauths, "QQ")
 	}
 
 	// Twitter.
-	// if setting.Cfg.MustBool("oauth.twitter", "ENABLED") {
+	// if setting.Cfg.Section("oauth.twitter").Key( "ENABLED").MustBool() {
 	// 	setting.OauthService.Twitter = true
 	// 	newTwitterOauth(socialConfigs["twitter"])
 	// 	enabledOauths = append(enabledOauths, "Twitter")
 	// }
 
 	// Weibo.
-	if setting.Cfg.MustBool("oauth.weibo", "ENABLED") {
+	if setting.Cfg.Section("oauth.weibo").Key("ENABLED").MustBool() {
 		setting.OauthService.Weibo = true
 		newWeiboOauth(socialConfigs["weibo"])
 		enabledOauths = append(enabledOauths, "Weibo")
