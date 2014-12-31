@@ -27,7 +27,7 @@ github.com/mattn/go-sqlite3 = commit:a80c27ba33
 github.com/nfnt/resize = commit:581d15cb53
 github.com/russross/blackfriday = commit:05b8cefd6a
 github.com/saintfish/chardet = commit:3af4cd4741
-gopkg.in/ini.v1
+gopkg.in/ini.v1 = 
 
 [res]
 include = conf|etc|public|scripts|templates
