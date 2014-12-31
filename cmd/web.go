@@ -126,9 +126,9 @@ func newMacaron() *macaron.Macaron {
 		Redirect:        true,
 	}))
 	m.Use(cache.Cacher(cache.Options{
-		Adapter:  setting.CacheAdapter,
-		Interval: setting.CacheInternal,
-		Conn:     setting.CacheConn,
+		Adapter:       setting.CacheAdapter,
+		AdapterConfig: setting.CacheConn,
+		Interval:      setting.CacheInternal,
 	}))
 	m.Use(captcha.Captchaer(captcha.Options{
 		SubURL: setting.AppSubUrl,
