@@ -6,6 +6,7 @@ package repo
 
 import (
 	"fmt"
+	"net/url"
 	"os"
 	"path"
 	"strings"
@@ -180,11 +181,20 @@ func MigratePost(ctx *middleware.Context, form auth.MigrateRepoForm) {
 		}
 	}
 
-	authStr := strings.Replace(fmt.Sprintf("://%s:%s",
-		form.AuthUserName, form.AuthPasswd), "@", "%40", -1)
-	url := strings.Replace(form.HttpsUrl, "://", authStr+"@", 1)
+	u, err := url.Parse(form.HttpsUrl)
+
+	if err != nil || u.Scheme != "https" {
+		ctx.Data["Err_HttpsUrl"] = true
+		ctx.RenderWithErr(ctx.Tr("form.url_error"), MIGRATE, &form)
+		return
+	}
+
+	if len(form.AuthUserName) > 0 || len(form.AuthPasswd) > 0 {
+		u.User = url.UserPassword(form.AuthUserName, form.AuthPasswd)
+	}
+
 	repo, err := models.MigrateRepository(ctxUser, form.RepoName, form.Description, form.Private,
-		form.Mirror, url)
+		form.Mirror, u.String())
 	if err == nil {
 		log.Trace("Repository migrated: %s/%s", ctxUser.Name, form.RepoName)
 		ctx.Redirect(setting.AppSubUrl + "/" + ctxUser.Name + "/" + form.RepoName)
