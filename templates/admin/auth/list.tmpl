@@ -34,8 +34,8 @@
 					                            <td><a href="{{AppSubUrl}}/admin/auths/{{.Id}}">{{.Name}}</a></td>
 					                            <td>{{.TypeString}}</td>
 					                            <td><i class="fa fa{{if .IsActived}}-check{{end}}-square-o"></i></td>
-					                            <td>{{DateFormat .Updated "M d, Y"}}</td>
-					                            <td>{{DateFormat .Created "M d, Y"}}</td>
+					                            <td><span title="{{DateFormat .Updated "r"}}">{{DateFormat .Updated "M d, Y"}}</span></td>
+					                            <td><span title="{{DateFormat .Created "r"}}">{{DateFormat .Created "M d, Y"}}</span></td>
 					                            <td><a href="{{AppSubUrl}}/admin/auths/{{.Id}}"><i class="fa fa-pencil-square-o"></i></a></td>
 					                        </tr>
 					                        {{end}}

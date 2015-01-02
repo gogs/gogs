@@ -22,7 +22,7 @@
                                 <i class="fa fa-send fa-2x left"></i>
                                 <div class="ssh-content left">
                                     <p><strong>{{.Name}}</strong></p>
-                                    <p class="activity"><i>{{$.i18n.Tr "settings.add_on"}} {{DateFormat .Created "M d, Y"}} —  <i class="octicon octicon-info"></i>{{if .HasUsed}}{{$.i18n.Tr "settings.last_used"}} {{DateFormat .Updated "M d, Y"}}{{else}}{{$.i18n.Tr "settings.no_activity"}}{{end}}</i></p>
+                                    <p class="activity"><i>{{$.i18n.Tr "settings.add_on"}} <span title="{{DateFormat .Created "r"}}">{{DateFormat .Created "M d, Y"}}</span> —  <i class="octicon octicon-info"></i>{{if .HasUsed}}{{$.i18n.Tr "settings.last_used"}} {{DateFormat .Updated "M d, Y"}}{{else}}{{$.i18n.Tr "settings.no_activity"}}{{end}}</i></p>
                                 </div>
                                 <a href="{{AppSubUrl}}/user/settings/applications?remove={{.Id}}">
                                 	<button class="btn btn-small btn-red btn-radius ssh-btn right">{{$.i18n.Tr "settings.delete_token"}}</button>

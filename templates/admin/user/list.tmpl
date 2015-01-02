@@ -37,7 +37,7 @@
 					                            <td><i class="fa fa{{if .IsActive}}-check{{end}}-square-o"></i></td>
 					                            <td><i class="fa fa{{if .IsAdmin}}-check{{end}}-square-o"></i></td>
 					                            <td>{{.NumRepos}}</td>
-					                            <td>{{DateFormat .Created "M d, Y"}}</td>
+					                            <td><span title="{{DateFormat .Created "r"}}">{{DateFormat .Created "M d, Y"}}</span></td>
 					                            <td><a href="{{AppSubUrl}}/admin/users/{{.Id}}"><i class="fa fa-pencil-square-o"></i></a></td>
 					                        </tr>
 					                        {{end}}
