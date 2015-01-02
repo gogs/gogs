@@ -3,7 +3,6 @@ path = github.com/gogits/gogs
 
 [deps]
 github.com/beego/memcache = commit:2aea774416
-github.com/beego/redigo = commit:856744a0d5
 github.com/Unknwon/cae = commit:2e70a1351b
 github.com/Unknwon/com = 
 github.com/Unknwon/i18n = 
@@ -28,6 +27,7 @@ github.com/nfnt/resize = commit:581d15cb53
 github.com/russross/blackfriday = commit:05b8cefd6a
 github.com/saintfish/chardet = commit:3af4cd4741
 gopkg.in/ini.v1 = 
+gopkg.in/redis.v2 = 
 
 [res]
 include = conf|etc|public|scripts|templates
