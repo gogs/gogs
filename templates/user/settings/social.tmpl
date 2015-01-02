@@ -18,7 +18,7 @@
                                 <div class="ssh-content left">
                                     <p><strong>{{Oauth2Name .Type}}</strong></p>
                                     <p class="print">{{.Identity}}</p>
-                                    <p class="activity"><i>{{$.i18n.Tr "settings.add_on"}} {{DateFormat .Created "M d, Y"}} —  <i class="octicon octicon-info"></i>{{$.i18n.Tr "settings.last_used"}} {{DateFormat .Updated "M d, Y"}}</i></p>
+                                    <p class="activity"><i>{{$.i18n.Tr "settings.add_on"}} <span title="{{DateFormat .Created "r"}}">{{DateFormat .Created "M d, Y"}}</span> —  <i class="octicon octicon-info"></i>{{$.i18n.Tr "settings.last_used"}} {{DateFormat .Updated "M d, Y"}}</i></p>
                                 </div>
                                 <a class="right btn btn-small btn-red btn-header btn-radius" href="{{AppSubUrl}}/user/settings/social?remove={{.Id}}">{{$.i18n.Tr "settings.unbind"}}</a>
                             </li>
