@@ -107,9 +107,15 @@ var (
 	SessionConfig session.Options
 
 	// Git settings.
-	MaxGitDiffLines int
-	GitFsckArgs     []string
-	GitGcArgs       []string
+	Git struct {
+		MaxGitDiffLines int
+		GcArgs          []string `delim:" "`
+		Fsck            struct {
+			Enable   bool
+			Interval int
+			Args     []string `delim:" "`
+		} `ini:"git.fsck"`
+	}
 
 	// I18n settings.
 	Langs, Names []string
@@ -174,6 +180,7 @@ func NewConfigContext() {
 	} else {
 		log.Warn("No custom 'conf/app.ini' found, please go to '/install'")
 	}
+	Cfg.NameMapper = ini.AllCapsUnderscore
 
 	LogRootPath = Cfg.Section("log").Key("ROOT_PATH").MustString(path.Join(workDir, "log"))
 
@@ -291,10 +298,9 @@ func NewConfigContext() {
 	}
 	DisableGravatar = sec.Key("DISABLE_GRAVATAR").MustBool()
 
-	sec = Cfg.Section("git")
-	MaxGitDiffLines = sec.Key("MAX_GITDIFF_LINES").MustInt(10000)
-	GitFsckArgs = sec.Key("FSCK_ARGS").Strings(" ")
-	GitGcArgs = sec.Key("GC_ARGS").Strings(" ")
+	if err = Cfg.Section("git").MapTo(&Git); err != nil {
+		log.Fatal(4, "Fail to map Git settings: %v", err)
+	}
 
 	Langs = Cfg.Section("i18n").Key("LANGS").Strings(",")
 	Names = Cfg.Section("i18n").Key("NAMES").Strings(",")

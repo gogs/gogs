@@ -208,7 +208,7 @@ func Diff(ctx *middleware.Context) {
 	commit := ctx.Repo.Commit
 	commit.CommitMessage = string(base.RenderIssueIndexPattern([]byte(commit.CommitMessage), ctx.Repo.RepoLink))
 	diff, err := models.GetDiffCommit(models.RepoPath(userName, repoName),
-		commitId, setting.MaxGitDiffLines)
+		commitId, setting.Git.MaxGitDiffLines)
 	if err != nil {
 		ctx.Handle(404, "GetDiffCommit", err)
 		return
@@ -272,7 +272,7 @@ func CompareDiff(ctx *middleware.Context) {
 	}
 
 	diff, err := models.GetDiffRange(models.RepoPath(userName, repoName), beforeCommitId,
-		afterCommitId, setting.MaxGitDiffLines)
+		afterCommitId, setting.Git.MaxGitDiffLines)
 	if err != nil {
 		ctx.Handle(404, "GetDiffRange", err)
 		return
