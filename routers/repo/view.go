@@ -98,7 +98,7 @@ func Home(ctx *middleware.Context) {
 				readmeExist := base.IsMarkdownFile(blob.Name()) || base.IsReadmeFile(blob.Name())
 				ctx.Data["ReadmeExist"] = readmeExist
 				if readmeExist {
-					ctx.Data["FileContent"] = string(base.RenderMarkdown(buf, ""))
+					ctx.Data["FileContent"] = string(base.RenderMarkdown(buf, branchLink))
 				} else {
 					if err, content := base.ToUtf8WithErr(buf); err != nil {
 						if err != nil {
