@@ -6,6 +6,8 @@ package models
 
 import (
 	"bufio"
+	"encoding/base64"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"io"
@@ -110,6 +112,85 @@ var (
 		"(DSA)":     1024,
 	}
 )
+
+func extractTypeFromBase64Key(key string) (string, error) {
+	b, err := base64.StdEncoding.DecodeString(key)
+	if err != nil || len(b) < 4 {
+		return "", errors.New("Invalid key format")
+	}
+
+	keyLength := int(binary.BigEndian.Uint32(b))
+
+	if len(b) < 4+keyLength {
+		return "", errors.New("Invalid key format")
+	}
+
+	return string(b[4 : 4+keyLength]), nil
+}
+
+// Parse any key string in openssh or ssh2 format to clean openssh string (rfc4253)
+func ParseKeyString(content string) (string, error) {
+
+	// Transform all legal line endings to a single "\n"
+	s := strings.Replace(strings.Replace(strings.TrimSpace(content), "\r\n", "\n", -1), "\r", "\n", -1)
+
+	lines := strings.Split(s, "\n")
+
+	var keyType, keyContent, keyComment string
+
+	if len(lines) == 1 {
+		// Parse openssh format
+		parts := strings.Fields(lines[0])
+		switch len(parts) {
+		case 0:
+			return "", errors.New("Empty key")
+		case 1:
+			keyContent = parts[0]
+		case 2:
+			keyType = parts[0]
+			keyContent = parts[1]
+		default:
+			keyType = parts[0]
+			keyContent = parts[1]
+			keyComment = parts[2]
+		}
+
+		// If keyType is not given, extract it from content. If given, validate it
+		if len(keyType) == 0 {
+			if t, err := extractTypeFromBase64Key(keyContent); err == nil {
+				keyType = t
+			} else {
+				return "", err
+			}
+		} else {
+			if t, err := extractTypeFromBase64Key(keyContent); err != nil || keyType != t {
+				return "", err
+			}
+		}
+	} else {
+		// Parse SSH2 file format.
+		continuationLine := false
+
+		for _, line := range lines {
+			// Skip lines that:
+			// 1) are a continuation of the previous line,
+			// 2) contain ":" as that are comment lines
+			// 3) contain "-" as that are begin and end tags
+			if continuationLine || strings.ContainsAny(line, ":-") {
+				continuationLine = strings.HasSuffix(line, "\\")
+			} else {
+				keyContent = keyContent + line
+			}
+		}
+
+		if t, err := extractTypeFromBase64Key(keyContent); err == nil {
+			keyType = t
+		} else {
+			return "", err
+		}
+	}
+	return keyType + " " + keyContent + " " + keyComment, nil
+}
 
 // CheckPublicKeyString checks if the given public key string is recognized by SSH.
 func CheckPublicKeyString(content string) (bool, error) {
