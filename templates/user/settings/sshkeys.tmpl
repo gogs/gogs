@@ -23,7 +23,7 @@
                                 <div class="ssh-content left">
                                     <p><strong>{{.Name}}</strong></p>
                                     <p class="print">{{.Fingerprint}}</p>
-                                    <p class="activity"><i>{{$.i18n.Tr "settings.add_on"}} {{DateFormat .Created "M d, Y"}} —  <i class="octicon octicon-info"></i>{{if .HasUsed}}{{$.i18n.Tr "settings.last_used"}} {{DateFormat .Updated "M d, Y"}}{{else}}{{$.i18n.Tr "settings.no_activity"}}{{end}}</i></p>
+                                    <p class="activity"><i>{{$.i18n.Tr "settings.add_on"}} <span title="{{DateFormat .Created "r"}}">{{DateFormat .Created "M d, Y"}}</span> —  <i class="octicon octicon-info"></i>{{if .HasUsed}}{{$.i18n.Tr "settings.last_used"}} <span title="{{DateFormat .Updated "r"}}">{{DateFormat .Updated "M d, Y"}}</span>{{else}}{{$.i18n.Tr "settings.no_activity"}}{{end}}</i></p>
                                 </div>
                                 <form action="{{AppSubUrl}}/user/settings/ssh" method="post">
                                     {{$.CsrfTokenHtml}}
