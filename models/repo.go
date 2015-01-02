@@ -1186,6 +1186,8 @@ func MirrorUpdate() {
 	isMirrorUpdating = true
 	defer func() { isMirrorUpdating = false }()
 
+	mirrors := make([]*Mirror, 0, 10)
+
 	if err := x.Iterate(new(Mirror), func(idx int, bean interface{}) error {
 		m := bean.(*Mirror)
 		if m.NextUpdate.After(time.Now()) {
@@ -1196,13 +1198,25 @@ func MirrorUpdate() {
 		if _, stderr, err := process.ExecDir(10*time.Minute,
 			repoPath, fmt.Sprintf("MirrorUpdate: %s", repoPath),
 			"git", "remote", "update"); err != nil {
-			return errors.New("git remote update: " + stderr)
+			desc := fmt.Sprintf("Fail to update mirror repository(%s): %s", repoPath, stderr)
+			log.Error(4, desc)
+			if err = CreateRepositoryNotice(desc); err != nil {
+				log.Error(4, "Fail to add notice: %v", err)
+			}
+			return nil
 		}
 
 		m.NextUpdate = time.Now().Add(time.Duration(m.Interval) * time.Hour)
-		return UpdateMirror(m)
+		mirrors = append(mirrors, m)
+		return nil
 	}); err != nil {
-		log.Error(4, "repo.MirrorUpdate: %v", err)
+		log.Error(4, "MirrorUpdate: %v", err)
+	}
+
+	for i := range mirrors {
+		if err := UpdateMirror(mirrors[i]); err != nil {
+			log.Error(4, "UpdateMirror", fmt.Sprintf("%s: %v", mirrors[i].RepoName, err))
+		}
 	}
 }
 
