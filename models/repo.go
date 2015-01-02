@@ -507,6 +507,11 @@ func initRepository(f string, u *User, repo *Repository, initReadme bool, repoLa
 	}
 
 	if len(fileName) == 0 {
+		// re-fetch the repository from database before updating it (else it would
+		// override changes that were done earlier with sql)
+		if _, err := x.Get(repo); err != nil {
+			return err
+		}
 		repo.IsBare = true
 		repo.DefaultBranch = "master"
 		return UpdateRepository(repo)
