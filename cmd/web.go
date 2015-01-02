@@ -25,6 +25,7 @@ import (
 	"github.com/macaron-contrib/oauth2"
 	"github.com/macaron-contrib/session"
 	"github.com/macaron-contrib/toolbox"
+	"gopkg.in/ini.v1"
 
 	api "github.com/gogits/go-gogs-client"
 
@@ -79,6 +80,7 @@ func checkVersion() {
 		{"github.com/macaron-contrib/csrf", csrf.Version, "0.0.1"},
 		{"github.com/macaron-contrib/i18n", i18n.Version, "0.0.5"},
 		{"github.com/macaron-contrib/session", session.Version, "0.1.1"},
+		{"gopkg.in/ini.v1", ini.Version, "1.0.1"},
 	}
 	for _, c := range checkers {
 		ver := strings.Join(strings.Split(c.Version(), ".")[:3], ".")

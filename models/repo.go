@@ -1228,7 +1228,7 @@ func GitFsck() {
 	isGitFscking = true
 	defer func() { isGitFscking = false }()
 
-	args := append([]string{"fsck"}, setting.GitFsckArgs...)
+	args := append([]string{"fsck"}, setting.Git.Fsck.Args...)
 	if err := x.Where("id > 0").Iterate(new(Repository),
 		func(idx int, bean interface{}) error {
 			repo := bean.(*Repository)
@@ -1252,7 +1252,7 @@ func GitFsck() {
 }
 
 func GitGcRepos() error {
-	args := append([]string{"gc"}, setting.GitGcArgs...)
+	args := append([]string{"gc"}, setting.Git.GcArgs...)
 	return x.Where("id > 0").Iterate(new(Repository),
 		func(idx int, bean interface{}) error {
 			repo := bean.(*Repository)
