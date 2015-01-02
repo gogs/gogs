@@ -829,6 +829,8 @@ func TransferOwnership(u *User, newOwner string, repo *Repository) error {
 
 // ChangeRepositoryName changes all corresponding setting from old repository name to new one.
 func ChangeRepositoryName(userName, oldRepoName, newRepoName string) (err error) {
+	userName = strings.ToLower(userName)
+	oldRepoName = strings.ToLower(oldRepoName)
 	newRepoName = strings.ToLower(newRepoName)
 	if !IsLegalName(newRepoName) {
 		return ErrRepoNameIllegal
@@ -836,7 +838,7 @@ func ChangeRepositoryName(userName, oldRepoName, newRepoName string) (err error)
 
 	// Update accesses.
 	accesses := make([]Access, 0, 10)
-	if err = x.Find(&accesses, &Access{RepoName: strings.ToLower(userName + "/" + oldRepoName)}); err != nil {
+	if err = x.Find(&accesses, &Access{RepoName: userName + "/" + oldRepoName}); err != nil {
 		return err
 	}
 
