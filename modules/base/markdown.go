@@ -100,7 +100,7 @@ func (options *CustomRender) Image(out *bytes.Buffer, link []byte, title []byte,
 }
 
 var (
-	MentionPattern     = regexp.MustCompile(`@[0-9a-zA-Z_]{1,}`)
+	MentionPattern     = regexp.MustCompile(`(\s@)[0-9a-zA-Z_]{1,}`)
 	commitPattern      = regexp.MustCompile(`(\s|^)https?.*commit/[0-9a-zA-Z]+(#+[0-9a-zA-Z-]*)?`)
 	issueFullPattern   = regexp.MustCompile(`(\s|^)https?.*issues/[0-9]+(#+[0-9a-zA-Z-]*)?`)
 	issueIndexPattern  = regexp.MustCompile(`#[0-9]+`)
@@ -123,7 +123,7 @@ func RenderSpecialLink(rawBytes []byte, urlPrefix string) []byte {
 			ms := MentionPattern.FindAll(line, -1)
 			for _, m := range ms {
 				line = bytes.Replace(line, m,
-					[]byte(fmt.Sprintf(`<a href="%s/user/%s">%s</a>`, setting.AppSubUrl, m[1:], m)), -1)
+					[]byte(fmt.Sprintf(`<a href="%s/%s">%s</a>`, setting.AppSubUrl, m[2:], m)), -1)
 			}
 		}
 
