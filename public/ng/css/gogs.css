@@ -1250,6 +1250,9 @@ The register and sign-in page style
   color: #428BCA;
   text-decoration: underline;
 }
+#repo-files-table td.message .text-truncate {
+  max-width: 360px;
+}
 #repo-files-table tbody {
   background-color: #FFF;
 }
