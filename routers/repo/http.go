@@ -78,6 +78,7 @@ func Http(ctx *middleware.Context) {
 	var askAuth = !isPublicPull || setting.Service.RequireSignInView
 	var authUser *models.User
 	var authUsername, passwd string
+	usedToken := false
 
 	// check access
 	if askAuth {
@@ -103,15 +104,41 @@ func Http(ctx *middleware.Context) {
 
 		authUser, err = models.GetUserByName(authUsername)
 		if err != nil {
-			ctx.Handle(401, "no basic auth and digit auth", nil)
-			return
+			// check if a token was given instead of username
+			tokens, err := models.ListAllAccessTokens()
+			if err != nil {
+				ctx.Handle(401, "no basic auth and digit auth", nil)
+				return
+			}
+
+			for _, token := range tokens {
+				if token.Sha1 == authUsername {
+					// get user belonging to token
+					authUser, err = models.GetUserById(token.Uid)
+					if err != nil {
+						ctx.Handle(401, "no basic auth and digit auth", nil)
+						return
+					}
+					authUsername = authUser.Name
+					usedToken = true
+					break
+				}
+			}
+
+			if authUser == nil {
+				ctx.Handle(401, "no basic auth and digit auth", nil)
+				return
+			}
 		}
 
-		newUser := &models.User{Passwd: passwd, Salt: authUser.Salt}
-		newUser.EncodePasswd()
-		if authUser.Passwd != newUser.Passwd {
-			ctx.Handle(401, "no basic auth and digit auth", nil)
-			return
+		// check password if token is not used
+		if !usedToken {
+			newUser := &models.User{Passwd: passwd, Salt: authUser.Salt}
+			newUser.EncodePasswd()
+			if authUser.Passwd != newUser.Passwd {
+				ctx.Handle(401, "no basic auth and digit auth", nil)
+				return
+			}
 		}
 
 		if !isPublicPull {
