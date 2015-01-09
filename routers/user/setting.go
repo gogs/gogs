@@ -131,7 +131,7 @@ func SettingsAvatar(ctx *middleware.Context, form auth.UploadAvatarForm) {
 func SettingsEmails(ctx *middleware.Context) {
 	ctx.Data["Title"] = ctx.Tr("settings")
 	ctx.Data["PageIsUserSettings"] = true
-	ctx.Data["PageIsSettingsEmails"] = true
+	ctx.Data["PageIsSettingsEmail"] = true
 
 	var err error
 	ctx.Data["Emails"], err = models.GetEmailAddresses(ctx.User.Id)
@@ -147,7 +147,7 @@ func SettingsEmails(ctx *middleware.Context) {
 func SettingsEmailPost(ctx *middleware.Context, form auth.AddEmailForm) {
 	ctx.Data["Title"] = ctx.Tr("settings")
 	ctx.Data["PageIsUserSettings"] = true
-	ctx.Data["PageIsSettingsEmails"] = true
+	ctx.Data["PageIsSettingsEmail"] = true
 
 	var err error
 	ctx.Data["Emails"], err = models.GetEmailAddresses(ctx.User.Id)
