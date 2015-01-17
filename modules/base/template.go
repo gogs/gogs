@@ -17,7 +17,7 @@ import (
 	"golang.org/x/text/transform"
 
 	"github.com/gogits/gogs/modules/setting"
-	"github.com/saintfish/chardet"
+	"github.com/gogits/chardet"
 )
 
 func Str2html(raw string) template.HTML {
