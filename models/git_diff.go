@@ -14,12 +14,14 @@ import (
 	"strings"
 	"time"
 
+	"golang.org/x/net/html/charset"
+	"golang.org/x/text/transform"
+
 	"github.com/Unknwon/com"
 
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/git"
 	"github.com/gogits/gogs/modules/log"
-	"github.com/gogits/gogs/modules/mahonia"
 	"github.com/gogits/gogs/modules/process"
 )
 
@@ -192,14 +194,18 @@ func ParsePatch(pid int64, maxlines int, cmd *exec.Cmd, reader io.Reader) (*Diff
 	}
 
 	// FIXME: use first 30 lines to detect file encoding.
-	charset, err := base.DetectEncoding(buf.Bytes())
-	if charset != "utf8" && err == nil {
-		decoder := mahonia.NewDecoder(charset)
-		if decoder != nil {
+	charsetLabel, err := base.DetectEncoding(buf.Bytes())
+	if charsetLabel != "utf8" && err == nil {
+		encoding, _ := charset.Lookup(charsetLabel)
+
+		if encoding != nil {
+			d := encoding.NewDecoder()
 			for _, f := range diff.Files {
 				for _, sec := range f.Sections {
 					for _, l := range sec.Lines {
-						l.Content = decoder.ConvertString(l.Content)
+						if c, _, err := transform.String(d, l.Content); err == nil {
+							l.Content = c
+						}
 					}
 				}
 			}
