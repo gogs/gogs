@@ -13,6 +13,7 @@ github.com/codegangsta/cli = commit:7381bc4e62
 github.com/go-sql-driver/mysql = commit:8111ee3ec3
 github.com/go-xorm/core = commit:3e0fa232ab
 github.com/go-xorm/xorm = commit:58d33844ce
+github.com/gogits/chardet = commit:2404f77725
 github.com/gogits/go-gogs-client = commit:92e76d616a
 github.com/gogits/oauth2 = commit:99cbec870a
 github.com/lib/pq = commit:b021d0ef20
@@ -27,7 +28,6 @@ github.com/macaron-contrib/toolbox = commit:57127bcc89
 github.com/mattn/go-sqlite3 = commit:a80c27ba33
 github.com/nfnt/resize = commit:581d15cb53
 github.com/russross/blackfriday = commit:05b8cefd6a
-github.com/saintfish/chardet = commit:3af4cd4741
 
 [res]
 include = conf|etc|public|scripts|templates
