@@ -12,4 +12,4 @@ USER=$(whoami)
 HOME=$(grep "^$USER:" /etc/passwd | cut -d: -f6)
 export USER HOME PATH
 
-cd "$(pwd)" && exec ./gogs web
+cd "$(dirname "$0")/.." && exec ./gogs web
