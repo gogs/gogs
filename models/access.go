@@ -78,3 +78,23 @@ func HasAccess(uname, repoName string, mode AccessType) (bool, error) {
 	}
 	return true, nil
 }
+
+// GetAccessibleRepositories finds all repositories where a user has access to,
+// besides his own.
+func (u *User) GetAccessibleRepositories() (map[*Repository]AccessType, error) {
+	accesses := make([]*Access, 0, 10)
+	if err := x.Find(&accesses, &Access{UserName: u.LowerName}); err != nil {
+		return nil, err
+	}
+
+	repos := make(map[*Repository]AccessType, len(accesses))
+	for _, access := range accesses {
+		repo, err := GetRepositoryByRef(access.RepoName)
+		if err != nil {
+			return nil, err
+		}
+		repos[repo] = access.Mode
+	}
+
+	return repos, nil
+}
