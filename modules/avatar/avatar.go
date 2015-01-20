@@ -38,10 +38,12 @@ import (
 
 var gravatarSource string
 
-func init() {
+func UpdateGravatarSource() {
 	gravatarSource = setting.GravatarSource
+	log.Debug("avatar.UpdateGravatarSource(gavatar source): %s", gravatarSource)
 	if !strings.HasPrefix(gravatarSource, "http:") {
 		gravatarSource = "http:" + gravatarSource
+		log.Debug("avatar.UpdateGravatarSource(update gavatar source): %s", gravatarSource)
 	}
 }
 
@@ -131,11 +133,13 @@ func (this *Avatar) Encode(wr io.Writer, size int) (err error) {
 
 // get image from gravatar.com
 func (this *Avatar) Update() {
+	UpdateGravatarSource()
 	thunder.Fetch(gravatarSource+this.Hash+"?"+this.reqParams,
 		this.imagePath)
 }
 
 func (this *Avatar) UpdateTimeout(timeout time.Duration) (err error) {
+	UpdateGravatarSource()
 	select {
 	case <-time.After(timeout):
 		err = fmt.Errorf("get gravatar image %s timeout", this.Hash)
