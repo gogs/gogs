@@ -25,7 +25,7 @@
                     <div class="panel panel-default issue-content">
                         <div class="panel-body">
                             <div class="content markdown">
-                                {{str2html .Issue.RenderedContent}}
+                                {{Str2html .Issue.RenderedContent}}
                             </div>
                             <div class="issue-edit-content hidden">
                                 <div class="form-group">
@@ -73,7 +73,7 @@
                             </div>
                             <div class="panel-body markdown">
                                 {{if len .Content}}
-                                {{str2html .Content}}
+                                {{Str2html .Content}}
                                 {{else}}
                                 <i>No comment entered</i>
                                 {{end}}
