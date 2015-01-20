@@ -13,15 +13,19 @@ import (
 	"strings"
 	"time"
 
+	"github.com/microcosm-cc/bluemonday"
 	"golang.org/x/net/html/charset"
 	"golang.org/x/text/transform"
 
-	"github.com/gogits/gogs/modules/setting"
 	"github.com/gogits/chardet"
+	"github.com/gogits/gogs/modules/setting"
 )
 
+// FIXME: use me to Markdown API renders
+var p = bluemonday.UGCPolicy()
+
 func Str2html(raw string) template.HTML {
-	return template.HTML(raw)
+	return template.HTML(p.Sanitize(raw))
 }
 
 func Range(l int) []int {
@@ -113,7 +117,6 @@ var TemplateFuncs template.FuncMap = map[string]interface{}{
 		return fmt.Sprint(time.Since(startTime).Nanoseconds()/1e6) + "ms"
 	},
 	"AvatarLink": AvatarLink,
-	"str2html":   Str2html, // TODO: Legacy
 	"Str2html":   Str2html,
 	"TimeSince":  TimeSince,
 	"FileSize":   FileSize,

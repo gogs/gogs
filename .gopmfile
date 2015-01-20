@@ -23,10 +23,10 @@ github.com/macaron-contrib/oauth2 = commit:8f394c3629
 github.com/macaron-contrib/session = 
 github.com/macaron-contrib/toolbox = commit:57127bcc89
 github.com/mattn/go-sqlite3 = commit:a80c27ba33
+github.com/microcosm-cc/bluemonday = 
 github.com/nfnt/resize = commit:8f44931448
 github.com/russross/blackfriday = commit:05b8cefd6a
 github.com/shurcooL/go = commit:48293cbc7a
-github.com/saintfish/chardet = commit:3af4cd4741
 gopkg.in/ini.v1 = commit:28ad8c408b
 gopkg.in/redis.v2 = commit:e617904962
 

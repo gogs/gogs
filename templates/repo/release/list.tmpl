@@ -39,7 +39,7 @@
                                 <span class="ahead">{{$.i18n.Tr "repo.release.ahead" .NumCommitsBehind .Target | Str2html}}</span>
                             </p>
                             <div class="markdown desc">
-                                {{str2html .Note}}
+                                {{Str2html .Note}}
                             </div>
                             <p class="download">
                                 <a class="btn btn-gray btn-large btn-radius" href="{{$.RepoLink}}/archive/{{.TagName}}.zip" rel="nofollow"><i class="fa fa-download"></i> {{$.i18n.Tr "repo.release.source_code"}} (ZIP)</a>

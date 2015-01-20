@@ -32,7 +32,7 @@
                         <a href="{{$.RepoLink}}/issues?milestone={{.Index}}{{if .IsClosed}}&state=closed{{end}}">Issues</a>
                     </p>
                     <hr/>
-                    <p class="description">{{.RenderedContent | str2html}}</p>
+                    <p class="description">{{.RenderedContent | Str2html}}</p>
                 </div>
                 {{end}}
             </div>
