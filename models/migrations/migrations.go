@@ -2,6 +2,7 @@ package migrations
 
 import (
 	"errors"
+
 	"github.com/go-xorm/xorm"
 )
 
@@ -9,7 +10,7 @@ type migration func(*xorm.Engine) error
 
 // The version table. Should have only one row with id==1
 type Version struct {
-	Id      int64 `xorm:"pk"`
+	Id      int64
 	Version int64
 }
 
@@ -25,9 +26,10 @@ func Migrate(x *xorm.Engine) error {
 	has, err := x.Get(currentVersion)
 	if err != nil {
 		return err
-	}
-	if !has {
-		_, err = x.InsertOne(currentVersion)
+	} else if !has {
+		if _, err = x.InsertOne(currentVersion); err != nil {
+			return err
+		}
 	}
 
 	v := currentVersion.Version
