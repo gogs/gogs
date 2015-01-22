@@ -45,7 +45,7 @@ func init() {
 		new(Issue), new(Comment), new(Attachment), new(IssueUser), new(Label), new(Milestone),
 		new(Mirror), new(Release), new(LoginSource), new(Webhook),
 		new(UpdateTask), new(HookTask), new(Team), new(OrgUser), new(TeamUser),
-		new(Notice), new(EmailAddress))
+		new(Notice), new(EmailAddress), new(Collaboration))
 }
 
 func LoadModelsConfig() {
@@ -127,13 +127,65 @@ func SetEngine() (err error) {
 	return nil
 }
 
+func migrateAccessToCollaboration() error {
+	sql := "select * from access"
+	results, err := x.Query(sql)
+	if err != nil {
+		return err
+	}
+
+	for _, result := range results {
+		userName := string(result["user_name"])
+		repoName := string(result["repo_name"])
+
+		user, err1 := GetUserByName(userName)
+		repo, err2 := GetRepositoryByRef(repoName)
+		if err1 != nil || err2 != nil {
+			continue
+		}
+		if err := repo.GetOwner(); err != nil {
+			continue
+		}
+		if repo.Owner.Id == user.Id {
+			continue
+		}
+
+		if repo.Owner.IsOrganization() {
+			if err := repo.Owner.GetMembers(); err != nil {
+				continue
+			}
+			if !repo.Owner.IsOrgMember(user.Id) {
+				x.Insert(&Collaboration{UserId: user.Id, RepoId: repo.Id})
+			}
+		} else {
+			x.Insert(&Collaboration{UserId: user.Id, RepoId: repo.Id})
+		}
+	}
+	return nil
+}
+
 func NewEngine() (err error) {
 	if err = SetEngine(); err != nil {
 		return err
 	}
+
+	var hasAccess, hasCollaboration, needMigration bool
+	if hasAccess, err = x.IsTableExist("access"); err != nil {
+		return err
+	}
+	if hasCollaboration, err = x.IsTableExist("collaboration"); err != nil {
+		return err
+	}
+	needMigration = hasAccess && !hasCollaboration
+
 	if err = x.StoreEngine("InnoDB").Sync2(tables...); err != nil {
 		return fmt.Errorf("sync database struct error: %v\n", err)
 	}
+
+	if needMigration {
+		return migrateAccessToCollaboration()
+	}
+
 	return nil
 }
 
