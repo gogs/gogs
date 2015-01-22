@@ -20,7 +20,9 @@ var migrations = []migration{}
 
 // Migrate database to current version
 func Migrate(x *xorm.Engine) error {
-	x.Sync(new(Version))
+	if err := x.Sync(new(Version)); err != nil {
+		return err
+	}
 
 	currentVersion := &Version{Id: 1}
 	has, err := x.Get(currentVersion)
@@ -39,7 +41,9 @@ func Migrate(x *xorm.Engine) error {
 			return err
 		}
 		currentVersion.Version = v + int64(i) + 1
-		x.Id(1).Update(currentVersion)
+		if _, err = x.Id(1).Update(currentVersion); err != nil {
+			return err
+		}
 	}
 	return nil
 }
