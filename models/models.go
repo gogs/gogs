@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/go-xorm/core"
 	"github.com/go-xorm/xorm"
 	_ "github.com/lib/pq"
 
@@ -46,7 +47,7 @@ func init() {
 		new(Issue), new(Comment), new(Attachment), new(IssueUser), new(Label), new(Milestone),
 		new(Mirror), new(Release), new(LoginSource), new(Webhook),
 		new(UpdateTask), new(HookTask), new(Team), new(OrgUser), new(TeamUser),
-		new(Notice), new(EmailAddress))
+		new(Notice), new(EmailAddress), new(Collaboration))
 }
 
 func LoadModelsConfig() {
@@ -100,6 +101,7 @@ func NewTestEngine(x *xorm.Engine) (err error) {
 		return fmt.Errorf("models.init(fail to connect to database): %v", err)
 	}
 
+	x.SetMapper(core.GonicMapper{})
 	return x.Sync(tables...)
 }
 
@@ -108,6 +110,8 @@ func SetEngine() (err error) {
 	if err != nil {
 		return fmt.Errorf("models.init(fail to connect to database): %v", err)
 	}
+
+	x.SetMapper(core.GonicMapper{})
 
 	// WARNING: for serv command, MUST remove the output to os.stdout,
 	// so use log file to instead print to stdout.
@@ -140,6 +144,7 @@ func NewEngine() (err error) {
 	if err = x.StoreEngine("InnoDB").Sync2(tables...); err != nil {
 		return fmt.Errorf("sync database struct error: %v\n", err)
 	}
+
 	return nil
 }
 

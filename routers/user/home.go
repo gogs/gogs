@@ -49,13 +49,19 @@ func Dashboard(ctx *middleware.Context) {
 	} else {
 		// Normal user.
 		ctxUser = ctx.User
-		collaborates, err := models.GetCollaborativeRepos(ctxUser.Name)
+		collaborates, err := ctx.User.GetAccessibleRepositories()
 		if err != nil {
-			ctx.Handle(500, "GetCollaborativeRepos", err)
+			ctx.Handle(500, "GetAccessibleRepositories", err)
 			return
 		}
-		ctx.Data["CollaborateCount"] = len(collaborates)
-		ctx.Data["CollaborativeRepos"] = collaborates
+
+		repositories := make([]*models.Repository, 0, len(collaborates))
+		for repo := range collaborates {
+			repositories = append(repositories, repo)
+		}
+
+		ctx.Data["CollaborateCount"] = len(repositories)
+		ctx.Data["CollaborativeRepos"] = repositories
 	}
 	ctx.Data["ContextUser"] = ctxUser
 
