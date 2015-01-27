@@ -5,13 +5,13 @@ Gogs - Go Git Service [![wercker status](https://app.wercker.com/status/ad0bdb0b
 
 Gogs(Go Git Service) is a painless self-hosted Git Service written in Go.
 
-![Demo](https://gowalker.org/public/gogs_demo.gif)
+![Demo](http://gogs.qiniudn.com/gogs_demo.gif)
 
 ##### Current version: 0.5.11 Beta
 
 ### NOTICES
 
-- Due to testing purpose, data of [try.gogs.io](https://try.gogs.io) has been reset in **June 21, 2014** and will reset multiple times after. Please do **NOT** put your important data on the site.
+- Due to testing purpose, data of [try.gogs.io](https://try.gogs.io) has been reset in **Jan 28, 2015** and will reset multiple times after. Please do **NOT** put your important data on the site.
 - Demo site [try.gogs.io](https://try.gogs.io) is running under `dev` branch.
 
 #### Other language version
