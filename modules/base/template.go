@@ -90,6 +90,11 @@ func ToUtf8(content string) string {
 	return res
 }
 
+// RenderCommitMessage renders commit message with XSS-safe and special links.
+func RenderCommitMessage(msg, urlPrefix string) template.HTML {
+	return template.HTML(string(RenderIssueIndexPattern([]byte(template.HTMLEscapeString(msg)), urlPrefix)))
+}
+
 var mailDomains = map[string]string{
 	"gmail.com": "gmail.com",
 }
@@ -163,6 +168,7 @@ var TemplateFuncs template.FuncMap = map[string]interface{}{
 	"EscapePound": func(str string) string {
 		return strings.Replace(str, "#", "%23", -1)
 	},
+	"RenderCommitMessage": RenderCommitMessage,
 }
 
 type Actioner interface {

@@ -7,7 +7,7 @@ Gogs(Go Git Service) is a painless self-hosted Git Service written in Go.
 
 ![Demo](http://gogs.qiniudn.com/gogs_demo.gif)
 
-##### Current version: 0.5.11 Beta
+##### Current version: 0.5.12 Beta
 
 ### NOTICES
 
