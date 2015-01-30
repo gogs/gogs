@@ -7,7 +7,6 @@ package models
 import (
 	"errors"
 	"fmt"
-	"html"
 	"html/template"
 	"io/ioutil"
 	"os"
@@ -218,11 +217,9 @@ func (repo *Repository) HasAccess(uname string) bool {
 // DescriptionHtml does special handles to description and return HTML string.
 func (repo *Repository) DescriptionHtml() template.HTML {
 	sanitize := func(s string) string {
-		// TODO(nuss-justin): Improve sanitization. Strip all tags?
-		ss := html.EscapeString(s)
-		return fmt.Sprintf(`<a href="%s" target="_blank">%s</a>`, ss, ss)
+		return fmt.Sprintf(`<a href="%[1]s" target="_blank">%[1]s</a>`, s)
 	}
-	return template.HTML(DescPattern.ReplaceAllStringFunc(base.XSSString(repo.Description), sanitize))
+	return template.HTML(DescPattern.ReplaceAllStringFunc(base.Sanitizer.Sanitize(repo.Description), sanitize))
 }
 
 // IsRepositoryExist returns true if the repository with given name under user has already existed.
