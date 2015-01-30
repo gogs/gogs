@@ -15,16 +15,18 @@ import (
 	"hash"
 	"html/template"
 	"math"
-	"regexp"
 	"strings"
 	"time"
 
 	"github.com/Unknwon/com"
 	"github.com/Unknwon/i18n"
+	"github.com/microcosm-cc/bluemonday"
 
 	"github.com/gogits/gogs/modules/avatar"
 	"github.com/gogits/gogs/modules/setting"
 )
+
+var Sanitizer = bluemonday.UGCPolicy()
 
 // Encode string to md5 hex value.
 func EncodeMd5(str string) string {
@@ -472,30 +474,4 @@ func DateFormat(t time.Time, format string) string {
 	replacer := strings.NewReplacer(datePatterns...)
 	format = replacer.Replace(format)
 	return t.Format(format)
-}
-
-type xssFilter struct {
-	reg  *regexp.Regexp
-	repl []byte
-}
-
-var (
-	whiteSpace = []byte(" ")
-	xssFilters = []xssFilter{
-		{regexp.MustCompile(`\ [ONon]\w*=["]*`), whiteSpace},
-		{regexp.MustCompile(`<[SCRIPTscript]{6}`), whiteSpace},
-		{regexp.MustCompile(`=[` + "`" + `'"]*[JAVASCRIPTjavascript \t\0&#x0D;]*:`), whiteSpace},
-	}
-)
-
-// XSS goes through all the XSS filters to make user input content as safe as possible.
-func XSS(in []byte) []byte {
-	for _, filter := range xssFilters {
-		in = filter.reg.ReplaceAll(in, filter.repl)
-	}
-	return in
-}
-
-func XSSString(in string) string {
-	return string(XSS([]byte(in)))
 }

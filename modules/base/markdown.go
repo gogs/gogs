@@ -212,7 +212,7 @@ func RenderRawMarkdown(body []byte, urlPrefix string) []byte {
 func RenderMarkdown(rawBytes []byte, urlPrefix string) []byte {
 	body := RenderSpecialLink(rawBytes, urlPrefix)
 	body = RenderRawMarkdown(body, urlPrefix)
-	body = XSS(body)
+	body = Sanitizer.SanitizeBytes(body)
 	return body
 }
 

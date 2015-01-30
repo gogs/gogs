@@ -13,7 +13,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/microcosm-cc/bluemonday"
 	"golang.org/x/net/html/charset"
 	"golang.org/x/text/transform"
 
@@ -21,11 +20,8 @@ import (
 	"github.com/gogits/gogs/modules/setting"
 )
 
-// FIXME: use me to Markdown API renders
-var p = bluemonday.UGCPolicy()
-
 func Str2html(raw string) template.HTML {
-	return template.HTML(p.Sanitize(raw))
+	return template.HTML(Sanitizer.Sanitize(raw))
 }
 
 func Range(l int) []int {
