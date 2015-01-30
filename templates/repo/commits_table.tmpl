@@ -32,7 +32,7 @@
                     {{end}}
                 </td>
                 <td class="sha"><a rel="nofollow" class="label label-green" href="{{AppSubUrl}}/{{$username}}/{{$reponame}}/commit/{{.Id}} ">{{SubStr .Id.String 0 10}} </a></td>
-                <td class="message"><span class="text-truncate">{{Str2html .Summary}}</span></td>
+                <td class="message"><span class="text-truncate">{{RenderCommitMessage .Summary $.RepoLink}}</span></td>
                 <td class="date">{{TimeSince .Author.When $.Lang}}</td>
             </tr>
             {{end}}

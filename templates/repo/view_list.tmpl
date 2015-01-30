@@ -53,7 +53,7 @@
                   <a rel="nofollow" class="label label-green" href="{{AppSubUrl}}/{{$.Username}}/{{$.Reponame}}/commit/{{$commit.Id}} ">{{SubStr $commit.Id.String 0 10}} </a>
                 </td>
                 <td class="message">
-                  <span class="text-truncate">{{Str2html $commit.Summary}}</span>
+                  <span class="text-truncate">{{RenderCommitMessage $commit.Summary $.RepoLink}}</span>
                 </td>
                 <td class="age">{{TimeSince $commit.Committer.When $.Lang}}</td>
             </tr>
