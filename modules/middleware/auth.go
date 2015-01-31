@@ -54,7 +54,6 @@ func Toggle(options *ToggleOptions) macaron.Handler {
 				if strings.HasSuffix(ctx.Req.RequestURI, "watch") {
 					return
 				}
-				println(url.QueryEscape(setting.AppSubUrl + ctx.Req.RequestURI))
 				ctx.SetCookie("redirect_to", url.QueryEscape(setting.AppSubUrl+ctx.Req.RequestURI), 0, setting.AppSubUrl)
 				ctx.Redirect(setting.AppSubUrl + "/user/login")
 				return
