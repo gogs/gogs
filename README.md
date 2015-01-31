@@ -13,6 +13,7 @@ Gogs(Go Git Service) is a painless self-hosted Git Service written in Go.
 
 - Due to testing purpose, data of [try.gogs.io](https://try.gogs.io) has been reset in **Jan 28, 2015** and will reset multiple times after. Please do **NOT** put your important data on the site.
 - Demo site [try.gogs.io](https://try.gogs.io) is running under `dev` branch.
+- If you think there are vulnerabilities in the project, please talk private to **u@gogs.io**, thanks!
 
 #### Other language version
 
