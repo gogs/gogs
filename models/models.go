@@ -32,7 +32,7 @@ var (
 	HasEngine bool
 
 	DbCfg struct {
-		Type, Host, Name, User, Pwd, Path, SslMode string
+		Type, Host, Name, User, Passwd, Path, SSLMode string
 	}
 
 	EnableSQLite3 bool
@@ -58,10 +58,10 @@ func LoadModelsConfig() {
 	DbCfg.Host = sec.Key("HOST").String()
 	DbCfg.Name = sec.Key("NAME").String()
 	DbCfg.User = sec.Key("USER").String()
-	if len(DbCfg.Pwd) == 0 {
-		DbCfg.Pwd = sec.Key("PASSWD").String()
+	if len(DbCfg.Passwd) == 0 {
+		DbCfg.Passwd = sec.Key("PASSWD").String()
 	}
-	DbCfg.SslMode = sec.Key("SSL_MODE").String()
+	DbCfg.SSLMode = sec.Key("SSL_MODE").String()
 	DbCfg.Path = sec.Key("PATH").MustString("data/gogs.db")
 }
 
@@ -70,7 +70,7 @@ func getEngine() (*xorm.Engine, error) {
 	switch DbCfg.Type {
 	case "mysql":
 		cnnstr = fmt.Sprintf("%s:%s@tcp(%s)/%s?charset=utf8",
-			DbCfg.User, DbCfg.Pwd, DbCfg.Host, DbCfg.Name)
+			DbCfg.User, DbCfg.Passwd, DbCfg.Host, DbCfg.Name)
 	case "postgres":
 		var host, port = "127.0.0.1", "5432"
 		fields := strings.Split(DbCfg.Host, ":")
@@ -81,7 +81,7 @@ func getEngine() (*xorm.Engine, error) {
 			port = fields[1]
 		}
 		cnnstr = fmt.Sprintf("user=%s password=%s host=%s port=%s dbname=%s sslmode=%s",
-			DbCfg.User, DbCfg.Pwd, host, port, DbCfg.Name, DbCfg.SslMode)
+			DbCfg.User, DbCfg.Passwd, host, port, DbCfg.Name, DbCfg.SSLMode)
 	case "sqlite3":
 		if !EnableSQLite3 {
 			return nil, fmt.Errorf("Unknown database type: %s", DbCfg.Type)
@@ -97,7 +97,7 @@ func getEngine() (*xorm.Engine, error) {
 func NewTestEngine(x *xorm.Engine) (err error) {
 	x, err = getEngine()
 	if err != nil {
-		return fmt.Errorf("models.init(fail to connect to database): %v", err)
+		return fmt.Errorf("connect to database: %v", err)
 	}
 
 	return x.Sync(tables...)
@@ -106,7 +106,7 @@ func NewTestEngine(x *xorm.Engine) (err error) {
 func SetEngine() (err error) {
 	x, err = getEngine()
 	if err != nil {
-		return fmt.Errorf("models.init(fail to connect to database): %v", err)
+		return fmt.Errorf("connect to database: %v", err)
 	}
 
 	// WARNING: for serv command, MUST remove the output to os.stdout,

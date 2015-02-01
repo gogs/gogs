@@ -13,7 +13,7 @@
                         <div class="text-center panel-desc">{{.i18n.Tr "install.requite_db_desc"}}</div>
                         <div class="field">
                             <label class="req">{{.i18n.Tr "install.db_type"}}</label>
-                            <select name="database" id="install-database" class="form-control">
+                            <select name="db_type" id="install-database" class="form-control">
                                 {{range .DbOptions}}
                                 <option value="{{.}}"{{if eq $.CurDbOption .}}selected{{end}}>{{.}}</option>
                                 {{end}}
@@ -22,20 +22,20 @@
 
                         <div class="server-sql {{if eq .CurDbOption "SQLite3"}}hide{{end}}">
                             <div class="field">
-                                <label class="req" for="host">{{.i18n.Tr "install.host"}}</label>
-                                <input class="ipt ipt-large ipt-radius {{if .Err_DbHost}}ipt-error{{end}}" id="host" name="host" value="{{.host}}" />
+                                <label class="req" for="db_host">{{.i18n.Tr "install.host"}}</label>
+                                <input class="ipt ipt-large ipt-radius {{if .Err_DbHost}}ipt-error{{end}}" id="db_host" name="db_host" value="{{.db_host}}" />
                             </div>
                             <div class="field">
-                                <label class="req" for="user">{{.i18n.Tr "install.user"}}</label>
-                                <input class="ipt ipt-large ipt-radius {{if .Err_DbUser}}ipt-error{{end}}" id="user" name="user" value="{{.user}}" />
+                                <label class="req" for="db_user">{{.i18n.Tr "install.user"}}</label>
+                                <input class="ipt ipt-large ipt-radius {{if .Err_DbUser}}ipt-error{{end}}" id="db_user" name="db_user" value="{{.db_user}}" />
                             </div>
                             <div class="field">
-                                <label class="req" for="passwd">{{.i18n.Tr "install.password"}}</label>
-                                <input class="ipt ipt-large ipt-radius {{if .Err_DbPasswd}}ipt-error{{end}}" id="passwd" name="passwd" type="password" value="{{.passwd}}" />
+                                <label class="req" for="db_passwd">{{.i18n.Tr "install.password"}}</label>
+                                <input class="ipt ipt-large ipt-radius {{if .Err_DbPasswd}}ipt-error{{end}}" id="db_passwd" name="db_passwd" type="password" value="{{.db_passwd}}" />
                             </div>
                             <div class="field">
-                                <label class="req" for="database_name">{{.i18n.Tr "install.db_name"}}</label>
-                                <input class="ipt ipt-large ipt-radius {{if .Err_DatabaseName}}ipt-error{{end}}" id="database_name" name="database_name" value="{{.database_name}}" />
+                                <label class="req" for="db_name">{{.i18n.Tr "install.db_name"}}</label>
+                                <input class="ipt ipt-large ipt-radius {{if .Err_DbName}}ipt-error{{end}}" id="db_name" name="db_name" value="{{.db_name}}" />
                                 <label></label>
                                 <span class="help">{{.i18n.Tr "install.db_helper"}}</span>
                             </div>
@@ -51,8 +51,8 @@
                         </div>
 
                         <div class="field sqlite-setting {{if not (eq .CurDbOption "SQLite3")}}hide{{end}}">
-                            <label class="req" for="database_path">{{.i18n.Tr "install.path"}}</label>
-                            <input class="ipt ipt-large ipt-radius {{if .Err_DatabasePath}}ipt-error{{end}}" id="database_path" name="database_path" value="{{.database_path}}" />
+                            <label class="req" for="db_path">{{.i18n.Tr "install.path"}}</label>
+                            <input class="ipt ipt-large ipt-radius {{if .Err_DbPath}}ipt-error{{end}}" id="db_path" name="db_path" value="{{.db_path}}" />
                             <label></label>
                             <span class="help">{{.i18n.Tr "install.sqlite_helper"}}</span>
                         </div>
@@ -61,8 +61,8 @@
 
                         <div class="text-center panel-desc">{{.i18n.Tr "install.general_title"}}</div>
                         <div class="field">
-                            <label class="req" for="repo_path">{{.i18n.Tr "install.repo_path"}}</label>
-                            <input class="ipt ipt-large ipt-radius {{if .Err_RepoRootPath}}ipt-error{{end}}" id="repo_path" name="repo_path" value="{{.repo_path}}" required />
+                            <label class="req" for="repo_root_path">{{.i18n.Tr "install.repo_path"}}</label>
+                            <input class="ipt ipt-large ipt-radius {{if .Err_RepoRootPath}}ipt-error{{end}}" id="repo_root_path" name="repo_root_path" value="{{.repo_root_path}}" required />
                             <label></label>
                             <span class="help">{{.i18n.Tr "install.repo_path_helper"}}</span>
                         </div>
@@ -79,6 +79,12 @@
                             <span class="help">{{.i18n.Tr "install.domain_helper"}}</span>
                         </div>
                         <div class="field">
+                            <label class="req" for="http_port">{{.i18n.Tr "install.http_port"}}</label>
+                            <input class="ipt ipt-large ipt-radius {{if .Err_HttpPort}}ipt-error{{end}}" id="http_port" name="http_port" value="{{.http_port}}" required />
+                            <label></label>
+                            <span class="help">{{.i18n.Tr "install.http_port_helper"}}</span>
+                        </div>
+                        <div class="field">
                             <label class="req" for="app_url">{{.i18n.Tr "install.app_url"}}</label>
                             <input class="ipt ipt-large ipt-radius {{if .Err_AppUrl}}ipt-error{{end}}" id="app_url" name="app_url" value="{{.app_url}}" required />
                             <label></label>
@@ -93,12 +99,12 @@
                             <input class="ipt ipt-large ipt-radius {{if .Err_SmtpHost}}ipt-error{{end}}" id="smtp_host" name="smtp_host" value="{{.smtp_host}}" />
                         </div>
                         <div class="field">
-                            <label for="mailer_user">{{.i18n.Tr "install.mailer_user"}}</label>
-                            <input class="ipt ipt-large ipt-radius {{if .Err_SmtpEmail}}ipt-error{{end}}" id="mailer_user" name="mailer_user" value="{{.mailer_user}}" />
+                            <label for="smtp_user">{{.i18n.Tr "install.mailer_user"}}</label>
+                            <input class="ipt ipt-large ipt-radius {{if .Err_SMTPEmail}}ipt-error{{end}}" id="smtp_user" name="smtp_user" value="{{.smtp_user}}" />
                         </div>
                         <div class="field">
-                            <label for="mailer_pwd">{{.i18n.Tr "install.mailer_password"}}</label>
-                            <input class="ipt ipt-large ipt-radius {{if .Err_SmtpPasswd}}ipt-error{{end}}" id="mailer_pwd" name="mailer_pwd" type="password" value="{{.mailer_pwd}}" />
+                            <label for="smtp_pwd">{{.i18n.Tr "install.mailer_password"}}</label>
+                            <input class="ipt ipt-large ipt-radius {{if .Err_SMTPPasswd}}ipt-error{{end}}" id="smtp_pwd" name="smtp_pwd" type="password" value="{{.smtp_pwd}}" />
                         </div>
 
                         <hr>
@@ -122,12 +128,12 @@
                             <input class="ipt ipt-large ipt-radius {{if .Err_AdminName}}ipt-error{{end}}" id="admin_name" name="admin_name" value="{{.admin_name}}" required />
                         </div>
                         <div class="field">
-                            <label class="req" for="admin_pwd">{{.i18n.Tr "install.admin_password"}}</label>
-                            <input class="ipt ipt-large ipt-radius {{if .Err_AdminPasswd}}ipt-error{{end}}" id="admin_pwd" name="admin_pwd" type="password" value="{{.admin_pwd}}" required />
+                            <label class="req" for="admin_passwd">{{.i18n.Tr "install.admin_password"}}</label>
+                            <input class="ipt ipt-large ipt-radius {{if .Err_AdminPasswd}}ipt-error{{end}}" id="admin_passwd" name="admin_passwd" type="password" value="{{.admin_passwd}}" required />
                         </div>
                         <div class="field">
-                            <label class="req" for="confirm_passwd">{{.i18n.Tr "install.confirm_password"}}</label>
-                            <input class="ipt ipt-large ipt-radius {{if .Err_AdminPasswd}}ipt-error{{end}}" id="confirm_passwd" name="confirm_passwd" type="password" required />
+                            <label class="req" for="admin_confirm_passwd">{{.i18n.Tr "install.confirm_password"}}</label>
+                            <input class="ipt ipt-large ipt-radius {{if .Err_AdminPasswd}}ipt-error{{end}}" id="admin_confirm_passwd" name="admin_confirm_passwd" type="password" required />
                         </div>
                         <div class="field">
                             <label class="req" for="admin_email">{{.i18n.Tr "install.admin_email"}}</label>
