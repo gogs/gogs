@@ -608,7 +608,7 @@ function initTeamMembersList() {
             $ul.toggleShow();
         }
     }).next().next().find('ul').on("click", 'li', function () {
-        $('#org-team-members-add').val($(this).text());
+        $('#org-team-members-add').val($(this).find('.username').text());
         $ul.toggleHide();
     });
 }
