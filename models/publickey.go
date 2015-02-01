@@ -244,7 +244,7 @@ func CheckPublicKeyString(content string) (bool, error) {
 }
 
 // saveAuthorizedKeyFile writes SSH key content to authorized_keys file.
-func saveAuthorizedKeyFile(key *PublicKey) error {
+func saveAuthorizedKeyFile(keys ...*PublicKey) error {
 	sshOpLocker.Lock()
 	defer sshOpLocker.Unlock()
 
@@ -269,8 +269,13 @@ func saveAuthorizedKeyFile(key *PublicKey) error {
 		}
 	}
 
-	_, err = f.WriteString(key.GetAuthorizedString())
-	return err
+	for _, key := range keys {
+		_, err = f.WriteString(key.GetAuthorizedString())
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // AddPublicKey adds new public key to database and authorized_keys file.
@@ -421,4 +426,22 @@ func DeletePublicKey(key *PublicKey) error {
 		return err
 	}
 	return os.Rename(tmpPath, fpath)
+}
+
+// RewriteAllPublicKeys remove any authorized key and re-write all key from database again
+func RewriteAllPublicKeys() error {
+	keys := make([]*PublicKey, 0, 5)
+	err := x.Find(&keys)
+	if err != nil {
+		return err
+	}
+
+	fpath := filepath.Join(SshPath, "authorized_keys")
+	if _, err := os.Stat(fpath); os.IsNotExist(err) {
+		return saveAuthorizedKeyFile(keys...)
+	}
+	if err := os.Remove(fpath); err != nil {
+		return err
+	}
+	return saveAuthorizedKeyFile(keys...)
 }
