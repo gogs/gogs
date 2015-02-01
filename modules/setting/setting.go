@@ -178,7 +178,7 @@ func NewConfigContext() {
 			log.Fatal(4, "Fail to load custom 'conf/app.ini': %v", err)
 		}
 	} else {
-		log.Warn("No custom 'conf/app.ini' found, please go to '/install'")
+		log.Warn("No custom 'conf/app.ini' found, ignore this if you're running first time")
 	}
 	Cfg.NameMapper = ini.AllCapsUnderscore
 
