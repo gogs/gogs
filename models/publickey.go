@@ -33,7 +33,7 @@ const (
 )
 
 var (
-	ErrKeyAlreadyExist = errors.New("Public key already exist")
+	ErrKeyAlreadyExist = errors.New("Public key already exists")
 	ErrKeyNotExist     = errors.New("Public key does not exist")
 	ErrKeyUnableVerify = errors.New("Unable to verify public key")
 )
@@ -41,7 +41,7 @@ var (
 var sshOpLocker = sync.Mutex{}
 
 var (
-	SshPath string // SSH directory.
+	SSHPath string // SSH directory.
 	appPath string // Execution(binary) path.
 )
 
@@ -72,9 +72,9 @@ func init() {
 	appPath = strings.Replace(appPath, "\\", "/", -1)
 
 	// Determine and create .ssh path.
-	SshPath = filepath.Join(homeDir(), ".ssh")
-	if err = os.MkdirAll(SshPath, 0700); err != nil {
-		log.Fatal(4, "fail to create SshPath(%s): %v\n", SshPath, err)
+	SSHPath = filepath.Join(homeDir(), ".ssh")
+	if err = os.MkdirAll(SSHPath, 0700); err != nil {
+		log.Fatal(4, "fail to create '%s': %v", SSHPath, err)
 	}
 }
 
@@ -248,12 +248,13 @@ func saveAuthorizedKeyFile(keys ...*PublicKey) error {
 	sshOpLocker.Lock()
 	defer sshOpLocker.Unlock()
 
-	fpath := filepath.Join(SshPath, "authorized_keys")
+	fpath := filepath.Join(SSHPath, "authorized_keys")
 	f, err := os.OpenFile(fpath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0600)
 	if err != nil {
 		return err
 	}
 	defer f.Close()
+
 	finfo, err := f.Stat()
 	if err != nil {
 		return err
@@ -270,8 +271,7 @@ func saveAuthorizedKeyFile(keys ...*PublicKey) error {
 	}
 
 	for _, key := range keys {
-		_, err = f.WriteString(key.GetAuthorizedString())
-		if err != nil {
+		if _, err = f.WriteString(key.GetAuthorizedString()); err != nil {
 			return err
 		}
 	}
@@ -418,8 +418,8 @@ func DeletePublicKey(key *PublicKey) error {
 		return err
 	}
 
-	fpath := filepath.Join(SshPath, "authorized_keys")
-	tmpPath := filepath.Join(SshPath, "authorized_keys.tmp")
+	fpath := filepath.Join(SSHPath, "authorized_keys")
+	tmpPath := filepath.Join(SSHPath, "authorized_keys.tmp")
 	if err = rewriteAuthorizedKeys(key, fpath, tmpPath); err != nil {
 		return err
 	} else if err = os.Remove(fpath); err != nil {
@@ -428,20 +428,36 @@ func DeletePublicKey(key *PublicKey) error {
 	return os.Rename(tmpPath, fpath)
 }
 
-// RewriteAllPublicKeys remove any authorized key and re-write all key from database again
+// RewriteAllPublicKeys removes any authorized key and rewrite all keys from database again.
 func RewriteAllPublicKeys() error {
-	keys := make([]*PublicKey, 0, 5)
-	err := x.Find(&keys)
+	sshOpLocker.Lock()
+	defer sshOpLocker.Unlock()
+
+	tmpPath := filepath.Join(SSHPath, "authorized_keys.tmp")
+	f, err := os.Create(tmpPath)
+	if err != nil {
+		return err
+	}
+	defer os.Remove(tmpPath)
+
+	err = x.Iterate(new(PublicKey), func(idx int, bean interface{}) (err error) {
+		_, err = f.WriteString((bean.(*PublicKey)).GetAuthorizedString())
+		return err
+	})
+	f.Close()
 	if err != nil {
 		return err
 	}
 
-	fpath := filepath.Join(SshPath, "authorized_keys")
-	if _, err := os.Stat(fpath); os.IsNotExist(err) {
-		return saveAuthorizedKeyFile(keys...)
+	fpath := filepath.Join(SSHPath, "authorized_keys")
+	if com.IsExist(fpath) {
+		if err = os.Remove(fpath); err != nil {
+			return err
+		}
 	}
-	if err := os.Remove(fpath); err != nil {
+	if err = os.Rename(tmpPath, fpath); err != nil {
 		return err
 	}
-	return saveAuthorizedKeyFile(keys...)
+
+	return nil
 }
