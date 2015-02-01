@@ -8,6 +8,8 @@ go:
 
 sudo: false
 
+script: go build -v
+
 notifications:
   email:
     - u@gogs.io
