@@ -14,6 +14,7 @@ import (
 	"github.com/Unknwon/com"
 	"github.com/Unknwon/macaron"
 	"github.com/go-xorm/xorm"
+	"gopkg.in/ini.v1"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
@@ -186,41 +187,42 @@ func InstallPost(ctx *middleware.Context, form auth.InstallForm) {
 	}
 
 	// Save settings.
-	setting.Cfg.Section("database").Key("DB_TYPE").SetValue(models.DbCfg.Type)
-	setting.Cfg.Section("database").Key("HOST").SetValue(models.DbCfg.Host)
-	setting.Cfg.Section("database").Key("NAME").SetValue(models.DbCfg.Name)
-	setting.Cfg.Section("database").Key("USER").SetValue(models.DbCfg.User)
-	setting.Cfg.Section("database").Key("PASSWD").SetValue(models.DbCfg.Passwd)
-	setting.Cfg.Section("database").Key("SSL_MODE").SetValue(models.DbCfg.SSLMode)
-	setting.Cfg.Section("database").Key("PATH").SetValue(models.DbCfg.Path)
+	cfg := ini.Empty()
+	cfg.Section("database").Key("DB_TYPE").SetValue(models.DbCfg.Type)
+	cfg.Section("database").Key("HOST").SetValue(models.DbCfg.Host)
+	cfg.Section("database").Key("NAME").SetValue(models.DbCfg.Name)
+	cfg.Section("database").Key("USER").SetValue(models.DbCfg.User)
+	cfg.Section("database").Key("PASSWD").SetValue(models.DbCfg.Passwd)
+	cfg.Section("database").Key("SSL_MODE").SetValue(models.DbCfg.SSLMode)
+	cfg.Section("database").Key("PATH").SetValue(models.DbCfg.Path)
 
-	setting.Cfg.Section("repository").Key("ROOT").SetValue(form.RepoRootPath)
-	setting.Cfg.Section("").Key("RUN_USER").SetValue(form.RunUser)
-	setting.Cfg.Section("server").Key("DOMAIN").SetValue(form.Domain)
-	setting.Cfg.Section("server").Key("HTTP_PORT").SetValue(form.HTTPPort)
-	setting.Cfg.Section("server").Key("ROOT_URL").SetValue(form.AppUrl)
+	cfg.Section("repository").Key("ROOT").SetValue(form.RepoRootPath)
+	cfg.Section("").Key("RUN_USER").SetValue(form.RunUser)
+	cfg.Section("server").Key("DOMAIN").SetValue(form.Domain)
+	cfg.Section("server").Key("HTTP_PORT").SetValue(form.HTTPPort)
+	cfg.Section("server").Key("ROOT_URL").SetValue(form.AppUrl)
 
 	if len(strings.TrimSpace(form.SMTPHost)) > 0 {
-		setting.Cfg.Section("mailer").Key("ENABLED").SetValue("true")
-		setting.Cfg.Section("mailer").Key("HOST").SetValue(form.SMTPHost)
-		setting.Cfg.Section("mailer").Key("USER").SetValue(form.SMTPEmail)
-		setting.Cfg.Section("mailer").Key("PASSWD").SetValue(form.SMTPPasswd)
+		cfg.Section("mailer").Key("ENABLED").SetValue("true")
+		cfg.Section("mailer").Key("HOST").SetValue(form.SMTPHost)
+		cfg.Section("mailer").Key("USER").SetValue(form.SMTPEmail)
+		cfg.Section("mailer").Key("PASSWD").SetValue(form.SMTPPasswd)
 
-		setting.Cfg.Section("service").Key("REGISTER_EMAIL_CONFIRM").SetValue(com.ToStr(form.RegisterConfirm == "on"))
-		setting.Cfg.Section("service").Key("ENABLE_NOTIFY_MAIL").SetValue(com.ToStr(form.MailNotify == "on"))
+		cfg.Section("service").Key("REGISTER_EMAIL_CONFIRM").SetValue(com.ToStr(form.RegisterConfirm == "on"))
+		cfg.Section("service").Key("ENABLE_NOTIFY_MAIL").SetValue(com.ToStr(form.MailNotify == "on"))
 	}
 
-	setting.Cfg.Section("").Key("RUN_MODE").SetValue("prod")
+	cfg.Section("").Key("RUN_MODE").SetValue("prod")
 
-	setting.Cfg.Section("session").Key("PROVIDER").SetValue("file")
+	cfg.Section("session").Key("PROVIDER").SetValue("file")
 
-	setting.Cfg.Section("log").Key("MODE").SetValue("file")
+	cfg.Section("log").Key("MODE").SetValue("file")
 
-	setting.Cfg.Section("security").Key("INSTALL_LOCK").SetValue("true")
-	setting.Cfg.Section("security").Key("SECRET_KEY").SetValue(base.GetRandomString(15))
+	cfg.Section("security").Key("INSTALL_LOCK").SetValue("true")
+	cfg.Section("security").Key("SECRET_KEY").SetValue(base.GetRandomString(15))
 
 	os.MkdirAll("custom/conf", os.ModePerm)
-	if err := setting.Cfg.SaveTo(path.Join(setting.CustomPath, "conf/app.ini")); err != nil {
+	if err := cfg.SaveTo(path.Join(setting.CustomPath, "conf/app.ini")); err != nil {
 		ctx.RenderWithErr(ctx.Tr("install.save_config_failed", err), INSTALL, &form)
 		return
 	}

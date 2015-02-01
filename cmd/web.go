@@ -77,13 +77,13 @@ func checkVersion() {
 
 	// Check dependency version.
 	checkers := []VerChecker{
-		{"github.com/Unknwon/macaron", macaron.Version, "0.5.0"},
+		{"github.com/Unknwon/macaron", macaron.Version, "0.5.1"},
 		{"github.com/macaron-contrib/binding", binding.Version, "0.0.4"},
 		{"github.com/macaron-contrib/cache", cache.Version, "0.0.7"},
 		{"github.com/macaron-contrib/csrf", csrf.Version, "0.0.1"},
 		{"github.com/macaron-contrib/i18n", i18n.Version, "0.0.5"},
 		{"github.com/macaron-contrib/session", session.Version, "0.1.6"},
-		{"gopkg.in/ini.v1", ini.Version, "1.0.1"},
+		{"gopkg.in/ini.v1", ini.Version, "1.2.0"},
 	}
 	for _, c := range checkers {
 		ver := strings.Join(strings.Split(c.Version(), ".")[:3], ".")
