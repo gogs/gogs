@@ -41,12 +41,14 @@ var (
 
 var (
 	// Same as Github. See https://help.github.com/articles/closing-issues-via-commit-messages
-	IssueKeywords    = []string{"close", "closes", "closed", "fix", "fixes", "fixed", "resolve", "resolves", "resolved"}
-	IssueKeywordsPat *regexp.Regexp
+	IssueCloseKeywords    = []string{"close", "closes", "closed", "fix", "fixes", "fixed", "resolve", "resolves", "resolved"}
+	IssueCloseKeywordsPat *regexp.Regexp
+	IssueReferenceKeywordsPat *regexp.Regexp
 )
 
 func init() {
-	IssueKeywordsPat = regexp.MustCompile(fmt.Sprintf(`(?i)(?:%s) \S+`, strings.Join(IssueKeywords, "|")))
+	IssueCloseKeywordsPat = regexp.MustCompile(fmt.Sprintf(`(?i)(?:%s) \S+`, strings.Join(IssueCloseKeywords, "|")))
+	IssueReferenceKeywordsPat = regexp.MustCompile(fmt.Sprintf(`(?i)(?:) \S+`))
 }
 
 // Action represents user operation type and other information to repository.,
@@ -110,13 +112,13 @@ func (a Action) GetIssueInfos() []string {
 
 func updateIssuesCommit(userId, repoId int64, repoUserName, repoName string, commits []*base.PushCommit) error {
 	for _, c := range commits {
-		refs := IssueKeywordsPat.FindAllString(c.Message, -1)
-
-		for _, ref := range refs {
+		references := IssueReferenceKeywordsPat.FindAllString(c.Message, -1)
+		
+		for _, ref := range references {
 			ref := ref[strings.IndexByte(ref, byte(' '))+1:]
 			ref = strings.TrimRightFunc(ref, func(c rune) bool {
-				return !unicode.IsDigit(c)
-			})
+					return !unicode.IsDigit(c)
+				})
 
 			if len(ref) == 0 {
 				continue
@@ -144,6 +146,35 @@ func updateIssuesCommit(userId, repoId int64, repoUserName, repoName string, com
 			if _, err = CreateComment(userId, issue.RepoId, issue.Id, 0, 0, COMMIT, message, nil); err != nil {
 				return err
 			}
+		}
+
+		closes := IssueCloseKeywordsPat.FindAllString(c.Message, -1)
+
+		for _, ref := range closes {
+			ref := ref[strings.IndexByte(ref, byte(' '))+1:]
+			ref = strings.TrimRightFunc(ref, func(c rune) bool {
+					return !unicode.IsDigit(c)
+				})
+
+			if len(ref) == 0 {
+				continue
+			}
+
+			// Add repo name if missing
+			if ref[0] == '#' {
+				ref = fmt.Sprintf("%s/%s%s", repoUserName, repoName, ref)
+			} else if strings.Contains(ref, "/") == false {
+				// We don't support User#ID syntax yet
+				// return ErrNotImplemented
+
+				continue
+			}
+
+			issue, err := GetIssueByRef(ref)
+
+			if err != nil {
+				return err
+			}
 
 			if issue.RepoId == repoId {
 				if issue.IsClosed {
@@ -168,6 +199,7 @@ func updateIssuesCommit(userId, repoId int64, repoUserName, repoName string, com
 				}
 			}
 		}
+		
 	}
 
 	return nil
