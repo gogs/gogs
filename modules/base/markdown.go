@@ -63,12 +63,18 @@ func IsImageFile(data []byte) (string, bool) {
 	return contentType, false
 }
 
+// IsReadmeFile returns true if given file name suppose to be a README file.
 func IsReadmeFile(name string) bool {
 	name = strings.ToLower(name)
 	if len(name) < 6 {
 		return false
+	} else if len(name) == 6 {
+		if name == "readme" {
+			return true
+		}
+		return false
 	}
-	if name[:6] == "readme" {
+	if name[:7] == "readme." {
 		return true
 	}
 	return false
