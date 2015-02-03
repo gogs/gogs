@@ -15,6 +15,7 @@ import (
 	"image/jpeg"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
@@ -104,6 +105,25 @@ type EmailAddress struct {
 	Email       string `xorm:"UNIQUE NOT NULL"`
 	IsActivated bool
 	IsPrimary   bool `xorm:"-"`
+}
+
+// ByEmail implements sort.Interface for []*EmailAddress based on
+// the Email field.
+type ByEmail []*EmailAddress
+
+func (e ByEmail) Len() int {
+	return len(e)
+}
+
+func (e ByEmail) Swap(i, j int) {
+	e[i], e[j] = e[j], e[i]
+}
+
+func (e ByEmail) Less(i, j int) bool {
+	if e[i].IsPrimary {
+		return true
+	}
+	return e[i].Email < e[j].Email
 }
 
 // DashboardLink returns the user dashboard page link.
@@ -629,7 +649,7 @@ func GetUserIdsByNames(names []string) []int64 {
 // Get all email addresses
 func GetEmailAddresses(uid int64) ([]*EmailAddress, error) {
 	emails := make([]*EmailAddress, 0, 5)
-	err := x.Where("uid=?", uid).Find(&emails)
+	err := x.Where("uid=?", uid).Asc("Email").Find(&emails)
 	if err != nil {
 		return nil, err
 	}
@@ -650,11 +670,16 @@ func GetEmailAddresses(uid int64) ([]*EmailAddress, error) {
 		}
 	}
 
-	// We alway want the primary email address displayed, even if it's not in
-	// the emailaddress table (yet)
+	// We always want the primary email address displayed, even if it's not in
+	// the emailaddress table (yet).
 	if !isPrimaryFound {
 		emails = append(emails, &EmailAddress{Email: u.Email, IsActivated: true, IsPrimary: true})
 	}
+
+	// We want the list of email adresses to be sorted with the primary
+	// address always on top.
+	sort.Sort(ByEmail(emails))
+
 	return emails, nil
 }
 
