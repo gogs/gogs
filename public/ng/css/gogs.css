@@ -1761,7 +1761,6 @@ The register and sign-in page style
 #org-setting-form,
 #repo-setting-form,
 #user-profile-form,
-#add-email-form,
 .repo-setting-form {
   background-color: #FFF;
   padding: 30px 0;
@@ -1790,7 +1789,6 @@ The register and sign-in page style
 #org-setting-form .ipt,
 #repo-setting-form .ipt,
 #user-profile-form .ipt,
-#add-email-form .ipt,
 .repo-setting-form .ipt {
   width: 360px;
 }
@@ -1821,7 +1819,7 @@ The register and sign-in page style
 #repo-hooks-panel .setting-list,
 #repo-hooks-history-panel .setting-list,
 #user-social-panel .setting-list,
-#user-applications-panel .setting-list, 
+#user-applications-panel .setting-list,
 #user-ssh-panel .setting-list {
   background-color: #FFF;
 }
@@ -1829,7 +1827,6 @@ The register and sign-in page style
 #repo-hooks-history-panel .setting-list li,
 #user-social-panel .setting-list li,
 #user-applications-panel .setting-list li,
-#user-email-panel .setting-list li,
 #user-ssh-panel .setting-list li {
   padding: 8px 20px;
   border-bottom: 1px solid #eaeaea;
