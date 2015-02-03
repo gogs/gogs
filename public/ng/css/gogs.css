@@ -1761,6 +1761,7 @@ The register and sign-in page style
 #org-setting-form,
 #repo-setting-form,
 #user-profile-form,
+#add-email-form,
 .repo-setting-form {
   background-color: #FFF;
   padding: 30px 0;
@@ -1769,6 +1770,7 @@ The register and sign-in page style
 #org-setting-form textarea,
 #repo-setting-form textarea,
 #user-profile-form textarea,
+#add-email-form textarea,
 .repo-setting-form textarea {
   margin-left: 4px;
   height: 100px;
@@ -1777,11 +1779,13 @@ The register and sign-in page style
 #org-setting-form label,
 #repo-setting-form label,
 #user-profile-form label,
+#add-email-form label,
 .repo-setting-form label,
 #auth-setting-form .form-label,
 #org-setting-form .form-label,
 #repo-setting-form .form-label,
 #user-profile-form .form-label,
+#add-email-form .form-label,
 .repo-setting-form .form-label {
   width: 240px;
 }
@@ -1789,6 +1793,7 @@ The register and sign-in page style
 #org-setting-form .ipt,
 #repo-setting-form .ipt,
 #user-profile-form .ipt,
+#add-email-form .ipt,
 .repo-setting-form .ipt {
   width: 360px;
 }
@@ -1796,6 +1801,7 @@ The register and sign-in page style
 #org-setting-form .field,
 #repo-setting-form .field,
 #user-profile-form .field,
+#add-email-form .field,
 .repo-setting-form .field {
   margin-bottom: 24px;
 }
@@ -1813,6 +1819,7 @@ The register and sign-in page style
 #repo-hooks-history-panel,
 #user-social-panel,
 #user-applications-panel,
+#user-email-panel,
 #user-ssh-panel {
   margin-bottom: 20px;
 }
@@ -1820,6 +1827,7 @@ The register and sign-in page style
 #repo-hooks-history-panel .setting-list,
 #user-social-panel .setting-list,
 #user-applications-panel .setting-list,
+#user-email-panel .setting-list,
 #user-ssh-panel .setting-list {
   background-color: #FFF;
 }
@@ -1827,6 +1835,7 @@ The register and sign-in page style
 #repo-hooks-history-panel .setting-list li,
 #user-social-panel .setting-list li,
 #user-applications-panel .setting-list li,
+#user-email-panel .setting-list li,
 #user-ssh-panel .setting-list li {
   padding: 8px 20px;
   border-bottom: 1px solid #eaeaea;
@@ -1835,6 +1844,7 @@ The register and sign-in page style
 #repo-hooks-history-panel .setting-list li.ssh:hover,
 #user-social-panel .setting-list li.ssh:hover,
 #user-applications-panel .setting-list li.ssh:hover,
+#user-email-panel .setting-list li.ssh:hover,
 #user-ssh-panel .setting-list li.ssh:hover {
   background-color: #ffffEE;
 }
@@ -1842,6 +1852,7 @@ The register and sign-in page style
 #repo-hooks-history-panel .setting-list li i,
 #user-social-panel .setting-list li i,
 #user-applications-panel .setting-list li i,
+#user-email-panel .setting-list li i,
 #user-ssh-panel .setting-list li i {
   padding-right: 5px;
 }
@@ -1849,6 +1860,7 @@ The register and sign-in page style
 #repo-hooks-history-panel .active-icon,
 #user-social-panel .active-icon,
 #user-applications-panel .active-icon,
+#user-email-panel .active-icon,
 #user-ssh-panel .active-icon {
   width: 10px;
   height: 10px;
@@ -1861,6 +1873,7 @@ The register and sign-in page style
 #repo-hooks-history-panel .ssh-content,
 #user-social-panel .ssh-content,
 #user-applications-panel .ssh-content,
+#user-email-panel .ssh-content,
 #user-ssh-panel .ssh-content {
   margin-left: 24px;
 }
@@ -1868,6 +1881,7 @@ The register and sign-in page style
 #repo-hooks-history-panel .ssh-content .octicon,
 #user-social-panel .ssh-content .octicon,
 #user-applications-panel .ssh-content .octicon,
+#user-email-panel .ssh-content .octicon,
 #user-ssh-panel .ssh-content .octicon {
   margin-right: 4px;
 }
@@ -1875,16 +1889,19 @@ The register and sign-in page style
 #repo-hooks-history-panel .ssh-content .print,
 #user-social-panel .ssh-content .print,
 #user-applications-panel .ssh-content .print,
+#user-email-panel .ssh-content .print,
 #user-ssh-panel .ssh-content .print,
 #repo-hooks-panel .ssh-content .access,
 #repo-hooks-history-panel .ssh-content .access,
 #user-social-panel .ssh-content .access,
 #user-applications-panel .ssh-content .access,
+#user-email-panel .ssh-content .access,
 #user-ssh-panel .ssh-content .access,
 #repo-hooks-panel .ssh-content .activity,
 #repo-hooks-history-panel .ssh-content .activity,
 #user-social-panel .ssh-content .activity,
 #user-applications-panel .ssh-content .activity,
+#user-email-panel .ssh-content .activity,
 #user-ssh-panel .ssh-content .activity {
   color: #888;
 }
@@ -1892,6 +1909,7 @@ The register and sign-in page style
 #repo-hooks-history-panel .ssh-content .access,
 #user-social-panel .ssh-content .access,
 #user-applications-panel .ssh-content .access,
+#user-email-panel .ssh-content .access,
 #user-ssh-panel .ssh-content .access {
   max-width: 500px;
 }
@@ -1899,6 +1917,7 @@ The register and sign-in page style
 #repo-hooks-history-panel .ssh-btn,
 #user-social-panel .ssh-btn,
 #user-applications-panel .ssh-btn,
+#user-email-panel .ssh-btn,
 #user-ssh-panel .ssh-btn {
   margin-top: 6px;
 }
