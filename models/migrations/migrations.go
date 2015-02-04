@@ -90,7 +90,7 @@ func accessToCollaboration(x *xorm.Engine) error {
 
 	x.Sync(new(Collaboration))
 
-	sql := `SELECT u.id AS uid, a.repo_name AS repo, a.mode AS mode FROM access a JOIN user u ON a.user_name=u.lower_name`
+	sql := `SELECT u.id AS uid, a.repo_name AS repo, a.mode AS mode, a.created as created FROM access a JOIN user u ON a.user_name=u.lower_name`
 	results, err := x.Query(sql)
 	if err != nil {
 		return err
@@ -100,12 +100,14 @@ func accessToCollaboration(x *xorm.Engine) error {
 		userID := mustParseInt64(result["uid"])
 		repoRefName := string(result["repo"])
 		mode := mustParseInt64(result["mode"])
+		created := result["created"]
 
 		//Collaborators must have write access
 		if mode < 2 {
 			continue
 		}
 
+		// find owner of repository
 		parts := strings.SplitN(repoRefName, "/", 2)
 		ownerName := parts[0]
 		repoName := parts[1]
@@ -118,14 +120,23 @@ func accessToCollaboration(x *xorm.Engine) error {
 		if len(results) < 1 {
 			continue
 		}
-		ownerID := mustParseInt64(results[0]["uid"])
 
+		ownerID := mustParseInt64(results[0]["uid"])
+		if ownerID == userID {
+			continue
+		}
+
+		// test if user is member of owning organization
+		isMember := false
 		for _, member := range results {
 			memberID := mustParseInt64(member["memberid"])
 			// We can skip all cases that a user is member of the owning organization
 			if memberID == userID {
-				continue
+				isMember = true
 			}
+		}
+		if isMember {
+			continue
 		}
 
 		sql = `SELECT id FROM repository WHERE owner_id=? AND lower_name=?`
@@ -139,8 +150,8 @@ func accessToCollaboration(x *xorm.Engine) error {
 
 		repoID := results[0]["id"]
 
-		sql = `INSERT INTO collaboration (user_id, repo_id) VALUES (?,?)`
-		_, err = x.Exec(sql, userID, repoID)
+		sql = `INSERT INTO collaboration (user_id, repo_id, created) VALUES (?,?,?)`
+		_, err = x.Exec(sql, userID, repoID, created)
 		if err != nil {
 			return err
 		}
