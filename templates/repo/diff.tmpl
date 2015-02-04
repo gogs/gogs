@@ -105,10 +105,10 @@
                         {{range $k, $line := $section.Lines}}                        
                         <tr class="{{DiffLineTypeToStr .Type}}-code nl-{{$i}} ol-{{$i}}">
                             <td class="lines-num lines-num-old">
-                                <span rel="L{{Add $i 1}}{{Add $j 1}}{{$k}}">{{if $line.LeftIdx}}{{$line.LeftIdx}}{{end}}</span>
+                                <span rel="L{{Add $i 1}}{{$j}}{{$k}}">{{if $line.LeftIdx}}{{$line.LeftIdx}}{{end}}</span>
                             </td>
                             <td class="lines-num lines-num-new">
-                                <span rel="L{{Add $i 1}}{{Add $j 1}}{{$k}}">{{if $line.RightIdx}}{{$line.RightIdx}}{{end}}</span>
+                                <span rel="L{{Add $i 1}}{{$j}}{{$k}}">{{if $line.RightIdx}}{{$line.RightIdx}}{{end}}</span>
                             </td>
                             
                             <td class="lines-code">
