@@ -93,6 +93,10 @@ func (u *User) GetAccessibleRepositories() (map[*Repository]AccessType, error) {
 		if err != nil {
 			return nil, err
 		}
+		err = repo.GetOwner()
+		if err != nil {
+			return nil, err
+		}
 		repos[repo] = access.Mode
 	}
 
