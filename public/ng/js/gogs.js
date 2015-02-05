@@ -261,6 +261,14 @@ var Gogs = {};
             }
         });
 
+        $('.code-diff .lines-code > pre').hover(function () {
+            var $b = $(this).prev();
+            $b.addClass('ishovered');
+        });
+        $('.code-diff tr').mouseleave(function () {
+            $('.code-diff .lines-code > b').removeClass('ishovered');
+        });
+
         $(window).on('hashchange', function (e) {
             var m = window.location.hash.match(/^#diff-(\d+)(L\d+)\-(L\d+)$/);
             var $list = $('.code-diff td.lines-num > span');

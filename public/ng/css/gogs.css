@@ -1445,13 +1445,45 @@ The register and sign-in page style
 .code-view .lines-num span {
   font-family: Monaco, Menlo, Consolas, "Courier New", monospace;
   line-height: 20px;
-  padding: 0 10px;
+  padding: 0 15px;
   cursor: pointer;
   display: block;
+}
+.code-view .lines-code b {
+  position: relative;
+  z-index: 5;
+  float: left;
+  width: 20px;
+  height: 20px;
+  margin: 0px -10px -1px -10px;
+  line-height: 20px;
+  color: #fff;
+  text-align: center;
+  text-indent: 0;
+  cursor: pointer;
+  background-color: #4183c4;
+  background-color: #4183c4;
+  background-image: -webkit-linear-gradient(#5490ca, #4183c4);
+  background-image: linear-gradient(#5490ca, #4183c4);
+  background-repeat: repeat-x;
+  border-radius: 3px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+  opacity: 0;
+  -webkit-transform: scale(0.8, 0.8);
+  -ms-transform: scale(0.8, 0.8);
+  transform: scale(0.8, 0.8);
+  -webkit-transition: -webkit-transform 0.1s ease-in-out;
+  transition: transform 0.1s ease-in-out;
+  font-size: 20px;
+}
+.code-view .lines-code b.ishovered {
+  opacity:1;
 }
 .code-view .lines-code > pre {
   border: none;
   border-left: 1px solid #ddd;
+  border-radius: 0;
+  padding-left: 15px;
 }
 .code-view .lines-code > pre > ol.linenums > li {
   padding: 0 10px;
