@@ -53,7 +53,9 @@ var CmdWeb = cli.Command{
 	Description: `Gogs web server is the only thing you need to run,
 and it takes care of all the other things for you`,
 	Action: runWeb,
-	Flags:  []cli.Flag{},
+	Flags: []cli.Flag{
+		cli.StringFlag{"port, p", "3000", "Temporary port number to prevent conflict", ""},
+	},
 }
 
 type VerChecker struct {
@@ -75,13 +77,13 @@ func checkVersion() {
 
 	// Check dependency version.
 	checkers := []VerChecker{
-		{"github.com/Unknwon/macaron", macaron.Version, "0.5.0"},
+		{"github.com/Unknwon/macaron", macaron.Version, "0.5.1"},
 		{"github.com/macaron-contrib/binding", binding.Version, "0.0.4"},
 		{"github.com/macaron-contrib/cache", cache.Version, "0.0.7"},
-		{"github.com/macaron-contrib/csrf", csrf.Version, "0.0.1"},
+		{"github.com/macaron-contrib/csrf", csrf.Version, "0.0.3"},
 		{"github.com/macaron-contrib/i18n", i18n.Version, "0.0.5"},
 		{"github.com/macaron-contrib/session", session.Version, "0.1.6"},
-		{"gopkg.in/ini.v1", ini.Version, "1.0.1"},
+		{"gopkg.in/ini.v1", ini.Version, "1.2.0"},
 	}
 	for _, c := range checkers {
 		ver := strings.Join(strings.Split(c.Version(), ".")[:3], ".")
@@ -162,7 +164,7 @@ func newMacaron() *macaron.Macaron {
 	return m
 }
 
-func runWeb(*cli.Context) {
+func runWeb(ctx *cli.Context) {
 	routers.GlobalInit()
 	checkVersion()
 
@@ -179,9 +181,9 @@ func runWeb(*cli.Context) {
 	// Routers.
 	m.Get("/", ignSignIn, routers.Home)
 	m.Get("/explore", ignSignIn, routers.Explore)
-	// FIXME: when i'm binding form here???
-	m.Get("/install", bindIgnErr(auth.InstallForm{}), routers.Install)
-	m.Post("/install", bindIgnErr(auth.InstallForm{}), routers.InstallPost)
+	m.Combo("/install", routers.InstallInit).
+		Get(routers.Install).
+		Post(bindIgnErr(auth.InstallForm{}), routers.InstallPost)
 	m.Group("", func() {
 		m.Get("/pulls", user.Pulls)
 		m.Get("/issues", user.Issues)
@@ -459,6 +461,12 @@ func runWeb(*cli.Context) {
 
 	// Not found handler.
 	m.NotFound(routers.NotFound)
+
+	// Flag for port number in case first time run conflict.
+	if ctx.IsSet("port") {
+		setting.AppUrl = strings.Replace(setting.AppUrl, setting.HttpPort, ctx.String("port"), 1)
+		setting.HttpPort = ctx.String("port")
+	}
 
 	var err error
 	listenAddr := fmt.Sprintf("%s:%s", setting.HttpAddr, setting.HttpPort)

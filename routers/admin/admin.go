@@ -118,6 +118,7 @@ const (
 	CLEAN_INACTIVATE_USER
 	CLEAN_REPO_ARCHIVES
 	GIT_GC_REPOS
+	SYNC_SSH_AUTHORIZED_KEY
 )
 
 func Dashboard(ctx *middleware.Context) {
@@ -144,6 +145,9 @@ func Dashboard(ctx *middleware.Context) {
 		case GIT_GC_REPOS:
 			success = ctx.Tr("admin.dashboard.git_gc_repos_success")
 			err = models.GitGcRepos()
+		case SYNC_SSH_AUTHORIZED_KEY:
+			success = ctx.Tr("admin.dashboard.resync_all_sshkeys_success")
+			err = models.RewriteAllPublicKeys()
 		}
 
 		if err != nil {

@@ -17,7 +17,7 @@
         <div class="panel panel-info panel-radius diff-head-box">
             <div class="panel-header">
                 <a class="pull-right btn btn-blue btn-header btn-medium btn-radius" rel="nofollow" href="{{.SourcePath}}">{{.i18n.Tr "repo.diff.browse_source"}}</a>
-                <h4 class="commit-message">{{Str2html .Commit.Message}}</h4>
+                <h4 class="commit-message">{{RenderCommitMessage .Commit.Message $.RepoLink}}</h4>
             </div>
             <div class="panel-body">
                 <span class="pull-right">
@@ -74,11 +74,11 @@
             </ol>
         </div>
 
-        {{range .Diff.Files}}
+        {{range $i, $file := .Diff.Files}}
         <div class="panel panel-radius diff-file-box diff-box file-content" id="diff-{{.Index}}">
             <div class="panel-header">
                 <div class="diff-counter count pull-left">
-                    {{if not .IsBin}}
+                    {{if not $file.IsBin}}
                     <span class="add" data-line="{{.Addition}}">+ {{.Addition}}</span>
                     <span class="bar">
                         <span class="pull-left add"></span>
@@ -90,9 +90,9 @@
                     {{end}}
                 </div>
                 <a class="btn btn-gray btn-header btn-radius text-black pull-right" rel="nofollow" href="{{$.SourcePath}}/{{.Name}}">{{$.i18n.Tr "repo.diff.view_file"}}</a>
-                <span class="file">{{.Name}}</span>
+                <span class="file">{{$file.Name}}</span>
             </div>
-            {{$isImage := (call $.IsImageFile .Name)}}
+            {{$isImage := (call $.IsImageFile $file.Name)}}
             <div class="panel-body file-body file-code code-view code-diff">
                 {{if $isImage}}
                     <div class="text-center">
@@ -101,18 +101,18 @@
                 {{else}}
                 <table>
                     <tbody>
-                        {{range .Sections}}
-                        {{range .Lines}}
-                        <tr class="{{DiffLineTypeToStr .Type}}-code nl-1 ol-1">
+                        {{range $j, $section := $file.Sections}}
+                        {{range $k, $line := $section.Lines}}                        
+                        <tr class="{{DiffLineTypeToStr .Type}}-code nl-{{$i}} ol-{{$i}}">
                             <td class="lines-num lines-num-old">
-                                <span rel="L1">{{if .LeftIdx}}{{.LeftIdx}}{{end}}</span>
+                                <span rel="diff-{{Add $i 1}}L{{$j}}{{$k}}">{{if $line.LeftIdx}}{{$line.LeftIdx}}{{end}}</span>
                             </td>
                             <td class="lines-num lines-num-new">
-                                <span rel="L1">{{if .RightIdx}}{{.RightIdx}}{{end}}</span>
+                                <span rel="diff-{{Add $i 1}}L{{$j}}{{$k}}">{{if $line.RightIdx}}{{$line.RightIdx}}{{end}}</span>
                             </td>
                             
                             <td class="lines-code">
-                                <pre>{{.Content}}</pre>
+                                <pre>{{$line.Content}}</pre>
                             </td>
                         </tr>
                         {{end}}

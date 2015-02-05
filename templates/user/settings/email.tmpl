@@ -36,19 +36,21 @@
 							   {{end}}
                             </li>
                             {{end}}
-                             <form action="{{AppSubUrl}}/user/settings/email" method="post">
-							{{.CsrfTokenHtml}}
-							<p class="panel-header"><strong>{{.i18n.Tr "settings.add_new_email"}}</strong></p>
-							<p class="field">
+                        </ul>
+                        <div class="panel-header">
+                             <strong>{{.i18n.Tr "settings.add_new_email"}}</strong>
+                        </div>
+                        <form class="form form-align panel-body" id="add-email-form" action="{{AppSubUrl}}/user/settings/email" method="post">
+                            {{.CsrfTokenHtml}}                            
+                            <p class="field">
                                 <label class="req" for="email">{{.i18n.Tr "email"}}</label>
-                                <input class="ipt ipt-radius" id="email" name="email" type="text" required />
+                                <input class="ipt ipt-large ipt-radius" id="email" name="email" type="text" required />
                             </p>
                             <p class="field">
                                 <label></label>
-                                <button class="btn btn-green btn-radius" id="email-add-btn">{{.i18n.Tr "settings.add_email"}}</button>
+                                <button class="btn btn-green btn-large btn-radius" id="email-add-btn">{{.i18n.Tr "settings.add_email"}}</button>
                             </p>
-							</form>
-                        </ul>
+                        </form>
                     </div>                    
                 </div>
             </div>

@@ -1,18 +1,19 @@
-Gogs - Go Git Service [![wercker status](https://app.wercker.com/status/ad0bdb0bc450ac6f09bc56b9640a50aa/s/ "wercker status")](https://app.wercker.com/project/bykey/ad0bdb0bc450ac6f09bc56b9640a50aa) [![Build Status](https://travis-ci.org/gogits/gogs.svg?branch=master)](https://travis-ci.org/gogits/gogs)
+Gogs - Go Git Service [![Build Status](https://travis-ci.org/gogits/gogs.svg?branch=master)](https://travis-ci.org/gogits/gogs)
 =====================
 
 [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/gogits/gogs?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 Gogs(Go Git Service) is a painless self-hosted Git Service written in Go.
 
-![Demo](https://gowalker.org/public/gogs_demo.gif)
+![Demo](http://gogs.qiniudn.com/gogs_demo.gif)
 
-##### Current version: 0.5.11 Beta
+##### Current version: 0.5.12 Beta
 
 ### NOTICES
 
-- Due to testing purpose, data of [try.gogs.io](https://try.gogs.io) has been reset in **June 21, 2014** and will reset multiple times after. Please do **NOT** put your important data on the site.
+- Due to testing purpose, data of [try.gogs.io](https://try.gogs.io) has been reset in **Jan 28, 2015** and will reset multiple times after. Please do **NOT** put your important data on the site.
 - Demo site [try.gogs.io](https://try.gogs.io) is running under `dev` branch.
+- If you think there are vulnerabilities in the project, please talk private to **u@gogs.io**, thanks!
 
 #### Other language version
 
@@ -50,7 +51,7 @@ The goal of this project is to make the easiest, fastest and most painless way t
 - Drone CI integration
 - Supports MySQL, PostgreSQL and SQLite3
 - Social account login(GitHub, Google, QQ, Weibo)
-- Multi-language support([7 languages](https://crowdin.com/project/gogs))
+- Multi-language support([9 languages](https://crowdin.com/project/gogs))
 
 ## System Requirements
 
