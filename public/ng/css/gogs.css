@@ -1449,6 +1449,13 @@ The register and sign-in page style
   cursor: pointer;
   display: block;
 }
+.code-view .lines-code b:hover {
+  width: 22px;
+  height: 22px;
+  line-height: 22px;
+  font-size: 22px;
+  margin: -1px -12px -2px -11px;
+}
 .code-view .lines-code b {
   position: relative;
   z-index: 5;
