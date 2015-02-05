@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"strings"
 
 	"github.com/Unknwon/com"
@@ -221,8 +222,8 @@ func InstallPost(ctx *middleware.Context, form auth.InstallForm) {
 	cfg.Section("security").Key("INSTALL_LOCK").SetValue("true")
 	cfg.Section("security").Key("SECRET_KEY").SetValue(base.GetRandomString(15))
 
-	os.MkdirAll("custom/conf", os.ModePerm)
-	if err := cfg.SaveTo(path.Join(setting.CustomPath, "conf/app.ini")); err != nil {
+	os.MkdirAll(filepath.Dir(setting.CustomConf), os.ModePerm)
+	if err := cfg.SaveTo(setting.CustomConf); err != nil {
 		ctx.RenderWithErr(ctx.Tr("install.save_config_failed", err), INSTALL, &form)
 		return
 	}
