@@ -27,7 +27,9 @@ var CmdServ = cli.Command{
 	Usage:       "This command should only be called by SSH shell",
 	Description: `Serv provide access auth for repositories`,
 	Action:      runServ,
-	Flags:       []cli.Flag{},
+	Flags: []cli.Flag{
+		cli.StringFlag{"config, c", "custom/conf/app.ini", "Configuration file", ""},
+	},
 }
 
 func setup(logPath string) {
@@ -77,6 +79,9 @@ func In(b string, sl map[string]models.AccessType) bool {
 }
 
 func runServ(k *cli.Context) {
+	if k.IsSet("config") {
+		setting.CustomConf = k.String("config")
+	}
 	setup("serv.log")
 
 	keys := strings.Split(os.Args[2], "-")
