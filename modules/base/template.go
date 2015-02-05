@@ -155,6 +155,7 @@ var TemplateFuncs template.FuncMap = map[string]interface{}{
 	},
 	"DiffTypeToStr":     DiffTypeToStr,
 	"DiffLineTypeToStr": DiffLineTypeToStr,
+	"DiffLinePosToStr":  DiffLinePosToStr,
 	"ShortSha":          ShortSha,
 	"Md5":               EncodeMd5,
 	"ActionContent2Commits": ActionContent2Commits,
@@ -232,6 +233,10 @@ func DiffLineTypeToStr(diffType int) string {
 		return "tag"
 	}
 	return "same"
+}
+
+func DiffLinePosToStr(file int, section int, line int) string {
+	return fmt.Sprintf("%vL%v%v", file + 1, section, line)
 }
 
 func Oauth2Icon(t int) string {

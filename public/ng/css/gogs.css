@@ -278,6 +278,9 @@ img.avatar-100 {
   padding-left: 0;
   list-style: none;
 }
+.text-danger {
+  color: #a94442;
+}
 .markdown {
   background-color: white;
   font-size: 16px;
@@ -1449,42 +1452,9 @@ The register and sign-in page style
   cursor: pointer;
   display: block;
 }
-.code-view .lines-code b:hover {
-  width: 22px;
-  height: 22px;
-  line-height: 22px;
-  font-size: 22px;
-  margin: -1px -12px -2px -11px;
-}
-.code-view .lines-code b {
-  position: relative;
-  z-index: 5;
-  float: left;
-  width: 20px;
-  height: 20px;
-  margin: 0px -10px -1px -10px;
-  line-height: 20px;
-  color: #fff;
-  text-align: center;
-  text-indent: 0;
-  cursor: pointer;
-  background-color: #4183c4;
-  background-color: #4183c4;
-  background-image: -webkit-linear-gradient(#5490ca, #4183c4);
-  background-image: linear-gradient(#5490ca, #4183c4);
-  background-repeat: repeat-x;
-  border-radius: 3px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.15);
-  opacity: 0;
-  -webkit-transform: scale(0.8, 0.8);
-  -ms-transform: scale(0.8, 0.8);
-  transform: scale(0.8, 0.8);
-  -webkit-transition: -webkit-transform 0.1s ease-in-out;
-  transition: transform 0.1s ease-in-out;
-  font-size: 20px;
-}
-.code-view .lines-code b.ishovered {
-  opacity:1;
+
+.code-view .comment {
+  background-color: #fafafa;
 }
 .code-view .lines-code > pre {
   border: none;
@@ -1498,6 +1468,85 @@ The register and sign-in page style
 }
 .code-view .lines-code > pre > ol.linenums > li.active {
   background: #ffffdd;
+}
+.code-view .lines-code > b {
+  position: relative;
+  float: left;
+  width: 16px;
+  height: 16px;
+  margin: 2px -8px 0px -8px;
+  line-height: 16px;
+  color: #fff;
+  text-align: center;
+  cursor: pointer;
+  background-color: #428bca;
+  border-radius: 2px;
+  opacity: 0;
+  font-size: 16px;
+}
+.code-view .lines-code > b.ishovered {
+  opacity: 1;
+}
+.code-view .lines-code > b:hover {
+  width: 18px;
+  height: 18px;
+  line-height: 18px;
+  font-size: 20px;
+  margin: 1px -10px 0px -9px;
+}
+.code-view .lines-code .commit-comment {
+  margin: 5px;
+  max-width: 800px;
+}
+.code-view .lines-code .commit-comment .label-default {
+  background-color: #999;
+  font-size: 80%;
+  padding: 5px;
+  line-height: 10px;
+  margin-right: 5px;
+}
+.code-view .lines-code .commit-comment .commit-content {
+  border-bottom-width: 1px;
+}
+.code-view .lines-code .commit-comment .user.pull-left {
+  margin: 5px;
+}
+.code-view .lines-code .commit-comment .user .avatar {
+  width: 26px;
+  height: 26px;
+  margin-right: 3px;
+}
+.code-view .lines-code .commit-comment .panel-heading {
+  padding-top: 4px;
+  padding-bottom: 0px;
+  font-weight: normal;
+  background-color: #FAFAFA;
+  border-bottom: 1px solid #DDD;
+}
+.code-view .lines-code .commit-comment .panel-default .panel-heading {
+  font-weight: bold;
+}
+.code-view .lines-code .commit-comment .markdown {
+  font-size: 14px;
+  padding: 12px 15px;
+}
+.code-view .panel-default {
+  border-color: #d8d8d8;
+}
+.code-view .alert {
+  padding: 8px;
+  margin-bottom: 18px;
+  border-radius: 2px;
+  border: 1px solid transparent;
+  margin: 5px;
+}
+.code-view .alert-warning {
+  background-color: #f9edbe;
+  border-color: #f0c36d;
+  color: #333;
+}
+.code-view #commit-conversation {
+  margin: 10px;
 }
 .repo-setting-zone {
   padding: 30px;
@@ -1664,6 +1713,10 @@ The register and sign-in page style
   background-color: #ffe2dd !important;
   border-color: #e9aeae !important;
 }
+.diff-file-box .code-diff tbody tr.del-code td.selected-line,
+.diff-file-box .code-diff tbody tr.del-code td.selected-line pre {
+  background-color: #ffffdd !important;
+}
 .diff-file-box .code-diff tbody tr.add-code td,
 .diff-file-box .code-diff tbody tr.add-code pre {
   background-color: #d1ffd6 !important;
@@ -1677,6 +1730,10 @@ The register and sign-in page style
 .diff-file-box .code-diff tbody tr:hover pre {
   background-color: #FFF8D2 !important;
   border-color: #F0DB88 !important;
+}
+.diff-file-box .code-diff tbody tr.add-comment:hover td,
+.diff-file-box .code-diff tbody tr.add-comment:hover pre {
+  background-color: #FFFFFF !important;
 }
 .compare-head-box {
   margin-top: 10px;

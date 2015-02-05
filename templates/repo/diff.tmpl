@@ -37,7 +37,7 @@
                     <img class="avatar-30" src="{{AvatarLink .Commit.Author.Email}}" />
                     <strong>{{.Commit.Author.Name}}</strong>
                     {{end}}
-                    <span class="text-grey" id="authored-time">{{TimeSince .Commit.Author.When $.Lang}}</span> 
+                    <span class="text-grey" id="authored-time">{{TimeSince .Commit.Author.When $.Lang}}</span>
                 </p>
             </div>
         </div>
@@ -102,19 +102,57 @@
                 <table>
                     <tbody>
                         {{range $j, $section := $file.Sections}}
-                        {{range $k, $line := $section.Lines}}                        
+                        {{range $k, $line := $section.Lines}}
+                        {{$lineNum := (DiffLinePosToStr $i $j $k)}}
                         <tr class="{{DiffLineTypeToStr .Type}}-code nl-{{$i}} ol-{{$i}}">
                             <td class="lines-num lines-num-old">
-                                <span rel="diff-{{Add $i 1}}L{{$j}}{{$k}}">{{if $line.LeftIdx}}{{$line.LeftIdx}}{{end}}</span>
+                                <span rel="diff-{{$lineNum}}">{{if $line.LeftIdx}}{{$line.LeftIdx}}{{end}}</span>
                             </td>
                             <td class="lines-num lines-num-new">
-                                <span rel="diff-{{Add $i 1}}L{{$j}}{{$k}}">{{if $line.RightIdx}}{{$line.RightIdx}}{{end}}</span>
+                                <span rel="diff-{{$lineNum}}">{{if $line.RightIdx}}{{$line.RightIdx}}{{end}}</span>
                             </td>
                             <td class="lines-code">
-                                <b>+</b>
+                                {{if $.SignedUser}}{{if $k}}<b class="octicon octicon-plus" aria-label="Add line comment"></b>{{end}}{{end}}
                                 <pre>{{$line.Content}}</pre>
                             </td>
                         </tr>
+                        {{if index $.Comments $lineNum}}
+                        <tr class="comment comment-{{$lineNum}}">
+                            <td class="lines-code" colspan="3">
+                                {{range (index $.Comments $lineNum)}}
+                                <a name="comment-{{.Id}}"></a>
+                                <div class="commit-comment clear" id="commit-comment-{{.Id}}">
+                                    <a class="author-avatar" href="{{AppSubUrl}}/{{.Poster.Name}}">
+                                        <img class="avatar-40 radius"
+                                             src="{{.Poster.AvatarLink}}"
+                                             alt=""></a>
+
+                                    <div class="panel panel-radius">
+                                        <p class="panel-header clear"><a class="author-name" href="#">{{.Poster.Name}}</a>
+                                            <span class="date">{{TimeSince .Created $.Lang}}</span>
+                                    <span class="action right">
+                                        {{if $.IsRepositoryOwner}}
+                                        <span class="label label-black label-radius">{{$.i18n.Tr "repo.owner"}}</span>
+                                        {{end}}
+                                        <!--<a href="#"><i class="octicon octicon-pencil"></i></a>-->
+                                        <!--<a href="#"><i class="octicon octicon-x"></i></a>-->
+                                    </span>
+                                        </p>
+
+                                        <div class="panel-content content markdown">
+                                            {{if len .Content}}
+                                            {{Str2html .Content}}
+                                            {{else}}
+                                            <i>No comment entered</i>
+                                            {{end}}
+                                        </div>
+                                    </div>
+                                </div>
+                                {{end}}
+                                <button rel="diff-{{$lineNum}}" class="btn btn-gray btn-radius text-bold answer" value="close">{{$.i18n.Tr "repo.commits.comment.comment_line"}}</button>
+                            </td>
+                        </tr>
+                        {{end}}
                         {{end}}
                         {{end}}
                     </tbody>
@@ -122,7 +160,7 @@
                 {{end}}
             </div>
         </div>
-        <br> 
+        <br>
         {{end}}
         {{end}}
     </div>

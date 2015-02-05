@@ -779,7 +779,7 @@ func Comment(ctx *middleware.Context) {
 				cmtType = models.REOPEN
 			}
 
-			if _, err = models.CreateComment(ctx.User.Id, ctx.Repo.Repository.Id, issue.Id, 0, 0, cmtType, "", nil); err != nil {
+			if _, err = models.CreateComment(ctx.User.Id, ctx.Repo.Repository.Id, issue.Id, "", "", cmtType, "", nil); err != nil {
 				send(200, nil, err)
 				return
 			}
@@ -795,7 +795,7 @@ func Comment(ctx *middleware.Context) {
 	if len(content) > 0 || len(ctx.Req.MultipartForm.File["attachments"]) > 0 {
 		switch ctx.Params(":action") {
 		case "new":
-			if comment, err = models.CreateComment(ctx.User.Id, ctx.Repo.Repository.Id, issue.Id, 0, 0, models.COMMENT, content, nil); err != nil {
+			if comment, err = models.CreateComment(ctx.User.Id, ctx.Repo.Repository.Id, issue.Id, "", "", models.COMMENT, content, nil); err != nil {
 				send(500, nil, err)
 				return
 			}

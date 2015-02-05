@@ -2,6 +2,7 @@ package migrations
 
 import (
 	"errors"
+	"time"
 
 	"github.com/go-xorm/xorm"
 )
@@ -16,7 +17,9 @@ type Version struct {
 
 // This is a sequence of migrations. Add new migrations to the bottom of the list.
 // If you want to "retire" a migration, replace it with "expiredMigration"
-var migrations = []migration{}
+var migrations = []migration{
+	prepareToCommitComments,
+}
 
 // Migrate database to current version
 func Migrate(x *xorm.Engine) error {
@@ -50,4 +53,25 @@ func Migrate(x *xorm.Engine) error {
 
 func expiredMigration(x *xorm.Engine) error {
 	return errors.New("You are migrating from a too old gogs version")
+}
+
+func prepareToCommitComments(x *xorm.Engine) error {
+	type Comment struct {
+		Id       int64
+		Type     int64
+		PosterId int64
+		IssueId  int64
+		CommitId string
+		Line     string
+		Content  string    `xorm:"TEXT"`
+		Created  time.Time `xorm:"CREATED"`
+	}
+	x.Sync(new(Comment))
+
+	sql := `UPDATE comment SET commit_id = '', line = '' WHERE commit_id = '0' AND line = '0'`
+	_, err := x.Exec(sql)
+	if err != nil {
+		return err
+	}
+	return nil
 }

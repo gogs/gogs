@@ -6,20 +6,27 @@ package repo
 
 import (
 	"container/list"
+	"errors"
+	"fmt"
 	"path"
+	"regexp"
+	"strings"
 
 	"github.com/Unknwon/com"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/git"
+	"github.com/gogits/gogs/modules/log"
+	"github.com/gogits/gogs/modules/mailer"
 	"github.com/gogits/gogs/modules/middleware"
 	"github.com/gogits/gogs/modules/setting"
 )
 
 const (
-	COMMITS base.TplName = "repo/commits"
-	DIFF    base.TplName = "repo/diff"
+	COMMITS      base.TplName = "repo/commits"
+	DIFF         base.TplName = "repo/diff"
+	COMMENT_FORM base.TplName = "repo/comment_form"
 )
 
 func RefCommits(ctx *middleware.Context) {
@@ -243,6 +250,33 @@ func Diff(ctx *middleware.Context) {
 		}
 	}
 
+	// Get comments.
+	comments, err := models.GetCommitComments(commitId)
+	if err != nil {
+		ctx.Handle(500, "commit.GetDiffCommit(GetCommitComments): %v", err)
+		return
+	}
+
+	// Get posters.
+	commentsMap := make(map[string]map[int]models.Comment)
+	for i := range comments {
+		u, err := models.GetUserById(comments[i].PosterId)
+		if err != nil {
+			ctx.Handle(500, "issue.ViewIssue(GetUserById.2): %v", err)
+			return
+		}
+		comments[i].Poster = u
+
+		if comments[i].Type == models.COMMENT {
+			comments[i].Content = string(base.RenderMarkdown([]byte(comments[i].Content), ctx.Repo.RepoLink))
+		}
+
+		if _, ok := commentsMap[comments[i].Line]; !ok {
+			commentsMap[comments[i].Line] = make(map[int]models.Comment)
+		}
+		commentsMap[comments[i].Line][i] = comments[i]
+	}
+
 	ctx.Data["Username"] = userName
 	ctx.Data["Reponame"] = repoName
 	ctx.Data["IsImageFile"] = isImageFile
@@ -251,6 +285,7 @@ func Diff(ctx *middleware.Context) {
 	ctx.Data["Author"] = models.ValidateCommitWithEmail(commit)
 	ctx.Data["Diff"] = diff
 	ctx.Data["Parents"] = parents
+	ctx.Data["Comments"] = commentsMap
 	ctx.Data["DiffNotAvailable"] = diff.NumFiles() == 0
 	ctx.Data["SourcePath"] = setting.AppSubUrl + "/" + path.Join(userName, repoName, "src", commitId)
 	ctx.Data["RawPath"] = setting.AppSubUrl + "/" + path.Join(userName, repoName, "raw", commitId)
@@ -318,4 +353,104 @@ func CompareDiff(ctx *middleware.Context) {
 	ctx.Data["SourcePath"] = setting.AppSubUrl + "/" + path.Join(userName, repoName, "src", afterCommitId)
 	ctx.Data["RawPath"] = setting.AppSubUrl + "/" + path.Join(userName, repoName, "raw", afterCommitId)
 	ctx.HTML(200, DIFF)
+}
+
+func GetCommentForm(ctx *middleware.Context) {
+	ctx.Data["Repo"] = ctx.Repo
+	ctx.Data["Line"] = ctx.Query("line")
+	ctx.HTML(200, COMMENT_FORM)
+}
+
+func CreateCommitComment(ctx *middleware.Context) {
+
+	send := func(status int, data interface{}, err error) {
+		if err != nil {
+			log.Error(4, "commit.Comment(?): %s", err)
+
+			ctx.JSON(status, map[string]interface{}{
+				"ok":     false,
+				"status": status,
+				"error":  err.Error(),
+			})
+		} else {
+			ctx.JSON(status, map[string]interface{}{
+				"ok":     true,
+				"status": status,
+				"data":   data,
+			})
+		}
+	}
+	var comment *models.Comment
+
+	commitId := ctx.ParamsEscape(":commitId")
+	content := ctx.Query("content")
+	line := ctx.Query("line")
+	lineRe, err := regexp.Compile("[0-9]+L[0-9]+")
+	fmt.Println(ctx.Locale.Tr("repo.commits.comment.required_field"))
+	if len(content) > 0 && lineRe.MatchString(line) {
+		switch ctx.Params(":action") {
+		case "new":
+			if comment, err = models.CreateComment(ctx.User.Id, ctx.Repo.Repository.Id, 0, commitId, line, models.COMMENT, content, nil); err != nil {
+				send(500, nil, err)
+				return
+			}
+			log.Trace("%s Comment created: %s", ctx.Req.RequestURI, commitId)
+		default:
+			ctx.Handle(404, "commit.Comment", err)
+			return
+		}
+	} else {
+		err := errors.New(ctx.Locale.Tr("repo.commits.comment.required_field"))
+		send(200, err.Error(), err)
+		return
+	}
+	// Update mentions.
+	ms := base.MentionPattern.FindAllString(comment.Content, -1)
+	if len(ms) > 0 {
+		for i := range ms {
+			ms[i] = ms[i][1:]
+		}
+	}
+	// Notify watchers.
+	act := &models.Action{
+		ActUserId:    ctx.User.Id,
+		ActUserName:  ctx.User.LowerName,
+		ActEmail:     ctx.User.Email,
+		OpType:       models.COMMENT_COMMIT,
+		Content:      fmt.Sprintf("%s|%s", commitId, strings.Split(content, "\n")[0]),
+		RepoId:       ctx.Repo.Repository.Id,
+		RepoUserName: ctx.Repo.Owner.LowerName,
+		RepoName:     ctx.Repo.Repository.LowerName,
+	}
+	if err = models.NotifyWatchers(act); err != nil {
+		send(500, nil, err)
+		return
+	}
+
+	// Mail watchers and mentions.
+	if setting.Service.EnableNotifyMail {
+		comment.Content = content
+		tos, err := mailer.SendCommentNotifyMail(ctx.User, ctx.Repo.Owner, ctx.Repo.Repository, comment)
+		if err != nil {
+			send(500, nil, err)
+			return
+		}
+
+		tos = append(tos, ctx.User.LowerName)
+		newTos := make([]string, 0, len(ms))
+		for _, m := range ms {
+			if com.IsSliceContainsStr(tos, m) {
+				continue
+			}
+
+			newTos = append(newTos, m)
+		}
+		if err = mailer.SendCommentMentionMail(ctx.Render, ctx.User, ctx.Repo.Owner,
+			ctx.Repo.Repository, comment, models.GetUserEmailsByNames(newTos)); err != nil {
+			send(500, nil, err)
+			return
+		}
+	}
+
+	send(200, fmt.Sprintf("%s/commit/%s#comment-%d", ctx.Repo.RepoLink, commitId, comment.Id), nil)
 }

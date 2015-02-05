@@ -238,6 +238,11 @@ var Gogs = {};
             $.changeHash('#' + $select.attr('rel'));
         }
 
+        function prepareToForm() {
+            $('.add-comment').hide('fast', function(){ $(this).remove(); });
+            $('button.answer').show();
+        }
+
         $(document).on('click', '.code-diff .lines-num span', function (e) {
             var $select = $(this);
             var $list = $select.parent().siblings('.lines-code').parents().find('td.lines-num > span');
@@ -247,6 +252,57 @@ var Gogs = {};
                 (e.shiftKey && $list.filter('.active').length ? $list.filter('.active').eq(0) : null)
             );
             $.deSelect();
+        });
+
+        $('.code-diff .lines-code > b, .code-diff .lines-code > button.answer').click(function () {
+            prepareToForm();
+            var commit = document.location.href.match(/([a-zA-Z0-9:\/\/]+)\/commit\/([a-z0-9]+)/);
+            var lineNum;
+            if ($(this).prop("tagName") == "BUTTON") {                
+                lineNum = $(this).attr('rel');                                
+            } else {
+                lineNum = $(this).parent().prev().find('span').attr('rel');
+            }
+            $('button[rel='+lineNum+']').fadeOut();
+            lineNum = lineNum.substr(5);
+            var commentTr = $(".comment-"+lineNum);
+            if (commit) {
+                var elem = (commentTr.length > 0) ? commentTr : $(this).parents('tr');
+                var url = commit[1] + '/commit/comment/' + commit[2];
+                elem.after(
+                    $('<tr class="add-comment">').load(url + '?line=' + lineNum, function () {
+                        $('.menu-line.add-nav').tabs();
+                        $('#pull-commit-preview').markdown_preview(".commit-add-comment");
+                        $('body').animate({
+                            scrollTop: $(this).offset().top - 33 // height of button
+                        }, 1000);
+                    })
+                );
+            }
+        });
+
+        $('.code-diff').on('click', '#cancel-commit-conversation', function () {
+            prepareToForm();
+            return false;
+        });
+
+        $('.code-diff').on('submit', '#commit-add-comment-form', function () {
+            var url = $(this).attr('action');
+            $.ajax({
+                url: url,
+                data: $(this).serialize(),
+                dataType: "json",
+                method: "post",
+                success: function (json) {
+                    if (json.ok && json.data.length) {
+                        window.location.href = json.data;
+                        location.reload();
+                    } else {
+                        $('#submit-error').html(json.error);
+                    }
+                }
+            });
+            return false;
         });
 
         $('.code-diff .lines-code > pre').each(function () {
@@ -261,10 +317,16 @@ var Gogs = {};
             }
         });
 
-        $('.code-diff .lines-code > pre').hover(function () {
-            var $b = $(this).prev();
+        $('.code-diff .add-code .lines-code > pre, \
+            .code-diff .del-code .lines-code > pre, \
+            .code-diff .add-code .lines-code > b, \
+            .code-diff .del-code .lines-code > b, \
+            .code-diff .add-code .lines-num, \
+            .code-diff .del-code .lines-num').hover(function () {
+            var $b = $(this).parents('tr').find('b');
             $b.addClass('ishovered');
         });
+
         $('.code-diff tr').mouseleave(function () {
             $('.code-diff .lines-code > b').removeClass('ishovered');
         });
@@ -284,6 +346,14 @@ var Gogs = {};
                 $first = $list.filter('[rel=diff-' + m[1] + m[2] + ']');
                 selectRange($list, $first);
                 $("html, body").scrollTop($first.offset().top - 200);
+                return;
+            }            
+            m = window.location.hash.match(/^#comment-(\d+)$/);
+            if (m) {
+                $("html, body").animate({
+                    scrollTop: $('a[name=comment-'+m[1]+']').offset().top
+                }, 1000);
+                return;
             }
         }).trigger('hashchange');
     };

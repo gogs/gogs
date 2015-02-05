@@ -1,0 +1,34 @@
+<td colspan="3">
+{{if .SignedUser}}
+    <div id="commit-conversation" class="js-tab-show clear commit-comment">
+        <div id="commit-conversation-list" class="left grid-5-6">
+            <div class="commit-add-comment clear">
+                <img class="avatar-40 radius" src="{{.SignedUser.AvatarLink}}" alt=""/>
+                <div class="panel panel-radius">
+                    <div class="panel-header">
+                        <ul class="menu menu-line add-nav">
+                            <li class="js-tab-nav js-tab-nav-show" data-tab-target="#commit-add-comment-form"><a href="#">{{$.i18n.Tr "repo.release.write"}}</a></li>
+                            <li class="js-tab-nav" data-tab-target="#commit-add-comment-preview"><a href="#" id="pull-commit-preview">{{$.i18n.Tr "repo.release.preview"}}</a></li>
+                        </ul>
+                    </div>
+                    <div class="panel-content content">
+                        <div id="submit-error" class="text-danger"></div>
+                        <form id="commit-add-comment-form" action="{{AppSubUrl}}/{{.Repo.Owner.Name}}/{{.Repo.Repository.Name}}/commit/comment/new/{{.Repo.CommitId}}" method="post">
+                            {{.CsrfTokenHtml}}
+                            <input type="hidden" name="line" value="{{.Line}}" >
+                            <textarea class="ipt ipt-radius js-preview-input" name="content" id="commit-add-content"></textarea>
+                            <p class="submit text-right">
+                                <button class="btn btn-gray btn-radius text-bold" id="cancel-commit-conversation" name="submit" value="close">{{$.i18n.Tr "cancel"}}</button>&nbsp;&nbsp;
+                                <button class="btn btn-green btn-radius text-bold" name="submit" value="comment">{{$.i18n.Tr "repo.commits.comment.add"}}</button>
+                            </p>
+                        </form>
+                        <div id="commit-add-comment-preview" class="js-preview-container markdown">
+                            preview
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{{else}}<div class="alert alert-warning"><a class="btn btn-success btn-lg" href="{{AppSubUrl}}/user/sign_up">Sign up for free</a> to join this conversation. Already have an account? <a href="{{AppSubUrl}}/user/login">Sign in to comment</a></div>{{end}}
+</td>
