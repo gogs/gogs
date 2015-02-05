@@ -477,6 +477,7 @@ func UpdateUser(u *User) error {
 	}
 	u.Avatar = avatar.HashEmail(u.AvatarEmail)
 
+	u.FullName = base.Sanitizer.Sanitize(u.FullName)
 	_, err = x.Id(u.Id).AllCols().Update(u)
 	return err
 }
