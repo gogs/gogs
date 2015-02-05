@@ -206,10 +206,18 @@ var Gogs = {};
     Gogs.renderDiffView = function () {
         function selectRange($list, $select, $from) {
             $list.removeClass('active');
+            $list.parents('tr').removeClass('end-selected-line');
             $list.parents('tr').find('td').removeClass('selected-line');
             if ($from) {
-                var a = parseInt($select.attr('rel').substr(1));
-                var b = parseInt($from.attr('rel').substr(1));
+                var expr = new RegExp(/diff-(\d+)L(\d+)/);
+                var selectMatches = $select.attr('rel').match(expr)
+                var fromMatches = $from.attr('rel').match(expr)
+                var a = parseInt(selectMatches[2]);
+                var b = parseInt(fromMatches[2]);
+                var linesIntToStr = {};
+                linesIntToStr[a] = selectMatches[2];
+                linesIntToStr[b] = fromMatches[2];
+
                 var c;
                 if (a != b) {
                     if (a > b) {
@@ -217,13 +225,11 @@ var Gogs = {};
                         a = b;
                         b = c;
                     }
-                    var classes = [];
-                    for (i = a; i <= b; i++) {
-                        classes.push('[rel=L' + i + ']');
-                    }
-                    $list.filter(classes.join(',')).addClass('active');
-                    $list.filter(classes.join(',')).parents('tr').find('td').addClass('selected-line');
-                    $.changeHash('#L' + a + '-' + 'L' + b);
+                    $('[rel=diff-'+fromMatches[1]+'L' + linesIntToStr[b] + ']').parents('tr').next().addClass('end-selected-line');
+                    var $selectedLines = $('[rel=diff-'+fromMatches[1]+'L' + linesIntToStr[a] + ']').parents('tr').nextUntil('.end-selected-line').andSelf();
+                    $selectedLines.find('td.lines-num > span').addClass('active')
+                    $selectedLines.find('td').addClass('selected-line');
+                    $.changeHash('#diff-'+fromMatches[1]+'L' + linesIntToStr[a] + '-L' + linesIntToStr[b]);
                     return
                 }
             }
@@ -256,18 +262,18 @@ var Gogs = {};
         });
 
         $(window).on('hashchange', function (e) {
-            var m = window.location.hash.match(/^#(L\d+)\-(L\d+)$/);
+            var m = window.location.hash.match(/^#diff-(\d+)(L\d+)\-(L\d+)$/);
             var $list = $('.code-diff td.lines-num > span');
             var $first;
             if (m) {
-                $first = $list.filter('[rel=' + m[1] + ']');
-                selectRange($list, $first, $list.filter('[rel=' + m[2] + ']'));
+                $first = $list.filter('[rel=diff-' + m[1] + m[2] + ']');
+                selectRange($list, $first, $list.filter('[rel=diff-' + m[1] + m[3] + ']'));
                 $("html, body").scrollTop($first.offset().top - 200);
                 return;
             }
-            m = window.location.hash.match(/^#(L\d+)$/);
+            m = window.location.hash.match(/^#diff-(\d+)(L\d+)$/);
             if (m) {
-                $first = $list.filter('[rel=' + m[1] + ']');
+                $first = $list.filter('[rel=diff-' + m[1] + m[2] + ']');
                 selectRange($list, $first);
                 $("html, body").scrollTop($first.offset().top - 200);
             }
