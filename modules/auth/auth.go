@@ -9,6 +9,7 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/Unknwon/com"
 	"github.com/Unknwon/macaron"
 	"github.com/macaron-contrib/binding"
 	"github.com/macaron-contrib/session"
@@ -135,6 +136,10 @@ type Form interface {
 	binding.Validator
 }
 
+func init() {
+	binding.SetNameMapper(com.ToSnakeCase)
+}
+
 // AssignForm assign form values back to the template data.
 func AssignForm(form interface{}, data map[string]interface{}) {
 	typ := reflect.TypeOf(form)
@@ -152,6 +157,8 @@ func AssignForm(form interface{}, data map[string]interface{}) {
 		// Allow ignored fields in the struct
 		if fieldName == "-" {
 			continue
+		} else if len(fieldName) == 0 {
+			fieldName = com.ToSnakeCase(field.Name)
 		}
 
 		data[fieldName] = val.Field(i).Interface()

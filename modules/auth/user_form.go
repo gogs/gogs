@@ -12,26 +12,27 @@ import (
 )
 
 type InstallForm struct {
-	Database        string `form:"database" binding:"Required"`
-	DbHost          string `form:"host"`
-	DbUser          string `form:"user"`
-	DbPasswd        string `form:"passwd"`
-	DatabaseName    string `form:"database_name"`
-	SslMode         string `form:"ssl_mode"`
-	DatabasePath    string `form:"database_path"`
-	RepoRootPath    string `form:"repo_path" binding:"Required"`
-	RunUser         string `form:"run_user" binding:"Required"`
-	Domain          string `form:"domain" binding:"Required"`
-	AppUrl          string `form:"app_url" binding:"Required"`
-	SmtpHost        string `form:"smtp_host"`
-	SmtpEmail       string `form:"mailer_user"`
-	SmtpPasswd      string `form:"mailer_pwd"`
-	RegisterConfirm string `form:"register_confirm"`
-	MailNotify      string `form:"mail_notify"`
-	AdminName       string `form:"admin_name" binding:"Required;AlphaDashDot;MaxSize(30)"`
-	AdminPasswd     string `form:"admin_pwd" binding:"Required;MinSize(6);MaxSize(255)"`
-	ConfirmPasswd   string `form:"confirm_passwd" binding:"Required;MinSize(6);MaxSize(255)"`
-	AdminEmail      string `form:"admin_email" binding:"Required;Email;MaxSize(50)"`
+	DbType             string `binding:"Required"`
+	DbHost             string
+	DbUser             string
+	DbPasswd           string
+	DbName             string
+	SSLMode            string
+	DbPath             string
+	RepoRootPath       string `binding:"Required"`
+	RunUser            string `binding:"Required"`
+	Domain             string `binding:"Required"`
+	HTTPPort           string `binding:"Required"`
+	AppUrl             string `binding:"Required"`
+	SMTPHost           string
+	SMTPEmail          string
+	SMTPPasswd         string
+	RegisterConfirm    string
+	MailNotify         string
+	AdminName          string `binding:"Required;AlphaDashDot;MaxSize(30)"`
+	AdminPasswd        string `binding:"Required;MinSize(6);MaxSize(255)"`
+	AdminConfirmPasswd string `binding:"Required;MinSize(6);MaxSize(255)"`
+	AdminEmail         string `binding:"Required;Email;MaxSize(50)"`
 }
 
 func (f *InstallForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
