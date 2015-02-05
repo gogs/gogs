@@ -13,7 +13,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/microcosm-cc/bluemonday"
 	"golang.org/x/net/html/charset"
 	"golang.org/x/text/transform"
 
@@ -21,11 +20,8 @@ import (
 	"github.com/gogits/gogs/modules/setting"
 )
 
-// FIXME: use me to Markdown API renders
-var p = bluemonday.UGCPolicy()
-
 func Str2html(raw string) template.HTML {
-	return template.HTML(p.Sanitize(raw))
+	return template.HTML(Sanitizer.Sanitize(raw))
 }
 
 func Range(l int) []int {
@@ -88,6 +84,11 @@ func ToUtf8WithErr(content []byte) (error, string) {
 func ToUtf8(content string) string {
 	_, res := ToUtf8WithErr([]byte(content))
 	return res
+}
+
+// RenderCommitMessage renders commit message with XSS-safe and special links.
+func RenderCommitMessage(msg, urlPrefix string) template.HTML {
+	return template.HTML(string(RenderIssueIndexPattern([]byte(template.HTMLEscapeString(msg)), urlPrefix)))
 }
 
 var mailDomains = map[string]string{
@@ -163,6 +164,7 @@ var TemplateFuncs template.FuncMap = map[string]interface{}{
 	"EscapePound": func(str string) string {
 		return strings.Replace(str, "#", "%23", -1)
 	},
+	"RenderCommitMessage": RenderCommitMessage,
 }
 
 type Actioner interface {

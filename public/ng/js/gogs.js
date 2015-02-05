@@ -202,6 +202,78 @@ var Gogs = {};
         }).trigger('hashchange');
     };
 
+    // Render diff view.
+    Gogs.renderDiffView = function () {
+        function selectRange($list, $select, $from) {
+            $list.removeClass('active');
+            $list.parents('tr').find('td').removeClass('selected-line');
+            if ($from) {
+                var a = parseInt($select.attr('rel').substr(1));
+                var b = parseInt($from.attr('rel').substr(1));
+                var c;
+                if (a != b) {
+                    if (a > b) {
+                        c = a;
+                        a = b;
+                        b = c;
+                    }
+                    var classes = [];
+                    for (i = a; i <= b; i++) {
+                        classes.push('[rel=L' + i + ']');
+                    }
+                    $list.filter(classes.join(',')).addClass('active');
+                    $list.filter(classes.join(',')).parents('tr').find('td').addClass('selected-line');
+                    $.changeHash('#L' + a + '-' + 'L' + b);
+                    return
+                }
+            }
+            $select.addClass('active');
+            $select.parents('tr').find('td').addClass('selected-line');
+            $.changeHash('#' + $select.attr('rel'));
+        }
+
+        $(document).on('click', '.code-diff .lines-num span', function (e) {
+            var $select = $(this);
+            var $list = $select.parent().siblings('.lines-code').parents().find('td.lines-num > span');
+            selectRange(
+                $list,
+                $list.filter('[rel=' + $select.attr('rel') + ']'),
+                (e.shiftKey && $list.filter('.active').length ? $list.filter('.active').eq(0) : null)
+            );
+            $.deSelect();
+        });
+
+        $('.code-diff .lines-code > pre').each(function () {
+            var $pre = $(this);
+            var $lineCode = $pre.parent();
+            var $lineNums = $lineCode.siblings('.lines-num');
+            if ($lineNums.length > 0) {
+                var nums = $pre.find('ol.linenums > li').length;
+                for (var i = 1; i <= nums; i++) {
+                    $lineNums.append('<span id="L' + i + '" rel="L' + i + '">' + i + '</span>');
+                }
+            }
+        });
+
+        $(window).on('hashchange', function (e) {
+            var m = window.location.hash.match(/^#(L\d+)\-(L\d+)$/);
+            var $list = $('.code-diff td.lines-num > span');
+            var $first;
+            if (m) {
+                $first = $list.filter('[rel=' + m[1] + ']');
+                selectRange($list, $first, $list.filter('[rel=' + m[2] + ']'));
+                $("html, body").scrollTop($first.offset().top - 200);
+                return;
+            }
+            m = window.location.hash.match(/^#(L\d+)$/);
+            if (m) {
+                $first = $list.filter('[rel=' + m[1] + ']');
+                selectRange($list, $first);
+                $("html, body").scrollTop($first.offset().top - 200);
+            }
+        }).trigger('hashchange');
+    };
+
     // Search users by keyword.
     Gogs.searchUsers = function (val, $target) {
         var notEmpty = function (str) {
@@ -287,7 +359,12 @@ var Gogs = {};
 
 function initCore() {
     Gogs.renderMarkdown();
-    Gogs.renderCodeView();
+
+    if ($('.code-diff').length == 0) {
+        Gogs.renderCodeView();
+    } else {
+        Gogs.renderDiffView();
+    }
 
     // Switch list.
     $('.js-tab-nav').click(function (e) {
@@ -508,7 +585,7 @@ function initRepoSetting() {
             $ul.toggleShow();
         }
     }).next().next().find('ul').on("click", 'li', function () {
-        $('#repo-collaborator').val($(this).text());
+        $('#repo-collaborator').val($(this).find('.username').text());
         $ul.toggleHide();
     });
 }
@@ -608,7 +685,7 @@ function initTeamMembersList() {
             $ul.toggleShow();
         }
     }).next().next().find('ul').on("click", 'li', function () {
-        $('#org-team-members-add').val($(this).text());
+        $('#org-team-members-add').val($(this).find('.username').text());
         $ul.toggleHide();
     });
 }

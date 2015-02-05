@@ -164,7 +164,7 @@ func runFixLocation(ctx *cli.Context) {
 	fmt.Scanln()
 
 	// Fix in authorized_keys file.
-	sshPath := path.Join(models.SshPath, "authorized_keys")
+	sshPath := path.Join(models.SSHPath, "authorized_keys")
 	if com.IsFile(sshPath) {
 		fmt.Printf("Fixing pathes in file: %s\n", sshPath)
 		if err := rewriteAuthorizedKeys(sshPath, oldPath, execPath); err != nil {

@@ -1052,22 +1052,6 @@ function initRepoSetting() {
             return;
         }
         Gogits.getUsers($this.val(), $this.next());
-        /*$.ajax({
-         url: '/api/v1/users/search?q=' + $this.val(),
-         dataType: "json",
-         success: function (json) {
-         if (json.ok && json.data.length) {
-         var html = '';
-         $.each(json.data, function (i, item) {
-         html += '<li><img src="' + item.avatar + '">' + item.username + '</li>';
-         });
-         $this.next().toggleShow();
-         $this.next().find('ul').html(html);
-         } else {
-         $this.next().toggleHide();
-         }
-         }
-         });*/
     }).on('focus', function () {
         if (!$(this).val()) {
             $(this).next().toggleHide();

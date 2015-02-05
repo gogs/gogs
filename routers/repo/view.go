@@ -156,9 +156,9 @@ func Home(ctx *middleware.Context) {
 		for _, f := range files {
 			switch c := f[1].(type) {
 			case *git.Commit:
-				c.CommitMessage = string(base.RenderIssueIndexPattern([]byte(c.CommitMessage), ctx.Repo.RepoLink))
+				c.CommitMessage = c.CommitMessage
 			case *git.SubModuleFile:
-				c.CommitMessage = string(base.RenderIssueIndexPattern([]byte(c.CommitMessage), ctx.Repo.RepoLink))
+				c.CommitMessage = c.CommitMessage
 			}
 		}
 		ctx.Data["Files"] = files
