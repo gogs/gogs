@@ -1630,6 +1630,10 @@ The register and sign-in page style
   background-color: #d1ffd6 !important;
   border-color: #b4e2b4 !important;
 }
+.diff-file-box .code-diff tbody tr.add-code td.selected-line,
+.diff-file-box .code-diff tbody tr.add-code td.selected-line pre {
+  background-color: #ffffdd !important;
+}
 .diff-file-box .code-diff tbody tr:hover td,
 .diff-file-box .code-diff tbody tr:hover pre {
   background-color: #FFF8D2 !important;
