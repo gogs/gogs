@@ -137,18 +137,18 @@ func Http(ctx *middleware.Context) {
 		}
 
 		if !isPublicPull {
-			var tp = models.WRITABLE
+			var tp = models.WriteAccess
 			if isPull {
-				tp = models.READABLE
+				tp = models.ReadAccess
 			}
 
-			has, err := models.HasAccess(authUsername, username+"/"+reponame, tp)
+			has, err := models.HasAccess(authUser, repo, tp)
 			if err != nil {
 				ctx.Handle(401, "no basic auth and digit auth", nil)
 				return
 			} else if !has {
-				if tp == models.READABLE {
-					has, err = models.HasAccess(authUsername, username+"/"+reponame, models.WRITABLE)
+				if tp == models.ReadAccess {
+					has, err = models.HasAccess(authUser, repo, models.WriteAccess)
 					if err != nil || !has {
 						ctx.Handle(401, "no basic auth and digit auth", nil)
 						return

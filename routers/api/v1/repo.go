@@ -255,7 +255,7 @@ func ListMyRepos(ctx *middleware.Context) {
 			return
 		}
 
-		repos[i] = ToApiRepository(repo.Owner, repo, api.Permission{false, access >= models.WRITABLE, true})
+		repos[i] = ToApiRepository(repo.Owner, repo, api.Permission{false, access >= models.WriteAccess, true})
 
 		// FIXME: cache result to reduce DB query?
 		if repo.Owner.IsOrganization() && repo.Owner.IsOwnedBy(ctx.User.Id) {
