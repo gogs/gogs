@@ -21,6 +21,7 @@ type Version struct {
 // If you want to "retire" a migration, replace it with "expiredMigration"
 var migrations = []migration{
 	accessToCollaboration,
+	accessRefactor,
 }
 
 // Migrate database to current version
@@ -156,5 +157,10 @@ func accessToCollaboration(x *xorm.Engine) error {
 			return err
 		}
 	}
+	return nil
+}
+
+func accessRefactor(x *xorm.Engine) error {
+	//TODO
 	return nil
 }
