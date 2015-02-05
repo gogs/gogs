@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -67,19 +66,19 @@ func parseCmd(cmd string) (string, string) {
 }
 
 var (
-	COMMANDS_READONLY = map[string]models.AccessType{
-		"git-upload-pack":    models.WRITABLE,
-		"git upload-pack":    models.WRITABLE,
-		"git-upload-archive": models.WRITABLE,
+	COMMANDS_READONLY = map[string]models.AccessMode{
+		"git-upload-pack":    models.WriteAccess,
+		"git upload-pack":    models.WriteAccess,
+		"git-upload-archive": models.WriteAccess,
 	}
 
-	COMMANDS_WRITE = map[string]models.AccessType{
-		"git-receive-pack": models.READABLE,
-		"git receive-pack": models.READABLE,
+	COMMANDS_WRITE = map[string]models.AccessMode{
+		"git-receive-pack": models.ReadAccess,
+		"git receive-pack": models.ReadAccess,
 	}
 )
 
-func In(b string, sl map[string]models.AccessType) bool {
+func In(b string, sl map[string]models.AccessMode) bool {
 	_, e := sl[b]
 	return e
 }
@@ -144,9 +143,19 @@ func runServ(k *cli.Context) {
 	}
 
 	// Access check.
+	repo, err := models.GetRepositoryByName(repoUser.Id, repoName)
+	if err != nil {
+		if err == models.ErrRepoNotExist {
+			println("Gogs: given repository does not exist")
+			log.GitLogger.Fatal(2, "Repository does not exist: %s/%s", repoUser.Name, repoName)
+		}
+		println("Gogs: internal error:", err.Error())
+		log.GitLogger.Fatal(2, "Fail to get repository: %v", err)
+	}
+
 	switch {
 	case isWrite:
-		has, err := models.HasAccess(user.Name, path.Join(repoUserName, repoName), models.WRITABLE)
+		has, err := models.HasAccess(user, repo, models.WriteAccess)
 		if err != nil {
 			println("Gogs: internal error:", err.Error())
 			log.GitLogger.Fatal(2, "Fail to check write access:", err)
@@ -155,21 +164,11 @@ func runServ(k *cli.Context) {
 			log.GitLogger.Fatal(2, "User %s has no right to write repository %s", user.Name, repoPath)
 		}
 	case isRead:
-		repo, err := models.GetRepositoryByName(repoUser.Id, repoName)
-		if err != nil {
-			if err == models.ErrRepoNotExist {
-				println("Gogs: given repository does not exist")
-				log.GitLogger.Fatal(2, "Repository does not exist: %s/%s", repoUser.Name, repoName)
-			}
-			println("Gogs: internal error:", err.Error())
-			log.GitLogger.Fatal(2, "Fail to get repository: %v", err)
-		}
-
 		if !repo.IsPrivate {
 			break
 		}
 
-		has, err := models.HasAccess(user.Name, path.Join(repoUserName, repoName), models.READABLE)
+		has, err := models.HasAccess(user, repo, models.ReadAccess)
 		if err != nil {
 			println("Gogs: internal error:", err.Error())
 			log.GitLogger.Fatal(2, "Fail to check read access:", err)
