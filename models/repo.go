@@ -206,14 +206,6 @@ func (repo *Repository) IsOwnedBy(u *User) bool {
 	return repo.OwnerId == u.Id
 }
 
-func (repo *Repository) HasAccess(uname string) bool {
-	if err := repo.GetOwner(); err != nil {
-		return false
-	}
-	has, _ := HasAccess(uname, path.Join(repo.Owner.Name, repo.Name), READABLE)
-	return has
-}
-
 // DescriptionHtml does special handles to description and return HTML string.
 func (repo *Repository) DescriptionHtml() template.HTML {
 	sanitize := func(s string) string {
@@ -553,36 +545,11 @@ func CreateRepository(u *User, name, desc, lang, license string, private, mirror
 
 	var t *Team // Owner team.
 
-	mode := WRITABLE
-	if mirror {
-		mode = READABLE
-	}
-	access := &Access{
-		UserName: u.LowerName,
-		RepoName: path.Join(u.LowerName, repo.LowerName),
-		Mode:     mode,
-	}
+	// TODO fix code for mirrors?
+
 	// Give access to all members in owner team.
 	if u.IsOrganization() {
-		t, err = u.GetOwnerTeam()
-		if err != nil {
-			sess.Rollback()
-			return nil, err
-		}
-		if err = t.GetMembers(); err != nil {
-			sess.Rollback()
-			return nil, err
-		}
-		for _, u := range t.Members {
-			access.Id = 0
-			access.UserName = u.LowerName
-			if _, err = sess.Insert(access); err != nil {
-				sess.Rollback()
-				return nil, err
-			}
-		}
-	} else {
-		if _, err = sess.Insert(access); err != nil {
+		if err = repo.RecalcAccessSess(); err != nil {
 			sess.Rollback()
 			return nil, err
 		}
@@ -712,37 +679,10 @@ func TransferOwnership(u *User, newOwner string, repo *Repository) error {
 	}
 
 	owner := repo.Owner
-	oldRepoLink := path.Join(owner.LowerName, repo.LowerName)
-	// Delete all access first if current owner is an organization.
-	if owner.IsOrganization() {
-		if _, err = sess.Where("repo_name=?", oldRepoLink).Delete(new(Access)); err != nil {
-			sess.Rollback()
-			return fmt.Errorf("fail to delete current accesses: %v", err)
-		}
-	} else {
-		// Delete current owner access.
-		if _, err = sess.Where("repo_name=?", oldRepoLink).And("user_name=?", owner.LowerName).
-			Delete(new(Access)); err != nil {
-			sess.Rollback()
-			return fmt.Errorf("fail to delete access(owner): %v", err)
-		}
-		// In case new owner has access.
-		if _, err = sess.Where("repo_name=?", oldRepoLink).And("user_name=?", newUser.LowerName).
-			Delete(new(Access)); err != nil {
-			sess.Rollback()
-			return fmt.Errorf("fail to delete access(new user): %v", err)
-		}
-	}
-
-	// Change accesses to new repository path.
-	if _, err = sess.Where("repo_name=?", oldRepoLink).
-		Update(&Access{RepoName: path.Join(newUser.LowerName, repo.LowerName)}); err != nil {
-		sess.Rollback()
-		return fmt.Errorf("fail to update access(change reponame): %v", err)
-	}
 
 	// Update repository.
 	repo.OwnerId = newUser.Id
+	repo.Owner = newUser
 	if _, err := sess.Id(repo.Id).Update(repo); err != nil {
 		sess.Rollback()
 		return err
@@ -759,53 +699,8 @@ func TransferOwnership(u *User, newOwner string, repo *Repository) error {
 		return err
 	}
 
-	mode := WRITABLE
-	if repo.IsMirror {
-		mode = READABLE
-	}
-	// New owner is organization.
-	if newUser.IsOrganization() {
-		access := &Access{
-			RepoName: path.Join(newUser.LowerName, repo.LowerName),
-			Mode:     mode,
-		}
-
-		// Give access to all members in owner team.
-		t, err := newUser.GetOwnerTeam()
-		if err != nil {
-			sess.Rollback()
-			return err
-		}
-		if err = t.GetMembers(); err != nil {
-			sess.Rollback()
-			return err
-		}
-		for _, u := range t.Members {
-			access.Id = 0
-			access.UserName = u.LowerName
-			if _, err = sess.Insert(access); err != nil {
-				sess.Rollback()
-				return err
-			}
-		}
-
-		// Update owner team info and count.
-		t.RepoIds += "$" + com.ToStr(repo.Id) + "|"
-		t.NumRepos++
-		if _, err = sess.Id(t.Id).AllCols().Update(t); err != nil {
-			sess.Rollback()
-			return err
-		}
-	} else {
-		access := &Access{
-			RepoName: path.Join(newUser.LowerName, repo.LowerName),
-			UserName: newUser.LowerName,
-			Mode:     mode,
-		}
-		if _, err = sess.Insert(access); err != nil {
-			sess.Rollback()
-			return fmt.Errorf("fail to insert access: %v", err)
-		}
+	if err = repo.RecalcAccessSess(); err != nil {
+		return err
 	}
 
 	// Change repository directory name.
@@ -838,32 +733,8 @@ func ChangeRepositoryName(userName, oldRepoName, newRepoName string) (err error)
 		return ErrRepoNameIllegal
 	}
 
-	// Update accesses.
-	accesses := make([]Access, 0, 10)
-	if err = x.Find(&accesses, &Access{RepoName: userName + "/" + oldRepoName}); err != nil {
-		return err
-	}
-
-	sess := x.NewSession()
-	defer sess.Close()
-	if err = sess.Begin(); err != nil {
-		return err
-	}
-
-	for i := range accesses {
-		accesses[i].RepoName = userName + "/" + newRepoName
-		if err = UpdateAccessWithSession(sess, &accesses[i]); err != nil {
-			return err
-		}
-	}
-
 	// Change repository directory name.
-	if err = os.Rename(RepoPath(userName, oldRepoName), RepoPath(userName, newRepoName)); err != nil {
-		sess.Rollback()
-		return err
-	}
-
-	return sess.Commit()
+	return os.Rename(RepoPath(userName, oldRepoName), RepoPath(userName, newRepoName))
 }
 
 func UpdateRepository(repo *Repository) error {
@@ -912,7 +783,7 @@ func DeleteRepository(uid, repoId int64, userName string) error {
 	}
 
 	// Delete all access.
-	if _, err := sess.Delete(&Access{RepoName: strings.ToLower(path.Join(userName, repo.Name))}); err != nil {
+	if _, err := sess.Delete(&Access{RepoID: repo.Id}); err != nil {
 		sess.Rollback()
 		return err
 	}
@@ -1105,7 +976,7 @@ func (r *Repository) AddCollaborator(u *User) error {
 		return err
 	}
 
-	return AddAccess(&Access{UserName: u.LowerName, RepoName: path.Join(r.Owner.LowerName, r.LowerName), Mode: WRITABLE})
+	return r.RecalcAccessSess()
 }
 
 // Delete collaborator and accompanying access
@@ -1116,25 +987,7 @@ func (r *Repository) DeleteCollaborator(u *User) error {
 		return err
 	}
 
-	if err := r.GetOwner(); err != nil {
-		return err
-	}
-
-	needDelete := true
-	if r.Owner.IsOrganization() {
-		auth, err := GetHighestAuthorize(r.Owner.Id, u.Id, r.Id, 0)
-		if err != nil {
-			return err
-		}
-		if auth > 0 {
-			needDelete = false
-		}
-	}
-	if needDelete {
-		return DeleteAccess(&Access{UserName: u.LowerName, RepoName: path.Join(r.Owner.LowerName, r.LowerName), Mode: WRITABLE})
-	}
-
-	return nil
+	return r.RecalcAccessSess()
 }
 
 type SearchOption struct {
@@ -1443,40 +1296,10 @@ func ForkRepository(u *User, oldRepo *Repository, name, desc string) (*Repositor
 		return nil, err
 	}
 
+	if err = repo.RecalcAccessSess(); err != nil {
+		return nil, err
+	}
 	var t *Team // Owner team.
-
-	mode := WRITABLE
-
-	access := &Access{
-		UserName: u.LowerName,
-		RepoName: path.Join(u.LowerName, repo.LowerName),
-		Mode:     mode,
-	}
-	// Give access to all members in owner team.
-	if u.IsOrganization() {
-		t, err = u.GetOwnerTeam()
-		if err != nil {
-			sess.Rollback()
-			return nil, err
-		}
-		if err = t.GetMembers(); err != nil {
-			sess.Rollback()
-			return nil, err
-		}
-		for _, u := range t.Members {
-			access.Id = 0
-			access.UserName = u.LowerName
-			if _, err = sess.Insert(access); err != nil {
-				sess.Rollback()
-				return nil, err
-			}
-		}
-	} else {
-		if _, err = sess.Insert(access); err != nil {
-			sess.Rollback()
-			return nil, err
-		}
-	}
 
 	if _, err = sess.Exec(
 		"UPDATE `user` SET num_repos = num_repos + 1 WHERE id = ?", u.Id); err != nil {

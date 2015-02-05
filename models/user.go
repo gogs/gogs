@@ -396,59 +396,7 @@ func ChangeUserName(u *User, newUserName string) (err error) {
 		return ErrUserNameIllegal
 	}
 
-	newUserName = strings.ToLower(newUserName)
-
-	// Update accesses of user.
-	accesses := make([]Access, 0, 10)
-	if err = x.Find(&accesses, &Access{UserName: u.LowerName}); err != nil {
-		return err
-	}
-
-	sess := x.NewSession()
-	defer sess.Close()
-	if err = sess.Begin(); err != nil {
-		return err
-	}
-
-	for i := range accesses {
-		accesses[i].UserName = newUserName
-		if strings.HasPrefix(accesses[i].RepoName, u.LowerName+"/") {
-			accesses[i].RepoName = strings.Replace(accesses[i].RepoName, u.LowerName, newUserName, 1)
-		}
-		if err = UpdateAccessWithSession(sess, &accesses[i]); err != nil {
-			return err
-		}
-	}
-
-	repos, err := GetRepositories(u.Id, true)
-	if err != nil {
-		return err
-	}
-	for i := range repos {
-		accesses = make([]Access, 0, 10)
-		// Update accesses of user repository.
-		if err = x.Find(&accesses, &Access{RepoName: u.LowerName + "/" + repos[i].LowerName}); err != nil {
-			return err
-		}
-
-		for j := range accesses {
-			// if the access is not the user's access (already updated above)
-			if accesses[j].UserName != u.LowerName {
-				accesses[j].RepoName = newUserName + "/" + repos[i].LowerName
-				if err = UpdateAccessWithSession(sess, &accesses[j]); err != nil {
-					return err
-				}
-			}
-		}
-	}
-
-	// Change user directory name.
-	if err = os.Rename(UserPath(u.LowerName), UserPath(newUserName)); err != nil {
-		sess.Rollback()
-		return err
-	}
-
-	return sess.Commit()
+	return os.Rename(UserPath(u.LowerName), UserPath(newUserName))
 }
 
 // UpdateUser updates user's information.
@@ -521,7 +469,7 @@ func DeleteUser(u *User) error {
 		return err
 	}
 	// Delete all accesses.
-	if _, err = x.Delete(&Access{UserName: u.LowerName}); err != nil {
+	if _, err = x.Delete(&Access{UserID: u.Id}); err != nil {
 		return err
 	}
 	// Delete all alternative email addresses

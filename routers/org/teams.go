@@ -168,14 +168,14 @@ func NewTeamPost(ctx *middleware.Context, form auth.CreateTeamForm) {
 	}
 
 	// Validate permission level.
-	var auth models.AuthorizeType
+	var auth models.AccessMode
 	switch form.Permission {
 	case "read":
-		auth = models.ORG_READABLE
+		auth = models.ReadAccess
 	case "write":
-		auth = models.ORG_WRITABLE
+		auth = models.WriteAccess
 	case "admin":
-		auth = models.ORG_ADMIN
+		auth = models.AdminAccess
 	default:
 		ctx.Error(401)
 		return
@@ -249,14 +249,14 @@ func EditTeamPost(ctx *middleware.Context, form auth.CreateTeamForm) {
 	isAuthChanged := false
 	if !t.IsOwnerTeam() {
 		// Validate permission level.
-		var auth models.AuthorizeType
+		var auth models.AccessMode
 		switch form.Permission {
 		case "read":
-			auth = models.ORG_READABLE
+			auth = models.ReadAccess
 		case "write":
-			auth = models.ORG_WRITABLE
+			auth = models.WriteAccess
 		case "admin":
-			auth = models.ORG_ADMIN
+			auth = models.AdminAccess
 		default:
 			ctx.Error(401)
 			return
