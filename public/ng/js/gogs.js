@@ -141,6 +141,7 @@ var Gogs = {};
     Gogs.renderCodeView = function () {
         function selectRange($list, $select, $from) {
             $list.removeClass('active');
+            $list.parents('tr').find('td').removeClass('selected-line');
             if ($from) {
                 var a = parseInt($select.attr('rel').substr(1));
                 var b = parseInt($from.attr('rel').substr(1));
@@ -153,21 +154,27 @@ var Gogs = {};
                     }
                     var classes = [];
                     for (i = a; i <= b; i++) {
-                        classes.push('.L' + i);
+                        classes.push('[rel=L' + i + ']');
                     }
                     $list.filter(classes.join(',')).addClass('active');
+                    $list.filter(classes.join(',')).parents('tr').find('td').addClass('selected-line');
                     $.changeHash('#L' + a + '-' + 'L' + b);
                     return
                 }
             }
             $select.addClass('active');
+            $select.parents('tr').find('td').addClass('selected-line');
             $.changeHash('#' + $select.attr('rel'));
         }
 
         $(document).on('click', '.lines-num span', function (e) {
             var $select = $(this);
-            var $list = $select.parent().siblings('.lines-code').find('ol.linenums > li');
-            selectRange($list, $list.filter('[rel=' + $select.attr('rel') + ']'), (e.shiftKey ? $list.filter('.active').eq(0) : null));
+            var $list = $select.parent().siblings('.lines-code').parents().find('td.lines-num > span');
+            selectRange(
+                $list,
+                $list.filter('[rel=' + $select.attr('rel') + ']'),
+                (e.shiftKey && $list.filter('.active').length ? $list.filter('.active').eq(0) : null)
+            );
             $.deSelect();
         });
 
@@ -185,17 +192,17 @@ var Gogs = {};
 
         $(window).on('hashchange', function (e) {
             var m = window.location.hash.match(/^#(L\d+)\-(L\d+)$/);
-            var $list = $('.code-view ol.linenums > li');
+            var $list = $('.code-view td.lines-num > span');
             var $first;
             if (m) {
-                $first = $list.filter('.' + m[1]);
-                selectRange($list, $first, $list.filter('.' + m[2]));
+                $first = $list.filter('[rel=' + m[1] + ']');
+                selectRange($list, $first, $list.filter('[rel=' + m[2] + ']'));
                 $("html, body").scrollTop($first.offset().top - 200);
                 return;
             }
             m = window.location.hash.match(/^#(L\d+)$/);
             if (m) {
-                $first = $list.filter('.' + m[1]);
+                $first = $list.filter('[rel=' + m[1] + ']');
                 selectRange($list, $first);
                 $("html, body").scrollTop($first.offset().top - 200);
             }
