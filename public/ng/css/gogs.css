@@ -1620,10 +1620,22 @@ The register and sign-in page style
   background-color: #E0E0E0 !important;
   border-color: #ADADAD !important;
 }
+.diff-file-box .code-diff tbody tr.tag-code td.selected-line,
+.diff-file-box .code-diff tbody tr.tag-code td.selected-line pre {
+  background-color: #ffffdd !important;
+}
+.diff-file-box .code-diff tbody tr.same-code td.selected-line,
+.diff-file-box .code-diff tbody tr.same-code td.selected-line pre {
+  background-color: #ffffdd !important;
+}
 .diff-file-box .code-diff tbody tr.del-code td,
 .diff-file-box .code-diff tbody tr.del-code pre {
   background-color: #ffe2dd !important;
   border-color: #e9aeae !important;
+}
+.diff-file-box .code-diff tbody tr.del-code td.selected-line,
+.diff-file-box .code-diff tbody tr.del-code td.selected-line pre {
+  background-color: #ffffdd !important;
 }
 .diff-file-box .code-diff tbody tr.add-code td,
 .diff-file-box .code-diff tbody tr.add-code pre {
