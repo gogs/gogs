@@ -60,6 +60,8 @@ type DiffFile struct {
 	Index              int
 	Addition, Deletion int
 	Type               int
+	IsCreated          bool
+	IsDeleted          bool
 	IsBin              bool
 	Sections           []*DiffSection
 }
@@ -181,10 +183,16 @@ func ParsePatch(pid int64, maxlines int, cmd *exec.Cmd, reader io.Reader) (*Diff
 				switch {
 				case strings.HasPrefix(scanner.Text(), "new file"):
 					curFile.Type = DIFF_FILE_ADD
+					curFile.IsDeleted = false
+					curFile.IsCreated = true
 				case strings.HasPrefix(scanner.Text(), "deleted"):
 					curFile.Type = DIFF_FILE_DEL
+					curFile.IsCreated = false
+					curFile.IsDeleted = true
 				case strings.HasPrefix(scanner.Text(), "index"):
 					curFile.Type = DIFF_FILE_CHANGE
+					curFile.IsCreated = false
+					curFile.IsDeleted = false
 				}
 				if curFile.Type > 0 {
 					break
