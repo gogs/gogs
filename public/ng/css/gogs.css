@@ -448,6 +448,9 @@ img.avatar-100 {
   margin: 15px 0;
   border-bottom: 2px solid #EEE;
 }
+.markdown p {
+    margin: 20px 0;
+}
 .markdown blockquote:last-child,
 .markdown ul:last-child,
 .markdown ol:last-child,
