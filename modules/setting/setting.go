@@ -325,7 +325,7 @@ func newService() {
 	Service.ActiveCodeLives = Cfg.Section("service").Key("ACTIVE_CODE_LIVE_MINUTES").MustInt(180)
 	Service.ResetPwdCodeLives = Cfg.Section("service").Key("RESET_PASSWD_CODE_LIVE_MINUTES").MustInt(180)
 	Service.DisableRegistration = Cfg.Section("service").Key("DISABLE_REGISTRATION").MustBool()
-	Service.ShowRegistrationButton = Cfg.Section("service").Key("SHOW_REGISTRATION_BUTTON").MustBool()
+	Service.ShowRegistrationButton = Cfg.Section("service").Key("SHOW_REGISTRATION_BUTTON").MustBool(!Service.DisableRegistration)
 	Service.RequireSignInView = Cfg.Section("service").Key("REQUIRE_SIGNIN_VIEW").MustBool()
 	Service.EnableCacheAvatar = Cfg.Section("service").Key("ENABLE_CACHE_AVATAR").MustBool()
 	Service.EnableReverseProxyAuth = Cfg.Section("service").Key("ENABLE_REVERSE_PROXY_AUTHENTICATION").MustBool()
