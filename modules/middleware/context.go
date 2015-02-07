@@ -192,6 +192,8 @@ func Contexter() macaron.Handler {
 		ctx.Data["CsrfToken"] = x.GetToken()
 		ctx.Data["CsrfTokenHtml"] = template.HTML(`<input type="hidden" name="_csrf" value="` + x.GetToken() + `">`)
 
+		ctx.Data["ShowRegistrationButton"] = setting.Service.ShowRegistrationButton
+
 		c.Map(ctx)
 	}
 }
