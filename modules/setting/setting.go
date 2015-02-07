@@ -50,7 +50,8 @@ var (
 	Protocol           Scheme
 	Domain             string
 	HttpAddr, HttpPort string
-	SshPort            int
+	DisableSSH         bool
+	SSHPort            int
 	OfflineMode        bool
 	DisableRouterLog   bool
 	CertFile, KeyFile  string
@@ -209,7 +210,8 @@ func NewConfigContext() {
 	Domain = sec.Key("DOMAIN").MustString("localhost")
 	HttpAddr = sec.Key("HTTP_ADDR").MustString("0.0.0.0")
 	HttpPort = sec.Key("HTTP_PORT").MustString("3000")
-	SshPort = sec.Key("SSH_PORT").MustInt(22)
+	DisableSSH = sec.Key("DISABLE_SSH").MustBool()
+	SSHPort = sec.Key("SSH_PORT").MustInt(22)
 	OfflineMode = sec.Key("OFFLINE_MODE").MustBool()
 	DisableRouterLog = sec.Key("DISABLE_ROUTER_LOG").MustBool()
 	StaticRootPath = sec.Key("STATIC_ROOT_PATH").MustString(workDir)

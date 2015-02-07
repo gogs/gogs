@@ -247,8 +247,8 @@ func (repo *Repository) CloneLink() (cl CloneLink, err error) {
 	if err = repo.GetOwner(); err != nil {
 		return cl, err
 	}
-	if setting.SshPort != 22 {
-		cl.SSH = fmt.Sprintf("ssh://%s@%s:%d/%s/%s.git", setting.RunUser, setting.Domain, setting.SshPort, repo.Owner.LowerName, repo.LowerName)
+	if setting.SSHPort != 22 {
+		cl.SSH = fmt.Sprintf("ssh://%s@%s:%d/%s/%s.git", setting.RunUser, setting.Domain, setting.SSHPort, repo.Owner.LowerName, repo.LowerName)
 	} else {
 		cl.SSH = fmt.Sprintf("%s@%s:%s/%s.git", setting.RunUser, setting.Domain, repo.Owner.LowerName, repo.LowerName)
 	}

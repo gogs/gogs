@@ -33,6 +33,12 @@ var CmdServ = cli.Command{
 func setup(logPath string) {
 	setting.NewConfigContext()
 	log.NewGitLogger(filepath.Join(setting.LogRootPath, logPath))
+
+	if setting.DisableSSH {
+		println("Gogs: SSH has been disabled")
+		os.Exit(1)
+	}
+
 	models.LoadModelsConfig()
 
 	if models.UseSQLite3 {
