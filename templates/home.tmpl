@@ -14,7 +14,9 @@
                 <input class="ipt ipt-large" name="password" type="password" placeholder="{{.i18n.Tr "home.password_holder"}}"/>
                 <input name="from" type="hidden" value="home">
                 <button class="btn btn-black btn-large">{{.i18n.Tr "sign_in"}}</button>
+                {{if .ShowRegistrationButton}}
                 <button class="btn btn-green btn-large" id="register-button">{{.i18n.Tr "register"}}</button>
+                {{end}}
             </form>
             <div id="promo-social" class="social-buttons">
                 {{template "ng/base/social" .}}
