@@ -177,8 +177,8 @@ func RenderSha1CurrentPattern(rawBytes []byte, urlPrefix string) []byte {
 func RenderIssueIndexPattern(rawBytes []byte, urlPrefix string) []byte {
 	ms := issueIndexPattern.FindAll(rawBytes, -1)
 	for _, m := range ms {
-		rawBytes = bytes.Replace(rawBytes, m, []byte(fmt.Sprintf(
-			`<a href="%s/issues/%s">%s</a>`, urlPrefix, m[1:], m)), -1)
+		rawBytes = bytes.Replace(rawBytes, m, []byte(fmt.Sprintf(`<a href="%s/issues/%s">%s</a>`,
+			urlPrefix, strings.TrimPrefix(string(m[1:]), "#"), m)), -1)
 	}
 	return rawBytes
 }
