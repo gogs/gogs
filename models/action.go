@@ -119,8 +119,6 @@ func (a Action) GetIssueInfos() []string {
 
 func updateIssuesCommit(userId, repoId int64, repoUserName, repoName string, commits []*base.PushCommit) error {
 	for _, c := range commits {
-		// FIXME: should not be a reference when it comes with action.
-		// e.g. fixes #1 will not have duplicated reference message.
 		for _, ref := range IssueReferenceKeywordsPat.FindAllString(c.Message, -1) {
 			ref := ref[strings.IndexByte(ref, byte(' '))+1:]
 			ref = strings.TrimRightFunc(ref, func(c rune) bool {

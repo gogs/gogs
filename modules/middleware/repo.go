@@ -386,6 +386,7 @@ func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 		ctx.Data["IsRepositoryOwner"] = ctx.Repo.IsOwner
 		ctx.Data["IsRepositoryTrueOwner"] = ctx.Repo.IsTrueOwner
 
+		ctx.Data["DisableSSH"] = setting.DisableSSH
 		ctx.Repo.CloneLink, err = repo.CloneLink()
 		if err != nil {
 			ctx.Handle(500, "CloneLink", err)
