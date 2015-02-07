@@ -859,22 +859,16 @@ type CommentType int
 
 const (
 	// Plain comment, can be associated with a commit (CommitId > 0) and a line (Line > 0)
-	COMMENT CommentType = iota
+	COMMENT_TYPE_COMMENT CommentType = iota
+	COMMENT_TYPE_REOPEN
+	COMMENT_TYPE_CLOSE
 
-	// Reopen action
-	REOPEN
-
-	// Close action
-	CLOSE
-
-	// Reference from another issue
-	ISSUE
-
+	// References.
+	COMMENT_TYPE_ISSUE
 	// Reference from some commit (not part of a pull request)
-	COMMIT
-
+	COMMENT_TYPE_COMMIT
 	// Reference from some pull request
-	PULL
+	COMMENT_TYPE_PULL
 )
 
 // Comment represents a comment in commit and issue page.
@@ -908,7 +902,7 @@ func CreateComment(userId, repoId, issueId, commitId, line int64, cmtType Commen
 
 	// Check comment type.
 	switch cmtType {
-	case COMMENT:
+	case COMMENT_TYPE_COMMENT:
 		rawSql := "UPDATE `issue` SET num_comments = num_comments + 1 WHERE id = ?"
 		if _, err := sess.Exec(rawSql, issueId); err != nil {
 			sess.Rollback()
@@ -929,13 +923,13 @@ func CreateComment(userId, repoId, issueId, commitId, line int64, cmtType Commen
 				return nil, err
 			}
 		}
-	case REOPEN:
+	case COMMENT_TYPE_REOPEN:
 		rawSql := "UPDATE `repository` SET num_closed_issues = num_closed_issues - 1 WHERE id = ?"
 		if _, err := sess.Exec(rawSql, repoId); err != nil {
 			sess.Rollback()
 			return nil, err
 		}
-	case CLOSE:
+	case COMMENT_TYPE_CLOSE:
 		rawSql := "UPDATE `repository` SET num_closed_issues = num_closed_issues + 1 WHERE id = ?"
 		if _, err := sess.Exec(rawSql, repoId); err != nil {
 			sess.Rollback()
