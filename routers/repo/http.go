@@ -73,12 +73,14 @@ func Http(ctx *middleware.Context) {
 		return
 	}
 
-	// only public pull don't need auth
+	// Only public pull don't need auth.
 	isPublicPull := !repo.IsPrivate && isPull
-	var askAuth = !isPublicPull || setting.Service.RequireSignInView
-	var authUser *models.User
-	var authUsername, passwd string
-	usedToken := false
+	var (
+		askAuth      = !isPublicPull || setting.Service.RequireSignInView
+		authUser     *models.User
+		authUsername string
+		authPasswd   string
+	)
 
 	// check access
 	if askAuth {
@@ -91,12 +93,13 @@ func Http(ctx *middleware.Context) {
 		auths := strings.Fields(baHead)
 		// currently check basic auth
 		// TODO: support digit auth
-		// FIXME: middlewares/context.go did basic auth check already
+		// FIXME: middlewares/context.go did basic auth check already,
+		// maybe could use that one.
 		if len(auths) != 2 || auths[0] != "Basic" {
 			ctx.Handle(401, "no basic auth and digit auth", nil)
 			return
 		}
-		authUsername, passwd, err = base.BasicAuthDecode(auths[1])
+		authUsername, authPasswd, err = base.BasicAuthDecode(auths[1])
 		if err != nil {
 			ctx.Handle(401, "no basic auth and digit auth", nil)
 			return
@@ -104,39 +107,31 @@ func Http(ctx *middleware.Context) {
 
 		authUser, err = models.GetUserByName(authUsername)
 		if err != nil {
-			// check if a token was given instead of username
-			tokens, err := models.ListAllAccessTokens()
+			if err != models.ErrUserNotExist {
+				ctx.Handle(500, "GetUserByName", err)
+				return
+			}
+
+			// Assume username now is a token.
+			token, err := models.GetAccessTokenBySha(authUsername)
 			if err != nil {
-				ctx.Handle(401, "no basic auth and digit auth", nil)
-				return
-			}
-
-			for _, token := range tokens {
-				if token.Sha1 == authUsername {
-					// get user belonging to token
-					authUser, err = models.GetUserById(token.Uid)
-					if err != nil {
-						ctx.Handle(401, "no basic auth and digit auth", nil)
-						return
-					}
-					authUsername = authUser.Name
-					usedToken = true
-					break
+				if err == models.ErrAccessTokenNotExist {
+					ctx.Handle(401, "invalid token", nil)
+				} else {
+					ctx.Handle(500, "GetAccessTokenBySha", err)
 				}
-			}
-
-			if authUser == nil {
-				ctx.Handle(401, "no basic auth and digit auth", nil)
 				return
 			}
-		}
-
-		// check password if token is not used
-		if !usedToken {
-			newUser := &models.User{Passwd: passwd, Salt: authUser.Salt}
-			newUser.EncodePasswd()
-			if authUser.Passwd != newUser.Passwd {
-				ctx.Handle(401, "no basic auth and digit auth", nil)
+			authUser, err = models.GetUserById(token.Uid)
+			if err != nil {
+				ctx.Handle(500, "GetUserById", err)
+				return
+			}
+			authUsername = authUser.Name
+		} else {
+			// Check user's password when username is correctly presented.
+			if !authUser.ValidtePassword(authPasswd) {
+				ctx.Handle(401, "invalid password", nil)
 				return
 			}
 		}
@@ -166,9 +161,7 @@ func Http(ctx *middleware.Context) {
 		}
 	}
 
-	var f func(rpc string, input []byte)
-
-	f = func(rpc string, input []byte) {
+	var f = func(rpc string, input []byte) {
 		if rpc == "receive-pack" {
 			var lastLine int64 = 0
 
