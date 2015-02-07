@@ -41,13 +41,20 @@ var (
 
 var (
 	// Same as Github. See https://help.github.com/articles/closing-issues-via-commit-messages
-	IssueCloseKeywords        = []string{"close", "closes", "closed", "fix", "fixes", "fixed", "resolve", "resolves", "resolved"}
-	IssueCloseKeywordsPat     *regexp.Regexp
-	IssueReferenceKeywordsPat *regexp.Regexp
+	IssueCloseKeywords  = []string{"close", "closes", "closed", "fix", "fixes", "fixed", "resolve", "resolves", "resolved"}
+	IssueReopenKeywords = []string{"reopen", "reopens", "reopened"}
+
+	IssueCloseKeywordsPat, IssueReopenKeywordsPat *regexp.Regexp
+	IssueReferenceKeywordsPat                     *regexp.Regexp
 )
 
+func assembleKeywordsPattern(words []string) string {
+	return fmt.Sprintf(`(?i)(?:%s) \S+`, strings.Join(words, "|"))
+}
+
 func init() {
-	IssueCloseKeywordsPat = regexp.MustCompile(fmt.Sprintf(`(?i)(?:%s) \S+`, strings.Join(IssueCloseKeywords, "|")))
+	IssueCloseKeywordsPat = regexp.MustCompile(assembleKeywordsPattern(IssueCloseKeywords))
+	IssueReopenKeywordsPat = regexp.MustCompile(assembleKeywordsPattern(IssueReopenKeywords))
 	IssueReferenceKeywordsPat = regexp.MustCompile(`(?i)(?:)(^| )\S+`)
 }
 
@@ -112,11 +119,9 @@ func (a Action) GetIssueInfos() []string {
 
 func updateIssuesCommit(userId, repoId int64, repoUserName, repoName string, commits []*base.PushCommit) error {
 	for _, c := range commits {
-		references := IssueReferenceKeywordsPat.FindAllString(c.Message, -1)
-
 		// FIXME: should not be a reference when it comes with action.
 		// e.g. fixes #1 will not have duplicated reference message.
-		for _, ref := range references {
+		for _, ref := range IssueReferenceKeywordsPat.FindAllString(c.Message, -1) {
 			ref := ref[strings.IndexByte(ref, byte(' '))+1:]
 			ref = strings.TrimRightFunc(ref, func(c rune) bool {
 				return !unicode.IsDigit(c)
@@ -137,22 +142,18 @@ func updateIssuesCommit(userId, repoId int64, repoUserName, repoName string, com
 			}
 
 			issue, err := GetIssueByRef(ref)
-
 			if err != nil {
 				return err
 			}
 
 			url := fmt.Sprintf("%s/%s/%s/commit/%s", setting.AppSubUrl, repoUserName, repoName, c.Sha1)
 			message := fmt.Sprintf(`<a href="%s">%s</a>`, url, c.Message)
-
-			if _, err = CreateComment(userId, issue.RepoId, issue.Id, 0, 0, COMMIT, message, nil); err != nil {
+			if _, err = CreateComment(userId, issue.RepoId, issue.Id, 0, 0, COMMENT_TYPE_COMMIT, message, nil); err != nil {
 				return err
 			}
 		}
 
-		closes := IssueCloseKeywordsPat.FindAllString(c.Message, -1)
-
-		for _, ref := range closes {
+		for _, ref := range IssueCloseKeywordsPat.FindAllString(c.Message, -1) {
 			ref := ref[strings.IndexByte(ref, byte(' '))+1:]
 			ref = strings.TrimRightFunc(ref, func(c rune) bool {
 				return !unicode.IsDigit(c)
@@ -173,7 +174,6 @@ func updateIssuesCommit(userId, repoId int64, repoUserName, repoName string, com
 			}
 
 			issue, err := GetIssueByRef(ref)
-
 			if err != nil {
 				return err
 			}
@@ -182,7 +182,6 @@ func updateIssuesCommit(userId, repoId int64, repoUserName, repoName string, com
 				if issue.IsClosed {
 					continue
 				}
-
 				issue.IsClosed = true
 
 				if err = UpdateIssue(issue); err != nil {
@@ -196,14 +195,60 @@ func updateIssuesCommit(userId, repoId int64, repoUserName, repoName string, com
 				}
 
 				// If commit happened in the referenced repository, it means the issue can be closed.
-				if _, err = CreateComment(userId, repoId, issue.Id, 0, 0, CLOSE, "", nil); err != nil {
+				if _, err = CreateComment(userId, repoId, issue.Id, 0, 0, COMMENT_TYPE_CLOSE, "", nil); err != nil {
 					return err
 				}
 			}
 		}
 
-	}
+		for _, ref := range IssueReopenKeywordsPat.FindAllString(c.Message, -1) {
+			ref := ref[strings.IndexByte(ref, byte(' '))+1:]
+			ref = strings.TrimRightFunc(ref, func(c rune) bool {
+				return !unicode.IsDigit(c)
+			})
 
+			if len(ref) == 0 {
+				continue
+			}
+
+			// Add repo name if missing
+			if ref[0] == '#' {
+				ref = fmt.Sprintf("%s/%s%s", repoUserName, repoName, ref)
+			} else if strings.Contains(ref, "/") == false {
+				// We don't support User#ID syntax yet
+				// return ErrNotImplemented
+
+				continue
+			}
+
+			issue, err := GetIssueByRef(ref)
+			if err != nil {
+				return err
+			}
+
+			if issue.RepoId == repoId {
+				if !issue.IsClosed {
+					continue
+				}
+				issue.IsClosed = false
+
+				if err = UpdateIssue(issue); err != nil {
+					return err
+				} else if err = UpdateIssueUserPairsByStatus(issue.Id, issue.IsClosed); err != nil {
+					return err
+				}
+
+				if err = ChangeMilestoneIssueStats(issue); err != nil {
+					return err
+				}
+
+				// If commit happened in the referenced repository, it means the issue can be closed.
+				if _, err = CreateComment(userId, repoId, issue.Id, 0, 0, COMMENT_TYPE_REOPEN, "", nil); err != nil {
+					return err
+				}
+			}
+		}
+	}
 	return nil
 }
 

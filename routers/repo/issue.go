@@ -424,7 +424,7 @@ func ViewIssue(ctx *middleware.Context) {
 		}
 		comments[i].Poster = u
 
-		if comments[i].Type == models.COMMENT {
+		if comments[i].Type == models.COMMENT_TYPE_COMMENT {
 			comments[i].Content = string(base.RenderMarkdown([]byte(comments[i].Content), ctx.Repo.RepoLink))
 		}
 	}
@@ -774,9 +774,9 @@ func Comment(ctx *middleware.Context) {
 				}
 			}
 
-			cmtType := models.CLOSE
+			cmtType := models.COMMENT_TYPE_CLOSE
 			if !issue.IsClosed {
-				cmtType = models.REOPEN
+				cmtType = models.COMMENT_TYPE_REOPEN
 			}
 
 			if _, err = models.CreateComment(ctx.User.Id, ctx.Repo.Repository.Id, issue.Id, 0, 0, cmtType, "", nil); err != nil {
@@ -795,7 +795,7 @@ func Comment(ctx *middleware.Context) {
 	if len(content) > 0 || len(ctx.Req.MultipartForm.File["attachments"]) > 0 {
 		switch ctx.Params(":action") {
 		case "new":
-			if comment, err = models.CreateComment(ctx.User.Id, ctx.Repo.Repository.Id, issue.Id, 0, 0, models.COMMENT, content, nil); err != nil {
+			if comment, err = models.CreateComment(ctx.User.Id, ctx.Repo.Repository.Id, issue.Id, 0, 0, models.COMMENT_TYPE_COMMENT, content, nil); err != nil {
 				send(500, nil, err)
 				return
 			}
@@ -1122,18 +1122,18 @@ func IssueGetAttachment(ctx *middleware.Context) {
 
 // testing route handler for new issue ui page
 // todo : move to Issue() function
-func Issues2(ctx *middleware.Context){
-	ctx.HTML(200,"repo/issue2/list")
+func Issues2(ctx *middleware.Context) {
+	ctx.HTML(200, "repo/issue2/list")
 }
 
-func PullRequest2(ctx *middleware.Context){
-	ctx.HTML(200,"repo/pr2/list")
+func PullRequest2(ctx *middleware.Context) {
+	ctx.HTML(200, "repo/pr2/list")
 }
 
-func Labels2(ctx *middleware.Context){
-	ctx.HTML(200,"repo/issue2/labels")
+func Labels2(ctx *middleware.Context) {
+	ctx.HTML(200, "repo/issue2/labels")
 }
 
-func Milestones2(ctx *middleware.Context){
-	ctx.HTML(200,"repo/milestone2/list")
+func Milestones2(ctx *middleware.Context) {
+	ctx.HTML(200, "repo/milestone2/list")
 }
