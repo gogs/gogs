@@ -1,88 +1,91 @@
 .markdown {
-    background-color: white;
-    font-size: 16px;
-    line-height: 24px;
-    .markdown-body {
-        padding-left: 24px;
-        padding-right: 16px;
-    }
-    h5,
-    h6 {
-        font-size: 1em;
-    }
-    ul {
-        padding: 10px 0 0 15px;
-        li {
-            list-style: inside;
-        }
-    }
-    ol li {
-        list-style: decimal inside;
-    }
+  background-color: white;
+  font-size: 16px;
+  line-height: 24px;
+  .markdown-body {
+    padding-left: 24px;
+    padding-right: 16px;
+  }
+  h5,
+  h6 {
+    font-size: 1em;
+  }
+  ul {
+    padding: 10px 0 0 15px;
     li {
-        line-height: 1.6;
-        margin-top: 6px;
-        &:first-child {
-            margin-top: 0;
-        }
+      list-style: inside;
     }
+  }
+  ol li {
+    list-style: decimal inside;
+  }
+  li {
+    line-height: 1.6;
+    margin-top: 6px;
+    &:first-child {
+        margin-top: 0;
+    }
+  }
+  code {
+    padding: 0.2em 0.5em;
+    margin: 0;
+    background-color: rgba(0,0,0,0.04);
+    border-radius: 3px;
+  }
+  >pre {
+    font-size: 14px;
+    line-height: 1.6;
+    overflow: auto;
+    border: 1px solid #ddd;
+    border-radius: .25em;
+    margin: 5px 0;
+    padding: 10px;
+    background-color: #f8f8f8;
     code {
-        padding: 0.2em 0.5em;
-        margin: 0;
-        background-color: rgba(0,0,0,0.04);
-        border-radius: 3px;
+      padding: 0;
+      background-color: inherit;
     }
-    >pre {
-        font-size: 14px;
-        line-height: 1.6;
-        overflow: auto;
-        border: 1px solid #ddd;
-        border-radius: .25em;
-        margin: 5px 0;
-        padding: 10px;
-        background-color: #f8f8f8;
-        code {
-            padding: 0;
-            background-color: inherit;
-        }
+  }
+  img {
+    padding: 10px 0;
+    max-width: 100%;
+  }
+  blockquote {
+    border-left: 4px solid #ddd;
+    margin-bottom: 16px;
+    p {
+      font-size: 14px;
+      padding: 5px 15px;
+      color: #777;
     }
-    img {
-        padding: 10px 0;
-        max-width: 100%;
+  }
+  table {
+    display: block;
+    width: 100%;
+    overflow: auto;
+    word-break: normal;
+    margin: 15px 0;
+    border-collapse: collapse;
+    border-spacing: 0;
+    display: block;
+    th {
+      font-weight: 700;
     }
-    blockquote {
-        border-left: 4px solid #ddd;
-        margin-bottom: 16px;
-        p {
-            font-size: 14px;
-            padding: 5px 15px;
-            color: #777;
-        }
+    th, td {
+      border: 1px solid #DDD;
+      padding: 6px 13px !important;
     }
-    table {
-        display: block;
-        width: 100%;
-        overflow: auto;
-        word-break: normal;
-        margin: 15px 0;
-        border-collapse: collapse;
-        border-spacing: 0;
-        display: block;
-        th {
-            font-weight: 700;
-        }
-        th, td {
-            border: 1px solid #DDD;
-            padding: 6px 13px !important;
-        }
-        tr {
-            background-color: #FFF;
-            border-top: 1px solid #CCC;
-            &:nth-child(2n) {
-                background-color: #F8F8F8;
-            }
-        }
+    tr {
+      background-color: #FFF;
+      border-top: 1px solid #CCC;
+      &:nth-child(2n) {
+          background-color: #F8F8F8;
+      }
     }
+  }
+  p {
+     margin: 20px 0;
+  }
 }
 .markdown a {
     color: #428BCA;

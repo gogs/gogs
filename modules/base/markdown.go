@@ -106,7 +106,7 @@ func (options *CustomRender) Image(out *bytes.Buffer, link []byte, title []byte,
 }
 
 var (
-	MentionPattern     = regexp.MustCompile(`(\s@)[0-9a-zA-Z_]{1,}`)
+	MentionPattern     = regexp.MustCompile(`((^|\s)@)[0-9a-zA-Z_]{1,}`)
 	commitPattern      = regexp.MustCompile(`(\s|^)https?.*commit/[0-9a-zA-Z]+(#+[0-9a-zA-Z-]*)?`)
 	issueFullPattern   = regexp.MustCompile(`(\s|^)https?.*issues/[0-9]+(#+[0-9a-zA-Z-]*)?`)
 	issueIndexPattern  = regexp.MustCompile(`( |^)#[0-9]+`)
