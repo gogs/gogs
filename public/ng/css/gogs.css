@@ -364,6 +364,9 @@ img.avatar-100 {
 .markdown table tr:nth-child(2n) {
   background-color: #F8F8F8;
 }
+.markdown p {
+  margin: 20px 0;
+}
 .markdown a {
   color: #428BCA;
 }
@@ -447,9 +450,6 @@ img.avatar-100 {
   padding: 0;
   margin: 15px 0;
   border-bottom: 2px solid #EEE;
-}
-.markdown p {
-    margin: 20px 0;
 }
 .markdown blockquote:last-child,
 .markdown ul:last-child,
