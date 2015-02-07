@@ -62,21 +62,6 @@ func ListAccessTokens(uid int64) ([]*AccessToken, error) {
 	return tokens, nil
 }
 
-// ListAllAccessTokens returns all access tokens
-func ListAllAccessTokens() ([]*AccessToken, error) {
-	tokens := make([]*AccessToken, 0, 5)
-	err := x.Desc("id").Find(&tokens)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, t := range tokens {
-		t.HasUsed = t.Updated.After(t.Created)
-		t.HasRecentActivity = t.Updated.Add(7 * 24 * time.Hour).After(time.Now())
-	}
-	return tokens, nil
-}
-
 // DeleteAccessTokenById deletes access token by given ID.
 func DeleteAccessTokenById(id int64) error {
 	_, err := x.Id(id).Delete(new(AccessToken))
