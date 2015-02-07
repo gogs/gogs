@@ -41,7 +41,6 @@ func Home(ctx *middleware.Context) {
 		ctx.Data["OauthEnabled"] = true
 		ctx.Data["OauthService"] = setting.OauthService
 	}
-	ctx.Data["ShowRegistrationButton"] = setting.Service.ShowRegistrationButton
 
 	ctx.Data["PageIsHome"] = true
 	ctx.HTML(200, HOME)

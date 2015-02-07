@@ -49,9 +49,11 @@
             <li class="right" id="header-nav-sign-in">
                 <a href="{{AppSubUrl}}/user/login" title="Sign In"><i class="octicon octicon-sign-in"></i> {{.i18n.Tr "sign_in"}}</a>
             </li>
+            {{if .ShowRegistrationButton}}
             <li class="right">
                 <a href="{{AppSubUrl}}/user/sign_up" title="Account Settings"><i class="octicon octicon-person-add"></i> {{.i18n.Tr "register"}}</a>
             </li>
+            {{end}}
             {{end}}
         {{end}}
     </ul>
