@@ -18,9 +18,11 @@
                 </a>
                 <div id="repo-header-download-drop" class="drop-down">
                     <div id="repo-clone" class="clear">
-                        <button class="btn btn-blue left left btn-left-radius" id="repo-clone-ssh" data-link="{{$.CloneLink.SSH}}">SSH</button>
-                        <button class="btn btn-gray left" id="repo-clone-https" data-link="{{$.CloneLink.HTTPS}}">HTTPS</button>
-                        <input id="repo-clone-url" class="ipt ipt-disabled left" value="{{$.CloneLink.SSH}}" readonly />
+                        {{if not $.DisableSSH}}
+                        <button class="btn btn-blue left btn-left-radius" id="repo-clone-ssh" data-link="{{$.CloneLink.SSH}}">SSH</button>
+                        {{end}}
+                        <button class="btn {{if $.DisableSSH}}btn-blue{{else}}btn-gray{{end}} left" id="repo-clone-https" data-link="{{$.CloneLink.HTTPS}}">HTTPS</button>
+                        <input id="repo-clone-url" class="ipt ipt-disabled left" value="{{if $.DisableSSH}}{{$.CloneLink.HTTPS}}{{else}}{{$.CloneLink.SSH}}{{end}}" readonly />
                         <button id="repo-clone-copy" class="btn btn-black left btn-right-radius" data-copy-val="val" data-copy-from="#repo-clone-url" original-title="{{$.i18n.Tr "repo.click_to_copy"}}" data-original-title="{{$.i18n.Tr "repo.click_to_copy"}}" data-after-title="{{$.i18n.Tr "repo.copied"}}">{{$.i18n.Tr "repo.copy_link"}}</button>
                         <p class="text-center" id="repo-clone-help">{{$.i18n.Tr "repo.clone_helper" "http://git-scm.com/book/en/Git-Basics-Getting-a-Git-Repository" | Str2html}}</p>
                         <hr/>
