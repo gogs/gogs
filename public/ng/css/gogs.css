@@ -1218,6 +1218,9 @@ The register and sign-in page style
 #repo-files-table {
   margin-bottom: 20px;
 }
+#repo-files-table .sha .label {
+  font-family: Monaco, Menlo, Consolas, "Courier New", monospace;
+}
 #repo-files-table th,
 #repo-files-table td {
   text-align: left;
