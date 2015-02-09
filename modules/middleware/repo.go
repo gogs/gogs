@@ -64,9 +64,9 @@ func ApiRepoAssignment() macaron.Handler {
 				ctx.JSON(500, &base.ApiJsonErr{"AccessLevel: " + err.Error(), base.DOC_URL})
 				return
 			}
-			ctx.Repo.IsOwner = mode >= models.WriteAccess
-			ctx.Repo.IsAdmin = mode >= models.ReadAccess
-			ctx.Repo.IsTrueOwner = mode >= models.OwnerAccess
+			ctx.Repo.IsOwner = mode >= models.ACCESS_MODE_WRITE
+			ctx.Repo.IsAdmin = mode >= models.ACCESS_MODE_READ
+			ctx.Repo.IsTrueOwner = mode >= models.ACCESS_MODE_OWNER
 		}
 
 		// Check access.
@@ -244,9 +244,9 @@ func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 				ctx.JSON(500, &base.ApiJsonErr{"AccessLevel: " + err.Error(), base.DOC_URL})
 				return
 			}
-			ctx.Repo.IsOwner = mode >= models.WriteAccess
-			ctx.Repo.IsAdmin = mode >= models.ReadAccess
-			ctx.Repo.IsTrueOwner = mode >= models.OwnerAccess
+			ctx.Repo.IsOwner = mode >= models.ACCESS_MODE_WRITE
+			ctx.Repo.IsAdmin = mode >= models.ACCESS_MODE_READ
+			ctx.Repo.IsTrueOwner = mode >= models.ACCESS_MODE_OWNER
 		}
 
 		// Check access.

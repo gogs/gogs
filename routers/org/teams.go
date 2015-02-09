@@ -171,11 +171,11 @@ func NewTeamPost(ctx *middleware.Context, form auth.CreateTeamForm) {
 	var auth models.AccessMode
 	switch form.Permission {
 	case "read":
-		auth = models.ReadAccess
+		auth = models.ACCESS_MODE_READ
 	case "write":
-		auth = models.WriteAccess
+		auth = models.ACCESS_MODE_WRITE
 	case "admin":
-		auth = models.AdminAccess
+		auth = models.ACCESS_MODE_ADMIN
 	default:
 		ctx.Error(401)
 		return
@@ -252,11 +252,11 @@ func EditTeamPost(ctx *middleware.Context, form auth.CreateTeamForm) {
 		var auth models.AccessMode
 		switch form.Permission {
 		case "read":
-			auth = models.ReadAccess
+			auth = models.ACCESS_MODE_READ
 		case "write":
-			auth = models.WriteAccess
+			auth = models.ACCESS_MODE_WRITE
 		case "admin":
-			auth = models.AdminAccess
+			auth = models.ACCESS_MODE_ADMIN
 		default:
 			ctx.Error(401)
 			return

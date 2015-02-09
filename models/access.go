@@ -11,15 +11,15 @@ package models
 type AccessMode int
 
 const (
-	NoAccess AccessMode = iota
-	ReadAccess
-	WriteAccess
-	AdminAccess
-	OwnerAccess
+	ACCESS_MODE_NONE AccessMode = iota
+	ACCESS_MODE_READ
+	ACCESS_MODE_WRITE
+	ACCESS_MODE_ADMIN
+	ACCESS_MODE_OWNER
 )
 
 func maxAccessMode(modes ...AccessMode) AccessMode {
-	max := NoAccess
+	max := ACCESS_MODE_NONE
 	for _, mode := range modes {
 		if mode > max {
 			max = mode
@@ -47,14 +47,14 @@ func HasAccess(u *User, r *Repository, testMode AccessMode) (bool, error) {
 // Return the Access a user has to a repository. Will return NoneAccess if the
 // user does not have access. User can be nil!
 func AccessLevel(u *User, r *Repository) (AccessMode, error) {
-	mode := NoAccess
+	mode := ACCESS_MODE_NONE
 	if !r.IsPrivate {
-		mode = ReadAccess
+		mode = ACCESS_MODE_READ
 	}
 
 	if u != nil {
 		if u.Id == r.OwnerId {
-			return OwnerAccess, nil
+			return ACCESS_MODE_OWNER, nil
 		}
 
 		a := &Access{UserID: u.Id, RepoID: r.Id}
@@ -101,7 +101,7 @@ func (r *Repository) RecalcAccessSess() error {
 		return err
 	}
 	for _, c := range collaborators {
-		accessMap[c.Id] = WriteAccess
+		accessMap[c.Id] = ACCESS_MODE_WRITE
 	}
 
 	if err := r.GetOwner(); err != nil {
@@ -126,9 +126,9 @@ func (r *Repository) RecalcAccessSess() error {
 		}
 	}
 
-	minMode := ReadAccess
+	minMode := ACCESS_MODE_READ
 	if !r.IsPrivate {
-		minMode = WriteAccess
+		minMode = ACCESS_MODE_WRITE
 	}
 
 	newAccesses := make([]Access, 0, len(accessMap))
