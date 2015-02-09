@@ -90,7 +90,10 @@ func runServ(k *cli.Context) {
 	}
 	setup("serv.log")
 
-	keys := strings.Split(os.Args[2], "-")
+	if len(k.Args()) < 1 {
+		log.GitLogger.Fatal(2, "Not enough arguments")
+	}
+	keys := strings.Split(k.Args()[0], "-")
 	if len(keys) != 2 {
 		println("Gogs: auth file format error")
 		log.GitLogger.Fatal(2, "Invalid auth file format: %s", os.Args[2])
