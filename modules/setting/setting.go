@@ -125,6 +125,7 @@ var (
 	Cfg          *ini.File
 	ConfRootPath string
 	CustomPath   string // Custom directory path.
+	CustomConf   string
 	ProdMode     bool
 	RunUser      string
 	IsWindows    bool
@@ -173,13 +174,16 @@ func NewConfigContext() {
 		CustomPath = path.Join(workDir, "custom")
 	}
 
-	cfgPath := path.Join(CustomPath, "conf/app.ini")
-	if com.IsFile(cfgPath) {
-		if err = Cfg.Append(cfgPath); err != nil {
-			log.Fatal(4, "Fail to load custom 'conf/app.ini': %v", err)
+	if len(CustomConf) == 0 {
+		CustomConf = path.Join(CustomPath, "conf/app.ini")
+	}
+
+	if com.IsFile(CustomConf) {
+		if err = Cfg.Append(CustomConf); err != nil {
+			log.Fatal(4, "Fail to load custom conf '%s': %v", CustomConf, err)
 		}
 	} else {
-		log.Warn("No custom 'conf/app.ini' found, ignore this if you're running first time")
+		log.Warn("Custom config (%s) not found, ignore this if you're running first time", CustomConf)
 	}
 	Cfg.NameMapper = ini.AllCapsUnderscore
 

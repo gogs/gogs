@@ -30,7 +30,7 @@ import (
 )
 
 const (
-	TPL_UPDATE_HOOK = "#!/usr/bin/env %s\n%s update $1 $2 $3\n"
+	TPL_UPDATE_HOOK = "#!/usr/bin/env %s\n%s update --config=%s $1 $2 $3\n"
 )
 
 var (
@@ -424,7 +424,7 @@ func initRepository(f string, u *User, repo *Repository, initReadme bool, repoLa
 
 	// hook/post-update
 	if err := createHookUpdate(filepath.Join(repoPath, "hooks", "update"),
-		fmt.Sprintf(TPL_UPDATE_HOOK, setting.ScriptType, "\""+appPath+"\"")); err != nil {
+		fmt.Sprintf(TPL_UPDATE_HOOK, setting.ScriptType, "\""+appPath+"\"", setting.CustomConf)); err != nil {
 		return err
 	}
 
