@@ -357,13 +357,16 @@ func MigrateRepository(u *User, name, desc string, private, mirror bool, url str
 		os.RemoveAll(repoPath)
 	}
 
-	// this command could for both migrate and mirror
+	// FIXME: this command could for both migrate and mirror
 	_, stderr, err := process.ExecTimeout(10*time.Minute,
 		fmt.Sprintf("MigrateRepository: %s", repoPath),
 		"git", "clone", "--mirror", "--bare", url, repoPath)
 	if err != nil {
-		return repo, errors.New("git clone: " + stderr)
+		return repo, fmt.Errorf("git clone --mirror --bare: %v", stderr)
+	} else if err = createUpdateHook(repoPath); err != nil {
+		return repo, fmt.Errorf("create update hook: %v", err)
 	}
+
 	return repo, UpdateRepository(repo)
 }
 
@@ -402,7 +405,7 @@ func initRepoCommit(tmpPath string, sig *git.Signature) (err error) {
 	return nil
 }
 
-func createHookUpdate(repoPath string) error {
+func createUpdateHook(repoPath string) error {
 	return ioutil.WriteFile(path.Join(repoPath, "hooks/update"),
 		[]byte(fmt.Sprintf(_TPL_UPDATE_HOOK, setting.ScriptType, "\""+appPath+"\"", setting.CustomConf)), 0777)
 }
@@ -416,8 +419,7 @@ func initRepository(f string, u *User, repo *Repository, initReadme bool, repoLa
 		return err
 	}
 
-	// hook/post-update
-	if err := createHookUpdate(repoPath); err != nil {
+	if err := createUpdateHook(repoPath); err != nil {
 		return err
 	}
 
@@ -1175,7 +1177,7 @@ func RewriteRepositoryUpdateHook() error {
 			if err := repo.GetOwner(); err != nil {
 				return err
 			}
-			return createHookUpdate(RepoPath(repo.Owner.Name, repo.Name))
+			return createUpdateHook(RepoPath(repo.Owner.Name, repo.Name))
 		})
 }
 
