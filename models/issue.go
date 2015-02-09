@@ -282,10 +282,10 @@ type IssueUser struct {
 }
 
 // NewIssueUserPairs adds new issue-user pairs for new issue of repository.
-func NewIssueUserPairs(rid, iid, oid, pid, aid int64, repoName string) (err error) {
-	iu := &IssueUser{IssueId: iid, RepoId: rid}
+func NewIssueUserPairs(repo *Repository, iid, oid, pid, aid int64) (err error) {
+	iu := &IssueUser{IssueId: iid, RepoId: repo.Id}
 
-	us, err := GetCollaborators(repoName)
+	us, err := repo.GetCollaborators()
 	if err != nil {
 		return err
 	}
