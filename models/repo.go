@@ -30,7 +30,7 @@ import (
 )
 
 const (
-	_TPL_UPDATE_HOOK = "#!/usr/bin/env %s\n%s update --config='%s' $1 $2 $3\n"
+	_TPL_UPDATE_HOOK = "#!/usr/bin/env %s\n%s update $1 $2 $3 --config='%s'\n"
 )
 
 var (
