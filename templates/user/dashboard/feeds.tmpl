@@ -12,14 +12,14 @@
             {{$.i18n.Tr "action.commit_repo" AppSubUrl .GetRepoLink .GetBranch .GetBranch AppSubUrl .GetRepoLink .GetRepoLink | Str2html}}
             {{else if eq .GetOpType 6}}
             {{ $index := index .GetIssueInfos 0}}
-            {{$.i18n.Tr "action.create_issue" AppSubUrl .GetRepoLink $index .GetRepoLink $index | Str2html}}
+            {{$.i18n.Tr "action.create_issue" .GetRepoLink $index | Str2html}}
             {{else if eq .GetOpType 8}}
             {{$.i18n.Tr "action.transfer_repo" .GetContent AppSubUrl .GetRepoLink .GetRepoLink | Str2html}}
             {{else if eq .GetOpType 9}}
             {{$.i18n.Tr "action.push_tag" AppSubUrl .GetRepoLink .GetBranch .GetBranch AppSubUrl .GetRepoLink .GetRepoLink | Str2html}}
             {{else if eq .GetOpType 10}}
             {{ $index := index .GetIssueInfos 0}}
-            {{$.i18n.Tr "action.comment_issue" AppSubUrl .GetRepoLink $index .GetRepoLink $index | Str2html}}
+            {{$.i18n.Tr "action.comment_issue" .GetRepoLink $index | Str2html}}
             {{end}}
         </p>
         {{if eq .GetOpType 5}}

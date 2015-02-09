@@ -30,7 +30,7 @@ import (
 )
 
 const (
-	TPL_UPDATE_HOOK = "#!/usr/bin/env %s\n%s update --config=%s $1 $2 $3\n"
+	_TPL_UPDATE_HOOK = "#!/usr/bin/env %s\n%s update --config='%s' $1 $2 $3\n"
 )
 
 var (
@@ -402,15 +402,9 @@ func initRepoCommit(tmpPath string, sig *git.Signature) (err error) {
 	return nil
 }
 
-func createHookUpdate(hookPath, content string) error {
-	pu, err := os.OpenFile(hookPath, os.O_CREATE|os.O_WRONLY, 0777)
-	if err != nil {
-		return err
-	}
-	defer pu.Close()
-
-	_, err = pu.WriteString(content)
-	return err
+func createHookUpdate(repoPath string) error {
+	return ioutil.WriteFile(path.Join(repoPath, "hooks/update"),
+		[]byte(fmt.Sprintf(_TPL_UPDATE_HOOK, setting.ScriptType, "\""+appPath+"\"", setting.CustomConf)), 0777)
 }
 
 // InitRepository initializes README and .gitignore if needed.
@@ -423,8 +417,7 @@ func initRepository(f string, u *User, repo *Repository, initReadme bool, repoLa
 	}
 
 	// hook/post-update
-	if err := createHookUpdate(filepath.Join(repoPath, "hooks", "update"),
-		fmt.Sprintf(TPL_UPDATE_HOOK, setting.ScriptType, "\""+appPath+"\"", setting.CustomConf)); err != nil {
+	if err := createHookUpdate(repoPath); err != nil {
 		return err
 	}
 
@@ -1171,6 +1164,18 @@ func DeleteRepositoryArchives() error {
 				return err
 			}
 			return os.RemoveAll(filepath.Join(RepoPath(repo.Owner.Name, repo.Name), "archives"))
+		})
+}
+
+// RewriteRepositoryUpdateHook rewrites all repositories' update hook.
+func RewriteRepositoryUpdateHook() error {
+	return x.Where("id > 0").Iterate(new(Repository),
+		func(idx int, bean interface{}) error {
+			repo := bean.(*Repository)
+			if err := repo.GetOwner(); err != nil {
+				return err
+			}
+			return createHookUpdate(RepoPath(repo.Owner.Name, repo.Name))
 		})
 }
 
