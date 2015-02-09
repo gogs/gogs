@@ -237,28 +237,31 @@ func ListMyRepos(ctx *middleware.Context) {
 	}
 	numOwnRepos := len(ownRepos)
 
-	collaRepos, err := models.GetCollaborativeRepos(ctx.User.Name)
+	accessibleRepos, err := ctx.User.GetAccessibleRepositories()
 	if err != nil {
-		ctx.JSON(500, &base.ApiJsonErr{"GetCollaborativeRepos: " + err.Error(), base.DOC_URL})
+		ctx.JSON(500, &base.ApiJsonErr{"GetAccessibleRepositories: " + err.Error(), base.DOC_URL})
 		return
 	}
 
-	repos := make([]*api.Repository, numOwnRepos+len(collaRepos))
+	repos := make([]*api.Repository, numOwnRepos+len(accessibleRepos))
 	for i := range ownRepos {
 		repos[i] = ToApiRepository(ctx.User, ownRepos[i], api.Permission{true, true, true})
 	}
-	for i := range collaRepos {
-		if err = collaRepos[i].GetOwner(); err != nil {
+	i := numOwnRepos
+
+	for repo, access := range accessibleRepos {
+		if err = repo.GetOwner(); err != nil {
 			ctx.JSON(500, &base.ApiJsonErr{"GetOwner: " + err.Error(), base.DOC_URL})
 			return
 		}
-		j := i + numOwnRepos
-		repos[j] = ToApiRepository(collaRepos[i].Owner, collaRepos[i].Repository, api.Permission{false, collaRepos[i].CanPush, true})
+
+		repos[i] = ToApiRepository(repo.Owner, repo, api.Permission{false, access >= models.WRITABLE, true})
 
 		// FIXME: cache result to reduce DB query?
-		if collaRepos[i].Owner.IsOrganization() && collaRepos[i].Owner.IsOwnedBy(ctx.User.Id) {
-			repos[j].Permissions.Admin = true
+		if repo.Owner.IsOrganization() && repo.Owner.IsOwnedBy(ctx.User.Id) {
+			repos[i].Permissions.Admin = true
 		}
+		i++
 	}
 
 	ctx.JSON(200, &repos)
