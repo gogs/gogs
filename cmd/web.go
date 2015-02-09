@@ -126,7 +126,7 @@ func newMacaron() *macaron.Macaron {
 	m.Use(i18n.I18n(i18n.Options{
 		SubURL:          setting.AppSubUrl,
 		Directory:       path.Join(setting.ConfRootPath, "locale"),
-		CustomDirectory: path.Join(setting.CustomPath, "conf/locale"),
+		CustomDirectory: path.Join(setting.CustomPath, "locale"),
 		Langs:           setting.Langs,
 		Names:           setting.Names,
 		Redirect:        true,

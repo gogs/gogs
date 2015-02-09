@@ -60,7 +60,7 @@ func LoadRepoConfig() {
 		if err != nil {
 			log.Fatal(4, "Fail to get %s files: %v", t, err)
 		}
-		customPath := path.Join(setting.CustomPath, "conf", t)
+		customPath := path.Join(setting.CustomPath, t)
 		if com.IsDir(customPath) {
 			customFiles, err := com.StatDir(customPath)
 			if err != nil {
@@ -464,7 +464,7 @@ func initRepository(f string, u *User, repo *Repository, initReadme bool, repoLa
 			}
 		} else {
 			// Check custom files.
-			filePath = path.Join(setting.CustomPath, "conf/gitignore", repoLang)
+			filePath = path.Join(setting.CustomPath, "gitignore", repoLang)
 			if com.IsFile(filePath) {
 				if err := com.Copy(filePath, targetPath); err != nil {
 					return err
@@ -485,7 +485,7 @@ func initRepository(f string, u *User, repo *Repository, initReadme bool, repoLa
 			}
 		} else {
 			// Check custom files.
-			filePath = path.Join(setting.CustomPath, "conf/license", license)
+			filePath = path.Join(setting.CustomPath, "license", license)
 			if com.IsFile(filePath) {
 				if err := com.Copy(filePath, targetPath); err != nil {
 					return err

@@ -169,13 +169,8 @@ func NewConfigContext() {
 		log.Fatal(4, "Fail to parse 'conf/app.ini': %v", err)
 	}
 
-	CustomPath = os.Getenv("GOGS_CUSTOM")
-	if len(CustomPath) == 0 {
-		CustomPath = path.Join(workDir, "custom")
-	}
-
 	if len(CustomConf) == 0 {
-		CustomConf = path.Join(CustomPath, "conf/app.ini")
+		CustomConf = path.Join(workDir, "custom", "conf", "app.ini")
 	}
 
 	if com.IsFile(CustomConf) {
@@ -219,6 +214,7 @@ func NewConfigContext() {
 	OfflineMode = sec.Key("OFFLINE_MODE").MustBool()
 	DisableRouterLog = sec.Key("DISABLE_ROUTER_LOG").MustBool()
 	StaticRootPath = sec.Key("STATIC_ROOT_PATH").MustString(workDir)
+	CustomPath = sec.Key("CUSTOM_PATH").MustString(path.Dir(CustomConf))
 	EnableGzip = sec.Key("ENABLE_GZIP").MustBool()
 
 	switch sec.Key("LANDING_PAGE").MustString("home") {
