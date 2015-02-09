@@ -28,7 +28,7 @@ The goal of this project is to make the easiest, fastest and most painless way t
 
 - Please see [Documentation](http://gogs.io/docs/intro/) for project design, known issues, and change log.
 - See [Trello Board](https://trello.com/b/uxAoeLUl/gogs-go-git-service) to follow the develop team.
-- Try it before anything? Do it [online](https://try.gogs.io/Unknown/gogs) or go down to **Installation -> Install from binary** section!
+- Try it before anything? Do it [online](https://try.gogs.io/unknwon/gogs) or go down to **Installation -> Install from binary** section!
 - Having troubles? Get help from [Troubleshooting](http://gogs.io/docs/intro/troubleshooting.md).
 - Want to help on localization? Check out [Crowdin](https://crowdin.com/project/gogs)!
 
@@ -52,7 +52,7 @@ The goal of this project is to make the easiest, fastest and most painless way t
 - Drone CI integration
 - Supports MySQL, PostgreSQL and SQLite3
 - Social account login(GitHub, Google, QQ, Weibo)
-- Multi-language support([9 languages](https://crowdin.com/project/gogs))
+- Multi-language support([10 languages](https://crowdin.com/project/gogs))
 
 ## System Requirements
 

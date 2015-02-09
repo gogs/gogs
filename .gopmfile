@@ -3,6 +3,7 @@ path = github.com/gogits/gogs
 
 [deps]
 github.com/beego/memcache = commit:2aea774416
+github.com/bradfitz/gomemcache = 
 github.com/Unknwon/cae = commit:2e70a1351b
 github.com/Unknwon/com = commit:d9bcf409c8
 github.com/Unknwon/i18n = commit:1e88666229
@@ -27,6 +28,8 @@ github.com/microcosm-cc/bluemonday =
 github.com/nfnt/resize = commit:8f44931448
 github.com/russross/blackfriday = commit:05b8cefd6a
 github.com/shurcooL/go = commit:48293cbc7a
+golang.org/x/net = 
+golang.org/x/text = 
 gopkg.in/ini.v1 = commit:28ad8c408b
 gopkg.in/redis.v2 = commit:e617904962
 
