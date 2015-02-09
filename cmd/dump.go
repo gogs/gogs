@@ -25,8 +25,8 @@ var CmdDump = cli.Command{
 It can be used for backup and capture Gogs server image to send to maintainer`,
 	Action: runDump,
 	Flags: []cli.Flag{
+		cli.StringFlag{"config, c", "custom/conf/app.ini", "Custom configuration file path", ""},
 		cli.BoolFlag{"verbose, v", "show process details", ""},
-		cli.StringFlag{"config, c", "custom/conf/app.ini", "Configuration file", ""},
 	},
 }
 
