@@ -102,9 +102,11 @@
                             <div class="panel-body">
                                 <dl class="dl-horizontal admin-dl-horizontal">
                                     <dt>{{.i18n.Tr "admin.config.task_interval"}}</dt>
-                                    <dd>{{.WebhookTaskInterval}} {{.i18n.Tr "tool.raw_minutes"}}</dd>
+                                    <dd>{{.Webhook.TaskInterval}} {{.i18n.Tr "tool.raw_minutes"}}</dd>
                                     <dt>{{.i18n.Tr "admin.config.deliver_timeout"}}</dt>
-                                    <dd>{{.WebhookDeliverTimeout}} {{.i18n.Tr "tool.raw_seconds"}}</dd>
+                                    <dd>{{.Webhook.DeliverTimeout}} {{.i18n.Tr "tool.raw_seconds"}}</dd>
+                                    <dt>{{.i18n.Tr "admin.config.allow_insecure_certification"}}</dt>
+                                    <dd><i class="fa fa{{if .Webhook.AllowInsecureCertification}}-check{{end}}-square-o"></i></dd>
                                 </dl>
                             </div>
                         </div>
