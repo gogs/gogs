@@ -69,9 +69,9 @@ var (
 
 	// Webhook settings.
 	Webhook struct {
-		TaskInterval               int
-		DeliverTimeout             int
-		AllowInsecureCertification bool
+		TaskInterval   int
+		DeliverTimeout int
+		SkipTLSVerify  bool
 	}
 
 	// Repository settings.
@@ -514,7 +514,7 @@ func newWebhookService() {
 	sec := Cfg.Section("webhook")
 	Webhook.TaskInterval = sec.Key("TASK_INTERVAL").MustInt(1)
 	Webhook.DeliverTimeout = sec.Key("DELIVER_TIMEOUT").MustInt(5)
-	Webhook.AllowInsecureCertification = sec.Key("ALLOW_INSECURE_CERTIFICATION").MustBool()
+	Webhook.SkipTLSVerify = sec.Key("SKIP_TLS_VERIFY").MustBool()
 }
 
 func NewServices() {
