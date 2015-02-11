@@ -1060,71 +1060,74 @@ func GetRepositoryCount(user *User) (int64, error) {
 	return x.Count(&Repository{OwnerId: user.Id})
 }
 
-// GetCollaboratorNames returns a list of user name of repository's collaborators.
-func GetCollaboratorNames(repoName string) ([]string, error) {
-	accesses := make([]*Access, 0, 10)
-	if err := x.Find(&accesses, &Access{RepoName: strings.ToLower(repoName)}); err != nil {
+// GetCollaborators returns the collaborators for a repository
+func (r *Repository) GetCollaborators() ([]*User, error) {
+	collaborations := make([]*Collaboration, 0)
+	if err := x.Find(&collaborations, &Collaboration{RepoID: r.Id}); err != nil {
 		return nil, err
 	}
 
-	names := make([]string, len(accesses))
-	for i := range accesses {
-		names[i] = accesses[i].UserName
-	}
-	return names, nil
-}
-
-// CollaborativeRepository represents a repository with collaborative information.
-type CollaborativeRepository struct {
-	*Repository
-	CanPush bool
-}
-
-// GetCollaborativeRepos returns a list of repositories that user is collaborator.
-func GetCollaborativeRepos(uname string) ([]*CollaborativeRepository, error) {
-	uname = strings.ToLower(uname)
-	accesses := make([]*Access, 0, 10)
-	if err := x.Find(&accesses, &Access{UserName: uname}); err != nil {
-		return nil, err
-	}
-
-	repos := make([]*CollaborativeRepository, 0, 10)
-	for _, access := range accesses {
-		infos := strings.Split(access.RepoName, "/")
-		if infos[0] == uname {
-			continue
-		}
-
-		u, err := GetUserByName(infos[0])
+	users := make([]*User, len(collaborations))
+	for i, c := range collaborations {
+		user, err := GetUserById(c.UserID)
 		if err != nil {
 			return nil, err
 		}
-
-		repo, err := GetRepositoryByName(u.Id, infos[1])
-		if err != nil {
-			return nil, err
-		}
-		repo.Owner = u
-		repos = append(repos, &CollaborativeRepository{repo, access.Mode == WRITABLE})
+		users[i] = user
 	}
-	return repos, nil
+	return users, nil
 }
 
-// GetCollaborators returns a list of users of repository's collaborators.
-func GetCollaborators(repoName string) (us []*User, err error) {
-	accesses := make([]*Access, 0, 10)
-	if err = x.Find(&accesses, &Access{RepoName: strings.ToLower(repoName)}); err != nil {
-		return nil, err
+// Add collaborator and accompanying access
+func (r *Repository) AddCollaborator(u *User) error {
+	collaboration := &Collaboration{RepoID: r.Id, UserID: u.Id}
+
+	has, err := x.Get(collaboration)
+	if err != nil {
+		return err
+	}
+	if has {
+		return nil
 	}
 
-	us = make([]*User, len(accesses))
-	for i := range accesses {
-		us[i], err = GetUserByName(accesses[i].UserName)
+	if _, err = x.InsertOne(collaboration); err != nil {
+		return err
+	}
+
+	if err = r.GetOwner(); err != nil {
+		return err
+	}
+
+	return AddAccess(&Access{UserName: u.LowerName, RepoName: path.Join(r.Owner.LowerName, r.LowerName), Mode: WRITABLE})
+}
+
+// Delete collaborator and accompanying access
+func (r *Repository) DeleteCollaborator(u *User) error {
+	collaboration := &Collaboration{RepoID: r.Id, UserID: u.Id}
+
+	if has, err := x.Delete(collaboration); err != nil || has == 0 {
+		return err
+	}
+
+	if err := r.GetOwner(); err != nil {
+		return err
+	}
+
+	needDelete := true
+	if r.Owner.IsOrganization() {
+		auth, err := GetHighestAuthorize(r.Owner.Id, u.Id, r.Id, 0)
 		if err != nil {
-			return nil, err
+			return err
+		}
+		if auth > 0 {
+			needDelete = false
 		}
 	}
-	return us, nil
+	if needDelete {
+		return DeleteAccess(&Access{UserName: u.LowerName, RepoName: path.Join(r.Owner.LowerName, r.LowerName), Mode: WRITABLE})
+	}
+
+	return nil
 }
 
 type SearchOption struct {
@@ -1553,4 +1556,12 @@ func ForkRepository(u *User, oldRepo *Repository, name, desc string) (*Repositor
 	}
 
 	return repo, nil
+}
+
+// A Collaboration is a relation between an individual and a repository
+type Collaboration struct {
+	ID      int64     `xorm:"pk autoincr"`
+	RepoID  int64     `xorm:"UNIQUE(s) INDEX NOT NULL"`
+	UserID  int64     `xorm:"UNIQUE(s) INDEX NOT NULL"`
+	Created time.Time `xorm:"CREATED"`
 }
