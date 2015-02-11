@@ -5,6 +5,7 @@
 package models
 
 import (
+	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"io/ioutil"
@@ -307,13 +308,14 @@ func DeliverHooks() {
 	defer func() { isShooting = false }()
 
 	tasks := make([]*HookTask, 0, 10)
-	timeout := time.Duration(setting.WebhookDeliverTimeout) * time.Second
+	timeout := time.Duration(setting.Webhook.DeliverTimeout) * time.Second
 	x.Where("is_delivered=?", false).Iterate(new(HookTask),
 		func(idx int, bean interface{}) error {
 			t := bean.(*HookTask)
 			req := httplib.Post(t.Url).SetTimeout(timeout, timeout).
 				Header("X-Gogs-Delivery", t.Uuid).
-				Header("X-Gogs-Event", string(t.EventType))
+				Header("X-Gogs-Event", string(t.EventType)).
+				SetTLSClientConfig(&tls.Config{InsecureSkipVerify: setting.Webhook.AllowInsecureCertification})
 
 			switch t.ContentType {
 			case JSON:
@@ -329,7 +331,7 @@ func DeliverHooks() {
 			case GOGS:
 				{
 					if _, err := req.Response(); err != nil {
-						log.Error(4, "Delivery: %v", err)
+						log.Error(5, "Delivery: %v", err)
 					} else {
 						t.IsSucceed = true
 					}
@@ -337,15 +339,15 @@ func DeliverHooks() {
 			case SLACK:
 				{
 					if res, err := req.Response(); err != nil {
-						log.Error(4, "Delivery: %v", err)
+						log.Error(5, "Delivery: %v", err)
 					} else {
 						defer res.Body.Close()
 						contents, err := ioutil.ReadAll(res.Body)
 						if err != nil {
-							log.Error(4, "%s", err)
+							log.Error(5, "%s", err)
 						} else {
 							if string(contents) != "ok" {
-								log.Error(4, "slack failed with: %s", string(contents))
+								log.Error(5, "slack failed with: %s", string(contents))
 							} else {
 								t.IsSucceed = true
 							}

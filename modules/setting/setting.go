@@ -68,8 +68,11 @@ var (
 	ReverseProxyAuthUser string
 
 	// Webhook settings.
-	WebhookTaskInterval   int
-	WebhookDeliverTimeout int
+	Webhook struct {
+		TaskInterval               int
+		DeliverTimeout             int
+		AllowInsecureCertification bool
+	}
 
 	// Repository settings.
 	RepoRootPath string
@@ -508,8 +511,10 @@ func newNotifyMailService() {
 }
 
 func newWebhookService() {
-	WebhookTaskInterval = Cfg.Section("webhook").Key("TASK_INTERVAL").MustInt(1)
-	WebhookDeliverTimeout = Cfg.Section("webhook").Key("DELIVER_TIMEOUT").MustInt(5)
+	sec := Cfg.Section("webhook")
+	Webhook.TaskInterval = sec.Key("TASK_INTERVAL").MustInt(1)
+	Webhook.DeliverTimeout = sec.Key("DELIVER_TIMEOUT").MustInt(5)
+	Webhook.AllowInsecureCertification = sec.Key("ALLOW_INSECURE_CERTIFICATION").MustBool()
 }
 
 func NewServices() {

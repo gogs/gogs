@@ -188,11 +188,8 @@ func Config(ctx *middleware.Context) {
 	ctx.Data["ReverseProxyAuthUser"] = setting.ReverseProxyAuthUser
 
 	ctx.Data["Service"] = setting.Service
-
 	ctx.Data["DbCfg"] = models.DbCfg
-
-	ctx.Data["WebhookTaskInterval"] = setting.WebhookTaskInterval
-	ctx.Data["WebhookDeliverTimeout"] = setting.WebhookDeliverTimeout
+	ctx.Data["Webhook"] = setting.Webhook
 
 	ctx.Data["MailerEnabled"] = false
 	if setting.MailService != nil {
