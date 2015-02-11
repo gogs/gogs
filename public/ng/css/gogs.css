@@ -1066,6 +1066,9 @@ The register and sign-in page style
 #repo-header-download-drop .btn > i {
   margin-right: 6px;
 }
+#repo-header-download-drop input {
+  cursor: default;
+}
 #repo-header-download-drop button,
 #repo-header-download-drop input {
   font-size: 11px;
