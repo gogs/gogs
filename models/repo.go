@@ -1296,7 +1296,7 @@ func IsWatching(uid, repoId int64) bool {
 	return has
 }
 
-func watchRepoWithEngine(e Engine, uid, repoId int64, watch bool) (err error) {
+func watchRepo(e Engine, uid, repoId int64, watch bool) (err error) {
 	if watch {
 		if IsWatching(uid, repoId) {
 			return nil
@@ -1319,7 +1319,7 @@ func watchRepoWithEngine(e Engine, uid, repoId int64, watch bool) (err error) {
 
 // Watch or unwatch repository.
 func WatchRepo(uid, repoId int64, watch bool) (err error) {
-	return watchRepoWithEngine(x, uid, repoId, watch)
+	return watchRepo(x, uid, repoId, watch)
 }
 
 // GetWatchers returns all watchers of given repository.
@@ -1507,14 +1507,14 @@ func ForkRepository(u *User, oldRepo *Repository, name, desc string) (*Repositor
 				log.Error(4, "GetMembers: %v", err)
 			} else {
 				for _, u := range t.Members {
-					if err = watchRepoWithEngine(sess, u.Id, repo.Id, true); err != nil {
+					if err = watchRepo(sess, u.Id, repo.Id, true); err != nil {
 						log.Error(4, "WatchRepo2: %v", err)
 					}
 				}
 			}
 		}
 	} else {
-		if err = watchRepoWithEngine(sess, u.Id, repo.Id, true); err != nil {
+		if err = watchRepo(sess, u.Id, repo.Id, true); err != nil {
 			log.Error(4, "WatchRepo3: %v", err)
 		}
 	}
