@@ -24,7 +24,10 @@ import (
 type Engine interface {
 	Delete(interface{}) (int64, error)
 	Exec(string, ...interface{}) (sql.Result, error)
+	Get(interface{}) (bool, error)
 	Insert(...interface{}) (int64, error)
+	Id(interface{}) *xorm.Session
+	Where(string, ...interface{}) *xorm.Session
 }
 
 var (
