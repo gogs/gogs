@@ -6,7 +6,6 @@ package middleware
 
 import (
 	"net/url"
-	"strings"
 
 	"github.com/Unknwon/macaron"
 	"github.com/macaron-contrib/csrf"
@@ -50,10 +49,6 @@ func Toggle(options *ToggleOptions) macaron.Handler {
 
 		if options.SignInRequire {
 			if !ctx.IsSigned {
-				// Ignore watch repository operation.
-				if strings.HasSuffix(ctx.Req.RequestURI, "watch") {
-					return
-				}
 				ctx.SetCookie("redirect_to", url.QueryEscape(setting.AppSubUrl+ctx.Req.RequestURI), 0, setting.AppSubUrl)
 				ctx.Redirect(setting.AppSubUrl + "/user/login")
 				return
