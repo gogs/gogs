@@ -357,13 +357,16 @@ func MigrateRepository(u *User, name, desc string, private, mirror bool, url str
 		os.RemoveAll(repoPath)
 	}
 
-	// this command could for both migrate and mirror
+	// FIXME: this command could for both migrate and mirror
 	_, stderr, err := process.ExecTimeout(10*time.Minute,
 		fmt.Sprintf("MigrateRepository: %s", repoPath),
 		"git", "clone", "--mirror", "--bare", url, repoPath)
 	if err != nil {
-		return repo, errors.New("git clone: " + stderr)
+		return repo, fmt.Errorf("git clone --mirror --bare: %v", stderr)
+	} else if err = createUpdateHook(repoPath); err != nil {
+		return repo, fmt.Errorf("create update hook: %v", err)
 	}
+
 	return repo, UpdateRepository(repo)
 }
 
@@ -402,7 +405,7 @@ func initRepoCommit(tmpPath string, sig *git.Signature) (err error) {
 	return nil
 }
 
-func createHookUpdate(repoPath string) error {
+func createUpdateHook(repoPath string) error {
 	return ioutil.WriteFile(path.Join(repoPath, "hooks/update"),
 		[]byte(fmt.Sprintf(_TPL_UPDATE_HOOK, setting.ScriptType, "\""+appPath+"\"", setting.CustomConf)), 0777)
 }
@@ -416,8 +419,7 @@ func initRepository(f string, u *User, repo *Repository, initReadme bool, repoLa
 		return err
 	}
 
-	// hook/post-update
-	if err := createHookUpdate(repoPath); err != nil {
+	if err := createUpdateHook(repoPath); err != nil {
 		return err
 	}
 
@@ -1178,7 +1180,7 @@ func RewriteRepositoryUpdateHook() error {
 			if err := repo.GetOwner(); err != nil {
 				return err
 			}
-			return createHookUpdate(RepoPath(repo.Owner.Name, repo.Name))
+			return createUpdateHook(RepoPath(repo.Owner.Name, repo.Name))
 		})
 }
 
@@ -1297,7 +1299,7 @@ func IsWatching(uid, repoId int64) bool {
 	return has
 }
 
-func watchRepoWithEngine(e Engine, uid, repoId int64, watch bool) (err error) {
+func watchRepo(e Engine, uid, repoId int64, watch bool) (err error) {
 	if watch {
 		if IsWatching(uid, repoId) {
 			return nil
@@ -1320,7 +1322,7 @@ func watchRepoWithEngine(e Engine, uid, repoId int64, watch bool) (err error) {
 
 // Watch or unwatch repository.
 func WatchRepo(uid, repoId int64, watch bool) (err error) {
-	return watchRepoWithEngine(x, uid, repoId, watch)
+	return watchRepo(x, uid, repoId, watch)
 }
 
 // GetWatchers returns all watchers of given repository.
@@ -1508,14 +1510,14 @@ func ForkRepository(u *User, oldRepo *Repository, name, desc string) (*Repositor
 				log.Error(4, "GetMembers: %v", err)
 			} else {
 				for _, u := range t.Members {
-					if err = watchRepoWithEngine(sess, u.Id, repo.Id, true); err != nil {
+					if err = watchRepo(sess, u.Id, repo.Id, true); err != nil {
 						log.Error(4, "WatchRepo2: %v", err)
 					}
 				}
 			}
 		}
 	} else {
-		if err = watchRepoWithEngine(sess, u.Id, repo.Id, true); err != nil {
+		if err = watchRepo(sess, u.Id, repo.Id, true); err != nil {
 			log.Error(4, "WatchRepo3: %v", err)
 		}
 	}

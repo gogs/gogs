@@ -138,11 +138,8 @@ func TeamsRepoAction(ctx *middleware.Context) {
 	}
 
 	if err != nil {
-		log.Error(3, "Action(%s): %v", ctx.Params(":action"), err)
-		ctx.JSON(200, map[string]interface{}{
-			"ok":  false,
-			"err": err.Error(),
-		})
+		log.Error(3, "Action(%s): '%s' %v", ctx.Params(":action"), ctx.Org.Team.Name, err)
+		ctx.Handle(500, "TeamsRepoAction", err)
 		return
 	}
 	ctx.Redirect(ctx.Org.OrgLink + "/teams/" + ctx.Org.Team.LowerName + "/repositories")
