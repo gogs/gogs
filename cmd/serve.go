@@ -67,14 +67,14 @@ func parseCmd(cmd string) (string, string) {
 
 var (
 	COMMANDS_READONLY = map[string]models.AccessMode{
-		"git-upload-pack":    models.WriteAccess,
-		"git upload-pack":    models.WriteAccess,
-		"git-upload-archive": models.WriteAccess,
+		"git-upload-pack":    models.ACCESS_MODE_WRITE,
+		"git upload-pack":    models.ACCESS_MODE_WRITE,
+		"git-upload-archive": models.ACCESS_MODE_WRITE,
 	}
 
 	COMMANDS_WRITE = map[string]models.AccessMode{
-		"git-receive-pack": models.ReadAccess,
-		"git receive-pack": models.ReadAccess,
+		"git-receive-pack": models.ACCESS_MODE_READ,
+		"git receive-pack": models.ACCESS_MODE_READ,
 	}
 )
 
@@ -155,7 +155,7 @@ func runServ(k *cli.Context) {
 
 	switch {
 	case isWrite:
-		has, err := models.HasAccess(user, repo, models.WriteAccess)
+		has, err := models.HasAccess(user, repo, models.ACCESS_MODE_WRITE)
 		if err != nil {
 			println("Gogs: internal error:", err.Error())
 			log.GitLogger.Fatal(2, "Fail to check write access:", err)
@@ -168,7 +168,7 @@ func runServ(k *cli.Context) {
 			break
 		}
 
-		has, err := models.HasAccess(user, repo, models.ReadAccess)
+		has, err := models.HasAccess(user, repo, models.ACCESS_MODE_READ)
 		if err != nil {
 			println("Gogs: internal error:", err.Error())
 			log.GitLogger.Fatal(2, "Fail to check read access:", err)
