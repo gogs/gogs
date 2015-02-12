@@ -43,7 +43,7 @@ func setup(logPath string) {
 
 	models.LoadModelsConfig()
 
-	if models.UseSQLite3 {
+	if setting.UseSQLite3 {
 		workDir, _ := setting.WorkDir()
 		os.Chdir(workDir)
 	}

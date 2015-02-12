@@ -67,6 +67,11 @@ var (
 	CookieRememberName   string
 	ReverseProxyAuthUser string
 
+	// Database settings.
+	UseSQLite3    bool
+	UseMySQL      bool
+	UsePostgreSQL bool
+
 	// Webhook settings.
 	Webhook struct {
 		TaskInterval   int

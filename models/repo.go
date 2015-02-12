@@ -847,7 +847,8 @@ func ChangeRepositoryName(userName, oldRepoName, newRepoName string) (err error)
 
 	for i := range accesses {
 		accesses[i].RepoName = userName + "/" + newRepoName
-		if err = UpdateAccessWithSession(sess, &accesses[i]); err != nil {
+		if err = updateAccess(sess, &accesses[i]); err != nil {
+			sess.Rollback()
 			return err
 		}
 	}
@@ -1062,76 +1063,6 @@ func GetRepositoryCount(user *User) (int64, error) {
 	return x.Count(&Repository{OwnerId: user.Id})
 }
 
-// GetCollaborators returns the collaborators for a repository
-func (r *Repository) GetCollaborators() ([]*User, error) {
-	collaborations := make([]*Collaboration, 0)
-	if err := x.Find(&collaborations, &Collaboration{RepoID: r.Id}); err != nil {
-		return nil, err
-	}
-
-	users := make([]*User, len(collaborations))
-	for i, c := range collaborations {
-		user, err := GetUserById(c.UserID)
-		if err != nil {
-			return nil, err
-		}
-		users[i] = user
-	}
-	return users, nil
-}
-
-// Add collaborator and accompanying access
-func (r *Repository) AddCollaborator(u *User) error {
-	collaboration := &Collaboration{RepoID: r.Id, UserID: u.Id}
-
-	has, err := x.Get(collaboration)
-	if err != nil {
-		return err
-	}
-	if has {
-		return nil
-	}
-
-	if _, err = x.InsertOne(collaboration); err != nil {
-		return err
-	}
-
-	if err = r.GetOwner(); err != nil {
-		return err
-	}
-
-	return AddAccess(&Access{UserName: u.LowerName, RepoName: path.Join(r.Owner.LowerName, r.LowerName), Mode: WRITABLE})
-}
-
-// Delete collaborator and accompanying access
-func (r *Repository) DeleteCollaborator(u *User) error {
-	collaboration := &Collaboration{RepoID: r.Id, UserID: u.Id}
-
-	if has, err := x.Delete(collaboration); err != nil || has == 0 {
-		return err
-	}
-
-	if err := r.GetOwner(); err != nil {
-		return err
-	}
-
-	needDelete := true
-	if r.Owner.IsOrganization() {
-		auth, err := GetHighestAuthorize(r.Owner.Id, u.Id, r.Id, 0)
-		if err != nil {
-			return err
-		}
-		if auth > 0 {
-			needDelete = false
-		}
-	}
-	if needDelete {
-		return DeleteAccess(&Access{UserName: u.LowerName, RepoName: path.Join(r.Owner.LowerName, r.LowerName), Mode: WRITABLE})
-	}
-
-	return nil
-}
-
 type SearchOption struct {
 	Keyword string
 	Uid     int64
@@ -1277,6 +1208,120 @@ func GitGcRepos() error {
 			}
 			return nil
 		})
+}
+
+// _________        .__  .__        ___.                        __  .__
+// \_   ___ \  ____ |  | |  | _____ \_ |__   ________________ _/  |_|__| ____   ____
+// /    \  \/ /  _ \|  | |  | \__  \ | __ \ /  _ \_  __ \__  \\   __\  |/  _ \ /    \
+// \     \___(  <_> )  |_|  |__/ __ \| \_\ (  <_> )  | \// __ \|  | |  (  <_> )   |  \
+//  \______  /\____/|____/____(____  /___  /\____/|__|  (____  /__| |__|\____/|___|  /
+//         \/                      \/    \/                  \/                    \/
+
+// A Collaboration is a relation between an individual and a repository
+type Collaboration struct {
+	ID      int64     `xorm:"pk autoincr"`
+	RepoID  int64     `xorm:"UNIQUE(s) INDEX NOT NULL"`
+	UserID  int64     `xorm:"UNIQUE(s) INDEX NOT NULL"`
+	Created time.Time `xorm:"CREATED"`
+}
+
+// Add collaborator and accompanying access
+func (r *Repository) AddCollaborator(u *User) error {
+	collaboration := &Collaboration{RepoID: r.Id, UserID: u.Id}
+	has, err := x.Get(collaboration)
+	if err != nil {
+		return err
+	} else if has {
+		return nil
+	}
+
+	if err = r.GetOwner(); err != nil {
+		return err
+	}
+
+	sess := x.NewSession()
+	defer sess.Close()
+	if err = sess.Begin(); err != nil {
+		return err
+	}
+
+	if _, err = sess.InsertOne(collaboration); err != nil {
+		sess.Rollback()
+		return err
+	} else if err = addAccess(sess, &Access{
+		UserName: u.LowerName,
+		RepoName: path.Join(r.Owner.LowerName, r.LowerName),
+		Mode:     WRITABLE}); err != nil {
+		sess.Rollback()
+		return err
+	}
+
+	return sess.Commit()
+}
+
+// GetCollaborators returns the collaborators for a repository
+func (r *Repository) GetCollaborators() ([]*User, error) {
+	collaborations := make([]*Collaboration, 0, 5)
+	if err := x.Where("repo_id=?", r.Id).Find(&collaborations); err != nil {
+		return nil, err
+	}
+
+	users := make([]*User, len(collaborations))
+	for i, c := range collaborations {
+		user, err := GetUserById(c.UserID)
+		if err != nil {
+			return nil, err
+		}
+		users[i] = user
+	}
+	return users, nil
+}
+
+// Delete collaborator and accompanying access
+func (r *Repository) DeleteCollaborator(u *User) (err error) {
+	collaboration := &Collaboration{RepoID: r.Id, UserID: u.Id}
+	has, err := x.Get(collaboration)
+	if err != nil {
+		return err
+	} else if !has {
+		return nil
+	}
+
+	if err = r.GetOwner(); err != nil {
+		return err
+	}
+
+	sess := x.NewSession()
+	defer sess.Close()
+	if err = sess.Begin(); err != nil {
+		return err
+	}
+
+	needDelete := true
+	if r.Owner.IsOrganization() {
+		auth, err := getHighestAuthorize(sess, r.Owner.Id, u.Id, r.Id, 0)
+		if err != nil {
+			sess.Rollback()
+			return err
+		}
+		if auth > 0 {
+			needDelete = false
+		}
+	}
+	if needDelete {
+		if err = deleteAccess(sess, &Access{
+			UserName: u.LowerName,
+			RepoName: path.Join(r.Owner.LowerName, r.LowerName),
+			Mode:     WRITABLE}); err != nil {
+			sess.Rollback()
+			return err
+		} else if _, err = sess.Delete(collaboration); err != nil {
+			sess.Rollback()
+			return err
+		}
+	}
+
+	return sess.Commit()
 }
 
 //  __      __         __         .__
@@ -1558,12 +1603,4 @@ func ForkRepository(u *User, oldRepo *Repository, name, desc string) (*Repositor
 	}
 
 	return repo, nil
-}
-
-// A Collaboration is a relation between an individual and a repository
-type Collaboration struct {
-	ID      int64     `xorm:"pk autoincr"`
-	RepoID  int64     `xorm:"UNIQUE(s) INDEX NOT NULL"`
-	UserID  int64     `xorm:"UNIQUE(s) INDEX NOT NULL"`
-	Created time.Time `xorm:"CREATED"`
 }
