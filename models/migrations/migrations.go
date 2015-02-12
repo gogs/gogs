@@ -5,7 +5,6 @@
 package migrations
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -17,7 +16,7 @@ import (
 	"github.com/gogits/gogs/modules/setting"
 )
 
-const _DB_VER = 1
+const _MIN_DB_VER = 0
 
 type Migration interface {
 	Description() string
@@ -48,9 +47,10 @@ type Version struct {
 }
 
 // This is a sequence of migrations. Add new migrations to the bottom of the list.
-// If you want to "retire" a migration, replace it with "expiredMigration"
+// If you want to "retire" a migration, remove it from the top of the list and 
+// update _MIN_VER_DB accordingly 
 var migrations = []Migration{
-	NewMigration("generate collaboration from access", accessToCollaboration),
+	NewMigration("generate collaboration from access", accessToCollaboration), // V0 -> V1
 }
 
 // Migrate database to current version
@@ -64,6 +64,8 @@ func Migrate(x *xorm.Engine) error {
 	if err != nil {
 		return fmt.Errorf("get: %v", err)
 	} else if !has {
+		// If the user table does not exist it is a fresh installation and we
+		// can skip all migrations
 		needsMigration, err := x.IsTableExist("user")
 		if err != nil {
 			return err
@@ -73,10 +75,12 @@ func Migrate(x *xorm.Engine) error {
 			if err != nil {
 				return err
 			}
+			// If the user table is empty it is a fresh installation and we can
+			// skip all migrations
 			needsMigration = !isEmpty
 		}
 		if !needsMigration {
-			currentVersion.Version = int64(len(migrations))
+			currentVersion.Version = int64(_MIN_DB_VER + len(migrations))
 		}
 
 		if _, err = x.InsertOne(currentVersion); err != nil {
@@ -85,7 +89,7 @@ func Migrate(x *xorm.Engine) error {
 	}
 
 	v := currentVersion.Version
-	for i, m := range migrations[v:] {
+	for i, m := range migrations[v-_MIN_DB_VER:] {
 		log.Info("Migration: %s", m.Description())
 		if err = m.Migrate(x); err != nil {
 			return fmt.Errorf("do migrate: %v", err)
@@ -96,10 +100,6 @@ func Migrate(x *xorm.Engine) error {
 		}
 	}
 	return nil
-}
-
-func expiredMigration(x *xorm.Engine) error {
-	return errors.New("You are migrating from a too old gogs version")
 }
 
 func accessToCollaboration(x *xorm.Engine) error {
@@ -118,7 +118,12 @@ func accessToCollaboration(x *xorm.Engine) error {
 	}
 
 	sess := x.NewSession()
-	defer sess.Close()
+	defer func() {
+		if sess.IsCommitedOrRollbacked {
+			sess.Rollback()
+		}
+		sess.Close()
+	}()
 	if err = sess.Begin(); err != nil {
 		return err
 	}
@@ -151,7 +156,6 @@ func accessToCollaboration(x *xorm.Engine) error {
 
 		results, err := sess.Query("SELECT u.id as `uid`, ou.uid as `memberid` FROM `user` u LEFT JOIN org_user ou ON ou.org_id=u.id WHERE u.lower_name=?", ownerName)
 		if err != nil {
-			sess.Rollback()
 			return err
 		}
 		if len(results) < 1 {
@@ -189,7 +193,6 @@ func accessToCollaboration(x *xorm.Engine) error {
 		}
 		has, err := sess.Get(collaboration)
 		if err != nil {
-			sess.Rollback()
 			return err
 		} else if has {
 			continue
@@ -197,7 +200,6 @@ func accessToCollaboration(x *xorm.Engine) error {
 
 		collaboration.Created = created
 		if _, err = sess.InsertOne(collaboration); err != nil {
-			sess.Rollback()
 			return err
 		}
 	}
