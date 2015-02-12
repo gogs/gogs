@@ -56,12 +56,13 @@ func expiredMigration(x *xorm.Engine) error {
 
 func prepareToCommitComments(x *xorm.Engine) error {
 
-	sql := `ALTER TABLE comment MODIFY commit_id VARCHAR(50) DEFAULT NULL`
+	sql := `ALTER TABLE comment MODIFY commit_id VARCHAR(50) NULL DEFAULT NULL`
 	_, err := x.Exec(sql)
 	if err != nil {
 		return err
 	}
-	sql = `ALTER TABLE comment MODIFY line VARCHAR(50) DEFAULT NULL;`
+
+	sql = `ALTER TABLE comment MODIFY line VARCHAR(50) NULL DEFAULT NULL;`
 	_, err = x.Exec(sql)
 	if err != nil {
 		return err

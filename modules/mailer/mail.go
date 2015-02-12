@@ -222,6 +222,7 @@ func SendIssueMentionMail(r macaron.Render, u, owner *models.User,
 	data := GetMailTmplData(nil)
 	data["IssueLink"] = fmt.Sprintf("%s/%s/issues/%d", owner.Name, repo.Name, issue.Index)
 	data["Subject"] = subject
+	data["ActUserName"] = u.Name
 
 	body, err := r.HTMLString(string(NOTIFY_MENTION), data)
 	if err != nil {
@@ -246,6 +247,7 @@ func SendCommentMentionMail(r macaron.Render, u, owner *models.User,
 	data := GetMailTmplData(nil)
 	data["IssueLink"] = fmt.Sprintf("%s/%s/commit/%s", owner.Name, repo.Name, comment.CommitId)
 	data["Subject"] = subject
+	data["ActUserName"] = u.Name
 
 	body, err := r.HTMLString(string(NOTIFY_MENTION), data)
 	if err != nil {
