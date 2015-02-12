@@ -395,6 +395,7 @@ func ChangeUserName(u *User, newUserName string) (err error) {
 	if !IsLegalName(newUserName) {
 		return ErrUserNameIllegal
 	}
+
 	return os.Rename(UserPath(u.LowerName), UserPath(newUserName))
 }
 
