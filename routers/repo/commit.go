@@ -386,7 +386,6 @@ func CreateCommitComment(ctx *middleware.Context) {
 	content := ctx.Query("content")
 	line := ctx.Query("line")
 	lineRe, err := regexp.Compile("[0-9]+L[0-9]+")
-	fmt.Println(ctx.Locale.Tr("repo.commits.comment.required_field"))
 	if len(content) > 0 && lineRe.MatchString(line) {
 		switch ctx.Params(":action") {
 		case "new":

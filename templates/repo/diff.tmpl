@@ -112,7 +112,7 @@
                                 <span rel="diff-{{$lineNum}}">{{if $line.RightIdx}}{{$line.RightIdx}}{{end}}</span>
                             </td>
                             <td class="lines-code">
-                                {{if $.SignedUser}}{{if $k}}<b class="octicon octicon-plus" aria-label="Add line comment"></b>{{end}}{{end}}
+                                {{if $.SignedUser}}{{if $k}}<b class="octicon octicon-plus" aria-label="{{$.i18n.Tr "repo.commits.comment.comment_line"}}"></b>{{end}}{{end}}
                                 <pre>{{$line.Content}}</pre>
                             </td>
                         </tr>
@@ -128,7 +128,7 @@
                                              alt=""></a>
 
                                     <div class="panel panel-radius">
-                                        <p class="panel-header clear"><a class="author-name" href="#">{{.Poster.Name}}</a>
+                                        <p class="panel-header clear"><a class="author-name" href="{{AppSubUrl}}/{{.Poster.Name}}">{{.Poster.Name}}</a>
                                             <span class="date">{{TimeSince .Created $.Lang}}</span>
                                     <span class="action right">
                                         {{if $.IsRepositoryOwner}}

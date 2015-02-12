@@ -373,7 +373,6 @@ func runWeb(ctx *cli.Context) {
 	m.Group("/:username/:reponame", func() {
 		m.Get("/settings", repo.Settings)
 		m.Post("/settings", bindIgnErr(auth.RepoSettingForm{}), repo.SettingsPost)
-		m.Post("/commit/comment/:action/:commitId", repo.CreateCommitComment)
 		m.Group("/settings", func() {
 			m.Route("/collaboration", "GET,POST", repo.SettingsCollaboration)
 			m.Get("/hooks", repo.Webhooks)
@@ -442,6 +441,7 @@ func runWeb(ctx *cli.Context) {
 			m.Get("/commits/*", repo.RefCommits)
 			m.Get("/commit/comment/*", repo.GetCommentForm)
 			m.Get("/commit/*", repo.Diff)
+			m.Post("/commit/comment/:action/:commitId", repo.CreateCommitComment)
 		}, middleware.RepoRef())
 
 		m.Get("/compare/:before([a-z0-9]+)...:after([a-z0-9]+)", repo.CompareDiff)
