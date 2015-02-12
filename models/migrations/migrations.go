@@ -2,7 +2,6 @@ package migrations
 
 import (
 	"errors"
-	"time"
 
 	"github.com/go-xorm/xorm"
 )
@@ -56,20 +55,20 @@ func expiredMigration(x *xorm.Engine) error {
 }
 
 func prepareToCommitComments(x *xorm.Engine) error {
-	type Comment struct {
-		Id       int64
-		Type     int64
-		PosterId int64
-		IssueId  int64
-		CommitId string
-		Line     string
-		Content  string    `xorm:"TEXT"`
-		Created  time.Time `xorm:"CREATED"`
-	}
-	x.Sync(new(Comment))
 
-	sql := `UPDATE comment SET commit_id = '', line = '' WHERE commit_id = '0' AND line = '0'`
+	sql := `ALTER TABLE comment MODIFY commit_id VARCHAR(50) DEFAULT NULL`
 	_, err := x.Exec(sql)
+	if err != nil {
+		return err
+	}
+	sql = `ALTER TABLE comment MODIFY line VARCHAR(50) DEFAULT NULL;`
+	_, err = x.Exec(sql)
+	if err != nil {
+		return err
+	}
+
+	sql = `UPDATE comment SET commit_id = '', line = '' WHERE commit_id = '0' AND line = '0'`
+	_, err = x.Exec(sql)
 	if err != nil {
 		return err
 	}

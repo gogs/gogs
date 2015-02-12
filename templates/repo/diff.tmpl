@@ -131,7 +131,7 @@
                                         <p class="panel-header clear"><a class="author-name" href="{{AppSubUrl}}/{{.Poster.Name}}">{{.Poster.Name}}</a>
                                             <span class="date">{{TimeSince .Created $.Lang}}</span>
                                     <span class="action right">
-                                        {{if $.IsRepositoryOwner}}
+                                        {{if eq $.Repository.Owner.Id .Poster.Id}}
                                         <span class="label label-black label-radius">{{$.i18n.Tr "repo.owner"}}</span>
                                         {{end}}
                                         <!--<a href="#"><i class="octicon octicon-pencil"></i></a>-->
