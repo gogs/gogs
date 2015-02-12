@@ -415,7 +415,8 @@ func ChangeUserName(u *User, newUserName string) (err error) {
 		if strings.HasPrefix(accesses[i].RepoName, u.LowerName+"/") {
 			accesses[i].RepoName = strings.Replace(accesses[i].RepoName, u.LowerName, newUserName, 1)
 		}
-		if err = UpdateAccessWithSession(sess, &accesses[i]); err != nil {
+		if err = updateAccess(sess, &accesses[i]); err != nil {
+			sess.Rollback()
 			return err
 		}
 	}
@@ -435,7 +436,8 @@ func ChangeUserName(u *User, newUserName string) (err error) {
 			// if the access is not the user's access (already updated above)
 			if accesses[j].UserName != u.LowerName {
 				accesses[j].RepoName = newUserName + "/" + repos[i].LowerName
-				if err = UpdateAccessWithSession(sess, &accesses[j]); err != nil {
+				if err = updateAccess(sess, &accesses[j]); err != nil {
+					sess.Rollback()
 					return err
 				}
 			}
@@ -564,8 +566,7 @@ func UserPath(userName string) string {
 
 func GetUserByKeyId(keyId int64) (*User, error) {
 	user := new(User)
-	rawSql := "SELECT a.* FROM `user` AS a, public_key AS b WHERE a.id = b.owner_id AND b.id=?"
-	has, err := x.Sql(rawSql, keyId).Get(user)
+	has, err := x.Sql("SELECT a.* FROM `user` AS a, public_key AS b WHERE a.id = b.owner_id AND b.id=?", keyId).Get(user)
 	if err != nil {
 		return nil, err
 	} else if !has {

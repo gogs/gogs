@@ -40,24 +40,29 @@ var (
 	}
 
 	EnableSQLite3 bool
-	UseSQLite3    bool
 )
 
 func init() {
 	tables = append(tables,
-		new(User), new(PublicKey), new(Follow), new(Oauth2), new(AccessToken),
-		new(Repository), new(Watch), new(Star), new(Action), new(Access),
+		new(User), new(PublicKey), new(Oauth2), new(AccessToken),
+		new(Repository), new(Collaboration), new(Access),
+		new(Watch), new(Star), new(Follow), new(Action),
 		new(Issue), new(Comment), new(Attachment), new(IssueUser), new(Label), new(Milestone),
 		new(Mirror), new(Release), new(LoginSource), new(Webhook),
 		new(UpdateTask), new(HookTask), new(Team), new(OrgUser), new(TeamUser),
-		new(Notice), new(EmailAddress), new(Collaboration))
+		new(Notice), new(EmailAddress))
 }
 
 func LoadModelsConfig() {
 	sec := setting.Cfg.Section("database")
 	DbCfg.Type = sec.Key("DB_TYPE").String()
-	if DbCfg.Type == "sqlite3" {
-		UseSQLite3 = true
+	switch DbCfg.Type {
+	case "sqlite3":
+		setting.UseSQLite3 = true
+	case "mysql":
+		setting.UseMySQL = true
+	case "postgres":
+		setting.UsePostgreSQL = true
 	}
 	DbCfg.Host = sec.Key("HOST").String()
 	DbCfg.Name = sec.Key("NAME").String()
@@ -141,7 +146,7 @@ func NewEngine() (err error) {
 	}
 
 	if err = migrations.Migrate(x); err != nil {
-		return err
+		return fmt.Errorf("migrate: %v", err)
 	}
 
 	if err = x.StoreEngine("InnoDB").Sync2(tables...); err != nil {

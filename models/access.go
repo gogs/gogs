@@ -7,8 +7,6 @@ package models
 import (
 	"strings"
 	"time"
-
-	"github.com/go-xorm/xorm"
 )
 
 type AccessType int
@@ -27,35 +25,40 @@ type Access struct {
 	Created  time.Time  `xorm:"CREATED"`
 }
 
-// AddAccess adds new access record.
-func AddAccess(access *Access) error {
+func addAccess(e Engine, access *Access) error {
 	access.UserName = strings.ToLower(access.UserName)
 	access.RepoName = strings.ToLower(access.RepoName)
-	_, err := x.Insert(access)
+	_, err := e.Insert(access)
 	return err
+}
+
+// AddAccess adds new access record.
+func AddAccess(access *Access) error {
+	return addAccess(x, access)
+}
+
+func updateAccess(e Engine, access *Access) error {
+	if _, err := e.Id(access.Id).Update(access); err != nil {
+		return err
+	}
+	return nil
 }
 
 // UpdateAccess updates access information.
 func UpdateAccess(access *Access) error {
 	access.UserName = strings.ToLower(access.UserName)
 	access.RepoName = strings.ToLower(access.RepoName)
-	_, err := x.Id(access.Id).Update(access)
+	return updateAccess(x, access)
+}
+
+func deleteAccess(e Engine, access *Access) error {
+	_, err := e.Delete(access)
 	return err
 }
 
 // DeleteAccess deletes access record.
 func DeleteAccess(access *Access) error {
-	_, err := x.Delete(access)
-	return err
-}
-
-// UpdateAccess updates access information with session for rolling back.
-func UpdateAccessWithSession(sess *xorm.Session, access *Access) error {
-	if _, err := sess.Id(access.Id).Update(access); err != nil {
-		sess.Rollback()
-		return err
-	}
-	return nil
+	return deleteAccess(x, access)
 }
 
 // HasAccess returns true if someone can read or write to given repository.
@@ -93,9 +96,10 @@ func (u *User) GetAccessibleRepositories() (map[*Repository]AccessType, error) {
 		if err != nil {
 			return nil, err
 		}
-		err = repo.GetOwner()
-		if err != nil {
+		if err = repo.GetOwner(); err != nil {
 			return nil, err
+		} else if repo.OwnerId == u.Id {
+			continue
 		}
 		repos[repo] = access.Mode
 	}
