@@ -282,30 +282,33 @@ type IssueUser struct {
 }
 
 // NewIssueUserPairs adds new issue-user pairs for new issue of repository.
-func NewIssueUserPairs(repo *Repository, iid, oid, pid, aid int64) (err error) {
-	iu := &IssueUser{IssueId: iid, RepoId: repo.Id}
-
-	us, err := repo.GetCollaborators()
+func NewIssueUserPairs(repo *Repository, issueID, orgID, posterID, assigneeID int64) (err error) {
+	users, err := repo.GetCollaborators()
 	if err != nil {
 		return err
 	}
 
+	iu := &IssueUser{
+		IssueId: issueID,
+		RepoId:  repo.Id,
+	}
+
 	isNeedAddPoster := true
-	for _, u := range us {
+	for _, u := range users {
 		iu.Uid = u.Id
-		iu.IsPoster = iu.Uid == pid
+		iu.IsPoster = iu.Uid == posterID
 		if isNeedAddPoster && iu.IsPoster {
 			isNeedAddPoster = false
 		}
-		iu.IsAssigned = iu.Uid == aid
+		iu.IsAssigned = iu.Uid == assigneeID
 		if _, err = x.Insert(iu); err != nil {
 			return err
 		}
 	}
 	if isNeedAddPoster {
-		iu.Uid = pid
+		iu.Uid = posterID
 		iu.IsPoster = true
-		iu.IsAssigned = iu.Uid == aid
+		iu.IsAssigned = iu.Uid == assigneeID
 		if _, err = x.Insert(iu); err != nil {
 			return err
 		}
