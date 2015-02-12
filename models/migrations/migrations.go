@@ -47,8 +47,8 @@ type Version struct {
 }
 
 // This is a sequence of migrations. Add new migrations to the bottom of the list.
-// If you want to "retire" a migration, remove it from the top of the list and 
-// update _MIN_VER_DB accordingly 
+// If you want to "retire" a migration, remove it from the top of the list and
+// update _MIN_VER_DB accordingly
 var migrations = []Migration{
 	NewMigration("generate collaboration from access", accessToCollaboration), // V0 -> V1
 }
@@ -65,7 +65,7 @@ func Migrate(x *xorm.Engine) error {
 		return fmt.Errorf("get: %v", err)
 	} else if !has {
 		// If the user table does not exist it is a fresh installation and we
-		// can skip all migrations
+		// can skip all migrations.
 		needsMigration, err := x.IsTableExist("user")
 		if err != nil {
 			return err
@@ -76,7 +76,7 @@ func Migrate(x *xorm.Engine) error {
 				return err
 			}
 			// If the user table is empty it is a fresh installation and we can
-			// skip all migrations
+			// skip all migrations.
 			needsMigration = !isEmpty
 		}
 		if !needsMigration {
@@ -102,6 +102,13 @@ func Migrate(x *xorm.Engine) error {
 	return nil
 }
 
+func sessionRelease(sess *xorm.Session) {
+	if !sess.IsCommitedOrRollbacked {
+		sess.Rollback()
+	}
+	sess.Close()
+}
+
 func accessToCollaboration(x *xorm.Engine) error {
 	type Collaboration struct {
 		ID      int64 `xorm:"pk autoincr"`
@@ -118,12 +125,7 @@ func accessToCollaboration(x *xorm.Engine) error {
 	}
 
 	sess := x.NewSession()
-	defer func() {
-		if sess.IsCommitedOrRollbacked {
-			sess.Rollback()
-		}
-		sess.Close()
-	}()
+	defer sessionRelease(sess)
 	if err = sess.Begin(); err != nil {
 		return err
 	}
