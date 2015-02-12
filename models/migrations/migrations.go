@@ -13,12 +13,33 @@ import (
 	"github.com/Unknwon/com"
 	"github.com/go-xorm/xorm"
 
+	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/setting"
 )
 
 const _DB_VER = 1
 
-type migration func(*xorm.Engine) error
+type Migration interface {
+	Description() string
+	Migrate(*xorm.Engine) error
+}
+
+type migration struct {
+	description string
+	migrate     func(*xorm.Engine) error
+}
+
+func NewMigration(desc string, fn func(*xorm.Engine) error) Migration {
+	return &migration{desc, fn}
+}
+
+func (m *migration) Description() string {
+	return m.description
+}
+
+func (m *migration) Migrate(x *xorm.Engine) error {
+	return m.migrate(x)
+}
 
 // The version table. Should have only one row with id==1
 type Version struct {
@@ -28,8 +49,8 @@ type Version struct {
 
 // This is a sequence of migrations. Add new migrations to the bottom of the list.
 // If you want to "retire" a migration, replace it with "expiredMigration"
-var migrations = []migration{
-	accessToCollaboration,
+var migrations = []Migration{
+	NewMigration("generate collaboration from access", accessToCollaboration),
 }
 
 // Migrate database to current version
@@ -47,13 +68,13 @@ func Migrate(x *xorm.Engine) error {
 		if err != nil {
 			return err
 		}
-		// if needsMigration {
-		// 	isEmpty, err := x.IsTableEmpty("user")
-		// 	if err != nil {
-		// 		return err
-		// 	}
-		// 	needsMigration = !isEmpty
-		// }
+		if needsMigration {
+			isEmpty, err := x.IsTableEmpty("user")
+			if err != nil {
+				return err
+			}
+			needsMigration = !isEmpty
+		}
 		if !needsMigration {
 			currentVersion.Version = int64(len(migrations))
 		}
@@ -64,9 +85,10 @@ func Migrate(x *xorm.Engine) error {
 	}
 
 	v := currentVersion.Version
-	for i, migration := range migrations[v:] {
-		if err = migration(x); err != nil {
-			return fmt.Errorf("run migration: %v", err)
+	for i, m := range migrations[v:] {
+		log.Info("Migration: %s", m.Description())
+		if err = m.Migrate(x); err != nil {
+			return fmt.Errorf("do migrate: %v", err)
 		}
 		currentVersion.Version = v + int64(i) + 1
 		if _, err = x.Id(1).Update(currentVersion); err != nil {
@@ -92,6 +114,12 @@ func accessToCollaboration(x *xorm.Engine) error {
 
 	results, err := x.Query("SELECT u.id AS `uid`, a.repo_name AS `repo`, a.mode AS `mode`, a.created as `created` FROM `access` a JOIN `user` u ON a.user_name=u.lower_name")
 	if err != nil {
+		return err
+	}
+
+	sess := x.NewSession()
+	defer sess.Close()
+	if err = sess.Begin(); err != nil {
 		return err
 	}
 
@@ -121,8 +149,9 @@ func accessToCollaboration(x *xorm.Engine) error {
 		ownerName := parts[0]
 		repoName := parts[1]
 
-		results, err := x.Query("SELECT u.id as `uid`, ou.uid as `memberid` FROM `user` u LEFT JOIN org_user ou ON ou.org_id=u.id WHERE u.lower_name=?", ownerName)
+		results, err := sess.Query("SELECT u.id as `uid`, ou.uid as `memberid` FROM `user` u LEFT JOIN org_user ou ON ou.org_id=u.id WHERE u.lower_name=?", ownerName)
 		if err != nil {
+			sess.Rollback()
 			return err
 		}
 		if len(results) < 1 {
@@ -147,21 +176,31 @@ func accessToCollaboration(x *xorm.Engine) error {
 			continue
 		}
 
-		results, err = x.Query("SELECT id FROM `repository` WHERE owner_id=? AND lower_name=?", ownerID, repoName)
+		results, err = sess.Query("SELECT id FROM `repository` WHERE owner_id=? AND lower_name=?", ownerID, repoName)
 		if err != nil {
 			return err
-		}
-		if len(results) < 1 {
+		} else if len(results) < 1 {
 			continue
 		}
 
-		if _, err = x.InsertOne(&Collaboration{
-			UserID:  userID,
-			RepoID:  com.StrTo(results[0]["id"]).MustInt64(),
-			Created: created,
-		}); err != nil {
+		collaboration := &Collaboration{
+			UserID: userID,
+			RepoID: com.StrTo(results[0]["id"]).MustInt64(),
+		}
+		has, err := sess.Get(collaboration)
+		if err != nil {
+			sess.Rollback()
+			return err
+		} else if has {
+			continue
+		}
+
+		collaboration.Created = created
+		if _, err = sess.InsertOne(collaboration); err != nil {
+			sess.Rollback()
 			return err
 		}
 	}
-	return nil
+
+	return sess.Commit()
 }
