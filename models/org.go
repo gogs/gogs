@@ -32,19 +32,31 @@ func (org *User) IsOrgMember(uid int64) bool {
 	return IsOrganizationMember(org.Id, uid)
 }
 
+func (org *User) getTeam(e Engine, name string) (*Team, error) {
+	return getTeam(e, org.Id, name)
+}
+
 // GetTeam returns named team of organization.
 func (org *User) GetTeam(name string) (*Team, error) {
-	return GetTeam(org.Id, name)
+	return org.getTeam(x, name)
+}
+
+func (org *User) getOwnerTeam(e Engine) (*Team, error) {
+	return org.getTeam(e, OWNER_TEAM)
 }
 
 // GetOwnerTeam returns owner team of organization.
 func (org *User) GetOwnerTeam() (*Team, error) {
-	return org.GetTeam(OWNER_TEAM)
+	return org.getOwnerTeam(x)
+}
+
+func (org *User) getTeams(e Engine) error {
+	return e.Where("org_id=?", org.Id).Find(&org.Teams)
 }
 
 // GetTeams returns all teams that belong to organization.
 func (org *User) GetTeams() error {
-	return x.Where("org_id=?", org.Id).Find(&org.Teams)
+	return org.getTeams(x)
 }
 
 // GetMembers returns all members of organization.
@@ -430,8 +442,7 @@ func (t *Team) IsMember(uid int64) bool {
 	return IsTeamMember(t.OrgId, t.Id, uid)
 }
 
-// GetRepositories returns all repositories in team of organization.
-func (t *Team) GetRepositories() error {
+func (t *Team) getRepositories(e Engine) error {
 	idStrs := strings.Split(t.RepoIds, "|")
 	t.Repos = make([]*Repository, 0, len(idStrs))
 	for _, str := range idStrs {
@@ -442,7 +453,7 @@ func (t *Team) GetRepositories() error {
 		if id == 0 {
 			continue
 		}
-		repo, err := GetRepositoryById(id)
+		repo, err := getRepositoryById(e, id)
 		if err != nil {
 			return err
 		}
@@ -451,10 +462,19 @@ func (t *Team) GetRepositories() error {
 	return nil
 }
 
+// GetRepositories returns all repositories in team of organization.
+func (t *Team) GetRepositories() error {
+	return t.getRepositories(x)
+}
+
+func (t *Team) getMembers(e Engine) (err error) {
+	t.Members, err = getTeamMembers(e, t.Id)
+	return err
+}
+
 // GetMembers returns all members in team of organization.
 func (t *Team) GetMembers() (err error) {
-	t.Members, err = GetTeamMembers(t.OrgId, t.Id)
-	return err
+	return t.getMembers(x)
 }
 
 // AddMember adds new member to team of organization.
@@ -483,7 +503,7 @@ func (t *Team) AddRepository(repo *Repository) (err error) {
 	}
 
 	sess := x.NewSession()
-	defer sess.Close()
+	defer sessionRelease(sess)
 	if err = sess.Begin(); err != nil {
 		return err
 	}
@@ -491,26 +511,23 @@ func (t *Team) AddRepository(repo *Repository) (err error) {
 	t.NumRepos++
 	t.RepoIds += idStr
 	if _, err = sess.Id(t.Id).AllCols().Update(t); err != nil {
-		sess.Rollback()
 		return err
 	}
 
-	if err = repo.RecalcAccessSess(); err != nil {
-		sess.Rollback()
+	if err = repo.recalculateAccesses(sess); err != nil {
 		return err
 	}
 
 	for _, u := range t.Members {
-		if err = WatchRepo(u.Id, repo.Id, true); err != nil {
-			sess.Rollback()
+		if err = watchRepo(sess, u.Id, repo.Id, true); err != nil {
 			return err
 		}
 	}
 	return sess.Commit()
 }
 
-func (t *Team) HasRepository(r *Repository) bool {
-	idStr := "$" + com.ToStr(r.Id) + "|"
+func (t *Team) HasRepository(repo *Repository) bool {
+	idStr := "$" + com.ToStr(repo.Id) + "|"
 	return strings.Contains(t.RepoIds, idStr)
 }
 
@@ -533,7 +550,7 @@ func (t *Team) RemoveRepository(repoId int64) error {
 	}
 
 	sess := x.NewSession()
-	defer sess.Close()
+	defer sessionRelease(sess)
 	if err = sess.Begin(); err != nil {
 		return err
 	}
@@ -541,18 +558,15 @@ func (t *Team) RemoveRepository(repoId int64) error {
 	t.NumRepos--
 	t.RepoIds = strings.Replace(t.RepoIds, idStr, "", 1)
 	if _, err = sess.Id(t.Id).AllCols().Update(t); err != nil {
-		sess.Rollback()
 		return err
 	}
 
-	if err = repo.RecalcAccessSess(); err != nil {
-		sess.Rollback()
+	if err = repo.recalculateAccesses(sess); err != nil {
 		return err
 	}
 
 	for _, u := range t.Members {
-		if err = WatchRepo(u.Id, repo.Id, false); err != nil {
-			sess.Rollback()
+		if err = watchRepo(sess, u.Id, repo.Id, false); err != nil {
 			return err
 		}
 	}
@@ -601,19 +615,23 @@ func NewTeam(t *Team) error {
 	return sess.Commit()
 }
 
-// GetTeam returns team by given team name and organization.
-func GetTeam(orgId int64, name string) (*Team, error) {
+func getTeam(e Engine, orgId int64, name string) (*Team, error) {
 	t := &Team{
 		OrgId:     orgId,
 		LowerName: strings.ToLower(name),
 	}
-	has, err := x.Get(t)
+	has, err := e.Get(t)
 	if err != nil {
 		return nil, err
 	} else if !has {
 		return nil, ErrTeamNotExist
 	}
 	return t, nil
+}
+
+// GetTeam returns team by given team name and organization.
+func GetTeam(orgId int64, name string) (*Team, error) {
+	return getTeam(x, orgId, name)
 }
 
 func getTeamById(e Engine, teamId int64) (*Team, error) {
@@ -643,19 +661,19 @@ func UpdateTeam(t *Team, authChanged bool) (err error) {
 	}
 
 	sess := x.NewSession()
-	defer sess.Close()
+	defer sessionRelease(sess)
 	if err = sess.Begin(); err != nil {
 		return err
 	}
 
 	// Update access for team members if needed.
 	if authChanged {
-		if err = t.GetRepositories(); err != nil {
+		if err = t.getRepositories(sess); err != nil {
 			return err
 		}
 
 		for _, repo := range t.Repos {
-			if err = repo.RecalcAccessSess(); err != nil {
+			if err = repo.recalculateAccesses(sess); err != nil {
 				return err
 			}
 		}
@@ -663,7 +681,6 @@ func UpdateTeam(t *Team, authChanged bool) (err error) {
 
 	t.LowerName = strings.ToLower(t.Name)
 	if _, err = sess.Id(t.Id).AllCols().Update(t); err != nil {
-		sess.Rollback()
 		return err
 	}
 	return sess.Commit()
@@ -685,32 +702,29 @@ func DeleteTeam(t *Team) error {
 	}
 
 	sess := x.NewSession()
-	defer sess.Close()
+	defer sessionRelease(sess)
 	if err = sess.Begin(); err != nil {
 		return err
 	}
 
 	// Delete all accesses.
 	for _, repo := range t.Repos {
-		if err = repo.RecalcAccessSess(); err != nil {
+		if err = repo.recalculateAccesses(sess); err != nil {
 			return err
 		}
 	}
 
 	// Delete team-user.
 	if _, err = sess.Where("org_id=?", org.Id).Where("team_id=?", t.Id).Delete(new(TeamUser)); err != nil {
-		sess.Rollback()
 		return err
 	}
 
 	// Delete team.
 	if _, err = sess.Id(t.Id).Delete(new(Team)); err != nil {
-		sess.Rollback()
 		return err
 	}
 	// Update organization number of teams.
 	if _, err = sess.Exec("UPDATE `user` SET num_teams = num_teams - 1 WHERE id = ?", t.OrgId); err != nil {
-		sess.Rollback()
 		return err
 	}
 
@@ -742,11 +756,15 @@ func IsTeamMember(orgId, teamId, uid int64) bool {
 	return isTeamMember(x, orgId, teamId, uid)
 }
 
-// GetTeamMembers returns all members in given team of organization.
-func GetTeamMembers(orgId, teamId int64) ([]*User, error) {
+func getTeamMembers(e Engine, teamID int64) ([]*User, error) {
 	us := make([]*User, 0, 10)
-	err := x.Sql("SELECT * FROM `user` JOIN `team_user` ON `team_user`.`team_id` = ? AND `team_user`.`uid` = `user`.`id`", teamId).Find(&us)
+	err := e.Sql("SELECT * FROM `user` JOIN `team_user` ON `team_user`.`team_id` = ? AND `team_user`.`uid` = `user`.`id`", teamID).Find(&us)
 	return us, err
+}
+
+// GetTeamMembers returns all members in given team of organization.
+func GetTeamMembers(teamID int64) ([]*User, error) {
+	return getTeamMembers(x, teamID)
 }
 
 func getUserTeams(e Engine, orgId, uid int64) ([]*Team, error) {
@@ -796,7 +814,7 @@ func AddTeamMember(orgId, teamId, uid int64) error {
 	}
 
 	sess := x.NewSession()
-	defer sess.Close()
+	defer sessionRelease(sess)
 	if err = sess.Begin(); err != nil {
 		return err
 	}
@@ -808,26 +826,21 @@ func AddTeamMember(orgId, teamId, uid int64) error {
 	}
 
 	if _, err = sess.Insert(tu); err != nil {
-		sess.Rollback()
 		return err
 	} else if _, err = sess.Id(t.Id).Update(t); err != nil {
-		sess.Rollback()
 		return err
 	}
 
 	// Give access to team repositories.
 	for _, repo := range t.Repos {
-		if err = repo.RecalcAccessSess(); err != nil {
-			sess.Rollback()
+		if err = repo.recalculateAccesses(sess); err != nil {
 			return err
 		}
 	}
 
 	// We make sure it exists before.
 	ou := new(OrgUser)
-	_, err = sess.Where("uid=?", uid).And("org_id=?", orgId).Get(ou)
-	if err != nil {
-		sess.Rollback()
+	if _, err = sess.Where("uid=?", uid).And("org_id=?", orgId).Get(ou); err != nil {
 		return err
 	}
 	ou.NumTeams++
@@ -835,7 +848,6 @@ func AddTeamMember(orgId, teamId, uid int64) error {
 		ou.IsOwner = true
 	}
 	if _, err = sess.Id(ou.Id).AllCols().Update(ou); err != nil {
-		sess.Rollback()
 		return err
 	}
 
@@ -860,12 +872,12 @@ func removeTeamMember(e Engine, orgId, teamId, uid int64) error {
 
 	t.NumMembers--
 
-	if err = t.GetRepositories(); err != nil {
+	if err = t.getRepositories(e); err != nil {
 		return err
 	}
 
 	// Get organization.
-	org, err := GetUserById(orgId)
+	org, err := getUserById(e, orgId)
 	if err != nil {
 		return err
 	}
@@ -884,7 +896,7 @@ func removeTeamMember(e Engine, orgId, teamId, uid int64) error {
 
 	// Delete access to team repositories.
 	for _, repo := range t.Repos {
-		if err = repo.RecalcAccessSess(); err != nil {
+		if err = repo.recalculateAccesses(e); err != nil {
 			return err
 		}
 	}

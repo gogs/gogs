@@ -28,7 +28,7 @@ func ApiRepoAssignment() macaron.Handler {
 			err error
 		)
 
-		// Check if the user is the same as the repository owner
+		// Check if the user is the same as the repository owner.
 		if ctx.IsSigned && u.LowerName == strings.ToLower(userName) {
 			u = ctx.User
 		} else {
@@ -216,9 +216,9 @@ func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 			u, err = models.GetUserByName(userName)
 			if err != nil {
 				if err == models.ErrUserNotExist {
-					ctx.Error(404)
+					ctx.Handle(404, "GetUserByName", err)
 				} else {
-					ctx.JSON(500, &base.ApiJsonErr{"GetUserByName: " + err.Error(), base.DOC_URL})
+					ctx.Handle(500, "GetUserByName", err)
 				}
 				return
 			}
@@ -229,20 +229,20 @@ func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 		repo, err := models.GetRepositoryByName(u.Id, repoName)
 		if err != nil {
 			if err == models.ErrRepoNotExist {
-				ctx.Error(404)
+				ctx.Handle(404, "GetRepositoryByName", err)
 			} else {
-				ctx.JSON(500, &base.ApiJsonErr{"GetRepositoryByName: " + err.Error(), base.DOC_URL})
+				ctx.Handle(500, "GetRepositoryByName", err)
 			}
 			return
 		} else if err = repo.GetOwner(); err != nil {
-			ctx.JSON(500, &base.ApiJsonErr{"GetOwner: " + err.Error(), base.DOC_URL})
+			ctx.Handle(500, "GetOwner", err)
 			return
 		}
 
 		if ctx.IsSigned {
 			mode, err := models.AccessLevel(ctx.User, repo)
 			if err != nil {
-				ctx.JSON(500, &base.ApiJsonErr{"AccessLevel: " + err.Error(), base.DOC_URL})
+				ctx.Handle(500, "AccessLevel", err)
 				return
 			}
 			ctx.Repo.IsOwner = mode >= models.ACCESS_MODE_WRITE
@@ -252,7 +252,7 @@ func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 
 		// Check access.
 		if repo.IsPrivate && !ctx.Repo.IsOwner {
-			ctx.Error(404)
+			ctx.Handle(404, "no access right", err)
 			return
 		}
 		ctx.Repo.HasAccess = true
