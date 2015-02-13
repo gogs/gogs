@@ -51,6 +51,7 @@ type Version struct {
 // update _MIN_VER_DB accordingly
 var migrations = []Migration{
 	NewMigration("generate collaboration from access", accessToCollaboration), // V0 -> V1
+	NewMigration("refactor access table to use id's", accessRefactor),         // V1 -> V2
 }
 
 // Migrate database to current version
@@ -207,4 +208,9 @@ func accessToCollaboration(x *xorm.Engine) error {
 	}
 
 	return sess.Commit()
+}
+
+func accessRefactor(x *xorm.Engine) error {
+	//TODO
+	return nil
 }

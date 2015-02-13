@@ -87,7 +87,7 @@ func OrgAssignment(redirect bool, args ...bool) macaron.Handler {
 				return
 			}
 			ctx.Data["Team"] = ctx.Org.Team
-			ctx.Org.IsAdminTeam = ctx.Org.Team.IsOwnerTeam() || ctx.Org.Team.Authorize == models.ORG_ADMIN
+			ctx.Org.IsAdminTeam = ctx.Org.Team.IsOwnerTeam() || ctx.Org.Team.Authorize >= models.ACCESS_MODE_ADMIN
 		}
 		ctx.Data["IsAdminTeam"] = ctx.Org.IsAdminTeam
 		if requireAdminTeam && !ctx.Org.IsAdminTeam {

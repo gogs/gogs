@@ -5,7 +5,6 @@
 package middleware
 
 import (
-	"errors"
 	"fmt"
 	"net/url"
 	"strings"
@@ -29,17 +28,10 @@ func ApiRepoAssignment() macaron.Handler {
 			err error
 		)
 
-		// Collaborators who have write access can be seen as owners.
-		if ctx.IsSigned {
-			ctx.Repo.IsOwner, err = models.HasAccess(ctx.User.Name, userName+"/"+repoName, models.WRITABLE)
-			if err != nil {
-				ctx.JSON(500, &base.ApiJsonErr{"HasAccess: " + err.Error(), base.DOC_URL})
-				return
-			}
-			ctx.Repo.IsTrueOwner = ctx.User.LowerName == strings.ToLower(userName)
-		}
-
-		if !ctx.Repo.IsTrueOwner {
+		// Check if the user is the same as the repository owner
+		if ctx.IsSigned && u.LowerName == strings.ToLower(userName) {
+			u = ctx.User
+		} else {
 			u, err = models.GetUserByName(userName)
 			if err != nil {
 				if err == models.ErrUserNotExist {
@@ -49,64 +41,39 @@ func ApiRepoAssignment() macaron.Handler {
 				}
 				return
 			}
-		} else {
-			u = ctx.User
 		}
 		ctx.Repo.Owner = u
-
-		// Organization owner team members are true owners as well.
-		if ctx.IsSigned && ctx.Repo.Owner.IsOrganization() && ctx.Repo.Owner.IsOwnedBy(ctx.User.Id) {
-			ctx.Repo.IsTrueOwner = true
-		}
 
 		// Get repository.
 		repo, err := models.GetRepositoryByName(u.Id, repoName)
 		if err != nil {
 			if err == models.ErrRepoNotExist {
 				ctx.Error(404)
-				return
+			} else {
+				ctx.JSON(500, &base.ApiJsonErr{"GetRepositoryByName: " + err.Error(), base.DOC_URL})
 			}
-			ctx.JSON(500, &base.ApiJsonErr{"GetRepositoryByName: " + err.Error(), base.DOC_URL})
 			return
 		} else if err = repo.GetOwner(); err != nil {
 			ctx.JSON(500, &base.ApiJsonErr{"GetOwner: " + err.Error(), base.DOC_URL})
 			return
 		}
 
-		// Check if the mirror repository owner(mirror repository doesn't have access).
-		if ctx.IsSigned && !ctx.Repo.IsOwner {
-			if repo.OwnerId == ctx.User.Id {
-				ctx.Repo.IsOwner = true
+		if ctx.IsSigned {
+			mode, err := models.AccessLevel(ctx.User, repo)
+			if err != nil {
+				ctx.JSON(500, &base.ApiJsonErr{"AccessLevel: " + err.Error(), base.DOC_URL})
+				return
 			}
-			// Check if current user has admin permission to repository.
-			if u.IsOrganization() {
-				auth, err := models.GetHighestAuthorize(u.Id, ctx.User.Id, repo.Id, 0)
-				if err != nil {
-					ctx.JSON(500, &base.ApiJsonErr{"GetHighestAuthorize: " + err.Error(), base.DOC_URL})
-					return
-				}
-				if auth == models.ORG_ADMIN {
-					ctx.Repo.IsOwner = true
-					ctx.Repo.IsAdmin = true
-				}
-			}
+
+			ctx.Repo.IsOwner = mode >= models.ACCESS_MODE_WRITE
+			ctx.Repo.IsAdmin = mode >= models.ACCESS_MODE_READ
+			ctx.Repo.IsTrueOwner = mode >= models.ACCESS_MODE_OWNER
 		}
 
 		// Check access.
 		if repo.IsPrivate && !ctx.Repo.IsOwner {
-			if ctx.User == nil {
-				ctx.Error(404)
-				return
-			}
-
-			hasAccess, err := models.HasAccess(ctx.User.Name, ctx.Repo.Owner.Name+"/"+repo.Name, models.READABLE)
-			if err != nil {
-				ctx.JSON(500, &base.ApiJsonErr{"HasAccess: " + err.Error(), base.DOC_URL})
-				return
-			} else if !hasAccess {
-				ctx.Error(404)
-				return
-			}
+			ctx.Error(404)
+			return
 		}
 		ctx.Repo.HasAccess = true
 
@@ -242,101 +209,54 @@ func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 			refName = ctx.Params(":path")
 		}
 
-		// Collaborators who have write access can be seen as owners.
-		if ctx.IsSigned {
-			ctx.Repo.IsOwner, err = models.HasAccess(ctx.User.Name, userName+"/"+repoName, models.WRITABLE)
-			if err != nil {
-				ctx.Handle(500, "HasAccess", err)
-				return
-			}
-			ctx.Repo.IsTrueOwner = ctx.User.LowerName == strings.ToLower(userName)
-		}
-
-		if !ctx.Repo.IsTrueOwner {
+		// Check if the user is the same as the repository owner
+		if ctx.IsSigned && u.LowerName == strings.ToLower(userName) {
+			u = ctx.User
+		} else {
 			u, err = models.GetUserByName(userName)
 			if err != nil {
 				if err == models.ErrUserNotExist {
-					ctx.Handle(404, "GetUserByName", err)
-				} else if redirect {
-					log.Error(4, "GetUserByName", err)
-					ctx.Redirect(setting.AppSubUrl + "/")
+					ctx.Error(404)
 				} else {
-					ctx.Handle(500, "GetUserByName", err)
+					ctx.JSON(500, &base.ApiJsonErr{"GetUserByName: " + err.Error(), base.DOC_URL})
 				}
 				return
 			}
-		} else {
-			u = ctx.User
-		}
-
-		if u == nil {
-			if redirect {
-				ctx.Redirect(setting.AppSubUrl + "/")
-				return
-			}
-			ctx.Handle(404, "RepoAssignment", errors.New("invliad user account for single repository"))
-			return
 		}
 		ctx.Repo.Owner = u
-
-		// Organization owner team members are true owners as well.
-		if ctx.IsSigned && ctx.Repo.Owner.IsOrganization() && ctx.Repo.Owner.IsOwnedBy(ctx.User.Id) {
-			ctx.Repo.IsTrueOwner = true
-		}
 
 		// Get repository.
 		repo, err := models.GetRepositoryByName(u.Id, repoName)
 		if err != nil {
 			if err == models.ErrRepoNotExist {
-				ctx.Handle(404, "GetRepositoryByName", err)
-				return
-			} else if redirect {
-				ctx.Redirect(setting.AppSubUrl + "/")
-				return
+				ctx.Error(404)
+			} else {
+				ctx.JSON(500, &base.ApiJsonErr{"GetRepositoryByName: " + err.Error(), base.DOC_URL})
 			}
-			ctx.Handle(500, "GetRepositoryByName", err)
 			return
 		} else if err = repo.GetOwner(); err != nil {
-			ctx.Handle(500, "GetOwner", err)
+			ctx.JSON(500, &base.ApiJsonErr{"GetOwner: " + err.Error(), base.DOC_URL})
 			return
 		}
 
-		// Check if the mirror repository owner(mirror repository doesn't have access).
-		if ctx.IsSigned && !ctx.Repo.IsOwner {
-			if repo.OwnerId == ctx.User.Id {
-				ctx.Repo.IsOwner = true
+		if ctx.IsSigned {
+			mode, err := models.AccessLevel(ctx.User, repo)
+			if err != nil {
+				ctx.JSON(500, &base.ApiJsonErr{"AccessLevel: " + err.Error(), base.DOC_URL})
+				return
 			}
-			// Check if current user has admin permission to repository.
-			if u.IsOrganization() {
-				auth, err := models.GetHighestAuthorize(u.Id, ctx.User.Id, repo.Id, 0)
-				if err != nil {
-					ctx.Handle(500, "GetHighestAuthorize", err)
-					return
-				}
-				if auth == models.ORG_ADMIN {
-					ctx.Repo.IsOwner = true
-					ctx.Repo.IsAdmin = true
-				}
-			}
+			ctx.Repo.IsOwner = mode >= models.ACCESS_MODE_WRITE
+			ctx.Repo.IsAdmin = mode >= models.ACCESS_MODE_READ
+			ctx.Repo.IsTrueOwner = mode >= models.ACCESS_MODE_OWNER
 		}
 
 		// Check access.
 		if repo.IsPrivate && !ctx.Repo.IsOwner {
-			if ctx.User == nil {
-				ctx.Handle(404, "HasAccess", nil)
-				return
-			}
-
-			hasAccess, err := models.HasAccess(ctx.User.Name, ctx.Repo.Owner.Name+"/"+repo.Name, models.READABLE)
-			if err != nil {
-				ctx.Handle(500, "HasAccess", err)
-				return
-			} else if !hasAccess {
-				ctx.Handle(404, "HasAccess", nil)
-				return
-			}
+			ctx.Error(404)
+			return
 		}
 		ctx.Repo.HasAccess = true
+
 		ctx.Data["HasAccess"] = true
 
 		if repo.IsMirror {
