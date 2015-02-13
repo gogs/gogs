@@ -110,7 +110,7 @@ func sessionRelease(sess *xorm.Session) {
 	sess.Close()
 }
 
-func accessToCollaboration(x *xorm.Engine) error {
+func accessToCollaboration(x *xorm.Engine) (err error) {
 	type Collaboration struct {
 		ID      int64 `xorm:"pk autoincr"`
 		RepoID  int64 `xorm:"UNIQUE(s) INDEX NOT NULL"`
@@ -118,7 +118,9 @@ func accessToCollaboration(x *xorm.Engine) error {
 		Created time.Time
 	}
 
-	x.Sync(new(Collaboration))
+	if err = x.Sync(new(Collaboration)); err != nil {
+		return fmt.Errorf("sync: %v", err)
+	}
 
 	results, err := x.Query("SELECT u.id AS `uid`, a.repo_name AS `repo`, a.mode AS `mode`, a.created as `created` FROM `access` a JOIN `user` u ON a.user_name=u.lower_name")
 	if err != nil {
@@ -210,7 +212,90 @@ func accessToCollaboration(x *xorm.Engine) error {
 	return sess.Commit()
 }
 
-func accessRefactor(x *xorm.Engine) error {
-	//TODO
-	return nil
+func accessRefactor(x *xorm.Engine) (err error) {
+	type (
+		AccessMode int
+		Access     struct {
+			ID       int64 `xorm:"pk autoincr"`
+			UserName string
+			RepoName string
+			UserID   int64 `xorm:"UNIQUE(s)"`
+			RepoID   int64 `xorm:"UNIQUE(s)"`
+			Mode     AccessMode
+		}
+	)
+
+	var rawSQL string
+	switch {
+	case setting.UseSQLite3, setting.UsePostgreSQL:
+		rawSQL = "DROP INDEX IF EXISTS `UQE_access_S`"
+	case setting.UseMySQL:
+		rawSQL = "DROP INDEX `UQE_access_S` ON `access`"
+	}
+	if _, err = x.Exec(rawSQL); err != nil &&
+		!strings.Contains(err.Error(), "check that column/key exists") {
+		return fmt.Errorf("drop index: %v", err)
+	}
+
+	sess := x.NewSession()
+	defer sessionRelease(sess)
+	if err = sess.Begin(); err != nil {
+		return err
+	}
+
+	if err = sess.Sync2(new(Access)); err != nil {
+		return fmt.Errorf("sync: %v", err)
+	}
+
+	accesses := make([]*Access, 0, 50)
+	if err = sess.Iterate(new(Access), func(idx int, bean interface{}) error {
+		a := bean.(*Access)
+
+		// Update username to user ID.
+		users, err := sess.Query("SELECT `id` FROM `user` WHERE lower_name=?", a.UserName)
+		if err != nil {
+			return fmt.Errorf("query user: %v", err)
+		} else if len(users) < 1 {
+			return nil
+		}
+		a.UserID = com.StrTo(users[0]["id"]).MustInt64()
+
+		// Update repository name(username/reponame) to repository ID.
+		names := strings.Split(a.RepoName, "/")
+		ownerName := names[0]
+		repoName := names[1]
+
+		// Check if user is the owner of the repository.
+		ownerID := a.UserID
+		if ownerName != a.UserName {
+			users, err := sess.Query("SELECT `id` FROM `user` WHERE lower_name=?", ownerName)
+			if err != nil {
+				return fmt.Errorf("query owner: %v", err)
+			} else if len(users) < 1 {
+				return nil
+			}
+			ownerID = com.StrTo(users[0]["id"]).MustInt64()
+		}
+
+		repos, err := sess.Query("SELECT `id` FROM `repository` WHERE owner_id=? AND lower_name=?", ownerID, repoName)
+		if err != nil {
+			return fmt.Errorf("query repository: %v", err)
+		} else if len(repos) < 1 {
+			return nil
+		}
+		a.RepoID = com.StrTo(repos[0]["id"]).MustInt64()
+
+		accesses = append(accesses, a)
+		return nil
+	}); err != nil {
+		return fmt.Errorf("iterate: %v", err)
+	}
+
+	for i := range accesses {
+		if _, err = sess.Id(accesses[i].ID).Update(accesses[i]); err != nil {
+			return fmt.Errorf("update: %v", err)
+		}
+	}
+
+	return sess.Commit()
 }
