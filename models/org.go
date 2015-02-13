@@ -666,6 +666,11 @@ func UpdateTeam(t *Team, authChanged bool) (err error) {
 		return err
 	}
 
+	t.LowerName = strings.ToLower(t.Name)
+	if _, err = sess.Id(t.Id).AllCols().Update(t); err != nil {
+		return err
+	}
+
 	// Update access for team members if needed.
 	if authChanged {
 		if err = t.getRepositories(sess); err != nil {
@@ -679,10 +684,6 @@ func UpdateTeam(t *Team, authChanged bool) (err error) {
 		}
 	}
 
-	t.LowerName = strings.ToLower(t.Name)
-	if _, err = sess.Id(t.Id).AllCols().Update(t); err != nil {
-		return err
-	}
 	return sess.Commit()
 }
 
