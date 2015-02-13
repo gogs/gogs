@@ -521,16 +521,20 @@ func GetUserByKeyId(keyId int64) (*User, error) {
 	return user, nil
 }
 
-// GetUserById returns the user object by given ID if exists.
-func GetUserById(id int64) (*User, error) {
+func getUserById(e Engine, id int64) (*User, error) {
 	u := new(User)
-	has, err := x.Id(id).Get(u)
+	has, err := e.Id(id).Get(u)
 	if err != nil {
 		return nil, err
 	} else if !has {
 		return nil, ErrUserNotExist
 	}
 	return u, nil
+}
+
+// GetUserById returns the user object by given ID if exists.
+func GetUserById(id int64) (*User, error) {
+	return getUserById(x, id)
 }
 
 // GetUserByName returns user by given name.

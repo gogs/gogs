@@ -83,16 +83,16 @@ func In(b string, sl map[string]models.AccessMode) bool {
 	return e
 }
 
-func runServ(k *cli.Context) {
-	if k.IsSet("config") {
-		setting.CustomConf = k.String("config")
+func runServ(c *cli.Context) {
+	if c.IsSet("config") {
+		setting.CustomConf = c.String("config")
 	}
 	setup("serv.log")
 
-	if len(k.Args()) < 1 {
+	if len(c.Args()) < 1 {
 		log.GitLogger.Fatal(2, "Not enough arguments")
 	}
-	keys := strings.Split(k.Args()[0], "-")
+	keys := strings.Split(c.Args()[0], "-")
 	if len(keys) != 2 {
 		println("Gogs: auth file format error")
 		log.GitLogger.Fatal(2, "Invalid auth file format: %s", os.Args[2])
@@ -116,6 +116,7 @@ func runServ(k *cli.Context) {
 	cmd := os.Getenv("SSH_ORIGINAL_COMMAND")
 	if cmd == "" {
 		println("Hi", user.Name, "! You've successfully authenticated, but Gogs does not provide shell access.")
+		println("If this is what you do not expect, please log in with password and setup Gogs under another user.")
 		return
 	}
 

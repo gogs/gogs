@@ -24,10 +24,20 @@ import (
 type Engine interface {
 	Delete(interface{}) (int64, error)
 	Exec(string, ...interface{}) (sql.Result, error)
+	Find(interface{}, ...interface{}) error
 	Get(interface{}) (bool, error)
 	Insert(...interface{}) (int64, error)
+	InsertOne(interface{}) (int64, error)
 	Id(interface{}) *xorm.Session
+	Sql(string, ...interface{}) *xorm.Session
 	Where(string, ...interface{}) *xorm.Session
+}
+
+func sessionRelease(sess *xorm.Session) {
+	if !sess.IsCommitedOrRollbacked {
+		sess.Rollback()
+	}
+	sess.Close()
 }
 
 var (

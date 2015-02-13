@@ -210,8 +210,11 @@ func Profile(ctx *middleware.Context) {
 				if !ctx.IsSigned {
 					continue
 				}
-				if has, _ := models.HasAccess(ctx.User, &models.Repository{Id: act.RepoId, IsPrivate: true},
-					models.ACCESS_MODE_READ); !has {
+				if has, _ := models.HasAccess(ctx.User,
+					&models.Repository{
+						Id:        act.RepoId,
+						IsPrivate: true,
+					}, models.ACCESS_MODE_READ); !has {
 					continue
 				}
 			}
