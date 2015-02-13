@@ -137,18 +137,18 @@ func Http(ctx *middleware.Context) {
 		}
 
 		if !isPublicPull {
-			var tp = models.WRITABLE
+			var tp = models.ACCESS_MODE_WRITE
 			if isPull {
-				tp = models.READABLE
+				tp = models.ACCESS_MODE_READ
 			}
 
-			has, err := models.HasAccess(authUsername, username+"/"+reponame, tp)
+			has, err := models.HasAccess(authUser, repo, tp)
 			if err != nil {
 				ctx.Handle(401, "no basic auth and digit auth", nil)
 				return
 			} else if !has {
-				if tp == models.READABLE {
-					has, err = models.HasAccess(authUsername, username+"/"+reponame, models.WRITABLE)
+				if tp == models.ACCESS_MODE_READ {
+					has, err = models.HasAccess(authUser, repo, models.ACCESS_MODE_WRITE)
 					if err != nil || !has {
 						ctx.Handle(401, "no basic auth and digit auth", nil)
 						return
@@ -288,7 +288,7 @@ func serviceRpc(rpc string, hr handler) {
 
 	access := hasAccess(r, hr.Config, dir, rpc, true)
 	if access == false {
-		renderNoAccess(w)
+		renderACCESS_MODE_NONE(w)
 		return
 	}
 
@@ -515,7 +515,7 @@ func renderNotFound(w http.ResponseWriter) {
 	w.Write([]byte("Not Found"))
 }
 
-func renderNoAccess(w http.ResponseWriter) {
+func renderACCESS_MODE_NONE(w http.ResponseWriter) {
 	w.WriteHeader(http.StatusForbidden)
 	w.Write([]byte("Forbidden"))
 }
