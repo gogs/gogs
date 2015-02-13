@@ -88,6 +88,11 @@ func maxAccessMode(modes ...AccessMode) AccessMode {
 	return max
 }
 
+func (repo *Repository) recalculateTeamAccesses(e Engine, mode AccessMode) error {
+
+	return nil
+}
+
 func (repo *Repository) recalculateAccesses(e Engine) error {
 	accessMap := make(map[int64]AccessMode, 20)
 
@@ -111,6 +116,8 @@ func (repo *Repository) recalculateAccesses(e Engine) error {
 		for _, team := range repo.Owner.Teams {
 			if !(team.IsOwnerTeam() || team.HasRepository(repo)) {
 				continue
+			} else if team.IsOwnerTeam() {
+				team.Authorize = ACCESS_MODE_OWNER
 			}
 
 			if err = team.getMembers(e); err != nil {
@@ -129,22 +136,20 @@ func (repo *Repository) recalculateAccesses(e Engine) error {
 
 	newAccesses := make([]Access, 0, len(accessMap))
 	for userID, mode := range accessMap {
-		if userID == repo.OwnerId || mode <= minMode {
+		if mode < minMode {
 			continue
 		}
 		newAccesses = append(newAccesses, Access{
 			UserID: userID,
 			RepoID: repo.Id,
-			Mode:   mode})
+			Mode:   mode,
+		})
 	}
 
-	// Delete old accesses for repository
+	// Delete old accesses and insert new ones for repository.
 	if _, err = e.Delete(&Access{RepoID: repo.Id}); err != nil {
 		return err
-	}
-
-	// And insert the new ones
-	if _, err = e.Insert(newAccesses); err != nil {
+	} else if _, err = e.Insert(newAccesses); err != nil {
 		return err
 	}
 
