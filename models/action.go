@@ -242,7 +242,7 @@ func updateIssuesCommit(userId, repoId int64, repoUserName, repoName string, com
 				}
 
 				// If commit happened in the referenced repository, it means the issue can be closed.
-				if _, err = CreateComment(userId, repoId, issue.Id, 0, 0, COMMENT_TYPE_REOPEN, "", nil); err != nil {
+				if _, err = CreateComment(userId, repoId, issue.Id, "", "", COMMENT_TYPE_REOPEN, "", nil); err != nil {
 					return err
 				}
 			}

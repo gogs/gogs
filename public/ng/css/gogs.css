@@ -1457,13 +1457,9 @@ The register and sign-in page style
 .code-view .lines-num span {
   font-family: Monaco, Menlo, Consolas, "Courier New", monospace;
   line-height: 20px;
-  padding: 0 15px;
+  padding: 0 10px;
   cursor: pointer;
   display: block;
-}
-
-.code-view .comment {
-  background-color: #fafafa;
 }
 .code-view .lines-code > pre {
   border: none;

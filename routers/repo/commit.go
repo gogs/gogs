@@ -267,7 +267,7 @@ func Diff(ctx *middleware.Context) {
 		}
 		comments[i].Poster = u
 
-		if comments[i].Type == models.COMMENT {
+		if comments[i].Type == models.COMMENT_TYPE_COMMENT {
 			comments[i].Content = string(base.RenderMarkdown([]byte(comments[i].Content), ctx.Repo.RepoLink))
 		}
 
@@ -393,7 +393,7 @@ func CreateCommitComment(ctx *middleware.Context) {
 	if len(content) > 0 && lineRe.MatchString(line) {
 		switch ctx.Params(":action") {
 		case "new":
-			if comment, err = models.CreateComment(ctx.User.Id, ctx.Repo.Repository.Id, 0, commitId, line, models.COMMENT, content, nil); err != nil {
+			if comment, err = models.CreateComment(ctx.User.Id, ctx.Repo.Repository.Id, 0, commitId, line, models.COMMENT_TYPE_COMMENT, content, nil); err != nil {
 				send(500, nil, err)
 				return
 			}
