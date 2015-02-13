@@ -1702,6 +1702,9 @@ The register and sign-in page style
 .diff-file-box .code-diff tbody tr.comment:hover pre {
   background-color: #FFFFFF !important;
 }
+.diff-file-box .code-diff tbody tr.comment .markdown p {
+  margin: 0;
+}
 .compare-head-box {
   margin-top: 10px;
 }
