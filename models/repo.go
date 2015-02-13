@@ -206,6 +206,11 @@ func (repo *Repository) RepoLink() (string, error) {
 	return setting.AppSubUrl + "/" + repo.Owner.Name + "/" + repo.Name, nil
 }
 
+func (repo *Repository) HasAccess(u *User) bool {
+	has, _ := HasAccess(u, repo, ACCESS_MODE_READ)
+	return has
+}
+
 func (repo *Repository) IsOwnedBy(u *User) bool {
 	return repo.OwnerId == u.Id
 }
@@ -539,9 +544,9 @@ func CreateRepository(u *User, name, desc, lang, license string, private, mirror
 
 	if _, err = sess.Insert(repo); err != nil {
 		return nil, err
+	} else if _, err = sess.Exec("UPDATE `user` SET num_repos = num_repos + 1 WHERE id = ?", u.Id); err != nil {
+		return nil, err
 	}
-
-	var t *Team // Owner team.
 
 	// TODO fix code for mirrors?
 
@@ -550,22 +555,8 @@ func CreateRepository(u *User, name, desc, lang, license string, private, mirror
 		if err = repo.recalculateAccesses(sess); err != nil {
 			return nil, err
 		}
-	}
 
-	if _, err = sess.Exec("UPDATE `user` SET num_repos = num_repos + 1 WHERE id = ?", u.Id); err != nil {
-		return nil, err
-	}
-
-	// Update owner team info and count.
-	if u.IsOrganization() {
-		t.RepoIds += "$" + com.ToStr(repo.Id) + "|"
-		t.NumRepos++
-		if _, err = sess.Id(t.Id).AllCols().Update(t); err != nil {
-			return nil, err
-		}
-	}
-
-	if u.IsOrganization() {
+		// Update owner team info and count.
 		t, err := u.getOwnerTeam(sess)
 		if err != nil {
 			return nil, fmt.Errorf("get owner team: %v", err)
@@ -577,6 +568,12 @@ func CreateRepository(u *User, name, desc, lang, license string, private, mirror
 			if err = watchRepo(sess, u.Id, repo.Id, true); err != nil {
 				return nil, fmt.Errorf("watch repository: %v", err)
 			}
+		}
+
+		t.RepoIds += "$" + com.ToStr(repo.Id) + "|"
+		t.NumRepos++
+		if _, err = sess.Id(t.Id).AllCols().Update(t); err != nil {
+			return nil, err
 		}
 	} else {
 		if err = watchRepo(sess, u.Id, repo.Id, true); err != nil {
@@ -746,21 +743,11 @@ func DeleteRepository(uid, repoId int64, userName string) error {
 	}
 
 	sess := x.NewSession()
-	defer sess.Close()
+	defer sessionRelease(sess)
 	if err = sess.Begin(); err != nil {
 		return err
 	}
 
-	if _, err = sess.Delete(&Repository{Id: repoId}); err != nil {
-		sess.Rollback()
-		return err
-	}
-
-	// Delete all access.
-	if _, err := sess.Delete(&Access{RepoID: repo.Id}); err != nil {
-		sess.Rollback()
-		return err
-	}
 	if org.IsOrganization() {
 		idStr := "$" + com.ToStr(repoId) + "|"
 		for _, t := range org.Teams {
@@ -770,34 +757,26 @@ func DeleteRepository(uid, repoId int64, userName string) error {
 			t.NumRepos--
 			t.RepoIds = strings.Replace(t.RepoIds, idStr, "", 1)
 			if _, err = sess.Id(t.Id).AllCols().Update(t); err != nil {
-				sess.Rollback()
 				return err
 			}
 		}
 	}
 
-	if _, err := sess.Delete(&Action{RepoId: repo.Id}); err != nil {
-		sess.Rollback()
+	if _, err = sess.Delete(&Repository{Id: repoId}); err != nil {
 		return err
-	}
-	if _, err = sess.Delete(&Watch{RepoId: repoId}); err != nil {
-		sess.Rollback()
+	} else if _, err := sess.Delete(&Access{RepoID: repo.Id}); err != nil {
 		return err
-	}
-	if _, err = sess.Delete(&Mirror{RepoId: repoId}); err != nil {
-		sess.Rollback()
+	} else if _, err := sess.Delete(&Action{RepoId: repo.Id}); err != nil {
 		return err
-	}
-	if _, err = sess.Delete(&IssueUser{RepoId: repoId}); err != nil {
-		sess.Rollback()
+	} else if _, err = sess.Delete(&Watch{RepoId: repoId}); err != nil {
 		return err
-	}
-	if _, err = sess.Delete(&Milestone{RepoId: repoId}); err != nil {
-		sess.Rollback()
+	} else if _, err = sess.Delete(&Mirror{RepoId: repoId}); err != nil {
 		return err
-	}
-	if _, err = sess.Delete(&Release{RepoId: repoId}); err != nil {
-		sess.Rollback()
+	} else if _, err = sess.Delete(&IssueUser{RepoId: repoId}); err != nil {
+		return err
+	} else if _, err = sess.Delete(&Milestone{RepoId: repoId}); err != nil {
+		return err
+	} else if _, err = sess.Delete(&Release{RepoId: repoId}); err != nil {
 		return err
 	}
 
@@ -805,29 +784,24 @@ func DeleteRepository(uid, repoId int64, userName string) error {
 	if err = x.Iterate(&Issue{RepoId: repoId}, func(idx int, bean interface{}) error {
 		issue := bean.(*Issue)
 		if _, err = sess.Delete(&Comment{IssueId: issue.Id}); err != nil {
-			sess.Rollback()
 			return err
 		}
 		return nil
 	}); err != nil {
-		sess.Rollback()
 		return err
 	}
 
 	if _, err = sess.Delete(&Issue{RepoId: repoId}); err != nil {
-		sess.Rollback()
 		return err
 	}
 
 	if repo.IsFork {
 		if _, err = sess.Exec("UPDATE `repository` SET num_forks = num_forks - 1 WHERE id = ?", repo.ForkId); err != nil {
-			sess.Rollback()
 			return err
 		}
 	}
 
 	if _, err = sess.Exec("UPDATE `user` SET num_repos = num_repos - 1 WHERE id = ?", uid); err != nil {
-		sess.Rollback()
 		return err
 	}
 
@@ -839,6 +813,7 @@ func DeleteRepository(uid, repoId int64, userName string) error {
 			log.Error(4, "Fail to add notice: %v", err)
 		}
 	}
+
 	return sess.Commit()
 }
 
@@ -1331,37 +1306,29 @@ func ForkRepository(u *User, oldRepo *Repository, name, desc string) (*Repositor
 
 	if err = repo.recalculateAccesses(sess); err != nil {
 		return nil, err
-	}
-
-	var t *Team // Owner team.
-
-	if _, err = sess.Exec("UPDATE `user` SET num_repos = num_repos + 1 WHERE id = ?", u.Id); err != nil {
+	} else if _, err = sess.Exec("UPDATE `user` SET num_repos = num_repos + 1 WHERE id = ?", u.Id); err != nil {
 		return nil, err
 	}
 
-	// Update owner team info and count.
 	if u.IsOrganization() {
+		// Update owner team info and count.
+		t, err := u.getOwnerTeam(sess)
+		if err != nil {
+			return nil, fmt.Errorf("get owner team: %v", err)
+		} else if err = t.getMembers(sess); err != nil {
+			return nil, fmt.Errorf("get team members: %v", err)
+		}
+
+		for _, u := range t.Members {
+			if err = watchRepo(sess, u.Id, repo.Id, true); err != nil {
+				return nil, fmt.Errorf("watch repository: %v", err)
+			}
+		}
+
 		t.RepoIds += "$" + com.ToStr(repo.Id) + "|"
 		t.NumRepos++
 		if _, err = sess.Id(t.Id).AllCols().Update(t); err != nil {
 			return nil, err
-		}
-	}
-
-	if u.IsOrganization() {
-		t, err := u.getOwnerTeam(sess)
-		if err != nil {
-			return nil, fmt.Errorf("get owner team: %v", err)
-		} else {
-			if err = t.getMembers(sess); err != nil {
-				return nil, fmt.Errorf("get team members: %v", err)
-			} else {
-				for _, u := range t.Members {
-					if err = watchRepo(sess, u.Id, repo.Id, true); err != nil {
-						return nil, fmt.Errorf("watch repository: %v", err)
-					}
-				}
-			}
 		}
 	} else {
 		if err = watchRepo(sess, u.Id, repo.Id, true); err != nil {

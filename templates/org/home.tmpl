@@ -27,7 +27,7 @@
         </div>
         <div id="org-repo-list">
 			{{range .Repos}}
-				{{if .HasAccess $.SignedUser.Name}}
+				{{if .HasAccess $.SignedUser}}
 				<div class="org-repo-item">
                     <ul class="org-repo-status right">
                         <li><i class="octicon octicon-star"></i> {{.NumStars}}</li>
