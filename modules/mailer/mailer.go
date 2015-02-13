@@ -72,15 +72,17 @@ func sendMail(settings *setting.Mailer, recipients []string, msgContent []byte) 
 		return err
 	}
 
-	cert, err := tls.LoadX509KeyPair(settings.CertFile, settings.KeyFile)
-	if err != nil {
-		return err
-	}
-
 	tlsconfig := &tls.Config{
 		InsecureSkipVerify: settings.SkipVerify,
 		ServerName:         host,
-		Certificates:       []tls.Certificate{cert},
+	}
+
+	if settings.UseCertificate {
+		cert, err := tls.LoadX509KeyPair(settings.CertFile, settings.KeyFile)
+		if err != nil {
+			return err
+		}
+		tlsconfig.Certificates = []tls.Certificate{cert}
 	}
 
 	conn, err := net.Dial("tcp", net.JoinHostPort(host, port))
