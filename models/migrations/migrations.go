@@ -51,7 +51,8 @@ type Version struct {
 // update _MIN_VER_DB accordingly
 var migrations = []Migration{
 	NewMigration("generate collaboration from access", accessToCollaboration), // V0 -> V1
-	NewMigration("refactor access table to use id's", accessRefactor),         // V1 -> V2
+	NewMigration("make authorize 4 if team is owners", ownerTeamUpdate),       // V1 -> V2
+	NewMigration("refactor access table to use id's", accessRefactor),         // V2 -> V3
 }
 
 // Migrate database to current version
@@ -212,31 +213,91 @@ func accessToCollaboration(x *xorm.Engine) (err error) {
 	return sess.Commit()
 }
 
+func ownerTeamUpdate(x *xorm.Engine) (err error) {
+	if _, err := x.Exec("UPDATE team SET authorize=4 WHERE lower_name=?", "owners"); err != nil {
+		return fmt.Errorf("drop table: %v", err)
+	}
+	return nil
+}
+
 func accessRefactor(x *xorm.Engine) (err error) {
 	type (
 		AccessMode int
 		Access     struct {
-			ID       int64 `xorm:"pk autoincr"`
-			UserName string
-			RepoName string
-			UserID   int64 `xorm:"UNIQUE(s)"`
-			RepoID   int64 `xorm:"UNIQUE(s)"`
-			Mode     AccessMode
+			ID     int64 `xorm:"pk autoincr"`
+			UserID int64 `xorm:"UNIQUE(s)"`
+			RepoID int64 `xorm:"UNIQUE(s)"`
+			Mode   AccessMode
+		}
+		UserRepo struct {
+			UserID int64
+			RepoID int64
 		}
 	)
 
-	var rawSQL string
-	switch {
-	case setting.UseSQLite3, setting.UsePostgreSQL:
-		rawSQL = "DROP INDEX IF EXISTS `UQE_access_S`"
-	case setting.UseMySQL:
-		rawSQL = "DROP INDEX `UQE_access_S` ON `access`"
+	// We consiously don't start a session yet as we make only reads for now, no writes
+
+	accessMap := make(map[UserRepo]AccessMode, 50)
+
+	results, err := x.Query("SELECT r.id as `repo_id`, r.is_private as `is_private`, r.owner_id as `owner_id`, u.type as `owner_type` FROM `repository` r LEFT JOIN user u ON r.owner_id=u.id")
+	if err != nil {
+		return err
 	}
-	if _, err = x.Exec(rawSQL); err != nil &&
-		!strings.Contains(err.Error(), "check that column/key exists") {
-		return fmt.Errorf("drop index: %v", err)
+	for _, repo := range results {
+		repoID := com.StrTo(repo["repo_id"]).MustInt64()
+		isPrivate := com.StrTo(repo["is_private"]).MustInt() > 0
+		ownerID := com.StrTo(repo["owner_id"]).MustInt64()
+		ownerIsOrganization := com.StrTo(repo["owner_type"]).MustInt() > 0
+
+		results, err := x.Query("SELECT user_id FROM collaboration WHERE repo_id=?", repoID)
+		if err != nil {
+			return fmt.Errorf("select repos: %v", err)
+		}
+		for _, user := range results {
+			userID := com.StrTo(user["user_id"]).MustInt64()
+			accessMap[UserRepo{userID, repoID}] = 2 // WRITE ACCESS
+		}
+
+		if !ownerIsOrganization {
+			continue
+		}
+
+		minAccessLevel := AccessMode(0)
+		if !isPrivate {
+			minAccessLevel = 1
+		}
+
+		repoString := "$" + string(repo["repo_id"]) + "|"
+
+		results, err = x.Query("SELECT id, authorize, repo_ids FROM team WHERE org_id=? AND authorize > ? ORDER BY authorize ASC", ownerID, int(minAccessLevel))
+		if err != nil {
+			return fmt.Errorf("select teams from org: %v", err)
+		}
+
+		for _, team := range results {
+			if !strings.Contains(string(team["repo_ids"]), repoString) {
+				continue
+			}
+			teamID := com.StrTo(team["id"]).MustInt64()
+			mode := AccessMode(com.StrTo(team["authorize"]).MustInt())
+
+			results, err := x.Query("SELECT uid FROM team_user WHERE team_id=?", teamID)
+			if err != nil {
+				return fmt.Errorf("select users from team: %v", err)
+			}
+			for _, user := range results {
+				userID := com.StrTo(user["uid"]).MustInt64()
+				accessMap[UserRepo{userID, repoID}] = mode
+			}
+		}
 	}
 
+	// Drop table can't be in a session (at least not in sqlite)
+	if _, err = x.Exec("DROP TABLE access"); err != nil {
+		return fmt.Errorf("drop table: %v", err)
+	}
+
+	// Now we start writing so we make a session
 	sess := x.NewSession()
 	defer sessionRelease(sess)
 	if err = sess.Begin(); err != nil {
@@ -247,55 +308,12 @@ func accessRefactor(x *xorm.Engine) (err error) {
 		return fmt.Errorf("sync: %v", err)
 	}
 
-	accesses := make([]*Access, 0, 50)
-	if err = sess.Iterate(new(Access), func(idx int, bean interface{}) error {
-		a := bean.(*Access)
-
-		// Update username to user ID.
-		users, err := sess.Query("SELECT `id` FROM `user` WHERE lower_name=?", a.UserName)
-		if err != nil {
-			return fmt.Errorf("query user: %v", err)
-		} else if len(users) < 1 {
-			return nil
-		}
-		a.UserID = com.StrTo(users[0]["id"]).MustInt64()
-
-		// Update repository name(username/reponame) to repository ID.
-		names := strings.Split(a.RepoName, "/")
-		ownerName := names[0]
-		repoName := names[1]
-
-		// Check if user is the owner of the repository.
-		ownerID := a.UserID
-		if ownerName != a.UserName {
-			users, err := sess.Query("SELECT `id` FROM `user` WHERE lower_name=?", ownerName)
-			if err != nil {
-				return fmt.Errorf("query owner: %v", err)
-			} else if len(users) < 1 {
-				return nil
-			}
-			ownerID = com.StrTo(users[0]["id"]).MustInt64()
-		}
-
-		repos, err := sess.Query("SELECT `id` FROM `repository` WHERE owner_id=? AND lower_name=?", ownerID, repoName)
-		if err != nil {
-			return fmt.Errorf("query repository: %v", err)
-		} else if len(repos) < 1 {
-			return nil
-		}
-		a.RepoID = com.StrTo(repos[0]["id"]).MustInt64()
-
-		accesses = append(accesses, a)
-		return nil
-	}); err != nil {
-		return fmt.Errorf("iterate: %v", err)
+	accesses := make([]*Access, 0, len(accessMap))
+	for ur, mode := range accessMap {
+		accesses = append(accesses, &Access{UserID: ur.UserID, RepoID: ur.RepoID, Mode: mode})
 	}
 
-	for i := range accesses {
-		if _, err = sess.Id(accesses[i].ID).Update(accesses[i]); err != nil {
-			return fmt.Errorf("update: %v", err)
-		}
-	}
+	_, err = sess.Insert(accesses)
 
 	return sess.Commit()
 }
