@@ -451,6 +451,7 @@ type Mailer struct {
 	From              string
 	User, Passwd      string
 	SkipVerify        bool
+	UseCertificate    bool
 	CertFile, KeyFile string
 }
 
@@ -479,13 +480,14 @@ func newMailService() {
 	}
 
 	MailService = &Mailer{
-		Name:       sec.Key("NAME").MustString(AppName),
-		Host:       sec.Key("HOST").String(),
-		User:       sec.Key("USER").String(),
-		Passwd:     sec.Key("PASSWD").String(),
-		SkipVerify: sec.Key("SKIP_VERIFY").MustBool(),
-		CertFile:   sec.Key("CERT_FILE").String(),
-		KeyFile:    sec.Key("KEY_FILE").String(),
+		Name:           sec.Key("NAME").MustString(AppName),
+		Host:           sec.Key("HOST").String(),
+		User:           sec.Key("USER").String(),
+		Passwd:         sec.Key("PASSWD").String(),
+		SkipVerify:     sec.Key("SKIP_VERIFY").MustBool(),
+		UseCertificate: sec.Key("USE_CERTIFICATE").MustBool(),
+		CertFile:       sec.Key("CERT_FILE").String(),
+		KeyFile:        sec.Key("KEY_FILE").String(),
 	}
 	MailService.From = sec.Key("FROM").MustString(MailService.User)
 	log.Info("Mail Service Enabled")
