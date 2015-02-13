@@ -288,7 +288,7 @@ func serviceRpc(rpc string, hr handler) {
 
 	access := hasAccess(r, hr.Config, dir, rpc, true)
 	if access == false {
-		renderACCESS_MODE_NONE(w)
+		renderNoAccess(w)
 		return
 	}
 
@@ -515,7 +515,7 @@ func renderNotFound(w http.ResponseWriter) {
 	w.Write([]byte("Not Found"))
 }
 
-func renderACCESS_MODE_NONE(w http.ResponseWriter) {
+func renderNoAccess(w http.ResponseWriter) {
 	w.WriteHeader(http.StatusForbidden)
 	w.Write([]byte("Forbidden"))
 }

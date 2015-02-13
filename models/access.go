@@ -14,16 +14,6 @@ const (
 	ACCESS_MODE_OWNER
 )
 
-func maxAccessMode(modes ...AccessMode) AccessMode {
-	max := ACCESS_MODE_NONE
-	for _, mode := range modes {
-		if mode > max {
-			max = mode
-		}
-	}
-	return max
-}
-
 // Access represents the highest access level of a user to the repository. The only access type
 // that is not in this table is the real owner of a repository. In case of an organization
 // repository, the members of the owners team are in this table.
@@ -32,12 +22,6 @@ type Access struct {
 	UserID int64 `xorm:"UNIQUE(s)"`
 	RepoID int64 `xorm:"UNIQUE(s)"`
 	Mode   AccessMode
-}
-
-// HasAccess returns true if someone has the request access level. User can be nil!
-func HasAccess(u *User, r *Repository, testMode AccessMode) (bool, error) {
-	mode, err := AccessLevel(u, r)
-	return testMode <= mode, err
 }
 
 // Return the Access a user has to a repository. Will return NoneAccess if the
@@ -61,6 +45,12 @@ func AccessLevel(u *User, r *Repository) (AccessMode, error) {
 	}
 
 	return mode, nil
+}
+
+// HasAccess returns true if someone has the request access level. User can be nil!
+func HasAccess(u *User, r *Repository, testMode AccessMode) (bool, error) {
+	mode, err := AccessLevel(u, r)
+	return testMode <= mode, err
 }
 
 // GetAccessibleRepositories finds all repositories where a user has access to,
@@ -88,12 +78,21 @@ func (u *User) GetAccessibleRepositories() (map[*Repository]AccessMode, error) {
 	return repos, nil
 }
 
-// Recalculate all accesses for repository
-func (r *Repository) RecalcAccessSess() error {
+func maxAccessMode(modes ...AccessMode) AccessMode {
+	max := ACCESS_MODE_NONE
+	for _, mode := range modes {
+		if mode > max {
+			max = mode
+		}
+	}
+	return max
+}
+
+func (repo *Repository) recalculateAccesses(e Engine) error {
 	accessMap := make(map[int64]AccessMode, 20)
 
 	// Give all collaborators write access
-	collaborators, err := r.GetCollaborators()
+	collaborators, err := repo.getCollaborators(e)
 	if err != nil {
 		return err
 	}
@@ -101,20 +100,20 @@ func (r *Repository) RecalcAccessSess() error {
 		accessMap[c.Id] = ACCESS_MODE_WRITE
 	}
 
-	if err := r.GetOwner(); err != nil {
+	if err := repo.getOwner(e); err != nil {
 		return err
 	}
-	if r.Owner.IsOrganization() {
-		if err = r.Owner.GetTeams(); err != nil {
+	if repo.Owner.IsOrganization() {
+		if err = repo.Owner.getTeams(e); err != nil {
 			return err
 		}
 
-		for _, team := range r.Owner.Teams {
-			if !(team.IsOwnerTeam() || team.HasRepository(r)) {
+		for _, team := range repo.Owner.Teams {
+			if !(team.IsOwnerTeam() || team.HasRepository(repo)) {
 				continue
 			}
 
-			if err = team.GetMembers(); err != nil {
+			if err = team.getMembers(e); err != nil {
 				return err
 			}
 			for _, u := range team.Members {
@@ -124,28 +123,35 @@ func (r *Repository) RecalcAccessSess() error {
 	}
 
 	minMode := ACCESS_MODE_READ
-	if !r.IsPrivate {
+	if !repo.IsPrivate {
 		minMode = ACCESS_MODE_WRITE
 	}
 
 	newAccesses := make([]Access, 0, len(accessMap))
 	for userID, mode := range accessMap {
-		if userID == r.OwnerId || mode <= minMode {
+		if userID == repo.OwnerId || mode <= minMode {
 			continue
 		}
-		newAccesses = append(newAccesses, Access{UserID: userID, RepoID: r.Id, Mode: mode})
+		newAccesses = append(newAccesses, Access{
+			UserID: userID,
+			RepoID: repo.Id,
+			Mode:   mode})
 	}
 
 	// Delete old accesses for repository
-	if _, err = x.Delete(&Access{RepoID: r.Id}); err != nil {
+	if _, err = e.Delete(&Access{RepoID: repo.Id}); err != nil {
 		return err
 	}
 
 	// And insert the new ones
-	if _, err = x.Insert(newAccesses); err != nil {
+	if _, err = e.Insert(newAccesses); err != nil {
 		return err
 	}
 
 	return nil
+}
 
+// RecalculateAccesses recalculates all accesses for repository.
+func (r *Repository) RecalculateAccesses() error {
+	return r.recalculateAccesses(x)
 }
