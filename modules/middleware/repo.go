@@ -29,7 +29,7 @@ func ApiRepoAssignment() macaron.Handler {
 		)
 
 		// Check if the user is the same as the repository owner.
-		if ctx.IsSigned && u.LowerName == strings.ToLower(userName) {
+		if ctx.IsSigned && ctx.User.LowerName == strings.ToLower(userName) {
 			u = ctx.User
 		} else {
 			u, err = models.GetUserByName(userName)
@@ -210,7 +210,7 @@ func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 		}
 
 		// Check if the user is the same as the repository owner
-		if ctx.IsSigned && u.LowerName == strings.ToLower(userName) {
+		if ctx.IsSigned && ctx.User.LowerName == strings.ToLower(userName) {
 			u = ctx.User
 		} else {
 			u, err = models.GetUserByName(userName)
@@ -248,6 +248,9 @@ func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 			ctx.Repo.IsOwner = mode >= models.ACCESS_MODE_WRITE
 			ctx.Repo.IsAdmin = mode >= models.ACCESS_MODE_READ
 			ctx.Repo.IsTrueOwner = mode >= models.ACCESS_MODE_OWNER
+			if !ctx.Repo.IsTrueOwner && ctx.Repo.Owner.IsOrganization() {
+				ctx.Repo.IsTrueOwner = ctx.Repo.Owner.IsOwnedBy(ctx.User.Id)
+			}
 		}
 
 		// Check access.
