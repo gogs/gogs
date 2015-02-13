@@ -81,6 +81,9 @@
     .btn>i {
         margin-right: 6px;
     }
+    input {
+        cursor: default;
+    }
     button, input {
         font-size: 11px;
     }
@@ -247,6 +250,9 @@
 }
 #repo-files-table {
     margin-bottom: 20px;
+    .sha .label {
+     font-family: Monaco,Menlo,Consolas,"Courier New",monospace;   
+    }
     th, td {
         text-align: left;
         line-height: 32px;
@@ -687,6 +693,14 @@
                     td, pre {
                         background-color: #E0E0E0 !important;
                         border-color: #ADADAD !important;
+                    }
+                    td.selected-line, td.selected-line pre {
+                        background-color: #ffffdd !important;
+                    }
+                }
+                &.same-code {
+                    td.selected-line, td.selected-line pre {
+                        background-color: #ffffdd !important;
                     }
                 }
                 &.del-code {

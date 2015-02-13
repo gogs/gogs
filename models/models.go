@@ -15,7 +15,7 @@ import (
 	"github.com/go-xorm/xorm"
 	_ "github.com/lib/pq"
 
-	"github.com/gogits/gogs/models/migrations"
+	// "github.com/gogits/gogs/models/migrations"
 	"github.com/gogits/gogs/modules/setting"
 )
 
@@ -23,7 +23,10 @@ import (
 type Engine interface {
 	Delete(interface{}) (int64, error)
 	Exec(string, ...interface{}) (sql.Result, error)
+	Get(interface{}) (bool, error)
 	Insert(...interface{}) (int64, error)
+	Id(interface{}) *xorm.Session
+	Where(string, ...interface{}) *xorm.Session
 }
 
 var (
@@ -133,9 +136,9 @@ func NewEngine() (err error) {
 		return err
 	}
 
-	if err = migrations.Migrate(x); err != nil {
-		return err
-	}
+	// if err = migrations.Migrate(x); err != nil {
+	// 	return err
+	// }
 
 	if err = x.StoreEngine("InnoDB").Sync2(tables...); err != nil {
 		return fmt.Errorf("sync database struct error: %v\n", err)

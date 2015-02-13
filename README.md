@@ -7,12 +7,13 @@ Gogs(Go Git Service) is a painless self-hosted Git Service written in Go.
 
 ![Demo](http://gogs.qiniudn.com/gogs_demo.gif)
 
-##### Current version: 0.5.12 Beta
+##### Current version: 0.5.13 Beta
 
 ### NOTICES
 
 - Due to testing purpose, data of [try.gogs.io](https://try.gogs.io) has been reset in **Jan 28, 2015** and will reset multiple times after. Please do **NOT** put your important data on the site.
 - Demo site [try.gogs.io](https://try.gogs.io) is running under `dev` branch.
+- You **MUST** read [CONTRIBUTING.md](CONTRIBUTING.md) before you start filing a issue or making a Pull Request.
 - If you think there are vulnerabilities in the project, please talk private to **u@gogs.io**, thanks!
 
 #### Other language version
@@ -27,7 +28,7 @@ The goal of this project is to make the easiest, fastest and most painless way t
 
 - Please see [Documentation](http://gogs.io/docs/intro/) for project design, known issues, and change log.
 - See [Trello Board](https://trello.com/b/uxAoeLUl/gogs-go-git-service) to follow the develop team.
-- Try it before anything? Do it [online](https://try.gogs.io/Unknown/gogs) or go down to **Installation -> Install from binary** section!
+- Try it before anything? Do it [online](https://try.gogs.io/unknwon/gogs) or go down to **Installation -> Install from binary** section!
 - Having troubles? Get help from [Troubleshooting](http://gogs.io/docs/intro/troubleshooting.md).
 - Want to help on localization? Check out [Crowdin](https://crowdin.com/project/gogs)!
 
@@ -51,7 +52,7 @@ The goal of this project is to make the easiest, fastest and most painless way t
 - Drone CI integration
 - Supports MySQL, PostgreSQL and SQLite3
 - Social account login(GitHub, Google, QQ, Weibo)
-- Multi-language support([9 languages](https://crowdin.com/project/gogs))
+- Multi-language support([10 languages](https://crowdin.com/project/gogs))
 
 ## System Requirements
 
@@ -81,7 +82,7 @@ There are 5 ways to install Gogs:
 
 ## Contributors
 
-- The [core team](http://gogs.io/team) of this project. 
+- The [core team](http://gogs.io/team) of this project.
 - See [contributors page](https://github.com/gogits/gogs/graphs/contributors) for full list of contributors.
 - See [TRANSLATORS](conf/locale/TRANSLATORS) for full list of translators.
 

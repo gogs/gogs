@@ -27,12 +27,20 @@ var CmdServ = cli.Command{
 	Usage:       "This command should only be called by SSH shell",
 	Description: `Serv provide access auth for repositories`,
 	Action:      runServ,
-	Flags:       []cli.Flag{},
+	Flags: []cli.Flag{
+		cli.StringFlag{"config, c", "custom/conf/app.ini", "Custom configuration file path", ""},
+	},
 }
 
 func setup(logPath string) {
 	setting.NewConfigContext()
 	log.NewGitLogger(filepath.Join(setting.LogRootPath, logPath))
+
+	if setting.DisableSSH {
+		println("Gogs: SSH has been disabled")
+		os.Exit(1)
+	}
+
 	models.LoadModelsConfig()
 
 	if models.UseSQLite3 {
@@ -77,9 +85,15 @@ func In(b string, sl map[string]models.AccessType) bool {
 }
 
 func runServ(k *cli.Context) {
+	if k.IsSet("config") {
+		setting.CustomConf = k.String("config")
+	}
 	setup("serv.log")
 
-	keys := strings.Split(os.Args[2], "-")
+	if len(k.Args()) < 1 {
+		log.GitLogger.Fatal(2, "Not enough arguments")
+	}
+	keys := strings.Split(k.Args()[0], "-")
 	if len(keys) != 2 {
 		println("Gogs: auth file format error")
 		log.GitLogger.Fatal(2, "Invalid auth file format: %s", os.Args[2])

@@ -50,7 +50,8 @@ var (
 	Protocol           Scheme
 	Domain             string
 	HttpAddr, HttpPort string
-	SshPort            int
+	DisableSSH         bool
+	SSHPort            int
 	OfflineMode        bool
 	DisableRouterLog   bool
 	CertFile, KeyFile  string
@@ -67,8 +68,11 @@ var (
 	ReverseProxyAuthUser string
 
 	// Webhook settings.
-	WebhookTaskInterval   int
-	WebhookDeliverTimeout int
+	Webhook struct {
+		TaskInterval   int
+		DeliverTimeout int
+		SkipTLSVerify  bool
+	}
 
 	// Repository settings.
 	RepoRootPath string
@@ -124,6 +128,7 @@ var (
 	Cfg          *ini.File
 	ConfRootPath string
 	CustomPath   string // Custom directory path.
+	CustomConf   string
 	ProdMode     bool
 	RunUser      string
 	IsWindows    bool
@@ -172,13 +177,16 @@ func NewConfigContext() {
 		CustomPath = path.Join(workDir, "custom")
 	}
 
-	cfgPath := path.Join(CustomPath, "conf/app.ini")
-	if com.IsFile(cfgPath) {
-		if err = Cfg.Append(cfgPath); err != nil {
-			log.Fatal(4, "Fail to load custom 'conf/app.ini': %v", err)
+	if len(CustomConf) == 0 {
+		CustomConf = path.Join(CustomPath, "conf/app.ini")
+	}
+
+	if com.IsFile(CustomConf) {
+		if err = Cfg.Append(CustomConf); err != nil {
+			log.Fatal(4, "Fail to load custom conf '%s': %v", CustomConf, err)
 		}
 	} else {
-		log.Warn("No custom 'conf/app.ini' found, ignore this if you're running first time")
+		log.Warn("Custom config (%s) not found, ignore this if you're running first time", CustomConf)
 	}
 	Cfg.NameMapper = ini.AllCapsUnderscore
 
@@ -209,7 +217,8 @@ func NewConfigContext() {
 	Domain = sec.Key("DOMAIN").MustString("localhost")
 	HttpAddr = sec.Key("HTTP_ADDR").MustString("0.0.0.0")
 	HttpPort = sec.Key("HTTP_PORT").MustString("3000")
-	SshPort = sec.Key("SSH_PORT").MustInt(22)
+	DisableSSH = sec.Key("DISABLE_SSH").MustBool()
+	SSHPort = sec.Key("SSH_PORT").MustInt(22)
 	OfflineMode = sec.Key("OFFLINE_MODE").MustBool()
 	DisableRouterLog = sec.Key("DISABLE_ROUTER_LOG").MustBool()
 	StaticRootPath = sec.Key("STATIC_ROOT_PATH").MustString(workDir)
@@ -231,7 +240,7 @@ func NewConfigContext() {
 	ReverseProxyAuthUser = sec.Key("REVERSE_PROXY_AUTHENTICATION_USER").MustString("X-WEBAUTH-USER")
 
 	sec = Cfg.Section("attachment")
-	AttachmentPath = sec.Key("PATH").MustString("data/attachments")
+	AttachmentPath = path.Join(workDir, sec.Key("PATH").MustString("data/attachments"))
 	AttachmentAllowedTypes = sec.Key("ALLOWED_TYPES").MustString("image/jpeg|image/png")
 	AttachmentMaxSize = sec.Key("MAX_SIZE").MustInt64(32)
 	AttachmentMaxFiles = sec.Key("MAX_FILES").MustInt(10)
@@ -288,7 +297,7 @@ func NewConfigContext() {
 
 	sec = Cfg.Section("picture")
 	PictureService = sec.Key("SERVICE").In("server", []string{"server"})
-	AvatarUploadPath = sec.Key("AVATAR_UPLOAD_PATH").MustString("data/avatars")
+	AvatarUploadPath = path.Join(workDir, sec.Key("AVATAR_UPLOAD_PATH").MustString("data/avatars"))
 	os.MkdirAll(AvatarUploadPath, os.ModePerm)
 	switch sec.Key("GRAVATAR_SOURCE").MustString("gravatar") {
 	case "duoshuo":
@@ -311,6 +320,7 @@ func NewConfigContext() {
 var Service struct {
 	RegisterEmailConfirm           bool
 	DisableRegistration            bool
+	ShowRegistrationButton         bool
 	RequireSignInView              bool
 	EnableCacheAvatar              bool
 	EnableNotifyMail               bool
@@ -324,6 +334,7 @@ func newService() {
 	Service.ActiveCodeLives = Cfg.Section("service").Key("ACTIVE_CODE_LIVE_MINUTES").MustInt(180)
 	Service.ResetPwdCodeLives = Cfg.Section("service").Key("RESET_PASSWD_CODE_LIVE_MINUTES").MustInt(180)
 	Service.DisableRegistration = Cfg.Section("service").Key("DISABLE_REGISTRATION").MustBool()
+	Service.ShowRegistrationButton = Cfg.Section("service").Key("SHOW_REGISTRATION_BUTTON").MustBool(!Service.DisableRegistration)
 	Service.RequireSignInView = Cfg.Section("service").Key("REQUIRE_SIGNIN_VIEW").MustBool()
 	Service.EnableCacheAvatar = Cfg.Section("service").Key("ENABLE_CACHE_AVATAR").MustBool()
 	Service.EnableReverseProxyAuth = Cfg.Section("service").Key("ENABLE_REVERSE_PROXY_AUTHENTICATION").MustBool()
@@ -500,8 +511,10 @@ func newNotifyMailService() {
 }
 
 func newWebhookService() {
-	WebhookTaskInterval = Cfg.Section("webhook").Key("TASK_INTERVAL").MustInt(1)
-	WebhookDeliverTimeout = Cfg.Section("webhook").Key("DELIVER_TIMEOUT").MustInt(5)
+	sec := Cfg.Section("webhook")
+	Webhook.TaskInterval = sec.Key("TASK_INTERVAL").MustInt(1)
+	Webhook.DeliverTimeout = sec.Key("DELIVER_TIMEOUT").MustInt(5)
+	Webhook.SkipTLSVerify = sec.Key("SKIP_TLS_VERIFY").MustBool()
 }
 
 func NewServices() {

@@ -127,7 +127,6 @@ func Home(ctx *middleware.Context) {
 		entries.Sort()
 
 		files := make([][]interface{}, 0, len(entries))
-
 		for _, te := range entries {
 			if te.Type != git.COMMIT {
 				c, err := ctx.Repo.Commit.GetCommitOfRelPath(filepath.Join(treePath, te.Name()))
@@ -149,16 +148,6 @@ func Home(ctx *middleware.Context) {
 					return
 				}
 				files = append(files, []interface{}{te, git.NewSubModuleFile(c, sm.Url, te.Id.String())})
-			}
-		}
-
-		// Render issue index links.
-		for _, f := range files {
-			switch c := f[1].(type) {
-			case *git.Commit:
-				c.CommitMessage = c.CommitMessage
-			case *git.SubModuleFile:
-				c.CommitMessage = c.CommitMessage
 			}
 		}
 		ctx.Data["Files"] = files
@@ -208,7 +197,6 @@ func Home(ctx *middleware.Context) {
 		}
 
 		lastCommit := ctx.Repo.Commit
-		lastCommit.CommitMessage = string(base.RenderIssueIndexPattern([]byte(lastCommit.CommitMessage), ctx.Repo.RepoLink))
 		if len(treePath) > 0 {
 			c, err := ctx.Repo.Commit.GetCommitOfRelPath(treePath)
 			if err != nil {

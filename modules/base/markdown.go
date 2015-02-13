@@ -106,7 +106,7 @@ func (options *CustomRender) Image(out *bytes.Buffer, link []byte, title []byte,
 }
 
 var (
-	MentionPattern     = regexp.MustCompile(`@[0-9a-zA-Z_]{1,}`)
+	MentionPattern     = regexp.MustCompile(`(\s|^)@[0-9a-zA-Z_]+`)
 	commitPattern      = regexp.MustCompile(`(\s|^)https?.*commit/[0-9a-zA-Z]+(#+[0-9a-zA-Z-]*)?`)
 	issueFullPattern   = regexp.MustCompile(`(\s|^)https?.*issues/[0-9]+(#+[0-9a-zA-Z-]*)?`)
 	issueIndexPattern  = regexp.MustCompile(`( |^)#[0-9]+`)
@@ -128,6 +128,7 @@ func RenderSpecialLink(rawBytes []byte, urlPrefix string) []byte {
 		if !inCodeBlock && !bytes.HasPrefix(line, tab) {
 			ms := MentionPattern.FindAll(line, -1)
 			for _, m := range ms {
+				m = bytes.TrimSpace(m)
 				line = bytes.Replace(line, m,
 					[]byte(fmt.Sprintf(`<a href="%s/%s">%s</a>`, setting.AppSubUrl, m[1:], m)), -1)
 			}
@@ -177,8 +178,8 @@ func RenderSha1CurrentPattern(rawBytes []byte, urlPrefix string) []byte {
 func RenderIssueIndexPattern(rawBytes []byte, urlPrefix string) []byte {
 	ms := issueIndexPattern.FindAll(rawBytes, -1)
 	for _, m := range ms {
-		rawBytes = bytes.Replace(rawBytes, m, []byte(fmt.Sprintf(
-			`<a href="%s/issues/%s">%s</a>`, urlPrefix, m[1:], m)), -1)
+		rawBytes = bytes.Replace(rawBytes, m, []byte(fmt.Sprintf(`<a href="%s/issues/%s">%s</a>`,
+			urlPrefix, strings.TrimPrefix(string(m[1:]), "#"), m)), -1)
 	}
 	return rawBytes
 }

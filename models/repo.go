@@ -30,7 +30,7 @@ import (
 )
 
 const (
-	TPL_UPDATE_HOOK = "#!/usr/bin/env %s\n%s update $1 $2 $3\n"
+	_TPL_UPDATE_HOOK = "#!/usr/bin/env %s\n%s update $1 $2 $3 --config='%s'\n"
 )
 
 var (
@@ -247,8 +247,8 @@ func (repo *Repository) CloneLink() (cl CloneLink, err error) {
 	if err = repo.GetOwner(); err != nil {
 		return cl, err
 	}
-	if setting.SshPort != 22 {
-		cl.SSH = fmt.Sprintf("ssh://%s@%s:%d/%s/%s.git", setting.RunUser, setting.Domain, setting.SshPort, repo.Owner.LowerName, repo.LowerName)
+	if setting.SSHPort != 22 {
+		cl.SSH = fmt.Sprintf("ssh://%s@%s:%d/%s/%s.git", setting.RunUser, setting.Domain, setting.SSHPort, repo.Owner.LowerName, repo.LowerName)
 	} else {
 		cl.SSH = fmt.Sprintf("%s@%s:%s/%s.git", setting.RunUser, setting.Domain, repo.Owner.LowerName, repo.LowerName)
 	}
@@ -357,13 +357,16 @@ func MigrateRepository(u *User, name, desc string, private, mirror bool, url str
 		os.RemoveAll(repoPath)
 	}
 
-	// this command could for both migrate and mirror
+	// FIXME: this command could for both migrate and mirror
 	_, stderr, err := process.ExecTimeout(10*time.Minute,
 		fmt.Sprintf("MigrateRepository: %s", repoPath),
 		"git", "clone", "--mirror", "--bare", url, repoPath)
 	if err != nil {
-		return repo, errors.New("git clone: " + stderr)
+		return repo, fmt.Errorf("git clone --mirror --bare: %v", stderr)
+	} else if err = createUpdateHook(repoPath); err != nil {
+		return repo, fmt.Errorf("create update hook: %v", err)
 	}
+
 	return repo, UpdateRepository(repo)
 }
 
@@ -402,15 +405,9 @@ func initRepoCommit(tmpPath string, sig *git.Signature) (err error) {
 	return nil
 }
 
-func createHookUpdate(hookPath, content string) error {
-	pu, err := os.OpenFile(hookPath, os.O_CREATE|os.O_WRONLY, 0777)
-	if err != nil {
-		return err
-	}
-	defer pu.Close()
-
-	_, err = pu.WriteString(content)
-	return err
+func createUpdateHook(repoPath string) error {
+	return ioutil.WriteFile(path.Join(repoPath, "hooks/update"),
+		[]byte(fmt.Sprintf(_TPL_UPDATE_HOOK, setting.ScriptType, "\""+appPath+"\"", setting.CustomConf)), 0777)
 }
 
 // InitRepository initializes README and .gitignore if needed.
@@ -422,9 +419,7 @@ func initRepository(f string, u *User, repo *Repository, initReadme bool, repoLa
 		return err
 	}
 
-	// hook/post-update
-	if err := createHookUpdate(filepath.Join(repoPath, "hooks", "update"),
-		fmt.Sprintf(TPL_UPDATE_HOOK, setting.ScriptType, "\""+appPath+"\"")); err != nil {
+	if err := createUpdateHook(repoPath); err != nil {
 		return err
 	}
 
@@ -1174,6 +1169,18 @@ func DeleteRepositoryArchives() error {
 		})
 }
 
+// RewriteRepositoryUpdateHook rewrites all repositories' update hook.
+func RewriteRepositoryUpdateHook() error {
+	return x.Where("id > 0").Iterate(new(Repository),
+		func(idx int, bean interface{}) error {
+			repo := bean.(*Repository)
+			if err := repo.GetOwner(); err != nil {
+				return err
+			}
+			return createUpdateHook(RepoPath(repo.Owner.Name, repo.Name))
+		})
+}
+
 var (
 	// Prevent duplicate tasks.
 	isMirrorUpdating = false
@@ -1289,7 +1296,7 @@ func IsWatching(uid, repoId int64) bool {
 	return has
 }
 
-func watchRepoWithEngine(e Engine, uid, repoId int64, watch bool) (err error) {
+func watchRepo(e Engine, uid, repoId int64, watch bool) (err error) {
 	if watch {
 		if IsWatching(uid, repoId) {
 			return nil
@@ -1312,7 +1319,7 @@ func watchRepoWithEngine(e Engine, uid, repoId int64, watch bool) (err error) {
 
 // Watch or unwatch repository.
 func WatchRepo(uid, repoId int64, watch bool) (err error) {
-	return watchRepoWithEngine(x, uid, repoId, watch)
+	return watchRepo(x, uid, repoId, watch)
 }
 
 // GetWatchers returns all watchers of given repository.
@@ -1500,14 +1507,14 @@ func ForkRepository(u *User, oldRepo *Repository, name, desc string) (*Repositor
 				log.Error(4, "GetMembers: %v", err)
 			} else {
 				for _, u := range t.Members {
-					if err = watchRepoWithEngine(sess, u.Id, repo.Id, true); err != nil {
+					if err = watchRepo(sess, u.Id, repo.Id, true); err != nil {
 						log.Error(4, "WatchRepo2: %v", err)
 					}
 				}
 			}
 		}
 	} else {
-		if err = watchRepoWithEngine(sess, u.Id, repo.Id, true); err != nil {
+		if err = watchRepo(sess, u.Id, repo.Id, true); err != nil {
 			log.Error(4, "WatchRepo3: %v", err)
 		}
 	}

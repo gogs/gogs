@@ -1,6 +1,7 @@
 .DS_Store
 *.db
 *.log
+log/
 custom/
 data/
 .vendor/

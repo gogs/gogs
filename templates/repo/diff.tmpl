@@ -89,7 +89,11 @@
                     {{$.i18n.Tr "repo.diff.bin"}}
                     {{end}}
                 </div>
+                {{if $file.IsDeleted}}
+                <a class="btn btn-gray btn-header btn-radius text-black pull-right" rel="nofollow" href="{{$.BeforeSourcePath}}/{{.Name}}">{{$.i18n.Tr "repo.diff.view_file"}}</a>
+                {{else}}
                 <a class="btn btn-gray btn-header btn-radius text-black pull-right" rel="nofollow" href="{{$.SourcePath}}/{{.Name}}">{{$.i18n.Tr "repo.diff.view_file"}}</a>
+                {{end}}
                 <span class="file">{{$file.Name}}</span>
             </div>
             {{$isImage := (call $.IsImageFile $file.Name)}}

@@ -119,6 +119,7 @@ const (
 	CLEAN_REPO_ARCHIVES
 	GIT_GC_REPOS
 	SYNC_SSH_AUTHORIZED_KEY
+	SYNC_REPOSITORY_UPDATE_HOOK
 )
 
 func Dashboard(ctx *middleware.Context) {
@@ -148,6 +149,9 @@ func Dashboard(ctx *middleware.Context) {
 		case SYNC_SSH_AUTHORIZED_KEY:
 			success = ctx.Tr("admin.dashboard.resync_all_sshkeys_success")
 			err = models.RewriteAllPublicKeys()
+		case SYNC_REPOSITORY_UPDATE_HOOK:
+			success = ctx.Tr("admin.dashboard.resync_all_update_hooks_success")
+			err = models.RewriteRepositoryUpdateHook()
 		}
 
 		if err != nil {
@@ -184,11 +188,8 @@ func Config(ctx *middleware.Context) {
 	ctx.Data["ReverseProxyAuthUser"] = setting.ReverseProxyAuthUser
 
 	ctx.Data["Service"] = setting.Service
-
 	ctx.Data["DbCfg"] = models.DbCfg
-
-	ctx.Data["WebhookTaskInterval"] = setting.WebhookTaskInterval
-	ctx.Data["WebhookDeliverTimeout"] = setting.WebhookDeliverTimeout
+	ctx.Data["Webhook"] = setting.Webhook
 
 	ctx.Data["MailerEnabled"] = false
 	if setting.MailService != nil {
