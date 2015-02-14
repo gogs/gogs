@@ -286,6 +286,25 @@ var Gogs = {};
             return false;
         });
 
+        $('.remove-comment').click(function () {
+            var commit = document.location.href.match(/([a-zA-Z0-9:\/\/]+)\/commit\/([a-z0-9]+)/);
+            var url = commit[1] + '/commit/comment/delete/';
+            $.ajax({
+                url: url,
+                data: {comment: $(this).data('id')},
+                dataType: 'json',
+                method: 'post',
+                success: function (json) {
+                    if (json.ok) {
+                        location.reload();
+                    } else {
+                        alert(json.error);
+                    }
+                }
+            });
+            return false;
+        });
+
         $('.code-diff').on('submit', '#commit-add-comment-form', function () {
             var url = $(this).attr('action');
             $.ajax({

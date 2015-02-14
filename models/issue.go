@@ -1089,3 +1089,9 @@ func DeleteAttachmentsByComment(commentId int64, remove bool) (int, error) {
 
 	return DeleteAttachments(attachments, remove)
 }
+
+func DeleteComment(commentId, userId int64) error {
+	_, err := x.Delete(&Comment{Id: commentId, PosterId: userId})
+	
+	return err
+}

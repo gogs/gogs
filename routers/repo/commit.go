@@ -457,3 +457,20 @@ func CreateCommitComment(ctx *middleware.Context) {
 
 	send(200, fmt.Sprintf("%s/commit/%s#comment-%d", ctx.Repo.RepoLink, commitId, comment.Id), nil)
 }
+
+func DeleteCommitComment(ctx *middleware.Context) {
+
+	commentId := com.StrTo(ctx.Query("comment")).MustInt64()
+	if err := models.DeleteComment(int64(commentId), ctx.User.Id); err != nil {
+		ctx.JSON(200, map[string]interface{}{
+			"ok":     false,
+			"error":  err.Error(),
+		})
+		return
+	}
+
+	ctx.JSON(200, map[string]interface{}{
+		"ok":     true,
+		"data":  "ok",
+	})
+}

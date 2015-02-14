@@ -140,8 +140,8 @@
                                         {{end}}
                                         {{if $.SignedUser}}
                                         {{if eq $.SignedUser.Id .Poster.Id}}
-                                        <a href="#"><i class="octicon octicon-pencil"></i></a>
-                                        <a href="#"><i class="octicon octicon-x"></i></a>
+                                        <!--<a href="#" class="edit-comment"><i class="octicon octicon-pencil"></i></a>-->
+                                        <a href="#" data-id="{{.Id}}" class="remove-comment"><i class="octicon octicon-x"></i></a>
                                         {{end}}
                                         {{end}}
                                     </span>
