@@ -188,7 +188,7 @@ func ActionIcon(opType int) string {
 		return "git-commit"
 	case 6: // Create issue.
 		return "issue-opened"
-	case 10: // Comment issue.
+	case 10, 11: // Comment issue.
 		return "comment"
 	default:
 		return "invalid type"

@@ -138,8 +138,12 @@
                                         {{if eq $.Repository.Owner.Id .Poster.Id}}
                                         <span class="label label-black label-radius">{{$.i18n.Tr "repo.owner"}}</span>
                                         {{end}}
-                                        <!--<a href="#"><i class="octicon octicon-pencil"></i></a>-->
-                                        <!--<a href="#"><i class="octicon octicon-x"></i></a>-->
+                                        {{if $.SignedUser}}
+                                        {{if eq $.SignedUser.Id .Poster.Id}}
+                                        <a href="#"><i class="octicon octicon-pencil"></i></a>
+                                        <a href="#"><i class="octicon octicon-x"></i></a>
+                                        {{end}}
+                                        {{end}}
                                     </span>
                                         </p>
 
