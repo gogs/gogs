@@ -3,7 +3,7 @@ Gogs - Go Git Service [![Build Status](https://travis-ci.org/gogits/gogs.svg?bra
 
 [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/gogits/gogs?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
-Gogs(Go Git Service) is a painless self-hosted Git Service written in Go.
+Gogs (Go Git Service) is a painless self-hosted Git service written in Go.
 
 ![Demo](http://gogs.qiniudn.com/gogs_demo.gif)
 
@@ -12,9 +12,9 @@ Gogs(Go Git Service) is a painless self-hosted Git Service written in Go.
 ### NOTICES
 
 - Due to testing purpose, data of [try.gogs.io](https://try.gogs.io) has been reset in **Jan 28, 2015** and will reset multiple times after. Please do **NOT** put your important data on the site.
-- Demo site [try.gogs.io](https://try.gogs.io) is running under `dev` branch.
+- The demo site [try.gogs.io](https://try.gogs.io) is running under `dev` branch.
 - You **MUST** read [CONTRIBUTING.md](CONTRIBUTING.md) before you start filing a issue or making a Pull Request.
-- If you think there are vulnerabilities in the project, please talk private to **u@gogs.io**, thanks!
+- If you think there are vulnerabilities in the project, please talk privately to **u@gogs.io**.  Thanks!
 
 #### Other language version
 
@@ -22,15 +22,15 @@ Gogs(Go Git Service) is a painless self-hosted Git Service written in Go.
 
 ## Purpose
 
-The goal of this project is to make the easiest, fastest and most painless way to set up a self-hosted Git service. With Go, this can be done in independent binary distribution across **ALL platforms** that Go supports, including Linux, Mac OS X, and Windows.
+The goal of this project is to make the easiest, fastest, and most painless way to set up a self-hosted Git service. With Go, this can be done via an independent binary distribution across **ALL platforms** that Go supports, including Linux, Mac OS X, and Windows.
 
 ## Overview
 
-- Please see [Documentation](http://gogs.io/docs/intro/) for project design, known issues, and change log.
-- See [Trello Board](https://trello.com/b/uxAoeLUl/gogs-go-git-service) to follow the develop team.
-- Try it before anything? Do it [online](https://try.gogs.io/unknwon/gogs) or go down to **Installation -> Install from binary** section!
-- Having troubles? Get help from [Troubleshooting](http://gogs.io/docs/intro/troubleshooting.md).
-- Want to help on localization? Check out [Crowdin](https://crowdin.com/project/gogs)!
+- Please see the [Documentation](http://gogs.io/docs/intro/) for project design, known issues, and change log.
+- See the [Trello Board](https://trello.com/b/uxAoeLUl/gogs-go-git-service) to follow the develop team.
+- Want to try it before doing anything else? Do it [online](https://try.gogs.io/unknwon/gogs) or go down to the **Installation -> Install from binary** section!
+- Having trouble? Get help with [Troubleshooting](http://gogs.io/docs/intro/troubleshooting.md).
+- Want to help with localization? Check out [Crowdin](https://crowdin.com/project/gogs)!
 
 ## Features
 
@@ -46,22 +46,22 @@ The goal of this project is to make the easiest, fastest and most painless way t
 - Repository Git hooks
 - Add/remove repository collaborators
 - Gravatar and cache support
-- Mail service(register, issue)
+- Mail service (register, issue)
 - Administration panel
 - Slack webhook integration
 - Drone CI integration
 - Supports MySQL, PostgreSQL and SQLite3
-- Social account login(GitHub, Google, QQ, Weibo)
-- Multi-language support([10 languages](https://crowdin.com/project/gogs))
+- Social account login (GitHub, Google, QQ, Weibo)
+- Multi-language support ([10 languages](https://crowdin.com/project/gogs))
 
 ## System Requirements
 
-- A cheap Raspberry Pi is powerful enough to match the minimal requirement.
-- 4 CPU Cores and 1GB RAM would be the baseline for teamwork.
+- A cheap Raspberry Pi is powerful enough for basic functionality.
+- At least 4 CPU cores and 1GB RAM would be the baseline for teamwork.
 
 ## Installation
 
-Make sure you install [Prerequirements](http://gogs.io/docs/installation/) first.
+Make sure you install the [prerequisites](http://gogs.io/docs/installation/) first.
 
 There are 5 ways to install Gogs:
 
