@@ -121,7 +121,7 @@ func SetEngine() (err error) {
 	if err != nil {
 		return fmt.Errorf("models.init(fail to create xorm.log): %v", err)
 	}
-	x.Logger = xorm.NewSimpleLogger(f)
+	x.SetLogger(xorm.NewSimpleLogger(f))
 
 	x.ShowSQL = true
 	x.ShowInfo = true
