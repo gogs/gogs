@@ -166,12 +166,11 @@ func newMacaron() *macaron.Macaron {
 }
 
 func runWeb(ctx *cli.Context) {
-	checkVersion()
-
 	if ctx.IsSet("config") {
 		setting.CustomConf = ctx.String("config")
 	}
 	routers.GlobalInit()
+	checkVersion()
 
 	m := newMacaron()
 
