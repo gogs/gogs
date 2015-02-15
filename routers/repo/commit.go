@@ -362,6 +362,7 @@ func CompareDiff(ctx *middleware.Context) {
 func GetCommentForm(ctx *middleware.Context) {
 	ctx.Data["Repo"] = ctx.Repo
 	ctx.Data["Line"] = ctx.Query("line")
+	ctx.Data["CommentId"] = ctx.Query("id")
 	ctx.HTML(200, COMMENT_FORM)
 }
 
@@ -385,19 +386,39 @@ func CreateCommitComment(ctx *middleware.Context) {
 		}
 	}
 	var comment *models.Comment
+	var err error
 
 	commitId := ctx.ParamsEscape(":commitId")
 	content := ctx.Query("content")
-	line := ctx.Query("line")
-	lineRe, err := regexp.Compile("[0-9]+L[0-9]+")
-	if len(content) > 0 && lineRe.MatchString(line) {
+	if len(content) > 0 {
 		switch ctx.Params(":action") {
 		case "new":
+			line := ctx.Query("line")
+			lineRe, err := regexp.Compile("[0-9]+L[0-9]+")
+			if len(line) > 0 && !lineRe.MatchString(line) {
+				err := errors.New("Something went wrong")
+				send(200, err.Error(), err)
+				return
+			}
 			if comment, err = models.CreateComment(ctx.User.Id, ctx.Repo.Repository.Id, 0, commitId, line, models.COMMENT_TYPE_COMMENT, content, nil); err != nil {
 				send(500, nil, err)
 				return
 			}
 			log.Trace("%s Comment created: %s", ctx.Req.RequestURI, commitId)
+		case "edit":
+			commentId := com.StrTo(ctx.Query("id")).MustInt64()
+			comment, err = models.GetCommentById(commentId)
+			if err != nil {
+				send(500, nil, err)
+				return
+			}
+
+			comment.Content = content
+			if err = models.UpdateComment(comment); err != nil {
+				send(500, nil, err)
+				return
+			}
+			log.Trace("%s Comment updated: %v", ctx.Req.RequestURI, comment.Id)
 		default:
 			ctx.Handle(404, "commit.Comment", err)
 			return

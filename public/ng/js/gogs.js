@@ -240,7 +240,7 @@ var Gogs = {};
 
         function prepareToForm() {
             $('.add-comment').hide('fast', function(){ $(this).remove(); });
-            $('button.answer').show();
+            $('button.answer').hide();
         }
 
         $(document).on('click', '.code-diff .lines-num span', function (e) {
@@ -270,38 +270,73 @@ var Gogs = {};
                 var elem = (commentTr.length > 0) ? commentTr : $(this).parents('tr');
                 var url = commit[1] + '/commit/comment/' + commit[2];
                 elem.after(
-                    $('<tr class="add-comment">').load(url + '?line=' + lineNum, function () {
-                        $('.menu-line.add-nav').tabs();
-                        $('#pull-commit-preview').markdown_preview(".commit-add-comment");
-                        $('body').animate({
-                            scrollTop: $(this).offset().top - 33 // height of button
-                        }, 1000);
-                    })
+                    $('<tr class="add-comment">').append(
+                        $('<td colspan="3">').load(url + '?line=' + lineNum, function () {
+                            $('.menu-line.add-nav').tabs();
+                            $('#pull-commit-preview').markdown_preview(".commit-add-comment");
+                            $('body').animate({
+                                scrollTop: $(this).offset().top - 33 // height of button
+                            }, 1000);
+                        })
+                    )
                 );
             }
         });
 
         $('.code-diff').on('click', '#cancel-commit-conversation', function () {
             prepareToForm();
+            $('button.answer').show();
+            return false;
+        });
+
+
+        $('.code-diff').on('click', '#cancel-edit-commit-conversation', function () {
+            prepareToForm();
+            $(this).parents('.commit-comment').children().show();
+            $(this).parents('#commit-conversation').parent().remove();
+            $('button.answer').show();
+            return false;
+        });
+
+        $('.edit-comment').click(function () {
+            prepareToForm();
+            var text = $(this).parents('div.panel:first').find('.markdown').text();
+            var id = $(this).parents('.commit-comment').attr('id');
+            id = id.substr(15);
+            var commit = document.location.href.match(/([a-zA-Z0-9:\/\/]+)\/commit\/([a-z0-9]+)/);
+            var url = commit[1] + '/commit/comment/' + commit[2];
+            $(this).parents('.commit-comment').children().hide();
+            $(this).parents('.commit-comment').append(
+                $('<div>').load(url + '?id='+id, function () {
+                    $('.menu-line.add-nav').tabs();
+                    $('#pull-commit-preview').markdown_preview(".commit-add-comment");
+                    $('#commit-add-content').text(text.trim());
+                    $('body').animate({
+                        scrollTop: $(this).offset().top - 33 // height of button
+                    }, 1000);
+                })
+            )
             return false;
         });
 
         $('.remove-comment').click(function () {
-            var commit = document.location.href.match(/([a-zA-Z0-9:\/\/]+)\/commit\/([a-z0-9]+)/);
-            var url = commit[1] + '/commit/comment/delete/';
-            $.ajax({
-                url: url,
-                data: {comment: $(this).data('id')},
-                dataType: 'json',
-                method: 'post',
-                success: function (json) {
-                    if (json.ok) {
-                        location.reload();
-                    } else {
-                        alert(json.error);
+            if (confirm('Are you sure?')) {
+                var commit = document.location.href.match(/([a-zA-Z0-9:\/\/]+)\/commit\/([a-z0-9]+)/);
+                var url = commit[1] + '/commit/comment/delete/';
+                $.ajax({
+                    url: url,
+                    data: {comment: $(this).data('id')},
+                    dataType: 'json',
+                    method: 'post',
+                    success: function (json) {
+                        if (json.ok) {
+                            location.reload();
+                        } else {
+                            alert(json.error);
+                        }
                     }
-                }
-            });
+                });
+            }
             return false;
         });
 

@@ -940,6 +940,17 @@ func CreateComment(userId, repoId, issueId int64, commitId, line string, cmtType
 	return comment, sess.Commit()
 }
 
+// UpdateComment update comment
+func UpdateComment(comment *Comment) error {
+	_, err := x.Id(comment.Id).AllCols().Update(comment)
+
+	if err != nil {
+		return err
+	}
+
+	return err
+}
+
 // GetCommentById returns the comment with the given id
 func GetCommentById(commentId int64) (*Comment, error) {
 	c := &Comment{Id: commentId}

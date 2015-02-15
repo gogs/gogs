@@ -1696,6 +1696,9 @@ The register and sign-in page style
   background-color: #FFF8D2 !important;
   border-color: #F0DB88 !important;
 }
+.diff-file-box .code-diff tbody tr.add-comment td {
+  padding: 10px;
+}
 .diff-file-box .code-diff tbody tr.add-comment:hover td,
 .diff-file-box .code-diff tbody tr.comment:hover td,
 .diff-file-box .code-diff tbody tr.add-comment:hover pre,

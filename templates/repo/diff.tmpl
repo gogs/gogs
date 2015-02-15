@@ -134,17 +134,17 @@
                                     <div class="panel panel-radius">
                                         <p class="panel-header clear"><a class="author-name" href="{{AppSubUrl}}/{{.Poster.Name}}">{{.Poster.Name}}</a>
                                             <span class="date">{{TimeSince .Created $.Lang}}</span>
-                                    <span class="action right">
-                                        {{if eq $.Repository.Owner.Id .Poster.Id}}
-                                        <span class="label label-black label-radius">{{$.i18n.Tr "repo.owner"}}</span>
-                                        {{end}}
-                                        {{if $.SignedUser}}
-                                        {{if eq $.SignedUser.Id .Poster.Id}}
-                                        <!--<a href="#" class="edit-comment"><i class="octicon octicon-pencil"></i></a>-->
-                                        <a href="#" data-id="{{.Id}}" class="remove-comment"><i class="octicon octicon-x"></i></a>
-                                        {{end}}
-                                        {{end}}
-                                    </span>
+                                            <span class="action right">
+                                                {{if eq $.Repository.Owner.Id .Poster.Id}}
+                                                <span class="label label-black label-radius">{{$.i18n.Tr "repo.owner"}}</span>
+                                                {{end}}
+                                                {{if $.SignedUser}}
+                                                {{if eq $.SignedUser.Id .Poster.Id}}
+                                                <a href="#" class="edit-comment"><i class="octicon octicon-pencil"></i></a>
+                                                <a href="#" data-id="{{.Id}}" class="remove-comment"><i class="octicon octicon-x"></i></a>
+                                                {{end}}
+                                                {{end}}
+                                            </span>
                                         </p>
 
                                         <div class="panel-content content markdown">
