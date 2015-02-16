@@ -20,7 +20,7 @@
         <!-- <li>
             <a class="radius" href="#"><i class="octicon octicon-organization"></i>contributors <span class="num right label label-gray label-radius">43</span></a>
         </li> -->
-        {{if .IsRepositoryTrueOwner}}
+        {{if .IsRepositoryAdmin}}
         <li class="border-bottom"></li>
         <li>
             <a class="radius" href="{{.RepoLink}}/settings"><i class="octicon octicon-tools"></i>{{.i18n.Tr "repo.settings"}}</a>
