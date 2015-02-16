@@ -103,7 +103,12 @@ func Dashboard(ctx *middleware.Context) {
 	feeds := make([]*models.Action, 0, len(actions))
 	for _, act := range actions {
 		if act.IsPrivate {
-			if has, _ := models.HasAccess(ctx.User, &models.Repository{Id: act.RepoId, IsPrivate: true}, models.ACCESS_MODE_READ); !has {
+			repo := &models.Repository{Id: act.RepoId, IsPrivate: true}
+			// This prevents having to retrieve the repository for each action
+			if act.RepoUserName == ctx.User.LowerName {
+				repo.OwnerId = ctx.User.Id
+			}
+			if has, _ := models.HasAccess(ctx.User, repo, models.ACCESS_MODE_READ); !has {
 				continue
 			}
 		}
@@ -210,11 +215,12 @@ func Profile(ctx *middleware.Context) {
 				if !ctx.IsSigned {
 					continue
 				}
-				if has, _ := models.HasAccess(ctx.User,
-					&models.Repository{
-						Id:        act.RepoId,
-						IsPrivate: true,
-					}, models.ACCESS_MODE_READ); !has {
+				repo := &models.Repository{Id: act.RepoId, IsPrivate: true}
+				// This prevents having to retrieve the repository for each action
+				if act.RepoUserName == ctx.User.LowerName {
+					repo.OwnerId = ctx.User.Id
+				}
+				if has, _ := models.HasAccess(ctx.User, repo, models.ACCESS_MODE_READ); !has {
 					continue
 				}
 			}
