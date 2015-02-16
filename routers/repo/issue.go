@@ -230,7 +230,7 @@ func CreateIssuePost(ctx *middleware.Context, form auth.CreateIssueForm) {
 	}
 
 	// Only collaborators can assign.
-	if !ctx.Repo.IsOwner {
+	if !ctx.Repo.IsOwner() {
 		form.AssigneeId = 0
 	}
 	issue := &models.Issue{
@@ -434,7 +434,7 @@ func ViewIssue(ctx *middleware.Context) {
 	ctx.Data["Title"] = issue.Name
 	ctx.Data["Issue"] = issue
 	ctx.Data["Comments"] = comments
-	ctx.Data["IsIssueOwner"] = ctx.Repo.IsOwner || (ctx.IsSigned && issue.PosterId == ctx.User.Id)
+	ctx.Data["IsIssueOwner"] = ctx.Repo.IsOwner() || (ctx.IsSigned && issue.PosterId == ctx.User.Id)
 	ctx.Data["IsRepoToolbarIssues"] = true
 	ctx.Data["IsRepoToolbarIssuesList"] = false
 	ctx.HTML(200, ISSUE_VIEW)
@@ -457,7 +457,7 @@ func UpdateIssue(ctx *middleware.Context, form auth.CreateIssueForm) {
 		return
 	}
 
-	if ctx.User.Id != issue.PosterId && !ctx.Repo.IsOwner {
+	if ctx.User.Id != issue.PosterId && !ctx.Repo.IsOwner() {
 		ctx.Error(403)
 		return
 	}
@@ -484,7 +484,7 @@ func UpdateIssue(ctx *middleware.Context, form auth.CreateIssueForm) {
 }
 
 func UpdateIssueLabel(ctx *middleware.Context) {
-	if !ctx.Repo.IsOwner {
+	if !ctx.Repo.IsOwner() {
 		ctx.Error(403)
 		return
 	}
@@ -560,7 +560,7 @@ func UpdateIssueLabel(ctx *middleware.Context) {
 }
 
 func UpdateIssueMilestone(ctx *middleware.Context) {
-	if !ctx.Repo.IsOwner {
+	if !ctx.Repo.IsOwner() {
 		ctx.Error(403)
 		return
 	}
@@ -606,7 +606,7 @@ func UpdateIssueMilestone(ctx *middleware.Context) {
 }
 
 func UpdateAssignee(ctx *middleware.Context) {
-	if !ctx.Repo.IsOwner {
+	if !ctx.Repo.IsOwner() {
 		ctx.Error(403)
 		return
 	}
@@ -752,7 +752,7 @@ func Comment(ctx *middleware.Context) {
 
 	// Check if issue owner changes the status of issue.
 	var newStatus string
-	if ctx.Repo.IsOwner || issue.PosterId == ctx.User.Id {
+	if ctx.Repo.IsOwner() || issue.PosterId == ctx.User.Id {
 		newStatus = ctx.Query("change_status")
 	}
 	if len(newStatus) > 0 {
