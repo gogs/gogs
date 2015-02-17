@@ -154,7 +154,6 @@ type Repository struct {
 
 	IsPrivate bool
 	IsBare    bool
-	IsGoget   bool
 
 	IsMirror bool
 	*Mirror  `xorm:"-"`
