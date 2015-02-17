@@ -52,7 +52,6 @@ type RepoSettingForm struct {
 	Branch      string `form:"branch"`
 	Interval    int    `form:"interval"`
 	Private     bool   `form:"private"`
-	GoGet       bool   `form:"goget"`
 }
 
 func (f *RepoSettingForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
