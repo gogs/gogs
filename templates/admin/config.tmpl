@@ -105,8 +105,8 @@
                                     <dd>{{.Webhook.TaskInterval}} {{.i18n.Tr "tool.raw_minutes"}}</dd>
                                     <dt>{{.i18n.Tr "admin.config.deliver_timeout"}}</dt>
                                     <dd>{{.Webhook.DeliverTimeout}} {{.i18n.Tr "tool.raw_seconds"}}</dd>
-                                    <dt>{{.i18n.Tr "admin.config.allow_insecure_certification"}}</dt>
-                                    <dd><i class="fa fa{{if .Webhook.AllowInsecureCertification}}-check{{end}}-square-o"></i></dd>
+                                    <dt>{{.i18n.Tr "admin.config.skip_tls_verify"}}</dt>
+                                    <dd><i class="fa fa{{if .Webhook.SkipTLSVerify}}-check{{end}}-square-o"></i></dd>
                                 </dl>
                             </div>
                         </div>

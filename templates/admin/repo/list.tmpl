@@ -37,7 +37,7 @@
 					                            <td>{{.NumWatches}}</td>
 					                            <td>{{.NumStars}}</td>
 					                            <td>{{.NumIssues}}</td>
-					                            <td><span title="{{DateFormat .Created "r"}}">{{DateFormat .Created "M d, Y"}}</span></td>
+					                            <td><span title="{{DateFmtLong .Created}}">{{DateFmtShort .Created}}</span></td>
 					                        </tr>
 					                        {{end}}
 					                    </tbody>
