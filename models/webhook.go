@@ -315,7 +315,7 @@ func DeliverHooks() {
 			req := httplib.Post(t.Url).SetTimeout(timeout, timeout).
 				Header("X-Gogs-Delivery", t.Uuid).
 				Header("X-Gogs-Event", string(t.EventType)).
-				SetTLSClientConfig(&tls.Config{InsecureSkipVerify: setting.Webhook.AllowInsecureCertification})
+				SetTLSClientConfig(&tls.Config{InsecureSkipVerify: setting.Webhook.SkipTLSVerify})
 
 			switch t.ContentType {
 			case JSON:
