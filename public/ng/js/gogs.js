@@ -209,14 +209,14 @@ var Gogs = {};
             $list.parents('tr').removeClass('end-selected-line');
             $list.parents('tr').find('td').removeClass('selected-line');
             if ($from) {
-                var expr = new RegExp(/diff-(\d+)L(\d+)/);
+                var expr = new RegExp(/diff-(\w+)([LR])(\d+)/);
                 var selectMatches = $select.attr('rel').match(expr)
                 var fromMatches = $from.attr('rel').match(expr)
-                var a = parseInt(selectMatches[2]);
-                var b = parseInt(fromMatches[2]);
+                var a = parseInt(selectMatches[3]);
+                var b = parseInt(fromMatches[3]);
                 var linesIntToStr = {};
-                linesIntToStr[a] = selectMatches[2];
-                linesIntToStr[b] = fromMatches[2];
+                linesIntToStr[a] = selectMatches[3];
+                linesIntToStr[b] = fromMatches[3];
 
                 var c;
                 if (a != b) {
@@ -225,11 +225,11 @@ var Gogs = {};
                         a = b;
                         b = c;
                     }
-                    $('[rel=diff-'+fromMatches[1]+'L' + linesIntToStr[b] + ']').parents('tr').next().addClass('end-selected-line');
-                    var $selectedLines = $('[rel=diff-'+fromMatches[1]+'L' + linesIntToStr[a] + ']').parents('tr').nextUntil('.end-selected-line').andSelf();
+                    $('[rel=diff-'+fromMatches[1] + fromMatches[2] + linesIntToStr[b] + ']').parents('tr').next().addClass('end-selected-line');
+                    var $selectedLines = $('[rel=diff-'+fromMatches[1]+selectMatches[2] + linesIntToStr[a] + ']').parents('tr').nextUntil('.end-selected-line').andSelf();
                     $selectedLines.find('td.lines-num > span').addClass('active')
                     $selectedLines.find('td').addClass('selected-line');
-                    $.changeHash('#diff-'+fromMatches[1]+'L' + linesIntToStr[a] + '-L' + linesIntToStr[b]);
+                    $.changeHash('#diff-'+fromMatches[1]+fromMatches[2] + linesIntToStr[a] + '-' + selectMatches[2] + + linesIntToStr[b]);
                     return
                 }
             }
@@ -262,7 +262,7 @@ var Gogs = {};
         });
 
         $(window).on('hashchange', function (e) {
-            var m = window.location.hash.match(/^#diff-(\d+)(L\d+)\-(L\d+)$/);
+            var m = window.location.hash.match(/^#diff-(\w+)([LR]\d+)\-([LR]\d+)$/);
             var $list = $('.code-diff td.lines-num > span');
             var $first;
             if (m) {
@@ -271,7 +271,7 @@ var Gogs = {};
                 $("html, body").scrollTop($first.offset().top - 200);
                 return;
             }
-            m = window.location.hash.match(/^#diff-(\d+)(L\d+)$/);
+            m = window.location.hash.match(/^#diff-(\w+)([LR]\d+)$/);
             if (m) {
                 $first = $list.filter('[rel=diff-' + m[1] + m[2] + ']');
                 selectRange($list, $first);
