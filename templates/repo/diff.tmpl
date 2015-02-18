@@ -105,9 +105,9 @@
                 {{else}}
                 <table>
                     <tbody>
-                        {{range $j, $section := $file.Sections}}
-                        {{range $k, $line := $section.Lines}}
-                        <tr class="{{DiffLineTypeToStr .Type}}-code nl-{{$i}} ol-{{$i}}">
+                        {{range .Sections}}
+                        {{range $k, $line := .Lines}}
+                        <tr class="{{DiffLineTypeToStr .Type}}-code nl-{{$k}} ol-{{$k}}">
                             <td class="lines-num lines-num-old">
                                 <span rel="{{if $line.LeftIdx}}diff-L{{Sha1 $file.Name}}{{$line.LeftIdx}}{{end}}">{{if $line.LeftIdx}}{{$line.LeftIdx}}{{end}}</span>
                             </td>
