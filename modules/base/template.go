@@ -126,8 +126,13 @@ var TemplateFuncs template.FuncMap = map[string]interface{}{
 		return a + b
 	},
 	"ActionIcon": ActionIcon,
-	"DateFormat": DateFormat,
-	"List":       List,
+	"DateFmtLong": func(t time.Time) string {
+		return t.Format(time.RFC1123Z)
+	},
+	"DateFmtShort": func(t time.Time) string {
+		return t.Format("Jan 02, 2006")
+	},
+	"List": List,
 	"Mail2Domain": func(mail string) string {
 		if !strings.Contains(mail, "@") {
 			return "try.gogs.io"

@@ -35,7 +35,7 @@
 					                            <td>{{.NumTeams}}</td>
 					                            <td>{{.NumMembers}}</td>
 					                            <td>{{.NumRepos}}</td>
-					                            <td><span title="{{DateFormat .Created "r"}}">{{DateFormat .Created "M d, Y"}}</span></td>
+					                            <td><span title="{{DateFmtLong .Created}}">{{DateFmtShort .Created}}</span></td>
 					                        </tr>
 					                        {{end}}
 					                    </tbody>
