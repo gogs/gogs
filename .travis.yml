@@ -13,3 +13,4 @@ script: go build -v
 notifications:
   email:
     - u@gogs.io
+  slack: gophercn:o5pSanyTeNhnfYc3QnG0X7Wx

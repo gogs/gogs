@@ -15,7 +15,7 @@ import (
 	"github.com/go-xorm/xorm"
 	_ "github.com/lib/pq"
 
-	"github.com/gogits/gogs/models/migrations"
+	// "github.com/gogits/gogs/models/migrations"
 	"github.com/gogits/gogs/modules/setting"
 )
 
@@ -121,7 +121,7 @@ func SetEngine() (err error) {
 	if err != nil {
 		return fmt.Errorf("models.init(fail to create xorm.log): %v", err)
 	}
-	x.Logger = xorm.NewSimpleLogger(f)
+	x.SetLogger(xorm.NewSimpleLogger(f))
 
 	x.ShowSQL = true
 	x.ShowInfo = true
@@ -136,9 +136,9 @@ func NewEngine() (err error) {
 		return err
 	}
 
-	if err = migrations.Migrate(x); err != nil {
-		return err
-	}
+	// if err = migrations.Migrate(x); err != nil {
+	// 	return err
+	// }
 
 	if err = x.StoreEngine("InnoDB").Sync2(tables...); err != nil {
 		return fmt.Errorf("sync database struct error: %v\n", err)
