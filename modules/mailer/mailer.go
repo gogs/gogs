@@ -10,6 +10,7 @@ import (
 	"net"
 	"net/mail"
 	"net/smtp"
+	"os"
 	"strings"
 
 	"github.com/gogits/gogs/modules/log"
@@ -94,6 +95,12 @@ func sendMail(settings *setting.Mailer, recipients []string, msgContent []byte) 
 	if err != nil {
 		return err
 	}
+
+	hostname, err := os.Hostname()
+	if err != nil {
+		return err
+	}
+	client.Hello(hostname)
 
 	// If not using SMTPS, alway use STARTTLS if available
 	hasStartTLS, _ := client.Extension("STARTTLS")
