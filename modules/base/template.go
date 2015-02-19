@@ -41,6 +41,10 @@ func List(l *list.List) chan interface{} {
 	return c
 }
 
+func Sha1(str string) string {
+	return EncodeSha1(str)
+}
+
 func ShortSha(sha1 string) string {
 	if len(sha1) == 40 {
 		return sha1[:10]
@@ -160,6 +164,7 @@ var TemplateFuncs template.FuncMap = map[string]interface{}{
 	},
 	"DiffTypeToStr":     DiffTypeToStr,
 	"DiffLineTypeToStr": DiffLineTypeToStr,
+	"Sha1":	             Sha1,
 	"ShortSha":          ShortSha,
 	"Md5":               EncodeMd5,
 	"ActionContent2Commits": ActionContent2Commits,
