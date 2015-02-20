@@ -100,7 +100,10 @@ func sendMail(settings *setting.Mailer, recipients []string, msgContent []byte) 
 	if err != nil {
 		return err
 	}
-	client.Hello(hostname)
+
+	if err = client.Hello(hostname); err != nil {
+		return err
+	}
 
 	// If not using SMTPS, alway use STARTTLS if available
 	hasStartTLS, _ := client.Extension("STARTTLS")
