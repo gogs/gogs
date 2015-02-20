@@ -209,27 +209,28 @@ var Gogs = {};
             $list.parents('tr').removeClass('end-selected-line');
             $list.parents('tr').find('td').removeClass('selected-line');
             if ($from) {
-                var expr = new RegExp(/diff-(\w+)([LR])(\d+)/);
+                var expr = new RegExp(/diff-(\w+)([LR]\d+)/);
                 var selectMatches = $select.attr('rel').match(expr)
                 var fromMatches = $from.attr('rel').match(expr)
-                var a = parseInt(selectMatches[3]);
-                var b = parseInt(fromMatches[3]);
-                var linesIntToStr = {};
-                linesIntToStr[a] = selectMatches[3];
-                linesIntToStr[b] = fromMatches[3];
+                var selectTop = $select.offset().top;
+                var fromTop = $from.offset().top;
+                var hash;
 
-                var c;
-                if (a != b) {
-                    if (a > b) {
-                        c = a;
-                        a = b;
-                        b = c;
+                if (selectMatches[2] != fromMatches[2]) {
+                    if ((selectTop > fromTop)) {
+                        $startElem = $from;
+                        $endElem = $select;
+                        hash = fromMatches[1]+fromMatches[2] + '-' + selectMatches[2];
+                    } else {
+                        $startElem = $select;
+                        $endElem = $from;
+                        hash = selectMatches[1]+selectMatches[2] + '-' + fromMatches[2];
                     }
-                    $('[rel=diff-'+fromMatches[1] + fromMatches[2] + linesIntToStr[b] + ']').parents('tr').next().addClass('end-selected-line');
-                    var $selectedLines = $('[rel=diff-'+fromMatches[1]+selectMatches[2] + linesIntToStr[a] + ']').parents('tr').nextUntil('.end-selected-line').andSelf();
+                    $endElem.parents('tr').next().addClass('end-selected-line');
+                    var $selectedLines = $startElem.parents('tr').nextUntil('.end-selected-line').andSelf();
                     $selectedLines.find('td.lines-num > span').addClass('active')
                     $selectedLines.find('td').addClass('selected-line');
-                    $.changeHash('#diff-'+fromMatches[1]+fromMatches[2] + linesIntToStr[a] + '-' + selectMatches[2] + + linesIntToStr[b]);
+                    $.changeHash('#diff-'+hash);
                     return
                 }
             }
