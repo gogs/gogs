@@ -240,7 +240,10 @@ func NewConfigContext() {
 	ReverseProxyAuthUser = sec.Key("REVERSE_PROXY_AUTHENTICATION_USER").MustString("X-WEBAUTH-USER")
 
 	sec = Cfg.Section("attachment")
-	AttachmentPath = path.Join(workDir, sec.Key("PATH").MustString("data/attachments"))
+	AttachmentPath = sec.Key("PATH").MustString("data/attachments")
+	if !filepath.IsAbs(AttachmentPath) {
+		AttachmentPath = path.Join(workDir, AttachmentPath)
+	}
 	AttachmentAllowedTypes = sec.Key("ALLOWED_TYPES").MustString("image/jpeg|image/png")
 	AttachmentMaxSize = sec.Key("MAX_SIZE").MustInt64(32)
 	AttachmentMaxFiles = sec.Key("MAX_FILES").MustInt(10)
@@ -297,7 +300,10 @@ func NewConfigContext() {
 
 	sec = Cfg.Section("picture")
 	PictureService = sec.Key("SERVICE").In("server", []string{"server"})
-	AvatarUploadPath = path.Join(workDir, sec.Key("AVATAR_UPLOAD_PATH").MustString("data/avatars"))
+	AvatarUploadPath = sec.Key("AVATAR_UPLOAD_PATH").MustString("data/avatars")
+	if !filepath.IsAbs(AvatarUploadPath) {
+		AvatarUploadPath = path.Join(workDir, AvatarUploadPath)
+	}
 	os.MkdirAll(AvatarUploadPath, os.ModePerm)
 	switch sec.Key("GRAVATAR_SOURCE").MustString("gravatar") {
 	case "duoshuo":

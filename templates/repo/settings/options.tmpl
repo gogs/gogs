@@ -59,11 +59,6 @@
 					                <input class="ipt-chk" id="visibility" name="private" type="checkbox" {{if .Repository.IsPrivate}}checked{{end}} />
 					                <span>{{.i18n.Tr "repo.visiblity_helper" | Str2html}}</span>
 					            </div>
-					            <div class="field">
-					                <label for="goget">{{.i18n.Tr "repo.goget_meta"}}</label>
-					                <input class="ipt-chk" id="goget" name="goget" type="checkbox" {{if .Repository.IsGoget}}checked{{end}} />
-					                <span>{{.i18n.Tr "repo.goget_meta_helper" | Str2html}}</span>
-					            </div>
 	                            <div class="field">
 	                                <span class="form-label"></span>
 	                                <button class="btn btn-green btn-large btn-radius" id="change-reponame-btn" href="#change-reponame-modal">{{.i18n.Tr "repo.settings.update_settings"}}</button>

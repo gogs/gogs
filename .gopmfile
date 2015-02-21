@@ -2,35 +2,34 @@
 path = github.com/gogits/gogs
 
 [deps]
-github.com/beego/memcache = commit:2aea774416
-github.com/bradfitz/gomemcache = 
+github.com/bradfitz/gomemcache = commit:72a68649ba
 github.com/Unknwon/cae = commit:2e70a1351b
-github.com/Unknwon/com = commit:d9bcf409c8
+github.com/Unknwon/com = commit:188d690b1a
 github.com/Unknwon/i18n = commit:1e88666229
-github.com/Unknwon/macaron = 
-github.com/codegangsta/cli = commit:a14c5b47c7
-github.com/go-sql-driver/mysql = commit:04cf947760
-github.com/go-xorm/core = commit:e7882d8b00
-github.com/go-xorm/xorm = commit:dcc529b68a
+github.com/Unknwon/macaron = commit:e089393c3f
+github.com/codegangsta/cli = commit:6086d7927e
+github.com/go-sql-driver/mysql = commit:27633f0519
+github.com/go-xorm/core = commit:16cb27928f
+github.com/go-xorm/xorm = commit:f2d3be988e
 github.com/gogits/chardet = commit:2404f77725
 github.com/gogits/go-gogs-client = commit:92e76d616a
-github.com/lib/pq = commit:3e3efe51a0
-github.com/macaron-contrib/binding = commit:0fbe4b9707
-github.com/macaron-contrib/cache = 
-github.com/macaron-contrib/captcha = commit:3567dc48b8
-github.com/macaron-contrib/csrf = commit:3ea14e7ee7
-github.com/macaron-contrib/i18n = commit:0ee0539c84
+github.com/lib/pq = commit:835d5eb08d
+github.com/macaron-contrib/binding = commit:dc739fabc3
+github.com/macaron-contrib/cache = commit:b68f6b448f
+github.com/macaron-contrib/captcha = commit:066c50c7eb
+github.com/macaron-contrib/csrf = commit:98ddf5a710
+github.com/macaron-contrib/i18n = commit:eeebd44f64
 github.com/macaron-contrib/oauth2 = commit:8f394c3629
-github.com/macaron-contrib/session = 
-github.com/macaron-contrib/toolbox = commit:57127bcc89
-github.com/mattn/go-sqlite3 = commit:a80c27ba33
-github.com/microcosm-cc/bluemonday = 
+github.com/macaron-contrib/session = commit:8e8d938b27
+github.com/macaron-contrib/toolbox = commit:acbfe36e16
+github.com/mattn/go-sqlite3 = commit:25d045f12a
+github.com/microcosm-cc/bluemonday = commit:fcd0f5074e
 github.com/nfnt/resize = commit:8f44931448
-github.com/russross/blackfriday = commit:05b8cefd6a
-github.com/shurcooL/go = commit:48293cbc7a
+github.com/russross/blackfriday = commit:77efab57b2
+github.com/shurcooL/go = commit:329f57438c
 golang.org/x/net = 
 golang.org/x/text = 
-gopkg.in/ini.v1 = commit:28ad8c408b
+gopkg.in/ini.v1 = commit:4febc4104c
 gopkg.in/redis.v2 = commit:e617904962
 
 [res]

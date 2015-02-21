@@ -7,7 +7,7 @@
 		<meta name="description" content="Gogs(Go Git Service) a painless self-hosted Git Service written in Go" />
 		<meta name="keywords" content="go, git, self-hosted, gogs">
 		<meta name="_csrf" content="{{.CsrfToken}}" />
-		{{if .Repository.IsGoget}}<meta name="go-import" content="{{.GoGetImport}} git {{.CloneLink.HTTPS}}">{{end}}
+		{{if .GoGetImport}}<meta name="go-import" content="{{.GoGetImport}} git {{.CloneLink.HTTPS}}">{{end}}
 
 		<link rel="shortcut icon" href="{{AppSubUrl}}/img/favicon.png" />
 
