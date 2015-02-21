@@ -319,7 +319,7 @@ func runWeb(ctx *cli.Context) {
 		m.Get("/template/*", dev.TemplatePreview)
 	}
 
-	reqTrueOwner := middleware.RequireTrueOwner()
+	reqAdmin := middleware.RequireAdmin()
 
 	// Organization.
 	m.Group("/org", func() {
@@ -394,7 +394,7 @@ func runWeb(ctx *cli.Context) {
 				m.Post("/:name", repo.GitHooksEditPost)
 			}, middleware.GitHookService())
 		})
-	}, reqSignIn, middleware.RepoAssignment(true), reqTrueOwner)
+	}, reqSignIn, middleware.RepoAssignment(true), reqAdmin)
 
 	m.Group("/:username/:reponame", func() {
 		m.Get("/action/:action", repo.Action)
