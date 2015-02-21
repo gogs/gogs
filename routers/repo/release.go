@@ -41,7 +41,7 @@ func Releases(ctx *middleware.Context) {
 	tags := make([]*models.Release, len(rawTags))
 	for i, rawTag := range rawTags {
 		for j, rel := range rels {
-			if rel == nil || (rel.IsDraft && !ctx.Repo.IsOwner) {
+			if rel == nil || (rel.IsDraft && !ctx.Repo.IsOwner()) {
 				continue
 			}
 			if rel.TagName == rawTag {
@@ -140,7 +140,7 @@ func Releases(ctx *middleware.Context) {
 }
 
 func NewRelease(ctx *middleware.Context) {
-	if !ctx.Repo.IsOwner {
+	if !ctx.Repo.IsOwner() {
 		ctx.Handle(403, "release.ReleasesNew", nil)
 		return
 	}
@@ -153,7 +153,7 @@ func NewRelease(ctx *middleware.Context) {
 }
 
 func NewReleasePost(ctx *middleware.Context, form auth.NewReleaseForm) {
-	if !ctx.Repo.IsOwner {
+	if !ctx.Repo.IsOwner() {
 		ctx.Handle(403, "release.ReleasesNew", nil)
 		return
 	}
@@ -211,7 +211,7 @@ func NewReleasePost(ctx *middleware.Context, form auth.NewReleaseForm) {
 }
 
 func EditRelease(ctx *middleware.Context) {
-	if !ctx.Repo.IsOwner {
+	if !ctx.Repo.IsOwner() {
 		ctx.Handle(403, "release.ReleasesEdit", nil)
 		return
 	}
@@ -234,7 +234,7 @@ func EditRelease(ctx *middleware.Context) {
 }
 
 func EditReleasePost(ctx *middleware.Context, form auth.EditReleaseForm) {
-	if !ctx.Repo.IsOwner {
+	if !ctx.Repo.IsOwner() {
 		ctx.Handle(403, "release.EditReleasePost", nil)
 		return
 	}
