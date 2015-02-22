@@ -109,7 +109,7 @@ func SettingsPost(ctx *middleware.Context, form auth.RepoSettingForm) {
 		}
 
 		newOwner := ctx.Query("new_owner_name")
-		isExist, err := models.IsUserExist(newOwner)
+		isExist, err := models.IsUserExist(0, newOwner)
 		if err != nil {
 			ctx.Handle(500, "IsUserExist", err)
 			return

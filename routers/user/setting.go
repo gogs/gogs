@@ -50,7 +50,7 @@ func SettingsPost(ctx *middleware.Context, form auth.UpdateProfileForm) {
 
 	// Check if user name has been changed.
 	if ctx.User.Name != form.UserName {
-		isExist, err := models.IsUserExist(form.UserName)
+		isExist, err := models.IsUserExist(ctx.User.Id, form.UserName)
 		if err != nil {
 			ctx.Handle(500, "IsUserExist", err)
 			return
@@ -58,11 +58,14 @@ func SettingsPost(ctx *middleware.Context, form auth.UpdateProfileForm) {
 			ctx.RenderWithErr(ctx.Tr("form.username_been_taken"), SETTINGS_PROFILE, &form)
 			return
 		} else if err = models.ChangeUserName(ctx.User, form.UserName); err != nil {
-			if err == models.ErrUserNameIllegal {
+			switch err {
+			case models.ErrUserNameIllegal:
 				ctx.Flash.Error(ctx.Tr("form.illegal_username"))
 				ctx.Redirect(setting.AppSubUrl + "/user/settings")
-				return
-			} else {
+			case models.ErrEmailAlreadyUsed:
+				ctx.Flash.Error(ctx.Tr("form.email_been_used"))
+				ctx.Redirect(setting.AppSubUrl + "/user/settings")
+			default:
 				ctx.Handle(500, "ChangeUserName", err)
 			}
 			return
