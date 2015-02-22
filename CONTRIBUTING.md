@@ -52,7 +52,7 @@ We're trying very hard to keep Gogs lean and focused. We don't want it to do eve
 
 ### Ask For Help
 
-Before opening a new issue, please check to make sure your problem isn't already addressed on the [Troubleshooting](http://gogs.io/docs/intro/troubleshooting.md) and [FAQs](http://gogs.io/docs/intro/faqs.html) pages.
+Before opening an issue, please make sure your problem isn't already addressed on the [Troubleshooting](http://gogs.io/docs/intro/troubleshooting.md) and [FAQs](http://gogs.io/docs/intro/faqs.html) pages.
 
 ## Things To Notice
 
