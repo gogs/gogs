@@ -627,7 +627,7 @@ func GetUserIdsByNames(names []string) []int64 {
 	return ids
 }
 
-// Get all email addresses
+// GetEmailAddresses returns all e-mail addresses belongs to given user.
 func GetEmailAddresses(uid int64) ([]*EmailAddress, error) {
 	emails := make([]*EmailAddress, 0, 5)
 	err := x.Where("uid=?", uid).Find(&emails)
@@ -641,7 +641,6 @@ func GetEmailAddresses(uid int64) ([]*EmailAddress, error) {
 	}
 
 	isPrimaryFound := false
-
 	for _, email := range emails {
 		if email.Email == u.Email {
 			isPrimaryFound = true
@@ -654,7 +653,11 @@ func GetEmailAddresses(uid int64) ([]*EmailAddress, error) {
 	// We alway want the primary email address displayed, even if it's not in
 	// the emailaddress table (yet)
 	if !isPrimaryFound {
-		emails = append(emails, &EmailAddress{Email: u.Email, IsActivated: true, IsPrimary: true})
+		emails = append(emails, &EmailAddress{
+			Email:       u.Email,
+			IsActivated: true,
+			IsPrimary:   true,
+		})
 	}
 	return emails, nil
 }
