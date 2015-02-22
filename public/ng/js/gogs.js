@@ -262,8 +262,10 @@ var Gogs = {};
             if ($(this).prop("tagName") == "BUTTON") {                
                 lineNum = $(this).attr('rel');                                
             } else {
-                lineNum = $(this).parent().prev().find('span').attr('rel');
+                var span = $(this).parents('tr').find('span:not([rel=""])');
+                lineNum = span.first().attr('rel');
             }
+            console.log(lineNum);
             $('button[rel='+lineNum+']').fadeOut();
             lineNum = lineNum.substr(5);
             var commentTr = $(".comment-"+lineNum);
@@ -372,12 +374,9 @@ var Gogs = {};
             }
         });
 
-        $('.code-diff .add-code .lines-code > pre, \
-            .code-diff .del-code .lines-code > pre, \
-            .code-diff .add-code .lines-code > b, \
-            .code-diff .del-code .lines-code > b, \
-            .code-diff .add-code .lines-num, \
-            .code-diff .del-code .lines-num').hover(function () {
+        $('.code-diff .lines-code > pre, \
+            .code-diff .lines-code > b, \
+            .code-diff .lines-num').hover(function () {
             var $b = $(this).parents('tr').find('b');
             $b.addClass('ishovered');
         });

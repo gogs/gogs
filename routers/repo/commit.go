@@ -394,7 +394,7 @@ func CreateCommitComment(ctx *middleware.Context) {
 		switch ctx.Params(":action") {
 		case "new":
 			line := ctx.Query("line")
-			lineRe, err := regexp.Compile("[0-9]+L[0-9]+")
+			lineRe, err := regexp.Compile("[a-zA-Z0-9]{40}[LR][0-9]+")
 			if len(line) > 0 && !lineRe.MatchString(line) {
 				err := errors.New("Something went wrong")
 				send(200, err.Error(), err)

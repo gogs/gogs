@@ -245,8 +245,17 @@ func DiffLineTypeToStr(diffType int) string {
 	return "same"
 }
 
-func DiffLinePosToStr(file int, section int, line int) string {
-	return fmt.Sprintf("%vL%v%v", file + 1, section, line)
+func DiffLinePosToStr(filepath string, leftIdx, rightIdx int) string {
+	var idx int;
+	var letter string;
+	if leftIdx > 0 {
+		idx = leftIdx
+		letter = "L"
+	} else {
+		idx = rightIdx
+		letter = "R"
+	}
+	return fmt.Sprintf("%v%v%v", Sha1(filepath), letter, idx)
 }
 
 func Oauth2Icon(t int) string {

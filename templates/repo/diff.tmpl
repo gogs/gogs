@@ -107,7 +107,6 @@
                     <tbody>
                         {{range .Sections}}
                         {{range $k, $line := .Lines}}
-                        {{$lineNum := (DiffLinePosToStr $file.Name $line.LeftIdx)}}
                         <tr class="{{DiffLineTypeToStr .Type}}-code nl-{{$k}} ol-{{$k}}">
                             <td class="lines-num lines-num-old">
                                 <span rel="{{if $line.LeftIdx}}diff-{{Sha1 $file.Name}}L{{$line.LeftIdx}}{{end}}">{{if $line.LeftIdx}}{{$line.LeftIdx}}{{end}}</span>
@@ -120,7 +119,8 @@
                                 <pre>{{$line.Content}}</pre>
                             </td>
                         </tr>
-                        {{if index $.Comments $lineNum}}
+                        {{$lineNum := (DiffLinePosToStr $file.Name $line.LeftIdx $line.RightIdx)}}
+                        {{if index $.Comments $lineNum }}
                         <tr class="comment comment-{{$lineNum}}">
                             <td class="lines-code" colspan="3">
                                 {{range (index $.Comments $lineNum)}}
@@ -160,6 +160,7 @@
                                 <button rel="diff-{{$lineNum}}" class="btn btn-gray btn-radius text-bold answer" value="close">{{$.i18n.Tr "repo.commits.comment.comment_line"}}</button>
                             </td>
                         </tr>
+                        {{end}}
                         {{end}}
                         {{end}}
                     </tbody>
