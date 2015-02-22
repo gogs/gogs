@@ -130,6 +130,18 @@ func (ctx *Context) Handle(status int, title string, err error) {
 	ctx.HTML(status, base.TplName(fmt.Sprintf("status/%d", status)))
 }
 
+func (ctx *Context) HandleAPI(status int, obj interface{}) {
+	var message string
+	if err, ok := obj.(error); ok {
+		message = err.Error()
+	} else {
+		message = obj.(string)
+	}
+	ctx.JSON(status, map[string]string{
+		"message": message,
+	})
+}
+
 func (ctx *Context) ServeContent(name string, r io.ReadSeeker, params ...interface{}) {
 	modtime := time.Now()
 	for _, p := range params {
