@@ -2,7 +2,7 @@
 	<div class="container">
 		<a class="text-black left" href="{{AppSubUrl}}/org/{{.Org.LowerName}}">
 			<img class="avatar-48 left" src="{{.Org.AvatarLink}}?s=100">
-			<span class="org-name">{{.Org.FullName}}</span>
+			<span class="org-name">{{if .Org.FullName}}{{.Org.FullName}}{{else}}{{.Org.Name}}{{end}}</span>
 		</a>
 		<ul class="menu menu-line container">
 			<li class="right">

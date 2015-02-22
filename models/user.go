@@ -249,11 +249,13 @@ func (u *User) GetFullNameFallback() string {
 
 // IsUserExist checks if given user name exist,
 // the user name should be noncased unique.
-func IsUserExist(name string) (bool, error) {
+// If uid is presented, then check will rule out that one,
+// it is used when update a user name in settings page.
+func IsUserExist(uid int64, name string) (bool, error) {
 	if len(name) == 0 {
 		return false, nil
 	}
-	return x.Get(&User{LowerName: strings.ToLower(name)})
+	return x.Where("id!=?", uid).Get(&User{LowerName: strings.ToLower(name)})
 }
 
 // IsEmailUsed returns true if the e-mail has been used.
@@ -278,7 +280,7 @@ func CreateUser(u *User) error {
 		return ErrUserNameIllegal
 	}
 
-	isExist, err := IsUserExist(u.Name)
+	isExist, err := IsUserExist(0, u.Name)
 	if err != nil {
 		return err
 	} else if isExist {
@@ -397,6 +399,10 @@ func ChangeUserName(u *User, newUserName string) (err error) {
 	}
 
 	newUserName = strings.ToLower(newUserName)
+	if u.LowerName == newUserName {
+		// User only change letter cases.
+		return nil
+	}
 
 	// Update accesses of user.
 	accesses := make([]Access, 0, 10)
@@ -453,7 +459,7 @@ func ChangeUserName(u *User, newUserName string) (err error) {
 
 // UpdateUser updates user's information.
 func UpdateUser(u *User) error {
-	has, err := x.Where("id!=?", u.Id).And("type=?", INDIVIDUAL).And("email=?", u.Email).Get(new(User))
+	has, err := x.Where("id!=?", u.Id).And("type=?", u.Type).And("email=?", u.Email).Get(new(User))
 	if err != nil {
 		return err
 	} else if has {
