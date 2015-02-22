@@ -5,7 +5,7 @@ FROM ubuntu:14.04
 RUN DEBIAN_FRONTEND=noninteractive apt-get update && \
 		apt-get install -qy \
 		build-essential ca-certificates curl \
-		bzr git mercurial \
+		bzr git mercurial openssh-client\
 		--no-install-recommends
 
 ENV GOLANG_VERSION 1.3
