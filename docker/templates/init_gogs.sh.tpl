@@ -1,6 +1,6 @@
 #!/bin/sh
 
-if [ ! -d "$DIRECTORY" ]; then
+if [ ! -d "$GOGS_CUSTOM_CONF_PATH" ]; then
     mkdir -p $GOGS_CUSTOM_CONF_PATH
 
 echo "
