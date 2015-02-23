@@ -31,7 +31,7 @@ func (f *CreateRepoForm) Validate(ctx *macaron.Context, errs binding.Errors) bin
 }
 
 type MigrateRepoForm struct {
-	HttpsUrl     string `form:"url" binding:"Required;Url"`
+	CloneAddr    string `binding:"Required"`
 	AuthUserName string `form:"auth_username"`
 	AuthPasswd   string `form:"auth_password"`
 	Uid          int64  `form:"uid" binding:"Required"`
@@ -52,7 +52,6 @@ type RepoSettingForm struct {
 	Branch      string `form:"branch"`
 	Interval    int    `form:"interval"`
 	Private     bool   `form:"private"`
-	GoGet       bool   `form:"goget"`
 }
 
 func (f *RepoSettingForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {

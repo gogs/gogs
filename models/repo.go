@@ -154,7 +154,6 @@ type Repository struct {
 
 	IsPrivate bool
 	IsBare    bool
-	IsGoget   bool
 
 	IsMirror bool
 	*Mirror  `xorm:"-"`
@@ -515,7 +514,7 @@ func initRepository(e Engine, f string, u *User, repo *Repository, initReadme bo
 }
 
 // CreateRepository creates a repository for given user or organization.
-func CreateRepository(u *User, name, desc, lang, license string, private, mirror, initReadme bool) (*Repository, error) {
+func CreateRepository(u *User, name, desc, lang, license string, isPrivate, isMirror, initReadme bool) (*Repository, error) {
 	if !IsLegalName(name) {
 		return nil, ErrRepoNameIllegal
 	}
@@ -533,7 +532,7 @@ func CreateRepository(u *User, name, desc, lang, license string, private, mirror
 		Name:        name,
 		LowerName:   strings.ToLower(name),
 		Description: desc,
-		IsPrivate:   private,
+		IsPrivate:   isPrivate,
 	}
 
 	sess := x.NewSession()
@@ -559,34 +558,22 @@ func CreateRepository(u *User, name, desc, lang, license string, private, mirror
 		// Update owner team info and count.
 		t, err := u.getOwnerTeam(sess)
 		if err != nil {
-			return nil, fmt.Errorf("get owner team: %v", err)
-		} else if err = t.getMembers(sess); err != nil {
-			return nil, fmt.Errorf("get team members: %v", err)
-		}
-
-		for _, u := range t.Members {
-			if err = watchRepo(sess, u.Id, repo.Id, true); err != nil {
-				return nil, fmt.Errorf("watch repository: %v", err)
-			}
-		}
-
-		t.RepoIds += "$" + com.ToStr(repo.Id) + "|"
-		t.NumRepos++
-		if _, err = sess.Id(t.Id).AllCols().Update(t); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("getOwnerTeam: %v", err)
+		} else if err = t.addRepository(sess, repo); err != nil {
+			return nil, fmt.Errorf("addRepository: %v", err)
 		}
 	} else {
 		if err = watchRepo(sess, u.Id, repo.Id, true); err != nil {
-			return nil, fmt.Errorf("watch repository 2: %v", err)
+			return nil, fmt.Errorf("watchRepo: %v", err)
 		}
 	}
 
 	if err = newRepoAction(sess, u, repo); err != nil {
-		return nil, fmt.Errorf("new repository action: %v", err)
+		return nil, fmt.Errorf("newRepoAction: %v", err)
 	}
 
 	// No need for init mirror.
-	if !mirror {
+	if !isMirror {
 		repoPath := RepoPath(u.Name, repo.Name)
 		if err = initRepository(sess, repoPath, u, repo, initReadme, lang, license); err != nil {
 			if err2 := os.RemoveAll(repoPath); err2 != nil {
@@ -641,14 +628,14 @@ func RepoPath(userName, repoName string) string {
 }
 
 // TransferOwnership transfers all corresponding setting from old user to new one.
-func TransferOwnership(u *User, newOwner string, repo *Repository) error {
-	newUser, err := GetUserByName(newOwner)
+func TransferOwnership(u *User, newOwnerName string, repo *Repository) error {
+	newOwner, err := GetUserByName(newOwnerName)
 	if err != nil {
-		return fmt.Errorf("fail to get new owner(%s): %v", newOwner, err)
+		return fmt.Errorf("get new owner(%s): %v", newOwnerName, err)
 	}
 
 	// Check if new owner has repository with same name.
-	has, err := IsRepositoryExist(newUser, repo.Name)
+	has, err := IsRepositoryExist(newOwner, repo.Name)
 	if err != nil {
 		return err
 	} else if has {
@@ -664,27 +651,50 @@ func TransferOwnership(u *User, newOwner string, repo *Repository) error {
 	owner := repo.Owner
 
 	// Update repository.
-	repo.OwnerId = newUser.Id
-	repo.Owner = newUser
+	repo.OwnerId = newOwner.Id
+	repo.Owner = newOwner
 	if _, err := sess.Id(repo.Id).Update(repo); err != nil {
 		return err
 	}
 
+	// Remove redundant collaborators
+	collaborators, err := repo.GetCollaborators()
+	if err != nil {
+		return err
+	}
+	for _, c := range collaborators {
+		if c.Id == newOwner.Id || newOwner.IsOrgMember(c.Id) {
+			if _, err = sess.Delete(&Collaboration{RepoID: repo.Id, UserID: c.Id}); err != nil {
+				return err
+			}
+		}
+	}
+
+	if newOwner.IsOrganization() {
+		// Update owner team info and count.
+		t, err := newOwner.GetOwnerTeam()
+		if err != nil {
+			return err
+		} else if err = t.addRepository(sess, repo); err != nil {
+			return err
+		}
+	}
+
 	// Update user repository number.
-	if _, err = sess.Exec("UPDATE `user` SET num_repos = num_repos + 1 WHERE id = ?", newUser.Id); err != nil {
+	if _, err = sess.Exec("UPDATE `user` SET num_repos = num_repos + 1 WHERE id = ?", newOwner.Id); err != nil {
 		return err
 	} else if _, err = sess.Exec("UPDATE `user` SET num_repos = num_repos - 1 WHERE id = ?", owner.Id); err != nil {
 		return err
 	} else if err = repo.recalculateAccesses(sess); err != nil {
 		return err
-	} else if err = watchRepo(sess, newUser.Id, repo.Id, true); err != nil {
+	} else if err = watchRepo(sess, newOwner.Id, repo.Id, true); err != nil {
 		return err
-	} else if err = transferRepoAction(sess, u, newUser, repo); err != nil {
+	} else if err = transferRepoAction(sess, u, owner, newOwner, repo); err != nil {
 		return err
 	}
 
 	// Change repository directory name.
-	if err = os.Rename(RepoPath(owner.Name, repo.Name), RepoPath(newUser.Name, repo.Name)); err != nil {
+	if err = os.Rename(RepoPath(owner.Name, repo.Name), RepoPath(newOwner.Name, repo.Name)); err != nil {
 		return err
 	}
 
@@ -722,8 +732,8 @@ func UpdateRepository(repo *Repository) error {
 }
 
 // DeleteRepository deletes a repository for a user or organization.
-func DeleteRepository(uid, repoId int64, userName string) error {
-	repo := &Repository{Id: repoId, OwnerId: uid}
+func DeleteRepository(uid, repoID int64, userName string) error {
+	repo := &Repository{Id: repoID, OwnerId: uid}
 	has, err := x.Get(repo)
 	if err != nil {
 		return err
@@ -749,68 +759,66 @@ func DeleteRepository(uid, repoId int64, userName string) error {
 	}
 
 	if org.IsOrganization() {
-		idStr := "$" + com.ToStr(repoId) + "|"
 		for _, t := range org.Teams {
-			if !strings.Contains(t.RepoIds, idStr) {
+			if !t.hasRepository(sess, repoID) {
 				continue
-			}
-			t.NumRepos--
-			t.RepoIds = strings.Replace(t.RepoIds, idStr, "", 1)
-			if _, err = sess.Id(t.Id).AllCols().Update(t); err != nil {
+			} else if err = t.removeRepository(sess, repo); err != nil {
 				return err
 			}
 		}
 	}
 
-	if _, err = sess.Delete(&Repository{Id: repoId}); err != nil {
+	if _, err = sess.Delete(&Repository{Id: repoID}); err != nil {
 		return err
 	} else if _, err := sess.Delete(&Access{RepoID: repo.Id}); err != nil {
 		return err
 	} else if _, err := sess.Delete(&Action{RepoId: repo.Id}); err != nil {
 		return err
-	} else if _, err = sess.Delete(&Watch{RepoId: repoId}); err != nil {
+	} else if _, err = sess.Delete(&Watch{RepoId: repoID}); err != nil {
 		return err
-	} else if _, err = sess.Delete(&Mirror{RepoId: repoId}); err != nil {
+	} else if _, err = sess.Delete(&Mirror{RepoId: repoID}); err != nil {
 		return err
-	} else if _, err = sess.Delete(&IssueUser{RepoId: repoId}); err != nil {
+	} else if _, err = sess.Delete(&IssueUser{RepoId: repoID}); err != nil {
 		return err
-	} else if _, err = sess.Delete(&Milestone{RepoId: repoId}); err != nil {
+	} else if _, err = sess.Delete(&Milestone{RepoId: repoID}); err != nil {
 		return err
-	} else if _, err = sess.Delete(&Release{RepoId: repoId}); err != nil {
+	} else if _, err = sess.Delete(&Release{RepoId: repoID}); err != nil {
+		return err
+	} else if _, err = sess.Delete(&Collaboration{RepoID: repoID}); err != nil {
 		return err
 	}
 
 	// Delete comments.
-	if err = x.Iterate(&Issue{RepoId: repoId}, func(idx int, bean interface{}) error {
-		issue := bean.(*Issue)
-		if _, err = sess.Delete(&Comment{IssueId: issue.Id}); err != nil {
-			return err
-		}
-		return nil
-	}); err != nil {
+	issues := make([]*Issue, 0, 25)
+	if err = sess.Where("repo_id=?", repoID).Find(&issues); err != nil {
 		return err
 	}
+	for i := range issues {
+		if _, err = sess.Delete(&Comment{IssueId: issues[i].Id}); err != nil {
+			return err
+		}
+	}
 
-	if _, err = sess.Delete(&Issue{RepoId: repoId}); err != nil {
+	if _, err = sess.Delete(&Issue{RepoId: repoID}); err != nil {
 		return err
 	}
 
 	if repo.IsFork {
-		if _, err = sess.Exec("UPDATE `repository` SET num_forks = num_forks - 1 WHERE id = ?", repo.ForkId); err != nil {
+		if _, err = sess.Exec("UPDATE `repository` SET num_forks=num_forks-1 WHERE id=?", repo.ForkId); err != nil {
 			return err
 		}
 	}
 
-	if _, err = sess.Exec("UPDATE `user` SET num_repos = num_repos - 1 WHERE id = ?", uid); err != nil {
+	if _, err = sess.Exec("UPDATE `user` SET num_repos=num_repos-1 WHERE id=?", uid); err != nil {
 		return err
 	}
 
 	// Remove repository files.
 	if err = os.RemoveAll(RepoPath(userName, repo.Name)); err != nil {
-		desc := fmt.Sprintf("Fail to delete repository files(%s/%s): %v", userName, repo.Name, err)
+		desc := fmt.Sprintf("delete repository files(%s/%s): %v", userName, repo.Name, err)
 		log.Warn(desc)
 		if err = CreateRepositoryNotice(desc); err != nil {
-			log.Error(4, "Fail to add notice: %v", err)
+			log.Error(4, "add notice: %v", err)
 		}
 	}
 
@@ -1314,33 +1322,21 @@ func ForkRepository(u *User, oldRepo *Repository, name, desc string) (*Repositor
 		// Update owner team info and count.
 		t, err := u.getOwnerTeam(sess)
 		if err != nil {
-			return nil, fmt.Errorf("get owner team: %v", err)
-		} else if err = t.getMembers(sess); err != nil {
-			return nil, fmt.Errorf("get team members: %v", err)
-		}
-
-		for _, u := range t.Members {
-			if err = watchRepo(sess, u.Id, repo.Id, true); err != nil {
-				return nil, fmt.Errorf("watch repository: %v", err)
-			}
-		}
-
-		t.RepoIds += "$" + com.ToStr(repo.Id) + "|"
-		t.NumRepos++
-		if _, err = sess.Id(t.Id).AllCols().Update(t); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("getOwnerTeam: %v", err)
+		} else if err = t.addRepository(sess, repo); err != nil {
+			return nil, fmt.Errorf("addRepository: %v", err)
 		}
 	} else {
 		if err = watchRepo(sess, u.Id, repo.Id, true); err != nil {
-			return nil, fmt.Errorf("watch repository 2: %v", err)
+			return nil, fmt.Errorf("watchRepo: %v", err)
 		}
 	}
 
 	if err = newRepoAction(sess, u, repo); err != nil {
-		return nil, fmt.Errorf("new repository action: %v", err)
+		return nil, fmt.Errorf("newRepoAction: %v", err)
 	}
 
-	if _, err = sess.Exec("UPDATE `repository` SET num_forks = num_forks + 1 WHERE id = ?", oldRepo.Id); err != nil {
+	if _, err = sess.Exec("UPDATE `repository` SET num_forks=num_forks+1 WHERE id=?", oldRepo.Id); err != nil {
 		return nil, err
 	}
 
