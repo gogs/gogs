@@ -24,21 +24,19 @@ type Access struct {
 	Mode   AccessMode
 }
 
-// Return the Access a user has to a repository. Will return NoneAccess if the
-// user does not have access. User can be nil!
-func AccessLevel(u *User, r *Repository) (AccessMode, error) {
+func accessLevel(e Engine, u *User, repo *Repository) (AccessMode, error) {
 	mode := ACCESS_MODE_NONE
-	if !r.IsPrivate {
+	if !repo.IsPrivate {
 		mode = ACCESS_MODE_READ
 	}
 
 	if u != nil {
-		if u.Id == r.OwnerId {
+		if u.Id == repo.OwnerId {
 			return ACCESS_MODE_OWNER, nil
 		}
 
-		a := &Access{UserID: u.Id, RepoID: r.Id}
-		if has, err := x.Get(a); !has || err != nil {
+		a := &Access{UserID: u.Id, RepoID: repo.Id}
+		if has, err := e.Get(a); !has || err != nil {
 			return mode, err
 		}
 		return a.Mode, nil
@@ -47,10 +45,20 @@ func AccessLevel(u *User, r *Repository) (AccessMode, error) {
 	return mode, nil
 }
 
-// HasAccess returns true if someone has the request access level. User can be nil!
-func HasAccess(u *User, r *Repository, testMode AccessMode) (bool, error) {
-	mode, err := AccessLevel(u, r)
+// AccessLevel returns the Access a user has to a repository. Will return NoneAccess if the
+// user does not have access. User can be nil!
+func AccessLevel(u *User, repo *Repository) (AccessMode, error) {
+	return accessLevel(x, u, repo)
+}
+
+func hasAccess(e Engine, u *User, repo *Repository, testMode AccessMode) (bool, error) {
+	mode, err := accessLevel(e, u, repo)
 	return testMode <= mode, err
+}
+
+// HasAccess returns true if someone has the request access level. User can be nil!
+func HasAccess(u *User, repo *Repository, testMode AccessMode) (bool, error) {
+	return hasAccess(x, u, repo, testMode)
 }
 
 // GetAccessibleRepositories finds all repositories where a user has access to,
@@ -96,7 +104,8 @@ func (repo *Repository) recalculateTeamAccesses(e Engine, mode AccessMode) error
 func (repo *Repository) recalculateAccesses(e Engine) error {
 	accessMap := make(map[int64]AccessMode, 20)
 
-	// Give all collaborators write access
+	// FIXME: should be able to have read-only access.
+	// Give all collaborators write access.
 	collaborators, err := repo.getCollaborators(e)
 	if err != nil {
 		return err
@@ -114,9 +123,7 @@ func (repo *Repository) recalculateAccesses(e Engine) error {
 		}
 
 		for _, team := range repo.Owner.Teams {
-			if !(team.IsOwnerTeam() || team.HasRepository(repo)) {
-				continue
-			} else if team.IsOwnerTeam() {
+			if team.IsOwnerTeam() {
 				team.Authorize = ACCESS_MODE_OWNER
 			}
 
@@ -128,6 +135,8 @@ func (repo *Repository) recalculateAccesses(e Engine) error {
 			}
 		}
 	}
+
+	// FIXME: do corss-comparison so reduce deletions and additions to the minimum?
 
 	minMode := ACCESS_MODE_READ
 	if !repo.IsPrivate {
