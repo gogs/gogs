@@ -434,20 +434,20 @@ func NewRepoAction(u *User, repo *Repository) (err error) {
 	return newRepoAction(x, u, repo)
 }
 
-func transferRepoAction(e Engine, u, newUser *User, repo *Repository) (err error) {
+func transferRepoAction(e Engine, actUser, oldOwner, newOwner *User, repo *Repository) (err error) {
 	action := &Action{
-		ActUserId:    u.Id,
-		ActUserName:  u.Name,
-		ActEmail:     u.Email,
+		ActUserId:    actUser.Id,
+		ActUserName:  actUser.Name,
+		ActEmail:     actUser.Email,
 		OpType:       TRANSFER_REPO,
 		RepoId:       repo.Id,
-		RepoUserName: newUser.Name,
+		RepoUserName: newOwner.Name,
 		RepoName:     repo.Name,
 		IsPrivate:    repo.IsPrivate,
-		Content:      path.Join(repo.Owner.LowerName, repo.LowerName),
+		Content:      path.Join(oldOwner.LowerName, repo.LowerName),
 	}
 	if err = notifyWatchers(e, action); err != nil {
-		return fmt.Errorf("notify watchers '%d/%s'", u.Id, repo.Id)
+		return fmt.Errorf("notify watchers '%d/%s'", actUser.Id, repo.Id)
 	}
 
 	// Remove watch for organization.
@@ -457,13 +457,13 @@ func transferRepoAction(e Engine, u, newUser *User, repo *Repository) (err error
 		}
 	}
 
-	log.Trace("action.TransferRepoAction: %s/%s", u.Name, repo.Name)
+	log.Trace("action.TransferRepoAction: %s/%s", actUser.Name, repo.Name)
 	return nil
 }
 
 // TransferRepoAction adds new action for transferring repository.
-func TransferRepoAction(u, newUser *User, repo *Repository) (err error) {
-	return transferRepoAction(x, u, newUser, repo)
+func TransferRepoAction(actUser, oldOwner, newOwner *User, repo *Repository) (err error) {
+	return transferRepoAction(x, actUser, oldOwner, newOwner, repo)
 }
 
 // GetFeeds returns action list of given user in given context.

@@ -16,7 +16,7 @@ import (
 	"github.com/go-xorm/xorm"
 	_ "github.com/lib/pq"
 
-	// "github.com/gogits/gogs/models/migrations"
+	"github.com/gogits/gogs/models/migrations"
 	"github.com/gogits/gogs/modules/setting"
 )
 
@@ -59,7 +59,8 @@ func init() {
 		new(Watch), new(Star), new(Follow), new(Action),
 		new(Issue), new(Comment), new(Attachment), new(IssueUser), new(Label), new(Milestone),
 		new(Mirror), new(Release), new(LoginSource), new(Webhook),
-		new(UpdateTask), new(HookTask), new(Team), new(OrgUser), new(TeamUser),
+		new(UpdateTask), new(HookTask),
+		new(Team), new(OrgUser), new(TeamUser), new(TeamRepo),
 		new(Notice), new(EmailAddress))
 }
 

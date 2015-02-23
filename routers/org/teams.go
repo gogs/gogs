@@ -181,7 +181,7 @@ func NewTeamPost(ctx *middleware.Context, form auth.CreateTeamForm) {
 	org := ctx.Org.Organization
 
 	t := &models.Team{
-		OrgId:       org.Id,
+		OrgID:       org.Id,
 		Name:        form.TeamName,
 		Description: form.Description,
 		Authorize:   auth,

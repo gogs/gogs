@@ -231,7 +231,7 @@ func (u *User) GetOrganizations() error {
 
 	u.Orgs = make([]*User, len(ous))
 	for i, ou := range ous {
-		u.Orgs[i], err = GetUserById(ou.OrgId)
+		u.Orgs[i], err = GetUserById(ou.OrgID)
 		if err != nil {
 			return err
 		}
@@ -860,7 +860,7 @@ func UpdateMentions(userNames []string, issueId int64) error {
 		}
 
 		for _, orgUser := range orgUsers {
-			tempIds = append(tempIds, orgUser.Id)
+			tempIds = append(tempIds, orgUser.ID)
 		}
 
 		ids = append(ids, tempIds...)
