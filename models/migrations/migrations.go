@@ -53,6 +53,7 @@ var migrations = []Migration{
 	NewMigration("generate collaboration from access", accessToCollaboration), // V0 -> V1
 	NewMigration("make authorize 4 if team is owners", ownerTeamUpdate),       // V1 -> V2
 	NewMigration("refactor access table to use id's", accessRefactor),         // V2 -> V3
+	NewMigration("generate team-repo from team", teamToTeamRepo),              // V3 -> V4
 }
 
 // Migrate database to current version
@@ -214,8 +215,8 @@ func accessToCollaboration(x *xorm.Engine) (err error) {
 }
 
 func ownerTeamUpdate(x *xorm.Engine) (err error) {
-	if _, err := x.Exec("UPDATE team SET authorize=4 WHERE lower_name=?", "owners"); err != nil {
-		return fmt.Errorf("drop table: %v", err)
+	if _, err := x.Exec("UPDATE `team` SET authorize=4 WHERE lower_name=?", "owners"); err != nil {
+		return fmt.Errorf("update owner team table: %v", err)
 	}
 	return nil
 }
@@ -239,9 +240,9 @@ func accessRefactor(x *xorm.Engine) (err error) {
 
 	accessMap := make(map[UserRepo]AccessMode, 50)
 
-	results, err := x.Query("SELECT r.id as `repo_id`, r.is_private as `is_private`, r.owner_id as `owner_id`, u.type as `owner_type` FROM `repository` r LEFT JOIN user u ON r.owner_id=u.id")
+	results, err := x.Query("SELECT r.id AS `repo_id`, r.is_private AS `is_private`, r.owner_id AS `owner_id`, u.type AS `owner_type` FROM `repository` r LEFT JOIN `user` u ON r.owner_id=u.id")
 	if err != nil {
-		return err
+		return fmt.Errorf("select repositories: %v", err)
 	}
 	for _, repo := range results {
 		repoID := com.StrTo(repo["repo_id"]).MustInt64()
@@ -249,9 +250,9 @@ func accessRefactor(x *xorm.Engine) (err error) {
 		ownerID := com.StrTo(repo["owner_id"]).MustInt64()
 		ownerIsOrganization := com.StrTo(repo["owner_type"]).MustInt() > 0
 
-		results, err := x.Query("SELECT user_id FROM collaboration WHERE repo_id=?", repoID)
+		results, err := x.Query("SELECT `user_id` FROM `collaboration` WHERE repo_id=?", repoID)
 		if err != nil {
-			return fmt.Errorf("select repos: %v", err)
+			return fmt.Errorf("select collaborators: %v", err)
 		}
 		for _, user := range results {
 			userID := com.StrTo(user["user_id"]).MustInt64()
@@ -262,6 +263,8 @@ func accessRefactor(x *xorm.Engine) (err error) {
 			continue
 		}
 
+		// The minimum level to add a new access record,
+		// because public repository has implicit open access.
 		minAccessLevel := AccessMode(0)
 		if !isPrivate {
 			minAccessLevel = 1
@@ -269,7 +272,7 @@ func accessRefactor(x *xorm.Engine) (err error) {
 
 		repoString := "$" + string(repo["repo_id"]) + "|"
 
-		results, err = x.Query("SELECT id, authorize, repo_ids FROM team WHERE org_id=? AND authorize > ? ORDER BY authorize ASC", ownerID, int(minAccessLevel))
+		results, err = x.Query("SELECT `id`,`authorize`,`repo_ids` FROM `team` WHERE org_id=? AND authorize>? ORDER BY `authorize` ASC", ownerID, int(minAccessLevel))
 		if err != nil {
 			return fmt.Errorf("select teams from org: %v", err)
 		}
@@ -281,20 +284,20 @@ func accessRefactor(x *xorm.Engine) (err error) {
 			teamID := com.StrTo(team["id"]).MustInt64()
 			mode := AccessMode(com.StrTo(team["authorize"]).MustInt())
 
-			results, err := x.Query("SELECT uid FROM team_user WHERE team_id=?", teamID)
+			results, err := x.Query("SELECT `uid` FROM `team_user` WHERE team_id=?", teamID)
 			if err != nil {
 				return fmt.Errorf("select users from team: %v", err)
 			}
 			for _, user := range results {
-				userID := com.StrTo(user["uid"]).MustInt64()
+				userID := com.StrTo(user["user_id"]).MustInt64()
 				accessMap[UserRepo{userID, repoID}] = mode
 			}
 		}
 	}
 
 	// Drop table can't be in a session (at least not in sqlite)
-	if _, err = x.Exec("DROP TABLE access"); err != nil {
-		return fmt.Errorf("drop table: %v", err)
+	if _, err = x.Exec("DROP TABLE `access`"); err != nil {
+		return fmt.Errorf("drop access table: %v", err)
 	}
 
 	// Now we start writing so we make a session
@@ -313,7 +316,56 @@ func accessRefactor(x *xorm.Engine) (err error) {
 		accesses = append(accesses, &Access{UserID: ur.UserID, RepoID: ur.RepoID, Mode: mode})
 	}
 
-	_, err = sess.Insert(accesses)
+	if _, err = sess.Insert(accesses); err != nil {
+		return fmt.Errorf("insert accesses: %v", err)
+	}
+
+	return sess.Commit()
+}
+
+func teamToTeamRepo(x *xorm.Engine) error {
+	type TeamRepo struct {
+		ID     int64 `xorm:"pk autoincr"`
+		OrgID  int64 `xorm:"INDEX"`
+		TeamID int64 `xorm:"UNIQUE(s)"`
+		RepoID int64 `xorm:"UNIQUE(s)"`
+	}
+
+	teamRepos := make([]*TeamRepo, 0, 50)
+
+	results, err := x.Query("SELECT `id`,`org_id`,`repo_ids` FROM `team`")
+	if err != nil {
+		return fmt.Errorf("select teams: %v", err)
+	}
+	for _, team := range results {
+		orgID := com.StrTo(team["org_id"]).MustInt64()
+		teamID := com.StrTo(team["id"]).MustInt64()
+
+		for _, idStr := range strings.Split(string(team["repo_ids"]), "|") {
+			repoID := com.StrTo(strings.TrimPrefix(idStr, "$")).MustInt64()
+			if repoID == 0 {
+				continue
+			}
+
+			teamRepos = append(teamRepos, &TeamRepo{
+				OrgID:  orgID,
+				TeamID: teamID,
+				RepoID: repoID,
+			})
+		}
+	}
+
+	sess := x.NewSession()
+	defer sessionRelease(sess)
+	if err = sess.Begin(); err != nil {
+		return err
+	}
+
+	if err = sess.Sync2(new(TeamRepo)); err != nil {
+		return fmt.Errorf("sync: %v", err)
+	} else if _, err = sess.Insert(teamRepos); err != nil {
+		return fmt.Errorf("insert team-repos: %v", err)
+	}
 
 	return sess.Commit()
 }
