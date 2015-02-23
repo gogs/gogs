@@ -103,7 +103,7 @@ func CreateOrganization(org, owner *User) (*User, error) {
 		return nil, ErrUserNameIllegal
 	}
 
-	isExist, err := IsUserExist(org.Name)
+	isExist, err := IsUserExist(0, org.Name)
 	if err != nil {
 		return nil, err
 	} else if isExist {

@@ -189,6 +189,12 @@ func InstallPost(ctx *middleware.Context, form auth.InstallForm) {
 
 	// Save settings.
 	cfg := ini.Empty()
+	if com.IsFile(setting.CustomConf) {
+		// Keeps custom settings if there is already something.
+		if err := cfg.Append(setting.CustomConf); err != nil {
+			log.Error(4, "Fail to load custom conf '%s': %v", setting.CustomConf, err)
+		}
+	}
 	cfg.Section("database").Key("DB_TYPE").SetValue(models.DbCfg.Type)
 	cfg.Section("database").Key("HOST").SetValue(models.DbCfg.Host)
 	cfg.Section("database").Key("NAME").SetValue(models.DbCfg.Name)
