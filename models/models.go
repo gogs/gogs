@@ -59,7 +59,8 @@ func init() {
 		new(Watch), new(Star), new(Follow), new(Action),
 		new(Issue), new(Comment), new(Attachment), new(IssueUser), new(Label), new(Milestone),
 		new(Mirror), new(Release), new(LoginSource), new(Webhook),
-		new(UpdateTask), new(HookTask), new(Team), new(OrgUser), new(TeamUser),
+		new(UpdateTask), new(HookTask),
+		new(Team), new(OrgUser), new(TeamUser), new(TeamRepo),
 		new(Notice), new(EmailAddress))
 }
 
@@ -140,7 +141,7 @@ func SetEngine() (err error) {
 	if err != nil {
 		return fmt.Errorf("models.init(fail to create xorm.log): %v", err)
 	}
-	x.Logger = xorm.NewSimpleLogger(f)
+	x.SetLogger(xorm.NewSimpleLogger(f))
 
 	x.ShowSQL = true
 	x.ShowInfo = true

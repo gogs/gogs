@@ -26,10 +26,12 @@
                 <button class="btn btn-green btn-large btn-radius">{{.i18n.Tr "sign_in"}}</button>&nbsp;&nbsp;&nbsp;&nbsp;
                 {{if not .IsSocialLogin}}<a href="{{AppSubUrl}}/user/forget_password">{{.i18n.Tr "auth.forget_password"}}</a>{{end}}
             </div>
+            {{if .ShowRegistrationButton}}
             <div class="field">
                 <label></label>
                 <a href="{{AppSubUrl}}/user/sign_up">{{.i18n.Tr "auth.sign_up_now" | Str2html}}</a>
             </div>
+            {{end}}
             {{if and (not .IsSocialLogin) .OauthEnabled}}
             <hr/>
             <div id="sign-social" class="text-center social-buttons">

@@ -158,6 +158,11 @@ func Http(ctx *middleware.Context) {
 					return
 				}
 			}
+
+			if !isPull && repo.IsMirror {
+				ctx.Handle(401, "can't push to mirror", nil)
+				return
+			}
 		}
 	}
 

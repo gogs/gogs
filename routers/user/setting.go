@@ -50,7 +50,7 @@ func SettingsPost(ctx *middleware.Context, form auth.UpdateProfileForm) {
 
 	// Check if user name has been changed.
 	if ctx.User.Name != form.UserName {
-		isExist, err := models.IsUserExist(form.UserName)
+		isExist, err := models.IsUserExist(ctx.User.Id, form.UserName)
 		if err != nil {
 			ctx.Handle(500, "IsUserExist", err)
 			return
@@ -58,11 +58,14 @@ func SettingsPost(ctx *middleware.Context, form auth.UpdateProfileForm) {
 			ctx.RenderWithErr(ctx.Tr("form.username_been_taken"), SETTINGS_PROFILE, &form)
 			return
 		} else if err = models.ChangeUserName(ctx.User, form.UserName); err != nil {
-			if err == models.ErrUserNameIllegal {
+			switch err {
+			case models.ErrUserNameIllegal:
 				ctx.Flash.Error(ctx.Tr("form.illegal_username"))
 				ctx.Redirect(setting.AppSubUrl + "/user/settings")
-				return
-			} else {
+			case models.ErrEmailAlreadyUsed:
+				ctx.Flash.Error(ctx.Tr("form.email_been_used"))
+				ctx.Redirect(setting.AppSubUrl + "/user/settings")
+			default:
 				ctx.Handle(500, "ChangeUserName", err)
 			}
 			return
@@ -133,13 +136,12 @@ func SettingsEmails(ctx *middleware.Context) {
 	ctx.Data["PageIsUserSettings"] = true
 	ctx.Data["PageIsSettingsEmails"] = true
 
-	var err error
-	ctx.Data["Emails"], err = models.GetEmailAddresses(ctx.User.Id)
-
+	emails, err := models.GetEmailAddresses(ctx.User.Id)
 	if err != nil {
-		ctx.Handle(500, "email.GetEmailAddresses", err)
+		ctx.Handle(500, "GetEmailAddresses", err)
 		return
 	}
+	ctx.Data["Emails"] = emails
 
 	ctx.HTML(200, SETTINGS_EMAILS)
 }
@@ -149,16 +151,16 @@ func SettingsEmailPost(ctx *middleware.Context, form auth.AddEmailForm) {
 	ctx.Data["PageIsUserSettings"] = true
 	ctx.Data["PageIsSettingsEmails"] = true
 
-	var err error
-	ctx.Data["Emails"], err = models.GetEmailAddresses(ctx.User.Id)
+	emails, err := models.GetEmailAddresses(ctx.User.Id)
 	if err != nil {
-		ctx.Handle(500, "email.GetEmailAddresses", err)
+		ctx.Handle(500, "GetEmailAddresses", err)
 		return
 	}
+	ctx.Data["Emails"] = emails
 
-	// Delete Email address.
+	// Delete E-mail address.
 	if ctx.Query("_method") == "DELETE" {
-		id := com.StrTo(ctx.Query("id")).MustInt64()
+		id := ctx.QueryInt64("id")
 		if id <= 0 {
 			return
 		}
@@ -174,7 +176,7 @@ func SettingsEmailPost(ctx *middleware.Context, form auth.AddEmailForm) {
 
 	// Make emailaddress primary.
 	if ctx.Query("_method") == "PRIMARY" {
-		id := com.StrTo(ctx.Query("id")).MustInt64()
+		id := ctx.QueryInt64("id")
 		if id <= 0 {
 			return
 		}
@@ -189,46 +191,41 @@ func SettingsEmailPost(ctx *middleware.Context, form auth.AddEmailForm) {
 	}
 
 	// Add Email address.
-	if ctx.Req.Method == "POST" {
-		if ctx.HasError() {
-			ctx.HTML(200, SETTINGS_EMAILS)
+	if ctx.HasError() {
+		ctx.HTML(200, SETTINGS_EMAILS)
+		return
+	}
+
+	cleanEmail := strings.Replace(form.Email, "\n", "", -1)
+	e := &models.EmailAddress{
+		Uid:         ctx.User.Id,
+		Email:       cleanEmail,
+		IsActivated: !setting.Service.RegisterEmailConfirm,
+	}
+
+	if err := models.AddEmailAddress(e); err != nil {
+		if err == models.ErrEmailAlreadyUsed {
+			ctx.RenderWithErr(ctx.Tr("form.email_been_used"), SETTINGS_EMAILS, &form)
 			return
 		}
+		ctx.Handle(500, "AddEmailAddress", err)
+		return
+	} else {
+		// Send confirmation e-mail
+		if setting.Service.RegisterEmailConfirm {
+			mailer.SendActivateEmail(ctx.Render, ctx.User, e)
 
-		cleanEmail := strings.Replace(form.Email, "\n", "", -1)
-		e := &models.EmailAddress{
-			Uid:         ctx.User.Id,
-			Email:       cleanEmail,
-			IsActivated: !setting.Service.RegisterEmailConfirm,
-		}
-
-		if err := models.AddEmailAddress(e); err != nil {
-			if err == models.ErrEmailAlreadyUsed {
-				ctx.RenderWithErr(ctx.Tr("form.email_has_been_used"), SETTINGS_EMAILS, &form)
-				return
+			if err := ctx.Cache.Put("MailResendLimit_"+ctx.User.LowerName, ctx.User.LowerName, 180); err != nil {
+				log.Error(4, "Set cache(MailResendLimit) fail: %v", err)
 			}
-			ctx.Handle(500, "email.AddEmailAddress", err)
-			return
+			ctx.Flash.Success(ctx.Tr("settings.add_email_success_confirmation_email_sent"))
 		} else {
-
-			// Send confirmation e-mail
-			if setting.Service.RegisterEmailConfirm {
-				mailer.SendActivateEmail(ctx.Render, ctx.User, e)
-
-				if err := ctx.Cache.Put("MailResendLimit_"+ctx.User.LowerName, ctx.User.LowerName, 180); err != nil {
-					log.Error(4, "Set cache(MailResendLimit) fail: %v", err)
-				}
-				ctx.Flash.Success(ctx.Tr("settings.add_email_success_confirmation_email_sent"))
-			} else {
-				ctx.Flash.Success(ctx.Tr("settings.add_email_success"))
-			}
-
-			log.Trace("Email address added: %s", e.Email)
-
-			ctx.Redirect(setting.AppSubUrl + "/user/settings/email")
-			return
+			ctx.Flash.Success(ctx.Tr("settings.add_email_success"))
 		}
 
+		log.Trace("Email address added: %s", e.Email)
+		ctx.Redirect(setting.AppSubUrl + "/user/settings/email")
+		return
 	}
 
 	ctx.HTML(200, SETTINGS_EMAILS)

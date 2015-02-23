@@ -7,8 +7,8 @@
         <div class="panel-content">
             {{template "ng/base/alert" .}}
             <div class="field">
-                <label class="req" for="url">HTTPS URL</label>
-                <input class="ipt ipt-large ipt-radius {{if .Err_HttpsUrl}}ipt-error{{end}}" id="url" name="url" type="text" value="{{.url}}" required />
+                <label class="req" for="clone_addr">{{.i18n.Tr "repo.migrate.clone_address"}}</label>
+                <input class="ipt ipt-large ipt-radius {{if .Err_CloneAddr}}ipt-error{{end}}" id="clone_addr" name="clone_addr" type="text" value="{{.clone_addr}}" required />
             </div>
             <div class="field">
                 <span class="form-label"></span>
