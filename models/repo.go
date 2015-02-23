@@ -669,6 +669,19 @@ func TransferOwnership(u *User, newOwner string, repo *Repository) error {
 		return err
 	}
 
+	// Remove redundant collaborators
+	collaborators, err := repo.GetCollaborators()
+	if err != nil {
+		return err
+	}
+	for _, c := range collaborators {
+		if c.Id == newUser.Id || newUser.IsOrgMember(c.Id) {
+			if _, err = sess.Delete(&Collaboration{RepoID: repo.Id, UserID: c.Id}); err != nil {
+				return err
+			}
+		}
+	}
+
 	// Update user repository number.
 	if _, err = sess.Exec("UPDATE `user` SET num_repos = num_repos + 1 WHERE id = ?", newUser.Id); err != nil {
 		return err
@@ -776,6 +789,8 @@ func DeleteRepository(uid, repoId int64, userName string) error {
 	} else if _, err = sess.Delete(&Milestone{RepoId: repoId}); err != nil {
 		return err
 	} else if _, err = sess.Delete(&Release{RepoId: repoId}); err != nil {
+		return err
+	} else if _, err = sess.Delete(&Collaboration{RepoID: repoId}); err != nil {
 		return err
 	}
 
