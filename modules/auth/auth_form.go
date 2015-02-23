@@ -18,7 +18,10 @@ type AuthenticationForm struct {
 	Port              int    `form:"port"`
 	UseSSL            bool   `form:"usessl"`
 	BaseDN            string `form:"base_dn"`
-	Attributes        string `form:"attributes"`
+	AttributeUsername string `form:"attribute_username"`
+	AttributeName     string `form:"attribute_name"`
+	AttributeSurname  string `form:"attribute_surname"`
+	AttributeMail     string `form:"attribute_mail"`
 	Filter            string `form:"filter"`
 	MsAdSA            string `form:"ms_ad_sa"`
 	IsActived         bool   `form:"is_actived"`
