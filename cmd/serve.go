@@ -164,6 +164,11 @@ func runServ(c *cli.Context) {
 			println("You have no right to write this repository")
 			log.GitLogger.Fatal(2, "User %s has no right to write repository %s", user.Name, repoPath)
 		}
+
+		if repo.IsMirror {
+			println("You can't write to a mirror repository")
+			log.GitLogger.Fatal(2, "User %s tried to write to a mirror repository %s", user.Name, repoPath)
+		}
 	case isRead:
 		if !repo.IsPrivate {
 			break
