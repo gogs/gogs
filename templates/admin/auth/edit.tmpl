@@ -48,8 +48,20 @@
                                     <input class="ipt ipt-large ipt-radius {{if .Err_BaseDN}}ipt-error{{end}}" id="base_dn" name="base_dn" value="{{.Source.LDAP.BaseDN}}" />
                                 </div>
                                 <div class="field">
-                                    <label class="req" for="attributes">{{.i18n.Tr "admin.auths.attributes"}}</label>
-                                    <input class="ipt ipt-large ipt-radius {{if .Err_Attributes}}ipt-error{{end}}" id="attributes" name="attributes" value="{{.Source.LDAP.Attributes}}" />
+                                    <label class="req" for="attribute_username">{{.i18n.Tr "admin.auths.attribute_username"}}</label>
+                                    <input class="ipt ipt-large ipt-radius {{if .Err_Attributes}}ipt-error{{end}}" id="attribute_username" name="attribute_username" value="{{.Source.LDAP.AttributeUsername}}" />
+                                </div>
+                                <div class="field">
+                                    <label class="req" for="attribute_name">{{.i18n.Tr "admin.auths.attribute_name"}}</label>
+                                    <input class="ipt ipt-large ipt-radius {{if .Err_Attributes}}ipt-error{{end}}" id="attribute_name" name="attribute_name" value="{{.Source.LDAP.AttributeName}}" />
+                                </div>
+                                <div class="field">
+                                    <label class="req" for="attribute_surname">{{.i18n.Tr "admin.auths.attribute_surname"}}</label>
+                                    <input class="ipt ipt-large ipt-radius {{if .Err_Attributes}}ipt-error{{end}}" id="attribute_surname" name="attribute_surname" value="{{.Source.LDAP.AttributeSurname}}" />
+                                </div>
+                                <div class="field">
+                                    <label class="req" for="attribute_mail">{{.i18n.Tr "admin.auths.attribute_mail"}}</label>
+                                    <input class="ipt ipt-large ipt-radius {{if .Err_Attributes}}ipt-error{{end}}" id="attribute_mail" name="attribute_mail" value="{{.Source.LDAP.AttributeMail}}" />
                                 </div>
                                 <div class="field">
                                     <label class="req" for="filter">{{.i18n.Tr "admin.auths.filter"}}</label>
