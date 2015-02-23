@@ -58,24 +58,19 @@ func ApiRepoAssignment() macaron.Handler {
 			return
 		}
 
-		if ctx.IsSigned {
-			mode, err := models.AccessLevel(ctx.User, repo)
-			if err != nil {
-				ctx.JSON(500, &base.ApiJsonErr{"AccessLevel: " + err.Error(), base.DOC_URL})
-				return
-			}
-
-			ctx.Repo.IsOwner = mode >= models.ACCESS_MODE_WRITE
-			ctx.Repo.IsAdmin = mode >= models.ACCESS_MODE_READ
-			ctx.Repo.IsTrueOwner = mode >= models.ACCESS_MODE_OWNER
+		mode, err := models.AccessLevel(ctx.User, repo)
+		if err != nil {
+			ctx.JSON(500, &base.ApiJsonErr{"AccessLevel: " + err.Error(), base.DOC_URL})
+			return
 		}
 
+		ctx.Repo.AccessMode = mode
+
 		// Check access.
-		if repo.IsPrivate && !ctx.Repo.IsOwner {
+		if ctx.Repo.AccessMode == models.ACCESS_MODE_NONE {
 			ctx.Error(404)
 			return
 		}
-		ctx.Repo.HasAccess = true
 
 		ctx.Repo.Repository = repo
 	}
@@ -239,26 +234,18 @@ func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 			return
 		}
 
-		if ctx.IsSigned {
-			mode, err := models.AccessLevel(ctx.User, repo)
-			if err != nil {
-				ctx.Handle(500, "AccessLevel", err)
-				return
-			}
-			ctx.Repo.IsOwner = mode >= models.ACCESS_MODE_WRITE
-			ctx.Repo.IsAdmin = mode >= models.ACCESS_MODE_READ
-			ctx.Repo.IsTrueOwner = mode >= models.ACCESS_MODE_OWNER
-			if !ctx.Repo.IsTrueOwner && ctx.Repo.Owner.IsOrganization() {
-				ctx.Repo.IsTrueOwner = ctx.Repo.Owner.IsOwnedBy(ctx.User.Id)
-			}
+		mode, err := models.AccessLevel(ctx.User, repo)
+		if err != nil {
+			ctx.Handle(500, "AccessLevel", err)
+			return
 		}
+		ctx.Repo.AccessMode = mode
 
 		// Check access.
-		if repo.IsPrivate && !ctx.Repo.IsOwner {
+		if ctx.Repo.AccessMode == models.ACCESS_MODE_NONE {
 			ctx.Handle(404, "no access right", err)
 			return
 		}
-		ctx.Repo.HasAccess = true
 
 		ctx.Data["HasAccess"] = true
 
@@ -306,8 +293,8 @@ func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 		ctx.Data["Title"] = u.Name + "/" + repo.Name
 		ctx.Data["Repository"] = repo
 		ctx.Data["Owner"] = ctx.Repo.Repository.Owner
-		ctx.Data["IsRepositoryOwner"] = ctx.Repo.IsOwner
-		ctx.Data["IsRepositoryTrueOwner"] = ctx.Repo.IsTrueOwner
+		ctx.Data["IsRepositoryOwner"] = ctx.Repo.AccessMode >= models.ACCESS_MODE_WRITE
+		ctx.Data["IsRepositoryAdmin"] = ctx.Repo.AccessMode >= models.ACCESS_MODE_ADMIN
 
 		ctx.Data["DisableSSH"] = setting.DisableSSH
 		ctx.Repo.CloneLink, err = repo.CloneLink()
@@ -317,8 +304,7 @@ func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 		}
 		ctx.Data["CloneLink"] = ctx.Repo.CloneLink
 
-		if ctx.Repo.Repository.IsGoget {
-			ctx.Data["GoGetLink"] = fmt.Sprintf("%s%s/%s", setting.AppUrl, u.LowerName, repo.LowerName)
+		if ctx.Query("go-get") == "1" {
 			ctx.Data["GoGetImport"] = fmt.Sprintf("%s/%s/%s", setting.Domain, u.LowerName, repo.LowerName)
 		}
 
@@ -362,9 +348,9 @@ func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 	}
 }
 
-func RequireTrueOwner() macaron.Handler {
+func RequireAdmin() macaron.Handler {
 	return func(ctx *Context) {
-		if !ctx.Repo.IsTrueOwner && !ctx.Repo.IsAdmin {
+		if ctx.Repo.AccessMode < models.ACCESS_MODE_ADMIN {
 			if !ctx.IsSigned {
 				ctx.SetCookie("redirect_to", "/"+url.QueryEscape(setting.AppSubUrl+ctx.Req.RequestURI), 0, setting.AppSubUrl)
 				ctx.Redirect(setting.AppSubUrl + "/user/login")

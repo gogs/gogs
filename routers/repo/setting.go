@@ -83,7 +83,6 @@ func SettingsPost(ctx *middleware.Context, form auth.RepoSettingForm) {
 		ctx.Repo.Repository.Description = form.Description
 		ctx.Repo.Repository.Website = form.Website
 		ctx.Repo.Repository.IsPrivate = form.Private
-		ctx.Repo.Repository.IsGoget = form.GoGet
 		if err := models.UpdateRepository(ctx.Repo.Repository); err != nil {
 			ctx.Handle(404, "UpdateRepository", err)
 			return
@@ -109,7 +108,7 @@ func SettingsPost(ctx *middleware.Context, form auth.RepoSettingForm) {
 		}
 
 		newOwner := ctx.Query("new_owner_name")
-		isExist, err := models.IsUserExist(newOwner)
+		isExist, err := models.IsUserExist(0, newOwner)
 		if err != nil {
 			ctx.Handle(500, "IsUserExist", err)
 			return

@@ -2,20 +2,20 @@
 
 > This guidelines sheet is forked from [CONTRIBUTING.md](https://github.com/drone/drone/blob/master/CONTRIBUTING.md).
 
-Gogs is not perfect and it has bugs, or incomplete features for rare cases. You're welcome to tell us or contribute some code. This document describes details about how can you contribute to Gogs project.
+Gogs is not perfect, and it has bugs or incomplete features in rare cases. You're welcome to tell us, or to contribute some code. This document describes details about how can you contribute to Gogs project.
 
 ## Contribution guidelines
 
 Depends on the situation, you will:
 
-- Find bug, create an issue
-- Need more functionality, make a feature request
-- Want to contribute code, open a pull request
-- Run into issue, need help
+- Find a bug and create an issue
+- Need more functionality and make a feature request
+- Want to contribute code and open a pull request
+- Run into issue and need help
 
 ### Bug Report
 
-If you find or consider something is a bug, please create a issue on [GitHub](https://github.com/gogits/gogs/issues). To reduce unnecessary time wasting of interacting and waiting with team members, please include following information in the first place with a comfortable form for you:
+If you find something you consider a bug, please create a issue on [GitHub](https://github.com/gogits/gogs/issues). To avoid wasting time and reduce back-and-forth communication with team members, please include at least the following information in a form comfortable for you:
 
 - Bug Description
 - Gogs Version
@@ -28,7 +28,7 @@ Please take a moment to check that an issue on [GitHub](https://github.com/gogit
 
 #### Bug Report Example
 
-Gogs crashed when create repository with license, using v0.5.13.0207, SQLite3, Git 1.9.0, Ubuntu 12.04.
+Gogs crashed when creating a repository with a license, using v0.5.13.0207, SQLite3, Git 1.9.0, Ubuntu 12.04.
 
 Error log:
 
@@ -38,11 +38,11 @@ Error log:
 
 ### Feature Request
 
-There is no standard form of making a feature request, just try to describe the feature as clear as possible because team members may not have experience with the functionality you're talking about.
+There is no standard form of making a feature request. Just try to describe the feature as clearly as possible, because team members may not have experience with the functionality you're talking about.
 
 ### Pull Request
 
-Pull requests are always welcome, but note that **ALL PULL REQUESTS MUST SEND TO `DEV` BRANCH**.
+Pull requests are always welcome, but note that **ALL PULL REQUESTS MUST APPLY TO THE `DEV` BRANCH**.
 
 We are always thrilled to receive pull requests, and do our best to process them as fast as possible. Not sure if that typo is worth a pull request? Do it! We will appreciate it.
 
@@ -52,7 +52,7 @@ We're trying very hard to keep Gogs lean and focused. We don't want it to do eve
 
 ### Ask For Help
 
-Before open any new issue, please check your problem on [Troubleshooting](http://gogs.io/docs/intro/troubleshooting.md) and [FAQs](http://gogs.io/docs/intro/faqs.html) pages.
+Before opening an issue, please make sure your problem isn't already addressed on the [Troubleshooting](http://gogs.io/docs/intro/troubleshooting.md) and [FAQs](http://gogs.io/docs/intro/faqs.html) pages.
 
 ## Things To Notice
 

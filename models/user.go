@@ -231,7 +231,7 @@ func (u *User) GetOrganizations() error {
 
 	u.Orgs = make([]*User, len(ous))
 	for i, ou := range ous {
-		u.Orgs[i], err = GetUserById(ou.OrgId)
+		u.Orgs[i], err = GetUserById(ou.OrgID)
 		if err != nil {
 			return err
 		}
@@ -249,11 +249,13 @@ func (u *User) GetFullNameFallback() string {
 
 // IsUserExist checks if given user name exist,
 // the user name should be noncased unique.
-func IsUserExist(name string) (bool, error) {
+// If uid is presented, then check will rule out that one,
+// it is used when update a user name in settings page.
+func IsUserExist(uid int64, name string) (bool, error) {
 	if len(name) == 0 {
 		return false, nil
 	}
-	return x.Get(&User{LowerName: strings.ToLower(name)})
+	return x.Where("id!=?", uid).Get(&User{LowerName: strings.ToLower(name)})
 }
 
 // IsEmailUsed returns true if the e-mail has been used.
@@ -278,7 +280,7 @@ func CreateUser(u *User) error {
 		return ErrUserNameIllegal
 	}
 
-	isExist, err := IsUserExist(u.Name)
+	isExist, err := IsUserExist(0, u.Name)
 	if err != nil {
 		return err
 	} else if isExist {
@@ -401,7 +403,7 @@ func ChangeUserName(u *User, newUserName string) (err error) {
 
 // UpdateUser updates user's information.
 func UpdateUser(u *User) error {
-	has, err := x.Where("id!=?", u.Id).And("type=?", INDIVIDUAL).And("email=?", u.Email).Get(new(User))
+	has, err := x.Where("id!=?", u.Id).And("type=?", u.Type).And("email=?", u.Email).Get(new(User))
 	if err != nil {
 		return err
 	} else if has {
@@ -578,7 +580,7 @@ func GetUserIdsByNames(names []string) []int64 {
 	return ids
 }
 
-// Get all email addresses
+// GetEmailAddresses returns all e-mail addresses belongs to given user.
 func GetEmailAddresses(uid int64) ([]*EmailAddress, error) {
 	emails := make([]*EmailAddress, 0, 5)
 	err := x.Where("uid=?", uid).Find(&emails)
@@ -592,7 +594,6 @@ func GetEmailAddresses(uid int64) ([]*EmailAddress, error) {
 	}
 
 	isPrimaryFound := false
-
 	for _, email := range emails {
 		if email.Email == u.Email {
 			isPrimaryFound = true
@@ -605,7 +606,11 @@ func GetEmailAddresses(uid int64) ([]*EmailAddress, error) {
 	// We alway want the primary email address displayed, even if it's not in
 	// the emailaddress table (yet)
 	if !isPrimaryFound {
-		emails = append(emails, &EmailAddress{Email: u.Email, IsActivated: true, IsPrimary: true})
+		emails = append(emails, &EmailAddress{
+			Email:       u.Email,
+			IsActivated: true,
+			IsPrimary:   true,
+		})
 	}
 	return emails, nil
 }
@@ -855,7 +860,7 @@ func UpdateMentions(userNames []string, issueId int64) error {
 		}
 
 		for _, orgUser := range orgUsers {
-			tempIds = append(tempIds, orgUser.Id)
+			tempIds = append(tempIds, orgUser.ID)
 		}
 
 		ids = append(ids, tempIds...)
