@@ -15,15 +15,18 @@ import (
 
 // Basic LDAP authentication service
 type Ldapsource struct {
-	Name         string // canonical name (ie. corporate.ad)
-	Host         string // LDAP host
-	Port         int    // port number
-	UseSSL       bool   // Use SSL
-	BaseDN       string // Base DN
-	Attributes   string // Attribute to search
-	Filter       string // Query filter to validate entry
-	MsAdSAFormat string // in the case of MS AD Simple Authen, the format to use (see: http://msdn.microsoft.com/en-us/library/cc223499.aspx)
-	Enabled      bool   // if this source is disabled
+	Name              string // canonical name (ie. corporate.ad)
+	Host              string // LDAP host
+	Port              int    // port number
+	UseSSL            bool   // Use SSL
+	BaseDN            string // Base DN
+	AttributeUsername string // Username attribute
+	AttributeName     string // First name attribute
+	AttributeSurname  string // Surname attribute
+	AttributeMail     string // E-mail attribute
+	Filter            string // Query filter to validate entry
+	MsAdSAFormat      string // in the case of MS AD Simple Authen, the format to use (see: http://msdn.microsoft.com/en-us/library/cc223499.aspx)
+	Enabled           bool   // if this source is disabled
 }
 
 //Global LDAP directory pool
@@ -32,18 +35,18 @@ var (
 )
 
 // Add a new source (LDAP directory) to the global pool
-func AddSource(name string, host string, port int, usessl bool, basedn string, attributes string, filter string, msadsaformat string) {
-	ldaphost := Ldapsource{name, host, port, usessl, basedn, attributes, filter, msadsaformat, true}
+func AddSource(name string, host string, port int, usessl bool, basedn string, attribcn string, attribname string, attribsn string, attribmail string, filter string, msadsaformat string) {
+	ldaphost := Ldapsource{name, host, port, usessl, basedn, attribcn, attribname, attribsn, attribmail, filter, msadsaformat, true}
 	Authensource = append(Authensource, ldaphost)
 }
 
 //LoginUser : try to login an user to LDAP sources, return requested (attribute,true) if ok, ("",false) other wise
 //First match wins
 //Returns first attribute if exists
-func LoginUser(name, passwd string) (a string, r bool) {
+func LoginUser(name, passwd string) (cn, fn, sn, mail string, r bool) {
 	r = false
 	for _, ls := range Authensource {
-		a, r = ls.SearchEntry(name, passwd)
+		cn, fn, sn, mail, r = ls.SearchEntry(name, passwd)
 		if r {
 			return
 		}
@@ -52,12 +55,12 @@ func LoginUser(name, passwd string) (a string, r bool) {
 }
 
 // searchEntry : search an LDAP source if an entry (name, passwd) is valide and in the specific filter
-func (ls Ldapsource) SearchEntry(name, passwd string) (string, bool) {
+func (ls Ldapsource) SearchEntry(name, passwd string) (string, string, string, string, bool) {
 	l, err := ldapDial(ls)
 	if err != nil {
 		log.Error(4, "LDAP Connect error, %s:%v", ls.Host, err)
 		ls.Enabled = false
-		return "", false
+		return "", "", "", "", false
 	}
 	defer l.Close()
 
@@ -65,26 +68,29 @@ func (ls Ldapsource) SearchEntry(name, passwd string) (string, bool) {
 	err = l.Bind(nx, passwd)
 	if err != nil {
 		log.Debug("LDAP Authan failed for %s, reason: %s", nx, err.Error())
-		return "", false
+		return "", "", "", "", false
 	}
 
 	search := ldap.NewSearchRequest(
 		ls.BaseDN,
 		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
 		fmt.Sprintf(ls.Filter, name),
-		[]string{ls.Attributes},
+		[]string{ls.AttributeUsername, ls.AttributeName, ls.AttributeSurname, ls.AttributeMail},
 		nil)
 	sr, err := l.Search(search)
 	if err != nil {
 		log.Debug("LDAP Authen OK but not in filter %s", name)
-		return "", false
+		return "", "", "", "", false
 	}
 	log.Debug("LDAP Authen OK: %s", name)
 	if len(sr.Entries) > 0 {
-		r := sr.Entries[0].GetAttributeValue(ls.Attributes)
-		return r, true
+		cn := sr.Entries[0].GetAttributeValue(ls.AttributeUsername)
+		name := sr.Entries[0].GetAttributeValue(ls.AttributeName)
+		sn := sr.Entries[0].GetAttributeValue(ls.AttributeSurname)
+		mail := sr.Entries[0].GetAttributeValue(ls.AttributeMail)
+		return cn, name, sn, mail, true
 	}
-	return "", true
+	return "", "", "", "", true
 }
 
 func ldapDial(ls Ldapsource) (*ldap.Conn, error) {
