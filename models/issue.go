@@ -564,7 +564,7 @@ func GetLabels(repoId int64) ([]*Label, error) {
 
 // UpdateLabel updates label information.
 func UpdateLabel(l *Label) error {
-	_, err := x.Id(l.Id).Update(l)
+	_, err := x.Id(l.Id).AllCols().Update(l)
 	return err
 }
 

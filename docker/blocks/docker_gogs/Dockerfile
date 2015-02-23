@@ -4,7 +4,7 @@ FROM ubuntu:14.04
 
 RUN apt-get update && apt-get install -y \
 		build-essential ca-certificates curl \
-		bzr git mercurial \
+		bzr git mercurial openssh-client\
 		--no-install-recommends
 
 ENV GOLANG_VERSION 1.3

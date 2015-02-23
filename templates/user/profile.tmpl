@@ -28,7 +28,7 @@
                     {{if .Owner.Website}}
                     <li class="list-group-item"><i class="octicon octicon-link"></i>&nbsp;&nbsp;<a target="_blank" href="{{.Owner.Website}}">{{.Owner.Website}}</a></li>
                     {{end}}
-                    <li class="list-group-item"><i class="octicon octicon-clock"></i>&nbsp;&nbsp;{{.i18n.Tr "user.join_on"}} {{DateFormat .Owner.Created "M d, Y"}}</li>
+                    <li class="list-group-item"><i class="octicon octicon-clock"></i>&nbsp;&nbsp;{{.i18n.Tr "user.join_on"}} {{DateFmtShort .Owner.Created}}</li>
                 </ul>
                 <hr>
                 <ul class="list-no-style">
