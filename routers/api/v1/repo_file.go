@@ -12,7 +12,7 @@ import (
 )
 
 func GetRepoRawFile(ctx *middleware.Context) {
-	if ctx.Repo.Repository.IsPrivate && !ctx.Repo.HasAccess {
+	if !ctx.Repo.HasAccess() {
 		ctx.Error(404)
 		return
 	}
