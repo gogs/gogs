@@ -182,6 +182,17 @@ func updateIssuesCommit(userId, repoId int64, repoUserName, repoName string, com
 				}
 				issue.IsClosed = true
 
+				if err = issue.GetLabels(); err != nil {
+					return err
+				}
+				for _, label := range issue.Labels {
+					label.NumClosedIssues++
+
+					if err = UpdateLabel(label); err != nil {
+						return err
+					}
+				}
+
 				if err = UpdateIssue(issue); err != nil {
 					return err
 				} else if err = UpdateIssueUserPairsByStatus(issue.Id, issue.IsClosed); err != nil {
@@ -229,6 +240,17 @@ func updateIssuesCommit(userId, repoId int64, repoUserName, repoName string, com
 					continue
 				}
 				issue.IsClosed = false
+
+				if err = issue.GetLabels(); err != nil {
+					return err
+				}
+				for _, label := range issue.Labels {
+					label.NumClosedIssues--
+
+					if err = UpdateLabel(label); err != nil {
+						return err
+					}
+				}
 
 				if err = UpdateIssue(issue); err != nil {
 					return err

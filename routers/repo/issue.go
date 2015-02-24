@@ -549,6 +549,7 @@ func UpdateIssueLabel(ctx *middleware.Context) {
 				label.NumClosedIssues--
 			}
 		}
+
 		if err = models.UpdateLabel(label); err != nil {
 			ctx.Handle(500, "issue.UpdateIssueLabel(UpdateLabel)", err)
 			return
@@ -765,6 +766,24 @@ func Comment(ctx *middleware.Context) {
 			} else if err = models.UpdateIssueUserPairsByStatus(issue.Id, issue.IsClosed); err != nil {
 				send(500, nil, err)
 				return
+			}
+
+			if err = issue.GetLabels(); err != nil {
+				send(500, nil, err)
+				return
+			}
+
+			for _, label := range issue.Labels {
+				if issue.IsClosed {
+					label.NumClosedIssues++
+				} else {
+					label.NumClosedIssues--
+				}
+
+				if err = models.UpdateLabel(label); err != nil {
+					send(500, nil, err)
+					return
+				}
 			}
 
 			// Change open/closed issue counter for the associated milestone
