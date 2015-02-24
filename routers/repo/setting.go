@@ -53,15 +53,11 @@ func SettingsPost(ctx *middleware.Context, form auth.RepoSettingForm) {
 		newRepoName := form.RepoName
 		// Check if repository name has been changed.
 		if ctx.Repo.Repository.Name != newRepoName {
-			isExist, err := models.IsRepositoryExist(ctx.Repo.Owner, newRepoName)
-			if err != nil {
-				ctx.Handle(500, "IsRepositoryExist", err)
-				return
-			} else if isExist {
+			if models.IsRepositoryExist(ctx.Repo.Owner, newRepoName) {
 				ctx.Data["Err_RepoName"] = true
 				ctx.RenderWithErr(ctx.Tr("form.repo_name_been_taken"), SETTINGS_OPTIONS, nil)
 				return
-			} else if err = models.ChangeRepositoryName(ctx.Repo.Owner.Name, ctx.Repo.Repository.Name, newRepoName); err != nil {
+			} else if err := models.ChangeRepositoryName(ctx.Repo.Owner.Name, ctx.Repo.Repository.Name, newRepoName); err != nil {
 				if err == models.ErrRepoNameIllegal {
 					ctx.Data["Err_RepoName"] = true
 					ctx.RenderWithErr(ctx.Tr("form.illegal_repo_name"), SETTINGS_OPTIONS, nil)

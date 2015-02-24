@@ -28,7 +28,7 @@ func (org *User) IsOwnedBy(uid int64) bool {
 
 // IsOrgMember returns true if given user is member of organization.
 func (org *User) IsOrgMember(uid int64) bool {
-	return IsOrganizationMember(org.Id, uid)
+	return org.IsOrganization() && IsOrganizationMember(org.Id, uid)
 }
 
 func (org *User) getTeam(e Engine, name string) (*Team, error) {
@@ -493,19 +493,19 @@ func (t *Team) addRepository(e Engine, repo *Repository) (err error) {
 
 	t.NumRepos++
 	if _, err = e.Id(t.ID).AllCols().Update(t); err != nil {
-		return err
+		return fmt.Errorf("update team: %v", err)
 	}
 
 	if err = repo.recalculateAccesses(e); err != nil {
-		return err
+		return fmt.Errorf("recalculateAccesses: %v", err)
 	}
 
 	if err = t.getMembers(e); err != nil {
-		return fmt.Errorf("get team members: %v", err)
+		return fmt.Errorf("getMembers: %v", err)
 	}
 	for _, u := range t.Members {
 		if err = watchRepo(e, u.Id, repo.Id, true); err != nil {
-			return err
+			return fmt.Errorf("watchRepo: %v", err)
 		}
 	}
 	return nil
@@ -772,10 +772,20 @@ func IsTeamMember(orgID, teamID, uid int64) bool {
 	return isTeamMember(x, orgID, teamID, uid)
 }
 
-func getTeamMembers(e Engine, teamID int64) ([]*User, error) {
-	us := make([]*User, 0, 10)
-	err := e.Sql("SELECT * FROM `user` JOIN `team_user` ON `team_user`.`team_id` = ? AND `team_user`.`uid` = `user`.`id`", teamID).Find(&us)
-	return us, err
+func getTeamMembers(e Engine, teamID int64) (_ []*User, err error) {
+	teamUsers := make([]*TeamUser, 0, 10)
+	if err = e.Where("team_id=?", teamID).Find(&teamUsers); err != nil {
+		return nil, fmt.Errorf("get team-users: %v", err)
+	}
+	members := make([]*User, 0, len(teamUsers))
+	for i := range teamUsers {
+		member := new(User)
+		if _, err = e.Id(teamUsers[i].Uid).Get(member); err != nil {
+			return nil, fmt.Errorf("get user '%d': %v", teamUsers[i].Uid, err)
+		}
+		members = append(members, member)
+	}
+	return members, nil
 }
 
 // GetTeamMembers returns all members in given team of organization.
