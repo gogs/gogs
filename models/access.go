@@ -4,6 +4,10 @@
 
 package models
 
+import (
+	"fmt"
+)
+
 type AccessMode int
 
 const (
@@ -128,7 +132,7 @@ func (repo *Repository) recalculateAccesses(e Engine) error {
 			}
 
 			if err = team.getMembers(e); err != nil {
-				return err
+				return fmt.Errorf("getMembers '%d': %v", team.ID, err)
 			}
 			for _, u := range team.Members {
 				accessMap[u.Id] = maxAccessMode(accessMap[u.Id], team.Authorize)
@@ -157,9 +161,9 @@ func (repo *Repository) recalculateAccesses(e Engine) error {
 
 	// Delete old accesses and insert new ones for repository.
 	if _, err = e.Delete(&Access{RepoID: repo.Id}); err != nil {
-		return err
+		return fmt.Errorf("delete old accesses: %v", err)
 	} else if _, err = e.Insert(newAccesses); err != nil {
-		return err
+		return fmt.Errorf("insert new accesses: %v", err)
 	}
 
 	return nil
