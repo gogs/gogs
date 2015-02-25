@@ -16,7 +16,9 @@ type Version struct {
 
 // This is a sequence of migrations. Add new migrations to the bottom of the list.
 // If you want to "retire" a migration, replace it with "expiredMigration"
-var migrations = []migration{}
+var migrations = []migration{
+	prepareToCommitComments,
+}
 
 // Migrate database to current version
 func Migrate(x *xorm.Engine) error {
@@ -50,4 +52,26 @@ func Migrate(x *xorm.Engine) error {
 
 func expiredMigration(x *xorm.Engine) error {
 	return errors.New("You are migrating from a too old gogs version")
+}
+
+func prepareToCommitComments(x *xorm.Engine) error {
+
+	sql := `ALTER TABLE comment MODIFY commit_id VARCHAR(50) NULL DEFAULT NULL`
+	_, err := x.Exec(sql)
+	if err != nil {
+		return err
+	}
+
+	sql = `ALTER TABLE comment MODIFY line VARCHAR(50) NULL DEFAULT NULL;`
+	_, err = x.Exec(sql)
+	if err != nil {
+		return err
+	}
+
+	sql = `UPDATE comment SET commit_id = '', line = '' WHERE commit_id = '0' AND line = '0'`
+	_, err = x.Exec(sql)
+	if err != nil {
+		return err
+	}
+	return nil
 }

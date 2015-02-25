@@ -878,14 +878,14 @@ type Comment struct {
 	PosterId int64
 	Poster   *User `xorm:"-"`
 	IssueId  int64
-	CommitId int64
-	Line     int64
+	CommitId string
+	Line     string
 	Content  string    `xorm:"TEXT"`
 	Created  time.Time `xorm:"CREATED"`
 }
 
 // CreateComment creates comment of issue or commit.
-func CreateComment(userId, repoId, issueId, commitId, line int64, cmtType CommentType, content string, attachments []int64) (*Comment, error) {
+func CreateComment(userId, repoId, issueId int64, commitId, line string, cmtType CommentType, content string, attachments []int64) (*Comment, error) {
 	sess := x.NewSession()
 	defer sess.Close()
 	if err := sess.Begin(); err != nil {
@@ -940,6 +940,17 @@ func CreateComment(userId, repoId, issueId, commitId, line int64, cmtType Commen
 	return comment, sess.Commit()
 }
 
+// UpdateComment update comment
+func UpdateComment(comment *Comment) error {
+	_, err := x.Id(comment.Id).AllCols().Update(comment)
+
+	if err != nil {
+		return err
+	}
+
+	return err
+}
+
 // GetCommentById returns the comment with the given id
 func GetCommentById(commentId int64) (*Comment, error) {
 	c := &Comment{Id: commentId}
@@ -963,6 +974,13 @@ func GetIssueComments(issueId int64) ([]Comment, error) {
 func (c *Comment) Attachments() []*Attachment {
 	a, _ := GetAttachmentsByComment(c.Id)
 	return a
+}
+
+// GetCommitComments returns list of comment by given commit id.
+func GetCommitComments(commitId string) ([]Comment, error) {
+	comments := make([]Comment, 0, 10)
+	err := x.Asc("created").Find(&comments, &Comment{CommitId: commitId})
+	return comments, err
 }
 
 func (c *Comment) AfterDelete() {
@@ -1081,4 +1099,10 @@ func DeleteAttachmentsByComment(commentId int64, remove bool) (int, error) {
 	}
 
 	return DeleteAttachments(attachments, remove)
+}
+
+func DeleteComment(commentId, userId int64) error {
+	_, err := x.Delete(&Comment{Id: commentId, PosterId: userId})
+	
+	return err
 }

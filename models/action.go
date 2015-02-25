@@ -33,6 +33,7 @@ const (
 	TRANSFER_REPO                       // 8
 	PUSH_TAG                            // 9
 	COMMENT_ISSUE                       // 10
+	COMMENT_COMMIT                      // 11
 )
 
 var (
@@ -146,7 +147,7 @@ func updateIssuesCommit(userId, repoId int64, repoUserName, repoName string, com
 
 			url := fmt.Sprintf("%s/%s/%s/commit/%s", setting.AppSubUrl, repoUserName, repoName, c.Sha1)
 			message := fmt.Sprintf(`<a href="%s">%s</a>`, url, c.Message)
-			if _, err = CreateComment(userId, issue.RepoId, issue.Id, 0, 0, COMMENT_TYPE_COMMIT, message, nil); err != nil {
+			if _, err = CreateComment(userId, issue.RepoId, issue.Id, "", "", COMMENT_TYPE_COMMIT, message, nil); err != nil {
 				return err
 			}
 		}
@@ -204,7 +205,7 @@ func updateIssuesCommit(userId, repoId int64, repoUserName, repoName string, com
 				}
 
 				// If commit happened in the referenced repository, it means the issue can be closed.
-				if _, err = CreateComment(userId, repoId, issue.Id, 0, 0, COMMENT_TYPE_CLOSE, "", nil); err != nil {
+				if _, err = CreateComment(userId, repoId, issue.Id, "", "", COMMENT_TYPE_CLOSE, "", nil); err != nil {
 					return err
 				}
 			}
@@ -263,7 +264,7 @@ func updateIssuesCommit(userId, repoId int64, repoUserName, repoName string, com
 				}
 
 				// If commit happened in the referenced repository, it means the issue can be closed.
-				if _, err = CreateComment(userId, repoId, issue.Id, 0, 0, COMMENT_TYPE_REOPEN, "", nil); err != nil {
+				if _, err = CreateComment(userId, repoId, issue.Id, "", "", COMMENT_TYPE_REOPEN, "", nil); err != nil {
 					return err
 				}
 			}

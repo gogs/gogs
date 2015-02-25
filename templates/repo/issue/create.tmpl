@@ -86,7 +86,7 @@
                 {{end}}
                 <div class="form-group panel-body">
                     <div class="md-help pull-right"><!-- todo help link -->
-                        Content with <a href="https://help.github.com/articles/markdown-basics">Markdown</a>
+                        {{.i18n.Tr "repo.release.content_with_md" "https://help.github.com/articles/markdown-basics" | Str2html}}
                     </div>
                     <ul class="nav nav-tabs" data-init="tabs">
                         <li class="active issue-write"><a href="#issue-textarea" data-toggle="tab">Write</a></li>

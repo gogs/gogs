@@ -481,16 +481,51 @@
             display: block;
         }
     }
-    .lines-code > pre {
-        border: none;
-        border-left: 1px solid #ddd;
-        > ol.linenums > li {
-            padding: 0 10px;
-            line-height: 20px;
-            &.active {
-                background: #ffffdd;
+    .lines-code {
+        > pre {
+            border: none;
+            border-left: 1px solid #ddd;
+            border-radius: 0;
+            padding-left: 15px;
+            > ol.linenums > li {
+                padding: 0 10px;
+                line-height: 20px;
+                &.active {
+                    background: #ffffdd;
+                }
             }
         }
+        > b {
+            position: relative;
+            float: left;
+            width: 16px;
+            height: 16px;
+            margin: 2px -8px 0px -8px;
+            line-height: 16px;
+            color: #fff;
+            text-align: center;
+            cursor: pointer;
+            background-color: #428bca;
+            border-radius: 2px;
+            opacity: 0;
+            font-size: 16px;
+            &.ishovered {
+                opacity: 1;
+            }
+            &:hover {
+                width: 18px;
+                height: 18px;
+                line-height: 18px;
+                font-size: 20px;
+                margin: 1px -10px 0px -9px;
+            }
+        }
+        button.answer {
+            margin: 0 0 10px 70px;
+        }
+    }
+    .commit-comment {
+        margin: 10px;
     }
 }
 .repo-setting-zone {
@@ -688,6 +723,21 @@
                     td, pre {
                         background-color: #FFF8D2 !important;
                         border-color: #F0DB88 !important;   
+                    }
+                }
+                &.add-comment {
+                    td {
+                        padding: 10px;
+                    }
+                }
+                &.add-comment:hover, &.comment:hover {
+                    td, pre {
+                        background-color: #FFFFFF !important;
+                    }
+                }
+                &.comment {
+                    .markdown p {
+                        margin: 0;
                     }
                 }
             }

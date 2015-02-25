@@ -86,6 +86,7 @@
 }
 #pr-commit,
 #pr-file-diff,
+#commit-add-comment-preview,
 #issue-add-comment-preview {
   display: none;
 }
@@ -93,14 +94,16 @@
   padding-right: 30px;
   box-sizing: border-box;
 }
+.commit-comment,
 .issue-comment,
 .issue-commit,
 .issue-line,
 .issue-merge,
+.commit-add-comment,
 .issue-add-comment {
   margin-bottom: 24px;
 }
-.issue-comment {
+.commit-comment, .issue-comment {
   .author-avatar {
     img {
       margin-right: 12px;
@@ -184,7 +187,8 @@
   height: 4px;
   background-color: #E6E6E6;
 }
-.issue-add-comment {
+.issue-add-comment,
+.commit-add-comment {
   .panel {
     margin-left: 60px;
     margin-top: -40px;
@@ -215,7 +219,8 @@
     }
   }
 }
-textarea#issue-add-content {
+textarea#issue-add-content,
+textarea#commit-add-content {
   width: 100%;
   box-sizing: border-box;
   height: 120px;

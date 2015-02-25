@@ -29,7 +29,8 @@
                             </div>
                             <div class="issue-edit-content hidden">
                                 <div class="form-group">
-                                    <div class="md-help pull-right">Content with <a href="https://help.github.com/articles/markdown-basics">Markdown</a>
+                                    <div class="md-help pull-right">
+                                        {{.i18n.Tr "repo.release.content_with_md" "https://help.github.com/articles/markdown-basics" | Str2html}}
                                     </div>
                                     <ul class="nav nav-tabs" data-init="tabs">
                                         <li class="issue-write active"><a href="#issue-edit-textarea" data-toggle="tab">Write</a></li>
@@ -125,7 +126,8 @@
                         {{.CsrfTokenHtml}}
                         <div class="panel-body">
                             <div class="form-group">
-                                <div class="md-help pull-right">Content with <a href="https://help.github.com/articles/markdown-basics">Markdown</a>
+                                <div class="md-help pull-right">
+                                    {{.i18n.Tr "repo.release.content_with_md" "https://help.github.com/articles/markdown-basics" | Str2html}}
                                 </div>
                                 <ul class="nav nav-tabs" data-init="tabs">
                                     <li class="active issue-write"><a href="#issue-textarea" data-toggle="tab">Write</a></li>

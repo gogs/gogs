@@ -239,6 +239,11 @@ var Gogs = {};
             $.changeHash('#' + $select.attr('rel'));
         }
 
+        function prepareToForm() {
+            $('.add-comment').hide('fast', function(){ $(this).remove(); });
+            $('button.answer').hide();
+        }
+
         $(document).on('click', '.code-diff .lines-num span', function (e) {
             var $select = $(this);
             var $list = $select.parent().siblings('.lines-code').parents().find('td.lines-num > span');
@@ -248,6 +253,113 @@ var Gogs = {};
                 (e.shiftKey && $list.filter('.active').length ? $list.filter('.active').eq(0) : null)
             );
             $.deSelect();
+        });
+
+        $('.code-diff .lines-code > b, .code-diff .lines-code > button.answer').click(function () {
+            prepareToForm();
+            var commit = document.location.href.match(/([a-zA-Z0-9:\/\/]+)\/commit\/([a-z0-9]+)/);
+            var lineNum;
+            if ($(this).prop("tagName") == "BUTTON") {                
+                lineNum = $(this).attr('rel');                                
+            } else {
+                var span = $(this).parents('tr').find('span:not([rel=""])');
+                lineNum = span.first().attr('rel');
+            }
+            console.log(lineNum);
+            $('button[rel='+lineNum+']').fadeOut();
+            lineNum = lineNum.substr(5);
+            var commentTr = $(".comment-"+lineNum);
+            if (commit) {
+                var elem = (commentTr.length > 0) ? commentTr : $(this).parents('tr');
+                var url = commit[1] + '/commit/comment/' + commit[2];
+                elem.after(
+                    $('<tr class="add-comment">').append(
+                        $('<td colspan="3">').load(url + '?line=' + lineNum, function () {
+                            $('.menu-line.add-nav').tabs();
+                            $('#pull-commit-preview').markdown_preview(".commit-add-comment");
+                            $('body').animate({
+                                scrollTop: $(this).offset().top - 33 // height of button
+                            }, 1000);
+                        })
+                    )
+                );
+            }
+        });
+
+        $('.code-diff').on('click', '#cancel-commit-conversation', function () {
+            prepareToForm();
+            $('button.answer').show();
+            return false;
+        });
+
+
+        $('.code-diff').on('click', '#cancel-edit-commit-conversation', function () {
+            prepareToForm();
+            $(this).parents('.commit-comment').children().show();
+            $(this).parents('#commit-conversation').parent().remove();
+            $('button.answer').show();
+            return false;
+        });
+
+        $('.edit-comment').click(function () {
+            prepareToForm();
+            var text = $(this).parents('div.panel:first').find('.markdown').text();
+            var id = $(this).parents('.commit-comment').attr('id');
+            id = id.substr(15);
+            var commit = document.location.href.match(/([a-zA-Z0-9:\/\/]+)\/commit\/([a-z0-9]+)/);
+            var url = commit[1] + '/commit/comment/' + commit[2];
+            $(this).parents('.commit-comment').children().hide();
+            $(this).parents('.commit-comment').append(
+                $('<div>').load(url + '?id='+id, function () {
+                    $('.menu-line.add-nav').tabs();
+                    $('#pull-commit-preview').markdown_preview(".commit-add-comment");
+                    $('#commit-add-content').text(text.trim());
+                    $('body').animate({
+                        scrollTop: $(this).offset().top - 33 // height of button
+                    }, 1000);
+                })
+            )
+            return false;
+        });
+
+        $('.remove-comment').click(function () {
+            if (confirm('Are you sure?')) {
+                var commit = document.location.href.match(/([a-zA-Z0-9:\/\/]+)\/commit\/([a-z0-9]+)/);
+                var url = commit[1] + '/commit/comment/delete/';
+                $.ajax({
+                    url: url,
+                    data: {comment: $(this).data('id')},
+                    dataType: 'json',
+                    method: 'post',
+                    success: function (json) {
+                        if (json.ok) {
+                            location.reload();
+                        } else {
+                            alert(json.error);
+                        }
+                    }
+                });
+            }
+            return false;
+        });
+
+        $('.code-diff').on('submit', '#commit-add-comment-form', function () {
+            var url = $(this).attr('action');
+            $.ajax({
+                url: url,
+                data: $(this).serialize(),
+                dataType: "json",
+                method: "post",
+                success: function (json) {
+                    if (json.ok && json.data.length) {
+                        window.location.href = json.data;
+                        location.reload();
+                    } else {
+                        $('#submit-error').html(json.error);
+                    }
+                }
+            });
+            return false;
         });
 
         $('.code-diff .lines-code > pre').each(function () {
@@ -260,6 +372,17 @@ var Gogs = {};
                     $lineNums.append('<span id="L' + i + '" rel="L' + i + '">' + i + '</span>');
                 }
             }
+        });
+
+        $('.code-diff .lines-code > pre, \
+            .code-diff .lines-code > b, \
+            .code-diff .lines-num').hover(function () {
+            var $b = $(this).parents('tr').find('b');
+            $b.addClass('ishovered');
+        });
+
+        $('.code-diff tr').mouseleave(function () {
+            $('.code-diff .lines-code > b').removeClass('ishovered');
         });
 
         $(window).on('hashchange', function (e) {
@@ -277,6 +400,14 @@ var Gogs = {};
                 $first = $list.filter('[rel=diff-' + m[1] + m[2] + ']');
                 selectRange($list, $first);
                 $("html, body").scrollTop($first.offset().top - 200);
+                return;
+            }            
+            m = window.location.hash.match(/^#comment-(\d+)$/);
+            if (m) {
+                $("html, body").animate({
+                    scrollTop: $('a[name=comment-'+m[1]+']').offset().top
+                }, 1000);
+                return;
             }
         }).trigger('hashchange');
     };
