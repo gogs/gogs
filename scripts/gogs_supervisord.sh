@@ -7,7 +7,7 @@ EXEPATH='/usr/bin/gogs_start'
 if [ ! -f $EXEPATH ]; then
     gogs_scripts_path=$(cd `dirname $0`; pwd)
     echo $gogs_scripts_path
-    sudo ln -s $gogs_scripts_path'/start.sh' /usr/bin/gogs_start
+    sudo ln -s $gogs_scripts_path'/start_for_supervisord.sh' /usr/bin/gogs_start
 fi
 
 LOGDIR="log"
