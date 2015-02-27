@@ -224,6 +224,7 @@ func InstallPost(ctx *middleware.Context, form auth.InstallForm) {
 	cfg.Section("session").Key("PROVIDER").SetValue("file")
 
 	cfg.Section("log").Key("MODE").SetValue("file")
+	cfg.Section("log").Key("LEVEL").SetValue("Info")
 
 	cfg.Section("security").Key("INSTALL_LOCK").SetValue("true")
 	cfg.Section("security").Key("SECRET_KEY").SetValue(base.GetRandomString(15))

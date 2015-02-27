@@ -164,7 +164,7 @@ var TemplateFuncs template.FuncMap = map[string]interface{}{
 	},
 	"DiffTypeToStr":     DiffTypeToStr,
 	"DiffLineTypeToStr": DiffLineTypeToStr,
-	"Sha1":	             Sha1,
+	"Sha1":              Sha1,
 	"ShortSha":          ShortSha,
 	"Md5":               EncodeMd5,
 	"ActionContent2Commits": ActionContent2Commits,
