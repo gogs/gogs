@@ -105,10 +105,10 @@ func Http(ctx *middleware.Context) {
 			return
 		}
 
-		authUser, err = models.GetUserByName(authUsername)
+		authUser, err := models.UserSignIn(authUsername, authPasswd)
 		if err != nil {
 			if err != models.ErrUserNotExist {
-				ctx.Handle(500, "GetUserByName", err)
+				ctx.Handle(500, "UserSignIn error: %v", err)
 				return
 			}
 
@@ -128,12 +128,6 @@ func Http(ctx *middleware.Context) {
 				return
 			}
 			authUsername = authUser.Name
-		} else {
-			// Check user's password when username is correctly presented.
-			if !authUser.ValidtePassword(authPasswd) {
-				ctx.Handle(401, "invalid password", nil)
-				return
-			}
 		}
 
 		if !isPublicPull {

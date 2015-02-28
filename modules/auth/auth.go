@@ -108,17 +108,16 @@ func SignedInUser(req *http.Request, sess session.Store) (*models.User, bool) {
 			auths := strings.Fields(baHead)
 			if len(auths) == 2 && auths[0] == "Basic" {
 				uname, passwd, _ := base.BasicAuthDecode(auths[1])
-				u, err := models.GetUserByName(uname)
+
+				u, err := models.UserSignIn(uname, passwd)
 				if err != nil {
 					if err != models.ErrUserNotExist {
-						log.Error(4, "GetUserByName: %v", err)
+						log.Error(4, "UserSignIn: %v", err)
 					}
 					return nil, false
 				}
 
-				if u.ValidtePassword(passwd) {
-					return u, true
-				}
+				return u, true
 			}
 		}
 		return nil, false
