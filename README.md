@@ -7,13 +7,13 @@ Gogs (Go Git Service) is a painless self-hosted Git service written in Go.
 
 ![Demo](http://gogs.qiniudn.com/gogs_demo.gif)
 
-##### Current version: 0.5.13 Beta
+##### Current version: 0.5.16 Beta
 
 ### NOTICES
 
 - Due to testing purpose, data of [try.gogs.io](https://try.gogs.io) has been reset in **Jan 28, 2015** and will reset multiple times after. Please do **NOT** put your important data on the site.
 - The demo site [try.gogs.io](https://try.gogs.io) is running under `dev` branch.
-- You **MUST** read [CONTRIBUTING.md](CONTRIBUTING.md) before you start filing a issue or making a Pull Request.
+- You **MUST** read [CONTRIBUTING.md](CONTRIBUTING.md) before you start filing an issue or making a Pull Request.
 - If you think there are vulnerabilities in the project, please talk privately to **u@gogs.io**.  Thanks!
 
 #### Other language version
@@ -57,7 +57,7 @@ The goal of this project is to make the easiest, fastest, and most painless way 
 ## System Requirements
 
 - A cheap Raspberry Pi is powerful enough for basic functionality.
-- At least 4 CPU cores and 1GB RAM would be the baseline for teamwork.
+- At least 2 CPU cores and 1GB RAM would be the baseline for teamwork.
 
 ## Installation
 

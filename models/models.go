@@ -12,10 +12,11 @@ import (
 	"strings"
 
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/go-xorm/core"
 	"github.com/go-xorm/xorm"
 	_ "github.com/lib/pq"
 
-	// "github.com/gogits/gogs/models/migrations"
+	"github.com/gogits/gogs/models/migrations"
 	"github.com/gogits/gogs/modules/setting"
 )
 
@@ -23,10 +24,20 @@ import (
 type Engine interface {
 	Delete(interface{}) (int64, error)
 	Exec(string, ...interface{}) (sql.Result, error)
+	Find(interface{}, ...interface{}) error
 	Get(interface{}) (bool, error)
 	Insert(...interface{}) (int64, error)
+	InsertOne(interface{}) (int64, error)
 	Id(interface{}) *xorm.Session
+	Sql(string, ...interface{}) *xorm.Session
 	Where(string, ...interface{}) *xorm.Session
+}
+
+func sessionRelease(sess *xorm.Session) {
+	if !sess.IsCommitedOrRollbacked {
+		sess.Rollback()
+	}
+	sess.Close()
 }
 
 var (
@@ -39,24 +50,30 @@ var (
 	}
 
 	EnableSQLite3 bool
-	UseSQLite3    bool
 )
 
 func init() {
 	tables = append(tables,
-		new(User), new(PublicKey), new(Follow), new(Oauth2), new(AccessToken),
-		new(Repository), new(Watch), new(Star), new(Action), new(Access),
+		new(User), new(PublicKey), new(Oauth2), new(AccessToken),
+		new(Repository), new(Collaboration), new(Access),
+		new(Watch), new(Star), new(Follow), new(Action),
 		new(Issue), new(Comment), new(Attachment), new(IssueUser), new(Label), new(Milestone),
 		new(Mirror), new(Release), new(LoginSource), new(Webhook),
-		new(UpdateTask), new(HookTask), new(Team), new(OrgUser), new(TeamUser),
+		new(UpdateTask), new(HookTask),
+		new(Team), new(OrgUser), new(TeamUser), new(TeamRepo),
 		new(Notice), new(EmailAddress))
 }
 
 func LoadModelsConfig() {
 	sec := setting.Cfg.Section("database")
 	DbCfg.Type = sec.Key("DB_TYPE").String()
-	if DbCfg.Type == "sqlite3" {
-		UseSQLite3 = true
+	switch DbCfg.Type {
+	case "sqlite3":
+		setting.UseSQLite3 = true
+	case "mysql":
+		setting.UseMySQL = true
+	case "postgres":
+		setting.UsePostgreSQL = true
 	}
 	DbCfg.Host = sec.Key("HOST").String()
 	DbCfg.Name = sec.Key("NAME").String()
@@ -103,6 +120,7 @@ func NewTestEngine(x *xorm.Engine) (err error) {
 		return fmt.Errorf("connect to database: %v", err)
 	}
 
+	x.SetMapper(core.GonicMapper{})
 	return x.Sync(tables...)
 }
 
@@ -111,6 +129,8 @@ func SetEngine() (err error) {
 	if err != nil {
 		return fmt.Errorf("connect to database: %v", err)
 	}
+
+	x.SetMapper(core.GonicMapper{})
 
 	// WARNING: for serv command, MUST remove the output to os.stdout,
 	// so use log file to instead print to stdout.
@@ -136,13 +156,14 @@ func NewEngine() (err error) {
 		return err
 	}
 
-	// if err = migrations.Migrate(x); err != nil {
-	// 	return err
-	// }
+	if err = migrations.Migrate(x); err != nil {
+		return fmt.Errorf("migrate: %v", err)
+	}
 
 	if err = x.StoreEngine("InnoDB").Sync2(tables...); err != nil {
 		return fmt.Errorf("sync database struct error: %v\n", err)
 	}
+
 	return nil
 }
 

@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -43,7 +42,7 @@ func setup(logPath string) {
 
 	models.LoadModelsConfig()
 
-	if models.UseSQLite3 {
+	if setting.UseSQLite3 {
 		workDir, _ := setting.WorkDir()
 		os.Chdir(workDir)
 	}
@@ -67,33 +66,33 @@ func parseCmd(cmd string) (string, string) {
 }
 
 var (
-	COMMANDS_READONLY = map[string]models.AccessType{
-		"git-upload-pack":    models.WRITABLE,
-		"git upload-pack":    models.WRITABLE,
-		"git-upload-archive": models.WRITABLE,
+	COMMANDS_READONLY = map[string]models.AccessMode{
+		"git-upload-pack":    models.ACCESS_MODE_WRITE,
+		"git upload-pack":    models.ACCESS_MODE_WRITE,
+		"git-upload-archive": models.ACCESS_MODE_WRITE,
 	}
 
-	COMMANDS_WRITE = map[string]models.AccessType{
-		"git-receive-pack": models.READABLE,
-		"git receive-pack": models.READABLE,
+	COMMANDS_WRITE = map[string]models.AccessMode{
+		"git-receive-pack": models.ACCESS_MODE_READ,
+		"git receive-pack": models.ACCESS_MODE_READ,
 	}
 )
 
-func In(b string, sl map[string]models.AccessType) bool {
+func In(b string, sl map[string]models.AccessMode) bool {
 	_, e := sl[b]
 	return e
 }
 
-func runServ(k *cli.Context) {
-	if k.IsSet("config") {
-		setting.CustomConf = k.String("config")
+func runServ(c *cli.Context) {
+	if c.IsSet("config") {
+		setting.CustomConf = c.String("config")
 	}
 	setup("serv.log")
 
-	if len(k.Args()) < 1 {
+	if len(c.Args()) < 1 {
 		log.GitLogger.Fatal(2, "Not enough arguments")
 	}
-	keys := strings.Split(k.Args()[0], "-")
+	keys := strings.Split(c.Args()[0], "-")
 	if len(keys) != 2 {
 		println("Gogs: auth file format error")
 		log.GitLogger.Fatal(2, "Invalid auth file format: %s", os.Args[2])
@@ -117,6 +116,7 @@ func runServ(k *cli.Context) {
 	cmd := os.Getenv("SSH_ORIGINAL_COMMAND")
 	if cmd == "" {
 		println("Hi", user.Name, "! You've successfully authenticated, but Gogs does not provide shell access.")
+		println("If this is what you do not expect, please log in with password and setup Gogs under another user.")
 		return
 	}
 
@@ -144,9 +144,19 @@ func runServ(k *cli.Context) {
 	}
 
 	// Access check.
+	repo, err := models.GetRepositoryByName(repoUser.Id, repoName)
+	if err != nil {
+		if err == models.ErrRepoNotExist {
+			println("Gogs: given repository does not exist")
+			log.GitLogger.Fatal(2, "Repository does not exist: %s/%s", repoUser.Name, repoName)
+		}
+		println("Gogs: internal error:", err.Error())
+		log.GitLogger.Fatal(2, "Fail to get repository: %v", err)
+	}
+
 	switch {
 	case isWrite:
-		has, err := models.HasAccess(user.Name, path.Join(repoUserName, repoName), models.WRITABLE)
+		has, err := models.HasAccess(user, repo, models.ACCESS_MODE_WRITE)
 		if err != nil {
 			println("Gogs: internal error:", err.Error())
 			log.GitLogger.Fatal(2, "Fail to check write access:", err)
@@ -154,22 +164,17 @@ func runServ(k *cli.Context) {
 			println("You have no right to write this repository")
 			log.GitLogger.Fatal(2, "User %s has no right to write repository %s", user.Name, repoPath)
 		}
-	case isRead:
-		repo, err := models.GetRepositoryByName(repoUser.Id, repoName)
-		if err != nil {
-			if err == models.ErrRepoNotExist {
-				println("Gogs: given repository does not exist")
-				log.GitLogger.Fatal(2, "Repository does not exist: %s/%s", repoUser.Name, repoName)
-			}
-			println("Gogs: internal error:", err.Error())
-			log.GitLogger.Fatal(2, "Fail to get repository: %v", err)
-		}
 
+		if repo.IsMirror {
+			println("You can't write to a mirror repository")
+			log.GitLogger.Fatal(2, "User %s tried to write to a mirror repository %s", user.Name, repoPath)
+		}
+	case isRead:
 		if !repo.IsPrivate {
 			break
 		}
 
-		has, err := models.HasAccess(user.Name, path.Join(repoUserName, repoName), models.READABLE)
+		has, err := models.HasAccess(user, repo, models.ACCESS_MODE_READ)
 		if err != nil {
 			println("Gogs: internal error:", err.Error())
 			log.GitLogger.Fatal(2, "Fail to check read access:", err)

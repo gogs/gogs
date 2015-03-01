@@ -1,6 +1,6 @@
 [run]
 init_cmds = [
-	["grep", "-rn", "FIXME", "."],
+	#["grep", "-rn", "FIXME", "."],
 	["./gogs", "web"]
 ]
 watch_all = true
