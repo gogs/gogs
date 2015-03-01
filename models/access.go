@@ -87,6 +87,7 @@ func (u *User) GetAccessibleRepositories() (map[*Repository]AccessMode, error) {
 		repos[repo] = access.Mode
 	}
 
+	// FIXME: should we generate an ordered list here? Random looks weird.
 	return repos, nil
 }
 
