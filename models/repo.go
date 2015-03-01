@@ -544,11 +544,6 @@ func CreateRepository(u *User, name, desc, lang, license string, isPrivate, isMi
 
 	// Give access to all members in owner team.
 	if u.IsOrganization() {
-		if err = repo.recalculateAccesses(sess); err != nil {
-			return nil, err
-		}
-
-		// Update owner team info and count.
 		t, err := u.getOwnerTeam(sess)
 		if err != nil {
 			return nil, fmt.Errorf("getOwnerTeam: %v", err)
@@ -556,12 +551,15 @@ func CreateRepository(u *User, name, desc, lang, license string, isPrivate, isMi
 			return nil, fmt.Errorf("addRepository: %v", err)
 		}
 	} else {
-		if err = watchRepo(sess, u.Id, repo.Id, true); err != nil {
-			return nil, fmt.Errorf("watchRepo: %v", err)
+		// Organization called this in addRepository method.
+		if err = repo.recalculateAccesses(sess); err != nil {
+			return nil, fmt.Errorf("recalculateAccesses: %v", err)
 		}
 	}
 
-	if err = newRepoAction(sess, u, repo); err != nil {
+	if err = watchRepo(sess, u.Id, repo.Id, true); err != nil {
+		return nil, fmt.Errorf("watchRepo: %v", err)
+	} else if err = newRepoAction(sess, u, repo); err != nil {
 		return nil, fmt.Errorf("newRepoAction: %v", err)
 	}
 
@@ -667,6 +665,27 @@ func TransferOwnership(u *User, newOwnerName string, repo *Repository) error {
 		}
 	}
 
+	// Remove old team-repository relations.
+	if owner.IsOrganization() {
+		if err = owner.getTeams(sess); err != nil {
+			return fmt.Errorf("getTeams: %v", err)
+		}
+		for _, t := range owner.Teams {
+			if !t.hasRepository(sess, repo.Id) {
+				continue
+			}
+
+			t.NumRepos--
+			if _, err := sess.Id(t.ID).AllCols().Update(t); err != nil {
+				return fmt.Errorf("decrease team repository count '%d': %v", t.ID, err)
+			}
+		}
+
+		if err = owner.removeOrgRepo(sess, repo.Id); err != nil {
+			return fmt.Errorf("removeOrgRepo: %v", err)
+		}
+	}
+
 	if newOwner.IsOrganization() {
 		t, err := newOwner.GetOwnerTeam()
 		if err != nil {
@@ -763,7 +782,7 @@ func DeleteRepository(uid, repoID int64, userName string) error {
 		for _, t := range org.Teams {
 			if !t.hasRepository(sess, repoID) {
 				continue
-			} else if err = t.removeRepository(sess, repo); err != nil {
+			} else if err = t.removeRepository(sess, repo, false); err != nil {
 				return err
 			}
 		}
@@ -771,9 +790,9 @@ func DeleteRepository(uid, repoID int64, userName string) error {
 
 	if _, err = sess.Delete(&Repository{Id: repoID}); err != nil {
 		return err
-	} else if _, err := sess.Delete(&Access{RepoID: repo.Id}); err != nil {
+	} else if _, err = sess.Delete(&Access{RepoID: repo.Id}); err != nil {
 		return err
-	} else if _, err := sess.Delete(&Action{RepoId: repo.Id}); err != nil {
+	} else if _, err = sess.Delete(&Action{RepoId: repo.Id}); err != nil {
 		return err
 	} else if _, err = sess.Delete(&Watch{RepoId: repoID}); err != nil {
 		return err

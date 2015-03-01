@@ -85,6 +85,15 @@ func (org *User) RemoveMember(uid int64) error {
 	return RemoveOrgUser(org.Id, uid)
 }
 
+func (org *User) removeOrgRepo(e Engine, repoID int64) error {
+	return removeOrgRepo(e, org.Id, repoID)
+}
+
+// RemoveOrgRepo removes all team-repository relations of organization.
+func (org *User) RemoveOrgRepo(repoID int64) error {
+	return org.removeOrgRepo(x, repoID)
+}
+
 // IsOrgEmailUsed returns true if the e-mail has been used in organization account.
 func IsOrgEmailUsed(email string) (bool, error) {
 	if len(email) == 0 {
@@ -364,7 +373,7 @@ func RemoveOrgUser(orgId, uid int64) error {
 	if _, err := sess.Id(ou.ID).Delete(ou); err != nil {
 		sess.Rollback()
 		return err
-	} else if _, err = sess.Exec("UPDATE `user` SET num_members = num_members - 1 WHERE id = ?", orgId); err != nil {
+	} else if _, err = sess.Exec("UPDATE `user` SET num_members=num_members-1 WHERE id = ?", orgId); err != nil {
 		sess.Rollback()
 		return err
 	}
@@ -496,7 +505,7 @@ func (t *Team) addRepository(e Engine, repo *Repository) (err error) {
 		return fmt.Errorf("update team: %v", err)
 	}
 
-	if err = repo.recalculateAccesses(e); err != nil {
+	if err = repo.recalculateTeamAccesses(e, 0); err != nil {
 		return fmt.Errorf("recalculateAccesses: %v", err)
 	}
 
@@ -532,7 +541,7 @@ func (t *Team) AddRepository(repo *Repository) (err error) {
 	return sess.Commit()
 }
 
-func (t *Team) removeRepository(e Engine, repo *Repository) (err error) {
+func (t *Team) removeRepository(e Engine, repo *Repository, recalculate bool) (err error) {
 	if err = removeTeamRepo(e, t.ID, repo.Id); err != nil {
 		return err
 	}
@@ -542,8 +551,11 @@ func (t *Team) removeRepository(e Engine, repo *Repository) (err error) {
 		return err
 	}
 
-	if err = repo.recalculateAccesses(e); err != nil {
-		return err
+	// Don't need to recalculate when delete a repository from organization.
+	if recalculate {
+		if err = repo.recalculateTeamAccesses(e, t.ID); err != nil {
+			return err
+		}
 	}
 
 	if err = t.getMembers(e); err != nil {
@@ -582,7 +594,7 @@ func (t *Team) RemoveRepository(repoID int64) error {
 		return err
 	}
 
-	if err = t.removeRepository(sess, repo); err != nil {
+	if err = t.removeRepository(sess, repo, true); err != nil {
 		return err
 	}
 
@@ -623,7 +635,7 @@ func NewTeam(t *Team) error {
 	}
 
 	// Update organization number of teams.
-	if _, err = sess.Exec("UPDATE `user` SET num_teams = num_teams + 1 WHERE id = ?", t.OrgID); err != nil {
+	if _, err = sess.Exec("UPDATE `user` SET num_teams=num_teams+1 WHERE id = ?", t.OrgID); err != nil {
 		sess.Rollback()
 		return err
 	}
@@ -683,18 +695,18 @@ func UpdateTeam(t *Team, authChanged bool) (err error) {
 
 	t.LowerName = strings.ToLower(t.Name)
 	if _, err = sess.Id(t.ID).AllCols().Update(t); err != nil {
-		return err
+		return fmt.Errorf("update: %v", err)
 	}
 
 	// Update access for team members if needed.
 	if authChanged {
 		if err = t.getRepositories(sess); err != nil {
-			return err
+			return fmt.Errorf("getRepositories:%v", err)
 		}
 
 		for _, repo := range t.Repos {
-			if err = repo.recalculateAccesses(sess); err != nil {
-				return err
+			if err = repo.recalculateTeamAccesses(sess, 0); err != nil {
+				return fmt.Errorf("recalculateTeamAccesses: %v", err)
 			}
 		}
 	}
@@ -706,8 +718,6 @@ func UpdateTeam(t *Team, authChanged bool) (err error) {
 // It's caller's responsibility to assign organization ID.
 func DeleteTeam(t *Team) error {
 	if err := t.GetRepositories(); err != nil {
-		return err
-	} else if err = t.GetMembers(); err != nil {
 		return err
 	}
 
@@ -725,7 +735,7 @@ func DeleteTeam(t *Team) error {
 
 	// Delete all accesses.
 	for _, repo := range t.Repos {
-		if err = repo.recalculateAccesses(sess); err != nil {
+		if err = repo.recalculateTeamAccesses(sess, t.ID); err != nil {
 			return err
 		}
 	}
@@ -850,7 +860,6 @@ func AddTeamMember(orgId, teamId, uid int64) error {
 		OrgID:  orgId,
 		TeamID: teamId,
 	}
-
 	if _, err = sess.Insert(tu); err != nil {
 		return err
 	} else if _, err = sess.Id(t.ID).Update(t); err != nil {
@@ -859,7 +868,7 @@ func AddTeamMember(orgId, teamId, uid int64) error {
 
 	// Give access to team repositories.
 	for _, repo := range t.Repos {
-		if err = repo.recalculateAccesses(sess); err != nil {
+		if err = repo.recalculateTeamAccesses(sess, 0); err != nil {
 			return err
 		}
 	}
@@ -913,7 +922,6 @@ func removeTeamMember(e Engine, orgId, teamId, uid int64) error {
 		OrgID:  orgId,
 		TeamID: teamId,
 	}
-
 	if _, err := e.Delete(tu); err != nil {
 		return err
 	} else if _, err = e.Id(t.ID).AllCols().Update(t); err != nil {
@@ -922,7 +930,7 @@ func removeTeamMember(e Engine, orgId, teamId, uid int64) error {
 
 	// Delete access to team repositories.
 	for _, repo := range t.Repos {
-		if err = repo.recalculateAccesses(e); err != nil {
+		if err = repo.recalculateTeamAccesses(e, 0); err != nil {
 			return err
 		}
 	}
@@ -1006,4 +1014,17 @@ func removeTeamRepo(e Engine, teamID, repoID int64) error {
 // RemoveTeamRepo deletes repository relation to team.
 func RemoveTeamRepo(teamID, repoID int64) error {
 	return removeTeamRepo(x, teamID, repoID)
+}
+
+func removeOrgRepo(e Engine, orgID, repoID int64) error {
+	_, err := e.Delete(&TeamRepo{
+		OrgID:  orgID,
+		RepoID: repoID,
+	})
+	return err
+}
+
+// RemoveOrgRepo removes all team-repository relations of given organization.
+func RemoveOrgRepo(orgID, repoID int64) error {
+	return removeOrgRepo(x, orgID, repoID)
 }
