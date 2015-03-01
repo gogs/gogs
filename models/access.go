@@ -100,48 +100,8 @@ func maxAccessMode(modes ...AccessMode) AccessMode {
 	return max
 }
 
-func (repo *Repository) recalculateTeamAccesses(e Engine, mode AccessMode) error {
-
-	return nil
-}
-
-func (repo *Repository) recalculateAccesses(e Engine) error {
-	accessMap := make(map[int64]AccessMode, 20)
-
-	// FIXME: should be able to have read-only access.
-	// Give all collaborators write access.
-	collaborators, err := repo.getCollaborators(e)
-	if err != nil {
-		return err
-	}
-	for _, c := range collaborators {
-		accessMap[c.Id] = ACCESS_MODE_WRITE
-	}
-
-	if err := repo.getOwner(e); err != nil {
-		return err
-	}
-	if repo.Owner.IsOrganization() {
-		if err = repo.Owner.getTeams(e); err != nil {
-			return err
-		}
-
-		for _, team := range repo.Owner.Teams {
-			if team.IsOwnerTeam() {
-				team.Authorize = ACCESS_MODE_OWNER
-			}
-
-			if err = team.getMembers(e); err != nil {
-				return fmt.Errorf("getMembers '%d': %v", team.ID, err)
-			}
-			for _, u := range team.Members {
-				accessMap[u.Id] = maxAccessMode(accessMap[u.Id], team.Authorize)
-			}
-		}
-	}
-
-	// FIXME: do corss-comparison so reduce deletions and additions to the minimum?
-
+// FIXME: do corss-comparison so reduce deletions and additions to the minimum?
+func (repo *Repository) refreshAccesses(e Engine, accessMap map[int64]AccessMode) (err error) {
 	minMode := ACCESS_MODE_READ
 	if !repo.IsPrivate {
 		minMode = ACCESS_MODE_WRITE
@@ -165,8 +125,66 @@ func (repo *Repository) recalculateAccesses(e Engine) error {
 	} else if _, err = e.Insert(newAccesses); err != nil {
 		return fmt.Errorf("insert new accesses: %v", err)
 	}
-
 	return nil
+}
+
+// FIXME: should be able to have read-only access.
+// Give all collaborators write access.
+func (repo *Repository) refreshCollaboratorAccesses(e Engine, accessMap map[int64]AccessMode) error {
+	collaborators, err := repo.getCollaborators(e)
+	if err != nil {
+		return fmt.Errorf("getCollaborators: %v", err)
+	}
+	for _, c := range collaborators {
+		accessMap[c.Id] = ACCESS_MODE_WRITE
+	}
+	return nil
+}
+
+// recalculateTeamAccesses recalculates new accesses for teams of an organization
+// except the team whose ID is given. It is used to assign a team ID when
+// remove repository from that team.
+func (repo *Repository) recalculateTeamAccesses(e Engine, ignTeamID int64) (err error) {
+	accessMap := make(map[int64]AccessMode, 20)
+
+	if err = repo.refreshCollaboratorAccesses(e, accessMap); err != nil {
+		return fmt.Errorf("refreshCollaboratorAccesses: %v", err)
+	}
+
+	if err = repo.getOwner(e); err != nil {
+		return err
+	}
+	if repo.Owner.IsOrganization() {
+		if err = repo.Owner.getTeams(e); err != nil {
+			return err
+		}
+
+		for _, t := range repo.Owner.Teams {
+			if t.ID == ignTeamID {
+				continue
+			}
+			if t.IsOwnerTeam() {
+				t.Authorize = ACCESS_MODE_OWNER
+			}
+
+			if err = t.getMembers(e); err != nil {
+				return fmt.Errorf("getMembers '%d': %v", t.ID, err)
+			}
+			for _, m := range t.Members {
+				accessMap[m.Id] = maxAccessMode(accessMap[m.Id], t.Authorize)
+			}
+		}
+	}
+
+	return repo.refreshAccesses(e, accessMap)
+}
+
+func (repo *Repository) recalculateAccesses(e Engine) error {
+	accessMap := make(map[int64]AccessMode, 20)
+	if err := repo.refreshCollaboratorAccesses(e, accessMap); err != nil {
+		return fmt.Errorf("refreshCollaboratorAccesses: %v", err)
+	}
+	return repo.refreshAccesses(e, accessMap)
 }
 
 // RecalculateAccesses recalculates all accesses for repository.
