@@ -289,7 +289,7 @@ func accessRefactor(x *xorm.Engine) (err error) {
 				return fmt.Errorf("select users from team: %v", err)
 			}
 			for _, user := range results {
-				userID := com.StrTo(user["user_id"]).MustInt64()
+				userID := com.StrTo(user["uid"]).MustInt64()
 				accessMap[UserRepo{userID, repoID}] = mode
 			}
 		}
