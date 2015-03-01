@@ -5,7 +5,7 @@ Gogs(Go Git Service) 是一个基于 Go 语言的自助 Git 服务。
 
 ![Demo](http://gogs.qiniudn.com/gogs_demo.gif)
 
-##### 当前版本：0.5.15 Beta
+##### 当前版本：0.5.16 Beta
 
 ## 开发目的
 
