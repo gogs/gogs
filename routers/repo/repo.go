@@ -349,7 +349,7 @@ func Action(ctx *middleware.Context) {
 	case "unstar":
 		err = models.StarRepo(ctx.User.Id, ctx.Repo.Repository.Id, false)
 	case "desc":
-		if !ctx.Repo.IsOwner {
+		if !ctx.Repo.IsOwner() {
 			ctx.Error(404)
 			return
 		}
