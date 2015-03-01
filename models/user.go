@@ -40,7 +40,7 @@ var (
 	ErrUserHasOrgs           = errors.New("User still have membership of organization")
 	ErrUserAlreadyExist      = errors.New("User already exist")
 	ErrUserNotExist          = errors.New("User does not exist")
-	ErrPublicKeyNotExist     = errors.New("Public key does not exist")
+	ErrUserNotKeyOwner       = errors.New("User does not the owner of public key")
 	ErrEmailAlreadyUsed      = errors.New("E-mail already used")
 	ErrEmailNotExist         = errors.New("E-mail does not exist")
 	ErrEmailNotActivated     = errors.New("E-mail address has not been activated")
@@ -518,7 +518,7 @@ func GetUserByKeyId(keyId int64) (*User, error) {
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, ErrPublicKeyNotExist
+		return nil, ErrUserNotKeyOwner
 	}
 	return user, nil
 }

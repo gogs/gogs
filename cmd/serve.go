@@ -22,7 +22,7 @@ import (
 )
 
 const (
-	ACCESS_DENIED_MESSAGE = "Repository does not exist or you do not have access"
+	_ACCESS_DENIED_MESSAGE = "Repository does not exist or you do not have access"
 )
 
 var CmdServ = cli.Command{
@@ -55,7 +55,6 @@ func setup(logPath string) {
 }
 
 func parseCmd(cmd string) (string, string) {
-
 	ss := strings.SplitN(cmd, " ", 2)
 	if len(ss) != 2 {
 		return "", ""
@@ -66,8 +65,10 @@ func parseCmd(cmd string) (string, string) {
 var (
 	COMMANDS = map[string]models.AccessMode{
 		"git-upload-pack":    models.ACCESS_MODE_READ,
+		"git upload-pack":    models.ACCESS_MODE_READ,
 		"git-upload-archive": models.ACCESS_MODE_READ,
 		"git-receive-pack":   models.ACCESS_MODE_WRITE,
+		"git receive-pack":   models.ACCESS_MODE_WRITE,
 	}
 )
 
@@ -133,7 +134,7 @@ func runServ(c *cli.Context) {
 			if user.Id == repoUser.Id || repoUser.IsOwnedBy(user.Id) {
 				fail("Repository does not exist", "Repository does not exist: %s/%s", repoUser.Name, repoName)
 			} else {
-				fail(ACCESS_DENIED_MESSAGE, "Repository does not exist: %s/%s", repoUser.Name, repoName)
+				fail(_ACCESS_DENIED_MESSAGE, "Repository does not exist: %s/%s", repoUser.Name, repoName)
 			}
 		}
 		fail("Internal error", "Fail to get repository: %v", err)
@@ -146,9 +147,9 @@ func runServ(c *cli.Context) {
 
 	mode, err := models.AccessLevel(user, repo)
 	if err != nil {
-		fail("Internal error", "HasAccess fail: %v", err)
+		fail("Internal error", "Fail to check access: %v", err)
 	} else if mode < requestedMode {
-		clientMessage := ACCESS_DENIED_MESSAGE
+		clientMessage := _ACCESS_DENIED_MESSAGE
 		if mode >= models.ACCESS_MODE_READ {
 			clientMessage = "You do not have sufficient authorization for this action"
 		}
