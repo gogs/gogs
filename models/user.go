@@ -231,7 +231,7 @@ func (u *User) GetOrganizations() error {
 
 	u.Orgs = make([]*User, len(ous))
 	for i, ou := range ous {
-		u.Orgs[i], err = GetUserById(ou.OrgId)
+		u.Orgs[i], err = GetUserById(ou.OrgID)
 		if err != nil {
 			return err
 		}
@@ -398,63 +398,7 @@ func ChangeUserName(u *User, newUserName string) (err error) {
 		return ErrUserNameIllegal
 	}
 
-	newUserName = strings.ToLower(newUserName)
-	if u.LowerName == newUserName {
-		// User only change letter cases.
-		return nil
-	}
-
-	// Update accesses of user.
-	accesses := make([]Access, 0, 10)
-	if err = x.Find(&accesses, &Access{UserName: u.LowerName}); err != nil {
-		return err
-	}
-
-	sess := x.NewSession()
-	defer sess.Close()
-	if err = sess.Begin(); err != nil {
-		return err
-	}
-
-	for i := range accesses {
-		accesses[i].UserName = newUserName
-		if strings.HasPrefix(accesses[i].RepoName, u.LowerName+"/") {
-			accesses[i].RepoName = strings.Replace(accesses[i].RepoName, u.LowerName, newUserName, 1)
-		}
-		if err = UpdateAccessWithSession(sess, &accesses[i]); err != nil {
-			return err
-		}
-	}
-
-	repos, err := GetRepositories(u.Id, true)
-	if err != nil {
-		return err
-	}
-	for i := range repos {
-		accesses = make([]Access, 0, 10)
-		// Update accesses of user repository.
-		if err = x.Find(&accesses, &Access{RepoName: u.LowerName + "/" + repos[i].LowerName}); err != nil {
-			return err
-		}
-
-		for j := range accesses {
-			// if the access is not the user's access (already updated above)
-			if accesses[j].UserName != u.LowerName {
-				accesses[j].RepoName = newUserName + "/" + repos[i].LowerName
-				if err = UpdateAccessWithSession(sess, &accesses[j]); err != nil {
-					return err
-				}
-			}
-		}
-	}
-
-	// Change user directory name.
-	if err = os.Rename(UserPath(u.LowerName), UserPath(newUserName)); err != nil {
-		sess.Rollback()
-		return err
-	}
-
-	return sess.Commit()
+	return os.Rename(UserPath(u.LowerName), UserPath(newUserName))
 }
 
 // UpdateUser updates user's information.
@@ -527,7 +471,7 @@ func DeleteUser(u *User) error {
 		return err
 	}
 	// Delete all accesses.
-	if _, err = x.Delete(&Access{UserName: u.LowerName}); err != nil {
+	if _, err = x.Delete(&Access{UserID: u.Id}); err != nil {
 		return err
 	}
 	// Delete all alternative email addresses
@@ -570,8 +514,7 @@ func UserPath(userName string) string {
 
 func GetUserByKeyId(keyId int64) (*User, error) {
 	user := new(User)
-	rawSql := "SELECT a.* FROM `user` AS a, public_key AS b WHERE a.id = b.owner_id AND b.id=?"
-	has, err := x.Sql(rawSql, keyId).Get(user)
+	has, err := x.Sql("SELECT a.* FROM `user` AS a, public_key AS b WHERE a.id = b.owner_id AND b.id=?", keyId).Get(user)
 	if err != nil {
 		return nil, err
 	} else if !has {
@@ -580,16 +523,20 @@ func GetUserByKeyId(keyId int64) (*User, error) {
 	return user, nil
 }
 
-// GetUserById returns the user object by given ID if exists.
-func GetUserById(id int64) (*User, error) {
+func getUserById(e Engine, id int64) (*User, error) {
 	u := new(User)
-	has, err := x.Id(id).Get(u)
+	has, err := e.Id(id).Get(u)
 	if err != nil {
 		return nil, err
 	} else if !has {
 		return nil, ErrUserNotExist
 	}
 	return u, nil
+}
+
+// GetUserById returns the user object by given ID if exists.
+func GetUserById(id int64) (*User, error) {
+	return getUserById(x, id)
 }
 
 // GetUserByName returns user by given name.
@@ -913,7 +860,7 @@ func UpdateMentions(userNames []string, issueId int64) error {
 		}
 
 		for _, orgUser := range orgUsers {
-			tempIds = append(tempIds, orgUser.Id)
+			tempIds = append(tempIds, orgUser.ID)
 		}
 
 		ids = append(ids, tempIds...)

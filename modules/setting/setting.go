@@ -67,6 +67,11 @@ var (
 	CookieRememberName   string
 	ReverseProxyAuthUser string
 
+	// Database settings.
+	UseSQLite3    bool
+	UseMySQL      bool
+	UsePostgreSQL bool
+
 	// Webhook settings.
 	Webhook struct {
 		TaskInterval   int
@@ -267,10 +272,6 @@ func NewConfigContext() {
 		"StampNano":   time.StampNano,
 	}[Cfg.Section("time").Key("FORMAT").MustString("RFC1123")]
 
-	if err = os.MkdirAll(AttachmentPath, os.ModePerm); err != nil {
-		log.Fatal(4, "Could not create directory %s: %s", AttachmentPath, err)
-	}
-
 	RunUser = Cfg.Section("").Key("RUN_USER").String()
 	curUser := os.Getenv("USER")
 	if len(curUser) == 0 {
@@ -293,9 +294,6 @@ func NewConfigContext() {
 	} else {
 		RepoRootPath = filepath.Clean(RepoRootPath)
 	}
-	if err = os.MkdirAll(RepoRootPath, os.ModePerm); err != nil {
-		log.Fatal(4, "Fail to create repository root path(%s): %v", RepoRootPath, err)
-	}
 	ScriptType = sec.Key("SCRIPT_TYPE").MustString("bash")
 
 	sec = Cfg.Section("picture")
@@ -304,7 +302,6 @@ func NewConfigContext() {
 	if !filepath.IsAbs(AvatarUploadPath) {
 		AvatarUploadPath = path.Join(workDir, AvatarUploadPath)
 	}
-	os.MkdirAll(AvatarUploadPath, os.ModePerm)
 	switch sec.Key("GRAVATAR_SOURCE").MustString("gravatar") {
 	case "duoshuo":
 		GravatarSource = "http://gravatar.duoshuo.com/avatar/"
@@ -369,9 +366,11 @@ func newLogService() {
 			log.Fatal(4, "Unknown log mode: %s", mode)
 		}
 
+		validLevels := []string{"Trace", "Debug", "Info", "Warn", "Error", "Critical"}
 		// Log level.
-		levelName := Cfg.Section("log."+mode).Key("LEVEL").In("Trace",
-			[]string{"Trace", "Debug", "Info", "Warn", "Error", "Critical"})
+		levelName := Cfg.Section("log."+mode).Key("LEVEL").In(
+			Cfg.Section("log").Key("LEVEL").In("Trace", validLevels),
+			validLevels)
 		level, ok := logLevels[levelName]
 		if !ok {
 			log.Fatal(4, "Unknown log level: %s", levelName)
