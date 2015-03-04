@@ -1,5 +1,5 @@
 [Unit]
-Description=Gogs (Go Git Service) server
+Description=Gogs (Go Git Service)
 After=syslog.target
 After=network.target
 #After=mysqld.service
@@ -11,8 +11,10 @@ After=network.target
 Type=simple
 User=git
 Group=git
-ExecStart=/home/git/gogs/gogs/start.sh
 WorkingDirectory=/home/git/gogs
+ExecStart=/home/git/gogs/gogs web
+Restart=always
+Environment="USER=git","HOME=/home/git"
 
 [Install]
 WantedBy=multi-user.target
