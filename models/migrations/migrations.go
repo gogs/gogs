@@ -54,6 +54,7 @@ var migrations = []Migration{
 	NewMigration("make authorize 4 if team is owners", ownerTeamUpdate),       // V1 -> V2
 	NewMigration("refactor access table to use id's", accessRefactor),         // V2 -> V3
 	NewMigration("generate team-repo from team", teamToTeamRepo),              // V3 -> V4
+	NewMigration("change comment table", prepareToCommitComments),             // V4 -> V5
 }
 
 // Migrate database to current version
@@ -368,4 +369,26 @@ func teamToTeamRepo(x *xorm.Engine) error {
 	}
 
 	return sess.Commit()
+}
+
+func prepareToCommitComments(x *xorm.Engine) error {
+
+	sql := `ALTER TABLE comment MODIFY commit_id VARCHAR(50) NULL DEFAULT NULL`
+	_, err := x.Exec(sql)
+	if err != nil {
+		return err
+	}
+
+	sql = `ALTER TABLE comment MODIFY line VARCHAR(50) NULL DEFAULT NULL;`
+	_, err = x.Exec(sql)
+	if err != nil {
+		return err
+	}
+
+	sql = `UPDATE comment SET commit_id = '', line = '' WHERE commit_id = '0' AND line = '0'`
+	_, err = x.Exec(sql)
+	if err != nil {
+		return err
+	}
+	return nil
 }
