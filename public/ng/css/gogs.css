@@ -278,6 +278,9 @@ img.avatar-100 {
   padding-left: 0;
   list-style: none;
 }
+.text-danger {
+  color: #a94442;
+}
 .markdown {
   background-color: white;
   font-size: 16px;
@@ -1459,6 +1462,8 @@ The register and sign-in page style
 .code-view .lines-code > pre {
   border: none;
   border-left: 1px solid #ddd;
+  border-radius: 0;
+  padding-left: 15px;
 }
 .code-view .lines-code > pre > ol.linenums > li {
   padding: 0 10px;
@@ -1466,6 +1471,37 @@ The register and sign-in page style
 }
 .code-view .lines-code > pre > ol.linenums > li.active {
   background: #ffffdd;
+}
+.code-view .lines-code > b {
+  position: relative;
+  float: left;
+  width: 16px;
+  height: 16px;
+  margin: 2px -8px 0px -8px;
+  line-height: 16px;
+  color: #fff;
+  text-align: center;
+  cursor: pointer;
+  background-color: #428bca;
+  border-radius: 2px;
+  opacity: 0;
+  font-size: 16px;
+}
+.code-view .lines-code > b.ishovered {
+  opacity: 1;
+}
+.code-view .lines-code > b:hover {
+  width: 18px;
+  height: 18px;
+  line-height: 18px;
+  font-size: 20px;
+  margin: 1px -10px 0px -9px;
+}
+.code-view .lines-code button.answer {
+  margin: 0 0 10px 70px;
+}
+.code-view .commit-comment {
+  margin: 10px;
 }
 .repo-setting-zone {
   padding: 30px;
@@ -1657,6 +1693,18 @@ The register and sign-in page style
 .diff-file-box .code-diff tbody tr:hover pre {
   background-color: #FFF8D2 !important;
   border-color: #F0DB88 !important;
+}
+.diff-file-box .code-diff tbody tr.add-comment td {
+  padding: 10px;
+}
+.diff-file-box .code-diff tbody tr.add-comment:hover td,
+.diff-file-box .code-diff tbody tr.comment:hover td,
+.diff-file-box .code-diff tbody tr.add-comment:hover pre,
+.diff-file-box .code-diff tbody tr.comment:hover pre {
+  background-color: #FFFFFF !important;
+}
+.diff-file-box .code-diff tbody tr.comment .markdown p {
+  margin: 0;
 }
 .compare-head-box {
   margin-top: 10px;
@@ -2039,6 +2087,7 @@ The register and sign-in page style
 }
 #pr-commit,
 #pr-file-diff,
+#commit-add-comment-preview,
 #issue-add-comment-preview {
   display: none;
 }
@@ -2046,35 +2095,44 @@ The register and sign-in page style
   padding-right: 30px;
   box-sizing: border-box;
 }
+.commit-comment,
 .issue-comment,
 .issue-commit,
 .issue-line,
 .issue-merge,
+.commit-add-comment,
 .issue-add-comment {
   margin-bottom: 24px;
 }
+.commit-comment .author-avatar img,
 .issue-comment .author-avatar img {
   margin-right: 12px;
 }
+.commit-comment .panel,
 .issue-comment .panel {
   margin-left: 60px;
   margin-top: -40px;
 }
+.commit-comment .panel-header,
 .issue-comment .panel-header {
   font-size: 13px;
 }
+.commit-comment .author-name,
 .issue-comment .author-name {
   font-weight: bold;
 }
+.commit-comment .date,
 .issue-comment .date {
   margin-left: 4px;
   font-style: italic;
   color: #888;
 }
+.commit-comment .action > *,
 .issue-comment .action > * {
   margin-left: 4px;
   font-size: 12px;
 }
+.commit-comment .action i,
 .issue-comment .action i {
   font-size: 13px;
 }
@@ -2128,15 +2186,18 @@ The register and sign-in page style
   height: 4px;
   background-color: #E6E6E6;
 }
-.issue-add-comment .panel {
+.issue-add-comment .panel,
+.commit-add-comment .panel {
   margin-left: 60px;
   margin-top: -40px;
 }
-.issue-add-comment .panel-header {
+.issue-add-comment .panel-header,
+.commit-add-comment .panel-header {
   font-size: 13px;
   padding-bottom: 0;
 }
-.issue-add-comment .add-nav > li > a {
+.issue-add-comment .add-nav > li > a,
+.commit-add-comment .add-nav > li > a {
   padding: 4px 12px;
   color: #444;
   border: 1px solid #CCC;
@@ -2145,13 +2206,16 @@ The register and sign-in page style
   border-top-left-radius: .3em;
   border-top-right-radius: .3em;
 }
-.issue-add-comment .add-nav > li > a:hover {
+.issue-add-comment .add-nav > li > a:hover,
+.commit-add-comment .add-nav > li > a:hover {
   background-color: #FFF;
 }
-.issue-add-comment .add-nav > li.js-tab-nav-show > a {
+.issue-add-comment .add-nav > li.js-tab-nav-show > a,
+.commit-add-comment .add-nav > li.js-tab-nav-show > a {
   background-color: #FFF;
 }
-textarea#issue-add-content {
+textarea#issue-add-content,
+textarea#commit-add-content {
   width: 100%;
   box-sizing: border-box;
   height: 120px;

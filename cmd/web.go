@@ -443,7 +443,10 @@ func runWeb(ctx *cli.Context) {
 			m.Get("/src/*", repo.Home)
 			m.Get("/raw/*", repo.SingleDownload)
 			m.Get("/commits/*", repo.RefCommits)
+			m.Get("/commit/comment/*", repo.GetCommentForm)
 			m.Get("/commit/*", repo.Diff)
+			m.Post("/commit/comment/delete/", repo.DeleteCommitComment)
+			m.Post("/commit/comment/:action/:commitId", repo.CreateCommitComment)
 		}, middleware.RepoRef())
 
 		m.Get("/compare/:before([a-z0-9]+)...:after([a-z0-9]+)", repo.CompareDiff)

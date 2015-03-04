@@ -1,0 +1,43 @@
+<!--<td colspan="3">-->
+{{if .SignedUser}}
+    <div id="commit-conversation" class="js-tab-show clear">
+        <div id="commit-conversation-list" class="left grid-5-6">
+            <div class="commit-add-comment clear">
+                <img class="avatar-40 radius" src="{{.SignedUser.AvatarLink}}" alt=""/>
+                <div class="panel panel-radius">
+                    <div class="panel-header">
+                        <div class="md-help pull-right"><!-- todo help link -->
+                            {{.i18n.Tr "repo.release.content_with_md" "https://help.github.com/articles/markdown-basics" | Str2html}}
+                        </div>
+                        <ul class="menu menu-line add-nav">
+                            <li class="js-tab-nav js-tab-nav-show" data-tab-target="#commit-add-comment-edit"><a href="#">{{$.i18n.Tr "repo.release.write"}}</a></li>
+                            <li class="js-tab-nav" data-tab-target="#commit-add-comment-preview"><a href="#" id="pull-commit-preview">{{$.i18n.Tr "repo.release.preview"}}</a></li>
+                        </ul>
+                    </div>
+                    <form id="commit-add-comment-form" action="{{AppSubUrl}}/{{.Repo.Owner.Name}}/{{.Repo.Repository.Name}}/commit/comment/{{if .CommentId}}edit{{else}}new{{end}}/{{.Repo.CommitId}}" method="post">
+                        <div class="panel-content content">
+                            <div id="submit-error" class="text-danger"></div>
+                                {{.CsrfTokenHtml}}
+                                {{if .CommentId}}
+                                <input type="hidden" name="id" value="{{.CommentId}}" >
+                                {{else}}
+                                <input type="hidden" name="line" value="{{.Line}}" >
+                                {{end}}
+                                <div id="commit-add-comment-edit">
+                                    <textarea class="ipt ipt-radius js-preview-input" name="content" id="commit-add-content"></textarea>
+                                </div>
+                                <div id="commit-add-comment-preview" class="js-preview-container markdown">
+                                    preview
+                                </div>
+                                <p class="submit text-right">
+                                    <button class="btn btn-gray btn-radius text-bold" id="cancel-{{if .CommentId}}edit-{{end}}commit-conversation" name="submit" value="close">{{$.i18n.Tr "cancel"}}</button>&nbsp;&nbsp;
+                                    <button class="btn btn-green btn-radius text-bold" name="submit" value="comment">{{$.i18n.Tr "repo.commits.comment.add"}}</button>
+                                </p>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+{{else}}<div class="alert alert-warning"><a class="btn btn-success btn-lg" href="{{AppSubUrl}}/user/sign_up">Sign up for free</a> to join this conversation. Already have an account? <a href="{{AppSubUrl}}/user/login">Sign in to comment</a></div>{{end}}
+<!--</td>-->
