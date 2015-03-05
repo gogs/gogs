@@ -154,8 +154,33 @@ func SendResetPasswdMail(r macaron.Render, u *models.User) {
 	SendAsync(&msg)
 }
 
-// SendIssueNotifyMail sends mail notification of all watchers of repository.
+// SendIssueNotifyMail sends mail notification to all watchers of repository.
 func SendIssueNotifyMail(u, owner *models.User, repo *models.Repository, issue *models.Issue) ([]string, error) {
+
+	subject := fmt.Sprintf("[%s] %s(#%d)", repo.Name, issue.Name, issue.Index)
+	content := fmt.Sprintf("%s<br>-<br> <a href=\"%s%s/%s/issues/%d\">View it on Gogs</a>.",
+		base.RenderSpecialLink([]byte(issue.Content), owner.Name+"/"+repo.Name),
+		setting.AppUrl, owner.Name, repo.Name, issue.Index)
+
+	msgInfo := fmt.Sprintf("Subject: %s, send issue notify emails", subject)
+
+	return SendNotifyMail(u, repo, subject, content, msgInfo)
+}
+
+// SendCommentNotifyMail sends mail notification to all watchers of repository.
+func SendCommentNotifyMail(u, owner *models.User, repo *models.Repository, comment *models.Comment) ([]string, error) {
+
+	subject := fmt.Sprintf("[%s] New comment to commit %s", repo.Name, comment.CommitId)
+	content := fmt.Sprintf("%s<br>-<br> <a href=\"%s%s/%s/commit/%s\">View it on Gogs</a>.",
+		base.RenderSpecialLink([]byte(comment.Content), owner.Name+"/"+repo.Name),
+		setting.AppUrl, owner.Name, repo.Name, comment.CommitId)
+
+	msgInfo := fmt.Sprintf("Subject: %s, send issue notify emails", subject)
+
+	return SendNotifyMail(u, repo, subject, content, msgInfo)
+}
+
+func SendNotifyMail(u *models.User, repo *models.Repository, subject, content, msgInfo string) ([]string, error) {
 	ws, err := models.GetWatchers(repo.Id)
 	if err != nil {
 		return nil, errors.New("mail.NotifyWatchers(GetWatchers): " + err.Error())
@@ -178,12 +203,8 @@ func SendIssueNotifyMail(u, owner *models.User, repo *models.Repository, issue *
 		return tos, nil
 	}
 
-	subject := fmt.Sprintf("[%s] %s(#%d)", repo.Name, issue.Name, issue.Index)
-	content := fmt.Sprintf("%s<br>-<br> <a href=\"%s%s/%s/issues/%d\">View it on Gogs</a>.",
-		base.RenderSpecialLink([]byte(issue.Content), owner.Name+"/"+repo.Name),
-		setting.AppUrl, owner.Name, repo.Name, issue.Index)
 	msg := NewMailMessageFrom(tos, u.Email, subject, content)
-	msg.Info = fmt.Sprintf("Subject: %s, send issue notify emails", subject)
+	msg.Info = msgInfo
 	SendAsync(&msg)
 	return tos, nil
 }
@@ -201,6 +222,7 @@ func SendIssueMentionMail(r macaron.Render, u, owner *models.User,
 	data := GetMailTmplData(nil)
 	data["IssueLink"] = fmt.Sprintf("%s/%s/issues/%d", owner.Name, repo.Name, issue.Index)
 	data["Subject"] = subject
+	data["ActUserName"] = u.Name
 
 	body, err := r.HTMLString(string(NOTIFY_MENTION), data)
 	if err != nil {
@@ -209,6 +231,31 @@ func SendIssueMentionMail(r macaron.Render, u, owner *models.User,
 
 	msg := NewMailMessageFrom(tos, u.Email, subject, body)
 	msg.Info = fmt.Sprintf("Subject: %s, send issue mention emails", subject)
+	SendAsync(&msg)
+	return nil
+}
+
+func SendCommentMentionMail(r macaron.Render, u, owner *models.User,
+	repo *models.Repository, comment *models.Comment, tos []string) error {
+
+	if len(tos) == 0 {
+		return nil
+	}
+
+	subject := fmt.Sprintf("[%s] Commit %s", repo.Name, comment.CommitId)
+
+	data := GetMailTmplData(nil)
+	data["IssueLink"] = fmt.Sprintf("%s/%s/commit/%s", owner.Name, repo.Name, comment.CommitId)
+	data["Subject"] = subject
+	data["ActUserName"] = u.Name
+
+	body, err := r.HTMLString(string(NOTIFY_MENTION), data)
+	if err != nil {
+		return fmt.Errorf("mail.SendCommentMentionMail(fail to render): %v", err)
+	}
+
+	msg := NewMailMessageFrom(tos, u.Email, subject, body)
+	msg.Info = fmt.Sprintf("Subject: %s, send comment mention emails", subject)
 	SendAsync(&msg)
 	return nil
 }
