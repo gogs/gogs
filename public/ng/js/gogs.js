@@ -453,7 +453,23 @@ function initRepoCreate() {
 
             $(this).parent().find('.checked').removeClass('checked');
             $(this).addClass('checked');
-            console.log("set repo owner to uid :", uid, $(this).text().trim());
+            console.log("set repo owner to uid:", uid, $(this).text().trim());
+        }
+    });
+
+    // Branch switch menu click.
+    $('.repo-pull-branch-list').on('click', 'li', function () {
+        if (!$(this).hasClass('checked')) {
+            var branch_name = $(this).data('branch-name');
+            var target = $(this).data('target');
+            var target_show = $(this).data('target-show');
+
+            $(target).val(branch_name);
+            $(target_show).text($(this).text().trim());
+
+            $(this).parent().find('.checked').removeClass('checked');
+            $(this).addClass('checked');
+            console.log("set branch: ", branch_name, $(this).text().trim());
         }
     });
 

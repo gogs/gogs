@@ -13,15 +13,15 @@
           <span><a target="_blank" href="{{AppSubUrl}}/{{.RequestFrom}}">{{.RequestFrom}}</a></span>
         </div>
         <div class="field">
-            <label for="from_branch" class="req">{{.i18n.Tr "repo.pulls.from_branch"}}</label>
-            <input id="from_branch_name" type="hidden" name="branch_name" value="{{.BranchName}}" />
+            <label for="from-branch" class="req">{{.i18n.Tr "repo.pulls.from_branch"}}</label>
+            <input id="from-branch" type="hidden" name="form_branch" value="{{.BranchName}}" />
             <div class="inline-block drop">
                 <a class="drop-bottom">
-                  <strong id="branch-name">{{.BranchName}}</strong>
+                  <strong id="from-branch-name">{{.BranchName}}</strong>
                 </a>
-                <ul class="drop-down menu menu-vertical menu-radius switching-list" id="repo-create-owner-list">
+                <ul class="drop-down menu menu-vertical menu-radius switching-list repo-pull-branch-list" id="repo-pull-branch-list">
                   {{range .Branches}}
-                  <li {{if eq . $.BranchName}}class="checked"{{end}} data-branch-name="{{.}}">
+                  <li {{if eq . $.BranchName}}class="checked"{{end}} data-branch-name="{{.}}" data-target="#from-branch" data-target-show="#from-branch-name">
                       <a>
                           <i class="octicon octicon-check"></i>
                           <strong>{{.}}</strong>
@@ -34,6 +34,34 @@
         <div class="field">
           <label>{{.i18n.Tr "repo.pulls.request_to"}}</label>
           <span><a target="_blank" href="{{AppSubUrl}}/{{.RequestTo}}">{{.RequestTo}}</a></span>
+        </div>
+        <div class="field">
+            <label for="to-branch" class="req">{{.i18n.Tr "repo.pulls.to_branch"}}</label>
+            <input id="to-branch" type="hidden" name="to_branch" value="{{.DefaultBranch}}" />
+            <div class="inline-block drop">
+                <a class="drop-bottom">
+                  <strong id="to-branch-name">{{.DefaultBranch}}</strong>
+                </a>
+                <ul class="drop-down menu menu-vertical menu-radius switching-list repo-pull-branch-list" id="repo-pull-branch-list">
+                  {{range .ForkRepo.Branches}}
+                  <li {{if eq . $.DefaultBranch}}class="checked"{{end}} data-branch-name="{{.}}" data-target="#to-branch" data-target-show="#to-branch-name">
+                      <a>
+                          <i class="octicon octicon-check"></i>
+                          <strong>{{.}}</strong>
+                      </a>
+                  </li>
+                  {{end}}
+                </ul>
+            </div>
+        </div>
+        <div class="field clear">
+          <label class="left req" for="desc">{{.i18n.Tr "repo.repo_desc"}}</label>
+          <textarea class="ipt ipt-large ipt-radius {{if .Err_Description}}ipt-error{{end}}" id="desc" name="desc" required>{{.desc}}</textarea>
+        </div>
+        <div class="field">
+            <label></label>
+            <button class="btn btn-large btn-blue btn-radius">{{.i18n.Tr "repo.pulls.create"}}</button>
+            <a class="btn btn-small btn-gray btn-radius" id="repo-create-cancel" href="{{AppSubUrl}}{{.RepoLink}}"><strong>{{.i18n.Tr "cancel"}}</strong></a>
         </div>
       </div>
   </form>

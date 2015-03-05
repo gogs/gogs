@@ -162,6 +162,8 @@ type Repository struct {
 	ForkId   int64
 	ForkRepo *Repository `xorm:"-"`
 
+	Branches []string `xorm:"-"`
+
 	Created time.Time `xorm:"CREATED"`
 	Updated time.Time `xorm:"UPDATED"`
 }
@@ -183,11 +185,29 @@ func (repo *Repository) GetMirror() (err error) {
 }
 
 func (repo *Repository) GetForkRepo() (err error) {
-	if !repo.IsFork {
+	if !repo.IsFork || repo.ForkRepo != nil {
 		return nil
 	}
 
 	repo.ForkRepo, err = GetRepositoryById(repo.ForkId)
+	return err
+}
+
+func (repo *Repository) GetBranches() error {
+	if repo.Branches != nil {
+		return nil
+	}
+
+	repoPath, err := repo.RepoPath()
+	if err != nil {
+		return err
+	}
+	gitRepo, err := git.OpenRepository(repoPath)
+	if err != nil {
+		return err
+	}
+
+	repo.Branches, err = gitRepo.GetBranches()
 	return err
 }
 

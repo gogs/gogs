@@ -33,10 +33,17 @@ func NewPullRequest(ctx *middleware.Context) {
 	}
 
 	forkRepo := ctx.Repo.Repository.ForkRepo
-	if err := forkRepo.GetOwner(); err != nil {
-		ctx.Handle(500, "GetOwner", err)
+	if err := forkRepo.GetBranches(); err != nil {
+		ctx.Handle(500, "GetBranches", err)
 		return
 	}
+	ctx.Data["ForkRepo"] = forkRepo
 	ctx.Data["RequestTo"] = forkRepo.Owner.Name + "/" + forkRepo.Name
+
+	if len(forkRepo.DefaultBranch) == 0 {
+		forkRepo.DefaultBranch = forkRepo.Branches[0]
+	}
+	ctx.Data["DefaultBranch"] = forkRepo.DefaultBranch
+
 	ctx.HTML(200, NEW_PULL)
 }

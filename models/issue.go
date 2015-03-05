@@ -114,19 +114,16 @@ func (i *Issue) AfterDelete() {
 // CreateIssue creates new issue for repository.
 func NewIssue(issue *Issue) (err error) {
 	sess := x.NewSession()
-	defer sess.Close()
+	defer sessionRelease(sess)
 	if err = sess.Begin(); err != nil {
 		return err
 	}
 
 	if _, err = sess.Insert(issue); err != nil {
-		sess.Rollback()
 		return err
 	}
 
-	rawSql := "UPDATE `repository` SET num_issues = num_issues + 1 WHERE id = ?"
-	if _, err = sess.Exec(rawSql, issue.RepoId); err != nil {
-		sess.Rollback()
+	if _, err = sess.Exec("UPDATE `repository` SET num_issues=num_issues+1 WHERE id = ?", issue.RepoId); err != nil {
 		return err
 	}
 
