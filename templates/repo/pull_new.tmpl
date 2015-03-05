@@ -54,6 +54,10 @@
                 </ul>
             </div>
         </div>
+        <div class="field">
+            <label class="req" for="title">{{.i18n.Tr "repo.pulls.title"}}</label>
+            <input class="ipt ipt-large ipt-radius {{if .Err_Title}}ipt-error{{end}}" id="title" name="title" value="{{.title}}" required />
+        </div>
         <div class="field clear">
           <label class="left req" for="desc">{{.i18n.Tr "repo.repo_desc"}}</label>
           <textarea class="ipt ipt-large ipt-radius {{if .Err_Description}}ipt-error{{end}}" id="desc" name="desc" required>{{.desc}}</textarea>
