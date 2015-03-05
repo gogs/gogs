@@ -393,6 +393,10 @@ func runWeb(ctx *cli.Context) {
 				m.Post("/:name", repo.GitHooksEditPost)
 			}, middleware.GitHookService())
 		})
+
+		m.Group("/pulls", func() {
+			m.Combo("/new").Get(repo.NewPullRequest)
+		})
 	}, reqSignIn, middleware.RepoAssignment(true), reqAdmin)
 
 	m.Group("/:username/:reponame", func() {

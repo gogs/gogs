@@ -1,0 +1,41 @@
+{{template "ng/base/head" .}}
+{{template "ng/base/header" .}}
+<div id="repo-wrapper">
+  <form id="repo-create-form" class="form form-align panel panel-radius" action="{{AppSubUrl}}{{.RepoLink}}/pull/new" method="post">
+    {{.CsrfTokenHtml}}
+      <div class="panel-header">
+        <h2>{{.i18n.Tr "repo.pulls.new"}}</h2>
+      </div>
+      <div class="panel-content">
+        {{template "ng/base/alert" .}}
+        <div class="field">
+          <label>{{.i18n.Tr "repo.pulls.request_from"}}</label>
+          <span><a target="_blank" href="{{AppSubUrl}}/{{.RequestFrom}}">{{.RequestFrom}}</a></span>
+        </div>
+        <div class="field">
+            <label for="from_branch" class="req">{{.i18n.Tr "repo.pulls.from_branch"}}</label>
+            <input id="from_branch_name" type="hidden" name="branch_name" value="{{.BranchName}}" />
+            <div class="inline-block drop">
+                <a class="drop-bottom">
+                  <strong id="branch-name">{{.BranchName}}</strong>
+                </a>
+                <ul class="drop-down menu menu-vertical menu-radius switching-list" id="repo-create-owner-list">
+                  {{range .Branches}}
+                  <li {{if eq . $.BranchName}}class="checked"{{end}} data-branch-name="{{.}}">
+                      <a>
+                          <i class="octicon octicon-check"></i>
+                          <strong>{{.}}</strong>
+                      </a>
+                  </li>
+                  {{end}}
+                </ul>
+            </div>
+        </div>
+        <div class="field">
+          <label>{{.i18n.Tr "repo.pulls.request_to"}}</label>
+          <span><a target="_blank" href="{{AppSubUrl}}/{{.RequestTo}}">{{.RequestTo}}</a></span>
+        </div>
+      </div>
+  </form>
+</div>
+{{template "ng/base/footer" .}}
