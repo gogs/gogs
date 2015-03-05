@@ -231,7 +231,7 @@ func (u *User) GetOrganizations() error {
 
 	u.Orgs = make([]*User, len(ous))
 	for i, ou := range ous {
-		u.Orgs[i], err = GetUserById(ou.OrgId)
+		u.Orgs[i], err = GetUserById(ou.OrgID)
 		if err != nil {
 			return err
 		}
@@ -249,11 +249,13 @@ func (u *User) GetFullNameFallback() string {
 
 // IsUserExist checks if given user name exist,
 // the user name should be noncased unique.
-func IsUserExist(name string) (bool, error) {
+// If uid is presented, then check will rule out that one,
+// it is used when update a user name in settings page.
+func IsUserExist(uid int64, name string) (bool, error) {
 	if len(name) == 0 {
 		return false, nil
 	}
-	return x.Get(&User{LowerName: strings.ToLower(name)})
+	return x.Where("id!=?", uid).Get(&User{LowerName: strings.ToLower(name)})
 }
 
 // IsEmailUsed returns true if the e-mail has been used.
@@ -278,7 +280,7 @@ func CreateUser(u *User) error {
 		return ErrUserNameIllegal
 	}
 
-	isExist, err := IsUserExist(u.Name)
+	isExist, err := IsUserExist(0, u.Name)
 	if err != nil {
 		return err
 	} else if isExist {
@@ -396,64 +398,12 @@ func ChangeUserName(u *User, newUserName string) (err error) {
 		return ErrUserNameIllegal
 	}
 
-	newUserName = strings.ToLower(newUserName)
-
-	// Update accesses of user.
-	accesses := make([]Access, 0, 10)
-	if err = x.Find(&accesses, &Access{UserName: u.LowerName}); err != nil {
-		return err
-	}
-
-	sess := x.NewSession()
-	defer sess.Close()
-	if err = sess.Begin(); err != nil {
-		return err
-	}
-
-	for i := range accesses {
-		accesses[i].UserName = newUserName
-		if strings.HasPrefix(accesses[i].RepoName, u.LowerName+"/") {
-			accesses[i].RepoName = strings.Replace(accesses[i].RepoName, u.LowerName, newUserName, 1)
-		}
-		if err = UpdateAccessWithSession(sess, &accesses[i]); err != nil {
-			return err
-		}
-	}
-
-	repos, err := GetRepositories(u.Id, true)
-	if err != nil {
-		return err
-	}
-	for i := range repos {
-		accesses = make([]Access, 0, 10)
-		// Update accesses of user repository.
-		if err = x.Find(&accesses, &Access{RepoName: u.LowerName + "/" + repos[i].LowerName}); err != nil {
-			return err
-		}
-
-		for j := range accesses {
-			// if the access is not the user's access (already updated above)
-			if accesses[j].UserName != u.LowerName {
-				accesses[j].RepoName = newUserName + "/" + repos[i].LowerName
-				if err = UpdateAccessWithSession(sess, &accesses[j]); err != nil {
-					return err
-				}
-			}
-		}
-	}
-
-	// Change user directory name.
-	if err = os.Rename(UserPath(u.LowerName), UserPath(newUserName)); err != nil {
-		sess.Rollback()
-		return err
-	}
-
-	return sess.Commit()
+	return os.Rename(UserPath(u.LowerName), UserPath(newUserName))
 }
 
 // UpdateUser updates user's information.
 func UpdateUser(u *User) error {
-	has, err := x.Where("id!=?", u.Id).And("type=?", INDIVIDUAL).And("email=?", u.Email).Get(new(User))
+	has, err := x.Where("id!=?", u.Id).And("type=?", u.Type).And("email=?", u.Email).Get(new(User))
 	if err != nil {
 		return err
 	} else if has {
@@ -521,7 +471,7 @@ func DeleteUser(u *User) error {
 		return err
 	}
 	// Delete all accesses.
-	if _, err = x.Delete(&Access{UserName: u.LowerName}); err != nil {
+	if _, err = x.Delete(&Access{UserID: u.Id}); err != nil {
 		return err
 	}
 	// Delete all alternative email addresses
@@ -564,8 +514,7 @@ func UserPath(userName string) string {
 
 func GetUserByKeyId(keyId int64) (*User, error) {
 	user := new(User)
-	rawSql := "SELECT a.* FROM `user` AS a, public_key AS b WHERE a.id = b.owner_id AND b.id=?"
-	has, err := x.Sql(rawSql, keyId).Get(user)
+	has, err := x.Sql("SELECT a.* FROM `user` AS a, public_key AS b WHERE a.id = b.owner_id AND b.id=?", keyId).Get(user)
 	if err != nil {
 		return nil, err
 	} else if !has {
@@ -574,16 +523,20 @@ func GetUserByKeyId(keyId int64) (*User, error) {
 	return user, nil
 }
 
-// GetUserById returns the user object by given ID if exists.
-func GetUserById(id int64) (*User, error) {
+func getUserById(e Engine, id int64) (*User, error) {
 	u := new(User)
-	has, err := x.Id(id).Get(u)
+	has, err := e.Id(id).Get(u)
 	if err != nil {
 		return nil, err
 	} else if !has {
 		return nil, ErrUserNotExist
 	}
 	return u, nil
+}
+
+// GetUserById returns the user object by given ID if exists.
+func GetUserById(id int64) (*User, error) {
+	return getUserById(x, id)
 }
 
 // GetUserByName returns user by given name.
@@ -627,7 +580,7 @@ func GetUserIdsByNames(names []string) []int64 {
 	return ids
 }
 
-// Get all email addresses
+// GetEmailAddresses returns all e-mail addresses belongs to given user.
 func GetEmailAddresses(uid int64) ([]*EmailAddress, error) {
 	emails := make([]*EmailAddress, 0, 5)
 	err := x.Where("uid=?", uid).Find(&emails)
@@ -641,7 +594,6 @@ func GetEmailAddresses(uid int64) ([]*EmailAddress, error) {
 	}
 
 	isPrimaryFound := false
-
 	for _, email := range emails {
 		if email.Email == u.Email {
 			isPrimaryFound = true
@@ -654,7 +606,11 @@ func GetEmailAddresses(uid int64) ([]*EmailAddress, error) {
 	// We alway want the primary email address displayed, even if it's not in
 	// the emailaddress table (yet)
 	if !isPrimaryFound {
-		emails = append(emails, &EmailAddress{Email: u.Email, IsActivated: true, IsPrimary: true})
+		emails = append(emails, &EmailAddress{
+			Email:       u.Email,
+			IsActivated: true,
+			IsPrimary:   true,
+		})
 	}
 	return emails, nil
 }
@@ -904,7 +860,7 @@ func UpdateMentions(userNames []string, issueId int64) error {
 		}
 
 		for _, orgUser := range orgUsers {
-			tempIds = append(tempIds, orgUser.Id)
+			tempIds = append(tempIds, orgUser.ID)
 		}
 
 		ids = append(ids, tempIds...)

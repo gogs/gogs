@@ -9,11 +9,13 @@
                 <a class="link" href="{{.Repository.Website}}">{{.Repository.Website}}</a>
             </p>
             <ul id="repo-file-nav" class="clear menu menu-line">
-                <!-- <li>
-                    <a href="#">
-                        <button class="btn btn-green btn-small btn-radius" id="repo-compare-btn"><i class="octicon octicon-git-compare"></i></button>
+                {{if (and (.Repository.IsFork) .IsRepositoryAdmin)}}
+                <li>
+                    <a href="{{.RepoLink}}/pulls/new">
+                        <button class="btn btn-green btn-small btn-radius" id="repo-compare-btn"><i class="octicon octicon-git-pull-request"></i></button>
                     </a>
-                </li> -->
+                </li>
+                {{end}}
                 <li id="repo-branch-switch" class="down drop">
                     <a>
                         <button class="btn btn-gray btn-medium btn-radius">

@@ -79,7 +79,7 @@ func checkVersion() {
 	// Check dependency version.
 	checkers := []VerChecker{
 		{"github.com/Unknwon/macaron", macaron.Version, "0.5.1"},
-		{"github.com/macaron-contrib/binding", binding.Version, "0.0.4"},
+		{"github.com/macaron-contrib/binding", binding.Version, "0.0.5"},
 		{"github.com/macaron-contrib/cache", cache.Version, "0.0.7"},
 		{"github.com/macaron-contrib/csrf", csrf.Version, "0.0.3"},
 		{"github.com/macaron-contrib/i18n", i18n.Version, "0.0.5"},
@@ -229,7 +229,7 @@ func runWeb(ctx *cli.Context) {
 			})
 
 			m.Any("/*", func(ctx *middleware.Context) {
-				ctx.JSON(404, &base.ApiJsonErr{"Not Found", base.DOC_URL})
+				ctx.HandleAPI(404, "Page not found")
 			})
 		})
 	})
@@ -318,7 +318,7 @@ func runWeb(ctx *cli.Context) {
 		m.Get("/template/*", dev.TemplatePreview)
 	}
 
-	reqTrueOwner := middleware.RequireTrueOwner()
+	reqAdmin := middleware.RequireAdmin()
 
 	// Organization.
 	m.Group("/org", func() {
@@ -393,7 +393,11 @@ func runWeb(ctx *cli.Context) {
 				m.Post("/:name", repo.GitHooksEditPost)
 			}, middleware.GitHookService())
 		})
-	}, reqSignIn, middleware.RepoAssignment(true), reqTrueOwner)
+
+		m.Group("/pulls", func() {
+			m.Combo("/new").Get(repo.NewPullRequest)
+		})
+	}, reqSignIn, middleware.RepoAssignment(true), reqAdmin)
 
 	m.Group("/:username/:reponame", func() {
 		m.Get("/action/:action", repo.Action)

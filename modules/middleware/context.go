@@ -38,29 +38,7 @@ type Context struct {
 	IsSigned    bool
 	IsBasicAuth bool
 
-	Repo struct {
-		IsOwner      bool
-		IsTrueOwner  bool
-		IsWatching   bool
-		IsBranch     bool
-		IsTag        bool
-		IsCommit     bool
-		IsAdmin      bool // Current user is admin level.
-		HasAccess    bool
-		Repository   *models.Repository
-		Owner        *models.User
-		Commit       *git.Commit
-		Tag          *git.Tag
-		GitRepo      *git.Repository
-		BranchName   string
-		TagName      string
-		TreeName     string
-		CommitId     string
-		RepoLink     string
-		CloneLink    models.CloneLink
-		CommitsCount int
-		Mirror       *models.Mirror
-	}
+	Repo RepoContext
 
 	Org struct {
 		IsOwner      bool
@@ -71,6 +49,37 @@ type Context struct {
 
 		Team *models.Team
 	}
+}
+
+type RepoContext struct {
+	AccessMode   models.AccessMode
+	IsWatching   bool
+	IsBranch     bool
+	IsTag        bool
+	IsCommit     bool
+	Repository   *models.Repository
+	Owner        *models.User
+	Commit       *git.Commit
+	Tag          *git.Tag
+	GitRepo      *git.Repository
+	BranchName   string
+	TagName      string
+	TreeName     string
+	CommitId     string
+	RepoLink     string
+	CloneLink    models.CloneLink
+	CommitsCount int
+	Mirror       *models.Mirror
+}
+
+// Return if the current user has write access for this repository
+func (r RepoContext) IsOwner() bool {
+	return r.AccessMode >= models.ACCESS_MODE_WRITE
+}
+
+// Return if the current user has read access for this repository
+func (r RepoContext) HasAccess() bool {
+	return r.AccessMode >= models.ACCESS_MODE_READ
 }
 
 // HasError returns true if error occurs in form validation.
@@ -128,6 +137,18 @@ func (ctx *Context) Handle(status int, title string, err error) {
 		ctx.Data["Title"] = "Internal Server Error"
 	}
 	ctx.HTML(status, base.TplName(fmt.Sprintf("status/%d", status)))
+}
+
+func (ctx *Context) HandleAPI(status int, obj interface{}) {
+	var message string
+	if err, ok := obj.(error); ok {
+		message = err.Error()
+	} else {
+		message = obj.(string)
+	}
+	ctx.JSON(status, map[string]string{
+		"message": message,
+	})
 }
 
 func (ctx *Context) ServeContent(name string, r io.ReadSeeker, params ...interface{}) {

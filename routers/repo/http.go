@@ -105,10 +105,10 @@ func Http(ctx *middleware.Context) {
 			return
 		}
 
-		authUser, err = models.GetUserByName(authUsername)
+		authUser, err := models.UserSignIn(authUsername, authPasswd)
 		if err != nil {
 			if err != models.ErrUserNotExist {
-				ctx.Handle(500, "GetUserByName", err)
+				ctx.Handle(500, "UserSignIn error: %v", err)
 				return
 			}
 
@@ -128,27 +128,21 @@ func Http(ctx *middleware.Context) {
 				return
 			}
 			authUsername = authUser.Name
-		} else {
-			// Check user's password when username is correctly presented.
-			if !authUser.ValidtePassword(authPasswd) {
-				ctx.Handle(401, "invalid password", nil)
-				return
-			}
 		}
 
 		if !isPublicPull {
-			var tp = models.WRITABLE
+			var tp = models.ACCESS_MODE_WRITE
 			if isPull {
-				tp = models.READABLE
+				tp = models.ACCESS_MODE_READ
 			}
 
-			has, err := models.HasAccess(authUsername, username+"/"+reponame, tp)
+			has, err := models.HasAccess(authUser, repo, tp)
 			if err != nil {
 				ctx.Handle(401, "no basic auth and digit auth", nil)
 				return
 			} else if !has {
-				if tp == models.READABLE {
-					has, err = models.HasAccess(authUsername, username+"/"+reponame, models.WRITABLE)
+				if tp == models.ACCESS_MODE_READ {
+					has, err = models.HasAccess(authUser, repo, models.ACCESS_MODE_WRITE)
 					if err != nil || !has {
 						ctx.Handle(401, "no basic auth and digit auth", nil)
 						return
@@ -157,6 +151,11 @@ func Http(ctx *middleware.Context) {
 					ctx.Handle(401, "no basic auth and digit auth", nil)
 					return
 				}
+			}
+
+			if !isPull && repo.IsMirror {
+				ctx.Handle(401, "can't push to mirror", nil)
+				return
 			}
 		}
 	}

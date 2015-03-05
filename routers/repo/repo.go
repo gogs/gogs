@@ -181,20 +181,26 @@ func MigratePost(ctx *middleware.Context, form auth.MigrateRepoForm) {
 		}
 	}
 
-	u, err := url.Parse(form.HttpsUrl)
-
-	if err != nil || u.Scheme != "https" {
-		ctx.Data["Err_HttpsUrl"] = true
-		ctx.RenderWithErr(ctx.Tr("form.url_error"), MIGRATE, &form)
+	// Remote address can be HTTPS URL or local path.
+	remoteAddr := form.CloneAddr
+	if strings.HasPrefix(form.CloneAddr, "http") {
+		u, err := url.Parse(form.CloneAddr)
+		if err != nil {
+			ctx.Data["Err_CloneAddr"] = true
+			ctx.RenderWithErr(ctx.Tr("form.url_error"), MIGRATE, &form)
+			return
+		}
+		if len(form.AuthUserName) > 0 || len(form.AuthPasswd) > 0 {
+			u.User = url.UserPassword(form.AuthUserName, form.AuthPasswd)
+		}
+		remoteAddr = u.String()
+	} else if !com.IsDir(remoteAddr) {
+		ctx.Data["Err_CloneAddr"] = true
+		ctx.RenderWithErr(ctx.Tr("repo.migrate.invalid_local_path"), MIGRATE, &form)
 		return
 	}
 
-	if len(form.AuthUserName) > 0 || len(form.AuthPasswd) > 0 {
-		u.User = url.UserPassword(form.AuthUserName, form.AuthPasswd)
-	}
-
-	repo, err := models.MigrateRepository(ctxUser, form.RepoName, form.Description, form.Private,
-		form.Mirror, u.String())
+	repo, err := models.MigrateRepository(ctxUser, form.RepoName, form.Description, form.Private, form.Mirror, remoteAddr)
 	if err == nil {
 		log.Trace("Repository migrated: %s/%s", ctxUser.Name, form.RepoName)
 		ctx.Redirect(setting.AppSubUrl + "/" + ctxUser.Name + "/" + form.RepoName)
@@ -343,7 +349,7 @@ func Action(ctx *middleware.Context) {
 	case "unstar":
 		err = models.StarRepo(ctx.User.Id, ctx.Repo.Repository.Id, false)
 	case "desc":
-		if !ctx.Repo.IsOwner {
+		if !ctx.Repo.IsOwner() {
 			ctx.Error(404)
 			return
 		}

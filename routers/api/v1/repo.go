@@ -5,7 +5,7 @@
 package v1
 
 import (
-	"fmt"
+	"net/url"
 	"path"
 	"strings"
 
@@ -156,17 +156,15 @@ func CreateOrgRepo(ctx *middleware.Context, opt api.CreateRepoOption) {
 func MigrateRepo(ctx *middleware.Context, form auth.MigrateRepoForm) {
 	u, err := models.GetUserByName(ctx.Query("username"))
 	if err != nil {
-		ctx.JSON(500, map[string]interface{}{
-			"ok":    false,
-			"error": err.Error(),
-		})
+		if err == models.ErrUserNotExist {
+			ctx.HandleAPI(422, err)
+		} else {
+			ctx.HandleAPI(500, err)
+		}
 		return
 	}
 	if !u.ValidtePassword(ctx.Query("password")) {
-		ctx.JSON(500, map[string]interface{}{
-			"ok":    false,
-			"error": "username or password is not correct",
-		})
+		ctx.HandleAPI(422, "Username or password is not correct.")
 		return
 	}
 
@@ -175,56 +173,59 @@ func MigrateRepo(ctx *middleware.Context, form auth.MigrateRepoForm) {
 	if form.Uid != u.Id {
 		org, err := models.GetUserById(form.Uid)
 		if err != nil {
-			log.Error(4, "GetUserById: %v", err)
-			ctx.Error(500)
+			if err == models.ErrUserNotExist {
+				ctx.HandleAPI(422, err)
+			} else {
+				ctx.HandleAPI(500, err)
+			}
 			return
 		}
 		ctxUser = org
 	}
 
 	if ctx.HasError() {
-		ctx.JSON(422, map[string]interface{}{
-			"ok":    false,
-			"error": ctx.GetErrMsg(),
-		})
+		ctx.HandleAPI(422, ctx.GetErrMsg())
 		return
 	}
 
 	if ctxUser.IsOrganization() {
 		// Check ownership of organization.
 		if !ctxUser.IsOwnedBy(u.Id) {
-			ctx.JSON(403, map[string]interface{}{
-				"ok":    false,
-				"error": "given user is not owner of organization",
-			})
+			ctx.HandleAPI(403, "Given user is not owner of organization.")
 			return
 		}
 	}
 
-	authStr := strings.Replace(fmt.Sprintf("://%s:%s",
-		form.AuthUserName, form.AuthPasswd), "@", "%40", -1)
-	url := strings.Replace(form.HttpsUrl, "://", authStr+"@", 1)
-	repo, err := models.MigrateRepository(ctxUser, form.RepoName, form.Description, form.Private,
-		form.Mirror, url)
-	if err == nil {
-		log.Trace("Repository migrated: %s/%s", ctxUser.Name, form.RepoName)
-		ctx.JSON(200, map[string]interface{}{
-			"ok":   true,
-			"data": "/" + ctxUser.Name + "/" + form.RepoName,
-		})
+	// Remote address can be HTTPS URL or local path.
+	remoteAddr := form.CloneAddr
+	if strings.HasPrefix(form.CloneAddr, "http") {
+		u, err := url.Parse(form.CloneAddr)
+		if err != nil {
+			ctx.HandleAPI(422, err)
+			return
+		}
+		if len(form.AuthUserName) > 0 || len(form.AuthPasswd) > 0 {
+			u.User = url.UserPassword(form.AuthUserName, form.AuthPasswd)
+		}
+		remoteAddr = u.String()
+	} else if !com.IsDir(remoteAddr) {
+		ctx.HandleAPI(422, "Invalid local path, it does not exist or not a directory.")
 		return
 	}
 
-	if repo != nil {
-		if errDelete := models.DeleteRepository(ctxUser.Id, repo.Id, ctxUser.Name); errDelete != nil {
-			log.Error(4, "DeleteRepository: %v", errDelete)
+	repo, err := models.MigrateRepository(ctxUser, form.RepoName, form.Description, form.Private, form.Mirror, remoteAddr)
+	if err != nil {
+		if repo != nil {
+			if errDelete := models.DeleteRepository(ctxUser.Id, repo.Id, ctxUser.Name); errDelete != nil {
+				log.Error(4, "DeleteRepository: %v", errDelete)
+			}
 		}
+		ctx.HandleAPI(500, err)
+		return
 	}
 
-	ctx.JSON(500, map[string]interface{}{
-		"ok":    false,
-		"error": err.Error(),
-	})
+	log.Trace("Repository migrated: %s/%s", ctxUser.Name, form.RepoName)
+	ctx.WriteHeader(200)
 }
 
 // GET /user/repos
@@ -237,28 +238,31 @@ func ListMyRepos(ctx *middleware.Context) {
 	}
 	numOwnRepos := len(ownRepos)
 
-	collaRepos, err := models.GetCollaborativeRepos(ctx.User.Name)
+	accessibleRepos, err := ctx.User.GetAccessibleRepositories()
 	if err != nil {
-		ctx.JSON(500, &base.ApiJsonErr{"GetCollaborativeRepos: " + err.Error(), base.DOC_URL})
+		ctx.JSON(500, &base.ApiJsonErr{"GetAccessibleRepositories: " + err.Error(), base.DOC_URL})
 		return
 	}
 
-	repos := make([]*api.Repository, numOwnRepos+len(collaRepos))
+	repos := make([]*api.Repository, numOwnRepos+len(accessibleRepos))
 	for i := range ownRepos {
 		repos[i] = ToApiRepository(ctx.User, ownRepos[i], api.Permission{true, true, true})
 	}
-	for i := range collaRepos {
-		if err = collaRepos[i].GetOwner(); err != nil {
+	i := numOwnRepos
+
+	for repo, access := range accessibleRepos {
+		if err = repo.GetOwner(); err != nil {
 			ctx.JSON(500, &base.ApiJsonErr{"GetOwner: " + err.Error(), base.DOC_URL})
 			return
 		}
-		j := i + numOwnRepos
-		repos[j] = ToApiRepository(collaRepos[i].Owner, collaRepos[i].Repository, api.Permission{false, collaRepos[i].CanPush, true})
+
+		repos[i] = ToApiRepository(repo.Owner, repo, api.Permission{false, access >= models.ACCESS_MODE_WRITE, true})
 
 		// FIXME: cache result to reduce DB query?
-		if collaRepos[i].Owner.IsOrganization() && collaRepos[i].Owner.IsOwnedBy(ctx.User.Id) {
-			repos[j].Permissions.Admin = true
+		if repo.Owner.IsOrganization() && repo.Owner.IsOwnedBy(ctx.User.Id) {
+			repos[i].Permissions.Admin = true
 		}
+		i++
 	}
 
 	ctx.JSON(200, &repos)

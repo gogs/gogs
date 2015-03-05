@@ -63,15 +63,18 @@ func NewAuthSourcePost(ctx *middleware.Context, form auth.AuthenticationForm) {
 	case models.LDAP:
 		u = &models.LDAPConfig{
 			Ldapsource: ldap.Ldapsource{
-				Host:         form.Host,
-				Port:         form.Port,
-				UseSSL:       form.UseSSL,
-				BaseDN:       form.BaseDN,
-				Attributes:   form.Attributes,
-				Filter:       form.Filter,
-				MsAdSAFormat: form.MsAdSA,
-				Enabled:      true,
-				Name:         form.AuthName,
+				Host:              form.Host,
+				Port:              form.Port,
+				UseSSL:            form.UseSSL,
+				BaseDN:            form.BaseDN,
+				AttributeUsername: form.AttributeUsername,
+				AttributeName:     form.AttributeName,
+				AttributeSurname:  form.AttributeSurname,
+				AttributeMail:     form.AttributeMail,
+				Filter:            form.Filter,
+				MsAdSAFormat:      form.MsAdSA,
+				Enabled:           true,
+				Name:              form.AuthName,
 			},
 		}
 	case models.SMTP:
@@ -142,15 +145,18 @@ func EditAuthSourcePost(ctx *middleware.Context, form auth.AuthenticationForm) {
 	case models.LDAP:
 		config = &models.LDAPConfig{
 			Ldapsource: ldap.Ldapsource{
-				Host:         form.Host,
-				Port:         form.Port,
-				UseSSL:       form.UseSSL,
-				BaseDN:       form.BaseDN,
-				Attributes:   form.Attributes,
-				Filter:       form.Filter,
-				MsAdSAFormat: form.MsAdSA,
-				Enabled:      true,
-				Name:         form.AuthName,
+				Host:              form.Host,
+				Port:              form.Port,
+				UseSSL:            form.UseSSL,
+				BaseDN:            form.BaseDN,
+				AttributeUsername: form.AttributeUsername,
+				AttributeName:     form.AttributeName,
+				AttributeSurname:  form.AttributeSurname,
+				AttributeMail:     form.AttributeMail,
+				Filter:            form.Filter,
+				MsAdSAFormat:      form.MsAdSA,
+				Enabled:           true,
+				Name:              form.AuthName,
 			},
 		}
 	case models.SMTP:

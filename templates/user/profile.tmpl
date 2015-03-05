@@ -28,7 +28,7 @@
                     {{if .Owner.Website}}
                     <li class="list-group-item"><i class="octicon octicon-link"></i>&nbsp;&nbsp;<a target="_blank" href="{{.Owner.Website}}">{{.Owner.Website}}</a></li>
                     {{end}}
-                    <li class="list-group-item"><i class="octicon octicon-clock"></i>&nbsp;&nbsp;{{.i18n.Tr "user.join_on"}} {{DateFormat .Owner.Created "M d, Y"}}</li>
+                    <li class="list-group-item"><i class="octicon octicon-clock"></i>&nbsp;&nbsp;{{.i18n.Tr "user.join_on"}} {{DateFmtShort .Owner.Created}}</li>
                 </ul>
                 <hr>
                 <ul class="list-no-style">
@@ -74,7 +74,7 @@
                     <div class="tab-pane active">
                         <div id="org-repo-list">
                             {{range .Repos}}
-                                {{if or (not .IsPrivate) (.HasAccess $.SignedUserName)}}
+                                {{if or (not .IsPrivate) (.HasAccess $.SignedUser)}}
                                 <div class="org-repo-item">
                                     <ul class="org-repo-status right">
                                         <li><i class="octicon octicon-star"></i> {{.NumStars}}</li>

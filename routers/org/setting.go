@@ -39,18 +39,18 @@ func SettingsPost(ctx *middleware.Context, form auth.UpdateOrgSettingForm) {
 
 	// Check if organization name has been changed.
 	if org.Name != form.OrgUserName {
-		isExist, err := models.IsUserExist(form.OrgUserName)
+		isExist, err := models.IsUserExist(org.Id, form.OrgUserName)
 		if err != nil {
 			ctx.Handle(500, "IsUserExist", err)
 			return
 		} else if isExist {
+			ctx.Data["Err_UserName"] = true
 			ctx.RenderWithErr(ctx.Tr("form.username_been_taken"), SETTINGS_OPTIONS, &form)
 			return
 		} else if err = models.ChangeUserName(org, form.OrgUserName); err != nil {
 			if err == models.ErrUserNameIllegal {
-				ctx.Flash.Error(ctx.Tr("form.illegal_username"))
-				ctx.Redirect(setting.AppSubUrl + "/org/" + org.LowerName + "/settings")
-				return
+				ctx.Data["Err_UserName"] = true
+				ctx.RenderWithErr(ctx.Tr("form.illegal_username"), SETTINGS_OPTIONS, &form)
 			} else {
 				ctx.Handle(500, "ChangeUserName", err)
 			}
@@ -68,7 +68,12 @@ func SettingsPost(ctx *middleware.Context, form auth.UpdateOrgSettingForm) {
 	org.Avatar = base.EncodeMd5(form.Avatar)
 	org.AvatarEmail = form.Avatar
 	if err := models.UpdateUser(org); err != nil {
-		ctx.Handle(500, "UpdateUser", err)
+		if err == models.ErrEmailAlreadyUsed {
+			ctx.Data["Err_Email"] = true
+			ctx.RenderWithErr(ctx.Tr("form.email_been_used"), SETTINGS_OPTIONS, &form)
+		} else {
+			ctx.Handle(500, "UpdateUser", err)
+		}
 		return
 	}
 	log.Trace("Organization setting updated: %s", org.Name)

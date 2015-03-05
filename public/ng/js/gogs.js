@@ -209,27 +209,28 @@ var Gogs = {};
             $list.parents('tr').removeClass('end-selected-line');
             $list.parents('tr').find('td').removeClass('selected-line');
             if ($from) {
-                var expr = new RegExp(/diff-(\d+)L(\d+)/);
+                var expr = new RegExp(/diff-(\w+)([LR]\d+)/);
                 var selectMatches = $select.attr('rel').match(expr)
                 var fromMatches = $from.attr('rel').match(expr)
-                var a = parseInt(selectMatches[2]);
-                var b = parseInt(fromMatches[2]);
-                var linesIntToStr = {};
-                linesIntToStr[a] = selectMatches[2];
-                linesIntToStr[b] = fromMatches[2];
+                var selectTop = $select.offset().top;
+                var fromTop = $from.offset().top;
+                var hash;
 
-                var c;
-                if (a != b) {
-                    if (a > b) {
-                        c = a;
-                        a = b;
-                        b = c;
+                if (selectMatches[2] != fromMatches[2]) {
+                    if ((selectTop > fromTop)) {
+                        $startElem = $from;
+                        $endElem = $select;
+                        hash = fromMatches[1]+fromMatches[2] + '-' + selectMatches[2];
+                    } else {
+                        $startElem = $select;
+                        $endElem = $from;
+                        hash = selectMatches[1]+selectMatches[2] + '-' + fromMatches[2];
                     }
-                    $('[rel=diff-'+fromMatches[1]+'L' + linesIntToStr[b] + ']').parents('tr').next().addClass('end-selected-line');
-                    var $selectedLines = $('[rel=diff-'+fromMatches[1]+'L' + linesIntToStr[a] + ']').parents('tr').nextUntil('.end-selected-line').andSelf();
+                    $endElem.parents('tr').next().addClass('end-selected-line');
+                    var $selectedLines = $startElem.parents('tr').nextUntil('.end-selected-line').andSelf();
                     $selectedLines.find('td.lines-num > span').addClass('active')
                     $selectedLines.find('td').addClass('selected-line');
-                    $.changeHash('#diff-'+fromMatches[1]+'L' + linesIntToStr[a] + '-L' + linesIntToStr[b]);
+                    $.changeHash('#diff-'+hash);
                     return
                 }
             }
@@ -262,7 +263,7 @@ var Gogs = {};
         });
 
         $(window).on('hashchange', function (e) {
-            var m = window.location.hash.match(/^#diff-(\d+)(L\d+)\-(L\d+)$/);
+            var m = window.location.hash.match(/^#diff-(\w+)([LR]\d+)\-([LR]\d+)$/);
             var $list = $('.code-diff td.lines-num > span');
             var $first;
             if (m) {
@@ -271,7 +272,7 @@ var Gogs = {};
                 $("html, body").scrollTop($first.offset().top - 200);
                 return;
             }
-            m = window.location.hash.match(/^#diff-(\d+)(L\d+)$/);
+            m = window.location.hash.match(/^#diff-(\w+)([LR]\d+)$/);
             if (m) {
                 $first = $list.filter('[rel=diff-' + m[1] + m[2] + ']');
                 selectRange($list, $first);
@@ -452,7 +453,23 @@ function initRepoCreate() {
 
             $(this).parent().find('.checked').removeClass('checked');
             $(this).addClass('checked');
-            console.log("set repo owner to uid :", uid, $(this).text().trim());
+            console.log("set repo owner to uid:", uid, $(this).text().trim());
+        }
+    });
+
+    // Branch switch menu click.
+    $('.repo-pull-branch-list').on('click', 'li', function () {
+        if (!$(this).hasClass('checked')) {
+            var branch_name = $(this).data('branch-name');
+            var target = $(this).data('target');
+            var target_show = $(this).data('target-show');
+
+            $(target).val(branch_name);
+            $(target_show).text($(this).text().trim());
+
+            $(this).parent().find('.checked').removeClass('checked');
+            $(this).addClass('checked');
+            console.log("set branch: ", branch_name, $(this).text().trim());
         }
     });
 

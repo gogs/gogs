@@ -182,6 +182,17 @@ func updateIssuesCommit(userId, repoId int64, repoUserName, repoName string, com
 				}
 				issue.IsClosed = true
 
+				if err = issue.GetLabels(); err != nil {
+					return err
+				}
+				for _, label := range issue.Labels {
+					label.NumClosedIssues++
+
+					if err = UpdateLabel(label); err != nil {
+						return err
+					}
+				}
+
 				if err = UpdateIssue(issue); err != nil {
 					return err
 				} else if err = UpdateIssueUserPairsByStatus(issue.Id, issue.IsClosed); err != nil {
@@ -229,6 +240,17 @@ func updateIssuesCommit(userId, repoId int64, repoUserName, repoName string, com
 					continue
 				}
 				issue.IsClosed = false
+
+				if err = issue.GetLabels(); err != nil {
+					return err
+				}
+				for _, label := range issue.Labels {
+					label.NumClosedIssues--
+
+					if err = UpdateLabel(label); err != nil {
+						return err
+					}
+				}
 
 				if err = UpdateIssue(issue); err != nil {
 					return err
@@ -412,46 +434,58 @@ func CommitRepoAction(userId, repoUserId int64, userName, actEmail string,
 	return nil
 }
 
-// NewRepoAction adds new action for creating repository.
-func NewRepoAction(u *User, repo *Repository) (err error) {
-	if err = NotifyWatchers(&Action{ActUserId: u.Id, ActUserName: u.Name, ActEmail: u.Email,
-		OpType: CREATE_REPO, RepoId: repo.Id, RepoUserName: repo.Owner.Name, RepoName: repo.Name,
-		IsPrivate: repo.IsPrivate}); err != nil {
-		log.Error(4, "NotifyWatchers: %d/%s", u.Id, repo.Name)
-		return err
+func newRepoAction(e Engine, u *User, repo *Repository) (err error) {
+	if err = notifyWatchers(e, &Action{
+		ActUserId:    u.Id,
+		ActUserName:  u.Name,
+		ActEmail:     u.Email,
+		OpType:       CREATE_REPO,
+		RepoId:       repo.Id,
+		RepoUserName: repo.Owner.Name,
+		RepoName:     repo.Name,
+		IsPrivate:    repo.IsPrivate}); err != nil {
+		return fmt.Errorf("notify watchers '%d/%s'", u.Id, repo.Id)
 	}
 
 	log.Trace("action.NewRepoAction: %s/%s", u.Name, repo.Name)
 	return err
 }
 
-// TransferRepoAction adds new action for transferring repository.
-func TransferRepoAction(u, newUser *User, repo *Repository) (err error) {
+// NewRepoAction adds new action for creating repository.
+func NewRepoAction(u *User, repo *Repository) (err error) {
+	return newRepoAction(x, u, repo)
+}
+
+func transferRepoAction(e Engine, actUser, oldOwner, newOwner *User, repo *Repository) (err error) {
 	action := &Action{
-		ActUserId:    u.Id,
-		ActUserName:  u.Name,
-		ActEmail:     u.Email,
+		ActUserId:    actUser.Id,
+		ActUserName:  actUser.Name,
+		ActEmail:     actUser.Email,
 		OpType:       TRANSFER_REPO,
 		RepoId:       repo.Id,
-		RepoUserName: newUser.Name,
+		RepoUserName: newOwner.Name,
 		RepoName:     repo.Name,
 		IsPrivate:    repo.IsPrivate,
-		Content:      path.Join(repo.Owner.LowerName, repo.LowerName),
+		Content:      path.Join(oldOwner.LowerName, repo.LowerName),
 	}
-	if err = NotifyWatchers(action); err != nil {
-		log.Error(4, "NotifyWatchers: %d/%s", u.Id, repo.Name)
-		return err
+	if err = notifyWatchers(e, action); err != nil {
+		return fmt.Errorf("notify watchers '%d/%s'", actUser.Id, repo.Id)
 	}
 
 	// Remove watch for organization.
 	if repo.Owner.IsOrganization() {
-		if err = WatchRepo(repo.Owner.Id, repo.Id, false); err != nil {
-			log.Error(4, "WatchRepo", err)
+		if err = watchRepo(e, repo.Owner.Id, repo.Id, false); err != nil {
+			return fmt.Errorf("watch repository: %v", err)
 		}
 	}
 
-	log.Trace("action.TransferRepoAction: %s/%s", u.Name, repo.Name)
-	return err
+	log.Trace("action.TransferRepoAction: %s/%s", actUser.Name, repo.Name)
+	return nil
+}
+
+// TransferRepoAction adds new action for transferring repository.
+func TransferRepoAction(actUser, oldOwner, newOwner *User, repo *Repository) (err error) {
+	return transferRepoAction(x, actUser, oldOwner, newOwner, repo)
 }
 
 // GetFeeds returns action list of given user in given context.

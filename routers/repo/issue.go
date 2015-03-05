@@ -174,7 +174,7 @@ func CreateIssue(ctx *middleware.Context) {
 		return
 	}
 
-	us, err := models.GetCollaborators(strings.TrimPrefix(ctx.Repo.RepoLink, "/"))
+	us, err := ctx.Repo.Repository.GetCollaborators()
 	if err != nil {
 		ctx.Handle(500, "issue.CreateIssue(GetCollaborators)", err)
 		return
@@ -218,7 +218,7 @@ func CreateIssuePost(ctx *middleware.Context, form auth.CreateIssueForm) {
 		return
 	}
 
-	_, err = models.GetCollaborators(strings.TrimPrefix(ctx.Repo.RepoLink, "/"))
+	_, err = ctx.Repo.Repository.GetCollaborators()
 	if err != nil {
 		send(500, nil, err)
 		return
@@ -230,7 +230,7 @@ func CreateIssuePost(ctx *middleware.Context, form auth.CreateIssueForm) {
 	}
 
 	// Only collaborators can assign.
-	if !ctx.Repo.IsOwner {
+	if !ctx.Repo.IsOwner() {
 		form.AssigneeId = 0
 	}
 	issue := &models.Issue{
@@ -246,8 +246,8 @@ func CreateIssuePost(ctx *middleware.Context, form auth.CreateIssueForm) {
 	if err := models.NewIssue(issue); err != nil {
 		send(500, nil, err)
 		return
-	} else if err := models.NewIssueUserPairs(issue.RepoId, issue.Id, ctx.Repo.Owner.Id,
-		ctx.User.Id, form.AssigneeId, ctx.Repo.Repository.Name); err != nil {
+	} else if err := models.NewIssueUserPairs(ctx.Repo.Repository, issue.Id, ctx.Repo.Owner.Id,
+		ctx.User.Id, form.AssigneeId); err != nil {
 		send(500, nil, err)
 		return
 	}
@@ -384,7 +384,7 @@ func ViewIssue(ctx *middleware.Context) {
 	}
 
 	// Get all collaborators.
-	ctx.Data["Collaborators"], err = models.GetCollaborators(strings.TrimPrefix(ctx.Repo.RepoLink, "/"))
+	ctx.Data["Collaborators"], err = ctx.Repo.Repository.GetCollaborators()
 	if err != nil {
 		ctx.Handle(500, "issue.CreateIssue(GetCollaborators)", err)
 		return
@@ -434,7 +434,7 @@ func ViewIssue(ctx *middleware.Context) {
 	ctx.Data["Title"] = issue.Name
 	ctx.Data["Issue"] = issue
 	ctx.Data["Comments"] = comments
-	ctx.Data["IsIssueOwner"] = ctx.Repo.IsOwner || (ctx.IsSigned && issue.PosterId == ctx.User.Id)
+	ctx.Data["IsIssueOwner"] = ctx.Repo.IsOwner() || (ctx.IsSigned && issue.PosterId == ctx.User.Id)
 	ctx.Data["IsRepoToolbarIssues"] = true
 	ctx.Data["IsRepoToolbarIssuesList"] = false
 	ctx.HTML(200, ISSUE_VIEW)
@@ -457,7 +457,7 @@ func UpdateIssue(ctx *middleware.Context, form auth.CreateIssueForm) {
 		return
 	}
 
-	if ctx.User.Id != issue.PosterId && !ctx.Repo.IsOwner {
+	if ctx.User.Id != issue.PosterId && !ctx.Repo.IsOwner() {
 		ctx.Error(403)
 		return
 	}
@@ -484,7 +484,7 @@ func UpdateIssue(ctx *middleware.Context, form auth.CreateIssueForm) {
 }
 
 func UpdateIssueLabel(ctx *middleware.Context) {
-	if !ctx.Repo.IsOwner {
+	if !ctx.Repo.IsOwner() {
 		ctx.Error(403)
 		return
 	}
@@ -549,6 +549,7 @@ func UpdateIssueLabel(ctx *middleware.Context) {
 				label.NumClosedIssues--
 			}
 		}
+
 		if err = models.UpdateLabel(label); err != nil {
 			ctx.Handle(500, "issue.UpdateIssueLabel(UpdateLabel)", err)
 			return
@@ -560,7 +561,7 @@ func UpdateIssueLabel(ctx *middleware.Context) {
 }
 
 func UpdateIssueMilestone(ctx *middleware.Context) {
-	if !ctx.Repo.IsOwner {
+	if !ctx.Repo.IsOwner() {
 		ctx.Error(403)
 		return
 	}
@@ -606,7 +607,7 @@ func UpdateIssueMilestone(ctx *middleware.Context) {
 }
 
 func UpdateAssignee(ctx *middleware.Context) {
-	if !ctx.Repo.IsOwner {
+	if !ctx.Repo.IsOwner() {
 		ctx.Error(403)
 		return
 	}
@@ -752,7 +753,7 @@ func Comment(ctx *middleware.Context) {
 
 	// Check if issue owner changes the status of issue.
 	var newStatus string
-	if ctx.Repo.IsOwner || issue.PosterId == ctx.User.Id {
+	if ctx.Repo.IsOwner() || issue.PosterId == ctx.User.Id {
 		newStatus = ctx.Query("change_status")
 	}
 	if len(newStatus) > 0 {
@@ -765,6 +766,24 @@ func Comment(ctx *middleware.Context) {
 			} else if err = models.UpdateIssueUserPairsByStatus(issue.Id, issue.IsClosed); err != nil {
 				send(500, nil, err)
 				return
+			}
+
+			if err = issue.GetLabels(); err != nil {
+				send(500, nil, err)
+				return
+			}
+
+			for _, label := range issue.Labels {
+				if issue.IsClosed {
+					label.NumClosedIssues++
+				} else {
+					label.NumClosedIssues--
+				}
+
+				if err = models.UpdateLabel(label); err != nil {
+					send(500, nil, err)
+					return
+				}
 			}
 
 			// Change open/closed issue counter for the associated milestone
