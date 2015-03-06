@@ -42,7 +42,7 @@ func newSignatureFromCommitline(line []byte) (_ *Signature, err error) {
 		}
 		sig.When = time.Unix(seconds, 0)
 	} else {
-		sig.When, err = time.Parse(time.RFC1123Z, string(line[emailstop+2:]))
+		sig.When, err = time.Parse("Mon Jan _2 15:04:05 2006 -0700", string(line[emailstop+2:]))
 		if err != nil {
 			return nil, err
 		}
