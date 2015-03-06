@@ -111,10 +111,18 @@ func SettingsPost(ctx *middleware.Context, form auth.RepoSettingForm) {
 		} else if !isExist {
 			ctx.RenderWithErr(ctx.Tr("form.enterred_invalid_owner_name"), SETTINGS_OPTIONS, nil)
 			return
-		} else if !ctx.User.ValidtePassword(ctx.Query("password")) {
-			ctx.RenderWithErr(ctx.Tr("form.enterred_invalid_password"), SETTINGS_OPTIONS, nil)
+		}
+
+		if _, err = models.UserSignIn(ctx.User.Name, ctx.Query("password")); err != nil {
+			if err == models.ErrUserNotExist {
+				ctx.RenderWithErr(ctx.Tr("form.enterred_invalid_password"), SETTINGS_OPTIONS, nil)
+			} else {
+				ctx.Handle(500, "UserSignIn", err)
+			}
 			return
-		} else if err = models.TransferOwnership(ctx.User, newOwner, ctx.Repo.Repository); err != nil {
+		}
+
+		if err = models.TransferOwnership(ctx.User, newOwner, ctx.Repo.Repository); err != nil {
 			if err == models.ErrRepoAlreadyExist {
 				ctx.RenderWithErr(ctx.Tr("repo.settings.new_owner_has_same_repo"), SETTINGS_OPTIONS, nil)
 			} else {
@@ -136,15 +144,15 @@ func SettingsPost(ctx *middleware.Context, form auth.RepoSettingForm) {
 				ctx.Error(404)
 				return
 			}
-			if !ctx.User.ValidtePassword(ctx.Query("password")) {
+		}
+
+		if _, err := models.UserSignIn(ctx.User.Name, ctx.Query("password")); err != nil {
+			if err == models.ErrUserNotExist {
 				ctx.RenderWithErr(ctx.Tr("form.enterred_invalid_password"), SETTINGS_OPTIONS, nil)
-				return
+			} else {
+				ctx.Handle(500, "UserSignIn", err)
 			}
-		} else {
-			if !ctx.Repo.Owner.ValidtePassword(ctx.Query("password")) {
-				ctx.RenderWithErr(ctx.Tr("form.enterred_invalid_password"), SETTINGS_OPTIONS, nil)
-				return
-			}
+			return
 		}
 
 		if err := models.DeleteRepository(ctx.Repo.Owner.Id, ctx.Repo.Repository.Id, ctx.Repo.Owner.Name); err != nil {
