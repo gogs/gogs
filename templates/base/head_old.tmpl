@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+	<head{{if AppSubUrl}} data-suburl="{{AppSubUrl}}"{{end}}>
+		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+		<link rel="shortcut icon" href="{{AppSubUrl}}/img/favicon.png" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+        <meta name="author" content="Gogs - Go Git Service" />
+		<meta name="description" content="Gogs(Go Git Service) is a GitHub-like clone in the Go Programming Language" />
+		<meta name="keywords" content="go, git">
+		<meta name="_csrf" content="{{.CsrfToken}}" />
+		{{if .GoGetImport}}<meta name="go-import" content="{{.GoGetImport}} git {{.CloneLink.HTTPS}}">{{end}}
+
+		 <!-- Stylesheets -->
+		{{if CdnMode}}
+		<link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+		<link href="//maxcdn.bootstrapcdn.com/font-awesome/4.1.0/css/font-awesome.min.css" rel="stylesheet">
+
+		<script src="//code.jquery.com/jquery-1.11.0.min.js"></script>
+		<script src="//netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+		{{else}}
+		<link href="{{AppSubUrl}}/css/bootstrap.min.css" rel="stylesheet" />
+		<link href="{{AppSubUrl}}/css/font-awesome.min.css" rel="stylesheet" />
+
+		<script src="{{AppSubUrl}}/js/jquery-1.10.1.min.js"></script>
+		<script src="{{AppSubUrl}}/js/bootstrap.min.js"></script>
+		{{end}}
+
+		<link href="{{AppSubUrl}}/css/todc-bootstrap.min.css" rel="stylesheet" />
+        <link href="{{AppSubUrl}}/css/datepicker3.css" rel="stylesheet" />
+        <link href="{{AppSubUrl}}/css/bootstrap-colorpicker.min.css" rel="stylesheet" />
+		<link href="{{AppSubUrl}}/css/markdown.css" rel="stylesheet" />
+		<link href="{{AppSubUrl}}/css/gogs.css" rel="stylesheet" />
+
+        <script src="{{AppSubUrl}}/js/lib.js"></script>
+        <script src="{{AppSubUrl}}/js/app.js"></script>
+		<title>{{if .Title}}{{.Title}} - {{end}}{{AppName}}</title>
+	</head>
+	<body>
+		<div id="wrapper">
+		<noscript>Please enable JavaScript in your browser!</noscript>
