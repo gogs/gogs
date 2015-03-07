@@ -1,41 +1,60 @@
 <!DOCTYPE html>
 <html>
-	<head{{if AppSubUrl}} data-suburl="{{AppSubUrl}}"{{end}}>
-		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-		<link rel="shortcut icon" href="{{AppSubUrl}}/img/favicon.png" />
-        <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-        <meta name="author" content="Gogs - Go Git Service" />
-		<meta name="description" content="Gogs(Go Git Service) is a GitHub-like clone in the Go Programming Language" />
-		<meta name="keywords" content="go, git">
-		<meta name="_csrf" content="{{.CsrfToken}}" />
-		{{if .GoGetImport}}<meta name="go-import" content="{{.GoGetImport}} git {{.CloneLink.HTTPS}}">{{end}}
+<head data-suburl="{{AppSubUrl}}">
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+	<meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+	<meta name="author" content="Gogs - Go Git Service" />
+	<meta name="description" content="Gogs(Go Git Service) a painless self-hosted Git Service written in Go" />
+	<meta name="keywords" content="go, git, self-hosted, gogs">
+	<meta name="_csrf" content="{{.CsrfToken}}" />
+	{{if .GoGetImport}}
+	<meta name="go-import" content="{{.GoGetImport}} git {{.CloneLink.HTTPS}}">
+	{{end}}
 
-		 <!-- Stylesheets -->
-		{{if CdnMode}}
-		<link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
-		<link href="//maxcdn.bootstrapcdn.com/font-awesome/4.1.0/css/font-awesome.min.css" rel="stylesheet">
+	<link rel="shortcut icon" href="{{AppSubUrl}}/img/favicon.png" />
 
-		<script src="//code.jquery.com/jquery-1.11.0.min.js"></script>
-		<script src="//netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
-		{{else}}
-		<link href="{{AppSubUrl}}/css/bootstrap.min.css" rel="stylesheet" />
-		<link href="{{AppSubUrl}}/css/font-awesome.min.css" rel="stylesheet" />
+	{{if CdnMode}}
+	<script src="//code.jquery.com/jquery-1.11.2.min.js"></script>
+	<link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css">
+	{{else}}
+	<script src="{{AppSubUrl}}/js/jquery-1.11.2.min.js"></script>
+	<link rel="stylesheet" href="{{AppSubUrl}}/css/font-awesome.min.css">
+	{{end}}
 
-		<script src="{{AppSubUrl}}/js/jquery-1.10.1.min.js"></script>
-		<script src="{{AppSubUrl}}/js/bootstrap.min.js"></script>
-		{{end}}
+	<!-- Stylesheet -->
+	<link rel="stylesheet" href="{{AppSubUrl}}/css/semantic.min.css">
+	<link rel="stylesheet" href="{{AppSubUrl}}/css/gogs.min.css">
 
-		<link href="{{AppSubUrl}}/css/todc-bootstrap.min.css" rel="stylesheet" />
-        <link href="{{AppSubUrl}}/css/datepicker3.css" rel="stylesheet" />
-        <link href="{{AppSubUrl}}/css/bootstrap-colorpicker.min.css" rel="stylesheet" />
-		<link href="{{AppSubUrl}}/css/markdown.css" rel="stylesheet" />
-		<link href="{{AppSubUrl}}/css/gogs.css" rel="stylesheet" />
+	<!-- JavaScript -->
+	<script src="{{AppSubUrl}}/js/semantic.min.js"></script>
+	<script src="{{AppSubUrl}}/js/gogs.js"></script>
 
-        <script src="{{AppSubUrl}}/js/lib.js"></script>
-        <script src="{{AppSubUrl}}/js/app.js"></script>
-		<title>{{if .Title}}{{.Title}} - {{end}}{{AppName}}</title>
-	</head>
-	<body>
-		<div id="wrapper">
+	<title>{{if .Title}}{{.Title}} - {{end}}{{AppName}}</title>
+</head>
+<body>
+	<div class="full height">
 		<noscript>Please enable JavaScript in your browser!</noscript>
+		<div class="following bar light">
+		  <div class="ui page grid">
+		    <div class="column">
+		      <div class="ui right floated secondary menu">
+		      	{{if .ShowRegistrationButton}}
+		      	<a class="view-ui item {{if .PageIsSignUp}}active{{end}}" href="{{AppSubUrl}}/user/sign_up"><i class="octicon octicon-person-add"></i> {{.i18n.Tr "register"}}</a>
+		      	{{end}}
+		      	<a class="view-ui item {{if .PageIsSignIn}}active{{end}}" href="{{AppSubUrl}}/user/login"><i class="octicon octicon-sign-in"></i> {{.i18n.Tr "sign_in"}}</a>
+		      </div>
+		      <div class="ui secondary menu">
+		      	<img class="img-15 ui image brand" src="{{AppSubUrl}}/img/favicon.png">
+		      	<a class="view-ui item {{if .PageIsHome}}active{{end}}" href="{{AppSubUrl}}/">{{if .IsSigned}}{{.i18n.Tr "dashboard"}}{{else}}{{.i18n.Tr "home"}}{{end}}</a>
+		      	<a class="view-ui item {{if .PageIsExplore}}active{{end}}" href="{{AppSubUrl}}/explore">{{.i18n.Tr "explore"}}</a>
+		      	<a class="view-ui item" target="_blank" href="http://gogs.io/docs">{{.i18n.Tr "help"}}</a>
+		      	<!-- <div class="item">
+		      	  <div class="ui icon input">
+		      	    <input class="searchbox" type="text" placeholder="{{.i18n.Tr "search_project"}}">
+		      	    <i class="search icon"></i>
+		      	  </div>
+		      	</div> -->
+		      </div>
+		    </div>
+		  </div>
+		</div>
