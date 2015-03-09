@@ -234,10 +234,6 @@ func PostProcessMarkdown(rawHtml []byte, urlPrefix string) []byte {
 	var buf bytes.Buffer
 	tokenizer := html.NewTokenizer(bytes.NewReader(rawHtml))
 	for html.ErrorToken != tokenizer.Next() {
-
-			// A parse error has occurred, so return the original input unmodified
-			return rawHtml
-
 		token := tokenizer.Token()
 		switch token.Type {
 			case html.TextToken:
