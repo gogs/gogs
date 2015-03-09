@@ -112,9 +112,9 @@ const HtmlAttributePattern =
     `(?:` + // optional value
       `\s*=\s*` +
       `(?P<attr_value>` +
-        `"[^\x00\p{Cc}"]*"` + // double-quoted
-        `'[^\x00\p{Cc}']*'` + // single-quoted
-        `[^\x00\p{Cc}\s"'=<>\x60]+` +   // unquoted
+        `"[^\x00\p{Cc}"]*"|` + // double-quoted
+        `'[^\x00\p{Cc}']*'|` + // single-quoted
+        `[^\x00\p{Cc}\s"'=<>\x60]+` + // unquoted
       `)` +
     `)?` +
   `)`
