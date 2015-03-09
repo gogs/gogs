@@ -257,7 +257,7 @@ func CreateIssuePost(ctx *middleware.Context, form auth.CreateIssueForm) {
 	}
 
 	// Update mentions.
-	ms := base.MentionPattern.FindAllString(issue.Content, -1)
+	ms := base.MentionRegex.FindAllString(issue.Content, -1)
 	if len(ms) > 0 {
 		for i := range ms {
 			ms[i] = ms[i][1:]
@@ -820,7 +820,7 @@ func Comment(ctx *middleware.Context) {
 			}
 
 			// Update mentions.
-			ms = base.MentionPattern.FindAllString(issue.Content, -1)
+			ms = base.MentionRegex.FindAllString(issue.Content, -1)
 			if len(ms) > 0 {
 				for i := range ms {
 					ms[i] = ms[i][1:]

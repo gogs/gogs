@@ -105,12 +105,31 @@ func (options *CustomRender) Image(out *bytes.Buffer, link []byte, title []byte,
 	options.Renderer.Image(out, link, title, alt)
 }
 
+// See http://www.w3.org/TR/html-markup/syntax.html#attribute
+const HtmlAttributePattern =
+  `(?:` +
+    `(?P<attr_name>[^\s\x00"'>/=\p{Cc}]+)` +
+    `(?:` + // optional value
+      `\s*=\s*` +
+      `(?P<attr_value>` +
+        `"[^\x00\p{Cc}"]*"` + // double-quoted
+        `'[^\x00\p{Cc}']*'` + // single-quoted
+        `[^\x00\p{Cc}\s"'=<>\x60]+` +   // unquoted
+      `)` +
+    `)?` +
+  `)`
+
+const HtmlCommentPattern = `<!--(?:[^-]|-[^-]|--[^>])*-->`
+
 var (
-	MentionPattern     = regexp.MustCompile(`(\s|^)@[0-9a-zA-Z_]+`)
-	commitPattern      = regexp.MustCompile(`(\s|^)https?.*commit/[0-9a-zA-Z]+(#+[0-9a-zA-Z-]*)?`)
-	issueFullPattern   = regexp.MustCompile(`(\s|^)https?.*issues/[0-9]+(#+[0-9a-zA-Z-]*)?`)
-	issueIndexPattern  = regexp.MustCompile(`( |^)#[0-9]+`)
-	sha1CurrentPattern = regexp.MustCompile(`\b[0-9a-f]{40}\b`)
+	MentionRegex      = regexp.MustCompile(`(\s|^)@[0-9a-zA-Z_]+`)
+	CommitRegex       = regexp.MustCompile(`(\s|^)https?.*commit/[0-9a-zA-Z]+(#+[0-9a-zA-Z-]*)?`)
+	IssueFullRegex    = regexp.MustCompile(`(\s|^)https?.*issues/[0-9]+(#+[0-9a-zA-Z-]*)?`)
+	IssueIndexRegex   = regexp.MustCompile(`( |^)#[0-9]+`)
+	Sha1CurrentRegex  = regexp.MustCompile(`\b[0-9a-f]{40}\b`)
+	HtmlOpenTagRegex  = regexp.MustCompile(MkHtmlOpenTagPattern(`[a-zA-Z0-9]+`))
+	HtmlCloseTagRegex = regexp.MustCompile(MkHtmlCloseTagPattern(`[a-zA-Z0-9]+`))
+	HtmlCommentRegex  = regexp.MustCompile(HtmlCommentPattern)
 )
 
 func RenderSpecialLink(rawBytes []byte, urlPrefix string) []byte {
@@ -126,7 +145,7 @@ func RenderSpecialLink(rawBytes []byte, urlPrefix string) []byte {
 		}
 
 		if !inCodeBlock && !bytes.HasPrefix(line, tab) {
-			ms := MentionPattern.FindAll(line, -1)
+			ms := MentionRegex.FindAll(line, -1)
 			for _, m := range ms {
 				m = bytes.TrimSpace(m)
 				line = bytes.Replace(line, m,
@@ -139,7 +158,7 @@ func RenderSpecialLink(rawBytes []byte, urlPrefix string) []byte {
 	}
 
 	rawBytes = buf.Bytes()
-	ms := commitPattern.FindAll(rawBytes, -1)
+	ms := CommitRegex.FindAll(rawBytes, -1)
 	for _, m := range ms {
 		m = bytes.TrimSpace(m)
 		i := strings.Index(string(m), "commit/")
@@ -150,7 +169,7 @@ func RenderSpecialLink(rawBytes []byte, urlPrefix string) []byte {
 		rawBytes = bytes.Replace(rawBytes, m, []byte(fmt.Sprintf(
 			` <code><a href="%s">%s</a></code>`, m, ShortSha(string(m[i+7:j])))), -1)
 	}
-	ms = issueFullPattern.FindAll(rawBytes, -1)
+	ms = IssueFullRegex.FindAll(rawBytes, -1)
 	for _, m := range ms {
 		m = bytes.TrimSpace(m)
 		i := strings.Index(string(m), "issues/")
@@ -161,13 +180,11 @@ func RenderSpecialLink(rawBytes []byte, urlPrefix string) []byte {
 		rawBytes = bytes.Replace(rawBytes, m, []byte(fmt.Sprintf(
 			` <a href="%s">#%s</a>`, m, ShortSha(string(m[i+7:j])))), -1)
 	}
-	rawBytes = RenderIssueIndexPattern(rawBytes, urlPrefix)
-	rawBytes = RenderSha1CurrentPattern(rawBytes, urlPrefix)
 	return rawBytes
 }
 
 func RenderSha1CurrentPattern(rawBytes []byte, urlPrefix string) []byte {
-	ms := sha1CurrentPattern.FindAll(rawBytes, -1)
+	ms := Sha1CurrentRegex.FindAll(rawBytes, -1)
 	for _, m := range ms {
 		rawBytes = bytes.Replace(rawBytes, m, []byte(fmt.Sprintf(
 			`<a href="%s/commit/%s"><code>%s</code></a>`, urlPrefix, m, ShortSha(string(m)))), -1)
@@ -176,7 +193,7 @@ func RenderSha1CurrentPattern(rawBytes []byte, urlPrefix string) []byte {
 }
 
 func RenderIssueIndexPattern(rawBytes []byte, urlPrefix string) []byte {
-	ms := issueIndexPattern.FindAll(rawBytes, -1)
+	ms := IssueIndexRegex.FindAll(rawBytes, -1)
 	for _, m := range ms {
 		rawBytes = bytes.Replace(rawBytes, m, []byte(fmt.Sprintf(`<a href="%s/issues/%s">%s</a>`,
 			urlPrefix, strings.TrimPrefix(string(m[1:]), "#"), m)), -1)
@@ -197,7 +214,7 @@ func RenderRawMarkdown(body []byte, urlPrefix string) []byte {
 	htmlFlags |= blackfriday.HTML_OMIT_CONTENTS
 	// htmlFlags |= blackfriday.HTML_COMPLETE_PAGE
 	renderer := &CustomRender{
-		Renderer:  blackfriday.HtmlRenderer(htmlFlags, "", ""),
+		Renderer:	blackfriday.HtmlRenderer(htmlFlags, "", ""),
 		urlPrefix: urlPrefix,
 	}
 
@@ -217,12 +234,121 @@ func RenderRawMarkdown(body []byte, urlPrefix string) []byte {
 }
 
 func RenderMarkdown(rawBytes []byte, urlPrefix string) []byte {
-	body := RenderSpecialLink(rawBytes, urlPrefix)
-	body = RenderRawMarkdown(body, urlPrefix)
-	body = Sanitizer.SanitizeBytes(body)
-	return body
+	return PostProcessMarkdown(RenderRawMarkdown(rawBytes, urlPrefix), urlPrefix)
 }
 
 func RenderMarkdownString(raw, urlPrefix string) string {
 	return string(RenderMarkdown([]byte(raw), urlPrefix))
+}
+
+func PostProcessMarkdown(html []byte, urlPrefix string) []byte {
+	processed := make([]byte, len(html) + len(html) / 2)
+	for i, part := range GetPostProcessableParts(html) {
+		if (0 == i & 1) && len(part) > 0 {
+			part = RenderSpecialLink(part, urlPrefix)
+			part = RenderSha1CurrentPattern(part, urlPrefix)
+			part = RenderIssueIndexPattern(part, urlPrefix)
+		}
+
+		processed = append(processed, part...)
+	}
+
+	return processed
+}
+
+// Breaks the provided HTML into processable and non-processable content, with processable content at
+// even indices, and non-processable content (tags) at odd indices.
+func GetPostProcessableParts(html []byte) [][]byte {
+	// Strip comments from the input so that we don't have to deal with tags contained in comments
+	html = HtmlCommentRegex.ReplaceAll(html, []byte{})
+
+	openMatches	:= HtmlOpenTagRegex.FindAllSubmatchIndex(html, -1)
+	closeMatches := HtmlCloseTagRegex.FindAllSubmatchIndex(html, -1)
+
+	oi := 0; ol := len(openMatches)
+	ci := 0; cl := len(closeMatches)
+
+	parts := make([][]byte, 2 * (ol + cl) + 1) // we have fence sections
+	lastOffset := 0
+	for ci < cl && oi < ol {
+		// Does an open tag occur next?
+		if oi < ol && (ci >= cl || openMatches[oi][0] < closeMatches[ci][0]) {
+			openMatch := openMatches[oi]
+			openTagName := string(html[openMatch[2]:openMatch[3]])
+			foundClose := false
+
+			// If this is an excluded tag, its content is not post-processable and we need to skip to the end
+			// of its matching close tag (we assume that you cannot nest tags)
+			if IsExcludedTagName(openTagName) {
+				for closeSearchIndex := ci; closeSearchIndex < cl; closeSearchIndex++ {
+					closeMatch := closeMatches[closeSearchIndex]
+
+					// Skip close tags occurring before the open tag
+					if closeMatch[0] < openMatch[1] { continue }
+
+					closeTagName := string(html[closeMatch[2]:closeMatch[3]])
+					if strings.EqualFold(openTagName, closeTagName) {
+						foundClose = true
+
+						parts = append(parts, html[lastOffset:openMatch[0]], html[openMatch[0]:closeMatch[1]])
+						lastOffset = closeMatch[1]
+
+						ci = closeSearchIndex + 1
+						// Advance the open tag index until we are at a tag occurring after the close tag
+						for oi < ol && openMatches[oi][0] < closeMatch[1] { oi++ }
+
+						break
+					}
+				}
+			}
+
+			// If we did not find a close tag (or this is not an excluded tag), then we just add the open tag
+			// as the skipped part.
+			if !foundClose {
+				parts = append(parts, html[lastOffset:openMatch[0]], html[openMatch[0]:openMatch[1]])
+				lastOffset = openMatch[1]
+
+				oi += 1
+				for ci < cl && closeMatches[ci][0] < openMatch[1] { ci++ }
+			}
+		} else {
+			closeMatch := closeMatches[ci]
+
+			parts = append(parts, html[lastOffset:closeMatch[0]], html[closeMatch[0]:closeMatch[1]])
+			lastOffset = closeMatch[1]
+
+			ci += 1
+			for oi < ol && openMatches[oi][0] < closeMatch[1] { oi++ }
+		}
+	}
+
+	if(lastOffset < len(html)) {
+		parts = append(parts, html[lastOffset:])
+	}
+
+	return parts
+}
+
+func IsExcludedTagName(tagName string) bool {
+	return strings.EqualFold("a", tagName) ||
+				 strings.EqualFold("code", tagName) ||
+				 strings.EqualFold("pre", tagName)
+}
+
+// Creates an uncompiled regular expression matching an HTML tag using the provided tag name pattern.
+// Subpattern 1 (`tag_name`) contains the matched tag name. Subpattern 2 (`tag_attributes`) contains the
+// tag's attribute string. Subpattern 3 (`tag_void`) contains the tag's void slash (if any).
+func MkHtmlOpenTagPattern(tagNamePattern string) string {
+  return `(?:` +
+           `<(?P<tag_name>` + tagNamePattern + `)` +
+           `(?P<tag_attributes>(?:\s+` + HtmlAttributePattern + `)*)` +
+           `(?:\s*(?P<tag_void>/))?` +
+           `\s*>` +
+         `)`
+}
+
+// Creates an uncompiled regular expression matching an HTML close tag using the provided tag name pattern.
+// Subpattern 1 (`tag_close`) contains the matched tag name.
+func MkHtmlCloseTagPattern(tagNamePattern string) string {
+	return `</(?P<tag_close>` + tagNamePattern + `)\s*>`
 }
