@@ -1,0 +1,12 @@
+web:
+  build: .
+  links:
+    - mysql
+  ports:
+    - "3000:3000"
+
+mysql:
+  image: mysql
+  environment:
+    - MYSQL_ROOT_PASSWORD=gogs
+    - MYSQL_DATABASE=gogs
