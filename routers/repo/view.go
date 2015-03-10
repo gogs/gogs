@@ -141,13 +141,17 @@ func Home(ctx *middleware.Context) {
 					ctx.Handle(500, "GetSubModule", err)
 					return
 				}
+				smUrl := ""
+				if sm != nil {
+					smUrl = sm.Url
+				}
 
 				c, err := ctx.Repo.Commit.GetCommitOfRelPath(filepath.Join(treePath, te.Name()))
 				if err != nil {
 					ctx.Handle(500, "GetCommitOfRelPath", err)
 					return
 				}
-				files = append(files, []interface{}{te, git.NewSubModuleFile(c, sm.Url, te.Id.String())})
+				files = append(files, []interface{}{te, git.NewSubModuleFile(c, smUrl, te.Id.String())})
 			}
 		}
 		ctx.Data["Files"] = files

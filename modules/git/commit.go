@@ -88,11 +88,11 @@ func (c *Commit) GetCommitOfRelPath(relPath string) (*Commit, error) {
 }
 
 func (c *Commit) GetSubModule(entryname string) (*SubModule, error) {
-	moduels, err := c.GetSubModules()
+	modules, err := c.GetSubModules()
 	if err != nil {
 		return nil, err
 	}
-	return moduels[entryname], nil
+	return modules[entryname], nil
 }
 
 func (c *Commit) GetSubModules() (map[string]*SubModule, error) {
