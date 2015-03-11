@@ -181,7 +181,7 @@ func MigratePost(ctx *middleware.Context, form auth.MigrateRepoForm) {
 		}
 	}
 
-	// Remote address can be HTTPS URL or local path.
+	// Remote address can be HTTP/HTTPS URL or local path.
 	remoteAddr := form.CloneAddr
 	if strings.HasPrefix(form.CloneAddr, "http") {
 		u, err := url.Parse(form.CloneAddr)
@@ -190,8 +190,8 @@ func MigratePost(ctx *middleware.Context, form auth.MigrateRepoForm) {
 			ctx.RenderWithErr(ctx.Tr("form.url_error"), MIGRATE, &form)
 			return
 		}
-		if len(form.AuthUserName) > 0 || len(form.AuthPasswd) > 0 {
-			u.User = url.UserPassword(form.AuthUserName, form.AuthPasswd)
+		if len(form.AuthUsername) > 0 || len(form.AuthPassword) > 0 {
+			u.User = url.UserPassword(form.AuthUsername, form.AuthPassword)
 		}
 		remoteAddr = u.String()
 	} else if !com.IsDir(remoteAddr) {
