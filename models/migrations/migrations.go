@@ -341,12 +341,15 @@ func teamToTeamRepo(x *xorm.Engine) error {
 		orgID := com.StrTo(team["org_id"]).MustInt64()
 		teamID := com.StrTo(team["id"]).MustInt64()
 
+		// #1032: legacy code can have duplicated IDs for same repository.
+		mark := make(map[int64]bool)
 		for _, idStr := range strings.Split(string(team["repo_ids"]), "|") {
 			repoID := com.StrTo(strings.TrimPrefix(idStr, "$")).MustInt64()
-			if repoID == 0 {
+			if repoID == 0 || mark[repoID] {
 				continue
 			}
 
+			mark[repoID] = true
 			teamRepos = append(teamRepos, &TeamRepo{
 				OrgID:  orgID,
 				TeamID: teamID,
