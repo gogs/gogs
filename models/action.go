@@ -97,8 +97,15 @@ func (a Action) GetRepoName() string {
 	return a.RepoName
 }
 
+func (a Action) GetRepoPath() string {
+	return path.Join(a.RepoUserName, a.RepoName)
+}
+
 func (a Action) GetRepoLink() string {
-	return path.Join(setting.AppSubUrl, a.RepoUserName, a.RepoName)
+	if len(setting.AppSubUrl) > 0 {
+		return path.Join(setting.AppSubUrl, a.GetRepoPath())
+	}
+	return "/" + a.GetRepoPath()
 }
 
 func (a Action) GetBranch() string {
