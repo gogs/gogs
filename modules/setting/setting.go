@@ -341,7 +341,7 @@ func newService() {
 	Service.RequireSignInView = Cfg.Section("service").Key("REQUIRE_SIGNIN_VIEW").MustBool()
 	Service.EnableCacheAvatar = Cfg.Section("service").Key("ENABLE_CACHE_AVATAR").MustBool()
 	Service.EnableReverseProxyAuth = Cfg.Section("service").Key("ENABLE_REVERSE_PROXY_AUTHENTICATION").MustBool()
-	Service.EnableReverseProxyAutoRegister = Cfg.Section("service").Key("ENABLE_REVERSE_PROXY_AUTO_REGISTERATION").MustBool()
+	Service.EnableReverseProxyAutoRegister = Cfg.Section("service").Key("ENABLE_REVERSE_PROXY_AUTO_REGISTRATION").MustBool()
 }
 
 var logLevels = map[string]string{
