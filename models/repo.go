@@ -1377,5 +1377,9 @@ func ForkRepository(u *User, oldRepo *Repository, name, desc string) (_ *Reposit
 		return nil, fmt.Errorf("git update-server-info: %v", err)
 	}
 
+	if err = createUpdateHook(repoPath); err != nil {
+		return nil, fmt.Errorf("createUpdateHook: %v", err)
+	}
+
 	return repo, sess.Commit()
 }
