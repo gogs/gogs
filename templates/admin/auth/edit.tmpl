@@ -12,7 +12,7 @@
                             <div class="panel-header">
                                 <strong>{{.i18n.Tr "admin.auths.edit"}}</strong>
                             </div>
-                            <form class="form form-align panel-body" id="auth-setting-form" action="{{AppSubUrl}}/admin/auths/{{.Source.Id}}" data-delete-url="/admin/auths/{{.Source.Id}}/delete" method="post">
+                            <form class="form form-align panel-body" id="auth-setting-form" action="{{AppSubUrl}}/admin/auths/{{.Source.Id}}" data-delete-url="{{AppSubUrl}}/admin/auths/{{.Source.Id}}/delete" method="post">
                                 {{.CsrfTokenHtml}}
                                 <input type="hidden" value="{{.Source.Id}}" name="id"/>
                                 {{$type := .Source.Type}}
