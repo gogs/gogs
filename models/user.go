@@ -124,7 +124,7 @@ func (u *User) AvatarLink() string {
 	switch {
 	case u.UseCustomAvatar:
 		return setting.AppSubUrl + "/avatars/" + com.ToStr(u.Id)
-	case setting.DisableGravatar:
+	case setting.DisableGravatar, setting.OfflineMode:
 		return setting.AppSubUrl + "/img/avatar_default.jpg"
 	case setting.Service.EnableCacheAvatar:
 		return setting.AppSubUrl + "/avatar/" + u.Avatar
