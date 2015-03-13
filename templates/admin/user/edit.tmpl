@@ -12,7 +12,7 @@
                             <div class="panel-header">
                                 <strong>{{.i18n.Tr "admin.users.edit_account"}}</strong>
                             </div>
-                            <form class="form form-align panel-body" id="user-profile-form" action="{{AppSubUrl}}/admin/users/{{.User.Id}}" method="post" data-delete-url="/admin/users/{{.User.Id}}/delete">
+                            <form class="form form-align panel-body" id="user-profile-form" action="{{AppSubUrl}}/admin/users/{{.User.Id}}" method="post" data-delete-url="{{AppSubUrl}}/admin/users/{{.User.Id}}/delete">
 					            {{.CsrfTokenHtml}}
                                 <div class="field">
                                     <label class="req">{{.i18n.Tr "admin.users.auth_source"}}</label>
