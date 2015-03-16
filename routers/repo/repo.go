@@ -356,7 +356,7 @@ func Action(ctx *middleware.Context) {
 
 		ctx.Repo.Repository.Description = ctx.Query("desc")
 		ctx.Repo.Repository.Website = ctx.Query("site")
-		err = models.UpdateRepository(ctx.Repo.Repository)
+		err = models.UpdateRepository(ctx.Repo.Repository, false)
 	}
 
 	if err != nil {
