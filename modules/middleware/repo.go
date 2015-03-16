@@ -47,7 +47,7 @@ func ApiRepoAssignment() macaron.Handler {
 		// Get repository.
 		repo, err := models.GetRepositoryByName(u.Id, repoName)
 		if err != nil {
-			if err == models.ErrRepoNotExist {
+			if models.IsErrRepoNotExist(err) {
 				ctx.Error(404)
 			} else {
 				ctx.JSON(500, &base.ApiJsonErr{"GetRepositoryByName: " + err.Error(), base.DOC_URL})
@@ -223,7 +223,7 @@ func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 		// Get repository.
 		repo, err := models.GetRepositoryByName(u.Id, repoName)
 		if err != nil {
-			if err == models.ErrRepoNotExist {
+			if models.IsErrRepoNotExist(err) {
 				ctx.Handle(404, "GetRepositoryByName", err)
 			} else {
 				ctx.Handle(500, "GetRepositoryByName", err)

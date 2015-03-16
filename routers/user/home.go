@@ -354,7 +354,7 @@ func Issues(ctx *middleware.Context) {
 
 		issues[i].Repo, err = models.GetRepositoryById(issues[i].RepoId)
 		if err != nil {
-			if err == models.ErrRepoNotExist {
+			if models.IsErrRepoNotExist(err) {
 				log.Warn("user.Issues(GetRepositoryById #%d): repository not exist", issues[i].RepoId)
 				continue
 			} else {
