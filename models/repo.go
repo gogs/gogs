@@ -35,7 +35,6 @@ const (
 
 var (
 	ErrRepoAlreadyExist  = errors.New("Repository already exist")
-	ErrRepoNotExist      = errors.New("Repository does not exist")
 	ErrRepoFileNotExist  = errors.New("Repository file does not exist")
 	ErrRepoNameIllegal   = errors.New("Repository name contains illegal characters")
 	ErrRepoFileNotLoaded = errors.New("Repository file not loaded")
@@ -758,7 +757,7 @@ func DeleteRepository(uid, repoID int64, userName string) error {
 	if err != nil {
 		return err
 	} else if !has {
-		return ErrRepoNotExist
+		return ErrRepoNotExist{repoID, uid, ""}
 	}
 
 	// In case is a organization.
@@ -875,18 +874,18 @@ func GetRepositoryByName(uid int64, repoName string) (*Repository, error) {
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, ErrRepoNotExist
+		return nil, ErrRepoNotExist{0, uid, repoName}
 	}
 	return repo, err
 }
 
 func getRepositoryById(e Engine, id int64) (*Repository, error) {
-	repo := &Repository{}
+	repo := new(Repository)
 	has, err := e.Id(id).Get(repo)
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, ErrRepoNotExist
+		return nil, ErrRepoNotExist{id, 0, ""}
 	}
 	return repo, nil
 }

@@ -251,7 +251,7 @@ func Fork(ctx *middleware.Context) {
 	ctx.Data["Title"] = ctx.Tr("new_fork")
 
 	if _, err := getForkRepository(ctx); err != nil {
-		if err == models.ErrRepoNotExist {
+		if models.IsErrRepoNotExist(err) {
 			ctx.Redirect(setting.AppSubUrl + "/")
 		} else {
 			ctx.Handle(500, "getForkRepository", err)
@@ -275,7 +275,7 @@ func ForkPost(ctx *middleware.Context, form auth.CreateRepoForm) {
 
 	forkRepo, err := getForkRepository(ctx)
 	if err != nil {
-		if err == models.ErrRepoNotExist {
+		if models.IsErrRepoNotExist(err) {
 			ctx.Redirect(setting.AppSubUrl + "/")
 		} else {
 			ctx.Handle(500, "getForkRepository", err)
