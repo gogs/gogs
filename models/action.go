@@ -309,7 +309,7 @@ func CommitRepoAction(userId, repoUserId int64, userName, actEmail string,
 		return errors.New("action.CommitRepoAction(GetRepositoryByName): " + err.Error())
 	}
 	repo.IsBare = false
-	if err = UpdateRepository(repo); err != nil {
+	if err = UpdateRepository(repo, false); err != nil {
 		return errors.New("action.CommitRepoAction(UpdateRepository): " + err.Error())
 	}
 
