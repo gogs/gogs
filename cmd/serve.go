@@ -128,7 +128,7 @@ func runServ(c *cli.Context) {
 
 	repo, err := models.GetRepositoryByName(repoUser.Id, repoName)
 	if err != nil {
-		if err == models.ErrRepoNotExist {
+		if models.IsErrRepoNotExist(err) {
 			if user.Id == repoUser.Id || repoUser.IsOwnedBy(user.Id) {
 				fail("Repository does not exist", "Repository does not exist: %s/%s", repoUser.Name, repoName)
 			} else {

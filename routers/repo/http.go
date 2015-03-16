@@ -65,7 +65,7 @@ func Http(ctx *middleware.Context) {
 
 	repo, err := models.GetRepositoryByName(repoUser.Id, reponame)
 	if err != nil {
-		if err == models.ErrRepoNotExist {
+		if models.IsErrRepoNotExist(err) {
 			ctx.Handle(404, "GetRepositoryByName", nil)
 		} else {
 			ctx.Handle(500, "GetRepositoryByName", err)

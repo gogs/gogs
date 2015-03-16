@@ -6,6 +6,8 @@ package models
 
 import (
 	"fmt"
+
+	"github.com/gogits/gogs/modules/log"
 )
 
 type AccessMode int
@@ -77,6 +79,10 @@ func (u *User) GetAccessibleRepositories() (map[*Repository]AccessMode, error) {
 	for _, access := range accesses {
 		repo, err := GetRepositoryById(access.RepoID)
 		if err != nil {
+			if IsErrRepoNotExist(err) {
+				log.Error(4, "%v", err)
+				continue
+			}
 			return nil, err
 		}
 		if err = repo.GetOwner(); err != nil {
