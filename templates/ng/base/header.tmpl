@@ -13,18 +13,18 @@
 
         {{if .IsSigned}}
         <li class="right" id="header-nav-sign-out">
-            <a href="{{AppSubUrl}}/user/logout" title="{{.i18n.Tr "sign_out"}}"><i class="octicon octicon-sign-out"></i><span class="sr-only">{{.i18n.Tr "sign_out"}}</span></a>
+            <a href="{{AppSubUrl}}/user/logout" title="{{.i18n.Tr "sign_out"}}"><i class="octicon octicon-sign-out"></i></a>
         </li>
         <li class="right {{if .PageIsUserSettings}}current{{end}}">
-            <a href="{{AppSubUrl}}/user/settings" title="{{.i18n.Tr "account_settings"}}"><i class="octicon octicon-settings"></i><span class="sr-only">{{.i18n.Tr "account_settings"}}</span></a>
+            <a href="{{AppSubUrl}}/user/settings" title="{{.i18n.Tr "account_settings"}}"><i class="octicon octicon-settings"></i></a>
         </li>
             {{if .IsAdmin}}
             <li class="right {{if .PageIsAdmin}}current{{end}}">
-                <a href="{{AppSubUrl}}/admin" title="{{.i18n.Tr "admin_panel"}}"><i class="octicon octicon-circuit-board"><span class="sr-only">{{.i18n.Tr "admin_panel"}}</span></i></a>
+                <a href="{{AppSubUrl}}/admin" title="{{.i18n.Tr "admin_panel"}}"><i class="octicon octicon-circuit-board"></i></a>
             </li>
             {{end}}
         <li class="right down">
-            <a href="#"><i class="octicon octicon-plus"></i><span class="sr-only">{{.i18n.Tr "more"}}</span></a>
+            <a href="#"><i class="octicon octicon-plus"></i></a>
             <ul class="menu menu-down" id="header-new-repo-menu">
                 <li><a href="{{AppSubUrl}}/repo/create"><i class="octicon octicon-repo-create"></i>{{.i18n.Tr "new_repo"}}</a></li>
                 <li><a href="{{AppSubUrl}}/repo/migrate"><i class="octicon octicon-repo-clone"></i>{{.i18n.Tr "new_migrate"}}</a></li>
