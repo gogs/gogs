@@ -11,15 +11,15 @@ import (
 )
 
 type AdminEditUserForm struct {
-	Email        string `form:"email" binding:"Required;Email;MaxSize(50)"`
-	Passwd       string `form:"password"`
-	Website      string `form:"website" binding:"MaxSize(50)"`
-	Location     string `form:"location" binding:"MaxSize(50)"`
-	Avatar       string `form:"avatar" binding:"Required;Email;MaxSize(50)"`
-	Active       bool   `form:"active"`
-	Admin        bool   `form:"admin"`
-	AllowGitHook bool   `form:"allow_git_hook"`
-	LoginType    int    `form:"login_type"`
+	Email        string `binding:"Required;Email;MaxSize(50)"`
+	Password     string `binding:"OmitEmpty;MinSize(6);MaxSize(255)"`
+	Website      string `binding:"MaxSize(50)"`
+	Location     string `binding:"MaxSize(50)"`
+	Avatar       string `binding:"Required;Email;MaxSize(50)"`
+	Active       bool
+	Admin        bool
+	AllowGitHook bool
+	LoginType    int
 }
 
 func (f *AdminEditUserForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
