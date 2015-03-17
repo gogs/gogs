@@ -168,6 +168,7 @@ func EditUserPost(ctx *middleware.Context, form auth.AdminEditUserForm) {
 		ctx.Handle(500, "GetUserById", err)
 		return
 	}
+	ctx.Data["User"] = u
 
 	if ctx.HasError() {
 		ctx.HTML(200, USER_EDIT)
@@ -175,8 +176,8 @@ func EditUserPost(ctx *middleware.Context, form auth.AdminEditUserForm) {
 	}
 
 	// FIXME: need password length check
-	if len(form.Passwd) > 0 {
-		u.Passwd = form.Passwd
+	if len(form.Password) > 0 {
+		u.Passwd = form.Password
 		u.Salt = models.GetUserSalt()
 		u.EncodePasswd()
 	}
@@ -192,8 +193,6 @@ func EditUserPost(ctx *middleware.Context, form auth.AdminEditUserForm) {
 	u.IsActive = form.Active
 	u.IsAdmin = form.Admin
 	u.AllowGitHook = form.AllowGitHook
-
-	ctx.Data["User"] = u
 
 	if err := models.UpdateUser(u); err != nil {
 		if err == models.ErrEmailAlreadyUsed {

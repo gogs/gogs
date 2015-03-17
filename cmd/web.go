@@ -79,7 +79,7 @@ func checkVersion() {
 	// Check dependency version.
 	checkers := []VerChecker{
 		{"github.com/Unknwon/macaron", macaron.Version, "0.5.1"},
-		{"github.com/macaron-contrib/binding", binding.Version, "0.0.5"},
+		{"github.com/macaron-contrib/binding", binding.Version, "0.0.6"},
 		{"github.com/macaron-contrib/cache", cache.Version, "0.0.7"},
 		{"github.com/macaron-contrib/csrf", csrf.Version, "0.0.3"},
 		{"github.com/macaron-contrib/i18n", i18n.Version, "0.0.5"},
