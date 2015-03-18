@@ -87,13 +87,12 @@ func SettingsDelete(ctx *middleware.Context) {
 
 	org := ctx.Org.Organization
 	if ctx.Req.Method == "POST" {
-		// TODO: validate password.
+		// FIXME: validate password.
 		if err := models.DeleteOrganization(org); err != nil {
-			switch err {
-			case models.ErrUserOwnRepos:
+			if models.IsErrUserOwnRepos(err) {
 				ctx.Flash.Error(ctx.Tr("form.org_still_own_repo"))
 				ctx.Redirect(setting.AppSubUrl + "/org/" + org.LowerName + "/settings/delete")
-			default:
+			} else {
 				ctx.Handle(500, "DeleteOrganization", err)
 			}
 		} else {

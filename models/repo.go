@@ -819,9 +819,9 @@ func DeleteRepository(uid, repoID int64, userName string) error {
 		return err
 	} else if _, err = sess.Delete(&Access{RepoID: repo.Id}); err != nil {
 		return err
-	} else if _, err = sess.Delete(&Action{RepoId: repo.Id}); err != nil {
+	} else if _, err = sess.Delete(&Action{RepoID: repo.Id}); err != nil {
 		return err
-	} else if _, err = sess.Delete(&Watch{RepoId: repoID}); err != nil {
+	} else if _, err = sess.Delete(&Watch{RepoID: repoID}); err != nil {
 		return err
 	} else if _, err = sess.Delete(&Mirror{RepoId: repoID}); err != nil {
 		return err
@@ -1190,9 +1190,9 @@ func (repo *Repository) DeleteCollaborator(u *User) (err error) {
 
 // Watch is connection request for receiving repository notification.
 type Watch struct {
-	Id     int64
-	UserId int64 `xorm:"UNIQUE(watch)"`
-	RepoId int64 `xorm:"UNIQUE(watch)"`
+	ID     int64 `xorm:"pk autoincr"`
+	UserID int64 `xorm:"UNIQUE(watch)"`
+	RepoID int64 `xorm:"UNIQUE(watch)"`
 }
 
 // IsWatching checks if user has watched given repository.
@@ -1206,7 +1206,7 @@ func watchRepo(e Engine, uid, repoId int64, watch bool) (err error) {
 		if IsWatching(uid, repoId) {
 			return nil
 		}
-		if _, err = e.Insert(&Watch{RepoId: repoId, UserId: uid}); err != nil {
+		if _, err = e.Insert(&Watch{RepoID: repoId, UserID: uid}); err != nil {
 			return err
 		}
 		_, err = e.Exec("UPDATE `repository` SET num_watches = num_watches + 1 WHERE id = ?", repoId)
@@ -1217,7 +1217,7 @@ func watchRepo(e Engine, uid, repoId int64, watch bool) (err error) {
 		if _, err = e.Delete(&Watch{0, uid, repoId}); err != nil {
 			return err
 		}
-		_, err = e.Exec("UPDATE `repository` SET num_watches = num_watches - 1 WHERE id = ?", repoId)
+		_, err = e.Exec("UPDATE `repository` SET num_watches=num_watches-1 WHERE id=?", repoId)
 	}
 	return err
 }
@@ -1229,7 +1229,7 @@ func WatchRepo(uid, repoId int64, watch bool) (err error) {
 
 func getWatchers(e Engine, rid int64) ([]*Watch, error) {
 	watches := make([]*Watch, 0, 10)
-	err := e.Find(&watches, &Watch{RepoId: rid})
+	err := e.Find(&watches, &Watch{RepoID: rid})
 	return watches, err
 }
 
@@ -1240,24 +1240,24 @@ func GetWatchers(rid int64) ([]*Watch, error) {
 
 func notifyWatchers(e Engine, act *Action) error {
 	// Add feeds for user self and all watchers.
-	watches, err := getWatchers(e, act.RepoId)
+	watches, err := getWatchers(e, act.RepoID)
 	if err != nil {
 		return fmt.Errorf("get watchers: %v", err)
 	}
 
 	// Add feed for actioner.
-	act.UserId = act.ActUserId
+	act.UserID = act.ActUserID
 	if _, err = e.InsertOne(act); err != nil {
 		return fmt.Errorf("insert new actioner: %v", err)
 	}
 
 	for i := range watches {
-		if act.ActUserId == watches[i].UserId {
+		if act.ActUserID == watches[i].UserID {
 			continue
 		}
 
-		act.Id = 0
-		act.UserId = watches[i].UserId
+		act.ID = 0
+		act.UserID = watches[i].UserID
 		if _, err = e.InsertOne(act); err != nil {
 			return fmt.Errorf("insert new action: %v", err)
 		}

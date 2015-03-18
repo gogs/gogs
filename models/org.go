@@ -18,7 +18,6 @@ var (
 	ErrTeamAlreadyExist = errors.New("Team already exist")
 	ErrTeamNotExist     = errors.New("Team does not exist")
 	ErrTeamNameIllegal  = errors.New("Team name contains illegal characters")
-	ErrLastOrgOwner     = errors.New("The user to remove is the last member in owner team")
 )
 
 // IsOwnedBy returns true if given user is in the owner team.
@@ -339,18 +338,20 @@ func RemoveOrgUser(orgId, uid int64) error {
 
 	has, err := x.Where("uid=?", uid).And("org_id=?", orgId).Get(ou)
 	if err != nil {
-		return err
+		return fmt.Errorf("get org-user: %v", err)
 	} else if !has {
 		return nil
 	}
 
 	u, err := GetUserById(uid)
 	if err != nil {
-		return err
+		return fmt.Errorf("GetUserById: %v", err)
 	}
 	org, err := GetUserById(orgId)
 	if err != nil {
-		return err
+		return fmt.Errorf("get organization: %v", err)
+	} else if err = org.GetRepositories(); err != nil {
+		return fmt.Errorf("GetRepositories: %v", err)
 	}
 
 	// Check if the user to delete is the last member in owner team.
@@ -360,49 +361,39 @@ func RemoveOrgUser(orgId, uid int64) error {
 			return err
 		}
 		if t.NumMembers == 1 {
-			return ErrLastOrgOwner
+			return ErrLastOrgOwner{UID: uid}
 		}
 	}
 
 	sess := x.NewSession()
-	defer sess.Close()
+	defer sessionRelease(sess)
 	if err := sess.Begin(); err != nil {
 		return err
 	}
 
 	if _, err := sess.Id(ou.ID).Delete(ou); err != nil {
-		sess.Rollback()
 		return err
-	} else if _, err = sess.Exec("UPDATE `user` SET num_members=num_members-1 WHERE id = ?", orgId); err != nil {
-		sess.Rollback()
+	} else if _, err = sess.Exec("UPDATE `user` SET num_members=num_members-1 WHERE id=?", orgId); err != nil {
 		return err
 	}
 
 	// Delete all repository accesses.
-	if err = org.GetRepositories(); err != nil {
-		sess.Rollback()
-		return err
-	}
-	access := &Access{
-		UserID: u.Id,
-	}
+	access := &Access{UserID: u.Id}
 	for _, repo := range org.Repos {
 		access.RepoID = repo.Id
 		if _, err = sess.Delete(access); err != nil {
-			sess.Rollback()
 			return err
-		} else if err = WatchRepo(u.Id, repo.Id, false); err != nil {
-			sess.Rollback()
+		} else if err = watchRepo(sess, u.Id, repo.Id, false); err != nil {
 			return err
 		}
 	}
 
 	// Delete member in his/her teams.
-	ts, err := GetUserTeams(org.Id, u.Id)
+	teams, err := getUserTeams(sess, org.Id, u.Id)
 	if err != nil {
 		return err
 	}
-	for _, t := range ts {
+	for _, t := range teams {
 		if err = removeTeamMember(sess, org.Id, t.ID, u.Id); err != nil {
 			return err
 		}
@@ -902,7 +893,7 @@ func removeTeamMember(e Engine, orgId, teamId, uid int64) error {
 
 	// Check if the user to delete is the last member in owner team.
 	if t.IsOwnerTeam() && t.NumMembers == 1 {
-		return ErrLastOrgOwner
+		return ErrLastOrgOwner{UID: uid}
 	}
 
 	t.NumMembers--
