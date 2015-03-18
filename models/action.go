@@ -417,32 +417,28 @@ func CommitRepoAction(userId, repoUserId int64, userName, actEmail string,
 			continue
 		}
 
+		var payload BasePayload
 		switch w.HookTaskType {
 		case SLACK:
-			{
-				s, err := GetSlackPayload(p, w.Meta)
-				if err != nil {
-					return errors.New("action.GetSlackPayload: " + err.Error())
-				}
-				CreateHookTask(&HookTask{
-					Type:        w.HookTaskType,
-					Url:         w.Url,
-					BasePayload: s,
-					ContentType: w.ContentType,
-					IsSsl:       w.IsSsl,
-				})
+			s, err := GetSlackPayload(p, w.Meta)
+			if err != nil {
+				return errors.New("action.GetSlackPayload: " + err.Error())
 			}
+			payload = s
 		default:
-			{
-				p.Secret = w.Secret
-				CreateHookTask(&HookTask{
-					Type:        w.HookTaskType,
-					Url:         w.Url,
-					BasePayload: p,
-					ContentType: w.ContentType,
-					IsSsl:       w.IsSsl,
-				})
-			}
+			payload = p
+			p.Secret = w.Secret
+		}
+
+		if err = CreateHookTask(&HookTask{
+			Type:        w.HookTaskType,
+			Url:         w.Url,
+			BasePayload: payload,
+			ContentType: w.ContentType,
+			EventType:   HOOK_EVENT_PUSH,
+			IsSsl:       w.IsSsl,
+		}); err != nil {
+			return fmt.Errorf("CreateHookTask: %v", err)
 		}
 	}
 
