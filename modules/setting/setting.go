@@ -163,6 +163,13 @@ func WorkDir() (string, error) {
 	return path.Dir(strings.Replace(execPath, "\\", "/", -1)), err
 }
 
+func forcePathSeparator(path string) {
+	if strings.Contains(path, "\\") {
+		fmt.Println("Do not use '\\' or '\\\\' in paths, instead, please use '/' in all places")
+		os.Exit(1)
+	}
+}
+
 // NewConfigContext initializes configuration context.
 // NOTE: do not print any log except error.
 func NewConfigContext() {
@@ -196,6 +203,7 @@ func NewConfigContext() {
 	Cfg.NameMapper = ini.AllCapsUnderscore
 
 	LogRootPath = Cfg.Section("log").Key("ROOT_PATH").MustString(path.Join(workDir, "log"))
+	forcePathSeparator(LogRootPath)
 
 	sec := Cfg.Section("server")
 	AppName = Cfg.Section("").Key("APP_NAME").MustString("Gogs: Go Git Service")
@@ -287,18 +295,22 @@ func NewConfigContext() {
 	if err != nil {
 		log.Fatal(4, "Fail to get home directory: %v", err)
 	}
+	homeDir = strings.Replace(homeDir, "\\", "/", -1)
+
 	sec = Cfg.Section("repository")
-	RepoRootPath = sec.Key("ROOT").MustString(filepath.Join(homeDir, "gogs-repositories"))
+	RepoRootPath = sec.Key("ROOT").MustString(path.Join(homeDir, "gogs-repositories"))
+	forcePathSeparator(RepoRootPath)
 	if !filepath.IsAbs(RepoRootPath) {
-		RepoRootPath = filepath.Join(workDir, RepoRootPath)
+		RepoRootPath = path.Join(workDir, RepoRootPath)
 	} else {
-		RepoRootPath = filepath.Clean(RepoRootPath)
+		RepoRootPath = path.Clean(RepoRootPath)
 	}
 	ScriptType = sec.Key("SCRIPT_TYPE").MustString("bash")
 
 	sec = Cfg.Section("picture")
 	PictureService = sec.Key("SERVICE").In("server", []string{"server"})
 	AvatarUploadPath = sec.Key("AVATAR_UPLOAD_PATH").MustString("data/avatars")
+	forcePathSeparator(AvatarUploadPath)
 	if !filepath.IsAbs(AvatarUploadPath) {
 		AvatarUploadPath = path.Join(workDir, AvatarUploadPath)
 	}
