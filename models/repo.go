@@ -23,6 +23,7 @@ import (
 	"github.com/Unknwon/com"
 
 	"github.com/gogits/gogs/modules/base"
+	"github.com/gogits/gogs/modules/bindata"
 	"github.com/gogits/gogs/modules/git"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/process"
@@ -55,7 +56,7 @@ func LoadRepoConfig() {
 	types := []string{"gitignore", "license"}
 	typeFiles := make([][]string, 2)
 	for i, t := range types {
-		files, err := com.StatDir(path.Join("conf", t))
+		files, err := bindata.AssetDir("conf/" + t)
 		if err != nil {
 			log.Fatal(4, "Fail to get %s files: %v", t, err)
 		}
@@ -365,17 +366,6 @@ func MigrateRepository(u *User, name, desc string, private, mirror bool, url str
 	return repo, UpdateRepository(repo, false)
 }
 
-// extractGitBareZip extracts git-bare.zip to repository path.
-func extractGitBareZip(repoPath string) error {
-	z, err := zip.Open(path.Join(setting.ConfRootPath, "content/git-bare.zip"))
-	if err != nil {
-		return err
-	}
-	defer z.Close()
-
-	return z.ExtractTo(repoPath)
-}
-
 // initRepoCommit temporarily changes with work directory.
 func initRepoCommit(tmpPath string, sig *git.Signature) (err error) {
 	var stderr string
@@ -409,9 +399,13 @@ func createUpdateHook(repoPath string) error {
 func initRepository(e Engine, f string, u *User, repo *Repository, initReadme bool, repoLang, license string) error {
 	repoPath := RepoPath(u.Name, repo.Name)
 
-	// Create bare new repository.
-	if err := extractGitBareZip(repoPath); err != nil {
-		return err
+	// Init bare new repository.
+	os.MkdirAll(repoPath, os.ModePerm)
+	_, stderr, err := process.ExecDir(-1, repoPath,
+		fmt.Sprintf("initRepository(git init --bare): %s", repoPath),
+		"git", "init", "--bare")
+	if err != nil {
+		return errors.New("initRepository(git init --bare): " + stderr)
 	}
 
 	if err := createUpdateHook(repoPath); err != nil {
@@ -434,7 +428,7 @@ func initRepository(e Engine, f string, u *User, repo *Repository, initReadme bo
 	tmpDir := filepath.Join(os.TempDir(), com.ToStr(time.Now().Nanosecond()))
 	os.MkdirAll(tmpDir, os.ModePerm)
 
-	_, stderr, err := process.Exec(
+	_, stderr, err = process.Exec(
 		fmt.Sprintf("initRepository(git clone): %s", repoPath),
 		"git", "clone", repoPath, tmpDir)
 	if err != nil {
@@ -451,43 +445,36 @@ func initRepository(e Engine, f string, u *User, repo *Repository, initReadme bo
 		}
 	}
 
+	// FIXME: following two can be merged.
+
 	// .gitignore
-	filePath := "conf/gitignore/" + repoLang
-	if com.IsFile(filePath) {
-		targetPath := path.Join(tmpDir, fileName["gitign"])
-		if com.IsFile(filePath) {
-			if err = com.Copy(filePath, targetPath); err != nil {
-				return err
-			}
-		} else {
-			// Check custom files.
-			filePath = path.Join(setting.CustomPath, "conf/gitignore", repoLang)
-			if com.IsFile(filePath) {
-				if err := com.Copy(filePath, targetPath); err != nil {
-					return err
-				}
-			}
+	// Copy custom file when available.
+	customPath := path.Join(setting.CustomPath, "conf/gitignore", repoLang)
+	targetPath := path.Join(tmpDir, fileName["gitign"])
+	if com.IsFile(customPath) {
+		if err := com.Copy(customPath, targetPath); err != nil {
+			return fmt.Errorf("copy gitignore: %v", err)
+		}
+	} else if com.IsSliceContainsStr(Gitignores, repoLang) {
+		if err = ioutil.WriteFile(targetPath,
+			bindata.MustAsset(path.Join("conf/gitignore", repoLang)), os.ModePerm); err != nil {
+			return fmt.Errorf("generate gitignore: %v", err)
 		}
 	} else {
 		delete(fileName, "gitign")
 	}
 
 	// LICENSE
-	filePath = "conf/license/" + license
-	if com.IsFile(filePath) {
-		targetPath := path.Join(tmpDir, fileName["license"])
-		if com.IsFile(filePath) {
-			if err = com.Copy(filePath, targetPath); err != nil {
-				return err
-			}
-		} else {
-			// Check custom files.
-			filePath = path.Join(setting.CustomPath, "conf/license", license)
-			if com.IsFile(filePath) {
-				if err := com.Copy(filePath, targetPath); err != nil {
-					return err
-				}
-			}
+	customPath = path.Join(setting.CustomPath, "conf/license", license)
+	targetPath = path.Join(tmpDir, fileName["license"])
+	if com.IsFile(customPath) {
+		if err = com.Copy(customPath, targetPath); err != nil {
+			return fmt.Errorf("copy license: %v", err)
+		}
+	} else if com.IsSliceContainsStr(Licenses, license) {
+		if err = ioutil.WriteFile(targetPath,
+			bindata.MustAsset(path.Join("conf/license", license)), os.ModePerm); err != nil {
+			return fmt.Errorf("generate license: %v", err)
 		}
 	} else {
 		delete(fileName, "license")

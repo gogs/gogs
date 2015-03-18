@@ -20,6 +20,7 @@ import (
 	"github.com/macaron-contrib/session"
 	"gopkg.in/ini.v1"
 
+	"github.com/gogits/gogs/modules/bindata"
 	"github.com/gogits/gogs/modules/log"
 	// "github.com/gogits/gogs/modules/ssh"
 )
@@ -131,7 +132,6 @@ var (
 
 	// Global setting objects.
 	Cfg          *ini.File
-	ConfRootPath string
 	CustomPath   string // Custom directory path.
 	CustomConf   string
 	ProdMode     bool
@@ -165,8 +165,7 @@ func WorkDir() (string, error) {
 
 func forcePathSeparator(path string) {
 	if strings.Contains(path, "\\") {
-		fmt.Println("Do not use '\\' or '\\\\' in paths, instead, please use '/' in all places")
-		os.Exit(1)
+		log.Fatal(4, "Do not use '\\' or '\\\\' in paths, instead, please use '/' in all places")
 	}
 }
 
@@ -177,9 +176,8 @@ func NewConfigContext() {
 	if err != nil {
 		log.Fatal(4, "Fail to get work directory: %v", err)
 	}
-	ConfRootPath = path.Join(workDir, "conf")
 
-	Cfg, err = ini.Load(path.Join(workDir, "conf/app.ini"))
+	Cfg, err = ini.Load(bindata.MustAsset("conf/app.ini"))
 	if err != nil {
 		log.Fatal(4, "Fail to parse 'conf/app.ini': %v", err)
 	}
