@@ -270,12 +270,12 @@ func CreateIssuePost(ctx *middleware.Context, form auth.CreateIssueForm) {
 	}
 
 	act := &models.Action{
-		ActUserId:    ctx.User.Id,
+		ActUserID:    ctx.User.Id,
 		ActUserName:  ctx.User.Name,
 		ActEmail:     ctx.User.Email,
 		OpType:       models.CREATE_ISSUE,
 		Content:      fmt.Sprintf("%d|%s", issue.Index, issue.Name),
-		RepoId:       ctx.Repo.Repository.Id,
+		RepoID:       ctx.Repo.Repository.Id,
 		RepoUserName: ctx.Repo.Owner.Name,
 		RepoName:     ctx.Repo.Repository.Name,
 		RefName:      ctx.Repo.BranchName,
@@ -845,12 +845,12 @@ func Comment(ctx *middleware.Context) {
 
 	// Notify watchers.
 	act := &models.Action{
-		ActUserId:    ctx.User.Id,
+		ActUserID:    ctx.User.Id,
 		ActUserName:  ctx.User.LowerName,
 		ActEmail:     ctx.User.Email,
 		OpType:       models.COMMENT_ISSUE,
 		Content:      fmt.Sprintf("%d|%s", issue.Index, strings.Split(content, "\n")[0]),
-		RepoId:       ctx.Repo.Repository.Id,
+		RepoID:       ctx.Repo.Repository.Id,
 		RepoUserName: ctx.Repo.Owner.LowerName,
 		RepoName:     ctx.Repo.Repository.LowerName,
 	}

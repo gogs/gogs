@@ -91,7 +91,7 @@ func TeamsAction(ctx *middleware.Context) {
 	}
 
 	if err != nil {
-		if err == models.ErrLastOrgOwner {
+		if models.IsErrLastOrgOwner(err) {
 			ctx.Flash.Error(ctx.Tr("form.last_org_owner"))
 		} else {
 			log.Error(3, "Action(%s): %v", ctx.Params(":action"), err)

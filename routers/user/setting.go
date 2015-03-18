@@ -451,20 +451,13 @@ func SettingsDelete(ctx *middleware.Context) {
 	ctx.Data["PageIsSettingsDelete"] = true
 
 	if ctx.Req.Method == "POST" {
-		// tmpUser := models.User{
-		// 	Passwd: ctx.Query("password"),
-		// 	Salt:   ctx.User.Salt,
-		// }
-		// tmpUser.EncodePasswd()
-		// if tmpUser.Passwd != ctx.User.Passwd {
-		// 	ctx.Flash.Error("Password is not correct. Make sure you are owner of this account.")
-		// } else {
+		// FIXME: validate password.
 		if err := models.DeleteUser(ctx.User); err != nil {
-			switch err {
-			case models.ErrUserOwnRepos:
+			switch {
+			case models.IsErrUserOwnRepos(err):
 				ctx.Flash.Error(ctx.Tr("form.still_own_repo"))
 				ctx.Redirect(setting.AppSubUrl + "/user/settings/delete")
-			case models.ErrUserHasOrgs:
+			case models.IsErrUserHasOrgs(err):
 				ctx.Flash.Error(ctx.Tr("form.still_has_org"))
 				ctx.Redirect(setting.AppSubUrl + "/user/settings/delete")
 			default:

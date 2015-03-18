@@ -222,11 +222,11 @@ func DeleteUser(ctx *middleware.Context) {
 	}
 
 	if err = models.DeleteUser(u); err != nil {
-		switch err {
-		case models.ErrUserOwnRepos:
+		switch {
+		case models.IsErrUserOwnRepos(err):
 			ctx.Flash.Error(ctx.Tr("admin.users.still_own_repo"))
 			ctx.Redirect(setting.AppSubUrl + "/admin/users/" + ctx.Params(":userid"))
-		case models.ErrUserHasOrgs:
+		case models.IsErrUserHasOrgs(err):
 			ctx.Flash.Error(ctx.Tr("admin.users.still_has_org"))
 			ctx.Redirect(setting.AppSubUrl + "/admin/users/" + ctx.Params(":userid"))
 		default:
