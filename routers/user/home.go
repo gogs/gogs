@@ -261,8 +261,10 @@ func Email2User(ctx *middleware.Context) {
 	ctx.Redirect(setting.AppSubUrl + "/user/" + u.Name)
 }
 
-func Issues(ctx *middleware.Context) {
-	ctx.Data["Title"] = "Your Issues"
+func Issues(ctx *middleware.Context) {	
+	ctx.Data["Title"] = ctx.Tr("issues")
+	ctx.Data["PageIsDashboard"] = true
+	ctx.Data["PageIsIssues"] = true
 
 	viewType := ctx.Query("type")
 	types := []string{"assigned", "created_by"}
@@ -386,5 +388,8 @@ func Issues(ctx *middleware.Context) {
 	} else {
 		ctx.Data["ShowCount"] = issueStats.OpenCount
 	}
+	
+	ctx.Data["ContextUser"] = ctx.User
+	
 	ctx.HTML(200, ISSUES)
 }
