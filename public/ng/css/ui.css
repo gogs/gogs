@@ -188,7 +188,8 @@ input:focus,
   background-color: #f2fffc;
   outline: none;
 }
-button {
+button,
+.btn {
   overflow: visible;
   padding: .6em 1.2em;
 }
@@ -431,6 +432,19 @@ dt {
   background-color: #fafafa;
   color: #444444;
 }
+.btn-white {
+  background-color: #ffffff;
+  color: #444444;
+  border: 1px solid #c6c6c6;
+}
+.btn-white:hover {
+  background-color: #e8e8e8;
+  color: #444444;
+}
+.btn-white.active {
+  background-color: #e8e8e8;
+  color: #444444;
+}
 .btn-active {
   box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.1) inset, 0 0 4px rgba(0, 0, 0, 0.15) inset;
 }
@@ -474,6 +488,22 @@ dt {
 .btn-disabled:hover {
   background-image: none !important;
   color: #ffffff;
+}
+.btn-group {
+  display: inline-block;
+}
+.btn-group > .btn {
+  position: relative;
+  float: left;
+  margin-right: -1px;
+}
+.btn-group > .btn:first-child {
+  border-bottom-left-radius: .25em;
+  border-top-left-radius: .25em;
+}
+.btn-group > .btn:last-child {
+  border-bottom-right-radius: .25em;
+  border-top-right-radius: .25em;
 }
 .ipt:focus {
   border-color: #428bca;
@@ -550,6 +580,10 @@ ul.menu > li > a:hover {
   background-color: #eaeaea;
   color: #444444;
 }
+ul.menu > li > a.active {
+  background-color: #4183c4;
+  color: #FFF;
+}
 ul.menu > li.current > a,
 ul.menu > li.hover > a {
   color: #444444;
@@ -597,6 +631,7 @@ ul.menu-vertical > li.head,
 ul.menu-down > li.head {
   display: block;
   padding: .4em 1.2em;
+  margin-bottom: 4px;
 }
 ul.menu-vertical > li.down,
 ul.menu-down > li.down {
