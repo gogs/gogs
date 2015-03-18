@@ -205,7 +205,7 @@ func IsValidHookTaskType(name string) bool {
 type HookEventType string
 
 const (
-	PUSH HookEventType = "push"
+	HOOK_EVENT_PUSH HookEventType = "push"
 )
 
 // FIXME: just use go-gogs-client structs maybe?
