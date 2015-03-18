@@ -104,7 +104,7 @@ func Dashboard(ctx *middleware.Context) {
 	for _, act := range actions {
 		if act.IsPrivate {
 			// This prevents having to retrieve the repository for each action
-			repo := &models.Repository{Id: act.RepoId, IsPrivate: true}
+			repo := &models.Repository{Id: act.RepoID, IsPrivate: true}
 			if act.RepoUserName != ctx.User.LowerName {
 				if has, _ := models.HasAccess(ctx.User, repo, models.ACCESS_MODE_READ); !has {
 					continue
@@ -216,7 +216,7 @@ func Profile(ctx *middleware.Context) {
 					continue
 				}
 				// This prevents having to retrieve the repository for each action
-				repo := &models.Repository{Id: act.RepoId, IsPrivate: true}
+				repo := &models.Repository{Id: act.RepoID, IsPrivate: true}
 				if act.RepoUserName != ctx.User.LowerName {
 					if has, _ := models.HasAccess(ctx.User, repo, models.ACCESS_MODE_READ); !has {
 						continue
