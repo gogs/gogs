@@ -78,7 +78,7 @@ func checkVersion() {
 
 	// Check dependency version.
 	checkers := []VerChecker{
-		{"github.com/Unknwon/macaron", macaron.Version, "0.5.1"},
+		{"github.com/Unknwon/macaron", macaron.Version, "0.5.4"},
 		{"github.com/macaron-contrib/binding", binding.Version, "0.0.6"},
 		{"github.com/macaron-contrib/cache", cache.Version, "0.0.7"},
 		{"github.com/macaron-contrib/csrf", csrf.Version, "0.0.3"},
@@ -457,7 +457,7 @@ func runWeb(ctx *cli.Context) {
 	// robots.txt
 	m.Get("/robots.txt", func(ctx *middleware.Context) {
 		if setting.HasRobotsTxt {
-			ctx.ServeFile(path.Join(setting.CustomPath, "robots.txt"))
+			ctx.ServeFileContent(path.Join(setting.CustomPath, "robots.txt"))
 		} else {
 			ctx.Error(404)
 		}
