@@ -396,16 +396,14 @@ func createUpdateHook(repoPath string) error {
 }
 
 // InitRepository initializes README and .gitignore if needed.
-func initRepository(e Engine, f string, u *User, repo *Repository, initReadme bool, repoLang, license string) error {
-	repoPath := RepoPath(u.Name, repo.Name)
-
+func initRepository(e Engine, repoPath string, u *User, repo *Repository, initReadme bool, repoLang, license string) error {
 	// Init bare new repository.
 	os.MkdirAll(repoPath, os.ModePerm)
 	_, stderr, err := process.ExecDir(-1, repoPath,
 		fmt.Sprintf("initRepository(git init --bare): %s", repoPath),
 		"git", "init", "--bare")
 	if err != nil {
-		return errors.New("initRepository(git init --bare): " + stderr)
+		return errors.New("git init --bare: " + stderr)
 	}
 
 	if err := createUpdateHook(repoPath); err != nil {
@@ -432,7 +430,7 @@ func initRepository(e Engine, f string, u *User, repo *Repository, initReadme bo
 		fmt.Sprintf("initRepository(git clone): %s", repoPath),
 		"git", "clone", repoPath, tmpDir)
 	if err != nil {
-		return errors.New("initRepository(git clone): " + stderr)
+		return errors.New("git clone: " + stderr)
 	}
 
 	// README
