@@ -2414,6 +2414,35 @@ textarea#issue-add-content {
 #milestone-list .action-bar a {
   margin-left: 12px;
 }
+.issues.list-group {
+  margin: 10px 0 20px 0;
+}
+.issues.list-group > .list-group-item {
+  background-color: #FFF;
+  border: 1px solid #e5e5e5;
+  display: block;
+  padding: 10px 15px;
+  margin-bottom: -1px;
+}
+.issues.list-group > .list-group-item:hover {
+  background-color: rgba(19, 95, 215, 0.03);
+}
+.issues.list-group > .list-group-item > .title {
+  margin-bottom: 16px;
+  font-weight: bold;
+  font-size: 1.2em;
+}
+.issues.list-group > .list-group-item > .title > a {
+  color: #444;
+}
+.issues.list-group > .list-group-item > .info span {
+  margin-right: 12px;
+  color: #888;
+  line-height: 20px;
+}
+.issues.list-group > .list-group-item > .info span > a {
+  color: #444;
+}
 .org-header-alert .alert {
   margin-top: 10px;
 }
