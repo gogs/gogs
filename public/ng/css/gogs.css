@@ -732,7 +732,8 @@ ol.linenums {
 #dashboard-header > .menu-line > li.right > a {
   font-size: 1.2em;
   color: #444444;
-  padding: .4em .8em;
+  margin: -12px 0px;
+  padding: 22px 0.8em;
 }
 #dashboard-header > .menu-line > li.right > a:hover {
   background-color: transparent;
