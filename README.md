@@ -13,8 +13,8 @@ Gogs (Go Git Service) is a painless self-hosted Git service written in Go.
 
 - Due to testing purpose, data of [try.gogs.io](https://try.gogs.io) has been reset in **Jan 28, 2015** and will reset multiple times after. Please do **NOT** put your important data on the site.
 - The demo site [try.gogs.io](https://try.gogs.io) is running under `develop` branch.
-- You **MUST** read [CONTRIBUTING.md](CONTRIBUTING.md) before you start filing an issue or making a Pull Request.
-- If you think there are vulnerabilities in the project, please talk privately to **u@gogs.io**.  Thanks!
+- You **MUST** read [CONTRIBUTING.md](CONTRIBUTING.md) before you start filing an issue or making a Pull Request, and **MUST** discuss with us on [Gitter](https://gitter.im/gogits/gogs) for UI changes and feature Pull Reuqests, otherwise it's high possibilities that we are not going to merge it.
+- If you think there are vulnerabilities in the project, please talk privately to **u@gogs.io**. Thanks!
 
 #### Other language version
 
