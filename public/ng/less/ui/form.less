@@ -70,6 +70,19 @@
   }
 }
 
+.btn-white {
+  background-color: @btnWhiteColor;
+  color: @baseFontColor;
+  border: 1px solid @btnWhiteBorderColor;
+  &:hover {
+    background-color: @btnWhiteHoverColor;
+    color: @baseFontColor;
+  }
+  &.active {
+    background-color: @btnWhiteHoverColor;
+    color: @baseFontColor;
+  }
+}
 // status buttons
 
 .btn-active {
@@ -118,6 +131,22 @@
   }
 }
 
+.btn-group {
+  display: inline-block;
+  > .btn {
+  	position: relative;
+	float: left;
+	margin-right: -1px;
+	&:first-child{
+		border-bottom-left-radius: .25em;
+  		border-top-left-radius: .25em;
+	}
+	&:last-child{
+		border-bottom-right-radius: .25em;
+  		border-top-right-radius: .25em;
+	}
+  }
+}
 // input form elements
 .ipt {
     &:focus {
