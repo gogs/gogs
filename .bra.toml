@@ -5,13 +5,12 @@ init_cmds = [
 ]
 watch_all = true
 watch_dirs = [
-	"$WORKDIR/conf/locale",
 	"$WORKDIR/cmd",
 	"$WORKDIR/models",
 	"$WORKDIR/modules",
 	"$WORKDIR/routers"
 ]
-watch_exts = [".go", ".ini"]
+watch_exts = [".go"]
 build_delay = 1500
 cmds = [
 	#["go-bindata", "-o=modules/bindata/bindata.go", "-ignore=\\.DS_Store|README", "-pkg=bindata", "conf/..."],
