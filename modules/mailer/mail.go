@@ -163,7 +163,7 @@ func SendIssueNotifyMail(u, owner *models.User, repo *models.Repository, issue *
 
 	tos := make([]string, 0, len(ws))
 	for i := range ws {
-		uid := ws[i].UserId
+		uid := ws[i].UserID
 		if u.Id == uid {
 			continue
 		}

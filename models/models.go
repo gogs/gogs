@@ -89,8 +89,13 @@ func getEngine() (*xorm.Engine, error) {
 	cnnstr := ""
 	switch DbCfg.Type {
 	case "mysql":
-		cnnstr = fmt.Sprintf("%s:%s@tcp(%s)/%s?charset=utf8",
-			DbCfg.User, DbCfg.Passwd, DbCfg.Host, DbCfg.Name)
+		if DbCfg.Host[0] == '/' { // looks like a unix socket
+			cnnstr = fmt.Sprintf("%s:%s@unix(%s)/%s?charset=utf8",
+				DbCfg.User, DbCfg.Passwd, DbCfg.Host, DbCfg.Name)
+		} else {
+			cnnstr = fmt.Sprintf("%s:%s@tcp(%s)/%s?charset=utf8",
+				DbCfg.User, DbCfg.Passwd, DbCfg.Host, DbCfg.Name)
+		}
 	case "postgres":
 		var host, port = "127.0.0.1", "5432"
 		fields := strings.Split(DbCfg.Host, ":")

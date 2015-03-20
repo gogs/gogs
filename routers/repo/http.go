@@ -65,7 +65,7 @@ func Http(ctx *middleware.Context) {
 
 	repo, err := models.GetRepositoryByName(repoUser.Id, reponame)
 	if err != nil {
-		if err == models.ErrRepoNotExist {
+		if models.IsErrRepoNotExist(err) {
 			ctx.Handle(404, "GetRepositoryByName", nil)
 		} else {
 			ctx.Handle(500, "GetRepositoryByName", err)
@@ -105,7 +105,7 @@ func Http(ctx *middleware.Context) {
 			return
 		}
 
-		authUser, err := models.UserSignIn(authUsername, authPasswd)
+		authUser, err = models.UserSignIn(authUsername, authPasswd)
 		if err != nil {
 			if err != models.ErrUserNotExist {
 				ctx.Handle(500, "UserSignIn error: %v", err)
@@ -160,7 +160,7 @@ func Http(ctx *middleware.Context) {
 		}
 	}
 
-	var f = func(rpc string, input []byte) {
+	callback := func(rpc string, input []byte) {
 		if rpc == "receive-pack" {
 			var lastLine int64 = 0
 
@@ -189,6 +189,7 @@ func Http(ctx *middleware.Context) {
 						newCommitId := fields[1]
 						refName := fields[2]
 
+						// FIXME: handle error.
 						models.Update(refName, oldCommitId, newCommitId, authUsername, username, reponame, authUser.Id)
 					}
 					lastLine = lastLine + size
@@ -199,25 +200,23 @@ func Http(ctx *middleware.Context) {
 		}
 	}
 
-	config := Config{setting.RepoRootPath, "git", true, true, f}
+	HTTPBackend(&Config{
+		RepoRootPath: setting.RepoRootPath,
+		GitBinPath:   "git",
+		UploadPack:   true,
+		ReceivePack:  true,
+		OnSucceed:    callback,
+	})(ctx.Resp, ctx.Req.Request)
 
-	handler := HttpBackend(&config)
-	handler(ctx.Resp, ctx.Req.Request)
 	runtime.GC()
 }
 
-type route struct {
-	cr      *regexp.Regexp
-	method  string
-	handler func(handler)
-}
-
 type Config struct {
-	ReposRoot   string
-	GitBinPath  string
-	UploadPack  bool
-	ReceivePack bool
-	OnSucceed   func(rpc string, input []byte)
+	RepoRootPath string
+	GitBinPath   string
+	UploadPack   bool
+	ReceivePack  bool
+	OnSucceed    func(rpc string, input []byte)
 }
 
 type handler struct {
@@ -226,6 +225,12 @@ type handler struct {
 	r    *http.Request
 	Dir  string
 	File string
+}
+
+type route struct {
+	cr      *regexp.Regexp
+	method  string
+	handler func(handler)
 }
 
 var routes = []route{
@@ -243,7 +248,7 @@ var routes = []route{
 }
 
 // Request handling function
-func HttpBackend(config *Config) http.HandlerFunc {
+func HTTPBackend(config *Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		for _, route := range routes {
 			r.URL.Path = strings.ToLower(r.URL.Path) // blue: In case some repo name has upper case name
@@ -285,8 +290,7 @@ func serviceReceivePack(hr handler) {
 func serviceRpc(rpc string, hr handler) {
 	w, r, dir := hr.w, hr.r, hr.Dir
 
-	access := hasAccess(r, hr.Config, dir, rpc, true)
-	if access == false {
+	if !hasAccess(r, hr.Config, dir, rpc, true) {
 		renderNoAccess(w)
 		return
 	}
@@ -337,7 +341,6 @@ func serviceRpc(rpc string, hr handler) {
 	if hr.Config.OnSucceed != nil {
 		hr.Config.OnSucceed(rpc, input)
 	}
-	w.WriteHeader(http.StatusOK)
 }
 
 func getInfoRefs(hr handler) {
@@ -408,7 +411,7 @@ func sendFile(contentType string, hr handler) {
 }
 
 func getGitDir(config *Config, fPath string) (string, error) {
-	root := config.ReposRoot
+	root := config.RepoRootPath
 
 	if root == "" {
 		cwd, err := os.Getwd()

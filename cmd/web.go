@@ -34,6 +34,7 @@ import (
 	"github.com/gogits/gogs/modules/auth/apiv1"
 	"github.com/gogits/gogs/modules/avatar"
 	"github.com/gogits/gogs/modules/base"
+	"github.com/gogits/gogs/modules/bindata"
 	"github.com/gogits/gogs/modules/git"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/middleware"
@@ -78,11 +79,11 @@ func checkVersion() {
 
 	// Check dependency version.
 	checkers := []VerChecker{
-		{"github.com/Unknwon/macaron", macaron.Version, "0.5.1"},
-		{"github.com/macaron-contrib/binding", binding.Version, "0.0.5"},
+		{"github.com/Unknwon/macaron", macaron.Version, "0.5.4"},
+		{"github.com/macaron-contrib/binding", binding.Version, "0.0.6"},
 		{"github.com/macaron-contrib/cache", cache.Version, "0.0.7"},
 		{"github.com/macaron-contrib/csrf", csrf.Version, "0.0.3"},
-		{"github.com/macaron-contrib/i18n", i18n.Version, "0.0.5"},
+		{"github.com/macaron-contrib/i18n", i18n.Version, "0.0.7"},
 		{"github.com/macaron-contrib/session", session.Version, "0.1.6"},
 		{"gopkg.in/ini.v1", ini.Version, "1.2.0"},
 	}
@@ -123,9 +124,18 @@ func newMacaron() *macaron.Macaron {
 		Funcs:      []template.FuncMap{base.TemplateFuncs},
 		IndentJSON: macaron.Env != macaron.PROD,
 	}))
+
+	localeNames, err := bindata.AssetDir("conf/locale")
+	if err != nil {
+		log.Fatal(4, "Fail to list locale files: %v", err)
+	}
+	localFiles := make(map[string][]byte)
+	for _, name := range localeNames {
+		localFiles[name] = bindata.MustAsset("conf/locale/" + name)
+	}
 	m.Use(i18n.I18n(i18n.Options{
 		SubURL:          setting.AppSubUrl,
-		Directory:       path.Join(setting.ConfRootPath, "locale"),
+		Files:           localFiles,
 		CustomDirectory: path.Join(setting.CustomPath, "conf/locale"),
 		Langs:           setting.Langs,
 		Names:           setting.Names,
@@ -457,7 +467,7 @@ func runWeb(ctx *cli.Context) {
 	// robots.txt
 	m.Get("/robots.txt", func(ctx *middleware.Context) {
 		if setting.HasRobotsTxt {
-			ctx.ServeFile(path.Join(setting.CustomPath, "robots.txt"))
+			ctx.ServeFileContent(path.Join(setting.CustomPath, "robots.txt"))
 		} else {
 			ctx.Error(404)
 		}

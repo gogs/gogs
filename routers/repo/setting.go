@@ -78,8 +78,9 @@ func SettingsPost(ctx *middleware.Context, form auth.RepoSettingForm) {
 		}
 		ctx.Repo.Repository.Description = form.Description
 		ctx.Repo.Repository.Website = form.Website
+		visibilityChanged := ctx.Repo.Repository.IsPrivate != form.Private
 		ctx.Repo.Repository.IsPrivate = form.Private
-		if err := models.UpdateRepository(ctx.Repo.Repository); err != nil {
+		if err := models.UpdateRepository(ctx.Repo.Repository, visibilityChanged); err != nil {
 			ctx.Handle(404, "UpdateRepository", err)
 			return
 		}
