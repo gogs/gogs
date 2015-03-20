@@ -181,7 +181,7 @@ func MigratePost(ctx *middleware.Context, form auth.MigrateRepoForm) {
 		}
 	}
 
-	// Remote address can be HTTPS URL or local path.
+	// Remote address can be HTTP/HTTPS URL or local path.
 	remoteAddr := form.CloneAddr
 	if strings.HasPrefix(form.CloneAddr, "http") {
 		u, err := url.Parse(form.CloneAddr)
@@ -190,8 +190,8 @@ func MigratePost(ctx *middleware.Context, form auth.MigrateRepoForm) {
 			ctx.RenderWithErr(ctx.Tr("form.url_error"), MIGRATE, &form)
 			return
 		}
-		if len(form.AuthUserName) > 0 || len(form.AuthPasswd) > 0 {
-			u.User = url.UserPassword(form.AuthUserName, form.AuthPasswd)
+		if len(form.AuthUsername) > 0 || len(form.AuthPassword) > 0 {
+			u.User = url.UserPassword(form.AuthUsername, form.AuthPassword)
 		}
 		remoteAddr = u.String()
 	} else if !com.IsDir(remoteAddr) {
@@ -251,7 +251,7 @@ func Fork(ctx *middleware.Context) {
 	ctx.Data["Title"] = ctx.Tr("new_fork")
 
 	if _, err := getForkRepository(ctx); err != nil {
-		if err == models.ErrRepoNotExist {
+		if models.IsErrRepoNotExist(err) {
 			ctx.Redirect(setting.AppSubUrl + "/")
 		} else {
 			ctx.Handle(500, "getForkRepository", err)
@@ -275,7 +275,7 @@ func ForkPost(ctx *middleware.Context, form auth.CreateRepoForm) {
 
 	forkRepo, err := getForkRepository(ctx)
 	if err != nil {
-		if err == models.ErrRepoNotExist {
+		if models.IsErrRepoNotExist(err) {
 			ctx.Redirect(setting.AppSubUrl + "/")
 		} else {
 			ctx.Handle(500, "getForkRepository", err)
@@ -356,7 +356,7 @@ func Action(ctx *middleware.Context) {
 
 		ctx.Repo.Repository.Description = ctx.Query("desc")
 		ctx.Repo.Repository.Website = ctx.Query("site")
-		err = models.UpdateRepository(ctx.Repo.Repository)
+		err = models.UpdateRepository(ctx.Repo.Repository, false)
 	}
 
 	if err != nil {

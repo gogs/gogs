@@ -61,14 +61,14 @@ func init() {
 // Action represents user operation type and other information to repository.,
 // it implemented interface base.Actioner so that can be used in template render.
 type Action struct {
-	Id           int64
-	UserId       int64 // Receiver user id.
+	ID           int64 `xorm:"pk autoincr"`
+	UserID       int64 // Receiver user id.
 	OpType       ActionType
-	ActUserId    int64  // Action user id.
+	ActUserID    int64  // Action user id.
 	ActUserName  string // Action user name.
 	ActEmail     string
 	ActAvatar    string `xorm:"-"`
-	RepoId       int64
+	RepoID       int64
 	RepoUserName string
 	RepoName     string
 	RefName      string
@@ -97,8 +97,15 @@ func (a Action) GetRepoName() string {
 	return a.RepoName
 }
 
+func (a Action) GetRepoPath() string {
+	return path.Join(a.RepoUserName, a.RepoName)
+}
+
 func (a Action) GetRepoLink() string {
-	return path.Join(setting.AppSubUrl, a.RepoUserName, a.RepoName)
+	if len(setting.AppSubUrl) > 0 {
+		return path.Join(setting.AppSubUrl, a.GetRepoPath())
+	}
+	return "/" + a.GetRepoPath()
 }
 
 func (a Action) GetBranch() string {
@@ -302,7 +309,7 @@ func CommitRepoAction(userId, repoUserId int64, userName, actEmail string,
 		return errors.New("action.CommitRepoAction(GetRepositoryByName): " + err.Error())
 	}
 	repo.IsBare = false
-	if err = UpdateRepository(repo); err != nil {
+	if err = UpdateRepository(repo, false); err != nil {
 		return errors.New("action.CommitRepoAction(UpdateRepository): " + err.Error())
 	}
 
@@ -312,10 +319,18 @@ func CommitRepoAction(userId, repoUserId int64, userName, actEmail string,
 		log.Debug("action.CommitRepoAction(updateIssuesCommit): ", err)
 	}
 
-	if err = NotifyWatchers(&Action{ActUserId: userId, ActUserName: userName, ActEmail: actEmail,
-		OpType: opType, Content: string(bs), RepoId: repoId, RepoUserName: repoUserName,
-		RepoName: repoName, RefName: refName,
-		IsPrivate: repo.IsPrivate}); err != nil {
+	if err = NotifyWatchers(&Action{
+		ActUserID:    userId,
+		ActUserName:  userName,
+		ActEmail:     actEmail,
+		OpType:       opType,
+		Content:      string(bs),
+		RepoID:       repoId,
+		RepoUserName: repoUserName,
+		RepoName:     repoName,
+		RefName:      refName,
+		IsPrivate:    repo.IsPrivate,
+	}); err != nil {
 		return errors.New("action.CommitRepoAction(NotifyWatchers): " + err.Error())
 
 	}
@@ -402,32 +417,28 @@ func CommitRepoAction(userId, repoUserId int64, userName, actEmail string,
 			continue
 		}
 
+		var payload BasePayload
 		switch w.HookTaskType {
 		case SLACK:
-			{
-				s, err := GetSlackPayload(p, w.Meta)
-				if err != nil {
-					return errors.New("action.GetSlackPayload: " + err.Error())
-				}
-				CreateHookTask(&HookTask{
-					Type:        w.HookTaskType,
-					Url:         w.Url,
-					BasePayload: s,
-					ContentType: w.ContentType,
-					IsSsl:       w.IsSsl,
-				})
+			s, err := GetSlackPayload(p, w.Meta)
+			if err != nil {
+				return errors.New("action.GetSlackPayload: " + err.Error())
 			}
+			payload = s
 		default:
-			{
-				p.Secret = w.Secret
-				CreateHookTask(&HookTask{
-					Type:        w.HookTaskType,
-					Url:         w.Url,
-					BasePayload: p,
-					ContentType: w.ContentType,
-					IsSsl:       w.IsSsl,
-				})
-			}
+			payload = p
+			p.Secret = w.Secret
+		}
+
+		if err = CreateHookTask(&HookTask{
+			Type:        w.HookTaskType,
+			Url:         w.Url,
+			BasePayload: payload,
+			ContentType: w.ContentType,
+			EventType:   HOOK_EVENT_PUSH,
+			IsSsl:       w.IsSsl,
+		}); err != nil {
+			return fmt.Errorf("CreateHookTask: %v", err)
 		}
 	}
 
@@ -436,14 +447,15 @@ func CommitRepoAction(userId, repoUserId int64, userName, actEmail string,
 
 func newRepoAction(e Engine, u *User, repo *Repository) (err error) {
 	if err = notifyWatchers(e, &Action{
-		ActUserId:    u.Id,
+		ActUserID:    u.Id,
 		ActUserName:  u.Name,
 		ActEmail:     u.Email,
 		OpType:       CREATE_REPO,
-		RepoId:       repo.Id,
+		RepoID:       repo.Id,
 		RepoUserName: repo.Owner.Name,
 		RepoName:     repo.Name,
-		IsPrivate:    repo.IsPrivate}); err != nil {
+		IsPrivate:    repo.IsPrivate,
+	}); err != nil {
 		return fmt.Errorf("notify watchers '%d/%s'", u.Id, repo.Id)
 	}
 
@@ -458,11 +470,11 @@ func NewRepoAction(u *User, repo *Repository) (err error) {
 
 func transferRepoAction(e Engine, actUser, oldOwner, newOwner *User, repo *Repository) (err error) {
 	action := &Action{
-		ActUserId:    actUser.Id,
+		ActUserID:    actUser.Id,
 		ActUserName:  actUser.Name,
 		ActEmail:     actUser.Email,
 		OpType:       TRANSFER_REPO,
-		RepoId:       repo.Id,
+		RepoID:       repo.Id,
 		RepoUserName: newOwner.Name,
 		RepoName:     repo.Name,
 		IsPrivate:    repo.IsPrivate,

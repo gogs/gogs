@@ -36,8 +36,6 @@ const (
 )
 
 var (
-	ErrUserOwnRepos          = errors.New("User still have ownership of repositories")
-	ErrUserHasOrgs           = errors.New("User still have membership of organization")
 	ErrUserAlreadyExist      = errors.New("User already exist")
 	ErrUserNotExist          = errors.New("User does not exist")
 	ErrUserNotKeyOwner       = errors.New("User does not the owner of public key")
@@ -124,7 +122,7 @@ func (u *User) AvatarLink() string {
 	switch {
 	case u.UseCustomAvatar:
 		return setting.AppSubUrl + "/avatars/" + com.ToStr(u.Id)
-	case setting.DisableGravatar:
+	case setting.DisableGravatar, setting.OfflineMode:
 		return setting.AppSubUrl + "/img/avatar_default.jpg"
 	case setting.Service.EnableCacheAvatar:
 		return setting.AppSubUrl + "/avatar/" + u.Avatar
@@ -432,55 +430,75 @@ func UpdateUser(u *User) error {
 	return err
 }
 
+// DeleteBeans deletes all given beans, beans should contain delete conditions.
+func DeleteBeans(e Engine, beans ...interface{}) (err error) {
+	for i := range beans {
+		if _, err = e.Delete(beans[i]); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // FIXME: need some kind of mechanism to record failure. HINT: system notice
 // DeleteUser completely and permanently deletes everything of user.
 func DeleteUser(u *User) error {
 	// Check ownership of repository.
 	count, err := GetRepositoryCount(u)
 	if err != nil {
-		return errors.New("GetRepositoryCount: " + err.Error())
+		return fmt.Errorf("GetRepositoryCount: %v", err)
 	} else if count > 0 {
-		return ErrUserOwnRepos
+		return ErrUserOwnRepos{UID: u.Id}
 	}
 
 	// Check membership of organization.
 	count, err = u.GetOrganizationCount()
 	if err != nil {
-		return errors.New("GetOrganizationCount: " + err.Error())
+		return fmt.Errorf("GetOrganizationCount: %v", err)
 	} else if count > 0 {
-		return ErrUserHasOrgs
+		return ErrUserHasOrgs{UID: u.Id}
+	}
+
+	// Get watches before session.
+	watches := make([]*Watch, 0, 10)
+	if err = x.Where("user_id=?", u.Id).Find(&watches); err != nil {
+		return fmt.Errorf("get all watches: %v", err)
+	}
+	repoIDs := make([]int64, 0, len(watches))
+	for i := range watches {
+		repoIDs = append(repoIDs, watches[i].RepoID)
 	}
 
 	// FIXME: check issues, other repos' commits
-	// FIXME: roll backable in some point.
 
-	// Delete all followers.
-	if _, err = x.Delete(&Follow{FollowId: u.Id}); err != nil {
+	sess := x.NewSession()
+	defer sessionRelease(sess)
+	if err = sess.Begin(); err != nil {
 		return err
 	}
-	// Delete oauth2.
-	if _, err = x.Delete(&Oauth2{Uid: u.Id}); err != nil {
+
+	if err = DeleteBeans(sess,
+		&Follow{FollowID: u.Id},
+		&Oauth2{Uid: u.Id},
+		&Action{UserID: u.Id},
+		&Access{UserID: u.Id},
+		&Collaboration{UserID: u.Id},
+		&EmailAddress{Uid: u.Id},
+		&Watch{UserID: u.Id},
+	); err != nil {
 		return err
 	}
-	// Delete all feeds.
-	if _, err = x.Delete(&Action{UserId: u.Id}); err != nil {
-		return err
+
+	// Decrease all watch numbers.
+	for i := range repoIDs {
+		if _, err = sess.Exec("UPDATE `repository` SET num_watches=num_watches-1 WHERE id=?", repoIDs[i]); err != nil {
+			return err
+		}
 	}
-	// Delete all watches.
-	if _, err = x.Delete(&Watch{UserId: u.Id}); err != nil {
-		return err
-	}
-	// Delete all accesses.
-	if _, err = x.Delete(&Access{UserID: u.Id}); err != nil {
-		return err
-	}
-	// Delete all alternative email addresses
-	if _, err = x.Delete(&EmailAddress{Uid: u.Id}); err != nil {
-		return err
-	}
+
 	// Delete all SSH keys.
 	keys := make([]*PublicKey, 0, 10)
-	if err = x.Find(&keys, &PublicKey{OwnerId: u.Id}); err != nil {
+	if err = sess.Find(&keys, &PublicKey{OwnerId: u.Id}); err != nil {
 		return err
 	}
 	for _, key := range keys {
@@ -489,13 +507,16 @@ func DeleteUser(u *User) error {
 		}
 	}
 
+	if _, err = sess.Delete(u); err != nil {
+		return err
+	}
+
 	// Delete user directory.
 	if err = os.RemoveAll(UserPath(u.Name)); err != nil {
 		return err
 	}
 
-	_, err = x.Delete(u)
-	return err
+	return sess.Commit()
 }
 
 // DeleteInactivateUsers deletes all inactivate users and email addresses.
@@ -777,8 +798,8 @@ func SearchUserByName(opt SearchOption) (us []*User, err error) {
 // Follow is connection request for receiving user notification.
 type Follow struct {
 	Id       int64
-	UserId   int64 `xorm:"unique(follow)"`
-	FollowId int64 `xorm:"unique(follow)"`
+	UserID   int64 `xorm:"unique(follow)"`
+	FollowID int64 `xorm:"unique(follow)"`
 }
 
 // FollowUser marks someone be another's follower.
@@ -787,7 +808,7 @@ func FollowUser(userId int64, followId int64) (err error) {
 	defer sess.Close()
 	sess.Begin()
 
-	if _, err = sess.Insert(&Follow{UserId: userId, FollowId: followId}); err != nil {
+	if _, err = sess.Insert(&Follow{UserID: userId, FollowID: followId}); err != nil {
 		sess.Rollback()
 		return err
 	}
@@ -812,7 +833,7 @@ func UnFollowUser(userId int64, unFollowId int64) (err error) {
 	defer session.Close()
 	session.Begin()
 
-	if _, err = session.Delete(&Follow{UserId: userId, FollowId: unFollowId}); err != nil {
+	if _, err = session.Delete(&Follow{UserID: userId, FollowID: unFollowId}); err != nil {
 		session.Rollback()
 		return err
 	}

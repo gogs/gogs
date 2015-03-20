@@ -104,7 +104,7 @@ func Dashboard(ctx *middleware.Context) {
 	for _, act := range actions {
 		if act.IsPrivate {
 			// This prevents having to retrieve the repository for each action
-			repo := &models.Repository{Id: act.RepoId, IsPrivate: true}
+			repo := &models.Repository{Id: act.RepoID, IsPrivate: true}
 			if act.RepoUserName != ctx.User.LowerName {
 				if has, _ := models.HasAccess(ctx.User, repo, models.ACCESS_MODE_READ); !has {
 					continue
@@ -216,7 +216,7 @@ func Profile(ctx *middleware.Context) {
 					continue
 				}
 				// This prevents having to retrieve the repository for each action
-				repo := &models.Repository{Id: act.RepoId, IsPrivate: true}
+				repo := &models.Repository{Id: act.RepoID, IsPrivate: true}
 				if act.RepoUserName != ctx.User.LowerName {
 					if has, _ := models.HasAccess(ctx.User, repo, models.ACCESS_MODE_READ); !has {
 						continue
@@ -261,8 +261,10 @@ func Email2User(ctx *middleware.Context) {
 	ctx.Redirect(setting.AppSubUrl + "/user/" + u.Name)
 }
 
-func Issues(ctx *middleware.Context) {
-	ctx.Data["Title"] = "Your Issues"
+func Issues(ctx *middleware.Context) {	
+	ctx.Data["Title"] = ctx.Tr("issues")
+	ctx.Data["PageIsDashboard"] = true
+	ctx.Data["PageIsIssues"] = true
 
 	viewType := ctx.Query("type")
 	types := []string{"assigned", "created_by"}
@@ -354,7 +356,7 @@ func Issues(ctx *middleware.Context) {
 
 		issues[i].Repo, err = models.GetRepositoryById(issues[i].RepoId)
 		if err != nil {
-			if err == models.ErrRepoNotExist {
+			if models.IsErrRepoNotExist(err) {
 				log.Warn("user.Issues(GetRepositoryById #%d): repository not exist", issues[i].RepoId)
 				continue
 			} else {
@@ -386,5 +388,8 @@ func Issues(ctx *middleware.Context) {
 	} else {
 		ctx.Data["ShowCount"] = issueStats.OpenCount
 	}
+	
+	ctx.Data["ContextUser"] = ctx.User
+	
 	ctx.HTML(200, ISSUES)
 }

@@ -7,14 +7,14 @@ Gogs (Go Git Service) is a painless self-hosted Git service written in Go.
 
 ![Demo](http://gogs.qiniudn.com/gogs_demo.gif)
 
-##### Current version: 0.5.16 Beta
+##### Current version: 0.6.0 Beta
 
 ### NOTICES
 
 - Due to testing purpose, data of [try.gogs.io](https://try.gogs.io) has been reset in **Jan 28, 2015** and will reset multiple times after. Please do **NOT** put your important data on the site.
-- The demo site [try.gogs.io](https://try.gogs.io) is running under `dev` branch.
-- You **MUST** read [CONTRIBUTING.md](CONTRIBUTING.md) before you start filing an issue or making a Pull Request.
-- If you think there are vulnerabilities in the project, please talk privately to **u@gogs.io**.  Thanks!
+- The demo site [try.gogs.io](https://try.gogs.io) is running under `develop` branch.
+- You **MUST** read [CONTRIBUTING.md](CONTRIBUTING.md) before you start filing an issue or making a Pull Request, and **MUST** discuss with us on [Gitter](https://gitter.im/gogits/gogs) for UI changes and feature Pull Reuqests, otherwise it's high possibilities that we are not going to merge it.
+- If you think there are vulnerabilities in the project, please talk privately to **u@gogs.io**. Thanks!
 
 #### Other language version
 
@@ -30,7 +30,7 @@ The goal of this project is to make the easiest, fastest, and most painless way 
 - See the [Trello Board](https://trello.com/b/uxAoeLUl/gogs-go-git-service) to follow the develop team.
 - Want to try it before doing anything else? Do it [online](https://try.gogs.io/unknwon/gogs) or go down to the **Installation -> Install from binary** section!
 - Having trouble? Get help with [Troubleshooting](http://gogs.io/docs/intro/troubleshooting.md).
-- Want to help with localization? Check out [Crowdin](https://crowdin.com/project/gogs)!
+- Want to help with localization? Check out the [guide](http://gogs.io/docs/features/i18n.html)!
 
 ## Features
 
@@ -52,7 +52,7 @@ The goal of this project is to make the easiest, fastest, and most painless way 
 - Drone CI integration
 - Supports MySQL, PostgreSQL and SQLite3
 - Social account login (GitHub, Google, QQ, Weibo)
-- Multi-language support ([10 languages](https://crowdin.com/project/gogs))
+- Multi-language support ([11 languages](https://crowdin.com/project/gogs))
 
 ## System Requirements
 
