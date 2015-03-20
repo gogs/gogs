@@ -3,7 +3,7 @@ Gogs - Go Git Service [![Build Status](https://travis-ci.org/gogits/gogs.svg?bra
 
 [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/gogits/gogs?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
-Gogs (Go Git Service) is a painless self-hosted Git service written in Go.
+Gogs (Go Git Service) is a painless self-hosted Git service.
 
 ![Demo](http://gogs.qiniudn.com/gogs_demo.gif)
 
