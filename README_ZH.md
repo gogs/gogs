@@ -1,7 +1,7 @@
 Gogs - Go Git Service [![Build Status](https://travis-ci.org/gogits/gogs.svg?branch=master)](https://travis-ci.org/gogits/gogs)
 =====================
 
-Gogs(Go Git Service) 是一个基于 Go 语言的自助 Git 服务。
+Gogs (Go Git Service) 是一款可轻易搭建的自助 Git 服务。
 
 ![Demo](http://gogs.qiniudn.com/gogs_demo.gif)
 

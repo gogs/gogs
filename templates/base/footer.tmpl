@@ -5,19 +5,10 @@
 				© 2015 Gogs · {{.i18n.Tr "version"}}: {{AppVer}} · {{.i18n.Tr "page"}}: <strong>{{LoadTimes .PageStartTime}}</strong> · {{.i18n.Tr "template"}}: <strong>{{call .TmplLoadTimes}}</strong>
 			</div>
 			<div class="ui right links">
-				<a target="_blank" href="https://github.com/gogits/gogs"><i class="fa fa-github-square"></i></a>
-				<a target="_blank" href="https://twitter.com/gogitservice"><i class="fa fa-twitter"></i></a>
-				<a target="_blank" href="https://plus.google.com/communities/115599856376145964459"><i class="fa fa-google-plus"></i></a>
-				<a target="_blank" href="http://weibo.com/gogschina"><i class="fa fa-weibo"></i></a>
-				<!-- <div id="footer-lang" class="inline drop drop-top">{{.i18n.Tr "language"}}
-				    <div class="drop-down">
-				        <ul class="menu menu-vertical switching-list">
-				        	{{range .AllLangs}}
-				            <li><a href="{{if eq $.Lang .Lang}}#{{else}}{{$.Link}}?lang={{.Lang}}{{end}}">{{.Name}}</a></li>
-				            {{end}}
-				        </ul>
-				    </div>
-				</div> -->
+				<a target="_blank" href="https://github.com/gogits/gogs"><i class="fa fa-github-square"></i><span class="sr-only">GitHub</span></a>
+				<a target="_blank" href="https://twitter.com/gogitservice"><i class="fa fa-twitter"></i><span class="sr-only">Twitter</span></a>
+				<a target="_blank" href="https://plus.google.com/communities/115599856376145964459"><i class="fa fa-google-plus"></i><span class="sr-only">Google Plus</span></a>
+				<a target="_blank" href="http://weibo.com/gogschina"><i class="fa fa-weibo"></i><span class="sr-only">Sina Weibo</span></a>
 				<div class="ui language bottom pointing dropdown link item">
           <i class="world icon"></i>
           <div class="text">{{.LangName}}</div>
