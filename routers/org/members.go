@@ -61,14 +61,14 @@ func MembersAction(ctx *middleware.Context) {
 			return
 		}
 		err = org.RemoveMember(uid)
-		if err == models.ErrLastOrgOwner {
+		if models.IsErrLastOrgOwner(err) {
 			ctx.Flash.Error(ctx.Tr("form.last_org_owner"))
 			ctx.Redirect(ctx.Org.OrgLink + "/members")
 			return
 		}
 	case "leave":
 		err = org.RemoveMember(ctx.User.Id)
-		if err == models.ErrLastOrgOwner {
+		if models.IsErrLastOrgOwner(err) {
 			ctx.Flash.Error(ctx.Tr("form.last_org_owner"))
 			ctx.Redirect(ctx.Org.OrgLink + "/members")
 			return

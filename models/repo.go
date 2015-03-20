@@ -23,6 +23,7 @@ import (
 	"github.com/Unknwon/com"
 
 	"github.com/gogits/gogs/modules/base"
+	"github.com/gogits/gogs/modules/bindata"
 	"github.com/gogits/gogs/modules/git"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/process"
@@ -35,7 +36,6 @@ const (
 
 var (
 	ErrRepoAlreadyExist  = errors.New("Repository already exist")
-	ErrRepoNotExist      = errors.New("Repository does not exist")
 	ErrRepoFileNotExist  = errors.New("Repository file does not exist")
 	ErrRepoNameIllegal   = errors.New("Repository name contains illegal characters")
 	ErrRepoFileNotLoaded = errors.New("Repository file not loaded")
@@ -56,7 +56,7 @@ func LoadRepoConfig() {
 	types := []string{"gitignore", "license"}
 	typeFiles := make([][]string, 2)
 	for i, t := range types {
-		files, err := com.StatDir(path.Join("conf", t))
+		files, err := bindata.AssetDir("conf/" + t)
 		if err != nil {
 			log.Fatal(4, "Fail to get %s files: %v", t, err)
 		}
@@ -348,7 +348,7 @@ func MigrateRepository(u *User, name, desc string, private, mirror bool, url str
 			return repo, err
 		}
 		repo.IsMirror = true
-		return repo, UpdateRepository(repo)
+		return repo, UpdateRepository(repo, false)
 	} else {
 		os.RemoveAll(repoPath)
 	}
@@ -363,18 +363,7 @@ func MigrateRepository(u *User, name, desc string, private, mirror bool, url str
 		return repo, fmt.Errorf("create update hook: %v", err)
 	}
 
-	return repo, UpdateRepository(repo)
-}
-
-// extractGitBareZip extracts git-bare.zip to repository path.
-func extractGitBareZip(repoPath string) error {
-	z, err := zip.Open(path.Join(setting.ConfRootPath, "content/git-bare.zip"))
-	if err != nil {
-		return err
-	}
-	defer z.Close()
-
-	return z.ExtractTo(repoPath)
+	return repo, UpdateRepository(repo, false)
 }
 
 // initRepoCommit temporarily changes with work directory.
@@ -407,12 +396,14 @@ func createUpdateHook(repoPath string) error {
 }
 
 // InitRepository initializes README and .gitignore if needed.
-func initRepository(e Engine, f string, u *User, repo *Repository, initReadme bool, repoLang, license string) error {
-	repoPath := RepoPath(u.Name, repo.Name)
-
-	// Create bare new repository.
-	if err := extractGitBareZip(repoPath); err != nil {
-		return err
+func initRepository(e Engine, repoPath string, u *User, repo *Repository, initReadme bool, repoLang, license string) error {
+	// Init bare new repository.
+	os.MkdirAll(repoPath, os.ModePerm)
+	_, stderr, err := process.ExecDir(-1, repoPath,
+		fmt.Sprintf("initRepository(git init --bare): %s", repoPath),
+		"git", "init", "--bare")
+	if err != nil {
+		return errors.New("git init --bare: " + stderr)
 	}
 
 	if err := createUpdateHook(repoPath); err != nil {
@@ -435,11 +426,11 @@ func initRepository(e Engine, f string, u *User, repo *Repository, initReadme bo
 	tmpDir := filepath.Join(os.TempDir(), com.ToStr(time.Now().Nanosecond()))
 	os.MkdirAll(tmpDir, os.ModePerm)
 
-	_, stderr, err := process.Exec(
+	_, stderr, err = process.Exec(
 		fmt.Sprintf("initRepository(git clone): %s", repoPath),
 		"git", "clone", repoPath, tmpDir)
 	if err != nil {
-		return errors.New("initRepository(git clone): " + stderr)
+		return errors.New("git clone: " + stderr)
 	}
 
 	// README
@@ -452,43 +443,36 @@ func initRepository(e Engine, f string, u *User, repo *Repository, initReadme bo
 		}
 	}
 
+	// FIXME: following two can be merged.
+
 	// .gitignore
-	filePath := "conf/gitignore/" + repoLang
-	if com.IsFile(filePath) {
-		targetPath := path.Join(tmpDir, fileName["gitign"])
-		if com.IsFile(filePath) {
-			if err = com.Copy(filePath, targetPath); err != nil {
-				return err
-			}
-		} else {
-			// Check custom files.
-			filePath = path.Join(setting.CustomPath, "conf/gitignore", repoLang)
-			if com.IsFile(filePath) {
-				if err := com.Copy(filePath, targetPath); err != nil {
-					return err
-				}
-			}
+	// Copy custom file when available.
+	customPath := path.Join(setting.CustomPath, "conf/gitignore", repoLang)
+	targetPath := path.Join(tmpDir, fileName["gitign"])
+	if com.IsFile(customPath) {
+		if err := com.Copy(customPath, targetPath); err != nil {
+			return fmt.Errorf("copy gitignore: %v", err)
+		}
+	} else if com.IsSliceContainsStr(Gitignores, repoLang) {
+		if err = ioutil.WriteFile(targetPath,
+			bindata.MustAsset(path.Join("conf/gitignore", repoLang)), os.ModePerm); err != nil {
+			return fmt.Errorf("generate gitignore: %v", err)
 		}
 	} else {
 		delete(fileName, "gitign")
 	}
 
 	// LICENSE
-	filePath = "conf/license/" + license
-	if com.IsFile(filePath) {
-		targetPath := path.Join(tmpDir, fileName["license"])
-		if com.IsFile(filePath) {
-			if err = com.Copy(filePath, targetPath); err != nil {
-				return err
-			}
-		} else {
-			// Check custom files.
-			filePath = path.Join(setting.CustomPath, "conf/license", license)
-			if com.IsFile(filePath) {
-				if err := com.Copy(filePath, targetPath); err != nil {
-					return err
-				}
-			}
+	customPath = path.Join(setting.CustomPath, "conf/license", license)
+	targetPath = path.Join(tmpDir, fileName["license"])
+	if com.IsFile(customPath) {
+		if err = com.Copy(customPath, targetPath); err != nil {
+			return fmt.Errorf("copy license: %v", err)
+		}
+	} else if com.IsSliceContainsStr(Licenses, license) {
+		if err = ioutil.WriteFile(targetPath,
+			bindata.MustAsset(path.Join("conf/license", license)), os.ModePerm); err != nil {
+			return fmt.Errorf("generate license: %v", err)
 		}
 	} else {
 		delete(fileName, "license")
@@ -502,7 +486,7 @@ func initRepository(e Engine, f string, u *User, repo *Repository, initReadme bo
 		}
 		repo.IsBare = true
 		repo.DefaultBranch = "master"
-		return updateRepository(e, repo)
+		return updateRepository(e, repo, false)
 	}
 
 	// Apply changes and commit.
@@ -734,7 +718,7 @@ func ChangeRepositoryName(userName, oldRepoName, newRepoName string) (err error)
 	return os.Rename(RepoPath(userName, oldRepoName), RepoPath(userName, newRepoName))
 }
 
-func updateRepository(e Engine, repo *Repository) error {
+func updateRepository(e Engine, repo *Repository, visibilityChanged bool) (err error) {
 	repo.LowerName = strings.ToLower(repo.Name)
 
 	if len(repo.Description) > 255 {
@@ -743,12 +727,40 @@ func updateRepository(e Engine, repo *Repository) error {
 	if len(repo.Website) > 255 {
 		repo.Website = repo.Website[:255]
 	}
-	_, err := e.Id(repo.Id).AllCols().Update(repo)
-	return err
+
+	if _, err = e.Id(repo.Id).AllCols().Update(repo); err != nil {
+		return fmt.Errorf("update: %v", err)
+	}
+
+	if visibilityChanged {
+		if err = repo.getOwner(e); err != nil {
+			return fmt.Errorf("getOwner: %v", err)
+		}
+		if !repo.Owner.IsOrganization() {
+			return nil
+		}
+
+		// Organization repository need to recalculate access table when visivility is changed.
+		if err = repo.recalculateTeamAccesses(e, 0); err != nil {
+			return fmt.Errorf("recalculateTeamAccesses: %v", err)
+		}
+	}
+
+	return nil
 }
 
-func UpdateRepository(repo *Repository) error {
-	return updateRepository(x, repo)
+func UpdateRepository(repo *Repository, visibilityChanged bool) (err error) {
+	sess := x.NewSession()
+	defer sessionRelease(sess)
+	if err = sess.Begin(); err != nil {
+		return err
+	}
+
+	if err = updateRepository(x, repo, visibilityChanged); err != nil {
+		return fmt.Errorf("updateRepository: %v", err)
+	}
+
+	return sess.Commit()
 }
 
 // DeleteRepository deletes a repository for a user or organization.
@@ -758,7 +770,7 @@ func DeleteRepository(uid, repoID int64, userName string) error {
 	if err != nil {
 		return err
 	} else if !has {
-		return ErrRepoNotExist
+		return ErrRepoNotExist{repoID, uid, ""}
 	}
 
 	// In case is a organization.
@@ -792,9 +804,9 @@ func DeleteRepository(uid, repoID int64, userName string) error {
 		return err
 	} else if _, err = sess.Delete(&Access{RepoID: repo.Id}); err != nil {
 		return err
-	} else if _, err = sess.Delete(&Action{RepoId: repo.Id}); err != nil {
+	} else if _, err = sess.Delete(&Action{RepoID: repo.Id}); err != nil {
 		return err
-	} else if _, err = sess.Delete(&Watch{RepoId: repoID}); err != nil {
+	} else if _, err = sess.Delete(&Watch{RepoID: repoID}); err != nil {
 		return err
 	} else if _, err = sess.Delete(&Mirror{RepoId: repoID}); err != nil {
 		return err
@@ -875,18 +887,18 @@ func GetRepositoryByName(uid int64, repoName string) (*Repository, error) {
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, ErrRepoNotExist
+		return nil, ErrRepoNotExist{0, uid, repoName}
 	}
 	return repo, err
 }
 
 func getRepositoryById(e Engine, id int64) (*Repository, error) {
-	repo := &Repository{}
+	repo := new(Repository)
 	has, err := e.Id(id).Get(repo)
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, ErrRepoNotExist
+		return nil, ErrRepoNotExist{id, 0, ""}
 	}
 	return repo, nil
 }
@@ -1163,9 +1175,9 @@ func (repo *Repository) DeleteCollaborator(u *User) (err error) {
 
 // Watch is connection request for receiving repository notification.
 type Watch struct {
-	Id     int64
-	UserId int64 `xorm:"UNIQUE(watch)"`
-	RepoId int64 `xorm:"UNIQUE(watch)"`
+	ID     int64 `xorm:"pk autoincr"`
+	UserID int64 `xorm:"UNIQUE(watch)"`
+	RepoID int64 `xorm:"UNIQUE(watch)"`
 }
 
 // IsWatching checks if user has watched given repository.
@@ -1179,7 +1191,7 @@ func watchRepo(e Engine, uid, repoId int64, watch bool) (err error) {
 		if IsWatching(uid, repoId) {
 			return nil
 		}
-		if _, err = e.Insert(&Watch{RepoId: repoId, UserId: uid}); err != nil {
+		if _, err = e.Insert(&Watch{RepoID: repoId, UserID: uid}); err != nil {
 			return err
 		}
 		_, err = e.Exec("UPDATE `repository` SET num_watches = num_watches + 1 WHERE id = ?", repoId)
@@ -1190,7 +1202,7 @@ func watchRepo(e Engine, uid, repoId int64, watch bool) (err error) {
 		if _, err = e.Delete(&Watch{0, uid, repoId}); err != nil {
 			return err
 		}
-		_, err = e.Exec("UPDATE `repository` SET num_watches = num_watches - 1 WHERE id = ?", repoId)
+		_, err = e.Exec("UPDATE `repository` SET num_watches=num_watches-1 WHERE id=?", repoId)
 	}
 	return err
 }
@@ -1202,7 +1214,7 @@ func WatchRepo(uid, repoId int64, watch bool) (err error) {
 
 func getWatchers(e Engine, rid int64) ([]*Watch, error) {
 	watches := make([]*Watch, 0, 10)
-	err := e.Find(&watches, &Watch{RepoId: rid})
+	err := e.Find(&watches, &Watch{RepoID: rid})
 	return watches, err
 }
 
@@ -1213,24 +1225,24 @@ func GetWatchers(rid int64) ([]*Watch, error) {
 
 func notifyWatchers(e Engine, act *Action) error {
 	// Add feeds for user self and all watchers.
-	watches, err := getWatchers(e, act.RepoId)
+	watches, err := getWatchers(e, act.RepoID)
 	if err != nil {
 		return fmt.Errorf("get watchers: %v", err)
 	}
 
 	// Add feed for actioner.
-	act.UserId = act.ActUserId
+	act.UserID = act.ActUserID
 	if _, err = e.InsertOne(act); err != nil {
 		return fmt.Errorf("insert new actioner: %v", err)
 	}
 
 	for i := range watches {
-		if act.ActUserId == watches[i].UserId {
+		if act.ActUserID == watches[i].UserID {
 			continue
 		}
 
-		act.Id = 0
-		act.UserId = watches[i].UserId
+		act.ID = 0
+		act.UserID = watches[i].UserID
 		if _, err = e.InsertOne(act); err != nil {
 			return fmt.Errorf("insert new action: %v", err)
 		}
@@ -1375,6 +1387,10 @@ func ForkRepository(u *User, oldRepo *Repository, name, desc string) (_ *Reposit
 		"git", "update-server-info")
 	if err != nil {
 		return nil, fmt.Errorf("git update-server-info: %v", err)
+	}
+
+	if err = createUpdateHook(repoPath); err != nil {
+		return nil, fmt.Errorf("createUpdateHook: %v", err)
 	}
 
 	return repo, sess.Commit()

@@ -168,6 +168,7 @@ func EditUserPost(ctx *middleware.Context, form auth.AdminEditUserForm) {
 		ctx.Handle(500, "GetUserById", err)
 		return
 	}
+	ctx.Data["User"] = u
 
 	if ctx.HasError() {
 		ctx.HTML(200, USER_EDIT)
@@ -175,8 +176,8 @@ func EditUserPost(ctx *middleware.Context, form auth.AdminEditUserForm) {
 	}
 
 	// FIXME: need password length check
-	if len(form.Passwd) > 0 {
-		u.Passwd = form.Passwd
+	if len(form.Password) > 0 {
+		u.Passwd = form.Password
 		u.Salt = models.GetUserSalt()
 		u.EncodePasswd()
 	}
@@ -192,8 +193,6 @@ func EditUserPost(ctx *middleware.Context, form auth.AdminEditUserForm) {
 	u.IsActive = form.Active
 	u.IsAdmin = form.Admin
 	u.AllowGitHook = form.AllowGitHook
-
-	ctx.Data["User"] = u
 
 	if err := models.UpdateUser(u); err != nil {
 		if err == models.ErrEmailAlreadyUsed {
@@ -223,11 +222,11 @@ func DeleteUser(ctx *middleware.Context) {
 	}
 
 	if err = models.DeleteUser(u); err != nil {
-		switch err {
-		case models.ErrUserOwnRepos:
+		switch {
+		case models.IsErrUserOwnRepos(err):
 			ctx.Flash.Error(ctx.Tr("admin.users.still_own_repo"))
 			ctx.Redirect(setting.AppSubUrl + "/admin/users/" + ctx.Params(":userid"))
-		case models.ErrUserHasOrgs:
+		case models.IsErrUserHasOrgs(err):
 			ctx.Flash.Error(ctx.Tr("admin.users.still_has_org"))
 			ctx.Redirect(setting.AppSubUrl + "/admin/users/" + ctx.Params(":userid"))
 		default:

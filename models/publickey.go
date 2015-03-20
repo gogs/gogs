@@ -254,15 +254,16 @@ func saveAuthorizedKeyFile(keys ...*PublicKey) error {
 	}
 	defer f.Close()
 
-	finfo, err := f.Stat()
+	fi, err := f.Stat()
 	if err != nil {
 		return err
 	}
 
 	// FIXME: following command does not support in Windows.
 	if !setting.IsWindows {
-		if finfo.Mode().Perm() > 0600 {
-			log.Error(4, "authorized_keys file has unusual permission flags: %s - setting to -rw-------", finfo.Mode().Perm().String())
+		// .ssh directory should have mode 700, and authorized_keys file should have mode 600.
+		if fi.Mode().Perm() > 0600 {
+			log.Error(4, "authorized_keys file has unusual permission flags: %s - setting to -rw-------", fi.Mode().Perm().String())
 			if err = f.Chmod(0600); err != nil {
 				return err
 			}
@@ -433,7 +434,7 @@ func RewriteAllPublicKeys() error {
 	defer sshOpLocker.Unlock()
 
 	tmpPath := filepath.Join(SSHPath, "authorized_keys.tmp")
-	f, err := os.Create(tmpPath)
+	f, err := os.OpenFile(tmpPath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
 		return err
 	}

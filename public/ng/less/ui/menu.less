@@ -11,6 +11,10 @@ ul.menu {
         background-color: @lineMenuHoverBgColor;
         color: @lineMenuHoverFontColor;
       }
+      &.active {
+		  background-color: #4183c4;
+		  color: #FFF;
+	  }
     }
     &.current > a,
     &.hover > a {
@@ -67,6 +71,7 @@ ul.menu-down {
   > li.head {
     display: block;
     padding: .4em 1.2em;
+	margin-bottom: 4px;
   }
   > li.down {
     position: relative;

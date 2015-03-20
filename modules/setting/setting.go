@@ -20,6 +20,7 @@ import (
 	"github.com/macaron-contrib/session"
 	"gopkg.in/ini.v1"
 
+	"github.com/gogits/gogs/modules/bindata"
 	"github.com/gogits/gogs/modules/log"
 	// "github.com/gogits/gogs/modules/ssh"
 )
@@ -131,7 +132,6 @@ var (
 
 	// Global setting objects.
 	Cfg          *ini.File
-	ConfRootPath string
 	CustomPath   string // Custom directory path.
 	CustomConf   string
 	ProdMode     bool
@@ -163,6 +163,12 @@ func WorkDir() (string, error) {
 	return path.Dir(strings.Replace(execPath, "\\", "/", -1)), err
 }
 
+func forcePathSeparator(path string) {
+	if strings.Contains(path, "\\") {
+		log.Fatal(4, "Do not use '\\' or '\\\\' in paths, instead, please use '/' in all places")
+	}
+}
+
 // NewConfigContext initializes configuration context.
 // NOTE: do not print any log except error.
 func NewConfigContext() {
@@ -170,9 +176,8 @@ func NewConfigContext() {
 	if err != nil {
 		log.Fatal(4, "Fail to get work directory: %v", err)
 	}
-	ConfRootPath = path.Join(workDir, "conf")
 
-	Cfg, err = ini.Load(path.Join(workDir, "conf/app.ini"))
+	Cfg, err = ini.Load(bindata.MustAsset("conf/app.ini"))
 	if err != nil {
 		log.Fatal(4, "Fail to parse 'conf/app.ini': %v", err)
 	}
@@ -196,6 +201,7 @@ func NewConfigContext() {
 	Cfg.NameMapper = ini.AllCapsUnderscore
 
 	LogRootPath = Cfg.Section("log").Key("ROOT_PATH").MustString(path.Join(workDir, "log"))
+	forcePathSeparator(LogRootPath)
 
 	sec := Cfg.Section("server")
 	AppName = Cfg.Section("").Key("APP_NAME").MustString("Gogs: Go Git Service")
@@ -287,18 +293,22 @@ func NewConfigContext() {
 	if err != nil {
 		log.Fatal(4, "Fail to get home directory: %v", err)
 	}
+	homeDir = strings.Replace(homeDir, "\\", "/", -1)
+
 	sec = Cfg.Section("repository")
-	RepoRootPath = sec.Key("ROOT").MustString(filepath.Join(homeDir, "gogs-repositories"))
+	RepoRootPath = sec.Key("ROOT").MustString(path.Join(homeDir, "gogs-repositories"))
+	forcePathSeparator(RepoRootPath)
 	if !filepath.IsAbs(RepoRootPath) {
-		RepoRootPath = filepath.Join(workDir, RepoRootPath)
+		RepoRootPath = path.Join(workDir, RepoRootPath)
 	} else {
-		RepoRootPath = filepath.Clean(RepoRootPath)
+		RepoRootPath = path.Clean(RepoRootPath)
 	}
 	ScriptType = sec.Key("SCRIPT_TYPE").MustString("bash")
 
 	sec = Cfg.Section("picture")
 	PictureService = sec.Key("SERVICE").In("server", []string{"server"})
 	AvatarUploadPath = sec.Key("AVATAR_UPLOAD_PATH").MustString("data/avatars")
+	forcePathSeparator(AvatarUploadPath)
 	if !filepath.IsAbs(AvatarUploadPath) {
 		AvatarUploadPath = path.Join(workDir, AvatarUploadPath)
 	}
@@ -341,7 +351,7 @@ func newService() {
 	Service.RequireSignInView = Cfg.Section("service").Key("REQUIRE_SIGNIN_VIEW").MustBool()
 	Service.EnableCacheAvatar = Cfg.Section("service").Key("ENABLE_CACHE_AVATAR").MustBool()
 	Service.EnableReverseProxyAuth = Cfg.Section("service").Key("ENABLE_REVERSE_PROXY_AUTHENTICATION").MustBool()
-	Service.EnableReverseProxyAutoRegister = Cfg.Section("service").Key("ENABLE_REVERSE_PROXY_AUTO_REGISTERATION").MustBool()
+	Service.EnableReverseProxyAutoRegister = Cfg.Section("service").Key("ENABLE_REVERSE_PROXY_AUTO_REGISTRATION").MustBool()
 }
 
 var logLevels = map[string]string{

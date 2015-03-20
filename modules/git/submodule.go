@@ -31,6 +31,10 @@ func NewSubModuleFile(c *Commit, refUrl, refId string) *SubModuleFile {
 
 // RefUrl guesses and returns reference URL.
 func (sf *SubModuleFile) RefUrl() string {
+	if sf.refUrl == "" {
+		return ""
+	}
+
 	url := strings.TrimSuffix(sf.refUrl, ".git")
 
 	// git://xxx/user/repo

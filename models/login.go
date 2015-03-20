@@ -215,11 +215,9 @@ func UserSignIn(uname, passwd string) (*User, error) {
 
 	switch u.LoginType {
 	case LDAP:
-		return LoginUserLdapSource(u, u.LoginName, passwd,
-			source.Id, source.Cfg.(*LDAPConfig), false)
+		return LoginUserLdapSource(u, u.LoginName, passwd, source.Id, source.Cfg.(*LDAPConfig), false)
 	case SMTP:
-		return LoginUserSMTPSource(u, u.LoginName, passwd,
-			source.Id, source.Cfg.(*SMTPConfig), false)
+		return LoginUserSMTPSource(u, u.LoginName, passwd, source.Id, source.Cfg.(*SMTPConfig), false)
 	}
 	return nil, ErrUnsupportedLoginType
 }
