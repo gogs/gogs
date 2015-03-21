@@ -631,7 +631,6 @@ ul.menu-vertical > li.head,
 ul.menu-down > li.head {
   display: block;
   padding: .4em 1.2em;
-  margin-bottom: 4px;
 }
 ul.menu-vertical > li.down,
 ul.menu-down > li.down {
