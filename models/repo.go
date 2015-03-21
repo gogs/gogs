@@ -987,6 +987,7 @@ var (
 	// Prevent duplicate tasks.
 	isMirrorUpdating = false
 	isGitFscking     = false
+	isCheckRepos     = false
 )
 
 // MirrorUpdate checks and updates mirror repositories.
@@ -1076,6 +1077,42 @@ func GitGcRepos() error {
 			}
 			return nil
 		})
+}
+
+func CheckRepoStats() {
+	if isCheckRepos {
+		return
+	}
+	isCheckRepos = true
+	defer func() { isCheckRepos = false }()
+
+	// Check count watchers
+	results_watch, err := x.Query("SELECT r.id FROM `repository` r WHERE r.num_watches!=(SELECT count(*) FROM `watch` WHERE repo_id=r.id)")
+	if err != nil {
+		log.Error(4, "select repository check 'watch': %v", err)
+	}
+	for _, repo_id := range results_watch {
+		log.Info("updating repository count 'watch'")
+		repoID := com.StrTo(repo_id["id"]).MustInt64()
+		_, err := x.Exec("UPDATE `repository` SET num_watches=(SELECT count(*) FROM `watch` WHERE repo_id=?) WHERE id=?", repoID, repoID)
+		if err != nil {
+			log.Error(4, "update repository check 'watch', repo %v: %v", repo_id, err)
+		}
+	}
+
+	// Check count stars
+	results_star, err := x.Query("SELECT s.id FROM `repository` s WHERE s.num_stars!=(SELECT count(*) FROM `star` WHERE repo_id=s.id)")
+	if err != nil {
+		log.Error(4, "select repository check 'star': %v", err)
+	}
+	for _, repo_id := range results_star {
+		log.Info("updating repository count 'star'")
+		repoID := com.StrTo(repo_id["id"]).MustInt64()
+		_, err := x.Exec("UPDATE `repository` SET .num_stars=(SELECT count(*) FROM `star` WHERE repo_id=?) WHERE id=?", repoID, repoID)
+		if err != nil {
+			log.Error(4, "update repository check 'star', repo %v: %v", repo_id, err)
+		}
+	}
 }
 
 // _________        .__  .__        ___.                        __  .__

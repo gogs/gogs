@@ -19,6 +19,7 @@ func NewCronContext() {
 	if setting.Git.Fsck.Enable {
 		c.AddFunc("Repository health check", fmt.Sprintf("@every %dh", setting.Git.Fsck.Interval), models.GitFsck)
 	}
+	c.AddFunc("Check repository statistics", "@every 24h", models.CheckRepoStats)
 	c.Start()
 }
 
