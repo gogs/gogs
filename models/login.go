@@ -242,6 +242,7 @@ func LoginUserLdapSource(u *User, name, passwd string, sourceId int64, cfg *LDAP
 	}
 
 	u = &User{
+		LowerName:   strings.ToLower(name),
 		Name:        name,
 		FullName:    fn + " " + sn,
 		LoginType:   LDAP,
