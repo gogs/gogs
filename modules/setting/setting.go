@@ -130,6 +130,9 @@ var (
 	// I18n settings.
 	Langs, Names []string
 
+	// Other settings.
+	ShowFooterBranding bool
+
 	// Global setting objects.
 	Cfg          *ini.File
 	CustomPath   string // Custom directory path.
@@ -326,6 +329,8 @@ func NewConfigContext() {
 
 	Langs = Cfg.Section("i18n").Key("LANGS").Strings(",")
 	Names = Cfg.Section("i18n").Key("NAMES").Strings(",")
+
+	ShowFooterBranding = Cfg.Section("other").Key("SHOW_FOOTER_BRANDING").MustBool()
 
 	HasRobotsTxt = com.IsFile(path.Join(CustomPath, "robots.txt"))
 }
