@@ -15,10 +15,9 @@ import (
 	"strings"
 
 	"github.com/russross/blackfriday"
+	"golang.org/x/net/html"
 
 	"github.com/gogits/gogs/modules/setting"
-
-	"golang.org/x/net/html"
 )
 
 func isletter(c byte) bool {
@@ -109,40 +108,22 @@ func (options *CustomRender) Image(out *bytes.Buffer, link []byte, title []byte,
 }
 
 var (
-	MentionPattern     = regexp.MustCompile(`(\s|^)@[0-9a-zA-Z_]+`)
+	MentionPattern     = regexp.MustCompile(`(\s|^)@[0-9a-zA-Z_\.]+`)
 	commitPattern      = regexp.MustCompile(`(\s|^)https?.*commit/[0-9a-zA-Z]+(#+[0-9a-zA-Z-]*)?`)
 	issueFullPattern   = regexp.MustCompile(`(\s|^)https?.*issues/[0-9]+(#+[0-9a-zA-Z-]*)?`)
-	issueIndexPattern  = regexp.MustCompile(`( |^)#[0-9]+`)
+	issueIndexPattern  = regexp.MustCompile(`( |^)#[0-9]+\b`)
 	sha1CurrentPattern = regexp.MustCompile(`\b[0-9a-f]{40}\b`)
 )
 
 func RenderSpecialLink(rawBytes []byte, urlPrefix string) []byte {
-	buf := bytes.NewBufferString("")
-	inCodeBlock := false
-	codeBlockPrefix := []byte("```")
-	lineBreak := []byte("\n")
-	tab := []byte("\t")
-	lines := bytes.Split(rawBytes, lineBreak)
-	for _, line := range lines {
-		if bytes.HasPrefix(line, codeBlockPrefix) {
-			inCodeBlock = !inCodeBlock
-		}
-
-		if !inCodeBlock && !bytes.HasPrefix(line, tab) {
-			ms := MentionPattern.FindAll(line, -1)
-			for _, m := range ms {
-				m = bytes.TrimSpace(m)
-				line = bytes.Replace(line, m,
-					[]byte(fmt.Sprintf(`<a href="%s/%s">%s</a>`, setting.AppSubUrl, m[1:], m)), -1)
-			}
-		}
-
-		buf.Write(line)
-		buf.Write(lineBreak)
+	ms := MentionPattern.FindAll(rawBytes, -1)
+	for _, m := range ms {
+		m = bytes.TrimSpace(m)
+		rawBytes = bytes.Replace(rawBytes, m,
+			[]byte(fmt.Sprintf(`<a href="%s/%s">%s</a>`, setting.AppSubUrl, m[1:], m)), -1)
 	}
 
-	rawBytes = buf.Bytes()
-	ms := commitPattern.FindAll(rawBytes, -1)
+	ms = commitPattern.FindAll(rawBytes, -1)
 	for _, m := range ms {
 		m = bytes.TrimSpace(m)
 		i := strings.Index(string(m), "commit/")
@@ -181,8 +162,14 @@ func RenderSha1CurrentPattern(rawBytes []byte, urlPrefix string) []byte {
 func RenderIssueIndexPattern(rawBytes []byte, urlPrefix string) []byte {
 	ms := issueIndexPattern.FindAll(rawBytes, -1)
 	for _, m := range ms {
-		rawBytes = bytes.Replace(rawBytes, m, []byte(fmt.Sprintf(`<a href="%s/issues/%s">%s</a>`,
-			urlPrefix, strings.TrimPrefix(string(m[1:]), "#"), m)), -1)
+		var space string
+		m2 := m
+		if m2[0] == ' ' {
+			space = " "
+			m2 = m2[1:]
+		}
+		rawBytes = bytes.Replace(rawBytes, m, []byte(fmt.Sprintf(`%s<a href="%s/issues/%s">%s</a>`,
+			space, urlPrefix, m2[1:], m2)), 1)
 	}
 	return rawBytes
 }
@@ -219,6 +206,47 @@ func RenderRawMarkdown(body []byte, urlPrefix string) []byte {
 	return body
 }
 
+// PostProcessMarkdown treats different types of HTML differently,
+// and only renders special links for plain text blocks.
+func PostProcessMarkdown(rawHtml []byte, urlPrefix string) []byte {
+	var buf bytes.Buffer
+	tokenizer := html.NewTokenizer(bytes.NewReader(rawHtml))
+	for html.ErrorToken != tokenizer.Next() {
+		token := tokenizer.Token()
+		switch token.Type {
+		case html.TextToken:
+			buf.Write(RenderSpecialLink([]byte(token.String()), urlPrefix))
+
+		case html.StartTagToken:
+			buf.WriteString(token.String())
+			tagName := token.Data
+			// If this is an excluded tag, we skip processing all output until a close tag is encountered.
+			if strings.EqualFold("a", tagName) || strings.EqualFold("code", tagName) || strings.EqualFold("pre", tagName) {
+				for html.ErrorToken != tokenizer.Next() {
+					token = tokenizer.Token()
+					// Copy the token to the output verbatim
+					buf.WriteString(token.String())
+					// If this is the close tag, we are done
+					if html.EndTagToken == token.Type && strings.EqualFold(tagName, token.Data) {
+						break
+					}
+				}
+			}
+
+		default:
+			buf.WriteString(token.String())
+		}
+	}
+
+	if io.EOF == tokenizer.Err() {
+		return buf.Bytes()
+	}
+
+	// If we are not at the end of the input, then some other parsing error has occurred,
+	// so return the input verbatim.
+	return rawHtml
+}
+
 func RenderMarkdown(rawBytes []byte, urlPrefix string) []byte {
 	result := RenderRawMarkdown(rawBytes, urlPrefix)
 	result = PostProcessMarkdown(result, urlPrefix)
@@ -228,45 +256,4 @@ func RenderMarkdown(rawBytes []byte, urlPrefix string) []byte {
 
 func RenderMarkdownString(raw, urlPrefix string) string {
 	return string(RenderMarkdown([]byte(raw), urlPrefix))
-}
-
-func PostProcessMarkdown(rawHtml []byte, urlPrefix string) []byte {
-	var buf bytes.Buffer
-	tokenizer := html.NewTokenizer(bytes.NewReader(rawHtml))
-	for html.ErrorToken != tokenizer.Next() {
-		token := tokenizer.Token()
-		switch token.Type {
-			case html.TextToken:
-				text := []byte(token.String())
-				text = RenderSpecialLink(text, urlPrefix)
-
-				buf.Write(text)
-
-			case html.StartTagToken:
-				buf.WriteString(token.String())
-
-				tagName := token.Data
-				// If this is an excluded tag, we skip processing all output until a close tag is encountered
-				if strings.EqualFold("a", tagName) || strings.EqualFold("code", tagName) || strings.EqualFold("pre", tagName) {
-					for html.ErrorToken != tokenizer.Next() {
-						token = tokenizer.Token()
-						// Copy the token to the output verbatim
-						buf.WriteString(token.String())
-						// If this is the close tag, we are done
-						if html.EndTagToken == token.Type && strings.EqualFold(tagName, token.Data) { break }
-					}
-				}
-
-			default:
-				buf.WriteString(token.String())
-		}
-	}
-
-	if io.EOF == tokenizer.Err() {
-		return buf.Bytes()
-	}
-
-	// If we are not at the end of the input, then some other parsing error has occurred, so return
-	// the input verbatim.
-	return rawHtml
 }
