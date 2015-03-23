@@ -372,7 +372,7 @@ func runWeb(ctx *cli.Context) {
 	}, reqSignIn)
 	m.Group("/org", func() {
 		m.Get("/:org", org.Home)
-	}, middleware.OrgAssignment(true))
+	}, ignSignIn, middleware.OrgAssignment(true))
 
 	// Repository.
 	m.Group("/repo", func() {
