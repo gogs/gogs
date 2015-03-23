@@ -7,6 +7,7 @@ package base
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"net/http"
 	"path"
 	"path/filepath"
@@ -16,6 +17,8 @@ import (
 	"github.com/russross/blackfriday"
 
 	"github.com/gogits/gogs/modules/setting"
+
+	"golang.org/x/net/html"
 )
 
 func isletter(c byte) bool {
@@ -217,12 +220,53 @@ func RenderRawMarkdown(body []byte, urlPrefix string) []byte {
 }
 
 func RenderMarkdown(rawBytes []byte, urlPrefix string) []byte {
-	body := RenderSpecialLink(rawBytes, urlPrefix)
-	body = RenderRawMarkdown(body, urlPrefix)
-	body = Sanitizer.SanitizeBytes(body)
-	return body
+	result := RenderRawMarkdown(rawBytes, urlPrefix)
+	result = PostProcessMarkdown(result, urlPrefix)
+	result = Sanitizer.SanitizeBytes(result)
+	return result
 }
 
 func RenderMarkdownString(raw, urlPrefix string) string {
 	return string(RenderMarkdown([]byte(raw), urlPrefix))
+}
+
+func PostProcessMarkdown(rawHtml []byte, urlPrefix string) []byte {
+	var buf bytes.Buffer
+	tokenizer := html.NewTokenizer(bytes.NewReader(rawHtml))
+	for html.ErrorToken != tokenizer.Next() {
+		token := tokenizer.Token()
+		switch token.Type {
+			case html.TextToken:
+				text := []byte(token.String())
+				text = RenderSpecialLink(text, urlPrefix)
+
+				buf.Write(text)
+
+			case html.StartTagToken:
+				buf.WriteString(token.String())
+
+				tagName := token.Data
+				// If this is an excluded tag, we skip processing all output until a close tag is encountered
+				if strings.EqualFold("a", tagName) || strings.EqualFold("code", tagName) || strings.EqualFold("pre", tagName) {
+					for html.ErrorToken != tokenizer.Next() {
+						token = tokenizer.Token()
+						// Copy the token to the output verbatim
+						buf.WriteString(token.String())
+						// If this is the close tag, we are done
+						if html.EndTagToken == token.Type && strings.EqualFold(tagName, token.Data) { break }
+					}
+				}
+
+			default:
+				buf.WriteString(token.String())
+		}
+	}
+
+	if io.EOF == tokenizer.Err() {
+		return buf.Bytes()
+	}
+
+	// If we are not at the end of the input, then some other parsing error has occurred, so return
+	// the input verbatim.
+	return rawHtml
 }
