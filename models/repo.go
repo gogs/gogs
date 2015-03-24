@@ -104,8 +104,8 @@ func NewRepoContext() {
 		log.Fatal(4, "Gogs requires Git version greater or equal to 1.7.1")
 	}
 
-	// Check if server has user.email and user.name set correctly and set if they're not.
-	for configKey, defaultValue := range map[string]string{"user.name": "Gogs", "user.email": "gogitservice@gmail.com"} {
+	// Git requires setting user.name and user.email in order to commit changes.
+	for configKey, defaultValue := range map[string]string{"user.name": "Gogs", "user.email": "gogs@fake.local"} {
 		if stdout, stderr, err := process.Exec("NewRepoContext(get setting)", "git", "config", "--get", configKey); err != nil || strings.TrimSpace(stdout) == "" {
 			// ExitError indicates this config is not set
 			if _, ok := err.(*exec.ExitError); ok || strings.TrimSpace(stdout) == "" {
