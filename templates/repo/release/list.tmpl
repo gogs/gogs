@@ -9,11 +9,13 @@
                     <span class="release"><strong>{{.i18n.Tr "repo.release.releases"}}</strong></span><!--  /
                     <a class="tag" href="{{AppSubUrl}}/{tag_link}">Tags</a> -->
                     <!-- comment : if in tag page, show a.release and span.tag please -->
+                    {{if .IsRepositoryAdmin}}
                     <a class="btn" href="{{$.RepoLink}}/releases/new">
                         <button class="btn btn-medium btn-blue btn-radius">
                             {{.i18n.Tr "repo.release.new_release"}}
                         </button>
                     </a>
+                    {{end}}
                 </h4>
                 <ul id="release-list" class="list-unstyled">
                     {{range .Releases}}
