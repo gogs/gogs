@@ -118,6 +118,9 @@ var TemplateFuncs template.FuncMap = map[string]interface{}{
 	"CdnMode": func() bool {
 		return setting.ProdMode && !setting.OfflineMode
 	},
+	"DisableGravatar": func() bool {
+		return setting.DisableGravatar
+	},
 	"LoadTimes": func(startTime time.Time) string {
 		return fmt.Sprint(time.Since(startTime).Nanoseconds()/1e6) + "ms"
 	},
