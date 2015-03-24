@@ -74,15 +74,15 @@ func NewAuthSourcePost(ctx *middleware.Context, form auth.AuthenticationForm) {
 				Filter:            form.Filter,
 				MsAdSAFormat:      form.MsAdSA,
 				Enabled:           true,
-				Name:              form.AuthName,
+				Name:              form.Name,
 			},
 		}
 	case models.SMTP:
 		u = &models.SMTPConfig{
-			Auth: form.SmtpAuth,
-			Host: form.SmtpHost,
-			Port: form.SmtpPort,
-			TLS:  form.Tls,
+			Auth: form.SMTPAuth,
+			Host: form.SMTPHost,
+			Port: form.SMTPPort,
+			TLS:  form.TLS,
 		}
 	default:
 		ctx.Error(400)
@@ -91,7 +91,7 @@ func NewAuthSourcePost(ctx *middleware.Context, form auth.AuthenticationForm) {
 
 	var source = &models.LoginSource{
 		Type:              models.LoginType(form.Type),
-		Name:              form.AuthName,
+		Name:              form.Name,
 		IsActived:         true,
 		AllowAutoRegister: form.AllowAutoRegister,
 		Cfg:               u,
@@ -102,7 +102,7 @@ func NewAuthSourcePost(ctx *middleware.Context, form auth.AuthenticationForm) {
 		return
 	}
 
-	log.Trace("Authentication created by admin(%s): %s", ctx.User.Name, form.AuthName)
+	log.Trace("Authentication created by admin(%s): %s", ctx.User.Name, form.Name)
 	ctx.Redirect(setting.AppSubUrl + "/admin/auths")
 }
 
@@ -156,15 +156,15 @@ func EditAuthSourcePost(ctx *middleware.Context, form auth.AuthenticationForm) {
 				Filter:            form.Filter,
 				MsAdSAFormat:      form.MsAdSA,
 				Enabled:           true,
-				Name:              form.AuthName,
+				Name:              form.Name,
 			},
 		}
 	case models.SMTP:
 		config = &models.SMTPConfig{
-			Auth: form.SmtpAuth,
-			Host: form.SmtpHost,
-			Port: form.SmtpPort,
-			TLS:  form.Tls,
+			Auth: form.SMTPAuth,
+			Host: form.SMTPHost,
+			Port: form.SMTPPort,
+			TLS:  form.TLS,
 		}
 	default:
 		ctx.Error(400)
@@ -172,8 +172,8 @@ func EditAuthSourcePost(ctx *middleware.Context, form auth.AuthenticationForm) {
 	}
 
 	u := models.LoginSource{
-		Id:                form.Id,
-		Name:              form.AuthName,
+		Id:                form.ID,
+		Name:              form.Name,
 		IsActived:         form.IsActived,
 		Type:              models.LoginType(form.Type),
 		AllowAutoRegister: form.AllowAutoRegister,
@@ -185,7 +185,7 @@ func EditAuthSourcePost(ctx *middleware.Context, form auth.AuthenticationForm) {
 		return
 	}
 
-	log.Trace("Authentication changed by admin(%s): %s", ctx.User.Name, form.AuthName)
+	log.Trace("Authentication changed by admin(%s): %s", ctx.User.Name, form.Name)
 	ctx.Flash.Success(ctx.Tr("admin.auths.update_success"))
 	ctx.Redirect(setting.AppSubUrl + "/admin/auths/" + ctx.Params(":authid"))
 }
