@@ -1107,6 +1107,10 @@ func (repo *Repository) AddCollaborator(u *User) error {
 		return nil
 	}
 
+	if err = repo.GetOwner(); err != nil {
+		return fmt.Errorf("GetOwner: %v", err)
+	}
+
 	sess := x.NewSession()
 	defer sessionRelease(sess)
 	if err = sess.Begin(); err != nil {
@@ -1115,8 +1119,15 @@ func (repo *Repository) AddCollaborator(u *User) error {
 
 	if _, err = sess.InsertOne(collaboration); err != nil {
 		return err
-	} else if err = repo.recalculateAccesses(sess); err != nil {
-		return err
+	}
+
+	if repo.Owner.IsOrganization() {
+		err = repo.recalculateTeamAccesses(sess, 0)
+	} else {
+		err = repo.recalculateAccesses(sess)
+	}
+	if err != nil {
+		return fmt.Errorf("recalculateAccesses 'team=%v': %v", repo.Owner.IsOrganization(), err)
 	}
 
 	return sess.Commit()
