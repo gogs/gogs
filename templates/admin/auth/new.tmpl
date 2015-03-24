@@ -44,8 +44,20 @@
                                         <input class="ipt ipt-large ipt-radius {{if .Err_BaseDN}}ipt-error{{end}}" id="base_dn" name="base_dn" value="{{.base_dn}}" />
                                     </div>
                                     <div class="field">
-                                        <label class="req" for="attributes">{{.i18n.Tr "admin.auths.attributes"}}</label>
-                                        <input class="ipt ipt-large ipt-radius {{if .Err_Attributes}}ipt-error{{end}}" id="attributes" name="attributes" value="{{.attributes}}" />
+                                        <label class="req" for="attribute_username">{{.i18n.Tr "admin.auths.attribute_username"}}</label>
+                                        <input class="ipt ipt-large ipt-radius {{if .Err_AttributeUsername}}ipt-error{{end}}" id="attribute_username" name="attribute_username" value="{{.attribute_username}}" />
+                                    </div>
+                                    <div class="field">
+                                        <label for="attribute_name">{{.i18n.Tr "admin.auths.attribute_name"}}</label>
+                                        <input class="ipt ipt-large ipt-radius {{if .Err_AttributeName}}ipt-error{{end}}" id="attribute_name" name="attribute_name" value="{{.attribute_name}}" />
+                                    </div>
+                                    <div class="field">
+                                        <label for="attribute_surname">{{.i18n.Tr "admin.auths.attribute_surname"}}</label>
+                                        <input class="ipt ipt-large ipt-radius {{if .Err_AttributeSurname}}ipt-error{{end}}" id="attribute_surname" name="attribute_surname" value="{{.attribute_surname}}" />
+                                    </div>
+                                    <div class="field">
+                                        <label class="req" for="attribute_mail">{{.i18n.Tr "admin.auths.attribute_mail"}}</label>
+                                        <input class="ipt ipt-large ipt-radius {{if .Err_AttributeMail}}ipt-error{{end}}" id="attribute_mail" name="attribute_mail" value="{{.attribute_mail}}" />
                                     </div>
                                     <div class="field">
                                         <label class="req" for="filter">{{.i18n.Tr "admin.auths.filter"}}</label>
@@ -59,19 +71,19 @@
                                 <div class="smtp hidden">
                                     <div class="field">
                                         <label class="req">{{.i18n.Tr "admin.auths.smtp_auth"}}</label>
-                                        <select name="smtpauth">
+                                        <select name="smtp_auth">
                                             {{range .SMTPAuths}}
                                             <option value="{{.}}">{{.}}</option>
                                             {{end}}
                                         </select>
                                     </div>
                                     <div class="field">
-                                        <label class="req" for="smtphost">{{.i18n.Tr "admin.auths.smtphost"}}</label>
-                                        <input class="ipt ipt-large ipt-radius {{if .Err_SmtpHost}}ipt-error{{end}}" id="smtphost" name="smtphost" value="{{.smtphost}}" />
+                                        <label class="req" for="smtp_host">{{.i18n.Tr "admin.auths.smtphost"}}</label>
+                                        <input class="ipt ipt-large ipt-radius {{if .Err_SmtpHost}}ipt-error{{end}}" id="smtp_host" name="smtp_host" value="{{.smtp_host}}" />
                                     </div>
                                     <div class="field">
-                                        <label class="req" for="smtpport">{{.i18n.Tr "admin.auths.smtpport"}}</label>
-                                        <input class="ipt ipt-large ipt-radius {{if .Err_SmtpPort}}ipt-error{{end}}" id="smtpport" name="smtpport" value="{{.smtpport}}" />
+                                        <label class="req" for="smtp_port">{{.i18n.Tr "admin.auths.smtpport"}}</label>
+                                        <input class="ipt ipt-large ipt-radius {{if .Err_SmtpPort}}ipt-error{{end}}" id="smtp_port" name="smtp_port" value="{{.smtp_port}}" />
                                     </div>
                                 </div>
                                 <div class="field">
