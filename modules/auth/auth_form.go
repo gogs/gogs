@@ -10,25 +10,25 @@ import (
 )
 
 type AuthenticationForm struct {
-	Id                int64  `form:"id"`
-	Type              int    `form:"type"`
-	AuthName          string `form:"name" binding:"Required;MaxSize(50)"`
-	Domain            string `form:"domain"`
-	Host              string `form:"host"`
-	Port              int    `form:"port"`
+	ID                int64 `form:"id"`
+	Type              int
+	Name              string `binding:"Required;MaxSize(50)"`
+	Domain            string
+	Host              string
+	Port              int
 	UseSSL            bool   `form:"usessl"`
 	BaseDN            string `form:"base_dn"`
-	AttributeUsername string `form:"attribute_username"`
-	AttributeName     string `form:"attribute_name"`
-	AttributeSurname  string `form:"attribute_surname"`
-	AttributeMail     string `form:"attribute_mail"`
-	Filter            string `form:"filter"`
+	AttributeUsername string
+	AttributeName     string
+	AttributeSurname  string
+	AttributeMail     string
+	Filter            string
 	MsAdSA            string `form:"ms_ad_sa"`
-	IsActived         bool   `form:"is_actived"`
-	SmtpAuth          string `form:"smtpauth"`
-	SmtpHost          string `form:"smtphost"`
-	SmtpPort          int    `form:"smtpport"`
-	Tls               bool   `form:"tls"`
+	IsActived         bool
+	SMTPAuth          string `form:"smtp_auth"`
+	SMTPHost          string `form:"smtp_host"`
+	SMTPPort          int    `form:"smtp_port"`
+	TLS               bool   `form:"tls"`
 	AllowAutoRegister bool   `form:"allowautoregister"`
 }
 
