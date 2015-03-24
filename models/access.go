@@ -170,8 +170,13 @@ func (repo *Repository) recalculateTeamAccesses(e Engine, ignTeamID int64) (err 
 			if t.ID == ignTeamID {
 				continue
 			}
+
+			// Owner team gets owner access, and skip for teams that do not
+			// have relations with repository.
 			if t.IsOwnerTeam() {
 				t.Authorize = ACCESS_MODE_OWNER
+			} else if !t.hasRepository(e, repo.Id) {
+				continue
 			}
 
 			if err = t.getMembers(e); err != nil {
