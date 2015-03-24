@@ -322,6 +322,9 @@ func NewConfigContext() {
 		GravatarSource = "//1.gravatar.com/avatar/"
 	}
 	DisableGravatar = sec.Key("DISABLE_GRAVATAR").MustBool()
+	if OfflineMode {
+		DisableGravatar = true
+	}
 
 	if err = Cfg.Section("git").MapTo(&Git); err != nil {
 		log.Fatal(4, "Fail to map Git settings: %v", err)

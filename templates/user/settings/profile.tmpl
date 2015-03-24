@@ -46,10 +46,12 @@
                                     <label for="location">{{.i18n.Tr "settings.location"}}</label>
                                     <input class="ipt ipt-large ipt-radius {{if .Err_Location}}ipt-error{{end}}" id="location" name="location" type="text" value="{{.SignedUser.Location}}" />
                                 </div>
+                                {{if not DisableGravatar}}
                                 <div class="field">
                                     <label class="req" for="gravatar-email">Gravatar {{.i18n.Tr "email"}}</label>
                                     <input class="ipt ipt-large ipt-radius {{if .Err_Avatar}}ipt-error{{end}}" id="gravatar-email" name="avatar" type="text" value="{{.SignedUser.AvatarEmail}}" />
                                 </div>
+                                {{end}}
                                 <div class="field">
                                     <label></label>
                                     <button class="btn btn-green btn-large btn-radius" id="change-username-btn" href="#change-username-modal">{{.i18n.Tr "settings.update_profile"}}</button>
