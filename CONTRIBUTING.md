@@ -1,6 +1,6 @@
 # Contributing to Gogs
 
-> This guidelines sheet is forked from [CONTRIBUTING.md](https://github.com/drone/drone/blob/master/CONTRIBUTING.md).
+> This guidelines sheet is forked from [CONTRIBUTING.md](https://github.com/drone/drone/blob/8d9c7cee56d6c2eac81dc156ce27be6716d97e68/CONTRIBUTING.md).
 
 Gogs is not perfect, and it has bugs or incomplete features in rare cases. You're welcome to tell us, or to contribute some code. This document describes details about how can you contribute to Gogs project.
 
@@ -68,7 +68,6 @@ Examples of unacceptable behavior by participants include the use of sexual lang
 
 Project maintainers have the right and responsibility to remove, edit, or reject comments, commits, code, wiki edits, issues, and other contributions that are not aligned to this Code of Conduct. Project maintainers who do not follow the Code of Conduct may be removed from the project team.
 
-Instances of abusive, harassing, or otherwise unacceptable behavior can be
-reported by emailing contact@gitlab.com
+Instances of abusive, harassing, or otherwise unacceptable behavior can be reported by emailing u@gogs.io
 
 This Code of Conduct is adapted from the [Contributor Covenant](http:contributor-covenant.org), version 1.0.0, available at [http://contributor-covenant.org/version/1/0/0/](http://contributor-covenant.org/version/1/0/0/)
