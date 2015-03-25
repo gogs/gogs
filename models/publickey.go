@@ -101,17 +101,15 @@ func (key *PublicKey) GetAuthorizedString() string {
 	return fmt.Sprintf(_TPL_PUBLICK_KEY, appPath, key.Id, setting.CustomConf, key.Content)
 }
 
-var (
-	MinimumKeySize = map[string]int{
-		"(ED25519)": 256,
-		"(ECDSA)":   256,
-		"(NTRU)":    1087,
-		"(MCE)":     1702,
-		"(McE)":     1702,
-		"(RSA)":     2048,
-		"(DSA)":     1024,
-	}
-)
+var minimumKeySizes = map[string]int{
+	"(ED25519)": 256,
+	"(ECDSA)":   256,
+	"(NTRU)":    1087,
+	"(MCE)":     1702,
+	"(McE)":     1702,
+	"(RSA)":     2048,
+	"(DSA)":     1024,
+}
 
 func extractTypeFromBase64Key(key string) (string, error) {
 	b, err := base64.StdEncoding.DecodeString(key)
@@ -228,15 +226,17 @@ func CheckPublicKeyString(content string) (bool, error) {
 	}
 
 	// Check if key type and key size match.
-	keySize := com.StrTo(sshKeygenOutput[0]).MustInt()
-	if keySize == 0 {
-		return false, errors.New("cannot get key size of the given key")
-	}
-	keyType := strings.TrimSpace(sshKeygenOutput[len(sshKeygenOutput)-1])
-	if minimumKeySize := MinimumKeySize[keyType]; minimumKeySize == 0 {
-		return false, errors.New("sorry, unrecognized public key type")
-	} else if keySize < minimumKeySize {
-		return false, fmt.Errorf("the minimum accepted size of a public key %s is %d", keyType, minimumKeySize)
+	if !setting.Service.DisableMinimumKeySizeCheck {
+		keySize := com.StrTo(sshKeygenOutput[0]).MustInt()
+		if keySize == 0 {
+			return false, errors.New("cannot get key size of the given key")
+		}
+		keyType := strings.TrimSpace(sshKeygenOutput[len(sshKeygenOutput)-1])
+		if minimumKeySize := minimumKeySizes[keyType]; minimumKeySize == 0 {
+			return false, errors.New("sorry, unrecognized public key type")
+		} else if keySize < minimumKeySize {
+			return false, fmt.Errorf("the minimum accepted size of a public key %s is %d", keyType, minimumKeySize)
+		}
 	}
 
 	return true, nil
