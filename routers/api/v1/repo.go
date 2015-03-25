@@ -196,9 +196,11 @@ func MigrateRepo(ctx *middleware.Context, form auth.MigrateRepoForm) {
 		}
 	}
 
-	// Remote address can be HTTP/HTTPS URL or local path.
+	// Remote address can be HTTP/HTTPS/Git URL or local path.
 	remoteAddr := form.CloneAddr
-	if strings.HasPrefix(form.CloneAddr, "http") {
+	if strings.HasPrefix(form.CloneAddr, "http://") ||
+		strings.HasPrefix(form.CloneAddr, "https://") ||
+		strings.HasPrefix(form.CloneAddr, "git://") {
 		u, err := url.Parse(form.CloneAddr)
 		if err != nil {
 			ctx.HandleAPI(422, err)

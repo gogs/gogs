@@ -182,8 +182,12 @@ func MigratePost(ctx *middleware.Context, form auth.MigrateRepoForm) {
 	}
 
 	// Remote address can be HTTP/HTTPS/Git URL or local path.
+	// Note: remember to change api/v1/repo.go: MigrateRepo
+	// FIXME: merge these two functions with better error handling
 	remoteAddr := form.CloneAddr
-	if strings.HasPrefix(form.CloneAddr, "http://") || strings.HasPrefix(form.CloneAddr, "https://") || strings.HasPrefix(form.CloneAddr, "git://") {
+	if strings.HasPrefix(form.CloneAddr, "http://") ||
+		strings.HasPrefix(form.CloneAddr, "https://") ||
+		strings.HasPrefix(form.CloneAddr, "git://") {
 		u, err := url.Parse(form.CloneAddr)
 		if err != nil {
 			ctx.Data["Err_CloneAddr"] = true
