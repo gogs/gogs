@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"reflect"
+	"errors"
 )
 
 type Packet struct {
@@ -177,6 +178,10 @@ func readBytes(reader io.Reader, buf []byte) error {
 	idx := 0
 	buflen := len(buf)
 
+	if reader == nil {
+		return errors.New("reader was nil, aborting")
+	}
+	
 	for idx < buflen {
 		n, err := reader.Read(buf[idx:])
 		if err != nil {
