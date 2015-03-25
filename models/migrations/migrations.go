@@ -11,6 +11,7 @@ import (
 
 	"github.com/Unknwon/com"
 	"github.com/go-xorm/xorm"
+	"gopkg.in/ini.v1"
 
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/setting"
@@ -54,6 +55,7 @@ var migrations = []Migration{
 	NewMigration("make authorize 4 if team is owners", ownerTeamUpdate),       // V1 -> V2:v0.5.13
 	NewMigration("refactor access table to use id's", accessRefactor),         // V2 -> V3:v0.5.13
 	NewMigration("generate team-repo from team", teamToTeamRepo),              // V3 -> V4:v0.5.13
+	NewMigration("fix locale file load panic", fixLocaleFileLoadPanic),        // V4 -> V5:v0.6.0
 }
 
 // Migrate database to current version
@@ -371,4 +373,19 @@ func teamToTeamRepo(x *xorm.Engine) error {
 	}
 
 	return sess.Commit()
+}
+
+func fixLocaleFileLoadPanic(_ *xorm.Engine) error {
+	cfg, err := ini.Load(setting.CustomConf)
+	if err != nil {
+		return fmt.Errorf("load custom config: %v", err)
+	}
+
+	cfg.DeleteSection("i18n")
+	if err = cfg.SaveTo(setting.CustomConf); err != nil {
+		return fmt.Errorf("save custom config: %v", err)
+	}
+
+	setting.Langs = strings.Split(strings.Replace(strings.Join(setting.Langs, ","), "fr-CA", "fr-FR", 1), ",")
+	return nil
 }
