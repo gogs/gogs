@@ -339,6 +339,8 @@ func NewConfigContext() {
 }
 
 var Service struct {
+	ActiveCodeLives                int
+	ResetPwdCodeLives              int
 	RegisterEmailConfirm           bool
 	DisableRegistration            bool
 	ShowRegistrationButton         bool
@@ -347,19 +349,20 @@ var Service struct {
 	EnableNotifyMail               bool
 	EnableReverseProxyAuth         bool
 	EnableReverseProxyAutoRegister bool
-	ActiveCodeLives                int
-	ResetPwdCodeLives              int
+	DisableMinimumKeySizeCheck     bool
 }
 
 func newService() {
-	Service.ActiveCodeLives = Cfg.Section("service").Key("ACTIVE_CODE_LIVE_MINUTES").MustInt(180)
-	Service.ResetPwdCodeLives = Cfg.Section("service").Key("RESET_PASSWD_CODE_LIVE_MINUTES").MustInt(180)
-	Service.DisableRegistration = Cfg.Section("service").Key("DISABLE_REGISTRATION").MustBool()
-	Service.ShowRegistrationButton = Cfg.Section("service").Key("SHOW_REGISTRATION_BUTTON").MustBool(!Service.DisableRegistration)
-	Service.RequireSignInView = Cfg.Section("service").Key("REQUIRE_SIGNIN_VIEW").MustBool()
-	Service.EnableCacheAvatar = Cfg.Section("service").Key("ENABLE_CACHE_AVATAR").MustBool()
-	Service.EnableReverseProxyAuth = Cfg.Section("service").Key("ENABLE_REVERSE_PROXY_AUTHENTICATION").MustBool()
-	Service.EnableReverseProxyAutoRegister = Cfg.Section("service").Key("ENABLE_REVERSE_PROXY_AUTO_REGISTRATION").MustBool()
+	sec := Cfg.Section("service")
+	Service.ActiveCodeLives = sec.Key("ACTIVE_CODE_LIVE_MINUTES").MustInt(180)
+	Service.ResetPwdCodeLives = sec.Key("RESET_PASSWD_CODE_LIVE_MINUTES").MustInt(180)
+	Service.DisableRegistration = sec.Key("DISABLE_REGISTRATION").MustBool()
+	Service.ShowRegistrationButton = sec.Key("SHOW_REGISTRATION_BUTTON").MustBool(!Service.DisableRegistration)
+	Service.RequireSignInView = sec.Key("REQUIRE_SIGNIN_VIEW").MustBool()
+	Service.EnableCacheAvatar = sec.Key("ENABLE_CACHE_AVATAR").MustBool()
+	Service.EnableReverseProxyAuth = sec.Key("ENABLE_REVERSE_PROXY_AUTHENTICATION").MustBool()
+	Service.EnableReverseProxyAutoRegister = sec.Key("ENABLE_REVERSE_PROXY_AUTO_REGISTRATION").MustBool()
+	Service.DisableRegistration = sec.Key("DISABLE_MINIMUM_KEY_SIZE_CHECK").MustBool()
 }
 
 var logLevels = map[string]string{
