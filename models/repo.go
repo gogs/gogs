@@ -37,7 +37,6 @@ const (
 var (
 	ErrRepoAlreadyExist  = errors.New("Repository already exist")
 	ErrRepoFileNotExist  = errors.New("Repository file does not exist")
-	ErrRepoNameIllegal   = errors.New("Repository name contains illegal characters")
 	ErrRepoFileNotLoaded = errors.New("Repository file not loaded")
 	ErrMirrorNotExist    = errors.New("Mirror does not exist")
 	ErrInvalidReference  = errors.New("Invalid reference specified")
@@ -223,12 +222,12 @@ func (repo *Repository) DescriptionHtml() template.HTML {
 }
 
 // IsRepositoryExist returns true if the repository with given name under user has already existed.
-func IsRepositoryExist(u *User, repoName string) bool {
-	has, _ := x.Get(&Repository{
+func IsRepositoryExist(u *User, repoName string) (bool, error) {
+	has, err := x.Get(&Repository{
 		OwnerId:   u.Id,
 		LowerName: strings.ToLower(repoName),
 	})
-	return has && com.IsDir(RepoPath(u.Name, repoName))
+	return has && com.IsDir(RepoPath(u.Name, repoName)), err
 }
 
 // CloneLink represents different types of clone URLs of repository.
@@ -253,24 +252,27 @@ func (repo *Repository) CloneLink() (cl CloneLink, err error) {
 }
 
 var (
-	illegalEquals  = []string{"debug", "raw", "install", "api", "avatar", "user", "org", "help", "stars", "issues", "pulls", "commits", "repo", "template", "admin", "new"}
-	illegalSuffixs = []string{".git", ".keys"}
+	reservedNames    = []string{"debug", "raw", "install", "api", "avatar", "user", "org", "help", "stars", "issues", "pulls", "commits", "repo", "template", "admin", "new"}
+	reservedPatterns = []string{"*.git", "*.keys"}
 )
 
-// IsLegalName returns false if name contains illegal characters.
-func IsLegalName(repoName string) bool {
-	repoName = strings.ToLower(repoName)
-	for _, char := range illegalEquals {
-		if repoName == char {
-			return false
+// IsUsableName checks if name is reserved or pattern of name is not allowed.
+func IsUsableName(name string) error {
+	name = strings.ToLower(name)
+	for i := range reservedNames {
+		if name == reservedNames[i] {
+			return ErrNameReserved{name}
 		}
 	}
-	for _, char := range illegalSuffixs {
-		if strings.HasSuffix(repoName, char) {
-			return false
+
+	for _, pat := range reservedPatterns {
+		if pat[0] == '*' && strings.HasSuffix(name, pat[1:]) ||
+			(pat[len(pat)-1] == '*' && strings.HasPrefix(name, pat[:len(pat)-1])) {
+			return ErrNamePatternNotAllowed{pat}
 		}
 	}
-	return true
+
+	return nil
 }
 
 // Mirror represents a mirror information of repository.
@@ -504,11 +506,14 @@ func initRepository(e Engine, repoPath string, u *User, repo *Repository, initRe
 
 // CreateRepository creates a repository for given user or organization.
 func CreateRepository(u *User, name, desc, lang, license string, isPrivate, isMirror, initReadme bool) (_ *Repository, err error) {
-	if !IsLegalName(name) {
-		return nil, ErrRepoNameIllegal
+	if err = IsUsableName(name); err != nil {
+		return nil, err
 	}
 
-	if IsRepositoryExist(u, name) {
+	has, err := IsRepositoryExist(u, name)
+	if err != nil {
+		return nil, fmt.Errorf("IsRepositoryExist: %v", err)
+	} else if has {
 		return nil, ErrRepoAlreadyExist
 	}
 
@@ -619,7 +624,10 @@ func TransferOwnership(u *User, newOwnerName string, repo *Repository) error {
 	}
 
 	// Check if new owner has repository with same name.
-	if IsRepositoryExist(newOwner, repo.Name) {
+	has, err := IsRepositoryExist(newOwner, repo.Name)
+	if err != nil {
+		return fmt.Errorf("IsRepositoryExist: %v", err)
+	} else if has {
 		return ErrRepoAlreadyExist
 	}
 
@@ -727,16 +735,22 @@ func TransferOwnership(u *User, newOwnerName string, repo *Repository) error {
 }
 
 // ChangeRepositoryName changes all corresponding setting from old repository name to new one.
-func ChangeRepositoryName(userName, oldRepoName, newRepoName string) (err error) {
-	userName = strings.ToLower(userName)
+func ChangeRepositoryName(u *User, oldRepoName, newRepoName string) (err error) {
 	oldRepoName = strings.ToLower(oldRepoName)
 	newRepoName = strings.ToLower(newRepoName)
-	if !IsLegalName(newRepoName) {
-		return ErrRepoNameIllegal
+	if err = IsUsableName(newRepoName); err != nil {
+		return err
+	}
+
+	has, err := IsRepositoryExist(u, newRepoName)
+	if err != nil {
+		return fmt.Errorf("IsRepositoryExist: %v", err)
+	} else if has {
+		return ErrRepoAlreadyExist
 	}
 
 	// Change repository directory name.
-	return os.Rename(RepoPath(userName, oldRepoName), RepoPath(userName, newRepoName))
+	return os.Rename(RepoPath(u.LowerName, oldRepoName), RepoPath(u.LowerName, newRepoName))
 }
 
 func updateRepository(e Engine, repo *Repository, visibilityChanged bool) (err error) {
@@ -1340,7 +1354,10 @@ func IsStaring(uid, repoId int64) bool {
 //      \/                   \/
 
 func ForkRepository(u *User, oldRepo *Repository, name, desc string) (_ *Repository, err error) {
-	if IsRepositoryExist(u, name) {
+	has, err := IsRepositoryExist(u, name)
+	if err != nil {
+		return nil, fmt.Errorf("IsRepositoryExist: %v", err)
+	} else if has {
 		return nil, ErrRepoAlreadyExist
 	}
 

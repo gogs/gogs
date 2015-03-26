@@ -239,7 +239,7 @@ func InstallPost(ctx *middleware.Context, form auth.InstallForm) {
 	// Create admin account.
 	if err := models.CreateUser(&models.User{Name: form.AdminName, Email: form.AdminEmail, Passwd: form.AdminPasswd,
 		IsAdmin: true, IsActive: true}); err != nil {
-		if err != models.ErrUserAlreadyExist {
+		if !models.IsErrUserAlreadyExist(err) {
 			setting.InstallLock = false
 			ctx.Data["Err_AdminName"] = true
 			ctx.Data["Err_AdminEmail"] = true
