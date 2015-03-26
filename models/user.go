@@ -36,10 +36,8 @@ const (
 )
 
 var (
-	ErrUserAlreadyExist      = errors.New("User already exist")
 	ErrUserNotExist          = errors.New("User does not exist")
 	ErrUserNotKeyOwner       = errors.New("User does not the owner of public key")
-	ErrEmailAlreadyUsed      = errors.New("E-mail already used")
 	ErrEmailNotExist         = errors.New("E-mail does not exist")
 	ErrEmailNotActivated     = errors.New("E-mail address has not been activated")
 	ErrUserNameIllegal       = errors.New("User name contains illegal characters")
@@ -273,23 +271,23 @@ func GetUserSalt() string {
 }
 
 // CreateUser creates record of a new user.
-func CreateUser(u *User) error {
-	if !IsLegalName(u.Name) {
-		return ErrUserNameIllegal
+func CreateUser(u *User) (err error) {
+	if err = IsUsableName(u.Name); err != nil {
+		return err
 	}
 
 	isExist, err := IsUserExist(0, u.Name)
 	if err != nil {
 		return err
 	} else if isExist {
-		return ErrUserAlreadyExist
+		return ErrUserAlreadyExist{u.Name}
 	}
 
 	isExist, err = IsEmailUsed(u.Email)
 	if err != nil {
 		return err
 	} else if isExist {
-		return ErrEmailAlreadyUsed
+		return ErrEmailAlreadyUsed{u.Email}
 	}
 
 	u.LowerName = strings.ToLower(u.Name)
@@ -392,8 +390,15 @@ func VerifyActiveEmailCode(code, email string) *EmailAddress {
 
 // ChangeUserName changes all corresponding setting from old user name to new one.
 func ChangeUserName(u *User, newUserName string) (err error) {
-	if !IsLegalName(newUserName) {
-		return ErrUserNameIllegal
+	if err = IsUsableName(newUserName); err != nil {
+		return err
+	}
+
+	isExist, err := IsUserExist(0, newUserName)
+	if err != nil {
+		return err
+	} else if isExist {
+		return ErrUserAlreadyExist{newUserName}
 	}
 
 	return os.Rename(UserPath(u.LowerName), UserPath(newUserName))
@@ -405,7 +410,7 @@ func UpdateUser(u *User) error {
 	if err != nil {
 		return err
 	} else if has {
-		return ErrEmailAlreadyUsed
+		return ErrEmailAlreadyUsed{u.Email}
 	}
 
 	u.LowerName = strings.ToLower(u.Name)
@@ -641,7 +646,7 @@ func AddEmailAddress(email *EmailAddress) error {
 	if err != nil {
 		return err
 	} else if used {
-		return ErrEmailAlreadyUsed
+		return ErrEmailAlreadyUsed{email.Email}
 	}
 
 	_, err = x.Insert(email)
