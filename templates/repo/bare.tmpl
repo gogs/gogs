@@ -21,8 +21,8 @@
                 <div class="panel-content">
                     <div id="repo-clone" class="clear text-center">
                         <h2>{{.i18n.Tr "repo.clone_this_repo"}}</h2>
-                        <button class="btn btn-blue current left btn-left-radius" id="repo-clone-ssh" data-link="{{.CloneLink.SSH}}">SSH</button>
-                        <button class="btn btn-gray left" id="repo-clone-https" data-link="{{.CloneLink.HTTPS}}">HTTPS</button>
+                        <button class="btn btn-blue current left btn-left-radius" {{if $.DisableSSH}}style="visibility: hidden" {{end}} id="repo-clone-ssh" data-link="{{.CloneLink.SSH}}">SSH</button>
+                        <button class="btn {{if $.DisableSSH}}btn-blue{{else}}btn-gray{{end}} left" id="repo-clone-https" data-link="{{.CloneLink.HTTPS}}">HTTPS</button>
                         <input id="repo-clone-url" type="text" class="ipt ipt-disabled left" value="{{.CloneLink.SSH}}" onclick="this.select()" readonly />
                         <button class="btn btn-black left btn-right-radius" id="repo-clone-copy" data-copy-val="val" data-copy-from="#repo-clone-url">{{.i18n.Tr "repo.copy_link"}}</button>
                         <p class="text-center" id="repo-clone-help">{{.i18n.Tr "repo.clone_helper" "http://git-scm.com/book/en/Git-Basics-Getting-a-Git-Repository" | Str2html}}</p>
