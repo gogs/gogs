@@ -12,7 +12,9 @@
 			                <li><i class="octicon octicon-star"></i> {{.NumStars}}</li>
 			                <li><i class="octicon octicon-git-branch"></i> {{.NumForks}}</li>
 			            </ul>
-						<h2><a href="{{AppSubUrl}}/{{.Owner.Name}}/{{.Name}}">{{.Name}}</a></h2>
+				    <h2>
+				        <a href="{{AppSubUrl}}/{{.Owner.Name}}/{{.Name}}">{{.Owner.Name}} / {{.Name}}</a>
+				    </h2>
 						<p class="org-repo-description">{{.Description}}</p>
 						<p class="org-repo-updated">{{$.i18n.Tr "org.repo_updated"}} {{TimeSince .Updated $.i18n.Lang}}</p>
 					</div>
