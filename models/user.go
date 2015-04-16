@@ -145,7 +145,7 @@ func (u *User) EncodePasswd() {
 	u.Passwd = fmt.Sprintf("%x", newPasswd)
 }
 
-// ValidtePassword checks if given password matches the one belongs to the user.
+// ValidatePassword checks if given password matches the one belongs to the user.
 func (u *User) ValidatePassword(passwd string) bool {
 	newUser := &User{Passwd: passwd, Salt: u.Salt}
 	newUser.EncodePasswd()
