@@ -169,7 +169,7 @@ func UserSignIn(uname, passwd string) (*User, error) {
 	// For plain login, user must exist to reach this line.
 	// Now verify password.
 	if u.LoginType == PLAIN {
-		if !u.ValidtePassword(passwd) {
+		if !u.ValidatePassword(passwd) {
 			return nil, ErrUserNotExist
 		}
 		return u, nil

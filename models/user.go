@@ -146,7 +146,7 @@ func (u *User) EncodePasswd() {
 }
 
 // ValidtePassword checks if given password matches the one belongs to the user.
-func (u *User) ValidtePassword(passwd string) bool {
+func (u *User) ValidatePassword(passwd string) bool {
 	newUser := &User{Passwd: passwd, Salt: u.Salt}
 	newUser.EncodePasswd()
 	return u.Passwd == newUser.Passwd
