@@ -163,7 +163,7 @@ func MigrateRepo(ctx *middleware.Context, form auth.MigrateRepoForm) {
 		}
 		return
 	}
-	if !u.ValidtePassword(ctx.Query("password")) {
+	if !u.ValidatePassword(ctx.Query("password")) {
 		ctx.HandleAPI(422, "Username or password is not correct.")
 		return
 	}
