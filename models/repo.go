@@ -40,6 +40,7 @@ var (
 	ErrRepoFileNotLoaded = errors.New("Repository file not loaded")
 	ErrMirrorNotExist    = errors.New("Mirror does not exist")
 	ErrInvalidReference  = errors.New("Invalid reference specified")
+	ErrNameEmpty         = errors.New("Name is empty")
 )
 
 var (
@@ -259,7 +260,11 @@ var (
 
 // IsUsableName checks if name is reserved or pattern of name is not allowed.
 func IsUsableName(name string) error {
-	name = strings.ToLower(name)
+	name = strings.TrimSpace(strings.ToLower(name))
+	if utf8.RuneCountInString(name) == 0 {
+		return ErrNameEmpty
+	}
+
 	for i := range reservedNames {
 		if name == reservedNames[i] {
 			return ErrNameReserved{name}
