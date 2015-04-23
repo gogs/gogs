@@ -17,6 +17,7 @@ import (
 	"github.com/go-xorm/xorm"
 
 	"github.com/gogits/gogs/modules/auth/ldap"
+	"github.com/gogits/gogs/modules/auth/pam"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/uuid"
 )
@@ -28,6 +29,7 @@ const (
 	PLAIN
 	LDAP
 	SMTP
+	PAM
 )
 
 var (
@@ -39,12 +41,14 @@ var (
 var LoginTypes = map[LoginType]string{
 	LDAP: "LDAP",
 	SMTP: "SMTP",
+	PAM: "PAM",
 }
 
 // Ensure structs implemented interface.
 var (
 	_ core.Conversion = &LDAPConfig{}
 	_ core.Conversion = &SMTPConfig{}
+	_ core.Conversion = &PAMConfig{}
 )
 
 type LDAPConfig struct {
@@ -74,6 +78,18 @@ func (cfg *SMTPConfig) ToDB() ([]byte, error) {
 	return json.Marshal(cfg)
 }
 
+type PAMConfig struct {
+	ServiceName string // pam service (e.g. system-auth)
+}
+
+func (cfg *PAMConfig) FromDB(bs []byte) error {
+	return json.Unmarshal(bs, &cfg)
+}
+
+func (cfg *PAMConfig) ToDB() ([]byte, error) {
+	return json.Marshal(cfg)
+}
+
 type LoginSource struct {
 	Id                int64
 	Type              LoginType
@@ -97,6 +113,10 @@ func (source *LoginSource) SMTP() *SMTPConfig {
 	return source.Cfg.(*SMTPConfig)
 }
 
+func (source *LoginSource) PAM() *PAMConfig {
+	return source.Cfg.(*PAMConfig)
+}
+
 func (source *LoginSource) BeforeSet(colName string, val xorm.Cell) {
 	if colName == "type" {
 		ty := (*val).(int64)
@@ -105,6 +125,8 @@ func (source *LoginSource) BeforeSet(colName string, val xorm.Cell) {
 			source.Cfg = new(LDAPConfig)
 		case SMTP:
 			source.Cfg = new(SMTPConfig)
+		case PAM:
+			source.Cfg = new(PAMConfig)
 		}
 	}
 }
@@ -197,6 +219,13 @@ func UserSignIn(uname, passwd string) (*User, error) {
 					return u, nil
 				}
 				log.Warn("Fail to login(%s) by SMTP(%s): %v", uname, source.Name, err)
+			} else if source.Type == PAM {
+				u, err := LoginUserPAMSource(nil, uname, passwd,
+					source.Id, source.Cfg.(*PAMConfig), true)
+				if err == nil {
+					return u, nil
+				}
+				log.Warn("Fail to login(%s) by PAM(%s): %v", uname, source.Name, err)
 			}
 		}
 
@@ -218,6 +247,8 @@ func UserSignIn(uname, passwd string) (*User, error) {
 		return LoginUserLdapSource(u, u.LoginName, passwd, source.Id, source.Cfg.(*LDAPConfig), false)
 	case SMTP:
 		return LoginUserSMTPSource(u, u.LoginName, passwd, source.Id, source.Cfg.(*SMTPConfig), false)
+	case PAM:
+		return LoginUserPAMSource(u, u.LoginName, passwd, source.Id, source.Cfg.(*PAMConfig), false)
 	}
 	return nil, ErrUnsupportedLoginType
 }
@@ -350,6 +381,36 @@ func LoginUserSMTPSource(u *User, name, passwd string, sourceId int64, cfg *SMTP
 		LowerName:   strings.ToLower(loginName),
 		Name:        strings.ToLower(loginName),
 		LoginType:   SMTP,
+		LoginSource: sourceId,
+		LoginName:   name,
+		IsActive:    true,
+		Passwd:      passwd,
+		Email:       name,
+	}
+	err := CreateUser(u)
+	return u, err
+}
+
+// Query if name/passwd can login against PAM
+// Create a local user if success
+// Return the same LoginUserPlain semantic
+func LoginUserPAMSource(u *User, name, passwd string, sourceId int64, cfg *PAMConfig, autoRegister bool) (*User, error) {
+	if err := pam.PAMAuth(cfg.ServiceName, name, passwd); err != nil {
+		if strings.Contains(err.Error(), "Authentication failure") {
+			return nil, ErrUserNotExist
+		}
+		return nil, err
+	}
+
+	if !autoRegister {
+		return u, nil
+	}
+
+	// fake a local user creation
+	u = &User{
+		LowerName:   strings.ToLower(name),
+		Name:        strings.ToLower(name),
+		LoginType:   PAM,
 		LoginSource: sourceId,
 		LoginName:   name,
 		IsActive:    true,
