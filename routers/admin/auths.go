@@ -84,6 +84,10 @@ func NewAuthSourcePost(ctx *middleware.Context, form auth.AuthenticationForm) {
 			Port: form.SMTPPort,
 			TLS:  form.TLS,
 		}
+	case models.PAM:
+		u = &models.PAMConfig{
+			ServiceName: form.PAMServiceName,
+		}
 	default:
 		ctx.Error(400)
 		return
@@ -165,6 +169,10 @@ func EditAuthSourcePost(ctx *middleware.Context, form auth.AuthenticationForm) {
 			Host: form.SMTPHost,
 			Port: form.SMTPPort,
 			TLS:  form.TLS,
+		}
+	case models.PAM:
+		config = &models.PAMConfig{
+			ServiceName: form.PAMServiceName,
 		}
 	default:
 		ctx.Error(400)
