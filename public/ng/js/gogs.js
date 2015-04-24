@@ -753,9 +753,16 @@ function initAdmin() {
         if (v == 2) {
             $('.ldap').toggleShow();
             $('.smtp').toggleHide();
+            $('.pam').toggleHide();
         }
         if (v == 3) {
             $('.smtp').toggleShow();
+            $('.ldap').toggleHide();
+            $('.pam').toggleHide();
+        }
+        if (v == 4) {
+            $('.pam').toggleShow();
+            $('.smtp').toggleHide();
             $('.ldap').toggleHide();
         }
     });
