@@ -139,6 +139,13 @@ func (ctx *Context) Handle(status int, title string, err error) {
 	ctx.HTML(status, base.TplName(fmt.Sprintf("status/%d", status)))
 }
 
+func (ctx *Context) HandleText(status int, title string) {
+	if (status / 100 == 4) || (status / 100 == 5) {
+		log.Error(4, "%s", title)
+	}
+	ctx.RenderData(status, []byte(title))
+}
+
 func (ctx *Context) HandleAPI(status int, obj interface{}) {
 	var message string
 	if err, ok := obj.(error); ok {
