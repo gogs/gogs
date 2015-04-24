@@ -30,6 +30,7 @@ type AuthenticationForm struct {
 	SMTPPort          int    `form:"smtp_port"`
 	TLS               bool   `form:"tls"`
 	AllowAutoRegister bool   `form:"allowautoregister"`
+	PAMServiceName    string
 }
 
 func (f *AuthenticationForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {

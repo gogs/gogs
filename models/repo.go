@@ -40,6 +40,7 @@ var (
 	ErrRepoFileNotLoaded = errors.New("Repository file not loaded")
 	ErrMirrorNotExist    = errors.New("Mirror does not exist")
 	ErrInvalidReference  = errors.New("Invalid reference specified")
+	ErrNameEmpty         = errors.New("Name is empty")
 )
 
 var (
@@ -242,10 +243,11 @@ func (repo *Repository) CloneLink() (cl CloneLink, err error) {
 	if err = repo.GetOwner(); err != nil {
 		return cl, err
 	}
+
 	if setting.SSHPort != 22 {
-		cl.SSH = fmt.Sprintf("ssh://%s@%s:%d/%s/%s.git", setting.RunUser, setting.Domain, setting.SSHPort, repo.Owner.LowerName, repo.LowerName)
+		cl.SSH = fmt.Sprintf("ssh://%s@%s:%d/%s/%s.git", setting.RunUser, setting.SSHDomain, setting.SSHPort, repo.Owner.LowerName, repo.LowerName)
 	} else {
-		cl.SSH = fmt.Sprintf("%s@%s:%s/%s.git", setting.RunUser, setting.Domain, repo.Owner.LowerName, repo.LowerName)
+		cl.SSH = fmt.Sprintf("%s@%s:%s/%s.git", setting.RunUser, setting.SSHDomain, repo.Owner.LowerName, repo.LowerName)
 	}
 	cl.HTTPS = fmt.Sprintf("%s%s/%s.git", setting.AppUrl, repo.Owner.LowerName, repo.LowerName)
 	return cl, nil
@@ -258,7 +260,11 @@ var (
 
 // IsUsableName checks if name is reserved or pattern of name is not allowed.
 func IsUsableName(name string) error {
-	name = strings.ToLower(name)
+	name = strings.TrimSpace(strings.ToLower(name))
+	if utf8.RuneCountInString(name) == 0 {
+		return ErrNameEmpty
+	}
+
 	for i := range reservedNames {
 		if name == reservedNames[i] {
 			return ErrNameReserved{name}
