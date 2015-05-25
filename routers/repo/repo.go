@@ -82,6 +82,10 @@ func CreatePost(ctx *middleware.Context, form auth.CreateRepoForm) {
 			ctx.Handle(500, "checkContextUser", err)
 			return
 		}
+		if !ctxUser.IsOrganization() {
+			ctx.Error(403)
+			return
+		}
 	}
 	ctx.Data["ContextUser"] = ctxUser
 
@@ -157,6 +161,10 @@ func MigratePost(ctx *middleware.Context, form auth.MigrateRepoForm) {
 		ctxUser, err = checkContextUser(ctx, form.Uid)
 		if err != nil {
 			ctx.Handle(500, "checkContextUser", err)
+			return
+		}
+		if !ctxUser.IsOrganization() {
+			ctx.Error(403)
 			return
 		}
 	}
@@ -294,6 +302,10 @@ func ForkPost(ctx *middleware.Context, form auth.CreateRepoForm) {
 		ctxUser, err = checkContextUser(ctx, form.Uid)
 		if err != nil {
 			ctx.Handle(500, "checkContextUser", err)
+			return
+		}
+		if !ctxUser.IsOrganization() {
+			ctx.Error(403)
 			return
 		}
 	}
