@@ -17,12 +17,13 @@ import (
 
 var CmdGenerate = cli.Command{
 	Name:  "generate",
-	Usage: "Generate web server configuration files",
+	Usage: "Generate self-signed certificate, apache and nginx configuration files",
 	Description: `Generate configuration files to use a web server as a proxy for Gogs.`,
 	Flags: []cli.Flag{
 		cli.StringFlag{"config, c", "custom/conf/app.ini", "Custom configuration file path", ""},
 	},
 	Subcommands: []cli.Command{
+		CmdCert,
 		{
 			Name: "apache",
 			Usage: "generate Apache configuration file",
