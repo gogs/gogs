@@ -478,6 +478,8 @@ type Mailer struct {
 	Host              string
 	From              string
 	User, Passwd      string
+	DisableHelo       bool
+	HeloHostname      string
 	SkipVerify        bool
 	UseCertificate    bool
 	CertFile, KeyFile string
@@ -512,6 +514,8 @@ func newMailService() {
 		Host:           sec.Key("HOST").String(),
 		User:           sec.Key("USER").String(),
 		Passwd:         sec.Key("PASSWD").String(),
+		DisableHelo:    sec.Key("DISABLE_HELO").MustBool(),
+		HeloHostname:   sec.Key("HELO_HOSTNAME").String(),
 		SkipVerify:     sec.Key("SKIP_VERIFY").MustBool(),
 		UseCertificate: sec.Key("USE_CERTIFICATE").MustBool(),
 		CertFile:       sec.Key("CERT_FILE").String(),

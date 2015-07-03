@@ -24,6 +24,7 @@ github.com/macaron-contrib/session = commit:31e841d95c
 github.com/macaron-contrib/toolbox = commit:acbfe36e16
 github.com/mattn/go-sqlite3 = commit:e28cd440fa
 github.com/microcosm-cc/bluemonday = commit:fcd0f5074e
+github.com/msteinert/pam = 
 github.com/nfnt/resize = commit:53e9ca890b
 github.com/russross/blackfriday = commit:6928e11ecd
 github.com/shurcooL/go = commit:bc30a0bd33
