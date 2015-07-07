@@ -1,0 +1,155 @@
+{{template "ng/base/head" .}}
+<div id="setting-wrapper" class="main-wrapper">
+    <div class="container clear">
+        <div class="setting-content">
+            {{template "ng/base/alert" .}}
+            <div id="setting-content">
+                <div class="panel panel-radius">
+                    <div class="panel-header">
+                        <strong>{{.i18n.Tr "install.title"}}</strong>
+                    </div>
+                    <form class="form form-align panel-body" id="install-form" action="{{AppSubUrl}}/install" method="post">
+                        {{.CsrfTokenHtml}}
+                        <div class="text-center panel-desc">{{.i18n.Tr "install.requite_db_desc"}}</div>
+                        <div class="field">
+                            <label class="req">{{.i18n.Tr "install.db_type"}}</label>
+                            <select name="db_type" id="install-database" class="form-control">
+                                {{range .DbOptions}}
+                                <option value="{{.}}"{{if eq $.CurDbOption .}}selected{{end}}>{{.}}</option>
+                                {{end}}
+                            </select>
+                        </div>
+
+                        <div class="server-sql {{if eq .CurDbOption "SQLite3"}}hide{{end}}">
+                            <div class="field">
+                                <label class="req" for="db_host">{{.i18n.Tr "install.host"}}</label>
+                                <input class="ipt ipt-large ipt-radius {{if .Err_DbHost}}ipt-error{{end}}" id="db_host" name="db_host" value="{{.db_host}}" />
+                            </div>
+                            <div class="field">
+                                <label class="req" for="db_user">{{.i18n.Tr "install.user"}}</label>
+                                <input class="ipt ipt-large ipt-radius {{if .Err_DbUser}}ipt-error{{end}}" id="db_user" name="db_user" value="{{.db_user}}" />
+                            </div>
+                            <div class="field">
+                                <label class="req" for="db_passwd">{{.i18n.Tr "install.password"}}</label>
+                                <input class="ipt ipt-large ipt-radius {{if .Err_DbPasswd}}ipt-error{{end}}" id="db_passwd" name="db_passwd" type="password" value="{{.db_passwd}}" />
+                            </div>
+                            <div class="field">
+                                <label class="req" for="db_name">{{.i18n.Tr "install.db_name"}}</label>
+                                <input class="ipt ipt-large ipt-radius {{if .Err_DbName}}ipt-error{{end}}" id="db_name" name="db_name" value="{{.db_name}}" />
+                                <label></label>
+                                <span class="help">{{.i18n.Tr "install.db_helper"}}</span>
+                            </div>
+                        </div>
+
+                        <div class="field pgsql-setting {{if not (eq .CurDbOption "PostgreSQL")}}hide{{end}}">
+                            <label class="req">{{.i18n.Tr "install.ssl_mode"}}</label>
+                            <select name="ssl_mode" class="form-control">
+                                <option value="disable">Disable</option>
+                                <option value="require">Require</option>
+                                <option value="verify-full">Verify Full</option>
+                            </select>
+                        </div>
+
+                        <div class="field sqlite-setting {{if not (eq .CurDbOption "SQLite3")}}hide{{end}}">
+                            <label class="req" for="db_path">{{.i18n.Tr "install.path"}}</label>
+                            <input class="ipt ipt-large ipt-radius {{if .Err_DbPath}}ipt-error{{end}}" id="db_path" name="db_path" value="{{.db_path}}" />
+                            <label></label>
+                            <span class="help">{{.i18n.Tr "install.sqlite_helper"}}</span>
+                        </div>
+
+                        <hr>
+
+                        <div class="text-center panel-desc">{{.i18n.Tr "install.general_title"}}</div>
+                        <div class="field">
+                            <label class="req" for="repo_root_path">{{.i18n.Tr "install.repo_path"}}</label>
+                            <input class="ipt ipt-large ipt-radius {{if .Err_RepoRootPath}}ipt-error{{end}}" id="repo_root_path" name="repo_root_path" value="{{.repo_root_path}}" required />
+                            <label></label>
+                            <span class="help">{{.i18n.Tr "install.repo_path_helper"}}</span>
+                        </div>
+                        <div class="field">
+                            <label class="req" for="run_user">{{.i18n.Tr "install.run_user"}}</label>
+                            <input class="ipt ipt-large ipt-radius {{if .Err_RunUser}}ipt-error{{end}}" id="run_user" name="run_user" value="{{.run_user}}" required />
+                            <label></label>
+                            <span class="help">{{.i18n.Tr "install.run_user_helper"}}</span>
+                        </div>
+                        <div class="field">
+                            <label class="req" for="domain">{{.i18n.Tr "install.domain"}}</label>
+                            <input class="ipt ipt-large ipt-radius {{if .Err_Domain}}ipt-error{{end}}" id="domain" name="domain" value="{{.domain}}" required />
+                            <label></label>
+                            <span class="help">{{.i18n.Tr "install.domain_helper"}}</span>
+                        </div>
+                        <div class="field">
+                            <label class="req" for="http_port">{{.i18n.Tr "install.http_port"}}</label>
+                            <input class="ipt ipt-large ipt-radius {{if .Err_HttpPort}}ipt-error{{end}}" id="http_port" name="http_port" value="{{.http_port}}" required />
+                            <label></label>
+                            <span class="help">{{.i18n.Tr "install.http_port_helper"}}</span>
+                        </div>
+                        <div class="field">
+                            <label class="req" for="app_url">{{.i18n.Tr "install.app_url"}}</label>
+                            <input class="ipt ipt-large ipt-radius {{if .Err_AppUrl}}ipt-error{{end}}" id="app_url" name="app_url" value="{{.app_url}}" required />
+                            <label></label>
+                            <span class="help">{{.i18n.Tr "install.app_url_helper"}}</span>
+                        </div>
+
+                        <hr>
+
+                        <div class="text-center panel-desc">{{.i18n.Tr "install.email_title"}}</div>
+                        <div class="field">
+                            <label for="smtp_host">{{.i18n.Tr "install.smtp_host"}}</label>
+                            <input class="ipt ipt-large ipt-radius {{if .Err_SmtpHost}}ipt-error{{end}}" id="smtp_host" name="smtp_host" value="{{.smtp_host}}" />
+                        </div>
+                        <div class="field">
+                            <label for="smtp_user">{{.i18n.Tr "install.mailer_user"}}</label>
+                            <input class="ipt ipt-large ipt-radius {{if .Err_SMTPEmail}}ipt-error{{end}}" id="smtp_user" name="smtp_user" value="{{.smtp_user}}" />
+                        </div>
+                        <div class="field">
+                            <label for="smtp_pwd">{{.i18n.Tr "install.mailer_password"}}</label>
+                            <input class="ipt ipt-large ipt-radius {{if .Err_SMTPPasswd}}ipt-error{{end}}" id="smtp_pwd" name="smtp_pwd" type="password" value="{{.smtp_pwd}}" />
+                        </div>
+
+                        <hr>
+
+                        <div class="text-center panel-desc">{{.i18n.Tr "install.notify_title"}}</div>
+                        <div class="field">
+                            <label></label>
+                            <input name="register_confirm" type="checkbox" {{if .register_confirm}}checked{{end}}>
+                            <strong>{{.i18n.Tr "install.register_confirm"}}</strong>
+                            <br>
+                            <label></label>
+                            <input name="mail_notify" type="checkbox" {{if .mail_notify}}checked{{end}}>
+                            <strong>{{.i18n.Tr "install.mail_notify"}}</strong>
+                        </div>
+
+                        <hr>
+
+                        <div class="text-center panel-desc">{{.i18n.Tr "install.admin_title"}}</div>
+                        <div class="field">
+                            <label class="req" for="admin_name">{{.i18n.Tr "install.admin_name"}}</label>
+                            <input class="ipt ipt-large ipt-radius {{if .Err_AdminName}}ipt-error{{end}}" id="admin_name" name="admin_name" value="{{.admin_name}}" required />
+                        </div>
+                        <div class="field">
+                            <label class="req" for="admin_passwd">{{.i18n.Tr "install.admin_password"}}</label>
+                            <input class="ipt ipt-large ipt-radius {{if .Err_AdminPasswd}}ipt-error{{end}}" id="admin_passwd" name="admin_passwd" type="password" value="{{.admin_passwd}}" required />
+                        </div>
+                        <div class="field">
+                            <label class="req" for="admin_confirm_passwd">{{.i18n.Tr "install.confirm_password"}}</label>
+                            <input class="ipt ipt-large ipt-radius {{if .Err_AdminPasswd}}ipt-error{{end}}" id="admin_confirm_passwd" name="admin_confirm_passwd" type="password" required />
+                        </div>
+                        <div class="field">
+                            <label class="req" for="admin_email">{{.i18n.Tr "install.admin_email"}}</label>
+                            <input class="ipt ipt-large ipt-radius {{if .Err_AdminEmail}}ipt-error{{end}}" id="admin_email" name="admin_email" value="{{.admin_email}}" required />
+                        </div>
+
+                        <hr>
+
+                        <div class="field">
+                            <label></label>
+                            <button class="btn btn-blue btn-large btn-radius">{{.i18n.Tr "install.install_gogs"}}</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{{template "ng/base/footer" .}}
