@@ -34,6 +34,7 @@
 <body>
 	<div class="full height">
 		<noscript>Please enable JavaScript in your browser!</noscript>
+		{{if not .PageIsInstall}}
 		<div class="following bar light">
 		  <div class="ui page grid">
 		    <div class="column">
@@ -58,3 +59,4 @@
 		    </div>
 		  </div>
 		</div>
+		{{end}}
