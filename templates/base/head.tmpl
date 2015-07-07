@@ -14,20 +14,20 @@
 	<link rel="shortcut icon" href="{{AppSubUrl}}/img/favicon.png" />
 
 	{{if CdnMode}}
-	<script src="//code.jquery.com/jquery-1.11.2.min.js"></script>
+	<script src="//code.jquery.com/jquery-1.11.3.min.js"></script>
 	<link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css">
 	{{else}}
-	<script src="{{AppSubUrl}}/js/jquery-1.11.2.min.js"></script>
+	<script src="{{AppSubUrl}}/js/jquery-1.11.3.min.js"></script>
 	<link rel="stylesheet" href="{{AppSubUrl}}/css/font-awesome.min.css">
 	{{end}}
 
 	<!-- Stylesheet -->
-	<link rel="stylesheet" href="{{AppSubUrl}}/css/semantic.min.css">
-	<link rel="stylesheet" href="{{AppSubUrl}}/css/gogs.min.css">
+	<link rel="stylesheet" href="{{AppSubUrl}}/css/semantic.min.css?v={{AppVer}}">
+	<link rel="stylesheet" href="{{AppSubUrl}}/css/gogs.min.css?v={{AppVer}}">
 
 	<!-- JavaScript -->
-	<script src="{{AppSubUrl}}/js/semantic.min.js"></script>
-	<script src="{{AppSubUrl}}/js/gogs.js"></script>
+	<script src="{{AppSubUrl}}/js/semantic.min.js?v={{AppVer}}"></script>
+	<script src="{{AppSubUrl}}/js/gogs.js?v={{AppVer}}"></script>
 
 	<title>{{if .Title}}{{.Title}} - {{end}}{{AppName}}</title>
 </head>
