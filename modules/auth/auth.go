@@ -208,7 +208,14 @@ func validate(errs binding.Errors, data map[string]interface{}, f Form, l macaro
 
 		if errs[0].FieldNames[0] == field.Name {
 			data["Err_"+field.Name] = true
-			trName := l.Tr("form." + field.Name)
+
+			trName := field.Tag.Get("locale")
+			if len(trName) == 0 {
+				trName = l.Tr("form." + field.Name)
+			} else {
+				trName = l.Tr(trName)
+			}
+
 			switch errs[0].Classification {
 			case binding.ERR_REQUIRED:
 				data["ErrorMsg"] = trName + l.Tr("form.require_error")

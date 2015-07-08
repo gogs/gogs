@@ -17,22 +17,22 @@ type InstallForm struct {
 	DbUser             string
 	DbPasswd           string
 	DbName             string
-	SSLMode            string
+	SSLMode            string `form:"ssl_mode"`
 	DbPath             string
 	RepoRootPath       string `binding:"Required"`
 	RunUser            string `binding:"Required"`
 	Domain             string `binding:"Required"`
-	HTTPPort           string `binding:"Required"`
+	HTTPPort           string `form:"http_port" binding:"Required"`
 	AppUrl             string `binding:"Required"`
-	SMTPHost           string
-	SMTPEmail          string
-	SMTPPasswd         string
-	RegisterConfirm    string
-	MailNotify         string
-	AdminName          string `binding:"Required;AlphaDashDot;MaxSize(30)"`
-	AdminPasswd        string `binding:"Required;MinSize(6);MaxSize(255)"`
-	AdminConfirmPasswd string `binding:"Required;MinSize(6);MaxSize(255)"`
-	AdminEmail         string `binding:"Required;Email;MaxSize(50)"`
+	SMTPHost           string `form:"smtp_host"`
+	SMTPEmail          string `form:"smtp_user" binding:"OmitEmpty;Email;MaxSize(50)" locale:"install.mailer_user"`
+	SMTPPasswd         string `form:"smtp_passwd"`
+	RegisterConfirm    bool
+	MailNotify         bool
+	AdminName          string `binding:"OmitEmpty;AlphaDashDot;MaxSize(30)" locale:"install.admin_name"`
+	AdminPasswd        string `binding:"OmitEmpty;MinSize(6);MaxSize(255)" locale:"install.admin_password"`
+	AdminConfirmPasswd string
+	AdminEmail         string `binding:"OmitEmpty;Email;MaxSize(50)" locale:"install.admin_email"`
 }
 
 func (f *InstallForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
