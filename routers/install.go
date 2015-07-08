@@ -126,6 +126,15 @@ func InstallPost(ctx *middleware.Context, form auth.InstallForm) {
 	ctx.Data["CurDbOption"] = form.DbType
 
 	if ctx.HasError() {
+		if ctx.HasValue("Err_SMTPEmail") {
+			ctx.Data["Err_SMTP"] = true
+		}
+		if ctx.HasValue("Err_AdminName") ||
+			ctx.HasValue("Err_AdminPasswd") ||
+			ctx.HasValue("Err_AdminEmail") {
+			ctx.Data["Err_Admin"] = true
+		}
+
 		ctx.HTML(200, INSTALL)
 		return
 	}
@@ -146,12 +155,20 @@ func InstallPost(ctx *middleware.Context, form auth.InstallForm) {
 	models.DbCfg.SSLMode = form.SSLMode
 	models.DbCfg.Path = form.DbPath
 
+	if models.DbCfg.Type == "sqlite3" && len(models.DbCfg.Path) == 0 {
+		ctx.Data["Err_DbPath"] = true
+		ctx.RenderWithErr(ctx.Tr("install.err_empty_sqlite_path"), INSTALL, &form)
+		return
+	}
+
 	// Set test engine.
 	var x *xorm.Engine
 	if err := models.NewTestEngine(x); err != nil {
 		if strings.Contains(err.Error(), `Unknown database type: sqlite3`) {
+			ctx.Data["Err_DbType"] = true
 			ctx.RenderWithErr(ctx.Tr("install.sqlite3_not_available", "http://gogs.io/docs/installation/install_from_binary.html"), INSTALL, &form)
 		} else {
+			ctx.Data["Err_DbSetting"] = true
 			ctx.RenderWithErr(ctx.Tr("install.invalid_db_setting", err), INSTALL, &form)
 		}
 		return
@@ -214,8 +231,8 @@ func InstallPost(ctx *middleware.Context, form auth.InstallForm) {
 		cfg.Section("mailer").Key("USER").SetValue(form.SMTPEmail)
 		cfg.Section("mailer").Key("PASSWD").SetValue(form.SMTPPasswd)
 
-		cfg.Section("service").Key("REGISTER_EMAIL_CONFIRM").SetValue(com.ToStr(form.RegisterConfirm == "on"))
-		cfg.Section("service").Key("ENABLE_NOTIFY_MAIL").SetValue(com.ToStr(form.MailNotify == "on"))
+		cfg.Section("service").Key("REGISTER_EMAIL_CONFIRM").SetValue(com.ToStr(form.RegisterConfirm))
+		cfg.Section("service").Key("ENABLE_NOTIFY_MAIL").SetValue(com.ToStr(form.MailNotify))
 	}
 
 	cfg.Section("").Key("RUN_MODE").SetValue("prod")
@@ -237,16 +254,23 @@ func InstallPost(ctx *middleware.Context, form auth.InstallForm) {
 	GlobalInit()
 
 	// Create admin account.
-	if err := models.CreateUser(&models.User{Name: form.AdminName, Email: form.AdminEmail, Passwd: form.AdminPasswd,
-		IsAdmin: true, IsActive: true}); err != nil {
-		if !models.IsErrUserAlreadyExist(err) {
-			setting.InstallLock = false
-			ctx.Data["Err_AdminName"] = true
-			ctx.Data["Err_AdminEmail"] = true
-			ctx.RenderWithErr(ctx.Tr("install.invalid_admin_setting", err), INSTALL, &form)
-			return
+	if len(form.AdminName) > 0 {
+		if err := models.CreateUser(&models.User{
+			Name:     form.AdminName,
+			Email:    form.AdminEmail,
+			Passwd:   form.AdminPasswd,
+			IsAdmin:  true,
+			IsActive: true,
+		}); err != nil {
+			if !models.IsErrUserAlreadyExist(err) {
+				setting.InstallLock = false
+				ctx.Data["Err_AdminName"] = true
+				ctx.Data["Err_AdminEmail"] = true
+				ctx.RenderWithErr(ctx.Tr("install.invalid_admin_setting", err), INSTALL, &form)
+				return
+			}
+			log.Info("Admin account already exist")
 		}
-		log.Info("Admin account already exist")
 	}
 
 	log.Info("First-time run install finished!")
