@@ -38,6 +38,8 @@ $(document).ready(function () {
     $('.slide.up.dropdown').dropdown({
         transition: 'slide up'
     });
+    $('.ui.accordion').accordion();
+    $('.ui.checkbox').checkbox();
 
     initInstall();
 });
