@@ -124,6 +124,7 @@ func Install(ctx *middleware.Context) {
 	// E-mail service settings
 	if setting.MailService != nil {
 		form.SMTPHost = setting.MailService.Host
+		form.SMTPFrom = setting.MailService.From
 		form.SMTPEmail = setting.MailService.User
 	}
 	form.RegisterConfirm = setting.Service.RegisterEmailConfirm
@@ -245,6 +246,7 @@ func InstallPost(ctx *middleware.Context, form auth.InstallForm) {
 	if len(strings.TrimSpace(form.SMTPHost)) > 0 {
 		cfg.Section("mailer").Key("ENABLED").SetValue("true")
 		cfg.Section("mailer").Key("HOST").SetValue(form.SMTPHost)
+		cfg.Section("mailer").Key("FROM").SetValue(form.SMTPFrom)
 		cfg.Section("mailer").Key("USER").SetValue(form.SMTPEmail)
 		cfg.Section("mailer").Key("PASSWD").SetValue(form.SMTPPasswd)
 	} else {
