@@ -1,10 +1,28 @@
 targets:
   ubuntu-14.04:
+    build_dependencies:
+      - libpam0g-dev
+    dependencies:
+      - libpam0g
+      - git
   ubuntu-12.04:
+    build_dependencies:
+      - libpam0g-dev
+    dependencies:
+      - libpam0g
+      - git
   debian-7:
+    build_dependencies:
+      - libpam0g-dev
+    dependencies:
+      - libpam0g
+      - git
   centos-6:
-dependencies:
-  - git
+    build_dependencies:
+      - pam-devel
+    dependencies:
+      - pam
+      - git
 before:
   - mv packager/Procfile .
   - mv packager/.godir .
