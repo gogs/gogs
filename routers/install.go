@@ -90,11 +90,20 @@ func InstallInit(ctx *middleware.Context) {
 func Install(ctx *middleware.Context) {
 	form := auth.InstallForm{}
 
+	// Database settings
 	form.DbHost = models.DbCfg.Host
 	form.DbUser = models.DbCfg.User
 	form.DbName = models.DbCfg.Name
 	form.DbPath = models.DbCfg.Path
 
+	curDbOp := ""
+	if models.EnableSQLite3 {
+		curDbOp = "SQLite3" // Default when enabled.
+	}
+	ctx.Data["CurDbOption"] = curDbOp
+
+	// Application general settings
+	form.AppName = setting.AppName
 	form.RepoRootPath = setting.RepoRootPath
 
 	// Note(unknwon): it's hard for Windows users change a running user,
@@ -112,11 +121,18 @@ func Install(ctx *middleware.Context) {
 	form.HTTPPort = setting.HttpPort
 	form.AppUrl = setting.AppUrl
 
-	curDbOp := ""
-	if models.EnableSQLite3 {
-		curDbOp = "SQLite3" // Default when enabled.
+	// E-mail service settings
+	if setting.MailService != nil {
+		form.SMTPHost = setting.MailService.Host
+		form.SMTPEmail = setting.MailService.User
 	}
-	ctx.Data["CurDbOption"] = curDbOp
+	form.RegisterConfirm = setting.Service.RegisterEmailConfirm
+	form.MailNotify = setting.Service.EnableNotifyMail
+
+	// Server and other services settings
+	form.OfflineMode = setting.OfflineMode
+	form.DisableRegistration = setting.Service.DisableRegistration
+	form.RequireSignInView = setting.Service.RequireSignInView
 
 	auth.AssignForm(form, ctx.Data)
 	ctx.HTML(200, INSTALL)
@@ -219,6 +235,7 @@ func InstallPost(ctx *middleware.Context, form auth.InstallForm) {
 	cfg.Section("database").Key("SSL_MODE").SetValue(models.DbCfg.SSLMode)
 	cfg.Section("database").Key("PATH").SetValue(models.DbCfg.Path)
 
+	cfg.Section("").Key("APP_NAME").SetValue(form.AppName)
 	cfg.Section("repository").Key("ROOT").SetValue(form.RepoRootPath)
 	cfg.Section("").Key("RUN_USER").SetValue(form.RunUser)
 	cfg.Section("server").Key("DOMAIN").SetValue(form.Domain)
@@ -230,10 +247,15 @@ func InstallPost(ctx *middleware.Context, form auth.InstallForm) {
 		cfg.Section("mailer").Key("HOST").SetValue(form.SMTPHost)
 		cfg.Section("mailer").Key("USER").SetValue(form.SMTPEmail)
 		cfg.Section("mailer").Key("PASSWD").SetValue(form.SMTPPasswd)
-
-		cfg.Section("service").Key("REGISTER_EMAIL_CONFIRM").SetValue(com.ToStr(form.RegisterConfirm))
-		cfg.Section("service").Key("ENABLE_NOTIFY_MAIL").SetValue(com.ToStr(form.MailNotify))
+	} else {
+		cfg.Section("mailer").Key("ENABLED").SetValue("false")
 	}
+	cfg.Section("service").Key("REGISTER_EMAIL_CONFIRM").SetValue(com.ToStr(form.RegisterConfirm))
+	cfg.Section("service").Key("ENABLE_NOTIFY_MAIL").SetValue(com.ToStr(form.MailNotify))
+
+	cfg.Section("server").Key("OFFLINE_MODE").SetValue(com.ToStr(form.OfflineMode))
+	cfg.Section("service").Key("DISABLE_REGISTRATION").SetValue(com.ToStr(form.DisableRegistration))
+	cfg.Section("service").Key("REQUIRE_SIGNIN_VIEW").SetValue(com.ToStr(form.RequireSignInView))
 
 	cfg.Section("").Key("RUN_MODE").SetValue("prod")
 
