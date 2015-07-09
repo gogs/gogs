@@ -12,23 +12,31 @@ import (
 )
 
 type InstallForm struct {
-	DbType             string `binding:"Required"`
-	DbHost             string
-	DbUser             string
-	DbPasswd           string
-	DbName             string
-	SSLMode            string `form:"ssl_mode"`
-	DbPath             string
-	RepoRootPath       string `binding:"Required"`
-	RunUser            string `binding:"Required"`
-	Domain             string `binding:"Required"`
-	HTTPPort           string `form:"http_port" binding:"Required"`
-	AppUrl             string `binding:"Required"`
-	SMTPHost           string `form:"smtp_host"`
-	SMTPEmail          string `form:"smtp_user" binding:"OmitEmpty;Email;MaxSize(50)" locale:"install.mailer_user"`
-	SMTPPasswd         string `form:"smtp_passwd"`
-	RegisterConfirm    bool
-	MailNotify         bool
+	DbType   string `binding:"Required"`
+	DbHost   string
+	DbUser   string
+	DbPasswd string
+	DbName   string
+	SSLMode  string `form:"ssl_mode"`
+	DbPath   string
+
+	AppName      string `binding:"Required" locale:"install.app_name"`
+	RepoRootPath string `binding:"Required"`
+	RunUser      string `binding:"Required"`
+	Domain       string `binding:"Required"`
+	HTTPPort     string `form:"http_port" binding:"Required"`
+	AppUrl       string `binding:"Required"`
+
+	SMTPHost        string `form:"smtp_host"`
+	SMTPEmail       string `form:"smtp_user" binding:"OmitEmpty;Email;MaxSize(50)" locale:"install.mailer_user"`
+	SMTPPasswd      string `form:"smtp_passwd"`
+	RegisterConfirm bool
+	MailNotify      bool
+
+	OfflineMode         bool
+	DisableRegistration bool
+	RequireSignInView   bool
+
 	AdminName          string `binding:"OmitEmpty;AlphaDashDot;MaxSize(30)" locale:"install.admin_name"`
 	AdminPasswd        string `binding:"OmitEmpty;MinSize(6);MaxSize(255)" locale:"install.admin_password"`
 	AdminConfirmPasswd string
