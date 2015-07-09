@@ -33,7 +33,7 @@ LOGFILE=${GOGS_HOME}/log/gogs.log
 RETVAL=0
 
 # Read configuration from /etc/sysconfig/gogs to override defaults
-[ -r /etc/sysconfig/$NAME ] && ./etc/sysconfig/$NAME
+[ -r /etc/sysconfig/$NAME ] && . /etc/sysconfig/$NAME
 
 # Don't do anything if nothing is installed
 [ -x ${GOGS_PATH} ] || exit 0

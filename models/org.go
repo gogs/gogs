@@ -105,23 +105,23 @@ func IsOrgEmailUsed(email string) (bool, error) {
 }
 
 // CreateOrganization creates record of a new organization.
-func CreateOrganization(org, owner *User) (*User, error) {
-	if !IsLegalName(org.Name) {
-		return nil, ErrUserNameIllegal
+func CreateOrganization(org, owner *User) (err error) {
+	if err = IsUsableName(org.Name); err != nil {
+		return err
 	}
 
 	isExist, err := IsUserExist(0, org.Name)
 	if err != nil {
-		return nil, err
+		return err
 	} else if isExist {
-		return nil, ErrUserAlreadyExist
+		return ErrUserAlreadyExist{org.Name}
 	}
 
 	isExist, err = IsOrgEmailUsed(org.Email)
 	if err != nil {
-		return nil, err
+		return err
 	} else if isExist {
-		return nil, ErrEmailAlreadyUsed
+		return ErrEmailAlreadyUsed{org.Email}
 	}
 
 	org.LowerName = strings.ToLower(org.Name)
@@ -135,11 +135,11 @@ func CreateOrganization(org, owner *User) (*User, error) {
 	sess := x.NewSession()
 	defer sessionRelease(sess)
 	if err = sess.Begin(); err != nil {
-		return nil, err
+		return err
 	}
 
 	if _, err = sess.Insert(org); err != nil {
-		return nil, err
+		return fmt.Errorf("insert organization: %v", err)
 	}
 
 	// Create default owner team.
@@ -151,7 +151,7 @@ func CreateOrganization(org, owner *User) (*User, error) {
 		NumMembers: 1,
 	}
 	if _, err = sess.Insert(t); err != nil {
-		return nil, err
+		return fmt.Errorf("insert owner team: %v", err)
 	}
 
 	// Add initial creator to organization and owner team.
@@ -162,7 +162,7 @@ func CreateOrganization(org, owner *User) (*User, error) {
 		NumTeams: 1,
 	}
 	if _, err = sess.Insert(ou); err != nil {
-		return nil, err
+		return fmt.Errorf("insert org-user relation: %v", err)
 	}
 
 	tu := &TeamUser{
@@ -171,14 +171,14 @@ func CreateOrganization(org, owner *User) (*User, error) {
 		TeamID: t.ID,
 	}
 	if _, err = sess.Insert(tu); err != nil {
-		return nil, err
+		return fmt.Errorf("insert team-user relation: %v", err)
 	}
 
 	if err = os.MkdirAll(UserPath(org.Name), os.ModePerm); err != nil {
-		return nil, err
+		return fmt.Errorf("create directory: %v", err)
 	}
 
-	return org, sess.Commit()
+	return sess.Commit()
 }
 
 // GetOrgByName returns organization by given name.
@@ -594,9 +594,9 @@ func (t *Team) RemoveRepository(repoID int64) error {
 
 // NewTeam creates a record of new team.
 // It's caller's responsibility to assign organization ID.
-func NewTeam(t *Team) error {
-	if !IsLegalName(t.Name) {
-		return ErrTeamNameIllegal
+func NewTeam(t *Team) (err error) {
+	if err = IsUsableName(t.Name); err != nil {
+		return err
 	}
 
 	has, err := x.Id(t.OrgID).Get(new(User))
@@ -670,8 +670,8 @@ func GetTeamById(teamId int64) (*Team, error) {
 
 // UpdateTeam updates information of team.
 func UpdateTeam(t *Team, authChanged bool) (err error) {
-	if !IsLegalName(t.Name) {
-		return ErrTeamNameIllegal
+	if err = IsUsableName(t.Name); err != nil {
+		return err
 	}
 
 	if len(t.Description) > 255 {
