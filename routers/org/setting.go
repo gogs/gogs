@@ -68,7 +68,7 @@ func SettingsPost(ctx *middleware.Context, form auth.UpdateOrgSettingForm) {
 	org.Avatar = base.EncodeMd5(form.Avatar)
 	org.AvatarEmail = form.Avatar
 	if err := models.UpdateUser(org); err != nil {
-		if err == models.ErrEmailAlreadyUsed {
+		if models.IsErrEmailAlreadyUsed(err) {
 			ctx.Data["Err_Email"] = true
 			ctx.RenderWithErr(ctx.Tr("form.email_been_used"), SETTINGS_OPTIONS, &form)
 		} else {
