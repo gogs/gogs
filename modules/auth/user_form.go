@@ -28,6 +28,7 @@ type InstallForm struct {
 	AppUrl       string `binding:"Required"`
 
 	SMTPHost        string `form:"smtp_host"`
+	SMTPFrom        string `form:"smtp_from"`
 	SMTPEmail       string `form:"smtp_user" binding:"OmitEmpty;Email;MaxSize(50)" locale:"install.mailer_user"`
 	SMTPPasswd      string `form:"smtp_passwd"`
 	RegisterConfirm bool
