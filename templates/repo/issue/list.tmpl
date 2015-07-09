@@ -7,7 +7,7 @@
         <div class="col-md-3 filters">
             <div class="filter-list">
                 <ul class="list-unstyled">
-                    <li><a href="{{.RepoLink}}/issues?state={{.State}}"{{if eq .ViewType "all"}} class="active"{{end}}>All Issues <strong class="pull-right">{{..IssueStats.AllCount}}</strong></a></li>
+                    <li><a href="{{.RepoLink}}/issues?state={{.State}}"{{if eq .ViewType "all"}} class="active"{{end}}>All Issues <strong class="pull-right">{{.IssueStats.AllCount}}</strong></a></li>
                     <li><a href="{{.RepoLink}}/issues?type=assigned&state={{.State}}"{{if eq .ViewType "assigned"}} class="active"{{end}}>Assigned to you <strong class="pull-right">{{.IssueStats.AssignCount}}</strong></a></li>
                     <li><a href="{{.RepoLink}}/issues?type=created_by&state={{.State}}"{{if eq .ViewType "created_by"}} class="active"{{end}}>Created by you <strong class="pull-right">{{.IssueStats.CreateCount}}</strong></a></li>
                     <li><a href="{{.RepoLink}}/issues?type=mentioned&state={{.State}}"{{if eq .ViewType "mentioned"}} class="active"{{end}}>Mentioning you <strong class="pull-right">{{.IssueStats.MentionCount}}</strong></a></li>
