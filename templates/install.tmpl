@@ -76,6 +76,11 @@
 
 					<!-- General Settings -->
 					<h4 class="ui dividing header">{{.i18n.Tr "install.general_title"}}</h4>
+          <div class="inline required field {{if .Err_AppName}}error{{end}}">
+            <label for="app_name">{{.i18n.Tr "install.app_name"}}</label>
+            <input id="app_name" name="app_name" value="{{.app_name}}" required>
+            <span class="help">{{.i18n.Tr "install.app_name_helper"}}</span>
+          </div>
           <div class="inline required field {{if .Err_RepoRootPath}}error{{end}}">
             <label for="repo_root_path">{{.i18n.Tr "install.repo_path"}}</label>
             <input id="repo_root_path" name="repo_root_path" value="{{.repo_root_path}}" required>
@@ -122,15 +127,6 @@
                 <label for="smtp_passwd">{{.i18n.Tr "install.mailer_password"}}</label>
                 <input id="smtp_passwd" name="smtp_passwd" type="password" value="{{.smtp_passwd}}">
               </div>
-            </div>
-          </div>
-
-          <div class="ui accordion optional field">
-            <div class="title">
-              <i class="icon dropdown"></i>
-              {{.i18n.Tr "install.notify_title"}}
-            </div>
-            <div class="content">
               <div class="inline field">
                 <div class="ui checkbox">
                   <label><strong>{{.i18n.Tr "install.register_confirm"}}</strong></label>
@@ -141,6 +137,33 @@
                 <div class="ui checkbox">
                   <label><strong>{{.i18n.Tr "install.mail_notify"}}</strong></label>
                   <input name="mail_notify" type="checkbox" {{if .mail_notify}}checked{{end}}>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="ui accordion optional field">
+            <div class="title">
+              <i class="icon dropdown"></i>
+              {{.i18n.Tr "install.server_service_title"}}
+            </div>
+            <div class="content">
+              <div class="inline field">
+                <div class="ui checkbox">
+                  <label class="poping up" data-content="{{.i18n.Tr "install.offline_mode_popup"}}"><strong>{{.i18n.Tr "install.offline_mode"}}</strong></label>
+                  <input name="offline_mode" type="checkbox" {{if .offline_mode}}checked{{end}}>
+                </div>
+              </div>
+              <div class="inline field">
+                <div class="ui checkbox">
+                  <label class="poping up" data-content="{{.i18n.Tr "install.disable_registration_popup"}}"><strong>{{.i18n.Tr "install.disable_registration"}}</strong></label>
+                  <input name="disable_registration" type="checkbox" {{if .disable_registration}}checked{{end}}>
+                </div>
+              </div>
+              <div class="inline field">
+                <div class="ui checkbox">
+                  <label class="poping up" data-content="{{.i18n.Tr "install.require_sign_in_view_popup"}}"><strong>{{.i18n.Tr "install.require_sign_in_view"}}</strong></label>
+                  <input name="require_sign_in_view" type="checkbox" {{if .require_sign_in_view}}checked{{end}}>
                 </div>
               </div>
             </div>
