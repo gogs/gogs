@@ -50,20 +50,19 @@ func SettingsPost(ctx *middleware.Context, form auth.UpdateProfileForm) {
 
 	// Check if user name has been changed.
 	if ctx.User.Name != form.UserName {
-		isExist, err := models.IsUserExist(ctx.User.Id, form.UserName)
-		if err != nil {
-			ctx.Handle(500, "IsUserExist", err)
-			return
-		} else if isExist {
-			ctx.RenderWithErr(ctx.Tr("form.username_been_taken"), SETTINGS_PROFILE, &form)
-			return
-		} else if err = models.ChangeUserName(ctx.User, form.UserName); err != nil {
-			switch err {
-			case models.ErrUserNameIllegal:
-				ctx.Flash.Error(ctx.Tr("form.illegal_username"))
+		if err := models.ChangeUserName(ctx.User, form.UserName); err != nil {
+			switch {
+			case models.IsErrUserAlreadyExist(err):
+				ctx.Flash.Error(ctx.Tr("form.username_been_taken"))
 				ctx.Redirect(setting.AppSubUrl + "/user/settings")
-			case models.ErrEmailAlreadyUsed:
+			case models.IsErrEmailAlreadyUsed(err):
 				ctx.Flash.Error(ctx.Tr("form.email_been_used"))
+				ctx.Redirect(setting.AppSubUrl + "/user/settings")
+			case models.IsErrNameReserved(err):
+				ctx.Flash.Error(ctx.Tr("user.form.name_reserved"))
+				ctx.Redirect(setting.AppSubUrl + "/user/settings")
+			case models.IsErrNamePatternNotAllowed(err):
+				ctx.Flash.Error(ctx.Tr("user.form.name_pattern_not_allowed"))
 				ctx.Redirect(setting.AppSubUrl + "/user/settings")
 			default:
 				ctx.Handle(500, "ChangeUserName", err)
@@ -204,7 +203,7 @@ func SettingsEmailPost(ctx *middleware.Context, form auth.AddEmailForm) {
 	}
 
 	if err := models.AddEmailAddress(e); err != nil {
-		if err == models.ErrEmailAlreadyUsed {
+		if models.IsErrEmailAlreadyUsed(err) {
 			ctx.RenderWithErr(ctx.Tr("form.email_been_used"), SETTINGS_EMAILS, &form)
 			return
 		}

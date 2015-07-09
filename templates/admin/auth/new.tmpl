@@ -86,6 +86,12 @@
                                         <input class="ipt ipt-large ipt-radius {{if .Err_SmtpPort}}ipt-error{{end}}" id="smtp_port" name="smtp_port" value="{{.smtp_port}}" />
                                     </div>
                                 </div>
+                                <div class="pam hidden">
+                                    <div class="field">
+                                        <label class="req" for="pam_service_name">{{.i18n.Tr "admin.auths.pam_service_name"}}</label>
+                                        <input class="ipt ipt-large ipt-radius {{if .Err_PAMServiceName}}ipt-error{{end}}" id="pam_service_name" name="pam_service_name" value="{{.pam_service_name}}" />
+                                    </div>
+                                </div>
                                 <div class="field">
                                     <div class="smtp hidden">
                                         <label></label>
