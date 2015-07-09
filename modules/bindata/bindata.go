@@ -8,6 +8,12 @@
 // conf/gitignore/Google Go
 // conf/gitignore/Java
 // conf/gitignore/Objective-C
+// conf/gitignore/PHP CakePHP
+// conf/gitignore/PHP FuelPHP
+// conf/gitignore/PHP Laravel
+// conf/gitignore/PHP Symfony
+// conf/gitignore/PHP Yii
+// conf/gitignore/PHP ZendFramework
 // conf/gitignore/Python
 // conf/gitignore/Ruby
 // conf/license/Affero GPL
@@ -260,6 +266,126 @@ func confGitignoreObjectiveC() (*asset, error) {
 	}
 
 	info := bindataFileInfo{name: "conf/gitignore/Objective-C", size: 280, mode: os.FileMode(420), modTime: time.Unix(1398226579, 0)}
+	a := &asset{bytes: bytes, info:  info}
+	return a, nil
+}
+
+var _confGitignorePhpCakephp = []byte("\x1f\x8b\x08\x00\x00\x09\x6e\x88\x00\xff\x52\x56\x70\x4e\xcc\x4e\x0d\xf0\x08\x50\x30\xe6\xe2\xd2\x2f\x4b\xcd\x4b\xc9\x2f\xd2\xd7\xe2\xd2\x4f\xce\xcf\x4b\xcb\x4c\xd7\x4f\x2c\x28\xd0\x2b\xc8\x28\xe0\xd2\x2f\xc9\x2d\x00\x09\xe7\xe4\xa7\x17\x03\x69\x2e\x84\x36\x23\xa0\x36\xa0\x2a\x98\x02\x10\xd3\x19\xa2\x37\x39\xbf\x28\x15\xa2\x19\x49\x30\x25\xb1\x24\x31\x29\xb1\x18\x2a\x01\xb1\x0f\x64\x22\x20\x00\x00\xff\xff\x12\xb5\x37\x98\x88\x00\x00\x00")
+
+func confGitignorePhpCakephpBytes() ([]byte, error) {
+	return bindataRead(
+		_confGitignorePhpCakephp,
+		"conf/gitignore/PHP CakePHP",
+	)
+}
+
+func confGitignorePhpCakephp() (*asset, error) {
+	bytes, err := confGitignorePhpCakephpBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "conf/gitignore/PHP CakePHP", size: 136, mode: os.FileMode(420), modTime: time.Unix(1436431267, 0)}
+	a := &asset{bytes: bytes, info:  info}
+	return a, nil
+}
+
+var _confGitignorePhpFuelphp = []byte("\x1f\x8b\x08\x00\x00\x09\x6e\x88\x00\xff\x4a\x2b\x4d\xcd\xd1\x4f\x2c\x28\xd0\xcf\xc9\x4f\x2f\xd6\xd7\x02\x41\x2e\xb8\x58\x72\x62\x72\x46\x2a\x58\x08\x10\x00\x00\xff\xff\x0f\xec\xf0\x51\x27\x00\x00\x00")
+
+func confGitignorePhpFuelphpBytes() ([]byte, error) {
+	return bindataRead(
+		_confGitignorePhpFuelphp,
+		"conf/gitignore/PHP FuelPHP",
+	)
+}
+
+func confGitignorePhpFuelphp() (*asset, error) {
+	bytes, err := confGitignorePhpFuelphpBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "conf/gitignore/PHP FuelPHP", size: 39, mode: os.FileMode(420), modTime: time.Unix(1436431267, 0)}
+	a := &asset{bytes: bytes, info:  info}
+	return a, nil
+}
+
+var _confGitignorePhpLaravel = []byte("\x1f\x8b\x08\x00\x00\x09\x6e\x88\x00\xff\xd2\x4f\xca\xcf\x2f\x29\x2e\x29\x4a\x2c\xd0\x4f\xce\xcf\x2d\xc8\xcc\x49\x4d\xd1\x2b\xc8\x28\xe0\xd2\x4b\xcd\x2b\xd3\xd3\x42\x30\x61\x0c\x2e\x40\x00\x00\x00\xff\xff\xab\x96\x52\xb8\x31\x00\x00\x00")
+
+func confGitignorePhpLaravelBytes() ([]byte, error) {
+	return bindataRead(
+		_confGitignorePhpLaravel,
+		"conf/gitignore/PHP Laravel",
+	)
+}
+
+func confGitignorePhpLaravel() (*asset, error) {
+	bytes, err := confGitignorePhpLaravelBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "conf/gitignore/PHP Laravel", size: 49, mode: os.FileMode(420), modTime: time.Unix(1436431267, 0)}
+	a := &asset{bytes: bytes, info:  info}
+	return a, nil
+}
+
+var _confGitignorePhpSymfony = []byte("\x1f\x8b\x08\x00\x00\x09\x6e\x88\x00\xff\x74\x90\xc1\x4e\xc3\x30\x0c\x86\xef\x7d\x8a\x20\x2e\xc0\xa1\x91\xe0\x09\xc6\x2e\x5c\x90\x2a\x10\x67\xe4\x2e\x5e\x17\x91\xc6\x21\x4e\x06\x7d\x7b\x9c\x66\x6b\x77\x60\xa7\xe6\xf7\x6f\xff\xfe\xdc\x5b\xb5\x85\xdd\x01\x15\x78\xa3\x1c\x0d\xac\xee\xde\xa7\x71\x4f\x7e\x7a\xbc\x6f\x34\x84\xa0\x77\xc5\xd6\x0f\x55\x94\x0e\x79\xdf\xac\x46\x3b\xd8\xf4\x85\x18\x6a\x6d\xf6\x97\x52\x73\x35\xfc\x49\xc2\x8f\x10\xd7\xf0\x22\xce\xe1\xab\xb1\x86\x2f\xfe\x65\x78\x07\x11\x46\x4c\x18\xf9\x84\x4a\x7e\x6f\x07\x1d\x96\x72\x3b\x8d\xee\x9a\x65\xbd\x2d\x19\xaf\xe0\x61\x40\xa3\xfa\x49\x6d\x69\x0c\xc4\x18\xeb\x44\x4f\x94\x38\x45\x08\x6d\x38\x84\x76\xe6\xa9\x98\xff\x1a\xbd\xf5\x05\xbd\x7c\x64\x15\x93\xc3\x2a\xb8\xde\xfb\x19\xf1\x3b\xdb\x88\x23\xfa\x24\xb0\x47\xf4\x86\xa2\x2e\xfb\x37\xcc\x98\x78\xfe\x43\x59\x76\xab\x1c\x1c\x81\x91\x9e\x1f\xec\x75\x9f\xbd\x71\xc8\xba\xaa\x93\x35\x8f\x75\x2f\xdd\x87\xb7\xa9\xa2\x0a\x47\x16\xd1\xfe\x96\x6b\x2f\x85\x34\x3e\x67\xeb\x8c\x32\x90\x40\x20\xcb\x7b\x1e\x3f\x9f\x2a\x39\x9b\xb7\x46\x90\xab\x94\x8b\x20\x36\x7f\x01\x00\x00\xff\xff\xa7\x53\xbf\x78\x13\x02\x00\x00")
+
+func confGitignorePhpSymfonyBytes() ([]byte, error) {
+	return bindataRead(
+		_confGitignorePhpSymfony,
+		"conf/gitignore/PHP Symfony",
+	)
+}
+
+func confGitignorePhpSymfony() (*asset, error) {
+	bytes, err := confGitignorePhpSymfonyBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "conf/gitignore/PHP Symfony", size: 531, mode: os.FileMode(420), modTime: time.Unix(1436431267, 0)}
+	a := &asset{bytes: bytes, info:  info}
+	return a, nil
+}
+
+var _confGitignorePhpYii = []byte("\x1f\x8b\x08\x00\x00\x09\x6e\x88\x00\xff\x6c\x8d\x41\x0e\x84\x20\x10\x04\xef\xf3\x8b\xbd\x72\x60\xde\xc4\x42\x87\x9d\x64\x01\xc3\xb4\xfa\x7d\x35\xf1\xa6\xb7\x4e\xa7\x2a\x95\xdc\x41\xd7\x20\x9f\x7b\xc5\x6a\xb4\xda\xc7\x84\x2c\x73\x10\x99\x28\x3a\xd7\x4e\x6b\xb8\xb0\xe7\xf9\x6a\x94\xc4\xa4\x21\x96\xaf\xf0\x87\x06\xd7\xfc\x3f\x03\x96\x75\x33\xec\xae\x72\x04\x00\x00\xff\xff\x9c\xf5\x8e\xaa\x78\x00\x00\x00")
+
+func confGitignorePhpYiiBytes() ([]byte, error) {
+	return bindataRead(
+		_confGitignorePhpYii,
+		"conf/gitignore/PHP Yii",
+	)
+}
+
+func confGitignorePhpYii() (*asset, error) {
+	bytes, err := confGitignorePhpYiiBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "conf/gitignore/PHP Yii", size: 120, mode: os.FileMode(420), modTime: time.Unix(1436431267, 0)}
+	a := &asset{bytes: bytes, info:  info}
+	return a, nil
+}
+
+var _confGitignorePhpZendframework = []byte("\x1f\x8b\x08\x00\x00\x09\x6e\x88\x00\xff\x34\x8e\x31\x0e\xc3\x20\x0c\x45\x77\x9f\x02\x29\x5b\x86\xa0\x5e\xa1\xad\x3a\xf5\x04\xdd\x2c\x70\x08\x12\x60\x04\x4e\xd5\xdc\xbe\x58\x4d\x97\xcf\x47\xff\x7d\xdb\x93\xb9\x71\xae\xdc\xa9\x99\x35\x26\xea\xe0\xce\xef\x52\x37\x6c\xf0\xa6\xe2\xb9\x59\x80\xc9\x3c\xd9\x61\x32\x8e\xcb\x1a\x83\x62\xfa\x5a\xdc\x85\x13\xa3\xb7\xf3\x92\x34\x1f\xad\xaa\xf0\x35\x16\x6c\x87\x09\x24\x42\x1f\x39\x47\xcf\x4b\x66\x0d\xef\x28\x08\x7e\x88\x4d\x1c\xba\xfd\x59\x87\x6e\xa3\xd3\x77\xea\x3d\x72\xf9\x47\x92\xab\x05\x21\x55\xbd\x83\x02\xba\xc3\xbc\x1e\x17\xf0\x94\x79\x40\x63\x43\xc3\x6e\x3d\xbb\x3d\x53\x11\x94\xd1\x85\x6f\x00\x00\x00\xff\xff\xd2\xff\x36\xef\xd9\x00\x00\x00")
+
+func confGitignorePhpZendframeworkBytes() ([]byte, error) {
+	return bindataRead(
+		_confGitignorePhpZendframework,
+		"conf/gitignore/PHP ZendFramework",
+	)
+}
+
+func confGitignorePhpZendframework() (*asset, error) {
+	bytes, err := confGitignorePhpZendframeworkBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "conf/gitignore/PHP ZendFramework", size: 217, mode: os.FileMode(420), modTime: time.Unix(1436431267, 0)}
 	a := &asset{bytes: bytes, info:  info}
 	return a, nil
 }
@@ -904,6 +1030,12 @@ var _bindata = map[string]func() (*asset, error){
 	"conf/gitignore/Google Go": confGitignoreGoogleGo,
 	"conf/gitignore/Java": confGitignoreJava,
 	"conf/gitignore/Objective-C": confGitignoreObjectiveC,
+	"conf/gitignore/PHP CakePHP": confGitignorePhpCakephp,
+	"conf/gitignore/PHP FuelPHP": confGitignorePhpFuelphp,
+	"conf/gitignore/PHP Laravel": confGitignorePhpLaravel,
+	"conf/gitignore/PHP Symfony": confGitignorePhpSymfony,
+	"conf/gitignore/PHP Yii": confGitignorePhpYii,
+	"conf/gitignore/PHP ZendFramework": confGitignorePhpZendframework,
 	"conf/gitignore/Python": confGitignorePython,
 	"conf/gitignore/Ruby": confGitignoreRuby,
 	"conf/license/Affero GPL": confLicenseAfferoGpl,
@@ -992,6 +1124,18 @@ var _bintree = &bintree{nil, map[string]*bintree{
 			"Java": &bintree{confGitignoreJava, map[string]*bintree{
 			}},
 			"Objective-C": &bintree{confGitignoreObjectiveC, map[string]*bintree{
+			}},
+			"PHP CakePHP": &bintree{confGitignorePhpCakephp, map[string]*bintree{
+			}},
+			"PHP FuelPHP": &bintree{confGitignorePhpFuelphp, map[string]*bintree{
+			}},
+			"PHP Laravel": &bintree{confGitignorePhpLaravel, map[string]*bintree{
+			}},
+			"PHP Symfony": &bintree{confGitignorePhpSymfony, map[string]*bintree{
+			}},
+			"PHP Yii": &bintree{confGitignorePhpYii, map[string]*bintree{
+			}},
+			"PHP ZendFramework": &bintree{confGitignorePhpZendframework, map[string]*bintree{
 			}},
 			"Python": &bintree{confGitignorePython, map[string]*bintree{
 			}},
