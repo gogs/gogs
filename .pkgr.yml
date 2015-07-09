@@ -1,28 +1,24 @@
 targets:
+  debian-7: &debian
+    build_dependencies:
+      - libpam0g-dev
+    dependencies:
+      - libpam0g
+      - git
+  debian-8:
+    <<: *debian
   ubuntu-14.04:
-    build_dependencies:
-      - libpam0g-dev
-    dependencies:
-      - libpam0g
-      - git
+    <<: *debian
   ubuntu-12.04:
-    build_dependencies:
-      - libpam0g-dev
-    dependencies:
-      - libpam0g
-      - git
-  debian-7:
-    build_dependencies:
-      - libpam0g-dev
-    dependencies:
-      - libpam0g
-      - git
-  centos-6:
+    <<: *debian
+  centos-6: &el
     build_dependencies:
       - pam-devel
     dependencies:
       - pam
       - git
+  centos-7:
+    <<: *el
 before:
   - mv packager/Procfile .
   - mv packager/.godir .
