@@ -853,6 +853,7 @@ func Comment(ctx *middleware.Context) {
 		RepoID:       ctx.Repo.Repository.Id,
 		RepoUserName: ctx.Repo.Owner.LowerName,
 		RepoName:     ctx.Repo.Repository.LowerName,
+		IsPrivate:    ctx.Repo.Repository.IsPrivate,
 	}
 	if err = models.NotifyWatchers(act); err != nil {
 		send(500, nil, err)
