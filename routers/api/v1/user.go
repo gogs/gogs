@@ -68,5 +68,10 @@ func GetUserInfo(ctx *middleware.Context) {
 		}
 		return
 	}
+
+	// Hide user e-mail when API caller isn't signed in.
+	if !ctx.IsSigned {
+		u.Email = ""
+	}
 	ctx.JSON(200, &api.User{u.Id, u.Name, u.FullName, u.Email, u.AvatarLink()})
 }
