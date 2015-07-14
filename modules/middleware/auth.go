@@ -69,6 +69,7 @@ func Toggle(options *ToggleOptions) macaron.Handler {
 	}
 }
 
+// Contexter middleware already checks token for user sign in process.
 func ApiReqToken() macaron.Handler {
 	return func(ctx *Context) {
 		if !ctx.IsSigned {
