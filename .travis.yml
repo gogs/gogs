@@ -10,7 +10,7 @@ before_install:
   - sudo apt-get update -qq
   - sudo apt-get install -y libpam-dev
 
-script: go build -v
+script: go build -v -tags "pam"
 
 notifications:
   email:
