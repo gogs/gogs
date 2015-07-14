@@ -106,6 +106,12 @@ func (ctx *Context) HasError() bool {
 	return hasErr.(bool)
 }
 
+// HasValue returns true if value of given name exists.
+func (ctx *Context) HasValue(name string) bool {
+	_, ok := ctx.Data[name]
+	return ok
+}
+
 // HTML calls Context.HTML and converts template name to string.
 func (ctx *Context) HTML(status int, name base.TplName) {
 	ctx.Context.HTML(status, string(name))
@@ -140,7 +146,7 @@ func (ctx *Context) Handle(status int, title string, err error) {
 }
 
 func (ctx *Context) HandleText(status int, title string) {
-	if (status / 100 == 4) || (status / 100 == 5) {
+	if (status/100 == 4) || (status/100 == 5) {
 		log.Error(4, "%s", title)
 	}
 	ctx.RenderData(status, []byte(title))

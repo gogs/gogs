@@ -52,12 +52,24 @@ The goal of this project is to make the easiest, fastest, and most painless way 
 - Drone CI integration
 - Supports MySQL, PostgreSQL and SQLite3
 - Social account login (GitHub, Google, QQ, Weibo)
-- Multi-language support ([11 languages](https://crowdin.com/project/gogs))
+- Multi-language support ([13 languages](https://crowdin.com/project/gogs))
 
 ## System Requirements
 
 - A cheap Raspberry Pi is powerful enough for basic functionality.
 - At least 2 CPU cores and 1GB RAM would be the baseline for teamwork.
+
+## Browser Support
+
+According to [Semantic UI](https://github.com/Semantic-Org/Semantic-UI/tree/1.x):
+
+- Last 2 Versions FF, Chrome, IE 10+
+- Safari 6
+- IE 9+ (Browser prefix only)
+- Android 4
+- Blackberry 10
+
+Browser prefixes are present for Internet Explorer 9, but the browser is not officially supported.
 
 ## Installation
 

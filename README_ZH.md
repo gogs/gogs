@@ -39,12 +39,24 @@ Gogs 的目标是打造一个最简单、最快速和最轻松的方式搭建自
 - Drone CI 持续部署集成
 - 支持 MySQL、PostgreSQL 以及 SQLite3 数据库
 - 社交帐号登录（GitHub、Google、QQ、微博）
-- 多语言支持（[11 种语言]([more](https://crowdin.com/project/gogs))）
+- 多语言支持（[13 种语言]([more](https://crowdin.com/project/gogs))）
 
 ## 系统要求
 
 - 最低的系统硬件要求为一个廉价的树莓派
 - 如果用于团队项目，建议使用 2 核 CPU 及 1GB 内存
+
+## 浏览器支持
+
+根据 [Semantic UI](https://github.com/Semantic-Org/Semantic-UI/tree/1.x) 的要求：
+
+- 最新两版的 FF、Chrome 和 IE 10+
+- Safari 6
+- IE 9+ （仅限浏览器前缀）
+- Android 4
+- Blackberry 10
+
+尽管已经使用了 Internet Explorer 9 的浏览器前缀，但该版本的浏览器被没有被正式支持。
 
 ## 安装部署
 
