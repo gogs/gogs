@@ -145,6 +145,25 @@ func (repo *Repository) refreshCollaboratorAccesses(e Engine, accessMap map[int6
 	for _, c := range collaborators {
 		accessMap[c.Id] = ACCESS_MODE_WRITE
 	}
+
+	// Adds team members access.
+	if repo.Owner.IsOrganization() {
+		if err = repo.Owner.GetTeams(); err != nil {
+			return fmt.Errorf("GetTeams: %v", err)
+		}
+		for _, t := range repo.Owner.Teams {
+			if err = t.GetMembers(); err != nil {
+				return fmt.Errorf("GetMembers: %v", err)
+			}
+			for _, m := range t.Members {
+				if t.IsOwnerTeam() {
+					accessMap[m.Id] = ACCESS_MODE_OWNER
+				} else {
+					accessMap[m.Id] = maxAccessMode(accessMap[m.Id], t.Authorize)
+				}
+			}
+		}
+	}
 	return nil
 }
 
