@@ -52,7 +52,7 @@ The goal of this project is to make the easiest, fastest, and most painless way 
 - Drone CI integration
 - Supports MySQL, PostgreSQL and SQLite3
 - Social account login (GitHub, Google, QQ, Weibo)
-- Multi-language support ([12 languages](https://crowdin.com/project/gogs))
+- Multi-language support ([13 languages](https://crowdin.com/project/gogs))
 
 ## System Requirements
 
