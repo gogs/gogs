@@ -10,6 +10,7 @@ import (
 	"github.com/Unknwon/macaron"
 	"github.com/macaron-contrib/csrf"
 
+	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/setting"
 )
 
@@ -49,6 +50,12 @@ func Toggle(options *ToggleOptions) macaron.Handler {
 
 		if options.SignInRequire {
 			if !ctx.IsSigned {
+				// Restrict API calls with error message.
+				if auth.IsAPIPath(ctx.Req.URL.Path) {
+					ctx.HandleAPI(403, "Only signed in user is allowed to call APIs.")
+					return
+				}
+
 				ctx.SetCookie("redirect_to", url.QueryEscape(setting.AppSubUrl+ctx.Req.RequestURI), 0, setting.AppSubUrl)
 				ctx.Redirect(setting.AppSubUrl + "/user/login")
 				return
