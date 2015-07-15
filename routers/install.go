@@ -36,6 +36,7 @@ func checkRunMode() {
 	switch setting.Cfg.Section("").Key("RUN_MODE").String() {
 	case "prod":
 		macaron.Env = macaron.PROD
+		macaron.ColorLog = false
 		setting.ProdMode = true
 	case "test":
 		macaron.Env = macaron.TEST
