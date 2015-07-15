@@ -242,7 +242,7 @@ func runWeb(ctx *cli.Context) {
 				ctx.HandleAPI(404, "Page not found")
 			})
 		})
-	})
+	}, ignSignIn)
 
 	// User.
 	m.Group("/user", func() {
