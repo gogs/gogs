@@ -1058,7 +1058,7 @@ func MirrorUpdate() {
 		repoPath := filepath.Join(setting.RepoRootPath, m.RepoName+".git")
 		if _, stderr, err := process.ExecDir(10*time.Minute,
 			repoPath, fmt.Sprintf("MirrorUpdate: %s", repoPath),
-			"git", "remote", "update"); err != nil {
+			"git", "remote", "update", "--prune"); err != nil {
 			desc := fmt.Sprintf("Fail to update mirror repository(%s): %s", repoPath, stderr)
 			log.Error(4, desc)
 			if err = CreateRepositoryNotice(desc); err != nil {
