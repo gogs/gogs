@@ -28,18 +28,25 @@ const (
 	FORK    base.TplName = "repo/fork"
 )
 
-func checkContextUser(ctx *middleware.Context, uid int64) (*models.User, error) {
-	ctxUser := ctx.User
-	if uid > 0 {
-		org, err := models.GetUserById(uid)
-		if err != models.ErrUserNotExist {
-			if err != nil {
-				return nil, fmt.Errorf("GetUserById: %v", err)
-			}
-			ctxUser = org
-		}
+func checkContextUser(ctx *middleware.Context, uid int64) *models.User {
+	// Not equal means current user is an organization.
+	if uid == ctx.User.Id || uid == 0 {
+		return ctx.User
 	}
-	return ctxUser, nil
+
+	org, err := models.GetUserById(uid)
+	if err == models.ErrUserNotExist {
+		return ctx.User
+	}
+
+	if err != nil {
+		ctx.Handle(500, "checkContextUser", fmt.Errorf("GetUserById(%d): %v", uid, err))
+		return nil
+	} else if !org.IsOrganization() {
+		ctx.Error(403)
+		return nil
+	}
+	return org
 }
 
 func Create(ctx *middleware.Context) {
@@ -51,9 +58,8 @@ func Create(ctx *middleware.Context) {
 	ctx.Data["Gitignores"] = models.Gitignores
 	ctx.Data["Licenses"] = models.Licenses
 
-	ctxUser, err := checkContextUser(ctx, ctx.QueryInt64("org"))
-	if err != nil {
-		ctx.Handle(500, "checkContextUser", err)
+	ctxUser := checkContextUser(ctx, ctx.QueryInt64("org"))
+	if ctx.Written() {
 		return
 	}
 	ctx.Data["ContextUser"] = ctxUser
@@ -73,15 +79,9 @@ func CreatePost(ctx *middleware.Context, form auth.CreateRepoForm) {
 	ctx.Data["Gitignores"] = models.Gitignores
 	ctx.Data["Licenses"] = models.Licenses
 
-	ctxUser := ctx.User
-	// Not equal means current user is an organization.
-	if form.Uid != ctx.User.Id {
-		var err error
-		ctxUser, err = checkContextUser(ctx, form.Uid)
-		if err != nil {
-			ctx.Handle(500, "checkContextUser", err)
-			return
-		}
+	ctxUser := checkContextUser(ctx, form.Uid)
+	if ctx.Written() {
+		return
 	}
 	ctx.Data["ContextUser"] = ctxUser
 
@@ -136,9 +136,8 @@ func CreatePost(ctx *middleware.Context, form auth.CreateRepoForm) {
 func Migrate(ctx *middleware.Context) {
 	ctx.Data["Title"] = ctx.Tr("new_migrate")
 
-	ctxUser, err := checkContextUser(ctx, ctx.QueryInt64("org"))
-	if err != nil {
-		ctx.Handle(500, "checkContextUser", err)
+	ctxUser := checkContextUser(ctx, ctx.QueryInt64("org"))
+	if ctx.Written() {
 		return
 	}
 	ctx.Data["ContextUser"] = ctxUser
@@ -155,15 +154,9 @@ func Migrate(ctx *middleware.Context) {
 func MigratePost(ctx *middleware.Context, form auth.MigrateRepoForm) {
 	ctx.Data["Title"] = ctx.Tr("new_migrate")
 
-	ctxUser := ctx.User
-	// Not equal means current user is an organization.
-	if form.Uid != ctx.User.Id {
-		var err error
-		ctxUser, err = checkContextUser(ctx, form.Uid)
-		if err != nil {
-			ctx.Handle(500, "checkContextUser", err)
-			return
-		}
+	ctxUser := checkContextUser(ctx, form.Uid)
+	if ctx.Written() {
+		return
 	}
 	ctx.Data["ContextUser"] = ctxUser
 
@@ -297,15 +290,9 @@ func ForkPost(ctx *middleware.Context, form auth.CreateRepoForm) {
 		return
 	}
 
-	ctxUser := ctx.User
-	// Not equal means current user is an organization.
-	if form.Uid != ctx.User.Id {
-		var err error
-		ctxUser, err = checkContextUser(ctx, form.Uid)
-		if err != nil {
-			ctx.Handle(500, "checkContextUser", err)
-			return
-		}
+	ctxUser := checkContextUser(ctx, form.Uid)
+	if ctx.Written() {
+		return
 	}
 	ctx.Data["ContextUser"] = ctxUser
 
