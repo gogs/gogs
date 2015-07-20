@@ -17,20 +17,20 @@ type InstallForm struct {
 	DbUser   string
 	DbPasswd string
 	DbName   string
-	SSLMode  string `form:"ssl_mode"`
+	SSLMode  string
 	DbPath   string
 
 	AppName      string `binding:"Required" locale:"install.app_name"`
 	RepoRootPath string `binding:"Required"`
 	RunUser      string `binding:"Required"`
 	Domain       string `binding:"Required"`
-	HTTPPort     string `form:"http_port" binding:"Required"`
+	HTTPPort     string `binding:"Required"`
 	AppUrl       string `binding:"Required"`
 
-	SMTPHost        string `form:"smtp_host"`
-	SMTPFrom        string `form:"smtp_from"`
-	SMTPEmail       string `form:"smtp_user" binding:"OmitEmpty;Email;MaxSize(50)" locale:"install.mailer_user"`
-	SMTPPasswd      string `form:"smtp_passwd"`
+	SMTPHost        string
+	SMTPFrom        string
+	SMTPEmail       string `binding:"OmitEmpty;Email;MaxSize(50)" locale:"install.mailer_user"`
+	SMTPPasswd      string
 	RegisterConfirm bool
 	MailNotify      bool
 
