@@ -71,6 +71,8 @@ According to [Semantic UI](https://github.com/Semantic-Org/Semantic-UI/tree/1.x)
 
 Browser prefixes are present for Internet Explorer 9, but the browser is not officially supported.
 
+The official support minimal size  is 1024*768, UI may still looks right in smaller size but no promises and fixes.
+
 ## Installation
 
 Make sure you install the [prerequisites](http://gogs.io/docs/installation/) first.

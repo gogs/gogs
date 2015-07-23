@@ -4,7 +4,7 @@ path = github.com/gogits/gogs
 [deps]
 github.com/bradfitz/gomemcache = commit:72a68649ba
 github.com/Unknwon/cae = commit:2e70a1351b
-github.com/Unknwon/com = commit:188d690b1a
+github.com/Unknwon/com = 
 github.com/Unknwon/i18n = commit:7457d88830
 github.com/Unknwon/macaron = commit:93de4f3fad
 github.com/codegangsta/cli = commit:2bcd11f863

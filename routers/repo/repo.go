@@ -374,7 +374,13 @@ func Action(ctx *middleware.Context) {
 		})
 		return
 	}
-	ctx.Redirect(ctx.Repo.RepoLink)
+
+	redirectTo := ctx.Query("redirect_to")
+	if len(redirectTo) == 0 {
+		redirectTo = ctx.Repo.RepoLink
+	}
+	ctx.Redirect(redirectTo)
+
 	return
 	ctx.JSON(200, map[string]interface{}{
 		"ok": true,

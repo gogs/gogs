@@ -1,0 +1,63 @@
+{{with .Repository}}
+<div id="repo-header" class="clear">
+    <div class="container clear">
+        <h1 id="repo-header-name" class="left public">
+            <i class="mega-octicon octicon-{{if .IsPrivate}}lock{{else if .IsMirror}}repo-clone{{else if .IsFork}}repo-forked{{else}}repo{{end}}"></i>
+            <a class="author" href="{{AppSubUrl}}/{{.Owner.Name}}">{{.Owner.Name}}</a>
+            <span class="divider">/</span>
+            <a class="repo text-bold" href="{{$.RepoLink}}">{{.Name}}</a>
+            {{if .IsMirror}}<span class="label label-gray">{{$.i18n.Tr "mirror"}}</span>{{end}}
+            {{if .IsFork}}<span class="fork-flag">forked from <a href="{{.ForkRepo.RepoLink}}">{{SubStr .ForkRepo.RepoLink 1 -1}}</a></span>{{end}}
+        </h1>
+        <ul id="repo-header-meta" class="right menu menu-line">
+            <li id="repo-header-download" class="drop">
+                <a id="repo-header-download-btn" href="#">
+                    <button class="btn btn-black text-bold btn-radius">
+                        <i class="octicon octicon-cloud-download"></i>
+                    </button>
+                </a>
+                <div id="repo-header-download-drop" class="drop-down">
+                    <div id="repo-clone" class="clear">
+                        {{if not $.DisableSSH}}
+                        <button class="btn btn-blue left btn-left-radius" id="repo-clone-ssh" data-link="{{$.CloneLink.SSH}}">SSH</button>
+                        {{end}}
+                        <button class="btn {{if $.DisableSSH}}btn-blue{{else}}btn-gray{{end}} left" id="repo-clone-https" data-link="{{$.CloneLink.HTTPS}}">HTTPS</button>
+                        <input id="repo-clone-url" class="ipt ipt-disabled left" value="{{if $.DisableSSH}}{{$.CloneLink.HTTPS}}{{else}}{{$.CloneLink.SSH}}{{end}}" onclick="this.select();" readonly />
+                        <button id="repo-clone-copy" class="btn btn-black left btn-right-radius" data-copy-val="val" data-copy-from="#repo-clone-url" original-title="{{$.i18n.Tr "repo.click_to_copy"}}" data-original-title="{{$.i18n.Tr "repo.click_to_copy"}}" data-after-title="{{$.i18n.Tr "repo.copied"}}">{{$.i18n.Tr "repo.copy_link"}}</button>
+                        <p class="text-center" id="repo-clone-help">{{$.i18n.Tr "repo.clone_helper" "http://git-scm.com/book/en/Git-Basics-Getting-a-Git-Repository" | Str2html}}</p>
+                        <hr/>
+                        <div class="text-center" id="repo-clone-zip">
+                            <a class="btn btn-green btn-radius" href="{{$.RepoLink}}/archive/{{EscapePound $.BranchName}}.zip"><i class="octicon octicon-file-zip"></i>ZIP</a>
+                            <a class="btn btn-green btn-radius" href="{{$.RepoLink}}/archive/{{EscapePound $.BranchName}}.tar.gz"><i class="octicon octicon-file-zip"></i>TAR.GZ</a>
+                        </div>
+                    </div>
+                </div>
+            </li>
+            <li id="repo-header-watch">
+                <a id="repo-header-watch-btn" href="{{$.RepoLink}}/action/{{if $.IsWatchingRepo}}un{{end}}watch">
+                    <button class="btn btn-gray text-bold btn-radius">
+                        <i class="octicon octicon-eye-watch"></i>{{if $.IsWatchingRepo}}{{$.i18n.Tr "repo.unwatch"}}{{else}}{{$.i18n.Tr "repo.watch"}}{{end}}<span class="num">{{.NumWatches}}</span>
+                    </button>
+                </a>
+            </li>
+            <li id="repo-header-star">
+                <a id="repo-header-star-btn" href="{{$.RepoLink}}/action/{{if $.IsStaringRepo}}un{{end}}star">
+                    <button class="btn btn-gray text-bold btn-radius">
+                        <i class="octicon octicon-star"></i>{{if $.IsStaringRepo}}{{$.i18n.Tr "repo.unstar"}}{{else}}{{$.i18n.Tr "repo.star"}}{{end}}
+                        <span class="num">{{.NumStars}}</span>
+                    </button>
+                </a>
+            </li>
+            <li id="repo-header-fork">
+                <a id="repo-header-fork-btn" {{if or (not $.IsRepositoryAdmin) $.Owner.IsOrganization}}href="{{AppSubUrl}}/repo/fork?fork_id={{.Id}}"{{end}}>
+                    <button class="btn btn-gray text-bold btn-radius">
+                        <i class="octicon octicon-repo-forked"></i>{{$.i18n.Tr "repo.fork"}}
+                        <span class="num">{{.NumForks}}</span>
+                    </button>
+                </a>
+            
+            </li>
+        </ul>
+    </div>
+</div>
+{{end}}
