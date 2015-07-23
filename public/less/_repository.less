@@ -1,0 +1,78 @@
+.repository {
+	@mega-octicon-width: 30px;
+
+	padding-top: 15px;
+	padding-bottom: @footer-margin * 3;
+	.head {
+		height: 75px;
+		padding-top: 20px;
+		background-color: #FCFCFC;
+		.mega-octicon {
+			width: @mega-octicon-width;
+		}
+		a,
+		.fork-flag {
+			font-weight: 300;
+		}
+		.ui.label {
+			margin-top: 5px;
+			vertical-align: top;
+		}
+		.fork-flag {
+			margin-left: @mega-octicon-width + 8px;
+			display: block;
+			font-size: 11px;
+			line-height: 10px;
+			white-space: nowrap;
+		}
+		.button {
+			margin-left: 10px;
+			i {
+				margin-right: 5px;
+			}
+		}
+		.num {
+			font-weight: bold;
+		}
+		.octicon {
+			height: 5px;
+		}
+	}
+	.navbar {
+		height: 60px;
+		padding-top: 20px;
+	}
+	.filter.menu .label.color {
+		padding: 0 8px;
+	}
+	.type.item .menu {
+		  right: 0!important;
+  		left: auto!important;
+	}
+	.issue.list {
+		list-style: none;
+		font-size: 13px;
+		padding-top: 60px;
+		.item {
+			padding-bottom: 10px;
+			border-bottom: 1px dashed #AAA;
+			.title {
+				color: #444;
+				font-size: 15px;
+				font-weight: bold;
+				margin: 0 6px;
+				&:hover {
+					color: #000;
+				}
+			}
+			.comment {
+				padding-right: 10px;
+				color: #666;
+			}
+			.desc {
+				padding-top: 5px;
+				color: #999;
+			}
+		}
+	}
+}

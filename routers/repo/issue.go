@@ -41,7 +41,8 @@ var (
 )
 
 func Issues(ctx *middleware.Context) {
-	ctx.Data["Title"] = "Issues"
+	ctx.Data["Title"] = ctx.Tr("repo.issues")
+	ctx.Data["PageIsIssueList"] = true
 	ctx.Data["IsRepoToolbarIssues"] = true
 	ctx.Data["IsRepoToolbarIssuesList"] = true
 
