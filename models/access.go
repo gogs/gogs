@@ -173,12 +173,11 @@ func (repo *Repository) refreshCollaboratorAccesses(e Engine, accessMap map[int6
 func (repo *Repository) recalculateTeamAccesses(e Engine, ignTeamID int64) (err error) {
 	accessMap := make(map[int64]AccessMode, 20)
 
-	if err = repo.refreshCollaboratorAccesses(e, accessMap); err != nil {
-		return fmt.Errorf("refreshCollaboratorAccesses: %v", err)
-	}
-
 	if err = repo.getOwner(e); err != nil {
 		return err
+	}
+	if err = repo.refreshCollaboratorAccesses(e, accessMap); err != nil {
+		return fmt.Errorf("refreshCollaboratorAccesses: %v", err)
 	}
 	if repo.Owner.IsOrganization() {
 		if err = repo.Owner.getTeams(e); err != nil {
