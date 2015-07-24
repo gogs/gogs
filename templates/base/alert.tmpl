@@ -3,3 +3,8 @@
   <p>{{.Flash.ErrorMsg}}</p>
 </div>
 {{end}}
+{{if .Flash.SuccessMsg}}
+<div class="ui positive message">
+  <p>{{.Flash.SuccessMsg}}</p>
+</div>
+{{end}}

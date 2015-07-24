@@ -936,44 +936,40 @@ func NewLabel(ctx *middleware.Context, form auth.CreateLabelForm) {
 }
 
 func UpdateLabel(ctx *middleware.Context, form auth.CreateLabelForm) {
-	id := com.StrTo(ctx.Query("id")).MustInt64()
-	if id == 0 {
-		ctx.Error(404)
+	l, err := models.GetLabelById(form.ID)
+	if err != nil {
+		switch err {
+		case models.ErrLabelNotExist:
+			ctx.Error(404)
+		default:
+			ctx.Handle(500, "UpdateLabel", err)
+		}
 		return
 	}
 
-	l := &models.Label{
-		ID:    id,
-		Name:  form.Title,
-		Color: form.Color,
-	}
+	l.Name = form.Title
+	l.Color = form.Color
 	if err := models.UpdateLabel(l); err != nil {
-		ctx.Handle(500, "issue.UpdateLabel(UpdateLabel)", err)
+		ctx.Handle(500, "UpdateLabel", err)
 		return
 	}
-	ctx.Redirect(ctx.Repo.RepoLink + "/issues")
+	ctx.Redirect(ctx.Repo.RepoLink + "/labels")
 }
 
 func DeleteLabel(ctx *middleware.Context) {
-	removes := ctx.Query("remove")
-	if len(strings.TrimSpace(removes)) == 0 {
-		ctx.JSON(200, map[string]interface{}{
-			"ok": true,
-		})
-		return
-	}
-
-	strIds := strings.Split(removes, ",")
-	for _, strId := range strIds {
-		if err := models.DeleteLabel(ctx.Repo.Repository.Id, strId); err != nil {
-			ctx.Handle(500, "issue.DeleteLabel(DeleteLabel)", err)
-			return
+	id := ctx.QueryInt64("id")
+	if id > 0 {
+		if err := models.DeleteLabel(ctx.Repo.Repository.Id, id); err != nil {
+			ctx.Flash.Error("DeleteLabel: " + err.Error())
+		} else {
+			ctx.Flash.Success(ctx.Tr("repo.issues.label_deletion_success"))
 		}
 	}
 
 	ctx.JSON(200, map[string]interface{}{
-		"ok": true,
+		"redirect": ctx.Repo.RepoLink + "/labels",
 	})
+	return
 }
 
 func Milestones(ctx *middleware.Context) {

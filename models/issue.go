@@ -242,10 +242,9 @@ const (
 )
 
 // GetIssuesByLabel returns a list of issues by given label and repository.
-func GetIssuesByLabel(repoId int64, label string) ([]*Issue, error) {
+func GetIssuesByLabel(repoID, labelID int64) ([]*Issue, error) {
 	issues := make([]*Issue, 0, 10)
-	err := x.Where("repo_id=?", repoId).And("label_ids like '%$" + label + "|%'").Find(&issues)
-	return issues, err
+	return issues, x.Where("repo_id=?", repoID).And("label_ids like '%$" + com.ToStr(labelID) + "|%'").Find(&issues)
 }
 
 // GetIssueCountByPoster returns number of issues of repository by poster.
@@ -577,9 +576,8 @@ func UpdateLabel(l *Label) error {
 }
 
 // DeleteLabel delete a label of given repository.
-func DeleteLabel(repoId int64, strId string) error {
-	id, _ := com.StrTo(strId).Int64()
-	l, err := GetLabelById(id)
+func DeleteLabel(repoID, labelID int64) error {
+	l, err := GetLabelById(labelID)
 	if err != nil {
 		if err == ErrLabelNotExist {
 			return nil
@@ -587,27 +585,25 @@ func DeleteLabel(repoId int64, strId string) error {
 		return err
 	}
 
-	issues, err := GetIssuesByLabel(repoId, strId)
+	issues, err := GetIssuesByLabel(repoID, labelID)
 	if err != nil {
 		return err
 	}
 
 	sess := x.NewSession()
-	defer sess.Close()
+	defer sessionRelease(sess)
 	if err = sess.Begin(); err != nil {
 		return err
 	}
 
 	for _, issue := range issues {
-		issue.LabelIds = strings.Replace(issue.LabelIds, "$"+strId+"|", "", -1)
+		issue.LabelIds = strings.Replace(issue.LabelIds, "$"+com.ToStr(labelID)+"|", "", -1)
 		if _, err = sess.Id(issue.ID).AllCols().Update(issue); err != nil {
-			sess.Rollback()
 			return err
 		}
 	}
 
 	if _, err = sess.Delete(l); err != nil {
-		sess.Rollback()
 		return err
 	}
 	return sess.Commit()
