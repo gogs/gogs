@@ -1,0 +1,64 @@
+{{template "base/head" .}}
+<div class="repository labels">
+	{{template "repo/header" .}}
+	<div class="ui middle page grid body">
+		<div class="navbar">
+			{{template "repo/issue/navbar" .}}
+			{{if .IsRepositoryAdmin}}
+			<form class="ui right form" action="{{$.RepoLink}}/labels/new" method="post">
+				{{.CsrfTokenHtml}}
+				<div class="ui right floated secondary menu">
+					<div class="item">
+						<div class="ui large input">
+						  <input class="new-label-input" name="title" placeholder="{{.i18n.Tr "repo.issues.new_label_placeholder"}}" required>
+						</div>
+					</div>
+					<div class="item">
+						<div class="ui large input">
+			        <input class="color-picker" name="color" value="#70c24a" required>
+			    	</div>
+					</div>
+					<div class="item precolors">
+						<a class="color" style="background-color:#e11d21" data-color-hex="#e11d21"></a>
+						<a class="color" style="background-color:#eb6420" data-color-hex="#eb6420"></a>
+						<a class="color" style="background-color:#fbca04" data-color-hex="#fbca04"></a>
+						<a class="color" style="background-color:#009800" data-color-hex="#009800"></a>
+						<a class="color" style="background-color:#006b75" data-color-hex="#006b75"></a>
+						<a class="color" style="background-color:#207de5" data-color-hex="#207de5"></a>
+						<a class="color" style="background-color:#0052cc" data-color-hex="#0052cc"></a>
+						<a class="color" style="background-color:#53e917" data-color-hex="#53e917"></a>
+						<a class="color" style="background-color:#f6c6c7" data-color-hex="#f6c6c7"></a>
+						<a class="color" style="background-color:#fad8c7" data-color-hex="#fad8c7"></a>
+						<a class="color" style="background-color:#fef2c0" data-color-hex="#fef2c0"></a>
+						<a class="color" style="background-color:#bfe5bf" data-color-hex="#bfe5bf"></a>
+						<a class="color" style="background-color:#bfdadc" data-color-hex="#bfdadc"></a>
+						<a class="color" style="background-color:#c7def8" data-color-hex="#c7def8"></a>
+						<a class="color" style="background-color:#bfd4f2" data-color-hex="#bfd4f2"></a>
+						<a class="color" style="background-color:#d4c5f9" data-color-hex="#d4c5f9"></a>
+					</div>
+					<button class="ui green button">{{.i18n.Tr "repo.issues.new_label"}}</button>
+				</div>
+			</form>
+			{{end}}
+		</div>
+		<div class="ui divider"></div>
+		{{template "repo/issue/alert" .}}
+		<div class="ui left">
+			<div class="ui black label">{{.i18n.Tr "repo.issues.label_count" .NumLabels}}</div>
+		</div>
+
+		<div class="label list">
+			{{range .Labels}}
+			<li class="item">
+				<div class="ui label" style="background-color: {{.Color}}"><i class="octicon octicon-tag"></i> {{.Name}}</div>
+				{{if $.IsRepositoryAdmin}}
+				<a class="ui right" href="#"><i class="octicon octicon-x"></i> {{$.i18n.Tr "repo.issues.label_delete"}}</a>
+				<a class="ui right" href="#"><i class="octicon octicon-pencil"></i> {{$.i18n.Tr "repo.issues.label_edit"}}</a>
+				{{end}}
+				<a class="ui right open-issues" href="{{$.RepoLink}}/issues?labels={{.ID}}"><i class="octicon octicon-issue-opened"></i> {{$.i18n.Tr "repo.issues.label_open_issues" .NumOpenIssues}}</a>
+			</li>
+			{{end}}
+		</div>
+	</div>
+</div>
+{{template "base/footer" .}}

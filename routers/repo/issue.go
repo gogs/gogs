@@ -30,6 +30,8 @@ const (
 	ISSUE_CREATE base.TplName = "repo/issue/create"
 	ISSUE_VIEW   base.TplName = "repo/issue/view"
 
+	LABELS base.TplName = "repo/issue/labels"
+
 	MILESTONE      base.TplName = "repo/issue/milestone"
 	MILESTONE_NEW  base.TplName = "repo/issue/milestone_new"
 	MILESTONE_EDIT base.TplName = "repo/issue/milestone_edit"
@@ -39,6 +41,19 @@ var (
 	ErrFileTypeForbidden = errors.New("File type is not allowed")
 	ErrTooManyFiles      = errors.New("Maximum number of files to upload exceeded")
 )
+
+func RetrieveLabels(ctx *middleware.Context) {
+	labels, err := models.GetLabels(ctx.Repo.Repository.Id)
+	if err != nil {
+		ctx.Handle(500, "RetrieveLabels.GetLabels: %v", err)
+		return
+	}
+	for _, l := range labels {
+		l.CalOpenIssues()
+	}
+	ctx.Data["Labels"] = labels
+	ctx.Data["NumLabels"] = len(labels)
+}
 
 func Issues(ctx *middleware.Context) {
 	ctx.Data["Title"] = ctx.Tr("repo.issues")
@@ -85,17 +100,6 @@ func Issues(ctx *middleware.Context) {
 		mid = mile.Id
 	}
 
-	selectLabels := ctx.Query("labels")
-	labels, err := models.GetLabels(repo.Id)
-	if err != nil {
-		ctx.Handle(500, "GetLabels: %v", err)
-		return
-	}
-	for _, l := range labels {
-		l.CalOpenIssues()
-	}
-	ctx.Data["Labels"] = labels
-
 	page := ctx.QueryInt("page")
 	if page <= 1 {
 		page = 1
@@ -106,6 +110,8 @@ func Issues(ctx *middleware.Context) {
 		(isShowClosed && repo.NumClosedIssues > setting.IssuePagingNum*page) {
 		ctx.Data["NextPage"] = page + 1
 	}
+
+	selectLabels := ctx.Query("labels")
 
 	// Get issues.
 	issues, err := models.GetIssues(assigneeId, repo.Id, posterId, mid, page,
@@ -125,24 +131,26 @@ func Issues(ctx *middleware.Context) {
 	// Get posters.
 	for i := range issues {
 		if err = issues[i].GetLabels(); err != nil {
-			ctx.Handle(500, "GetLabels", fmt.Errorf("[#%d]%v", issues[i].Id, err))
+			ctx.Handle(500, "GetLabels", fmt.Errorf("[#%d]%v", issues[i].ID, err))
 			return
 		}
 
-		idx := models.PairsContains(pairs, issues[i].Id, ctx.User.Id)
+		if ctx.IsSigned {
+			idx := models.PairsContains(pairs, issues[i].ID, ctx.User.Id)
 
-		if filterMode == models.FM_MENTION && (idx == -1 || !pairs[idx].IsMentioned) {
-			continue
-		}
+			if filterMode == models.FM_MENTION && (idx == -1 || !pairs[idx].IsMentioned) {
+				continue
+			}
 
-		if idx > -1 {
-			issues[i].IsRead = pairs[idx].IsRead
-		} else {
-			issues[i].IsRead = true
+			if idx > -1 {
+				issues[i].IsRead = pairs[idx].IsRead
+			} else {
+				issues[i].IsRead = true
+			}
 		}
 
 		if err = issues[i].GetPoster(); err != nil {
-			ctx.Handle(500, "GetPoster", fmt.Errorf("[#%d]%v", issues[i].Id, err))
+			ctx.Handle(500, "GetPoster", fmt.Errorf("[#%d]%v", issues[i].ID, err))
 			return
 		}
 	}
@@ -257,14 +265,14 @@ func CreateIssuePost(ctx *middleware.Context, form auth.CreateIssueForm) {
 	if err := models.NewIssue(issue); err != nil {
 		send(500, nil, err)
 		return
-	} else if err := models.NewIssueUserPairs(ctx.Repo.Repository, issue.Id, ctx.Repo.Owner.Id,
+	} else if err := models.NewIssueUserPairs(ctx.Repo.Repository, issue.ID, ctx.Repo.Owner.Id,
 		ctx.User.Id, form.AssigneeId); err != nil {
 		send(500, nil, err)
 		return
 	}
 
 	if setting.AttachmentEnabled {
-		uploadFiles(ctx, issue.Id, 0)
+		uploadFiles(ctx, issue.ID, 0)
 	}
 
 	// Update mentions.
@@ -274,7 +282,7 @@ func CreateIssuePost(ctx *middleware.Context, form auth.CreateIssueForm) {
 			ms[i] = ms[i][1:]
 		}
 
-		if err := models.UpdateMentions(ms, issue.Id); err != nil {
+		if err := models.UpdateMentions(ms, issue.ID); err != nil {
 			send(500, nil, err)
 			return
 		}
@@ -321,7 +329,7 @@ func CreateIssuePost(ctx *middleware.Context, form auth.CreateIssueForm) {
 			return
 		}
 	}
-	log.Trace("%d Issue created: %d", ctx.Repo.Repository.Id, issue.Id)
+	log.Trace("%d Issue created: %d", ctx.Repo.Repository.Id, issue.ID)
 
 	send(200, fmt.Sprintf("%s/%s/%s/issues/%d", setting.AppSubUrl, ctx.Params(":username"), ctx.Params(":reponame"), issue.Index), nil)
 }
@@ -329,7 +337,7 @@ func CreateIssuePost(ctx *middleware.Context, form auth.CreateIssueForm) {
 func checkLabels(labels, allLabels []*models.Label) {
 	for _, l := range labels {
 		for _, l2 := range allLabels {
-			if l.Id == l2.Id {
+			if l.ID == l2.ID {
 				l2.IsChecked = true
 				break
 			}
@@ -403,7 +411,7 @@ func ViewIssue(ctx *middleware.Context) {
 
 	if ctx.IsSigned {
 		// Update issue-user.
-		if err = models.UpdateIssueUserPairByRead(ctx.User.Id, issue.Id); err != nil {
+		if err = models.UpdateIssueUserPairByRead(ctx.User.Id, issue.ID); err != nil {
 			ctx.Handle(500, "issue.ViewIssue(UpdateIssueUserPairByRead): %v", err)
 			return
 		}
@@ -420,7 +428,7 @@ func ViewIssue(ctx *middleware.Context) {
 	issue.RenderedContent = string(base.RenderMarkdown([]byte(issue.Content), ctx.Repo.RepoLink))
 
 	// Get comments.
-	comments, err := models.GetIssueComments(issue.Id)
+	comments, err := models.GetIssueComments(issue.ID)
 	if err != nil {
 		ctx.Handle(500, "issue.ViewIssue(GetIssueComments): %v", err)
 		return
@@ -642,7 +650,7 @@ func UpdateAssignee(ctx *middleware.Context) {
 	aid := com.StrTo(ctx.Query("assigneeid")).MustInt64()
 	// Not check for invalid assignee id and give responsibility to owners.
 	issue.AssigneeId = aid
-	if err = models.UpdateIssueUserPairByAssignee(aid, issue.Id); err != nil {
+	if err = models.UpdateIssueUserPairByAssignee(aid, issue.ID); err != nil {
 		ctx.Handle(500, "UpdateIssueUserPairByAssignee: %v", err)
 		return
 	} else if err = models.UpdateIssue(issue); err != nil {
@@ -774,7 +782,7 @@ func Comment(ctx *middleware.Context) {
 			if err = models.UpdateIssue(issue); err != nil {
 				send(500, nil, err)
 				return
-			} else if err = models.UpdateIssueUserPairsByStatus(issue.Id, issue.IsClosed); err != nil {
+			} else if err = models.UpdateIssueUserPairsByStatus(issue.ID, issue.IsClosed); err != nil {
 				send(500, nil, err)
 				return
 			}
@@ -809,11 +817,11 @@ func Comment(ctx *middleware.Context) {
 				cmtType = models.COMMENT_TYPE_REOPEN
 			}
 
-			if _, err = models.CreateComment(ctx.User.Id, ctx.Repo.Repository.Id, issue.Id, 0, 0, cmtType, "", nil); err != nil {
+			if _, err = models.CreateComment(ctx.User.Id, ctx.Repo.Repository.Id, issue.ID, 0, 0, cmtType, "", nil); err != nil {
 				send(200, nil, err)
 				return
 			}
-			log.Trace("%s Issue(%d) status changed: %v", ctx.Req.RequestURI, issue.Id, !issue.IsClosed)
+			log.Trace("%s Issue(%d) status changed: %v", ctx.Req.RequestURI, issue.ID, !issue.IsClosed)
 		}
 	}
 
@@ -825,7 +833,7 @@ func Comment(ctx *middleware.Context) {
 	if len(content) > 0 || len(ctx.Req.MultipartForm.File["attachments"]) > 0 {
 		switch ctx.Params(":action") {
 		case "new":
-			if comment, err = models.CreateComment(ctx.User.Id, ctx.Repo.Repository.Id, issue.Id, 0, 0, models.COMMENT_TYPE_COMMENT, content, nil); err != nil {
+			if comment, err = models.CreateComment(ctx.User.Id, ctx.Repo.Repository.Id, issue.ID, 0, 0, models.COMMENT_TYPE_COMMENT, content, nil); err != nil {
 				send(500, nil, err)
 				return
 			}
@@ -837,13 +845,13 @@ func Comment(ctx *middleware.Context) {
 					ms[i] = ms[i][1:]
 				}
 
-				if err := models.UpdateMentions(ms, issue.Id); err != nil {
+				if err := models.UpdateMentions(ms, issue.ID); err != nil {
 					send(500, nil, err)
 					return
 				}
 			}
 
-			log.Trace("%s Comment created: %d", ctx.Req.RequestURI, issue.Id)
+			log.Trace("%s Comment created: %d", ctx.Req.RequestURI, issue.ID)
 		default:
 			ctx.Handle(404, "issue.Comment", err)
 			return
@@ -851,7 +859,7 @@ func Comment(ctx *middleware.Context) {
 	}
 
 	if comment != nil {
-		uploadFiles(ctx, issue.Id, comment.Id)
+		uploadFiles(ctx, issue.ID, comment.Id)
 	}
 
 	// Notify watchers.
@@ -899,9 +907,19 @@ func Comment(ctx *middleware.Context) {
 	send(200, fmt.Sprintf("%s/issues/%d", ctx.Repo.RepoLink, index), nil)
 }
 
+func Labels(ctx *middleware.Context) {
+	ctx.Data["Title"] = ctx.Tr("repo.labels")
+	ctx.Data["PageIsLabels"] = true
+	ctx.HTML(200, LABELS)
+}
+
 func NewLabel(ctx *middleware.Context, form auth.CreateLabelForm) {
+	ctx.Data["Title"] = ctx.Tr("repo.labels")
+	ctx.Data["PageIsLabels"] = true
+
 	if ctx.HasError() {
-		Issues(ctx)
+		ctx.Flash.Error(ctx.Data["ErrorMsg"].(string))
+		ctx.Redirect(ctx.Repo.RepoLink + "/labels")
 		return
 	}
 
@@ -911,10 +929,10 @@ func NewLabel(ctx *middleware.Context, form auth.CreateLabelForm) {
 		Color:  form.Color,
 	}
 	if err := models.NewLabel(l); err != nil {
-		ctx.Handle(500, "issue.NewLabel(NewLabel)", err)
+		ctx.Handle(500, "NewLabel", err)
 		return
 	}
-	ctx.Redirect(ctx.Repo.RepoLink + "/issues")
+	ctx.Redirect(ctx.Repo.RepoLink + "/labels")
 }
 
 func UpdateLabel(ctx *middleware.Context, form auth.CreateLabelForm) {
@@ -925,7 +943,7 @@ func UpdateLabel(ctx *middleware.Context, form auth.CreateLabelForm) {
 	}
 
 	l := &models.Label{
-		Id:    id,
+		ID:    id,
 		Name:  form.Title,
 		Color: form.Color,
 	}
@@ -1151,18 +1169,8 @@ func IssueGetAttachment(ctx *middleware.Context) {
 	ctx.ServeFile(attachment.Path, "\""+attachment.Name+"\"")
 }
 
-// testing route handler for new issue ui page
-// todo : move to Issue() function
-func Issues2(ctx *middleware.Context) {
-	ctx.HTML(200, "repo/issue2/list")
-}
-
 func PullRequest2(ctx *middleware.Context) {
 	ctx.HTML(200, "repo/pr2/list")
-}
-
-func Labels2(ctx *middleware.Context) {
-	ctx.HTML(200, "repo/issue2/labels")
 }
 
 func Milestones2(ctx *middleware.Context) {

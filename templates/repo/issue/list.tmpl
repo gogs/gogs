@@ -4,9 +4,11 @@
 	<div class="ui middle page grid body">
 		<div class="navbar">
 			{{template "repo/issue/navbar" .}}
+			{{if .IsRepositoryAdmin}}
 			<div class="ui right floated secondary menu">
 				<a class="ui green button" href="{{$.RepoLink}}/issues/new">{{.i18n.Tr "repo.issues.new"}}</a>
 			</div>
+			{{end}}
 		</div>
 		<div class="ui divider"></div>
 		<div class="ui left">
@@ -29,7 +31,7 @@
 				</span>
         <div class="menu">
         	{{range .Labels}}
-        	<a class="item" href="{{$.RepoLink}}/issues?type={{$.ViewType}}&state={{$.State}}&labels={{.Id}}"><span class="label color" style="background-color: {{.Color}}"></span> {{.Name}}</a>
+        	<a class="item" href="{{$.RepoLink}}/issues?type={{$.ViewType}}&state={{$.State}}&labels={{.ID}}"><span class="label color" style="background-color: {{.Color}}"></span> {{.Name}}</a>
           {{end}}
 				</div>
 			</div>
@@ -73,7 +75,7 @@
 			{{range .Issues}}
 			{{ $timeStr:= TimeSince .Created $.Lang }}
       <li class="item">
-      	<div class="ui {{if .IsRead}}black{{else}}green{{end}} label">#{{.Id}}</div>
+      	<div class="ui {{if .IsRead}}black{{else}}green{{end}} label">#{{.Index}}</div>
       	<a class="title" href="{{$.RepoLink}}/issues/{{.Index}}">{{.Name}}</a>
       	{{if .NumComments}}<span class="comment ui right"><i class="octicon octicon-comment"></i> {{.NumComments}}</span>{{end}}
         <p class="desc">{{$.i18n.Tr "repo.issues.opened_by" $timeStr .Poster.Name|Str2html}}</p>

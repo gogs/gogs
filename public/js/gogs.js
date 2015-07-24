@@ -32,6 +32,24 @@ function initInstall() {
     });
 };
 
+function initRepository(){
+    if ($('.repository').length == 0) {
+        return;
+    }
+
+    if ($('.labels').length == 0) {
+        return;
+    }
+    $('.color-picker').each( function() {
+        $(this).minicolors();
+    });
+    $('.precolors .color').click(function(){
+        var color_hex = $(this).data('color-hex')
+        $('.color-picker').val(color_hex);
+        $('.minicolors-swatch-color').css("background-color", color_hex);
+    });
+};
+
 $(document).ready(function () {
     // Semantic UI modules.
     $('.dropdown').dropdown();
@@ -46,4 +64,5 @@ $(document).ready(function () {
     $('.poping.up').popup();
 
     initInstall();
+    initRepository();
 });
