@@ -1037,7 +1037,7 @@ var (
 	// Prevent duplicate tasks.
 	isMirrorUpdating = false
 	isGitFscking     = false
-	isCheckRepos     = false
+	isCheckingRepos  = false
 )
 
 // MirrorUpdate checks and updates mirror repositories.
@@ -1130,11 +1130,11 @@ func GitGcRepos() error {
 }
 
 func CheckRepoStats() {
-	if isCheckRepos {
+	if isCheckingRepos {
 		return
 	}
-	isCheckRepos = true
-	defer func() { isCheckRepos = false }()
+	isCheckingRepos = true
+	defer func() { isCheckingRepos = false }()
 
 	// Check count watchers
 	results_watch, err := x.Query("SELECT r.id FROM `repository` r WHERE r.num_watches!=(SELECT count(*) FROM `watch` WHERE repo_id=r.id)")
