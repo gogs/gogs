@@ -93,19 +93,20 @@ func Issues(ctx *middleware.Context) {
 	}
 
 	repo := ctx.Repo.Repository
+	selectLabels := ctx.Query("labels")
 	milestoneID := ctx.QueryInt64("milestone")
+	issueStats := models.GetIssueStats(repo.Id, uid, com.StrTo(selectLabels).MustInt64(), isShowClosed, filterMode)
+
 	page := ctx.QueryInt("page")
 	if page <= 1 {
 		page = 1
 	} else {
 		ctx.Data["PreviousPage"] = page - 1
 	}
-	if (!isShowClosed && repo.NumOpenIssues > setting.IssuePagingNum*page) ||
-		(isShowClosed && repo.NumClosedIssues > setting.IssuePagingNum*page) {
+	if (!isShowClosed && int(issueStats.OpenCount) > setting.IssuePagingNum*page) ||
+		(isShowClosed && int(issueStats.ClosedCount) > setting.IssuePagingNum*page) {
 		ctx.Data["NextPage"] = page + 1
 	}
-
-	selectLabels := ctx.Query("labels")
 
 	// Get issues.
 	issues, err := models.GetIssues(uid, assigneeID, repo.Id, posterID, milestoneID,
@@ -148,7 +149,6 @@ func Issues(ctx *middleware.Context) {
 		}
 	}
 
-	issueStats := models.GetIssueStats(repo.Id, uid, com.StrTo(selectLabels).MustInt64(), isShowClosed, filterMode)
 	ctx.Data["IssueStats"] = issueStats
 	ctx.Data["SelectLabels"] = com.StrTo(selectLabels).MustInt64()
 	ctx.Data["ViewType"] = viewType
