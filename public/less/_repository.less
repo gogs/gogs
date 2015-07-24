@@ -41,6 +41,42 @@
 	.navbar {
 		height: 60px;
 		padding-top: 20px;
+		.ui.secondary.menu .item {
+			margin-left: -10px;
+			margin-top: -7px;
+			&>.input {
+				.new-label-input,
+				.color-picker {
+					background-color: white;
+					border: 1px solid rgba(0,0,0,.15);
+				}
+			}
+			.new-label-input {
+				width: 150px;
+			}
+			.color-picker {
+				height: 35px;
+				width: auto;
+				padding-left: 30px;
+			}
+			.minicolors-swatch.minicolors-sprite {
+				top: 10px;
+				left: 10px;
+				width: 15px;
+				height: 15px;
+			}
+			&.precolors {
+				padding-left: 0;
+				padding-right: 0;
+				margin-right: 10px;
+				width: 120px;
+				.color {
+					float: left;
+					width: 15px;
+					height: 15px;
+				}
+			}
+		}
 	}
 	.filter.menu .label.color {
 		padding: 0 8px;
@@ -50,9 +86,10 @@
   		left: auto!important;
 	}
 	.issue.list {
+		clear: both;
 		list-style: none;
 		font-size: 13px;
-		padding-top: 45px;
+		padding-top: 15px;
 		.item {
 			padding-top: 15px;
 			padding-bottom: 10px;
@@ -77,6 +114,27 @@
 		}
 		.page.buttons {
 			padding-top: 15px;
+		}
+	}
+	.label.list {
+		clear: both;
+		padding-top: 15px;
+		.item {
+			padding-top: 10px;
+			padding-bottom: 10px;
+			border-bottom: 1px dashed #AAA;
+			a {
+				font-size: 15px;
+				padding-top: 5px;
+				padding-right: 10px;
+				color: #666;
+				&:hover {
+					color: #000;
+				}
+				&.open-issues {
+					margin-right: 30px;
+				}
+			}
 		}
 	}
 }

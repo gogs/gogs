@@ -80,7 +80,7 @@ func checkVersion() {
 	// Check dependency version.
 	checkers := []VerChecker{
 		{"github.com/Unknwon/macaron", macaron.Version, "0.5.4"},
-		{"github.com/macaron-contrib/binding", binding.Version, "0.0.6"},
+		{"github.com/macaron-contrib/binding", binding.Version, "0.1.0"},
 		{"github.com/macaron-contrib/cache", cache.Version, "0.0.7"},
 		{"github.com/macaron-contrib/csrf", csrf.Version, "0.0.3"},
 		{"github.com/macaron-contrib/i18n", i18n.Version, "0.0.7"},
@@ -442,15 +442,14 @@ func runWeb(ctx *cli.Context) {
 
 	m.Group("/:username/:reponame", func() {
 		m.Get("/releases", middleware.RepoRef(), repo.Releases)
-		m.Get("/issues", repo.Issues)
+		m.Get("/issues", repo.RetrieveLabels, repo.Issues)
 		m.Get("/issues/:index", repo.ViewIssue)
+		m.Get("/labels/", repo.RetrieveLabels, repo.Labels)
 		m.Get("/milestones", repo.Milestones)
 		m.Get("/pulls", repo.Pulls)
 		m.Get("/branches", repo.Branches)
 		m.Get("/archive/*", repo.Download)
-		m.Get("/issues2/", repo.Issues2)
 		m.Get("/pulls2/", repo.PullRequest2)
-		m.Get("/labels2/", repo.Labels2)
 		m.Get("/milestone2/", repo.Milestones2)
 
 		m.Group("", func() {

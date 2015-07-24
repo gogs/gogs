@@ -876,7 +876,7 @@ func DeleteRepository(uid, repoID int64, userName string) error {
 		return err
 	}
 	for i := range issues {
-		if _, err = sess.Delete(&Comment{IssueId: issues[i].Id}); err != nil {
+		if _, err = sess.Delete(&Comment{IssueId: issues[i].ID}); err != nil {
 			return err
 		}
 	}

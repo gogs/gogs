@@ -32,7 +32,7 @@ var (
 
 // Issue represents an issue or pull request of repository.
 type Issue struct {
-	Id              int64
+	ID              int64 `xorm:"pk autoincr"`
 	RepoId          int64 `xorm:"INDEX"`
 	Index           int64 // Index in one repository.
 	Name            string
@@ -100,15 +100,15 @@ func (i *Issue) GetAssignee() (err error) {
 }
 
 func (i *Issue) Attachments() []*Attachment {
-	a, _ := GetAttachmentsForIssue(i.Id)
+	a, _ := GetAttachmentsForIssue(i.ID)
 	return a
 }
 
 func (i *Issue) AfterDelete() {
-	_, err := DeleteAttachmentsByIssue(i.Id, true)
+	_, err := DeleteAttachmentsByIssue(i.ID, true)
 
 	if err != nil {
-		log.Info("Could not delete files for issue #%d: %s", i.Id, err)
+		log.Info("Could not delete files for issue #%d: %s", i.ID, err)
 	}
 }
 
@@ -175,7 +175,7 @@ func GetIssueByIndex(rid, index int64) (*Issue, error) {
 
 // GetIssueById returns an issue by ID.
 func GetIssueById(id int64) (*Issue, error) {
-	issue := &Issue{Id: id}
+	issue := &Issue{ID: id}
 	has, err := x.Get(issue)
 	if err != nil {
 		return nil, err
@@ -456,7 +456,7 @@ func GetUserIssueStats(uid int64, filterMode int) *IssueStats {
 
 // UpdateIssue updates information of issue.
 func UpdateIssue(issue *Issue) error {
-	_, err := x.Id(issue.Id).AllCols().Update(issue)
+	_, err := x.Id(issue.ID).AllCols().Update(issue)
 
 	if err != nil {
 		return err
@@ -526,7 +526,7 @@ func UpdateIssueUserPairsByMentions(uids []int64, iid int64) error {
 
 // Label represents a label of repository for issues.
 type Label struct {
-	Id              int64
+	ID              int64 `xorm:"pk autoincr"`
 	RepoId          int64 `xorm:"INDEX"`
 	Name            string
 	Color           string `xorm:"VARCHAR(7)"`
@@ -553,7 +553,7 @@ func GetLabelById(id int64) (*Label, error) {
 		return nil, ErrLabelNotExist
 	}
 
-	l := &Label{Id: id}
+	l := &Label{ID: id}
 	has, err := x.Get(l)
 	if err != nil {
 		return nil, err
@@ -572,7 +572,7 @@ func GetLabels(repoId int64) ([]*Label, error) {
 
 // UpdateLabel updates label information.
 func UpdateLabel(l *Label) error {
-	_, err := x.Id(l.Id).AllCols().Update(l)
+	_, err := x.Id(l.ID).AllCols().Update(l)
 	return err
 }
 
@@ -600,7 +600,7 @@ func DeleteLabel(repoId int64, strId string) error {
 
 	for _, issue := range issues {
 		issue.LabelIds = strings.Replace(issue.LabelIds, "$"+strId+"|", "", -1)
-		if _, err = sess.Id(issue.Id).AllCols().Update(issue); err != nil {
+		if _, err = sess.Id(issue.ID).AllCols().Update(issue); err != nil {
 			sess.Rollback()
 			return err
 		}
@@ -788,7 +788,7 @@ func ChangeMilestoneAssign(oldMid, mid int64, issue *Issue) (err error) {
 		}
 
 		rawSql := "UPDATE `issue_user` SET milestone_id = 0 WHERE issue_id = ?"
-		if _, err = sess.Exec(rawSql, issue.Id); err != nil {
+		if _, err = sess.Exec(rawSql, issue.ID); err != nil {
 			sess.Rollback()
 			return err
 		}
@@ -816,7 +816,7 @@ func ChangeMilestoneAssign(oldMid, mid int64, issue *Issue) (err error) {
 		}
 
 		rawSql := "UPDATE `issue_user` SET milestone_id = ? WHERE issue_id = ?"
-		if _, err = sess.Exec(rawSql, m.Id, issue.Id); err != nil {
+		if _, err = sess.Exec(rawSql, m.Id, issue.ID); err != nil {
 			sess.Rollback()
 			return err
 		}
