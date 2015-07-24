@@ -11,6 +11,7 @@ import (
 )
 
 type AdminEditUserForm struct {
+	FullName     string `form:"fullname" binding:"MaxSize(100)"`
 	Email        string `binding:"Required;Email;MaxSize(50)"`
 	Password     string `binding:"OmitEmpty;MinSize(6);MaxSize(255)"`
 	Website      string `binding:"MaxSize(50)"`
