@@ -82,8 +82,9 @@ var (
 	}
 
 	// Repository settings.
-	RepoRootPath string
-	ScriptType   string
+	RepoRootPath   string
+	ScriptType     string
+	IssuePagingNum int = 10
 
 	// Picture settings.
 	PictureService   string

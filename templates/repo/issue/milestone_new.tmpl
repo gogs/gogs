@@ -4,7 +4,7 @@
 {{template "repo/toolbar" .}}
 <div id="body" class="container">
     <div id="issue">
-        <form class="form" action="{{.RepoLink}}/issues/milestones/new" method="post" id="issue-create-form">
+        <form class="form" action="{{.RepoLink}}/milestones/new" method="post" id="issue-create-form">
             {{.CsrfTokenHtml}}
             {{template "base/alert" .}}
             <div class="col-md-1">

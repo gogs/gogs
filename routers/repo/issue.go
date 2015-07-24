@@ -43,8 +43,6 @@ var (
 func Issues(ctx *middleware.Context) {
 	ctx.Data["Title"] = ctx.Tr("repo.issues")
 	ctx.Data["PageIsIssueList"] = true
-	ctx.Data["IsRepoToolbarIssues"] = true
-	ctx.Data["IsRepoToolbarIssuesList"] = true
 
 	viewType := ctx.Query("type")
 	types := []string{"assigned", "created_by", "mentioned"}
@@ -54,6 +52,7 @@ func Issues(ctx *middleware.Context) {
 
 	isShowClosed := ctx.Query("state") == "closed"
 
+	// Must sign in to see issues about you.
 	if viewType != "all" && !ctx.IsSigned {
 		ctx.SetCookie("redirect_to", "/"+url.QueryEscape(setting.AppSubUrl+ctx.Req.RequestURI), 0, setting.AppSubUrl)
 		ctx.Redirect(setting.AppSubUrl + "/user/login")
@@ -73,21 +72,23 @@ func Issues(ctx *middleware.Context) {
 		filterMode = models.FM_MENTION
 	}
 
+	repo := ctx.Repo.Repository
+
 	var mid int64
-	midx, _ := com.StrTo(ctx.Query("milestone")).Int64()
+	midx := ctx.QueryInt64("milestone")
 	if midx > 0 {
-		mile, err := models.GetMilestoneByIndex(ctx.Repo.Repository.Id, midx)
+		mile, err := models.GetMilestoneByIndex(repo.Id, midx)
 		if err != nil {
-			ctx.Handle(500, "issue.Issues(GetMilestoneByIndex): %v", err)
+			ctx.Handle(500, "GetMilestoneByIndex: %v", err)
 			return
 		}
 		mid = mile.Id
 	}
 
 	selectLabels := ctx.Query("labels")
-	labels, err := models.GetLabels(ctx.Repo.Repository.Id)
+	labels, err := models.GetLabels(repo.Id)
 	if err != nil {
-		ctx.Handle(500, "issue.Issues(GetLabels): %v", err)
+		ctx.Handle(500, "GetLabels: %v", err)
 		return
 	}
 	for _, l := range labels {
@@ -95,20 +96,29 @@ func Issues(ctx *middleware.Context) {
 	}
 	ctx.Data["Labels"] = labels
 
-	page, _ := com.StrTo(ctx.Query("page")).Int()
+	page := ctx.QueryInt("page")
+	if page <= 1 {
+		page = 1
+	} else {
+		ctx.Data["PreviousPage"] = page - 1
+	}
+	if (!isShowClosed && repo.NumOpenIssues > setting.IssuePagingNum*page) ||
+		(isShowClosed && repo.NumClosedIssues > setting.IssuePagingNum*page) {
+		ctx.Data["NextPage"] = page + 1
+	}
 
 	// Get issues.
-	issues, err := models.GetIssues(assigneeId, ctx.Repo.Repository.Id, posterId, mid, page,
+	issues, err := models.GetIssues(assigneeId, repo.Id, posterId, mid, page,
 		isShowClosed, selectLabels, ctx.Query("sortType"))
 	if err != nil {
-		ctx.Handle(500, "issue.Issues(GetIssues): %v", err)
+		ctx.Handle(500, "GetIssues: %v", err)
 		return
 	}
 
 	// Get issue-user pairs.
-	pairs, err := models.GetIssueUserPairs(ctx.Repo.Repository.Id, posterId, isShowClosed)
+	pairs, err := models.GetIssueUserPairs(repo.Id, posterId, isShowClosed)
 	if err != nil {
-		ctx.Handle(500, "issue.Issues(GetIssueUserPairs): %v", err)
+		ctx.Handle(500, "GetIssueUserPairs: %v", err)
 		return
 	}
 
@@ -119,7 +129,7 @@ func Issues(ctx *middleware.Context) {
 			return
 		}
 
-		idx := models.PairsContains(pairs, issues[i].Id)
+		idx := models.PairsContains(pairs, issues[i].Id, ctx.User.Id)
 
 		if filterMode == models.FM_MENTION && (idx == -1 || !pairs[idx].IsMentioned) {
 			continue
@@ -132,7 +142,7 @@ func Issues(ctx *middleware.Context) {
 		}
 
 		if err = issues[i].GetPoster(); err != nil {
-			ctx.Handle(500, "issue.Issues(GetPoster)", fmt.Errorf("[#%d]%v", issues[i].Id, err))
+			ctx.Handle(500, "GetPoster", fmt.Errorf("[#%d]%v", issues[i].Id, err))
 			return
 		}
 	}
@@ -141,9 +151,9 @@ func Issues(ctx *middleware.Context) {
 	if ctx.User != nil {
 		uid = ctx.User.Id
 	}
-	issueStats := models.GetIssueStats(ctx.Repo.Repository.Id, uid, isShowClosed, filterMode)
+	issueStats := models.GetIssueStats(repo.Id, uid, isShowClosed, filterMode)
 	ctx.Data["IssueStats"] = issueStats
-	ctx.Data["SelectLabels"], _ = com.StrTo(selectLabels).Int64()
+	ctx.Data["SelectLabels"] = com.StrTo(selectLabels).MustInt64()
 	ctx.Data["ViewType"] = viewType
 	ctx.Data["Issues"] = issues
 	ctx.Data["IsShowClosed"] = isShowClosed
