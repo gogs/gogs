@@ -49,10 +49,12 @@ do_start()
 	#   1 if daemon was already running
 	#   2 if daemon could not be started
 	sh -c "start-stop-daemon --start --quiet --pidfile $PIDFILE --make-pidfile \\
-			--exec $DAEMON -- $DAEMON_ARGS --test > /dev/null \\
+			--test --chdir $WORKINGDIR --chuid $USER \\
+			--exec $DAEMON -- $DAEMON_ARGS > /dev/null \\
 			|| return 1"
 	sh -c "start-stop-daemon --start --quiet --pidfile $PIDFILE --make-pidfile \\
-			--background --exec /bin/su -- - $USER -c \"cd \\\"$WORKINGDIR\\\" && $DAEMON -- $DAEMON_ARGS\" \\
+			--background --chdir $WORKINGDIR --chuid $USER \\
+			--exec $DAEMON -- $DAEMON_ARGS \\
 			|| return 2"
 }
 
