@@ -74,32 +74,26 @@ func Issues(ctx *middleware.Context) {
 		return
 	}
 
-	var assigneeId, posterId int64
-	var filterMode int
+	var assigneeID, posterID int64
+	filterMode := models.FM_ALL
 	switch viewType {
 	case "assigned":
-		assigneeId = ctx.User.Id
+		assigneeID = ctx.User.Id
 		filterMode = models.FM_ASSIGN
 	case "created_by":
-		posterId = ctx.User.Id
+		posterID = ctx.User.Id
 		filterMode = models.FM_CREATE
 	case "mentioned":
 		filterMode = models.FM_MENTION
 	}
 
-	repo := ctx.Repo.Repository
-
-	var mid int64
-	midx := ctx.QueryInt64("milestone")
-	if midx > 0 {
-		mile, err := models.GetMilestoneByIndex(repo.Id, midx)
-		if err != nil {
-			ctx.Handle(500, "GetMilestoneByIndex: %v", err)
-			return
-		}
-		mid = mile.Id
+	var uid int64 = -1
+	if ctx.IsSigned {
+		uid = ctx.User.Id
 	}
 
+	repo := ctx.Repo.Repository
+	milestoneID := ctx.QueryInt64("milestone")
 	page := ctx.QueryInt("page")
 	if page <= 1 {
 		page = 1
@@ -114,15 +108,15 @@ func Issues(ctx *middleware.Context) {
 	selectLabels := ctx.Query("labels")
 
 	// Get issues.
-	issues, err := models.GetIssues(assigneeId, repo.Id, posterId, mid, page,
-		isShowClosed, selectLabels, ctx.Query("sortType"))
+	issues, err := models.GetIssues(uid, assigneeID, repo.Id, posterID, milestoneID,
+		page, isShowClosed, filterMode == models.FM_MENTION, selectLabels, ctx.Query("sortType"))
 	if err != nil {
 		ctx.Handle(500, "GetIssues: %v", err)
 		return
 	}
 
 	// Get issue-user pairs.
-	pairs, err := models.GetIssueUserPairs(repo.Id, posterId, isShowClosed)
+	pairs, err := models.GetIssueUserPairs(repo.Id, posterID, isShowClosed)
 	if err != nil {
 		ctx.Handle(500, "GetIssueUserPairs: %v", err)
 		return
@@ -130,36 +124,31 @@ func Issues(ctx *middleware.Context) {
 
 	// Get posters.
 	for i := range issues {
+		if err = issues[i].GetPoster(); err != nil {
+			ctx.Handle(500, "GetPoster", fmt.Errorf("[#%d]%v", issues[i].ID, err))
+			return
+		}
+
 		if err = issues[i].GetLabels(); err != nil {
 			ctx.Handle(500, "GetLabels", fmt.Errorf("[#%d]%v", issues[i].ID, err))
 			return
 		}
 
-		if ctx.IsSigned {
-			idx := models.PairsContains(pairs, issues[i].ID, ctx.User.Id)
-
-			if filterMode == models.FM_MENTION && (idx == -1 || !pairs[idx].IsMentioned) {
-				continue
-			}
-
-			if idx > -1 {
-				issues[i].IsRead = pairs[idx].IsRead
-			} else {
-				issues[i].IsRead = true
-			}
+		if !ctx.IsSigned {
+			issues[i].IsRead = true
+			continue
 		}
 
-		if err = issues[i].GetPoster(); err != nil {
-			ctx.Handle(500, "GetPoster", fmt.Errorf("[#%d]%v", issues[i].ID, err))
-			return
+		// Check read status.
+		idx := models.PairsContains(pairs, issues[i].ID, ctx.User.Id)
+		if idx > -1 {
+			issues[i].IsRead = pairs[idx].IsRead
+		} else {
+			issues[i].IsRead = true
 		}
 	}
 
-	var uid int64 = -1
-	if ctx.User != nil {
-		uid = ctx.User.Id
-	}
-	issueStats := models.GetIssueStats(repo.Id, uid, isShowClosed, filterMode)
+	issueStats := models.GetIssueStats(repo.Id, uid, com.StrTo(selectLabels).MustInt64(), isShowClosed, filterMode)
 	ctx.Data["IssueStats"] = issueStats
 	ctx.Data["SelectLabels"] = com.StrTo(selectLabels).MustInt64()
 	ctx.Data["ViewType"] = viewType
@@ -169,8 +158,10 @@ func Issues(ctx *middleware.Context) {
 		ctx.Data["State"] = "closed"
 		ctx.Data["ShowCount"] = issueStats.ClosedCount
 	} else {
+		ctx.Data["State"] = "open"
 		ctx.Data["ShowCount"] = issueStats.OpenCount
 	}
+
 	ctx.HTML(200, ISSUES)
 }
 
