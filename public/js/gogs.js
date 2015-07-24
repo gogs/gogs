@@ -35,7 +35,7 @@ function initInstall() {
 $(document).ready(function () {
     // Semantic UI modules.
     $('.dropdown').dropdown();
-    $('.link.dropdown').dropdown({
+    $('.jump.dropdown').dropdown({
         action: 'hide'
     });
     $('.slide.up.dropdown').dropdown({
