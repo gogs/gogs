@@ -12,7 +12,7 @@
                     {{if .IsRepoToolbarIssues}}
                     <li class="tmp">{{if .IsRepoToolbarIssuesList}}
                         <a href="{{.RepoLink}}/issues/new"><button class="btn btn-primary btn-sm">New Issue</button></a>
-                        <a href="{{.RepoLink}}/issues/milestones"><button class="btn btn-success btn-sm">Milestones</button></a>
+                        <a href="{{.RepoLink}}/milestones"><button class="btn btn-success btn-sm">Milestones</button></a>
                         {{end}}</li>
                     {{end}}
                     <li class="{{if .IsRepoToolbarReleases}}active{{end}}"><a href="{{.RepoLink}}/releases">{{if .Repository.NumTags}}<span class="badge">{{.Repository.NumTags}}</span> {{end}}Releases</a></li>

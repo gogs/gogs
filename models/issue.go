@@ -17,6 +17,7 @@ import (
 	"github.com/go-xorm/xorm"
 
 	"github.com/gogits/gogs/modules/log"
+	"github.com/gogits/gogs/modules/setting"
 )
 
 var (
@@ -114,19 +115,14 @@ func (i *Issue) AfterDelete() {
 // CreateIssue creates new issue for repository.
 func NewIssue(issue *Issue) (err error) {
 	sess := x.NewSession()
-	defer sess.Close()
+	defer sessionRelease(sess)
 	if err = sess.Begin(); err != nil {
 		return err
 	}
 
 	if _, err = sess.Insert(issue); err != nil {
-		sess.Rollback()
 		return err
-	}
-
-	rawSql := "UPDATE `repository` SET num_issues = num_issues + 1 WHERE id = ?"
-	if _, err = sess.Exec(rawSql, issue.RepoId); err != nil {
-		sess.Rollback()
+	} else if _, err = sess.Exec("UPDATE `repository` SET num_issues = num_issues + 1 WHERE id = ?", issue.RepoId); err != nil {
 		return err
 	}
 
@@ -191,7 +187,7 @@ func GetIssueById(id int64) (*Issue, error) {
 
 // GetIssues returns a list of issues by given conditions.
 func GetIssues(uid, rid, pid, mid int64, page int, isClosed bool, labelIds, sortType string) ([]Issue, error) {
-	sess := x.Limit(20, (page-1)*20)
+	sess := x.Limit(setting.IssuePagingNum, (page-1)*setting.IssuePagingNum)
 
 	if rid > 0 {
 		sess.Where("repo_id=?", rid).And("is_closed=?", isClosed)
@@ -211,9 +207,8 @@ func GetIssues(uid, rid, pid, mid int64, page int, isClosed bool, labelIds, sort
 
 	if len(labelIds) > 0 {
 		for _, label := range strings.Split(labelIds, ",") {
-			// Prevent SQL inject.
 			if com.StrTo(label).MustInt() > 0 {
-				sess.And("label_ids like '%$" + label + "|%'")
+				sess.And("label_ids like ?", "'%$"+label+"|%'")
 			}
 		}
 	}
@@ -236,8 +231,7 @@ func GetIssues(uid, rid, pid, mid int64, page int, isClosed bool, labelIds, sort
 	}
 
 	var issues []Issue
-	err := sess.Find(&issues)
-	return issues, err
+	return issues, sess.Find(&issues)
 }
 
 type IssueStatus int
@@ -281,6 +275,7 @@ type IssueUser struct {
 	IsClosed    bool
 }
 
+// FIXME: organization
 // NewIssueUserPairs adds new issue-user pairs for new issue of repository.
 func NewIssueUserPairs(repo *Repository, issueID, orgID, posterID, assigneeID int64) error {
 	users, err := repo.GetCollaborators()
@@ -316,13 +311,24 @@ func NewIssueUserPairs(repo *Repository, issueID, orgID, posterID, assigneeID in
 		}
 	}
 
+	// Add owner's as well.
+	if repo.OwnerId != posterID {
+		iu.Id = 0
+		iu.Uid = repo.OwnerId
+		iu.IsAssigned = iu.Uid == assigneeID
+		if _, err = x.Insert(iu); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
 // PairsContains returns true when pairs list contains given issue.
-func PairsContains(ius []*IssueUser, issueId int64) int {
+func PairsContains(ius []*IssueUser, issueId, uid int64) int {
 	for i := range ius {
-		if ius[i].IssueId == issueId {
+		if ius[i].IssueId == issueId &&
+			ius[i].Uid == uid {
 			return i
 		}
 	}

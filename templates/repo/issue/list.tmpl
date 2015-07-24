@@ -22,7 +22,7 @@
 			</div>
 		</div>
 		<div class="ui right floated secondary filter menu">
-			<div class="ui {{if not .Labels}}disabled{{end}} pointing dropdown item">
+			<div class="ui {{if not .Labels}}disabled{{end}} pointing dropdown jump item">
 				<span class="text">
 					{{.i18n.Tr "repo.issues.filter_label"}}
 					<i class="dropdown icon"></i>
@@ -33,7 +33,7 @@
           {{end}}
 				</div>
 			</div>
-			<div class="ui {{if not .Milestones}}disabled{{end}} pointing dropdown item">
+			<div class="ui {{if not .Milestones}}disabled{{end}} pointing dropdown jump item">
 				<span class="text">
 					{{.i18n.Tr "repo.issues.filter_milestone"}}
 					<i class="dropdown icon"></i>
@@ -44,7 +44,7 @@
           {{end}}
 				</div>
 			</div>
-			<div class="ui {{if not .Assignees}}disabled{{end}} pointing dropdown item">
+			<div class="ui {{if not .Assignees}}disabled{{end}} pointing dropdown jump item">
 				<span class="text">
 					{{.i18n.Tr "repo.issues.filter_assignee"}}
 					<i class="dropdown icon"></i>
@@ -55,7 +55,7 @@
           {{end}}
 				</div>
 			</div>
-			<div class="ui pointing dropdown type item">
+			<div class="ui pointing dropdown type jump item">
 				<span class="text">
 					{{.i18n.Tr "repo.issues.filter_type"}}
 					<i class="dropdown icon"></i>
@@ -73,12 +73,17 @@
 			{{range .Issues}}
 			{{ $timeStr:= TimeSince .Created $.Lang }}
       <li class="item">
-      	<div class="ui black label">#{{.Id}}</div>
+      	<div class="ui {{if .IsRead}}black{{else}}green{{end}} label">#{{.Id}}</div>
       	<a class="title" href="{{$.RepoLink}}/issues/{{.Index}}">{{.Name}}</a>
-        <p class="desc">{{$.i18n.Tr "repo.issues.opened_by" $timeStr .Poster.Name|Str2html}}</p>
       	{{if .NumComments}}<span class="comment ui right"><i class="octicon octicon-comment"></i> {{.NumComments}}</span>{{end}}
+        <p class="desc">{{$.i18n.Tr "repo.issues.opened_by" $timeStr .Poster.Name|Str2html}}</p>
       </li>
       {{end}}
+			
+			<div class="center page buttons">
+			<a class="ui {{if not .PreviousPage}}disabled{{end}} blue button" href="{{.RepoLink}}/issues?page={{.PreviousPage}}">{{.i18n.Tr "repo.issues.previous"}}</a>
+			<a class="ui {{if not .NextPage}}disabled{{end}} blue button" href="{{.RepoLink}}/issues?page={{.NextPage}}">{{.i18n.Tr "repo.issues.next"}}</a>
+			</div>
 		</div>
 	</div>
 </div>

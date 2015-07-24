@@ -6,11 +6,11 @@
     <div id="issue">
         <div class="col-md-3 filter-list">
             <ul class="list-unstyled">
-                <li><a href="{{.RepoLink}}/issues/milestones"{{if eq .State "open"}} class="active"{{end}}>Open Milestones <strong class="pull-right">{{.Repository.NumOpenMilestones}}</strong></a></li>
-                <li><a href="{{.RepoLink}}/issues/milestones?state=closed"{{if eq .State "closed"}} class="active"{{end}}>Close Milestones <strong class="pull-right">{{.Repository.NumClosedMilestones}}</strong></a></li>
+                <li><a href="{{.RepoLink}}/milestones"{{if eq .State "open"}} class="active"{{end}}>Open Milestones <strong class="pull-right">{{.Repository.NumOpenMilestones}}</strong></a></li>
+                <li><a href="{{.RepoLink}}/milestones?state=closed"{{if eq .State "closed"}} class="active"{{end}}>Close Milestones <strong class="pull-right">{{.Repository.NumClosedMilestones}}</strong></a></li>
             </ul>
             <hr/>
-            <a href="{{.RepoLink}}/issues/milestones/new" class="text-center">
+            <a href="{{.RepoLink}}/milestones/new" class="text-center">
                 <button class="btn btn-default btn-block">Create new milestone</button>
             </a>
         </div>
@@ -22,13 +22,13 @@
                     <span class="issue-open label label-success">{{.NumOpenIssues}}</span>
                     <span class="issue-close label label-warning">{{.NumClosedIssues}}</span>
                     <p class="actions pull-right">
-                        <a href="{{$.RepoLink}}/issues/milestones/{{.Index}}/edit">Edit</a>
+                        <a href="{{$.RepoLink}}/milestones/{{.Index}}/edit">Edit</a>
                         {{if .IsClosed}}
-                        <a href="{{$.RepoLink}}/issues/milestones/{{.Index}}/open">Open</a>
+                        <a href="{{$.RepoLink}}/milestones/{{.Index}}/open">Open</a>
                         {{else}}
-                        <a href="{{$.RepoLink}}/issues/milestones/{{.Index}}/close">Close</a>
+                        <a href="{{$.RepoLink}}/milestones/{{.Index}}/close">Close</a>
                         {{end}}
-                        <a class="text-danger" href="{{$.RepoLink}}/issues/milestones/{{.Index}}/delete">Delete</a>
+                        <a class="text-danger" href="{{$.RepoLink}}/milestones/{{.Index}}/delete">Delete</a>
                         <a href="{{$.RepoLink}}/issues?milestone={{.Index}}{{if .IsClosed}}&state=closed{{end}}">Issues</a>
                     </p>
                     <hr/>
