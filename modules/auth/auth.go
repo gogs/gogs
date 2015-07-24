@@ -171,10 +171,14 @@ func AssignForm(form interface{}, data map[string]interface{}) {
 func getSize(field reflect.StructField, prefix string) string {
 	for _, rule := range strings.Split(field.Tag.Get("binding"), ";") {
 		if strings.HasPrefix(rule, prefix) {
-			return rule[8 : len(rule)-1]
+			return rule[len(prefix) : len(rule)-1]
 		}
 	}
 	return ""
+}
+
+func GetSize(field reflect.StructField) string {
+	return getSize(field, "Size(")
 }
 
 func GetMinSize(field reflect.StructField) string {
@@ -227,6 +231,8 @@ func validate(errs binding.Errors, data map[string]interface{}, f Form, l macaro
 				data["ErrorMsg"] = trName + l.Tr("form.alpha_dash_error")
 			case binding.ERR_ALPHA_DASH_DOT:
 				data["ErrorMsg"] = trName + l.Tr("form.alpha_dash_dot_error")
+			case binding.ERR_SIZE:
+				data["ErrorMsg"] = trName + l.Tr("form.size_error", GetSize(field))
 			case binding.ERR_MIN_SIZE:
 				data["ErrorMsg"] = trName + l.Tr("form.min_size_error", GetMinSize(field))
 			case binding.ERR_MAX_SIZE:

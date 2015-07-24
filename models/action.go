@@ -153,7 +153,7 @@ func updateIssuesCommit(userId, repoId int64, repoUserName, repoName string, com
 
 			url := fmt.Sprintf("%s/%s/%s/commit/%s", setting.AppSubUrl, repoUserName, repoName, c.Sha1)
 			message := fmt.Sprintf(`<a href="%s">%s</a>`, url, c.Message)
-			if _, err = CreateComment(userId, issue.RepoId, issue.Id, 0, 0, COMMENT_TYPE_COMMIT, message, nil); err != nil {
+			if _, err = CreateComment(userId, issue.RepoId, issue.ID, 0, 0, COMMENT_TYPE_COMMIT, message, nil); err != nil {
 				return err
 			}
 		}
@@ -202,7 +202,7 @@ func updateIssuesCommit(userId, repoId int64, repoUserName, repoName string, com
 
 				if err = UpdateIssue(issue); err != nil {
 					return err
-				} else if err = UpdateIssueUserPairsByStatus(issue.Id, issue.IsClosed); err != nil {
+				} else if err = UpdateIssueUserPairsByStatus(issue.ID, issue.IsClosed); err != nil {
 					return err
 				}
 
@@ -211,7 +211,7 @@ func updateIssuesCommit(userId, repoId int64, repoUserName, repoName string, com
 				}
 
 				// If commit happened in the referenced repository, it means the issue can be closed.
-				if _, err = CreateComment(userId, repoId, issue.Id, 0, 0, COMMENT_TYPE_CLOSE, "", nil); err != nil {
+				if _, err = CreateComment(userId, repoId, issue.ID, 0, 0, COMMENT_TYPE_CLOSE, "", nil); err != nil {
 					return err
 				}
 			}
@@ -261,7 +261,7 @@ func updateIssuesCommit(userId, repoId int64, repoUserName, repoName string, com
 
 				if err = UpdateIssue(issue); err != nil {
 					return err
-				} else if err = UpdateIssueUserPairsByStatus(issue.Id, issue.IsClosed); err != nil {
+				} else if err = UpdateIssueUserPairsByStatus(issue.ID, issue.IsClosed); err != nil {
 					return err
 				}
 
@@ -270,7 +270,7 @@ func updateIssuesCommit(userId, repoId int64, repoUserName, repoName string, com
 				}
 
 				// If commit happened in the referenced repository, it means the issue can be closed.
-				if _, err = CreateComment(userId, repoId, issue.Id, 0, 0, COMMENT_TYPE_REOPEN, "", nil); err != nil {
+				if _, err = CreateComment(userId, repoId, issue.ID, 0, 0, COMMENT_TYPE_REOPEN, "", nil); err != nil {
 					return err
 				}
 			}

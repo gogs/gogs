@@ -29,6 +29,12 @@
 	<script src="{{AppSubUrl}}/js/semantic.min.js?v={{AppVer}}"></script>
 	<script src="{{AppSubUrl}}/js/gogs.js?v={{AppVer}}"></script>
 
+	<!-- Third-party libraries -->
+	{{if .PageIsLabels}}
+	<link rel="stylesheet" href="{{AppSubUrl}}/css/jquery.minicolors.css?v={{AppVer}}">
+	<script src="{{AppSubUrl}}/js/libs/jquery.minicolors.min.js?v={{AppVer}}"></script>
+	{{end}}
+
 	<title>{{if .Title}}{{.Title}} - {{end}}{{AppName}}</title>
 </head>
 <body>

@@ -1,7 +1,7 @@
 <div class="ui left">
 	<div class="ui compact menu">
 	  <a class="{{if .PageIsIssueList}}active{{end}} item" href="{{.RepoLink}}/issues">{{.i18n.Tr "repo.issues"}}</a>
-	  <a class="item" href="{{.RepoLink}}/labels">{{.i18n.Tr "repo.labels"}}</a>
+	  <a class="{{if .PageIsLabels}}active{{end}} item" href="{{.RepoLink}}/labels">{{.i18n.Tr "repo.labels"}}</a>
 	  <a class="item" href="{{.RepoLink}}/milestones">{{.i18n.Tr "repo.milestones"}}</a>
 	</div>
 </div>
