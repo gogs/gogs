@@ -134,6 +134,7 @@ func (f *CreateMilestoneForm) Validate(ctx *macaron.Context, errs binding.Errors
 //         \/    \/    \/     \/
 
 type CreateLabelForm struct {
+	ID    int64
 	Title string `binding:"Required;MaxSize(50)" locale:"repo.issues.label_name"`
 	Color string `binding:"Required;Size(7)" locale:"repo.issues.label_color"`
 }

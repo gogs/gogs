@@ -1,3 +1,5 @@
+var csrf;
+
 function initInstall() {
     if ($('.install').length == 0) {
         return;
@@ -32,25 +34,55 @@ function initInstall() {
     });
 };
 
-function initRepository(){
+function initRepository() {
     if ($('.repository').length == 0) {
         return;
     }
 
-    if ($('.labels').length == 0) {
+    // Labels
+    if ($('.repository.labels').length == 0) {
         return;
     }
-    $('.color-picker').each( function() {
+    $('.color-picker').each(function () {
         $(this).minicolors();
     });
-    $('.precolors .color').click(function(){
+    $('.precolors .color').click(function () {
         var color_hex = $(this).data('color-hex')
         $('.color-picker').val(color_hex);
         $('.minicolors-swatch-color').css("background-color", color_hex);
     });
+    $('.delete-label-button').click(function () {
+        var $this = $(this);
+        $('.delete-label.modal').modal({
+            closable: false,
+            onApprove: function () {
+                $.post($this.data('url'), {
+                    "_csrf": csrf,
+                    "id": $this.data("id")
+                }).done(function (data) {
+                    window.location.href = data.redirect;
+                });
+            }
+        }).modal('show');
+        return false;
+    });
+    $('.edit-label-button').click(function () {
+        $('#label-modal-id').val($(this).data('id'));
+        $('#label-modal-title').val($(this).data('title'));
+        $('#label-modal-color').val($(this).data('color'))
+        $('.minicolors-swatch-color').css("background-color", $(this).data('color'));
+        $('.edit-label.modal').modal({
+            onApprove: function () {
+                $('.edit-label.form').submit();
+            }
+        }).modal('show');
+        return false;
+    });
 };
 
 $(document).ready(function () {
+    csrf = $('meta[name=_csrf]').attr("content");
+
     // Semantic UI modules.
     $('.dropdown').dropdown();
     $('.jump.dropdown').dropdown({
