@@ -116,7 +116,7 @@ func (f *AddEmailForm) Validate(ctx *macaron.Context, errs binding.Errors) bindi
 }
 
 type ChangePasswordForm struct {
-	OldPassword string `form:"old_password" binding:"Required;MinSize(6);MaxSize(255)"`
+	OldPassword string `form:"old_password" binding:"Required;MinSize(1);MaxSize(255)"`
 	Password    string `form:"password" binding:"Required;MinSize(6);MaxSize(255)"`
 	Retype      string `form:"retype"`
 }
