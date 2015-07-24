@@ -4,8 +4,14 @@ rm -rf $outPath
 mkdir $outPath
 
 go build ../gogs.go
-chmod +x gogs
-mv gogs $outPath/
+PLATFORM=`uname | cut -d _ -f 1`
+if [ $PLATFORM = "MINGW32" ] || [ $PLATFORM = "MINGW64" ] || [ $PLATFORM = "CYGWIN" ]; then
+	GOGS_EXE=gogs.exe
+else
+	GOGS_EXE=gogs
+fi
+chmod +x $GOGS_EXE
+mv $GOGS_EXE $outPath/
 
 cp -r ../conf/ $outPath/conf/
 cp -r ../custom/ $outPath/custom/

@@ -33,6 +33,10 @@
                                     <label class="text-left">{{.User.Name}}</label>
                                 </div>
                                 <div class="field">
+                                    <label for="full-name">{{.i18n.Tr "settings.full_name"}}</label>
+                                    <input class="ipt ipt-large ipt-radius {{if .Err_FullName}}ipt-error{{end}}" id="full-name" name="fullname" type="text" value="{{.User.FullName}}" />
+                                </div>
+                                <div class="field">
                                     <label class="req" for="email">{{.i18n.Tr "email"}}</label>
                                     <input class="ipt ipt-large ipt-radius {{if .Err_Email}}ipt-error{{end}}" id="email" name="email" type="email" value="{{.User.Email}}" required/>
                                 </div>
