@@ -82,9 +82,11 @@ var (
 	}
 
 	// Repository settings.
-	RepoRootPath   string
-	ScriptType     string
-	IssuePagingNum int = 10
+	RepoRootPath string
+	ScriptType   string
+
+	// UI settings.
+	IssuePagingNum int
 
 	// Picture settings.
 	PictureService   string
@@ -310,6 +312,9 @@ func NewConfigContext() {
 		RepoRootPath = path.Clean(RepoRootPath)
 	}
 	ScriptType = sec.Key("SCRIPT_TYPE").MustString("bash")
+
+	// UI settings.
+	IssuePagingNum = Cfg.Section("ui").Key("ISSUE_PAGING_NUM").MustInt(10)
 
 	sec = Cfg.Section("picture")
 	PictureService = sec.Key("SERVICE").In("server", []string{"server"})

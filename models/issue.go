@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"github.com/Unknwon/com"
-	"github.com/go-xorm/xorm"
 
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/setting"
@@ -73,7 +72,7 @@ func (i *Issue) GetLabels() error {
 	strIds := strings.Split(strings.TrimSuffix(i.LabelIds[1:], "|"), "|$")
 	i.Labels = make([]*Label, 0, len(strIds))
 	for _, strId := range strIds {
-		id, _ := com.StrTo(strId).Int64()
+		id := com.StrTo(strId).MustInt64()
 		if id > 0 {
 			l, err := GetLabelById(id)
 			if err != nil {
@@ -186,29 +185,29 @@ func GetIssueById(id int64) (*Issue, error) {
 }
 
 // GetIssues returns a list of issues by given conditions.
-func GetIssues(uid, rid, pid, mid int64, page int, isClosed bool, labelIds, sortType string) ([]Issue, error) {
+func GetIssues(uid, assigneeID, repoID, posterID, milestoneID int64, page int, isClosed, isMention bool, labelIds, sortType string) ([]Issue, error) {
 	sess := x.Limit(setting.IssuePagingNum, (page-1)*setting.IssuePagingNum)
 
-	if rid > 0 {
-		sess.Where("repo_id=?", rid).And("is_closed=?", isClosed)
+	if repoID > 0 {
+		sess.Where("issue.repo_id=?", repoID).And("issue.is_closed=?", isClosed)
 	} else {
-		sess.Where("is_closed=?", isClosed)
+		sess.Where("issue.is_closed=?", isClosed)
 	}
 
-	if uid > 0 {
-		sess.And("assignee_id=?", uid)
-	} else if pid > 0 {
-		sess.And("poster_id=?", pid)
+	if assigneeID > 0 {
+		sess.And("issue.assignee_id=?", assigneeID)
+	} else if posterID > 0 {
+		sess.And("issue.poster_id=?", posterID)
 	}
 
-	if mid > 0 {
-		sess.And("milestone_id=?", mid)
+	if milestoneID > 0 {
+		sess.And("issue.milestone_id=?", milestoneID)
 	}
 
 	if len(labelIds) > 0 {
 		for _, label := range strings.Split(labelIds, ",") {
 			if com.StrTo(label).MustInt() > 0 {
-				sess.And("label_ids like ?", "'%$"+label+"|%'")
+				sess.And("label_ids like ?", "%$"+label+"|%")
 			}
 		}
 	}
@@ -228,6 +227,14 @@ func GetIssues(uid, rid, pid, mid int64, page int, isClosed bool, labelIds, sort
 		sess.Desc("priority")
 	default:
 		sess.Desc("created")
+	}
+
+	if isMention {
+		queryStr := "issue.id == issue_user.issue_id AND issue_user.is_mentioned=1"
+		if uid > 0 {
+			queryStr += " AND issue_user.uid = " + com.ToStr(uid)
+		}
+		sess.Join("INNER", "issue_user", queryStr)
 	}
 
 	var issues []Issue
@@ -394,53 +401,42 @@ type IssueStats struct {
 
 // Filter modes.
 const (
-	FM_ASSIGN = iota + 1
+	FM_ALL = iota
+	FM_ASSIGN
 	FM_CREATE
 	FM_MENTION
 )
 
 // GetIssueStats returns issue statistic information by given conditions.
-func GetIssueStats(rid, uid int64, isShowClosed bool, filterMode int) *IssueStats {
+func GetIssueStats(repoID, uid, labelID int64, isShowClosed bool, filterMode int) *IssueStats {
 	stats := &IssueStats{}
 	issue := new(Issue)
-	tmpSess := &xorm.Session{}
 
-	sess := x.Where("repo_id=?", rid)
-	*tmpSess = *sess
-	stats.OpenCount, _ = tmpSess.And("is_closed=?", false).Count(issue)
-	*tmpSess = *sess
-	stats.ClosedCount, _ = tmpSess.And("is_closed=?", true).Count(issue)
-	if isShowClosed {
-		stats.AllCount = stats.ClosedCount
-	} else {
-		stats.AllCount = stats.OpenCount
-	}
+	queryStr := "repo_id=? AND is_closed=?"
+	switch filterMode {
+	case FM_ALL:
+		stats.OpenCount, _ = x.Where(queryStr, repoID, false).Count(issue)
+		stats.ClosedCount, _ = x.Where(queryStr, repoID, true).Count(issue)
+		return stats
 
-	if filterMode != FM_MENTION {
-		sess = x.Where("repo_id=?", rid)
-		switch filterMode {
-		case FM_ASSIGN:
-			sess.And("assignee_id=?", uid)
-		case FM_CREATE:
-			sess.And("poster_id=?", uid)
-		default:
-			goto nofilter
-		}
-		*tmpSess = *sess
-		stats.OpenCount, _ = tmpSess.And("is_closed=?", false).Count(issue)
-		*tmpSess = *sess
-		stats.ClosedCount, _ = tmpSess.And("is_closed=?", true).Count(issue)
-	} else {
-		sess := x.Where("repo_id=?", rid).And("uid=?", uid).And("is_mentioned=?", true)
-		*tmpSess = *sess
-		stats.OpenCount, _ = tmpSess.And("is_closed=?", false).Count(new(IssueUser))
-		*tmpSess = *sess
-		stats.ClosedCount, _ = tmpSess.And("is_closed=?", true).Count(new(IssueUser))
+	case FM_ASSIGN:
+		queryStr += " AND assignee_id=?"
+		stats.OpenCount, _ = x.Where(queryStr, repoID, false, uid).Count(issue)
+		stats.ClosedCount, _ = x.Where(queryStr, repoID, true, uid).Count(issue)
+		return stats
+
+	case FM_CREATE:
+		queryStr += " AND poster_id=?"
+		stats.OpenCount, _ = x.Where(queryStr, repoID, false, uid).Count(issue)
+		stats.ClosedCount, _ = x.Where(queryStr, repoID, true, uid).Count(issue)
+		return stats
+
+	case FM_MENTION:
+		queryStr += " AND uid=? AND is_mentioned=?"
+		stats.OpenCount, _ = x.Where(queryStr, repoID, false, uid, true).Count(new(IssueUser))
+		stats.ClosedCount, _ = x.Where(queryStr, repoID, true, uid, true).Count(new(IssueUser))
+		return stats
 	}
-nofilter:
-	stats.AssignCount, _ = x.Where("repo_id=?", rid).And("is_closed=?", isShowClosed).And("assignee_id=?", uid).Count(issue)
-	stats.CreateCount, _ = x.Where("repo_id=?", rid).And("is_closed=?", isShowClosed).And("poster_id=?", uid).Count(issue)
-	stats.MentionCount, _ = x.Where("repo_id=?", rid).And("uid=?", uid).And("is_closed=?", isShowClosed).And("is_mentioned=?", true).Count(new(IssueUser))
 	return stats
 }
 
@@ -894,7 +890,7 @@ type Comment struct {
 // CreateComment creates comment of issue or commit.
 func CreateComment(userId, repoId, issueId, commitId, line int64, cmtType CommentType, content string, attachments []int64) (*Comment, error) {
 	sess := x.NewSession()
-	defer sess.Close()
+	defer sessionRelease(sess)
 	if err := sess.Begin(); err != nil {
 		return nil, err
 	}
@@ -903,7 +899,6 @@ func CreateComment(userId, repoId, issueId, commitId, line int64, cmtType Commen
 		CommitId: commitId, Line: line, Content: content}
 
 	if _, err := sess.Insert(comment); err != nil {
-		sess.Rollback()
 		return nil, err
 	}
 
@@ -912,7 +907,6 @@ func CreateComment(userId, repoId, issueId, commitId, line int64, cmtType Commen
 	case COMMENT_TYPE_COMMENT:
 		rawSql := "UPDATE `issue` SET num_comments = num_comments + 1 WHERE id = ?"
 		if _, err := sess.Exec(rawSql, issueId); err != nil {
-			sess.Rollback()
 			return nil, err
 		}
 
@@ -926,20 +920,17 @@ func CreateComment(userId, repoId, issueId, commitId, line int64, cmtType Commen
 			}
 
 			if _, err := sess.Exec(rawSql, comment.Id, strings.Join(astrs, ",")); err != nil {
-				sess.Rollback()
 				return nil, err
 			}
 		}
 	case COMMENT_TYPE_REOPEN:
 		rawSql := "UPDATE `repository` SET num_closed_issues = num_closed_issues - 1 WHERE id = ?"
 		if _, err := sess.Exec(rawSql, repoId); err != nil {
-			sess.Rollback()
 			return nil, err
 		}
 	case COMMENT_TYPE_CLOSE:
 		rawSql := "UPDATE `repository` SET num_closed_issues = num_closed_issues + 1 WHERE id = ?"
 		if _, err := sess.Exec(rawSql, repoId); err != nil {
-			sess.Rollback()
 			return nil, err
 		}
 	}
