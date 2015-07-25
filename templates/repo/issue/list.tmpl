@@ -87,8 +87,8 @@
       {{end}}
 			
 			<div class="center page buttons">
-			<a class="ui {{if not .PreviousPage}}disabled{{end}} blue button" href="{{.RepoLink}}/issues?page={{.PreviousPage}}">{{.i18n.Tr "repo.issues.previous"}}</a>
-			<a class="ui {{if not .NextPage}}disabled{{end}} blue button" href="{{.RepoLink}}/issues?page={{.NextPage}}">{{.i18n.Tr "repo.issues.next"}}</a>
+			<a class="ui {{if not .PreviousPage}}disabled{{end}} blue button" href="{{.RepoLink}}/issues?type={{$.ViewType}}&state={{$.State}}&labels={{.SelectLabels}}&page={{.PreviousPage}}">{{.i18n.Tr "repo.issues.previous"}}</a>
+			<a class="ui {{if not .NextPage}}disabled{{end}} blue button" href="{{.RepoLink}}/issues?type={{$.ViewType}}&state={{$.State}}&labels={{.SelectLabels}}&page={{.NextPage}}">{{.i18n.Tr "repo.issues.next"}}</a>
 			</div>
 		</div>
 	</div>
