@@ -190,7 +190,10 @@ func Http(ctx *middleware.Context) {
 						refName := fields[2]
 
 						// FIXME: handle error.
-						models.Update(refName, oldCommitId, newCommitId, authUsername, username, reponame, authUser.Id)
+						if err = models.Update(refName, oldCommitId, newCommitId, authUsername, username, reponame, authUser.Id); err == nil {
+							models.HookQueue.AddRepoID(repo.Id)
+						}
+
 					}
 					lastLine = lastLine + size
 				} else {
