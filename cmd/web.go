@@ -451,6 +451,7 @@ func runWeb(ctx *cli.Context) {
 		m.Get("/archive/*", repo.Download)
 		m.Get("/pulls2/", repo.PullRequest2)
 		m.Get("/milestone2/", repo.Milestones2)
+		m.Head("/hooks/trigger", repo.TriggerHook)
 
 		m.Group("", func() {
 			m.Get("/src/*", repo.Home)
