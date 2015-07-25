@@ -16,6 +16,7 @@ import (
 	"github.com/codegangsta/cli"
 
 	"github.com/gogits/gogs/models"
+	"github.com/gogits/gogs/modules/httplib"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/setting"
 	"github.com/gogits/gogs/modules/uuid"
@@ -191,6 +192,12 @@ func runServ(c *cli.Context) {
 		if err = models.DelUpdateTasksByUuid(uuid); err != nil {
 			log.GitLogger.Fatal(2, "DelUpdateTasksByUuid: %v", err)
 		}
+	}
+
+	// Send deliver hook request.
+	resp, err := httplib.Head(setting.AppUrl + setting.AppSubUrl + repoUserName + "/" + repoName + "/hooks/trigger").Response()
+	if err == nil {
+		resp.Body.Close()
 	}
 
 	// Update key activity.

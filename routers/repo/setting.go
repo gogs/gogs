@@ -634,3 +634,7 @@ func GitHooksEditPost(ctx *middleware.Context) {
 	}
 	ctx.Redirect(ctx.Repo.RepoLink + "/settings/hooks/git")
 }
+
+func TriggerHook(ctx *middleware.Context) {
+	models.HookQueue.AddRepoID(ctx.Repo.Repository.Id)
+}

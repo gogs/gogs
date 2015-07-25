@@ -76,7 +76,7 @@ var (
 
 	// Webhook settings.
 	Webhook struct {
-		TaskInterval   int
+		QueueLength    int
 		DeliverTimeout int
 		SkipTLSVerify  bool
 	}
@@ -555,7 +555,7 @@ func newNotifyMailService() {
 
 func newWebhookService() {
 	sec := Cfg.Section("webhook")
-	Webhook.TaskInterval = sec.Key("TASK_INTERVAL").MustInt(1)
+	Webhook.QueueLength = sec.Key("QUEUE_LENGTH").MustInt(1000)
 	Webhook.DeliverTimeout = sec.Key("DELIVER_TIMEOUT").MustInt(5)
 	Webhook.SkipTLSVerify = sec.Key("SKIP_TLS_VERIFY").MustBool()
 }
