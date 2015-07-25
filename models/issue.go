@@ -412,7 +412,10 @@ func GetIssueStats(repoID, uid, labelID int64, isShowClosed bool, filterMode int
 	stats := &IssueStats{}
 	issue := new(Issue)
 
-	queryStr := "repo_id=? AND is_closed=?"
+	queryStr := "issue.repo_id=? AND issue.is_closed=?"
+	if labelID > 0 {
+		queryStr += " AND issue.label_ids like '%$" + com.ToStr(labelID) + "|%'"
+	}
 	switch filterMode {
 	case FM_ALL:
 		stats.OpenCount, _ = x.Where(queryStr, repoID, false).Count(issue)
@@ -433,6 +436,15 @@ func GetIssueStats(repoID, uid, labelID int64, isShowClosed bool, filterMode int
 
 	case FM_MENTION:
 		queryStr += " AND uid=? AND is_mentioned=?"
+		if labelID > 0 {
+			stats.OpenCount, _ = x.Where(queryStr, repoID, false, uid, true).
+				Join("INNER", "issue", "issue.id = issue_id").Count(new(IssueUser))
+			stats.ClosedCount, _ = x.Where(queryStr, repoID, true, uid, true).
+				Join("INNER", "issue", "issue.id = issue_id").Count(new(IssueUser))
+			return stats
+		}
+
+		queryStr = strings.Replace(queryStr, "issue.", "", 2)
 		stats.OpenCount, _ = x.Where(queryStr, repoID, false, uid, true).Count(new(IssueUser))
 		stats.ClosedCount, _ = x.Where(queryStr, repoID, true, uid, true).Count(new(IssueUser))
 		return stats
