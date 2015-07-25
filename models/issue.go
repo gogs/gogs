@@ -230,7 +230,7 @@ func GetIssues(uid, assigneeID, repoID, posterID, milestoneID int64, page int, i
 	}
 
 	if isMention {
-		queryStr := "issue.id == issue_user.issue_id AND issue_user.is_mentioned=1"
+		queryStr := "issue.id = issue_user.issue_id AND issue_user.is_mentioned=1"
 		if uid > 0 {
 			queryStr += " AND issue_user.uid = " + com.ToStr(uid)
 		}
