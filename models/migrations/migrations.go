@@ -5,6 +5,7 @@
 package migrations
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -51,11 +52,12 @@ type Version struct {
 // If you want to "retire" a migration, remove it from the top of the list and
 // update _MIN_VER_DB accordingly
 var migrations = []Migration{
-	NewMigration("generate collaboration from access", accessToCollaboration), // V0 -> V1:v0.5.13
-	NewMigration("make authorize 4 if team is owners", ownerTeamUpdate),       // V1 -> V2:v0.5.13
-	NewMigration("refactor access table to use id's", accessRefactor),         // V2 -> V3:v0.5.13
-	NewMigration("generate team-repo from team", teamToTeamRepo),              // V3 -> V4:v0.5.13
-	NewMigration("fix locale file load panic", fixLocaleFileLoadPanic),        // V4 -> V5:v0.6.0
+	NewMigration("generate collaboration from access", accessToCollaboration),    // V0 -> V1:v0.5.13
+	NewMigration("make authorize 4 if team is owners", ownerTeamUpdate),          // V1 -> V2:v0.5.13
+	NewMigration("refactor access table to use id's", accessRefactor),            // V2 -> V3:v0.5.13
+	NewMigration("generate team-repo from team", teamToTeamRepo),                 // V3 -> V4:v0.5.13
+	NewMigration("fix locale file load panic", fixLocaleFileLoadPanic),           // V4 -> V5:v0.6.0
+	NewMigration("trim action compare URL prefix", trimCommitActionAppUrlPrefix), // V5 -> V6:v0.6.3      // V4 -> V5:v0.6.0
 }
 
 // Migrate database to current version
@@ -388,4 +390,66 @@ func fixLocaleFileLoadPanic(_ *xorm.Engine) error {
 
 	setting.Langs = strings.Split(strings.Replace(strings.Join(setting.Langs, ","), "fr-CA", "fr-FR", 1), ",")
 	return nil
+}
+
+func trimCommitActionAppUrlPrefix(x *xorm.Engine) error {
+	type PushCommit struct {
+		Sha1        string
+		Message     string
+		AuthorEmail string
+		AuthorName  string
+	}
+
+	type PushCommits struct {
+		Len        int
+		Commits    []*PushCommit
+		CompareUrl string
+	}
+
+	type Action struct {
+		ID      int64  `xorm:"pk autoincr"`
+		Content string `xorm:"TEXT"`
+	}
+
+	results, err := x.Query("SELECT `id`,`content` FROM `action` WHERE `op_type`=?", 5)
+	if err != nil {
+		return fmt.Errorf("select commit actions: %v", err)
+	}
+
+	sess := x.NewSession()
+	defer sessionRelease(sess)
+	if err = sess.Begin(); err != nil {
+		return err
+	}
+
+	var pushCommits *PushCommits
+	for _, action := range results {
+		actID := com.StrTo(string(action["id"])).MustInt64()
+		if actID == 0 {
+			continue
+		}
+
+		pushCommits = new(PushCommits)
+		if err = json.Unmarshal(action["content"], pushCommits); err != nil {
+			return fmt.Errorf("unmarshal action content[%s]: %v", actID, err)
+		}
+
+		infos := strings.Split(pushCommits.CompareUrl, "/")
+		if len(infos) <= 4 {
+			continue
+		}
+		pushCommits.CompareUrl = strings.Join(infos[len(infos)-4:], "/")
+
+		p, err := json.Marshal(pushCommits)
+		if err != nil {
+			return fmt.Errorf("marshal action content[%s]: %v", actID, err)
+		}
+
+		if _, err = sess.Id(actID).Update(&Action{
+			Content: string(p),
+		}); err != nil {
+			return fmt.Errorf("update action[%s]: %v", actID, err)
+		}
+	}
+	return sess.Commit()
 }
