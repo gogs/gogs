@@ -293,12 +293,12 @@ func CommitRepoAction(userId, repoUserId int64, userName, actEmail string,
 	repoLink := fmt.Sprintf("%s%s/%s", setting.AppUrl, repoUserName, repoName)
 	// if not the first commit, set the compareUrl
 	if !strings.HasPrefix(oldCommitId, "0000000") {
-		commit.CompareUrl = fmt.Sprintf("%s/compare/%s...%s", repoLink, oldCommitId, newCommitId)
+		commit.CompareUrl = fmt.Sprintf("%s/%s/compare/%s...%s", repoUserName, repoName, oldCommitId, newCommitId)
 	}
 
 	bs, err := json.Marshal(commit)
 	if err != nil {
-		return errors.New("action.CommitRepoAction(json): " + err.Error())
+		return errors.New("json: " + err.Error())
 	}
 
 	refName := git.RefEndName(refFullName)
@@ -306,17 +306,17 @@ func CommitRepoAction(userId, repoUserId int64, userName, actEmail string,
 	// Change repository bare status and update last updated time.
 	repo, err := GetRepositoryByName(repoUserId, repoName)
 	if err != nil {
-		return errors.New("action.CommitRepoAction(GetRepositoryByName): " + err.Error())
+		return errors.New("GetRepositoryByName: " + err.Error())
 	}
 	repo.IsBare = false
 	if err = UpdateRepository(repo, false); err != nil {
-		return errors.New("action.CommitRepoAction(UpdateRepository): " + err.Error())
+		return errors.New("UpdateRepository: " + err.Error())
 	}
 
 	err = updateIssuesCommit(userId, repoId, repoUserName, repoName, commit.Commits)
 
 	if err != nil {
-		log.Debug("action.CommitRepoAction(updateIssuesCommit): ", err)
+		log.Debug("updateIssuesCommit: ", err)
 	}
 
 	if err = NotifyWatchers(&Action{
@@ -331,18 +331,18 @@ func CommitRepoAction(userId, repoUserId int64, userName, actEmail string,
 		RefName:      refName,
 		IsPrivate:    repo.IsPrivate,
 	}); err != nil {
-		return errors.New("action.CommitRepoAction(NotifyWatchers): " + err.Error())
+		return errors.New("NotifyWatchers: " + err.Error())
 
 	}
 
 	// New push event hook.
 	if err := repo.GetOwner(); err != nil {
-		return errors.New("action.CommitRepoAction(GetOwner): " + err.Error())
+		return errors.New("GetOwner: " + err.Error())
 	}
 
 	ws, err := GetActiveWebhooksByRepoId(repoId)
 	if err != nil {
-		return errors.New("action.CommitRepoAction(GetActiveWebhooksByRepoId): " + err.Error())
+		return errors.New("GetActiveWebhooksByRepoId: " + err.Error())
 	}
 
 	// check if repo belongs to org and append additional webhooks
@@ -350,7 +350,7 @@ func CommitRepoAction(userId, repoUserId int64, userName, actEmail string,
 		// get hooks for org
 		orgws, err := GetActiveWebhooksByOrgId(repo.OwnerId)
 		if err != nil {
-			return errors.New("action.CommitRepoAction(GetActiveWebhooksByOrgId): " + err.Error())
+			return errors.New("GetActiveWebhooksByOrgId: " + err.Error())
 		}
 		ws = append(ws, orgws...)
 	}
@@ -408,7 +408,7 @@ func CommitRepoAction(userId, repoUserId int64, userName, actEmail string,
 		},
 		Before:     oldCommitId,
 		After:      newCommitId,
-		CompareUrl: commit.CompareUrl,
+		CompareUrl: setting.AppUrl + commit.CompareUrl,
 	}
 
 	for _, w := range ws {

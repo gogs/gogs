@@ -214,7 +214,11 @@ func (l *Logger) writerMsg(skip, level int, msg string) error {
 				fnName = strings.TrimLeft(filepath.Ext(fn.Name()), ".") + "()"
 			}
 
-			lm.msg = fmt.Sprintf("[%s:%d %s] %s", filepath.Base(file), line, fnName, msg)
+			fileName := file
+			if len(fileName) > 20 {
+				fileName = "..." + fileName[len(fileName)-20:]
+			}
+			lm.msg = fmt.Sprintf("[%s:%d %s] %s", fileName, line, fnName, msg)
 		} else {
 			lm.msg = msg
 		}
