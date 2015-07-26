@@ -27,7 +27,7 @@ func (repo *Repository) GetTags() ([]string, error) {
 	}
 	stdout, stderr, err := com.ExecCmdDir(repo.Path, "git", "tag", "-l")
 	if err != nil {
-		return nil, errors.New(stderr)
+		return nil, concatenateError(err, stderr)
 	}
 	tags := strings.Split(stdout, "\n")
 	return tags[:len(tags)-1], nil

@@ -47,6 +47,12 @@ func OrgAssignment(redirect bool, args ...bool) macaron.Handler {
 		org := ctx.Org.Organization
 		ctx.Data["Org"] = org
 
+		// Force redirection when username is actually a user.
+		if !org.IsOrganization() {
+			ctx.Redirect("/" + org.Name)
+			return
+		}
+
 		if ctx.IsSigned {
 			ctx.Org.IsOwner = org.IsOwnedBy(ctx.User.Id)
 			if ctx.Org.IsOwner {

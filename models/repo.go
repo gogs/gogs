@@ -423,13 +423,18 @@ func createUpdateHook(repoPath string) error {
 
 // InitRepository initializes README and .gitignore if needed.
 func initRepository(e Engine, repoPath string, u *User, repo *Repository, initReadme bool, repoLang, license string) error {
+	// Somehow the directory could exist.
+	if com.IsExist(repoPath) {
+		return fmt.Errorf("initRepository: path already exists: %s", repoPath)
+	}
+
 	// Init bare new repository.
 	os.MkdirAll(repoPath, os.ModePerm)
 	_, stderr, err := process.ExecDir(-1, repoPath,
 		fmt.Sprintf("initRepository(git init --bare): %s", repoPath),
 		"git", "init", "--bare")
 	if err != nil {
-		return errors.New("git init --bare: " + stderr)
+		return fmt.Errorf("git init --bare: %s", err)
 	}
 
 	if err := createUpdateHook(repoPath); err != nil {
