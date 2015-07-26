@@ -7,6 +7,7 @@ package git
 import (
 	"bytes"
 	"container/list"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -66,4 +67,11 @@ func isFile(filePath string) bool {
 		return false
 	}
 	return !f.IsDir()
+}
+
+func concatenateError(err error, stderr string) error {
+	if len(stderr) == 0 {
+		return err
+	}
+	return fmt.Errorf("%v: %s", err, stderr)
 }
