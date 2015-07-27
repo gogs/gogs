@@ -6,7 +6,8 @@ github.com/bradfitz/gomemcache = commit:72a68649ba
 github.com/Unknwon/cae = commit:2e70a1351b
 github.com/Unknwon/com = 
 github.com/Unknwon/i18n = commit:7457d88830
-github.com/Unknwon/macaron = commit:93de4f3fad
+github.com/Unknwon/macaron = 
+github.com/Unknwon/paginater = 
 github.com/codegangsta/cli = commit:2bcd11f863
 github.com/go-sql-driver/mysql = commit:a197e5d405
 github.com/go-xorm/core = commit:be6e7ac47d
@@ -14,7 +15,7 @@ github.com/go-xorm/xorm = commit:1f0dd9bef2
 github.com/gogits/chardet = commit:2404f77725
 github.com/gogits/go-gogs-client = commit:92e76d616a
 github.com/lib/pq = commit:30ed2200d7
-github.com/macaron-contrib/binding = commit:548a793679
+github.com/macaron-contrib/binding = 
 github.com/macaron-contrib/cache = commit:928d5c35cd
 github.com/macaron-contrib/captcha = 
 github.com/macaron-contrib/csrf = commit:98ddf5a710
@@ -30,7 +31,7 @@ github.com/russross/blackfriday = commit:6928e11ecd
 github.com/shurcooL/go = commit:bc30a0bd33
 golang.org/x/net = commit:7dbad50ab5
 golang.org/x/text = commit:5f741289c4
-gopkg.in/ini.v1 = commit:177219109c
+gopkg.in/ini.v1 = 
 gopkg.in/redis.v2 = commit:e617904962
 
 [res]

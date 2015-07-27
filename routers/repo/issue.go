@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/Unknwon/com"
+	"github.com/Unknwon/paginater"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
@@ -100,13 +101,15 @@ func Issues(ctx *middleware.Context) {
 	page := ctx.QueryInt("page")
 	if page <= 1 {
 		page = 1
+	}
+
+	var total int
+	if !isShowClosed {
+		total = int(issueStats.OpenCount)
 	} else {
-		ctx.Data["PreviousPage"] = page - 1
+		total = int(issueStats.ClosedCount)
 	}
-	if (!isShowClosed && int(issueStats.OpenCount) > setting.IssuePagingNum*page) ||
-		(isShowClosed && int(issueStats.ClosedCount) > setting.IssuePagingNum*page) {
-		ctx.Data["NextPage"] = page + 1
-	}
+	ctx.Data["Page"] = paginater.New(total, setting.IssuePagingNum, page, 5)
 
 	// Get issues.
 	issues, err := models.GetIssues(uid, assigneeID, repo.Id, posterID, milestoneID,
