@@ -86,10 +86,25 @@
       </li>
       {{end}}
 			
+			{{with .Page}}
 			<div class="center page buttons">
-			<a class="ui {{if not .PreviousPage}}disabled{{end}} blue button" href="{{.RepoLink}}/issues?type={{$.ViewType}}&state={{$.State}}&labels={{.SelectLabels}}&page={{.PreviousPage}}">{{.i18n.Tr "repo.issues.previous"}}</a>
-			<a class="ui {{if not .NextPage}}disabled{{end}} blue button" href="{{.RepoLink}}/issues?type={{$.ViewType}}&state={{$.State}}&labels={{.SelectLabels}}&page={{.NextPage}}">{{.i18n.Tr "repo.issues.next"}}</a>
+				<div class="ui borderless pagination menu">
+				  <a class="{{if not .HasPrevious}}disabled{{end}} item" {{if .HasPrevious}}href="{{$.RepoLink}}/issues?type={{$.ViewType}}&state={{$.State}}&labels={{$.SelectLabels}}&page={{.Previous}}"{{end}}>
+				    <i class="left arrow icon"></i> {{$.i18n.Tr "repo.issues.previous"}}
+				  </a>
+					{{range .Pages}}
+					{{if eq .Num -1}}
+					<a class="disabled item">...</a>
+					{{else}}
+					<a class="{{if .IsCurrent}}active{{end}} item" {{if not .IsCurrent}}href="{{$.RepoLink}}/issues?type={{$.ViewType}}&state={{$.State}}&labels={{$.SelectLabels}}&page={{.Num}}"{{end}}>{{.Num}}</a>
+					{{end}}
+					{{end}}
+				  <a class="{{if not .HasNext}}disabled{{end}} item" {{if .HasNext}}href="{{$.RepoLink}}/issues?type={{$.ViewType}}&state={{$.State}}&labels={{$.SelectLabels}}&page={{.Next}}"{{end}}>
+				    {{$.i18n.Tr "repo.issues.next"}} <i class="icon right arrow"></i>
+				  </a>
+				</div>
 			</div>
+			{{end}}
 		</div>
 	</div>
 </div>
