@@ -25,7 +25,7 @@
 		        </div>
 		        <div class="issues list-group">
 		            {{range .Issues}}{{if .}}
-		            <div class="list-group-item issue-item" id="issue-{{.Id}}" onclick="window.location.href='{{AppSubUrl}}/{{.Repo.Owner.Name}}/{{.Repo.Name}}/issues/{{.Index}}'">
+		            <div class="list-group-item issue-item" id="issue-{{.ID}}" onclick="window.location.href='{{AppSubUrl}}/{{.Repo.Owner.Name}}/{{.Repo.Name}}/issues/{{.Index}}'">
 		                <span class="number pull-right">#{{.Index}}</span>
 		                <h5 class="title"><a href="{{AppSubUrl}}/{{.Repo.Owner.Name}}/{{.Repo.Name}}/issues/{{.Index}}">{{.Name}}</a></h5>
 		                <p class="info">
