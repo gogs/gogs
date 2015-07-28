@@ -167,8 +167,8 @@ func ParsePatch(pid int64, maxlines int, cmd *exec.Cmd, reader io.Reader) (*Diff
 				return diff, nil
 			}
 
-			fs := strings.Split(line[len(DIFF_HEAD):], " ")
-			a := fs[0]
+			beg := len(DIFF_HEAD)
+			a := line[beg : (len(line)-beg)/2+beg]
 
 			curFile = &DiffFile{
 				Name:     a[strings.Index(a, "/")+1:],
