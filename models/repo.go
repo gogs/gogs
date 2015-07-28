@@ -373,9 +373,9 @@ func MigrateRepository(u *User, name, desc string, private, mirror bool, url str
 	// FIXME: this command could for both migrate and mirror
 	_, stderr, err := process.ExecTimeout(10*time.Minute,
 		fmt.Sprintf("MigrateRepository: %s", repoPath),
-		"git", "clone", "--mirror", "--bare", url, repoPath)
+		"git", "clone", "--mirror", "--bare", "--quiet", url, repoPath)
 	if err != nil {
-		return repo, fmt.Errorf("git clone --mirror --bare: %v", stderr)
+		return repo, fmt.Errorf("git clone --mirror --bare --quiet: %v", stderr)
 	} else if err = createUpdateHook(repoPath); err != nil {
 		return repo, fmt.Errorf("create update hook: %v", err)
 	}
