@@ -50,7 +50,7 @@
                     <span class="octicon octicon-file-{{if or $entry.IsDir}}directory{{else}}text{{end}}"></span>
                 </td>
                 <td class="name">
-                    <a href="{{EscapePound $.BranchLink}}/{{$.TreePath}}{{$entry.Name}}" class="text-truncate">{{$entry.Name}}</a>
+                    <a href="{{EscapePound $.BranchLink}}/{{EscapePound $.TreePath}}{{EscapePound $entry.Name}}" class="text-truncate">{{$entry.Name}}</a>
                 </td>
                 {{end}}
                 <td class="sha">

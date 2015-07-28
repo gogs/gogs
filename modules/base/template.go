@@ -178,7 +178,7 @@ var TemplateFuncs template.FuncMap = map[string]interface{}{
 	"Oauth2Name":            Oauth2Name,
 	"ToUtf8":                ToUtf8,
 	"EscapePound": func(str string) string {
-		return strings.Replace(str, "#", "%23", -1)
+		return strings.Replace(strings.Replace(str, "%", "%25", -1), "#", "%23", -1)
 	},
 	"RenderCommitMessage": RenderCommitMessage,
 }
