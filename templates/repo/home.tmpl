@@ -48,7 +48,7 @@
                     {{ $l := Subtract $n 1}}
                     {{range $i, $v := .Treenames}}
                         {{if eq $i $l}}
-                        <span class="bread">{{EscapePound $v}}</span>
+                        <span class="bread">{{$v}}</span>
                         {{else}}
                         <span class="bread"><a href="{{EscapePound $.BranchLink}}/{{index $.Paths $i}}">{{$v}}</a></span>
                         {{end}}
