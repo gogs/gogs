@@ -47,7 +47,7 @@
                 <input class="ipt ipt-large ipt-radius {{if .Err_Location}}ipt-error{{end}}" id="location" name="location" type="text" value="{{.Org.Location}}" />
               </div>
               <div class="field {{if DisableGravatar}}hide{{end}}">
-                <label for="gravatar-email">Gravatar {{.i18n.Tr "email"}}</label>
+                <label class="req" for="gravatar-email">Gravatar {{.i18n.Tr "email"}}</label>
                 <input class="ipt ipt-large ipt-radius {{if .Err_Avatar}}ipt-error{{end}}" id="gravatar-email" name="avatar" type="text" value="{{.Org.AvatarEmail}}" />
               </div>
               <div class="field">

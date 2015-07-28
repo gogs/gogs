@@ -29,8 +29,8 @@ github.com/msteinert/pam =
 github.com/nfnt/resize = commit:53e9ca890b
 github.com/russross/blackfriday = commit:6928e11ecd
 github.com/shurcooL/go = commit:bc30a0bd33
-golang.org/x/net = commit:7dbad50ab5
-golang.org/x/text = commit:5f741289c4
+golang.org/x/net = 
+golang.org/x/text = 
 gopkg.in/ini.v1 = 
 gopkg.in/redis.v2 = commit:e617904962
 
