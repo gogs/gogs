@@ -84,6 +84,7 @@ var (
 	// Repository settings.
 	RepoRootPath string
 	ScriptType   string
+	AnsiCharset  string
 
 	// UI settings.
 	IssuePagingNum int
@@ -312,6 +313,7 @@ func NewConfigContext() {
 		RepoRootPath = path.Clean(RepoRootPath)
 	}
 	ScriptType = sec.Key("SCRIPT_TYPE").MustString("bash")
+	AnsiCharset = sec.Key("ANSI_CHARSET").MustString("ISO-8859-1")
 
 	// UI settings.
 	IssuePagingNum = Cfg.Section("ui").Key("ISSUE_PAGING_NUM").MustInt(10)
