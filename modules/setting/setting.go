@@ -313,7 +313,7 @@ func NewConfigContext() {
 		RepoRootPath = path.Clean(RepoRootPath)
 	}
 	ScriptType = sec.Key("SCRIPT_TYPE").MustString("bash")
-	AnsiCharset = sec.Key("ANSI_CHARSET").MustString("ISO-8859-1")
+	AnsiCharset = sec.Key("ANSI_CHARSET").MustString("")
 
 	// UI settings.
 	IssuePagingNum = Cfg.Section("ui").Key("ISSUE_PAGING_NUM").MustInt(10)
