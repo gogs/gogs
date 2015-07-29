@@ -28,7 +28,7 @@ func ServeBlob(ctx *middleware.Context, blob *git.Blob) error {
 	_, isTextFile := base.IsTextFile(buf)
 	if isTextFile {
 		charset, _ := base.DetectEncoding(buf)
-		if charset != "utf-8" {
+		if charset != "UTF-8" {
 			ctx.Resp.Header().Set("Content-Type", "text/plain; charset="+charset)
 		}
 	} else {
