@@ -50,7 +50,8 @@
                         {{if eq $i $l}}
                         <span class="bread">{{$v}}</span>
                         {{else}}
-                        <span class="bread"><a href="{{EscapePound $.BranchLink}}/{{index $.Paths $i}}">{{$v}}</a></span>
+                        {{ $p := index $.Paths $i}}
+                        <span class="bread"><a href="{{EscapePound $.BranchLink}}/{{EscapePound $p}}">{{$v}}</a></span>
                         {{end}}
                     {{end}}
                 </li>

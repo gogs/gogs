@@ -26,10 +26,17 @@ func ServeBlob(ctx *middleware.Context, blob *git.Blob) error {
 	}
 
 	_, isTextFile := base.IsTextFile(buf)
-	_, isImageFile := base.IsImageFile(buf)
-	if !isTextFile && !isImageFile {
-		ctx.Resp.Header().Set("Content-Disposition", "attachment; filename="+path.Base(ctx.Repo.TreeName))
-		ctx.Resp.Header().Set("Content-Transfer-Encoding", "binary")
+	if isTextFile {
+		charset, _ := base.DetectEncoding(buf)
+		if charset != "UTF-8" {
+			ctx.Resp.Header().Set("Content-Type", "text/plain; charset="+charset)
+		}
+	} else {
+		_, isImageFile := base.IsImageFile(buf)
+		if !isImageFile {
+			ctx.Resp.Header().Set("Content-Disposition", "attachment; filename="+path.Base(ctx.Repo.TreeName))
+			ctx.Resp.Header().Set("Content-Transfer-Encoding", "binary")
+		}
 	}
 	ctx.Resp.Write(buf)
 	_, err = io.Copy(ctx.Resp, dataRc)
