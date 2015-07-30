@@ -55,7 +55,7 @@ func ShortSha(sha1 string) string {
 func DetectEncoding(content []byte) (string, error) {
 	detector := chardet.NewTextDetector()
 	result, err := detector.DetectBest(content)
-	if result.Charset == "ISO-8859-1" {
+	if result.Charset != "UTF-8" && len(setting.AnsiCharset) > 0 {
 		return setting.AnsiCharset, err
 	}
 	return result.Charset, err
@@ -67,7 +67,7 @@ func ToUtf8WithErr(content []byte) (error, string) {
 		return err, ""
 	}
 
-	if charsetLabel == "utf8" {
+	if charsetLabel == "UTF-8" {
 		return nil, string(content)
 	}
 
