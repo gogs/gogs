@@ -87,6 +87,7 @@
       {{end}}
 			
 			{{with .Page}}
+			{{if gt .Total 1}}
 			<div class="center page buttons">
 				<div class="ui borderless pagination menu">
 				  <a class="{{if not .HasPrevious}}disabled{{end}} item" {{if .HasPrevious}}href="{{$.RepoLink}}/issues?type={{$.ViewType}}&state={{$.State}}&labels={{$.SelectLabels}}&page={{.Previous}}"{{end}}>
@@ -104,6 +105,7 @@
 				  </a>
 				</div>
 			</div>
+			{{end}}
 			{{end}}
 		</div>
 	</div>
