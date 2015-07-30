@@ -975,7 +975,7 @@ func Milestones(ctx *middleware.Context) {
 
 	miles, err := models.GetMilestones(ctx.Repo.Repository.Id, isShowClosed)
 	if err != nil {
-		ctx.Handle(500, "issue.Milestones(GetMilestones)", err)
+		ctx.Handle(500, "GetMilestones", err)
 		return
 	}
 	for _, m := range miles {
@@ -1016,7 +1016,7 @@ func NewMilestonePost(ctx *middleware.Context, form auth.CreateMilestoneForm) {
 	}
 	deadline, err = time.Parse("01/02/2006", form.Deadline)
 	if err != nil {
-		ctx.Handle(500, "issue.NewMilestonePost(time.Parse)", err)
+		ctx.Handle(500, "time.Parse", err)
 		return
 	}
 
@@ -1028,11 +1028,11 @@ func NewMilestonePost(ctx *middleware.Context, form auth.CreateMilestoneForm) {
 		Deadline: deadline,
 	}
 	if err = models.NewMilestone(mile); err != nil {
-		ctx.Handle(500, "issue.NewMilestonePost(NewMilestone)", err)
+		ctx.Handle(500, "NewMilestone", err)
 		return
 	}
 
-	ctx.Redirect(ctx.Repo.RepoLink + "/issues/milestones")
+	ctx.Redirect(ctx.Repo.RepoLink + "/milestones")
 }
 
 func UpdateMilestone(ctx *middleware.Context) {
@@ -1040,7 +1040,7 @@ func UpdateMilestone(ctx *middleware.Context) {
 	ctx.Data["IsRepoToolbarIssues"] = true
 	ctx.Data["IsRepoToolbarIssuesList"] = true
 
-	idx := com.StrTo(ctx.Params(":index")).MustInt64()
+	idx := ctx.ParamsInt64(":index")
 	if idx == 0 {
 		ctx.Handle(404, "issue.UpdateMilestone", nil)
 		return
@@ -1049,9 +1049,9 @@ func UpdateMilestone(ctx *middleware.Context) {
 	mile, err := models.GetMilestoneByIndex(ctx.Repo.Repository.Id, idx)
 	if err != nil {
 		if err == models.ErrMilestoneNotExist {
-			ctx.Handle(404, "issue.UpdateMilestone(GetMilestoneByIndex)", err)
+			ctx.Handle(404, "GetMilestoneByIndex", err)
 		} else {
-			ctx.Handle(500, "issue.UpdateMilestone(GetMilestoneByIndex)", err)
+			ctx.Handle(500, "GetMilestoneByIndex", err)
 		}
 		return
 	}
@@ -1062,7 +1062,7 @@ func UpdateMilestone(ctx *middleware.Context) {
 		case "open":
 			if mile.IsClosed {
 				if err = models.ChangeMilestoneStatus(mile, false); err != nil {
-					ctx.Handle(500, "issue.UpdateMilestone(ChangeMilestoneStatus)", err)
+					ctx.Handle(500, "ChangeMilestoneStatus", err)
 					return
 				}
 			}
@@ -1070,17 +1070,17 @@ func UpdateMilestone(ctx *middleware.Context) {
 			if !mile.IsClosed {
 				mile.ClosedDate = time.Now()
 				if err = models.ChangeMilestoneStatus(mile, true); err != nil {
-					ctx.Handle(500, "issue.UpdateMilestone(ChangeMilestoneStatus)", err)
+					ctx.Handle(500, "ChangeMilestoneStatus", err)
 					return
 				}
 			}
 		case "delete":
 			if err = models.DeleteMilestone(mile); err != nil {
-				ctx.Handle(500, "issue.UpdateMilestone(DeleteMilestone)", err)
+				ctx.Handle(500, "DeleteMilestone", err)
 				return
 			}
 		}
-		ctx.Redirect(ctx.Repo.RepoLink + "/issues/milestones")
+		ctx.Redirect(ctx.Repo.RepoLink + "/milestones")
 		return
 	}
 
@@ -1098,7 +1098,7 @@ func UpdateMilestonePost(ctx *middleware.Context, form auth.CreateMilestoneForm)
 	ctx.Data["IsRepoToolbarIssues"] = true
 	ctx.Data["IsRepoToolbarIssuesList"] = true
 
-	idx := com.StrTo(ctx.Params(":index")).MustInt64()
+	idx := ctx.ParamsInt64(":index")
 	if idx == 0 {
 		ctx.Handle(404, "issue.UpdateMilestonePost", nil)
 		return
@@ -1107,9 +1107,9 @@ func UpdateMilestonePost(ctx *middleware.Context, form auth.CreateMilestoneForm)
 	mile, err := models.GetMilestoneByIndex(ctx.Repo.Repository.Id, idx)
 	if err != nil {
 		if err == models.ErrMilestoneNotExist {
-			ctx.Handle(404, "issue.UpdateMilestonePost(GetMilestoneByIndex)", err)
+			ctx.Handle(404, "GetMilestoneByIndex", err)
 		} else {
-			ctx.Handle(500, "issue.UpdateMilestonePost(GetMilestoneByIndex)", err)
+			ctx.Handle(500, "GetMilestoneByIndex", err)
 		}
 		return
 	}
@@ -1125,7 +1125,7 @@ func UpdateMilestonePost(ctx *middleware.Context, form auth.CreateMilestoneForm)
 	}
 	deadline, err = time.Parse("01/02/2006", form.Deadline)
 	if err != nil {
-		ctx.Handle(500, "issue.UpdateMilestonePost(time.Parse)", err)
+		ctx.Handle(500, "time.Parse", err)
 		return
 	}
 
@@ -1133,11 +1133,11 @@ func UpdateMilestonePost(ctx *middleware.Context, form auth.CreateMilestoneForm)
 	mile.Content = form.Content
 	mile.Deadline = deadline
 	if err = models.UpdateMilestone(mile); err != nil {
-		ctx.Handle(500, "issue.UpdateMilestonePost(UpdateMilestone)", err)
+		ctx.Handle(500, "UpdateMilestone", err)
 		return
 	}
 
-	ctx.Redirect(ctx.Repo.RepoLink + "/issues/milestones")
+	ctx.Redirect(ctx.Repo.RepoLink + "/milestones")
 }
 
 func IssueGetAttachment(ctx *middleware.Context) {
@@ -1150,7 +1150,7 @@ func IssueGetAttachment(ctx *middleware.Context) {
 	attachment, err := models.GetAttachmentById(id)
 
 	if err != nil {
-		ctx.Handle(404, "issue.IssueGetAttachment(models.GetAttachmentById)", err)
+		ctx.Handle(404, "models.GetAttachmentById", err)
 		return
 	}
 
