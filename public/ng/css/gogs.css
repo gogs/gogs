@@ -291,21 +291,20 @@ img.avatar-100 {
 .markdown h6 {
   font-size: 1em;
 }
-.markdown ul {
-  padding: 10px 0 0 15px;
+.markdown ul,
+.markdown ol {
+  padding-left: 1.2em;
 }
-.markdown ul li {
-  list-style: inside;
+.markdown ul > li,
+.markdown ol > li {
+  list-style: outside;
+  margin-top: 0.4em;
 }
 .markdown ol > li {
-  list-style: decimal inside;
+  list-style: decimal;
 }
 .markdown li {
   line-height: 1.6;
-  margin-top: 6px;
-}
-.markdown li:first-child {
-  margin-top: 0;
 }
 .markdown code {
   padding: 0.2em 0.5em;
