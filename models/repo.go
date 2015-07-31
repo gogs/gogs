@@ -486,7 +486,7 @@ func initRepository(e Engine, repoPath string, u *User, repo *Repository, initRe
 		}
 	} else if com.IsSliceContainsStr(Gitignores, repoLang) {
 		if err = ioutil.WriteFile(targetPath,
-			bindata.MustAsset(path.Join("conf/gitignore", repoLang)), os.ModePerm); err != nil {
+			bindata.MustAsset(path.Join("conf/gitignore", repoLang)), 0644); err != nil {
 			return fmt.Errorf("generate gitignore: %v", err)
 		}
 	} else {
@@ -502,7 +502,7 @@ func initRepository(e Engine, repoPath string, u *User, repo *Repository, initRe
 		}
 	} else if com.IsSliceContainsStr(Licenses, license) {
 		if err = ioutil.WriteFile(targetPath,
-			bindata.MustAsset(path.Join("conf/license", license)), os.ModePerm); err != nil {
+			bindata.MustAsset(path.Join("conf/license", license)), 0644); err != nil {
 			return fmt.Errorf("generate license: %v", err)
 		}
 	} else {
