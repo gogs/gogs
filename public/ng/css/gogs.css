@@ -297,7 +297,7 @@ img.avatar-100 {
 .markdown ul li {
   list-style: inside;
 }
-.markdown ol li {
+.markdown ol > li {
   list-style: decimal inside;
 }
 .markdown li {
