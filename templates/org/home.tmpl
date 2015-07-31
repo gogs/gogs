@@ -12,7 +12,7 @@
       <ul class="text-grey">
         {{if .Org.Location}}<li><span class="octicon octicon-location"></span> <span>{{.Org.Location}}</span></li>{{end}}
         {{if .Org.Website}}<li><span class="octicon octicon-link"></span> <a target="_blank" href="{{.Org.Website}}">{{.Org.Website}}</a></li>{{end}}
-        {{if .Org.Email}}<li><span class="octicon octicon-mail"></span> <a href="mailto:{{.Org.Email}}">{{.Org.Email}}</a></li>{{end}}
+        {{if and .Org.Email .IsSigned}}<li><span class="octicon octicon-mail"></span> <a href="mailto:{{.Org.Email}}">{{.Org.Email}}</a></li>{{end}}
       </ul>
 		</div>
 	</div>
