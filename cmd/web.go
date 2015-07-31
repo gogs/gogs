@@ -98,7 +98,9 @@ func checkVersion() {
 // newMacaron initializes Macaron instance.
 func newMacaron() *macaron.Macaron {
 	m := macaron.New()
-	m.Use(macaron.Logger())
+	if !setting.DisableRouterLog {
+		m.Use(macaron.Logger())
+	}
 	m.Use(macaron.Recovery())
 	if setting.EnableGzip {
 		m.Use(macaron.Gziper())
@@ -109,14 +111,14 @@ func newMacaron() *macaron.Macaron {
 	m.Use(macaron.Static(
 		path.Join(setting.StaticRootPath, "public"),
 		macaron.StaticOptions{
-			SkipLogging: !setting.DisableRouterLog,
+			SkipLogging: setting.DisableRouterLog,
 		},
 	))
 	m.Use(macaron.Static(
 		setting.AvatarUploadPath,
 		macaron.StaticOptions{
 			Prefix:      "avatars",
-			SkipLogging: !setting.DisableRouterLog,
+			SkipLogging: setting.DisableRouterLog,
 		},
 	))
 	m.Use(macaron.Renderer(macaron.RenderOptions{
