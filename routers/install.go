@@ -98,11 +98,11 @@ func Install(ctx *middleware.Context) {
 	form.DbName = models.DbCfg.Name
 	form.DbPath = models.DbCfg.Path
 
-	curDbOp := ""
 	if models.EnableSQLite3 {
-		curDbOp = "SQLite3" // Default when enabled.
+		ctx.Data["CurDbOption"] = "SQLite3" // Default when enabled.
+	} else {
+		ctx.Data["CurDbOption"] = "MySQL"
 	}
-	ctx.Data["CurDbOption"] = curDbOp
 
 	// Application general settings
 	form.AppName = setting.AppName
