@@ -105,7 +105,7 @@ func getEngine() (*xorm.Engine, error) {
 		if len(fields) > 1 && len(strings.TrimSpace(fields[1])) > 0 {
 			port = fields[1]
 		}
-		cnnstr = fmt.Sprintf("user=%s password=%s host=%s port=%s dbname=%s sslmode=%s",
+		cnnstr = fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s",
 			DbCfg.User, DbCfg.Passwd, host, port, DbCfg.Name, DbCfg.SSLMode)
 	case "sqlite3":
 		if !EnableSQLite3 {
