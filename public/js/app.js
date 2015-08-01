@@ -770,6 +770,7 @@ function initIssue() {
         $("#issue-edit-btn").on("click", function () {
             $('#issue h1.title,#issue .issue-main > .issue-content .content,#issue-edit-btn').toggleHide();
             $('#issue-edit-title,.issue-edit-content,.issue-edit-cancel,.issue-edit-save').toggleShow();
+            $('#issue-edit-content').focus();
         });
         $('.issue-edit-cancel').on("click", function () {
             $('#issue h1.title,#issue .issue-main > .issue-content .content,#issue-edit-btn').toggleShow();
