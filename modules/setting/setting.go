@@ -167,8 +167,12 @@ func ExecPath() (string, error) {
 
 // WorkDir returns absolute path of work directory.
 func WorkDir() (string, error) {
-	execPath, err := ExecPath()
-	return path.Dir(strings.Replace(execPath, "\\", "/", -1)), err
+	work := os.Getenv("WORK_DIR")
+	if len(work) == 0 {
+		execPath, err := ExecPath()
+		return path.Dir(strings.Replace(execPath, "\\", "/", -1)), err
+	}
+	return work, nil
 }
 
 func forcePathSeparator(path string) {
