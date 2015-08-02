@@ -460,10 +460,10 @@ func newLogService() {
 func newCacheService() {
 	CacheAdapter = Cfg.Section("cache").Key("ADAPTER").In("memory", []string{"memory", "redis", "memcache"})
 	if EnableRedis {
-		log.Info("Redis Enabled")
+		log.Info("Redis Supported")
 	}
 	if EnableMemcache {
-		log.Info("Memcache Enabled")
+		log.Info("Memcache Supported")
 	}
 
 	switch CacheAdapter {
