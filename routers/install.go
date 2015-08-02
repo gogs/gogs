@@ -72,7 +72,7 @@ func GlobalInit() {
 		log.NewGitLogger(path.Join(setting.LogRootPath, "http.log"))
 	}
 	if models.EnableSQLite3 {
-		log.Info("SQLite3 Enabled")
+		log.Info("SQLite3 Supported")
 	}
 	checkRunMode()
 }
@@ -213,6 +213,7 @@ func InstallPost(ctx *middleware.Context, form auth.InstallForm) {
 
 	// Check admin password.
 	if form.AdminPasswd != form.AdminConfirmPasswd {
+		ctx.Data["Err_Admin"] = true
 		ctx.Data["Err_AdminPasswd"] = true
 		ctx.RenderWithErr(ctx.Tr("form.password_not_match"), INSTALL, form)
 		return
