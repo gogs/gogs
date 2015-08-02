@@ -491,13 +491,13 @@ function initInstall() {
                     // Change the host value to the Postgres default, but only
                     // if the user hasn't already changed it from the MySQL
                     // default.
-                    if ($('#database-host').val() == mysql_default) {
-                        $('#database-host').val(postgres_default);
+                    if ($('#db_host').val() == mysql_default) {
+                        $('#db_host').val(postgres_default);
                     }
                 } else if (val == 'MySQL') {
                     $('.pgsql-setting').addClass("hide");
-                    if ($('#database-host').val() == postgres_default) {
-                        $('#database-host').val(mysql_default);
+                    if ($('#db_host').val() == postgres_default) {
+                        $('#db_host').val(mysql_default);
                     }
                 } else {
                     $('.pgsql-setting').addClass("hide");
