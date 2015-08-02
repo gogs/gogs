@@ -69,7 +69,7 @@ type VerChecker struct {
 // checkVersion checks if binary matches the version of templates files.
 func checkVersion() {
 	// Templates.
-	data, err := ioutil.ReadFile(path.Join(setting.StaticRootPath, "templates/.VERSION"))
+	data, err := ioutil.ReadFile(setting.StaticRootPath + "/templates/.VERSION")
 	if err != nil {
 		log.Fatal(4, "Fail to read 'templates/.VERSION': %v", err)
 	}
