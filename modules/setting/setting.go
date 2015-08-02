@@ -168,7 +168,18 @@ func ExecPath() (string, error) {
 // WorkDir returns absolute path of work directory.
 func WorkDir() (string, error) {
 	execPath, err := ExecPath()
-	return path.Dir(strings.Replace(execPath, "\\", "/", -1)), err
+	if err != nil {
+		return execPath, err
+	}
+
+	// Note: we don't use path.Dir here because it does not handle case
+	//	which path starts with two "/" in Windows: "//psf/Home/..."
+	execPath = strings.Replace(execPath, "\\", "/", -1)
+	i := strings.LastIndex(execPath, "/")
+	if i == -1 {
+		return execPath, nil
+	}
+	return execPath[:i], nil
 }
 
 func forcePathSeparator(path string) {
