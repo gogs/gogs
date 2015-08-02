@@ -203,11 +203,11 @@ func NewConfigContext() {
 
 	CustomPath = os.Getenv("GOGS_CUSTOM")
 	if len(CustomPath) == 0 {
-		CustomPath = path.Join(workDir, "custom")
+		CustomPath = workDir + "/custom"
 	}
 
 	if len(CustomConf) == 0 {
-		CustomConf = path.Join(CustomPath, "conf/app.ini")
+		CustomConf = CustomPath + "/conf/app.ini"
 	}
 
 	if com.IsFile(CustomConf) {
