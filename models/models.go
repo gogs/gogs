@@ -122,7 +122,7 @@ func getEngine() (*xorm.Engine, error) {
 func NewTestEngine(x *xorm.Engine) (err error) {
 	x, err = getEngine()
 	if err != nil {
-		return fmt.Errorf("connect to database: %v", err)
+		return fmt.Errorf("Connect to database: %v", err)
 	}
 
 	x.SetMapper(core.GonicMapper{})
@@ -132,7 +132,7 @@ func NewTestEngine(x *xorm.Engine) (err error) {
 func SetEngine() (err error) {
 	x, err = getEngine()
 	if err != nil {
-		return fmt.Errorf("connect to database: %v", err)
+		return fmt.Errorf("Connect to database: %v", err)
 	}
 
 	x.SetMapper(core.GonicMapper{})
@@ -144,7 +144,7 @@ func SetEngine() (err error) {
 
 	f, err := os.Create(logPath)
 	if err != nil {
-		return fmt.Errorf("models.init(fail to create xorm.log): %v", err)
+		return fmt.Errorf("Fail to create xorm.log: %v", err)
 	}
 	x.SetLogger(xorm.NewSimpleLogger(f))
 
