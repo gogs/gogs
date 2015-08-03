@@ -93,6 +93,9 @@ $(document).ready(function () {
     });
     $('.ui.accordion').accordion();
     $('.ui.checkbox').checkbox();
+    $('.ui.progress').progress({
+        showActivity: false
+    });
     $('.poping.up').popup();
 
     initInstall();

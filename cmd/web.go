@@ -330,7 +330,7 @@ func runWeb(ctx *cli.Context) {
 		m.Get("/template/*", dev.TemplatePreview)
 	}
 
-	reqAdmin := middleware.RequireAdmin()
+	reqRepoAdmin := middleware.RequireRepoAdmin()
 
 	// Organization.
 	m.Group("/org", func() {
@@ -405,7 +405,7 @@ func runWeb(ctx *cli.Context) {
 				m.Post("/:name", repo.GitHooksEditPost)
 			}, middleware.GitHookService())
 		})
-	}, reqSignIn, middleware.RepoAssignment(true), reqAdmin)
+	}, reqSignIn, middleware.RepoAssignment(true), reqRepoAdmin)
 
 	m.Group("/:username/:reponame", func() {
 		m.Get("/action/:action", repo.Action)
@@ -423,14 +423,14 @@ func runWeb(ctx *cli.Context) {
 			m.Post("/new", bindIgnErr(auth.CreateLabelForm{}), repo.NewLabel)
 			m.Post("/edit", bindIgnErr(auth.CreateLabelForm{}), repo.UpdateLabel)
 			m.Post("/delete", repo.DeleteLabel)
-		})
+		}, reqRepoAdmin)
 		m.Group("/milestones", func() {
 			m.Get("/new", repo.NewMilestone)
 			m.Post("/new", bindIgnErr(auth.CreateMilestoneForm{}), repo.NewMilestonePost)
 			m.Get("/:index/edit", repo.UpdateMilestone)
 			m.Post("/:index/edit", bindIgnErr(auth.CreateMilestoneForm{}), repo.UpdateMilestonePost)
 			m.Get("/:index/:action", repo.UpdateMilestone)
-		})
+		}, reqRepoAdmin)
 
 		m.Post("/comment/:action", repo.Comment)
 
@@ -439,7 +439,7 @@ func runWeb(ctx *cli.Context) {
 			m.Post("/new", bindIgnErr(auth.NewReleaseForm{}), repo.NewReleasePost)
 			m.Get("/edit/:tagname", repo.EditRelease)
 			m.Post("/edit/:tagname", bindIgnErr(auth.EditReleaseForm{}), repo.EditReleasePost)
-		}, middleware.RepoRef())
+		}, reqRepoAdmin, middleware.RepoRef())
 	}, reqSignIn, middleware.RepoAssignment(true))
 
 	m.Group("/:username/:reponame", func() {

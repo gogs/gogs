@@ -348,7 +348,7 @@ func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 	}
 }
 
-func RequireAdmin() macaron.Handler {
+func RequireRepoAdmin() macaron.Handler {
 	return func(ctx *Context) {
 		if ctx.Repo.AccessMode < models.ACCESS_MODE_ADMIN {
 			if !ctx.IsSigned {

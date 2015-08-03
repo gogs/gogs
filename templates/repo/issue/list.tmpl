@@ -70,43 +70,45 @@
 			</div>
 		</div>
 
-		<div class="issue list">
-			{{range .Issues}}
-			{{ $timeStr:= TimeSince .Created $.Lang }}
-      <li class="item">
-      	<div class="ui {{if .IsRead}}black{{else}}green{{end}} label">#{{.Index}}</div>
-      	<a class="title" href="{{$.RepoLink}}/issues/{{.Index}}">{{.Name}}</a>
+		<div class="sixteen wide column">
+			<div class="issue list">
+				{{range .Issues}}
+				{{ $timeStr:= TimeSince .Created $.Lang }}
+	      <li class="item">
+	      	<div class="ui {{if .IsRead}}black{{else}}green{{end}} label">#{{.Index}}</div>
+	      	<a class="title" href="{{$.RepoLink}}/issues/{{.Index}}">{{.Name}}</a>
 
-      	{{range .Labels}}
-				<a class="ui label" href="{{$.RepoLink}}/issues?type={{$.ViewType}}&state={{$.State}}&labels={{.ID}}" style="background-color: {{.Color}}">{{.Name}}</a>
-      	{{end}}
+	      	{{range .Labels}}
+					<a class="ui label" href="{{$.RepoLink}}/issues?type={{$.ViewType}}&state={{$.State}}&labels={{.ID}}" style="background-color: {{.Color}}">{{.Name}}</a>
+	      	{{end}}
 
-      	{{if .NumComments}}<span class="comment ui right"><i class="octicon octicon-comment"></i> {{.NumComments}}</span>{{end}}
-        <p class="desc">{{$.i18n.Tr "repo.issues.opened_by" $timeStr .Poster.Name|Str2html}}</p>
-      </li>
-      {{end}}
-			
-			{{with .Page}}
-			{{if gt .Total 1}}
-			<div class="center page buttons">
-				<div class="ui borderless pagination menu">
-				  <a class="{{if not .HasPrevious}}disabled{{end}} item" {{if .HasPrevious}}href="{{$.RepoLink}}/issues?type={{$.ViewType}}&state={{$.State}}&labels={{$.SelectLabels}}&page={{.Previous}}"{{end}}>
-				    <i class="left arrow icon"></i> {{$.i18n.Tr "repo.issues.previous"}}
-				  </a>
-					{{range .Pages}}
-					{{if eq .Num -1}}
-					<a class="disabled item">...</a>
-					{{else}}
-					<a class="{{if .IsCurrent}}active{{end}} item" {{if not .IsCurrent}}href="{{$.RepoLink}}/issues?type={{$.ViewType}}&state={{$.State}}&labels={{$.SelectLabels}}&page={{.Num}}"{{end}}>{{.Num}}</a>
-					{{end}}
-					{{end}}
-				  <a class="{{if not .HasNext}}disabled{{end}} item" {{if .HasNext}}href="{{$.RepoLink}}/issues?type={{$.ViewType}}&state={{$.State}}&labels={{$.SelectLabels}}&page={{.Next}}"{{end}}>
-				    {{$.i18n.Tr "repo.issues.next"}} <i class="icon right arrow"></i>
-				  </a>
+	      	{{if .NumComments}}<span class="comment ui right"><i class="octicon octicon-comment"></i> {{.NumComments}}</span>{{end}}
+	        <p class="desc">{{$.i18n.Tr "repo.issues.opened_by" $timeStr .Poster.Name|Str2html}}</p>
+	      </li>
+	      {{end}}
+				
+				{{with .Page}}
+				{{if gt .Total 1}}
+				<div class="center page buttons">
+					<div class="ui borderless pagination menu">
+					  <a class="{{if not .HasPrevious}}disabled{{end}} item" {{if .HasPrevious}}href="{{$.RepoLink}}/issues?type={{$.ViewType}}&state={{$.State}}&labels={{$.SelectLabels}}&page={{.Previous}}"{{end}}>
+					    <i class="left arrow icon"></i> {{$.i18n.Tr "repo.issues.previous"}}
+					  </a>
+						{{range .Pages}}
+						{{if eq .Num -1}}
+						<a class="disabled item">...</a>
+						{{else}}
+						<a class="{{if .IsCurrent}}active{{end}} item" {{if not .IsCurrent}}href="{{$.RepoLink}}/issues?type={{$.ViewType}}&state={{$.State}}&labels={{$.SelectLabels}}&page={{.Num}}"{{end}}>{{.Num}}</a>
+						{{end}}
+						{{end}}
+					  <a class="{{if not .HasNext}}disabled{{end}} item" {{if .HasNext}}href="{{$.RepoLink}}/issues?type={{$.ViewType}}&state={{$.State}}&labels={{$.SelectLabels}}&page={{.Next}}"{{end}}>
+					    {{$.i18n.Tr "repo.issues.next"}} <i class="icon right arrow"></i>
+					  </a>
+					</div>
 				</div>
+				{{end}}
+				{{end}}
 			</div>
-			{{end}}
-			{{end}}
 		</div>
 	</div>
 </div>

@@ -159,10 +159,8 @@ func Issues(ctx *middleware.Context) {
 	ctx.Data["IsShowClosed"] = isShowClosed
 	if isShowClosed {
 		ctx.Data["State"] = "closed"
-		ctx.Data["ShowCount"] = issueStats.ClosedCount
 	} else {
 		ctx.Data["State"] = "open"
-		ctx.Data["ShowCount"] = issueStats.OpenCount
 	}
 
 	ctx.HTML(200, ISSUES)
@@ -176,12 +174,12 @@ func CreateIssue(ctx *middleware.Context) {
 
 	var err error
 	// Get all milestones.
-	ctx.Data["OpenMilestones"], err = models.GetMilestones(ctx.Repo.Repository.Id, false)
+	ctx.Data["OpenMilestones"], err = models.Milestones(ctx.Repo.Repository.Id, false)
 	if err != nil {
 		ctx.Handle(500, "issue.ViewIssue(GetMilestones.1): %v", err)
 		return
 	}
-	ctx.Data["ClosedMilestones"], err = models.GetMilestones(ctx.Repo.Repository.Id, true)
+	ctx.Data["ClosedMilestones"], err = models.Milestones(ctx.Repo.Repository.Id, true)
 	if err != nil {
 		ctx.Handle(500, "issue.ViewIssue(GetMilestones.2): %v", err)
 		return
@@ -220,12 +218,12 @@ func CreateIssuePost(ctx *middleware.Context, form auth.CreateIssueForm) {
 
 	var err error
 	// Get all milestones.
-	_, err = models.GetMilestones(ctx.Repo.Repository.Id, false)
+	_, err = models.Milestones(ctx.Repo.Repository.Id, false)
 	if err != nil {
 		send(500, nil, err)
 		return
 	}
-	_, err = models.GetMilestones(ctx.Repo.Repository.Id, true)
+	_, err = models.Milestones(ctx.Repo.Repository.Id, true)
 	if err != nil {
 		send(500, nil, err)
 		return
@@ -385,12 +383,12 @@ func ViewIssue(ctx *middleware.Context) {
 	}
 
 	// Get all milestones.
-	ctx.Data["OpenMilestones"], err = models.GetMilestones(ctx.Repo.Repository.Id, false)
+	ctx.Data["OpenMilestones"], err = models.Milestones(ctx.Repo.Repository.Id, false)
 	if err != nil {
 		ctx.Handle(500, "issue.ViewIssue(GetMilestones.1): %v", err)
 		return
 	}
-	ctx.Data["ClosedMilestones"], err = models.GetMilestones(ctx.Repo.Repository.Id, true)
+	ctx.Data["ClosedMilestones"], err = models.Milestones(ctx.Repo.Repository.Id, true)
 	if err != nil {
 		ctx.Handle(500, "issue.ViewIssue(GetMilestones.2): %v", err)
 		return
@@ -967,13 +965,12 @@ func DeleteLabel(ctx *middleware.Context) {
 }
 
 func Milestones(ctx *middleware.Context) {
-	ctx.Data["Title"] = "Milestones"
-	ctx.Data["IsRepoToolbarIssues"] = true
-	ctx.Data["IsRepoToolbarIssuesList"] = true
+	ctx.Data["Title"] = ctx.Tr("repo.milestones")
+	ctx.Data["PageIsMilestones"] = true
 
 	isShowClosed := ctx.Query("state") == "closed"
 
-	miles, err := models.GetMilestones(ctx.Repo.Repository.Id, isShowClosed)
+	miles, err := models.Milestones(ctx.Repo.Repository.Id, isShowClosed)
 	if err != nil {
 		ctx.Handle(500, "GetMilestones", err)
 		return
@@ -984,11 +981,17 @@ func Milestones(ctx *middleware.Context) {
 	}
 	ctx.Data["Milestones"] = miles
 
+	openCount, closedCount := models.MilestoneStats(ctx.Repo.Repository.Id)
+	ctx.Data["OpenCount"] = openCount
+	ctx.Data["ClosedCount"] = closedCount
+
 	if isShowClosed {
 		ctx.Data["State"] = "closed"
 	} else {
 		ctx.Data["State"] = "open"
 	}
+
+	ctx.Data["IsShowClosed"] = isShowClosed
 	ctx.HTML(200, MILESTONE)
 }
 
