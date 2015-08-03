@@ -197,7 +197,7 @@
                     <p>None yet</p>
                     {{end}}
                 </div>
-                <div class="milestone" data-milestone="{{.Milestone.Id}}" data-ajax="{{.Issue.Index}}/milestone">
+                <div class="milestone" data-milestone="{{.Milestone.ID}}" data-ajax="{{.Issue.Index}}/milestone">
                     <div class="pull-right action">
                         {{if .IsRepositoryOwner}}
                         <button class="btn btn-default btn-sm" data-toggle="dropdown">
@@ -219,7 +219,7 @@
                                             {{else}}
                                             <ul class="list-unstyled">
                                                 {{range .OpenMilestones}}
-                                                <li class="milestone-item" data-id="{{.Id}}">
+                                                <li class="milestone-item" data-id="{{.ID}}">
                                                     <p><strong>{{.Name}}</strong></p>
                                                     <!-- <p>due to 3 days later</p> -->
                                                 </li>
