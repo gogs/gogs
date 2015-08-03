@@ -1,43 +1,70 @@
-{{template "base/head_old" .}}
-{{template "base/navbar" .}}
-{{template "repo/nav" .}}
-{{template "repo/toolbar" .}}
-<div id="body" class="container">
-    <div id="issue">
-        <div class="col-md-3 filter-list">
-            <ul class="list-unstyled">
-                <li><a href="{{.RepoLink}}/milestones"{{if eq .State "open"}} class="active"{{end}}>Open Milestones <strong class="pull-right">{{.Repository.NumOpenMilestones}}</strong></a></li>
-                <li><a href="{{.RepoLink}}/milestones?state=closed"{{if eq .State "closed"}} class="active"{{end}}>Close Milestones <strong class="pull-right">{{.Repository.NumClosedMilestones}}</strong></a></li>
-            </ul>
-            <hr/>
-            <a href="{{.RepoLink}}/milestones/new" class="text-center">
-                <button class="btn btn-default btn-block">Create new milestone</button>
-            </a>
-        </div>
-        <div class="col-md-9">
-            <div class="milestones list-group">
-                {{range .Milestones}}
-                <div class="list-group-item milestone-item">
-                    <h4 class="title pull-left"><a href="{{$.RepoLink}}/issues?milestone={{.Index}}{{if .IsClosed}}&state=closed{{end}}">{{.Name}}</a></h4>
-                    <span class="issue-open label label-success">{{.NumOpenIssues}}</span>
-                    <span class="issue-close label label-warning">{{.NumClosedIssues}}</span>
-                    <p class="actions pull-right">
-                        <a href="{{$.RepoLink}}/milestones/{{.Index}}/edit">Edit</a>
-                        {{if .IsClosed}}
-                        <a href="{{$.RepoLink}}/milestones/{{.Index}}/open">Open</a>
-                        {{else}}
-                        <a href="{{$.RepoLink}}/milestones/{{.Index}}/close">Close</a>
-                        {{end}}
-                        <a class="text-danger" href="{{$.RepoLink}}/milestones/{{.Index}}/delete">Delete</a>
-                        <a href="{{$.RepoLink}}/issues?milestone={{.Index}}{{if .IsClosed}}&state=closed{{end}}">Issues</a>
-                    </p>
-                    <hr/>
-                    <p class="description">{{.RenderedContent | Str2html}}</p>
-                </div>
-                {{end}}
-            </div>
-        </div>
-    </div>
+{{template "base/head" .}}
+<div class="repository">
+	{{template "repo/header" .}}
+	<div class="ui middle page grid body">
+		<div class="navbar">
+			{{template "repo/issue/navbar" .}}
+			<div class="ui right floated secondary menu">
+				<a class="ui green button" href="{{$.RepoLink}}/milestones/new">{{.i18n.Tr "repo.milestones.new"}}</a>
+			</div>
+		</div>
+		<div class="ui divider"></div>
+		<div class="ui left">
+			<div class="ui tiny buttons">
+			  <a class="ui green basic button {{if not .IsShowClosed}}active{{end}}" href="{{.RepoLink}}/milestones?state=open">
+			  	<i class="octicon octicon-milestone"></i>
+			  	{{.i18n.Tr "repo.milestones.open_tab" .OpenCount}}
+			  </a>
+			  <a class="ui red basic button {{if .IsShowClosed}}active{{end}}" href="{{.RepoLink}}/milestones?state=closed">
+			  	<i class="octicon octicon-milestone"></i>
+			  	{{.i18n.Tr "repo.milestones.close_tab" .ClosedCount}}
+			  </a>
+			</div>
+		</div>
+
+		
+		<div class="sixteen wide column">
+			<div class="milestone list">
+				{{range .Milestones}}
+				<li class="item">
+					<i class="octicon octicon-milestone"></i> <a href="{{$.RepoLink}}/issues?state={{$.State}}&midx={{.Index}}">{{.Name}}</a>
+					<div class="ui right blue progress" data-percent="{{if .Completeness}}{{.Completeness}}{{else}}100{{end}}">
+				    <div class="bar">
+				      <div class="progress"></div>
+				    </div>
+					</div>
+					<div class="meta">
+						{{ $closedDate:= TimeSince .ClosedDate $.Lang }}
+						{{if .IsClosed}}
+						<span class="octicon octicon-clock"></span> {{$.i18n.Tr "repo.milestones.closed" $closedDate|Str2html}}
+						{{else}}
+						<span class="octicon octicon-calendar"></span> {{if .DeadlineString}}{{.DeadlineString}}{{else}}{{$.i18n.Tr "repo.milestones.no_due_date"}}{{end}}
+						{{end}}
+						<span class="issue-stats">
+							<i class="octicon octicon-issue-opened"></i> {{$.i18n.Tr "repo.issues.open_tab" .NumOpenIssues}}
+							<i class="octicon octicon-issue-closed"></i> {{$.i18n.Tr "repo.issues.close_tab" .NumClosedIssues}}
+						</span>
+					</div>
+					{{if $.IsRepositoryAdmin}}
+					<div class="ui right operate">
+						<a href="{{$.RepoLink}}/milestones/{{.Index}}/edit" data-id={{.ID}} data-title={{.Name}}><i class="octicon octicon-pencil"></i> {{$.i18n.Tr "repo.issues.label_edit"}}</a>
+						{{if .IsClosed}}
+						<a href="{{$.RepoLink}}/milestones/{{.Index}}/open" data-id={{.ID}} data-title={{.Name}}><i class="octicon octicon-check"></i> {{$.i18n.Tr "repo.milestones.open"}}</a>
+						{{else}}
+						<a href="{{$.RepoLink}}/milestones/{{.Index}}/close" data-id={{.ID}} data-title={{.Name}}><i class="octicon octicon-x"></i> {{$.i18n.Tr "repo.milestones.close"}}</a>
+						{{end}}
+						<a class="delete-milestone-button" href="#" data-url="{{$.RepoLink}}/milestone/delete" data-id="{{.ID}}"><i class="octicon octicon-trashcan"></i> {{$.i18n.Tr "repo.issues.label_delete"}}</a>
+					</div>
+					{{if .Content}}
+					<div class="content">
+						{{.RenderedContent|Str2html}}
+					</div>
+					{{end}}
+					{{end}}
+				</li>
+				{{end}}
+			</div>
+		</div>
+	</div>
 </div>
-</div>
-{{template "base/footer_old" .}}
+{{template "base/footer" .}}

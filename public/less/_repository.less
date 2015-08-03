@@ -97,11 +97,10 @@
 		  right: 0!important;
   		left: auto!important;
 	}
+
 	.issue.list {
 		clear: both;
 		list-style: none;
-		font-size: 13px;
-		padding-top: 15px;
 		>.item {
 			padding-top: 15px;
 			padding-bottom: 10px;
@@ -128,9 +127,10 @@
 			padding-top: 15px;
 		}
 	}
+
 	.label.list {
 		clear: both;
-		padding-top: 15px;
+		list-style: none;
 		.item {
 			padding-top: 10px;
 			padding-bottom: 10px;
@@ -146,6 +146,55 @@
 				&.open-issues {
 					margin-right: 30px;
 				}
+			}
+		}
+	}
+
+	.milestone.list {
+		clear: both;
+		list-style: none;
+		.item {
+			padding-top: 10px;
+			padding-bottom: 10px;
+			border-bottom: 1px dashed #AAA;
+			> a {
+				padding-top: 5px;
+				padding-right: 10px;
+				color: #000;
+				&:hover {
+					color: #4078c0;
+				}
+			}
+			.ui.progress {
+				width: 40%;
+				padding: 0;
+				border: 0;
+				margin: 0;
+				.bar {
+					height: 20px;
+				}
+			}
+			.meta {
+				color: #999;
+				padding-top: 5px;
+				.issue-stats .octicon{
+					padding-left: 5px;
+				}
+			}
+			.operate {
+				margin-top: -15px;
+				> a {
+					font-size: 15px;
+					padding-top: 5px;
+					padding-right: 10px;
+					color: #666;
+					&:hover {
+						color: #000;
+					}
+				}
+			}
+			.content {
+				padding-top: 10px;
 			}
 		}
 	}

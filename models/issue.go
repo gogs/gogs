@@ -626,7 +626,7 @@ func DeleteLabel(repoID, labelID int64) error {
 
 // Milestone represents a milestone of repository.
 type Milestone struct {
-	Id              int64
+	ID              int64 `xorm:"pk autoincr"`
 	RepoId          int64 `xorm:"INDEX"`
 	Index           int64
 	Name            string
@@ -670,7 +670,7 @@ func NewMilestone(m *Milestone) (err error) {
 
 // GetMilestoneById returns the milestone by given ID.
 func GetMilestoneById(id int64) (*Milestone, error) {
-	m := &Milestone{Id: id}
+	m := &Milestone{ID: id}
 	has, err := x.Get(m)
 	if err != nil {
 		return nil, err
@@ -692,16 +692,15 @@ func GetMilestoneByIndex(repoId, idx int64) (*Milestone, error) {
 	return m, nil
 }
 
-// GetMilestones returns a list of milestones of given repository and status.
-func GetMilestones(repoId int64, isClosed bool) ([]*Milestone, error) {
+// Milestones returns a list of milestones of given repository and status.
+func Milestones(repoID int64, isClosed bool) ([]*Milestone, error) {
 	miles := make([]*Milestone, 0, 10)
-	err := x.Where("repo_id=?", repoId).And("is_closed=?", isClosed).Find(&miles)
-	return miles, err
+	return miles, x.Where("repo_id=? AND is_closed=?", repoID, isClosed).Find(&miles)
 }
 
 // UpdateMilestone updates information of given milestone.
 func UpdateMilestone(m *Milestone) error {
-	_, err := x.Id(m.Id).Update(m)
+	_, err := x.Id(m.ID).AllCols().Update(m)
 	return err
 }
 
@@ -719,7 +718,7 @@ func ChangeMilestoneStatus(m *Milestone, isClosed bool) (err error) {
 	}
 
 	m.IsClosed = isClosed
-	if _, err = sess.Id(m.Id).AllCols().Update(m); err != nil {
+	if _, err = sess.Id(m.ID).AllCols().Update(m); err != nil {
 		sess.Rollback()
 		return err
 	}
@@ -786,7 +785,7 @@ func ChangeMilestoneAssign(oldMid, mid int64, issue *Issue) (err error) {
 			m.Completeness = 0
 		}
 
-		if _, err = sess.Id(m.Id).Cols("num_issues,num_completeness,num_closed_issues").Update(m); err != nil {
+		if _, err = sess.Id(m.ID).Cols("num_issues,num_completeness,num_closed_issues").Update(m); err != nil {
 			sess.Rollback()
 			return err
 		}
@@ -814,13 +813,13 @@ func ChangeMilestoneAssign(oldMid, mid int64, issue *Issue) (err error) {
 		}
 
 		m.Completeness = m.NumClosedIssues * 100 / m.NumIssues
-		if _, err = sess.Id(m.Id).Cols("num_issues,num_completeness,num_closed_issues").Update(m); err != nil {
+		if _, err = sess.Id(m.ID).Cols("num_issues,num_completeness,num_closed_issues").Update(m); err != nil {
 			sess.Rollback()
 			return err
 		}
 
 		rawSql := "UPDATE `issue_user` SET milestone_id = ? WHERE issue_id = ?"
-		if _, err = sess.Exec(rawSql, m.Id, issue.ID); err != nil {
+		if _, err = sess.Exec(rawSql, m.ID, issue.ID); err != nil {
 			sess.Rollback()
 			return err
 		}
@@ -849,17 +848,24 @@ func DeleteMilestone(m *Milestone) (err error) {
 	}
 
 	rawSql = "UPDATE `issue` SET milestone_id = 0 WHERE milestone_id = ?"
-	if _, err = sess.Exec(rawSql, m.Id); err != nil {
+	if _, err = sess.Exec(rawSql, m.ID); err != nil {
 		sess.Rollback()
 		return err
 	}
 
 	rawSql = "UPDATE `issue_user` SET milestone_id = 0 WHERE milestone_id = ?"
-	if _, err = sess.Exec(rawSql, m.Id); err != nil {
+	if _, err = sess.Exec(rawSql, m.ID); err != nil {
 		sess.Rollback()
 		return err
 	}
 	return sess.Commit()
+}
+
+// MilestoneStats returns stats of open and closed milestone count of given repository.
+func MilestoneStats(repoID int64) (open int64, closed int64) {
+	open, _ = x.Where("repo_id=? AND is_closed=?", repoID, false).Count(new(Milestone))
+	closed, _ = x.Where("repo_id=? AND is_closed=?", repoID, true).Count(new(Milestone))
+	return open, closed
 }
 
 // _________                                       __
