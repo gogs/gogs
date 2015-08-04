@@ -10,20 +10,19 @@ import (
 	"strings"
 
 	"github.com/Unknwon/macaron"
+	"github.com/mcuadros/go-version"
+	"github.com/mssola/user_agent"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/git"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/setting"
-
-	"github.com/hashicorp/go-version"
-	"github.com/mssola/user_agent"
 )
 
 const (
 	FIREFOX_COPY_SUPPORT = "41.0"
-	CHROME_COPY_SUPPORT = "43.0.2356"
+	CHROME_COPY_SUPPORT  = "43.0.2356"
 )
 
 func ApiRepoAssignment() macaron.Handler {
@@ -355,22 +354,11 @@ func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 		ctx.Data["CommitId"] = ctx.Repo.CommitId
 
 		userAgent := ctx.Req.Header.Get("User-Agent")
-		ua := user_agent.New(userAgent);
+		ua := user_agent.New(userAgent)
 		browserName, browserVer := ua.Browser()
 
-		sliceVer := strings.Split(browserVer, ".")
-		var max int
-		if max = len(sliceVer); 3 < max {
-			max = 3
-		}
-		browserVer = strings.Join(sliceVer[:max], ".")
-
-		browserVersion, err := version.NewVersion(browserVer)
-		chromeConstraint, err := version.NewConstraint(">= " + CHROME_COPY_SUPPORT)
-		firefoxConstraint, err := version.NewConstraint(">= " + FIREFOX_COPY_SUPPORT)
-
-		ctx.Data["BrowserSupportsCopy"] = (browserName == "Chrome" && chromeConstraint.Check(browserVersion)) || (browserName == "Firefox" && firefoxConstraint.Check(browserVersion))
-
+		ctx.Data["BrowserSupportsCopy"] = (browserName == "Chrome" && version.Compare(browserVer, CHROME_COPY_SUPPORT, ">=")) ||
+			(browserName == "Firefox" && version.Compare(browserVer, FIREFOX_COPY_SUPPORT, ">="))
 	}
 }
 
