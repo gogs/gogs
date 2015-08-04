@@ -427,9 +427,9 @@ func runWeb(ctx *cli.Context) {
 		m.Group("/milestones", func() {
 			m.Get("/new", repo.NewMilestone)
 			m.Post("/new", bindIgnErr(auth.CreateMilestoneForm{}), repo.NewMilestonePost)
-			m.Get("/:index/edit", repo.UpdateMilestone)
+			m.Get("/:index/edit", repo.MilestoneActions)
 			m.Post("/:index/edit", bindIgnErr(auth.CreateMilestoneForm{}), repo.UpdateMilestonePost)
-			m.Get("/:index/:action", repo.UpdateMilestone)
+			m.Get("/:index/:action", repo.MilestoneActions)
 		}, reqRepoAdmin)
 
 		m.Post("/comment/:action", repo.Comment)
@@ -452,7 +452,6 @@ func runWeb(ctx *cli.Context) {
 		m.Get("/branches", repo.Branches)
 		m.Get("/archive/*", repo.Download)
 		m.Get("/pulls2/", repo.PullRequest2)
-		m.Get("/milestone2/", repo.Milestones2)
 		m.Head("/hooks/trigger", repo.TriggerHook)
 
 		m.Group("", func() {
