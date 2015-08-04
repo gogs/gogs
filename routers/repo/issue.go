@@ -66,8 +66,6 @@ func Issues(ctx *middleware.Context) {
 		viewType = "all"
 	}
 
-	isShowClosed := ctx.Query("state") == "closed"
-
 	// Must sign in to see issues about you.
 	if viewType != "all" && !ctx.IsSigned {
 		ctx.SetCookie("redirect_to", "/"+url.QueryEscape(setting.AppSubUrl+ctx.Req.RequestURI), 0, setting.AppSubUrl)
@@ -96,6 +94,7 @@ func Issues(ctx *middleware.Context) {
 	repo := ctx.Repo.Repository
 	selectLabels := ctx.Query("labels")
 	milestoneID := ctx.QueryInt64("milestone")
+	isShowClosed := ctx.Query("state") == "closed"
 	issueStats := models.GetIssueStats(repo.Id, uid, com.StrTo(selectLabels).MustInt64(), isShowClosed, filterMode)
 
 	page := ctx.QueryInt("page")
@@ -112,7 +111,7 @@ func Issues(ctx *middleware.Context) {
 	ctx.Data["Page"] = paginater.New(total, setting.IssuePagingNum, page, 5)
 
 	// Get issues.
-	issues, err := models.GetIssues(uid, assigneeID, repo.Id, posterID, milestoneID,
+	issues, err := models.Issues(uid, assigneeID, repo.Id, posterID, milestoneID,
 		page, isShowClosed, filterMode == models.FM_MENTION, selectLabels, ctx.Query("sortType"))
 	if err != nil {
 		ctx.Handle(500, "GetIssues: %v", err)
@@ -172,22 +171,25 @@ func CreateIssue(ctx *middleware.Context) {
 	ctx.Data["IsRepoToolbarIssuesList"] = false
 	ctx.Data["AttachmentsEnabled"] = setting.AttachmentEnabled
 
-	var err error
+	var (
+		repo = ctx.Repo.Repository
+		err  error
+	)
 	// Get all milestones.
-	ctx.Data["OpenMilestones"], err = models.Milestones(ctx.Repo.Repository.Id, false)
+	ctx.Data["OpenMilestones"], err = models.Milestones(repo.Id, -1, false)
 	if err != nil {
-		ctx.Handle(500, "issue.ViewIssue(GetMilestones.1): %v", err)
+		ctx.Handle(500, "GetMilestones.1: %v", err)
 		return
 	}
-	ctx.Data["ClosedMilestones"], err = models.Milestones(ctx.Repo.Repository.Id, true)
+	ctx.Data["ClosedMilestones"], err = models.Milestones(repo.Id, -1, true)
 	if err != nil {
-		ctx.Handle(500, "issue.ViewIssue(GetMilestones.2): %v", err)
+		ctx.Handle(500, "GetMilestones.2: %v", err)
 		return
 	}
 
-	us, err := ctx.Repo.Repository.GetCollaborators()
+	us, err := repo.GetCollaborators()
 	if err != nil {
-		ctx.Handle(500, "issue.CreateIssue(GetCollaborators)", err)
+		ctx.Handle(500, "GetCollaborators", err)
 		return
 	}
 
@@ -218,12 +220,12 @@ func CreateIssuePost(ctx *middleware.Context, form auth.CreateIssueForm) {
 
 	var err error
 	// Get all milestones.
-	_, err = models.Milestones(ctx.Repo.Repository.Id, false)
+	_, err = models.Milestones(ctx.Repo.Repository.Id, -1, false)
 	if err != nil {
 		send(500, nil, err)
 		return
 	}
-	_, err = models.Milestones(ctx.Repo.Repository.Id, true)
+	_, err = models.Milestones(ctx.Repo.Repository.Id, -1, true)
 	if err != nil {
 		send(500, nil, err)
 		return
@@ -371,7 +373,7 @@ func ViewIssue(ctx *middleware.Context) {
 
 	// Get assigned milestone.
 	if issue.MilestoneId > 0 {
-		ctx.Data["Milestone"], err = models.GetMilestoneById(issue.MilestoneId)
+		ctx.Data["Milestone"], err = models.MilestoneById(issue.MilestoneId)
 		if err != nil {
 			if err == models.ErrMilestoneNotExist {
 				log.Warn("issue.ViewIssue(GetMilestoneById): %v", err)
@@ -383,12 +385,12 @@ func ViewIssue(ctx *middleware.Context) {
 	}
 
 	// Get all milestones.
-	ctx.Data["OpenMilestones"], err = models.Milestones(ctx.Repo.Repository.Id, false)
+	ctx.Data["OpenMilestones"], err = models.Milestones(ctx.Repo.Repository.Id, -1, false)
 	if err != nil {
 		ctx.Handle(500, "issue.ViewIssue(GetMilestones.1): %v", err)
 		return
 	}
-	ctx.Data["ClosedMilestones"], err = models.Milestones(ctx.Repo.Repository.Id, true)
+	ctx.Data["ClosedMilestones"], err = models.Milestones(ctx.Repo.Repository.Id, -1, true)
 	if err != nil {
 		ctx.Handle(500, "issue.ViewIssue(GetMilestones.2): %v", err)
 		return
@@ -969,8 +971,24 @@ func Milestones(ctx *middleware.Context) {
 	ctx.Data["PageIsMilestones"] = true
 
 	isShowClosed := ctx.Query("state") == "closed"
+	openCount, closedCount := models.MilestoneStats(ctx.Repo.Repository.Id)
+	ctx.Data["OpenCount"] = openCount
+	ctx.Data["ClosedCount"] = closedCount
 
-	miles, err := models.Milestones(ctx.Repo.Repository.Id, isShowClosed)
+	page := ctx.QueryInt("page")
+	if page <= 1 {
+		page = 1
+	}
+
+	var total int
+	if !isShowClosed {
+		total = int(openCount)
+	} else {
+		total = int(closedCount)
+	}
+	ctx.Data["Page"] = paginater.New(total, setting.IssuePagingNum, page, 5)
+
+	miles, err := models.Milestones(ctx.Repo.Repository.Id, page, isShowClosed)
 	if err != nil {
 		ctx.Handle(500, "GetMilestones", err)
 		return
@@ -980,10 +998,6 @@ func Milestones(ctx *middleware.Context) {
 		m.CalOpenIssues()
 	}
 	ctx.Data["Milestones"] = miles
-
-	openCount, closedCount := models.MilestoneStats(ctx.Repo.Repository.Id)
-	ctx.Data["OpenCount"] = openCount
-	ctx.Data["ClosedCount"] = closedCount
 
 	if isShowClosed {
 		ctx.Data["State"] = "closed"
@@ -1024,7 +1038,7 @@ func NewMilestonePost(ctx *middleware.Context, form auth.CreateMilestoneForm) {
 	}
 
 	mile := &models.Milestone{
-		RepoId:   ctx.Repo.Repository.Id,
+		RepoID:   ctx.Repo.Repository.Id,
 		Index:    int64(ctx.Repo.Repository.NumMilestones) + 1,
 		Name:     form.Title,
 		Content:  form.Content,
@@ -1038,14 +1052,17 @@ func NewMilestonePost(ctx *middleware.Context, form auth.CreateMilestoneForm) {
 	ctx.Redirect(ctx.Repo.RepoLink + "/milestones")
 }
 
-func UpdateMilestone(ctx *middleware.Context) {
+func EditMilestone(ctx *middleware.Context)     {}
+func EditMilestonePost(ctx *middleware.Context) {}
+
+func MilestoneActions(ctx *middleware.Context) {
 	ctx.Data["Title"] = "Update Milestone"
 	ctx.Data["IsRepoToolbarIssues"] = true
 	ctx.Data["IsRepoToolbarIssuesList"] = true
 
 	idx := ctx.ParamsInt64(":index")
 	if idx == 0 {
-		ctx.Handle(404, "issue.UpdateMilestone", nil)
+		ctx.Handle(404, "get milestone index", nil)
 		return
 	}
 
@@ -1164,8 +1181,4 @@ func IssueGetAttachment(ctx *middleware.Context) {
 
 func PullRequest2(ctx *middleware.Context) {
 	ctx.HTML(200, "repo/pr2/list")
-}
-
-func Milestones2(ctx *middleware.Context) {
-	ctx.HTML(200, "repo/milestone2/list")
 }
