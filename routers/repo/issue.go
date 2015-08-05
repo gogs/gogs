@@ -150,11 +150,20 @@ func Issues(ctx *middleware.Context) {
 			issues[i].IsRead = true
 		}
 	}
+	ctx.Data["Issues"] = issues
+
+	// Get milestones.
+	miles, err := models.GetAllRepoMilestones(repo.Id)
+	if err != nil {
+		ctx.Handle(500, "GetAllRepoMilestones: %v", err)
+		return
+	}
+	ctx.Data["Milestones"] = miles
 
 	ctx.Data["IssueStats"] = issueStats
 	ctx.Data["SelectLabels"] = com.StrTo(selectLabels).MustInt64()
 	ctx.Data["ViewType"] = viewType
-	ctx.Data["Issues"] = issues
+	ctx.Data["MilestoneID"] = milestoneID
 	ctx.Data["IsShowClosed"] = isShowClosed
 	if isShowClosed {
 		ctx.Data["State"] = "closed"
@@ -247,12 +256,12 @@ func CreateIssuePost(ctx *middleware.Context, form auth.CreateIssueForm) {
 		form.AssigneeId = 0
 	}
 	issue := &models.Issue{
-		RepoId:      ctx.Repo.Repository.Id,
+		RepoID:      ctx.Repo.Repository.Id,
 		Index:       int64(ctx.Repo.Repository.NumIssues) + 1,
 		Name:        form.IssueName,
-		PosterId:    ctx.User.Id,
-		MilestoneId: form.MilestoneId,
-		AssigneeId:  form.AssigneeId,
+		PosterID:    ctx.User.Id,
+		MilestoneID: form.MilestoneId,
+		AssigneeID:  form.AssigneeId,
 		LabelIds:    form.Labels,
 		Content:     form.Content,
 	}
@@ -372,8 +381,8 @@ func ViewIssue(ctx *middleware.Context) {
 	ctx.Data["Labels"] = labels
 
 	// Get assigned milestone.
-	if issue.MilestoneId > 0 {
-		ctx.Data["Milestone"], err = models.MilestoneById(issue.MilestoneId)
+	if issue.MilestoneID > 0 {
+		ctx.Data["Milestone"], err = models.GetMilestoneById(issue.MilestoneID)
 		if err != nil {
 			if models.IsErrMilestoneNotExist(err) {
 				log.Warn("GetMilestoneById: %v", err)
@@ -447,7 +456,7 @@ func ViewIssue(ctx *middleware.Context) {
 	ctx.Data["Title"] = issue.Name
 	ctx.Data["Issue"] = issue
 	ctx.Data["Comments"] = comments
-	ctx.Data["IsIssueOwner"] = ctx.Repo.IsOwner() || (ctx.IsSigned && issue.PosterId == ctx.User.Id)
+	ctx.Data["IsIssueOwner"] = ctx.Repo.IsOwner() || (ctx.IsSigned && issue.PosterID == ctx.User.Id)
 	ctx.Data["IsRepoToolbarIssues"] = true
 	ctx.Data["IsRepoToolbarIssuesList"] = false
 	ctx.HTML(200, ISSUE_VIEW)
@@ -470,7 +479,7 @@ func UpdateIssue(ctx *middleware.Context, form auth.CreateIssueForm) {
 		return
 	}
 
-	if ctx.User.Id != issue.PosterId && !ctx.Repo.IsOwner() {
+	if ctx.User.Id != issue.PosterID && !ctx.Repo.IsOwner() {
 		ctx.Error(403)
 		return
 	}
@@ -595,7 +604,7 @@ func UpdateIssueMilestone(ctx *middleware.Context) {
 		return
 	}
 
-	oldMid := issue.MilestoneId
+	oldMid := issue.MilestoneID
 	mid := com.StrTo(ctx.Query("milestoneid")).MustInt64()
 	if oldMid == mid {
 		ctx.JSON(200, map[string]interface{}{
@@ -605,7 +614,7 @@ func UpdateIssueMilestone(ctx *middleware.Context) {
 	}
 
 	// Not check for invalid milestone id and give responsibility to owners.
-	issue.MilestoneId = mid
+	issue.MilestoneID = mid
 	if err = models.ChangeMilestoneAssign(oldMid, mid, issue); err != nil {
 		ctx.Handle(500, "issue.UpdateIssueMilestone(ChangeMilestoneAssign)", err)
 		return
@@ -643,7 +652,7 @@ func UpdateAssignee(ctx *middleware.Context) {
 
 	aid := com.StrTo(ctx.Query("assigneeid")).MustInt64()
 	// Not check for invalid assignee id and give responsibility to owners.
-	issue.AssigneeId = aid
+	issue.AssigneeID = aid
 	if err = models.UpdateIssueUserPairByAssignee(aid, issue.ID); err != nil {
 		ctx.Handle(500, "UpdateIssueUserPairByAssignee: %v", err)
 		return
@@ -766,7 +775,7 @@ func Comment(ctx *middleware.Context) {
 
 	// Check if issue owner changes the status of issue.
 	var newStatus string
-	if ctx.Repo.IsOwner() || issue.PosterId == ctx.User.Id {
+	if ctx.Repo.IsOwner() || issue.PosterID == ctx.User.Id {
 		newStatus = ctx.Query("change_status")
 	}
 	if len(newStatus) > 0 {
@@ -800,7 +809,7 @@ func Comment(ctx *middleware.Context) {
 			}
 
 			// Change open/closed issue counter for the associated milestone
-			if issue.MilestoneId > 0 {
+			if issue.MilestoneID > 0 {
 				if err = models.ChangeMilestoneIssueStats(issue); err != nil {
 					send(500, nil, err)
 				}
@@ -951,13 +960,10 @@ func UpdateLabel(ctx *middleware.Context, form auth.CreateLabelForm) {
 }
 
 func DeleteLabel(ctx *middleware.Context) {
-	id := ctx.QueryInt64("id")
-	if id > 0 {
-		if err := models.DeleteLabel(ctx.Repo.Repository.Id, id); err != nil {
-			ctx.Flash.Error("DeleteLabel: " + err.Error())
-		} else {
-			ctx.Flash.Success(ctx.Tr("repo.issues.label_deletion_success"))
-		}
+	if err := models.DeleteLabel(ctx.Repo.Repository.Id, ctx.QueryInt64("id")); err != nil {
+		ctx.Flash.Error("DeleteLabel: " + err.Error())
+	} else {
+		ctx.Flash.Success(ctx.Tr("repo.issues.label_deletion_success"))
 	}
 
 	ctx.JSON(200, map[string]interface{}{
@@ -1116,18 +1122,8 @@ func EditMilestonePost(ctx *middleware.Context, form auth.CreateMilestoneForm) {
 	ctx.Redirect(ctx.Repo.RepoLink + "/milestones")
 }
 
-func MilestoneActions(ctx *middleware.Context) {
-	ctx.Data["Title"] = "Update Milestone"
-	ctx.Data["IsRepoToolbarIssues"] = true
-	ctx.Data["IsRepoToolbarIssuesList"] = true
-
-	idx := ctx.ParamsInt64(":index")
-	if idx == 0 {
-		ctx.Handle(404, "get milestone index", nil)
-		return
-	}
-
-	mile, err := models.GetMilestoneByIndex(ctx.Repo.Repository.Id, idx)
+func ChangeMilestonStatus(ctx *middleware.Context) {
+	m, err := models.GetMilestoneByIndex(ctx.Repo.Repository.Id, ctx.ParamsInt64(":index"))
 	if err != nil {
 		if models.IsErrMilestoneNotExist(err) {
 			ctx.Handle(404, "GetMilestoneByIndex", err)
@@ -1137,88 +1133,39 @@ func MilestoneActions(ctx *middleware.Context) {
 		return
 	}
 
-	action := ctx.Params(":action")
-	if len(action) > 0 {
-		switch action {
-		case "open":
-			if mile.IsClosed {
-				if err = models.ChangeMilestoneStatus(mile, false); err != nil {
-					ctx.Handle(500, "ChangeMilestoneStatus", err)
-					return
-				}
-			}
-		case "close":
-			if !mile.IsClosed {
-				mile.ClosedDate = time.Now()
-				if err = models.ChangeMilestoneStatus(mile, true); err != nil {
-					ctx.Handle(500, "ChangeMilestoneStatus", err)
-					return
-				}
-			}
-		case "delete":
-			if err = models.DeleteMilestone(mile); err != nil {
-				ctx.Handle(500, "DeleteMilestone", err)
+	switch ctx.Params(":action") {
+	case "open":
+		if m.IsClosed {
+			if err = models.ChangeMilestoneStatus(m, false); err != nil {
+				ctx.Handle(500, "ChangeMilestoneStatus", err)
 				return
 			}
 		}
+		ctx.Redirect(ctx.Repo.RepoLink + "/milestones?state=open")
+	case "close":
+		if !m.IsClosed {
+			m.ClosedDate = time.Now()
+			if err = models.ChangeMilestoneStatus(m, true); err != nil {
+				ctx.Handle(500, "ChangeMilestoneStatus", err)
+				return
+			}
+		}
+		ctx.Redirect(ctx.Repo.RepoLink + "/milestones?state=closed")
+	default:
 		ctx.Redirect(ctx.Repo.RepoLink + "/milestones")
-		return
 	}
-
-	mile.DeadlineString = mile.Deadline.UTC().Format("01/02/2006")
-	if mile.DeadlineString == "12/31/9999" {
-		mile.DeadlineString = ""
-	}
-	ctx.Data["Milestone"] = mile
-
-	ctx.HTML(200, MILESTONE_EDIT)
 }
 
-func UpdateMilestonePost(ctx *middleware.Context, form auth.CreateMilestoneForm) {
-	ctx.Data["Title"] = "Update Milestone"
-	ctx.Data["IsRepoToolbarIssues"] = true
-	ctx.Data["IsRepoToolbarIssuesList"] = true
-
-	idx := ctx.ParamsInt64(":index")
-	if idx == 0 {
-		ctx.Handle(404, "issue.UpdateMilestonePost", nil)
-		return
+func DeleteMilestone(ctx *middleware.Context) {
+	if err := models.DeleteMilestoneByID(ctx.QueryInt64("id")); err != nil {
+		ctx.Flash.Error("DeleteMilestone: " + err.Error())
+	} else {
+		ctx.Flash.Success(ctx.Tr("repo.milestones.deletion_success"))
 	}
 
-	mile, err := models.GetMilestoneByIndex(ctx.Repo.Repository.Id, idx)
-	if err != nil {
-		if models.IsErrMilestoneNotExist(err) {
-			ctx.Handle(404, "GetMilestoneByIndex", err)
-		} else {
-			ctx.Handle(500, "GetMilestoneByIndex", err)
-		}
-		return
-	}
-
-	if ctx.HasError() {
-		ctx.HTML(200, MILESTONE_EDIT)
-		return
-	}
-
-	var deadline time.Time
-	if len(form.Deadline) == 0 {
-		form.Deadline = "12/31/9999"
-	}
-	deadline, err = time.Parse("01/02/2006", form.Deadline)
-	if err != nil {
-		ctx.Handle(500, "time.Parse", err)
-		return
-	}
-
-	mile.Name = form.Title
-	mile.Content = form.Content
-	mile.Deadline = deadline
-	if err = models.UpdateMilestone(mile); err != nil {
-		ctx.Handle(500, "UpdateMilestone", err)
-		return
-	}
-
-	ctx.Redirect(ctx.Repo.RepoLink + "/milestones")
+	ctx.JSON(200, map[string]interface{}{
+		"redirect": ctx.Repo.RepoLink + "/milestones",
+	})
 }
 
 func IssueGetAttachment(ctx *middleware.Context) {

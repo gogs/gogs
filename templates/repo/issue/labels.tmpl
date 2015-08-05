@@ -38,7 +38,7 @@
 				<li class="item">
 					<div class="ui label" style="background-color: {{.Color}}"><i class="octicon octicon-tag"></i> {{.Name}}</div>
 					{{if $.IsRepositoryAdmin}}
-					<a class="ui right delete-label-button" href="#" data-url="{{$.RepoLink}}/labels/delete" data-id="{{.ID}}"><i class="octicon octicon-trashcan"></i> {{$.i18n.Tr "repo.issues.label_delete"}}</a>
+					<a class="ui right delete-button" href="#" data-url="{{$.RepoLink}}/labels/delete" data-id="{{.ID}}"><i class="octicon octicon-trashcan"></i> {{$.i18n.Tr "repo.issues.label_delete"}}</a>
 					<a class="ui right edit-label-button" href="#" data-id={{.ID}} data-title={{.Name}} data-color={{.Color}}><i class="octicon octicon-pencil"></i> {{$.i18n.Tr "repo.issues.label_edit"}}</a>
 					{{end}}
 					<a class="ui right open-issues" href="{{$.RepoLink}}/issues?labels={{.ID}}"><i class="octicon octicon-issue-opened"></i> {{$.i18n.Tr "repo.issues.label_open_issues" .NumOpenIssues}}</a>
@@ -50,7 +50,7 @@
 </div>
 
 {{if .IsRepositoryAdmin}}
-<div class="ui basic delete-label modal">
+<div class="ui basic delete modal">
   <div class="header">
     {{.i18n.Tr "repo.issues.label_deletion"}}
   </div>

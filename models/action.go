@@ -153,7 +153,7 @@ func updateIssuesCommit(userId, repoId int64, repoUserName, repoName string, com
 
 			url := fmt.Sprintf("%s/%s/%s/commit/%s", setting.AppSubUrl, repoUserName, repoName, c.Sha1)
 			message := fmt.Sprintf(`<a href="%s">%s</a>`, url, c.Message)
-			if _, err = CreateComment(userId, issue.RepoId, issue.ID, 0, 0, COMMENT_TYPE_COMMIT, message, nil); err != nil {
+			if _, err = CreateComment(userId, issue.RepoID, issue.ID, 0, 0, COMMENT_TYPE_COMMIT, message, nil); err != nil {
 				return err
 			}
 		}
@@ -183,7 +183,7 @@ func updateIssuesCommit(userId, repoId int64, repoUserName, repoName string, com
 				return err
 			}
 
-			if issue.RepoId == repoId {
+			if issue.RepoID == repoId {
 				if issue.IsClosed {
 					continue
 				}
@@ -242,7 +242,7 @@ func updateIssuesCommit(userId, repoId int64, repoUserName, repoName string, com
 				return err
 			}
 
-			if issue.RepoId == repoId {
+			if issue.RepoID == repoId {
 				if !issue.IsClosed {
 					continue
 				}
