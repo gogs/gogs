@@ -134,3 +134,24 @@ func IsErrRepoNotExist(err error) bool {
 func (err ErrRepoNotExist) Error() string {
 	return fmt.Sprintf("repository does not exist [id: %d, uid: %d, name: %s]", err.ID, err.UID, err.Name)
 }
+
+//    _____  .__.__                   __
+//   /     \ |__|  |   ____   _______/  |_  ____   ____   ____
+//  /  \ /  \|  |  | _/ __ \ /  ___/\   __\/  _ \ /    \_/ __ \
+// /    Y    \  |  |_\  ___/ \___ \  |  | (  <_> )   |  \  ___/
+// \____|__  /__|____/\___  >____  > |__|  \____/|___|  /\___  >
+//         \/             \/     \/                   \/     \/
+
+type ErrMilestoneNotExist struct {
+	ID    int64
+	Index int64
+}
+
+func IsErrMilestoneNotExist(err error) bool {
+	_, ok := err.(ErrMilestoneNotExist)
+	return ok
+}
+
+func (err ErrMilestoneNotExist) Error() string {
+	return fmt.Sprintf("milestone does not exist [id: %d, index: %d]", err.ID, err.Index)
+}

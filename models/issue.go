@@ -23,7 +23,6 @@ import (
 var (
 	ErrIssueNotExist       = errors.New("Issue does not exist")
 	ErrLabelNotExist       = errors.New("Label does not exist")
-	ErrMilestoneNotExist   = errors.New("Milestone does not exist")
 	ErrWrongIssueCounter   = errors.New("Invalid number of issues for this milestone")
 	ErrAttachmentNotExist  = errors.New("Attachment does not exist")
 	ErrAttachmentNotLinked = errors.New("Attachment does not belong to this issue")
@@ -691,7 +690,7 @@ func MilestoneById(id int64) (*Milestone, error) {
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, ErrMilestoneNotExist
+		return nil, ErrMilestoneNotExist{id, 0}
 	}
 	return m, nil
 }
@@ -703,7 +702,7 @@ func GetMilestoneByIndex(repoId, idx int64) (*Milestone, error) {
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, ErrMilestoneNotExist
+		return nil, ErrMilestoneNotExist{0, idx}
 	}
 	return m, nil
 }
