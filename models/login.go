@@ -41,7 +41,7 @@ var (
 var LoginTypes = map[LoginType]string{
 	LDAP: "LDAP",
 	SMTP: "SMTP",
-	PAM: "PAM",
+	PAM:  "PAM",
 }
 
 // Ensure structs implemented interface.
@@ -192,7 +192,7 @@ func UserSignIn(uname, passwd string) (*User, error) {
 	// Now verify password.
 	if u.LoginType == PLAIN {
 		if !u.ValidatePassword(passwd) {
-			return nil, ErrUserNotExist
+			return nil, ErrUserNotExist{u.Id, u.Name}
 		}
 		return u, nil
 	}
@@ -229,7 +229,7 @@ func UserSignIn(uname, passwd string) (*User, error) {
 			}
 		}
 
-		return nil, ErrUserNotExist
+		return nil, ErrUserNotExist{u.Id, u.Name}
 	}
 
 	var source LoginSource
@@ -261,7 +261,7 @@ func LoginUserLdapSource(u *User, name, passwd string, sourceId int64, cfg *LDAP
 	name, fn, sn, mail, logged := cfg.Ldapsource.SearchEntry(name, passwd)
 	if !logged {
 		// User not in LDAP, do nothing
-		return nil, ErrUserNotExist
+		return nil, ErrUserNotExist{u.Id, u.Name}
 	}
 	if !autoRegister {
 		return u, nil
@@ -362,7 +362,7 @@ func LoginUserSMTPSource(u *User, name, passwd string, sourceId int64, cfg *SMTP
 
 	if err := SmtpAuth(cfg.Host, cfg.Port, auth, cfg.TLS); err != nil {
 		if strings.Contains(err.Error(), "Username and Password not accepted") {
-			return nil, ErrUserNotExist
+			return nil, ErrUserNotExist{u.Id, u.Name}
 		}
 		return nil, err
 	}
@@ -397,7 +397,7 @@ func LoginUserSMTPSource(u *User, name, passwd string, sourceId int64, cfg *SMTP
 func LoginUserPAMSource(u *User, name, passwd string, sourceId int64, cfg *PAMConfig, autoRegister bool) (*User, error) {
 	if err := pam.PAMAuth(cfg.ServiceName, name, passwd); err != nil {
 		if strings.Contains(err.Error(), "Authentication failure") {
-			return nil, ErrUserNotExist
+			return nil, ErrUserNotExist{u.Id, u.Name}
 		}
 		return nil, err
 	}

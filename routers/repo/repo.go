@@ -35,7 +35,7 @@ func checkContextUser(ctx *middleware.Context, uid int64) *models.User {
 	}
 
 	org, err := models.GetUserById(uid)
-	if err == models.ErrUserNotExist {
+	if models.IsErrUserNotExist(err) {
 		return ctx.User
 	}
 

@@ -77,7 +77,7 @@ func TeamsAction(ctx *middleware.Context) {
 		var u *models.User
 		u, err = models.GetUserByName(uname)
 		if err != nil {
-			if err == models.ErrUserNotExist {
+			if models.IsErrUserNotExist(err) {
 				ctx.Flash.Error(ctx.Tr("form.user_not_exist"))
 				ctx.Redirect(ctx.Org.OrgLink + "/teams/" + ctx.Org.Team.LowerName)
 			} else {

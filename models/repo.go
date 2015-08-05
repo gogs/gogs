@@ -624,7 +624,7 @@ func GetRepositoriesWithUsers(num, offset int) ([]*Repository, error) {
 		if err != nil {
 			return nil, err
 		} else if !has {
-			return nil, ErrUserNotExist
+			return nil, ErrUserNotExist{repo.OwnerId, ""}
 		}
 	}
 
