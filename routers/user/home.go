@@ -350,13 +350,13 @@ func Issues(ctx *middleware.Context) {
 			}
 		}
 
-		issues[i].Repo, err = models.GetRepositoryById(issues[i].RepoId)
+		issues[i].Repo, err = models.GetRepositoryById(issues[i].RepoID)
 		if err != nil {
 			if models.IsErrRepoNotExist(err) {
-				log.Warn("user.Issues(GetRepositoryById #%d): repository not exist", issues[i].RepoId)
+				log.Warn("GetRepositoryById[%d]: repository not exist", issues[i].RepoID)
 				continue
 			} else {
-				ctx.Handle(500, fmt.Sprintf("user.Issues(GetRepositoryById #%d)", issues[i].RepoId), err)
+				ctx.Handle(500, fmt.Sprintf("GetRepositoryById[%d]", issues[i].RepoID), err)
 				return
 			}
 		}
