@@ -1033,9 +1033,9 @@ func NewMilestonePost(ctx *middleware.Context, form auth.CreateMilestoneForm) {
 	}
 
 	if len(form.Deadline) == 0 {
-		form.Deadline = "12/31/9999"
+		form.Deadline = "9999-12-31"
 	}
-	deadline, err := time.Parse("01/02/2006", form.Deadline)
+	deadline, err := time.Parse("2006-01-02", form.Deadline)
 	if err != nil {
 		ctx.Data["Err_Deadline"] = true
 		ctx.RenderWithErr(ctx.Tr("repo.milestones.invalid_due_date_format"), MILESTONE_NEW, &form)
