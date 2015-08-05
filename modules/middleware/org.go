@@ -34,7 +34,7 @@ func OrgAssignment(redirect bool, args ...bool) macaron.Handler {
 		var err error
 		ctx.Org.Organization, err = models.GetUserByName(orgName)
 		if err != nil {
-			if err == models.ErrUserNotExist {
+			if models.IsErrUserNotExist(err) {
 				ctx.Handle(404, "GetUserByName", err)
 			} else if redirect {
 				log.Error(4, "GetUserByName", err)

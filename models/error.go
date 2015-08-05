@@ -54,6 +54,20 @@ func (err ErrUserAlreadyExist) Error() string {
 	return fmt.Sprintf("user already exists: [name: %s]", err.Name)
 }
 
+type ErrUserNotExist struct {
+	UID  int64
+	Name string
+}
+
+func IsErrUserNotExist(err error) bool {
+	_, ok := err.(ErrUserNotExist)
+	return ok
+}
+
+func (err ErrUserNotExist) Error() string {
+	return fmt.Sprintf("user does not exist: [uid: %d, name: %s]", err.UID, err.Name)
+}
+
 type ErrEmailAlreadyUsed struct {
 	Email string
 }
