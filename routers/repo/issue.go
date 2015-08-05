@@ -33,7 +33,7 @@ const (
 
 	LABELS base.TplName = "repo/issue/labels"
 
-	MILESTONE      base.TplName = "repo/issue/milestone"
+	MILESTONE      base.TplName = "repo/issue/milestones"
 	MILESTONE_NEW  base.TplName = "repo/issue/milestone_new"
 	MILESTONE_EDIT base.TplName = "repo/issue/milestone_edit"
 )
@@ -1010,45 +1010,44 @@ func Milestones(ctx *middleware.Context) {
 }
 
 func NewMilestone(ctx *middleware.Context) {
-	ctx.Data["Title"] = "New Milestone"
-	ctx.Data["IsRepoToolbarIssues"] = true
-	ctx.Data["IsRepoToolbarIssuesList"] = true
+	ctx.Data["Title"] = ctx.Tr("repo.milestones.new")
+	ctx.Data["PageIsMilestones"] = true
+	ctx.Data["DateLang"] = setting.DateLang(ctx.Locale.Language())
 	ctx.HTML(200, MILESTONE_NEW)
 }
 
 func NewMilestonePost(ctx *middleware.Context, form auth.CreateMilestoneForm) {
-	ctx.Data["Title"] = "New Milestone"
-	ctx.Data["IsRepoToolbarIssues"] = true
-	ctx.Data["IsRepoToolbarIssuesList"] = true
+	ctx.Data["Title"] = ctx.Tr("repo.milestones.new")
+	ctx.Data["PageIsMilestones"] = true
+	ctx.Data["DateLang"] = setting.DateLang(ctx.Locale.Language())
 
 	if ctx.HasError() {
 		ctx.HTML(200, MILESTONE_NEW)
 		return
 	}
 
-	var deadline time.Time
-	var err error
 	if len(form.Deadline) == 0 {
 		form.Deadline = "12/31/9999"
 	}
-	deadline, err = time.Parse("01/02/2006", form.Deadline)
+	deadline, err := time.Parse("01/02/2006", form.Deadline)
 	if err != nil {
-		ctx.Handle(500, "time.Parse", err)
+		ctx.Data["Err_Deadline"] = true
+		ctx.RenderWithErr(ctx.Tr("repo.milestones.invalid_due_date_format"), MILESTONE_NEW, &form)
 		return
 	}
 
-	mile := &models.Milestone{
+	if err = models.NewMilestone(&models.Milestone{
 		RepoID:   ctx.Repo.Repository.Id,
 		Index:    int64(ctx.Repo.Repository.NumMilestones) + 1,
 		Name:     form.Title,
 		Content:  form.Content,
 		Deadline: deadline,
-	}
-	if err = models.NewMilestone(mile); err != nil {
+	}); err != nil {
 		ctx.Handle(500, "NewMilestone", err)
 		return
 	}
 
+	ctx.Flash.Success(ctx.Tr("repo.milestones.create_success", form.Title))
 	ctx.Redirect(ctx.Repo.RepoLink + "/milestones")
 }
 

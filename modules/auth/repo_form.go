@@ -117,9 +117,9 @@ func (f *CreateIssueForm) Validate(ctx *macaron.Context, errs binding.Errors) bi
 //         \/             \/     \/                   \/     \/
 
 type CreateMilestoneForm struct {
-	Title    string `form:"title" binding:"Required;MaxSize(50)"`
-	Content  string `form:"content"`
-	Deadline string `form:"due_date"`
+	Title    string `binding:"Required;MaxSize(50)"`
+	Content  string
+	Deadline string
 }
 
 func (f *CreateMilestoneForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {

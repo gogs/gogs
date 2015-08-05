@@ -9,6 +9,7 @@
 			</div>
 		</div>
 		<div class="ui divider"></div>
+		{{template "repo/issue/alert" .}}
 		<div class="ui left">
 			<div class="ui tiny buttons">
 			  <a class="ui green basic button {{if not .IsShowClosed}}active{{end}}" href="{{.RepoLink}}/milestones?state=open">
@@ -36,9 +37,14 @@
 					<div class="meta">
 						{{ $closedDate:= TimeSince .ClosedDate $.Lang }}
 						{{if .IsClosed}}
-						<span class="octicon octicon-clock"></span> {{$.i18n.Tr "repo.milestones.closed" $closedDate|Str2html}}
+							<span class="octicon octicon-clock"></span> {{$.i18n.Tr "repo.milestones.closed" $closedDate|Str2html}}
 						{{else}}
-						<span class="octicon octicon-calendar"></span> {{if .DeadlineString}}{{.DeadlineString}}{{else}}{{$.i18n.Tr "repo.milestones.no_due_date"}}{{end}}
+							<span class="octicon octicon-calendar"></span> 
+							{{if .DeadlineString}}
+							<span {{if .IsOverDue}}class="overdue"{{end}}>{{.DeadlineString}}</span>
+							{{else}}
+							{{$.i18n.Tr "repo.milestones.no_due_date"}}
+							{{end}}
 						{{end}}
 						<span class="issue-stats">
 							<i class="octicon octicon-issue-opened"></i> {{$.i18n.Tr "repo.issues.open_tab" .NumOpenIssues}}
