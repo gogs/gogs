@@ -351,21 +351,21 @@ func ViewIssue(ctx *middleware.Context) {
 	issue, err := models.GetIssueByIndex(ctx.Repo.Repository.Id, idx)
 	if err != nil {
 		if err == models.ErrIssueNotExist {
-			ctx.Handle(404, "issue.ViewIssue(GetIssueByIndex)", err)
+			ctx.Handle(404, "GetIssueByIndex", err)
 		} else {
-			ctx.Handle(500, "issue.ViewIssue(GetIssueByIndex)", err)
+			ctx.Handle(500, "GetIssueByIndex", err)
 		}
 		return
 	}
 
 	// Get labels.
 	if err = issue.GetLabels(); err != nil {
-		ctx.Handle(500, "issue.ViewIssue(GetLabels)", err)
+		ctx.Handle(500, "GetLabels", err)
 		return
 	}
 	labels, err := models.GetLabels(ctx.Repo.Repository.Id)
 	if err != nil {
-		ctx.Handle(500, "issue.ViewIssue(GetLabels.2)", err)
+		ctx.Handle(500, "GetLabels.2", err)
 		return
 	}
 	checkLabels(issue.Labels, labels)
@@ -375,10 +375,10 @@ func ViewIssue(ctx *middleware.Context) {
 	if issue.MilestoneId > 0 {
 		ctx.Data["Milestone"], err = models.MilestoneById(issue.MilestoneId)
 		if err != nil {
-			if err == models.ErrMilestoneNotExist {
-				log.Warn("issue.ViewIssue(GetMilestoneById): %v", err)
+			if models.IsErrMilestoneNotExist(err) {
+				log.Warn("GetMilestoneById: %v", err)
 			} else {
-				ctx.Handle(500, "issue.ViewIssue(GetMilestoneById)", err)
+				ctx.Handle(500, "GetMilestoneById", err)
 				return
 			}
 		}
@@ -387,36 +387,36 @@ func ViewIssue(ctx *middleware.Context) {
 	// Get all milestones.
 	ctx.Data["OpenMilestones"], err = models.GetMilestones(ctx.Repo.Repository.Id, -1, false)
 	if err != nil {
-		ctx.Handle(500, "issue.ViewIssue(GetMilestones.1): %v", err)
+		ctx.Handle(500, "GetMilestones.1: %v", err)
 		return
 	}
 	ctx.Data["ClosedMilestones"], err = models.GetMilestones(ctx.Repo.Repository.Id, -1, true)
 	if err != nil {
-		ctx.Handle(500, "issue.ViewIssue(GetMilestones.2): %v", err)
+		ctx.Handle(500, "GetMilestones.2: %v", err)
 		return
 	}
 
 	// Get all collaborators.
 	ctx.Data["Collaborators"], err = ctx.Repo.Repository.GetCollaborators()
 	if err != nil {
-		ctx.Handle(500, "issue.CreateIssue(GetCollaborators)", err)
+		ctx.Handle(500, "GetCollaborators", err)
 		return
 	}
 
 	if ctx.IsSigned {
 		// Update issue-user.
 		if err = models.UpdateIssueUserPairByRead(ctx.User.Id, issue.ID); err != nil {
-			ctx.Handle(500, "issue.ViewIssue(UpdateIssueUserPairByRead): %v", err)
+			ctx.Handle(500, "UpdateIssueUserPairByRead: %v", err)
 			return
 		}
 	}
 
 	// Get poster and Assignee.
 	if err = issue.GetPoster(); err != nil {
-		ctx.Handle(500, "issue.ViewIssue(GetPoster): %v", err)
+		ctx.Handle(500, "GetPoster: %v", err)
 		return
 	} else if err = issue.GetAssignee(); err != nil {
-		ctx.Handle(500, "issue.ViewIssue(GetAssignee): %v", err)
+		ctx.Handle(500, "GetAssignee: %v", err)
 		return
 	}
 	issue.RenderedContent = string(base.RenderMarkdown([]byte(issue.Content), ctx.Repo.RepoLink))
@@ -424,7 +424,7 @@ func ViewIssue(ctx *middleware.Context) {
 	// Get comments.
 	comments, err := models.GetIssueComments(issue.ID)
 	if err != nil {
-		ctx.Handle(500, "issue.ViewIssue(GetIssueComments): %v", err)
+		ctx.Handle(500, "GetIssueComments: %v", err)
 		return
 	}
 
@@ -432,7 +432,7 @@ func ViewIssue(ctx *middleware.Context) {
 	for i := range comments {
 		u, err := models.GetUserById(comments[i].PosterId)
 		if err != nil {
-			ctx.Handle(500, "issue.ViewIssue(GetUserById.2): %v", err)
+			ctx.Handle(500, "GetUserById.2: %v", err)
 			return
 		}
 		comments[i].Poster = u
@@ -1051,8 +1051,70 @@ func NewMilestonePost(ctx *middleware.Context, form auth.CreateMilestoneForm) {
 	ctx.Redirect(ctx.Repo.RepoLink + "/milestones")
 }
 
-func EditMilestone(ctx *middleware.Context)     {}
-func EditMilestonePost(ctx *middleware.Context) {}
+func EditMilestone(ctx *middleware.Context) {
+	ctx.Data["Title"] = ctx.Tr("repo.milestones.edit")
+	ctx.Data["PageIsMilestones"] = true
+	ctx.Data["PageIsEditMilestone"] = true
+	ctx.Data["DateLang"] = setting.DateLang(ctx.Locale.Language())
+
+	m, err := models.GetMilestoneByIndex(ctx.Repo.Repository.Id, ctx.ParamsInt64(":index"))
+	if err != nil {
+		if models.IsErrMilestoneNotExist(err) {
+			ctx.Handle(404, "GetMilestoneByIndex", nil)
+		} else {
+			ctx.Handle(500, "GetMilestoneByIndex", err)
+		}
+		return
+	}
+	ctx.Data["title"] = m.Name
+	ctx.Data["content"] = m.Content
+	if len(m.DeadlineString) > 0 {
+		ctx.Data["deadline"] = m.DeadlineString
+	}
+	ctx.HTML(200, MILESTONE_NEW)
+}
+
+func EditMilestonePost(ctx *middleware.Context, form auth.CreateMilestoneForm) {
+	ctx.Data["Title"] = ctx.Tr("repo.milestones.edit")
+	ctx.Data["PageIsMilestones"] = true
+	ctx.Data["PageIsEditMilestone"] = true
+	ctx.Data["DateLang"] = setting.DateLang(ctx.Locale.Language())
+
+	if ctx.HasError() {
+		ctx.HTML(200, MILESTONE_NEW)
+		return
+	}
+
+	if len(form.Deadline) == 0 {
+		form.Deadline = "9999-12-31"
+	}
+	deadline, err := time.Parse("2006-01-02", form.Deadline)
+	if err != nil {
+		ctx.Data["Err_Deadline"] = true
+		ctx.RenderWithErr(ctx.Tr("repo.milestones.invalid_due_date_format"), MILESTONE_NEW, &form)
+		return
+	}
+
+	m, err := models.GetMilestoneByIndex(ctx.Repo.Repository.Id, ctx.ParamsInt64(":index"))
+	if err != nil {
+		if models.IsErrMilestoneNotExist(err) {
+			ctx.Handle(404, "GetMilestoneByIndex", nil)
+		} else {
+			ctx.Handle(500, "GetMilestoneByIndex", err)
+		}
+		return
+	}
+	m.Name = form.Title
+	m.Content = form.Content
+	m.Deadline = deadline
+	if err = models.UpdateMilestone(m); err != nil {
+		ctx.Handle(500, "UpdateMilestone", err)
+		return
+	}
+
+	ctx.Flash.Success(ctx.Tr("repo.milestones.edit_success", m.Name))
+	ctx.Redirect(ctx.Repo.RepoLink + "/milestones")
+}
 
 func MilestoneActions(ctx *middleware.Context) {
 	ctx.Data["Title"] = "Update Milestone"
@@ -1067,7 +1129,7 @@ func MilestoneActions(ctx *middleware.Context) {
 
 	mile, err := models.GetMilestoneByIndex(ctx.Repo.Repository.Id, idx)
 	if err != nil {
-		if err == models.ErrMilestoneNotExist {
+		if models.IsErrMilestoneNotExist(err) {
 			ctx.Handle(404, "GetMilestoneByIndex", err)
 		} else {
 			ctx.Handle(500, "GetMilestoneByIndex", err)
@@ -1125,7 +1187,7 @@ func UpdateMilestonePost(ctx *middleware.Context, form auth.CreateMilestoneForm)
 
 	mile, err := models.GetMilestoneByIndex(ctx.Repo.Repository.Id, idx)
 	if err != nil {
-		if err == models.ErrMilestoneNotExist {
+		if models.IsErrMilestoneNotExist(err) {
 			ctx.Handle(404, "GetMilestoneByIndex", err)
 		} else {
 			ctx.Handle(500, "GetMilestoneByIndex", err)
