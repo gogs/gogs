@@ -493,17 +493,6 @@
 		"outputPathIsOutsideProject": 0,
 		"outputPathIsSetByUser": 0
 		},
-	"\/public\/ng\/js\/gogs.js": {
-		"fileType": 64,
-		"ignore": 0,
-		"ignoreWasSetByUser": 0,
-		"inputAbbreviatedPath": "\/public\/ng\/js\/gogs.js",
-		"outputAbbreviatedPath": "\/public\/ng\/js\/min\/gogs-min.js",
-		"outputPathIsOutsideProject": 0,
-		"outputPathIsSetByUser": 0,
-		"outputStyle": 1,
-		"syntaxCheckerStyle": 1
-		},
 	"\/public\/ng\/js\/gogs\/issue_label.js": {
 		"fileType": 64,
 		"ignore": 1,

@@ -60,7 +60,7 @@ func SignIn(ctx *middleware.Context) {
 
 	u, err := models.GetUserByName(uname)
 	if err != nil {
-		if err != models.ErrUserNotExist {
+		if !models.IsErrUserNotExist(err) {
 			ctx.Handle(500, "GetUserByName", err)
 		} else {
 			ctx.HTML(200, SIGNIN)
@@ -105,7 +105,7 @@ func SignInPost(ctx *middleware.Context, form auth.SignInForm) {
 
 	u, err := models.UserSignIn(form.UserName, form.Password)
 	if err != nil {
-		if err == models.ErrUserNotExist {
+		if models.IsErrUserNotExist(err) {
 			ctx.RenderWithErr(ctx.Tr("form.username_password_incorrect"), SIGNIN, &form)
 		} else {
 			ctx.Handle(500, "UserSignIn", err)
@@ -328,7 +328,7 @@ func Activate(ctx *middleware.Context) {
 		user.IsActive = true
 		user.Rands = models.GetUserSalt()
 		if err := models.UpdateUser(user); err != nil {
-			if err == models.ErrUserNotExist {
+			if models.IsErrUserNotExist(err) {
 				ctx.Error(404)
 			} else {
 				ctx.Handle(500, "UpdateUser", err)
@@ -391,7 +391,7 @@ func ForgotPasswdPost(ctx *middleware.Context) {
 	email := ctx.Query("email")
 	u, err := models.GetUserByEmail(email)
 	if err != nil {
-		if err == models.ErrUserNotExist {
+		if models.IsErrUserNotExist(err) {
 			ctx.Data["Err_Email"] = true
 			ctx.RenderWithErr(ctx.Tr("auth.email_not_associate"), FORGOT_PASSWORD, nil)
 		} else {

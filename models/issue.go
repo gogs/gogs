@@ -74,7 +74,7 @@ func (i *Issue) BeforeSet(colName string, val xorm.Cell) {
 
 func (i *Issue) GetPoster() (err error) {
 	i.Poster, err = GetUserById(i.PosterID)
-	if err == ErrUserNotExist {
+	if IsErrUserNotExist(err) {
 		i.Poster = &User{Name: "FakeUser"}
 		return nil
 	}
@@ -108,8 +108,9 @@ func (i *Issue) GetAssignee() (err error) {
 	if i.AssigneeID == 0 {
 		return nil
 	}
+
 	i.Assignee, err = GetUserById(i.AssigneeID)
-	if err == ErrUserNotExist {
+	if IsErrUserNotExist(err) {
 		return nil
 	}
 	return err
