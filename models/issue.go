@@ -426,13 +426,16 @@ const (
 )
 
 // GetIssueStats returns issue statistic information by given conditions.
-func GetIssueStats(repoID, uid, labelID int64, isShowClosed bool, filterMode int) *IssueStats {
+func GetIssueStats(repoID, uid, labelID, milestoneID int64, isShowClosed bool, filterMode int) *IssueStats {
 	stats := &IssueStats{}
 	issue := new(Issue)
 
 	queryStr := "issue.repo_id=? AND issue.is_closed=?"
 	if labelID > 0 {
 		queryStr += " AND issue.label_ids like '%$" + com.ToStr(labelID) + "|%'"
+	}
+	if milestoneID > 0 {
+		queryStr += " AND milestone_id=" + com.ToStr(milestoneID)
 	}
 	switch filterMode {
 	case FM_ALL:

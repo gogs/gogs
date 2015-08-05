@@ -95,7 +95,7 @@ func Issues(ctx *middleware.Context) {
 	selectLabels := ctx.Query("labels")
 	milestoneID := ctx.QueryInt64("milestone")
 	isShowClosed := ctx.Query("state") == "closed"
-	issueStats := models.GetIssueStats(repo.Id, uid, com.StrTo(selectLabels).MustInt64(), isShowClosed, filterMode)
+	issueStats := models.GetIssueStats(repo.Id, uid, com.StrTo(selectLabels).MustInt64(), milestoneID, isShowClosed, filterMode)
 
 	page := ctx.QueryInt("page")
 	if page <= 1 {
