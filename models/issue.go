@@ -640,6 +640,7 @@ type Milestone struct {
 	Completeness    int // Percentage(1-100).
 	Deadline        time.Time
 	DeadlineString  string `xorm:"-"`
+	IsOverDue       bool   `xorm:"-"`
 	ClosedDate      time.Time
 }
 
@@ -651,6 +652,9 @@ func (m *Milestone) BeforeSet(colName string, val xorm.Cell) {
 		}
 
 		m.DeadlineString = t.Format("2006-01-02")
+		if time.Now().After(t) {
+			m.IsOverDue = true
+		}
 	}
 }
 

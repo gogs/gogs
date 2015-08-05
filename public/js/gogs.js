@@ -1,3 +1,5 @@
+'use strict';
+
 var csrf;
 
 function initInstall() {
@@ -40,44 +42,62 @@ function initRepository() {
     }
 
     // Labels
-    if ($('.repository.labels').length == 0) {
-        return;
+    if ($('.repository.labels').length > 0) {
+        $('.color-picker').each(function () {
+            $(this).minicolors();
+        });
+        $('.precolors .color').click(function () {
+            var color_hex = $(this).data('color-hex')
+            $('.color-picker').val(color_hex);
+            $('.minicolors-swatch-color').css("background-color", color_hex);
+        });
+        $('.delete-label-button').click(function () {
+            var $this = $(this);
+            $('.delete-label.modal').modal({
+                closable: false,
+                onApprove: function () {
+                    $.post($this.data('url'), {
+                        "_csrf": csrf,
+                        "id": $this.data("id")
+                    }).done(function (data) {
+                        window.location.href = data.redirect;
+                    });
+                }
+            }).modal('show');
+            return false;
+        });
+        $('.edit-label-button').click(function () {
+            $('#label-modal-id').val($(this).data('id'));
+            $('#label-modal-title').val($(this).data('title'));
+            $('#label-modal-color').val($(this).data('color'))
+            $('.minicolors-swatch-color').css("background-color", $(this).data('color'));
+            $('.edit-label.modal').modal({
+                onApprove: function () {
+                    $('.edit-label.form').submit();
+                }
+            }).modal('show');
+            return false;
+        });
     }
-    $('.color-picker').each(function () {
-        $(this).minicolors();
-    });
-    $('.precolors .color').click(function () {
-        var color_hex = $(this).data('color-hex')
-        $('.color-picker').val(color_hex);
-        $('.minicolors-swatch-color').css("background-color", color_hex);
-    });
-    $('.delete-label-button').click(function () {
-        var $this = $(this);
-        $('.delete-label.modal').modal({
-            closable: false,
-            onApprove: function () {
-                $.post($this.data('url'), {
-                    "_csrf": csrf,
-                    "id": $this.data("id")
-                }).done(function (data) {
-                    window.location.href = data.redirect;
-                });
+
+    // Milestones
+    if ($('.repository.new.milestone').length > 0) {
+        var $datepicker = $('.milestone.datepicker')
+        $datepicker.datetimepicker({
+            lang: $datepicker.data('lang'),
+            inline: true,
+            timepicker: false,
+            startDate: $datepicker.data('start-date'),
+            formatDate: 'm/d/Y',
+            onSelectDate: function (ct) {
+                $('#deadline').val(ct.dateFormat('m/d/Y'));
             }
-        }).modal('show');
-        return false;
-    });
-    $('.edit-label-button').click(function () {
-        $('#label-modal-id').val($(this).data('id'));
-        $('#label-modal-title').val($(this).data('title'));
-        $('#label-modal-color').val($(this).data('color'))
-        $('.minicolors-swatch-color').css("background-color", $(this).data('color'));
-        $('.edit-label.modal').modal({
-            onApprove: function () {
-                $('.edit-label.form').submit();
-            }
-        }).modal('show');
-        return false;
-    });
+        });
+        $('#clear-date').click(function () {
+            $('#deadline').val('');
+            return false;
+        });
+    }
 };
 
 $(document).ready(function () {
