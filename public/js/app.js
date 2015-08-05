@@ -269,36 +269,62 @@ var Gogits = {};
         if ($(selector).hasClass('js-copy-bind')) {
             return;
         }
-        $(selector).zclip({
-            path: "/js/ZeroClipboard.swf",
-            copy: function () {
-                var t = $(this).data("copy-val");
-                var to = $($(this).data("copy-from"));
-                var str = "";
-                if (t == "txt") {
-                    str = to.text();
-                }
-                if (t == 'val') {
-                    str = to.val();
-                }
-                if (t == 'html') {
-                    str = to.html();
-                }
-                return str;
-            },
-            afterCopy: function () {
+
+        if ( document.documentElement.classList.contains("is-copy-enabled") ) {
+
+            $(selector).click(function(event) {
                 var $this = $(this);
-                $this.tooltip('hide')
-                    .attr('data-original-title', 'Copied OK');
+
+                var cfrom = $this.attr('data-copy-from');
+                $(cfrom).select();
+                document.execCommand('copy');
+                getSelection().removeAllRanges();
+
+                $this.tipsy("hide").attr('original-title', $this.data('after-title'));
                 setTimeout(function () {
-                    $this.tooltip("show");
+                    $this.tipsy("show");
                 }, 200);
                 setTimeout(function () {
-                    $this.tooltip('hide')
-                        .attr('data-original-title', 'Copy to Clipboard');
-                }, 3000);
-            }
-        }).addClass("js-copy-bind");
+                    $this.tipsy('hide').attr('original-title', $this.data('original-title'));
+                }, 2000);
+                
+                this.blur();
+                return;
+            });
+
+            $(selector).addClass("js-copy-bind");
+
+        } else {
+
+            $(selector).zclip({
+                path: Gogits.AppSubUrl + "/js/ZeroClipboard.swf",
+                copy: function () {
+                    var t = $(this).data("copy-val");
+                    var to = $($(this).data("copy-from"));
+                    var str = "";
+                    if (t == "txt") {
+                        str = to.text();
+                    }
+                    if (t == 'val') {
+                        str = to.val();
+                    }
+                    if (t == 'html') {
+                        str = to.html();
+                    }
+                    return str;
+                },
+                afterCopy: function () {
+                    var $this = $(this);
+                    $this.tipsy("hide").attr('original-title', $this.data('after-title'));
+                    setTimeout(function () {
+                        $this.tipsy("show");
+                    }, 200);
+                    setTimeout(function () {
+                        $this.tipsy('hide').attr('original-title', $this.data('original-title'));
+                    }, 2000);
+                }
+            }).addClass("js-copy-bind");
+        }
     }
 
     // api working

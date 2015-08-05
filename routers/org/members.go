@@ -100,7 +100,7 @@ func Invitation(ctx *middleware.Context) {
 		uname := ctx.Query("uname")
 		u, err := models.GetUserByName(uname)
 		if err != nil {
-			if err == models.ErrUserNotExist {
+			if models.IsErrUserNotExist(err) {
 				ctx.Flash.Error(ctx.Tr("form.user_not_exist"))
 				ctx.Redirect(ctx.Org.OrgLink + "/invitations/new")
 			} else {

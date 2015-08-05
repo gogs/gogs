@@ -55,7 +55,7 @@ func Http(ctx *middleware.Context) {
 
 	repoUser, err := models.GetUserByName(username)
 	if err != nil {
-		if err == models.ErrUserNotExist {
+		if models.IsErrUserNotExist(err) {
 			ctx.Handle(404, "GetUserByName", nil)
 		} else {
 			ctx.Handle(500, "GetUserByName", err)
@@ -107,7 +107,7 @@ func Http(ctx *middleware.Context) {
 
 		authUser, err = models.UserSignIn(authUsername, authPasswd)
 		if err != nil {
-			if err != models.ErrUserNotExist {
+			if !models.IsErrUserNotExist(err) {
 				ctx.Handle(500, "UserSignIn error: %v", err)
 				return
 			}

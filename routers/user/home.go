@@ -38,7 +38,7 @@ func Dashboard(ctx *middleware.Context) {
 		// Organization.
 		org, err := models.GetUserByName(orgName)
 		if err != nil {
-			if err == models.ErrUserNotExist {
+			if models.IsErrUserNotExist(err) {
 				ctx.Handle(404, "GetUserByName", err)
 			} else {
 				ctx.Handle(500, "GetUserByName", err)
@@ -115,7 +115,7 @@ func Dashboard(ctx *middleware.Context) {
 		// FIXME: cache results?
 		u, err := models.GetUserByName(act.ActUserName)
 		if err != nil {
-			if err == models.ErrUserNotExist {
+			if models.IsErrUserNotExist(err) {
 				continue
 			}
 			ctx.Handle(500, "GetUserByName", err)
@@ -176,7 +176,7 @@ func Profile(ctx *middleware.Context) {
 
 	u, err := models.GetUserByName(uname)
 	if err != nil {
-		if err == models.ErrUserNotExist {
+		if models.IsErrUserNotExist(err) {
 			ctx.Handle(404, "GetUserByName", err)
 		} else {
 			ctx.Handle(500, "GetUserByName", err)
@@ -223,7 +223,7 @@ func Profile(ctx *middleware.Context) {
 			// FIXME: cache results?
 			u, err := models.GetUserByName(act.ActUserName)
 			if err != nil {
-				if err == models.ErrUserNotExist {
+				if models.IsErrUserNotExist(err) {
 					continue
 				}
 				ctx.Handle(500, "GetUserByName", err)
@@ -247,10 +247,10 @@ func Profile(ctx *middleware.Context) {
 func Email2User(ctx *middleware.Context) {
 	u, err := models.GetUserByEmail(ctx.Query("email"))
 	if err != nil {
-		if err == models.ErrUserNotExist {
-			ctx.Handle(404, "user.Email2User(GetUserByEmail)", err)
+		if models.IsErrUserNotExist(err) {
+			ctx.Handle(404, "GetUserByEmail", err)
 		} else {
-			ctx.Handle(500, "user.Email2User(GetUserByEmail)", err)
+			ctx.Handle(500, "GetUserByEmail", err)
 		}
 		return
 	}
