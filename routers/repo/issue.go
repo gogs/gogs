@@ -176,12 +176,12 @@ func CreateIssue(ctx *middleware.Context) {
 		err  error
 	)
 	// Get all milestones.
-	ctx.Data["OpenMilestones"], err = models.Milestones(repo.Id, -1, false)
+	ctx.Data["OpenMilestones"], err = models.GetMilestones(repo.Id, -1, false)
 	if err != nil {
 		ctx.Handle(500, "GetMilestones.1: %v", err)
 		return
 	}
-	ctx.Data["ClosedMilestones"], err = models.Milestones(repo.Id, -1, true)
+	ctx.Data["ClosedMilestones"], err = models.GetMilestones(repo.Id, -1, true)
 	if err != nil {
 		ctx.Handle(500, "GetMilestones.2: %v", err)
 		return
@@ -220,12 +220,12 @@ func CreateIssuePost(ctx *middleware.Context, form auth.CreateIssueForm) {
 
 	var err error
 	// Get all milestones.
-	_, err = models.Milestones(ctx.Repo.Repository.Id, -1, false)
+	_, err = models.GetMilestones(ctx.Repo.Repository.Id, -1, false)
 	if err != nil {
 		send(500, nil, err)
 		return
 	}
-	_, err = models.Milestones(ctx.Repo.Repository.Id, -1, true)
+	_, err = models.GetMilestones(ctx.Repo.Repository.Id, -1, true)
 	if err != nil {
 		send(500, nil, err)
 		return
@@ -385,12 +385,12 @@ func ViewIssue(ctx *middleware.Context) {
 	}
 
 	// Get all milestones.
-	ctx.Data["OpenMilestones"], err = models.Milestones(ctx.Repo.Repository.Id, -1, false)
+	ctx.Data["OpenMilestones"], err = models.GetMilestones(ctx.Repo.Repository.Id, -1, false)
 	if err != nil {
 		ctx.Handle(500, "issue.ViewIssue(GetMilestones.1): %v", err)
 		return
 	}
-	ctx.Data["ClosedMilestones"], err = models.Milestones(ctx.Repo.Repository.Id, -1, true)
+	ctx.Data["ClosedMilestones"], err = models.GetMilestones(ctx.Repo.Repository.Id, -1, true)
 	if err != nil {
 		ctx.Handle(500, "issue.ViewIssue(GetMilestones.2): %v", err)
 		return
@@ -988,7 +988,7 @@ func Milestones(ctx *middleware.Context) {
 	}
 	ctx.Data["Page"] = paginater.New(total, setting.IssuePagingNum, page, 5)
 
-	miles, err := models.Milestones(ctx.Repo.Repository.Id, page, isShowClosed)
+	miles, err := models.GetMilestones(ctx.Repo.Repository.Id, page, isShowClosed)
 	if err != nil {
 		ctx.Handle(500, "GetMilestones", err)
 		return
