@@ -4,6 +4,11 @@
 	<div class="ui middle page grid body">
 		<div class="navbar">
 			{{template "repo/issue/navbar" .}}
+			{{if and .IsRepositoryAdmin .PageIsEditMilestone}}
+			<div class="ui right floated secondary menu">
+				<a class="ui green button" href="{{$.RepoLink}}/milestones/new">{{.i18n.Tr "repo.milestones.new"}}</a>
+			</div>
+			{{end}}
 		</div>
 		<div class="ui divider"></div>
 		<div class="sixteen wide column page grid">
