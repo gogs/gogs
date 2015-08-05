@@ -36,7 +36,6 @@ const (
 )
 
 var (
-	ErrUserNotExist          = errors.New("User does not exist")
 	ErrUserNotKeyOwner       = errors.New("User does not the owner of public key")
 	ErrEmailNotExist         = errors.New("E-mail does not exist")
 	ErrEmailNotActivated     = errors.New("E-mail address has not been activated")
@@ -555,7 +554,7 @@ func getUserById(e Engine, id int64) (*User, error) {
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, ErrUserNotExist
+		return nil, ErrUserNotExist{id, ""}
 	}
 	return u, nil
 }
@@ -568,14 +567,14 @@ func GetUserById(id int64) (*User, error) {
 // GetUserByName returns user by given name.
 func GetUserByName(name string) (*User, error) {
 	if len(name) == 0 {
-		return nil, ErrUserNotExist
+		return nil, ErrUserNotExist{0, name}
 	}
 	u := &User{LowerName: strings.ToLower(name)}
 	has, err := x.Get(u)
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, ErrUserNotExist
+		return nil, ErrUserNotExist{0, name}
 	}
 	return u, nil
 }
@@ -700,7 +699,7 @@ func MakeEmailPrimary(email *EmailAddress) error {
 	if err != nil {
 		return err
 	} else if !has {
-		return ErrUserNotExist
+		return ErrUserNotExist{email.Uid, ""}
 	}
 
 	// Make sure the former primary email doesn't disappear
@@ -763,7 +762,7 @@ func ValidateCommitsWithEmails(oldCommits *list.List) *list.List {
 // GetUserByEmail returns the user object by given e-mail if exists.
 func GetUserByEmail(email string) (*User, error) {
 	if len(email) == 0 {
-		return nil, ErrUserNotExist
+		return nil, ErrUserNotExist{0, "email"}
 	}
 	// First try to find the user by primary email
 	user := &User{Email: strings.ToLower(email)}
@@ -785,7 +784,7 @@ func GetUserByEmail(email string) (*User, error) {
 		return GetUserById(emailAddress.Uid)
 	}
 
-	return nil, ErrUserNotExist
+	return nil, ErrUserNotExist{0, "email"}
 }
 
 // SearchUserByName returns given number of users whose name contains keyword.
