@@ -297,7 +297,7 @@ var Gogits = {};
         } else {
 
             $(selector).zclip({
-                path: Gogs.AppSubUrl + "/js/ZeroClipboard.swf",
+                path: Gogits.AppSubUrl + "/js/ZeroClipboard.swf",
                 copy: function () {
                     var t = $(this).data("copy-val");
                     var to = $($(this).data("copy-from"));
