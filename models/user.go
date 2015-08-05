@@ -258,6 +258,8 @@ func IsEmailUsed(email string) (bool, error) {
 	if len(email) == 0 {
 		return false, nil
 	}
+
+	email = strings.ToLower(email)
 	if has, err := x.Get(&EmailAddress{Email: email}); has || err != nil {
 		return has, err
 	}
@@ -405,6 +407,7 @@ func ChangeUserName(u *User, newUserName string) (err error) {
 
 // UpdateUser updates user's information.
 func UpdateUser(u *User) error {
+	u.Email = strings.ToLower(u.Email)
 	has, err := x.Where("id!=?", u.Id).And("type=?", u.Type).And("email=?", u.Email).Get(new(User))
 	if err != nil {
 		return err
@@ -641,6 +644,7 @@ func GetEmailAddresses(uid int64) ([]*EmailAddress, error) {
 }
 
 func AddEmailAddress(email *EmailAddress) error {
+	email.Email = strings.ToLower(email.Email)
 	used, err := IsEmailUsed(email.Email)
 	if err != nil {
 		return err
@@ -674,7 +678,7 @@ func DeleteEmailAddress(email *EmailAddress) error {
 		return ErrEmailNotExist
 	}
 
-	if _, err = x.Delete(email); err != nil {
+	if _, err = x.Id(email.Id).Delete(email); err != nil {
 		return err
 	}
 
@@ -736,13 +740,15 @@ func ValidateCommitWithEmail(c *git.Commit) *User {
 
 // ValidateCommitsWithEmails checks if authors' e-mails of commits are corresponding to users.
 func ValidateCommitsWithEmails(oldCommits *list.List) *list.List {
-	emails := map[string]*User{}
-	newCommits := list.New()
-	e := oldCommits.Front()
+	var (
+		u          *User
+		emails     = map[string]*User{}
+		newCommits = list.New()
+		e          = oldCommits.Front()
+	)
 	for e != nil {
 		c := e.Value.(*git.Commit)
 
-		var u *User
 		if v, ok := emails[c.Author.Email]; !ok {
 			u, _ = GetUserByEmail(c.Author.Email)
 			emails[c.Author.Email] = u
@@ -764,8 +770,10 @@ func GetUserByEmail(email string) (*User, error) {
 	if len(email) == 0 {
 		return nil, ErrUserNotExist{0, "email"}
 	}
+
+	email = strings.ToLower(email)
 	// First try to find the user by primary email
-	user := &User{Email: strings.ToLower(email)}
+	user := &User{Email: email}
 	has, err := x.Get(user)
 	if err != nil {
 		return nil, err
@@ -775,7 +783,7 @@ func GetUserByEmail(email string) (*User, error) {
 	}
 
 	// Otherwise, check in alternative list for activated email addresses
-	emailAddress := &EmailAddress{Email: strings.ToLower(email), IsActivated: true}
+	emailAddress := &EmailAddress{Email: email, IsActivated: true}
 	has, err = x.Get(emailAddress)
 	if err != nil {
 		return nil, err
