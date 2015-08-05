@@ -134,6 +134,7 @@ var (
 
 	// I18n settings.
 	Langs, Names []string
+	dateLangs    map[string]string
 
 	// Other settings.
 	ShowFooterBranding bool
@@ -147,6 +148,14 @@ var (
 	IsWindows    bool
 	HasRobotsTxt bool
 )
+
+func DateLang(lang string) string {
+	name, ok := dateLangs[lang]
+	if ok {
+		return name
+	}
+	return "en"
+}
 
 func init() {
 	IsWindows = runtime.GOOS == "windows"
@@ -353,6 +362,7 @@ func NewConfigContext() {
 
 	Langs = Cfg.Section("i18n").Key("LANGS").Strings(",")
 	Names = Cfg.Section("i18n").Key("NAMES").Strings(",")
+	dateLangs = Cfg.Section("i18n.datelang").KeysHash()
 
 	ShowFooterBranding = Cfg.Section("other").Key("SHOW_FOOTER_BRANDING").MustBool()
 

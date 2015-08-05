@@ -34,6 +34,9 @@
 	{{if .PageIsLabels}}
 	<link rel="stylesheet" href="{{AppSubUrl}}/css/jquery.minicolors.css?v={{AppVer}}">
 	<script src="{{AppSubUrl}}/js/libs/jquery.minicolors.min.js?v={{AppVer}}"></script>
+	{{else if .PageIsMilestones}}
+	<link rel="stylesheet" href="{{AppSubUrl}}/css/jquery.datetimepicker.css?v={{AppVer}}">
+	<script src="{{AppSubUrl}}/js/libs/jquery.datetimepicker.js?v={{AppVer}}"></script>
 	{{end}}
 
 	<title>{{if .Title}}{{.Title}} - {{end}}{{AppName}}</title>
