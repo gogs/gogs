@@ -114,9 +114,6 @@ var Gogs = {};
     // Render markdown.
     Gogs.renderMarkdown = function () {
         var $md = $('.markdown');
-        var $pre = $md.find('pre > code').parent();
-        $pre.addClass('prettyprint');
-        prettyPrint();
 
         // Set anchor.
         var headers = {};
