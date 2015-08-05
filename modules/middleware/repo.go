@@ -41,7 +41,7 @@ func ApiRepoAssignment() macaron.Handler {
 		} else {
 			u, err = models.GetUserByName(userName)
 			if err != nil {
-				if err == models.ErrUserNotExist {
+				if models.IsErrUserNotExist(err) {
 					ctx.Error(404)
 				} else {
 					ctx.JSON(500, &base.ApiJsonErr{"GetUserByName: " + err.Error(), base.DOC_URL})
@@ -217,7 +217,7 @@ func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 		} else {
 			u, err = models.GetUserByName(userName)
 			if err != nil {
-				if err == models.ErrUserNotExist {
+				if models.IsErrUserNotExist(err) {
 					ctx.Handle(404, "GetUserByName", err)
 				} else {
 					ctx.Handle(500, "GetUserByName", err)

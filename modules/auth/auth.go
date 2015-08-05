@@ -55,7 +55,7 @@ func SignedInId(req *http.Request, sess session.Store) int64 {
 	}
 	if id, ok := uid.(int64); ok {
 		if _, err := models.GetUserById(id); err != nil {
-			if err != models.ErrUserNotExist {
+			if !models.IsErrUserNotExist(err) {
 				log.Error(4, "GetUserById: %v", err)
 			}
 			return 0
@@ -80,7 +80,7 @@ func SignedInUser(req *http.Request, sess session.Store) (*models.User, bool) {
 			if len(webAuthUser) > 0 {
 				u, err := models.GetUserByName(webAuthUser)
 				if err != nil {
-					if err != models.ErrUserNotExist {
+					if !models.IsErrUserNotExist(err) {
 						log.Error(4, "GetUserByName: %v", err)
 						return nil, false
 					}
@@ -115,7 +115,7 @@ func SignedInUser(req *http.Request, sess session.Store) (*models.User, bool) {
 
 				u, err := models.UserSignIn(uname, passwd)
 				if err != nil {
-					if err != models.ErrUserNotExist {
+					if !models.IsErrUserNotExist(err) {
 						log.Error(4, "UserSignIn: %v", err)
 					}
 					return nil, false

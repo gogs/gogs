@@ -139,7 +139,7 @@ func CreateRepo(ctx *middleware.Context, opt api.CreateRepoOption) {
 func CreateOrgRepo(ctx *middleware.Context, opt api.CreateRepoOption) {
 	org, err := models.GetOrgByName(ctx.Params(":org"))
 	if err != nil {
-		if err == models.ErrUserNotExist {
+		if models.IsErrUserNotExist(err) {
 			ctx.Error(404)
 		} else {
 			ctx.Error(500)
@@ -157,7 +157,7 @@ func CreateOrgRepo(ctx *middleware.Context, opt api.CreateRepoOption) {
 func MigrateRepo(ctx *middleware.Context, form auth.MigrateRepoForm) {
 	u, err := models.GetUserByName(ctx.Query("username"))
 	if err != nil {
-		if err == models.ErrUserNotExist {
+		if models.IsErrUserNotExist(err) {
 			ctx.HandleAPI(422, err)
 		} else {
 			ctx.HandleAPI(500, err)
@@ -174,7 +174,7 @@ func MigrateRepo(ctx *middleware.Context, form auth.MigrateRepoForm) {
 	if form.Uid != u.Id {
 		org, err := models.GetUserById(form.Uid)
 		if err != nil {
-			if err == models.ErrUserNotExist {
+			if models.IsErrUserNotExist(err) {
 				ctx.HandleAPI(422, err)
 			} else {
 				ctx.HandleAPI(500, err)

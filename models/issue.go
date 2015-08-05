@@ -57,7 +57,7 @@ type Issue struct {
 
 func (i *Issue) GetPoster() (err error) {
 	i.Poster, err = GetUserById(i.PosterId)
-	if err == ErrUserNotExist {
+	if IsErrUserNotExist(err) {
 		i.Poster = &User{Name: "FakeUser"}
 		return nil
 	}
@@ -92,7 +92,7 @@ func (i *Issue) GetAssignee() (err error) {
 		return nil
 	}
 	i.Assignee, err = GetUserById(i.AssigneeId)
-	if err == ErrUserNotExist {
+	if IsErrUserNotExist(err) {
 		return nil
 	}
 	return err

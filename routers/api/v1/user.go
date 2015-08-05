@@ -61,7 +61,7 @@ func SearchUsers(ctx *middleware.Context) {
 func GetUserInfo(ctx *middleware.Context) {
 	u, err := models.GetUserByName(ctx.Params(":username"))
 	if err != nil {
-		if err == models.ErrUserNotExist {
+		if models.IsErrUserNotExist(err) {
 			ctx.Error(404)
 		} else {
 			ctx.JSON(500, &base.ApiJsonErr{"GetUserByName: " + err.Error(), base.DOC_URL})

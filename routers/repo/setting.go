@@ -118,7 +118,7 @@ func SettingsPost(ctx *middleware.Context, form auth.RepoSettingForm) {
 		}
 
 		if _, err = models.UserSignIn(ctx.User.Name, ctx.Query("password")); err != nil {
-			if err == models.ErrUserNotExist {
+			if models.IsErrUserNotExist(err) {
 				ctx.RenderWithErr(ctx.Tr("form.enterred_invalid_password"), SETTINGS_OPTIONS, nil)
 			} else {
 				ctx.Handle(500, "UserSignIn", err)
@@ -151,7 +151,7 @@ func SettingsPost(ctx *middleware.Context, form auth.RepoSettingForm) {
 		}
 
 		if _, err := models.UserSignIn(ctx.User.Name, ctx.Query("password")); err != nil {
-			if err == models.ErrUserNotExist {
+			if models.IsErrUserNotExist(err) {
 				ctx.RenderWithErr(ctx.Tr("form.enterred_invalid_password"), SETTINGS_OPTIONS, nil)
 			} else {
 				ctx.Handle(500, "UserSignIn", err)
@@ -185,7 +185,7 @@ func SettingsCollaboration(ctx *middleware.Context) {
 
 		u, err := models.GetUserByName(name)
 		if err != nil {
-			if err == models.ErrUserNotExist {
+			if models.IsErrUserNotExist(err) {
 				ctx.Flash.Error(ctx.Tr("form.user_not_exist"))
 				ctx.Redirect(setting.AppSubUrl + ctx.Req.URL.Path)
 			} else {
