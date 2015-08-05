@@ -8,8 +8,13 @@
 		<div class="ui divider"></div>
 		<div class="sixteen wide column page grid">
 			<h2 class="ui dividing header">
+				{{if .PageIsEditMilestone}}
+			  {{.i18n.Tr "repo.milestones.edit"}}
+			  <div class="sub header">{{.i18n.Tr "repo.milestones.edit_subheader"}}</div>
+				{{else}}
 			  {{.i18n.Tr "repo.milestones.new"}}
 			  <div class="sub header">{{.i18n.Tr "repo.milestones.new_subheader"}}</div>
+			  {{end}}
 			</h2>
 			<form class="ui form grid" action="{{.Link}}" method="post">
         {{.CsrfTokenHtml}}
@@ -21,7 +26,7 @@
 				<div class="eleven wide column">
 					<div class="field {{if .Err_Title}}error{{end}}">
 						<label>{{.i18n.Tr "repo.milestones.title"}}</label>
-						<input name="title" placeholder="{{.i18n.Tr "repo.milestones.title"}}" value="{{.title}}" required>
+						<input name="title" placeholder="{{.i18n.Tr "repo.milestones.title"}}" value="{{.title}}" autofocus required>
 					</div>
 					<div class="field">
 						<label>{{.i18n.Tr "repo.milestones.desc"}}</label>
@@ -41,9 +46,18 @@
 					</div>
 				</div>
 				<div class="ui divider"></div>
+				{{if .PageIsEditMilestone}}
+				<button class="ui right green button">
+					{{.i18n.Tr "repo.milestones.modify"}}
+				</button>
+				<a class="ui right blue basic button" href="{{.RepoLink}}/milestones">
+					{{.i18n.Tr "repo.milestones.cancel"}}
+				</a>
+				{{else}}
 				<button class="ui right green button">
 					{{.i18n.Tr "repo.milestones.create"}}
 				</button>
+				{{end}}
 			</form>
 		</div>
 	</div>

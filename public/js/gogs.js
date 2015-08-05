@@ -88,9 +88,9 @@ function initRepository() {
             inline: true,
             timepicker: false,
             startDate: $datepicker.data('start-date'),
-            formatDate: 'm/d/Y',
+            formatDate: 'Y-m-d',
             onSelectDate: function (ct) {
-                $('#deadline').val(ct.dateFormat('m/d/Y'));
+                $('#deadline').val(ct.dateFormat('Y-m-d'));
             }
         });
         $('#clear-date').click(function () {
