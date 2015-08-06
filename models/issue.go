@@ -684,7 +684,6 @@ func NewMilestone(m *Milestone) (err error) {
 		return err
 	}
 
-	m.Deadline = m.Deadline.Local()
 	if _, err = sess.Insert(m); err != nil {
 		return err
 	}
