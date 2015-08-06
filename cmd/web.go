@@ -404,6 +404,13 @@ func runWeb(ctx *cli.Context) {
 				m.Get("/:name", repo.GitHooksEdit)
 				m.Post("/:name", repo.GitHooksEditPost)
 			}, middleware.GitHookService())
+
+			m.Group("/keys", func() {
+				m.Combo("").Get(repo.SettingsDeployKeys).
+					Post(bindIgnErr(auth.AddSSHKeyForm{}), repo.SettingsDeployKeysPost)
+				m.Post("/delete", repo.DeleteDeployKey)
+			})
+
 		})
 	}, reqSignIn, middleware.RepoAssignment(true), reqRepoAdmin)
 

@@ -107,6 +107,82 @@ func (err ErrUserHasOrgs) Error() string {
 	return fmt.Sprintf("user still has membership of organizations: [uid: %d]", err.UID)
 }
 
+// __________     ___.   .__  .__          ____  __.
+// \______   \__ _\_ |__ |  | |__| ____   |    |/ _|____ ___.__.
+//  |     ___/  |  \ __ \|  | |  |/ ___\  |      <_/ __ <   |  |
+//  |    |   |  |  / \_\ \  |_|  \  \___  |    |  \  ___/\___  |
+//  |____|   |____/|___  /____/__|\___  > |____|__ \___  > ____|
+//                     \/             \/          \/   \/\/
+
+type ErrKeyNotExist struct {
+	ID int64
+}
+
+func IsErrKeyNotExist(err error) bool {
+	_, ok := err.(ErrKeyNotExist)
+	return ok
+}
+
+func (err ErrKeyNotExist) Error() string {
+	return fmt.Sprintf("public key does not exist: [id: %d]", err.ID)
+}
+
+type ErrKeyAlreadyExist struct {
+	OwnerID int64
+	Content string
+}
+
+func IsErrKeyAlreadyExist(err error) bool {
+	_, ok := err.(ErrKeyAlreadyExist)
+	return ok
+}
+
+func (err ErrKeyAlreadyExist) Error() string {
+	return fmt.Sprintf("public key already exists: [owner_id: %d, content: %s]", err.OwnerID, err.Content)
+}
+
+type ErrKeyNameAlreadyUsed struct {
+	OwnerID int64
+	Name    string
+}
+
+func IsErrKeyNameAlreadyUsed(err error) bool {
+	_, ok := err.(ErrKeyNameAlreadyUsed)
+	return ok
+}
+
+func (err ErrKeyNameAlreadyUsed) Error() string {
+	return fmt.Sprintf("public key already exists: [owner_id: %d, name: %s]", err.OwnerID, err.Name)
+}
+
+type ErrDeployKeyAlreadyExist struct {
+	KeyID  int64
+	RepoID int64
+}
+
+func IsErrDeployKeyAlreadyExist(err error) bool {
+	_, ok := err.(ErrDeployKeyAlreadyExist)
+	return ok
+}
+
+func (err ErrDeployKeyAlreadyExist) Error() string {
+	return fmt.Sprintf("public key already exists: [key_id: %d, repo_id: %d]", err.KeyID, err.RepoID)
+}
+
+type ErrDeployKeyNameAlreadyUsed struct {
+	RepoID int64
+	Name   string
+}
+
+func IsErrDeployKeyNameAlreadyUsed(err error) bool {
+	_, ok := err.(ErrDeployKeyNameAlreadyUsed)
+	return ok
+}
+
+func (err ErrDeployKeyNameAlreadyUsed) Error() string {
+	return fmt.Sprintf("public key already exists: [repo_id: %d, name: %s]", err.RepoID, err.Name)
+}
+
 // ________                            .__                __  .__
 // \_____  \_______  _________    ____ |__|____________ _/  |_|__| ____   ____
 //  /   |   \_  __ \/ ___\__  \  /    \|  \___   /\__  \\   __\  |/  _ \ /    \

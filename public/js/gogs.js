@@ -86,6 +86,13 @@ function initRepository() {
             return false;
         });
     }
+
+    // Settings
+    if ($('.repository.settings').length > 0) {
+        $('#add-deploy-key').click(function () {
+            $('#add-deploy-key-panel').show();
+        });
+    }
 };
 
 $(document).ready(function () {
