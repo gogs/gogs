@@ -77,6 +77,7 @@ func Home(ctx *middleware.Context) {
 				ext = ext[1:]
 			}
 			ctx.Data["FileExt"] = ext
+			ctx.Data["FileLanguage"] = Language(ext)
 			ctx.Data["FileLink"] = rawLink + "/" + treename
 
 			buf := make([]byte, 1024)
@@ -237,4 +238,149 @@ func Home(ctx *middleware.Context) {
 	ctx.Data["TreePath"] = treePath
 	ctx.Data["BranchLink"] = branchLink
 	ctx.HTML(200, HOME)
+}
+
+func Language(ext string) string {
+
+	languages := map[string]string {
+
+		"as": "actionscript",
+
+		"scpt"        : "applescript",
+		"AppleScript" : "applescript",
+
+		"asp" : "aspnet",
+		"aspx": "aspnet",
+
+		"bash": "bash",
+		"bsh" : "bash",
+
+		"b" : "brainfuck",
+		"bf": "brainfuck",
+
+		"c": "c",
+
+		"c++": "cpp",
+		"cpp": "cpp",
+
+		"coffee": "coffeescript",
+
+		"css": "css",
+
+		"dart": "dart",
+
+		"e": "eiffel",
+
+		"erl": "erlang",
+
+		"fs": "fsharp",
+
+		"f"  : "fortran",
+		"f90": "fortran",
+
+		"feature": "gherkin",
+
+		"go": "go",
+
+		"groovy": "groovy",
+		"gsh"   : "groovy",
+		"gvy"   : "groovy",
+		"gy"    : "groovy",
+
+		"haml": "haml",
+
+		"hs" : "haskell",
+		"lhs": "haskell",
+
+		"ini": "ini",
+
+		"j"   : "java",
+		"java": "java",
+		"jsp" : "java",
+
+		"js"  : "javascript",
+		"json": "javascript",
+
+		"jl": "julia",
+
+		"kmn": "keyman",
+
+		"tex": "latex",
+
+		"less": "less",
+
+		"lol" : "lolcode",
+		"lols": "lolcode",
+
+		"make": "makefile",
+
+		"htm" : "markup",
+		"html": "markup",
+		"svg" : "markup",
+		"wml" : "markup",
+		"xml" : "markup",
+
+		"m": "matlab",
+
+		"asm": "nasm",
+
+		"nsi": "nsis",
+
+		"C": "objectivec",
+
+		"pas": "pascal",
+
+		"pl"  : "perl",
+
+		"php" : "php",
+		"php2": "php",
+		"php3": "php",
+		"php4": "php",
+		"php5": "php",
+
+		"cmd" : "powershell",
+		"ps1" : "powershell",
+		"psm1": "powershell",
+
+		"py": "python",
+
+		"R": "r",
+
+		"rip": "rip",
+
+		"rb": "ruby",
+
+		"rs": "rust",
+
+		"sas": "sas",
+
+		"sass": "sass",
+
+		"scss": "scss",
+
+		"scala": "scala",
+
+		"scm": "scheme",
+		"ss" : "scheme",
+
+		"st": "smalltalk",
+
+		"tpl": "smarty",
+
+		"sql": "sql",
+
+		"styl": "stylus",
+
+		"swift": "swift",
+
+		"twig": "twig",
+
+		"ts": "typescript",
+
+		"vhdl": "vhdl",
+
+		"yaml": "yaml",
+	}
+
+	return languages[ext]
 }

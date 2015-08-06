@@ -284,7 +284,7 @@ img.avatar-100 {
   font-size: 16px;
   line-height: 1.6;
   word-wrap: break-word;
-  padding: 0 2em 2em !important;
+  padding-left: 2em;
 }
 .markdown > *:first-child {
   margin-top: 0 !important;
@@ -610,6 +610,11 @@ img.avatar-100 {
   background: transparent;
   border: 0;
 }
+.markdown :not(pre) > code,
+.markdown :not(pre) > code[class*="language-"],
+.markdown pre[class*="language-"] {
+  background-color: #f3f3f3;
+}
 .markdown .highlight {
   margin-bottom: 16px;
 }
@@ -619,7 +624,7 @@ img.avatar-100 {
   overflow: auto;
   font-size: 85%;
   line-height: 1.45;
-  background-color: #f7f7f7;
+  background-color: #f3f3f3;
   border-radius: 3px;
 }
 .markdown .highlight pre {
@@ -1613,7 +1618,7 @@ The register and sign-in page style
   overflow: auto;
   overflow-x: auto;
   overflow-y: hidden;
-  background: white;
+  background: #fafafa;
 }
 .code-view .view-raw {
   min-height: 40px;
