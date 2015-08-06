@@ -101,6 +101,9 @@ func Home(ctx *middleware.Context) {
 				if readmeExist {
 					ctx.Data["FileContent"] = string(base.RenderMarkdown(buf, branchLink))
 				} else {
+					lines := ctx.Query("lines")
+          //TODO: sanitization, remove spaces and validation if needed
+					ctx.Data["HighlightLines"] = lines
 					if err, content := base.ToUtf8WithErr(buf); err != nil {
 						if err != nil {
 							log.Error(4, "Convert content encoding: %s", err)

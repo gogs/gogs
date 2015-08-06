@@ -209,7 +209,8 @@ pre.line-numbers > code {
 }
 
 	.line-numbers-rows > span {
-		pointer-events: none;
+		pointer-events: auto;
+		cursor: pointer;
 		display: block;
 		counter-increment: linenumber;
 	}
