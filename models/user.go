@@ -314,19 +314,23 @@ func CreateUser(u *User) (err error) {
 		return err
 	}
 
-	// Auto-set admin for user whose ID is 1.
-	if u.Id == 1 {
+	// Auto-set admin for the first user.
+	if countUsers(sess) == 1 {
 		u.IsAdmin = true
 		u.IsActive = true
-		_, err = x.Id(u.Id).UseBool().Update(u)
+		_, err = x.Id(u.Id).AllCols().Update(u)
 	}
 	return err
 }
 
+func countUsers(e Engine) int64 {
+	count, _ := e.Where("type=0").Count(new(User))
+	return count
+}
+
 // CountUsers returns number of users.
 func CountUsers() int64 {
-	count, _ := x.Where("type=0").Count(new(User))
-	return count
+	return countUsers(x)
 }
 
 // GetUsers returns given number of user objects with offset.
