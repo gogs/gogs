@@ -60,7 +60,7 @@ func (i *Issue) AfterSet(colName string, _ xorm.Cell) {
 	var err error
 	switch colName {
 	case "milestone_id":
-		i.Milestone, err = GetMilestoneById(i.MilestoneID)
+		i.Milestone, err = GetMilestoneByID(i.MilestoneID)
 		if err != nil {
 			log.Error(3, "GetMilestoneById: %v", err)
 		}
@@ -644,7 +644,6 @@ func DeleteLabel(repoID, labelID int64) error {
 type Milestone struct {
 	ID              int64 `xorm:"pk autoincr"`
 	RepoID          int64 `xorm:"INDEX"`
-	Index           int64
 	Name            string
 	Content         string `xorm:"TEXT"`
 	RenderedContent string `xorm:"-"`
@@ -680,44 +679,30 @@ func (m *Milestone) CalOpenIssues() {
 // NewMilestone creates new milestone of repository.
 func NewMilestone(m *Milestone) (err error) {
 	sess := x.NewSession()
-	defer sess.Close()
+	defer sessionRelease(sess)
 	if err = sess.Begin(); err != nil {
 		return err
 	}
 
+	m.Deadline = m.Deadline.Local()
 	if _, err = sess.Insert(m); err != nil {
-		sess.Rollback()
 		return err
 	}
 
-	rawSql := "UPDATE `repository` SET num_milestones = num_milestones + 1 WHERE id = ?"
-	if _, err = sess.Exec(rawSql, m.RepoID); err != nil {
-		sess.Rollback()
+	if _, err = sess.Exec("UPDATE `repository` SET num_milestones=num_milestones+1 WHERE id=?", m.RepoID); err != nil {
 		return err
 	}
 	return sess.Commit()
 }
 
-// GetMilestoneById returns the milestone by given ID.
-func GetMilestoneById(id int64) (*Milestone, error) {
+// GetMilestoneByID returns the milestone of given ID.
+func GetMilestoneByID(id int64) (*Milestone, error) {
 	m := &Milestone{ID: id}
 	has, err := x.Get(m)
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, ErrMilestoneNotExist{id, 0}
-	}
-	return m, nil
-}
-
-// GetMilestoneByIndex returns the milestone of given repository and index.
-func GetMilestoneByIndex(repoId, idx int64) (*Milestone, error) {
-	m := &Milestone{RepoID: repoId, Index: idx}
-	has, err := x.Get(m)
-	if err != nil {
-		return nil, err
-	} else if !has {
-		return nil, ErrMilestoneNotExist{0, idx}
+		return nil, ErrMilestoneNotExist{id}
 	}
 	return m, nil
 }
@@ -736,7 +721,6 @@ func GetMilestones(repoID int64, page int, isClosed bool) ([]*Milestone, error) 
 		sess = sess.Limit(setting.IssuePagingNum, (page-1)*setting.IssuePagingNum)
 	}
 	return miles, sess.Find(&miles)
-
 }
 
 func updateMilestone(e Engine, m *Milestone) error {
@@ -808,7 +792,7 @@ func ChangeMilestoneIssueStats(issue *Issue) error {
 		return nil
 	}
 
-	m, err := GetMilestoneById(issue.MilestoneID)
+	m, err := GetMilestoneByID(issue.MilestoneID)
 	if err != nil {
 		return err
 	}
@@ -835,7 +819,7 @@ func ChangeMilestoneAssign(oldMid, mid int64, issue *Issue) (err error) {
 	}
 
 	if oldMid > 0 {
-		m, err := GetMilestoneById(oldMid)
+		m, err := GetMilestoneByID(oldMid)
 		if err != nil {
 			return err
 		}
@@ -863,7 +847,7 @@ func ChangeMilestoneAssign(oldMid, mid int64, issue *Issue) (err error) {
 	}
 
 	if mid > 0 {
-		m, err := GetMilestoneById(mid)
+		m, err := GetMilestoneByID(mid)
 		if err != nil {
 			return err
 		}
@@ -895,7 +879,7 @@ func ChangeMilestoneAssign(oldMid, mid int64, issue *Issue) (err error) {
 
 // DeleteMilestoneByID deletes a milestone by given ID.
 func DeleteMilestoneByID(mid int64) error {
-	m, err := GetMilestoneById(mid)
+	m, err := GetMilestoneByID(mid)
 	if err != nil {
 		if IsErrMilestoneNotExist(err) {
 			return nil

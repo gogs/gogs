@@ -233,8 +233,7 @@ func (err ErrRepoNotExist) Error() string {
 //         \/             \/     \/                   \/     \/
 
 type ErrMilestoneNotExist struct {
-	ID    int64
-	Index int64
+	ID int64
 }
 
 func IsErrMilestoneNotExist(err error) bool {
@@ -243,5 +242,5 @@ func IsErrMilestoneNotExist(err error) bool {
 }
 
 func (err ErrMilestoneNotExist) Error() string {
-	return fmt.Sprintf("milestone does not exist [id: %d, index: %d]", err.ID, err.Index)
+	return fmt.Sprintf("milestone does not exist [id: %d]", err.ID)
 }
