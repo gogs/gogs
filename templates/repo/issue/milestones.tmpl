@@ -54,11 +54,11 @@
 					</div>
 					{{if $.IsRepositoryAdmin}}
 					<div class="ui right operate">
-						<a href="{{$.Link}}/{{.Index}}/edit" data-id={{.ID}} data-title={{.Name}}><i class="octicon octicon-pencil"></i> {{$.i18n.Tr "repo.issues.label_edit"}}</a>
+						<a href="{{$.Link}}/{{.ID}}/edit" data-id={{.ID}} data-title={{.Name}}><i class="octicon octicon-pencil"></i> {{$.i18n.Tr "repo.issues.label_edit"}}</a>
 						{{if .IsClosed}}
-						<a href="{{$.Link}}/{{.Index}}/open" data-id={{.ID}} data-title={{.Name}}><i class="octicon octicon-check"></i> {{$.i18n.Tr "repo.milestones.open"}}</a>
+						<a href="{{$.Link}}/{{.ID}}/open" data-id={{.ID}} data-title={{.Name}}><i class="octicon octicon-check"></i> {{$.i18n.Tr "repo.milestones.open"}}</a>
 						{{else}}
-						<a href="{{$.Link}}/{{.Index}}/close" data-id={{.ID}} data-title={{.Name}}><i class="octicon octicon-x"></i> {{$.i18n.Tr "repo.milestones.close"}}</a>
+						<a href="{{$.Link}}/{{.ID}}/close" data-id={{.ID}} data-title={{.Name}}><i class="octicon octicon-x"></i> {{$.i18n.Tr "repo.milestones.close"}}</a>
 						{{end}}
 						<a class="delete-button" href="#" data-url="{{$.RepoLink}}/milestones/delete" data-id="{{.ID}}"><i class="octicon octicon-trashcan"></i> {{$.i18n.Tr "repo.issues.label_delete"}}</a>
 					</div>
