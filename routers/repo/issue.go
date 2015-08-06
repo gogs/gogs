@@ -382,7 +382,7 @@ func ViewIssue(ctx *middleware.Context) {
 
 	// Get assigned milestone.
 	if issue.MilestoneID > 0 {
-		ctx.Data["Milestone"], err = models.GetMilestoneById(issue.MilestoneID)
+		ctx.Data["Milestone"], err = models.GetMilestoneByID(issue.MilestoneID)
 		if err != nil {
 			if models.IsErrMilestoneNotExist(err) {
 				log.Warn("GetMilestoneById: %v", err)
@@ -1044,7 +1044,6 @@ func NewMilestonePost(ctx *middleware.Context, form auth.CreateMilestoneForm) {
 
 	if err = models.NewMilestone(&models.Milestone{
 		RepoID:   ctx.Repo.Repository.Id,
-		Index:    int64(ctx.Repo.Repository.NumMilestones) + 1,
 		Name:     form.Title,
 		Content:  form.Content,
 		Deadline: deadline,
@@ -1063,12 +1062,12 @@ func EditMilestone(ctx *middleware.Context) {
 	ctx.Data["PageIsEditMilestone"] = true
 	ctx.Data["DateLang"] = setting.DateLang(ctx.Locale.Language())
 
-	m, err := models.GetMilestoneByIndex(ctx.Repo.Repository.Id, ctx.ParamsInt64(":index"))
+	m, err := models.GetMilestoneByID(ctx.ParamsInt64(":id"))
 	if err != nil {
 		if models.IsErrMilestoneNotExist(err) {
-			ctx.Handle(404, "GetMilestoneByIndex", nil)
+			ctx.Handle(404, "GetMilestoneByID", nil)
 		} else {
-			ctx.Handle(500, "GetMilestoneByIndex", err)
+			ctx.Handle(500, "GetMilestoneByID", err)
 		}
 		return
 	}
@@ -1101,12 +1100,12 @@ func EditMilestonePost(ctx *middleware.Context, form auth.CreateMilestoneForm) {
 		return
 	}
 
-	m, err := models.GetMilestoneByIndex(ctx.Repo.Repository.Id, ctx.ParamsInt64(":index"))
+	m, err := models.GetMilestoneByID(ctx.ParamsInt64(":id"))
 	if err != nil {
 		if models.IsErrMilestoneNotExist(err) {
-			ctx.Handle(404, "GetMilestoneByIndex", nil)
+			ctx.Handle(404, "GetMilestoneByID", nil)
 		} else {
-			ctx.Handle(500, "GetMilestoneByIndex", err)
+			ctx.Handle(500, "GetMilestoneByID", err)
 		}
 		return
 	}
@@ -1123,12 +1122,12 @@ func EditMilestonePost(ctx *middleware.Context, form auth.CreateMilestoneForm) {
 }
 
 func ChangeMilestonStatus(ctx *middleware.Context) {
-	m, err := models.GetMilestoneByIndex(ctx.Repo.Repository.Id, ctx.ParamsInt64(":index"))
+	m, err := models.GetMilestoneByID(ctx.ParamsInt64(":id"))
 	if err != nil {
 		if models.IsErrMilestoneNotExist(err) {
-			ctx.Handle(404, "GetMilestoneByIndex", err)
+			ctx.Handle(404, "GetMilestoneByID", err)
 		} else {
-			ctx.Handle(500, "GetMilestoneByIndex", err)
+			ctx.Handle(500, "GetMilestoneByID", err)
 		}
 		return
 	}

@@ -435,9 +435,9 @@ func runWeb(ctx *cli.Context) {
 		m.Group("/milestones", func() {
 			m.Get("/new", repo.NewMilestone)
 			m.Post("/new", bindIgnErr(auth.CreateMilestoneForm{}), repo.NewMilestonePost)
-			m.Get("/:index/edit", repo.EditMilestone)
-			m.Post("/:index/edit", bindIgnErr(auth.CreateMilestoneForm{}), repo.EditMilestonePost)
-			m.Get("/:index/:action", repo.ChangeMilestonStatus)
+			m.Get("/:id/edit", repo.EditMilestone)
+			m.Post("/:id/edit", bindIgnErr(auth.CreateMilestoneForm{}), repo.EditMilestonePost)
+			m.Get("/:id/:action", repo.ChangeMilestonStatus)
 			m.Post("/delete", repo.DeleteMilestone)
 		}, reqRepoAdmin)
 
