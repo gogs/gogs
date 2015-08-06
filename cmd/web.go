@@ -17,6 +17,7 @@ import (
 
 	"github.com/Unknwon/macaron"
 	"github.com/codegangsta/cli"
+	"github.com/go-xorm/xorm"
 	"github.com/macaron-contrib/binding"
 	"github.com/macaron-contrib/cache"
 	"github.com/macaron-contrib/captcha"
@@ -25,6 +26,7 @@ import (
 	"github.com/macaron-contrib/oauth2"
 	"github.com/macaron-contrib/session"
 	"github.com/macaron-contrib/toolbox"
+	"github.com/mcuadros/go-version"
 	"gopkg.in/ini.v1"
 
 	api "github.com/gogits/go-gogs-client"
@@ -35,7 +37,6 @@ import (
 	"github.com/gogits/gogs/modules/avatar"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/bindata"
-	"github.com/gogits/gogs/modules/git"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/middleware"
 	"github.com/gogits/gogs/modules/setting"
@@ -79,6 +80,7 @@ func checkVersion() {
 
 	// Check dependency version.
 	checkers := []VerChecker{
+		{"github.com/go-xorm/xorm", func() string { return xorm.Version }, "0.4.3.0806"},
 		{"github.com/Unknwon/macaron", macaron.Version, "0.5.4"},
 		{"github.com/macaron-contrib/binding", binding.Version, "0.1.0"},
 		{"github.com/macaron-contrib/cache", cache.Version, "0.0.7"},
@@ -88,9 +90,8 @@ func checkVersion() {
 		{"gopkg.in/ini.v1", ini.Version, "1.3.4"},
 	}
 	for _, c := range checkers {
-		ver := strings.Join(strings.Split(c.Version(), ".")[:3], ".")
-		if git.MustParseVersion(ver).LessThan(git.MustParseVersion(c.Expected)) {
-			log.Fatal(4, "Package '%s' version is too old(%s -> %s), did you forget to update?", c.ImportPath, ver, c.Expected)
+		if !version.Compare(c.Version(), c.Expected, ">=") {
+			log.Fatal(4, "Package '%s' version is too old(%s -> %s), did you forget to update?", c.ImportPath, c.Version(), c.Expected)
 		}
 	}
 }
