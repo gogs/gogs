@@ -305,7 +305,7 @@ func SettingsSSHKeysPost(ctx *middleware.Context, form auth.AddSSHKeyForm) {
 			return
 		}
 
-		if err = models.DeletePublicKey(&models.PublicKey{Id: id}); err != nil {
+		if err = models.DeletePublicKey(&models.PublicKey{ID: id}); err != nil {
 			ctx.Handle(500, "DeletePublicKey", err)
 		} else {
 			log.Trace("SSH key deleted: %s", ctx.User.Name)
@@ -321,15 +321,8 @@ func SettingsSSHKeysPost(ctx *middleware.Context, form auth.AddSSHKeyForm) {
 			return
 		}
 
-		// Parse openssh style string from form content
-		content, err := models.ParseKeyString(form.Content)
+		content, err := models.CheckPublicKeyString(form.Content)
 		if err != nil {
-			ctx.Flash.Error(ctx.Tr("form.invalid_ssh_key", err.Error()))
-			ctx.Redirect(setting.AppSubUrl + "/user/settings/ssh")
-			return
-		}
-
-		if ok, err := models.CheckPublicKeyString(content); !ok {
 			if err == models.ErrKeyUnableVerify {
 				ctx.Flash.Info(ctx.Tr("form.unable_verify_ssh_key"))
 			} else {
@@ -339,21 +332,19 @@ func SettingsSSHKeysPost(ctx *middleware.Context, form auth.AddSSHKeyForm) {
 			}
 		}
 
-		k := &models.PublicKey{
-			OwnerId: ctx.User.Id,
-			Name:    form.SSHTitle,
-			Content: content,
-		}
-		if err := models.AddPublicKey(k); err != nil {
-			if err == models.ErrKeyAlreadyExist {
-				ctx.RenderWithErr(ctx.Tr("form.ssh_key_been_used"), SETTINGS_SSH_KEYS, &form)
-				return
+		if err = models.AddPublicKey(ctx.User.Id, form.Title, content); err != nil {
+			switch {
+			case models.IsErrKeyAlreadyExist(err):
+				ctx.RenderWithErr(ctx.Tr("settings.ssh_key_been_used"), SETTINGS_SSH_KEYS, &form)
+			case models.IsErrKeyNameAlreadyUsed(err):
+				ctx.RenderWithErr(ctx.Tr("settings.ssh_key_name_used"), SETTINGS_SSH_KEYS, &form)
+			default:
+				ctx.Handle(500, "AddPublicKey", err)
 			}
-			ctx.Handle(500, "ssh.AddPublicKey", err)
 			return
 		} else {
 			log.Trace("SSH key added: %s", ctx.User.Name)
-			ctx.Flash.Success(ctx.Tr("settings.add_key_success"))
+			ctx.Flash.Success(ctx.Tr("settings.add_key_success", form.Title))
 			ctx.Redirect(setting.AppSubUrl + "/user/settings/ssh")
 			return
 		}

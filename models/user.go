@@ -505,7 +505,7 @@ func DeleteUser(u *User) error {
 
 	// Delete all SSH keys.
 	keys := make([]*PublicKey, 0, 10)
-	if err = sess.Find(&keys, &PublicKey{OwnerId: u.Id}); err != nil {
+	if err = sess.Find(&keys, &PublicKey{OwnerID: u.Id}); err != nil {
 		return err
 	}
 	for _, key := range keys {
