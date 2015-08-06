@@ -197,6 +197,7 @@
     >.drop-down {
         top: 40px;
         left: 0;
+        z-index: 9999;
     }
 }
 #repo-branch-filter-ipt {
@@ -459,6 +460,13 @@
             font-size: 1.05em;
             line-height: 16px;
             padding: 6px 8px;
+        }
+    }
+    pre {
+        padding-top: 0!important;
+        padding-bottom: 0!important;
+        code {
+            padding-top: 2px;
         }
     }
     table {

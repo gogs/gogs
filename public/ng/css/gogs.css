@@ -1371,6 +1371,7 @@ The register and sign-in page style
 #repo-branch-switch > .drop-down {
   top: 40px;
   left: 0;
+  z-index: 9999;
 }
 #repo-branch-filter-ipt {
   width: 100%;
@@ -1629,6 +1630,13 @@ The register and sign-in page style
   font-size: 1.05em;
   line-height: 16px;
   padding: 6px 8px;
+}
+.code-view pre {
+  padding-top: 0!important;
+  padding-bottom: 0!important;
+}
+.code-view pre code {
+  padding-top: 2px;
 }
 .code-view table {
   width: 100%;
