@@ -177,9 +177,6 @@ var Gogits = {};
     // render markdown
     Gogits.renderMarkdown = function () {
         var $md = $('.markdown');
-        var $pre = $md.find('pre > code').parent();
-        $pre.addClass('prettyprint linenums');
-        prettyPrint();
 
         // Set anchor.
         var headers = {};

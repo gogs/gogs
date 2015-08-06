@@ -92,6 +92,9 @@
 #repo-content {
     padding-top: 18px;
     padding-bottom: 18px;
+    .panel-content {
+      padding: 0;
+    }
 }
 .repo-wide-wrapper {
     padding: 18px;
@@ -197,6 +200,7 @@
     >.drop-down {
         top: 40px;
         left: 0;
+        z-index: 9999;
     }
 }
 #repo-branch-filter-ipt {
@@ -450,7 +454,7 @@
     overflow: auto;
     overflow-x: auto;
     overflow-y: hidden;
-    background: white;
+    background: #fafafa;
     .view-raw {
         min-height: 40px;
         text-align: center;

@@ -4,7 +4,7 @@
   font-size:16px;
   line-height:1.6;
   word-wrap:break-word;
-  padding: 0 2em 2em !important;
+  padding-left: 2em;
 
   >*:first-child {
     margin-top:0 !important;
@@ -391,6 +391,12 @@
     border:0;
   }
 
+  :not(pre) > code,
+  :not(pre) > code[class*="language-"],
+  pre[class*="language-"] {
+    background-color:#f3f3f3;
+  }
+
   .highlight {
     margin-bottom:16px;
   }
@@ -401,7 +407,7 @@
     overflow:auto;
     font-size:85%;
     line-height:1.45;
-    background-color:#f7f7f7;
+    background-color:#f3f3f3;
     border-radius:3px;
   }
 

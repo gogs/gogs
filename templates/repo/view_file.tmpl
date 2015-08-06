@@ -25,10 +25,12 @@
             </a>
         {{end}}
     </p>
-    <div class="{{if .ReadmeExist}}panel-content markdown{{end}} code-view" id="repo-code-view">
+    <div class="panel-content">
     	{{if .ReadmeExist}}
-    	{{if .FileContent}}{{.FileContent | Str2html}}{{end}}
-        {{else if not .IsFileText}}
+        <div class="markdown">
+    	  {{if .FileContent}}{{.FileContent | Str2html}}{{end}}
+        </div>
+      {{else if not .IsFileText}}
         <div class="view-raw">
             {{if .IsImageFile}}
             <img src="{{EscapePound .FileLink}}">
@@ -37,14 +39,11 @@
             {{end}}
         </div>
     	{{else if .FileSize}}
-        <table>
-            <tbody>
-                <tr>
-                    <td class="lines-num"></td>
-                    <td class="lines-code"><pre class="prettyprint linenums {{if .FileExt}}lang-{{.FileExt}}{{end}}"><code>{{.FileContent}}</code></pre></td>
-                </tr>
-            </tbody>
-        </table>
+        <div class="code-view" id="repo-code-view">
+          <pre class="line-numbers"{{if .HighlightLines}}data-line="{{.HighlightLines}}"{{end}}>
+            <code class="language-{{if .FileLanguage}}{{.FileLanguage}}{{else}}nohighlight{{end}}">{{.FileContent}}</code>
+          </pre>
+        </div>
     	{{end}}
     </div>
 </div>
