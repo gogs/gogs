@@ -315,7 +315,7 @@ func CreateUser(u *User) (err error) {
 	}
 
 	// Auto-set admin for the first user.
-	if countUsers(sess) == 1 {
+	if CountUsers() == 1 {
 		u.IsAdmin = true
 		u.IsActive = true
 		_, err = x.Id(u.Id).AllCols().Update(u)
