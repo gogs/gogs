@@ -71,16 +71,16 @@ var (
 	}
 )
 
+func fail(userMessage, logMessage string, args ...interface{}) {
+	fmt.Fprintln(os.Stderr, "Gogs:", userMessage)
+	log.GitLogger.Fatal(3, logMessage, args...)
+}
+
 func runServ(c *cli.Context) {
 	if c.IsSet("config") {
 		setting.CustomConf = c.String("config")
 	}
 	setup("serv.log")
-
-	fail := func(userMessage, logMessage string, args ...interface{}) {
-		fmt.Fprintln(os.Stderr, "Gogs:", userMessage)
-		log.GitLogger.Fatal(3, logMessage, args...)
-	}
 
 	if len(c.Args()) < 1 {
 		fail("Not enough arguments", "Not enough arguments")
@@ -131,30 +131,53 @@ func runServ(c *cli.Context) {
 	if requestedMode == models.ACCESS_MODE_WRITE || repo.IsPrivate {
 		keys := strings.Split(c.Args()[0], "-")
 		if len(keys) != 2 {
-			fail("key-id format error", "Invalid key id: %s", c.Args()[0])
+			fail("Key ID format error", "Invalid key ID: %s", c.Args()[0])
 		}
 
-		keyID, err = com.StrTo(keys[1]).Int64()
+		key, err := models.GetPublicKeyByID(com.StrTo(keys[1]).MustInt64())
 		if err != nil {
-			fail("key-id format error", "Invalid key id: %s", err)
+			fail("Key ID format error", "Invalid key ID[%s]: %v", c.Args()[0], err)
 		}
+		keyID = key.ID
 
-		user, err = models.GetUserByKeyId(keyID)
-		if err != nil {
-			fail("internal error", "Failed to get user by key ID(%d): %v", keyID, err)
-		}
-
-		mode, err := models.AccessLevel(user, repo)
-		if err != nil {
-			fail("Internal error", "Fail to check access: %v", err)
-		} else if mode < requestedMode {
-			clientMessage := _ACCESS_DENIED_MESSAGE
-			if mode >= models.ACCESS_MODE_READ {
-				clientMessage = "You do not have sufficient authorization for this action"
+		// Check deploy key or user key.
+		if key.Type == models.KEY_TYPE_DEPLOY {
+			if key.Mode < requestedMode {
+				fail("Key permission denied", "Cannot push with deployment key: %d", key.ID)
 			}
-			fail(clientMessage,
-				"User %s does not have level %v access to repository %s",
-				user.Name, requestedMode, repoPath)
+			// Check if this deploy key belongs to current repository.
+			if !models.HasDeployKey(key.ID, repo.Id) {
+				fail("Key access denied", "Key access denied: %d-%d", key.ID, repo.Id)
+			}
+
+			// Update deploy key activity.
+			deployKey, err := models.GetDeployKeyByRepo(key.ID, repo.Id)
+			if err != nil {
+				fail("Internal error", "GetDeployKey: %v", err)
+			}
+
+			deployKey.Updated = time.Now()
+			if err = models.UpdateDeployKey(deployKey); err != nil {
+				fail("Internal error", "UpdateDeployKey: %v", err)
+			}
+		} else {
+			user, err = models.GetUserByKeyId(key.ID)
+			if err != nil {
+				fail("internal error", "Failed to get user by key ID(%d): %v", keyID, err)
+			}
+
+			mode, err := models.AccessLevel(user, repo)
+			if err != nil {
+				fail("Internal error", "Fail to check access: %v", err)
+			} else if mode < requestedMode {
+				clientMessage := _ACCESS_DENIED_MESSAGE
+				if mode >= models.ACCESS_MODE_READ {
+					clientMessage = "You do not have sufficient authorization for this action"
+				}
+				fail(clientMessage,
+					"User %s does not have level %v access to repository %s",
+					user.Name, requestedMode, repoPath)
+			}
 		}
 	}
 
@@ -201,9 +224,9 @@ func runServ(c *cli.Context) {
 		resp.Body.Close()
 	}
 
-	// Update key activity.
+	// Update user key activity.
 	if keyID > 0 {
-		key, err := models.GetPublicKeyById(keyID)
+		key, err := models.GetPublicKeyByID(keyID)
 		if err != nil {
 			fail("Internal error", "GetPublicKeyById: %v", err)
 		}

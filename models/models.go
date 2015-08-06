@@ -55,7 +55,7 @@ var (
 func init() {
 	tables = append(tables,
 		new(User), new(PublicKey), new(Oauth2), new(AccessToken),
-		new(Repository), new(Collaboration), new(Access),
+		new(Repository), new(DeployKey), new(Collaboration), new(Access),
 		new(Watch), new(Star), new(Follow), new(Action),
 		new(Issue), new(Comment), new(Attachment), new(IssueUser), new(Label), new(Milestone),
 		new(Mirror), new(Release), new(LoginSource), new(Webhook),
@@ -132,7 +132,7 @@ func NewTestEngine(x *xorm.Engine) (err error) {
 func SetEngine() (err error) {
 	x, err = getEngine()
 	if err != nil {
-		return fmt.Errorf("Connect to database: %v", err)
+		return fmt.Errorf("Fail to connect to database: %v", err)
 	}
 
 	x.SetMapper(core.GonicMapper{})

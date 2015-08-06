@@ -56,16 +56,11 @@ type Issue struct {
 	Updated         time.Time `xorm:"UPDATED"`
 }
 
-func (i *Issue) BeforeSet(colName string, val xorm.Cell) {
+func (i *Issue) AfterSet(colName string, _ xorm.Cell) {
 	var err error
 	switch colName {
 	case "milestone_id":
-		mid := (*val).(int64)
-		if mid <= 0 {
-			return
-		}
-
-		i.Milestone, err = GetMilestoneById(mid)
+		i.Milestone, err = GetMilestoneById(i.MilestoneID)
 		if err != nil {
 			log.Error(3, "GetMilestoneById: %v", err)
 		}
@@ -664,15 +659,14 @@ type Milestone struct {
 	ClosedDate      time.Time
 }
 
-func (m *Milestone) BeforeSet(colName string, val xorm.Cell) {
+func (m *Milestone) AfterSet(colName string, _ xorm.Cell) {
 	if colName == "deadline" {
-		t := (*val).(time.Time)
-		if t.Year() == 9999 {
+		if m.Deadline.Year() == 9999 {
 			return
 		}
 
-		m.DeadlineString = t.Format("2006-01-02")
-		if time.Now().After(t) {
+		m.DeadlineString = m.Deadline.Format("2006-01-02")
+		if time.Now().After(m.Deadline) {
 			m.IsOverDue = true
 		}
 	}

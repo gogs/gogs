@@ -27,10 +27,11 @@ const (
 	SETTINGS_OPTIONS base.TplName = "repo/settings/options"
 	COLLABORATION    base.TplName = "repo/settings/collaboration"
 	HOOKS            base.TplName = "repo/settings/hooks"
-	GITHOOKS         base.TplName = "repo/settings/githooks"
-	GITHOOK_EDIT     base.TplName = "repo/settings/githook_edit"
 	HOOK_NEW         base.TplName = "repo/settings/hook_new"
 	ORG_HOOK_NEW     base.TplName = "org/settings/hook_new"
+	GITHOOKS         base.TplName = "repo/settings/githooks"
+	GITHOOK_EDIT     base.TplName = "repo/settings/githook_edit"
+	DEPLOY_KEYS      base.TplName = "repo/settings/deploy_keys"
 )
 
 func Settings(ctx *middleware.Context) {
@@ -584,6 +585,10 @@ func getOrgRepoCtx(ctx *middleware.Context) (*OrgRepoCtx, error) {
 	}
 }
 
+func TriggerHook(ctx *middleware.Context) {
+	models.HookQueue.AddRepoID(ctx.Repo.Repository.Id)
+}
+
 func GitHooks(ctx *middleware.Context) {
 	ctx.Data["Title"] = ctx.Tr("repo.settings")
 	ctx.Data["PageIsSettingsGitHooks"] = true
@@ -635,6 +640,70 @@ func GitHooksEditPost(ctx *middleware.Context) {
 	ctx.Redirect(ctx.Repo.RepoLink + "/settings/hooks/git")
 }
 
-func TriggerHook(ctx *middleware.Context) {
-	models.HookQueue.AddRepoID(ctx.Repo.Repository.Id)
+func SettingsDeployKeys(ctx *middleware.Context) {
+	ctx.Data["Title"] = ctx.Tr("repo.settings")
+	ctx.Data["PageIsSettingsKeys"] = true
+
+	keys, err := models.ListDeployKeys(ctx.Repo.Repository.Id)
+	if err != nil {
+		ctx.Handle(500, "ListDeployKeys", err)
+		return
+	}
+	ctx.Data["Deploykeys"] = keys
+
+	ctx.HTML(200, DEPLOY_KEYS)
+}
+
+func SettingsDeployKeysPost(ctx *middleware.Context, form auth.AddSSHKeyForm) {
+	ctx.Data["Title"] = ctx.Tr("repo.settings")
+	ctx.Data["PageIsSettingsKeys"] = true
+
+	if ctx.HasError() {
+		ctx.HTML(200, DEPLOY_KEYS)
+		return
+	}
+
+	content, err := models.CheckPublicKeyString(form.Content)
+	if err != nil {
+		if err == models.ErrKeyUnableVerify {
+			ctx.Flash.Info(ctx.Tr("form.unable_verify_ssh_key"))
+		} else {
+			ctx.Data["HasError"] = true
+			ctx.Data["Err_Content"] = true
+			ctx.Flash.Error(ctx.Tr("form.invalid_ssh_key", err.Error()))
+			ctx.Redirect(ctx.Repo.RepoLink + "/settings/keys")
+			return
+		}
+	}
+
+	if err = models.AddDeployKey(ctx.Repo.Repository.Id, form.Title, content); err != nil {
+		ctx.Data["HasError"] = true
+		switch {
+		case models.IsErrKeyAlreadyExist(err):
+			ctx.Data["Err_Content"] = true
+			ctx.RenderWithErr(ctx.Tr("repo.settings.key_been_used"), DEPLOY_KEYS, &form)
+		case models.IsErrKeyNameAlreadyUsed(err):
+			ctx.Data["Err_Title"] = true
+			ctx.RenderWithErr(ctx.Tr("repo.settings.key_name_used"), DEPLOY_KEYS, &form)
+		default:
+			ctx.Handle(500, "AddDeployKey", err)
+		}
+		return
+	}
+
+	log.Trace("Deploy key added: %d", ctx.Repo.Repository.Id)
+	ctx.Flash.Success(ctx.Tr("repo.settings.add_key_success", form.Title))
+	ctx.Redirect(ctx.Repo.RepoLink + "/settings/keys")
+}
+
+func DeleteDeployKey(ctx *middleware.Context) {
+	if err := models.DeleteDeployKey(ctx.QueryInt64("id")); err != nil {
+		ctx.Flash.Error("DeleteDeployKey: " + err.Error())
+	} else {
+		ctx.Flash.Success(ctx.Tr("repo.settings.deploy_key_deletion_success"))
+	}
+
+	ctx.JSON(200, map[string]interface{}{
+		"redirect": ctx.Repo.RepoLink + "/settings/keys",
+	})
 }

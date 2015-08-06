@@ -126,8 +126,8 @@ func (f *ChangePasswordForm) Validate(ctx *macaron.Context, errs binding.Errors)
 }
 
 type AddSSHKeyForm struct {
-	SSHTitle string `form:"title" binding:"Required"`
-	Content  string `form:"content" binding:"Required"`
+	Title   string `binding:"Required;MaxSize(50)"`
+	Content string `binding:"Required"`
 }
 
 func (f *AddSSHKeyForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
