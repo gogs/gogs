@@ -456,6 +456,7 @@ func initRepository(e Engine, repoPath string, u *User, repo *Repository, initRe
 	// Clone to temprory path and do the init commit.
 	tmpDir := filepath.Join(os.TempDir(), com.ToStr(time.Now().Nanosecond()))
 	os.MkdirAll(tmpDir, os.ModePerm)
+	defer os.RemoveAll(tmpDir)
 
 	_, stderr, err = process.Exec(
 		fmt.Sprintf("initRepository(git clone): %s", repoPath),
