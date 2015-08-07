@@ -209,18 +209,24 @@ pre.line-numbers > code {
 }
 
 	.line-numbers-rows > span {
-		pointer-events: none;
+		pointer-events: auto;
+		cursor: pointer;
 		display: block;
 		counter-increment: linenumber;
 	}
 
 		.line-numbers-rows > span:before {
 			content: counter(linenumber);
-			color: #999;
+			color: rgba(0,0,0,0.3);
 			display: block;
 			padding-right: 0.8em;
 			text-align: right;
 		}
+
+.line-numbers-rows > span:hover::before {
+	color: rgba(0,0,0,0.6);
+}
+
 pre[class*='language-'] {
 	position: relative;
 }

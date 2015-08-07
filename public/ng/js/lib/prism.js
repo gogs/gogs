@@ -3697,6 +3697,12 @@ Prism.hooks.add('after-highlight', function (env) {
 
 	env.element.appendChild(lineNumbersWrapper);
 
+	$(".line-numbers-rows > span").on("click", function() {
+		var line = $(this).index() + 1;
+		$(pre).attr("data-line", line);
+		Prism.highlightAll();
+	});
+
 });;
 (function(){
 
