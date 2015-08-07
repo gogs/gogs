@@ -85,6 +85,10 @@ There are 5 ways to install Gogs:
 - [Ship with Docker](https://github.com/gogits/gogs/tree/master/docker)
 - [Install with Vagrant](https://github.com/geerlingguy/ansible-vagrant-examples/tree/master/gogs)
 
+### Screencasts
+
+- [Instalando Gogs no Ubuntu](https://www.youtube.com/watch?v=DFNifgEHOzk)(Português)
+
 ## Acknowledgments
 
 - Router and middleware mechanism of [Macaron](https://github.com/Unknwon/macaron).
