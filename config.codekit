@@ -568,12 +568,12 @@
 		"outputStyle": 1,
 		"syntaxCheckerStyle": 1
 		},
-	"\/public\/ng\/js\/lib\/prism.js": {
+	"\/public\/ng\/js\/lib\/gogs-prism.js": {
 		"fileType": 64,
 		"ignore": 0,
 		"ignoreWasSetByUser": 0,
-		"inputAbbreviatedPath": "\/public\/ng\/js\/lib\/prism.js",
-		"outputAbbreviatedPath": "\/public\/ng\/js\/lib\/min\/prism-min.js",
+		"inputAbbreviatedPath": "\/public\/ng\/js\/lib\/gogs-prism.js",
+		"outputAbbreviatedPath": "\/public\/ng\/js\/lib\/min\/gogs-prism-min.js",
 		"outputPathIsOutsideProject": 0,
 		"outputPathIsSetByUser": 0,
 		"outputStyle": 1,
