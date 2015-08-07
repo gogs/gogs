@@ -284,7 +284,7 @@ img.avatar-100 {
   font-size: 16px;
   line-height: 1.6;
   word-wrap: break-word;
-  padding-left: 2em;
+  padding: 1em 1em 1em 2.2em;
 }
 .markdown > *:first-child {
   margin-top: 0 !important;
@@ -1272,6 +1272,9 @@ The register and sign-in page style
   padding-top: 18px;
   padding-bottom: 18px;
 }
+#repo-content .panel-content {
+  padding: 0;
+}
 .repo-wide-wrapper {
   padding: 18px;
   position: relative;
@@ -1615,11 +1618,15 @@ The register and sign-in page style
   color: #888;
   margin-left: 1em;
 }
+.view-raw {
+  line-height: 0;
+  padding: 1em;
+}
 .code-view {
   overflow: auto;
   overflow-x: auto;
   overflow-y: hidden;
-  background: #fafafa;
+  background: transparent;
 }
 .code-view .view-raw {
   min-height: 40px;
@@ -1630,13 +1637,6 @@ The register and sign-in page style
   font-size: 1.05em;
   line-height: 16px;
   padding: 6px 8px;
-}
-.code-view pre {
-  padding-top: 0!important;
-  padding-bottom: 0!important;
-}
-.code-view pre code {
-  padding-top: 2px;
 }
 .code-view table {
   width: 100%;

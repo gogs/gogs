@@ -25,12 +25,12 @@
             </a>
         {{end}}
     </p>
-    <div class="{{if .ReadmeExist}}panel-content{{end}}">
+    <div class="panel-content">
     	{{if .ReadmeExist}}
         <div class="markdown">
     	  {{if .FileContent}}{{.FileContent | Str2html}}{{end}}
         </div>
-        {{else if not .IsFileText}}
+      {{else if not .IsFileText}}
         <div class="view-raw">
             {{if .IsImageFile}}
             <img src="{{EscapePound .FileLink}}">

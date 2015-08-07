@@ -15,7 +15,7 @@ pre[class*="language-"] {
 	white-space: pre;
 	word-spacing: normal;
 	word-break: normal;
-	line-height: 1.5;
+	line-height: 24px;
 
 	-moz-tab-size: 4;
 	-o-tab-size: 4;
@@ -52,9 +52,17 @@ pre[class*="language-"] {
 	overflow: auto;
 }
 
+.code-view pre[class*="language-"] {
+	padding-top: 0;
+}
+
 :not(pre) > code[class*="language-"],
 pre[class*="language-"] {
 	background: #fafafa;
+}
+
+.code-view pre[class*="language-"] {
+	background: transparent;
 }
 
 /* Inline code */
@@ -137,22 +145,21 @@ pre[class*="language-"] {
 
 pre[data-line] {
 	position: relative;
-	padding: 1em 0 1em 3em;
+	padding: 0 0 1em 3em;
 }
 
 .line-highlight {
 	position: absolute;
 	left: 0;
 	right: 0;
+	z-index: -1;
 	padding: inherit 0;
-	margin-top: 1em; /* Same as .prism’s padding-top */
+	margin-top: 0; /* Same as .prism’s padding-top */
+	margin-left: 3.6em;
+	width: 100%;
 
-	background: hsla(24, 20%, 50%,.08);
-	background: -moz-linear-gradient(left, hsla(24, 20%, 50%,.1) 70%, hsla(24, 20%, 50%,0));
-	background: -webkit-linear-gradient(left, hsla(24, 20%, 50%,.1) 70%, hsla(24, 20%, 50%,0));
-	background: -o-linear-gradient(left, hsla(24, 20%, 50%,.1) 70%, hsla(24, 20%, 50%,0));
-	background: linear-gradient(left, hsla(24, 20%, 50%,.1) 70%, hsla(24, 20%, 50%,0));
-	
+	background: rgb(248, 238, 199);
+
 	pointer-events: none;
 	
 	line-height: inherit;
@@ -164,10 +171,12 @@ pre[data-line] {
 	content: attr(data-start);
 	position: absolute;
 	top: .4em;
-	left: .6em;
+	left: .4em;
 	min-width: 1em;
-	padding: 0 .5em;
-	background-color: hsla(24, 20%, 50%,.4);
+	height: 20px;
+	padding: 0 1.8em;
+	margin-left: -5.4em;
+	background-color: #ededed;
 	color: hsl(24, 20%, 95%);
 	font: bold 65%/1.5 sans-serif;
 	text-align: center;
@@ -185,7 +194,7 @@ pre[data-line] {
 
 pre.line-numbers {
 	position: relative;
-	padding-left: 3.8em;
+	padding-left: 4.4em;
 	counter-reset: linenumber;
 }
 
@@ -198,10 +207,11 @@ pre.line-numbers > code {
 	pointer-events: none;
 	top: 0;
 	font-size: 100%;
-	left: -3.8em;
-	width: 3em; /* works for line-numbers below 1000 lines */
+	left: -4.4em;
+	width: 3.6em; /* works for line-numbers below 1000 lines */
 	letter-spacing: -1px;
 	border-right: 1px solid #999;
+	margin-top: -3px;
 
 	-webkit-user-select: none;
 	-moz-user-select: none;
