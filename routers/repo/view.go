@@ -10,6 +10,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"regexp"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"
@@ -101,6 +102,11 @@ func Home(ctx *middleware.Context) {
 				if readmeExist {
 					ctx.Data["FileContent"] = string(base.RenderMarkdown(buf, branchLink))
 				} else {
+					lines := ctx.Query("lines")
+					validLines := regexp.MustCompile(`^[0-9]+(-[0-9]+)?(,[0-9]+(-[0-9]+)?)*$`)
+					if validLines.MatchString(lines) {
+						ctx.Data["HighlightLines"] = lines
+					}
 					if err, content := base.ToUtf8WithErr(buf); err != nil {
 						if err != nil {
 							log.Error(4, "Convert content encoding: %s", err)
