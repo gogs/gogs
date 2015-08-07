@@ -586,7 +586,26 @@ func getOrgRepoCtx(ctx *middleware.Context) (*OrgRepoCtx, error) {
 }
 
 func TriggerHook(ctx *middleware.Context) {
-	models.HookQueue.AddRepoID(ctx.Repo.Repository.Id)
+	u, err := models.GetUserByName(ctx.Params(":username"))
+	if err != nil {
+		if models.IsErrUserNotExist(err) {
+			ctx.Handle(404, "GetUserByName", err)
+		} else {
+			ctx.Handle(500, "GetUserByName", err)
+		}
+		return
+	}
+
+	repo, err := models.GetRepositoryByName(u.Id, ctx.Params(":reponame"))
+	if err != nil {
+		if models.IsErrRepoNotExist(err) {
+			ctx.Handle(404, "GetRepositoryByName", err)
+		} else {
+			ctx.Handle(500, "GetRepositoryByName", err)
+		}
+		return
+	}
+	models.HookQueue.AddRepoID(repo.Id)
 }
 
 func GitHooks(ctx *middleware.Context) {
