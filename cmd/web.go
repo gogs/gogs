@@ -461,7 +461,6 @@ func runWeb(ctx *cli.Context) {
 		m.Get("/branches", repo.Branches)
 		m.Get("/archive/*", repo.Download)
 		m.Get("/pulls2/", repo.PullRequest2)
-		m.Head("/hooks/trigger", repo.TriggerHook)
 
 		m.Group("", func() {
 			m.Get("/src/*", repo.Home)
@@ -479,7 +478,10 @@ func runWeb(ctx *cli.Context) {
 			m.Get(".git", repo.Home)
 		}, ignSignIn, middleware.RepoAssignment(true, true), middleware.RepoRef())
 
-		m.Any("/:reponame/*", ignSignInAndCsrf, repo.Http)
+		m.Group("/:reponame", func() {
+			m.Any("/*", ignSignInAndCsrf, repo.Http)
+			m.Head("/hooks/trigger", repo.TriggerHook)
+		})
 	})
 
 	// robots.txt
