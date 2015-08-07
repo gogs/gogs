@@ -88,10 +88,14 @@ There are 5 ways to install Gogs:
 ### Tutorials
 
 - [How To Set Up Gogs on Ubuntu 14.04](https://www.digitalocean.com/community/tutorials/how-to-set-up-gogs-on-ubuntu-14-04)
+- [Run your own GitHub-like service with the help of Docker](http://blog.hypriot.com/post/run-your-own-github-like-service-with-docker/)
+- [阿里云上 Ubuntu 14.04 64 位安装 Gogs](http://my.oschina.net/luyao/blog/375654) (Chinese)
+- [Installing Gogs on FreeBSD](https://www.codejam.info/2015/03/installing-gogs-on-freebsd.html)
+- [Gogs on Raspberry Pi](http://blog.meinside.pe.kr/Gogs-on-Raspberry-Pi/)
 
 ### Screencasts
 
-- [Instalando Gogs no Ubuntu](https://www.youtube.com/watch?v=DFNifgEHOzk)(Português)
+- [Instalando Gogs no Ubuntu](https://www.youtube.com/watch?v=DFNifgEHOzk) (Português)
 
 ## Acknowledgments
 
