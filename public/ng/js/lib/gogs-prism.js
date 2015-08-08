@@ -3706,6 +3706,17 @@ Prism.hooks.add('after-highlight', function (env) {
 		$(pre).attr("data-line", range);
 		Prism.highlightAll();
 		Prism.clickedLine = line;
+
+		var linesRegexp = new RegExp("([?&])lines=.*?(&|$)", "i");
+		var newuri = document.location.href;
+		var separator = newuri.indexOf('?') !== -1 ? "&" : "?";
+		if (newuri.match(linesRegexp)) {
+			newuri = newuri.replace(linesRegexp, '$1' + "lines=" + range + '$2');
+		}
+		else {
+			newuri = newuri + separator + "lines=" + range;
+		}
+		window.history.pushState("", "", newuri)
 	});
 
 });;
