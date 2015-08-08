@@ -17,7 +17,7 @@ import (
 // GET /repos/:username/:reponame/hooks
 // https://developer.github.com/v3/repos/hooks/#list-hooks
 func ListRepoHooks(ctx *middleware.Context) {
-	hooks, err := models.GetWebhooksByRepoId(ctx.Repo.Repository.Id)
+	hooks, err := models.GetWebhooksByRepoId(ctx.Repo.Repository.ID)
 	if err != nil {
 		ctx.JSON(500, &base.ApiJsonErr{"GetWebhooksByRepoId: " + err.Error(), base.DOC_URL})
 		return
@@ -67,7 +67,7 @@ func CreateRepoHook(ctx *middleware.Context, form api.CreateHookOption) {
 	}
 
 	w := &models.Webhook{
-		RepoId:      ctx.Repo.Repository.Id,
+		RepoId:      ctx.Repo.Repository.ID,
 		Url:         form.Config["url"],
 		ContentType: models.ToHookContentType(form.Config["content_type"]),
 		Secret:      form.Config["secret"],

@@ -146,12 +146,12 @@ func runServ(c *cli.Context) {
 				fail("Key permission denied", "Cannot push with deployment key: %d", key.ID)
 			}
 			// Check if this deploy key belongs to current repository.
-			if !models.HasDeployKey(key.ID, repo.Id) {
-				fail("Key access denied", "Key access denied: %d-%d", key.ID, repo.Id)
+			if !models.HasDeployKey(key.ID, repo.ID) {
+				fail("Key access denied", "Key access denied: %d-%d", key.ID, repo.ID)
 			}
 
 			// Update deploy key activity.
-			deployKey, err := models.GetDeployKeyByRepo(key.ID, repo.Id)
+			deployKey, err := models.GetDeployKeyByRepo(key.ID, repo.ID)
 			if err != nil {
 				fail("Internal error", "GetDeployKey: %v", err)
 			}

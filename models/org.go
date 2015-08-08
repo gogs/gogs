@@ -66,7 +66,7 @@ func (org *User) GetMembers() error {
 
 	org.Members = make([]*User, len(ous))
 	for i, ou := range ous {
-		org.Members[i], err = GetUserById(ou.Uid)
+		org.Members[i], err = GetUserByID(ou.Uid)
 		if err != nil {
 			return err
 		}
@@ -343,11 +343,11 @@ func RemoveOrgUser(orgId, uid int64) error {
 		return nil
 	}
 
-	u, err := GetUserById(uid)
+	u, err := GetUserByID(uid)
 	if err != nil {
 		return fmt.Errorf("GetUserById: %v", err)
 	}
-	org, err := GetUserById(orgId)
+	org, err := GetUserByID(orgId)
 	if err != nil {
 		return fmt.Errorf("get organization: %v", err)
 	} else if err = org.GetRepositories(); err != nil {
@@ -380,10 +380,10 @@ func RemoveOrgUser(orgId, uid int64) error {
 	// Delete all repository accesses.
 	access := &Access{UserID: u.Id}
 	for _, repo := range org.Repos {
-		access.RepoID = repo.Id
+		access.RepoID = repo.ID
 		if _, err = sess.Delete(access); err != nil {
 			return err
-		} else if err = watchRepo(sess, u.Id, repo.Id, false); err != nil {
+		} else if err = watchRepo(sess, u.Id, repo.ID, false); err != nil {
 			return err
 		}
 	}
@@ -443,7 +443,7 @@ func (t *Team) getRepositories(e Engine) (err error) {
 
 	t.Repos = make([]*Repository, 0, len(teamRepos))
 	for i := range teamRepos {
-		repo, err := getRepositoryById(e, teamRepos[i].RepoID)
+		repo, err := getRepositoryByID(e, teamRepos[i].RepoID)
 		if err != nil {
 			return fmt.Errorf("getRepositoryById(%d): %v", teamRepos[i].RepoID, err)
 		}
@@ -487,7 +487,7 @@ func (t *Team) HasRepository(repoID int64) bool {
 }
 
 func (t *Team) addRepository(e Engine, repo *Repository) (err error) {
-	if err = addTeamRepo(e, t.OrgID, t.ID, repo.Id); err != nil {
+	if err = addTeamRepo(e, t.OrgID, t.ID, repo.ID); err != nil {
 		return err
 	}
 
@@ -504,7 +504,7 @@ func (t *Team) addRepository(e Engine, repo *Repository) (err error) {
 		return fmt.Errorf("getMembers: %v", err)
 	}
 	for _, u := range t.Members {
-		if err = watchRepo(e, u.Id, repo.Id, true); err != nil {
+		if err = watchRepo(e, u.Id, repo.ID, true); err != nil {
 			return fmt.Errorf("watchRepo: %v", err)
 		}
 	}
@@ -513,9 +513,9 @@ func (t *Team) addRepository(e Engine, repo *Repository) (err error) {
 
 // AddRepository adds new repository to team of organization.
 func (t *Team) AddRepository(repo *Repository) (err error) {
-	if repo.OwnerId != t.OrgID {
+	if repo.OwnerID != t.OrgID {
 		return errors.New("Repository does not belong to organization")
-	} else if t.HasRepository(repo.Id) {
+	} else if t.HasRepository(repo.ID) {
 		return nil
 	}
 
@@ -533,7 +533,7 @@ func (t *Team) AddRepository(repo *Repository) (err error) {
 }
 
 func (t *Team) removeRepository(e Engine, repo *Repository, recalculate bool) (err error) {
-	if err = removeTeamRepo(e, t.ID, repo.Id); err != nil {
+	if err = removeTeamRepo(e, t.ID, repo.ID); err != nil {
 		return err
 	}
 
@@ -560,7 +560,7 @@ func (t *Team) removeRepository(e Engine, repo *Repository, recalculate bool) (e
 			continue
 		}
 
-		if err = watchRepo(e, u.Id, repo.Id, false); err != nil {
+		if err = watchRepo(e, u.Id, repo.ID, false); err != nil {
 			return err
 		}
 	}
@@ -574,7 +574,7 @@ func (t *Team) RemoveRepository(repoID int64) error {
 		return nil
 	}
 
-	repo, err := GetRepositoryById(repoID)
+	repo, err := GetRepositoryByID(repoID)
 	if err != nil {
 		return err
 	}
@@ -713,7 +713,7 @@ func DeleteTeam(t *Team) error {
 	}
 
 	// Get organization.
-	org, err := GetUserById(t.OrgID)
+	org, err := GetUserByID(t.OrgID)
 	if err != nil {
 		return err
 	}
@@ -903,7 +903,7 @@ func removeTeamMember(e Engine, orgId, teamId, uid int64) error {
 	}
 
 	// Get organization.
-	org, err := getUserById(e, orgId)
+	org, err := getUserByID(e, orgId)
 	if err != nil {
 		return err
 	}

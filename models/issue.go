@@ -68,7 +68,7 @@ func (i *Issue) AfterSet(colName string, _ xorm.Cell) {
 }
 
 func (i *Issue) GetPoster() (err error) {
-	i.Poster, err = GetUserById(i.PosterID)
+	i.Poster, err = GetUserByID(i.PosterID)
 	if IsErrUserNotExist(err) {
 		i.Poster = &User{Name: "FakeUser"}
 		return nil
@@ -104,7 +104,7 @@ func (i *Issue) GetAssignee() (err error) {
 		return nil
 	}
 
-	i.Assignee, err = GetUserById(i.AssigneeID)
+	i.Assignee, err = GetUserByID(i.AssigneeID)
 	if IsErrUserNotExist(err) {
 		return nil
 	}
@@ -170,7 +170,7 @@ func GetIssueByRef(ref string) (issue *Issue, err error) {
 		return
 	}
 
-	return GetIssueByIndex(repo.Id, issueNumber)
+	return GetIssueByIndex(repo.ID, issueNumber)
 }
 
 // GetIssueByIndex returns issue by given index in repository.
@@ -304,7 +304,7 @@ func NewIssueUserPairs(repo *Repository, issueID, orgID, posterID, assigneeID in
 
 	iu := &IssueUser{
 		IssueId: issueID,
-		RepoId:  repo.Id,
+		RepoId:  repo.ID,
 	}
 
 	isNeedAddPoster := true
@@ -331,9 +331,9 @@ func NewIssueUserPairs(repo *Repository, issueID, orgID, posterID, assigneeID in
 	}
 
 	// Add owner's as well.
-	if repo.OwnerId != posterID {
+	if repo.OwnerID != posterID {
 		iu.Id = 0
-		iu.Uid = repo.OwnerId
+		iu.Uid = repo.OwnerID
 		iu.IsAssigned = iu.Uid == assigneeID
 		if _, err = x.Insert(iu); err != nil {
 			return err
@@ -760,7 +760,7 @@ func MilestoneStats(repoID int64) (open int64, closed int64) {
 
 // ChangeMilestoneStatus changes the milestone open/closed status.
 func ChangeMilestoneStatus(m *Milestone, isClosed bool) (err error) {
-	repo, err := GetRepositoryById(m.RepoID)
+	repo, err := GetRepositoryByID(m.RepoID)
 	if err != nil {
 		return err
 	}
@@ -776,9 +776,9 @@ func ChangeMilestoneStatus(m *Milestone, isClosed bool) (err error) {
 		return err
 	}
 
-	repo.NumMilestones = int(countRepoMilestones(sess, repo.Id))
-	repo.NumClosedMilestones = int(countRepoClosedMilestones(sess, repo.Id))
-	if _, err = sess.Id(repo.Id).AllCols().Update(repo); err != nil {
+	repo.NumMilestones = int(countRepoMilestones(sess, repo.ID))
+	repo.NumClosedMilestones = int(countRepoClosedMilestones(sess, repo.ID))
+	if _, err = sess.Id(repo.ID).AllCols().Update(repo); err != nil {
 		return err
 	}
 	return sess.Commit()
@@ -886,7 +886,7 @@ func DeleteMilestoneByID(mid int64) error {
 		return err
 	}
 
-	repo, err := GetRepositoryById(m.RepoID)
+	repo, err := GetRepositoryByID(m.RepoID)
 	if err != nil {
 		return err
 	}
@@ -901,9 +901,9 @@ func DeleteMilestoneByID(mid int64) error {
 		return err
 	}
 
-	repo.NumMilestones = int(countRepoMilestones(sess, repo.Id))
-	repo.NumClosedMilestones = int(countRepoClosedMilestones(sess, repo.Id))
-	if _, err = sess.Id(repo.Id).AllCols().Update(repo); err != nil {
+	repo.NumMilestones = int(countRepoMilestones(sess, repo.ID))
+	repo.NumClosedMilestones = int(countRepoClosedMilestones(sess, repo.ID))
+	if _, err = sess.Id(repo.ID).AllCols().Update(repo); err != nil {
 		return err
 	}
 

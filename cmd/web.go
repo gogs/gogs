@@ -449,6 +449,8 @@ func runWeb(ctx *cli.Context) {
 			m.Get("/edit/:tagname", repo.EditRelease)
 			m.Post("/edit/:tagname", bindIgnErr(auth.EditReleaseForm{}), repo.EditReleasePost)
 		}, reqRepoAdmin, middleware.RepoRef())
+
+		m.Combo("/compare/*").Get(repo.CompareAndPullRequest)
 	}, reqSignIn, middleware.RepoAssignment(true))
 
 	m.Group("/:username/:reponame", func() {
@@ -469,7 +471,7 @@ func runWeb(ctx *cli.Context) {
 			m.Get("/commit/*", repo.Diff)
 		}, middleware.RepoRef())
 
-		m.Get("/compare/:before([a-z0-9]+)...:after([a-z0-9]+)", repo.CompareDiff)
+		m.Get("/compare/:before([a-z0-9]{40})...:after([a-z0-9]{40})", repo.CompareDiff)
 	}, ignSignIn, middleware.RepoAssignment(true))
 
 	m.Group("/:username", func() {

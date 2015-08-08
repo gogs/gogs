@@ -58,7 +58,7 @@ func GetOauth2(identity string) (oa *Oauth2, err error) {
 	} else if oa.Uid == -1 {
 		return oa, ErrOauth2NotAssociated
 	}
-	oa.User, err = GetUserById(oa.Uid)
+	oa.User, err = GetUserByID(oa.Uid)
 	return oa, err
 }
 

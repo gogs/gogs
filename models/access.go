@@ -37,11 +37,11 @@ func accessLevel(e Engine, u *User, repo *Repository) (AccessMode, error) {
 	}
 
 	if u != nil {
-		if u.Id == repo.OwnerId {
+		if u.Id == repo.OwnerID {
 			return ACCESS_MODE_OWNER, nil
 		}
 
-		a := &Access{UserID: u.Id, RepoID: repo.Id}
+		a := &Access{UserID: u.Id, RepoID: repo.ID}
 		if has, err := e.Get(a); !has || err != nil {
 			return mode, err
 		}
@@ -77,7 +77,7 @@ func (u *User) GetAccessibleRepositories() (map[*Repository]AccessMode, error) {
 
 	repos := make(map[*Repository]AccessMode, len(accesses))
 	for _, access := range accesses {
-		repo, err := GetRepositoryById(access.RepoID)
+		repo, err := GetRepositoryByID(access.RepoID)
 		if err != nil {
 			if IsErrRepoNotExist(err) {
 				log.Error(4, "%v", err)
@@ -87,7 +87,7 @@ func (u *User) GetAccessibleRepositories() (map[*Repository]AccessMode, error) {
 		}
 		if err = repo.GetOwner(); err != nil {
 			return nil, err
-		} else if repo.OwnerId == u.Id {
+		} else if repo.OwnerID == u.Id {
 			continue
 		}
 		repos[repo] = access.Mode
@@ -121,13 +121,13 @@ func (repo *Repository) refreshAccesses(e Engine, accessMap map[int64]AccessMode
 		}
 		newAccesses = append(newAccesses, Access{
 			UserID: userID,
-			RepoID: repo.Id,
+			RepoID: repo.ID,
 			Mode:   mode,
 		})
 	}
 
 	// Delete old accesses and insert new ones for repository.
-	if _, err = e.Delete(&Access{RepoID: repo.Id}); err != nil {
+	if _, err = e.Delete(&Access{RepoID: repo.ID}); err != nil {
 		return fmt.Errorf("delete old accesses: %v", err)
 	} else if _, err = e.Insert(newAccesses); err != nil {
 		return fmt.Errorf("insert new accesses: %v", err)
@@ -193,7 +193,7 @@ func (repo *Repository) recalculateTeamAccesses(e Engine, ignTeamID int64) (err 
 			// have relations with repository.
 			if t.IsOwnerTeam() {
 				t.Authorize = ACCESS_MODE_OWNER
-			} else if !t.hasRepository(e, repo.Id) {
+			} else if !t.hasRepository(e, repo.ID) {
 				continue
 			}
 

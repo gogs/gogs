@@ -5,26 +5,31 @@
 package repo
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/base"
+	"github.com/gogits/gogs/modules/git"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/middleware"
 	"github.com/gogits/gogs/modules/setting"
 )
 
 const (
-	FORK  base.TplName = "repo/pulls/fork"
-	PULLS base.TplName = "repo/pulls"
+	FORK         base.TplName = "repo/pulls/fork"
+	COMPARE_PULL base.TplName = "repo/pulls/compare"
+	PULLS        base.TplName = "repo/pulls"
 )
 
 func getForkRepository(ctx *middleware.Context) *models.Repository {
-	forkRepo, err := models.GetRepositoryById(ctx.ParamsInt64(":repoid"))
+	forkRepo, err := models.GetRepositoryByID(ctx.ParamsInt64(":repoid"))
 	if err != nil {
 		if models.IsErrRepoNotExist(err) {
-			ctx.Handle(404, "GetRepositoryById", nil)
+			ctx.Handle(404, "GetRepositoryByID", nil)
 		} else {
-			ctx.Handle(500, "GetRepositoryById", err)
+			ctx.Handle(500, "GetRepositoryByID", err)
 		}
 		return nil
 	}
@@ -78,7 +83,7 @@ func ForkPost(ctx *middleware.Context, form auth.CreateRepoForm) {
 		return
 	}
 
-	repo, has := models.HasForkedRepo(ctxUser.Id, forkRepo.Id)
+	repo, has := models.HasForkedRepo(ctxUser.Id, forkRepo.ID)
 	if has {
 		ctx.Redirect(setting.AppSubUrl + "/" + ctxUser.Name + "/" + repo.Name)
 		return
@@ -110,8 +115,54 @@ func ForkPost(ctx *middleware.Context, form auth.CreateRepoForm) {
 		return
 	}
 
-	log.Trace("Repository forked[%d]: %s/%s", forkRepo.Id, ctxUser.Name, repo.Name)
+	log.Trace("Repository forked[%d]: %s/%s", forkRepo.ID, ctxUser.Name, repo.Name)
 	ctx.Redirect(setting.AppSubUrl + "/" + ctxUser.Name + "/" + repo.Name)
+}
+
+func CompareAndPullRequest(ctx *middleware.Context) {
+	// Get compare information.
+	infos := strings.Split(ctx.Params("*"), "...")
+	if len(infos) != 2 {
+		ctx.Handle(404, "CompareAndPullRequest", nil)
+		return
+	}
+
+	baseBranch := infos[0]
+	ctx.Data["BaseBranch"] = baseBranch
+
+	headInfos := strings.Split(infos[1], ":")
+	if len(headInfos) != 2 {
+		ctx.Handle(404, "CompareAndPullRequest", nil)
+		return
+	}
+	headUser := headInfos[0]
+	headBranch := headInfos[1]
+	ctx.Data["HeadBranch"] = headBranch
+
+	// TODO: check if branches are valid.
+	fmt.Println(baseBranch, headUser, headBranch)
+
+	// TODO: add organization support
+	// Check if current user has fork of repository.
+	headRepo, has := models.HasForkedRepo(ctx.User.Id, ctx.Repo.Repository.ID)
+	if !has {
+		ctx.Handle(404, "HasForkedRepo", nil)
+		return
+	}
+
+	headGitRepo, err := git.OpenRepository(models.RepoPath(ctx.User.Name, headRepo.Name))
+	if err != nil {
+		ctx.Handle(500, "OpenRepository", err)
+		return
+	}
+	headBranches, err := headGitRepo.GetBranches()
+	if err != nil {
+		ctx.Handle(500, "GetBranches", err)
+		return
+	}
+	ctx.Data["HeadBranches"] = headBranches
+
+	ctx.HTML(200, COMPARE_PULL)
 }
 
 func Pulls(ctx *middleware.Context) {
