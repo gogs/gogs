@@ -1,4 +1,4 @@
-/* http://prismjs.com/download.html?themes=prism&languages=markup+css+clike+javascript+actionscript+apacheconf+applescript+aspnet+autohotkey+bash+brainfuck+c+csharp+cpp+coffeescript+css-extras+dart+eiffel+erlang+fsharp+fortran+gherkin+git+go+groovy+haml+handlebars+haskell+http+ini+jade+java+julia+keyman+latex+less+lolcode+makefile+markdown+matlab+nasm+nsis+objectivec+pascal+perl+php+php-extras+powershell+python+r+jsx+rest+rip+ruby+rust+sas+sass+scss+scala+scheme+smalltalk+smarty+sql+stylus+swift+twig+typescript+vhdl+wiki+yaml&plugins=line-highlight+line-numbers+file-highlight+show-language+highlight-keywords */
+/* http://prismjs.com/download.html?themes=prism&languages=markup+css+clike+javascript+actionscript+apacheconf+applescript+aspnet+autohotkey+bash+brainfuck+c+csharp+cpp+coffeescript+css-extras+dart+eiffel+erlang+fsharp+fortran+gherkin+git+go+groovy+haml+handlebars+haskell+http+ini+jade+java+julia+keyman+latex+less+lolcode+makefile+markdown+matlab+nasm+nsis+objectivec+pascal+perl+php+php-extras+powershell+python+r+jsx+rest+rip+ruby+rust+sas+sass+scss+scala+scheme+smalltalk+smarty+sql+stylus+swift+twig+typescript+vhdl+wiki+yaml&plugins=line-highlight+line-numbers+show-language+highlight-keywords */
 /**
  * prism.js default theme for JavaScript, CSS and HTML
  * Based on dabblet (http://dabblet.com)
@@ -15,7 +15,7 @@ pre[class*="language-"] {
 	white-space: pre;
 	word-spacing: normal;
 	word-break: normal;
-	line-height: 1.5;
+	line-height: 24px;
 
 	-moz-tab-size: 4;
 	-o-tab-size: 4;
@@ -52,9 +52,17 @@ pre[class*="language-"] {
 	overflow: auto;
 }
 
+.code-view pre[class*="language-"] {
+	padding-top: 0;
+}
+
 :not(pre) > code[class*="language-"],
 pre[class*="language-"] {
 	background: #fafafa;
+}
+
+.code-view pre[class*="language-"] {
+	background: transparent;
 }
 
 /* Inline code */
@@ -126,6 +134,7 @@ pre[class*="language-"] {
 .token.bold {
 	font-weight: bold;
 }
+
 .token.italic {
 	font-style: italic;
 }
@@ -136,54 +145,56 @@ pre[class*="language-"] {
 
 pre[data-line] {
 	position: relative;
-	padding: 1em 0 1em 3em;
+	padding: 0 0 1em 3em;
 }
 
 .line-highlight {
 	position: absolute;
 	left: 0;
 	right: 0;
+	z-index: -1;
 	padding: inherit 0;
-	margin-top: 1em; /* Same as .prism’s padding-top */
+	margin-top: 0; /* Same as .prism’s padding-top */
+	margin-left: 3.6em;
+	width: 100%;
 
-	background: hsla(24, 20%, 50%,.08);
-	background: -moz-linear-gradient(left, hsla(24, 20%, 50%,.1) 70%, hsla(24, 20%, 50%,0));
-	background: -webkit-linear-gradient(left, hsla(24, 20%, 50%,.1) 70%, hsla(24, 20%, 50%,0));
-	background: -o-linear-gradient(left, hsla(24, 20%, 50%,.1) 70%, hsla(24, 20%, 50%,0));
-	background: linear-gradient(left, hsla(24, 20%, 50%,.1) 70%, hsla(24, 20%, 50%,0));
-	
+	background: rgb(248, 238, 199);
+
 	pointer-events: none;
 	
 	line-height: inherit;
 	white-space: pre;
 }
 
-	.line-highlight:before,
-	.line-highlight[data-end]:after {
-		content: attr(data-start);
-		position: absolute;
-		top: .4em;
-		left: .6em;
-		min-width: 1em;
-		padding: 0 .5em;
-		background-color: hsla(24, 20%, 50%,.4);
-		color: hsl(24, 20%, 95%);
-		font: bold 65%/1.5 sans-serif;
-		text-align: center;
-		vertical-align: .3em;
-		border-radius: 999px;
-		text-shadow: none;
-		box-shadow: 0 1px white;
-	}
+.line-highlight::before,
+.line-highlight[data-end]::after {
+	content: attr(data-start);
+	position: absolute;
+	top: .4em;
+	left: .4em;
+	min-width: 1em;
+	height: 20px;
+	padding: 0 1.8em;
+	margin-left: -5.4em;
+	background-color: #ededed;
+	color: hsl(24, 20%, 95%);
+	font: bold 65%/1.5 sans-serif;
+	text-align: center;
+	vertical-align: .3em;
+	border-radius: 999px;
+	text-shadow: none;
+	box-shadow: 0 1px white;
+}
 	
-	.line-highlight[data-end]:after {
-		content: attr(data-end);
-		top: auto;
-		bottom: .4em;
-	}
+.line-highlight[data-end]::after {
+	content: attr(data-end);
+	top: auto;
+	bottom: .4em;
+}
+
 pre.line-numbers {
 	position: relative;
-	padding-left: 3.8em;
+	padding-left: 4.4em;
 	counter-reset: linenumber;
 }
 
@@ -196,34 +207,41 @@ pre.line-numbers > code {
 	pointer-events: none;
 	top: 0;
 	font-size: 100%;
-	left: -3.8em;
-	width: 3em; /* works for line-numbers below 1000 lines */
+	left: -4.4em;
+	width: 3.6em; /* works for line-numbers below 1000 lines */
 	letter-spacing: -1px;
 	border-right: 1px solid #999;
+	margin-top: -3px;
 
 	-webkit-user-select: none;
 	-moz-user-select: none;
 	-ms-user-select: none;
 	user-select: none;
-
 }
 
-	.line-numbers-rows > span {
-		pointer-events: none;
-		display: block;
-		counter-increment: linenumber;
-	}
+.line-numbers-rows > span {
+	pointer-events: auto;
+	cursor: pointer;
+	display: block;
+	counter-increment: linenumber;
+}
 
-		.line-numbers-rows > span:before {
-			content: counter(linenumber);
-			color: #999;
-			display: block;
-			padding-right: 0.8em;
-			text-align: right;
-		}
+.line-numbers-rows > span::before {
+	content: counter(linenumber);
+	color: rgba(0,0,0,0.3);
+	display: block;
+	padding-right: 0.8em;
+	text-align: right;
+}
+
+.line-numbers-rows > span:hover::before {
+	color: rgba(0,0,0,0.6);
+}
+
 pre[class*='language-'] {
 	position: relative;
 }
+
 pre[class*='language-'][data-language]::before {
 	content: attr(data-language);
 	color: black;
