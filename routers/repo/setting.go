@@ -160,7 +160,7 @@ func SettingsPost(ctx *middleware.Context, form auth.RepoSettingForm) {
 			return
 		}
 
-		if err := models.DeleteRepository(ctx.Repo.Owner.Id, ctx.Repo.Repository.Id, ctx.Repo.Owner.Name); err != nil {
+		if err := models.DeleteRepository(ctx.Repo.Owner.Id, ctx.Repo.Repository.ID, ctx.Repo.Owner.Name); err != nil {
 			ctx.Handle(500, "DeleteRepository", err)
 			return
 		}
@@ -262,7 +262,7 @@ func Webhooks(ctx *middleware.Context) {
 		return
 	}
 
-	ws, err := models.GetWebhooksByRepoId(ctx.Repo.Repository.Id)
+	ws, err := models.GetWebhooksByRepoId(ctx.Repo.Repository.ID)
 	if err != nil {
 		ctx.Handle(500, "GetWebhooksByRepoId", err)
 		return
@@ -569,7 +569,7 @@ func getOrgRepoCtx(ctx *middleware.Context) (*OrgRepoCtx, error) {
 	if _, ok := ctx.Data["RepoLink"]; ok {
 		return &OrgRepoCtx{
 			OrgId:       int64(0),
-			RepoId:      ctx.Repo.Repository.Id,
+			RepoId:      ctx.Repo.Repository.ID,
 			Link:        ctx.Repo.RepoLink,
 			NewTemplate: HOOK_NEW,
 		}, nil
@@ -605,7 +605,7 @@ func TriggerHook(ctx *middleware.Context) {
 		}
 		return
 	}
-	models.HookQueue.AddRepoID(repo.Id)
+	models.HookQueue.AddRepoID(repo.ID)
 }
 
 func GitHooks(ctx *middleware.Context) {
@@ -663,7 +663,7 @@ func SettingsDeployKeys(ctx *middleware.Context) {
 	ctx.Data["Title"] = ctx.Tr("repo.settings")
 	ctx.Data["PageIsSettingsKeys"] = true
 
-	keys, err := models.ListDeployKeys(ctx.Repo.Repository.Id)
+	keys, err := models.ListDeployKeys(ctx.Repo.Repository.ID)
 	if err != nil {
 		ctx.Handle(500, "ListDeployKeys", err)
 		return
@@ -695,7 +695,7 @@ func SettingsDeployKeysPost(ctx *middleware.Context, form auth.AddSSHKeyForm) {
 		}
 	}
 
-	if err = models.AddDeployKey(ctx.Repo.Repository.Id, form.Title, content); err != nil {
+	if err = models.AddDeployKey(ctx.Repo.Repository.ID, form.Title, content); err != nil {
 		ctx.Data["HasError"] = true
 		switch {
 		case models.IsErrKeyAlreadyExist(err):
@@ -710,7 +710,7 @@ func SettingsDeployKeysPost(ctx *middleware.Context, form auth.AddSSHKeyForm) {
 		return
 	}
 
-	log.Trace("Deploy key added: %d", ctx.Repo.Repository.Id)
+	log.Trace("Deploy key added: %d", ctx.Repo.Repository.ID)
 	ctx.Flash.Success(ctx.Tr("repo.settings.add_key_success", form.Title))
 	ctx.Redirect(ctx.Repo.RepoLink + "/settings/keys")
 }

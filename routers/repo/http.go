@@ -122,7 +122,7 @@ func Http(ctx *middleware.Context) {
 				}
 				return
 			}
-			authUser, err = models.GetUserById(token.Uid)
+			authUser, err = models.GetUserByID(token.Uid)
 			if err != nil {
 				ctx.Handle(500, "GetUserById", err)
 				return
@@ -191,7 +191,7 @@ func Http(ctx *middleware.Context) {
 
 						// FIXME: handle error.
 						if err = models.Update(refName, oldCommitId, newCommitId, authUsername, username, reponame, authUser.Id); err == nil {
-							models.HookQueue.AddRepoID(repo.Id)
+							models.HookQueue.AddRepoID(repo.ID)
 						}
 
 					}

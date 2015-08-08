@@ -7,7 +7,7 @@
 	  <div class="divider"> / </div>
 	  <a href="{{$.RepoLink}}">{{.Name}}</a>
 	  {{if .IsMirror}}<div class="ui label">{{$.i18n.Tr "mirror"}}</div>{{end}}
-	  {{if .IsFork}}<div class="fork-flag">{{$.i18n.Tr "repo.forked_from"}} <a href="{{.ForkRepo.RepoLink}}">{{SubStr .ForkRepo.RepoLink 1 -1}}</a></div>{{end}}
+	  {{if .IsFork}}<div class="fork-flag">{{$.i18n.Tr "repo.forked_from"}} <a href="{{.BaseRepo.RepoLink}}">{{SubStr .BaseRepo.RepoLink 1 -1}}</a></div>{{end}}
 		</div>
 	</h2>
 	<div class="ui right floated secondary menu">

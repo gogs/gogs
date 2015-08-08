@@ -44,7 +44,7 @@ var (
 )
 
 func RetrieveLabels(ctx *middleware.Context) {
-	labels, err := models.GetLabels(ctx.Repo.Repository.Id)
+	labels, err := models.GetLabels(ctx.Repo.Repository.ID)
 	if err != nil {
 		ctx.Handle(500, "RetrieveLabels.GetLabels: %v", err)
 		return
@@ -95,7 +95,7 @@ func Issues(ctx *middleware.Context) {
 	selectLabels := ctx.Query("labels")
 	milestoneID := ctx.QueryInt64("milestone")
 	isShowClosed := ctx.Query("state") == "closed"
-	issueStats := models.GetIssueStats(repo.Id, uid, com.StrTo(selectLabels).MustInt64(), milestoneID, isShowClosed, filterMode)
+	issueStats := models.GetIssueStats(repo.ID, uid, com.StrTo(selectLabels).MustInt64(), milestoneID, isShowClosed, filterMode)
 
 	page := ctx.QueryInt("page")
 	if page <= 1 {
@@ -111,7 +111,7 @@ func Issues(ctx *middleware.Context) {
 	ctx.Data["Page"] = paginater.New(total, setting.IssuePagingNum, page, 5)
 
 	// Get issues.
-	issues, err := models.Issues(uid, assigneeID, repo.Id, posterID, milestoneID,
+	issues, err := models.Issues(uid, assigneeID, repo.ID, posterID, milestoneID,
 		page, isShowClosed, filterMode == models.FM_MENTION, selectLabels, ctx.Query("sortType"))
 	if err != nil {
 		ctx.Handle(500, "GetIssues: %v", err)
@@ -119,7 +119,7 @@ func Issues(ctx *middleware.Context) {
 	}
 
 	// Get issue-user pairs.
-	pairs, err := models.GetIssueUserPairs(repo.Id, posterID, isShowClosed)
+	pairs, err := models.GetIssueUserPairs(repo.ID, posterID, isShowClosed)
 	if err != nil {
 		ctx.Handle(500, "GetIssueUserPairs: %v", err)
 		return
@@ -153,7 +153,7 @@ func Issues(ctx *middleware.Context) {
 	ctx.Data["Issues"] = issues
 
 	// Get milestones.
-	miles, err := models.GetAllRepoMilestones(repo.Id)
+	miles, err := models.GetAllRepoMilestones(repo.ID)
 	if err != nil {
 		ctx.Handle(500, "GetAllRepoMilestones: %v", err)
 		return
@@ -185,12 +185,12 @@ func CreateIssue(ctx *middleware.Context) {
 		err  error
 	)
 	// Get all milestones.
-	ctx.Data["OpenMilestones"], err = models.GetMilestones(repo.Id, -1, false)
+	ctx.Data["OpenMilestones"], err = models.GetMilestones(repo.ID, -1, false)
 	if err != nil {
 		ctx.Handle(500, "GetMilestones.1: %v", err)
 		return
 	}
-	ctx.Data["ClosedMilestones"], err = models.GetMilestones(repo.Id, -1, true)
+	ctx.Data["ClosedMilestones"], err = models.GetMilestones(repo.ID, -1, true)
 	if err != nil {
 		ctx.Handle(500, "GetMilestones.2: %v", err)
 		return
@@ -229,12 +229,12 @@ func CreateIssuePost(ctx *middleware.Context, form auth.CreateIssueForm) {
 
 	var err error
 	// Get all milestones.
-	_, err = models.GetMilestones(ctx.Repo.Repository.Id, -1, false)
+	_, err = models.GetMilestones(ctx.Repo.Repository.ID, -1, false)
 	if err != nil {
 		send(500, nil, err)
 		return
 	}
-	_, err = models.GetMilestones(ctx.Repo.Repository.Id, -1, true)
+	_, err = models.GetMilestones(ctx.Repo.Repository.ID, -1, true)
 	if err != nil {
 		send(500, nil, err)
 		return
@@ -256,7 +256,7 @@ func CreateIssuePost(ctx *middleware.Context, form auth.CreateIssueForm) {
 		form.AssigneeId = 0
 	}
 	issue := &models.Issue{
-		RepoID:      ctx.Repo.Repository.Id,
+		RepoID:      ctx.Repo.Repository.ID,
 		Index:       int64(ctx.Repo.Repository.NumIssues) + 1,
 		Name:        form.IssueName,
 		PosterID:    ctx.User.Id,
@@ -297,7 +297,7 @@ func CreateIssuePost(ctx *middleware.Context, form auth.CreateIssueForm) {
 		ActEmail:     ctx.User.Email,
 		OpType:       models.CREATE_ISSUE,
 		Content:      fmt.Sprintf("%d|%s", issue.Index, issue.Name),
-		RepoID:       ctx.Repo.Repository.Id,
+		RepoID:       ctx.Repo.Repository.ID,
 		RepoUserName: ctx.Repo.Owner.Name,
 		RepoName:     ctx.Repo.Repository.Name,
 		RefName:      ctx.Repo.BranchName,
@@ -332,7 +332,7 @@ func CreateIssuePost(ctx *middleware.Context, form auth.CreateIssueForm) {
 			return
 		}
 	}
-	log.Trace("%d Issue created: %d", ctx.Repo.Repository.Id, issue.ID)
+	log.Trace("%d Issue created: %d", ctx.Repo.Repository.ID, issue.ID)
 
 	send(200, fmt.Sprintf("%s/%s/%s/issues/%d", setting.AppSubUrl, ctx.Params(":username"), ctx.Params(":reponame"), issue.Index), nil)
 }
@@ -357,7 +357,7 @@ func ViewIssue(ctx *middleware.Context) {
 		return
 	}
 
-	issue, err := models.GetIssueByIndex(ctx.Repo.Repository.Id, idx)
+	issue, err := models.GetIssueByIndex(ctx.Repo.Repository.ID, idx)
 	if err != nil {
 		if err == models.ErrIssueNotExist {
 			ctx.Handle(404, "GetIssueByIndex", err)
@@ -372,7 +372,7 @@ func ViewIssue(ctx *middleware.Context) {
 		ctx.Handle(500, "GetLabels", err)
 		return
 	}
-	labels, err := models.GetLabels(ctx.Repo.Repository.Id)
+	labels, err := models.GetLabels(ctx.Repo.Repository.ID)
 	if err != nil {
 		ctx.Handle(500, "GetLabels.2", err)
 		return
@@ -394,12 +394,12 @@ func ViewIssue(ctx *middleware.Context) {
 	}
 
 	// Get all milestones.
-	ctx.Data["OpenMilestones"], err = models.GetMilestones(ctx.Repo.Repository.Id, -1, false)
+	ctx.Data["OpenMilestones"], err = models.GetMilestones(ctx.Repo.Repository.ID, -1, false)
 	if err != nil {
 		ctx.Handle(500, "GetMilestones.1: %v", err)
 		return
 	}
-	ctx.Data["ClosedMilestones"], err = models.GetMilestones(ctx.Repo.Repository.Id, -1, true)
+	ctx.Data["ClosedMilestones"], err = models.GetMilestones(ctx.Repo.Repository.ID, -1, true)
 	if err != nil {
 		ctx.Handle(500, "GetMilestones.2: %v", err)
 		return
@@ -439,7 +439,7 @@ func ViewIssue(ctx *middleware.Context) {
 
 	// Get posters.
 	for i := range comments {
-		u, err := models.GetUserById(comments[i].PosterId)
+		u, err := models.GetUserByID(comments[i].PosterId)
 		if err != nil {
 			ctx.Handle(500, "GetUserById.2: %v", err)
 			return
@@ -469,7 +469,7 @@ func UpdateIssue(ctx *middleware.Context, form auth.CreateIssueForm) {
 		return
 	}
 
-	issue, err := models.GetIssueByIndex(ctx.Repo.Repository.Id, idx)
+	issue, err := models.GetIssueByIndex(ctx.Repo.Repository.ID, idx)
 	if err != nil {
 		if err == models.ErrIssueNotExist {
 			ctx.Handle(404, "issue.UpdateIssue", err)
@@ -517,7 +517,7 @@ func UpdateIssueLabel(ctx *middleware.Context) {
 		return
 	}
 
-	issue, err := models.GetIssueByIndex(ctx.Repo.Repository.Id, idx)
+	issue, err := models.GetIssueByIndex(ctx.Repo.Repository.ID, idx)
 	if err != nil {
 		if err == models.ErrIssueNotExist {
 			ctx.Handle(404, "issue.UpdateIssueLabel(GetIssueByIndex)", err)
@@ -762,7 +762,7 @@ func Comment(ctx *middleware.Context) {
 		return
 	}
 
-	issue, err := models.GetIssueByIndex(ctx.Repo.Repository.Id, index)
+	issue, err := models.GetIssueByIndex(ctx.Repo.Repository.ID, index)
 	if err != nil {
 		if err == models.ErrIssueNotExist {
 			send(404, nil, err)
@@ -820,7 +820,7 @@ func Comment(ctx *middleware.Context) {
 				cmtType = models.COMMENT_TYPE_REOPEN
 			}
 
-			if _, err = models.CreateComment(ctx.User.Id, ctx.Repo.Repository.Id, issue.ID, 0, 0, cmtType, "", nil); err != nil {
+			if _, err = models.CreateComment(ctx.User.Id, ctx.Repo.Repository.ID, issue.ID, 0, 0, cmtType, "", nil); err != nil {
 				send(200, nil, err)
 				return
 			}
@@ -836,7 +836,7 @@ func Comment(ctx *middleware.Context) {
 	if len(content) > 0 || len(ctx.Req.MultipartForm.File["attachments"]) > 0 {
 		switch ctx.Params(":action") {
 		case "new":
-			if comment, err = models.CreateComment(ctx.User.Id, ctx.Repo.Repository.Id, issue.ID, 0, 0, models.COMMENT_TYPE_COMMENT, content, nil); err != nil {
+			if comment, err = models.CreateComment(ctx.User.Id, ctx.Repo.Repository.ID, issue.ID, 0, 0, models.COMMENT_TYPE_COMMENT, content, nil); err != nil {
 				send(500, nil, err)
 				return
 			}
@@ -872,7 +872,7 @@ func Comment(ctx *middleware.Context) {
 		ActEmail:     ctx.User.Email,
 		OpType:       models.COMMENT_ISSUE,
 		Content:      fmt.Sprintf("%d|%s", issue.Index, strings.Split(content, "\n")[0]),
-		RepoID:       ctx.Repo.Repository.Id,
+		RepoID:       ctx.Repo.Repository.ID,
 		RepoUserName: ctx.Repo.Owner.LowerName,
 		RepoName:     ctx.Repo.Repository.LowerName,
 		IsPrivate:    ctx.Repo.Repository.IsPrivate,
@@ -927,7 +927,7 @@ func NewLabel(ctx *middleware.Context, form auth.CreateLabelForm) {
 	}
 
 	l := &models.Label{
-		RepoId: ctx.Repo.Repository.Id,
+		RepoId: ctx.Repo.Repository.ID,
 		Name:   form.Title,
 		Color:  form.Color,
 	}
@@ -960,7 +960,7 @@ func UpdateLabel(ctx *middleware.Context, form auth.CreateLabelForm) {
 }
 
 func DeleteLabel(ctx *middleware.Context) {
-	if err := models.DeleteLabel(ctx.Repo.Repository.Id, ctx.QueryInt64("id")); err != nil {
+	if err := models.DeleteLabel(ctx.Repo.Repository.ID, ctx.QueryInt64("id")); err != nil {
 		ctx.Flash.Error("DeleteLabel: " + err.Error())
 	} else {
 		ctx.Flash.Success(ctx.Tr("repo.issues.label_deletion_success"))
@@ -977,7 +977,7 @@ func Milestones(ctx *middleware.Context) {
 	ctx.Data["PageIsMilestones"] = true
 
 	isShowClosed := ctx.Query("state") == "closed"
-	openCount, closedCount := models.MilestoneStats(ctx.Repo.Repository.Id)
+	openCount, closedCount := models.MilestoneStats(ctx.Repo.Repository.ID)
 	ctx.Data["OpenCount"] = openCount
 	ctx.Data["ClosedCount"] = closedCount
 
@@ -994,7 +994,7 @@ func Milestones(ctx *middleware.Context) {
 	}
 	ctx.Data["Page"] = paginater.New(total, setting.IssuePagingNum, page, 5)
 
-	miles, err := models.GetMilestones(ctx.Repo.Repository.Id, page, isShowClosed)
+	miles, err := models.GetMilestones(ctx.Repo.Repository.ID, page, isShowClosed)
 	if err != nil {
 		ctx.Handle(500, "GetMilestones", err)
 		return
@@ -1043,7 +1043,7 @@ func NewMilestonePost(ctx *middleware.Context, form auth.CreateMilestoneForm) {
 	}
 
 	if err = models.NewMilestone(&models.Milestone{
-		RepoID:   ctx.Repo.Repository.Id,
+		RepoID:   ctx.Repo.Repository.ID,
 		Name:     form.Title,
 		Content:  form.Content,
 		Deadline: deadline,

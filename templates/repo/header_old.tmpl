@@ -7,7 +7,7 @@
             <span class="divider">/</span>
             <a class="repo text-bold" href="{{$.RepoLink}}">{{.Name}}</a>
             {{if .IsMirror}}<span class="label label-gray">{{$.i18n.Tr "mirror"}}</span>{{end}}
-            {{if .IsFork}}<span class="fork-flag">forked from <a href="{{.ForkRepo.RepoLink}}">{{SubStr .ForkRepo.RepoLink 1 -1}}</a></span>{{end}}
+            {{if .IsFork}}<span class="fork-flag">forked from <a href="{{.BaseRepo.RepoLink}}">{{SubStr .BaseRepo.RepoLink 1 -1}}</a></span>{{end}}
         </h1>
         <ul id="repo-header-meta" class="right menu menu-line">
             <li id="repo-header-download" class="drop">
@@ -49,7 +49,7 @@
                 </a>
             </li>
             <li id="repo-header-fork">
-                <a id="repo-header-fork-btn" {{if or (not $.IsRepositoryAdmin) $.Owner.IsOrganization}}href="{{AppSubUrl}}/repo/fork/{{.Id}}"{{end}}>
+                <a id="repo-header-fork-btn" {{if or (not $.IsRepositoryAdmin) $.Owner.IsOrganization}}href="{{AppSubUrl}}/repo/fork/{{.ID}}"{{end}}>
                     <button class="btn btn-gray text-bold btn-radius">
                         <i class="octicon octicon-repo-forked"></i>{{$.i18n.Tr "repo.fork"}}
                         <span class="num">{{.NumForks}}</span>
