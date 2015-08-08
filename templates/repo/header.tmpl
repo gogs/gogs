@@ -19,7 +19,7 @@
 		  <i class="fa fa-star{{if not $.IsStaringRepo}}-o{{end}}"></i>
 		  {{if $.IsStaringRepo}}{{$.i18n.Tr "repo.unstar"}}{{else}}{{$.i18n.Tr "repo.star"}}{{end}} <span class="num">{{.NumStars}}</span>
 		</a>
-		<a class="ui black basic button {{if $.IsRepositoryOwner}}poping up{{end}}" {{if not $.IsRepositoryOwner}}href="{{AppSubUrl}}/repo/fork?fork_id={{.Id}}"{{end}} {{if $.IsRepositoryOwner}}data-content="{{$.i18n.Tr "repo.fork_from_self"}}"{{end}}>
+		<a class="ui black basic button {{if $.IsRepositoryOwner}}poping up{{end}}" {{if not $.IsRepositoryOwner}}href="{{AppSubUrl}}/repo/fork/{{.Id}}"{{end}} {{if $.IsRepositoryOwner}}data-content="{{$.i18n.Tr "repo.fork_from_self"}}"{{end}}>
 		  <i class="octicon octicon-repo-forked"></i>
 		  {{$.i18n.Tr "repo.fork"}} <span class="num">{{.NumForks}}</span>
 		</a>

@@ -25,7 +25,6 @@ import (
 const (
 	CREATE  base.TplName = "repo/create"
 	MIGRATE base.TplName = "repo/migrate"
-	FORK    base.TplName = "repo/fork"
 )
 
 func checkContextUser(ctx *middleware.Context, uid int64) *models.User {
@@ -119,7 +118,7 @@ func CreatePost(ctx *middleware.Context, form auth.CreateRepoForm) {
 	}
 
 	switch {
-	case err == models.ErrRepoAlreadyExist:
+	case models.IsErrRepoAlreadyExist(err):
 		ctx.Data["Err_RepoName"] = true
 		ctx.RenderWithErr(ctx.Tr("form.repo_name_been_taken"), CREATE, &form)
 	case models.IsErrNameReserved(err):
@@ -222,7 +221,7 @@ func MigratePost(ctx *middleware.Context, form auth.MigrateRepoForm) {
 	}
 
 	switch {
-	case err == models.ErrRepoAlreadyExist:
+	case models.IsErrRepoAlreadyExist(err):
 		ctx.Data["Err_RepoName"] = true
 		ctx.RenderWithErr(ctx.Tr("form.repo_name_been_taken"), MIGRATE, &form)
 	case models.IsErrNameReserved(err):
@@ -233,114 +232,6 @@ func MigratePost(ctx *middleware.Context, form auth.MigrateRepoForm) {
 		ctx.RenderWithErr(ctx.Tr("repo.form.name_pattern_not_allowed", err.(models.ErrNamePatternNotAllowed).Pattern), MIGRATE, &form)
 	default:
 		ctx.Handle(500, "MigratePost", err)
-	}
-}
-
-func getForkRepository(ctx *middleware.Context) (*models.Repository, error) {
-	forkId := ctx.QueryInt64("fork_id")
-	ctx.Data["ForkId"] = forkId
-
-	forkRepo, err := models.GetRepositoryById(forkId)
-	if err != nil {
-		return nil, fmt.Errorf("GetRepositoryById: %v", err)
-	}
-	ctx.Data["repo_name"] = forkRepo.Name
-	ctx.Data["desc"] = forkRepo.Description
-
-	if err = forkRepo.GetOwner(); err != nil {
-		return nil, fmt.Errorf("GetOwner: %v", err)
-	}
-	ctx.Data["ForkFrom"] = forkRepo.Owner.Name + "/" + forkRepo.Name
-	return forkRepo, nil
-}
-
-func Fork(ctx *middleware.Context) {
-	ctx.Data["Title"] = ctx.Tr("new_fork")
-
-	if _, err := getForkRepository(ctx); err != nil {
-		if models.IsErrRepoNotExist(err) {
-			ctx.Redirect(setting.AppSubUrl + "/")
-		} else {
-			ctx.Handle(500, "getForkRepository", err)
-		}
-		return
-	}
-
-	// FIXME: maybe sometime can directly fork to organization?
-	ctx.Data["ContextUser"] = ctx.User
-	if err := ctx.User.GetOrganizations(); err != nil {
-		ctx.Handle(500, "GetOrganizations", err)
-		return
-	}
-	ctx.Data["Orgs"] = ctx.User.Orgs
-
-	ctx.HTML(200, FORK)
-}
-
-func ForkPost(ctx *middleware.Context, form auth.CreateRepoForm) {
-	ctx.Data["Title"] = ctx.Tr("new_fork")
-
-	forkRepo, err := getForkRepository(ctx)
-	if err != nil {
-		if models.IsErrRepoNotExist(err) {
-			ctx.Redirect(setting.AppSubUrl + "/")
-		} else {
-			ctx.Handle(500, "getForkRepository", err)
-		}
-		return
-	}
-
-	ctxUser := checkContextUser(ctx, form.Uid)
-	if ctx.Written() {
-		return
-	}
-	ctx.Data["ContextUser"] = ctxUser
-
-	if err := ctx.User.GetOrganizations(); err != nil {
-		ctx.Handle(500, "GetOrganizations", err)
-		return
-	}
-	ctx.Data["Orgs"] = ctx.User.Orgs
-
-	if ctx.HasError() {
-		ctx.HTML(200, CREATE)
-		return
-	}
-
-	if ctxUser.IsOrganization() {
-		// Check ownership of organization.
-		if !ctxUser.IsOwnedBy(ctx.User.Id) {
-			ctx.Error(403)
-			return
-		}
-	}
-
-	repo, err := models.ForkRepository(ctxUser, forkRepo, form.RepoName, form.Description)
-	if err == nil {
-		log.Trace("Repository forked: %s/%s", ctxUser.Name, repo.Name)
-		ctx.Redirect(setting.AppSubUrl + "/" + ctxUser.Name + "/" + repo.Name)
-		return
-	}
-
-	if repo != nil {
-		if errDelete := models.DeleteRepository(ctxUser.Id, repo.Id, ctxUser.Name); errDelete != nil {
-			log.Error(4, "DeleteRepository: %v", errDelete)
-		}
-	}
-
-	// FIXME: merge this with other 2 error handling in to one.
-	switch {
-	case err == models.ErrRepoAlreadyExist:
-		ctx.Data["Err_RepoName"] = true
-		ctx.RenderWithErr(ctx.Tr("form.repo_name_been_taken"), FORK, &form)
-	case models.IsErrNameReserved(err):
-		ctx.Data["Err_RepoName"] = true
-		ctx.RenderWithErr(ctx.Tr("repo.form.name_reserved", err.(models.ErrNameReserved).Name), FORK, &form)
-	case models.IsErrNamePatternNotAllowed(err):
-		ctx.Data["Err_RepoName"] = true
-		ctx.RenderWithErr(ctx.Tr("repo.form.name_pattern_not_allowed", err.(models.ErrNamePatternNotAllowed).Pattern), FORK, &form)
-	default:
-		ctx.Handle(500, "ForkPost", err)
 	}
 }
 

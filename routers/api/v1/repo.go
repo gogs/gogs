@@ -104,7 +104,7 @@ func createRepo(ctx *middleware.Context, owner *models.User, opt api.CreateRepoO
 	repo, err := models.CreateRepository(owner, opt.Name, opt.Description,
 		opt.Gitignore, opt.License, opt.Private, false, opt.AutoInit)
 	if err != nil {
-		if err == models.ErrRepoAlreadyExist ||
+		if models.IsErrRepoAlreadyExist(err) ||
 			models.IsErrNameReserved(err) ||
 			models.IsErrNamePatternNotAllowed(err) {
 			ctx.JSON(422, &base.ApiJsonErr{err.Error(), base.DOC_URL})

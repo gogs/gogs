@@ -49,7 +49,7 @@
                 </a>
             </li>
             <li id="repo-header-fork">
-                <a id="repo-header-fork-btn" {{if or (not $.IsRepositoryAdmin) $.Owner.IsOrganization}}href="{{AppSubUrl}}/repo/fork?fork_id={{.Id}}"{{end}}>
+                <a id="repo-header-fork-btn" {{if or (not $.IsRepositoryAdmin) $.Owner.IsOrganization}}href="{{AppSubUrl}}/repo/fork/{{.Id}}"{{end}}>
                     <button class="btn btn-gray text-bold btn-radius">
                         <i class="octicon octicon-repo-forked"></i>{{$.i18n.Tr "repo.fork"}}
                         <span class="num">{{.NumForks}}</span>
