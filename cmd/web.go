@@ -383,8 +383,8 @@ func runWeb(ctx *cli.Context) {
 		m.Post("/create", bindIgnErr(auth.CreateRepoForm{}), repo.CreatePost)
 		m.Get("/migrate", repo.Migrate)
 		m.Post("/migrate", bindIgnErr(auth.MigrateRepoForm{}), repo.MigratePost)
-		m.Get("/fork", repo.Fork)
-		m.Post("/fork", bindIgnErr(auth.CreateRepoForm{}), repo.ForkPost)
+		m.Combo("/fork/:repoid").Get(repo.Fork).
+			Post(bindIgnErr(auth.CreateRepoForm{}), repo.ForkPost)
 	}, reqSignIn)
 
 	m.Group("/:username/:reponame", func() {

@@ -56,7 +56,7 @@ func SettingsPost(ctx *middleware.Context, form auth.RepoSettingForm) {
 		if ctx.Repo.Repository.Name != newRepoName {
 			if err := models.ChangeRepositoryName(ctx.Repo.Owner, ctx.Repo.Repository.Name, newRepoName); err != nil {
 				switch {
-				case err == models.ErrRepoAlreadyExist:
+				case models.IsErrRepoAlreadyExist(err):
 					ctx.Data["Err_RepoName"] = true
 					ctx.RenderWithErr(ctx.Tr("form.repo_name_been_taken"), SETTINGS_OPTIONS, &form)
 				case models.IsErrNameReserved(err):
@@ -128,7 +128,7 @@ func SettingsPost(ctx *middleware.Context, form auth.RepoSettingForm) {
 		}
 
 		if err = models.TransferOwnership(ctx.User, newOwner, ctx.Repo.Repository); err != nil {
-			if err == models.ErrRepoAlreadyExist {
+			if models.IsErrRepoAlreadyExist(err) {
 				ctx.RenderWithErr(ctx.Tr("repo.settings.new_owner_has_same_repo"), SETTINGS_OPTIONS, nil)
 			} else {
 				ctx.Handle(500, "TransferOwnership", err)
