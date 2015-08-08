@@ -1421,6 +1421,13 @@ func IsStaring(uid, repoId int64) bool {
 //  \___  / \____/|__|  |__|_ \
 //      \/                   \/
 
+// HasForkedRepo checks if given user has already forked a repository with given ID.
+func HasForkedRepo(ownerID, repoID int64) (*Repository, bool) {
+	repo := new(Repository)
+	has, _ := x.Where("owner_id=? AND fork_id=?", ownerID, repoID).Get(repo)
+	return repo, has
+}
+
 func ForkRepository(u *User, oldRepo *Repository, name, desc string) (_ *Repository, err error) {
 	repo := &Repository{
 		OwnerId:     u.Id,
