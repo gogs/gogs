@@ -9,11 +9,14 @@
                 <a class="link" href="{{.Repository.Website}}">{{.Repository.Website}}</a>
             </p>
             <ul id="repo-file-nav" class="clear menu menu-line">
-                <!-- <li>
-                    <a href="#">
+                {{if and .IsRepositoryAdmin .Repository.BaseRepo}}
+                {{ $baseRepo := .Repository.BaseRepo}}
+                <li>
+                    <a href="{{AppSubUrl}}/{{$baseRepo.Owner.Name}}/{{$baseRepo.Name}}/compare/{{$.BaseDefaultBranch}}...{{$.Owner.Name}}:{{$.BranchName}}">
                         <button class="btn btn-green btn-small btn-radius" id="repo-compare-btn"><i class="octicon octicon-git-compare"></i></button>
                     </a>
-                </li> -->
+                </li>
+                {{end}}
                 <li id="repo-branch-switch" class="down drop">
                     <a>
                         <button class="btn btn-gray btn-medium btn-radius">

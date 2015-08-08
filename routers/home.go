@@ -57,7 +57,7 @@ func Explore(ctx *middleware.Context) {
 	}
 	for _, repo := range repos {
 		if err = repo.GetOwner(); err != nil {
-			ctx.Handle(500, "GetOwner", fmt.Errorf("%d: %v", repo.Id, err))
+			ctx.Handle(500, "GetOwner", fmt.Errorf("%d: %v", repo.ID, err))
 			return
 		}
 	}

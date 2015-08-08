@@ -54,7 +54,7 @@ func SignedInId(req *http.Request, sess session.Store) int64 {
 		return 0
 	}
 	if id, ok := uid.(int64); ok {
-		if _, err := models.GetUserById(id); err != nil {
+		if _, err := models.GetUserByID(id); err != nil {
 			if !models.IsErrUserNotExist(err) {
 				log.Error(4, "GetUserById: %v", err)
 			}
@@ -127,7 +127,7 @@ func SignedInUser(req *http.Request, sess session.Store) (*models.User, bool) {
 		return nil, false
 	}
 
-	u, err := models.GetUserById(uid)
+	u, err := models.GetUserByID(uid)
 	if err != nil {
 		log.Error(4, "GetUserById: %v", err)
 		return nil, false

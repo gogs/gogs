@@ -139,9 +139,9 @@ func EditUser(ctx *middleware.Context) {
 		return
 	}
 
-	u, err := models.GetUserById(uid)
+	u, err := models.GetUserByID(uid)
 	if err != nil {
-		ctx.Handle(500, "GetUserById", err)
+		ctx.Handle(500, "GetUserByID", err)
 		return
 	}
 
@@ -166,7 +166,7 @@ func EditUserPost(ctx *middleware.Context, form auth.AdminEditUserForm) {
 		return
 	}
 
-	u, err := models.GetUserById(uid)
+	u, err := models.GetUserByID(uid)
 	if err != nil {
 		ctx.Handle(500, "GetUserById", err)
 		return
@@ -219,9 +219,9 @@ func DeleteUser(ctx *middleware.Context) {
 		return
 	}
 
-	u, err := models.GetUserById(uid)
+	u, err := models.GetUserByID(uid)
 	if err != nil {
-		ctx.Handle(500, "GetUserById", err)
+		ctx.Handle(500, "GetUserByID", err)
 		return
 	}
 

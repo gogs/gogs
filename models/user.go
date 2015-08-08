@@ -226,7 +226,7 @@ func (u *User) GetOrganizations() error {
 
 	u.Orgs = make([]*User, len(ous))
 	for i, ou := range ous {
-		u.Orgs[i], err = GetUserById(ou.OrgID)
+		u.Orgs[i], err = GetUserByID(ou.OrgID)
 		if err != nil {
 			return err
 		}
@@ -555,7 +555,7 @@ func GetUserByKeyId(keyId int64) (*User, error) {
 	return user, nil
 }
 
-func getUserById(e Engine, id int64) (*User, error) {
+func getUserByID(e Engine, id int64) (*User, error) {
 	u := new(User)
 	has, err := e.Id(id).Get(u)
 	if err != nil {
@@ -566,9 +566,9 @@ func getUserById(e Engine, id int64) (*User, error) {
 	return u, nil
 }
 
-// GetUserById returns the user object by given ID if exists.
-func GetUserById(id int64) (*User, error) {
-	return getUserById(x, id)
+// GetUserByID returns the user object by given ID if exists.
+func GetUserByID(id int64) (*User, error) {
+	return getUserByID(x, id)
 }
 
 // GetUserByName returns user by given name.
@@ -620,7 +620,7 @@ func GetEmailAddresses(uid int64) ([]*EmailAddress, error) {
 		return nil, err
 	}
 
-	u, err := GetUserById(uid)
+	u, err := GetUserByID(uid)
 	if err != nil {
 		return nil, err
 	}
@@ -666,7 +666,7 @@ func (email *EmailAddress) Activate() error {
 		return err
 	}
 
-	if user, err := GetUserById(email.Uid); err != nil {
+	if user, err := GetUserByID(email.Uid); err != nil {
 		return err
 	} else {
 		user.Rands = GetUserSalt()
@@ -793,7 +793,7 @@ func GetUserByEmail(email string) (*User, error) {
 		return nil, err
 	}
 	if has {
-		return GetUserById(emailAddress.Uid)
+		return GetUserByID(emailAddress.Uid)
 	}
 
 	return nil, ErrUserNotExist{0, "email"}

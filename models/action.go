@@ -348,7 +348,7 @@ func CommitRepoAction(userId, repoUserId int64, userName, actEmail string,
 	// check if repo belongs to org and append additional webhooks
 	if repo.Owner.IsOrganization() {
 		// get hooks for org
-		orgws, err := GetActiveWebhooksByOrgId(repo.OwnerId)
+		orgws, err := GetActiveWebhooksByOrgId(repo.OwnerID)
 		if err != nil {
 			return errors.New("GetActiveWebhooksByOrgId: " + err.Error())
 		}
@@ -388,7 +388,7 @@ func CommitRepoAction(userId, repoUserId int64, userName, actEmail string,
 		Ref:     refFullName,
 		Commits: commits,
 		Repo: &PayloadRepo{
-			Id:          repo.Id,
+			Id:          repo.ID,
 			Name:        repo.LowerName,
 			Url:         repoLink,
 			Description: repo.Description,
@@ -431,7 +431,7 @@ func CommitRepoAction(userId, repoUserId int64, userName, actEmail string,
 		}
 
 		if err = CreateHookTask(&HookTask{
-			RepoID:      repo.Id,
+			RepoID:      repo.ID,
 			HookID:      w.Id,
 			Type:        w.HookTaskType,
 			Url:         w.Url,
@@ -453,12 +453,12 @@ func newRepoAction(e Engine, u *User, repo *Repository) (err error) {
 		ActUserName:  u.Name,
 		ActEmail:     u.Email,
 		OpType:       CREATE_REPO,
-		RepoID:       repo.Id,
+		RepoID:       repo.ID,
 		RepoUserName: repo.Owner.Name,
 		RepoName:     repo.Name,
 		IsPrivate:    repo.IsPrivate,
 	}); err != nil {
-		return fmt.Errorf("notify watchers '%d/%s'", u.Id, repo.Id)
+		return fmt.Errorf("notify watchers '%d/%s'", u.Id, repo.ID)
 	}
 
 	log.Trace("action.NewRepoAction: %s/%s", u.Name, repo.Name)
@@ -476,19 +476,19 @@ func transferRepoAction(e Engine, actUser, oldOwner, newOwner *User, repo *Repos
 		ActUserName:  actUser.Name,
 		ActEmail:     actUser.Email,
 		OpType:       TRANSFER_REPO,
-		RepoID:       repo.Id,
+		RepoID:       repo.ID,
 		RepoUserName: newOwner.Name,
 		RepoName:     repo.Name,
 		IsPrivate:    repo.IsPrivate,
 		Content:      path.Join(oldOwner.LowerName, repo.LowerName),
 	}
 	if err = notifyWatchers(e, action); err != nil {
-		return fmt.Errorf("notify watchers '%d/%s'", actUser.Id, repo.Id)
+		return fmt.Errorf("notify watchers '%d/%s'", actUser.Id, repo.ID)
 	}
 
 	// Remove watch for organization.
 	if repo.Owner.IsOrganization() {
-		if err = watchRepo(e, repo.Owner.Id, repo.Id, false); err != nil {
+		if err = watchRepo(e, repo.Owner.Id, repo.ID, false); err != nil {
 			return fmt.Errorf("watch repository: %v", err)
 		}
 	}

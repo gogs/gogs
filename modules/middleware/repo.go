@@ -257,7 +257,7 @@ func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 		ctx.Data["HasAccess"] = true
 
 		if repo.IsMirror {
-			ctx.Repo.Mirror, err = models.GetMirror(repo.Id)
+			ctx.Repo.Mirror, err = models.GetMirror(repo.ID)
 			if err != nil {
 				ctx.Handle(500, "GetMirror", err)
 				return
@@ -291,10 +291,34 @@ func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 		ctx.Data["Tags"] = tags
 		ctx.Repo.Repository.NumTags = len(tags)
 
-		// Non-fork repository will not return error in this method.
-		if err = repo.GetForkRepo(); err != nil {
-			ctx.Handle(500, "GetForkRepo", err)
-			return
+		if repo.IsFork {
+			// Non-fork repository will not return error in this method.
+			if err = repo.GetBaseRepo(); err != nil {
+				ctx.Handle(500, "GetBaseRepo", err)
+				return
+			} else if repo.BaseRepo.GetOwner(); err != nil {
+				ctx.Handle(500, "BaseRepo.GetOwner", err)
+				return
+			}
+
+			bsaeRepo := repo.BaseRepo
+			baseGitRepo, err := git.OpenRepository(models.RepoPath(bsaeRepo.Owner.Name, bsaeRepo.Name))
+			if err != nil {
+				ctx.Handle(500, "OpenRepository", err)
+				return
+			}
+			if len(bsaeRepo.DefaultBranch) > 0 && baseGitRepo.IsBranchExist(bsaeRepo.DefaultBranch) {
+				ctx.Data["BaseDefaultBranch"] = bsaeRepo.DefaultBranch
+			} else {
+				baseBranches, err := baseGitRepo.GetBranches()
+				if err != nil {
+					ctx.Handle(500, "GetBranches", err)
+					return
+				}
+				if len(baseBranches) > 0 {
+					ctx.Data["BaseDefaultBranch"] = baseBranches[0]
+				}
+			}
 		}
 
 		ctx.Data["Title"] = u.Name + "/" + repo.Name
@@ -327,8 +351,8 @@ func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 		}
 
 		if ctx.IsSigned {
-			ctx.Data["IsWatchingRepo"] = models.IsWatching(ctx.User.Id, repo.Id)
-			ctx.Data["IsStaringRepo"] = models.IsStaring(ctx.User.Id, repo.Id)
+			ctx.Data["IsWatchingRepo"] = models.IsWatching(ctx.User.Id, repo.ID)
+			ctx.Data["IsStaringRepo"] = models.IsStaring(ctx.User.Id, repo.ID)
 		}
 
 		ctx.Data["TagName"] = ctx.Repo.TagName
@@ -342,8 +366,8 @@ func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 
 		// If not branch selected, try default one.
 		// If default branch doesn't exists, fall back to some other branch.
-		if ctx.Repo.BranchName == "" {
-			if ctx.Repo.Repository.DefaultBranch != "" && gitRepo.IsBranchExist(ctx.Repo.Repository.DefaultBranch) {
+		if len(ctx.Repo.BranchName) == 0 {
+			if len(ctx.Repo.Repository.DefaultBranch) > 0 && gitRepo.IsBranchExist(ctx.Repo.Repository.DefaultBranch) {
 				ctx.Repo.BranchName = ctx.Repo.Repository.DefaultBranch
 			} else if len(brs) > 0 {
 				ctx.Repo.BranchName = brs[0]

@@ -28,7 +28,7 @@ func ToApiRepository(owner *models.User, repo *models.Repository, permission api
 		log.Error(4, "CloneLink: %v", err)
 	}
 	return &api.Repository{
-		Id:          repo.Id,
+		Id:          repo.ID,
 		Owner:       *ToApiUser(owner),
 		FullName:    owner.Name + "/" + repo.Name,
 		Private:     repo.IsPrivate,
@@ -55,7 +55,7 @@ func SearchRepos(ctx *middleware.Context) {
 		if ctx.User.Id == opt.Uid {
 			opt.Private = true
 		} else {
-			u, err := models.GetUserById(opt.Uid)
+			u, err := models.GetUserByID(opt.Uid)
 			if err != nil {
 				ctx.JSON(500, map[string]interface{}{
 					"ok":    false,
@@ -89,7 +89,7 @@ func SearchRepos(ctx *middleware.Context) {
 			return
 		}
 		results[i] = &api.Repository{
-			Id:       repos[i].Id,
+			Id:       repos[i].ID,
 			FullName: path.Join(repos[i].Owner.Name, repos[i].Name),
 		}
 	}
@@ -111,7 +111,7 @@ func createRepo(ctx *middleware.Context, owner *models.User, opt api.CreateRepoO
 		} else {
 			log.Error(4, "CreateRepository: %v", err)
 			if repo != nil {
-				if err = models.DeleteRepository(ctx.User.Id, repo.Id, ctx.User.Name); err != nil {
+				if err = models.DeleteRepository(ctx.User.Id, repo.ID, ctx.User.Name); err != nil {
 					log.Error(4, "DeleteRepository: %v", err)
 				}
 			}
@@ -172,7 +172,7 @@ func MigrateRepo(ctx *middleware.Context, form auth.MigrateRepoForm) {
 	ctxUser := u
 	// Not equal means current user is an organization.
 	if form.Uid != u.Id {
-		org, err := models.GetUserById(form.Uid)
+		org, err := models.GetUserByID(form.Uid)
 		if err != nil {
 			if models.IsErrUserNotExist(err) {
 				ctx.HandleAPI(422, err)
@@ -219,7 +219,7 @@ func MigrateRepo(ctx *middleware.Context, form auth.MigrateRepoForm) {
 	repo, err := models.MigrateRepository(ctxUser, form.RepoName, form.Description, form.Private, form.Mirror, remoteAddr)
 	if err != nil {
 		if repo != nil {
-			if errDelete := models.DeleteRepository(ctxUser.Id, repo.Id, ctxUser.Name); errDelete != nil {
+			if errDelete := models.DeleteRepository(ctxUser.Id, repo.ID, ctxUser.Name); errDelete != nil {
 				log.Error(4, "DeleteRepository: %v", errDelete)
 			}
 		}
