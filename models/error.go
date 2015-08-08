@@ -225,6 +225,20 @@ func (err ErrRepoNotExist) Error() string {
 	return fmt.Sprintf("repository does not exist [id: %d, uid: %d, name: %s]", err.ID, err.UID, err.Name)
 }
 
+type ErrRepoAlreadyExist struct {
+	Uname string
+	Name  string
+}
+
+func IsErrRepoAlreadyExist(err error) bool {
+	_, ok := err.(ErrRepoAlreadyExist)
+	return ok
+}
+
+func (err ErrRepoAlreadyExist) Error() string {
+	return fmt.Sprintf("repository already exists [uname: %d, name: %s]", err.Uname, err.Name)
+}
+
 //    _____  .__.__                   __
 //   /     \ |__|  |   ____   _______/  |_  ____   ____   ____
 //  /  \ /  \|  |  | _/ __ \ /  ___/\   __\/  _ \ /    \_/ __ \

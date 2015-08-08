@@ -20,6 +20,10 @@ import (
 	"github.com/gogits/gogs/modules/setting"
 )
 
+func Safe(raw string) template.HTML {
+	return template.HTML(raw)
+}
+
 func Str2html(raw string) template.HTML {
 	return template.HTML(Sanitizer.Sanitize(raw))
 }
@@ -128,6 +132,7 @@ var TemplateFuncs template.FuncMap = map[string]interface{}{
 		return fmt.Sprint(time.Since(startTime).Nanoseconds()/1e6) + "ms"
 	},
 	"AvatarLink": AvatarLink,
+	"Safe":       Safe,
 	"Str2html":   Str2html,
 	"TimeSince":  TimeSince,
 	"FileSize":   FileSize,
