@@ -69,7 +69,9 @@
                                 <a href="{{AppSubUrl}}/{{.Poster.Name}}" class="user">{{.Poster.Name}}</a> commented <span class="time">{{TimeSince .Created $.Lang}}</span>
                                 <!-- <a class="issue-comment-del pull-right issue-action" href="#" title="Edit Comment"><i class="fa fa-times-circle"></i></a>
                                 <a class="issue-comment-edit pull-right issue-action" href="#" title="Remove Comment" data-url="{remove-link}"><i class="fa fa-edit"></i></a> -->
+                                {{if eq .Poster.Id $.Owner.Id}}
                                 <span class="role label label-default pull-right">Owner</span>
+                                {{end}}
                             </div>
                             <div class="panel-body markdown">
                                 {{if len .Content}}
