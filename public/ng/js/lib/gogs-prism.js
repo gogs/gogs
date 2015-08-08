@@ -3583,6 +3583,7 @@ function highlightLines(pre, lines, classes) {
 		
 		line.textContent = Array(end - start + 2).join(' \n');
 		line.className = (classes || '') + ' line-highlight';
+		line.id = "PrismHL_" + ranges[i-1];
 
     //if the line-numbers plugin is enabled, then there is no reason for this plugin to display the line numbers
     if(!hasClass(pre, 'line-numbers')) {
@@ -3603,6 +3604,9 @@ function highlightLines(pre, lines, classes) {
       (pre.querySelector('code') || pre).appendChild(line);
     }
 	}
+
+	$('html, body').scrollTop($('#PrismHL_' + ranges[0]).offset().top);
+
 }
 
 function applyHash() {
