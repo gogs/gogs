@@ -97,10 +97,9 @@ function initRepository() {
     // Pull request
     if ($('.repository.compare.pull').length > 0) {
         $('.choose.branch .dropdown').dropdown({
-            action: 'hide',
             fullTextSearch: true,
-            onNoResults: function () {
-                $('.choose.branch .dropdown .active').addClass('selected');
+            onChange: function (text, value, $choice) {
+                window.location.href = $choice.data('url');
             }
         });
     }

@@ -21,7 +21,7 @@
 	          </div>
 	          <div class="items">
 		        	{{range .Branches}}
-		          <a class="{{if eq $.BaseBranch .}}active selected{{end}} item" href="{{$.RepoLink}}/compare/{{.}}...{{$.SignedUser.Name}}:{{$.HeadBranch}}">{{.}}</a>
+		          <div class="{{if eq $.BaseBranch .}}active selected{{end}} item" data-url="{{$.RepoLink}}/compare/{{.}}...{{$.SignedUser.Name}}:{{$.HeadBranch}}">{{.}}</div>
 		        	{{end}}
 	          </div>
 					</div>
@@ -39,7 +39,7 @@
 	          </div>
 	          <div class="items">
 		        	{{range .HeadBranches}}
-		          <a class="{{if eq $.HeadBranch .}}active selected{{end}} item" href="{{$.RepoLink}}/compare/{{$.BaseBranch}}...{{$.SignedUser.Name}}:{{.}}">{{.}}</a>
+		          <div class="{{if eq $.HeadBranch .}}active selected{{end}} item" data-url="{{$.RepoLink}}/compare/{{$.BaseBranch}}...{{$.SignedUser.Name}}:{{.}}">{{.}}</div>
 		        	{{end}}
 	        	</div>
 					</div>
