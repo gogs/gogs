@@ -1,16 +1,17 @@
 {{template "base/head" .}}
 <div class="repository settings">
 	{{template "repo/header" .}}
-	<div class="ui page grid">
+	<div class="ui container">
+	<div class="ui grid">
 		{{template "repo/settings/navbar" .}}
 		<div class="twelve wide column content">
 			{{template "base/alert" .}}
-			<h4 class="ui top attached header">
+			<h3 class="ui top attached header">
 			  {{.i18n.Tr "repo.settings.deploy_keys"}}
 			  <div class="ui right">
 			  	<div id="add-deploy-key" class="ui blue tiny button">{{.i18n.Tr "repo.settings.add_deploy_key"}}</div>
 			  </div>
-			</h4>
+			</h3>
 			<div class="ui attached segment">
 				{{if .Deploykeys}}
 				<div class="ui key list">
@@ -31,7 +32,7 @@
 								<i>{{$.i18n.Tr "settings.add_on"}} <span>{{DateFmtShort .Created}}</span> —  <i class="octicon octicon-info"></i> {{if .HasUsed}}{{$.i18n.Tr "settings.last_used"}} <span>{{DateFmtShort .Updated}}</span>{{else}}{{$.i18n.Tr "settings.no_activity"}}{{end}}</i>
 							</div>
 						</div>
-						<div class="three wide column">
+						<div class="two wide column">
 							<button class="ui red tiny button delete-button" data-url="{{$.Link}}/delete" data-id="{{.ID}}">
 								{{$.i18n.Tr "settings.delete_key"}}
 							</button>
@@ -67,30 +68,25 @@
 			</div>
 		</div>
 	</div>
+	</div>
 </div>
 
-<div class="ui basic delete modal">
-  <div class="header">
+<div class="ui small basic delete modal">
+  <div class="ui icon header">
+    <i class="trash icon"></i>
     {{.i18n.Tr "repo.settings.deploy_key_deletion"}}
   </div>
   <div class="content">
-    <div class="image">
-      <i class="trash icon"></i>
-    </div>
-    <div class="description">
-      <p>{{.i18n.Tr "repo.settings.deploy_key_deletion_desc"}}</p>
-    </div>
+    <p>{{.i18n.Tr "repo.settings.deploy_key_deletion_desc"}}</p>
   </div>
   <div class="actions">
-    <div class="two fluid ui inverted buttons">
-      <div class="ui red basic inverted button">
-        <i class="remove icon"></i>
-        {{.i18n.Tr "modal.no"}}
-      </div>
-      <div class="ui green basic inverted positive button">
-        <i class="checkmark icon"></i>
-        {{.i18n.Tr "modal.yes"}}
-      </div>
+    <div class="ui red basic inverted cancel button">
+      <i class="remove icon"></i>
+      {{.i18n.Tr "modal.no"}}
+    </div>
+    <div class="ui green basic inverted ok button">
+      <i class="checkmark icon"></i>
+      {{.i18n.Tr "modal.yes"}}
     </div>
   </div>
 </div>

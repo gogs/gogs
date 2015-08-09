@@ -1,7 +1,7 @@
 {{template "base/head" .}}
 <div class="repository new milestone">
 	{{template "repo/header" .}}
-	<div class="ui middle page grid body">
+	<div class="ui container">
 		<div class="navbar">
 			{{template "repo/issue/navbar" .}}
 			{{if and .IsRepositoryAdmin .PageIsEditMilestone}}
@@ -11,7 +11,6 @@
 			{{end}}
 		</div>
 		<div class="ui divider"></div>
-		<div class="sixteen wide column page grid">
 			<h2 class="ui dividing header">
 				{{if .PageIsEditMilestone}}
 			  {{.i18n.Tr "repo.milestones.edit"}}
@@ -21,13 +20,9 @@
 			  <div class="sub header">{{.i18n.Tr "repo.milestones.new_subheader"}}</div>
 			  {{end}}
 			</h2>
+      {{template "base/alert" .}}
 			<form class="ui form grid" action="{{.Link}}" method="post">
         {{.CsrfTokenHtml}}
-        {{if .Flash}}
-				<div class="sixteen wide column">
-        	{{template "base/alert" .}}
-        </div>
-        {{end}}
 				<div class="eleven wide column">
 					<div class="field {{if .Err_Title}}error{{end}}">
 						<label>{{.i18n.Tr "repo.milestones.title"}}</label>
@@ -38,7 +33,7 @@
 						<textarea name="content">{{.content}}</textarea>
 					</div>
 				</div>
-				<div class="three wide column">
+				<div class="four wide column">
 					<div class="field {{if .Err_Deadline}}error{{end}}">
 						<label>
 							{{.i18n.Tr "repo.milestones.due_date"}}
@@ -50,21 +45,24 @@
 						<input class="milestone datepicker" data-lang="{{.DateLang}}" data-start-date="{{.deadline}}">
 					</div>
 				</div>
-				<div class="ui divider"></div>
-				{{if .PageIsEditMilestone}}
-				<button class="ui right green button">
-					{{.i18n.Tr "repo.milestones.modify"}}
-				</button>
-				<a class="ui right blue basic button" href="{{.RepoLink}}/milestones">
-					{{.i18n.Tr "repo.milestones.cancel"}}
-				</a>
-				{{else}}
-				<button class="ui right green button">
-					{{.i18n.Tr "repo.milestones.create"}}
-				</button>
-				{{end}}
+				<div class="ui container">
+					<div class="ui divider"></div>
+					<div class="ui right">
+						{{if .PageIsEditMilestone}}
+						<a class="ui blue basic button" href="{{.RepoLink}}/milestones">
+							{{.i18n.Tr "repo.milestones.cancel"}}
+						</a>
+						<button class="ui green button">
+							{{.i18n.Tr "repo.milestones.modify"}}
+						</button>
+						{{else}}
+						<button class="ui green button">
+							{{.i18n.Tr "repo.milestones.create"}}
+						</button>
+						{{end}}
+					</div>
+				</div>
 			</form>
-		</div>
 	</div>
 </div>
 {{template "base/footer" .}}
