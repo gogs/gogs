@@ -69,7 +69,9 @@
                                 <a href="{{AppSubUrl}}/{{.Poster.Name}}" class="user">{{.Poster.Name}}</a> commented <span class="time">{{TimeSince .Created $.Lang}}</span>
                                 <!-- <a class="issue-comment-del pull-right issue-action" href="#" title="Edit Comment"><i class="fa fa-times-circle"></i></a>
                                 <a class="issue-comment-edit pull-right issue-action" href="#" title="Remove Comment" data-url="{remove-link}"><i class="fa fa-edit"></i></a> -->
+                                {{if eq .Poster.Id $.Owner.Id}}
                                 <span class="role label label-default pull-right">Owner</span>
+                                {{end}}
                             </div>
                             <div class="panel-body markdown">
                                 {{if len .Content}}
@@ -251,7 +253,7 @@
                     <h4>Milestone</h4>
                     {{if .Milestone}}
                     <p class="completion{{if eq .Milestone.Completeness 0}} hidden{{end}}"><span style="width:{{.Milestone.Completeness}}%">&nbsp;</span></p>
-                    <p class="name"><strong><a href="{{$.RepoLink}}/issues?milestone={{.Milestone.Index}}{{if $.Issue.IsClosed}}&state=closed{{end}}">{{.Milestone.Name}}</a></strong></p>
+                    <p class="name"><strong><a href="{{$.RepoLink}}/issues?milestone={{.Milestone.ID}}{{if $.Issue.IsClosed}}&state=closed{{end}}">{{.Milestone.Name}}</a></strong></p>
                     {{else}}
                     <p class="name">No milestone</p>
                     {{end}}
