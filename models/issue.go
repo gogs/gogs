@@ -38,7 +38,7 @@ type Issue struct {
 	Repo            *Repository `xorm:"-"`
 	PosterID        int64
 	Poster          *User    `xorm:"-"`
-	LabelIds        string   `xorm:"TEXT"`
+	LabelIDs        string   `xorm:"label_ids TEXT"`
 	Labels          []*Label `xorm:"-"`
 	MilestoneID     int64
 	Milestone       *Milestone `xorm:"-"`
@@ -77,11 +77,11 @@ func (i *Issue) GetPoster() (err error) {
 }
 
 func (i *Issue) GetLabels() error {
-	if len(i.LabelIds) < 3 {
+	if len(i.LabelIDs) < 3 {
 		return nil
 	}
 
-	strIds := strings.Split(strings.TrimSuffix(i.LabelIds[1:], "|"), "|$")
+	strIds := strings.Split(strings.TrimSuffix(i.LabelIDs[1:], "|"), "|$")
 	i.Labels = make([]*Label, 0, len(strIds))
 	for _, strId := range strIds {
 		id := com.StrTo(strId).MustInt64()
@@ -134,7 +134,7 @@ func NewIssue(issue *Issue) (err error) {
 
 	if _, err = sess.Insert(issue); err != nil {
 		return err
-	} else if _, err = sess.Exec("UPDATE `repository` SET num_issues = num_issues + 1 WHERE id = ?", issue.RepoID); err != nil {
+	} else if _, err = sess.Exec("UPDATE `repository` SET num_issues=num_issues+1 WHERE id=?", issue.RepoID); err != nil {
 		return err
 	}
 
@@ -296,14 +296,14 @@ type IssueUser struct {
 
 // FIXME: organization
 // NewIssueUserPairs adds new issue-user pairs for new issue of repository.
-func NewIssueUserPairs(repo *Repository, issueID, orgID, posterID, assigneeID int64) error {
+func NewIssueUserPairs(repo *Repository, issue *Issue) error {
 	users, err := repo.GetCollaborators()
 	if err != nil {
 		return err
 	}
 
 	iu := &IssueUser{
-		IssueId: issueID,
+		IssueId: issue.ID,
 		RepoId:  repo.ID,
 	}
 
@@ -311,30 +311,30 @@ func NewIssueUserPairs(repo *Repository, issueID, orgID, posterID, assigneeID in
 	for _, u := range users {
 		iu.Id = 0
 		iu.Uid = u.Id
-		iu.IsPoster = iu.Uid == posterID
+		iu.IsPoster = iu.Uid == issue.PosterID
 		if isNeedAddPoster && iu.IsPoster {
 			isNeedAddPoster = false
 		}
-		iu.IsAssigned = iu.Uid == assigneeID
+		iu.IsAssigned = iu.Uid == issue.AssigneeID
 		if _, err = x.Insert(iu); err != nil {
 			return err
 		}
 	}
 	if isNeedAddPoster {
 		iu.Id = 0
-		iu.Uid = posterID
+		iu.Uid = issue.PosterID
 		iu.IsPoster = true
-		iu.IsAssigned = iu.Uid == assigneeID
+		iu.IsAssigned = iu.Uid == issue.AssigneeID
 		if _, err = x.Insert(iu); err != nil {
 			return err
 		}
 	}
 
 	// Add owner's as well.
-	if repo.OwnerID != posterID {
+	if repo.OwnerID != issue.PosterID {
 		iu.Id = 0
 		iu.Uid = repo.OwnerID
-		iu.IsAssigned = iu.Uid == assigneeID
+		iu.IsAssigned = iu.Uid == issue.AssigneeID
 		if _, err = x.Insert(iu); err != nil {
 			return err
 		}
@@ -621,7 +621,7 @@ func DeleteLabel(repoID, labelID int64) error {
 	}
 
 	for _, issue := range issues {
-		issue.LabelIds = strings.Replace(issue.LabelIds, "$"+com.ToStr(labelID)+"|", "", -1)
+		issue.LabelIDs = strings.Replace(issue.LabelIDs, "$"+com.ToStr(labelID)+"|", "", -1)
 		if _, err = sess.Id(issue.ID).AllCols().Update(issue); err != nil {
 			return err
 		}

@@ -105,6 +105,7 @@
 	.page.buttons {
 		padding-top: 15px;
 	}
+
 	.issue.list {
 		clear: both;
 		list-style: none;
@@ -135,6 +136,32 @@
 						color: #000!important;
 					}
 				}
+			}
+		}
+	}
+	&.new.issue {
+		.comment.form {
+			.metas {
+				min-width: 220px;
+			}
+		}
+	}
+	.comment.form {
+		.ui.comments {
+			margin-top: -12px;
+			max-width: 750px!important;
+		}
+		.content {
+			.field:first-child {
+				clear: none;
+			}
+			.tab.segment {
+				border: none;
+		    padding: 0;
+		    padding-top: 10px;
+			}
+			textarea {
+				height: 200px;
 			}
 		}
 	}

@@ -1,0 +1,14 @@
+{{template "base/head" .}}
+<div class="repository new issue">
+	{{template "repo/header" .}}
+	<div class="ui middle page grid body">
+		<div class="navbar">
+			{{template "repo/issue/navbar" .}}
+		</div>
+		<div class="ui divider"></div>
+		<div class="sixteen wide column page grid">
+			{{template "repo/issue/new_form" .}}
+		</div>
+	</div>
+</div>
+{{template "base/footer" .}}

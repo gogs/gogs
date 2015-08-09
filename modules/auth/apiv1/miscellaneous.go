@@ -14,9 +14,9 @@ import (
 )
 
 type MarkdownForm struct {
-	Text    string `form:"text"`
-	Mode    string `form:"mode"`
-	Context string `form:"context"`
+	Text    string
+	Mode    string
+	Context string
 }
 
 func (f *MarkdownForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {

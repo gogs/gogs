@@ -27,9 +27,9 @@ import (
 )
 
 const (
-	ISSUES       base.TplName = "repo/issue/list"
-	ISSUE_CREATE base.TplName = "repo/issue/create"
-	ISSUE_VIEW   base.TplName = "repo/issue/view"
+	ISSUES     base.TplName = "repo/issue/list"
+	ISSUE_NEW  base.TplName = "repo/issue/new"
+	ISSUE_VIEW base.TplName = "repo/issue/view"
 
 	LABELS base.TplName = "repo/issue/labels"
 
@@ -174,167 +174,198 @@ func Issues(ctx *middleware.Context) {
 	ctx.HTML(200, ISSUES)
 }
 
-func CreateIssue(ctx *middleware.Context) {
-	ctx.Data["Title"] = "Create issue"
-	ctx.Data["IsRepoToolbarIssues"] = true
-	ctx.Data["IsRepoToolbarIssuesList"] = false
-	ctx.Data["AttachmentsEnabled"] = setting.AttachmentEnabled
+func NewIssue(ctx *middleware.Context) {
+	ctx.Data["Title"] = ctx.Tr("repo.issues.new")
+	ctx.Data["PageIsIssueList"] = true
+	ctx.Data["IsAttachmentEnabled"] = setting.AttachmentEnabled
+	ctx.Data["AttachmentAllowedTypes"] = setting.AttachmentAllowedTypes
 
-	var (
-		repo = ctx.Repo.Repository
-		err  error
-	)
-	// Get all milestones.
-	ctx.Data["OpenMilestones"], err = models.GetMilestones(repo.ID, -1, false)
-	if err != nil {
-		ctx.Handle(500, "GetMilestones.1: %v", err)
+	// var (
+	// 	repo = ctx.Repo.Repository
+	// 	err  error
+	// )
+	// // Get all milestones.
+	// ctx.Data["OpenMilestones"], err = models.GetMilestones(repo.ID, -1, false)
+	// if err != nil {
+	// 	ctx.Handle(500, "GetMilestones.1: %v", err)
+	// 	return
+	// }
+	// ctx.Data["ClosedMilestones"], err = models.GetMilestones(repo.ID, -1, true)
+	// if err != nil {
+	// 	ctx.Handle(500, "GetMilestones.2: %v", err)
+	// 	return
+	// }
+
+	// us, err := repo.GetCollaborators()
+	// if err != nil {
+	// 	ctx.Handle(500, "GetCollaborators", err)
+	// 	return
+	// }
+
+	// ctx.Data["Collaborators"] = us
+
+	ctx.HTML(200, ISSUE_NEW)
+}
+
+func NewIssuePost(ctx *middleware.Context, form auth.CreateIssueForm) {
+	ctx.Data["Title"] = ctx.Tr("repo.issues.new")
+	ctx.Data["PageIsIssueList"] = true
+	ctx.Data["IsAttachmentEnabled"] = setting.AttachmentEnabled
+	ctx.Data["AttachmentAllowedTypes"] = setting.AttachmentAllowedTypes
+
+	if ctx.HasError() {
+		ctx.HTML(200, ISSUE_NEW)
 		return
 	}
-	ctx.Data["ClosedMilestones"], err = models.GetMilestones(repo.ID, -1, true)
-	if err != nil {
-		ctx.Handle(500, "GetMilestones.2: %v", err)
+
+	issue := &models.Issue{
+		RepoID:   ctx.Repo.Repository.ID,
+		Index:    int64(ctx.Repo.Repository.NumIssues) + 1,
+		Name:     form.Title,
+		PosterID: ctx.User.Id,
+		// MilestoneID: form.MilestoneID,
+		// AssigneeID:  form.AssigneeID,
+		// LabelIDs:    "$" + strings.Join(form.LabelIDs, "|$") + "|",
+		Content: form.Content,
+	}
+	if err := models.NewIssue(issue); err != nil {
+		ctx.Handle(500, "NewIssue", err)
+		return
+	} else if err := models.NewIssueUserPairs(ctx.Repo.Repository, issue); err != nil {
+		ctx.Handle(500, "NewIssue", err)
 		return
 	}
 
-	us, err := repo.GetCollaborators()
-	if err != nil {
-		ctx.Handle(500, "GetCollaborators", err)
-		return
-	}
-
-	ctx.Data["AllowedTypes"] = setting.AttachmentAllowedTypes
-	ctx.Data["Collaborators"] = us
-
-	ctx.HTML(200, ISSUE_CREATE)
+	ctx.Redirect(ctx.Repo.RepoLink + "/issues/" + com.ToStr(issue.Index))
 }
 
 func CreateIssuePost(ctx *middleware.Context, form auth.CreateIssueForm) {
-	send := func(status int, data interface{}, err error) {
-		if err != nil {
-			log.Error(4, "issue.CreateIssuePost(?): %s", err)
+	// send := func(status int, data interface{}, err error) {
+	// 	if err != nil {
+	// 		log.Error(4, "issue.CreateIssuePost(?): %s", err)
 
-			ctx.JSON(status, map[string]interface{}{
-				"ok":     false,
-				"status": status,
-				"error":  err.Error(),
-			})
-		} else {
-			ctx.JSON(status, map[string]interface{}{
-				"ok":     true,
-				"status": status,
-				"data":   data,
-			})
-		}
-	}
+	// 		ctx.JSON(status, map[string]interface{}{
+	// 			"ok":     false,
+	// 			"status": status,
+	// 			"error":  err.Error(),
+	// 		})
+	// 	} else {
+	// 		ctx.JSON(status, map[string]interface{}{
+	// 			"ok":     true,
+	// 			"status": status,
+	// 			"data":   data,
+	// 		})
+	// 	}
+	// }
 
-	var err error
-	// Get all milestones.
-	_, err = models.GetMilestones(ctx.Repo.Repository.ID, -1, false)
-	if err != nil {
-		send(500, nil, err)
-		return
-	}
-	_, err = models.GetMilestones(ctx.Repo.Repository.ID, -1, true)
-	if err != nil {
-		send(500, nil, err)
-		return
-	}
+	// var err error
+	// // Get all milestones.
+	// _, err = models.GetMilestones(ctx.Repo.Repository.ID, -1, false)
+	// if err != nil {
+	// 	send(500, nil, err)
+	// 	return
+	// }
+	// _, err = models.GetMilestones(ctx.Repo.Repository.ID, -1, true)
+	// if err != nil {
+	// 	send(500, nil, err)
+	// 	return
+	// }
 
-	_, err = ctx.Repo.Repository.GetCollaborators()
-	if err != nil {
-		send(500, nil, err)
-		return
-	}
+	// _, err = ctx.Repo.Repository.GetCollaborators()
+	// if err != nil {
+	// 	send(500, nil, err)
+	// 	return
+	// }
 
-	if ctx.HasError() {
-		send(400, nil, errors.New(ctx.Flash.ErrorMsg))
-		return
-	}
+	// if ctx.HasError() {
+	// 	send(400, nil, errors.New(ctx.Flash.ErrorMsg))
+	// 	return
+	// }
 
-	// Only collaborators can assign.
-	if !ctx.Repo.IsOwner() {
-		form.AssigneeId = 0
-	}
-	issue := &models.Issue{
-		RepoID:      ctx.Repo.Repository.ID,
-		Index:       int64(ctx.Repo.Repository.NumIssues) + 1,
-		Name:        form.IssueName,
-		PosterID:    ctx.User.Id,
-		MilestoneID: form.MilestoneId,
-		AssigneeID:  form.AssigneeId,
-		LabelIds:    form.Labels,
-		Content:     form.Content,
-	}
-	if err := models.NewIssue(issue); err != nil {
-		send(500, nil, err)
-		return
-	} else if err := models.NewIssueUserPairs(ctx.Repo.Repository, issue.ID, ctx.Repo.Owner.Id,
-		ctx.User.Id, form.AssigneeId); err != nil {
-		send(500, nil, err)
-		return
-	}
+	// // Only collaborators can assign.
+	// if !ctx.Repo.IsOwner() {
+	// 	form.AssigneeId = 0
+	// }
+	// issue := &models.Issue{
+	// 	RepoID:      ctx.Repo.Repository.ID,
+	// 	Index:       int64(ctx.Repo.Repository.NumIssues) + 1,
+	// 	Name:        form.IssueName,
+	// 	PosterID:    ctx.User.Id,
+	// 	MilestoneID: form.MilestoneId,
+	// 	AssigneeID:  form.AssigneeId,
+	// 	LabelIds:    form.Labels,
+	// 	Content:     form.Content,
+	// }
+	// if err := models.NewIssue(issue); err != nil {
+	// 	send(500, nil, err)
+	// 	return
+	// } else if err := models.NewIssueUserPairs(ctx.Repo.Repository, issue.ID, ctx.Repo.Owner.Id,
+	// 	ctx.User.Id, form.AssigneeId); err != nil {
+	// 	send(500, nil, err)
+	// 	return
+	// }
 
-	if setting.AttachmentEnabled {
-		uploadFiles(ctx, issue.ID, 0)
-	}
+	// if setting.AttachmentEnabled {
+	// 	uploadFiles(ctx, issue.ID, 0)
+	// }
 
-	// Update mentions.
-	ms := base.MentionPattern.FindAllString(issue.Content, -1)
-	if len(ms) > 0 {
-		for i := range ms {
-			ms[i] = ms[i][1:]
-		}
+	// // Update mentions.
+	// ms := base.MentionPattern.FindAllString(issue.Content, -1)
+	// if len(ms) > 0 {
+	// 	for i := range ms {
+	// 		ms[i] = ms[i][1:]
+	// 	}
 
-		if err := models.UpdateMentions(ms, issue.ID); err != nil {
-			send(500, nil, err)
-			return
-		}
-	}
+	// 	if err := models.UpdateMentions(ms, issue.ID); err != nil {
+	// 		send(500, nil, err)
+	// 		return
+	// 	}
+	// }
 
-	act := &models.Action{
-		ActUserID:    ctx.User.Id,
-		ActUserName:  ctx.User.Name,
-		ActEmail:     ctx.User.Email,
-		OpType:       models.CREATE_ISSUE,
-		Content:      fmt.Sprintf("%d|%s", issue.Index, issue.Name),
-		RepoID:       ctx.Repo.Repository.ID,
-		RepoUserName: ctx.Repo.Owner.Name,
-		RepoName:     ctx.Repo.Repository.Name,
-		RefName:      ctx.Repo.BranchName,
-		IsPrivate:    ctx.Repo.Repository.IsPrivate,
-	}
-	// Notify watchers.
-	if err := models.NotifyWatchers(act); err != nil {
-		send(500, nil, err)
-		return
-	}
+	// act := &models.Action{
+	// 	ActUserID:    ctx.User.Id,
+	// 	ActUserName:  ctx.User.Name,
+	// 	ActEmail:     ctx.User.Email,
+	// 	OpType:       models.CREATE_ISSUE,
+	// 	Content:      fmt.Sprintf("%d|%s", issue.Index, issue.Name),
+	// 	RepoID:       ctx.Repo.Repository.ID,
+	// 	RepoUserName: ctx.Repo.Owner.Name,
+	// 	RepoName:     ctx.Repo.Repository.Name,
+	// 	RefName:      ctx.Repo.BranchName,
+	// 	IsPrivate:    ctx.Repo.Repository.IsPrivate,
+	// }
+	// // Notify watchers.
+	// if err := models.NotifyWatchers(act); err != nil {
+	// 	send(500, nil, err)
+	// 	return
+	// }
 
-	// Mail watchers and mentions.
-	if setting.Service.EnableNotifyMail {
-		tos, err := mailer.SendIssueNotifyMail(ctx.User, ctx.Repo.Owner, ctx.Repo.Repository, issue)
-		if err != nil {
-			send(500, nil, err)
-			return
-		}
+	// // Mail watchers and mentions.
+	// if setting.Service.EnableNotifyMail {
+	// 	tos, err := mailer.SendIssueNotifyMail(ctx.User, ctx.Repo.Owner, ctx.Repo.Repository, issue)
+	// 	if err != nil {
+	// 		send(500, nil, err)
+	// 		return
+	// 	}
 
-		tos = append(tos, ctx.User.LowerName)
-		newTos := make([]string, 0, len(ms))
-		for _, m := range ms {
-			if com.IsSliceContainsStr(tos, m) {
-				continue
-			}
+	// 	tos = append(tos, ctx.User.LowerName)
+	// 	newTos := make([]string, 0, len(ms))
+	// 	for _, m := range ms {
+	// 		if com.IsSliceContainsStr(tos, m) {
+	// 			continue
+	// 		}
 
-			newTos = append(newTos, m)
-		}
-		if err = mailer.SendIssueMentionMail(ctx.Render, ctx.User, ctx.Repo.Owner,
-			ctx.Repo.Repository, issue, models.GetUserEmailsByNames(newTos)); err != nil {
-			send(500, nil, err)
-			return
-		}
-	}
-	log.Trace("%d Issue created: %d", ctx.Repo.Repository.ID, issue.ID)
+	// 		newTos = append(newTos, m)
+	// 	}
+	// 	if err = mailer.SendIssueMentionMail(ctx.Render, ctx.User, ctx.Repo.Owner,
+	// 		ctx.Repo.Repository, issue, models.GetUserEmailsByNames(newTos)); err != nil {
+	// 		send(500, nil, err)
+	// 		return
+	// 	}
+	// }
+	// log.Trace("%d Issue created: %d", ctx.Repo.Repository.ID, issue.ID)
 
-	send(200, fmt.Sprintf("%s/%s/%s/issues/%d", setting.AppSubUrl, ctx.Params(":username"), ctx.Params(":reponame"), issue.Index), nil)
+	// send(200, fmt.Sprintf("%s/%s/%s/issues/%d", setting.AppSubUrl, ctx.Params(":username"), ctx.Params(":reponame"), issue.Index), nil)
 }
 
 func checkLabels(labels, allLabels []*models.Label) {
@@ -484,7 +515,7 @@ func UpdateIssue(ctx *middleware.Context, form auth.CreateIssueForm) {
 		return
 	}
 
-	issue.Name = form.IssueName
+	issue.Name = form.Title
 	//issue.MilestoneId = form.MilestoneId
 	//issue.AssigneeId = form.AssigneeId
 	//issue.LabelIds = form.Labels
@@ -540,16 +571,16 @@ func UpdateIssueLabel(ctx *middleware.Context) {
 		return
 	}
 
-	isHad := strings.Contains(issue.LabelIds, "$"+labelStrId+"|")
+	isHad := strings.Contains(issue.LabelIDs, "$"+labelStrId+"|")
 	isNeedUpdate := false
 	if isAttach {
 		if !isHad {
-			issue.LabelIds += "$" + labelStrId + "|"
+			issue.LabelIDs += "$" + labelStrId + "|"
 			isNeedUpdate = true
 		}
 	} else {
 		if isHad {
-			issue.LabelIds = strings.Replace(issue.LabelIds, "$"+labelStrId+"|", "", -1)
+			issue.LabelIDs = strings.Replace(issue.LabelIDs, "$"+labelStrId+"|", "", -1)
 			isNeedUpdate = true
 		}
 	}
