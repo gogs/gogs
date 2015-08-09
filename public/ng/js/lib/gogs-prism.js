@@ -3609,7 +3609,8 @@ function highlightLines(pre, lines, classes) {
     }
 	}
 
-	$('html, body').scrollTop($('#PrismHL_' + ranges[0]).offset().top);
+	if ( !Prism.preventScroll ) $('html, body').scrollTop($('#PrismHL_' + ranges[0]).offset().top);
+	Prism.preventScroll = false;
 
 }
 
@@ -3716,6 +3717,7 @@ Prism.hooks.add('complete', function (env) {
 			range = ( Prism.clickedLine > line ) ? line + "-" + Prism.clickedLine : Prism.clickedLine + "-" + line;
 		}
 		$(pre).attr("data-line", range);
+		Prism.preventScroll = true;
 		Prism.highlightAll();
 		Prism.clickedLine = line;
 
