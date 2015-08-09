@@ -1496,7 +1496,7 @@ The register and sign-in page style
 .repo-bare #repo-header-meta {
   display: none;
 }
-.repo-bare #repo-clone-ssh {
+.repo-bare .btn-first {
   margin-left: 200px;
 }
 .repo-bare #repo-clone-copy {
