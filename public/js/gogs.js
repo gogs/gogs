@@ -104,11 +104,13 @@ function initRepository() {
 
     // Pull request
     if ($('.repository.compare.pull').length > 0) {
-        $('.choose.branch .dropdown').dropdown({
+        var $branch_dropdown = $('.choose.branch .dropdown')
+        $branch_dropdown.dropdown({
             fullTextSearch: true,
             onChange: function (text, value, $choice) {
                 window.location.href = $choice.data('url');
-            }
+            },
+            message: {noResults: $branch_dropdown.data('no-results')}
         });
     }
 };
