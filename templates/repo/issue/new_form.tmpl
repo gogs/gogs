@@ -27,16 +27,19 @@
 			         {{.i18n.Tr "repo.release.loading"}}
 			      </div>
 		      </div>
-					<button class="ui right green button">
-						{{.i18n.Tr "repo.issues.create"}}
-					</button>
+		      <div class="text right">
+						<button class="ui green button">
+							{{.i18n.Tr "repo.issues.create"}}
+						</button>
+		      </div>
 		    </div>
 		  </div>
 		</div>
 	</div>
+
 	<div class="four wide column">
 		<div class="ui segment metas">
-			<div class="ui {{if .Labels}}disabled{{end}} pointing dropdown jump item">
+			<div class="ui {{if .Labels}}disabled{{end}} dropdown jump item">
 				<span class="text">
 					<strong>{{.i18n.Tr "repo.issues.new.labels"}}</strong>
 					<span class="octicon octicon-gear"></span>
@@ -52,7 +55,7 @@
 				<span class="item">filter_label_no_select</span>
 			</div>
 			<div class="ui divider"></div>
-			<div class="ui {{if .Labels}}disabled{{end}} pointing dropdown jump item">
+			<div class="ui {{if .Labels}}disabled{{end}} dropdown jump item">
 				<span class="text">
 					<strong>{{.i18n.Tr "repo.issues.new.labels"}}</strong>
 					<span class="octicon octicon-gear"></span>
@@ -68,7 +71,7 @@
 				<span class="item">filter_label_no_select</span>
 			</div>
 			<div class="ui divider"></div>
-			<div class="ui {{if .Labels}}disabled{{end}} pointing dropdown jump item">
+			<div class="ui {{if .Labels}}disabled{{end}} dropdown jump item">
 				<span class="text">
 					<strong>{{.i18n.Tr "repo.issues.new.labels"}}</strong>
 					<span class="octicon octicon-gear"></span>
