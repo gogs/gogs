@@ -123,6 +123,26 @@ $(document).ready(function () {
     });
     $('.poping.up').popup();
 
+    // Comment form
+    $('.comment.form .tabular.menu .item').tab();
+    $('.comment.form .tabular.menu .item[data-tab="preview"]').click(function () {
+        var $this = $(this);
+        console.log($('.comment.form .tab.segment[data-tab="write"] textarea').val())
+        console.log($('.comment.form .tab.segment[data-tab="preview"]').html())
+        $.post($this.data('url'), {
+                "_csrf": csrf,
+                "mode": "gfm",
+                "context": $this.data('context'),
+                "text": $('.comment.form .tab.segment[data-tab="write"] textarea').val()
+            },
+            function (data) {
+                console.log(data)
+                $('.comment.form .tab.segment[data-tab="preview"]').html(data);
+            }
+        )
+        ;
+    })
+
     // Helpers.
     $('.delete-button').click(function () {
         var $this = $(this);

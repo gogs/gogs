@@ -1,0 +1,88 @@
+<form class="ui comment form grid" action="{{.Link}}" method="post">
+  {{.CsrfTokenHtml}}
+  {{if .Flash}}
+	<div class="sixteen wide column">
+  	{{template "base/alert" .}}
+  </div>
+  {{end}}
+  <div class="twelve wide column">
+		<div class="ui comments">
+		  <div class="comment">
+		    <a class="avatar">
+		      <img src="{{.SignedUser.AvatarLink}}">
+		    </a>
+		    <div class="ui segment content">
+		      <div class="field">
+		      	<input name="title" placeholder="{{.i18n.Tr "repo.milestones.title"}}" value="{{.title}}" autofocus required>
+		      </div>
+		      <div class="field">
+			      <div class="ui top attached tabular menu">
+			          <a class="active item" data-tab="write">{{.i18n.Tr "repo.release.write"}}</a>
+			          <a class="item" data-tab="preview" data-url="/api/v1/markdown" data-context="{{.RepoLink}}">{{.i18n.Tr "repo.release.preview"}}</a>
+			      </div>
+			      <div class="ui bottom attached active tab segment" data-tab="write">
+		          <textarea name="content"></textarea>
+		        </div>
+			      <div class="ui bottom attached tab segment markdown" data-tab="preview">
+			         {{.i18n.Tr "repo.release.loading"}}
+			      </div>
+		      </div>
+					<button class="ui right green button">
+						{{.i18n.Tr "repo.issues.create"}}
+					</button>
+		    </div>
+		  </div>
+		</div>
+	</div>
+	<div class="four wide column">
+		<div class="ui segment metas">
+			<div class="ui {{if .Labels}}disabled{{end}} pointing dropdown jump item">
+				<span class="text">
+					<strong>{{.i18n.Tr "repo.issues.new.labels"}}</strong>
+					<span class="octicon octicon-gear"></span>
+				</span>
+        <div class="menu">
+        	<a class="item" href="{{$.RepoLink}}/issues?type={{$.ViewType}}&state={{$.State}}&milestone={{$.MilestoneID}}">{{.i18n.Tr "repo.issues.filter_label_no_select"}}</a>
+        	{{range .Labels}}
+        	<a class="item" href="{{$.RepoLink}}/issues?type={{$.ViewType}}&state={{$.State}}&labels={{.ID}}&milestone={{$.MilestoneID}}"><span class="octicon {{if eq $.SelectLabels .ID}}octicon-check{{end}}"></span><span class="label color" style="background-color: {{.Color}}"></span> {{.Name}}</a>
+          {{end}}
+				</div>
+			</div>
+			<div class="ui list">
+				<span class="item">filter_label_no_select</span>
+			</div>
+			<div class="ui divider"></div>
+			<div class="ui {{if .Labels}}disabled{{end}} pointing dropdown jump item">
+				<span class="text">
+					<strong>{{.i18n.Tr "repo.issues.new.labels"}}</strong>
+					<span class="octicon octicon-gear"></span>
+				</span>
+        <div class="menu">
+        	<a class="item" href="{{$.RepoLink}}/issues?type={{$.ViewType}}&state={{$.State}}&milestone={{$.MilestoneID}}">{{.i18n.Tr "repo.issues.filter_label_no_select"}}</a>
+        	{{range .Labels}}
+        	<a class="item" href="{{$.RepoLink}}/issues?type={{$.ViewType}}&state={{$.State}}&labels={{.ID}}&milestone={{$.MilestoneID}}"><span class="octicon {{if eq $.SelectLabels .ID}}octicon-check{{end}}"></span><span class="label color" style="background-color: {{.Color}}"></span> {{.Name}}</a>
+          {{end}}
+				</div>
+			</div>
+			<div class="ui list">
+				<span class="item">filter_label_no_select</span>
+			</div>
+			<div class="ui divider"></div>
+			<div class="ui {{if .Labels}}disabled{{end}} pointing dropdown jump item">
+				<span class="text">
+					<strong>{{.i18n.Tr "repo.issues.new.labels"}}</strong>
+					<span class="octicon octicon-gear"></span>
+				</span>
+        <div class="menu">
+        	<a class="item" href="{{$.RepoLink}}/issues?type={{$.ViewType}}&state={{$.State}}&milestone={{$.MilestoneID}}">{{.i18n.Tr "repo.issues.filter_label_no_select"}}</a>
+        	{{range .Labels}}
+        	<a class="item" href="{{$.RepoLink}}/issues?type={{$.ViewType}}&state={{$.State}}&labels={{.ID}}&milestone={{$.MilestoneID}}"><span class="octicon {{if eq $.SelectLabels .ID}}octicon-check{{end}}"></span><span class="label color" style="background-color: {{.Color}}"></span> {{.Name}}</a>
+          {{end}}
+				</div>
+			</div>
+			<div class="ui list">
+				<span class="item">filter_label_no_select</span>
+			</div>
+		</div>
+	</div>
+</form>
