@@ -14,6 +14,7 @@ github.com/go-xorm/core =
 github.com/go-xorm/xorm = 
 github.com/gogits/chardet = commit:2404f77725
 github.com/gogits/go-gogs-client = commit:92e76d616a
+github.com/issue9/identicon = 
 github.com/lib/pq = commit:0dad96c0b9
 github.com/macaron-contrib/binding = commit:de6ed78668
 github.com/macaron-contrib/cache = commit:cd824f6f2d
