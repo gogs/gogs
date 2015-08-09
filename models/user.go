@@ -13,7 +13,9 @@ import (
 	"fmt"
 	"image"
 	"image/jpeg"
+	_ "image/jpeg"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -116,11 +118,39 @@ func (u *User) HomeLink() string {
 
 // AvatarLink returns user gravatar link.
 func (u *User) AvatarLink() string {
+	defaultImgUrl := setting.AppSubUrl + "/img/avatar_default.jpg"
+	imgPath := path.Join(setting.AvatarUploadPath, com.ToStr(u.Id))
 	switch {
 	case u.UseCustomAvatar:
+		if !com.IsExist(imgPath) {
+			return defaultImgUrl
+		}
 		return setting.AppSubUrl + "/avatars/" + com.ToStr(u.Id)
 	case setting.DisableGravatar, setting.OfflineMode:
-		return setting.AppSubUrl + "/img/avatar_default.jpg"
+		if !com.IsExist(imgPath) {
+			img, err := avatar.RandomImage([]byte(u.Email))
+			if err != nil {
+				log.Error(3, "RandomImage: %v", err)
+				return defaultImgUrl
+			}
+			if err = os.MkdirAll(path.Dir(imgPath), os.ModePerm); err != nil {
+				log.Error(3, "Create: %v", err)
+				return defaultImgUrl
+			}
+			fw, err := os.Create(imgPath)
+			if err != nil {
+				log.Error(3, "Create: %v", err)
+				return defaultImgUrl
+			}
+			defer fw.Close()
+
+			if err = jpeg.Encode(fw, img, nil); err != nil {
+				log.Error(3, "Encode: %v", err)
+				return defaultImgUrl
+			}
+		}
+
+		return setting.AppSubUrl + "/avatars/" + com.ToStr(u.Id)
 	case setting.Service.EnableCacheAvatar:
 		return setting.AppSubUrl + "/avatar/" + u.Avatar
 	}
