@@ -134,7 +134,7 @@ func (u *User) AvatarLink() string {
 				return defaultImgUrl
 			}
 			if err = os.MkdirAll(path.Dir(imgPath), os.ModePerm); err != nil {
-				log.Error(3, "Create: %v", err)
+				log.Error(3, "MkdirAll: %v", err)
 				return defaultImgUrl
 			}
 			fw, err := os.Create(imgPath)
@@ -148,6 +148,7 @@ func (u *User) AvatarLink() string {
 				log.Error(3, "Encode: %v", err)
 				return defaultImgUrl
 			}
+			log.Info("New random avatar created: %d", u.Id)
 		}
 
 		return setting.AppSubUrl + "/avatars/" + com.ToStr(u.Id)
