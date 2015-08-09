@@ -253,7 +253,7 @@
                     <h4>Milestone</h4>
                     {{if .Milestone}}
                     <p class="completion{{if eq .Milestone.Completeness 0}} hidden{{end}}"><span style="width:{{.Milestone.Completeness}}%">&nbsp;</span></p>
-                    <p class="name"><strong><a href="{{$.RepoLink}}/issues?milestone={{.Milestone.Index}}{{if $.Issue.IsClosed}}&state=closed{{end}}">{{.Milestone.Name}}</a></strong></p>
+                    <p class="name"><strong><a href="{{$.RepoLink}}/issues?milestone={{.Milestone.ID}}{{if $.Issue.IsClosed}}&state=closed{{end}}">{{.Milestone.Name}}</a></strong></p>
                     {{else}}
                     <p class="name">No milestone</p>
                     {{end}}
