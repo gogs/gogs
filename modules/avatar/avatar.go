@@ -32,9 +32,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/issue9/identicon"
 	"github.com/nfnt/resize"
 
+	"github.com/gogits/gogs/modules/identicon"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/setting"
 )
