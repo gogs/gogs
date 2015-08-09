@@ -19,9 +19,11 @@ import (
 	"errors"
 	"fmt"
 	"image"
+	"image/color/palette"
 	"image/jpeg"
 	"image/png"
 	"io"
+	"math/rand"
 	"net/http"
 	"net/url"
 	"os"
@@ -30,6 +32,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/issue9/identicon"
 	"github.com/nfnt/resize"
 
 	"github.com/gogits/gogs/modules/log"
@@ -57,6 +60,27 @@ func HashEmail(email string) string {
 	h := md5.New()
 	h.Write([]byte(email))
 	return hex.EncodeToString(h.Sum(nil))
+}
+
+const _RANDOM_AVATAR_SIZE = 200
+
+// RandomImage generates and returns a random avatar image.
+func RandomImage(data []byte) (image.Image, error) {
+	randExtent := len(palette.WebSafe) - 32
+	rand.Seed(time.Now().UnixNano())
+	colorIndex := rand.Intn(randExtent)
+	backColorIndex := colorIndex - 1
+	if backColorIndex < 0 {
+		backColorIndex = randExtent - 1
+	}
+
+	// Size, background, forecolor
+	imgMaker, err := identicon.New(_RANDOM_AVATAR_SIZE,
+		palette.WebSafe[backColorIndex], palette.WebSafe[colorIndex:colorIndex+32]...)
+	if err != nil {
+		return nil, err
+	}
+	return imgMaker.Make(data), nil
 }
 
 // Avatar represents the avatar object.
