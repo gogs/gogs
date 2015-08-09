@@ -20,6 +20,15 @@ func (repo *Repository) IsTagExist(tagName string) bool {
 	return IsTagExist(repo.Path, tagName)
 }
 
+func (repo *Repository) getTagsReversed() ([]string, error) {
+	stdout, stderr, err := com.ExecCmdDir(repo.Path, "git", "tag", "-l", "--sort=-v:refname")
+	if err != nil {
+		return nil, concatenateError(err, stderr)
+	}
+	tags := strings.Split(stdout, "\n")
+	return tags[:len(tags)-1], nil
+}
+
 // GetTags returns all tags of given repository.
 func (repo *Repository) GetTags() ([]string, error) {
 	if gitVer.AtLeast(MustParseVersion("2.0.0")) {
@@ -28,15 +37,6 @@ func (repo *Repository) GetTags() ([]string, error) {
 	stdout, stderr, err := com.ExecCmdDir(repo.Path, "git", "tag", "-l")
 	if err != nil {
 		return nil, concatenateError(err, stderr)
-	}
-	tags := strings.Split(stdout, "\n")
-	return tags[:len(tags)-1], nil
-}
-
-func (repo *Repository) getTagsReversed() ([]string, error) {
-	stdout, stderr, err := com.ExecCmdDir(repo.Path, "git", "tag", "-l", "--sort=-v:refname")
-	if err != nil {
-		return nil, errors.New(stderr)
 	}
 	tags := strings.Split(stdout, "\n")
 	return tags[:len(tags)-1], nil

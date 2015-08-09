@@ -43,6 +43,15 @@ function initRepository() {
 
     // Labels
     if ($('.repository.labels').length > 0) {
+        // Create label
+        var $new_label_panel = $('.new-label.segment');
+        $('.new-label.button').click(function () {
+            $new_label_panel.show();
+        });
+        $('.new-label.segment .cancel').click(function () {
+            $new_label_panel.hide();
+        });
+
         $('.color-picker').each(function () {
             $(this).minicolors();
         });
@@ -53,8 +62,7 @@ function initRepository() {
         });
         $('.edit-label-button').click(function () {
             $('#label-modal-id').val($(this).data('id'));
-            $('#label-modal-title').val($(this).data('title'));
-            $('#label-modal-color').val($(this).data('color'))
+            $('.edit-label .new-label-input').val($(this).data('title'));
             $('.minicolors-swatch-color').css("background-color", $(this).data('color'));
             $('.edit-label.modal').modal({
                 onApprove: function () {

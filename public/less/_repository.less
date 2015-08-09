@@ -4,11 +4,11 @@
 	padding-top: 15px;
 	padding-bottom: @footer-margin * 3;
 	.head {
-		height: 75px;
-		padding-top: 20px;
+		height: 40px;
 		background-color: #FCFCFC;
 		.mega-octicon {
 			width: @mega-octicon-width;
+			font-size: 30px;
 		}
 		a,
 		.fork-flag {
@@ -25,65 +25,13 @@
 			line-height: 10px;
 			white-space: nowrap;
 		}
-		.button {
-			margin-left: 10px;
-			i {
-				margin-right: 5px;
-			}
-		}
 		.num {
 			font-weight: bold;
-		}
-		.octicon {
-			height: 5px;
-		}
-	}
-	.navbar {
-		height: 60px;
-		padding-top: 20px;
-		.ui.secondary.menu .item {
-			margin-left: -10px;
-			margin-top: -7px;
-			&>.input {
-				.new-label-input,
-				.color-picker {
-					background-color: white;
-					border: 1px solid rgba(0,0,0,.15);
-				}
-			}
-			&.input {
-				margin-right: -7px;
-			}
-			.new-label-input {
-				width: 150px;
-			}
-			.color-picker {
-				height: 35px;
-				width: auto;
-				padding-left: 30px;
-			}
-			.minicolors-swatch.minicolors-sprite {
-				top: 10px;
-				left: 10px;
-				width: 15px;
-				height: 15px;
-			}
-			&.precolors {
-				padding-left: 0;
-				padding-right: 0;
-				margin-right: 10px;
-				width: 120px;
-				.color {
-					float: left;
-					width: 15px;
-					height: 15px;
-				}
-			}
 		}
 	}
 	.filter.menu {
 		.label.color {
-			margin-left: 17px;
+			margin-left: 15px;
 			padding: 0 8px;
 		}
 		.octicon {
@@ -99,7 +47,7 @@
   		.clickable .name {
   			padding-left: 15px!important;
   		}
-		}
+	 	}
 	}
 
 	.page.buttons {
@@ -107,8 +55,8 @@
 	}
 
 	.issue.list {
-		clear: both;
 		list-style: none;
+		padding-top: 15px;
 		>.item {
 			padding-top: 15px;
 			padding-bottom: 10px;
@@ -167,8 +115,8 @@
 	}
 
 	.label.list {
-		clear: both;
 		list-style: none;
+		padding-top: 15px;
 		.item {
 			padding-top: 10px;
 			padding-bottom: 10px;
@@ -189,8 +137,8 @@
 	}
 
 	.milestone.list {
-		clear: both;
 		list-style: none;
+		padding-top: 15px;
 		> .item {
 			padding-top: 10px;
 			padding-bottom: 10px;
@@ -243,11 +191,8 @@
 		textarea {
 			height: 200px;
 		}
-	}
-
-	&.settings {
-		.content {
-			padding-left: 20px!important;
+		#deadline {
+			width: 150px;
 		}
 	}
 
@@ -316,30 +261,47 @@
 	}
 }
 
-.edit-label.modal {
-	.color-picker {
-		margin-top: -8px!important;
-		height: 35px;
-		width: auto!important;
-		padding-left: 30px!important;
+.ui.vertical.menu {
+	.header.item {
+		font-size: 1.1em;
+		background: #f0f0f0;
 	}
-	.minicolors-swatch.minicolors-sprite {
-		top: 1px;
-		left: 10px;
-		width: 15px;
-		height: 15px;
-	}
-	.precolors {
-		margin-bottom: -11px!important;
-		padding-left: 0!important;
-		padding-right: 0!important;
-		margin-right: 10px!important;
-		width: 120px!important;
-		.color {
-			float: left;
-			margin: 0!important;
+}
+
+.edit-label.modal,
+.new-label.segment {
+	.form {
+		.column {
+			padding-right: 0;
+		}
+		.buttons {
+			margin-left: auto;
+			padding-top: 15px;
+		}
+		.color.picker.column {
+			width: auto;
+			.color-picker {
+				height: 35px;
+				width: auto;
+				padding-left: 30px;
+			}
+		}
+		.minicolors-swatch.minicolors-sprite {
+			top: 10px;
+			left: 10px;
 			width: 15px;
 			height: 15px;
+		}
+		.precolors {
+			padding-left: 0;
+			padding-right: 0;
+			margin: 3px 10px auto 10px;
+			width: 120px;
+			.color {
+				float: left;
+				width: 15px;
+				height: 15px;
+			}
 		}
 	}
 }

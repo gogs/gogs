@@ -46,39 +46,8 @@
 		<noscript>Please enable JavaScript in your browser!</noscript>
 		{{if not .PageIsInstall}}
 		<div class="following bar light">
-		  <div class="ui page grid">
+		  <div class="ui container">
 		    <div class="column">
-	      	{{if .IsSigned}}
-		      <div class="ui right floated secondary menu">
-		      	<a class="view-ui item user avatar poping up" href="{{AppSubUrl}}/{{.SignedUser.Name}}" data-content="{{.SignedUser.Name}}" data-variation="inverted">
-		      		<img class="img-15" src="{{.SignedUser.AvatarLink}}"/>
-		      		<span class="sr-only">{{.SignedUser.Name}}</span>
-		      	</a>
-						<div class="ui pointing dropdown head link jump item">
-							<span class="text">
-								<i class="octicon octicon-plus"></i>
-								<i class="dropdown icon"></i>
-							</span>
-			        <div class="menu">
-			          <a class="item" href="{{AppSubUrl}}/repo/create"><i class="octicon octicon-repo-create"></i> {{.i18n.Tr "new_repo"}}</a>
-			          <a class="item" href="{{AppSubUrl}}/repo/migrate"><i class="octicon octicon-repo-clone"></i> {{.i18n.Tr "new_migrate"}}</a>
-			          <a class="item" href="{{AppSubUrl}}/org/create"><i class="octicon octicon-organization"></i> {{.i18n.Tr "new_org"}}</a>
-							</div>
-						</div>
-						{{if .IsAdmin}}
-						<a class="view-ui item poping up {{if .PageIsAdmin}}active{{end}}" href="{{AppSubUrl}}/admin" data-content="{{.i18n.Tr "admin_panel"}}" data-variation="inverted"><i class="octicon icon settings"></i><span class="sr-only">{{.i18n.Tr "admin_panel"}}</span></a>
-						{{end}}
-						<a class="view-ui item poping up {{if .PageIsSettings}}active{{end}}" href="{{AppSubUrl}}/user/settings" data-content="{{.i18n.Tr "account_settings"}}" data-variation="inverted"><i class="octicon octicon-settings"></i><span class="sr-only">{{.i18n.Tr "account_settings"}}</span></a>
-						<a class="view-ui item poping up" href="{{AppSubUrl}}/user/logout" data-content="{{.i18n.Tr "sign_out"}}" data-variation="inverted"><i class="octicon octicon-sign-out"></i><span class="sr-only">{{.i18n.Tr "sign_out"}}</span></a>
-		      </div>
-	      	{{else}}
-		      <div class="ui right floated secondary menu">
-		      	{{if .ShowRegistrationButton}}
-		      	<a class="view-ui item {{if .PageIsSignUp}}active{{end}}" href="{{AppSubUrl}}/user/sign_up"><i class="octicon octicon-person-add"></i> {{.i18n.Tr "register"}}</a>
-		      	{{end}}
-		      	<a class="view-ui item {{if .PageIsSignIn}}active{{end}}" href="{{AppSubUrl}}/user/login"><i class="octicon octicon-sign-in"></i> {{.i18n.Tr "sign_in"}}</a>
-		      </div>
-		      {{end}}
 		      <div class="ui secondary menu">
 		      	<img class="img-15 ui image brand" src="{{AppSubUrl}}/img/favicon.png">
 		      	<a class="view-ui item {{if .PageIsHome}}active{{end}}" href="{{AppSubUrl}}/">{{if .IsSigned}}{{.i18n.Tr "dashboard"}}{{else}}{{.i18n.Tr "home"}}{{end}}</a>
@@ -90,6 +59,38 @@
 		      	    <i class="search icon"></i>
 		      	  </div>
 		      	</div> -->
+
+  	      	{{if .IsSigned}}
+  		      <div class="right menu">
+  		      	<a class="view-ui item user avatar poping up" href="{{AppSubUrl}}/{{.SignedUser.Name}}" data-content="{{.SignedUser.Name}}" data-variation="inverted">
+  		      		<img class="img-15" src="{{.SignedUser.AvatarLink}}"/>
+  		      		<span class="sr-only">{{.SignedUser.Name}}</span>
+  		      	</a>
+  						<div class="ui dropdown head link jump item">
+  							<span class="text">
+  								<i class="octicon octicon-plus"></i>
+  								<i class="dropdown icon"></i>
+  							</span>
+  			        <div class="menu">
+  			          <a class="item" href="{{AppSubUrl}}/repo/create"><i class="octicon octicon-repo-create"></i> {{.i18n.Tr "new_repo"}}</a>
+  			          <a class="item" href="{{AppSubUrl}}/repo/migrate"><i class="octicon octicon-repo-clone"></i> {{.i18n.Tr "new_migrate"}}</a>
+  			          <a class="item" href="{{AppSubUrl}}/org/create"><i class="octicon octicon-organization"></i> {{.i18n.Tr "new_org"}}</a>
+  							</div>
+  						</div>
+  						{{if .IsAdmin}}
+  						<a class="view-ui item poping up {{if .PageIsAdmin}}active{{end}}" href="{{AppSubUrl}}/admin" data-content="{{.i18n.Tr "admin_panel"}}" data-variation="inverted"><i class="octicon icon settings"></i><span class="sr-only">{{.i18n.Tr "admin_panel"}}</span></a>
+  						{{end}}
+  						<a class="view-ui item poping up {{if .PageIsSettings}}active{{end}}" href="{{AppSubUrl}}/user/settings" data-content="{{.i18n.Tr "account_settings"}}" data-variation="inverted"><i class="octicon octicon-settings"></i><span class="sr-only">{{.i18n.Tr "account_settings"}}</span></a>
+  						<a class="view-ui item poping up" href="{{AppSubUrl}}/user/logout" data-content="{{.i18n.Tr "sign_out"}}" data-variation="inverted"><i class="octicon octicon-sign-out"></i><span class="sr-only">{{.i18n.Tr "sign_out"}}</span></a>
+  		      </div>
+  	      	{{else}}
+  		      <div class="ui right floated secondary menu">
+  		      	{{if .ShowRegistrationButton}}
+  		      	<a class="view-ui item {{if .PageIsSignUp}}active{{end}}" href="{{AppSubUrl}}/user/sign_up"><i class="octicon octicon-person-add"></i> {{.i18n.Tr "register"}}</a>
+  		      	{{end}}
+  		      	<a class="view-ui item {{if .PageIsSignIn}}active{{end}}" href="{{AppSubUrl}}/user/login"><i class="octicon octicon-sign-in"></i> {{.i18n.Tr "sign_in"}}</a>
+  		      </div>
+  		      {{end}}
 		      </div>
 		    </div>
 		  </div>

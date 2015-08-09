@@ -658,6 +658,14 @@ type Milestone struct {
 	ClosedDate      time.Time
 }
 
+func (m *Milestone) BeforeUpdate() {
+	if m.NumIssues > 0 {
+		m.Completeness = m.NumClosedIssues * 100 / m.NumIssues
+	} else {
+		m.Completeness = 0
+	}
+}
+
 func (m *Milestone) AfterSet(colName string, _ xorm.Cell) {
 	if colName == "deadline" {
 		if m.Deadline.Year() == 9999 {
@@ -804,8 +812,6 @@ func ChangeMilestoneIssueStats(issue *Issue) error {
 		m.NumClosedIssues--
 	}
 
-	m.Completeness = m.NumClosedIssues * 100 / m.NumIssues
-
 	return UpdateMilestone(m)
 }
 
@@ -827,13 +833,8 @@ func ChangeMilestoneAssign(oldMid, mid int64, issue *Issue) (err error) {
 		if issue.IsClosed {
 			m.NumClosedIssues--
 		}
-		if m.NumIssues > 0 {
-			m.Completeness = m.NumClosedIssues * 100 / m.NumIssues
-		} else {
-			m.Completeness = 0
-		}
 
-		if _, err = sess.Id(m.ID).Cols("num_issues,num_completeness,num_closed_issues").Update(m); err != nil {
+		if _, err = sess.Id(m.ID).AllCols().Update(m); err != nil {
 			sess.Rollback()
 			return err
 		}
@@ -860,8 +861,7 @@ func ChangeMilestoneAssign(oldMid, mid int64, issue *Issue) (err error) {
 			return ErrWrongIssueCounter
 		}
 
-		m.Completeness = m.NumClosedIssues * 100 / m.NumIssues
-		if _, err = sess.Id(m.ID).Cols("num_issues,num_completeness,num_closed_issues").Update(m); err != nil {
+		if _, err = sess.Id(m.ID).AllCols().Update(m); err != nil {
 			sess.Rollback()
 			return err
 		}
