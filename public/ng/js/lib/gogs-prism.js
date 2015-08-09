@@ -173,10 +173,6 @@ var _ = _self.Prism = {
 			parent.className = parent.className.replace(lang, '').replace(/\s+/g, ' ') + ' language-' + language;
 		}
 
-		if (!grammar) {
-			return;
-		}
-
 		var code = element.textContent;
 
 		if(!code) {
@@ -191,6 +187,11 @@ var _ = _self.Prism = {
 			grammar: grammar,
 			code: code
 		};
+
+		if (!grammar) {
+			_.hooks.run('complete', env);
+			return;
+		}
 
 		_.hooks.run('before-highlight', env);
 
@@ -224,6 +225,9 @@ var _ = _self.Prism = {
 
 			_.hooks.run('after-highlight', env);
 		}
+
+		_.hooks.run('complete', env);
+
 	},
 
 	highlight: function (text, grammar, language) {
@@ -3583,6 +3587,7 @@ function highlightLines(pre, lines, classes) {
 		
 		line.textContent = Array(end - start + 2).join(' \n');
 		line.className = (classes || '') + ' line-highlight';
+		line.id = "PrismHL_" + ranges[i-1];
 
     //if the line-numbers plugin is enabled, then there is no reason for this plugin to display the line numbers
     if(!hasClass(pre, 'line-numbers')) {
@@ -3603,6 +3608,9 @@ function highlightLines(pre, lines, classes) {
       (pre.querySelector('code') || pre).appendChild(line);
     }
 	}
+
+	$('html, body').scrollTop($('#PrismHL_' + ranges[0]).offset().top);
+
 }
 
 function applyHash() {
@@ -3637,7 +3645,7 @@ function applyHash() {
 
 var fakeTimer = 0; // Hack to limit the number of times applyHash() runs
 
-Prism.hooks.add('after-highlight', function(env) {
+Prism.hooks.add('complete', function(env) {
 	var pre = env.element.parentNode;
 	var lines = pre && pre.getAttribute('data-line');
 	
@@ -3660,7 +3668,7 @@ addEventListener('hashchange', applyHash);
 
 })();
 ;
-Prism.hooks.add('after-highlight', function (env) {
+Prism.hooks.add('complete', function (env) {
 	// works only for <code> wrapped inside <pre> (not inline)
 	var pre = env.element.parentNode;
 	var clsReg = /\s*\bline-numbers\b\s*/;
@@ -3669,6 +3677,10 @@ Prism.hooks.add('after-highlight', function (env) {
 		// Abort only if nor the <pre> nor the <code> have the class
 		(!clsReg.test(pre.className) && !clsReg.test(env.element.className))
 	) {
+		return;
+	}
+
+	if ( env.element.querySelector(".line-numbers-rows") ) {
 		return;
 	}
 
