@@ -188,6 +188,22 @@ func NewIssue(repo *Repository, issue *Issue, labelIDs []int64) (err error) {
 		return err
 	}
 
+	// Notify watchers.
+	act := &Action{
+		ActUserID:    issue.Poster.Id,
+		ActUserName:  issue.Poster.Name,
+		ActEmail:     issue.Poster.Email,
+		OpType:       CREATE_ISSUE,
+		Content:      fmt.Sprintf("%d|%s", issue.Index, issue.Name),
+		RepoID:       repo.ID,
+		RepoUserName: repo.Owner.Name,
+		RepoName:     repo.Name,
+		IsPrivate:    repo.IsPrivate,
+	}
+	if err = notifyWatchers(sess, act); err != nil {
+		return err
+	}
+
 	return sess.Commit()
 }
 
@@ -583,8 +599,8 @@ func UpdateIssueUserPairByRead(uid, iid int64) error {
 	return err
 }
 
-// UpdateIssueUserPairsByMentions updates issue-user pairs by mentioning.
-func UpdateIssueUserPairsByMentions(uids []int64, iid int64) error {
+// UpdateIssueUsersByMentions updates issue-user pairs by mentioning.
+func UpdateIssueUsersByMentions(uids []int64, iid int64) error {
 	for _, uid := range uids {
 		iu := &IssueUser{UID: uid, IssueID: iid}
 		has, err := x.Get(iu)
