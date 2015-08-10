@@ -109,7 +109,10 @@ $(document).ready(function () {
     // Semantic UI modules.
     $('.dropdown').dropdown();
     $('.jump.dropdown').dropdown({
-        action: 'hide'
+        action: 'hide',
+        onShow: function() {
+            $('.poping.up').popup('hide');
+        }
     });
     $('.slide.up.dropdown').dropdown({
         transition: 'slide up'
@@ -120,6 +123,13 @@ $(document).ready(function () {
         showActivity: false
     });
     $('.poping.up').popup();
+    $('.top.menu .poping.up').popup({
+        onShow: function() {
+            if ( $('.top.menu .menu.transition').hasClass('visible') ) {
+                return false;
+            }
+        }
+    });
 
     // Helpers.
     $('.delete-button').click(function () {
