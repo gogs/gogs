@@ -4,12 +4,14 @@
     <div id="user-profile-page" class="container clear">
         <div class="grid-1-5 left">
             <div>
-                {{if .Owner.UseCustomAvatar}}
+                {{if and (.Owner.UseCustomAvatar) (eq .SignedUser.Id .Owner.Id)}}
                 <a href="{{AppSubUrl}}/user/settings" id="profile-avatar" original-title="{{.i18n.Tr "user.change_custom_avatar"}}">
-                {{else}}
+                {{else if eq .SignedUser.Id .Owner.Id}}
                 <a href="http://gravatar.com/emails/" id="profile-avatar" original-title="{{.i18n.Tr "user.change_avatar"}}">
+                {{else}}
+                <a href="{{.Owner.AvatarLink}}?s=234" id="profile-avatar">
                 {{end}}
-                    <img class="profile-avatar" src="{{.Owner.AvatarLink}}?s=200"title="{{.Owner.Name}}"/>
+                    <img class="profile-avatar" src="{{.Owner.AvatarLink}}?s=234" title="{{.Owner.Name}}"/>
                 </a>
                 <div class="text-center" id="profile-name">
                     {{if .Owner.FullName}}<span id="profile-fullname" class="center-block">{{.Owner.FullName}}</span><br>{{end}}
@@ -17,7 +19,7 @@
                 </div>
             </div>
             <div class="profile-info">
-                <hr> 
+                <hr>
                 <ul class="list-no-style">
                     {{if .Owner.Location}}
                     <li class="list-group-item"><i class="octicon octicon-location"></i>&nbsp;&nbsp;{{.Owner.Location}}</li>
