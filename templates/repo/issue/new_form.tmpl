@@ -101,23 +101,29 @@
 				</div>
 			</div>
 
-			<!-- <div class="ui divider"></div>
+			<div class="ui divider"></div>
 
-			<div class="ui {{if not .Assignees}}disabled{{end}} dropdown jump item">
+			<input id="assignee_id" name="assignee_id" type="hidden" value="{{.assignee_id}}">
+			<div class="ui {{if not .Assignees}}disabled{{end}} jump select-assignee dropdown">
 				<span class="text">
 					<strong>{{.i18n.Tr "repo.issues.new.assignee"}}</strong>
 					<span class="octicon octicon-gear"></span>
 				</span>
         <div class="menu">
-        	<div class="item">{{.i18n.Tr "repo.issues.new.clear_assignee"}}</a>
+        	<div class="no-select item">{{.i18n.Tr "repo.issues.new.clear_assignee"}}</div>
         	{{range .Assignees}}
-        	<a class="item" href="#"><span class="octicon {{if eq .ID $.AssigneeID}}octicon-check{{end}}"></span> {{.Name}}</a>
+        	<div class="item" data-id="{{.Id}}" data-href="{{.HomeLink}}" data-avatar="{{.AvatarLink}}"><img src="{{.AvatarLink}}"> {{.Name}}</div>
           {{end}}
 				</div>
 			</div>
-			<div class="ui list">
-				<span class="item">filter_label_no_select</span>
-			</div> -->
+			<div class="ui select-assignee list">
+				<span class="no-select item {{if .Assignee}}hide{{end}}">{{.i18n.Tr "repo.issues.new.no_assignee"}}</span>
+				<div class="selected">
+					{{if .Assignee}}
+					<a class="item" href="{{.Assignee.HomeLink}}"><img class="ui avatar image" src="{{.Assignee.AvatarLink}}"> {{.Assignee.Name}}</a>
+					{{end}}
+				</div>
+			</div>
 		</div>
 	</div>
 	{{end}}

@@ -602,6 +602,17 @@ func GetUserByID(id int64) (*User, error) {
 	return getUserByID(x, id)
 }
 
+// GetAssigneeByID returns the user with write access of repository by given ID.
+func GetAssigneeByID(repo *Repository, userID int64) (*User, error) {
+	has, err := HasAccess(&User{Id: userID}, repo, ACCESS_MODE_WRITE)
+	if err != nil {
+		return nil, err
+	} else if !has {
+		return nil, ErrUserNotExist{userID, ""}
+	}
+	return GetUserByID(userID)
+}
+
 // GetUserByName returns user by given name.
 func GetUserByName(name string) (*User, error) {
 	if len(name) == 0 {
