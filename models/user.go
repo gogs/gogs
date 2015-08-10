@@ -911,18 +911,19 @@ func UnFollowUser(userId int64, unFollowId int64) (err error) {
 }
 
 func UpdateMentions(userNames []string, issueId int64) error {
+	for i := range userNames {
+		userNames[i] = strings.ToLower(userNames[i])
+	}
 	users := make([]*User, 0, len(userNames))
 
-	if err := x.Where("name IN (?)", strings.Join(userNames, "\",\"")).OrderBy("name ASC").Find(&users); err != nil {
+	if err := x.Where("lower_name IN (?)", strings.Join(userNames, "\",\"")).OrderBy("lower_name ASC").Find(&users); err != nil {
 		return err
 	}
 
 	ids := make([]int64, 0, len(userNames))
-
 	for _, user := range users {
 		ids = append(ids, user.Id)
-
-		if user.Type == INDIVIDUAL {
+		if !user.IsOrganization() {
 			continue
 		}
 
@@ -931,9 +932,7 @@ func UpdateMentions(userNames []string, issueId int64) error {
 		}
 
 		tempIds := make([]int64, 0, user.NumMembers)
-
 		orgUsers, err := GetOrgUsersByOrgId(user.Id)
-
 		if err != nil {
 			return err
 		}
@@ -945,7 +944,7 @@ func UpdateMentions(userNames []string, issueId int64) error {
 		ids = append(ids, tempIds...)
 	}
 
-	if err := UpdateIssueUserPairsByMentions(ids, issueId); err != nil {
+	if err := UpdateIssueUsersByMentions(ids, issueId); err != nil {
 		return err
 	}
 

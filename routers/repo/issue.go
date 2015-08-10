@@ -246,36 +246,40 @@ func NewIssuePost(ctx *middleware.Context, form auth.CreateIssueForm) {
 
 		// Check milestone.
 		milestoneID = form.MilestoneID
-		ctx.Data["OpenMilestones"], err = models.GetMilestones(repo.ID, -1, false)
-		if err != nil {
-			ctx.Handle(500, "GetMilestones: %v", err)
-			return
+		if milestoneID > 0 {
+			ctx.Data["OpenMilestones"], err = models.GetMilestones(repo.ID, -1, false)
+			if err != nil {
+				ctx.Handle(500, "GetMilestones: %v", err)
+				return
+			}
+			ctx.Data["ClosedMilestones"], err = models.GetMilestones(repo.ID, -1, true)
+			if err != nil {
+				ctx.Handle(500, "GetMilestones: %v", err)
+				return
+			}
+			ctx.Data["Milestone"], err = repo.GetMilestoneByID(milestoneID)
+			if err != nil {
+				ctx.Handle(500, "GetMilestoneByID: %v", err)
+				return
+			}
+			ctx.Data["milestone_id"] = milestoneID
 		}
-		ctx.Data["ClosedMilestones"], err = models.GetMilestones(repo.ID, -1, true)
-		if err != nil {
-			ctx.Handle(500, "GetMilestones: %v", err)
-			return
-		}
-		ctx.Data["Milestone"], err = repo.GetMilestoneByID(milestoneID)
-		if err != nil {
-			ctx.Handle(500, "GetMilestoneByID: %v", err)
-			return
-		}
-		ctx.Data["milestone_id"] = milestoneID
 
 		// Check assignee.
 		assigneeID = form.AssigneeID
-		ctx.Data["Assignees"], err = repo.GetAssignees()
-		if err != nil {
-			ctx.Handle(500, "GetAssignees: %v", err)
-			return
+		if assigneeID > 0 {
+			ctx.Data["Assignees"], err = repo.GetAssignees()
+			if err != nil {
+				ctx.Handle(500, "GetAssignees: %v", err)
+				return
+			}
+			ctx.Data["Assignee"], err = repo.GetAssigneeByID(assigneeID)
+			if err != nil {
+				ctx.Handle(500, "GetAssigneeByID: %v", err)
+				return
+			}
+			ctx.Data["assignee_id"] = assigneeID
 		}
-		ctx.Data["Assignee"], err = repo.GetAssigneeByID(assigneeID)
-		if err != nil {
-			ctx.Handle(500, "GetAssigneeByID: %v", err)
-			return
-		}
-		ctx.Data["assignee_id"] = assigneeID
 	}
 
 	if ctx.HasError() {
@@ -288,6 +292,7 @@ func NewIssuePost(ctx *middleware.Context, form auth.CreateIssueForm) {
 		Index:       int64(repo.NumIssues) + 1,
 		Name:        form.Title,
 		PosterID:    ctx.User.Id,
+		Poster:      ctx.User,
 		MilestoneID: milestoneID,
 		AssigneeID:  assigneeID,
 		Content:     form.Content,
@@ -297,71 +302,45 @@ func NewIssuePost(ctx *middleware.Context, form auth.CreateIssueForm) {
 		return
 	}
 
+	// Update mentions.
+	mentions := base.MentionPattern.FindAllString(issue.Content, -1)
+	if len(mentions) > 0 {
+		for i := range mentions {
+			mentions[i] = mentions[i][1:]
+		}
+
+		if err := models.UpdateMentions(mentions, issue.ID); err != nil {
+			ctx.Handle(500, "UpdateMentions", err)
+			return
+		}
+	}
+
+	// Mail watchers and mentions.
+	if setting.Service.EnableNotifyMail {
+		tos, err := mailer.SendIssueNotifyMail(ctx.User, ctx.Repo.Owner, ctx.Repo.Repository, issue)
+		if err != nil {
+			ctx.Handle(500, "SendIssueNotifyMail", err)
+			return
+		}
+
+		tos = append(tos, ctx.User.LowerName)
+		newTos := make([]string, 0, len(mentions))
+		for _, m := range mentions {
+			if com.IsSliceContainsStr(tos, m) {
+				continue
+			}
+
+			newTos = append(newTos, m)
+		}
+		if err = mailer.SendIssueMentionMail(ctx.Render, ctx.User, ctx.Repo.Owner,
+			ctx.Repo.Repository, issue, models.GetUserEmailsByNames(newTos)); err != nil {
+			ctx.Handle(500, "SendIssueMentionMail", err)
+			return
+		}
+	}
+
+	log.Trace("Issue created: %d/%d", ctx.Repo.Repository.ID, issue.ID)
 	ctx.Redirect(ctx.Repo.RepoLink + "/issues/" + com.ToStr(issue.Index))
-}
-
-func CreateIssuePost(ctx *middleware.Context, form auth.CreateIssueForm) {
-	// if setting.AttachmentEnabled {
-	// 	uploadFiles(ctx, issue.ID, 0)
-	// }
-
-	// // Update mentions.
-	// ms := base.MentionPattern.FindAllString(issue.Content, -1)
-	// if len(ms) > 0 {
-	// 	for i := range ms {
-	// 		ms[i] = ms[i][1:]
-	// 	}
-
-	// 	if err := models.UpdateMentions(ms, issue.ID); err != nil {
-	// 		send(500, nil, err)
-	// 		return
-	// 	}
-	// }
-
-	// act := &models.Action{
-	// 	ActUserID:    ctx.User.Id,
-	// 	ActUserName:  ctx.User.Name,
-	// 	ActEmail:     ctx.User.Email,
-	// 	OpType:       models.CREATE_ISSUE,
-	// 	Content:      fmt.Sprintf("%d|%s", issue.Index, issue.Name),
-	// 	RepoID:       ctx.Repo.Repository.ID,
-	// 	RepoUserName: ctx.Repo.Owner.Name,
-	// 	RepoName:     ctx.Repo.Repository.Name,
-	// 	RefName:      ctx.Repo.BranchName,
-	// 	IsPrivate:    ctx.Repo.Repository.IsPrivate,
-	// }
-	// // Notify watchers.
-	// if err := models.NotifyWatchers(act); err != nil {
-	// 	send(500, nil, err)
-	// 	return
-	// }
-
-	// // Mail watchers and mentions.
-	// if setting.Service.EnableNotifyMail {
-	// 	tos, err := mailer.SendIssueNotifyMail(ctx.User, ctx.Repo.Owner, ctx.Repo.Repository, issue)
-	// 	if err != nil {
-	// 		send(500, nil, err)
-	// 		return
-	// 	}
-
-	// 	tos = append(tos, ctx.User.LowerName)
-	// 	newTos := make([]string, 0, len(ms))
-	// 	for _, m := range ms {
-	// 		if com.IsSliceContainsStr(tos, m) {
-	// 			continue
-	// 		}
-
-	// 		newTos = append(newTos, m)
-	// 	}
-	// 	if err = mailer.SendIssueMentionMail(ctx.Render, ctx.User, ctx.Repo.Owner,
-	// 		ctx.Repo.Repository, issue, models.GetUserEmailsByNames(newTos)); err != nil {
-	// 		send(500, nil, err)
-	// 		return
-	// 	}
-	// }
-	// log.Trace("%d Issue created: %d", ctx.Repo.Repository.ID, issue.ID)
-
-	// send(200, fmt.Sprintf("%s/%s/%s/issues/%d", setting.AppSubUrl, ctx.Params(":username"), ctx.Params(":reponame"), issue.Index), nil)
 }
 
 func checkLabels(labels, allLabels []*models.Label) {
