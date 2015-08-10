@@ -177,6 +177,43 @@ func (repo *Repository) GetOwner() (err error) {
 	return repo.getOwner(x)
 }
 
+// GetAssignees returns all users that have write access of repository.
+func (repo *Repository) GetAssignees() (_ []*User, err error) {
+	if err = repo.GetOwner(); err != nil {
+		return nil, err
+	}
+
+	accesses := make([]*Access, 0, 10)
+	if err = x.Where("repo_id=? AND mode>=?", repo.ID, ACCESS_MODE_WRITE).Find(&accesses); err != nil {
+		return nil, err
+	}
+
+	users := make([]*User, 0, len(accesses)+1) // Just waste 1 unit does not matter.
+	if !repo.Owner.IsOrganization() {
+		users = append(users, repo.Owner)
+	}
+
+	var u *User
+	for i := range accesses {
+		u, err = GetUserByID(accesses[i].UserID)
+		if err != nil {
+			return nil, err
+		}
+		users = append(users, u)
+	}
+	return users, nil
+}
+
+// GetAssigneeByID returns the user that has write access of repository by given ID.
+func (repo *Repository) GetAssigneeByID(userID int64) (*User, error) {
+	return GetAssigneeByID(repo, userID)
+}
+
+// GetMilestoneByID returns the milestone belongs to repository by given ID.
+func (repo *Repository) GetMilestoneByID(milestoneID int64) (*Milestone, error) {
+	return GetRepoMilestoneByID(repo.ID, milestoneID)
+}
+
 func (repo *Repository) GetMirror() (err error) {
 	repo.Mirror, err = GetMirror(repo.ID)
 	return err
@@ -876,7 +913,7 @@ func DeleteRepository(uid, repoID int64, userName string) error {
 		return err
 	} else if _, err = sess.Delete(&Mirror{RepoID: repoID}); err != nil {
 		return err
-	} else if _, err = sess.Delete(&IssueUser{RepoId: repoID}); err != nil {
+	} else if _, err = sess.Delete(&IssueUser{RepoID: repoID}); err != nil {
 		return err
 	} else if _, err = sess.Delete(&Milestone{RepoID: repoID}); err != nil {
 		return err

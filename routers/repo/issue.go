@@ -202,17 +202,12 @@ func NewIssue(ctx *middleware.Context) {
 			return
 		}
 
-		// ctx.Data["AssigneeID"] = 0
-		// ctx.Data["Assignees"], err = repo.GetCollaborators()
+		ctx.Data["Assignees"], err = repo.GetAssignees()
+		if err != nil {
+			ctx.Handle(500, "GetAssignees: %v", err)
+			return
+		}
 	}
-
-	// us, err := repo.GetCollaborators()
-	// if err != nil {
-	// 	ctx.Handle(500, "GetCollaborators", err)
-	// 	return
-	// }
-
-	// ctx.Data["Collaborators"] = us
 
 	ctx.HTML(200, ISSUE_NEW)
 }
@@ -227,6 +222,7 @@ func NewIssuePost(ctx *middleware.Context, form auth.CreateIssueForm) {
 		repo        = ctx.Repo.Repository
 		labelIDs    []int64
 		milestoneID int64
+		assigneeID  int64
 	)
 	if ctx.User.IsAdmin {
 		// Check labels.
@@ -260,12 +256,26 @@ func NewIssuePost(ctx *middleware.Context, form auth.CreateIssueForm) {
 			ctx.Handle(500, "GetMilestones: %v", err)
 			return
 		}
-		ctx.Data["Milestone"], err = models.GetRepoMilestoneByID(repo.ID, milestoneID)
+		ctx.Data["Milestone"], err = repo.GetMilestoneByID(milestoneID)
 		if err != nil {
-			ctx.Handle(500, "GetRepoMilestoneByID: %v", err)
+			ctx.Handle(500, "GetMilestoneByID: %v", err)
 			return
 		}
 		ctx.Data["milestone_id"] = milestoneID
+
+		// Check assignee.
+		assigneeID = form.AssigneeID
+		ctx.Data["Assignees"], err = repo.GetAssignees()
+		if err != nil {
+			ctx.Handle(500, "GetAssignees: %v", err)
+			return
+		}
+		ctx.Data["Assignee"], err = repo.GetAssigneeByID(assigneeID)
+		if err != nil {
+			ctx.Handle(500, "GetAssigneeByID: %v", err)
+			return
+		}
+		ctx.Data["assignee_id"] = assigneeID
 	}
 
 	if ctx.HasError() {
@@ -279,13 +289,10 @@ func NewIssuePost(ctx *middleware.Context, form auth.CreateIssueForm) {
 		Name:        form.Title,
 		PosterID:    ctx.User.Id,
 		MilestoneID: milestoneID,
-		// AssigneeID:  form.AssigneeID,
-		Content: form.Content,
+		AssigneeID:  assigneeID,
+		Content:     form.Content,
 	}
-	if err := models.NewIssue(issue, labelIDs); err != nil {
-		ctx.Handle(500, "NewIssue", err)
-		return
-	} else if err := models.NewIssueUserPairs(repo, issue); err != nil {
+	if err := models.NewIssue(repo, issue, labelIDs); err != nil {
 		ctx.Handle(500, "NewIssue", err)
 		return
 	}
@@ -294,71 +301,6 @@ func NewIssuePost(ctx *middleware.Context, form auth.CreateIssueForm) {
 }
 
 func CreateIssuePost(ctx *middleware.Context, form auth.CreateIssueForm) {
-	// send := func(status int, data interface{}, err error) {
-	// 	if err != nil {
-	// 		log.Error(4, "issue.CreateIssuePost(?): %s", err)
-
-	// 		ctx.JSON(status, map[string]interface{}{
-	// 			"ok":     false,
-	// 			"status": status,
-	// 			"error":  err.Error(),
-	// 		})
-	// 	} else {
-	// 		ctx.JSON(status, map[string]interface{}{
-	// 			"ok":     true,
-	// 			"status": status,
-	// 			"data":   data,
-	// 		})
-	// 	}
-	// }
-
-	// var err error
-	// // Get all milestones.
-	// _, err = models.GetMilestones(ctx.Repo.Repository.ID, -1, false)
-	// if err != nil {
-	// 	send(500, nil, err)
-	// 	return
-	// }
-	// _, err = models.GetMilestones(ctx.Repo.Repository.ID, -1, true)
-	// if err != nil {
-	// 	send(500, nil, err)
-	// 	return
-	// }
-
-	// _, err = ctx.Repo.Repository.GetCollaborators()
-	// if err != nil {
-	// 	send(500, nil, err)
-	// 	return
-	// }
-
-	// if ctx.HasError() {
-	// 	send(400, nil, errors.New(ctx.Flash.ErrorMsg))
-	// 	return
-	// }
-
-	// // Only collaborators can assign.
-	// if !ctx.Repo.IsOwner() {
-	// 	form.AssigneeId = 0
-	// }
-	// issue := &models.Issue{
-	// 	RepoID:      ctx.Repo.Repository.ID,
-	// 	Index:       int64(ctx.Repo.Repository.NumIssues) + 1,
-	// 	Name:        form.IssueName,
-	// 	PosterID:    ctx.User.Id,
-	// 	MilestoneID: form.MilestoneId,
-	// 	AssigneeID:  form.AssigneeId,
-	// 	LabelIds:    form.Labels,
-	// 	Content:     form.Content,
-	// }
-	// if err := models.NewIssue(issue); err != nil {
-	// 	send(500, nil, err)
-	// 	return
-	// } else if err := models.NewIssueUserPairs(ctx.Repo.Repository, issue.ID, ctx.Repo.Owner.Id,
-	// 	ctx.User.Id, form.AssigneeId); err != nil {
-	// 	send(500, nil, err)
-	// 	return
-	// }
-
 	// if setting.AttachmentEnabled {
 	// 	uploadFiles(ctx, issue.ID, 0)
 	// }
@@ -743,7 +685,7 @@ func UpdateAssignee(ctx *middleware.Context) {
 	aid := com.StrTo(ctx.Query("assigneeid")).MustInt64()
 	// Not check for invalid assignee id and give responsibility to owners.
 	issue.AssigneeID = aid
-	if err = models.UpdateIssueUserPairByAssignee(aid, issue.ID); err != nil {
+	if err = models.UpdateIssueUserByAssignee(issue.ID, aid); err != nil {
 		ctx.Handle(500, "UpdateIssueUserPairByAssignee: %v", err)
 		return
 	} else if err = models.UpdateIssue(issue); err != nil {

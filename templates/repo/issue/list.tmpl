@@ -87,11 +87,14 @@
         <p class="desc">
         	{{$.i18n.Tr "repo.issues.opened_by" $timeStr .Poster.Name|Str2html}}
 	        {{if .Milestone}}
-					{{with .Milestone}}
-					<a class="milestone" href="{{$.RepoLink}}/issues?type={{$.ViewType}}&state={{$.State}}&labels={{$.SelectLabels}}&milestone={{.ID}}">
-						<span class="octicon octicon-milestone"></span> {{.Name}}
+					<a class="milestone" href="{{$.RepoLink}}/issues?type={{$.ViewType}}&state={{$.State}}&labels={{$.SelectLabels}}&milestone={{.Milestone.ID}}">
+						<span class="octicon octicon-milestone"></span> {{.Milestone.Name}}
 					</a>
-					{{end}}
+	        {{end}}
+	        {{if .Assignee}}
+					<a class="ui right assignee poping up" href="{{.Assignee.HomeLink}}" data-content="{{.Assignee.Name}}" data-variation="inverted" data-position="left center">
+						<img class="ui avatar image" src="{{.Assignee.AvatarLink}}">
+					</a>
 	        {{end}}
         </p>
       </li>

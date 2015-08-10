@@ -17,6 +17,7 @@ import (
 	"github.com/Unknwon/com"
 	"github.com/go-xorm/xorm"
 
+	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/setting"
 )
@@ -59,9 +60,22 @@ func (i *Issue) AfterSet(colName string, _ xorm.Cell) {
 	var err error
 	switch colName {
 	case "milestone_id":
+		if i.MilestoneID == 0 {
+			return
+		}
+
 		i.Milestone, err = GetMilestoneByID(i.MilestoneID)
 		if err != nil {
 			log.Error(3, "GetMilestoneById: %v", err)
+		}
+	case "assignee_id":
+		if i.AssigneeID == 0 {
+			return
+		}
+
+		i.Assignee, err = GetUserByID(i.AssigneeID)
+		if err != nil {
+			log.Error(3, "GetUserByID: %v", err)
 		}
 	}
 }
@@ -120,7 +134,7 @@ func (i *Issue) RemoveLabel(labelID int64) error {
 }
 
 func (i *Issue) GetAssignee() (err error) {
-	if i.AssigneeID == 0 {
+	if i.AssigneeID == 0 || i.Assignee != nil {
 		return nil
 	}
 
@@ -145,7 +159,7 @@ func (i *Issue) AfterDelete() {
 }
 
 // CreateIssue creates new issue with labels for repository.
-func NewIssue(issue *Issue, labelIDs []int64) (err error) {
+func NewIssue(repo *Repository, issue *Issue, labelIDs []int64) (err error) {
 	sess := x.NewSession()
 	defer sessionRelease(sess)
 	if err = sess.Begin(); err != nil {
@@ -168,6 +182,10 @@ func NewIssue(issue *Issue, labelIDs []int64) (err error) {
 		if err = changeMilestoneAssign(sess, 0, issue); err != nil {
 			return err
 		}
+	}
+
+	if err = newIssueUsers(sess, repo, issue); err != nil {
+		return err
 	}
 
 	return sess.Commit()
@@ -221,7 +239,7 @@ func GetIssueById(id int64) (*Issue, error) {
 }
 
 // Issues returns a list of issues by given conditions.
-func Issues(uid, assigneeID, repoID, posterID, milestoneID int64, page int, isClosed, isMention bool, labelIds, sortType string) ([]*Issue, error) {
+func Issues(uid, assigneeID, repoID, posterID, milestoneID int64, page int, isClosed, isMention bool, labels, sortType string) ([]*Issue, error) {
 	sess := x.Limit(setting.IssuePagingNum, (page-1)*setting.IssuePagingNum)
 
 	if repoID > 0 {
@@ -238,14 +256,6 @@ func Issues(uid, assigneeID, repoID, posterID, milestoneID int64, page int, isCl
 
 	if milestoneID > 0 {
 		sess.And("issue.milestone_id=?", milestoneID)
-	}
-
-	if len(labelIds) > 0 {
-		for _, label := range strings.Split(labelIds, ",") {
-			if com.StrTo(label).MustInt() > 0 {
-				sess.And("label_ids like ?", "%$"+label+"|%")
-			}
-		}
 	}
 
 	switch sortType {
@@ -265,10 +275,26 @@ func Issues(uid, assigneeID, repoID, posterID, milestoneID int64, page int, isCl
 		sess.Desc("created")
 	}
 
+	labelIDs := base.StringsToInt64s(strings.Split(labels, ","))
+	if len(labelIDs) > 0 {
+		validJoin := false
+		queryStr := "issue.id=issue_label.issue_id"
+		for _, id := range labelIDs {
+			if id == 0 {
+				continue
+			}
+			validJoin = true
+			queryStr += " AND issue_label.label_id=" + com.ToStr(id)
+		}
+		if validJoin {
+			sess.Join("INNER", "issue_label", queryStr)
+		}
+	}
+
 	if isMention {
-		queryStr := "issue.id = issue_user.issue_id AND issue_user.is_mentioned=1"
+		queryStr := "issue.id=issue_user.issue_id AND issue_user.is_mentioned=1"
 		if uid > 0 {
-			queryStr += " AND issue_user.uid = " + com.ToStr(uid)
+			queryStr += " AND issue_user.uid=" + com.ToStr(uid)
 		}
 		sess.Join("INNER", "issue_user", queryStr)
 	}
@@ -299,11 +325,11 @@ func GetIssueCountByPoster(uid, rid int64, isClosed bool) int64 {
 
 // IssueUser represents an issue-user relation.
 type IssueUser struct {
-	Id          int64
-	Uid         int64 `xorm:"INDEX"` // User ID.
-	IssueId     int64
-	RepoId      int64 `xorm:"INDEX"`
-	MilestoneId int64
+	ID          int64 `xorm:"pk autoincr"`
+	UID         int64 `xorm:"uid INDEX"` // User ID.
+	IssueID     int64
+	RepoID      int64 `xorm:"INDEX"`
+	MilestoneID int64
 	IsRead      bool
 	IsAssigned  bool
 	IsMentioned bool
@@ -312,59 +338,62 @@ type IssueUser struct {
 }
 
 // FIXME: organization
-// NewIssueUserPairs adds new issue-user pairs for new issue of repository.
-func NewIssueUserPairs(repo *Repository, issue *Issue) error {
-	users, err := repo.GetCollaborators()
+func newIssueUsers(e *xorm.Session, repo *Repository, issue *Issue) error {
+	users, err := repo.GetAssignees()
 	if err != nil {
 		return err
 	}
 
 	iu := &IssueUser{
-		IssueId: issue.ID,
-		RepoId:  repo.ID,
+		IssueID: issue.ID,
+		RepoID:  repo.ID,
 	}
 
+	// Poster can be anyone.
 	isNeedAddPoster := true
 	for _, u := range users {
-		iu.Id = 0
-		iu.Uid = u.Id
-		iu.IsPoster = iu.Uid == issue.PosterID
+		iu.ID = 0
+		iu.UID = u.Id
+		iu.IsPoster = iu.UID == issue.PosterID
 		if isNeedAddPoster && iu.IsPoster {
 			isNeedAddPoster = false
 		}
-		iu.IsAssigned = iu.Uid == issue.AssigneeID
-		if _, err = x.Insert(iu); err != nil {
+		iu.IsAssigned = iu.UID == issue.AssigneeID
+		if _, err = e.Insert(iu); err != nil {
 			return err
 		}
 	}
 	if isNeedAddPoster {
-		iu.Id = 0
-		iu.Uid = issue.PosterID
+		iu.ID = 0
+		iu.UID = issue.PosterID
 		iu.IsPoster = true
-		iu.IsAssigned = iu.Uid == issue.AssigneeID
-		if _, err = x.Insert(iu); err != nil {
+		if _, err = e.Insert(iu); err != nil {
 			return err
 		}
 	}
-
-	// Add owner's as well.
-	if repo.OwnerID != issue.PosterID {
-		iu.Id = 0
-		iu.Uid = repo.OwnerID
-		iu.IsAssigned = iu.Uid == issue.AssigneeID
-		if _, err = x.Insert(iu); err != nil {
-			return err
-		}
-	}
-
 	return nil
+}
+
+// NewIssueUsers adds new issue-user relations for new issue of repository.
+func NewIssueUsers(repo *Repository, issue *Issue) (err error) {
+	sess := x.NewSession()
+	defer sessionRelease(sess)
+	if err = sess.Begin(); err != nil {
+		return err
+	}
+
+	if err = newIssueUsers(sess, repo, issue); err != nil {
+		return err
+	}
+
+	return sess.Commit()
 }
 
 // PairsContains returns true when pairs list contains given issue.
 func PairsContains(ius []*IssueUser, issueId, uid int64) int {
 	for i := range ius {
-		if ius[i].IssueId == issueId &&
-			ius[i].Uid == uid {
+		if ius[i].IssueID == issueId &&
+			ius[i].UID == uid {
 			return i
 		}
 	}
@@ -374,7 +403,7 @@ func PairsContains(ius []*IssueUser, issueId, uid int64) int {
 // GetIssueUserPairs returns issue-user pairs by given repository and user.
 func GetIssueUserPairs(rid, uid int64, isClosed bool) ([]*IssueUser, error) {
 	ius := make([]*IssueUser, 0, 10)
-	err := x.Where("is_closed=?", isClosed).Find(&ius, &IssueUser{RepoId: rid, Uid: uid})
+	err := x.Where("is_closed=?", isClosed).Find(&ius, &IssueUser{RepoID: rid, UID: uid})
 	return ius, err
 }
 
@@ -437,50 +466,58 @@ const (
 	FM_MENTION
 )
 
+func parseCountResult(results []map[string][]byte) int64 {
+	if len(results) == 0 {
+		return 0
+	}
+	for _, result := range results[0] {
+		return com.StrTo(string(result)).MustInt64()
+	}
+	return 0
+}
+
 // GetIssueStats returns issue statistic information by given conditions.
 func GetIssueStats(repoID, uid, labelID, milestoneID int64, isShowClosed bool, filterMode int) *IssueStats {
 	stats := &IssueStats{}
-	issue := new(Issue)
+	// issue := new(Issue)
 
-	queryStr := "issue.repo_id=? AND issue.is_closed=?"
+	queryStr := "SELECT COUNT(*) FROM `issue` "
 	if labelID > 0 {
-		queryStr += " AND issue.label_ids like '%$" + com.ToStr(labelID) + "|%'"
+		queryStr += "INNER JOIN `issue_label` ON `issue`.id=`issue_label`.issue_id AND `issue_label`.label_id=" + com.ToStr(labelID)
 	}
+
+	baseCond := " WHERE issue.repo_id=? AND issue.is_closed=?"
 	if milestoneID > 0 {
-		queryStr += " AND milestone_id=" + com.ToStr(milestoneID)
+		baseCond += " AND issue.milestone_id=" + com.ToStr(milestoneID)
 	}
 	switch filterMode {
 	case FM_ALL:
-		stats.OpenCount, _ = x.Where(queryStr, repoID, false).Count(issue)
-		stats.ClosedCount, _ = x.Where(queryStr, repoID, true).Count(issue)
-		return stats
+		resutls, _ := x.Query(queryStr+baseCond, repoID, false)
+		stats.OpenCount = parseCountResult(resutls)
+		resutls, _ = x.Query(queryStr+baseCond, repoID, true)
+		stats.ClosedCount = parseCountResult(resutls)
 
 	case FM_ASSIGN:
-		queryStr += " AND assignee_id=?"
-		stats.OpenCount, _ = x.Where(queryStr, repoID, false, uid).Count(issue)
-		stats.ClosedCount, _ = x.Where(queryStr, repoID, true, uid).Count(issue)
-		return stats
+		baseCond += " AND assignee_id=?"
+		resutls, _ := x.Query(queryStr+baseCond, repoID, false, uid)
+		stats.OpenCount = parseCountResult(resutls)
+		resutls, _ = x.Query(queryStr+baseCond, repoID, true, uid)
+		stats.ClosedCount = parseCountResult(resutls)
 
 	case FM_CREATE:
-		queryStr += " AND poster_id=?"
-		stats.OpenCount, _ = x.Where(queryStr, repoID, false, uid).Count(issue)
-		stats.ClosedCount, _ = x.Where(queryStr, repoID, true, uid).Count(issue)
-		return stats
+		baseCond += " AND poster_id=?"
+		resutls, _ := x.Query(queryStr+baseCond, repoID, false, uid)
+		stats.OpenCount = parseCountResult(resutls)
+		resutls, _ = x.Query(queryStr+baseCond, repoID, true, uid)
+		stats.ClosedCount = parseCountResult(resutls)
 
 	case FM_MENTION:
-		queryStr += " AND uid=? AND is_mentioned=?"
-		if labelID > 0 {
-			stats.OpenCount, _ = x.Where(queryStr, repoID, false, uid, true).
-				Join("INNER", "issue", "issue.id = issue_id").Count(new(IssueUser))
-			stats.ClosedCount, _ = x.Where(queryStr, repoID, true, uid, true).
-				Join("INNER", "issue", "issue.id = issue_id").Count(new(IssueUser))
-			return stats
-		}
-
-		queryStr = strings.Replace(queryStr, "issue.", "", 2)
-		stats.OpenCount, _ = x.Where(queryStr, repoID, false, uid, true).Count(new(IssueUser))
-		stats.ClosedCount, _ = x.Where(queryStr, repoID, true, uid, true).Count(new(IssueUser))
-		return stats
+		queryStr += " INNER JOIN `issue_user` ON `issue`.id=`issue_user`.issue_id"
+		baseCond += " AND `issue_user`.uid=? AND `issue_user`.is_mentioned=?"
+		resutls, _ := x.Query(queryStr+baseCond, repoID, false, uid, true)
+		stats.OpenCount = parseCountResult(resutls)
+		resutls, _ = x.Query(queryStr+baseCond, repoID, true, uid, true)
+		stats.ClosedCount = parseCountResult(resutls)
 	}
 	return stats
 }
@@ -511,20 +548,32 @@ func UpdateIssueUserPairsByStatus(iid int64, isClosed bool) error {
 	return err
 }
 
-// UpdateIssueUserPairByAssignee updates issue-user pair for assigning.
-func UpdateIssueUserPairByAssignee(aid, iid int64) error {
-	rawSql := "UPDATE `issue_user` SET is_assigned = ? WHERE issue_id = ?"
-	if _, err := x.Exec(rawSql, false, iid); err != nil {
+func updateIssueUserByAssignee(e *xorm.Session, issueID, assigneeID int64) (err error) {
+	if _, err = e.Exec("UPDATE `issue_user` SET is_assigned=? WHERE issue_id=?", false, issueID); err != nil {
 		return err
 	}
 
 	// Assignee ID equals to 0 means clear assignee.
-	if aid == 0 {
+	if assigneeID == 0 {
 		return nil
 	}
-	rawSql = "UPDATE `issue_user` SET is_assigned = ? WHERE uid = ? AND issue_id = ?"
-	_, err := x.Exec(rawSql, true, aid, iid)
+	_, err = e.Exec("UPDATE `issue_user` SET is_assigned=? WHERE uid=? AND issue_id=?", true, assigneeID, issueID)
 	return err
+}
+
+// UpdateIssueUserByAssignee updates issue-user relation for assignee.
+func UpdateIssueUserByAssignee(issueID, assigneeID int64) (err error) {
+	sess := x.NewSession()
+	defer sessionRelease(sess)
+	if err = sess.Begin(); err != nil {
+		return err
+	}
+
+	if err = updateIssueUserByAssignee(sess, issueID, assigneeID); err != nil {
+		return err
+	}
+
+	return sess.Commit()
 }
 
 // UpdateIssueUserPairByRead updates issue-user pair for reading.
@@ -537,7 +586,7 @@ func UpdateIssueUserPairByRead(uid, iid int64) error {
 // UpdateIssueUserPairsByMentions updates issue-user pairs by mentioning.
 func UpdateIssueUserPairsByMentions(uids []int64, iid int64) error {
 	for _, uid := range uids {
-		iu := &IssueUser{Uid: uid, IssueId: iid}
+		iu := &IssueUser{UID: uid, IssueID: iid}
 		has, err := x.Get(iu)
 		if err != nil {
 			return err
@@ -545,7 +594,7 @@ func UpdateIssueUserPairsByMentions(uids []int64, iid int64) error {
 
 		iu.IsMentioned = true
 		if has {
-			_, err = x.Id(iu.Id).AllCols().Update(iu)
+			_, err = x.Id(iu.ID).AllCols().Update(iu)
 		} else {
 			_, err = x.Insert(iu)
 		}
