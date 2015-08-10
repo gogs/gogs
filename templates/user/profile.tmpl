@@ -4,9 +4,9 @@
     <div id="user-profile-page" class="container clear">
         <div class="grid-1-5 left">
             <div>
-                {{if and (.Owner.UseCustomAvatar) (eq .SignedUser.Id .Owner.Id)}}
+                {{if and (.Owner.UseCustomAvatar) (eq .SignedUserName .Owner.Name)}}
                 <a href="{{AppSubUrl}}/user/settings" id="profile-avatar" original-title="{{.i18n.Tr "user.change_custom_avatar"}}">
-                {{else if eq .SignedUser.Id .Owner.Id}}
+                {{else if eq .SignedUserName .Owner.Name}}
                 <a href="http://gravatar.com/emails/" id="profile-avatar" original-title="{{.i18n.Tr "user.change_avatar"}}">
                 {{else}}
                 <a href="{{.Owner.AvatarLink}}?s=234" id="profile-avatar">
