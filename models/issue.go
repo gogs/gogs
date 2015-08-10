@@ -353,7 +353,6 @@ type IssueUser struct {
 	IsClosed    bool
 }
 
-// FIXME: organization
 func newIssueUsers(e *xorm.Session, repo *Repository, issue *Issue) error {
 	users, err := repo.GetAssignees()
 	if err != nil {
