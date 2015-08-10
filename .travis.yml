@@ -17,3 +17,9 @@ notifications:
   email:
     - u@gogs.io
   slack: gophercn:o5pSanyTeNhnfYc3QnG0X7Wx
+  webhooks:
+    urls:
+      - https://webhooks.gitter.im/e/b590f8e03882f7aedc3e
+    on_success: change 
+    on_failure: always 
+    on_start: never     
