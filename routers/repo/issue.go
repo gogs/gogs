@@ -180,14 +180,16 @@ func NewIssue(ctx *middleware.Context) {
 	ctx.Data["IsAttachmentEnabled"] = setting.AttachmentEnabled
 	ctx.Data["AttachmentAllowedTypes"] = setting.AttachmentAllowedTypes
 
-	var (
-		repo = ctx.Repo.Repository
-		err  error
-	)
-	ctx.Data["Labels"], err = models.GetLabelsByRepoID(repo.ID)
-	if err != nil {
-		ctx.Handle(500, "GetLabelsByRepoID: %v", err)
-		return
+	if ctx.User.IsAdmin {
+		var (
+			repo = ctx.Repo.Repository
+			err  error
+		)
+		ctx.Data["Labels"], err = models.GetLabelsByRepoID(repo.ID)
+		if err != nil {
+			ctx.Handle(500, "GetLabelsByRepoID: %v", err)
+			return
+		}
 	}
 
 	// // Get all milestones.
@@ -219,6 +221,31 @@ func NewIssuePost(ctx *middleware.Context, form auth.CreateIssueForm) {
 	ctx.Data["IsAttachmentEnabled"] = setting.AttachmentEnabled
 	ctx.Data["AttachmentAllowedTypes"] = setting.AttachmentAllowedTypes
 
+	var (
+		repo     = ctx.Repo.Repository
+		labelIDs []int64
+	)
+	if ctx.User.IsAdmin {
+		// Check labels.
+		labelIDs = base.StringsToInt64s(strings.Split(form.LabelIDs, ","))
+		labelIDMark := base.Int64sToMap(labelIDs)
+		labels, err := models.GetLabelsByRepoID(repo.ID)
+		if err != nil {
+			ctx.Handle(500, "GetLabelsByRepoID: %v", err)
+			return
+		}
+		hasSelected := false
+		for i := range labels {
+			if labelIDMark[labels[i].ID] {
+				labels[i].IsChecked = true
+				hasSelected = true
+			}
+		}
+		ctx.Data["HasSelectedLabel"] = hasSelected
+		ctx.Data["label_ids"] = form.LabelIDs
+		ctx.Data["Labels"] = labels
+	}
+
 	if ctx.HasError() {
 		ctx.HTML(200, ISSUE_NEW)
 		return
@@ -226,18 +253,17 @@ func NewIssuePost(ctx *middleware.Context, form auth.CreateIssueForm) {
 
 	issue := &models.Issue{
 		RepoID:   ctx.Repo.Repository.ID,
-		Index:    int64(ctx.Repo.Repository.NumIssues) + 1,
+		Index:    int64(repo.NumIssues) + 1,
 		Name:     form.Title,
 		PosterID: ctx.User.Id,
 		// MilestoneID: form.MilestoneID,
 		// AssigneeID:  form.AssigneeID,
-		// LabelIDs:    "$" + strings.Join(form.LabelIDs, "|$") + "|",
 		Content: form.Content,
 	}
-	if err := models.NewIssue(issue); err != nil {
+	if err := models.NewIssue(issue, labelIDs); err != nil {
 		ctx.Handle(500, "NewIssue", err)
 		return
-	} else if err := models.NewIssueUserPairs(ctx.Repo.Repository, issue); err != nil {
+	} else if err := models.NewIssueUserPairs(repo, issue); err != nil {
 		ctx.Handle(500, "NewIssue", err)
 		return
 	}
