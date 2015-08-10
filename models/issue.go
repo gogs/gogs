@@ -400,8 +400,8 @@ func PairsContains(ius []*IssueUser, issueId, uid int64) int {
 	return -1
 }
 
-// GetIssueUserPairs returns issue-user pairs by given repository and user.
-func GetIssueUserPairs(rid, uid int64, isClosed bool) ([]*IssueUser, error) {
+// GetIssueUsers returns issue-user pairs by given repository and user.
+func GetIssueUsers(rid, uid int64, isClosed bool) ([]*IssueUser, error) {
 	ius := make([]*IssueUser, 0, 10)
 	err := x.Where("is_closed=?", isClosed).Find(&ius, &IssueUser{RepoID: rid, UID: uid})
 	return ius, err
