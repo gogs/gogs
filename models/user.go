@@ -194,7 +194,7 @@ func (u *User) UploadAvatar(data []byte) error {
 	if err != nil {
 		return err
 	}
-	m := resize.Resize(200, 200, img, resize.NearestNeighbor)
+	m := resize.Resize(234, 234, img, resize.NearestNeighbor)
 
 	sess := x.NewSession()
 	defer sess.Close()
