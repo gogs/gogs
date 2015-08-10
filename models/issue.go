@@ -7,6 +7,7 @@ package models
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"html/template"
 	"os"
 	"strconv"
@@ -22,7 +23,6 @@ import (
 
 var (
 	ErrIssueNotExist       = errors.New("Issue does not exist")
-	ErrLabelNotExist       = errors.New("Label does not exist")
 	ErrWrongIssueCounter   = errors.New("Invalid number of issues for this milestone")
 	ErrAttachmentNotExist  = errors.New("Attachment does not exist")
 	ErrAttachmentNotLinked = errors.New("Attachment does not belong to this issue")
@@ -38,7 +38,6 @@ type Issue struct {
 	Repo            *Repository `xorm:"-"`
 	PosterID        int64
 	Poster          *User    `xorm:"-"`
-	LabelIDs        string   `xorm:"label_ids TEXT"`
 	Labels          []*Label `xorm:"-"`
 	MilestoneID     int64
 	Milestone       *Milestone `xorm:"-"`
@@ -76,27 +75,48 @@ func (i *Issue) GetPoster() (err error) {
 	return err
 }
 
-func (i *Issue) GetLabels() error {
-	if len(i.LabelIDs) < 3 {
+func (i *Issue) hasLabel(e Engine, labelID int64) bool {
+	return hasIssueLabel(e, i.ID, labelID)
+}
+
+// HasLabel returns true if issue has been labeled by given ID.
+func (i *Issue) HasLabel(labelID int64) bool {
+	return i.hasLabel(x, labelID)
+}
+
+func (i *Issue) addLabel(e Engine, labelID int64) error {
+	return newIssueLabel(e, i.ID, labelID)
+}
+
+// AddLabel adds new label to issue by given ID.
+func (i *Issue) AddLabel(labelID int64) error {
+	return i.addLabel(x, labelID)
+}
+
+func (i *Issue) getLabels(e Engine) (err error) {
+	if len(i.Labels) > 0 {
 		return nil
 	}
 
-	strIds := strings.Split(strings.TrimSuffix(i.LabelIDs[1:], "|"), "|$")
-	i.Labels = make([]*Label, 0, len(strIds))
-	for _, strId := range strIds {
-		id := com.StrTo(strId).MustInt64()
-		if id > 0 {
-			l, err := GetLabelById(id)
-			if err != nil {
-				if err == ErrLabelNotExist {
-					continue
-				}
-				return err
-			}
-			i.Labels = append(i.Labels, l)
-		}
+	i.Labels, err = getLabelsByIssueID(e, i.ID)
+	if err != nil {
+		return fmt.Errorf("getLabelsByIssueID: %v", err)
 	}
 	return nil
+}
+
+// GetLabels retrieves all labels of issue and assign to corresponding field.
+func (i *Issue) GetLabels() error {
+	return i.getLabels(x)
+}
+
+func (i *Issue) removeLabel(e Engine, labelID int64) error {
+	return deleteIssueLabel(e, i.ID, labelID)
+}
+
+// RemoveLabel removes a label from issue by given ID.
+func (i *Issue) RemoveLabel(labelID int64) error {
+	return i.removeLabel(x, labelID)
 }
 
 func (i *Issue) GetAssignee() (err error) {
@@ -260,12 +280,6 @@ const (
 	IS_OPEN = iota + 1
 	IS_CLOSE
 )
-
-// GetIssuesByLabel returns a list of issues by given label and repository.
-func GetIssuesByLabel(repoID, labelID int64) ([]*Issue, error) {
-	issues := make([]*Issue, 0, 10)
-	return issues, x.Where("repo_id=?", repoID).And("label_ids like '%$" + com.ToStr(labelID) + "|%'").Find(&issues)
-}
 
 // GetIssueCountByPoster returns number of issues of repository by poster.
 func GetIssueCountByPoster(uid, rid int64, isClosed bool) int64 {
@@ -550,7 +564,7 @@ func UpdateIssueUserPairsByMentions(uids []int64, iid int64) error {
 // Label represents a label of repository for issues.
 type Label struct {
 	ID              int64 `xorm:"pk autoincr"`
-	RepoId          int64 `xorm:"INDEX"`
+	RepoID          int64 `xorm:"INDEX"`
 	Name            string
 	Color           string `xorm:"VARCHAR(7)"`
 	NumIssues       int
@@ -570,10 +584,9 @@ func NewLabel(l *Label) error {
 	return err
 }
 
-// GetLabelById returns a label by given ID.
-func GetLabelById(id int64) (*Label, error) {
+func getLabelByID(e Engine, id int64) (*Label, error) {
 	if id <= 0 {
-		return nil, ErrLabelNotExist
+		return nil, ErrLabelNotExist{id}
 	}
 
 	l := &Label{ID: id}
@@ -581,16 +594,43 @@ func GetLabelById(id int64) (*Label, error) {
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, ErrLabelNotExist
+		return nil, ErrLabelNotExist{l.ID}
 	}
 	return l, nil
 }
 
-// GetLabels returns a list of labels of given repository ID.
-func GetLabels(repoId int64) ([]*Label, error) {
+// GetLabelByID returns a label by given ID.
+func GetLabelByID(id int64) (*Label, error) {
+	return getLabelByID(x, id)
+}
+
+// GetLabelsByRepoID returns all labels that belong to given repository by ID.
+func GetLabelsByRepoID(repoID int64) ([]*Label, error) {
 	labels := make([]*Label, 0, 10)
-	err := x.Where("repo_id=?", repoId).Find(&labels)
-	return labels, err
+	return labels, x.Where("repo_id=?", repoID).Find(&labels)
+}
+
+func getLabelsByIssueID(e Engine, issueID int64) ([]*Label, error) {
+	issueLabels, err := getIssueLabels(e, issueID)
+	if err != nil {
+		return nil, fmt.Errorf("getIssueLabels: %v", err)
+	}
+
+	var label *Label
+	labels := make([]*Label, 0, len(issueLabels))
+	for idx := range issueLabels {
+		label, err = getLabelByID(e, issueLabels[idx].LabelID)
+		if err != nil && !IsErrLabelNotExist(err) {
+			return nil, fmt.Errorf("getLabelByID: %v", err)
+		}
+		labels = append(labels, label)
+	}
+	return labels, nil
+}
+
+// GetLabelsByIssueID returns all labels that belong to given issue by ID.
+func GetLabelsByIssueID(issueID int64) ([]*Label, error) {
+	return getLabelsByIssueID(x, issueID)
 }
 
 // UpdateLabel updates label information.
@@ -601,16 +641,11 @@ func UpdateLabel(l *Label) error {
 
 // DeleteLabel delete a label of given repository.
 func DeleteLabel(repoID, labelID int64) error {
-	l, err := GetLabelById(labelID)
+	l, err := GetLabelByID(labelID)
 	if err != nil {
-		if err == ErrLabelNotExist {
+		if IsErrLabelNotExist(err) {
 			return nil
 		}
-		return err
-	}
-
-	issues, err := GetIssuesByLabel(repoID, labelID)
-	if err != nil {
 		return err
 	}
 
@@ -620,17 +655,72 @@ func DeleteLabel(repoID, labelID int64) error {
 		return err
 	}
 
-	for _, issue := range issues {
-		issue.LabelIDs = strings.Replace(issue.LabelIDs, "$"+com.ToStr(labelID)+"|", "", -1)
-		if _, err = sess.Id(issue.ID).AllCols().Update(issue); err != nil {
-			return err
-		}
-	}
-
-	if _, err = sess.Delete(l); err != nil {
+	if _, err = x.Where("label_id=?", labelID).Delete(new(IssueLabel)); err != nil {
+		return err
+	} else if _, err = sess.Delete(l); err != nil {
 		return err
 	}
 	return sess.Commit()
+}
+
+// .___                            .____          ___.          .__
+// |   | ______ ________ __   ____ |    |   _____ \_ |__   ____ |  |
+// |   |/  ___//  ___/  |  \_/ __ \|    |   \__  \ | __ \_/ __ \|  |
+// |   |\___ \ \___ \|  |  /\  ___/|    |___ / __ \| \_\ \  ___/|  |__
+// |___/____  >____  >____/  \___  >_______ (____  /___  /\___  >____/
+//          \/     \/            \/        \/    \/    \/     \/
+
+// IssueLabel represetns an issue-lable relation.
+type IssueLabel struct {
+	ID      int64 `xorm:"pk autoincr"`
+	IssueID int64 `xorm:"UNIQUE(s)"`
+	LabelID int64 `xorm:"UNIQUE(s)"`
+}
+
+func hasIssueLabel(e Engine, issueID, labelID int64) bool {
+	has, _ := e.Where("issue_id=? AND label_id=?", issueID, labelID).Get(new(IssueLabel))
+	return has
+}
+
+// HasIssueLabel returns true if issue has been labeled.
+func HasIssueLabel(issueID, labelID int64) bool {
+	return hasIssueLabel(x, issueID, labelID)
+}
+
+func newIssueLabel(e Engine, issueID, labelID int64) error {
+	_, err := e.Insert(&IssueLabel{
+		IssueID: issueID,
+		LabelID: labelID,
+	})
+	return err
+}
+
+// NewIssueLabel creates a new issue-label relation.
+func NewIssueLabel(issueID, labelID int64) error {
+	return newIssueLabel(x, issueID, labelID)
+}
+
+func getIssueLabels(e Engine, issueID int64) ([]*IssueLabel, error) {
+	issueLabels := make([]*IssueLabel, 0, 10)
+	return issueLabels, e.Where("issue_id=?", issueID).Find(&issueLabels)
+}
+
+// GetIssueLabels returns all issue-label relations of given issue by ID.
+func GetIssueLabels(issueID int64) ([]*IssueLabel, error) {
+	return getIssueLabels(x, issueID)
+}
+
+func deleteIssueLabel(e Engine, issueID, labelID int64) error {
+	_, err := e.Delete(&IssueLabel{
+		IssueID: issueID,
+		LabelID: labelID,
+	})
+	return err
+}
+
+// DeleteIssueLabel deletes issue-label relation.
+func DeleteIssueLabel(issueID, labelID int64) error {
+	return deleteIssueLabel(x, issueID, labelID)
 }
 
 //    _____  .__.__                   __
