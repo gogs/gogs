@@ -38,17 +38,13 @@ The goal of this project is to make the easiest, fastest, and most painless way 
 - SSH/HTTP(S) protocol support
 - SMTP/LDAP/reverse proxy authentication support
 - Reverse proxy suburl support
-- Register/delete/rename account
-- Create/manage/delete organization with team management
-- Create/fork/migrate/mirror/delete/watch/rename/transfer public/private repository
-- Repository viewer/release/issue tracker
-- Repository and Organization level webhooks
-- Repository Git hooks
+- Account/Organization(with team)/Repository management
+- Repository/Organization webhooks(including Slack)
+- Repository Git hooks/deploy keys
 - Add/remove repository collaborators
-- Gravatar and cache support
-- Mail service (register, issue)
+- Gravatar and custom source support
+- Mail service
 - Administration panel
-- Slack webhook integration
 - Drone CI integration
 - Supports MySQL, PostgreSQL and SQLite3
 - Social account login (GitHub, Google, QQ, Weibo)
