@@ -28,7 +28,7 @@
                 		{{range .Team.Repos}}
                 		<li class="collab">
                 			{{if $canAddRemove}}
-							<a class="btn btn-small btn-red btn-radius right" href="{{$.OrgLink}}/teams/{{$.Team.LowerName}}/action/repo/remove?repoid={{.Id}}">{{$.i18n.Tr "org.teams.remove_repo"}}</a>
+							<a class="btn btn-small btn-red btn-radius right" href="{{$.OrgLink}}/teams/{{$.Team.LowerName}}/action/repo/remove?repoid={{.ID}}">{{$.i18n.Tr "org.teams.remove_repo"}}</a>
 							{{end}}
 							<a class="member" href="{{AppSubUrl}}/{{$.Org.Name}}/{{.Name}}">
                                 <i class="octicon octicon-{{if .IsPrivate}}lock{{else if .IsFork}}repo-forked{{else if .IsMirror}}repo-clone{{else}}repo{{end}}"></i>
