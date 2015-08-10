@@ -8,7 +8,7 @@
   <div class="twelve wide column">
 		<div class="ui comments">
 		  <div class="comment">
-		    <a class="avatar">
+		    <a class="avatar" href="{{.SignedUser.HomeLink}}">
 		      <img src="{{.SignedUser.AvatarLink}}">
 		    </a>
 		    <div class="ui segment content">
@@ -37,17 +37,34 @@
 		</div>
 	</div>
 
+	{{if .IsRepositoryAdmin}}
 	<div class="four wide column">
 		<div class="ui segment metas">
-			<div class="ui {{if .Labels}}disabled{{end}} dropdown jump item">
+			<div class="ui {{if not .Labels}}disabled{{end}} dropdown jump item">
 				<span class="text">
 					<strong>{{.i18n.Tr "repo.issues.new.labels"}}</strong>
+					<span class="octicon octicon-gear"></span>
+				</span>
+        <div class="filter menu">
+        	<a class="item" href="#">{{.i18n.Tr "repo.issues.new.clear_labels"}}</a>
+        	{{range .Labels}}
+        	<a class="item" href="#"><span class="octicon {{if .IsChecked}}octicon-check{{end}}"></span><span class="label color" style="background-color: {{.Color}}"></span> {{.Name}}</a>
+          {{end}}
+				</div>
+			</div>
+			<div class="ui list">
+				<span class="item {{if .SelectedLabels}}hide{{end}}">{{.i18n.Tr "repo.issues.new.no_label"}}</span>
+			</div>
+			<!-- <div class="ui divider"></div>
+			<div class="ui {{if .Labels}}disabled{{end}} dropdown jump item">
+				<span class="text">
+					<strong>{{.i18n.Tr "repo.issues.new.milestone"}}</strong>
 					<span class="octicon octicon-gear"></span>
 				</span>
         <div class="menu">
         	<a class="item" href="{{$.RepoLink}}/issues?type={{$.ViewType}}&state={{$.State}}&milestone={{$.MilestoneID}}">{{.i18n.Tr "repo.issues.filter_label_no_select"}}</a>
         	{{range .Labels}}
-        	<a class="item" href="{{$.RepoLink}}/issues?type={{$.ViewType}}&state={{$.State}}&labels={{.ID}}&milestone={{$.MilestoneID}}"><span class="octicon {{if eq $.SelectLabels .ID}}octicon-check{{end}}"></span><span class="label color" style="background-color: {{.Color}}"></span> {{.Name}}</a>
+        	<a class="item" href="{{$.RepoLink}}/issues?type={{$.ViewType}}&state={{$.State}}&labels={{.ID}}&milestone={{$.MilestoneID}}"><span class="octicon {{if .IsChecked}}octicon-check{{end}}"></span><span class="label color" style="background-color: {{.Color}}"></span> {{.Name}}</a>
           {{end}}
 				</div>
 			</div>
@@ -57,35 +74,20 @@
 			<div class="ui divider"></div>
 			<div class="ui {{if .Labels}}disabled{{end}} dropdown jump item">
 				<span class="text">
-					<strong>{{.i18n.Tr "repo.issues.new.labels"}}</strong>
+					<strong>{{.i18n.Tr "repo.issues.new.assignee"}}</strong>
 					<span class="octicon octicon-gear"></span>
 				</span>
         <div class="menu">
         	<a class="item" href="{{$.RepoLink}}/issues?type={{$.ViewType}}&state={{$.State}}&milestone={{$.MilestoneID}}">{{.i18n.Tr "repo.issues.filter_label_no_select"}}</a>
         	{{range .Labels}}
-        	<a class="item" href="{{$.RepoLink}}/issues?type={{$.ViewType}}&state={{$.State}}&labels={{.ID}}&milestone={{$.MilestoneID}}"><span class="octicon {{if eq $.SelectLabels .ID}}octicon-check{{end}}"></span><span class="label color" style="background-color: {{.Color}}"></span> {{.Name}}</a>
+        	<a class="item" href="{{$.RepoLink}}/issues?type={{$.ViewType}}&state={{$.State}}&labels={{.ID}}&milestone={{$.MilestoneID}}"><span class="octicon {{if .IsChecked}}octicon-check{{end}}"></span><span class="label color" style="background-color: {{.Color}}"></span> {{.Name}}</a>
           {{end}}
 				</div>
 			</div>
 			<div class="ui list">
 				<span class="item">filter_label_no_select</span>
-			</div>
-			<div class="ui divider"></div>
-			<div class="ui {{if .Labels}}disabled{{end}} dropdown jump item">
-				<span class="text">
-					<strong>{{.i18n.Tr "repo.issues.new.labels"}}</strong>
-					<span class="octicon octicon-gear"></span>
-				</span>
-        <div class="menu">
-        	<a class="item" href="{{$.RepoLink}}/issues?type={{$.ViewType}}&state={{$.State}}&milestone={{$.MilestoneID}}">{{.i18n.Tr "repo.issues.filter_label_no_select"}}</a>
-        	{{range .Labels}}
-        	<a class="item" href="{{$.RepoLink}}/issues?type={{$.ViewType}}&state={{$.State}}&labels={{.ID}}&milestone={{$.MilestoneID}}"><span class="octicon {{if eq $.SelectLabels .ID}}octicon-check{{end}}"></span><span class="label color" style="background-color: {{.Color}}"></span> {{.Name}}</a>
-          {{end}}
-				</div>
-			</div>
-			<div class="ui list">
-				<span class="item">filter_label_no_select</span>
-			</div>
+			</div> -->
 		</div>
 	</div>
+	{{end}}
 </form>

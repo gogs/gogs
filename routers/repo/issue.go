@@ -44,7 +44,7 @@ var (
 )
 
 func RetrieveLabels(ctx *middleware.Context) {
-	labels, err := models.GetLabels(ctx.Repo.Repository.ID)
+	labels, err := models.GetLabelsByRepoID(ctx.Repo.Repository.ID)
 	if err != nil {
 		ctx.Handle(500, "RetrieveLabels.GetLabels: %v", err)
 		return
@@ -180,10 +180,16 @@ func NewIssue(ctx *middleware.Context) {
 	ctx.Data["IsAttachmentEnabled"] = setting.AttachmentEnabled
 	ctx.Data["AttachmentAllowedTypes"] = setting.AttachmentAllowedTypes
 
-	// var (
-	// 	repo = ctx.Repo.Repository
-	// 	err  error
-	// )
+	var (
+		repo = ctx.Repo.Repository
+		err  error
+	)
+	ctx.Data["Labels"], err = models.GetLabelsByRepoID(repo.ID)
+	if err != nil {
+		ctx.Handle(500, "GetLabelsByRepoID: %v", err)
+		return
+	}
+
 	// // Get all milestones.
 	// ctx.Data["OpenMilestones"], err = models.GetMilestones(repo.ID, -1, false)
 	// if err != nil {
@@ -403,7 +409,7 @@ func ViewIssue(ctx *middleware.Context) {
 		ctx.Handle(500, "GetLabels", err)
 		return
 	}
-	labels, err := models.GetLabels(ctx.Repo.Repository.ID)
+	labels, err := models.GetLabelsByRepoID(ctx.Repo.Repository.ID)
 	if err != nil {
 		ctx.Handle(500, "GetLabels.2", err)
 		return
@@ -560,10 +566,10 @@ func UpdateIssueLabel(ctx *middleware.Context) {
 
 	isAttach := ctx.Query("action") == "attach"
 	labelStrId := ctx.Query("id")
-	labelId := com.StrTo(labelStrId).MustInt64()
-	label, err := models.GetLabelById(labelId)
+	labelID := com.StrTo(labelStrId).MustInt64()
+	label, err := models.GetLabelByID(labelID)
 	if err != nil {
-		if err == models.ErrLabelNotExist {
+		if models.IsErrLabelNotExist(err) {
 			ctx.Handle(404, "issue.UpdateIssueLabel(GetLabelById)", err)
 		} else {
 			ctx.Handle(500, "issue.UpdateIssueLabel(GetLabelById)", err)
@@ -571,16 +577,21 @@ func UpdateIssueLabel(ctx *middleware.Context) {
 		return
 	}
 
-	isHad := strings.Contains(issue.LabelIDs, "$"+labelStrId+"|")
 	isNeedUpdate := false
 	if isAttach {
-		if !isHad {
-			issue.LabelIDs += "$" + labelStrId + "|"
+		if !issue.HasLabel(labelID) {
+			if err = issue.AddLabel(labelID); err != nil {
+				ctx.Handle(500, "AddLabel", err)
+				return
+			}
 			isNeedUpdate = true
 		}
 	} else {
-		if isHad {
-			issue.LabelIDs = strings.Replace(issue.LabelIDs, "$"+labelStrId+"|", "", -1)
+		if issue.HasLabel(labelID) {
+			if err = issue.RemoveLabel(labelID); err != nil {
+				ctx.Handle(500, "RemoveLabel", err)
+				return
+			}
 			isNeedUpdate = true
 		}
 	}
@@ -958,7 +969,7 @@ func NewLabel(ctx *middleware.Context, form auth.CreateLabelForm) {
 	}
 
 	l := &models.Label{
-		RepoId: ctx.Repo.Repository.ID,
+		RepoID: ctx.Repo.Repository.ID,
 		Name:   form.Title,
 		Color:  form.Color,
 	}
@@ -970,10 +981,10 @@ func NewLabel(ctx *middleware.Context, form auth.CreateLabelForm) {
 }
 
 func UpdateLabel(ctx *middleware.Context, form auth.CreateLabelForm) {
-	l, err := models.GetLabelById(form.ID)
+	l, err := models.GetLabelByID(form.ID)
 	if err != nil {
-		switch err {
-		case models.ErrLabelNotExist:
+		switch {
+		case models.IsErrLabelNotExist(err):
 			ctx.Error(404)
 		default:
 			ctx.Handle(500, "UpdateLabel", err)
