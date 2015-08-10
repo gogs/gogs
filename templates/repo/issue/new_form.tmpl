@@ -38,22 +38,26 @@
 	</div>
 
 	{{if .IsRepositoryAdmin}}
+	<input id="label_ids" name="label_ids" type="hidden" value="{{.label_ids}}">
 	<div class="four wide column">
 		<div class="ui segment metas">
-			<div class="ui {{if not .Labels}}disabled{{end}} dropdown jump item">
+			<div class="ui {{if not .Labels}}disabled{{end}} jump select-label dropdown">
 				<span class="text">
 					<strong>{{.i18n.Tr "repo.issues.new.labels"}}</strong>
 					<span class="octicon octicon-gear"></span>
 				</span>
-        <div class="filter menu">
-        	<a class="item" href="#">{{.i18n.Tr "repo.issues.new.clear_labels"}}</a>
+        <div class="filter menu" data-id="#label_ids">
+        	<a class="no-select item" href="#">{{.i18n.Tr "repo.issues.new.clear_labels"}}</a>
         	{{range .Labels}}
-        	<a class="item" href="#"><span class="octicon {{if .IsChecked}}octicon-check{{end}}"></span><span class="label color" style="background-color: {{.Color}}"></span> {{.Name}}</a>
+        	<a class="{{if .IsChecked}}checked{{end}} item" href="#" data-id="{{.ID}}" data-id-selector="#label_{{.ID}}"><span class="octicon {{if .IsChecked}}octicon-check{{end}}"></span><span class="label color" style="background-color: {{.Color}}"></span> {{.Name}}</a>
           {{end}}
 				</div>
 			</div>
-			<div class="ui list">
-				<span class="item {{if .SelectedLabels}}hide{{end}}">{{.i18n.Tr "repo.issues.new.no_label"}}</span>
+			<div class="ui labels list">
+				<span class="no-select item {{if .HasSelectedLabel}}hide{{end}}">{{.i18n.Tr "repo.issues.new.no_label"}}</span>
+      	{{range .Labels}}
+      	<a class="{{if not .IsChecked}}hide{{end}} item" id="label_{{.ID}}" href="{{$.RepoLink}}/issues?labels={{.ID}}"><span class="label color" style="background-color: {{.Color}}"></span> <span class="text">{{.Name}}</span></a>
+        {{end}}
 			</div>
 			<!-- <div class="ui divider"></div>
 			<div class="ui {{if .Labels}}disabled{{end}} dropdown jump item">

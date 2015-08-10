@@ -98,8 +98,8 @@ func (f *NewSlackHookForm) Validate(ctx *macaron.Context, errs binding.Errors) b
 //          \/     \/            \/
 
 type CreateIssueForm struct {
-	Title       string  `binding:"Required;MaxSize(255)"`
-	LabelIDs    []int64 `form:"label_id"`
+	Title       string `binding:"Required;MaxSize(255)"`
+	LabelIDs    string `form:"label_ids"`
 	MilestoneID int64
 	AssigneeID  int64
 	Content     string

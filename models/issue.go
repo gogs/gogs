@@ -144,8 +144,8 @@ func (i *Issue) AfterDelete() {
 	}
 }
 
-// CreateIssue creates new issue for repository.
-func NewIssue(issue *Issue) (err error) {
+// CreateIssue creates new issue with labels for repository.
+func NewIssue(issue *Issue, labelIDs []int64) (err error) {
 	sess := x.NewSession()
 	defer sessionRelease(sess)
 	if err = sess.Begin(); err != nil {
@@ -156,6 +156,12 @@ func NewIssue(issue *Issue) (err error) {
 		return err
 	} else if _, err = sess.Exec("UPDATE `repository` SET num_issues=num_issues+1 WHERE id=?", issue.RepoID); err != nil {
 		return err
+	}
+
+	for _, id := range labelIDs {
+		if err = issue.addLabel(sess, id); err != nil {
+			return fmt.Errorf("addLabel: %v", err)
+		}
 	}
 
 	if err = sess.Commit(); err != nil {
@@ -688,6 +694,10 @@ func HasIssueLabel(issueID, labelID int64) bool {
 }
 
 func newIssueLabel(e Engine, issueID, labelID int64) error {
+	if issueID == 0 || labelID == 0 {
+		return nil
+	}
+
 	_, err := e.Insert(&IssueLabel{
 		IssueID: issueID,
 		LabelID: labelID,

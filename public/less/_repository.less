@@ -29,6 +29,22 @@
 			font-weight: bold;
 		}
 	}
+	.metas .ui.list {
+		.label.color {
+			padding: 0 8px;
+			margin-right: 5px;
+		}
+		a {
+			padding-top: 5px;
+			padding-right: 10px;
+			.text {
+				color: #444;
+				&:hover {
+					color: #000;
+				}
+			}
+		}
+	}
 	.filter.menu {
 		.label.color {
 			margin-left: 15px;
@@ -91,6 +107,10 @@
 		.comment.form {
 			.metas {
 				min-width: 220px;
+				.filter.menu {
+					max-height: 300px;
+					overflow-x: auto;
+				}
 			}
 		}
 	}

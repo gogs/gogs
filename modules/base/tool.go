@@ -420,3 +420,21 @@ func Subtract(left interface{}, right interface{}) interface{} {
 		return fleft + float64(rleft) - (fright + float64(rright))
 	}
 }
+
+// StringsToInt64s converts a slice of string to a slice of int64.
+func StringsToInt64s(strs []string) []int64 {
+	ints := make([]int64, len(strs))
+	for i := range strs {
+		ints[i] = com.StrTo(strs[i]).MustInt64()
+	}
+	return ints
+}
+
+// Int64sToMap converts a slice of int64 to a int64 map.
+func Int64sToMap(ints []int64) map[int64]bool {
+	m := make(map[int64]bool)
+	for _, i := range ints {
+		m[i] = true
+	}
+	return m
+}
