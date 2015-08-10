@@ -190,19 +190,21 @@ func NewIssue(ctx *middleware.Context) {
 			ctx.Handle(500, "GetLabelsByRepoID: %v", err)
 			return
 		}
-	}
 
-	// // Get all milestones.
-	// ctx.Data["OpenMilestones"], err = models.GetMilestones(repo.ID, -1, false)
-	// if err != nil {
-	// 	ctx.Handle(500, "GetMilestones.1: %v", err)
-	// 	return
-	// }
-	// ctx.Data["ClosedMilestones"], err = models.GetMilestones(repo.ID, -1, true)
-	// if err != nil {
-	// 	ctx.Handle(500, "GetMilestones.2: %v", err)
-	// 	return
-	// }
+		ctx.Data["OpenMilestones"], err = models.GetMilestones(repo.ID, -1, false)
+		if err != nil {
+			ctx.Handle(500, "GetMilestones: %v", err)
+			return
+		}
+		ctx.Data["ClosedMilestones"], err = models.GetMilestones(repo.ID, -1, true)
+		if err != nil {
+			ctx.Handle(500, "GetMilestones: %v", err)
+			return
+		}
+
+		// ctx.Data["AssigneeID"] = 0
+		// ctx.Data["Assignees"], err = repo.GetCollaborators()
+	}
 
 	// us, err := repo.GetCollaborators()
 	// if err != nil {
@@ -222,8 +224,9 @@ func NewIssuePost(ctx *middleware.Context, form auth.CreateIssueForm) {
 	ctx.Data["AttachmentAllowedTypes"] = setting.AttachmentAllowedTypes
 
 	var (
-		repo     = ctx.Repo.Repository
-		labelIDs []int64
+		repo        = ctx.Repo.Repository
+		labelIDs    []int64
+		milestoneID int64
 	)
 	if ctx.User.IsAdmin {
 		// Check labels.
@@ -244,6 +247,25 @@ func NewIssuePost(ctx *middleware.Context, form auth.CreateIssueForm) {
 		ctx.Data["HasSelectedLabel"] = hasSelected
 		ctx.Data["label_ids"] = form.LabelIDs
 		ctx.Data["Labels"] = labels
+
+		// Check milestone.
+		milestoneID = form.MilestoneID
+		ctx.Data["OpenMilestones"], err = models.GetMilestones(repo.ID, -1, false)
+		if err != nil {
+			ctx.Handle(500, "GetMilestones: %v", err)
+			return
+		}
+		ctx.Data["ClosedMilestones"], err = models.GetMilestones(repo.ID, -1, true)
+		if err != nil {
+			ctx.Handle(500, "GetMilestones: %v", err)
+			return
+		}
+		ctx.Data["Milestone"], err = models.GetRepoMilestoneByID(repo.ID, milestoneID)
+		if err != nil {
+			ctx.Handle(500, "GetRepoMilestoneByID: %v", err)
+			return
+		}
+		ctx.Data["milestone_id"] = milestoneID
 	}
 
 	if ctx.HasError() {
@@ -252,11 +274,11 @@ func NewIssuePost(ctx *middleware.Context, form auth.CreateIssueForm) {
 	}
 
 	issue := &models.Issue{
-		RepoID:   ctx.Repo.Repository.ID,
-		Index:    int64(repo.NumIssues) + 1,
-		Name:     form.Title,
-		PosterID: ctx.User.Id,
-		// MilestoneID: form.MilestoneID,
+		RepoID:      ctx.Repo.Repository.ID,
+		Index:       int64(repo.NumIssues) + 1,
+		Name:        form.Title,
+		PosterID:    ctx.User.Id,
+		MilestoneID: milestoneID,
 		// AssigneeID:  form.AssigneeID,
 		Content: form.Content,
 	}
@@ -683,7 +705,7 @@ func UpdateIssueMilestone(ctx *middleware.Context) {
 
 	// Not check for invalid milestone id and give responsibility to owners.
 	issue.MilestoneID = mid
-	if err = models.ChangeMilestoneAssign(oldMid, mid, issue); err != nil {
+	if err = models.ChangeMilestoneAssign(oldMid, issue); err != nil {
 		ctx.Handle(500, "issue.UpdateIssueMilestone(ChangeMilestoneAssign)", err)
 		return
 	} else if err = models.UpdateIssue(issue); err != nil {
