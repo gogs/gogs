@@ -65,29 +65,42 @@ function initCommentForm() {
         $($(this).parent().data('id')).val('');
     });
 
-    var $milestone_menu = $('.select-milestone .menu');
-    var $milestone_list = $('.ui.select-milestone.list')
-    // Milestones
-    $milestone_menu.find('.item:not(.no-select)').click(function () {
-        $(this).parent().find('.item').each(function () {
-            $(this).removeClass('selected active')
-        });
+    function selectItem(select_id, input_id) {
+        var $menu = $(select_id + ' .menu');
+        var $list = $('.ui' + select_id + '.list')
+        $menu.find('.item:not(.no-select)').click(function () {
+            $(this).parent().find('.item').each(function () {
+                $(this).removeClass('selected active')
+            });
 
-        $(this).addClass('selected active');
-        $milestone_list.find('.selected').html('<a class="item" href=' + $(this).data('href') + '>' +
-            $(this).text() + '</a>');
-        $('.ui.select-milestone.list .no-select').addClass('hide');
-        $('#milestone_id').val($(this).data('id'));
-    });
-    $milestone_menu.find('.no-select.item').click(function () {
-        $(this).parent().find('.item:not(.no-select)').each(function () {
-            $(this).removeClass('selected active')
+            $(this).addClass('selected active');
+            switch (input_id) {
+                case '#milestone_id':
+                    $list.find('.selected').html('<a class="item" href=' + $(this).data('href') + '>' +
+                        $(this).text() + '</a>');
+                    break;
+                case '#assignee_id':
+                    $list.find('.selected').html('<a class="item" href=' + $(this).data('href') + '>' +
+                        '<img class="ui avatar image" src=' + $(this).data('avatar') + '>' +
+                        $(this).text() + '</a>');
+            }
+            $('.ui' + select_id + '.list .no-select').addClass('hide');
+            $(input_id).val($(this).data('id'));
         });
+        $menu.find('.no-select.item').click(function () {
+            $(this).parent().find('.item:not(.no-select)').each(function () {
+                $(this).removeClass('selected active')
+            });
 
-        $milestone_list.find('.selected').html('');
-        $milestone_list.find('.no-select').removeClass('hide');
-        $('#milestone_id').val('');
-    });
+            $list.find('.selected').html('');
+            $list.find('.no-select').removeClass('hide');
+            $(input_id).val('');
+        });
+    }
+
+    // Milestone and assignee
+    selectItem('.select-milestone', '#milestone_id');
+    selectItem('.select-assignee', '#assignee_id');
 }
 
 function initInstall() {

@@ -12,7 +12,7 @@
 		            <li><a href="{{AppSubUrl}}/issues?type=created_by&repoid={{.RepoId}}&state={{.State}}" class="radius{{if eq .ViewType "created_by"}} active{{end}}">Created by you <strong class="pull-right">{{.IssueStats.CreateCount}}</strong></a></li>
 		            <li><hr/></li>
 		            {{range .Repos}}
-		            <li><a href="{{AppSubUrl}}/issues?type={{$.ViewType}}{{if eq $.RepoId .Id}}{{else}}&repoid={{.Id}}{{end}}&state={{$.State}}" class="radius{{if eq $.RepoId .Id}} active{{end}}">{{$.SignedUser.Name}}/{{.Name}} <strong class="pull-right">{{if $.IsShowClosed}}{{.NumClosedIssues}}{{else}}{{.NumOpenIssues}}{{end}}</strong></a></li>
+		            <li><a href="{{AppSubUrl}}/issues?type={{$.ViewType}}{{if eq $.RepoId .ID}}{{else}}&repoid={{.ID}}{{end}}&state={{$.State}}" class="radius{{if eq $.RepoId .ID}} active{{end}}">{{$.SignedUser.Name}}/{{.Name}} <strong class="pull-right">{{if $.IsShowClosed}}{{.NumClosedIssues}}{{else}}{{.NumOpenIssues}}{{end}}</strong></a></li>
 		            {{end}}
 		        </ul>
 		    </div>

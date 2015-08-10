@@ -339,13 +339,13 @@ func Issues(ctx *middleware.Context) {
 
 	issues := make([]*models.Issue, len(ius))
 	for i := range ius {
-		issues[i], err = models.GetIssueById(ius[i].IssueId)
+		issues[i], err = models.GetIssueById(ius[i].IssueID)
 		if err != nil {
 			if err == models.ErrIssueNotExist {
-				log.Warn("user.Issues(GetIssueById #%d): issue not exist", ius[i].IssueId)
+				log.Warn("user.Issues(GetIssueById #%d): issue not exist", ius[i].IssueID)
 				continue
 			} else {
-				ctx.Handle(500, fmt.Sprintf("user.Issues(GetIssueById #%d)", ius[i].IssueId), err)
+				ctx.Handle(500, fmt.Sprintf("user.Issues(GetIssueById #%d)", ius[i].IssueID), err)
 				return
 			}
 		}
