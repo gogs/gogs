@@ -58,6 +58,7 @@ var migrations = []Migration{
 	NewMigration("generate team-repo from team", teamToTeamRepo),                 // V3 -> V4:v0.5.13
 	NewMigration("fix locale file load panic", fixLocaleFileLoadPanic),           // V4 -> V5:v0.6.0
 	NewMigration("trim action compare URL prefix", trimCommitActionAppUrlPrefix), // V5 -> V6:v0.6.3
+	NewMigration("generate issue-label from issue", issueToIssueLabel),           // V6 -> V7:v0.6.4
 }
 
 // Migrate database to current version
@@ -130,6 +131,9 @@ func accessToCollaboration(x *xorm.Engine) (err error) {
 
 	results, err := x.Query("SELECT u.id AS `uid`, a.repo_name AS `repo`, a.mode AS `mode`, a.created as `created` FROM `access` a JOIN `user` u ON a.user_name=u.lower_name")
 	if err != nil {
+		if strings.Contains(err.Error(), "no such column") {
+			return nil
+		}
 		return err
 	}
 
@@ -278,6 +282,9 @@ func accessRefactor(x *xorm.Engine) (err error) {
 
 		results, err = x.Query("SELECT `id`,`authorize`,`repo_ids` FROM `team` WHERE org_id=? AND authorize>? ORDER BY `authorize` ASC", ownerID, int(minAccessLevel))
 		if err != nil {
+			if strings.Contains(err.Error(), "no such column") {
+				return nil
+			}
 			return fmt.Errorf("select teams from org: %v", err)
 		}
 
@@ -339,6 +346,9 @@ func teamToTeamRepo(x *xorm.Engine) error {
 
 	results, err := x.Query("SELECT `id`,`org_id`,`repo_ids` FROM `team`")
 	if err != nil {
+		if strings.Contains(err.Error(), "no such column") {
+			return nil
+		}
 		return fmt.Errorf("select teams: %v", err)
 	}
 	for _, team := range results {
@@ -369,7 +379,7 @@ func teamToTeamRepo(x *xorm.Engine) error {
 	}
 
 	if err = sess.Sync2(new(TeamRepo)); err != nil {
-		return fmt.Errorf("sync: %v", err)
+		return fmt.Errorf("sync2: %v", err)
 	} else if _, err = sess.Insert(teamRepos); err != nil {
 		return fmt.Errorf("insert team-repos: %v", err)
 	}
@@ -451,5 +461,54 @@ func trimCommitActionAppUrlPrefix(x *xorm.Engine) error {
 			return fmt.Errorf("update action[%s]: %v", actID, err)
 		}
 	}
+	return sess.Commit()
+}
+
+func issueToIssueLabel(x *xorm.Engine) error {
+	type IssueLabel struct {
+		ID      int64 `xorm:"pk autoincr"`
+		IssueID int64 `xorm:"UNIQUE(s)"`
+		LabelID int64 `xorm:"UNIQUE(s)"`
+	}
+
+	issueLabels := make([]*IssueLabel, 0, 50)
+	results, err := x.Query("SELECT `id`,`label_ids` FROM `issue`")
+	if err != nil {
+		if strings.Contains(err.Error(), "no such column") {
+			return nil
+		}
+		return fmt.Errorf("select issues: %v", err)
+	}
+	for _, issue := range results {
+		issueID := com.StrTo(issue["id"]).MustInt64()
+
+		// Just in case legacy code can have duplicated IDs for same label.
+		mark := make(map[int64]bool)
+		for _, idStr := range strings.Split(string(issue["label_ids"]), "|") {
+			labelID := com.StrTo(strings.TrimPrefix(idStr, "$")).MustInt64()
+			if labelID == 0 || mark[labelID] {
+				continue
+			}
+
+			mark[labelID] = true
+			issueLabels = append(issueLabels, &IssueLabel{
+				IssueID: issueID,
+				LabelID: labelID,
+			})
+		}
+	}
+
+	sess := x.NewSession()
+	defer sessionRelease(sess)
+	if err = sess.Begin(); err != nil {
+		return err
+	}
+
+	if err = sess.Sync2(new(IssueLabel)); err != nil {
+		return fmt.Errorf("sync2: %v", err)
+	} else if _, err = sess.Insert(issueLabels); err != nil {
+		return fmt.Errorf("insert issue-labels: %v", err)
+	}
+
 	return sess.Commit()
 }

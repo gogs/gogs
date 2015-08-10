@@ -239,6 +239,26 @@ func (err ErrRepoAlreadyExist) Error() string {
 	return fmt.Sprintf("repository already exists [uname: %d, name: %s]", err.Uname, err.Name)
 }
 
+// .____          ___.          .__
+// |    |   _____ \_ |__   ____ |  |
+// |    |   \__  \ | __ \_/ __ \|  |
+// |    |___ / __ \| \_\ \  ___/|  |__
+// |_______ (____  /___  /\___  >____/
+//         \/    \/    \/     \/
+
+type ErrLabelNotExist struct {
+	ID int64
+}
+
+func IsErrLabelNotExist(err error) bool {
+	_, ok := err.(ErrLabelNotExist)
+	return ok
+}
+
+func (err ErrLabelNotExist) Error() string {
+	return fmt.Sprintf("label does not exist [id: %d]", err.ID)
+}
+
 //    _____  .__.__                   __
 //   /     \ |__|  |   ____   _______/  |_  ____   ____   ____
 //  /  \ /  \|  |  | _/ __ \ /  ___/\   __\/  _ \ /    \_/ __ \
