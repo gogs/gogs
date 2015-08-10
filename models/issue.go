@@ -164,16 +164,13 @@ func NewIssue(issue *Issue, labelIDs []int64) (err error) {
 		}
 	}
 
-	if err = sess.Commit(); err != nil {
-		return err
-	}
-
 	if issue.MilestoneID > 0 {
-		// FIXES(280): Update milestone counter.
-		return ChangeMilestoneAssign(0, issue.MilestoneID, issue)
+		if err = changeMilestoneAssign(sess, 0, issue); err != nil {
+			return err
+		}
 	}
 
-	return
+	return sess.Commit()
 }
 
 // GetIssueByRef returns an Issue specified by a GFM reference.
@@ -497,15 +494,14 @@ func GetUserIssueStats(uid int64, filterMode int) *IssueStats {
 	return stats
 }
 
+func updateIssue(e Engine, issue *Issue) error {
+	_, err := e.Id(issue.ID).AllCols().Update(issue)
+	return err
+}
+
 // UpdateIssue updates information of issue.
 func UpdateIssue(issue *Issue) error {
-	_, err := x.Id(issue.ID).AllCols().Update(issue)
-
-	if err != nil {
-		return err
-	}
-
-	return err
+	return updateIssue(x, issue)
 }
 
 // UpdateIssueUserByStatus updates issue-user pairs by issue status.
@@ -712,7 +708,7 @@ func NewIssueLabel(issueID, labelID int64) error {
 
 func getIssueLabels(e Engine, issueID int64) ([]*IssueLabel, error) {
 	issueLabels := make([]*IssueLabel, 0, 10)
-	return issueLabels, e.Where("issue_id=?", issueID).Find(&issueLabels)
+	return issueLabels, e.Where("issue_id=?", issueID).Asc("label_id").Find(&issueLabels)
 }
 
 // GetIssueLabels returns all issue-label relations of given issue by ID.
@@ -802,14 +798,30 @@ func NewMilestone(m *Milestone) (err error) {
 	return sess.Commit()
 }
 
-// GetMilestoneByID returns the milestone of given ID.
-func GetMilestoneByID(id int64) (*Milestone, error) {
+func getMilestoneByID(e Engine, id int64) (*Milestone, error) {
 	m := &Milestone{ID: id}
 	has, err := x.Get(m)
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, ErrMilestoneNotExist{id}
+		return nil, ErrMilestoneNotExist{id, 0}
+	}
+	return m, nil
+}
+
+// GetMilestoneByID returns the milestone of given ID.
+func GetMilestoneByID(id int64) (*Milestone, error) {
+	return getMilestoneByID(x, id)
+}
+
+// GetRepoMilestoneByID returns the milestone of given ID and repository.
+func GetRepoMilestoneByID(repoID, milestoneID int64) (*Milestone, error) {
+	m := &Milestone{ID: milestoneID, RepoID: repoID}
+	has, err := x.Get(m)
+	if err != nil {
+		return nil, err
+	} else if !has {
+		return nil, ErrMilestoneNotExist{milestoneID, repoID}
 	}
 	return m, nil
 }
@@ -915,16 +927,9 @@ func ChangeMilestoneIssueStats(issue *Issue) error {
 	return UpdateMilestone(m)
 }
 
-// ChangeMilestoneAssign changes assignment of milestone for issue.
-func ChangeMilestoneAssign(oldMid, mid int64, issue *Issue) (err error) {
-	sess := x.NewSession()
-	defer sess.Close()
-	if err = sess.Begin(); err != nil {
-		return err
-	}
-
+func changeMilestoneAssign(e *xorm.Session, oldMid int64, issue *Issue) error {
 	if oldMid > 0 {
-		m, err := GetMilestoneByID(oldMid)
+		m, err := getMilestoneByID(e, oldMid)
 		if err != nil {
 			return err
 		}
@@ -934,20 +939,15 @@ func ChangeMilestoneAssign(oldMid, mid int64, issue *Issue) (err error) {
 			m.NumClosedIssues--
 		}
 
-		if _, err = sess.Id(m.ID).AllCols().Update(m); err != nil {
-			sess.Rollback()
+		if err = updateMilestone(e, m); err != nil {
 			return err
-		}
-
-		rawSql := "UPDATE `issue_user` SET milestone_id = 0 WHERE issue_id = ?"
-		if _, err = sess.Exec(rawSql, issue.ID); err != nil {
-			sess.Rollback()
+		} else if _, err = e.Exec("UPDATE `issue_user` SET milestone_id=0 WHERE issue_id=?", issue.ID); err != nil {
 			return err
 		}
 	}
 
-	if mid > 0 {
-		m, err := GetMilestoneByID(mid)
+	if issue.MilestoneID > 0 {
+		m, err := GetMilestoneByID(issue.MilestoneID)
 		if err != nil {
 			return err
 		}
@@ -961,16 +961,26 @@ func ChangeMilestoneAssign(oldMid, mid int64, issue *Issue) (err error) {
 			return ErrWrongIssueCounter
 		}
 
-		if _, err = sess.Id(m.ID).AllCols().Update(m); err != nil {
-			sess.Rollback()
+		if err = updateMilestone(e, m); err != nil {
+			return err
+		} else if _, err = e.Exec("UPDATE `issue_user` SET milestone_id=? WHERE issue_id=?", m.ID, issue.ID); err != nil {
 			return err
 		}
+	}
 
-		rawSql := "UPDATE `issue_user` SET milestone_id = ? WHERE issue_id = ?"
-		if _, err = sess.Exec(rawSql, m.ID, issue.ID); err != nil {
-			sess.Rollback()
-			return err
-		}
+	return nil
+}
+
+// ChangeMilestoneAssign changes assignment of milestone for issue.
+func ChangeMilestoneAssign(oldMid int64, issue *Issue) (err error) {
+	sess := x.NewSession()
+	defer sess.Close()
+	if err = sess.Begin(); err != nil {
+		return err
+	}
+
+	if err = changeMilestoneAssign(sess, oldMid, issue); err != nil {
+		return err
 	}
 
 	return sess.Commit()

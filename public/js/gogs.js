@@ -2,6 +2,94 @@
 
 var csrf;
 
+function initCommentForm() {
+    if ($('.comment.form').length == 0) {
+        return
+    }
+
+    var $form = $('.comment.form');
+    $form.find('.tabular.menu .item').tab();
+    $form.find('.tabular.menu .item[data-tab="preview"]').click(function () {
+        var $this = $(this);
+        $.post($this.data('url'), {
+                "_csrf": csrf,
+                "mode": "gfm",
+                "context": $this.data('context'),
+                "text": $form.find('.tab.segment[data-tab="write"] textarea').val()
+            },
+            function (data) {
+                $form.find('.tab.segment[data-tab="preview"]').html(data);
+            }
+        );
+    });
+
+    // Labels
+    var $list = $('.ui.labels.list');
+    var $no_select = $list.find('.no-select');
+    $('.select-label .menu .item:not(.no-select)').click(function () {
+        if ($(this).hasClass('checked')) {
+            $(this).removeClass('checked')
+            $(this).find('.octicon').removeClass('octicon-check')
+        } else {
+            $(this).addClass('checked')
+            $(this).find('.octicon').addClass('octicon-check')
+        }
+
+        var label_ids = "";
+        $(this).parent().find('.item').each(function () {
+            if ($(this).hasClass('checked')) {
+                label_ids += $(this).data('id') + ",";
+                $($(this).data('id-selector')).removeClass('hide');
+            } else {
+                $($(this).data('id-selector')).addClass('hide');
+            }
+        });
+        if (label_ids.length == 0) {
+            $no_select.removeClass('hide');
+        } else {
+            $no_select.addClass('hide');
+        }
+        $($(this).parent().data('id')).val(label_ids);
+        return false;
+    });
+    $('.select-label .menu .no-select.item').click(function () {
+        $(this).parent().find('.item').each(function () {
+            $(this).removeClass('checked');
+            $(this).find('.octicon').removeClass('octicon-check');
+        });
+
+        $list.find('.item').each(function () {
+            $(this).addClass('hide');
+        });
+        $no_select.removeClass('hide');
+        $($(this).parent().data('id')).val('');
+    });
+
+    var $milestone_menu = $('.select-milestone .menu');
+    var $milestone_list = $('.ui.select-milestone.list')
+    // Milestones
+    $milestone_menu.find('.item:not(.no-select)').click(function () {
+        $(this).parent().find('.item').each(function () {
+            $(this).removeClass('selected active')
+        });
+
+        $(this).addClass('selected active');
+        $milestone_list.find('.selected').html('<a class="item" href=' + $(this).data('href') + '>' +
+            $(this).text() + '</a>');
+        $('.ui.select-milestone.list .no-select').addClass('hide');
+        $('#milestone_id').val($(this).data('id'));
+    });
+    $milestone_menu.find('.no-select.item').click(function () {
+        $(this).parent().find('.item:not(.no-select)').each(function () {
+            $(this).removeClass('selected active')
+        });
+
+        $milestone_list.find('.selected').html('');
+        $milestone_list.find('.no-select').removeClass('hide');
+        $('#milestone_id').val('');
+    });
+}
+
 function initInstall() {
     if ($('.install').length == 0) {
         return;
@@ -133,66 +221,6 @@ $(document).ready(function () {
     });
     $('.poping.up').popup();
 
-    // Comment form
-    if ($('.comment.form').length > 0) {
-        var $form = $(this);
-        $form.find('.tabular.menu .item').tab();
-        $form.find('.tabular.menu .item[data-tab="preview"]').click(function () {
-            var $this = $(this);
-            $.post($this.data('url'), {
-                    "_csrf": csrf,
-                    "mode": "gfm",
-                    "context": $this.data('context'),
-                    "text": $form.find('.tab.segment[data-tab="write"] textarea').val()
-                },
-                function (data) {
-                    $form.find('.tab.segment[data-tab="preview"]').html(data);
-                }
-            );
-        });
-
-        // Labels
-        var $list = $('.ui.labels.list');
-        var $no_select = $list.find('.no-select');
-        $('.select-label .item:not(.no-select)').click(function () {
-            if ($(this).hasClass('checked')) {
-                $(this).removeClass('checked')
-                $(this).find('.octicon').removeClass('octicon-check')
-            } else {
-                $(this).addClass('checked')
-                $(this).find('.octicon').addClass('octicon-check')
-            }
-
-            var label_ids = "";
-            $(this).parent().find('.item').each(function () {
-                if ($(this).hasClass('checked')) {
-                    label_ids += $(this).data('id') + ",";
-                    $($(this).data('id-selector')).removeClass('hide');
-                } else {
-                    $($(this).data('id-selector')).addClass('hide');
-                }
-            });
-            if (label_ids.length == 0) {
-                $no_select.removeClass('hide');
-            } else {
-                $no_select.addClass('hide');
-            }
-            $($(this).parent().data('id')).val(label_ids);
-            return false;
-        });
-        $('.select-label .no-select.item').click(function () {
-            $(this).parent().find('.item').each(function () {
-                $(this).removeClass('checked');
-                $(this).find('.octicon').removeClass('octicon-check');
-            });
-
-            $list.find('.item').each(function () {
-                $(this).addClass('hide');
-            });
-            $no_select.removeClass('hide');
-            $($(this).parent().data('id')).val('');
-        });
-    }
 
     // Helpers.
     $('.delete-button').click(function () {
@@ -211,6 +239,7 @@ $(document).ready(function () {
         return false;
     });
 
+    initCommentForm();
     initInstall();
     initRepository();
 });
