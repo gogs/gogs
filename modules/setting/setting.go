@@ -15,10 +15,11 @@ import (
 	"strings"
 	"time"
 
+	"gopkg.in/ini.v1"
+
 	"github.com/Unknwon/com"
 	"github.com/macaron-contrib/oauth2"
 	"github.com/macaron-contrib/session"
-	"gopkg.in/ini.v1"
 
 	"github.com/gogits/gogs/modules/bindata"
 	"github.com/gogits/gogs/modules/log"
@@ -345,11 +346,13 @@ func NewConfigContext() {
 	if !filepath.IsAbs(AvatarUploadPath) {
 		AvatarUploadPath = path.Join(workDir, AvatarUploadPath)
 	}
-	switch sec.Key("GRAVATAR_SOURCE").MustString("gravatar") {
+	switch source := sec.Key("GRAVATAR_SOURCE").MustString("gravatar"); source {
 	case "duoshuo":
 		GravatarSource = "http://gravatar.duoshuo.com/avatar/"
-	default:
+	case "gravatar":
 		GravatarSource = "//1.gravatar.com/avatar/"
+	default:
+		GravatarSource = source
 	}
 	DisableGravatar = sec.Key("DISABLE_GRAVATAR").MustBool()
 	if OfflineMode {

@@ -97,6 +97,9 @@ func Migrate(x *xorm.Engine) error {
 	}
 
 	v := currentVersion.Version
+	if int(v) > len(migrations) {
+		return nil
+	}
 	for i, m := range migrations[v-_MIN_DB_VER:] {
 		log.Info("Migration: %s", m.Description())
 		if err = m.Migrate(x); err != nil {
