@@ -114,14 +114,14 @@ func Issues(ctx *middleware.Context) {
 	issues, err := models.Issues(uid, assigneeID, repo.ID, posterID, milestoneID,
 		page, isShowClosed, filterMode == models.FM_MENTION, selectLabels, ctx.Query("sortType"))
 	if err != nil {
-		ctx.Handle(500, "GetIssues: %v", err)
+		ctx.Handle(500, "Issues: %v", err)
 		return
 	}
 
-	// Get issue-user pairs.
-	pairs, err := models.GetIssueUserPairs(repo.ID, posterID, isShowClosed)
+	// Get issue-user relations.
+	pairs, err := models.GetIssueUsers(repo.ID, posterID, isShowClosed)
 	if err != nil {
-		ctx.Handle(500, "GetIssueUserPairs: %v", err)
+		ctx.Handle(500, "GetIssueUsers: %v", err)
 		return
 	}
 
