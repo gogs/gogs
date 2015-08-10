@@ -16,7 +16,6 @@ img {
 	z-index: 900;
 	left: 0;
 	width: 100%;
-	padding: 5px 0;
 	&.light {
 		background-color: white;
 		border-bottom: 1px solid #DDDDDD;
@@ -25,10 +24,19 @@ img {
 	.column .menu {
 		margin-top: 0;
 	}
-	.brand {
-		float: left;
-		margin-top: 5px;
-		margin-right: 5px;
+	.top.menu a.item.brand {
+		padding-left: 0;
+	}
+	.brand .ui.mini.image {
+		width: 30px;
+	}
+	.top.menu a.item:hover,
+	.top.menu .dropdown.item:hover,
+	.top.menu .dropdown.item.active	{
+		background-color: transparent;
+	}
+	.top.menu a.item:hover {
+		color: rgba(0,0,0,.45);
 	}
 	.head.link.item {
 		padding-right: 0!important;
@@ -37,8 +45,8 @@ img {
 			margin-right: 5px;
 		}
 	}
-	.user.avatar {
-		padding: 0;
+	.avatar > .ui.image {
+		margin-right: 0;
 	}
 	.searchbox {
   	background-color: rgb(244, 244, 244)!important;
@@ -115,6 +123,10 @@ footer {
     height: (2px * @i)!important;
   }
   .generate-img(@n, (@i + 1));
+}
+
+.octicon.icon {
+	font-family: octicons;
 }
 
 // Accessibility
