@@ -29,18 +29,27 @@
 			font-weight: bold;
 		}
 	}
-	.metas .ui.list {
-		.label.color {
-			padding: 0 8px;
-			margin-right: 5px;
+	.metas {
+		.menu {
+			max-height: 300px;
+	    overflow-x: auto;
 		}
-		a {
-			padding-top: 5px;
-			padding-right: 10px;
-			.text {
-				color: #444;
-				&:hover {
-					color: #000;
+		.ui.list {
+			.hide {
+				display: none!important;
+			}
+			.label.color {
+				padding: 0 8px;
+				margin-right: 5px;
+			}
+			a {
+				padding-top: 5px;
+				padding-right: 10px;
+				.text {
+					color: #444;
+					&:hover {
+						color: #000;
+					}
 				}
 			}
 		}
