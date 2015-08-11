@@ -27,6 +27,9 @@
 			         {{.i18n.Tr "repo.release.loading"}}
 			      </div>
 		      </div>
+		      {{if .IsAttachmentEnabled}}
+		      <div class="ui basic button dropzone" id="dropzone" data-upload-url="/attachments" data-accepts="{{.AttachmentAllowedTypes}}" data-max-size="1" data-default-message="{{.i18n.Tr "dropzone.default_message"}}" data-invalid-input-type="{{.i18n.Tr "dropzone.invalid_input_type"}}" data-file-too-big="{{.i18n.Tr "dropzone.file_too_big"}}" data-remove-file="{{.i18n.Tr "dropzone.remove_file"}}"></div>
+		      {{end}}
 		      <div class="text right">
 						<button class="ui green button">
 							{{.i18n.Tr "repo.issues.create"}}

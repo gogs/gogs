@@ -325,7 +325,10 @@ func runWeb(ctx *cli.Context) {
 		})
 	}, adminReq)
 
-	m.Get("/:username", ignSignIn, user.Profile)
+	m.Group("", func() {
+		m.Get("/:username", user.Profile)
+		m.Post("/attachments", repo.UploadAttachment)
+	}, ignSignIn)
 
 	if macaron.Env == macaron.DEV {
 		m.Get("/template/*", dev.TemplatePreview)
