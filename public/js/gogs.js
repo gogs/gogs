@@ -223,7 +223,7 @@ $(document).ready(function () {
     $('.dropdown').dropdown();
     $('.jump.dropdown').dropdown({
         action: 'hide',
-        onShow: function() {
+        onShow: function () {
             $('.poping.up').popup('hide');
         }
     });
@@ -237,8 +237,8 @@ $(document).ready(function () {
     });
     $('.poping.up').popup();
     $('.top.menu .poping.up').popup({
-        onShow: function() {
-            if ( $('.top.menu .menu.transition').hasClass('visible') ) {
+        onShow: function () {
+            if ($('.top.menu .menu.transition').hasClass('visible')) {
                 return false;
             }
         }

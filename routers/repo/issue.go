@@ -11,6 +11,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 	"time"
 
@@ -724,6 +725,7 @@ func uploadFiles(ctx *middleware.Context, issueId, commentId int64) {
 			return
 		}
 
+		os.MkdirAll(setting.AttachmentPath, os.ModePerm)
 		out, err := ioutil.TempFile(setting.AttachmentPath, "attachment_")
 
 		if err != nil {
