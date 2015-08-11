@@ -103,6 +103,7 @@ type CreateIssueForm struct {
 	MilestoneID int64
 	AssigneeID  int64
 	Content     string
+	Attachments []string
 }
 
 func (f *CreateIssueForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {

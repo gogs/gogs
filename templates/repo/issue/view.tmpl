@@ -53,7 +53,7 @@
                             <span class="attachment-label label label-info">Attachments:</span>
 
                             {{range $attachments}}
-                            <a class="attachment label label-default" href="{{.IssueId}}/attachment/{{.Id}}">{{.Name}}</a>
+                            <a class="attachment label label-default" href="/attachments/{{.UUID}}">{{.Name}}</a>
                             {{end}}
                         </div>
                         {{end}}
@@ -145,17 +145,17 @@
                                 </div>
                             </div>
                             {{if .AttachmentsEnabled}}
-                            <div id="attached">
+                            <!-- <div id="attached">
                                 <div id="attached-list">
                                     <b>Attachments:</b>
                                 </div>
-                            </div>
+                            </div> -->
                             {{end}}
                             <div class="text-right">
                                 <div class="form-group">
                                     {{if .AttachmentsEnabled}}
-                                    <input type="file" accept="{{.AllowedTypes}}" style="display: none;" id="attachments-input" name="attachments" multiple />
-                                    <button class="btn-default btn attachment-add" id="attachments-button">Select Attachments...</button>
+                                    <!-- <input type="file" accept="{{.AllowedTypes}}" style="display: none;" id="attachments-input" name="attachments" multiple />
+                                    <button class="btn-default btn attachment-add" id="attachments-button">Select Attachments...</button> -->
                                     {{end}}
                                     {{if .IsIssueOwner}}{{if .Issue.IsClosed}}
                                     <input type="submit" class="btn-default btn issue-open" id="issue-open-btn" data-origin="Reopen" data-text="Reopen & Comment" name="change_status" value="Reopen"/>{{else}}
