@@ -285,9 +285,9 @@ func NewConfigContext() {
 	if !filepath.IsAbs(AttachmentPath) {
 		AttachmentPath = path.Join(workDir, AttachmentPath)
 	}
-	AttachmentAllowedTypes = sec.Key("ALLOWED_TYPES").MustString("image/jpeg|image/png")
+	AttachmentAllowedTypes = strings.Replace(sec.Key("ALLOWED_TYPES").MustString("image/jpeg,image/png"), "|", ",", -1)
 	AttachmentMaxSize = sec.Key("MAX_SIZE").MustInt64(32)
-	AttachmentMaxFiles = sec.Key("MAX_FILES").MustInt(10)
+	AttachmentMaxFiles = sec.Key("MAX_FILES").MustInt(5)
 	AttachmentEnabled = sec.Key("ENABLE").MustBool(true)
 
 	TimeFormat = map[string]string{

@@ -5,8 +5,12 @@
 package migrations
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"os"
+	"path"
 	"strings"
 	"time"
 
@@ -16,6 +20,7 @@ import (
 
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/setting"
+	gouuid "github.com/gogits/gogs/modules/uuid"
 )
 
 const _MIN_DB_VER = 0
@@ -59,6 +64,7 @@ var migrations = []Migration{
 	NewMigration("fix locale file load panic", fixLocaleFileLoadPanic),           // V4 -> V5:v0.6.0
 	NewMigration("trim action compare URL prefix", trimCommitActionAppUrlPrefix), // V5 -> V6:v0.6.3
 	NewMigration("generate issue-label from issue", issueToIssueLabel),           // V6 -> V7:v0.6.4
+	NewMigration("refactor attachment table", attachmentRefactor),                // V7 -> V8:v0.6.4
 }
 
 // Migrate database to current version
@@ -97,8 +103,11 @@ func Migrate(x *xorm.Engine) error {
 	}
 
 	v := currentVersion.Version
-	if int(v) > len(migrations) {
-		return nil
+	if int(v-_MIN_DB_VER) > len(migrations) {
+		// User downgraded Gogs.
+		currentVersion.Version = int64(len(migrations) + _MIN_DB_VER)
+		_, err = x.Id(1).Update(currentVersion)
+		return err
 	}
 	for i, m := range migrations[v-_MIN_DB_VER:] {
 		log.Info("Migration: %s", m.Description())
@@ -511,6 +520,88 @@ func issueToIssueLabel(x *xorm.Engine) error {
 		return fmt.Errorf("sync2: %v", err)
 	} else if _, err = sess.Insert(issueLabels); err != nil {
 		return fmt.Errorf("insert issue-labels: %v", err)
+	}
+
+	return sess.Commit()
+}
+
+func attachmentRefactor(x *xorm.Engine) error {
+	type Attachment struct {
+		ID   int64  `xorm:"pk autoincr"`
+		UUID string `xorm:"uuid INDEX"`
+
+		// For rename purpose.
+		Path    string `xorm:"-"`
+		NewPath string `xorm:"-"`
+	}
+
+	results, err := x.Query("SELECT * FROM `attachment`")
+	if err != nil {
+		return fmt.Errorf("select attachments: %v", err)
+	}
+
+	attachments := make([]*Attachment, 0, len(results))
+	for _, attach := range results {
+		if !com.IsExist(string(attach["path"])) {
+			// If the attachment is already missing, there is no point to update it.
+			continue
+		}
+		attachments = append(attachments, &Attachment{
+			ID:   com.StrTo(attach["id"]).MustInt64(),
+			UUID: gouuid.NewV4().String(),
+			Path: string(attach["path"]),
+		})
+	}
+
+	sess := x.NewSession()
+	defer sessionRelease(sess)
+	if err = sess.Begin(); err != nil {
+		return err
+	}
+
+	if err = sess.Sync2(new(Attachment)); err != nil {
+		return fmt.Errorf("Sync2: %v", err)
+	}
+
+	// Note: Roll back for rename can be a dead loop,
+	// 	so produces a backup file.
+	var buf bytes.Buffer
+	buf.WriteString("# old path -> new path\n")
+
+	// Update database first because this is where error happens the most often.
+	for _, attach := range attachments {
+		if _, err = sess.Id(attach.ID).Update(attach); err != nil {
+			return err
+		}
+
+		attach.NewPath = path.Join(setting.AttachmentPath, attach.UUID[0:1], attach.UUID[1:2], attach.UUID)
+		buf.WriteString(attach.Path)
+		buf.WriteString("\t")
+		buf.WriteString(attach.NewPath)
+		buf.WriteString("\n")
+	}
+
+	// Then rename attachments.
+	isSucceed := true
+	defer func() {
+		if isSucceed {
+			return
+		}
+
+		dumpPath := path.Join(setting.LogRootPath, "attachment_path.dump")
+		ioutil.WriteFile(dumpPath, buf.Bytes(), 0666)
+		fmt.Println("Fail to rename some attachments, old and new paths are saved into:", dumpPath)
+	}()
+	for _, attach := range attachments {
+		if err = os.MkdirAll(path.Dir(attach.NewPath), os.ModePerm); err != nil {
+			isSucceed = false
+			return err
+		}
+
+		if err = os.Rename(attach.Path, attach.NewPath); err != nil {
+			isSucceed = false
+			return err
+		}
 	}
 
 	return sess.Commit()

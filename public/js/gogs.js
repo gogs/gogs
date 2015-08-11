@@ -254,7 +254,7 @@ $(document).ready(function () {
         $dropz.dropzone({
             url: $dropz.data('upload-url'),
             headers: {"X-Csrf-Token": csrf},
-            maxFiles: 5,
+            maxFiles: $dropz.data('max-file'),
             maxFilesize: $dropz.data('max-size'),
             acceptedFiles: $dropz.data('accepts'),
             addRemoveLinks: true,
@@ -265,10 +265,12 @@ $(document).ready(function () {
             init: function () {
                 this.on("success", function (file, data) {
                     filenameDict[file.name] = data.uuid;
-                    console.log(data)
+                    $('.attachments').append('<input id="' + data.uuid + '" name="attachments" type="hidden" value="' + data.uuid + '">');
                 })
                 this.on("removedfile", function (file) {
-                    console.log(filenameDict[file.name]);
+                    if (file.name in filenameDict) {
+                        $('#' + filenameDict[file.name]).remove();
+                    }
                 })
             }
         });

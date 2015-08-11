@@ -9,7 +9,10 @@ import (
 	"errors"
 	"fmt"
 	"html/template"
+	"io"
+	"mime/multipart"
 	"os"
+	"path"
 	"strconv"
 	"strings"
 	"time"
@@ -20,12 +23,12 @@ import (
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/setting"
+	gouuid "github.com/gogits/gogs/modules/uuid"
 )
 
 var (
 	ErrIssueNotExist       = errors.New("Issue does not exist")
 	ErrWrongIssueCounter   = errors.New("Invalid number of issues for this milestone")
-	ErrAttachmentNotExist  = errors.New("Attachment does not exist")
 	ErrAttachmentNotLinked = errors.New("Attachment does not belong to this issue")
 	ErrMissingIssueNumber  = errors.New("No issue number specified")
 )
@@ -159,7 +162,20 @@ func (i *Issue) AfterDelete() {
 }
 
 // CreateIssue creates new issue with labels for repository.
-func NewIssue(repo *Repository, issue *Issue, labelIDs []int64) (err error) {
+func NewIssue(repo *Repository, issue *Issue, labelIDs []int64, uuids []string) (err error) {
+	// Check attachments.
+	attachments := make([]*Attachment, 0, len(uuids))
+	for _, uuid := range uuids {
+		attach, err := GetAttachmentByUUID(uuid)
+		if err != nil {
+			if IsErrAttachmentNotExist(err) {
+				continue
+			}
+			return fmt.Errorf("GetAttachmentByUUID[%s]: %v", uuid, err)
+		}
+		attachments = append(attachments, attach)
+	}
+
 	sess := x.NewSession()
 	defer sessionRelease(sess)
 	if err = sess.Begin(); err != nil {
@@ -186,6 +202,14 @@ func NewIssue(repo *Repository, issue *Issue, labelIDs []int64) (err error) {
 
 	if err = newIssueUsers(sess, repo, issue); err != nil {
 		return err
+	}
+
+	for i := range attachments {
+		attachments[i].IssueID = issue.ID
+		// No assign value could be 0, so ignore AllCols().
+		if _, err = sess.Id(attachments[i].ID).Update(attachments[i]); err != nil {
+			return fmt.Errorf("update attachment[%d]: %v", attachments[i].ID, err)
+		}
 	}
 
 	// Notify watchers.
@@ -1210,49 +1234,73 @@ func (c *Comment) AfterDelete() {
 	}
 }
 
+// Attachment represent a attachment of issue/comment/release.
 type Attachment struct {
-	Id        int64
-	IssueId   int64
-	CommentId int64
+	ID        int64  `xorm:"pk autoincr"`
+	UUID      string `xorm:"uuid UNIQUE"`
+	IssueID   int64  `xorm:"INDEX"`
+	CommentID int64
+	ReleaseID int64 `xorm:"INDEX"`
 	Name      string
-	Path      string    `xorm:"TEXT"`
 	Created   time.Time `xorm:"CREATED"`
 }
 
-// CreateAttachment creates a new attachment inside the database and
-func CreateAttachment(issueId, commentId int64, name, path string) (*Attachment, error) {
-	sess := x.NewSession()
-	defer sess.Close()
+// AttachmentLocalPath returns where attachment is stored in local file system based on given UUID.
+func AttachmentLocalPath(uuid string) string {
+	return path.Join(setting.AttachmentPath, uuid[0:1], uuid[1:2], uuid)
+}
 
+// LocalPath returns where attachment is stored in local file system.
+func (attach *Attachment) LocalPath() string {
+	return AttachmentLocalPath(attach.UUID)
+}
+
+// NewAttachment creates a new attachment object.
+func NewAttachment(name string, buf []byte, file multipart.File) (_ *Attachment, err error) {
+	attach := &Attachment{
+		UUID: gouuid.NewV4().String(),
+		Name: name,
+	}
+
+	if err = os.MkdirAll(path.Dir(attach.LocalPath()), os.ModePerm); err != nil {
+		return nil, fmt.Errorf("MkdirAll: %v", err)
+	}
+
+	fw, err := os.Create(attach.LocalPath())
+	if err != nil {
+		return nil, fmt.Errorf("Create: %v", err)
+	}
+	defer fw.Close()
+
+	if _, err = fw.Write(buf); err != nil {
+		return nil, fmt.Errorf("Write: %v", err)
+	} else if _, err = io.Copy(fw, file); err != nil {
+		return nil, fmt.Errorf("Copy: %v", err)
+	}
+
+	sess := x.NewSession()
+	defer sessionRelease(sess)
 	if err := sess.Begin(); err != nil {
 		return nil, err
 	}
 
-	a := &Attachment{IssueId: issueId, CommentId: commentId, Name: name, Path: path}
-
-	if _, err := sess.Insert(a); err != nil {
-		sess.Rollback()
+	if _, err := sess.Insert(attach); err != nil {
 		return nil, err
 	}
 
-	return a, sess.Commit()
+	return attach, sess.Commit()
 }
 
-// Attachment returns the attachment by given ID.
-func GetAttachmentById(id int64) (*Attachment, error) {
-	m := &Attachment{Id: id}
-
-	has, err := x.Get(m)
-
+// GetAttachmentByUUID returns attachment by given UUID.
+func GetAttachmentByUUID(uuid string) (*Attachment, error) {
+	attach := &Attachment{UUID: uuid}
+	has, err := x.Get(attach)
 	if err != nil {
 		return nil, err
+	} else if !has {
+		return nil, ErrAttachmentNotExist{0, uuid}
 	}
-
-	if !has {
-		return nil, ErrAttachmentNotExist
-	}
-
-	return m, nil
+	return attach, nil
 }
 
 func GetAttachmentsForIssue(issueId int64) ([]*Attachment, error) {
@@ -1285,12 +1333,12 @@ func DeleteAttachment(a *Attachment, remove bool) error {
 func DeleteAttachments(attachments []*Attachment, remove bool) (int, error) {
 	for i, a := range attachments {
 		if remove {
-			if err := os.Remove(a.Path); err != nil {
+			if err := os.Remove(a.LocalPath()); err != nil {
 				return i, err
 			}
 		}
 
-		if _, err := x.Delete(a.Id); err != nil {
+		if _, err := x.Delete(a.ID); err != nil {
 			return i, err
 		}
 	}
