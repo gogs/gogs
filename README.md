@@ -57,17 +57,15 @@ The goal of this project is to make the easiest, fastest, and most painless way 
 
 ## Browser Support
 
-According to [Semantic UI](https://github.com/Semantic-Org/Semantic-UI/tree/1.x):
+According to [Semantic UI](https://github.com/Semantic-Org/Semantic-UI):
 
-- Last 2 Versions FF, Chrome, IE 10+
-- Safari 6
-- IE 9+ (Browser prefix only)
+- Last 2 Versions FF, Chrome, IE 10+, Safari Mac
+- IE 10+
 - Android 4
-- Blackberry 10
 
-Browser prefixes are present for Internet Explorer 9, but the browser is not officially supported.
+Some components will work in IE 9, but the browser is not officially supported.
 
-The official support minimal size  is 1024*768, UI may still looks right in smaller size but no promises and fixes.
+The official support minimal size  is **1024*768**, UI may still looks right in smaller size but no promises and fixes.
 
 ## Installation
 
