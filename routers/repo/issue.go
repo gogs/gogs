@@ -7,11 +7,8 @@ package repo
 import (
 	"errors"
 	"fmt"
-	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
-	"os"
 	"strings"
 	"time"
 
@@ -181,6 +178,7 @@ func NewIssue(ctx *middleware.Context) {
 	ctx.Data["RequireDropzone"] = true
 	ctx.Data["IsAttachmentEnabled"] = setting.AttachmentEnabled
 	ctx.Data["AttachmentAllowedTypes"] = setting.AttachmentAllowedTypes
+	ctx.Data["AttachmentMaxFiles"] = setting.AttachmentMaxFiles
 
 	if ctx.User.IsAdmin {
 		var (
@@ -215,18 +213,19 @@ func NewIssue(ctx *middleware.Context) {
 }
 
 func NewIssuePost(ctx *middleware.Context, form auth.CreateIssueForm) {
-	fmt.Println(ctx.QueryStrings("uuids"))
 	ctx.Data["Title"] = ctx.Tr("repo.issues.new")
 	ctx.Data["PageIsIssueList"] = true
 	ctx.Data["RequireDropzone"] = true
 	ctx.Data["IsAttachmentEnabled"] = setting.AttachmentEnabled
 	ctx.Data["AttachmentAllowedTypes"] = setting.AttachmentAllowedTypes
+	ctx.Data["AttachmentMaxFiles"] = setting.AttachmentMaxFiles
 
 	var (
 		repo        = ctx.Repo.Repository
 		labelIDs    []int64
 		milestoneID int64
 		assigneeID  int64
+		attachments []string
 	)
 	if ctx.User.IsAdmin {
 		// Check labels.
@@ -286,6 +285,10 @@ func NewIssuePost(ctx *middleware.Context, form auth.CreateIssueForm) {
 		}
 	}
 
+	if setting.AttachmentEnabled {
+		attachments = ctx.QueryStrings("attachments")
+	}
+
 	if ctx.HasError() {
 		ctx.HTML(200, ISSUE_NEW)
 		return
@@ -301,7 +304,7 @@ func NewIssuePost(ctx *middleware.Context, form auth.CreateIssueForm) {
 		AssigneeID:  assigneeID,
 		Content:     form.Content,
 	}
-	if err := models.NewIssue(repo, issue, labelIDs); err != nil {
+	if err := models.NewIssue(repo, issue, labelIDs, attachments); err != nil {
 		ctx.Handle(500, "NewIssue", err)
 		return
 	}
@@ -347,9 +350,50 @@ func NewIssuePost(ctx *middleware.Context, form auth.CreateIssueForm) {
 	ctx.Redirect(ctx.Repo.RepoLink + "/issues/" + com.ToStr(issue.Index))
 }
 
-func UploadAttachment(ctx *middleware.Context) {
+func UploadIssueAttachment(ctx *middleware.Context) {
+	if !setting.AttachmentEnabled {
+		ctx.Error(404, "attachment is not enabled")
+		return
+	}
+
+	allowedTypes := strings.Split(setting.AttachmentAllowedTypes, ",")
+	file, header, err := ctx.Req.FormFile("file")
+	if err != nil {
+		ctx.Error(500, fmt.Sprintf("FormFile: %v", err))
+		return
+	}
+	defer file.Close()
+
+	buf := make([]byte, 1024)
+	n, _ := file.Read(buf)
+	if n > 0 {
+		buf = buf[:n]
+	}
+	fileType := http.DetectContentType(buf)
+
+	allowed := false
+	for _, t := range allowedTypes {
+		t := strings.Trim(t, " ")
+		if t == "*/*" || t == fileType {
+			allowed = true
+			break
+		}
+	}
+
+	if !allowed {
+		ctx.Error(400, ErrFileTypeForbidden.Error())
+		return
+	}
+
+	attach, err := models.NewAttachment(header.Filename, buf, file)
+	if err != nil {
+		ctx.Error(500, fmt.Sprintf("NewAttachment: %v", err))
+		return
+	}
+
+	log.Trace("New attachment uploaded: %s", attach.UUID)
 	ctx.JSON(200, map[string]string{
-		"uuid": "fuck",
+		"uuid": attach.UUID,
 	})
 }
 
@@ -687,78 +731,6 @@ func UpdateAssignee(ctx *middleware.Context) {
 	})
 }
 
-func uploadFiles(ctx *middleware.Context, issueId, commentId int64) {
-	if !setting.AttachmentEnabled {
-		return
-	}
-
-	allowedTypes := strings.Split(setting.AttachmentAllowedTypes, "|")
-	attachments := ctx.Req.MultipartForm.File["attachments"]
-
-	if len(attachments) > setting.AttachmentMaxFiles {
-		ctx.Handle(400, "issue.Comment", ErrTooManyFiles)
-		return
-	}
-
-	for _, header := range attachments {
-		file, err := header.Open()
-
-		if err != nil {
-			ctx.Handle(500, "issue.Comment(header.Open)", err)
-			return
-		}
-
-		defer file.Close()
-
-		buf := make([]byte, 1024)
-		n, _ := file.Read(buf)
-		if n > 0 {
-			buf = buf[:n]
-		}
-		fileType := http.DetectContentType(buf)
-		fmt.Println(fileType)
-
-		allowed := false
-
-		for _, t := range allowedTypes {
-			t := strings.Trim(t, " ")
-
-			if t == "*/*" || t == fileType {
-				allowed = true
-				break
-			}
-		}
-
-		if !allowed {
-			ctx.Handle(400, "issue.Comment", ErrFileTypeForbidden)
-			return
-		}
-
-		os.MkdirAll(setting.AttachmentPath, os.ModePerm)
-		out, err := ioutil.TempFile(setting.AttachmentPath, "attachment_")
-
-		if err != nil {
-			ctx.Handle(500, "ioutil.TempFile", err)
-			return
-		}
-
-		defer out.Close()
-
-		out.Write(buf)
-		_, err = io.Copy(out, file)
-		if err != nil {
-			ctx.Handle(500, "io.Copy", err)
-			return
-		}
-
-		_, err = models.CreateAttachment(issueId, commentId, header.Filename, out.Name())
-		if err != nil {
-			ctx.Handle(500, "CreateAttachment", err)
-			return
-		}
-	}
-}
-
 func Comment(ctx *middleware.Context) {
 	send := func(status int, data interface{}, err error) {
 		if err != nil {
@@ -884,7 +856,7 @@ func Comment(ctx *middleware.Context) {
 	}
 
 	if comment != nil {
-		uploadFiles(ctx, issue.ID, comment.Id)
+		// uploadFiles(ctx, issue.ID, comment.Id)
 	}
 
 	// Notify watchers.
@@ -1192,25 +1164,6 @@ func DeleteMilestone(ctx *middleware.Context) {
 	ctx.JSON(200, map[string]interface{}{
 		"redirect": ctx.Repo.RepoLink + "/milestones",
 	})
-}
-
-func IssueGetAttachment(ctx *middleware.Context) {
-	id := com.StrTo(ctx.Params(":id")).MustInt64()
-	if id == 0 {
-		ctx.Error(404)
-		return
-	}
-
-	attachment, err := models.GetAttachmentById(id)
-
-	if err != nil {
-		ctx.Handle(404, "models.GetAttachmentById", err)
-		return
-	}
-
-	// Fix #312. Attachments with , in their name are not handled correctly by Google Chrome.
-	// We must put the name in " manually.
-	ctx.ServeFile(attachment.Path, "\""+attachment.Name+"\"")
 }
 
 func PullRequest2(ctx *middleware.Context) {

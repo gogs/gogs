@@ -327,7 +327,22 @@ func runWeb(ctx *cli.Context) {
 
 	m.Group("", func() {
 		m.Get("/:username", user.Profile)
-		m.Post("/attachments", repo.UploadAttachment)
+		m.Get("/attachments/:uuid", func(ctx *middleware.Context) {
+			attach, err := models.GetAttachmentByUUID(ctx.Params(":uuid"))
+			if err != nil {
+				if models.IsErrAttachmentNotExist(err) {
+					ctx.Error(404)
+				} else {
+					ctx.Handle(500, "GetAttachmentByUUID", err)
+				}
+				return
+			}
+
+			// Fix #312. Attachments with , in their name are not handled correctly by Google Chrome.
+			// We must put the name in " manually.
+			ctx.ServeFileContent(attach.LocalPath(), "\""+attach.Name+"\"")
+		})
+		m.Post("/issues/attachments", repo.UploadIssueAttachment)
 	}, ignSignIn)
 
 	if macaron.Env == macaron.DEV {
@@ -428,7 +443,6 @@ func runWeb(ctx *cli.Context) {
 			m.Post("/:index/label", repo.UpdateIssueLabel)
 			m.Post("/:index/milestone", repo.UpdateIssueMilestone)
 			m.Post("/:index/assignee", repo.UpdateAssignee)
-			m.Get("/:index/attachment/:id", repo.IssueGetAttachment)
 		})
 		m.Group("/labels", func() {
 			m.Post("/new", bindIgnErr(auth.CreateLabelForm{}), repo.NewLabel)
