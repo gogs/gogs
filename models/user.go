@@ -553,10 +553,12 @@ func DeleteUser(u *User) error {
 		return err
 	}
 
-	// Delete user directory.
+	// Delete user data.
 	if err = os.RemoveAll(UserPath(u.Name)); err != nil {
 		return err
 	}
+	// Delete avatar.
+	os.Remove(u.CustomAvatarPath())
 
 	return sess.Commit()
 }
