@@ -345,6 +345,7 @@ func runWeb(ctx *cli.Context) {
 			}
 			defer fr.Close()
 
+			ctx.Header().Set("Cache-Control", "public,max-age=86400")
 			// Fix #312. Attachments with , in their name are not handled correctly by Google Chrome.
 			// We must put the name in " manually.
 			if err = repo.ServeData(ctx, "\""+attach.Name+"\"", fr); err != nil {
