@@ -338,9 +338,19 @@ func runWeb(ctx *cli.Context) {
 				return
 			}
 
+			fr, err := os.Open(attach.LocalPath())
+			if err != nil {
+				ctx.Handle(500, "Open", err)
+				return
+			}
+			defer fr.Close()
+
 			// Fix #312. Attachments with , in their name are not handled correctly by Google Chrome.
 			// We must put the name in " manually.
-			ctx.ServeFileContent(attach.LocalPath(), "\""+attach.Name+"\"")
+			if err = repo.ServeData(ctx, "\""+attach.Name+"\"", fr); err != nil {
+				ctx.Handle(500, "ServeData", err)
+				return
+			}
 		})
 		m.Post("/issues/attachments", repo.UploadIssueAttachment)
 	}, ignSignIn)
