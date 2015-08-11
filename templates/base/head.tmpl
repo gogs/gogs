@@ -31,12 +31,17 @@
 	<script src="{{AppSubUrl}}/js/gogs.js?v={{AppVer}}"></script>
 
 	<!-- Third-party libraries -->
-	{{if .PageIsLabels}}
+	{{if .RequireMinicolors}}
 	<link rel="stylesheet" href="{{AppSubUrl}}/css/jquery.minicolors.css?v={{AppVer}}">
 	<script src="{{AppSubUrl}}/js/libs/jquery.minicolors.min.js?v={{AppVer}}"></script>
-	{{else if .PageIsMilestones}}
+	{{end}}
+	{{if .RequireDatetimepicker}}
 	<link rel="stylesheet" href="{{AppSubUrl}}/css/jquery.datetimepicker.css?v={{AppVer}}">
 	<script src="{{AppSubUrl}}/js/libs/jquery.datetimepicker.js?v={{AppVer}}"></script>
+	{{end}}
+	{{if .RequireDropzone}}
+	<link rel="stylesheet" href="{{AppSubUrl}}/css/dropzone.css?v={{AppVer}}">
+	<script src="{{AppSubUrl}}/js/libs/dropzone.js?v={{AppVer}}"></script>
 	{{end}}
 
 	<title>{{if .Title}}{{.Title}} - {{end}}{{AppName}}</title>
