@@ -244,6 +244,35 @@ $(document).ready(function () {
         }
     });
 
+    // Dropzone
+    if ($('#dropzone').length > 0) {
+        // Disable auto discover for all elements:
+        Dropzone.autoDiscover = false;
+
+        var filenameDict = {};
+        var $dropz = $('#dropzone');
+        $dropz.dropzone({
+            url: $dropz.data('upload-url'),
+            headers: {"X-Csrf-Token": csrf},
+            maxFiles: 5,
+            maxFilesize: $dropz.data('max-size'),
+            acceptedFiles: $dropz.data('accepts'),
+            addRemoveLinks: true,
+            dictDefaultMessage: $dropz.data('default-message'),
+            dictInvalidFileType: $dropz.data('invalid-input-type'),
+            dictFileTooBig: $dropz.data('file-too-big'),
+            dictRemoveFile: $dropz.data('remove-file'),
+            init: function () {
+                this.on("success", function (file, data) {
+                    filenameDict[file.name] = data.uuid;
+                    console.log(data)
+                })
+                this.on("removedfile", function (file) {
+                    console.log(filenameDict[file.name]);
+                })
+            }
+        });
+    }
 
     // Helpers.
     $('.delete-button').click(function () {

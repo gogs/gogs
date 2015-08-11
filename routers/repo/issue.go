@@ -178,6 +178,7 @@ func Issues(ctx *middleware.Context) {
 func NewIssue(ctx *middleware.Context) {
 	ctx.Data["Title"] = ctx.Tr("repo.issues.new")
 	ctx.Data["PageIsIssueList"] = true
+	ctx.Data["RequireDropzone"] = true
 	ctx.Data["IsAttachmentEnabled"] = setting.AttachmentEnabled
 	ctx.Data["AttachmentAllowedTypes"] = setting.AttachmentAllowedTypes
 
@@ -214,8 +215,10 @@ func NewIssue(ctx *middleware.Context) {
 }
 
 func NewIssuePost(ctx *middleware.Context, form auth.CreateIssueForm) {
+	fmt.Println(ctx.QueryStrings("uuids"))
 	ctx.Data["Title"] = ctx.Tr("repo.issues.new")
 	ctx.Data["PageIsIssueList"] = true
+	ctx.Data["RequireDropzone"] = true
 	ctx.Data["IsAttachmentEnabled"] = setting.AttachmentEnabled
 	ctx.Data["AttachmentAllowedTypes"] = setting.AttachmentAllowedTypes
 
@@ -342,6 +345,12 @@ func NewIssuePost(ctx *middleware.Context, form auth.CreateIssueForm) {
 
 	log.Trace("Issue created: %d/%d", ctx.Repo.Repository.ID, issue.ID)
 	ctx.Redirect(ctx.Repo.RepoLink + "/issues/" + com.ToStr(issue.Index))
+}
+
+func UploadAttachment(ctx *middleware.Context) {
+	ctx.JSON(200, map[string]string{
+		"uuid": "fuck",
+	})
 }
 
 func checkLabels(labels, allLabels []*models.Label) {
@@ -926,6 +935,7 @@ func Comment(ctx *middleware.Context) {
 func Labels(ctx *middleware.Context) {
 	ctx.Data["Title"] = ctx.Tr("repo.labels")
 	ctx.Data["PageIsLabels"] = true
+	ctx.Data["RequireMinicolors"] = true
 	ctx.HTML(200, LABELS)
 }
 
@@ -1031,6 +1041,7 @@ func Milestones(ctx *middleware.Context) {
 func NewMilestone(ctx *middleware.Context) {
 	ctx.Data["Title"] = ctx.Tr("repo.milestones.new")
 	ctx.Data["PageIsMilestones"] = true
+	ctx.Data["RequireDatetimepicker"] = true
 	ctx.Data["DateLang"] = setting.DateLang(ctx.Locale.Language())
 	ctx.HTML(200, MILESTONE_NEW)
 }
@@ -1038,6 +1049,7 @@ func NewMilestone(ctx *middleware.Context) {
 func NewMilestonePost(ctx *middleware.Context, form auth.CreateMilestoneForm) {
 	ctx.Data["Title"] = ctx.Tr("repo.milestones.new")
 	ctx.Data["PageIsMilestones"] = true
+	ctx.Data["RequireDatetimepicker"] = true
 	ctx.Data["DateLang"] = setting.DateLang(ctx.Locale.Language())
 
 	if ctx.HasError() {
@@ -1073,6 +1085,7 @@ func EditMilestone(ctx *middleware.Context) {
 	ctx.Data["Title"] = ctx.Tr("repo.milestones.edit")
 	ctx.Data["PageIsMilestones"] = true
 	ctx.Data["PageIsEditMilestone"] = true
+	ctx.Data["RequireDatetimepicker"] = true
 	ctx.Data["DateLang"] = setting.DateLang(ctx.Locale.Language())
 
 	m, err := models.GetMilestoneByID(ctx.ParamsInt64(":id"))
@@ -1096,6 +1109,7 @@ func EditMilestonePost(ctx *middleware.Context, form auth.CreateMilestoneForm) {
 	ctx.Data["Title"] = ctx.Tr("repo.milestones.edit")
 	ctx.Data["PageIsMilestones"] = true
 	ctx.Data["PageIsEditMilestone"] = true
+	ctx.Data["RequireDatetimepicker"] = true
 	ctx.Data["DateLang"] = setting.DateLang(ctx.Locale.Language())
 
 	if ctx.HasError() {
