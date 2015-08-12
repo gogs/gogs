@@ -10,8 +10,8 @@ gogs_config_file=conf.tmp
 gogs_config=config
 gogs_init_file=$docker_dir/init_gogs.sh
 
-fig_file=fig.yml
-fig_config=fig
+compose_file=docker-compose.yml
+compose_config=docker-compose
 
 gogs_init_template=$template_dir/init_gogs.sh.tpl
 
@@ -28,7 +28,7 @@ if [ "$#" == 0 ]; then
     exit 0
 fi
 
-for file in $gogs_config_file $fig_file; do
+for file in $gogs_config_file $compose_file; do
     if [ -e $file ]; then
         echo "Deleting $file"
         rm $file
@@ -53,10 +53,10 @@ for dir in $@; do
         echo "" >> $gogs_config_file
     fi
 
-    if [ -e $current_dir/$fig_config ]; then
-        echo "Adding $current_dir/$fig_config to $fig_file"
-        cat $current_dir/fig >> $fig_file
-        echo "" >> $fig_file
+    if [ -e $current_dir/$compose_config ]; then
+        echo "Adding $current_dir/$compose_config to $compose_file"
+        cat $current_dir/$compose_config >> $compose_file
+        echo "" >> $compose_file
     fi
 done
 

@@ -16,7 +16,7 @@
               {{.CsrfTokenHtml}}
               <input type="hidden" name="action" value="update">
               <div class="field">
-                <label class="req" for="orgname">{{.i18n.Tr "username"}}</label>
+                <label class="req" for="orgname">{{.i18n.Tr "org.org_name_holder"}}</label>
                 <input class="ipt ipt-large ipt-radius {{if .Err_UserName}}ipt-error{{end}}" id="orgname" name="uname" value="{{.Org.Name}}" data-orgname="{{.Org.Name}}" required />
               </div>
               <div class="white-popup-block mfp-hide" id="change-orgname-modal">
@@ -46,12 +46,10 @@
                 <label for="location">{{.i18n.Tr "org.settings.location"}}</label>
                 <input class="ipt ipt-large ipt-radius {{if .Err_Location}}ipt-error{{end}}" id="location" name="location" type="text" value="{{.Org.Location}}" />
               </div>
-              {{if not DisableGravatar}}
-              <div class="field">
-                <label for="gravatar-email">Gravatar {{.i18n.Tr "email"}}</label>
+              <div class="field {{if DisableGravatar}}hide{{end}}">
+                <label class="req" for="gravatar-email">Gravatar {{.i18n.Tr "email"}}</label>
                 <input class="ipt ipt-large ipt-radius {{if .Err_Avatar}}ipt-error{{end}}" id="gravatar-email" name="avatar" type="text" value="{{.Org.AvatarEmail}}" />
               </div>
-              {{end}}
               <div class="field">
                 <span class="form-label"></span>
                 <button class="btn btn-green btn-large btn-radius" id="change-orgname-btn" href="#change-orgname-modal">{{.i18n.Tr "org.settings.update_settings"}}</button>

@@ -36,10 +36,7 @@ const (
 )
 
 var (
-	ErrUserAlreadyExist      = errors.New("User already exist")
-	ErrUserNotExist          = errors.New("User does not exist")
 	ErrUserNotKeyOwner       = errors.New("User does not the owner of public key")
-	ErrEmailAlreadyUsed      = errors.New("E-mail already used")
 	ErrEmailNotExist         = errors.New("E-mail does not exist")
 	ErrEmailNotActivated     = errors.New("E-mail address has not been activated")
 	ErrUserNameIllegal       = errors.New("User name contains illegal characters")
@@ -145,8 +142,8 @@ func (u *User) EncodePasswd() {
 	u.Passwd = fmt.Sprintf("%x", newPasswd)
 }
 
-// ValidtePassword checks if given password matches the one belongs to the user.
-func (u *User) ValidtePassword(passwd string) bool {
+// ValidatePassword checks if given password matches the one belongs to the user.
+func (u *User) ValidatePassword(passwd string) bool {
 	newUser := &User{Passwd: passwd, Salt: u.Salt}
 	newUser.EncodePasswd()
 	return u.Passwd == newUser.Passwd
@@ -261,6 +258,8 @@ func IsEmailUsed(email string) (bool, error) {
 	if len(email) == 0 {
 		return false, nil
 	}
+
+	email = strings.ToLower(email)
 	if has, err := x.Get(&EmailAddress{Email: email}); has || err != nil {
 		return has, err
 	}
@@ -273,23 +272,23 @@ func GetUserSalt() string {
 }
 
 // CreateUser creates record of a new user.
-func CreateUser(u *User) error {
-	if !IsLegalName(u.Name) {
-		return ErrUserNameIllegal
+func CreateUser(u *User) (err error) {
+	if err = IsUsableName(u.Name); err != nil {
+		return err
 	}
 
 	isExist, err := IsUserExist(0, u.Name)
 	if err != nil {
 		return err
 	} else if isExist {
-		return ErrUserAlreadyExist
+		return ErrUserAlreadyExist{u.Name}
 	}
 
 	isExist, err = IsEmailUsed(u.Email)
 	if err != nil {
 		return err
 	} else if isExist {
-		return ErrEmailAlreadyUsed
+		return ErrEmailAlreadyUsed{u.Email}
 	}
 
 	u.LowerName = strings.ToLower(u.Name)
@@ -315,19 +314,23 @@ func CreateUser(u *User) error {
 		return err
 	}
 
-	// Auto-set admin for user whose ID is 1.
-	if u.Id == 1 {
+	// Auto-set admin for the first user.
+	if CountUsers() == 1 {
 		u.IsAdmin = true
 		u.IsActive = true
-		_, err = x.Id(u.Id).UseBool().Update(u)
+		_, err = x.Id(u.Id).AllCols().Update(u)
 	}
 	return err
 }
 
+func countUsers(e Engine) int64 {
+	count, _ := e.Where("type=0").Count(new(User))
+	return count
+}
+
 // CountUsers returns number of users.
 func CountUsers() int64 {
-	count, _ := x.Where("type=0").Count(new(User))
-	return count
+	return countUsers(x)
 }
 
 // GetUsers returns given number of user objects with offset.
@@ -392,8 +395,15 @@ func VerifyActiveEmailCode(code, email string) *EmailAddress {
 
 // ChangeUserName changes all corresponding setting from old user name to new one.
 func ChangeUserName(u *User, newUserName string) (err error) {
-	if !IsLegalName(newUserName) {
-		return ErrUserNameIllegal
+	if err = IsUsableName(newUserName); err != nil {
+		return err
+	}
+
+	isExist, err := IsUserExist(0, newUserName)
+	if err != nil {
+		return err
+	} else if isExist {
+		return ErrUserAlreadyExist{newUserName}
 	}
 
 	return os.Rename(UserPath(u.LowerName), UserPath(newUserName))
@@ -401,11 +411,12 @@ func ChangeUserName(u *User, newUserName string) (err error) {
 
 // UpdateUser updates user's information.
 func UpdateUser(u *User) error {
+	u.Email = strings.ToLower(u.Email)
 	has, err := x.Where("id!=?", u.Id).And("type=?", u.Type).And("email=?", u.Email).Get(new(User))
 	if err != nil {
 		return err
 	} else if has {
-		return ErrEmailAlreadyUsed
+		return ErrEmailAlreadyUsed{u.Email}
 	}
 
 	u.LowerName = strings.ToLower(u.Name)
@@ -498,7 +509,7 @@ func DeleteUser(u *User) error {
 
 	// Delete all SSH keys.
 	keys := make([]*PublicKey, 0, 10)
-	if err = sess.Find(&keys, &PublicKey{OwnerId: u.Id}); err != nil {
+	if err = sess.Find(&keys, &PublicKey{OwnerID: u.Id}); err != nil {
 		return err
 	}
 	for _, key := range keys {
@@ -550,7 +561,7 @@ func getUserById(e Engine, id int64) (*User, error) {
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, ErrUserNotExist
+		return nil, ErrUserNotExist{id, ""}
 	}
 	return u, nil
 }
@@ -563,14 +574,14 @@ func GetUserById(id int64) (*User, error) {
 // GetUserByName returns user by given name.
 func GetUserByName(name string) (*User, error) {
 	if len(name) == 0 {
-		return nil, ErrUserNotExist
+		return nil, ErrUserNotExist{0, name}
 	}
 	u := &User{LowerName: strings.ToLower(name)}
 	has, err := x.Get(u)
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, ErrUserNotExist
+		return nil, ErrUserNotExist{0, name}
 	}
 	return u, nil
 }
@@ -637,11 +648,12 @@ func GetEmailAddresses(uid int64) ([]*EmailAddress, error) {
 }
 
 func AddEmailAddress(email *EmailAddress) error {
+	email.Email = strings.ToLower(email.Email)
 	used, err := IsEmailUsed(email.Email)
 	if err != nil {
 		return err
 	} else if used {
-		return ErrEmailAlreadyUsed
+		return ErrEmailAlreadyUsed{email.Email}
 	}
 
 	_, err = x.Insert(email)
@@ -670,7 +682,7 @@ func DeleteEmailAddress(email *EmailAddress) error {
 		return ErrEmailNotExist
 	}
 
-	if _, err = x.Delete(email); err != nil {
+	if _, err = x.Id(email.Id).Delete(email); err != nil {
 		return err
 	}
 
@@ -695,7 +707,7 @@ func MakeEmailPrimary(email *EmailAddress) error {
 	if err != nil {
 		return err
 	} else if !has {
-		return ErrUserNotExist
+		return ErrUserNotExist{email.Uid, ""}
 	}
 
 	// Make sure the former primary email doesn't disappear
@@ -732,13 +744,15 @@ func ValidateCommitWithEmail(c *git.Commit) *User {
 
 // ValidateCommitsWithEmails checks if authors' e-mails of commits are corresponding to users.
 func ValidateCommitsWithEmails(oldCommits *list.List) *list.List {
-	emails := map[string]*User{}
-	newCommits := list.New()
-	e := oldCommits.Front()
+	var (
+		u          *User
+		emails     = map[string]*User{}
+		newCommits = list.New()
+		e          = oldCommits.Front()
+	)
 	for e != nil {
 		c := e.Value.(*git.Commit)
 
-		var u *User
 		if v, ok := emails[c.Author.Email]; !ok {
 			u, _ = GetUserByEmail(c.Author.Email)
 			emails[c.Author.Email] = u
@@ -758,10 +772,12 @@ func ValidateCommitsWithEmails(oldCommits *list.List) *list.List {
 // GetUserByEmail returns the user object by given e-mail if exists.
 func GetUserByEmail(email string) (*User, error) {
 	if len(email) == 0 {
-		return nil, ErrUserNotExist
+		return nil, ErrUserNotExist{0, "email"}
 	}
+
+	email = strings.ToLower(email)
 	// First try to find the user by primary email
-	user := &User{Email: strings.ToLower(email)}
+	user := &User{Email: email}
 	has, err := x.Get(user)
 	if err != nil {
 		return nil, err
@@ -771,7 +787,7 @@ func GetUserByEmail(email string) (*User, error) {
 	}
 
 	// Otherwise, check in alternative list for activated email addresses
-	emailAddress := &EmailAddress{Email: strings.ToLower(email), IsActivated: true}
+	emailAddress := &EmailAddress{Email: email, IsActivated: true}
 	has, err = x.Get(emailAddress)
 	if err != nil {
 		return nil, err
@@ -780,7 +796,7 @@ func GetUserByEmail(email string) (*User, error) {
 		return GetUserById(emailAddress.Uid)
 	}
 
-	return nil, ErrUserNotExist
+	return nil, ErrUserNotExist{0, "email"}
 }
 
 // SearchUserByName returns given number of users whose name contains keyword.

@@ -14,7 +14,7 @@ Group=git
 WorkingDirectory=/home/git/gogs
 ExecStart=/home/git/gogs/gogs web
 Restart=always
-Environment="USER=git","HOME=/home/git"
+Environment=USER=git HOME=/home/git
 
 [Install]
 WantedBy=multi-user.target

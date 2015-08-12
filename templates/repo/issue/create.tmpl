@@ -12,7 +12,7 @@
             </div>
             <div class="col-md-8 panel panel-default">
                 <div class="form-group panel-body">
-                    <input class="form-control input-lg" type="text" name="title" required="required" placeholder="Title" value="{{.title}}" />
+                    <input class="form-control input-lg" type="text" name="title" required="required" placeholder="Title" value="{{.title}}" autofocus />
                 </div>
                 <div class="form-group panel-body">
                     {{if .IsRepositoryOwner}}
@@ -54,7 +54,7 @@
                                             {{else}}
                                             <ul class="list-unstyled">
                                                 {{range .OpenMilestones}}
-                                                <li class="milestone-item" data-id="{{.Id}}">
+                                                <li class="milestone-item" data-id="{{.ID}}">
                                                     <p><strong>{{.Name}}</strong></p>
                                                     <!-- <p>due to 3 days later</p> -->
                                                 </li>
@@ -69,7 +69,7 @@
                                             {{else}}
                                             <ul class="list-unstyled">
                                                 {{range .ClosedMilestones}}
-                                                <li class="milestone-item" data-id="{{.Id}}">
+                                                <li class="milestone-item" data-id="{{.ID}}">
                                                     <p><strong>{{.Name}}</strong></p>
                                                     <p>Closed {{TimeSince .ClosedDate $.Lang}}</p>
                                                 </li>

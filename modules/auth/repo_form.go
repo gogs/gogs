@@ -117,9 +117,9 @@ func (f *CreateIssueForm) Validate(ctx *macaron.Context, errs binding.Errors) bi
 //         \/             \/     \/                   \/     \/
 
 type CreateMilestoneForm struct {
-	Title    string `form:"title" binding:"Required;MaxSize(50)"`
-	Content  string `form:"content"`
-	Deadline string `form:"due_date"`
+	Title    string `binding:"Required;MaxSize(50)"`
+	Content  string
+	Deadline string
 }
 
 func (f *CreateMilestoneForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
@@ -134,8 +134,9 @@ func (f *CreateMilestoneForm) Validate(ctx *macaron.Context, errs binding.Errors
 //         \/    \/    \/     \/
 
 type CreateLabelForm struct {
-	Title string `form:"title" binding:"Required;MaxSize(50)"`
-	Color string `form:"color" binding:"Required;Size(7)"`
+	ID    int64
+	Title string `binding:"Required;MaxSize(50)" locale:"repo.issues.label_name"`
+	Color string `binding:"Required;Size(7)" locale:"repo.issues.label_color"`
 }
 
 func (f *CreateLabelForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {

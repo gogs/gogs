@@ -3,10 +3,6 @@ Gogs - Go Git Service [![Build Status](https://travis-ci.org/gogits/gogs.svg?bra
 
 Gogs (Go Git Service) 是一款可轻易搭建的自助 Git 服务。
 
-![Demo](http://gogs.qiniudn.com/gogs_demo.gif)
-
-##### 当前版本：0.6.1 Beta
-
 ## 开发目的
 
 Gogs 的目标是打造一个最简单、最快速和最轻松的方式搭建自助 Git 服务。使用 Go 语言开发使得 Gogs 能够通过独立的二进制分发，并且支持 Go 语言支持的 **所有平台**，包括 Linux、Mac OS X 以及 Windows。
@@ -39,12 +35,26 @@ Gogs 的目标是打造一个最简单、最快速和最轻松的方式搭建自
 - Drone CI 持续部署集成
 - 支持 MySQL、PostgreSQL 以及 SQLite3 数据库
 - 社交帐号登录（GitHub、Google、QQ、微博）
-- 多语言支持（[11 种语言]([more](https://crowdin.com/project/gogs))）
+- 多语言支持（[14 种语言]([more](https://crowdin.com/project/gogs))）
 
 ## 系统要求
 
 - 最低的系统硬件要求为一个廉价的树莓派
 - 如果用于团队项目，建议使用 2 核 CPU 及 1GB 内存
+
+## 浏览器支持
+
+根据 [Semantic UI](https://github.com/Semantic-Org/Semantic-UI/tree/1.x) 的要求：
+
+- 最新两版的 FF、Chrome 和 IE 10+
+- Safari 6
+- IE 9+ （仅限浏览器前缀）
+- Android 4
+- Blackberry 10
+
+尽管已经使用了 Internet Explorer 9 的浏览器前缀，但该版本的浏览器被没有被正式支持。
+
+官方支持的最小 UI 尺寸为 1024*768，UI 不一定会在更小尺寸的设备上被破坏，但我们无法保证且不会修复。
 
 ## 安装部署
 
@@ -70,6 +80,7 @@ Gogs 的目标是打造一个最简单、最快速和最轻松的方式搭建自
 ## 贡献成员
 
 - 本项目的 [开发团队](http://gogs.io/team)。
+- 前团队成员 [@lunny](https://github.com/lunny) 和 [@fuxiaohei](https://github.com/fuxiaohei)。
 - 您可以通过查看 [贡献者页面](https://github.com/gogits/gogs/graphs/contributors) 获取完整的贡献者列表。
 - 您可以通过查看 [TRANSLATORS](conf/locale/TRANSLATORS) 文件获取完整的翻译人员列表。
 

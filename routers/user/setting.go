@@ -50,20 +50,19 @@ func SettingsPost(ctx *middleware.Context, form auth.UpdateProfileForm) {
 
 	// Check if user name has been changed.
 	if ctx.User.Name != form.UserName {
-		isExist, err := models.IsUserExist(ctx.User.Id, form.UserName)
-		if err != nil {
-			ctx.Handle(500, "IsUserExist", err)
-			return
-		} else if isExist {
-			ctx.RenderWithErr(ctx.Tr("form.username_been_taken"), SETTINGS_PROFILE, &form)
-			return
-		} else if err = models.ChangeUserName(ctx.User, form.UserName); err != nil {
-			switch err {
-			case models.ErrUserNameIllegal:
-				ctx.Flash.Error(ctx.Tr("form.illegal_username"))
+		if err := models.ChangeUserName(ctx.User, form.UserName); err != nil {
+			switch {
+			case models.IsErrUserAlreadyExist(err):
+				ctx.Flash.Error(ctx.Tr("form.username_been_taken"))
 				ctx.Redirect(setting.AppSubUrl + "/user/settings")
-			case models.ErrEmailAlreadyUsed:
+			case models.IsErrEmailAlreadyUsed(err):
 				ctx.Flash.Error(ctx.Tr("form.email_been_used"))
+				ctx.Redirect(setting.AppSubUrl + "/user/settings")
+			case models.IsErrNameReserved(err):
+				ctx.Flash.Error(ctx.Tr("user.form.name_reserved"))
+				ctx.Redirect(setting.AppSubUrl + "/user/settings")
+			case models.IsErrNamePatternNotAllowed(err):
+				ctx.Flash.Error(ctx.Tr("user.form.name_pattern_not_allowed"))
 				ctx.Redirect(setting.AppSubUrl + "/user/settings")
 			default:
 				ctx.Handle(500, "ChangeUserName", err)
@@ -204,7 +203,7 @@ func SettingsEmailPost(ctx *middleware.Context, form auth.AddEmailForm) {
 	}
 
 	if err := models.AddEmailAddress(e); err != nil {
-		if err == models.ErrEmailAlreadyUsed {
+		if models.IsErrEmailAlreadyUsed(err) {
 			ctx.RenderWithErr(ctx.Tr("form.email_been_used"), SETTINGS_EMAILS, &form)
 			return
 		}
@@ -306,7 +305,7 @@ func SettingsSSHKeysPost(ctx *middleware.Context, form auth.AddSSHKeyForm) {
 			return
 		}
 
-		if err = models.DeletePublicKey(&models.PublicKey{Id: id}); err != nil {
+		if err = models.DeletePublicKey(&models.PublicKey{ID: id}); err != nil {
 			ctx.Handle(500, "DeletePublicKey", err)
 		} else {
 			log.Trace("SSH key deleted: %s", ctx.User.Name)
@@ -322,15 +321,8 @@ func SettingsSSHKeysPost(ctx *middleware.Context, form auth.AddSSHKeyForm) {
 			return
 		}
 
-		// Parse openssh style string from form content
-		content, err := models.ParseKeyString(form.Content)
+		content, err := models.CheckPublicKeyString(form.Content)
 		if err != nil {
-			ctx.Flash.Error(ctx.Tr("form.invalid_ssh_key", err.Error()))
-			ctx.Redirect(setting.AppSubUrl + "/user/settings/ssh")
-			return
-		}
-
-		if ok, err := models.CheckPublicKeyString(content); !ok {
 			if err == models.ErrKeyUnableVerify {
 				ctx.Flash.Info(ctx.Tr("form.unable_verify_ssh_key"))
 			} else {
@@ -340,21 +332,19 @@ func SettingsSSHKeysPost(ctx *middleware.Context, form auth.AddSSHKeyForm) {
 			}
 		}
 
-		k := &models.PublicKey{
-			OwnerId: ctx.User.Id,
-			Name:    form.SSHTitle,
-			Content: content,
-		}
-		if err := models.AddPublicKey(k); err != nil {
-			if err == models.ErrKeyAlreadyExist {
-				ctx.RenderWithErr(ctx.Tr("form.ssh_key_been_used"), SETTINGS_SSH_KEYS, &form)
-				return
+		if err = models.AddPublicKey(ctx.User.Id, form.Title, content); err != nil {
+			switch {
+			case models.IsErrKeyAlreadyExist(err):
+				ctx.RenderWithErr(ctx.Tr("settings.ssh_key_been_used"), SETTINGS_SSH_KEYS, &form)
+			case models.IsErrKeyNameAlreadyUsed(err):
+				ctx.RenderWithErr(ctx.Tr("settings.ssh_key_name_used"), SETTINGS_SSH_KEYS, &form)
+			default:
+				ctx.Handle(500, "AddPublicKey", err)
 			}
-			ctx.Handle(500, "ssh.AddPublicKey", err)
 			return
 		} else {
 			log.Trace("SSH key added: %s", ctx.User.Name)
-			ctx.Flash.Success(ctx.Tr("settings.add_key_success"))
+			ctx.Flash.Success(ctx.Tr("settings.add_key_success", form.Title))
 			ctx.Redirect(setting.AppSubUrl + "/user/settings/ssh")
 			return
 		}

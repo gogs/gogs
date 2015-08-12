@@ -333,25 +333,17 @@ var Gogs = {};
         if ($(selector).hasClass('js-copy-bind')) {
             return;
         }
-        $(selector).zclip({
-            path: Gogs.AppSubUrl + "/js/ZeroClipboard.swf",
-            copy: function () {
-                var t = $(this).data("copy-val");
-                var to = $($(this).data("copy-from"));
-                var str = "";
-                if (t == "txt") {
-                    str = to.text();
-                }
-                if (t == 'val') {
-                    str = to.val();
-                }
-                if (t == 'html') {
-                    str = to.html();
-                }
-                return str;
-            },
-            afterCopy: function () {
+
+        if ( document.documentElement.classList.contains("is-copy-enabled") ) {
+
+            $(selector).click(function(event) {
                 var $this = $(this);
+
+                var cfrom = $this.attr('data-copy-from');
+                $(cfrom).select();
+                document.execCommand('copy');
+                getSelection().removeAllRanges();
+
                 $this.tipsy("hide").attr('original-title', $this.data('after-title'));
                 setTimeout(function () {
                     $this.tipsy("show");
@@ -359,8 +351,44 @@ var Gogs = {};
                 setTimeout(function () {
                     $this.tipsy('hide').attr('original-title', $this.data('original-title'));
                 }, 2000);
-            }
-        }).addClass("js-copy-bind");
+                
+                this.blur();
+                return;
+            });
+
+            $(selector).addClass("js-copy-bind");
+
+        } else {
+
+            $(selector).zclip({
+                path: Gogs.AppSubUrl + "/js/ZeroClipboard.swf",
+                copy: function () {
+                    var t = $(this).data("copy-val");
+                    var to = $($(this).data("copy-from"));
+                    var str = "";
+                    if (t == "txt") {
+                        str = to.text();
+                    }
+                    if (t == 'val') {
+                        str = to.val();
+                    }
+                    if (t == 'html') {
+                        str = to.html();
+                    }
+                    return str;
+                },
+                afterCopy: function () {
+                    var $this = $(this);
+                    $this.tipsy("hide").attr('original-title', $this.data('after-title'));
+                    setTimeout(function () {
+                        $this.tipsy("show");
+                    }, 200);
+                    setTimeout(function () {
+                        $this.tipsy('hide').attr('original-title', $this.data('original-title'));
+                    }, 2000);
+                }
+            }).addClass("js-copy-bind");
+        }
     }
 })(jQuery);
 
@@ -753,9 +781,16 @@ function initAdmin() {
         if (v == 2) {
             $('.ldap').toggleShow();
             $('.smtp').toggleHide();
+            $('.pam').toggleHide();
         }
         if (v == 3) {
             $('.smtp').toggleShow();
+            $('.ldap').toggleHide();
+            $('.pam').toggleHide();
+        }
+        if (v == 4) {
+            $('.pam').toggleShow();
+            $('.smtp').toggleHide();
             $('.ldap').toggleHide();
         }
     });

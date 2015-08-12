@@ -29,7 +29,6 @@ profile/
 __pycache__
 *.pem
 output*
-config.codekit
 .brackets.json
 docker/fig.yml
 docker/docker/Dockerfile

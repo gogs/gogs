@@ -26,7 +26,7 @@ func (f *CreateOrgForm) Validate(ctx *macaron.Context, errs binding.Errors) bind
 }
 
 type UpdateOrgSettingForm struct {
-	OrgUserName string `form:"uname" binding:"Required;MaxSize(35)"`
+	OrgUserName string `form:"uname" binding:"Required;AlphaDashDot;MaxSize(30)" locale:"org.org_name_holder"`
 	OrgFullName string `form:"fullname" binding:"MaxSize(100)"`
 	Email       string `form:"email" binding:"Required;Email;MaxSize(50)"`
 	Description string `form:"desc" binding:"MaxSize(255)"`
