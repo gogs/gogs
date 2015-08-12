@@ -32,19 +32,42 @@
 					  </div>
 					</div>
 			    <div class="ui attached segment markdown">
+			    	{{if .Issue.RenderedContent}}
 						{{.Issue.RenderedContent|Str2html}}
+			    	{{else}}
+						<span class="no-content">{{.i18n.Tr "repo.issues.no_content"}}</span>
+			    	{{end}}
 	  			</div>
 	  			{{if .Issue.Attachments}}
 					<div class="ui bottom attached segment">
 						<div class="ui small images">
 							{{range .Issue.Attachments}}
-						  <a href="/attachments/{{.UUID}}"><img class="ui image" src="/attachments/{{.UUID}}"></a>
+						  <a target="_blank" href="/attachments/{{.UUID}}"><img class="ui image" src="/attachments/{{.UUID}}"></a>
 						  {{end}}
 						</div>
 					</div>
 	  			{{end}}
 		    </div>
   		</div>
+
+		  <div class="comment form">
+		    <a class="avatar" href="{{.SignedUser.HomeLink}}">
+		      <img src="{{.SignedUser.AvatarLink}}">
+		    </a>
+		    <div class="content">
+			    <form class="ui segment form" action="{{.Link}}" method="post">
+						{{template "repo/issue/comment_tab" .}}
+			      <div class="text right">
+							<div class="ui red basic button" data-close="{{.i18n.Tr "repo.issues.close_issue"}}" data-close-and-comment="{{.i18n.Tr "repo.issues.close_comment_issue"}}">
+								{{.i18n.Tr "repo.issues.close_issue"}}
+							</div>
+							<div class="ui green button">
+								{{.i18n.Tr "repo.issues.create_comment"}}
+							</div>
+			      </div>
+			    </form>
+		    </div>
+		  </div>
   	</ui>
 	</div>
 

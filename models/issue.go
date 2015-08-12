@@ -160,12 +160,9 @@ func (i *Issue) GetAssignee() (err error) {
 	return err
 }
 
-func (i *Issue) AfterDelete() {
-	_, err := DeleteAttachmentsByIssue(i.ID, true)
-
-	if err != nil {
-		log.Info("Could not delete files for issue #%d: %s", i.ID, err)
-	}
+// ReadBy sets issue to be read by given user.
+func (i *Issue) ReadBy(uid int64) error {
+	return UpdateIssueUserByRead(uid, i.ID)
 }
 
 // CreateIssue creates new issue with labels for repository.
@@ -625,10 +622,9 @@ func UpdateIssueUserByAssignee(issueID, assigneeID int64) (err error) {
 	return sess.Commit()
 }
 
-// UpdateIssueUserPairByRead updates issue-user pair for reading.
-func UpdateIssueUserPairByRead(uid, iid int64) error {
-	rawSql := "UPDATE `issue_user` SET is_read = ? WHERE uid = ? AND issue_id = ?"
-	_, err := x.Exec(rawSql, true, uid, iid)
+// UpdateIssueUserByRead updates issue-user relation for reading.
+func UpdateIssueUserByRead(uid, issueID int64) error {
+	_, err := x.Exec("UPDATE `issue_user` SET is_read=? WHERE uid=? AND issue_id=?", true, uid, issueID)
 	return err
 }
 
