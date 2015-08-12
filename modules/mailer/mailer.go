@@ -104,13 +104,18 @@ func sendMail(settings *setting.Mailer, recipients []string, msgContent []byte) 
 		return err
 	}
 
-	hostname, err := os.Hostname()
-	if err != nil {
-		return err
-	}
+	if !setting.MailService.DisableHelo {
+		hostname := setting.MailService.HeloHostname
+		if len(hostname) == 0 {
+			hostname, err = os.Hostname()
+			if err != nil {
+				return err
+			}
+		}
 
-	if err = client.Hello(hostname); err != nil {
-		return err
+		if err = client.Hello(hostname); err != nil {
+			return err
+		}
 	}
 
 	// If not using SMTPS, alway use STARTTLS if available

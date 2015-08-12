@@ -21,6 +21,10 @@ import (
 	"github.com/gogits/gogs/modules/uuid"
 )
 
+func IsAPIPath(url string) bool {
+	return strings.HasPrefix(url, "/api/")
+}
+
 // SignedInId returns the id of signed in user.
 func SignedInId(req *http.Request, sess session.Store) int64 {
 	if !models.HasEngine {
@@ -28,7 +32,7 @@ func SignedInId(req *http.Request, sess session.Store) int64 {
 	}
 
 	// API calls need to check access token.
-	if strings.HasPrefix(req.URL.Path, "/api/") {
+	if IsAPIPath(req.URL.Path) {
 		auHead := req.Header.Get("Authorization")
 		if len(auHead) > 0 {
 			auths := strings.Fields(auHead)
@@ -51,7 +55,7 @@ func SignedInId(req *http.Request, sess session.Store) int64 {
 	}
 	if id, ok := uid.(int64); ok {
 		if _, err := models.GetUserById(id); err != nil {
-			if err != models.ErrUserNotExist {
+			if !models.IsErrUserNotExist(err) {
 				log.Error(4, "GetUserById: %v", err)
 			}
 			return 0
@@ -76,7 +80,7 @@ func SignedInUser(req *http.Request, sess session.Store) (*models.User, bool) {
 			if len(webAuthUser) > 0 {
 				u, err := models.GetUserByName(webAuthUser)
 				if err != nil {
-					if err != models.ErrUserNotExist {
+					if !models.IsErrUserNotExist(err) {
 						log.Error(4, "GetUserByName: %v", err)
 						return nil, false
 					}
@@ -111,7 +115,7 @@ func SignedInUser(req *http.Request, sess session.Store) (*models.User, bool) {
 
 				u, err := models.UserSignIn(uname, passwd)
 				if err != nil {
-					if err != models.ErrUserNotExist {
+					if !models.IsErrUserNotExist(err) {
 						log.Error(4, "UserSignIn: %v", err)
 					}
 					return nil, false
@@ -167,10 +171,14 @@ func AssignForm(form interface{}, data map[string]interface{}) {
 func getSize(field reflect.StructField, prefix string) string {
 	for _, rule := range strings.Split(field.Tag.Get("binding"), ";") {
 		if strings.HasPrefix(rule, prefix) {
-			return rule[8 : len(rule)-1]
+			return rule[len(prefix) : len(rule)-1]
 		}
 	}
 	return ""
+}
+
+func GetSize(field reflect.StructField) string {
+	return getSize(field, "Size(")
 }
 
 func GetMinSize(field reflect.StructField) string {
@@ -208,7 +216,14 @@ func validate(errs binding.Errors, data map[string]interface{}, f Form, l macaro
 
 		if errs[0].FieldNames[0] == field.Name {
 			data["Err_"+field.Name] = true
-			trName := l.Tr("form." + field.Name)
+
+			trName := field.Tag.Get("locale")
+			if len(trName) == 0 {
+				trName = l.Tr("form." + field.Name)
+			} else {
+				trName = l.Tr(trName)
+			}
+
 			switch errs[0].Classification {
 			case binding.ERR_REQUIRED:
 				data["ErrorMsg"] = trName + l.Tr("form.require_error")
@@ -216,6 +231,8 @@ func validate(errs binding.Errors, data map[string]interface{}, f Form, l macaro
 				data["ErrorMsg"] = trName + l.Tr("form.alpha_dash_error")
 			case binding.ERR_ALPHA_DASH_DOT:
 				data["ErrorMsg"] = trName + l.Tr("form.alpha_dash_dot_error")
+			case binding.ERR_SIZE:
+				data["ErrorMsg"] = trName + l.Tr("form.size_error", GetSize(field))
 			case binding.ERR_MIN_SIZE:
 				data["ErrorMsg"] = trName + l.Tr("form.min_size_error", GetMinSize(field))
 			case binding.ERR_MAX_SIZE:

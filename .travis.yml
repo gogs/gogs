@@ -6,9 +6,12 @@ go:
   - 1.4
   - tip
 
-sudo: false
+before_install:
+  - sudo apt-get update -qq
+  - sudo apt-get install -y libpam-dev
+  - go get github.com/msteinert/pam 
 
-script: go build -v
+script: go build -v -tags "pam"
 
 notifications:
   email:

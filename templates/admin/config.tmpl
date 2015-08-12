@@ -101,8 +101,8 @@
                             </div>
                             <div class="panel-body">
                                 <dl class="dl-horizontal admin-dl-horizontal">
-                                    <dt>{{.i18n.Tr "admin.config.task_interval"}}</dt>
-                                    <dd>{{.Webhook.TaskInterval}} {{.i18n.Tr "tool.raw_minutes"}}</dd>
+                                    <dt>{{.i18n.Tr "admin.config.queue_length"}}</dt>
+                                    <dd>{{.Webhook.QueueLength}}</dd>
                                     <dt>{{.i18n.Tr "admin.config.deliver_timeout"}}</dt>
                                     <dd>{{.Webhook.DeliverTimeout}} {{.i18n.Tr "tool.raw_seconds"}}</dd>
                                     <dt>{{.i18n.Tr "admin.config.skip_tls_verify"}}</dt>
@@ -121,6 +121,8 @@
                                     <dd><i class="fa fa{{if .MailerEnabled}}-check{{end}}-square-o"></i></dd>
                                     {{if .MailerEnabled}}<dt>{{.i18n.Tr "admin.config.mailer_name"}}</dt>
                                     <dd>{{.Mailer.Name}}</dd>
+                                    <dt>{{.i18n.Tr "admin.config.mailer_disable_helo"}}</dt>
+                                    <dd><i class="fa fa{{if .Mailer.DisableHelo}}-check{{end}}-square-o"></i></dd>
                                     <dt>{{.i18n.Tr "admin.config.mailer_host"}}</dt>
                                     <dd>{{.Mailer.Host}}</dd>
                                     <dt>{{.i18n.Tr "admin.config.mailer_user"}}</dt>

@@ -8,6 +8,7 @@
         <meta name="author" content="Gogs - Go Git Service" />
 		<meta name="description" content="Gogs(Go Git Service) is a GitHub-like clone in the Go Programming Language" />
 		<meta name="keywords" content="go, git">
+		<meta name="referrer" content="no-referrer" />
 		<meta name="_csrf" content="{{.CsrfToken}}" />
 		{{if .GoGetImport}}<meta name="go-import" content="{{.GoGetImport}} git {{.CloneLink.HTTPS}}">{{end}}
 
@@ -16,13 +17,13 @@
 		<link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
 		<link href="//maxcdn.bootstrapcdn.com/font-awesome/4.1.0/css/font-awesome.min.css" rel="stylesheet">
 
-		<script src="//code.jquery.com/jquery-1.11.0.min.js"></script>
+		<script src="//code.jquery.com/jquery-1.11.3.min.js"></script>
 		<script src="//netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
 		{{else}}
 		<link href="{{AppSubUrl}}/css/bootstrap.min.css" rel="stylesheet" />
 		<link href="{{AppSubUrl}}/css/font-awesome.min.css" rel="stylesheet" />
 
-		<script src="{{AppSubUrl}}/js/jquery-1.10.1.min.js"></script>
+		<script src="{{AppSubUrl}}/js/jquery-1.11.3.min.js"></script>
 		<script src="{{AppSubUrl}}/js/bootstrap.min.js"></script>
 		{{end}}
 

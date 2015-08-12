@@ -27,10 +27,11 @@ const (
 	SETTINGS_OPTIONS base.TplName = "repo/settings/options"
 	COLLABORATION    base.TplName = "repo/settings/collaboration"
 	HOOKS            base.TplName = "repo/settings/hooks"
-	GITHOOKS         base.TplName = "repo/settings/githooks"
-	GITHOOK_EDIT     base.TplName = "repo/settings/githook_edit"
 	HOOK_NEW         base.TplName = "repo/settings/hook_new"
 	ORG_HOOK_NEW     base.TplName = "org/settings/hook_new"
+	GITHOOKS         base.TplName = "repo/settings/githooks"
+	GITHOOK_EDIT     base.TplName = "repo/settings/githook_edit"
+	DEPLOY_KEYS      base.TplName = "repo/settings/deploy_keys"
 )
 
 func Settings(ctx *middleware.Context) {
@@ -53,15 +54,18 @@ func SettingsPost(ctx *middleware.Context, form auth.RepoSettingForm) {
 		newRepoName := form.RepoName
 		// Check if repository name has been changed.
 		if ctx.Repo.Repository.Name != newRepoName {
-			if models.IsRepositoryExist(ctx.Repo.Owner, newRepoName) {
-				ctx.Data["Err_RepoName"] = true
-				ctx.RenderWithErr(ctx.Tr("form.repo_name_been_taken"), SETTINGS_OPTIONS, nil)
-				return
-			} else if err := models.ChangeRepositoryName(ctx.Repo.Owner.Name, ctx.Repo.Repository.Name, newRepoName); err != nil {
-				if err == models.ErrRepoNameIllegal {
+			if err := models.ChangeRepositoryName(ctx.Repo.Owner, ctx.Repo.Repository.Name, newRepoName); err != nil {
+				switch {
+				case models.IsErrRepoAlreadyExist(err):
 					ctx.Data["Err_RepoName"] = true
-					ctx.RenderWithErr(ctx.Tr("form.illegal_repo_name"), SETTINGS_OPTIONS, nil)
-				} else {
+					ctx.RenderWithErr(ctx.Tr("form.repo_name_been_taken"), SETTINGS_OPTIONS, &form)
+				case models.IsErrNameReserved(err):
+					ctx.Data["Err_RepoName"] = true
+					ctx.RenderWithErr(ctx.Tr("repo.form.name_reserved", err.(models.ErrNameReserved).Name), SETTINGS_OPTIONS, &form)
+				case models.IsErrNamePatternNotAllowed(err):
+					ctx.Data["Err_RepoName"] = true
+					ctx.RenderWithErr(ctx.Tr("repo.form.name_pattern_not_allowed", err.(models.ErrNamePatternNotAllowed).Pattern), SETTINGS_OPTIONS, &form)
+				default:
 					ctx.Handle(500, "ChangeRepositoryName", err)
 				}
 				return
@@ -115,7 +119,7 @@ func SettingsPost(ctx *middleware.Context, form auth.RepoSettingForm) {
 		}
 
 		if _, err = models.UserSignIn(ctx.User.Name, ctx.Query("password")); err != nil {
-			if err == models.ErrUserNotExist {
+			if models.IsErrUserNotExist(err) {
 				ctx.RenderWithErr(ctx.Tr("form.enterred_invalid_password"), SETTINGS_OPTIONS, nil)
 			} else {
 				ctx.Handle(500, "UserSignIn", err)
@@ -124,7 +128,7 @@ func SettingsPost(ctx *middleware.Context, form auth.RepoSettingForm) {
 		}
 
 		if err = models.TransferOwnership(ctx.User, newOwner, ctx.Repo.Repository); err != nil {
-			if err == models.ErrRepoAlreadyExist {
+			if models.IsErrRepoAlreadyExist(err) {
 				ctx.RenderWithErr(ctx.Tr("repo.settings.new_owner_has_same_repo"), SETTINGS_OPTIONS, nil)
 			} else {
 				ctx.Handle(500, "TransferOwnership", err)
@@ -148,7 +152,7 @@ func SettingsPost(ctx *middleware.Context, form auth.RepoSettingForm) {
 		}
 
 		if _, err := models.UserSignIn(ctx.User.Name, ctx.Query("password")); err != nil {
-			if err == models.ErrUserNotExist {
+			if models.IsErrUserNotExist(err) {
 				ctx.RenderWithErr(ctx.Tr("form.enterred_invalid_password"), SETTINGS_OPTIONS, nil)
 			} else {
 				ctx.Handle(500, "UserSignIn", err)
@@ -182,7 +186,7 @@ func SettingsCollaboration(ctx *middleware.Context) {
 
 		u, err := models.GetUserByName(name)
 		if err != nil {
-			if err == models.ErrUserNotExist {
+			if models.IsErrUserNotExist(err) {
 				ctx.Flash.Error(ctx.Tr("form.user_not_exist"))
 				ctx.Redirect(setting.AppSubUrl + ctx.Req.URL.Path)
 			} else {
@@ -279,6 +283,7 @@ func WebHooksNew(ctx *middleware.Context) {
 	ctx.Data["PageIsSettingsHooksNew"] = true
 	ctx.Data["Webhook"] = models.Webhook{HookEvent: &models.HookEvent{}}
 	renderHookTypes(ctx)
+
 	orCtx, err := getOrgRepoCtx(ctx)
 	if err != nil {
 		ctx.Handle(500, "WebHooksNew(getOrgRepoCtx)", err)
@@ -293,6 +298,7 @@ func WebHooksNewPost(ctx *middleware.Context, form auth.NewWebhookForm) {
 	ctx.Data["PageIsSettingsHooks"] = true
 	ctx.Data["PageIsSettingsHooksNew"] = true
 	ctx.Data["Webhook"] = models.Webhook{HookEvent: &models.HookEvent{}}
+	renderHookTypes(ctx)
 
 	orCtx, err := getOrgRepoCtx(ctx)
 	if err != nil {
@@ -361,14 +367,10 @@ func WebHooksEdit(ctx *middleware.Context) {
 	// set data per HookTaskType
 	switch w.HookTaskType {
 	case models.SLACK:
-		{
-			ctx.Data["SlackHook"] = w.GetSlackHook()
-			ctx.Data["HookType"] = "Slack"
-		}
+		ctx.Data["SlackHook"] = w.GetSlackHook()
+		ctx.Data["HookType"] = "Slack"
 	default:
-		{
-			ctx.Data["HookType"] = "Gogs"
-		}
+		ctx.Data["HookType"] = "Gogs"
 	}
 	w.GetEvent()
 	ctx.Data["Webhook"] = w
@@ -399,6 +401,15 @@ func WebHooksEditPost(ctx *middleware.Context, form auth.NewWebhookForm) {
 			ctx.Handle(500, "GetWebhookById", err)
 		}
 		return
+	}
+
+	// set data per HookTaskType
+	switch w.HookTaskType {
+	case models.SLACK:
+		ctx.Data["SlackHook"] = w.GetSlackHook()
+		ctx.Data["HookType"] = "Slack"
+	default:
+		ctx.Data["HookType"] = "Gogs"
 	}
 	w.GetEvent()
 	ctx.Data["Webhook"] = w
@@ -574,6 +585,29 @@ func getOrgRepoCtx(ctx *middleware.Context) (*OrgRepoCtx, error) {
 	}
 }
 
+func TriggerHook(ctx *middleware.Context) {
+	u, err := models.GetUserByName(ctx.Params(":username"))
+	if err != nil {
+		if models.IsErrUserNotExist(err) {
+			ctx.Handle(404, "GetUserByName", err)
+		} else {
+			ctx.Handle(500, "GetUserByName", err)
+		}
+		return
+	}
+
+	repo, err := models.GetRepositoryByName(u.Id, ctx.Params(":reponame"))
+	if err != nil {
+		if models.IsErrRepoNotExist(err) {
+			ctx.Handle(404, "GetRepositoryByName", err)
+		} else {
+			ctx.Handle(500, "GetRepositoryByName", err)
+		}
+		return
+	}
+	models.HookQueue.AddRepoID(repo.Id)
+}
+
 func GitHooks(ctx *middleware.Context) {
 	ctx.Data["Title"] = ctx.Tr("repo.settings")
 	ctx.Data["PageIsSettingsGitHooks"] = true
@@ -623,4 +657,72 @@ func GitHooksEditPost(ctx *middleware.Context) {
 		return
 	}
 	ctx.Redirect(ctx.Repo.RepoLink + "/settings/hooks/git")
+}
+
+func SettingsDeployKeys(ctx *middleware.Context) {
+	ctx.Data["Title"] = ctx.Tr("repo.settings")
+	ctx.Data["PageIsSettingsKeys"] = true
+
+	keys, err := models.ListDeployKeys(ctx.Repo.Repository.Id)
+	if err != nil {
+		ctx.Handle(500, "ListDeployKeys", err)
+		return
+	}
+	ctx.Data["Deploykeys"] = keys
+
+	ctx.HTML(200, DEPLOY_KEYS)
+}
+
+func SettingsDeployKeysPost(ctx *middleware.Context, form auth.AddSSHKeyForm) {
+	ctx.Data["Title"] = ctx.Tr("repo.settings")
+	ctx.Data["PageIsSettingsKeys"] = true
+
+	if ctx.HasError() {
+		ctx.HTML(200, DEPLOY_KEYS)
+		return
+	}
+
+	content, err := models.CheckPublicKeyString(form.Content)
+	if err != nil {
+		if err == models.ErrKeyUnableVerify {
+			ctx.Flash.Info(ctx.Tr("form.unable_verify_ssh_key"))
+		} else {
+			ctx.Data["HasError"] = true
+			ctx.Data["Err_Content"] = true
+			ctx.Flash.Error(ctx.Tr("form.invalid_ssh_key", err.Error()))
+			ctx.Redirect(ctx.Repo.RepoLink + "/settings/keys")
+			return
+		}
+	}
+
+	if err = models.AddDeployKey(ctx.Repo.Repository.Id, form.Title, content); err != nil {
+		ctx.Data["HasError"] = true
+		switch {
+		case models.IsErrKeyAlreadyExist(err):
+			ctx.Data["Err_Content"] = true
+			ctx.RenderWithErr(ctx.Tr("repo.settings.key_been_used"), DEPLOY_KEYS, &form)
+		case models.IsErrKeyNameAlreadyUsed(err):
+			ctx.Data["Err_Title"] = true
+			ctx.RenderWithErr(ctx.Tr("repo.settings.key_name_used"), DEPLOY_KEYS, &form)
+		default:
+			ctx.Handle(500, "AddDeployKey", err)
+		}
+		return
+	}
+
+	log.Trace("Deploy key added: %d", ctx.Repo.Repository.Id)
+	ctx.Flash.Success(ctx.Tr("repo.settings.add_key_success", form.Title))
+	ctx.Redirect(ctx.Repo.RepoLink + "/settings/keys")
+}
+
+func DeleteDeployKey(ctx *middleware.Context) {
+	if err := models.DeleteDeployKey(ctx.QueryInt64("id")); err != nil {
+		ctx.Flash.Error("DeleteDeployKey: " + err.Error())
+	} else {
+		ctx.Flash.Success(ctx.Tr("repo.settings.deploy_key_deletion_success"))
+	}
+
+	ctx.JSON(200, map[string]interface{}{
+		"redirect": ctx.Repo.RepoLink + "/settings/keys",
+	})
 }

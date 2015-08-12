@@ -28,7 +28,7 @@
                                 <form action="{{AppSubUrl}}/user/settings/ssh" method="post">
                                     {{$.CsrfTokenHtml}}
                                     <input name="_method" type="hidden" value="DELETE">
-                                    <input name="id" type="hidden" value="{{.Id}}">
+                                    <input name="id" type="hidden" value="{{.ID}}">
                                     <button class="right ssh-btn btn btn-red btn-radius btn-small">{{$.i18n.Tr "settings.delete_key"}}</button>
                                 </form>
                             </li>

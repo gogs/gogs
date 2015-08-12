@@ -34,7 +34,7 @@ func OrgAssignment(redirect bool, args ...bool) macaron.Handler {
 		var err error
 		ctx.Org.Organization, err = models.GetUserByName(orgName)
 		if err != nil {
-			if err == models.ErrUserNotExist {
+			if models.IsErrUserNotExist(err) {
 				ctx.Handle(404, "GetUserByName", err)
 			} else if redirect {
 				log.Error(4, "GetUserByName", err)
@@ -46,6 +46,12 @@ func OrgAssignment(redirect bool, args ...bool) macaron.Handler {
 		}
 		org := ctx.Org.Organization
 		ctx.Data["Org"] = org
+
+		// Force redirection when username is actually a user.
+		if !org.IsOrganization() {
+			ctx.Redirect("/" + org.Name)
+			return
+		}
 
 		if ctx.IsSigned {
 			ctx.Org.IsOwner = org.IsOwnedBy(ctx.User.Id)
