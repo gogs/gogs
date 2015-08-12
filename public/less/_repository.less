@@ -3,20 +3,25 @@
 
 	padding-top: 15px;
 	padding-bottom: @footer-margin * 3;
+
 	.head {
-		height: 40px;
-		background-color: #FCFCFC;
+		.column {
+			padding-top: 5px!important;
+			padding-bottom: 5px!important;
+		}
+		.ui.compact.menu {
+			margin-left: 1rem;
+		}
+		.ui.header {
+			margin-top: 0;
+		}
 		.mega-octicon {
 			width: @mega-octicon-width;
 			font-size: 30px;
 		}
-		a,
-		.fork-flag {
+		.ui.huge.breadcrumb {
 			font-weight: 300;
-		}
-		.ui.label {
-			margin-top: 5px;
-			vertical-align: top;
+			font-size: 1.7rem;
 		}
 		.fork-flag {
 			margin-left: @mega-octicon-width + 8px;
@@ -25,10 +30,8 @@
 			line-height: 10px;
 			white-space: nowrap;
 		}
-		.num {
-			font-weight: bold;
-		}
 	}
+
 	.metas {
 		.menu {
 			max-height: 300px;
