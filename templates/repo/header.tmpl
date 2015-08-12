@@ -5,7 +5,7 @@
 
 		<div class="column"><!-- start column -->
 
-			<div class="ui grey small compact menu floated right count labelled">
+			<div class="ui black small compact menu floated right count labelled">
 				<a class="item{{if $.IsRepositoryOwner}} poping up{{end}}"{{if not $.IsRepositoryOwner}} href="{{AppSubUrl}}/repo/fork/{{.ID}}"{{else}} data-content="{{$.i18n.Tr "repo.fork_from_self"}}" data-position="top center" data-variation="tiny"{{end}}>
 					<i class="icon octicon octicon-repo-forked"></i>
 					{{$.i18n.Tr "repo.fork"}}
@@ -13,7 +13,7 @@
 				<span class="active item num">{{.NumForks}}</span>
 			</div>
 
-			<div class="ui grey small compact menu floated right count labelled">
+			<div class="ui black small compact menu floated right count labelled">
 				<a class="item" href="{{$.RepoLink}}/action/{{if $.IsStaringRepo}}un{{end}}star?redirect_to={{$.Link}}">
 					<i class="icon fa-star{{if not $.IsStaringRepo}}-o{{end}}"></i>
 					{{if $.IsStaringRepo}}{{$.i18n.Tr "repo.unstar"}}{{else}}{{$.i18n.Tr "repo.star"}}{{end}}
@@ -21,7 +21,7 @@
 				<span class="active item num">{{.NumStars}}</span>
 			</div>
 
-			<div class="ui grey small compact menu floated right count labelled">
+			<div class="ui black small compact menu floated right count labelled">
 				<a class="item" href="{{$.RepoLink}}/action/{{if $.IsWatchingRepo}}un{{end}}watch?redirect_to={{$.Link}}">
 					<i class="icon fa fa-eye{{if not $.IsWatchingRepo}}-slash{{end}}"></i>
 					{{if $.IsWatchingRepo}}{{$.i18n.Tr "repo.unwatch"}}{{else}}{{$.i18n.Tr "repo.watch"}}{{end}}
@@ -29,36 +29,16 @@
 				<span class="active item num">{{.NumWatches}}</span>
 			</div>
 
-			<div class="ui header"><!-- start header -->
-
+			<div class="ui header">
+			<div class="ui huge breadcrumb">
 				<i class="mega-octicon octicon-{{if .IsPrivate}}lock{{else if .IsMirror}}repo-clone{{else if .IsFork}}repo-forked{{else}}repo{{end}}"></i>
-
-				<div class="content">
-
-					<div class="ui huge breadcrumb"><!-- start breadcrumb -->
-
-						<a href="{{AppSubUrl}}/{{.Owner.Name}}">{{.Owner.Name}}</a>
-
-						<div class="divider"> / </div>
-
-						<a href="{{$.RepoLink}}">{{.Name}}</a>
-
-						{{if .IsMirror}}
-						<div class="divider"></div>
-						<div class="ui small label">{{$.i18n.Tr "mirror"}}</div>
-						{{end}}
-
-						{{if .IsFork}}
-						<div class="sub header">
-						<span class="ui text small">{{$.i18n.Tr "repo.forked_from"}}</span> <a href="{{.BaseRepo.RepoLink}}">{{SubStr .BaseRepo.RepoLink 1 -1}}</a>
-						</div>
-						{{end}}
-
-					</div><!-- end breadcrumb -->
-
-				</div><!-- end content -->
-
-			</div><!-- end header -->
+				<a href="{{AppSubUrl}}/{{.Owner.Name}}">{{.Owner.Name}}</a>
+				<div class="divider"> / </div>
+				<a href="{{$.RepoLink}}">{{.Name}}</a>
+				{{if .IsMirror}}<div class="ui label">{{$.i18n.Tr "mirror"}}</div>{{end}}
+				{{if .IsFork}}<div class="fork-flag">{{$.i18n.Tr "repo.forked_from"}} <a href="{{.BaseRepo.RepoLink}}">{{SubStr .BaseRepo.RepoLink 1 -1}}</a></div>{{end}}
+			</div>
+			</div>
 
 		</div><!-- end column -->
 
