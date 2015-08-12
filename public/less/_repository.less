@@ -121,8 +121,10 @@
 	@comment-avatar-width: 3em;
 	&.new.issue {
 		.comment.form {
-			.comment .avatar {
-				width: @comment-avatar-width;
+			.comment {
+				.avatar {
+					width: @comment-avatar-width;
+				}
 			}
 			.content {
 				margin-left: 4em;
@@ -137,6 +139,7 @@
 					overflow-x: auto;
 				}
 			}
+
 		}
 	}
 	&.view.issue {
@@ -187,11 +190,29 @@
 					.markdown {
 						font-size: 14px;
 					}
-					.bottom.segment {
+					.no-content {
+						color: #767676;
+						font-style: italic;
+					}
+					> .bottom.segment {
 						background: #f3f4f5;
 						.ui.image {
 							max-height: 150px;
 						}
+					}
+				}
+
+				.ui.form {
+					.field:first-child {
+						clear: none;
+					}
+					.tab.segment {
+						border: none;
+				    padding: 0;
+				    padding-top: 10px;
+					}
+					textarea {
+						height: 200px;
 					}
 				}
 			}
@@ -203,7 +224,7 @@
 	.comment.form {
 		.ui.comments {
 			margin-top: -12px;
-			max-width: 750px!important;
+			max-width: 100%;
 		}
 		.content {
 			.field:first-child {
@@ -216,15 +237,6 @@
 			}
 			textarea {
 				height: 200px;
-			}
-		}
-		.dropzone {
-			width: 100%; 
-			margin-bottom: 10px;
-			border: 2px dashed #0087F7;
-			box-shadow: none;
-			.dz-error-message {
-				top: 140px;
 			}
 		}
 	}
@@ -348,6 +360,18 @@
 			    z-index: 13;
 				}
 			}
+		}
+	}
+}
+
+.ui.comments {
+	.dropzone {
+		width: 100%; 
+		margin-bottom: 10px;
+		border: 2px dashed #0087F7;
+		box-shadow: none!important;
+		.dz-error-message {
+			top: 140px;
 		}
 	}
 }
