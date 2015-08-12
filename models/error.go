@@ -239,6 +239,28 @@ func (err ErrRepoAlreadyExist) Error() string {
 	return fmt.Sprintf("repository already exists [uname: %d, name: %s]", err.Uname, err.Name)
 }
 
+// .___
+// |   | ______ ________ __   ____
+// |   |/  ___//  ___/  |  \_/ __ \
+// |   |\___ \ \___ \|  |  /\  ___/
+// |___/____  >____  >____/  \___  >
+//          \/     \/            \/
+
+type ErrIssueNotExist struct {
+	ID     int64
+	RepoID int64
+	Index  int64
+}
+
+func IsErrIssueNotExist(err error) bool {
+	_, ok := err.(ErrIssueNotExist)
+	return ok
+}
+
+func (err ErrIssueNotExist) Error() string {
+	return fmt.Sprintf("issue does not exist [id: %d, repo_id: %d, index: %4]", err.ID, err.RepoID, err.Index)
+}
+
 // .____          ___.          .__
 // |    |   _____ \_ |__   ____ |  |
 // |    |   \__  \ | __ \_/ __ \|  |

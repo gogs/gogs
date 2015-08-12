@@ -27,7 +27,6 @@ import (
 )
 
 var (
-	ErrIssueNotExist       = errors.New("Issue does not exist")
 	ErrWrongIssueCounter   = errors.New("Invalid number of issues for this milestone")
 	ErrAttachmentNotLinked = errors.New("Attachment does not belong to this issue")
 	ErrMissingIssueNumber  = errors.New("No issue number specified")
@@ -57,11 +56,24 @@ type Issue struct {
 	Deadline        time.Time
 	Created         time.Time `xorm:"CREATED"`
 	Updated         time.Time `xorm:"UPDATED"`
+
+	Attachments []*Attachment `xorm:"-"`
+}
+
+// HashTag returns unique hash tag for issue.
+func (i *Issue) HashTag() string {
+	return "#issue-" + com.ToStr(i.Index)
 }
 
 func (i *Issue) AfterSet(colName string, _ xorm.Cell) {
 	var err error
 	switch colName {
+	case "id":
+		i.Attachments, err = GetAttachmentsByIssueID(i.ID)
+		if err != nil {
+			log.Error(3, "GetAttachmentsByIssueID[%d]: %v", i.ID, err)
+		}
+
 	case "milestone_id":
 		if i.MilestoneID == 0 {
 			return
@@ -69,7 +81,7 @@ func (i *Issue) AfterSet(colName string, _ xorm.Cell) {
 
 		i.Milestone, err = GetMilestoneByID(i.MilestoneID)
 		if err != nil {
-			log.Error(3, "GetMilestoneById: %v", err)
+			log.Error(3, "GetMilestoneById[%d]: %v", i.ID, err)
 		}
 	case "assignee_id":
 		if i.AssigneeID == 0 {
@@ -78,7 +90,7 @@ func (i *Issue) AfterSet(colName string, _ xorm.Cell) {
 
 		i.Assignee, err = GetUserByID(i.AssigneeID)
 		if err != nil {
-			log.Error(3, "GetUserByID: %v", err)
+			log.Error(3, "GetUserByID[%d]: %v", i.ID, err)
 		}
 	}
 }
@@ -86,7 +98,7 @@ func (i *Issue) AfterSet(colName string, _ xorm.Cell) {
 func (i *Issue) GetPoster() (err error) {
 	i.Poster, err = GetUserByID(i.PosterID)
 	if IsErrUserNotExist(err) {
-		i.Poster = &User{Name: "FakeUser"}
+		i.Poster = &User{Name: "Someone"}
 		return nil
 	}
 	return err
@@ -146,11 +158,6 @@ func (i *Issue) GetAssignee() (err error) {
 		return nil
 	}
 	return err
-}
-
-func (i *Issue) Attachments() []*Attachment {
-	a, _ := GetAttachmentsForIssue(i.ID)
-	return a
 }
 
 func (i *Issue) AfterDelete() {
@@ -255,25 +262,28 @@ func GetIssueByRef(ref string) (issue *Issue, err error) {
 }
 
 // GetIssueByIndex returns issue by given index in repository.
-func GetIssueByIndex(rid, index int64) (*Issue, error) {
-	issue := &Issue{RepoID: rid, Index: index}
+func GetIssueByIndex(repoID, index int64) (*Issue, error) {
+	issue := &Issue{
+		RepoID: repoID,
+		Index:  index,
+	}
 	has, err := x.Get(issue)
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, ErrIssueNotExist
+		return nil, ErrIssueNotExist{0, repoID, index}
 	}
 	return issue, nil
 }
 
-// GetIssueById returns an issue by ID.
-func GetIssueById(id int64) (*Issue, error) {
-	issue := &Issue{ID: id}
-	has, err := x.Get(issue)
+// GetIssueByID returns an issue by given ID.
+func GetIssueByID(id int64) (*Issue, error) {
+	issue := new(Issue)
+	has, err := x.Id(id).Get(issue)
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, ErrIssueNotExist
+		return nil, ErrIssueNotExist{id, 0, 0}
 	}
 	return issue, nil
 }
@@ -1303,17 +1313,10 @@ func GetAttachmentByUUID(uuid string) (*Attachment, error) {
 	return attach, nil
 }
 
-func GetAttachmentsForIssue(issueId int64) ([]*Attachment, error) {
+// GetAttachmentsByIssueID returns all attachments for given issue by ID.
+func GetAttachmentsByIssueID(issueID int64) ([]*Attachment, error) {
 	attachments := make([]*Attachment, 0, 10)
-	err := x.Where("issue_id = ?", issueId).And("comment_id = 0").Find(&attachments)
-	return attachments, err
-}
-
-// GetAttachmentsByIssue returns a list of attachments for the given issue
-func GetAttachmentsByIssue(issueId int64) ([]*Attachment, error) {
-	attachments := make([]*Attachment, 0, 10)
-	err := x.Where("issue_id = ?", issueId).And("comment_id > 0").Find(&attachments)
-	return attachments, err
+	return attachments, x.Where("issue_id=? AND comment_id=0", issueID).Find(&attachments)
 }
 
 // GetAttachmentsByComment returns a list of attachments for the given comment
@@ -1348,7 +1351,7 @@ func DeleteAttachments(attachments []*Attachment, remove bool) (int, error) {
 
 // DeleteAttachmentsByIssue deletes all attachments associated with the given issue.
 func DeleteAttachmentsByIssue(issueId int64, remove bool) (int, error) {
-	attachments, err := GetAttachmentsByIssue(issueId)
+	attachments, err := GetAttachmentsByIssueID(issueId)
 
 	if err != nil {
 		return 0, err

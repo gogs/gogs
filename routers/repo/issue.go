@@ -172,13 +172,17 @@ func Issues(ctx *middleware.Context) {
 	ctx.HTML(200, ISSUES)
 }
 
+func renderAttachmentSettings(ctx *middleware.Context) {
+	ctx.Data["IsAttachmentEnabled"] = setting.AttachmentEnabled
+	ctx.Data["AttachmentAllowedTypes"] = setting.AttachmentAllowedTypes
+	ctx.Data["AttachmentMaxFiles"] = setting.AttachmentMaxFiles
+}
+
 func NewIssue(ctx *middleware.Context) {
 	ctx.Data["Title"] = ctx.Tr("repo.issues.new")
 	ctx.Data["PageIsIssueList"] = true
 	ctx.Data["RequireDropzone"] = true
-	ctx.Data["IsAttachmentEnabled"] = setting.AttachmentEnabled
-	ctx.Data["AttachmentAllowedTypes"] = setting.AttachmentAllowedTypes
-	ctx.Data["AttachmentMaxFiles"] = setting.AttachmentMaxFiles
+	renderAttachmentSettings(ctx)
 
 	if ctx.User.IsAdmin {
 		var (
@@ -216,9 +220,7 @@ func NewIssuePost(ctx *middleware.Context, form auth.CreateIssueForm) {
 	ctx.Data["Title"] = ctx.Tr("repo.issues.new")
 	ctx.Data["PageIsIssueList"] = true
 	ctx.Data["RequireDropzone"] = true
-	ctx.Data["IsAttachmentEnabled"] = setting.AttachmentEnabled
-	ctx.Data["AttachmentAllowedTypes"] = setting.AttachmentAllowedTypes
-	ctx.Data["AttachmentMaxFiles"] = setting.AttachmentMaxFiles
+	renderAttachmentSettings(ctx)
 
 	var (
 		repo        = ctx.Repo.Repository
@@ -409,116 +411,96 @@ func checkLabels(labels, allLabels []*models.Label) {
 }
 
 func ViewIssue(ctx *middleware.Context) {
-	ctx.Data["AttachmentsEnabled"] = setting.AttachmentEnabled
+	ctx.Data["PageIsIssueList"] = true
+	ctx.Data["RequireDropzone"] = true
+	renderAttachmentSettings(ctx)
 
-	idx := com.StrTo(ctx.Params(":index")).MustInt64()
-	if idx == 0 {
-		ctx.Handle(404, "issue.ViewIssue", nil)
-		return
-	}
-
-	issue, err := models.GetIssueByIndex(ctx.Repo.Repository.ID, idx)
+	issue, err := models.GetIssueByIndex(ctx.Repo.Repository.ID, ctx.ParamsInt64(":index"))
 	if err != nil {
-		if err == models.ErrIssueNotExist {
+		if models.IsErrIssueNotExist(err) {
 			ctx.Handle(404, "GetIssueByIndex", err)
 		} else {
 			ctx.Handle(500, "GetIssueByIndex", err)
 		}
 		return
 	}
+	ctx.Data["Title"] = issue.Name
 
-	// Get labels.
-	if err = issue.GetLabels(); err != nil {
-		ctx.Handle(500, "GetLabels", err)
-		return
-	}
-	labels, err := models.GetLabelsByRepoID(ctx.Repo.Repository.ID)
-	if err != nil {
-		ctx.Handle(500, "GetLabels.2", err)
-		return
-	}
-	checkLabels(issue.Labels, labels)
-	ctx.Data["Labels"] = labels
-
-	// Get assigned milestone.
-	if issue.MilestoneID > 0 {
-		ctx.Data["Milestone"], err = models.GetMilestoneByID(issue.MilestoneID)
-		if err != nil {
-			if models.IsErrMilestoneNotExist(err) {
-				log.Warn("GetMilestoneById: %v", err)
-			} else {
-				ctx.Handle(500, "GetMilestoneById", err)
-				return
-			}
-		}
-	}
-
-	// Get all milestones.
-	ctx.Data["OpenMilestones"], err = models.GetMilestones(ctx.Repo.Repository.ID, -1, false)
-	if err != nil {
-		ctx.Handle(500, "GetMilestones.1: %v", err)
-		return
-	}
-	ctx.Data["ClosedMilestones"], err = models.GetMilestones(ctx.Repo.Repository.ID, -1, true)
-	if err != nil {
-		ctx.Handle(500, "GetMilestones.2: %v", err)
-		return
-	}
-
-	// Get all collaborators.
-	ctx.Data["Collaborators"], err = ctx.Repo.Repository.GetCollaborators()
-	if err != nil {
-		ctx.Handle(500, "GetCollaborators", err)
-		return
-	}
-
-	if ctx.IsSigned {
-		// Update issue-user.
-		if err = models.UpdateIssueUserPairByRead(ctx.User.Id, issue.ID); err != nil {
-			ctx.Handle(500, "UpdateIssueUserPairByRead: %v", err)
-			return
-		}
-	}
-
-	// Get poster and Assignee.
 	if err = issue.GetPoster(); err != nil {
 		ctx.Handle(500, "GetPoster: %v", err)
-		return
-	} else if err = issue.GetAssignee(); err != nil {
-		ctx.Handle(500, "GetAssignee: %v", err)
 		return
 	}
 	issue.RenderedContent = string(base.RenderMarkdown([]byte(issue.Content), ctx.Repo.RepoLink))
 
-	// Get comments.
-	comments, err := models.GetIssueComments(issue.ID)
-	if err != nil {
-		ctx.Handle(500, "GetIssueComments: %v", err)
+	// Attchments.
+
+	// Metas.
+	if err = issue.GetLabels(); err != nil {
+		ctx.Handle(500, "GetLabels", err)
 		return
 	}
 
-	// Get posters.
-	for i := range comments {
-		u, err := models.GetUserByID(comments[i].PosterId)
-		if err != nil {
-			ctx.Handle(500, "GetUserById.2: %v", err)
-			return
-		}
-		comments[i].Poster = u
+	if ctx.IsSigned {
+		// 	// Update issue-user.
+		// 	if err = models.UpdateIssueUserPairByRead(ctx.User.Id, issue.ID); err != nil {
+		// 		ctx.Handle(500, "UpdateIssueUserPairByRead: %v", err)
+		// 		return
+		// 	}
 
-		if comments[i].Type == models.COMMENT_TYPE_COMMENT {
-			comments[i].Content = string(base.RenderMarkdown([]byte(comments[i].Content), ctx.Repo.RepoLink))
+		if ctx.User.IsAdmin {
+			// labels, err := models.GetLabelsByRepoID(ctx.Repo.Repository.ID)
+			// if err != nil {
+			// 	ctx.Handle(500, "GetLabels.2", err)
+			// 	return
+			// }
+			// checkLabels(issue.Labels, labels)
+			// ctx.Data["Labels"] = labels
+
+			// // Get all milestones.
+			// ctx.Data["OpenMilestones"], err = models.GetMilestones(ctx.Repo.Repository.ID, -1, false)
+			// if err != nil {
+			// 	ctx.Handle(500, "GetMilestones.1: %v", err)
+			// 	return
+			// }
+			// ctx.Data["ClosedMilestones"], err = models.GetMilestones(ctx.Repo.Repository.ID, -1, true)
+			// if err != nil {
+			// 	ctx.Handle(500, "GetMilestones.2: %v", err)
+			// 	return
+			// }
+
+			// // Get all collaborators.
+			// ctx.Data["Collaborators"], err = ctx.Repo.Repository.GetCollaborators()
+			// if err != nil {
+			// 	ctx.Handle(500, "GetCollaborators", err)
+			// 	return
+			// }
 		}
 	}
 
-	ctx.Data["AllowedTypes"] = setting.AttachmentAllowedTypes
+	// // Get comments.
+	// comments, err := models.GetIssueComments(issue.ID)
+	// if err != nil {
+	// 	ctx.Handle(500, "GetIssueComments: %v", err)
+	// 	return
+	// }
 
-	ctx.Data["Title"] = issue.Name
+	// // Get posters.
+	// for i := range comments {
+	// 	u, err := models.GetUserByID(comments[i].PosterId)
+	// 	if err != nil {
+	// 		ctx.Handle(500, "GetUserById.2: %v", err)
+	// 		return
+	// 	}
+	// 	comments[i].Poster = u
+
+	// 	if comments[i].Type == models.COMMENT_TYPE_COMMENT {
+	// 		comments[i].Content = string(base.RenderMarkdown([]byte(comments[i].Content), ctx.Repo.RepoLink))
+	// 	}
+	// }
+
 	ctx.Data["Issue"] = issue
-	ctx.Data["Comments"] = comments
-	ctx.Data["IsIssueOwner"] = ctx.Repo.IsOwner() || (ctx.IsSigned && issue.PosterID == ctx.User.Id)
-	ctx.Data["IsRepoToolbarIssues"] = true
-	ctx.Data["IsRepoToolbarIssuesList"] = false
+	// ctx.Data["Comments"] = comments
+	// ctx.Data["IsIssueOwner"] = ctx.Repo.IsOwner() || (ctx.IsSigned && issue.PosterID == ctx.User.Id)
 	ctx.HTML(200, ISSUE_VIEW)
 }
 
@@ -531,7 +513,7 @@ func UpdateIssue(ctx *middleware.Context, form auth.CreateIssueForm) {
 
 	issue, err := models.GetIssueByIndex(ctx.Repo.Repository.ID, idx)
 	if err != nil {
-		if err == models.ErrIssueNotExist {
+		if models.IsErrIssueNotExist(err) {
 			ctx.Handle(404, "issue.UpdateIssue", err)
 		} else {
 			ctx.Handle(500, "issue.UpdateIssue(GetIssueByIndex)", err)
@@ -579,7 +561,7 @@ func UpdateIssueLabel(ctx *middleware.Context) {
 
 	issue, err := models.GetIssueByIndex(ctx.Repo.Repository.ID, idx)
 	if err != nil {
-		if err == models.ErrIssueNotExist {
+		if models.IsErrIssueNotExist(err) {
 			ctx.Handle(404, "issue.UpdateIssueLabel(GetIssueByIndex)", err)
 		} else {
 			ctx.Handle(500, "issue.UpdateIssueLabel(GetIssueByIndex)", err)
@@ -659,12 +641,12 @@ func UpdateIssueMilestone(ctx *middleware.Context) {
 		return
 	}
 
-	issue, err := models.GetIssueById(issueId)
+	issue, err := models.GetIssueByID(issueId)
 	if err != nil {
-		if err == models.ErrIssueNotExist {
-			ctx.Handle(404, "issue.UpdateIssueMilestone(GetIssueById)", err)
+		if models.IsErrIssueNotExist(err) {
+			ctx.Handle(404, "issue.UpdateIssueMilestone(GetIssueByID)", err)
 		} else {
-			ctx.Handle(500, "issue.UpdateIssueMilestone(GetIssueById)", err)
+			ctx.Handle(500, "issue.UpdateIssueMilestone(GetIssueByID)", err)
 		}
 		return
 	}
@@ -705,12 +687,12 @@ func UpdateAssignee(ctx *middleware.Context) {
 		return
 	}
 
-	issue, err := models.GetIssueById(issueId)
+	issue, err := models.GetIssueByID(issueId)
 	if err != nil {
-		if err == models.ErrIssueNotExist {
-			ctx.Handle(404, "GetIssueById", err)
+		if models.IsErrIssueNotExist(err) {
+			ctx.Handle(404, "GetIssueByID", err)
 		} else {
-			ctx.Handle(500, "GetIssueById", err)
+			ctx.Handle(500, "GetIssueByID", err)
 		}
 		return
 	}
@@ -758,7 +740,7 @@ func Comment(ctx *middleware.Context) {
 
 	issue, err := models.GetIssueByIndex(ctx.Repo.Repository.ID, index)
 	if err != nil {
-		if err == models.ErrIssueNotExist {
+		if models.IsErrIssueNotExist(err) {
 			send(404, nil, err)
 		} else {
 			send(200, nil, err)
