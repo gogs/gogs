@@ -38,6 +38,9 @@ img {
 	.top.menu a.item:hover {
 		color: rgba(0,0,0,.45);
 	}
+	.top.menu .menu {
+		z-index: 900;
+	}
 	.head.link.item {
 		padding-right: 0!important;
 		.dropdown.icon,
@@ -74,12 +77,21 @@ img {
 		&.right {
 			text-align: right;
 		}
+		&.small {
+			font-size: 0.75em;
+		}
 	}
 
 	.message {
 		text-align: center;
 	}
+
+	.header > i + .content {
+		padding-left: 0.75rem;
+		vertical-align: middle;
+	}
 }
+
 footer {
 	margin-top: @footer-margin!important;
 	height: @footer-margin;
@@ -125,7 +137,8 @@ footer {
   .generate-img(@n, (@i + 1));
 }
 
-.octicon.icon {
+.octicon.icon,
+.mega-octicon.icon {
 	font-family: octicons;
 }
 
