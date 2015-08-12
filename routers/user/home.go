@@ -339,9 +339,9 @@ func Issues(ctx *middleware.Context) {
 
 	issues := make([]*models.Issue, len(ius))
 	for i := range ius {
-		issues[i], err = models.GetIssueById(ius[i].IssueID)
+		issues[i], err = models.GetIssueByID(ius[i].IssueID)
 		if err != nil {
-			if err == models.ErrIssueNotExist {
+			if models.IsErrIssueNotExist(err) {
 				log.Warn("user.Issues(GetIssueById #%d): issue not exist", ius[i].IssueID)
 				continue
 			} else {

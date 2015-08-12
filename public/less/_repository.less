@@ -118,8 +118,18 @@
 			}
 		}
 	}
+	@comment-avatar-width: 3em;
 	&.new.issue {
 		.comment.form {
+			.comment .avatar {
+				width: @comment-avatar-width;
+			}
+			.content {
+				margin-left: 4em;
+				.markdown {
+					font-size: 14px;
+				}
+			}
 			.metas {
 				min-width: 220px;
 				.filter.menu {
@@ -127,6 +137,67 @@
 					overflow-x: auto;
 				}
 			}
+		}
+	}
+	&.view.issue {
+		.title {
+			padding-bottom: 0!important;
+			h1 {
+				font-weight: 300;
+				font-size: 3rem;
+				margin-bottom: 5px;
+			}
+			.index {
+				font-weight: 300;
+				color: #aaa;
+				letter-spacing: -1px;
+			}
+			.label {
+				margin-right: 10px;
+			}
+		}
+		.comment-list {
+			.comment {
+				.avatar {
+					width: @comment-avatar-width;
+				}
+				.content {
+					margin-left: 4em;
+					.header {
+						font-weight: normal;
+						padding: auto 15px;
+						color: #767676;
+						background-color: #f7f7f7;
+						border-bottom: 1px solid #eee;
+						border-top-left-radius: 3px;
+						border-top-right-radius: 3px;
+						.text {
+							max-width: 78%;
+					    padding-top: 10px;
+					    padding-bottom: 10px;
+			        color: #767676;
+					    a {
+					    	color: #444;
+					    	&:hover {
+					    		color: #000;
+					    	}
+					    }
+						}
+					}
+					.markdown {
+						font-size: 14px;
+					}
+					.bottom.segment {
+						background: #f3f4f5;
+						.ui.image {
+							max-height: 150px;
+						}
+					}
+				}
+			}
+		}
+		.ui.segment.metas {
+	    margin-top: -3px;
 		}
 	}
 	.comment.form {
