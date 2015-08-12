@@ -13,17 +13,16 @@ type AuthenticationForm struct {
 	ID                int64 `form:"id"`
 	Type              int
 	Name              string `binding:"Required;MaxSize(50)"`
-	Domain            string
 	Host              string
 	Port              int
-	UseSSL            bool   `form:"usessl"`
-	BaseDN            string `form:"base_dn"`
-	AttributeUsername string
+	UseSSL            bool   `form:"use_ssl"`
+	BindDN            string `form:"bind_dn"`
+	BindPassword      string
+	UserBase          string
 	AttributeName     string
 	AttributeSurname  string
 	AttributeMail     string
 	Filter            string
-	MsAdSA            string `form:"ms_ad_sa"`
 	IsActived         bool
 	SMTPAuth          string `form:"smtp_auth"`
 	SMTPHost          string `form:"smtp_host"`
