@@ -21,7 +21,7 @@ load_rc_config $name
 : ${gogs_enable:="NO"}
 : ${gogs_directory:="/home/git"}
 
-command="${gogs_directory}/scripts/start.sh"
+command="${gogs_directory}/gogs web"
 
 pidfile="${gogs_directory}/${name}.pid"
 

@@ -104,8 +104,9 @@ func createRepo(ctx *middleware.Context, owner *models.User, opt api.CreateRepoO
 	repo, err := models.CreateRepository(owner, opt.Name, opt.Description,
 		opt.Gitignore, opt.License, opt.Private, false, opt.AutoInit)
 	if err != nil {
-		if err == models.ErrRepoAlreadyExist ||
-			err == models.ErrRepoNameIllegal {
+		if models.IsErrRepoAlreadyExist(err) ||
+			models.IsErrNameReserved(err) ||
+			models.IsErrNamePatternNotAllowed(err) {
 			ctx.JSON(422, &base.ApiJsonErr{err.Error(), base.DOC_URL})
 		} else {
 			log.Error(4, "CreateRepository: %v", err)
@@ -138,7 +139,7 @@ func CreateRepo(ctx *middleware.Context, opt api.CreateRepoOption) {
 func CreateOrgRepo(ctx *middleware.Context, opt api.CreateRepoOption) {
 	org, err := models.GetOrgByName(ctx.Params(":org"))
 	if err != nil {
-		if err == models.ErrUserNotExist {
+		if models.IsErrUserNotExist(err) {
 			ctx.Error(404)
 		} else {
 			ctx.Error(500)
@@ -156,14 +157,14 @@ func CreateOrgRepo(ctx *middleware.Context, opt api.CreateRepoOption) {
 func MigrateRepo(ctx *middleware.Context, form auth.MigrateRepoForm) {
 	u, err := models.GetUserByName(ctx.Query("username"))
 	if err != nil {
-		if err == models.ErrUserNotExist {
+		if models.IsErrUserNotExist(err) {
 			ctx.HandleAPI(422, err)
 		} else {
 			ctx.HandleAPI(500, err)
 		}
 		return
 	}
-	if !u.ValidtePassword(ctx.Query("password")) {
+	if !u.ValidatePassword(ctx.Query("password")) {
 		ctx.HandleAPI(422, "Username or password is not correct.")
 		return
 	}
@@ -173,7 +174,7 @@ func MigrateRepo(ctx *middleware.Context, form auth.MigrateRepoForm) {
 	if form.Uid != u.Id {
 		org, err := models.GetUserById(form.Uid)
 		if err != nil {
-			if err == models.ErrUserNotExist {
+			if models.IsErrUserNotExist(err) {
 				ctx.HandleAPI(422, err)
 			} else {
 				ctx.HandleAPI(500, err)

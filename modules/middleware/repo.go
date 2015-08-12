@@ -10,12 +10,19 @@ import (
 	"strings"
 
 	"github.com/Unknwon/macaron"
+	"github.com/mcuadros/go-version"
+	"github.com/mssola/user_agent"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/git"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/setting"
+)
+
+const (
+	FIREFOX_COPY_SUPPORT = "41.0"
+	CHROME_COPY_SUPPORT  = "43.0.2356"
 )
 
 func ApiRepoAssignment() macaron.Handler {
@@ -34,7 +41,7 @@ func ApiRepoAssignment() macaron.Handler {
 		} else {
 			u, err = models.GetUserByName(userName)
 			if err != nil {
-				if err == models.ErrUserNotExist {
+				if models.IsErrUserNotExist(err) {
 					ctx.Error(404)
 				} else {
 					ctx.JSON(500, &base.ApiJsonErr{"GetUserByName: " + err.Error(), base.DOC_URL})
@@ -210,7 +217,7 @@ func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 		} else {
 			u, err = models.GetUserByName(userName)
 			if err != nil {
-				if err == models.ErrUserNotExist {
+				if models.IsErrUserNotExist(err) {
 					ctx.Handle(404, "GetUserByName", err)
 				} else {
 					ctx.Handle(500, "GetUserByName", err)
@@ -345,10 +352,17 @@ func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 
 		ctx.Data["BranchName"] = ctx.Repo.BranchName
 		ctx.Data["CommitId"] = ctx.Repo.CommitId
+
+		userAgent := ctx.Req.Header.Get("User-Agent")
+		ua := user_agent.New(userAgent)
+		browserName, browserVer := ua.Browser()
+
+		ctx.Data["BrowserSupportsCopy"] = (browserName == "Chrome" && version.Compare(browserVer, CHROME_COPY_SUPPORT, ">=")) ||
+			(browserName == "Firefox" && version.Compare(browserVer, FIREFOX_COPY_SUPPORT, ">="))
 	}
 }
 
-func RequireAdmin() macaron.Handler {
+func RequireRepoAdmin() macaron.Handler {
 	return func(ctx *Context) {
 		if ctx.Repo.AccessMode < models.ACCESS_MODE_ADMIN {
 			if !ctx.IsSigned {

@@ -12,7 +12,12 @@
             <strong class="file-name">{{.FileName}}</strong><span class="file-size">{{FileSize .FileSize}}</span>
 	    {{end}}
         {{if not .ReadmeInList}}
-            <a class="right" href="{{.RepoLink}}/commits/{{EscapePound .BranchName}}/{{.TreeName}}">
+            {{if not .IsCommit}}
+                <a class="right" href="{{.RepoLink}}/src/{{.CommitId}}/{{EscapePound .TreeName}}">
+                    <button class="btn btn-medium btn-gray btn-right-radius btn-comb">{{.i18n.Tr "repo.file_permalink"}}</button>
+                </a>
+            {{end}}
+            <a class="right" href="{{.RepoLink}}/commits/{{EscapePound .BranchName}}/{{EscapePound .TreeName}}">
                 <button class="btn btn-medium btn-gray btn-right-radius btn-comb">{{.i18n.Tr "repo.file_history"}}</button>
             </a>
             <a class="right" href="{{EscapePound .FileLink}}">

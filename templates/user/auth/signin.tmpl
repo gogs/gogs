@@ -17,8 +17,9 @@
             </div>
             {{if not .IsSocialLogin}}
             <div class="field">
-                <span class="form-label"></span>
-                <input class="ipt-chk" id="remember" name="remember" type="checkbox"/>&nbsp;&nbsp;&nbsp;&nbsp;<strong>{{.i18n.Tr "auth.remember_me"}}</strong>
+                <label class="chk-label">
+                    <input class="ipt-chk" id="remember" name="remember" type="checkbox"/>&nbsp;&nbsp;&nbsp;&nbsp;<strong>{{.i18n.Tr "auth.remember_me"}}</strong>
+                </label>
             </div>
             {{end}}
             <div class="field">

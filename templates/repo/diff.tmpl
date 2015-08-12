@@ -1,12 +1,12 @@
 {{template "ng/base/head" .}}
 {{template "ng/base/header" .}}
 <div id="repo-wrapper">
-    {{template "repo/header" .}}
+    {{template "repo/header_old" .}}
     <div class="container clear" id="diff-page">
         {{if .IsDiffCompare }}
         <div class="panel panel-info panel-radius compare-head-box">
             <div class="panel-header">
-                <a class="pull-right btn btn-blue btn-header btn-medium btn-radius" rel="nofollow" href="{{.SourcePath}}">{{.i18n.Tr "repo.diff.browse_source"}}</a>
+                <a class="pull-right btn btn-blue btn-header btn-medium btn-radius" rel="nofollow" href="{{EscapePound .SourcePath}}">{{.i18n.Tr "repo.diff.browse_source"}}</a>
                 <h4><a href="{{$.RepoLink}}/commit/{{.BeforeCommitId}}" class="label label-green">{{ShortSha .BeforeCommitId}}</a> ... <a href="{{$.RepoLink}}/commit/{{.AfterCommitId}}" class="label label-green">{{ShortSha .AfterCommitId}}</a></h4>
             </div>
             <div class="panel-body compare">
@@ -16,7 +16,7 @@
         {{else}}
         <div class="panel panel-info panel-radius diff-head-box">
             <div class="panel-header">
-                <a class="pull-right btn btn-blue btn-header btn-medium btn-radius" rel="nofollow" href="{{.SourcePath}}">{{.i18n.Tr "repo.diff.browse_source"}}</a>
+                <a class="pull-right btn btn-blue btn-header btn-medium btn-radius" rel="nofollow" href="{{EscapePound .SourcePath}}">{{.i18n.Tr "repo.diff.browse_source"}}</a>
                 <h4 class="commit-message">{{RenderCommitMessage .Commit.Message $.RepoLink}}</h4>
             </div>
             <div class="panel-body">
@@ -37,7 +37,7 @@
                     <img class="avatar-30" src="{{AvatarLink .Commit.Author.Email}}" />
                     <strong>{{.Commit.Author.Name}}</strong>
                     {{end}}
-                    <span class="text-grey" id="authored-time">{{TimeSince .Commit.Author.When $.Lang}}</span> 
+                    <span class="text-grey" id="authored-time">{{TimeSince .Commit.Author.When $.Lang}}</span>
                 </p>
             </div>
         </div>
@@ -90,9 +90,9 @@
                     {{end}}
                 </div>
                 {{if $file.IsDeleted}}
-                <a class="btn btn-gray btn-header btn-radius text-black pull-right" rel="nofollow" href="{{$.BeforeSourcePath}}/{{.Name}}">{{$.i18n.Tr "repo.diff.view_file"}}</a>
+                <a class="btn btn-gray btn-header btn-radius text-black pull-right" rel="nofollow" href="{{EscapePound $.BeforeSourcePath}}/{{EscapePound .Name}}">{{$.i18n.Tr "repo.diff.view_file"}}</a>
                 {{else}}
-                <a class="btn btn-gray btn-header btn-radius text-black pull-right" rel="nofollow" href="{{$.SourcePath}}/{{.Name}}">{{$.i18n.Tr "repo.diff.view_file"}}</a>
+                <a class="btn btn-gray btn-header btn-radius text-black pull-right" rel="nofollow" href="{{EscapePound $.SourcePath}}/{{EscapePound .Name}}">{{$.i18n.Tr "repo.diff.view_file"}}</a>
                 {{end}}
                 <span class="file">{{$file.Name}}</span>
             </div>
@@ -100,7 +100,7 @@
             <div class="panel-body file-body file-code code-view code-diff">
                 {{if $isImage}}
                     <div class="text-center">
-                        <img src="{{$.RawPath}}/{{.Name}}">
+                        <img src="{{$.RawPath}}/{{EscapePound .Name}}">
                     </div>
                 {{else}}
                 <table>
@@ -114,7 +114,7 @@
                             <td class="lines-num lines-num-new">
                                 <span rel="{{if $line.RightIdx}}diff-{{Sha1 $file.Name}}R{{$line.RightIdx}}{{end}}">{{if $line.RightIdx}}{{$line.RightIdx}}{{end}}</span>
                             </td>
-                            
+
                             <td class="lines-code">
                                 <pre>{{$line.Content}}</pre>
                             </td>
@@ -126,7 +126,7 @@
                 {{end}}
             </div>
         </div>
-        <br> 
+        <br>
         {{end}}
         {{end}}
     </div>

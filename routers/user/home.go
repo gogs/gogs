@@ -38,7 +38,7 @@ func Dashboard(ctx *middleware.Context) {
 		// Organization.
 		org, err := models.GetUserByName(orgName)
 		if err != nil {
-			if err == models.ErrUserNotExist {
+			if models.IsErrUserNotExist(err) {
 				ctx.Handle(404, "GetUserByName", err)
 			} else {
 				ctx.Handle(500, "GetUserByName", err)
@@ -115,7 +115,7 @@ func Dashboard(ctx *middleware.Context) {
 		// FIXME: cache results?
 		u, err := models.GetUserByName(act.ActUserName)
 		if err != nil {
-			if err == models.ErrUserNotExist {
+			if models.IsErrUserNotExist(err) {
 				continue
 			}
 			ctx.Handle(500, "GetUserByName", err)
@@ -152,6 +152,7 @@ func ShowSSHKeys(ctx *middleware.Context, uid int64) {
 	var buf bytes.Buffer
 	for i := range keys {
 		buf.WriteString(keys[i].OmitEmail())
+		buf.WriteString("\n")
 	}
 	ctx.RenderData(200, buf.Bytes())
 }
@@ -175,7 +176,7 @@ func Profile(ctx *middleware.Context) {
 
 	u, err := models.GetUserByName(uname)
 	if err != nil {
-		if err == models.ErrUserNotExist {
+		if models.IsErrUserNotExist(err) {
 			ctx.Handle(404, "GetUserByName", err)
 		} else {
 			ctx.Handle(500, "GetUserByName", err)
@@ -192,11 +193,6 @@ func Profile(ctx *middleware.Context) {
 	if u.IsOrganization() {
 		ctx.Redirect(setting.AppSubUrl + "/org/" + u.Name)
 		return
-	}
-
-	// For security reason, hide e-mail address for anonymous visitors.
-	if !ctx.IsSigned {
-		u.Email = ""
 	}
 	ctx.Data["Owner"] = u
 
@@ -227,7 +223,7 @@ func Profile(ctx *middleware.Context) {
 			// FIXME: cache results?
 			u, err := models.GetUserByName(act.ActUserName)
 			if err != nil {
-				if err == models.ErrUserNotExist {
+				if models.IsErrUserNotExist(err) {
 					continue
 				}
 				ctx.Handle(500, "GetUserByName", err)
@@ -251,17 +247,17 @@ func Profile(ctx *middleware.Context) {
 func Email2User(ctx *middleware.Context) {
 	u, err := models.GetUserByEmail(ctx.Query("email"))
 	if err != nil {
-		if err == models.ErrUserNotExist {
-			ctx.Handle(404, "user.Email2User(GetUserByEmail)", err)
+		if models.IsErrUserNotExist(err) {
+			ctx.Handle(404, "GetUserByEmail", err)
 		} else {
-			ctx.Handle(500, "user.Email2User(GetUserByEmail)", err)
+			ctx.Handle(500, "GetUserByEmail", err)
 		}
 		return
 	}
 	ctx.Redirect(setting.AppSubUrl + "/user/" + u.Name)
 }
 
-func Issues(ctx *middleware.Context) {	
+func Issues(ctx *middleware.Context) {
 	ctx.Data["Title"] = ctx.Tr("issues")
 	ctx.Data["PageIsDashboard"] = true
 	ctx.Data["PageIsIssues"] = true
@@ -354,13 +350,13 @@ func Issues(ctx *middleware.Context) {
 			}
 		}
 
-		issues[i].Repo, err = models.GetRepositoryById(issues[i].RepoId)
+		issues[i].Repo, err = models.GetRepositoryById(issues[i].RepoID)
 		if err != nil {
 			if models.IsErrRepoNotExist(err) {
-				log.Warn("user.Issues(GetRepositoryById #%d): repository not exist", issues[i].RepoId)
+				log.Warn("GetRepositoryById[%d]: repository not exist", issues[i].RepoID)
 				continue
 			} else {
-				ctx.Handle(500, fmt.Sprintf("user.Issues(GetRepositoryById #%d)", issues[i].RepoId), err)
+				ctx.Handle(500, fmt.Sprintf("GetRepositoryById[%d]", issues[i].RepoID), err)
 				return
 			}
 		}
@@ -388,8 +384,8 @@ func Issues(ctx *middleware.Context) {
 	} else {
 		ctx.Data["ShowCount"] = issueStats.OpenCount
 	}
-	
+
 	ctx.Data["ContextUser"] = ctx.User
-	
+
 	ctx.HTML(200, ISSUES)
 }

@@ -1,0 +1,50 @@
+.form {
+	.help {
+		color: #999999;
+	  padding-top: .6em;
+	  padding-bottom: .6em;
+	  display: inline-block;
+	}
+}
+.ui.attached.header {
+	background: #f0f0f0;
+	.right {
+		margin-top: -5px;
+	}
+}
+.repository.new.fork {
+	form {
+		margin: auto;
+		width: 800px!important;
+		.ui.message {
+			text-align: center;
+		}
+		@input-padding: 250px !important;
+		.header {
+			padding-left: @input-padding+20px;
+		}
+		.inline.field > label {
+			text-align: right;
+			width: @input-padding;
+			word-wrap: break-word;
+		}
+		.help {
+			margin-left: @input-padding+10px;
+		}
+		.dropdown {
+			.dropdown.icon {
+				margin-top: -7px!important;
+			}
+			.text {
+				margin-right: 0!important;
+				i {
+					margin-right: 0!important;
+				}
+			}
+		}
+		input,
+		textarea {
+			width: 50%!important;
+		}
+	}
+}

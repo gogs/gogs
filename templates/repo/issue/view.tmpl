@@ -3,15 +3,15 @@
 {{template "repo/nav" .}}
 {{template "repo/toolbar" .}}
 <div id="body" class="container">
-    <div id="issue" data-id="{{.Issue.Id}}">
-        <div id="issue-{{.Issue.Id}}" class="issue-whole issue-is-opening">
+    <div id="issue" data-id="{{.Issue.ID}}">
+        <div id="issue-{{.Issue.ID}}" class="issue-whole issue-is-opening">
             <div class="issue-wrap col-md-10">
                 <div class="issue-head clearfix">
                     <div class="number pull-right">#{{.Issue.Index}}</div>
                     <a class="author pull-left" href="{{AppSubUrl}}/{{.Issue.Poster.Name}}"><img class="avatar" src="{{.Issue.Poster.AvatarLink}}" alt="" width="30"/></a>
                     <h1 class="title pull-left">{{.Issue.Name}}</h1>
                     <input id="issue-edit-title" class="form-control input-lg pull-left hidden" type="text" value="{{.Issue.Name}}" data-ajax-rel="issue-edit-save" data-ajax-val="val" data-ajax-field="title"/>
-                    <input type="hidden" value="{{.Issue.Id}}" data-ajax-rel="issue-edit-save" data-ajax-val="val" data-ajax-field="issue_id"/>
+                    <input type="hidden" value="{{.Issue.ID}}" data-ajax-rel="issue-edit-save" data-ajax-val="val" data-ajax-field="issue_id"/>
                     <p class="info pull-left">
                         {{if .IsIssueOwner}}<a class="btn btn-default pull-right issue-edit" href="#" id="issue-edit-btn">Edit</a>
                         <a class="btn btn-danger pull-right issue-edit-cancel hidden" href="#">Cancel</a>
@@ -178,7 +178,7 @@
                         <div class="dropdown-menu dropdown-menu-right no">
                             <ul class="list-unstyled">
                                 {{range .Labels}}
-                                <li class="{{if not .IsChecked}}no-{{end}}checked" data-id="{{.Id}}">
+                                <li class="{{if not .IsChecked}}no-{{end}}checked" data-id="{{.ID}}">
                                     {{if .IsChecked}}<span class="check pull-left"><i class="fa fa-check"></i></span>{{end}}
                                     <span class="color" style="background-color: {{.Color}}"></span>
                                     <span class="name">{{.Name}}</span>
@@ -191,13 +191,13 @@
                     <h4>Labels</h4>
                     {{if .Issue.Labels}}
                     {{range .Issue.Labels}}
-                    <p id="label-{{.Id}}" class="label-item label-white" style="background-color: {{.Color}}"><strong>{{.Name}}</strong></p>
+                    <p id="label-{{.ID}}" class="label-item label-white" style="background-color: {{.Color}}"><strong>{{.Name}}</strong></p>
                     {{end}}
                     {{else}}
                     <p>None yet</p>
                     {{end}}
                 </div>
-                <div class="milestone" data-milestone="{{.Milestone.Id}}" data-ajax="{{.Issue.Index}}/milestone">
+                <div class="milestone" data-milestone="{{.Milestone.ID}}" data-ajax="{{.Issue.Index}}/milestone">
                     <div class="pull-right action">
                         {{if .IsRepositoryOwner}}
                         <button class="btn btn-default btn-sm" data-toggle="dropdown">
@@ -219,7 +219,7 @@
                                             {{else}}
                                             <ul class="list-unstyled">
                                                 {{range .OpenMilestones}}
-                                                <li class="milestone-item" data-id="{{.Id}}">
+                                                <li class="milestone-item" data-id="{{.ID}}">
                                                     <p><strong>{{.Name}}</strong></p>
                                                     <!-- <p>due to 3 days later</p> -->
                                                 </li>
@@ -234,7 +234,7 @@
                                             {{else}}
                                             <ul class="list-unstyled">
                                                 {{range .ClosedMilestones}}
-                                                <li class="milestone-item" data-id="{{.Id}}">
+                                                <li class="milestone-item" data-id="{{.ID}}">
                                                     <p><strong>{{.Name}}</strong></p>
                                                     <p>Closed {{TimeSince .ClosedDate $.Lang}}</p>
                                                 </li>

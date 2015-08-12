@@ -53,6 +53,7 @@ var (
 	HttpAddr, HttpPort string
 	DisableSSH         bool
 	SSHPort            int
+	SSHDomain          string
 	OfflineMode        bool
 	DisableRouterLog   bool
 	CertFile, KeyFile  string
@@ -75,7 +76,7 @@ var (
 
 	// Webhook settings.
 	Webhook struct {
-		TaskInterval   int
+		QueueLength    int
 		DeliverTimeout int
 		SkipTLSVerify  bool
 	}
@@ -83,6 +84,10 @@ var (
 	// Repository settings.
 	RepoRootPath string
 	ScriptType   string
+	AnsiCharset  string
+
+	// UI settings.
+	IssuePagingNum int
 
 	// Picture settings.
 	PictureService   string
@@ -129,6 +134,7 @@ var (
 
 	// I18n settings.
 	Langs, Names []string
+	dateLangs    map[string]string
 
 	// Other settings.
 	ShowFooterBranding bool
@@ -142,6 +148,14 @@ var (
 	IsWindows    bool
 	HasRobotsTxt bool
 )
+
+func DateLang(lang string) string {
+	name, ok := dateLangs[lang]
+	if ok {
+		return name
+	}
+	return "en"
+}
 
 func init() {
 	IsWindows = runtime.GOOS == "windows"
@@ -163,7 +177,18 @@ func ExecPath() (string, error) {
 // WorkDir returns absolute path of work directory.
 func WorkDir() (string, error) {
 	execPath, err := ExecPath()
-	return path.Dir(strings.Replace(execPath, "\\", "/", -1)), err
+	if err != nil {
+		return execPath, err
+	}
+
+	// Note: we don't use path.Dir here because it does not handle case
+	//	which path starts with two "/" in Windows: "//psf/Home/..."
+	execPath = strings.Replace(execPath, "\\", "/", -1)
+	i := strings.LastIndex(execPath, "/")
+	if i == -1 {
+		return execPath, nil
+	}
+	return execPath[:i], nil
 }
 
 func forcePathSeparator(path string) {
@@ -187,11 +212,11 @@ func NewConfigContext() {
 
 	CustomPath = os.Getenv("GOGS_CUSTOM")
 	if len(CustomPath) == 0 {
-		CustomPath = path.Join(workDir, "custom")
+		CustomPath = workDir + "/custom"
 	}
 
 	if len(CustomConf) == 0 {
-		CustomConf = path.Join(CustomPath, "conf/app.ini")
+		CustomConf = CustomPath + "/conf/app.ini"
 	}
 
 	if com.IsFile(CustomConf) {
@@ -232,6 +257,7 @@ func NewConfigContext() {
 	HttpAddr = sec.Key("HTTP_ADDR").MustString("0.0.0.0")
 	HttpPort = sec.Key("HTTP_PORT").MustString("3000")
 	DisableSSH = sec.Key("DISABLE_SSH").MustBool()
+	SSHDomain = sec.Key("SSH_DOMAIN").MustString(Domain)
 	SSHPort = sec.Key("SSH_PORT").MustInt(22)
 	OfflineMode = sec.Key("OFFLINE_MODE").MustBool()
 	DisableRouterLog = sec.Key("DISABLE_ROUTER_LOG").MustBool()
@@ -307,6 +333,10 @@ func NewConfigContext() {
 		RepoRootPath = path.Clean(RepoRootPath)
 	}
 	ScriptType = sec.Key("SCRIPT_TYPE").MustString("bash")
+	AnsiCharset = sec.Key("ANSI_CHARSET").MustString("")
+
+	// UI settings.
+	IssuePagingNum = Cfg.Section("ui").Key("ISSUE_PAGING_NUM").MustInt(10)
 
 	sec = Cfg.Section("picture")
 	PictureService = sec.Key("SERVICE").In("server", []string{"server"})
@@ -332,6 +362,7 @@ func NewConfigContext() {
 
 	Langs = Cfg.Section("i18n").Key("LANGS").Strings(",")
 	Names = Cfg.Section("i18n").Key("NAMES").Strings(",")
+	dateLangs = Cfg.Section("i18n.datelang").KeysHash()
 
 	ShowFooterBranding = Cfg.Section("other").Key("SHOW_FOOTER_BRANDING").MustBool()
 
@@ -439,10 +470,10 @@ func newLogService() {
 func newCacheService() {
 	CacheAdapter = Cfg.Section("cache").Key("ADAPTER").In("memory", []string{"memory", "redis", "memcache"})
 	if EnableRedis {
-		log.Info("Redis Enabled")
+		log.Info("Redis Supported")
 	}
 	if EnableMemcache {
-		log.Info("Memcache Enabled")
+		log.Info("Memcache Supported")
 	}
 
 	switch CacheAdapter {
@@ -476,6 +507,8 @@ type Mailer struct {
 	Host              string
 	From              string
 	User, Passwd      string
+	DisableHelo       bool
+	HeloHostname      string
 	SkipVerify        bool
 	UseCertificate    bool
 	CertFile, KeyFile string
@@ -510,6 +543,8 @@ func newMailService() {
 		Host:           sec.Key("HOST").String(),
 		User:           sec.Key("USER").String(),
 		Passwd:         sec.Key("PASSWD").String(),
+		DisableHelo:    sec.Key("DISABLE_HELO").MustBool(),
+		HeloHostname:   sec.Key("HELO_HOSTNAME").String(),
 		SkipVerify:     sec.Key("SKIP_VERIFY").MustBool(),
 		UseCertificate: sec.Key("USE_CERTIFICATE").MustBool(),
 		CertFile:       sec.Key("CERT_FILE").String(),
@@ -543,7 +578,7 @@ func newNotifyMailService() {
 
 func newWebhookService() {
 	sec := Cfg.Section("webhook")
-	Webhook.TaskInterval = sec.Key("TASK_INTERVAL").MustInt(1)
+	Webhook.QueueLength = sec.Key("QUEUE_LENGTH").MustInt(1000)
 	Webhook.DeliverTimeout = sec.Key("DELIVER_TIMEOUT").MustInt(5)
 	Webhook.SkipTLSVerify = sec.Key("SKIP_TLS_VERIFY").MustBool()
 }

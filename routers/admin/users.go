@@ -106,16 +106,19 @@ func NewUserPost(ctx *middleware.Context, form auth.RegisterForm) {
 	}
 
 	if err := models.CreateUser(u); err != nil {
-		switch err {
-		case models.ErrUserAlreadyExist:
+		switch {
+		case models.IsErrUserAlreadyExist(err):
 			ctx.Data["Err_UserName"] = true
 			ctx.RenderWithErr(ctx.Tr("form.username_been_taken"), USER_NEW, &form)
-		case models.ErrEmailAlreadyUsed:
+		case models.IsErrEmailAlreadyUsed(err):
 			ctx.Data["Err_Email"] = true
 			ctx.RenderWithErr(ctx.Tr("form.email_been_used"), USER_NEW, &form)
-		case models.ErrUserNameIllegal:
+		case models.IsErrNameReserved(err):
 			ctx.Data["Err_UserName"] = true
-			ctx.RenderWithErr(ctx.Tr("form.illegal_username"), USER_NEW, &form)
+			ctx.RenderWithErr(ctx.Tr("user.form.name_reserved", err.(models.ErrNameReserved).Name), USER_NEW, &form)
+		case models.IsErrNamePatternNotAllowed(err):
+			ctx.Data["Err_UserName"] = true
+			ctx.RenderWithErr(ctx.Tr("user.form.name_pattern_not_allowed", err.(models.ErrNamePatternNotAllowed).Pattern), USER_NEW, &form)
 		default:
 			ctx.Handle(500, "CreateUser", err)
 		}
@@ -182,6 +185,7 @@ func EditUserPost(ctx *middleware.Context, form auth.AdminEditUserForm) {
 		u.EncodePasswd()
 	}
 
+	u.FullName = form.FullName
 	u.Email = form.Email
 	u.Website = form.Website
 	u.Location = form.Location
@@ -195,7 +199,7 @@ func EditUserPost(ctx *middleware.Context, form auth.AdminEditUserForm) {
 	u.AllowGitHook = form.AllowGitHook
 
 	if err := models.UpdateUser(u); err != nil {
-		if err == models.ErrEmailAlreadyUsed {
+		if models.IsErrEmailAlreadyUsed(err) {
 			ctx.Data["Err_Email"] = true
 			ctx.RenderWithErr(ctx.Tr("form.email_been_used"), USER_EDIT, &form)
 		} else {

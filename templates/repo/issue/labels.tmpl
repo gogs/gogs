@@ -1,0 +1,111 @@
+{{template "base/head" .}}
+<div class="repository labels">
+	{{template "repo/header" .}}
+	<div class="ui middle page grid body">
+		<div class="navbar">
+			{{template "repo/issue/navbar" .}}
+			{{if .IsRepositoryAdmin}}
+			<form class="ui right form" action="{{$.RepoLink}}/labels/new" method="post">
+				{{.CsrfTokenHtml}}
+				<div class="ui right floated secondary menu">
+					<div class="input item">
+						<div class="ui large input">
+						  <input class="new-label-input" name="title" placeholder="{{.i18n.Tr "repo.issues.new_label_placeholder"}}" required>
+						</div>
+					</div>
+					<div class="item">
+						<div class="ui large input">
+			        <input class="color-picker" name="color" value="#70c24a" required>
+			    	</div>
+					</div>
+					<div class="item precolors">
+						{{template "repo/issue/label_precolors"}}
+					</div>
+					<button class="ui green button">{{.i18n.Tr "repo.issues.new_label"}}</button>
+				</div>
+			</form>
+			{{end}}
+		</div>
+		<div class="ui divider"></div>
+		{{template "repo/issue/alert" .}}
+		<div class="ui left">
+			<div class="ui black label">{{.i18n.Tr "repo.issues.label_count" .NumLabels}}</div>
+		</div>
+
+		<div class="sixteen wide column">
+			<div class="label list">
+				{{range .Labels}}
+				<li class="item">
+					<div class="ui label" style="background-color: {{.Color}}"><i class="octicon octicon-tag"></i> {{.Name}}</div>
+					{{if $.IsRepositoryAdmin}}
+					<a class="ui right delete-button" href="#" data-url="{{$.RepoLink}}/labels/delete" data-id="{{.ID}}"><i class="octicon octicon-trashcan"></i> {{$.i18n.Tr "repo.issues.label_delete"}}</a>
+					<a class="ui right edit-label-button" href="#" data-id={{.ID}} data-title={{.Name}} data-color={{.Color}}><i class="octicon octicon-pencil"></i> {{$.i18n.Tr "repo.issues.label_edit"}}</a>
+					{{end}}
+					<a class="ui right open-issues" href="{{$.RepoLink}}/issues?labels={{.ID}}"><i class="octicon octicon-issue-opened"></i> {{$.i18n.Tr "repo.issues.label_open_issues" .NumOpenIssues}}</a>
+				</li>
+				{{end}}
+			</div>
+		</div>
+	</div>
+</div>
+
+{{if .IsRepositoryAdmin}}
+<div class="ui basic delete modal">
+  <div class="header">
+    {{.i18n.Tr "repo.issues.label_deletion"}}
+  </div>
+  <div class="content">
+    <div class="image">
+      <i class="trash icon"></i>
+    </div>
+    <div class="description">
+      <p>{{.i18n.Tr "repo.issues.label_deletion_desc"}}</p>
+    </div>
+  </div>
+  <div class="actions">
+    <div class="two fluid ui inverted buttons">
+      <div class="ui red basic inverted button">
+        <i class="remove icon"></i>
+        {{.i18n.Tr "modal.no"}}
+      </div>
+      <div class="ui green basic inverted positive button">
+        <i class="checkmark icon"></i>
+        {{.i18n.Tr "modal.yes"}}
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="ui small edit-label modal">
+  <div class="header">
+    {{.i18n.Tr "repo.issues.label_modify"}}
+  </div>
+  <div class="content">
+		<form class="ui edit-label form" action="{{$.RepoLink}}/labels/edit" method="post">
+			{{.CsrfTokenHtml}}
+			<input id="label-modal-id" name="id" type="hidden">
+			<div class="inline fields">
+				<div class="field">
+					<input id="label-modal-title" name="title" placeholder="{{.i18n.Tr "repo.issues.new_label_placeholder"}}" required>
+				</div>
+				<div class="field">
+		      <input id="label-modal-color" class="color-picker" name="color" value="#70c24a" required>
+				</div>
+				<div class="field precolors">
+					{{template "repo/issue/label_precolors"}}
+				</div>
+			</div>
+		</form>
+  </div>
+  <div class="actions">
+    <div class="ui negative button">
+      {{.i18n.Tr "modal.no"}}
+    </div>
+    <div class="ui positive right labeled icon button">
+      {{.i18n.Tr "modal.modify"}}
+      <i class="checkmark icon"></i>
+    </div>
+  </div>
+</div>
+{{end}}
+{{template "base/footer" .}}

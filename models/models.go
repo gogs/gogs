@@ -55,7 +55,7 @@ var (
 func init() {
 	tables = append(tables,
 		new(User), new(PublicKey), new(Oauth2), new(AccessToken),
-		new(Repository), new(Collaboration), new(Access),
+		new(Repository), new(DeployKey), new(Collaboration), new(Access),
 		new(Watch), new(Star), new(Follow), new(Action),
 		new(Issue), new(Comment), new(Attachment), new(IssueUser), new(Label), new(Milestone),
 		new(Mirror), new(Release), new(LoginSource), new(Webhook),
@@ -90,10 +90,10 @@ func getEngine() (*xorm.Engine, error) {
 	switch DbCfg.Type {
 	case "mysql":
 		if DbCfg.Host[0] == '/' { // looks like a unix socket
-			cnnstr = fmt.Sprintf("%s:%s@unix(%s)/%s?charset=utf8",
+			cnnstr = fmt.Sprintf("%s:%s@unix(%s)/%s?charset=utf8&parseTime=true",
 				DbCfg.User, DbCfg.Passwd, DbCfg.Host, DbCfg.Name)
 		} else {
-			cnnstr = fmt.Sprintf("%s:%s@tcp(%s)/%s?charset=utf8",
+			cnnstr = fmt.Sprintf("%s:%s@tcp(%s)/%s?charset=utf8&parseTime=true",
 				DbCfg.User, DbCfg.Passwd, DbCfg.Host, DbCfg.Name)
 		}
 	case "postgres":
@@ -105,7 +105,7 @@ func getEngine() (*xorm.Engine, error) {
 		if len(fields) > 1 && len(strings.TrimSpace(fields[1])) > 0 {
 			port = fields[1]
 		}
-		cnnstr = fmt.Sprintf("user=%s password=%s host=%s port=%s dbname=%s sslmode=%s",
+		cnnstr = fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s",
 			DbCfg.User, DbCfg.Passwd, host, port, DbCfg.Name, DbCfg.SSLMode)
 	case "sqlite3":
 		if !EnableSQLite3 {
@@ -122,7 +122,7 @@ func getEngine() (*xorm.Engine, error) {
 func NewTestEngine(x *xorm.Engine) (err error) {
 	x, err = getEngine()
 	if err != nil {
-		return fmt.Errorf("connect to database: %v", err)
+		return fmt.Errorf("Connect to database: %v", err)
 	}
 
 	x.SetMapper(core.GonicMapper{})
@@ -132,7 +132,7 @@ func NewTestEngine(x *xorm.Engine) (err error) {
 func SetEngine() (err error) {
 	x, err = getEngine()
 	if err != nil {
-		return fmt.Errorf("connect to database: %v", err)
+		return fmt.Errorf("Fail to connect to database: %v", err)
 	}
 
 	x.SetMapper(core.GonicMapper{})
@@ -144,7 +144,7 @@ func SetEngine() (err error) {
 
 	f, err := os.Create(logPath)
 	if err != nil {
-		return fmt.Errorf("models.init(fail to create xorm.log): %v", err)
+		return fmt.Errorf("Fail to create xorm.log: %v", err)
 	}
 	x.SetLogger(xorm.NewSimpleLogger(f))
 
