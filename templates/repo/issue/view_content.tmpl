@@ -1,44 +1,51 @@
-<form class="ui comment form grid" action="{{.Link}}" method="post">
-  {{.CsrfTokenHtml}}
-  {{if .Flash}}
+<div class="ui grid">
+	{{if .Flash}}
 	<div class="sixteen wide column">
   	{{template "base/alert" .}}
   </div>
   {{end}}
-  <div class="twelve wide column">
-		<div class="ui comments">
-		  <div class="comment">
+  <div class="sixteen wide column title">
+		<h1><span class="index">#{{.Issue.Index}}</span> {{.Issue.Name}}</h1>
+		{{if .Issue.IsClosed}}
+		<div class="ui red large label"><i class="octicon octicon-issue-closed"></i> {{.i18n.Tr "repo.issues.closed_title"}}</div>
+		{{else}}
+		<div class="ui green large label"><i class="octicon octicon-issue-opened"></i> {{.i18n.Tr "repo.issues.open_title"}}</div>
+		{{end}}
+		{{ $createdStr:= TimeSince .Issue.Created $.Lang }}
+		<span class="time-desc">
+			{{$.i18n.Tr "repo.issues.opened_by" $createdStr .Issue.Poster.Name|Str2html}}
+			·
+			{{$.i18n.Tr "repo.issues.num_comments" .Issue.NumComments}}
+		</span>
+  	<div class="ui divider"></div>
+  </div>
+	<div class="twelve wide column comment-list">
+  	<ui class="ui comments">
+  		<div class="comment">
 		    <a class="avatar" href="{{.SignedUser.HomeLink}}">
 		      <img src="{{.SignedUser.AvatarLink}}">
 		    </a>
-		    <div class="ui segment content">
-		      <div class="field">
-		      	<input name="title" placeholder="{{.i18n.Tr "repo.milestones.title"}}" value="{{.title}}" autofocus required>
-		      </div>
-		      <div class="field">
-			      <div class="ui top attached tabular menu">
-		          <a class="active item" data-tab="write">{{.i18n.Tr "repo.release.write"}}</a>
-		          <a class="item" data-tab="preview" data-url="/api/v1/markdown" data-context="{{.RepoLink}}">{{.i18n.Tr "repo.release.preview"}}</a>
-			      </div>
-			      <div class="ui bottom attached active tab segment" data-tab="write">
-		          <textarea name="content"></textarea>
-		        </div>
-			      <div class="ui bottom attached tab segment markdown" data-tab="preview">
-			        {{.i18n.Tr "repo.release.loading"}}
-			      </div>
-		      </div>
-		      {{if .IsAttachmentEnabled}}
-		      <div class="attachments"></div>
-		      <div class="ui basic button dropzone" id="dropzone" data-upload-url="/issues/attachments" data-accepts="{{.AttachmentAllowedTypes}}" data-max-file="{{.AttachmentMaxFiles}}" data-max-size="2" data-default-message="{{.i18n.Tr "dropzone.default_message"}}" data-invalid-input-type="{{.i18n.Tr "dropzone.invalid_input_type"}}" data-file-too-big="{{.i18n.Tr "dropzone.file_too_big"}}" data-remove-file="{{.i18n.Tr "dropzone.remove_file"}}"></div>
-		      {{end}}
-		      <div class="text right">
-						<button class="ui green button">
-							{{.i18n.Tr "repo.issues.create"}}
-						</button>
-		      </div>
+		    <div class="content">
+					<div class="ui top attached header">
+						<span class="text"><a href="{{.Issue.Poster.HomeLink}}">{{.Issue.Poster.Name}}</a> {{.i18n.Tr "repo.issues.commented_at" .Issue.HashTag $createdStr | Safe}}</span>
+					  <div class="ui right actions">
+					  </div>
+					</div>
+			    <div class="ui attached segment markdown">
+						{{.Issue.RenderedContent|Str2html}}
+	  			</div>
+	  			{{if .Issue.Attachments}}
+					<div class="ui bottom attached segment">
+						<div class="ui small images">
+							{{range .Issue.Attachments}}
+						  <a href="/attachments/{{.UUID}}"><img class="ui image" src="/attachments/{{.UUID}}"></a>
+						  {{end}}
+						</div>
+					</div>
+	  			{{end}}
 		    </div>
-		  </div>
-		</div>
+  		</div>
+  	</ui>
 	</div>
 
 	<div class="four wide column">
@@ -57,9 +64,12 @@
 				</div>
 			</div>
 			<div class="ui labels list">
+				{{if not .Issue.Labels}}
 				<span class="no-select item {{if .HasSelectedLabel}}hide{{end}}">{{.i18n.Tr "repo.issues.new.no_label"}}</span>
-      	{{range .Labels}}
-      	<a class="{{if not .IsChecked}}hide{{end}} item" id="label_{{.ID}}" href="{{$.RepoLink}}/issues?labels={{.ID}}"><span class="label color" style="background-color: {{.Color}}"></span> <span class="text">{{.Name}}</span></a>
+				{{else}}
+      	{{range .Issue.Labels}}
+      	<a class="item" id="label_{{.ID}}" href="{{$.RepoLink}}/issues?labels={{.ID}}"><span class="label color" style="background-color: {{.Color}}"></span> <span class="text">{{.Name}}</span></a>
+        {{end}}
         {{end}}
 			</div>
 
@@ -96,10 +106,10 @@
 				</div>
 			</div>
 			<div class="ui select-milestone list">
-				<span class="no-select item {{if .Milestone}}hide{{end}}">{{.i18n.Tr "repo.issues.new.no_milestone"}}</span>
+				<span class="no-select item {{if .Issue.Milestone}}hide{{end}}">{{.i18n.Tr "repo.issues.new.no_milestone"}}</span>
 				<div class="selected">
-					{{if .Milestone}}
-					<a class="item" href="{{.RepoLink}}/issues?milestone={{.Milestone.ID}}"> {{.Milestone.Name}}</a>
+					{{if .Issue.Milestone}}
+					<a class="item" href="{{.RepoLink}}/issues?milestone={{.Issue.Milestone.ID}}"> {{.Issue.Milestone.Name}}</a>
 					{{end}}
 				</div>
 			</div>
@@ -120,13 +130,13 @@
 				</div>
 			</div>
 			<div class="ui select-assignee list">
-				<span class="no-select item {{if .Assignee}}hide{{end}}">{{.i18n.Tr "repo.issues.new.no_assignee"}}</span>
+				<span class="no-select item {{if .Issue.Assignee}}hide{{end}}">{{.i18n.Tr "repo.issues.new.no_assignee"}}</span>
 				<div class="selected">
-					{{if .Assignee}}
-					<a class="item" href="{{.Assignee.HomeLink}}"><img class="ui avatar image" src="{{.Assignee.AvatarLink}}"> {{.Assignee.Name}}</a>
+					{{if .Issue.Assignee}}
+					<a class="item" href="{{.Issue.Assignee.HomeLink}}"><img class="ui avatar image" src="{{.Issue.Assignee.AvatarLink}}"> {{.Issue.Assignee.Name}}</a>
 					{{end}}
 				</div>
 			</div>
 		</div>
 	</div>
-</form>
+</div>
