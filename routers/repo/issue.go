@@ -441,11 +441,11 @@ func ViewIssue(ctx *middleware.Context) {
 	}
 
 	if ctx.IsSigned {
-		// 	// Update issue-user.
-		// 	if err = models.UpdateIssueUserPairByRead(ctx.User.Id, issue.ID); err != nil {
-		// 		ctx.Handle(500, "UpdateIssueUserPairByRead: %v", err)
-		// 		return
-		// 	}
+		// Update issue-user.
+		if err = issue.ReadBy(ctx.User.Id); err != nil {
+			ctx.Handle(500, "ReadBy: %v", err)
+			return
+		}
 
 		if ctx.User.IsAdmin {
 			// labels, err := models.GetLabelsByRepoID(ctx.Repo.Repository.ID)
