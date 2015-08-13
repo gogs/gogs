@@ -7,7 +7,7 @@
 			</h3>
 			<div class="ui attached segment">
         {{template "base/alert" .}}
-        
+
 			  <form class="ui form" action="{{AppSubUrl}}/install" method="post">
 			  	{{.CsrfTokenHtml}}
 
@@ -123,8 +123,8 @@
                 <span class="help">{{.i18n.Tr "install.smtp_from_helper"}}</span>
               </div>
               <div class="inline field {{if .Err_SMTPEmail}}error{{end}}">
-                <label for="smtp_user">{{.i18n.Tr "install.mailer_user"}}</label>
-                <input id="smtp_user" name="smtp_user" value="{{.smtp_user}}">
+                <label for="smtp_email">{{.i18n.Tr "install.mailer_user"}}</label>
+                <input id="smtp_email" name="smtp_email" value="{{.smtp_email}}">
               </div>
               <div class="inline field">
                 <label for="smtp_passwd">{{.i18n.Tr "install.mailer_password"}}</label>
@@ -144,7 +144,7 @@
               </div>
             </div>
           </div>
-          
+
           <div class="ui accordion optional field">
             <div class="title">
               <i class="icon dropdown"></i>
