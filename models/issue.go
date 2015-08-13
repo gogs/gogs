@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"html/template"
 	"io"
 	"mime/multipart"
 	"os"
@@ -58,11 +57,12 @@ type Issue struct {
 	Updated         time.Time `xorm:"UPDATED"`
 
 	Attachments []*Attachment `xorm:"-"`
+	Comments    []*Comment    `xorm:"-"`
 }
 
 // HashTag returns unique hash tag for issue.
 func (i *Issue) HashTag() string {
-	return "#issue-" + com.ToStr(i.Index)
+	return "issue-" + com.ToStr(i.ID)
 }
 
 func (i *Issue) AfterSet(colName string, _ xorm.Cell) {
@@ -72,6 +72,11 @@ func (i *Issue) AfterSet(colName string, _ xorm.Cell) {
 		i.Attachments, err = GetAttachmentsByIssueID(i.ID)
 		if err != nil {
 			log.Error(3, "GetAttachmentsByIssueID[%d]: %v", i.ID, err)
+		}
+
+		i.Comments, err = GetCommentsByIssueID(i.ID)
+		if err != nil {
+			log.Error(3, "GetCommentsByIssueID[%d]: %v", i.ID, err)
 		}
 
 	case "milestone_id":
@@ -93,6 +98,11 @@ func (i *Issue) AfterSet(colName string, _ xorm.Cell) {
 			log.Error(3, "GetUserByID[%d]: %v", i.ID, err)
 		}
 	}
+}
+
+// IsPoster returns true if given user by ID is the poster.
+func (i *Issue) IsPoster(uid int64) bool {
+	return i.PosterID == uid
 }
 
 func (i *Issue) GetPoster() (err error) {
@@ -163,6 +173,61 @@ func (i *Issue) GetAssignee() (err error) {
 // ReadBy sets issue to be read by given user.
 func (i *Issue) ReadBy(uid int64) error {
 	return UpdateIssueUserByRead(uid, i.ID)
+}
+
+func (i *Issue) changeStatus(e *xorm.Session, doer *User, isClosed bool) (err error) {
+	if i.IsClosed == isClosed {
+		return nil
+	}
+	i.IsClosed = isClosed
+
+	if err = updateIssue(e, i); err != nil {
+		return err
+	} else if err = updateIssueUsersByStatus(e, i.ID, isClosed); err != nil {
+		return err
+	}
+
+	// Update labels.
+	if err = i.getLabels(e); err != nil {
+		return err
+	}
+	for idx := range i.Labels {
+		if i.IsClosed {
+			i.Labels[idx].NumClosedIssues++
+		} else {
+			i.Labels[idx].NumClosedIssues--
+		}
+		if err = updateLabel(e, i.Labels[idx]); err != nil {
+			return err
+		}
+	}
+
+	// Update milestone.
+	if err = changeMilestoneIssueStats(e, i); err != nil {
+		return err
+	}
+
+	// New action comment.
+	if _, err = createStatusComment(e, doer, i.Repo, i); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// ChangeStatus changes issue status to open/closed.
+func (i *Issue) ChangeStatus(doer *User, isClosed bool) (err error) {
+	sess := x.NewSession()
+	defer sessionRelease(sess)
+	if err = sess.Begin(); err != nil {
+		return err
+	}
+
+	if err = i.changeStatus(sess, doer, isClosed); err != nil {
+		return err
+	}
+
+	return sess.Commit()
 }
 
 // CreateIssue creates new issue with labels for repository.
@@ -587,11 +652,14 @@ func UpdateIssue(issue *Issue) error {
 	return updateIssue(x, issue)
 }
 
-// UpdateIssueUserByStatus updates issue-user pairs by issue status.
-func UpdateIssueUserPairsByStatus(iid int64, isClosed bool) error {
-	rawSql := "UPDATE `issue_user` SET is_closed = ? WHERE issue_id = ?"
-	_, err := x.Exec(rawSql, isClosed, iid)
+func updateIssueUsersByStatus(e Engine, issueID int64, isClosed bool) error {
+	_, err := e.Exec("UPDATE `issue_user` SET is_closed=? WHERE issue_id=?", isClosed, issueID)
 	return err
+}
+
+// UpdateIssueUsersByStatus updates issue-user relations by issue status.
+func UpdateIssueUsersByStatus(issueID int64, isClosed bool) error {
+	return updateIssueUsersByStatus(x, issueID, isClosed)
 }
 
 func updateIssueUserByAssignee(e *xorm.Session, issueID, assigneeID int64) (err error) {
@@ -729,10 +797,14 @@ func GetLabelsByIssueID(issueID int64) ([]*Label, error) {
 	return getLabelsByIssueID(x, issueID)
 }
 
-// UpdateLabel updates label information.
-func UpdateLabel(l *Label) error {
+func updateLabel(e Engine, l *Label) error {
 	_, err := x.Id(l.ID).AllCols().Update(l)
 	return err
+}
+
+// UpdateLabel updates label information.
+func UpdateLabel(l *Label) error {
+	return updateLabel(x, l)
 }
 
 // DeleteLabel delete a label of given repository.
@@ -998,14 +1070,12 @@ func ChangeMilestoneStatus(m *Milestone, isClosed bool) (err error) {
 	return sess.Commit()
 }
 
-// ChangeMilestoneIssueStats updates the open/closed issues counter and progress
-// for the milestone associated witht the given issue.
-func ChangeMilestoneIssueStats(issue *Issue) error {
+func changeMilestoneIssueStats(e *xorm.Session, issue *Issue) error {
 	if issue.MilestoneID == 0 {
 		return nil
 	}
 
-	m, err := GetMilestoneByID(issue.MilestoneID)
+	m, err := getMilestoneByID(e, issue.MilestoneID)
 	if err != nil {
 		return err
 	}
@@ -1018,7 +1088,23 @@ func ChangeMilestoneIssueStats(issue *Issue) error {
 		m.NumClosedIssues--
 	}
 
-	return UpdateMilestone(m)
+	return updateMilestone(e, m)
+}
+
+// ChangeMilestoneIssueStats updates the open/closed issues counter and progress
+// for the milestone associated witht the given issue.
+func ChangeMilestoneIssueStats(issue *Issue) (err error) {
+	sess := x.NewSession()
+	defer sessionRelease(sess)
+	if err = sess.Begin(); err != nil {
+		return err
+	}
+
+	if err = changeMilestoneIssueStats(sess, issue); err != nil {
+		return err
+	}
+
+	return sess.Commit()
 }
 
 func changeMilestoneAssign(e *xorm.Session, oldMid int64, issue *Issue) error {
@@ -1145,98 +1231,165 @@ const (
 
 // Comment represents a comment in commit and issue page.
 type Comment struct {
-	Id       int64
-	Type     CommentType
-	PosterId int64
-	Poster   *User `xorm:"-"`
-	IssueId  int64
-	CommitId int64
-	Line     int64
-	Content  string    `xorm:"TEXT"`
-	Created  time.Time `xorm:"CREATED"`
+	ID              int64 `xorm:"pk autoincr"`
+	Type            CommentType
+	PosterID        int64
+	Poster          *User `xorm:"-"`
+	IssueID         int64 `xorm:"INDEX"`
+	CommitID        int64
+	Line            int64
+	Content         string    `xorm:"TEXT"`
+	RenderedContent string    `xorm:"-"`
+	Created         time.Time `xorm:"CREATED"`
+
+	Attachments []*Attachment `xorm:"-"`
 }
 
-// CreateComment creates comment of issue or commit.
-func CreateComment(userId, repoId, issueId, commitId, line int64, cmtType CommentType, content string, attachments []int64) (*Comment, error) {
-	sess := x.NewSession()
-	defer sessionRelease(sess)
-	if err := sess.Begin(); err != nil {
-		return nil, err
+// HashTag returns unique hash tag for issue.
+func (c *Comment) HashTag() string {
+	return "issuecomment-" + com.ToStr(c.ID)
+}
+
+func (c *Comment) AfterSet(colName string, _ xorm.Cell) {
+	var err error
+	switch colName {
+	case "id":
+		c.Attachments, err = GetAttachmentsByCommentID(c.ID)
+		if err != nil {
+			log.Error(3, "GetAttachmentsByCommentID[%d]: %v", c.ID, err)
+		}
+
+	case "poster_id":
+		c.Poster, err = GetUserByID(c.PosterID)
+		if err != nil {
+			if IsErrUserNotExist(err) {
+				c.PosterID = -1
+				c.Poster = &User{Name: "someone"}
+			} else {
+				log.Error(3, "GetUserByID[%d]: %v", c.ID, err)
+			}
+		}
 	}
+}
 
-	comment := &Comment{PosterId: userId, Type: cmtType, IssueId: issueId,
-		CommitId: commitId, Line: line, Content: content}
-
-	if _, err := sess.Insert(comment); err != nil {
+func createComment(e *xorm.Session, u *User, repo *Repository, issue *Issue, commitID, line int64, cmtType CommentType, content string, uuids []string) (_ *Comment, err error) {
+	comment := &Comment{
+		PosterID: u.Id,
+		Type:     cmtType,
+		IssueID:  issue.ID,
+		CommitID: commitID,
+		Line:     line,
+		Content:  content,
+	}
+	if _, err = e.Insert(comment); err != nil {
 		return nil, err
 	}
 
 	// Check comment type.
 	switch cmtType {
 	case COMMENT_TYPE_COMMENT:
-		rawSql := "UPDATE `issue` SET num_comments = num_comments + 1 WHERE id = ?"
-		if _, err := sess.Exec(rawSql, issueId); err != nil {
+		if _, err = e.Exec("UPDATE `issue` SET num_comments=num_comments+1 WHERE id=?", issue.ID); err != nil {
 			return nil, err
 		}
 
-		if len(attachments) > 0 {
-			rawSql = "UPDATE `attachment` SET comment_id = ? WHERE id IN (?)"
-
-			astrs := make([]string, 0, len(attachments))
-
-			for _, a := range attachments {
-				astrs = append(astrs, strconv.FormatInt(a, 10))
+		// Check attachments.
+		attachments := make([]*Attachment, 0, len(uuids))
+		for _, uuid := range uuids {
+			attach, err := getAttachmentByUUID(e, uuid)
+			if err != nil {
+				if IsErrAttachmentNotExist(err) {
+					continue
+				}
+				return nil, fmt.Errorf("getAttachmentByUUID[%s]: %v", uuid, err)
 			}
+			attachments = append(attachments, attach)
+		}
 
-			if _, err := sess.Exec(rawSql, comment.Id, strings.Join(astrs, ",")); err != nil {
-				return nil, err
+		for i := range attachments {
+			attachments[i].IssueID = issue.ID
+			attachments[i].CommentID = comment.ID
+			// No assign value could be 0, so ignore AllCols().
+			if _, err = e.Id(attachments[i].ID).Update(attachments[i]); err != nil {
+				return nil, fmt.Errorf("update attachment[%d]: %v", attachments[i].ID, err)
 			}
 		}
+
+		// Notify watchers.
+		act := &Action{
+			ActUserID:    u.Id,
+			ActUserName:  u.LowerName,
+			ActEmail:     u.Email,
+			OpType:       COMMENT_ISSUE,
+			Content:      fmt.Sprintf("%d|%s", issue.Index, strings.Split(content, "\n")[0]),
+			RepoID:       repo.ID,
+			RepoUserName: repo.Owner.LowerName,
+			RepoName:     repo.LowerName,
+			IsPrivate:    repo.IsPrivate,
+		}
+		if err = notifyWatchers(e, act); err != nil {
+			return nil, err
+		}
+
 	case COMMENT_TYPE_REOPEN:
-		rawSql := "UPDATE `repository` SET num_closed_issues = num_closed_issues - 1 WHERE id = ?"
-		if _, err := sess.Exec(rawSql, repoId); err != nil {
+		if _, err = e.Exec("UPDATE `repository` SET num_closed_issues=num_closed_issues-1 WHERE id=?", repo.ID); err != nil {
 			return nil, err
 		}
 	case COMMENT_TYPE_CLOSE:
-		rawSql := "UPDATE `repository` SET num_closed_issues = num_closed_issues + 1 WHERE id = ?"
-		if _, err := sess.Exec(rawSql, repoId); err != nil {
+		if _, err = e.Exec("UPDATE `repository` SET num_closed_issues=num_closed_issues+1 WHERE id=?", repo.ID); err != nil {
 			return nil, err
 		}
+	}
+
+	return comment, nil
+}
+
+func createStatusComment(e *xorm.Session, doer *User, repo *Repository, issue *Issue) (*Comment, error) {
+	cmtType := COMMENT_TYPE_CLOSE
+	if !issue.IsClosed {
+		cmtType = COMMENT_TYPE_REOPEN
+	}
+	return createComment(e, doer, repo, issue, 0, 0, cmtType, "", nil)
+}
+
+// CreateComment creates comment of issue or commit.
+func CreateComment(doer *User, repo *Repository, issue *Issue, commitID, line int64, cmtType CommentType, content string, attachments []string) (comment *Comment, err error) {
+	sess := x.NewSession()
+	defer sessionRelease(sess)
+	if err = sess.Begin(); err != nil {
+		return nil, err
+	}
+
+	comment, err = createComment(sess, doer, repo, issue, commitID, line, cmtType, content, attachments)
+	if err != nil {
+		return nil, err
 	}
 
 	return comment, sess.Commit()
 }
 
-// GetCommentById returns the comment with the given id
-func GetCommentById(commentId int64) (*Comment, error) {
-	c := &Comment{Id: commentId}
-	_, err := x.Get(c)
+// CreateIssueComment creates a plain issue comment.
+func CreateIssueComment(doer *User, repo *Repository, issue *Issue, content string, attachments []string) (*Comment, error) {
+	return CreateComment(doer, repo, issue, 0, 0, COMMENT_TYPE_COMMENT, content, attachments)
+}
 
+// GetCommentById returns the comment with the given id
+func GetCommentById(id int64) (*Comment, error) {
+	c := new(Comment)
+	_, err := x.Id(id).Get(c)
 	return c, err
 }
 
-func (c *Comment) ContentHtml() template.HTML {
-	return template.HTML(c.Content)
-}
-
-// GetIssueComments returns list of comment by given issue id.
-func GetIssueComments(issueId int64) ([]Comment, error) {
-	comments := make([]Comment, 0, 10)
-	err := x.Asc("created").Find(&comments, &Comment{IssueId: issueId})
-	return comments, err
-}
-
-// Attachments returns the attachments for this comment.
-func (c *Comment) Attachments() []*Attachment {
-	a, _ := GetAttachmentsByComment(c.Id)
-	return a
+// GetCommentsByIssueID returns all comments of issue by given ID.
+func GetCommentsByIssueID(issueID int64) ([]*Comment, error) {
+	comments := make([]*Comment, 0, 10)
+	return comments, x.Where("issue_id=?", issueID).Asc("created").Find(&comments)
 }
 
 func (c *Comment) AfterDelete() {
-	_, err := DeleteAttachmentsByComment(c.Id, true)
+	_, err := DeleteAttachmentsByComment(c.ID, true)
 
 	if err != nil {
-		log.Info("Could not delete files for comment %d on issue #%d: %s", c.Id, c.IssueId, err)
+		log.Info("Could not delete files for comment %d on issue #%d: %s", c.ID, c.IssueID, err)
 	}
 }
 
@@ -1297,8 +1450,7 @@ func NewAttachment(name string, buf []byte, file multipart.File) (_ *Attachment,
 	return attach, sess.Commit()
 }
 
-// GetAttachmentByUUID returns attachment by given UUID.
-func GetAttachmentByUUID(uuid string) (*Attachment, error) {
+func getAttachmentByUUID(e Engine, uuid string) (*Attachment, error) {
 	attach := &Attachment{UUID: uuid}
 	has, err := x.Get(attach)
 	if err != nil {
@@ -1309,17 +1461,21 @@ func GetAttachmentByUUID(uuid string) (*Attachment, error) {
 	return attach, nil
 }
 
+// GetAttachmentByUUID returns attachment by given UUID.
+func GetAttachmentByUUID(uuid string) (*Attachment, error) {
+	return getAttachmentByUUID(x, uuid)
+}
+
 // GetAttachmentsByIssueID returns all attachments for given issue by ID.
 func GetAttachmentsByIssueID(issueID int64) ([]*Attachment, error) {
 	attachments := make([]*Attachment, 0, 10)
 	return attachments, x.Where("issue_id=? AND comment_id=0", issueID).Find(&attachments)
 }
 
-// GetAttachmentsByComment returns a list of attachments for the given comment
-func GetAttachmentsByComment(commentId int64) ([]*Attachment, error) {
+// GetAttachmentsByCommentID returns all attachments if comment by given ID.
+func GetAttachmentsByCommentID(commentID int64) ([]*Attachment, error) {
 	attachments := make([]*Attachment, 0, 10)
-	err := x.Where("comment_id = ?", commentId).Find(&attachments)
-	return attachments, err
+	return attachments, x.Where("comment_id=?", commentID).Find(&attachments)
 }
 
 // DeleteAttachment deletes the given attachment and optionally the associated file.
@@ -1358,7 +1514,7 @@ func DeleteAttachmentsByIssue(issueId int64, remove bool) (int, error) {
 
 // DeleteAttachmentsByComment deletes all attachments associated with the given comment.
 func DeleteAttachmentsByComment(commentId int64, remove bool) (int, error) {
-	attachments, err := GetAttachmentsByComment(commentId)
+	attachments, err := GetAttachmentsByCommentID(commentId)
 
 	if err != nil {
 		return 0, err

@@ -124,7 +124,7 @@ func (a Action) GetIssueInfos() []string {
 	return strings.SplitN(a.Content, "|", 2)
 }
 
-func updateIssuesCommit(userId, repoId int64, repoUserName, repoName string, commits []*base.PushCommit) error {
+func updateIssuesCommit(u *User, repo *Repository, repoUserName, repoName string, commits []*base.PushCommit) error {
 	for _, c := range commits {
 		for _, ref := range IssueReferenceKeywordsPat.FindAllString(c.Message, -1) {
 			ref := ref[strings.IndexByte(ref, byte(' '))+1:]
@@ -153,7 +153,7 @@ func updateIssuesCommit(userId, repoId int64, repoUserName, repoName string, com
 
 			url := fmt.Sprintf("%s/%s/%s/commit/%s", setting.AppSubUrl, repoUserName, repoName, c.Sha1)
 			message := fmt.Sprintf(`<a href="%s">%s</a>`, url, c.Message)
-			if _, err = CreateComment(userId, issue.RepoID, issue.ID, 0, 0, COMMENT_TYPE_COMMIT, message, nil); err != nil {
+			if _, err = CreateComment(u, repo, issue, 0, 0, COMMENT_TYPE_COMMIT, message, nil); err != nil {
 				return err
 			}
 		}
@@ -183,7 +183,7 @@ func updateIssuesCommit(userId, repoId int64, repoUserName, repoName string, com
 				return err
 			}
 
-			if issue.RepoID == repoId {
+			if issue.RepoID == repo.ID {
 				if issue.IsClosed {
 					continue
 				}
@@ -202,7 +202,7 @@ func updateIssuesCommit(userId, repoId int64, repoUserName, repoName string, com
 
 				if err = UpdateIssue(issue); err != nil {
 					return err
-				} else if err = UpdateIssueUserPairsByStatus(issue.ID, issue.IsClosed); err != nil {
+				} else if err = UpdateIssueUsersByStatus(issue.ID, issue.IsClosed); err != nil {
 					return err
 				}
 
@@ -211,7 +211,7 @@ func updateIssuesCommit(userId, repoId int64, repoUserName, repoName string, com
 				}
 
 				// If commit happened in the referenced repository, it means the issue can be closed.
-				if _, err = CreateComment(userId, repoId, issue.ID, 0, 0, COMMENT_TYPE_CLOSE, "", nil); err != nil {
+				if _, err = CreateComment(u, repo, issue, 0, 0, COMMENT_TYPE_CLOSE, "", nil); err != nil {
 					return err
 				}
 			}
@@ -242,7 +242,7 @@ func updateIssuesCommit(userId, repoId int64, repoUserName, repoName string, com
 				return err
 			}
 
-			if issue.RepoID == repoId {
+			if issue.RepoID == repo.ID {
 				if !issue.IsClosed {
 					continue
 				}
@@ -261,7 +261,7 @@ func updateIssuesCommit(userId, repoId int64, repoUserName, repoName string, com
 
 				if err = UpdateIssue(issue); err != nil {
 					return err
-				} else if err = UpdateIssueUserPairsByStatus(issue.ID, issue.IsClosed); err != nil {
+				} else if err = UpdateIssueUsersByStatus(issue.ID, issue.IsClosed); err != nil {
 					return err
 				}
 
@@ -270,7 +270,7 @@ func updateIssuesCommit(userId, repoId int64, repoUserName, repoName string, com
 				}
 
 				// If commit happened in the referenced repository, it means the issue can be closed.
-				if _, err = CreateComment(userId, repoId, issue.ID, 0, 0, COMMENT_TYPE_REOPEN, "", nil); err != nil {
+				if _, err = CreateComment(u, repo, issue, 0, 0, COMMENT_TYPE_REOPEN, "", nil); err != nil {
 					return err
 				}
 			}
@@ -280,8 +280,8 @@ func updateIssuesCommit(userId, repoId int64, repoUserName, repoName string, com
 }
 
 // CommitRepoAction adds new action for committing repository.
-func CommitRepoAction(userId, repoUserId int64, userName, actEmail string,
-	repoId int64, repoUserName, repoName string, refFullName string, commit *base.PushCommits, oldCommitId string, newCommitId string) error {
+func CommitRepoAction(userID, repoUserID int64, userName, actEmail string,
+	repoID int64, repoUserName, repoName string, refFullName string, commit *base.PushCommits, oldCommitID string, newCommitID string) error {
 
 	opType := COMMIT_REPO
 	// Check it's tag push or branch.
@@ -292,40 +292,44 @@ func CommitRepoAction(userId, repoUserId int64, userName, actEmail string,
 
 	repoLink := fmt.Sprintf("%s%s/%s", setting.AppUrl, repoUserName, repoName)
 	// if not the first commit, set the compareUrl
-	if !strings.HasPrefix(oldCommitId, "0000000") {
-		commit.CompareUrl = fmt.Sprintf("%s/%s/compare/%s...%s", repoUserName, repoName, oldCommitId, newCommitId)
+	if !strings.HasPrefix(oldCommitID, "0000000") {
+		commit.CompareUrl = fmt.Sprintf("%s/%s/compare/%s...%s", repoUserName, repoName, oldCommitID, newCommitID)
 	}
 
 	bs, err := json.Marshal(commit)
 	if err != nil {
-		return errors.New("json: " + err.Error())
+		return fmt.Errorf("Marshal: %v", err)
 	}
 
 	refName := git.RefEndName(refFullName)
 
 	// Change repository bare status and update last updated time.
-	repo, err := GetRepositoryByName(repoUserId, repoName)
+	repo, err := GetRepositoryByName(repoUserID, repoName)
 	if err != nil {
-		return errors.New("GetRepositoryByName: " + err.Error())
+		return fmt.Errorf("GetRepositoryByName: %v", err)
 	}
 	repo.IsBare = false
 	if err = UpdateRepository(repo, false); err != nil {
-		return errors.New("UpdateRepository: " + err.Error())
+		return fmt.Errorf("UpdateRepository: %v", err)
 	}
 
-	err = updateIssuesCommit(userId, repoId, repoUserName, repoName, commit.Commits)
+	u, err := GetUserByID(userID)
+	if err != nil {
+		return fmt.Errorf("GetUserByID: %v", err)
+	}
 
+	err = updateIssuesCommit(u, repo, repoUserName, repoName, commit.Commits)
 	if err != nil {
 		log.Debug("updateIssuesCommit: ", err)
 	}
 
 	if err = NotifyWatchers(&Action{
-		ActUserID:    userId,
+		ActUserID:    u.Id,
 		ActUserName:  userName,
 		ActEmail:     actEmail,
 		OpType:       opType,
 		Content:      string(bs),
-		RepoID:       repoId,
+		RepoID:       repo.ID,
 		RepoUserName: repoUserName,
 		RepoName:     repoName,
 		RefName:      refName,
@@ -340,7 +344,7 @@ func CommitRepoAction(userId, repoUserId int64, userName, actEmail string,
 		return errors.New("GetOwner: " + err.Error())
 	}
 
-	ws, err := GetActiveWebhooksByRepoId(repoId)
+	ws, err := GetActiveWebhooksByRepoId(repo.ID)
 	if err != nil {
 		return errors.New("GetActiveWebhooksByRepoId: " + err.Error())
 	}
@@ -406,8 +410,8 @@ func CommitRepoAction(userId, repoUserId int64, userName, actEmail string,
 			Email:    pusher_email,
 			UserName: userName,
 		},
-		Before:     oldCommitId,
-		After:      newCommitId,
+		Before:     oldCommitID,
+		After:      newCommitID,
 		CompareUrl: setting.AppUrl + commit.CompareUrl,
 	}
 
