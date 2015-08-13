@@ -798,7 +798,7 @@ func GetLabelsByIssueID(issueID int64) ([]*Label, error) {
 }
 
 func updateLabel(e Engine, l *Label) error {
-	_, err := x.Id(l.ID).AllCols().Update(l)
+	_, err := e.Id(l.ID).AllCols().Update(l)
 	return err
 }
 
@@ -1222,11 +1222,13 @@ const (
 	COMMENT_TYPE_CLOSE
 
 	// References.
-	COMMENT_TYPE_ISSUE
-	// Reference from some commit (not part of a pull request)
-	COMMENT_TYPE_COMMIT
-	// Reference from some pull request
-	COMMENT_TYPE_PULL
+	COMMENT_TYPE_ISSUE_REF
+	// Reference from a commit (not part of a pull request)
+	COMMENT_TYPE_COMMIT_REF
+	// Reference from a comment
+	COMMENT_TYPE_COMMENT_REF
+	// Reference from a pull request
+	COMMENT_TYPE_PULL_REF
 )
 
 // Comment represents a comment in commit and issue page.
@@ -1245,9 +1247,14 @@ type Comment struct {
 	Attachments []*Attachment `xorm:"-"`
 }
 
-// HashTag returns unique hash tag for issue.
+// HashTag returns unique hash tag for comment.
 func (c *Comment) HashTag() string {
 	return "issuecomment-" + com.ToStr(c.ID)
+}
+
+// EventTag returns unique event hash tag for comment.
+func (c *Comment) EventTag() string {
+	return "event-" + com.ToStr(c.ID)
 }
 
 func (c *Comment) AfterSet(colName string, _ xorm.Cell) {

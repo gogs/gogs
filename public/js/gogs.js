@@ -203,6 +203,22 @@ function initRepository() {
         });
     }
 
+    // Issues
+    if ($('.repository.view.issue').length > 0) {
+        var $status_btn = $('#status-button');
+        $('#content').keyup(function () {
+            if ($(this).val().length == 0) {
+                $status_btn.text($status_btn.data('status'))
+            } else {
+                $status_btn.text($status_btn.data('status-and-comment'))
+            }
+        });
+        $status_btn.click(function () {
+            $('#status').val($status_btn.data('status-val'));
+            $('#comment-form').submit();
+        })
+    }
+
     // Pull request
     if ($('.repository.compare.pull').length > 0) {
         var $branch_dropdown = $('.choose.branch .dropdown')

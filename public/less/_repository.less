@@ -163,6 +163,19 @@
 			}
 		}
 		.comment-list {
+			&:before {
+				display: block;
+				content: "";
+				position: absolute;
+				margin-top: 12px;
+    		margin-bottom: 14px;
+				top: 0;
+				bottom: 0;
+				left: 96px;
+				width: 2px;
+				background-color: #f3f3f3;
+				z-index: -1;
+			}
 			.comment {
 				.avatar {
 					width: @comment-avatar-width;
@@ -181,13 +194,6 @@
 							max-width: 78%;
 					    padding-top: 10px;
 					    padding-bottom: 10px;
-			        color: #767676;
-					    a {
-					    	color: #444;
-					    	&:hover {
-					    		color: #000;
-					    	}
-					    }
 						}
 					}
 					.markdown {
@@ -218,6 +224,25 @@
 						height: 200px;
 					}
 				}
+			}
+			.event {
+				position: relative;
+		    margin: 15px 0 15px 79px;
+		    padding-left: 25px;
+		    .octicon {
+		    	width: 30px;
+		    	float: left;
+		    	margin-left: -36px;
+		    	text-align: center;
+		    	&.octicon-circle-slash {
+		    		font-size: 30px;
+		    		color: #bd2c00;
+		    	}
+		    	&.octicon-primitive-dot {
+		    		font-size: 35px;
+		    		color: #6cc644;
+		    	}
+		    }
 			}
 		}
 		.ui.segment.metas {

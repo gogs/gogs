@@ -720,9 +720,9 @@ func NewComment(ctx *middleware.Context, form auth.CreateCommentForm) {
 
 	// Check if issue owner/poster changes the status of issue.
 	if (ctx.Repo.IsOwner() || issue.IsPoster(ctx.User.Id)) &&
-		(form.NewStatus == "reopen" || form.NewStatus == "close") {
+		(form.Status == "reopen" || form.Status == "close") {
 		issue.Repo = ctx.Repo.Repository
-		if err = issue.ChangeStatus(ctx.User, form.NewStatus == "close"); err != nil {
+		if err = issue.ChangeStatus(ctx.User, form.Status == "close"); err != nil {
 			ctx.Handle(500, "ChangeStatus", err)
 			return
 		}
