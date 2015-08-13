@@ -5,12 +5,16 @@
 package middleware
 
 import (
+	"fmt"
 	"net/url"
 
 	"github.com/Unknwon/macaron"
 	"github.com/macaron-contrib/csrf"
 
+	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
+	"github.com/gogits/gogs/modules/base"
+	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/setting"
 )
 
@@ -19,6 +23,41 @@ type ToggleOptions struct {
 	SignOutRequire bool
 	AdminRequire   bool
 	DisableCsrf    bool
+}
+
+// AutoSignIn reads cookie and try to auto-login.
+func AutoSignIn(ctx *Context) (bool, error) {
+	uname := ctx.GetCookie(setting.CookieUserName)
+	if len(uname) == 0 {
+		return false, nil
+	}
+
+	isSucceed := false
+	defer func() {
+		if !isSucceed {
+			log.Trace("auto-login cookie cleared: %s", uname)
+			ctx.SetCookie(setting.CookieUserName, "", -1, setting.AppSubUrl)
+			ctx.SetCookie(setting.CookieRememberName, "", -1, setting.AppSubUrl)
+		}
+	}()
+
+	u, err := models.GetUserByName(uname)
+	if err != nil {
+		if !models.IsErrUserNotExist(err) {
+			return false, fmt.Errorf("GetUserByName: %v", err)
+		}
+		return false, nil
+	}
+
+	if val, _ := ctx.GetSuperSecureCookie(
+		base.EncodeMd5(u.Rands+u.Passwd), setting.CookieRememberName); val != u.Name {
+		return false, nil
+	}
+
+	isSucceed = true
+	ctx.Session.Set("uid", u.Id)
+	ctx.Session.Set("uname", u.Name)
+	return true, nil
 }
 
 func Toggle(options *ToggleOptions) macaron.Handler {
