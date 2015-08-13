@@ -50,20 +50,53 @@
 		    </div>
   		</div>
 
+  		{{range .Issue.Comments}}
+  		{{ $createdStr:= TimeSince .Created $.Lang }}
+  		<div class="comment">
+		    <a class="avatar" href="{{.Poster.HomeLink}}">
+		      <img src="{{.Poster.AvatarLink}}">
+		    </a>
+		    <div class="content">
+					<div class="ui top attached header">
+						<span class="text"><a href="{{.Poster.HomeLink}}">{{.Poster.Name}}</a> {{$.i18n.Tr "repo.issues.commented_at" .HashTag $createdStr | Safe}}</span>
+					  <div class="ui right actions">
+					  </div>
+					</div>
+			    <div class="ui attached segment markdown">
+			    	{{if .RenderedContent}}
+						{{.RenderedContent|Str2html}}
+			    	{{else}}
+						<span class="no-content">{{$.i18n.Tr "repo.issues.no_content"}}</span>
+			    	{{end}}
+	  			</div>
+	  			{{if .Attachments}}
+					<div class="ui bottom attached segment">
+						<div class="ui small images">
+							{{range .Attachments}}
+						  <a target="_blank" href="/attachments/{{.UUID}}"><img class="ui image" src="/attachments/{{.UUID}}"></a>
+						  {{end}}
+						</div>
+					</div>
+	  			{{end}}
+		    </div>
+  		</div>
+  		{{end}}
+
 		  <div class="comment form">
 		    <a class="avatar" href="{{.SignedUser.HomeLink}}">
 		      <img src="{{.SignedUser.AvatarLink}}">
 		    </a>
 		    <div class="content">
-			    <form class="ui segment form" action="{{.Link}}" method="post">
+			    <form class="ui segment form" action="{{.Link}}/comments" method="post">
 						{{template "repo/issue/comment_tab" .}}
+						{{.CsrfTokenHtml}}
 			      <div class="text right">
 							<div class="ui red basic button" data-close="{{.i18n.Tr "repo.issues.close_issue"}}" data-close-and-comment="{{.i18n.Tr "repo.issues.close_comment_issue"}}">
 								{{.i18n.Tr "repo.issues.close_issue"}}
 							</div>
-							<div class="ui green button">
+							<button class="ui green button">
 								{{.i18n.Tr "repo.issues.create_comment"}}
-							</div>
+							</button>
 			      </div>
 			    </form>
 		    </div>

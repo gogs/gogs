@@ -110,6 +110,16 @@ func (f *CreateIssueForm) Validate(ctx *macaron.Context, errs binding.Errors) bi
 	return validate(errs, ctx.Data, f, ctx.Locale)
 }
 
+type CreateCommentForm struct {
+	Content     string
+	NewStatus   string `binding:"OmitEmpty;In(reopen,close)"`
+	Attachments []string
+}
+
+func (f *CreateCommentForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
+	return validate(errs, ctx.Data, f, ctx.Locale)
+}
+
 //    _____  .__.__                   __
 //   /     \ |__|  |   ____   _______/  |_  ____   ____   ____
 //  /  \ /  \|  |  | _/ __ \ /  ___/\   __\/  _ \ /    \_/ __ \
