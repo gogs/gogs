@@ -27,7 +27,7 @@
 		    </a>
 		    <div class="content">
 					<div class="ui top attached header">
-						<span class="text"><a href="{{.Issue.Poster.HomeLink}}">{{.Issue.Poster.Name}}</a> {{.i18n.Tr "repo.issues.commented_at" .Issue.HashTag $createdStr | Safe}}</span>
+						<span class="text grey"><a href="{{.Issue.Poster.HomeLink}}">{{.Issue.Poster.Name}}</a> {{.i18n.Tr "repo.issues.commented_at" .Issue.HashTag $createdStr | Safe}}</span>
 					  <div class="ui right actions">
 					  </div>
 					</div>
@@ -52,13 +52,16 @@
 
   		{{range .Issue.Comments}}
   		{{ $createdStr:= TimeSince .Created $.Lang }}
+
+			<!-- 0 = COMMENT, 1 = REOPEN, 2 = CLOSE, 3 = ISSUE_REF, 4 = COMMIT_REF, 5 = COMMENT_REF, 6 = PULL_REF -->
+			{{if eq .Type 0}}
   		<div class="comment">
 		    <a class="avatar" href="{{.Poster.HomeLink}}">
 		      <img src="{{.Poster.AvatarLink}}">
 		    </a>
 		    <div class="content">
 					<div class="ui top attached header">
-						<span class="text"><a href="{{.Poster.HomeLink}}">{{.Poster.Name}}</a> {{$.i18n.Tr "repo.issues.commented_at" .HashTag $createdStr | Safe}}</span>
+						<span class="text grey"><a href="{{.Poster.HomeLink}}">{{.Poster.Name}}</a> {{$.i18n.Tr "repo.issues.commented_at" .HashTag $createdStr | Safe}}</span>
 					  <div class="ui right actions">
 					  </div>
 					</div>
@@ -80,6 +83,24 @@
 	  			{{end}}
 		    </div>
   		</div>
+  		{{else if eq .Type 1}}
+  		<div class="event">
+  			<span class="octicon octicon-primitive-dot"></span>
+  			<a class="ui avatar image" href="{{.Poster.HomeLink}}">
+  			  <img src="{{.Poster.AvatarLink}}">
+  			</a>
+  			<span class="text grey"><a href="{{.Poster.HomeLink}}">{{.Poster.Name}}</a> {{$.i18n.Tr "repo.issues.closed_at" .EventTag $createdStr | Safe}}</span>
+  		</div>
+  		{{else if eq .Type 2}}
+  		<div class="event">
+  			<span class="octicon octicon-circle-slash"></span>
+  			<a class="ui avatar image" href="{{.Poster.HomeLink}}">
+  			  <img src="{{.Poster.AvatarLink}}">
+  			</a>
+  			<span class="text grey"><a href="{{.Poster.HomeLink}}">{{.Poster.Name}}</a> {{$.i18n.Tr "repo.issues.closed_at" .EventTag $createdStr | Safe}}</span>
+  		</div>
+			{{end}}
+
   		{{end}}
 
 		  <div class="comment form">
@@ -87,13 +108,20 @@
 		      <img src="{{.SignedUser.AvatarLink}}">
 		    </a>
 		    <div class="content">
-			    <form class="ui segment form" action="{{.Link}}/comments" method="post">
+			    <form class="ui segment form" id="comment-form" action="{{.Link}}/comments" method="post">
 						{{template "repo/issue/comment_tab" .}}
 						{{.CsrfTokenHtml}}
+						<input id="status" name="status" type="hidden">
 			      <div class="text right">
-							<div class="ui red basic button" data-close="{{.i18n.Tr "repo.issues.close_issue"}}" data-close-and-comment="{{.i18n.Tr "repo.issues.close_comment_issue"}}">
+			      	{{if .Issue.IsClosed}}
+							<div id="status-button" class="ui green basic button" data-status="{{.i18n.Tr "repo.issues.reopen_issue"}}" data-status-and-comment="{{.i18n.Tr "repo.issues.reopen_comment_issue"}}" data-status-val="reopen">
+								{{.i18n.Tr "repo.issues.reopen_issue"}}
+							</div>
+			      	{{else}}
+							<div id="status-button" class="ui red basic button" data-status="{{.i18n.Tr "repo.issues.close_issue"}}" data-status-and-comment="{{.i18n.Tr "repo.issues.close_comment_issue"}}" data-status-val="close">
 								{{.i18n.Tr "repo.issues.close_issue"}}
 							</div>
+							{{end}}
 							<button class="ui green button">
 								{{.i18n.Tr "repo.issues.create_comment"}}
 							</button>
