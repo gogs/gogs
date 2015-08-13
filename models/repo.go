@@ -247,8 +247,8 @@ func (repo *Repository) HasAccess(u *User) bool {
 	return has
 }
 
-func (repo *Repository) IsOwnedBy(u *User) bool {
-	return repo.OwnerID == u.Id
+func (repo *Repository) IsOwnedBy(userID int64) bool {
+	return repo.OwnerID == userID
 }
 
 // DescriptionHtml does special handles to description and return HTML string.

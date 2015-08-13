@@ -427,7 +427,7 @@ func ViewIssue(ctx *middleware.Context) {
 	ctx.Data["Title"] = issue.Name
 
 	if err = issue.GetPoster(); err != nil {
-		ctx.Handle(500, "GetPoster: %v", err)
+		ctx.Handle(500, "GetPoster", err)
 		return
 	}
 	issue.RenderedContent = string(base.RenderMarkdown([]byte(issue.Content), ctx.Repo.RepoLink))
@@ -441,7 +441,7 @@ func ViewIssue(ctx *middleware.Context) {
 	if ctx.IsSigned {
 		// Update issue-user.
 		if err = issue.ReadBy(ctx.User.Id); err != nil {
-			ctx.Handle(500, "ReadBy: %v", err)
+			ctx.Handle(500, "ReadBy", err)
 			return
 		}
 
@@ -475,10 +475,35 @@ func ViewIssue(ctx *middleware.Context) {
 		}
 	}
 
+	var (
+		repo    = ctx.Repo.Repository
+		tag     models.CommentTag
+		ok      bool
+		marked  = make(map[int64]models.CommentTag)
+		comment *models.Comment
+	)
 	// Render comments.
-	for i := range issue.Comments {
-		if issue.Comments[i].Type == models.COMMENT_TYPE_COMMENT {
-			issue.Comments[i].RenderedContent = string(base.RenderMarkdown([]byte(issue.Comments[i].Content), ctx.Repo.RepoLink))
+	for _, comment = range issue.Comments {
+		if comment.Type == models.COMMENT_TYPE_COMMENT {
+			comment.RenderedContent = string(base.RenderMarkdown([]byte(comment.Content), ctx.Repo.RepoLink))
+
+			// Check tag.
+			tag, ok = marked[comment.PosterID]
+			if ok {
+				comment.ShowTag = tag
+				continue
+			}
+
+			if repo.IsOwnedBy(comment.PosterID) ||
+				(repo.Owner.IsOrganization() && repo.Owner.IsOwnedBy(comment.PosterID)) {
+				comment.ShowTag = models.COMMENT_TAG_OWNER
+			} else if comment.Poster.IsAdminOfRepo(repo) {
+				comment.ShowTag = models.COMMENT_TAG_ADMIN
+			} else if comment.PosterID == issue.PosterID {
+				comment.ShowTag = models.COMMENT_TAG_POSTER
+			}
+
+			marked[comment.PosterID] = comment.ShowTag
 		}
 	}
 
