@@ -288,7 +288,7 @@ func NewIssuePost(ctx *middleware.Context, form auth.CreateIssueForm) {
 	}
 
 	if setting.AttachmentEnabled {
-		attachments = ctx.QueryStrings("attachments")
+		attachments = form.Attachments
 	}
 
 	if ctx.HasError() {
@@ -432,8 +432,6 @@ func ViewIssue(ctx *middleware.Context) {
 	}
 	issue.RenderedContent = string(base.RenderMarkdown([]byte(issue.Content), ctx.Repo.RepoLink))
 
-	// Attchments.
-
 	// Metas.
 	if err = issue.GetLabels(); err != nil {
 		ctx.Handle(500, "GetLabels", err)
@@ -477,29 +475,14 @@ func ViewIssue(ctx *middleware.Context) {
 		}
 	}
 
-	// // Get comments.
-	// comments, err := models.GetIssueComments(issue.ID)
-	// if err != nil {
-	// 	ctx.Handle(500, "GetIssueComments: %v", err)
-	// 	return
-	// }
-
-	// // Get posters.
-	// for i := range comments {
-	// 	u, err := models.GetUserByID(comments[i].PosterId)
-	// 	if err != nil {
-	// 		ctx.Handle(500, "GetUserById.2: %v", err)
-	// 		return
-	// 	}
-	// 	comments[i].Poster = u
-
-	// 	if comments[i].Type == models.COMMENT_TYPE_COMMENT {
-	// 		comments[i].Content = string(base.RenderMarkdown([]byte(comments[i].Content), ctx.Repo.RepoLink))
-	// 	}
-	// }
+	// Render comments.
+	for i := range issue.Comments {
+		if issue.Comments[i].Type == models.COMMENT_TYPE_COMMENT {
+			issue.Comments[i].RenderedContent = string(base.RenderMarkdown([]byte(issue.Comments[i].Content), ctx.Repo.RepoLink))
+		}
+	}
 
 	ctx.Data["Issue"] = issue
-	// ctx.Data["Comments"] = comments
 	// ctx.Data["IsIssueOwner"] = ctx.Repo.IsOwner() || (ctx.IsSigned && issue.PosterID == ctx.User.Id)
 	ctx.HTML(200, ISSUE_VIEW)
 }
@@ -713,163 +696,76 @@ func UpdateAssignee(ctx *middleware.Context) {
 	})
 }
 
-func Comment(ctx *middleware.Context) {
-	send := func(status int, data interface{}, err error) {
-		if err != nil {
-			log.Error(4, "issue.Comment(?): %s", err)
-
-			ctx.JSON(status, map[string]interface{}{
-				"ok":     false,
-				"status": status,
-				"error":  err.Error(),
-			})
-		} else {
-			ctx.JSON(status, map[string]interface{}{
-				"ok":     true,
-				"status": status,
-				"data":   data,
-			})
-		}
-	}
-
-	index := com.StrTo(ctx.Query("issueIndex")).MustInt64()
-	if index == 0 {
-		ctx.Error(404)
-		return
-	}
-
-	issue, err := models.GetIssueByIndex(ctx.Repo.Repository.ID, index)
+func NewComment(ctx *middleware.Context, form auth.CreateCommentForm) {
+	issue, err := models.GetIssueByIndex(ctx.Repo.Repository.ID, ctx.ParamsInt64(":index"))
 	if err != nil {
 		if models.IsErrIssueNotExist(err) {
-			send(404, nil, err)
+			ctx.Handle(404, "GetIssueByIndex", err)
 		} else {
-			send(200, nil, err)
+			ctx.Handle(500, "GetIssueByIndex", err)
 		}
-
 		return
 	}
 
-	// Check if issue owner changes the status of issue.
-	var newStatus string
-	if ctx.Repo.IsOwner() || issue.PosterID == ctx.User.Id {
-		newStatus = ctx.Query("change_status")
-	}
-	if len(newStatus) > 0 {
-		if (strings.Contains(newStatus, "Reopen") && issue.IsClosed) ||
-			(strings.Contains(newStatus, "Close") && !issue.IsClosed) {
-			issue.IsClosed = !issue.IsClosed
-			if err = models.UpdateIssue(issue); err != nil {
-				send(500, nil, err)
-				return
-			} else if err = models.UpdateIssueUserPairsByStatus(issue.ID, issue.IsClosed); err != nil {
-				send(500, nil, err)
-				return
-			}
-
-			if err = issue.GetLabels(); err != nil {
-				send(500, nil, err)
-				return
-			}
-
-			for _, label := range issue.Labels {
-				if issue.IsClosed {
-					label.NumClosedIssues++
-				} else {
-					label.NumClosedIssues--
-				}
-
-				if err = models.UpdateLabel(label); err != nil {
-					send(500, nil, err)
-					return
-				}
-			}
-
-			// Change open/closed issue counter for the associated milestone
-			if issue.MilestoneID > 0 {
-				if err = models.ChangeMilestoneIssueStats(issue); err != nil {
-					send(500, nil, err)
-				}
-			}
-
-			cmtType := models.COMMENT_TYPE_CLOSE
-			if !issue.IsClosed {
-				cmtType = models.COMMENT_TYPE_REOPEN
-			}
-
-			if _, err = models.CreateComment(ctx.User.Id, ctx.Repo.Repository.ID, issue.ID, 0, 0, cmtType, "", nil); err != nil {
-				send(200, nil, err)
-				return
-			}
-			log.Trace("%s Issue(%d) status changed: %v", ctx.Req.RequestURI, issue.ID, !issue.IsClosed)
-		}
+	var attachments []string
+	if setting.AttachmentEnabled {
+		attachments = form.Attachments
 	}
 
-	var comment *models.Comment
+	if ctx.HasError() {
+		ctx.Flash.Error(ctx.Data["ErrorMsg"].(string))
+		ctx.Redirect(fmt.Sprintf("%s/issues/%d", ctx.Repo.RepoLink, issue.Index))
+		return
+	}
 
-	var ms []string
-	content := ctx.Query("content")
-	// Fix #321. Allow empty comments, as long as we have attachments.
-	if len(content) > 0 || len(ctx.Req.MultipartForm.File["attachments"]) > 0 {
-		switch ctx.Params(":action") {
-		case "new":
-			if comment, err = models.CreateComment(ctx.User.Id, ctx.Repo.Repository.ID, issue.ID, 0, 0, models.COMMENT_TYPE_COMMENT, content, nil); err != nil {
-				send(500, nil, err)
-				return
-			}
-
-			// Update mentions.
-			ms = base.MentionPattern.FindAllString(issue.Content, -1)
-			if len(ms) > 0 {
-				for i := range ms {
-					ms[i] = ms[i][1:]
-				}
-
-				if err := models.UpdateMentions(ms, issue.ID); err != nil {
-					send(500, nil, err)
-					return
-				}
-			}
-
-			log.Trace("%s Comment created: %d", ctx.Req.RequestURI, issue.ID)
-		default:
-			ctx.Handle(404, "issue.Comment", err)
+	// Check if issue owner/poster changes the status of issue.
+	if (ctx.Repo.IsOwner() || issue.IsPoster(ctx.User.Id)) &&
+		(form.NewStatus == "reopen" || form.NewStatus == "close") {
+		issue.Repo = ctx.Repo.Repository
+		if err = issue.ChangeStatus(ctx.User, form.NewStatus == "close"); err != nil {
+			ctx.Handle(500, "ChangeStatus", err)
 			return
 		}
+		log.Trace("%s Issue[%d] status changed: %v", ctx.Req.RequestURI, issue.ID, !issue.IsClosed)
 	}
 
-	if comment != nil {
-		// uploadFiles(ctx, issue.ID, comment.Id)
-	}
-
-	// Notify watchers.
-	act := &models.Action{
-		ActUserID:    ctx.User.Id,
-		ActUserName:  ctx.User.LowerName,
-		ActEmail:     ctx.User.Email,
-		OpType:       models.COMMENT_ISSUE,
-		Content:      fmt.Sprintf("%d|%s", issue.Index, strings.Split(content, "\n")[0]),
-		RepoID:       ctx.Repo.Repository.ID,
-		RepoUserName: ctx.Repo.Owner.LowerName,
-		RepoName:     ctx.Repo.Repository.LowerName,
-		IsPrivate:    ctx.Repo.Repository.IsPrivate,
-	}
-	if err = models.NotifyWatchers(act); err != nil {
-		send(500, nil, err)
+	// Fix #321: Allow empty comments, as long as we have attachments.
+	if len(form.Content) == 0 && len(attachments) == 0 {
+		ctx.Redirect(fmt.Sprintf("%s/issues/%d", ctx.Repo.RepoLink, issue.Index))
 		return
+	}
+
+	comment, err := models.CreateIssueComment(ctx.User, ctx.Repo.Repository, issue, form.Content, attachments)
+	if err != nil {
+		ctx.Handle(500, "CreateIssueComment", err)
+		return
+	}
+
+	// Update mentions.
+	mentions := base.MentionPattern.FindAllString(comment.Content, -1)
+	if len(mentions) > 0 {
+		for i := range mentions {
+			mentions[i] = mentions[i][1:]
+		}
+
+		if err := models.UpdateMentions(mentions, issue.ID); err != nil {
+			ctx.Handle(500, "UpdateMentions", err)
+			return
+		}
 	}
 
 	// Mail watchers and mentions.
 	if setting.Service.EnableNotifyMail {
-		issue.Content = content
+		issue.Content = form.Content
 		tos, err := mailer.SendIssueNotifyMail(ctx.User, ctx.Repo.Owner, ctx.Repo.Repository, issue)
 		if err != nil {
-			send(500, nil, err)
+			ctx.Handle(500, "SendIssueNotifyMail", err)
 			return
 		}
 
 		tos = append(tos, ctx.User.LowerName)
-		newTos := make([]string, 0, len(ms))
-		for _, m := range ms {
+		newTos := make([]string, 0, len(mentions))
+		for _, m := range mentions {
 			if com.IsSliceContainsStr(tos, m) {
 				continue
 			}
@@ -878,12 +774,13 @@ func Comment(ctx *middleware.Context) {
 		}
 		if err = mailer.SendIssueMentionMail(ctx.Render, ctx.User, ctx.Repo.Owner,
 			ctx.Repo.Repository, issue, models.GetUserEmailsByNames(newTos)); err != nil {
-			send(500, nil, err)
+			ctx.Handle(500, "SendIssueMentionMail", err)
 			return
 		}
 	}
 
-	send(200, fmt.Sprintf("%s/issues/%d", ctx.Repo.RepoLink, index), nil)
+	log.Trace("Comment created: %d/%d/%d", ctx.Repo.Repository.ID, issue.ID, comment.ID)
+	ctx.Redirect(fmt.Sprintf("%s/issues/%d#%s", ctx.Repo.RepoLink, issue.Index, comment.HashTag()))
 }
 
 func Labels(ctx *middleware.Context) {

@@ -321,6 +321,10 @@ func timeSince(then time.Time, lang string) string {
 	}
 }
 
+func RawTimeSince(t time.Time, lang string) string {
+	return timeSince(t, lang)
+}
+
 // TimeSince calculates the time interval and generate user-friendly string.
 func TimeSince(t time.Time, lang string) template.HTML {
 	return template.HTML(fmt.Sprintf(`<span class="time-since" title="%s">%s</span>`, t.Format(setting.TimeFormat), timeSince(t, lang)))

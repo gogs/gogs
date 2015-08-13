@@ -228,14 +228,16 @@ func runWeb(ctx *cli.Context) {
 			})
 
 			// Repositories.
-			m.Combo("/user/repos", middleware.ApiReqToken()).Get(v1.ListMyRepos).Post(bind(api.CreateRepoOption{}), v1.CreateRepo)
+			m.Combo("/user/repos", middleware.ApiReqToken()).Get(v1.ListMyRepos).
+				Post(bind(api.CreateRepoOption{}), v1.CreateRepo)
 			m.Post("/org/:org/repos", middleware.ApiReqToken(), bind(api.CreateRepoOption{}), v1.CreateOrgRepo)
 			m.Group("/repos", func() {
 				m.Get("/search", v1.SearchRepos)
 				m.Post("/migrate", bindIgnErr(auth.MigrateRepoForm{}), v1.MigrateRepo)
 
 				m.Group("/:username/:reponame", func() {
-					m.Combo("/hooks").Get(v1.ListRepoHooks).Post(bind(api.CreateHookOption{}), v1.CreateRepoHook)
+					m.Combo("/hooks").Get(v1.ListRepoHooks).
+						Post(bind(api.CreateHookOption{}), v1.CreateRepoHook)
 					m.Patch("/hooks/:id:int", bind(api.EditHookOption{}), v1.EditRepoHook)
 					m.Get("/raw/*", middleware.RepoRef(), v1.GetRepoRawFile)
 				}, middleware.ApiRepoAssignment(), middleware.ApiReqToken())
@@ -450,10 +452,14 @@ func runWeb(ctx *cli.Context) {
 		m.Group("/issues", func() {
 			m.Combo("/new").Get(repo.NewIssue).
 				Post(bindIgnErr(auth.CreateIssueForm{}), repo.NewIssuePost)
-			m.Post("/:index", bindIgnErr(auth.CreateIssueForm{}), repo.UpdateIssue)
-			m.Post("/:index/label", repo.UpdateIssueLabel)
-			m.Post("/:index/milestone", repo.UpdateIssueMilestone)
-			m.Post("/:index/assignee", repo.UpdateAssignee)
+
+			m.Group("/:index", func() {
+				m.Post("", bindIgnErr(auth.CreateIssueForm{}), repo.UpdateIssue)
+				m.Post("/label", repo.UpdateIssueLabel)
+				m.Post("/milestone", repo.UpdateIssueMilestone)
+				m.Post("/assignee", repo.UpdateAssignee)
+				m.Combo("/comments").Post(bindIgnErr(auth.CreateCommentForm{}), repo.NewComment)
+			})
 		})
 		m.Group("/labels", func() {
 			m.Post("/new", bindIgnErr(auth.CreateLabelForm{}), repo.NewLabel)
@@ -468,8 +474,6 @@ func runWeb(ctx *cli.Context) {
 			m.Get("/:id/:action", repo.ChangeMilestonStatus)
 			m.Post("/delete", repo.DeleteMilestone)
 		}, reqRepoAdmin)
-
-		m.Post("/comment/:action", repo.Comment)
 
 		m.Group("/releases", func() {
 			m.Get("/new", repo.NewRelease)

@@ -1,10 +1,7 @@
 {{with .Repository}}
 <div class="ui container"><!-- start container -->
-
 	<div id="repoheader" class="ui vertically padded grid head"><!-- start grid -->
-
 		<div class="column"><!-- start column -->
-
 			<div class="ui black small compact menu floated right count labelled">
 				<a class="item{{if $.IsRepositoryOwner}} poping up{{end}}"{{if not $.IsRepositoryOwner}} href="{{AppSubUrl}}/repo/fork/{{.ID}}"{{else}} data-content="{{$.i18n.Tr "repo.fork_from_self"}}" data-position="top center" data-variation="tiny"{{end}}>
 					<i class="icon octicon octicon-repo-forked"></i>
@@ -41,9 +38,7 @@
 			</div>
 
 		</div><!-- end column -->
-
 	</div><!-- end grid -->
-	
 </div><!-- end container -->
 
 <div class="ui divider"></div>
