@@ -222,6 +222,25 @@ func (u *User) UploadAvatar(data []byte) error {
 	return sess.Commit()
 }
 
+// IsAdminOfRepo returns true if user has admin or higher access of repository.
+func (u *User) IsAdminOfRepo(repo *Repository) bool {
+	if err := repo.GetOwner(); err != nil {
+		log.Error(3, "GetOwner: %v", err)
+		return false
+	}
+
+	if repo.Owner.IsOrganization() {
+		has, err := HasAccess(u, repo, ACCESS_MODE_ADMIN)
+		if err != nil {
+			log.Error(3, "HasAccess: %v", err)
+			return false
+		}
+		return has
+	}
+
+	return repo.IsOwnedBy(u.Id)
+}
+
 // IsOrganization returns true if user is actually a organization.
 func (u *User) IsOrganization() bool {
 	return u.Type == ORGANIZATION

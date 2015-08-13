@@ -42,49 +42,22 @@ func SignIn(ctx *middleware.Context) {
 	}
 
 	// Check auto-login.
-	uname := ctx.GetCookie(setting.CookieUserName)
-	if len(uname) == 0 {
-		ctx.HTML(200, SIGNIN)
-		return
-	}
-
-	isSucceed := false
-	defer func() {
-		if !isSucceed {
-			log.Trace("auto-login cookie cleared: %s", uname)
-			ctx.SetCookie(setting.CookieUserName, "", -1, setting.AppSubUrl)
-			ctx.SetCookie(setting.CookieRememberName, "", -1, setting.AppSubUrl)
-			return
-		}
-	}()
-
-	u, err := models.GetUserByName(uname)
+	isSucceed, err := middleware.AutoSignIn(ctx)
 	if err != nil {
-		if !models.IsErrUserNotExist(err) {
-			ctx.Handle(500, "GetUserByName", err)
-		} else {
-			ctx.HTML(200, SIGNIN)
+		ctx.Handle(500, "AutoSignIn", err)
+		return
+	}
+
+	if isSucceed {
+		if redirectTo, _ := url.QueryUnescape(ctx.GetCookie("redirect_to")); len(redirectTo) > 0 {
+			ctx.SetCookie("redirect_to", "", -1, setting.AppSubUrl)
+			ctx.Redirect(redirectTo)
 		}
+		ctx.Redirect(setting.AppSubUrl + "/")
 		return
 	}
 
-	if val, _ := ctx.GetSuperSecureCookie(
-		base.EncodeMd5(u.Rands+u.Passwd), setting.CookieRememberName); val != u.Name {
-		ctx.HTML(200, SIGNIN)
-		return
-	}
-
-	isSucceed = true
-
-	ctx.Session.Set("uid", u.Id)
-	ctx.Session.Set("uname", u.Name)
-	if redirectTo, _ := url.QueryUnescape(ctx.GetCookie("redirect_to")); len(redirectTo) > 0 {
-		ctx.SetCookie("redirect_to", "", -1, setting.AppSubUrl)
-		ctx.Redirect(redirectTo)
-		return
-	}
-
-	ctx.Redirect(setting.AppSubUrl + "/")
+	ctx.HTML(200, SIGNIN)
 }
 
 func SignInPost(ctx *middleware.Context, form auth.SignInForm) {

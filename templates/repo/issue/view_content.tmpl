@@ -22,8 +22,8 @@
 	<div class="twelve wide column comment-list">
   	<ui class="ui comments">
   		<div class="comment">
-		    <a class="avatar" href="{{.SignedUser.HomeLink}}">
-		      <img src="{{.SignedUser.AvatarLink}}">
+		    <a class="avatar" href="{{.Issue.Poster.HomeLink}}">
+		      <img src="{{.Issue.Poster.AvatarLink}}">
 		    </a>
 		    <div class="content">
 					<div class="ui top attached header">
@@ -63,6 +63,17 @@
 					<div class="ui top attached header">
 						<span class="text grey"><a href="{{.Poster.HomeLink}}">{{.Poster.Name}}</a> {{$.i18n.Tr "repo.issues.commented_at" .HashTag $createdStr | Safe}}</span>
 					  <div class="ui right actions">
+					  	{{if gt .ShowTag 0}}
+					  	<div class="tag">
+					  	{{if eq .ShowTag 1}}
+							{{$.i18n.Tr "repo.issues.poster"}}
+					  	{{else if eq .ShowTag 2}}
+							{{$.i18n.Tr "repo.issues.admin"}}
+					  	{{else if eq .ShowTag 3}}
+							{{$.i18n.Tr "repo.issues.owner"}}
+					  	{{end}}
+					  	</div>
+					  	{{end}}
 					  </div>
 					</div>
 			    <div class="ui attached segment markdown">
@@ -89,7 +100,7 @@
   			<a class="ui avatar image" href="{{.Poster.HomeLink}}">
   			  <img src="{{.Poster.AvatarLink}}">
   			</a>
-  			<span class="text grey"><a href="{{.Poster.HomeLink}}">{{.Poster.Name}}</a> {{$.i18n.Tr "repo.issues.closed_at" .EventTag $createdStr | Safe}}</span>
+  			<span class="text grey"><a href="{{.Poster.HomeLink}}">{{.Poster.Name}}</a> {{$.i18n.Tr "repo.issues.reopened_at" .EventTag $createdStr | Safe}}</span>
   		</div>
   		{{else if eq .Type 2}}
   		<div class="event">
@@ -103,6 +114,7 @@
 
   		{{end}}
 
+			{{if .IsSigned}}
 		  <div class="comment form">
 		    <a class="avatar" href="{{.SignedUser.HomeLink}}">
 		      <img src="{{.SignedUser.AvatarLink}}">
@@ -129,6 +141,12 @@
 			    </form>
 		    </div>
 		  </div>
+		  {{else}}
+		  <div class="ui warning message">
+		    <a href="/user/sign_up" class="ui green button">{{.i18n.Tr "repo.issues.sign_up_for_free"}}</a>
+		    {{.i18n.Tr "repo.issues.sign_in_require_desc" "/user/login" | Safe}}
+		  </div>
+		  {{end}}
   	</ui>
 	</div>
 

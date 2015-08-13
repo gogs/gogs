@@ -1231,6 +1231,15 @@ const (
 	COMMENT_TYPE_PULL_REF
 )
 
+type CommentTag int
+
+const (
+	COMMENT_TAG_NONE CommentTag = iota
+	COMMENT_TAG_POSTER
+	COMMENT_TAG_ADMIN
+	COMMENT_TAG_OWNER
+)
+
 // Comment represents a comment in commit and issue page.
 type Comment struct {
 	ID              int64 `xorm:"pk autoincr"`
@@ -1245,6 +1254,9 @@ type Comment struct {
 	Created         time.Time `xorm:"CREATED"`
 
 	Attachments []*Attachment `xorm:"-"`
+
+	// For view issue page.
+	ShowTag CommentTag `xorm:"-"`
 }
 
 // HashTag returns unique hash tag for comment.
