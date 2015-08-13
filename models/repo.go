@@ -923,13 +923,26 @@ func DeleteRepository(uid, repoID int64, userName string) error {
 		return err
 	}
 
-	// Delete comments.
+	// Delete comments and attachments.
 	issues := make([]*Issue, 0, 25)
+	attachmentPaths := make([]string, 0, len(issues))
 	if err = sess.Where("repo_id=?", repoID).Find(&issues); err != nil {
 		return err
 	}
 	for i := range issues {
 		if _, err = sess.Delete(&Comment{IssueID: issues[i].ID}); err != nil {
+			return err
+		}
+
+		attachments := make([]*Attachment, 0, 5)
+		if err = sess.Where("issue_id=?", issues[i].ID).Find(&attachments); err != nil {
+			return err
+		}
+		for j := range attachments {
+			attachmentPaths = append(attachmentPaths, attachments[j].LocalPath())
+		}
+
+		if _, err = sess.Delete(&Attachment{IssueID: issues[i].ID}); err != nil {
 			return err
 		}
 	}
@@ -954,6 +967,13 @@ func DeleteRepository(uid, repoID int64, userName string) error {
 		log.Warn(desc)
 		if err = CreateRepositoryNotice(desc); err != nil {
 			log.Error(4, "add notice: %v", err)
+		}
+	}
+
+	// Remove attachment files.
+	for i := range attachmentPaths {
+		if err = os.Remove(attachmentPaths[i]); err != nil {
+			log.Warn("delete attachment: %v", err)
 		}
 	}
 
