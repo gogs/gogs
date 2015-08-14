@@ -123,13 +123,23 @@ func (i *Issue) HasLabel(labelID int64) bool {
 	return i.hasLabel(x, labelID)
 }
 
-func (i *Issue) addLabel(e Engine, labelID int64) error {
-	return newIssueLabel(e, i.ID, labelID)
+func (i *Issue) addLabel(e *xorm.Session, label *Label) error {
+	return newIssueLabel(e, i, label)
 }
 
 // AddLabel adds new label to issue by given ID.
-func (i *Issue) AddLabel(labelID int64) error {
-	return i.addLabel(x, labelID)
+func (i *Issue) AddLabel(label *Label) (err error) {
+	sess := x.NewSession()
+	defer sessionRelease(sess)
+	if err = sess.Begin(); err != nil {
+		return err
+	}
+
+	if err = i.addLabel(sess, label); err != nil {
+		return err
+	}
+
+	return sess.Commit()
 }
 
 func (i *Issue) getLabels(e Engine) (err error) {
@@ -149,13 +159,43 @@ func (i *Issue) GetLabels() error {
 	return i.getLabels(x)
 }
 
-func (i *Issue) removeLabel(e Engine, labelID int64) error {
-	return deleteIssueLabel(e, i.ID, labelID)
+func (i *Issue) removeLabel(e *xorm.Session, label *Label) error {
+	return deleteIssueLabel(e, i, label)
 }
 
 // RemoveLabel removes a label from issue by given ID.
-func (i *Issue) RemoveLabel(labelID int64) error {
-	return i.removeLabel(x, labelID)
+func (i *Issue) RemoveLabel(label *Label) (err error) {
+	sess := x.NewSession()
+	defer sessionRelease(sess)
+	if err = sess.Begin(); err != nil {
+		return err
+	}
+
+	if err = i.removeLabel(sess, label); err != nil {
+		return err
+	}
+
+	return sess.Commit()
+}
+
+func (i *Issue) ClearLabels() (err error) {
+	sess := x.NewSession()
+	defer sessionRelease(sess)
+	if err = sess.Begin(); err != nil {
+		return err
+	}
+
+	if err = i.getLabels(sess); err != nil {
+		return err
+	}
+
+	for idx := range i.Labels {
+		if err = i.removeLabel(sess, i.Labels[idx]); err != nil {
+			return err
+		}
+	}
+
+	return sess.Commit()
 }
 
 func (i *Issue) GetAssignee() (err error) {
@@ -257,10 +297,20 @@ func NewIssue(repo *Repository, issue *Issue, labelIDs []int64, uuids []string) 
 		return err
 	}
 
+	var label *Label
 	for _, id := range labelIDs {
-		if err = issue.addLabel(sess, id); err != nil {
+		if id == 0 {
+			continue
+		}
+
+		label, err = getLabelByID(sess, id)
+		if err != nil {
+			return err
+		}
+		if err = issue.addLabel(sess, label); err != nil {
 			return fmt.Errorf("addLabel: %v", err)
 		}
+
 	}
 
 	if issue.MilestoneID > 0 {
@@ -662,28 +712,30 @@ func UpdateIssueUsersByStatus(issueID int64, isClosed bool) error {
 	return updateIssueUsersByStatus(x, issueID, isClosed)
 }
 
-func updateIssueUserByAssignee(e *xorm.Session, issueID, assigneeID int64) (err error) {
-	if _, err = e.Exec("UPDATE `issue_user` SET is_assigned=? WHERE issue_id=?", false, issueID); err != nil {
+func updateIssueUserByAssignee(e *xorm.Session, issue *Issue) (err error) {
+	if _, err = e.Exec("UPDATE `issue_user` SET is_assigned=? WHERE issue_id=?", false, issue.ID); err != nil {
 		return err
 	}
 
 	// Assignee ID equals to 0 means clear assignee.
-	if assigneeID == 0 {
-		return nil
+	if issue.AssigneeID > 0 {
+		if _, err = e.Exec("UPDATE `issue_user` SET is_assigned=? WHERE uid=? AND issue_id=?", true, issue.AssigneeID, issue.ID); err != nil {
+			return err
+		}
 	}
-	_, err = e.Exec("UPDATE `issue_user` SET is_assigned=? WHERE uid=? AND issue_id=?", true, assigneeID, issueID)
-	return err
+
+	return updateIssue(e, issue)
 }
 
 // UpdateIssueUserByAssignee updates issue-user relation for assignee.
-func UpdateIssueUserByAssignee(issueID, assigneeID int64) (err error) {
+func UpdateIssueUserByAssignee(issue *Issue) (err error) {
 	sess := x.NewSession()
 	defer sessionRelease(sess)
 	if err = sess.Begin(); err != nil {
 		return err
 	}
 
-	if err = updateIssueUserByAssignee(sess, issueID, assigneeID); err != nil {
+	if err = updateIssueUserByAssignee(sess, issue); err != nil {
 		return err
 	}
 
@@ -855,21 +907,34 @@ func HasIssueLabel(issueID, labelID int64) bool {
 	return hasIssueLabel(x, issueID, labelID)
 }
 
-func newIssueLabel(e Engine, issueID, labelID int64) error {
-	if issueID == 0 || labelID == 0 {
-		return nil
+func newIssueLabel(e *xorm.Session, issue *Issue, label *Label) (err error) {
+	if _, err = e.Insert(&IssueLabel{
+		IssueID: issue.ID,
+		LabelID: label.ID,
+	}); err != nil {
+		return err
 	}
 
-	_, err := e.Insert(&IssueLabel{
-		IssueID: issueID,
-		LabelID: labelID,
-	})
-	return err
+	label.NumIssues++
+	if issue.IsClosed {
+		label.NumClosedIssues++
+	}
+	return updateLabel(e, label)
 }
 
 // NewIssueLabel creates a new issue-label relation.
-func NewIssueLabel(issueID, labelID int64) error {
-	return newIssueLabel(x, issueID, labelID)
+func NewIssueLabel(issue *Issue, label *Label) (err error) {
+	sess := x.NewSession()
+	defer sessionRelease(sess)
+	if err = sess.Begin(); err != nil {
+		return err
+	}
+
+	if err = newIssueLabel(sess, issue, label); err != nil {
+		return err
+	}
+
+	return sess.Commit()
 }
 
 func getIssueLabels(e Engine, issueID int64) ([]*IssueLabel, error) {
@@ -882,17 +947,34 @@ func GetIssueLabels(issueID int64) ([]*IssueLabel, error) {
 	return getIssueLabels(x, issueID)
 }
 
-func deleteIssueLabel(e Engine, issueID, labelID int64) error {
-	_, err := e.Delete(&IssueLabel{
-		IssueID: issueID,
-		LabelID: labelID,
-	})
-	return err
+func deleteIssueLabel(e *xorm.Session, issue *Issue, label *Label) (err error) {
+	if _, err = e.Delete(&IssueLabel{
+		IssueID: issue.ID,
+		LabelID: label.ID,
+	}); err != nil {
+		return err
+	}
+
+	label.NumIssues--
+	if issue.IsClosed {
+		label.NumClosedIssues--
+	}
+	return updateLabel(e, label)
 }
 
 // DeleteIssueLabel deletes issue-label relation.
-func DeleteIssueLabel(issueID, labelID int64) error {
-	return deleteIssueLabel(x, issueID, labelID)
+func DeleteIssueLabel(issue *Issue, label *Label) (err error) {
+	sess := x.NewSession()
+	defer sessionRelease(sess)
+	if err = sess.Begin(); err != nil {
+		return err
+	}
+
+	if err = deleteIssueLabel(sess, issue, label); err != nil {
+		return err
+	}
+
+	return sess.Commit()
 }
 
 //    _____  .__.__                   __
@@ -966,7 +1048,7 @@ func NewMilestone(m *Milestone) (err error) {
 
 func getMilestoneByID(e Engine, id int64) (*Milestone, error) {
 	m := &Milestone{ID: id}
-	has, err := x.Get(m)
+	has, err := e.Get(m)
 	if err != nil {
 		return nil, err
 	} else if !has {
@@ -1127,7 +1209,7 @@ func changeMilestoneAssign(e *xorm.Session, oldMid int64, issue *Issue) error {
 	}
 
 	if issue.MilestoneID > 0 {
-		m, err := GetMilestoneByID(issue.MilestoneID)
+		m, err := getMilestoneByID(e, issue.MilestoneID)
 		if err != nil {
 			return err
 		}
@@ -1148,7 +1230,7 @@ func changeMilestoneAssign(e *xorm.Session, oldMid int64, issue *Issue) error {
 		}
 	}
 
-	return nil
+	return updateIssue(e, issue)
 }
 
 // ChangeMilestoneAssign changes assignment of milestone for issue.
@@ -1162,7 +1244,6 @@ func ChangeMilestoneAssign(oldMid int64, issue *Issue) (err error) {
 	if err = changeMilestoneAssign(sess, oldMid, issue); err != nil {
 		return err
 	}
-
 	return sess.Commit()
 }
 

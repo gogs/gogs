@@ -13,7 +13,7 @@
 		{{end}}
 		{{ $createdStr:= TimeSince .Issue.Created $.Lang }}
 		<span class="time-desc">
-			{{$.i18n.Tr "repo.issues.opened_by" $createdStr .Issue.Poster.Name|Str2html}}
+			{{$.i18n.Tr "repo.issues.opened_by" $createdStr .Issue.Poster.Name | Safe}}
 			·
 			{{$.i18n.Tr "repo.issues.num_comments" .Issue.NumComments}}
 		</span>
@@ -152,13 +152,12 @@
 
 	<div class="four wide column">
 		<div class="ui segment metas">
-			<input id="label_ids" name="label_ids" type="hidden" value="{{.label_ids}}">
-			<div class="ui {{if not .Labels}}disabled{{end}} jump select-label dropdown">
+			<div class="ui {{if not .IsRepositoryAdmin}}disabled{{end}} jump select-label dropdown">
 				<span class="text">
 					<strong>{{.i18n.Tr "repo.issues.new.labels"}}</strong>
 					<span class="octicon octicon-gear"></span>
 				</span>
-        <div class="filter menu" data-id="#label_ids">
+        <div class="filter menu" data-action="update" data-update-url="{{$.RepoLink}}/issues/{{$.Issue.Index}}/label">
         	<div class="no-select item">{{.i18n.Tr "repo.issues.new.clear_labels"}}</div>
         	{{range .Labels}}
         	<a class="{{if .IsChecked}}checked{{end}} item" href="#" data-id="{{.ID}}" data-id-selector="#label_{{.ID}}"><span class="octicon {{if .IsChecked}}octicon-check{{end}}"></span><span class="label color" style="background-color: {{.Color}}"></span> {{.Name}}</a>
@@ -166,24 +165,20 @@
 				</div>
 			</div>
 			<div class="ui labels list">
-				{{if not .Issue.Labels}}
 				<span class="no-select item {{if .HasSelectedLabel}}hide{{end}}">{{.i18n.Tr "repo.issues.new.no_label"}}</span>
-				{{else}}
-      	{{range .Issue.Labels}}
-      	<a class="item" id="label_{{.ID}}" href="{{$.RepoLink}}/issues?labels={{.ID}}"><span class="label color" style="background-color: {{.Color}}"></span> <span class="text">{{.Name}}</span></a>
-        {{end}}
+      	{{range .Labels}}
+      	<a class="{{if not .IsChecked}}hide{{end}} item" id="label_{{.ID}}" href="{{$.RepoLink}}/issues?labels={{.ID}}"><span class="label color" style="background-color: {{.Color}}"></span> <span class="text">{{.Name}}</span></a>
         {{end}}
 			</div>
 
 			<div class="ui divider"></div>
 
-			<input id="milestone_id" name="milestone_id" type="hidden" value="{{.milestone_id}}">
-			<div class="ui {{if not (or .OpenMilestones .ClosedMilestones)}}disabled{{end}} jump select-milestone dropdown">
+			<div class="ui {{if not .IsRepositoryAdmin}}disabled{{end}} jump select-milestone dropdown">
 				<span class="text">
 					<strong>{{.i18n.Tr "repo.issues.new.milestone"}}</strong>
 					<span class="octicon octicon-gear"></span>
 				</span>
-        <div class="menu">
+        <div class="menu" data-action="update" data-update-url="{{$.RepoLink}}/issues/{{$.Issue.Index}}/milestone">
         	<div class="no-select item">{{.i18n.Tr "repo.issues.new.clear_milestone"}}</div>
         	{{if .OpenMilestones}}
         	<div class="divider"></div>
@@ -219,12 +214,12 @@
 			<div class="ui divider"></div>
 
 			<input id="assignee_id" name="assignee_id" type="hidden" value="{{.assignee_id}}">
-			<div class="ui {{if not .Assignees}}disabled{{end}} jump select-assignee dropdown">
+			<div class="ui {{if not .IsRepositoryAdmin}}disabled{{end}} jump select-assignee dropdown">
 				<span class="text">
 					<strong>{{.i18n.Tr "repo.issues.new.assignee"}}</strong>
 					<span class="octicon octicon-gear"></span>
 				</span>
-        <div class="menu">
+        <div class="menu" data-action="update" data-update-url="{{$.RepoLink}}/issues/{{$.Issue.Index}}/assignee">
         	<div class="no-select item">{{.i18n.Tr "repo.issues.new.clear_assignee"}}</div>
         	{{range .Assignees}}
         	<div class="item" data-id="{{.Id}}" data-href="{{.HomeLink}}" data-avatar="{{.AvatarLink}}"><img src="{{.AvatarLink}}"> {{.Name}}</div>
