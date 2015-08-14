@@ -324,8 +324,8 @@ func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 		ctx.Data["Title"] = u.Name + "/" + repo.Name
 		ctx.Data["Repository"] = repo
 		ctx.Data["Owner"] = ctx.Repo.Repository.Owner
-		ctx.Data["IsRepositoryOwner"] = ctx.Repo.AccessMode >= models.ACCESS_MODE_WRITE
-		ctx.Data["IsRepositoryAdmin"] = ctx.Repo.AccessMode >= models.ACCESS_MODE_ADMIN
+		ctx.Data["IsRepositoryOwner"] = ctx.Repo.IsOwner()
+		ctx.Data["IsRepositoryAdmin"] = ctx.Repo.IsAdmin()
 
 		ctx.Data["DisableSSH"] = setting.DisableSSH
 		ctx.Repo.CloneLink, err = repo.CloneLink()
@@ -388,7 +388,7 @@ func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 
 func RequireRepoAdmin() macaron.Handler {
 	return func(ctx *Context) {
-		if ctx.Repo.AccessMode < models.ACCESS_MODE_ADMIN {
+		if !ctx.Repo.IsAdmin() {
 			if !ctx.IsSigned {
 				ctx.SetCookie("redirect_to", "/"+url.QueryEscape(setting.AppSubUrl+ctx.Req.RequestURI), 0, setting.AppSubUrl)
 				ctx.Redirect(setting.AppSubUrl + "/user/login")

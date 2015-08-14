@@ -26,13 +26,30 @@ function initCommentForm() {
     // Labels
     var $list = $('.ui.labels.list');
     var $no_select = $list.find('.no-select');
-    $('.select-label .menu .item:not(.no-select)').click(function () {
+    var $label_menu = $('.select-label .menu');
+    var has_label_update_action = $label_menu.data('action') == 'update';
+
+    function updateIssueMeta(url, action, id) {
+        $.post(url, {
+            "_csrf": csrf,
+            "action": action,
+            "id": id
+        });
+    }
+
+    $label_menu.find('.item:not(.no-select)').click(function () {
         if ($(this).hasClass('checked')) {
             $(this).removeClass('checked')
             $(this).find('.octicon').removeClass('octicon-check')
+            if (has_label_update_action) {
+                updateIssueMeta($label_menu.data('update-url'), "detach", $(this).data('id'));
+            }
         } else {
             $(this).addClass('checked')
             $(this).find('.octicon').addClass('octicon-check')
+            if (has_label_update_action) {
+                updateIssueMeta($label_menu.data('update-url'), "attach", $(this).data('id'));
+            }
         }
 
         var label_ids = "";
@@ -52,7 +69,11 @@ function initCommentForm() {
         $($(this).parent().data('id')).val(label_ids);
         return false;
     });
-    $('.select-label .menu .no-select.item').click(function () {
+    $label_menu.find('.no-select.item').click(function () {
+        if (has_label_update_action) {
+            updateIssueMeta($label_menu.data('update-url'), "clear", '');
+        }
+
         $(this).parent().find('.item').each(function () {
             $(this).removeClass('checked');
             $(this).find('.octicon').removeClass('octicon-check');
@@ -68,12 +89,17 @@ function initCommentForm() {
     function selectItem(select_id, input_id) {
         var $menu = $(select_id + ' .menu');
         var $list = $('.ui' + select_id + '.list')
+        var has_update_action = $menu.data('action') == 'update';
+
         $menu.find('.item:not(.no-select)').click(function () {
             $(this).parent().find('.item').each(function () {
                 $(this).removeClass('selected active')
             });
 
             $(this).addClass('selected active');
+            if (has_update_action) {
+                updateIssueMeta($menu.data('update-url'), '', $(this).data('id'));
+            }
             switch (input_id) {
                 case '#milestone_id':
                     $list.find('.selected').html('<a class="item" href=' + $(this).data('href') + '>' +
@@ -91,6 +117,11 @@ function initCommentForm() {
             $(this).parent().find('.item:not(.no-select)').each(function () {
                 $(this).removeClass('selected active')
             });
+
+
+            if (has_update_action) {
+                updateIssueMeta($menu.data('update-url'), '', '');
+            }
 
             $list.find('.selected').html('');
             $list.find('.no-select').removeClass('hide');
@@ -234,6 +265,14 @@ function initRepository() {
 
 $(document).ready(function () {
     csrf = $('meta[name=_csrf]').attr("content");
+
+    // Show exact time
+    $('.time-since').each(function () {
+        $(this).addClass('poping up').
+            attr('data-content', $(this).attr('title')).
+            attr('data-variation', 'inverted tiny').
+            attr('title', '');
+    });
 
     // Semantic UI modules.
     $('.dropdown').dropdown();
