@@ -119,6 +119,10 @@ func (u *User) HomeLink() string {
 // AvatarLink returns user gravatar link.
 func (u *User) AvatarLink() string {
 	defaultImgUrl := setting.AppSubUrl + "/img/avatar_default.jpg"
+	if u.Id == -1 {
+		return defaultImgUrl
+	}
+
 	imgPath := path.Join(setting.AvatarUploadPath, com.ToStr(u.Id))
 	switch {
 	case u.UseCustomAvatar:
@@ -319,6 +323,15 @@ func IsEmailUsed(email string) (bool, error) {
 // GetUserSalt returns a ramdom user salt token.
 func GetUserSalt() string {
 	return base.GetRandomString(10)
+}
+
+// NewFakeUser creates and returns a fake user for someone has deleted his/her account.
+func NewFakeUser() *User {
+	return &User{
+		Id:        -1,
+		Name:      "Someone",
+		LowerName: "someone",
+	}
 }
 
 // CreateUser creates record of a new user.
@@ -546,6 +559,7 @@ func DeleteUser(u *User) error {
 		&Collaboration{UserID: u.Id},
 		&EmailAddress{Uid: u.Id},
 		&Watch{UserID: u.Id},
+		&IssueUser{UID: u.Id},
 	); err != nil {
 		return err
 	}
@@ -563,9 +577,14 @@ func DeleteUser(u *User) error {
 		return err
 	}
 	for _, key := range keys {
-		if err = DeletePublicKey(key); err != nil {
+		if err = deletePublicKey(sess, key); err != nil {
 			return err
 		}
+	}
+
+	// Clear assignee.
+	if _, err = sess.Exec("UPDATE `issue` SET assignee_id=0 WHERE assignee_id=?", u.Id); err != nil {
+		return err
 	}
 
 	if _, err = sess.Delete(u); err != nil {
