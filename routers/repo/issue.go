@@ -508,7 +508,7 @@ func ViewIssue(ctx *middleware.Context) {
 	}
 
 	ctx.Data["Issue"] = issue
-	// ctx.Data["IsIssueOwner"] = ctx.Repo.IsOwner() || (ctx.IsSigned && issue.PosterID == ctx.User.Id)
+	ctx.Data["IsIssueOwner"] = ctx.Repo.IsAdmin() || (ctx.IsSigned && issue.IsPoster(ctx.User.Id))
 	ctx.HTML(200, ISSUE_VIEW)
 }
 
@@ -685,7 +685,7 @@ func NewComment(ctx *middleware.Context, form auth.CreateCommentForm) {
 	}
 
 	// Check if issue owner/poster changes the status of issue.
-	if (ctx.Repo.IsOwner() || issue.IsPoster(ctx.User.Id)) &&
+	if (ctx.Repo.IsOwner() || (ctx.IsSigned && issue.IsPoster(ctx.User.Id))) &&
 		(form.Status == "reopen" || form.Status == "close") {
 		issue.Repo = ctx.Repo.Repository
 		if err = issue.ChangeStatus(ctx.User, form.Status == "close"); err != nil {
