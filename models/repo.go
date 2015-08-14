@@ -458,7 +458,9 @@ func initRepoCommit(tmpPath string, sig *git.Signature) (err error) {
 }
 
 func createUpdateHook(repoPath string) error {
-	return ioutil.WriteFile(path.Join(repoPath, "hooks/update"),
+	hookPath := path.Join(repoPath, "hooks/update")
+	os.MkdirAll(path.Dir(hookPath), os.ModePerm)
+	return ioutil.WriteFile(hookPath,
 		[]byte(fmt.Sprintf(_TPL_UPDATE_HOOK, setting.ScriptType, "\""+appPath+"\"", setting.CustomConf)), 0777)
 }
 
