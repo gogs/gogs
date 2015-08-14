@@ -108,7 +108,8 @@ func (i *Issue) IsPoster(uid int64) bool {
 func (i *Issue) GetPoster() (err error) {
 	i.Poster, err = GetUserByID(i.PosterID)
 	if IsErrUserNotExist(err) {
-		i.Poster = &User{Name: "Someone"}
+		i.PosterID = -1
+		i.Poster = NewFakeUser()
 		return nil
 	}
 	return err
