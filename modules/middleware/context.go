@@ -72,9 +72,14 @@ type RepoContext struct {
 	Mirror       *models.Mirror
 }
 
-// Return if the current user has write access for this repository
+// IsOwner returns true if current user is the owner of repository.
 func (r RepoContext) IsOwner() bool {
-	return r.AccessMode >= models.ACCESS_MODE_WRITE
+	return r.AccessMode >= models.ACCESS_MODE_OWNER
+}
+
+// IsAdmin returns true if current user has admin or higher access of repository.
+func (r RepoContext) IsAdmin() bool {
+	return r.AccessMode >= models.ACCESS_MODE_ADMIN
 }
 
 // Return if the current user has read access for this repository

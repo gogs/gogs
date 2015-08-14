@@ -184,7 +184,7 @@ func NewIssue(ctx *middleware.Context) {
 	ctx.Data["RequireDropzone"] = true
 	renderAttachmentSettings(ctx)
 
-	if ctx.User.IsAdmin {
+	if ctx.Repo.IsAdmin() {
 		var (
 			repo = ctx.Repo.Repository
 			err  error
@@ -229,7 +229,7 @@ func NewIssuePost(ctx *middleware.Context, form auth.CreateIssueForm) {
 		assigneeID  int64
 		attachments []string
 	)
-	if ctx.User.IsAdmin {
+	if ctx.Repo.IsAdmin() {
 		// Check labels.
 		labelIDs = base.StringsToInt64s(strings.Split(form.LabelIDs, ","))
 		labelIDMark := base.Int64sToMap(labelIDs)
@@ -399,17 +399,6 @@ func UploadIssueAttachment(ctx *middleware.Context) {
 	})
 }
 
-func checkLabels(labels, allLabels []*models.Label) {
-	for _, l := range labels {
-		for _, l2 := range allLabels {
-			if l.ID == l2.ID {
-				l2.IsChecked = true
-				break
-			}
-		}
-	}
-}
-
 func ViewIssue(ctx *middleware.Context) {
 	ctx.Data["PageIsIssueList"] = true
 	ctx.Data["RequireDropzone"] = true
@@ -432,10 +421,51 @@ func ViewIssue(ctx *middleware.Context) {
 	}
 	issue.RenderedContent = string(base.RenderMarkdown([]byte(issue.Content), ctx.Repo.RepoLink))
 
+	repo := ctx.Repo.Repository
+
 	// Metas.
+	// Check labels.
 	if err = issue.GetLabels(); err != nil {
 		ctx.Handle(500, "GetLabels", err)
 		return
+	}
+	labelIDMark := make(map[int64]bool)
+	for i := range issue.Labels {
+		labelIDMark[issue.Labels[i].ID] = true
+	}
+	labels, err := models.GetLabelsByRepoID(repo.ID)
+	if err != nil {
+		ctx.Handle(500, "GetLabelsByRepoID: %v", err)
+		return
+	}
+	hasSelected := false
+	for i := range labels {
+		if labelIDMark[labels[i].ID] {
+			labels[i].IsChecked = true
+			hasSelected = true
+		}
+	}
+	ctx.Data["HasSelectedLabel"] = hasSelected
+	ctx.Data["Labels"] = labels
+
+	// Check milestone and assignee.
+	if ctx.Repo.IsAdmin() {
+		ctx.Data["OpenMilestones"], err = models.GetMilestones(repo.ID, -1, false)
+		if err != nil {
+			ctx.Handle(500, "GetMilestones: %v", err)
+			return
+		}
+		ctx.Data["ClosedMilestones"], err = models.GetMilestones(repo.ID, -1, true)
+		if err != nil {
+			ctx.Handle(500, "GetMilestones: %v", err)
+			return
+		}
+
+		ctx.Data["Assignees"], err = repo.GetAssignees()
+		if err != nil {
+			ctx.Handle(500, "GetAssignees: %v", err)
+			return
+		}
 	}
 
 	if ctx.IsSigned {
@@ -444,39 +474,9 @@ func ViewIssue(ctx *middleware.Context) {
 			ctx.Handle(500, "ReadBy", err)
 			return
 		}
-
-		if ctx.User.IsAdmin {
-			// labels, err := models.GetLabelsByRepoID(ctx.Repo.Repository.ID)
-			// if err != nil {
-			// 	ctx.Handle(500, "GetLabels.2", err)
-			// 	return
-			// }
-			// checkLabels(issue.Labels, labels)
-			// ctx.Data["Labels"] = labels
-
-			// // Get all milestones.
-			// ctx.Data["OpenMilestones"], err = models.GetMilestones(ctx.Repo.Repository.ID, -1, false)
-			// if err != nil {
-			// 	ctx.Handle(500, "GetMilestones.1: %v", err)
-			// 	return
-			// }
-			// ctx.Data["ClosedMilestones"], err = models.GetMilestones(ctx.Repo.Repository.ID, -1, true)
-			// if err != nil {
-			// 	ctx.Handle(500, "GetMilestones.2: %v", err)
-			// 	return
-			// }
-
-			// // Get all collaborators.
-			// ctx.Data["Collaborators"], err = ctx.Repo.Repository.GetCollaborators()
-			// if err != nil {
-			// 	ctx.Handle(500, "GetCollaborators", err)
-			// 	return
-			// }
-		}
 	}
 
 	var (
-		repo    = ctx.Repo.Repository
 		tag     models.CommentTag
 		ok      bool
 		marked  = make(map[int64]models.CommentTag)
@@ -555,112 +555,68 @@ func UpdateIssue(ctx *middleware.Context, form auth.CreateIssueForm) {
 	})
 }
 
-func UpdateIssueLabel(ctx *middleware.Context) {
-	if !ctx.Repo.IsOwner() {
-		ctx.Error(403)
-		return
-	}
-
-	idx := com.StrTo(ctx.Params(":index")).MustInt64()
-	if idx <= 0 {
-		ctx.Error(404)
-		return
-	}
-
-	issue, err := models.GetIssueByIndex(ctx.Repo.Repository.ID, idx)
+func getActionIssue(ctx *middleware.Context) *models.Issue {
+	issue, err := models.GetIssueByIndex(ctx.Repo.Repository.ID, ctx.ParamsInt64(":index"))
 	if err != nil {
 		if models.IsErrIssueNotExist(err) {
-			ctx.Handle(404, "issue.UpdateIssueLabel(GetIssueByIndex)", err)
+			ctx.Error(404, "GetIssueByIndex")
 		} else {
-			ctx.Handle(500, "issue.UpdateIssueLabel(GetIssueByIndex)", err)
+			ctx.Handle(500, "GetIssueByIndex", err)
 		}
+		return nil
+	}
+	return issue
+}
+
+func UpdateIssueLabel(ctx *middleware.Context) {
+	issue := getActionIssue(ctx)
+	if ctx.Written() {
 		return
 	}
 
-	isAttach := ctx.Query("action") == "attach"
-	labelStrId := ctx.Query("id")
-	labelID := com.StrTo(labelStrId).MustInt64()
-	label, err := models.GetLabelByID(labelID)
-	if err != nil {
-		if models.IsErrLabelNotExist(err) {
-			ctx.Handle(404, "issue.UpdateIssueLabel(GetLabelById)", err)
-		} else {
-			ctx.Handle(500, "issue.UpdateIssueLabel(GetLabelById)", err)
+	if ctx.Query("action") == "clear" {
+		if err := issue.ClearLabels(); err != nil {
+			ctx.Handle(500, "ClearLabels", err)
+			return
 		}
-		return
-	}
+	} else {
+		isAttach := ctx.Query("action") == "attach"
+		label, err := models.GetLabelByID(ctx.QueryInt64("id"))
+		if err != nil {
+			if models.IsErrLabelNotExist(err) {
+				ctx.Error(404, "GetLabelByID")
+			} else {
+				ctx.Handle(500, "GetLabelByID", err)
+			}
+			return
+		}
 
-	isNeedUpdate := false
-	if isAttach {
-		if !issue.HasLabel(labelID) {
-			if err = issue.AddLabel(labelID); err != nil {
+		if isAttach && !issue.HasLabel(label.ID) {
+			if err = issue.AddLabel(label); err != nil {
 				ctx.Handle(500, "AddLabel", err)
 				return
 			}
-			isNeedUpdate = true
-		}
-	} else {
-		if issue.HasLabel(labelID) {
-			if err = issue.RemoveLabel(labelID); err != nil {
+		} else if !isAttach && issue.HasLabel(label.ID) {
+			if err = issue.RemoveLabel(label); err != nil {
 				ctx.Handle(500, "RemoveLabel", err)
 				return
 			}
-			isNeedUpdate = true
 		}
 	}
 
-	if isNeedUpdate {
-		if err = models.UpdateIssue(issue); err != nil {
-			ctx.Handle(500, "issue.UpdateIssueLabel(UpdateIssue)", err)
-			return
-		}
-
-		if isAttach {
-			label.NumIssues++
-			if issue.IsClosed {
-				label.NumClosedIssues++
-			}
-		} else {
-			label.NumIssues--
-			if issue.IsClosed {
-				label.NumClosedIssues--
-			}
-		}
-
-		if err = models.UpdateLabel(label); err != nil {
-			ctx.Handle(500, "issue.UpdateIssueLabel(UpdateLabel)", err)
-			return
-		}
-	}
 	ctx.JSON(200, map[string]interface{}{
 		"ok": true,
 	})
 }
 
 func UpdateIssueMilestone(ctx *middleware.Context) {
-	if !ctx.Repo.IsOwner() {
-		ctx.Error(403)
-		return
-	}
-
-	issueId := com.StrTo(ctx.Query("issue")).MustInt64()
-	if issueId == 0 {
-		ctx.Error(404)
-		return
-	}
-
-	issue, err := models.GetIssueByID(issueId)
-	if err != nil {
-		if models.IsErrIssueNotExist(err) {
-			ctx.Handle(404, "issue.UpdateIssueMilestone(GetIssueByID)", err)
-		} else {
-			ctx.Handle(500, "issue.UpdateIssueMilestone(GetIssueByID)", err)
-		}
+	issue := getActionIssue(ctx)
+	if ctx.Written() {
 		return
 	}
 
 	oldMid := issue.MilestoneID
-	mid := com.StrTo(ctx.Query("milestoneid")).MustInt64()
+	mid := ctx.QueryInt64("id")
 	if oldMid == mid {
 		ctx.JSON(200, map[string]interface{}{
 			"ok": true,
@@ -670,11 +626,8 @@ func UpdateIssueMilestone(ctx *middleware.Context) {
 
 	// Not check for invalid milestone id and give responsibility to owners.
 	issue.MilestoneID = mid
-	if err = models.ChangeMilestoneAssign(oldMid, issue); err != nil {
-		ctx.Handle(500, "issue.UpdateIssueMilestone(ChangeMilestoneAssign)", err)
-		return
-	} else if err = models.UpdateIssue(issue); err != nil {
-		ctx.Handle(500, "issue.UpdateIssueMilestone(UpdateIssue)", err)
+	if err := models.ChangeMilestoneAssign(oldMid, issue); err != nil {
+		ctx.Handle(500, "ChangeMilestoneAssign", err)
 		return
 	}
 
@@ -683,36 +636,24 @@ func UpdateIssueMilestone(ctx *middleware.Context) {
 	})
 }
 
-func UpdateAssignee(ctx *middleware.Context) {
-	if !ctx.Repo.IsOwner() {
-		ctx.Error(403)
+func UpdateIssueAssignee(ctx *middleware.Context) {
+	issue := getActionIssue(ctx)
+	if ctx.Written() {
 		return
 	}
 
-	issueId := com.StrTo(ctx.Query("issue")).MustInt64()
-	if issueId == 0 {
-		ctx.Error(404)
+	aid := ctx.QueryInt64("id")
+	if issue.AssigneeID == aid {
+		ctx.JSON(200, map[string]interface{}{
+			"ok": true,
+		})
 		return
 	}
 
-	issue, err := models.GetIssueByID(issueId)
-	if err != nil {
-		if models.IsErrIssueNotExist(err) {
-			ctx.Handle(404, "GetIssueByID", err)
-		} else {
-			ctx.Handle(500, "GetIssueByID", err)
-		}
-		return
-	}
-
-	aid := com.StrTo(ctx.Query("assigneeid")).MustInt64()
 	// Not check for invalid assignee id and give responsibility to owners.
 	issue.AssigneeID = aid
-	if err = models.UpdateIssueUserByAssignee(issue.ID, aid); err != nil {
-		ctx.Handle(500, "UpdateIssueUserPairByAssignee: %v", err)
-		return
-	} else if err = models.UpdateIssue(issue); err != nil {
-		ctx.Handle(500, "UpdateIssue", err)
+	if err := models.UpdateIssueUserByAssignee(issue); err != nil {
+		ctx.Handle(500, "UpdateIssueUserByAssignee: %v", err)
 		return
 	}
 
