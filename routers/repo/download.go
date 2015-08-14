@@ -21,12 +21,7 @@ func ServeData(ctx *middleware.Context, name string, reader io.Reader) error {
 	}
 
 	_, isTextFile := base.IsTextFile(buf)
-	if isTextFile {
-		charset, _ := base.DetectEncoding(buf)
-		if charset != "UTF-8" {
-			ctx.Resp.Header().Set("Content-Type", "text/plain; charset="+charset)
-		}
-	} else {
+	if ! isTextFile {
 		_, isImageFile := base.IsImageFile(buf)
 		if !isImageFile {
 			ctx.Resp.Header().Set("Content-Disposition", "attachment; filename="+path.Base(ctx.Repo.TreeName))
