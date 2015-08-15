@@ -108,7 +108,7 @@
           <!-- Optional Settings -->
           <h4 class="ui dividing header">{{.i18n.Tr "install.optional_title"}}</h4>
           <div class="ui accordion optional field">
-            <div class="title {{if .Err_SMTP}}text-error{{end}}">
+            <div class="title {{if .Err_SMTP}}text red{{end}}">
               <i class="icon dropdown"></i>
               {{.i18n.Tr "install.email_title"}}
             </div>
@@ -173,7 +173,7 @@
           </div>
 
           <div class="ui accordion optional field">
-            <div class="title {{if .Err_Admin}}text-error{{end}}">
+            <div class="title {{if .Err_Admin}}text red{{end}}">
               <i class="icon dropdown"></i>
               {{.i18n.Tr "install.admin_title"}}
             </div>
