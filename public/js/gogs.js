@@ -118,7 +118,6 @@ function initCommentForm() {
                 $(this).removeClass('selected active')
             });
 
-
             if (has_update_action) {
                 updateIssueMeta($menu.data('update-url'), '', '');
             }
@@ -171,6 +170,15 @@ function initInstall() {
 function initRepository() {
     if ($('.repository').length == 0) {
         return;
+    }
+
+    // New migrate
+    if ($('.repository.new.migrate').length > 0) {
+        // Clear browser autocomplete.
+        if ($('#auth_username').data('need-clear')) {
+            $('#auth_username').val('');
+            $('#auth_password').val('');
+        }
     }
 
     // Labels
