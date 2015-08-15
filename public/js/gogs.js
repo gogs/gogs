@@ -172,15 +172,6 @@ function initRepository() {
         return;
     }
 
-    // New migrate
-    if ($('.repository.new.migrate').length > 0) {
-        // Clear browser autocomplete.
-        if ($('#auth_username').data('need-clear')) {
-            $('#auth_username').val('');
-            $('#auth_password').val('');
-        }
-    }
-
     // Labels
     if ($('.repository.labels').length > 0) {
         // Create label
