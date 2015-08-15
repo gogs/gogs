@@ -86,15 +86,6 @@
 		"randomFootnoteNumbers": 0,
 		"useCompatibilityMode": 0
 		},
-	"\/public\/css\/bootstrap.min.css": {
-		"fileType": 16,
-		"ignore": 0,
-		"ignoreWasSetByUser": 0,
-		"inputAbbreviatedPath": "\/public\/css\/bootstrap.min.css",
-		"outputAbbreviatedPath": "No Output Path",
-		"outputPathIsOutsideProject": 0,
-		"outputPathIsSetByUser": 0
-		},
 	"\/public\/css\/dropzone.css": {
 		"fileType": 16,
 		"ignore": 0,
@@ -158,15 +149,6 @@
 		"outputPathIsOutsideProject": 0,
 		"outputPathIsSetByUser": 0
 		},
-	"\/public\/css\/markdown.css": {
-		"fileType": 16,
-		"ignore": 0,
-		"ignoreWasSetByUser": 0,
-		"inputAbbreviatedPath": "\/public\/css\/markdown.css",
-		"outputAbbreviatedPath": "No Output Path",
-		"outputPathIsOutsideProject": 0,
-		"outputPathIsSetByUser": 0
-		},
 	"\/public\/css\/semantic.min.css": {
 		"fileType": 16,
 		"ignore": 0,
@@ -186,15 +168,6 @@
 		"outputPathIsOutsideProject": 0,
 		"outputPathIsSetByUser": 0,
 		"processed": 0
-		},
-	"\/public\/css\/todc-bootstrap.min.css": {
-		"fileType": 16,
-		"ignore": 0,
-		"ignoreWasSetByUser": 0,
-		"inputAbbreviatedPath": "\/public\/css\/todc-bootstrap.min.css",
-		"outputAbbreviatedPath": "No Output Path",
-		"outputPathIsOutsideProject": 0,
-		"outputPathIsSetByUser": 0
 		},
 	"\/public\/img\/404.png": {
 		"fileType": 32768,
@@ -228,61 +201,6 @@
 		"outputPathIsOutsideProject": 0,
 		"outputPathIsSetByUser": 0,
 		"processed": 1
-		},
-	"\/public\/img\/bootstrap-colorpicker\/alpha-horizontal.png": {
-		"fileType": 32768,
-		"ignore": 0,
-		"ignoreWasSetByUser": 0,
-		"initialSize": 3635,
-		"inputAbbreviatedPath": "\/public\/img\/bootstrap-colorpicker\/alpha-horizontal.png",
-		"outputAbbreviatedPath": "\/public\/img\/bootstrap-colorpicker\/alpha-horizontal.png",
-		"outputPathIsOutsideProject": 0,
-		"outputPathIsSetByUser": 0,
-		"processed": 0
-		},
-	"\/public\/img\/bootstrap-colorpicker\/alpha.png": {
-		"fileType": 32768,
-		"ignore": 0,
-		"ignoreWasSetByUser": 0,
-		"initialSize": 3271,
-		"inputAbbreviatedPath": "\/public\/img\/bootstrap-colorpicker\/alpha.png",
-		"outputAbbreviatedPath": "\/public\/img\/bootstrap-colorpicker\/alpha.png",
-		"outputPathIsOutsideProject": 0,
-		"outputPathIsSetByUser": 0,
-		"processed": 0
-		},
-	"\/public\/img\/bootstrap-colorpicker\/hue-horizontal.png": {
-		"fileType": 32768,
-		"ignore": 0,
-		"ignoreWasSetByUser": 0,
-		"initialSize": 2837,
-		"inputAbbreviatedPath": "\/public\/img\/bootstrap-colorpicker\/hue-horizontal.png",
-		"outputAbbreviatedPath": "\/public\/img\/bootstrap-colorpicker\/hue-horizontal.png",
-		"outputPathIsOutsideProject": 0,
-		"outputPathIsSetByUser": 0,
-		"processed": 0
-		},
-	"\/public\/img\/bootstrap-colorpicker\/hue.png": {
-		"fileType": 32768,
-		"ignore": 0,
-		"ignoreWasSetByUser": 0,
-		"initialSize": 2972,
-		"inputAbbreviatedPath": "\/public\/img\/bootstrap-colorpicker\/hue.png",
-		"outputAbbreviatedPath": "\/public\/img\/bootstrap-colorpicker\/hue.png",
-		"outputPathIsOutsideProject": 0,
-		"outputPathIsSetByUser": 0,
-		"processed": 0
-		},
-	"\/public\/img\/bootstrap-colorpicker\/saturation.png": {
-		"fileType": 32768,
-		"ignore": 0,
-		"ignoreWasSetByUser": 0,
-		"initialSize": 8817,
-		"inputAbbreviatedPath": "\/public\/img\/bootstrap-colorpicker\/saturation.png",
-		"outputAbbreviatedPath": "\/public\/img\/bootstrap-colorpicker\/saturation.png",
-		"outputPathIsOutsideProject": 0,
-		"outputPathIsSetByUser": 0,
-		"processed": 0
 		},
 	"\/public\/img\/checkmark.png": {
 		"fileType": 32768,
