@@ -216,7 +216,7 @@ func MigratePost(ctx *middleware.Context, form auth.MigrateRepoForm) {
 
 	if strings.Contains(err.Error(), "Authentication failed") {
 		ctx.Data["Err_Auth"] = true
-		ctx.RenderWithErr(ctx.Tr("form.auth_failed", err), MIGRATE, &form)
+		ctx.RenderWithErr(ctx.Tr("form.auth_failed", strings.Replace(err.Error(), ":"+form.AuthPassword+"@", ":<password>@", 1)), MIGRATE, &form)
 		return
 	}
 
