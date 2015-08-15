@@ -59,6 +59,7 @@ func Issues(ctx *middleware.Context) {
 	ctx.Data["PageIsIssueList"] = true
 
 	viewType := ctx.Query("type")
+	sortType := ctx.Query("sort")
 	types := []string{"assigned", "created_by", "mentioned"}
 	if !com.IsSliceContainsStr(types, viewType) {
 		viewType = "all"
@@ -71,7 +72,10 @@ func Issues(ctx *middleware.Context) {
 		return
 	}
 
-	var assigneeID, posterID int64
+	var (
+		assigneeID = ctx.QueryInt64("assignee")
+		posterID   int64
+	)
 	filterMode := models.FM_ALL
 	switch viewType {
 	case "assigned":
@@ -92,9 +96,8 @@ func Issues(ctx *middleware.Context) {
 	repo := ctx.Repo.Repository
 	selectLabels := ctx.Query("labels")
 	milestoneID := ctx.QueryInt64("milestone")
-	assigneeID = ctx.QueryInt64("assignee")
 	isShowClosed := ctx.Query("state") == "closed"
-	issueStats := models.GetIssueStats(repo.ID, uid, com.StrTo(selectLabels).MustInt64(), milestoneID, isShowClosed, filterMode)
+	issueStats := models.GetIssueStats(repo.ID, uid, com.StrTo(selectLabels).MustInt64(), milestoneID, assigneeID, isShowClosed, filterMode)
 
 	page := ctx.QueryInt("page")
 	if page <= 1 {
@@ -111,7 +114,7 @@ func Issues(ctx *middleware.Context) {
 
 	// Get issues.
 	issues, err := models.Issues(uid, assigneeID, repo.ID, posterID, milestoneID,
-		page, isShowClosed, filterMode == models.FM_MENTION, selectLabels, ctx.Query("sortType"))
+		page, isShowClosed, filterMode == models.FM_MENTION, selectLabels, sortType)
 	if err != nil {
 		ctx.Handle(500, "Issues: %v", err)
 		return
@@ -168,6 +171,7 @@ func Issues(ctx *middleware.Context) {
 	ctx.Data["IssueStats"] = issueStats
 	ctx.Data["SelectLabels"] = com.StrTo(selectLabels).MustInt64()
 	ctx.Data["ViewType"] = viewType
+	ctx.Data["SortType"] = sortType
 	ctx.Data["MilestoneID"] = milestoneID
 	ctx.Data["AssigneeID"] = assigneeID
 	ctx.Data["IsShowClosed"] = isShowClosed

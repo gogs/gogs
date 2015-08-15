@@ -639,7 +639,7 @@ func parseCountResult(results []map[string][]byte) int64 {
 }
 
 // GetIssueStats returns issue statistic information by given conditions.
-func GetIssueStats(repoID, uid, labelID, milestoneID int64, isShowClosed bool, filterMode int) *IssueStats {
+func GetIssueStats(repoID, uid, labelID, milestoneID, assigneeID int64, isShowClosed bool, filterMode int) *IssueStats {
 	stats := &IssueStats{}
 	// issue := new(Issue)
 
@@ -652,18 +652,14 @@ func GetIssueStats(repoID, uid, labelID, milestoneID int64, isShowClosed bool, f
 	if milestoneID > 0 {
 		baseCond += " AND issue.milestone_id=" + com.ToStr(milestoneID)
 	}
+	if assigneeID > 0 {
+		baseCond += " AND assignee_id=" + com.ToStr(assigneeID)
+	}
 	switch filterMode {
-	case FM_ALL:
+	case FM_ALL, FM_ASSIGN:
 		resutls, _ := x.Query(queryStr+baseCond, repoID, false)
 		stats.OpenCount = parseCountResult(resutls)
 		resutls, _ = x.Query(queryStr+baseCond, repoID, true)
-		stats.ClosedCount = parseCountResult(resutls)
-
-	case FM_ASSIGN:
-		baseCond += " AND assignee_id=?"
-		resutls, _ := x.Query(queryStr+baseCond, repoID, false, uid)
-		stats.OpenCount = parseCountResult(resutls)
-		resutls, _ = x.Query(queryStr+baseCond, repoID, true, uid)
 		stats.ClosedCount = parseCountResult(resutls)
 
 	case FM_CREATE:
