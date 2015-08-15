@@ -9,9 +9,9 @@ Gogs (Go Git Service) is a painless self-hosted Git service.
 
 <table>
     <tr>
-        <td><img src="http://gogs.io/imgs/screenshoots/1.png"></td>
-        <td><img src="http://gogs.io/imgs/screenshoots/2.png"></td>
-        <td><img src="http://gogs.io/imgs/screenshoots/3.png"></td>
+        <td width="33%"><img src="http://gogs.io/imgs/screenshoots/1.png"></td>
+        <td width="33%"><img src="http://gogs.io/imgs/screenshoots/2.png"></td>
+        <td width="33%"><img src="http://gogs.io/imgs/screenshoots/3.png"></td>
     </tr>
     <tr>
         <td><img src="http://gogs.io/imgs/screenshoots/4.png"></td>
