@@ -386,7 +386,6 @@ func ListPublicKeys(uid int64) ([]*PublicKey, error) {
 
 // rewriteAuthorizedKeys finds and deletes corresponding line in authorized_keys file.
 func rewriteAuthorizedKeys(key *PublicKey, p, tmpP string) error {
-
 	fr, err := os.Open(p)
 	if err != nil {
 		return err
