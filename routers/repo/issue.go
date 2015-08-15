@@ -92,6 +92,7 @@ func Issues(ctx *middleware.Context) {
 	repo := ctx.Repo.Repository
 	selectLabels := ctx.Query("labels")
 	milestoneID := ctx.QueryInt64("milestone")
+	assigneeID = ctx.QueryInt64("assignee")
 	isShowClosed := ctx.Query("state") == "closed"
 	issueStats := models.GetIssueStats(repo.ID, uid, com.StrTo(selectLabels).MustInt64(), milestoneID, isShowClosed, filterMode)
 
@@ -151,17 +152,24 @@ func Issues(ctx *middleware.Context) {
 	ctx.Data["Issues"] = issues
 
 	// Get milestones.
-	miles, err := models.GetAllRepoMilestones(repo.ID)
+	ctx.Data["Milestones"], err = models.GetAllRepoMilestones(repo.ID)
 	if err != nil {
 		ctx.Handle(500, "GetAllRepoMilestones: %v", err)
 		return
 	}
-	ctx.Data["Milestones"] = miles
+
+	// Get assignees.
+	ctx.Data["Assignees"], err = repo.GetAssignees()
+	if err != nil {
+		ctx.Handle(500, "GetAssignees: %v", err)
+		return
+	}
 
 	ctx.Data["IssueStats"] = issueStats
 	ctx.Data["SelectLabels"] = com.StrTo(selectLabels).MustInt64()
 	ctx.Data["ViewType"] = viewType
 	ctx.Data["MilestoneID"] = milestoneID
+	ctx.Data["AssigneeID"] = assigneeID
 	ctx.Data["IsShowClosed"] = isShowClosed
 	if isShowClosed {
 		ctx.Data["State"] = "closed"
