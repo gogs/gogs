@@ -10,61 +10,65 @@
 		</div>
 		<div class="ui divider"></div>
 		<div class="ui tiny buttons">
-		  <a class="ui green basic button {{if not .IsShowClosed}}active{{end}}" href="{{.RepoLink}}/issues?type={{$.ViewType}}&state=open&labels={{.SelectLabels}}&milestone={{.MilestoneID}}">
+		  <a class="ui green basic button {{if not .IsShowClosed}}active{{end}}" href="{{.RepoLink}}/issues?type={{$.ViewType}}&state=open&labels={{.SelectLabels}}&milestone={{.MilestoneID}}&assignee={{.AssigneeID}}">
 		  	<i class="octicon octicon-issue-opened"></i>
 		  	{{.i18n.Tr "repo.issues.open_tab" .IssueStats.OpenCount}}
 		  </a>
-		  <a class="ui red basic button {{if .IsShowClosed}}active{{end}}" href="{{.RepoLink}}/issues?type={{.ViewType}}&state=closed&labels={{.SelectLabels}}&milestone={{.MilestoneID}}">
+		  <a class="ui red basic button {{if .IsShowClosed}}active{{end}}" href="{{.RepoLink}}/issues?type={{.ViewType}}&state=closed&labels={{.SelectLabels}}&milestone={{.MilestoneID}}&assignee={{.AssigneeID}}">
 		  	<i class="octicon octicon-issue-closed"></i>
 		  	{{.i18n.Tr "repo.issues.close_tab" .IssueStats.ClosedCount}}
 		  </a>
 		</div>
 		<div class="ui right floated secondary filter menu">
+			<!-- Label -->
 			<div class="ui {{if not .Labels}}disabled{{end}} dropdown jump item">
 				<span class="text">
 					{{.i18n.Tr "repo.issues.filter_label"}}
 					<i class="dropdown icon"></i>
 				</span>
         <div class="menu">
-        	<a class="item" href="{{$.RepoLink}}/issues?type={{$.ViewType}}&state={{$.State}}&milestone={{$.MilestoneID}}">{{.i18n.Tr "repo.issues.filter_label_no_select"}}</a>
+        	<a class="item" href="{{$.RepoLink}}/issues?type={{$.ViewType}}&state={{$.State}}&milestone={{$.MilestoneID}}&assignee={{$.AssigneeID}}">{{.i18n.Tr "repo.issues.filter_label_no_select"}}</a>
         	{{range .Labels}}
-        	<a class="item" href="{{$.RepoLink}}/issues?type={{$.ViewType}}&state={{$.State}}&labels={{.ID}}&milestone={{$.MilestoneID}}"><span class="octicon {{if eq $.SelectLabels .ID}}octicon-check{{end}}"></span><span class="label color" style="background-color: {{.Color}}"></span> {{.Name}}</a>
+        	<a class="item" href="{{$.RepoLink}}/issues?type={{$.ViewType}}&state={{$.State}}&labels={{.ID}}&milestone={{$.MilestoneID}}&assignee={{$.AssigneeID}}"><span class="octicon {{if eq $.SelectLabels .ID}}octicon-check{{end}}"></span><span class="label color" style="background-color: {{.Color}}"></span> {{.Name}}</a>
           {{end}}
 				</div>
 			</div>
+
+			<!-- Milestone -->
 			<div class="ui {{if not .Milestones}}disabled{{end}} dropdown jump item">
 				<span class="text">
 					{{.i18n.Tr "repo.issues.filter_milestone"}}
 					<i class="dropdown icon"></i>
 				</span>
         <div class="menu">
-        	<a class="item" href="{{$.RepoLink}}/issues?type={{$.ViewType}}&state={{$.State}}&labels={{.SelectLabels}}">{{.i18n.Tr "repo.issues.filter_milestone_no_select"}}</a>
+        	<a class="item" href="{{$.RepoLink}}/issues?type={{$.ViewType}}&state={{$.State}}&labels={{.SelectLabels}}&assignee={{$.AssigneeID}}">{{.i18n.Tr "repo.issues.filter_milestone_no_select"}}</a>
         	{{range .Milestones}}
-        	<a class="clickable item" href="{{$.RepoLink}}/issues?type={{$.ViewType}}&state={{$.State}}&labels={{$.SelectLabels}}&milestone={{.ID}}"><span class="octicon {{if eq $.MilestoneID .ID}}octicon-check{{end}}"></span> <span class="name">{{.Name}}</span></a>
+        	<a class="{{if eq $.MilestoneID .ID}}active selected{{end}} item" href="{{$.RepoLink}}/issues?type={{$.ViewType}}&state={{$.State}}&labels={{$.SelectLabels}}&milestone={{.ID}}&assignee={{$.AssigneeID}}">{{.Name}}</a>
           {{end}}
 				</div>
 			</div>
-			<!-- <div class="ui {{if not .Assignees}}disabled{{end}} dropdown jump item">
+			<div class="ui {{if not .Assignees}}disabled{{end}} dropdown jump item">
 				<span class="text">
 					{{.i18n.Tr "repo.issues.filter_assignee"}}
 					<i class="dropdown icon"></i>
 				</span>
         <div class="menu">
+        	<a class="item" href="{{$.RepoLink}}/issues?type={{$.ViewType}}&state={{$.State}}&labels={{.SelectLabels}}&milestone={{$.MilestoneID}}">{{.i18n.Tr "repo.issues.filter_assginee_no_select"}}</a>
         	{{range .Assignees}}
-        	<a class="item" href="{{$.RepoLink}}/issues">{{.Name}}</a>
+        	<a class="{{if eq $.AssigneeID .Id}}active selected{{end}} item" href="{{$.RepoLink}}/issues?type={{$.ViewType}}&state={{$.State}}&labels={{$.SelectLabels}}&milestone={{$.MilestoneID}}&assignee={{.Id}}"><img src="{{.AvatarLink}}"> {{.Name}}</a>
           {{end}}
 				</div>
-			</div> -->
+			</div>
 			<div class="ui dropdown type jump item">
 				<span class="text">
 					{{.i18n.Tr "repo.issues.filter_type"}}
 					<i class="dropdown icon"></i>
 				</span>
         <div class="menu">
-        	<a class="{{if eq .ViewType "all"}}active{{end}} item" href="{{$.RepoLink}}/issues?type=all&state={{$.State}}&labels={{.SelectLabels}}&milestone={{$.MilestoneID}}">{{.i18n.Tr "repo.issues.filter_type.all_issues"}}</a>
+        	<a class="{{if eq .ViewType "all"}}active{{end}} item" href="{{$.RepoLink}}/issues?type=all&state={{$.State}}&labels={{.SelectLabels}}&milestone={{$.MilestoneID}}&assignee={{$.AssigneeID}}">{{.i18n.Tr "repo.issues.filter_type.all_issues"}}</a>
         	<a class="{{if eq .ViewType "assigned"}}active{{end}} item" href="{{$.RepoLink}}/issues?type=assigned&state={{$.State}}&labels={{.SelectLabels}}&milestone={{$.MilestoneID}}">{{.i18n.Tr "repo.issues.filter_type.assigned_to_you"}}</a>
-        	<a class="{{if eq .ViewType "created_by"}}active{{end}} item" href="{{$.RepoLink}}/issues?type=created_by&state={{$.State}}&labels={{.SelectLabels}}&milestone={{$.MilestoneID}}">{{.i18n.Tr "repo.issues.filter_type.created_by_you"}}</a>
-        	<a class="{{if eq .ViewType "mentioned"}}active{{end}} item" href="{{$.RepoLink}}/issues?type=mentioned&state={{$.State}}&labels={{.SelectLabels}}&milestone={{$.MilestoneID}}">{{.i18n.Tr "repo.issues.filter_type.mentioning_you"}}</a>
+        	<a class="{{if eq .ViewType "created_by"}}active{{end}} item" href="{{$.RepoLink}}/issues?type=created_by&state={{$.State}}&labels={{.SelectLabels}}&milestone={{$.MilestoneID}}&assignee={{$.AssigneeID}}">{{.i18n.Tr "repo.issues.filter_type.created_by_you"}}</a>
+        	<a class="{{if eq .ViewType "mentioned"}}active{{end}} item" href="{{$.RepoLink}}/issues?type=mentioned&state={{$.State}}&labels={{.SelectLabels}}&milestone={{$.MilestoneID}}&assignee={{$.AssigneeID}}">{{.i18n.Tr "repo.issues.filter_type.mentioning_you"}}</a>
 				</div>
 			</div>
 		</div>
@@ -77,7 +81,7 @@
       	<a class="title" href="{{$.RepoLink}}/issues/{{.Index}}">{{.Name}}</a>
 
       	{{range .Labels}}
-				<a class="ui label" href="{{$.RepoLink}}/issues?type={{$.ViewType}}&state={{$.State}}&labels={{.ID}}&milestone={{$.MilestoneID}}" style="background-color: {{.Color}}">{{.Name}}</a>
+				<a class="ui label" href="{{$.RepoLink}}/issues?type={{$.ViewType}}&state={{$.State}}&labels={{.ID}}&milestone={{$.MilestoneID}}&assignee={{$.AssigneeID}}" style="background-color: {{.Color}}">{{.Name}}</a>
       	{{end}}
 
       	{{if .NumComments}}
@@ -87,7 +91,7 @@
         <p class="desc">
         	{{$.i18n.Tr "repo.issues.opened_by" $timeStr .Poster.Name | Safe}}
 	        {{if .Milestone}}
-					<a class="milestone" href="{{$.RepoLink}}/issues?type={{$.ViewType}}&state={{$.State}}&labels={{$.SelectLabels}}&milestone={{.Milestone.ID}}">
+					<a class="milestone" href="{{$.RepoLink}}/issues?type={{$.ViewType}}&state={{$.State}}&labels={{$.SelectLabels}}&milestone={{.Milestone.ID}}&assignee={{$.AssigneeID}}">
 						<span class="octicon octicon-milestone"></span> {{.Milestone.Name}}
 					</a>
 	        {{end}}
@@ -104,17 +108,17 @@
 			{{if gt .TotalPages 1}}
 			<div class="center page buttons">
 				<div class="ui borderless pagination menu">
-				  <a class="{{if not .HasPrevious}}disabled{{end}} item" {{if .HasPrevious}}href="{{$.Link}}?type={{$.ViewType}}&state={{$.State}}&labels={{$.SelectLabels}}&milestone={{$.MilestoneID}}&page={{.Previous}}"{{end}}>
+				  <a class="{{if not .HasPrevious}}disabled{{end}} item" {{if .HasPrevious}}href="{{$.Link}}?type={{$.ViewType}}&state={{$.State}}&labels={{$.SelectLabels}}&milestone={{$.MilestoneID}}&assignee={{$.AssigneeID}}&page={{.Previous}}"{{end}}>
 				    <i class="left arrow icon"></i> {{$.i18n.Tr "repo.issues.previous"}}
 				  </a>
 					{{range .Pages}}
 					{{if eq .Num -1}}
 					<a class="disabled item">...</a>
 					{{else}}
-					<a class="{{if .IsCurrent}}active{{end}} item" {{if not .IsCurrent}}href="{{$.Link}}?type={{$.ViewType}}&state={{$.State}}&labels={{$.SelectLabels}}&milestone={{$.MilestoneID}}&page={{.Num}}"{{end}}>{{.Num}}</a>
+					<a class="{{if .IsCurrent}}active{{end}} item" {{if not .IsCurrent}}href="{{$.Link}}?type={{$.ViewType}}&state={{$.State}}&labels={{$.SelectLabels}}&milestone={{$.MilestoneID}}&assignee={{$.AssigneeID}}&page={{.Num}}"{{end}}>{{.Num}}</a>
 					{{end}}
 					{{end}}
-				  <a class="{{if not .HasNext}}disabled{{end}} item" {{if .HasNext}}href="{{$.Link}}?type={{$.ViewType}}&state={{$.State}}&labels={{$.SelectLabels}}&milestone={{$.MilestoneID}}&page={{.Next}}"{{end}}>
+				  <a class="{{if not .HasNext}}disabled{{end}} item" {{if .HasNext}}href="{{$.Link}}?type={{$.ViewType}}&state={{$.State}}&labels={{$.SelectLabels}}&milestone={{$.MilestoneID}}&assignee={{$.AssigneeID}}&page={{.Next}}"{{end}}>
 				    {{$.i18n.Tr "repo.issues.next"}} <i class="icon right arrow"></i>
 				  </a>
 				</div>
