@@ -22,8 +22,9 @@
             <div class="content {{if .Err_Auth}}active{{end}}">
               <div class="inline field {{if .Err_Auth}}error{{end}}">
                 <label for="auth_username">{{.i18n.Tr "username"}}</label>
-                <input id="auth_username" name="auth_username" value="{{.auth_username}}123" {{if not .auth_username}}data-need-clear="true"{{end}}>
+                <input id="auth_username" name="auth_username" value="{{.auth_username}}" {{if not .auth_username}}data-need-clear="true"{{end}}>
               </div>
+              <input class="fake">
               <div class="inline field {{if .Err_Auth}}error{{end}}">
                 <label for="auth_password">{{.i18n.Tr "password"}}</label>
                 <input id="auth_password" name="auth_password" type="password" value="{{.auth_password}}">
