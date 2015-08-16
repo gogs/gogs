@@ -1,43 +1,64 @@
-LDAP authentication
-===================
+Gogs LDAP Authentication Module
+===============================
 
-## Goal
+## About
 
-Authenticat user against LDAP directories
-
-It will bind with the user's login/pasword and query attributs ("mail" for instance) in a pool of directory servers
-
-The first OK wins.
-
-If there's connection error, the server will be disabled and won't be checked again
+This authentication module attempts to authorize and authenticate a user
+against an LDAP server. Like most LDAP authentication systems, this module does
+this in two steps. First, it queries the LDAP server using a Bind DN and
+searches for the user that is attempting to sign in. If the user is found, the
+module attempts to bind to the server using the user's supplied credentials. If
+this succeeds, the user has been authenticated, and his account information is
+retrieved and passed to the Gogs login infrastructure.
 
 ## Usage
 
-In the [security] section, set
->  LDAP_AUTH = true
+To use this module, add an LDAP authentication source via the Authentications
+section in the admin panel. The fields should be set as follows:
 
-then for each LDAP source, set
+* Authorization Name **(required)**
+	* A name to assign to the new method of authorization.
 
-> [LdapSource-someuniquename]
-> name=canonicalName
-> host=hostname-or-ip
-> port=3268	# or regular LDAP port
-> # the following settings depend highly how you've configured your AD
-> basedn=dc=ACME,dc=COM
-> MSADSAFORMAT=%s@ACME.COM
-> filter=(&(objectClass=user)(sAMAccountName=%s))
+* Host **(required)**
+	* The address where the LDAP server can be reached.
+	* Example: mydomain.com
 
-### Limitation
+* Port **(required)**
+	* The port to use when connecting to the server.
+	* Example: 636
 
-Only tested on an MS 2008R2 DC, using global catalog (TCP/3268)
+* Enable TLS Encryption (optional)
+	* Whether to use TLS when connecting to the LDAP server.
 
-This MSAD is a mess.
+* Bind DN (optional)
+	* The DN to bind to the LDAP server with when searching for the user.
+	This may be left blank to perform an anonymous search.
+	* Example: cn=Search,dc=mydomain,dc=com
 
-The way how one checks the directory (CN, DN etc...) may be highly depending local custom configuration
+* Bind Password (optional)
+	* The password for the Bind DN specified above, if any.
 
-### Todo
-* Define a timeout per server
-* Check servers marked as "Disabled" when they'll come back online
-* Find a more flexible way to define filter/MSADSAFORMAT/Attributes etc... maybe text/template ?
-* Check OpenLDAP server
-* SSL support ?
+* User Search Base **(required)**
+	* The LDAP base at which user accounts will be searched for.
+	* Example: ou=Users,dc=mydomain,dc=com
+
+* User Filter **(required)**
+	* An LDAP filter declaring how to find the user record that is attempting
+	to authenticate. The '%s' matching parameter will be substituted with
+	the user's username.
+	* Example: (&(objectClass=posixAccount)(uid=%s))
+
+* First name attribute (optional)
+	* The attribute of the user's LDAP record containing the user's first
+	name. This will be used to populate their account information.
+	* Example: givenName
+
+* Surname name attribute (optional)
+	*The attribute of the user's LDAP record containing the user's surname
+	This will be used to populate their account information.
+	* Example: sn
+
+* E-mail attribute (required)
+	The attribute of the user's LDAP record containing the user's email
+	address. This will be used to populate their account information.
+	* Example: mail
