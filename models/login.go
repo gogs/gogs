@@ -19,7 +19,6 @@ import (
 	"github.com/gogits/gogs/modules/auth/ldap"
 	"github.com/gogits/gogs/modules/auth/pam"
 	"github.com/gogits/gogs/modules/log"
-	"github.com/gogits/gogs/modules/uuid"
 )
 
 type LoginType int
@@ -258,18 +257,19 @@ func UserSignIn(uname, passwd string) (*User, error) {
 // Return the same LoginUserPlain semantic
 // FIXME: https://github.com/gogits/gogs/issues/672
 func LoginUserLdapSource(u *User, name, passwd string, sourceId int64, cfg *LDAPConfig, autoRegister bool) (*User, error) {
-	name, fn, sn, mail, logged := cfg.Ldapsource.SearchEntry(name, passwd)
+	fn, sn, mail, logged := cfg.Ldapsource.SearchEntry(name, passwd)
 	if !logged {
 		// User not in LDAP, do nothing
-		return nil, ErrUserNotExist{u.Id, u.Name}
+		return nil, ErrUserNotExist{0, name}
 	}
+
 	if !autoRegister {
 		return u, nil
 	}
 
 	// Fallback.
 	if len(mail) == 0 {
-		mail = uuid.NewV4().String() + "@localhost"
+		mail = fmt.Sprintf("%s@localhost", name)
 	}
 
 	u = &User{
