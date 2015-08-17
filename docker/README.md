@@ -1,16 +1,17 @@
-# Docker for gogs
+# Docker for Gogs
 
 ## Usage
+
 ```
-docker pull gogits/gogs
+docker pull gogs/gogs
 
 mkdir -p /var/gogs
-docker run --name=gogs -p 10022:22 -p 10080:3000 -v /var/gogs:/data gogits/gogs
+docker run --name=gogs -p 10022:22 -p 10080:3000 -v /var/gogs:/data gogs/gogs
 ```
 
-File will store in local path: `/var/gogs`
+File will store in local path: `/var/gogs`.
 
-Directory `/var/gogs` keeps git repos and gogs data
+Directory `/var/gogs` keeps Git repoistories and Gogs data:
 
     /var/gogs
     |-- git
@@ -25,7 +26,7 @@ Directory `/var/gogs` keeps git repos and gogs data
 
 ## SSH Support
 
-In order to support ssh, You need to change `HTTP_PORT` and `SSH_PORT` in `/var/gogs/gogs/conf/app.ini`
+In order to support SSH, You need to change `HTTP_PORT` and `SSH_PORT` in `/var/gogs/gogs/conf/app.ini`:
 
 ```
 [server]
@@ -33,4 +34,4 @@ HTTP_PORT = 3000
 SSH_PORT = 10022
 ```
 
-setting description can be found in <http://gogs.io/docs/advanced/configuration_cheat_sheet.html>
+Full documentation of settings can be found [here](http://gogs.io/docs/advanced/configuration_cheat_sheet.html).
