@@ -13,13 +13,13 @@ File will store in local path: `/var/gogs`
 Directory `/var/gogs` keeps git repos and gogs data
 
     /var/gogs
-    ├── git
-    │   └── gogs-repositories
+    |── git
+    |   └── gogs-repositories
     |-- ssh
     |    `-- # ssh pub-pri keys for gogs
-    └── gogs
-        ├── conf
-        ├── data
-        ├── log
-        └── templates
+    `---- gogs
+        |── conf
+        |── data
+        |── log
+        |── templates
 
