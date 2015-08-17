@@ -35,3 +35,16 @@ SSH_PORT = 10022
 ```
 
 Full documentation of settings can be found [here](http://gogs.io/docs/advanced/configuration_cheat_sheet.html).
+
+## Todo
+Install page need support set `SSH_PORT`
+
+## Problems
+
+If meet error
+
+```
+checkVersion()] [E] Binary and template file version does not match
+```
+
+Run `rm -fr /var/gogs/gogs/templates/` will fix. Remember to backup templates file, If you have some modification.

@@ -3,14 +3,14 @@ MAINTAINER codeskyblue@gmail.com
 
 RUN echo "deb http://ftp.debian.org/debian/ wheezy-backports main" >> /etc/apt/sources.list
 RUN apt-get update
-RUN apt-get install -y openssh-server rsync
+RUN apt-get install -y openssh-server rsync libpam-dev
 
 # set the working directory and add current stuff
 COPY  . /gopath/src/github.com/gogits/gogs/
 WORKDIR /gopath/src/github.com/gogits/gogs/
 
-RUN go get -v -tags "sqlite redis memcache cert"
-RUN go build -tags "sqlite redis memcache cert"
+RUN go get -v -tags "sqlite redis memcache cert pam"
+RUN go build -tags "sqlite redis memcache cert pam"
 
 RUN useradd --shell /bin/bash --system --comment gogits git
 
