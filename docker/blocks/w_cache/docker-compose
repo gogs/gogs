@@ -1,6 +1,0 @@
-gogs:
-  build: docker
-  links:
-    - cache
-  ports:
-    - "3000:3000"
