@@ -1435,9 +1435,9 @@ func NotifyWatchers(act *Action) error {
 //         \/           \/
 
 type Star struct {
-	Id     int64
-	Uid    int64 `xorm:"UNIQUE(s)"`
-	RepoId int64 `xorm:"UNIQUE(s)"`
+	ID     int64 `xorm:"pk autoincr"`
+	UID    int64 `xorm:"uid UNIQUE(s)"`
+	RepoID int64 `xorm:"UNIQUE(s)"`
 }
 
 // Star or unstar repository.
@@ -1446,7 +1446,7 @@ func StarRepo(uid, repoId int64, star bool) (err error) {
 		if IsStaring(uid, repoId) {
 			return nil
 		}
-		if _, err = x.Insert(&Star{Uid: uid, RepoId: repoId}); err != nil {
+		if _, err = x.Insert(&Star{UID: uid, RepoID: repoId}); err != nil {
 			return err
 		} else if _, err = x.Exec("UPDATE `repository` SET num_stars = num_stars + 1 WHERE id = ?", repoId); err != nil {
 			return err

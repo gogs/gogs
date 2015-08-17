@@ -420,7 +420,7 @@ func SettingsApplicationsPost(ctx *middleware.Context, form auth.NewAccessTokenF
 		}
 
 		t := &models.AccessToken{
-			Uid:  ctx.User.Id,
+			UID:  ctx.User.Id,
 			Name: form.Name,
 		}
 		if err := models.NewAccessToken(t); err != nil {
