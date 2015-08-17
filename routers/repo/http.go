@@ -292,6 +292,7 @@ func serviceReceivePack(hr handler) {
 
 func serviceRpc(rpc string, hr handler) {
 	w, r, dir := hr.w, hr.r, hr.Dir
+	defer r.Body.Close()
 
 	if !hasAccess(r, hr.Config, dir, rpc, true) {
 		renderNoAccess(w)
