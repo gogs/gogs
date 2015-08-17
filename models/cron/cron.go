@@ -5,29 +5,48 @@
 package cron
 
 import (
+	"time"
+
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/cron"
+	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/setting"
 )
 
 var c = cron.New()
 
 func NewCronContext() {
+	var (
+		entry *cron.Entry
+		err   error
+	)
 	if setting.Cron.UpdateMirror.Enabled {
-		c.AddFunc("Update mirrors", setting.Cron.UpdateMirror.Schedule, models.MirrorUpdate)
+		entry, err = c.AddFunc("Update mirrors", setting.Cron.UpdateMirror.Schedule, models.MirrorUpdate)
+		if err != nil {
+			log.Fatal(4, "Cron[Update mirrors]: %v", err)
+		}
 		if setting.Cron.UpdateMirror.RunAtStart {
+			entry.Prev = time.Now()
 			go models.MirrorUpdate()
 		}
 	}
 	if setting.Cron.RepoHealthCheck.Enabled {
-		c.AddFunc("Repository health check", setting.Cron.RepoHealthCheck.Schedule, models.GitFsck)
+		entry, err = c.AddFunc("Repository health check", setting.Cron.RepoHealthCheck.Schedule, models.GitFsck)
+		if err != nil {
+			log.Fatal(4, "Cron[Repository health check]: %v", err)
+		}
 		if setting.Cron.RepoHealthCheck.RunAtStart {
+			entry.Prev = time.Now()
 			go models.GitFsck()
 		}
 	}
 	if setting.Cron.CheckRepoStats.Enabled {
-		c.AddFunc("Check repository statistics", setting.Cron.CheckRepoStats.Schedule, models.CheckRepoStats)
+		entry, err = c.AddFunc("Check repository statistics", setting.Cron.CheckRepoStats.Schedule, models.CheckRepoStats)
+		if err != nil {
+			log.Fatal(4, "Cron[Check repository statistics]: %v", err)
+		}
 		if setting.Cron.CheckRepoStats.RunAtStart {
+			entry.Prev = time.Now()
 			go models.CheckRepoStats()
 		}
 	}
