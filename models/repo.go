@@ -1108,7 +1108,7 @@ func RewriteRepositoryUpdateHook() error {
 }
 
 var (
-	// Prevent duplicate tasks.
+	// Prevent duplicate running tasks.
 	isMirrorUpdating = false
 	isGitFscking     = false
 	isCheckingRepos  = false
@@ -1164,7 +1164,7 @@ func GitFsck() {
 	isGitFscking = true
 	defer func() { isGitFscking = false }()
 
-	args := append([]string{"fsck"}, setting.Git.Fsck.Args...)
+	args := append([]string{"fsck"}, setting.Cron.RepoHealthCheck.Args...)
 	if err := x.Where("id > 0").Iterate(new(Repository),
 		func(idx int, bean interface{}) error {
 			repo := bean.(*Repository)
@@ -1216,7 +1216,7 @@ func CheckRepoStats() {
 		log.Error(4, "select repository check 'watch': %v", err)
 	}
 	for _, repo_id := range results_watch {
-		log.Info("updating repository count 'watch'")
+		log.Trace("updating repository count 'watch'")
 		repoID := com.StrTo(repo_id["id"]).MustInt64()
 		_, err := x.Exec("UPDATE `repository` SET num_watches=(SELECT count(*) FROM `watch` WHERE repo_id=?) WHERE id=?", repoID, repoID)
 		if err != nil {
@@ -1230,7 +1230,7 @@ func CheckRepoStats() {
 		log.Error(4, "select repository check 'star': %v", err)
 	}
 	for _, repo_id := range results_star {
-		log.Info("updating repository count 'star'")
+		log.Trace("updating repository count 'star'")
 		repoID := com.StrTo(repo_id["id"]).MustInt64()
 		_, err := x.Exec("UPDATE `repository` SET .num_stars=(SELECT count(*) FROM `star` WHERE repo_id=?) WHERE id=?", repoID, repoID)
 		if err != nil {

@@ -126,11 +126,26 @@ var (
 	Git struct {
 		MaxGitDiffLines int
 		GcArgs          []string `delim:" "`
-		Fsck            struct {
-			Enable   bool
-			Interval int
-			Args     []string `delim:" "`
-		} `ini:"git.fsck"`
+	}
+
+	// Cron tasks.
+	Cron struct {
+		UpdateMirror struct {
+			Enabled    bool
+			RunAtStart bool
+			Schedule   string
+		} `ini:"cron.update_mirrors"`
+		RepoHealthCheck struct {
+			Enabled    bool
+			RunAtStart bool
+			Schedule   string
+			Args       []string `delim:" "`
+		} `ini:"cron.repo_health_check"`
+		CheckRepoStats struct {
+			Enabled    bool
+			RunAtStart bool
+			Schedule   string
+		} `ini:"cron.check_repo_stats"`
 	}
 
 	// I18n settings.
@@ -361,6 +376,8 @@ func NewConfigContext() {
 
 	if err = Cfg.Section("git").MapTo(&Git); err != nil {
 		log.Fatal(4, "Fail to map Git settings: %v", err)
+	} else if Cfg.Section("cron").MapTo(&Cron); err != nil {
+		log.Fatal(4, "Fail to map Cron settings: %v", err)
 	}
 
 	Langs = Cfg.Section("i18n").Key("LANGS").Strings(",")

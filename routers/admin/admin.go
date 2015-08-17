@@ -14,8 +14,8 @@ import (
 	"github.com/Unknwon/macaron"
 
 	"github.com/gogits/gogs/models"
+	"github.com/gogits/gogs/models/cron"
 	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/modules/cron"
 	"github.com/gogits/gogs/modules/middleware"
 	"github.com/gogits/gogs/modules/process"
 	"github.com/gogits/gogs/modules/setting"
@@ -229,6 +229,6 @@ func Monitor(ctx *middleware.Context) {
 	ctx.Data["PageIsAdmin"] = true
 	ctx.Data["PageIsAdminMonitor"] = true
 	ctx.Data["Processes"] = process.Processes
-	ctx.Data["Entries"] = cron.ListEntries()
+	ctx.Data["Entries"] = cron.ListTasks()
 	ctx.HTML(200, MONITOR)
 }
