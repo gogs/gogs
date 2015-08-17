@@ -1,6 +1,0 @@
-db:
-  image: wyaeld/postgres:9.3
-  environment:
-    POSTGRESQL_DB: gogs
-    POSTGRESQL_USER: gogs
-    POSTGRESQL_PASS: password
