@@ -1,5 +1,5 @@
 web:
-  build: .
+  build: ./docker
   links:
     - mysql
   ports:
