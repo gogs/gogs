@@ -54,11 +54,11 @@ section in the admin panel. The fields should be set as follows:
 	* Example: givenName
 
 * Surname name attribute (optional)
-	*The attribute of the user's LDAP record containing the user's surname
+	* The attribute of the user's LDAP record containing the user's surname
 	This will be used to populate their account information.
 	* Example: sn
 
-* E-mail attribute (required)
-	The attribute of the user's LDAP record containing the user's email
+* E-mail attribute **(required)**
+	* The attribute of the user's LDAP record containing the user's email
 	address. This will be used to populate their account information.
 	* Example: mail
