@@ -515,8 +515,12 @@ func DeleteBeans(e Engine, beans ...interface{}) (err error) {
 }
 
 // FIXME: need some kind of mechanism to record failure. HINT: system notice
-// DeleteUser completely and permanently deletes everything of user.
+// DeleteUser completely and permanently deletes everything of a user,
+// but issues/comments/pulls will be kept and shown as someone has been deleted.
 func DeleteUser(u *User) error {
+	// Note: A user owns any repository or belongs to any organization
+	//	cannot perform delete operation.
+
 	// Check ownership of repository.
 	count, err := GetRepositoryCount(u)
 	if err != nil {
@@ -533,80 +537,116 @@ func DeleteUser(u *User) error {
 		return ErrUserHasOrgs{UID: u.Id}
 	}
 
-	// Get watches before session.
-	watches := make([]*Watch, 0, 10)
-	if err = x.Where("user_id=?", u.Id).Find(&watches); err != nil {
-		return fmt.Errorf("get all watches: %v", err)
-	}
-	repoIDs := make([]int64, 0, len(watches))
-	for i := range watches {
-		repoIDs = append(repoIDs, watches[i].RepoID)
-	}
-
-	// FIXME: check issues, other repos' commits
-
 	sess := x.NewSession()
 	defer sessionRelease(sess)
 	if err = sess.Begin(); err != nil {
 		return err
 	}
 
-	if err = DeleteBeans(sess,
-		&Follow{FollowID: u.Id},
-		&Oauth2{Uid: u.Id},
-		&Action{UserID: u.Id},
-		&Access{UserID: u.Id},
-		&Collaboration{UserID: u.Id},
-		&EmailAddress{Uid: u.Id},
-		&Watch{UserID: u.Id},
-		&IssueUser{UID: u.Id},
-	); err != nil {
-		return err
+	// ***** START: Watch *****
+	watches := make([]*Watch, 0, 10)
+	if err = x.Find(&watches, &Watch{UserID: u.Id}); err != nil {
+		return fmt.Errorf("get all watches: %v", err)
 	}
-
-	// Decrease all watch numbers.
-	for i := range repoIDs {
-		if _, err = sess.Exec("UPDATE `repository` SET num_watches=num_watches-1 WHERE id=?", repoIDs[i]); err != nil {
-			return err
+	for i := range watches {
+		if _, err = sess.Exec("UPDATE `repository` SET num_watches=num_watches-1 WHERE id=?", watches[i].RepoID); err != nil {
+			return fmt.Errorf("decrease repository watch number[%d]: %v", watches[i].RepoID, err)
 		}
 	}
+	// ***** END: Watch *****
 
-	// Delete all SSH keys.
+	// ***** START: Star *****
+	stars := make([]*Star, 0, 10)
+	if err = x.Find(&stars, &Star{UID: u.Id}); err != nil {
+		return fmt.Errorf("get all stars: %v", err)
+	}
+	for i := range stars {
+		if _, err = sess.Exec("UPDATE `repository` SET num_stars=num_stars-1 WHERE id=?", stars[i].RepoID); err != nil {
+			return fmt.Errorf("decrease repository star number[%d]: %v", stars[i].RepoID, err)
+		}
+	}
+	// ***** END: Star *****
+
+	// ***** START: Follow *****
+	followers := make([]*Follow, 0, 10)
+	if err = x.Find(&followers, &Follow{UserID: u.Id}); err != nil {
+		return fmt.Errorf("get all followers: %v", err)
+	}
+	for i := range followers {
+		if _, err = sess.Exec("UPDATE `user` SET num_followers=num_followers-1 WHERE id=?", followers[i].UserID); err != nil {
+			return fmt.Errorf("decrease user follower number[%d]: %v", followers[i].UserID, err)
+		}
+	}
+	// ***** END: Follow *****
+
+	if err = DeleteBeans(sess,
+		&Oauth2{Uid: u.Id},
+		&AccessToken{UID: u.Id},
+		&Collaboration{UserID: u.Id},
+		&Access{UserID: u.Id},
+		&Watch{UserID: u.Id},
+		&Star{UID: u.Id},
+		&Follow{FollowID: u.Id},
+		&Action{UserID: u.Id},
+		&IssueUser{UID: u.Id},
+		&EmailAddress{Uid: u.Id},
+	); err != nil {
+		return fmt.Errorf("DeleteBeans: %v", err)
+	}
+
+	// ***** START: PublicKey *****
 	keys := make([]*PublicKey, 0, 10)
 	if err = sess.Find(&keys, &PublicKey{OwnerID: u.Id}); err != nil {
-		return err
+		return fmt.Errorf("get all public keys: %v", err)
 	}
 	for _, key := range keys {
 		if err = deletePublicKey(sess, key); err != nil {
+			return fmt.Errorf("deletePublicKey: %v", err)
+		}
+	}
+	// ***** END: PublicKey *****
+
+	// Clear assignee.
+	if _, err = sess.Exec("UPDATE `issue` SET assignee_id=0 WHERE assignee_id=?", u.Id); err != nil {
+		return fmt.Errorf("clear assignee: %v", err)
+	}
+
+	if _, err = sess.Delete(u); err != nil {
+		return fmt.Errorf("Delete: %v", err)
+	}
+
+	if err = sess.Commit(); err != nil {
+		return fmt.Errorf("Commit: %v", err)
+	}
+
+	// FIXME: system notice
+	// Note: There are something just cannot be roll back,
+	//	so just keep error logs of those operations.
+
+	RewriteAllPublicKeys()
+	os.RemoveAll(UserPath(u.Name))
+	os.Remove(u.CustomAvatarPath())
+
+	return nil
+}
+
+// DeleteInactivateUsers deletes all inactivate users and email addresses.
+func DeleteInactivateUsers() (err error) {
+	users := make([]*User, 0, 10)
+	if err = x.Where("is_active=?", false).Find(&users); err != nil {
+		return fmt.Errorf("get all inactive users: %v", err)
+	}
+	for _, u := range users {
+		if err = DeleteUser(u); err != nil {
+			// Ignore users that were set inactive by admin.
+			if IsErrUserOwnRepos(err) || IsErrUserHasOrgs(err) {
+				continue
+			}
 			return err
 		}
 	}
 
-	// Clear assignee.
-	if _, err = sess.Exec("UPDATE `issue` SET assignee_id=0 WHERE assignee_id=?", u.Id); err != nil {
-		return err
-	}
-
-	if _, err = sess.Delete(u); err != nil {
-		return err
-	}
-
-	// Delete user data.
-	if err = os.RemoveAll(UserPath(u.Name)); err != nil {
-		return err
-	}
-	// Delete avatar.
-	os.Remove(u.CustomAvatarPath())
-
-	return sess.Commit()
-}
-
-// DeleteInactivateUsers deletes all inactivate users and email addresses.
-func DeleteInactivateUsers() error {
-	_, err := x.Where("is_active=?", false).Delete(new(User))
-	if err == nil {
-		_, err = x.Where("is_activated=?", false).Delete(new(EmailAddress))
-	}
+	_, err = x.Where("is_activated=?", false).Delete(new(EmailAddress))
 	return err
 }
 
@@ -895,9 +935,9 @@ func SearchUserByName(opt SearchOption) (us []*User, err error) {
 
 // Follow is connection request for receiving user notification.
 type Follow struct {
-	Id       int64
-	UserID   int64 `xorm:"unique(follow)"`
-	FollowID int64 `xorm:"unique(follow)"`
+	ID       int64 `xorm:"pk autoincr"`
+	UserID   int64 `xorm:"UNIQUE(follow)"`
+	FollowID int64 `xorm:"UNIQUE(follow)"`
 }
 
 // FollowUser marks someone be another's follower.

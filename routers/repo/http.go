@@ -122,7 +122,7 @@ func Http(ctx *middleware.Context) {
 				}
 				return
 			}
-			authUser, err = models.GetUserByID(token.Uid)
+			authUser, err = models.GetUserByID(token.UID)
 			if err != nil {
 				ctx.Handle(500, "GetUserById", err)
 				return

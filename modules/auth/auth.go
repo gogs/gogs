@@ -44,7 +44,7 @@ func SignedInId(req *http.Request, sess session.Store) int64 {
 					}
 					return 0
 				}
-				return t.Uid
+				return t.UID
 			}
 		}
 	}

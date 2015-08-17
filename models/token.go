@@ -18,8 +18,8 @@ var (
 
 // AccessToken represents a personal access token.
 type AccessToken struct {
-	Id                int64
-	Uid               int64
+	ID                int64 `xorm:"pk autoincr"`
+	UID               int64 `xorm:"uid INDEX"`
 	Name              string
 	Sha1              string    `xorm:"UNIQUE VARCHAR(40)"`
 	Created           time.Time `xorm:"CREATED"`
