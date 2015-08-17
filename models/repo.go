@@ -173,7 +173,7 @@ func (repo *Repository) getOwner(e Engine) (err error) {
 	return err
 }
 
-func (repo *Repository) GetOwner() (err error) {
+func (repo *Repository) GetOwner() error {
 	return repo.getOwner(x)
 }
 
@@ -326,10 +326,21 @@ func IsUsableName(name string) error {
 type Mirror struct {
 	ID         int64 `xorm:"pk autoincr"`
 	RepoID     int64
-	RepoName   string    // <user name>/<repo name>
-	Interval   int       // Hour.
-	Updated    time.Time `xorm:"UPDATED"`
+	Repo       *Repository `xorm:"-"`
+	Interval   int         // Hour.
+	Updated    time.Time   `xorm:"UPDATED"`
 	NextUpdate time.Time
+}
+
+func (m *Mirror) AfterSet(colName string, _ xorm.Cell) {
+	var err error
+	switch colName {
+	case "repo_id":
+		m.Repo, err = GetRepositoryByID(m.RepoID)
+		if err != nil {
+			log.Error(3, "GetRepositoryByID[%d]: %v", m.ID, err)
+		}
+	}
 }
 
 func getMirror(e Engine, repoId int64) (*Mirror, error) {
@@ -368,7 +379,6 @@ func MirrorRepository(repoId int64, userName, repoName, repoPath, url string) er
 
 	if _, err = x.InsertOne(&Mirror{
 		RepoID:     repoId,
-		RepoName:   strings.ToLower(userName + "/" + repoName),
 		Interval:   24,
 		NextUpdate: time.Now().Add(24 * time.Hour),
 	}); err != nil {
@@ -784,18 +794,6 @@ func TransferOwnership(u *User, newOwnerName string, repo *Repository) error {
 		return fmt.Errorf("transferRepoAction: %v", err)
 	}
 
-	// Update mirror information.
-	if repo.IsMirror {
-		mirror, err := getMirror(sess, repo.ID)
-		if err != nil {
-			return fmt.Errorf("getMirror: %v", err)
-		}
-		mirror.RepoName = newOwner.LowerName + "/" + repo.LowerName
-		if err = updateMirror(sess, mirror); err != nil {
-			return fmt.Errorf("updateMirror: %v", err)
-		}
-	}
-
 	// Change repository directory name.
 	if err = os.Rename(RepoPath(owner.Name, repo.Name), RepoPath(newOwner.Name, repo.Name)); err != nil {
 		return fmt.Errorf("rename directory: %v", err)
@@ -1122,22 +1120,32 @@ func MirrorUpdate() {
 	isMirrorUpdating = true
 	defer func() { isMirrorUpdating = false }()
 
-	mirrors := make([]*Mirror, 0, 10)
+	log.Trace("Doing: MirrorUpdate")
 
+	mirrors := make([]*Mirror, 0, 10)
 	if err := x.Iterate(new(Mirror), func(idx int, bean interface{}) error {
 		m := bean.(*Mirror)
 		if m.NextUpdate.After(time.Now()) {
 			return nil
 		}
 
-		repoPath := filepath.Join(setting.RepoRootPath, m.RepoName+".git")
+		if m.Repo == nil {
+			log.Error(4, "Disconnected mirror repository found: %d", m.ID)
+			return nil
+		}
+
+		repoPath, err := m.Repo.RepoPath()
+		if err != nil {
+			return fmt.Errorf("Repo.RepoPath: %v", err)
+		}
+
 		if _, stderr, err := process.ExecDir(10*time.Minute,
 			repoPath, fmt.Sprintf("MirrorUpdate: %s", repoPath),
 			"git", "remote", "update", "--prune"); err != nil {
 			desc := fmt.Sprintf("Fail to update mirror repository(%s): %s", repoPath, stderr)
 			log.Error(4, desc)
 			if err = CreateRepositoryNotice(desc); err != nil {
-				log.Error(4, "Fail to add notice: %v", err)
+				log.Error(4, "CreateRepositoryNotice: %v", err)
 			}
 			return nil
 		}
@@ -1151,7 +1159,7 @@ func MirrorUpdate() {
 
 	for i := range mirrors {
 		if err := UpdateMirror(mirrors[i]); err != nil {
-			log.Error(4, "UpdateMirror", fmt.Sprintf("%s: %v", mirrors[i].RepoName, err))
+			log.Error(4, "UpdateMirror[%d]: %v", mirrors[i].ID, err)
 		}
 	}
 }
@@ -1164,26 +1172,28 @@ func GitFsck() {
 	isGitFscking = true
 	defer func() { isGitFscking = false }()
 
+	log.Trace("Doing: GitFsck")
+
 	args := append([]string{"fsck"}, setting.Cron.RepoHealthCheck.Args...)
-	if err := x.Where("id > 0").Iterate(new(Repository),
+	if err := x.Where("id>0").Iterate(new(Repository),
 		func(idx int, bean interface{}) error {
 			repo := bean.(*Repository)
-			if err := repo.GetOwner(); err != nil {
-				return err
+			repoPath, err := repo.RepoPath()
+			if err != nil {
+				return fmt.Errorf("RepoPath: %v", err)
 			}
 
-			repoPath := RepoPath(repo.Owner.Name, repo.Name)
-			_, _, err := process.ExecDir(-1, repoPath, "Repository health check", "git", args...)
+			_, _, err = process.ExecDir(-1, repoPath, "Repository health check", "git", args...)
 			if err != nil {
 				desc := fmt.Sprintf("Fail to health check repository(%s)", repoPath)
 				log.Warn(desc)
 				if err = CreateRepositoryNotice(desc); err != nil {
-					log.Error(4, "Fail to add notice: %v", err)
+					log.Error(4, "CreateRepositoryNotice: %v", err)
 				}
 			}
 			return nil
 		}); err != nil {
-		log.Error(4, "repo.Fsck: %v", err)
+		log.Error(4, "GitFsck: %v", err)
 	}
 }
 
@@ -1210,33 +1220,55 @@ func CheckRepoStats() {
 	isCheckingRepos = true
 	defer func() { isCheckingRepos = false }()
 
-	// Check count watchers
-	results_watch, err := x.Query("SELECT r.id FROM `repository` r WHERE r.num_watches!=(SELECT count(*) FROM `watch` WHERE repo_id=r.id)")
-	if err != nil {
-		log.Error(4, "select repository check 'watch': %v", err)
-	}
-	for _, repo_id := range results_watch {
-		log.Trace("updating repository count 'watch'")
-		repoID := com.StrTo(repo_id["id"]).MustInt64()
-		_, err := x.Exec("UPDATE `repository` SET num_watches=(SELECT count(*) FROM `watch` WHERE repo_id=?) WHERE id=?", repoID, repoID)
-		if err != nil {
-			log.Error(4, "update repository check 'watch', repo %v: %v", repo_id, err)
-		}
-	}
+	log.Trace("Doing: CheckRepoStats")
 
-	// Check count stars
-	results_star, err := x.Query("SELECT s.id FROM `repository` s WHERE s.num_stars!=(SELECT count(*) FROM `star` WHERE repo_id=s.id)")
+	// ***** START: Watch *****
+	results, err := x.Query("SELECT repo.id FROM `repository` repo WHERE repo.num_watches!=(SELECT COUNT(*) FROM `watch` WHERE repo_id=repo.id)")
 	if err != nil {
-		log.Error(4, "select repository check 'star': %v", err)
+		log.Error(4, "Select repository check 'watch': %v", err)
+		return
 	}
-	for _, repo_id := range results_star {
-		log.Trace("updating repository count 'star'")
-		repoID := com.StrTo(repo_id["id"]).MustInt64()
-		_, err := x.Exec("UPDATE `repository` SET .num_stars=(SELECT count(*) FROM `star` WHERE repo_id=?) WHERE id=?", repoID, repoID)
+	for _, watch := range results {
+		repoID := com.StrTo(watch["id"]).MustInt64()
+		log.Trace("Updating repository count 'watch': %d", repoID)
+		_, err = x.Exec("UPDATE `repository` SET num_watches=(SELECT COUNT(*) FROM `watch` WHERE repo_id=?) WHERE id=?", repoID, repoID)
 		if err != nil {
-			log.Error(4, "update repository check 'star', repo %v: %v", repo_id, err)
+			log.Error(4, "Update repository check 'watch'[%d]: %v", repoID, err)
 		}
 	}
+	// ***** END: Watch *****
+
+	// ***** START: Star *****
+	results, err = x.Query("SELECT repo.id FROM `repository` repo WHERE repo.num_stars!=(SELECT COUNT(*) FROM `star` WHERE repo_id=repo.id)")
+	if err != nil {
+		log.Error(4, "Select repository check 'star': %v", err)
+		return
+	}
+	for _, star := range results {
+		repoID := com.StrTo(star["id"]).MustInt64()
+		log.Trace("Updating repository count 'star': %d", repoID)
+		_, err = x.Exec("UPDATE `repository` SET num_stars=(SELECT COUNT(*) FROM `star` WHERE repo_id=?) WHERE id=?", repoID, repoID)
+		if err != nil {
+			log.Error(4, "Update repository check 'star'[%d]: %v", repoID, err)
+		}
+	}
+	// ***** END: Star *****
+
+	// ***** START: Label *****
+	results, err = x.Query("SELECT label.id FROM `label` WHERE label.num_issues!=(SELECT COUNT(*) FROM `issue_label` WHERE label_id=label.id)")
+	if err != nil {
+		log.Error(4, "Select label check 'num_issues': %v", err)
+		return
+	}
+	for _, label := range results {
+		labelID := com.StrTo(label["id"]).MustInt64()
+		log.Trace("Updating label count 'num_issues': %d", labelID)
+		_, err = x.Exec("UPDATE `label` SET num_issues=(SELECT COUNT(*) FROM `issue_label` WHERE label_id=?) WHERE id=?", labelID, labelID)
+		if err != nil {
+			log.Error(4, "Update label check 'num_issues'[%d]: %v", labelID, err)
+		}
+	}
+	// ***** END: Label *****
 }
 
 // _________        .__  .__        ___.                        __  .__

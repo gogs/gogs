@@ -91,34 +91,33 @@ type FuncJob func()
 func (f FuncJob) Run() { f() }
 
 // AddFunc adds a func to the Cron to be run on the given schedule.
-func (c *Cron) AddFunc(desc, spec string, cmd func()) error {
+func (c *Cron) AddFunc(desc, spec string, cmd func()) (*Entry, error) {
 	return c.AddJob(desc, spec, FuncJob(cmd))
 }
 
 // AddFunc adds a Job to the Cron to be run on the given schedule.
-func (c *Cron) AddJob(desc, spec string, cmd Job) error {
+func (c *Cron) AddJob(desc, spec string, cmd Job) (*Entry, error) {
 	schedule, err := Parse(spec)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	c.Schedule(desc, spec, schedule, cmd)
-	return nil
+	return c.Schedule(desc, spec, schedule, cmd), nil
 }
 
 // Schedule adds a Job to the Cron to be run on the given schedule.
-func (c *Cron) Schedule(desc, spec string, schedule Schedule, cmd Job) {
+func (c *Cron) Schedule(desc, spec string, schedule Schedule, cmd Job) *Entry {
 	entry := &Entry{
 		Description: desc,
 		Spec:        spec,
 		Schedule:    schedule,
 		Job:         cmd,
 	}
-	if !c.running {
+	if c.running {
+		c.add <- entry
+	} else {
 		c.entries = append(c.entries, entry)
-		return
 	}
-
-	c.add <- entry
+	return entry
 }
 
 // Entries returns a snapshot of the cron entries.

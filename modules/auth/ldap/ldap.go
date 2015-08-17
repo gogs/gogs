@@ -42,7 +42,7 @@ func (ls Ldapsource) FindUserDN(name string) (string, bool) {
 	if ls.BindDN != "" && ls.BindPassword != "" {
 		err = l.Bind(ls.BindDN, ls.BindPassword)
 		if err != nil {
-			log.Debug("Failed to bind as BindDN: %s, %s", ls.BindDN, err.Error())
+			log.Debug("Failed to bind as BindDN[%s]: %v", ls.BindDN, err)
 			return "", false
 		}
 		log.Trace("Bound as BindDN %s", ls.BindDN)
@@ -60,7 +60,7 @@ func (ls Ldapsource) FindUserDN(name string) (string, bool) {
 	// Ensure we found a user
 	sr, err := l.Search(search)
 	if err != nil || len(sr.Entries) < 1 {
-		log.Debug("Failed search using filter %s: %s", userFilter, err.Error())
+		log.Debug("Failed search using filter[%s]: %v", userFilter, err)
 		return "", false
 	} else if len(sr.Entries) > 1 {
 		log.Debug("Filter '%s' returned more than one user.", userFilter)
@@ -95,7 +95,7 @@ func (ls Ldapsource) SearchEntry(name, passwd string) (string, string, string, b
 	log.Trace("Binding with userDN: %s", userDN)
 	err = l.Bind(userDN, passwd)
 	if err != nil {
-		log.Debug("LDAP auth. failed for %s, reason: %s", userDN, err.Error())
+		log.Debug("LDAP auth. failed for %s, reason: %v", userDN, err)
 		return "", "", "", false
 	}
 
@@ -108,7 +108,7 @@ func (ls Ldapsource) SearchEntry(name, passwd string) (string, string, string, b
 
 	sr, err := l.Search(search)
 	if err != nil {
-		log.Error(4, "LDAP Search failed unexpectedly! (%s)", err.Error())
+		log.Error(4, "LDAP Search failed unexpectedly! (%v)", err)
 		return "", "", "", false
 	} else if len(sr.Entries) < 1 {
 		log.Error(4, "LDAP Search failed unexpectedly! (0 entries)")
