@@ -39,7 +39,7 @@ type InstallForm struct {
 	RequireSignInView   bool
 
 	AdminName          string `binding:"OmitEmpty;AlphaDashDot;MaxSize(30)" locale:"install.admin_name"`
-	AdminPasswd        string `binding:"OmitEmpty;MinSize(6);MaxSize(255)" locale:"install.admin_password"`
+	AdminPasswd        string `binding:"OmitEmpty;MaxSize(255)" locale:"install.admin_password"`
 	AdminConfirmPasswd string
 	AdminEmail         string `binding:"OmitEmpty;Email;MaxSize(50)" locale:"install.admin_email"`
 }
@@ -58,7 +58,7 @@ func (f *InstallForm) Validate(ctx *macaron.Context, errs binding.Errors) bindin
 type RegisterForm struct {
 	UserName  string `form:"uname" binding:"Required;AlphaDashDot;MaxSize(35)"`
 	Email     string `form:"email" binding:"Required;Email;MaxSize(50)"`
-	Password  string `form:"password" binding:"Required;MinSize(6);MaxSize(255)"`
+	Password  string `form:"password" binding:"Required;MaxSize(255)"`
 	Retype    string `form:"retype"`
 	LoginType string `form:"logintype"`
 	LoginName string `form:"loginname"`
@@ -70,7 +70,7 @@ func (f *RegisterForm) Validate(ctx *macaron.Context, errs binding.Errors) bindi
 
 type SignInForm struct {
 	UserName string `form:"uname" binding:"Required;MaxSize(35)"`
-	Password string `form:"password" binding:"Required;MinSize(6);MaxSize(255)"`
+	Password string `form:"password" binding:"Required;MaxSize(255)"`
 	Remember bool   `form:"remember"`
 }
 
@@ -117,7 +117,7 @@ func (f *AddEmailForm) Validate(ctx *macaron.Context, errs binding.Errors) bindi
 
 type ChangePasswordForm struct {
 	OldPassword string `form:"old_password" binding:"Required;MinSize(1);MaxSize(255)"`
-	Password    string `form:"password" binding:"Required;MinSize(6);MaxSize(255)"`
+	Password    string `form:"password" binding:"Required;MaxSize(255)"`
 	Retype      string `form:"retype"`
 }
 
