@@ -1,29 +1,14 @@
-#FROM debian:wheezy-backports
 FROM google/golang:latest
+MAINTAINER codeskyblue@gmail.com
+
 RUN echo "deb http://ftp.debian.org/debian/ wheezy-backports main" >> /etc/apt/sources.list
 RUN apt-get update
-#RUN apt-get install -y gcc libc6-dev make --no-install-recommends
-
-# install golang
-#ENV GOLANG_VERSION 1.4.3
-#RUN curl -sSL https://golang.org/dl/go$GOLANG_VERSION.src.tar.gz \
-#        | tar -v -C /usr/src -xz
-#RUN cd /usr/src/go/src && ./make.bash --no-clean 2>&1
-#ENV PATH /usr/src/go/bin:$PATH
-#ENV GOPATH /gopath
-
-ENV TAGS="sqlite redis memcache" 
-COPY  . /gopath/src/github.com/gogits/gogs/
-
-#RUN apt-cache search openssh-server
 RUN apt-get install -y openssh-server rsync
-##RUN echo "deb http://ftp.debian.org/debian/ wheezy-backports main" >> /etc/apt/sources.list \
-#    && apt-get update \
-#    && apt-get install -y -t wheezy-backports openssh-server rsync
-
 
 # set the working directory and add current stuff
+COPY  . /gopath/src/github.com/gogits/gogs/
 WORKDIR /gopath/src/github.com/gogits/gogs/
+
 RUN go get -v -tags "sqlite redis memcache cert"
 RUN go build -tags "sqlite redis memcache cert"
 
