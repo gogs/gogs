@@ -34,7 +34,7 @@ type CreateAccessTokenForm struct {
 // POST /users/:username/tokens
 func CreateAccessToken(ctx *middleware.Context, form CreateAccessTokenForm) {
 	t := &models.AccessToken{
-		Uid:  ctx.User.Id,
+		UID:  ctx.User.Id,
 		Name: form.Name,
 	}
 	if err := models.NewAccessToken(t); err != nil {
