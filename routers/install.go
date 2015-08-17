@@ -18,9 +18,9 @@ import (
 	"gopkg.in/ini.v1"
 
 	"github.com/gogits/gogs/models"
+	"github.com/gogits/gogs/models/cron"
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/modules/cron"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/mailer"
 	"github.com/gogits/gogs/modules/middleware"
