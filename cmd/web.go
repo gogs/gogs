@@ -249,7 +249,7 @@ func runWeb(ctx *cli.Context) {
 		})
 	}, ignSignIn)
 
-	// User.
+	// ***** START: User *****
 	m.Group("/user", func() {
 		m.Get("/login", user.SignIn)
 		m.Post("/login", bindIgnErr(auth.SignInForm{}), user.SignInPost)
@@ -259,6 +259,7 @@ func runWeb(ctx *cli.Context) {
 		m.Get("/reset_password", user.ResetPasswd)
 		m.Post("/reset_password", user.ResetPasswdPost)
 	}, reqSignOut)
+
 	m.Group("/user/settings", func() {
 		m.Get("", user.Settings)
 		m.Post("", bindIgnErr(auth.UpdateProfileForm{}), user.SettingsPost)
@@ -272,7 +273,11 @@ func runWeb(ctx *cli.Context) {
 		m.Get("/social", user.SettingsSocial)
 		m.Combo("/applications").Get(user.SettingsApplications).Post(bindIgnErr(auth.NewAccessTokenForm{}), user.SettingsApplicationsPost)
 		m.Route("/delete", "GET,POST", user.SettingsDelete)
-	}, reqSignIn)
+	}, reqSignIn, func(ctx *middleware.Context) {
+		ctx.Data["PageIsUserSettings"] = true
+		ctx.Data["HasOAuthService"] = setting.OauthService != nil
+	})
+
 	m.Group("/user", func() {
 		// r.Get("/feeds", binding.Bind(auth.FeedsForm{}), user.Feeds)
 		m.Any("/activate", user.Activate)
@@ -282,6 +287,7 @@ func runWeb(ctx *cli.Context) {
 		m.Post("/forget_password", user.ForgotPasswdPost)
 		m.Get("/logout", user.SignOut)
 	})
+	// ***** END: User *****
 
 	// Gravatar service.
 	avt := avatar.CacheServer("public/img/avatar/", "public/img/avatar_default.jpg")

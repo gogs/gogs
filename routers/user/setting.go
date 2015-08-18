@@ -33,14 +33,12 @@ const (
 
 func Settings(ctx *middleware.Context) {
 	ctx.Data["Title"] = ctx.Tr("settings")
-	ctx.Data["PageIsUserSettings"] = true
 	ctx.Data["PageIsSettingsProfile"] = true
 	ctx.HTML(200, SETTINGS_PROFILE)
 }
 
 func SettingsPost(ctx *middleware.Context, form auth.UpdateProfileForm) {
 	ctx.Data["Title"] = ctx.Tr("settings")
-	ctx.Data["PageIsUserSettings"] = true
 	ctx.Data["PageIsSettingsProfile"] = true
 
 	if ctx.HasError() {
@@ -132,7 +130,6 @@ func SettingsAvatar(ctx *middleware.Context, form auth.UploadAvatarForm) {
 
 func SettingsEmails(ctx *middleware.Context) {
 	ctx.Data["Title"] = ctx.Tr("settings")
-	ctx.Data["PageIsUserSettings"] = true
 	ctx.Data["PageIsSettingsEmails"] = true
 
 	emails, err := models.GetEmailAddresses(ctx.User.Id)
@@ -147,7 +144,6 @@ func SettingsEmails(ctx *middleware.Context) {
 
 func SettingsEmailPost(ctx *middleware.Context, form auth.AddEmailForm) {
 	ctx.Data["Title"] = ctx.Tr("settings")
-	ctx.Data["PageIsUserSettings"] = true
 	ctx.Data["PageIsSettingsEmails"] = true
 
 	emails, err := models.GetEmailAddresses(ctx.User.Id)
@@ -232,14 +228,12 @@ func SettingsEmailPost(ctx *middleware.Context, form auth.AddEmailForm) {
 
 func SettingsPassword(ctx *middleware.Context) {
 	ctx.Data["Title"] = ctx.Tr("settings")
-	ctx.Data["PageIsUserSettings"] = true
 	ctx.Data["PageIsSettingsPassword"] = true
 	ctx.HTML(200, SETTINGS_PASSWORD)
 }
 
 func SettingsPasswordPost(ctx *middleware.Context, form auth.ChangePasswordForm) {
 	ctx.Data["Title"] = ctx.Tr("settings")
-	ctx.Data["PageIsUserSettings"] = true
 	ctx.Data["PageIsSettingsPassword"] = true
 
 	if ctx.HasError() {
@@ -273,7 +267,6 @@ func SettingsPasswordPost(ctx *middleware.Context, form auth.ChangePasswordForm)
 
 func SettingsSSHKeys(ctx *middleware.Context) {
 	ctx.Data["Title"] = ctx.Tr("settings")
-	ctx.Data["PageIsUserSettings"] = true
 	ctx.Data["PageIsSettingsSSHKeys"] = true
 
 	var err error
@@ -288,7 +281,6 @@ func SettingsSSHKeys(ctx *middleware.Context) {
 
 func SettingsSSHKeysPost(ctx *middleware.Context, form auth.AddSSHKeyForm) {
 	ctx.Data["Title"] = ctx.Tr("settings")
-	ctx.Data["PageIsUserSettings"] = true
 	ctx.Data["PageIsSettingsSSHKeys"] = true
 
 	var err error
@@ -355,7 +347,6 @@ func SettingsSSHKeysPost(ctx *middleware.Context, form auth.AddSSHKeyForm) {
 
 func SettingsSocial(ctx *middleware.Context) {
 	ctx.Data["Title"] = ctx.Tr("settings")
-	ctx.Data["PageIsUserSettings"] = true
 	ctx.Data["PageIsSettingsSocial"] = true
 
 	// Unbind social account.
@@ -381,7 +372,6 @@ func SettingsSocial(ctx *middleware.Context) {
 
 func SettingsApplications(ctx *middleware.Context) {
 	ctx.Data["Title"] = ctx.Tr("settings")
-	ctx.Data["PageIsUserSettings"] = true
 	ctx.Data["PageIsSettingsApplications"] = true
 
 	// Delete access token.
@@ -409,7 +399,6 @@ func SettingsApplications(ctx *middleware.Context) {
 // FIXME: split to two different functions and pages to handle access token and oauth2
 func SettingsApplicationsPost(ctx *middleware.Context, form auth.NewAccessTokenForm) {
 	ctx.Data["Title"] = ctx.Tr("settings")
-	ctx.Data["PageIsUserSettings"] = true
 	ctx.Data["PageIsSettingsApplications"] = true
 
 	switch ctx.Query("type") {
@@ -437,11 +426,18 @@ func SettingsApplicationsPost(ctx *middleware.Context, form auth.NewAccessTokenF
 
 func SettingsDelete(ctx *middleware.Context) {
 	ctx.Data["Title"] = ctx.Tr("settings")
-	ctx.Data["PageIsUserSettings"] = true
 	ctx.Data["PageIsSettingsDelete"] = true
 
 	if ctx.Req.Method == "POST" {
-		// FIXME: validate password.
+		if _, err := models.UserSignIn(ctx.User.Name, ctx.Query("password")); err != nil {
+			if models.IsErrUserNotExist(err) {
+				ctx.RenderWithErr(ctx.Tr("form.enterred_invalid_password"), SETTINGS_DELETE, nil)
+			} else {
+				ctx.Handle(500, "UserSignIn", err)
+			}
+			return
+		}
+
 		if err := models.DeleteUser(ctx.User); err != nil {
 			switch {
 			case models.IsErrUserOwnRepos(err):

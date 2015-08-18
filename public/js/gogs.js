@@ -336,6 +336,11 @@ $(document).ready(function () {
         $('.delete.modal').modal({
             closable: false,
             onApprove: function () {
+                if ($this.data('type') == "form") {
+                    $($this.data('form')).submit();
+                    return;
+                }
+
                 $.post($this.data('url'), {
                     "_csrf": csrf,
                     "id": $this.data("id")
