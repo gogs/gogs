@@ -1,50 +1,61 @@
 # Docker for Gogs
 
+Visit [Docker Hub](https://hub.docker.com/r/gogs/gogs/) see all available tags.
+
 ## Usage
 
-```
-docker pull gogs/gogs
+To keep your data out of Docker container, we do a volume(`/var/gogs` -> `/data`) here, and you can change it based on your situation.
 
-mkdir -p /var/gogs
-docker run --name=gogs -p 10022:22 -p 10080:3000 -v /var/gogs:/data gogs/gogs
+```
+# Pull image from Docker Hub.
+$ docker pull gogs/gogs
+
+# Create local directory for volume.
+$ mkdir -p /var/gogs
+
+# Use `docker run` for the first time.
+$ docker run --name=gogs -p 10022:22 -p 10080:3000 -v /var/gogs:/data gogs/gogs
+
+# Use `docker start` if you have stopped it.
+$ docker start gogs 
 ```
 
-File will store in local path: `/var/gogs`.
+Files will be store in local path `/var/gogs` in my case.
 
 Directory `/var/gogs` keeps Git repoistories and Gogs data:
 
     /var/gogs
     |-- git
-    |   `-- gogs-repositories
+    |   |-- gogs-repositories
     |-- ssh
-    |    `-- # ssh pub-pri keys for gogs
-    `---- gogs
+    |   |-- # ssh public/private keys for Gogs
+    |-- gogs
         |-- conf
         |-- data
         |-- log
-        `-- templates
+        |-- templates
 
 ## SSH Support
 
-In order to support SSH, You need to change `HTTP_PORT` and `SSH_PORT` in `/var/gogs/gogs/conf/app.ini`:
+In order to support SSH, You need to change `SSH_PORT` in `/var/gogs/gogs/conf/app.ini`:
 
 ```
 [server]
-HTTP_PORT = 3000
 SSH_PORT = 10022
 ```
 
 Full documentation of settings can be found [here](http://gogs.io/docs/advanced/configuration_cheat_sheet.html).
 
 ## Todo
-Install page need support set `SSH_PORT`
 
-## Problems
+Install page need support set `SSH_PORT`.
 
-If meet error
+## Troubleshooting
+
+If you see the following error:
 
 ```
 checkVersion()] [E] Binary and template file version does not match
 ```
 
-Run `rm -fr /var/gogs/gogs/templates/` will fix. Remember to backup templates file, If you have some modification.
+Run `rm -fr /var/gogs/gogs/templates/` should fix this it. Just remember to backup templates file if you have made modifications youself.
