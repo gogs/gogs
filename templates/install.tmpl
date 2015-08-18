@@ -9,8 +9,6 @@
         {{template "base/alert" .}}
 
 			  <form class="ui form" action="{{AppSubUrl}}/install" method="post">
-			  	{{.CsrfTokenHtml}}
-
 			  	<!-- Dtabase Settings -->
 			  	<h4 class="ui dividing header">{{.i18n.Tr "install.db_title"}}</h4>
 			  	<p>{{.i18n.Tr "install.requite_db_desc"}}</p>
@@ -65,7 +63,7 @@
           </div>
 
           <div id="sqlite_settings" class="{{if not (eq .CurDbOption "SQLite3")}}hide{{end}}">
-            <div class="inline required field {{if .Err_DbPath}}error{{end}}">
+            <div class="inline required field {{if or .Err_DbPath .Err_DbSetting}}error{{end}}">
               <label for="db_path">{{.i18n.Tr "install.path"}}</label>
               <input id="db_path" name="db_path" value="{{.db_path}}">
               <span class="help">{{.i18n.Tr "install.sqlite_helper"}}</span>
