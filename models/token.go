@@ -62,8 +62,8 @@ func ListAccessTokens(uid int64) ([]*AccessToken, error) {
 	return tokens, nil
 }
 
-// DeleteAccessTokenById deletes access token by given ID.
-func DeleteAccessTokenById(id int64) error {
+// DeleteAccessTokenByID deletes access token by given ID.
+func DeleteAccessTokenByID(id int64) error {
 	_, err := x.Id(id).Delete(new(AccessToken))
 	return err
 }

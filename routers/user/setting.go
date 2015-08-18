@@ -374,18 +374,6 @@ func SettingsApplications(ctx *middleware.Context) {
 	ctx.Data["Title"] = ctx.Tr("settings")
 	ctx.Data["PageIsSettingsApplications"] = true
 
-	// Delete access token.
-	remove, _ := com.StrTo(ctx.Query("remove")).Int64()
-	if remove > 0 {
-		if err := models.DeleteAccessTokenById(remove); err != nil {
-			ctx.Handle(500, "DeleteAccessTokenById", err)
-			return
-		}
-		ctx.Flash.Success(ctx.Tr("settings.delete_token_success"))
-		ctx.Redirect(setting.AppSubUrl + "/user/settings/applications")
-		return
-	}
-
 	tokens, err := models.ListAccessTokens(ctx.User.Id)
 	if err != nil {
 		ctx.Handle(500, "ListAccessTokens", err)
@@ -396,32 +384,40 @@ func SettingsApplications(ctx *middleware.Context) {
 	ctx.HTML(200, SETTINGS_APPLICATIONS)
 }
 
-// FIXME: split to two different functions and pages to handle access token and oauth2
 func SettingsApplicationsPost(ctx *middleware.Context, form auth.NewAccessTokenForm) {
 	ctx.Data["Title"] = ctx.Tr("settings")
 	ctx.Data["PageIsSettingsApplications"] = true
 
-	switch ctx.Query("type") {
-	case "token":
-		if ctx.HasError() {
-			ctx.HTML(200, SETTINGS_APPLICATIONS)
-			return
-		}
-
-		t := &models.AccessToken{
-			UID:  ctx.User.Id,
-			Name: form.Name,
-		}
-		if err := models.NewAccessToken(t); err != nil {
-			ctx.Handle(500, "NewAccessToken", err)
-			return
-		}
-
-		ctx.Flash.Success(ctx.Tr("settings.generate_token_succees"))
-		ctx.Flash.Info(t.Sha1)
+	if ctx.HasError() {
+		ctx.HTML(200, SETTINGS_APPLICATIONS)
+		return
 	}
 
+	t := &models.AccessToken{
+		UID:  ctx.User.Id,
+		Name: form.Name,
+	}
+	if err := models.NewAccessToken(t); err != nil {
+		ctx.Handle(500, "NewAccessToken", err)
+		return
+	}
+
+	ctx.Flash.Success(ctx.Tr("settings.generate_token_succees"))
+	ctx.Flash.Info(t.Sha1)
+
 	ctx.Redirect(setting.AppSubUrl + "/user/settings/applications")
+}
+
+func SettingsDeleteApplication(ctx *middleware.Context) {
+	if err := models.DeleteAccessTokenByID(ctx.QueryInt64("id")); err != nil {
+		ctx.Flash.Error("DeleteAccessTokenByID: " + err.Error())
+	} else {
+		ctx.Flash.Success(ctx.Tr("settings.delete_token_success"))
+	}
+
+	ctx.JSON(200, map[string]interface{}{
+		"redirect": setting.AppSubUrl + "/user/settings/applications",
+	})
 }
 
 func SettingsDelete(ctx *middleware.Context) {

@@ -1013,7 +1013,7 @@ func ChangeMilestonStatus(ctx *middleware.Context) {
 
 func DeleteMilestone(ctx *middleware.Context) {
 	if err := models.DeleteMilestoneByID(ctx.QueryInt64("id")); err != nil {
-		ctx.Flash.Error("DeleteMilestone: " + err.Error())
+		ctx.Flash.Error("DeleteMilestoneByID: " + err.Error())
 	} else {
 		ctx.Flash.Success(ctx.Tr("repo.milestones.deletion_success"))
 	}
