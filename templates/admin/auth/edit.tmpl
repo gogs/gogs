@@ -49,7 +49,7 @@
                                 </div>
                                 <div class="field">
                                     <label for="bind_password">{{.i18n.Tr "admin.auths.bind_password"}}</label>
-                                    <input class="ipt ipt-large ipt-radius {{if .Err_BindPassword}}ipt-error{{end}}" id="bind_password" name="bind_password" value="{{.Source.LDAP.BindPassword}}" />
+                                    <input class="ipt ipt-large ipt-radius {{if .Err_BindPassword}}ipt-error{{end}}" id="bind_password" name="bind_password" type="password" value="{{.Source.LDAP.BindPassword}}" />
                                 </div>
                                 <div class="field">
                                     <label class="req" for="user_base">{{.i18n.Tr "admin.auths.user_base"}}</label>
