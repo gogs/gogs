@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"net/http/fcgi"
 	"os"
+	"os/signal"
 	"path"
 	"strings"
 
@@ -529,6 +530,16 @@ func runWeb(ctx *cli.Context) {
 
 	// Not found handler.
 	m.NotFound(routers.NotFound)
+
+	// Detect kill signal.
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+	go func() {
+		for _ = range c {
+			fmt.Println("Kill signal detected, exiting now...")
+			os.Exit(0)
+		}
+	}()
 
 	// Flag for port number in case first time run conflict.
 	if ctx.IsSet("port") {
