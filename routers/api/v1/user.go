@@ -18,7 +18,7 @@ import (
 // ToApiUser converts user to API format.
 func ToApiUser(u *models.User) *api.User {
 	return &api.User{
-		Id:        u.Id,
+		ID:        u.Id,
 		UserName:  u.Name,
 		AvatarUrl: string(setting.Protocol) + u.AvatarLink(),
 	}
@@ -45,9 +45,13 @@ func SearchUsers(ctx *middleware.Context) {
 	results := make([]*api.User, len(us))
 	for i := range us {
 		results[i] = &api.User{
+			ID:        us[i].Id,
 			UserName:  us[i].Name,
 			AvatarUrl: us[i].AvatarLink(),
 			FullName:  us[i].FullName,
+		}
+		if ctx.IsSigned {
+			results[i].Email = us[i].Email
 		}
 	}
 
