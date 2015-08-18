@@ -373,17 +373,9 @@ func CreateUser(u *User) (err error) {
 	} else if err = os.MkdirAll(UserPath(u.Name), os.ModePerm); err != nil {
 		sess.Rollback()
 		return err
-	} else if err = sess.Commit(); err != nil {
-		return err
 	}
 
-	// Auto-set admin for the first user.
-	if CountUsers() == 1 {
-		u.IsAdmin = true
-		u.IsActive = true
-		_, err = x.Id(u.Id).AllCols().Update(u)
-	}
-	return err
+	return sess.Commit()
 }
 
 func countUsers(e Engine) int64 {

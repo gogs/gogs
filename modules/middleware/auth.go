@@ -80,7 +80,7 @@ func Toggle(options *ToggleOptions) macaron.Handler {
 			return
 		}
 
-		if !options.SignOutRequire && !options.DisableCsrf && ctx.Req.Method == "POST" {
+		if !options.SignOutRequire && !options.DisableCsrf && ctx.Req.Method == "POST" && !auth.IsAPIPath(ctx.Req.URL.Path) {
 			csrf.Validate(ctx.Context, ctx.csrf)
 			if ctx.Written() {
 				return

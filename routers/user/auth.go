@@ -220,7 +220,6 @@ func SignUpPost(ctx *middleware.Context, cpt *captcha.Captcha, form auth.Registe
 		Passwd:   form.Password,
 		IsActive: !setting.Service.RegisterEmailConfirm || isOauth,
 	}
-
 	if err := models.CreateUser(u); err != nil {
 		switch {
 		case models.IsErrUserAlreadyExist(err):
@@ -241,6 +240,16 @@ func SignUpPost(ctx *middleware.Context, cpt *captcha.Captcha, form auth.Registe
 		return
 	}
 	log.Trace("Account created: %s", u.Name)
+
+	// Auto-set admin for the only user.
+	if models.CountUsers() == 1 {
+		u.IsAdmin = true
+		u.IsActive = true
+		if err := models.UpdateUser(u); err != nil {
+			ctx.Handle(500, "UpdateUser", err)
+			return
+		}
+	}
 
 	// Bind social account.
 	if isOauth {
