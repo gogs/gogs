@@ -206,7 +206,7 @@ func runWeb(ctx *cli.Context) {
 		m.Get("/issues", user.Issues)
 	}, reqSignIn)
 
-	// API.
+	// ***** START: API *****
 	// FIXME: custom form error response.
 	m.Group("/api", func() {
 		m.Group("/v1", func() {
@@ -248,6 +248,7 @@ func runWeb(ctx *cli.Context) {
 			})
 		})
 	}, ignSignIn)
+	// ***** END: API *****
 
 	// ***** START: User *****
 	m.Group("/user", func() {
