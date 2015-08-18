@@ -271,7 +271,9 @@ func runWeb(ctx *cli.Context) {
 		m.Get("/ssh", user.SettingsSSHKeys)
 		m.Post("/ssh", bindIgnErr(auth.AddSSHKeyForm{}), user.SettingsSSHKeysPost)
 		m.Get("/social", user.SettingsSocial)
-		m.Combo("/applications").Get(user.SettingsApplications).Post(bindIgnErr(auth.NewAccessTokenForm{}), user.SettingsApplicationsPost)
+		m.Combo("/applications").Get(user.SettingsApplications).
+			Post(bindIgnErr(auth.NewAccessTokenForm{}), user.SettingsApplicationsPost)
+		m.Post("/applications/delete", user.SettingsDeleteApplication)
 		m.Route("/delete", "GET,POST", user.SettingsDelete)
 	}, reqSignIn, func(ctx *middleware.Context) {
 		ctx.Data["PageIsUserSettings"] = true

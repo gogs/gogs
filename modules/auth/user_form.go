@@ -135,7 +135,7 @@ func (f *AddSSHKeyForm) Validate(ctx *macaron.Context, errs binding.Errors) bind
 }
 
 type NewAccessTokenForm struct {
-	Name string `form:"name" binding:"Required"`
+	Name string `binding:"Required"`
 }
 
 func (f *NewAccessTokenForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {

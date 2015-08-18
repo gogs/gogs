@@ -226,13 +226,6 @@ function initRepository() {
         });
     }
 
-    // Settings
-    if ($('.repository.settings').length > 0) {
-        $('#add-deploy-key').click(function () {
-            $('#add-deploy-key-panel').show();
-        });
-    }
-
     // Issues
     if ($('.repository.view.issue').length > 0) {
         var $status_btn = $('#status-button');
@@ -350,6 +343,9 @@ $(document).ready(function () {
             }
         }).modal('show');
         return false;
+    });
+    $('.show-panel.button').click(function () {
+        $($(this).data('panel')).show();
     });
 
     initCommentForm();
