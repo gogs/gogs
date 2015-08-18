@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"reflect"
 	"strings"
+	"time"
 
 	"github.com/Unknwon/com"
 	"github.com/Unknwon/macaron"
@@ -37,12 +38,16 @@ func SignedInId(req *http.Request, sess session.Store) int64 {
 		if len(auHead) > 0 {
 			auths := strings.Fields(auHead)
 			if len(auths) == 2 && auths[0] == "token" {
-				t, err := models.GetAccessTokenBySha(auths[1])
+				t, err := models.GetAccessTokenBySHA(auths[1])
 				if err != nil {
 					if err != models.ErrAccessTokenNotExist {
-						log.Error(4, "GetAccessTokenBySha: %v", err)
+						log.Error(4, "GetAccessTokenBySHA: %v", err)
 					}
 					return 0
+				}
+				t.Updated = time.Now()
+				if err = models.UpdateAccessToekn(t); err != nil {
+					log.Error(4, "UpdateAccessToekn: %v", err)
 				}
 				return t.UID
 			}

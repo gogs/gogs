@@ -35,8 +35,8 @@ func NewAccessToken(t *AccessToken) error {
 	return err
 }
 
-// GetAccessTokenBySha returns access token by given sha1.
-func GetAccessTokenBySha(sha string) (*AccessToken, error) {
+// GetAccessTokenBySHA returns access token by given sha1.
+func GetAccessTokenBySHA(sha string) (*AccessToken, error) {
 	t := &AccessToken{Sha1: sha}
 	has, err := x.Get(t)
 	if err != nil {
@@ -60,6 +60,12 @@ func ListAccessTokens(uid int64) ([]*AccessToken, error) {
 		t.HasRecentActivity = t.Updated.Add(7 * 24 * time.Hour).After(time.Now())
 	}
 	return tokens, nil
+}
+
+// UpdateAccessToekn updates information of access token.
+func UpdateAccessToekn(t *AccessToken) error {
+	_, err := x.Id(t.ID).AllCols().Update(t)
+	return err
 }
 
 // DeleteAccessTokenByID deletes access token by given ID.
