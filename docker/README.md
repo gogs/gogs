@@ -59,3 +59,7 @@ checkVersion()] [E] Binary and template file version does not match
 ```
 
 Run `rm -fr /var/gogs/gogs/templates/` should fix this it. Just remember to backup templates file if you have made modifications youself.
+
+## Known Issues
+
+- [Use ctrl+c when clone through SSH makes Docker exit unexpectedly](https://github.com/gogits/gogs/issues/1499)
