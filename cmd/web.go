@@ -222,7 +222,8 @@ func runWeb(ctx *cli.Context) {
 					m.Get("", v1.GetUserInfo)
 
 					m.Group("/tokens", func() {
-						m.Combo("").Get(v1.ListAccessTokens).Post(bind(v1.CreateAccessTokenForm{}), v1.CreateAccessToken)
+						m.Combo("").Get(v1.ListAccessTokens).
+							Post(bind(v1.CreateAccessTokenForm{}), v1.CreateAccessToken)
 					}, middleware.ApiReqBasicAuth())
 				})
 			})
