@@ -24,6 +24,7 @@ type InstallForm struct {
 	RepoRootPath string `binding:"Required"`
 	RunUser      string `binding:"Required"`
 	Domain       string `binding:"Required"`
+	SSHPort      int
 	HTTPPort     string `binding:"Required"`
 	AppUrl       string `binding:"Required"`
 

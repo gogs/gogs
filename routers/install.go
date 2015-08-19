@@ -118,6 +118,7 @@ func Install(ctx *middleware.Context) {
 	}
 
 	form.Domain = setting.Domain
+	form.SSHPort = setting.SSHPort
 	form.HTTPPort = setting.HttpPort
 	form.AppUrl = setting.AppUrl
 
@@ -240,6 +241,13 @@ func InstallPost(ctx *middleware.Context, form auth.InstallForm) {
 	cfg.Section("server").Key("DOMAIN").SetValue(form.Domain)
 	cfg.Section("server").Key("HTTP_PORT").SetValue(form.HTTPPort)
 	cfg.Section("server").Key("ROOT_URL").SetValue(form.AppUrl)
+
+	if form.SSHPort == 0 {
+		cfg.Section("server").Key("DISABLE_SSH").SetValue("true")
+	} else {
+		cfg.Section("server").Key("DISABLE_SSH").SetValue("false")
+		cfg.Section("server").Key("SSH_PORT").SetValue(com.ToStr(form.SSHPort))
+	}
 
 	if len(strings.TrimSpace(form.SMTPHost)) > 0 {
 		cfg.Section("mailer").Key("ENABLED").SetValue("true")

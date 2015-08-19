@@ -93,6 +93,11 @@
             <span class="help">{{.i18n.Tr "install.domain_helper"}}</span>
           </div>
           <div class="inline required field">
+            <label for="ssh_port">{{.i18n.Tr "install.ssh_port"}}</label>
+            <input id="ssh_port" name="ssh_port" value="{{.ssh_port}}">
+            <span class="help">{{.i18n.Tr "install.ssh_port_helper"}}</span>
+          </div>
+          <div class="inline required field">
             <label for="http_port">{{.i18n.Tr "install.http_port"}}</label>
             <input id="http_port" name="http_port" value="{{.http_port}}" required>
             <span class="help">{{.i18n.Tr "install.http_port_helper"}}</span>
@@ -105,6 +110,8 @@
 
           <!-- Optional Settings -->
           <h4 class="ui dividing header">{{.i18n.Tr "install.optional_title"}}</h4>
+
+          <!-- Email -->
           <div class="ui accordion optional field">
             <div class="title {{if .Err_SMTP}}text red{{end}}">
               <i class="icon dropdown"></i>
@@ -143,6 +150,7 @@
             </div>
           </div>
 
+          <!-- Server and other services -->
           <div class="ui accordion optional field">
             <div class="title">
               <i class="icon dropdown"></i>
@@ -170,6 +178,7 @@
             </div>
           </div>
 
+          <!-- Admin -->
           <div class="ui accordion optional field">
             <div class="title {{if .Err_Admin}}text red{{end}}">
               <i class="icon dropdown"></i>
