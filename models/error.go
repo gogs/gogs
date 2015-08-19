@@ -258,7 +258,27 @@ func IsErrIssueNotExist(err error) bool {
 }
 
 func (err ErrIssueNotExist) Error() string {
-	return fmt.Sprintf("issue does not exist [id: %d, repo_id: %d, index: %4]", err.ID, err.RepoID, err.Index)
+	return fmt.Sprintf("issue does not exist [id: %d, repo_id: %d, index: %d]", err.ID, err.RepoID, err.Index)
+}
+
+// _________                                       __
+// \_   ___ \  ____   _____   _____   ____   _____/  |_
+// /    \  \/ /  _ \ /     \ /     \_/ __ \ /    \   __\
+// \     \___(  <_> )  Y Y  \  Y Y  \  ___/|   |  \  |
+//  \______  /\____/|__|_|  /__|_|  /\___  >___|  /__|
+//         \/             \/      \/     \/     \/
+
+type ErrCommentNotExist struct {
+	ID int64
+}
+
+func IsErrCommentNotExist(err error) bool {
+	_, ok := err.(ErrCommentNotExist)
+	return ok
+}
+
+func (err ErrCommentNotExist) Error() string {
+	return fmt.Sprintf("comment does not exist [id: %d]", err.ID)
 }
 
 // .____          ___.          .__
