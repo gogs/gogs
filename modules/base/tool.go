@@ -273,7 +273,6 @@ func TimeSincePro(then time.Time) string {
 
 func timeSince(then time.Time, lang string) string {
 	now := time.Now()
-	fmt.Println(2, now)
 
 	lbl := i18n.Tr(lang, "tool.ago")
 	diff := now.Unix() - then.Unix()
