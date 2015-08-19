@@ -23,6 +23,7 @@ type AuthenticationForm struct {
 	AttributeSurname  string
 	AttributeMail     string
 	Filter            string
+	AdminFilter       string
 	IsActived         bool
 	SMTPAuth          string `form:"smtp_auth"`
 	SMTPHost          string `form:"smtp_host"`
