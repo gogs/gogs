@@ -12,7 +12,6 @@ import (
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/middleware"
-	"github.com/gogits/gogs/modules/setting"
 )
 
 // ToApiUser converts user to API format.
@@ -20,7 +19,9 @@ func ToApiUser(u *models.User) *api.User {
 	return &api.User{
 		ID:        u.Id,
 		UserName:  u.Name,
-		AvatarUrl: string(setting.Protocol) + u.AvatarLink(),
+		FullName:  u.FullName,
+		Email:     u.Email,
+		AvatarUrl: u.AvatarLink(),
 	}
 }
 
