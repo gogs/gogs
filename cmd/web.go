@@ -467,7 +467,7 @@ func runWeb(ctx *cli.Context) {
 
 			m.Combo("/:index/comments").Post(bindIgnErr(auth.CreateCommentForm{}), repo.NewComment)
 			m.Group("/:index", func() {
-				m.Post("", bindIgnErr(auth.CreateIssueForm{}), repo.UpdateIssue)
+				m.Post("/title", repo.UpdateIssueTitle)
 				m.Post("/label", repo.UpdateIssueLabel)
 				m.Post("/milestone", repo.UpdateIssueMilestone)
 				m.Post("/assignee", repo.UpdateIssueAssignee)
