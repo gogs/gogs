@@ -24,6 +24,7 @@ import (
 	"github.com/gogits/gogs/modules/bindata"
 	"github.com/gogits/gogs/modules/log"
 	// "github.com/gogits/gogs/modules/ssh"
+	"github.com/gogits/gogs/modules/user"
 )
 
 type Scheme string
@@ -324,10 +325,7 @@ func NewConfigContext() {
 	}[Cfg.Section("time").Key("FORMAT").MustString("RFC1123")]
 
 	RunUser = Cfg.Section("").Key("RUN_USER").String()
-	curUser := os.Getenv("USER")
-	if len(curUser) == 0 {
-		curUser = os.Getenv("USERNAME")
-	}
+	curUser := user.CurrentUsername()
 	// Does not check run user when the install lock is off.
 	if InstallLock && RunUser != curUser {
 		log.Fatal(4, "Expect user(%s) but current user is: %s", RunUser, curUser)
