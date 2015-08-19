@@ -14,6 +14,8 @@ import (
 	"time"
 	"unicode"
 
+	"github.com/go-xorm/xorm"
+
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/git"
 	"github.com/gogits/gogs/modules/log"
@@ -75,6 +77,13 @@ type Action struct {
 	IsPrivate    bool      `xorm:"NOT NULL DEFAULT false"`
 	Content      string    `xorm:"TEXT"`
 	Created      time.Time `xorm:"created"`
+}
+
+func (a *Action) AfterSet(colName string, _ xorm.Cell) {
+	switch colName {
+	case "created":
+		a.Created = a.Created.UTC()
+	}
 }
 
 func (a Action) GetOpType() int {
