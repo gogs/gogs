@@ -10,7 +10,9 @@ import (
 	"os"
 	"path"
 	"strings"
+	"time"
 
+	"github.com/Unknwon/com"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/go-xorm/core"
 	"github.com/go-xorm/xorm"
@@ -38,6 +40,25 @@ func sessionRelease(sess *xorm.Session) {
 		sess.Rollback()
 	}
 	sess.Close()
+}
+
+// Note: get back time.Time from database Go sees it at UTC where they are really Local.
+// 	So this function makes correct timezone offset.
+func regulateTimeZone(t time.Time) time.Time {
+	if setting.UseSQLite3 {
+		return t
+	}
+
+	zone := t.Local().Format("-0700")
+	if len(zone) != 5 {
+		return t
+	}
+	offset := com.StrTo(zone[2:3]).MustInt()
+
+	if zone[0] == '-' {
+		return t.Add(time.Duration(offset) * time.Hour)
+	}
+	return t.Add(-1 * time.Duration(offset) * time.Hour)
 }
 
 var (
