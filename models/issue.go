@@ -93,7 +93,8 @@ func (i *Issue) AfterSet(colName string, _ xorm.Cell) {
 			log.Error(3, "GetUserByID[%d]: %v", i.ID, err)
 		}
 	case "created":
-		i.Created = i.Created.UTC()
+		now := time.Now()
+		i.Created = i.Created.Add(now.Sub(now.UTC()))
 	}
 }
 
@@ -1359,7 +1360,8 @@ func (c *Comment) AfterSet(colName string, _ xorm.Cell) {
 			}
 		}
 	case "created":
-		fmt.Println(1, c.Created)
+		now := time.Now()
+		c.Created = c.Created.Add(now.Sub(now.UTC()))
 	}
 }
 
