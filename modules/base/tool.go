@@ -252,7 +252,7 @@ func computeTimeDiff(diff int64) (int64, string) {
 
 // TimeSincePro calculates the time interval and generate full user-friendly string.
 func TimeSincePro(then time.Time) string {
-	now := time.Now().UTC()
+	now := time.Now()
 	diff := now.Unix() - then.Unix()
 
 	if then.After(now) {
@@ -272,7 +272,8 @@ func TimeSincePro(then time.Time) string {
 }
 
 func timeSince(then time.Time, lang string) string {
-	now := time.Now().UTC()
+	now := time.Now()
+	fmt.Println(2, now)
 
 	lbl := i18n.Tr(lang, "tool.ago")
 	diff := now.Unix() - then.Unix()
