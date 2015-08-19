@@ -60,11 +60,6 @@ type Issue struct {
 	Comments    []*Comment    `xorm:"-"`
 }
 
-// HashTag returns unique hash tag for issue.
-func (i *Issue) HashTag() string {
-	return "issue-" + com.ToStr(i.ID)
-}
-
 func (i *Issue) AfterSet(colName string, _ xorm.Cell) {
 	var err error
 	switch colName {
@@ -97,7 +92,14 @@ func (i *Issue) AfterSet(colName string, _ xorm.Cell) {
 		if err != nil {
 			log.Error(3, "GetUserByID[%d]: %v", i.ID, err)
 		}
+	case "created":
+		i.Created = i.Created.UTC()
 	}
+}
+
+// HashTag returns unique hash tag for issue.
+func (i *Issue) HashTag() string {
+	return "issue-" + com.ToStr(i.ID)
 }
 
 // IsPoster returns true if given user by ID is the poster.
@@ -1337,16 +1339,6 @@ type Comment struct {
 	ShowTag CommentTag `xorm:"-"`
 }
 
-// HashTag returns unique hash tag for comment.
-func (c *Comment) HashTag() string {
-	return "issuecomment-" + com.ToStr(c.ID)
-}
-
-// EventTag returns unique event hash tag for comment.
-func (c *Comment) EventTag() string {
-	return "event-" + com.ToStr(c.ID)
-}
-
 func (c *Comment) AfterSet(colName string, _ xorm.Cell) {
 	var err error
 	switch colName {
@@ -1366,7 +1358,19 @@ func (c *Comment) AfterSet(colName string, _ xorm.Cell) {
 				log.Error(3, "GetUserByID[%d]: %v", c.ID, err)
 			}
 		}
+	case "created":
+		c.Created = c.Created.UTC()
 	}
+}
+
+// HashTag returns unique hash tag for comment.
+func (c *Comment) HashTag() string {
+	return "issuecomment-" + com.ToStr(c.ID)
+}
+
+// EventTag returns unique event hash tag for comment.
+func (c *Comment) EventTag() string {
+	return "event-" + com.ToStr(c.ID)
 }
 
 func createComment(e *xorm.Session, u *User, repo *Repository, issue *Issue, commitID, line int64, cmtType CommentType, content string, uuids []string) (_ *Comment, err error) {
