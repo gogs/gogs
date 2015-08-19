@@ -82,7 +82,8 @@ type Action struct {
 func (a *Action) AfterSet(colName string, _ xorm.Cell) {
 	switch colName {
 	case "created":
-		a.Created = a.Created.UTC()
+		now := time.Now()
+		a.Created = a.Created.Add(now.Sub(now.UTC()))
 	}
 }
 
