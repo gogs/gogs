@@ -470,7 +470,7 @@ func trimCommitActionAppUrlPrefix(x *xorm.Engine) error {
 		if _, err = sess.Id(actID).Update(&Action{
 			Content: string(p),
 		}); err != nil {
-			return fmt.Errorf("update action[%s]: %v", actID, err)
+			return fmt.Errorf("update action[%d]: %v", actID, err)
 		}
 	}
 	return sess.Commit()

@@ -120,7 +120,7 @@ func createRepo(ctx *middleware.Context, owner *models.User, opt api.CreateRepoO
 		return
 	}
 
-	ctx.JSON(200, ToApiRepository(owner, repo, api.Permission{true, true, true}))
+	ctx.JSON(201, ToApiRepository(owner, repo, api.Permission{true, true, true}))
 }
 
 // POST /user/repos
@@ -254,17 +254,11 @@ func ListMyRepos(ctx *middleware.Context) {
 	i := numOwnRepos
 
 	for repo, access := range accessibleRepos {
-		if err = repo.GetOwner(); err != nil {
-			ctx.JSON(500, &base.ApiJsonErr{"GetOwner: " + err.Error(), base.DOC_URL})
-			return
-		}
-
-		repos[i] = ToApiRepository(repo.Owner, repo, api.Permission{false, access >= models.ACCESS_MODE_WRITE, true})
-
-		// FIXME: cache result to reduce DB query?
-		if repo.Owner.IsOrganization() && repo.Owner.IsOwnedBy(ctx.User.Id) {
-			repos[i].Permissions.Admin = true
-		}
+		repos[i] = ToApiRepository(repo.Owner, repo, api.Permission{
+			Admin: access >= models.ACCESS_MODE_ADMIN,
+			Push:  access >= models.ACCESS_MODE_WRITE,
+			Pull:  true,
+		})
 		i++
 	}
 
