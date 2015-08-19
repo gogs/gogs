@@ -1359,7 +1359,7 @@ func (c *Comment) AfterSet(colName string, _ xorm.Cell) {
 			}
 		}
 	case "created":
-		c.Created = c.Created.UTC()
+		fmt.Println(1, c.Created)
 	}
 }
 
