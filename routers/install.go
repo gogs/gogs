@@ -26,6 +26,7 @@ import (
 	"github.com/gogits/gogs/modules/middleware"
 	"github.com/gogits/gogs/modules/setting"
 	"github.com/gogits/gogs/modules/social"
+	"github.com/gogits/gogs/modules/user"
 )
 
 const (
@@ -111,10 +112,7 @@ func Install(ctx *middleware.Context) {
 	// Note(unknwon): it's hard for Windows users change a running user,
 	// 	so just use current one if config says default.
 	if setting.IsWindows && setting.RunUser == "git" {
-		form.RunUser = os.Getenv("USER")
-		if len(form.RunUser) == 0 {
-			form.RunUser = os.Getenv("USERNAME")
-		}
+		form.RunUser = user.CurrentUsername()
 	} else {
 		form.RunUser = setting.RunUser
 	}
@@ -201,10 +199,7 @@ func InstallPost(ctx *middleware.Context, form auth.InstallForm) {
 	}
 
 	// Check run user.
-	curUser := os.Getenv("USER")
-	if len(curUser) == 0 {
-		curUser = os.Getenv("USERNAME")
-	}
+	curUser := user.CurrentUsername()
 	if form.RunUser != curUser {
 		ctx.Data["Err_RunUser"] = true
 		ctx.RenderWithErr(ctx.Tr("install.run_user_not_match", form.RunUser, curUser), INSTALL, &form)
