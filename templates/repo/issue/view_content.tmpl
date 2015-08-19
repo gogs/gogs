@@ -5,7 +5,23 @@
   </div>
   {{end}}
   <div class="sixteen wide column title">
-		<h1><span class="index">#{{.Issue.Index}}</span> {{.Issue.Name}}</h1>
+  	<div class="ui grid">
+			<h1 class="twelve wide column">
+				<span class="index">#{{.Issue.Index}}</span> <span id="issue-title">{{.Issue.Name}}</span>
+				<div id="edit-title-input" class="ui input" style="display: none">
+				  <input value="{{.Issue.Name}}">
+				</div>
+			</h1>
+			{{if .IsIssueOwner}}
+			<div class="four wide column">
+				<div class="edit-zone text right">
+					<div id="edit-title" class="ui basic green not-in-edit button">{{.i18n.Tr "repo.issues.edit"}}</div>
+					<div id="cancel-edit-title" class="ui basic blue in-edit button" style="display: none">{{.i18n.Tr "repo.issues.cancel"}}</div>
+					<div id="save-edit-title" class="ui green in-edit button" style="display: none" data-update-url="{{.Link}}/title">{{.i18n.Tr "repo.issues.save"}}</div>
+				</div>
+			</div>
+			{{end}}
+  	</div>
 		{{if .Issue.IsClosed}}
 		<div class="ui red large label"><i class="octicon octicon-issue-closed"></i> {{.i18n.Tr "repo.issues.closed_title"}}</div>
 		{{else}}
@@ -33,6 +49,9 @@
 					<div class="ui top attached header">
 						<span class="text grey"><a {{if gt .Issue.Poster.Id 0}}href="{{.Issue.Poster.HomeLink}}"{{end}}>{{.Issue.Poster.Name}}</a> {{.i18n.Tr "repo.issues.commented_at" .Issue.HashTag $createdStr | Safe}}</span>
 					  <div class="ui right actions">
+					  	{{if .IsIssueOwner}}
+							<a class="item" href="#"><i class="octicon octicon-pencil"></i></a>
+					  	{{end}}
 					  </div>
 					</div>
 			    <div class="ui attached segment markdown">
@@ -68,7 +87,7 @@
 						<span class="text grey"><a {{if gt .Poster.Id 0}}href="{{.Poster.HomeLink}}"{{end}}>{{.Poster.Name}}</a> {{$.i18n.Tr "repo.issues.commented_at" .HashTag $createdStr | Safe}}</span>
 					  <div class="ui right actions">
 					  	{{if gt .ShowTag 0}}
-					  	<div class="tag">
+					  	<div class="item tag">
 					  	{{if eq .ShowTag 1}}
 							{{$.i18n.Tr "repo.issues.poster"}}
 					  	{{else if eq .ShowTag 2}}
@@ -77,6 +96,9 @@
 							{{$.i18n.Tr "repo.issues.owner"}}
 					  	{{end}}
 					  	</div>
+					  	{{end}}
+					  	{{if or $.IsRepositoryAdmin (eq .Poster.Id $.SignedUserID)}}
+							<a class="item" href="#"><i class="octicon octicon-pencil"></i></a>
 					  	{{end}}
 					  </div>
 					</div>

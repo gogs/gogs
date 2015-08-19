@@ -228,6 +228,39 @@ function initRepository() {
 
     // Issues
     if ($('.repository.view.issue').length > 0) {
+        // Edit issue title
+        var $issue_title = $('#issue-title');
+        var $edit_input = $('#edit-title-input input');
+        var editTitleToggle = function () {
+            $issue_title.toggle();
+            $('.not-in-edit').toggle();
+            $('#edit-title-input').toggle();
+            $('.in-edit').toggle();
+            $edit_input.focus();
+            return false;
+        }
+        $('#edit-title').click(editTitleToggle);
+        $('#cancel-edit-title').click(editTitleToggle);
+        $('#save-edit-title').click(editTitleToggle).
+            click(function () {
+                if ($edit_input.val().length == 0 ||
+                    $edit_input.val() == $issue_title.text()) {
+                    $edit_input.val($issue_title.text());
+                    return false;
+                }
+
+                $.post($(this).data('update-url'), {
+                        "_csrf": csrf,
+                        "title": $edit_input.val()
+                    },
+                    function (data) {
+                        $edit_input.val(data.title);
+                        $issue_title.text(data.title);
+                    });
+                return false;
+            });
+
+        // Change status
         var $status_btn = $('#status-button');
         $('#content').keyup(function () {
             if ($(this).val().length == 0) {

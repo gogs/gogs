@@ -217,9 +217,11 @@ func Contexter() macaron.Handler {
 			ctx.IsSigned = true
 			ctx.Data["IsSigned"] = ctx.IsSigned
 			ctx.Data["SignedUser"] = ctx.User
+			ctx.Data["SignedUserID"] = ctx.User.Id
 			ctx.Data["SignedUserName"] = ctx.User.Name
 			ctx.Data["IsAdmin"] = ctx.User.IsAdmin
 		} else {
+			ctx.Data["SignedUserID"] = 0
 			ctx.Data["SignedUserName"] = ""
 		}
 

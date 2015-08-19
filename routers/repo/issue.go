@@ -524,49 +524,6 @@ func ViewIssue(ctx *middleware.Context) {
 	ctx.HTML(200, ISSUE_VIEW)
 }
 
-func UpdateIssue(ctx *middleware.Context, form auth.CreateIssueForm) {
-	idx := com.StrTo(ctx.Params(":index")).MustInt64()
-	if idx <= 0 {
-		ctx.Error(404)
-		return
-	}
-
-	issue, err := models.GetIssueByIndex(ctx.Repo.Repository.ID, idx)
-	if err != nil {
-		if models.IsErrIssueNotExist(err) {
-			ctx.Handle(404, "issue.UpdateIssue", err)
-		} else {
-			ctx.Handle(500, "issue.UpdateIssue(GetIssueByIndex)", err)
-		}
-		return
-	}
-
-	if ctx.User.Id != issue.PosterID && !ctx.Repo.IsOwner() {
-		ctx.Error(403)
-		return
-	}
-
-	issue.Name = form.Title
-	//issue.MilestoneId = form.MilestoneId
-	//issue.AssigneeId = form.AssigneeId
-	//issue.LabelIds = form.Labels
-	issue.Content = form.Content
-	// try get content from text, ignore conflict with preview ajax
-	if form.Content == "" {
-		issue.Content = ctx.Query("text")
-	}
-	if err = models.UpdateIssue(issue); err != nil {
-		ctx.Handle(500, "issue.UpdateIssue(UpdateIssue)", err)
-		return
-	}
-
-	ctx.JSON(200, map[string]interface{}{
-		"ok":      true,
-		"title":   issue.Name,
-		"content": string(base.RenderMarkdown([]byte(issue.Content), ctx.Repo.RepoLink)),
-	})
-}
-
 func getActionIssue(ctx *middleware.Context) *models.Issue {
 	issue, err := models.GetIssueByIndex(ctx.Repo.Repository.ID, ctx.ParamsInt64(":index"))
 	if err != nil {
@@ -578,6 +535,36 @@ func getActionIssue(ctx *middleware.Context) *models.Issue {
 		return nil
 	}
 	return issue
+}
+
+func UpdateIssueTitle(ctx *middleware.Context) {
+	issue := getActionIssue(ctx)
+	if ctx.Written() {
+		return
+	}
+
+	if !ctx.IsSigned || ctx.User.Id != issue.PosterID || !ctx.Repo.IsAdmin() {
+		ctx.Error(403)
+		return
+	}
+
+	title := ctx.Query("title")
+	if len(title) == 0 {
+		ctx.JSON(200, map[string]interface{}{
+			"title": issue.Name,
+		})
+		return
+	}
+	issue.Name = title
+
+	if err := models.UpdateIssue(issue); err != nil {
+		ctx.Handle(500, "UpdateIssue", err)
+		return
+	}
+
+	ctx.JSON(200, map[string]interface{}{
+		"title": issue.Name,
+	})
 }
 
 func UpdateIssueLabel(ctx *middleware.Context) {
