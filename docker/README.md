@@ -43,8 +43,8 @@ Most of settings are obvious and easy to understand, but there are some settings
 - **Run User**: keep it as default value `git` because `start.sh` already setup a user with name `git`.
 - **Domain**: fill in with Docker container IP(e.g. `192.168.99.100`).
 - **SSH Port**: Use the exposed port from Docker container. For example, your SSH server listens on `22` inside Docker, but you expose it by `10022:22`, then use `10022` for this value.
-- **HTTP Port**: Use the exposed port from Docker container. For example, your Gogs listens on `3000` inside Docker, but you expose it by `10080:3000`, then use `10080` for this value.
-- **Application URL**: Use combination of **Domain** and **HTTP Port** values(e.g. `http://192.168.99.100:10080/`). 
+- **HTTP Port**: Use port you want Gogs to listen on inside Docker container. For example, your Gogs listens on `3000` inside Docker, and you expose it by `10080:3000`, but you still use `3000` for this value.
+- **Application URL**: Use combination of **Domain** and **exposed HTTP Port** values(e.g. `http://192.168.99.100:10080/`). 
 
 Full documentation of settings can be found [here](http://gogs.io/docs/advanced/configuration_cheat_sheet.html).
 
