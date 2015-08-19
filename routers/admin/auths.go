@@ -71,6 +71,7 @@ func NewAuthSourcePost(ctx *middleware.Context, form auth.AuthenticationForm) {
 				BindPassword:      form.BindPassword,
 				UserBase:          form.UserBase,
 				Filter:            form.Filter,
+				AdminFilter:       form.AdminFilter,
 				AttributeName:     form.AttributeName,
 				AttributeSurname:  form.AttributeSurname,
 				AttributeMail:     form.AttributeMail,
@@ -160,6 +161,7 @@ func EditAuthSourcePost(ctx *middleware.Context, form auth.AuthenticationForm) {
 				AttributeSurname:  form.AttributeSurname,
 				AttributeMail:     form.AttributeMail,
 				Filter:            form.Filter,
+				AdminFilter:       form.AdminFilter,
 				Enabled:           true,
 			},
 		}

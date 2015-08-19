@@ -257,7 +257,7 @@ func UserSignIn(uname, passwd string) (*User, error) {
 // Return the same LoginUserPlain semantic
 // FIXME: https://github.com/gogits/gogs/issues/672
 func LoginUserLdapSource(u *User, name, passwd string, sourceId int64, cfg *LDAPConfig, autoRegister bool) (*User, error) {
-	fn, sn, mail, logged := cfg.Ldapsource.SearchEntry(name, passwd)
+	fn, sn, mail, admin, logged := cfg.Ldapsource.SearchEntry(name, passwd)
 	if !logged {
 		// User not in LDAP, do nothing
 		return nil, ErrUserNotExist{0, name}
@@ -281,6 +281,7 @@ func LoginUserLdapSource(u *User, name, passwd string, sourceId int64, cfg *LDAP
 		LoginName:   name,
 		Passwd:      passwd,
 		Email:       mail,
+		IsAdmin:     admin,
 		IsActive:    true,
 	}
 	return u, CreateUser(u)
