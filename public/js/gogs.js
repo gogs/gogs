@@ -2,26 +2,30 @@
 
 var csrf;
 
-function initCommentForm() {
-    if ($('.comment.form').length == 0) {
-        return
-    }
-
-    var $form = $('.comment.form');
-    $form.find('.tabular.menu .item').tab();
-    $form.find('.tabular.menu .item[data-tab="preview"]').click(function () {
+function initCommentPreviewTab($form) {
+    var $tab_menu = $form.find('.tabular.menu');
+    $tab_menu.find('.item').tab();
+    $tab_menu.find('.item[data-tab="' + $tab_menu.data('preview') + '"]').click(function () {
         var $this = $(this);
         $.post($this.data('url'), {
                 "_csrf": csrf,
                 "mode": "gfm",
                 "context": $this.data('context'),
-                "text": $form.find('.tab.segment[data-tab="write"] textarea').val()
+                "text": $form.find('.tab.segment[data-tab="' + $tab_menu.data('write') + '"] textarea').val()
             },
             function (data) {
-                $form.find('.tab.segment[data-tab="preview"]').html(data);
+                $form.find('.tab.segment[data-tab="' + $tab_menu.data('preview') + '"]').html(data);
             }
         );
     });
+}
+
+function initCommentForm() {
+    if ($('.comment.form').length == 0) {
+        return
+    }
+
+    initCommentPreviewTab($('.comment.form'));
 
     // Labels
     var $list = $('.ui.labels.list');
@@ -259,6 +263,66 @@ function initRepository() {
                     });
                 return false;
             });
+
+        // Edit issue or comment content
+        $('.edit-content').click(function () {
+            var $segment = $(this).parent().parent().next();
+            var $edit_content_zone = $segment.find('.edit-content-zone');
+            var $render_content = $segment.find('.render-content');
+            var $raw_content = $segment.find('.raw-content');
+            var $textarea;
+
+            // Setup new form
+            if ($edit_content_zone.html().length == 0) {
+                $edit_content_zone.html($('#edit-content-form').html());
+                $textarea = $segment.find('textarea');
+
+                // Give new write/preview data-tab name to distinguish from others
+                var $edit_content_form = $edit_content_zone.find('.ui.comment.form');
+                var $tabular_menu = $edit_content_form.find('.tabular.menu');
+                $tabular_menu.attr('data-write', $edit_content_zone.data('write'));
+                $tabular_menu.attr('data-preview', $edit_content_zone.data('preview'));
+                $tabular_menu.find('.write.item').attr('data-tab', $edit_content_zone.data('write'));
+                $tabular_menu.find('.preview.item').attr('data-tab', $edit_content_zone.data('preview'));
+                $edit_content_form.find('.write.segment').attr('data-tab', $edit_content_zone.data('write'));
+                $edit_content_form.find('.preview.segment').attr('data-tab', $edit_content_zone.data('preview'));
+
+                initCommentPreviewTab($edit_content_form);
+
+                $edit_content_zone.find('.cancel.button').click(function () {
+                    $render_content.show();
+                    $edit_content_zone.hide();
+                });
+                $edit_content_zone.find('.save.button').click(function () {
+                    $render_content.show();
+                    $edit_content_zone.hide();
+
+                    $.post($edit_content_zone.data('update-url'), {
+                            "_csrf": csrf,
+                            "content": $textarea.val(),
+                            "context": $edit_content_zone.data('context')
+                        },
+                        function (data) {
+                            if (data.length == 0) {
+                                $render_content.html($('#no-content').html());
+                            } else {
+                                $render_content.html(data.content);
+                            }
+                        });
+                });
+            } else {
+                $textarea = $segment.find('textarea');
+            }
+
+            // Show write/preview tab and copy raw content as needed
+            $edit_content_zone.show();
+            $render_content.hide();
+            if ($textarea.val().length == 0) {
+                $textarea.val($raw_content.text());
+            }
+            $textarea.focus();
+            return false;
+        });
 
         // Change status
         var $status_btn = $('#status-button');

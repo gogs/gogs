@@ -1363,6 +1363,14 @@ func (c *Comment) AfterSet(colName string, _ xorm.Cell) {
 	}
 }
 
+func (c *Comment) AfterDelete() {
+	_, err := DeleteAttachmentsByComment(c.ID, true)
+
+	if err != nil {
+		log.Info("Could not delete files for comment %d on issue #%d: %s", c.ID, c.IssueID, err)
+	}
+}
+
 // HashTag returns unique hash tag for comment.
 func (c *Comment) HashTag() string {
 	return "issuecomment-" + com.ToStr(c.ID)
@@ -1473,11 +1481,16 @@ func CreateIssueComment(doer *User, repo *Repository, issue *Issue, content stri
 	return CreateComment(doer, repo, issue, 0, 0, COMMENT_TYPE_COMMENT, content, attachments)
 }
 
-// GetCommentById returns the comment with the given id
-func GetCommentById(id int64) (*Comment, error) {
+// GetCommentByID returns the comment by given ID.
+func GetCommentByID(id int64) (*Comment, error) {
 	c := new(Comment)
-	_, err := x.Id(id).Get(c)
-	return c, err
+	has, err := x.Id(id).Get(c)
+	if err != nil {
+		return nil, err
+	} else if !has {
+		return nil, ErrCommentNotExist{id}
+	}
+	return c, nil
 }
 
 // GetCommentsByIssueID returns all comments of issue by given ID.
@@ -1486,12 +1499,10 @@ func GetCommentsByIssueID(issueID int64) ([]*Comment, error) {
 	return comments, x.Where("issue_id=?", issueID).Asc("created").Find(&comments)
 }
 
-func (c *Comment) AfterDelete() {
-	_, err := DeleteAttachmentsByComment(c.ID, true)
-
-	if err != nil {
-		log.Info("Could not delete files for comment %d on issue #%d: %s", c.ID, c.IssueID, err)
-	}
+// UpdateComment updates information of comment.
+func UpdateComment(c *Comment) error {
+	_, err := x.Id(c.ID).AllCols().Update(c)
+	return err
 }
 
 // Attachment represent a attachment of issue/comment/release.

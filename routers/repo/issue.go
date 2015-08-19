@@ -543,19 +543,16 @@ func UpdateIssueTitle(ctx *middleware.Context) {
 		return
 	}
 
-	if !ctx.IsSigned || ctx.User.Id != issue.PosterID || !ctx.Repo.IsAdmin() {
+	if !ctx.IsSigned || (ctx.User.Id != issue.PosterID && !ctx.Repo.IsAdmin()) {
 		ctx.Error(403)
 		return
 	}
 
-	title := ctx.Query("title")
-	if len(title) == 0 {
-		ctx.JSON(200, map[string]interface{}{
-			"title": issue.Name,
-		})
+	issue.Name = ctx.Query("title")
+	if len(issue.Name) == 0 {
+		ctx.Error(204)
 		return
 	}
-	issue.Name = title
 
 	if err := models.UpdateIssue(issue); err != nil {
 		ctx.Handle(500, "UpdateIssue", err)
@@ -564,6 +561,28 @@ func UpdateIssueTitle(ctx *middleware.Context) {
 
 	ctx.JSON(200, map[string]interface{}{
 		"title": issue.Name,
+	})
+}
+
+func UpdateIssueContent(ctx *middleware.Context) {
+	issue := getActionIssue(ctx)
+	if ctx.Written() {
+		return
+	}
+
+	if !ctx.IsSigned || (ctx.User.Id != issue.PosterID && !ctx.Repo.IsAdmin()) {
+		ctx.Error(403)
+		return
+	}
+
+	issue.Content = ctx.Query("content")
+	if err := models.UpdateIssue(issue); err != nil {
+		ctx.Handle(500, "UpdateIssue", err)
+		return
+	}
+
+	ctx.JSON(200, map[string]interface{}{
+		"content": string(base.RenderMarkdown([]byte(issue.Content), ctx.Query("context"))),
 	})
 }
 
@@ -746,6 +765,42 @@ func NewComment(ctx *middleware.Context, form auth.CreateCommentForm) {
 
 	log.Trace("Comment created: %d/%d/%d", ctx.Repo.Repository.ID, issue.ID, comment.ID)
 	ctx.Redirect(fmt.Sprintf("%s/issues/%d#%s", ctx.Repo.RepoLink, issue.Index, comment.HashTag()))
+}
+
+func UpdateCommentContent(ctx *middleware.Context) {
+	comment, err := models.GetCommentByID(ctx.ParamsInt64(":id"))
+	if err != nil {
+		if models.IsErrCommentNotExist(err) {
+			ctx.Error(404, "GetCommentByID")
+		} else {
+			ctx.Handle(500, "GetCommentByID", err)
+		}
+		return
+	}
+
+	if !ctx.IsSigned || (ctx.User.Id != comment.PosterID && !ctx.Repo.IsAdmin()) {
+		ctx.Error(403)
+		return
+	} else if comment.Type != models.COMMENT_TYPE_COMMENT {
+		ctx.Error(204)
+		return
+	}
+
+	comment.Content = ctx.Query("content")
+	if len(comment.Content) == 0 {
+		ctx.JSON(200, map[string]interface{}{
+			"content": "",
+		})
+		return
+	}
+	if err := models.UpdateComment(comment); err != nil {
+		ctx.Handle(500, "UpdateComment", err)
+		return
+	}
+
+	ctx.JSON(200, map[string]interface{}{
+		"content": string(base.RenderMarkdown([]byte(comment.Content), ctx.Query("context"))),
+	})
 }
 
 func Labels(ctx *middleware.Context) {
