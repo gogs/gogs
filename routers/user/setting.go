@@ -269,12 +269,12 @@ func SettingsSSHKeys(ctx *middleware.Context) {
 	ctx.Data["Title"] = ctx.Tr("settings")
 	ctx.Data["PageIsSettingsSSHKeys"] = true
 
-	var err error
-	ctx.Data["Keys"], err = models.ListPublicKeys(ctx.User.Id)
+	keys, err := models.ListPublicKeys(ctx.User.Id)
 	if err != nil {
-		ctx.Handle(500, "ssh.ListPublicKey", err)
+		ctx.Handle(500, "ListPublicKeys", err)
 		return
 	}
+	ctx.Data["Keys"] = keys
 
 	ctx.HTML(200, SETTINGS_SSH_KEYS)
 }
@@ -283,66 +283,58 @@ func SettingsSSHKeysPost(ctx *middleware.Context, form auth.AddSSHKeyForm) {
 	ctx.Data["Title"] = ctx.Tr("settings")
 	ctx.Data["PageIsSettingsSSHKeys"] = true
 
-	var err error
-	ctx.Data["Keys"], err = models.ListPublicKeys(ctx.User.Id)
+	keys, err := models.ListPublicKeys(ctx.User.Id)
 	if err != nil {
-		ctx.Handle(500, "ssh.ListPublicKey", err)
+		ctx.Handle(500, "ListPublicKeys", err)
+		return
+	}
+	ctx.Data["Keys"] = keys
+
+	if ctx.HasError() {
+		ctx.HTML(200, SETTINGS_SSH_KEYS)
 		return
 	}
 
-	// Delete SSH key.
-	if ctx.Query("_method") == "DELETE" {
-		id := com.StrTo(ctx.Query("id")).MustInt64()
-		if id <= 0 {
-			return
-		}
-
-		if err = models.DeletePublicKey(&models.PublicKey{ID: id}); err != nil {
-			ctx.Handle(500, "DeletePublicKey", err)
+	content, err := models.CheckPublicKeyString(form.Content)
+	if err != nil {
+		if err == models.ErrKeyUnableVerify {
+			ctx.Flash.Info(ctx.Tr("form.unable_verify_ssh_key"))
 		} else {
-			log.Trace("SSH key deleted: %s", ctx.User.Name)
-			ctx.Redirect(setting.AppSubUrl + "/user/settings/ssh")
-		}
-		return
-	}
-
-	// Add new SSH key.
-	if ctx.Req.Method == "POST" {
-		if ctx.HasError() {
-			ctx.HTML(200, SETTINGS_SSH_KEYS)
-			return
-		}
-
-		content, err := models.CheckPublicKeyString(form.Content)
-		if err != nil {
-			if err == models.ErrKeyUnableVerify {
-				ctx.Flash.Info(ctx.Tr("form.unable_verify_ssh_key"))
-			} else {
-				ctx.Flash.Error(ctx.Tr("form.invalid_ssh_key", err.Error()))
-				ctx.Redirect(setting.AppSubUrl + "/user/settings/ssh")
-				return
-			}
-		}
-
-		if err = models.AddPublicKey(ctx.User.Id, form.Title, content); err != nil {
-			switch {
-			case models.IsErrKeyAlreadyExist(err):
-				ctx.RenderWithErr(ctx.Tr("settings.ssh_key_been_used"), SETTINGS_SSH_KEYS, &form)
-			case models.IsErrKeyNameAlreadyUsed(err):
-				ctx.RenderWithErr(ctx.Tr("settings.ssh_key_name_used"), SETTINGS_SSH_KEYS, &form)
-			default:
-				ctx.Handle(500, "AddPublicKey", err)
-			}
-			return
-		} else {
-			log.Trace("SSH key added: %s", ctx.User.Name)
-			ctx.Flash.Success(ctx.Tr("settings.add_key_success", form.Title))
+			ctx.Flash.Error(ctx.Tr("form.invalid_ssh_key", err.Error()))
 			ctx.Redirect(setting.AppSubUrl + "/user/settings/ssh")
 			return
 		}
 	}
 
-	ctx.HTML(200, SETTINGS_SSH_KEYS)
+	if err = models.AddPublicKey(ctx.User.Id, form.Title, content); err != nil {
+		ctx.Data["HasError"] = true
+		switch {
+		case models.IsErrKeyAlreadyExist(err):
+			ctx.Data["Err_Content"] = true
+			ctx.RenderWithErr(ctx.Tr("settings.ssh_key_been_used"), SETTINGS_SSH_KEYS, &form)
+		case models.IsErrKeyNameAlreadyUsed(err):
+			ctx.Data["Err_Title"] = true
+			ctx.RenderWithErr(ctx.Tr("settings.ssh_key_name_used"), SETTINGS_SSH_KEYS, &form)
+		default:
+			ctx.Handle(500, "AddPublicKey", err)
+		}
+		return
+	}
+
+	ctx.Flash.Success(ctx.Tr("settings.add_key_success", form.Title))
+	ctx.Redirect(setting.AppSubUrl + "/user/settings/ssh")
+}
+
+func DeleteSSHKey(ctx *middleware.Context) {
+	if err := models.DeletePublicKey(ctx.QueryInt64("id")); err != nil {
+		ctx.Flash.Error("DeletePublicKey: " + err.Error())
+	} else {
+		ctx.Flash.Success(ctx.Tr("settings.ssh_key_deletion_success"))
+	}
+
+	ctx.JSON(200, map[string]interface{}{
+		"redirect": setting.AppSubUrl + "/user/settings/ssh",
+	})
 }
 
 func SettingsSocial(ctx *middleware.Context) {
@@ -389,6 +381,12 @@ func SettingsApplicationsPost(ctx *middleware.Context, form auth.NewAccessTokenF
 	ctx.Data["PageIsSettingsApplications"] = true
 
 	if ctx.HasError() {
+		tokens, err := models.ListAccessTokens(ctx.User.Id)
+		if err != nil {
+			ctx.Handle(500, "ListAccessTokens", err)
+			return
+		}
+		ctx.Data["Tokens"] = tokens
 		ctx.HTML(200, SETTINGS_APPLICATIONS)
 		return
 	}

@@ -53,12 +53,12 @@
 						<form class="ui form" action="{{.Link}}" method="post">
 							{{.CsrfTokenHtml}}
 							<div class="field {{if .Err_Title}}error{{end}}">
-								<label>{{.i18n.Tr "repo.settings.title"}}</label>
-								<input name="title" value="{{.title}}" autofocus required>
+								<label for="title">{{.i18n.Tr "repo.settings.title"}}</label>
+								<input id="title" name="title" value="{{.title}}" autofocus required>
 							</div>
 							<div class="field {{if .Err_Content}}error{{end}}">
-								<label>{{.i18n.Tr "repo.settings.deploy_key_content"}}</label>
-								<textarea name="content" required>{{.content}}</textarea>
+								<label for="content">{{.i18n.Tr "repo.settings.deploy_key_content"}}</label>
+								<textarea id="content" name="content" required>{{.content}}</textarea>
 							</div>
 							<button class="ui green button">
 								{{.i18n.Tr "repo.settings.add_deploy_key"}}
