@@ -466,7 +466,15 @@ func deletePublicKey(e *xorm.Session, key *PublicKey) error {
 }
 
 // DeletePublicKey deletes SSH key information both in database and authorized_keys file.
-func DeletePublicKey(key *PublicKey) (err error) {
+func DeletePublicKey(id int64) (err error) {
+	key := &PublicKey{ID: id}
+	has, err := x.Id(key.ID).Get(key)
+	if err != nil {
+		return err
+	} else if !has {
+		return nil
+	}
+
 	sess := x.NewSession()
 	defer sessionRelease(sess)
 	if err = sess.Begin(); err != nil {
