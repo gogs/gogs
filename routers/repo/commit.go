@@ -189,7 +189,7 @@ func FileHistory(ctx *middleware.Context) {
 }
 
 func Diff(ctx *middleware.Context) {
-	ctx.Data["IsRepoToolbarCommits"] = true
+	ctx.Data["PageIsDiff"] = true
 
 	userName := ctx.Repo.Owner.Name
 	repoName := ctx.Repo.Repository.Name
