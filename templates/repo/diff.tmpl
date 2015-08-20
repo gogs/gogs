@@ -1,19 +1,18 @@
-{{template "ng/base/head" .}}
-{{template "ng/base/header" .}}
-<div id="repo-wrapper">
-    {{template "repo/header_old" .}}
-    <div class="container clear" id="diff-page">
-        {{if .IsDiffCompare }}
+{{template "base/head" .}}
+<div class="repository diff">
+  {{template "repo/header" .}}
+    <div class="ui container">
+      {{if .IsDiffCompare }}
         <div class="panel panel-info panel-radius compare-head-box">
             <div class="panel-header">
                 <a class="pull-right btn btn-blue btn-header btn-medium btn-radius" rel="nofollow" href="{{EscapePound .SourcePath}}">{{.i18n.Tr "repo.diff.browse_source"}}</a>
                 <h4><a href="{{$.RepoLink}}/commit/{{.BeforeCommitId}}" class="label label-green">{{ShortSha .BeforeCommitId}}</a> ... <a href="{{$.RepoLink}}/commit/{{.AfterCommitId}}" class="label label-green">{{ShortSha .AfterCommitId}}</a></h4>
             </div>
             <div class="panel-body compare">
-                {{template "repo/commits_table" .}}
             </div>
         </div>
-        {{else}}
+      {{template "repo/commits_table" .}}
+      {{else}}
         <div class="panel panel-info panel-radius diff-head-box">
             <div class="panel-header">
                 <a class="pull-right btn btn-blue btn-header btn-medium btn-radius" rel="nofollow" href="{{EscapePound .SourcePath}}">{{.i18n.Tr "repo.diff.browse_source"}}</a>
@@ -41,7 +40,8 @@
                 </p>
             </div>
         </div>
-        {{end}}
+      {{end}}
+      
         {{if .DiffNotAvailable}}
         <h4>{{.i18n.Tr "repo.diff.data_not_available"}}</h4>
         {{else}}
@@ -129,6 +129,6 @@
         <br>
         {{end}}
         {{end}}
-    </div>
+  </div>
 </div>
-{{template "ng/base/footer" .}}
+{{template "base/footer" .}}
