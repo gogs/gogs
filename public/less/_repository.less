@@ -2,7 +2,7 @@
 	@mega-octicon-width: 30px;
 
 	padding-top: 15px;
-	padding-bottom: @footer-margin * 3;
+	padding-bottom: @footer-margin * 2;
 
 	.head {
 		.column {
@@ -422,6 +422,52 @@
 			    z-index: 13;
 				}
 			}
+		}
+	}
+
+	&.commits {
+		.header {
+			.ui.right {
+				.search {
+					input {
+						font-weight: normal;
+						padding: 5px 10px;
+					}
+				}
+				.button {
+					float: right;
+					margin-left: 5px;
+					margin-top: 1px;
+				}
+			}
+		}
+	}
+	.commits.table {
+		font-size: 13px;
+		th, td {
+			&:first-child {
+				padding-left: 15px;
+			}
+		}
+		td {
+			line-height: 15px;
+		}
+		.author {
+			min-width: 180px;
+		}
+		.sha {
+			a {
+				font-family: Consolas, Menlo, Monaco, "Lucida Console", monospace;
+				font-size: 14px;
+				padding: 6px 10px 4px 10px;
+				font-weight: normal;
+			}
+		}
+		.message span {
+			max-width: 500px;
+		}
+		.date {
+	    width: 120px;
 		}
 	}
 }
