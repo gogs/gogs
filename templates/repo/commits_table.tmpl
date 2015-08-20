@@ -9,6 +9,8 @@
       <button class="ui black tiny button" data-panel="#add-deploy-key-panel">{{.i18n.Tr "repo.commits.find"}}</button>
     </form>
   </div>
+  {{else if .IsDiffCompare}}
+  <a href="{{$.RepoLink}}/commit/{{.BeforeCommitId}}" class="ui green sha label">{{ShortSha .BeforeCommitId}}</a> ... <a href="{{$.RepoLink}}/commit/{{.AfterCommitId}}" class="ui green sha label">{{ShortSha .AfterCommitId}}</a>
   {{end}}
 </h4>
 <div class="ui attached table segment">
