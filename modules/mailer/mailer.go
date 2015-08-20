@@ -12,16 +12,16 @@ import (
 	"net/smtp"
 	"os"
 	"strings"
-	"errors"
+
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/setting"
 )
 
 type loginAuth struct {
-  username, password string
+	username, password string
 }
 
-//SMTP AUTH LOGIN Auth Handler
+// SMTP AUTH LOGIN Auth Handler
 func LoginAuth(username, password string) smtp.Auth {
 	return &loginAuth{username, password}
 }
@@ -38,7 +38,7 @@ func (a *loginAuth) Next(fromServer []byte, more bool) ([]byte, error) {
 		case "Password:":
 			return []byte(a.password), nil
 		default:
-			return nil, errors.New("Unkown fromServer")
+			return nil, fmt.Errorf("unknwon fromServer: %s", string(fromServer))
 		}
 	}
 	return nil, nil
@@ -162,8 +162,8 @@ func sendMail(settings *setting.Mailer, recipients []string, msgContent []byte) 
 			auth = smtp.CRAMMD5Auth(settings.User, settings.Passwd)
 		} else if strings.Contains(options, "PLAIN") {
 			auth = smtp.PlainAuth("", settings.User, settings.Passwd, host)
-		//Patch for AUTH LOGIN
 		} else if strings.Contains(options, "LOGIN") {
+			// Patch for AUTH LOGIN
 			auth = LoginAuth(settings.User, settings.Passwd)
 		}
 
