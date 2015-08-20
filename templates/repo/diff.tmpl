@@ -3,14 +3,6 @@
   {{template "repo/header" .}}
   <div class="ui container">
     {{if .IsDiffCompare }}
-    <div class="panel panel-info panel-radius compare-head-box">
-        <div class="panel-header">
-            <a class="pull-right btn btn-blue btn-header btn-medium btn-radius" rel="nofollow" href="{{EscapePound .SourcePath}}">{{.i18n.Tr "repo.diff.browse_source"}}</a>
-            <h4><a href="{{$.RepoLink}}/commit/{{.BeforeCommitId}}" class="label label-green">{{ShortSha .BeforeCommitId}}</a> ... <a href="{{$.RepoLink}}/commit/{{.AfterCommitId}}" class="label label-green">{{ShortSha .AfterCommitId}}</a></h4>
-        </div>
-        <div class="panel-body compare">
-        </div>
-    </div>
     {{template "repo/commits_table" .}}
     {{else}}
     <h4 class="ui top attached info header">
