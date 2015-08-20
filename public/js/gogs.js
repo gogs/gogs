@@ -339,6 +339,25 @@ function initRepository() {
         })
     }
 
+    // Diff
+    if ($('.repository.diff').length > 0) {
+        $('.diff-detail-box .toggle.button').click(function () {
+            $($(this).data('target')).slideToggle(100);
+        })
+
+        var $counter = $('.diff-counter');
+        if ($counter.length < 1) {
+            return;
+        }
+        $counter.each(function (i, item) {
+            var $item = $(item);
+            var addLine = $item.find('span[data-line].add').data("line");
+            var delLine = $item.find('span[data-line].del').data("line");
+            var addPercent = parseFloat(addLine) / (parseFloat(addLine) + parseFloat(delLine)) * 100;
+            $item.find(".bar .add").css("width", addPercent + "%");
+        });
+    }
+
     // Pull request
     if ($('.repository.compare.pull').length > 0) {
         var $branch_dropdown = $('.choose.branch .dropdown')
