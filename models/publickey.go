@@ -123,7 +123,7 @@ var minimumKeySizes = map[string]int{
 	"(NTRU)":    1087,
 	"(MCE)":     1702,
 	"(McE)":     1702,
-	"(RSA)":     2048,
+	"(RSA)":     1024,
 	"(DSA)":     1024,
 }
 
