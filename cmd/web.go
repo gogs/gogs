@@ -272,8 +272,9 @@ func runWeb(ctx *cli.Context) {
 		m.Post("/email", bindIgnErr(auth.AddEmailForm{}), user.SettingsEmailPost)
 		m.Get("/password", user.SettingsPassword)
 		m.Post("/password", bindIgnErr(auth.ChangePasswordForm{}), user.SettingsPasswordPost)
-		m.Get("/ssh", user.SettingsSSHKeys)
-		m.Post("/ssh", bindIgnErr(auth.AddSSHKeyForm{}), user.SettingsSSHKeysPost)
+		m.Combo("/ssh").Get(user.SettingsSSHKeys).
+			Post(bindIgnErr(auth.AddSSHKeyForm{}), user.SettingsSSHKeysPost)
+		m.Post("/ssh/delete", user.DeleteSSHKey)
 		m.Get("/social", user.SettingsSocial)
 		m.Combo("/applications").Get(user.SettingsApplications).
 			Post(bindIgnErr(auth.NewAccessTokenForm{}), user.SettingsApplicationsPost)

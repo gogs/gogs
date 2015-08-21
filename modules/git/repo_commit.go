@@ -275,9 +275,11 @@ func (repo *Repository) searchCommits(id sha1, keyword string) (*list.List, erro
 	return parsePrettyFormatLog(repo, stdout)
 }
 
+var CommitsRangeSize = 50
+
 func (repo *Repository) commitsByRange(id sha1, page int) (*list.List, error) {
 	stdout, stderr, err := com.ExecCmdDirBytes(repo.Path, "git", "log", id.String(),
-		"--skip="+com.ToStr((page-1)*50), "--max-count=50", prettyLogFormat)
+		"--skip="+com.ToStr((page-1)*CommitsRangeSize), "--max-count="+com.ToStr(CommitsRangeSize), prettyLogFormat)
 	if err != nil {
 		return nil, errors.New(string(stderr))
 	}
