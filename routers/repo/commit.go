@@ -9,6 +9,7 @@ import (
 	"path"
 
 	"github.com/Unknwon/com"
+	"github.com/Unknwon/paginater"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"
@@ -44,7 +45,7 @@ func RenderIssueLinks(oldCommits *list.List, repoLink string) *list.List {
 }
 
 func Commits(ctx *middleware.Context) {
-	ctx.Data["IsRepoToolbarCommits"] = true
+	ctx.Data["PageIsCommits"] = true
 
 	userName := ctx.Repo.Owner.Name
 	repoName := ctx.Repo.Repository.Name
@@ -64,19 +65,11 @@ func Commits(ctx *middleware.Context) {
 		return
 	}
 
-	// Calculate and validate page number.
-	page, _ := com.StrTo(ctx.Query("p")).Int()
-	if page < 1 {
+	page := ctx.QueryInt("page")
+	if page <= 1 {
 		page = 1
 	}
-	lastPage := page - 1
-	if lastPage < 0 {
-		lastPage = 0
-	}
-	nextPage := page + 1
-	if page*50 > commitsCount {
-		nextPage = 0
-	}
+	ctx.Data["Page"] = paginater.New(commitsCount, git.CommitsRangeSize, page, 5)
 
 	// Both `git log branchName` and `git log commitId` work.
 	commits, err := ctx.Repo.Commit.CommitsByRange(page)
@@ -91,14 +84,11 @@ func Commits(ctx *middleware.Context) {
 	ctx.Data["Username"] = userName
 	ctx.Data["Reponame"] = repoName
 	ctx.Data["CommitCount"] = commitsCount
-	ctx.Data["LastPageNum"] = lastPage
-	ctx.Data["NextPageNum"] = nextPage
 	ctx.HTML(200, COMMITS)
 }
 
 func SearchCommits(ctx *middleware.Context) {
-	ctx.Data["IsSearchPage"] = true
-	ctx.Data["IsRepoToolbarCommits"] = true
+	ctx.Data["PageIsCommits"] = true
 
 	keyword := ctx.Query("q")
 	if len(keyword) == 0 {
@@ -199,7 +189,7 @@ func FileHistory(ctx *middleware.Context) {
 }
 
 func Diff(ctx *middleware.Context) {
-	ctx.Data["IsRepoToolbarCommits"] = true
+	ctx.Data["PageIsDiff"] = true
 
 	userName := ctx.Repo.Owner.Name
 	repoName := ctx.Repo.Repository.Name
@@ -253,7 +243,7 @@ func Diff(ctx *middleware.Context) {
 	ctx.Data["Parents"] = parents
 	ctx.Data["DiffNotAvailable"] = diff.NumFiles() == 0
 	ctx.Data["SourcePath"] = setting.AppSubUrl + "/" + path.Join(userName, repoName, "src", commitId)
-	if (commit.ParentCount() > 0) {
+	if commit.ParentCount() > 0 {
 		ctx.Data["BeforeSourcePath"] = setting.AppSubUrl + "/" + path.Join(userName, repoName, "src", parents[0])
 	}
 	ctx.Data["RawPath"] = setting.AppSubUrl + "/" + path.Join(userName, repoName, "raw", commitId)

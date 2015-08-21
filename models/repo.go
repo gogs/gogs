@@ -166,6 +166,13 @@ type Repository struct {
 	Updated time.Time `xorm:"UPDATED"`
 }
 
+func (repo *Repository) AfterSet(colName string, _ xorm.Cell) {
+	switch colName {
+	case "updated":
+		repo.Updated = regulateTimeZone(repo.Updated)
+	}
+}
+
 func (repo *Repository) getOwner(e Engine) (err error) {
 	if repo.Owner == nil {
 		repo.Owner, err = getUserByID(e, repo.OwnerID)

@@ -71,6 +71,13 @@ func parseTreeData(tree *Tree, data []byte) ([]*TreeEntry, error) {
 
 		step = bytes.IndexByte(data[pos:], '\n')
 		entry.name = string(data[pos : pos+step])
+
+		// In case entry name is surrounded by double quotes(it happens only in git-shell).
+		if entry.name[0] == '"' {
+			entry.name = string(data[pos+1 : pos+step-1])
+			entry.name = strings.Replace(entry.name, `\"`, `"`, -1)
+		}
+
 		pos += step + 1
 		entries = append(entries, entry)
 	}

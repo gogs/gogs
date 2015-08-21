@@ -1,134 +1,136 @@
-{{template "ng/base/head" .}}
-{{template "ng/base/header" .}}
-<div id="repo-wrapper">
-    {{template "repo/header_old" .}}
-    <div class="container clear" id="diff-page">
-        {{if .IsDiffCompare }}
-        <div class="panel panel-info panel-radius compare-head-box">
-            <div class="panel-header">
-                <a class="pull-right btn btn-blue btn-header btn-medium btn-radius" rel="nofollow" href="{{EscapePound .SourcePath}}">{{.i18n.Tr "repo.diff.browse_source"}}</a>
-                <h4><a href="{{$.RepoLink}}/commit/{{.BeforeCommitId}}" class="label label-green">{{ShortSha .BeforeCommitId}}</a> ... <a href="{{$.RepoLink}}/commit/{{.AfterCommitId}}" class="label label-green">{{ShortSha .AfterCommitId}}</a></h4>
-            </div>
-            <div class="panel-body compare">
-                {{template "repo/commits_table" .}}
-            </div>
+{{template "base/head" .}}
+<div class="repository diff">
+  {{template "repo/header" .}}
+  <div class="ui container">
+    {{if .IsDiffCompare }}
+    {{template "repo/commits_table" .}}
+    {{else}}
+    <h4 class="ui top attached info header">
+      {{RenderCommitMessage .Commit.Message $.RepoLink}}
+      <div class="ui right">
+        <a class="ui blue tiny button" href="{{EscapePound .SourcePath}}">
+          {{.i18n.Tr "repo.diff.browse_source"}}
+        </a>
+      </div>
+    </h4>
+    <div class="ui attached info segment">
+      {{if .Author}}
+      <img class="ui avatar image" src="{{.Author.AvatarLink}}" />
+      <a href="{{.Author.HomeLink}}"><strong>{{.Commit.Author.Name}}</strong></a>
+      {{else}}
+      <img class="ui avatar image" src="{{AvatarLink .Commit.Author.Email}}" />
+      <strong>{{.Commit.Author.Name}}</strong>
+      {{end}}
+      <span class="text grey" id="authored-time">{{TimeSince .Commit.Author.When $.Lang}}</span>
+      <div class="ui right">
+        <div class="ui horizontal list">
+          <div class="item">
+            {{.i18n.Tr "repo.diff.parent"}}
+          </div>
+          <div class="item">
+            {{range .Parents}}
+            <a class="ui blue sha label" href="{{$.RepoLink}}/commit/{{.}}">{{ShortSha .}}</a>
+            {{end}}
+          </div>
+          <div class="item">{{.i18n.Tr "repo.diff.commit"}}</div>
+          <div class="item"><span class="ui blue sha label">{{ShortSha .CommitId}}</span></div>
         </div>
-        {{else}}
-        <div class="panel panel-info panel-radius diff-head-box">
-            <div class="panel-header">
-                <a class="pull-right btn btn-blue btn-header btn-medium btn-radius" rel="nofollow" href="{{EscapePound .SourcePath}}">{{.i18n.Tr "repo.diff.browse_source"}}</a>
-                <h4 class="commit-message">{{RenderCommitMessage .Commit.Message $.RepoLink}}</h4>
-            </div>
-            <div class="panel-body">
-                <span class="pull-right">
-                    <ul class="list-unstyled">
-                        <li class="inline">{{.i18n.Tr "repo.diff.parent"}}</li>
-                        {{range .Parents}}
-                        <li class="inline"><a href="{{$.RepoLink}}/commit/{{.}}"><span class="label label-blue">{{ShortSha .}}</span></a></li>
-                        {{end}}
-                        <li class="inline">{{.i18n.Tr "repo.diff.commit"}} <span class="label label-blue">{{ShortSha .CommitId}}</span></li>
-                    </ul>
-                </span>
-                <p class="author">
-                    {{if .Author}}
-                    <img class="avatar-30" src="{{.Author.AvatarLink}}" />
-                    <a href="{{AppSubUrl}}/{{.Author.Name}}"><strong>{{.Commit.Author.Name}}</strong></a>
-                    {{else}}
-                    <img class="avatar-30" src="{{AvatarLink .Commit.Author.Email}}" />
-                    <strong>{{.Commit.Author.Name}}</strong>
-                    {{end}}
-                    <span class="text-grey" id="authored-time">{{TimeSince .Commit.Author.When $.Lang}}</span>
-                </p>
-            </div>
-        </div>
-        {{end}}
-        {{if .DiffNotAvailable}}
-        <h4>{{.i18n.Tr "repo.diff.data_not_available"}}</h4>
-        {{else}}
-        <div class="diff-detail-box diff-box">
-            <a class="pull-right btn btn-gray btn-header btn-radius text-black" data-target="#diff-files">{{.i18n.Tr "repo.diff.show_diff_stats"}}</a>
-            <p class="showing">
-                <i class="fa fa-retweet"></i>
-                {{.i18n.Tr "repo.diff.stats_desc" .Diff.NumFiles .Diff.TotalAddition .Diff.TotalDeletion | Str2html}}
-            </p>
-            <ol class="detail-files collapse hide" id="diff-files">
-                {{range .Diff.Files}}
-                <li>
-                    <div class="diff-counter count pull-right">
-                        {{if not .IsBin}}
-                        <span class="add" data-line="{{.Addition}}">{{.Addition}}</span>
-                        <span class="bar">
-                            <span class="pull-left add"></span>
-                            <span class="pull-left del"></span>
-                        </span>
-                        <span class="del" data-line="{{.Deletion}}">{{.Deletion}}</span>
-                        {{else}}
-                        <span>{{$.i18n.Tr "repo.diff.bin"}}</span>
-                        {{end}}
-                    </div>
-                    <!-- todo finish all file status, now modify, add, delete and rename -->
-                    <span class="status {{DiffTypeToStr .Type}}" data-toggle="tooltip" data-placement="right" title="{{DiffTypeToStr .Type}}">&nbsp;</span>
-                    <a class="file" href="#diff-{{.Index}}">{{.Name}}</a>
-                </li>
-                {{end}}
-            </ol>
-        </div>
-
-        {{range $i, $file := .Diff.Files}}
-        <div class="panel panel-radius diff-file-box diff-box file-content" id="diff-{{.Index}}">
-            <div class="panel-header">
-                <div class="diff-counter count pull-left">
-                    {{if not $file.IsBin}}
-                    <span class="add" data-line="{{.Addition}}">+ {{.Addition}}</span>
-                    <span class="bar">
-                        <span class="pull-left add"></span>
-                        <span class="pull-left del"></span>
-                    </span>
-                    <span class="del" data-line="{{.Deletion}}">- {{.Deletion}}</span>
-                    {{else}}
-                    {{$.i18n.Tr "repo.diff.bin"}}
-                    {{end}}
-                </div>
-                {{if $file.IsDeleted}}
-                <a class="btn btn-gray btn-header btn-radius text-black pull-right" rel="nofollow" href="{{EscapePound $.BeforeSourcePath}}/{{EscapePound .Name}}">{{$.i18n.Tr "repo.diff.view_file"}}</a>
-                {{else}}
-                <a class="btn btn-gray btn-header btn-radius text-black pull-right" rel="nofollow" href="{{EscapePound $.SourcePath}}/{{EscapePound .Name}}">{{$.i18n.Tr "repo.diff.view_file"}}</a>
-                {{end}}
-                <span class="file">{{$file.Name}}</span>
-            </div>
-            {{$isImage := (call $.IsImageFile $file.Name)}}
-            <div class="panel-body file-body file-code code-view code-diff">
-                {{if $isImage}}
-                    <div class="text-center">
-                        <img src="{{$.RawPath}}/{{EscapePound .Name}}">
-                    </div>
-                {{else}}
-                <table>
-                    <tbody>
-                        {{range .Sections}}
-                        {{range $k, $line := .Lines}}
-                        <tr class="{{DiffLineTypeToStr .Type}}-code nl-{{$k}} ol-{{$k}}">
-                            <td class="lines-num lines-num-old">
-                                <span rel="{{if $line.LeftIdx}}diff-{{Sha1 $file.Name}}L{{$line.LeftIdx}}{{end}}">{{if $line.LeftIdx}}{{$line.LeftIdx}}{{end}}</span>
-                            </td>
-                            <td class="lines-num lines-num-new">
-                                <span rel="{{if $line.RightIdx}}diff-{{Sha1 $file.Name}}R{{$line.RightIdx}}{{end}}">{{if $line.RightIdx}}{{$line.RightIdx}}{{end}}</span>
-                            </td>
-
-                            <td class="lines-code">
-                                <pre>{{$line.Content}}</pre>
-                            </td>
-                        </tr>
-                        {{end}}
-                        {{end}}
-                    </tbody>
-                </table>
-                {{end}}
-            </div>
-        </div>
-        <br>
-        {{end}}
-        {{end}}
+      </div>
     </div>
+    {{end}}
+    
+    {{if .DiffNotAvailable}}
+    <h4>{{.i18n.Tr "repo.diff.data_not_available"}}</h4>
+    {{else}}
+    <div class="diff-detail-box diff-box">
+      <div>
+        <i class="fa fa-retweet"></i>
+        {{.i18n.Tr "repo.diff.stats_desc" .Diff.NumFiles .Diff.TotalAddition .Diff.TotalDeletion | Str2html}}
+        <div class="ui right">
+          <a class="ui tiny basic black toggle button" data-target="#diff-files">{{.i18n.Tr "repo.diff.show_diff_stats"}}</a>
+        </div>
+      </div>
+      <ol class="detail-files hide" id="diff-files">
+        {{range .Diff.Files}}
+        <li>
+          <div class="diff-counter count pull-right">
+            {{if not .IsBin}}
+            <span class="add" data-line="{{.Addition}}">{{.Addition}}</span>
+            <span class="bar">
+              <span class="pull-left add"></span>
+              <span class="pull-left del"></span>
+            </span>
+            <span class="del" data-line="{{.Deletion}}">{{.Deletion}}</span>
+            {{else}}
+            <span>{{$.i18n.Tr "repo.diff.bin"}}</span>
+            {{end}}
+          </div>
+          <!-- todo finish all file status, now modify, add, delete and rename -->
+          <span class="status {{DiffTypeToStr .Type}} poping up" data-content="{{DiffTypeToStr .Type}}" data-variation="inverted tiny" data-position="right center">&nbsp;</span>
+          <a class="file" href="#diff-{{.Index}}">{{.Name}}</a>
+        </li>
+        {{end}}
+      </ol>
+    </div>
+
+    {{range $i, $file := .Diff.Files}}
+    <div class="diff-file-box diff-box file-content" id="diff-{{.Index}}">
+      <h4 class="ui top attached normal header">
+        <div class="diff-counter count ui left">
+            {{if not $file.IsBin}}
+            <span class="add" data-line="{{.Addition}}">+ {{.Addition}}</span>
+            <span class="bar">
+              <span class="pull-left add"></span>
+              <span class="pull-left del"></span>
+            </span>
+            <span class="del" data-line="{{.Deletion}}">- {{.Deletion}}</span>
+            {{else}}
+            {{$.i18n.Tr "repo.diff.bin"}}
+            {{end}}
+        </div>
+        <span class="file">{{$file.Name}}</span>
+        <div class="ui right">
+          {{if $file.IsDeleted}}
+          <a class="ui basic tiny button" rel="nofollow" href="{{EscapePound $.BeforeSourcePath}}/{{EscapePound .Name}}">{{$.i18n.Tr "repo.diff.view_file"}}</a>
+          {{else}}
+          <a class="ui basic tiny button" rel="nofollow" href="{{EscapePound $.SourcePath}}/{{EscapePound .Name}}">{{$.i18n.Tr "repo.diff.view_file"}}</a>
+          {{end}}
+        </div>
+      </h4>
+      <div class="ui attached table segment">
+        {{$isImage := (call $.IsImageFile $file.Name)}}
+        {{if $isImage}}
+        <div class="center">
+          <img src="{{$.RawPath}}/{{EscapePound .Name}}">
+        </div>
+        {{else}}
+        <div class="file-body file-code code-view code-diff">
+          <table>
+            <tbody>
+              {{range .Sections}}
+              {{range $k, $line := .Lines}}
+              <tr class="{{DiffLineTypeToStr .Type}}-code nl-{{$k}} ol-{{$k}}">
+                <td class="lines-num lines-num-old">
+                  <span rel="{{if $line.LeftIdx}}diff-{{Sha1 $file.Name}}L{{$line.LeftIdx}}{{end}}">{{if $line.LeftIdx}}{{$line.LeftIdx}}{{end}}</span>
+                </td>
+                <td class="lines-num lines-num-new">
+                  <span rel="{{if $line.RightIdx}}diff-{{Sha1 $file.Name}}R{{$line.RightIdx}}{{end}}">{{if $line.RightIdx}}{{$line.RightIdx}}{{end}}</span>
+                </td>
+                <td class="lines-code">
+                  <pre>{{$line.Content}}</pre>
+                </td>
+              </tr>
+              {{end}}
+              {{end}}
+            </tbody>
+          </table>
+        </div>
+        {{end}}
+      </div>
+    </div>
+    <br>
+    {{end}}
+    {{end}}
+  </div>
 </div>
-{{template "ng/base/footer" .}}
+{{template "base/footer" .}}

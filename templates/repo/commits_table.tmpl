@@ -1,48 +1,68 @@
-<div id="commits-list">
-    <div class="panel panel-radius">
-        <div class="panel-header">
-            {{if not .IsDiffCompare}}
-            <form class="search pull-right" action="{{.RepoLink}}/commits/{{.BranchName}}/search" method="get" id="commits-search-form">
-                <input class="ipt ipt-radius" type="search" name="q" placeholder="{{.i18n.Tr "repo.commits.search"}}" value="{{.Keyword}}" />
-                <button class="btn btn-black btn-small btn-radius">{{.i18n.Tr "repo.commits.find"}}</button>
-            </form>
-            {{end}}
-            <h4>{{.CommitCount}} {{.i18n.Tr "repo.commits.commits"}}</h4>
-        </div>
-        <table class="panel-body table commit-list table-striped">
-            <thead>
-                <tr>
-                    <th class="author">{{.i18n.Tr "repo.commits.author"}}</th>
-                    <th class="sha">SHA1</th>
-                    <th class="message">{{.i18n.Tr "repo.commits.message"}}</th>
-                    <th class="date">{{.i18n.Tr "repo.commits.date"}}</th>
-                </tr>
-            </thead>
-            <tbody>
-            {{ $username := .Username}}
-            {{ $reponame := .Reponame}}
-            {{$r := List .Commits}}
-            {{range $r}}
-            <tr>
-                <td class="author">
-                    {{if .User}}
-                    <img class="avatar-20" src="{{.User.AvatarLink}}" alt=""/>&nbsp;&nbsp;&nbsp;<a href="{{AppSubUrl}}/{{.User.Name}}">{{.Author.Name}}</a>
-                    {{else}}
-                    <img class="avatar-20" src="{{AvatarLink .Author.Email}}" alt=""/>&nbsp;&nbsp;&nbsp;{{.Author.Name}}
-                    {{end}}
-                </td>
-                <td class="sha"><a rel="nofollow" class="label label-green" href="{{AppSubUrl}}/{{$username}}/{{$reponame}}/commit/{{.Id}} ">{{SubStr .Id.String 0 10}} </a></td>
-                <td class="message"><span class="text-truncate">{{RenderCommitMessage .Summary $.RepoLink}}</span></td>
-                <td class="date">{{TimeSince .Author.When $.Lang}}</td>
-            </tr>
-            {{end}}
-            </tbody>
-        </table>
-    </div>
-    {{if and (not .IsSearchPage) (not .IsDiffCompare)}}
-    <ul class="pagination">
-        {{if .LastPageNum}}<li><a class="btn btn-medium btn-gray btn-radius" href="{{.RepoLink}}/commits/{{.BranchName}}{{if .FileName}}/{{.FileName}}{{end}}?p={{.LastPageNum}}" rel="nofollow">&laquo; {{.i18n.Tr "repo.commits.newer"}}</a></li>{{end}}
-        {{if .NextPageNum}}<li><a class="btn btn-medium btn-gray btn-radius" href="{{.RepoLink}}/commits/{{.BranchName}}{{if .FileName}}/{{.FileName}}{{end}}?p={{.NextPageNum}}" rel="nofollow">&raquo; {{.i18n.Tr "repo.commits.older"}}</a></li>{{end}}
-    </ul>
+<h4 class="ui top attached header">
+  {{.CommitCount}} {{.i18n.Tr "repo.commits.commits"}}
+  {{if .PageIsCommits}}
+  <div class="ui right">
+    <form action="{{.RepoLink}}/commits/{{.BranchName}}/search">
+      <div class="ui tiny search input">
+        <input name="q" placeholder="{{.i18n.Tr "repo.commits.search"}}" value="{{.Keyword}}" autofocus>
+      </div>
+      <button class="ui black tiny button" data-panel="#add-deploy-key-panel">{{.i18n.Tr "repo.commits.find"}}</button>
+    </form>
+  </div>
+  {{else if .IsDiffCompare}}
+  <a href="{{$.RepoLink}}/commit/{{.BeforeCommitId}}" class="ui green sha label">{{ShortSha .BeforeCommitId}}</a> ... <a href="{{$.RepoLink}}/commit/{{.AfterCommitId}}" class="ui green sha label">{{ShortSha .AfterCommitId}}</a>
+  {{end}}
+</h4>
+<div class="ui attached table segment">
+  <table class="ui very basic striped commits table">
+    <thead>
+      <tr>
+        <th>{{.i18n.Tr "repo.commits.author"}}</th>
+        <th>SHA1</th>
+        <th>{{.i18n.Tr "repo.commits.message"}}</th>
+        <th>{{.i18n.Tr "repo.commits.date"}}</th>
+      </tr>
+    </thead>
+    <tbody>
+    {{ $username := .Username}}
+    {{ $reponame := .Reponame}}
+    {{  $r:= List .Commits}}
+    {{range $r}}
+      <tr>
+        <td class="author">
+          {{if .User}}
+          <img class="ui avatar image" src="{{.User.AvatarLink}}" alt=""/>&nbsp;&nbsp;<a href="{{AppSubUrl}}/{{.User.Name}}">{{.Author.Name}}</a>
+          {{else}}
+          <img class="ui avatar image" src="{{AvatarLink .Author.Email}}" alt=""/>&nbsp;&nbsp;{{.Author.Name}}
+          {{end}}
+        </td>
+        <td class="sha"><a rel="nofollow" class="ui green sha label" href="{{AppSubUrl}}/{{$username}}/{{$reponame}}/commit/{{.Id}} ">{{SubStr .Id.String 0 10}} </a></td>
+        <td class="message"><span class="text truncate">{{RenderCommitMessage .Summary $.RepoLink}}</span></td>
+        <td class="date">{{TimeSince .Author.When $.Lang}}</td>
+      </tr>
     {{end}}
+    </tbody>
+  </table>
 </div>
+
+{{with .Page}}
+{{if gt .TotalPages 1}}
+<div class="center page buttons">
+  <div class="ui borderless pagination menu">
+    <a class="{{if not .HasPrevious}}disabled{{end}} item" {{if .HasPrevious}}href="{{$.RepoLink}}/commits/{{$.BranchName}}{{if $.FileName}}/{{$.FileName}}{{end}}?page={{.Previous}}"{{end}}>
+      <i class="left arrow icon"></i> {{$.i18n.Tr "repo.issues.previous"}}
+    </a>
+    {{range .Pages}}
+    {{if eq .Num -1}}
+    <a class="disabled item">...</a>
+    {{else}}
+    <a class="{{if .IsCurrent}}active{{end}} item" {{if not .IsCurrent}}href="{{$.RepoLink}}/commits/{{$.BranchName}}{{if $.FileName}}/{{$.FileName}}{{end}}?page={{.Num}}"{{end}}>{{.Num}}</a>
+    {{end}}
+    {{end}}
+    <a class="{{if not .HasNext}}disabled{{end}} item" {{if .HasNext}}href="{{$.RepoLink}}/commits/{{$.BranchName}}{{if $.FileName}}/{{$.FileName}}{{end}}?page={{.Next}}"{{end}}>
+      {{$.i18n.Tr "repo.issues.next"}} <i class="icon right arrow"></i>
+    </a>
+  </div>
+</div>
+{{end}}
+{{end}}
