@@ -8,6 +8,7 @@ package ldap
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/gogits/gogs/modules/ldap"
 	"github.com/gogits/gogs/modules/log"
@@ -30,7 +31,7 @@ type Ldapsource struct {
 	Enabled          bool   // if this source is disabled
 }
 
-func (ls Ldapsource) FindUserDN(name string) (string, bool) {
+func (ls Ldapsource) FindUserDN(name, passwd string) (string, bool) {
 	l, err := ldapDial(ls)
 	if err != nil {
 		log.Error(4, "LDAP Connect error, %s:%v", ls.Host, err)
@@ -40,13 +41,20 @@ func (ls Ldapsource) FindUserDN(name string) (string, bool) {
 	defer l.Close()
 
 	log.Trace("Search for LDAP user: %s", name)
-	if ls.BindDN != "" && ls.BindPassword != "" {
-		err = l.Bind(ls.BindDN, ls.BindPassword)
+	if ls.BindDN != "" {
+		if ls.BindPassword == "" {
+			bd = strings.Replace(ls.BindDN, "<username>", name, -1)
+			bp = passwd
+		} else {
+			bd = ls.BindDN
+			bp = ls.BindPassword
+		}
+		err = l.Bind(bd, bp)
 		if err != nil {
-			log.Debug("Failed to bind as BindDN[%s]: %v", ls.BindDN, err)
+			log.Debug("Failed to bind as BindDN[%s]: %v", bd, err)
 			return "", false
 		}
-		log.Trace("Bound as BindDN %s", ls.BindDN)
+		log.Trace("Bound as BindDN %s", bd)
 	} else {
 		log.Trace("Proceeding with anonymous LDAP search.")
 	}
@@ -79,7 +87,7 @@ func (ls Ldapsource) FindUserDN(name string) (string, bool) {
 
 // searchEntry : search an LDAP source if an entry (name, passwd) is valid and in the specific filter
 func (ls Ldapsource) SearchEntry(name, passwd string) (string, string, string, bool, bool) {
-	userDN, found := ls.FindUserDN(name)
+	userDN, found := ls.FindUserDN(name, passwd)
 	if !found {
 		return "", "", "", false, false
 	}
