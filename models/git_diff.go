@@ -169,6 +169,12 @@ func ParsePatch(pid int64, maxlines int, cmd *exec.Cmd, reader io.Reader) (*Diff
 			beg := len(DIFF_HEAD)
 			a := line[beg : (len(line)-beg)/2+beg]
 
+			// In case file name is surrounded by double quotes(it happens only in git-shell).
+			if a[0] == '"' {
+				a = a[1 : len(a)-1]
+				a = strings.Replace(a, `\"`, `"`, -1)
+			}
+
 			curFile = &DiffFile{
 				Name:     a[strings.Index(a, "/")+1:],
 				Index:    len(diff.Files) + 1,

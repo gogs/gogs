@@ -677,6 +677,13 @@ func SettingsDeployKeysPost(ctx *middleware.Context, form auth.AddSSHKeyForm) {
 	ctx.Data["Title"] = ctx.Tr("repo.settings")
 	ctx.Data["PageIsSettingsKeys"] = true
 
+	keys, err := models.ListDeployKeys(ctx.Repo.Repository.ID)
+	if err != nil {
+		ctx.Handle(500, "ListDeployKeys", err)
+		return
+	}
+	ctx.Data["Deploykeys"] = keys
+
 	if ctx.HasError() {
 		ctx.HTML(200, DEPLOY_KEYS)
 		return

@@ -1,9 +1,8 @@
-{{template "ng/base/head" .}}
-{{template "ng/base/header" .}}
-<div id="repo-wrapper">
-    {{template "repo/header_old" .}}
-	<div class="container clear">
-  		{{template "repo/commits_table" .}}
-  	</div>
+{{template "base/head" .}}
+<div class="repository commits">
+	{{template "repo/header" .}}
+  <div class="ui container">
+		{{template "repo/commits_table" .}}
+	</div>
 </div>
-{{template "ng/base/footer" .}}
+{{template "base/footer" .}}

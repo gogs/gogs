@@ -2,7 +2,7 @@
 	@mega-octicon-width: 30px;
 
 	padding-top: 15px;
-	padding-bottom: @footer-margin * 3;
+	padding-bottom: @footer-margin * 2;
 
 	.head {
 		.column {
@@ -423,6 +423,187 @@
 				}
 			}
 		}
+	}
+
+	&.commits {
+		.header {
+			.ui.right {
+				.search {
+					input {
+						font-weight: normal;
+						padding: 5px 10px;
+					}
+				}
+				.button {
+					float: right;
+					margin-left: 5px;
+					margin-top: 1px;
+				}
+			}
+		}
+	}
+	.commits.table {
+		font-size: 13px;
+		th, td {
+			&:first-child {
+				padding-left: 15px;
+			}
+		}
+		td {
+			line-height: 15px;
+		}
+		.author {
+			min-width: 180px;
+		}
+		.message span {
+			max-width: 500px;
+		}
+		.date {
+	    width: 120px;
+		}
+	}
+	.sha.label {
+		font-family: Consolas, Menlo, Monaco, "Lucida Console", monospace;
+		font-size: 14px;
+		padding: 6px 10px 4px 10px;
+		font-weight: normal;
+	}
+
+	.diff-detail-box {
+    margin: 15px 0;
+    line-height: 30px;
+    ol {
+      clear: both;
+      padding-left: 0;
+      margin-top: 5px;
+      margin-bottom: 28px;
+      li {
+        list-style: none;
+        padding-bottom: 4px;
+        margin-bottom: 4px;
+        border-bottom: 1px dashed #DDD;
+        padding-left: 6px;
+      }
+    }
+    span.status{
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      margin-right: 8px;
+      vertical-align: middle;
+      &.modify {
+        background-color: #f0db88;
+      }
+      &.add {
+        background-color: #b4e2b4;
+      }
+      &.del {
+        background-color: #e9aeae;
+      }
+      &.rename {
+        background-color: #dad8ff;
+      }
+    }
+	}
+	.diff-box {
+    .count {
+      margin-right: 12px;
+      .bar {
+        background-color: #e75316;
+        height: 12px;
+        width: 40px;
+        display: inline-block;
+        margin: 2px 4px 0 4px;
+        vertical-align: text-top;
+        .add {
+          background-color: #77c64a;
+          height: 12px;
+        }
+      }
+    }
+    .file {
+      color: #888;
+    }
+	}
+	.diff-file-box {
+		.header {
+			border-bottom: 1px solid #d4d4d5!important;
+		}
+    .file-body.file-code {
+      .lines-num {
+        text-align: right;
+        color: #999;
+        background: #fafafa;
+        width: 1%;
+      }
+      .lines-num-old {
+        border-right: 1px solid #DDD;
+      }
+    }
+    .code-diff {
+    	font-size: 13px;
+    	td {
+    		padding: 0;
+    		border-top: none;
+    	}
+    	pre {
+    		margin: 0;
+    	}
+    	.lines-num {
+    		border-right: 1px solid #d4d4d5;
+    		padding: 0 5px;
+    	}
+      tbody {
+        tr {
+          &.tag-code {
+            td, pre {
+              background-color: #E0E0E0 !important;
+              border-color: #ADADAD!important;
+            }
+            // td.selected-line, td.selected-line pre {
+            //   background-color: #ffffdd !important;
+            // }
+          }
+          // &.same-code {
+          //   td.selected-line, td.selected-line pre {
+          //     background-color: #ffffdd !important;
+          //   }
+          // }
+          &.del-code {
+            td, pre {
+              background-color: #ffe2dd !important;
+              border-color: #e9aeae !important;
+            }
+            // td.selected-line, td.selected-line pre {
+            //   background-color: #ffffdd !important;
+            // }
+          }
+          &.add-code {
+            td, pre { 
+              background-color: #d1ffd6 !important;
+              border-color: #b4e2b4 !important;
+            }
+            // td.selected-line, td.selected-line pre {
+            //   background-color: #ffffdd !important;
+            // }
+          }
+          &:hover {
+            td {
+              background-color: #FFF8D2 !important;
+              border-color: #F0DB88 !important;   
+            }
+            pre {
+              background-color: transparent !important;
+            }
+          }
+        }
+      }
+    }
+	}
+	.code-view {
+		overflow: auto;
+		overflow-x: auto;
+		overflow-y: hidden;
 	}
 }
 
