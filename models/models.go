@@ -133,7 +133,9 @@ func getEngine() (*xorm.Engine, error) {
 		if !EnableSQLite3 {
 			return nil, fmt.Errorf("Unknown database type: %s", DbCfg.Type)
 		}
-		os.MkdirAll(path.Dir(DbCfg.Path), os.ModePerm)
+		if err := os.MkdirAll(path.Dir(DbCfg.Path), os.ModePerm); err != nil {
+			return nil, fmt.Errorf("Fail to create directories: %v", err)
+		}
 		cnnstr = "file:" + DbCfg.Path + "?cache=shared&mode=rwc"
 	default:
 		return nil, fmt.Errorf("Unknown database type: %s", DbCfg.Type)

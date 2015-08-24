@@ -10,6 +10,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-xorm/xorm"
+
 	"github.com/gogits/gogs/modules/git"
 )
 
@@ -35,6 +37,13 @@ type Release struct {
 	IsDraft          bool   `xorm:"NOT NULL DEFAULT false"`
 	IsPrerelease     bool
 	Created          time.Time `xorm:"CREATED"`
+}
+
+func (r *Release) AfterSet(colName string, _ xorm.Cell) {
+	switch colName {
+	case "created":
+		r.Created = regulateTimeZone(r.Created)
+	}
 }
 
 // IsReleaseExist returns true if release with given tag name already exists.
