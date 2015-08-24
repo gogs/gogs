@@ -592,7 +592,7 @@ func DeleteUser(u *User) error {
 		return fmt.Errorf("get all public keys: %v", err)
 	}
 	for _, key := range keys {
-		if err = deletePublicKey(sess, key); err != nil {
+		if err = deletePublicKey(sess, key.ID); err != nil {
 			return fmt.Errorf("deletePublicKey: %v", err)
 		}
 	}
