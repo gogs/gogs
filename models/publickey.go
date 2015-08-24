@@ -298,9 +298,13 @@ func saveAuthorizedKeyFile(keys ...*PublicKey) error {
 	return nil
 }
 
+// checkKeyContent onlys checks if key content has been used as public key,
+// it is OK to use same key as deploy key for multiple repositories/users.
 func checkKeyContent(content string) error {
-	// Same key can only be added once.
-	has, err := x.Where("content=?", content).Get(new(PublicKey))
+	has, err := x.Get(&PublicKey{
+		Content: content,
+		Type:    KEY_TYPE_USER,
+	})
 	if err != nil {
 		return err
 	} else if has {
@@ -440,10 +444,11 @@ func UpdatePublicKey(key *PublicKey) error {
 	return err
 }
 
-func deletePublicKey(e *xorm.Session, key *PublicKey) error {
+func deletePublicKey(e *xorm.Session, keyID int64) error {
 	sshOpLocker.Lock()
 	defer sshOpLocker.Unlock()
 
+	key := &PublicKey{ID: keyID}
 	has, err := e.Get(key)
 	if err != nil {
 		return err
@@ -451,7 +456,7 @@ func deletePublicKey(e *xorm.Session, key *PublicKey) error {
 		return nil
 	}
 
-	if _, err = e.Id(key.ID).Delete(key); err != nil {
+	if _, err = e.Id(key.ID).Delete(new(PublicKey)); err != nil {
 		return err
 	}
 
@@ -467,8 +472,7 @@ func deletePublicKey(e *xorm.Session, key *PublicKey) error {
 
 // DeletePublicKey deletes SSH key information both in database and authorized_keys file.
 func DeletePublicKey(id int64) (err error) {
-	key := &PublicKey{ID: id}
-	has, err := x.Id(key.ID).Get(key)
+	has, err := x.Id(id).Get(new(PublicKey))
 	if err != nil {
 		return err
 	} else if !has {
@@ -481,7 +485,7 @@ func DeletePublicKey(id int64) (err error) {
 		return err
 	}
 
-	if err = deletePublicKey(sess, key); err != nil {
+	if err = deletePublicKey(sess, id); err != nil {
 		return err
 	}
 
@@ -658,7 +662,7 @@ func DeleteDeployKey(id int64) error {
 		return err
 	}
 
-	if _, err = sess.Id(key.ID).Delete(key); err != nil {
+	if _, err = sess.Id(key.ID).Delete(new(DeployKey)); err != nil {
 		return fmt.Errorf("delete deploy key[%d]: %v", key.ID, err)
 	}
 
@@ -667,7 +671,7 @@ func DeleteDeployKey(id int64) error {
 	if err != nil {
 		return err
 	} else if !has {
-		if err = deletePublicKey(sess, &PublicKey{ID: key.KeyID}); err != nil {
+		if err = deletePublicKey(sess, key.KeyID); err != nil {
 			return err
 		}
 	}
