@@ -178,7 +178,7 @@ func SendIssueNotifyMail(u, owner *models.User, repo *models.Repository, issue *
 		return tos, nil
 	}
 
-	subject := fmt.Sprintf("[%s] %s(#%d)", repo.Name, issue.Name, issue.Index)
+	subject := fmt.Sprintf("[%s] %s (#%d)", repo.Name, issue.Name, issue.Index)
 	content := fmt.Sprintf("%s<br>-<br> <a href=\"%s%s/%s/issues/%d\">View it on Gogs</a>.",
 		base.RenderSpecialLink([]byte(issue.Content), owner.Name+"/"+repo.Name),
 		setting.AppUrl, owner.Name, repo.Name, issue.Index)
@@ -196,7 +196,7 @@ func SendIssueMentionMail(r macaron.Render, u, owner *models.User,
 		return nil
 	}
 
-	subject := fmt.Sprintf("[%s] %s(#%d)", repo.Name, issue.Name, issue.Index)
+	subject := fmt.Sprintf("[%s] %s (#%d)", repo.Name, issue.Name, issue.Index)
 
 	data := GetMailTmplData(nil)
 	data["IssueLink"] = fmt.Sprintf("%s/%s/issues/%d", owner.Name, repo.Name, issue.Index)
