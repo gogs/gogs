@@ -27,8 +27,10 @@
             <ul class="list-no-style">
                 {{ $push := ActionContent2Commits .}}
                 {{ $repoLink := .GetRepoLink}}
+                {{if $push.Commits}}
                 {{range $push.Commits}}
                 <li><img class="avatar-16" src="{{AvatarLink .AuthorEmail}}?s=16"> <a href="{{$repoLink}}/commit/{{.Sha1}}">{{ShortSha .Sha1}}</a> <span class="text-truncate grid-4-5">{{.Message}}</span></li>
+                {{end}}
                 {{end}}
                 {{if $push.CompareUrl}}<li><a href="{{AppSubUrl}}/{{$push.CompareUrl}}">{{$.i18n.Tr "action.compare_2_commits"}} »</a></li>{{end}}
             </ul>
