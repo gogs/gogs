@@ -9,6 +9,7 @@
   					{{.i18n.Tr "home.issues.in_your_repos"}}
   					<strong class="ui right">{{.IssueStats.AllCount}}</strong>
   				</a>
+  				{{if not .ContextUser.IsOrganization}}
   				<a class="{{if eq .ViewType "assigned"}}active{{end}} item" href="{{.Link}}?type=assigned&repo={{.RepoID}}&state={{.State}}">
   					{{.i18n.Tr "repo.issues.filter_type.assigned_to_you"}}
   					<strong class="ui right">{{.IssueStats.AssignCount}}</strong>
@@ -17,6 +18,7 @@
   					{{.i18n.Tr "repo.issues.filter_type.created_by_you"}}
   					<strong class="ui right">{{.IssueStats.CreateCount}}</strong>
   				</a>
+  				{{end}}
   				<div class="ui divider"></div>
           {{range .Repos}}
           <a class="{{if eq $.RepoID .ID}}active{{end}} item" href="{{$.Link}}?type={{$.ViewType}}{{if not (eq $.RepoID .ID)}}&repo={{.ID}}{{end}}&state={{$.State}}">{{$.SignedUser.Name}}/{{.Name}} <strong class="ui right">{{if $.IsShowClosed}}{{.NumClosedIssues}}{{else}}{{.NumOpenIssues}}{{end}}</strong></a>

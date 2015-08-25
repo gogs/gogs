@@ -434,6 +434,15 @@ func StringsToInt64s(strs []string) []int64 {
 	return ints
 }
 
+// Int64sToStrings converts a slice of int64 to a slice of string.
+func Int64sToStrings(ints []int64) []string {
+	strs := make([]string, len(ints))
+	for i := range ints {
+		strs[i] = com.ToStr(ints[i])
+	}
+	return strs
+}
+
 // Int64sToMap converts a slice of int64 to a int64 map.
 func Int64sToMap(ints []int64) map[int64]bool {
 	m := make(map[int64]bool)
