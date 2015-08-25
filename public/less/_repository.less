@@ -79,47 +79,6 @@
 	 	}
 	}
 
-	.page.buttons {
-		padding-top: 15px;
-	}
-
-	.issue.list {
-		list-style: none;
-		padding-top: 15px;
-		>.item {
-			padding-top: 15px;
-			padding-bottom: 10px;
-			border-bottom: 1px dashed #AAA;
-			.title {
-				color: #444;
-				font-size: 15px;
-				font-weight: bold;
-				margin: 0 6px;
-				&:hover {
-					color: #000;
-				}
-			}
-			.comment {
-				padding-right: 10px;
-				color: #666;
-			}
-			.desc {
-				padding-top: 5px;
-				color: #999;
-				a.milestone {
-					padding-left: 5px;
-					color: #999!important;
-					&:hover {
-						color: #000!important;
-					}
-				}
-				.assignee {
-					margin-top: -5px;
-					margin-right: 5px;
-				}
-			}
-		}
-	}
 	@comment-avatar-width: 3em;
 	&.new.issue {
 		.comment.form {
@@ -605,6 +564,48 @@
 		overflow-x: auto;
 		overflow-y: hidden;
 	}
+}
+
+.issue.list {
+	list-style: none;
+	padding-top: 15px;
+	>.item {
+		padding-top: 15px;
+		padding-bottom: 10px;
+		border-bottom: 1px dashed #AAA;
+		.title {
+			color: #444;
+			font-size: 15px;
+			font-weight: bold;
+			margin: 0 6px;
+			&:hover {
+				color: #000;
+			}
+		}
+		.comment {
+			padding-right: 10px;
+			color: #666;
+		}
+		.desc {
+			padding-top: 5px;
+			color: #999;
+			a.milestone {
+				padding-left: 5px;
+				color: #999!important;
+				&:hover {
+					color: #000!important;
+				}
+			}
+			.assignee {
+				margin-top: -5px;
+				margin-right: 5px;
+			}
+		}
+	}
+}
+
+.page.buttons {
+	padding-top: 15px;
 }
 
 .ui.comments {

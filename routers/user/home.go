@@ -10,10 +10,10 @@ import (
 	"strings"
 
 	"github.com/Unknwon/com"
+	"github.com/Unknwon/paginater"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/middleware"
 	"github.com/gogits/gogs/modules/setting"
 )
@@ -21,18 +21,13 @@ import (
 const (
 	DASHBOARD base.TplName = "user/dashboard/dashboard"
 	PULLS     base.TplName = "user/dashboard/pulls"
-	ISSUES    base.TplName = "user/issues"
+	ISSUES    base.TplName = "user/dashboard/issues"
 	STARS     base.TplName = "user/stars"
 	PROFILE   base.TplName = "user/profile"
 )
 
-func Dashboard(ctx *middleware.Context) {
-	ctx.Data["Title"] = ctx.Tr("dashboard")
-	ctx.Data["PageIsDashboard"] = true
-	ctx.Data["PageIsNews"] = true
-
-	var ctxUser *models.User
-	// Check context type.
+func getDashboardContextUser(ctx *middleware.Context) *models.User {
+	ctxUser := ctx.User
 	orgName := ctx.Params(":org")
 	if len(orgName) > 0 {
 		// Organization.
@@ -43,10 +38,33 @@ func Dashboard(ctx *middleware.Context) {
 			} else {
 				ctx.Handle(500, "GetUserByName", err)
 			}
-			return
+			return nil
 		}
 		ctxUser = org
-	} else {
+	}
+	ctx.Data["ContextUser"] = ctxUser
+
+	if err := ctx.User.GetOrganizations(); err != nil {
+		ctx.Handle(500, "GetOrganizations", err)
+		return nil
+	}
+	ctx.Data["Orgs"] = ctx.User.Orgs
+
+	return ctxUser
+}
+
+func Dashboard(ctx *middleware.Context) {
+	ctx.Data["Title"] = ctx.Tr("dashboard")
+	ctx.Data["PageIsDashboard"] = true
+	ctx.Data["PageIsNews"] = true
+
+	ctxUser := getDashboardContextUser(ctx)
+	if ctx.Written() {
+		return
+	}
+
+	// Check context type.
+	if !ctxUser.IsOrganization() {
 		// Normal user.
 		ctxUser = ctx.User
 		collaborates, err := ctx.User.GetAccessibleRepositories()
@@ -63,13 +81,6 @@ func Dashboard(ctx *middleware.Context) {
 		ctx.Data["CollaborateCount"] = len(repositories)
 		ctx.Data["CollaborativeRepos"] = repositories
 	}
-	ctx.Data["ContextUser"] = ctxUser
-
-	if err := ctx.User.GetOrganizations(); err != nil {
-		ctx.Handle(500, "GetOrganizations", err)
-		return
-	}
-	ctx.Data["Orgs"] = ctx.User.Orgs
 
 	repos, err := models.GetRepositories(ctxUser.Id, true)
 	if err != nil {
@@ -140,6 +151,138 @@ func Pulls(ctx *middleware.Context) {
 	ctx.Data["ContextUser"] = ctx.User
 
 	ctx.HTML(200, PULLS)
+}
+
+func Issues(ctx *middleware.Context) {
+	ctx.Data["Title"] = ctx.Tr("issues")
+	ctx.Data["PageIsIssues"] = true
+
+	ctxUser := getDashboardContextUser(ctx)
+	if ctx.Written() {
+		return
+	}
+
+	// Organization does not have view type and filter mode.
+	var (
+		viewType   string
+		filterMode = models.FM_ALL
+		assigneeID int64
+		posterID   int64
+	)
+	if ctxUser.IsOrganization() {
+		viewType = "all"
+	} else {
+		viewType = ctx.Query("type")
+		types := []string{"assigned", "created_by"}
+		if !com.IsSliceContainsStr(types, viewType) {
+			viewType = "all"
+		}
+
+		switch viewType {
+		case "assigned":
+			filterMode = models.FM_ASSIGN
+			assigneeID = ctxUser.Id
+		case "created_by":
+			filterMode = models.FM_CREATE
+			posterID = ctxUser.Id
+		}
+	}
+
+	repoID := ctx.QueryInt64("repo")
+	isShowClosed := ctx.Query("state") == "closed"
+	issueStats := models.GetUserIssueStats(repoID, ctxUser.Id, filterMode)
+
+	page := ctx.QueryInt("page")
+	if page <= 1 {
+		page = 1
+	}
+
+	var total int
+	if !isShowClosed {
+		total = int(issueStats.OpenCount)
+	} else {
+		total = int(issueStats.ClosedCount)
+	}
+	ctx.Data["Page"] = paginater.New(total, setting.IssuePagingNum, page, 5)
+
+	// Get repositories.
+	repos, err := models.GetRepositories(ctxUser.Id, true)
+	if err != nil {
+		ctx.Handle(500, "GetRepositories", err)
+		return
+	}
+
+	repoIDs := make([]int64, 0, len(repos))
+	showRepos := make([]*models.Repository, 0, len(repos))
+	for _, repo := range repos {
+		if repo.NumIssues == 0 {
+			continue
+		}
+
+		repoIDs = append(repoIDs, repo.ID)
+		repo.NumOpenIssues = repo.NumIssues - repo.NumClosedIssues
+		issueStats.AllCount += int64(repo.NumOpenIssues)
+
+		if repo.ID == repoID {
+			repo.NumOpenIssues = int(issueStats.OpenCount)
+			repo.NumClosedIssues = int(issueStats.ClosedCount)
+		} else if filterMode != models.FM_ALL && repo.NumIssues > 0 {
+			// Calculate repository issue count with filter mode.
+			numOpen, numClosed := repo.IssueStats(ctxUser.Id, filterMode)
+			repo.NumOpenIssues, repo.NumClosedIssues = int(numOpen), int(numClosed)
+		}
+
+		if repo.ID == repoID ||
+			(isShowClosed && repo.NumClosedIssues > 0) ||
+			(!isShowClosed && repo.NumOpenIssues > 0) {
+			showRepos = append(showRepos, repo)
+		}
+	}
+	ctx.Data["Repos"] = showRepos
+
+	if repoID > 0 {
+		repoIDs = []int64{repoID}
+	}
+
+	// Get issues.
+	issues, err := models.Issues(ctxUser.Id, assigneeID, repoID, posterID, 0,
+		page, isShowClosed, false, "", "")
+	if err != nil {
+		ctx.Handle(500, "Issues: %v", err)
+		return
+	}
+
+	// Get posters and repository.
+	for i := range issues {
+		issues[i].Repo, err = models.GetRepositoryByID(issues[i].RepoID)
+		if err != nil {
+			ctx.Handle(500, "GetRepositoryByID", fmt.Errorf("[#%d]%v", issues[i].ID, err))
+			return
+		}
+
+		if err = issues[i].Repo.GetOwner(); err != nil {
+			ctx.Handle(500, "GetOwner", fmt.Errorf("[#%d]%v", issues[i].ID, err))
+			return
+		}
+
+		if err = issues[i].GetPoster(); err != nil {
+			ctx.Handle(500, "GetPoster", fmt.Errorf("[#%d]%v", issues[i].ID, err))
+			return
+		}
+	}
+	ctx.Data["Issues"] = issues
+
+	ctx.Data["IssueStats"] = issueStats
+	ctx.Data["ViewType"] = viewType
+	ctx.Data["RepoID"] = repoID
+	ctx.Data["IsShowClosed"] = isShowClosed
+	if isShowClosed {
+		ctx.Data["State"] = "closed"
+	} else {
+		ctx.Data["State"] = "open"
+	}
+
+	ctx.HTML(200, ISSUES)
 }
 
 func ShowSSHKeys(ctx *middleware.Context, uid int64) {
@@ -255,137 +398,4 @@ func Email2User(ctx *middleware.Context) {
 		return
 	}
 	ctx.Redirect(setting.AppSubUrl + "/user/" + u.Name)
-}
-
-func Issues(ctx *middleware.Context) {
-	ctx.Data["Title"] = ctx.Tr("issues")
-	ctx.Data["PageIsDashboard"] = true
-	ctx.Data["PageIsIssues"] = true
-
-	viewType := ctx.Query("type")
-	types := []string{"assigned", "created_by"}
-	if !com.IsSliceContainsStr(types, viewType) {
-		viewType = "all"
-	}
-
-	isShowClosed := ctx.Query("state") == "closed"
-
-	var filterMode int
-	switch viewType {
-	case "assigned":
-		filterMode = models.FM_ASSIGN
-	case "created_by":
-		filterMode = models.FM_CREATE
-	}
-
-	repoId, _ := com.StrTo(ctx.Query("repoid")).Int64()
-	issueStats := models.GetUserIssueStats(ctx.User.Id, filterMode)
-
-	// Get all repositories.
-	repos, err := models.GetRepositories(ctx.User.Id, true)
-	if err != nil {
-		ctx.Handle(500, "user.Issues(GetRepositories)", err)
-		return
-	}
-
-	repoIds := make([]int64, 0, len(repos))
-	showRepos := make([]*models.Repository, 0, len(repos))
-	for _, repo := range repos {
-		if repo.NumIssues == 0 {
-			continue
-		}
-
-		repoIds = append(repoIds, repo.ID)
-		repo.NumOpenIssues = repo.NumIssues - repo.NumClosedIssues
-		issueStats.AllCount += int64(repo.NumOpenIssues)
-
-		if isShowClosed {
-			if repo.NumClosedIssues > 0 {
-				if filterMode == models.FM_CREATE {
-					repo.NumClosedIssues = int(models.GetIssueCountByPoster(ctx.User.Id, repo.ID, isShowClosed))
-				}
-				showRepos = append(showRepos, repo)
-			}
-		} else {
-			if repo.NumOpenIssues > 0 {
-				if filterMode == models.FM_CREATE {
-					repo.NumOpenIssues = int(models.GetIssueCountByPoster(ctx.User.Id, repo.ID, isShowClosed))
-				}
-				showRepos = append(showRepos, repo)
-			}
-		}
-	}
-
-	if repoId > 0 {
-		repoIds = []int64{repoId}
-	}
-
-	page, _ := com.StrTo(ctx.Query("page")).Int()
-
-	// Get all issues.
-	var ius []*models.IssueUser
-	switch viewType {
-	case "assigned":
-		fallthrough
-	case "created_by":
-		ius, err = models.GetIssueUserPairsByMode(ctx.User.Id, repoId, isShowClosed, page, filterMode)
-	default:
-		ius, err = models.GetIssueUserPairsByRepoIds(repoIds, isShowClosed, page)
-	}
-	if err != nil {
-		ctx.Handle(500, "user.Issues(GetAllIssueUserPairs)", err)
-		return
-	}
-
-	issues := make([]*models.Issue, len(ius))
-	for i := range ius {
-		issues[i], err = models.GetIssueByID(ius[i].IssueID)
-		if err != nil {
-			if models.IsErrIssueNotExist(err) {
-				log.Warn("user.Issues(GetIssueById #%d): issue not exist", ius[i].IssueID)
-				continue
-			} else {
-				ctx.Handle(500, fmt.Sprintf("user.Issues(GetIssueById #%d)", ius[i].IssueID), err)
-				return
-			}
-		}
-
-		issues[i].Repo, err = models.GetRepositoryByID(issues[i].RepoID)
-		if err != nil {
-			if models.IsErrRepoNotExist(err) {
-				log.Warn("GetRepositoryById[%d]: repository not exist", issues[i].RepoID)
-				continue
-			} else {
-				ctx.Handle(500, fmt.Sprintf("GetRepositoryById[%d]", issues[i].RepoID), err)
-				return
-			}
-		}
-
-		if err = issues[i].Repo.GetOwner(); err != nil {
-			ctx.Handle(500, "user.Issues(GetOwner)", err)
-			return
-		}
-
-		if err = issues[i].GetPoster(); err != nil {
-			ctx.Handle(500, "user.Issues(GetUserById)", err)
-			return
-		}
-	}
-
-	ctx.Data["RepoId"] = repoId
-	ctx.Data["Repos"] = showRepos
-	ctx.Data["Issues"] = issues
-	ctx.Data["ViewType"] = viewType
-	ctx.Data["IssueStats"] = issueStats
-	ctx.Data["IsShowClosed"] = isShowClosed
-	if isShowClosed {
-		ctx.Data["State"] = "closed"
-		ctx.Data["ShowCount"] = issueStats.ClosedCount
-	} else {
-		ctx.Data["ShowCount"] = issueStats.OpenCount
-	}
-
-	ctx.Data["ContextUser"] = ctx.User
-
-	ctx.HTML(200, ISSUES)
 }
