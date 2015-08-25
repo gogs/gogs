@@ -1,0 +1,12 @@
+.git/*
+conf/*
+packager/*
+scripts/*
+*.yml
+*.md
+.bra.toml
+.editorconfig
+.gitignore
+.gopmfile
+config.codekit
+LICENSE
