@@ -221,6 +221,11 @@ func (repo *Repository) GetMilestoneByID(milestoneID int64) (*Milestone, error) 
 	return GetRepoMilestoneByID(repo.ID, milestoneID)
 }
 
+// IssueStats returns number of open and closed repository issues by given filter mode.
+func (repo *Repository) IssueStats(uid int64, filterMode int) (int64, int64) {
+	return GetRepoIssueStats(repo.ID, uid, filterMode)
+}
+
 func (repo *Repository) GetMirror() (err error) {
 	repo.Mirror, err = GetMirror(repo.ID)
 	return err

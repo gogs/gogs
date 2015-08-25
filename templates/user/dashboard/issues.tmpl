@@ -1,0 +1,86 @@
+{{template "base/head" .}}
+<div class="dashboard issues">
+  {{template "user/dashboard/navbar" .}}
+  <div class="ui container">
+  	<div class="ui grid">
+  		<div class="four wide column">
+  			<div class="ui secondary vertical filter menu">
+  				<a class="{{if eq .ViewType "all"}}active{{end}} item" href="{{.Link}}?repo={{.RepoID}}&state={{.State}}">
+  					{{.i18n.Tr "home.issues.in_your_repos"}}
+  					<strong class="ui right">{{.IssueStats.AllCount}}</strong>
+  				</a>
+  				<a class="{{if eq .ViewType "assigned"}}active{{end}} item" href="{{.Link}}?type=assigned&repo={{.RepoID}}&state={{.State}}">
+  					{{.i18n.Tr "repo.issues.filter_type.assigned_to_you"}}
+  					<strong class="ui right">{{.IssueStats.AssignCount}}</strong>
+  				</a>
+  				<a class="{{if eq .ViewType "created_by"}}active{{end}} item" href="{{.Link}}?type=created_by&repo={{.RepoID}}&state={{.State}}">
+  					{{.i18n.Tr "repo.issues.filter_type.created_by_you"}}
+  					<strong class="ui right">{{.IssueStats.CreateCount}}</strong>
+  				</a>
+  				<div class="ui divider"></div>
+          {{range .Repos}}
+          <a class="{{if eq $.RepoID .ID}}active{{end}} item" href="{{$.Link}}?type={{$.ViewType}}{{if not (eq $.RepoID .ID)}}&repo={{.ID}}{{end}}&state={{$.State}}">{{$.SignedUser.Name}}/{{.Name}} <strong class="ui right">{{if $.IsShowClosed}}{{.NumClosedIssues}}{{else}}{{.NumOpenIssues}}{{end}}</strong></a>
+          {{end}}
+  			</div>
+  		</div>
+			<div class="twelve wide column content">
+				<div class="ui tiny buttons">
+				  <a class="ui green basic button {{if not .IsShowClosed}}active{{end}}" href="{{.Link}}?type={{$.ViewType}}&repo={{.RepoID}}&state=open">
+				  	<i class="octicon octicon-issue-opened"></i>
+				  	{{.i18n.Tr "repo.issues.open_tab" .IssueStats.OpenCount}}
+				  </a>
+				  <a class="ui red basic button {{if .IsShowClosed}}active{{end}}" href="{{.Link}}?type={{$.ViewType}}&repo={{.RepoID}}&state=closed">
+				  	<i class="octicon octicon-issue-closed"></i>
+				  	{{.i18n.Tr "repo.issues.close_tab" .IssueStats.ClosedCount}}
+				  </a>
+				</div>
+
+				<div class="issue list">
+					{{range .Issues}}
+					{{ $timeStr:= TimeSince .Created $.Lang }}
+		      <li class="item">
+		      	<div class="ui label">#{{.ID}}</div>
+		      	<a class="title" href="{{AppSubUrl}}/{{.Repo.Owner.Name}}/{{.Repo.Name}}/issues/{{.Index}}">{{.Name}}</a>
+
+		      	{{if .NumComments}}
+		      	<span class="comment ui right"><i class="octicon octicon-comment"></i> {{.NumComments}}</span>
+		      	{{end}}
+
+		        <p class="desc">
+		        	{{$.i18n.Tr "repo.issues.opened_by" $timeStr .Poster.Name | Safe}}
+			        {{if .Assignee}}
+							<a class="ui right assignee poping up" href="{{.Assignee.HomeLink}}" data-content="{{.Assignee.Name}}" data-variation="inverted" data-position="left center">
+								<img class="ui avatar image" src="{{.Assignee.AvatarLink}}">
+							</a>
+			        {{end}}
+		        </p>
+		      </li>
+		      {{end}}
+					
+					{{with .Page}}
+					{{if gt .TotalPages 1}}
+					<div class="center page buttons">
+						<div class="ui borderless pagination menu">
+						  <a class="{{if not .HasPrevious}}disabled{{end}} item" {{if .HasPrevious}}href="{{$.Link}}?type={{$.ViewType}}&state={{$.State}}&labels={{$.SelectLabels}}&milestone={{$.MilestoneID}}&assignee={{$.AssigneeID}}&page={{.Previous}}"{{end}}>
+						    <i class="left arrow icon"></i> {{$.i18n.Tr "repo.issues.previous"}}
+						  </a>
+							{{range .Pages}}
+							{{if eq .Num -1}}
+							<a class="disabled item">...</a>
+							{{else}}
+							<a class="{{if .IsCurrent}}active{{end}} item" {{if not .IsCurrent}}href="{{$.Link}}?type={{$.ViewType}}&state={{$.State}}&labels={{$.SelectLabels}}&milestone={{$.MilestoneID}}&assignee={{$.AssigneeID}}&page={{.Num}}"{{end}}>{{.Num}}</a>
+							{{end}}
+							{{end}}
+						  <a class="{{if not .HasNext}}disabled{{end}} item" {{if .HasNext}}href="{{$.Link}}?type={{$.ViewType}}&state={{$.State}}&labels={{$.SelectLabels}}&milestone={{$.MilestoneID}}&assignee={{$.AssigneeID}}&page={{.Next}}"{{end}}>
+						    {{$.i18n.Tr "repo.issues.next"}} <i class="icon right arrow"></i>
+						  </a>
+						</div>
+					</div>
+					{{end}}
+					{{end}}
+				</div>
+		  </div>
+  	</div>
+	</div>
+</div>
+{{template "base/footer" .}}

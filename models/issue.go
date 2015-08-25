@@ -641,9 +641,8 @@ func parseCountResult(results []map[string][]byte) int64 {
 }
 
 // GetIssueStats returns issue statistic information by given conditions.
-func GetIssueStats(repoID, uid, labelID, milestoneID, assigneeID int64, isShowClosed bool, filterMode int) *IssueStats {
+func GetIssueStats(repoID, uid, labelID, milestoneID, assigneeID int64, filterMode int) *IssueStats {
 	stats := &IssueStats{}
-	// issue := new(Issue)
 
 	queryStr := "SELECT COUNT(*) FROM `issue` "
 	if labelID > 0 {
@@ -659,36 +658,73 @@ func GetIssueStats(repoID, uid, labelID, milestoneID, assigneeID int64, isShowCl
 	}
 	switch filterMode {
 	case FM_ALL, FM_ASSIGN:
-		resutls, _ := x.Query(queryStr+baseCond, repoID, false)
-		stats.OpenCount = parseCountResult(resutls)
-		resutls, _ = x.Query(queryStr+baseCond, repoID, true)
-		stats.ClosedCount = parseCountResult(resutls)
+		results, _ := x.Query(queryStr+baseCond, repoID, false)
+		stats.OpenCount = parseCountResult(results)
+		results, _ = x.Query(queryStr+baseCond, repoID, true)
+		stats.ClosedCount = parseCountResult(results)
 
 	case FM_CREATE:
 		baseCond += " AND poster_id=?"
-		resutls, _ := x.Query(queryStr+baseCond, repoID, false, uid)
-		stats.OpenCount = parseCountResult(resutls)
-		resutls, _ = x.Query(queryStr+baseCond, repoID, true, uid)
-		stats.ClosedCount = parseCountResult(resutls)
+		results, _ := x.Query(queryStr+baseCond, repoID, false, uid)
+		stats.OpenCount = parseCountResult(results)
+		results, _ = x.Query(queryStr+baseCond, repoID, true, uid)
+		stats.ClosedCount = parseCountResult(results)
 
 	case FM_MENTION:
 		queryStr += " INNER JOIN `issue_user` ON `issue`.id=`issue_user`.issue_id"
 		baseCond += " AND `issue_user`.uid=? AND `issue_user`.is_mentioned=?"
-		resutls, _ := x.Query(queryStr+baseCond, repoID, false, uid, true)
-		stats.OpenCount = parseCountResult(resutls)
-		resutls, _ = x.Query(queryStr+baseCond, repoID, true, uid, true)
-		stats.ClosedCount = parseCountResult(resutls)
+		results, _ := x.Query(queryStr+baseCond, repoID, false, uid, true)
+		stats.OpenCount = parseCountResult(results)
+		results, _ = x.Query(queryStr+baseCond, repoID, true, uid, true)
+		stats.ClosedCount = parseCountResult(results)
 	}
 	return stats
 }
 
 // GetUserIssueStats returns issue statistic information for dashboard by given conditions.
-func GetUserIssueStats(uid int64, filterMode int) *IssueStats {
+func GetUserIssueStats(repoID, uid int64, filterMode int) *IssueStats {
 	stats := &IssueStats{}
 	issue := new(Issue)
 	stats.AssignCount, _ = x.Where("assignee_id=?", uid).And("is_closed=?", false).Count(issue)
 	stats.CreateCount, _ = x.Where("poster_id=?", uid).And("is_closed=?", false).Count(issue)
+
+	queryStr := "SELECT COUNT(*) FROM `issue` "
+	baseCond := " WHERE issue.is_closed=?"
+	if repoID > 0 {
+		baseCond += " AND issue.repo_id=" + com.ToStr(repoID)
+	}
+	switch filterMode {
+	case FM_ASSIGN:
+		baseCond += " AND assignee_id=" + com.ToStr(uid)
+
+	case FM_CREATE:
+		baseCond += " AND poster_id=" + com.ToStr(uid)
+	}
+
+	results, _ := x.Query(queryStr+baseCond, false)
+	stats.OpenCount = parseCountResult(results)
+	results, _ = x.Query(queryStr+baseCond, true)
+	stats.ClosedCount = parseCountResult(results)
 	return stats
+}
+
+// GetRepoIssueStats returns number of open and closed repository issues by given filter mode.
+func GetRepoIssueStats(repoID, uid int64, filterMode int) (numOpen int64, numClosed int64) {
+	queryStr := "SELECT COUNT(*) FROM `issue` "
+	baseCond := " WHERE issue.repo_id=? AND issue.is_closed=?"
+	switch filterMode {
+	case FM_ASSIGN:
+		baseCond += " AND assignee_id=" + com.ToStr(uid)
+
+	case FM_CREATE:
+		baseCond += " AND poster_id=" + com.ToStr(uid)
+	}
+
+	results, _ := x.Query(queryStr+baseCond, repoID, false)
+	numOpen = parseCountResult(results)
+	results, _ = x.Query(queryStr+baseCond, repoID, true)
+	numClosed = parseCountResult(results)
+	return numOpen, numClosed
 }
 
 func updateIssue(e Engine, issue *Issue) error {
