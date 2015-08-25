@@ -190,20 +190,6 @@ func Issues(ctx *middleware.Context) {
 
 	repoID := ctx.QueryInt64("repo")
 	isShowClosed := ctx.Query("state") == "closed"
-	issueStats := models.GetUserIssueStats(repoID, ctxUser.Id, filterMode)
-
-	page := ctx.QueryInt("page")
-	if page <= 1 {
-		page = 1
-	}
-
-	var total int
-	if !isShowClosed {
-		total = int(issueStats.OpenCount)
-	} else {
-		total = int(issueStats.ClosedCount)
-	}
-	ctx.Data["Page"] = paginater.New(total, setting.IssuePagingNum, page, 5)
 
 	// Get repositories.
 	repos, err := models.GetRepositories(ctxUser.Id, true)
@@ -212,6 +198,7 @@ func Issues(ctx *middleware.Context) {
 		return
 	}
 
+	allCount := 0
 	repoIDs := make([]int64, 0, len(repos))
 	showRepos := make([]*models.Repository, 0, len(repos))
 	for _, repo := range repos {
@@ -221,12 +208,9 @@ func Issues(ctx *middleware.Context) {
 
 		repoIDs = append(repoIDs, repo.ID)
 		repo.NumOpenIssues = repo.NumIssues - repo.NumClosedIssues
-		issueStats.AllCount += int64(repo.NumOpenIssues)
+		allCount += repo.NumOpenIssues
 
-		if repo.ID == repoID {
-			repo.NumOpenIssues = int(issueStats.OpenCount)
-			repo.NumClosedIssues = int(issueStats.ClosedCount)
-		} else if filterMode != models.FM_ALL && repo.NumIssues > 0 {
+		if filterMode != models.FM_ALL {
 			// Calculate repository issue count with filter mode.
 			numOpen, numClosed := repo.IssueStats(ctxUser.Id, filterMode)
 			repo.NumOpenIssues, repo.NumClosedIssues = int(numOpen), int(numClosed)
@@ -244,9 +228,25 @@ func Issues(ctx *middleware.Context) {
 		repoIDs = []int64{repoID}
 	}
 
+	issueStats := models.GetUserIssueStats(repoID, ctxUser.Id, repoIDs, filterMode)
+	issueStats.AllCount = int64(allCount)
+
+	page := ctx.QueryInt("page")
+	if page <= 1 {
+		page = 1
+	}
+
+	var total int
+	if !isShowClosed {
+		total = int(issueStats.OpenCount)
+	} else {
+		total = int(issueStats.ClosedCount)
+	}
+	ctx.Data["Page"] = paginater.New(total, setting.IssuePagingNum, page, 5)
+
 	// Get issues.
 	issues, err := models.Issues(ctxUser.Id, assigneeID, repoID, posterID, 0,
-		page, isShowClosed, false, "", "")
+		repoIDs, page, isShowClosed, false, "", "")
 	if err != nil {
 		ctx.Handle(500, "Issues: %v", err)
 		return
