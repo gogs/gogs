@@ -114,7 +114,7 @@ func Issues(ctx *middleware.Context) {
 
 	// Get issues.
 	issues, err := models.Issues(uid, assigneeID, repo.ID, posterID, milestoneID,
-		page, isShowClosed, filterMode == models.FM_MENTION, selectLabels, sortType)
+		nil, page, isShowClosed, filterMode == models.FM_MENTION, selectLabels, sortType)
 	if err != nil {
 		ctx.Handle(500, "Issues: %v", err)
 		return

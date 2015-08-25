@@ -404,11 +404,13 @@ func GetIssueByID(id int64) (*Issue, error) {
 }
 
 // Issues returns a list of issues by given conditions.
-func Issues(uid, assigneeID, repoID, posterID, milestoneID int64, page int, isClosed, isMention bool, labels, sortType string) ([]*Issue, error) {
+func Issues(uid, assigneeID, repoID, posterID, milestoneID int64, repoIDs []int64, page int, isClosed, isMention bool, labels, sortType string) ([]*Issue, error) {
 	sess := x.Limit(setting.IssuePagingNum, (page-1)*setting.IssuePagingNum)
 
 	if repoID > 0 {
 		sess.Where("issue.repo_id=?", repoID).And("issue.is_closed=?", isClosed)
+	} else if repoIDs != nil {
+		sess.Where("issue.repo_id IN (?)", strings.Join(base.Int64sToStrings(repoIDs), ",")).And("issue.is_closed=?", isClosed)
 	} else {
 		sess.Where("issue.is_closed=?", isClosed)
 	}
@@ -682,7 +684,7 @@ func GetIssueStats(repoID, uid, labelID, milestoneID, assigneeID int64, filterMo
 }
 
 // GetUserIssueStats returns issue statistic information for dashboard by given conditions.
-func GetUserIssueStats(repoID, uid int64, filterMode int) *IssueStats {
+func GetUserIssueStats(repoID, uid int64, repoIDs []int64, filterMode int) *IssueStats {
 	stats := &IssueStats{}
 	issue := new(Issue)
 	stats.AssignCount, _ = x.Where("assignee_id=?", uid).And("is_closed=?", false).Count(issue)
@@ -692,6 +694,8 @@ func GetUserIssueStats(repoID, uid int64, filterMode int) *IssueStats {
 	baseCond := " WHERE issue.is_closed=?"
 	if repoID > 0 {
 		baseCond += " AND issue.repo_id=" + com.ToStr(repoID)
+	} else {
+		baseCond += " AND issue.repo_id IN (" + strings.Join(base.Int64sToStrings(repoIDs), ",") + ")"
 	}
 	switch filterMode {
 	case FM_ASSIGN:

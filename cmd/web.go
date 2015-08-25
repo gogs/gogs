@@ -384,6 +384,7 @@ func runWeb(ctx *cli.Context) {
 
 		m.Group("/:org", func() {
 			m.Get("/dashboard", user.Dashboard)
+			m.Get("/issues", user.Issues)
 			m.Get("/members", org.Members)
 			m.Get("/members/action/:action", org.MembersAction)
 
