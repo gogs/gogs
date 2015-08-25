@@ -29,7 +29,7 @@
 	<div class="four wide column">
 		<div class="ui segment metas">
 			<input id="label_ids" name="label_ids" type="hidden" value="{{.label_ids}}">
-			<div class="ui {{if not .Labels}}disabled{{end}} jump select-label dropdown">
+			<div class="ui {{if not .Labels}}disabled{{end}} floating jump select-label dropdown">
 				<span class="text">
 					<strong>{{.i18n.Tr "repo.issues.new.labels"}}</strong>
 					<span class="octicon octicon-gear"></span>
@@ -51,7 +51,7 @@
 			<div class="ui divider"></div>
 
 			<input id="milestone_id" name="milestone_id" type="hidden" value="{{.milestone_id}}">
-			<div class="ui {{if not (or .OpenMilestones .ClosedMilestones)}}disabled{{end}} jump select-milestone dropdown">
+			<div class="ui {{if not (or .OpenMilestones .ClosedMilestones)}}disabled{{end}} floating jump select-milestone dropdown">
 				<span class="text">
 					<strong>{{.i18n.Tr "repo.issues.new.milestone"}}</strong>
 					<span class="octicon octicon-gear"></span>
@@ -92,7 +92,7 @@
 			<div class="ui divider"></div>
 
 			<input id="assignee_id" name="assignee_id" type="hidden" value="{{.assignee_id}}">
-			<div class="ui {{if not .Assignees}}disabled{{end}} jump select-assignee dropdown">
+			<div class="ui {{if not .Assignees}}disabled{{end}} floating jump select-assignee dropdown">
 				<span class="text">
 					<strong>{{.i18n.Tr "repo.issues.new.assignee"}}</strong>
 					<span class="octicon octicon-gear"></span>

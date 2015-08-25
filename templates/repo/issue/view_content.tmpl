@@ -188,7 +188,7 @@
 
 	<div class="four wide column">
 		<div class="ui segment metas">
-			<div class="ui {{if not .IsRepositoryAdmin}}disabled{{end}} jump select-label dropdown">
+			<div class="ui {{if not .IsRepositoryAdmin}}disabled{{end}} floating jump select-label dropdown">
 				<span class="text">
 					<strong>{{.i18n.Tr "repo.issues.new.labels"}}</strong>
 					<span class="octicon octicon-gear"></span>
@@ -209,7 +209,7 @@
 
 			<div class="ui divider"></div>
 
-			<div class="ui {{if not .IsRepositoryAdmin}}disabled{{end}} jump select-milestone dropdown">
+			<div class="ui {{if not .IsRepositoryAdmin}}disabled{{end}} floating jump select-milestone dropdown">
 				<span class="text">
 					<strong>{{.i18n.Tr "repo.issues.new.milestone"}}</strong>
 					<span class="octicon octicon-gear"></span>
@@ -250,7 +250,7 @@
 			<div class="ui divider"></div>
 
 			<input id="assignee_id" name="assignee_id" type="hidden" value="{{.assignee_id}}">
-			<div class="ui {{if not .IsRepositoryAdmin}}disabled{{end}} jump select-assignee dropdown">
+			<div class="ui {{if not .IsRepositoryAdmin}}disabled{{end}} floating jump select-assignee dropdown">
 				<span class="text">
 					<strong>{{.i18n.Tr "repo.issues.new.assignee"}}</strong>
 					<span class="octicon octicon-gear"></span>
