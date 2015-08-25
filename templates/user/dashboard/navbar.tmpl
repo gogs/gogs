@@ -26,5 +26,25 @@
     	</a>
     </div>
   </div>
+
+  {{if .ContextUser.IsOrganization}}
+  <div class="ui right">
+    <div class="ui secondary head menu">
+      <a class="{{if .PageIsNews}}active{{end}} item" href="{{AppSubUrl}}/org/{{.ContextUser.Name}}/dashboard">
+        <i class="octicon octicon-rss"></i>&nbsp;{{.i18n.Tr "news_feed"}}
+      </a>
+      <a class="{{if .PageIsIssues}}active{{end}} item" href="{{AppSubUrl}}/org/{{.ContextUser.Name}}/issues">
+        <i class="octicon octicon-issue-opened"></i>&nbsp;{{.i18n.Tr "issues"}}
+      </a>
+      <div class="right menu">
+        <div class="item">
+          <a class="ui blue basic button" href="{{AppSubUrl}}/org/{{.ContextUser.Name}}">
+            {{.i18n.Tr "home.view_home" .ContextUser.Name}}
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+  {{end}}
 </div>
 <div class="ui divider"></div>

@@ -33,11 +33,9 @@
                 </ul>
             </div>
         </li>
-        {{if not .ContextUser.IsOrganization}}
         <li class="right">
-            <a {{if $.PageIsIssues}}class="current"{{end}} href="{{.ContextUser.DashboardLink}}issues"><i class="octicon octicon-issue-opened"></i>{{.i18n.Tr "issues"}}</a>
+            <a {{if $.PageIsIssues}}class="current"{{end}} href="{{AppSubUrl}}/{{if .ContextUser.IsOrganization}}org/{{.ContextUser.Name}}/{{end}}issues"><i class="octicon octicon-issue-opened"></i>{{.i18n.Tr "issues"}}</a>
         </li>
-        {{end}}
         <!-- <li class="right">
             <a {{if .PageIsPulls}}class="current"{{end}} href="{{.ContextUser.DashboardLink}}pulls"><i class="octicon octicon-git-pull-request"></i>{{.i18n.Tr "pull_requests"}}</a>
         </li> -->
