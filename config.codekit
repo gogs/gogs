@@ -235,6 +235,17 @@
 		"outputPathIsSetByUser": 0,
 		"processed": 1
 		},
+	"\/public\/img\/slack.png": {
+		"fileType": 32768,
+		"ignore": 0,
+		"ignoreWasSetByUser": 0,
+		"initialSize": 1633,
+		"inputAbbreviatedPath": "\/public\/img\/slack.png",
+		"outputAbbreviatedPath": "\/public\/img\/slack.png",
+		"outputPathIsOutsideProject": 0,
+		"outputPathIsSetByUser": 0,
+		"processed": 0
+		},
 	"\/public\/less\/_admin.less": {
 		"allowInsecureImports": 0,
 		"createSourceMap": 0,
