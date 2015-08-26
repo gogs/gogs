@@ -1,37 +1,29 @@
-{{template "ng/base/head" .}}
-{{template "ng/base/header" .}}
-{{template "org/base/header" .}}
-<div id="setting-wrapper" class="main-wrapper">
-    <div id="org-setting" class="container clear">
-        {{template "org/settings/nav" .}}
-        <div class="grid-4-5 left">
-            <div class="setting-content">
-                {{template "ng/base/alert" .}}
-                <div id="setting-content">
-                    <div id="repo-hooks-panel" class="panel panel-radius">
-                        <div class="panel-header">
-                          <strong>{{if .PageIsSettingsHooksNew}}{{.i18n.Tr "repo.settings.add_webhook"}}{{else}}{{.i18n.Tr "repo.settings.update_webhook"}}{{end}}</strong>
-                        </div>
-                        {{template "repo/settings/hook_types" .}}
-                        {{template "repo/settings/hook_gogs" .}}
-                        {{template "repo/settings/hook_slack" .}}
-                    </div>
-                </div>
-                {{if .PageIsSettingsHooksEdit}}
-              <br>
-                <div id="setting-content">
-                    <div id="repo-hooks-history-panel" class="panel panel-radius">
-                        <div class="panel-header">
-                          <strong>{{.i18n.Tr "repo.settings.recent_deliveries"}}</strong>
-                        </div>
-                        <ul class="panel-body setting-list">
-                            <li>Coming soon!</li>
-                        </ul>
-                    </div>
-              </div>
-              {{end}}
-            </div>
+{{template "base/head" .}}
+<div class="organization settings new webhook">
+  {{template "org/header" .}}
+  <div class="ui container">
+    <div class="ui grid">
+      {{template "org/settings/navbar" .}}
+      <div class="twelve wide column content">
+        {{template "base/alert" .}}
+        <h4 class="ui top attached header">
+          {{if .PageIsSettingsHooksNew}}{{.i18n.Tr "repo.settings.add_webhook"}}{{else}}{{.i18n.Tr "repo.settings.update_webhook"}}{{end}}
+          <div class="ui right">
+            {{if eq .HookType "gogs"}}
+            <img class="img-13" src="{{AppSubUrl}}/img/favicon.png">
+            {{else if eq .HookType "slack"}}
+            <img class="img-13" src="{{AppSubUrl}}/img/slack.png">
+            {{end}}
+          </div>
+        </h4>
+        <div class="ui attached segment">
+          {{template "repo/settings/hook_gogs" .}}
+          {{template "repo/settings/hook_slack" .}}
         </div>
+
+        {{template "repo/settings/hook_history" .}}
+      </div>
+    </div>
   </div>
 </div>
-{{template "ng/base/footer" .}}
+{{template "base/footer" .}}

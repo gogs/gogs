@@ -81,6 +81,7 @@ var (
 		QueueLength    int
 		DeliverTimeout int
 		SkipTLSVerify  bool
+		Types          []string
 	}
 
 	// Repository settings.
@@ -599,6 +600,7 @@ func newWebhookService() {
 	Webhook.QueueLength = sec.Key("QUEUE_LENGTH").MustInt(1000)
 	Webhook.DeliverTimeout = sec.Key("DELIVER_TIMEOUT").MustInt(5)
 	Webhook.SkipTLSVerify = sec.Key("SKIP_TLS_VERIFY").MustBool()
+	Webhook.Types = []string{"gogs", "slack"}
 }
 
 func NewServices() {
