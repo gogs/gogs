@@ -3,7 +3,17 @@
 	<h4 class="ui top attached header">
 	  {{.i18n.Tr "repo.settings.hooks"}}
 	  <div class="ui right">
-	  	<a class="ui blue tiny button" href="{{.BaseLink}}/settings/hooks/new">{{.i18n.Tr "repo.settings.add_webhook"}}</a>
+      <div class="ui floating1 jump dropdown">
+        <div class="ui blue tiny button">{{.i18n.Tr "repo.settings.add_webhook"}}</div>
+        <div class="menu">
+          <a class="item" href="{{.BaseLink}}/settings/hooks/gogs/new">
+            <img class="img-10" src="{{AppSubUrl}}/img/favicon.png">Gogs
+          </a>
+          <a class="item" href="{{.BaseLink}}/settings/hooks/slack/new">
+            <img class="img-10" src="{{AppSubUrl}}/img/slack.png">Slack
+          </a>
+        </div>
+      </div>
 	  </div>
 	</h4>
 	<div class="ui attached table segment">
@@ -31,22 +41,4 @@
   </div>
 </div>
 
-<div class="ui small basic delete modal">
-  <div class="ui icon header">
-    <i class="trash icon"></i>
-    {{.i18n.Tr "repo.settings.webhook_deletion"}}
-  </div>
-  <div class="content">
-    <p>{{.i18n.Tr "repo.settings.webhook_deletion_desc"}}</p>
-  </div>
-  <div class="actions">
-    <div class="ui red basic inverted cancel button">
-      <i class="remove icon"></i>
-      {{.i18n.Tr "modal.no"}}
-    </div>
-    <div class="ui green basic inverted ok button">
-      <i class="checkmark icon"></i>
-      {{.i18n.Tr "modal.yes"}}
-    </div>
-  </div>
-</div>
+{{template "repo/settings/hook_delete_modal" .}}

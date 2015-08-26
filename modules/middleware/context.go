@@ -26,6 +26,27 @@ import (
 	"github.com/gogits/gogs/modules/setting"
 )
 
+type RepoContext struct {
+	AccessMode   models.AccessMode
+	IsWatching   bool
+	IsBranch     bool
+	IsTag        bool
+	IsCommit     bool
+	Repository   *models.Repository
+	Owner        *models.User
+	Commit       *git.Commit
+	Tag          *git.Tag
+	GitRepo      *git.Repository
+	BranchName   string
+	TagName      string
+	TreeName     string
+	CommitId     string
+	RepoLink     string
+	CloneLink    models.CloneLink
+	CommitsCount int
+	Mirror       *models.Mirror
+}
+
 // Context represents context of a request.
 type Context struct {
 	*macaron.Context
@@ -49,27 +70,6 @@ type Context struct {
 
 		Team *models.Team
 	}
-}
-
-type RepoContext struct {
-	AccessMode   models.AccessMode
-	IsWatching   bool
-	IsBranch     bool
-	IsTag        bool
-	IsCommit     bool
-	Repository   *models.Repository
-	Owner        *models.User
-	Commit       *git.Commit
-	Tag          *git.Tag
-	GitRepo      *git.Repository
-	BranchName   string
-	TagName      string
-	TreeName     string
-	CommitId     string
-	RepoLink     string
-	CloneLink    models.CloneLink
-	CommitsCount int
-	Mirror       *models.Mirror
 }
 
 // IsOwner returns true if current user is the owner of repository.
