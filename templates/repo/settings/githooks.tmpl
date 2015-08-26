@@ -1,5 +1,5 @@
 {{template "base/head" .}}
-<div class="repository settings hooks">
+<div class="repository settings githooks">
 	{{template "repo/header" .}}
 	<div class="ui container">
 		<div class="ui grid">
@@ -16,13 +16,9 @@
             </div>
 						{{range .Hooks}}
 						<div class="item">
-							{{if .IsActive}}
-							<span class="text success"><i class="octicon octicon-check"></i></span>
-							{{else}}
-							<span class="text grey"><i class="octicon octicon-primitive-dot"></i></span>
-							{{end}}
+							<span class="text {{if .IsActive}}green{{else}}grey{{end}}"><i class="octicon octicon-primitive-dot"></i></span>
 							<span>{{.Name}}</span>
-              <a href="{{$.RepoLink}}/settings/hooks/git/{{.Name}}" class="text blue ui right"><i class="fa fa-pencil"></i></a>
+              <a class="text blue ui right" href="{{$.RepoLink}}/settings/hooks/git/{{.Name}}"><i class="fa fa-pencil"></i></a>
 						</div>
             {{end}}
           </div>

@@ -1,6 +1,6 @@
 {{with .Repository}}
 <div class="ui container"><!-- start container -->
-	<div id="repoheader" class="ui vertically padded grid head"><!-- start grid -->
+	<div class="ui vertically padded grid head"><!-- start grid -->
 		<div class="column"><!-- start column -->
 			<div class="ui black small compact menu floated right count labelled">
 				<a class="item{{if $.IsRepositoryOwner}} poping up{{end}}"{{if not $.IsRepositoryOwner}} href="{{AppSubUrl}}/repo/fork/{{.ID}}"{{else}} data-content="{{$.i18n.Tr "repo.fork_from_self"}}" data-position="top center" data-variation="tiny"{{end}}>
@@ -27,19 +27,17 @@
 			</div>
 
 			<div class="ui header">
-			<div class="ui huge breadcrumb">
-				<i class="mega-octicon octicon-{{if .IsPrivate}}lock{{else if .IsMirror}}repo-clone{{else if .IsFork}}repo-forked{{else}}repo{{end}}"></i>
-				<a href="{{AppSubUrl}}/{{.Owner.Name}}">{{.Owner.Name}}</a>
-				<div class="divider"> / </div>
-				<a href="{{$.RepoLink}}">{{.Name}}</a>
-				{{if .IsMirror}}<div class="ui label">{{$.i18n.Tr "mirror"}}</div>{{end}}
-				{{if .IsFork}}<div class="fork-flag">{{$.i18n.Tr "repo.forked_from"}} <a href="{{.BaseRepo.RepoLink}}">{{SubStr .BaseRepo.RepoLink 1 -1}}</a></div>{{end}}
+				<div class="ui huge breadcrumb">
+					<i class="mega-octicon octicon-{{if .IsPrivate}}lock{{else if .IsMirror}}repo-clone{{else if .IsFork}}repo-forked{{else}}repo{{end}}"></i>
+					<a href="{{AppSubUrl}}/{{.Owner.Name}}">{{.Owner.Name}}</a>
+					<div class="divider"> / </div>
+					<a href="{{$.RepoLink}}">{{.Name}}</a>
+					{{if .IsMirror}}<div class="ui label">{{$.i18n.Tr "mirror"}}</div>{{end}}
+					{{if .IsFork}}<div class="fork-flag">{{$.i18n.Tr "repo.forked_from"}} <a href="{{.BaseRepo.RepoLink}}">{{SubStr .BaseRepo.RepoLink 1 -1}}</a></div>{{end}}
+				</div>
 			</div>
-			</div>
-
 		</div><!-- end column -->
 	</div><!-- end grid -->
 </div><!-- end container -->
-
 <div class="ui divider"></div>
 {{end}}

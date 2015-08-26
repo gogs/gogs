@@ -73,9 +73,21 @@ img {
 	.text {
 		&.red {
 			color: #d95c5c!important;
+	    a {
+	    	color: #d95c5c!important;
+	    	&:hover {
+	    		color: #E67777!important;
+	    	}
+	    }
 		}
 		&.blue {
 			color: #428bca!important;
+	    a {
+	    	color: #15c!important;
+	    	&:hover {
+	    		color: #428bca!important;
+	    	}
+	    }
 		}
 		&.grey {
 	    color: #767676!important;
@@ -104,6 +116,10 @@ img {
 			text-overflow: ellipsis;
 			white-space: nowrap;
 			display: inline-block;
+		}
+
+		&.thin {
+			font-weight: normal;
 		}
 	}
 

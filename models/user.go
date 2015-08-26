@@ -111,8 +111,11 @@ func (u *User) DashboardLink() string {
 	return setting.AppSubUrl + "/"
 }
 
-// HomeLink returns the user home page link.
+// HomeLink returns the user or organization home page link.
 func (u *User) HomeLink() string {
+	if u.IsOrganization() {
+		return setting.AppSubUrl + "/org/" + u.Name
+	}
 	return setting.AppSubUrl + "/" + u.Name
 }
 
@@ -160,6 +163,15 @@ func (u *User) AvatarLink() string {
 		return setting.AppSubUrl + "/avatar/" + u.Avatar
 	}
 	return setting.GravatarSource + u.Avatar
+}
+
+// DisplayName returns full name if it's not empty,
+// returns username otherwise.
+func (u *User) DisplayName() string {
+	if len(u.FullName) > 0 {
+		return u.FullName
+	}
+	return u.Name
 }
 
 // NewGitSig generates and returns the signature of given user.

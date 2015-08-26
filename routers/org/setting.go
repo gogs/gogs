@@ -105,9 +105,11 @@ func SettingsDelete(ctx *middleware.Context) {
 	ctx.HTML(200, SETTINGS_DELETE)
 }
 
-func SettingsHooks(ctx *middleware.Context) {
+func Webhooks(ctx *middleware.Context) {
 	ctx.Data["Title"] = ctx.Tr("org.settings")
 	ctx.Data["PageIsSettingsHooks"] = true
+	ctx.Data["BaseLink"] = ctx.Org.OrgLink
+	ctx.Data["Description"] = ctx.Tr("org.settings.hooks_desc")
 
 	// Delete web hook.
 	remove := com.StrTo(ctx.Query("remove")).MustInt64()
@@ -129,4 +131,16 @@ func SettingsHooks(ctx *middleware.Context) {
 
 	ctx.Data["Webhooks"] = ws
 	ctx.HTML(200, SETTINGS_HOOKS)
+}
+
+func DeleteWebhook(ctx *middleware.Context) {
+	if err := models.DeleteWebhook(ctx.QueryInt64("id")); err != nil {
+		ctx.Flash.Error("DeleteWebhook: " + err.Error())
+	} else {
+		ctx.Flash.Success(ctx.Tr("repo.settings.webhook_deletion_success"))
+	}
+
+	ctx.JSON(200, map[string]interface{}{
+		"redirect": ctx.Org.OrgLink + "/settings/hooks",
+	})
 }

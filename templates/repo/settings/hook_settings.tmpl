@@ -11,5 +11,5 @@
 <div class="field">
     <label></label>
     <button class="btn btn-green btn-large btn-radius">{{if .PageIsSettingsHooksNew}}{{.i18n.Tr "repo.settings.add_webhook"}}{{else}}{{.i18n.Tr "repo.settings.update_webhook"}}{{end}}</button>
-    {{if .PageIsSettingsHooksEdit}}<a class="btn btn-red btn-large btn-link btn-radius" href="{{.RepoLink}}/settings/hooks?remove={{.Webhook.Id}}"><strong>{{.i18n.Tr "repo.settings.delete_webhook"}}</strong></a>{{end}}
+    {{if .PageIsSettingsHooksEdit}}<a class="btn btn-red btn-large btn-link btn-radius" href="{{.RepoLink}}/settings/hooks?remove={{.Webhook.ID}}"><strong>{{.i18n.Tr "repo.settings.delete_webhook"}}</strong></a>{{end}}
 </div>
