@@ -14,7 +14,7 @@
 				    <span class="text">base: {{$.BaseBranch}}</span>
 					  <i class="dropdown icon"></i>
 					</div>
-	        <div class="menu">
+	        <div class="overflow menu">
 		        <div class="ui icon search input">
 	            <i class="filter icon"></i>
 	            <input name="search" placeholder="Filter branch...">
@@ -32,7 +32,7 @@
 				    <span class="text">compare: {{$.HeadBranch}}</span>
 					  <i class="dropdown icon"></i>
 					</div>
-	        <div class="menu">
+	        <div class="overflow menu">
 		        <div class="ui icon search input">
 	            <i class="filter icon"></i>
 	            <input name="search" placeholder="Filter branch...">
@@ -47,6 +47,7 @@
 			</div>
 			{{template "repo/issue/new_form" .}}
 		</div>
+
 	</div>
 </div>
 {{template "base/footer" .}}
