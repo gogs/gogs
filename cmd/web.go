@@ -303,6 +303,7 @@ func runWeb(ctx *cli.Context) {
 
 	adminReq := middleware.Toggle(&middleware.ToggleOptions{SignInRequire: true, AdminRequire: true})
 
+	// ***** START: Admin *****
 	m.Group("/admin", func() {
 		m.Get("", adminReq, admin.Dashboard)
 		m.Get("/config", admin.Config)
@@ -339,6 +340,7 @@ func runWeb(ctx *cli.Context) {
 			m.Get("/:id:int/delete", admin.DeleteNotice)
 		})
 	}, adminReq)
+	// ***** END: Admin *****
 
 	m.Group("", func() {
 		m.Get("/:username", user.Profile)
@@ -377,7 +379,7 @@ func runWeb(ctx *cli.Context) {
 
 	reqRepoAdmin := middleware.RequireRepoAdmin()
 
-	// Organization.
+	// ***** START: Organization *****
 	m.Group("/org", func() {
 		m.Get("/create", org.Create)
 		m.Post("/create", bindIgnErr(auth.CreateOrgForm{}), org.CreatePost)
@@ -403,9 +405,14 @@ func runWeb(ctx *cli.Context) {
 			m.Post("/teams/:team/delete", org.DeleteTeam)
 
 			m.Group("/settings", func() {
-				m.Get("", org.Settings)
-				m.Post("", bindIgnErr(auth.UpdateOrgSettingForm{}), org.SettingsPost)
-				m.Get("/hooks", org.SettingsHooks)
+				m.Combo("").Get(org.Settings).
+					Post(bindIgnErr(auth.UpdateOrgSettingForm{}), org.SettingsPost)
+
+				m.Group("/hooks", func() {
+					m.Get("", org.Webhooks)
+					m.Post("/delete", org.DeleteWebhook)
+				})
+
 				m.Get("/hooks/new", repo.WebHooksNew)
 				m.Post("/hooks/gogs/new", bindIgnErr(auth.NewWebhookForm{}), repo.WebHooksNewPost)
 				m.Post("/hooks/slack/new", bindIgnErr(auth.NewSlackHookForm{}), repo.SlackHooksNewPost)
@@ -421,8 +428,9 @@ func runWeb(ctx *cli.Context) {
 	m.Group("/org", func() {
 		m.Get("/:org", org.Home)
 	}, ignSignIn, middleware.OrgAssignment(true))
+	// ***** END: Organization *****
 
-	// Repository.
+	// ***** START: Repository *****
 	m.Group("/repo", func() {
 		m.Get("/create", repo.Create)
 		m.Post("/create", bindIgnErr(auth.CreateRepoForm{}), repo.CreatePost)
@@ -433,11 +441,15 @@ func runWeb(ctx *cli.Context) {
 	}, reqSignIn)
 
 	m.Group("/:username/:reponame", func() {
-		m.Get("/settings", repo.Settings)
-		m.Post("/settings", bindIgnErr(auth.RepoSettingForm{}), repo.SettingsPost)
 		m.Group("/settings", func() {
-			m.Route("/collaboration", "GET,POST", repo.SettingsCollaboration)
-			m.Get("/hooks", repo.Webhooks)
+			m.Combo("").Get(repo.Settings).
+				Post(bindIgnErr(auth.RepoSettingForm{}), repo.SettingsPost)
+			m.Route("/collaboration", "GET,POST", repo.Collaboration)
+
+			m.Group("/hooks", func() {
+				m.Get("", repo.Webhooks)
+				m.Post("/delete", repo.DeleteWebhook)
+			})
 			m.Get("/hooks/new", repo.WebHooksNew)
 			m.Post("/hooks/gogs/new", bindIgnErr(auth.NewWebhookForm{}), repo.WebHooksNewPost)
 			m.Post("/hooks/slack/new", bindIgnErr(auth.NewSlackHookForm{}), repo.SlackHooksNewPost)
@@ -446,14 +458,14 @@ func runWeb(ctx *cli.Context) {
 			m.Post("/hooks/slack/:id", bindIgnErr(auth.NewSlackHookForm{}), repo.SlackHooksEditPost)
 
 			m.Group("/hooks/git", func() {
-				m.Get("", repo.SettingsGitHooks)
-				m.Combo("/:name").Get(repo.SettingsGitHooksEdit).
-					Post(repo.SettingsGitHooksEditPost)
+				m.Get("", repo.GitHooks)
+				m.Combo("/:name").Get(repo.GitHooksEdit).
+					Post(repo.GitHooksEditPost)
 			}, middleware.GitHookService())
 
 			m.Group("/keys", func() {
-				m.Combo("").Get(repo.SettingsDeployKeys).
-					Post(bindIgnErr(auth.AddSSHKeyForm{}), repo.SettingsDeployKeysPost)
+				m.Combo("").Get(repo.DeployKeys).
+					Post(bindIgnErr(auth.AddSSHKeyForm{}), repo.DeployKeysPost)
 				m.Post("/delete", repo.DeleteDeployKey)
 			})
 
@@ -536,6 +548,7 @@ func runWeb(ctx *cli.Context) {
 			m.Head("/hooks/trigger", repo.TriggerHook)
 		})
 	})
+	// ***** END: Repository *****
 
 	// robots.txt
 	m.Get("/robots.txt", func(ctx *middleware.Context) {

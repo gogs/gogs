@@ -26,7 +26,7 @@ func ListRepoHooks(ctx *middleware.Context) {
 	apiHooks := make([]*api.Hook, len(hooks))
 	for i := range hooks {
 		h := &api.Hook{
-			Id:     hooks[i].Id,
+			ID:     hooks[i].ID,
 			Type:   hooks[i].HookTaskType.Name(),
 			Active: hooks[i].IsActive,
 			Config: make(map[string]string),
@@ -35,7 +35,7 @@ func ListRepoHooks(ctx *middleware.Context) {
 		// Currently, onle have push event.
 		h.Events = []string{"push"}
 
-		h.Config["url"] = hooks[i].Url
+		h.Config["url"] = hooks[i].URL
 		h.Config["content_type"] = hooks[i].ContentType.Name()
 		if hooks[i].HookTaskType == models.SLACK {
 			s := hooks[i].GetSlackHook()
@@ -67,8 +67,8 @@ func CreateRepoHook(ctx *middleware.Context, form api.CreateHookOption) {
 	}
 
 	w := &models.Webhook{
-		RepoId:      ctx.Repo.Repository.ID,
-		Url:         form.Config["url"],
+		RepoID:      ctx.Repo.Repository.ID,
+		URL:         form.Config["url"],
 		ContentType: models.ToHookContentType(form.Config["content_type"]),
 		Secret:      form.Config["secret"],
 		HookEvent: &models.HookEvent{
@@ -102,12 +102,12 @@ func CreateRepoHook(ctx *middleware.Context, form api.CreateHookOption) {
 	}
 
 	apiHook := &api.Hook{
-		Id:     w.Id,
+		ID:     w.ID,
 		Type:   w.HookTaskType.Name(),
 		Events: []string{"push"},
 		Active: w.IsActive,
 		Config: map[string]string{
-			"url":          w.Url,
+			"url":          w.URL,
 			"content_type": w.ContentType.Name(),
 		},
 	}
@@ -129,7 +129,7 @@ func EditRepoHook(ctx *middleware.Context, form api.EditHookOption) {
 
 	if form.Config != nil {
 		if url, ok := form.Config["url"]; ok {
-			w.Url = url
+			w.URL = url
 		}
 		if ct, ok := form.Config["content_type"]; ok {
 			if !models.IsValidHookContentType(ct) {
