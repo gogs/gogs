@@ -414,11 +414,11 @@ func runWeb(ctx *cli.Context) {
 					m.Get("/:type/new", repo.WebhooksNew)
 					m.Post("/gogs/new", bindIgnErr(auth.NewWebhookForm{}), repo.WebHooksNewPost)
 					m.Post("/slack/new", bindIgnErr(auth.NewSlackHookForm{}), repo.SlackHooksNewPost)
+					m.Get("/:id", repo.WebHooksEdit)
+					m.Post("/gogs/:id", bindIgnErr(auth.NewWebhookForm{}), repo.WebHooksEditPost)
+					m.Post("/slack/:id", bindIgnErr(auth.NewSlackHookForm{}), repo.SlackHooksEditPost)
 				})
 
-				m.Get("/hooks/:id", repo.WebHooksEdit)
-				m.Post("/hooks/gogs/:id", bindIgnErr(auth.NewWebhookForm{}), repo.WebHooksEditPost)
-				m.Post("/hooks/slack/:id", bindIgnErr(auth.NewSlackHookForm{}), repo.SlackHooksEditPost)
 				m.Route("/delete", "GET,POST", org.SettingsDelete)
 			})
 
@@ -452,17 +452,16 @@ func runWeb(ctx *cli.Context) {
 				m.Get("/:type/new", repo.WebhooksNew)
 				m.Post("/gogs/new", bindIgnErr(auth.NewWebhookForm{}), repo.WebHooksNewPost)
 				m.Post("/slack/new", bindIgnErr(auth.NewSlackHookForm{}), repo.SlackHooksNewPost)
+				m.Get("/:id", repo.WebHooksEdit)
+				m.Post("/gogs/:id", bindIgnErr(auth.NewWebhookForm{}), repo.WebHooksEditPost)
+				m.Post("/slack/:id", bindIgnErr(auth.NewSlackHookForm{}), repo.SlackHooksEditPost)
+
+				m.Group("/git", func() {
+					m.Get("", repo.GitHooks)
+					m.Combo("/:name").Get(repo.GitHooksEdit).
+						Post(repo.GitHooksEditPost)
+				}, middleware.GitHookService())
 			})
-
-			m.Get("/hooks/:id", repo.WebHooksEdit)
-			m.Post("/hooks/gogs/:id", bindIgnErr(auth.NewWebhookForm{}), repo.WebHooksEditPost)
-			m.Post("/hooks/slack/:id", bindIgnErr(auth.NewSlackHookForm{}), repo.SlackHooksEditPost)
-
-			m.Group("/hooks/git", func() {
-				m.Get("", repo.GitHooks)
-				m.Combo("/:name").Get(repo.GitHooksEdit).
-					Post(repo.GitHooksEditPost)
-			}, middleware.GitHookService())
 
 			m.Group("/keys", func() {
 				m.Combo("").Get(repo.DeployKeys).

@@ -66,7 +66,6 @@ func (f *RepoSettingForm) Validate(ctx *macaron.Context, errs binding.Errors) bi
 //        \/       \/    \/     \/     \/            \/
 
 type WebhookForm struct {
-	HookType string `binding:"Required"`
 	PushOnly bool
 	Active   bool
 }
