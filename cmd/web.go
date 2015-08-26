@@ -446,9 +446,9 @@ func runWeb(ctx *cli.Context) {
 			m.Post("/hooks/slack/:id", bindIgnErr(auth.NewSlackHookForm{}), repo.SlackHooksEditPost)
 
 			m.Group("/hooks/git", func() {
-				m.Get("", repo.GitHooks)
-				m.Get("/:name", repo.GitHooksEdit)
-				m.Post("/:name", repo.GitHooksEditPost)
+				m.Get("", repo.SettingsGitHooks)
+				m.Combo("/:name").Get(repo.SettingsGitHooksEdit).
+					Post(repo.SettingsGitHooksEditPost)
 			}, middleware.GitHookService())
 
 			m.Group("/keys", func() {
