@@ -575,15 +575,22 @@ func initRepository(e Engine, repoPath string, u *User, repo *Repository, initRe
 		delete(fileName, "license")
 	}
 
+	// Re-fetch the repository from database before updating it (else it would
+	// override changes that were done earlier with sql)
+	if repo, err = getRepositoryByID(e, repo.ID); err != nil {
+		return fmt.Errorf("getRepositoryByID: %v", err)
+	}
 	if len(fileName) == 0 {
-		// Re-fetch the repository from database before updating it (else it would
-		// override changes that were done earlier with sql)
-		if repo, err = getRepositoryByID(e, repo.ID); err != nil {
-			return err
-		}
 		repo.IsBare = true
-		repo.DefaultBranch = "master"
-		return updateRepository(e, repo, false)
+	}
+	repo.DefaultBranch = "master"
+	if err = updateRepository(e, repo, false); err != nil {
+		return fmt.Errorf("updateRepository: %v", err)
+	}
+
+	// Ignore init process if user choose not to.
+	if len(fileName) == 0 {
+		return nil
 	}
 
 	// Apply changes and commit.
