@@ -14,12 +14,10 @@
     		{{.SignedUser.Name}}
     	</a>
     	{{range .Orgs}}
-    	{{if .IsOwnedBy $.SignedUser.Id}}
     	<a class="{{if eq $.ContextUser.Id .Id}}active selected{{end}} item" href="{{AppSubUrl}}/org/{{.Name}}/issues">
       	<img class="ui image" src="{{.AvatarLink}}">
     		{{.Name}}
     	</a>
-    	{{end}}
     	{{end}}
     	<a class="item" href="{{AppSubUrl}}/org/create">
     		<i class="octicon octicon-repo-create"></i>&nbsp;&nbsp;&nbsp;{{.i18n.Tr "new_org"}}
