@@ -1,0 +1,52 @@
+<div class="twelve wide column content">
+	{{template "base/alert" .}}
+	<h4 class="ui top attached header">
+	  {{.i18n.Tr "repo.settings.hooks"}}
+	  <div class="ui right">
+	  	<a class="ui blue tiny button" href="{{.BaseLink}}/settings/hooks/new">{{.i18n.Tr "repo.settings.add_webhook"}}</a>
+	  </div>
+	</h4>
+	<div class="ui attached table segment">
+    <div class="ui hook list">
+      <div class="item">
+      	{{.Description | Str2html}}
+      </div>
+      {{range .Webhooks}}
+			<div class="item">
+				{{if eq .LastStatus 1}}
+				<span class="text green"><i class="octicon octicon-check"></i></span>
+				{{else if eq .LastStatus 2}}
+				<span class="text red"><i class="octicon octicon-alert"></i></span>
+				{{else}}
+				<span class="text grey"><i class="octicon octicon-primitive-dot"></i></span>
+				{{end}}
+				<a href="{{$.BaseLink}}/settings/hooks/{{.ID}}">{{.URL}}</a>
+				<div class="ui right">
+					<span class="text blue"><a href="{{$.BaseLink}}/settings/hooks/{{.ID}}"><i class="fa fa-pencil"></i></a></span>
+					<span class="text red"><a class="delete-button" data-url="{{$.Link}}/delete" data-id="{{.ID}}"><i class="fa fa-times"></i></a></span>
+				</div>
+			</div>
+      {{end}}
+    </div>
+  </div>
+</div>
+
+<div class="ui small basic delete modal">
+  <div class="ui icon header">
+    <i class="trash icon"></i>
+    {{.i18n.Tr "repo.settings.webhook_deletion"}}
+  </div>
+  <div class="content">
+    <p>{{.i18n.Tr "repo.settings.webhook_deletion_desc"}}</p>
+  </div>
+  <div class="actions">
+    <div class="ui red basic inverted cancel button">
+      <i class="remove icon"></i>
+      {{.i18n.Tr "modal.no"}}
+    </div>
+    <div class="ui green basic inverted ok button">
+      <i class="checkmark icon"></i>
+      {{.i18n.Tr "modal.yes"}}
+    </div>
+  </div>
+</div>

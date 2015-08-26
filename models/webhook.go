@@ -60,36 +60,45 @@ type HookEvent struct {
 	PushOnly bool `json:"push_only"`
 }
 
+type HookStatus int
+
+const (
+	HOOK_STATUS_NONE = iota
+	HOOK_STATUS_SUCCEED
+	HOOK_STATUS_FAILED
+)
+
 // Webhook represents a web hook object.
 type Webhook struct {
-	Id           int64
-	RepoId       int64
-	Url          string `xorm:"TEXT"`
+	ID           int64 `xorm:"pk autoincr"`
+	RepoID       int64
+	OrgID        int64
+	URL          string `xorm:"url TEXT"`
 	ContentType  HookContentType
 	Secret       string `xorm:"TEXT"`
 	Events       string `xorm:"TEXT"`
 	*HookEvent   `xorm:"-"`
-	IsSsl        bool
+	IsSSL        bool `xorm:"is_ssl"`
 	IsActive     bool
 	HookTaskType HookTaskType
-	Meta         string `xorm:"TEXT"` // store hook-specific attributes
-	OrgId        int64
-	Created      time.Time `xorm:"CREATED"`
-	Updated      time.Time `xorm:"UPDATED"`
+	Meta         string     `xorm:"TEXT"` // store hook-specific attributes
+	LastStatus   HookStatus // Last delivery status
+	Created      time.Time  `xorm:"CREATED"`
+	Updated      time.Time  `xorm:"UPDATED"`
 }
 
 // GetEvent handles conversion from Events to HookEvent.
 func (w *Webhook) GetEvent() {
 	w.HookEvent = &HookEvent{}
 	if err := json.Unmarshal([]byte(w.Events), w.HookEvent); err != nil {
-		log.Error(4, "webhook.GetEvent(%d): %v", w.Id, err)
+		log.Error(4, "webhook.GetEvent(%d): %v", w.ID, err)
 	}
 }
 
 func (w *Webhook) GetSlackHook() *Slack {
 	s := &Slack{}
 	if err := json.Unmarshal([]byte(w.Meta), s); err != nil {
-		log.Error(4, "webhook.GetSlackHook(%d): %v", w.Id, err)
+		log.Error(4, "webhook.GetSlackHook(%d): %v", w.ID, err)
 	}
 	return s
 }
@@ -117,7 +126,7 @@ func CreateWebhook(w *Webhook) error {
 
 // GetWebhookById returns webhook by given ID.
 func GetWebhookById(hookId int64) (*Webhook, error) {
-	w := &Webhook{Id: hookId}
+	w := &Webhook{ID: hookId}
 	has, err := x.Get(w)
 	if err != nil {
 		return nil, err
@@ -134,26 +143,37 @@ func GetActiveWebhooksByRepoId(repoId int64) (ws []*Webhook, err error) {
 }
 
 // GetWebhooksByRepoId returns all webhooks of repository.
-func GetWebhooksByRepoId(repoId int64) (ws []*Webhook, err error) {
-	err = x.Find(&ws, &Webhook{RepoId: repoId})
+func GetWebhooksByRepoId(repoID int64) (ws []*Webhook, err error) {
+	err = x.Find(&ws, &Webhook{RepoID: repoID})
 	return ws, err
 }
 
 // UpdateWebhook updates information of webhook.
 func UpdateWebhook(w *Webhook) error {
-	_, err := x.Id(w.Id).AllCols().Update(w)
+	_, err := x.Id(w.ID).AllCols().Update(w)
 	return err
 }
 
 // DeleteWebhook deletes webhook of repository.
-func DeleteWebhook(hookId int64) error {
-	_, err := x.Delete(&Webhook{Id: hookId})
-	return err
+func DeleteWebhook(id int64) (err error) {
+	sess := x.NewSession()
+	defer sessionRelease(sess)
+	if err = sess.Begin(); err != nil {
+		return err
+	}
+
+	if _, err = sess.Delete(&Webhook{ID: id}); err != nil {
+		return err
+	} else if _, err = sess.Delete(&HookTask{HookID: id}); err != nil {
+		return err
+	}
+
+	return sess.Commit()
 }
 
 // GetWebhooksByOrgId returns all webhooks for an organization.
-func GetWebhooksByOrgId(orgId int64) (ws []*Webhook, err error) {
-	err = x.Find(&ws, &Webhook{OrgId: orgId})
+func GetWebhooksByOrgId(orgID int64) (ws []*Webhook, err error) {
+	err = x.Find(&ws, &Webhook{OrgID: orgID})
 	return ws, err
 }
 
