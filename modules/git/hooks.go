@@ -10,6 +10,8 @@ import (
 	"os"
 	"path"
 	"strings"
+
+	"github.com/Unknwon/com"
 )
 
 // hookNames is a list of Git hooks' name that are supported.
@@ -81,7 +83,10 @@ func (h *Hook) Name() string {
 // Update updates hook settings.
 func (h *Hook) Update() error {
 	if len(strings.TrimSpace(h.Content)) == 0 {
-		return os.Remove(h.path)
+		if com.IsExist(h.path) {
+			return os.Remove(h.path)
+		}
+		return nil
 	}
 	return ioutil.WriteFile(h.path, []byte(strings.Replace(h.Content, "\r", "", -1)), os.ModePerm)
 }

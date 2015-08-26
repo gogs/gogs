@@ -608,7 +608,7 @@ func TriggerHook(ctx *middleware.Context) {
 	models.HookQueue.AddRepoID(repo.ID)
 }
 
-func GitHooks(ctx *middleware.Context) {
+func SettingsGitHooks(ctx *middleware.Context) {
 	ctx.Data["Title"] = ctx.Tr("repo.settings")
 	ctx.Data["PageIsSettingsGitHooks"] = true
 
@@ -622,7 +622,7 @@ func GitHooks(ctx *middleware.Context) {
 	ctx.HTML(200, GITHOOKS)
 }
 
-func GitHooksEdit(ctx *middleware.Context) {
+func SettingsGitHooksEdit(ctx *middleware.Context) {
 	ctx.Data["Title"] = ctx.Tr("repo.settings")
 	ctx.Data["PageIsSettingsGitHooks"] = true
 
@@ -640,7 +640,7 @@ func GitHooksEdit(ctx *middleware.Context) {
 	ctx.HTML(200, GITHOOK_EDIT)
 }
 
-func GitHooksEditPost(ctx *middleware.Context) {
+func SettingsGitHooksEditPost(ctx *middleware.Context) {
 	name := ctx.Params(":name")
 	hook, err := ctx.Repo.GitRepo.GetHook(name)
 	if err != nil {
