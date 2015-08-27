@@ -121,7 +121,7 @@ func CreateRepoHook(ctx *middleware.Context, form api.CreateHookOption) {
 // PATCH /repos/:username/:reponame/hooks/:id
 // https://developer.github.com/v3/repos/hooks/#edit-a-hook
 func EditRepoHook(ctx *middleware.Context, form api.EditHookOption) {
-	w, err := models.GetWebhookById(ctx.ParamsInt64(":id"))
+	w, err := models.GetWebhookByID(ctx.ParamsInt64(":id"))
 	if err != nil {
 		ctx.JSON(500, &base.ApiJsonErr{"GetWebhookById: " + err.Error(), base.DOC_URL})
 		return

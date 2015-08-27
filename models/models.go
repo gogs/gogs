@@ -84,6 +84,11 @@ func init() {
 		new(UpdateTask), new(HookTask),
 		new(Team), new(OrgUser), new(TeamUser), new(TeamRepo),
 		new(Notice), new(EmailAddress))
+
+	gonicNames := []string{"SSL"}
+	for _, name := range gonicNames {
+		core.LintGonicMapper[name] = true
+	}
 }
 
 func LoadModelsConfig() {

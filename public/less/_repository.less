@@ -624,7 +624,7 @@
 		}
 	}
 	.hook.list {
-		.item:not(:first-child) {
+		> .item:not(:first-child) {
 			border-top: 1px solid #eaeaea;
 		}
 		.item {
@@ -632,6 +632,40 @@
 			.octicon,
 			.fa {
 				width: 20px;
+				text-align: center;
+			}
+		}
+	}
+	.hook.history.list {
+		.item {
+			padding-left: 13px;
+			.meta {
+				.ui.right {
+					margin-top: 5px;
+					.time {
+						font-size: 12px;
+					}
+				}
+			}
+			.info {
+				margin-top: 10px;
+				.tabular.menu {
+					.item {
+						font-weight: 500;
+					}
+				}
+				.tab.segment {
+					border: none;
+			    padding: 0;
+			    padding-top: 10px;
+			    box-shadow: none;
+			    * {
+			    	color: #666;
+			    }
+			    pre {
+						word-wrap: break-word;
+			    }
+				}
 			}
 		}
 	}

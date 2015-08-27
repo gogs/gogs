@@ -448,11 +448,11 @@ func CommitRepoAction(userID, repoUserID int64, userName, actEmail string,
 			RepoID:      repo.ID,
 			HookID:      w.ID,
 			Type:        w.HookTaskType,
-			Url:         w.URL,
+			URL:         w.URL,
 			BasePayload: payload,
 			ContentType: w.ContentType,
 			EventType:   HOOK_EVENT_PUSH,
-			IsSsl:       w.IsSSL,
+			IsSSL:       w.IsSSL,
 		}); err != nil {
 			return fmt.Errorf("CreateHookTask: %v", err)
 		}

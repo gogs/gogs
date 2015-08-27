@@ -341,10 +341,6 @@ function initRepository() {
 
     // Diff
     if ($('.repository.diff').length > 0) {
-        $('.diff-detail-box .toggle.button').click(function () {
-            $($(this).data('target')).slideToggle(100);
-        })
-
         var $counter = $('.diff-counter');
         if ($counter.length < 1) {
             return;
@@ -405,6 +401,11 @@ $(document).ready(function () {
                 return false;
             }
         }
+    });
+    $('.tabular.menu .item').tab();
+
+    $('.toggle.button').click(function () {
+        $($(this).data('target')).slideToggle(100);
     });
 
     // Dropzone
