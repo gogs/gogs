@@ -408,6 +408,9 @@ $(document).ready(function () {
         $($(this).data('target')).slideToggle(100);
     });
 
+    // Highlight JS
+    hljs.initHighlightingOnLoad();
+
     // Dropzone
     if ($('#dropzone').length > 0) {
         // Disable auto discover for all elements:

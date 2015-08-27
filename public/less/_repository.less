@@ -659,11 +659,15 @@
 			    padding: 0;
 			    padding-top: 10px;
 			    box-shadow: none;
-			    * {
+			    > * {
 			    	color: #666;
 			    }
 			    pre {
 						word-wrap: break-word;
+						.hljs {
+							padding: 0;
+							background-color: inherit;
+						}
 			    }
 				}
 			}

@@ -31,6 +31,10 @@
 	<script src="{{AppSubUrl}}/js/gogs.js?v={{AppVer}}"></script>
 
 	<!-- Third-party libraries -->
+	{{if .RequireHighlightJS}}
+	<link rel="stylesheet" href="{{AppSubUrl}}/css/highlightjs/default.css?v={{AppVer}}">
+	<script src="{{AppSubUrl}}/js/libs/highlight.pack.js?v={{AppVer}}"></script>
+	{{end}}
 	{{if .RequireMinicolors}}
 	<link rel="stylesheet" href="{{AppSubUrl}}/css/jquery.minicolors.css?v={{AppVer}}">
 	<script src="{{AppSubUrl}}/js/libs/jquery.minicolors.min.js?v={{AppVer}}"></script>

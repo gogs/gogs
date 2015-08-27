@@ -43,7 +43,7 @@
 {{ range $key, $val := .RequestInfo.Headers }}<strong>{{$key}}:</strong> {{$val}}
 {{end}}</pre>
 					<h5>{{$.i18n.Tr "repo.settings.webhook.payload"}}</h5>
-					<pre class="raw">{{.PayloadContent}}</pre>
+					<pre class="raw"><code class="json">{{.PayloadContent}}</code></pre>
 				  {{else}}
 				  N/A
 				  {{end}}
@@ -54,7 +54,7 @@
 				  <pre class="raw">{{ range $key, $val := .ResponseInfo.Headers }}<strong>{{$key}}:</strong> {{$val}}
 {{end}}</pre>
 					<h5>{{$.i18n.Tr "repo.settings.webhook.body"}}</h5>
-					<pre class="raw">{{.ResponseInfo.Body}}</pre>
+					<pre class="raw"><code>{{.ResponseInfo.Body}}</code></pre>
 				  {{else}}
 				  N/A
 				  {{end}}
