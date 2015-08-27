@@ -418,6 +418,8 @@ func SlackHooksNewPost(ctx *middleware.Context, form auth.NewSlackHookForm) {
 }
 
 func checkWebhook(ctx *middleware.Context) (*OrgRepoCtx, *models.Webhook) {
+	ctx.Data["RequireHighlightJS"] = true
+
 	orCtx, err := getOrgRepoCtx(ctx)
 	if err != nil {
 		ctx.Handle(500, "getOrgRepoCtx", err)

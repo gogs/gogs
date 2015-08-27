@@ -86,89 +86,6 @@
 		"randomFootnoteNumbers": 0,
 		"useCompatibilityMode": 0
 		},
-	"\/public\/css\/dropzone.css": {
-		"fileType": 16,
-		"ignore": 0,
-		"ignoreWasSetByUser": 0,
-		"inputAbbreviatedPath": "\/public\/css\/dropzone.css",
-		"outputAbbreviatedPath": "No Output Path",
-		"outputPathIsOutsideProject": 0,
-		"outputPathIsSetByUser": 0
-		},
-	"\/public\/css\/font-awesome.min.css": {
-		"fileType": 16,
-		"ignore": 0,
-		"ignoreWasSetByUser": 0,
-		"inputAbbreviatedPath": "\/public\/css\/font-awesome.min.css",
-		"outputAbbreviatedPath": "No Output Path",
-		"outputPathIsOutsideProject": 0,
-		"outputPathIsSetByUser": 0
-		},
-	"\/public\/css\/github.min.css": {
-		"fileType": 16,
-		"ignore": 0,
-		"ignoreWasSetByUser": 0,
-		"inputAbbreviatedPath": "\/public\/css\/github.min.css",
-		"outputAbbreviatedPath": "No Output Path",
-		"outputPathIsOutsideProject": 0,
-		"outputPathIsSetByUser": 0
-		},
-	"\/public\/css\/gogs.css": {
-		"fileType": 16,
-		"ignore": 0,
-		"ignoreWasSetByUser": 0,
-		"inputAbbreviatedPath": "\/public\/css\/gogs.css",
-		"outputAbbreviatedPath": "No Output Path",
-		"outputPathIsOutsideProject": 0,
-		"outputPathIsSetByUser": 0
-		},
-	"\/public\/css\/gogs.min.css": {
-		"fileType": 16,
-		"ignore": 1,
-		"ignoreWasSetByUser": 0,
-		"inputAbbreviatedPath": "\/public\/css\/gogs.min.css",
-		"outputAbbreviatedPath": "No Output Path",
-		"outputPathIsOutsideProject": 0,
-		"outputPathIsSetByUser": 0
-		},
-	"\/public\/css\/jquery.datetimepicker.css": {
-		"fileType": 16,
-		"ignore": 0,
-		"ignoreWasSetByUser": 0,
-		"inputAbbreviatedPath": "\/public\/css\/jquery.datetimepicker.css",
-		"outputAbbreviatedPath": "No Output Path",
-		"outputPathIsOutsideProject": 0,
-		"outputPathIsSetByUser": 0
-		},
-	"\/public\/css\/jquery.minicolors.css": {
-		"fileType": 16,
-		"ignore": 0,
-		"ignoreWasSetByUser": 0,
-		"inputAbbreviatedPath": "\/public\/css\/jquery.minicolors.css",
-		"outputAbbreviatedPath": "No Output Path",
-		"outputPathIsOutsideProject": 0,
-		"outputPathIsSetByUser": 0
-		},
-	"\/public\/css\/semantic.min.css": {
-		"fileType": 16,
-		"ignore": 0,
-		"ignoreWasSetByUser": 0,
-		"inputAbbreviatedPath": "\/public\/css\/semantic.min.css",
-		"outputAbbreviatedPath": "No Output Path",
-		"outputPathIsOutsideProject": 0,
-		"outputPathIsSetByUser": 0
-		},
-	"\/public\/css\/themes\/default\/assets\/images\/flags.png": {
-		"fileType": 32768,
-		"ignore": 0,
-		"ignoreWasSetByUser": 0,
-		"initialSize": 28123,
-		"inputAbbreviatedPath": "\/public\/css\/themes\/default\/assets\/images\/flags.png",
-		"outputAbbreviatedPath": "\/public\/css\/themes\/default\/assets\/images\/flags.png",
-		"outputPathIsOutsideProject": 0,
-		"outputPathIsSetByUser": 0,
-		"processed": 0
-		},
 	"\/public\/img\/404.png": {
 		"fileType": 32768,
 		"ignore": 0,
@@ -1750,7 +1667,7 @@
 	"sassUseLibsass": 0,
 	"shouldRunAutoprefixer": 0,
 	"shouldRunBless": 0,
-	"skippedItemsString": "_cache, logs, _logs, cache, \/public\/js\/lib, .git, \/public\/js, log, .svn, .hg",
+	"skippedItemsString": "_cache, logs, \/public\/css, _logs, cache, \/public\/js\/lib, .git, \/public\/js, log, .svn, .hg",
 	"slimAutoOutputPathEnabled": 1,
 	"slimAutoOutputPathFilenamePattern": "*.html",
 	"slimAutoOutputPathRelativePath": "",
