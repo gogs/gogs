@@ -236,7 +236,27 @@ func IsErrRepoAlreadyExist(err error) bool {
 }
 
 func (err ErrRepoAlreadyExist) Error() string {
-	return fmt.Sprintf("repository already exists [uname: %d, name: %s]", err.Uname, err.Name)
+	return fmt.Sprintf("repository already exists [uname: %s, name: %s]", err.Uname, err.Name)
+}
+
+//  __      __      ___.   .__                   __
+// /  \    /  \ ____\_ |__ |  |__   ____   ____ |  | __
+// \   \/\/   // __ \| __ \|  |  \ /  _ \ /  _ \|  |/ /
+//  \        /\  ___/| \_\ \   Y  (  <_> |  <_> )    <
+//   \__/\  /  \___  >___  /___|  /\____/ \____/|__|_ \
+//        \/       \/    \/     \/                   \/
+
+type ErrWebhookNotExist struct {
+	ID int64
+}
+
+func IsErrWebhookNotExist(err error) bool {
+	_, ok := err.(ErrWebhookNotExist)
+	return ok
+}
+
+func (err ErrWebhookNotExist) Error() string {
+	return fmt.Sprintf("webhook does not exist [id: %d]", err.ID)
 }
 
 // .___
