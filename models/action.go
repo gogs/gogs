@@ -133,6 +133,7 @@ func (a Action) GetIssueInfos() []string {
 	return strings.SplitN(a.Content, "|", 2)
 }
 
+// updateIssuesCommit checks if issues are manipulated by commit message.
 func updateIssuesCommit(u *User, repo *Repository, repoUserName, repoName string, commits []*base.PushCommit) error {
 	for _, c := range commits {
 		for _, ref := range IssueReferenceKeywordsPat.FindAllString(c.Message, -1) {
@@ -376,7 +377,7 @@ func CommitRepoAction(userID, repoUserID int64, userName, actEmail string,
 	pusher, err := GetUserByName(userName)
 	if err == nil {
 		pusher_email = pusher.Email
-		pusher_name = pusher.GetFullNameFallback()
+		pusher_name = pusher.DisplayName()
 	}
 
 	commits := make([]*PayloadCommit, len(commit.Commits))
@@ -408,7 +409,7 @@ func CommitRepoAction(userID, repoUserID int64, userName, actEmail string,
 			Website:     repo.Website,
 			Watchers:    repo.NumWatches,
 			Owner: &PayloadAuthor{
-				Name:     repo.Owner.GetFullNameFallback(),
+				Name:     repo.Owner.DisplayName(),
 				Email:    repo.Owner.Email,
 				UserName: repo.Owner.Name,
 			},
