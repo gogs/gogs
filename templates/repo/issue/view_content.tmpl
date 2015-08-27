@@ -30,7 +30,7 @@
 		{{ $createdStr:= TimeSince .Issue.Created $.Lang }}
 		<span class="time-desc">
 			{{if gt .Issue.Poster.Id 0}}
-			{{$.i18n.Tr "repo.issues.opened_by" $createdStr .Issue.Poster.Name | Safe}}
+			{{$.i18n.Tr "repo.issues.opened_by" $createdStr .Issue.Poster.HomeLink .Issue.Poster.Name | Safe}}
 			{{else}}
 			{{$.i18n.Tr "repo.issues.opened_by_fake" $createdStr .Issue.Poster.Name | Safe}}
 			{{end}}

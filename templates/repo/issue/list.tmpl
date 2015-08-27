@@ -109,7 +109,7 @@
       	{{end}}
 
         <p class="desc">
-        	{{$.i18n.Tr "repo.issues.opened_by" $timeStr .Poster.Name | Safe}}
+        	{{$.i18n.Tr "repo.issues.opened_by" $timeStr .Poster.HomeLink .Poster.Name | Safe}}
 	        {{if .Milestone}}
 					<a class="milestone" href="{{$.RepoLink}}/issues?type={{$.ViewType}}&state={{$.State}}&labels={{$.SelectLabels}}&milestone={{.Milestone.ID}}&assignee={{$.AssigneeID}}">
 						<span class="octicon octicon-milestone"></span> {{.Milestone.Name}}
