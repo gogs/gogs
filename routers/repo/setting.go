@@ -417,15 +417,22 @@ func SlackHooksNewPost(ctx *middleware.Context, form auth.NewSlackHookForm) {
 	ctx.Redirect(orCtx.Link + "/settings/hooks")
 }
 
-func checkWebhook(ctx *middleware.Context) *models.Webhook {
-	w, err := models.GetWebhookById(ctx.ParamsInt64(":id"))
+func checkWebhook(ctx *middleware.Context) (*OrgRepoCtx, *models.Webhook) {
+	orCtx, err := getOrgRepoCtx(ctx)
 	if err != nil {
-		if err == models.ErrWebhookNotExist {
-			ctx.Handle(404, "GetWebhookById", nil)
+		ctx.Handle(500, "getOrgRepoCtx", err)
+		return nil, nil
+	}
+	ctx.Data["BaseLink"] = orCtx.Link
+
+	w, err := models.GetWebhookByID(ctx.ParamsInt64(":id"))
+	if err != nil {
+		if models.IsErrWebhookNotExist(err) {
+			ctx.Handle(404, "GetWebhookByID", nil)
 		} else {
-			ctx.Handle(500, "GetWebhookById", err)
+			ctx.Handle(500, "GetWebhookByID", err)
 		}
-		return nil
+		return nil, nil
 	}
 
 	switch w.HookTaskType {
@@ -436,7 +443,12 @@ func checkWebhook(ctx *middleware.Context) *models.Webhook {
 		ctx.Data["HookType"] = "gogs"
 	}
 	w.GetEvent()
-	return w
+
+	ctx.Data["History"], err = w.History(1)
+	if err != nil {
+		ctx.Handle(500, "History", err)
+	}
+	return orCtx, w
 }
 
 func WebHooksEdit(ctx *middleware.Context) {
@@ -444,17 +456,11 @@ func WebHooksEdit(ctx *middleware.Context) {
 	ctx.Data["PageIsSettingsHooks"] = true
 	ctx.Data["PageIsSettingsHooksEdit"] = true
 
-	ctx.Data["Webhook"] = checkWebhook(ctx)
+	orCtx, w := checkWebhook(ctx)
 	if ctx.Written() {
 		return
 	}
-
-	orCtx, err := getOrgRepoCtx(ctx)
-	if err != nil {
-		ctx.Handle(500, "getOrgRepoCtx", err)
-		return
-	}
-	ctx.Data["BaseLink"] = orCtx.Link
+	ctx.Data["Webhook"] = w
 
 	ctx.HTML(200, orCtx.NewTemplate)
 }
@@ -464,18 +470,11 @@ func WebHooksEditPost(ctx *middleware.Context, form auth.NewWebhookForm) {
 	ctx.Data["PageIsSettingsHooks"] = true
 	ctx.Data["PageIsSettingsHooksEdit"] = true
 
-	w := checkWebhook(ctx)
+	orCtx, w := checkWebhook(ctx)
 	if ctx.Written() {
 		return
 	}
 	ctx.Data["Webhook"] = w
-
-	orCtx, err := getOrgRepoCtx(ctx)
-	if err != nil {
-		ctx.Handle(500, "getOrgRepoCtx", err)
-		return
-	}
-	ctx.Data["BaseLink"] = orCtx.Link
 
 	if ctx.HasError() {
 		ctx.HTML(200, orCtx.NewTemplate)
@@ -511,18 +510,11 @@ func SlackHooksEditPost(ctx *middleware.Context, form auth.NewSlackHookForm) {
 	ctx.Data["PageIsSettingsHooks"] = true
 	ctx.Data["PageIsSettingsHooksEdit"] = true
 
-	w := checkWebhook(ctx)
+	orCtx, w := checkWebhook(ctx)
 	if ctx.Written() {
 		return
 	}
 	ctx.Data["Webhook"] = w
-
-	orCtx, err := getOrgRepoCtx(ctx)
-	if err != nil {
-		ctx.Handle(500, "getOrgRepoCtx", err)
-		return
-	}
-	ctx.Data["BaseLink"] = orCtx.Link
 
 	if ctx.HasError() {
 		ctx.HTML(200, orCtx.NewTemplate)
@@ -588,6 +580,7 @@ func TriggerHook(ctx *middleware.Context) {
 		return
 	}
 	models.HookQueue.AddRepoID(repo.ID)
+	ctx.Status(200)
 }
 
 func GitHooks(ctx *middleware.Context) {

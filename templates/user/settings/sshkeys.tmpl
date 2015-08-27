@@ -19,7 +19,7 @@
             {{range .Keys}}
             <div class="item ui grid">
               <div class="one wide column">
-                <i class="ssh-key-state-indicator fa fa-circle{{if .HasRecentActivity}} active invert poping up{{else}}-o{{end}}" {{if .HasRecentActivity}}data-content="{{$.i18n.Tr "settings.key_state_desc"}}" data-variation="inverted"{{end}}></i>
+                <i class="ssh-key-state-indicator fa fa-circle{{if .HasRecentActivity}} active invert poping up{{else}}-o{{end}}" {{if .HasRecentActivity}}data-content="{{$.i18n.Tr "settings.key_state_desc"}}" data-variation="inverted tiny"{{end}}></i>
               </div>
               <div class="one wide column">
                 <i class="mega-octicon octicon-key left"></i>

@@ -82,6 +82,7 @@ var (
 		DeliverTimeout int
 		SkipTLSVerify  bool
 		Types          []string
+		PagingNum      int
 	}
 
 	// Repository settings.
@@ -601,6 +602,7 @@ func newWebhookService() {
 	Webhook.DeliverTimeout = sec.Key("DELIVER_TIMEOUT").MustInt(5)
 	Webhook.SkipTLSVerify = sec.Key("SKIP_TLS_VERIFY").MustBool()
 	Webhook.Types = []string{"gogs", "slack"}
+	Webhook.PagingNum = sec.Key("PAGING_NUM").MustInt(10)
 }
 
 func NewServices() {
