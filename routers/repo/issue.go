@@ -521,6 +521,7 @@ func ViewIssue(ctx *middleware.Context) {
 
 	ctx.Data["Issue"] = issue
 	ctx.Data["IsIssueOwner"] = ctx.Repo.IsAdmin() || (ctx.IsSigned && issue.IsPoster(ctx.User.Id))
+	ctx.Data["SignInLink"] = setting.AppSubUrl + "/user/login"
 	ctx.HTML(200, ISSUE_VIEW)
 }
 
