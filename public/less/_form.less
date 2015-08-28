@@ -18,6 +18,8 @@
 }
 
 .repository {
+	@input-padding: 250px !important;
+	&.new.repo,
 	&.new.migrate,
 	&.new.fork {
 		form {
@@ -26,7 +28,6 @@
 			.ui.message {
 				text-align: center;
 			}
-			@input-padding: 250px !important;
 			.header {
 				padding-left: @input-padding+30px;
 			}
@@ -56,6 +57,15 @@
 			textarea {
 				width: 50%!important;
 			}
+		}
+	}
+
+	&.new.repo {
+		.selection.dropdown {
+			width: 50%!important;
+		}
+		#auto-init {
+			margin-left: @input-padding+15px;
 		}
 	}
 }
