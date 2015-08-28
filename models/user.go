@@ -69,6 +69,9 @@ type User struct {
 	Created     time.Time `xorm:"CREATED"`
 	Updated     time.Time `xorm:"UPDATED"`
 
+	// Remember visibility choice for convenience.
+	LastRepoVisibility bool
+
 	// Permissions.
 	IsActive     bool
 	IsAdmin      bool

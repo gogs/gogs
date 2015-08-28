@@ -52,10 +52,10 @@ func Create(ctx *middleware.Context) {
 	ctx.Data["Title"] = ctx.Tr("new_repo")
 
 	// Give default value for template to render.
-	ctx.Data["gitignore"] = "0"
-	ctx.Data["license"] = "0"
 	ctx.Data["Gitignores"] = models.Gitignores
 	ctx.Data["Licenses"] = models.Licenses
+	ctx.Data["Readmes"] = models.Readmes
+	ctx.Data["readme"] = "Default"
 
 	ctxUser := checkContextUser(ctx, ctx.QueryInt64("org"))
 	if ctx.Written() {
@@ -77,6 +77,7 @@ func CreatePost(ctx *middleware.Context, form auth.CreateRepoForm) {
 
 	ctx.Data["Gitignores"] = models.Gitignores
 	ctx.Data["Licenses"] = models.Licenses
+	ctx.Data["Readmes"] = models.Readmes
 
 	ctxUser := checkContextUser(ctx, form.Uid)
 	if ctx.Written() {
@@ -104,7 +105,7 @@ func CreatePost(ctx *middleware.Context, form auth.CreateRepoForm) {
 	}
 
 	repo, err := models.CreateRepository(ctxUser, form.RepoName, form.Description,
-		form.Gitignore, form.License, form.Private, false, form.AutoInit)
+		form.Gitignores, form.License, form.Private, false, form.AutoInit)
 	if err == nil {
 		log.Trace("Repository created: %s/%s", ctxUser.Name, repo.Name)
 		ctx.Redirect(setting.AppSubUrl + "/" + ctxUser.Name + "/" + repo.Name)
