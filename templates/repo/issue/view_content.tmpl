@@ -69,7 +69,7 @@
 					<div class="ui bottom attached segment">
 						<div class="ui small images">
 							{{range .Issue.Attachments}}
-						  <a target="_blank" href="/attachments/{{.UUID}}"><img class="ui image" src="/attachments/{{.UUID}}"></a>
+						  <a target="_blank" href="{{AppSubUrl}}/attachments/{{.UUID}}"><img class="ui image" src="{{AppSubUrl}}/attachments/{{.UUID}}"></a>
 						  {{end}}
 						</div>
 					</div>
@@ -179,8 +179,8 @@
 		  </div>
 		  {{else}}
 		  <div class="ui warning message">
-		    <a href="/user/sign_up" class="ui green button">{{.i18n.Tr "repo.issues.sign_up_for_free"}}</a>
-		    {{.i18n.Tr "repo.issues.sign_in_require_desc" "/user/login" | Safe}}
+		    <a href="{{AppSubUrl}}/user/sign_up" class="ui green button">{{.i18n.Tr "repo.issues.sign_up_for_free"}}</a>
+		    {{.i18n.Tr "repo.issues.sign_in_require_desc" .SignInLink | Safe}}
 		  </div>
 		  {{end}}
   	</ui>
