@@ -5,7 +5,6 @@
 package git
 
 import (
-	"errors"
 	"strings"
 
 	"github.com/Unknwon/com"
@@ -23,7 +22,7 @@ func (repo *Repository) IsBranchExist(branchName string) bool {
 func (repo *Repository) GetBranches() ([]string, error) {
 	stdout, stderr, err := com.ExecCmdDir(repo.Path, "git", "show-ref", "--heads")
 	if err != nil {
-		return nil, errors.New(stderr)
+		return nil, concatenateError(err, stderr)
 	}
 	infos := strings.Split(stdout, "\n")
 	branches := make([]string, len(infos)-1)
