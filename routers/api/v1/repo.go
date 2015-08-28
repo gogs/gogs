@@ -100,15 +100,48 @@ func SearchRepos(ctx *middleware.Context) {
 	})
 }
 
+// https://github.com/gogits/go-gogs-client/wiki/Repositories#list-your-repositories
+func ListMyRepos(ctx *middleware.Context) {
+	ownRepos, err := models.GetRepositories(ctx.User.Id, true)
+	if err != nil {
+		ctx.JSON(500, &base.ApiJsonErr{"GetRepositories: " + err.Error(), base.DOC_URL})
+		return
+	}
+	numOwnRepos := len(ownRepos)
+
+	accessibleRepos, err := ctx.User.GetAccessibleRepositories()
+	if err != nil {
+		ctx.JSON(500, &base.ApiJsonErr{"GetAccessibleRepositories: " + err.Error(), base.DOC_URL})
+		return
+	}
+
+	repos := make([]*api.Repository, numOwnRepos+len(accessibleRepos))
+	for i := range ownRepos {
+		repos[i] = ToApiRepository(ctx.User, ownRepos[i], api.Permission{true, true, true})
+	}
+	i := numOwnRepos
+
+	for repo, access := range accessibleRepos {
+		repos[i] = ToApiRepository(repo.Owner, repo, api.Permission{
+			Admin: access >= models.ACCESS_MODE_ADMIN,
+			Push:  access >= models.ACCESS_MODE_WRITE,
+			Pull:  true,
+		})
+		i++
+	}
+
+	ctx.JSON(200, &repos)
+}
+
 func createRepo(ctx *middleware.Context, owner *models.User, opt api.CreateRepoOption) {
 	repo, err := models.CreateRepository(owner, models.CreateRepoOptions{
 		Name:        opt.Name,
 		Description: opt.Description,
-		Gitignores:  opt.Gitignore,
+		Gitignores:  opt.Gitignores,
 		License:     opt.License,
-		// Readme:      form.Readme,
-		IsPrivate: opt.Private,
-		AutoInit:  opt.AutoInit,
+		Readme:      opt.Readme,
+		IsPrivate:   opt.Private,
+		AutoInit:    opt.AutoInit,
 	})
 	if err != nil {
 		if models.IsErrRepoAlreadyExist(err) ||
@@ -130,8 +163,7 @@ func createRepo(ctx *middleware.Context, owner *models.User, opt api.CreateRepoO
 	ctx.JSON(201, ToApiRepository(owner, repo, api.Permission{true, true, true}))
 }
 
-// POST /user/repos
-// https://developer.github.com/v3/repos/#create
+// https://github.com/gogits/go-gogs-client/wiki/Repositories#create
 func CreateRepo(ctx *middleware.Context, opt api.CreateRepoOption) {
 	// Shouldn't reach this condition, but just in case.
 	if ctx.User.IsOrganization() {
@@ -141,8 +173,6 @@ func CreateRepo(ctx *middleware.Context, opt api.CreateRepoOption) {
 	createRepo(ctx, ctx.User, opt)
 }
 
-// POST /orgs/:org/repos
-// https://developer.github.com/v3/repos/#create
 func CreateOrgRepo(ctx *middleware.Context, opt api.CreateRepoOption) {
 	org, err := models.GetOrgByName(ctx.Params(":org"))
 	if err != nil {
@@ -236,38 +266,4 @@ func MigrateRepo(ctx *middleware.Context, form auth.MigrateRepoForm) {
 
 	log.Trace("Repository migrated: %s/%s", ctxUser.Name, form.RepoName)
 	ctx.WriteHeader(200)
-}
-
-// GET /user/repos
-// https://developer.github.com/v3/repos/#list-your-repositories
-func ListMyRepos(ctx *middleware.Context) {
-	ownRepos, err := models.GetRepositories(ctx.User.Id, true)
-	if err != nil {
-		ctx.JSON(500, &base.ApiJsonErr{"GetRepositories: " + err.Error(), base.DOC_URL})
-		return
-	}
-	numOwnRepos := len(ownRepos)
-
-	accessibleRepos, err := ctx.User.GetAccessibleRepositories()
-	if err != nil {
-		ctx.JSON(500, &base.ApiJsonErr{"GetAccessibleRepositories: " + err.Error(), base.DOC_URL})
-		return
-	}
-
-	repos := make([]*api.Repository, numOwnRepos+len(accessibleRepos))
-	for i := range ownRepos {
-		repos[i] = ToApiRepository(ctx.User, ownRepos[i], api.Permission{true, true, true})
-	}
-	i := numOwnRepos
-
-	for repo, access := range accessibleRepos {
-		repos[i] = ToApiRepository(repo.Owner, repo, api.Permission{
-			Admin: access >= models.ACCESS_MODE_ADMIN,
-			Push:  access >= models.ACCESS_MODE_WRITE,
-			Pull:  true,
-		})
-		i++
-	}
-
-	ctx.JSON(200, &repos)
 }
