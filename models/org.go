@@ -483,7 +483,7 @@ func (t *Team) hasRepository(e Engine, repoID int64) bool {
 
 // HasRepository returns true if given repository belong to team.
 func (t *Team) HasRepository(repoID int64) bool {
-	return HasTeamRepo(t.OrgID, t.ID, repoID)
+	return t.hasRepository(x, repoID)
 }
 
 func (t *Team) addRepository(e Engine, repo *Repository) (err error) {
