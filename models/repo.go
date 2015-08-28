@@ -530,9 +530,15 @@ func prepareRepoCommit(repo *Repository, tmpDir, repoPath string, opts CreateRep
 		return fmt.Errorf("getRepoInitFile[%s]: %v", opts.Readme, err)
 	}
 
+	cloneLink, err := repo.CloneLink()
+	if err != nil {
+		return fmt.Errorf("CloneLink: %v", err)
+	}
 	match := map[string]string{
-		"Name":        repo.Name,
-		"Description": repo.Description,
+		"Name":           repo.Name,
+		"Description":    repo.Description,
+		"CloneURL.SSH":   cloneLink.SSH,
+		"CloneURL.HTTPS": cloneLink.HTTPS,
 	}
 	if err = ioutil.WriteFile(filepath.Join(tmpDir, "README.md"),
 		[]byte(com.Expand(string(data), match)), 0644); err != nil {
