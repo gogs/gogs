@@ -16,6 +16,8 @@ import (
 
 	"github.com/go-xorm/xorm"
 
+	api "github.com/gogits/go-gogs-client"
+
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/git"
 	"github.com/gogits/gogs/modules/log"
@@ -290,20 +292,50 @@ func updateIssuesCommit(u *User, repo *Repository, repoUserName, repoName string
 }
 
 // CommitRepoAction adds new action for committing repository.
-func CommitRepoAction(userID, repoUserID int64, userName, actEmail string,
-	repoID int64, repoUserName, repoName string, refFullName string, commit *base.PushCommits, oldCommitID string, newCommitID string) error {
+func CommitRepoAction(
+	userID, repoUserID int64,
+	userName, actEmail string,
+	repoID int64,
+	repoUserName, repoName string,
+	refFullName string,
+	commit *base.PushCommits,
+	oldCommitID string, newCommitID string) error {
 
+	u, err := GetUserByID(userID)
+	if err != nil {
+		return fmt.Errorf("GetUserByID: %v", err)
+	}
+
+	repo, err := GetRepositoryByName(repoUserID, repoName)
+	if err != nil {
+		return fmt.Errorf("GetRepositoryByName: %v", err)
+	} else if err = repo.GetOwner(); err != nil {
+		return fmt.Errorf("GetOwner: %v", err)
+	}
+
+	isNewBranch := false
 	opType := COMMIT_REPO
 	// Check it's tag push or branch.
 	if strings.HasPrefix(refFullName, "refs/tags/") {
 		opType = PUSH_TAG
 		commit = &base.PushCommits{}
-	}
+	} else {
+		// if not the first commit, set the compareUrl
+		if !strings.HasPrefix(oldCommitID, "0000000") {
+			commit.CompareUrl = fmt.Sprintf("%s/%s/compare/%s...%s", repoUserName, repoName, oldCommitID, newCommitID)
+		} else {
+			isNewBranch = true
+		}
 
-	repoLink := fmt.Sprintf("%s%s/%s", setting.AppUrl, repoUserName, repoName)
-	// if not the first commit, set the compareUrl
-	if !strings.HasPrefix(oldCommitID, "0000000") {
-		commit.CompareUrl = fmt.Sprintf("%s/%s/compare/%s...%s", repoUserName, repoName, oldCommitID, newCommitID)
+		// Change repository bare status and update last updated time.
+		repo.IsBare = false
+		if err = UpdateRepository(repo, false); err != nil {
+			return fmt.Errorf("UpdateRepository: %v", err)
+		}
+
+		if err = updateIssuesCommit(u, repo, repoUserName, repoName, commit.Commits); err != nil {
+			log.Debug("updateIssuesCommit: %v", err)
+		}
 	}
 
 	bs, err := json.Marshal(commit)
@@ -312,26 +344,6 @@ func CommitRepoAction(userID, repoUserID int64, userName, actEmail string,
 	}
 
 	refName := git.RefEndName(refFullName)
-
-	// Change repository bare status and update last updated time.
-	repo, err := GetRepositoryByName(repoUserID, repoName)
-	if err != nil {
-		return fmt.Errorf("GetRepositoryByName: %v", err)
-	}
-	repo.IsBare = false
-	if err = UpdateRepository(repo, false); err != nil {
-		return fmt.Errorf("UpdateRepository: %v", err)
-	}
-
-	u, err := GetUserByID(userID)
-	if err != nil {
-		return fmt.Errorf("GetUserByID: %v", err)
-	}
-
-	err = updateIssuesCommit(u, repo, repoUserName, repoName, commit.Commits)
-	if err != nil {
-		log.Debug("updateIssuesCommit: ", err)
-	}
 
 	if err = NotifyWatchers(&Action{
 		ActUserID:    u.Id,
@@ -345,32 +357,24 @@ func CommitRepoAction(userID, repoUserID int64, userName, actEmail string,
 		RefName:      refName,
 		IsPrivate:    repo.IsPrivate,
 	}); err != nil {
-		return errors.New("NotifyWatchers: " + err.Error())
+		return fmt.Errorf("NotifyWatchers: %v", err)
 
 	}
 
-	// New push event hook.
-	if err := repo.GetOwner(); err != nil {
-		return errors.New("GetOwner: " + err.Error())
-	}
-
-	ws, err := GetActiveWebhooksByRepoId(repo.ID)
-	if err != nil {
-		return errors.New("GetActiveWebhooksByRepoId: " + err.Error())
-	}
-
-	// check if repo belongs to org and append additional webhooks
-	if repo.Owner.IsOrganization() {
-		// get hooks for org
-		orgws, err := GetActiveWebhooksByOrgId(repo.OwnerID)
-		if err != nil {
-			return errors.New("GetActiveWebhooksByOrgId: " + err.Error())
-		}
-		ws = append(ws, orgws...)
-	}
-
-	if len(ws) == 0 {
-		return nil
+	repoLink := fmt.Sprintf("%s%s/%s", setting.AppUrl, repoUserName, repoName)
+	payloadRepo := &api.PayloadRepo{
+		ID:          repo.ID,
+		Name:        repo.LowerName,
+		URL:         repoLink,
+		Description: repo.Description,
+		Website:     repo.Website,
+		Watchers:    repo.NumWatches,
+		Owner: &api.PayloadAuthor{
+			Name:     repo.Owner.DisplayName(),
+			Email:    repo.Owner.Email,
+			UserName: repo.Owner.Name,
+		},
+		Private: repo.IsPrivate,
 	}
 
 	pusher_email, pusher_name := "", ""
@@ -379,83 +383,66 @@ func CommitRepoAction(userID, repoUserID int64, userName, actEmail string,
 		pusher_email = pusher.Email
 		pusher_name = pusher.DisplayName()
 	}
-
-	commits := make([]*PayloadCommit, len(commit.Commits))
-	for i, cmt := range commit.Commits {
-		author_username := ""
-		author, err := GetUserByEmail(cmt.AuthorEmail)
-		if err == nil {
-			author_username = author.Name
-		}
-		commits[i] = &PayloadCommit{
-			Id:      cmt.Sha1,
-			Message: cmt.Message,
-			Url:     fmt.Sprintf("%s/commit/%s", repoLink, cmt.Sha1),
-			Author: &PayloadAuthor{
-				Name:     cmt.AuthorName,
-				Email:    cmt.AuthorEmail,
-				UserName: author_username,
-			},
-		}
-	}
-	p := &Payload{
-		Ref:     refFullName,
-		Commits: commits,
-		Repo: &PayloadRepo{
-			Id:          repo.ID,
-			Name:        repo.LowerName,
-			Url:         repoLink,
-			Description: repo.Description,
-			Website:     repo.Website,
-			Watchers:    repo.NumWatches,
-			Owner: &PayloadAuthor{
-				Name:     repo.Owner.DisplayName(),
-				Email:    repo.Owner.Email,
-				UserName: repo.Owner.Name,
-			},
-			Private: repo.IsPrivate,
-		},
-		Pusher: &PayloadAuthor{
-			Name:     pusher_name,
-			Email:    pusher_email,
-			UserName: userName,
-		},
-		Before:     oldCommitID,
-		After:      newCommitID,
-		CompareUrl: setting.AppUrl + commit.CompareUrl,
+	payloadSender := &api.PayloadUser{
+		UserName:  pusher.Name,
+		ID:        pusher.Id,
+		AvatarUrl: setting.AppUrl + pusher.RelAvatarLink(),
 	}
 
-	for _, w := range ws {
-		w.GetEvent()
-		if !w.HasPushEvent() {
-			continue
-		}
-
-		var payload BasePayload
-		switch w.HookTaskType {
-		case SLACK:
-			s, err := GetSlackPayload(p, w.Meta)
-			if err != nil {
-				return errors.New("action.GetSlackPayload: " + err.Error())
+	switch opType {
+	case COMMIT_REPO: // Push
+		commits := make([]*api.PayloadCommit, len(commit.Commits))
+		for i, cmt := range commit.Commits {
+			author_username := ""
+			author, err := GetUserByEmail(cmt.AuthorEmail)
+			if err == nil {
+				author_username = author.Name
 			}
-			payload = s
-		default:
-			payload = p
-			p.Secret = w.Secret
+			commits[i] = &api.PayloadCommit{
+				ID:      cmt.Sha1,
+				Message: cmt.Message,
+				URL:     fmt.Sprintf("%s/commit/%s", repoLink, cmt.Sha1),
+				Author: &api.PayloadAuthor{
+					Name:     cmt.AuthorName,
+					Email:    cmt.AuthorEmail,
+					UserName: author_username,
+				},
+			}
+		}
+		p := &api.PushPayload{
+			Ref:        refFullName,
+			Before:     oldCommitID,
+			After:      newCommitID,
+			CompareUrl: setting.AppUrl + commit.CompareUrl,
+			Commits:    commits,
+			Repo:       payloadRepo,
+			Pusher: &api.PayloadAuthor{
+				Name:     pusher_name,
+				Email:    pusher_email,
+				UserName: userName,
+			},
+			Sender: payloadSender,
+		}
+		if err = PrepareWebhooks(repo, HOOK_EVENT_PUSH, p); err != nil {
+			return fmt.Errorf("PrepareWebhooks: %v", err)
 		}
 
-		if err = CreateHookTask(&HookTask{
-			RepoID:      repo.ID,
-			HookID:      w.ID,
-			Type:        w.HookTaskType,
-			URL:         w.URL,
-			BasePayload: payload,
-			ContentType: w.ContentType,
-			EventType:   HOOK_EVENT_PUSH,
-			IsSSL:       w.IsSSL,
-		}); err != nil {
-			return fmt.Errorf("CreateHookTask: %v", err)
+		if isNewBranch {
+			return PrepareWebhooks(repo, HOOK_EVENT_CREATE, &api.CreatePayload{
+				Ref:     refName,
+				RefType: "branch",
+				Repo:    payloadRepo,
+				Sender:  payloadSender,
+			})
 		}
+
+	case PUSH_TAG: // Create
+		return PrepareWebhooks(repo, HOOK_EVENT_CREATE, &api.CreatePayload{
+			Ref:     refName,
+			RefType: "tag",
+			Repo:    payloadRepo,
+			Sender:  payloadSender,
+		})
 	}
 
 	return nil

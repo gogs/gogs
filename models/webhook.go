@@ -15,6 +15,8 @@ import (
 
 	"github.com/go-xorm/xorm"
 
+	api "github.com/gogits/go-gogs-client"
+
 	"github.com/gogits/gogs/modules/httplib"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/setting"
@@ -54,9 +56,18 @@ func IsValidHookContentType(name string) bool {
 	return ok
 }
 
+type HookEvents struct {
+	Create bool `json:"create"`
+	Push   bool `json:"push"`
+}
+
 // HookEvent represents events that will delivery hook.
 type HookEvent struct {
-	PushOnly bool `json:"push_only"`
+	PushOnly       bool `json:"push_only"`
+	SendEverything bool `json:"send_everything"`
+	ChooseEvents   bool `json:"choose_events"`
+
+	HookEvents `json:"events"`
 }
 
 type HookStatus int
@@ -94,8 +105,8 @@ func (w *Webhook) GetEvent() {
 	}
 }
 
-func (w *Webhook) GetSlackHook() *Slack {
-	s := &Slack{}
+func (w *Webhook) GetSlackHook() *SlackMeta {
+	s := &SlackMeta{}
 	if err := json.Unmarshal([]byte(w.Meta), s); err != nil {
 		log.Error(4, "webhook.GetSlackHook(%d): %v", w.ID, err)
 	}
@@ -114,12 +125,16 @@ func (w *Webhook) UpdateEvent() error {
 	return err
 }
 
+// HasCreateEvent returns true if hook enabled create event.
+func (w *Webhook) HasCreateEvent() bool {
+	return w.SendEverything ||
+		(w.ChooseEvents && w.HookEvents.Create)
+}
+
 // HasPushEvent returns true if hook enabled push event.
 func (w *Webhook) HasPushEvent() bool {
-	if w.PushOnly {
-		return true
-	}
-	return false
+	return w.PushOnly || w.SendEverything ||
+		(w.ChooseEvents && w.HookEvents.Push)
 }
 
 // CreateWebhook creates a new web hook.
@@ -140,9 +155,9 @@ func GetWebhookByID(id int64) (*Webhook, error) {
 	return w, nil
 }
 
-// GetActiveWebhooksByRepoId returns all active webhooks of repository.
-func GetActiveWebhooksByRepoId(repoId int64) (ws []*Webhook, err error) {
-	err = x.Where("repo_id=?", repoId).And("is_active=?", true).Find(&ws)
+// GetActiveWebhooksByRepoID returns all active webhooks of repository.
+func GetActiveWebhooksByRepoID(repoID int64) (ws []*Webhook, err error) {
+	err = x.Where("repo_id=?", repoID).And("is_active=?", true).Find(&ws)
 	return ws, err
 }
 
@@ -181,9 +196,9 @@ func GetWebhooksByOrgId(orgID int64) (ws []*Webhook, err error) {
 	return ws, err
 }
 
-// GetActiveWebhooksByOrgId returns all active webhooks for an organization.
-func GetActiveWebhooksByOrgId(orgId int64) (ws []*Webhook, err error) {
-	err = x.Where("org_id=?", orgId).And("is_active=?", true).Find(&ws)
+// GetActiveWebhooksByOrgID returns all active webhooks for an organization.
+func GetActiveWebhooksByOrgID(orgID int64) (ws []*Webhook, err error) {
+	err = x.Where("org_id=?", orgID).And("is_active=?", true).Find(&ws)
 	return ws, err
 }
 
@@ -230,57 +245,9 @@ func IsValidHookTaskType(name string) bool {
 type HookEventType string
 
 const (
-	HOOK_EVENT_PUSH HookEventType = "push"
+	HOOK_EVENT_CREATE HookEventType = "create"
+	HOOK_EVENT_PUSH   HookEventType = "push"
 )
-
-// FIXME: just use go-gogs-client structs maybe?
-type PayloadAuthor struct {
-	Name     string `json:"name"`
-	Email    string `json:"email"`
-	UserName string `json:"username"`
-}
-
-type PayloadCommit struct {
-	Id      string         `json:"id"`
-	Message string         `json:"message"`
-	Url     string         `json:"url"`
-	Author  *PayloadAuthor `json:"author"`
-}
-
-type PayloadRepo struct {
-	Id          int64          `json:"id"`
-	Name        string         `json:"name"`
-	Url         string         `json:"url"`
-	Description string         `json:"description"`
-	Website     string         `json:"website"`
-	Watchers    int            `json:"watchers"`
-	Owner       *PayloadAuthor `json:"owner"`
-	Private     bool           `json:"private"`
-}
-
-type BasePayload interface {
-	GetJSONPayload() ([]byte, error)
-}
-
-// Payload represents a payload information of hook.
-type Payload struct {
-	Secret     string           `json:"secret"`
-	Ref        string           `json:"ref"`
-	Commits    []*PayloadCommit `json:"commits"`
-	Repo       *PayloadRepo     `json:"repository"`
-	Pusher     *PayloadAuthor   `json:"pusher"`
-	Before     string           `json:"before"`
-	After      string           `json:"after"`
-	CompareUrl string           `json:"compare_url"`
-}
-
-func (p Payload) GetJSONPayload() ([]byte, error) {
-	data, err := json.MarshalIndent(p, "", "  ")
-	if err != nil {
-		return []byte{}, err
-	}
-	return data, nil
-}
 
 // HookRequest represents hook task request information.
 type HookRequest struct {
@@ -302,7 +269,7 @@ type HookTask struct {
 	UUID            string
 	Type            HookTaskType
 	URL             string
-	BasePayload     `xorm:"-"`
+	api.Payloader   `xorm:"-"`
 	PayloadContent  string `xorm:"TEXT"`
 	ContentType     HookContentType
 	EventType       HookEventType
@@ -367,13 +334,13 @@ func (t *HookTask) MarshalJSON(v interface{}) string {
 // HookTasks returns a list of hook tasks by given conditions.
 func HookTasks(hookID int64, page int) ([]*HookTask, error) {
 	tasks := make([]*HookTask, 0, setting.Webhook.PagingNum)
-	return tasks, x.Limit(setting.Webhook.PagingNum, (page-1)*setting.Webhook.PagingNum).Desc("id").Find(&tasks)
+	return tasks, x.Limit(setting.Webhook.PagingNum, (page-1)*setting.Webhook.PagingNum).Where("hook_id=?", hookID).Desc("id").Find(&tasks)
 }
 
 // CreateHookTask creates a new hook task,
 // it handles conversion from Payload to PayloadContent.
 func CreateHookTask(t *HookTask) error {
-	data, err := t.BasePayload.GetJSONPayload()
+	data, err := t.Payloader.JSONPayload()
 	if err != nil {
 		return err
 	}
@@ -387,6 +354,71 @@ func CreateHookTask(t *HookTask) error {
 func UpdateHookTask(t *HookTask) error {
 	_, err := x.Id(t.ID).AllCols().Update(t)
 	return err
+}
+
+// PrepareWebhooks adds new webhooks to task queue for given payload.
+func PrepareWebhooks(repo *Repository, event HookEventType, p api.Payloader) error {
+	if err := repo.GetOwner(); err != nil {
+		return fmt.Errorf("GetOwner: %v", err)
+	}
+
+	ws, err := GetActiveWebhooksByRepoID(repo.ID)
+	if err != nil {
+		return fmt.Errorf("GetActiveWebhooksByRepoID: %v", err)
+	}
+
+	// check if repo belongs to org and append additional webhooks
+	if repo.Owner.IsOrganization() {
+		// get hooks for org
+		orgws, err := GetActiveWebhooksByOrgID(repo.OwnerID)
+		if err != nil {
+			return fmt.Errorf("GetActiveWebhooksByOrgID: %v", err)
+		}
+		ws = append(ws, orgws...)
+	}
+
+	if len(ws) == 0 {
+		return nil
+	}
+
+	for _, w := range ws {
+		w.GetEvent()
+
+		switch event {
+		case HOOK_EVENT_CREATE:
+			if !w.HasCreateEvent() {
+				continue
+			}
+		case HOOK_EVENT_PUSH:
+			if !w.HasPushEvent() {
+				continue
+			}
+		}
+
+		switch w.HookTaskType {
+		case SLACK:
+			p, err = GetSlackPayload(p, event, w.Meta)
+			if err != nil {
+				return fmt.Errorf("GetSlackPayload: %v", err)
+			}
+		default:
+			p.SetSecret(w.Secret)
+		}
+
+		if err = CreateHookTask(&HookTask{
+			RepoID:      repo.ID,
+			HookID:      w.ID,
+			Type:        w.HookTaskType,
+			URL:         w.URL,
+			Payloader:   p,
+			ContentType: w.ContentType,
+			EventType:   HOOK_EVENT_PUSH,
+			IsSSL:       w.IsSSL,
+		}); err != nil {
+			return fmt.Errorf("CreateHookTask: %v", err)
+		}
+	}
+	return nil
 }
 
 type hookQueue struct {

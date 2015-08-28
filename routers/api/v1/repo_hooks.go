@@ -83,7 +83,7 @@ func CreateRepoHook(ctx *middleware.Context, form api.CreateHookOption) {
 			ctx.JSON(422, &base.ApiJsonErr{"missing config option: channel", base.DOC_URL})
 			return
 		}
-		meta, err := json.Marshal(&models.Slack{
+		meta, err := json.Marshal(&models.SlackMeta{
 			Channel: channel,
 		})
 		if err != nil {
@@ -141,7 +141,7 @@ func EditRepoHook(ctx *middleware.Context, form api.EditHookOption) {
 
 		if w.HookTaskType == models.SLACK {
 			if channel, ok := form.Config["channel"]; ok {
-				meta, err := json.Marshal(&models.Slack{
+				meta, err := json.Marshal(&models.SlackMeta{
 					Channel: channel,
 				})
 				if err != nil {

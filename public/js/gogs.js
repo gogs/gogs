@@ -367,6 +367,23 @@ function initRepository() {
     }
 };
 
+function initWebhook() {
+    if ($('.new.webhook').length == 0) {
+        return;
+    }
+
+    $('.events.checkbox input').change(function () {
+        if ($(this).is(':checked')) {
+            $('.events.fields').show();
+        }
+    });
+    $('.non-events.checkbox input').change(function () {
+        if ($(this).is(':checked')) {
+            $('.events.fields').hide();
+        }
+    });
+}
+
 $(document).ready(function () {
     csrf = $('meta[name=_csrf]').attr("content");
 
@@ -473,4 +490,5 @@ $(document).ready(function () {
     initCommentForm();
     initInstall();
     initRepository();
+    initWebhook();
 });

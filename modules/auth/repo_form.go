@@ -67,8 +67,22 @@ func (f *RepoSettingForm) Validate(ctx *macaron.Context, errs binding.Errors) bi
 //        \/       \/    \/     \/     \/            \/
 
 type WebhookForm struct {
-	PushOnly bool
-	Active   bool
+	Events string
+	Create bool
+	Push   bool
+	Active bool
+}
+
+func (f WebhookForm) PushOnly() bool {
+	return f.Events == "push_only"
+}
+
+func (f WebhookForm) SendEverything() bool {
+	return f.Events == "send_everything"
+}
+
+func (f WebhookForm) ChooseEvents() bool {
+	return f.Events == "choose_events"
 }
 
 type NewWebhookForm struct {

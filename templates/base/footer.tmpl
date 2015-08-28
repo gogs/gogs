@@ -26,4 +26,22 @@
 		</div>
 	</footer>
 </body>
+
+	<!-- Third-party libraries -->
+	{{if .RequireHighlightJS}}
+	<link rel="stylesheet" href="{{AppSubUrl}}/css/highlight-8.7/default.css">
+	<script src="{{AppSubUrl}}/js/libs/highlight-8.7.pack.js"></script>
+	{{end}}
+	{{if .RequireMinicolors}}
+	<link rel="stylesheet" href="{{AppSubUrl}}/css/jquery.minicolors-2.1.12.css">
+	<script src="{{AppSubUrl}}/js/libs/jquery.minicolors-2.1.12.min.js"></script>
+	{{end}}
+	{{if .RequireDatetimepicker}}
+	<link rel="stylesheet" href="{{AppSubUrl}}/css/jquery.datetimepicker-2.4.5.css">
+	<script src="{{AppSubUrl}}/js/libs/jquery.datetimepicker-2.4.5.js"></script>
+	{{end}}
+	{{if .RequireDropzone}}
+	<link rel="stylesheet" href="{{AppSubUrl}}/css/dropzone-4.0.1.css">
+	<script src="{{AppSubUrl}}/js/libs/dropzone-4.0.1.js"></script>
+	{{end}}
 </html>

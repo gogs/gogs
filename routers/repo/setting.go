@@ -320,6 +320,18 @@ func WebhooksNew(ctx *middleware.Context) {
 	ctx.HTML(200, orCtx.NewTemplate)
 }
 
+func ParseHookEvent(form auth.WebhookForm) *models.HookEvent {
+	return &models.HookEvent{
+		PushOnly:       form.PushOnly(),
+		SendEverything: form.SendEverything(),
+		ChooseEvents:   form.ChooseEvents(),
+		HookEvents: models.HookEvents{
+			Create: form.Create,
+			Push:   form.Push,
+		},
+	}
+}
+
 func WebHooksNewPost(ctx *middleware.Context, form auth.NewWebhookForm) {
 	ctx.Data["Title"] = ctx.Tr("repo.settings.add_webhook")
 	ctx.Data["PageIsSettingsHooks"] = true
@@ -345,13 +357,11 @@ func WebHooksNewPost(ctx *middleware.Context, form auth.NewWebhookForm) {
 	}
 
 	w := &models.Webhook{
-		RepoID:      orCtx.RepoID,
-		URL:         form.PayloadURL,
-		ContentType: contentType,
-		Secret:      form.Secret,
-		HookEvent: &models.HookEvent{
-			PushOnly: form.PushOnly,
-		},
+		RepoID:       orCtx.RepoID,
+		URL:          form.PayloadURL,
+		ContentType:  contentType,
+		Secret:       form.Secret,
+		HookEvent:    ParseHookEvent(form.WebhookForm),
 		IsActive:     form.Active,
 		HookTaskType: models.GOGS,
 		OrgID:        orCtx.OrgID,
@@ -385,7 +395,7 @@ func SlackHooksNewPost(ctx *middleware.Context, form auth.NewSlackHookForm) {
 		return
 	}
 
-	meta, err := json.Marshal(&models.Slack{
+	meta, err := json.Marshal(&models.SlackMeta{
 		Channel: form.Channel,
 	})
 	if err != nil {
@@ -394,12 +404,10 @@ func SlackHooksNewPost(ctx *middleware.Context, form auth.NewSlackHookForm) {
 	}
 
 	w := &models.Webhook{
-		RepoID:      orCtx.RepoID,
-		URL:         form.PayloadURL,
-		ContentType: models.JSON,
-		HookEvent: &models.HookEvent{
-			PushOnly: form.PushOnly,
-		},
+		RepoID:       orCtx.RepoID,
+		URL:          form.PayloadURL,
+		ContentType:  models.JSON,
+		HookEvent:    ParseHookEvent(form.WebhookForm),
 		IsActive:     form.Active,
 		HookTaskType: models.SLACK,
 		Meta:         string(meta),
@@ -491,9 +499,7 @@ func WebHooksEditPost(ctx *middleware.Context, form auth.NewWebhookForm) {
 	w.URL = form.PayloadURL
 	w.ContentType = contentType
 	w.Secret = form.Secret
-	w.HookEvent = &models.HookEvent{
-		PushOnly: form.PushOnly,
-	}
+	w.HookEvent = ParseHookEvent(form.WebhookForm)
 	w.IsActive = form.Active
 	if err := w.UpdateEvent(); err != nil {
 		ctx.Handle(500, "UpdateEvent", err)
@@ -523,7 +529,7 @@ func SlackHooksEditPost(ctx *middleware.Context, form auth.NewSlackHookForm) {
 		return
 	}
 
-	meta, err := json.Marshal(&models.Slack{
+	meta, err := json.Marshal(&models.SlackMeta{
 		Channel: form.Channel,
 	})
 	if err != nil {
@@ -533,9 +539,7 @@ func SlackHooksEditPost(ctx *middleware.Context, form auth.NewSlackHookForm) {
 
 	w.URL = form.PayloadURL
 	w.Meta = string(meta)
-	w.HookEvent = &models.HookEvent{
-		PushOnly: form.PushOnly,
-	}
+	w.HookEvent = ParseHookEvent(form.WebhookForm)
 	w.IsActive = form.Active
 	if err := w.UpdateEvent(); err != nil {
 		ctx.Handle(500, "UpdateEvent", err)
