@@ -122,9 +122,8 @@ func (u *User) HomeLink() string {
 	return setting.AppSubUrl + "/" + u.Name
 }
 
-// AvatarLink returns user gravatar link.
-func (u *User) AvatarLink() string {
-	defaultImgUrl := setting.AppSubUrl + "/img/avatar_default.jpg"
+func (u *User) RelAvatarLink() string {
+	defaultImgUrl := "/img/avatar_default.jpg"
 	if u.Id == -1 {
 		return defaultImgUrl
 	}
@@ -135,7 +134,7 @@ func (u *User) AvatarLink() string {
 		if !com.IsExist(imgPath) {
 			return defaultImgUrl
 		}
-		return setting.AppSubUrl + "/avatars/" + com.ToStr(u.Id)
+		return "/avatars/" + com.ToStr(u.Id)
 	case setting.DisableGravatar, setting.OfflineMode:
 		if !com.IsExist(imgPath) {
 			img, err := avatar.RandomImage([]byte(u.Email))
@@ -161,11 +160,20 @@ func (u *User) AvatarLink() string {
 			log.Info("New random avatar created: %d", u.Id)
 		}
 
-		return setting.AppSubUrl + "/avatars/" + com.ToStr(u.Id)
+		return "/avatars/" + com.ToStr(u.Id)
 	case setting.Service.EnableCacheAvatar:
-		return setting.AppSubUrl + "/avatar/" + u.Avatar
+		return "/avatar/" + u.Avatar
 	}
 	return setting.GravatarSource + u.Avatar
+}
+
+// AvatarLink returns user gravatar link.
+func (u *User) AvatarLink() string {
+	link := u.RelAvatarLink()
+	if link[0] == '/' {
+		return setting.AppSubUrl + link
+	}
+	return link
 }
 
 // NewGitSig generates and returns the signature of given user.
