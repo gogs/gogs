@@ -424,6 +424,15 @@
 		"strictMath": 0,
 		"strictUnits": 0
 		},
+	"\/public\/ng\/css\/font-awesome.min.css": {
+		"fileType": 16,
+		"ignore": 0,
+		"ignoreWasSetByUser": 0,
+		"inputAbbreviatedPath": "\/public\/ng\/css\/font-awesome.min.css",
+		"outputAbbreviatedPath": "No Output Path",
+		"outputPathIsOutsideProject": 0,
+		"outputPathIsSetByUser": 0
+		},
 	"\/public\/ng\/css\/gogs.css": {
 		"fileType": 16,
 		"ignore": 1,
