@@ -615,14 +615,16 @@ func initRepository(e Engine, repoPath string, u *User, repo *Repository, opts C
 		if err = initRepoCommit(tmpDir, u.NewGitSig()); err != nil {
 			return fmt.Errorf("initRepoCommit: %v", err)
 		}
-	} else {
-		repo.IsBare = true
 	}
 
 	// Re-fetch the repository from database before updating it (else it would
 	// override changes that were done earlier with sql)
 	if repo, err = getRepositoryByID(e, repo.ID); err != nil {
 		return fmt.Errorf("getRepositoryByID: %v", err)
+	}
+
+	if !opts.AutoInit {
+		repo.IsBare = true
 	}
 
 	repo.DefaultBranch = "master"
