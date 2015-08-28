@@ -5,6 +5,7 @@
 package models
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"html/template"
@@ -403,7 +404,12 @@ func MirrorRepository(repoId int64, userName, repoName, repoPath, url string) er
 
 // MigrateRepository migrates a existing repository from other project hosting.
 func MigrateRepository(u *User, name, desc string, private, mirror bool, url string) (*Repository, error) {
-	repo, err := CreateRepository(u, name, desc, "", "", private, mirror, false)
+	repo, err := CreateRepository(u, CreateRepoOptions{
+		Name:        name,
+		Description: desc,
+		IsPrivate:   private,
+		IsMirror:    mirror,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -488,8 +494,89 @@ func createUpdateHook(repoPath string) error {
 		[]byte(fmt.Sprintf(_TPL_UPDATE_HOOK, setting.ScriptType, "\""+appPath+"\"", setting.CustomConf)), 0777)
 }
 
+type CreateRepoOptions struct {
+	Name        string
+	Description string
+	Gitignores  string
+	License     string
+	Readme      string
+	IsPrivate   bool
+	IsMirror    bool
+	AutoInit    bool
+}
+
+func getRepoInitFile(tp, name string) ([]byte, error) {
+	relPath := path.Join("conf", tp, name)
+
+	// Use custom file when available.
+	customPath := path.Join(setting.CustomPath, relPath)
+	if com.IsFile(customPath) {
+		return ioutil.ReadFile(customPath)
+	}
+	return bindata.Asset(relPath)
+}
+
+func prepareRepoCommit(repo *Repository, tmpDir, repoPath string, opts CreateRepoOptions) error {
+	// Clone to temprory path and do the init commit.
+	_, stderr, err := process.Exec(
+		fmt.Sprintf("initRepository(git clone): %s", repoPath), "git", "clone", repoPath, tmpDir)
+	if err != nil {
+		return fmt.Errorf("git clone: %v - %s", err, stderr)
+	}
+
+	// README
+	data, err := getRepoInitFile("readme", opts.Readme)
+	if err != nil {
+		return fmt.Errorf("getRepoInitFile[%s]: %v", opts.Readme, err)
+	}
+
+	match := map[string]string{
+		"Name":        repo.Name,
+		"Description": repo.Description,
+	}
+	if err = ioutil.WriteFile(filepath.Join(tmpDir, "README.md"),
+		[]byte(com.Expand(string(data), match)), 0644); err != nil {
+		return fmt.Errorf("write README.md: %v", err)
+	}
+
+	// .gitignore
+	if len(opts.Gitignores) > 0 {
+		var buf bytes.Buffer
+		names := strings.Split(opts.Gitignores, ",")
+		for _, name := range names {
+			data, err = getRepoInitFile("gitignore", name)
+			if err != nil {
+				return fmt.Errorf("getRepoInitFile[%s]: %v", name, err)
+			}
+			buf.WriteString("# ---> " + name + "\n")
+			buf.Write(data)
+			buf.WriteString("\n")
+		}
+
+		if buf.Len() > 0 {
+			if err = ioutil.WriteFile(filepath.Join(tmpDir, ".gitignore"), buf.Bytes(), 0644); err != nil {
+				return fmt.Errorf("write .gitignore: %v", err)
+			}
+		}
+	}
+
+	// LICENSE
+	if len(opts.License) > 0 {
+		data, err = getRepoInitFile("license", opts.License)
+		if err != nil {
+			return fmt.Errorf("getRepoInitFile[%s]: %v", opts.License, err)
+		}
+
+		if err = ioutil.WriteFile(filepath.Join(tmpDir, "LICENSE"), data, 0644); err != nil {
+			return fmt.Errorf("write LICENSE: %v", err)
+		}
+	}
+
+	return nil
+}
+
 // InitRepository initializes README and .gitignore if needed.
-func initRepository(e Engine, repoPath string, u *User, repo *Repository, initReadme bool, repoLang, license string) error {
+func initRepository(e Engine, repoPath string, u *User, repo *Repository, opts CreateRepoOptions) error {
 	// Somehow the directory could exist.
 	if com.IsExist(repoPath) {
 		return fmt.Errorf("initRepository: path already exists: %s", repoPath)
@@ -498,83 +585,32 @@ func initRepository(e Engine, repoPath string, u *User, repo *Repository, initRe
 	// Init bare new repository.
 	os.MkdirAll(repoPath, os.ModePerm)
 	_, stderr, err := process.ExecDir(-1, repoPath,
-		fmt.Sprintf("initRepository(git init --bare): %s", repoPath),
-		"git", "init", "--bare")
+		fmt.Sprintf("initRepository(git init --bare): %s", repoPath), "git", "init", "--bare")
 	if err != nil {
-		return fmt.Errorf("git init --bare: %s", err)
+		return fmt.Errorf("git init --bare: %v - %s", err, stderr)
 	}
 
 	if err := createUpdateHook(repoPath); err != nil {
 		return err
 	}
 
-	// Initialize repository according to user's choice.
-	fileName := map[string]string{}
-	if initReadme {
-		fileName["readme"] = "README.md"
-	}
-	if repoLang != "" {
-		fileName["gitign"] = ".gitignore"
-	}
-	if license != "" {
-		fileName["license"] = "LICENSE"
-	}
-
-	// Clone to temprory path and do the init commit.
 	tmpDir := filepath.Join(os.TempDir(), com.ToStr(time.Now().Nanosecond()))
-	os.MkdirAll(tmpDir, os.ModePerm)
-	defer os.RemoveAll(tmpDir)
 
-	_, stderr, err = process.Exec(
-		fmt.Sprintf("initRepository(git clone): %s", repoPath),
-		"git", "clone", repoPath, tmpDir)
-	if err != nil {
-		return errors.New("git clone: " + stderr)
-	}
+	// Initialize repository according to user's choice.
+	if opts.AutoInit {
+		os.MkdirAll(tmpDir, os.ModePerm)
+		defer os.RemoveAll(tmpDir)
 
-	// README
-	if initReadme {
-		defaultReadme := repo.Name + "\n" + strings.Repeat("=",
-			utf8.RuneCountInString(repo.Name)) + "\n\n" + repo.Description
-		if err := ioutil.WriteFile(filepath.Join(tmpDir, fileName["readme"]),
-			[]byte(defaultReadme), 0644); err != nil {
-			return err
+		if err = prepareRepoCommit(repo, tmpDir, repoPath, opts); err != nil {
+			return fmt.Errorf("prepareRepoCommit: %v", err)
 		}
-	}
 
-	// FIXME: following two can be merged.
-
-	// .gitignore
-	// Copy custom file when available.
-	customPath := path.Join(setting.CustomPath, "conf/gitignore", repoLang)
-	targetPath := path.Join(tmpDir, fileName["gitign"])
-	if com.IsFile(customPath) {
-		if err := com.Copy(customPath, targetPath); err != nil {
-			return fmt.Errorf("copy gitignore: %v", err)
-		}
-	} else if com.IsSliceContainsStr(Gitignores, repoLang) {
-		if err = ioutil.WriteFile(targetPath,
-			bindata.MustAsset(path.Join("conf/gitignore", repoLang)), 0644); err != nil {
-			return fmt.Errorf("generate gitignore: %v", err)
+		// Apply changes and commit.
+		if err = initRepoCommit(tmpDir, u.NewGitSig()); err != nil {
+			return fmt.Errorf("initRepoCommit: %v", err)
 		}
 	} else {
-		delete(fileName, "gitign")
-	}
-
-	// LICENSE
-	customPath = path.Join(setting.CustomPath, "conf/license", license)
-	targetPath = path.Join(tmpDir, fileName["license"])
-	if com.IsFile(customPath) {
-		if err = com.Copy(customPath, targetPath); err != nil {
-			return fmt.Errorf("copy license: %v", err)
-		}
-	} else if com.IsSliceContainsStr(Licenses, license) {
-		if err = ioutil.WriteFile(targetPath,
-			bindata.MustAsset(path.Join("conf/license", license)), 0644); err != nil {
-			return fmt.Errorf("generate license: %v", err)
-		}
-	} else {
-		delete(fileName, "license")
+		repo.IsBare = true
 	}
 
 	// Re-fetch the repository from database before updating it (else it would
@@ -582,21 +618,13 @@ func initRepository(e Engine, repoPath string, u *User, repo *Repository, initRe
 	if repo, err = getRepositoryByID(e, repo.ID); err != nil {
 		return fmt.Errorf("getRepositoryByID: %v", err)
 	}
-	if len(fileName) == 0 {
-		repo.IsBare = true
-	}
+
 	repo.DefaultBranch = "master"
 	if err = updateRepository(e, repo, false); err != nil {
 		return fmt.Errorf("updateRepository: %v", err)
 	}
 
-	// Ignore init process if user choose not to.
-	if len(fileName) == 0 {
-		return nil
-	}
-
-	// Apply changes and commit.
-	return initRepoCommit(tmpDir, u.NewGitSig())
+	return nil
 }
 
 func createRepository(e *xorm.Session, u *User, repo *Repository) (err error) {
@@ -642,14 +670,14 @@ func createRepository(e *xorm.Session, u *User, repo *Repository) (err error) {
 }
 
 // CreateRepository creates a repository for given user or organization.
-func CreateRepository(u *User, name, desc, lang, license string, isPrivate, isMirror, initReadme bool) (_ *Repository, err error) {
+func CreateRepository(u *User, opts CreateRepoOptions) (_ *Repository, err error) {
 	repo := &Repository{
 		OwnerID:     u.Id,
 		Owner:       u,
-		Name:        name,
-		LowerName:   strings.ToLower(name),
-		Description: desc,
-		IsPrivate:   isPrivate,
+		Name:        opts.Name,
+		LowerName:   strings.ToLower(opts.Name),
+		Description: opts.Description,
+		IsPrivate:   opts.IsPrivate,
 	}
 
 	sess := x.NewSession()
@@ -663,9 +691,9 @@ func CreateRepository(u *User, name, desc, lang, license string, isPrivate, isMi
 	}
 
 	// No need for init mirror.
-	if !isMirror {
+	if !opts.IsMirror {
 		repoPath := RepoPath(u.Name, repo.Name)
-		if err = initRepository(sess, repoPath, u, repo, initReadme, lang, license); err != nil {
+		if err = initRepository(sess, repoPath, u, repo, opts); err != nil {
 			if err2 := os.RemoveAll(repoPath); err2 != nil {
 				log.Error(4, "initRepository: %v", err)
 				return nil, fmt.Errorf(

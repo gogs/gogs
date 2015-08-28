@@ -284,7 +284,7 @@ img.avatar-100 {
   font-size: 16px;
   line-height: 1.6;
   word-wrap: break-word;
-  padding: 0 2em 2em !important;
+  padding: 5px 2em 2em !important;
 }
 .markdown > *:first-child {
   margin-top: 0 !important;
