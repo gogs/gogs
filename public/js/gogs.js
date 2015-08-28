@@ -409,7 +409,9 @@ $(document).ready(function () {
     });
 
     // Highlight JS
-    hljs.initHighlightingOnLoad();
+    if (typeof hljs != 'undefined') {
+        hljs.initHighlightingOnLoad();
+    }
 
     // Dropzone
     if ($('#dropzone').length > 0) {

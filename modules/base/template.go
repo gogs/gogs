@@ -122,9 +122,6 @@ var TemplateFuncs template.FuncMap = map[string]interface{}{
 	"AppDomain": func() string {
 		return setting.Domain
 	},
-	"CdnMode": func() bool {
-		return setting.ProdMode && !setting.OfflineMode
-	},
 	"DisableGravatar": func() bool {
 		return setting.DisableGravatar
 	},

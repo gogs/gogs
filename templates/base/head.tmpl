@@ -14,38 +14,33 @@
 
 	<link rel="shortcut icon" href="{{AppSubUrl}}/img/favicon.png" />
 
-	{{if CdnMode}}
-	<script src="//code.jquery.com/jquery-1.11.3.min.js"></script>
-	<link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css">
-	{{else}}
 	<script src="{{AppSubUrl}}/js/jquery-1.11.3.min.js"></script>
-	<link rel="stylesheet" href="{{AppSubUrl}}/css/font-awesome.min.css">
-	{{end}}
+	<link rel="stylesheet" href="{{AppSubUrl}}/css/font-awesome-4.4.0.min.css">
 
 	<!-- Stylesheet -->
-	<link rel="stylesheet" href="{{AppSubUrl}}/css/semantic.min.css?v={{AppVer}}">
+	<link rel="stylesheet" href="{{AppSubUrl}}/css/semantic-2.0.8.min.css">
 	<link rel="stylesheet" href="{{AppSubUrl}}/css/gogs.min.css?v={{AppVer}}">
 
 	<!-- JavaScript -->
-	<script src="{{AppSubUrl}}/js/semantic.min.js?v={{AppVer}}"></script>
+	<script src="{{AppSubUrl}}/js/semantic-2.0.8.min.js"></script>
 	<script src="{{AppSubUrl}}/js/gogs.js?v={{AppVer}}"></script>
 
 	<!-- Third-party libraries -->
 	{{if .RequireHighlightJS}}
-	<link rel="stylesheet" href="{{AppSubUrl}}/css/highlightjs/default.css?v={{AppVer}}">
-	<script src="{{AppSubUrl}}/js/libs/highlight.pack.js?v={{AppVer}}"></script>
+	<link rel="stylesheet" href="{{AppSubUrl}}/css/highlight-8.7/default.css">
+	<script src="{{AppSubUrl}}/js/libs/highlight-8.7.pack.js"></script>
 	{{end}}
 	{{if .RequireMinicolors}}
-	<link rel="stylesheet" href="{{AppSubUrl}}/css/jquery.minicolors.css?v={{AppVer}}">
-	<script src="{{AppSubUrl}}/js/libs/jquery.minicolors.min.js?v={{AppVer}}"></script>
+	<link rel="stylesheet" href="{{AppSubUrl}}/css/jquery.minicolors-2.1.12.css">
+	<script src="{{AppSubUrl}}/js/libs/jquery.minicolors-2.1.12.min.js"></script>
 	{{end}}
 	{{if .RequireDatetimepicker}}
-	<link rel="stylesheet" href="{{AppSubUrl}}/css/jquery.datetimepicker.css?v={{AppVer}}">
-	<script src="{{AppSubUrl}}/js/libs/jquery.datetimepicker.js?v={{AppVer}}"></script>
+	<link rel="stylesheet" href="{{AppSubUrl}}/css/jquery.datetimepicker-2.4.5.css">
+	<script src="{{AppSubUrl}}/js/libs/jquery.datetimepicker-2.4.5.js"></script>
 	{{end}}
 	{{if .RequireDropzone}}
-	<link rel="stylesheet" href="{{AppSubUrl}}/css/dropzone.css?v={{AppVer}}">
-	<script src="{{AppSubUrl}}/js/libs/dropzone.js?v={{AppVer}}"></script>
+	<link rel="stylesheet" href="{{AppSubUrl}}/css/dropzone-4.0.1.css">
+	<script src="{{AppSubUrl}}/js/libs/dropzone-4.0.1.js"></script>
 	{{end}}
 
 	<title>{{if .Title}}{{.Title}} - {{end}}{{AppName}}</title>
