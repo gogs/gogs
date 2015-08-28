@@ -28,7 +28,7 @@
 					  	{{if .IsSucceed}}
 					  	<span class="ui green label">{{.ResponseInfo.Status}}</span>
 					  	{{else}}
-					  	<span class="ui red label">500</span>
+					  	<span class="ui red label">{{.ResponseInfo.Status}}</span>
 					  	{{end}}
 				  	{{else}}
 				  		<span class="ui label">N/A</span>

@@ -9,13 +9,18 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+
+	api "github.com/gogits/go-gogs-client"
+
+	"github.com/gogits/gogs/modules/git"
+	"github.com/gogits/gogs/modules/setting"
 )
 
 const (
 	SLACK_COLOR string = "#dd4b39"
 )
 
-type Slack struct {
+type SlackMeta struct {
 	Channel string `json:"channel"`
 }
 
@@ -34,69 +39,14 @@ type SlackAttachment struct {
 	Text  string `json:"text"`
 }
 
-func (p SlackPayload) GetJSONPayload() ([]byte, error) {
+func (p *SlackPayload) SetSecret(_ string) {}
+
+func (p *SlackPayload) JSONPayload() ([]byte, error) {
 	data, err := json.Marshal(p)
 	if err != nil {
 		return []byte{}, err
 	}
 	return data, nil
-}
-
-func GetSlackPayload(p *Payload, meta string) (*SlackPayload, error) {
-	slack := &Slack{}
-	slackPayload := &SlackPayload{}
-	if err := json.Unmarshal([]byte(meta), &slack); err != nil {
-		return slackPayload, errors.New("GetSlackPayload meta json:" + err.Error())
-	}
-
-	// TODO: handle different payload types: push, new branch, delete branch etc.
-	// when they are added to gogs. Only handles push now
-	return getSlackPushPayload(p, slack)
-}
-
-func getSlackPushPayload(p *Payload, slack *Slack) (*SlackPayload, error) {
-	// n new commits
-	refSplit := strings.Split(p.Ref, "/")
-	branchName := refSplit[len(refSplit)-1]
-	var commitString string
-
-	if len(p.Commits) == 1 {
-		commitString = "1 new commit"
-		if p.CompareUrl != "" {
-			commitString = SlackLinkFormatter(p.CompareUrl, commitString)
-		}
-	} else {
-		commitString = fmt.Sprintf("%d new commits", len(p.Commits))
-		if p.CompareUrl != "" {
-			commitString = SlackLinkFormatter(p.CompareUrl, commitString)
-		}
-	}
-
-	repoLink := SlackLinkFormatter(p.Repo.Url, p.Repo.Name)
-	branchLink := SlackLinkFormatter(p.Repo.Url+"/src/"+branchName, branchName)
-	text := fmt.Sprintf("[%s:%s] %s pushed by %s", repoLink, branchLink, commitString, p.Pusher.Name)
-	var attachmentText string
-
-	// for each commit, generate attachment text
-	for i, commit := range p.Commits {
-		attachmentText += fmt.Sprintf("%s: %s - %s", SlackLinkFormatter(commit.Url, commit.Id[:7]), SlackTextFormatter(commit.Message), SlackTextFormatter(commit.Author.Name))
-		// add linebreak to each commit but the last
-		if i < len(p.Commits)-1 {
-			attachmentText += "\n"
-		}
-	}
-
-	slackAttachments := []SlackAttachment{{Color: SLACK_COLOR, Text: attachmentText}}
-
-	return &SlackPayload{
-		Channel:     slack.Channel,
-		Text:        text,
-		Username:    "gogs",
-		IconUrl:     "https://raw.githubusercontent.com/gogits/gogs/master/public/img/favicon.png",
-		UnfurlLinks: 0,
-		LinkNames:   0,
-		Attachments: slackAttachments,
-	}, nil
 }
 
 // see: https://api.slack.com/docs/formatting
@@ -112,4 +62,82 @@ func SlackTextFormatter(s string) string {
 
 func SlackLinkFormatter(url string, text string) string {
 	return fmt.Sprintf("<%s|%s>", url, SlackTextFormatter(text))
+}
+
+func getSlackCreatePayload(p *api.CreatePayload, slack *SlackMeta) (*SlackPayload, error) {
+	// created tag/branch
+	refName := git.RefEndName(p.Ref)
+
+	repoLink := SlackLinkFormatter(p.Repo.URL, p.Repo.Name)
+	refLink := SlackLinkFormatter(p.Repo.URL+"/src/"+refName, refName)
+	text := fmt.Sprintf("[%s:%s] %s created by %s", repoLink, refLink, p.RefType, p.Sender.UserName)
+
+	return &SlackPayload{
+		Channel:  slack.Channel,
+		Text:     text,
+		Username: setting.AppName,
+		IconUrl:  setting.AppUrl + "/img/favicon.png",
+	}, nil
+}
+
+func getSlackPushPayload(p *api.PushPayload, slack *SlackMeta) (*SlackPayload, error) {
+	// n new commits
+	var (
+		branchName   = git.RefEndName(p.Ref)
+		commitString string
+	)
+
+	if len(p.Commits) == 1 {
+		commitString = "1 new commit"
+		if len(p.CompareUrl) > 0 {
+			commitString = SlackLinkFormatter(p.CompareUrl, commitString)
+		}
+	} else {
+		commitString = fmt.Sprintf("%d new commits", len(p.Commits))
+		if p.CompareUrl != "" {
+			commitString = SlackLinkFormatter(p.CompareUrl, commitString)
+		}
+	}
+
+	repoLink := SlackLinkFormatter(p.Repo.URL, p.Repo.Name)
+	branchLink := SlackLinkFormatter(p.Repo.URL+"/src/"+branchName, branchName)
+	text := fmt.Sprintf("[%s:%s] %s pushed by %s", repoLink, branchLink, commitString, p.Pusher.Name)
+
+	var attachmentText string
+	// for each commit, generate attachment text
+	for i, commit := range p.Commits {
+		attachmentText += fmt.Sprintf("%s: %s - %s", SlackLinkFormatter(commit.URL, commit.ID[:7]), SlackTextFormatter(commit.Message), SlackTextFormatter(commit.Author.Name))
+		// add linebreak to each commit but the last
+		if i < len(p.Commits)-1 {
+			attachmentText += "\n"
+		}
+	}
+
+	slackAttachments := []SlackAttachment{{Color: SLACK_COLOR, Text: attachmentText}}
+
+	return &SlackPayload{
+		Channel:     slack.Channel,
+		Text:        text,
+		Username:    setting.AppName,
+		IconUrl:     setting.AppUrl + "/img/favicon.png",
+		Attachments: slackAttachments,
+	}, nil
+}
+
+func GetSlackPayload(p api.Payloader, event HookEventType, meta string) (*SlackPayload, error) {
+	s := new(SlackPayload)
+
+	slack := &SlackMeta{}
+	if err := json.Unmarshal([]byte(meta), &slack); err != nil {
+		return s, errors.New("GetSlackPayload meta json:" + err.Error())
+	}
+
+	switch event {
+	case HOOK_EVENT_CREATE:
+		return getSlackCreatePayload(p.(*api.CreatePayload), slack)
+	case HOOK_EVENT_PUSH:
+		return getSlackPushPayload(p.(*api.PushPayload), slack)
+	}
+
+	return s, nil
 }
