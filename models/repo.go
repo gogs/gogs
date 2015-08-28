@@ -44,7 +44,7 @@ var (
 )
 
 var (
-	Gitignores, Licenses []string
+	Gitignores, Licenses, Readmes []string
 )
 
 var (
@@ -52,9 +52,9 @@ var (
 )
 
 func LoadRepoConfig() {
-	// Load .gitignore and license files.
-	types := []string{"gitignore", "license"}
-	typeFiles := make([][]string, 2)
+	// Load .gitignore and license files and readme templates.
+	types := []string{"gitignore", "license", "readme"}
+	typeFiles := make([][]string, 3)
 	for i, t := range types {
 		files, err := bindata.AssetDir("conf/" + t)
 		if err != nil {
@@ -78,8 +78,10 @@ func LoadRepoConfig() {
 
 	Gitignores = typeFiles[0]
 	Licenses = typeFiles[1]
+	Readmes = typeFiles[2]
 	sort.Strings(Gitignores)
 	sort.Strings(Licenses)
+	sort.Strings(Readmes)
 }
 
 func NewRepoContext() {
