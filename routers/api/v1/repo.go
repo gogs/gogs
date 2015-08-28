@@ -101,8 +101,15 @@ func SearchRepos(ctx *middleware.Context) {
 }
 
 func createRepo(ctx *middleware.Context, owner *models.User, opt api.CreateRepoOption) {
-	repo, err := models.CreateRepository(owner, opt.Name, opt.Description,
-		opt.Gitignore, opt.License, opt.Private, false, opt.AutoInit)
+	repo, err := models.CreateRepository(owner, models.CreateRepoOptions{
+		Name:        opt.Name,
+		Description: opt.Description,
+		Gitignores:  opt.Gitignore,
+		License:     opt.License,
+		// Readme:      form.Readme,
+		IsPrivate: opt.Private,
+		AutoInit:  opt.AutoInit,
+	})
 	if err != nil {
 		if models.IsErrRepoAlreadyExist(err) ||
 			models.IsErrNameReserved(err) ||
