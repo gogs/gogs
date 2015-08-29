@@ -64,7 +64,6 @@ Gogs 的目标是打造一个最简单、最快速和最轻松的方式搭建自
 
 ## 贡献成员
 
-- 本项目的 [开发团队](http://gogs.io/team)。
 - 前团队成员 [@lunny](https://github.com/lunny) 和 [@fuxiaohei](https://github.com/fuxiaohei)。
 - 您可以通过查看 [贡献者页面](https://github.com/gogits/gogs/graphs/contributors) 获取完整的贡献者列表。
 - 您可以通过查看 [TRANSLATORS](conf/locale/TRANSLATORS) 文件获取完整的翻译人员列表。
