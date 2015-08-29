@@ -1,10 +1,9 @@
-{{template "ng/base/head" .}}
-{{template "ng/base/header" .}}
-<div id="body" class="container text-center">
+{{template "base/head" .}}
+<div class="ui container center">
     <p style="margin-top: 100px"><img src="{{AppSubUrl}}/img/500.png" alt="500"/></p>
-    <hr/>
+    <div class="ui divider"></div>
     <br>
     {{if .ErrorMsg}}<p>An error has occurred : {{.ErrorMsg}}</p>{{end}}
     <p>Application Version: {{AppVer}}</p>
 </div>
-{{template "ng/base/footer" .}}
+{{template "base/footer" .}}
