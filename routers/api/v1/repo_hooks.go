@@ -6,6 +6,9 @@ package v1
 
 import (
 	"encoding/json"
+	"fmt"
+
+	"github.com/Unknwon/com"
 
 	api "github.com/gogits/go-gogs-client"
 
@@ -14,8 +17,33 @@ import (
 	"github.com/gogits/gogs/modules/middleware"
 )
 
-// GET /repos/:username/:reponame/hooks
-// https://developer.github.com/v3/repos/hooks/#list-hooks
+// ToApiHook converts webhook to API format.
+func ToApiHook(repoLink string, w *models.Webhook) *api.Hook {
+	config := map[string]string{
+		"url":          w.URL,
+		"content_type": w.ContentType.Name(),
+	}
+	if w.HookTaskType == models.SLACK {
+		s := w.GetSlackHook()
+		config["channel"] = s.Channel
+		config["username"] = s.Username
+		config["icon_url"] = s.IconURL
+		config["color"] = s.Color
+	}
+
+	return &api.Hook{
+		ID:      w.ID,
+		Type:    w.HookTaskType.Name(),
+		URL:     fmt.Sprintf("%s/settings/hooks/%d", repoLink, w.ID),
+		Active:  w.IsActive,
+		Config:  config,
+		Events:  w.EventsArray(),
+		Updated: w.Updated,
+		Created: w.Created,
+	}
+}
+
+// https://github.com/gogits/go-gogs-client/wiki/Repositories#list-hooks
 func ListRepoHooks(ctx *middleware.Context) {
 	hooks, err := models.GetWebhooksByRepoId(ctx.Repo.Repository.ID)
 	if err != nil {
@@ -25,31 +53,13 @@ func ListRepoHooks(ctx *middleware.Context) {
 
 	apiHooks := make([]*api.Hook, len(hooks))
 	for i := range hooks {
-		h := &api.Hook{
-			ID:     hooks[i].ID,
-			Type:   hooks[i].HookTaskType.Name(),
-			Active: hooks[i].IsActive,
-			Config: make(map[string]string),
-		}
-
-		// Currently, onle have push event.
-		h.Events = []string{"push"}
-
-		h.Config["url"] = hooks[i].URL
-		h.Config["content_type"] = hooks[i].ContentType.Name()
-		if hooks[i].HookTaskType == models.SLACK {
-			s := hooks[i].GetSlackHook()
-			h.Config["channel"] = s.Channel
-		}
-
-		apiHooks[i] = h
+		apiHooks[i] = ToApiHook(ctx.Repo.RepoLink, hooks[i])
 	}
 
 	ctx.JSON(200, &apiHooks)
 }
 
-// POST /repos/:username/:reponame/hooks
-// https://developer.github.com/v3/repos/hooks/#create-a-hook
+// https://github.com/gogits/go-gogs-client/wiki/Repositories#create-a-hook
 func CreateRepoHook(ctx *middleware.Context, form api.CreateHookOption) {
 	if !models.IsValidHookTaskType(form.Type) {
 		ctx.JSON(422, &base.ApiJsonErr{"invalid hook type", base.DOC_URL})
@@ -72,7 +82,11 @@ func CreateRepoHook(ctx *middleware.Context, form api.CreateHookOption) {
 		ContentType: models.ToHookContentType(form.Config["content_type"]),
 		Secret:      form.Config["secret"],
 		HookEvent: &models.HookEvent{
-			PushOnly: true, // Only support it now.
+			ChooseEvents: true,
+			HookEvents: models.HookEvents{
+				Create: com.IsSliceContainsStr(form.Events, string(models.HOOK_EVENT_CREATE)),
+				Push:   com.IsSliceContainsStr(form.Events, string(models.HOOK_EVENT_PUSH)),
+			},
 		},
 		IsActive:     form.Active,
 		HookTaskType: models.ToHookTaskType(form.Type),
@@ -84,7 +98,10 @@ func CreateRepoHook(ctx *middleware.Context, form api.CreateHookOption) {
 			return
 		}
 		meta, err := json.Marshal(&models.SlackMeta{
-			Channel: channel,
+			Channel:  channel,
+			Username: form.Config["username"],
+			IconURL:  form.Config["icon_url"],
+			Color:    form.Config["color"],
 		})
 		if err != nil {
 			ctx.JSON(500, &base.ApiJsonErr{"slack: JSON marshal failed: " + err.Error(), base.DOC_URL})
@@ -101,25 +118,10 @@ func CreateRepoHook(ctx *middleware.Context, form api.CreateHookOption) {
 		return
 	}
 
-	apiHook := &api.Hook{
-		ID:     w.ID,
-		Type:   w.HookTaskType.Name(),
-		Events: []string{"push"},
-		Active: w.IsActive,
-		Config: map[string]string{
-			"url":          w.URL,
-			"content_type": w.ContentType.Name(),
-		},
-	}
-	if w.HookTaskType == models.SLACK {
-		s := w.GetSlackHook()
-		apiHook.Config["channel"] = s.Channel
-	}
-	ctx.JSON(201, apiHook)
+	ctx.JSON(201, ToApiHook(ctx.Repo.RepoLink, w))
 }
 
-// PATCH /repos/:username/:reponame/hooks/:id
-// https://developer.github.com/v3/repos/hooks/#edit-a-hook
+// https://github.com/gogits/go-gogs-client/wiki/Repositories#edit-a-hook
 func EditRepoHook(ctx *middleware.Context, form api.EditHookOption) {
 	w, err := models.GetWebhookByID(ctx.ParamsInt64(":id"))
 	if err != nil {
@@ -142,7 +144,10 @@ func EditRepoHook(ctx *middleware.Context, form api.EditHookOption) {
 		if w.HookTaskType == models.SLACK {
 			if channel, ok := form.Config["channel"]; ok {
 				meta, err := json.Marshal(&models.SlackMeta{
-					Channel: channel,
+					Channel:  channel,
+					Username: form.Config["username"],
+					IconURL:  form.Config["icon_url"],
+					Color:    form.Config["color"],
 				})
 				if err != nil {
 					ctx.JSON(500, &base.ApiJsonErr{"slack: JSON marshal failed: " + err.Error(), base.DOC_URL})
@@ -153,17 +158,25 @@ func EditRepoHook(ctx *middleware.Context, form api.EditHookOption) {
 		}
 	}
 
+	// Update events
+	w.PushOnly = false
+	w.SendEverything = false
+	w.ChooseEvents = true
+	w.Create = com.IsSliceContainsStr(form.Events, string(models.HOOK_EVENT_CREATE))
+	w.Push = com.IsSliceContainsStr(form.Events, string(models.HOOK_EVENT_PUSH))
+	if err = w.UpdateEvent(); err != nil {
+		ctx.JSON(500, &base.ApiJsonErr{"UpdateEvent: " + err.Error(), base.DOC_URL})
+		return
+	}
+
 	if form.Active != nil {
 		w.IsActive = *form.Active
 	}
 
-	// FIXME: edit events
 	if err := models.UpdateWebhook(w); err != nil {
 		ctx.JSON(500, &base.ApiJsonErr{"UpdateWebhook: " + err.Error(), base.DOC_URL})
 		return
 	}
 
-	ctx.JSON(200, map[string]interface{}{
-		"ok": true,
-	})
+	ctx.JSON(200, ToApiHook(ctx.Repo.RepoLink, w))
 }

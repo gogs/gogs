@@ -396,7 +396,10 @@ func SlackHooksNewPost(ctx *middleware.Context, form auth.NewSlackHookForm) {
 	}
 
 	meta, err := json.Marshal(&models.SlackMeta{
-		Channel: form.Channel,
+		Channel:  form.Channel,
+		Username: form.Username,
+		IconURL:  form.IconURL,
+		Color:    form.Color,
 	})
 	if err != nil {
 		ctx.Handle(500, "Marshal", err)
@@ -452,7 +455,6 @@ func checkWebhook(ctx *middleware.Context) (*OrgRepoCtx, *models.Webhook) {
 	default:
 		ctx.Data["HookType"] = "gogs"
 	}
-	w.GetEvent()
 
 	ctx.Data["History"], err = w.History(1)
 	if err != nil {
@@ -530,7 +532,10 @@ func SlackHooksEditPost(ctx *middleware.Context, form auth.NewSlackHookForm) {
 	}
 
 	meta, err := json.Marshal(&models.SlackMeta{
-		Channel: form.Channel,
+		Channel:  form.Channel,
+		Username: form.Username,
+		IconURL:  form.IconURL,
+		Color:    form.Color,
 	})
 	if err != nil {
 		ctx.Handle(500, "Marshal", err)
