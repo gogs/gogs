@@ -47,12 +47,12 @@ func (f *MigrateRepoForm) Validate(ctx *macaron.Context, errs binding.Errors) bi
 }
 
 type RepoSettingForm struct {
-	RepoName    string `form:"repo_name" binding:"Required;AlphaDashDot;MaxSize(100)"`
-	Description string `form:"desc" binding:"MaxSize(255)"`
-	Website     string `form:"site" binding:"Url;MaxSize(100)"`
-	Branch      string `form:"branch"`
-	Interval    int    `form:"interval"`
-	Private     bool   `form:"private"`
+	RepoName    string `binding:"Required;AlphaDashDot;MaxSize(100)"`
+	Description string `binding:"MaxSize(255)"`
+	Website     string `binding:"Url;MaxSize(100)"`
+	Branch      string
+	Interval    int
+	Private     bool
 }
 
 func (f *RepoSettingForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {

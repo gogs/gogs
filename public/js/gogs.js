@@ -492,6 +492,9 @@ $(document).ready(function () {
     $('.show-panel.button').click(function () {
         $($(this).data('panel')).show();
     });
+    $('.show-modal.button').click(function () {
+        $($(this).data('modal')).modal('show');
+    });
 
     initCommentForm();
     initInstall();

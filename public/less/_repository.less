@@ -78,6 +78,25 @@
 	 		padding-right: 0;
 	 	}
 	}
+	
+	&.options {
+		input {
+			width: 50%!important;
+			min-width: 300px;
+		}
+		#interval {
+			width: 100px!important;
+			min-width: 100px;
+		}
+		.danger {
+			.item {
+				padding: 20px 15px;
+			}
+			.ui.divider {
+				margin: 0;
+			}
+		}
+	}
 
 	@comment-avatar-width: 3em;
 	&.new.issue {
@@ -731,5 +750,12 @@
 				height: 15px;
 			}
 		}
+	}
+}
+
+#transfer-repo-modal,
+#delete-repo-modal {
+	.ui.message {
+		width: 100%!important;
 	}
 }
