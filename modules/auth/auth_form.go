@@ -29,7 +29,8 @@ type AuthenticationForm struct {
 	SMTPHost          string `form:"smtp_host"`
 	SMTPPort          int    `form:"smtp_port"`
 	TLS               bool   `form:"tls"`
-	AllowAutoRegister bool   `form:"allowautoregister"`
+	SkipVerify        bool
+	AllowAutoRegister bool `form:"allowautoregister"`
 	PAMServiceName    string
 }
 

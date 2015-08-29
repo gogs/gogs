@@ -102,6 +102,10 @@
                                         <input name="tls" type="checkbox" {{if .tls}}checked{{end}}>
                                         <strong>{{.i18n.Tr "admin.auths.enable_tls"}}</strong>
                                         <br>
+                                        <label></label>
+                                        <input name="skip_verify" type="checkbox" {{if .skip_verify}}checked{{end}}>
+                                        <strong>{{.i18n.Tr "admin.auths.skip_tls_verify"}}</strong>
+                                        <br>
                                     </div>
                                     <label></label>
                                     <input name="allowautoregister" type="checkbox" {{if .allowautoregister}}checked{{end}}>

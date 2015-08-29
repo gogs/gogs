@@ -63,10 +63,11 @@ func (cfg *LDAPConfig) ToDB() ([]byte, error) {
 }
 
 type SMTPConfig struct {
-	Auth string
-	Host string
-	Port int
-	TLS  bool
+	Auth       string
+	Host       string
+	Port       int
+	TLS        bool
+	SkipVerify bool
 }
 
 func (cfg *SMTPConfig) FromDB(bs []byte) error {
@@ -90,7 +91,7 @@ func (cfg *PAMConfig) ToDB() ([]byte, error) {
 }
 
 type LoginSource struct {
-	Id                int64
+	ID                int64 `xorm:"pk autoincr"`
 	Type              LoginType
 	Name              string          `xorm:"UNIQUE"`
 	IsActived         bool            `xorm:"NOT NULL DEFAULT false"`
@@ -98,6 +99,20 @@ type LoginSource struct {
 	AllowAutoRegister bool            `xorm:"NOT NULL DEFAULT false"`
 	Created           time.Time       `xorm:"CREATED"`
 	Updated           time.Time       `xorm:"UPDATED"`
+}
+
+func (source *LoginSource) BeforeSet(colName string, val xorm.Cell) {
+	switch colName {
+	case "type":
+		switch LoginType((*val).(int64)) {
+		case LDAP:
+			source.Cfg = new(LDAPConfig)
+		case SMTP:
+			source.Cfg = new(SMTPConfig)
+		case PAM:
+			source.Cfg = new(PAMConfig)
+		}
+	}
 }
 
 func (source *LoginSource) TypeString() string {
@@ -116,32 +131,17 @@ func (source *LoginSource) PAM() *PAMConfig {
 	return source.Cfg.(*PAMConfig)
 }
 
-func (source *LoginSource) BeforeSet(colName string, val xorm.Cell) {
-	if colName == "type" {
-		ty := (*val).(int64)
-		switch LoginType(ty) {
-		case LDAP:
-			source.Cfg = new(LDAPConfig)
-		case SMTP:
-			source.Cfg = new(SMTPConfig)
-		case PAM:
-			source.Cfg = new(PAMConfig)
-		}
-	}
-}
-
 func CreateSource(source *LoginSource) error {
 	_, err := x.Insert(source)
 	return err
 }
 
 func GetAuths() ([]*LoginSource, error) {
-	var auths = make([]*LoginSource, 0, 5)
-	err := x.Find(&auths)
-	return auths, err
+	auths := make([]*LoginSource, 0, 5)
+	return auths, x.Find(&auths)
 }
 
-func GetLoginSourceById(id int64) (*LoginSource, error) {
+func GetLoginSourceByID(id int64) (*LoginSource, error) {
 	source := new(LoginSource)
 	has, err := x.Id(id).Get(source)
 	if err != nil {
@@ -153,19 +153,19 @@ func GetLoginSourceById(id int64) (*LoginSource, error) {
 }
 
 func UpdateSource(source *LoginSource) error {
-	_, err := x.Id(source.Id).AllCols().Update(source)
+	_, err := x.Id(source.ID).AllCols().Update(source)
 	return err
 }
 
 func DelLoginSource(source *LoginSource) error {
-	cnt, err := x.Count(&User{LoginSource: source.Id})
+	cnt, err := x.Count(&User{LoginSource: source.ID})
 	if err != nil {
 		return err
 	}
 	if cnt > 0 {
 		return ErrAuthenticationUserUsed
 	}
-	_, err = x.Id(source.Id).Delete(&LoginSource{})
+	_, err = x.Id(source.ID).Delete(&LoginSource{})
 	return err
 }
 
@@ -206,21 +206,21 @@ func UserSignIn(uname, passwd string) (*User, error) {
 		for _, source := range sources {
 			if source.Type == LDAP {
 				u, err := LoginUserLdapSource(nil, uname, passwd,
-					source.Id, source.Cfg.(*LDAPConfig), true)
+					source.ID, source.Cfg.(*LDAPConfig), true)
 				if err == nil {
 					return u, nil
 				}
 				log.Warn("Fail to login(%s) by LDAP(%s): %v", uname, source.Name, err)
 			} else if source.Type == SMTP {
 				u, err := LoginUserSMTPSource(nil, uname, passwd,
-					source.Id, source.Cfg.(*SMTPConfig), true)
+					source.ID, source.Cfg.(*SMTPConfig), true)
 				if err == nil {
 					return u, nil
 				}
 				log.Warn("Fail to login(%s) by SMTP(%s): %v", uname, source.Name, err)
 			} else if source.Type == PAM {
 				u, err := LoginUserPAMSource(nil, uname, passwd,
-					source.Id, source.Cfg.(*PAMConfig), true)
+					source.ID, source.Cfg.(*PAMConfig), true)
 				if err == nil {
 					return u, nil
 				}
@@ -243,11 +243,11 @@ func UserSignIn(uname, passwd string) (*User, error) {
 
 	switch u.LoginType {
 	case LDAP:
-		return LoginUserLdapSource(u, u.LoginName, passwd, source.Id, source.Cfg.(*LDAPConfig), false)
+		return LoginUserLdapSource(u, u.LoginName, passwd, source.ID, source.Cfg.(*LDAPConfig), false)
 	case SMTP:
-		return LoginUserSMTPSource(u, u.LoginName, passwd, source.Id, source.Cfg.(*SMTPConfig), false)
+		return LoginUserSMTPSource(u, u.LoginName, passwd, source.ID, source.Cfg.(*SMTPConfig), false)
 	case PAM:
-		return LoginUserPAMSource(u, u.LoginName, passwd, source.Id, source.Cfg.(*PAMConfig), false)
+		return LoginUserPAMSource(u, u.LoginName, passwd, source.ID, source.Cfg.(*PAMConfig), false)
 	}
 	return nil, ErrUnsupportedLoginType
 }
@@ -311,14 +311,17 @@ func (a *loginAuth) Next(fromServer []byte, more bool) ([]byte, error) {
 	return nil, nil
 }
 
-var (
+const (
 	SMTP_PLAIN = "PLAIN"
 	SMTP_LOGIN = "LOGIN"
-	SMTPAuths  = []string{SMTP_PLAIN, SMTP_LOGIN}
 )
 
-func SmtpAuth(host string, port int, a smtp.Auth, useTls bool) error {
-	c, err := smtp.Dial(fmt.Sprintf("%s:%d", host, port))
+var (
+	SMTPAuths = []string{SMTP_PLAIN, SMTP_LOGIN}
+)
+
+func SMTPAuth(a smtp.Auth, cfg *SMTPConfig) error {
+	c, err := smtp.Dial(fmt.Sprintf("%s:%d", cfg.Host, cfg.Port))
 	if err != nil {
 		return err
 	}
@@ -328,10 +331,12 @@ func SmtpAuth(host string, port int, a smtp.Auth, useTls bool) error {
 		return err
 	}
 
-	if useTls {
+	if cfg.TLS {
 		if ok, _ := c.Extension("STARTTLS"); ok {
-			config := &tls.Config{ServerName: host}
-			if err = c.StartTLS(config); err != nil {
+			if err = c.StartTLS(&tls.Config{
+				InsecureSkipVerify: cfg.SkipVerify,
+				ServerName:         cfg.Host,
+			}); err != nil {
 				return err
 			}
 		} else {
@@ -361,7 +366,7 @@ func LoginUserSMTPSource(u *User, name, passwd string, sourceId int64, cfg *SMTP
 		return nil, errors.New("Unsupported SMTP auth type")
 	}
 
-	if err := SmtpAuth(cfg.Host, cfg.Port, auth, cfg.TLS); err != nil {
+	if err := SMTPAuth(auth, cfg); err != nil {
 		if strings.Contains(err.Error(), "Username and Password not accepted") {
 			return nil, ErrUserNotExist{u.Id, u.Name}
 		}

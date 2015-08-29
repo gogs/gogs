@@ -12,9 +12,9 @@
                             <div class="panel-header">
                                 <strong>{{.i18n.Tr "admin.auths.edit"}}</strong>
                             </div>
-                            <form class="form form-align panel-body" id="auth-setting-form" action="{{AppSubUrl}}/admin/auths/{{.Source.Id}}" data-delete-url="{{AppSubUrl}}/admin/auths/{{.Source.Id}}/delete" method="post">
+                            <form class="form form-align panel-body" id="auth-setting-form" action="{{AppSubUrl}}/admin/auths/{{.Source.ID}}" data-delete-url="{{AppSubUrl}}/admin/auths/{{.Source.ID}}/delete" method="post">
                                 {{.CsrfTokenHtml}}
-                                <input type="hidden" value="{{.Source.Id}}" name="id"/>
+                                <input type="hidden" value="{{.Source.ID}}" name="id"/>
                                 {{$type := .Source.Type}}
                                 <div class="field">
                                     <label>{{.i18n.Tr "admin.auths.auth_type"}}</label>
@@ -108,6 +108,10 @@
                                     <label></label>
                                     <input name="tls" type="checkbox" {{if .Source.SMTP.TLS}}checked{{end}}>
                                     <strong>{{.i18n.Tr "admin.auths.enable_tls"}}</strong>
+                                    <br>
+                                    <label></label>
+                                    <input name="skip_verify" type="checkbox" {{if .Source.SMTP.SkipVerify}}checked{{end}}>
+                                    <strong>{{.i18n.Tr "admin.auths.skip_tls_verify"}}</strong>
                                     <br>
                                     {{end}}
                                     <label></label>
