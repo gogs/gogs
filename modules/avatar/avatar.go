@@ -45,7 +45,7 @@ func UpdateGravatarSource() {
 	gravatarSource = setting.GravatarSource
 	if strings.HasPrefix(gravatarSource, "//") {
 		gravatarSource = "http:" + gravatarSource
-	} else if !strings.HasPrefix(gravatarSource, "http://") ||
+	} else if !strings.HasPrefix(gravatarSource, "http://") &&
 		!strings.HasPrefix(gravatarSource, "https://") {
 		gravatarSource = "http://" + gravatarSource
 	}
