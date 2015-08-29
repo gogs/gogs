@@ -13,22 +13,20 @@ import (
 	api "github.com/gogits/go-gogs-client"
 
 	"github.com/gogits/gogs/modules/git"
-	"github.com/gogits/gogs/modules/setting"
-)
-
-const (
-	SLACK_COLOR string = "#dd4b39"
 )
 
 type SlackMeta struct {
-	Channel string `json:"channel"`
+	Channel  string `json:"channel"`
+	Username string `json:"username"`
+	IconURL  string `json:"icon_url"`
+	Color    string `json:"color"`
 }
 
 type SlackPayload struct {
 	Channel     string            `json:"channel"`
 	Text        string            `json:"text"`
 	Username    string            `json:"username"`
-	IconUrl     string            `json:"icon_url"`
+	IconURL     string            `json:"icon_url"`
 	UnfurlLinks int               `json:"unfurl_links"`
 	LinkNames   int               `json:"link_names"`
 	Attachments []SlackAttachment `json:"attachments"`
@@ -75,8 +73,8 @@ func getSlackCreatePayload(p *api.CreatePayload, slack *SlackMeta) (*SlackPayloa
 	return &SlackPayload{
 		Channel:  slack.Channel,
 		Text:     text,
-		Username: setting.AppName,
-		IconUrl:  setting.AppUrl + "/img/favicon.png",
+		Username: slack.Username,
+		IconURL:  slack.IconURL,
 	}, nil
 }
 
@@ -113,13 +111,13 @@ func getSlackPushPayload(p *api.PushPayload, slack *SlackMeta) (*SlackPayload, e
 		}
 	}
 
-	slackAttachments := []SlackAttachment{{Color: SLACK_COLOR, Text: attachmentText}}
+	slackAttachments := []SlackAttachment{{Color: slack.Color, Text: attachmentText}}
 
 	return &SlackPayload{
 		Channel:     slack.Channel,
 		Text:        text,
-		Username:    setting.AppName,
-		IconUrl:     setting.AppUrl + "/img/favicon.png",
+		Username:    slack.Username,
+		IconURL:     slack.IconURL,
 		Attachments: slackAttachments,
 	}, nil
 }

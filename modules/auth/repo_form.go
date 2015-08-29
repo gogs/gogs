@@ -99,6 +99,9 @@ func (f *NewWebhookForm) Validate(ctx *macaron.Context, errs binding.Errors) bin
 type NewSlackHookForm struct {
 	PayloadURL string `binding:"Required`
 	Channel    string `binding:"Required"`
+	Username   string
+	IconURL    string
+	Color      string
 	WebhookForm
 }
 
