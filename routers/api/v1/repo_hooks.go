@@ -76,6 +76,9 @@ func CreateRepoHook(ctx *middleware.Context, form api.CreateHookOption) {
 		return
 	}
 
+	if len(form.Events) == 0 {
+		form.Events = []string{"push"}
+	}
 	w := &models.Webhook{
 		RepoID:      ctx.Repo.Repository.ID,
 		URL:         form.Config["url"],
@@ -159,6 +162,9 @@ func EditRepoHook(ctx *middleware.Context, form api.EditHookOption) {
 	}
 
 	// Update events
+	if len(form.Events) == 0 {
+		form.Events = []string{"push"}
+	}
 	w.PushOnly = false
 	w.SendEverything = false
 	w.ChooseEvents = true
