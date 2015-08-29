@@ -119,7 +119,7 @@ func Toggle(options *ToggleOptions) macaron.Handler {
 func ApiReqToken() macaron.Handler {
 	return func(ctx *Context) {
 		if !ctx.IsSigned {
-			ctx.Error(403)
+			ctx.Error(401)
 			return
 		}
 	}
@@ -128,7 +128,7 @@ func ApiReqToken() macaron.Handler {
 func ApiReqBasicAuth() macaron.Handler {
 	return func(ctx *Context) {
 		if !ctx.IsBasicAuth {
-			ctx.Error(403)
+			ctx.Error(401)
 			return
 		}
 	}
