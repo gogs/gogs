@@ -63,27 +63,28 @@ func NewAuthSourcePost(ctx *middleware.Context, form auth.AuthenticationForm) {
 	case models.LDAP:
 		u = &models.LDAPConfig{
 			Ldapsource: ldap.Ldapsource{
-				Name:              form.Name,
-				Host:              form.Host,
-				Port:              form.Port,
-				UseSSL:            form.UseSSL,
-				BindDN:            form.BindDN,
-				BindPassword:      form.BindPassword,
-				UserBase:          form.UserBase,
-				Filter:            form.Filter,
-				AdminFilter:       form.AdminFilter,
-				AttributeName:     form.AttributeName,
-				AttributeSurname:  form.AttributeSurname,
-				AttributeMail:     form.AttributeMail,
-				Enabled:           true,
+				Name:             form.Name,
+				Host:             form.Host,
+				Port:             form.Port,
+				UseSSL:           form.UseSSL,
+				BindDN:           form.BindDN,
+				BindPassword:     form.BindPassword,
+				UserBase:         form.UserBase,
+				Filter:           form.Filter,
+				AdminFilter:      form.AdminFilter,
+				AttributeName:    form.AttributeName,
+				AttributeSurname: form.AttributeSurname,
+				AttributeMail:    form.AttributeMail,
+				Enabled:          true,
 			},
 		}
 	case models.SMTP:
 		u = &models.SMTPConfig{
-			Auth: form.SMTPAuth,
-			Host: form.SMTPHost,
-			Port: form.SMTPPort,
-			TLS:  form.TLS,
+			Auth:       form.SMTPAuth,
+			Host:       form.SMTPHost,
+			Port:       form.SMTPPort,
+			TLS:        form.TLS,
+			SkipVerify: form.SkipVerify,
 		}
 	case models.PAM:
 		u = &models.PAMConfig{
@@ -123,7 +124,7 @@ func EditAuthSource(ctx *middleware.Context) {
 		ctx.Handle(404, "EditAuthSource", nil)
 		return
 	}
-	u, err := models.GetLoginSourceById(id)
+	u, err := models.GetLoginSourceByID(id)
 	if err != nil {
 		ctx.Handle(500, "GetLoginSourceById", err)
 		return
@@ -150,27 +151,28 @@ func EditAuthSourcePost(ctx *middleware.Context, form auth.AuthenticationForm) {
 	case models.LDAP:
 		config = &models.LDAPConfig{
 			Ldapsource: ldap.Ldapsource{
-				Name:              form.Name,
-				Host:              form.Host,
-				Port:              form.Port,
-				UseSSL:            form.UseSSL,
-				BindDN:            form.BindDN,
-				BindPassword:      form.BindPassword,
-				UserBase:          form.UserBase,
-				AttributeName:     form.AttributeName,
-				AttributeSurname:  form.AttributeSurname,
-				AttributeMail:     form.AttributeMail,
-				Filter:            form.Filter,
-				AdminFilter:       form.AdminFilter,
-				Enabled:           true,
+				Name:             form.Name,
+				Host:             form.Host,
+				Port:             form.Port,
+				UseSSL:           form.UseSSL,
+				BindDN:           form.BindDN,
+				BindPassword:     form.BindPassword,
+				UserBase:         form.UserBase,
+				AttributeName:    form.AttributeName,
+				AttributeSurname: form.AttributeSurname,
+				AttributeMail:    form.AttributeMail,
+				Filter:           form.Filter,
+				AdminFilter:      form.AdminFilter,
+				Enabled:          true,
 			},
 		}
 	case models.SMTP:
 		config = &models.SMTPConfig{
-			Auth: form.SMTPAuth,
-			Host: form.SMTPHost,
-			Port: form.SMTPPort,
-			TLS:  form.TLS,
+			Auth:       form.SMTPAuth,
+			Host:       form.SMTPHost,
+			Port:       form.SMTPPort,
+			TLS:        form.TLS,
+			SkipVerify: form.SkipVerify,
 		}
 	case models.PAM:
 		config = &models.PAMConfig{
@@ -182,7 +184,7 @@ func EditAuthSourcePost(ctx *middleware.Context, form auth.AuthenticationForm) {
 	}
 
 	u := models.LoginSource{
-		Id:                form.ID,
+		ID:                form.ID,
 		Name:              form.Name,
 		IsActived:         form.IsActived,
 		Type:              models.LoginType(form.Type),
@@ -207,7 +209,7 @@ func DeleteAuthSource(ctx *middleware.Context) {
 		return
 	}
 
-	a, err := models.GetLoginSourceById(id)
+	a, err := models.GetLoginSourceByID(id)
 	if err != nil {
 		ctx.Handle(500, "GetLoginSourceById", err)
 		return
