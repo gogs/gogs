@@ -48,10 +48,6 @@ var (
 	Gitignores, Licenses, Readmes []string
 )
 
-var (
-	DescPattern = regexp.MustCompile(`https?://\S+`)
-)
-
 func LoadRepoConfig() {
 	// Load .gitignore and license files and readme templates.
 	types := []string{"gitignore", "license", "readme"}
@@ -265,6 +261,10 @@ func (repo *Repository) HasAccess(u *User) bool {
 func (repo *Repository) IsOwnedBy(userID int64) bool {
 	return repo.OwnerID == userID
 }
+
+var (
+	DescPattern = regexp.MustCompile(`https?://\S+`)
+)
 
 // DescriptionHtml does special handles to description and return HTML string.
 func (repo *Repository) DescriptionHtml() template.HTML {

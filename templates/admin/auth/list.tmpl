@@ -30,13 +30,13 @@
 					                    <tbody>
 					                        {{range .Sources}}
 					                        <tr>
-					                            <td>{{.Id}}</td>
-					                            <td><a href="{{AppSubUrl}}/admin/auths/{{.Id}}">{{.Name}}</a></td>
+					                            <td>{{.ID}}</td>
+					                            <td><a href="{{AppSubUrl}}/admin/auths/{{.ID}}">{{.Name}}</a></td>
 					                            <td>{{.TypeString}}</td>
 					                            <td><i class="fa fa{{if .IsActived}}-check{{end}}-square-o"></i></td>
 					                            <td><span title="{{DateFmtLong .Updated}}">{{DateFmtShort .Updated}}</span></td>
 					                            <td><span title="{{DateFmtLong .Created}}">{{DateFmtShort .Created}}</span></td>
-					                            <td><a href="{{AppSubUrl}}/admin/auths/{{.Id}}"><i class="fa fa-pencil-square-o"></i></a></td>
+					                            <td><a href="{{AppSubUrl}}/admin/auths/{{.ID}}"><i class="fa fa-pencil-square-o"></i></a></td>
 					                        </tr>
 					                        {{end}}
 					                    </tbody>
