@@ -1,11 +1,9 @@
-{{template "ng/base/head" .}}
-{{template "ng/base/header" .}}
-<div class="container text-center">
+{{template "base/head" .}}
+<div class="ui container center">
     <p style="margin-top: 100px"><img src="{{AppSubUrl}}/img/404.png" alt="404"/></p>
-    <hr/>
+    <div class="ui divider"></div>
     <br>
     <p>Application Version: {{AppVer}}</p>
     <p>If you think this is an error, please open an issue on <a href="https://github.com/gogits/gogs/issues/new">GitHub</a>.</p>
-    <!-- <p>We're currently working on 0.5 beta version, many pages may be missing at this time. Sorry for confusion!</p> -->
 </div>
-{{template "ng/base/footer" .}}
+{{template "base/footer" .}}
