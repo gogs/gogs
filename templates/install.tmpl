@@ -158,9 +158,15 @@
             </div>
             <div class="content">
               <div class="inline field">
-                <div class="ui checkbox">
+                <div class="ui checkbox" id="offline-mode">
                   <label class="poping up" data-content="{{.i18n.Tr "install.offline_mode_popup"}}"><strong>{{.i18n.Tr "install.offline_mode"}}</strong></label>
                   <input name="offline_mode" type="checkbox" {{if .offline_mode}}checked{{end}}>
+                </div>
+              </div>
+              <div class="inline field">
+                <div class="ui checkbox" id="disable-gravatar">
+                  <label class="poping up" data-content="{{.i18n.Tr "install.disable_gravatar_popup"}}"><strong>{{.i18n.Tr "install.disable_gravatar"}}</strong></label>
+                  <input name="disable_gravatar" type="checkbox" {{if .disable_gravatar}}checked{{end}}>
                 </div>
               </div>
               <div class="inline field">

@@ -169,6 +169,12 @@ function initInstall() {
             }
         }
     });
+
+    $('#offline-mode input').change(function () {
+        if ($(this).is(':checked')) {
+            $('#disable-gravatar').checkbox('check');
+        }
+    });
 };
 
 function initRepository() {

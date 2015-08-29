@@ -36,6 +36,7 @@ type InstallForm struct {
 	MailNotify      bool
 
 	OfflineMode         bool
+	DisableGravatar     bool
 	DisableRegistration bool
 	RequireSignInView   bool
 
