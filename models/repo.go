@@ -600,7 +600,7 @@ func initRepository(e Engine, repoPath string, u *User, repo *Repository, opts C
 		return err
 	}
 
-	tmpDir := filepath.Join(os.TempDir(), com.ToStr(time.Now().Nanosecond()))
+	tmpDir := filepath.Join(os.TempDir(), "gogs", repo.Name, com.ToStr(time.Now().Nanosecond()))
 
 	// Initialize repository according to user's choice.
 	if opts.AutoInit {

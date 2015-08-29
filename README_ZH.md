@@ -39,15 +39,8 @@ Gogs 的目标是打造一个最简单、最快速和最轻松的方式搭建自
 
 ## 浏览器支持
 
-根据 [Semantic UI](https://github.com/Semantic-Org/Semantic-UI) 的要求：
-
-- 最新两版的 FF、Chrome、IE 10+ 和 Safari Mac
-- IE 10+
-- Android 4
-
-尽管一些组件可以在 IE 9 下使用，但该版本的浏览器被没有被正式支持。
-
-官方支持的最小 UI 尺寸为 **1024*768**，UI 不一定会在更小尺寸的设备上被破坏，但我们无法保证且不会修复。
+- 请根据 [Semantic UI](https://github.com/Semantic-Org/Semantic-UI#browser-support) 查看具体支持的浏览器版本。
+- 官方支持的最小 UI 尺寸为 **1024*768**，UI 不一定会在更小尺寸的设备上被破坏，但我们无法保证且不会修复。
 
 ## 安装部署
 
