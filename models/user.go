@@ -479,10 +479,9 @@ func ChangeUserName(u *User, newUserName string) (err error) {
 	return os.Rename(UserPath(u.LowerName), UserPath(newUserName))
 }
 
-// UpdateUser updates user's information.
-func UpdateUser(u *User) error {
+func updateUser(e Engine, u *User) error {
 	u.Email = strings.ToLower(u.Email)
-	has, err := x.Where("id!=?", u.Id).And("type=?", u.Type).And("email=?", u.Email).Get(new(User))
+	has, err := e.Where("id!=?", u.Id).And("type=?", u.Type).And("email=?", u.Email).Get(new(User))
 	if err != nil {
 		return err
 	} else if has {
@@ -507,8 +506,13 @@ func UpdateUser(u *User) error {
 	u.Avatar = avatar.HashEmail(u.AvatarEmail)
 
 	u.FullName = base.Sanitizer.Sanitize(u.FullName)
-	_, err = x.Id(u.Id).AllCols().Update(u)
+	_, err = e.Id(u.Id).AllCols().Update(u)
 	return err
+}
+
+// UpdateUser updates user's information.
+func UpdateUser(u *User) error {
+	return updateUser(x, u)
 }
 
 // DeleteBeans deletes all given beans, beans should contain delete conditions.
