@@ -410,7 +410,7 @@ func Issues(uid, assigneeID, repoID, posterID, milestoneID int64, repoIDs []int6
 	if repoID > 0 {
 		sess.Where("issue.repo_id=?", repoID).And("issue.is_closed=?", isClosed)
 	} else if repoIDs != nil {
-		sess.Where("issue.repo_id IN (?)", strings.Join(base.Int64sToStrings(repoIDs), ",")).And("issue.is_closed=?", isClosed)
+		sess.Where("issue.repo_id IN ("+strings.Join(base.Int64sToStrings(repoIDs), ",")+")").And("issue.is_closed=?", isClosed)
 	} else {
 		sess.Where("issue.is_closed=?", isClosed)
 	}

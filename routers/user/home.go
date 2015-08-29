@@ -224,10 +224,6 @@ func Issues(ctx *middleware.Context) {
 	}
 	ctx.Data["Repos"] = showRepos
 
-	if repoID > 0 {
-		repoIDs = []int64{repoID}
-	}
-
 	issueStats := models.GetUserIssueStats(repoID, ctxUser.Id, repoIDs, filterMode)
 	issueStats.AllCount = int64(allCount)
 
