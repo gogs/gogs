@@ -120,10 +120,6 @@ func CreatePost(ctx *middleware.Context, form auth.CreateRepoForm) {
 		AutoInit:    form.AutoInit,
 	})
 	if err == nil {
-		// Remember visibility preference.
-		ctx.User.LastRepoVisibility = repo.IsPrivate
-		models.UpdateUser(ctx.User)
-
 		log.Trace("Repository created: %s/%s", ctxUser.Name, repo.Name)
 		ctx.Redirect(setting.AppSubUrl + "/" + ctxUser.Name + "/" + repo.Name)
 		return
@@ -190,10 +186,6 @@ func MigratePost(ctx *middleware.Context, form auth.MigrateRepoForm) {
 
 	repo, err := models.MigrateRepository(ctxUser, form.RepoName, form.Description, form.Private, form.Mirror, remoteAddr)
 	if err == nil {
-		// Remember visibility preference.
-		ctx.User.LastRepoVisibility = repo.IsPrivate
-		models.UpdateUser(ctx.User)
-
 		log.Trace("Repository migrated: %s/%s", ctxUser.Name, form.RepoName)
 		ctx.Redirect(setting.AppSubUrl + "/" + ctxUser.Name + "/" + form.RepoName)
 		return

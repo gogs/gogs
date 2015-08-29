@@ -649,8 +649,13 @@ func createRepository(e *xorm.Session, u *User, repo *Repository) (err error) {
 
 	if _, err = e.Insert(repo); err != nil {
 		return err
-	} else if _, err = e.Exec("UPDATE `user` SET num_repos=num_repos+1 WHERE id=?", u.Id); err != nil {
-		return err
+	}
+
+	u.NumRepos++
+	// Remember visibility preference.
+	u.LastRepoVisibility = repo.IsPrivate
+	if err = updateUser(e, u); err != nil {
+		return fmt.Errorf("updateUser: %v", err)
 	}
 
 	// Give access to all members in owner team.
@@ -1279,7 +1284,7 @@ func CheckRepoStats() {
 
 	log.Trace("Doing: CheckRepoStats")
 
-	// ***** START: Watch *****
+	// ***** START: Repository.NumWatches *****
 	results, err := x.Query("SELECT repo.id FROM `repository` repo WHERE repo.num_watches!=(SELECT COUNT(*) FROM `watch` WHERE repo_id=repo.id)")
 	if err != nil {
 		log.Error(4, "Select repository check 'watch': %v", err)
@@ -1293,9 +1298,9 @@ func CheckRepoStats() {
 			log.Error(4, "Update repository check 'watch'[%d]: %v", repoID, err)
 		}
 	}
-	// ***** END: Watch *****
+	// ***** END: Repository.NumWatches *****
 
-	// ***** START: Star *****
+	// ***** START: Repository.NumStars *****
 	results, err = x.Query("SELECT repo.id FROM `repository` repo WHERE repo.num_stars!=(SELECT COUNT(*) FROM `star` WHERE repo_id=repo.id)")
 	if err != nil {
 		log.Error(4, "Select repository check 'star': %v", err)
@@ -1309,9 +1314,9 @@ func CheckRepoStats() {
 			log.Error(4, "Update repository check 'star'[%d]: %v", repoID, err)
 		}
 	}
-	// ***** END: Star *****
+	// ***** END: Repository.NumStars *****
 
-	// ***** START: Label *****
+	// ***** START: Label.NumIssues *****
 	results, err = x.Query("SELECT label.id FROM `label` WHERE label.num_issues!=(SELECT COUNT(*) FROM `issue_label` WHERE label_id=label.id)")
 	if err != nil {
 		log.Error(4, "Select label check 'num_issues': %v", err)
@@ -1325,7 +1330,23 @@ func CheckRepoStats() {
 			log.Error(4, "Update label check 'num_issues'[%d]: %v", labelID, err)
 		}
 	}
-	// ***** END: Label *****
+	// ***** END: Label.NumIssues *****
+
+	// ***** START: User.NumRepos *****
+	results, err = x.Query("SELECT `user`.id FROM `user` WHERE `user`.num_repos!=(SELECT COUNT(*) FROM `repository` WHERE owner_id=`user`.id)")
+	if err != nil {
+		log.Error(4, "Select user check 'num_repos': %v", err)
+		return
+	}
+	for _, user := range results {
+		userID := com.StrTo(user["id"]).MustInt64()
+		log.Trace("Updating user count 'num_repos': %d", userID)
+		_, err = x.Exec("UPDATE `user` SET num_repos=(SELECT COUNT(*) FROM `repository` WHERE owner_id=?) WHERE id=?", userID, userID)
+		if err != nil {
+			log.Error(4, "Update user check 'num_repos'[%d]: %v", userID, err)
+		}
+	}
+	// ***** END: User.NumRepos *****
 }
 
 // _________        .__  .__        ___.                        __  .__
