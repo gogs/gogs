@@ -97,11 +97,16 @@ type Webhook struct {
 	Updated      time.Time  `xorm:"UPDATED"`
 }
 
-// GetEvent handles conversion from Events to HookEvent.
-func (w *Webhook) GetEvent() {
-	w.HookEvent = &HookEvent{}
-	if err := json.Unmarshal([]byte(w.Events), w.HookEvent); err != nil {
-		log.Error(4, "webhook.GetEvent(%d): %v", w.ID, err)
+func (w *Webhook) AfterSet(colName string, _ xorm.Cell) {
+	var err error
+	switch colName {
+	case "events":
+		w.HookEvent = &HookEvent{}
+		if err = json.Unmarshal([]byte(w.Events), w.HookEvent); err != nil {
+			log.Error(3, "Unmarshal[%d]: %v", w.ID, err)
+		}
+	case "created":
+		w.Created = regulateTimeZone(w.Created)
 	}
 }
 
@@ -135,6 +140,17 @@ func (w *Webhook) HasCreateEvent() bool {
 func (w *Webhook) HasPushEvent() bool {
 	return w.PushOnly || w.SendEverything ||
 		(w.ChooseEvents && w.HookEvents.Push)
+}
+
+func (w *Webhook) EventsArray() []string {
+	events := make([]string, 0, 2)
+	if w.HasCreateEvent() {
+		events = append(events, "create")
+	}
+	if w.HasPushEvent() {
+		events = append(events, "push")
+	}
+	return events
 }
 
 // CreateWebhook creates a new web hook.
@@ -382,8 +398,6 @@ func PrepareWebhooks(repo *Repository, event HookEventType, p api.Payloader) err
 	}
 
 	for _, w := range ws {
-		w.GetEvent()
-
 		switch event {
 		case HOOK_EVENT_CREATE:
 			if !w.HasCreateEvent() {
