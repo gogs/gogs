@@ -7,6 +7,7 @@ package models
 import (
 	"database/sql"
 	"fmt"
+	"net/url"
 	"os"
 	"path"
 	"strings"
@@ -133,7 +134,7 @@ func getEngine() (*xorm.Engine, error) {
 			port = fields[1]
 		}
 		cnnstr = fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s",
-			DbCfg.User, DbCfg.Passwd, host, port, DbCfg.Name, DbCfg.SSLMode)
+			url.QueryEscape(DbCfg.User), url.QueryEscape(DbCfg.Passwd), host, port, DbCfg.Name, DbCfg.SSLMode)
 	case "sqlite3":
 		if !EnableSQLite3 {
 			return nil, fmt.Errorf("Unknown database type: %s", DbCfg.Type)
