@@ -43,12 +43,13 @@ var gravatarSource string
 
 func UpdateGravatarSource() {
 	gravatarSource = setting.GravatarSource
-	log.Debug("avatar.UpdateGravatarSource(gavatar source): %s", gravatarSource)
-	if !strings.HasPrefix(gravatarSource, "http://") ||
+	if strings.HasPrefix(gravatarSource, "//") {
+		gravatarSource = "http:" + gravatarSource
+	} else if !strings.HasPrefix(gravatarSource, "http://") ||
 		!strings.HasPrefix(gravatarSource, "https://") {
 		gravatarSource = "http://" + gravatarSource
-		log.Debug("avatar.UpdateGravatarSource(update gavatar source): %s", gravatarSource)
 	}
+	log.Debug("avatar.UpdateGravatarSource(update gavatar source): %s", gravatarSource)
 }
 
 // hash email to md5 string
