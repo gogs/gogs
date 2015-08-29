@@ -131,6 +131,7 @@ func Install(ctx *middleware.Context) {
 
 	// Server and other services settings
 	form.OfflineMode = setting.OfflineMode
+	form.DisableGravatar = setting.DisableGravatar
 	form.DisableRegistration = setting.Service.DisableRegistration
 	form.RequireSignInView = setting.Service.RequireSignInView
 
@@ -260,6 +261,7 @@ func InstallPost(ctx *middleware.Context, form auth.InstallForm) {
 	cfg.Section("service").Key("ENABLE_NOTIFY_MAIL").SetValue(com.ToStr(form.MailNotify))
 
 	cfg.Section("server").Key("OFFLINE_MODE").SetValue(com.ToStr(form.OfflineMode))
+	cfg.Section("picture").Key("DISABLE_GRAVATAR").SetValue(com.ToStr(form.DisableGravatar))
 	cfg.Section("service").Key("DISABLE_REGISTRATION").SetValue(com.ToStr(form.DisableRegistration))
 	cfg.Section("service").Key("REQUIRE_SIGNIN_VIEW").SetValue(com.ToStr(form.RequireSignInView))
 
