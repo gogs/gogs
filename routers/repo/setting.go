@@ -44,6 +44,8 @@ func SettingsPost(ctx *middleware.Context, form auth.RepoSettingForm) {
 	ctx.Data["Title"] = ctx.Tr("repo.settings")
 	ctx.Data["PageIsSettingsOptions"] = true
 
+	repo := ctx.Repo.Repository
+
 	switch ctx.Query("action") {
 	case "update":
 		if ctx.HasError() {
@@ -53,44 +55,41 @@ func SettingsPost(ctx *middleware.Context, form auth.RepoSettingForm) {
 
 		newRepoName := form.RepoName
 		// Check if repository name has been changed.
-		if ctx.Repo.Repository.Name != newRepoName {
-			if err := models.ChangeRepositoryName(ctx.Repo.Owner, ctx.Repo.Repository.Name, newRepoName); err != nil {
+		if repo.LowerName != strings.ToLower(newRepoName) {
+			if err := models.ChangeRepositoryName(ctx.Repo.Owner, repo.Name, newRepoName); err != nil {
+				ctx.Data["Err_RepoName"] = true
 				switch {
 				case models.IsErrRepoAlreadyExist(err):
-					ctx.Data["Err_RepoName"] = true
 					ctx.RenderWithErr(ctx.Tr("form.repo_name_been_taken"), SETTINGS_OPTIONS, &form)
 				case models.IsErrNameReserved(err):
-					ctx.Data["Err_RepoName"] = true
 					ctx.RenderWithErr(ctx.Tr("repo.form.name_reserved", err.(models.ErrNameReserved).Name), SETTINGS_OPTIONS, &form)
 				case models.IsErrNamePatternNotAllowed(err):
-					ctx.Data["Err_RepoName"] = true
 					ctx.RenderWithErr(ctx.Tr("repo.form.name_pattern_not_allowed", err.(models.ErrNamePatternNotAllowed).Pattern), SETTINGS_OPTIONS, &form)
 				default:
 					ctx.Handle(500, "ChangeRepositoryName", err)
 				}
 				return
 			}
-			log.Trace("Repository name changed: %s/%s -> %s", ctx.Repo.Owner.Name, ctx.Repo.Repository.Name, newRepoName)
-			ctx.Repo.Repository.Name = newRepoName
-			ctx.Repo.Repository.LowerName = strings.ToLower(newRepoName)
+			log.Trace("Repository name changed: %s/%s -> %s", ctx.Repo.Owner.Name, repo.Name, newRepoName)
 		}
+		// In case it's just a case change.
+		repo.Name = newRepoName
+		repo.LowerName = strings.ToLower(newRepoName)
 
-		br := form.Branch
-
-		if ctx.Repo.GitRepo.IsBranchExist(br) {
-			ctx.Repo.Repository.DefaultBranch = br
+		if ctx.Repo.GitRepo.IsBranchExist(form.Branch) {
+			repo.DefaultBranch = form.Branch
 		}
-		ctx.Repo.Repository.Description = form.Description
-		ctx.Repo.Repository.Website = form.Website
-		visibilityChanged := ctx.Repo.Repository.IsPrivate != form.Private
-		ctx.Repo.Repository.IsPrivate = form.Private
-		if err := models.UpdateRepository(ctx.Repo.Repository, visibilityChanged); err != nil {
+		repo.Description = form.Description
+		repo.Website = form.Website
+		visibilityChanged := repo.IsPrivate != form.Private
+		repo.IsPrivate = form.Private
+		if err := models.UpdateRepository(repo, visibilityChanged); err != nil {
 			ctx.Handle(404, "UpdateRepository", err)
 			return
 		}
-		log.Trace("Repository updated: %s/%s", ctx.Repo.Owner.Name, ctx.Repo.Repository.Name)
+		log.Trace("Repository updated: %s/%s", ctx.Repo.Owner.Name, repo.Name)
 
-		if ctx.Repo.Repository.IsMirror {
+		if repo.IsMirror {
 			if form.Interval > 0 {
 				ctx.Repo.Mirror.Interval = form.Interval
 				ctx.Repo.Mirror.NextUpdate = time.Now().Add(time.Duration(form.Interval) * time.Hour)
@@ -101,11 +100,18 @@ func SettingsPost(ctx *middleware.Context, form auth.RepoSettingForm) {
 		}
 
 		ctx.Flash.Success(ctx.Tr("repo.settings.update_settings_success"))
-		ctx.Redirect(fmt.Sprintf("%s/%s/%s/settings", setting.AppSubUrl, ctx.Repo.Owner.Name, ctx.Repo.Repository.Name))
+		ctx.Redirect(fmt.Sprintf("%s/%s/%s/settings", setting.AppSubUrl, ctx.Repo.Owner.Name, repo.Name))
 	case "transfer":
-		if ctx.Repo.Repository.Name != form.RepoName {
+		if repo.Name != form.RepoName {
 			ctx.RenderWithErr(ctx.Tr("form.enterred_invalid_repo_name"), SETTINGS_OPTIONS, nil)
 			return
+		}
+
+		if ctx.Repo.Owner.IsOrganization() {
+			if !ctx.Repo.Owner.IsOwnedBy(ctx.User.Id) {
+				ctx.Error(404)
+				return
+			}
 		}
 
 		newOwner := ctx.Query("new_owner_name")
@@ -118,16 +124,7 @@ func SettingsPost(ctx *middleware.Context, form auth.RepoSettingForm) {
 			return
 		}
 
-		if _, err = models.UserSignIn(ctx.User.Name, ctx.Query("password")); err != nil {
-			if models.IsErrUserNotExist(err) {
-				ctx.RenderWithErr(ctx.Tr("form.enterred_invalid_password"), SETTINGS_OPTIONS, nil)
-			} else {
-				ctx.Handle(500, "UserSignIn", err)
-			}
-			return
-		}
-
-		if err = models.TransferOwnership(ctx.User, newOwner, ctx.Repo.Repository); err != nil {
+		if err = models.TransferOwnership(ctx.User, newOwner, repo); err != nil {
 			if models.IsErrRepoAlreadyExist(err) {
 				ctx.RenderWithErr(ctx.Tr("repo.settings.new_owner_has_same_repo"), SETTINGS_OPTIONS, nil)
 			} else {
@@ -135,11 +132,11 @@ func SettingsPost(ctx *middleware.Context, form auth.RepoSettingForm) {
 			}
 			return
 		}
-		log.Trace("Repository transfered: %s/%s -> %s", ctx.Repo.Owner.Name, ctx.Repo.Repository.Name, newOwner)
+		log.Trace("Repository transfered: %s/%s -> %s", ctx.Repo.Owner.Name, repo.Name, newOwner)
 		ctx.Flash.Success(ctx.Tr("repo.settings.transfer_succeed"))
-		ctx.Redirect(setting.AppSubUrl + "/")
+		ctx.Redirect(setting.AppSubUrl + "/" + newOwner + "/" + repo.Name)
 	case "delete":
-		if ctx.Repo.Repository.Name != form.RepoName {
+		if repo.Name != form.RepoName {
 			ctx.RenderWithErr(ctx.Tr("form.enterred_invalid_repo_name"), SETTINGS_OPTIONS, nil)
 			return
 		}
@@ -151,25 +148,12 @@ func SettingsPost(ctx *middleware.Context, form auth.RepoSettingForm) {
 			}
 		}
 
-		if _, err := models.UserSignIn(ctx.User.Name, ctx.Query("password")); err != nil {
-			if models.IsErrUserNotExist(err) {
-				ctx.RenderWithErr(ctx.Tr("form.enterred_invalid_password"), SETTINGS_OPTIONS, nil)
-			} else {
-				ctx.Handle(500, "UserSignIn", err)
-			}
-			return
-		}
-
-		if err := models.DeleteRepository(ctx.Repo.Owner.Id, ctx.Repo.Repository.ID, ctx.Repo.Owner.Name); err != nil {
+		if err := models.DeleteRepository(ctx.Repo.Owner.Id, repo.ID, ctx.Repo.Owner.Name); err != nil {
 			ctx.Handle(500, "DeleteRepository", err)
 			return
 		}
-		log.Trace("Repository deleted: %s/%s", ctx.Repo.Owner.Name, ctx.Repo.Repository.Name)
-		if ctx.Repo.Owner.IsOrganization() {
-			ctx.Redirect(setting.AppSubUrl + "/org/" + ctx.Repo.Owner.Name + "/dashboard")
-		} else {
-			ctx.Redirect(setting.AppSubUrl + "/")
-		}
+		log.Trace("Repository deleted: %s/%s", ctx.Repo.Owner.Name, repo.Name)
+		ctx.Redirect(ctx.Repo.Owner.DashboardLink())
 	}
 }
 
