@@ -99,15 +99,13 @@ func ForkPost(ctx *middleware.Context, form auth.CreateRepoForm) {
 
 	repo, err := models.ForkRepository(ctxUser, forkRepo, form.RepoName, form.Description)
 	if err != nil {
+		ctx.Data["Err_RepoName"] = true
 		switch {
 		case models.IsErrRepoAlreadyExist(err):
-			ctx.Data["Err_RepoName"] = true
 			ctx.RenderWithErr(ctx.Tr("repo.settings.new_owner_has_same_repo"), FORK, &form)
 		case models.IsErrNameReserved(err):
-			ctx.Data["Err_RepoName"] = true
 			ctx.RenderWithErr(ctx.Tr("repo.form.name_reserved", err.(models.ErrNameReserved).Name), FORK, &form)
 		case models.IsErrNamePatternNotAllowed(err):
-			ctx.Data["Err_RepoName"] = true
 			ctx.RenderWithErr(ctx.Tr("repo.form.name_pattern_not_allowed", err.(models.ErrNamePatternNotAllowed).Pattern), FORK, &form)
 		default:
 			ctx.Handle(500, "ForkPost", err)
@@ -120,7 +118,12 @@ func ForkPost(ctx *middleware.Context, form auth.CreateRepoForm) {
 }
 
 func CompareAndPullRequest(ctx *middleware.Context) {
-	// Get compare information.
+	ctx.Data["Title"] = ctx.Tr("repo.pulls.compare_changes")
+	ctx.Data["PageIsComparePull"] = true
+
+	repo := ctx.Repo.Repository
+
+	// Get compare branch information.
 	infos := strings.Split(ctx.Params("*"), "...")
 	if len(infos) != 2 {
 		ctx.Handle(404, "CompareAndPullRequest", nil)
@@ -144,7 +147,7 @@ func CompareAndPullRequest(ctx *middleware.Context) {
 
 	// TODO: add organization support
 	// Check if current user has fork of repository.
-	headRepo, has := models.HasForkedRepo(ctx.User.Id, ctx.Repo.Repository.ID)
+	headRepo, has := models.HasForkedRepo(ctx.User.Id, repo.ID)
 	if !has {
 		ctx.Handle(404, "HasForkedRepo", nil)
 		return
@@ -161,6 +164,14 @@ func CompareAndPullRequest(ctx *middleware.Context) {
 		return
 	}
 	ctx.Data["HeadBranches"] = headBranches
+
+	// Setup information for new form.
+	RetrieveRepoMetas(ctx, ctx.Repo.Repository)
+	if ctx.Written() {
+		return
+	}
+
+	// Get diff information.
 
 	ctx.HTML(200, COMPARE_PULL)
 }

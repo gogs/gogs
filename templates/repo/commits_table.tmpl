@@ -10,7 +10,7 @@
     </form>
   </div>
   {{else if .IsDiffCompare}}
-  <a href="{{$.RepoLink}}/commit/{{.BeforeCommitId}}" class="ui green sha label">{{ShortSha .BeforeCommitId}}</a> ... <a href="{{$.RepoLink}}/commit/{{.AfterCommitId}}" class="ui green sha label">{{ShortSha .AfterCommitId}}</a>
+  <a href="{{$.RepoLink}}/commit/{{.BeforeCommitID}}" class="ui green sha label">{{ShortSha .BeforeCommitID}}</a> ... <a href="{{$.RepoLink}}/commit/{{.AfterCommitID}}" class="ui green sha label">{{ShortSha .AfterCommitID}}</a>
   {{end}}
 </h4>
 <div class="ui attached table segment">
