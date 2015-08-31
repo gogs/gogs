@@ -14,14 +14,14 @@
 				    <span class="text">base: {{$.BaseBranch}}</span>
 					  <i class="dropdown icon"></i>
 					</div>
-	        <div class="overflow menu">
+	        <div class="menu">
 		        <div class="ui icon search input">
 	            <i class="filter icon"></i>
 	            <input name="search" placeholder="Filter branch...">
 	          </div>
-	          <div class="items">
+	          <div class="scrolling menu">
 		        	{{range .Branches}}
-		          <div class="{{if eq $.BaseBranch .}}active selected{{end}} item" data-url="{{$.RepoLink}}/compare/{{.}}...{{$.SignedUser.Name}}:{{$.HeadBranch}}">{{.}}</div>
+		          <div class="item {{if eq $.BaseBranch .}}selected{{end}}" data-url="{{$.RepoLink}}/compare/{{.}}...{{$.SignedUser.Name}}:{{$.HeadBranch}}">{{.}}</div>
 		        	{{end}}
 	          </div>
 					</div>
@@ -32,14 +32,14 @@
 				    <span class="text">compare: {{$.HeadBranch}}</span>
 					  <i class="dropdown icon"></i>
 					</div>
-	        <div class="overflow menu">
+	        <div class="menu">
 		        <div class="ui icon search input">
 	            <i class="filter icon"></i>
 	            <input name="search" placeholder="Filter branch...">
 	          </div>
-	          <div class="items">
+	          <div class="scrolling menu">
 		        	{{range .HeadBranches}}
-		          <div class="{{if eq $.HeadBranch .}}active selected{{end}} item" data-url="{{$.RepoLink}}/compare/{{$.BaseBranch}}...{{$.SignedUser.Name}}:{{.}}">{{.}}</div>
+		          <div class="{{if eq $.HeadBranch .}}selected{{end}} item" data-url="{{$.RepoLink}}/compare/{{$.BaseBranch}}...{{$.SignedUser.Name}}:{{.}}">{{.}}</div>
 		        	{{end}}
 	        	</div>
 					</div>
