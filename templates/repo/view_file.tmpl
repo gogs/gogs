@@ -13,7 +13,7 @@
 	    {{end}}
         {{if not .ReadmeInList}}
             {{if not .IsCommit}}
-                <a class="right" href="{{.RepoLink}}/src/{{.CommitId}}/{{EscapePound .TreeName}}">
+                <a class="right" href="{{.RepoLink}}/src/{{.CommitID}}/{{EscapePound .TreeName}}">
                     <button class="btn btn-medium btn-gray btn-right-radius btn-comb">{{.i18n.Tr "repo.file_permalink"}}</button>
                 </a>
             {{end}}

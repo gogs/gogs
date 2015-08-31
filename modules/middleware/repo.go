@@ -118,7 +118,7 @@ func RepoRef() macaron.Handler {
 				ctx.Handle(500, "GetCommitOfBranch", err)
 				return
 			}
-			ctx.Repo.CommitId = ctx.Repo.Commit.Id.String()
+			ctx.Repo.CommitID = ctx.Repo.Commit.Id.String()
 			ctx.Repo.IsBranch = true
 
 		} else {
@@ -149,7 +149,7 @@ func RepoRef() macaron.Handler {
 					ctx.Handle(500, "GetCommitOfBranch", err)
 					return
 				}
-				ctx.Repo.CommitId = ctx.Repo.Commit.Id.String()
+				ctx.Repo.CommitID = ctx.Repo.Commit.Id.String()
 
 			} else if ctx.Repo.GitRepo.IsTagExist(refName) {
 				ctx.Repo.IsTag = true
@@ -158,10 +158,10 @@ func RepoRef() macaron.Handler {
 					ctx.Handle(500, "GetCommitOfTag", err)
 					return
 				}
-				ctx.Repo.CommitId = ctx.Repo.Commit.Id.String()
+				ctx.Repo.CommitID = ctx.Repo.Commit.Id.String()
 			} else if len(refName) == 40 {
 				ctx.Repo.IsCommit = true
-				ctx.Repo.CommitId = refName
+				ctx.Repo.CommitID = refName
 
 				ctx.Repo.Commit, err = ctx.Repo.GitRepo.GetCommit(refName)
 				if err != nil {
@@ -176,7 +176,7 @@ func RepoRef() macaron.Handler {
 
 		ctx.Repo.BranchName = refName
 		ctx.Data["BranchName"] = ctx.Repo.BranchName
-		ctx.Data["CommitId"] = ctx.Repo.CommitId
+		ctx.Data["CommitID"] = ctx.Repo.CommitID
 		ctx.Data["IsBranch"] = ctx.Repo.IsBranch
 		ctx.Data["IsTag"] = ctx.Repo.IsTag
 		ctx.Data["IsCommit"] = ctx.Repo.IsCommit
@@ -375,7 +375,7 @@ func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 		}
 
 		ctx.Data["BranchName"] = ctx.Repo.BranchName
-		ctx.Data["CommitId"] = ctx.Repo.CommitId
+		ctx.Data["CommitID"] = ctx.Repo.CommitID
 
 		userAgent := ctx.Req.Header.Get("User-Agent")
 		ua := user_agent.New(userAgent)

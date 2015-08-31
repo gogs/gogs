@@ -190,39 +190,46 @@ func renderAttachmentSettings(ctx *middleware.Context) {
 	ctx.Data["AttachmentMaxFiles"] = setting.AttachmentMaxFiles
 }
 
+func RetrieveRepoMetas(ctx *middleware.Context, repo *models.Repository) []*models.Label {
+	if !ctx.Repo.IsAdmin() {
+		return nil
+	}
+
+	labels, err := models.GetLabelsByRepoID(repo.ID)
+	if err != nil {
+		ctx.Handle(500, "GetLabelsByRepoID: %v", err)
+		return nil
+	}
+	ctx.Data["Labels"] = labels
+
+	ctx.Data["OpenMilestones"], err = models.GetMilestones(repo.ID, -1, false)
+	if err != nil {
+		ctx.Handle(500, "GetMilestones: %v", err)
+		return nil
+	}
+	ctx.Data["ClosedMilestones"], err = models.GetMilestones(repo.ID, -1, true)
+	if err != nil {
+		ctx.Handle(500, "GetMilestones: %v", err)
+		return nil
+	}
+
+	ctx.Data["Assignees"], err = repo.GetAssignees()
+	if err != nil {
+		ctx.Handle(500, "GetAssignees: %v", err)
+		return nil
+	}
+	return labels
+}
+
 func NewIssue(ctx *middleware.Context) {
 	ctx.Data["Title"] = ctx.Tr("repo.issues.new")
 	ctx.Data["PageIsIssueList"] = true
 	ctx.Data["RequireDropzone"] = true
 	renderAttachmentSettings(ctx)
 
-	if ctx.Repo.IsAdmin() {
-		var (
-			repo = ctx.Repo.Repository
-			err  error
-		)
-		ctx.Data["Labels"], err = models.GetLabelsByRepoID(repo.ID)
-		if err != nil {
-			ctx.Handle(500, "GetLabelsByRepoID: %v", err)
-			return
-		}
-
-		ctx.Data["OpenMilestones"], err = models.GetMilestones(repo.ID, -1, false)
-		if err != nil {
-			ctx.Handle(500, "GetMilestones: %v", err)
-			return
-		}
-		ctx.Data["ClosedMilestones"], err = models.GetMilestones(repo.ID, -1, true)
-		if err != nil {
-			ctx.Handle(500, "GetMilestones: %v", err)
-			return
-		}
-
-		ctx.Data["Assignees"], err = repo.GetAssignees()
-		if err != nil {
-			ctx.Handle(500, "GetAssignees: %v", err)
-			return
-		}
+	RetrieveRepoMetas(ctx, ctx.Repo.Repository)
+	if ctx.Written() {
+		return
 	}
 
 	ctx.HTML(200, ISSUE_NEW)
@@ -240,16 +247,18 @@ func NewIssuePost(ctx *middleware.Context, form auth.CreateIssueForm) {
 		milestoneID int64
 		assigneeID  int64
 		attachments []string
+		err         error
 	)
+
 	if ctx.Repo.IsAdmin() {
+		labels := RetrieveRepoMetas(ctx, repo)
+		if ctx.Written() {
+			return
+		}
+
 		// Check labels.
 		labelIDs = base.StringsToInt64s(strings.Split(form.LabelIDs, ","))
 		labelIDMark := base.Int64sToMap(labelIDs)
-		labels, err := models.GetLabelsByRepoID(repo.ID)
-		if err != nil {
-			ctx.Handle(500, "GetLabelsByRepoID: %v", err)
-			return
-		}
 		hasSelected := false
 		for i := range labels {
 			if labelIDMark[labels[i].ID] {
@@ -264,16 +273,6 @@ func NewIssuePost(ctx *middleware.Context, form auth.CreateIssueForm) {
 		// Check milestone.
 		milestoneID = form.MilestoneID
 		if milestoneID > 0 {
-			ctx.Data["OpenMilestones"], err = models.GetMilestones(repo.ID, -1, false)
-			if err != nil {
-				ctx.Handle(500, "GetMilestones: %v", err)
-				return
-			}
-			ctx.Data["ClosedMilestones"], err = models.GetMilestones(repo.ID, -1, true)
-			if err != nil {
-				ctx.Handle(500, "GetMilestones: %v", err)
-				return
-			}
 			ctx.Data["Milestone"], err = repo.GetMilestoneByID(milestoneID)
 			if err != nil {
 				ctx.Handle(500, "GetMilestoneByID: %v", err)
@@ -285,11 +284,6 @@ func NewIssuePost(ctx *middleware.Context, form auth.CreateIssueForm) {
 		// Check assignee.
 		assigneeID = form.AssigneeID
 		if assigneeID > 0 {
-			ctx.Data["Assignees"], err = repo.GetAssignees()
-			if err != nil {
-				ctx.Handle(500, "GetAssignees: %v", err)
-				return
-			}
 			ctx.Data["Assignee"], err = repo.GetAssigneeByID(assigneeID)
 			if err != nil {
 				ctx.Handle(500, "GetAssigneeByID: %v", err)

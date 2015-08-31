@@ -24,6 +24,7 @@
       <span class="text grey" id="authored-time">{{TimeSince .Commit.Author.When $.Lang}}</span>
       <div class="ui right">
         <div class="ui horizontal list">
+          {{if .Parents}}
           <div class="item">
             {{.i18n.Tr "repo.diff.parent"}}
           </div>
@@ -32,8 +33,9 @@
             <a class="ui blue sha label" href="{{$.RepoLink}}/commit/{{.}}">{{ShortSha .}}</a>
             {{end}}
           </div>
+          {{end}}
           <div class="item">{{.i18n.Tr "repo.diff.commit"}}</div>
-          <div class="item"><span class="ui blue sha label">{{ShortSha .CommitId}}</span></div>
+          <div class="item"><span class="ui blue sha label">{{ShortSha .CommitID}}</span></div>
         </div>
       </div>
     </div>
