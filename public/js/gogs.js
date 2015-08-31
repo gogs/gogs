@@ -182,6 +182,18 @@ function initRepository() {
         return;
     }
 
+    // Options
+    if ($('.repository.settings.options').length > 0) {
+        $('#repo_name').keyup(function () {
+            var $prompt_span = $('#repo-name-change-prompt');
+            if ($(this).val().toLowerCase() != $(this).data('repo-name').toLowerCase()) {
+                $prompt_span.show();
+            }else{
+                $prompt_span.hide();
+            }
+        });
+    }
+
     // Labels
     if ($('.repository.labels').length > 0) {
         // Create label
