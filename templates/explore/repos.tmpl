@@ -5,7 +5,7 @@
 			{{template "explore/nav" .}}
 			<div class="twelve wide column content">
 				<h4 class="ui top attached header">
-					Repositories
+					{{.i18n.Tr "explore.repos"}}
 				</h4>
 				<div class="ui attached segment">
 					{{range $i, $v := .Repos}}
