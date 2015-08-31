@@ -188,7 +188,7 @@ function initRepository() {
             var $prompt_span = $('#repo-name-change-prompt');
             if ($(this).val().toLowerCase() != $(this).data('repo-name').toLowerCase()) {
                 $prompt_span.show();
-            }else{
+            } else {
                 $prompt_span.hide();
             }
         });
