@@ -40,7 +40,7 @@ type RepoContext struct {
 	BranchName   string
 	TagName      string
 	TreeName     string
-	CommitId     string
+	CommitID     string
 	RepoLink     string
 	CloneLink    models.CloneLink
 	CommitsCount int
