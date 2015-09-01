@@ -851,9 +851,10 @@ type PullRepo struct {
 	HeadRepoID   int64       `xorm:"UNIQUE(s)"`
 	HeadRepo     *Repository `xorm:"-"`
 	BaseRepoID   int64       `xorm:"UNIQUE(s)"`
-	HeadBarcnh   string      `xorm:"UNIQUE(s)"`
-	BaseBranch   string      `xorm:"UNIQUE(s)"`
-	MergeBase    string      `xorm:"VARCHAR(40)"`
+	HeadUserName string
+	HeadBarcnh   string `xorm:"UNIQUE(s)"`
+	BaseBranch   string `xorm:"UNIQUE(s)"`
+	MergeBase    string `xorm:"VARCHAR(40)"`
 	Type         PullRequestType
 	CanAutoMerge bool
 }
@@ -871,7 +872,6 @@ func (pr *PullRepo) AfterSet(colName string, _ xorm.Cell) {
 
 // NewPullRequest creates new pull request with labels for repository.
 func NewPullRequest(repo *Repository, pr *Issue, labelIDs []int64, uuids []string, pullRepo *PullRepo, patch []byte) (err error) {
-
 	sess := x.NewSession()
 	defer sessionRelease(sess)
 	if err = sess.Begin(); err != nil {

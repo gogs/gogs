@@ -461,6 +461,9 @@ func ViewIssue(ctx *middleware.Context) {
 
 	// Get more information if it's a pull request.
 	if issue.IsPull {
+		ctx.Data["HeadTarget"] = issue.PullRepo.HeadUserName + "/" + issue.PullRepo.HeadBarcnh
+		ctx.Data["BaseTarget"] = ctx.Repo.Owner.Name + "/" + issue.PullRepo.BaseBranch
+
 		headRepoPath, err := issue.PullRepo.HeadRepo.RepoPath()
 		if err != nil {
 			ctx.Handle(500, "PullRepo.HeadRepo.RepoPath", err)
