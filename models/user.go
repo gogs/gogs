@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/Unknwon/com"
+	"github.com/go-xorm/xorm"
 	"github.com/nfnt/resize"
 
 	"github.com/gogits/gogs/modules/avatar"
@@ -94,6 +95,15 @@ type User struct {
 	NumMembers  int
 	Teams       []*Team `xorm:"-"`
 	Members     []*User `xorm:"-"`
+}
+
+func (u *User) AfterSet(colName string, _ xorm.Cell) {
+	switch colName {
+	case "full_name":
+		u.FullName = base.Sanitizer.Sanitize(u.FullName)
+	case "created":
+		u.Created = regulateTimeZone(u.Created)
+	}
 }
 
 // EmailAdresses is the list of all email addresses of a user. Can contain the
