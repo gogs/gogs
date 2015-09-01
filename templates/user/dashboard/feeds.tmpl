@@ -8,6 +8,8 @@
             <a href="{{AppSubUrl}}/{{.GetActUserName}}">{{.GetActUserName}}</a>
             {{if eq .GetOpType 1}}
             {{$.i18n.Tr "action.create_repo" .GetRepoLink .GetRepoPath | Str2html}}
+            {{else if eq .GetOpType 2}}
+            {{$.i18n.Tr "action.rename_repo" .GetContent .GetRepoLink .GetRepoPath | Str2html}}
             {{else if eq .GetOpType 5}}
             {{$.i18n.Tr "action.commit_repo" .GetRepoLink .GetBranch .GetRepoPath | Str2html}}
             {{else if eq .GetOpType 6}}

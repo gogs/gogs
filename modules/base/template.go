@@ -192,8 +192,12 @@ type Actioner interface {
 	GetActEmail() string
 	GetRepoUserName() string
 	GetRepoName() string
+	GetRepoPath() string
+	GetRepoLink() string
 	GetBranch() string
 	GetContent() string
+	GetCreate() time.Time
+	GetIssueInfos() []string
 }
 
 // ActionIcon accepts a int that represents action operation type

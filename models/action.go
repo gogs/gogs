@@ -28,7 +28,7 @@ type ActionType int
 
 const (
 	CREATE_REPO   ActionType = iota + 1 // 1
-	DELETE_REPO                         // 2
+	RENAME_REPO                         // 2
 	STAR_REPO                           // 3
 	FOLLOW_REPO                         // 4
 	COMMIT_REPO                         // 5
@@ -133,6 +133,29 @@ func (a Action) GetCreate() time.Time {
 
 func (a Action) GetIssueInfos() []string {
 	return strings.SplitN(a.Content, "|", 2)
+}
+
+func newRepoAction(e Engine, u *User, repo *Repository) (err error) {
+	if err = notifyWatchers(e, &Action{
+		ActUserID:    u.Id,
+		ActUserName:  u.Name,
+		ActEmail:     u.Email,
+		OpType:       CREATE_REPO,
+		RepoID:       repo.ID,
+		RepoUserName: repo.Owner.Name,
+		RepoName:     repo.Name,
+		IsPrivate:    repo.IsPrivate,
+	}); err != nil {
+		return fmt.Errorf("notify watchers '%d/%s': %v", u.Id, repo.ID, err)
+	}
+
+	log.Trace("action.newRepoAction: %s/%s", u.Name, repo.Name)
+	return err
+}
+
+// NewRepoAction adds new action for creating repository.
+func NewRepoAction(u *User, repo *Repository) (err error) {
+	return newRepoAction(x, u, repo)
 }
 
 // updateIssuesCommit checks if issues are manipulated by commit message.
@@ -448,31 +471,8 @@ func CommitRepoAction(
 	return nil
 }
 
-func newRepoAction(e Engine, u *User, repo *Repository) (err error) {
-	if err = notifyWatchers(e, &Action{
-		ActUserID:    u.Id,
-		ActUserName:  u.Name,
-		ActEmail:     u.Email,
-		OpType:       CREATE_REPO,
-		RepoID:       repo.ID,
-		RepoUserName: repo.Owner.Name,
-		RepoName:     repo.Name,
-		IsPrivate:    repo.IsPrivate,
-	}); err != nil {
-		return fmt.Errorf("notify watchers '%d/%s'", u.Id, repo.ID)
-	}
-
-	log.Trace("action.NewRepoAction: %s/%s", u.Name, repo.Name)
-	return err
-}
-
-// NewRepoAction adds new action for creating repository.
-func NewRepoAction(u *User, repo *Repository) (err error) {
-	return newRepoAction(x, u, repo)
-}
-
 func transferRepoAction(e Engine, actUser, oldOwner, newOwner *User, repo *Repository) (err error) {
-	action := &Action{
+	if err = notifyWatchers(e, &Action{
 		ActUserID:    actUser.Id,
 		ActUserName:  actUser.Name,
 		ActEmail:     actUser.Email,
@@ -482,9 +482,8 @@ func transferRepoAction(e Engine, actUser, oldOwner, newOwner *User, repo *Repos
 		RepoName:     repo.Name,
 		IsPrivate:    repo.IsPrivate,
 		Content:      path.Join(oldOwner.LowerName, repo.LowerName),
-	}
-	if err = notifyWatchers(e, action); err != nil {
-		return fmt.Errorf("notify watchers '%d/%s'", actUser.Id, repo.ID)
+	}); err != nil {
+		return fmt.Errorf("notify watchers '%d/%s': %v", actUser.Id, repo.ID, err)
 	}
 
 	// Remove watch for organization.
@@ -494,13 +493,36 @@ func transferRepoAction(e Engine, actUser, oldOwner, newOwner *User, repo *Repos
 		}
 	}
 
-	log.Trace("action.TransferRepoAction: %s/%s", actUser.Name, repo.Name)
+	log.Trace("action.transferRepoAction: %s/%s", actUser.Name, repo.Name)
 	return nil
 }
 
 // TransferRepoAction adds new action for transferring repository.
-func TransferRepoAction(actUser, oldOwner, newOwner *User, repo *Repository) (err error) {
+func TransferRepoAction(actUser, oldOwner, newOwner *User, repo *Repository) error {
 	return transferRepoAction(x, actUser, oldOwner, newOwner, repo)
+}
+
+func renameRepoAction(e Engine, actUser *User, oldRepoName string, repo *Repository) (err error) {
+	if err = notifyWatchers(e, &Action{
+		ActUserID:    actUser.Id,
+		ActUserName:  actUser.Name,
+		ActEmail:     actUser.Email,
+		OpType:       RENAME_REPO,
+		RepoUserName: repo.Owner.Name,
+		RepoName:     repo.Name,
+		IsPrivate:    repo.IsPrivate,
+		Content:      oldRepoName,
+	}); err != nil {
+		return fmt.Errorf("notify watchers: %v", err)
+	}
+
+	log.Trace("action.renameRepoAction: %s/%s", actUser.Name, repo.Name)
+	return nil
+}
+
+// RenameRepoAction adds new action for renaming a repository.
+func RenameRepoAction(actUser *User, oldRepoName string, repo *Repository) error {
+	return renameRepoAction(x, actUser, oldRepoName, repo)
 }
 
 // GetFeeds returns action list of given user in given context.
