@@ -53,6 +53,7 @@ func SettingsPost(ctx *middleware.Context, form auth.RepoSettingForm) {
 			return
 		}
 
+		oldRepoName := repo.Name
 		newRepoName := form.RepoName
 		// Check if repository name has been changed.
 		if repo.LowerName != strings.ToLower(newRepoName) {
@@ -84,7 +85,10 @@ func SettingsPost(ctx *middleware.Context, form auth.RepoSettingForm) {
 		visibilityChanged := repo.IsPrivate != form.Private
 		repo.IsPrivate = form.Private
 		if err := models.UpdateRepository(repo, visibilityChanged); err != nil {
-			ctx.Handle(404, "UpdateRepository", err)
+			ctx.Handle(500, "UpdateRepository", err)
+			return
+		} else if err = models.RenameRepoAction(ctx.User, oldRepoName, repo); err != nil {
+			ctx.Handle(500, "RenameRepoAction", err)
 			return
 		}
 		log.Trace("Repository updated: %s/%s", ctx.Repo.Owner.Name, repo.Name)
