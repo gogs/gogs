@@ -2,13 +2,15 @@
 <div class="ui container"><!-- start container -->
 	<div class="ui vertically padded grid head"><!-- start grid -->
 		<div class="column"><!-- start column -->
+			{{if not .IsBare}}
 			<div class="ui black small compact menu floated right count labelled">
-				<a class="item{{if $.IsRepositoryOwner}} poping up{{end}}"{{if not $.IsRepositoryOwner}} href="{{AppSubUrl}}/repo/fork/{{.ID}}"{{else}} data-content="{{$.i18n.Tr "repo.fork_from_self"}}" data-position="top center" data-variation="tiny"{{end}}>
+				<a class="item{{if eq .OwnerID $.SignedUserID}} poping up{{end}}"{{if not (eq .OwnerID $.SignedUserID)}} href="{{AppSubUrl}}/repo/fork/{{.ID}}"{{else}} data-content="{{$.i18n.Tr "repo.fork_from_self"}}" data-position="top center" data-variation="tiny"{{end}}>
 					<i class="icon octicon octicon-repo-forked"></i>
 					{{$.i18n.Tr "repo.fork"}}
 				</a>
 				<span class="active item num">{{.NumForks}}</span>
 			</div>
+			{{end}}
 
 			<div class="ui black small compact menu floated right count labelled">
 				<a class="item" href="{{$.RepoLink}}/action/{{if $.IsStaringRepo}}un{{end}}star?redirect_to={{$.Link}}">

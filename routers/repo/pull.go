@@ -33,6 +33,13 @@ func getForkRepository(ctx *middleware.Context) *models.Repository {
 		}
 		return nil
 	}
+
+	// Cannot fork bare repo.
+	if forkRepo.IsBare {
+		ctx.Handle(404, "", nil)
+		return nil
+	}
+
 	ctx.Data["repo_name"] = forkRepo.Name
 	ctx.Data["desc"] = forkRepo.Description
 	ctx.Data["IsPrivate"] = forkRepo.IsPrivate
