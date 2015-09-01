@@ -53,10 +53,12 @@ func SettingsPost(ctx *middleware.Context, form auth.RepoSettingForm) {
 			return
 		}
 
+		isNameChanged := false
 		oldRepoName := repo.Name
 		newRepoName := form.RepoName
 		// Check if repository name has been changed.
 		if repo.LowerName != strings.ToLower(newRepoName) {
+			isNameChanged = true
 			if err := models.ChangeRepositoryName(ctx.Repo.Owner, repo.Name, newRepoName); err != nil {
 				ctx.Data["Err_RepoName"] = true
 				switch {
@@ -71,6 +73,7 @@ func SettingsPost(ctx *middleware.Context, form auth.RepoSettingForm) {
 				}
 				return
 			}
+
 			log.Trace("Repository name changed: %s/%s -> %s", ctx.Repo.Owner.Name, repo.Name, newRepoName)
 		}
 		// In case it's just a case change.
@@ -87,11 +90,14 @@ func SettingsPost(ctx *middleware.Context, form auth.RepoSettingForm) {
 		if err := models.UpdateRepository(repo, visibilityChanged); err != nil {
 			ctx.Handle(500, "UpdateRepository", err)
 			return
-		} else if err = models.RenameRepoAction(ctx.User, oldRepoName, repo); err != nil {
-			ctx.Handle(500, "RenameRepoAction", err)
-			return
 		}
 		log.Trace("Repository updated: %s/%s", ctx.Repo.Owner.Name, repo.Name)
+
+		if isNameChanged {
+			if err := models.RenameRepoAction(ctx.User, oldRepoName, repo); err != nil {
+				log.Error(4, "RenameRepoAction: %v", err)
+			}
+		}
 
 		if repo.IsMirror {
 			if form.Interval > 0 {
@@ -152,7 +158,7 @@ func SettingsPost(ctx *middleware.Context, form auth.RepoSettingForm) {
 			}
 		}
 
-		if err := models.DeleteRepository(ctx.Repo.Owner.Id, repo.ID, ctx.Repo.Owner.Name); err != nil {
+		if err := models.DeleteRepository(ctx.Repo.Owner.Id, repo.ID); err != nil {
 			ctx.Handle(500, "DeleteRepository", err)
 			return
 		}
