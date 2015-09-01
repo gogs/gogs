@@ -10,9 +10,11 @@
     </form>
   </div>
   {{else if .IsDiffCompare}}
-  <a href="{{$.RepoLink}}/commit/{{.BeforeCommitID}}" class="ui green sha label">{{ShortSha .BeforeCommitID}}</a> ... <a href="{{$.RepoLink}}/commit/{{.AfterCommitID}}" class="ui green sha label">{{ShortSha .AfterCommitID}}</a>
+  <a href="{{$.CommitRepoLink}}/commit/{{.BeforeCommitID}}" class="ui green sha label">{{ShortSha .BeforeCommitID}}</a> ... <a href="{{$.CommitRepoLink}}/commit/{{.AfterCommitID}}" class="ui green sha label">{{ShortSha .AfterCommitID}}</a>
   {{end}}
 </h4>
+
+{{if .Commits}}
 <div class="ui attached table segment">
   <table class="ui very basic striped commits table">
     <thead>
@@ -24,9 +26,7 @@
       </tr>
     </thead>
     <tbody>
-    {{ $username := .Username}}
-    {{ $reponame := .Reponame}}
-    {{  $r:= List .Commits}}
+    {{ $r:= List .Commits}}
     {{range $r}}
       <tr>
         <td class="author">
@@ -36,7 +36,7 @@
           <img class="ui avatar image" src="{{AvatarLink .Author.Email}}" alt=""/>&nbsp;&nbsp;{{.Author.Name}}
           {{end}}
         </td>
-        <td class="sha"><a rel="nofollow" class="ui green sha label" href="{{AppSubUrl}}/{{$username}}/{{$reponame}}/commit/{{.Id}} ">{{SubStr .Id.String 0 10}} </a></td>
+        <td class="sha"><a rel="nofollow" class="ui green sha label" href="{{AppSubUrl}}/{{$.Username}}/{{$.Reponame}}/commit/{{.Id}} ">{{SubStr .Id.String 0 10}} </a></td>
         <td class="message"><span class="text truncate">{{RenderCommitMessage .Summary $.RepoLink}}</span></td>
         <td class="date">{{TimeSince .Author.When $.Lang}}</td>
       </tr>
@@ -44,6 +44,7 @@
     </tbody>
   </table>
 </div>
+{{end}}
 
 {{with .Page}}
 {{if gt .TotalPages 1}}
