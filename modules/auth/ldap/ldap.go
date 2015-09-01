@@ -120,19 +120,21 @@ func (ls Ldapsource) SearchEntry(name, passwd string) (string, string, string, b
 	sn_attr := sr.Entries[0].GetAttributeValue(ls.AttributeSurname)
 	mail_attr := sr.Entries[0].GetAttributeValue(ls.AttributeMail)
 
-	search = ldap.NewSearchRequest(
-		userDN, ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false, ls.AdminFilter,
-		[]string{ls.AttributeName},
-		nil)
-
-	sr, err = l.Search(search)
 	admin_attr := false
-	if err != nil {
-		log.Error(4, "LDAP Admin Search failed unexpectedly! (%v)", err)
-	} else if len(sr.Entries) < 1 {
-		log.Error(4, "LDAP Admin Search failed")
-	} else {
-		admin_attr = true
+	if len(ls.AdminFilter) > 0 {
+		search = ldap.NewSearchRequest(
+			userDN, ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false, ls.AdminFilter,
+			[]string{ls.AttributeName},
+			nil)
+
+		sr, err = l.Search(search)
+		if err != nil {
+			log.Error(4, "LDAP Admin Search failed unexpectedly! (%v)", err)
+		} else if len(sr.Entries) < 1 {
+			log.Error(4, "LDAP Admin Search failed")
+		} else {
+			admin_attr = true
+		}
 	}
 
 	return name_attr, sn_attr, mail_attr, admin_attr, true
