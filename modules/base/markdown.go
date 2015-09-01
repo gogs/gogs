@@ -201,6 +201,10 @@ func RenderRawMarkdown(body []byte, urlPrefix string) []byte {
 	extensions |= blackfriday.EXTENSION_SPACE_HEADERS
 	extensions |= blackfriday.EXTENSION_NO_EMPTY_LINE_BEFORE_BLOCK
 
+	if setting.Markdown.EnableHardLineBreak {
+		extensions |= blackfriday.EXTENSION_HARD_LINE_BREAK
+	}
+
 	body = blackfriday.Markdown(body, renderer, extensions)
 	return body
 }

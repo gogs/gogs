@@ -94,6 +94,11 @@ var (
 	ExplorePagingNum int
 	IssuePagingNum   int
 
+	// Markdown sttings.
+	Markdown struct {
+		EnableHardLineBreak bool
+	}
+
 	// Picture settings.
 	PictureService   string
 	AvatarUploadPath string
@@ -353,8 +358,9 @@ func NewConfigContext() {
 	AnsiCharset = sec.Key("ANSI_CHARSET").MustString("")
 
 	// UI settings.
-	ExplorePagingNum = Cfg.Section("ui").Key("EXPLORE_PAGING_NUM").MustInt(20)
-	IssuePagingNum = Cfg.Section("ui").Key("ISSUE_PAGING_NUM").MustInt(10)
+	sec = Cfg.Section("ui")
+	ExplorePagingNum = sec.Key("EXPLORE_PAGING_NUM").MustInt(20)
+	IssuePagingNum = sec.Key("ISSUE_PAGING_NUM").MustInt(10)
 
 	sec = Cfg.Section("picture")
 	PictureService = sec.Key("SERVICE").In("server", []string{"server"})
@@ -376,7 +382,9 @@ func NewConfigContext() {
 		DisableGravatar = true
 	}
 
-	if err = Cfg.Section("git").MapTo(&Git); err != nil {
+	if err = Cfg.Section("markdown").MapTo(&Markdown); err != nil {
+		log.Fatal(4, "Fail to map Markdown settings: %v", err)
+	} else if err = Cfg.Section("git").MapTo(&Git); err != nil {
 		log.Fatal(4, "Fail to map Git settings: %v", err)
 	} else if Cfg.Section("cron").MapTo(&Cron); err != nil {
 		log.Fatal(4, "Fail to map Cron settings: %v", err)
