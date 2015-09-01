@@ -91,7 +91,8 @@ var (
 	AnsiCharset  string
 
 	// UI settings.
-	IssuePagingNum int
+	ExplorePagingNum int
+	IssuePagingNum   int
 
 	// Picture settings.
 	PictureService   string
@@ -352,6 +353,7 @@ func NewConfigContext() {
 	AnsiCharset = sec.Key("ANSI_CHARSET").MustString("")
 
 	// UI settings.
+	ExplorePagingNum = Cfg.Section("ui").Key("EXPLORE_PAGING_NUM").MustInt(20)
 	IssuePagingNum = Cfg.Section("ui").Key("ISSUE_PAGING_NUM").MustInt(10)
 
 	sec = Cfg.Section("picture")

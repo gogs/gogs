@@ -7,6 +7,8 @@ package routers
 import (
 	"fmt"
 
+	"github.com/Unknwon/paginater"
+
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/middleware"
@@ -50,7 +52,14 @@ func Explore(ctx *middleware.Context) {
 	ctx.Data["Title"] = ctx.Tr("explore")
 	ctx.Data["PageIsExploreRepositories"] = true
 
-	repos, err := models.GetRecentUpdatedRepositories(20)
+	page := ctx.QueryInt("page")
+	if page <= 1 {
+		page = 1
+	}
+
+	ctx.Data["Page"] = paginater.New(int(models.CountRepositories()), setting.ExplorePagingNum, page, 5)
+
+	repos, err := models.GetRecentUpdatedRepositories(page)
 	if err != nil {
 		ctx.Handle(500, "GetRecentUpdatedRepositories", err)
 		return
