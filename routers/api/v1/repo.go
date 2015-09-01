@@ -151,7 +151,7 @@ func createRepo(ctx *middleware.Context, owner *models.User, opt api.CreateRepoO
 		} else {
 			log.Error(4, "CreateRepository: %v", err)
 			if repo != nil {
-				if err = models.DeleteRepository(ctx.User.Id, repo.ID, ctx.User.Name); err != nil {
+				if err = models.DeleteRepository(ctx.User.Id, repo.ID); err != nil {
 					log.Error(4, "DeleteRepository: %v", err)
 				}
 			}
@@ -256,7 +256,7 @@ func MigrateRepo(ctx *middleware.Context, form auth.MigrateRepoForm) {
 	repo, err := models.MigrateRepository(ctxUser, form.RepoName, form.Description, form.Private, form.Mirror, remoteAddr)
 	if err != nil {
 		if repo != nil {
-			if errDelete := models.DeleteRepository(ctxUser.Id, repo.ID, ctxUser.Name); errDelete != nil {
+			if errDelete := models.DeleteRepository(ctxUser.Id, repo.ID); errDelete != nil {
 				log.Error(4, "DeleteRepository: %v", errDelete)
 			}
 		}
