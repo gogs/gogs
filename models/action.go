@@ -158,6 +158,30 @@ func NewRepoAction(u *User, repo *Repository) (err error) {
 	return newRepoAction(x, u, repo)
 }
 
+func renameRepoAction(e Engine, actUser *User, oldRepoName string, repo *Repository) (err error) {
+	if err = notifyWatchers(e, &Action{
+		ActUserID:    actUser.Id,
+		ActUserName:  actUser.Name,
+		ActEmail:     actUser.Email,
+		OpType:       RENAME_REPO,
+		RepoID:       repo.ID,
+		RepoUserName: repo.Owner.Name,
+		RepoName:     repo.Name,
+		IsPrivate:    repo.IsPrivate,
+		Content:      oldRepoName,
+	}); err != nil {
+		return fmt.Errorf("notify watchers: %v", err)
+	}
+
+	log.Trace("action.renameRepoAction: %s/%s", actUser.Name, repo.Name)
+	return nil
+}
+
+// RenameRepoAction adds new action for renaming a repository.
+func RenameRepoAction(actUser *User, oldRepoName string, repo *Repository) error {
+	return renameRepoAction(x, actUser, oldRepoName, repo)
+}
+
 // updateIssuesCommit checks if issues are manipulated by commit message.
 func updateIssuesCommit(u *User, repo *Repository, repoUserName, repoName string, commits []*base.PushCommit) error {
 	for _, c := range commits {
@@ -500,29 +524,6 @@ func transferRepoAction(e Engine, actUser, oldOwner, newOwner *User, repo *Repos
 // TransferRepoAction adds new action for transferring repository.
 func TransferRepoAction(actUser, oldOwner, newOwner *User, repo *Repository) error {
 	return transferRepoAction(x, actUser, oldOwner, newOwner, repo)
-}
-
-func renameRepoAction(e Engine, actUser *User, oldRepoName string, repo *Repository) (err error) {
-	if err = notifyWatchers(e, &Action{
-		ActUserID:    actUser.Id,
-		ActUserName:  actUser.Name,
-		ActEmail:     actUser.Email,
-		OpType:       RENAME_REPO,
-		RepoUserName: repo.Owner.Name,
-		RepoName:     repo.Name,
-		IsPrivate:    repo.IsPrivate,
-		Content:      oldRepoName,
-	}); err != nil {
-		return fmt.Errorf("notify watchers: %v", err)
-	}
-
-	log.Trace("action.renameRepoAction: %s/%s", actUser.Name, repo.Name)
-	return nil
-}
-
-// RenameRepoAction adds new action for renaming a repository.
-func RenameRepoAction(actUser *User, oldRepoName string, repo *Repository) error {
-	return renameRepoAction(x, actUser, oldRepoName, repo)
 }
 
 // GetFeeds returns action list of given user in given context.

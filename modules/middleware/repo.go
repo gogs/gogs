@@ -190,6 +190,41 @@ func RepoRef() macaron.Handler {
 	}
 }
 
+func RetrieveBaseRepo(ctx *Context, repo *models.Repository) {
+	// Non-fork repository will not return error in this method.
+	if err := repo.GetBaseRepo(); err != nil {
+		if models.IsErrRepoNotExist(err) {
+			repo.IsFork = false
+			repo.ForkID = 0
+			return
+		}
+		ctx.Handle(500, "GetBaseRepo", err)
+		return
+	} else if err = repo.BaseRepo.GetOwner(); err != nil {
+		ctx.Handle(500, "BaseRepo.GetOwner", err)
+		return
+	}
+
+	bsaeRepo := repo.BaseRepo
+	baseGitRepo, err := git.OpenRepository(models.RepoPath(bsaeRepo.Owner.Name, bsaeRepo.Name))
+	if err != nil {
+		ctx.Handle(500, "OpenRepository", err)
+		return
+	}
+	if len(bsaeRepo.DefaultBranch) > 0 && baseGitRepo.IsBranchExist(bsaeRepo.DefaultBranch) {
+		ctx.Data["BaseDefaultBranch"] = bsaeRepo.DefaultBranch
+	} else {
+		baseBranches, err := baseGitRepo.GetBranches()
+		if err != nil {
+			ctx.Handle(500, "GetBranches", err)
+			return
+		}
+		if len(baseBranches) > 0 {
+			ctx.Data["BaseDefaultBranch"] = baseBranches[0]
+		}
+	}
+}
+
 func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 	return func(ctx *Context) {
 		var (
@@ -292,32 +327,9 @@ func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 		ctx.Repo.Repository.NumTags = len(tags)
 
 		if repo.IsFork {
-			// Non-fork repository will not return error in this method.
-			if err = repo.GetBaseRepo(); err != nil {
-				ctx.Handle(500, "GetBaseRepo", err)
+			RetrieveBaseRepo(ctx, repo)
+			if ctx.Written() {
 				return
-			} else if repo.BaseRepo.GetOwner(); err != nil {
-				ctx.Handle(500, "BaseRepo.GetOwner", err)
-				return
-			}
-
-			bsaeRepo := repo.BaseRepo
-			baseGitRepo, err := git.OpenRepository(models.RepoPath(bsaeRepo.Owner.Name, bsaeRepo.Name))
-			if err != nil {
-				ctx.Handle(500, "OpenRepository", err)
-				return
-			}
-			if len(bsaeRepo.DefaultBranch) > 0 && baseGitRepo.IsBranchExist(bsaeRepo.DefaultBranch) {
-				ctx.Data["BaseDefaultBranch"] = bsaeRepo.DefaultBranch
-			} else {
-				baseBranches, err := baseGitRepo.GetBranches()
-				if err != nil {
-					ctx.Handle(500, "GetBranches", err)
-					return
-				}
-				if len(baseBranches) > 0 {
-					ctx.Data["BaseDefaultBranch"] = baseBranches[0]
-				}
 			}
 		}
 

@@ -47,7 +47,7 @@
 	            <label>{{.i18n.Tr "repo.visibility"}}</label>
 	            <div class="ui checkbox">
 	              <input name="private" type="checkbox" {{if .Repository.IsPrivate}}checked{{end}}>
-	              <label>{{.i18n.Tr "repo.visiblity_helper" | Safe}}</label>
+	              <label>{{.i18n.Tr "repo.visiblity_helper" | Safe}} {{if .Repository.NumForks}}<span class="text red">{{.i18n.Tr "repo.visiblity_fork_helper"}}</span>{{end}}</label>
 	            </div>
 	          </div>
 	          {{end}}
@@ -138,6 +138,11 @@
 		<div class="ui warning message text left">
 			{{.i18n.Tr "repo.settings.delete_notices_1" | Safe}} <br>
 			{{.i18n.Tr "repo.settings.delete_notices_2" | Safe}}
+			{{if .Repository.NumForks}}<br>
+			{{.i18n.Tr "repo.settings.delete_notices_fork_1" | Safe}} <br>
+			{{.i18n.Tr "repo.settings.delete_notices_fork_2" | Safe}} <br>
+			{{.i18n.Tr "repo.settings.delete_notices_fork_3" | Safe}}
+			{{end}}
 		</div>
   	<form class="ui form" action="{{.Link}}" method="post">
       {{.CsrfTokenHtml}}

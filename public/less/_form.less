@@ -61,11 +61,13 @@
 	}
 
 	&.new.repo {
-		.selection.dropdown {
-			width: 50%!important;
-		}
-		#auto-init {
-			margin-left: @input-padding+15px;
+		.ui.form {
+			.selection.dropdown:not(.owner) {
+				width: 50%!important;
+			}
+			#auto-init {
+				margin-left: @input-padding+15px;
+			}
 		}
 	}
 }
