@@ -20,7 +20,7 @@
                                         <option value="0-0">{{.i18n.Tr "admin.users.local"}}</option>
 									    {{$tp := .User.LoginSource}}
 									    {{range $key, $val := .LoginSources}}
-					  					<option value="{{$val.Type}}-{{$val.Id}}"{{if eq $val.Id $tp}} selected{{end}}>{{$val.Name}}</option>
+					  					<option value="{{$val.Type}}-{{$val.ID}}"{{if eq $val.ID $tp}} selected{{end}}>{{$val.Name}}</option>
 					  					{{end}}
                                     </select>
                                 </div>
