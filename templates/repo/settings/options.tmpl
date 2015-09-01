@@ -100,7 +100,10 @@
     {{.i18n.Tr "repo.settings.transfer"}}
   </div>
   <div class="content">
-		<div class="ui warning message text left">{{.i18n.Tr "repo.settings.transfer_notices" | Str2html}}</div>
+		<div class="ui warning message text left">
+			{{.i18n.Tr "repo.settings.transfer_notices_1" | Safe}} <br>
+			{{.i18n.Tr "repo.settings.transfer_notices_2" | Safe}}
+		</div>
   	<form class="ui form" action="{{.Link}}" method="post">
       {{.CsrfTokenHtml}}
 			<input type="hidden" name="action" value="transfer">
@@ -132,7 +135,10 @@
     {{.i18n.Tr "repo.settings.delete"}}
   </div>
   <div class="content">
-		<div class="ui warning message text left">{{.i18n.Tr "repo.settings.delete_notices" | Str2html}}</div>
+		<div class="ui warning message text left">
+			{{.i18n.Tr "repo.settings.delete_notices_1" | Safe}} <br>
+			{{.i18n.Tr "repo.settings.delete_notices_2" | Safe}}
+		</div>
   	<form class="ui form" action="{{.Link}}" method="post">
       {{.CsrfTokenHtml}}
 			<input type="hidden" name="action" value="delete">
