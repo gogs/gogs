@@ -314,7 +314,7 @@ func CompareAndPullRequestPost(ctx *middleware.Context, form auth.CreateIssueFor
 		attachments []string
 	)
 
-	_, headRepo, headGitRepo, prInfo, baseBranch, headBranch := ParseCompareInfo(ctx)
+	headUser, headRepo, headGitRepo, prInfo, baseBranch, headBranch := ParseCompareInfo(ctx)
 	if ctx.Written() {
 		return
 	}
@@ -351,12 +351,13 @@ func CompareAndPullRequestPost(ctx *middleware.Context, form auth.CreateIssueFor
 		Content:     form.Content,
 	}
 	if err := models.NewPullRequest(repo, pr, labelIDs, attachments, &models.PullRepo{
-		HeadRepoID: headRepo.ID,
-		BaseRepoID: repo.ID,
-		HeadBarcnh: headBranch,
-		BaseBranch: baseBranch,
-		MergeBase:  prInfo.MergeBase,
-		Type:       models.PULL_REQUEST_GOGS,
+		HeadRepoID:   headRepo.ID,
+		BaseRepoID:   repo.ID,
+		HeadUserName: headUser.Name,
+		HeadBarcnh:   headBranch,
+		BaseBranch:   baseBranch,
+		MergeBase:    prInfo.MergeBase,
+		Type:         models.PULL_REQUEST_GOGS,
 	}, patch); err != nil {
 		ctx.Handle(500, "NewPullRequest", err)
 		return

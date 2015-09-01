@@ -21,6 +21,11 @@
 	{{else}}
 	<div class="ui green large label"><i class="octicon octicon-issue-opened"></i> {{.i18n.Tr "repo.issues.open_title"}}</div>
 	{{end}}
+
+	{{if .Issue.IsPull}}
+	<a {{if gt .Issue.Poster.Id 0}}href="{{.Issue.Poster.HomeLink}}"{{end}}>{{.Issue.Poster.Name}}</a>
+	<span class="pull-desc">{{$.i18n.Tr "repo.pulls.title_desc" .NumCommits .HeadTarget .BaseTarget | Str2html}}</span>
+	{{else}}
 	{{ $createdStr:= TimeSince .Issue.Created $.Lang }}
 	<span class="time-desc">
 		{{if gt .Issue.Poster.Id 0}}
@@ -31,5 +36,6 @@
 		·
 		{{$.i18n.Tr "repo.issues.num_comments" .Issue.NumComments}}
 	</span>
+	{{end}}
 	<div class="ui divider"></div>
 </div>
