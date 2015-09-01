@@ -1105,9 +1105,9 @@ func GetRepositories(uid int64, private bool) ([]*Repository, error) {
 }
 
 // GetRecentUpdatedRepositories returns the list of repositories that are recently updated.
-func GetRecentUpdatedRepositories(num int) (repos []*Repository, err error) {
-	err = x.Where("is_private=?", false).Limit(num).Desc("updated").Find(&repos)
-	return repos, err
+func GetRecentUpdatedRepositories(page int) (repos []*Repository, err error) {
+	return repos, x.Limit(setting.ExplorePagingNum, (page-1)*setting.ExplorePagingNum).
+		Where("is_private=?", false).Limit(setting.ExplorePagingNum).Desc("updated").Find(&repos)
 }
 
 // GetRepositoryCount returns the total number of repositories of user.
