@@ -19,7 +19,7 @@
                                     <select id="login-type" name="logintype">
                                         <option value="0-0">{{.i18n.Tr "admin.users.local"}}</option>
                                         {{range $key, $val := .LoginSources}}
-                                        <option value="{{$val.Type}}-{{$val.Id}}">{{$val.Name}}</option>
+                                        <option value="{{$val.Type}}-{{$val.ID}}">{{$val.Name}}</option>
                                         {{end}}
                                     </select>
                                 </div>
