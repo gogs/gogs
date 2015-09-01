@@ -18,6 +18,7 @@ import (
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/base"
+	"github.com/gogits/gogs/modules/git"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/mailer"
 	"github.com/gogits/gogs/modules/middleware"
@@ -185,9 +186,30 @@ func Issues(ctx *middleware.Context) {
 }
 
 func renderAttachmentSettings(ctx *middleware.Context) {
+	ctx.Data["RequireDropzone"] = true
 	ctx.Data["IsAttachmentEnabled"] = setting.AttachmentEnabled
 	ctx.Data["AttachmentAllowedTypes"] = setting.AttachmentAllowedTypes
 	ctx.Data["AttachmentMaxFiles"] = setting.AttachmentMaxFiles
+}
+
+func RetrieveRepoMilestonesAndAssignees(ctx *middleware.Context, repo *models.Repository) {
+	var err error
+	ctx.Data["OpenMilestones"], err = models.GetMilestones(repo.ID, -1, false)
+	if err != nil {
+		ctx.Handle(500, "GetMilestones: %v", err)
+		return
+	}
+	ctx.Data["ClosedMilestones"], err = models.GetMilestones(repo.ID, -1, true)
+	if err != nil {
+		ctx.Handle(500, "GetMilestones: %v", err)
+		return
+	}
+
+	ctx.Data["Assignees"], err = repo.GetAssignees()
+	if err != nil {
+		ctx.Handle(500, "GetAssignees: %v", err)
+		return
+	}
 }
 
 func RetrieveRepoMetas(ctx *middleware.Context, repo *models.Repository) []*models.Label {
@@ -202,29 +224,17 @@ func RetrieveRepoMetas(ctx *middleware.Context, repo *models.Repository) []*mode
 	}
 	ctx.Data["Labels"] = labels
 
-	ctx.Data["OpenMilestones"], err = models.GetMilestones(repo.ID, -1, false)
-	if err != nil {
-		ctx.Handle(500, "GetMilestones: %v", err)
-		return nil
-	}
-	ctx.Data["ClosedMilestones"], err = models.GetMilestones(repo.ID, -1, true)
-	if err != nil {
-		ctx.Handle(500, "GetMilestones: %v", err)
+	RetrieveRepoMilestonesAndAssignees(ctx, repo)
+	if ctx.Written() {
 		return nil
 	}
 
-	ctx.Data["Assignees"], err = repo.GetAssignees()
-	if err != nil {
-		ctx.Handle(500, "GetAssignees: %v", err)
-		return nil
-	}
 	return labels
 }
 
 func NewIssue(ctx *middleware.Context) {
 	ctx.Data["Title"] = ctx.Tr("repo.issues.new")
 	ctx.Data["PageIsIssueList"] = true
-	ctx.Data["RequireDropzone"] = true
 	renderAttachmentSettings(ctx)
 
 	RetrieveRepoMetas(ctx, ctx.Repo.Repository)
@@ -235,62 +245,73 @@ func NewIssue(ctx *middleware.Context) {
 	ctx.HTML(200, ISSUE_NEW)
 }
 
+func ValidateRepoMetas(ctx *middleware.Context, form auth.CreateIssueForm) ([]int64, int64, int64) {
+	var (
+		repo = ctx.Repo.Repository
+		err  error
+	)
+
+	labels := RetrieveRepoMetas(ctx, ctx.Repo.Repository)
+	if ctx.Written() {
+		return nil, 0, 0
+	}
+
+	if !ctx.Repo.IsAdmin() {
+		return nil, 0, 0
+	}
+
+	// Check labels.
+	labelIDs := base.StringsToInt64s(strings.Split(form.LabelIDs, ","))
+	labelIDMark := base.Int64sToMap(labelIDs)
+	hasSelected := false
+	for i := range labels {
+		if labelIDMark[labels[i].ID] {
+			labels[i].IsChecked = true
+			hasSelected = true
+		}
+	}
+	ctx.Data["HasSelectedLabel"] = hasSelected
+	ctx.Data["label_ids"] = form.LabelIDs
+	ctx.Data["Labels"] = labels
+
+	// Check milestone.
+	milestoneID := form.MilestoneID
+	if milestoneID > 0 {
+		ctx.Data["Milestone"], err = repo.GetMilestoneByID(milestoneID)
+		if err != nil {
+			ctx.Handle(500, "GetMilestoneByID: %v", err)
+			return nil, 0, 0
+		}
+		ctx.Data["milestone_id"] = milestoneID
+	}
+
+	// Check assignee.
+	assigneeID := form.AssigneeID
+	if assigneeID > 0 {
+		ctx.Data["Assignee"], err = repo.GetAssigneeByID(assigneeID)
+		if err != nil {
+			ctx.Handle(500, "GetAssigneeByID: %v", err)
+			return nil, 0, 0
+		}
+		ctx.Data["assignee_id"] = assigneeID
+	}
+
+	return labelIDs, milestoneID, assigneeID
+}
+
 func NewIssuePost(ctx *middleware.Context, form auth.CreateIssueForm) {
 	ctx.Data["Title"] = ctx.Tr("repo.issues.new")
 	ctx.Data["PageIsIssueList"] = true
-	ctx.Data["RequireDropzone"] = true
 	renderAttachmentSettings(ctx)
 
 	var (
 		repo        = ctx.Repo.Repository
-		labelIDs    []int64
-		milestoneID int64
-		assigneeID  int64
 		attachments []string
-		err         error
 	)
 
-	if ctx.Repo.IsAdmin() {
-		labels := RetrieveRepoMetas(ctx, repo)
-		if ctx.Written() {
-			return
-		}
-
-		// Check labels.
-		labelIDs = base.StringsToInt64s(strings.Split(form.LabelIDs, ","))
-		labelIDMark := base.Int64sToMap(labelIDs)
-		hasSelected := false
-		for i := range labels {
-			if labelIDMark[labels[i].ID] {
-				labels[i].IsChecked = true
-				hasSelected = true
-			}
-		}
-		ctx.Data["HasSelectedLabel"] = hasSelected
-		ctx.Data["label_ids"] = form.LabelIDs
-		ctx.Data["Labels"] = labels
-
-		// Check milestone.
-		milestoneID = form.MilestoneID
-		if milestoneID > 0 {
-			ctx.Data["Milestone"], err = repo.GetMilestoneByID(milestoneID)
-			if err != nil {
-				ctx.Handle(500, "GetMilestoneByID: %v", err)
-				return
-			}
-			ctx.Data["milestone_id"] = milestoneID
-		}
-
-		// Check assignee.
-		assigneeID = form.AssigneeID
-		if assigneeID > 0 {
-			ctx.Data["Assignee"], err = repo.GetAssigneeByID(assigneeID)
-			if err != nil {
-				ctx.Handle(500, "GetAssigneeByID: %v", err)
-				return
-			}
-			ctx.Data["assignee_id"] = assigneeID
-		}
+	labelIDs, milestoneID, assigneeID := ValidateRepoMetas(ctx, form)
+	if ctx.Written() {
+		return
 	}
 
 	if setting.AttachmentEnabled {
@@ -332,7 +353,7 @@ func NewIssuePost(ctx *middleware.Context, form auth.CreateIssueForm) {
 
 	// Mail watchers and mentions.
 	if setting.Service.EnableNotifyMail {
-		tos, err := mailer.SendIssueNotifyMail(ctx.User, ctx.Repo.Owner, ctx.Repo.Repository, issue)
+		tos, err := mailer.SendIssueNotifyMail(ctx.User, ctx.Repo.Owner, repo, issue)
 		if err != nil {
 			ctx.Handle(500, "SendIssueNotifyMail", err)
 			return
@@ -348,13 +369,13 @@ func NewIssuePost(ctx *middleware.Context, form auth.CreateIssueForm) {
 			newTos = append(newTos, m)
 		}
 		if err = mailer.SendIssueMentionMail(ctx.Render, ctx.User, ctx.Repo.Owner,
-			ctx.Repo.Repository, issue, models.GetUserEmailsByNames(newTos)); err != nil {
+			repo, issue, models.GetUserEmailsByNames(newTos)); err != nil {
 			ctx.Handle(500, "SendIssueMentionMail", err)
 			return
 		}
 	}
 
-	log.Trace("Issue created: %d/%d", ctx.Repo.Repository.ID, issue.ID)
+	log.Trace("Issue created: %d/%d", repo.ID, issue.ID)
 	ctx.Redirect(ctx.Repo.RepoLink + "/issues/" + com.ToStr(issue.Index))
 }
 
@@ -421,6 +442,15 @@ func ViewIssue(ctx *middleware.Context) {
 	}
 	ctx.Data["Title"] = issue.Name
 
+	// Make sure type and URL matches.
+	if ctx.Params(":type") == "issues" && issue.IsPull {
+		ctx.Redirect(ctx.Repo.RepoLink + "/pulls/" + com.ToStr(issue.Index))
+		return
+	} else if ctx.Params(":type") == "pulls" && !issue.IsPull {
+		ctx.Redirect(ctx.Repo.RepoLink + "/issues/" + com.ToStr(issue.Index))
+		return
+	}
+
 	if err = issue.GetPoster(); err != nil {
 		ctx.Handle(500, "GetPoster", err)
 		return
@@ -428,6 +458,30 @@ func ViewIssue(ctx *middleware.Context) {
 	issue.RenderedContent = string(base.RenderMarkdown([]byte(issue.Content), ctx.Repo.RepoLink))
 
 	repo := ctx.Repo.Repository
+
+	// Get more information if it's a pull request.
+	if issue.IsPull {
+		headRepoPath, err := issue.PullRepo.HeadRepo.RepoPath()
+		if err != nil {
+			ctx.Handle(500, "PullRepo.HeadRepo.RepoPath", err)
+			return
+		}
+
+		headGitRepo, err := git.OpenRepository(headRepoPath)
+		if err != nil {
+			ctx.Handle(500, "OpenRepository", err)
+			return
+		}
+
+		prInfo, err := headGitRepo.GetPullRequestInfo(models.RepoPath(repo.Owner.Name, repo.Name),
+			issue.PullRepo.BaseBranch, issue.PullRepo.HeadBarcnh)
+		if err != nil {
+			ctx.Handle(500, "GetPullRequestInfo", err)
+			return
+		}
+		ctx.Data["NumCommits"] = prInfo.Commits.Len()
+		ctx.Data["NumFiles"] = prInfo.NumFiles
+	}
 
 	// Metas.
 	// Check labels.
@@ -456,20 +510,8 @@ func ViewIssue(ctx *middleware.Context) {
 
 	// Check milestone and assignee.
 	if ctx.Repo.IsAdmin() {
-		ctx.Data["OpenMilestones"], err = models.GetMilestones(repo.ID, -1, false)
-		if err != nil {
-			ctx.Handle(500, "GetMilestones: %v", err)
-			return
-		}
-		ctx.Data["ClosedMilestones"], err = models.GetMilestones(repo.ID, -1, true)
-		if err != nil {
-			ctx.Handle(500, "GetMilestones: %v", err)
-			return
-		}
-
-		ctx.Data["Assignees"], err = repo.GetAssignees()
-		if err != nil {
-			ctx.Handle(500, "GetAssignees: %v", err)
+		RetrieveRepoMilestonesAndAssignees(ctx, repo)
+		if ctx.Written() {
 			return
 		}
 	}

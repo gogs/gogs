@@ -9,7 +9,31 @@
 			</div>
 		</div>
 		<div class="ui divider"></div>
+		{{if .Issue.IsPull}}
+		{{template "repo/issue/view_title" .}}
+		<div class="ui top attached pull tabular menu">
+		  <a class="item active" href="{{.RepoLink}}/pulls/{{.Issue.Index}}">
+		  	<span class="octicon octicon-comment-discussion"></span>
+		  	{{$.i18n.Tr "repo.pulls.tab_conversation"}}
+		  	<span class="ui label">{{.Issue.NumComments}}</span>
+		  </a>
+		  <a class="item" href="{{.RepoLink}}/pulls/{{.Issue.Index}}/commits">
+		  	<span class="octicon octicon-git-commit"></span>
+		  	{{$.i18n.Tr "repo.pulls.tab_commits"}}
+		  	<span class="ui label">{{.NumCommits}}</span>
+		  </a>
+		  <a class="item" href="{{.RepoLink}}/pulls/{{.Issue.Index}}/files">
+		  	<span class="octicon octicon-diff"></span>
+		  	{{$.i18n.Tr "repo.pulls.tab_files"}}
+		  	<span class="ui label">{{.NumFiles}}</span>
+		  </a>
+		</div>
+	  <div class="ui bottom attached tab pull segment active" data-tab="request-{{.ID}}">
+	  	{{template "repo/issue/view_content" .}}
+	  </div>
+		{{else}}
 		{{template "repo/issue/view_content" .}}
+		{{end}}
 	</div>
 </div>
 {{template "base/footer" .}}

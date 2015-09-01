@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"mime/multipart"
 	"os"
 	"path"
@@ -21,6 +22,7 @@ import (
 
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
+	"github.com/gogits/gogs/modules/process"
 	"github.com/gogits/gogs/modules/setting"
 	gouuid "github.com/gogits/gogs/modules/uuid"
 )
@@ -44,9 +46,10 @@ type Issue struct {
 	MilestoneID     int64
 	Milestone       *Milestone `xorm:"-"`
 	AssigneeID      int64
-	Assignee        *User `xorm:"-"`
-	IsRead          bool  `xorm:"-"`
-	IsPull          bool  // Indicates whether is a pull request or not.
+	Assignee        *User     `xorm:"-"`
+	IsRead          bool      `xorm:"-"`
+	IsPull          bool      // Indicates whether is a pull request or not.
+	PullRepo        *PullRepo `xorm:"-"`
 	IsClosed        bool
 	Content         string `xorm:"TEXT"`
 	RenderedContent string `xorm:"-"`
@@ -91,6 +94,11 @@ func (i *Issue) AfterSet(colName string, _ xorm.Cell) {
 		i.Assignee, err = GetUserByID(i.AssigneeID)
 		if err != nil {
 			log.Error(3, "GetUserByID[%d]: %v", i.ID, err)
+		}
+	case "is_pull":
+		i.PullRepo, err = GetPullRepoByPullID(i.ID)
+		if err != nil {
+			log.Error(3, "GetPullRepoByPullID[%d]: %v", i.ID, err)
 		}
 	case "created":
 		i.Created = regulateTimeZone(i.Created)
@@ -273,30 +281,11 @@ func (i *Issue) ChangeStatus(doer *User, isClosed bool) (err error) {
 	return sess.Commit()
 }
 
-// CreateIssue creates new issue with labels for repository.
-func NewIssue(repo *Repository, issue *Issue, labelIDs []int64, uuids []string) (err error) {
-	// Check attachments.
-	attachments := make([]*Attachment, 0, len(uuids))
-	for _, uuid := range uuids {
-		attach, err := GetAttachmentByUUID(uuid)
-		if err != nil {
-			if IsErrAttachmentNotExist(err) {
-				continue
-			}
-			return fmt.Errorf("GetAttachmentByUUID[%s]: %v", uuid, err)
-		}
-		attachments = append(attachments, attach)
-	}
-
-	sess := x.NewSession()
-	defer sessionRelease(sess)
-	if err = sess.Begin(); err != nil {
+// It's caller's responsibility to create action.
+func newIssue(e *xorm.Session, repo *Repository, issue *Issue, labelIDs []int64, uuids []string) (err error) {
+	if _, err = e.Insert(issue); err != nil {
 		return err
-	}
-
-	if _, err = sess.Insert(issue); err != nil {
-		return err
-	} else if _, err = sess.Exec("UPDATE `repository` SET num_issues=num_issues+1 WHERE id=?", issue.RepoID); err != nil {
+	} else if _, err = e.Exec("UPDATE `repository` SET num_issues=num_issues+1 WHERE id=?", issue.RepoID); err != nil {
 		return err
 	}
 
@@ -306,32 +295,60 @@ func NewIssue(repo *Repository, issue *Issue, labelIDs []int64, uuids []string) 
 			continue
 		}
 
-		label, err = getLabelByID(sess, id)
+		label, err = getLabelByID(e, id)
 		if err != nil {
 			return err
 		}
-		if err = issue.addLabel(sess, label); err != nil {
+		if err = issue.addLabel(e, label); err != nil {
 			return fmt.Errorf("addLabel: %v", err)
 		}
 
 	}
 
 	if issue.MilestoneID > 0 {
-		if err = changeMilestoneAssign(sess, 0, issue); err != nil {
+		if err = changeMilestoneAssign(e, 0, issue); err != nil {
 			return err
 		}
 	}
 
-	if err = newIssueUsers(sess, repo, issue); err != nil {
+	if err = newIssueUsers(e, repo, issue); err != nil {
 		return err
+	}
+
+	// Check attachments.
+	attachments := make([]*Attachment, 0, len(uuids))
+	for _, uuid := range uuids {
+		attach, err := getAttachmentByUUID(e, uuid)
+		if err != nil {
+			if IsErrAttachmentNotExist(err) {
+				continue
+			}
+			return fmt.Errorf("getAttachmentByUUID[%s]: %v", uuid, err)
+		}
+		attachments = append(attachments, attach)
 	}
 
 	for i := range attachments {
 		attachments[i].IssueID = issue.ID
 		// No assign value could be 0, so ignore AllCols().
-		if _, err = sess.Id(attachments[i].ID).Update(attachments[i]); err != nil {
+		if _, err = e.Id(attachments[i].ID).Update(attachments[i]); err != nil {
 			return fmt.Errorf("update attachment[%d]: %v", attachments[i].ID, err)
 		}
+	}
+
+	return nil
+}
+
+// NewIssue creates new issue with labels for repository.
+func NewIssue(repo *Repository, issue *Issue, labelIDs []int64, uuids []string) (err error) {
+	sess := x.NewSession()
+	defer sessionRelease(sess)
+	if err = sess.Begin(); err != nil {
+		return err
+	}
+
+	if err = newIssue(sess, repo, issue, labelIDs, uuids); err != nil {
+		return fmt.Errorf("newIssue: %v", err)
 	}
 
 	// Notify watchers.
@@ -811,6 +828,117 @@ func UpdateIssueUsersByMentions(uids []int64, iid int64) error {
 		}
 	}
 	return nil
+}
+
+// __________      .__  .__ __________                                     __
+// \______   \__ __|  | |  |\______   \ ____  ________ __   ____   _______/  |_
+//  |     ___/  |  \  | |  | |       _// __ \/ ____/  |  \_/ __ \ /  ___/\   __\
+//  |    |   |  |  /  |_|  |_|    |   \  ___< <_|  |  |  /\  ___/ \___ \  |  |
+//  |____|   |____/|____/____/____|_  /\___  >__   |____/  \___  >____  > |__|
+//                                  \/     \/   |__|           \/     \/
+
+type PullRequestType int
+
+const (
+	PULL_REQUEST_GOGS = iota
+	PLLL_ERQUEST_GIT
+)
+
+// PullRepo represents relation between pull request and repositories.
+type PullRepo struct {
+	ID           int64       `xorm:"pk autoincr"`
+	PullID       int64       `xorm:"INDEX"`
+	HeadRepoID   int64       `xorm:"UNIQUE(s)"`
+	HeadRepo     *Repository `xorm:"-"`
+	BaseRepoID   int64       `xorm:"UNIQUE(s)"`
+	HeadBarcnh   string      `xorm:"UNIQUE(s)"`
+	BaseBranch   string      `xorm:"UNIQUE(s)"`
+	MergeBase    string      `xorm:"VARCHAR(40)"`
+	Type         PullRequestType
+	CanAutoMerge bool
+}
+
+func (pr *PullRepo) AfterSet(colName string, _ xorm.Cell) {
+	var err error
+	switch colName {
+	case "head_repo_id":
+		pr.HeadRepo, err = GetRepositoryByID(pr.HeadRepoID)
+		if err != nil {
+			log.Error(3, "GetRepositoryByID[%d]: %v", pr.ID, err)
+		}
+	}
+}
+
+// NewPullRequest creates new pull request with labels for repository.
+func NewPullRequest(repo *Repository, pr *Issue, labelIDs []int64, uuids []string, pullRepo *PullRepo, patch []byte) (err error) {
+
+	sess := x.NewSession()
+	defer sessionRelease(sess)
+	if err = sess.Begin(); err != nil {
+		return err
+	}
+
+	if err = newIssue(sess, repo, pr, labelIDs, uuids); err != nil {
+		return fmt.Errorf("newIssue: %v", err)
+	}
+
+	// Notify watchers.
+	act := &Action{
+		ActUserID:    pr.Poster.Id,
+		ActUserName:  pr.Poster.Name,
+		ActEmail:     pr.Poster.Email,
+		OpType:       PULL_REQUEST,
+		Content:      fmt.Sprintf("%d|%s", pr.Index, pr.Name),
+		RepoID:       repo.ID,
+		RepoUserName: repo.Owner.Name,
+		RepoName:     repo.Name,
+		IsPrivate:    repo.IsPrivate,
+	}
+	if err = notifyWatchers(sess, act); err != nil {
+		return err
+	}
+
+	// Test apply patch.
+	repoPath, err := repo.RepoPath()
+	if err != nil {
+		return fmt.Errorf("RepoPath: %v", err)
+	}
+	patchPath := path.Join(repoPath, "pulls", com.ToStr(pr.ID)+".patch")
+
+	os.MkdirAll(path.Dir(patchPath), os.ModePerm)
+	if err = ioutil.WriteFile(patchPath, patch, 0644); err != nil {
+		return fmt.Errorf("save patch: %v", err)
+	}
+	defer os.Remove(patchPath)
+
+	stdout, stderr, err := process.ExecDir(-1, repoPath,
+		fmt.Sprintf("NewPullRequest(git apply --check): %d", repo.ID),
+		"git", "apply", "--check", "-v", patchPath)
+	if err != nil {
+		if strings.Contains(stderr, "fatal:") {
+			return fmt.Errorf("git apply --check: %v - %s", err, stderr)
+		}
+	}
+	pullRepo.CanAutoMerge = !strings.Contains(stdout, "error: patch failed:")
+
+	pullRepo.PullID = pr.ID
+	if _, err = sess.Insert(pullRepo); err != nil {
+		return fmt.Errorf("insert pull repo: %v", err)
+	}
+
+	return sess.Commit()
+}
+
+// GetPullRepoByPullID returns pull repo by given pull ID.
+func GetPullRepoByPullID(pullID int64) (*PullRepo, error) {
+	pullRepo := new(PullRepo)
+	has, err := x.Where("pull_id=?", pullID).Get(pullRepo)
+	if err != nil {
+		return nil, err
+	} else if !has {
+		return nil, ErrPullRepoNotExist{0, pullID}
+	}
+	return pullRepo, nil
 }
 
 // .____          ___.          .__

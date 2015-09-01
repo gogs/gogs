@@ -297,6 +297,7 @@ func CompareDiff(ctx *middleware.Context) {
 	}
 	commits = models.ValidateCommitsWithEmails(commits)
 
+	ctx.Data["CommitRepoLink"] = ctx.Repo.RepoLink
 	ctx.Data["Commits"] = commits
 	ctx.Data["CommitCount"] = commits.Len()
 	ctx.Data["BeforeCommitID"] = beforeCommitID

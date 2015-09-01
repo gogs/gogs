@@ -160,7 +160,6 @@ type Repository struct {
 	IsFork   bool `xorm:"NOT NULL DEFAULT false"`
 	ForkID   int64
 	BaseRepo *Repository `xorm:"-"`
-	ForkInfo *ForkInfo   `xorm:"-"`
 
 	Created time.Time `xorm:"CREATED"`
 	Updated time.Time `xorm:"UPDATED"`
@@ -168,15 +167,6 @@ type Repository struct {
 
 func (repo *Repository) AfterSet(colName string, _ xorm.Cell) {
 	switch colName {
-	case "is_fork":
-		forkInfo := new(ForkInfo)
-		has, err := x.Where("repo_id=?", repo.ID).Get(forkInfo)
-		if err != nil {
-			log.Error(3, "get fork in[%d]: %v", repo.ID, err)
-			return
-		} else if has {
-			repo.ForkInfo = forkInfo
-		}
 	case "updated":
 		repo.Updated = regulateTimeZone(repo.Updated)
 	}
@@ -1047,8 +1037,6 @@ func DeleteRepository(uid, repoID int64) error {
 	if repo.IsFork {
 		if _, err = sess.Exec("UPDATE `repository` SET num_forks=num_forks-1 WHERE id=?", repo.ForkID); err != nil {
 			return fmt.Errorf("decrease fork count: %v", err)
-		} else if _, err = sess.Delete(&ForkInfo{RepoID: repo.ID}); err != nil {
-			return fmt.Errorf("delete fork info: %v", err)
 		}
 	}
 
@@ -1094,9 +1082,6 @@ func DeleteRepository(uid, repoID int64) error {
 		} else {
 			if _, err = x.Exec("UPDATE `repository` SET fork_id=0,is_fork=? WHERE fork_id=?", false, repo.ID); err != nil {
 				log.Error(4, "reset 'fork_id' and 'is_fork': %v", err)
-			}
-			if _, err = x.Delete(&ForkInfo{ForkID: repo.ID}); err != nil {
-				log.Error(4, "clear fork infos: %v", err)
 			}
 		}
 	}
@@ -1669,13 +1654,6 @@ func IsStaring(uid, repoId int64) bool {
 //  \___  / \____/|__|  |__|_ \
 //      \/                   \/
 
-type ForkInfo struct {
-	ID            int64 `xorm:"pk autoincr"`
-	ForkID        int64
-	RepoID        int64  `xorm:"UNIQUE"`
-	StartCommitID string `xorm:"VARCHAR(40)"`
-}
-
 // HasForkedRepo checks if given user has already forked a repository with given ID.
 func HasForkedRepo(ownerID, repoID int64) (*Repository, bool) {
 	repo := new(Repository)
@@ -1709,13 +1687,6 @@ func ForkRepository(u *User, oldRepo *Repository, name, desc string) (_ *Reposit
 	if _, err = sess.Exec("UPDATE `repository` SET num_forks=num_forks+1 WHERE id=?", oldRepo.ID); err != nil {
 		return nil, err
 	}
-	// else if _, err = sess.Insert(&ForkInfo{
-	// 	ForkID:        oldRepo.ID,
-	// 	RepoID:        repo.ID,
-	// 	StartCommitID: "",
-	// }); err != nil {
-	// 	return nil, fmt.Errorf("insert fork info: %v", err)
-	// }
 
 	oldRepoPath, err := oldRepo.RepoPath()
 	if err != nil {

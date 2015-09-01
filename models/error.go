@@ -281,6 +281,27 @@ func (err ErrIssueNotExist) Error() string {
 	return fmt.Sprintf("issue does not exist [id: %d, repo_id: %d, index: %d]", err.ID, err.RepoID, err.Index)
 }
 
+// __________      .__  .__ __________                                     __
+// \______   \__ __|  | |  |\______   \ ____  ________ __   ____   _______/  |_
+//  |     ___/  |  \  | |  | |       _// __ \/ ____/  |  \_/ __ \ /  ___/\   __\
+//  |    |   |  |  /  |_|  |_|    |   \  ___< <_|  |  |  /\  ___/ \___ \  |  |
+//  |____|   |____/|____/____/____|_  /\___  >__   |____/  \___  >____  > |__|
+//                                  \/     \/   |__|           \/     \/
+
+type ErrPullRepoNotExist struct {
+	ID     int64
+	PullID int64
+}
+
+func IsErrPullRepoNotExist(err error) bool {
+	_, ok := err.(ErrPullRepoNotExist)
+	return ok
+}
+
+func (err ErrPullRepoNotExist) Error() string {
+	return fmt.Sprintf("pull repo does not exist [id: %d, pull_id: %d]", err.ID, err.PullID)
+}
+
 // _________                                       __
 // \_   ___ \  ____   _____   _____   ____   _____/  |_
 // /    \  \/ /  _ \ /     \ /     \_/ __ \ /    \   __\
