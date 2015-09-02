@@ -18,7 +18,6 @@ import (
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/modules/git"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/mailer"
 	"github.com/gogits/gogs/modules/middleware"
@@ -427,7 +426,6 @@ func UploadIssueAttachment(ctx *middleware.Context) {
 }
 
 func ViewIssue(ctx *middleware.Context) {
-	ctx.Data["PageIsIssueList"] = true
 	ctx.Data["RequireDropzone"] = true
 	renderAttachmentSettings(ctx)
 
@@ -451,6 +449,13 @@ func ViewIssue(ctx *middleware.Context) {
 		return
 	}
 
+	if issue.IsPull {
+		ctx.Data["PageIsPullList"] = true
+		ctx.Data["PageIsPullConversation"] = true
+	} else {
+		ctx.Data["PageIsIssueList"] = true
+	}
+
 	if err = issue.GetPoster(); err != nil {
 		ctx.Handle(500, "GetPoster", err)
 		return
@@ -461,29 +466,10 @@ func ViewIssue(ctx *middleware.Context) {
 
 	// Get more information if it's a pull request.
 	if issue.IsPull {
-		ctx.Data["HeadTarget"] = issue.PullRepo.HeadUserName + "/" + issue.PullRepo.HeadBarcnh
-		ctx.Data["BaseTarget"] = ctx.Repo.Owner.Name + "/" + issue.PullRepo.BaseBranch
-
-		headRepoPath, err := issue.PullRepo.HeadRepo.RepoPath()
-		if err != nil {
-			ctx.Handle(500, "PullRepo.HeadRepo.RepoPath", err)
+		PrepareViewPullInfo(ctx, issue)
+		if ctx.Written() {
 			return
 		}
-
-		headGitRepo, err := git.OpenRepository(headRepoPath)
-		if err != nil {
-			ctx.Handle(500, "OpenRepository", err)
-			return
-		}
-
-		prInfo, err := headGitRepo.GetPullRequestInfo(models.RepoPath(repo.Owner.Name, repo.Name),
-			issue.PullRepo.BaseBranch, issue.PullRepo.HeadBarcnh)
-		if err != nil {
-			ctx.Handle(500, "GetPullRequestInfo", err)
-			return
-		}
-		ctx.Data["NumCommits"] = prInfo.Commits.Len()
-		ctx.Data["NumFiles"] = prInfo.NumFiles
 	}
 
 	// Metas.

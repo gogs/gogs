@@ -7,6 +7,7 @@ package git
 import (
 	"bufio"
 	"container/list"
+	"net/http"
 	"strings"
 )
 
@@ -131,4 +132,31 @@ func (c *Commit) GetSubModules() (map[string]*SubModule, error) {
 	}
 
 	return c.submodules, nil
+}
+
+func isImageFile(data []byte) (string, bool) {
+	contentType := http.DetectContentType(data)
+	if strings.Index(contentType, "image/") != -1 {
+		return contentType, true
+	}
+	return contentType, false
+}
+
+func (c *Commit) IsImageFile(name string) bool {
+	blob, err := c.GetBlobByPath(name)
+	if err != nil {
+		return false
+	}
+
+	dataRc, err := blob.Data()
+	if err != nil {
+		return false
+	}
+	buf := make([]byte, 1024)
+	n, _ := dataRc.Read(buf)
+	if n > 0 {
+		buf = buf[:n]
+	}
+	_, isImage := isImageFile(buf)
+	return isImage
 }

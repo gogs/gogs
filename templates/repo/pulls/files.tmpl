@@ -1,5 +1,5 @@
 {{template "base/head" .}}
-<div class="repository view issue pull">
+<div class="repository view issue pull files diff">
 	{{template "repo/header" .}}
 	<div class="ui container">
 		<div class="navbar">
@@ -9,15 +9,11 @@
 			</div>
 		</div>
 		<div class="ui divider"></div>
-		{{if .Issue.IsPull}}
 		{{template "repo/issue/view_title" .}}
 		{{template "repo/pulls/tab_menu" .}}
-	  <div class="ui bottom attached tab pull segment active" data-tab="request-{{.ID}}">
-	  	{{template "repo/issue/view_content" .}}
+	  <div class="ui bottom attached tab pull segment active">
+			{{template "repo/diff_box" .}}
 	  </div>
-		{{else}}
-		{{template "repo/issue/view_content" .}}
-		{{end}}
 	</div>
 </div>
 {{template "base/footer" .}}
