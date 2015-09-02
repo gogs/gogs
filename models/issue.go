@@ -925,6 +925,8 @@ func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository) (err error
 	}
 
 	pr.HasMerged = true
+	pr.Merged = time.Now()
+	pr.MergerID = doer.Id
 	if _, err = sess.Id(pr.ID).AllCols().Update(pr); err != nil {
 		return fmt.Errorf("update pull request: %v", err)
 	}
