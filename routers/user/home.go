@@ -20,7 +20,6 @@ import (
 
 const (
 	DASHBOARD base.TplName = "user/dashboard/dashboard"
-	PULLS     base.TplName = "user/dashboard/pulls"
 	ISSUES    base.TplName = "user/dashboard/issues"
 	STARS     base.TplName = "user/stars"
 	PROFILE   base.TplName = "user/profile"
@@ -139,23 +138,15 @@ func Dashboard(ctx *middleware.Context) {
 	ctx.HTML(200, DASHBOARD)
 }
 
-func Pulls(ctx *middleware.Context) {
-	ctx.Data["Title"] = ctx.Tr("pull_requests")
-	ctx.Data["PageIsDashboard"] = true
-	ctx.Data["PageIsPulls"] = true
-
-	if err := ctx.User.GetOrganizations(); err != nil {
-		ctx.Handle(500, "GetOrganizations", err)
-		return
-	}
-	ctx.Data["ContextUser"] = ctx.User
-
-	ctx.HTML(200, PULLS)
-}
-
 func Issues(ctx *middleware.Context) {
-	ctx.Data["Title"] = ctx.Tr("issues")
-	ctx.Data["PageIsIssues"] = true
+	isPullList := ctx.Params(":type") == "pulls"
+	if isPullList {
+		ctx.Data["Title"] = ctx.Tr("pull_requests")
+		ctx.Data["PageIsPulls"] = true
+	} else {
+		ctx.Data["Title"] = ctx.Tr("issues")
+		ctx.Data["PageIsIssues"] = true
+	}
 
 	ctxUser := getDashboardContextUser(ctx)
 	if ctx.Written() {
@@ -202,17 +193,24 @@ func Issues(ctx *middleware.Context) {
 	repoIDs := make([]int64, 0, len(repos))
 	showRepos := make([]*models.Repository, 0, len(repos))
 	for _, repo := range repos {
-		if repo.NumIssues == 0 {
+		if (isPullList && repo.NumPulls == 0) ||
+			(!isPullList && repo.NumIssues == 0) {
 			continue
 		}
 
 		repoIDs = append(repoIDs, repo.ID)
-		repo.NumOpenIssues = repo.NumIssues - repo.NumClosedIssues
-		allCount += repo.NumOpenIssues
+
+		if isPullList {
+			allCount += repo.NumOpenPulls
+			repo.NumOpenIssues = repo.NumOpenPulls
+			repo.NumClosedIssues = repo.NumClosedPulls
+		} else {
+			allCount += repo.NumOpenIssues
+		}
 
 		if filterMode != models.FM_ALL {
 			// Calculate repository issue count with filter mode.
-			numOpen, numClosed := repo.IssueStats(ctxUser.Id, filterMode)
+			numOpen, numClosed := repo.IssueStats(ctxUser.Id, filterMode, isPullList)
 			repo.NumOpenIssues, repo.NumClosedIssues = int(numOpen), int(numClosed)
 		}
 
@@ -224,7 +222,7 @@ func Issues(ctx *middleware.Context) {
 	}
 	ctx.Data["Repos"] = showRepos
 
-	issueStats := models.GetUserIssueStats(repoID, ctxUser.Id, repoIDs, filterMode)
+	issueStats := models.GetUserIssueStats(repoID, ctxUser.Id, repoIDs, filterMode, isPullList)
 	issueStats.AllCount = int64(allCount)
 
 	page := ctx.QueryInt("page")
@@ -241,8 +239,16 @@ func Issues(ctx *middleware.Context) {
 	ctx.Data["Page"] = paginater.New(total, setting.IssuePagingNum, page, 5)
 
 	// Get issues.
-	issues, err := models.Issues(ctxUser.Id, assigneeID, repoID, posterID, 0,
-		repoIDs, page, isShowClosed, false, "", "")
+	issues, err := models.Issues(&models.IssuesOptions{
+		UserID:     ctxUser.Id,
+		AssigneeID: assigneeID,
+		RepoID:     repoID,
+		PosterID:   posterID,
+		RepoIDs:    repoIDs,
+		Page:       page,
+		IsClosed:   isShowClosed,
+		IsPull:     isPullList,
+	})
 	if err != nil {
 		ctx.Handle(500, "Issues: %v", err)
 		return

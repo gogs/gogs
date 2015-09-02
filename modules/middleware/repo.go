@@ -300,8 +300,6 @@ func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 			ctx.Data["MirrorInterval"] = ctx.Repo.Mirror.Interval
 		}
 
-		repo.NumOpenIssues = repo.NumIssues - repo.NumClosedIssues
-		repo.NumOpenMilestones = repo.NumMilestones - repo.NumClosedMilestones
 		ctx.Repo.Repository = repo
 		ctx.Data["IsBareRepo"] = ctx.Repo.Repository.IsBare
 

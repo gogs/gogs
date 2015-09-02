@@ -1,5 +1,6 @@
 <div class="ui compact small menu">
   <a class="{{if .PageIsIssueList}}active{{end}} item" href="{{.RepoLink}}/issues">{{.i18n.Tr "repo.issues"}}</a>
+  <a class="{{if .PageIsPullList}}active{{end}} item" href="{{.RepoLink}}/pulls">{{.i18n.Tr "repo.pulls"}}</a>
   <a class="{{if .PageIsLabels}}active{{end}} item" href="{{.RepoLink}}/labels">{{.i18n.Tr "repo.labels"}}</a>
   <a class="{{if .PageIsMilestones}}active{{end}} item" href="{{.RepoLink}}/milestones">{{.i18n.Tr "repo.milestones"}}</a>
 </div>
