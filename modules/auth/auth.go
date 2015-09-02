@@ -32,32 +32,34 @@ func SignedInID(ctx *macaron.Context, sess session.Store) int64 {
 	}
 
 	// Check access token.
-	tokenSHA := ctx.Query("token")
-	if len(tokenSHA) == 0 {
-		// Well, check with header again.
-		auHead := ctx.Req.Header.Get("Authorization")
-		if len(auHead) > 0 {
-			auths := strings.Fields(auHead)
-			if len(auths) == 2 && auths[0] == "token" {
-				tokenSHA = auths[1]
+	if IsAPIPath(ctx.Req.URL.Path) {
+		tokenSHA := ctx.Query("token")
+		if len(tokenSHA) == 0 {
+			// Well, check with header again.
+			auHead := ctx.Req.Header.Get("Authorization")
+			if len(auHead) > 0 {
+				auths := strings.Fields(auHead)
+				if len(auths) == 2 && auths[0] == "token" {
+					tokenSHA = auths[1]
+				}
 			}
 		}
-	}
 
-	// Let's see if token is valid.
-	if len(tokenSHA) > 0 {
-		t, err := models.GetAccessTokenBySHA(tokenSHA)
-		if err != nil {
-			if models.IsErrAccessTokenNotExist(err) {
-				log.Error(4, "GetAccessTokenBySHA: %v", err)
+		// Let's see if token is valid.
+		if len(tokenSHA) > 0 {
+			t, err := models.GetAccessTokenBySHA(tokenSHA)
+			if err != nil {
+				if models.IsErrAccessTokenNotExist(err) {
+					log.Error(4, "GetAccessTokenBySHA: %v", err)
+				}
+				return 0
 			}
-			return 0
+			t.Updated = time.Now()
+			if err = models.UpdateAccessToekn(t); err != nil {
+				log.Error(4, "UpdateAccessToekn: %v", err)
+			}
+			return t.UID
 		}
-		t.Updated = time.Now()
-		if err = models.UpdateAccessToekn(t); err != nil {
-			log.Error(4, "UpdateAccessToekn: %v", err)
-		}
-		return t.UID
 	}
 
 	uid := sess.Get("uid")
