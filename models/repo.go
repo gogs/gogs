@@ -167,6 +167,12 @@ type Repository struct {
 
 func (repo *Repository) AfterSet(colName string, _ xorm.Cell) {
 	switch colName {
+	case "num_closed_issues":
+		repo.NumOpenIssues = repo.NumIssues - repo.NumClosedIssues
+	case "num_closed_pulls":
+		repo.NumOpenPulls = repo.NumPulls - repo.NumClosedPulls
+	case "num_closed_milestones":
+		repo.NumOpenMilestones = repo.NumMilestones - repo.NumClosedMilestones
 	case "updated":
 		repo.Updated = regulateTimeZone(repo.Updated)
 	}
@@ -221,8 +227,8 @@ func (repo *Repository) GetMilestoneByID(milestoneID int64) (*Milestone, error) 
 }
 
 // IssueStats returns number of open and closed repository issues by given filter mode.
-func (repo *Repository) IssueStats(uid int64, filterMode int) (int64, int64) {
-	return GetRepoIssueStats(repo.ID, uid, filterMode)
+func (repo *Repository) IssueStats(uid int64, filterMode int, isPull bool) (int64, int64) {
+	return GetRepoIssueStats(repo.ID, uid, filterMode, isPull)
 }
 
 func (repo *Repository) GetMirror() (err error) {

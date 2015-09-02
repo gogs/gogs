@@ -287,10 +287,17 @@ func (i *Issue) ChangeStatus(doer *User, isClosed bool) (err error) {
 }
 
 // It's caller's responsibility to create action.
-func newIssue(e *xorm.Session, repo *Repository, issue *Issue, labelIDs []int64, uuids []string) (err error) {
+func newIssue(e *xorm.Session, repo *Repository, issue *Issue, labelIDs []int64, uuids []string, isPull bool) (err error) {
 	if _, err = e.Insert(issue); err != nil {
 		return err
-	} else if _, err = e.Exec("UPDATE `repository` SET num_issues=num_issues+1 WHERE id=?", issue.RepoID); err != nil {
+	}
+
+	if isPull {
+		_, err = e.Exec("UPDATE `repository` SET num_pulls=num_pulls+1 WHERE id=?", issue.RepoID)
+	} else {
+		_, err = e.Exec("UPDATE `repository` SET num_issues=num_issues+1 WHERE id=?", issue.RepoID)
+	}
+	if err != nil {
 		return err
 	}
 
@@ -352,7 +359,7 @@ func NewIssue(repo *Repository, issue *Issue, labelIDs []int64, uuids []string) 
 		return err
 	}
 
-	if err = newIssue(sess, repo, issue, labelIDs, uuids); err != nil {
+	if err = newIssue(sess, repo, issue, labelIDs, uuids, false); err != nil {
 		return fmt.Errorf("newIssue: %v", err)
 	}
 
@@ -425,33 +432,50 @@ func GetIssueByID(id int64) (*Issue, error) {
 	return issue, nil
 }
 
-// Issues returns a list of issues by given conditions.
-func Issues(uid, assigneeID, repoID, posterID, milestoneID int64, repoIDs []int64, page int, isClosed, isMention bool, labels, sortType string) ([]*Issue, error) {
-	sess := x.Limit(setting.IssuePagingNum, (page-1)*setting.IssuePagingNum)
+type IssuesOptions struct {
+	UserID      int64
+	AssigneeID  int64
+	RepoID      int64
+	PosterID    int64
+	MilestoneID int64
+	RepoIDs     []int64
+	Page        int
+	IsClosed    bool
+	IsMention   bool
+	IsPull      bool
+	Labels      string
+	SortType    string
+}
 
-	if repoID > 0 {
-		sess.Where("issue.repo_id=?", repoID).And("issue.is_closed=?", isClosed)
-	} else if repoIDs != nil {
+// Issues returns a list of issues by given conditions.
+func Issues(opts *IssuesOptions) ([]*Issue, error) {
+	sess := x.Limit(setting.IssuePagingNum, (opts.Page-1)*setting.IssuePagingNum)
+
+	if opts.RepoID > 0 {
+		sess.Where("issue.repo_id=?", opts.RepoID).And("issue.is_closed=?", opts.IsClosed)
+	} else if opts.RepoIDs != nil {
 		// In case repository IDs are provided but actually no repository has issue.
-		if len(repoIDs) == 0 {
+		if len(opts.RepoIDs) == 0 {
 			return make([]*Issue, 0), nil
 		}
-		sess.Where("issue.repo_id IN ("+strings.Join(base.Int64sToStrings(repoIDs), ",")+")").And("issue.is_closed=?", isClosed)
+		sess.Where("issue.repo_id IN ("+strings.Join(base.Int64sToStrings(opts.RepoIDs), ",")+")").And("issue.is_closed=?", opts.IsClosed)
 	} else {
-		sess.Where("issue.is_closed=?", isClosed)
+		sess.Where("issue.is_closed=?", opts.IsClosed)
 	}
 
-	if assigneeID > 0 {
-		sess.And("issue.assignee_id=?", assigneeID)
-	} else if posterID > 0 {
-		sess.And("issue.poster_id=?", posterID)
+	if opts.AssigneeID > 0 {
+		sess.And("issue.assignee_id=?", opts.AssigneeID)
+	} else if opts.PosterID > 0 {
+		sess.And("issue.poster_id=?", opts.PosterID)
 	}
 
-	if milestoneID > 0 {
-		sess.And("issue.milestone_id=?", milestoneID)
+	if opts.MilestoneID > 0 {
+		sess.And("issue.milestone_id=?", opts.MilestoneID)
 	}
 
-	switch sortType {
+	sess.And("issue.is_pull=?", opts.IsPull)
+
+	switch opts.SortType {
 	case "oldest":
 		sess.Asc("created")
 	case "recentupdate":
@@ -468,7 +492,7 @@ func Issues(uid, assigneeID, repoID, posterID, milestoneID int64, repoIDs []int6
 		sess.Desc("created")
 	}
 
-	labelIDs := base.StringsToInt64s(strings.Split(labels, ","))
+	labelIDs := base.StringsToInt64s(strings.Split(opts.Labels, ","))
 	if len(labelIDs) > 0 {
 		validJoin := false
 		queryStr := "issue.id=issue_label.issue_id"
@@ -484,10 +508,10 @@ func Issues(uid, assigneeID, repoID, posterID, milestoneID int64, repoIDs []int6
 		}
 	}
 
-	if isMention {
+	if opts.IsMention {
 		queryStr := "issue.id=issue_user.issue_id AND issue_user.is_mentioned=1"
-		if uid > 0 {
-			queryStr += " AND issue_user.uid=" + com.ToStr(uid)
+		if opts.UserID > 0 {
+			queryStr += " AND issue_user.uid=" + com.ToStr(opts.UserID)
 		}
 		sess.Join("INNER", "issue_user", queryStr)
 	}
@@ -668,53 +692,66 @@ func parseCountResult(results []map[string][]byte) int64 {
 	return 0
 }
 
+type IssueStatsOptions struct {
+	RepoID      int64
+	UserID      int64
+	LabelID     int64
+	MilestoneID int64
+	AssigneeID  int64
+	FilterMode  int
+	IsPull      bool
+}
+
 // GetIssueStats returns issue statistic information by given conditions.
-func GetIssueStats(repoID, uid, labelID, milestoneID, assigneeID int64, filterMode int) *IssueStats {
+func GetIssueStats(opts *IssueStatsOptions) *IssueStats {
 	stats := &IssueStats{}
 
 	queryStr := "SELECT COUNT(*) FROM `issue` "
-	if labelID > 0 {
-		queryStr += "INNER JOIN `issue_label` ON `issue`.id=`issue_label`.issue_id AND `issue_label`.label_id=" + com.ToStr(labelID)
+	if opts.LabelID > 0 {
+		queryStr += "INNER JOIN `issue_label` ON `issue`.id=`issue_label`.issue_id AND `issue_label`.label_id=" + com.ToStr(opts.LabelID)
 	}
 
-	baseCond := " WHERE issue.repo_id=? AND issue.is_closed=?"
-	if milestoneID > 0 {
-		baseCond += " AND issue.milestone_id=" + com.ToStr(milestoneID)
+	baseCond := " WHERE issue.repo_id=" + com.ToStr(opts.RepoID) + " AND issue.is_closed=?"
+	if opts.MilestoneID > 0 {
+		baseCond += " AND issue.milestone_id=" + com.ToStr(opts.MilestoneID)
 	}
-	if assigneeID > 0 {
-		baseCond += " AND assignee_id=" + com.ToStr(assigneeID)
+	if opts.AssigneeID > 0 {
+		baseCond += " AND assignee_id=" + com.ToStr(opts.AssigneeID)
 	}
-	switch filterMode {
+	if opts.IsPull {
+		baseCond += " AND issue.is_pull=1"
+	} else {
+		baseCond += " AND issue.is_pull=0"
+	}
+
+	switch opts.FilterMode {
 	case FM_ALL, FM_ASSIGN:
-		results, _ := x.Query(queryStr+baseCond, repoID, false)
+		results, _ := x.Query(queryStr+baseCond, false)
 		stats.OpenCount = parseCountResult(results)
-		results, _ = x.Query(queryStr+baseCond, repoID, true)
+		results, _ = x.Query(queryStr+baseCond, true)
 		stats.ClosedCount = parseCountResult(results)
 
 	case FM_CREATE:
 		baseCond += " AND poster_id=?"
-		results, _ := x.Query(queryStr+baseCond, repoID, false, uid)
+		results, _ := x.Query(queryStr+baseCond, false, opts.UserID)
 		stats.OpenCount = parseCountResult(results)
-		results, _ = x.Query(queryStr+baseCond, repoID, true, uid)
+		results, _ = x.Query(queryStr+baseCond, true, opts.UserID)
 		stats.ClosedCount = parseCountResult(results)
 
 	case FM_MENTION:
 		queryStr += " INNER JOIN `issue_user` ON `issue`.id=`issue_user`.issue_id"
 		baseCond += " AND `issue_user`.uid=? AND `issue_user`.is_mentioned=?"
-		results, _ := x.Query(queryStr+baseCond, repoID, false, uid, true)
+		results, _ := x.Query(queryStr+baseCond, false, opts.UserID, true)
 		stats.OpenCount = parseCountResult(results)
-		results, _ = x.Query(queryStr+baseCond, repoID, true, uid, true)
+		results, _ = x.Query(queryStr+baseCond, true, opts.UserID, true)
 		stats.ClosedCount = parseCountResult(results)
 	}
 	return stats
 }
 
 // GetUserIssueStats returns issue statistic information for dashboard by given conditions.
-func GetUserIssueStats(repoID, uid int64, repoIDs []int64, filterMode int) *IssueStats {
+func GetUserIssueStats(repoID, uid int64, repoIDs []int64, filterMode int, isPull bool) *IssueStats {
 	stats := &IssueStats{}
-	issue := new(Issue)
-	stats.AssignCount, _ = x.Where("assignee_id=?", uid).And("is_closed=?", false).Count(issue)
-	stats.CreateCount, _ = x.Where("poster_id=?", uid).And("is_closed=?", false).Count(issue)
 
 	queryStr := "SELECT COUNT(*) FROM `issue` "
 	baseCond := " WHERE issue.is_closed=?"
@@ -723,6 +760,18 @@ func GetUserIssueStats(repoID, uid int64, repoIDs []int64, filterMode int) *Issu
 	} else {
 		baseCond += " AND issue.repo_id IN (" + strings.Join(base.Int64sToStrings(repoIDs), ",") + ")"
 	}
+
+	if isPull {
+		baseCond += " AND issue.is_pull=1"
+	} else {
+		baseCond += " AND issue.is_pull=0"
+	}
+
+	results, _ := x.Query(queryStr+baseCond+" AND assignee_id=?", false, uid)
+	stats.AssignCount = parseCountResult(results)
+	results, _ = x.Query(queryStr+baseCond+" AND poster_id=?", false, uid)
+	stats.CreateCount = parseCountResult(results)
+
 	switch filterMode {
 	case FM_ASSIGN:
 		baseCond += " AND assignee_id=" + com.ToStr(uid)
@@ -731,7 +780,7 @@ func GetUserIssueStats(repoID, uid int64, repoIDs []int64, filterMode int) *Issu
 		baseCond += " AND poster_id=" + com.ToStr(uid)
 	}
 
-	results, _ := x.Query(queryStr+baseCond, false)
+	results, _ = x.Query(queryStr+baseCond, false)
 	stats.OpenCount = parseCountResult(results)
 	results, _ = x.Query(queryStr+baseCond, true)
 	stats.ClosedCount = parseCountResult(results)
@@ -739,9 +788,16 @@ func GetUserIssueStats(repoID, uid int64, repoIDs []int64, filterMode int) *Issu
 }
 
 // GetRepoIssueStats returns number of open and closed repository issues by given filter mode.
-func GetRepoIssueStats(repoID, uid int64, filterMode int) (numOpen int64, numClosed int64) {
+func GetRepoIssueStats(repoID, uid int64, filterMode int, isPull bool) (numOpen int64, numClosed int64) {
 	queryStr := "SELECT COUNT(*) FROM `issue` "
 	baseCond := " WHERE issue.repo_id=? AND issue.is_closed=?"
+
+	if isPull {
+		baseCond += " AND issue.is_pull=1"
+	} else {
+		baseCond += " AND issue.is_pull=0"
+	}
+
 	switch filterMode {
 	case FM_ASSIGN:
 		baseCond += " AND assignee_id=" + com.ToStr(uid)
@@ -924,6 +980,10 @@ func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository) (err error
 		return fmt.Errorf("GetCommitIdOfBranch: %v", err)
 	}
 
+	if err = mergePullRequestAction(sess, doer, pr.Pull.Repo, pr.Pull); err != nil {
+		return fmt.Errorf("mergePullRequestAction: %v", err)
+	}
+
 	pr.HasMerged = true
 	pr.Merged = time.Now()
 	pr.MergerID = doer.Id
@@ -975,7 +1035,7 @@ func NewPullRequest(repo *Repository, pull *Issue, labelIDs []int64, uuids []str
 		return err
 	}
 
-	if err = newIssue(sess, repo, pull, labelIDs, uuids); err != nil {
+	if err = newIssue(sess, repo, pull, labelIDs, uuids, true); err != nil {
 		return fmt.Errorf("newIssue: %v", err)
 	}
 
@@ -984,7 +1044,7 @@ func NewPullRequest(repo *Repository, pull *Issue, labelIDs []int64, uuids []str
 		ActUserID:    pull.Poster.Id,
 		ActUserName:  pull.Poster.Name,
 		ActEmail:     pull.Poster.Email,
-		OpType:       PULL_REQUEST,
+		OpType:       CREATE_PULL_REQUEST,
 		Content:      fmt.Sprintf("%d|%s", pull.Index, pull.Name),
 		RepoID:       repo.ID,
 		RepoUserName: repo.Owner.Name,
@@ -1729,11 +1789,21 @@ func createComment(e *xorm.Session, u *User, repo *Repository, issue *Issue, com
 		}
 
 	case COMMENT_TYPE_REOPEN:
-		if _, err = e.Exec("UPDATE `repository` SET num_closed_issues=num_closed_issues-1 WHERE id=?", repo.ID); err != nil {
+		if issue.IsPull {
+			_, err = e.Exec("UPDATE `repository` SET num_closed_pulls=num_closed_pulls-1 WHERE id=?", repo.ID)
+		} else {
+			_, err = e.Exec("UPDATE `repository` SET num_closed_issues=num_closed_issues-1 WHERE id=?", repo.ID)
+		}
+		if err != nil {
 			return nil, err
 		}
 	case COMMENT_TYPE_CLOSE:
-		if _, err = e.Exec("UPDATE `repository` SET num_closed_issues=num_closed_issues+1 WHERE id=?", repo.ID); err != nil {
+		if issue.IsPull {
+			_, err = e.Exec("UPDATE `repository` SET num_closed_pulls=num_closed_pulls+1 WHERE id=?", repo.ID)
+		} else {
+			_, err = e.Exec("UPDATE `repository` SET num_closed_issues=num_closed_issues+1 WHERE id=?", repo.ID)
+		}
+		if err != nil {
 			return nil, err
 		}
 	}

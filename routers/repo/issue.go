@@ -55,8 +55,14 @@ func RetrieveLabels(ctx *middleware.Context) {
 }
 
 func Issues(ctx *middleware.Context) {
-	ctx.Data["Title"] = ctx.Tr("repo.issues")
-	ctx.Data["PageIsIssueList"] = true
+	isPullList := ctx.Params(":type") == "pulls"
+	if isPullList {
+		ctx.Data["Title"] = ctx.Tr("repo.pulls")
+		ctx.Data["PageIsPullList"] = true
+	} else {
+		ctx.Data["Title"] = ctx.Tr("repo.issues")
+		ctx.Data["PageIsIssueList"] = true
+	}
 
 	viewType := ctx.Query("type")
 	sortType := ctx.Query("sort")
@@ -97,7 +103,15 @@ func Issues(ctx *middleware.Context) {
 	selectLabels := ctx.Query("labels")
 	milestoneID := ctx.QueryInt64("milestone")
 	isShowClosed := ctx.Query("state") == "closed"
-	issueStats := models.GetIssueStats(repo.ID, uid, com.StrTo(selectLabels).MustInt64(), milestoneID, assigneeID, filterMode)
+	issueStats := models.GetIssueStats(&models.IssueStatsOptions{
+		RepoID:      repo.ID,
+		UserID:      uid,
+		LabelID:     com.StrTo(selectLabels).MustInt64(),
+		MilestoneID: milestoneID,
+		AssigneeID:  assigneeID,
+		FilterMode:  filterMode,
+		IsPull:      isPullList,
+	})
 
 	page := ctx.QueryInt("page")
 	if page <= 1 {
@@ -113,8 +127,19 @@ func Issues(ctx *middleware.Context) {
 	ctx.Data["Page"] = paginater.New(total, setting.IssuePagingNum, page, 5)
 
 	// Get issues.
-	issues, err := models.Issues(uid, assigneeID, repo.ID, posterID, milestoneID,
-		nil, page, isShowClosed, filterMode == models.FM_MENTION, selectLabels, sortType)
+	issues, err := models.Issues(&models.IssuesOptions{
+		UserID:      uid,
+		AssigneeID:  assigneeID,
+		RepoID:      repo.ID,
+		PosterID:    posterID,
+		MilestoneID: milestoneID,
+		Page:        page,
+		IsClosed:    isShowClosed,
+		IsMention:   filterMode == models.FM_MENTION,
+		IsPull:      isPullList,
+		Labels:      selectLabels,
+		SortType:    sortType,
+	})
 	if err != nil {
 		ctx.Handle(500, "Issues: %v", err)
 		return
@@ -188,6 +213,7 @@ func renderAttachmentSettings(ctx *middleware.Context) {
 	ctx.Data["RequireDropzone"] = true
 	ctx.Data["IsAttachmentEnabled"] = setting.AttachmentEnabled
 	ctx.Data["AttachmentAllowedTypes"] = setting.AttachmentAllowedTypes
+	ctx.Data["AttachmentMaxSize"] = setting.AttachmentMaxSize
 	ctx.Data["AttachmentMaxFiles"] = setting.AttachmentMaxFiles
 }
 
@@ -324,7 +350,7 @@ func NewIssuePost(ctx *middleware.Context, form auth.CreateIssueForm) {
 
 	issue := &models.Issue{
 		RepoID:      ctx.Repo.Repository.ID,
-		Index:       int64(repo.NumIssues) + 1,
+		Index:       int64(repo.NumIssues) + int64(repo.NumPulls) + 1,
 		Name:        form.Title,
 		PosterID:    ctx.User.Id,
 		Poster:      ctx.User,
@@ -1095,8 +1121,4 @@ func DeleteMilestone(ctx *middleware.Context) {
 	ctx.JSON(200, map[string]interface{}{
 		"redirect": ctx.Repo.RepoLink + "/milestones",
 	})
-}
-
-func PullRequest2(ctx *middleware.Context) {
-	ctx.HTML(200, "repo/pr2/list")
 }
