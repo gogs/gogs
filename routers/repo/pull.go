@@ -23,7 +23,6 @@ import (
 const (
 	FORK         base.TplName = "repo/pulls/fork"
 	COMPARE_PULL base.TplName = "repo/pulls/compare"
-	PULLS        base.TplName = "repo/pulls"
 	PULL_COMMITS base.TplName = "repo/pulls/commits"
 	PULL_FILES   base.TplName = "repo/pulls/files"
 )
@@ -127,11 +126,6 @@ func ForkPost(ctx *middleware.Context, form auth.CreateRepoForm) {
 
 	log.Trace("Repository forked[%d]: %s/%s", forkRepo.ID, ctxUser.Name, repo.Name)
 	ctx.Redirect(setting.AppSubUrl + "/" + ctxUser.Name + "/" + repo.Name)
-}
-
-func Pulls(ctx *middleware.Context) {
-	ctx.Data["IsRepoToolbarPulls"] = true
-	ctx.HTML(200, PULLS)
 }
 
 func checkPullInfo(ctx *middleware.Context) *models.Issue {

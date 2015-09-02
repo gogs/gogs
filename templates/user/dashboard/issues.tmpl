@@ -21,7 +21,7 @@
   				{{end}}
   				<div class="ui divider"></div>
           {{range .Repos}}
-          <a class="{{if eq $.RepoID .ID}}active{{end}} item" href="{{$.Link}}?type={{$.ViewType}}{{if not (eq $.RepoID .ID)}}&repo={{.ID}}{{end}}&state={{$.State}}">{{$.SignedUser.Name}}/{{.Name}} <strong class="ui right">{{if $.IsShowClosed}}{{.NumClosedIssues}}{{else}}{{.NumOpenIssues}}{{end}}</strong></a>
+          <a class="{{if eq $.RepoID .ID}}active{{end}} item" href="{{$.Link}}?type={{$.ViewType}}{{if not (eq $.RepoID .ID)}}&repo={{.ID}}{{end}}&state={{$.State}}">{{$.ContextUser.Name}}/{{.Name}} <strong class="ui right">{{if $.IsShowClosed}}{{.NumClosedIssues}}{{else}}{{.NumOpenIssues}}{{end}}</strong></a>
           {{end}}
   			</div>
   		</div>

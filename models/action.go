@@ -27,16 +27,17 @@ import (
 type ActionType int
 
 const (
-	CREATE_REPO   ActionType = iota + 1 // 1
-	RENAME_REPO                         // 2
-	STAR_REPO                           // 3
-	FOLLOW_REPO                         // 4
-	COMMIT_REPO                         // 5
-	CREATE_ISSUE                        // 6
-	PULL_REQUEST                        // 7
-	TRANSFER_REPO                       // 8
-	PUSH_TAG                            // 9
-	COMMENT_ISSUE                       // 10
+	CREATE_REPO         ActionType = iota + 1 // 1
+	RENAME_REPO                               // 2
+	STAR_REPO                                 // 3
+	FOLLOW_REPO                               // 4
+	COMMIT_REPO                               // 5
+	CREATE_ISSUE                              // 6
+	CREATE_PULL_REQUEST                       // 7
+	TRANSFER_REPO                             // 8
+	PUSH_TAG                                  // 9
+	COMMENT_ISSUE                             // 10
+	MERGE_PULL_REQUEST                        // 11
 )
 
 var (
@@ -524,6 +525,25 @@ func transferRepoAction(e Engine, actUser, oldOwner, newOwner *User, repo *Repos
 // TransferRepoAction adds new action for transferring repository.
 func TransferRepoAction(actUser, oldOwner, newOwner *User, repo *Repository) error {
 	return transferRepoAction(x, actUser, oldOwner, newOwner, repo)
+}
+
+func mergePullRequestAction(e Engine, actUser *User, repo *Repository, pull *Issue) error {
+	return notifyWatchers(e, &Action{
+		ActUserID:    actUser.Id,
+		ActUserName:  actUser.Name,
+		ActEmail:     actUser.Email,
+		OpType:       MERGE_PULL_REQUEST,
+		Content:      fmt.Sprintf("%d|%s", pull.Index, pull.Name),
+		RepoID:       repo.ID,
+		RepoUserName: repo.Owner.Name,
+		RepoName:     repo.Name,
+		IsPrivate:    repo.IsPrivate,
+	})
+}
+
+// MergePullRequestAction adds new action for merging pull request.
+func MergePullRequestAction(actUser *User, repo *Repository, pull *Issue) error {
+	return mergePullRequestAction(x, actUser, repo, pull)
 }
 
 // GetFeeds returns action list of given user in given context.

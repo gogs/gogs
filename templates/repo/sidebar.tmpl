@@ -3,9 +3,9 @@
         <li>
             <a class="radius" href="{{.RepoLink}}/issues"><i class="octicon octicon-issue-opened"></i>{{.i18n.Tr "repo.issues"}}<span class="num right label label-blue label-radius">{{.Repository.NumOpenIssues}}</span></a>
         </li>
-        <!-- <li>
-            <a class="radius" href="{{.RepoLink}}/pulls"><i class="octicon octicon-git-pull-request"></i>Pull Requests<span class="num right label label-blue label-radius">{{.Repository.NumOpenPulls}}</span></a>
-        </li> -->
+        <li>
+            <a class="radius" href="{{.RepoLink}}/pulls"><i class="octicon octicon-git-pull-request"></i>{{.i18n.Tr "repo.pulls"}}<span class="num right label label-blue label-radius">{{.Repository.NumOpenPulls}}</span></a>
+        </li>
         <li class="border-bottom"></li>
         <li class="head">{{if .IsViewBranch}}{{.BranchName}}{{else}}{{ShortSha .BranchName}}{{end}}</li>
         <li>

@@ -36,6 +36,9 @@
       <a class="{{if .PageIsIssues}}active{{end}} item" href="{{AppSubUrl}}/org/{{.ContextUser.Name}}/issues">
         <i class="octicon octicon-issue-opened"></i>&nbsp;{{.i18n.Tr "issues"}}
       </a>
+      <a class="{{if .PageIsPulls}}active{{end}} item" href="{{AppSubUrl}}/org/{{.ContextUser.Name}}/pulls">
+        <i class="octicon octicon-git-pull-request"></i>&nbsp;{{.i18n.Tr "pull_requests"}}
+      </a>
       <div class="right menu">
         <div class="item">
           <a class="ui blue basic button" href="{{AppSubUrl}}/org/{{.ContextUser.Name}}">
