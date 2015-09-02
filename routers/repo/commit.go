@@ -204,25 +204,6 @@ func Diff(ctx *middleware.Context) {
 		return
 	}
 
-	isImageFile := func(name string) bool {
-		blob, err := ctx.Repo.Commit.GetBlobByPath(name)
-		if err != nil {
-			return false
-		}
-
-		dataRc, err := blob.Data()
-		if err != nil {
-			return false
-		}
-		buf := make([]byte, 1024)
-		n, _ := dataRc.Read(buf)
-		if n > 0 {
-			buf = buf[:n]
-		}
-		_, isImage := base.IsImageFile(buf)
-		return isImage
-	}
-
 	parents := make([]string, commit.ParentCount())
 	for i := 0; i < commit.ParentCount(); i++ {
 		sha, err := commit.ParentId(i)
@@ -235,7 +216,7 @@ func Diff(ctx *middleware.Context) {
 
 	ctx.Data["Username"] = userName
 	ctx.Data["Reponame"] = repoName
-	ctx.Data["IsImageFile"] = isImageFile
+	ctx.Data["IsImageFile"] = commit.IsImageFile
 	ctx.Data["Title"] = commit.Summary() + " · " + base.ShortSha(commitID)
 	ctx.Data["Commit"] = commit
 	ctx.Data["Author"] = models.ValidateCommitWithEmail(commit)
@@ -271,25 +252,6 @@ func CompareDiff(ctx *middleware.Context) {
 		return
 	}
 
-	isImageFile := func(name string) bool {
-		blob, err := commit.GetBlobByPath(name)
-		if err != nil {
-			return false
-		}
-
-		dataRc, err := blob.Data()
-		if err != nil {
-			return false
-		}
-		buf := make([]byte, 1024)
-		n, _ := dataRc.Read(buf)
-		if n > 0 {
-			buf = buf[:n]
-		}
-		_, isImage := base.IsImageFile(buf)
-		return isImage
-	}
-
 	commits, err := commit.CommitsBeforeUntil(beforeCommitID)
 	if err != nil {
 		ctx.Handle(500, "CommitsBeforeUntil", err)
@@ -304,7 +266,7 @@ func CompareDiff(ctx *middleware.Context) {
 	ctx.Data["AfterCommitID"] = afterCommitID
 	ctx.Data["Username"] = userName
 	ctx.Data["Reponame"] = repoName
-	ctx.Data["IsImageFile"] = isImageFile
+	ctx.Data["IsImageFile"] = commit.IsImageFile
 	ctx.Data["Title"] = "Comparing " + base.ShortSha(beforeCommitID) + "..." + base.ShortSha(afterCommitID) + " · " + userName + "/" + repoName
 	ctx.Data["Commit"] = commit
 	ctx.Data["Diff"] = diff

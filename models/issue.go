@@ -857,6 +857,7 @@ type PullRepo struct {
 	MergeBase    string `xorm:"VARCHAR(40)"`
 	Type         PullRequestType
 	CanAutoMerge bool
+	HasMerged    bool
 }
 
 func (pr *PullRepo) AfterSet(colName string, _ xorm.Cell) {
