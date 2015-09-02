@@ -317,6 +317,7 @@ func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 			return
 		}
 		ctx.Data["RepoLink"] = ctx.Repo.RepoLink
+		ctx.Data["RepoRelPath"] = ctx.Repo.Owner.Name + "/" + ctx.Repo.Repository.Name
 
 		tags, err := ctx.Repo.GitRepo.GetTags()
 		if err != nil {

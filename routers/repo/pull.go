@@ -170,12 +170,12 @@ func checkPullInfo(ctx *middleware.Context) *models.Issue {
 func PrepareViewPullInfo(ctx *middleware.Context, pull *models.Issue) *git.PullRequestInfo {
 	repo := ctx.Repo.Repository
 
-	ctx.Data["HeadTarget"] = pull.PullRepo.HeadUserName + "/" + pull.PullRepo.HeadBarcnh
-	ctx.Data["BaseTarget"] = ctx.Repo.Owner.Name + "/" + pull.PullRepo.BaseBranch
+	ctx.Data["HeadTarget"] = pull.HeadUserName + "/" + pull.HeadBarcnh
+	ctx.Data["BaseTarget"] = ctx.Repo.Owner.Name + "/" + pull.BaseBranch
 
-	headRepoPath, err := pull.PullRepo.HeadRepo.RepoPath()
+	headRepoPath, err := pull.HeadRepo.RepoPath()
 	if err != nil {
-		ctx.Handle(500, "PullRepo.HeadRepo.RepoPath", err)
+		ctx.Handle(500, "HeadRepo.RepoPath", err)
 		return nil
 	}
 
@@ -186,7 +186,7 @@ func PrepareViewPullInfo(ctx *middleware.Context, pull *models.Issue) *git.PullR
 	}
 
 	prInfo, err := headGitRepo.GetPullRequestInfo(models.RepoPath(repo.Owner.Name, repo.Name),
-		pull.PullRepo.BaseBranch, pull.PullRepo.HeadBarcnh)
+		pull.BaseBranch, pull.HeadBarcnh)
 	if err != nil {
 		ctx.Handle(500, "GetPullRequestInfo", err)
 		return nil
@@ -210,7 +210,10 @@ func ViewPullCommits(ctx *middleware.Context) {
 	}
 	prInfo.Commits = models.ValidateCommitsWithEmails(prInfo.Commits)
 	ctx.Data["Commits"] = prInfo.Commits
+	ctx.Data["CommitCount"] = prInfo.Commits.Len()
 
+	ctx.Data["Username"] = pull.HeadUserName
+	ctx.Data["Reponame"] = pull.HeadRepo.Name
 	ctx.HTML(200, PULL_COMMITS)
 }
 
@@ -226,9 +229,8 @@ func ViewPullFiles(ctx *middleware.Context) {
 	if ctx.Written() {
 		return
 	}
-	_ = prInfo
 
-	headRepoPath := models.RepoPath(pull.PullRepo.HeadUserName, pull.PullRepo.HeadRepo.Name)
+	headRepoPath := models.RepoPath(pull.HeadUserName, pull.HeadRepo.Name)
 
 	headGitRepo, err := git.OpenRepository(headRepoPath)
 	if err != nil {
@@ -236,7 +238,7 @@ func ViewPullFiles(ctx *middleware.Context) {
 		return
 	}
 
-	headCommitID, err := headGitRepo.GetCommitIdOfBranch(pull.PullRepo.HeadBarcnh)
+	headCommitID, err := headGitRepo.GetCommitIdOfBranch(pull.HeadBarcnh)
 	if err != nil {
 		ctx.Handle(500, "GetCommitIdOfBranch", err)
 		return
@@ -257,9 +259,9 @@ func ViewPullFiles(ctx *middleware.Context) {
 		return
 	}
 
-	headTarget := path.Join(pull.PullRepo.HeadUserName, pull.PullRepo.HeadRepo.Name)
-	ctx.Data["Username"] = pull.PullRepo.HeadUserName
-	ctx.Data["Reponame"] = pull.PullRepo.HeadRepo.Name
+	headTarget := path.Join(pull.HeadUserName, pull.HeadRepo.Name)
+	ctx.Data["Username"] = pull.HeadUserName
+	ctx.Data["Reponame"] = pull.HeadRepo.Name
 	ctx.Data["IsImageFile"] = headCommit.IsImageFile
 	ctx.Data["SourcePath"] = setting.AppSubUrl + "/" + path.Join(headTarget, "src", headCommitID)
 	ctx.Data["BeforeSourcePath"] = setting.AppSubUrl + "/" + path.Join(headTarget, "src", prInfo.MergeBase)
@@ -348,7 +350,7 @@ func PrepareCompareDiff(
 	headRepo *models.Repository,
 	headGitRepo *git.Repository,
 	prInfo *git.PullRequestInfo,
-	baseBranch, headBranch string) {
+	baseBranch, headBranch string) bool {
 
 	var (
 		repo = ctx.Repo.Repository
@@ -359,21 +361,26 @@ func PrepareCompareDiff(
 	ctx.Data["CommitRepoLink"], err = headRepo.RepoLink()
 	if err != nil {
 		ctx.Handle(500, "RepoLink", err)
-		return
+		return false
 	}
 
 	headCommitID, err := headGitRepo.GetCommitIdOfBranch(headBranch)
 	if err != nil {
 		ctx.Handle(500, "GetCommitIdOfBranch", err)
-		return
+		return false
 	}
 	ctx.Data["AfterCommitID"] = headCommitID
+
+	if headCommitID == prInfo.MergeBase {
+		ctx.Data["IsNothingToCompare"] = true
+		return true
+	}
 
 	diff, err := models.GetDiffRange(models.RepoPath(headUser.Name, headRepo.Name),
 		prInfo.MergeBase, headCommitID, setting.Git.MaxGitDiffLines)
 	if err != nil {
 		ctx.Handle(500, "GetDiffRange", err)
-		return
+		return false
 	}
 	ctx.Data["Diff"] = diff
 	ctx.Data["DiffNotAvailable"] = diff.NumFiles() == 0
@@ -381,7 +388,7 @@ func PrepareCompareDiff(
 	headCommit, err := headGitRepo.GetCommit(headCommitID)
 	if err != nil {
 		ctx.Handle(500, "GetCommit", err)
-		return
+		return false
 	}
 
 	prInfo.Commits = models.ValidateCommitsWithEmails(prInfo.Commits)
@@ -395,6 +402,7 @@ func PrepareCompareDiff(
 	ctx.Data["SourcePath"] = setting.AppSubUrl + "/" + path.Join(headTarget, "src", headCommitID)
 	ctx.Data["BeforeSourcePath"] = setting.AppSubUrl + "/" + path.Join(headTarget, "src", prInfo.MergeBase)
 	ctx.Data["RawPath"] = setting.AppSubUrl + "/" + path.Join(headTarget, "raw", headCommitID)
+	return false
 }
 
 func CompareAndPullRequest(ctx *middleware.Context) {
@@ -408,15 +416,30 @@ func CompareAndPullRequest(ctx *middleware.Context) {
 		return
 	}
 
-	PrepareCompareDiff(ctx, headUser, headRepo, headGitRepo, prInfo, baseBranch, headBranch)
+	pr, err := models.GetPullRequest(headRepo.ID, ctx.Repo.Repository.ID, headBranch, baseBranch)
+	if err != nil {
+		if !models.IsErrPullRequestNotExist(err) {
+			ctx.Handle(500, "HasPullRequest", err)
+			return
+		}
+	} else {
+		ctx.Data["HasPullRequest"] = true
+		ctx.Data["PullRequest"] = pr
+		ctx.HTML(200, COMPARE_PULL)
+		return
+	}
+
+	nothingToCompare := PrepareCompareDiff(ctx, headUser, headRepo, headGitRepo, prInfo, baseBranch, headBranch)
 	if ctx.Written() {
 		return
 	}
 
-	// Setup information for new form.
-	RetrieveRepoMetas(ctx, ctx.Repo.Repository)
-	if ctx.Written() {
-		return
+	if !nothingToCompare {
+		// Setup information for new form.
+		RetrieveRepoMetas(ctx, ctx.Repo.Repository)
+		if ctx.Written() {
+			return
+		}
 	}
 
 	ctx.HTML(200, COMPARE_PULL)
@@ -458,7 +481,7 @@ func CompareAndPullRequestPost(ctx *middleware.Context, form auth.CreateIssueFor
 		return
 	}
 
-	pr := &models.Issue{
+	pull := &models.Issue{
 		RepoID:      repo.ID,
 		Index:       int64(repo.NumIssues) + 1,
 		Name:        form.Title,
@@ -469,7 +492,7 @@ func CompareAndPullRequestPost(ctx *middleware.Context, form auth.CreateIssueFor
 		IsPull:      true,
 		Content:     form.Content,
 	}
-	if err := models.NewPullRequest(repo, pr, labelIDs, attachments, &models.PullRepo{
+	if err := models.NewPullRequest(repo, pull, labelIDs, attachments, &models.PullRequest{
 		HeadRepoID:   headRepo.ID,
 		BaseRepoID:   repo.ID,
 		HeadUserName: headUser.Name,
@@ -482,6 +505,6 @@ func CompareAndPullRequestPost(ctx *middleware.Context, form auth.CreateIssueFor
 		return
 	}
 
-	log.Trace("Pull request created: %d/%d", repo.ID, pr.ID)
-	ctx.Redirect(ctx.Repo.RepoLink + "/pulls/" + com.ToStr(pr.Index))
+	log.Trace("Pull request created: %d/%d", repo.ID, pull.ID)
+	ctx.Redirect(ctx.Repo.RepoLink + "/pulls/" + com.ToStr(pull.Index))
 }
