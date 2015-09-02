@@ -23,6 +23,8 @@ const (
 	FORK         base.TplName = "repo/pulls/fork"
 	COMPARE_PULL base.TplName = "repo/pulls/compare"
 	PULLS        base.TplName = "repo/pulls"
+	PULL_COMMITS base.TplName = "repo/pulls/commits"
+	PULL_FILES   base.TplName = "repo/pulls/files"
 )
 
 func getForkRepository(ctx *middleware.Context) *models.Repository {
@@ -131,7 +133,140 @@ func Pulls(ctx *middleware.Context) {
 	ctx.HTML(200, PULLS)
 }
 
-// func ViewPull
+func checkPullInfo(ctx *middleware.Context) *models.Issue {
+	pull, err := models.GetIssueByIndex(ctx.Repo.Repository.ID, ctx.ParamsInt64(":index"))
+	if err != nil {
+		if models.IsErrIssueNotExist(err) {
+			ctx.Handle(404, "GetIssueByIndex", err)
+		} else {
+			ctx.Handle(500, "GetIssueByIndex", err)
+		}
+		return nil
+	}
+	ctx.Data["Title"] = pull.Name
+	ctx.Data["Issue"] = pull
+
+	if !pull.IsPull {
+		ctx.Handle(404, "ViewPullCommits", nil)
+		return nil
+	}
+
+	if err = pull.GetPoster(); err != nil {
+		ctx.Handle(500, "GetPoster", err)
+		return nil
+	}
+
+	if ctx.IsSigned {
+		// Update issue-user.
+		if err = pull.ReadBy(ctx.User.Id); err != nil {
+			ctx.Handle(500, "ReadBy", err)
+			return nil
+		}
+	}
+
+	return pull
+}
+
+func PrepareViewPullInfo(ctx *middleware.Context, pull *models.Issue) *git.PullRequestInfo {
+	repo := ctx.Repo.Repository
+
+	ctx.Data["HeadTarget"] = pull.PullRepo.HeadUserName + "/" + pull.PullRepo.HeadBarcnh
+	ctx.Data["BaseTarget"] = ctx.Repo.Owner.Name + "/" + pull.PullRepo.BaseBranch
+
+	headRepoPath, err := pull.PullRepo.HeadRepo.RepoPath()
+	if err != nil {
+		ctx.Handle(500, "PullRepo.HeadRepo.RepoPath", err)
+		return nil
+	}
+
+	headGitRepo, err := git.OpenRepository(headRepoPath)
+	if err != nil {
+		ctx.Handle(500, "OpenRepository", err)
+		return nil
+	}
+
+	prInfo, err := headGitRepo.GetPullRequestInfo(models.RepoPath(repo.Owner.Name, repo.Name),
+		pull.PullRepo.BaseBranch, pull.PullRepo.HeadBarcnh)
+	if err != nil {
+		ctx.Handle(500, "GetPullRequestInfo", err)
+		return nil
+	}
+	ctx.Data["NumCommits"] = prInfo.Commits.Len()
+	ctx.Data["NumFiles"] = prInfo.NumFiles
+	return prInfo
+}
+
+func ViewPullCommits(ctx *middleware.Context) {
+	ctx.Data["PageIsPullCommits"] = true
+
+	pull := checkPullInfo(ctx)
+	if ctx.Written() {
+		return
+	}
+
+	prInfo := PrepareViewPullInfo(ctx, pull)
+	if ctx.Written() {
+		return
+	}
+	prInfo.Commits = models.ValidateCommitsWithEmails(prInfo.Commits)
+	ctx.Data["Commits"] = prInfo.Commits
+
+	ctx.HTML(200, PULL_COMMITS)
+}
+
+func ViewPullFiles(ctx *middleware.Context) {
+	ctx.Data["PageIsPullFiles"] = true
+
+	pull := checkPullInfo(ctx)
+	if ctx.Written() {
+		return
+	}
+
+	prInfo := PrepareViewPullInfo(ctx, pull)
+	if ctx.Written() {
+		return
+	}
+	_ = prInfo
+
+	headRepoPath := models.RepoPath(pull.PullRepo.HeadUserName, pull.PullRepo.HeadRepo.Name)
+
+	headGitRepo, err := git.OpenRepository(headRepoPath)
+	if err != nil {
+		ctx.Handle(500, "OpenRepository", err)
+		return
+	}
+
+	headCommitID, err := headGitRepo.GetCommitIdOfBranch(pull.PullRepo.HeadBarcnh)
+	if err != nil {
+		ctx.Handle(500, "GetCommitIdOfBranch", err)
+		return
+	}
+
+	diff, err := models.GetDiffRange(headRepoPath,
+		prInfo.MergeBase, headCommitID, setting.Git.MaxGitDiffLines)
+	if err != nil {
+		ctx.Handle(500, "GetDiffRange", err)
+		return
+	}
+	ctx.Data["Diff"] = diff
+	ctx.Data["DiffNotAvailable"] = diff.NumFiles() == 0
+
+	headCommit, err := headGitRepo.GetCommit(headCommitID)
+	if err != nil {
+		ctx.Handle(500, "GetCommit", err)
+		return
+	}
+
+	headTarget := path.Join(pull.PullRepo.HeadUserName, pull.PullRepo.HeadRepo.Name)
+	ctx.Data["Username"] = pull.PullRepo.HeadUserName
+	ctx.Data["Reponame"] = pull.PullRepo.HeadRepo.Name
+	ctx.Data["IsImageFile"] = headCommit.IsImageFile
+	ctx.Data["SourcePath"] = setting.AppSubUrl + "/" + path.Join(headTarget, "src", headCommitID)
+	ctx.Data["BeforeSourcePath"] = setting.AppSubUrl + "/" + path.Join(headTarget, "src", prInfo.MergeBase)
+	ctx.Data["RawPath"] = setting.AppSubUrl + "/" + path.Join(headTarget, "raw", headCommitID)
+
+	ctx.HTML(200, PULL_FILES)
+}
 
 func ParseCompareInfo(ctx *middleware.Context) (*models.User, *models.Repository, *git.Repository, *git.PullRequestInfo, string, string) {
 	// Get compare branch information.
@@ -248,34 +383,18 @@ func PrepareCompareDiff(
 		ctx.Handle(500, "GetCommit", err)
 		return
 	}
-	isImageFile := func(name string) bool {
-		blob, err := headCommit.GetBlobByPath(name)
-		if err != nil {
-			return false
-		}
-
-		dataRc, err := blob.Data()
-		if err != nil {
-			return false
-		}
-		buf := make([]byte, 1024)
-		n, _ := dataRc.Read(buf)
-		if n > 0 {
-			buf = buf[:n]
-		}
-		_, isImage := base.IsImageFile(buf)
-		return isImage
-	}
 
 	prInfo.Commits = models.ValidateCommitsWithEmails(prInfo.Commits)
 	ctx.Data["Commits"] = prInfo.Commits
 	ctx.Data["CommitCount"] = prInfo.Commits.Len()
 	ctx.Data["Username"] = headUser.Name
 	ctx.Data["Reponame"] = headRepo.Name
-	ctx.Data["IsImageFile"] = isImageFile
-	ctx.Data["SourcePath"] = setting.AppSubUrl + "/" + path.Join(headUser.Name, repo.Name, "src", headCommitID)
-	ctx.Data["BeforeSourcePath"] = setting.AppSubUrl + "/" + path.Join(headUser.Name, repo.Name, "src", prInfo.MergeBase)
-	ctx.Data["RawPath"] = setting.AppSubUrl + "/" + path.Join(headUser.Name, repo.Name, "raw", headCommitID)
+	ctx.Data["IsImageFile"] = headCommit.IsImageFile
+
+	headTarget := path.Join(headUser.Name, repo.Name)
+	ctx.Data["SourcePath"] = setting.AppSubUrl + "/" + path.Join(headTarget, "src", headCommitID)
+	ctx.Data["BeforeSourcePath"] = setting.AppSubUrl + "/" + path.Join(headTarget, "src", prInfo.MergeBase)
+	ctx.Data["RawPath"] = setting.AppSubUrl + "/" + path.Join(headTarget, "raw", headCommitID)
 }
 
 func CompareAndPullRequest(ctx *middleware.Context) {

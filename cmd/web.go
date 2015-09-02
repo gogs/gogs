@@ -528,6 +528,11 @@ func runWeb(ctx *cli.Context) {
 		m.Get("/archive/*", repo.Download)
 		m.Get("/pulls2/", repo.PullRequest2)
 
+		m.Group("/pulls/:index", func() {
+			m.Get("/commits", repo.ViewPullCommits)
+			m.Get("/files", repo.ViewPullFiles)
+		})
+
 		m.Group("", func() {
 			m.Get("/src/*", repo.Home)
 			m.Get("/raw/*", repo.SingleDownload)
