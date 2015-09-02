@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"container/list"
 	"errors"
+	"fmt"
 	"strings"
 	"sync"
 
@@ -138,7 +139,8 @@ func (repo *Repository) GetCommit(commitId string) (*Commit, error) {
 
 func (repo *Repository) commitsCount(id sha1) (int, error) {
 	if gitVer.LessThan(MustParseVersion("1.8.0")) {
-		stdout, stderr, err := com.ExecCmdDirBytes(repo.Path, "git", "log", "--pretty=format:''", id.String())
+		stdout, stderr, err := com.ExecCmdDirBytes(repo.Path, "git", "log",
+			"--pretty=format:''", id.String())
 		if err != nil {
 			return 0, errors.New(string(stderr))
 		}
@@ -150,6 +152,53 @@ func (repo *Repository) commitsCount(id sha1) (int, error) {
 		return 0, errors.New(stderr)
 	}
 	return com.StrTo(strings.TrimSpace(stdout)).Int()
+}
+
+func (repo *Repository) CommitsCount(commitId string) (int, error) {
+	id, err := NewIdFromString(commitId)
+	if err != nil {
+		return 0, err
+	}
+	return repo.commitsCount(id)
+}
+
+func (repo *Repository) commitsCountBetween(start, end sha1) (int, error) {
+	if gitVer.LessThan(MustParseVersion("1.8.0")) {
+		stdout, stderr, err := com.ExecCmdDirBytes(repo.Path, "git", "log",
+			"--pretty=format:''", start.String()+"..."+end.String())
+		if err != nil {
+			return 0, errors.New(string(stderr))
+		}
+		return len(bytes.Split(stdout, []byte("\n"))), nil
+	}
+
+	stdout, stderr, err := com.ExecCmdDir(repo.Path, "git", "rev-list", "--count",
+		start.String()+"..."+end.String())
+	if err != nil {
+		return 0, errors.New(stderr)
+	}
+	return com.StrTo(strings.TrimSpace(stdout)).Int()
+}
+
+func (repo *Repository) CommitsCountBetween(startCommitID, endCommitID string) (int, error) {
+	start, err := NewIdFromString(startCommitID)
+	if err != nil {
+		return 0, err
+	}
+	end, err := NewIdFromString(endCommitID)
+	if err != nil {
+		return 0, err
+	}
+	return repo.commitsCountBetween(start, end)
+}
+
+func (repo *Repository) FilesCountBetween(startCommitID, endCommitID string) (int, error) {
+	stdout, stderr, err := com.ExecCmdDir(repo.Path, "git", "diff", "--name-only",
+		startCommitID+"..."+endCommitID)
+	if err != nil {
+		return 0, fmt.Errorf("list changed files: %v", concatenateError(err, stderr))
+	}
+	return len(strings.Split(stdout, "\n")) - 1, nil
 }
 
 // used only for single tree, (]
@@ -229,14 +278,6 @@ func (repo *Repository) commitsBefore(lock *sync.Mutex, l *list.List, parent *li
 	}
 
 	return nil
-}
-
-func (repo *Repository) CommitsCount(commitId string) (int, error) {
-	id, err := NewIdFromString(commitId)
-	if err != nil {
-		return 0, err
-	}
-	return repo.commitsCount(id)
 }
 
 func (repo *Repository) FileCommitsCount(branch, file string) (int, error) {

@@ -16,15 +16,23 @@
 		</div>
 		{{end}}
 	</div>
-	{{if .Issue.IsClosed}}
+	{{if .HasMerged}}
+	<div class="ui purple large label"><i class="octicon octicon-git-pull-request"></i> {{.i18n.Tr "repo.pulls.merged"}}</div>
+	{{else if .Issue.IsClosed}}
 	<div class="ui red large label"><i class="octicon octicon-issue-closed"></i> {{.i18n.Tr "repo.issues.closed_title"}}</div>
 	{{else}}
 	<div class="ui green large label"><i class="octicon octicon-issue-opened"></i> {{.i18n.Tr "repo.issues.open_title"}}</div>
 	{{end}}
 
 	{{if .Issue.IsPull}}
-	<a {{if gt .Issue.Poster.Id 0}}href="{{.Issue.Poster.HomeLink}}"{{end}}>{{.Issue.Poster.Name}}</a>
-	<span class="pull-desc">{{$.i18n.Tr "repo.pulls.title_desc" .NumCommits .HeadTarget .BaseTarget | Str2html}}</span>
+		{{if .Issue.HasMerged}}
+		{{ $mergedStr:= TimeSince .Issue.Merged $.Lang }}
+		<a {{if gt .Issue.Merger.Id 0}}href="{{.Issue.Merger.HomeLink}}"{{end}}>{{.Issue.Merger.Name}}</a>
+		<span class="pull-desc">{{$.i18n.Tr "repo.pulls.merged_title_desc" .NumCommits .HeadTarget .BaseTarget $mergedStr | Safe}}</span>
+		{{else}}
+		<a {{if gt .Issue.Poster.Id 0}}href="{{.Issue.Poster.HomeLink}}"{{end}}>{{.Issue.Poster.Name}}</a>
+		<span class="pull-desc">{{$.i18n.Tr "repo.pulls.title_desc" .NumCommits .HeadTarget .BaseTarget | Str2html}}</span>
+		{{end}}
 	{{else}}
 	{{ $createdStr:= TimeSince .Issue.Created $.Lang }}
 	<span class="time-desc">

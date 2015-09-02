@@ -133,28 +133,40 @@
 
   		{{if .Issue.IsPull}}
   		<div class="comment merge box">
-		    <a class="avatar text {{if .Issue.IsClosed}}grey{{else if .Issue.CanAutoMerge}}green{{else}}red{{end}}">
+		    <a class="avatar text {{if .Issue.HasMerged}}purple{{else if .Issue.IsClosed}}grey{{else if and .Issue.CanAutoMerge (not .IsPullReuqestBroken)}}green{{else}}red{{end}}">
 		      <span class="mega-octicon octicon-git-merge"></span>
 		    </a>
 		    <div class="content">
 		    	<div class="ui merge segment">
-		    		{{if .Issue.IsClosed}}
+		    		{{if .Issue.HasMerged}}
+		    		<div class="item text purple">
+		    			{{$.i18n.Tr "repo.pulls.has_merged"}}
+		    		</div>
+		    		{{else if .Issue.IsClosed}}
 		    		<div class="item text grey">
 		    			{{$.i18n.Tr "repo.pulls.reopen_to_merge"}}
 		    		</div>
+		    		{{else if .IsPullReuqestBroken}}
+		    		<div class="item text red">
+		    			<span class="octicon octicon-x"></span>
+		    			{{$.i18n.Tr "repo.pulls.data_borken"}}
+		    		</div>
 		    		{{else if .Issue.CanAutoMerge}}
-		    		<div class="item text green">
-		    			<span class="octicon octicon-check"></span>
-		    			{{$.i18n.Tr "repo.pulls.can_auto_merge_desc"}}
-		    		</div>
-		    		{{if .IsRepositoryAdmin}}
-		    		<div class="ui divider"></div>
-		    		<div>
-		    			<button class="ui green button">
-		    				<span class="octicon octicon-git-merge"></span> {{$.i18n.Tr "repo.pulls.merge_pull_request"}}
-		    			</button>
-		    		</div>
-		    		{{end}}
+			    		<div class="item text green">
+			    			<span class="octicon octicon-check"></span>
+			    			{{$.i18n.Tr "repo.pulls.can_auto_merge_desc"}}
+			    		</div>
+			    		{{if .IsRepositoryAdmin}}
+			    		<div class="ui divider"></div>
+			    		<div>
+			    			<form class="ui form" action="{{.Link}}/merge" method="post">
+				    			{{.CsrfTokenHtml}}
+				    			<button class="ui green button">
+				    				<span class="octicon octicon-git-merge"></span> {{$.i18n.Tr "repo.pulls.merge_pull_request"}}
+				    			</button>
+			    			</form>
+			    		</div>
+			    		{{end}}
 		    		{{else}}
 		    		<div class="item text red">
 		    			<span class="octicon octicon-x"></span>
@@ -181,16 +193,16 @@
 						{{.CsrfTokenHtml}}
 						<input id="status" name="status" type="hidden">
 			      <div class="text right">
-			      	{{if .IsIssueOwner}}
-			      	{{if .Issue.IsClosed}}
-							<div id="status-button" class="ui green basic button" data-status="{{.i18n.Tr "repo.issues.reopen_issue"}}" data-status-and-comment="{{.i18n.Tr "repo.issues.reopen_comment_issue"}}" data-status-val="reopen">
-								{{.i18n.Tr "repo.issues.reopen_issue"}}
-							</div>
-			      	{{else}}
-							<div id="status-button" class="ui red basic button" data-status="{{.i18n.Tr "repo.issues.close_issue"}}" data-status-and-comment="{{.i18n.Tr "repo.issues.close_comment_issue"}}" data-status-val="close">
-								{{.i18n.Tr "repo.issues.close_issue"}}
-							</div>
-							{{end}}
+			      	{{if and .IsIssueOwner (not .DisableStatusChange)}}
+				      	{{if .Issue.IsClosed}}
+								<div id="status-button" class="ui green basic button" data-status="{{.i18n.Tr "repo.issues.reopen_issue"}}" data-status-and-comment="{{.i18n.Tr "repo.issues.reopen_comment_issue"}}" data-status-val="reopen">
+									{{.i18n.Tr "repo.issues.reopen_issue"}}
+								</div>
+				      	{{else}}
+								<div id="status-button" class="ui red basic button" data-status="{{.i18n.Tr "repo.issues.close_issue"}}" data-status-and-comment="{{.i18n.Tr "repo.issues.close_comment_issue"}}" data-status-val="close">
+									{{.i18n.Tr "repo.issues.close_issue"}}
+								</div>
+								{{end}}
 							{{end}}
 							<button class="ui green button">
 								{{.i18n.Tr "repo.issues.create_comment"}}

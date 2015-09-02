@@ -469,20 +469,20 @@ func initRepoCommit(tmpPath string, sig *git.Signature) (err error) {
 	if _, stderr, err = process.ExecDir(-1,
 		tmpPath, fmt.Sprintf("initRepoCommit(git add): %s", tmpPath),
 		"git", "add", "--all"); err != nil {
-		return errors.New("git add: " + stderr)
+		return fmt.Errorf("git add: %s", stderr)
 	}
 
 	if _, stderr, err = process.ExecDir(-1,
 		tmpPath, fmt.Sprintf("initRepoCommit(git commit): %s", tmpPath),
 		"git", "commit", fmt.Sprintf("--author='%s <%s>'", sig.Name, sig.Email),
 		"-m", "initial commit"); err != nil {
-		return errors.New("git commit: " + stderr)
+		return fmt.Errorf("git commit: %s", stderr)
 	}
 
 	if _, stderr, err = process.ExecDir(-1,
 		tmpPath, fmt.Sprintf("initRepoCommit(git push): %s", tmpPath),
 		"git", "push", "origin", "master"); err != nil {
-		return errors.New("git push: " + stderr)
+		return fmt.Errorf("git push: %s", stderr)
 	}
 	return nil
 }
@@ -1003,6 +1003,8 @@ func DeleteRepository(uid, repoID int64) error {
 	} else if _, err = sess.Delete(&Release{RepoId: repoID}); err != nil {
 		return err
 	} else if _, err = sess.Delete(&Collaboration{RepoID: repoID}); err != nil {
+		return err
+	} else if _, err = sess.Delete(&PullRequest{BaseRepoID: repoID}); err != nil {
 		return err
 	}
 
