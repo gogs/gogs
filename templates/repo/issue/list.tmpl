@@ -9,7 +9,7 @@
 			</div>
 		</div>
 		<div class="ui divider"></div>
-		<div class="ui tiny buttons">
+		<div class="ui tiny tabs buttons">
 		  <a class="ui green basic button {{if not .IsShowClosed}}active{{end}}" href="{{$.Link}}?type={{$.ViewType}}&sort={{$.SortType}}&state=open&labels={{.SelectLabels}}&milestone={{.MilestoneID}}&assignee={{.AssigneeID}}">
 		  	<i class="octicon octicon-issue-opened"></i>
 		  	{{.i18n.Tr "repo.issues.open_tab" .IssueStats.OpenCount}}
