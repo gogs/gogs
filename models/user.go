@@ -180,7 +180,7 @@ func (u *User) RelAvatarLink() string {
 // AvatarLink returns user gravatar link.
 func (u *User) AvatarLink() string {
 	link := u.RelAvatarLink()
-	if link[0] == '/' {
+	if link[0] == '/' && link[1] != '/' {
 		return setting.AppSubUrl + link
 	}
 	return link
