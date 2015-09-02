@@ -308,18 +308,23 @@ func (err ErrIssueNotExist) Error() string {
 //  |____|   |____/|____/____/____|_  /\___  >__   |____/  \___  >____  > |__|
 //                                  \/     \/   |__|           \/     \/
 
-type ErrPullRepoNotExist struct {
-	ID     int64
-	PullID int64
+type ErrPullRequestNotExist struct {
+	ID         int64
+	PullID     int64
+	HeadRepoID int64
+	BaseRepoID int64
+	HeadBarcnh string
+	BaseBranch string
 }
 
-func IsErrPullRepoNotExist(err error) bool {
-	_, ok := err.(ErrPullRepoNotExist)
+func IsErrPullRequestNotExist(err error) bool {
+	_, ok := err.(ErrPullRequestNotExist)
 	return ok
 }
 
-func (err ErrPullRepoNotExist) Error() string {
-	return fmt.Sprintf("pull repo does not exist [id: %d, pull_id: %d]", err.ID, err.PullID)
+func (err ErrPullRequestNotExist) Error() string {
+	return fmt.Sprintf("pull request does not exist [id: %d, pull_id: %d, head_repo_id: %d, base_repo_id: %d, head_branch: %s, base_branch: %s]",
+		err.ID, err.PullID, err.HeadRepoID, err.BaseRepoID, err.HeadBarcnh, err.BaseBranch)
 }
 
 // _________                                       __

@@ -45,10 +45,20 @@
 					</div>
 			 	</div>
 			</div>
-			{{template "repo/issue/new_form" .}}
 
+			{{if .IsNothingToCompare}}
+			<div class="ui segment">
+				{{.i18n.Tr "repo.pulls.nothing_to_compare"}}
+			</div>
+			{{else if .HasPullRequest}}
+			<div class="ui segment">
+				{{.i18n.Tr "repo.pulls.has_pull_request" $.RepoLink $.RepoRelPath .PullRequest.PullIndex | Safe}}
+			</div>
+			{{else}}
+			{{template "repo/issue/new_form" .}}
 	    {{template "repo/commits_table" .}}
 	    {{template "repo/diff_box" .}}
+	    {{end}}
 		</div>
 
 	</div>
