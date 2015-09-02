@@ -903,16 +903,15 @@ func (pr *PullRequest) AfterSet(colName string, _ xorm.Cell) {
 }
 
 // Merge merges pull request to base repository.
-func (pr *PullRequest) Merge(baseGitRepo *git.Repository) (err error) {
+func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository) (err error) {
 	sess := x.NewSession()
 	defer sessionRelease(sess)
 	if err = sess.Begin(); err != nil {
 		return err
 	}
 
-	pr.Pull.IsClosed = true
-	if _, err = sess.Id(pr.Pull.ID).AllCols().Update(pr.Pull); err != nil {
-		return fmt.Errorf("update pull: %v", err)
+	if err = pr.Pull.changeStatus(sess, doer, true); err != nil {
+		return fmt.Errorf("Pull.changeStatus: %v", err)
 	}
 
 	headRepoPath := RepoPath(pr.HeadUserName, pr.HeadRepo.Name)

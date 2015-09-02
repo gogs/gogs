@@ -381,7 +381,8 @@ func MergePullRequest(ctx *middleware.Context) {
 	}
 
 	pr.Pull = pull
-	if err = pr.Merge(ctx.Repo.GitRepo); err != nil {
+	pr.Pull.Repo = ctx.Repo.Repository
+	if err = pr.Merge(ctx.User, ctx.Repo.GitRepo); err != nil {
 		ctx.Handle(500, "GetPullRequestByPullID", err)
 		return
 	}
