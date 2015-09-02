@@ -84,3 +84,9 @@ func (repo *Repository) GetPatch(basePath, baseBranch, headBranch string) ([]byt
 
 	return stdout, nil
 }
+
+// Merge merges pull request from head repository and branch.
+func (repo *Repository) Merge(headRepoPath string, baseBranch, headBranch string) error {
+
+	return nil
+}

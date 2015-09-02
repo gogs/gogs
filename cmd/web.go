@@ -531,6 +531,7 @@ func runWeb(ctx *cli.Context) {
 		m.Group("/pulls/:index", func() {
 			m.Get("/commits", repo.ViewPullCommits)
 			m.Get("/files", repo.ViewPullFiles)
+			m.Post("/merge", reqRepoAdmin, repo.MergePullRequest)
 		})
 
 		m.Group("", func() {

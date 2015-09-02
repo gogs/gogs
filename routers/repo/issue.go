@@ -466,7 +466,12 @@ func ViewIssue(ctx *middleware.Context) {
 
 	// Get more information if it's a pull request.
 	if issue.IsPull {
-		PrepareViewPullInfo(ctx, issue)
+		if issue.HasMerged {
+			ctx.Data["DisableStatusChange"] = issue.HasMerged
+			PrepareMergedViewPullInfo(ctx, issue)
+		} else {
+			PrepareViewPullInfo(ctx, issue)
+		}
 		if ctx.Written() {
 			return
 		}
@@ -730,7 +735,8 @@ func NewComment(ctx *middleware.Context, form auth.CreateCommentForm) {
 
 	// Check if issue owner/poster changes the status of issue.
 	if (ctx.Repo.IsOwner() || (ctx.IsSigned && issue.IsPoster(ctx.User.Id))) &&
-		(form.Status == "reopen" || form.Status == "close") {
+		(form.Status == "reopen" || form.Status == "close") &&
+		!(issue.IsPull && issue.HasMerged) {
 		issue.Repo = ctx.Repo.Repository
 		if err = issue.ChangeStatus(ctx.User, form.Status == "close"); err != nil {
 			ctx.Handle(500, "ChangeStatus", err)
