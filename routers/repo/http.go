@@ -115,7 +115,7 @@ func Http(ctx *middleware.Context) {
 			// Assume username now is a token.
 			token, err := models.GetAccessTokenBySHA(authUsername)
 			if err != nil {
-				if err == models.ErrAccessTokenNotExist {
+				if models.IsErrAccessTokenNotExist(err) {
 					ctx.HandleText(401, "invalid token")
 				} else {
 					ctx.Handle(500, "GetAccessTokenBySha", err)
