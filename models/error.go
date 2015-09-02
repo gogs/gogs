@@ -183,6 +183,26 @@ func (err ErrDeployKeyNameAlreadyUsed) Error() string {
 	return fmt.Sprintf("public key already exists: [repo_id: %d, name: %s]", err.RepoID, err.Name)
 }
 
+//    _____                                   ___________     __
+//   /  _  \   ____  ____  ____   ______ _____\__    ___/___ |  | __ ____   ____
+//  /  /_\  \_/ ___\/ ___\/ __ \ /  ___//  ___/ |    | /  _ \|  |/ // __ \ /    \
+// /    |    \  \__\  \__\  ___/ \___ \ \___ \  |    |(  <_> )    <\  ___/|   |  \
+// \____|__  /\___  >___  >___  >____  >____  > |____| \____/|__|_ \\___  >___|  /
+//         \/     \/    \/    \/     \/     \/                    \/    \/     \/
+
+type ErrAccessTokenNotExist struct {
+	SHA string
+}
+
+func IsErrAccessTokenNotExist(err error) bool {
+	_, ok := err.(ErrAccessTokenNotExist)
+	return ok
+}
+
+func (err ErrAccessTokenNotExist) Error() string {
+	return fmt.Sprintf("access token does not exist: [sha: %s]", err.SHA)
+}
+
 // ________                            .__                __  .__
 // \_____  \_______  _________    ____ |__|____________ _/  |_|__| ____   ____
 //  /   |   \_  __ \/ ___\__  \  /    \|  \___   /\__  \\   __\  |/  _ \ /    \

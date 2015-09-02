@@ -5,15 +5,10 @@
 package models
 
 import (
-	"errors"
 	"time"
 
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/uuid"
-)
-
-var (
-	ErrAccessTokenNotExist = errors.New("Access token does not exist")
 )
 
 // AccessToken represents a personal access token.
@@ -42,7 +37,7 @@ func GetAccessTokenBySHA(sha string) (*AccessToken, error) {
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, ErrAccessTokenNotExist
+		return nil, ErrAccessTokenNotExist{sha}
 	}
 	return t, nil
 }
