@@ -5,7 +5,6 @@
 package auth
 
 import (
-	"net/http"
 	"reflect"
 	"strings"
 	"time"
@@ -26,32 +25,39 @@ func IsAPIPath(url string) bool {
 	return strings.HasPrefix(url, "/api/")
 }
 
-// SignedInId returns the id of signed in user.
-func SignedInId(req *http.Request, sess session.Store) int64 {
+// SignedInID returns the id of signed in user.
+func SignedInID(ctx *macaron.Context, sess session.Store) int64 {
 	if !models.HasEngine {
 		return 0
 	}
 
-	// API calls need to check access token.
-	if IsAPIPath(req.URL.Path) {
-		auHead := req.Header.Get("Authorization")
+	// Check access token.
+	tokenSHA := ctx.Query("token")
+	if len(tokenSHA) == 0 {
+		// Well, check with header again.
+		auHead := ctx.Req.Header.Get("Authorization")
 		if len(auHead) > 0 {
 			auths := strings.Fields(auHead)
 			if len(auths) == 2 && auths[0] == "token" {
-				t, err := models.GetAccessTokenBySHA(auths[1])
-				if err != nil {
-					if err != models.ErrAccessTokenNotExist {
-						log.Error(4, "GetAccessTokenBySHA: %v", err)
-					}
-					return 0
-				}
-				t.Updated = time.Now()
-				if err = models.UpdateAccessToekn(t); err != nil {
-					log.Error(4, "UpdateAccessToekn: %v", err)
-				}
-				return t.UID
+				tokenSHA = auths[1]
 			}
 		}
+	}
+
+	// Let's see if token is valid.
+	if len(tokenSHA) > 0 {
+		t, err := models.GetAccessTokenBySHA(tokenSHA)
+		if err != nil {
+			if models.IsErrAccessTokenNotExist(err) {
+				log.Error(4, "GetAccessTokenBySHA: %v", err)
+			}
+			return 0
+		}
+		t.Updated = time.Now()
+		if err = models.UpdateAccessToekn(t); err != nil {
+			log.Error(4, "UpdateAccessToekn: %v", err)
+		}
+		return t.UID
 	}
 
 	uid := sess.Get("uid")
@@ -72,16 +78,16 @@ func SignedInId(req *http.Request, sess session.Store) int64 {
 
 // SignedInUser returns the user object of signed user.
 // It returns a bool value to indicate whether user uses basic auth or not.
-func SignedInUser(req *http.Request, sess session.Store) (*models.User, bool) {
+func SignedInUser(ctx *macaron.Context, sess session.Store) (*models.User, bool) {
 	if !models.HasEngine {
 		return nil, false
 	}
 
-	uid := SignedInId(req, sess)
+	uid := SignedInID(ctx, sess)
 
 	if uid <= 0 {
 		if setting.Service.EnableReverseProxyAuth {
-			webAuthUser := req.Header.Get(setting.ReverseProxyAuthUser)
+			webAuthUser := ctx.Req.Header.Get(setting.ReverseProxyAuthUser)
 			if len(webAuthUser) > 0 {
 				u, err := models.GetUserByName(webAuthUser)
 				if err != nil {
@@ -112,7 +118,7 @@ func SignedInUser(req *http.Request, sess session.Store) (*models.User, bool) {
 		}
 
 		// Check with basic auth.
-		baHead := req.Header.Get("Authorization")
+		baHead := ctx.Req.Header.Get("Authorization")
 		if len(baHead) > 0 {
 			auths := strings.Fields(baHead)
 			if len(auths) == 2 && auths[0] == "Basic" {

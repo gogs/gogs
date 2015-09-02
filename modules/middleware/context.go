@@ -211,7 +211,7 @@ func Contexter() macaron.Handler {
 		}
 
 		// Get user from session if logined.
-		ctx.User, ctx.IsBasicAuth = auth.SignedInUser(ctx.Req.Request, ctx.Session)
+		ctx.User, ctx.IsBasicAuth = auth.SignedInUser(ctx.Context, ctx.Session)
 
 		if ctx.User != nil {
 			ctx.IsSigned = true
