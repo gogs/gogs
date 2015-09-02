@@ -46,10 +46,10 @@ type Issue struct {
 	MilestoneID     int64
 	Milestone       *Milestone `xorm:"-"`
 	AssigneeID      int64
-	Assignee        *User     `xorm:"-"`
-	IsRead          bool      `xorm:"-"`
-	IsPull          bool      // Indicates whether is a pull request or not.
-	PullRepo        *PullRepo `xorm:"-"`
+	Assignee        *User `xorm:"-"`
+	IsRead          bool  `xorm:"-"`
+	IsPull          bool  // Indicates whether is a pull request or not.
+	*PullRequest    `xorm:"-"`
 	IsClosed        bool
 	Content         string `xorm:"TEXT"`
 	RenderedContent string `xorm:"-"`
@@ -96,9 +96,13 @@ func (i *Issue) AfterSet(colName string, _ xorm.Cell) {
 			log.Error(3, "GetUserByID[%d]: %v", i.ID, err)
 		}
 	case "is_pull":
-		i.PullRepo, err = GetPullRepoByPullID(i.ID)
+		if !i.IsPull {
+			return
+		}
+
+		i.PullRequest, err = GetPullRequestByPullID(i.ID)
 		if err != nil {
-			log.Error(3, "GetPullRepoByPullID[%d]: %v", i.ID, err)
+			log.Error(3, "GetPullRequestByPullID[%d]: %v", i.ID, err)
 		}
 	case "created":
 		i.Created = regulateTimeZone(i.Created)
@@ -844,23 +848,25 @@ const (
 	PLLL_ERQUEST_GIT
 )
 
-// PullRepo represents relation between pull request and repositories.
-type PullRepo struct {
-	ID           int64       `xorm:"pk autoincr"`
-	PullID       int64       `xorm:"INDEX"`
-	HeadRepoID   int64       `xorm:"UNIQUE(s)"`
-	HeadRepo     *Repository `xorm:"-"`
-	BaseRepoID   int64       `xorm:"UNIQUE(s)"`
-	HeadUserName string
-	HeadBarcnh   string `xorm:"UNIQUE(s)"`
-	BaseBranch   string `xorm:"UNIQUE(s)"`
-	MergeBase    string `xorm:"VARCHAR(40)"`
-	Type         PullRequestType
-	CanAutoMerge bool
-	HasMerged    bool
+// PullRequest represents relation between pull request and repositories.
+type PullRequest struct {
+	ID             int64 `xorm:"pk autoincr"`
+	PullID         int64 `xorm:"INDEX"`
+	PullIndex      int64
+	HeadRepoID     int64       `xorm:"UNIQUE(s)"`
+	HeadRepo       *Repository `xorm:"-"`
+	BaseRepoID     int64       `xorm:"UNIQUE(s)"`
+	HeadUserName   string
+	HeadBarcnh     string `xorm:"UNIQUE(s)"`
+	BaseBranch     string `xorm:"UNIQUE(s)"`
+	MergeBase      string `xorm:"VARCHAR(40)"`
+	MergedCommitID string `xorm:"VARCHAR(40)"`
+	Type           PullRequestType
+	CanAutoMerge   bool
+	HasMerged      bool
 }
 
-func (pr *PullRepo) AfterSet(colName string, _ xorm.Cell) {
+func (pr *PullRequest) AfterSet(colName string, _ xorm.Cell) {
 	var err error
 	switch colName {
 	case "head_repo_id":
@@ -872,24 +878,24 @@ func (pr *PullRepo) AfterSet(colName string, _ xorm.Cell) {
 }
 
 // NewPullRequest creates new pull request with labels for repository.
-func NewPullRequest(repo *Repository, pr *Issue, labelIDs []int64, uuids []string, pullRepo *PullRepo, patch []byte) (err error) {
+func NewPullRequest(repo *Repository, pull *Issue, labelIDs []int64, uuids []string, pr *PullRequest, patch []byte) (err error) {
 	sess := x.NewSession()
 	defer sessionRelease(sess)
 	if err = sess.Begin(); err != nil {
 		return err
 	}
 
-	if err = newIssue(sess, repo, pr, labelIDs, uuids); err != nil {
+	if err = newIssue(sess, repo, pull, labelIDs, uuids); err != nil {
 		return fmt.Errorf("newIssue: %v", err)
 	}
 
 	// Notify watchers.
 	act := &Action{
-		ActUserID:    pr.Poster.Id,
-		ActUserName:  pr.Poster.Name,
-		ActEmail:     pr.Poster.Email,
+		ActUserID:    pull.Poster.Id,
+		ActUserName:  pull.Poster.Name,
+		ActEmail:     pull.Poster.Email,
 		OpType:       PULL_REQUEST,
-		Content:      fmt.Sprintf("%d|%s", pr.Index, pr.Name),
+		Content:      fmt.Sprintf("%d|%s", pull.Index, pull.Name),
 		RepoID:       repo.ID,
 		RepoUserName: repo.Owner.Name,
 		RepoName:     repo.Name,
@@ -920,26 +926,46 @@ func NewPullRequest(repo *Repository, pr *Issue, labelIDs []int64, uuids []strin
 			return fmt.Errorf("git apply --check: %v - %s", err, stderr)
 		}
 	}
-	pullRepo.CanAutoMerge = !strings.Contains(stdout, "error: patch failed:")
+	pr.CanAutoMerge = !strings.Contains(stdout, "error: patch failed:")
 
-	pullRepo.PullID = pr.ID
-	if _, err = sess.Insert(pullRepo); err != nil {
+	pr.PullID = pull.ID
+	pr.PullIndex = pull.Index
+	if _, err = sess.Insert(pr); err != nil {
 		return fmt.Errorf("insert pull repo: %v", err)
 	}
 
 	return sess.Commit()
 }
 
-// GetPullRepoByPullID returns pull repo by given pull ID.
-func GetPullRepoByPullID(pullID int64) (*PullRepo, error) {
-	pullRepo := new(PullRepo)
-	has, err := x.Where("pull_id=?", pullID).Get(pullRepo)
+// GetPullRequest returnss a pull request by given info.
+func GetPullRequest(headRepoID, baseRepoID int64, headBranch, baseBranch string) (*PullRequest, error) {
+	pr := &PullRequest{
+		HeadRepoID: headRepoID,
+		BaseRepoID: baseRepoID,
+		HeadBarcnh: headBranch,
+		BaseBranch: baseBranch,
+	}
+
+	has, err := x.Get(pr)
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, ErrPullRepoNotExist{0, pullID}
+		return nil, ErrPullRequestNotExist{0, 0, headRepoID, baseRepoID, headBranch, baseBranch}
 	}
-	return pullRepo, nil
+
+	return pr, nil
+}
+
+// GetPullRequestByPullID returns pull repo by given pull ID.
+func GetPullRequestByPullID(pullID int64) (*PullRequest, error) {
+	pr := new(PullRequest)
+	has, err := x.Where("pull_id=?", pullID).Get(pr)
+	if err != nil {
+		return nil, err
+	} else if !has {
+		return nil, ErrPullRequestNotExist{0, pullID, 0, 0, "", ""}
+	}
+	return pr, nil
 }
 
 // .____          ___.          .__
