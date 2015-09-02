@@ -21,6 +21,7 @@ import (
 	"github.com/go-xorm/xorm"
 
 	"github.com/gogits/gogs/modules/base"
+	"github.com/gogits/gogs/modules/git"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/process"
 	"github.com/gogits/gogs/modules/setting"
@@ -850,20 +851,24 @@ const (
 
 // PullRequest represents relation between pull request and repositories.
 type PullRequest struct {
-	ID             int64 `xorm:"pk autoincr"`
-	PullID         int64 `xorm:"INDEX"`
+	ID             int64  `xorm:"pk autoincr"`
+	PullID         int64  `xorm:"INDEX"`
+	Pull           *Issue `xorm:"-"`
 	PullIndex      int64
-	HeadRepoID     int64       `xorm:"UNIQUE(s)"`
+	HeadRepoID     int64
 	HeadRepo       *Repository `xorm:"-"`
-	BaseRepoID     int64       `xorm:"UNIQUE(s)"`
+	BaseRepoID     int64
 	HeadUserName   string
-	HeadBarcnh     string `xorm:"UNIQUE(s)"`
-	BaseBranch     string `xorm:"UNIQUE(s)"`
+	HeadBarcnh     string
+	BaseBranch     string
 	MergeBase      string `xorm:"VARCHAR(40)"`
 	MergedCommitID string `xorm:"VARCHAR(40)"`
 	Type           PullRequestType
 	CanAutoMerge   bool
 	HasMerged      bool
+	Merged         time.Time
+	MergerID       int64
+	Merger         *User `xorm:"-"`
 }
 
 func (pr *PullRequest) AfterSet(colName string, _ xorm.Cell) {
@@ -874,7 +879,91 @@ func (pr *PullRequest) AfterSet(colName string, _ xorm.Cell) {
 		if err != nil {
 			log.Error(3, "GetRepositoryByID[%d]: %v", pr.ID, err)
 		}
+	case "merger_id":
+		if !pr.HasMerged {
+			return
+		}
+
+		pr.Merger, err = GetUserByID(pr.MergerID)
+		if err != nil {
+			if IsErrUserNotExist(err) {
+				pr.MergerID = -1
+				pr.Merger = NewFakeUser()
+			} else {
+				log.Error(3, "GetUserByID[%d]: %v", pr.ID, err)
+			}
+		}
+	case "merged":
+		if !pr.HasMerged {
+			return
+		}
+
+		pr.Merged = regulateTimeZone(pr.Merged)
 	}
+}
+
+// Merge merges pull request to base repository.
+func (pr *PullRequest) Merge(baseGitRepo *git.Repository) (err error) {
+	sess := x.NewSession()
+	defer sessionRelease(sess)
+	if err = sess.Begin(); err != nil {
+		return err
+	}
+
+	pr.Pull.IsClosed = true
+	if _, err = sess.Id(pr.Pull.ID).AllCols().Update(pr.Pull); err != nil {
+		return fmt.Errorf("update pull: %v", err)
+	}
+
+	headRepoPath := RepoPath(pr.HeadUserName, pr.HeadRepo.Name)
+	headGitRepo, err := git.OpenRepository(headRepoPath)
+	if err != nil {
+		return fmt.Errorf("OpenRepository: %v", err)
+	}
+	pr.MergedCommitID, err = headGitRepo.GetCommitIdOfBranch(pr.HeadBarcnh)
+	if err != nil {
+		return fmt.Errorf("GetCommitIdOfBranch: %v", err)
+	}
+
+	pr.HasMerged = true
+	if _, err = sess.Id(pr.ID).AllCols().Update(pr); err != nil {
+		return fmt.Errorf("update pull request: %v", err)
+	}
+
+	// Clone base repo.
+	tmpBasePath := path.Join("data/tmp/repos", com.ToStr(time.Now().Nanosecond())+".git")
+	os.MkdirAll(path.Dir(tmpBasePath), os.ModePerm)
+	defer os.RemoveAll(path.Dir(tmpBasePath))
+
+	var stderr string
+	if _, stderr, err = process.ExecTimeout(5*time.Minute,
+		fmt.Sprintf("PullRequest.Merge(git clone): %s", tmpBasePath),
+		"git", "clone", baseGitRepo.Path, tmpBasePath); err != nil {
+		return fmt.Errorf("git clone: %s", stderr)
+	}
+
+	// Check out base branch.
+	if _, stderr, err = process.ExecDir(-1, tmpBasePath,
+		fmt.Sprintf("PullRequest.Merge(git checkout): %s", tmpBasePath),
+		"git", "checkout", pr.BaseBranch); err != nil {
+		return fmt.Errorf("git checkout: %s", stderr)
+	}
+
+	// Pull commits.
+	if _, stderr, err = process.ExecDir(-1, tmpBasePath,
+		fmt.Sprintf("PullRequest.Merge(git pull): %s", tmpBasePath),
+		"git", "pull", headRepoPath, pr.HeadBarcnh); err != nil {
+		return fmt.Errorf("git pull: %s", stderr)
+	}
+
+	// Push back to upstream.
+	if _, stderr, err = process.ExecDir(-1, tmpBasePath,
+		fmt.Sprintf("PullRequest.Merge(git push): %s", tmpBasePath),
+		"git", "push", baseGitRepo.Path, pr.BaseBranch); err != nil {
+		return fmt.Errorf("git push: %s", stderr)
+	}
+
+	return sess.Commit()
 }
 
 // NewPullRequest creates new pull request with labels for repository.
@@ -937,8 +1026,8 @@ func NewPullRequest(repo *Repository, pull *Issue, labelIDs []int64, uuids []str
 	return sess.Commit()
 }
 
-// GetPullRequest returnss a pull request by given info.
-func GetPullRequest(headRepoID, baseRepoID int64, headBranch, baseBranch string) (*PullRequest, error) {
+// GetUnmergedPullRequest returnss a pull request hasn't been merged by given info.
+func GetUnmergedPullRequest(headRepoID, baseRepoID int64, headBranch, baseBranch string) (*PullRequest, error) {
 	pr := &PullRequest{
 		HeadRepoID: headRepoID,
 		BaseRepoID: baseRepoID,
@@ -946,7 +1035,7 @@ func GetPullRequest(headRepoID, baseRepoID int64, headBranch, baseBranch string)
 		BaseBranch: baseBranch,
 	}
 
-	has, err := x.Get(pr)
+	has, err := x.Where("has_merged=?", false).Get(pr)
 	if err != nil {
 		return nil, err
 	} else if !has {
