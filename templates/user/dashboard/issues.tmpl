@@ -5,23 +5,26 @@
   	<div class="ui grid">
   		<div class="four wide column">
   			<div class="ui secondary vertical filter menu">
-  				<a class="{{if eq .ViewType "all"}}active{{end}} item" href="{{.Link}}?repo={{.RepoID}}&state={{.State}}">
+  				<a class="{{if eq .ViewType "all"}}ui basic blue button{{end}} item" href="{{.Link}}?repo={{.RepoID}}&state={{.State}}">
   					{{.i18n.Tr "home.issues.in_your_repos"}}
   					<strong class="ui right">{{.IssueStats.AllCount}}</strong>
   				</a>
   				{{if not .ContextUser.IsOrganization}}
-  				<a class="{{if eq .ViewType "assigned"}}active{{end}} item" href="{{.Link}}?type=assigned&repo={{.RepoID}}&state={{.State}}">
+  				<a class="{{if eq .ViewType "assigned"}}ui basic blue button{{end}} item" href="{{.Link}}?type=assigned&repo={{.RepoID}}&state={{.State}}">
   					{{.i18n.Tr "repo.issues.filter_type.assigned_to_you"}}
   					<strong class="ui right">{{.IssueStats.AssignCount}}</strong>
   				</a>
-  				<a class="{{if eq .ViewType "created_by"}}active{{end}} item" href="{{.Link}}?type=created_by&repo={{.RepoID}}&state={{.State}}">
+  				<a class="{{if eq .ViewType "created_by"}}ui basic blue button{{end}} item" href="{{.Link}}?type=created_by&repo={{.RepoID}}&state={{.State}}">
   					{{.i18n.Tr "repo.issues.filter_type.created_by_you"}}
   					<strong class="ui right">{{.IssueStats.CreateCount}}</strong>
   				</a>
   				{{end}}
   				<div class="ui divider"></div>
           {{range .Repos}}
-          <a class="{{if eq $.RepoID .ID}}active{{end}} item" href="{{$.Link}}?type={{$.ViewType}}{{if not (eq $.RepoID .ID)}}&repo={{.ID}}{{end}}&state={{$.State}}">{{$.ContextUser.Name}}/{{.Name}} <strong class="ui right">{{if $.IsShowClosed}}{{.NumClosedIssues}}{{else}}{{.NumOpenIssues}}{{end}}</strong></a>
+          <a class="{{if eq $.RepoID .ID}}ui basic blue button{{end}} repo name item" href="{{$.Link}}?type={{$.ViewType}}{{if not (eq $.RepoID .ID)}}&repo={{.ID}}{{end}}&state={{$.State}}">
+          	<span class="text truncate">{{$.ContextUser.Name}}/{{.Name}}12312312312312312</span>
+          	<div class="floating ui {{if $.IsShowClosed}}red{{else}}green{{end}} label">{{if $.IsShowClosed}}{{.NumClosedIssues}}{{else}}{{.NumOpenIssues}}{{end}}</div>
+          </a>
           {{end}}
   			</div>
   		</div>
@@ -41,7 +44,7 @@
 					{{range .Issues}}
 					{{ $timeStr:= TimeSince .Created $.Lang }}
 		      <li class="item">
-		      	<div class="ui label">#{{.ID}}</div>
+		      	<div class="ui label">{{if not $.RepoID}}{{.Repo.Name}}{{end}}#{{.Index}}</div>
 		      	<a class="title" href="{{AppSubUrl}}/{{.Repo.Owner.Name}}/{{.Repo.Name}}/issues/{{.Index}}">{{.Name}}</a>
 
 		      	{{if .NumComments}}
