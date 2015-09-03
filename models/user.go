@@ -632,7 +632,7 @@ func DeleteUser(u *User) error {
 		return fmt.Errorf("clear assignee: %v", err)
 	}
 
-	if _, err = sess.Delete(u); err != nil {
+	if _, err = sess.Id(u.Id).Delete(new(User)); err != nil {
 		return fmt.Errorf("Delete: %v", err)
 	}
 
