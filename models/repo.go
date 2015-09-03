@@ -1105,15 +1105,12 @@ func DeleteRepository(uid, repoID int64) error {
 // See https://help.github.com/articles/writing-on-github#references for more information on the syntax.
 func GetRepositoryByRef(ref string) (*Repository, error) {
 	n := strings.IndexByte(ref, byte('/'))
-
 	if n < 2 {
 		return nil, ErrInvalidReference
 	}
 
 	userName, repoName := ref[:n], ref[n+1:]
-
 	user, err := GetUserByName(userName)
-
 	if err != nil {
 		return nil, err
 	}
