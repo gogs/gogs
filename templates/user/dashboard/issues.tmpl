@@ -22,7 +22,7 @@
   				<div class="ui divider"></div>
           {{range .Repos}}
           <a class="{{if eq $.RepoID .ID}}ui basic blue button{{end}} repo name item" href="{{$.Link}}?type={{$.ViewType}}{{if not (eq $.RepoID .ID)}}&repo={{.ID}}{{end}}&state={{$.State}}">
-          	<span class="text truncate">{{$.ContextUser.Name}}/{{.Name}}12312312312312312</span>
+          	<span class="text truncate">{{$.ContextUser.Name}}/{{.Name}}</span>
           	<div class="floating ui {{if $.IsShowClosed}}red{{else}}green{{end}} label">{{if $.IsShowClosed}}{{.NumClosedIssues}}{{else}}{{.NumOpenIssues}}{{end}}</div>
           </a>
           {{end}}
