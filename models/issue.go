@@ -13,7 +13,6 @@ import (
 	"mime/multipart"
 	"os"
 	"path"
-	"strconv"
 	"strings"
 	"time"
 
@@ -384,25 +383,29 @@ func NewIssue(repo *Repository, issue *Issue, labelIDs []int64, uuids []string) 
 
 // GetIssueByRef returns an Issue specified by a GFM reference.
 // See https://help.github.com/articles/writing-on-github#references for more information on the syntax.
-func GetIssueByRef(ref string) (issue *Issue, err error) {
-	var issueNumber int64
-	var repo *Repository
-
+func GetIssueByRef(ref string) (*Issue, error) {
 	n := strings.IndexByte(ref, byte('#'))
-
 	if n == -1 {
 		return nil, ErrMissingIssueNumber
 	}
 
-	if issueNumber, err = strconv.ParseInt(ref[n+1:], 10, 64); err != nil {
-		return
+	index, err := com.StrTo(ref[n+1:]).Int64()
+	if err != nil {
+		return nil, err
 	}
 
-	if repo, err = GetRepositoryByRef(ref[:n]); err != nil {
-		return
+	repo, err := GetRepositoryByRef(ref[:n])
+	if err != nil {
+		return nil, err
 	}
 
-	return GetIssueByIndex(repo.ID, issueNumber)
+	issue, err := GetIssueByIndex(repo.ID, index)
+	if err != nil {
+		return nil, err
+	}
+
+	issue.Repo = repo
+	return issue, nil
 }
 
 // GetIssueByIndex returns issue by given index in repository.

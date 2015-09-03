@@ -183,14 +183,17 @@ func RenameRepoAction(actUser *User, oldRepoName string, repo *Repository) error
 	return renameRepoAction(x, actUser, oldRepoName, repo)
 }
 
+func issueIndexTrimRight(c rune) bool {
+	return !unicode.IsDigit(c)
+}
+
 // updateIssuesCommit checks if issues are manipulated by commit message.
 func updateIssuesCommit(u *User, repo *Repository, repoUserName, repoName string, commits []*base.PushCommit) error {
 	for _, c := range commits {
+		refMarked := make(map[int64]bool)
 		for _, ref := range IssueReferenceKeywordsPat.FindAllString(c.Message, -1) {
-			ref := ref[strings.IndexByte(ref, byte(' '))+1:]
-			ref = strings.TrimRightFunc(ref, func(c rune) bool {
-				return !unicode.IsDigit(c)
-			})
+			ref = ref[strings.IndexByte(ref, byte(' '))+1:]
+			ref = strings.TrimRightFunc(ref, issueIndexTrimRight)
 
 			if len(ref) == 0 {
 				continue
@@ -199,10 +202,9 @@ func updateIssuesCommit(u *User, repo *Repository, repoUserName, repoName string
 			// Add repo name if missing
 			if ref[0] == '#' {
 				ref = fmt.Sprintf("%s/%s%s", repoUserName, repoName, ref)
-			} else if strings.Contains(ref, "/") == false {
+			} else if !strings.Contains(ref, "/") {
 				// FIXME: We don't support User#ID syntax yet
 				// return ErrNotImplemented
-
 				continue
 			}
 
@@ -210,6 +212,11 @@ func updateIssuesCommit(u *User, repo *Repository, repoUserName, repoName string
 			if err != nil {
 				return err
 			}
+
+			if refMarked[issue.ID] {
+				continue
+			}
+			refMarked[issue.ID] = true
 
 			url := fmt.Sprintf("%s/%s/%s/commit/%s", setting.AppSubUrl, repoUserName, repoName, c.Sha1)
 			message := fmt.Sprintf(`<a href="%s">%s</a>`, url, c.Message)
@@ -218,11 +225,10 @@ func updateIssuesCommit(u *User, repo *Repository, repoUserName, repoName string
 			}
 		}
 
+		refMarked = make(map[int64]bool)
 		for _, ref := range IssueCloseKeywordsPat.FindAllString(c.Message, -1) {
-			ref := ref[strings.IndexByte(ref, byte(' '))+1:]
-			ref = strings.TrimRightFunc(ref, func(c rune) bool {
-				return !unicode.IsDigit(c)
-			})
+			ref = ref[strings.IndexByte(ref, byte(' '))+1:]
+			ref = strings.TrimRightFunc(ref, issueIndexTrimRight)
 
 			if len(ref) == 0 {
 				continue
@@ -234,7 +240,6 @@ func updateIssuesCommit(u *User, repo *Repository, repoUserName, repoName string
 			} else if strings.Contains(ref, "/") == false {
 				// We don't support User#ID syntax yet
 				// return ErrNotImplemented
-
 				continue
 			}
 
@@ -243,45 +248,24 @@ func updateIssuesCommit(u *User, repo *Repository, repoUserName, repoName string
 				return err
 			}
 
-			if issue.RepoID == repo.ID {
-				if issue.IsClosed {
-					continue
-				}
-				issue.IsClosed = true
+			if refMarked[issue.ID] {
+				continue
+			}
+			refMarked[issue.ID] = true
 
-				if err = issue.GetLabels(); err != nil {
-					return err
-				}
-				for _, label := range issue.Labels {
-					label.NumClosedIssues++
+			if issue.RepoID != repo.ID || issue.IsClosed {
+				continue
+			}
 
-					if err = UpdateLabel(label); err != nil {
-						return err
-					}
-				}
-
-				if err = UpdateIssue(issue); err != nil {
-					return err
-				} else if err = UpdateIssueUsersByStatus(issue.ID, issue.IsClosed); err != nil {
-					return err
-				}
-
-				if err = ChangeMilestoneIssueStats(issue); err != nil {
-					return err
-				}
-
-				// If commit happened in the referenced repository, it means the issue can be closed.
-				if _, err = CreateComment(u, repo, issue, 0, 0, COMMENT_TYPE_CLOSE, "", nil); err != nil {
-					return err
-				}
+			if err = issue.ChangeStatus(u, true); err != nil {
+				return err
 			}
 		}
 
+		// It is conflict to have close and reopen at same time, so refsMarkd doesn't need to reinit here.
 		for _, ref := range IssueReopenKeywordsPat.FindAllString(c.Message, -1) {
-			ref := ref[strings.IndexByte(ref, byte(' '))+1:]
-			ref = strings.TrimRightFunc(ref, func(c rune) bool {
-				return !unicode.IsDigit(c)
-			})
+			ref = ref[strings.IndexByte(ref, byte(' '))+1:]
+			ref = strings.TrimRightFunc(ref, issueIndexTrimRight)
 
 			if len(ref) == 0 {
 				continue
@@ -293,7 +277,6 @@ func updateIssuesCommit(u *User, repo *Repository, repoUserName, repoName string
 			} else if strings.Contains(ref, "/") == false {
 				// We don't support User#ID syntax yet
 				// return ErrNotImplemented
-
 				continue
 			}
 
@@ -302,37 +285,17 @@ func updateIssuesCommit(u *User, repo *Repository, repoUserName, repoName string
 				return err
 			}
 
-			if issue.RepoID == repo.ID {
-				if !issue.IsClosed {
-					continue
-				}
-				issue.IsClosed = false
+			if refMarked[issue.ID] {
+				continue
+			}
+			refMarked[issue.ID] = true
 
-				if err = issue.GetLabels(); err != nil {
-					return err
-				}
-				for _, label := range issue.Labels {
-					label.NumClosedIssues--
+			if issue.RepoID != repo.ID || !issue.IsClosed {
+				continue
+			}
 
-					if err = UpdateLabel(label); err != nil {
-						return err
-					}
-				}
-
-				if err = UpdateIssue(issue); err != nil {
-					return err
-				} else if err = UpdateIssueUsersByStatus(issue.ID, issue.IsClosed); err != nil {
-					return err
-				}
-
-				if err = ChangeMilestoneIssueStats(issue); err != nil {
-					return err
-				}
-
-				// If commit happened in the referenced repository, it means the issue can be closed.
-				if _, err = CreateComment(u, repo, issue, 0, 0, COMMENT_TYPE_REOPEN, "", nil); err != nil {
-					return err
-				}
+			if err = issue.ChangeStatus(u, false); err != nil {
+				return err
 			}
 		}
 	}
