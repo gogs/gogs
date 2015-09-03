@@ -251,5 +251,5 @@ func MigrateRepo(ctx *middleware.Context, form auth.MigrateRepoForm) {
 	}
 
 	log.Trace("Repository migrated: %s/%s", ctxUser.Name, form.RepoName)
-	ctx.WriteHeader(200)
+	ctx.JSON(201, ToApiRepository(ctxUser, repo, api.Permission{true, true, true}))
 }
