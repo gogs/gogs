@@ -11,7 +11,7 @@ Gogs 的目标是打造一个最简单、最快速和最轻松的方式搭建自
 
 - 有关项目设计、已知问题和变更日志，请通过 [使用手册](http://gogs.io/docs/intro/) 查看。
 - 您可以到 [Trello Board](https://trello.com/b/uxAoeLUl/gogs-go-git-service) 跟随开发团队的脚步。
-- 想要先睹为快？通过 [在线体验](https://try.gogs.io/unknwon/gogs) 或查看 **安装部署 -> 二进制安装** 小节。
+- 想要先睹为快？通过 [在线体验](https://try.gogs.io/gogs/gogs) 或查看 **安装部署 -> 二进制安装** 小节。
 - 使用过程中遇到问题？尝试从 [故障排查](http://gogs.io/docs/intro/troubleshooting.md) 页面获取帮助。
 - 希望帮助多国语言界面的翻译吗？请立即访问 [详情页面](http://gogs.io/docs/features/i18n.html)！
 
