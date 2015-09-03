@@ -156,7 +156,7 @@ func NewTestEngine(x *xorm.Engine) (err error) {
 	}
 
 	x.SetMapper(core.GonicMapper{})
-	return x.Sync(tables...)
+	return x.StoreEngine("InnoDB").Sync2(tables...)
 }
 
 func SetEngine() (err error) {
