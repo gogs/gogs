@@ -35,10 +35,10 @@ type MigrateRepoForm struct {
 	CloneAddr    string `binding:"Required"`
 	AuthUsername string
 	AuthPassword string
-	Mirror       bool
 	Uid          int64  `binding:"Required"`
 	RepoName     string `binding:"Required;AlphaDashDot;MaxSize(100)"`
 	Private      bool
+	Mirror       bool
 	Description  string `binding:"MaxSize(255)"`
 }
 
