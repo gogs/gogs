@@ -192,23 +192,9 @@ func CreateOrgRepo(ctx *middleware.Context, opt api.CreateRepoOption) {
 }
 
 func MigrateRepo(ctx *middleware.Context, form auth.MigrateRepoForm) {
-	u, err := models.GetUserByName(ctx.Query("username"))
-	if err != nil {
-		if models.IsErrUserNotExist(err) {
-			ctx.HandleAPI(422, err)
-		} else {
-			ctx.HandleAPI(500, err)
-		}
-		return
-	}
-	if !u.ValidatePassword(ctx.Query("password")) {
-		ctx.HandleAPI(422, "Username or password is not correct.")
-		return
-	}
-
-	ctxUser := u
+	ctxUser := ctx.User
 	// Not equal means current user is an organization.
-	if form.Uid != u.Id {
+	if form.Uid != ctxUser.Id {
 		org, err := models.GetUserByID(form.Uid)
 		if err != nil {
 			if models.IsErrUserNotExist(err) {
@@ -228,7 +214,7 @@ func MigrateRepo(ctx *middleware.Context, form auth.MigrateRepoForm) {
 
 	if ctxUser.IsOrganization() {
 		// Check ownership of organization.
-		if !ctxUser.IsOwnedBy(u.Id) {
+		if !ctxUser.IsOwnedBy(ctx.User.Id) {
 			ctx.HandleAPI(403, "Given user is not owner of organization.")
 			return
 		}

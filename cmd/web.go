@@ -229,11 +229,14 @@ func runWeb(ctx *cli.Context) {
 				Post(bind(api.CreateRepoOption{}), v1.CreateRepo)
 			m.Post("/org/:org/repos", middleware.ApiReqToken(), bind(api.CreateRepoOption{}), v1.CreateOrgRepo)
 
-			// TODO: https://github.com/gogits/go-gogs-client/wiki
 			m.Group("/repos", func() {
 				m.Get("/search", v1.SearchRepos)
-				m.Post("/migrate", bindIgnErr(auth.MigrateRepoForm{}), v1.MigrateRepo)
 
+				m.Group("", func() {
+					m.Post("/migrate", bindIgnErr(auth.MigrateRepoForm{}), v1.MigrateRepo)
+				}, middleware.ApiReqToken())
+
+				// TODO: https://github.com/gogits/go-gogs-client/wiki
 				m.Group("/:username/:reponame", func() {
 					m.Combo("/hooks").Get(v1.ListRepoHooks).
 						Post(bind(api.CreateHookOption{}), v1.CreateRepoHook)
