@@ -245,11 +245,15 @@ func (repo *Repository) GetBaseRepo() (err error) {
 	return err
 }
 
-func (repo *Repository) RepoPath() (string, error) {
-	if err := repo.GetOwner(); err != nil {
+func (repo *Repository) repoPath(e Engine) (string, error) {
+	if err := repo.getOwner(e); err != nil {
 		return "", err
 	}
 	return RepoPath(repo.Owner.Name, repo.Name), nil
+}
+
+func (repo *Repository) RepoPath() (string, error) {
+	return repo.repoPath(x)
 }
 
 func (repo *Repository) RepoLink() (string, error) {
@@ -1057,7 +1061,7 @@ func DeleteRepository(uid, repoID int64) error {
 	}
 
 	// Remove repository files.
-	repoPath, err := repo.RepoPath()
+	repoPath, err := repo.repoPath(sess)
 	if err != nil {
 		return fmt.Errorf("RepoPath: %v", err)
 	}
