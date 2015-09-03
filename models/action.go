@@ -226,6 +226,7 @@ func updateIssuesCommit(u *User, repo *Repository, repoUserName, repoName string
 		}
 
 		refMarked = make(map[int64]bool)
+		// FIXME: can merge this one and next one to a common function.
 		for _, ref := range IssueCloseKeywordsPat.FindAllString(c.Message, -1) {
 			ref = ref[strings.IndexByte(ref, byte(' '))+1:]
 			ref = strings.TrimRightFunc(ref, issueIndexTrimRight)
@@ -237,7 +238,7 @@ func updateIssuesCommit(u *User, repo *Repository, repoUserName, repoName string
 			// Add repo name if missing
 			if ref[0] == '#' {
 				ref = fmt.Sprintf("%s/%s%s", repoUserName, repoName, ref)
-			} else if strings.Contains(ref, "/") == false {
+			} else if !strings.Contains(ref, "/") {
 				// We don't support User#ID syntax yet
 				// return ErrNotImplemented
 				continue
@@ -274,7 +275,7 @@ func updateIssuesCommit(u *User, repo *Repository, repoUserName, repoName string
 			// Add repo name if missing
 			if ref[0] == '#' {
 				ref = fmt.Sprintf("%s/%s%s", repoUserName, repoName, ref)
-			} else if strings.Contains(ref, "/") == false {
+			} else if !strings.Contains(ref, "/") {
 				// We don't support User#ID syntax yet
 				// return ErrNotImplemented
 				continue
