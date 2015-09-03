@@ -236,7 +236,6 @@ func runWeb(ctx *cli.Context) {
 					m.Post("/migrate", bindIgnErr(auth.MigrateRepoForm{}), v1.MigrateRepo)
 				}, middleware.ApiReqToken())
 
-				// TODO: https://github.com/gogits/go-gogs-client/wiki
 				m.Group("/:username/:reponame", func() {
 					m.Combo("/hooks").Get(v1.ListRepoHooks).
 						Post(bind(api.CreateHookOption{}), v1.CreateRepoHook)

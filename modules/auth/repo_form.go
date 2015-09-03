@@ -32,14 +32,14 @@ func (f *CreateRepoForm) Validate(ctx *macaron.Context, errs binding.Errors) bin
 }
 
 type MigrateRepoForm struct {
-	CloneAddr    string `binding:"Required"`
-	AuthUsername string
-	AuthPassword string
-	Uid          int64  `binding:"Required"`
-	RepoName     string `binding:"Required;AlphaDashDot;MaxSize(100)"`
-	Private      bool
-	Mirror       bool
-	Description  string `binding:"MaxSize(255)"`
+	CloneAddr    string `json:"clone_addr" binding:"Required"`
+	AuthUsername string `json:"auth_username"`
+	AuthPassword string `json:"auth_password"`
+	Uid          int64  `json:"uid" binding:"Required"`
+	RepoName     string `json:"repo_name" binding:"Required;AlphaDashDot;MaxSize(100)"`
+	Private      bool   `json:"mirror"`
+	Mirror       bool   `json:"private"`
+	Description  string `json:"description" binding:"MaxSize(255)"`
 }
 
 func (f *MigrateRepoForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
