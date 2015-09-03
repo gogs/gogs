@@ -268,6 +268,10 @@ func (repo *Repository) IsOwnedBy(userID int64) bool {
 	return repo.OwnerID == userID
 }
 
+func (repo *Repository) NextIssueIndex() int64 {
+	return int64(repo.NumIssues+repo.NumPulls) + 1
+}
+
 var (
 	DescPattern = regexp.MustCompile(`https?://\S+`)
 )
