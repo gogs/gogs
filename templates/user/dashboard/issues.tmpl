@@ -26,12 +26,12 @@
   			</div>
   		</div>
 			<div class="twelve wide column content">
-				<div class="ui tiny tabs buttons">
-				  <a class="ui green basic button {{if not .IsShowClosed}}active{{end}}" href="{{.Link}}?type={{$.ViewType}}&repo={{.RepoID}}&state=open">
+				<div class="ui tiny basic buttons">
+				  <a class="ui {{if not .IsShowClosed}}green active{{end}} basic button" href="{{.Link}}?type={{$.ViewType}}&repo={{.RepoID}}&state=open">
 				  	<i class="octicon octicon-issue-opened"></i>
 				  	{{.i18n.Tr "repo.issues.open_tab" .IssueStats.OpenCount}}
 				  </a>
-				  <a class="ui red basic button {{if .IsShowClosed}}active{{end}}" href="{{.Link}}?type={{$.ViewType}}&repo={{.RepoID}}&state=closed">
+				  <a class="ui {{if .IsShowClosed}}red active{{end}} basic button" href="{{.Link}}?type={{$.ViewType}}&repo={{.RepoID}}&state=closed">
 				  	<i class="octicon octicon-issue-closed"></i>
 				  	{{.i18n.Tr "repo.issues.close_tab" .IssueStats.ClosedCount}}
 				  </a>

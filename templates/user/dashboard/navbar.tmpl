@@ -10,12 +10,12 @@
 				{{.i18n.Tr "home.switch_dashboard_context"}}
 			</div>
       <div class="items">
-      	<a class="{{if eq .ContextUser.Id .SignedUser.Id}}active selected{{end}} item" href="{{AppSubUrl}}/issues">
+      	<a class="{{if eq .ContextUser.Id .SignedUser.Id}}active selected{{end}} item" href="{{AppSubUrl}}/{{if .PageIsIssues}}issues{{else}}pulls{{end}}">
         	<img class="ui avatar image" src="{{.SignedUser.AvatarLink}}">
       		{{.SignedUser.Name}}
       	</a>
         {{range .Orgs}}
-        <a class="{{if eq $.ContextUser.Id .Id}}active selected{{end}} item" href="{{AppSubUrl}}/org/{{.Name}}/issues">
+        <a class="{{if eq $.ContextUser.Id .Id}}active selected{{end}} item" href="{{AppSubUrl}}/org/{{.Name}}/{{if $.PageIsIssues}}issues{{else}}pulls{{end}}">
           <img class="ui avatar image" src="{{.AvatarLink}}">
           {{.Name}}
         </a>
