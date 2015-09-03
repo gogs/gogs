@@ -598,7 +598,7 @@ func CompareAndPullRequestPost(ctx *middleware.Context, form auth.CreateIssueFor
 
 	pull := &models.Issue{
 		RepoID:      repo.ID,
-		Index:       int64(repo.NumIssues) + 1,
+		Index:       repo.NextIssueIndex(),
 		Name:        form.Title,
 		PosterID:    ctx.User.Id,
 		Poster:      ctx.User,
