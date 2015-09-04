@@ -740,10 +740,25 @@ func CreateRepository(u *User, opts CreateRepoOptions) (_ *Repository, err error
 	return repo, sess.Commit()
 }
 
+func countRepositories(showPrivate bool) int64 {
+	sess := x.NewSession()
+
+	if !showPrivate {
+		sess.Where("is_private=", false)
+	}
+
+	count, _ := sess.Count(new(Repository))
+	return count
+}
+
 // CountRepositories returns number of repositories.
 func CountRepositories() int64 {
-	count, _ := x.Count(new(Repository))
-	return count
+	return countRepositories(true)
+}
+
+// CountPublicRepositories returns number of public repositories.
+func CountPublicRepositories() int64 {
+	return countRepositories(false)
 }
 
 // GetRepositoriesWithUsers returns given number of repository objects with offset.

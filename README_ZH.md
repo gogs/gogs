@@ -66,7 +66,7 @@ Gogs 的目标是打造一个最简单、最快速和最轻松的方式搭建自
 
 - 前团队成员 [@lunny](https://github.com/lunny) 和 [@fuxiaohei](https://github.com/fuxiaohei)。
 - 您可以通过查看 [贡献者页面](https://github.com/gogits/gogs/graphs/contributors) 获取完整的贡献者列表。
-- 您可以通过查看 [TRANSLATORS](conf/locale/TRANSLATORS) 文件获取完整的翻译人员列表。
+- 您可以通过查看 [TRANSLATORS](conf/locale/TRANSLATORS) 文件获取公开的翻译人员列表。
 
 ## 授权许可
 

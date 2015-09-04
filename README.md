@@ -111,7 +111,7 @@ There are 5 ways to install Gogs:
 
 - Ex-team members [@lunny](https://github.com/lunny) and [@fuxiaohei](https://github.com/fuxiaohei).
 - See [contributors page](https://github.com/gogits/gogs/graphs/contributors) for full list of contributors.
-- See [TRANSLATORS](conf/locale/TRANSLATORS) for full list of translators.
+- See [TRANSLATORS](conf/locale/TRANSLATORS) for public list of translators.
 
 ## License
 
