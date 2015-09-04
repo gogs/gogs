@@ -57,7 +57,7 @@ func Explore(ctx *middleware.Context) {
 		page = 1
 	}
 
-	ctx.Data["Page"] = paginater.New(int(models.CountRepositories()), setting.ExplorePagingNum, page, 5)
+	ctx.Data["Page"] = paginater.New(int(models.CountPublicRepositories()), setting.ExplorePagingNum, page, 5)
 
 	repos, err := models.GetRecentUpdatedRepositories(page)
 	if err != nil {
