@@ -59,7 +59,7 @@ func (f *InstallForm) Validate(ctx *macaron.Context, errs binding.Errors) bindin
 
 type RegisterForm struct {
 	UserName  string `form:"uname" binding:"Required;AlphaDashDot;MaxSize(35)"`
-	Email     string `form:"email" binding:"Required;Email;MaxSize(50)"`
+	Email     string `form:"email" binding:"Required;Email;MaxSize(254)"`
 	Password  string `form:"password" binding:"Required;MaxSize(255)"`
 	Retype    string `form:"retype"`
 	LoginType string `form:"logintype"`
@@ -71,7 +71,7 @@ func (f *RegisterForm) Validate(ctx *macaron.Context, errs binding.Errors) bindi
 }
 
 type SignInForm struct {
-	UserName string `form:"uname" binding:"Required;MaxSize(35)"`
+	UserName string `form:"uname" binding:"Required;MaxSize(254)"`
 	Password string `form:"password" binding:"Required;MaxSize(255)"`
 	Remember bool   `form:"remember"`
 }
@@ -90,10 +90,10 @@ func (f *SignInForm) Validate(ctx *macaron.Context, errs binding.Errors) binding
 type UpdateProfileForm struct {
 	UserName string `form:"uname" binding:"Required;MaxSize(35)"`
 	FullName string `form:"fullname" binding:"MaxSize(100)"`
-	Email    string `form:"email" binding:"Required;Email;MaxSize(50)"`
+	Email    string `form:"email" binding:"Required;Email;MaxSize(254)"`
 	Website  string `form:"website" binding:"Url;MaxSize(100)"`
 	Location string `form:"location" binding:"MaxSize(50)"`
-	Avatar   string `form:"avatar" binding:"Required;Email;MaxSize(50)"`
+	Avatar   string `form:"avatar" binding:"Required;Email;MaxSize(254)"`
 }
 
 func (f *UpdateProfileForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
