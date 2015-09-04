@@ -74,11 +74,11 @@
 		"outputPathIsOutsideProject": 0,
 		"outputPathIsSetByUser": 0
 		},
-	"\/css\/semantic-2.0.8.min.css": {
+	"\/css\/semantic-2.1.3.min.css": {
 		"fileType": 16,
 		"ignore": 0,
 		"ignoreWasSetByUser": 0,
-		"inputAbbreviatedPath": "\/css\/semantic-2.0.8.min.css",
+		"inputAbbreviatedPath": "\/css\/semantic-2.1.3.min.css",
 		"outputAbbreviatedPath": "No Output Path",
 		"outputPathIsOutsideProject": 0,
 		"outputPathIsSetByUser": 0
@@ -237,12 +237,12 @@
 		"outputPathIsSetByUser": 0,
 		"processed": 0
 		},
-	"\/js\/semantic-2.0.8.min.js": {
+	"\/js\/semantic-2.1.3.min.js": {
 		"fileType": 64,
 		"ignore": 0,
 		"ignoreWasSetByUser": 0,
-		"inputAbbreviatedPath": "\/js\/semantic-2.0.8.min.js",
-		"outputAbbreviatedPath": "\/js\/min\/semantic-2.0.8.min-min.js",
+		"inputAbbreviatedPath": "\/js\/semantic-2.1.3.min.js",
+		"outputAbbreviatedPath": "\/js\/min\/semantic-2.1.3.min-min.js",
 		"outputPathIsOutsideProject": 0,
 		"outputPathIsSetByUser": 0,
 		"outputStyle": 1,
