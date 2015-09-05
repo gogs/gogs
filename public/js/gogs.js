@@ -327,6 +327,7 @@ function initRepository() {
                                 $render_content.html($('#no-content').html());
                             } else {
                                 $render_content.html(data.content);
+                                emojify.run($render_content[0]);
                             }
                         });
                 });
