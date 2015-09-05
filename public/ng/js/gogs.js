@@ -936,6 +936,10 @@ $(document).ready(function () {
     $('#pull-issue-preview').markdown_preview(".issue-add-comment");
 
     homepage();
+    emojify.setConfig({
+        img_dir:'/img/emoji'
+    });
+    emojify.run();
 
     // Fix language drop-down menu height.
     var l = $('#footer-lang li').length;
