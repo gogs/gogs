@@ -38,9 +38,8 @@ func getForkRepository(ctx *middleware.Context) *models.Repository {
 		return nil
 	}
 
-	// Cannot fork bare repo.
-	if forkRepo.IsBare {
-		ctx.Handle(404, "", nil)
+	if !forkRepo.CanBeForked() {
+		ctx.Handle(404, "getForkRepository", nil)
 		return nil
 	}
 
