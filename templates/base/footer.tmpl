@@ -2,13 +2,12 @@
 	<footer>
 		<div class="ui container">
 			<div class="ui left">
-				© 2015 Gogs · {{.i18n.Tr "version"}}: {{AppVer}} · {{.i18n.Tr "page"}}: <strong>{{LoadTimes .PageStartTime}}</strong> · {{.i18n.Tr "template"}}: <strong>{{call .TmplLoadTimes}}</strong>
+				© 2015 Gogs {{.i18n.Tr "version"}}: {{AppVer}} {{.i18n.Tr "page"}}: <strong>{{LoadTimes .PageStartTime}}</strong> {{.i18n.Tr "template"}}: <strong>{{call .TmplLoadTimes}}</strong>
 			</div>
 			<div class="ui right links">
 				{{if .ShowFooterBranding}}
 				<a target="_blank" href="https://github.com/gogits/gogs"><i class="fa fa-github-square"></i><span class="sr-only">GitHub</span></a>
 				<a target="_blank" href="https://twitter.com/gogitservice"><i class="fa fa-twitter"></i><span class="sr-only">Twitter</span></a>
-				<a target="_blank" href="https://plus.google.com/communities/115599856376145964459"><i class="fa fa-google-plus"></i><span class="sr-only">Google Plus</span></a>
 				<a target="_blank" href="http://weibo.com/gogschina"><i class="fa fa-weibo"></i><span class="sr-only">Sina Weibo</span></a>
 				{{end}}
 				<div class="ui language bottom pointing slide up dropdown link item">
