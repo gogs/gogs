@@ -272,6 +272,11 @@ func (repo *Repository) IsOwnedBy(userID int64) bool {
 	return repo.OwnerID == userID
 }
 
+// CanBeForked returns true if repository meets the requirements of being forked.
+func (repo *Repository) CanBeForked() bool {
+	return !repo.IsBare && !repo.IsMirror
+}
+
 func (repo *Repository) NextIssueIndex() int64 {
 	return int64(repo.NumIssues+repo.NumPulls) + 1
 }
