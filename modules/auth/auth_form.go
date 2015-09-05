@@ -19,6 +19,7 @@ type AuthenticationForm struct {
 	BindDN            string `form:"bind_dn"`
 	BindPassword      string
 	UserBase          string
+	UserDN            string `form:"user_dn"`
 	AttributeName     string
 	AttributeSurname  string
 	AttributeMail     string
