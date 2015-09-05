@@ -4,15 +4,15 @@ Gogs LDAP Authentication Module
 ## About
 
 This authentication module attempts to authorize and authenticate a user
-against an LDAP server. It provides two methods of authenitcation: LDAP via
+against an LDAP server. It provides two methods of authentication: LDAP via
 BindDN, and LDAP simple authentication.
 
-LDAP via BindDN functions like most LDAP authentication systems.
-First, it queries the LDAP server using a Bind DN and
-searches for the user that is attempting to sign in. If the user is found, the
-module attempts to bind to the server using the user's supplied credentials. If
-this succeeds, the user has been authenticated, and his account information is
-retrieved and passed to the Gogs login infrastructure.
+LDAP via BindDN functions like most LDAP authentication systems. First, it
+queries the LDAP server using a Bind DN and searches for the user that is
+attempting to sign in. If the user is found, the module attempts to bind to the
+server using the user's supplied credentials. If this succeeds, the user has
+been authenticated, and his account information is retrieved and passed to the
+Gogs login infrastructure.
 
 LDAP simple authentication does not utilize a Bind DN. Instead, it binds
 directly with the LDAP server using the user's supplied credentials. If the bind
@@ -97,4 +97,5 @@ share the following fields:
 * User Filter **(required)**
     * An LDAP filter declaring when a user should be allowed to log in. The `%s`
       matching parameter will be substituted with the user's username.
+    * Example: (&(objectClass=posixAccount)(cn=%s))
     * Example: (&(objectClass=posixAccount)(uid=%s))
