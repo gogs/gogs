@@ -22,6 +22,7 @@ type Ldapsource struct {
 	BindDN           string // DN to bind with
 	BindPassword     string // Bind DN password
 	UserBase         string // Base search path for users
+	UserDN           string // Template for the DN of the user for simple auth
 	AttributeName    string // First name attribute
 	AttributeSurname string // Surname attribute
 	AttributeMail    string // E-mail attribute
@@ -78,10 +79,19 @@ func (ls Ldapsource) FindUserDN(name string) (string, bool) {
 }
 
 // searchEntry : search an LDAP source if an entry (name, passwd) is valid and in the specific filter
-func (ls Ldapsource) SearchEntry(name, passwd string) (string, string, string, bool, bool) {
-	userDN, found := ls.FindUserDN(name)
-	if !found {
-		return "", "", "", false, false
+func (ls Ldapsource) SearchEntry(name, passwd string, directBind bool) (string, string, string, bool, bool) {
+	var userDN string
+	if directBind {
+		log.Trace("LDAP will bind directly via UserDN template: %s", ls.UserDN)
+		userDN = fmt.Sprintf(ls.UserDN, name)
+	} else {
+		log.Trace("LDAP will use BindDN.")
+
+		var found bool
+		userDN, found = ls.FindUserDN(name)
+		if !found {
+			return "", "", "", false, false
+		}
 	}
 
 	l, err := ldapDial(ls)
@@ -112,7 +122,12 @@ func (ls Ldapsource) SearchEntry(name, passwd string) (string, string, string, b
 		log.Error(4, "LDAP Search failed unexpectedly! (%v)", err)
 		return "", "", "", false, false
 	} else if len(sr.Entries) < 1 {
-		log.Error(4, "LDAP Search failed unexpectedly! (0 entries)")
+		if directBind {
+			log.Error(4, "User filter inhibited user login.")
+		} else {
+			log.Error(4, "LDAP Search failed unexpectedly! (0 entries)")
+		}
+
 		return "", "", "", false, false
 	}
 
