@@ -26,48 +26,52 @@
                                     <label class="req" for="name">{{.i18n.Tr "admin.auths.auth_name"}}</label>
                                     <input class="ipt ipt-large ipt-radius {{if .Err_AuthName}}ipt-error{{end}}" id="name" name="name" value="{{.name}}" required />
                                 </div>
-                                <div class="ldap">
-                                    <div class="field">
+                                <div class="dldap ldap">
+                                    <div class="dldap ldap field">
                                         <label class="req" for="host">{{.i18n.Tr "admin.auths.host"}}</label>
                                         <input class="ipt ipt-large ipt-radius {{if .Err_Host}}ipt-error{{end}}" id="host" name="host" value="{{.host}}" />
                                     </div>
-                                    <div class="field">
+                                    <div class="dldap ldap field">
                                         <label class="req" for="port">{{.i18n.Tr "admin.auths.port"}}</label>
                                         <input class="ipt ipt-large ipt-radius {{if .Err_Port}}ipt-error{{end}}" id="port" name="port" value="{{.port}}" />
                                     </div>
-                                    <div class="field">
+                                    <div class="dldap ldap field">
                                         <label for="use_ssl">{{.i18n.Tr "admin.auths.enable_tls"}}</label>
                                         <input name="use_ssl" type="checkbox" {{if .use_ssl}}checked{{end}}>
                                     </div>
-                                    <div class="field">
+                                    <div class="ldap field">
                                         <label class="req" for="bind_dn">{{.i18n.Tr "admin.auths.bind_dn"}}</label>
                                         <input class="ipt ipt-large ipt-radius {{if .Err_BindDN}}ipt-error{{end}}" id="bind_dn" name="bind_dn" value="{{.bind_dn}}" />
                                     </div>
-                                    <div class="field">
+                                    <div class="ldap field">
                                         <label class="req" for="bind_password">{{.i18n.Tr "admin.auths.bind_password"}}</label>
                                         <input class="ipt ipt-large ipt-radius {{if .Err_BindPassword}}ipt-error{{end}}" id="bind_password" name="bind_password" type="password" value="{{.bind_password}}" />
                                     </div>
-                                    <div class="field">
+                                    <div class="ldap field">
                                         <label class="req" for="user_base">{{.i18n.Tr "admin.auths.user_base"}}</label>
                                         <input class="ipt ipt-large ipt-radius {{if .Err_UserBase}}ipt-error{{end}}" id="user_base" name="user_base" value="{{.user_base}}" />
                                     </div>
-                                    <div class="field">
+                                    <div class="dldap field hidden">
+                                        <label class="req" for="user_dn">{{.i18n.Tr "admin.auths.user_dn"}}</label>
+                                        <input class="ipt ipt-large ipt-radius {{if .Err_UserDN}}ipt-error{{end}}" id="user_dn" name="user_dn" value="{{.user_dn}}" />
+                                    </div>
+                                    <div class="dldap ldap field">
                                         <label class="req" for="filter">{{.i18n.Tr "admin.auths.filter"}}</label>
                                         <input class="ipt ipt-large ipt-radius {{if .Err_Filter}}ipt-error{{end}}" id="filter" name="filter" value="{{.filter}}" />
                                     </div>
-                                    <div class="field">
+                                    <div class="dldap ldap field">
                                         <label for="filter">{{.i18n.Tr "admin.auths.admin_filter"}}</label>
                                         <input class="ipt ipt-large ipt-radius {{if .Err_AdminFilter}}ipt-error{{end}}" id="admin_filter" name="admin_filter" value="{{.admin_filter}}" />
                                     </div>
-                                    <div class="field">
+                                    <div class="dldap ldap field">
                                         <label for="attribute_name">{{.i18n.Tr "admin.auths.attribute_name"}}</label>
                                         <input class="ipt ipt-large ipt-radius {{if .Err_AttributeName}}ipt-error{{end}}" id="attribute_name" name="attribute_name" value="{{.attribute_name}}" />
                                     </div>
-                                    <div class="field">
+                                    <div class="dldap ldap field">
                                         <label for="attribute_surname">{{.i18n.Tr "admin.auths.attribute_surname"}}</label>
                                         <input class="ipt ipt-large ipt-radius {{if .Err_AttributeSurname}}ipt-error{{end}}" id="attribute_surname" name="attribute_surname" value="{{.attribute_surname}}" />
                                     </div>
-                                    <div class="field">
+                                    <div class="dldap ldap field">
                                         <label class="req" for="attribute_mail">{{.i18n.Tr "admin.auths.attribute_mail"}}</label>
                                         <input class="ipt ipt-large ipt-radius {{if .Err_AttributeMail}}ipt-error{{end}}" id="attribute_mail" name="attribute_mail" value="{{.attribute_mail}}" />
                                     </div>
