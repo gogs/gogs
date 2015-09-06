@@ -12,6 +12,7 @@ import (
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/middleware"
 	"github.com/gogits/gogs/modules/setting"
+	"github.com/gogits/gogs/routers/user"
 )
 
 const (
@@ -71,6 +72,17 @@ func SettingsPost(ctx *middleware.Context, form auth.UpdateOrgSettingForm) {
 	log.Trace("Organization setting updated: %s", org.Name)
 	ctx.Flash.Success(ctx.Tr("org.settings.update_setting_success"))
 	ctx.Redirect(org.HomeLink() + "/settings")
+}
+
+func SettingsAvatar(ctx *middleware.Context, form auth.UploadAvatarForm) {
+	form.Enable = true
+	if err := user.UpdateAvatarSetting(ctx, form, ctx.Org.Organization); err != nil {
+		ctx.Flash.Error(err.Error())
+	} else {
+		ctx.Flash.Success(ctx.Tr("org.settings.update_avatar_success"))
+	}
+
+	ctx.Redirect(ctx.Org.OrgLink + "/settings")
 }
 
 func SettingsDelete(ctx *middleware.Context) {

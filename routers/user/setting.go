@@ -5,6 +5,8 @@
 package user
 
 import (
+	"errors"
+	"fmt"
 	"io/ioutil"
 	"strings"
 
@@ -87,45 +89,47 @@ func SettingsPost(ctx *middleware.Context, form auth.UpdateProfileForm) {
 }
 
 // FIXME: limit size.
-func SettingsAvatar(ctx *middleware.Context, form auth.UploadAvatarForm) {
-	defer ctx.Redirect(setting.AppSubUrl + "/user/settings")
-
-	ctx.User.UseCustomAvatar = form.Enable
+func UpdateAvatarSetting(ctx *middleware.Context, form auth.UploadAvatarForm, ctxUser *models.User) error {
+	ctxUser.UseCustomAvatar = form.Enable
 
 	if form.Avatar != nil {
 		fr, err := form.Avatar.Open()
 		if err != nil {
-			ctx.Flash.Error(err.Error())
-			return
+			return fmt.Errorf("Avatar.Open: %v", err)
 		}
 
 		data, err := ioutil.ReadAll(fr)
 		if err != nil {
-			ctx.Flash.Error(err.Error())
-			return
+			return fmt.Errorf("ReadAll: %v", err)
 		}
 		if _, ok := base.IsImageFile(data); !ok {
-			ctx.Flash.Error(ctx.Tr("settings.uploaded_avatar_not_a_image"))
-			return
+			return errors.New(ctx.Tr("settings.uploaded_avatar_not_a_image"))
 		}
-		if err = ctx.User.UploadAvatar(data); err != nil {
-			ctx.Flash.Error(err.Error())
-			return
+		if err = ctxUser.UploadAvatar(data); err != nil {
+			return fmt.Errorf("UploadAvatar: %v", err)
 		}
 	} else {
 		// In case no avatar at all.
 		if form.Enable && !com.IsFile(ctx.User.CustomAvatarPath()) {
-			ctx.Flash.Error(ctx.Tr("settings.no_custom_avatar_available"))
-			return
+			return errors.New(ctx.Tr("settings.no_custom_avatar_available"))
 		}
 	}
 
-	if err := models.UpdateUser(ctx.User); err != nil {
-		ctx.Flash.Error(err.Error())
-		return
+	if err := models.UpdateUser(ctxUser); err != nil {
+		return fmt.Errorf("UpdateUser: %v", err)
 	}
 
-	ctx.Flash.Success(ctx.Tr("settings.update_avatar_success"))
+	return nil
+}
+
+func SettingsAvatar(ctx *middleware.Context, form auth.UploadAvatarForm) {
+	if err := UpdateAvatarSetting(ctx, form, ctx.User); err != nil {
+		ctx.Flash.Error(err.Error())
+	} else {
+		ctx.Flash.Success(ctx.Tr("settings.update_avatar_success"))
+	}
+
+	ctx.Redirect(setting.AppSubUrl + "/user/settings")
 }
 
 func SettingsEmails(ctx *middleware.Context) {
