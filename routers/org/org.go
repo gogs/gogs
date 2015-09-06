@@ -59,25 +59,18 @@ func CreatePost(ctx *middleware.Context, form auth.CreateOrgForm) {
 
 	org := &models.User{
 		Name:     form.OrgName,
-		Email:    form.Email,
 		IsActive: true,
 		Type:     models.ORGANIZATION,
 	}
 
-	var err error
-	if err = models.CreateOrganization(org, ctx.User); err != nil {
+	if err := models.CreateOrganization(org, ctx.User); err != nil {
+		ctx.Data["Err_OrgName"] = true
 		switch {
 		case models.IsErrUserAlreadyExist(err):
-			ctx.Data["Err_OrgName"] = true
 			ctx.RenderWithErr(ctx.Tr("form.org_name_been_taken"), CREATE, &form)
-		case models.IsErrEmailAlreadyUsed(err):
-			ctx.Data["Err_Email"] = true
-			ctx.RenderWithErr(ctx.Tr("form.email_been_used"), CREATE, &form)
 		case models.IsErrNameReserved(err):
-			ctx.Data["Err_OrgName"] = true
 			ctx.RenderWithErr(ctx.Tr("org.form.name_reserved", err.(models.ErrNameReserved).Name), CREATE, &form)
 		case models.IsErrNamePatternNotAllowed(err):
-			ctx.Data["Err_OrgName"] = true
 			ctx.RenderWithErr(ctx.Tr("org.form.name_pattern_not_allowed", err.(models.ErrNamePatternNotAllowed).Pattern), CREATE, &form)
 		default:
 			ctx.Handle(500, "CreateOrganization", err)
