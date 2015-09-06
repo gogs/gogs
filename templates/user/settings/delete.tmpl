@@ -1,5 +1,5 @@
 {{template "base/head" .}}
-<div class="user settings">
+<div class="user settings delete">
   <div class="ui container">
     <div class="ui grid">
       {{template "user/settings/navbar" .}}
@@ -10,7 +10,7 @@
         </h4>
         <div class="ui attached warning segment">
           <div class="ui red message">
-            <p>{{.i18n.Tr "settings.delete_prompt" | Str2html}}</p>
+            <p class="text left"><i class="octicon octicon-alert"></i> {{.i18n.Tr "settings.delete_prompt" | Str2html}}</p>
           </div>
           <form class="ui form" id="delete-form" action="{{.Link}}" method="post">
             {{.CsrfTokenHtml}}
@@ -37,15 +37,6 @@
   <div class="content">
     <p>{{.i18n.Tr "settings.delete_account_desc"}}</p>
   </div>
-  <div class="actions">
-    <div class="ui red basic inverted cancel button">
-      <i class="remove icon"></i>
-      {{.i18n.Tr "modal.no"}}
-    </div>
-    <div class="ui green basic inverted ok button">
-      <i class="checkmark icon"></i>
-      {{.i18n.Tr "modal.yes"}}
-    </div>
-  </div>
+  {{template "base/delete_modal_actions" .}}
 </div>
 {{template "base/footer" .}}
