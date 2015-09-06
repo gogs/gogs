@@ -55,12 +55,12 @@ type User struct {
 	Name      string `xorm:"UNIQUE NOT NULL"`
 	FullName  string
 	// Email is the primary email address (to be used for communication).
-	Email       string `xorm:"UNIQUE(s) NOT NULL"`
+	Email       string `xorm:"NOT NULL"`
 	Passwd      string `xorm:"NOT NULL"`
 	LoginType   LoginType
 	LoginSource int64 `xorm:"NOT NULL DEFAULT 0"`
 	LoginName   string
-	Type        UserType      `xorm:"UNIQUE(s)"`
+	Type        UserType
 	Orgs        []*User       `xorm:"-"`
 	Repos       []*Repository `xorm:"-"`
 	Location    string
@@ -132,42 +132,56 @@ func (u *User) HomeLink() string {
 	return setting.AppSubUrl + "/" + u.Name
 }
 
+// CustomAvatarPath returns user custom avatar file path.
+func (u *User) CustomAvatarPath() string {
+	return filepath.Join(setting.AvatarUploadPath, com.ToStr(u.Id))
+}
+
+// GenerateRandomAvatar generates a random avatar for user.
+func (u *User) GenerateRandomAvatar() error {
+	seed := u.Email
+	if len(seed) == 0 {
+		seed = u.Name
+	}
+
+	img, err := avatar.RandomImage([]byte(seed))
+	if err != nil {
+		return fmt.Errorf("RandomImage: %v", err)
+	}
+	if err = os.MkdirAll(path.Dir(u.CustomAvatarPath()), os.ModePerm); err != nil {
+		return fmt.Errorf("MkdirAll: %v", err)
+	}
+	fw, err := os.Create(u.CustomAvatarPath())
+	if err != nil {
+		return fmt.Errorf("Create: %v", err)
+	}
+	defer fw.Close()
+
+	if err = jpeg.Encode(fw, img, nil); err != nil {
+		return fmt.Errorf("Encode: %v", err)
+	}
+
+	log.Info("New random avatar created: %d", u.Id)
+	return nil
+}
+
 func (u *User) RelAvatarLink() string {
 	defaultImgUrl := "/img/avatar_default.jpg"
 	if u.Id == -1 {
 		return defaultImgUrl
 	}
 
-	imgPath := path.Join(setting.AvatarUploadPath, com.ToStr(u.Id))
 	switch {
 	case u.UseCustomAvatar:
-		if !com.IsExist(imgPath) {
+		if !com.IsExist(u.CustomAvatarPath()) {
 			return defaultImgUrl
 		}
 		return "/avatars/" + com.ToStr(u.Id)
 	case setting.DisableGravatar, setting.OfflineMode:
-		if !com.IsExist(imgPath) {
-			img, err := avatar.RandomImage([]byte(u.Email))
-			if err != nil {
-				log.Error(3, "RandomImage: %v", err)
-				return defaultImgUrl
+		if !com.IsExist(u.CustomAvatarPath()) {
+			if err := u.GenerateRandomAvatar(); err != nil {
+				log.Error(3, "GenerateRandomAvatar: %v", err)
 			}
-			if err = os.MkdirAll(path.Dir(imgPath), os.ModePerm); err != nil {
-				log.Error(3, "MkdirAll: %v", err)
-				return defaultImgUrl
-			}
-			fw, err := os.Create(imgPath)
-			if err != nil {
-				log.Error(3, "Create: %v", err)
-				return defaultImgUrl
-			}
-			defer fw.Close()
-
-			if err = jpeg.Encode(fw, img, nil); err != nil {
-				log.Error(3, "Encode: %v", err)
-				return defaultImgUrl
-			}
-			log.Info("New random avatar created: %d", u.Id)
 		}
 
 		return "/avatars/" + com.ToStr(u.Id)
@@ -206,11 +220,6 @@ func (u *User) ValidatePassword(passwd string) bool {
 	newUser := &User{Passwd: passwd, Salt: u.Salt}
 	newUser.EncodePasswd()
 	return u.Passwd == newUser.Passwd
-}
-
-// CustomAvatarPath returns user custom avatar file path.
-func (u *User) CustomAvatarPath() string {
-	return filepath.Join(setting.AvatarUploadPath, com.ToStr(u.Id))
 }
 
 // UploadAvatar saves custom avatar for user.
@@ -494,12 +503,20 @@ func ChangeUserName(u *User, newUserName string) (err error) {
 }
 
 func updateUser(e Engine, u *User) error {
-	u.Email = strings.ToLower(u.Email)
-	has, err := e.Where("id!=?", u.Id).And("type=?", u.Type).And("email=?", u.Email).Get(new(User))
-	if err != nil {
-		return err
-	} else if has {
-		return ErrEmailAlreadyUsed{u.Email}
+	// Organization does not need e-mail.
+	if !u.IsOrganization() {
+		u.Email = strings.ToLower(u.Email)
+		has, err := e.Where("id!=?", u.Id).And("type=?", u.Type).And("email=?", u.Email).Get(new(User))
+		if err != nil {
+			return err
+		} else if has {
+			return ErrEmailAlreadyUsed{u.Email}
+		}
+
+		if len(u.AvatarEmail) == 0 {
+			u.AvatarEmail = u.Email
+		}
+		u.Avatar = avatar.HashEmail(u.AvatarEmail)
 	}
 
 	u.LowerName = strings.ToLower(u.Name)
@@ -514,13 +531,8 @@ func updateUser(e Engine, u *User) error {
 		u.Description = u.Description[:255]
 	}
 
-	if u.AvatarEmail == "" {
-		u.AvatarEmail = u.Email
-	}
-	u.Avatar = avatar.HashEmail(u.AvatarEmail)
-
 	u.FullName = base.Sanitizer.Sanitize(u.FullName)
-	_, err = e.Id(u.Id).AllCols().Update(u)
+	_, err := e.Id(u.Id).AllCols().Update(u)
 	return err
 }
 

@@ -30,10 +30,6 @@
                 <label for="full-name">{{.i18n.Tr "org.settings.full_name"}}</label>
                 <input class="ipt ipt-large ipt-radius {{if .Err_FullName}}ipt-error{{end}}" id="full-name" name="fullname" value="{{.Org.FullName}}" />
               </div>
-              <div class="field">
-                <label class="req" for="email">{{.i18n.Tr "email"}}</label>
-                <input class="ipt ipt-large ipt-radius {{if .Err_Email}}ipt-error{{end}}" id="email" name="email" type="email" value="{{.Org.Email}}" required />
-              </div>
               <div class="field clear">
                 <label class="left" for="desc">{{.i18n.Tr "org.org_desc"}}</label>
                 <textarea class="ipt ipt-large ipt-radius {{if .Err_Description}}ipt-error{{end}}" id="desc" name="desc">{{.Org.Description}}</textarea>
@@ -45,10 +41,6 @@
               <div class="field">
                 <label for="location">{{.i18n.Tr "org.settings.location"}}</label>
                 <input class="ipt ipt-large ipt-radius {{if .Err_Location}}ipt-error{{end}}" id="location" name="location" type="text" value="{{.Org.Location}}" />
-              </div>
-              <div class="field {{if DisableGravatar}}hide{{end}}">
-                <label class="req" for="gravatar-email">Gravatar {{.i18n.Tr "email"}}</label>
-                <input class="ipt ipt-large ipt-radius {{if .Err_Avatar}}ipt-error{{end}}" id="gravatar-email" name="avatar" type="text" value="{{.Org.AvatarEmail}}" />
               </div>
               <div class="field">
                 <span class="form-label"></span>

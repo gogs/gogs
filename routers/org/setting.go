@@ -61,19 +61,11 @@ func SettingsPost(ctx *middleware.Context, form auth.UpdateOrgSettingForm) {
 	}
 
 	org.FullName = form.OrgFullName
-	org.Email = form.Email
 	org.Description = form.Description
 	org.Website = form.Website
 	org.Location = form.Location
-	org.Avatar = base.EncodeMd5(form.Avatar)
-	org.AvatarEmail = form.Avatar
 	if err := models.UpdateUser(org); err != nil {
-		if models.IsErrEmailAlreadyUsed(err) {
-			ctx.Data["Err_Email"] = true
-			ctx.RenderWithErr(ctx.Tr("form.email_been_used"), SETTINGS_OPTIONS, &form)
-		} else {
-			ctx.Handle(500, "UpdateUser", err)
-		}
+		ctx.Handle(500, "UpdateUser", err)
 		return
 	}
 	log.Trace("Organization setting updated: %s", org.Name)
