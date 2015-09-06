@@ -21,10 +21,6 @@ fi
 
 service ssh start
 
-# sync templates
-test -d /data/gogs/templates || cp -ar ./templates /data/gogs/
-rsync -rtv /data/gogs/templates/ ./templates/
-
 ln -sf /data/gogs/log ./log
 ln -sf /data/gogs/data ./data
 ln -sf /data/git /home/git
