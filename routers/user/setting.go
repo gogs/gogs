@@ -47,11 +47,11 @@ func SettingsPost(ctx *middleware.Context, form auth.UpdateProfileForm) {
 	}
 
 	// Check if user name has been changed.
-	if ctx.User.Name != form.UserName {
-		if err := models.ChangeUserName(ctx.User, form.UserName); err != nil {
+	if ctx.User.Name != form.Name {
+		if err := models.ChangeUserName(ctx.User, form.Name); err != nil {
 			switch {
 			case models.IsErrUserAlreadyExist(err):
-				ctx.Flash.Error(ctx.Tr("form.username_been_taken"))
+				ctx.Flash.Error(ctx.Tr("form.name_been_taken"))
 				ctx.Redirect(setting.AppSubUrl + "/user/settings")
 			case models.IsErrEmailAlreadyUsed(err):
 				ctx.Flash.Error(ctx.Tr("form.email_been_used"))
@@ -67,16 +67,16 @@ func SettingsPost(ctx *middleware.Context, form auth.UpdateProfileForm) {
 			}
 			return
 		}
-		log.Trace("User name changed: %s -> %s", ctx.User.Name, form.UserName)
-		ctx.User.Name = form.UserName
+		log.Trace("User name changed: %s -> %s", ctx.User.Name, form.Name)
+		ctx.User.Name = form.Name
 	}
 
 	ctx.User.FullName = form.FullName
 	ctx.User.Email = form.Email
 	ctx.User.Website = form.Website
 	ctx.User.Location = form.Location
-	ctx.User.Avatar = base.EncodeMd5(form.Avatar)
-	ctx.User.AvatarEmail = form.Avatar
+	ctx.User.Avatar = base.EncodeMd5(form.Gravatar)
+	ctx.User.AvatarEmail = form.Gravatar
 	if err := models.UpdateUser(ctx.User); err != nil {
 		ctx.Handle(500, "UpdateUser", err)
 		return

@@ -26,7 +26,7 @@
 			      </div>
 	  	    </div>
 
-          <div id="sql_settings" class="{{if eq .CurDbOption "SQLite3"}}hide{{end}}">
+          <div id="sql_settings" class="{{if or (eq .CurDbOption "SQLite3") (eq .CurDbOption "TiDB")}}hide{{end}}">
             <div class="inline required field {{if .Err_DbSetting}}error{{end}}">
               <label for="db_host">{{.i18n.Tr "install.host"}}</label>
               <input id="db_host" name="db_host" value="{{.db_host}}">
@@ -62,7 +62,7 @@
             </div>
           </div>
 
-          <div id="sqlite_settings" class="{{if not (eq .CurDbOption "SQLite3")}}hide{{end}}">
+          <div id="sqlite_settings" class="{{if not (or (eq .CurDbOption "SQLite3") (eq .CurDbOption "TiDB"))}}hide{{end}}">
             <div class="inline required field {{if or .Err_DbPath .Err_DbSetting}}error{{end}}">
               <label for="db_path">{{.i18n.Tr "install.path"}}</label>
               <input id="db_path" name="db_path" value="{{.db_path}}">
