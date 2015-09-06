@@ -470,6 +470,12 @@ func MigrateRepository(u *User, name, desc string, private, mirror bool, url str
 		return repo, fmt.Errorf("create update hook: %v", err)
 	}
 
+	// Check if repository is empty.
+	_, stderr, err = com.ExecCmdDir(repoPath, "git", "log", "-1")
+	if err != nil && strings.Contains(stderr, "fatal: bad default revision 'HEAD'") {
+		repo.IsBare = true
+	}
+
 	// Check if repository has master branch, if so set it to default branch.
 	gitRepo, err := git.OpenRepository(repoPath)
 	if err != nil {
