@@ -231,28 +231,27 @@ func (u *User) UploadAvatar(data []byte) error {
 	if err != nil {
 		return err
 	}
+
 	m := resize.Resize(234, 234, img, resize.NearestNeighbor)
 
 	sess := x.NewSession()
-	defer sess.Close()
+	defer sessionRelease(sess)
 	if err = sess.Begin(); err != nil {
 		return err
 	}
 
 	if _, err = sess.Id(u.Id).AllCols().Update(u); err != nil {
-		sess.Rollback()
 		return err
 	}
 
 	os.MkdirAll(setting.AvatarUploadPath, os.ModePerm)
 	fw, err := os.Create(u.CustomAvatarPath())
 	if err != nil {
-		sess.Rollback()
 		return err
 	}
 	defer fw.Close()
+
 	if err = jpeg.Encode(fw, m, nil); err != nil {
-		sess.Rollback()
 		return err
 	}
 
