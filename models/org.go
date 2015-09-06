@@ -212,7 +212,6 @@ func GetOrganizations(num, offset int) ([]*User, error) {
 	return orgs, err
 }
 
-// TODO: need some kind of mechanism to record failure.
 // DeleteOrganization completely and permanently deletes everything of organization.
 func DeleteOrganization(org *User) (err error) {
 	if err := DeleteUser(org); err != nil {
@@ -220,23 +219,23 @@ func DeleteOrganization(org *User) (err error) {
 	}
 
 	sess := x.NewSession()
-	defer sess.Close()
+	defer sessionRelease(sess)
 	if err = sess.Begin(); err != nil {
 		return err
 	}
 
-	if _, err = sess.Delete(&Team{OrgID: org.Id}); err != nil {
-		sess.Rollback()
-		return err
+	if err = deleteBeans(sess,
+		&Team{OrgID: org.Id},
+		&OrgUser{OrgID: org.Id},
+		&TeamUser{OrgID: org.Id},
+	); err != nil {
+		return fmt.Errorf("deleteBeans: %v", err)
 	}
-	if _, err = sess.Delete(&OrgUser{OrgID: org.Id}); err != nil {
-		sess.Rollback()
-		return err
+
+	if err = deleteUser(sess, org); err != nil {
+		return fmt.Errorf("deleteUser: %v", err)
 	}
-	if _, err = sess.Delete(&TeamUser{OrgID: org.Id}); err != nil {
-		sess.Rollback()
-		return err
-	}
+
 	return sess.Commit()
 }
 

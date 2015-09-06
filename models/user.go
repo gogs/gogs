@@ -284,9 +284,13 @@ func (u *User) IsPublicMember(orgId int64) bool {
 	return IsPublicMembership(orgId, u.Id)
 }
 
+func (u *User) getOrganizationCount(e Engine) (int64, error) {
+	return e.Where("uid=?", u.Id).Count(new(OrgUser))
+}
+
 // GetOrganizationCount returns count of membership of organization of user.
 func (u *User) GetOrganizationCount() (int64, error) {
-	return x.Where("uid=?", u.Id).Count(new(OrgUser))
+	return u.getOrganizationCount(x)
 }
 
 // GetRepositories returns all repositories that user owns, including private repositories.
@@ -525,8 +529,8 @@ func UpdateUser(u *User) error {
 	return updateUser(x, u)
 }
 
-// DeleteBeans deletes all given beans, beans should contain delete conditions.
-func DeleteBeans(e Engine, beans ...interface{}) (err error) {
+// deleteBeans deletes all given beans, beans should contain delete conditions.
+func deleteBeans(e Engine, beans ...interface{}) (err error) {
 	for i := range beans {
 		if _, err = e.Delete(beans[i]); err != nil {
 			return err
@@ -536,14 +540,12 @@ func DeleteBeans(e Engine, beans ...interface{}) (err error) {
 }
 
 // FIXME: need some kind of mechanism to record failure. HINT: system notice
-// DeleteUser completely and permanently deletes everything of a user,
-// but issues/comments/pulls will be kept and shown as someone has been deleted.
-func DeleteUser(u *User) error {
+func deleteUser(e *xorm.Session, u *User) error {
 	// Note: A user owns any repository or belongs to any organization
 	//	cannot perform delete operation.
 
 	// Check ownership of repository.
-	count, err := GetRepositoryCount(u)
+	count, err := getRepositoryCount(e, u)
 	if err != nil {
 		return fmt.Errorf("GetRepositoryCount: %v", err)
 	} else if count > 0 {
@@ -551,26 +553,20 @@ func DeleteUser(u *User) error {
 	}
 
 	// Check membership of organization.
-	count, err = u.GetOrganizationCount()
+	count, err = u.getOrganizationCount(e)
 	if err != nil {
 		return fmt.Errorf("GetOrganizationCount: %v", err)
 	} else if count > 0 {
 		return ErrUserHasOrgs{UID: u.Id}
 	}
 
-	sess := x.NewSession()
-	defer sessionRelease(sess)
-	if err = sess.Begin(); err != nil {
-		return err
-	}
-
 	// ***** START: Watch *****
 	watches := make([]*Watch, 0, 10)
-	if err = x.Find(&watches, &Watch{UserID: u.Id}); err != nil {
+	if err = e.Find(&watches, &Watch{UserID: u.Id}); err != nil {
 		return fmt.Errorf("get all watches: %v", err)
 	}
 	for i := range watches {
-		if _, err = sess.Exec("UPDATE `repository` SET num_watches=num_watches-1 WHERE id=?", watches[i].RepoID); err != nil {
+		if _, err = e.Exec("UPDATE `repository` SET num_watches=num_watches-1 WHERE id=?", watches[i].RepoID); err != nil {
 			return fmt.Errorf("decrease repository watch number[%d]: %v", watches[i].RepoID, err)
 		}
 	}
@@ -578,11 +574,11 @@ func DeleteUser(u *User) error {
 
 	// ***** START: Star *****
 	stars := make([]*Star, 0, 10)
-	if err = x.Find(&stars, &Star{UID: u.Id}); err != nil {
+	if err = e.Find(&stars, &Star{UID: u.Id}); err != nil {
 		return fmt.Errorf("get all stars: %v", err)
 	}
 	for i := range stars {
-		if _, err = sess.Exec("UPDATE `repository` SET num_stars=num_stars-1 WHERE id=?", stars[i].RepoID); err != nil {
+		if _, err = e.Exec("UPDATE `repository` SET num_stars=num_stars-1 WHERE id=?", stars[i].RepoID); err != nil {
 			return fmt.Errorf("decrease repository star number[%d]: %v", stars[i].RepoID, err)
 		}
 	}
@@ -590,17 +586,17 @@ func DeleteUser(u *User) error {
 
 	// ***** START: Follow *****
 	followers := make([]*Follow, 0, 10)
-	if err = x.Find(&followers, &Follow{UserID: u.Id}); err != nil {
+	if err = e.Find(&followers, &Follow{UserID: u.Id}); err != nil {
 		return fmt.Errorf("get all followers: %v", err)
 	}
 	for i := range followers {
-		if _, err = sess.Exec("UPDATE `user` SET num_followers=num_followers-1 WHERE id=?", followers[i].UserID); err != nil {
+		if _, err = e.Exec("UPDATE `user` SET num_followers=num_followers-1 WHERE id=?", followers[i].UserID); err != nil {
 			return fmt.Errorf("decrease user follower number[%d]: %v", followers[i].UserID, err)
 		}
 	}
 	// ***** END: Follow *****
 
-	if err = DeleteBeans(sess,
+	if err = deleteBeans(e,
 		&Oauth2{Uid: u.Id},
 		&AccessToken{UID: u.Id},
 		&Collaboration{UserID: u.Id},
@@ -612,32 +608,28 @@ func DeleteUser(u *User) error {
 		&IssueUser{UID: u.Id},
 		&EmailAddress{Uid: u.Id},
 	); err != nil {
-		return fmt.Errorf("DeleteBeans: %v", err)
+		return fmt.Errorf("deleteUser: %v", err)
 	}
 
 	// ***** START: PublicKey *****
 	keys := make([]*PublicKey, 0, 10)
-	if err = sess.Find(&keys, &PublicKey{OwnerID: u.Id}); err != nil {
+	if err = e.Find(&keys, &PublicKey{OwnerID: u.Id}); err != nil {
 		return fmt.Errorf("get all public keys: %v", err)
 	}
 	for _, key := range keys {
-		if err = deletePublicKey(sess, key.ID); err != nil {
+		if err = deletePublicKey(e, key.ID); err != nil {
 			return fmt.Errorf("deletePublicKey: %v", err)
 		}
 	}
 	// ***** END: PublicKey *****
 
 	// Clear assignee.
-	if _, err = sess.Exec("UPDATE `issue` SET assignee_id=0 WHERE assignee_id=?", u.Id); err != nil {
+	if _, err = e.Exec("UPDATE `issue` SET assignee_id=0 WHERE assignee_id=?", u.Id); err != nil {
 		return fmt.Errorf("clear assignee: %v", err)
 	}
 
-	if _, err = sess.Id(u.Id).Delete(new(User)); err != nil {
+	if _, err = e.Id(u.Id).Delete(new(User)); err != nil {
 		return fmt.Errorf("Delete: %v", err)
-	}
-
-	if err = sess.Commit(); err != nil {
-		return fmt.Errorf("Commit: %v", err)
 	}
 
 	// FIXME: system notice
@@ -649,6 +641,22 @@ func DeleteUser(u *User) error {
 	os.Remove(u.CustomAvatarPath())
 
 	return nil
+}
+
+// DeleteUser completely and permanently deletes everything of a user,
+// but issues/comments/pulls will be kept and shown as someone has been deleted.
+func DeleteUser(u *User) (err error) {
+	sess := x.NewSession()
+	defer sessionRelease(sess)
+	if err = sess.Begin(); err != nil {
+		return err
+	}
+
+	if err = deleteUser(sess, u); err != nil {
+		return fmt.Errorf("deleteUser: %v", err)
+	}
+
+	return sess.Commit()
 }
 
 // DeleteInactivateUsers deletes all inactivate users and email addresses.
