@@ -937,7 +937,7 @@ $(document).ready(function () {
 
     homepage();
     emojify.setConfig({
-        img_dir:'/img/emoji'
+        img_dir: Gogs.AppSubUrl + '/img/emoji'
     });
     emojify.run();
 

@@ -1,6 +1,7 @@
 'use strict';
 
 var csrf;
+var suburl;
 
 function initCommentPreviewTab($form) {
     var $tab_menu = $form.find('.tabular.menu');
@@ -407,6 +408,7 @@ function initWebhook() {
 
 $(document).ready(function () {
     csrf = $('meta[name=_csrf]').attr("content");
+    suburl = $('meta[name=_suburl]').attr("content");
 
     // Show exact time
     $('.time-since').each(function () {
@@ -485,9 +487,9 @@ $(document).ready(function () {
 
     // Emojify
     emojify.setConfig({
-        img_dir:'/img/emoji'
+        img_dir: suburl + '/img/emoji'
     });
-    $('.markdown').each(function(){
+    $('.emojify').each(function () {
         emojify.run($(this)[0]);
     });
 
