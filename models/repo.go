@@ -1190,9 +1190,13 @@ func GetRecentUpdatedRepositories(page int) (repos []*Repository, err error) {
 		Where("is_private=?", false).Limit(setting.ExplorePagingNum).Desc("updated").Find(&repos)
 }
 
+func getRepositoryCount(e Engine, u *User) (int64, error) {
+	return x.Count(&Repository{OwnerID: u.Id})
+}
+
 // GetRepositoryCount returns the total number of repositories of user.
 func GetRepositoryCount(u *User) (int64, error) {
-	return x.Count(&Repository{OwnerID: u.Id})
+	return getRepositoryCount(x, u)
 }
 
 type SearchOption struct {
