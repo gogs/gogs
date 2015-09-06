@@ -70,7 +70,7 @@ func SettingsPost(ctx *middleware.Context, form auth.UpdateOrgSettingForm) {
 	}
 	log.Trace("Organization setting updated: %s", org.Name)
 	ctx.Flash.Success(ctx.Tr("org.settings.update_setting_success"))
-	ctx.Redirect(setting.AppSubUrl + "/org/" + org.Name + "/settings")
+	ctx.Redirect(org.HomeLink() + "/settings")
 }
 
 func SettingsDelete(ctx *middleware.Context) {
@@ -79,11 +79,19 @@ func SettingsDelete(ctx *middleware.Context) {
 
 	org := ctx.Org.Organization
 	if ctx.Req.Method == "POST" {
-		// FIXME: validate password.
+		if _, err := models.UserSignIn(ctx.User.Name, ctx.Query("password")); err != nil {
+			if models.IsErrUserNotExist(err) {
+				ctx.RenderWithErr(ctx.Tr("form.enterred_invalid_password"), SETTINGS_DELETE, nil)
+			} else {
+				ctx.Handle(500, "UserSignIn", err)
+			}
+			return
+		}
+
 		if err := models.DeleteOrganization(org); err != nil {
 			if models.IsErrUserOwnRepos(err) {
 				ctx.Flash.Error(ctx.Tr("form.org_still_own_repo"))
-				ctx.Redirect(setting.AppSubUrl + "/org/" + org.LowerName + "/settings/delete")
+				ctx.Redirect(org.HomeLink() + "/settings/delete")
 			} else {
 				ctx.Handle(500, "DeleteOrganization", err)
 			}
