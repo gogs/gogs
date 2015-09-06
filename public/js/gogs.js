@@ -389,6 +389,26 @@ function initRepository() {
     }
 }
 
+function initOrganization(){
+    if ($('.organization').length == 0) {
+        return;
+    }
+
+    // Options
+    if ($('.organization.settings.options').length > 0) {
+        $('#org_name').keyup(function () {
+            var $prompt_span = $('#org-name-change-prompt');
+            if ($(this).val().toString().toLowerCase() != $(this).data('org-name').toString().toLowerCase()) {
+                $prompt_span.show();
+            } else {
+                $prompt_span.hide();
+            }
+        });
+    }
+
+
+}
+
 function initWebhook() {
     if ($('.new.webhook').length == 0) {
         return;
@@ -524,5 +544,6 @@ $(document).ready(function () {
     initCommentForm();
     initInstall();
     initRepository();
+    initOrganization();
     initWebhook();
 });

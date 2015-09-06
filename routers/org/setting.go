@@ -38,29 +38,29 @@ func SettingsPost(ctx *middleware.Context, form auth.UpdateOrgSettingForm) {
 	org := ctx.Org.Organization
 
 	// Check if organization name has been changed.
-	if org.Name != form.OrgUserName {
-		isExist, err := models.IsUserExist(org.Id, form.OrgUserName)
+	if org.Name != form.Name {
+		isExist, err := models.IsUserExist(org.Id, form.Name)
 		if err != nil {
 			ctx.Handle(500, "IsUserExist", err)
 			return
 		} else if isExist {
-			ctx.Data["Err_UserName"] = true
+			ctx.Data["OrgName"] = true
 			ctx.RenderWithErr(ctx.Tr("form.username_been_taken"), SETTINGS_OPTIONS, &form)
 			return
-		} else if err = models.ChangeUserName(org, form.OrgUserName); err != nil {
+		} else if err = models.ChangeUserName(org, form.Name); err != nil {
 			if err == models.ErrUserNameIllegal {
-				ctx.Data["Err_UserName"] = true
+				ctx.Data["OrgName"] = true
 				ctx.RenderWithErr(ctx.Tr("form.illegal_username"), SETTINGS_OPTIONS, &form)
 			} else {
 				ctx.Handle(500, "ChangeUserName", err)
 			}
 			return
 		}
-		log.Trace("Organization name changed: %s -> %s", org.Name, form.OrgUserName)
-		org.Name = form.OrgUserName
+		log.Trace("Organization name changed: %s -> %s", org.Name, form.Name)
+		org.Name = form.Name
 	}
 
-	org.FullName = form.OrgFullName
+	org.FullName = form.FullName
 	org.Description = form.Description
 	org.Website = form.Website
 	org.Location = form.Location
