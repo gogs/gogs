@@ -472,8 +472,12 @@ func MigrateRepository(u *User, name, desc string, private, mirror bool, url str
 
 	// Check if repository is empty.
 	_, stderr, err = com.ExecCmdDir(repoPath, "git", "log", "-1")
-	if err != nil && strings.Contains(stderr, "fatal: bad default revision 'HEAD'") {
-		repo.IsBare = true
+	if err != nil {
+		if strings.Contains(stderr, "fatal: bad default revision 'HEAD'") {
+			repo.IsBare = true
+		} else {
+			return repo, fmt.Errorf("check bare: %v - %s", err, stderr)
+		}
 	}
 
 	// Check if repository has master branch, if so set it to default branch.
