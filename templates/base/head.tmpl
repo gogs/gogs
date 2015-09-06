@@ -8,6 +8,7 @@
 	<meta name="keywords" content="go, git, self-hosted, gogs">
 	<meta name="referrer" content="no-referrer" />
 	<meta name="_csrf" content="{{.CsrfToken}}" />
+	<meta name="_suburl" content="{{AppSubUrl}}" />
 	{{if .GoGetImport}}
 	<meta name="go-import" content="{{.GoGetImport}} git {{.CloneLink.HTTPS}}">
 	{{end}}

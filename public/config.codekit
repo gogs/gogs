@@ -606,8 +606,8 @@
 		},
 	"\/ng\/js\/gogs.js": {
 		"fileType": 64,
-		"ignore": 0,
-		"ignoreWasSetByUser": 0,
+		"ignore": 1,
+		"ignoreWasSetByUser": 1,
 		"inputAbbreviatedPath": "\/ng\/js\/gogs.js",
 		"outputAbbreviatedPath": "\/ng\/js\/min\/gogs-min.js",
 		"outputPathIsOutsideProject": 0,
@@ -665,17 +665,6 @@
 		"ignoreWasSetByUser": 0,
 		"inputAbbreviatedPath": "\/ng\/js\/lib\/lib.js",
 		"outputAbbreviatedPath": "\/ng\/js\/lib\/min\/lib-min.js",
-		"outputPathIsOutsideProject": 0,
-		"outputPathIsSetByUser": 0,
-		"outputStyle": 1,
-		"syntaxCheckerStyle": 1
-		},
-	"\/ng\/js\/min\/gogs-min.js": {
-		"fileType": 64,
-		"ignore": 1,
-		"ignoreWasSetByUser": 0,
-		"inputAbbreviatedPath": "\/ng\/js\/min\/gogs-min.js",
-		"outputAbbreviatedPath": "\/ng\/js\/min\/min\/gogs-min-min.js",
 		"outputPathIsOutsideProject": 0,
 		"outputPathIsSetByUser": 0,
 		"outputStyle": 1,
