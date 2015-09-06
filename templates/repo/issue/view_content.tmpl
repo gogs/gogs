@@ -25,7 +25,7 @@
 					  </div>
 					</div>
 			    <div class="ui attached segment">
-			    	<div class="render-content markdown">
+			    	<div class="render-content markdown emojify">
 				    	{{if .Issue.RenderedContent}}
 							{{.Issue.RenderedContent|Str2html}}
 				    	{{else}}
@@ -77,7 +77,7 @@
 					  </div>
 					</div>
 			    <div class="ui attached segment">
-			    	<div class="render-content markdown">
+			    	<div class="render-content markdown emojify">
 				    	{{if .RenderedContent}}
 							{{.RenderedContent|Str2html}}
 				    	{{else}}
@@ -317,7 +317,7 @@
 		<div class="ui bottom attached active write tab segment">
 		  <textarea id="content" name="content"></textarea>
 		</div>
-		<div class="ui bottom attached tab preview segment markdown">
+		<div class="ui bottom attached tab preview segment markdown emojify">
 		  {{$.i18n.Tr "repo.release.loading"}}
 		</div>
     <div class="text right edit buttons">
