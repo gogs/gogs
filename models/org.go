@@ -9,8 +9,6 @@ import (
 	"fmt"
 	"os"
 	"strings"
-
-	"github.com/gogits/gogs/modules/base"
 )
 
 var (
@@ -93,17 +91,6 @@ func (org *User) RemoveOrgRepo(repoID int64) error {
 	return org.removeOrgRepo(x, repoID)
 }
 
-// IsOrgEmailUsed returns true if the e-mail has been used in organization account.
-func IsOrgEmailUsed(email string) (bool, error) {
-	if len(email) == 0 {
-		return false, nil
-	}
-	return x.Get(&User{
-		Email: email,
-		Type:  ORGANIZATION,
-	})
-}
-
 // CreateOrganization creates record of a new organization.
 func CreateOrganization(org, owner *User) (err error) {
 	if err = IsUsableName(org.Name); err != nil {
@@ -117,18 +104,9 @@ func CreateOrganization(org, owner *User) (err error) {
 		return ErrUserAlreadyExist{org.Name}
 	}
 
-	isExist, err = IsOrgEmailUsed(org.Email)
-	if err != nil {
-		return err
-	} else if isExist {
-		return ErrEmailAlreadyUsed{org.Email}
-	}
-
 	org.LowerName = strings.ToLower(org.Name)
 	org.FullName = org.Name
-	org.Avatar = base.EncodeMd5(org.Email)
-	org.AvatarEmail = org.Email
-	// No password for organization.
+	org.UseCustomAvatar = true
 	org.NumTeams = 1
 	org.NumMembers = 1
 
@@ -140,6 +118,17 @@ func CreateOrganization(org, owner *User) (err error) {
 
 	if _, err = sess.Insert(org); err != nil {
 		return fmt.Errorf("insert organization: %v", err)
+	}
+	org.GenerateRandomAvatar()
+
+	// Add initial creator to organization and owner team.
+	if _, err = sess.Insert(&OrgUser{
+		Uid:      owner.Id,
+		OrgID:    org.Id,
+		IsOwner:  true,
+		NumTeams: 1,
+	}); err != nil {
+		return fmt.Errorf("insert org-user relation: %v", err)
 	}
 
 	// Create default owner team.
@@ -154,23 +143,11 @@ func CreateOrganization(org, owner *User) (err error) {
 		return fmt.Errorf("insert owner team: %v", err)
 	}
 
-	// Add initial creator to organization and owner team.
-	ou := &OrgUser{
-		Uid:      owner.Id,
-		OrgID:    org.Id,
-		IsOwner:  true,
-		NumTeams: 1,
-	}
-	if _, err = sess.Insert(ou); err != nil {
-		return fmt.Errorf("insert org-user relation: %v", err)
-	}
-
-	tu := &TeamUser{
+	if _, err = sess.Insert(&TeamUser{
 		Uid:    owner.Id,
 		OrgID:  org.Id,
 		TeamID: t.ID,
-	}
-	if _, err = sess.Insert(tu); err != nil {
+	}); err != nil {
 		return fmt.Errorf("insert team-user relation: %v", err)
 	}
 

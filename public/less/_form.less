@@ -17,28 +17,41 @@
 	}
 }
 
+@create-page-form-input-padding: 250px !important;
+#create-page-form {
+	form {
+		margin: auto;
+		width: 800px!important;
+		.ui.message {
+			text-align: center;
+		}
+		.header {
+			padding-left: @create-page-form-input-padding+30px;
+		}
+		.inline.field > label {
+			text-align: right;
+			width: @create-page-form-input-padding;
+			word-wrap: break-word;
+		}
+		.help {
+			margin-left: @create-page-form-input-padding+15px;
+		}
+		.optional .title {
+			margin-left: @create-page-form-input-padding;
+		}
+		input,
+		textarea {
+			width: 50%!important;
+		}
+	}
+}
+
 .repository {
-	@input-padding: 250px !important;
 	&.new.repo,
 	&.new.migrate,
 	&.new.fork {
+		#create-page-form;
 		form {
-			margin: auto;
-			width: 800px!important;
-			.ui.message {
-				text-align: center;
-			}
-			.header {
-				padding-left: @input-padding+30px;
-			}
-			.inline.field > label {
-				text-align: right;
-				width: @input-padding;
-				word-wrap: break-word;
-			}
-			.help {
-				margin-left: @input-padding+15px;
-			}
 			.dropdown {
 				.dropdown.icon {
 					margin-top: -7px!important;
@@ -50,13 +63,6 @@
 					}
 				}
 			}
-			.optional .title {
-				margin-left: @input-padding;
-			}
-			input,
-			textarea {
-				width: 50%!important;
-			}
 		}
 	}
 
@@ -66,7 +72,7 @@
 				width: 50%!important;
 			}
 			#auto-init {
-				margin-left: @input-padding+15px;
+				margin-left: @create-page-form-input-padding+15px;
 			}
 		}
 	}
