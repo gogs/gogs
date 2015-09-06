@@ -148,7 +148,7 @@ function initInstall() {
     // Database type change detection.
     $("#db_type").change(function () {
         var db_type = $('#db_type').val();
-        if (db_type === "SQLite3") {
+        if (db_type === "SQLite3" || db_type === "TiDB") {
             $('#sql_settings').hide();
             $('#pgsql_settings').hide();
             $('#sqlite_settings').show();
@@ -389,7 +389,7 @@ function initRepository() {
     }
 }
 
-function initOrganization(){
+function initOrganization() {
     if ($('.organization').length == 0) {
         return;
     }
@@ -405,8 +405,24 @@ function initOrganization(){
             }
         });
     }
+}
 
+function initUser() {
+    if ($('.user').length == 0) {
+        return;
+    }
 
+    // Options
+    if ($('.user.settings.profile').length > 0) {
+        $('#username').keyup(function () {
+            var $prompt_span = $('#name-change-prompt');
+            if ($(this).val().toString().toLowerCase() != $(this).data('name').toString().toLowerCase()) {
+                $prompt_span.show();
+            } else {
+                $prompt_span.hide();
+            }
+        });
+    }
 }
 
 function initWebhook() {
@@ -545,5 +561,6 @@ $(document).ready(function () {
     initInstall();
     initRepository();
     initOrganization();
+    initUser();
     initWebhook();
 });

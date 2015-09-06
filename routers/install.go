@@ -85,7 +85,14 @@ func InstallInit(ctx *middleware.Context) {
 	ctx.Data["Title"] = ctx.Tr("install.install")
 	ctx.Data["PageIsInstall"] = true
 
-	ctx.Data["DbOptions"] = []string{"MySQL", "PostgreSQL", "SQLite3"}
+	dbOpts := []string{"MySQL", "PostgreSQL"}
+	if models.EnableSQLite3 {
+		dbOpts = append(dbOpts, "SQLite3")
+	}
+	if models.EnableTidb {
+		dbOpts = append(dbOpts, "TiDB")
+	}
+	ctx.Data["DbOptions"] = dbOpts
 }
 
 func Install(ctx *middleware.Context) {
@@ -163,7 +170,7 @@ func InstallPost(ctx *middleware.Context, form auth.InstallForm) {
 
 	// Pass basic check, now test configuration.
 	// Test database setting.
-	dbTypes := map[string]string{"MySQL": "mysql", "PostgreSQL": "postgres", "SQLite3": "sqlite3"}
+	dbTypes := map[string]string{"MySQL": "mysql", "PostgreSQL": "postgres", "SQLite3": "sqlite3", "TiDB": "tidb"}
 	models.DbCfg.Type = dbTypes[form.DbType]
 	models.DbCfg.Host = form.DbHost
 	models.DbCfg.User = form.DbUser
