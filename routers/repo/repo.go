@@ -30,7 +30,7 @@ const (
 func checkContextUser(ctx *middleware.Context, uid int64) *models.User {
 	orgs, err := models.GetOwnedOrgsByUserIDDesc(ctx.User.Id, "updated")
 	if err != nil {
-		ctx.Handle(500, "GetOwnedOrganizationsByUserIDDesc", err)
+		ctx.Handle(500, "GetOwnedOrgsByUserIDDesc", err)
 		return nil
 	}
 	ctx.Data["Orgs"] = orgs
