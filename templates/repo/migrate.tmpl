@@ -49,12 +49,10 @@
 	            		{{.SignedUser.Name}}
 			        	</div>
 			        	{{range .Orgs}}
-			        	{{if .IsOwnedBy $.SignedUser.Id}}
 			        	<div class="item" data-value="{{.Id}}">
 				        	<img class="ui mini image" src="{{.AvatarLink}}">
 	            		{{.Name}}
 			        	</div>
-			        	{{end}}
 			        	{{end}}
 			        </div>
 			      </div>
