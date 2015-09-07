@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"os"
 	"strings"
+
+	"github.com/go-xorm/xorm"
 )
 
 var (
@@ -249,6 +251,25 @@ func IsOrganizationMember(orgId, uid int64) bool {
 func IsPublicMembership(orgId, uid int64) bool {
 	has, _ := x.Where("uid=?", uid).And("org_id=?", orgId).And("is_public=?", true).Get(new(OrgUser))
 	return has
+}
+
+func getOwnedOrgsByUserID(sess *xorm.Session, userID int64) ([]*User, error) {
+	orgs := make([]*User, 0, 10)
+	return orgs, sess.Where("`org_user`.uid=?", userID).And("`org_user`.is_owner=?", true).
+		Join("INNER", "`org_user`", "`org_user`.org_id=`user`.id").Find(&orgs)
+}
+
+// GetOwnedOrgsByUserID returns a list of organizations are owned by given user ID.
+func GetOwnedOrgsByUserID(userID int64) ([]*User, error) {
+	sess := x.NewSession()
+	return getOwnedOrgsByUserID(sess, userID)
+}
+
+// GetOwnedOrganizationsByUserIDDesc returns a list of organizations are owned by
+// given user ID and descring order by given condition.
+func GetOwnedOrgsByUserIDDesc(userID int64, desc string) ([]*User, error) {
+	sess := x.NewSession()
+	return getOwnedOrgsByUserID(sess.Desc(desc), userID)
 }
 
 // GetOrgUsersByUserId returns all organization-user relations by user ID.

@@ -28,11 +28,12 @@ const (
 )
 
 func checkContextUser(ctx *middleware.Context, uid int64) *models.User {
-	if err := ctx.User.GetOrganizations(); err != nil {
-		ctx.Handle(500, "GetOrganizations", err)
+	orgs, err := models.GetOwnedOrgsByUserIDDesc(ctx.User.Id, "updated")
+	if err != nil {
+		ctx.Handle(500, "GetOwnedOrganizationsByUserIDDesc", err)
 		return nil
 	}
-	ctx.Data["Orgs"] = ctx.User.Orgs
+	ctx.Data["Orgs"] = orgs
 
 	// Not equal means current user is an organization.
 	if uid == ctx.User.Id || uid == 0 {
