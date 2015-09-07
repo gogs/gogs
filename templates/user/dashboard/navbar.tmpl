@@ -31,13 +31,13 @@
   <div class="ui right">
     <div class="ui secondary head menu">
       <a class="{{if .PageIsNews}}active{{end}} item" href="{{AppSubUrl}}/org/{{.ContextUser.Name}}/dashboard">
-        <i class="icon octicon octicon-rss"></i>&nbsp;{{.i18n.Tr "news_feed"}}
+        <i class="octicon octicon-rss"></i>&nbsp;{{.i18n.Tr "news_feed"}}
       </a>
       <a class="{{if .PageIsIssues}}active{{end}} item" href="{{AppSubUrl}}/org/{{.ContextUser.Name}}/issues">
-        <i class="icon octicon octicon-issue-opened"></i>&nbsp;{{.i18n.Tr "issues"}}
+        <i class="octicon octicon-issue-opened"></i>&nbsp;{{.i18n.Tr "issues"}}
       </a>
       <a class="{{if .PageIsPulls}}active{{end}} item" href="{{AppSubUrl}}/org/{{.ContextUser.Name}}/pulls">
-        <i class="icon octicon octicon-git-pull-request"></i>&nbsp;{{.i18n.Tr "pull_requests"}}
+        <i class="octicon octicon-git-pull-request"></i>&nbsp;{{.i18n.Tr "pull_requests"}}
       </a>
       <div class="right menu">
         <div class="item">
