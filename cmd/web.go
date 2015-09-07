@@ -545,7 +545,7 @@ func runWeb(ctx *cli.Context) {
 	m.Group("/:username", func() {
 		m.Group("/:reponame", func() {
 			m.Get("", repo.Home)
-			m.Get("\\.git", repo.Home)
+			m.Get("\\.git$", repo.Home)
 		}, ignSignIn, middleware.RepoAssignment(true, true), middleware.RepoRef())
 
 		m.Group("/:reponame", func() {
