@@ -29,7 +29,7 @@
   			</div>
   		</div>
 			<div class="twelve wide column content">
-				<div class="ui tiny basic buttons">
+				<div class="ui tiny basic status buttons">
 				  <a class="ui {{if not .IsShowClosed}}green active{{end}} basic button" href="{{.Link}}?type={{$.ViewType}}&repo={{.RepoID}}&state=open">
 				  	<i class="octicon octicon-issue-opened"></i>
 				  	{{.i18n.Tr "repo.issues.open_tab" .IssueStats.OpenCount}}
