@@ -31,7 +31,11 @@ const (
 
 // Create New mail message use MailFrom and MailUser
 func NewMailMessageFrom(To []string, from, subject, body string) Message {
-	return NewHtmlMessage(To, from, subject, body)
+	if setting.MailService.FixedNotifyFrom {
+		return NewHtmlMessage(To, setting.MailService.From, subject, body)	
+	} else {
+		return NewHtmlMessage(To, from, subject, body)
+	}
 }
 
 // Create New mail message use MailFrom and MailUser

@@ -542,6 +542,7 @@ type Mailer struct {
 	SkipVerify        bool
 	UseCertificate    bool
 	CertFile, KeyFile string
+	FixedNotifyFrom   bool
 }
 
 type OauthInfo struct {
@@ -579,6 +580,7 @@ func newMailService() {
 		UseCertificate: sec.Key("USE_CERTIFICATE").MustBool(),
 		CertFile:       sec.Key("CERT_FILE").String(),
 		KeyFile:        sec.Key("KEY_FILE").String(),
+		FixedNotifyFrom:sec.Key("FIXED_NOTIFY_FROM").MustBool(),
 	}
 	MailService.From = sec.Key("FROM").MustString(MailService.User)
 	log.Info("Mail Service Enabled")
