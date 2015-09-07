@@ -33,8 +33,7 @@ const (
 func NewMailMessageFrom(To []string, from, subject, body string) Message {
 	if setting.MailService.FixedNotifyFrom {
 		return NewHtmlMessage(To, setting.MailService.From, subject, body)	
-	}
-	else {
+	} else {
 		return NewHtmlMessage(To, from, subject, body)
 	}
 }
