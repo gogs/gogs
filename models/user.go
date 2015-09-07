@@ -61,6 +61,7 @@ type User struct {
 	LoginSource int64 `xorm:"NOT NULL DEFAULT 0"`
 	LoginName   string
 	Type        UserType
+	OwnedOrgs   []*User       `xorm:"-"`
 	Orgs        []*User       `xorm:"-"`
 	Repos       []*Repository `xorm:"-"`
 	Location    string
@@ -304,6 +305,12 @@ func (u *User) GetOrganizationCount() (int64, error) {
 // GetRepositories returns all repositories that user owns, including private repositories.
 func (u *User) GetRepositories() (err error) {
 	u.Repos, err = GetRepositories(u.Id, true)
+	return err
+}
+
+// GetOwnedOrganizations returns all organizations that user owns.
+func (u *User) GetOwnedOrganizations() (err error) {
+	u.OwnedOrgs, err = GetOwnedOrgsByUserID(u.Id)
 	return err
 }
 
