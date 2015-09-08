@@ -819,7 +819,7 @@ func NewComment(ctx *middleware.Context, form auth.CreateCommentForm) {
 			ctx.Handle(500, "ChangeStatus", err)
 			return
 		}
-		log.Trace("%s Issue[%d] status changed: %v", ctx.Req.RequestURI, issue.ID, !issue.IsClosed)
+		log.Trace("Issue[%d] status changed: %v", issue.ID, !issue.IsClosed)
 	}
 
 	ctx.Redirect(fmt.Sprintf("%s/issues/%d#%s", ctx.Repo.RepoLink, issue.Index, comment.HashTag()))
