@@ -630,7 +630,7 @@ func initRepository(e Engine, repoPath string, u *User, repo *Repository, opts C
 	}
 
 	tmpDir := filepath.Join(os.TempDir(), "gogs-"+repo.Name+"-"+com.ToStr(time.Now().Nanosecond()))
-	fmt.Println(tmpDir)
+
 	// Initialize repository according to user's choice.
 	if opts.AutoInit {
 		os.MkdirAll(tmpDir, os.ModePerm)
