@@ -191,6 +191,32 @@ func CreateOrgRepo(ctx *middleware.Context, opt api.CreateRepoOption) {
 	createRepo(ctx, org, opt)
 }
 
+func ForkRepo(ctx *middleware.Context) {
+	forkRepo(ctx, ctx.User, ctx.Repo.Repository)
+}
+
+func forkRepo(ctx *middleware.Context, owner *models.User, repo *models.Repository) {
+	forkedRepo, err := models.ForkRepository(owner, repo, repo.Name, repo.Description)
+	if err != nil {
+		if models.IsErrRepoAlreadyExist(err) ||
+		models.IsErrNameReserved(err) ||
+		models.IsErrNamePatternNotAllowed(err) {
+			ctx.JSON(422, &base.ApiJsonErr{err.Error(), base.DOC_URL})
+		} else {
+			log.Error(4, "ForkRepository: %v", err)
+			if forkedRepo != nil {
+				if err = models.DeleteRepository(ctx.User.Id, forkedRepo.ID); err != nil {
+					log.Error(4, "DeleteRepository: %v", err)
+				}
+			}
+			ctx.Error(500)
+		}
+		return
+	}
+
+	ctx.JSON(201, ToApiRepository(owner, forkedRepo, api.Permission{true, true, true}))
+}
+
 func MigrateRepo(ctx *middleware.Context, form auth.MigrateRepoForm) {
 	ctxUser := ctx.User
 	// Not equal means current user is an organization.
