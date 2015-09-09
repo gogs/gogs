@@ -28,6 +28,10 @@ import (
 
 var Sanitizer = bluemonday.UGCPolicy()
 
+func init() {
+	Sanitizer.AllowAttrs("class").OnElements("code")
+}
+
 // Encode string to md5 hex value.
 func EncodeMd5(str string) string {
 	m := md5.New()
