@@ -1231,7 +1231,7 @@ func SearchRepositoryByName(opt SearchOption) (repos []*Repository, err error) {
 		sess.Where("owner_id=?", opt.Uid)
 	}
 	if !opt.Private {
-		sess.And("is_private=false")
+		sess.And("is_private=?", false)
 	}
 	sess.And("lower_name like ?", "%"+opt.Keyword+"%").Find(&repos)
 	return repos, err
