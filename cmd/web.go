@@ -406,6 +406,7 @@ func runWeb(ctx *cli.Context) {
 			m.Group("/settings", func() {
 				m.Combo("").Get(org.Settings).
 					Post(bindIgnErr(auth.UpdateOrgSettingForm{}), org.SettingsPost)
+				m.Post("/avatar", binding.MultipartForm(auth.UploadAvatarForm{}), org.SettingsAvatar)
 
 				m.Group("/hooks", func() {
 					m.Get("", org.Webhooks)
@@ -544,7 +545,7 @@ func runWeb(ctx *cli.Context) {
 	m.Group("/:username", func() {
 		m.Group("/:reponame", func() {
 			m.Get("", repo.Home)
-			m.Get(".git", repo.Home)
+			m.Get("\\.git$", repo.Home)
 		}, ignSignIn, middleware.RepoAssignment(true, true), middleware.RepoRef())
 
 		m.Group("/:reponame", func() {

@@ -88,12 +88,12 @@ func (f *SignInForm) Validate(ctx *macaron.Context, errs binding.Errors) binding
 //         \/         \/                                   \/        \/        \/
 
 type UpdateProfileForm struct {
-	UserName string `form:"uname" binding:"Required;MaxSize(35)"`
-	FullName string `form:"fullname" binding:"MaxSize(100)"`
-	Email    string `form:"email" binding:"Required;Email;MaxSize(254)"`
-	Website  string `form:"website" binding:"Url;MaxSize(100)"`
-	Location string `form:"location" binding:"MaxSize(50)"`
-	Avatar   string `form:"avatar" binding:"Required;Email;MaxSize(254)"`
+	Name     string `binding:"Required;MaxSize(35)"`
+	FullName string `binding:"MaxSize(100)"`
+	Email    string `binding:"Required;Email;MaxSize(254)"`
+	Website  string `binding:"Url;MaxSize(100)"`
+	Location string `binding:"MaxSize(50)"`
+	Gravatar string `binding:"Required;Email;MaxSize(254)"`
 }
 
 func (f *UpdateProfileForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
@@ -101,8 +101,8 @@ func (f *UpdateProfileForm) Validate(ctx *macaron.Context, errs binding.Errors) 
 }
 
 type UploadAvatarForm struct {
-	Enable bool                  `form:"enable"`
-	Avatar *multipart.FileHeader `form:"avatar"`
+	Enable bool
+	Avatar *multipart.FileHeader
 }
 
 func (f *UploadAvatarForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {

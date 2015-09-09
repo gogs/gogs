@@ -27,7 +27,7 @@
                                 <li class="js-tab-nav js-tab-nav-show left" data-tab-target="#release-textarea">
                                     <button class="btn btn-medium btn-gray btn-left-radius">{{.i18n.Tr "repo.release.write"}}</button>
                                 </li>
-                                <li class="js-tab-nav left markdown-preview" id="release-preview-btn" data-tab-target="#release-preview" data-ajax="/api/v1/markdown" data-ajax-name="release-preview" data-ajax-context="{{.RepoLink}}" data-ajax-method="post" data-preview="#release-preview">
+                                <li class="js-tab-nav left markdown-preview" id="release-preview-btn" data-tab-target="#release-preview" data-ajax="{{AppSubUrl}}/api/v1/markdown" data-ajax-name="release-preview" data-ajax-context="{{.RepoLink}}" data-ajax-method="post" data-preview="#release-preview">
                                     <button class="btn btn-medium btn-gray btn-right-radius">{{.i18n.Tr "repo.release.preview"}}</button>
                                 </li>
                             </ul>

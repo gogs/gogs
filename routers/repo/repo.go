@@ -28,11 +28,12 @@ const (
 )
 
 func checkContextUser(ctx *middleware.Context, uid int64) *models.User {
-	if err := ctx.User.GetOrganizations(); err != nil {
-		ctx.Handle(500, "GetOrganizations", err)
+	orgs, err := models.GetOwnedOrgsByUserIDDesc(ctx.User.Id, "updated")
+	if err != nil {
+		ctx.Handle(500, "GetOwnedOrgsByUserIDDesc", err)
 		return nil
 	}
-	ctx.Data["Orgs"] = ctx.User.Orgs
+	ctx.Data["Orgs"] = orgs
 
 	// Not equal means current user is an organization.
 	if uid == ctx.User.Id || uid == 0 {
@@ -198,7 +199,8 @@ func MigratePost(ctx *middleware.Context, form auth.MigrateRepoForm) {
 	}
 
 	if strings.Contains(err.Error(), "Authentication failed") ||
-		strings.Contains(err.Error(), " not found") {
+		strings.Contains(err.Error(), " not found") ||
+		strings.Contains(err.Error(), "could not read Username") {
 		ctx.Data["Err_Auth"] = true
 		ctx.RenderWithErr(ctx.Tr("form.auth_failed", strings.Replace(err.Error(), ":"+form.AuthPassword+"@", ":<password>@", 1)), MIGRATE, &form)
 		return

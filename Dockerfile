@@ -5,7 +5,7 @@ RUN echo "deb http://ftp.debian.org/debian/ wheezy-backports main" >> /etc/apt/s
 	apt-get update -qqy && \
 	apt-get install --no-install-recommends -qqy \
 	curl build-essential ca-certificates git \ 
-	openssh-server rsync libpam-dev && \
+	openssh-server libpam-dev && \
 	apt-get autoclean && \
     apt-get autoremove && \
     rm -rf /var/lib/apt/lists/*
