@@ -10,7 +10,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/gogits/gogs/modules/base"
+	"github.com/go-xorm/xorm"
 )
 
 var (
@@ -93,17 +93,6 @@ func (org *User) RemoveOrgRepo(repoID int64) error {
 	return org.removeOrgRepo(x, repoID)
 }
 
-// IsOrgEmailUsed returns true if the e-mail has been used in organization account.
-func IsOrgEmailUsed(email string) (bool, error) {
-	if len(email) == 0 {
-		return false, nil
-	}
-	return x.Get(&User{
-		Email: email,
-		Type:  ORGANIZATION,
-	})
-}
-
 // CreateOrganization creates record of a new organization.
 func CreateOrganization(org, owner *User) (err error) {
 	if err = IsUsableName(org.Name); err != nil {
@@ -117,18 +106,9 @@ func CreateOrganization(org, owner *User) (err error) {
 		return ErrUserAlreadyExist{org.Name}
 	}
 
-	isExist, err = IsOrgEmailUsed(org.Email)
-	if err != nil {
-		return err
-	} else if isExist {
-		return ErrEmailAlreadyUsed{org.Email}
-	}
-
 	org.LowerName = strings.ToLower(org.Name)
 	org.FullName = org.Name
-	org.Avatar = base.EncodeMd5(org.Email)
-	org.AvatarEmail = org.Email
-	// No password for organization.
+	org.UseCustomAvatar = true
 	org.NumTeams = 1
 	org.NumMembers = 1
 
@@ -140,6 +120,17 @@ func CreateOrganization(org, owner *User) (err error) {
 
 	if _, err = sess.Insert(org); err != nil {
 		return fmt.Errorf("insert organization: %v", err)
+	}
+	org.GenerateRandomAvatar()
+
+	// Add initial creator to organization and owner team.
+	if _, err = sess.Insert(&OrgUser{
+		Uid:      owner.Id,
+		OrgID:    org.Id,
+		IsOwner:  true,
+		NumTeams: 1,
+	}); err != nil {
+		return fmt.Errorf("insert org-user relation: %v", err)
 	}
 
 	// Create default owner team.
@@ -154,23 +145,11 @@ func CreateOrganization(org, owner *User) (err error) {
 		return fmt.Errorf("insert owner team: %v", err)
 	}
 
-	// Add initial creator to organization and owner team.
-	ou := &OrgUser{
-		Uid:      owner.Id,
-		OrgID:    org.Id,
-		IsOwner:  true,
-		NumTeams: 1,
-	}
-	if _, err = sess.Insert(ou); err != nil {
-		return fmt.Errorf("insert org-user relation: %v", err)
-	}
-
-	tu := &TeamUser{
+	if _, err = sess.Insert(&TeamUser{
 		Uid:    owner.Id,
 		OrgID:  org.Id,
 		TeamID: t.ID,
-	}
-	if _, err = sess.Insert(tu); err != nil {
+	}); err != nil {
 		return fmt.Errorf("insert team-user relation: %v", err)
 	}
 
@@ -212,7 +191,6 @@ func GetOrganizations(num, offset int) ([]*User, error) {
 	return orgs, err
 }
 
-// TODO: need some kind of mechanism to record failure.
 // DeleteOrganization completely and permanently deletes everything of organization.
 func DeleteOrganization(org *User) (err error) {
 	if err := DeleteUser(org); err != nil {
@@ -220,23 +198,23 @@ func DeleteOrganization(org *User) (err error) {
 	}
 
 	sess := x.NewSession()
-	defer sess.Close()
+	defer sessionRelease(sess)
 	if err = sess.Begin(); err != nil {
 		return err
 	}
 
-	if _, err = sess.Delete(&Team{OrgID: org.Id}); err != nil {
-		sess.Rollback()
-		return err
+	if err = deleteBeans(sess,
+		&Team{OrgID: org.Id},
+		&OrgUser{OrgID: org.Id},
+		&TeamUser{OrgID: org.Id},
+	); err != nil {
+		return fmt.Errorf("deleteBeans: %v", err)
 	}
-	if _, err = sess.Delete(&OrgUser{OrgID: org.Id}); err != nil {
-		sess.Rollback()
-		return err
+
+	if err = deleteUser(sess, org); err != nil {
+		return fmt.Errorf("deleteUser: %v", err)
 	}
-	if _, err = sess.Delete(&TeamUser{OrgID: org.Id}); err != nil {
-		sess.Rollback()
-		return err
-	}
+
 	return sess.Commit()
 }
 
@@ -273,6 +251,25 @@ func IsOrganizationMember(orgId, uid int64) bool {
 func IsPublicMembership(orgId, uid int64) bool {
 	has, _ := x.Where("uid=?", uid).And("org_id=?", orgId).And("is_public=?", true).Get(new(OrgUser))
 	return has
+}
+
+func getOwnedOrgsByUserID(sess *xorm.Session, userID int64) ([]*User, error) {
+	orgs := make([]*User, 0, 10)
+	return orgs, sess.Where("`org_user`.uid=?", userID).And("`org_user`.is_owner=?", true).
+		Join("INNER", "`org_user`", "`org_user`.org_id=`user`.id").Find(&orgs)
+}
+
+// GetOwnedOrgsByUserID returns a list of organizations are owned by given user ID.
+func GetOwnedOrgsByUserID(userID int64) ([]*User, error) {
+	sess := x.NewSession()
+	return getOwnedOrgsByUserID(sess, userID)
+}
+
+// GetOwnedOrganizationsByUserIDDesc returns a list of organizations are owned by
+// given user ID and descring order by given condition.
+func GetOwnedOrgsByUserIDDesc(userID int64, desc string) ([]*User, error) {
+	sess := x.NewSession()
+	return getOwnedOrgsByUserID(sess.Desc(desc), userID)
 }
 
 // GetOrgUsersByUserId returns all organization-user relations by user ID.

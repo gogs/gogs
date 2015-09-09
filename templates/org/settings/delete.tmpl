@@ -1,36 +1,43 @@
-{{template "ng/base/head" .}}
-{{template "ng/base/header" .}}
-{{template "org/base/header" .}}
-<div id="setting-wrapper" class="main-wrapper">
-    <div id="org-setting" class="container clear">
-        {{template "org/settings/nav" .}}
-        <div class="grid-4-5 left">
-            <div class="setting-content">
-                {{template "ng/base/alert" .}}
-                <div id="setting-content">
-                    <div id="user-profile-setting-content" class="panel panel-warning panel-radius">
-                        <p class="panel-header"><strong>{{.i18n.Tr "org.settings.delete_account"}}</strong></p>
-                        <div class="panel-body panel-content">
-                            <span class="alert alert-red alert-radius block"><i class="octicon octicon-alert"></i>{{.i18n.Tr "org.settings.delete_prompt" | Str2html}}</span>
-                            <form id="delete-org-form" action="{{AppSubUrl}}/org/{{.Org.LowerName}}/settings/delete" method="post">
-                                {{.CsrfTokenHtml}}
-                                <p class="field">
-                                    <span class="form-label"></span>
-                                    <button class="btn btn-red btn-large btn-radius" id="delete-org-btn" href="#delete-org-modal">{{.i18n.Tr "org.settings.confirm_delete_account"}}</button>
-                                </p>
-                            </form>
-                            <div class="white-popup-block mfp-hide" id="delete-org-modal">
-                                <h1 class="text-red">{{.i18n.Tr "org.settings.delete_org_title"}}</h1>
-                                <p>{{.i18n.Tr "org.settings.delete_org_desc"}}</p>
-                                <br>
-                                <button class="btn btn-red btn-large btn-radius" id="delete-org-submit">{{.i18n.Tr "settings.continue"}}</button>
-                                <button class="btn btn-large btn-radius popup-modal-dismiss">{{.i18n.Tr "settings.cancel"}}</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+{{template "base/head" .}}
+<div class="organization settings delete">
+  {{template "org/header" .}}
+  <div class="ui container">
+    <div class="ui grid">
+      {{template "org/settings/navbar" .}}
+      <div class="twelve wide column content">
+        {{template "base/alert" .}}
+        <h4 class="ui top attached warning header">
+          {{.i18n.Tr "org.settings.delete_account"}}
+        </h4>
+        <div class="ui attached warning segment">
+          <div class="ui red message">
+            <p class="text left"><i class="octicon octicon-alert"></i> {{.i18n.Tr "org.settings.delete_prompt" | Str2html}}</p>
+          </div>
+          <form class="ui form" id="delete-form" action="{{.Link}}" method="post">
+            {{.CsrfTokenHtml}}
+            <input class="fake" type="password">
+            <div class="inline required field {{if .Err_Password}}error{{end}}">
+              <label for="password">{{.i18n.Tr "password"}}</label>
+              <input id="password" name="password" type="password" autofocus required>
             </div>
+            <div class="ui red button delete-button" data-type="form" data-form="#delete-form">
+              {{.i18n.Tr "org.settings.confirm_delete_account"}}
+            </div>
+          </form>
         </div>
+      </div>
     </div>
+  </div>
 </div>
-{{template "ng/base/footer" .}}
+
+<div class="ui small basic delete modal">
+  <div class="ui icon header">
+    <i class="trash icon"></i>
+    {{.i18n.Tr "org.settings.delete_org_title"}}
+  </div>
+  <div class="content">
+    <p>{{.i18n.Tr "org.settings.delete_org_desc"}}</p>
+  </div>
+  {{template "base/delete_modal_actions" .}}
+</div>
+{{template "base/footer" .}}

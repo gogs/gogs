@@ -1,64 +1,59 @@
-{{template "ng/base/head" .}}
-{{template "ng/base/header" .}}
-{{template "org/base/header" .}}
-<div id="setting-wrapper" class="main-wrapper">
-  <div id="org-setting" class="container clear">
-    {{template "org/settings/nav" .}}
-    <div class="grid-4-5 left">
-      <div class="setting-content">
-        {{template "ng/base/alert" .}}
-        <div id="setting-content">
-          <div id="user-profile-setting-content" class="panel panel-radius">
-            <div class="panel-header">
-              <strong>{{.i18n.Tr "org.settings.options"}}</strong>
+{{template "base/head" .}}
+<div class="organization settings options">
+  {{template "org/header" .}}
+  <div class="ui container">
+    <div class="ui grid">
+      {{template "org/settings/navbar" .}}
+      <div class="twelve wide column content">
+        {{template "base/alert" .}}
+        <h4 class="ui top attached header">
+          {{.i18n.Tr "org.settings.options"}}
+        </h4>
+        <div class="ui attached segment">
+          <form class="ui form" action="{{.Link}}" method="post">
+            {{.CsrfTokenHtml}}
+            <div class="required field {{if .Err_Name}}error{{end}}">
+              <label for="org_name">{{.i18n.Tr "org.org_name_holder"}}<span class="text red hide" id="org-name-change-prompt"> {{.i18n.Tr "org.settings.change_orgname_prompt"}}</span></label>
+              <input id="org_name" name="name" value="{{.Org.Name}}" data-org-name="{{.Org.Name}}" autofocus required>
             </div>
-            <form class="form form-align panel-body" id="org-setting-form" action="{{AppSubUrl}}/org/{{.Org.LowerName}}/settings" method="post">
-              {{.CsrfTokenHtml}}
-              <input type="hidden" name="action" value="update">
-              <div class="field">
-                <label class="req" for="orgname">{{.i18n.Tr "org.org_name_holder"}}</label>
-                <input class="ipt ipt-large ipt-radius {{if .Err_UserName}}ipt-error{{end}}" id="orgname" name="uname" value="{{.Org.Name}}" data-orgname="{{.Org.Name}}" required />
-              </div>
-              <div class="white-popup-block mfp-hide" id="change-orgname-modal">
-                <h1 class="text-red">{{.i18n.Tr "org.settings.change_orgname"}}</h1>
-                <p>{{.i18n.Tr "org.settings.change_orgname_desc"}}</p>
-                <br>
-                <button class="btn btn-red btn-large btn-radius" id="change-orgname-submit">{{.i18n.Tr "settings.continue"}}</button>
-                <button class="btn btn-large btn-radius popup-modal-dismiss">{{.i18n.Tr "settings.cancel"}}</button>
-              </div>
-              <div class="field">
-                <label for="full-name">{{.i18n.Tr "org.settings.full_name"}}</label>
-                <input class="ipt ipt-large ipt-radius {{if .Err_FullName}}ipt-error{{end}}" id="full-name" name="fullname" value="{{.Org.FullName}}" />
-              </div>
-              <div class="field">
-                <label class="req" for="email">{{.i18n.Tr "email"}}</label>
-                <input class="ipt ipt-large ipt-radius {{if .Err_Email}}ipt-error{{end}}" id="email" name="email" type="email" value="{{.Org.Email}}" required />
-              </div>
-              <div class="field clear">
-                <label class="left" for="desc">{{.i18n.Tr "org.org_desc"}}</label>
-                <textarea class="ipt ipt-large ipt-radius {{if .Err_Description}}ipt-error{{end}}" id="desc" name="desc">{{.Org.Description}}</textarea>
-              </div>
-              <div class="field">
-                <label for="website">{{.i18n.Tr "org.settings.website"}}</label>
-                <input class="ipt ipt-large ipt-radius {{if .Err_Website}}ipt-error{{end}}" id="website" name="website" type="url" value="{{.Org.Website}}" />
-              </div>
-              <div class="field">
-                <label for="location">{{.i18n.Tr "org.settings.location"}}</label>
-                <input class="ipt ipt-large ipt-radius {{if .Err_Location}}ipt-error{{end}}" id="location" name="location" type="text" value="{{.Org.Location}}" />
-              </div>
-              <div class="field {{if DisableGravatar}}hide{{end}}">
-                <label class="req" for="gravatar-email">Gravatar {{.i18n.Tr "email"}}</label>
-                <input class="ipt ipt-large ipt-radius {{if .Err_Avatar}}ipt-error{{end}}" id="gravatar-email" name="avatar" type="text" value="{{.Org.AvatarEmail}}" />
-              </div>
-              <div class="field">
-                <span class="form-label"></span>
-                <button class="btn btn-green btn-large btn-radius" id="change-orgname-btn" href="#change-orgname-modal">{{.i18n.Tr "org.settings.update_settings"}}</button>
-              </div>
-            </form>
-          </div>
+            <div class="field {{if .Err_FullName}}error{{end}}">
+              <label for="full_name">{{.i18n.Tr "org.org_name_holder"}}</label>
+              <input id="full_name" name="full_name" value="{{.Org.FullName}}">
+            </div>
+            <div class="field {{if .Err_Description}}error{{end}}">
+              <label for="description">{{$.i18n.Tr "org.org_desc"}}</label>
+              <textarea id="description" name="description" rows="2">{{.Org.Description}}</textarea>
+            </div>
+            <div class="field {{if .Err_Website}}error{{end}}">
+              <label for="website">{{.i18n.Tr "org.settings.website"}}</label>
+              <input id="website" name="website" type="url" value="{{.Org.Website}}">
+            </div>
+            <div class="field">
+              <label for="location">{{.i18n.Tr "org.settings.location"}}</label>
+              <input id="location" name="location"  value="{{.Org.Location}}">
+            </div>
+
+            <div class="field">
+               <button class="ui green button">{{$.i18n.Tr "org.settings.update_settings"}}</button>
+            </div>
+          </form>
+
+          <div class="ui divider"></div>
+
+          <form class="ui form" action="{{.Link}}/avatar" method="post" enctype="multipart/form-data">
+            {{.CsrfTokenHtml}}
+            <div class="inline field">
+                <label for="avatar">{{.i18n.Tr "settings.choose_new_avatar"}}</label>
+                <input name="avatar" type="file" >
+            </div>
+
+            <div class="field">
+               <button class="ui green button">{{$.i18n.Tr "settings.update_avatar"}}</button>
+            </div>
+          </form>
         </div>
       </div>
     </div>
   </div>
 </div>
-{{template "ng/base/footer" .}}
+{{template "base/footer" .}}

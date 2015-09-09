@@ -76,9 +76,8 @@ func ToUtf8WithErr(content []byte) (error, string) {
 	}
 
 	encoding, _ := charset.Lookup(charsetLabel)
-
 	if encoding == nil {
-		return fmt.Errorf("unknow char decoder %s", charsetLabel), string(content)
+		return fmt.Errorf("unknown char decoder %s", charsetLabel), string(content)
 	}
 
 	result, n, err := transform.String(encoding.NewDecoder(), string(content))

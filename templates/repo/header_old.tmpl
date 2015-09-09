@@ -48,7 +48,7 @@
                     </button>
                 </a>
             </li>
-            {{if not .IsBare}}
+            {{if .CanBeForked}}
             <li id="repo-header-fork">
                 <a id="repo-header-fork-btn" {{if or (not $.IsRepositoryAdmin) $.Owner.IsOrganization}}href="{{AppSubUrl}}/repo/fork/{{.ID}}"{{end}}>
                     <button class="btn btn-gray text-bold btn-radius">

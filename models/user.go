@@ -55,12 +55,13 @@ type User struct {
 	Name      string `xorm:"UNIQUE NOT NULL"`
 	FullName  string
 	// Email is the primary email address (to be used for communication).
-	Email       string `xorm:"UNIQUE(s) NOT NULL"`
+	Email       string `xorm:"NOT NULL"`
 	Passwd      string `xorm:"NOT NULL"`
 	LoginType   LoginType
 	LoginSource int64 `xorm:"NOT NULL DEFAULT 0"`
 	LoginName   string
-	Type        UserType      `xorm:"UNIQUE(s)"`
+	Type        UserType
+	OwnedOrgs   []*User       `xorm:"-"`
 	Orgs        []*User       `xorm:"-"`
 	Repos       []*Repository `xorm:"-"`
 	Location    string
@@ -132,42 +133,56 @@ func (u *User) HomeLink() string {
 	return setting.AppSubUrl + "/" + u.Name
 }
 
+// CustomAvatarPath returns user custom avatar file path.
+func (u *User) CustomAvatarPath() string {
+	return filepath.Join(setting.AvatarUploadPath, com.ToStr(u.Id))
+}
+
+// GenerateRandomAvatar generates a random avatar for user.
+func (u *User) GenerateRandomAvatar() error {
+	seed := u.Email
+	if len(seed) == 0 {
+		seed = u.Name
+	}
+
+	img, err := avatar.RandomImage([]byte(seed))
+	if err != nil {
+		return fmt.Errorf("RandomImage: %v", err)
+	}
+	if err = os.MkdirAll(path.Dir(u.CustomAvatarPath()), os.ModePerm); err != nil {
+		return fmt.Errorf("MkdirAll: %v", err)
+	}
+	fw, err := os.Create(u.CustomAvatarPath())
+	if err != nil {
+		return fmt.Errorf("Create: %v", err)
+	}
+	defer fw.Close()
+
+	if err = jpeg.Encode(fw, img, nil); err != nil {
+		return fmt.Errorf("Encode: %v", err)
+	}
+
+	log.Info("New random avatar created: %d", u.Id)
+	return nil
+}
+
 func (u *User) RelAvatarLink() string {
 	defaultImgUrl := "/img/avatar_default.jpg"
 	if u.Id == -1 {
 		return defaultImgUrl
 	}
 
-	imgPath := path.Join(setting.AvatarUploadPath, com.ToStr(u.Id))
 	switch {
 	case u.UseCustomAvatar:
-		if !com.IsExist(imgPath) {
+		if !com.IsExist(u.CustomAvatarPath()) {
 			return defaultImgUrl
 		}
 		return "/avatars/" + com.ToStr(u.Id)
 	case setting.DisableGravatar, setting.OfflineMode:
-		if !com.IsExist(imgPath) {
-			img, err := avatar.RandomImage([]byte(u.Email))
-			if err != nil {
-				log.Error(3, "RandomImage: %v", err)
-				return defaultImgUrl
+		if !com.IsExist(u.CustomAvatarPath()) {
+			if err := u.GenerateRandomAvatar(); err != nil {
+				log.Error(3, "GenerateRandomAvatar: %v", err)
 			}
-			if err = os.MkdirAll(path.Dir(imgPath), os.ModePerm); err != nil {
-				log.Error(3, "MkdirAll: %v", err)
-				return defaultImgUrl
-			}
-			fw, err := os.Create(imgPath)
-			if err != nil {
-				log.Error(3, "Create: %v", err)
-				return defaultImgUrl
-			}
-			defer fw.Close()
-
-			if err = jpeg.Encode(fw, img, nil); err != nil {
-				log.Error(3, "Encode: %v", err)
-				return defaultImgUrl
-			}
-			log.Info("New random avatar created: %d", u.Id)
 		}
 
 		return "/avatars/" + com.ToStr(u.Id)
@@ -208,11 +223,6 @@ func (u *User) ValidatePassword(passwd string) bool {
 	return u.Passwd == newUser.Passwd
 }
 
-// CustomAvatarPath returns user custom avatar file path.
-func (u *User) CustomAvatarPath() string {
-	return filepath.Join(setting.AvatarUploadPath, com.ToStr(u.Id))
-}
-
 // UploadAvatar saves custom avatar for user.
 // FIXME: split uploads to different subdirs in case we have massive users.
 func (u *User) UploadAvatar(data []byte) error {
@@ -222,28 +232,27 @@ func (u *User) UploadAvatar(data []byte) error {
 	if err != nil {
 		return err
 	}
+
 	m := resize.Resize(234, 234, img, resize.NearestNeighbor)
 
 	sess := x.NewSession()
-	defer sess.Close()
+	defer sessionRelease(sess)
 	if err = sess.Begin(); err != nil {
 		return err
 	}
 
 	if _, err = sess.Id(u.Id).AllCols().Update(u); err != nil {
-		sess.Rollback()
 		return err
 	}
 
 	os.MkdirAll(setting.AvatarUploadPath, os.ModePerm)
 	fw, err := os.Create(u.CustomAvatarPath())
 	if err != nil {
-		sess.Rollback()
 		return err
 	}
 	defer fw.Close()
+
 	if err = jpeg.Encode(fw, m, nil); err != nil {
-		sess.Rollback()
 		return err
 	}
 
@@ -284,14 +293,24 @@ func (u *User) IsPublicMember(orgId int64) bool {
 	return IsPublicMembership(orgId, u.Id)
 }
 
+func (u *User) getOrganizationCount(e Engine) (int64, error) {
+	return e.Where("uid=?", u.Id).Count(new(OrgUser))
+}
+
 // GetOrganizationCount returns count of membership of organization of user.
 func (u *User) GetOrganizationCount() (int64, error) {
-	return x.Where("uid=?", u.Id).Count(new(OrgUser))
+	return u.getOrganizationCount(x)
 }
 
 // GetRepositories returns all repositories that user owns, including private repositories.
 func (u *User) GetRepositories() (err error) {
 	u.Repos, err = GetRepositories(u.Id, true)
+	return err
+}
+
+// GetOwnedOrganizations returns all organizations that user owns.
+func (u *User) GetOwnedOrganizations() (err error) {
+	u.OwnedOrgs, err = GetOwnedOrgsByUserID(u.Id)
 	return err
 }
 
@@ -490,12 +509,20 @@ func ChangeUserName(u *User, newUserName string) (err error) {
 }
 
 func updateUser(e Engine, u *User) error {
-	u.Email = strings.ToLower(u.Email)
-	has, err := e.Where("id!=?", u.Id).And("type=?", u.Type).And("email=?", u.Email).Get(new(User))
-	if err != nil {
-		return err
-	} else if has {
-		return ErrEmailAlreadyUsed{u.Email}
+	// Organization does not need e-mail.
+	if !u.IsOrganization() {
+		u.Email = strings.ToLower(u.Email)
+		has, err := e.Where("id!=?", u.Id).And("type=?", u.Type).And("email=?", u.Email).Get(new(User))
+		if err != nil {
+			return err
+		} else if has {
+			return ErrEmailAlreadyUsed{u.Email}
+		}
+
+		if len(u.AvatarEmail) == 0 {
+			u.AvatarEmail = u.Email
+		}
+		u.Avatar = avatar.HashEmail(u.AvatarEmail)
 	}
 
 	u.LowerName = strings.ToLower(u.Name)
@@ -510,13 +537,8 @@ func updateUser(e Engine, u *User) error {
 		u.Description = u.Description[:255]
 	}
 
-	if u.AvatarEmail == "" {
-		u.AvatarEmail = u.Email
-	}
-	u.Avatar = avatar.HashEmail(u.AvatarEmail)
-
 	u.FullName = base.Sanitizer.Sanitize(u.FullName)
-	_, err = e.Id(u.Id).AllCols().Update(u)
+	_, err := e.Id(u.Id).AllCols().Update(u)
 	return err
 }
 
@@ -525,8 +547,8 @@ func UpdateUser(u *User) error {
 	return updateUser(x, u)
 }
 
-// DeleteBeans deletes all given beans, beans should contain delete conditions.
-func DeleteBeans(e Engine, beans ...interface{}) (err error) {
+// deleteBeans deletes all given beans, beans should contain delete conditions.
+func deleteBeans(e Engine, beans ...interface{}) (err error) {
 	for i := range beans {
 		if _, err = e.Delete(beans[i]); err != nil {
 			return err
@@ -536,14 +558,12 @@ func DeleteBeans(e Engine, beans ...interface{}) (err error) {
 }
 
 // FIXME: need some kind of mechanism to record failure. HINT: system notice
-// DeleteUser completely and permanently deletes everything of a user,
-// but issues/comments/pulls will be kept and shown as someone has been deleted.
-func DeleteUser(u *User) error {
+func deleteUser(e *xorm.Session, u *User) error {
 	// Note: A user owns any repository or belongs to any organization
 	//	cannot perform delete operation.
 
 	// Check ownership of repository.
-	count, err := GetRepositoryCount(u)
+	count, err := getRepositoryCount(e, u)
 	if err != nil {
 		return fmt.Errorf("GetRepositoryCount: %v", err)
 	} else if count > 0 {
@@ -551,26 +571,20 @@ func DeleteUser(u *User) error {
 	}
 
 	// Check membership of organization.
-	count, err = u.GetOrganizationCount()
+	count, err = u.getOrganizationCount(e)
 	if err != nil {
 		return fmt.Errorf("GetOrganizationCount: %v", err)
 	} else if count > 0 {
 		return ErrUserHasOrgs{UID: u.Id}
 	}
 
-	sess := x.NewSession()
-	defer sessionRelease(sess)
-	if err = sess.Begin(); err != nil {
-		return err
-	}
-
 	// ***** START: Watch *****
 	watches := make([]*Watch, 0, 10)
-	if err = x.Find(&watches, &Watch{UserID: u.Id}); err != nil {
+	if err = e.Find(&watches, &Watch{UserID: u.Id}); err != nil {
 		return fmt.Errorf("get all watches: %v", err)
 	}
 	for i := range watches {
-		if _, err = sess.Exec("UPDATE `repository` SET num_watches=num_watches-1 WHERE id=?", watches[i].RepoID); err != nil {
+		if _, err = e.Exec("UPDATE `repository` SET num_watches=num_watches-1 WHERE id=?", watches[i].RepoID); err != nil {
 			return fmt.Errorf("decrease repository watch number[%d]: %v", watches[i].RepoID, err)
 		}
 	}
@@ -578,11 +592,11 @@ func DeleteUser(u *User) error {
 
 	// ***** START: Star *****
 	stars := make([]*Star, 0, 10)
-	if err = x.Find(&stars, &Star{UID: u.Id}); err != nil {
+	if err = e.Find(&stars, &Star{UID: u.Id}); err != nil {
 		return fmt.Errorf("get all stars: %v", err)
 	}
 	for i := range stars {
-		if _, err = sess.Exec("UPDATE `repository` SET num_stars=num_stars-1 WHERE id=?", stars[i].RepoID); err != nil {
+		if _, err = e.Exec("UPDATE `repository` SET num_stars=num_stars-1 WHERE id=?", stars[i].RepoID); err != nil {
 			return fmt.Errorf("decrease repository star number[%d]: %v", stars[i].RepoID, err)
 		}
 	}
@@ -590,17 +604,17 @@ func DeleteUser(u *User) error {
 
 	// ***** START: Follow *****
 	followers := make([]*Follow, 0, 10)
-	if err = x.Find(&followers, &Follow{UserID: u.Id}); err != nil {
+	if err = e.Find(&followers, &Follow{UserID: u.Id}); err != nil {
 		return fmt.Errorf("get all followers: %v", err)
 	}
 	for i := range followers {
-		if _, err = sess.Exec("UPDATE `user` SET num_followers=num_followers-1 WHERE id=?", followers[i].UserID); err != nil {
+		if _, err = e.Exec("UPDATE `user` SET num_followers=num_followers-1 WHERE id=?", followers[i].UserID); err != nil {
 			return fmt.Errorf("decrease user follower number[%d]: %v", followers[i].UserID, err)
 		}
 	}
 	// ***** END: Follow *****
 
-	if err = DeleteBeans(sess,
+	if err = deleteBeans(e,
 		&Oauth2{Uid: u.Id},
 		&AccessToken{UID: u.Id},
 		&Collaboration{UserID: u.Id},
@@ -612,32 +626,28 @@ func DeleteUser(u *User) error {
 		&IssueUser{UID: u.Id},
 		&EmailAddress{Uid: u.Id},
 	); err != nil {
-		return fmt.Errorf("DeleteBeans: %v", err)
+		return fmt.Errorf("deleteUser: %v", err)
 	}
 
 	// ***** START: PublicKey *****
 	keys := make([]*PublicKey, 0, 10)
-	if err = sess.Find(&keys, &PublicKey{OwnerID: u.Id}); err != nil {
+	if err = e.Find(&keys, &PublicKey{OwnerID: u.Id}); err != nil {
 		return fmt.Errorf("get all public keys: %v", err)
 	}
 	for _, key := range keys {
-		if err = deletePublicKey(sess, key.ID); err != nil {
+		if err = deletePublicKey(e, key.ID); err != nil {
 			return fmt.Errorf("deletePublicKey: %v", err)
 		}
 	}
 	// ***** END: PublicKey *****
 
 	// Clear assignee.
-	if _, err = sess.Exec("UPDATE `issue` SET assignee_id=0 WHERE assignee_id=?", u.Id); err != nil {
+	if _, err = e.Exec("UPDATE `issue` SET assignee_id=0 WHERE assignee_id=?", u.Id); err != nil {
 		return fmt.Errorf("clear assignee: %v", err)
 	}
 
-	if _, err = sess.Id(u.Id).Delete(new(User)); err != nil {
+	if _, err = e.Id(u.Id).Delete(new(User)); err != nil {
 		return fmt.Errorf("Delete: %v", err)
-	}
-
-	if err = sess.Commit(); err != nil {
-		return fmt.Errorf("Commit: %v", err)
 	}
 
 	// FIXME: system notice
@@ -649,6 +659,22 @@ func DeleteUser(u *User) error {
 	os.Remove(u.CustomAvatarPath())
 
 	return nil
+}
+
+// DeleteUser completely and permanently deletes everything of a user,
+// but issues/comments/pulls will be kept and shown as someone has been deleted.
+func DeleteUser(u *User) (err error) {
+	sess := x.NewSession()
+	defer sessionRelease(sess)
+	if err = sess.Begin(); err != nil {
+		return err
+	}
+
+	if err = deleteUser(sess, u); err != nil {
+		return fmt.Errorf("deleteUser: %v", err)
+	}
+
+	return sess.Commit()
 }
 
 // DeleteInactivateUsers deletes all inactivate users and email addresses.
