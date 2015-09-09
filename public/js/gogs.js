@@ -1,6 +1,7 @@
 'use strict';
 
 var csrf;
+var suburl;
 
 function initCommentPreviewTab($form) {
     var $tab_menu = $form.find('.tabular.menu');
@@ -14,7 +15,9 @@ function initCommentPreviewTab($form) {
                 "text": $form.find('.tab.segment[data-tab="' + $tab_menu.data('write') + '"] textarea').val()
             },
             function (data) {
-                $form.find('.tab.segment[data-tab="' + $tab_menu.data('preview') + '"]').html(data);
+                var $preview_tab = $form.find('.tab.segment[data-tab="' + $tab_menu.data('preview') + '"]');
+                $preview_tab.html(data);
+                emojify.run($preview_tab[0]);
             }
         );
     });
@@ -43,14 +46,14 @@ function initCommentForm() {
 
     $label_menu.find('.item:not(.no-select)').click(function () {
         if ($(this).hasClass('checked')) {
-            $(this).removeClass('checked')
-            $(this).find('.octicon').removeClass('octicon-check')
+            $(this).removeClass('checked');
+            $(this).find('.octicon').removeClass('octicon-check');
             if (has_label_update_action) {
                 updateIssueMeta($label_menu.data('update-url'), "detach", $(this).data('id'));
             }
         } else {
-            $(this).addClass('checked')
-            $(this).find('.octicon').addClass('octicon-check')
+            $(this).addClass('checked');
+            $(this).find('.octicon').addClass('octicon-check');
             if (has_label_update_action) {
                 updateIssueMeta($label_menu.data('update-url'), "attach", $(this).data('id'));
             }
@@ -92,7 +95,7 @@ function initCommentForm() {
 
     function selectItem(select_id, input_id) {
         var $menu = $(select_id + ' .menu');
-        var $list = $('.ui' + select_id + '.list')
+        var $list = $('.ui' + select_id + '.list');
         var has_update_action = $menu.data('action') == 'update';
 
         $menu.find('.item:not(.no-select)').click(function () {
@@ -145,7 +148,7 @@ function initInstall() {
     // Database type change detection.
     $("#db_type").change(function () {
         var db_type = $('#db_type').val();
-        if (db_type === "SQLite3") {
+        if (db_type === "SQLite3" || db_type === "TiDB") {
             $('#sql_settings').hide();
             $('#pgsql_settings').hide();
             $('#sqlite_settings').show();
@@ -175,7 +178,7 @@ function initInstall() {
             $('#disable-gravatar').checkbox('check');
         }
     });
-};
+}
 
 function initRepository() {
     if ($('.repository').length == 0) {
@@ -209,7 +212,7 @@ function initRepository() {
             $(this).minicolors();
         });
         $('.precolors .color').click(function () {
-            var color_hex = $(this).data('color-hex')
+            var color_hex = $(this).data('color-hex');
             $('.color-picker').val(color_hex);
             $('.minicolors-swatch-color').css("background-color", color_hex);
         });
@@ -231,7 +234,7 @@ function initRepository() {
 
     }
     if ($('.repository.new.milestone').length > 0) {
-        var $datepicker = $('.milestone.datepicker')
+        var $datepicker = $('.milestone.datepicker');
         $datepicker.datetimepicker({
             lang: $datepicker.data('lang'),
             inline: true,
@@ -260,7 +263,7 @@ function initRepository() {
             $('.in-edit').toggle();
             $edit_input.focus();
             return false;
-        }
+        };
         $('#edit-title').click(editTitleToggle);
         $('#cancel-edit-title').click(editTitleToggle);
         $('#save-edit-title').click(editTitleToggle).
@@ -325,6 +328,7 @@ function initRepository() {
                                 $render_content.html($('#no-content').html());
                             } else {
                                 $render_content.html(data.content);
+                                emojify.run($render_content[0]);
                             }
                         });
                 });
@@ -374,7 +378,7 @@ function initRepository() {
 
     // Pull request
     if ($('.repository.compare.pull').length > 0) {
-        var $branch_dropdown = $('.choose.branch .dropdown')
+        var $branch_dropdown = $('.choose.branch .dropdown');
         $branch_dropdown.dropdown({
             fullTextSearch: true,
             onChange: function (text, value, $choice) {
@@ -383,7 +387,43 @@ function initRepository() {
             message: {noResults: $branch_dropdown.data('no-results')}
         });
     }
-};
+}
+
+function initOrganization() {
+    if ($('.organization').length == 0) {
+        return;
+    }
+
+    // Options
+    if ($('.organization.settings.options').length > 0) {
+        $('#org_name').keyup(function () {
+            var $prompt_span = $('#org-name-change-prompt');
+            if ($(this).val().toString().toLowerCase() != $(this).data('org-name').toString().toLowerCase()) {
+                $prompt_span.show();
+            } else {
+                $prompt_span.hide();
+            }
+        });
+    }
+}
+
+function initUser() {
+    if ($('.user').length == 0) {
+        return;
+    }
+
+    // Options
+    if ($('.user.settings.profile').length > 0) {
+        $('#username').keyup(function () {
+            var $prompt_span = $('#name-change-prompt');
+            if ($(this).val().toString().toLowerCase() != $(this).data('name').toString().toLowerCase()) {
+                $prompt_span.show();
+            } else {
+                $prompt_span.hide();
+            }
+        });
+    }
+}
 
 function initWebhook() {
     if ($('.new.webhook').length == 0) {
@@ -404,6 +444,7 @@ function initWebhook() {
 
 $(document).ready(function () {
     csrf = $('meta[name=_csrf]').attr("content");
+    suburl = $('meta[name=_suburl]').attr("content");
 
     // Show exact time
     $('.time-since').each(function () {
@@ -470,7 +511,7 @@ $(document).ready(function () {
                 this.on("success", function (file, data) {
                     filenameDict[file.name] = data.uuid;
                     $('.attachments').append('<input id="' + data.uuid + '" name="attachments" type="hidden" value="' + data.uuid + '">');
-                })
+                });
                 this.on("removedfile", function (file) {
                     if (file.name in filenameDict) {
                         $('#' + filenameDict[file.name]).remove();
@@ -479,6 +520,14 @@ $(document).ready(function () {
             }
         });
     }
+
+    // Emojify
+    emojify.setConfig({
+        img_dir: suburl + '/img/emoji'
+    });
+    $('.emojify').each(function () {
+        emojify.run($(this)[0]);
+    });
 
     // Helpers.
     $('.delete-button').click(function () {
@@ -511,5 +560,7 @@ $(document).ready(function () {
     initCommentForm();
     initInstall();
     initRepository();
+    initOrganization();
+    initUser();
     initWebhook();
 });

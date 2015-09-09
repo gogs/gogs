@@ -1,31 +1,30 @@
-{{template "ng/base/head" .}}
-{{template "ng/base/header" .}}
-<div id="sign-wrapper">
-    <form class="form-align form panel sign-panel sign-form container panel-radius" id="sign-up-form" action="{{AppSubUrl}}/org/create" method="post">
+{{template "base/head" .}}
+<div class="organization new org">
+  <div class="ui middle very relaxed page grid">
+    <div class="column">
+      <form class="ui form" action="{{.Link}}" method="post">
         {{.CsrfTokenHtml}}
-        <div class="panel-header">
-            <h2>{{.i18n.Tr "new_org"}}</h2>
+        <h3 class="ui top attached header">
+          {{.i18n.Tr "new_org"}}
+        </h3>
+        <div class="ui attached segment">
+          {{template "base/alert" .}}
+          <div class="inline required field {{if .Err_OrgName}}error{{end}}">
+            <label for="org_name">{{.i18n.Tr "org.org_name_holder"}}</label>
+            <input id="org_name" name="org_name" value="{{.org_name}}" autofocus required>
+            <span class="help">{{.i18n.Tr "org.org_name_helper"}}</span>
+          </div>
+
+          <div class="inline field">
+            <label></label>
+            <button class="ui green button">
+              {{.i18n.Tr "org.create_org"}}
+            </button>
+            <a class="ui button" href="{{AppSubUrl}}/">{{.i18n.Tr "cancel"}}</a>
+          </div>
         </div>
-        <div class="panel-content">
-            {{template "ng/base/alert" .}}
-            <div class="field">
-                <label class="req" for="org_name">{{.i18n.Tr "org.org_name_holder"}}</label>
-                <input class="ipt ipt-large ipt-radius {{if .Err_OrgName}}ipt-error{{end}}" id="org_name" name="org_name" type="text" value="{{.org_name}}" required/>
-                <label></label>
-                <span class="help">{{.i18n.Tr "org.org_name_helper"}}</span>
-            </div>
-            <div class="field">
-                <label class="req" for="email">{{.i18n.Tr "email"}}</label>
-                <input class="ipt ipt-large ipt-radius {{if .Err_Email}}ipt-error{{end}}" id="email" name="email" type="email" value="{{.email}}" required/>
-                <label></label>
-                <span class="help">{{.i18n.Tr "org.org_email_helper"}}</span>
-            </div>
-            <div class="field">
-                <span class="form-label"></span>
-                <button class="btn btn-large btn-blue btn-radius">{{.i18n.Tr "org.create_org"}}</button>
-                <a class="btn btn-small btn-gray btn-radius" id="repo-create-cancel" href="{{AppSubUrl}}/"><strong>{{.i18n.Tr "cancel"}}</strong></a>
-            </div>
-        </div>
-    </form>
+      </form>
+    </div>
+  </div>
 </div>
-{{template "ng/base/footer" .}}
+{{template "base/footer" .}}

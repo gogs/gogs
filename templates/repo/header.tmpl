@@ -29,7 +29,7 @@
 					    {{.NumStars}}
 					  </a>
 					</div>
-					{{if not .IsBare}}
+					{{if .CanBeForked}}
 					<div class="ui labeled button" tabindex="0">
 					  <a class="ui grey button {{if eq .OwnerID $.SignedUserID}}poping up{{end}}" {{if not (eq .OwnerID $.SignedUserID)}}href="{{AppSubUrl}}/repo/fork/{{.ID}}"{{else}} data-content="{{$.i18n.Tr "repo.fork_from_self"}}" data-position="top center" data-variation="tiny"{{end}}>
 					    <i class="icon octicon octicon-repo-forked"></i>{{$.i18n.Tr "repo.fork"}}

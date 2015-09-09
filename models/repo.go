@@ -272,6 +272,11 @@ func (repo *Repository) IsOwnedBy(userID int64) bool {
 	return repo.OwnerID == userID
 }
 
+// CanBeForked returns true if repository meets the requirements of being forked.
+func (repo *Repository) CanBeForked() bool {
+	return !repo.IsBare && !repo.IsMirror
+}
+
 func (repo *Repository) NextIssueIndex() int64 {
 	return int64(repo.NumIssues+repo.NumPulls) + 1
 }
@@ -465,6 +470,16 @@ func MigrateRepository(u *User, name, desc string, private, mirror bool, url str
 		return repo, fmt.Errorf("create update hook: %v", err)
 	}
 
+	// Check if repository is empty.
+	_, stderr, err = com.ExecCmdDir(repoPath, "git", "log", "-1")
+	if err != nil {
+		if strings.Contains(stderr, "fatal: bad default revision 'HEAD'") {
+			repo.IsBare = true
+		} else {
+			return repo, fmt.Errorf("check bare: %v - %s", err, stderr)
+		}
+	}
+
 	// Check if repository has master branch, if so set it to default branch.
 	gitRepo, err := git.OpenRepository(repoPath)
 	if err != nil {
@@ -615,7 +630,7 @@ func initRepository(e Engine, repoPath string, u *User, repo *Repository, opts C
 	}
 
 	tmpDir := filepath.Join(os.TempDir(), "gogs-"+repo.Name+"-"+com.ToStr(time.Now().Nanosecond()))
-	fmt.Println(tmpDir)
+
 	// Initialize repository according to user's choice.
 	if opts.AutoInit {
 		os.MkdirAll(tmpDir, os.ModePerm)
@@ -1185,9 +1200,13 @@ func GetRecentUpdatedRepositories(page int) (repos []*Repository, err error) {
 		Where("is_private=?", false).Limit(setting.ExplorePagingNum).Desc("updated").Find(&repos)
 }
 
+func getRepositoryCount(e Engine, u *User) (int64, error) {
+	return x.Count(&Repository{OwnerID: u.Id})
+}
+
 // GetRepositoryCount returns the total number of repositories of user.
 func GetRepositoryCount(u *User) (int64, error) {
-	return x.Count(&Repository{OwnerID: u.Id})
+	return getRepositoryCount(x, u)
 }
 
 type SearchOption struct {

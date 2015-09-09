@@ -13,8 +13,7 @@ watch_dirs = [
 watch_exts = [".go"]
 build_delay = 1500
 cmds = [
-	#["go-bindata", "-o=modules/bindata/bindata.go", "-ignore=\\.DS_Store|README", "-pkg=bindata", "conf/..."],
-	["go", "install", "-tags", "sqlite"],# redis memcache cert pam
+	["go", "install", "-tags", "sqlite"],# redis memcache cert pam tidb
 	["go", "build", "-tags", "sqlite"],
 	["./gogs", "web"]
 ]

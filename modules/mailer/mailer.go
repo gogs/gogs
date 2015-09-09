@@ -48,6 +48,7 @@ type Message struct {
 	To      []string
 	From    string
 	Subject string
+	ReplyTo string
 	Body    string
 	Type    string
 	Massive bool
@@ -63,7 +64,7 @@ func (m Message) Content() string {
 	}
 
 	// create mail content
-	content := "From: " + m.From + "\r\nSubject: " + m.Subject + "\r\nContent-Type: " + contentType + "\r\n\r\n" + m.Body
+	content := "From: " + m.From + "\r\nReply-To: " + m.ReplyTo + "\r\nSubject: " + m.Subject + "\r\nContent-Type: " + contentType + "\r\n\r\n" + m.Body
 	return content
 }
 
@@ -252,7 +253,8 @@ func SendAsync(msg *Message) {
 func NewHtmlMessage(To []string, From, Subject, Body string) Message {
 	return Message{
 		To:      To,
-		From:    From,
+		From:    setting.MailService.From,
+		ReplyTo: From,
 		Subject: Subject,
 		Body:    Body,
 		Type:    "html",
