@@ -110,7 +110,7 @@ func (f *UploadAvatarForm) Validate(ctx *macaron.Context, errs binding.Errors) b
 }
 
 type AddEmailForm struct {
-	Email string `binding:"Required;Email;MaxSize(50)"`
+	Email string `binding:"Required;Email;MaxSize(254)"`
 }
 
 func (f *AddEmailForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {

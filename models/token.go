@@ -14,7 +14,7 @@ import (
 // AccessToken represents a personal access token.
 type AccessToken struct {
 	ID                int64 `xorm:"pk autoincr"`
-	UID               int64 `xorm:"uid INDEX"`
+	UID               int64 `xorm:"INDEX"`
 	Name              string
 	Sha1              string    `xorm:"UNIQUE VARCHAR(40)"`
 	Created           time.Time `xorm:"CREATED"`
