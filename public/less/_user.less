@@ -3,9 +3,18 @@
 	padding-bottom: @footer-margin * 2;
 
 	&.settings {
-		.key.list {
+		.list {
 			.item.ui.grid {
 				margin-top: 15px;
+			}
+		}
+		.email.list {
+			.item:not(:first-child) {
+				border-top: 1px solid #eaeaea;
+				height: 50px;
+				.button {
+					margin-top: -10px;
+				}
 			}
 		}
 	}

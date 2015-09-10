@@ -267,8 +267,9 @@ func runWeb(ctx *cli.Context) {
 		m.Get("", user.Settings)
 		m.Post("", bindIgnErr(auth.UpdateProfileForm{}), user.SettingsPost)
 		m.Post("/avatar", binding.MultipartForm(auth.UploadAvatarForm{}), user.SettingsAvatar)
-		m.Get("/email", user.SettingsEmails)
-		m.Post("/email", bindIgnErr(auth.AddEmailForm{}), user.SettingsEmailPost)
+		m.Combo("/email").Get(user.SettingsEmails).
+			Post(bindIgnErr(auth.AddEmailForm{}), user.SettingsEmailPost)
+		m.Post("/email/delete", user.DeleteEmail)
 		m.Get("/password", user.SettingsPassword)
 		m.Post("/password", bindIgnErr(auth.ChangePasswordForm{}), user.SettingsPasswordPost)
 		m.Combo("/ssh").Get(user.SettingsSSHKeys).

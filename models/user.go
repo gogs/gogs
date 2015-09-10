@@ -110,8 +110,8 @@ func (u *User) AfterSet(colName string, _ xorm.Cell) {
 // EmailAdresses is the list of all email addresses of a user. Can contain the
 // primary email address, but is not obligatory
 type EmailAddress struct {
-	Id          int64
-	Uid         int64  `xorm:"INDEX NOT NULL"`
+	ID          int64  `xorm:"pk autoincr"`
+	UID         int64  `xorm:"INDEX NOT NULL"`
 	Email       string `xorm:"UNIQUE NOT NULL"`
 	IsActivated bool
 	IsPrimary   bool `xorm:"-"`
@@ -624,7 +624,7 @@ func deleteUser(e *xorm.Session, u *User) error {
 		&Follow{FollowID: u.Id},
 		&Action{UserID: u.Id},
 		&IssueUser{UID: u.Id},
-		&EmailAddress{Uid: u.Id},
+		&EmailAddress{UID: u.Id},
 	); err != nil {
 		return fmt.Errorf("deleteUser: %v", err)
 	}
@@ -831,11 +831,11 @@ func AddEmailAddress(email *EmailAddress) error {
 
 func (email *EmailAddress) Activate() error {
 	email.IsActivated = true
-	if _, err := x.Id(email.Id).AllCols().Update(email); err != nil {
+	if _, err := x.Id(email.ID).AllCols().Update(email); err != nil {
 		return err
 	}
 
-	if user, err := GetUserByID(email.Uid); err != nil {
+	if user, err := GetUserByID(email.UID); err != nil {
 		return err
 	} else {
 		user.Rands = GetUserSalt()
@@ -851,7 +851,7 @@ func DeleteEmailAddress(email *EmailAddress) error {
 		return ErrEmailNotExist
 	}
 
-	if _, err = x.Id(email.Id).Delete(email); err != nil {
+	if _, err = x.Id(email.ID).Delete(email); err != nil {
 		return err
 	}
 
@@ -871,12 +871,12 @@ func MakeEmailPrimary(email *EmailAddress) error {
 		return ErrEmailNotActivated
 	}
 
-	user := &User{Id: email.Uid}
+	user := &User{Id: email.UID}
 	has, err = x.Get(user)
 	if err != nil {
 		return err
 	} else if !has {
-		return ErrUserNotExist{email.Uid, ""}
+		return ErrUserNotExist{email.UID, ""}
 	}
 
 	// Make sure the former primary email doesn't disappear
@@ -885,7 +885,7 @@ func MakeEmailPrimary(email *EmailAddress) error {
 	if err != nil {
 		return err
 	} else if !has {
-		former_primary_email.Uid = user.Id
+		former_primary_email.UID = user.Id
 		former_primary_email.IsActivated = user.IsActive
 		x.Insert(former_primary_email)
 	}
@@ -962,7 +962,7 @@ func GetUserByEmail(email string) (*User, error) {
 		return nil, err
 	}
 	if has {
-		return GetUserByID(emailAddress.Uid)
+		return GetUserByID(emailAddress.UID)
 	}
 
 	return nil, ErrUserNotExist{0, "email"}
