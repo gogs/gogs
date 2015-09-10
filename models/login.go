@@ -23,13 +23,14 @@ import (
 
 type LoginType int
 
+// Note: new type must be added at the end of list to maintain compatibility.
 const (
 	NOTYPE LoginType = iota
 	PLAIN
 	LDAP
-	DLDAP
 	SMTP
 	PAM
+	DLDAP
 )
 
 var (
@@ -107,9 +108,7 @@ func (source *LoginSource) BeforeSet(colName string, val xorm.Cell) {
 	switch colName {
 	case "type":
 		switch LoginType((*val).(int64)) {
-		case LDAP:
-			fallthrough
-		case DLDAP:
+		case LDAP, DLDAP:
 			source.Cfg = new(LDAPConfig)
 		case SMTP:
 			source.Cfg = new(SMTPConfig)
@@ -233,9 +232,7 @@ func ExternalUserLogin(u *User, name, passwd string, source *LoginSource, autoRe
 	}
 
 	switch source.Type {
-	case LDAP:
-		fallthrough
-	case DLDAP:
+	case LDAP, DLDAP:
 		return LoginUserLdapSource(u, name, passwd, source, autoRegister)
 	case SMTP:
 		return LoginUserSMTPSource(u, name, passwd, source.ID, source.Cfg.(*SMTPConfig), autoRegister)
