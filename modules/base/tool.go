@@ -15,6 +15,7 @@ import (
 	"hash"
 	"html/template"
 	"math"
+	"regexp"
 	"strings"
 	"time"
 
@@ -26,11 +27,8 @@ import (
 	"github.com/gogits/gogs/modules/setting"
 )
 
-var Sanitizer = bluemonday.UGCPolicy()
+var Sanitizer = bluemonday.UGCPolicy().AllowAttrs("class").Matching(regexp.MustCompile(`[\p{L}\p{N}\s\-_',:\[\]!\./\\\(\)&]*`)).OnElements("code")
 
-func init() {
-	Sanitizer.AllowAttrs("class").OnElements("code")
-}
 
 // Encode string to md5 hex value.
 func EncodeMd5(str string) string {
