@@ -61,6 +61,8 @@ func NewAuthSourcePost(ctx *middleware.Context, form auth.AuthenticationForm) {
 	var u core.Conversion
 	switch models.LoginType(form.Type) {
 	case models.LDAP:
+	  fallthrough
+	case models.DLDAP:
 		u = &models.LDAPConfig{
 			Ldapsource: ldap.Ldapsource{
 				Name:             form.Name,
@@ -68,13 +70,14 @@ func NewAuthSourcePost(ctx *middleware.Context, form auth.AuthenticationForm) {
 				Port:             form.Port,
 				UseSSL:           form.UseSSL,
 				BindDN:           form.BindDN,
+				UserDN:           form.UserDN,
 				BindPassword:     form.BindPassword,
 				UserBase:         form.UserBase,
-				Filter:           form.Filter,
-				AdminFilter:      form.AdminFilter,
 				AttributeName:    form.AttributeName,
 				AttributeSurname: form.AttributeSurname,
 				AttributeMail:    form.AttributeMail,
+				Filter:           form.Filter,
+				AdminFilter:      form.AdminFilter,
 				Enabled:          true,
 			},
 		}
@@ -149,6 +152,8 @@ func EditAuthSourcePost(ctx *middleware.Context, form auth.AuthenticationForm) {
 	var config core.Conversion
 	switch models.LoginType(form.Type) {
 	case models.LDAP:
+	  fallthrough
+	case models.DLDAP:
 		config = &models.LDAPConfig{
 			Ldapsource: ldap.Ldapsource{
 				Name:             form.Name,
@@ -156,6 +161,7 @@ func EditAuthSourcePost(ctx *middleware.Context, form auth.AuthenticationForm) {
 				Port:             form.Port,
 				UseSSL:           form.UseSSL,
 				BindDN:           form.BindDN,
+				UserDN:           form.UserDN,
 				BindPassword:     form.BindPassword,
 				UserBase:         form.UserBase,
 				AttributeName:    form.AttributeName,

@@ -57,10 +57,10 @@ var Gogs = {};
     });
     $.fn.extend({
         toggleHide: function () {
-            $(this).addClass("hidden");
+            $(this).each(function(n, v) { $(v).addClass("hidden"); });
         },
         toggleShow: function () {
-            $(this).removeClass("hidden");
+            $(this).each(function(n, v) { $(v).removeClass("hidden"); });
         },
         toggleAjax: function (successCallback, errorCallback) {
             var url = $(this).data("ajax");
@@ -775,24 +775,20 @@ function initAdmin() {
         $form.attr('action', $form.data('delete-url'));
     });
 
-    // Create authorization.
+    // Create authorization. Keep list in sync with models/login.go.
+    var all_auths = ['none', 'plain', 'ldap', 'dldap', 'smtp', 'pam'];
     $('#auth-type').on("change", function () {
         var v = $(this).val();
-        if (v == 2) {
-            $('.ldap').toggleShow();
-            $('.smtp').toggleHide();
-            $('.pam').toggleHide();
-        }
-        if (v == 3) {
-            $('.smtp').toggleShow();
-            $('.ldap').toggleHide();
-            $('.pam').toggleHide();
-        }
-        if (v == 4) {
-            $('.pam').toggleShow();
-            $('.smtp').toggleHide();
-            $('.ldap').toggleHide();
-        }
+        if (v >= all_auths.length) return;
+
+        // Hide all through their class names.
+        $.each(all_auths, function(i, type) {
+          $('.' + type).toggleHide();
+        });
+
+        // Show the selected one.
+        var selected = all_auths[v];
+        $('.' + selected).toggleShow();
     });
 
     // Delete authorization.
