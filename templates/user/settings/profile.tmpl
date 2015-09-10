@@ -37,12 +37,12 @@
               <input id="location" name="location"  value="{{.SignedUser.Location}}">
             </div>
             <div class="required field {{if or DisableGravatar .SignedUser.UseCustomAvatar}}hide{{end}} {{if .Err_Gravatar}}error{{end}}">
-                <label for="gravatar">Gravatar {{.i18n.Tr "email"}}</label>
-                <input id="gravatar" name="gravatar" value="{{.SignedUser.AvatarEmail}}" />
+              <label for="gravatar">Gravatar {{.i18n.Tr "email"}}</label>
+              <input id="gravatar" name="gravatar" value="{{.SignedUser.AvatarEmail}}" />
             </div>
 
             <div class="field">
-               <button class="ui green button">{{$.i18n.Tr "settings.update_profile"}}</button>
+              <button class="ui green button">{{$.i18n.Tr "settings.update_profile"}}</button>
             </div>
           </form>
 
@@ -58,12 +58,12 @@
               </div>
             </div>
             <div class="inline field">
-                <label for="avatar">{{.i18n.Tr "settings.choose_new_avatar"}}</label>
-                <input name="avatar" type="file" >
+              <label for="avatar">{{.i18n.Tr "settings.choose_new_avatar"}}</label>
+              <input name="avatar" type="file" >
             </div>
 
             <div class="field">
-               <button class="ui green button">{{$.i18n.Tr "settings.update_avatar"}}</button>
+              <button class="ui green button">{{$.i18n.Tr "settings.update_avatar"}}</button>
             </div>
           </form>
         </div>
