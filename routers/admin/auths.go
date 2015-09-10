@@ -34,6 +34,8 @@ func Authentications(ctx *middleware.Context) {
 		ctx.Handle(500, "GetAuths", err)
 		return
 	}
+
+	ctx.Data["Total"] = models.CountLoginSources()
 	ctx.HTML(200, AUTHS)
 }
 
@@ -61,7 +63,7 @@ func NewAuthSourcePost(ctx *middleware.Context, form auth.AuthenticationForm) {
 	var u core.Conversion
 	switch models.LoginType(form.Type) {
 	case models.LDAP:
-	  fallthrough
+		fallthrough
 	case models.DLDAP:
 		u = &models.LDAPConfig{
 			Ldapsource: ldap.Ldapsource{
@@ -152,7 +154,7 @@ func EditAuthSourcePost(ctx *middleware.Context, form auth.AuthenticationForm) {
 	var config core.Conversion
 	switch models.LoginType(form.Type) {
 	case models.LDAP:
-	  fallthrough
+		fallthrough
 	case models.DLDAP:
 		config = &models.LDAPConfig{
 			Ldapsource: ldap.Ldapsource{

@@ -30,7 +30,7 @@
                                     <input class="ipt ipt-large ipt-radius {{if .Err_AuthName}}ipt-error{{end}}" id="name" name="name" value="{{.Source.Name}}" required />
                                 </div>
 
-                                {{if eq $type 2 3}}
+                                {{if eq $type 2 5}}
                                 <div class="field">
                                     <label class="req" for="host">{{.i18n.Tr "admin.auths.host"}}</label>
                                     <input class="ipt ipt-large ipt-radius {{if .Err_Host}}ipt-error{{end}}" id="host" name="host" value="{{.Source.LDAP.Host}}" required />
@@ -57,7 +57,7 @@
                                     <input class="ipt ipt-large ipt-radius {{if .Err_UserBase}}ipt-error{{end}}" id="user_base" name="user_base" value="{{.Source.LDAP.UserBase}}" />
                                 </div>
                                 {{end}}
-                                {{if eq $type 3}}
+                                {{if eq $type 5}}
                                 <div class="field">
                                     <label class="req" for="user_dn">{{.i18n.Tr "admin.auths.user_dn"}}</label>
                                     <input class="ipt ipt-large ipt-radius {{if .Err_UserDN}}ipt-error{{end}}" id="user_dn" name="user_dn" value="{{.Source.LDAP.UserDN}}" />
@@ -85,7 +85,7 @@
                                 </div>
 
 
-                                {{else if eq $type 4}}
+                                {{else if eq $type 3}}
                                 <div class="field">
                                     <label class="req">{{.i18n.Tr "admin.auths.smtp_auth"}}</label>
                                     <select name="smtp_auth">
@@ -105,7 +105,7 @@
                                     <input class="ipt ipt-large ipt-radius {{if .Err_SmtpPort}}ipt-error{{end}}" id="smtp_port" name="smtp_port" value="{{.Source.SMTP.Port}}" />
                                 </div>
 
-                                {{else if eq $type 5}}
+                                {{else if eq $type 4}}
                                 <div class="field">
                                     <label class="req" for="pam_service_name">{{.i18n.Tr "admin.auths.pam_service_name"}}</label>
                                     <input class="ipt ipt-large ipt-radius {{if .Err_PAMServiceName}}ipt-error{{end}}" id="pam_service_name" name="pam_service_name" value="{{.Source.PAM.ServiceName}}" />
@@ -113,7 +113,7 @@
                                 {{end}}
 
                                 <div class="field">
-                                    {{if eq $type 4}}
+                                    {{if eq $type 3}}
                                     <label></label>
                                     <input name="tls" type="checkbox" {{if .Source.SMTP.TLS}}checked{{end}}>
                                     <strong>{{.i18n.Tr "admin.auths.enable_tls"}}</strong>
