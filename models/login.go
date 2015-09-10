@@ -39,7 +39,7 @@ var (
 	ErrAuthenticationUserUsed     = errors.New("Authentication has been used by some users")
 )
 
-var LoginTypes = map[LoginType]string{
+var LoginNames = map[LoginType]string{
 	LDAP:  "LDAP (via BindDN)",
 	DLDAP: "LDAP (simple auth)",
 	SMTP:  "SMTP",
@@ -118,8 +118,8 @@ func (source *LoginSource) BeforeSet(colName string, val xorm.Cell) {
 	}
 }
 
-func (source *LoginSource) TypeString() string {
-	return LoginTypes[source.Type]
+func (source *LoginSource) TypeName() string {
+	return LoginNames[source.Type]
 }
 
 func (source *LoginSource) LDAP() *LDAPConfig {
@@ -315,9 +315,7 @@ const (
 	SMTP_LOGIN = "LOGIN"
 )
 
-var (
-	SMTPAuths = []string{SMTP_PLAIN, SMTP_LOGIN}
-)
+var SMTPAuths = []string{SMTP_PLAIN, SMTP_LOGIN}
 
 func SMTPAuth(a smtp.Auth, cfg *SMTPConfig) error {
 	c, err := smtp.Dial(fmt.Sprintf("%s:%d", cfg.Host, cfg.Port))
