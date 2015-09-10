@@ -1685,6 +1685,9 @@ type Comment struct {
 	RenderedContent string    `xorm:"-"`
 	Created         time.Time `xorm:"CREATED"`
 
+	// Reference issue in commit message
+	CommitSHA string `xorm:"VARCHAR(40)"`
+
 	Attachments []*Attachment `xorm:"-"`
 
 	// For view issue page.
@@ -1733,14 +1736,15 @@ func (c *Comment) EventTag() string {
 	return "event-" + com.ToStr(c.ID)
 }
 
-func createComment(e *xorm.Session, u *User, repo *Repository, issue *Issue, commitID, line int64, cmtType CommentType, content string, uuids []string) (_ *Comment, err error) {
+func createComment(e *xorm.Session, u *User, repo *Repository, issue *Issue, commitID, line int64, cmtType CommentType, content, commitSHA string, uuids []string) (_ *Comment, err error) {
 	comment := &Comment{
-		PosterID: u.Id,
-		Type:     cmtType,
-		IssueID:  issue.ID,
-		CommitID: commitID,
-		Line:     line,
-		Content:  content,
+		PosterID:  u.Id,
+		Type:      cmtType,
+		IssueID:   issue.ID,
+		CommitID:  commitID,
+		Line:      line,
+		Content:   content,
+		CommitSHA: commitSHA,
 	}
 	if _, err = e.Insert(comment); err != nil {
 		return nil, err
@@ -1819,18 +1823,18 @@ func createStatusComment(e *xorm.Session, doer *User, repo *Repository, issue *I
 	if !issue.IsClosed {
 		cmtType = COMMENT_TYPE_REOPEN
 	}
-	return createComment(e, doer, repo, issue, 0, 0, cmtType, "", nil)
+	return createComment(e, doer, repo, issue, 0, 0, cmtType, "", "", nil)
 }
 
 // CreateComment creates comment of issue or commit.
-func CreateComment(doer *User, repo *Repository, issue *Issue, commitID, line int64, cmtType CommentType, content string, attachments []string) (comment *Comment, err error) {
+func CreateComment(doer *User, repo *Repository, issue *Issue, commitID, line int64, cmtType CommentType, content, commitSHA string, attachments []string) (comment *Comment, err error) {
 	sess := x.NewSession()
 	defer sessionRelease(sess)
 	if err = sess.Begin(); err != nil {
 		return nil, err
 	}
 
-	comment, err = createComment(sess, doer, repo, issue, commitID, line, cmtType, content, attachments)
+	comment, err = createComment(sess, doer, repo, issue, commitID, line, cmtType, content, commitSHA, attachments)
 	if err != nil {
 		return nil, err
 	}
@@ -1840,7 +1844,29 @@ func CreateComment(doer *User, repo *Repository, issue *Issue, commitID, line in
 
 // CreateIssueComment creates a plain issue comment.
 func CreateIssueComment(doer *User, repo *Repository, issue *Issue, content string, attachments []string) (*Comment, error) {
-	return CreateComment(doer, repo, issue, 0, 0, COMMENT_TYPE_COMMENT, content, attachments)
+	return CreateComment(doer, repo, issue, 0, 0, COMMENT_TYPE_COMMENT, content, "", attachments)
+}
+
+// CreateRefComment creates a commit reference comment to issue.
+func CreateRefComment(doer *User, repo *Repository, issue *Issue, content, commitSHA string) error {
+	if len(commitSHA) == 0 {
+		return fmt.Errorf("cannot create reference with empty commit SHA")
+	}
+
+	// Check if same reference from same commit has already existed.
+	has, err := x.Get(&Comment{
+		Type:      COMMENT_TYPE_COMMIT_REF,
+		IssueID:   issue.ID,
+		CommitSHA: commitSHA,
+	})
+	if err != nil {
+		return fmt.Errorf("check reference comment: %v", err)
+	} else if has {
+		return nil
+	}
+
+	_, err = CreateComment(doer, repo, issue, 0, 0, COMMENT_TYPE_COMMIT_REF, content, commitSHA, nil)
+	return err
 }
 
 // GetCommentByID returns the comment by given ID.

@@ -220,7 +220,7 @@ func updateIssuesCommit(u *User, repo *Repository, repoUserName, repoName string
 
 			url := fmt.Sprintf("%s/%s/%s/commit/%s", setting.AppSubUrl, repoUserName, repoName, c.Sha1)
 			message := fmt.Sprintf(`<a href="%s">%s</a>`, url, c.Message)
-			if _, err = CreateComment(u, repo, issue, 0, 0, COMMENT_TYPE_COMMIT_REF, message, nil); err != nil {
+			if err = CreateRefComment(u, repo, issue, message, c.Sha1); err != nil {
 				return err
 			}
 		}
