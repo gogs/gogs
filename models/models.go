@@ -237,7 +237,7 @@ func GetStatistic() (stats Statistic) {
 	stats.Counter.Follow, _ = x.Count(new(Follow))
 	stats.Counter.Mirror, _ = x.Count(new(Mirror))
 	stats.Counter.Release, _ = x.Count(new(Release))
-	stats.Counter.LoginSource, _ = x.Count(new(LoginSource))
+	stats.Counter.LoginSource = CountLoginSources()
 	stats.Counter.Webhook, _ = x.Count(new(Webhook))
 	stats.Counter.Milestone, _ = x.Count(new(Milestone))
 	stats.Counter.Label, _ = x.Count(new(Label))

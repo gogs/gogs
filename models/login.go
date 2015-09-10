@@ -134,6 +134,12 @@ func (source *LoginSource) PAM() *PAMConfig {
 	return source.Cfg.(*PAMConfig)
 }
 
+// CountLoginSources returns number of login sources.
+func CountLoginSources() int64 {
+	count, _ := x.Count(new(LoginSource))
+	return count
+}
+
 func CreateSource(source *LoginSource) error {
 	_, err := x.Insert(source)
 	return err
