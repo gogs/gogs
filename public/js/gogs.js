@@ -147,7 +147,7 @@ function initInstall() {
 
     // Database type change detection.
     $("#db_type").change(function () {
-        var db_type = $('#db_type').val();
+        var db_type = $(this).val();
         if (db_type === "SQLite3" || db_type === "TiDB") {
             $('#sql_settings').hide();
             $('#pgsql_settings').hide();
@@ -442,6 +442,44 @@ function initWebhook() {
     });
 }
 
+
+function initAdmin() {
+    if ($('.admin').length == 0) {
+        return;
+    }
+
+    // New authentication
+    if ($('.admin.new.authentication').length > 0) {
+        $('#auth_type').change(function () {
+            var auth_type = $(this).val();
+            switch (auth_type) {
+                case '2':     // LDAP
+                    $('.dldap').hide();
+                    $('.smtp').hide();
+                    $('.pam').hide();
+                    $('.ldap').show();
+                    break;
+                case '3':     // SMTP
+                    $('.ldap').hide();
+                    $('.pam').hide();
+                    $('.smtp').show();
+                    break;
+                case '4':     // PAM
+                    $('.ldap').hide();
+                    $('.smtp').hide();
+                    $('.pam').show();
+                    break;
+                case '5':     // LDAP
+                    $('.ldap').hide();
+                    $('.smtp').hide();
+                    $('.pam').hide();
+                    $('.dldap').show();
+                    break;
+            }
+        });
+    }
+}
+
 $(document).ready(function () {
     csrf = $('meta[name=_csrf]').attr("content");
     suburl = $('meta[name=_suburl]').attr("content");
@@ -563,4 +601,5 @@ $(document).ready(function () {
     initOrganization();
     initUser();
     initWebhook();
+    initAdmin();
 });
