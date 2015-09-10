@@ -10,13 +10,13 @@ import (
 )
 
 type AuthenticationForm struct {
-	ID                int64 `form:"id"`
-	Type              int
-	Name              string `binding:"Required;MaxSize(50)"`
+	ID                int64
+	Type              int    `binding:"Range(2,5)"`
+	Name              string `binding:"Required;MaxSize(30)"`
 	Host              string
 	Port              int
-	UseSSL            bool   `form:"use_ssl"`
-	BindDN            string `form:"bind_dn"`
+	UseSSL            bool
+	BindDN            string
 	BindPassword      string
 	UserBase          string
 	UserDN            string `form:"user_dn"`
@@ -25,14 +25,14 @@ type AuthenticationForm struct {
 	AttributeMail     string
 	Filter            string
 	AdminFilter       string
-	IsActived         bool
-	SMTPAuth          string `form:"smtp_auth"`
-	SMTPHost          string `form:"smtp_host"`
-	SMTPPort          int    `form:"smtp_port"`
-	TLS               bool   `form:"tls"`
+	IsActive          bool
+	SMTPAuth          string
+	SMTPHost          string
+	SMTPPort          int
+	TLS               bool
 	SkipVerify        bool
-	AllowAutoRegister bool `form:"allowautoregister"`
-	PAMServiceName    string
+	AllowAutoRegister bool
+	PAMServiceName    string `form:"pam_service_name"`
 }
 
 func (f *AuthenticationForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
