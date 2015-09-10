@@ -242,6 +242,7 @@ func runWeb(ctx *cli.Context) {
 					m.Patch("/hooks/:id:int", bind(api.EditHookOption{}), v1.EditRepoHook)
 					m.Get("/raw/*", middleware.RepoRef(), v1.GetRepoRawFile)
 					m.Get("/archive/*", v1.GetRepoArchive)
+					m.Post("/forks", v1.ForkRepo)
 				}, middleware.ApiRepoAssignment(), middleware.ApiReqToken())
 			})
 

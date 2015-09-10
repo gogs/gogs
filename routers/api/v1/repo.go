@@ -192,11 +192,7 @@ func CreateOrgRepo(ctx *middleware.Context, opt api.CreateRepoOption) {
 }
 
 func ForkRepo(ctx *middleware.Context) {
-	forkRepo(ctx, ctx.User, ctx.Repo.Repository)
-}
-
-func forkRepo(ctx *middleware.Context, owner *models.User, repo *models.Repository) {
-	forkedRepo, err := models.ForkRepository(owner, repo, repo.Name, repo.Description)
+	forkedRepo, err := models.ForkRepository(ctx.User, ctx.Repo.Repository, ctx.Repo.Repository.Name, ctx.Repo.Repository.Description)
 	if err != nil {
 		if models.IsErrRepoAlreadyExist(err) ||
 		models.IsErrNameReserved(err) ||
@@ -214,7 +210,7 @@ func forkRepo(ctx *middleware.Context, owner *models.User, repo *models.Reposito
 		return
 	}
 
-	ctx.JSON(201, ToApiRepository(owner, forkedRepo, api.Permission{true, true, true}))
+	ctx.JSON(201, ToApiRepository(ctx.User, forkedRepo, api.Permission{true, true, true}))
 }
 
 func MigrateRepo(ctx *middleware.Context, form auth.MigrateRepoForm) {
