@@ -67,11 +67,12 @@ func (cfg *LDAPConfig) ToDB() ([]byte, error) {
 }
 
 type SMTPConfig struct {
-	Auth       string
-	Host       string
-	Port       int
-	TLS        bool
-	SkipVerify bool
+	Auth           string
+	Host           string
+	Port           int
+	AllowedDomains string `xorm:"TEXT"`
+	TLS            bool
+	SkipVerify     bool
 }
 
 func (cfg *SMTPConfig) FromDB(bs []byte) error {
@@ -383,6 +384,16 @@ func SMTPAuth(a smtp.Auth, cfg *SMTPConfig) error {
 // Create a local user if success
 // Return the same LoginUserPlain semantic
 func LoginUserSMTPSource(u *User, name, passwd string, sourceId int64, cfg *SMTPConfig, autoRegister bool) (*User, error) {
+	// Verify allowed domains.
+	if len(cfg.AllowedDomains) > 0 {
+		idx := strings.Index(name, "@")
+		if idx == -1 {
+			return nil, ErrUserNotExist{0, name}
+		} else if !com.IsSliceContainsStr(strings.Split(cfg.AllowedDomains, ","), name[idx+1:]) {
+			return nil, ErrUserNotExist{0, name}
+		}
+	}
+
 	var auth smtp.Auth
 	if cfg.Auth == SMTP_PLAIN {
 		auth = smtp.PlainAuth("", name, passwd, cfg.Host)
@@ -394,7 +405,8 @@ func LoginUserSMTPSource(u *User, name, passwd string, sourceId int64, cfg *SMTP
 
 	if err := SMTPAuth(auth, cfg); err != nil {
 		if strings.Contains(err.Error(), "Username and Password not accepted") {
-			return nil, ErrUserNotExist{u.Id, u.Name}
+			fmt.Println(err)
+			return nil, ErrUserNotExist{0, name}
 		}
 		return nil, err
 	}

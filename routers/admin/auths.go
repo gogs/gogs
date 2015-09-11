@@ -88,11 +88,12 @@ func parseLDAPConfig(form auth.AuthenticationForm) *models.LDAPConfig {
 
 func parseSMTPConfig(form auth.AuthenticationForm) *models.SMTPConfig {
 	return &models.SMTPConfig{
-		Auth:       form.SMTPAuth,
-		Host:       form.SMTPHost,
-		Port:       form.SMTPPort,
-		TLS:        form.TLS,
-		SkipVerify: form.SkipVerify,
+		Auth:           form.SMTPAuth,
+		Host:           form.SMTPHost,
+		Port:           form.SMTPPort,
+		AllowedDomains: form.AllowedDomains,
+		TLS:            form.TLS,
+		SkipVerify:     form.SkipVerify,
 	}
 }
 

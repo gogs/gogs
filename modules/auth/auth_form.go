@@ -28,6 +28,7 @@ type AuthenticationForm struct {
 	SMTPAuth          string
 	SMTPHost          string
 	SMTPPort          int
+	AllowedDomains    string
 	TLS               bool
 	SkipVerify        bool
 	AllowAutoRegister bool
