@@ -1,155 +1,163 @@
-{{template "ng/base/head" .}}
-{{template "ng/base/header" .}}
-<div id="admin-wrapper">
-    <div id="setting-wrapper" class="main-wrapper">
-        <div id="admin-setting" class="container clear">
-            {{template "admin/nav" .}}
-            <div class="grid-4-5 left">
-                <div class="setting-content">
-                    {{template "ng/base/alert" .}}
-                    <div id="setting-content">
-                        <div class="panel panel-radius">
-                            <div class="panel-header">
-                                <strong>{{.i18n.Tr "admin.auths.edit"}}</strong>
-                            </div>
-                            <form class="form form-align panel-body" id="auth-setting-form" action="{{AppSubUrl}}/admin/auths/{{.Source.ID}}" data-delete-url="{{AppSubUrl}}/admin/auths/{{.Source.ID}}/delete" method="post">
-                                {{.CsrfTokenHtml}}
-                                <input type="hidden" value="{{.Source.ID}}" name="id"/>
-                                {{$type := .Source.Type}}
-                                <div class="field">
-                                    <label>{{.i18n.Tr "admin.auths.auth_type"}}</label>
-                                    <input type="hidden" name="type" value="{{.Source.Type}}"/>
-                                    <label class="control-label">
-                                        {{range $key, $val := .LoginTypes}}
-                                            {{if eq $key $type}}{{$val}}{{end}}
-                                        {{end}}
-                                    </label>
-                                </div>
-                                <div class="field">
-                                    <label class="req" for="name">{{.i18n.Tr "admin.auths.auth_name"}}</label>
-                                    <input class="ipt ipt-large ipt-radius {{if .Err_AuthName}}ipt-error{{end}}" id="name" name="name" value="{{.Source.Name}}" required />
-                                </div>
-
-                                {{if eq $type 2 5}}
-                                <div class="field">
-                                    <label class="req" for="host">{{.i18n.Tr "admin.auths.host"}}</label>
-                                    <input class="ipt ipt-large ipt-radius {{if .Err_Host}}ipt-error{{end}}" id="host" name="host" value="{{.Source.LDAP.Host}}" required />
-                                </div>
-                                <div class="field">
-                                    <label class="req" for="port">{{.i18n.Tr "admin.auths.port"}}</label>
-                                    <input class="ipt ipt-large ipt-radius {{if .Err_Port}}ipt-error{{end}}" id="port" name="port" value="{{.Source.LDAP.Port}}" required />
-                                </div>
-                                <div class="field">
-                                    <label for="use_ssl">{{.i18n.Tr "admin.auths.enable_tls"}}</label>
-                                    <input name="use_ssl" type="checkbox" {{if .Source.LDAP.UseSSL}}checked{{end}}>
-                                </div>
-                                {{if eq $type 2}}
-                                <div class="field">
-                                    <label for="bind_dn">{{.i18n.Tr "admin.auths.bind_dn"}}</label>
-                                    <input class="ipt ipt-large ipt-radius {{if .Err_BindDN}}ipt-error{{end}}" id="bind_dn" name="bind_dn" value="{{.Source.LDAP.BindDN}}" />
-                                </div>
-                                <div class="field">
-                                    <label for="bind_password">{{.i18n.Tr "admin.auths.bind_password"}}</label>
-                                    <input class="ipt ipt-large ipt-radius {{if .Err_BindPassword}}ipt-error{{end}}" id="bind_password" name="bind_password" type="password" value="{{.Source.LDAP.BindPassword}}" />
-                                </div>
-                                <div class="field">
-                                    <label class="req" for="user_base">{{.i18n.Tr "admin.auths.user_base"}}</label>
-                                    <input class="ipt ipt-large ipt-radius {{if .Err_UserBase}}ipt-error{{end}}" id="user_base" name="user_base" value="{{.Source.LDAP.UserBase}}" />
-                                </div>
-                                {{end}}
-                                {{if eq $type 5}}
-                                <div class="field">
-                                    <label class="req" for="user_dn">{{.i18n.Tr "admin.auths.user_dn"}}</label>
-                                    <input class="ipt ipt-large ipt-radius {{if .Err_UserDN}}ipt-error{{end}}" id="user_dn" name="user_dn" value="{{.Source.LDAP.UserDN}}" />
-                                </div>
-                                {{end}}
-                                <div class="field">
-                                    <label class="req" for="filter">{{.i18n.Tr "admin.auths.filter"}}</label>
-                                    <input class="ipt ipt-large ipt-radius {{if .Err_Filter}}ipt-error{{end}}" id="filter" name="filter" value="{{.Source.LDAP.Filter}}" />
-                                </div>
-                                <div class="field">
-                                    <label for="filter">{{.i18n.Tr "admin.auths.admin_filter"}}</label>
-                                    <input class="ipt ipt-large ipt-radius {{if .Err_AdminFilter}}ipt-error{{end}}" id="admin_filter" name="admin_filter" value="{{.Source.LDAP.AdminFilter}}" />
-                                </div>
-                                <div class="field">
-                                    <label for="attribute_name">{{.i18n.Tr "admin.auths.attribute_name"}}</label>
-                                    <input class="ipt ipt-large ipt-radius {{if .Err_Attributes}}ipt-error{{end}}" id="attribute_name" name="attribute_name" value="{{.Source.LDAP.AttributeName}}" />
-                                </div>
-                                <div class="field">
-                                    <label for="attribute_surname">{{.i18n.Tr "admin.auths.attribute_surname"}}</label>
-                                    <input class="ipt ipt-large ipt-radius {{if .Err_Attributes}}ipt-error{{end}}" id="attribute_surname" name="attribute_surname" value="{{.Source.LDAP.AttributeSurname}}" />
-                                </div>
-                                <div class="field">
-                                    <label class="req" for="attribute_mail">{{.i18n.Tr "admin.auths.attribute_mail"}}</label>
-                                    <input class="ipt ipt-large ipt-radius {{if .Err_Attributes}}ipt-error{{end}}" id="attribute_mail" name="attribute_mail" value="{{.Source.LDAP.AttributeMail}}" />
-                                </div>
-
-
-                                {{else if eq $type 3}}
-                                <div class="field">
-                                    <label class="req">{{.i18n.Tr "admin.auths.smtp_auth"}}</label>
-                                    <select name="smtp_auth">
-                                        {{$auth := .Source.SMTP.Auth}}
-                                        {{range .SMTPAuths}}
-                                        <option value="{{.}}"
-                                        {{if eq . $auth}} selected{{end}}>{{.}}</option>
-                                        {{end}}
-                                    </select>
-                                </div>
-                                <div class="field">
-                                    <label class="req" for="smtp_host">{{.i18n.Tr "admin.auths.smtphost"}}</label>
-                                    <input class="ipt ipt-large ipt-radius {{if .Err_SmtpHost}}ipt-error{{end}}" id="smtp_host" name="smtp_host" value="{{.Source.SMTP.Host}}" />
-                                </div>
-                                <div class="field">
-                                    <label class="req" for="smtp_port">{{.i18n.Tr "admin.auths.smtpport"}}</label>
-                                    <input class="ipt ipt-large ipt-radius {{if .Err_SmtpPort}}ipt-error{{end}}" id="smtp_port" name="smtp_port" value="{{.Source.SMTP.Port}}" />
-                                </div>
-
-                                {{else if eq $type 4}}
-                                <div class="field">
-                                    <label class="req" for="pam_service_name">{{.i18n.Tr "admin.auths.pam_service_name"}}</label>
-                                    <input class="ipt ipt-large ipt-radius {{if .Err_PAMServiceName}}ipt-error{{end}}" id="pam_service_name" name="pam_service_name" value="{{.Source.PAM.ServiceName}}" />
-                                </div>
-                                {{end}}
-
-                                <div class="field">
-                                    {{if eq $type 3}}
-                                    <label></label>
-                                    <input name="tls" type="checkbox" {{if .Source.SMTP.TLS}}checked{{end}}>
-                                    <strong>{{.i18n.Tr "admin.auths.enable_tls"}}</strong>
-                                    <br>
-                                    <label></label>
-                                    <input name="skip_verify" type="checkbox" {{if .Source.SMTP.SkipVerify}}checked{{end}}>
-                                    <strong>{{.i18n.Tr "admin.auths.skip_tls_verify"}}</strong>
-                                    <br>
-                                    {{end}}
-                                    <label></label>
-                                    <input name="allowautoregister" type="checkbox" {{if .Source.AllowAutoRegister}}checked{{end}}>
-                                    <strong>{{.i18n.Tr "admin.auths.enable_auto_register"}}</strong>
-                                    <br>
-                                    <label></label>
-                                    <input name="is_actived" type="checkbox" {{if .Source.IsActived}}checked{{end}}>
-                                    <strong>{{.i18n.Tr "admin.auths.activated"}}</strong>
-                                </div>
-                                <div class="field">
-                                    <label></label>
-                                    <button class="btn btn-green btn-large btn-radius">{{.i18n.Tr "admin.auths.update"}}</button>
-                                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                                    <button class="btn btn-large btn-red btn-radius" id="delete-auth-btn" href="#delete-auth-modal">{{.i18n.Tr "admin.auths.delete"}}</button>
-                                </div>
-                                <div class="white-popup-block mfp-hide" id="delete-auth-modal">
-                                    <h1 class="text-red">{{.i18n.Tr "admin.auths.delete_auth_title"}}</h1>
-                                    <p>{{.i18n.Tr "admin.auths.delete_auth_desc"}}</p>
-                                    <br>
-                                    <button class="btn btn-red btn-large btn-radius" id="delete-auth-submit">{{.i18n.Tr "settings.continue"}}</button>
-                                    <button class="btn btn-large btn-radius popup-modal-dismiss">{{.i18n.Tr "settings.cancel"}}</button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                </div>
+{{template "base/head" .}}
+<div class="admin edit authentication">
+  <div class="ui container">
+    <div class="ui grid">
+      {{template "admin/navbar" .}}
+      <div class="twelve wide column content">
+        {{template "base/alert" .}}
+        <h4 class="ui top attached header">
+          {{.i18n.Tr "admin.auths.edit"}}
+        </h4>
+        <div class="ui attached segment">
+          <form class="ui form" action="{{.Link}}" method="post">
+            {{.CsrfTokenHtml}}
+            <input type="hidden" name="id" value="{{.Source.ID}}">
+            <div class="inline field">
+              <label>{{$.i18n.Tr "admin.auths.auth_type"}}</label>
+              <input type="hidden" name="type" value="{{.Source.Type}}">
+              <span>{{.Source.TypeName}}</span>
             </div>
+            <div class="required inline field {{if .Err_Name}}error{{end}}">
+              <label for="name">{{.i18n.Tr "admin.auths.auth_name"}}</label>
+              <input id="name" name="name" value="{{.Source.Name}}" autofocus required>
+            </div>
+
+            <!-- LDAP and DLDAP -->
+            {{if or .Source.IsLDAP .Source.IsDLDAP}}
+            {{ $cfg:=.Source.LDAP }}
+            <div class="required field">
+              <label for="host">{{.i18n.Tr "admin.auths.host"}}</label>
+              <input id="host" name="host" value="{{$cfg.Host}}" placeholder="e.g. mydomain.com" required>
+            </div>
+            <div class="required field">
+              <label for="port">{{.i18n.Tr "admin.auths.port"}}</label>
+              <input id="port" name="port" value="{{$cfg.Port}}"  placeholder="e.g. 636" required>
+            </div>
+            {{if .Source.IsLDAP}}
+            <div class="required field">
+              <label for="bind_dn">{{.i18n.Tr "admin.auths.bind_dn"}}</label>
+              <input id="bind_dn" name="bind_dn" value="{{$cfg.BindDN}}" placeholder="e.g. cn=Search,dc=mydomain,dc=com" required>
+            </div>
+            <input class="fake" type="password">
+            <div class="required field">
+              <label for="bind_password">{{.i18n.Tr "admin.auths.bind_password"}}</label>
+              <input id="bind_password" name="bind_password" type="password" value="{{$cfg.BindPassword}}" required>
+              <p class="help text red">{{.i18n.Tr "admin.auths.bind_password_helper"}}</p>
+            </div>
+            <div class="required field">
+              <label for="user_base">{{.i18n.Tr "admin.auths.user_base"}}</label>
+              <input id="user_base" name="user_base" value="{{$cfg.UserBase}}" placeholder="e.g. ou=Users,dc=mydomain,dc=com" required>
+            </div>
+            {{end}}
+            {{if .Source.IsDLDAP}}
+            <div class="required field">
+              <label for="user_dn">{{.i18n.Tr "admin.auths.user_dn"}}</label>
+              <input id="user_dn" name="user_dn" value="{{$cfg.UserDN}}" placeholder="e.g. ou=Users,dc=mydomain,dc=com" required>
+            </div>
+            {{end}}
+            <div class="required field">
+              <label for="filter">{{.i18n.Tr "admin.auths.filter"}}</label>
+              <input id="filter" name="filter" value="{{$cfg.Filter}}" placeholder="e.g. (&(objectClass=posixAccount)(uid=%s))" required>
+            </div>
+            <div class="field">
+              <label for="admin_filter">{{.i18n.Tr "admin.auths.admin_filter"}}</label>
+              <input id="admin_filter" name="admin_filter" value="{{$cfg.AdminFilter}}">
+            </div>
+            <div class="field">
+              <label for="attribute_name">{{.i18n.Tr "admin.auths.attribute_name"}}</label>
+              <input id="attribute_name" name="attribute_name" value="{{$cfg.AttributeName}}">
+            </div>
+            <div class="field">
+              <label for="attribute_surname">{{.i18n.Tr "admin.auths.attribute_surname"}}</label>
+              <input id="attribute_surname" name="attribute_surname" value="{{$cfg.AttributeSurname}}">
+            </div>
+            <div class="required field">
+              <label for="attribute_mail">{{.i18n.Tr "admin.auths.attribute_mail"}}</label>
+              <input id="attribute_mail" name="attribute_mail" value="{{$cfg.AttributeMail}}" placeholder="e.g. mail" required>
+            </div>
+            {{end}}
+
+            <!-- SMTP -->
+            {{if .Source.IsSMTP}}
+            {{ $cfg:=.Source.SMTP }}
+            <div class="inline required field">
+              <label>{{.i18n.Tr "admin.auths.smtp_auth"}}</label>
+              <div class="ui selection type dropdown">
+                <input type="hidden" id="smtp_auth" name="smtp_auth" value="{{$cfg.Auth}}" required>
+                <div class="text">{{$cfg.Auth}}</div>
+                <i class="dropdown icon"></i>
+                <div class="menu">
+                  {{range .SMTPAuths}}
+                  <div class="item" data-value="{{.}}">{{.}}</div>
+                  {{end}}
+                </div>
+              </div>
+            </div>
+            <div class="required field">
+              <label for="smtp_host">{{.i18n.Tr "admin.auths.smtphost"}}</label>
+              <input id="smtp_host" name="smtp_host" value="{{$cfg.Host}}" required>
+            </div>
+            <div class="required field">
+              <label for="smtp_port">{{.i18n.Tr "admin.auths.smtpport"}}</label>
+              <input id="smtp_port" name="smtp_port" value="{{$cfg.Port}}" required>
+            </div>
+            {{end}}
+
+            <!-- PAM -->
+            {{if .Source.IsPAM}}
+            {{ $cfg:=.Source.PAM }}
+            <div class="required field">
+              <label for="pam_service_name">{{.i18n.Tr "admin.auths.pam_service_name"}}</label>
+              <input id="pam_service_name" name="pam_service_name" value="{{$cfg.ServiceName}}" required>
+            </div>
+            {{end}}
+
+            <div class="inline field {{if not (or (or .Source.IsLDAP .Source.IsDLDAP) .Source.IsSMTP)}}hide{{end}}">
+              <div class="ui checkbox">
+                <label><strong>{{.i18n.Tr "admin.auths.enable_tls"}}</strong></label>
+                <input name="tls" type="checkbox" {{if .Source.UseTLS}}checked{{end}}>
+              </div>
+            </div>
+            {{if .Source.IsSMTP}}
+            <div class="inline field">
+              <div class="ui checkbox">
+                <label><strong>{{.i18n.Tr "admin.auths.skip_tls_verify"}}</strong></label>
+                <input name="skip_verify" type="checkbox" {{if .Source.SMTP.SkipVerify}}checked{{end}}>
+              </div>
+            </div>
+            {{end}}
+            <div class="inline field">
+              <div class="ui checkbox">
+                <label><strong>{{.i18n.Tr "admin.auths.enable_auto_register"}}</strong></label>
+                <input name="allow_auto_register" type="checkbox" {{if .Source.AllowAutoRegister}}checked{{end}}>
+              </div>
+            </div>
+            <div class="inline field">
+              <div class="ui checkbox">
+                <label><strong>{{.i18n.Tr "admin.auths.activated"}}</strong></label>
+                <input name="is_active" type="checkbox" {{if .Source.IsActived}}checked{{end}}>
+              </div>
+            </div>
+
+            <div class="field">
+              <button class="ui green button">{{.i18n.Tr "admin.auths.update"}}</button>
+              <div class="ui red button delete-button" data-url="{{$.Link}}/delete" data-id="{{.Source.ID}}">{{.i18n.Tr "admin.auths.delete"}}</div>
+            </div>
+          </form>
         </div>
+      </div>
     </div>
+  </div>
 </div>
-{{template "ng/base/footer" .}}
+
+<div class="ui small basic delete modal">
+  <div class="ui icon header">
+    <i class="trash icon"></i>
+    {{.i18n.Tr "admin.auths.delete_auth_title"}}
+  </div>
+  <div class="content">
+    <p>{{.i18n.Tr "admin.auths.delete_auth_desc"}}</p>
+  </div>
+  {{template "base/delete_modal_actions" .}}
+</div>
+{{template "base/footer" .}}

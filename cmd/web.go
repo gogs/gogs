@@ -330,8 +330,8 @@ func runWeb(ctx *cli.Context) {
 			m.Get("", admin.Authentications)
 			m.Get("/new", admin.NewAuthSource)
 			m.Post("/new", bindIgnErr(auth.AuthenticationForm{}), admin.NewAuthSourcePost)
-			m.Get("/:authid", admin.EditAuthSource)
-			m.Post("/:authid", bindIgnErr(auth.AuthenticationForm{}), admin.EditAuthSourcePost)
+			m.Combo("/:authid").Get(admin.EditAuthSource).
+				Post(bindIgnErr(auth.AuthenticationForm{}), admin.EditAuthSourcePost)
 			m.Post("/:authid/delete", admin.DeleteAuthSource)
 		})
 
