@@ -54,12 +54,13 @@ func regulateTimeZone(t time.Time) time.Time {
 	if len(zone) != 5 {
 		return t
 	}
-	offset := com.StrTo(zone[2:3]).MustInt()
+	hour := com.StrTo(zone[2:3]).MustInt()
+	minutes := com.StrTo(zone[3:4]).MustInt()
 
 	if zone[0] == '-' {
-		return t.Add(time.Duration(offset) * time.Hour)
+		return t.Add(time.Duration(hour) * time.Hour).Add(time.Duration(minutes) * time.Minute)
 	}
-	return t.Add(-1 * time.Duration(offset) * time.Hour)
+	return t.Add(-1 * time.Duration(hour) * time.Hour).Add(-1 * time.Duration(minutes) * time.Minute)
 }
 
 var (
