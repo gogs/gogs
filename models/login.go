@@ -405,7 +405,6 @@ func LoginUserSMTPSource(u *User, name, passwd string, sourceId int64, cfg *SMTP
 
 	if err := SMTPAuth(auth, cfg); err != nil {
 		if strings.Contains(err.Error(), "Username and Password not accepted") {
-			fmt.Println(err)
 			return nil, ErrUserNotExist{0, name}
 		}
 		return nil, err
