@@ -193,6 +193,10 @@ func UserSignIn(uname, passwd string) (*User, error) {
 		if !u.ValidatePassword(passwd) {
 			return nil, ErrUserNotExist{u.Id, u.Name}
 		}
+		// If not active, return error
+		if !u.IsActive {
+			return nil, ErrUserNotExist{u.Id, u.Name}
+		}
 		return u, nil
 	}
 
