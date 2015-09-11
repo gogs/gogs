@@ -243,6 +243,7 @@ func runWeb(ctx *cli.Context) {
 					m.Get("/raw/*", middleware.RepoRef(), v1.GetRepoRawFile)
 					m.Get("/archive/*", v1.GetRepoArchive)
 					m.Post("/forks", v1.ForkRepo)
+					m.Get("/commits/:commitId", v1.CommitById)
 				}, middleware.ApiRepoAssignment(), middleware.ApiReqToken())
 			})
 
