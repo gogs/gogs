@@ -243,7 +243,15 @@ func runWeb(ctx *cli.Context) {
 					m.Get("/raw/*", middleware.RepoRef(), v1.GetRepoRawFile)
 					m.Get("/archive/*", v1.GetRepoArchive)
 					m.Post("/forks", v1.ForkRepo)
-					m.Get("/commits/:commitId", v1.CommitById)
+
+					m.Get("/commits/:commitId", middleware.RepoRef(), v1.CommitById)
+					m.Get("/commits/current", middleware.RepoRef(), v1.CurrentCommit)
+
+					m.Group("/releases", func() {
+						m.Combo("").Get(v1.ListReleases).
+							Post(bindIgnErr(api.CreateReleaseOption{}), v1.CreateRelease)
+						m.Get("/:release", v1.ReleaseByName)
+					}, middleware.RepoRef())
 				}, middleware.ApiRepoAssignment(), middleware.ApiReqToken())
 			})
 
