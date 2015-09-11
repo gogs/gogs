@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Unknwon/com"
 	"github.com/go-xorm/core"
 	"github.com/go-xorm/xorm"
 
@@ -114,12 +115,41 @@ func (source *LoginSource) BeforeSet(colName string, val xorm.Cell) {
 			source.Cfg = new(SMTPConfig)
 		case PAM:
 			source.Cfg = new(PAMConfig)
+		default:
+			panic("unrecognized login source type: " + com.ToStr(*val))
 		}
 	}
 }
 
 func (source *LoginSource) TypeName() string {
 	return LoginNames[source.Type]
+}
+
+func (source *LoginSource) IsLDAP() bool {
+	return source.Type == LDAP
+}
+
+func (source *LoginSource) IsDLDAP() bool {
+	return source.Type == DLDAP
+}
+
+func (source *LoginSource) IsSMTP() bool {
+	return source.Type == SMTP
+}
+
+func (source *LoginSource) IsPAM() bool {
+	return source.Type == PAM
+}
+
+func (source *LoginSource) UseTLS() bool {
+	switch source.Type {
+	case LDAP, DLDAP:
+		return source.LDAP().UseSSL
+	case SMTP:
+		return source.SMTP().TLS
+	}
+
+	return false
 }
 
 func (source *LoginSource) LDAP() *LDAPConfig {
@@ -166,15 +196,14 @@ func UpdateSource(source *LoginSource) error {
 	return err
 }
 
-func DelLoginSource(source *LoginSource) error {
-	cnt, err := x.Count(&User{LoginSource: source.ID})
+func DeleteSource(source *LoginSource) error {
+	count, err := x.Count(&User{LoginSource: source.ID})
 	if err != nil {
 		return err
-	}
-	if cnt > 0 {
+	} else if count > 0 {
 		return ErrAuthenticationUserUsed
 	}
-	_, err = x.Id(source.ID).Delete(&LoginSource{})
+	_, err = x.Id(source.ID).Delete(new(LoginSource))
 	return err
 }
 

@@ -15,7 +15,6 @@ type AuthenticationForm struct {
 	Name              string `binding:"Required;MaxSize(30)"`
 	Host              string
 	Port              int
-	UseSSL            bool
 	BindDN            string
 	BindPassword      string
 	UserBase          string
