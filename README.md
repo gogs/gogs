@@ -5,7 +5,7 @@ Gogs - Go Git Service [![Build Status](https://travis-ci.org/gogits/gogs.svg?bra
 
 Gogs (Go Git Service) is a painless self-hosted Git service.
 
-##### Current version: 0.6.9 Beta
+##### Current version: 0.6.11 Beta
 
 <table>
     <tr>
