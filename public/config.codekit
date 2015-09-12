@@ -149,6 +149,17 @@
 		"outputPathIsSetByUser": 0,
 		"processed": 1
 		},
+	"\/img\/gogs-large-resize.png": {
+		"fileType": 32768,
+		"ignore": 0,
+		"ignoreWasSetByUser": 0,
+		"initialSize": 52238,
+		"inputAbbreviatedPath": "\/img\/gogs-large-resize.png",
+		"outputAbbreviatedPath": "\/img\/gogs-large-resize.png",
+		"outputPathIsOutsideProject": 0,
+		"outputPathIsSetByUser": 0,
+		"processed": 1
+		},
 	"\/img\/gogs-lg.png": {
 		"fileType": 32768,
 		"ignore": 0,
