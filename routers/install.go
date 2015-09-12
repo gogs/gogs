@@ -104,10 +104,14 @@ func Install(ctx *middleware.Context) {
 	form.DbName = models.DbCfg.Name
 	form.DbPath = models.DbCfg.Path
 
-	if models.EnableSQLite3 {
-		ctx.Data["CurDbOption"] = "SQLite3" // Default when enabled.
-	} else {
-		ctx.Data["CurDbOption"] = "MySQL"
+	ctx.Data["CurDbOption"] = "MySQL"
+	switch models.DbCfg.Type {
+	case "postgres":
+		ctx.Data["CurDbOption"] = "PostgreSQL"
+	case "sqlite3":
+		if models.EnableSQLite3 {
+			ctx.Data["CurDbOption"] = "SQLite3" // Default when enabled.
+		}
 	}
 
 	// Application general settings
