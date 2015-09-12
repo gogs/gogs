@@ -73,7 +73,7 @@ func ReleaseByName(ctx *middleware.Context) {
 
 func CreateRelease(ctx *middleware.Context, form api.CreateReleaseOption) {
 	if !ctx.Repo.GitRepo.IsBranchExist(form.Target) {
-		ctx.Handle(500, "IsBranchExist", errors.New("Branch did not exist, " + form.Target))
+		ctx.Handle(400, "IsBranchExist", errors.New("Branch did not exist, " + form.Target))
 		return
 	}
 
@@ -102,7 +102,11 @@ func CreateRelease(ctx *middleware.Context, form api.CreateReleaseOption) {
 		IsPrerelease: form.IsPrerelease,
 	}
 
-	models.CreateRelease(ctx.Repo.GitRepo, rel)
+	err = models.CreateRelease(ctx.Repo.GitRepo, rel)
+	if err != nil {
+		ctx.Handle(400, "CreateRelease", err)
+		return
+	}
 
 
 	ctx.JSON(201, ToApiRelease(rel, ctx.User))
