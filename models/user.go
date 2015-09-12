@@ -432,11 +432,10 @@ func CountUsers() int64 {
 	return countUsers(x)
 }
 
-// GetUsers returns given number of user objects with offset.
-func GetUsers(num, offset int) ([]*User, error) {
-	users := make([]*User, 0, num)
-	err := x.Limit(num, offset).Where("type=0").Asc("id").Find(&users)
-	return users, err
+// Users returns number of users in given page.
+func Users(page, pageSize int) ([]*User, error) {
+	users := make([]*User, 0, pageSize)
+	return users, x.Limit(pageSize, (page-1)*pageSize).Where("type=0").Asc("id").Find(&users)
 }
 
 // get user by erify code

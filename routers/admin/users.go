@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/Unknwon/com"
+	"github.com/Unknwon/paginater"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
@@ -46,15 +47,21 @@ func Users(ctx *middleware.Context) {
 	ctx.Data["PageIsAdmin"] = true
 	ctx.Data["PageIsAdminUsers"] = true
 
-	pageNum := 50
-	p := pagination(ctx, models.CountUsers(), pageNum)
+	total := models.CountUsers()
+	page := ctx.QueryInt("page")
+	if page <= 1 {
+		page = 1
+	}
+	ctx.Data["Page"] = paginater.New(int(total), setting.AdminUserPagingNum, page, 5)
 
-	users, err := models.GetUsers(pageNum, (p-1)*pageNum)
+	users, err := models.Users(page, setting.AdminUserPagingNum)
 	if err != nil {
-		ctx.Handle(500, "GetUsers", err)
+		ctx.Handle(500, "Users", err)
 		return
 	}
 	ctx.Data["Users"] = users
+
+	ctx.Data["Total"] = total
 	ctx.HTML(200, USERS)
 }
 
