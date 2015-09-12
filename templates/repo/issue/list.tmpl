@@ -139,7 +139,7 @@
 					{{end}}
 					{{end}}
 				  <a class="{{if not .HasNext}}disabled{{end}} item" {{if .HasNext}}href="{{$.Link}}?type={{$.ViewType}}&state={{$.State}}&labels={{$.SelectLabels}}&milestone={{$.MilestoneID}}&assignee={{$.AssigneeID}}&page={{.Next}}"{{end}}>
-				    {{$.i18n.Tr "repo.issues.next"}} <i class="icon right arrow"></i>
+				    {{$.i18n.Tr "repo.issues.next"}}&nbsp;<i class="icon right arrow"></i>
 				  </a>
 				</div>
 			</div>
