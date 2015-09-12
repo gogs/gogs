@@ -91,8 +91,9 @@ var (
 	AnsiCharset  string
 
 	// UI settings.
-	ExplorePagingNum int
-	IssuePagingNum   int
+	ExplorePagingNum   int
+	IssuePagingNum     int
+	AdminUserPagingNum int
 
 	// Markdown sttings.
 	Markdown struct {
@@ -366,6 +367,9 @@ func NewConfigContext() {
 	sec = Cfg.Section("ui")
 	ExplorePagingNum = sec.Key("EXPLORE_PAGING_NUM").MustInt(20)
 	IssuePagingNum = sec.Key("ISSUE_PAGING_NUM").MustInt(10)
+
+	sec = Cfg.Section("ui.admin")
+	AdminUserPagingNum = sec.Key("USER_PAGING_NUM").MustInt(50)
 
 	sec = Cfg.Section("picture")
 	PictureService = sec.Key("SERVICE").In("server", []string{"server"})
