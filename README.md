@@ -99,6 +99,10 @@ There are 5 ways to install Gogs:
 
 - [Instalando Gogs no Ubuntu](http://blog.linuxpro.com.br/2015/08/14/instalando-gogs-no-ubuntu/) (Português)
 
+### Deploy to Cloud
+
+- [OpenShift](https://github.com/tkisme/gogs-openshift)
+
 ## Acknowledgments
 
 - Router and middleware mechanism of [Macaron](https://github.com/Unknwon/macaron).
