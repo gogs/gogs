@@ -224,14 +224,13 @@ func UserSignIn(uname, passwd string) (*User, error) {
 
 	if userExists {
 		switch u.LoginType {
-		case NOTYPE:
-			fallthrough
-		case PLAIN:
+		case NOTYPE, PLAIN:
 			if u.ValidatePassword(passwd) {
 				return u, nil
 			}
 
 			return nil, ErrUserNotExist{u.Id, u.Name}
+
 		default:
 			var source LoginSource
 			hasSource, err := x.Id(u.LoginSource).Get(&source)
@@ -246,12 +245,12 @@ func UserSignIn(uname, passwd string) (*User, error) {
 	}
 
 	var sources []LoginSource
-	if err = x.UseBool().Find(&sources, &LoginSource{IsActived: true, AllowAutoRegister: true}); err != nil {
+	if err = x.UseBool().Find(&sources, &LoginSource{IsActived: true}); err != nil {
 		return nil, err
 	}
 
 	for _, source := range sources {
-		u, err := ExternalUserLogin(nil, uname, passwd, &source, true)
+		u, err := ExternalUserLogin(nil, uname, passwd, &source, source.AllowAutoRegister)
 		if err == nil {
 			return u, nil
 		}
