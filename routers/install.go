@@ -110,7 +110,11 @@ func Install(ctx *middleware.Context) {
 		ctx.Data["CurDbOption"] = "PostgreSQL"
 	case "sqlite3":
 		if models.EnableSQLite3 {
-			ctx.Data["CurDbOption"] = "SQLite3" // Default when enabled.
+			ctx.Data["CurDbOption"] = "SQLite3"
+		}
+	case "tidb":
+		if models.EnableTidb {
+			ctx.Data["CurDbOption"] = "TiDB"
 		}
 	}
 
@@ -183,9 +187,15 @@ func InstallPost(ctx *middleware.Context, form auth.InstallForm) {
 	models.DbCfg.SSLMode = form.SSLMode
 	models.DbCfg.Path = form.DbPath
 
-	if models.DbCfg.Type == "sqlite3" && len(models.DbCfg.Path) == 0 {
+	if (models.DbCfg.Type == "sqlite3" || models.DbCfg.Type == "tidb") &&
+		len(models.DbCfg.Path) == 0 {
 		ctx.Data["Err_DbPath"] = true
-		ctx.RenderWithErr(ctx.Tr("install.err_empty_sqlite_path"), INSTALL, &form)
+		ctx.RenderWithErr(ctx.Tr("install.err_empty_db_path"), INSTALL, &form)
+		return
+	} else if models.DbCfg.Type == "tidb" &&
+		strings.ContainsAny(path.Base(models.DbCfg.Path), ".-") {
+		ctx.Data["Err_DbPath"] = true
+		ctx.RenderWithErr(ctx.Tr("install.err_invalid_tidb_name"), INSTALL, &form)
 		return
 	}
 
@@ -217,7 +227,21 @@ func InstallPost(ctx *middleware.Context, form auth.InstallForm) {
 		return
 	}
 
+	// Check logic loophole between disable self-registration and no admin account.
+	if form.DisableRegistration && len(form.AdminName) == 0 {
+		ctx.Data["Err_Services"] = true
+		ctx.Data["Err_Admin"] = true
+		ctx.RenderWithErr(ctx.Tr("install.no_admin_and_disable_registration"), INSTALL, form)
+		return
+	}
+
 	// Check admin password.
+	if len(form.AdminName) > 0 && len(form.AdminPasswd) == 0 {
+		ctx.Data["Err_Admin"] = true
+		ctx.Data["Err_AdminPasswd"] = true
+		ctx.RenderWithErr(ctx.Tr("install.err_empty_admin_password"), INSTALL, form)
+		return
+	}
 	if form.AdminPasswd != form.AdminConfirmPasswd {
 		ctx.Data["Err_Admin"] = true
 		ctx.Data["Err_AdminPasswd"] = true

@@ -55,7 +55,7 @@ func regulateTimeZone(t time.Time) time.Time {
 		return t
 	}
 	hour := com.StrTo(zone[2:3]).MustInt()
-	minutes := com.StrTo(zone[3:4]).MustInt()
+	minutes := com.StrTo(zone[3:5]).MustInt()
 
 	if zone[0] == '-' {
 		return t.Add(time.Duration(hour) * time.Hour).Add(time.Duration(minutes) * time.Minute)
@@ -104,6 +104,8 @@ func LoadModelsConfig() {
 		setting.UseMySQL = true
 	case "postgres":
 		setting.UsePostgreSQL = true
+	case "tidb":
+		setting.UseTiDB = true
 	}
 	DbCfg.Host = sec.Key("HOST").String()
 	DbCfg.Name = sec.Key("NAME").String()
