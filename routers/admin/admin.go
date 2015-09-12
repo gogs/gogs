@@ -171,7 +171,7 @@ func Dashboard(ctx *middleware.Context) {
 }
 
 func Config(ctx *middleware.Context) {
-	ctx.Data["Title"] = ctx.Tr("admin.users")
+	ctx.Data["Title"] = ctx.Tr("admin.config")
 	ctx.Data["PageIsAdmin"] = true
 	ctx.Data["PageIsAdminConfig"] = true
 
