@@ -50,6 +50,7 @@ func Home(ctx *middleware.Context) {
 
 func Explore(ctx *middleware.Context) {
 	ctx.Data["Title"] = ctx.Tr("explore")
+	ctx.Data["PageIsExplore"] = true
 	ctx.Data["PageIsExploreRepositories"] = true
 
 	page := ctx.QueryInt("page")
