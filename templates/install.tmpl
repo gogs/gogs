@@ -152,7 +152,7 @@
 
           <!-- Server and other services -->
           <div class="ui accordion optional field">
-            <div class="title">
+            <div class="title {{if .Err_Services}}text red{{end}}">
               <i class="icon dropdown"></i>
               {{.i18n.Tr "install.server_service_title"}}
             </div>

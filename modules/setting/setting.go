@@ -75,6 +75,7 @@ var (
 	UseSQLite3    bool
 	UseMySQL      bool
 	UsePostgreSQL bool
+	UseTiDB       bool
 
 	// Webhook settings.
 	Webhook struct {
