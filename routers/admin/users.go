@@ -63,7 +63,7 @@ func NewUser(ctx *middleware.Context) {
 	ctx.HTML(200, USER_NEW)
 }
 
-func NewUserPost(ctx *middleware.Context, form auth.RegisterForm) {
+func NewUserPost(ctx *middleware.Context, form auth.AdminCrateUserForm) {
 	ctx.Data["Title"] = ctx.Tr("admin.users.new_account")
 	ctx.Data["PageIsAdmin"] = true
 	ctx.Data["PageIsAdminUsers"] = true
