@@ -458,20 +458,26 @@ function initAdmin() {
     }
 
     // New user
-    if ($('.admin.new.user').length > 0) {
+    if ($('.admin.new.user').length > 0 ||
+        $('.admin.edit.user').length > 0) {
         $('#login_type').change(function () {
             if ($(this).val().substring(0, 1) == '0') {
                 $('#login_name').removeAttr('required');
-                $('#password').attr('required', 'required');
                 $('.non-local').hide();
                 $('.local').show();
                 $('#user_name').focus();
+
+                if($(this).data('password')=="required"){
+                    $('#password').attr('required', 'required');
+                }
+
             } else {
                 $('#login_name').attr('required', 'required');
-                $('#password').removeAttr('required');
                 $('.non-local').show();
                 $('.local').hide();
                 $('#login_name').focus();
+
+                $('#password').removeAttr('required');
             }
         });
     }
