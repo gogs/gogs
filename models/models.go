@@ -46,7 +46,7 @@ func sessionRelease(sess *xorm.Session) {
 // Note: get back time.Time from database Go sees it at UTC where they are really Local.
 // 	So this function makes correct timezone offset.
 func regulateTimeZone(t time.Time) time.Time {
-	if setting.UseSQLite3 {
+	if !setting.UseMySQL {
 		return t
 	}
 
