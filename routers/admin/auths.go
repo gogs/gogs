@@ -29,9 +29,9 @@ func Authentications(ctx *middleware.Context) {
 	ctx.Data["PageIsAdminAuthentications"] = true
 
 	var err error
-	ctx.Data["Sources"], err = models.GetAuths()
+	ctx.Data["Sources"], err = models.LoginSources()
 	if err != nil {
-		ctx.Handle(500, "GetAuths", err)
+		ctx.Handle(500, "LoginSources", err)
 		return
 	}
 

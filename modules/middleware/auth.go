@@ -27,6 +27,10 @@ type ToggleOptions struct {
 
 // AutoSignIn reads cookie and try to auto-login.
 func AutoSignIn(ctx *Context) (bool, error) {
+	if !models.HasEngine {
+		return false, nil
+	}
+
 	uname := ctx.GetCookie(setting.CookieUserName)
 	if len(uname) == 0 {
 		return false, nil
