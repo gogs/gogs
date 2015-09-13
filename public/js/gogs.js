@@ -147,11 +147,20 @@ function initInstall() {
 
     // Database type change detection.
     $("#db_type").change(function () {
+        var sqlite_default = 'data/gogs.db';
+        var tidb_default = 'data/gogs_tidb';
+
         var db_type = $(this).val();
         if (db_type === "SQLite3" || db_type === "TiDB") {
             $('#sql_settings').hide();
             $('#pgsql_settings').hide();
             $('#sqlite_settings').show();
+
+            if (db_type === "SQLite3" && $('#db_path').val() == tidb_default) {
+                $('#db_path').val(sqlite_default);
+            } else if (db_type === "TiDB" && $('#db_path').val() == sqlite_default) {
+                $('#db_path').val(tidb_default);
+            }
             return;
         }
 
@@ -448,31 +457,46 @@ function initAdmin() {
         return;
     }
 
+    // New user
+    if ($('.admin.new.user').length > 0) {
+        $('#login_type').change(function () {
+            if ($(this).val().substring(0, 1) == '0') {
+                $('#login_name').removeAttr('required');
+                $('#password').attr('required', 'required');
+                $('.non-local').hide();
+                $('.local').show();
+                $('#user_name').focus();
+            } else {
+                $('#login_name').attr('required', 'required');
+                $('#password').removeAttr('required');
+                $('.non-local').show();
+                $('.local').hide();
+                $('#login_name').focus();
+            }
+        });
+    }
+
+
     // New authentication
     if ($('.admin.new.authentication').length > 0) {
         $('#auth_type').change(function () {
+            $('.ldap').hide();
+            $('.dldap').hide();
+            $('.smtp').hide();
+            $('.pam').hide();
+
             var auth_type = $(this).val();
             switch (auth_type) {
                 case '2':     // LDAP
-                    $('.dldap').hide();
-                    $('.smtp').hide();
-                    $('.pam').hide();
                     $('.ldap').show();
                     break;
                 case '3':     // SMTP
-                    $('.ldap').hide();
-                    $('.pam').hide();
                     $('.smtp').show();
                     break;
                 case '4':     // PAM
-                    $('.ldap').hide();
-                    $('.smtp').hide();
                     $('.pam').show();
                     break;
                 case '5':     // LDAP
-                    $('.ldap').hide();
-                    $('.smtp').hide();
-                    $('.pam').hide();
                     $('.dldap').show();
                     break;
             }

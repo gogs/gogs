@@ -175,7 +175,7 @@ func CreateSource(source *LoginSource) error {
 	return err
 }
 
-func GetAuths() ([]*LoginSource, error) {
+func LoginSources() ([]*LoginSource, error) {
 	auths := make([]*LoginSource, 0, 5)
 	return auths, x.Find(&auths)
 }
