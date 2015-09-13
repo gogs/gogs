@@ -28,8 +28,8 @@ Gogs 的目标是打造一个最简单、最快速和最轻松的方式搭建自
 - 支持 Gravatar 以及自定义源
 - 支持邮件服务
 - 支持后台管理面板
-- 支持 MySQL、PostgreSQL 以及 SQLite3 数据库
-- 支持社交帐号登录（GitHub、Google、QQ、微博）
+- 支持 CI 集成：[Drone](https://github.com/drone/drone)
+- 支持 MySQL、PostgreSQL、SQLite3 和 [TiDB](https://github.com/pingcap/tidb) 数据库
 - 支持多语言本地化（[14 种语言]([more](https://crowdin.com/project/gogs))）
 
 ## 系统要求

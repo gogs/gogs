@@ -61,8 +61,8 @@ The goal of this project is to make the easiest, fastest, and most painless way 
 - Gravatar and custom source support
 - Mail service
 - Administration panel
-- Supports MySQL, PostgreSQL and SQLite3
-- Social account login (GitHub, Google, QQ, Weibo)
+- CI integration: [Drone](https://github.com/drone/drone)
+- Supports MySQL, PostgreSQL, SQLite3 and [TiDB](https://github.com/pingcap/tidb)
 - Multi-language support ([14 languages](https://crowdin.com/project/gogs))
 
 ## System Requirements
