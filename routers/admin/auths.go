@@ -127,11 +127,10 @@ func NewAuthSourcePost(ctx *middleware.Context, form auth.AuthenticationForm) {
 	}
 
 	if err := models.CreateSource(&models.LoginSource{
-		Type:              models.LoginType(form.Type),
-		Name:              form.Name,
-		IsActived:         form.IsActive,
-		AllowAutoRegister: form.AllowAutoRegister,
-		Cfg:               config,
+		Type:      models.LoginType(form.Type),
+		Name:      form.Name,
+		IsActived: form.IsActive,
+		Cfg:       config,
 	}); err != nil {
 		ctx.Handle(500, "CreateSource", err)
 		return
@@ -195,7 +194,6 @@ func EditAuthSourcePost(ctx *middleware.Context, form auth.AuthenticationForm) {
 
 	source.Name = form.Name
 	source.IsActived = form.IsActive
-	source.AllowAutoRegister = form.AllowAutoRegister
 	source.Cfg = config
 	if err := models.UpdateSource(source); err != nil {
 		ctx.Handle(500, "UpdateSource", err)
