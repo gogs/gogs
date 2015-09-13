@@ -38,6 +38,7 @@ type InstallForm struct {
 	OfflineMode         bool
 	DisableGravatar     bool
 	DisableRegistration bool
+	EnableCaptcha       bool
 	RequireSignInView   bool
 
 	AdminName          string `binding:"OmitEmpty;AlphaDashDot;MaxSize(30)" locale:"install.admin_name"`
