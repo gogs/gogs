@@ -759,6 +759,20 @@ func NewComment(ctx *middleware.Context, form auth.CreateCommentForm) {
 		return
 	}
 
+	defer func() {
+		// Check if issue owner/poster changes the status of issue.
+		if (ctx.Repo.IsOwner() || (ctx.IsSigned && issue.IsPoster(ctx.User.Id))) &&
+			(form.Status == "reopen" || form.Status == "close") &&
+			!(issue.IsPull && issue.HasMerged) {
+			issue.Repo = ctx.Repo.Repository
+			if err = issue.ChangeStatus(ctx.User, form.Status == "close"); err != nil {
+				log.Error(4, "ChangeStatus: %v", err)
+			} else {
+				log.Trace("Issue[%d] status changed: %v", issue.ID, !issue.IsClosed)
+			}
+		}
+	}()
+
 	// Fix #321: Allow empty comments, as long as we have attachments.
 	if len(form.Content) == 0 && len(attachments) == 0 {
 		ctx.Redirect(fmt.Sprintf("%s/issues/%d", ctx.Repo.RepoLink, issue.Index))
@@ -809,18 +823,6 @@ func NewComment(ctx *middleware.Context, form auth.CreateCommentForm) {
 		}
 	}
 	log.Trace("Comment created: %d/%d/%d", ctx.Repo.Repository.ID, issue.ID, comment.ID)
-
-	// Check if issue owner/poster changes the status of issue.
-	if (ctx.Repo.IsOwner() || (ctx.IsSigned && issue.IsPoster(ctx.User.Id))) &&
-		(form.Status == "reopen" || form.Status == "close") &&
-		!(issue.IsPull && issue.HasMerged) {
-		issue.Repo = ctx.Repo.Repository
-		if err = issue.ChangeStatus(ctx.User, form.Status == "close"); err != nil {
-			ctx.Handle(500, "ChangeStatus", err)
-			return
-		}
-		log.Trace("Issue[%d] status changed: %v", issue.ID, !issue.IsClosed)
-	}
 
 	ctx.Redirect(fmt.Sprintf("%s/issues/%d#%s", ctx.Repo.RepoLink, issue.Index, comment.HashTag()))
 }
