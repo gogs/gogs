@@ -78,18 +78,6 @@ func (f *SignInForm) Validate(ctx *macaron.Context, errs binding.Errors) binding
 	return validate(errs, ctx.Data, f, ctx.Locale)
 }
 
-type AdminCrateUserForm struct {
-	UserName  string `binding:"Required;AlphaDashDot;MaxSize(35)"`
-	Email     string `binding:"Required;Email;MaxSize(254)"`
-	Password  string `binding:"MaxSize(255)"`
-	LoginType string
-	LoginName string
-}
-
-func (f *AdminCrateUserForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
-	return validate(errs, ctx.Data, f, ctx.Locale)
-}
-
 //   __________________________________________.___ _______    ________  _________
 //  /   _____/\_   _____/\__    ___/\__    ___/|   |\      \  /  _____/ /   _____/
 //  \_____  \  |    __)_   |    |     |    |   |   |/   |   \/   \  ___ \_____  \

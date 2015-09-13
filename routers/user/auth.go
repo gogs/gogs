@@ -151,7 +151,7 @@ func oauthSignUp(ctx *middleware.Context, sid int64) {
 func SignUp(ctx *middleware.Context) {
 	ctx.Data["Title"] = ctx.Tr("sign_up")
 
-	ctx.Data["DisableCaptcha"] = setting.Service.DisableCaptcha
+	ctx.Data["EnableCaptcha"] = setting.Service.EnableCaptcha
 
 	if setting.Service.DisableRegistration {
 		ctx.Data["DisableRegistration"] = true
@@ -170,7 +170,7 @@ func SignUp(ctx *middleware.Context) {
 func SignUpPost(ctx *middleware.Context, cpt *captcha.Captcha, form auth.RegisterForm) {
 	ctx.Data["Title"] = ctx.Tr("sign_up")
 
-	ctx.Data["DisableCaptcha"] = setting.Service.DisableCaptcha
+	ctx.Data["EnableCaptcha"] = setting.Service.EnableCaptcha
 
 	if setting.Service.DisableRegistration {
 		ctx.Error(403)
@@ -188,7 +188,7 @@ func SignUpPost(ctx *middleware.Context, cpt *captcha.Captcha, form auth.Registe
 		return
 	}
 
-	if !setting.Service.DisableCaptcha && !cpt.VerifyReq(ctx.Req) {
+	if setting.Service.EnableCaptcha && !cpt.VerifyReq(ctx.Req) {
 		ctx.Data["Err_Captcha"] = true
 		ctx.RenderWithErr(ctx.Tr("form.captcha_incorrect"), SIGNUP, &form)
 		return

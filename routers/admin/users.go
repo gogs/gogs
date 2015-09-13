@@ -122,30 +122,44 @@ func NewUserPost(ctx *middleware.Context, form auth.AdminCrateUserForm) {
 	ctx.Redirect(setting.AppSubUrl + "/admin/users/" + com.ToStr(u.Id))
 }
 
+func prepareUserInfo(ctx *middleware.Context) *models.User {
+	u, err := models.GetUserByID(ctx.ParamsInt64(":userid"))
+	if err != nil {
+		ctx.Handle(500, "GetUserByID", err)
+		return nil
+	}
+	ctx.Data["User"] = u
+
+	if u.LoginSource > 0 {
+		ctx.Data["LoginSource"], err = models.GetLoginSourceByID(u.LoginSource)
+		if err != nil {
+			ctx.Handle(500, "GetLoginSourceByID", err)
+			return nil
+		}
+	} else {
+		ctx.Data["LoginSource"] = &models.LoginSource{}
+	}
+
+	sources, err := models.LoginSources()
+	if err != nil {
+		ctx.Handle(500, "LoginSources", err)
+		return nil
+	}
+	ctx.Data["Sources"] = sources
+
+	return u
+}
+
 func EditUser(ctx *middleware.Context) {
 	ctx.Data["Title"] = ctx.Tr("admin.users.edit_account")
 	ctx.Data["PageIsAdmin"] = true
 	ctx.Data["PageIsAdminUsers"] = true
 
-	uid := com.StrTo(ctx.Params(":userid")).MustInt64()
-	if uid == 0 {
-		ctx.Handle(404, "EditUser", nil)
+	prepareUserInfo(ctx)
+	if ctx.Written() {
 		return
 	}
 
-	u, err := models.GetUserByID(uid)
-	if err != nil {
-		ctx.Handle(500, "GetUserByID", err)
-		return
-	}
-	ctx.Data["User"] = u
-
-	sources, err := models.LoginSources()
-	if err != nil {
-		ctx.Handle(500, "LoginSources", err)
-		return
-	}
-	ctx.Data["LoginSources"] = sources
 	ctx.HTML(200, USER_EDIT)
 }
 
@@ -154,25 +168,28 @@ func EditUserPost(ctx *middleware.Context, form auth.AdminEditUserForm) {
 	ctx.Data["PageIsAdmin"] = true
 	ctx.Data["PageIsAdminUsers"] = true
 
-	uid := com.StrTo(ctx.Params(":userid")).MustInt64()
-	if uid == 0 {
-		ctx.Handle(404, "EditUser", nil)
+	u := prepareUserInfo(ctx)
+	if ctx.Written() {
 		return
 	}
-
-	u, err := models.GetUserByID(uid)
-	if err != nil {
-		ctx.Handle(500, "GetUserById", err)
-		return
-	}
-	ctx.Data["User"] = u
 
 	if ctx.HasError() {
 		ctx.HTML(200, USER_EDIT)
 		return
 	}
 
-	// FIXME: need password length check
+	fields := strings.Split(form.LoginType, "-")
+	if len(fields) == 2 {
+		loginType := models.LoginType(com.StrTo(fields[0]).MustInt())
+		loginSource := com.StrTo(fields[1]).MustInt64()
+
+		if u.LoginSource != loginSource {
+			u.LoginSource = loginSource
+			u.LoginType = loginType
+			u.LoginName = form.LoginName
+		}
+	}
+
 	if len(form.Password) > 0 {
 		u.Passwd = form.Password
 		u.Salt = models.GetUserSalt()
@@ -183,11 +200,6 @@ func EditUserPost(ctx *middleware.Context, form auth.AdminEditUserForm) {
 	u.Email = form.Email
 	u.Website = form.Website
 	u.Location = form.Location
-	if len(form.Avatar) == 0 {
-		form.Avatar = form.Email
-	}
-	u.Avatar = base.EncodeMd5(form.Avatar)
-	u.AvatarEmail = form.Avatar
 	u.IsActive = form.Active
 	u.IsAdmin = form.Admin
 	u.AllowGitHook = form.AllowGitHook
@@ -202,6 +214,7 @@ func EditUserPost(ctx *middleware.Context, form auth.AdminEditUserForm) {
 		return
 	}
 	log.Trace("Account profile updated by admin(%s): %s", ctx.User.Name, u.Name)
+
 	ctx.Flash.Success(ctx.Tr("admin.users.update_profile_success"))
 	ctx.Redirect(setting.AppSubUrl + "/admin/users/" + ctx.Params(":userid"))
 }

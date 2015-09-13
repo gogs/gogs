@@ -28,7 +28,7 @@
             <label for="retype">{{.i18n.Tr "re_type"}}</label>
             <input id="retype" name="retype" type="password" value="{{.retype}}" required>
           </div>
-          {{if not .DisableCaptcha}}
+          {{if .EnableCaptcha}}
           <div class="inline field">
             <label></label>
             {{.Captcha.CreateHtml}}
