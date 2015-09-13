@@ -670,7 +670,8 @@ func DeleteUser(u *User) (err error) {
 	}
 
 	if err = deleteUser(sess, u); err != nil {
-		return fmt.Errorf("deleteUser: %v", err)
+		// Note: don't wrapper error here.
+		return err
 	}
 
 	return sess.Commit()

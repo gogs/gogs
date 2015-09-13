@@ -220,13 +220,7 @@ func EditUserPost(ctx *middleware.Context, form auth.AdminEditUserForm) {
 }
 
 func DeleteUser(ctx *middleware.Context) {
-	uid := com.StrTo(ctx.Params(":userid")).MustInt64()
-	if uid == 0 {
-		ctx.Handle(404, "DeleteUser", nil)
-		return
-	}
-
-	u, err := models.GetUserByID(uid)
+	u, err := models.GetUserByID(ctx.ParamsInt64(":userid"))
 	if err != nil {
 		ctx.Handle(500, "GetUserByID", err)
 		return
@@ -236,15 +230,23 @@ func DeleteUser(ctx *middleware.Context) {
 		switch {
 		case models.IsErrUserOwnRepos(err):
 			ctx.Flash.Error(ctx.Tr("admin.users.still_own_repo"))
-			ctx.Redirect(setting.AppSubUrl + "/admin/users/" + ctx.Params(":userid"))
+			ctx.JSON(200, map[string]interface{}{
+				"redirect": setting.AppSubUrl + "/admin/users/" + ctx.Params(":userid"),
+			})
 		case models.IsErrUserHasOrgs(err):
 			ctx.Flash.Error(ctx.Tr("admin.users.still_has_org"))
-			ctx.Redirect(setting.AppSubUrl + "/admin/users/" + ctx.Params(":userid"))
+			ctx.JSON(200, map[string]interface{}{
+				"redirect": setting.AppSubUrl + "/admin/users/" + ctx.Params(":userid"),
+			})
 		default:
 			ctx.Handle(500, "DeleteUser", err)
 		}
 		return
 	}
 	log.Trace("Account deleted by admin(%s): %s", ctx.User.Name, u.Name)
-	ctx.Redirect(setting.AppSubUrl + "/admin/users")
+
+	ctx.Flash.Success(ctx.Tr("admin.users.deletion_success"))
+	ctx.JSON(200, map[string]interface{}{
+		"redirect": setting.AppSubUrl + "/admin/users",
+	})
 }
