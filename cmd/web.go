@@ -312,7 +312,7 @@ func runWeb(ctx *cli.Context) {
 		m.Group("/users", func() {
 			m.Get("", admin.Users)
 			m.Get("/new", admin.NewUser)
-			m.Post("/new", bindIgnErr(auth.RegisterForm{}), admin.NewUserPost)
+			m.Post("/new", bindIgnErr(auth.AdminCrateUserForm{}), admin.NewUserPost)
 			m.Get("/:userid", admin.EditUser)
 			m.Post("/:userid", bindIgnErr(auth.AdminEditUserForm{}), admin.EditUserPost)
 			m.Post("/:userid/delete", admin.DeleteUser)
