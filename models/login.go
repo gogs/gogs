@@ -96,14 +96,13 @@ func (cfg *PAMConfig) ToDB() ([]byte, error) {
 }
 
 type LoginSource struct {
-	ID                int64 `xorm:"pk autoincr"`
-	Type              LoginType
-	Name              string          `xorm:"UNIQUE"`
-	IsActived         bool            `xorm:"NOT NULL DEFAULT false"`
-	Cfg               core.Conversion `xorm:"TEXT"`
-	AllowAutoRegister bool            `xorm:"NOT NULL DEFAULT false"`
-	Created           time.Time       `xorm:"CREATED"`
-	Updated           time.Time       `xorm:"UPDATED"`
+	ID        int64 `xorm:"pk autoincr"`
+	Type      LoginType
+	Name      string          `xorm:"UNIQUE"`
+	IsActived bool            `xorm:"NOT NULL DEFAULT false"`
+	Cfg       core.Conversion `xorm:"TEXT"`
+	Created   time.Time       `xorm:"CREATED"`
+	Updated   time.Time       `xorm:"UPDATED"`
 }
 
 func (source *LoginSource) BeforeSet(colName string, val xorm.Cell) {
@@ -208,81 +207,18 @@ func DeleteSource(source *LoginSource) error {
 	return err
 }
 
-// UserSignIn validates user name and password.
-func UserSignIn(uname, passwd string) (*User, error) {
-	var u *User
-	if strings.Contains(uname, "@") {
-		u = &User{Email: uname}
-	} else {
-		u = &User{LowerName: strings.ToLower(uname)}
-	}
-
-	userExists, err := x.Get(u)
-	if err != nil {
-		return nil, err
-	}
-
-	if userExists {
-		switch u.LoginType {
-		case NOTYPE, PLAIN:
-			if u.ValidatePassword(passwd) {
-				return u, nil
-			}
-
-			return nil, ErrUserNotExist{u.Id, u.Name}
-
-		default:
-			var source LoginSource
-			hasSource, err := x.Id(u.LoginSource).Get(&source)
-			if err != nil {
-				return nil, err
-			} else if !hasSource {
-				return nil, ErrLoginSourceNotExist
-			}
-
-			return ExternalUserLogin(u, u.LoginName, passwd, &source, false)
-		}
-	}
-
-	var sources []LoginSource
-	if err = x.UseBool().Find(&sources, &LoginSource{IsActived: true}); err != nil {
-		return nil, err
-	}
-
-	for _, source := range sources {
-		u, err := ExternalUserLogin(nil, uname, passwd, &source, source.AllowAutoRegister)
-		if err == nil {
-			return u, nil
-		}
-
-		log.Warn("Failed to login '%s' via '%s': %v", uname, source.Name, err)
-	}
-
-	return nil, ErrUserNotExist{u.Id, u.Name}
-}
-
-func ExternalUserLogin(u *User, name, passwd string, source *LoginSource, autoRegister bool) (*User, error) {
-	if !source.IsActived {
-		return nil, ErrLoginSourceNotActived
-	}
-
-	switch source.Type {
-	case LDAP, DLDAP:
-		return LoginUserLdapSource(u, name, passwd, source, autoRegister)
-	case SMTP:
-		return LoginUserSMTPSource(u, name, passwd, source.ID, source.Cfg.(*SMTPConfig), autoRegister)
-	case PAM:
-		return LoginUserPAMSource(u, name, passwd, source.ID, source.Cfg.(*PAMConfig), autoRegister)
-	}
-
-	return nil, ErrUnsupportedLoginType
-}
+// .____     ________      _____ __________
+// |    |    \______ \    /  _  \\______   \
+// |    |     |    |  \  /  /_\  \|     ___/
+// |    |___  |    `   \/    |    \    |
+// |_______ \/_______  /\____|__  /____|
+//         \/        \/         \/
 
 // Query if name/passwd can login against the LDAP directory pool
 // Create a local user if success
 // Return the same LoginUserPlain semantic
 // FIXME: https://github.com/gogits/gogs/issues/672
-func LoginUserLdapSource(u *User, name, passwd string, source *LoginSource, autoRegister bool) (*User, error) {
+func LoginUserLDAPSource(u *User, name, passwd string, source *LoginSource, autoRegister bool) (*User, error) {
 	cfg := source.Cfg.(*LDAPConfig)
 	directBind := (source.Type == DLDAP)
 	fn, sn, mail, admin, logged := cfg.Ldapsource.SearchEntry(name, passwd, directBind)
@@ -303,17 +239,23 @@ func LoginUserLdapSource(u *User, name, passwd string, source *LoginSource, auto
 	u = &User{
 		LowerName:   strings.ToLower(name),
 		Name:        name,
-		FullName:    fn + " " + sn,
+		FullName:    strings.TrimSpace(fn + " " + sn),
 		LoginType:   source.Type,
 		LoginSource: source.ID,
 		LoginName:   name,
-		Passwd:      passwd,
 		Email:       mail,
 		IsAdmin:     admin,
 		IsActive:    true,
 	}
 	return u, CreateUser(u)
 }
+
+//   _________   __________________________
+//  /   _____/  /     \__    ___/\______   \
+//  \_____  \  /  \ /  \|    |    |     ___/
+//  /        \/    Y    \    |    |    |
+// /_______  /\____|__  /____|    |____|
+//         \/         \/
 
 type loginAuth struct {
 	username, password string
@@ -433,6 +375,13 @@ func LoginUserSMTPSource(u *User, name, passwd string, sourceId int64, cfg *SMTP
 	return u, err
 }
 
+// __________  _____      _____
+// \______   \/  _  \    /     \
+//  |     ___/  /_\  \  /  \ /  \
+//  |    |  /    |    \/    Y    \
+//  |____|  \____|__  /\____|__  /
+//                  \/         \/
+
 // Query if name/passwd can login against PAM
 // Create a local user if success
 // Return the same LoginUserPlain semantic
@@ -461,4 +410,74 @@ func LoginUserPAMSource(u *User, name, passwd string, sourceId int64, cfg *PAMCo
 	}
 	err := CreateUser(u)
 	return u, err
+}
+
+func ExternalUserLogin(u *User, name, passwd string, source *LoginSource, autoRegister bool) (*User, error) {
+	if !source.IsActived {
+		return nil, ErrLoginSourceNotActived
+	}
+
+	switch source.Type {
+	case LDAP, DLDAP:
+		return LoginUserLDAPSource(u, name, passwd, source, autoRegister)
+	case SMTP:
+		return LoginUserSMTPSource(u, name, passwd, source.ID, source.Cfg.(*SMTPConfig), autoRegister)
+	case PAM:
+		return LoginUserPAMSource(u, name, passwd, source.ID, source.Cfg.(*PAMConfig), autoRegister)
+	}
+
+	return nil, ErrUnsupportedLoginType
+}
+
+// UserSignIn validates user name and password.
+func UserSignIn(uname, passwd string) (*User, error) {
+	var u *User
+	if strings.Contains(uname, "@") {
+		u = &User{Email: uname}
+	} else {
+		u = &User{LowerName: strings.ToLower(uname)}
+	}
+
+	userExists, err := x.Get(u)
+	if err != nil {
+		return nil, err
+	}
+
+	if userExists {
+		switch u.LoginType {
+		case NOTYPE, PLAIN:
+			if u.ValidatePassword(passwd) {
+				return u, nil
+			}
+
+			return nil, ErrUserNotExist{u.Id, u.Name}
+
+		default:
+			var source LoginSource
+			hasSource, err := x.Id(u.LoginSource).Get(&source)
+			if err != nil {
+				return nil, err
+			} else if !hasSource {
+				return nil, ErrLoginSourceNotExist
+			}
+
+			return ExternalUserLogin(u, u.LoginName, passwd, &source, false)
+		}
+	}
+
+	var sources []LoginSource
+	if err = x.UseBool().Find(&sources, &LoginSource{IsActived: true}); err != nil {
+		return nil, err
+	}
+
+	for _, source := range sources {
+		u, err := ExternalUserLogin(nil, uname, passwd, &source, true)
+		if err == nil {
+			return u, nil
+		}
+
+		log.Warn("Failed to login '%s' via '%s': %v", uname, source.Name, err)
+	}
+
+	return nil, ErrUserNotExist{u.Id, u.Name}
 }
