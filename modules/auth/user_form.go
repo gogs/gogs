@@ -58,12 +58,12 @@ func (f *InstallForm) Validate(ctx *macaron.Context, errs binding.Errors) bindin
 //         \/                         \/
 
 type RegisterForm struct {
-	UserName  string `form:"uname" binding:"Required;AlphaDashDot;MaxSize(35)"`
-	Email     string `form:"email" binding:"Required;Email;MaxSize(254)"`
-	Password  string `form:"password" binding:"Required;MaxSize(255)"`
-	Retype    string `form:"retype"`
-	LoginType string `form:"logintype"`
-	LoginName string `form:"loginname"`
+	UserName  string `binding:"Required;AlphaDashDot;MaxSize(35)"`
+	Email     string `binding:"Required;Email;MaxSize(254)"`
+	Password  string `binding:"Required;MaxSize(255)"`
+	Retype    string
+	LoginType string
+	LoginName string
 }
 
 func (f *RegisterForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {

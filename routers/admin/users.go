@@ -5,7 +5,6 @@
 package admin
 
 import (
-	"math"
 	"strings"
 
 	"github.com/Unknwon/com"
@@ -24,23 +23,6 @@ const (
 	USER_NEW  base.TplName = "admin/user/new"
 	USER_EDIT base.TplName = "admin/user/edit"
 )
-
-func pagination(ctx *middleware.Context, count int64, pageNum int) int {
-	p := ctx.QueryInt("p")
-	if p < 1 {
-		p = 1
-	}
-	curCount := int64((p-1)*pageNum + pageNum)
-	if curCount >= count {
-		p = int(math.Ceil(float64(count) / float64(pageNum)))
-	} else {
-		ctx.Data["NextPageNum"] = p + 1
-	}
-	if p > 1 {
-		ctx.Data["LastPageNum"] = p - 1
-	}
-	return p
-}
 
 func Users(ctx *middleware.Context) {
 	ctx.Data["Title"] = ctx.Tr("admin.users")
@@ -70,12 +52,14 @@ func NewUser(ctx *middleware.Context) {
 	ctx.Data["PageIsAdmin"] = true
 	ctx.Data["PageIsAdminUsers"] = true
 
-	auths, err := models.GetAuths()
+	ctx.Data["login_type"] = "0-0"
+
+	sources, err := models.LoginSources()
 	if err != nil {
-		ctx.Handle(500, "GetAuths", err)
+		ctx.Handle(500, "LoginSources", err)
 		return
 	}
-	ctx.Data["LoginSources"] = auths
+	ctx.Data["Sources"] = sources
 	ctx.HTML(200, USER_NEW)
 }
 
@@ -84,14 +68,15 @@ func NewUserPost(ctx *middleware.Context, form auth.RegisterForm) {
 	ctx.Data["PageIsAdmin"] = true
 	ctx.Data["PageIsAdminUsers"] = true
 
-	if ctx.HasError() {
-		ctx.HTML(200, USER_NEW)
+	sources, err := models.LoginSources()
+	if err != nil {
+		ctx.Handle(500, "LoginSources", err)
 		return
 	}
+	ctx.Data["Sources"] = sources
 
-	if form.Password != form.Retype {
-		ctx.Data["Err_Password"] = true
-		ctx.RenderWithErr(ctx.Tr("form.password_not_match"), USER_NEW, &form)
+	if ctx.HasError() {
+		ctx.HTML(200, USER_NEW)
 		return
 	}
 
@@ -104,12 +89,12 @@ func NewUserPost(ctx *middleware.Context, form auth.RegisterForm) {
 	}
 
 	if len(form.LoginType) > 0 {
-		// NOTE: need rewrite.
 		fields := strings.Split(form.LoginType, "-")
-		tp, _ := com.StrTo(fields[0]).Int()
-		u.LoginType = models.LoginType(tp)
-		u.LoginSource, _ = com.StrTo(fields[1]).Int64()
-		u.LoginName = form.LoginName
+		if len(fields) == 2 {
+			u.LoginType = models.LoginType(com.StrTo(fields[0]).MustInt())
+			u.LoginSource = com.StrTo(fields[1]).MustInt64()
+			u.LoginName = form.LoginName
+		}
 	}
 
 	if err := models.CreateUser(u); err != nil {
@@ -132,7 +117,9 @@ func NewUserPost(ctx *middleware.Context, form auth.RegisterForm) {
 		return
 	}
 	log.Trace("Account created by admin(%s): %s", ctx.User.Name, u.Name)
-	ctx.Redirect(setting.AppSubUrl + "/admin/users")
+
+	ctx.Flash.Success(ctx.Tr("admin.users.new_success", u.Name))
+	ctx.Redirect(setting.AppSubUrl + "/admin/users/" + com.ToStr(u.Id))
 }
 
 func EditUser(ctx *middleware.Context) {
@@ -151,14 +138,14 @@ func EditUser(ctx *middleware.Context) {
 		ctx.Handle(500, "GetUserByID", err)
 		return
 	}
-
 	ctx.Data["User"] = u
-	auths, err := models.GetAuths()
+
+	sources, err := models.LoginSources()
 	if err != nil {
-		ctx.Handle(500, "GetAuths", err)
+		ctx.Handle(500, "LoginSources", err)
 		return
 	}
-	ctx.Data["LoginSources"] = auths
+	ctx.Data["LoginSources"] = sources
 	ctx.HTML(200, USER_EDIT)
 }
 

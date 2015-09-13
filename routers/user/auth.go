@@ -151,6 +151,8 @@ func oauthSignUp(ctx *middleware.Context, sid int64) {
 func SignUp(ctx *middleware.Context) {
 	ctx.Data["Title"] = ctx.Tr("sign_up")
 
+	ctx.Data["DisableCaptcha"] = setting.Service.DisableCaptcha
+
 	if setting.Service.DisableRegistration {
 		ctx.Data["DisableRegistration"] = true
 		ctx.HTML(200, SIGNUP)
@@ -168,6 +170,8 @@ func SignUp(ctx *middleware.Context) {
 func SignUpPost(ctx *middleware.Context, cpt *captcha.Captcha, form auth.RegisterForm) {
 	ctx.Data["Title"] = ctx.Tr("sign_up")
 
+	ctx.Data["DisableCaptcha"] = setting.Service.DisableCaptcha
+
 	if setting.Service.DisableRegistration {
 		ctx.Error(403)
 		return
@@ -179,36 +183,18 @@ func SignUpPost(ctx *middleware.Context, cpt *captcha.Captcha, form auth.Registe
 		ctx.Data["IsSocialLogin"] = true
 	}
 
-	// May redirect from home page.
-	if ctx.Query("from") == "home" {
-		// Clear input error box.
-		ctx.Data["Err_UserName"] = false
-		ctx.Data["Err_Email"] = false
-
-		// Make the best guess.
-		uname := ctx.Query("uname")
-		i := strings.Index(uname, "@")
-		if i > -1 {
-			ctx.Data["email"] = uname
-			ctx.Data["uname"] = uname[:i]
-		} else {
-			ctx.Data["uname"] = uname
-		}
-		ctx.Data["password"] = ctx.Query("password")
-		ctx.HTML(200, SIGNUP)
-		return
-	}
-
 	if ctx.HasError() {
 		ctx.HTML(200, SIGNUP)
 		return
 	}
 
-	if !cpt.VerifyReq(ctx.Req) {
+	if !setting.Service.DisableCaptcha && !cpt.VerifyReq(ctx.Req) {
 		ctx.Data["Err_Captcha"] = true
 		ctx.RenderWithErr(ctx.Tr("form.captcha_incorrect"), SIGNUP, &form)
 		return
-	} else if form.Password != form.Retype {
+	}
+
+	if form.Password != form.Retype {
 		ctx.Data["Err_Password"] = true
 		ctx.RenderWithErr(ctx.Tr("form.password_not_match"), SIGNUP, &form)
 		return
