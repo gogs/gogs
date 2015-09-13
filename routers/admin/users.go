@@ -186,7 +186,6 @@ func EditUserPost(ctx *middleware.Context, form auth.AdminEditUserForm) {
 		if u.LoginSource != loginSource {
 			u.LoginSource = loginSource
 			u.LoginType = loginType
-			u.LoginName = form.LoginName
 		}
 	}
 
@@ -196,6 +195,7 @@ func EditUserPost(ctx *middleware.Context, form auth.AdminEditUserForm) {
 		u.EncodePasswd()
 	}
 
+	u.LoginName = form.LoginName
 	u.FullName = form.FullName
 	u.Email = form.Email
 	u.Website = form.Website
