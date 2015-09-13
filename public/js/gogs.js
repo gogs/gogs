@@ -187,6 +187,16 @@ function initInstall() {
             $('#disable-gravatar').checkbox('check');
         }
     });
+    $('#disable-registration input').change(function () {
+        if ($(this).is(':checked')) {
+            $('#enable-captcha').checkbox('uncheck');
+        }
+    });
+    $('#enable-captcha input').change(function () {
+        if ($(this).is(':checked')) {
+            $('#disable-registration').checkbox('uncheck');
+        }
+    });
 }
 
 function initRepository() {
