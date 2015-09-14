@@ -123,14 +123,12 @@
                 <input name="tls" type="checkbox" {{if .Source.UseTLS}}checked{{end}}>
               </div>
             </div>
-            {{if .Source.IsSMTP}}
-            <div class="inline field">
+            <div class="inline field {{if not (or (or .Source.IsLDAP .Source.IsDLDAP) .Source.IsSMTP)}}hide{{end}}">
               <div class="ui checkbox">
                 <label><strong>{{.i18n.Tr "admin.auths.skip_tls_verify"}}</strong></label>
-                <input name="skip_verify" type="checkbox" {{if .Source.SMTP.SkipVerify}}checked{{end}}>
+                <input name="skip_verify" type="checkbox" {{if .Source.SkipVerify}}checked{{end}}>
               </div>
             </div>
-            {{end}}
             <div class="inline field">
               <div class="ui checkbox">
                 <label><strong>{{.i18n.Tr "admin.auths.activated"}}</strong></label>

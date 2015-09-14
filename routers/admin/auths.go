@@ -67,11 +67,12 @@ func NewAuthSource(ctx *middleware.Context) {
 
 func parseLDAPConfig(form auth.AuthenticationForm) *models.LDAPConfig {
 	return &models.LDAPConfig{
-		Ldapsource: ldap.Ldapsource{
+		Source: &ldap.Source{
 			Name:             form.Name,
 			Host:             form.Host,
 			Port:             form.Port,
 			UseSSL:           form.TLS,
+			SkipVerify:       form.SkipVerify,
 			BindDN:           form.BindDN,
 			UserDN:           form.UserDN,
 			BindPassword:     form.BindPassword,

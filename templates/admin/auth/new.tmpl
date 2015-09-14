@@ -122,7 +122,7 @@
                 <input name="tls" type="checkbox" {{if .tls}}checked{{end}}>
               </div>
             </div>
-            <div class="smtp inline field {{if not (eq .type 3)}}hide{{end}}">
+            <div class="ldap dldap smtp inline field {{if not (or (or (eq .type 2) (eq .type 5)) (eq .type 3))}}hide{{end}}">
               <div class="ui checkbox">
                 <label><strong>{{.i18n.Tr "admin.auths.skip_tls_verify"}}</strong></label>
                 <input name="skip_verify" type="checkbox" {{if .skip_verify}}checked{{end}}>

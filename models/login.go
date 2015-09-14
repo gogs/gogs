@@ -55,15 +55,15 @@ var (
 )
 
 type LDAPConfig struct {
-	ldap.Ldapsource
+	*ldap.Source
 }
 
 func (cfg *LDAPConfig) FromDB(bs []byte) error {
-	return json.Unmarshal(bs, &cfg.Ldapsource)
+	return json.Unmarshal(bs, &cfg)
 }
 
 func (cfg *LDAPConfig) ToDB() ([]byte, error) {
-	return json.Marshal(cfg.Ldapsource)
+	return json.Marshal(cfg)
 }
 
 type SMTPConfig struct {
@@ -152,6 +152,17 @@ func (source *LoginSource) UseTLS() bool {
 	return false
 }
 
+func (source *LoginSource) SkipVerify() bool {
+	switch source.Type {
+	case LDAP, DLDAP:
+		return source.LDAP().SkipVerify
+	case SMTP:
+		return source.SMTP().SkipVerify
+	}
+
+	return false
+}
+
 func (source *LoginSource) LDAP() *LDAPConfig {
 	return source.Cfg.(*LDAPConfig)
 }
@@ -221,7 +232,7 @@ func DeleteSource(source *LoginSource) error {
 func LoginUserLDAPSource(u *User, name, passwd string, source *LoginSource, autoRegister bool) (*User, error) {
 	cfg := source.Cfg.(*LDAPConfig)
 	directBind := (source.Type == DLDAP)
-	fn, sn, mail, admin, logged := cfg.Ldapsource.SearchEntry(name, passwd, directBind)
+	fn, sn, mail, admin, logged := cfg.SearchEntry(name, passwd, directBind)
 	if !logged {
 		// User not in LDAP, do nothing
 		return nil, ErrUserNotExist{0, name}
