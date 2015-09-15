@@ -1619,7 +1619,7 @@ func DeleteMilestoneByID(mid int64) error {
 		return err
 	}
 
-	if _, err = sess.Id(m.ID).Delete(m); err != nil {
+	if _, err = sess.Id(m.ID).Delete(new(Milestone)); err != nil {
 		return err
 	}
 
