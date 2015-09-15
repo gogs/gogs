@@ -1,45 +1,52 @@
-{{template "ng/base/head" .}}
-{{template "ng/base/header" .}}
-<div id="sign-wrapper">
-    <form class="form-align form panel sign-panel sign-form container panel-radius" id="sign-up-form" action="{{AppSubUrl}}/user/login" method="post">
-        <div class="panel-header">
-            <h2>{{if .IsSocialLogin}}{{.i18n.Tr "social_sign_in" | Str2html}}{{else}}{{.i18n.Tr "sign_in"}}{{end}}</h2>
+{{template "base/head" .}}
+<div class="signin">
+  <div class="ui middle very relaxed page grid">
+    <div class="column">
+      <form class="ui form" action="{{.Link}}" method="post">
+        {{.CsrfTokenHtml}}
+        <h3 class="ui top attached header">
+          {{if .IsSocialLogin}}{{.i18n.Tr "social_sign_in" | Str2html}}{{else}}{{.i18n.Tr "sign_in"}}{{end}}
+        </h3>
+        <div class="ui attached segment">
+          {{template "base/alert" .}}
+          <div class="required inline field {{if .Err_UserName}}error{{end}}">
+            <label for="user_name">{{.i18n.Tr "home.uname_holder"}}</label>
+            <input id="user_name" name="user_name" value="{{.user_name}}" autofocus required>
+          </div>
+          <div class="required inline field {{if .Err_Password}}error{{end}}">
+            <label for="password">{{.i18n.Tr "password"}}</label>
+            <input id="password" name="password" type="password" value="{{.password}}" required>
+          </div>
+          {{if not .IsSocialLogin}}
+          <div class="inline field">
+            <label></label>
+            <div class="ui checkbox">
+              <label>{{.i18n.Tr "auth.remember_me"}}</label>
+              <input name="remember" type="checkbox">
+            </div>
+          </div>
+          {{end}}
+
+          <div class="inline field">
+            <label></label>
+            <button class="ui green button">{{.i18n.Tr "sign_in"}}</button>
+            {{if not .IsSocialLogin}}<a href="{{AppSubUrl}}/user/forget_password">{{.i18n.Tr "auth.forget_password"}}</a>{{end}}
+          </div>
+          {{if .ShowRegistrationButton}}
+          <div class="inline field">
+            <label></label>
+            <a href="{{AppSubUrl}}/user/sign_up">{{.i18n.Tr "auth.sign_up_now" | Str2html}}</a>
+          </div>
+          {{end}}
+          {{if and (not .IsSocialLogin) .OauthEnabled}}
+          <div class="inline field">
+            <label></label>
+            {{template "base/social" .}}
+          </div>
+          {{end}}
         </div>
-        <div class="panel-content">
-            {{template "ng/base/alert" .}}
-            <div class="field">
-                <label class="req" for="username">{{.i18n.Tr "home.uname_holder"}}</label>
-                <input class="ipt ipt-large ipt-radius {{if .Err_UserName}}ipt-error{{end}}" id="username" name="uname" type="text" value="{{.uname}}" required/>
-            </div>
-            <div class="field">
-                <label class="req" for="password">{{.i18n.Tr "password"}}</label>
-                <input class="ipt ipt-large ipt-radius {{if .Err_Password}}ipt-error{{end}}" id="password" name="password" type="password" required/>
-            </div>
-            {{if not .IsSocialLogin}}
-            <div class="field">
-                <label class="chk-label">
-                    <input class="ipt-chk" id="remember" name="remember" type="checkbox"/>&nbsp;&nbsp;&nbsp;&nbsp;<strong>{{.i18n.Tr "auth.remember_me"}}</strong>
-                </label>
-            </div>
-            {{end}}
-            <div class="field">
-                <span class="form-label"></span>
-                <button class="btn btn-green btn-large btn-radius">{{.i18n.Tr "sign_in"}}</button>&nbsp;&nbsp;&nbsp;&nbsp;
-                {{if not .IsSocialLogin}}<a href="{{AppSubUrl}}/user/forget_password">{{.i18n.Tr "auth.forget_password"}}</a>{{end}}
-            </div>
-            {{if .ShowRegistrationButton}}
-            <div class="field">
-                <label></label>
-                <a href="{{AppSubUrl}}/user/sign_up">{{.i18n.Tr "auth.sign_up_now" | Str2html}}</a>
-            </div>
-            {{end}}
-            {{if and (not .IsSocialLogin) .OauthEnabled}}
-            <hr/>
-            <div id="sign-social" class="text-center social-buttons">
-                {{template "ng/base/social" .}}
-            </div>
-            {{end}}
-        </div>
-    </form>
+      </form>
+    </div>
+  </div>
 </div>
-{{template "ng/base/footer" .}}
+{{template "base/footer" .}}

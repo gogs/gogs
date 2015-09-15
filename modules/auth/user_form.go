@@ -70,9 +70,9 @@ func (f *RegisterForm) Validate(ctx *macaron.Context, errs binding.Errors) bindi
 }
 
 type SignInForm struct {
-	UserName string `form:"uname" binding:"Required;MaxSize(254)"`
-	Password string `form:"password" binding:"Required;MaxSize(255)"`
-	Remember bool   `form:"remember"`
+	UserName string `binding:"Required;MaxSize(254)"`
+	Password string `binding:"Required;MaxSize(255)"`
+	Remember bool
 }
 
 func (f *SignInForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
