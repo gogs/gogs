@@ -56,7 +56,7 @@
                 </div>
                 <div class="dldap required field {{if not (eq .type 5)}}hide{{end}}">
                   <label for="user_dn">{{.i18n.Tr "admin.auths.user_dn"}}</label>
-                  <input id="user_dn" name="user_dn" value="{{.user_dn}}" placeholder="e.g. ou=Users,dc=mydomain,dc=com">
+                  <input id="user_dn" name="user_dn" value="{{.user_dn}}" placeholder="e.g. uid=%s,ou=Users,dc=mydomain,dc=com">
                 </div>
                 <div class="required field">
                   <label for="filter">{{.i18n.Tr "admin.auths.filter"}}</label>
