@@ -80,7 +80,7 @@ func processMailQueue() {
 		select {
 		case msg := <-mailQueue:
 			num, err := Send(msg)
-			tos := strings.Join(msg.To, "; ")
+			tos := strings.Join(msg.To, ", ")
 			info := ""
 			if err != nil {
 				if len(msg.Info) > 0 {
@@ -206,7 +206,7 @@ func sendMail(settings *setting.Mailer, recipients []string, msgContent []byte) 
 
 // Direct Send mail message
 func Send(msg *Message) (int, error) {
-	log.Trace("Sending mails to: %s", strings.Join(msg.To, "; "))
+	log.Trace("Sending mails to: %s", strings.Join(msg.To, ", "))
 
 	// get message body
 	content := msg.Content()
@@ -230,7 +230,7 @@ func Send(msg *Message) (int, error) {
 		}
 		return num, nil
 	} else {
-		body := []byte("To: " + strings.Join(msg.To, ";") + "\r\n" + content)
+		body := []byte("To: " + strings.Join(msg.To, ",") + "\r\n" + content)
 
 		// send to multiple emails in one message
 		err := sendMail(setting.MailService, msg.To, body)
