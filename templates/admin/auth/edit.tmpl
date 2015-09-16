@@ -52,7 +52,7 @@
             {{if .Source.IsDLDAP}}
             <div class="required field">
               <label for="user_dn">{{.i18n.Tr "admin.auths.user_dn"}}</label>
-              <input id="user_dn" name="user_dn" value="{{$cfg.UserDN}}" placeholder="e.g. ou=Users,dc=mydomain,dc=com" required>
+              <input id="user_dn" name="user_dn" value="{{$cfg.UserDN}}" placeholder="e.g. uid=%s,ou=Users,dc=mydomain,dc=com" required>
             </div>
             {{end}}
             <div class="required field">

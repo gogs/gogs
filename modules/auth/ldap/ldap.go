@@ -84,8 +84,8 @@ func (ls *Source) FindUserDN(name string) (string, bool) {
 func (ls *Source) SearchEntry(name, passwd string, directBind bool) (string, string, string, bool, bool) {
 	var userDN string
 	if directBind {
-		log.Trace("LDAP will bind directly via UserDN: %s", ls.UserDN)
-		userDN = ls.UserDN
+		log.Trace("LDAP will bind directly via UserDN template: %s", ls.UserDN)
+		userDN = fmt.Sprintf(ls.UserDN, name)
 	} else {
 		log.Trace("LDAP will use BindDN.")
 
