@@ -244,7 +244,7 @@ func Webhooks(ctx *middleware.Context) {
 	ctx.Data["Title"] = ctx.Tr("repo.settings.hooks")
 	ctx.Data["PageIsSettingsHooks"] = true
 	ctx.Data["BaseLink"] = ctx.Repo.RepoLink
-	ctx.Data["Description"] = ctx.Tr("repo.settings.hooks_desc", "http://gogs.io/docs/features/webhook.html")
+	ctx.Data["Description"] = ctx.Tr("repo.settings.hooks_desc", "https://github.com/gogits/go-gogs-client/wiki/Repositories---Webhooks")
 
 	ws, err := models.GetWebhooksByRepoId(ctx.Repo.Repository.ID)
 	if err != nil {
