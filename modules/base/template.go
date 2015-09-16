@@ -101,10 +101,6 @@ func RenderCommitMessage(msg, urlPrefix string) template.HTML {
 	return template.HTML(string(RenderIssueIndexPattern([]byte(template.HTMLEscapeString(msg)), urlPrefix)))
 }
 
-var mailDomains = map[string]string{
-	"gmail.com": "gmail.com",
-}
-
 var TemplateFuncs template.FuncMap = map[string]interface{}{
 	"GoVer": func() string {
 		return strings.Title(runtime.Version())
@@ -150,12 +146,7 @@ var TemplateFuncs template.FuncMap = map[string]interface{}{
 			return "try.gogs.io"
 		}
 
-		suffix := strings.SplitN(mail, "@", 2)[1]
-		domain, ok := mailDomains[suffix]
-		if !ok {
-			return "mail." + suffix
-		}
-		return domain
+		return strings.SplitN(mail, "@", 2)[1]
 	},
 	"SubStr": func(str string, start, length int) string {
 		if len(str) == 0 {
