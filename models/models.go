@@ -94,7 +94,7 @@ func init() {
 	}
 }
 
-func LoadModelsConfig() {
+func LoadConfigs() {
 	sec := setting.Cfg.Section("database")
 	DbCfg.Type = sec.Key("DB_TYPE").String()
 	switch DbCfg.Type {

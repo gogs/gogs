@@ -229,9 +229,9 @@ func forcePathSeparator(path string) {
 	}
 }
 
-// NewConfigContext initializes configuration context.
+// NewContext initializes configuration context.
 // NOTE: do not print any log except error.
-func NewConfigContext() {
+func NewContext() {
 	workDir, err := WorkDir()
 	if err != nil {
 		log.Fatal(4, "Fail to get work directory: %v", err)
@@ -545,6 +545,7 @@ func newSessionService() {
 
 // Mailer represents mail service.
 type Mailer struct {
+	QueueLength       int
 	Name              string
 	Host              string
 	From              string
@@ -581,6 +582,7 @@ func newMailService() {
 	}
 
 	MailService = &Mailer{
+		QueueLength:    sec.Key("SEND_BUFFER_LEN").MustInt(100),
 		Name:           sec.Key("NAME").MustString(AppName),
 		Host:           sec.Key("HOST").String(),
 		User:           sec.Key("USER").String(),
