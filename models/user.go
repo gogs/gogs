@@ -630,7 +630,6 @@ func deleteUser(e *xorm.Session, u *User) error {
 	// ***** END: Follow *****
 
 	if err = deleteBeans(e,
-		&Oauth2{Uid: u.Id},
 		&AccessToken{UID: u.Id},
 		&Collaboration{UserID: u.Id},
 		&Access{UserID: u.Id},

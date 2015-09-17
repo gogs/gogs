@@ -13,11 +13,6 @@
 	  <a class="{{if .PageIsSettingsSSHKeys}}active{{end}} item" href="{{AppSubUrl}}/user/settings/ssh">
 	    {{.i18n.Tr "settings.ssh_keys"}}
 	  </a>
-	  {{if .HasOAuthService}}
-	  <a class="{{if .PageIsSettingsSocial}}active{{end}} item" href="{{AppSubUrl}}/user/settings/social">
-	    {{.i18n.Tr "settings.social"}}
-	  </a>
-	  {{end}}
 	  <a class="{{if .PageIsSettingsApplications}}active{{end}} item" href="{{AppSubUrl}}/user/settings/applications">
 	    {{.i18n.Tr "settings.applications"}}
 	  </a>
