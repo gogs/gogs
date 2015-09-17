@@ -225,7 +225,7 @@ func SettingsEmailPost(ctx *middleware.Context, form auth.AddEmailForm) {
 
 	// Send confirmation e-mail
 	if setting.Service.RegisterEmailConfirm {
-		mailer.SendActivateEmail(ctx.Render, ctx.User, e)
+		mailer.SendActivateEmailMail(ctx.Context, ctx.User, e)
 
 		if err := ctx.Cache.Put("MailResendLimit_"+ctx.User.LowerName, ctx.User.LowerName, 180); err != nil {
 			log.Error(4, "Set cache(MailResendLimit) fail: %v", err)

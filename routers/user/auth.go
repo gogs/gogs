@@ -249,7 +249,7 @@ func SignUpPost(ctx *middleware.Context, cpt *captcha.Captcha, form auth.Registe
 
 	// Send confirmation e-mail, no need for social account.
 	if !isOauth && setting.Service.RegisterEmailConfirm && u.Id > 1 {
-		mailer.SendRegisterMail(ctx.Render, u)
+		mailer.SendActivateAccountMail(ctx.Context, u)
 		ctx.Data["IsSendRegisterMail"] = true
 		ctx.Data["Email"] = u.Email
 		ctx.Data["Hours"] = setting.Service.ActiveCodeLives / 60
@@ -278,7 +278,7 @@ func Activate(ctx *middleware.Context) {
 				ctx.Data["ResendLimited"] = true
 			} else {
 				ctx.Data["Hours"] = setting.Service.ActiveCodeLives / 60
-				mailer.SendActiveMail(ctx.Render, ctx.User)
+				mailer.SendActivateAccountMail(ctx.Context, ctx.User)
 
 				if err := ctx.Cache.Put("MailResendLimit_"+ctx.User.LowerName, ctx.User.LowerName, 180); err != nil {
 					log.Error(4, "Set cache(MailResendLimit) fail: %v", err)
