@@ -48,6 +48,17 @@ Most of settings are obvious and easy to understand, but there are some settings
 
 Full documentation of settings can be found [here](http://gogs.io/docs/advanced/configuration_cheat_sheet.html).
 
+## Upgrade
+
+:exclamation::exclamation::exclamation:<span style="color: red">**Make sure you have volumed data to somewhere outside Docker container**</span>:exclamation::exclamation::exclamation:
+
+Steps to upgrade Gogs with Docker:
+
+- `docker pull gogs/gogs`
+- `docker stop gogs`
+- `docker rm gogs`
+- Finally, create container as the first time and don't forget to do same volume and port mapping.
+
 ## Troubleshooting
 
 If you see the following error:
