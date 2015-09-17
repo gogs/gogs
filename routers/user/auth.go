@@ -6,7 +6,6 @@ package user
 
 import (
 	"net/url"
-	"strings"
 
 	"github.com/macaron-contrib/captcha"
 
@@ -30,17 +29,6 @@ const (
 func SignIn(ctx *middleware.Context) {
 	ctx.Data["Title"] = ctx.Tr("sign_in")
 
-	if _, ok := ctx.Session.Get("socialId").(int64); ok {
-		ctx.Data["IsSocialLogin"] = true
-		ctx.HTML(200, SIGNIN)
-		return
-	}
-
-	if setting.OauthService != nil {
-		ctx.Data["OauthEnabled"] = true
-		ctx.Data["OauthService"] = setting.OauthService
-	}
-
 	// Check auto-login.
 	isSucceed, err := middleware.AutoSignIn(ctx)
 	if err != nil {
@@ -63,14 +51,6 @@ func SignIn(ctx *middleware.Context) {
 func SignInPost(ctx *middleware.Context, form auth.SignInForm) {
 	ctx.Data["Title"] = ctx.Tr("sign_in")
 
-	sid, isOauth := ctx.Session.Get("socialId").(int64)
-	if isOauth {
-		ctx.Data["IsSocialLogin"] = true
-	} else if setting.OauthService != nil {
-		ctx.Data["OauthEnabled"] = true
-		ctx.Data["OauthService"] = setting.OauthService
-	}
-
 	if ctx.HasError() {
 		ctx.HTML(200, SIGNIN)
 		return
@@ -91,20 +71,6 @@ func SignInPost(ctx *middleware.Context, form auth.SignInForm) {
 		ctx.SetCookie(setting.CookieUserName, u.Name, days, setting.AppSubUrl)
 		ctx.SetSuperSecureCookie(base.EncodeMd5(u.Rands+u.Passwd),
 			setting.CookieRememberName, u.Name, days, setting.AppSubUrl)
-	}
-
-	// Bind with social account.
-	if isOauth {
-		if err = models.BindUserOauth2(u.Id, sid); err != nil {
-			if err == models.ErrOauth2RecordNotExist {
-				ctx.Handle(404, "GetOauth2ById", err)
-			} else {
-				ctx.Handle(500, "GetOauth2ById", err)
-			}
-			return
-		}
-		ctx.Session.Delete("socialId")
-		log.Trace("%s OAuth binded: %s -> %d", ctx.Req.RequestURI, form.UserName, sid)
 	}
 
 	ctx.Session.Set("uid", u.Id)
@@ -129,25 +95,6 @@ func SignOut(ctx *middleware.Context) {
 	ctx.Redirect(setting.AppSubUrl + "/")
 }
 
-func oauthSignUp(ctx *middleware.Context, sid int64) {
-	ctx.Data["Title"] = ctx.Tr("sign_up")
-
-	if _, err := models.GetOauth2ById(sid); err != nil {
-		if err == models.ErrOauth2RecordNotExist {
-			ctx.Handle(404, "GetOauth2ById", err)
-		} else {
-			ctx.Handle(500, "GetOauth2ById", err)
-		}
-		return
-	}
-
-	ctx.Data["IsSocialLogin"] = true
-	ctx.Data["uname"] = strings.Replace(ctx.Session.Get("socialName").(string), " ", "", -1)
-	ctx.Data["email"] = ctx.Session.Get("socialEmail")
-	log.Trace("social ID: %v", ctx.Session.Get("socialId"))
-	ctx.HTML(200, SIGNUP)
-}
-
 func SignUp(ctx *middleware.Context) {
 	ctx.Data["Title"] = ctx.Tr("sign_up")
 
@@ -156,11 +103,6 @@ func SignUp(ctx *middleware.Context) {
 	if setting.Service.DisableRegistration {
 		ctx.Data["DisableRegistration"] = true
 		ctx.HTML(200, SIGNUP)
-		return
-	}
-
-	if sid, ok := ctx.Session.Get("socialId").(int64); ok {
-		oauthSignUp(ctx, sid)
 		return
 	}
 
@@ -175,12 +117,6 @@ func SignUpPost(ctx *middleware.Context, cpt *captcha.Captcha, form auth.Registe
 	if setting.Service.DisableRegistration {
 		ctx.Error(403)
 		return
-	}
-
-	isOauth := false
-	sid, isOauth := ctx.Session.Get("socialId").(int64)
-	if isOauth {
-		ctx.Data["IsSocialLogin"] = true
 	}
 
 	if ctx.HasError() {
@@ -204,7 +140,7 @@ func SignUpPost(ctx *middleware.Context, cpt *captcha.Captcha, form auth.Registe
 		Name:     form.UserName,
 		Email:    form.Email,
 		Passwd:   form.Password,
-		IsActive: !setting.Service.RegisterEmailConfirm || isOauth,
+		IsActive: !setting.Service.RegisterEmailConfirm,
 	}
 	if err := models.CreateUser(u); err != nil {
 		switch {
@@ -237,18 +173,8 @@ func SignUpPost(ctx *middleware.Context, cpt *captcha.Captcha, form auth.Registe
 		}
 	}
 
-	// Bind social account.
-	if isOauth {
-		if err := models.BindUserOauth2(u.Id, sid); err != nil {
-			ctx.Handle(500, "BindUserOauth2", err)
-			return
-		}
-		ctx.Session.Delete("socialId")
-		log.Trace("%s OAuth binded: %s -> %d", ctx.Req.RequestURI, form.UserName, sid)
-	}
-
 	// Send confirmation e-mail, no need for social account.
-	if !isOauth && setting.Service.RegisterEmailConfirm && u.Id > 1 {
+	if setting.Service.RegisterEmailConfirm && u.Id > 1 {
 		mailer.SendActivateAccountMail(ctx.Context, u)
 		ctx.Data["IsSendRegisterMail"] = true
 		ctx.Data["Email"] = u.Email

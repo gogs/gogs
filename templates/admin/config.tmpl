@@ -137,27 +137,6 @@
                         <br>
                         <div class="panel panel-radius">
                             <div class="panel-header">
-                                <strong>{{.i18n.Tr "admin.config.oauth_config"}}</strong>
-                            </div>
-                            <div class="panel-body">
-                                <dl class="dl-horizontal admin-dl-horizontal">
-                                    <dt>{{.i18n.Tr "admin.config.oauth_enabled"}}</dt>
-                                    <dd><i class="fa fa{{if .OauthEnabled}}-check{{end}}-square-o"></i></dd>
-                                    {{if .OauthEnabled}}<dt>GitHub</dt>
-                                    <dd><i class="fa fa{{if .Oauther.GitHub}}-check{{end}}-square-o"></i></dd>
-                                    <dt>Google</dt>
-                                    <dd><i class="fa fa{{if .Oauther.Google}}-check{{end}}-square-o"></i></dd>
-                                    <dt>腾讯 QQ</dt>
-                                    <dd><i class="fa fa{{if .Oauther.Tencent}}-check{{end}}-square-o"></i></dd>
-                                    <dt>新浪微博</dt>
-                                    <dd><i class="fa fa{{if .Oauther.Weibo}}-check{{end}}-square-o"></i></dd>
-                                    {{end}}
-                                </dl>
-                            </div>
-                        </div>
-                        <br>
-                        <div class="panel panel-radius">
-                            <div class="panel-header">
                                 <strong>{{.i18n.Tr "admin.config.cache_config"}}</strong>
                             </div>
                             <div class="panel-body">

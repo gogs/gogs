@@ -23,7 +23,6 @@ import (
 	"github.com/macaron-contrib/captcha"
 	"github.com/macaron-contrib/csrf"
 	"github.com/macaron-contrib/i18n"
-	"github.com/macaron-contrib/oauth2"
 	"github.com/macaron-contrib/session"
 	"github.com/macaron-contrib/toolbox"
 	"github.com/mcuadros/go-version"
@@ -167,13 +166,6 @@ func newMacaron() *macaron.Macaron {
 			},
 		},
 	}))
-
-	// OAuth 2.
-	if setting.OauthService != nil {
-		for _, info := range setting.OauthService.OauthInfos {
-			m.Use(oauth2.NewOAuth2Provider(info.Options, info.AuthUrl, info.TokenUrl))
-		}
-	}
 	m.Use(middleware.Contexter())
 	return m
 }
@@ -256,7 +248,6 @@ func runWeb(ctx *cli.Context) {
 	m.Group("/user", func() {
 		m.Get("/login", user.SignIn)
 		m.Post("/login", bindIgnErr(auth.SignInForm{}), user.SignInPost)
-		m.Get("/info/:name", user.SocialSignIn)
 		m.Get("/sign_up", user.SignUp)
 		m.Post("/sign_up", bindIgnErr(auth.RegisterForm{}), user.SignUpPost)
 		m.Get("/reset_password", user.ResetPasswd)
@@ -275,14 +266,12 @@ func runWeb(ctx *cli.Context) {
 		m.Combo("/ssh").Get(user.SettingsSSHKeys).
 			Post(bindIgnErr(auth.AddSSHKeyForm{}), user.SettingsSSHKeysPost)
 		m.Post("/ssh/delete", user.DeleteSSHKey)
-		m.Get("/social", user.SettingsSocial)
 		m.Combo("/applications").Get(user.SettingsApplications).
 			Post(bindIgnErr(auth.NewAccessTokenForm{}), user.SettingsApplicationsPost)
 		m.Post("/applications/delete", user.SettingsDeleteApplication)
 		m.Route("/delete", "GET,POST", user.SettingsDelete)
 	}, reqSignIn, func(ctx *middleware.Context) {
 		ctx.Data["PageIsUserSettings"] = true
-		ctx.Data["HasOAuthService"] = setting.OauthService != nil
 	})
 
 	m.Group("/user", func() {
