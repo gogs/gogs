@@ -133,6 +133,22 @@ func (u *User) HomeLink() string {
 	return setting.AppSubUrl + "/" + u.Name
 }
 
+// GenerateEmailActivateCode generates an activate code based on user information and given e-mail.
+func (u *User) GenerateEmailActivateCode(email string) string {
+	code := base.CreateTimeLimitCode(
+		com.ToStr(u.Id)+email+u.LowerName+u.Passwd+u.Rands,
+		setting.Service.ActiveCodeLives, nil)
+
+	// Add tail hex username
+	code += hex.EncodeToString([]byte(u.LowerName))
+	return code
+}
+
+// GenerateActivateCode generates an activate code based on user information.
+func (u *User) GenerateActivateCode() string {
+	return u.GenerateEmailActivateCode(u.Email)
+}
+
 // CustomAvatarPath returns user custom avatar file path.
 func (u *User) CustomAvatarPath() string {
 	return filepath.Join(setting.AvatarUploadPath, com.ToStr(u.Id))

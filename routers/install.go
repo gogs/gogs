@@ -45,6 +45,7 @@ func checkRunMode() {
 
 func NewServices() {
 	setting.NewServices()
+	mailer.NewContext()
 	social.NewOauthService()
 }
 
@@ -53,7 +54,6 @@ func GlobalInit() {
 	setting.NewContext()
 	log.Trace("Custom path: %s", setting.CustomPath)
 	log.Trace("Log path: %s", setting.LogRootPath)
-	mailer.NewContext()
 	models.LoadConfigs()
 	NewServices()
 
