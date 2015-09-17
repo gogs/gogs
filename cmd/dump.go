@@ -34,8 +34,8 @@ func runDump(ctx *cli.Context) {
 	if ctx.IsSet("config") {
 		setting.CustomConf = ctx.String("config")
 	}
-	setting.NewConfigContext()
-	models.LoadModelsConfig()
+	setting.NewContext()
+	models.LoadConfigs()
 	models.SetEngine()
 
 	log.Printf("Dumping local repositories...%s", setting.RepoRootPath)

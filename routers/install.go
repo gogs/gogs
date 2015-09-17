@@ -50,11 +50,11 @@ func NewServices() {
 
 // GlobalInit is for global configuration reload-able.
 func GlobalInit() {
-	setting.NewConfigContext()
+	setting.NewContext()
 	log.Trace("Custom path: %s", setting.CustomPath)
 	log.Trace("Log path: %s", setting.LogRootPath)
-	mailer.NewMailerContext()
-	models.LoadModelsConfig()
+	mailer.NewContext()
+	models.LoadConfigs()
 	NewServices()
 
 	if setting.InstallLock {
@@ -66,7 +66,7 @@ func GlobalInit() {
 		}
 
 		models.HasEngine = true
-		cron.NewCronContext()
+		cron.NewContext()
 		models.InitDeliverHooks()
 		log.NewGitLogger(path.Join(setting.LogRootPath, "http.log"))
 	}
