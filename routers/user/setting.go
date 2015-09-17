@@ -49,7 +49,7 @@ func SettingsPost(ctx *middleware.Context, form auth.UpdateProfileForm) {
 	}
 
 	// Check if user name has been changed.
-	if ctx.User.Name != form.Name {
+	if ctx.User.LowerName != strings.ToLower(form.Name) {
 		if err := models.ChangeUserName(ctx.User, form.Name); err != nil {
 			switch {
 			case models.IsErrUserAlreadyExist(err):
@@ -70,8 +70,10 @@ func SettingsPost(ctx *middleware.Context, form auth.UpdateProfileForm) {
 			return
 		}
 		log.Trace("User name changed: %s -> %s", ctx.User.Name, form.Name)
-		ctx.User.Name = form.Name
 	}
+	// In case it's just a case change.
+	ctx.User.Name = form.Name
+	ctx.User.LowerName = strings.ToLower(form.Name)
 
 	ctx.User.FullName = form.FullName
 	ctx.User.Email = form.Email
