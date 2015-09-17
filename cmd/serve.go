@@ -37,7 +37,7 @@ var CmdServ = cli.Command{
 }
 
 func setup(logPath string) {
-	setting.NewConfigContext()
+	setting.NewContext()
 	log.NewGitLogger(filepath.Join(setting.LogRootPath, logPath))
 
 	if setting.DisableSSH {
@@ -45,9 +45,9 @@ func setup(logPath string) {
 		os.Exit(1)
 	}
 
-	models.LoadModelsConfig()
+	models.LoadConfigs()
 
-	if setting.UseSQLite3 {
+	if setting.UseSQLite3 || setting.UseTiDB {
 		workDir, _ := setting.WorkDir()
 		os.Chdir(workDir)
 	}
