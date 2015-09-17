@@ -33,6 +33,7 @@ github.com/russross/blackfriday = commit:8cec3a854e
 github.com/shurcooL/sanitized_anchor_name = commit:244f5ac324
 golang.org/x/net = 
 golang.org/x/text = 
+gopkg.in/gomail.v2 = 
 gopkg.in/ini.v1 = commit:463307112d
 gopkg.in/redis.v2 = commit:e617904962
 
