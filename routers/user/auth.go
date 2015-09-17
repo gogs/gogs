@@ -327,7 +327,7 @@ func ActivateEmail(ctx *middleware.Context) {
 		}
 
 		log.Trace("Email activated: %s", email.Email)
-		ctx.Flash.Success(ctx.Tr("settings.activate_email_success"))
+		ctx.Flash.Success(ctx.Tr("settings.add_email_successs"))
 	}
 
 	ctx.Redirect(setting.AppSubUrl + "/user/settings/email")
@@ -351,12 +351,14 @@ func ForgotPasswdPost(ctx *middleware.Context) {
 	ctx.Data["Title"] = ctx.Tr("auth.forgot_password")
 
 	if setting.MailService == nil {
-		ctx.Handle(403, "user.ForgotPasswdPost", nil)
+		ctx.Handle(403, "ForgotPasswdPost", nil)
 		return
 	}
 	ctx.Data["IsResetRequest"] = true
 
 	email := ctx.Query("email")
+	ctx.Data["Email"] = email
+
 	u, err := models.GetUserByEmail(email)
 	if err != nil {
 		if models.IsErrUserNotExist(err) {
@@ -374,12 +376,11 @@ func ForgotPasswdPost(ctx *middleware.Context) {
 		return
 	}
 
-	mailer.SendResetPasswdMail(ctx.Render, u)
+	mailer.SendResetPasswordMail(ctx.Context, u)
 	if err = ctx.Cache.Put("MailResendLimit_"+u.LowerName, u.LowerName, 180); err != nil {
 		log.Error(4, "Set cache(MailResendLimit) fail: %v", err)
 	}
 
-	ctx.Data["Email"] = email
 	ctx.Data["Hours"] = setting.Service.ActiveCodeLives / 60
 	ctx.Data["IsResetSent"] = true
 	ctx.HTML(200, FORGOT_PASSWORD)

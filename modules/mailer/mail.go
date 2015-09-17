@@ -18,10 +18,10 @@ import (
 )
 
 const (
-	AUTH_REGISTER_SUCCESS base.TplName = "mail/auth/register_success"
 	AUTH_ACTIVATE         base.TplName = "mail/auth/activate"
 	AUTH_ACTIVATE_EMAIL   base.TplName = "mail/auth/activate_email"
 	AUTH_RESET_PASSWORD   base.TplName = "mail/auth/reset_passwd"
+	AUTH_REGISTER_SUCCESS base.TplName = "mail/auth/register_success"
 
 	NOTIFY_COLLABORATOR base.TplName = "mail/notify/collaborator"
 	NOTIFY_MENTION      base.TplName = "mail/notify/mention"
@@ -67,27 +67,23 @@ func SendActivateEmailMail(c *macaron.Context, u *models.User, email *models.Ema
 	}
 
 	msg := NewMessage([]string{email.Email}, c.Tr("mail.activate_email"), body)
-	msg.Info = fmt.Sprintf("UID: %d, activate email: %s", u.Id, email.Email)
+	msg.Info = fmt.Sprintf("UID: %d, activate email", u.Id)
 
 	SendAsync(msg)
 }
 
-// Send reset password email.
-func SendResetPasswdMail(r macaron.Render, u *models.User) {
-	code := u.GenerateActivateCode()
-
-	subject := "Reset your password"
-
+// SendResetPasswordMail sends reset password e-mail.
+func SendResetPasswordMail(c *macaron.Context, u *models.User) {
 	data := ComposeTplData(u)
-	data["Code"] = code
-	body, err := r.HTMLString(string(AUTH_RESET_PASSWORD), data)
+	data["Code"] = u.GenerateActivateCode()
+	body, err := c.HTMLString(string(AUTH_RESET_PASSWORD), data)
 	if err != nil {
-		log.Error(4, "mail.SendResetPasswdMail(fail to render): %v", err)
+		log.Error(4, "HTMLString: %v", err)
 		return
 	}
 
-	msg := NewMessage([]string{u.Email}, subject, body)
-	msg.Info = fmt.Sprintf("UID: %d, send reset password email", u.Id)
+	msg := NewMessage([]string{u.Email}, c.Tr("mail.reset_password"), body)
+	msg.Info = fmt.Sprintf("UID: %d, reset password", u.Id)
 
 	SendAsync(msg)
 }
@@ -120,7 +116,7 @@ func SendIssueNotifyMail(u, owner *models.User, repo *models.Repository, issue *
 	content := fmt.Sprintf("%s<br>-<br> <a href=\"%s%s/%s/issues/%d\">View it on Gogs</a>.",
 		base.RenderSpecialLink([]byte(issue.Content), owner.Name+"/"+repo.Name),
 		setting.AppUrl, owner.Name, repo.Name, issue.Index)
-	msg := NewMessageFrom(tos, u.Email, subject, content)
+	msg := NewMessage(tos, subject, content)
 	msg.Info = fmt.Sprintf("Subject: %s, send issue notify emails", subject)
 	SendAsync(msg)
 	return tos, nil
@@ -145,7 +141,7 @@ func SendIssueMentionMail(r macaron.Render, u, owner *models.User,
 		return fmt.Errorf("mail.SendIssueMentionMail(fail to render): %v", err)
 	}
 
-	msg := NewMessageFrom(tos, u.Email, subject, body)
+	msg := NewMessage(tos, subject, body)
 	msg.Info = fmt.Sprintf("Subject: %s, send issue mention emails", subject)
 	SendAsync(msg)
 	return nil
