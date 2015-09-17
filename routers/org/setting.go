@@ -5,7 +5,10 @@
 package org
 
 import (
+	"strings"
+
 	"github.com/Unknwon/com"
+
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/base"
@@ -39,7 +42,7 @@ func SettingsPost(ctx *middleware.Context, form auth.UpdateOrgSettingForm) {
 	org := ctx.Org.Organization
 
 	// Check if organization name has been changed.
-	if org.Name != form.Name {
+	if org.LowerName != strings.ToLower(form.Name) {
 		isExist, err := models.IsUserExist(org.Id, form.Name)
 		if err != nil {
 			ctx.Handle(500, "IsUserExist", err)
@@ -58,8 +61,10 @@ func SettingsPost(ctx *middleware.Context, form auth.UpdateOrgSettingForm) {
 			return
 		}
 		log.Trace("Organization name changed: %s -> %s", org.Name, form.Name)
-		org.Name = form.Name
 	}
+	// In case it's just a case change.
+	org.Name = form.Name
+	org.LowerName = strings.ToLower(form.Name)
 
 	org.FullName = form.FullName
 	org.Description = form.Description
