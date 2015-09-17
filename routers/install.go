@@ -25,7 +25,6 @@ import (
 	"github.com/gogits/gogs/modules/mailer"
 	"github.com/gogits/gogs/modules/middleware"
 	"github.com/gogits/gogs/modules/setting"
-	"github.com/gogits/gogs/modules/social"
 	"github.com/gogits/gogs/modules/user"
 )
 
@@ -46,7 +45,6 @@ func checkRunMode() {
 func NewServices() {
 	setting.NewServices()
 	mailer.NewContext()
-	social.NewOauthService()
 }
 
 // GlobalInit is for global configuration reload-able.

@@ -570,8 +570,7 @@ type Oauther struct {
 }
 
 var (
-	MailService  *Mailer
-	OauthService *Oauther
+	MailService *Mailer
 )
 
 func newMailService() {

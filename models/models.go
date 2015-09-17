@@ -78,7 +78,7 @@ var (
 
 func init() {
 	tables = append(tables,
-		new(User), new(PublicKey), new(Oauth2), new(AccessToken),
+		new(User), new(PublicKey), new(AccessToken),
 		new(Repository), new(DeployKey), new(Collaboration), new(Access),
 		new(Watch), new(Star), new(Follow), new(Action),
 		new(Issue), new(PullRequest), new(Comment), new(Attachment), new(IssueUser),
@@ -236,7 +236,7 @@ func GetStatistic() (stats Statistic) {
 	stats.Counter.Access, _ = x.Count(new(Access))
 	stats.Counter.Issue, _ = x.Count(new(Issue))
 	stats.Counter.Comment, _ = x.Count(new(Comment))
-	stats.Counter.Oauth, _ = x.Count(new(Oauth2))
+	stats.Counter.Oauth = 0
 	stats.Counter.Follow, _ = x.Count(new(Follow))
 	stats.Counter.Mirror, _ = x.Count(new(Mirror))
 	stats.Counter.Release, _ = x.Count(new(Release))

@@ -5,7 +5,7 @@
       <form class="ui form" action="{{.Link}}" method="post">
         {{.CsrfTokenHtml}}
         <h3 class="ui top attached header">
-          {{if .IsSocialLogin}}{{.i18n.Tr "social_sign_in" | Str2html}}{{else}}{{.i18n.Tr "sign_in"}}{{end}}
+          {{.i18n.Tr "sign_in"}}
         </h3>
         <div class="ui attached segment">
           {{template "base/alert" .}}
@@ -17,7 +17,6 @@
             <label for="password">{{.i18n.Tr "password"}}</label>
             <input id="password" name="password" type="password" value="{{.password}}" required>
           </div>
-          {{if not .IsSocialLogin}}
           <div class="inline field">
             <label></label>
             <div class="ui checkbox">
@@ -25,23 +24,16 @@
               <input name="remember" type="checkbox">
             </div>
           </div>
-          {{end}}
 
           <div class="inline field">
             <label></label>
             <button class="ui green button">{{.i18n.Tr "sign_in"}}</button>
-            {{if not .IsSocialLogin}}<a href="{{AppSubUrl}}/user/forget_password">{{.i18n.Tr "auth.forget_password"}}</a>{{end}}
+            <a href="{{AppSubUrl}}/user/forget_password">{{.i18n.Tr "auth.forget_password"}}</a>
           </div>
           {{if .ShowRegistrationButton}}
           <div class="inline field">
             <label></label>
             <a href="{{AppSubUrl}}/user/sign_up">{{.i18n.Tr "auth.sign_up_now" | Str2html}}</a>
-          </div>
-          {{end}}
-          {{if and (not .IsSocialLogin) .OauthEnabled}}
-          <div class="inline field">
-            <label></label>
-            {{template "base/social" .}}
           </div>
           {{end}}
         </div>

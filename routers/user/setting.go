@@ -324,31 +324,6 @@ func DeleteSSHKey(ctx *middleware.Context) {
 	})
 }
 
-func SettingsSocial(ctx *middleware.Context) {
-	ctx.Data["Title"] = ctx.Tr("settings")
-	ctx.Data["PageIsSettingsSocial"] = true
-
-	// Unbind social account.
-	remove, _ := com.StrTo(ctx.Query("remove")).Int64()
-	if remove > 0 {
-		if err := models.DeleteOauth2ById(remove); err != nil {
-			ctx.Handle(500, "DeleteOauth2ById", err)
-			return
-		}
-		ctx.Flash.Success(ctx.Tr("settings.unbind_success"))
-		ctx.Redirect(setting.AppSubUrl + "/user/settings/social")
-		return
-	}
-
-	socials, err := models.GetOauthByUserId(ctx.User.Id)
-	if err != nil {
-		ctx.Handle(500, "GetOauthByUserId", err)
-		return
-	}
-	ctx.Data["Socials"] = socials
-	ctx.HTML(200, SETTINGS_SOCIAL)
-}
-
 func SettingsApplications(ctx *middleware.Context) {
 	ctx.Data["Title"] = ctx.Tr("settings")
 	ctx.Data["PageIsSettingsApplications"] = true
