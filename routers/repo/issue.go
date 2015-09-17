@@ -367,7 +367,7 @@ func NewIssuePost(ctx *middleware.Context, form auth.CreateIssueForm) {
 	mentions := base.MentionPattern.FindAllString(issue.Content, -1)
 	if len(mentions) > 0 {
 		for i := range mentions {
-			mentions[i] = mentions[i][1:]
+			mentions[i] = strings.TrimSpace(mentions[i])[1:]
 		}
 
 		if err := models.UpdateMentions(mentions, issue.ID); err != nil {
