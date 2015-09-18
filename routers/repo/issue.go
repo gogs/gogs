@@ -904,6 +904,7 @@ func UpdateLabel(ctx *middleware.Context, form auth.CreateLabelForm) {
 		return
 	}
 
+	fmt.Println(form.Title, form.Color)
 	l.Name = form.Title
 	l.Color = form.Color
 	if err := models.UpdateLabel(l); err != nil {
