@@ -96,9 +96,42 @@ func ToUtf8(content string) string {
 	return res
 }
 
+// Replaces all prefixes 'old' in 's' with 'new'.
+func ReplaceLeft(s, old, new string) string {
+	old_len, new_len, i, n := len(old), len(new), 0, 0
+	for ; i < len(s) && strings.HasPrefix(s[i:], old); n += 1 {
+		i += old_len
+	}
+
+	// simple optimization
+	if n == 0 {
+		return s
+	}
+
+	// allocating space for the new string
+	newLen := n*new_len + len(s[i:])
+	replacement := make([]byte, newLen, newLen)
+
+	j := 0
+	for ; j < n*new_len; j += new_len {
+		copy(replacement[j:j+new_len], new)
+	}
+
+	copy(replacement[j:], s[i:])
+	return string(replacement)
+}
+
 // RenderCommitMessage renders commit message with XSS-safe and special links.
 func RenderCommitMessage(msg, urlPrefix string) template.HTML {
-	return template.HTML(string(RenderIssueIndexPattern([]byte(template.HTMLEscapeString(msg)), urlPrefix)))
+	cleanMsg := template.HTMLEscapeString(msg)
+	fullMessage := string(RenderIssueIndexPattern([]byte(cleanMsg), urlPrefix))
+	msgLines := strings.Split(strings.TrimSpace(fullMessage), "\n")
+	for i := range msgLines {
+		msgLines[i] = ReplaceLeft(msgLines[i], " ", "&nbsp;")
+	}
+
+	fullMessage = strings.Join(msgLines, "<br>")
+	return template.HTML(fullMessage)
 }
 
 var TemplateFuncs template.FuncMap = map[string]interface{}{
