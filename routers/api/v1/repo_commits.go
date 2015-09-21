@@ -29,14 +29,14 @@ func ToApiCommit(commit *git.Commit) *api.Commit {
 	}
 }
 
-func CurrentCommit(ctx *middleware.Context) {
-	ctx.JSON(200, ToApiCommit(ctx.Repo.Commit))
+func HEADCommit(ctx *middleware.Context) {
+	ctx.JSON(200, ToApiCommit(ctx.Repo.Commit.Id.String()))
 }
 
-func CommitById(ctx *middleware.Context) {
+func CommitByID(ctx *middleware.Context) {
 
 
-	commit, err := ctx.Repo.GitRepo.GetCommit(ctx.Params(":commitId"))
+	commit, err := ctx.Repo.GitRepo.GetCommit(ctx.Params(":commitid"))
 	if err != nil {
 		log.Error(4, "GetCommit: %v", err)
 		ctx.Error(500, err.Error())

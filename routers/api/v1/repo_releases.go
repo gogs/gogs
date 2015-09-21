@@ -17,7 +17,7 @@ import (
 func ToApiRelease(release *models.Release, publisher *models.User) *api.Release {
 
 	return &api.Release{
-		Id:          		release.Id,
+		ID:          		release.Id,
 		Publisher:			*ToApiUser(publisher),
 		TagName:			release.TagName,
 		LowerTagName:		release.LowerTagName,
@@ -42,13 +42,19 @@ func ListReleases(ctx *middleware.Context) {
 
 	apiReleases := make([]*api.Release, len(rels))
 	for i, rel := range rels {
-		publisher, err := models.GetUserByID(rel.PublisherId)
-		if err != nil {
-			log.Error(4, "GetUserByID: %v", err)
-			return
+		if models.IsUserExist(rel.PublisherId, "") {
+			publisher, err := models.GetUserByID(rel.PublisherId)
+			if err != nil {
+				if models.IsErrUserNotExist(err) {
+					publisher = models.NewFakeUser()
+				} else {
+					log.Error(4, "GetUserByID: %v", err)
+					ctx.Status(500)
+					return
+				}
+			}
+			apiReleases[i] = ToApiRelease(rel, publisher)
 		}
-
-		apiReleases[i] = ToApiRelease(rel, publisher)
 	}
 	ctx.JSON(200, &apiReleases)
 }
@@ -63,7 +69,12 @@ func ReleaseByName(ctx *middleware.Context) {
 
 	publisher, err := models.GetUserByID(rel.PublisherId)
 	if err != nil {
-		log.Error(4, "GetUserByID: %v", err)
+		if models.IsErrUserNotExist(err) {
+			publisher = models.NewFakeUser()
+		} else {
+			ctx.Handle(422, "GetUserByID", err)
+			return
+		}
 		return
 	}
 
@@ -104,7 +115,7 @@ func CreateRelease(ctx *middleware.Context, form api.CreateReleaseOption) {
 
 	err = models.CreateRelease(ctx.Repo.GitRepo, rel)
 	if err != nil {
-		ctx.Handle(400, "CreateRelease", err)
+		ctx.Handle(500, "CreateRelease", err)
 		return
 	}
 

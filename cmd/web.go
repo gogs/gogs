@@ -244,8 +244,8 @@ func runWeb(ctx *cli.Context) {
 					m.Get("/archive/*", v1.GetRepoArchive)
 					m.Post("/forks", v1.ForkRepo)
 
-					m.Get("/commits/:commitId", middleware.RepoRef(), v1.CommitById)
-					m.Get("/commits/current", middleware.RepoRef(), v1.CurrentCommit)
+					m.Get("/commits/:commitid", middleware.RepoRef(), v1.CommitByID)
+					m.Get("/commits/head", middleware.RepoRef(), v1.HEADCommit)
 
 					m.Group("/releases", func() {
 						m.Combo("").Get(v1.ListReleases).
