@@ -18,7 +18,6 @@ import (
 	"gopkg.in/ini.v1"
 
 	"github.com/Unknwon/com"
-	"github.com/macaron-contrib/oauth2"
 	"github.com/macaron-contrib/session"
 
 	"github.com/gogits/gogs/modules/bindata"
@@ -555,18 +554,6 @@ type Mailer struct {
 	SkipVerify        bool
 	UseCertificate    bool
 	CertFile, KeyFile string
-}
-
-type OauthInfo struct {
-	oauth2.Options
-	AuthUrl, TokenUrl string
-}
-
-// Oauther represents oauth service.
-type Oauther struct {
-	GitHub, Google, Tencent,
-	Twitter, Weibo bool
-	OauthInfos map[string]*OauthInfo
 }
 
 var (
