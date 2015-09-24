@@ -347,7 +347,7 @@ func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 		ctx.Data["CloneLink"] = ctx.Repo.CloneLink
 
 		if ctx.Query("go-get") == "1" {
-			ctx.Data["GoGetImport"] = fmt.Sprintf("%s/%s/%s", setting.Domain, u.LowerName, repo.LowerName)
+			ctx.Data["GoGetImport"] = fmt.Sprintf("%s/%s/%s", setting.Domain, u.Name, repo.Name)
 		}
 
 		// repo is bare and display enable
