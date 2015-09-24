@@ -192,7 +192,7 @@ func runWeb(ctx *cli.Context) {
 	m.Get("/explore", ignSignIn, routers.Explore)
 	m.Combo("/install", routers.InstallInit).Get(routers.Install).
 		Post(bindIgnErr(auth.InstallForm{}), routers.InstallPost)
-	m.Get("/:type(issues|pulls)", reqSignIn, user.Issues)
+	m.Get("/^:type(issues|pulls)$", reqSignIn, user.Issues)
 
 	// ***** START: API *****
 	// FIXME: custom form error response.
@@ -375,7 +375,7 @@ func runWeb(ctx *cli.Context) {
 
 		m.Group("/:org", func() {
 			m.Get("/dashboard", user.Dashboard)
-			m.Get("/:type(issues|pulls)", user.Issues)
+			m.Get("/^:type(issues|pulls)$", user.Issues)
 			m.Get("/members", org.Members)
 			m.Get("/members/action/:action", org.MembersAction)
 
@@ -509,8 +509,8 @@ func runWeb(ctx *cli.Context) {
 
 	m.Group("/:username/:reponame", func() {
 		m.Get("/releases", middleware.RepoRef(), repo.Releases)
-		m.Get("/:type(issues|pulls)", repo.RetrieveLabels, repo.Issues)
-		m.Get("/:type(issues|pulls)/:index", repo.ViewIssue)
+		m.Get("/^:type(issues|pulls)$", repo.RetrieveLabels, repo.Issues)
+		m.Get("/^:type(issues|pulls)$/:index", repo.ViewIssue)
 		m.Get("/labels/", repo.RetrieveLabels, repo.Labels)
 		m.Get("/milestones", repo.Milestones)
 		m.Get("/branches", repo.Branches)
