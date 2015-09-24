@@ -6,12 +6,12 @@
     {{template "repo/commits_table" .}}
     {{else}}
     <h4 class="ui top attached info header">
-      {{RenderCommitMessage .Commit.Message $.RepoLink}}
       <div class="ui right">
         <a class="ui blue tiny button" href="{{EscapePound .SourcePath}}">
           {{.i18n.Tr "repo.diff.browse_source"}}
         </a>
       </div>
+      {{RenderCommitMessage .Commit.Message $.RepoLink}}
     </h4>
     <div class="ui attached info segment">
       {{if .Author}}
