@@ -16,7 +16,7 @@ import (
 	"net"
 	"testing"
 
-	"github.com/gogits/gogs/modules/ssh/terminal"
+	"github.com/gogits/gogs/modules/crypto/ssh/terminal"
 )
 
 type serverType func(Channel, <-chan *Request, *testing.T)
