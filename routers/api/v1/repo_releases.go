@@ -17,18 +17,18 @@ import (
 func ToApiRelease(release *models.Release, publisher *models.User) *api.Release {
 
 	return &api.Release{
-		ID:          		release.Id,
-		Publisher:			*ToApiUser(publisher),
-		TagName:			release.TagName,
-		LowerTagName:		release.LowerTagName,
-		Target:				release.Target,
-		Title:				release.Title,
-		Sha1:				release.Sha1,
-		NumCommits:			release.NumCommits,
-		Note:				release.Note,
-		IsDraft:			release.IsDraft,
-		IsPrerelease:		release.IsPrerelease,
-		Created:			release.Created,
+		ID:                release.Id,
+		Publisher:            *ToApiUser(publisher),
+		TagName:            release.TagName,
+		LowerTagName:        release.LowerTagName,
+		Target:                release.Target,
+		Title:                release.Title,
+		Sha1:                release.Sha1,
+		NumCommits:            release.NumCommits,
+		Note:                release.Note,
+		IsDraft:            release.IsDraft,
+		IsPrerelease:        release.IsPrerelease,
+		Created:            release.Created,
 	}
 }
 
@@ -42,19 +42,17 @@ func ListReleases(ctx *middleware.Context) {
 
 	apiReleases := make([]*api.Release, len(rels))
 	for i, rel := range rels {
-		if models.IsUserExist(rel.PublisherId, "") {
-			publisher, err := models.GetUserByID(rel.PublisherId)
-			if err != nil {
-				if models.IsErrUserNotExist(err) {
-					publisher = models.NewFakeUser()
-				} else {
-					log.Error(4, "GetUserByID: %v", err)
-					ctx.Status(500)
-					return
-				}
+		publisher, err := models.GetUserByID(rel.PublisherId)
+		if err != nil {
+			if models.IsErrUserNotExist(err) {
+				publisher = models.NewFakeUser()
+			} else {
+				log.Error(4, "GetUserByID: %v", err)
+				ctx.Status(500)
+				return
 			}
-			apiReleases[i] = ToApiRelease(rel, publisher)
 		}
+		apiReleases[i] = ToApiRelease(rel, publisher)
 	}
 	ctx.JSON(200, &apiReleases)
 }

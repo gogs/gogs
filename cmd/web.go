@@ -247,6 +247,8 @@ func runWeb(ctx *cli.Context) {
 					m.Get("/commits/:commitid", middleware.RepoRef(), v1.CommitByID)
 					m.Get("/commits/head", middleware.RepoRef(), v1.HEADCommit)
 
+					m.Get("/compare/:before([a-z0-9]{40})...:after([a-z0-9]{40})", middleware.RepoRef(), v1.DiffRange)
+
 					m.Group("/releases", func() {
 						m.Combo("").Get(v1.ListReleases).
 							Post(bindIgnErr(api.CreateReleaseOption{}), v1.CreateRelease)
