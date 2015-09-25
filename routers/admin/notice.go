@@ -24,14 +24,14 @@ func Notices(ctx *middleware.Context) {
 	ctx.Data["PageIsAdmin"] = true
 	ctx.Data["PageIsAdminNotices"] = true
 
-        total := models.CountNotices()
+	total := models.CountNotices()
 	page := ctx.QueryInt("page")
 	if page <= 1 {
 		page = 1
 	}
 	ctx.Data["Page"] = paginater.New(int(total), setting.AdminNoticePagingNum, page, 5)
- 
-        notices, err := models.Notices(page, setting.AdminNoticePagingNum)
+
+	notices, err := models.Notices(page, setting.AdminNoticePagingNum)
 	if err != nil {
 		ctx.Handle(500, "Notices", err)
 		return
