@@ -33,5 +33,5 @@ case "$1" in
     service gogs restart || true
     
   ;;
-  
+
 esac
