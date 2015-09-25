@@ -1,70 +1,69 @@
 {{template "base/head" .}}
 <div class="admin user">
-  <div class="ui container">
-    <div class="ui grid">
-      {{template "admin/navbar" .}}
-      <div class="twelve wide column content">
-        {{template "base/alert" .}}
-        <h4 class="ui top attached header">
-          {{.i18n.Tr "admin.repos.repo_manage_panel"}} ({{.i18n.Tr "admin.total" .Total}})
-        </h4>
-        <div class="ui attached table segment">
-          <table class="ui very basic striped table">
-			<thead>
-			  <tr>
-			    <th>ID</th>
-				<th>{{.i18n.Tr "admin.repos.owner"}}</th>
-				<th>{{.i18n.Tr "admin.repos.name"}}</th>
-				<th>{{.i18n.Tr "admin.repos.private"}}</th>
-				<th>{{.i18n.Tr "admin.repos.watches"}}</th>
-				<th>{{.i18n.Tr "admin.repos.stars"}}</th>
-				<th>{{.i18n.Tr "admin.repos.issues"}}</th>
-				<th>{{.i18n.Tr "admin.users.created"}}</th>
-			  </tr>
-			</thead>
-			<tbody>
-			  {{range .Repos}}
-				<tr>
-				  <td>{{.ID}}</td>
-				  <td><a href="{{AppSubUrl}}/{{.Owner.Name}}">{{.Owner.Name}}</a></td>
-                  <td><a href="{{AppSubUrl}}/{{.Owner.Name}}/{{.Name}}">{{.Name}}</a></td>
-			      <td><i class="fa fa{{if .IsPrivate}}-check{{end}}-square-o"></i></td>
-				  <td>{{.NumWatches}}</td>
-				  <td>{{.NumStars}}</td>
-			      <td>{{.NumIssues}}</td>
-				  <td><span title="{{DateFmtLong .Created}}">{{DateFmtShort .Created}}</span></td>
-				</tr>
-			  {{end}}
-			</tbody>
-		  </table>
+	<div class="ui container">
+		<div class="ui grid">
+			{{template "admin/navbar" .}}
+			<div class="twelve wide column content">
+				{{template "base/alert" .}}
+				<h4 class="ui top attached header">
+				{{.i18n.Tr "admin.repos.repo_manage_panel"}} ({{.i18n.Tr "admin.total" .Total}})
+				</h4>
+				<div class="ui attached table segment">
+					<table class="ui very basic striped table">
+						<thead>
+							<tr>
+								<th>ID</th>
+								<th>{{.i18n.Tr "admin.repos.owner"}}</th>
+								<th>{{.i18n.Tr "admin.repos.name"}}</th>
+								<th>{{.i18n.Tr "admin.repos.private"}}</th>
+								<th>{{.i18n.Tr "admin.repos.watches"}}</th>
+								<th>{{.i18n.Tr "admin.repos.stars"}}</th>
+								<th>{{.i18n.Tr "admin.repos.issues"}}</th>
+								<th>{{.i18n.Tr "admin.users.created"}}</th>
+							</tr>
+						</thead>
+						<tbody>
+							{{range .Repos}}
+							<tr>
+								<td>{{.ID}}</td>
+								<td><a href="{{AppSubUrl}}/{{.Owner.Name}}">{{.Owner.Name}}</a></td>
+								<td><a href="{{AppSubUrl}}/{{.Owner.Name}}/{{.Name}}">{{.Name}}</a></td>
+								<td><i class="fa fa{{if .IsPrivate}}-check{{end}}-square-o"></i></td>
+								<td>{{.NumWatches}}</td>
+								<td>{{.NumStars}}</td>
+								<td>{{.NumIssues}}</td>
+								<td><span title="{{DateFmtLong .Created}}">{{DateFmtShort .Created}}</span></td>
+							</tr>
+							{{end}}
+						</tbody>
+					</table>
+				</div>
+
+				{{with .Page}}
+				{{if gt .TotalPages 1}}
+				<div class="center page buttons">
+					<div class="ui borderless pagination menu">
+						<a class="{{if .IsFirst}}disabled{{end}} item" href="{{$.Link}}"><i class="angle double left icon"></i> {{$.i18n.Tr "admin.first_page"}}</a>
+						<a class="{{if not .HasPrevious}}disabled{{end}} item" {{if .HasPrevious}}href="{{$.Link}}?page={{.Previous}}"{{end}}>
+							<i class="left arrow icon"></i> {{$.i18n.Tr "repo.issues.previous"}}
+						</a>
+						{{range .Pages}}
+						{{if eq .Num -1}}
+						<a class="disabled item">...</a>
+						{{else}}
+						<a class="{{if .IsCurrent}}active{{end}} item" {{if not .IsCurrent}}href="{{$.Link}}?page={{.Num}}"{{end}}>{{.Num}}</a>
+						{{end}}
+						{{end}}
+						<a class="{{if not .HasNext}}disabled{{end}} item" {{if .HasNext}}href="{{$.Link}}?page={{.Next}}"{{end}}>
+							{{$.i18n.Tr "repo.issues.next"}}&nbsp;<i class="icon right arrow"></i>
+						</a>
+						<a class="{{if .IsLast}}disabled{{end}} item" href="{{$.Link}}?page={{.TotalPages}}">{{$.i18n.Tr "admin.last_page"}}&nbsp;<i class="angle double right icon"></i></a>
+					</div>
+				</div>
+				{{end}}
+				{{end}}
+			</div>
+		</div>
 	</div>
-
-	{{with .Page}}
-	  {{if gt .TotalPages 1}}
-	    <div class="center page buttons">
-	      <div class="ui borderless pagination menu">
-		<a class="{{if .IsFirst}}disabled{{end}} item" href="{{$.Link}}"><i class="angle double left icon"></i> {{$.i18n.Tr "admin.first_page"}}</a>
-                <a class="{{if not .HasPrevious}}disabled{{end}} item" {{if .HasPrevious}}href="{{$.Link}}?page={{.Previous}}"{{end}}>
-                  <i class="left arrow icon"></i> {{$.i18n.Tr "repo.issues.previous"}}
-                </a>
-                {{range .Pages}}
-                      {{if eq .Num -1}}
-                        <a class="disabled item">...</a>
-                      {{else}}
-                        <a class="{{if .IsCurrent}}active{{end}} item" {{if not .IsCurrent}}href="{{$.Link}}?page={{.Num}}"{{end}}>{{.Num}}</a>
-                      {{end}}
-                {{end}}
-                <a class="{{if not .HasNext}}disabled{{end}} item" {{if .HasNext}}href="{{$.Link}}?page={{.Next}}"{{end}}>
-		      {{$.i18n.Tr "repo.issues.next"}}&nbsp;<i class="icon right arrow"></i>
-                </a>
-		<a class="{{if .IsLast}}disabled{{end}} item" href="{{$.Link}}?page={{.TotalPages}}">{{$.i18n.Tr "admin.last_page"}}&nbsp;<i class="angle double right icon"></i></a>
-	      </div>
-	    </div>
-          {{end}}
-	{{end}}
-
-      </div>
-    </div>
-  </div>
 </div>
 {{template "base/footer" .}}
