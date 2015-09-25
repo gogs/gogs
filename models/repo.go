@@ -775,15 +775,13 @@ func CountRepositories() int64 {
 func CountPublicRepositories() int64 {
 	return countRepositories(false)
 }
-
-// GetRepositoriesWithUsers returns given number of repository objects with offset.
-// It also auto-gets corresponding users.
-func GetRepositoriesWithUsers(num, offset int) ([]*Repository, error) {
-	repos := make([]*Repository, 0, num)
-	if err := x.Limit(num, offset).Asc("id").Find(&repos); err != nil {
+// RepositoriesWithUsers returns number of repos in given page.
+func RepositoriesWithUsers(page, pageSize int) ([]*Repository, error) {
+	repos := make([]*Repository, 0, pageSize)
+	if err := x.Limit(pageSize, (page-1)*pageSize).Asc("id").Find(&repos); err != nil {
 		return nil, err
 	}
-
+	
 	for _, repo := range repos {
 		repo.Owner = &User{Id: repo.OwnerID}
 		has, err := x.Get(repo.Owner)
@@ -795,6 +793,7 @@ func GetRepositoriesWithUsers(num, offset int) ([]*Repository, error) {
 	}
 
 	return repos, nil
+
 }
 
 // RepoPath returns repository path by given user and repository name.
