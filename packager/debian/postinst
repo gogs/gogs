@@ -30,4 +30,6 @@ case "$1" in
     ${CLI} scale web=1 || true
   ;;
 
+service gogs restart || true
+
 esac
