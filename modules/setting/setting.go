@@ -94,6 +94,7 @@ var (
 	ExplorePagingNum   int
 	IssuePagingNum     int
 	AdminUserPagingNum int
+	AdminNoticePagingNum int
 
 	// Markdown sttings.
 	Markdown struct {
@@ -370,6 +371,7 @@ func NewContext() {
 
 	sec = Cfg.Section("ui.admin")
 	AdminUserPagingNum = sec.Key("USER_PAGING_NUM").MustInt(50)
+	AdminNoticePagingNum = sec.Key("NOTICE_PAGING_NUM").MustInt(50)
 
 	sec = Cfg.Section("picture")
 	PictureService = sec.Key("SERVICE").In("server", []string{"server"})
