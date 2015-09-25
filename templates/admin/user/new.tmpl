@@ -44,6 +44,16 @@
               <input id="password" name="password" type="password" value="{{.password}}" {{if eq .login_type "0-0"}}required{{end}}>
             </div>
 
+            <!-- Send register notify e-mail -->
+            {{if .CanSendEmail}}
+            <div class="inline field">
+              <div class="ui checkbox">
+                <label><strong>{{.i18n.Tr "admin.users.send_register_notify"}}</strong></label>
+                <input name="send_notify" type="checkbox" {{if .send_notify}}checked{{end}}>
+              </div>
+            </div>
+            {{end}}
+
             <div class="field">
               <button class="ui green button">{{.i18n.Tr "admin.users.new_account"}}</button>
             </div>
