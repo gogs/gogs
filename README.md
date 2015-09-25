@@ -5,7 +5,7 @@ Gogs - Go Git Service [![Build Status](https://travis-ci.org/gogits/gogs.svg?bra
 
 ![](public/img/gogs-large-resize.png)
 
-##### Current version: 0.6.13 Beta
+##### Current version: 0.6.14 Beta
 
 <table>
     <tr>
@@ -102,6 +102,8 @@ There are 5 ways to install Gogs:
 ### Deploy to Cloud
 
 - [OpenShift](https://github.com/tkisme/gogs-openshift)
+- [Cloudron](https://cloudron.io/appstore.html#io.gogs.cloudronapp)
+- [Scaleway](https://www.scaleway.com/imagehub/gogs/)
 
 ## Acknowledgments
 
