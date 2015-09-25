@@ -184,11 +184,10 @@ func CountOrganizations() int64 {
 	return count
 }
 
-// GetOrganizations returns given number of organizations with offset.
-func GetOrganizations(num, offset int) ([]*User, error) {
-	orgs := make([]*User, 0, num)
-	err := x.Limit(num, offset).Where("type=1").Asc("id").Find(&orgs)
-	return orgs, err
+// Organizations returns number of organizations in given page.
+func Organizations(page, pageSize int) ([]*User, error) {
+	orgs := make([]*User, 0, pageSize)
+	return orgs, x.Limit(pageSize, (page-1)*pageSize).Where("type=1").Asc("id").Find(&orgs)
 }
 
 // DeleteOrganization completely and permanently deletes everything of organization.
