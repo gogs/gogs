@@ -6,7 +6,7 @@ package admin
 
 import (
 	"github.com/Unknwon/com"
-        "github.com/Unknwon/paginater"
+	"github.com/Unknwon/paginater"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"
