@@ -50,11 +50,10 @@ func CountNotices() int64 {
 	return count
 }
 
-// GetNotices returns given number of notices with offset.
-func GetNotices(num, offset int) ([]*Notice, error) {
-	notices := make([]*Notice, 0, num)
-	err := x.Limit(num, offset).Desc("id").Find(&notices)
-	return notices, err
+// Notices returns number of notices in given page.
+func Notices(page, pageSize int) ([]*Notice, error) {
+	notices := make([]*Notice, 0, pageSize)
+	return notices, x.Limit(pageSize, (page-1)*pageSize).Desc("id").Find(&notices)
 }
 
 // DeleteNotice deletes a system notice by given ID.
