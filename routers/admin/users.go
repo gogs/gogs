@@ -14,6 +14,7 @@ import (
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
+	"github.com/gogits/gogs/modules/mailer"
 	"github.com/gogits/gogs/modules/middleware"
 	"github.com/gogits/gogs/modules/setting"
 )
@@ -60,6 +61,8 @@ func NewUser(ctx *middleware.Context) {
 		return
 	}
 	ctx.Data["Sources"] = sources
+
+	ctx.Data["CanSendEmail"] = setting.MailService != nil
 	ctx.HTML(200, USER_NEW)
 }
 
@@ -74,6 +77,8 @@ func NewUserPost(ctx *middleware.Context, form auth.AdminCrateUserForm) {
 		return
 	}
 	ctx.Data["Sources"] = sources
+
+	ctx.Data["CanSendEmail"] = setting.MailService != nil
 
 	if ctx.HasError() {
 		ctx.HTML(200, USER_NEW)
@@ -117,6 +122,11 @@ func NewUserPost(ctx *middleware.Context, form auth.AdminCrateUserForm) {
 		return
 	}
 	log.Trace("Account created by admin(%s): %s", ctx.User.Name, u.Name)
+
+	// Send e-mail notification.
+	if form.SendNotify && setting.MailService != nil {
+		mailer.SendRegisterNotifyMail(ctx.Context, u)
+	}
 
 	ctx.Flash.Success(ctx.Tr("admin.users.new_success", u.Name))
 	ctx.Redirect(setting.AppSubUrl + "/admin/users/" + com.ToStr(u.Id))
