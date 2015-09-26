@@ -91,12 +91,13 @@ var (
 	AnsiCharset  string
 
 	// UI settings.
-	ExplorePagingNum   int
-	IssuePagingNum     int
-	AdminUserPagingNum int
-	AdminRepoPagingNum int
+	ExplorePagingNum     int
+	IssuePagingNum       int
+	FeedMaxCommitNum     int
+	AdminUserPagingNum   int
+	AdminRepoPagingNum   int
 	AdminNoticePagingNum int
-	AdminOrgPagingNum int
+	AdminOrgPagingNum    int
 
 	// Markdown sttings.
 	Markdown struct {
@@ -370,6 +371,7 @@ func NewContext() {
 	sec = Cfg.Section("ui")
 	ExplorePagingNum = sec.Key("EXPLORE_PAGING_NUM").MustInt(20)
 	IssuePagingNum = sec.Key("ISSUE_PAGING_NUM").MustInt(10)
+	FeedMaxCommitNum = sec.Key("FEED_MAX_COMMIT_NUM").MustInt(5)
 
 	sec = Cfg.Section("ui.admin")
 	AdminUserPagingNum = sec.Key("USER_PAGING_NUM").MustInt(50)

@@ -189,7 +189,11 @@ func issueIndexTrimRight(c rune) bool {
 
 // updateIssuesCommit checks if issues are manipulated by commit message.
 func updateIssuesCommit(u *User, repo *Repository, repoUserName, repoName string, commits []*base.PushCommit) error {
-	for _, c := range commits {
+	// Commits are appended in the reverse order.
+	for i := len(commits) - 1; i >= 0; i-- {
+		c := commits[i]
+		fmt.Println(c)
+
 		refMarked := make(map[int64]bool)
 		for _, ref := range IssueReferenceKeywordsPat.FindAllString(c.Message, -1) {
 			ref = ref[strings.IndexByte(ref, byte(' '))+1:]
@@ -348,6 +352,10 @@ func CommitRepoAction(
 		if err = updateIssuesCommit(u, repo, repoUserName, repoName, commit.Commits); err != nil {
 			log.Debug("updateIssuesCommit: %v", err)
 		}
+	}
+
+	if len(commit.Commits) > setting.FeedMaxCommitNum {
+		commit.Commits = commit.Commits[:setting.FeedMaxCommitNum]
 	}
 
 	bs, err := json.Marshal(commit)
