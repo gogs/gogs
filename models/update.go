@@ -23,10 +23,6 @@ type UpdateTask struct {
 	NewCommitId string
 }
 
-const (
-	MAX_COMMITS int = 5
-)
-
 func AddUpdateTask(task *UpdateTask) error {
 	_, err := x.Insert(task)
 	return err
@@ -147,10 +143,8 @@ func Update(refName, oldCommitId, newCommitId, userName, repoUserName, repoName 
 			&base.PushCommit{commit.Id.String(),
 				commit.Message(),
 				commit.Author.Email,
-				commit.Author.Name})
-		if len(commits) >= MAX_COMMITS {
-			break
-		}
+				commit.Author.Name,
+			})
 	}
 
 	if err = CommitRepoAction(userId, ru.Id, userName, actEmail,
