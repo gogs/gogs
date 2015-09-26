@@ -192,7 +192,6 @@ func updateIssuesCommit(u *User, repo *Repository, repoUserName, repoName string
 	// Commits are appended in the reverse order.
 	for i := len(commits) - 1; i >= 0; i-- {
 		c := commits[i]
-		fmt.Println(c)
 
 		refMarked := make(map[int64]bool)
 		for _, ref := range IssueReferenceKeywordsPat.FindAllString(c.Message, -1) {
@@ -214,6 +213,9 @@ func updateIssuesCommit(u *User, repo *Repository, repoUserName, repoName string
 
 			issue, err := GetIssueByRef(ref)
 			if err != nil {
+				if IsErrIssueNotExist(err) {
+					continue
+				}
 				return err
 			}
 
@@ -250,6 +252,9 @@ func updateIssuesCommit(u *User, repo *Repository, repoUserName, repoName string
 
 			issue, err := GetIssueByRef(ref)
 			if err != nil {
+				if IsErrIssueNotExist(err) {
+					continue
+				}
 				return err
 			}
 
@@ -287,6 +292,9 @@ func updateIssuesCommit(u *User, repo *Repository, repoUserName, repoName string
 
 			issue, err := GetIssueByRef(ref)
 			if err != nil {
+				if IsErrIssueNotExist(err) {
+					continue
+				}
 				return err
 			}
 
@@ -350,7 +358,7 @@ func CommitRepoAction(
 		}
 
 		if err = updateIssuesCommit(u, repo, repoUserName, repoName, commit.Commits); err != nil {
-			log.Debug("updateIssuesCommit: %v", err)
+			log.Error(4, "updateIssuesCommit: %v", err)
 		}
 	}
 

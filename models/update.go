@@ -135,7 +135,6 @@ func Update(refName, oldCommitId, newCommitId, userName, repoUserName, repoName 
 	var actEmail string
 	for e := l.Front(); e != nil; e = e.Next() {
 		commit := e.Value.(*git.Commit)
-
 		if actEmail == "" {
 			actEmail = commit.Committer.Email
 		}
