@@ -777,19 +777,15 @@ func CountPublicRepositories() int64 {
 }
 
 // RepositoriesWithUsers returns number of repos in given page.
-func RepositoriesWithUsers(page, pageSize int) ([]*Repository, error) {
+func RepositoriesWithUsers(page, pageSize int) (_ []*Repository, err error) {
 	repos := make([]*Repository, 0, pageSize)
-	if err := x.Limit(pageSize, (page-1)*pageSize).Asc("id").Find(&repos); err != nil {
+	if err = x.Limit(pageSize, (page-1)*pageSize).Asc("id").Find(&repos); err != nil {
 		return nil, err
 	}
 
-	for _, repo := range repos {
-		repo.Owner = &User{Id: repo.OwnerID}
-		has, err := x.Get(repo.Owner)
-		if err != nil {
+	for i := range repos {
+		if err = repos[i].GetOwner(); err != nil {
 			return nil, err
-		} else if !has {
-			return nil, ErrUserNotExist{repo.OwnerID, ""}
 		}
 	}
 
