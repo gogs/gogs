@@ -11,6 +11,7 @@ import (
 	"github.com/gogits/gogs/modules/git"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/middleware"
+	"github.com/gogits/gogs/modules/base"
 )
 
 func ToApiSignature(signature *git.Signature) *api.Signature {
@@ -70,7 +71,7 @@ func ToApiDiffFile(diffFile *models.DiffFile) *api.DiffFile {
 		Index:              diffFile.Index,
 		Addition:           diffFile.Addition,
 		Deletion:           diffFile.Deletion,
-		Type:               diffFile.Type,
+		Type:               base.DiffTypeToStr(diffFile.Type),
 		IsCreated:          diffFile.IsCreated,
 		IsDeleted:          diffFile.IsDeleted,
 		IsBin:              diffFile.IsBin,
@@ -105,7 +106,7 @@ func ToApiDiffLine(diffLine *models.DiffLine) *api.DiffLine {
 	return &api.DiffLine{
 		LeftIdx:  diffLine.LeftIdx,
 		RightIdx: diffLine.RightIdx,
-		Type:     diffLine.Type,
+		Type:     base.DiffLineTypeToStr(diffLine.Type),
 		Content:  diffLine.Content,
 	}
 }
