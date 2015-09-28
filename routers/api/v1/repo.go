@@ -163,6 +163,10 @@ func createRepo(ctx *middleware.Context, owner *models.User, opt api.CreateRepoO
 	ctx.JSON(201, ToApiRepository(owner, repo, api.Permission{true, true, true}))
 }
 
+func GetRepo(ctx *middleware.Context) {
+	ctx.JSON(200, ToApiRepository(ctx.Repo.Repository.Owner, ctx.Repo.Repository, api.Permission{}))
+}
+
 // https://github.com/gogits/go-gogs-client/wiki/Repositories#create
 func CreateRepo(ctx *middleware.Context, opt api.CreateRepoOption) {
 	// Shouldn't reach this condition, but just in case.

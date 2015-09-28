@@ -32,12 +32,12 @@ func ToApiCommit(commit *git.Commit) *api.Commit {
 }
 
 func HEADCommit(ctx *middleware.Context) {
-	ctx.JSON(200, ctx.Repo.Commit.Id.String())
+	ctx.JSON(200, &api.Sha1{
+		Sha1: ctx.Repo.Commit.Id.String(),
+	})
 }
 
 func CommitByID(ctx *middleware.Context) {
-
-
 	commit, err := ctx.Repo.GitRepo.GetCommit(ctx.Params(":commitid"))
 	if err != nil {
 		log.Error(4, "GetCommit: %v", err)

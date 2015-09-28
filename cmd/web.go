@@ -237,6 +237,8 @@ func runWeb(ctx *cli.Context) {
 				}, middleware.ApiReqToken())
 
 				m.Group("/:username/:reponame", func() {
+					m.Get("", v1.GetRepo)
+
 					m.Combo("/hooks").Get(v1.ListRepoHooks).
 						Post(bind(api.CreateHookOption{}), v1.CreateRepoHook)
 					m.Patch("/hooks/:id:int", bind(api.EditHookOption{}), v1.EditRepoHook)
