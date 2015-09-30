@@ -10,11 +10,12 @@ RUN apt-get update -qqy && \
   apt-get autoremove && \
   rm -rf /var/lib/apt/lists/*
 
+# Use the force
+COPY . /gopath/src/github.com/gogits/gogs/
+
 # Build binary and clean up useless files
-RUN mkdir -p /app /goroot /gopath/src/github.com/gogits && \
+RUN mkdir -p /app /goroot && \
   curl https://storage.googleapis.com/golang/go1.5.linux-amd64.tar.gz | tar xzf - -C /goroot --strip-components=1 && \
-  git clone https://github.com/gogits/gogs.git \
-    /gopath/src/github.com/gogits/gogs && \
   cd /gopath/src/github.com/gogits/gogs && \
   GOROOT="/goroot" GOPATH="/gopath" PATH="$PATH:/goroot/bin:/gopath/bin" \
     go get -v -tags "sqlite redis memcache cert pam" && \
