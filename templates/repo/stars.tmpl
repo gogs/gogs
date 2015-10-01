@@ -32,7 +32,7 @@
                 </ol>
 
                 {{with .Page}}
-				{{if gt .TotalPages 1}}
+                {{if gt .TotalPages 1}}
                 <div class="pagination">
                     {{if .HasPrevious}}
                     <a href="{{$.RepoLink}}/stars/{{.Previous}}">{{$.i18n.Tr "issues.previous"}}</a>
