@@ -9,19 +9,19 @@ Gogs - Go Git Service [![Build Status](https://travis-ci.org/gogits/gogs.svg?bra
 
 <table>
     <tr>
-        <td width="33%"><img src="http://gogs.io/imgs/screenshots/1.png"></td>
-        <td width="33%"><img src="http://gogs.io/imgs/screenshots/2.png"></td>
-        <td width="33%"><img src="http://gogs.io/imgs/screenshots/3.png"></td>
+        <td width="33%"><img src="http://gogs.io/img/screenshots/1.png"></td>
+        <td width="33%"><img src="http://gogs.io/img/screenshots/2.png"></td>
+        <td width="33%"><img src="http://gogs.io/img/screenshots/3.png"></td>
     </tr>
     <tr>
-        <td><img src="http://gogs.io/imgs/screenshots/4.png"></td>
-        <td><img src="http://gogs.io/imgs/screenshots/5.png"></td>
-        <td><img src="http://gogs.io/imgs/screenshots/6.png"></td>
+        <td><img src="http://gogs.io/img/screenshots/4.png"></td>
+        <td><img src="http://gogs.io/img/screenshots/5.png"></td>
+        <td><img src="http://gogs.io/img/screenshots/6.png"></td>
     </tr>
     <tr>
-        <td><img src="http://gogs.io/imgs/screenshots/7.png"></td>
-        <td><img src="http://gogs.io/imgs/screenshots/8.png"></td>
-        <td><img src="http://gogs.io/imgs/screenshots/9.png"></td>
+        <td><img src="http://gogs.io/img/screenshots/7.png"></td>
+        <td><img src="http://gogs.io/img/screenshots/8.png"></td>
+        <td><img src="http://gogs.io/img/screenshots/9.png"></td>
     </tr>
 </table>
 
