@@ -795,3 +795,84 @@
         padding-top: 15px;
     }
 }
+
+#stars, #watchers, #forks {
+    h4 {
+        font-size: 18px;
+        padding-bottom: 20px;
+        text-transform: capitalize;
+        border-bottom: 1px solid #DDD;
+    }
+
+    h3 {
+        margin: -4px 0 0 0;
+        padding: 0;
+    }
+
+    .avatar {
+        width: 75px;
+        height: 75px;
+        float: left;
+        display: block;
+        margin-right: 10px;
+    }
+
+    .avatar-small {
+        width: 24px;
+        height: 24px;
+        float: left;
+        display: block;
+        margin-right: 10px;
+    }
+
+    ol {
+        margin-top: 10px;
+        list-style: none;
+        width: 100%;
+        overflow: hidden;
+    }
+
+    li {
+        width: 32.25%;
+        margin: 10px 10px 10px 0;
+        border-bottom: 1px solid #DDD;
+        float: left;
+        padding-bottom: 10px;
+    }
+
+    .pagination {
+        width: 100%;
+        text-align: center;
+        text-transform: capitalize;
+
+        a {
+            border-radius: 3px;
+            border: 1px solid #399ADE;
+            padding: 8px;
+            margin: 0;
+        }
+
+        .active {
+            border-radius: 3px;
+            border: 1px solid #399ADE;
+            background: #399ADE;
+            cursor: default;
+            padding: 8px;
+            margin: 0;
+            color: #FFFFFF;
+        }
+
+        .disabled {
+            border-radius: 3px;
+            border: 1px solid #DDD;
+            color: #D3D3D3;
+            cursor: default;
+            padding: 8px;
+            margin: 0;
+        }
+    }
+}
+
+#forks p {
+    padding: 5px 0;
+}
