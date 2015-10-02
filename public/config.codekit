@@ -204,6 +204,17 @@
 		"outputStyle": 1,
 		"syntaxCheckerStyle": 1
 		},
+	"\/js\/libs\/clipboard-1.3.1.min.js": {
+		"fileType": 64,
+		"ignore": 0,
+		"ignoreWasSetByUser": 0,
+		"inputAbbreviatedPath": "\/js\/libs\/clipboard-1.3.1.min.js",
+		"outputAbbreviatedPath": "\/js\/libs\/min\/clipboard-1.3.1.min-min.js",
+		"outputPathIsOutsideProject": 0,
+		"outputPathIsSetByUser": 0,
+		"outputStyle": 1,
+		"syntaxCheckerStyle": 1
+		},
 	"\/js\/libs\/dropzone-4.0.1.js": {
 		"fileType": 64,
 		"ignore": 0,
@@ -548,12 +559,12 @@
 		"fileType": 1,
 		"ieCompatibility": 1,
 		"ignore": 0,
-		"ignoreWasSetByUser": 0,
+		"ignoreWasSetByUser": 1,
 		"inputAbbreviatedPath": "\/less\/gogs.less",
-		"outputAbbreviatedPath": "\/css\/gogs.min.css",
+		"outputAbbreviatedPath": "\/css\/gogs.css",
 		"outputPathIsOutsideProject": 0,
 		"outputPathIsSetByUser": 1,
-		"outputStyle": 1,
+		"outputStyle": 0,
 		"relativeURLS": 0,
 		"shouldRunAutoprefixer": 0,
 		"shouldRunBless": 0,

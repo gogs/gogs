@@ -591,7 +591,28 @@
 		overflow-x: auto;
 		overflow-y: hidden;
 	}
+
+	&.quickstart {
+		.guide {
+			.item {
+				padding: 1em;
+				small {
+					font-weight: normal;
+				}
+			}
+			.clone.button:first-child {
+				border-radius: .28571429rem 0 0 .28571429rem;
+			}
+			#repo-clone-url {
+				border-radius: 0;
+				width: 100%;
+				padding: 5px 10px;
+				font-size: 1.2em;
+			}
+		}
+	}
 }
+// End of .repository
 
 .issue.list {
 	list-style: none;
