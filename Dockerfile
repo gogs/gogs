@@ -6,7 +6,7 @@ ADD https://github.com/tianon/gosu/releases/download/1.5/gosu-amd64 /usr/sbin/go
 RUN echo "@edge http://dl-4.alpinelinux.org/alpine/edge/main" | tee -a /etc/apk/repositories \
  && echo "@community http://dl-4.alpinelinux.org/alpine/edge/community" | tee -a /etc/apk/repositories \
  && apk -U --no-progress upgrade \
- && apk -U --no-progress add ca-certificates git linux-pam s6@edge curl openssh socat \
+ && apk -U --no-progress add ca-certificates bash git linux-pam s6@edge curl openssh socat \
  && chmod +x /usr/sbin/gosu
 
 # Configure Go and build Gogs
