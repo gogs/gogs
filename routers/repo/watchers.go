@@ -19,21 +19,21 @@ const (
 func Watchers(ctx *middleware.Context) {
 	ctx.Data["Title"] = ctx.Tr("repos.watches")
 
-	page := ctx.ParamsInt(":index")
+	page := ctx.QueryInt("page")
 	if page <= 0 {
 		page = 1
 	}
 
 	ctx.Data["Page"] = paginater.New(ctx.Repo.Repository.NumWatches, models.ItemsPerPage, page, 5)
 
-	watchers, err := ctx.Repo.Repository.GetWatchers(ctx.ParamsInt(":index"))
+	watchers, err := ctx.Repo.Repository.GetWatchers(ctx.QueryInt("page"))
 
 	if err != nil {
 		ctx.Handle(500, "GetWatchers", err)
 		return
 	}
 
-	if (ctx.ParamsInt(":index")-1)*models.ItemsPerPage > ctx.Repo.Repository.NumWatches {
+	if (ctx.QueryInt("page")-1)*models.ItemsPerPage > ctx.Repo.Repository.NumWatches {
 		ctx.Handle(404, "ctx.Repo.Repository.NumWatches", nil)
 		return
 	}
