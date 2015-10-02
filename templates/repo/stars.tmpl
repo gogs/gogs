@@ -35,19 +35,19 @@
                 {{if gt .TotalPages 1}}
                 <div class="pagination">
                     {{if .HasPrevious}}
-                    <a href="{{$.RepoLink}}/stars/{{.Previous}}">{{$.i18n.Tr "issues.previous"}}</a>
+                    <a href="{{$.RepoLink}}/stars?page={{.Previous}}">{{$.i18n.Tr "issues.previous"}}</a>
                     {{end}}
 
                     {{range .Pages}}
                     {{if eq .Num -1}}
                     <a class="disabled item">...</a>
                     {{else}}
-                    <a class="{{if .IsCurrent}}active{{end}} item" {{if not .IsCurrent}}href="{{$.RepoLink}}/stars/{{.Num}}"{{end}}>{{.Num}}</a>
+                    <a class="{{if .IsCurrent}}active{{end}} item" {{if not .IsCurrent}}href="{{$.RepoLink}}/stars?page={{.Num}}"{{end}}>{{.Num}}</a>
                     {{end}}
                     {{end}}
 
                     {{if .HasNext}}
-                    <a href="{{$.RepoLink}}/stars/{{.Next}}">{{$.i18n.Tr "issues.next"}}</a>
+                    <a href="{{$.RepoLink}}/stars?page={{.Next}}">{{$.i18n.Tr "issues.next"}}</a>
                     {{end}}
                 </div>
                 {{end}}
