@@ -350,20 +350,23 @@ func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 			ctx.Data["GoGetImport"] = fmt.Sprintf("%s/%s/%s", setting.Domain, u.Name, repo.Name)
 		}
 
+		if ctx.IsSigned {
+			ctx.Data["IsWatchingRepo"] = models.IsWatching(ctx.User.Id, repo.ID)
+			ctx.Data["IsStaringRepo"] = models.IsStaring(ctx.User.Id, repo.ID)
+		}
+
 		// repo is bare and display enable
 		if ctx.Repo.Repository.IsBare {
 			log.Debug("Bare repository: %s", ctx.Repo.RepoLink)
 			// NOTE: to prevent templating error
 			ctx.Data["BranchName"] = ""
 			if displayBare {
+				if !ctx.Repo.IsAdmin() {
+					ctx.Flash.Info(ctx.Tr("repo.repo_is_empty"), true)
+				}
 				ctx.HTML(200, "repo/bare")
 			}
 			return
-		}
-
-		if ctx.IsSigned {
-			ctx.Data["IsWatchingRepo"] = models.IsWatching(ctx.User.Id, repo.ID)
-			ctx.Data["IsStaringRepo"] = models.IsStaring(ctx.User.Id, repo.ID)
 		}
 
 		ctx.Data["TagName"] = ctx.Repo.TagName
