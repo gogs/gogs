@@ -1,7 +1,7 @@
-.git/*
-conf/*
-packager/*
-scripts/*
+.git
+conf
+packager
+scripts
 *.yml
 *.md
 .bra.toml

@@ -1,54 +1,29 @@
-FROM google/debian:wheezy
-MAINTAINER u@gogs.io
+FROM alpine:3.2
+MAINTAINER roemer.jp@gmail.com
 
-RUN echo "deb http://ftp.debian.org/debian/ wheezy-backports main" >> /etc/apt/sources.list && \
-	apt-get update -qqy && \
-	apt-get install --no-install-recommends -qqy \
-	curl build-essential ca-certificates git \ 
-	openssh-server libpam-dev && \
-	apt-get autoclean && \
-    apt-get autoremove && \
-    rm -rf /var/lib/apt/lists/*
+# Install system utils & Gogs runtime dependencies
+ADD https://github.com/tianon/gosu/releases/download/1.5/gosu-amd64 /usr/sbin/gosu
+RUN echo "@edge http://dl-4.alpinelinux.org/alpine/edge/main" | tee -a /etc/apk/repositories \
+ && echo "@community http://dl-4.alpinelinux.org/alpine/edge/community" | tee -a /etc/apk/repositories \
+ && apk -U --no-progress upgrade \
+ && apk -U --no-progress add ca-certificates bash git linux-pam s6@edge curl openssh socat \
+ && chmod +x /usr/sbin/gosu
 
-ENV GOROOT /goroot
-ENV GOPATH /gopath
-ENV PATH $PATH:$GOROOT/bin:$GOPATH/bin
+# Configure Go and build Gogs
+ENV GOPATH /tmp/go
+ENV PATH $PATH:$GOPATH/bin
 
-COPY . /gopath/src/github.com/gogits/gogs/
-WORKDIR /gopath/src/github.com/gogits/gogs/
-
-# Build binary and clean up useless files
-RUN mkdir /goroot && \
-	curl https://storage.googleapis.com/golang/go1.5.linux-amd64.tar.gz | tar xzf - -C /goroot --strip-components=1 && \
-	go get -v -tags "sqlite redis memcache cert pam" && \
-	go build -tags "sqlite redis memcache cert pam" && \
-	mkdir /app/ && \
-	mv /gopath/src/github.com/gogits/gogs/ /app/gogs/ && \
-	rm -r $GOROOT $GOPATH
-
+COPY . /app/gogs/
 WORKDIR /app/gogs/
+RUN ./docker/build.sh
 
-RUN useradd --shell /bin/bash --system --comment gogits git
-
-# SSH login fix, otherwise user is kicked off after login
-RUN mkdir /var/run/sshd && \
-	sed 's@session\s*required\s*pam_loginuid.so@session optional pam_loginuid.so@g' -i /etc/pam.d/sshd && \
-	sed 's@UsePrivilegeSeparation yes@UsePrivilegeSeparation no@' -i /etc/ssh/sshd_config && \
-	echo "export VISIBLE=now" >> /etc/profile && \
-	echo "PermitUserEnvironment yes" >> /etc/ssh/sshd_config
-
-# Setup server keys on startup
-RUN sed 's@^HostKey@\#HostKey@' -i /etc/ssh/sshd_config && \
-	echo "HostKey /data/ssh/ssh_host_key" >> /etc/ssh/sshd_config && \
-	echo "HostKey /data/ssh/ssh_host_rsa_key" >> /etc/ssh/sshd_config && \
-	echo "HostKey /data/ssh/ssh_host_dsa_key" >> /etc/ssh/sshd_config && \
-	echo "HostKey /data/ssh/ssh_host_ecdsa_key" >> /etc/ssh/sshd_config && \
-	echo "HostKey /data/ssh/ssh_host_ed25519_key" >> /etc/ssh/sshd_config
-
-# Prepare data
 ENV GOGS_CUSTOM /data/gogs
+
+# Create git user for Gogs
+RUN adduser -D -g 'Gogs Git User' git -h /data/git/ -s /bin/sh && passwd -u git
 RUN echo "export GOGS_CUSTOM=/data/gogs" >> /etc/profile
 
+# Configure Docker Container
+VOLUME ["/data"]
 EXPOSE 22 3000
-ENTRYPOINT []
 CMD ["./docker/start.sh"]
