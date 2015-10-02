@@ -19,12 +19,9 @@ then
 	chmod 600 /data/ssh/*
 fi
 
-service ssh start
-
 ln -sf /data/gogs/log ./log
 ln -sf /data/gogs/data ./data
 ln -sf /data/git /home/git
-
 
 if ! test -d ~git/.ssh
 then
@@ -40,4 +37,4 @@ then
 fi
 
 chown -R git:git /data .
-exec su git -c "./gogs web"
+exec supervisord -c /app/gogs/docker/supervisord.conf
