@@ -396,6 +396,22 @@ function initRepository() {
         });
     }
 
+    // Quick start
+    if ($('.repository.quickstart').length > 0) {
+        $('#repo-clone-ssh').click(function () {
+            $('.clone-url').text($(this).data('link'));
+            $('#repo-clone-url').val($(this).data('link'));
+            $(this).addClass('blue');
+            $('#repo-clone-https').removeClass('blue');
+        });
+        $('#repo-clone-https').click(function () {
+            $('.clone-url').text($(this).data('link'));
+            $('#repo-clone-url').val($(this).data('link'));
+            $(this).addClass('blue');
+            $('#repo-clone-ssh').removeClass('blue');
+        });
+    }
+
     // Pull request
     if ($('.repository.compare.pull').length > 0) {
         var $branch_dropdown = $('.choose.branch .dropdown');
@@ -478,7 +494,7 @@ function initAdmin() {
                 $('.local').show();
                 $('#user_name').focus();
 
-                if($(this).data('password')=="required"){
+                if ($(this).data('password') == "required") {
                     $('#password').attr('required', 'required');
                 }
 
@@ -606,6 +622,24 @@ $(document).ready(function () {
     });
     $('.emojify').each(function () {
         emojify.run($(this)[0]);
+    });
+
+    // Clipboard JS
+    var clipboard = new Clipboard('.clipboard');
+    clipboard.on('success', function (e) {
+        e.clearSelection();
+
+        $('#' + e.trigger.getAttribute('id')).popup('destroy');
+        e.trigger.setAttribute('data-content', e.trigger.getAttribute('data-success'))
+        $('#' + e.trigger.getAttribute('id')).popup('show');
+        e.trigger.setAttribute('data-content', e.trigger.getAttribute('data-original'))
+    });
+
+    clipboard.on('error', function (e) {
+        $('#' + e.trigger.getAttribute('id')).popup('destroy');
+        e.trigger.setAttribute('data-content', e.trigger.getAttribute('data-error'))
+        $('#' + e.trigger.getAttribute('id')).popup('show');
+        e.trigger.setAttribute('data-content', e.trigger.getAttribute('data-original'))
     });
 
     // Helpers.
