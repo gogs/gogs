@@ -12,4 +12,4 @@ then
 	chmod 600 /data/ssh/*
 fi
 
-exec gosu root /usr/sbin/sshd -D -f /etc/ssh/sshd_config
+exec gosu root /usr/sbin/sshd -D -f /app/gogs/docker/sshd_config

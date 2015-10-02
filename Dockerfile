@@ -9,9 +9,6 @@ RUN echo "@edge http://dl-4.alpinelinux.org/alpine/edge/main" | tee -a /etc/apk/
  && apk -U --no-progress add ca-certificates git linux-pam s6@edge curl openssh socat \
  && chmod +x /usr/sbin/gosu
 
-# Configure SSH
-COPY docker/sshd_config /etc/ssh/sshd_config
-
 # Configure Go and build Gogs
 ENV GOPATH /tmp/go
 ENV PATH $PATH:$GOPATH/bin
@@ -26,6 +23,7 @@ ENV GOGS_CUSTOM /data/gogs
 RUN adduser -D -g 'Gogs Git User' git -h /data/git/ -s /bin/sh && passwd -u git
 RUN echo "export GOGS_CUSTOM=/data/gogs" >> /etc/profile
 
+# Configure Docker Container
 VOLUME ["/data"]
 EXPOSE 22 3000
 CMD ["./docker/start.sh"]
