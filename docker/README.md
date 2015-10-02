@@ -35,6 +35,17 @@ Directory `/var/gogs` keeps Git repoistories and Gogs data:
         |-- log
         |-- templates
 
+### Volume with data container
+
+If you're more comfortable with mounting data to a data container, the commands you execute at the first time will look like as follows:
+
+```
+# Create data container
+docker run --name=gogs-data --entrypoint /bin/true gogs/gogs
+# Use `docker run` for the first time.
+docker run --name=gogs --volumes-from gogs-data -p 10022:22 -p 10080:3000 gogs/gogs
+```
+
 ## Settings
 
 Most of settings are obvious and easy to understand, but there are some settings can be confusing by running Gogs inside Docker:
@@ -58,17 +69,3 @@ Steps to upgrade Gogs with Docker:
 - `docker stop gogs`
 - `docker rm gogs`
 - Finally, create container as the first time and don't forget to do same volume and port mapping.
-
-## Troubleshooting
-
-If you see the following error:
-
-```
-checkVersion()] [E] Binary and template file version does not match
-```
-
-Run `rm -fr /var/gogs/gogs/templates/` should fix this it. Just remember to backup templates file if you have made modifications youself.
-
-## Known Issues
-
-- [Use ctrl+c when clone through SSH makes Docker exit unexpectedly](https://github.com/gogits/gogs/issues/1499)
