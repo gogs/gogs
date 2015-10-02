@@ -8,5 +8,9 @@ while read NAME CMD; do
     chmod +x /app/gogs/docker/s6/$NAME/run
 done
 
-# Exec S6 as process manager for gogs and dropbear ssh
-exec /usr/bin/s6-svscan /app/gogs/docker/s6/
+# Exec CMD or S6 by default if nothing present
+if [ $# -gt 0 ];then
+    exec "$@"
+else
+    exec /usr/bin/s6-svscan /app/gogs/docker/s6/
+fi
