@@ -1,0 +1,61 @@
+{{template "ng/base/head" .}}
+{{template "ng/base/header" .}}
+<div id="repo-wrapper">
+    {{template "repo/header_old" .}}
+    <div id="repo-content" class="clear container">
+        <div id="repo-main" class="left grid-5-6">
+            <div id="stars">
+                <h4>
+                    <strong>{{.i18n.Tr "repos.watches"}}</strong>
+                </h4>
+
+                <ol>
+                {{range .Watchers}}
+                <li>
+                    <a href="{{AppSubUrl}}/{{.Name}}">
+                    <img class="avatar" src="{{.AvatarLink}}" title="{{.Name}}"/>
+
+                    <h3>{{.Name}}</h3>
+                    </a>
+
+                    <p>
+                    {{if .Website}}
+                    <span class="octicon octicon-link"></span> <a href="{{.Website}}" target="_blank">{{.Website}}</a>
+                    {{else if .Location}}
+                    <span class="octicon octicon-location"></span> {{.Location}}
+                    {{else}}
+                    <span class="octicon octicon-clock"></span> {{$.i18n.Tr "user.join_on"}} {{DateFmtShort .Created}}
+                    {{end}}
+                    </p>
+                </li>
+                {{end}}
+                </ol>
+
+                {{with .Page}}
+                {{if gt .TotalPages 1}}
+                <div class="pagination">
+                    {{if .HasPrevious}}
+                    <a href="{{$.RepoLink}}/watchers?page={{.Previous}}">{{$.i18n.Tr "issues.previous"}}</a>
+                    {{end}}
+
+                    {{range .Pages}}
+                    {{if eq .Num -1}}
+                    <a class="disabled item">...</a>
+                    {{else}}
+                    <a class="{{if .IsCurrent}}active{{end}} item" {{if not .IsCurrent}}href="{{$.RepoLink}}/watchers?page={{.Num}}"{{end}}>{{.Num}}</a>
+                    {{end}}
+                    {{end}}
+
+                    {{if .HasNext}}
+                    <a href="{{$.RepoLink}}/watchers?page={{.Next}}">{{$.i18n.Tr "issues.next"}}</a>
+                    {{end}}
+                </div>
+                {{end}}
+                {{end}}
+            </div>
+        </div>
+
+        {{template "repo/sidebar" .}}
+    </div>
+</div>
+{{template "ng/base/footer" .}}
