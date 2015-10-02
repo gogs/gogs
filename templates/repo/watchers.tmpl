@@ -35,19 +35,19 @@
                 {{if gt .TotalPages 1}}
                 <div class="pagination">
                     {{if .HasPrevious}}
-                    <a href="{{$.RepoLink}}/watchers/{{.Previous}}">{{$.i18n.Tr "issues.previous"}}</a>
+                    <a href="{{$.RepoLink}}/watchers?page={{.Previous}}">{{$.i18n.Tr "issues.previous"}}</a>
                     {{end}}
 
                     {{range .Pages}}
                     {{if eq .Num -1}}
                     <a class="disabled item">...</a>
                     {{else}}
-                    <a class="{{if .IsCurrent}}active{{end}} item" {{if not .IsCurrent}}href="{{$.RepoLink}}/watchers/{{.Num}}"{{end}}>{{.Num}}</a>
+                    <a class="{{if .IsCurrent}}active{{end}} item" {{if not .IsCurrent}}href="{{$.RepoLink}}/watchers?page={{.Num}}"{{end}}>{{.Num}}</a>
                     {{end}}
                     {{end}}
 
                     {{if .HasNext}}
-                    <a href="{{$.RepoLink}}/watchers/{{.Next}}">{{$.i18n.Tr "issues.next"}}</a>
+                    <a href="{{$.RepoLink}}/watchers?page={{.Next}}">{{$.i18n.Tr "issues.next"}}</a>
                     {{end}}
                 </div>
                 {{end}}

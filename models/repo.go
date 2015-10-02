@@ -48,7 +48,7 @@ var (
 	Gitignores, Licenses, Readmes []string
 
 	// Maximum items per page in forks, watchers and stars of a repo
-	ItemsPerPage = 3
+	ItemsPerPage = 54
 )
 
 func LoadRepoConfig() {

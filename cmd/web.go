@@ -514,8 +514,8 @@ func runWeb(ctx *cli.Context) {
 		m.Get("/labels/", repo.RetrieveLabels, repo.Labels)
 		m.Get("/milestones", repo.Milestones)
 		m.Get("/branches", repo.Branches)
-		m.Get("/stars/?:index", middleware.RepoRef(), repo.Stars)
-		m.Get("/watchers/?:index", middleware.RepoRef(), repo.Watchers)
+		m.Get("/stars", middleware.RepoRef(), repo.Stars)
+		m.Get("/watchers", middleware.RepoRef(), repo.Watchers)
 		m.Get("/forks", middleware.RepoRef(), repo.Forks)
 		m.Get("/archive/*", repo.Download)
 
