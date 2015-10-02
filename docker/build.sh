@@ -1,5 +1,9 @@
 #!/bin/sh
 
+# Set temp environment vars
+export GOPATH=/tmp/go
+export PATH=${PATH}:${GOPATH}/bin
+
 # Install build deps
 apk -U --no-progress add linux-pam-dev go@community gcc musl-dev
 
@@ -15,3 +19,7 @@ rm -r $GOPATH
 
 # Remove build deps
 apk --no-progress del linux-pam-dev go gcc musl-dev
+
+# Create git user for Gogs
+adduser -H -D -g 'Gogs Git User' git -h /data/git -s /bin/bash && passwd -u git
+echo "export GOGS_CUSTOM=${GOGS_CUSTOM}" >> /etc/profile
