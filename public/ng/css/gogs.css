@@ -1947,6 +1947,94 @@ The register and sign-in page style
 #release #release-new-form {
   padding-top: 15px;
 }
+#stars h4,
+#watchers h4,
+#forks h4 {
+  font-size: 18px;
+  padding-bottom: 20px;
+  text-transform: capitalize;
+  border-bottom: 1px solid #DDD;
+}
+#stars h3,
+#watchers h3,
+#forks h3 {
+  margin: -4px 0 0 0;
+  padding: 0;
+}
+#stars .avatar,
+#watchers .avatar,
+#forks .avatar {
+  width: 75px;
+  height: 75px;
+  float: left;
+  display: block;
+  margin-right: 10px;
+}
+#stars .avatar-small,
+#watchers .avatar-small,
+#forks .avatar-small {
+  width: 24px;
+  height: 24px;
+  float: left;
+  display: block;
+  margin-right: 10px;
+}
+#stars ol,
+#watchers ol,
+#forks ol {
+  margin-top: 10px;
+  list-style: none;
+  width: 100%;
+  overflow: hidden;
+}
+#stars li,
+#watchers li,
+#forks li {
+  width: 32.25%;
+  margin: 10px 10px 10px 0;
+  border-bottom: 1px solid #DDD;
+  float: left;
+  padding-bottom: 10px;
+}
+#stars .pagination,
+#watchers .pagination,
+#forks .pagination {
+  width: 100%;
+  text-align: center;
+  text-transform: capitalize;
+}
+#stars .pagination a,
+#watchers .pagination a,
+#forks .pagination a {
+  border-radius: 3px;
+  border: 1px solid #399ADE;
+  padding: 8px;
+  margin: 0;
+}
+#stars .pagination .active,
+#watchers .pagination .active,
+#forks .pagination .active {
+  border-radius: 3px;
+  border: 1px solid #399ADE;
+  background: #399ADE;
+  cursor: default;
+  padding: 8px;
+  margin: 0;
+  color: #FFFFFF;
+}
+#stars .pagination .disabled,
+#watchers .pagination .disabled,
+#forks .pagination .disabled {
+  border-radius: 3px;
+  border: 1px solid #DDD;
+  color: #D3D3D3;
+  cursor: default;
+  padding: 8px;
+  margin: 0;
+}
+#forks p {
+  padding: 5px 0;
+}
 #admin-wrapper,
 #setting-wrapper {
   padding-bottom: 100px;

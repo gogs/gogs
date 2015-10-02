@@ -46,6 +46,9 @@ var (
 
 var (
 	Gitignores, Licenses, Readmes []string
+
+	// Maximum items per page in forks, watchers and stars of a repo
+	ItemsPerPage = 54
 )
 
 func LoadRepoConfig() {
@@ -1612,6 +1615,16 @@ func GetWatchers(rid int64) ([]*Watch, error) {
 	return getWatchers(x, rid)
 }
 
+// Repository.GetWatchers returns all users watching given repository.
+func (repo *Repository) GetWatchers(offset int) ([]*User, error) {
+	users := make([]*User, 0, 10)
+	offset = (offset - 1) * ItemsPerPage
+
+	err := x.Limit(ItemsPerPage, offset).Where("repo_id=?", repo.ID).Join("LEFT", "watch", "user.id=watch.user_id").Find(&users)
+
+	return users, err
+}
+
 func notifyWatchers(e Engine, act *Action) error {
 	// Add feeds for user self and all watchers.
 	watches, err := getWatchers(e, act.RepoID)
@@ -1689,6 +1702,15 @@ func IsStaring(uid, repoId int64) bool {
 	return has
 }
 
+func (repo *Repository) GetStars(offset int) ([]*User, error) {
+	users := make([]*User, 0, 10)
+	offset = (offset - 1) * ItemsPerPage
+
+	err := x.Limit(ItemsPerPage, offset).Where("repo_id=?", repo.ID).Join("LEFT", "star", "user.id=star.uid").Find(&users)
+
+	return users, err
+}
+
 // ___________           __
 // \_   _____/__________|  | __
 //  |    __)/  _ \_  __ \  |/ /
@@ -1755,4 +1777,12 @@ func ForkRepository(u *User, oldRepo *Repository, name, desc string) (_ *Reposit
 	}
 
 	return repo, sess.Commit()
+}
+
+func (repo *Repository) GetForks() ([]*Repository, error) {
+	forks := make([]*Repository, 0, 10)
+
+	err := x.Find(&forks, &Repository{ForkID: repo.ID})
+
+	return forks, err
 }
