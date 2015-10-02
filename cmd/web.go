@@ -514,9 +514,6 @@ func runWeb(ctx *cli.Context) {
 		m.Get("/labels/", repo.RetrieveLabels, repo.Labels)
 		m.Get("/milestones", repo.Milestones)
 		m.Get("/branches", repo.Branches)
-		m.Get("/stars", middleware.RepoRef(), repo.Stars)
-		m.Get("/watchers", middleware.RepoRef(), repo.Watchers)
-		m.Get("/forks", middleware.RepoRef(), repo.Forks)
 		m.Get("/archive/*", repo.Download)
 
 		m.Group("/pulls/:index", func() {
@@ -530,6 +527,9 @@ func runWeb(ctx *cli.Context) {
 			m.Get("/raw/*", repo.SingleDownload)
 			m.Get("/commits/*", repo.RefCommits)
 			m.Get("/commit/*", repo.Diff)
+			m.Get("/stars", repo.Stars)
+			m.Get("/watchers", repo.Watchers)
+			m.Get("/forks", repo.Forks)
 		}, middleware.RepoRef())
 
 		m.Get("/compare/:before([a-z0-9]{40})...:after([a-z0-9]{40})", repo.CompareDiff)
