@@ -1,0 +1,22 @@
+#!/bin/sh
+
+if ! test -d /data/gogs; then
+    mkdir -p /data/gogs/data /data/gogs/conf /data/gogs/log /data/git
+fi
+
+if ! test -d ~git/.ssh; then
+    mkdir ~git/.ssh
+    chmod 700 ~git/.ssh
+fi
+
+if ! test -f ~git/.ssh/environment; then
+    echo "GOGS_CUSTOM=${GOGS_CUSTOM}" > ~git/.ssh/environment
+    chmod 600 ~git/.ssh/environment
+fi
+
+cd /app/gogs
+
+ln -sf /data/gogs/log  ./log
+ln -sf /data/gogs/data ./data
+
+chown -R git:git /data /app/gogs ~git/
