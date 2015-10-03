@@ -28,6 +28,10 @@ case "$1" in
 
     # scale
     ${CLI} scale web=1 || true
+    
+    # restart the service
+    service gogs restart || true
+    
   ;;
 
 esac
