@@ -1,48 +1,48 @@
 {{with .Repository}}
 <div class="ui container"><!-- start container -->
-	<div class="ui vertically padded grid head"><!-- start grid -->
-		<div class="column"><!-- start column -->
-			<div class="ui header">
-				<div class="ui huge breadcrumb">
-					<i class="mega-octicon octicon-{{if .IsPrivate}}lock{{else if .IsMirror}}repo-clone{{else if .IsFork}}repo-forked{{else}}repo{{end}}"></i>
-					<a href="{{AppSubUrl}}/{{.Owner.Name}}">{{.Owner.Name}}</a>
-					<div class="divider"> / </div>
-					<a href="{{$.RepoLink}}">{{.Name}}</a>
-					{{if .IsMirror}}<div class="ui label">{{$.i18n.Tr "mirror"}}</div>{{end}}
-					{{if .IsFork}}<div class="fork-flag">{{$.i18n.Tr "repo.forked_from"}} <a href="{{.BaseRepo.RepoLink}}">{{SubStr .BaseRepo.RepoLink 1 -1}}</a></div>{{end}}
-				</div>
+    <div class="ui vertically padded grid head"><!-- start grid -->
+        <div class="column"><!-- start column -->
+            <div class="ui header">
+                <div class="ui huge breadcrumb">
+                    <i class="mega-octicon octicon-{{if .IsPrivate}}lock{{else if .IsMirror}}repo-clone{{else if .IsFork}}repo-forked{{else}}repo{{end}}"></i>
+                    <a href="{{AppSubUrl}}/{{.Owner.Name}}">{{.Owner.Name}}</a>
+                    <div class="divider"> / </div>
+                    <a href="{{$.RepoLink}}">{{.Name}}</a>
+                    {{if .IsMirror}}<div class="ui label">{{$.i18n.Tr "mirror"}}</div>{{end}}
+                    {{if .IsFork}}<div class="fork-flag">{{$.i18n.Tr "repo.forked_from"}} <a href="{{.BaseRepo.RepoLink}}">{{SubStr .BaseRepo.RepoLink 1 -1}}</a></div>{{end}}
+                </div>
 
-				<div class="ui right">
-					<div class="ui labeled button" tabindex="0">
-					  <a class="ui grey button" href="{{$.RepoLink}}/action/{{if $.IsWatchingRepo}}un{{end}}watch?redirect_to={{$.Link}}">
-					    <i class="icon fa fa-eye{{if not $.IsWatchingRepo}}-slash{{end}}"></i>{{if $.IsWatchingRepo}}{{$.i18n.Tr "repo.unwatch"}}{{else}}{{$.i18n.Tr "repo.watch"}}{{end}}
-					  </a>
-					  <a class="ui basic label">
-					    {{.NumWatches}}
-					  </a>
-					</div>
-					<div class="ui labeled button" tabindex="0">
-					  <a class="ui grey button" href="{{$.RepoLink}}/action/{{if $.IsStaringRepo}}un{{end}}star?redirect_to={{$.Link}}">
-					    <i class="icon fa-star{{if not $.IsStaringRepo}}-o{{end}}"></i>{{if $.IsStaringRepo}}{{$.i18n.Tr "repo.unstar"}}{{else}}{{$.i18n.Tr "repo.star"}}{{end}}
-					  </a>
-					  <a class="ui basic label">
-					    {{.NumStars}}
-					  </a>
-					</div>
-					{{if .CanBeForked}}
-					<div class="ui labeled button" tabindex="0">
-					  <a class="ui grey button {{if eq .OwnerID $.SignedUserID}}poping up{{end}}" {{if not (eq .OwnerID $.SignedUserID)}}href="{{AppSubUrl}}/repo/fork/{{.ID}}"{{else}} data-content="{{$.i18n.Tr "repo.fork_from_self"}}" data-position="top center" data-variation="tiny"{{end}}>
-					    <i class="icon octicon octicon-repo-forked"></i>{{$.i18n.Tr "repo.fork"}}
-					  </a>
-					  <a class="ui basic label">
-					    {{.NumForks}}
-					  </a>
-					</div>
-					{{end}}
-				</div>
-			</div>
-		</div><!-- end column -->
-	</div><!-- end grid -->
+                <div class="ui right">
+                    <div class="ui labeled button" tabindex="0">
+                        <a class="ui grey button" href="{{$.RepoLink}}/action/{{if $.IsWatchingRepo}}un{{end}}watch?redirect_to={{$.Link}}">
+                            <i class="icon fa fa-eye{{if not $.IsWatchingRepo}}-slash{{end}}"></i>{{if $.IsWatchingRepo}}{{$.i18n.Tr "repo.unwatch"}}{{else}}{{$.i18n.Tr "repo.watch"}}{{end}}
+                        </a>
+                        <a class="ui basic label" href="{{.RepoLink}}/watchers">
+                            {{.NumWatches}}
+                        </a>
+                    </div>
+                    <div class="ui labeled button" tabindex="0">
+                        <a class="ui grey button" href="{{$.RepoLink}}/action/{{if $.IsStaringRepo}}un{{end}}star?redirect_to={{$.Link}}">
+                            <i class="icon fa-star{{if not $.IsStaringRepo}}-o{{end}}"></i>{{if $.IsStaringRepo}}{{$.i18n.Tr "repo.unstar"}}{{else}}{{$.i18n.Tr "repo.star"}}{{end}}
+                        </a>
+                        <a class="ui basic label" href="{{.RepoLink}}/stars">
+                            {{.NumStars}}
+                        </a>
+                    </div>
+                    {{if .CanBeForked}}
+                    <div class="ui labeled button" tabindex="0">
+                        <a class="ui grey button {{if eq .OwnerID $.SignedUserID}}poping up{{end}}" {{if not (eq .OwnerID $.SignedUserID)}}href="{{AppSubUrl}}/repo/fork/{{.ID}}"{{else}} data-content="{{$.i18n.Tr "repo.fork_from_self"}}" data-position="top center" data-variation="tiny"{{end}}>
+                            <i class="icon octicon octicon-repo-forked"></i>{{$.i18n.Tr "repo.fork"}}
+                        </a>
+                        <a class="ui basic label" href="{{.RepoLink}}/forks">
+                            {{.NumForks}}
+                        </a>
+                    </div>
+                    {{end}}
+                </div>
+            </div>
+        </div><!-- end column -->
+    </div><!-- end grid -->
 </div><!-- end container -->
 <div class="ui divider"></div>
 {{end}}
