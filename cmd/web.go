@@ -226,6 +226,7 @@ func runWeb(ctx *cli.Context) {
 
 				m.Group("", func() {
 					m.Post("/migrate", bindIgnErr(auth.MigrateRepoForm{}), v1.MigrateRepo)
+					m.Delete("/:owner/:reponame", v1.RemoveRepo)
 				}, middleware.ApiReqToken())
 
 				m.Group("/:username/:reponame", func() {
