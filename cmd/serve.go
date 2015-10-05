@@ -219,9 +219,13 @@ func runServ(c *cli.Context) {
 	}
 
 	// Send deliver hook request.
-	resp, err := httplib.Head(setting.AppUrl + setting.AppSubUrl + repoUserName + "/" + repoName + "/hooks/trigger").Response()
+	reqURL := setting.AppUrl + repoUserName + "/" + repoName + "/hooks/trigger"
+	resp, err := httplib.Head(reqURL).Response()
 	if err == nil {
 		resp.Body.Close()
+		log.GitLogger.Trace("Trigger hook: %s", reqURL)
+	} else {
+		log.GitLogger.Error(2, "Fail to trigger hook: %v", err)
 	}
 
 	// Update user key activity.
