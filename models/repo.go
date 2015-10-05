@@ -1601,15 +1601,19 @@ type Watch struct {
 	RepoID int64 `xorm:"UNIQUE(watch)"`
 }
 
+func isWatching(e Engine, uid, repoId int64) bool {
+	has, _ := e.Get(&Watch{0, uid, repoId})
+	return has
+}
+
 // IsWatching checks if user has watched given repository.
 func IsWatching(uid, repoId int64) bool {
-	has, _ := x.Get(&Watch{0, uid, repoId})
-	return has
+	return isWatching(x, uid, repoId)
 }
 
 func watchRepo(e Engine, uid, repoId int64, watch bool) (err error) {
 	if watch {
-		if IsWatching(uid, repoId) {
+		if isWatching(e, uid, repoId) {
 			return nil
 		}
 		if _, err = e.Insert(&Watch{RepoID: repoId, UserID: uid}); err != nil {
@@ -1617,7 +1621,7 @@ func watchRepo(e Engine, uid, repoId int64, watch bool) (err error) {
 		}
 		_, err = e.Exec("UPDATE `repository` SET num_watches = num_watches + 1 WHERE id = ?", repoId)
 	} else {
-		if !IsWatching(uid, repoId) {
+		if !isWatching(e, uid, repoId) {
 			return nil
 		}
 		if _, err = e.Delete(&Watch{0, uid, repoId}); err != nil {
