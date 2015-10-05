@@ -187,16 +187,22 @@ func PrepareViewPullInfo(ctx *middleware.Context, pull *models.Issue) *git.PullR
 	ctx.Data["HeadTarget"] = pull.HeadUserName + "/" + pull.HeadBarcnh
 	ctx.Data["BaseTarget"] = ctx.Repo.Owner.Name + "/" + pull.BaseBranch
 
-	headRepoPath, err := pull.HeadRepo.RepoPath()
-	if err != nil {
-		ctx.Handle(500, "HeadRepo.RepoPath", err)
-		return nil
-	}
+	var (
+		headGitRepo *git.Repository
+		err         error
+	)
+	if pull.HeadRepo != nil {
+		headRepoPath, err := pull.HeadRepo.RepoPath()
+		if err != nil {
+			ctx.Handle(500, "HeadRepo.RepoPath", err)
+			return nil
+		}
 
-	headGitRepo, err := git.OpenRepository(headRepoPath)
-	if err != nil {
-		ctx.Handle(500, "OpenRepository", err)
-		return nil
+		headGitRepo, err = git.OpenRepository(headRepoPath)
+		if err != nil {
+			ctx.Handle(500, "OpenRepository", err)
+			return nil
+		}
 	}
 
 	if pull.HeadRepo == nil || !headGitRepo.IsBranchExist(pull.HeadBarcnh) {
@@ -530,18 +536,18 @@ func CompareAndPullRequest(ctx *middleware.Context) {
 		return
 	}
 
-	pr, err := models.GetUnmergedPullRequest(headRepo.ID, ctx.Repo.Repository.ID, headBranch, baseBranch)
-	if err != nil {
-		if !models.IsErrPullRequestNotExist(err) {
-			ctx.Handle(500, "GetUnmergedPullRequest", err)
-			return
-		}
-	} else {
-		ctx.Data["HasPullRequest"] = true
-		ctx.Data["PullRequest"] = pr
-		ctx.HTML(200, COMPARE_PULL)
-		return
-	}
+	// pr, err := models.GetUnmergedPullRequest(headRepo.ID, ctx.Repo.Repository.ID, headBranch, baseBranch)
+	// if err != nil {
+	// 	if !models.IsErrPullRequestNotExist(err) {
+	// 		ctx.Handle(500, "GetUnmergedPullRequest", err)
+	// 		return
+	// 	}
+	// } else {
+	// 	ctx.Data["HasPullRequest"] = true
+	// 	ctx.Data["PullRequest"] = pr
+	// 	ctx.HTML(200, COMPARE_PULL)
+	// 	return
+	// }
 
 	nothingToCompare := PrepareCompareDiff(ctx, headUser, headRepo, headGitRepo, prInfo, baseBranch, headBranch)
 	if ctx.Written() {
@@ -575,7 +581,7 @@ func CompareAndPullRequestPost(ctx *middleware.Context, form auth.CreateIssueFor
 		return
 	}
 
-	patch, err := headGitRepo.GetPatch(models.RepoPath(repo.Owner.Name, repo.Name), baseBranch, headBranch)
+	patch, err := headGitRepo.GetPatch(prInfo.MergeBase, headBranch)
 	if err != nil {
 		ctx.Handle(500, "GetPatch", err)
 		return

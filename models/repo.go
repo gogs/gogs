@@ -296,6 +296,35 @@ func (repo *Repository) DescriptionHtml() template.HTML {
 	return template.HTML(DescPattern.ReplaceAllStringFunc(base.Sanitizer.Sanitize(repo.Description), sanitize))
 }
 
+func (repo *Repository) LocalCopyPath() string {
+	return path.Join(setting.RepoRootPath, "local", com.ToStr(repo.ID))
+}
+
+// UpdateLocalCopy makes sure the local copy of repository is up-to-date.
+func (repo *Repository) UpdateLocalCopy() error {
+	repoPath, err := repo.RepoPath()
+	if err != nil {
+		return err
+	}
+
+	localPath := repo.LocalCopyPath()
+	if !com.IsExist(localPath) {
+		_, stderr, err := process.Exec(
+			fmt.Sprintf("UpdateLocalCopy(git clone): %s", repoPath), "git", "clone", repoPath, localPath)
+		if err != nil {
+			return fmt.Errorf("git clone: %v - %s", err, stderr)
+		}
+	} else {
+		_, stderr, err := process.ExecDir(-1, localPath,
+			fmt.Sprintf("UpdateLocalCopy(git pull): %s", repoPath), "git", "pull")
+		if err != nil {
+			return fmt.Errorf("git pull: %v - %s", err, stderr)
+		}
+	}
+
+	return nil
+}
+
 func isRepositoryExist(e Engine, u *User, repoName string) (bool, error) {
 	has, err := e.Get(&Repository{
 		OwnerID:   u.Id,
