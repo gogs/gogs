@@ -930,10 +930,12 @@ type PullRequest struct {
 	Merger         *User `xorm:"-"`
 }
 
+// Note: don't try to get Pull because will end up recursive querying.
 func (pr *PullRequest) AfterSet(colName string, _ xorm.Cell) {
 	var err error
 	switch colName {
 	case "head_repo_id":
+		// FIXME: shouldn't show error if it's known that head repository has been removed.
 		pr.HeadRepo, err = GetRepositoryByID(pr.HeadRepoID)
 		if err != nil {
 			log.Error(3, "GetRepositoryByID[%d]: %v", pr.ID, err)
@@ -1017,7 +1019,7 @@ func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository) (err error
 	if _, stderr, err = process.ExecDir(-1, tmpBasePath,
 		fmt.Sprintf("PullRequest.Merge(git pull): %s", tmpBasePath),
 		"git", "pull", headRepoPath, pr.HeadBarcnh); err != nil {
-		return fmt.Errorf("git pull: %s", stderr)
+		return fmt.Errorf("git pull[%s / %s -> %s]: %s", headRepoPath, pr.HeadBarcnh, tmpBasePath, stderr)
 	}
 
 	// Push back to upstream.
@@ -1059,27 +1061,32 @@ func NewPullRequest(repo *Repository, pull *Issue, labelIDs []int64, uuids []str
 	}
 
 	// Test apply patch.
+	if err = repo.UpdateLocalCopy(); err != nil {
+		return fmt.Errorf("UpdateLocalCopy: %v", err)
+	}
+
 	repoPath, err := repo.RepoPath()
 	if err != nil {
 		return fmt.Errorf("RepoPath: %v", err)
 	}
-	patchPath := path.Join(repoPath, "pulls", com.ToStr(pr.ID)+".patch")
+	patchPath := path.Join(repoPath, "pulls", com.ToStr(pull.ID)+".patch")
 
 	os.MkdirAll(path.Dir(patchPath), os.ModePerm)
 	if err = ioutil.WriteFile(patchPath, patch, 0644); err != nil {
 		return fmt.Errorf("save patch: %v", err)
 	}
-	defer os.Remove(patchPath)
 
-	stdout, stderr, err := process.ExecDir(-1, repoPath,
+	pr.CanAutoMerge = true
+	_, stderr, err := process.ExecDir(-1, repo.LocalCopyPath(),
 		fmt.Sprintf("NewPullRequest(git apply --check): %d", repo.ID),
-		"git", "apply", "--check", "-v", patchPath)
+		"git", "apply", "--check", patchPath)
 	if err != nil {
-		if strings.Contains(stderr, "fatal:") {
+		if strings.Contains(stderr, "patch does not apply") {
+			pr.CanAutoMerge = false
+		} else {
 			return fmt.Errorf("git apply --check: %v - %s", err, stderr)
 		}
 	}
-	pr.CanAutoMerge = !strings.Contains(stdout, "error: patch failed:")
 
 	pr.PullID = pull.ID
 	pr.PullIndex = pull.Index

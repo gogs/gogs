@@ -104,6 +104,7 @@ There are 5 ways to install Gogs:
 - [OpenShift](https://github.com/tkisme/gogs-openshift)
 - [Cloudron](https://cloudron.io/appstore.html#io.gogs.cloudronapp)
 - [Scaleway](https://www.scaleway.com/imagehub/gogs/)
+- [Portal](https://portaldemo.xyz/cloud/)
 
 ## Acknowledgments
 
