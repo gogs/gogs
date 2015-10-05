@@ -44,7 +44,7 @@ func (repo *Repository) GetPullRequestInfo(basePath, baseBranch, headBranch stri
 	}
 	prInfo.MergeBase = strings.TrimSpace(stdout)
 
-	stdout, stderr, err = com.ExecCmdDir(repo.Path, "git", "log", remoteBranch+"..."+headBranch, prettyLogFormat)
+	stdout, stderr, err = com.ExecCmdDir(repo.Path, "git", "log", prInfo.MergeBase+"..."+headBranch, prettyLogFormat)
 	if err != nil {
 		return nil, fmt.Errorf("list diff logs: %v", concatenateError(err, stderr))
 	}
@@ -64,20 +64,8 @@ func (repo *Repository) GetPullRequestInfo(basePath, baseBranch, headBranch stri
 }
 
 // GetPatch generates and returns patch data between given branches.
-func (repo *Repository) GetPatch(basePath, baseBranch, headBranch string) ([]byte, error) {
-	// Add a temporary remote.
-	tmpRemote := com.ToStr(time.Now().UnixNano())
-	_, stderr, err := com.ExecCmdDirBytes(repo.Path, "git", "remote", "add", "-f", tmpRemote, basePath)
-	if err != nil {
-		return nil, fmt.Errorf("add base as remote: %v", concatenateError(err, string(stderr)))
-	}
-	defer func() {
-		com.ExecCmdDir(repo.Path, "git", "remote", "remove", tmpRemote)
-	}()
-
-	var stdout []byte
-	remoteBranch := "remotes/" + tmpRemote + "/" + baseBranch
-	stdout, stderr, err = com.ExecCmdDirBytes(repo.Path, "git", "diff", "-p", remoteBranch, headBranch)
+func (repo *Repository) GetPatch(mergeBase, headBranch string) ([]byte, error) {
+	stdout, stderr, err := com.ExecCmdDirBytes(repo.Path, "git", "diff", "-p", mergeBase, headBranch)
 	if err != nil {
 		return nil, concatenateError(err, string(stderr))
 	}
