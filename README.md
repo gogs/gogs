@@ -45,7 +45,7 @@ The goal of this project is to make the easiest, fastest, and most painless way 
 - Please see the [Documentation](http://gogs.io/docs/intro/) for project design, known issues, and change log.
 - See the [Trello Board](https://trello.com/b/uxAoeLUl/gogs-go-git-service) to follow the develop team.
 - Want to try it before doing anything else? Do it [online](https://try.gogs.io/gogs/gogs) or go down to the **Installation -> Install from binary** section!
-- Having trouble? Get help with [Troubleshooting](http://gogs.io/docs/intro/troubleshooting.md).
+- Having trouble? Get help with [Troubleshooting](http://gogs.io/docs/intro/troubleshooting.html).
 - Want to help with localization? Check out the [guide](http://gogs.io/docs/features/i18n.html)!
 
 ## Features
@@ -81,9 +81,9 @@ Make sure you install the [prerequisites](http://gogs.io/docs/installation/) fir
 
 There are 5 ways to install Gogs:
 
-- [Install from binary](http://gogs.io/docs/installation/install_from_binary)
-- [Install from source](http://gogs.io/docs/installation/install_from_source)
-- [Install from packages](http://gogs.io/docs/installation/install_from_packages)
+- [Install from binary](http://gogs.io/docs/installation/install_from_binary.html)
+- [Install from source](http://gogs.io/docs/installation/install_from_source.html)
+- [Install from packages](http://gogs.io/docs/installation/install_from_packages.html)
 - [Ship with Docker](https://github.com/gogits/gogs/tree/master/docker)
 - [Install with Vagrant](https://github.com/geerlingguy/ansible-vagrant-examples/tree/master/gogs)
 
