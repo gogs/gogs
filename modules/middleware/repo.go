@@ -14,7 +14,6 @@ import (
 	"github.com/mssola/user_agent"
 
 	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/git"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/setting"
@@ -44,7 +43,7 @@ func ApiRepoAssignment() macaron.Handler {
 				if models.IsErrUserNotExist(err) {
 					ctx.Error(404)
 				} else {
-					ctx.JSON(500, &base.ApiJsonErr{"GetUserByName: " + err.Error(), base.DOC_URL})
+					ctx.APIError(500, "GetUserByName", err)
 				}
 				return
 			}
@@ -57,17 +56,17 @@ func ApiRepoAssignment() macaron.Handler {
 			if models.IsErrRepoNotExist(err) {
 				ctx.Error(404)
 			} else {
-				ctx.JSON(500, &base.ApiJsonErr{"GetRepositoryByName: " + err.Error(), base.DOC_URL})
+				ctx.APIError(500, "GetRepositoryByName", err)
 			}
 			return
 		} else if err = repo.GetOwner(); err != nil {
-			ctx.JSON(500, &base.ApiJsonErr{"GetOwner: " + err.Error(), base.DOC_URL})
+			ctx.APIError(500, "GetOwner", err)
 			return
 		}
 
 		mode, err := models.AccessLevel(ctx.User, repo)
 		if err != nil {
-			ctx.JSON(500, &base.ApiJsonErr{"AccessLevel: " + err.Error(), base.DOC_URL})
+			ctx.APIError(500, "AccessLevel", err)
 			return
 		}
 
