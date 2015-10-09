@@ -8,11 +8,6 @@ const DOC_URL = "https://github.com/gogits/go-gogs-client/wiki"
 
 type (
 	TplName string
-
-	ApiJsonErr struct {
-		Message string `json:"message"`
-		DocUrl  string `json:"url"`
-	}
 )
 
 var GoGetMetas = make(map[string]bool)

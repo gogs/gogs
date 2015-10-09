@@ -13,7 +13,6 @@ import (
 	api "github.com/gogits/go-gogs-client"
 
 	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/middleware"
 )
 
@@ -47,7 +46,7 @@ func ToApiHook(repoLink string, w *models.Webhook) *api.Hook {
 func ListRepoHooks(ctx *middleware.Context) {
 	hooks, err := models.GetWebhooksByRepoId(ctx.Repo.Repository.ID)
 	if err != nil {
-		ctx.JSON(500, &base.ApiJsonErr{"GetWebhooksByRepoId: " + err.Error(), base.DOC_URL})
+		ctx.APIError(500, "GetWebhooksByRepoId", err)
 		return
 	}
 
@@ -62,17 +61,17 @@ func ListRepoHooks(ctx *middleware.Context) {
 // https://github.com/gogits/go-gogs-client/wiki/Repositories#create-a-hook
 func CreateRepoHook(ctx *middleware.Context, form api.CreateHookOption) {
 	if !models.IsValidHookTaskType(form.Type) {
-		ctx.JSON(422, &base.ApiJsonErr{"invalid hook type", base.DOC_URL})
+		ctx.APIError(422, "", "Invalid hook type")
 		return
 	}
 	for _, name := range []string{"url", "content_type"} {
 		if _, ok := form.Config[name]; !ok {
-			ctx.JSON(422, &base.ApiJsonErr{"missing config option: " + name, base.DOC_URL})
+			ctx.APIError(422, "", "Missing config option: "+name)
 			return
 		}
 	}
 	if !models.IsValidHookContentType(form.Config["content_type"]) {
-		ctx.JSON(422, &base.ApiJsonErr{"invalid content type", base.DOC_URL})
+		ctx.APIError(422, "", "Invalid content type")
 		return
 	}
 
@@ -97,7 +96,7 @@ func CreateRepoHook(ctx *middleware.Context, form api.CreateHookOption) {
 	if w.HookTaskType == models.SLACK {
 		channel, ok := form.Config["channel"]
 		if !ok {
-			ctx.JSON(422, &base.ApiJsonErr{"missing config option: channel", base.DOC_URL})
+			ctx.APIError(422, "", "Missing config option: channel")
 			return
 		}
 		meta, err := json.Marshal(&models.SlackMeta{
@@ -107,17 +106,17 @@ func CreateRepoHook(ctx *middleware.Context, form api.CreateHookOption) {
 			Color:    form.Config["color"],
 		})
 		if err != nil {
-			ctx.JSON(500, &base.ApiJsonErr{"slack: JSON marshal failed: " + err.Error(), base.DOC_URL})
+			ctx.APIError(500, "slack: JSON marshal failed", err)
 			return
 		}
 		w.Meta = string(meta)
 	}
 
 	if err := w.UpdateEvent(); err != nil {
-		ctx.JSON(500, &base.ApiJsonErr{"UpdateEvent: " + err.Error(), base.DOC_URL})
+		ctx.APIError(500, "UpdateEvent", err)
 		return
 	} else if err := models.CreateWebhook(w); err != nil {
-		ctx.JSON(500, &base.ApiJsonErr{"CreateWebhook: " + err.Error(), base.DOC_URL})
+		ctx.APIError(500, "CreateWebhook", err)
 		return
 	}
 
@@ -128,7 +127,7 @@ func CreateRepoHook(ctx *middleware.Context, form api.CreateHookOption) {
 func EditRepoHook(ctx *middleware.Context, form api.EditHookOption) {
 	w, err := models.GetWebhookByID(ctx.ParamsInt64(":id"))
 	if err != nil {
-		ctx.JSON(500, &base.ApiJsonErr{"GetWebhookById: " + err.Error(), base.DOC_URL})
+		ctx.APIError(500, "GetWebhookById", err)
 		return
 	}
 
@@ -138,7 +137,7 @@ func EditRepoHook(ctx *middleware.Context, form api.EditHookOption) {
 		}
 		if ct, ok := form.Config["content_type"]; ok {
 			if !models.IsValidHookContentType(ct) {
-				ctx.JSON(422, &base.ApiJsonErr{"invalid content type", base.DOC_URL})
+				ctx.APIError(422, "", "Invalid content type")
 				return
 			}
 			w.ContentType = models.ToHookContentType(ct)
@@ -153,7 +152,7 @@ func EditRepoHook(ctx *middleware.Context, form api.EditHookOption) {
 					Color:    form.Config["color"],
 				})
 				if err != nil {
-					ctx.JSON(500, &base.ApiJsonErr{"slack: JSON marshal failed: " + err.Error(), base.DOC_URL})
+					ctx.APIError(500, "slack: JSON marshal failed", err)
 					return
 				}
 				w.Meta = string(meta)
@@ -171,7 +170,7 @@ func EditRepoHook(ctx *middleware.Context, form api.EditHookOption) {
 	w.Create = com.IsSliceContainsStr(form.Events, string(models.HOOK_EVENT_CREATE))
 	w.Push = com.IsSliceContainsStr(form.Events, string(models.HOOK_EVENT_PUSH))
 	if err = w.UpdateEvent(); err != nil {
-		ctx.JSON(500, &base.ApiJsonErr{"UpdateEvent: " + err.Error(), base.DOC_URL})
+		ctx.APIError(500, "UpdateEvent", err)
 		return
 	}
 
@@ -180,7 +179,7 @@ func EditRepoHook(ctx *middleware.Context, form api.EditHookOption) {
 	}
 
 	if err := models.UpdateWebhook(w); err != nil {
-		ctx.JSON(500, &base.ApiJsonErr{"UpdateWebhook: " + err.Error(), base.DOC_URL})
+		ctx.APIError(500, "UpdateWebhook", err)
 		return
 	}
 
