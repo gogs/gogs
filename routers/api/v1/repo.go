@@ -253,3 +253,39 @@ func MigrateRepo(ctx *middleware.Context, form auth.MigrateRepoForm) {
 	log.Trace("Repository migrated: %s/%s", ctxUser.Name, form.RepoName)
 	ctx.JSON(201, ToApiRepository(ctxUser, repo, api.Permission{true, true, true}))
 }
+
+func RemoveRepo(ctx *middleware.Context) {
+	user, err := models.GetUserByName(ctx.Params(":owner"))
+	if err != nil {
+		if models.IsErrUserNotExist(err) {
+			ctx.HandleAPI(404, err)
+		} else {
+			ctx.JSON(500, &base.ApiJsonErr{"GetUserByName: " + err.Error(), base.DOC_URL})
+		}
+		return
+	}
+
+	repo, err := models.GetRepositoryByName(user.Id, ctx.Params(":reponame"))
+	if err != nil {
+		if models.IsErrRepoNotExist(err) {
+			ctx.HandleAPI(404, err)
+		} else {
+			ctx.JSON(500, &base.ApiJsonErr{"GetRepositoryByName: " + err.Error(), base.DOC_URL})
+		}
+		return
+	}
+
+	if user.IsOrganization() && !user.IsOwnedBy(ctx.User.Id) {
+		ctx.HandleAPI(403, "Given user is not owner of organization.")
+		return
+	}
+
+	if err := models.DeleteRepository(user.Id, repo.ID); err != nil {
+		log.Error(4, "DeleteRespository: %v:", err)
+		ctx.HandleAPI(500, err)
+		return
+	}
+
+	log.Trace("Repository deleted: %s/%s", user.Name, repo.Name)
+	ctx.Status(204)
+}
