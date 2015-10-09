@@ -81,9 +81,9 @@ Make sure you install the [prerequisites](http://gogs.io/docs/installation/) fir
 
 There are 5 ways to install Gogs:
 
-- [Install from binary](http://gogs.io/docs/installation/install_from_binary.md)
-- [Install from source](http://gogs.io/docs/installation/install_from_source.md)
-- [Install from packages](http://gogs.io/docs/installation/install_from_packages.md)
+- [Install from binary](http://gogs.io/docs/installation/install_from_binary)
+- [Install from source](http://gogs.io/docs/installation/install_from_source)
+- [Install from packages](http://gogs.io/docs/installation/install_from_packages)
 - [Ship with Docker](https://github.com/gogits/gogs/tree/master/docker)
 - [Install with Vagrant](https://github.com/geerlingguy/ansible-vagrant-examples/tree/master/gogs)
 
