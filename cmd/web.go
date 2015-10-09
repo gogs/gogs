@@ -226,7 +226,7 @@ func runWeb(ctx *cli.Context) {
 
 				m.Group("", func() {
 					m.Post("/migrate", bindIgnErr(auth.MigrateRepoForm{}), v1.MigrateRepo)
-					m.Delete("/:owner/:reponame", v1.RemoveRepo)
+					m.Delete("/:username/:reponame", v1.DeleteRepo)
 				}, middleware.ApiReqToken())
 
 				m.Group("/:username/:reponame", func() {
@@ -239,7 +239,7 @@ func runWeb(ctx *cli.Context) {
 			})
 
 			m.Any("/*", func(ctx *middleware.Context) {
-				ctx.HandleAPI(404, "Page not found")
+				ctx.Error(404)
 			})
 		})
 	}, ignSignIn)
