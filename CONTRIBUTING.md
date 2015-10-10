@@ -42,7 +42,7 @@ There is no standard form of making a feature request. Just try to describe the 
 
 ### Pull Request
 
-Pull requests are always welcome, but note that **ALL PULL REQUESTS MUST APPLY TO THE `DEV` BRANCH**.
+Pull requests are always welcome, but note that **ALL PULL REQUESTS MUST APPLY TO THE `develop` BRANCH**.
 
 We are always thrilled to receive pull requests, and do our best to process them as fast as possible. Not sure if that typo is worth a pull request? Do it! We will appreciate it.
 
