@@ -52,8 +52,9 @@ func regulateTimeZone(t time.Time) time.Time {
 	}
 
 	zone := t.Local().Format("-0700")
+	log.Trace("regulateTimeZone: %s - %s", t.Local(), zone)
+
 	if len(zone) != 5 {
-		log.Debug("Unprocessable time: %v", t.Local())
 		return t
 	}
 	hour := com.StrTo(zone[2:3]).MustInt()
