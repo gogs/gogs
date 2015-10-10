@@ -16,7 +16,6 @@ WORKDIR /app/gogs/
 RUN ./docker/build.sh
 
 # Configure Docker Container
-VOLUME ["/data"]
 EXPOSE 22 3000
 ENTRYPOINT ["docker/start.sh"]
 CMD ["/usr/bin/s6-svscan", "/app/gogs/docker/s6/"]
