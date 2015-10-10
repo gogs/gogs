@@ -20,6 +20,7 @@ import (
 	_ "github.com/lib/pq"
 
 	"github.com/gogits/gogs/models/migrations"
+	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/setting"
 )
 
@@ -52,6 +53,7 @@ func regulateTimeZone(t time.Time) time.Time {
 
 	zone := t.Local().Format("-0700")
 	if len(zone) != 5 {
+		log.Debug("Unprocessable time: %v", t.Local())
 		return t
 	}
 	hour := com.StrTo(zone[2:3]).MustInt()
