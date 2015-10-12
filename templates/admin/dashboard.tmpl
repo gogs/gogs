@@ -1,28 +1,26 @@
-{{template "ng/base/head" .}}
-{{template "ng/base/header" .}}
-<div id="admin-wrapper">
-    <div id="setting-wrapper" class="main-wrapper">
-        <div id="repo-setting" class="container clear">
-            {{template "admin/nav" .}}
-            <div class="grid-4-5 left">
-                <div class="setting-content">
-                    {{template "ng/base/alert" .}}
-                    <div id="setting-content">
-                        <div class="panel panel-radius">
-                            <div class="panel-header">
-                                <strong>{{.i18n.Tr "admin.dashboard.statistic"}}</strong>
-                            </div>
-                            <div class="panel-body">
-                                <p class="admin-desc">
-                                    {{.i18n.Tr "admin.dashboard.statistic_info" .Stats.Counter.User .Stats.Counter.Org .Stats.Counter.PublicKey .Stats.Counter.Repo .Stats.Counter.Watch .Stats.Counter.Star .Stats.Counter.Action .Stats.Counter.Access .Stats.Counter.Issue .Stats.Counter.Comment .Stats.Counter.Oauth .Stats.Counter.Follow .Stats.Counter.Mirror .Stats.Counter.Release .Stats.Counter.LoginSource .Stats.Counter.Webhook .Stats.Counter.Milestone .Stats.Counter.Label .Stats.Counter.HookTask .Stats.Counter.Team .Stats.Counter.UpdateTask .Stats.Counter.Attachment | Str2html}}
-                            </div>
-                        </div>
-                        <br>
-                        <div class="panel panel-radius">
-                            <div class="panel-header">
-                                <strong>{{.i18n.Tr "admin.dashboard.operations"}}</strong>
-                            </div>
-                            <div class="panel-body admin-panel">
+{{template "base/head" .}}
+<div class="admin monitor">
+  <div class="ui container">
+    <div class="ui grid">
+      {{template "admin/navbar" .}}
+      <div class="twelve wide column content">
+        {{template "base/alert" .}}
+        <h4 class="ui top attached header">
+          {{.i18n.Tr "admin.dashboard.statistic"}}
+        </h4>
+        <div class="ui attached table segment">
+            <p class="admin-desc">
+               {{.i18n.Tr "admin.dashboard.statistic_info" .Stats.Counter.User .Stats.Counter.Org .Stats.Counter.PublicKey .Stats.Counter.Repo .Stats.Counter.Watch .Stats.Counter.Star .Stats.Counter.Action .Stats.Counter.Access .Stats.Counter.Issue .Stats.Counter.Comment .Stats.Counter.Oauth .Stats.Counter.Follow .Stats.Counter.Mirror .Stats.Counter.Release .Stats.Counter.LoginSource .Stats.Counter.Webhook .Stats.Counter.Milestone .Stats.Counter.Label .Stats.Counter.HookTask .Stats.Counter.Team .Stats.Counter.UpdateTask .Stats.Counter.Attachment | Str2html}}
+            </p>
+        </div>
+        <br>
+        
+        
+        <h4 class="ui top attached header">
+          {{.i18n.Tr "admin.dashboard.operations"}}
+        </h4>
+        <div class="ui attached table segment">
+   
                                 <div class="admin-table">
                                     <table class="table">
                                         <tbody>
@@ -49,16 +47,16 @@
                                         </tbody>
                                     </table>
                                 </div>
-                            </div>
-                        </div>
-                        <br>
-                        <div class="panel panel-radius">
-                            <div class="panel-header">
-                                <strong>{{.i18n.Tr "admin.dashboard.system_status"}}</strong>
-                            </div>
-                            <div class="panel-body">
-                                <dl class="dl-horizontal admin-dl-horizontal">
-                                    <dt>{{.i18n.Tr "admin.dashboard.server_uptime"}}</dt>
+        </div>
+        <br>
+   
+   
+        <h4 class="ui top attached header">
+          {{.i18n.Tr "admin.dashboard.statistic"}}
+        </h4>
+        <div class="ui attached table segment">
+		  <dl class="dl-horizontal admin-dl-horizontal">
+                               <dt>{{.i18n.Tr "admin.dashboard.server_uptime"}}</dt>
                                     <dd>{{.SysStatus.Uptime}}</dd>
 
                                     <dt>{{.i18n.Tr "admin.dashboard.current_goroutine"}}</dt>
@@ -145,13 +143,12 @@
 
                                     <dt>{{.i18n.Tr "admin.dashboard.gc_times"}}</dt>
                                     <dd>{{.SysStatus.NumGC}}</dd>
-                                </dl>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+          </dl>
         </div>
+        <br>
+   
+      </div>
     </div>
+  </div>
 </div>
-{{template "ng/base/footer" .}}
+{{template "base/footer" .}}
