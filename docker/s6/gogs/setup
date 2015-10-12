@@ -1,11 +1,7 @@
 #!/bin/sh
 
-if ! test -d /data/gogs; then
-    mkdir -p /data/gogs/data /data/gogs/conf /data/gogs/log /data/git
-fi
-
 if ! test -d ~git/.ssh; then
-    mkdir ~git/.ssh
+    mkdir -p ~git/.ssh
     chmod 700 ~git/.ssh
 fi
 
