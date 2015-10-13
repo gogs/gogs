@@ -22,7 +22,7 @@ $ docker start gogs
 
 Files will be store in local path `/var/gogs` in my case.
 
-Directory `/var/gogs` keeps Git repoistories and Gogs data:
+Directory `/var/gogs` keeps Git repositories and Gogs data:
 
     /var/gogs
     |-- git
