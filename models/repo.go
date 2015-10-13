@@ -105,6 +105,7 @@ func NewRepoContext() {
 	if ver.LessThan(reqVer) {
 		log.Fatal(4, "Gogs requires Git version greater or equal to 1.7.1")
 	}
+	log.Info("Git version: %s", ver.String())
 
 	// Git requires setting user.name and user.email in order to commit changes.
 	for configKey, defaultValue := range map[string]string{"user.name": "Gogs", "user.email": "gogs@fake.local"} {
