@@ -6,6 +6,7 @@ package git
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/Unknwon/com"
@@ -76,6 +77,10 @@ func (v *Version) LessThan(that *Version) bool {
 
 func (v *Version) AtLeast(that *Version) bool {
 	return v.Compare(that) >= 0
+}
+
+func (v *Version) String() string {
+	return fmt.Sprintf("%d.%d.%d", v.Major, v.Minor, v.Patch)
 }
 
 // GetVersion returns current Git version installed.
