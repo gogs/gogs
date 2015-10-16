@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"path"
 
-	"github.com/Unknwon/macaron"
+	"gopkg.in/macaron.v1"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"

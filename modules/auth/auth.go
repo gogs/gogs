@@ -10,9 +10,9 @@ import (
 	"time"
 
 	"github.com/Unknwon/com"
-	"github.com/Unknwon/macaron"
-	"github.com/macaron-contrib/binding"
-	"github.com/macaron-contrib/session"
+	"github.com/go-macaron/binding"
+	"github.com/go-macaron/session"
+	"gopkg.in/macaron.v1"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"

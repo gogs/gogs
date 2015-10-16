@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/Unknwon/com"
-	"github.com/Unknwon/macaron"
+	"gopkg.in/macaron.v1"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/models/cron"
