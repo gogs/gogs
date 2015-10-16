@@ -9,9 +9,9 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/Unknwon/macaron"
 	"github.com/mcuadros/go-version"
 	"github.com/mssola/user_agent"
+	"gopkg.in/macaron.v1"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/git"

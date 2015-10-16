@@ -18,7 +18,7 @@ import (
 	"gopkg.in/ini.v1"
 
 	"github.com/Unknwon/com"
-	"github.com/macaron-contrib/session"
+	"github.com/go-macaron/session"
 
 	"github.com/gogits/gogs/modules/bindata"
 	"github.com/gogits/gogs/modules/log"

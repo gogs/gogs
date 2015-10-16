@@ -12,11 +12,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Unknwon/macaron"
-	"github.com/macaron-contrib/cache"
-	"github.com/macaron-contrib/csrf"
-	"github.com/macaron-contrib/i18n"
-	"github.com/macaron-contrib/session"
+	"github.com/go-macaron/cache"
+	"github.com/go-macaron/csrf"
+	"github.com/go-macaron/i18n"
+	"github.com/go-macaron/session"
+	"gopkg.in/macaron.v1"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
@@ -154,7 +154,7 @@ func (ctx *Context) HandleText(status int, title string) {
 	if (status/100 == 4) || (status/100 == 5) {
 		log.Error(4, "%s", title)
 	}
-	ctx.RenderData(status, []byte(title))
+	ctx.PlainText(status, []byte(title))
 }
 
 // APIError logs error with title if status is 500.
