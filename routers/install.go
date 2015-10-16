@@ -13,9 +13,9 @@ import (
 	"strings"
 
 	"github.com/Unknwon/com"
-	"github.com/Unknwon/macaron"
 	"github.com/go-xorm/xorm"
 	"gopkg.in/ini.v1"
+	"gopkg.in/macaron.v1"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/models/cron"

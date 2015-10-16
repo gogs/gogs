@@ -15,18 +15,19 @@ import (
 	"path"
 	"strings"
 
-	"github.com/Unknwon/macaron"
 	"github.com/codegangsta/cli"
+	"github.com/go-macaron/binding"
+	"github.com/go-macaron/cache"
+	"github.com/go-macaron/captcha"
+	"github.com/go-macaron/csrf"
+	"github.com/go-macaron/gzip"
+	"github.com/go-macaron/i18n"
+	"github.com/go-macaron/session"
+	"github.com/go-macaron/toolbox"
 	"github.com/go-xorm/xorm"
-	"github.com/macaron-contrib/binding"
-	"github.com/macaron-contrib/cache"
-	"github.com/macaron-contrib/captcha"
-	"github.com/macaron-contrib/csrf"
-	"github.com/macaron-contrib/i18n"
-	"github.com/macaron-contrib/session"
-	"github.com/macaron-contrib/toolbox"
 	"github.com/mcuadros/go-version"
 	"gopkg.in/ini.v1"
+	"gopkg.in/macaron.v1"
 
 	api "github.com/gogits/go-gogs-client"
 
@@ -103,7 +104,7 @@ func newMacaron() *macaron.Macaron {
 	}
 	m.Use(macaron.Recovery())
 	if setting.EnableGzip {
-		m.Use(macaron.Gziper())
+		m.Use(gzip.Gziper())
 	}
 	if setting.Protocol == setting.FCGI {
 		m.SetURLPrefix(setting.AppSubUrl)

@@ -7,7 +7,7 @@ package user
 import (
 	"net/url"
 
-	"github.com/macaron-contrib/captcha"
+	"github.com/go-macaron/captcha"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"

@@ -5,9 +5,9 @@
 package auth
 
 import (
-	"github.com/Unknwon/macaron"
+	"gopkg.in/macaron.v1"
 
-	"github.com/macaron-contrib/binding"
+	"github.com/go-macaron/binding"
 )
 
 type AdminCrateUserForm struct {

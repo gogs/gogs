@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"net/url"
 
-	"github.com/Unknwon/macaron"
-	"github.com/macaron-contrib/csrf"
+	"github.com/go-macaron/csrf"
+	"gopkg.in/macaron.v1"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"

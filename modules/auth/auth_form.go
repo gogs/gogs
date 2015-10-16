@@ -5,8 +5,8 @@
 package auth
 
 import (
-	"github.com/Unknwon/macaron"
-	"github.com/macaron-contrib/binding"
+	"github.com/go-macaron/binding"
+	"gopkg.in/macaron.v1"
 )
 
 type AuthenticationForm struct {
