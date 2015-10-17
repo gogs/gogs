@@ -86,7 +86,6 @@ func ParsePatch(pid int64, maxlines int, cmd *exec.Cmd, reader io.Reader) (*Diff
 		}
 
 		leftLine, rightLine int
-		isTooLong           bool
 		// FIXME: Should use cache in the future.
 		buf bytes.Buffer
 	)
@@ -107,9 +106,10 @@ func ParsePatch(pid int64, maxlines int, cmd *exec.Cmd, reader io.Reader) (*Diff
 		i = i + 1
 
 		// Diff data too large, we only show the first about maxlines lines
-		if i == maxlines {
-			isTooLong = true
+		if i >= maxlines {
 			log.Warn("Diff data too large")
+			diff.Files = nil
+			return diff, nil
 		}
 
 		switch {
@@ -120,10 +120,6 @@ func ParsePatch(pid int64, maxlines int, cmd *exec.Cmd, reader io.Reader) (*Diff
 			curSection.Lines = append(curSection.Lines, diffLine)
 			continue
 		case line[0] == '@':
-			if isTooLong {
-				break
-			}
-
 			curSection = &DiffSection{}
 			curFile.Sections = append(curFile.Sections, curSection)
 			ss := strings.Split(line, "@@")
@@ -162,10 +158,6 @@ func ParsePatch(pid int64, maxlines int, cmd *exec.Cmd, reader io.Reader) (*Diff
 
 		// Get new file.
 		if strings.HasPrefix(line, DIFF_HEAD) {
-			if isTooLong {
-				break
-			}
-
 			beg := len(DIFF_HEAD)
 			a := line[beg : (len(line)-beg)/2+beg]
 
