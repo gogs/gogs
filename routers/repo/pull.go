@@ -374,7 +374,7 @@ func MergePullRequest(ctx *middleware.Context) {
 		return
 	}
 
-	if !pr.CanAutoMerge || pr.HasMerged {
+	if !pr.CanAutoMerge() || pr.HasMerged {
 		ctx.Handle(404, "MergePullRequest", nil)
 		return
 	}

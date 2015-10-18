@@ -904,8 +904,16 @@ func UpdateIssueUsersByMentions(uids []int64, iid int64) error {
 type PullRequestType int
 
 const (
-	PULL_REQUEST_GOGS = iota
+	PULL_REQUEST_GOGS PullRequestType = iota
 	PLLL_ERQUEST_GIT
+)
+
+type PullRequestStatus int
+
+const (
+	PULL_REQUEST_STATUS_CONFLICT PullRequestStatus = iota
+	PULL_REQUEST_STATUS_CHECKING
+	PULL_REQUEST_STATUS_MERGEABLE
 )
 
 // PullRequest represents relation between pull request and repositories.
@@ -923,7 +931,7 @@ type PullRequest struct {
 	MergeBase      string `xorm:"VARCHAR(40)"`
 	MergedCommitID string `xorm:"VARCHAR(40)"`
 	Type           PullRequestType
-	CanAutoMerge   bool
+	Status         PullRequestStatus
 	HasMerged      bool
 	Merged         time.Time
 	MergerID       int64
@@ -961,6 +969,10 @@ func (pr *PullRequest) AfterSet(colName string, _ xorm.Cell) {
 
 		pr.Merged = regulateTimeZone(pr.Merged)
 	}
+}
+
+func (pr *PullRequest) CanAutoMerge() bool {
+	return pr.Status == PULL_REQUEST_STATUS_MERGEABLE
 }
 
 // Merge merges pull request to base repository.
@@ -1076,13 +1088,13 @@ func NewPullRequest(repo *Repository, pull *Issue, labelIDs []int64, uuids []str
 		return fmt.Errorf("save patch: %v", err)
 	}
 
-	pr.CanAutoMerge = true
+	pr.Status = PULL_REQUEST_STATUS_MERGEABLE
 	_, stderr, err := process.ExecDir(-1, repo.LocalCopyPath(),
 		fmt.Sprintf("NewPullRequest(git apply --check): %d", repo.ID),
 		"git", "apply", "--check", patchPath)
 	if err != nil {
 		if strings.Contains(stderr, "patch does not apply") {
-			pr.CanAutoMerge = false
+			pr.Status = PULL_REQUEST_STATUS_CONFLICT
 		} else {
 			return fmt.Errorf("git apply --check: %v - %s", err, stderr)
 		}
