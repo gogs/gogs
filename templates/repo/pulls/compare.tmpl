@@ -52,7 +52,7 @@
 			</div>
 			{{else if .HasPullRequest}}
 			<div class="ui segment">
-				{{.i18n.Tr "repo.pulls.has_pull_request" $.RepoLink $.RepoRelPath .PullRequest.PullIndex | Safe}}
+				{{.i18n.Tr "repo.pulls.has_pull_request" $.RepoLink $.RepoRelPath .PullRequest.Index | Safe}}
 			</div>
 			{{else}}
 			{{template "repo/issue/new_form" .}}

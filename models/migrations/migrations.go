@@ -65,6 +65,7 @@ var migrations = []Migration{
 	NewMigration("trim action compare URL prefix", trimCommitActionAppUrlPrefix), // V5 -> V6:v0.6.3
 	NewMigration("generate issue-label from issue", issueToIssueLabel),           // V6 -> V7:v0.6.4
 	NewMigration("refactor attachment table", attachmentRefactor),                // V7 -> V8:v0.6.4
+	NewMigration("rename pull request fields", renamePullRequestFields),          // V8 -> V9:v0.6.16
 }
 
 // Migrate database to current version
@@ -600,6 +601,52 @@ func attachmentRefactor(x *xorm.Engine) error {
 
 		if err = os.Rename(attach.Path, attach.NewPath); err != nil {
 			isSucceed = false
+			return err
+		}
+	}
+
+	return sess.Commit()
+}
+
+func renamePullRequestFields(x *xorm.Engine) (err error) {
+	type PullRequest struct {
+		ID         int64 `xorm:"pk autoincr"`
+		PullID     int64 `xorm:"INDEX"`
+		PullIndex  int64
+		HeadBarcnh string
+
+		IssueID    int64 `xorm:"INDEX"`
+		Index      int64
+		HeadBranch string
+	}
+
+	if err = x.Sync(new(PullRequest)); err != nil {
+		return fmt.Errorf("sync: %v", err)
+	}
+
+	results, err := x.Query("SELECT `id`,`pull_id`,`pull_index`,`head_barcnh` FROM `pull_request`")
+	if err != nil {
+		if strings.Contains(err.Error(), "no such column") {
+			return nil
+		}
+		return fmt.Errorf("select pull requests: %v", err)
+	}
+
+	sess := x.NewSession()
+	defer sessionRelease(sess)
+	if err = sess.Begin(); err != nil {
+		return err
+	}
+
+	var pull *PullRequest
+	for _, pr := range results {
+		pull = &PullRequest{
+			ID:         com.StrTo(pr["id"]).MustInt64(),
+			IssueID:    com.StrTo(pr["pull_id"]).MustInt64(),
+			Index:      com.StrTo(pr["pull_index"]).MustInt64(),
+			HeadBranch: string(pr["head_barcnh"]),
+		}
+		if _, err = sess.Id(pull.ID).Update(pull); err != nil {
 			return err
 		}
 	}

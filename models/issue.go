@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"mime/multipart"
 	"os"
 	"path"
@@ -20,9 +19,7 @@ import (
 	"github.com/go-xorm/xorm"
 
 	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/modules/git"
 	"github.com/gogits/gogs/modules/log"
-	"github.com/gogits/gogs/modules/process"
 	"github.com/gogits/gogs/modules/setting"
 	gouuid "github.com/gogits/gogs/modules/uuid"
 )
@@ -100,9 +97,9 @@ func (i *Issue) AfterSet(colName string, _ xorm.Cell) {
 			return
 		}
 
-		i.PullRequest, err = GetPullRequestByPullID(i.ID)
+		i.PullRequest, err = GetPullRequestByIssueID(i.ID)
 		if err != nil {
-			log.Error(3, "GetPullRequestByPullID[%d]: %v", i.ID, err)
+			log.Error(3, "GetPullRequestByIssueID[%d]: %v", i.ID, err)
 		}
 	case "created":
 		i.Created = regulateTimeZone(i.Created)
@@ -892,252 +889,6 @@ func UpdateIssueUsersByMentions(uids []int64, iid int64) error {
 		}
 	}
 	return nil
-}
-
-// __________      .__  .__ __________                                     __
-// \______   \__ __|  | |  |\______   \ ____  ________ __   ____   _______/  |_
-//  |     ___/  |  \  | |  | |       _// __ \/ ____/  |  \_/ __ \ /  ___/\   __\
-//  |    |   |  |  /  |_|  |_|    |   \  ___< <_|  |  |  /\  ___/ \___ \  |  |
-//  |____|   |____/|____/____/____|_  /\___  >__   |____/  \___  >____  > |__|
-//                                  \/     \/   |__|           \/     \/
-
-type PullRequestType int
-
-const (
-	PULL_REQUEST_GOGS PullRequestType = iota
-	PLLL_ERQUEST_GIT
-)
-
-type PullRequestStatus int
-
-const (
-	PULL_REQUEST_STATUS_CONFLICT PullRequestStatus = iota
-	PULL_REQUEST_STATUS_CHECKING
-	PULL_REQUEST_STATUS_MERGEABLE
-)
-
-// PullRequest represents relation between pull request and repositories.
-type PullRequest struct {
-	ID             int64  `xorm:"pk autoincr"`
-	PullID         int64  `xorm:"INDEX"`
-	Pull           *Issue `xorm:"-"`
-	PullIndex      int64
-	HeadRepoID     int64
-	HeadRepo       *Repository `xorm:"-"`
-	BaseRepoID     int64
-	HeadUserName   string
-	HeadBarcnh     string
-	BaseBranch     string
-	MergeBase      string `xorm:"VARCHAR(40)"`
-	MergedCommitID string `xorm:"VARCHAR(40)"`
-	Type           PullRequestType
-	Status         PullRequestStatus
-	HasMerged      bool
-	Merged         time.Time
-	MergerID       int64
-	Merger         *User `xorm:"-"`
-}
-
-// Note: don't try to get Pull because will end up recursive querying.
-func (pr *PullRequest) AfterSet(colName string, _ xorm.Cell) {
-	var err error
-	switch colName {
-	case "head_repo_id":
-		// FIXME: shouldn't show error if it's known that head repository has been removed.
-		pr.HeadRepo, err = GetRepositoryByID(pr.HeadRepoID)
-		if err != nil {
-			log.Error(3, "GetRepositoryByID[%d]: %v", pr.ID, err)
-		}
-	case "merger_id":
-		if !pr.HasMerged {
-			return
-		}
-
-		pr.Merger, err = GetUserByID(pr.MergerID)
-		if err != nil {
-			if IsErrUserNotExist(err) {
-				pr.MergerID = -1
-				pr.Merger = NewFakeUser()
-			} else {
-				log.Error(3, "GetUserByID[%d]: %v", pr.ID, err)
-			}
-		}
-	case "merged":
-		if !pr.HasMerged {
-			return
-		}
-
-		pr.Merged = regulateTimeZone(pr.Merged)
-	}
-}
-
-func (pr *PullRequest) CanAutoMerge() bool {
-	return pr.Status == PULL_REQUEST_STATUS_MERGEABLE
-}
-
-// Merge merges pull request to base repository.
-func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository) (err error) {
-	sess := x.NewSession()
-	defer sessionRelease(sess)
-	if err = sess.Begin(); err != nil {
-		return err
-	}
-
-	if err = pr.Pull.changeStatus(sess, doer, true); err != nil {
-		return fmt.Errorf("Pull.changeStatus: %v", err)
-	}
-
-	headRepoPath := RepoPath(pr.HeadUserName, pr.HeadRepo.Name)
-	headGitRepo, err := git.OpenRepository(headRepoPath)
-	if err != nil {
-		return fmt.Errorf("OpenRepository: %v", err)
-	}
-	pr.MergedCommitID, err = headGitRepo.GetCommitIdOfBranch(pr.HeadBarcnh)
-	if err != nil {
-		return fmt.Errorf("GetCommitIdOfBranch: %v", err)
-	}
-
-	if err = mergePullRequestAction(sess, doer, pr.Pull.Repo, pr.Pull); err != nil {
-		return fmt.Errorf("mergePullRequestAction: %v", err)
-	}
-
-	pr.HasMerged = true
-	pr.Merged = time.Now()
-	pr.MergerID = doer.Id
-	if _, err = sess.Id(pr.ID).AllCols().Update(pr); err != nil {
-		return fmt.Errorf("update pull request: %v", err)
-	}
-
-	// Clone base repo.
-	tmpBasePath := path.Join("data/tmp/repos", com.ToStr(time.Now().Nanosecond())+".git")
-	os.MkdirAll(path.Dir(tmpBasePath), os.ModePerm)
-	defer os.RemoveAll(path.Dir(tmpBasePath))
-
-	var stderr string
-	if _, stderr, err = process.ExecTimeout(5*time.Minute,
-		fmt.Sprintf("PullRequest.Merge(git clone): %s", tmpBasePath),
-		"git", "clone", baseGitRepo.Path, tmpBasePath); err != nil {
-		return fmt.Errorf("git clone: %s", stderr)
-	}
-
-	// Check out base branch.
-	if _, stderr, err = process.ExecDir(-1, tmpBasePath,
-		fmt.Sprintf("PullRequest.Merge(git checkout): %s", tmpBasePath),
-		"git", "checkout", pr.BaseBranch); err != nil {
-		return fmt.Errorf("git checkout: %s", stderr)
-	}
-
-	// Pull commits.
-	if _, stderr, err = process.ExecDir(-1, tmpBasePath,
-		fmt.Sprintf("PullRequest.Merge(git pull): %s", tmpBasePath),
-		"git", "pull", headRepoPath, pr.HeadBarcnh); err != nil {
-		return fmt.Errorf("git pull[%s / %s -> %s]: %s", headRepoPath, pr.HeadBarcnh, tmpBasePath, stderr)
-	}
-
-	// Push back to upstream.
-	if _, stderr, err = process.ExecDir(-1, tmpBasePath,
-		fmt.Sprintf("PullRequest.Merge(git push): %s", tmpBasePath),
-		"git", "push", baseGitRepo.Path, pr.BaseBranch); err != nil {
-		return fmt.Errorf("git push: %s", stderr)
-	}
-
-	return sess.Commit()
-}
-
-// NewPullRequest creates new pull request with labels for repository.
-func NewPullRequest(repo *Repository, pull *Issue, labelIDs []int64, uuids []string, pr *PullRequest, patch []byte) (err error) {
-	sess := x.NewSession()
-	defer sessionRelease(sess)
-	if err = sess.Begin(); err != nil {
-		return err
-	}
-
-	if err = newIssue(sess, repo, pull, labelIDs, uuids, true); err != nil {
-		return fmt.Errorf("newIssue: %v", err)
-	}
-
-	// Notify watchers.
-	act := &Action{
-		ActUserID:    pull.Poster.Id,
-		ActUserName:  pull.Poster.Name,
-		ActEmail:     pull.Poster.Email,
-		OpType:       CREATE_PULL_REQUEST,
-		Content:      fmt.Sprintf("%d|%s", pull.Index, pull.Name),
-		RepoID:       repo.ID,
-		RepoUserName: repo.Owner.Name,
-		RepoName:     repo.Name,
-		IsPrivate:    repo.IsPrivate,
-	}
-	if err = notifyWatchers(sess, act); err != nil {
-		return err
-	}
-
-	// Test apply patch.
-	if err = repo.UpdateLocalCopy(); err != nil {
-		return fmt.Errorf("UpdateLocalCopy: %v", err)
-	}
-
-	repoPath, err := repo.RepoPath()
-	if err != nil {
-		return fmt.Errorf("RepoPath: %v", err)
-	}
-	patchPath := path.Join(repoPath, "pulls", com.ToStr(pull.ID)+".patch")
-
-	os.MkdirAll(path.Dir(patchPath), os.ModePerm)
-	if err = ioutil.WriteFile(patchPath, patch, 0644); err != nil {
-		return fmt.Errorf("save patch: %v", err)
-	}
-
-	pr.Status = PULL_REQUEST_STATUS_MERGEABLE
-	_, stderr, err := process.ExecDir(-1, repo.LocalCopyPath(),
-		fmt.Sprintf("NewPullRequest(git apply --check): %d", repo.ID),
-		"git", "apply", "--check", patchPath)
-	if err != nil {
-		if strings.Contains(stderr, "patch does not apply") {
-			pr.Status = PULL_REQUEST_STATUS_CONFLICT
-		} else {
-			return fmt.Errorf("git apply --check: %v - %s", err, stderr)
-		}
-	}
-
-	pr.PullID = pull.ID
-	pr.PullIndex = pull.Index
-	if _, err = sess.Insert(pr); err != nil {
-		return fmt.Errorf("insert pull repo: %v", err)
-	}
-
-	return sess.Commit()
-}
-
-// GetUnmergedPullRequest returnss a pull request hasn't been merged by given info.
-func GetUnmergedPullRequest(headRepoID, baseRepoID int64, headBranch, baseBranch string) (*PullRequest, error) {
-	pr := &PullRequest{
-		HeadRepoID: headRepoID,
-		BaseRepoID: baseRepoID,
-		HeadBarcnh: headBranch,
-		BaseBranch: baseBranch,
-	}
-
-	has, err := x.Where("has_merged=?", false).Get(pr)
-	if err != nil {
-		return nil, err
-	} else if !has {
-		return nil, ErrPullRequestNotExist{0, 0, headRepoID, baseRepoID, headBranch, baseBranch}
-	}
-
-	return pr, nil
-}
-
-// GetPullRequestByPullID returns pull repo by given pull ID.
-func GetPullRequestByPullID(pullID int64) (*PullRequest, error) {
-	pr := new(PullRequest)
-	has, err := x.Where("pull_id=?", pullID).Get(pr)
-	if err != nil {
-		return nil, err
-	} else if !has {
-		return nil, ErrPullRequestNotExist{0, pullID, 0, 0, "", ""}
-	}
-	return pr, nil
 }
 
 // .____          ___.          .__
