@@ -24,6 +24,7 @@ github.com/go-macaron/i18n =
 github.com/go-macaron/session = 
 github.com/go-macaron/toolbox = 
 github.com/klauspost/compress = 
+github.com/klauspost/crc32 = 
 github.com/mattn/go-sqlite3 = commit:b808f01f66
 github.com/mcuadros/go-version = commit:d52711f8d6
 github.com/microcosm-cc/bluemonday = commit:85ba47ef2c
