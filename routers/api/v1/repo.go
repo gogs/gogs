@@ -161,6 +161,10 @@ func createRepo(ctx *middleware.Context, owner *models.User, opt api.CreateRepoO
 	ctx.JSON(201, ToApiRepository(owner, repo, api.Permission{true, true, true}))
 }
 
+func GetRepo(ctx *middleware.Context) {
+	ctx.JSON(200, ToApiRepository(ctx.Repo.Repository.Owner, ctx.Repo.Repository, api.Permission{}))
+}
+
 // https://github.com/gogits/go-gogs-client/wiki/Repositories#create
 func CreateRepo(ctx *middleware.Context, opt api.CreateRepoOption) {
 	// Shouldn't reach this condition, but just in case.
@@ -187,6 +191,28 @@ func CreateOrgRepo(ctx *middleware.Context, opt api.CreateRepoOption) {
 		return
 	}
 	createRepo(ctx, org, opt)
+}
+
+func ForkRepo(ctx *middleware.Context) {
+	forkedRepo, err := models.ForkRepository(ctx.User, ctx.Repo.Repository, ctx.Repo.Repository.Name, ctx.Repo.Repository.Description)
+	if err != nil {
+		if models.IsErrRepoAlreadyExist(err) ||
+		models.IsErrNameReserved(err) ||
+		models.IsErrNamePatternNotAllowed(err) {
+			ctx.APIError(422, "ForkRepository", err)
+		} else {
+			log.Error(4, "ForkRepository: %v", err)
+			if forkedRepo != nil {
+				if err = models.DeleteRepository(ctx.User.Id, forkedRepo.ID); err != nil {
+					log.Error(4, "DeleteRepository: %v", err)
+				}
+			}
+			ctx.Error(500)
+		}
+		return
+	}
+
+	ctx.JSON(201, ToApiRepository(ctx.User, forkedRepo, api.Permission{true, true, true}))
 }
 
 func MigrateRepo(ctx *middleware.Context, form auth.MigrateRepoForm) {
