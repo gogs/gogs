@@ -7,7 +7,7 @@
 package setting
 
 import (
-	_ "github.com/macaron-contrib/cache/memcache"
+	_ "github.com/go-macaron/cache/memcache"
 )
 
 func init() {
