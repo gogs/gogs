@@ -13,7 +13,7 @@ for f in /data/gogs/data /data/gogs/conf /data/gogs/log /data/git /data/ssh; do
 done
 
 # Bind linked docker container to localhost socket using socat
-USED_PORT="80:443:22"
+USED_PORT="3000:22"
 while read NAME ADDR PORT; do
     if test -z "$NAME$ADDR$PORT"; then
         continue
