@@ -199,7 +199,7 @@ func ForkRepo(ctx *middleware.Context) {
 		if models.IsErrRepoAlreadyExist(err) ||
 		models.IsErrNameReserved(err) ||
 		models.IsErrNamePatternNotAllowed(err) {
-			ctx.JSON(422, &base.ApiJsonErr{err.Error(), base.DOC_URL})
+			ctx.APIError(422, "ForkRepository", err)
 		} else {
 			log.Error(4, "ForkRepository: %v", err)
 			if forkedRepo != nil {
