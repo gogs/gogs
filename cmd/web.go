@@ -205,6 +205,8 @@ func runWeb(ctx *cli.Context) {
 
 			// Users.
 			m.Group("/users", func() {
+				m.Post("", bind(api.CreateUserOption{}), v1.CreateUser)
+
 				m.Get("/search", v1.SearchUsers)
 
 				m.Group("/:username", func() {
