@@ -14,12 +14,6 @@ import (
 	"github.com/gogits/gogs/modules/middleware"
 )
 
-const (
-	USERS     base.TplName = "admin/user/list"
-	USER_NEW  base.TplName = "admin/user/new"
-	USER_EDIT base.TplName = "admin/user/edit"
-)
-
 // ToApiUser converts user to API format.
 func ToApiUser(u *models.User) *api.User {
 	return &api.User{
@@ -105,19 +99,15 @@ func CreateUser(ctx *middleware.Context, opt api.CreateUserOption) {
 	if err := models.CreateUser(u); err != nil {
 		switch {
 		case models.IsErrUserAlreadyExist(err):
-			ctx.Data["Err_UserName"] = true
-			ctx.RenderWithErr(ctx.Tr("form.username_been_taken"), USER_NEW, &opt)
+			ctx.APIError(409, "CreateUser", err)
 		case models.IsErrEmailAlreadyUsed(err):
-			ctx.Data["Err_Email"] = true
-			ctx.RenderWithErr(ctx.Tr("form.email_been_used"), USER_NEW, &opt)
+			ctx.APIError(409, "CreateUser", err)
 		case models.IsErrNameReserved(err):
-			ctx.Data["Err_UserName"] = true
-			ctx.RenderWithErr(ctx.Tr("user.form.name_reserved", err.(models.ErrNameReserved).Name), USER_NEW, &opt)
+			ctx.APIError(409, "CreateUser", err)
 		case models.IsErrNamePatternNotAllowed(err):
-			ctx.Data["Err_UserName"] = true
-			ctx.RenderWithErr(ctx.Tr("user.form.name_pattern_not_allowed", err.(models.ErrNamePatternNotAllowed).Pattern), USER_NEW, &opt)
+			ctx.APIError(409, "CreateUser", err)
 		default:
-			ctx.Handle(500, "CreateUser", err)
+			ctx.APIError(500, "CreateUser", err)
 		}
 		return
 	}
