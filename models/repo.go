@@ -46,6 +46,9 @@ var (
 
 var (
 	Gitignores, Licenses, Readmes []string
+
+	// Maximum items per page in forks, watchers and stars of a repo
+	ItemsPerPage = 54
 )
 
 func LoadRepoConfig() {
@@ -102,6 +105,7 @@ func NewRepoContext() {
 	if ver.LessThan(reqVer) {
 		log.Fatal(4, "Gogs requires Git version greater or equal to 1.7.1")
 	}
+	log.Info("Git Version: %s", ver.String())
 
 	// Git requires setting user.name and user.email in order to commit changes.
 	for configKey, defaultValue := range map[string]string{"user.name": "Gogs", "user.email": "gogs@fake.local"} {
@@ -291,6 +295,35 @@ func (repo *Repository) DescriptionHtml() template.HTML {
 		return fmt.Sprintf(`<a href="%[1]s" target="_blank">%[1]s</a>`, s)
 	}
 	return template.HTML(DescPattern.ReplaceAllStringFunc(base.Sanitizer.Sanitize(repo.Description), sanitize))
+}
+
+func (repo *Repository) LocalCopyPath() string {
+	return path.Join(setting.RepoRootPath, "local", com.ToStr(repo.ID))
+}
+
+// UpdateLocalCopy makes sure the local copy of repository is up-to-date.
+func (repo *Repository) UpdateLocalCopy() error {
+	repoPath, err := repo.RepoPath()
+	if err != nil {
+		return err
+	}
+
+	localPath := repo.LocalCopyPath()
+	if !com.IsExist(localPath) {
+		_, stderr, err := process.Exec(
+			fmt.Sprintf("UpdateLocalCopy(git clone): %s", repoPath), "git", "clone", repoPath, localPath)
+		if err != nil {
+			return fmt.Errorf("git clone: %v - %s", err, stderr)
+		}
+	} else {
+		_, stderr, err := process.ExecDir(-1, localPath,
+			fmt.Sprintf("UpdateLocalCopy(git pull): %s", repoPath), "git", "pull")
+		if err != nil {
+			return fmt.Errorf("git pull: %v - %s", err, stderr)
+		}
+	}
+
+	return nil
 }
 
 func isRepositoryExist(e Engine, u *User, repoName string) (bool, error) {
@@ -630,7 +663,7 @@ func initRepository(e Engine, repoPath string, u *User, repo *Repository, opts C
 	}
 
 	tmpDir := filepath.Join(os.TempDir(), "gogs-"+repo.Name+"-"+com.ToStr(time.Now().Nanosecond()))
-	fmt.Println(tmpDir)
+
 	// Initialize repository according to user's choice.
 	if opts.AutoInit {
 		os.MkdirAll(tmpDir, os.ModePerm)
@@ -776,21 +809,16 @@ func CountPublicRepositories() int64 {
 	return countRepositories(false)
 }
 
-// GetRepositoriesWithUsers returns given number of repository objects with offset.
-// It also auto-gets corresponding users.
-func GetRepositoriesWithUsers(num, offset int) ([]*Repository, error) {
-	repos := make([]*Repository, 0, num)
-	if err := x.Limit(num, offset).Asc("id").Find(&repos); err != nil {
+// RepositoriesWithUsers returns number of repos in given page.
+func RepositoriesWithUsers(page, pageSize int) (_ []*Repository, err error) {
+	repos := make([]*Repository, 0, pageSize)
+	if err = x.Limit(pageSize, (page-1)*pageSize).Asc("id").Find(&repos); err != nil {
 		return nil, err
 	}
 
-	for _, repo := range repos {
-		repo.Owner = &User{Id: repo.OwnerID}
-		has, err := x.Get(repo.Owner)
-		if err != nil {
+	for i := range repos {
+		if err = repos[i].GetOwner(); err != nil {
 			return nil, err
-		} else if !has {
-			return nil, ErrUserNotExist{repo.OwnerID, ""}
 		}
 	}
 
@@ -955,13 +983,11 @@ func updateRepository(e Engine, repo *Repository, visibilityChanged bool) (err e
 		if err = repo.getOwner(e); err != nil {
 			return fmt.Errorf("getOwner: %v", err)
 		}
-		if !repo.Owner.IsOrganization() {
-			return nil
-		}
-
-		// Organization repository need to recalculate access table when visivility is changed.
-		if err = repo.recalculateTeamAccesses(e, 0); err != nil {
-			return fmt.Errorf("recalculateTeamAccesses: %v", err)
+		if repo.Owner.IsOrganization() {
+			// Organization repository need to recalculate access table when visivility is changed.
+			if err = repo.recalculateTeamAccesses(e, 0); err != nil {
+				return fmt.Errorf("recalculateTeamAccesses: %v", err)
+			}
 		}
 
 		forkRepos, err := getRepositoriesByForkID(e, repo.ID)
@@ -1231,7 +1257,7 @@ func SearchRepositoryByName(opt SearchOption) (repos []*Repository, err error) {
 		sess.Where("owner_id=?", opt.Uid)
 	}
 	if !opt.Private {
-		sess.And("is_private=false")
+		sess.And("is_private=?", false)
 	}
 	sess.And("lower_name like ?", "%"+opt.Keyword+"%").Find(&repos)
 	return repos, err
@@ -1574,15 +1600,19 @@ type Watch struct {
 	RepoID int64 `xorm:"UNIQUE(watch)"`
 }
 
+func isWatching(e Engine, uid, repoId int64) bool {
+	has, _ := e.Get(&Watch{0, uid, repoId})
+	return has
+}
+
 // IsWatching checks if user has watched given repository.
 func IsWatching(uid, repoId int64) bool {
-	has, _ := x.Get(&Watch{0, uid, repoId})
-	return has
+	return isWatching(x, uid, repoId)
 }
 
 func watchRepo(e Engine, uid, repoId int64, watch bool) (err error) {
 	if watch {
-		if IsWatching(uid, repoId) {
+		if isWatching(e, uid, repoId) {
 			return nil
 		}
 		if _, err = e.Insert(&Watch{RepoID: repoId, UserID: uid}); err != nil {
@@ -1590,7 +1620,7 @@ func watchRepo(e Engine, uid, repoId int64, watch bool) (err error) {
 		}
 		_, err = e.Exec("UPDATE `repository` SET num_watches = num_watches + 1 WHERE id = ?", repoId)
 	} else {
-		if !IsWatching(uid, repoId) {
+		if !isWatching(e, uid, repoId) {
 			return nil
 		}
 		if _, err = e.Delete(&Watch{0, uid, repoId}); err != nil {
@@ -1615,6 +1645,16 @@ func getWatchers(e Engine, rid int64) ([]*Watch, error) {
 // GetWatchers returns all watchers of given repository.
 func GetWatchers(rid int64) ([]*Watch, error) {
 	return getWatchers(x, rid)
+}
+
+// Repository.GetWatchers returns all users watching given repository.
+func (repo *Repository) GetWatchers(offset int) ([]*User, error) {
+	users := make([]*User, 0, 10)
+	offset = (offset - 1) * ItemsPerPage
+
+	err := x.Limit(ItemsPerPage, offset).Where("repo_id=?", repo.ID).Join("LEFT", "watch", "user.id=watch.user_id").Find(&users)
+
+	return users, err
 }
 
 func notifyWatchers(e Engine, act *Action) error {
@@ -1658,7 +1698,7 @@ func NotifyWatchers(act *Action) error {
 
 type Star struct {
 	ID     int64 `xorm:"pk autoincr"`
-	UID    int64 `xorm:"uid UNIQUE(s)"`
+	UID    int64 `xorm:"UNIQUE(s)"`
 	RepoID int64 `xorm:"UNIQUE(s)"`
 }
 
@@ -1692,6 +1732,15 @@ func StarRepo(uid, repoId int64, star bool) (err error) {
 func IsStaring(uid, repoId int64) bool {
 	has, _ := x.Get(&Star{0, uid, repoId})
 	return has
+}
+
+func (repo *Repository) GetStars(offset int) ([]*User, error) {
+	users := make([]*User, 0, 10)
+	offset = (offset - 1) * ItemsPerPage
+
+	err := x.Limit(ItemsPerPage, offset).Where("repo_id=?", repo.ID).Join("LEFT", "star", "user.id=star.uid").Find(&users)
+
+	return users, err
 }
 
 // ___________           __
@@ -1760,4 +1809,12 @@ func ForkRepository(u *User, oldRepo *Repository, name, desc string) (_ *Reposit
 	}
 
 	return repo, sess.Commit()
+}
+
+func (repo *Repository) GetForks() ([]*Repository, error) {
+	forks := make([]*Repository, 0, 10)
+
+	err := x.Find(&forks, &Repository{ForkID: repo.ID})
+
+	return forks, err
 }

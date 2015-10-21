@@ -82,10 +82,14 @@
                                     <dd><i class="fa fa{{if .Service.ShowRegistrationButton}}-check{{end}}-square-o"></i></dd>
                                     <dt>{{.i18n.Tr "admin.config.require_sign_in_view"}}</dt>
                                     <dd><i class="fa fa{{if .Service.RequireSignInView}}-check{{end}}-square-o"></i></dd>
-                                    <dt>{{.i18n.Tr "admin.config.mail_notify"}}</dt>
-                                    <dd><i class="fa fa{{if .Service.EnableNotifyMail}}-check{{end}}-square-o"></i></dd>
                                     <dt>{{.i18n.Tr "admin.config.enable_cache_avatar"}}</dt>
                                     <dd><i class="fa fa{{if .Service.EnableCacheAvatar}}-check{{end}}-square-o"></i></dd>
+                                    <dt>{{.i18n.Tr "admin.config.mail_notify"}}</dt>
+                                    <dd><i class="fa fa{{if .Service.EnableNotifyMail}}-check{{end}}-square-o"></i></dd>
+                                    <dt>{{.i18n.Tr "admin.config.disable_key_size_check"}}</dt>
+                                    <dd><i class="fa fa{{if .Service.DisableMinimumKeySizeCheck}}-check{{end}}-square-o"></i></dd>
+                                    <dt>{{.i18n.Tr "admin.config.enable_captcha"}}</dt>
+                                    <dd><i class="fa fa{{if .Service.EnableCaptcha}}-check{{end}}-square-o"></i></dd>
                                     <hr/>
                                     <dt>{{.i18n.Tr "admin.config.active_code_lives"}}</dt>
                                     <dd>{{.Service.ActiveCodeLives}} {{.i18n.Tr "tool.raw_minutes"}}</dd>
@@ -127,27 +131,6 @@
                                     <dd>{{.Mailer.Host}}</dd>
                                     <dt>{{.i18n.Tr "admin.config.mailer_user"}}</dt>
                                     <dd>{{.Mailer.User}}</dd>{{end}}
-                                </dl>
-                            </div>
-                        </div>
-                        <br>
-                        <div class="panel panel-radius">
-                            <div class="panel-header">
-                                <strong>{{.i18n.Tr "admin.config.oauth_config"}}</strong>
-                            </div>
-                            <div class="panel-body">
-                                <dl class="dl-horizontal admin-dl-horizontal">
-                                    <dt>{{.i18n.Tr "admin.config.oauth_enabled"}}</dt>
-                                    <dd><i class="fa fa{{if .OauthEnabled}}-check{{end}}-square-o"></i></dd>
-                                    {{if .OauthEnabled}}<dt>GitHub</dt>
-                                    <dd><i class="fa fa{{if .Oauther.GitHub}}-check{{end}}-square-o"></i></dd>
-                                    <dt>Google</dt>
-                                    <dd><i class="fa fa{{if .Oauther.Google}}-check{{end}}-square-o"></i></dd>
-                                    <dt>腾讯 QQ</dt>
-                                    <dd><i class="fa fa{{if .Oauther.Tencent}}-check{{end}}-square-o"></i></dd>
-                                    <dt>新浪微博</dt>
-                                    <dd><i class="fa fa{{if .Oauther.Weibo}}-check{{end}}-square-o"></i></dd>
-                                    {{end}}
                                 </dl>
                             </div>
                         </div>

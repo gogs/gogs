@@ -1,43 +1,28 @@
-#!/bin/bash -
-#
+#!/bin/sh
 
-if ! test -d /data/gogs
-then
-	mkdir -p /var/run/sshd
-	mkdir -p /data/gogs/data /data/gogs/conf /data/gogs/log /data/git
+# Cleanup SOCAT services and s6 event folder
+# On start and on shutdown in case container has been killed
+rm -rf $(find /app/gogs/docker/s6/ -name 'event')
+rm -rf /app/gogs/docker/s6/SOCAT_*
+
+# Create VOLUME subfolder
+for f in /data/gogs/data /data/gogs/conf /data/gogs/log /data/git /data/ssh; do
+    if ! test -d $f; then
+        mkdir -p $f
+    fi
+done
+
+# Bind linked docker container to localhost socket using socat
+env | sed -En 's|(.*)_PORT_([0-9]*)_TCP=tcp://(.*):(.*)|\1_\2 socat -ls TCP4-LISTEN:\2,fork,reuseaddr TCP4:\3:\4|p' | \
+while read NAME CMD; do
+    mkdir -p /app/gogs/docker/s6/SOCAT_$NAME
+    echo -e "#!/bin/sh\nexec $CMD" > /app/gogs/docker/s6/SOCAT_$NAME/run
+    chmod +x /app/gogs/docker/s6/SOCAT_$NAME/run
+done
+
+# Exec CMD or S6 by default if nothing present
+if [ $# -gt 0 ];then
+    exec "$@"
+else
+    exec /usr/bin/s6-svscan /app/gogs/docker/s6/
 fi
-
-if ! test -d /data/ssh
-then
-	mkdir /data/ssh
-	ssh-keygen -q -f /data/ssh/ssh_host_key -N '' -t rsa1
-	ssh-keygen -q -f /data/ssh/ssh_host_rsa_key -N '' -t rsa
-	ssh-keygen -q -f /data/ssh/ssh_host_dsa_key -N '' -t dsa
-	ssh-keygen -q -f /data/ssh/ssh_host_ecdsa_key -N '' -t ecdsa
-	ssh-keygen -q -f /data/ssh/ssh_host_ed25519_key -N '' -t ed25519
-	chown -R root:root /data/ssh/*
-	chmod 600 /data/ssh/*
-fi
-
-service ssh start
-
-ln -sf /data/gogs/log ./log
-ln -sf /data/gogs/data ./data
-ln -sf /data/git /home/git
-
-
-if ! test -d ~git/.ssh
-then
-  mkdir ~git/.ssh
-  chmod 700 ~git/.ssh
-fi
-
-if ! test -f ~git/.ssh/environment
-then
-  echo "GOGS_CUSTOM=/data/gogs" > ~git/.ssh/environment
-  chown git:git ~git/.ssh/environment
-  chown 600 ~git/.ssh/environment
-fi
-
-chown -R git:git /data .
-exec su git -c "./gogs web"

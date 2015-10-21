@@ -10,7 +10,6 @@ import (
 	api "github.com/gogits/go-gogs-client"
 
 	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/middleware"
 )
 
@@ -69,7 +68,7 @@ func GetUserInfo(ctx *middleware.Context) {
 		if models.IsErrUserNotExist(err) {
 			ctx.Error(404)
 		} else {
-			ctx.JSON(500, &base.ApiJsonErr{"GetUserByName: " + err.Error(), base.DOC_URL})
+			ctx.APIError(500, "GetUserByName", err)
 		}
 		return
 	}

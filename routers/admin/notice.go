@@ -5,12 +5,13 @@
 package admin
 
 import (
-	"github.com/Unknwon/com"
+	"github.com/Unknwon/paginater"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/middleware"
+	"github.com/gogits/gogs/modules/setting"
 )
 
 const (
@@ -22,20 +23,26 @@ func Notices(ctx *middleware.Context) {
 	ctx.Data["PageIsAdmin"] = true
 	ctx.Data["PageIsAdminNotices"] = true
 
-	pageNum := 50
-	p := pagination(ctx, models.CountNotices(), pageNum)
+	total := models.CountNotices()
+	page := ctx.QueryInt("page")
+	if page <= 1 {
+		page = 1
+	}
+	ctx.Data["Page"] = paginater.New(int(total), setting.AdminNoticePagingNum, page, 5)
 
-	notices, err := models.GetNotices(pageNum, (p-1)*pageNum)
+	notices, err := models.Notices(page, setting.AdminNoticePagingNum)
 	if err != nil {
-		ctx.Handle(500, "GetNotices", err)
+		ctx.Handle(500, "Notices", err)
 		return
 	}
 	ctx.Data["Notices"] = notices
+
+	ctx.Data["Total"] = total
 	ctx.HTML(200, NOTICES)
 }
 
 func DeleteNotice(ctx *middleware.Context) {
-	id := com.StrTo(ctx.Params(":id")).MustInt64()
+	id := ctx.ParamsInt64(":id")
 	if err := models.DeleteNotice(id); err != nil {
 		ctx.Handle(500, "DeleteNotice", err)
 		return

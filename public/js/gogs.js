@@ -147,11 +147,20 @@ function initInstall() {
 
     // Database type change detection.
     $("#db_type").change(function () {
-        var db_type = $('#db_type').val();
+        var sqlite_default = 'data/gogs.db';
+        var tidb_default = 'data/gogs_tidb';
+
+        var db_type = $(this).val();
         if (db_type === "SQLite3" || db_type === "TiDB") {
             $('#sql_settings').hide();
             $('#pgsql_settings').hide();
             $('#sqlite_settings').show();
+
+            if (db_type === "SQLite3" && $('#db_path').val() == tidb_default) {
+                $('#db_path').val(sqlite_default);
+            } else if (db_type === "TiDB" && $('#db_path').val() == sqlite_default) {
+                $('#db_path').val(tidb_default);
+            }
             return;
         }
 
@@ -176,6 +185,16 @@ function initInstall() {
     $('#offline-mode input').change(function () {
         if ($(this).is(':checked')) {
             $('#disable-gravatar').checkbox('check');
+        }
+    });
+    $('#disable-registration input').change(function () {
+        if ($(this).is(':checked')) {
+            $('#enable-captcha').checkbox('uncheck');
+        }
+    });
+    $('#enable-captcha input').change(function () {
+        if ($(this).is(':checked')) {
+            $('#disable-registration').checkbox('uncheck');
         }
     });
 }
@@ -219,6 +238,7 @@ function initRepository() {
         $('.edit-label-button').click(function () {
             $('#label-modal-id').val($(this).data('id'));
             $('.edit-label .new-label-input').val($(this).data('title'));
+            $('.edit-label .color-picker').val($(this).data('color'));
             $('.minicolors-swatch-color').css("background-color", $(this).data('color'));
             $('.edit-label.modal').modal({
                 onApprove: function () {
@@ -376,6 +396,22 @@ function initRepository() {
         });
     }
 
+    // Quick start
+    if ($('.repository.quickstart').length > 0) {
+        $('#repo-clone-ssh').click(function () {
+            $('.clone-url').text($(this).data('link'));
+            $('#repo-clone-url').val($(this).data('link'));
+            $(this).addClass('blue');
+            $('#repo-clone-https').removeClass('blue');
+        });
+        $('#repo-clone-https').click(function () {
+            $('.clone-url').text($(this).data('link'));
+            $('#repo-clone-url').val($(this).data('link'));
+            $(this).addClass('blue');
+            $('#repo-clone-ssh').removeClass('blue');
+        });
+    }
+
     // Pull request
     if ($('.repository.compare.pull').length > 0) {
         var $branch_dropdown = $('.choose.branch .dropdown');
@@ -440,6 +476,65 @@ function initWebhook() {
             $('.events.fields').hide();
         }
     });
+}
+
+
+function initAdmin() {
+    if ($('.admin').length == 0) {
+        return;
+    }
+
+    // New user
+    if ($('.admin.new.user').length > 0 ||
+        $('.admin.edit.user').length > 0) {
+        $('#login_type').change(function () {
+            if ($(this).val().substring(0, 1) == '0') {
+                $('#login_name').removeAttr('required');
+                $('.non-local').hide();
+                $('.local').show();
+                $('#user_name').focus();
+
+                if ($(this).data('password') == "required") {
+                    $('#password').attr('required', 'required');
+                }
+
+            } else {
+                $('#login_name').attr('required', 'required');
+                $('.non-local').show();
+                $('.local').hide();
+                $('#login_name').focus();
+
+                $('#password').removeAttr('required');
+            }
+        });
+    }
+
+
+    // New authentication
+    if ($('.admin.new.authentication').length > 0) {
+        $('#auth_type').change(function () {
+            $('.ldap').hide();
+            $('.dldap').hide();
+            $('.smtp').hide();
+            $('.pam').hide();
+
+            var auth_type = $(this).val();
+            switch (auth_type) {
+                case '2':     // LDAP
+                    $('.ldap').show();
+                    break;
+                case '3':     // SMTP
+                    $('.smtp').show();
+                    break;
+                case '4':     // PAM
+                    $('.pam').show();
+                    break;
+                case '5':     // LDAP
+                    $('.dldap').show();
+                    break;
+            }
+        });
+    }
 }
 
 $(document).ready(function () {
@@ -529,6 +624,24 @@ $(document).ready(function () {
         emojify.run($(this)[0]);
     });
 
+    // Clipboard JS
+    var clipboard = new Clipboard('.clipboard');
+    clipboard.on('success', function (e) {
+        e.clearSelection();
+
+        $('#' + e.trigger.getAttribute('id')).popup('destroy');
+        e.trigger.setAttribute('data-content', e.trigger.getAttribute('data-success'))
+        $('#' + e.trigger.getAttribute('id')).popup('show');
+        e.trigger.setAttribute('data-content', e.trigger.getAttribute('data-original'))
+    });
+
+    clipboard.on('error', function (e) {
+        $('#' + e.trigger.getAttribute('id')).popup('destroy');
+        e.trigger.setAttribute('data-content', e.trigger.getAttribute('data-error'))
+        $('#' + e.trigger.getAttribute('id')).popup('show');
+        e.trigger.setAttribute('data-content', e.trigger.getAttribute('data-original'))
+    });
+
     // Helpers.
     $('.delete-button').click(function () {
         var $this = $(this);
@@ -563,4 +676,5 @@ $(document).ready(function () {
     initOrganization();
     initUser();
     initWebhook();
+    initAdmin();
 });

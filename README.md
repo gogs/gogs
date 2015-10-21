@@ -3,25 +3,25 @@ Gogs - Go Git Service [![Build Status](https://travis-ci.org/gogits/gogs.svg?bra
 
 [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/gogits/gogs?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
-Gogs (Go Git Service) is a painless self-hosted Git service.
+![](public/img/gogs-large-resize.png)
 
-##### Current version: 0.6.9 Beta
+##### Current version: 0.6.16 Beta
 
 <table>
     <tr>
-        <td width="33%"><img src="http://gogs.io/imgs/screenshoots/1.png"></td>
-        <td width="33%"><img src="http://gogs.io/imgs/screenshoots/2.png"></td>
-        <td width="33%"><img src="http://gogs.io/imgs/screenshoots/3.png"></td>
+        <td width="33%"><img src="http://gogs.io/img/screenshots/1.png"></td>
+        <td width="33%"><img src="http://gogs.io/img/screenshots/2.png"></td>
+        <td width="33%"><img src="http://gogs.io/img/screenshots/3.png"></td>
     </tr>
     <tr>
-        <td><img src="http://gogs.io/imgs/screenshoots/4.png"></td>
-        <td><img src="http://gogs.io/imgs/screenshoots/5.png"></td>
-        <td><img src="http://gogs.io/imgs/screenshoots/6.png"></td>
+        <td><img src="http://gogs.io/img/screenshots/4.png"></td>
+        <td><img src="http://gogs.io/img/screenshots/5.png"></td>
+        <td><img src="http://gogs.io/img/screenshots/6.png"></td>
     </tr>
     <tr>
-        <td><img src="http://gogs.io/imgs/screenshoots/7.png"></td>
-        <td><img src="http://gogs.io/imgs/screenshoots/8.png"></td>
-        <td><img src="http://gogs.io/imgs/screenshoots/9.png"></td>
+        <td><img src="http://gogs.io/img/screenshots/7.png"></td>
+        <td><img src="http://gogs.io/img/screenshots/8.png"></td>
+        <td><img src="http://gogs.io/img/screenshots/9.png"></td>
     </tr>
 </table>
 
@@ -38,14 +38,14 @@ Gogs (Go Git Service) is a painless self-hosted Git service.
 
 ## Purpose
 
-The goal of this project is to make the easiest, fastest, and most painless way to set up a self-hosted Git service. With Go, this can be done via an independent binary distribution across **ALL platforms** that Go supports, including Linux, Mac OS X, and Windows.
+The goal of this project is to make the easiest, fastest, and most painless way of setting up a self-hosted Git service. With Go, this can be done with an independent binary distribution across **ALL platforms** that Go supports, including Linux, Mac OS X, and Windows.
 
 ## Overview
 
 - Please see the [Documentation](http://gogs.io/docs/intro/) for project design, known issues, and change log.
 - See the [Trello Board](https://trello.com/b/uxAoeLUl/gogs-go-git-service) to follow the develop team.
 - Want to try it before doing anything else? Do it [online](https://try.gogs.io/gogs/gogs) or go down to the **Installation -> Install from binary** section!
-- Having trouble? Get help with [Troubleshooting](http://gogs.io/docs/intro/troubleshooting.md).
+- Having trouble? Get help with [Troubleshooting](http://gogs.io/docs/intro/troubleshooting.html).
 - Want to help with localization? Check out the [guide](http://gogs.io/docs/features/i18n.html)!
 
 ## Features
@@ -61,8 +61,8 @@ The goal of this project is to make the easiest, fastest, and most painless way 
 - Gravatar and custom source support
 - Mail service
 - Administration panel
-- Supports MySQL, PostgreSQL and SQLite3
-- Social account login (GitHub, Google, QQ, Weibo)
+- CI integration: [Drone](https://github.com/drone/drone)
+- Supports MySQL, PostgreSQL, SQLite3 and [TiDB](https://github.com/pingcap/tidb)
 - Multi-language support ([14 languages](https://crowdin.com/project/gogs))
 
 ## System Requirements
@@ -81,9 +81,9 @@ Make sure you install the [prerequisites](http://gogs.io/docs/installation/) fir
 
 There are 5 ways to install Gogs:
 
-- [Install from binary](http://gogs.io/docs/installation/install_from_binary.md)
-- [Install from source](http://gogs.io/docs/installation/install_from_source.md)
-- [Install from packages](http://gogs.io/docs/installation/install_from_packages.md)
+- [Install from binary](http://gogs.io/docs/installation/install_from_binary.html)
+- [Install from source](http://gogs.io/docs/installation/install_from_source.html)
+- [Install from packages](http://gogs.io/docs/installation/install_from_packages.html)
 - [Ship with Docker](https://github.com/gogits/gogs/tree/master/docker)
 - [Install with Vagrant](https://github.com/geerlingguy/ansible-vagrant-examples/tree/master/gogs)
 
@@ -98,6 +98,13 @@ There are 5 ways to install Gogs:
 ### Screencasts
 
 - [Instalando Gogs no Ubuntu](http://blog.linuxpro.com.br/2015/08/14/instalando-gogs-no-ubuntu/) (Português)
+
+### Deploy to Cloud
+
+- [OpenShift](https://github.com/tkisme/gogs-openshift)
+- [Cloudron](https://cloudron.io/appstore.html#io.gogs.cloudronapp)
+- [Scaleway](https://www.scaleway.com/imagehub/gogs/)
+- [Portal](https://portaldemo.xyz/cloud/)
 
 ## Acknowledgments
 

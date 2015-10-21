@@ -189,7 +189,10 @@ func issueIndexTrimRight(c rune) bool {
 
 // updateIssuesCommit checks if issues are manipulated by commit message.
 func updateIssuesCommit(u *User, repo *Repository, repoUserName, repoName string, commits []*base.PushCommit) error {
-	for _, c := range commits {
+	// Commits are appended in the reverse order.
+	for i := len(commits) - 1; i >= 0; i-- {
+		c := commits[i]
+
 		refMarked := make(map[int64]bool)
 		for _, ref := range IssueReferenceKeywordsPat.FindAllString(c.Message, -1) {
 			ref = ref[strings.IndexByte(ref, byte(' '))+1:]
@@ -210,6 +213,9 @@ func updateIssuesCommit(u *User, repo *Repository, repoUserName, repoName string
 
 			issue, err := GetIssueByRef(ref)
 			if err != nil {
+				if IsErrIssueNotExist(err) {
+					continue
+				}
 				return err
 			}
 
@@ -220,7 +226,7 @@ func updateIssuesCommit(u *User, repo *Repository, repoUserName, repoName string
 
 			url := fmt.Sprintf("%s/%s/%s/commit/%s", setting.AppSubUrl, repoUserName, repoName, c.Sha1)
 			message := fmt.Sprintf(`<a href="%s">%s</a>`, url, c.Message)
-			if _, err = CreateComment(u, repo, issue, 0, 0, COMMENT_TYPE_COMMIT_REF, message, nil); err != nil {
+			if err = CreateRefComment(u, repo, issue, message, c.Sha1); err != nil {
 				return err
 			}
 		}
@@ -246,6 +252,9 @@ func updateIssuesCommit(u *User, repo *Repository, repoUserName, repoName string
 
 			issue, err := GetIssueByRef(ref)
 			if err != nil {
+				if IsErrIssueNotExist(err) {
+					continue
+				}
 				return err
 			}
 
@@ -283,6 +292,9 @@ func updateIssuesCommit(u *User, repo *Repository, repoUserName, repoName string
 
 			issue, err := GetIssueByRef(ref)
 			if err != nil {
+				if IsErrIssueNotExist(err) {
+					continue
+				}
 				return err
 			}
 
@@ -346,8 +358,12 @@ func CommitRepoAction(
 		}
 
 		if err = updateIssuesCommit(u, repo, repoUserName, repoName, commit.Commits); err != nil {
-			log.Debug("updateIssuesCommit: %v", err)
+			log.Error(4, "updateIssuesCommit: %v", err)
 		}
+	}
+
+	if len(commit.Commits) > setting.FeedMaxCommitNum {
+		commit.Commits = commit.Commits[:setting.FeedMaxCommitNum]
 	}
 
 	bs, err := json.Marshal(commit)

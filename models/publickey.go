@@ -153,7 +153,7 @@ func parseKeyString(content string) (string, error) {
 
 	if len(lines) == 1 {
 		// Parse openssh format
-		parts := strings.Fields(lines[0])
+		parts := strings.SplitN(lines[0], " ", 3)
 		switch len(parts) {
 		case 0:
 			return "", errors.New("Empty key")

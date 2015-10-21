@@ -1,54 +1,63 @@
-{{template "ng/base/head" .}}
-{{template "ng/base/header" .}}
-<div id="admin-wrapper">
-    <div id="setting-wrapper" class="main-wrapper">
-        <div id="admin-setting" class="container clear">
-            {{template "admin/nav" .}}
-            <div class="grid-4-5 left">
-                <div class="setting-content">
-                    {{template "ng/base/alert" .}}
-                    <div id="setting-content">
-                        <div class="panel panel-radius">
-                            <div class="panel-header">
-                                <strong>{{.i18n.Tr "admin.notices.system_notice_list"}}</strong>
-                            </div>
-                            <div class="panel-body admin-panel">
-                                <div class="admin-table">
-					                <table class="table table-striped">
-					                    <thead>
-					                        <tr>
-					                            <th>Id</th>
-					                            <th>{{.i18n.Tr "admin.notices.type"}}</th>
-					                            <th>{{.i18n.Tr "admin.notices.desc"}}</th>
-					                            <th>{{.i18n.Tr "admin.users.created"}}</th>
-					                            <th>{{.i18n.Tr "admin.notices.op"}}</th>
-					                        </tr>
-					                    </thead>
-					                    <tbody>
-					                        {{range .Notices}}
-					                        <tr>
-					                            <td>{{.Id}}</td>
-					                            <td>{{$.i18n.Tr .TrStr}}</td>
-					                            <td class="grid-1-2"><span>{{.Description}}</span></td>
-					                            <td>{{.Created}}</td>
-					                            <td><a href="{{AppSubUrl}}/admin/notices/{{.Id}}/delete"><i class="fa fa-trash-o text-red"></i></a></td>
-					                        </tr>
-					                        {{end}}
-					                    </tbody>
-					                </table>
-					                {{if or .LastPageNum .NextPageNum}}
-					                <ul class="pagination">
-					                    {{if .LastPageNum}}<li><a class="btn btn-medium btn-gray btn-radius" href="{{AppSubUrl}}/admin/notices?p={{.LastPageNum}}">&laquo; {{.i18n.Tr "admin.prev"}}</a></li>{{end}}
-					                    {{if .NextPageNum}}<li><a class="btn btn-medium btn-gray btn-radius" href="{{AppSubUrl}}/admin/notices?p={{.NextPageNum}}">&raquo; {{.i18n.Tr "admin.next"}}</a></li>{{end}}
-					                </ul>
-					                {{end}}
-				                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+{{template "base/head" .}}
+<div class="admin user">
+  <div class="ui container">
+    <div class="ui grid">
+      {{template "admin/navbar" .}}
+      <div class="twelve wide column content">
+        {{template "base/alert" .}}
+        <h4 class="ui top attached header">
+          {{.i18n.Tr "admin.notices.system_notice_list"}} ({{.i18n.Tr "admin.total" .Total}})
+        </h4>
+        <div class="ui attached table segment">
+          <table class="ui very basic striped table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>{{.i18n.Tr "admin.notices.type"}}</th>
+                <th>{{.i18n.Tr "admin.notices.desc"}}</th>
+                <th>{{.i18n.Tr "admin.users.created"}}</th>
+                <th>{{.i18n.Tr "admin.notices.op"}}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {{range .Notices}}
+              <tr>
+                <td>{{.Id}}</td>
+                <td>{{$.i18n.Tr .TrStr}}</td>
+                <td><span>{{.Description}}</span></td>
+                <td>{{.Created}}</td>
+                <td><a href="{{AppSubUrl}}/admin/notices/{{.Id}}/delete"><i class="fa fa-trash-o text-red"></i></a></td>
+              </tr>
+              {{end}}
+            </tbody>
+          </table>
+	      </div>
+
+	      {{with .Page}}
+        {{if gt .TotalPages 1}}
+        <div class="center page buttons">
+          <div class="ui borderless pagination menu">
+            <a class="{{if .IsFirst}}disabled{{end}} item" href="{{$.Link}}"><i class="angle double left icon"></i> {{$.i18n.Tr "admin.first_page"}}</a>
+            <a class="{{if not .HasPrevious}}disabled{{end}} item" {{if .HasPrevious}}href="{{$.Link}}?page={{.Previous}}"{{end}}>
+              <i class="left arrow icon"></i> {{$.i18n.Tr "repo.issues.previous"}}
+            </a>
+            {{range .Pages}}
+            {{if eq .Num -1}}
+            <a class="disabled item">...</a>
+            {{else}}
+            <a class="{{if .IsCurrent}}active{{end}} item" {{if not .IsCurrent}}href="{{$.Link}}?page={{.Num}}"{{end}}>{{.Num}}</a>
+            {{end}}
+            {{end}}
+            <a class="{{if not .HasNext}}disabled{{end}} item" {{if .HasNext}}href="{{$.Link}}?page={{.Next}}"{{end}}>
+              {{$.i18n.Tr "repo.issues.next"}}&nbsp;<i class="icon right arrow"></i>
+            </a>
+            <a class="{{if .IsLast}}disabled{{end}} item" href="{{$.Link}}?page={{.TotalPages}}">{{$.i18n.Tr "admin.last_page"}}&nbsp;<i class="angle double right icon"></i></a>
+          </div>
         </div>
+        {{end}}
+        {{end}}
+      </div>
     </div>
+  </div>
 </div>
-{{template "ng/base/footer" .}}
+{{template "base/footer" .}}

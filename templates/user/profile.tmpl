@@ -9,7 +9,7 @@
                 {{else if eq .SignedUserName .Owner.Name}}
                 <a href="http://gravatar.com/emails/" id="profile-avatar" original-title="{{.i18n.Tr "user.change_avatar"}}">
                 {{else}}
-                <a href="{{.Owner.AvatarLink}}?s=234" id="profile-avatar">
+                <a id="profile-avatar">
                 {{end}}
                     <img class="profile-avatar" src="{{.Owner.AvatarLink}}?s=234" title="{{.Owner.Name}}"/>
                 </a>

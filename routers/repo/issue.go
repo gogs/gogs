@@ -367,7 +367,7 @@ func NewIssuePost(ctx *middleware.Context, form auth.CreateIssueForm) {
 	mentions := base.MentionPattern.FindAllString(issue.Content, -1)
 	if len(mentions) > 0 {
 		for i := range mentions {
-			mentions[i] = mentions[i][1:]
+			mentions[i] = strings.TrimSpace(mentions[i])[1:]
 		}
 
 		if err := models.UpdateMentions(mentions, issue.ID); err != nil {
@@ -759,13 +759,56 @@ func NewComment(ctx *middleware.Context, form auth.CreateCommentForm) {
 		return
 	}
 
+	var comment *models.Comment
+	defer func() {
+		// Check if issue owner/poster changes the status of issue.
+		if (ctx.Repo.IsOwner() || (ctx.IsSigned && issue.IsPoster(ctx.User.Id))) &&
+			(form.Status == "reopen" || form.Status == "close") &&
+			!(issue.IsPull && issue.HasMerged) {
+
+			var pr *models.PullRequest
+
+			if form.Status == "reopen" {
+				pull := issue.PullRequest
+				pr, err = models.GetUnmergedPullRequest(pull.HeadRepoID, pull.BaseRepoID, pull.HeadBranch, pull.BaseBranch)
+				if err != nil {
+					if !models.IsErrPullRequestNotExist(err) {
+						ctx.Handle(500, "GetUnmergedPullRequest", err)
+						return
+					}
+				}
+			}
+
+			if pr != nil {
+				ctx.Flash.Info(ctx.Tr("repo.pulls.open_unmerged_pull_exists", pr.Index))
+			} else {
+				issue.Repo = ctx.Repo.Repository
+				if err = issue.ChangeStatus(ctx.User, form.Status == "close"); err != nil {
+					log.Error(4, "ChangeStatus: %v", err)
+				} else {
+					log.Trace("Issue[%d] status changed: %v", issue.ID, !issue.IsClosed)
+				}
+			}
+		}
+
+		// Redirect to comment hashtag if there is any actual content.
+		typeName := "issues"
+		if issue.IsPull {
+			typeName = "pulls"
+		}
+		if comment != nil {
+			ctx.Redirect(fmt.Sprintf("%s/%s/%d#%s", ctx.Repo.RepoLink, typeName, issue.Index, comment.HashTag()))
+		} else {
+			ctx.Redirect(fmt.Sprintf("%s/%s/%d", ctx.Repo.RepoLink, typeName, issue.Index))
+		}
+	}()
+
 	// Fix #321: Allow empty comments, as long as we have attachments.
 	if len(form.Content) == 0 && len(attachments) == 0 {
-		ctx.Redirect(fmt.Sprintf("%s/issues/%d", ctx.Repo.RepoLink, issue.Index))
 		return
 	}
 
-	comment, err := models.CreateIssueComment(ctx.User, ctx.Repo.Repository, issue, form.Content, attachments)
+	comment, err = models.CreateIssueComment(ctx.User, ctx.Repo.Repository, issue, form.Content, attachments)
 	if err != nil {
 		ctx.Handle(500, "CreateIssueComment", err)
 		return
@@ -809,20 +852,6 @@ func NewComment(ctx *middleware.Context, form auth.CreateCommentForm) {
 		}
 	}
 	log.Trace("Comment created: %d/%d/%d", ctx.Repo.Repository.ID, issue.ID, comment.ID)
-
-	// Check if issue owner/poster changes the status of issue.
-	if (ctx.Repo.IsOwner() || (ctx.IsSigned && issue.IsPoster(ctx.User.Id))) &&
-		(form.Status == "reopen" || form.Status == "close") &&
-		!(issue.IsPull && issue.HasMerged) {
-		issue.Repo = ctx.Repo.Repository
-		if err = issue.ChangeStatus(ctx.User, form.Status == "close"); err != nil {
-			ctx.Handle(500, "ChangeStatus", err)
-			return
-		}
-		log.Trace("Issue[%d] status changed: %v", issue.ID, !issue.IsClosed)
-	}
-
-	ctx.Redirect(fmt.Sprintf("%s/issues/%d#%s", ctx.Repo.RepoLink, issue.Index, comment.HashTag()))
 }
 
 func UpdateCommentContent(ctx *middleware.Context) {
@@ -902,6 +931,7 @@ func UpdateLabel(ctx *middleware.Context, form auth.CreateLabelForm) {
 		return
 	}
 
+	fmt.Println(form.Title, form.Color)
 	l.Name = form.Title
 	l.Color = form.Color
 	if err := models.UpdateLabel(l); err != nil {

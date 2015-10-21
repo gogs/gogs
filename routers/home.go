@@ -39,17 +39,13 @@ func Home(ctx *middleware.Context) {
 		return
 	}
 
-	if setting.OauthService != nil {
-		ctx.Data["OauthEnabled"] = true
-		ctx.Data["OauthService"] = setting.OauthService
-	}
-
 	ctx.Data["PageIsHome"] = true
 	ctx.HTML(200, HOME)
 }
 
 func Explore(ctx *middleware.Context) {
 	ctx.Data["Title"] = ctx.Tr("explore")
+	ctx.Data["PageIsExplore"] = true
 	ctx.Data["PageIsExploreRepositories"] = true
 
 	page := ctx.QueryInt("page")

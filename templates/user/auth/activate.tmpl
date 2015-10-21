@@ -1,39 +1,46 @@
-{{template "ng/base/head" .}}
-{{template "ng/base/header" .}}
-<div id="sign-wrapper">
-    <form class="form-align form panel sign-panel sign-form container panel-radius" id="sign-up-form" action="{{AppSubUrl}}/user/activate" method="post">
+{{template "base/head" .}}
+<div class="user activate">
+  <div class="ui middle very relaxed page grid">
+    <div class="column">
+      <form class="ui form" action="{{AppSubUrl}}/user/activate" method="post">
         {{.CsrfTokenHtml}}
-        <div class="panel-header">
-            <h2>{{.i18n.Tr "auth.active_your_account"}}</h2>
-        </div>
-        <div class="panel-content">
-        {{if .IsActivatePage}}
+        <h2 class="ui top attached header">
+          {{.i18n.Tr "auth.active_your_account"}}
+        </h2>
+        <div class="ui attached segment">
+          {{template "base/alert" .}}
+          {{if .IsActivatePage}}
             {{if .ServiceNotEnabled}}
-            <p>{{.i18n.Tr "auth.disable_register_mail"}}</p>
+              <p class="center">{{.i18n.Tr "auth.disable_register_mail"}}</p>
             {{else if .ResendLimited}}
-            <p>{{.i18n.Tr "auth.resent_limit_prompt"}}</p>
+              <p class="center">{{.i18n.Tr "auth.resent_limit_prompt"}}</p>
             {{else}}
-            <p>{{.i18n.Tr "auth.confirmation_mail_sent_prompt" .SignedUser.Email .Hours | Str2html}}</p>
-            <hr/>
-            <label></label>
-            <a class="btn btn-green btn-large btn-link btn-radius" href="http://{{Mail2Domain .SignedUser.Email}}">{{.i18n.Tr "auth.sign_in_email"}}</a>
+              <p>{{.i18n.Tr "auth.confirmation_mail_sent_prompt" .SignedUser.Email .Hours | Str2html}}</p>
+              <div class="ui divider"></div>
+              <div class="text right">
+                <a class="ui green button" href="http://{{Mail2Domain .SignedUser.Email}}">{{.i18n.Tr "auth.sign_in_to_account"}}</a>
+              </div>
             {{end}}
-        {{else}}
+          {{else}}
             {{if .IsSendRegisterMail}}
-            <p>{{.i18n.Tr "auth.confirmation_mail_sent_prompt" .Email .Hours | Str2html}}</p>
-            <hr/>
-            <label></label>
-            <a class="btn btn-green btn-large btn-link btn-radius" href="http://{{Mail2Domain .Email}}">{{.i18n.Tr "auth.sign_in_email"}}</a>
+              <p>{{.i18n.Tr "auth.confirmation_mail_sent_prompt" .Email .Hours | Str2html}}</p>
+              <div class="ui divider"></div>
+              <div class="text right">
+                <a class="ui green button" href="http://{{Mail2Domain .Email}}">{{.i18n.Tr "auth.sign_in_to_account"}}</a>
+              </div>
             {{else if .IsActivateFailed}}
-            <p>{{.i18n.Tr "auth.invalid_code"}}</p>
+              <p>{{.i18n.Tr "auth.invalid_code"}}</p>
             {{else}}
-            <p>{{.i18n.Tr "auth.has_unconfirmed_mail" .SignedUser.Name .SignedUser.Email | Str2html}}</p>
-            <hr/>
-            <label></label>
-            <button class="btn btn-blue btn-large btn-radius">{{.i18n.Tr "auth.resend_mail"}}</button>
+              <p>{{.i18n.Tr "auth.has_unconfirmed_mail" .SignedUser.Name .SignedUser.Email | Str2html}}</p>
+              <div class="ui divider"></div>
+              <div class="text right">
+                <button class="ui blue button">{{.i18n.Tr "auth.resend_mail"}}</button>
+              </div>
             {{end}}
-        {{end}}
+          {{end}}
         </div>
-    </form>
+      </form>
+    </div>
+  </div>  
 </div>
-{{template "ng/base/footer" .}}
+{{template "base/footer" .}}

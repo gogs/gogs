@@ -16,7 +16,7 @@ import (
 // Render an arbitrary Markdown document.
 func Markdown(ctx *middleware.Context, form apiv1.MarkdownForm) {
 	if ctx.HasApiError() {
-		ctx.JSON(422, base.ApiJsonErr{ctx.GetErrMsg(), base.DOC_URL})
+		ctx.APIError(422, "", ctx.GetErrMsg())
 		return
 	}
 
@@ -38,7 +38,7 @@ func Markdown(ctx *middleware.Context, form apiv1.MarkdownForm) {
 func MarkdownRaw(ctx *middleware.Context) {
 	body, err := ctx.Req.Body().Bytes()
 	if err != nil {
-		ctx.JSON(422, base.ApiJsonErr{err.Error(), base.DOC_URL})
+		ctx.APIError(422, "", err)
 		return
 	}
 	ctx.Write(base.RenderRawMarkdown(body, ""))

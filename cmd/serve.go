@@ -37,7 +37,7 @@ var CmdServ = cli.Command{
 }
 
 func setup(logPath string) {
-	setting.NewConfigContext()
+	setting.NewContext()
 	log.NewGitLogger(filepath.Join(setting.LogRootPath, logPath))
 
 	if setting.DisableSSH {
@@ -45,9 +45,9 @@ func setup(logPath string) {
 		os.Exit(1)
 	}
 
-	models.LoadModelsConfig()
+	models.LoadConfigs()
 
-	if setting.UseSQLite3 {
+	if setting.UseSQLite3 || setting.UseTiDB {
 		workDir, _ := setting.WorkDir()
 		os.Chdir(workDir)
 	}
@@ -219,9 +219,13 @@ func runServ(c *cli.Context) {
 	}
 
 	// Send deliver hook request.
-	resp, err := httplib.Head(setting.AppUrl + setting.AppSubUrl + repoUserName + "/" + repoName + "/hooks/trigger").Response()
+	reqURL := setting.AppUrl + repoUserName + "/" + repoName + "/hooks/trigger"
+	resp, err := httplib.Head(reqURL).Response()
 	if err == nil {
 		resp.Body.Close()
+		log.GitLogger.Trace("Trigger hook: %s", reqURL)
+	} else {
+		log.GitLogger.Error(2, "Fail to trigger hook: %v", err)
 	}
 
 	// Update user key activity.

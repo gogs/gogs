@@ -7,6 +7,7 @@
 package ldap
 
 import (
+	"crypto/tls"
 	"fmt"
 
 	"github.com/gogits/gogs/modules/ldap"
@@ -14,14 +15,16 @@ import (
 )
 
 // Basic LDAP authentication service
-type Ldapsource struct {
+type Source struct {
 	Name             string // canonical name (ie. corporate.ad)
 	Host             string // LDAP host
 	Port             int    // port number
 	UseSSL           bool   // Use SSL
+	SkipVerify       bool
 	BindDN           string // DN to bind with
 	BindPassword     string // Bind DN password
 	UserBase         string // Base search path for users
+	UserDN           string // Template for the DN of the user for simple auth
 	AttributeName    string // First name attribute
 	AttributeSurname string // Surname attribute
 	AttributeMail    string // E-mail attribute
@@ -30,7 +33,7 @@ type Ldapsource struct {
 	Enabled          bool   // if this source is disabled
 }
 
-func (ls Ldapsource) FindUserDN(name string) (string, bool) {
+func (ls *Source) FindUserDN(name string) (string, bool) {
 	l, err := ldapDial(ls)
 	if err != nil {
 		log.Error(4, "LDAP Connect error, %s:%v", ls.Host, err)
@@ -78,10 +81,19 @@ func (ls Ldapsource) FindUserDN(name string) (string, bool) {
 }
 
 // searchEntry : search an LDAP source if an entry (name, passwd) is valid and in the specific filter
-func (ls Ldapsource) SearchEntry(name, passwd string) (string, string, string, bool, bool) {
-	userDN, found := ls.FindUserDN(name)
-	if !found {
-		return "", "", "", false, false
+func (ls *Source) SearchEntry(name, passwd string, directBind bool) (string, string, string, bool, bool) {
+	var userDN string
+	if directBind {
+		log.Trace("LDAP will bind directly via UserDN template: %s", ls.UserDN)
+		userDN = fmt.Sprintf(ls.UserDN, name)
+	} else {
+		log.Trace("LDAP will use BindDN.")
+
+		var found bool
+		userDN, found = ls.FindUserDN(name)
+		if !found {
+			return "", "", "", false, false
+		}
 	}
 
 	l, err := ldapDial(ls)
@@ -90,7 +102,6 @@ func (ls Ldapsource) SearchEntry(name, passwd string) (string, string, string, b
 		ls.Enabled = false
 		return "", "", "", false, false
 	}
-
 	defer l.Close()
 
 	log.Trace("Binding with userDN: %s", userDN)
@@ -112,7 +123,12 @@ func (ls Ldapsource) SearchEntry(name, passwd string) (string, string, string, b
 		log.Error(4, "LDAP Search failed unexpectedly! (%v)", err)
 		return "", "", "", false, false
 	} else if len(sr.Entries) < 1 {
-		log.Error(4, "LDAP Search failed unexpectedly! (0 entries)")
+		if directBind {
+			log.Error(4, "User filter inhibited user login.")
+		} else {
+			log.Error(4, "LDAP Search failed unexpectedly! (0 entries)")
+		}
+
 		return "", "", "", false, false
 	}
 
@@ -140,10 +156,12 @@ func (ls Ldapsource) SearchEntry(name, passwd string) (string, string, string, b
 	return name_attr, sn_attr, mail_attr, admin_attr, true
 }
 
-func ldapDial(ls Ldapsource) (*ldap.Conn, error) {
+func ldapDial(ls *Source) (*ldap.Conn, error) {
 	if ls.UseSSL {
-		log.Debug("Using TLS for LDAP")
-		return ldap.DialTLS("tcp", fmt.Sprintf("%s:%d", ls.Host, ls.Port), nil)
+		log.Debug("Using TLS for LDAP without verifying: %v", ls.SkipVerify)
+		return ldap.DialTLS("tcp", fmt.Sprintf("%s:%d", ls.Host, ls.Port), &tls.Config{
+			InsecureSkipVerify: ls.SkipVerify,
+		})
 	} else {
 		return ldap.Dial("tcp", fmt.Sprintf("%s:%d", ls.Host, ls.Port))
 	}

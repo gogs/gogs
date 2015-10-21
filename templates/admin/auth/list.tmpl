@@ -1,59 +1,46 @@
-{{template "ng/base/head" .}}
-{{template "ng/base/header" .}}
-<div id="admin-wrapper">
-    <div id="setting-wrapper" class="main-wrapper">
-        <div id="admin-setting" class="container clear">
-            {{template "admin/nav" .}}
-            <div class="grid-4-5 left">
-                <div class="setting-content">
-                    {{template "ng/base/alert" .}}
-                    <div id="setting-content">
-                        <div class="panel panel-radius">
-                            <div class="panel-header">
-                                <strong>{{.i18n.Tr "admin.auths.auth_manage_panel"}}</strong>
-                            </div>
-                            <div class="panel-body admin-panel">
-								<a class="btn-blue btn-medium btn-link btn-radius" href="{{AppSubUrl}}/admin/auths/new">{{.i18n.Tr "admin.auths.new"}}</a>
-                                <div class="admin-table">
-					                <table class="table table-striped">
-					                    <thead>
-					                        <tr>
-					                            <th>Id</th>
-					                            <th>{{.i18n.Tr "admin.auths.name"}}</th>
-					                            <th>{{.i18n.Tr "admin.auths.type"}}</th>
-					                            <th>{{.i18n.Tr "admin.auths.enabled"}}</th>
-					                            <th>{{.i18n.Tr "admin.auths.updated"}}</th>
-					                            <th>{{.i18n.Tr "admin.users.created"}}</th>
-					                            <th>{{.i18n.Tr "admin.users.edit"}}</th>
-					                        </tr>
-					                    </thead>
-					                    <tbody>
-					                        {{range .Sources}}
-					                        <tr>
-					                            <td>{{.ID}}</td>
-					                            <td><a href="{{AppSubUrl}}/admin/auths/{{.ID}}">{{.Name}}</a></td>
-					                            <td>{{.TypeString}}</td>
-					                            <td><i class="fa fa{{if .IsActived}}-check{{end}}-square-o"></i></td>
-					                            <td><span title="{{DateFmtLong .Updated}}">{{DateFmtShort .Updated}}</span></td>
-					                            <td><span title="{{DateFmtLong .Created}}">{{DateFmtShort .Created}}</span></td>
-					                            <td><a href="{{AppSubUrl}}/admin/auths/{{.ID}}"><i class="fa fa-pencil-square-o"></i></a></td>
-					                        </tr>
-					                        {{end}}
-					                    </tbody>
-					                </table>
-					                {{if or .LastPageNum .NextPageNum}}
-					                <ul class="pagination">
-					                    {{if .LastPageNum}}<li><a class="btn btn-medium btn-gray btn-radius" href="{{AppSubUrl}}/admin/auths?p={{.LastPageNum}}">&laquo; Prev.</a></li>{{end}}
-					                    {{if .NextPageNum}}<li><a class="btn btn-medium btn-gray btn-radius" href="{{AppSubUrl}}/admin/auths?p={{.NextPageNum}}">&raquo; Next</a></li>{{end}}
-					                </ul>
-					                {{end}}
-				                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+{{template "base/head" .}}
+<div class="admin authentication">
+  <div class="ui container">
+    <div class="ui grid">
+      {{template "admin/navbar" .}}
+      <div class="twelve wide column content">
+        {{template "base/alert" .}}
+        <h4 class="ui top attached header">
+          {{.i18n.Tr "admin.auths.auth_manage_panel"}} ({{.i18n.Tr "admin.total" .Total}})
+          <div class="ui right">
+            <a class="ui blue tiny button" href="{{AppSubUrl}}/admin/auths/new">{{.i18n.Tr "admin.auths.new"}}</a>
+          </div>
+        </h4>
+        <div class="ui attached table segment">
+          <table class="ui very basic striped table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>{{.i18n.Tr "admin.auths.name"}}</th>
+                <th>{{.i18n.Tr "admin.auths.type"}}</th>
+                <th>{{.i18n.Tr "admin.auths.enabled"}}</th>
+                <th>{{.i18n.Tr "admin.auths.updated"}}</th>
+                <th>{{.i18n.Tr "admin.users.created"}}</th>
+                <th>{{.i18n.Tr "admin.users.edit"}}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {{range .Sources}}
+              <tr>
+                <td>{{.ID}}</td>
+                <td><a href="{{AppSubUrl}}/admin/auths/{{.ID}}">{{.Name}}</a></td>
+                <td>{{.TypeName}}</td>
+                <td><i class="fa fa{{if .IsActived}}-check{{end}}-square-o"></i></td>
+                <td><span class="poping up" data-content="{{DateFmtLong .Updated}}" data-variation="tiny">{{DateFmtShort .Updated}}</span></td>
+                <td><span class="poping up" data-content="{{DateFmtLong .Created}}" data-variation="tiny">{{DateFmtShort .Created}}</span></td>
+                <td><a href="{{AppSubUrl}}/admin/auths/{{.ID}}"><i class="fa fa-pencil-square-o"></i></a></td>
+              </tr>
+              {{end}}
+            </tbody>
+          </table>
+				</div>
+			</div>
     </div>
+  </div>
 </div>
-{{template "ng/base/footer" .}}
+{{template "base/footer" .}}

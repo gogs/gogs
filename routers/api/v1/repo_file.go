@@ -6,7 +6,6 @@ package v1
 
 import (
 	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/git"
 	"github.com/gogits/gogs/modules/middleware"
 	"github.com/gogits/gogs/routers/repo"
@@ -23,12 +22,12 @@ func GetRepoRawFile(ctx *middleware.Context) {
 		if err == git.ErrNotExist {
 			ctx.Error(404)
 		} else {
-			ctx.JSON(500, &base.ApiJsonErr{"GetBlobByPath: " + err.Error(), base.DOC_URL})
+			ctx.APIError(500, "GetBlobByPath", err)
 		}
 		return
 	}
 	if err = repo.ServeBlob(ctx, blob); err != nil {
-		ctx.JSON(500, &base.ApiJsonErr{"ServeBlob: " + err.Error(), base.DOC_URL})
+		ctx.APIError(500, "ServeBlob", err)
 	}
 }
 
@@ -36,7 +35,7 @@ func GetRepoArchive(ctx *middleware.Context) {
 	repoPath := models.RepoPath(ctx.Params(":username"), ctx.Params(":reponame"))
 	gitRepo, err := git.OpenRepository(repoPath)
 	if err != nil {
-		ctx.Handle(500, "RepoAssignment Invalid repo: "+repoPath, err)
+		ctx.APIError(500, "OpenRepository", err)
 		return
 	}
 	ctx.Repo.GitRepo = gitRepo

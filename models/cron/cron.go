@@ -15,7 +15,7 @@ import (
 
 var c = cron.New()
 
-func NewCronContext() {
+func NewContext() {
 	var (
 		entry *cron.Entry
 		err   error

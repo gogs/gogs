@@ -1,32 +1,38 @@
-{{template "ng/base/head" .}}
-{{template "ng/base/header" .}}
-<div id="sign-wrapper">
-    <form class="form-align form panel sign-panel sign-form container panel-radius" id="sign-up-form" action="{{AppSubUrl}}/user/forget_password" method="post">
+{{template "base/head" .}}
+<div class="user forgot password">
+  <div class="ui middle very relaxed page grid">
+    <div class="column">
+      <form class="ui form" action="{{.Link}}" method="post">
         {{.CsrfTokenHtml}}
-        <div class="panel-header">
-            <h2>{{.i18n.Tr "auth.forgot_password"}}</h2>
-        </div>
-        <div class="panel-content">
-            {{template "ng/base/alert" .}}
-            {{if .IsResetSent}}
+        <h2 class="ui top attached header">
+          {{.i18n.Tr "auth.forgot_password"}}
+        </h2>
+        <div class="ui attached segment">
+          {{template "base/alert" .}}
+          {{if .IsResetSent}}
             <p>{{.i18n.Tr "auth.confirmation_mail_sent_prompt" .Email .Hours | Str2html}}</p>
-            <hr/>
-            <label></label>
-            <a class="btn btn-green btn-large btn-link btn-radius" href="http://{{Mail2Domain .Email}}">{{.i18n.Tr "auth.sign_in_email"}}</a>
-            {{else if .IsResetRequest}}
-            <div class="field">
-                <label class="req" for="email">{{.i18n.Tr "email"}}</label>
-                <input class="ipt ipt-large ipt-radius {{if .Err_Email}}ipt-error{{end}}" id="email" name="email" type="email"  value="{{.email}}"required/>
+            <div class="ui divider"></div>
+            <div class="text right">
+              <a class="ui green button" href="http://{{Mail2Domain .Email}}">{{.i18n.Tr "auth.sign_in_to_account"}}</a>
             </div>
-            <hr/>
-            <label></label>
-            <button class="btn btn-blue btn-large btn-radius">{{.i18n.Tr "auth.send_reset_mail"}}</button>
-            {{else if .IsResetDisable}}
-            <p>{{.i18n.Tr "auth.disable_register_mail"}}</p>
-            {{else if .ResendLimited}}
-            <p>{{.i18n.Tr "auth.resent_limit_prompt"}}</p>
-            {{end}}
+          {{else if .IsResetRequest}}
+            <div class="required inline field {{if .Err_Email}}error{{end}}">
+                <label for="email">{{.i18n.Tr "email"}}</label>
+                <input id="email" name="email" type="email"  value="{{.Email}}" autofocus required>
+            </div>
+            <div class="ui divider"></div>
+            <div class="inline field">
+              <label></label>
+              <button class="ui blue button">{{.i18n.Tr "auth.send_reset_mail"}}</button>
+            </div>
+          {{else if .IsResetDisable}}
+            <p class="center">{{.i18n.Tr "auth.disable_register_mail"}}</p>
+          {{else if .ResendLimited}}
+            <p class="center">{{.i18n.Tr "auth.resent_limit_prompt"}}</p>
+          {{end}}
         </div>
-    </form>
+      </form>
+    </div>
+  </div>
 </div>
-{{template "ng/base/footer" .}}
+{{template "base/footer" .}}

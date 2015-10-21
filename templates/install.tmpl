@@ -8,6 +8,8 @@
 			<div class="ui attached segment">
         {{template "base/alert" .}}
 
+        <p>{{.i18n.Tr "install.docker_helper" "https://github.com/gogits/gogs/tree/master/docker" | Safe}}</p>
+
 			  <form class="ui form" action="{{AppSubUrl}}/install" method="post">
 			  	<!-- Dtabase Settings -->
 			  	<h4 class="ui dividing header">{{.i18n.Tr "install.db_title"}}</h4>
@@ -152,7 +154,7 @@
 
           <!-- Server and other services -->
           <div class="ui accordion optional field">
-            <div class="title">
+            <div class="title {{if .Err_Services}}text red{{end}}">
               <i class="icon dropdown"></i>
               {{.i18n.Tr "install.server_service_title"}}
             </div>
@@ -170,9 +172,15 @@
                 </div>
               </div>
               <div class="inline field">
-                <div class="ui checkbox">
+                <div class="ui checkbox" id="disable-registration">
                   <label class="poping up" data-content="{{.i18n.Tr "install.disable_registration_popup"}}"><strong>{{.i18n.Tr "install.disable_registration"}}</strong></label>
                   <input name="disable_registration" type="checkbox" {{if .disable_registration}}checked{{end}}>
+                </div>
+              </div>
+              <div class="inline field">
+                <div class="ui checkbox" id="enable-captcha">
+                  <label class="poping up" data-content="{{.i18n.Tr "install.enable_captcha_popup"}}"><strong>{{.i18n.Tr "install.enable_captcha"}}</strong></label>
+                  <input name="enable_captcha" type="checkbox" {{if .enable_captcha}}checked{{end}}>
                 </div>
               </div>
               <div class="inline field">

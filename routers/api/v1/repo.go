@@ -15,7 +15,6 @@ import (
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
-	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/middleware"
 	"github.com/gogits/gogs/modules/setting"
@@ -104,14 +103,14 @@ func SearchRepos(ctx *middleware.Context) {
 func ListMyRepos(ctx *middleware.Context) {
 	ownRepos, err := models.GetRepositories(ctx.User.Id, true)
 	if err != nil {
-		ctx.JSON(500, &base.ApiJsonErr{"GetRepositories: " + err.Error(), base.DOC_URL})
+		ctx.APIError(500, "GetRepositories", err)
 		return
 	}
 	numOwnRepos := len(ownRepos)
 
 	accessibleRepos, err := ctx.User.GetAccessibleRepositories()
 	if err != nil {
-		ctx.JSON(500, &base.ApiJsonErr{"GetAccessibleRepositories: " + err.Error(), base.DOC_URL})
+		ctx.APIError(500, "GetAccessibleRepositories", err)
 		return
 	}
 
@@ -147,15 +146,14 @@ func createRepo(ctx *middleware.Context, owner *models.User, opt api.CreateRepoO
 		if models.IsErrRepoAlreadyExist(err) ||
 			models.IsErrNameReserved(err) ||
 			models.IsErrNamePatternNotAllowed(err) {
-			ctx.JSON(422, &base.ApiJsonErr{err.Error(), base.DOC_URL})
+			ctx.APIError(422, "", err)
 		} else {
-			log.Error(4, "CreateRepository: %v", err)
 			if repo != nil {
 				if err = models.DeleteRepository(ctx.User.Id, repo.ID); err != nil {
 					log.Error(4, "DeleteRepository: %v", err)
 				}
 			}
-			ctx.Error(500)
+			ctx.APIError(500, "CreateRepository", err)
 		}
 		return
 	}
@@ -171,7 +169,7 @@ func GetRepo(ctx *middleware.Context) {
 func CreateRepo(ctx *middleware.Context, opt api.CreateRepoOption) {
 	// Shouldn't reach this condition, but just in case.
 	if ctx.User.IsOrganization() {
-		ctx.JSON(422, "not allowed creating repository for organization")
+		ctx.APIError(422, "", "not allowed creating repository for organization")
 		return
 	}
 	createRepo(ctx, ctx.User, opt)
@@ -181,15 +179,15 @@ func CreateOrgRepo(ctx *middleware.Context, opt api.CreateRepoOption) {
 	org, err := models.GetOrgByName(ctx.Params(":org"))
 	if err != nil {
 		if models.IsErrUserNotExist(err) {
-			ctx.Error(404)
+			ctx.APIError(422, "", err)
 		} else {
-			ctx.Error(500)
+			ctx.APIError(500, "GetOrgByName", err)
 		}
 		return
 	}
 
 	if !org.IsOwnedBy(ctx.User.Id) {
-		ctx.Error(403)
+		ctx.APIError(403, "", "Given user is not owner of organization.")
 		return
 	}
 	createRepo(ctx, org, opt)
@@ -224,9 +222,9 @@ func MigrateRepo(ctx *middleware.Context, form auth.MigrateRepoForm) {
 		org, err := models.GetUserByID(form.Uid)
 		if err != nil {
 			if models.IsErrUserNotExist(err) {
-				ctx.HandleAPI(422, err)
+				ctx.APIError(422, "", err)
 			} else {
-				ctx.HandleAPI(500, err)
+				ctx.APIError(500, "GetUserByID", err)
 			}
 			return
 		}
@@ -234,14 +232,14 @@ func MigrateRepo(ctx *middleware.Context, form auth.MigrateRepoForm) {
 	}
 
 	if ctx.HasError() {
-		ctx.HandleAPI(422, ctx.GetErrMsg())
+		ctx.APIError(422, "", ctx.GetErrMsg())
 		return
 	}
 
 	if ctxUser.IsOrganization() {
 		// Check ownership of organization.
 		if !ctxUser.IsOwnedBy(ctx.User.Id) {
-			ctx.HandleAPI(403, "Given user is not owner of organization.")
+			ctx.APIError(403, "", "Given user is not owner of organization.")
 			return
 		}
 	}
@@ -253,7 +251,7 @@ func MigrateRepo(ctx *middleware.Context, form auth.MigrateRepoForm) {
 		strings.HasPrefix(form.CloneAddr, "git://") {
 		u, err := url.Parse(form.CloneAddr)
 		if err != nil {
-			ctx.HandleAPI(422, err)
+			ctx.APIError(422, "", err)
 			return
 		}
 		if len(form.AuthUsername) > 0 || len(form.AuthPassword) > 0 {
@@ -261,7 +259,7 @@ func MigrateRepo(ctx *middleware.Context, form auth.MigrateRepoForm) {
 		}
 		remoteAddr = u.String()
 	} else if !com.IsDir(remoteAddr) {
-		ctx.HandleAPI(422, "Invalid local path, it does not exist or not a directory.")
+		ctx.APIError(422, "", "Invalid local path, it does not exist or not a directory.")
 		return
 	}
 
@@ -272,10 +270,45 @@ func MigrateRepo(ctx *middleware.Context, form auth.MigrateRepoForm) {
 				log.Error(4, "DeleteRepository: %v", errDelete)
 			}
 		}
-		ctx.HandleAPI(500, err)
+		ctx.APIError(500, "MigrateRepository", err)
 		return
 	}
 
 	log.Trace("Repository migrated: %s/%s", ctxUser.Name, form.RepoName)
 	ctx.JSON(201, ToApiRepository(ctxUser, repo, api.Permission{true, true, true}))
+}
+
+func DeleteRepo(ctx *middleware.Context) {
+	user, err := models.GetUserByName(ctx.Params(":username"))
+	if err != nil {
+		if models.IsErrUserNotExist(err) {
+			ctx.APIError(422, "", err)
+		} else {
+			ctx.APIError(500, "GetUserByName", err)
+		}
+		return
+	}
+
+	repo, err := models.GetRepositoryByName(user.Id, ctx.Params(":reponame"))
+	if err != nil {
+		if models.IsErrRepoNotExist(err) {
+			ctx.Error(404)
+		} else {
+			ctx.APIError(500, "GetRepositoryByName", err)
+		}
+		return
+	}
+
+	if user.IsOrganization() && !user.IsOwnedBy(ctx.User.Id) {
+		ctx.APIError(403, "", "Given user is not owner of organization.")
+		return
+	}
+
+	if err := models.DeleteRepository(user.Id, repo.ID); err != nil {
+		ctx.APIError(500, "DeleteRepository", err)
+		return
+	}
+
+	log.Trace("Repository deleted: %s/%s", user.Name, repo.Name)
+	ctx.Status(204)
 }

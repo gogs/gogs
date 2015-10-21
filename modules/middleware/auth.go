@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"net/url"
 
-	"github.com/Unknwon/macaron"
-	"github.com/macaron-contrib/csrf"
+	"github.com/go-macaron/csrf"
+	"gopkg.in/macaron.v1"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
@@ -27,6 +27,10 @@ type ToggleOptions struct {
 
 // AutoSignIn reads cookie and try to auto-login.
 func AutoSignIn(ctx *Context) (bool, error) {
+	if !models.HasEngine {
+		return false, nil
+	}
+
 	uname := ctx.GetCookie(setting.CookieUserName)
 	if len(uname) == 0 {
 		return false, nil
@@ -91,7 +95,7 @@ func Toggle(options *ToggleOptions) macaron.Handler {
 			if !ctx.IsSigned {
 				// Restrict API calls with error message.
 				if auth.IsAPIPath(ctx.Req.URL.Path) {
-					ctx.HandleAPI(403, "Only signed in user is allowed to call APIs.")
+					ctx.APIError(403, "", "Only signed in user is allowed to call APIs.")
 					return
 				}
 

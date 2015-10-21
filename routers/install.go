@@ -13,9 +13,9 @@ import (
 	"strings"
 
 	"github.com/Unknwon/com"
-	"github.com/Unknwon/macaron"
 	"github.com/go-xorm/xorm"
 	"gopkg.in/ini.v1"
+	"gopkg.in/macaron.v1"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/models/cron"
@@ -25,7 +25,6 @@ import (
 	"github.com/gogits/gogs/modules/mailer"
 	"github.com/gogits/gogs/modules/middleware"
 	"github.com/gogits/gogs/modules/setting"
-	"github.com/gogits/gogs/modules/social"
 	"github.com/gogits/gogs/modules/user"
 )
 
@@ -45,16 +44,15 @@ func checkRunMode() {
 
 func NewServices() {
 	setting.NewServices()
-	social.NewOauthService()
+	mailer.NewContext()
 }
 
 // GlobalInit is for global configuration reload-able.
 func GlobalInit() {
-	setting.NewConfigContext()
+	setting.NewContext()
 	log.Trace("Custom path: %s", setting.CustomPath)
 	log.Trace("Log path: %s", setting.LogRootPath)
-	mailer.NewMailerContext()
-	models.LoadModelsConfig()
+	models.LoadConfigs()
 	NewServices()
 
 	if setting.InstallLock {
@@ -66,12 +64,15 @@ func GlobalInit() {
 		}
 
 		models.HasEngine = true
-		cron.NewCronContext()
+		cron.NewContext()
 		models.InitDeliverHooks()
 		log.NewGitLogger(path.Join(setting.LogRootPath, "http.log"))
 	}
 	if models.EnableSQLite3 {
 		log.Info("SQLite3 Supported")
+	}
+	if models.EnableTidb {
+		log.Info("TiDB Supported")
 	}
 	checkRunMode()
 }
@@ -104,10 +105,18 @@ func Install(ctx *middleware.Context) {
 	form.DbName = models.DbCfg.Name
 	form.DbPath = models.DbCfg.Path
 
-	if models.EnableSQLite3 {
-		ctx.Data["CurDbOption"] = "SQLite3" // Default when enabled.
-	} else {
-		ctx.Data["CurDbOption"] = "MySQL"
+	ctx.Data["CurDbOption"] = "MySQL"
+	switch models.DbCfg.Type {
+	case "postgres":
+		ctx.Data["CurDbOption"] = "PostgreSQL"
+	case "sqlite3":
+		if models.EnableSQLite3 {
+			ctx.Data["CurDbOption"] = "SQLite3"
+		}
+	case "tidb":
+		if models.EnableTidb {
+			ctx.Data["CurDbOption"] = "TiDB"
+		}
 	}
 
 	// Application general settings
@@ -140,6 +149,7 @@ func Install(ctx *middleware.Context) {
 	form.OfflineMode = setting.OfflineMode
 	form.DisableGravatar = setting.DisableGravatar
 	form.DisableRegistration = setting.Service.DisableRegistration
+	form.EnableCaptcha = setting.Service.EnableCaptcha
 	form.RequireSignInView = setting.Service.RequireSignInView
 
 	auth.AssignForm(form, ctx.Data)
@@ -179,9 +189,15 @@ func InstallPost(ctx *middleware.Context, form auth.InstallForm) {
 	models.DbCfg.SSLMode = form.SSLMode
 	models.DbCfg.Path = form.DbPath
 
-	if models.DbCfg.Type == "sqlite3" && len(models.DbCfg.Path) == 0 {
+	if (models.DbCfg.Type == "sqlite3" || models.DbCfg.Type == "tidb") &&
+		len(models.DbCfg.Path) == 0 {
 		ctx.Data["Err_DbPath"] = true
-		ctx.RenderWithErr(ctx.Tr("install.err_empty_sqlite_path"), INSTALL, &form)
+		ctx.RenderWithErr(ctx.Tr("install.err_empty_db_path"), INSTALL, &form)
+		return
+	} else if models.DbCfg.Type == "tidb" &&
+		strings.ContainsAny(path.Base(models.DbCfg.Path), ".-") {
+		ctx.Data["Err_DbPath"] = true
+		ctx.RenderWithErr(ctx.Tr("install.err_invalid_tidb_name"), INSTALL, &form)
 		return
 	}
 
@@ -213,7 +229,21 @@ func InstallPost(ctx *middleware.Context, form auth.InstallForm) {
 		return
 	}
 
+	// Check logic loophole between disable self-registration and no admin account.
+	if form.DisableRegistration && len(form.AdminName) == 0 {
+		ctx.Data["Err_Services"] = true
+		ctx.Data["Err_Admin"] = true
+		ctx.RenderWithErr(ctx.Tr("install.no_admin_and_disable_registration"), INSTALL, form)
+		return
+	}
+
 	// Check admin password.
+	if len(form.AdminName) > 0 && len(form.AdminPasswd) == 0 {
+		ctx.Data["Err_Admin"] = true
+		ctx.Data["Err_AdminPasswd"] = true
+		ctx.RenderWithErr(ctx.Tr("install.err_empty_admin_password"), INSTALL, form)
+		return
+	}
 	if form.AdminPasswd != form.AdminConfirmPasswd {
 		ctx.Data["Err_Admin"] = true
 		ctx.Data["Err_AdminPasswd"] = true
@@ -270,6 +300,7 @@ func InstallPost(ctx *middleware.Context, form auth.InstallForm) {
 	cfg.Section("server").Key("OFFLINE_MODE").SetValue(com.ToStr(form.OfflineMode))
 	cfg.Section("picture").Key("DISABLE_GRAVATAR").SetValue(com.ToStr(form.DisableGravatar))
 	cfg.Section("service").Key("DISABLE_REGISTRATION").SetValue(com.ToStr(form.DisableRegistration))
+	cfg.Section("service").Key("ENABLE_CAPTCHA").SetValue(com.ToStr(form.EnableCaptcha))
 	cfg.Section("service").Key("REQUIRE_SIGNIN_VIEW").SetValue(com.ToStr(form.RequireSignInView))
 
 	cfg.Section("").Key("RUN_MODE").SetValue("prod")

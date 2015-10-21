@@ -8,9 +8,11 @@ package models
 
 import (
 	_ "github.com/go-xorm/tidb"
+	"github.com/ngaut/log"
 	_ "github.com/pingcap/tidb"
 )
 
 func init() {
 	EnableTidb = true
+	log.SetLevelByString("error")
 }

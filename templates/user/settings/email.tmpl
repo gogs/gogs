@@ -1,60 +1,70 @@
-{{template "ng/base/head" .}}
-{{template "ng/base/header" .}}
-<div id="setting-wrapper" class="main-wrapper">
-    <div id="user-profile-setting" class="container clear">
-        {{template "user/settings/nav" .}}
-        <div class="grid-4-5 left">
-            <div class="setting-content">
-                {{template "ng/base/alert" .}}
-                <div id="user-email-setting-content">
-                    <div id="user-email-panel" class="panel panel-radius">
-                        <div class="panel-header">
-                             <strong>{{.i18n.Tr "settings.manage_emails"}}</strong>
-                        </div>
-                        <ul class="panel-body setting-list">
-                            <li>{{.i18n.Tr "settings.email_desc"}}</li>
-                            {{range .Emails}}
-                            <li class="email clear">
-                                <div class="email-content left">
-									<p><strong>{{.Email}}</strong> {{if .IsPrimary}} <span class="text-red">{{$.i18n.Tr "settings.primary"}}</span> {{end}}</p>
-							   </div>
-							   {{if not .IsPrimary}}
-							   {{if .IsActivated}}
-							   <form action="{{AppSubUrl}}/user/settings/email" method="post">
-                                    {{$.CsrfTokenHtml}}
-                                    <input name="_method" type="hidden" value="PRIMARY">
-                                    <input name="id" type="hidden" value="{{.Id}}">
-                                    <button class="right email-btn btn btn-small btn-green btn-radius">{{$.i18n.Tr "settings.primary_email"}}</button>
-                                </form>
-								{{end}}
-                                <form action="{{AppSubUrl}}/user/settings/email" method="post">
-                                    {{$.CsrfTokenHtml}}
-                                    <input name="_method" type="hidden" value="DELETE">
-                                    <input name="id" type="hidden" value="{{.Id}}">
-                                    <button class="right email-btn btn btn-small btn-red btn-radius" style="margin-right: 5px">{{$.i18n.Tr "settings.delete_email"}}</button>
-                                </form>
-							   {{end}}
-                            </li>
-                            {{end}}
-                        </ul>
-                        <div class="panel-header">
-                             <strong>{{.i18n.Tr "settings.add_new_email"}}</strong>
-                        </div>
-                        <form class="form form-align panel-body" id="add-email-form" action="{{AppSubUrl}}/user/settings/email" method="post">
-                            {{.CsrfTokenHtml}}                            
-                            <p class="field">
-                                <label class="req" for="email">{{.i18n.Tr "email"}}</label>
-                                <input class="ipt ipt-large ipt-radius" id="email" name="email" type="text" required />
-                            </p>
-                            <p class="field">
-                                <label></label>
-                                <button class="btn btn-green btn-large btn-radius" id="email-add-btn">{{.i18n.Tr "settings.add_email"}}</button>
-                            </p>
-                        </form>
-                    </div>                    
-                </div>
+{{template "base/head" .}}
+<div class="user settings emails">
+  <div class="ui container">
+    <div class="ui grid">
+      {{template "user/settings/navbar" .}}
+      <div class="twelve wide column content">
+        {{template "base/alert" .}}
+        <h4 class="ui top attached header">
+          {{.i18n.Tr "settings.manage_emails"}}
+        </h4>
+        <div class="ui attached segment">
+          <div class="ui email list">
+            <div class="item">
+              {{.i18n.Tr "settings.email_desc"}}
             </div>
+            {{range .Emails}}
+            <div class="item ui grid">
+              <div class="column">
+                <strong>{{.Email}}</strong> 
+                {{if .IsPrimary}}<span class="text red">{{$.i18n.Tr "settings.primary"}}</span>{{end}}
+                {{if not .IsPrimary}}
+                <div class="ui right">
+                  <button class="ui red tiny button delete-button" data-url="{{$.Link}}/delete" data-id="{{.ID}}">
+                    {{$.i18n.Tr "settings.delete_key"}}
+                  </button>
+                </div>
+                {{if .IsActivated}}
+                <div class="ui right">
+                  <form action="{{$.Link}}" method="post">
+                    {{$.CsrfTokenHtml}}
+                    <input name="_method" type="hidden" value="PRIMARY">
+                    <input name="id" type="hidden" value="{{.ID}}">
+                    <button class="ui green tiny button">{{$.i18n.Tr "settings.primary_email"}}</button>
+                  </form>
+                </div>
+                {{end}}
+                {{end}}
+              </div>
+            </div>
+            {{end}}
+          </div>        
         </div>
+        <div class="ui attached bottom segment">
+          <form class="ui form" action="{{.Link}}" method="post">
+            {{.CsrfTokenHtml}}                            
+            <div class="required field {{if .Err_Email}}error{{end}}">
+              <label for="email">{{.i18n.Tr "settings.add_new_email"}}</label>
+              <input id="email" name="email" type="email" autofocus required>
+            </div>
+            <button class="ui green button">
+              {{.i18n.Tr "settings.add_email"}}
+            </button>
+          </form> 
+        </div>
+      </div>
     </div>
+  </div>
 </div>
-{{template "ng/base/footer" .}}
+
+<div class="ui small basic delete modal">
+  <div class="ui icon header">
+    <i class="trash icon"></i>
+    {{.i18n.Tr "settings.email_deletion"}}
+  </div>
+  <div class="content">
+    <p>{{.i18n.Tr "settings.email_deletion_desc"}}</p>
+  </div>
+  {{template "base/delete_modal_actions" .}}
+</div>
+{{template "base/footer" .}}

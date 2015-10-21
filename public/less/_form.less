@@ -46,6 +46,24 @@
 	}
 }
 
+.user.activate,
+.user.forgot.password,
+.user.reset.password,
+.user.signin,
+.user.signup {
+	@input-padding: 200px!important;
+	#create-page-form;
+	form {
+		width: 700px!important;
+		.header {
+			padding-left: @input-padding+30px;
+		}
+		.inline.field > label {
+			width: @input-padding;
+		}
+	}
+}
+
 .repository {
 	&.new.repo,
 	&.new.migrate,

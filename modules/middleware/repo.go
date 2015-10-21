@@ -9,12 +9,11 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/Unknwon/macaron"
 	"github.com/mcuadros/go-version"
 	"github.com/mssola/user_agent"
+	"gopkg.in/macaron.v1"
 
 	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/git"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/setting"
@@ -44,7 +43,7 @@ func ApiRepoAssignment() macaron.Handler {
 				if models.IsErrUserNotExist(err) {
 					ctx.Error(404)
 				} else {
-					ctx.JSON(500, &base.ApiJsonErr{"GetUserByName: " + err.Error(), base.DOC_URL})
+					ctx.APIError(500, "GetUserByName", err)
 				}
 				return
 			}
@@ -57,17 +56,17 @@ func ApiRepoAssignment() macaron.Handler {
 			if models.IsErrRepoNotExist(err) {
 				ctx.Error(404)
 			} else {
-				ctx.JSON(500, &base.ApiJsonErr{"GetRepositoryByName: " + err.Error(), base.DOC_URL})
+				ctx.APIError(500, "GetRepositoryByName", err)
 			}
 			return
 		} else if err = repo.GetOwner(); err != nil {
-			ctx.JSON(500, &base.ApiJsonErr{"GetOwner: " + err.Error(), base.DOC_URL})
+			ctx.APIError(500, "GetOwner", err)
 			return
 		}
 
 		mode, err := models.AccessLevel(ctx.User, repo)
 		if err != nil {
-			ctx.JSON(500, &base.ApiJsonErr{"AccessLevel: " + err.Error(), base.DOC_URL})
+			ctx.APIError(500, "AccessLevel", err)
 			return
 		}
 
@@ -347,7 +346,12 @@ func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 		ctx.Data["CloneLink"] = ctx.Repo.CloneLink
 
 		if ctx.Query("go-get") == "1" {
-			ctx.Data["GoGetImport"] = fmt.Sprintf("%s/%s/%s", setting.Domain, u.LowerName, repo.LowerName)
+			ctx.Data["GoGetImport"] = fmt.Sprintf("%s/%s/%s", setting.Domain, u.Name, repo.Name)
+		}
+
+		if ctx.IsSigned {
+			ctx.Data["IsWatchingRepo"] = models.IsWatching(ctx.User.Id, repo.ID)
+			ctx.Data["IsStaringRepo"] = models.IsStaring(ctx.User.Id, repo.ID)
 		}
 
 		// repo is bare and display enable
@@ -356,14 +360,12 @@ func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 			// NOTE: to prevent templating error
 			ctx.Data["BranchName"] = ""
 			if displayBare {
+				if !ctx.Repo.IsAdmin() {
+					ctx.Flash.Info(ctx.Tr("repo.repo_is_empty"), true)
+				}
 				ctx.HTML(200, "repo/bare")
 			}
 			return
-		}
-
-		if ctx.IsSigned {
-			ctx.Data["IsWatchingRepo"] = models.IsWatching(ctx.User.Id, repo.ID)
-			ctx.Data["IsStaringRepo"] = models.IsStaring(ctx.User.Id, repo.ID)
 		}
 
 		ctx.Data["TagName"] = ctx.Repo.TagName

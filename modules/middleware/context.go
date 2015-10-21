@@ -12,11 +12,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Unknwon/macaron"
-	"github.com/macaron-contrib/cache"
-	"github.com/macaron-contrib/csrf"
-	"github.com/macaron-contrib/i18n"
-	"github.com/macaron-contrib/session"
+	"github.com/go-macaron/cache"
+	"github.com/go-macaron/csrf"
+	"github.com/go-macaron/i18n"
+	"github.com/go-macaron/session"
+	"gopkg.in/macaron.v1"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
@@ -154,18 +154,25 @@ func (ctx *Context) HandleText(status int, title string) {
 	if (status/100 == 4) || (status/100 == 5) {
 		log.Error(4, "%s", title)
 	}
-	ctx.RenderData(status, []byte(title))
+	ctx.PlainText(status, []byte(title))
 }
 
-func (ctx *Context) HandleAPI(status int, obj interface{}) {
+// APIError logs error with title if status is 500.
+func (ctx *Context) APIError(status int, title string, obj interface{}) {
 	var message string
 	if err, ok := obj.(error); ok {
 		message = err.Error()
 	} else {
 		message = obj.(string)
 	}
+
+	if status == 500 {
+		log.Error(4, "%s: %s", title, message)
+	}
+
 	ctx.JSON(status, map[string]string{
 		"message": message,
+		"url":     base.DOC_URL,
 	})
 }
 

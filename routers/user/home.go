@@ -299,7 +299,7 @@ func ShowSSHKeys(ctx *middleware.Context, uid int64) {
 		buf.WriteString(keys[i].OmitEmail())
 		buf.WriteString("\n")
 	}
-	ctx.RenderData(200, buf.Bytes())
+	ctx.PlainText(200, buf.Bytes())
 }
 
 func Profile(ctx *middleware.Context) {

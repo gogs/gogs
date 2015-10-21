@@ -7,8 +7,8 @@ package auth
 import (
 	"mime/multipart"
 
-	"github.com/Unknwon/macaron"
-	"github.com/macaron-contrib/binding"
+	"github.com/go-macaron/binding"
+	"gopkg.in/macaron.v1"
 )
 
 type InstallForm struct {
@@ -38,6 +38,7 @@ type InstallForm struct {
 	OfflineMode         bool
 	DisableGravatar     bool
 	DisableRegistration bool
+	EnableCaptcha       bool
 	RequireSignInView   bool
 
 	AdminName          string `binding:"OmitEmpty;AlphaDashDot;MaxSize(30)" locale:"install.admin_name"`
@@ -58,12 +59,10 @@ func (f *InstallForm) Validate(ctx *macaron.Context, errs binding.Errors) bindin
 //         \/                         \/
 
 type RegisterForm struct {
-	UserName  string `form:"uname" binding:"Required;AlphaDashDot;MaxSize(35)"`
-	Email     string `form:"email" binding:"Required;Email;MaxSize(254)"`
-	Password  string `form:"password" binding:"Required;MaxSize(255)"`
-	Retype    string `form:"retype"`
-	LoginType string `form:"logintype"`
-	LoginName string `form:"loginname"`
+	UserName string `binding:"Required;AlphaDashDot;MaxSize(35)"`
+	Email    string `binding:"Required;Email;MaxSize(254)"`
+	Password string `binding:"Required;MaxSize(255)"`
+	Retype   string
 }
 
 func (f *RegisterForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
@@ -71,9 +70,9 @@ func (f *RegisterForm) Validate(ctx *macaron.Context, errs binding.Errors) bindi
 }
 
 type SignInForm struct {
-	UserName string `form:"uname" binding:"Required;MaxSize(254)"`
-	Password string `form:"password" binding:"Required;MaxSize(255)"`
-	Remember bool   `form:"remember"`
+	UserName string `binding:"Required;MaxSize(254)"`
+	Password string `binding:"Required;MaxSize(255)"`
+	Remember bool
 }
 
 func (f *SignInForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
@@ -110,7 +109,7 @@ func (f *UploadAvatarForm) Validate(ctx *macaron.Context, errs binding.Errors) b
 }
 
 type AddEmailForm struct {
-	Email string `binding:"Required;Email;MaxSize(50)"`
+	Email string `binding:"Required;Email;MaxSize(254)"`
 }
 
 func (f *AddEmailForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {

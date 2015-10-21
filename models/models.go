@@ -20,6 +20,7 @@ import (
 	_ "github.com/lib/pq"
 
 	"github.com/gogits/gogs/models/migrations"
+	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/setting"
 )
 
@@ -46,20 +47,22 @@ func sessionRelease(sess *xorm.Session) {
 // Note: get back time.Time from database Go sees it at UTC where they are really Local.
 // 	So this function makes correct timezone offset.
 func regulateTimeZone(t time.Time) time.Time {
-	if setting.UseSQLite3 {
+	if !setting.UseMySQL {
 		return t
 	}
 
 	zone := t.Local().Format("-0700")
 	if len(zone) != 5 {
+		log.Error(4, "Unprocessable timezone: %s - %s", t.Local(), zone)
 		return t
 	}
-	offset := com.StrTo(zone[2:3]).MustInt()
+	hour := com.StrTo(zone[2:3]).MustInt()
+	minutes := com.StrTo(zone[3:5]).MustInt()
 
 	if zone[0] == '-' {
-		return t.Add(time.Duration(offset) * time.Hour)
+		return t.Add(time.Duration(hour) * time.Hour).Add(time.Duration(minutes) * time.Minute)
 	}
-	return t.Add(-1 * time.Duration(offset) * time.Hour)
+	return t.Add(-1 * time.Duration(hour) * time.Hour).Add(-1 * time.Duration(minutes) * time.Minute)
 }
 
 var (
@@ -77,7 +80,7 @@ var (
 
 func init() {
 	tables = append(tables,
-		new(User), new(PublicKey), new(Oauth2), new(AccessToken),
+		new(User), new(PublicKey), new(AccessToken),
 		new(Repository), new(DeployKey), new(Collaboration), new(Access),
 		new(Watch), new(Star), new(Follow), new(Action),
 		new(Issue), new(PullRequest), new(Comment), new(Attachment), new(IssueUser),
@@ -87,13 +90,13 @@ func init() {
 		new(Team), new(OrgUser), new(TeamUser), new(TeamRepo),
 		new(Notice), new(EmailAddress))
 
-	gonicNames := []string{"SSL"}
+	gonicNames := []string{"UID", "SSL"}
 	for _, name := range gonicNames {
 		core.LintGonicMapper[name] = true
 	}
 }
 
-func LoadModelsConfig() {
+func LoadConfigs() {
 	sec := setting.Cfg.Section("database")
 	DbCfg.Type = sec.Key("DB_TYPE").String()
 	switch DbCfg.Type {
@@ -103,6 +106,8 @@ func LoadModelsConfig() {
 		setting.UseMySQL = true
 	case "postgres":
 		setting.UsePostgreSQL = true
+	case "tidb":
+		setting.UseTiDB = true
 	}
 	DbCfg.Host = sec.Key("HOST").String()
 	DbCfg.Name = sec.Key("NAME").String()
@@ -233,11 +238,11 @@ func GetStatistic() (stats Statistic) {
 	stats.Counter.Access, _ = x.Count(new(Access))
 	stats.Counter.Issue, _ = x.Count(new(Issue))
 	stats.Counter.Comment, _ = x.Count(new(Comment))
-	stats.Counter.Oauth, _ = x.Count(new(Oauth2))
+	stats.Counter.Oauth = 0
 	stats.Counter.Follow, _ = x.Count(new(Follow))
 	stats.Counter.Mirror, _ = x.Count(new(Mirror))
 	stats.Counter.Release, _ = x.Count(new(Release))
-	stats.Counter.LoginSource, _ = x.Count(new(LoginSource))
+	stats.Counter.LoginSource = CountLoginSources()
 	stats.Counter.Webhook, _ = x.Count(new(Webhook))
 	stats.Counter.Milestone, _ = x.Count(new(Milestone))
 	stats.Counter.Label, _ = x.Count(new(Label))

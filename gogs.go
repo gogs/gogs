@@ -1,4 +1,4 @@
-// +build go1.2
+// +build go1.3
 
 // Copyright 2014 The Gogs Authors. All rights reserved.
 // Use of this source code is governed by a MIT-style
@@ -17,7 +17,7 @@ import (
 	"github.com/gogits/gogs/modules/setting"
 )
 
-const APP_VER = "0.6.9.0907 Beta"
+const APP_VER = "0.6.16.1018 Beta"
 
 func init() {
 	runtime.GOMAXPROCS(runtime.NumCPU())

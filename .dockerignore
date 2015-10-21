@@ -1,6 +1,14 @@
+.git
+.git/
 .git/*
+conf
+conf/
 conf/*
+packager
+packager/
 packager/*
+scripts
+scripts/
 scripts/*
 *.yml
 *.md
