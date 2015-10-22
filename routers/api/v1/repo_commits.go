@@ -41,13 +41,37 @@ func CommitByID(ctx *middleware.Context) {
 	commit, err := ctx.Repo.GitRepo.GetCommit(ctx.Params(":commitid"))
 	if err != nil {
 		log.Error(4, "GetCommit: %v", err)
-		ctx.Error(500, err.Error())
+		ctx.APIError(500, "GetCommit", err.Error())
 		return
 	}
 
 	ctx.JSON(200, ToApiCommit(commit))
 }
 
+func ListCommits(ctx *middleware.Context) {
+	commits, err := ctx.Repo.Commit.CommitsBefore()
+	if err != nil {
+		log.Error(4, "CommitsBefore: %v", err)
+		ctx.APIError(500, "CommitsBefore", err)
+		return
+	}
+
+	apiCommits := make([]*api.Commit, commits.Len())
+	i := 0
+	for e := commits.Front(); e != nil; e = e.Next() {
+		apiCommits[i] = ToApiCommit(e.Value.(*git.Commit))
+		i = i+ 1
+	}
+
+	ctx.JSON(200, apiCommits)
+}
+
+
+/**
+ *******************
+ *	DIFF
+ *******************
+ */
 
 func ToApiDiff(diff *models.Diff) *api.Diff {
 	return &api.Diff{
@@ -117,19 +141,19 @@ func DiffRange(ctx *middleware.Context) {
 
 	_, err := ctx.Repo.GitRepo.GetCommit(beforeCommitID)
 	if err != nil {
-		ctx.Handle(404, "GetCommit", err)
+		ctx.APIError(404, "GetCommit", err)
 		return
 	}
 	_, err = ctx.Repo.GitRepo.GetCommit(afterCommitID)
 	if err != nil {
-		ctx.Handle(404, "GetCommit", err)
+		ctx.APIError(404, "GetCommit", err)
 		return
 	}
 
 	diff, err := models.GetDiffRange(ctx.Repo.GitRepo.Path, beforeCommitID, afterCommitID, 10000)
 	if err != nil {
 		log.Error(4, "GetDiffRange: %v", err)
-		ctx.Error(500, err.Error())
+		ctx.APIError(500, "GetDiffRange", err.Error())
 		return
 	}
 
