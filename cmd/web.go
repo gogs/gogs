@@ -224,11 +224,12 @@ func runWeb(ctx *cli.Context) {
 
 			m.Group("/repos", func() {
 				m.Get("/search", v1.SearchRepos)
+			})
 
-				m.Group("", func() {
-					m.Post("/migrate", bindIgnErr(auth.MigrateRepoForm{}), v1.MigrateRepo)
-					m.Delete("/:username/:reponame", v1.DeleteRepo)
-				}, middleware.ApiReqToken())
+			m.Group("/repos", func() {
+				m.Post("/migrate", bindIgnErr(auth.MigrateRepoForm{}), v1.MigrateRepo)
+				m.Combo("/:username/:reponame").Get(v1.GetRepo)
+				m.Delete("/:username/:reponame", v1.DeleteRepo)
 
 				m.Group("/:username/:reponame", func() {
 					m.Combo("/hooks").Get(v1.ListRepoHooks).
@@ -236,8 +237,8 @@ func runWeb(ctx *cli.Context) {
 					m.Patch("/hooks/:id:int", bind(api.EditHookOption{}), v1.EditRepoHook)
 					m.Get("/raw/*", middleware.RepoRef(), v1.GetRepoRawFile)
 					m.Get("/archive/*", v1.GetRepoArchive)
-				}, middleware.ApiRepoAssignment(), middleware.ApiReqToken())
-			})
+				}, middleware.ApiRepoAssignment())
+			}, middleware.ApiReqToken())
 
 			m.Any("/*", func(ctx *middleware.Context) {
 				ctx.Error(404)
