@@ -250,13 +250,15 @@ func GetUnmergedPullRequest(headRepoID, baseRepoID int64, headBranch, baseBranch
 }
 
 // GetPullRequestByIssueID returns pull request by given issue ID.
-func GetPullRequestByIssueID(pullID int64) (*PullRequest, error) {
-	pr := new(PullRequest)
-	has, err := x.Where("pull_id=?", pullID).Get(pr)
+func GetPullRequestByIssueID(issueID int64) (*PullRequest, error) {
+	pr := &PullRequest{
+		IssueID: issueID,
+	}
+	has, err := x.Get(pr)
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, ErrPullRequestNotExist{0, pullID, 0, 0, "", ""}
+		return nil, ErrPullRequestNotExist{0, issueID, 0, 0, "", ""}
 	}
 	return pr, nil
 }
