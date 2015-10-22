@@ -228,8 +228,8 @@ func runWeb(ctx *cli.Context) {
 
 			m.Group("/repos", func() {
 				m.Post("/migrate", bindIgnErr(auth.MigrateRepoForm{}), v1.MigrateRepo)
-				m.Combo("/:username/:reponame").Get(v1.GetRepo)
-				m.Delete("/:username/:reponame", v1.DeleteRepo)
+				m.Combo("/:username/:reponame").Get(v1.GetRepo).
+					Delete(v1.DeleteRepo)
 
 				m.Group("/:username/:reponame", func() {
 					m.Combo("/hooks").Get(v1.ListRepoHooks).
