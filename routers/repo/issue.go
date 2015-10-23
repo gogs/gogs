@@ -786,7 +786,7 @@ func NewComment(ctx *middleware.Context, form auth.CreateCommentForm) {
 				if err = issue.ChangeStatus(ctx.User, form.Status == "close"); err != nil {
 					log.Error(4, "ChangeStatus: %v", err)
 				} else {
-					log.Trace("Issue[%d] status changed: %v", issue.ID, !issue.IsClosed)
+					log.Trace("Issue[%d] status changed to closed: %v", issue.ID, issue.IsClosed)
 				}
 			}
 		}
@@ -829,8 +829,11 @@ func NewComment(ctx *middleware.Context, form auth.CreateCommentForm) {
 
 	// Mail watchers and mentions.
 	if setting.Service.EnableNotifyMail {
-		issue.Content = form.Content
-		tos, err := mailer.SendIssueNotifyMail(ctx.User, ctx.Repo.Owner, ctx.Repo.Repository, issue)
+		tos, err := mailer.SendIssueNotifyMail(ctx.User, ctx.Repo.Owner, ctx.Repo.Repository, &models.Issue{
+			Index:   issue.Index,
+			Name:    issue.Name,
+			Content: form.Content,
+		})
 		if err != nil {
 			ctx.Handle(500, "SendIssueNotifyMail", err)
 			return

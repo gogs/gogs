@@ -233,7 +233,7 @@ func (i *Issue) changeStatus(e *xorm.Session, doer *User, isClosed bool) (err er
 	}
 	i.IsClosed = isClosed
 
-	if err = updateIssue(e, i); err != nil {
+	if err = updateIssueCols(e, i, "is_closed"); err != nil {
 		return err
 	} else if err = updateIssueUsersByStatus(e, i.ID, isClosed); err != nil {
 		return err
@@ -813,8 +813,15 @@ func GetRepoIssueStats(repoID, uid int64, filterMode int, isPull bool) (numOpen 
 	return numOpen, numClosed
 }
 
+// updateIssue updates all fields of given issue.
 func updateIssue(e Engine, issue *Issue) error {
 	_, err := e.Id(issue.ID).AllCols().Update(issue)
+	return err
+}
+
+// updateIssueCols update specific fields of given issue.
+func updateIssueCols(e Engine, issue *Issue, cols ...string) error {
+	_, err := e.Id(issue.ID).Cols(cols...).Update(issue)
 	return err
 }
 
