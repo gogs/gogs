@@ -768,7 +768,7 @@ func NewComment(ctx *middleware.Context, form auth.CreateCommentForm) {
 
 			var pr *models.PullRequest
 
-			if form.Status == "reopen" {
+			if form.Status == "reopen" && issue.IsPull {
 				pull := issue.PullRequest
 				pr, err = models.GetUnmergedPullRequest(pull.HeadRepoID, pull.BaseRepoID, pull.HeadBranch, pull.BaseBranch)
 				if err != nil {
