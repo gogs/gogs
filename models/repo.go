@@ -1125,7 +1125,7 @@ func DeleteRepository(uid, repoID int64) error {
 		desc := fmt.Sprintf("delete repository files[%s]: %v", repoPath, err)
 		log.Warn(desc)
 		if err = CreateRepositoryNotice(desc); err != nil {
-			log.Error(4, "add notice: %v", err)
+			log.Error(4, "CreateRepositoryNotice: %v", err)
 		}
 	}
 
@@ -1268,10 +1268,14 @@ func DeleteRepositoryArchives() error {
 	return x.Where("id > 0").Iterate(new(Repository),
 		func(idx int, bean interface{}) error {
 			repo := bean.(*Repository)
-			if err := repo.GetOwner(); err != nil {
-				return err
+			repoPath, err := repo.RepoPath()
+			if err != nil {
+				if err2 := CreateRepositoryNotice(fmt.Sprintf("DeleteRepositoryArchives[%d]: %v", repo.ID, err)); err2 != nil {
+					log.Error(4, "CreateRepositoryNotice: %v", err2)
+				}
+				return nil
 			}
-			return os.RemoveAll(filepath.Join(RepoPath(repo.Owner.Name, repo.Name), "archives"))
+			return os.RemoveAll(filepath.Join(repoPath, "archives"))
 		})
 }
 
