@@ -117,12 +117,12 @@ func Update(refName, oldCommitId, newCommitId, userName, repoUserName, repoName 
 	if isNew {
 		l, err = newCommit.CommitsBefore()
 		if err != nil {
-			return fmt.Errorf("Find CommitsBefore erro: %v", err)
+			return fmt.Errorf("CommitsBefore: %v", err)
 		}
 	} else {
 		l, err = newCommit.CommitsBeforeUntil(oldCommitId)
 		if err != nil {
-			return fmt.Errorf("Find CommitsBeforeUntil erro: %v", err)
+			return fmt.Errorf("CommitsBeforeUntil: %v", err)
 		}
 	}
 
