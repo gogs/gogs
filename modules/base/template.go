@@ -141,6 +141,9 @@ var TemplateFuncs template.FuncMap = map[string]interface{}{
 	"AppName": func() string {
 		return setting.AppName
 	},
+	"AppUrl": func() string {
+		return setting.AppUrl
+	},
 	"AppSubUrl": func() string {
 		return setting.AppSubUrl
 	},
