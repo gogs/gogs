@@ -360,7 +360,7 @@ func NewContext() {
 	homeDir = strings.Replace(homeDir, "\\", "/", -1)
 
 	sec = Cfg.Section("repository")
-	Repository.PullRequestQueueLength = 10000
+	Repository.PullRequestQueueLength = sec.Key("PULL_REQUEST_QUEUE_LENGTH").MustInt(10000)
 	RepoRootPath = sec.Key("ROOT").MustString(path.Join(homeDir, "gogs-repositories"))
 	forcePathSeparator(RepoRootPath)
 	if !filepath.IsAbs(RepoRootPath) {
