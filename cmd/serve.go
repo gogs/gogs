@@ -200,32 +200,34 @@ func runServ(c *cli.Context) {
 	}
 
 	if requestedMode == models.ACCESS_MODE_WRITE {
-		tasks, err := models.GetUpdateTasksByUuid(uuid)
+		task, err := models.GetUpdateTaskByUUID(uuid)
 		if err != nil {
-			log.GitLogger.Fatal(2, "GetUpdateTasksByUuid: %v", err)
+			log.GitLogger.Fatal(2, "GetUpdateTaskByUUID: %v", err)
 		}
 
-		for _, task := range tasks {
-			err = models.Update(task.RefName, task.OldCommitId, task.NewCommitId,
-				user.Name, repoUserName, repoName, user.Id)
-			if err != nil {
-				log.GitLogger.Error(2, "Failed to update: %v", err)
+		if err = models.Update(task.RefName, task.OldCommitID, task.NewCommitID,
+			user.Name, repoUserName, repoName, user.Id); err != nil {
+			log.GitLogger.Error(2, "Update: %v", err)
+		}
+
+		if err = models.DeleteUpdateTaskByUUID(uuid); err != nil {
+			log.GitLogger.Fatal(2, "DeleteUpdateTaskByUUID: %v", err)
+		}
+
+		// Ask for running deliver hook and test pull request tasks.
+		reqURL := setting.AppUrl + repoUserName + "/" + repoName + "/tasks/trigger?branch=" +
+			strings.TrimPrefix(task.RefName, "refs/heads/")
+		log.GitLogger.Trace("Trigger task: %s", reqURL)
+
+		resp, err := httplib.Head(reqURL).Response()
+		if err == nil {
+			resp.Body.Close()
+			if resp.StatusCode/100 != 2 {
+				log.GitLogger.Error(2, "Fail to trigger task: not 2xx response code")
 			}
+		} else {
+			log.GitLogger.Error(2, "Fail to trigger task: %v", err)
 		}
-
-		if err = models.DelUpdateTasksByUuid(uuid); err != nil {
-			log.GitLogger.Fatal(2, "DelUpdateTasksByUuid: %v", err)
-		}
-	}
-
-	// Send deliver hook request.
-	reqURL := setting.AppUrl + repoUserName + "/" + repoName + "/hooks/trigger"
-	resp, err := httplib.Head(reqURL).Response()
-	if err == nil {
-		resp.Body.Close()
-		log.GitLogger.Trace("Trigger hook: %s", reqURL)
-	} else {
-		log.GitLogger.Error(2, "Fail to trigger hook: %v", err)
 	}
 
 	// Update user key activity.

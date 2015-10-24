@@ -6,6 +6,7 @@ package repo
 
 import (
 	"container/list"
+	"errors"
 	"path"
 	"strings"
 
@@ -148,6 +149,9 @@ func checkPullInfo(ctx *middleware.Context) *models.Issue {
 	if err = issue.GetPoster(); err != nil {
 		ctx.Handle(500, "GetPoster", err)
 		return nil
+	} else if issue.GetHeadRepo(); err != nil {
+		ctx.Handle(500, "GetHeadRepo", err)
+		return nil
 	}
 
 	if ctx.IsSigned {
@@ -165,6 +169,11 @@ func PrepareMergedViewPullInfo(ctx *middleware.Context, pull *models.Issue) {
 	ctx.Data["HasMerged"] = true
 
 	var err error
+
+	if err = pull.GetMerger(); err != nil {
+		ctx.Handle(500, "GetMerger", err)
+		return
+	}
 
 	ctx.Data["HeadTarget"] = pull.HeadUserName + "/" + pull.HeadBranch
 	ctx.Data["BaseTarget"] = ctx.Repo.Owner.Name + "/" + pull.BaseBranch
@@ -191,6 +200,12 @@ func PrepareViewPullInfo(ctx *middleware.Context, pull *models.Issue) *git.PullR
 		headGitRepo *git.Repository
 		err         error
 	)
+
+	if err = pull.GetHeadRepo(); err != nil {
+		ctx.Handle(500, "GetHeadRepo", err)
+		return nil
+	}
+
 	if pull.HeadRepo != nil {
 		headRepoPath, err := pull.HeadRepo.RepoPath()
 		if err != nil {
@@ -627,4 +642,22 @@ func CompareAndPullRequestPost(ctx *middleware.Context, form auth.CreateIssueFor
 
 	log.Trace("Pull request created: %d/%d", repo.ID, pull.ID)
 	ctx.Redirect(ctx.Repo.RepoLink + "/pulls/" + com.ToStr(pull.Index))
+}
+
+func TriggerTask(ctx *middleware.Context) {
+	_, repo := parseOwnerAndRepo(ctx)
+	if ctx.Written() {
+		return
+	}
+	branch := ctx.Query("branch")
+	if len(branch) == 0 {
+		ctx.Handle(422, "TriggerTask", errors.New("branch is empty"))
+		return
+	}
+
+	log.Trace("TriggerTask[%d].(new request): %s", repo.ID, branch)
+
+	go models.HookQueue.Add(repo.ID)
+	go models.AddTestPullRequestTask(repo.ID, branch)
+	ctx.Status(202)
 }

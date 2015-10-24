@@ -813,21 +813,20 @@ func GetRepoIssueStats(repoID, uid int64, filterMode int, isPull bool) (numOpen 
 	return numOpen, numClosed
 }
 
-// updateIssue updates all fields of given issue.
 func updateIssue(e Engine, issue *Issue) error {
 	_, err := e.Id(issue.ID).AllCols().Update(issue)
 	return err
 }
 
-// updateIssueCols update specific fields of given issue.
+// UpdateIssue updates all fields of given issue.
+func UpdateIssue(issue *Issue) error {
+	return updateIssue(x, issue)
+}
+
+// updateIssueCols updates specific fields of given issue.
 func updateIssueCols(e Engine, issue *Issue, cols ...string) error {
 	_, err := e.Id(issue.ID).Cols(cols...).Update(issue)
 	return err
-}
-
-// UpdateIssue updates information of issue.
-func UpdateIssue(issue *Issue) error {
-	return updateIssue(x, issue)
 }
 
 func updateIssueUsersByStatus(e Engine, issueID int64, isClosed bool) error {

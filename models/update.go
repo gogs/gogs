@@ -16,11 +16,11 @@ import (
 )
 
 type UpdateTask struct {
-	Id          int64
-	Uuid        string `xorm:"index"`
+	ID          int64  `xorm:"pk autoincr"`
+	UUID        string `xorm:"index"`
 	RefName     string
-	OldCommitId string
-	NewCommitId string
+	OldCommitID string
+	NewCommitID string
 }
 
 func AddUpdateTask(task *UpdateTask) error {
@@ -28,20 +28,21 @@ func AddUpdateTask(task *UpdateTask) error {
 	return err
 }
 
-func GetUpdateTasksByUuid(uuid string) ([]*UpdateTask, error) {
+func GetUpdateTaskByUUID(uuid string) (*UpdateTask, error) {
 	task := &UpdateTask{
-		Uuid: uuid,
+		UUID: uuid,
 	}
-	tasks := make([]*UpdateTask, 0)
-	err := x.Find(&tasks, task)
+	has, err := x.Get(task)
 	if err != nil {
 		return nil, err
+	} else if !has {
+		return nil, fmt.Errorf("task does not exist: %s", uuid)
 	}
-	return tasks, nil
+	return task, nil
 }
 
-func DelUpdateTasksByUuid(uuid string) error {
-	_, err := x.Delete(&UpdateTask{Uuid: uuid})
+func DeleteUpdateTaskByUUID(uuid string) error {
+	_, err := x.Delete(&UpdateTask{UUID: uuid})
 	return err
 }
 

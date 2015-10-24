@@ -824,6 +824,9 @@ pre.raw {
 .ui .text.purple {
   color: #6e5494!important;
 }
+.ui .text.yellow {
+  color: #FBBD08!important;
+}
 .ui .text.left {
   text-align: left!important;
 }
@@ -1412,7 +1415,7 @@ footer .container .links > *:first-child {
   border: solid 1px #ccc;
   border-bottom-color: #bbb;
   border-radius: 3px;
-  box-shadow: inset 0 -1px 0 #bbbbbb;
+  box-shadow: inset 0 -1px 0 #bbb;
 }
 .markdown .csv-data td,
 .markdown .csv-data th {
