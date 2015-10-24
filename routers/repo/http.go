@@ -34,7 +34,7 @@ func authRequired(ctx *middleware.Context) {
 	ctx.HTML(401, base.TplName("status/401"))
 }
 
-func Http(ctx *middleware.Context) {
+func HTTP(ctx *middleware.Context) {
 	username := ctx.Params(":username")
 	reponame := ctx.Params(":reponame")
 	if strings.HasSuffix(reponame, ".git") {
@@ -195,7 +195,8 @@ func Http(ctx *middleware.Context) {
 
 						// FIXME: handle error.
 						if err = models.Update(refName, oldCommitId, newCommitId, authUsername, username, reponame, authUser.Id); err == nil {
-							models.HookQueue.AddRepoID(repo.ID)
+							go models.HookQueue.Add(repo.ID)
+							go models.AddTestPullRequestTask(repo.ID, strings.TrimPrefix(refName, "refs/heads/"))
 						}
 
 					}

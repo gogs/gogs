@@ -133,7 +133,13 @@
 
   		{{if .Issue.IsPull}}
   		<div class="comment merge box">
-		    <a class="avatar text {{if .Issue.HasMerged}}purple{{else if .Issue.IsClosed}}grey{{else if and .Issue.CanAutoMerge (not .IsPullReuqestBroken)}}green{{else}}red{{end}}">
+		    <a class="avatar text 
+		    {{if .Issue.HasMerged}}purple
+		    {{else if .Issue.IsClosed}}grey
+		    {{else if .IsPullReuqestBroken}}red
+		    {{else if .Issue.IsChecking}}yellow
+		    {{else if .Issue.CanAutoMerge}}green
+		    {{else}}red{{end}}">
 		      <span class="mega-octicon octicon-git-merge"></span>
 		    </a>
 		    <div class="content">
@@ -150,6 +156,11 @@
 		    		<div class="item text red">
 		    			<span class="octicon octicon-x"></span>
 		    			{{$.i18n.Tr "repo.pulls.data_broken"}}
+		    		</div>
+		    		{{else if .Issue.IsChecking}}
+		    		<div class="item text yellow">
+		    			<span class="octicon octicon-sync"></span>
+		    			{{$.i18n.Tr "repo.pulls.is_checking"}}
 		    		</div>
 		    		{{else if .Issue.CanAutoMerge}}
 			    		<div class="item text green">
