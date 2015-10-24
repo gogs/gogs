@@ -30,7 +30,7 @@ func NewSubModuleFile(c *Commit, refUrl, refId string) *SubModuleFile {
 }
 
 // RefUrl guesses and returns reference URL.
-func (sf *SubModuleFile) RefUrl() string {
+func (sf *SubModuleFile) RefUrl(appUrl string) string {
 	if sf.refUrl == "" {
 		return ""
 	}
@@ -51,8 +51,14 @@ func (sf *SubModuleFile) RefUrl() string {
 	i := strings.Index(url, "@")
 	j := strings.LastIndex(url, ":")
 	if i > -1 && j > -1 {
-		return "http://" + url[i+1:j] + "/" + url[j+1:]
+		// fix problem with reverse proxy works only with local server
+		if strings.Contains(appUrl,url[i+1:j]) {
+			return appUrl + url[j+1:]
+		} else {
+			return "http://" + url[i+1:j] + "/" + url[j+1:]
+		}
 	}
+
 	return url
 }
 
