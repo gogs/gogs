@@ -183,9 +183,11 @@ func (repo *Repository) AfterSet(colName string, _ xorm.Cell) {
 }
 
 func (repo *Repository) getOwner(e Engine) (err error) {
-	if repo.Owner == nil {
-		repo.Owner, err = getUserByID(e, repo.OwnerID)
+	if repo.Owner != nil {
+		return nil
 	}
+
+	repo.Owner, err = getUserByID(e, repo.OwnerID)
 	return err
 }
 
@@ -321,6 +323,30 @@ func (repo *Repository) UpdateLocalCopy() error {
 		if err != nil {
 			return fmt.Errorf("git pull: %v - %s", err, stderr)
 		}
+	}
+
+	return nil
+}
+
+// PatchPath returns corresponding patch file path of repository by given issue ID.
+func (repo *Repository) PatchPath(index int64) (string, error) {
+	if err := repo.GetOwner(); err != nil {
+		return "", err
+	}
+
+	return filepath.Join(RepoPath(repo.Owner.Name, repo.Name), "pulls", com.ToStr(index)+".patch"), nil
+}
+
+// SavePatch saves patch data to corresponding location by given issue ID.
+func (repo *Repository) SavePatch(index int64, patch []byte) error {
+	patchPath, err := repo.PatchPath(index)
+	if err != nil {
+		return fmt.Errorf("PatchPath: %v", err)
+	}
+
+	os.MkdirAll(path.Dir(patchPath), os.ModePerm)
+	if err = ioutil.WriteFile(patchPath, patch, 0644); err != nil {
+		return fmt.Errorf("WriteFile: %v", err)
 	}
 
 	return nil

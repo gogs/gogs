@@ -564,28 +564,28 @@ func DeleteWebhook(ctx *middleware.Context) {
 	})
 }
 
-func TriggerHook(ctx *middleware.Context) {
-	u, err := models.GetUserByName(ctx.Params(":username"))
+func parseOwnerAndRepo(ctx *middleware.Context) (*models.User, *models.Repository) {
+	owner, err := models.GetUserByName(ctx.Params(":username"))
 	if err != nil {
 		if models.IsErrUserNotExist(err) {
 			ctx.Handle(404, "GetUserByName", err)
 		} else {
 			ctx.Handle(500, "GetUserByName", err)
 		}
-		return
+		return nil, nil
 	}
 
-	repo, err := models.GetRepositoryByName(u.Id, ctx.Params(":reponame"))
+	repo, err := models.GetRepositoryByName(owner.Id, ctx.Params(":reponame"))
 	if err != nil {
 		if models.IsErrRepoNotExist(err) {
 			ctx.Handle(404, "GetRepositoryByName", err)
 		} else {
 			ctx.Handle(500, "GetRepositoryByName", err)
 		}
-		return
+		return nil, nil
 	}
-	models.HookQueue.AddRepoID(repo.ID)
-	ctx.Status(200)
+
+	return owner, repo
 }
 
 func GitHooks(ctx *middleware.Context) {

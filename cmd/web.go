@@ -545,8 +545,8 @@ func runWeb(ctx *cli.Context) {
 		}, ignSignIn, middleware.RepoAssignment(true, true), middleware.RepoRef())
 
 		m.Group("/:reponame", func() {
-			m.Any("/*", ignSignInAndCsrf, repo.Http)
-			m.Head("/hooks/trigger", repo.TriggerHook)
+			m.Any("/*", ignSignInAndCsrf, repo.HTTP)
+			m.Head("/tasks/trigger", repo.TriggerTask)
 		})
 	})
 	// ***** END: Repository *****
