@@ -39,8 +39,8 @@
                     <span class="octicon octicon-file-submodule"></span>
                 </td>
                 <td class="name">
-                    {{if $commit.RefUrl AppUrl}}
-                    <a href="{{$commit.RefUrl AppUrl}}" class="text-truncate">{{$entry.Name}}</a> @ <a href="{{$commit.RefUrl AppUrl}}/commit/{{$commit.RefId}}">{{ShortSha $commit.RefId}}</a>
+                    {{if $commit.RefUrl}}
+                    <a href="{{$commit.RefUrl}}" class="text-truncate">{{$entry.Name}}</a> @ <a href="{{$commit.RefUrl}}/commit/{{$commit.RefId}}">{{ShortSha $commit.RefId}}</a>
                     {{else}}
                     {{$entry.Name}} @ {{ShortSha $commit.RefId}}
                     {{end}}
