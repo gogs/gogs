@@ -206,6 +206,12 @@ func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository) (err error
 	return sess.Commit()
 }
 
+// patchConflicts is a list of conflit description from Git.
+var patchConflicts = []string{
+	"patch does not apply",
+	"already exists in working directory",
+}
+
 // testPatch checks if patch can be merged to base repository without conflit.
 func (pr *PullRequest) testPatch() (err error) {
 	if pr.BaseRepo == nil {
@@ -231,12 +237,15 @@ func (pr *PullRequest) testPatch() (err error) {
 		fmt.Sprintf("testPatch(git apply --check): %d", pr.BaseRepo.ID),
 		"git", "apply", "--check", patchPath)
 	if err != nil {
-		if strings.Contains(stderr, "patch does not apply") {
-			log.Trace("PullRequest[%d].testPatch(apply): has conflit", pr.ID)
-			pr.Status = PULL_REQUEST_STATUS_CONFLICT
-		} else {
-			return fmt.Errorf("git apply --check: %v - %s", err, stderr)
+		for i := range patchConflicts {
+			if strings.Contains(stderr, patchConflicts[i]) {
+				log.Trace("PullRequest[%d].testPatch(apply): has conflit", pr.ID)
+				pr.Status = PULL_REQUEST_STATUS_CONFLICT
+				return nil
+			}
 		}
+
+		return fmt.Errorf("git apply --check: %v - %s", err, stderr)
 	}
 	return nil
 }
@@ -269,6 +278,7 @@ func NewPullRequest(repo *Repository, pull *Issue, labelIDs []int64, uuids []str
 		return err
 	}
 
+	pr.Index = pull.Index
 	if err = repo.SavePatch(pr.Index, patch); err != nil {
 		return fmt.Errorf("SavePatch: %v", err)
 	}
@@ -282,7 +292,6 @@ func NewPullRequest(repo *Repository, pull *Issue, labelIDs []int64, uuids []str
 	}
 
 	pr.IssueID = pull.ID
-	pr.Index = pull.Index
 	if _, err = sess.Insert(pr); err != nil {
 		return fmt.Errorf("insert pull repo: %v", err)
 	}
@@ -308,10 +317,19 @@ func GetUnmergedPullRequest(headRepoID, baseRepoID int64, headBranch, baseBranch
 
 // GetUnmergedPullRequestsByHeadInfo returnss all pull requests that are open and has not been merged
 // by given head information (repo and branch).
-func GetUnmergedPullRequestsByHeadInfo(headRepoID int64, headBranch string) ([]*PullRequest, error) {
+func GetUnmergedPullRequestsByHeadInfo(repoID int64, branch string) ([]*PullRequest, error) {
 	prs := make([]*PullRequest, 0, 2)
 	return prs, x.Where("head_repo_id=? AND head_branch=? AND has_merged=? AND issue.is_closed=?",
-		headRepoID, headBranch, false, false).
+		repoID, branch, false, false).
+		Join("INNER", "issue", "issue.id=pull_request.issue_id").Find(&prs)
+}
+
+// GetUnmergedPullRequestsByBaseInfo returnss all pull requests that are open and has not been merged
+// by given base information (repo and branch).
+func GetUnmergedPullRequestsByBaseInfo(repoID int64, branch string) ([]*PullRequest, error) {
+	prs := make([]*PullRequest, 0, 2)
+	return prs, x.Where("base_repo_id=? AND base_branch=? AND has_merged=? AND issue.is_closed=?",
+		repoID, branch, false, false).
 		Join("INNER", "issue", "issue.id=pull_request.issue_id").Find(&prs)
 }
 
@@ -371,23 +389,24 @@ func (pr *PullRequest) checkAndUpdateStatus() {
 	}
 }
 
-// AddTestPullRequestTask adds new test tasks by given head repository and head branch,
-// and generate new patch for testing as needed.
-func AddTestPullRequestTask(headRepoID int64, headBranch string) {
-	log.Trace("AddTestPullRequestTask[head_repo_id: %d, head_branch: %s]: finding pull requests", headRepoID, headBranch)
-	prs, err := GetUnmergedPullRequestsByHeadInfo(headRepoID, headBranch)
-	if err != nil {
-		log.Error(4, "Find pull requests[head_repo_id: %d, head_branch: %s]: %v", headRepoID, headBranch, err)
-		return
-	}
+// addToTaskQueue adds itself to pull request test task queue.
+func (pr *PullRequest) addToTaskQueue() {
+	go PullRequestQueue.AddFunc(pr.ID, func() {
+		pr.Status = PULL_REQUEST_STATUS_CHECKING
+		if err := pr.UpdateCols("status"); err != nil {
+			log.Error(5, "addToTaskQueue.UpdateCols[%d].(add to queue): %v", pr.ID, err)
+		}
+	})
+}
 
+func addHeadRepoTasks(prs []*PullRequest) {
 	for _, pr := range prs {
-		log.Trace("AddTestPullRequestTask[%d]: composing new test task", pr.ID)
+		log.Trace("addHeadRepoTasks[%d]: composing new test task", pr.ID)
 		if err := pr.GetHeadRepo(); err != nil {
 			log.Error(4, "GetHeadRepo[%d]: %v", pr.ID, err)
 			continue
 		} else if pr.HeadRepo == nil {
-			log.Trace("AddTestPullRequestTask[%d]: ignored cruppted data", pr.ID)
+			log.Trace("addHeadRepoTasks[%d]: ignored cruppted data", pr.ID)
 			continue
 		}
 
@@ -420,15 +439,29 @@ func AddTestPullRequestTask(headRepoID int64, headBranch string) {
 			continue
 		}
 
-		if !PullRequestQueue.Exist(pr.ID) {
-			go func() {
-				PullRequestQueue.Add(pr.ID)
-				pr.Status = PULL_REQUEST_STATUS_CHECKING
-				if err = pr.UpdateCols("status"); err != nil {
-					log.Error(5, "AddTestPullRequestTask.UpdateCols[%d].(add to queue): %v", pr.ID, err)
-				}
-			}()
-		}
+		pr.addToTaskQueue()
+	}
+}
+
+// AddTestPullRequestTask adds new test tasks by given head/base repository and head/base branch,
+// and generate new patch for testing as needed.
+func AddTestPullRequestTask(repoID int64, branch string) {
+	log.Trace("AddTestPullRequestTask[head_repo_id: %d, head_branch: %s]: finding pull requests", repoID, branch)
+	prs, err := GetUnmergedPullRequestsByHeadInfo(repoID, branch)
+	if err != nil {
+		log.Error(4, "Find pull requests[head_repo_id: %d, head_branch: %s]: %v", repoID, branch, err)
+		return
+	}
+	addHeadRepoTasks(prs)
+
+	log.Trace("AddTestPullRequestTask[base_repo_id: %d, base_branch: %s]: finding pull requests", repoID, branch)
+	prs, err = GetUnmergedPullRequestsByBaseInfo(repoID, branch)
+	if err != nil {
+		log.Error(4, "Find pull requests[base_repo_id: %d, base_branch: %s]: %v", repoID, branch, err)
+		return
+	}
+	for _, pr := range prs {
+		pr.addToTaskQueue()
 	}
 }
 

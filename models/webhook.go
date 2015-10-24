@@ -465,7 +465,7 @@ func (q *UniqueQueue) Remove(id interface{}) {
 	delete(q.ids, com.ToStr(id))
 }
 
-func (q *UniqueQueue) Add(id interface{}) {
+func (q *UniqueQueue) AddFunc(id interface{}, fn func()) {
 	newid := com.ToStr(id)
 
 	if q.Exist(id) {
@@ -474,8 +474,15 @@ func (q *UniqueQueue) Add(id interface{}) {
 
 	q.lock.Lock()
 	q.ids[newid] = true
+	if fn != nil {
+		fn()
+	}
 	q.lock.Unlock()
 	q.queue <- newid
+}
+
+func (q *UniqueQueue) Add(id interface{}) {
+	q.AddFunc(id, nil)
 }
 
 func (q *UniqueQueue) Exist(id interface{}) bool {
