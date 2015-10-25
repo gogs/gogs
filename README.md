@@ -51,14 +51,15 @@ The goal of this project is to make the easiest, fastest, and most painless way 
 ## Features
 
 - Activity timeline
-- SSH/HTTP(S) protocol support
-- SMTP/LDAP/reverse proxy authentication support
-- Reverse proxy suburl support
-- Account/Organization(with team)/Repository management
-- Repository/Organization webhooks(including Slack)
+- SSH and HTTP/HTTPS protocols
+- SMTP/LDAP/Reverse proxy authentication
+- Reverse proxy with sub-path
+- Account/Organization/Repository management
+- Repository/Organization webhooks (including Slack)
 - Repository Git hooks/deploy keys
-- Add/remove repository collaborators
-- Gravatar and custom source support
+- Repository issues and pull requests
+- Add/Remove repository collaborators
+- Gravatar and custom source
 - Mail service
 - Administration panel
 - CI integration: [Drone](https://github.com/drone/drone)
@@ -116,7 +117,7 @@ There are 5 ways to install Gogs:
 
 ## Contributors
 
-- Ex-team members [@lunny](https://github.com/lunny) and [@fuxiaohei](https://github.com/fuxiaohei).
+- Ex-team members [@lunny](https://github.com/lunny), [@fuxiaohei](https://github.com/fuxiaohei) and [@slene](https://github.com/slene).
 - See [contributors page](https://github.com/gogits/gogs/graphs/contributors) for full list of contributors.
 - See [TRANSLATORS](conf/locale/TRANSLATORS) for public list of translators.
 
