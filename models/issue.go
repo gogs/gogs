@@ -92,15 +92,6 @@ func (i *Issue) AfterSet(colName string, _ xorm.Cell) {
 		if err != nil {
 			log.Error(3, "GetUserByID[%d]: %v", i.ID, err)
 		}
-	case "is_pull":
-		if !i.IsPull {
-			return
-		}
-
-		i.PullRequest, err = GetPullRequestByIssueID(i.ID)
-		if err != nil {
-			log.Error(3, "GetPullRequestByIssueID[%d]: %v", i.ID, err)
-		}
 	case "created":
 		i.Created = regulateTimeZone(i.Created)
 	}
@@ -280,6 +271,15 @@ func (i *Issue) ChangeStatus(doer *User, isClosed bool) (err error) {
 	}
 
 	return sess.Commit()
+}
+
+func (i *Issue) GetPullRequest() (err error) {
+	if i.PullRequest != nil {
+		return nil
+	}
+
+	i.PullRequest, err = GetPullRequestByIssueID(i.ID)
+	return err
 }
 
 // It's caller's responsibility to create action.
