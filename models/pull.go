@@ -226,6 +226,12 @@ func (pr *PullRequest) testPatch() (err error) {
 		return fmt.Errorf("BaseRepo.PatchPath: %v", err)
 	}
 
+	// Fast fail if patch does not exist, this assumes data is cruppted.
+	if !com.IsFile(patchPath) {
+		log.Trace("PullRequest[%d].testPatch: ignored cruppted data", pr.ID)
+		return nil
+	}
+
 	log.Trace("PullRequest[%d].testPatch(patchPath): %s", pr.ID, patchPath)
 
 	if err := pr.BaseRepo.UpdateLocalCopy(); err != nil {
@@ -373,28 +379,47 @@ func (pr *PullRequest) UpdateCols(cols ...string) error {
 
 var PullRequestQueue = NewUniqueQueue(setting.Repository.PullRequestQueueLength)
 
-// checkAndUpdateStatus checks if pull request is possible to levaing checking status,
-// and set to be either conflict or mergeable.
-func (pr *PullRequest) checkAndUpdateStatus() {
-	// Status is not changed to conflict means mergeable.
-	if pr.Status == PULL_REQUEST_STATUS_CHECKING {
-		pr.Status = PULL_REQUEST_STATUS_MERGEABLE
+// UpdatePatch generates and saves a new patch.
+func (pr *PullRequest) UpdatePatch() error {
+	if err := pr.GetHeadRepo(); err != nil {
+		return fmt.Errorf("GetHeadRepo: %v", err)
+	} else if pr.HeadRepo == nil {
+		log.Trace("PullRequest[%d].UpdatePatch: ignored cruppted data", pr.ID)
+		return nil
 	}
 
-	// Make sure there is no waiting test to process before levaing the checking status.
-	if !PullRequestQueue.Exist(pr.ID) {
-		if err := pr.UpdateCols("status"); err != nil {
-			log.Error(4, "Update[%d]: %v", pr.ID, err)
-		}
+	if err := pr.GetBaseRepo(); err != nil {
+		return fmt.Errorf("GetBaseRepo: %v", err)
 	}
+
+	headRepoPath, err := pr.HeadRepo.RepoPath()
+	if err != nil {
+		return fmt.Errorf("HeadRepo.RepoPath: %v", err)
+	}
+
+	headGitRepo, err := git.OpenRepository(headRepoPath)
+	if err != nil {
+		return fmt.Errorf("OpenRepository: %v", err)
+	}
+
+	patch, err := headGitRepo.GetPatch(pr.MergeBase, pr.HeadBranch)
+	if err != nil {
+		return fmt.Errorf("GetPatch: %v", err)
+	}
+
+	if err = pr.BaseRepo.SavePatch(pr.Index, patch); err != nil {
+		return fmt.Errorf("BaseRepo.SavePatch: %v", err)
+	}
+
+	return nil
 }
 
-// addToTaskQueue adds itself to pull request test task queue.
-func (pr *PullRequest) addToTaskQueue() {
+// AddToTaskQueue adds itself to pull request test task queue.
+func (pr *PullRequest) AddToTaskQueue() {
 	go PullRequestQueue.AddFunc(pr.ID, func() {
 		pr.Status = PULL_REQUEST_STATUS_CHECKING
 		if err := pr.UpdateCols("status"); err != nil {
-			log.Error(5, "addToTaskQueue.UpdateCols[%d].(add to queue): %v", pr.ID, err)
+			log.Error(5, "AddToTaskQueue.UpdateCols[%d].(add to queue): %v", pr.ID, err)
 		}
 	})
 }
@@ -402,44 +427,12 @@ func (pr *PullRequest) addToTaskQueue() {
 func addHeadRepoTasks(prs []*PullRequest) {
 	for _, pr := range prs {
 		log.Trace("addHeadRepoTasks[%d]: composing new test task", pr.ID)
-		if err := pr.GetHeadRepo(); err != nil {
-			log.Error(4, "GetHeadRepo[%d]: %v", pr.ID, err)
-			continue
-		} else if pr.HeadRepo == nil {
-			log.Trace("addHeadRepoTasks[%d]: ignored cruppted data", pr.ID)
+		if err := pr.UpdatePatch(); err != nil {
+			log.Error(4, "UpdatePatch: %v", err)
 			continue
 		}
 
-		if err := pr.GetBaseRepo(); err != nil {
-			log.Error(4, "GetBaseRepo[%d]: %v", pr.ID, err)
-			continue
-		}
-
-		headRepoPath, err := pr.HeadRepo.RepoPath()
-		if err != nil {
-			log.Error(4, "HeadRepo.RepoPath[%d]: %v", pr.ID, err)
-			continue
-		}
-
-		headGitRepo, err := git.OpenRepository(headRepoPath)
-		if err != nil {
-			log.Error(4, "OpenRepository[%d]: %v", pr.ID, err)
-			continue
-		}
-
-		// Generate patch.
-		patch, err := headGitRepo.GetPatch(pr.MergeBase, pr.HeadBranch)
-		if err != nil {
-			log.Error(4, "GetPatch[%d]: %v", pr.ID, err)
-			continue
-		}
-
-		if err = pr.BaseRepo.SavePatch(pr.Index, patch); err != nil {
-			log.Error(4, "BaseRepo.SavePatch[%d]: %v", pr.ID, err)
-			continue
-		}
-
-		pr.addToTaskQueue()
+		pr.AddToTaskQueue()
 	}
 }
 
@@ -461,7 +454,23 @@ func AddTestPullRequestTask(repoID int64, branch string) {
 		return
 	}
 	for _, pr := range prs {
-		pr.addToTaskQueue()
+		pr.AddToTaskQueue()
+	}
+}
+
+// checkAndUpdateStatus checks if pull request is possible to levaing checking status,
+// and set to be either conflict or mergeable.
+func (pr *PullRequest) checkAndUpdateStatus() {
+	// Status is not changed to conflict means mergeable.
+	if pr.Status == PULL_REQUEST_STATUS_CHECKING {
+		pr.Status = PULL_REQUEST_STATUS_MERGEABLE
+	}
+
+	// Make sure there is no waiting test to process before levaing the checking status.
+	if !PullRequestQueue.Exist(pr.ID) {
+		if err := pr.UpdateCols("status"); err != nil {
+			log.Error(4, "Update[%d]: %v", pr.ID, err)
+		}
 	}
 }
 
