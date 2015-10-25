@@ -476,6 +476,11 @@ func ViewIssue(ctx *middleware.Context) {
 	}
 
 	if issue.IsPull {
+		if err = issue.GetPullRequest(); err != nil {
+			ctx.Handle(500, "GetPullRequest", err)
+			return
+		}
+
 		ctx.Data["PageIsPullList"] = true
 		ctx.Data["PageIsPullConversation"] = true
 	} else {
@@ -747,6 +752,12 @@ func NewComment(ctx *middleware.Context, form auth.CreateCommentForm) {
 		}
 		return
 	}
+	if issue.IsPull {
+		if err = issue.GetPullRequest(); err != nil {
+			ctx.Handle(500, "GetPullRequest", err)
+			return
+		}
+	}
 
 	var attachments []string
 	if setting.AttachmentEnabled {
@@ -766,6 +777,7 @@ func NewComment(ctx *middleware.Context, form auth.CreateCommentForm) {
 			(form.Status == "reopen" || form.Status == "close") &&
 			!(issue.IsPull && issue.HasMerged) {
 
+			// Duplication and conflict check should apply to reopen pull request.
 			var pr *models.PullRequest
 
 			if form.Status == "reopen" && issue.IsPull {
@@ -776,6 +788,16 @@ func NewComment(ctx *middleware.Context, form auth.CreateCommentForm) {
 						ctx.Handle(500, "GetUnmergedPullRequest", err)
 						return
 					}
+				}
+
+				// Regenerate patch and test conflict.
+				if pr == nil {
+					if err = issue.UpdatePatch(); err != nil {
+						ctx.Handle(500, "UpdatePatch", err)
+						return
+					}
+
+					issue.AddToTaskQueue()
 				}
 			}
 

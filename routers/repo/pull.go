@@ -149,7 +149,10 @@ func checkPullInfo(ctx *middleware.Context) *models.Issue {
 	if err = issue.GetPoster(); err != nil {
 		ctx.Handle(500, "GetPoster", err)
 		return nil
-	} else if issue.GetHeadRepo(); err != nil {
+	} else if err = issue.GetPullRequest(); err != nil {
+		ctx.Handle(500, "GetPullRequest", err)
+		return nil
+	} else if err = issue.GetHeadRepo(); err != nil {
 		ctx.Handle(500, "GetHeadRepo", err)
 		return nil
 	}
