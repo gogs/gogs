@@ -71,7 +71,7 @@ type User struct {
 	Created     time.Time `xorm:"CREATED"`
 	Updated     time.Time `xorm:"UPDATED"`
 
-	// Remember visibility choice for convenience.
+	// Remember visibility choice for convenience, true for private
 	LastRepoVisibility bool
 
 	// Permissions.

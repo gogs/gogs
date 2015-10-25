@@ -480,13 +480,21 @@ func MirrorRepository(repoId int64, userName, repoName, repoPath, url string) er
 	return nil
 }
 
+type MigrateRepoOptions struct {
+	Name        string
+	Description string
+	IsPrivate   bool
+	IsMirror    bool
+	RemoteAddr  string
+}
+
 // MigrateRepository migrates a existing repository from other project hosting.
-func MigrateRepository(u *User, name, desc string, private, mirror bool, url string) (*Repository, error) {
+func MigrateRepository(u *User, opts MigrateRepoOptions) (*Repository, error) {
 	repo, err := CreateRepository(u, CreateRepoOptions{
-		Name:        name,
-		Description: desc,
-		IsPrivate:   private,
-		IsMirror:    mirror,
+		Name:        opts.Name,
+		Description: opts.Description,
+		IsPrivate:   opts.IsPrivate,
+		IsMirror:    opts.IsMirror,
 	})
 	if err != nil {
 		return nil, err
@@ -496,7 +504,7 @@ func MigrateRepository(u *User, name, desc string, private, mirror bool, url str
 	tmpDir := filepath.Join(os.TempDir(), fmt.Sprintf("%d", time.Now().Nanosecond()))
 	os.MkdirAll(tmpDir, os.ModePerm)
 
-	repoPath := RepoPath(u.Name, name)
+	repoPath := RepoPath(u.Name, opts.Name)
 
 	if u.IsOrganization() {
 		t, err := u.GetOwnerTeam()
@@ -509,8 +517,8 @@ func MigrateRepository(u *User, name, desc string, private, mirror bool, url str
 	}
 
 	repo.IsBare = false
-	if mirror {
-		if err = MirrorRepository(repo.ID, u.Name, repo.Name, repoPath, url); err != nil {
+	if opts.IsMirror {
+		if err = MirrorRepository(repo.ID, u.Name, repo.Name, repoPath, opts.RemoteAddr); err != nil {
 			return repo, err
 		}
 		repo.IsMirror = true
@@ -522,7 +530,7 @@ func MigrateRepository(u *User, name, desc string, private, mirror bool, url str
 	// FIXME: this command could for both migrate and mirror
 	_, stderr, err := process.ExecTimeout(10*time.Minute,
 		fmt.Sprintf("MigrateRepository: %s", repoPath),
-		"git", "clone", "--mirror", "--bare", "--quiet", url, repoPath)
+		"git", "clone", "--mirror", "--bare", "--quiet", opts.RemoteAddr, repoPath)
 	if err != nil {
 		return repo, fmt.Errorf("git clone --mirror --bare --quiet: %v", stderr)
 	} else if err = createUpdateHook(repoPath); err != nil {

@@ -87,11 +87,12 @@ var (
 
 	// Repository settings.
 	Repository struct {
+		AnsiCharset            string
+		ForcePrivate           bool
 		PullRequestQueueLength int
 	}
 	RepoRootPath string
 	ScriptType   string
-	AnsiCharset  string
 
 	// UI settings.
 	ExplorePagingNum     int
@@ -360,7 +361,6 @@ func NewContext() {
 	homeDir = strings.Replace(homeDir, "\\", "/", -1)
 
 	sec = Cfg.Section("repository")
-	Repository.PullRequestQueueLength = sec.Key("PULL_REQUEST_QUEUE_LENGTH").MustInt(10000)
 	RepoRootPath = sec.Key("ROOT").MustString(path.Join(homeDir, "gogs-repositories"))
 	forcePathSeparator(RepoRootPath)
 	if !filepath.IsAbs(RepoRootPath) {
@@ -369,7 +369,9 @@ func NewContext() {
 		RepoRootPath = path.Clean(RepoRootPath)
 	}
 	ScriptType = sec.Key("SCRIPT_TYPE").MustString("bash")
-	AnsiCharset = sec.Key("ANSI_CHARSET").MustString("")
+	Repository.AnsiCharset = sec.Key("ANSI_CHARSET").String()
+	Repository.ForcePrivate = sec.Key("FORCE_PRIVATE").MustBool()
+	Repository.PullRequestQueueLength = sec.Key("PULL_REQUEST_QUEUE_LENGTH").MustInt(10000)
 
 	// UI settings.
 	sec = Cfg.Section("ui")

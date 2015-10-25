@@ -237,7 +237,13 @@ func MigrateRepo(ctx *middleware.Context, form auth.MigrateRepoForm) {
 		return
 	}
 
-	repo, err := models.MigrateRepository(ctxUser, form.RepoName, form.Description, form.Private, form.Mirror, remoteAddr)
+	repo, err := models.MigrateRepository(ctxUser, models.MigrateRepoOptions{
+		Name:        form.RepoName,
+		Description: form.Description,
+		IsPrivate:   form.Private || setting.Repository.ForcePrivate,
+		IsMirror:    form.Mirror,
+		RemoteAddr:  remoteAddr,
+	})
 	if err != nil {
 		if repo != nil {
 			if errDelete := models.DeleteRepository(ctxUser.Id, repo.ID); errDelete != nil {

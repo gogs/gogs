@@ -46,7 +46,7 @@ func checkContextUser(ctx *middleware.Context, uid int64) *models.User {
 	}
 
 	if err != nil {
-		ctx.Handle(500, "checkContextUser", fmt.Errorf("GetUserById(%d): %v", uid, err))
+		ctx.Handle(500, "GetUserByID", fmt.Errorf("[%d]: %v", uid, err))
 		return nil
 	}
 
@@ -67,6 +67,7 @@ func Create(ctx *middleware.Context) {
 	ctx.Data["Readmes"] = models.Readmes
 	ctx.Data["readme"] = "Default"
 	ctx.Data["private"] = ctx.User.LastRepoVisibility
+	ctx.Data["IsForcedPrivate"] = setting.Repository.ForcePrivate
 
 	ctxUser := checkContextUser(ctx, ctx.QueryInt64("org"))
 	if ctx.Written() {
@@ -117,11 +118,11 @@ func CreatePost(ctx *middleware.Context, form auth.CreateRepoForm) {
 		Gitignores:  form.Gitignores,
 		License:     form.License,
 		Readme:      form.Readme,
-		IsPrivate:   form.Private,
+		IsPrivate:   form.Private || setting.Repository.ForcePrivate,
 		AutoInit:    form.AutoInit,
 	})
 	if err == nil {
-		log.Trace("Repository created: %s/%s", ctxUser.Name, repo.Name)
+		log.Trace("Repository created[%d]: %s/%s", repo.ID, ctxUser.Name, repo.Name)
 		ctx.Redirect(setting.AppSubUrl + "/" + ctxUser.Name + "/" + repo.Name)
 		return
 	}
@@ -138,6 +139,7 @@ func CreatePost(ctx *middleware.Context, form auth.CreateRepoForm) {
 func Migrate(ctx *middleware.Context) {
 	ctx.Data["Title"] = ctx.Tr("new_migrate")
 	ctx.Data["private"] = ctx.User.LastRepoVisibility
+	ctx.Data["IsForcedPrivate"] = setting.Repository.ForcePrivate
 
 	ctxUser := checkContextUser(ctx, ctx.QueryInt64("org"))
 	if ctx.Written() {
@@ -185,9 +187,15 @@ func MigratePost(ctx *middleware.Context, form auth.MigrateRepoForm) {
 		return
 	}
 
-	repo, err := models.MigrateRepository(ctxUser, form.RepoName, form.Description, form.Private, form.Mirror, remoteAddr)
+	repo, err := models.MigrateRepository(ctxUser, models.MigrateRepoOptions{
+		Name:        form.RepoName,
+		Description: form.Description,
+		IsPrivate:   form.Private || setting.Repository.ForcePrivate,
+		IsMirror:    form.Mirror,
+		RemoteAddr:  remoteAddr,
+	})
 	if err == nil {
-		log.Trace("Repository migrated: %s/%s", ctxUser.Name, form.RepoName)
+		log.Trace("Repository migrated[%d]: %s/%s", repo.ID, ctxUser.Name, form.RepoName)
 		ctx.Redirect(setting.AppSubUrl + "/" + ctxUser.Name + "/" + form.RepoName)
 		return
 	}
