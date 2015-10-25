@@ -73,12 +73,16 @@ func (pr *PullRequest) AfterSet(colName string, _ xorm.Cell) {
 	}
 }
 
-func (pr *PullRequest) GetHeadRepo() (err error) {
-	pr.HeadRepo, err = GetRepositoryByID(pr.HeadRepoID)
+func (pr *PullRequest) getHeadRepo(e Engine) (err error) {
+	pr.HeadRepo, err = getRepositoryByID(e, pr.HeadRepoID)
 	if err != nil && !IsErrRepoNotExist(err) {
 		return fmt.Errorf("GetRepositoryByID (head): %v", err)
 	}
 	return nil
+}
+
+func (pr *PullRequest) GetHeadRepo() (err error) {
+	return pr.getHeadRepo(x)
 }
 
 func (pr *PullRequest) GetBaseRepo() (err error) {
@@ -130,8 +134,8 @@ func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository) (err error
 		return fmt.Errorf("Issue.changeStatus: %v", err)
 	}
 
-	if err = pr.GetHeadRepo(); err != nil {
-		return fmt.Errorf("GetHeadRepo: %v", err)
+	if err = pr.getHeadRepo(sess); err != nil {
+		return fmt.Errorf("getHeadRepo: %v", err)
 	}
 
 	headRepoPath := RepoPath(pr.HeadUserName, pr.HeadRepo.Name)
