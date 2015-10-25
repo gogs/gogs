@@ -18,13 +18,14 @@ Gogs 的目标是打造一个最简单、最快速和最轻松的方式搭建自
 ## 功能特性
 
 - 支持活动时间线
-- 支持 SSH/HTTP(S) 协议
-- 支持 SMTP/LDAP/反向代理的用户认证
+- 支持 SSH 以及 HTTP/HTTPS 协议
+- 支持 SMTP、LDAP 和反向代理的用户认证
 - 支持反向代理子路径
 - 支持用户、组织和仓库管理系统
 - 支持仓库和组织级别 Web 钩子（包括 Slack 集成）
 - 支持仓库 Git 钩子和部署密钥
-- 支持 添加/删除 仓库协作者
+- 支持仓库工单（Issue）和合并请求（Pull Request）
+- 支持添加和删除仓库协作者
 - 支持 Gravatar 以及自定义源
 - 支持邮件服务
 - 支持后台管理面板
@@ -64,7 +65,7 @@ Gogs 的目标是打造一个最简单、最快速和最轻松的方式搭建自
 
 ## 贡献成员
 
-- 前团队成员 [@lunny](https://github.com/lunny) 和 [@fuxiaohei](https://github.com/fuxiaohei)。
+- 前团队成员 [@lunny](https://github.com/lunny)、[@fuxiaohei](https://github.com/fuxiaohei) 和 [@slene](https://github.com/slene)。
 - 您可以通过查看 [贡献者页面](https://github.com/gogits/gogs/graphs/contributors) 获取完整的贡献者列表。
 - 您可以通过查看 [TRANSLATORS](conf/locale/TRANSLATORS) 文件获取公开的翻译人员列表。
 
