@@ -76,7 +76,7 @@ func (pr *PullRequest) AfterSet(colName string, _ xorm.Cell) {
 func (pr *PullRequest) getHeadRepo(e Engine) (err error) {
 	pr.HeadRepo, err = getRepositoryByID(e, pr.HeadRepoID)
 	if err != nil && !IsErrRepoNotExist(err) {
-		return fmt.Errorf("GetRepositoryByID (head): %v", err)
+		return fmt.Errorf("getRepositoryByID(head): %v", err)
 	}
 	return nil
 }
@@ -92,7 +92,7 @@ func (pr *PullRequest) GetBaseRepo() (err error) {
 
 	pr.BaseRepo, err = GetRepositoryByID(pr.BaseRepoID)
 	if err != nil {
-		return fmt.Errorf("GetRepositoryByID (base): %v", err)
+		return fmt.Errorf("GetRepositoryByID(base): %v", err)
 	}
 	return nil
 }
