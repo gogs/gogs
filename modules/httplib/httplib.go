@@ -50,7 +50,7 @@ func SetDefaultSetting(setting Settings) {
 }
 
 // return *Request with specific method
-func newBeegoRequest(url, method string) *Request {
+func newRequest(url, method string) *Request {
 	var resp http.Response
 	req := http.Request{
 		Method:     method,
@@ -64,27 +64,27 @@ func newBeegoRequest(url, method string) *Request {
 
 // Get returns *Request with GET method.
 func Get(url string) *Request {
-	return newBeegoRequest(url, "GET")
+	return newRequest(url, "GET")
 }
 
 // Post returns *Request with POST method.
 func Post(url string) *Request {
-	return newBeegoRequest(url, "POST")
+	return newRequest(url, "POST")
 }
 
 // Put returns *Request with PUT method.
 func Put(url string) *Request {
-	return newBeegoRequest(url, "PUT")
+	return newRequest(url, "PUT")
 }
 
 // Delete returns *Request DELETE method.
 func Delete(url string) *Request {
-	return newBeegoRequest(url, "DELETE")
+	return newRequest(url, "DELETE")
 }
 
 // Head returns *Request with HEAD method.
 func Head(url string) *Request {
-	return newBeegoRequest(url, "HEAD")
+	return newRequest(url, "HEAD")
 }
 
 type Settings struct {

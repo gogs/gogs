@@ -5,6 +5,7 @@
 package cmd
 
 import (
+	"crypto/tls"
 	"fmt"
 	"os"
 	"os/exec"
@@ -219,7 +220,9 @@ func runServ(c *cli.Context) {
 			strings.TrimPrefix(task.RefName, "refs/heads/")
 		log.GitLogger.Trace("Trigger task: %s", reqURL)
 
-		resp, err := httplib.Head(reqURL).Response()
+		resp, err := httplib.Head(reqURL).SetTLSClientConfig(&tls.Config{
+			InsecureSkipVerify: true,
+		}).Response()
 		if err == nil {
 			resp.Body.Close()
 			if resp.StatusCode/100 != 2 {
