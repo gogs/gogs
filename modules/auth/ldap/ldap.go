@@ -9,6 +9,7 @@ package ldap
 import (
 	"crypto/tls"
 	"fmt"
+	"strings"
 
 	"github.com/gogits/gogs/modules/ldap"
 	"github.com/gogits/gogs/modules/log"
@@ -33,6 +34,28 @@ type Source struct {
 	Enabled          bool   // if this source is disabled
 }
 
+func (ls *Source) sanitizedUserQuery(username string) (string, bool) {
+	// See http://tools.ietf.org/search/rfc4515
+	badCharacters := "\x00()*\\"
+	if strings.ContainsAny(username, badCharacters) {
+		log.Debug("'%s' contains invalid query characters. Aborting.", username)
+		return "", false
+	}
+
+	return fmt.Sprintf(ls.Filter, username), true
+}
+
+func (ls *Source) sanitizedUserDN(username string) (string, bool) {
+	// See http://tools.ietf.org/search/rfc4514: "special characters"
+	badCharacters := "\x00()*\\,='\"#+;<> "
+	if strings.ContainsAny(username, badCharacters) {
+		log.Debug("'%s' contains invalid DN characters. Aborting.", username)
+		return "", false
+	}
+
+	return fmt.Sprintf(ls.UserDN, username), true
+}
+
 func (ls *Source) FindUserDN(name string) (string, bool) {
 	l, err := ldapDial(ls)
 	if err != nil {
@@ -55,7 +78,11 @@ func (ls *Source) FindUserDN(name string) (string, bool) {
 	}
 
 	// A search for the user.
-	userFilter := fmt.Sprintf(ls.Filter, name)
+	userFilter, ok := ls.sanitizedUserQuery(name)
+	if !ok {
+		return "", false
+	}
+
 	log.Trace("Searching using filter %s", userFilter)
 	search := ldap.NewSearchRequest(
 		ls.UserBase, ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0,
@@ -85,7 +112,12 @@ func (ls *Source) SearchEntry(name, passwd string, directBind bool) (string, str
 	var userDN string
 	if directBind {
 		log.Trace("LDAP will bind directly via UserDN template: %s", ls.UserDN)
-		userDN = fmt.Sprintf(ls.UserDN, name)
+
+		var ok bool
+		userDN, ok = ls.sanitizedUserDN(name)
+		if !ok {
+			return "", "", "", false, false
+		}
 	} else {
 		log.Trace("LDAP will use BindDN.")
 
@@ -112,7 +144,11 @@ func (ls *Source) SearchEntry(name, passwd string, directBind bool) (string, str
 	}
 
 	log.Trace("Bound successfully with userDN: %s", userDN)
-	userFilter := fmt.Sprintf(ls.Filter, name)
+	userFilter, ok := ls.sanitizedUserQuery(name)
+	if !ok {
+		return "", "", "", false, false
+	}
+
 	search := ldap.NewSearchRequest(
 		userDN, ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false, userFilter,
 		[]string{ls.AttributeName, ls.AttributeSurname, ls.AttributeMail},
