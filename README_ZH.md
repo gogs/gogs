@@ -55,6 +55,23 @@ Gogs 的目标是打造一个最简单、最快速和最轻松的方式搭建自
 - [采用 Docker 部署](https://github.com/gogits/gogs/tree/master/docker)
 - [通过 Vagrant 安装](https://github.com/geerlingguy/ansible-vagrant-examples/tree/master/gogs)
 
+### 使用教程
+
+- [阿里云上 Ubuntu 14.04 64 位安装 Gogs](http://my.oschina.net/luyao/blog/375654)
+
+### 云端部署
+
+- [OpenShift](https://github.com/tkisme/gogs-openshift)
+- [Cloudron](https://cloudron.io/appstore.html#io.gogs.cloudronapp)
+- [Scaleway](https://www.scaleway.com/imagehub/gogs/)
+- [Portal](https://portaldemo.xyz/cloud/)
+- [Sandstorm](https://github.com/cem/gogs-sandstorm)
+
+### 产品支持
+
+- [Synology](https://www.synology.com)（Docker）
+- [One Space](http://www.onespace.cc)（应用商店）
+
 ## 特别鸣谢
 
 - 基于 [Macaron](https://github.com/go-macaron/macaron) 的路由与中间件机制。
