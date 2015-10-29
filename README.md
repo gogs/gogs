@@ -106,6 +106,12 @@ There are 5 ways to install Gogs:
 - [Cloudron](https://cloudron.io/appstore.html#io.gogs.cloudronapp)
 - [Scaleway](https://www.scaleway.com/imagehub/gogs/)
 - [Portal](https://portaldemo.xyz/cloud/)
+- [Sandstorm](https://github.com/cem/gogs-sandstorm)
+
+### Product Support
+
+- [Synology](https://www.synology.com) (Docker)
+- [One Space](http://www.onespace.cc) (App Store)
 
 ## Acknowledgments
 
