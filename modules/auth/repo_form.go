@@ -37,8 +37,8 @@ type MigrateRepoForm struct {
 	AuthPassword string `json:"auth_password"`
 	Uid          int64  `json:"uid" binding:"Required"`
 	RepoName     string `json:"repo_name" binding:"Required;AlphaDashDot;MaxSize(100)"`
-	Private      bool   `json:"mirror"`
-	Mirror       bool   `json:"private"`
+	Mirror       bool   `json:"mirror"`
+	Private      bool   `json:"private"`
 	Description  string `json:"description" binding:"MaxSize(255)"`
 }
 
