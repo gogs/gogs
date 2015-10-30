@@ -160,7 +160,7 @@ func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository) (err error
 	}
 
 	// Clone base repo.
-	tmpBasePath := path.Join("data/tmp/repos", com.ToStr(time.Now().Nanosecond())+".git")
+	tmpBasePath := path.Join(setting.AppDataPath, "tmp/repos", com.ToStr(time.Now().Nanosecond())+".git")
 	os.MkdirAll(path.Dir(tmpBasePath), os.ModePerm)
 	defer os.RemoveAll(path.Dir(tmpBasePath))
 
@@ -214,6 +214,7 @@ func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository) (err error
 var patchConflicts = []string{
 	"patch does not apply",
 	"already exists in working directory",
+	"unrecognized input",
 }
 
 // testPatch checks if patch can be merged to base repository without conflit.

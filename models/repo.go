@@ -300,7 +300,7 @@ func (repo *Repository) DescriptionHtml() template.HTML {
 }
 
 func (repo *Repository) LocalCopyPath() string {
-	return path.Join(setting.RepoRootPath, "local", com.ToStr(repo.ID))
+	return path.Join(setting.AppDataPath, "tmp/local", com.ToStr(repo.ID))
 }
 
 // UpdateLocalCopy makes sure the local copy of repository is up-to-date.
@@ -1487,6 +1487,12 @@ func CheckRepoStats() {
 			"SELECT `user`.id FROM `user` WHERE `user`.num_repos!=(SELECT COUNT(*) FROM `repository` WHERE owner_id=`user`.id)",
 			"UPDATE `user` SET num_repos=(SELECT COUNT(*) FROM `repository` WHERE owner_id=?) WHERE id=?",
 			"user count 'num_repos'",
+		},
+		// Issue.NumComments
+		{
+			"SELECT `issue`.id FROM `issue` WHERE `issue`.num_comments!=(SELECT COUNT(*) FROM `comment` WHERE issue_id=`issue`.id AND type=0)",
+			"UPDATE `issue` SET num_comments=(SELECT COUNT(*) FROM `comment` WHERE issue_id=? AND type=0) WHERE id=?",
+			"issue count 'num_comments'",
 		},
 	}
 	for i := range checkers {
