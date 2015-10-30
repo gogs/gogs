@@ -173,6 +173,7 @@ func InstallPost(ctx *middleware.Context, form auth.InstallForm) {
 		ctx.HTML(200, INSTALL)
 		return
 	}
+	return
 
 	if _, err := exec.LookPath("git"); err != nil {
 		ctx.RenderWithErr(ctx.Tr("install.test_git_failed", err), INSTALL, &form)
