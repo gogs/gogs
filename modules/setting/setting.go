@@ -43,10 +43,11 @@ const (
 
 var (
 	// App settings.
-	AppVer    string
-	AppName   string
-	AppUrl    string
-	AppSubUrl string
+	AppVer      string
+	AppName     string
+	AppUrl      string
+	AppSubUrl   string
+	AppDataPath = "data"
 
 	// Server settings.
 	Protocol           Scheme
@@ -319,7 +320,7 @@ func NewContext() {
 	ReverseProxyAuthUser = sec.Key("REVERSE_PROXY_AUTHENTICATION_USER").MustString("X-WEBAUTH-USER")
 
 	sec = Cfg.Section("attachment")
-	AttachmentPath = sec.Key("PATH").MustString("data/attachments")
+	AttachmentPath = sec.Key("PATH").MustString(path.Join(AppDataPath, "attachments"))
 	if !filepath.IsAbs(AttachmentPath) {
 		AttachmentPath = path.Join(workDir, AttachmentPath)
 	}
@@ -387,7 +388,7 @@ func NewContext() {
 
 	sec = Cfg.Section("picture")
 	PictureService = sec.Key("SERVICE").In("server", []string{"server"})
-	AvatarUploadPath = sec.Key("AVATAR_UPLOAD_PATH").MustString("data/avatars")
+	AvatarUploadPath = sec.Key("AVATAR_UPLOAD_PATH").MustString(path.Join(AppDataPath, "avatars"))
 	forcePathSeparator(AvatarUploadPath)
 	if !filepath.IsAbs(AvatarUploadPath) {
 		AvatarUploadPath = path.Join(workDir, AvatarUploadPath)

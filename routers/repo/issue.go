@@ -324,6 +324,47 @@ func ValidateRepoMetas(ctx *middleware.Context, form auth.CreateIssueForm) ([]in
 	return labelIDs, milestoneID, assigneeID
 }
 
+func checkMentions(ctx *middleware.Context, issue *models.Issue) {
+	// Update mentions.
+	mentions := base.MentionPattern.FindAllString(issue.Content, -1)
+	if len(mentions) > 0 {
+		for i := range mentions {
+			mentions[i] = strings.TrimSpace(mentions[i])[1:]
+		}
+
+		if err := models.UpdateMentions(mentions, issue.ID); err != nil {
+			ctx.Handle(500, "UpdateMentions", err)
+			return
+		}
+	}
+
+	repo := ctx.Repo.Repository
+
+	// Mail watchers and mentions.
+	if setting.Service.EnableNotifyMail {
+		tos, err := mailer.SendIssueNotifyMail(ctx.User, ctx.Repo.Owner, repo, issue)
+		if err != nil {
+			ctx.Handle(500, "SendIssueNotifyMail", err)
+			return
+		}
+
+		tos = append(tos, ctx.User.LowerName)
+		newTos := make([]string, 0, len(mentions))
+		for _, m := range mentions {
+			if com.IsSliceContainsStr(tos, m) {
+				continue
+			}
+
+			newTos = append(newTos, m)
+		}
+		if err = mailer.SendIssueMentionMail(ctx.Render, ctx.User, ctx.Repo.Owner,
+			repo, issue, models.GetUserEmailsByNames(newTos)); err != nil {
+			ctx.Handle(500, "SendIssueMentionMail", err)
+			return
+		}
+	}
+}
+
 func NewIssuePost(ctx *middleware.Context, form auth.CreateIssueForm) {
 	ctx.Data["Title"] = ctx.Tr("repo.issues.new")
 	ctx.Data["PageIsIssueList"] = true
@@ -363,41 +404,9 @@ func NewIssuePost(ctx *middleware.Context, form auth.CreateIssueForm) {
 		return
 	}
 
-	// Update mentions.
-	mentions := base.MentionPattern.FindAllString(issue.Content, -1)
-	if len(mentions) > 0 {
-		for i := range mentions {
-			mentions[i] = strings.TrimSpace(mentions[i])[1:]
-		}
-
-		if err := models.UpdateMentions(mentions, issue.ID); err != nil {
-			ctx.Handle(500, "UpdateMentions", err)
-			return
-		}
-	}
-
-	// Mail watchers and mentions.
-	if setting.Service.EnableNotifyMail {
-		tos, err := mailer.SendIssueNotifyMail(ctx.User, ctx.Repo.Owner, repo, issue)
-		if err != nil {
-			ctx.Handle(500, "SendIssueNotifyMail", err)
-			return
-		}
-
-		tos = append(tos, ctx.User.LowerName)
-		newTos := make([]string, 0, len(mentions))
-		for _, m := range mentions {
-			if com.IsSliceContainsStr(tos, m) {
-				continue
-			}
-
-			newTos = append(newTos, m)
-		}
-		if err = mailer.SendIssueMentionMail(ctx.Render, ctx.User, ctx.Repo.Owner,
-			repo, issue, models.GetUserEmailsByNames(newTos)); err != nil {
-			ctx.Handle(500, "SendIssueMentionMail", err)
-			return
-		}
+	checkMentions(ctx, issue)
+	if ctx.Written() {
+		return
 	}
 
 	log.Trace("Issue created: %d/%d", repo.ID, issue.ID)
@@ -836,46 +845,16 @@ func NewComment(ctx *middleware.Context, form auth.CreateCommentForm) {
 		return
 	}
 
-	// Update mentions.
-	mentions := base.MentionPattern.FindAllString(comment.Content, -1)
-	if len(mentions) > 0 {
-		for i := range mentions {
-			mentions[i] = mentions[i][1:]
-		}
-
-		if err := models.UpdateMentions(mentions, issue.ID); err != nil {
-			ctx.Handle(500, "UpdateMentions", err)
-			return
-		}
+	checkMentions(ctx, &models.Issue{
+		ID:      issue.ID,
+		Index:   issue.Index,
+		Name:    issue.Name,
+		Content: form.Content,
+	})
+	if ctx.Written() {
+		return
 	}
 
-	// Mail watchers and mentions.
-	if setting.Service.EnableNotifyMail {
-		tos, err := mailer.SendIssueNotifyMail(ctx.User, ctx.Repo.Owner, ctx.Repo.Repository, &models.Issue{
-			Index:   issue.Index,
-			Name:    issue.Name,
-			Content: form.Content,
-		})
-		if err != nil {
-			ctx.Handle(500, "SendIssueNotifyMail", err)
-			return
-		}
-
-		tos = append(tos, ctx.User.LowerName)
-		newTos := make([]string, 0, len(mentions))
-		for _, m := range mentions {
-			if com.IsSliceContainsStr(tos, m) {
-				continue
-			}
-
-			newTos = append(newTos, m)
-		}
-		if err = mailer.SendIssueMentionMail(ctx.Render, ctx.User, ctx.Repo.Owner,
-			ctx.Repo.Repository, issue, models.GetUserEmailsByNames(newTos)); err != nil {
-			ctx.Handle(500, "SendIssueMentionMail", err)
-			return
-		}
-	}
 	log.Trace("Comment created: %d/%d/%d", ctx.Repo.Repository.ID, issue.ID, comment.ID)
 }
 
