@@ -347,6 +347,8 @@ func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 
 		if ctx.Query("go-get") == "1" {
 			ctx.Data["GoGetImport"] = fmt.Sprintf("%s/%s/%s", setting.Domain, u.Name, repo.Name)
+			ctx.Data["GoDocDirectory"] = fmt.Sprintf("%s%s/%s/src/master{/dir}", setting.AppUrl, repo.Owner.LowerName, repo.LowerName)
+			ctx.Data["GoDocFile"] = fmt.Sprintf("%s%s/%s/src/master{/dir}/{file}#L{line}", setting.AppUrl, repo.Owner.LowerName, repo.LowerName)
 		}
 
 		if ctx.IsSigned {
