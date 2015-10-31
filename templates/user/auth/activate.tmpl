@@ -16,18 +16,10 @@
               <p class="center">{{.i18n.Tr "auth.resent_limit_prompt"}}</p>
             {{else}}
               <p>{{.i18n.Tr "auth.confirmation_mail_sent_prompt" .SignedUser.Email .Hours | Str2html}}</p>
-              <div class="ui divider"></div>
-              <div class="text right">
-                <a class="ui green button" href="http://{{Mail2Domain .SignedUser.Email}}">{{.i18n.Tr "auth.sign_in_to_account"}}</a>
-              </div>
             {{end}}
           {{else}}
             {{if .IsSendRegisterMail}}
               <p>{{.i18n.Tr "auth.confirmation_mail_sent_prompt" .Email .Hours | Str2html}}</p>
-              <div class="ui divider"></div>
-              <div class="text right">
-                <a class="ui green button" href="http://{{Mail2Domain .Email}}">{{.i18n.Tr "auth.sign_in_to_account"}}</a>
-              </div>
             {{else if .IsActivateFailed}}
               <p>{{.i18n.Tr "auth.invalid_code"}}</p>
             {{else}}

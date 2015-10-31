@@ -11,10 +11,6 @@
           {{template "base/alert" .}}
           {{if .IsResetSent}}
             <p>{{.i18n.Tr "auth.confirmation_mail_sent_prompt" .Email .Hours | Str2html}}</p>
-            <div class="ui divider"></div>
-            <div class="text right">
-              <a class="ui green button" href="http://{{Mail2Domain .Email}}">{{.i18n.Tr "auth.sign_in_to_account"}}</a>
-            </div>
           {{else if .IsResetRequest}}
             <div class="required inline field {{if .Err_Email}}error{{end}}">
                 <label for="email">{{.i18n.Tr "email"}}</label>
