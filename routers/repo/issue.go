@@ -781,8 +781,8 @@ func NewComment(ctx *middleware.Context, form auth.CreateCommentForm) {
 
 	var comment *models.Comment
 	defer func() {
-		// Check if issue owner/poster changes the status of issue.
-		if (ctx.Repo.IsOwner() || (ctx.IsSigned && issue.IsPoster(ctx.User.Id))) &&
+		// Check if issue admin/poster changes the status of issue.
+		if (ctx.Repo.IsAdmin() || (ctx.IsSigned && issue.IsPoster(ctx.User.Id))) &&
 			(form.Status == "reopen" || form.Status == "close") &&
 			!(issue.IsPull && issue.HasMerged) {
 
