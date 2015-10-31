@@ -29,7 +29,8 @@ GOGS_PATH=${GOGS_HOME}/$NAME
 GOGS_USER=git
 SERVICENAME="Gogs Go Git Service"
 LOCKFILE=/var/lock/subsys/gogs
-LOGFILE=${GOGS_HOME}/log/gogs.log
+LOGPATH=${GOGS_HOME}/log
+LOGFILE=${LOGPATH}/gogs.log
 RETVAL=0
 
 # Read configuration from /etc/sysconfig/gogs to override defaults
@@ -37,6 +38,8 @@ RETVAL=0
 
 # Don't do anything if nothing is installed
 [ -x ${GOGS_PATH} ] || exit 0
+# exit if logpath dir is not created.
+[ -x ${LOGPATH} ] || exit 0
 
 DAEMON_OPTS="--check $NAME"
 
