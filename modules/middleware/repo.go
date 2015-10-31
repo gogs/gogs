@@ -7,6 +7,7 @@ package middleware
 import (
 	"fmt"
 	"net/url"
+	"path"
 	"strings"
 
 	"github.com/mcuadros/go-version"
@@ -30,15 +31,15 @@ func ApiRepoAssignment() macaron.Handler {
 		repoName := ctx.Params(":reponame")
 
 		var (
-			u   *models.User
-			err error
+			owner *models.User
+			err   error
 		)
 
 		// Check if the user is the same as the repository owner.
 		if ctx.IsSigned && ctx.User.LowerName == strings.ToLower(userName) {
-			u = ctx.User
+			owner = ctx.User
 		} else {
-			u, err = models.GetUserByName(userName)
+			owner, err = models.GetUserByName(userName)
 			if err != nil {
 				if models.IsErrUserNotExist(err) {
 					ctx.Error(404)
@@ -48,10 +49,10 @@ func ApiRepoAssignment() macaron.Handler {
 				return
 			}
 		}
-		ctx.Repo.Owner = u
+		ctx.Repo.Owner = owner
 
 		// Get repository.
-		repo, err := models.GetRepositoryByName(u.Id, repoName)
+		repo, err := models.GetRepositoryByName(owner.Id, repoName)
 		if err != nil {
 			if models.IsErrRepoNotExist(err) {
 				ctx.Error(404)
@@ -234,8 +235,8 @@ func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 		}
 
 		var (
-			u   *models.User
-			err error
+			owner *models.User
+			err   error
 		)
 
 		userName := ctx.Params(":username")
@@ -247,9 +248,9 @@ func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 
 		// Check if the user is the same as the repository owner
 		if ctx.IsSigned && ctx.User.LowerName == strings.ToLower(userName) {
-			u = ctx.User
+			owner = ctx.User
 		} else {
-			u, err = models.GetUserByName(userName)
+			owner, err = models.GetUserByName(userName)
 			if err != nil {
 				if models.IsErrUserNotExist(err) {
 					ctx.Handle(404, "GetUserByName", err)
@@ -259,10 +260,10 @@ func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 				return
 			}
 		}
-		ctx.Repo.Owner = u
+		ctx.Repo.Owner = owner
 
 		// Get repository.
-		repo, err := models.GetRepositoryByName(u.Id, repoName)
+		repo, err := models.GetRepositoryByName(owner.Id, repoName)
 		if err != nil {
 			if models.IsErrRepoNotExist(err) {
 				ctx.Handle(404, "GetRepositoryByName", err)
@@ -331,7 +332,7 @@ func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 			}
 		}
 
-		ctx.Data["Title"] = u.Name + "/" + repo.Name
+		ctx.Data["Title"] = owner.Name + "/" + repo.Name
 		ctx.Data["Repository"] = repo
 		ctx.Data["Owner"] = ctx.Repo.Repository.Owner
 		ctx.Data["IsRepositoryOwner"] = ctx.Repo.IsOwner()
@@ -344,12 +345,6 @@ func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 			return
 		}
 		ctx.Data["CloneLink"] = ctx.Repo.CloneLink
-
-		if ctx.Query("go-get") == "1" {
-			ctx.Data["GoGetImport"] = fmt.Sprintf("%s/%s/%s", setting.Domain, u.Name, repo.Name)
-			ctx.Data["GoDocDirectory"] = fmt.Sprintf("%s%s/%s/src/master{/dir}", setting.AppUrl, repo.Owner.LowerName, repo.LowerName)
-			ctx.Data["GoDocFile"] = fmt.Sprintf("%s%s/%s/src/master{/dir}/{file}#L{line}", setting.AppUrl, repo.Owner.LowerName, repo.LowerName)
-		}
 
 		if ctx.IsSigned {
 			ctx.Data["IsWatchingRepo"] = models.IsWatching(ctx.User.Id, repo.ID)
@@ -391,6 +386,13 @@ func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 
 		ctx.Data["BranchName"] = ctx.Repo.BranchName
 		ctx.Data["CommitID"] = ctx.Repo.CommitID
+
+		if ctx.Query("go-get") == "1" {
+			ctx.Data["GoGetImport"] = path.Join(setting.Domain, setting.AppSubUrl, owner.Name, repo.Name)
+			prefix := path.Join(setting.AppUrl, owner.Name, repo.Name, "src", ctx.Repo.BranchName)
+			ctx.Data["GoDocDirectory"] = prefix + "{/dir}"
+			ctx.Data["GoDocFile"] = prefix + "{/dir}/{file}#L{line}"
+		}
 
 		userAgent := ctx.Req.Header.Get("User-Agent")
 		ua := user_agent.New(userAgent)
