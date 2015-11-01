@@ -23,6 +23,7 @@ import (
 	"github.com/Unknwon/cae/zip"
 	"github.com/Unknwon/com"
 	"github.com/go-xorm/xorm"
+	"gopkg.in/ini.v1"
 
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/bindata"
@@ -535,6 +536,17 @@ func MigrateRepository(u *User, opts MigrateRepoOptions) (*Repository, error) {
 		return repo, fmt.Errorf("git clone --mirror --bare --quiet: %v", stderr)
 	} else if err = createUpdateHook(repoPath); err != nil {
 		return repo, fmt.Errorf("create update hook: %v", err)
+	}
+
+	// Clean up mirror info which prevents "push --all".
+	configPath := filepath.Join(repoPath, "/config")
+	cfg, err := ini.Load(configPath)
+	if err != nil {
+		return repo, fmt.Errorf("open config file: %v", err)
+	}
+	cfg.DeleteSection("remote \"origin\"")
+	if err = cfg.SaveToIndent(configPath, "\t"); err != nil {
+		return repo, fmt.Errorf("save config file: %v", err)
 	}
 
 	// Check if repository is empty.
