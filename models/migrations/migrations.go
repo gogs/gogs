@@ -684,6 +684,12 @@ func cleanUpMigrateRepoInfo(x *xorm.Engine) (err error) {
 		}
 
 		configPath := filepath.Join(setting.RepoRootPath, user.LowerName, repo.LowerName+".git/config")
+
+		// In case repository file is somehow missing.
+		if !com.IsFile(configPath) {
+			continue
+		}
+
 		cfg, err := ini.Load(configPath)
 		if err != nil {
 			return fmt.Errorf("open config file: %v", err)
