@@ -11,6 +11,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -66,6 +67,7 @@ var migrations = []Migration{
 	NewMigration("generate issue-label from issue", issueToIssueLabel),           // V6 -> V7:v0.6.4
 	NewMigration("refactor attachment table", attachmentRefactor),                // V7 -> V8:v0.6.4
 	NewMigration("rename pull request fields", renamePullRequestFields),          // V8 -> V9:v0.6.16
+	NewMigration("clean up migrate repo info", cleanUpMigrateRepoInfo),           // V9 -> V10:v0.6.20
 }
 
 // Migrate database to current version
@@ -652,4 +654,45 @@ func renamePullRequestFields(x *xorm.Engine) (err error) {
 	}
 
 	return sess.Commit()
+}
+
+func cleanUpMigrateRepoInfo(x *xorm.Engine) (err error) {
+	type (
+		User struct {
+			ID        int64 `xorm:"pk autoincr"`
+			LowerName string
+		}
+		Repository struct {
+			ID        int64 `xorm:"pk autoincr"`
+			OwnerID   int64
+			LowerName string
+		}
+	)
+
+	repos := make([]*Repository, 0, 25)
+	if err = x.Where("is_mirror=?", false).Find(&repos); err != nil {
+		return fmt.Errorf("select all non-mirror repositories: %v", err)
+	}
+	var user *User
+	for _, repo := range repos {
+		user = &User{ID: repo.OwnerID}
+		has, err := x.Get(user)
+		if err != nil {
+			return fmt.Errorf("get owner of repository[%d - %d]: %v", repo.ID, repo.OwnerID, err)
+		} else if !has {
+			continue
+		}
+
+		configPath := filepath.Join(setting.RepoRootPath, user.LowerName, repo.LowerName+".git/config")
+		cfg, err := ini.Load(configPath)
+		if err != nil {
+			return fmt.Errorf("open config file: %v", err)
+		}
+		cfg.DeleteSection("remote \"origin\"")
+		if err = cfg.SaveToIndent(configPath, "\t"); err != nil {
+			return fmt.Errorf("save config file: %v", err)
+		}
+	}
+
+	return nil
 }
