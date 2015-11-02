@@ -243,7 +243,7 @@ func CheckPublicKeyString(content string) (_ string, err error) {
 		}
 		keyType := strings.Trim(sshKeygenOutput[len(sshKeygenOutput)-1], " ()")
 		if minimumKeySize := setting.Service.MinimumKeySizes[keyType]; minimumKeySize == 0 {
-			return "", errors.New("sorry, unrecognized public key type")
+			return "", fmt.Errorf("unrecognized public key type: %s", keyType)
 		} else if keySize < minimumKeySize {
 			return "", fmt.Errorf("the minimum accepted size of a public key %s is %d", keyType, minimumKeySize)
 		}
