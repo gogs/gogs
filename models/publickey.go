@@ -218,9 +218,9 @@ func CheckPublicKeyString(content string) (_ string, err error) {
 	tmpFile.Close()
 
 	// Check if ssh-keygen recognizes its contents.
-	stdout, stderr, err := process.Exec("CheckPublicKeyString", "ssh-keygen", "-l", "-f", tmpPath)
+	stdout, stderr, err := process.Exec("CheckPublicKeyString", "ssh-keygen", "-lf", tmpPath)
 	if err != nil {
-		return "", errors.New("ssh-keygen -l -f: " + stderr)
+		return "", errors.New("ssh-keygen -lf: " + stderr)
 	} else if len(stdout) < 2 {
 		return "", errors.New("ssh-keygen returned not enough output to evaluate the key: " + stdout)
 	}
@@ -241,7 +241,8 @@ func CheckPublicKeyString(content string) (_ string, err error) {
 		if keySize == 0 {
 			return "", errors.New("cannot get key size of the given key")
 		}
-		keyType := strings.Trim(sshKeygenOutput[len(sshKeygenOutput)-1], " ()")
+
+		keyType := strings.Trim(sshKeygenOutput[len(sshKeygenOutput)-1], " ()\n")
 		if minimumKeySize := setting.Service.MinimumKeySizes[keyType]; minimumKeySize == 0 {
 			return "", fmt.Errorf("unrecognized public key type: %s", keyType)
 		} else if keySize < minimumKeySize {
@@ -311,9 +312,9 @@ func addKey(e Engine, key *PublicKey) (err error) {
 	if err = ioutil.WriteFile(tmpPath, []byte(key.Content), 0644); err != nil {
 		return err
 	}
-	stdout, stderr, err := process.Exec("AddPublicKey", "ssh-keygen", "-l", "-f", tmpPath)
+	stdout, stderr, err := process.Exec("AddPublicKey", "ssh-keygen", "-lf", tmpPath)
 	if err != nil {
-		return errors.New("ssh-keygen -l -f: " + stderr)
+		return errors.New("ssh-keygen -lf: " + stderr)
 	} else if len(stdout) < 2 {
 		return errors.New("not enough output for calculating fingerprint: " + stdout)
 	}
