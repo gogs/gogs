@@ -453,6 +453,7 @@ func newService() {
 	Service.EnableCaptcha = sec.Key("ENABLE_CAPTCHA").MustBool()
 
 	minimumKeySizes := Cfg.Section("service.minimum_key_sizes").Keys()
+	Service.MinimumKeySizes = make(map[string]int)
 	for _, key := range minimumKeySizes {
 		Service.MinimumKeySizes[key.Name()] = key.MustInt()
 	}
