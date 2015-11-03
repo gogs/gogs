@@ -213,6 +213,7 @@ func EditUserPost(ctx *middleware.Context, form auth.AdminEditUserForm) {
 	u.IsActive = form.Active
 	u.IsAdmin = form.Admin
 	u.AllowGitHook = form.AllowGitHook
+	u.AllowImportLocal = form.AllowImportLocal
 
 	if err := models.UpdateUser(u); err != nil {
 		if models.IsErrEmailAlreadyUsed(err) {

@@ -5,8 +5,14 @@
 package auth
 
 import (
+	"net/url"
+	"strings"
+
+	"github.com/Unknwon/com"
 	"github.com/go-macaron/binding"
 	"gopkg.in/macaron.v1"
+
+	"github.com/gogits/gogs/models"
 )
 
 // _______________________________________    _________.______________________ _______________.___.
@@ -44,6 +50,34 @@ type MigrateRepoForm struct {
 
 func (f *MigrateRepoForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
 	return validate(errs, ctx.Data, f, ctx.Locale)
+}
+
+// ParseRemoteAddr checks if given remote address is valid,
+// and returns composed URL with needed username and passowrd.
+// It also checks if given user has permission when remote address
+// is actually a local path.
+func (f MigrateRepoForm) ParseRemoteAddr(user *models.User) (string, error) {
+	remoteAddr := f.CloneAddr
+
+	// Remote address can be HTTP/HTTPS/Git URL or local path.
+	if strings.HasPrefix(remoteAddr, "http://") ||
+		strings.HasPrefix(remoteAddr, "https://") ||
+		strings.HasPrefix(remoteAddr, "git://") {
+		u, err := url.Parse(remoteAddr)
+		if err != nil {
+			return "", models.ErrInvalidCloneAddr{IsURLError: true}
+		}
+		if len(f.AuthUsername)+len(f.AuthPassword) > 0 {
+			u.User = url.UserPassword(f.AuthUsername, f.AuthPassword)
+		}
+		remoteAddr = u.String()
+	} else if !user.CanImportLocal() {
+		return "", models.ErrInvalidCloneAddr{IsPermissionDenied: true}
+	} else if !com.IsDir(remoteAddr) {
+		return "", models.ErrInvalidCloneAddr{IsInvalidPath: true}
+	}
+
+	return remoteAddr, nil
 }
 
 type RepoSettingForm struct {
