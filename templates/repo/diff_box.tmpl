@@ -36,18 +36,18 @@
 <div class="diff-file-box diff-box file-content" id="diff-{{.Index}}">
   <h4 class="ui top attached normal header">
     <div class="diff-counter count ui left">
-        {{if not $file.IsBin}}
-        <span class="add" data-line="{{.Addition}}">+ {{.Addition}}</span>
-        <span class="bar">
-          <span class="pull-left add"></span>
-          <span class="pull-left del"></span>
-        </span>
-        <span class="del" data-line="{{.Deletion}}">- {{.Deletion}}</span>
-        {{else}}
-        {{$.i18n.Tr "repo.diff.bin"}}
+        {{if $file.IsBin}}
+          {{$.i18n.Tr "repo.diff.bin"}}
+        {{else if not $file.IsRenamed}}
+          <span class="add" data-line="{{.Addition}}">+ {{.Addition}}</span>
+          <span class="bar">
+            <span class="pull-left add"></span>
+            <span class="pull-left del"></span>
+          </span>
+          <span class="del" data-line="{{.Deletion}}">- {{.Deletion}}</span>
         {{end}}
     </div>
-    <span class="file">{{$file.Name}}</span>
+    <span class="file">{{if $file.IsRenamed}}{{$file.OldName}} &rarr; {{end}}{{$file.Name}}</span>
     <div class="ui right">
       {{if $file.IsDeleted}}
       <a class="ui basic tiny button" rel="nofollow" href="{{EscapePound $.BeforeSourcePath}}/{{EscapePound .Name}}">{{$.i18n.Tr "repo.diff.view_file"}}</a>
