@@ -2288,6 +2288,10 @@ ol.linenums {
 .repository .diff-file-box .code-diff tbody tr:hover pre {
   background-color: transparent !important;
 }
+.repository .diff-file-box.file-content img {
+  max-width: 100%;
+  padding: 5px 5px 0 5px;
+}
 .repository .code-view {
   overflow: auto;
   overflow-x: auto;
