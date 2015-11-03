@@ -4,6 +4,7 @@ go:
   - 1.3
   - 1.4
   - 1.5
+  - tip
 
 before_install:
   - sudo apt-get update -qq
@@ -11,6 +12,7 @@ before_install:
   - go get github.com/msteinert/pam 
 
 install:
+  - go get -v github.com/go-xorm/xorm
   - go get -t -v ./...
 
 script: go build -v -tags "pam"
