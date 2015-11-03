@@ -97,7 +97,7 @@ func ParsePatch(pid int64, maxlines int, cmd *exec.Cmd, reader io.Reader) (*Diff
 	var i int
 	for scanner.Scan() {
 		line := scanner.Text()
-		// fmt.Println(i, line)
+
 		if strings.HasPrefix(line, "+++ ") || strings.HasPrefix(line, "--- ") {
 			continue
 		}
@@ -179,8 +179,6 @@ func ParsePatch(pid int64, maxlines int, cmd *exec.Cmd, reader io.Reader) (*Diff
 				a = a[1 : len(a)-1]
 				b = b[1 : len(b)-1]
 			}
-
-			fmt.Println(a, b)
 
 			curFile = &DiffFile{
 				Name:     a,

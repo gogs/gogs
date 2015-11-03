@@ -385,16 +385,18 @@ func (pr *PullRequest) UpdateCols(cols ...string) error {
 var PullRequestQueue = NewUniqueQueue(setting.Repository.PullRequestQueueLength)
 
 // UpdatePatch generates and saves a new patch.
-func (pr *PullRequest) UpdatePatch() error {
-	if err := pr.GetHeadRepo(); err != nil {
+func (pr *PullRequest) UpdatePatch() (err error) {
+	if err = pr.GetHeadRepo(); err != nil {
 		return fmt.Errorf("GetHeadRepo: %v", err)
 	} else if pr.HeadRepo == nil {
 		log.Trace("PullRequest[%d].UpdatePatch: ignored cruppted data", pr.ID)
 		return nil
 	}
 
-	if err := pr.GetBaseRepo(); err != nil {
+	if err = pr.GetBaseRepo(); err != nil {
 		return fmt.Errorf("GetBaseRepo: %v", err)
+	} else if err = pr.BaseRepo.GetOwner(); err != nil {
+		return fmt.Errorf("GetOwner: %v", err)
 	}
 
 	headRepoPath, err := pr.HeadRepo.RepoPath()
@@ -405,6 +407,22 @@ func (pr *PullRequest) UpdatePatch() error {
 	headGitRepo, err := git.OpenRepository(headRepoPath)
 	if err != nil {
 		return fmt.Errorf("OpenRepository: %v", err)
+	}
+
+	// Add a temporary remote.
+	tmpRemote := com.ToStr(time.Now().UnixNano())
+	if err = headGitRepo.AddRemote(tmpRemote, RepoPath(pr.BaseRepo.Owner.Name, pr.BaseRepo.Name)); err != nil {
+		return fmt.Errorf("AddRemote: %v", err)
+	}
+	defer func() {
+		headGitRepo.RemoveRemote(tmpRemote)
+	}()
+	remoteBranch := "remotes/" + tmpRemote + "/" + pr.BaseBranch
+	pr.MergeBase, err = headGitRepo.GetMergeBase(remoteBranch, pr.HeadBranch)
+	if err != nil {
+		return fmt.Errorf("GetMergeBase: %v", err)
+	} else if err = pr.Update(); err != nil {
+		return fmt.Errorf("Update: %v", err)
 	}
 
 	patch, err := headGitRepo.GetPatch(pr.MergeBase, pr.HeadBranch)

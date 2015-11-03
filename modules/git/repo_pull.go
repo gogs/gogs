@@ -20,31 +20,55 @@ type PullRequestInfo struct {
 	NumFiles int
 }
 
+// GetMergeBase checks and returns merge base of two branches.
+func (repo *Repository) GetMergeBase(remoteBranch, headBranch string) (string, error) {
+	// Get merge base commit.
+	stdout, stderr, err := com.ExecCmdDir(repo.Path, "git", "merge-base", remoteBranch, headBranch)
+	if err != nil {
+		return "", fmt.Errorf("get merge base: %v", concatenateError(err, stderr))
+	}
+	return strings.TrimSpace(stdout), nil
+}
+
+// AddRemote adds a remote to repository.
+func (repo *Repository) AddRemote(name, path string) error {
+	_, stderr, err := com.ExecCmdDir(repo.Path, "git", "remote", "add", "-f", name, path)
+	if err != nil {
+		return fmt.Errorf("add remote(%s - %s): %v", name, path, concatenateError(err, stderr))
+	}
+	return nil
+}
+
+// RemoveRemote removes a remote from repository.
+func (repo *Repository) RemoveRemote(name string) error {
+	_, stderr, err := com.ExecCmdDir(repo.Path, "git", "remote", "remove", name)
+	if err != nil {
+		return fmt.Errorf("remove remote(%s): %v", name, concatenateError(err, stderr))
+	}
+	return nil
+}
+
 // GetPullRequestInfo generates and returns pull request information
 // between base and head branches of repositories.
-func (repo *Repository) GetPullRequestInfo(basePath, baseBranch, headBranch string) (*PullRequestInfo, error) {
+func (repo *Repository) GetPullRequestInfo(basePath, baseBranch, headBranch string) (_ *PullRequestInfo, err error) {
 	// Add a temporary remote.
 	tmpRemote := com.ToStr(time.Now().UnixNano())
-	_, stderr, err := com.ExecCmdDir(repo.Path, "git", "remote", "add", "-f", tmpRemote, basePath)
-	if err != nil {
-		return nil, fmt.Errorf("add base as remote: %v", concatenateError(err, stderr))
+	if err = repo.AddRemote(tmpRemote, basePath); err != nil {
+		return nil, fmt.Errorf("AddRemote: %v", err)
 	}
 	defer func() {
-		com.ExecCmdDir(repo.Path, "git", "remote", "remove", tmpRemote)
+		repo.RemoveRemote(tmpRemote)
 	}()
 
-	prInfo := new(PullRequestInfo)
-
-	var stdout string
 	remoteBranch := "remotes/" + tmpRemote + "/" + baseBranch
-	// Get merge base commit.
-	stdout, stderr, err = com.ExecCmdDir(repo.Path, "git", "merge-base", remoteBranch, headBranch)
-	if err != nil {
-		return nil, fmt.Errorf("get merge base: %v", concatenateError(err, stderr))
-	}
-	prInfo.MergeBase = strings.TrimSpace(stdout)
 
-	stdout, stderr, err = com.ExecCmdDir(repo.Path, "git", "log", prInfo.MergeBase+"..."+headBranch, prettyLogFormat)
+	prInfo := new(PullRequestInfo)
+	prInfo.MergeBase, err = repo.GetMergeBase(remoteBranch, headBranch)
+	if err != nil {
+		return nil, fmt.Errorf("GetMergeBase: %v", err)
+	}
+
+	stdout, stderr, err := com.ExecCmdDir(repo.Path, "git", "log", prInfo.MergeBase+"..."+headBranch, prettyLogFormat)
 	if err != nil {
 		return nil, fmt.Errorf("list diff logs: %v", concatenateError(err, stderr))
 	}
