@@ -5,9 +5,7 @@
 package v1
 
 import (
-	"net/url"
 	"path"
-	"strings"
 
 	"github.com/Unknwon/com"
 
@@ -218,22 +216,23 @@ func MigrateRepo(ctx *middleware.Context, form auth.MigrateRepoForm) {
 		}
 	}
 
-	// Remote address can be HTTP/HTTPS/Git URL or local path.
-	remoteAddr := form.CloneAddr
-	if strings.HasPrefix(form.CloneAddr, "http://") ||
-		strings.HasPrefix(form.CloneAddr, "https://") ||
-		strings.HasPrefix(form.CloneAddr, "git://") {
-		u, err := url.Parse(form.CloneAddr)
-		if err != nil {
-			ctx.APIError(422, "", err)
-			return
+	remoteAddr, err := form.ParseRemoteAddr(ctx.User)
+	if err != nil {
+		if models.IsErrInvalidCloneAddr(err) {
+			addrErr := err.(models.ErrInvalidCloneAddr)
+			switch {
+			case addrErr.IsURLError:
+				ctx.APIError(422, "", err)
+			case addrErr.IsPermissionDenied:
+				ctx.APIError(422, "", "You are not allowed to import local repositories.")
+			case addrErr.IsInvalidPath:
+				ctx.APIError(422, "", "Invalid local path, it does not exist or not a directory.")
+			default:
+				ctx.APIError(500, "ParseRemoteAddr", "Unknown error type (ErrInvalidCloneAddr): "+err.Error())
+			}
+		} else {
+			ctx.APIError(500, "ParseRemoteAddr", err)
 		}
-		if len(form.AuthUsername) > 0 || len(form.AuthPassword) > 0 {
-			u.User = url.UserPassword(form.AuthUsername, form.AuthPassword)
-		}
-		remoteAddr = u.String()
-	} else if !com.IsDir(remoteAddr) {
-		ctx.APIError(422, "", "Invalid local path, it does not exist or not a directory.")
 		return
 	}
 
