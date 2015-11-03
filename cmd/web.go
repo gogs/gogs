@@ -82,11 +82,11 @@ func checkVersion() {
 	checkers := []VerChecker{
 		{"github.com/go-xorm/xorm", func() string { return xorm.Version }, "0.4.3.0806"},
 		{"github.com/Unknwon/macaron", macaron.Version, "0.5.4"},
-		{"github.com/macaron-contrib/binding", binding.Version, "0.1.0"},
-		{"github.com/macaron-contrib/cache", cache.Version, "0.1.2"},
-		{"github.com/macaron-contrib/csrf", csrf.Version, "0.0.3"},
-		{"github.com/macaron-contrib/i18n", i18n.Version, "0.0.7"},
-		{"github.com/macaron-contrib/session", session.Version, "0.1.6"},
+		{"github.com/go-macaron/binding", binding.Version, "0.1.0"},
+		{"github.com/go-macaron/cache", cache.Version, "0.1.2"},
+		{"github.com/go-macaron/csrf", csrf.Version, "0.0.3"},
+		{"github.com/go-macaron/i18n", i18n.Version, "0.0.7"},
+		{"github.com/go-macaron/session", session.Version, "0.1.6"},
 		{"gopkg.in/ini.v1", ini.Version, "1.3.4"},
 	}
 	for _, c := range checkers {
