@@ -910,9 +910,9 @@ func TransferOwnership(u *User, newOwnerName string, repo *Repository) error {
 	}
 
 	// Remove redundant collaborators.
-	collaborators, err := repo.GetCollaborators()
+	collaborators, err := repo.getCollaborators(sess)
 	if err != nil {
-		return fmt.Errorf("GetCollaborators: %v", err)
+		return fmt.Errorf("getCollaborators: %v", err)
 	}
 
 	// Dummy object.
@@ -948,9 +948,9 @@ func TransferOwnership(u *User, newOwnerName string, repo *Repository) error {
 	}
 
 	if newOwner.IsOrganization() {
-		t, err := newOwner.GetOwnerTeam()
+		t, err := newOwner.getOwnerTeam(sess)
 		if err != nil {
-			return fmt.Errorf("GetOwnerTeam: %v", err)
+			return fmt.Errorf("getOwnerTeam: %v", err)
 		} else if err = t.addRepository(sess, repo); err != nil {
 			return fmt.Errorf("add to owner team: %v", err)
 		}
