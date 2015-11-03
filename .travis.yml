@@ -12,7 +12,7 @@ before_install:
   - go get github.com/msteinert/pam 
 
 install:
-  - go get -d ./...
+  - go get -d .
 
 script: go build -v -tags "pam"
 
