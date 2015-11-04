@@ -5,23 +5,23 @@
   	<div class="ui grid">
   		<div class="four wide column">
   			<div class="ui secondary vertical filter menu">
-  				<a class="{{if eq .ViewType "all"}}ui basic blue button{{end}} item" href="{{.Link}}?repo={{.RepoID}}&state={{.State}}">
+  				<a class="{{if eq .ViewType "all"}}ui basic blue button{{end}} item" href="{{.Link}}?repo={{.RepoID}}&sort={{$.SortType}}&state={{.State}}">
   					{{.i18n.Tr "home.issues.in_your_repos"}}
   					<strong class="ui right">{{.IssueStats.AllCount}}</strong>
   				</a>
   				{{if not .ContextUser.IsOrganization}}
-  				<a class="{{if eq .ViewType "assigned"}}ui basic blue button{{end}} item" href="{{.Link}}?type=assigned&repo={{.RepoID}}&state={{.State}}">
+  				<a class="{{if eq .ViewType "assigned"}}ui basic blue button{{end}} item" href="{{.Link}}?type=assigned&repo={{.RepoID}}&sort={{$.SortType}}&state={{.State}}">
   					{{.i18n.Tr "repo.issues.filter_type.assigned_to_you"}}
   					<strong class="ui right">{{.IssueStats.AssignCount}}</strong>
   				</a>
-  				<a class="{{if eq .ViewType "created_by"}}ui basic blue button{{end}} item" href="{{.Link}}?type=created_by&repo={{.RepoID}}&state={{.State}}">
+  				<a class="{{if eq .ViewType "created_by"}}ui basic blue button{{end}} item" href="{{.Link}}?type=created_by&repo={{.RepoID}}&sort={{$.SortType}}&state={{.State}}">
   					{{.i18n.Tr "repo.issues.filter_type.created_by_you"}}
   					<strong class="ui right">{{.IssueStats.CreateCount}}</strong>
   				</a>
   				{{end}}
   				<div class="ui divider"></div>
           {{range .Repos}}
-          <a class="{{if eq $.RepoID .ID}}ui basic blue button{{end}} repo name item" href="{{$.Link}}?type={{$.ViewType}}{{if not (eq $.RepoID .ID)}}&repo={{.ID}}{{end}}&state={{$.State}}">
+          <a class="{{if eq $.RepoID .ID}}ui basic blue button{{end}} repo name item" href="{{$.Link}}?type={{$.ViewType}}{{if not (eq $.RepoID .ID)}}&repo={{.ID}}{{end}}&sort={{$.SortType}}&state={{$.State}}">
           	<span class="text truncate">{{$.ContextUser.Name}}/{{.Name}}</span>
           	<div class="floating ui {{if $.IsShowClosed}}red{{else}}green{{end}} label">{{if $.IsShowClosed}}{{.NumClosedIssues}}{{else}}{{.NumOpenIssues}}{{end}}</div>
           </a>
@@ -30,14 +30,31 @@
   		</div>
 			<div class="twelve wide column content">
 				<div class="ui tiny basic status buttons">
-				  <a class="ui {{if not .IsShowClosed}}green active{{end}} basic button" href="{{.Link}}?type={{$.ViewType}}&repo={{.RepoID}}&state=open">
+				  <a class="ui {{if not .IsShowClosed}}green active{{end}} basic button" href="{{.Link}}?type={{$.ViewType}}&repo={{.RepoID}}&sort={{$.SortType}}&state=open">
 				  	<i class="octicon octicon-issue-opened"></i>
 				  	{{.i18n.Tr "repo.issues.open_tab" .IssueStats.OpenCount}}
 				  </a>
-				  <a class="ui {{if .IsShowClosed}}red active{{end}} basic button" href="{{.Link}}?type={{$.ViewType}}&repo={{.RepoID}}&state=closed">
+				  <a class="ui {{if .IsShowClosed}}red active{{end}} basic button" href="{{.Link}}?type={{$.ViewType}}&repo={{.RepoID}}&sort={{$.SortType}}&state=closed">
 				  	<i class="octicon octicon-issue-closed"></i>
 				  	{{.i18n.Tr "repo.issues.close_tab" .IssueStats.ClosedCount}}
 				  </a>
+				</div>
+				<div class="ui right floated secondary filter menu">
+					<!-- Sort -->
+					<div class="ui dropdown type jump item">
+						<span class="text">
+							{{.i18n.Tr "repo.issues.filter_sort"}}
+							<i class="dropdown icon"></i>
+						</span>
+		        <div class="menu">
+		        	<a class="{{if or (eq .SortType "latest") (not .SortType)}}active{{end}} item" href="{{$.Link}}?type={{$.ViewType}}&repo={{.RepoID}}&sort=latest&state={{$.State}}">{{.i18n.Tr "repo.issues.filter_sort.latest"}}</a>
+		        	<a class="{{if eq .SortType "oldest"}}active{{end}} item" href="{{$.Link}}?type={{$.ViewType}}&repo={{.RepoID}}&sort=oldest&state={{$.State}}">{{.i18n.Tr "repo.issues.filter_sort.oldest"}}</a>
+		        	<a class="{{if eq .SortType "recentupdate"}}active{{end}} item" href="{{$.Link}}?type={{$.ViewType}}&repo={{.RepoID}}&sort=recentupdate&state={{$.State}}">{{.i18n.Tr "repo.issues.filter_sort.recentupdate"}}</a>
+		        	<a class="{{if eq .SortType "leastupdate"}}active{{end}} item" href="{{$.Link}}?type={{$.ViewType}}&repo={{.RepoID}}&sort=leastupdate&state={{$.State}}">{{.i18n.Tr "repo.issues.filter_sort.leastupdate"}}</a>
+		        	<a class="{{if eq .SortType "mostcomment"}}active{{end}} item" href="{{$.Link}}?type={{$.ViewType}}&repo={{.RepoID}}&sort=mostcomment&state={{$.State}}">{{.i18n.Tr "repo.issues.filter_sort.mostcomment"}}</a>
+		        	<a class="{{if eq .SortType "leastcomment"}}active{{end}} item" href="{{$.Link}}?type={{$.ViewType}}&repo={{.RepoID}}&sort=leastcomment&state={{$.State}}">{{.i18n.Tr "repo.issues.filter_sort.leastcomment"}}</a>
+						</div>
+					</div>
 				</div>
 
 				<div class="issue list">

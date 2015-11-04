@@ -156,6 +156,7 @@ func Issues(ctx *middleware.Context) {
 	// Organization does not have view type and filter mode.
 	var (
 		viewType   string
+		sortType   = ctx.Query("sort")
 		filterMode = models.FM_ALL
 		assigneeID int64
 		posterID   int64
@@ -248,6 +249,7 @@ func Issues(ctx *middleware.Context) {
 		Page:       page,
 		IsClosed:   isShowClosed,
 		IsPull:     isPullList,
+		SortType:   sortType,
 	})
 	if err != nil {
 		ctx.Handle(500, "Issues: %v", err)
@@ -276,6 +278,7 @@ func Issues(ctx *middleware.Context) {
 
 	ctx.Data["IssueStats"] = issueStats
 	ctx.Data["ViewType"] = viewType
+	ctx.Data["SortType"] = sortType
 	ctx.Data["RepoID"] = repoID
 	ctx.Data["IsShowClosed"] = isShowClosed
 	if isShowClosed {
