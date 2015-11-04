@@ -13,7 +13,7 @@ import (
 func (t *Tree) GetTreeEntryByPath(relpath string) (*TreeEntry, error) {
 	if len(relpath) == 0 {
 		return &TreeEntry{
-			Id:   t.Id,
+			ID:   t.ID,
 			Type: TREE,
 			mode: ModeTree,
 		}, nil

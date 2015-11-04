@@ -28,7 +28,7 @@ func (c *Commit) CreateArchive(path string, archiveType ArchiveType) error {
 		return fmt.Errorf("unknown format: %v", archiveType)
 	}
 
-	_, stderr, err := com.ExecCmdDir(c.repo.Path, "git", "archive", "--format="+format, "-o", path, c.Id.String())
+	_, stderr, err := com.ExecCmdDir(c.repo.Path, "git", "archive", "--format="+format, "-o", path, c.ID.String())
 	if err != nil {
 		return fmt.Errorf("%s", stderr)
 	}

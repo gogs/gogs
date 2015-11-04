@@ -118,7 +118,7 @@ func RepoRef() macaron.Handler {
 				ctx.Handle(500, "GetCommitOfBranch", err)
 				return
 			}
-			ctx.Repo.CommitID = ctx.Repo.Commit.Id.String()
+			ctx.Repo.CommitID = ctx.Repo.Commit.ID.String()
 			ctx.Repo.IsBranch = true
 
 		} else {
@@ -149,7 +149,7 @@ func RepoRef() macaron.Handler {
 					ctx.Handle(500, "GetCommitOfBranch", err)
 					return
 				}
-				ctx.Repo.CommitID = ctx.Repo.Commit.Id.String()
+				ctx.Repo.CommitID = ctx.Repo.Commit.ID.String()
 
 			} else if ctx.Repo.GitRepo.IsTagExist(refName) {
 				ctx.Repo.IsTag = true
@@ -158,7 +158,7 @@ func RepoRef() macaron.Handler {
 					ctx.Handle(500, "GetCommitOfTag", err)
 					return
 				}
-				ctx.Repo.CommitID = ctx.Repo.Commit.Id.String()
+				ctx.Repo.CommitID = ctx.Repo.Commit.ID.String()
 			} else if len(refName) == 40 {
 				ctx.Repo.IsCommit = true
 				ctx.Repo.CommitID = refName

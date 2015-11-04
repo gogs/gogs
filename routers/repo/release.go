@@ -88,10 +88,10 @@ func Releases(ctx *middleware.Context) {
 			tags[i] = &models.Release{
 				Title:   rawTag,
 				TagName: rawTag,
-				Sha1:    commit.Id.String(),
+				Sha1:    commit.ID.String(),
 			}
 
-			tags[i].NumCommits, err = ctx.Repo.GitRepo.CommitsCount(commit.Id.String())
+			tags[i].NumCommits, err = ctx.Repo.GitRepo.CommitsCount(commit.ID.String())
 			if err != nil {
 				ctx.Handle(500, "CommitsCount", err)
 				return
@@ -190,7 +190,7 @@ func NewReleasePost(ctx *middleware.Context, form auth.NewReleaseForm) {
 		Title:        form.Title,
 		TagName:      form.TagName,
 		Target:       form.Target,
-		Sha1:         commit.Id.String(),
+		Sha1:         commit.ID.String(),
 		NumCommits:   commitsCount,
 		Note:         form.Content,
 		IsDraft:      len(form.Draft) > 0,

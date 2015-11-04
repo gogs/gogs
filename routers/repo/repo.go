@@ -317,7 +317,7 @@ func Download(ctx *middleware.Context) {
 		return
 	}
 
-	archivePath = path.Join(archivePath, base.ShortSha(commit.Id.String())+ext)
+	archivePath = path.Join(archivePath, base.ShortSha(commit.ID.String())+ext)
 	if !com.IsFile(archivePath) {
 		if err := commit.CreateArchive(archivePath, archiveType); err != nil {
 			ctx.Handle(500, "Download -> CreateArchive "+archivePath, err)
@@ -325,5 +325,5 @@ func Download(ctx *middleware.Context) {
 		}
 	}
 
-	ctx.ServeFile(archivePath, ctx.Repo.Repository.Name+"-"+base.ShortSha(commit.Id.String())+ext)
+	ctx.ServeFile(archivePath, ctx.Repo.Repository.Name+"-"+base.ShortSha(commit.ID.String())+ext)
 }
