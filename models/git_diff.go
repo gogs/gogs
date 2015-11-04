@@ -258,7 +258,7 @@ func GetDiffRange(repoPath, beforeCommitId string, afterCommitId string, maxline
 			cmd = exec.Command("git", "show", afterCommitId)
 		} else {
 			c, _ := commit.Parent(0)
-			cmd = exec.Command("git", "diff", "-M", c.Id.String(), afterCommitId)
+			cmd = exec.Command("git", "diff", "-M", c.ID.String(), afterCommitId)
 		}
 	} else {
 		cmd = exec.Command("git", "diff", "-M", beforeCommitId, afterCommitId)

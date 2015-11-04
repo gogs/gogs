@@ -151,7 +151,7 @@ func Home(ctx *middleware.Context) {
 					ctx.Handle(500, "GetCommitOfRelPath", err)
 					return
 				}
-				files = append(files, []interface{}{te, git.NewSubModuleFile(c, smUrl, te.Id.String())})
+				files = append(files, []interface{}{te, git.NewSubModuleFile(c, smUrl, te.ID.String())})
 			}
 		}
 		ctx.Data["Files"] = files

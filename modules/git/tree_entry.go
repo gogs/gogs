@@ -24,7 +24,7 @@ const (
 )
 
 type TreeEntry struct {
-	Id   sha1
+	ID   sha1
 	Type ObjectType
 
 	mode EntryMode
@@ -51,7 +51,7 @@ func (te *TreeEntry) Size() int64 {
 		return te.size
 	}
 
-	stdout, _, err := com.ExecCmdDir(te.ptree.repo.Path, "git", "cat-file", "-s", te.Id.String())
+	stdout, _, err := com.ExecCmdDir(te.ptree.repo.Path, "git", "cat-file", "-s", te.ID.String())
 	if err != nil {
 		return 0
 	}
