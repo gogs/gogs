@@ -17,6 +17,9 @@
 				.text {
 					height: 16px;
 			    vertical-align: middle;
+			    &.truncate {
+						width: 85%;
+					}
 				}
 				.floating.label {
 					top: 7px;
@@ -24,12 +27,17 @@
 					width: 15%;
 				}
 			}
-			.item.active {
-		    background-color: #4183c4;
-		    color: #FFF;
+
+			// Sort
+			.jump.item {
+				margin: 1px;
+		    padding-right: 0;
 			}
-			.item .text {
-				width: 85%;
+			.menu {
+				max-height: 300px;
+				overflow-x: auto;
+				right: 0!important;
+				left: auto!important;
 			}
 		}
 		.ui.right .head.menu {
