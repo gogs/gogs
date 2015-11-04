@@ -140,7 +140,7 @@ func Update(refName, oldCommitId, newCommitId, userName, repoUserName, repoName 
 			actEmail = commit.Committer.Email
 		}
 		commits = append(commits,
-			&base.PushCommit{commit.Id.String(),
+			&base.PushCommit{commit.ID.String(),
 				commit.Message(),
 				commit.Author.Email,
 				commit.Author.Name,

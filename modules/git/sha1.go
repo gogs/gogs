@@ -12,7 +12,7 @@ import (
 )
 
 var (
-	IdNotExist = errors.New("sha1 id not exist")
+	IDNotExist = errors.New("sha1 ID does not exist")
 )
 
 type sha1 [20]byte

@@ -64,7 +64,7 @@ func createTag(gitRepo *git.Repository, rel *Release) error {
 				return err
 			}
 
-			if err = gitRepo.CreateTag(rel.TagName, commit.Id.String()); err != nil {
+			if err = gitRepo.CreateTag(rel.TagName, commit.ID.String()); err != nil {
 				return err
 			}
 		} else {

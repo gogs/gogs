@@ -18,7 +18,7 @@ var (
 
 // A tree is a flat directory listing.
 type Tree struct {
-	Id   sha1
+	ID   sha1
 	repo *Repository
 
 	// parent tree
@@ -66,7 +66,7 @@ func parseTreeData(tree *Tree, data []byte) ([]*TreeEntry, error) {
 		if err != nil {
 			return nil, err
 		}
-		entry.Id = id
+		entry.ID = id
 		pos += step + 1 // Skip half of sha1.
 
 		step = bytes.IndexByte(data[pos:], '\n')
@@ -100,7 +100,7 @@ func (t *Tree) SubTree(rpath string) (*Tree, error) {
 			return nil, err
 		}
 
-		g, err = t.repo.getTree(te.Id)
+		g, err = t.repo.getTree(te.ID)
 		if err != nil {
 			return nil, err
 		}
@@ -117,7 +117,7 @@ func (t *Tree) ListEntries(relpath string) (Entries, error) {
 	t.entriesParsed = true
 
 	stdout, stderr, err := com.ExecCmdDirBytes(t.repo.Path,
-		"git", "ls-tree", t.Id.String())
+		"git", "ls-tree", t.ID.String())
 	if err != nil {
 		if strings.Contains(err.Error(), "exit status 128") {
 			return nil, errors.New(strings.TrimSpace(string(stderr)))
@@ -130,7 +130,7 @@ func (t *Tree) ListEntries(relpath string) (Entries, error) {
 
 func NewTree(repo *Repository, id sha1) *Tree {
 	tree := new(Tree)
-	tree.Id = id
+	tree.ID = id
 	tree.repo = repo
 	return tree
 }
