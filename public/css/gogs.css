@@ -2554,17 +2554,23 @@ ol.linenums {
   height: 16px;
   vertical-align: middle;
 }
+.dashboard.issues .filter.menu .item .text.truncate {
+  width: 85%;
+}
 .dashboard.issues .filter.menu .item .floating.label {
   top: 7px;
   left: 90%;
   width: 15%;
 }
-.dashboard.issues .filter.menu .item.active {
-  background-color: #4183c4;
-  color: #FFF;
+.dashboard.issues .filter.menu .jump.item {
+  margin: 1px;
+  padding-right: 0;
 }
-.dashboard.issues .filter.menu .item .text {
-  width: 85%;
+.dashboard.issues .filter.menu .menu {
+  max-height: 300px;
+  overflow-x: auto;
+  right: 0!important;
+  left: auto!important;
 }
 .dashboard.issues .ui.right .head.menu {
   margin-top: -5px;
