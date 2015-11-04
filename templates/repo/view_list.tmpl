@@ -12,8 +12,8 @@
                 {{end}}
                 &nbsp;
             </span>
-            <span class="last-commit"><a href="{{.RepoLink}}/commit/{{.LastCommit.Id}}" rel="nofollow">
-                <strong>{{ShortSha .LastCommit.Id.String}}</strong></a>
+            <span class="last-commit"><a href="{{.RepoLink}}/commit/{{.LastCommit.ID}}" rel="nofollow">
+                <strong>{{ShortSha .LastCommit.ID.String}}</strong></a>
                 <span class="text-truncate">{{RenderCommitMessage .LastCommit.Summary .RepoLink}}</span>
             </span>
             <span class="age right">{{TimeSince .LastCommit.Author.When $.Lang}}</span>
@@ -54,7 +54,7 @@
                 </td>
                 {{end}}
                 <td class="sha">
-                  <a rel="nofollow" class="label label-green" href="{{AppSubUrl}}/{{$.Username}}/{{$.Reponame}}/commit/{{$commit.Id}} ">{{SubStr $commit.Id.String 0 10}} </a>
+                  <a rel="nofollow" class="label label-green" href="{{AppSubUrl}}/{{$.Username}}/{{$.Reponame}}/commit/{{$commit.ID}} ">{{SubStr $commit.ID.String 0 10}} </a>
                 </td>
                 <td class="message">
                   <span class="text-truncate">{{RenderCommitMessage $commit.Summary $.RepoLink}}</span>
