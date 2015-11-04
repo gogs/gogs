@@ -1,21 +1,7 @@
 #!/bin/sh
 
-# Cleanup SOCAT services and s6 event folder
-# On start and on shutdown in case container has been killed
-rm -rf $(find /app/gogs/docker/s6/ -name 'event')
-rm -rf /app/gogs/docker/s6/SOCAT_*
-
-# Create VOLUME subfolder
-for f in /data/gogs/data /data/gogs/conf /data/gogs/log /data/git /data/ssh; do
-    if ! test -d $f; then
-        mkdir -p $f
-    fi
-done
-
-# Bind linked docker container to localhost socket using socat
-LINK=$(echo "$SOCAT_LINK" | tr '[:upper:]' '[:lower:]')
-if [ "$LINK" != "false" -a "$LINK" != "0" ]; then
-
+create_socat_links() {
+    # Bind linked docker container to localhost socket using socat
     USED_PORT="3000:22"
     while read NAME ADDR PORT; do
         if test -z "$NAME$ADDR$PORT"; then
@@ -33,8 +19,31 @@ if [ "$LINK" != "false" -a "$LINK" != "0" ]; then
         fi
     done << EOT
     $(env | sed -En 's|(.*)_PORT_([0-9]+)_TCP=tcp://(.*):([0-9]+)|\1 \3 \4|p')
-    EOT
+EOT
+}
 
+cleanup() {
+    # Cleanup SOCAT services and s6 event folder
+    # On start and on shutdown in case container has been killed
+    rm -rf $(find /app/gogs/docker/s6/ -name 'event')
+    rm -rf /app/gogs/docker/s6/SOCAT_*
+}
+
+create_volume_subfolder() {
+    # Create VOLUME subfolder
+    for f in /data/gogs/data /data/gogs/conf /data/gogs/log /data/git /data/ssh; do
+        if ! test -d $f; then
+            mkdir -p $f
+        fi
+    done
+}
+
+cleanup
+create_volume_subfolder
+
+LINK=$(echo "$SOCAT_LINK" | tr '[:upper:]' '[:lower:]')
+if [ "$LINK" != "false" -a "$LINK" != "0" ]; then
+    create_socat_links
 fi
 
 # Exec CMD or S6 by default if nothing present
