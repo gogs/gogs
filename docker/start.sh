@@ -7,7 +7,7 @@ create_socat_links() {
         if test -z "$NAME$ADDR$PORT"; then
             continue
         elif echo $USED_PORT | grep -E "(^|:)$PORT($|:)" > /dev/null; then
-            echo "init:socat | Can't bind linked container ${NAME} to localhost, port ${PORT} already in use" 1>&2
+            echo "init:socat  | Can't bind linked container ${NAME} to localhost, port ${PORT} already in use" 1>&2
         else
             SERV_FOLDER=/app/gogs/docker/s6/SOCAT_${NAME}_${PORT}
             mkdir -p ${SERV_FOLDER}
@@ -15,7 +15,7 @@ create_socat_links() {
             echo -e "#!/bin/sh\nexec $CMD" > ${SERV_FOLDER}/run
             chmod +x ${SERV_FOLDER}/run
             USED_PORT="${USED_PORT}:${PORT}"
-            echo "init:socat | Linked container ${NAME} will be binded to localhost on port ${PORT}" 1>&2
+            echo "init:socat  | Linked container ${NAME} will be binded to localhost on port ${PORT}" 1>&2
         fi
     done << EOT
     $(env | sed -En 's|(.*)_PORT_([0-9]+)_TCP=tcp://(.*):([0-9]+)|\1 \3 \4|p')
@@ -42,7 +42,9 @@ cleanup
 create_volume_subfolder
 
 LINK=$(echo "$SOCAT_LINK" | tr '[:upper:]' '[:lower:]')
-if [ "$LINK" != "false" -a "$LINK" != "0" ]; then
+if [ "$LINK" = "false" -o "$LINK" = "0" ]; then
+    echo "init:socat  | Will not try to create socat links as requested" 1>&2
+else
     create_socat_links
 fi
 
