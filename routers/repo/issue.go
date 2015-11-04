@@ -124,7 +124,8 @@ func Issues(ctx *middleware.Context) {
 	} else {
 		total = int(issueStats.ClosedCount)
 	}
-	ctx.Data["Page"] = paginater.New(total, setting.IssuePagingNum, page, 5)
+	pager := paginater.New(total, setting.IssuePagingNum, page, 5)
+	ctx.Data["Page"] = pager
 
 	// Get issues.
 	issues, err := models.Issues(&models.IssuesOptions{
@@ -133,7 +134,7 @@ func Issues(ctx *middleware.Context) {
 		RepoID:      repo.ID,
 		PosterID:    posterID,
 		MilestoneID: milestoneID,
-		Page:        page,
+		Page:        pager.Current(),
 		IsClosed:    isShowClosed,
 		IsMention:   filterMode == models.FM_MENTION,
 		IsPull:      isPullList,
