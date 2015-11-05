@@ -20,3 +20,4 @@ ln -sf /data/gogs/data ./data
 ln -sf /data/git /home/git
 
 chown -R git:git /data /app/gogs ~git/
+chmod 0755 /data /data/gogs ~git/

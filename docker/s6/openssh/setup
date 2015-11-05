@@ -23,4 +23,5 @@ fi
 
 # Set correct right to ssh keys
 chown -R root:root /data/ssh/*
-chmod 600 /data/ssh/*
+chmod 0700 /data/ssh
+chmod 0600 /data/ssh/*
