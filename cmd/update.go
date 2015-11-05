@@ -42,10 +42,8 @@ func runUpdate(c *cli.Context) {
 		log.GitLogger.Fatal(2, "refName is empty, shouldn't use")
 	}
 
-	uuid := os.Getenv("uuid")
-
 	task := models.UpdateTask{
-		UUID:        uuid,
+		UUID:        os.Getenv("uuid"),
 		RefName:     args[0],
 		OldCommitID: args[1],
 		NewCommitID: args[2],

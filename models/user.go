@@ -728,9 +728,9 @@ func UserPath(userName string) string {
 	return filepath.Join(setting.RepoRootPath, strings.ToLower(userName))
 }
 
-func GetUserByKeyId(keyId int64) (*User, error) {
+func GetUserByKeyID(keyID int64) (*User, error) {
 	user := new(User)
-	has, err := x.Sql("SELECT a.* FROM `user` AS a, public_key AS b WHERE a.id = b.owner_id AND b.id=?", keyId).Get(user)
+	has, err := x.Sql("SELECT a.* FROM `user` AS a, public_key AS b WHERE a.id = b.owner_id AND b.id=?", keyID).Get(user)
 	if err != nil {
 		return nil, err
 	} else if !has {
