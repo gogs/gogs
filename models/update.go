@@ -28,6 +28,7 @@ func AddUpdateTask(task *UpdateTask) error {
 	return err
 }
 
+// GetUpdateTaskByUUID returns update task by given UUID.
 func GetUpdateTaskByUUID(uuid string) (*UpdateTask, error) {
 	task := &UpdateTask{
 		UUID: uuid,
@@ -36,7 +37,7 @@ func GetUpdateTaskByUUID(uuid string) (*UpdateTask, error) {
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, fmt.Errorf("task does not exist: %s", uuid)
+		return nil, ErrUpdateTaskNotExist{uuid}
 	}
 	return task, nil
 }

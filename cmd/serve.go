@@ -77,6 +77,43 @@ func fail(userMessage, logMessage string, args ...interface{}) {
 	log.GitLogger.Fatal(3, logMessage, args...)
 }
 
+func handleUpdateTask(uuid string, user *models.User, repoUserName, repoName string) {
+	task, err := models.GetUpdateTaskByUUID(uuid)
+	if err != nil {
+		if models.IsErrUpdateTaskNotExist(err) {
+			log.GitLogger.Trace("No update task is presented: %s", uuid)
+			return
+		}
+		log.GitLogger.Fatal(2, "GetUpdateTaskByUUID: %v", err)
+	}
+
+	if err = models.Update(task.RefName, task.OldCommitID, task.NewCommitID,
+		user.Name, repoUserName, repoName, user.Id); err != nil {
+		log.GitLogger.Error(2, "Update: %v", err)
+	}
+
+	if err = models.DeleteUpdateTaskByUUID(uuid); err != nil {
+		log.GitLogger.Fatal(2, "DeleteUpdateTaskByUUID: %v", err)
+	}
+
+	// Ask for running deliver hook and test pull request tasks.
+	reqURL := setting.AppUrl + repoUserName + "/" + repoName + "/tasks/trigger?branch=" +
+		strings.TrimPrefix(task.RefName, "refs/heads/")
+	log.GitLogger.Trace("Trigger task: %s", reqURL)
+
+	resp, err := httplib.Head(reqURL).SetTLSClientConfig(&tls.Config{
+		InsecureSkipVerify: true,
+	}).Response()
+	if err == nil {
+		resp.Body.Close()
+		if resp.StatusCode/100 != 2 {
+			log.GitLogger.Error(2, "Fail to trigger task: not 2xx response code")
+		}
+	} else {
+		log.GitLogger.Error(2, "Fail to trigger task: %v", err)
+	}
+}
+
 func runServ(c *cli.Context) {
 	if c.IsSet("config") {
 		setting.CustomConf = c.String("config")
@@ -162,7 +199,7 @@ func runServ(c *cli.Context) {
 				fail("Internal error", "UpdateDeployKey: %v", err)
 			}
 		} else {
-			user, err = models.GetUserByKeyId(key.ID)
+			user, err = models.GetUserByKeyID(key.ID)
 			if err != nil {
 				fail("internal error", "Failed to get user by key ID(%d): %v", keyID, err)
 			}
@@ -201,36 +238,7 @@ func runServ(c *cli.Context) {
 	}
 
 	if requestedMode == models.ACCESS_MODE_WRITE {
-		task, err := models.GetUpdateTaskByUUID(uuid)
-		if err != nil {
-			log.GitLogger.Fatal(2, "GetUpdateTaskByUUID: %v", err)
-		}
-
-		if err = models.Update(task.RefName, task.OldCommitID, task.NewCommitID,
-			user.Name, repoUserName, repoName, user.Id); err != nil {
-			log.GitLogger.Error(2, "Update: %v", err)
-		}
-
-		if err = models.DeleteUpdateTaskByUUID(uuid); err != nil {
-			log.GitLogger.Fatal(2, "DeleteUpdateTaskByUUID: %v", err)
-		}
-
-		// Ask for running deliver hook and test pull request tasks.
-		reqURL := setting.AppUrl + repoUserName + "/" + repoName + "/tasks/trigger?branch=" +
-			strings.TrimPrefix(task.RefName, "refs/heads/")
-		log.GitLogger.Trace("Trigger task: %s", reqURL)
-
-		resp, err := httplib.Head(reqURL).SetTLSClientConfig(&tls.Config{
-			InsecureSkipVerify: true,
-		}).Response()
-		if err == nil {
-			resp.Body.Close()
-			if resp.StatusCode/100 != 2 {
-				log.GitLogger.Error(2, "Fail to trigger task: not 2xx response code")
-			}
-		} else {
-			log.GitLogger.Error(2, "Fail to trigger task: %v", err)
-		}
+		handleUpdateTask(uuid, user, repoUserName, repoName)
 	}
 
 	// Update user key activity.

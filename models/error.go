@@ -275,6 +275,19 @@ func (err ErrInvalidCloneAddr) Error() string {
 		err.IsURLError, err.IsInvalidPath, err.IsPermissionDenied)
 }
 
+type ErrUpdateTaskNotExist struct {
+	UUID string
+}
+
+func IsErrUpdateTaskNotExist(err error) bool {
+	_, ok := err.(ErrUpdateTaskNotExist)
+	return ok
+}
+
+func (err ErrUpdateTaskNotExist) Error() string {
+	return fmt.Sprintf("update task does not exist [uuid: %s]", err.UUID)
+}
+
 //  __      __      ___.   .__                   __
 // /  \    /  \ ____\_ |__ |  |__   ____   ____ |  | __
 // \   \/\/   // __ \| __ \|  |  \ /  _ \ /  _ \|  |/ /
