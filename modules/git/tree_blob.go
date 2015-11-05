@@ -14,7 +14,7 @@ func (t *Tree) GetTreeEntryByPath(relpath string) (*TreeEntry, error) {
 	if len(relpath) == 0 {
 		return &TreeEntry{
 			ID:   t.ID,
-			Type: TREE,
+			Type: OBJECT_TREE,
 			mode: ModeTree,
 		}, nil
 		// return nil, fmt.Errorf("GetTreeEntryByPath(empty relpath): %v", ErrNotExist)

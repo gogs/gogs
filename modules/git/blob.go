@@ -5,22 +5,20 @@
 package git
 
 import (
-	"bytes"
-	"errors"
+	"fmt"
 	"io"
-
-	"github.com/Unknwon/com"
 )
 
+// Blob represents a blob type object.
 type Blob struct {
-	repo *Repository
 	*TreeEntry
 }
 
-func (b *Blob) Data() (io.Reader, error) {
-	stdout, stderr, err := com.ExecCmdDirBytes(b.repo.Path, "git", "show", b.ID.String())
+// Data returns a io.ReadCloser which can be read for blob data.
+func (b *Blob) Data() (io.ReadCloser, error) {
+	_, _, rc, err := b.ptree.repo.getRawObject(b.ID, false)
 	if err != nil {
-		return nil, errors.New(string(stderr))
+		return nil, fmt.Errorf("getRawObject: %v", err)
 	}
-	return bytes.NewBuffer(stdout), nil
+	return rc, nil
 }

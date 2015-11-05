@@ -67,11 +67,11 @@ func (repo *Repository) getTag(id sha1) (*Tag, error) {
 	tp = strings.TrimSpace(tp)
 
 	// Tag is a commit.
-	if ObjectType(tp) == COMMIT {
+	if ObjectTypeName(tp) == OBJETC_TYPE_NAME_COMMIT {
 		tag := &Tag{
 			ID:     id,
 			Object: id,
-			Type:   string(COMMIT),
+			Type:   string(OBJETC_TYPE_NAME_COMMIT),
 			repo:   repo,
 		}
 		repo.tagCache[id] = tag
@@ -103,7 +103,7 @@ func (repo *Repository) GetTag(tagName string) (*Tag, error) {
 		return nil, errors.New(stderr)
 	}
 
-	id, err := NewIdFromString(strings.Split(stdout, " ")[0])
+	id, err := NewIDFromString(strings.Split(stdout, " ")[0])
 	if err != nil {
 		return nil, err
 	}

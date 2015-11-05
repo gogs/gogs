@@ -12,7 +12,7 @@ import (
 
 // Find the tree object in the repository.
 func (repo *Repository) GetTree(idStr string) (*Tree, error) {
-	id, err := NewIdFromString(idStr)
+	id, err := NewIDFromString(idStr)
 	if err != nil {
 		return nil, err
 	}

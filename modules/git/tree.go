@@ -41,28 +41,28 @@ func parseTreeData(tree *Tree, data []byte) ([]*TreeEntry, error) {
 		switch string(data[pos : pos+step]) {
 		case "100644":
 			entry.mode = ModeBlob
-			entry.Type = BLOB
+			entry.Type = OBJECT_BLOB
 		case "100755":
 			entry.mode = ModeExec
-			entry.Type = BLOB
+			entry.Type = OBJECT_BLOB
 		case "120000":
 			entry.mode = ModeSymlink
-			entry.Type = BLOB
+			entry.Type = OBJECT_BLOB
 		case "160000":
 			entry.mode = ModeCommit
-			entry.Type = COMMIT
+			entry.Type = OBJECT_COMMIT
 
 			step = 8
 		case "040000":
 			entry.mode = ModeTree
-			entry.Type = TREE
+			entry.Type = OBJECT_TREE
 		default:
 			return nil, errors.New("unknown type: " + string(data[pos:pos+step]))
 		}
 		pos += step + 6 // Skip string type of entry type.
 
 		step = 40
-		id, err := NewIdFromString(string(data[pos : pos+step]))
+		id, err := NewIDFromString(string(data[pos : pos+step]))
 		if err != nil {
 			return nil, err
 		}

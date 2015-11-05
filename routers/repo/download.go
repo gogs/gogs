@@ -21,7 +21,7 @@ func ServeData(ctx *middleware.Context, name string, reader io.Reader) error {
 	}
 
 	_, isTextFile := base.IsTextFile(buf)
-	if ! isTextFile {
+	if !isTextFile {
 		_, isImageFile := base.IsImageFile(buf)
 		if !isImageFile {
 			ctx.Resp.Header().Set("Content-Disposition", "attachment; filename="+path.Base(ctx.Repo.TreeName))
@@ -34,12 +34,13 @@ func ServeData(ctx *middleware.Context, name string, reader io.Reader) error {
 }
 
 func ServeBlob(ctx *middleware.Context, blob *git.Blob) error {
-	dataRc, err := blob.Data()
+	rc, err := blob.Data()
 	if err != nil {
 		return err
 	}
+	defer rc.Close()
 
-	return ServeData(ctx, ctx.Repo.TreeName, dataRc)
+	return ServeData(ctx, ctx.Repo.TreeName, rc)
 }
 
 func SingleDownload(ctx *middleware.Context) {

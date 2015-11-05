@@ -66,14 +66,14 @@ l:
 			reftype := line[:spacepos]
 			switch string(reftype) {
 			case "tree":
-				id, err := NewIdFromString(string(line[spacepos+1:]))
+				id, err := NewIDFromString(string(line[spacepos+1:]))
 				if err != nil {
 					return nil, err
 				}
 				commit.Tree.ID = id
 			case "parent":
 				// A commit can have one or more parents
-				oid, err := NewIdFromString(string(line[spacepos+1:]))
+				oid, err := NewIDFromString(string(line[spacepos+1:]))
 				if err != nil {
 					return nil, err
 				}
@@ -129,7 +129,7 @@ func (repo *Repository) getCommit(id sha1) (*Commit, error) {
 
 // Find the commit object in the repository.
 func (repo *Repository) GetCommit(commitId string) (*Commit, error) {
-	id, err := NewIdFromString(commitId)
+	id, err := NewIDFromString(commitId)
 	if err != nil {
 		return nil, err
 	}
@@ -155,7 +155,7 @@ func (repo *Repository) commitsCount(id sha1) (int, error) {
 }
 
 func (repo *Repository) CommitsCount(commitId string) (int, error) {
-	id, err := NewIdFromString(commitId)
+	id, err := NewIDFromString(commitId)
 	if err != nil {
 		return 0, err
 	}
@@ -181,11 +181,11 @@ func (repo *Repository) commitsCountBetween(start, end sha1) (int, error) {
 }
 
 func (repo *Repository) CommitsCountBetween(startCommitID, endCommitID string) (int, error) {
-	start, err := NewIdFromString(startCommitID)
+	start, err := NewIDFromString(startCommitID)
 	if err != nil {
 		return 0, err
 	}
-	end, err := NewIdFromString(endCommitID)
+	end, err := NewIDFromString(endCommitID)
 	if err != nil {
 		return 0, err
 	}
@@ -332,7 +332,7 @@ func (repo *Repository) getCommitOfRelPath(id sha1, relPath string) (*Commit, er
 		return nil, err
 	}
 
-	id, err = NewIdFromString(string(stdout))
+	id, err = NewIDFromString(string(stdout))
 	if err != nil {
 		return nil, err
 	}

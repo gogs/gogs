@@ -128,7 +128,7 @@ func Home(ctx *middleware.Context) {
 
 		files := make([][]interface{}, 0, len(entries))
 		for _, te := range entries {
-			if te.Type != git.COMMIT {
+			if te.Type != git.OBJECT_COMMIT {
 				c, err := ctx.Repo.Commit.GetCommitOfRelPath(filepath.Join(treePath, te.Name()))
 				if err != nil {
 					ctx.Handle(500, "GetCommitOfRelPath", err)

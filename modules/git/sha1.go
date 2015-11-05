@@ -47,7 +47,7 @@ func (id sha1) Equal(s2 interface{}) bool {
 	return true
 }
 
-// Return string (hex) representation of the Oid
+// String returns string (hex) representation of the Oid.
 func (s sha1) String() string {
 	result := make([]byte, 0, 40)
 	hexvalues := []byte("0123456789abcdef")
@@ -58,8 +58,8 @@ func (s sha1) String() string {
 	return string(result)
 }
 
-// Create a new sha1 from a 20 byte slice.
-func NewId(b []byte) (sha1, error) {
+// NewID creates a new sha1 from a 20 byte slice.
+func NewID(b []byte) (sha1, error) {
 	var id sha1
 	if len(b) != 20 {
 		return id, errors.New("Length must be 20")
@@ -71,8 +71,8 @@ func NewId(b []byte) (sha1, error) {
 	return id, nil
 }
 
-// Create a new sha1 from a Sha1 string of length 40.
-func NewIdFromString(s string) (sha1, error) {
+// NewIDFromString creates a new sha1 from a Sha1 string of length 40.
+func NewIDFromString(s string) (sha1, error) {
 	s = strings.TrimSpace(s)
 	var id sha1
 	if len(s) != 40 {
@@ -83,5 +83,5 @@ func NewIdFromString(s string) (sha1, error) {
 		return id, err
 	}
 
-	return NewId(b)
+	return NewID(b)
 }

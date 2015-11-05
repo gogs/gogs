@@ -75,7 +75,6 @@ func (te *TreeEntry) EntryMode() EntryMode {
 
 func (te *TreeEntry) Blob() *Blob {
 	return &Blob{
-		repo:      te.ptree.repo,
 		TreeEntry: te,
 	}
 }
