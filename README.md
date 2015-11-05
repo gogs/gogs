@@ -120,6 +120,7 @@ There are 5 ways to install Gogs:
 - System Monitor Status is inspired by [GoBlog](https://github.com/fuxiaohei/goblog).
 - Thanks [lavachen](http://www.lavachen.cn/) and [Rocker](http://weibo.com/rocker1989) for designing Logo.
 - Thanks [Crowdin](https://crowdin.com/project/gogs) for providing open source translation plan.
+- Thanks [DigitalOcean](https://www.digitalocean.com) for hosting home and demo sites.
 
 ## Contributors
 
