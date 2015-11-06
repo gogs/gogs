@@ -393,7 +393,7 @@ func NewIssuePost(ctx *middleware.Context, form auth.CreateIssueForm) {
 	issue := &models.Issue{
 		RepoID:      ctx.Repo.Repository.ID,
 		Index:       repo.NextIssueIndex(),
-		Name:        form.Title,
+		Name:        strings.TrimSpace(form.Title),
 		PosterID:    ctx.User.Id,
 		Poster:      ctx.User,
 		MilestoneID: milestoneID,
@@ -620,7 +620,7 @@ func UpdateIssueTitle(ctx *middleware.Context) {
 		return
 	}
 
-	issue.Name = ctx.Query("title")
+	issue.Name = ctx.QueryTrim("title")
 	if len(issue.Name) == 0 {
 		ctx.Error(204)
 		return
