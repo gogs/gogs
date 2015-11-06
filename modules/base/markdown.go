@@ -100,11 +100,20 @@ func (options *CustomRender) Link(out *bytes.Buffer, link []byte, title []byte, 
 }
 
 func (options *CustomRender) Image(out *bytes.Buffer, link []byte, title []byte, alt []byte) {
+	prefix := strings.Replace(options.urlPrefix, "/src/", "/raw/", 1)
 	if len(link) > 0 && !isLink(link) {
-		link = []byte(path.Join(strings.Replace(options.urlPrefix, "/src/", "/raw/", 1), string(link)))
+		if link[0] != '/' {
+			prefix += "/"
+		}
+		link = []byte(prefix + string(link))
 	}
+	fmt.Println(2, string(link))
 
+	out.WriteString(`<a href="`)
+	out.Write(link)
+	out.WriteString(`">`)
 	options.Renderer.Image(out, link, title, alt)
+	out.WriteString("</a>")
 }
 
 var (
