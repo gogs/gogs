@@ -338,11 +338,9 @@ func CommitRepoAction(
 	}
 
 	// Change repository bare status and update last updated time.
-	if repo.IsBare {
-		repo.IsBare = false
-		if err = UpdateRepository(repo, false); err != nil {
-			return fmt.Errorf("UpdateRepository: %v", err)
-		}
+	repo.IsBare = false
+	if err = UpdateRepository(repo, false); err != nil {
+		return fmt.Errorf("UpdateRepository: %v", err)
 	}
 
 	isNewBranch := false
