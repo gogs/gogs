@@ -22,7 +22,6 @@ import (
 
 	"github.com/gogits/gogs/modules/bindata"
 	"github.com/gogits/gogs/modules/log"
-	// "github.com/gogits/gogs/modules/ssh"
 	"github.com/gogits/gogs/modules/user"
 )
 
@@ -51,6 +50,7 @@ var (
 	AppName     string
 	AppUrl      string
 	AppSubUrl   string
+	AppPath     string
 	AppDataPath = "data"
 
 	// Server settings.
@@ -58,8 +58,9 @@ var (
 	Domain             string
 	HttpAddr, HttpPort string
 	DisableSSH         bool
-	SSHPort            int
+	StartSSHServer     bool
 	SSHDomain          string
+	SSHPort            int
 	OfflineMode        bool
 	DisableRouterLog   bool
 	CertFile, KeyFile  string
@@ -196,21 +197,27 @@ func DateLang(lang string) string {
 	return "en"
 }
 
-func init() {
-	IsWindows = runtime.GOOS == "windows"
-	log.NewLogger(0, "console", `{"level": 0}`)
-}
-
-func ExecPath() (string, error) {
+// execPath returns the executable path.
+func execPath() (string, error) {
 	file, err := exec.LookPath(os.Args[0])
 	if err != nil {
 		return "", err
 	}
-	p, err := filepath.Abs(file)
-	if err != nil {
-		return "", err
+	return filepath.Abs(file)
+}
+
+func init() {
+	IsWindows = runtime.GOOS == "windows"
+	log.NewLogger(0, "console", `{"level": 0}`)
+
+	var err error
+	if AppPath, err = execPath(); err != nil {
+		log.Fatal(4, "fail to get app path: %v\n", err)
 	}
-	return p, nil
+
+	// Note: we don't use path.Dir here because it does not handle case
+	//	which path starts with two "/" in Windows: "//psf/Home/..."
+	AppPath = strings.Replace(AppPath, "\\", "/", -1)
 }
 
 // WorkDir returns absolute path of work directory.
@@ -220,19 +227,11 @@ func WorkDir() (string, error) {
 		return wd, nil
 	}
 
-	execPath, err := ExecPath()
-	if err != nil {
-		return execPath, err
-	}
-
-	// Note: we don't use path.Dir here because it does not handle case
-	//	which path starts with two "/" in Windows: "//psf/Home/..."
-	execPath = strings.Replace(execPath, "\\", "/", -1)
-	i := strings.LastIndex(execPath, "/")
+	i := strings.LastIndex(AppPath, "/")
 	if i == -1 {
-		return execPath, nil
+		return AppPath, nil
 	}
-	return execPath[:i], nil
+	return AppPath[:i], nil
 }
 
 func forcePathSeparator(path string) {
@@ -301,6 +300,9 @@ func NewContext() {
 	HttpAddr = sec.Key("HTTP_ADDR").MustString("0.0.0.0")
 	HttpPort = sec.Key("HTTP_PORT").MustString("3000")
 	DisableSSH = sec.Key("DISABLE_SSH").MustBool()
+	if !DisableSSH {
+		StartSSHServer = sec.Key("START_SSH_SERVER").MustBool()
+	}
 	SSHDomain = sec.Key("SSH_DOMAIN").MustString(Domain)
 	SSHPort = sec.Key("SSH_PORT").MustInt(22)
 	OfflineMode = sec.Key("OFFLINE_MODE").MustBool()
@@ -655,5 +657,4 @@ func NewServices() {
 	newRegisterMailService()
 	newNotifyMailService()
 	newWebhookService()
-	// ssh.Listen("2222")
 }

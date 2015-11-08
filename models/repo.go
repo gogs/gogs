@@ -380,7 +380,7 @@ func (repo *Repository) CloneLink() (cl CloneLink, err error) {
 	}
 
 	if setting.SSHPort != 22 {
-		cl.SSH = fmt.Sprintf("ssh://%s@%s:%d/%s/%s.git", setting.RunUser, setting.SSHDomain, setting.SSHPort, repo.Owner.LowerName, repo.LowerName)
+		cl.SSH = fmt.Sprintf("ssh://%s@%s:%d/%s/%s.git", setting.RunUser, setting.SSHDomain, setting.SSHPort, repo.Owner.Name, repo.Name)
 	} else {
 		cl.SSH = fmt.Sprintf("%s@%s:%s/%s.git", setting.RunUser, setting.SSHDomain, repo.Owner.Name, repo.Name)
 	}
@@ -599,7 +599,7 @@ func createUpdateHook(repoPath string) error {
 	hookPath := path.Join(repoPath, "hooks/update")
 	os.MkdirAll(path.Dir(hookPath), os.ModePerm)
 	return ioutil.WriteFile(hookPath,
-		[]byte(fmt.Sprintf(_TPL_UPDATE_HOOK, setting.ScriptType, "\""+appPath+"\"", setting.CustomConf)), 0777)
+		[]byte(fmt.Sprintf(_TPL_UPDATE_HOOK, setting.ScriptType, "\""+setting.AppPath+"\"", setting.CustomConf)), 0777)
 }
 
 type CreateRepoOptions struct {
