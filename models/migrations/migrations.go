@@ -456,7 +456,7 @@ func trimCommitActionAppUrlPrefix(x *xorm.Engine) error {
 
 		pushCommits = new(PushCommits)
 		if err = json.Unmarshal(action["content"], pushCommits); err != nil {
-			return fmt.Errorf("unmarshal action content[%s]: %v", actID, err)
+			return fmt.Errorf("unmarshal action content[%d]: %v", actID, err)
 		}
 
 		infos := strings.Split(pushCommits.CompareUrl, "/")
@@ -467,7 +467,7 @@ func trimCommitActionAppUrlPrefix(x *xorm.Engine) error {
 
 		p, err := json.Marshal(pushCommits)
 		if err != nil {
-			return fmt.Errorf("marshal action content[%s]: %v", actID, err)
+			return fmt.Errorf("marshal action content[%d]: %v", actID, err)
 		}
 
 		if _, err = sess.Id(actID).Update(&Action{

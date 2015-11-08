@@ -13,8 +13,10 @@ build:
 	go install -ldflags '$(LDFLAGS)' -tags '$(TAGS)'
 	go build -ldflags '$(LDFLAGS)' -tags '$(TAGS)'
 
+govet:
+	go tool vet -composites=false -methods=false -structtags=false .
+
 pack:
-	find . -name ".DS_Store" -print0 | xargs -0 rm
 	rm -rf $(RELEASE_GOGS)
 	mkdir -p $(RELEASE_GOGS)
 	cp -r gogs LICENSE README.md README_ZH.md templates public scripts $(RELEASE_GOGS)
@@ -28,3 +30,6 @@ bindata:
 
 clean:
 	go clean -i ./...
+
+clean-mac: clean
+	find . -name ".DS_Store" -print0 | xargs -0 rm
