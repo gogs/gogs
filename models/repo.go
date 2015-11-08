@@ -1330,10 +1330,14 @@ func RewriteRepositoryUpdateHook() error {
 	return x.Where("id > 0").Iterate(new(Repository),
 		func(idx int, bean interface{}) error {
 			repo := bean.(*Repository)
-			if err := repo.GetOwner(); err != nil {
-				return err
+			repoPath, err := repo.RepoPath()
+			if err != nil {
+				if err2 := CreateRepositoryNotice(fmt.Sprintf("RewriteRepositoryUpdateHook[%d]: %v", repo.ID, err)); err2 != nil {
+					log.Error(4, "CreateRepositoryNotice: %v", err2)
+				}
+				return nil
 			}
-			return createUpdateHook(RepoPath(repo.Owner.Name, repo.Name))
+			return createUpdateHook(repoPath)
 		})
 }
 

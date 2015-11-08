@@ -29,12 +29,12 @@ Gogs - Go Git Service [![Build Status](https://travis-ci.org/gogits/gogs.svg?bra
 
 - Due to testing purpose, data of [try.gogs.io](https://try.gogs.io) has been reset in **Jan 28, 2015** and will reset multiple times after. Please do **NOT** put your important data on the site.
 - The demo site [try.gogs.io](https://try.gogs.io) is running under `develop` branch.
-- :exclamation::exclamation::exclamation:<span style="color: red">You **MUST** read [CONTRIBUTING.md](CONTRIBUTING.md) before you start filing an issue or making a Pull Request, and **MUST** discuss with us on [Gitter](https://gitter.im/gogits/gogs) for UI changes and feature Pull Requests, otherwise it's high possibilities that we are not going to merge it.</span>:exclamation::exclamation::exclamation:
+- :bangbang:<span style="color: red">You **MUST** read [CONTRIBUTING.md](CONTRIBUTING.md) before you start filing an issue or making a Pull Request, and **MUST** discuss with us on [Gitter](https://gitter.im/gogits/gogs) for UI changes and feature Pull Requests, otherwise it's high possibilities that we are not going to merge it.</span>:bangbang:
 - If you think there are vulnerabilities in the project, please talk privately to **u@gogs.io**. Thanks!
+- If you're interested in using APIs, we have experimental support with [documentation](https://github.com/gogits/go-gogs-client/wiki).
+- If your team/company is using Gogs and would like to put your logo on [our website](http://gogs.io), contact us by any means.
 
-#### Other language version
-
-- [简体中文](README_ZH.md)
+[简体中文](README_ZH.md)
 
 ## Purpose
 
@@ -69,7 +69,7 @@ The goal of this project is to make the easiest, fastest, and most painless way 
 ## System Requirements
 
 - A cheap Raspberry Pi is powerful enough for basic functionality.
-- At least 2 CPU cores and 1GB RAM would be the baseline for teamwork.
+- 2 CPU cores and 1GB RAM would be the baseline for teamwork.
 
 ## Browser Support
 
