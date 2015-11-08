@@ -74,7 +74,14 @@ var (
 
 func fail(userMessage, logMessage string, args ...interface{}) {
 	fmt.Fprintln(os.Stderr, "Gogs:", userMessage)
-	log.GitLogger.Fatal(3, logMessage, args...)
+
+	if len(logMessage) > 0 {
+		log.GitLogger.Fatal(3, logMessage, args...)
+		return
+	}
+
+	log.GitLogger.Close()
+	os.Exit(1)
 }
 
 func handleUpdateTask(uuid string, user *models.User, repoUserName, repoName string) {
@@ -159,6 +166,11 @@ func runServ(c *cli.Context) {
 	requestedMode, has := COMMANDS[verb]
 	if !has {
 		fail("Unknown git command", "Unknown git command %s", verb)
+	}
+
+	// Prohibit push to mirror repositories.
+	if requestedMode > models.ACCESS_MODE_READ && repo.IsMirror {
+		fail("mirror repository is read-only", "")
 	}
 
 	// Allow anonymous clone for public repositories.

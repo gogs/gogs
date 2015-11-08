@@ -38,7 +38,6 @@ func RenderIssueLinks(oldCommits *list.List, repoLink string) *list.List {
 	newCommits := list.New()
 	for e := oldCommits.Front(); e != nil; e = e.Next() {
 		c := e.Value.(*git.Commit)
-		c.CommitMessage = c.CommitMessage
 		newCommits.PushBack(c)
 	}
 	return newCommits
@@ -196,7 +195,6 @@ func Diff(ctx *middleware.Context) {
 	commitID := ctx.Repo.CommitID
 
 	commit := ctx.Repo.Commit
-	commit.CommitMessage = commit.CommitMessage
 	diff, err := models.GetDiffCommit(models.RepoPath(userName, repoName),
 		commitID, setting.Git.MaxGitDiffLines)
 	if err != nil {
