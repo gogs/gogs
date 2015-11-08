@@ -181,12 +181,12 @@ func runServ(c *cli.Context) {
 	if requestedMode == models.ACCESS_MODE_WRITE || repo.IsPrivate {
 		keys := strings.Split(c.Args()[0], "-")
 		if len(keys) != 2 {
-			fail("Key ID format error", "Invalid key ID: %s", c.Args()[0])
+			fail("Key ID format error", "Invalid key argument: %s", c.Args()[0])
 		}
 
 		key, err := models.GetPublicKeyByID(com.StrTo(keys[1]).MustInt64())
 		if err != nil {
-			fail("Key ID format error", "Invalid key ID[%s]: %v", c.Args()[0], err)
+			fail("Invalid key ID", "Invalid key ID[%s]: %v", c.Args()[0], err)
 		}
 		keyID = key.ID
 
