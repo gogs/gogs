@@ -250,11 +250,6 @@ func Action(ctx *middleware.Context) {
 		redirectTo = ctx.Repo.RepoLink
 	}
 	ctx.Redirect(redirectTo)
-
-	return
-	ctx.JSON(200, map[string]interface{}{
-		"ok": true,
-	})
 }
 
 func Download(ctx *middleware.Context) {

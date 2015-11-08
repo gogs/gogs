@@ -147,7 +147,7 @@ func newRepoAction(e Engine, u *User, repo *Repository) (err error) {
 		RepoName:     repo.Name,
 		IsPrivate:    repo.IsPrivate,
 	}); err != nil {
-		return fmt.Errorf("notify watchers '%d/%s': %v", u.Id, repo.ID, err)
+		return fmt.Errorf("notify watchers '%d/%d': %v", u.Id, repo.ID, err)
 	}
 
 	log.Trace("action.newRepoAction: %s/%s", u.Name, repo.Name)
@@ -488,7 +488,7 @@ func transferRepoAction(e Engine, actUser, oldOwner, newOwner *User, repo *Repos
 		IsPrivate:    repo.IsPrivate,
 		Content:      path.Join(oldOwner.LowerName, repo.LowerName),
 	}); err != nil {
-		return fmt.Errorf("notify watchers '%d/%s': %v", actUser.Id, repo.ID, err)
+		return fmt.Errorf("notify watchers '%d/%d': %v", actUser.Id, repo.ID, err)
 	}
 
 	// Remove watch for organization.
