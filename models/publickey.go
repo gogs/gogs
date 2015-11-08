@@ -13,7 +13,6 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"path"
 	"path/filepath"
 	"strings"
@@ -38,20 +37,7 @@ var (
 )
 
 var sshOpLocker = sync.Mutex{}
-
-var (
-	SSHPath string // SSH directory.
-	appPath string // Execution(binary) path.
-)
-
-// exePath returns the executable path.
-func exePath() (string, error) {
-	file, err := exec.LookPath(os.Args[0])
-	if err != nil {
-		return "", err
-	}
-	return filepath.Abs(file)
-}
+var SSHPath string // SSH directory.
 
 // homeDir returns the home directory of current user.
 func homeDir() string {
@@ -63,16 +49,9 @@ func homeDir() string {
 }
 
 func init() {
-	var err error
-
-	if appPath, err = exePath(); err != nil {
-		log.Fatal(4, "fail to get app path: %v\n", err)
-	}
-	appPath = strings.Replace(appPath, "\\", "/", -1)
-
 	// Determine and create .ssh path.
 	SSHPath = filepath.Join(homeDir(), ".ssh")
-	if err = os.MkdirAll(SSHPath, 0700); err != nil {
+	if err := os.MkdirAll(SSHPath, 0700); err != nil {
 		log.Fatal(4, "fail to create '%s': %v", SSHPath, err)
 	}
 }
@@ -114,7 +93,7 @@ func (k *PublicKey) OmitEmail() string {
 
 // GetAuthorizedString generates and returns formatted public key string for authorized_keys file.
 func (key *PublicKey) GetAuthorizedString() string {
-	return fmt.Sprintf(_TPL_PUBLICK_KEY, appPath, key.ID, setting.CustomConf, key.Content)
+	return fmt.Sprintf(_TPL_PUBLICK_KEY, setting.AppPath, key.ID, setting.CustomConf, key.Content)
 }
 
 func extractTypeFromBase64Key(key string) (string, error) {
@@ -369,6 +348,19 @@ func GetPublicKeyByID(keyID int64) (*PublicKey, error) {
 		return nil, err
 	} else if !has {
 		return nil, ErrKeyNotExist{keyID}
+	}
+	return key, nil
+}
+
+// SearchPublicKeyByContent searches content as prefix (leak e-mail part)
+// and returns public key found.
+func SearchPublicKeyByContent(content string) (*PublicKey, error) {
+	key := new(PublicKey)
+	has, err := x.Where("content like ?", content+"%").Get(key)
+	if err != nil {
+		return nil, err
+	} else if !has {
+		return nil, ErrKeyNotExist{}
 	}
 	return key, nil
 }
