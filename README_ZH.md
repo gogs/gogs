@@ -57,6 +57,7 @@ Gogs 的目标是打造一个最简单、最快速和最轻松的方式搭建自
 
 ### 使用教程
 
+- [使用 Gogs 搭建自己的 Git 服务器](https://mynook.info/blog/post/host-your-own-git-server-using-gogs)
 - [阿里云上 Ubuntu 14.04 64 位安装 Gogs](http://my.oschina.net/luyao/blog/375654)
 
 ### 云端部署
