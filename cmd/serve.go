@@ -139,7 +139,7 @@ func runServ(c *cli.Context) {
 	}
 
 	verb, args := parseCmd(cmd)
-	repoPath := strings.Trim(args, "'")
+	repoPath := strings.ToLower(strings.Trim(args, "'"))
 	rr := strings.SplitN(repoPath, "/", 2)
 	if len(rr) != 2 {
 		fail("Invalid repository path", "Invalid repository path: %v", args)
