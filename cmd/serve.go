@@ -144,8 +144,8 @@ func runServ(c *cli.Context) {
 	if len(rr) != 2 {
 		fail("Invalid repository path", "Invalid repository path: %v", args)
 	}
-	repoUserName := rr[0]
-	repoName := strings.TrimSuffix(rr[1], ".git")
+	repoUserName := strings.ToLower(rr[0])
+	repoName := strings.ToLower(strings.TrimSuffix(rr[1], ".git"))
 
 	repoUser, err := models.GetUserByName(repoUserName)
 	if err != nil {
