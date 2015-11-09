@@ -31,14 +31,19 @@ func Home(ctx *middleware.Context) {
 
 	repoLink := ctx.Repo.RepoLink
 	branchLink := ctx.Repo.RepoLink + "/src/" + branchName
+	treeLink := branchLink
 	rawLink := ctx.Repo.RepoLink + "/raw/" + branchName
 
 	// Get tree path
 	treename := ctx.Repo.TreeName
 
-	if len(treename) > 0 && treename[len(treename)-1] == '/' {
-		ctx.Redirect(repoLink + "/src/" + branchName + "/" + treename[:len(treename)-1])
-		return
+	if len(treename) > 0 {
+		if treename[len(treename)-1] == '/' {
+			ctx.Redirect(repoLink + "/src/" + branchName + "/" + treename[:len(treename)-1])
+			return
+		}
+
+		treeLink += "/" + treename
 	}
 
 	ctx.Data["IsRepoToolbarSource"] = true
@@ -98,7 +103,7 @@ func Home(ctx *middleware.Context) {
 				readmeExist := base.IsMarkdownFile(blob.Name()) || base.IsReadmeFile(blob.Name())
 				ctx.Data["ReadmeExist"] = readmeExist
 				if readmeExist {
-					ctx.Data["FileContent"] = string(base.RenderMarkdown(buf, branchLink))
+					ctx.Data["FileContent"] = string(base.RenderMarkdown(buf, path.Dir(treeLink)))
 				} else {
 					if err, content := base.ToUtf8WithErr(buf); err != nil {
 						if err != nil {
@@ -191,7 +196,7 @@ func Home(ctx *middleware.Context) {
 					buf = append(buf, d...)
 					switch {
 					case base.IsMarkdownFile(readmeFile.Name()):
-						buf = base.RenderMarkdown(buf, branchLink)
+						buf = base.RenderMarkdown(buf, treeLink)
 					default:
 						buf = bytes.Replace(buf, []byte("\n"), []byte(`<br>`), -1)
 					}
