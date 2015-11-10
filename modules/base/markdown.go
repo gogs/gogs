@@ -107,7 +107,6 @@ func (options *CustomRender) Image(out *bytes.Buffer, link []byte, title []byte,
 		}
 		link = []byte(prefix + string(link))
 	}
-	fmt.Println(2, string(link))
 
 	out.WriteString(`<a href="`)
 	out.Write(link)
