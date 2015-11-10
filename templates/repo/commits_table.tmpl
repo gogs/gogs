@@ -1,5 +1,5 @@
 <h4 class="ui top attached header">
-  {{.CommitCount}} {{.i18n.Tr "repo.commits.commits"}}
+  {{.CommitCount}} {{.i18n.Tr "repo.commits.commits"}} {{if .Branch}}({{.Branch}}){{end}}
   {{if .PageIsCommits}}
   <div class="ui right">
     <form action="{{.RepoLink}}/commits/{{.BranchName}}/search">
