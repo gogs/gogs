@@ -21,6 +21,8 @@ function initCommentPreviewTab($form) {
             }
         );
     });
+
+    buttonsClickOnEnter();
 }
 
 function initCommentForm() {
@@ -537,6 +539,13 @@ function initAdmin() {
     }
 }
 
+function buttonsClickOnEnter() {
+    $('.ui.button').keypress(function(e){
+        if (e.keyCode == 13)
+            $(this).click();
+    });
+}
+
 $(document).ready(function () {
     csrf = $('meta[name=_csrf]').attr("content");
     suburl = $('meta[name=_suburl]').attr("content");
@@ -669,6 +678,8 @@ $(document).ready(function () {
     $('.show-modal.button').click(function () {
         $($(this).data('modal')).modal('show');
     });
+
+    buttonsClickOnEnter();
 
     initCommentForm();
     initInstall();
