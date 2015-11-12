@@ -10,12 +10,12 @@ import (
 	"fmt"
 	"path"
 	"regexp"
-	"strconv"
 	"strings"
 	"time"
 	"unicode"
 
 	"github.com/go-xorm/xorm"
+	"github.com/Unknwon/com"
 
 	api "github.com/gogits/go-gogs-client"
 
@@ -138,8 +138,8 @@ func (a Action) GetIssueInfos() []string {
 }
 
 func (a Action) GetIssueTitle() string {
-	issueID, _ := strconv.Atoi(strings.SplitN(a.Content, "|", 2)[0])
-	issue, _ := GetIssueByID(int64(issueID))
+	issueID := com.StrTo(a.GetIssueInfos()[0]).MustInt64()
+	issue, _ := GetIssueByID(issueID)
 	return issue.Name
 }
 
