@@ -31,7 +31,7 @@ stop_cmd="${name}_stop"
 gogs_start() {
 	cd ${gogs_directory}
 	export USER=${gogs_user}
-	export HOME=${gogs_directory}
+	export HOME=/usr/home/${gogs_user}
 	/usr/sbin/daemon -f -u ${gogs_user} -p ${pidfile} $command
 }
 
