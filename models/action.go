@@ -139,7 +139,11 @@ func (a Action) GetIssueInfos() []string {
 
 func (a Action) GetIssueTitle() string {
 	issueID := com.StrTo(a.GetIssueInfos()[0]).MustInt64()
-	issue, _ := GetIssueByID(issueID)
+	issue, err := GetIssueByID(issueID)
+	if err != nil {
+		log.Error(4, "GetIssueByID: %v", err)
+		return "500 when get title"
+	}
 	return issue.Name
 }
 
