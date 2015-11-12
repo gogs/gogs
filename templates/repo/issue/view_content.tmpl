@@ -206,16 +206,16 @@
 			      <div class="text right">
 			      	{{if and .IsIssueOwner (not .DisableStatusChange)}}
 				      	{{if .Issue.IsClosed}}
-								<div id="status-button" class="ui green basic button" tabindex="6" data-status="{{.i18n.Tr "repo.issues.reopen_issue"}}" data-status-and-comment="{{.i18n.Tr "repo.issues.reopen_comment_issue"}}" data-status-val="reopen">
+								<button id="status-button" class="ui green basic button" data-status="{{.i18n.Tr "repo.issues.reopen_issue"}}" data-status-and-comment="{{.i18n.Tr "repo.issues.reopen_comment_issue"}}" data-status-val="reopen">
 									{{.i18n.Tr "repo.issues.reopen_issue"}}
-								</div>
+								</button>
 				      	{{else}}
-								<div id="status-button" class="ui red basic button" tabindex="6" data-status="{{.i18n.Tr "repo.issues.close_issue"}}" data-status-and-comment="{{.i18n.Tr "repo.issues.close_comment_issue"}}" data-status-val="close">
+								<button id="status-button" tabindex="3" class="ui red basic button" data-status="{{.i18n.Tr "repo.issues.close_issue"}}" data-status-and-comment="{{.i18n.Tr "repo.issues.close_comment_issue"}}" data-status-val="close">
 									{{.i18n.Tr "repo.issues.close_issue"}}
-								</div>
+								</button>
 								{{end}}
 							{{end}}
-							<button class="ui green button" tabindex="5">
+							<button class="ui green button" tabindex="2">
 								{{.i18n.Tr "repo.issues.create_comment"}}
 							</button>
 			      </div>
