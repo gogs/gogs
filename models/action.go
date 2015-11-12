@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"path"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 	"unicode"
@@ -134,6 +135,12 @@ func (a Action) GetCreate() time.Time {
 
 func (a Action) GetIssueInfos() []string {
 	return strings.SplitN(a.Content, "|", 2)
+}
+
+func (a Action) GetIssueTitle() string {
+	issueID, _ := strconv.Atoi(strings.SplitN(a.Content, "|", 2)[0])
+	issue, _ := GetIssueByID(int64(issueID))
+	return issue.Name
 }
 
 func newRepoAction(e Engine, u *User, repo *Repository) (err error) {
