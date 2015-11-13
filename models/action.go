@@ -15,6 +15,7 @@ import (
 	"unicode"
 
 	"github.com/go-xorm/xorm"
+	"github.com/Unknwon/com"
 
 	api "github.com/gogits/go-gogs-client"
 
@@ -134,6 +135,16 @@ func (a Action) GetCreate() time.Time {
 
 func (a Action) GetIssueInfos() []string {
 	return strings.SplitN(a.Content, "|", 2)
+}
+
+func (a Action) GetIssueTitle() string {
+	issueIndex := com.StrTo(a.GetIssueInfos()[0]).MustInt64()
+	issue, err := GetIssueByIndex(a.RepoID, issueIndex)
+	if err != nil {
+		log.Error(4, "GetIssueByID: %v", err)
+		return "500 when get title"
+	}
+	return issue.Name
 }
 
 func newRepoAction(e Engine, u *User, repo *Repository) (err error) {
