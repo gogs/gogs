@@ -62,23 +62,21 @@ func Dashboard(ctx *middleware.Context) {
 		return
 	}
 
-	// Check context type.
 	if !ctxUser.IsOrganization() {
-		// Normal user.
-		ctxUser = ctx.User
-		collaborates, err := ctx.User.GetAccessibleRepositories()
+		collaborateRepos, err := ctx.User.GetAccessibleRepositories()
 		if err != nil {
 			ctx.Handle(500, "GetAccessibleRepositories", err)
 			return
 		}
 
-		repositories := make([]*models.Repository, 0, len(collaborates))
-		for repo := range collaborates {
-			repositories = append(repositories, repo)
+		for i := range collaborateRepos {
+			if err = collaborateRepos[i].GetOwner(); err != nil {
+				ctx.Handle(500, "GetOwner: "+collaborateRepos[i].Name, err)
+				return
+			}
 		}
-
-		ctx.Data["CollaborateCount"] = len(repositories)
-		ctx.Data["CollaborativeRepos"] = repositories
+		ctx.Data["CollaborateCount"] = len(collaborateRepos)
+		ctx.Data["CollaborativeRepos"] = collaborateRepos
 	}
 
 	repos, err := models.GetRepositories(ctxUser.Id, true)
@@ -89,7 +87,7 @@ func Dashboard(ctx *middleware.Context) {
 	ctx.Data["Repos"] = repos
 
 	// Get mirror repositories.
-	mirrors := make([]*models.Repository, 0, len(repos)/2)
+	mirrors := make([]*models.Repository, 0, 5)
 	for _, repo := range repos {
 		if repo.IsMirror {
 			if err = repo.GetMirror(); err != nil {
