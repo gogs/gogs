@@ -1,131 +1,112 @@
-{{template "ng/base/head" .}}
-{{template "ng/base/header" .}}
-{{template "user/dashboard/nav" .}}
-<div id="dashboard-wrapper">
-    <div id="dashboard" class="container">
-        {{template "ng/base/alert" .}}
-        <div id="dashboard-news" class="left grid-2-3">
-            {{template "user/dashboard/feeds" .}}
+{{template "base/head" .}}
+<div class="dashboard feeds">
+  {{template "user/dashboard/navbar" .}}
+  <div class="ui container">
+    <div class="ui grid">
+      <div class="ten wide column">
+        {{template "user/dashboard/feeds" .}}
+      </div>
+      <div class="six wide column">
+        <div class="ui {{if not .ContextUser.IsOrganization}}three{{else}}two{{end}} item tabable menu">
+          <a class="item active" data-tab="repos">{{.i18n.Tr "repository"}}</a>
+          {{if not .ContextUser.IsOrganization}}
+          <a class="item" data-tab="orgs">{{.i18n.Tr "organization"}}</a>
+          {{end}}
+          <a class="item" data-tab="mirrors">{{.i18n.Tr "mirror"}}</a>
         </div>
-        <div class="right grid-1-3" id="dashboard-sidebar">
-            <ul id="dashboard-sidebar-menu" class="menu menu-line">
-                <li class="js-tab-nav js-tab-nav-show first" data-tab-target="#dashboard-my-repo"><a href="#">{{.i18n.Tr "repository"}}</a></li>
-                {{if not .ContextUser.IsOrganization}}
-                <li class="js-tab-nav" data-tab-target="#dashboard-my-org"><a href="#">{{.i18n.Tr "organization"}}</a></li>
-                {{end}}
-                <li class="js-tab-nav last" data-tab-target="#dashboard-my-mirror"><a href="#">{{.i18n.Tr "mirror"}}</a></li>
-                <li class="drop right">
-                    <button class="btn btn-green text-bold" id="dashboard-new-repo">
-                        <i class="octicon octicon-plus"></i>
-                    </button>
-                    <ul class="menu menu-vertical drop-down" id="dashboard-new-repo-menu">
-                        <li><a href="{{AppSubUrl}}/repo/create"><i class="octicon octicon-repo-create"></i>{{.i18n.Tr "new_repo"}}</a></li>
-                        <li><a href="{{AppSubUrl}}/repo/migrate"><i class="octicon octicon-repo-clone"></i>{{.i18n.Tr "new_migrate"}}</a></li>
-                        <li><a href="{{AppSubUrl}}/org/create"><i class="octicon octicon-organization"></i>{{.i18n.Tr "new_org"}}</a></li>
-                    </ul>
-                </li>
+        <div class="ui tab active list" data-tab="repos">
+          <h4 class="ui top attached header">
+            {{.i18n.Tr "home.my_repos"}} <span class="ui grey label">{{.ContextUser.NumRepos}}</span>
+            <div class="ui right">
+              <a class="ui blue tiny show-panel button" href="{{AppSubUrl}}/repo/create">{{.i18n.Tr "new_repo"}}</a>
+            </div>
+          </h4>
+          <div class="ui attached table segment">
+            <ul>
+              {{range .Repos}}
+              <li {{if .IsPrivate}}class="private"{{end}}>
+                <a href="{{AppSubUrl}}/{{$.ContextUser.Name}}/{{.Name}}">
+                  <i class="octicon octicon-{{if .IsPrivate}}lock{{else if .IsFork}}repo-forked{{else if .IsMirror}}repo-clone{{else}}repo{{end}}"></i>
+                  <strong>{{.Name}}</strong>
+                  <span class="ui right text light grey">
+                    <i class="octicon octicon-star"></i>{{.NumStars}}
+                  </span>
+                </a>
+              </li>
+              {{end}}
             </ul>
-            <div class="panel" id="dashboard-my-repo">
-                <div class="panel-header">
-                    <h4 class="left">{{.i18n.Tr "home.my_repos"}}
-                        <span class="repo-count label label-gray label-radius">{{.ContextUser.NumRepos}}</span>
-                    </h4>
-                    &nbsp;
-                </div>
-                <div class="panel-body">
-                    <ul class="list-no-style">
-                        {{range .Repos}}
-                        <li {{if .IsPrivate}}class="private"{{end}}>
-                            <a href="{{AppSubUrl}}/{{$.ContextUser.Name}}/{{.Name}}">
-                                <i class="octicon octicon-{{if .IsPrivate}}lock{{else if .IsFork}}repo-forked{{else if .IsMirror}}repo-clone{{else}}repo{{end}}"></i>
-                                <span class="repo-name">
-                                    <strong class="repo">{{.Name}}</strong>
-                                </span>
-                                <span class="right repo-star">
-                                    <i class="octicon octicon-star"></i>{{.NumStars}}
-                                </span>
-                            </a>
-                        </li>
-                        {{end}}
-                    </ul>
-                </div>
-                {{if not .ContextUser.IsOrganization}}
-                <div class="panel-header repo-contrib-header">
-                    <h4 class="text-bold">{{.i18n.Tr "home.collaborative_repos"}}
-                        <span class="repo-count label label-gray label-radius">{{.CollaborateCount}}</span>
-                    </h4>
-                </div>
-                <div class="panel-body">
-                    <ul class="list-no-style">
-                        {{range .CollaborativeRepos}}
-                        <li {{if .IsPrivate}}class="private"{{end}}>
-                            <a href="{{AppSubUrl}}/{{.Owner.Name}}/{{.Name}}">
-                                <i class="octicon octicon-{{if .IsPrivate}}lock{{else if .IsFork}}repo-forked{{else if .IsMirror}}repo-clone{{else}}repo{{end}}"></i>
-                                <span class="repo-name">
-                                    <span class="repo-name-prefix">{{.Owner.Name}} / </span>
-                                    <strong class="repo">{{.Name}}</strong>
-                                </span>
-                                <span class="right repo-star">
-                                    <i class="octicon octicon-star"></i>{{.NumStars}}
-                                </span>
-                            </a>
-                        </li>
-                        {{end}}
-                    </ul>
-                </div>
-                {{end}}
-            </div>
-            {{if not .ContextUser.IsOrganization}}
-            <div class="panel" id="dashboard-my-org">
-                <div class="panel-header">
-                    <h4 class="text-bold">{{.i18n.Tr "home.my_orgs"}}
-                        <span class="repo-count label label-gray label-radius">{{.ContextUser.GetOrganizationCount}}</span>
-                    </h4>
-                </div>
-                <div class="panel-body">
-                    <ul class="list-no-style">
-                        {{range .ContextUser.Orgs}}
-                        <li>
-                            <a href="{{AppSubUrl}}/{{.Name}}">
-                                <i class="octicon octicon-organization"></i>
-                                <span class="repo-name">
-                                    <strong class="repo">{{.Name}}</strong>
-                                </span>
-                                <span class="right repo-star">
-                                    <i class="octicon octicon-repo"></i>{{.NumRepos}}
-                                </span>
-                            </a>
-                        </li>
-                        {{end}}
-                    </ul>
-                </div>
-            </div>
-            {{end}}
-            <div class="panel" id="dashboard-my-mirror">
-                <div class="panel-header">
-                    <h4 class="text-bold">{{.i18n.Tr "home.my_mirrors"}}
-                        <span class="repo-count label label-gray label-radius">{{.MirrorCount}}</span>
-                    </h4>
-                </div>
-                <div class="panel-body">
-                    <ul class="list-no-style">
-                        {{range .Mirrors}}
-                        <li {{if .IsPrivate}}class="private"{{end}}>
-                            <a href="{{AppSubUrl}}/{{$.ContextUser.Name}}/{{.Name}}">
-                                <i class="octicon octicon-repo-clone"></i>
-                                <span class="repo-name">
-                                    <strong class="repo">{{.Name}}</strong>
-                                </span>
-                                <span class="right repo-star">
-                                    <i class="octicon octicon-sync"></i>{{.Interval}}H
-                                </span>
-                            </a>
-                        </li>
-                        {{end}}
-                    </ul>
-                </div>
-            </div>
+          </div>
+
+          {{if not .ContextUser.IsOrganization}}
+          <h4 class="ui top attached header">
+            {{.i18n.Tr "home.collaborative_repos"}} <span class="ui grey label">{{.CollaborateCount}}</span>
+          </h4>
+          <div class="ui attached table segment">
+            <ul>
+              {{range .CollaborativeRepos}}
+              <li {{if .IsPrivate}}class="private"{{end}}>
+                <a href="{{AppSubUrl}}/{{.Owner.Name}}/{{.Name}}">
+                  <i class="octicon octicon-{{if .IsPrivate}}lock{{else if .IsFork}}repo-forked{{else if .IsMirror}}repo-clone{{else}}repo{{end}}"></i>
+                  {{.Owner.Name}} / <strong>{{.Name}}</strong>
+                  <span class="ui right text light grey">
+                    <i class="octicon octicon-star"></i>{{.NumStars}}
+                  </span>
+                </a>
+              </li>
+              {{end}}
+            </ul>
+          </div>
+          {{end}}
         </div>
+
+        {{if not .ContextUser.IsOrganization}}
+        <div class="ui tab list" data-tab="orgs">
+          <h4 class="ui top attached header">
+            {{.i18n.Tr "home.my_orgs"}} <span class="ui grey label">{{.ContextUser.GetOrganizationCount}}</span>
+            <div class="ui right">
+              <a class="ui blue tiny show-panel button" href="{{AppSubUrl}}/org/create">{{.i18n.Tr "new_org"}}</a>
+            </div>
+          </h4>
+          <div class="ui attached table segment">
+            <ul>
+              {{range .ContextUser.Orgs}}
+              <li>
+                <a href="{{AppSubUrl}}/{{.Name}}">
+                  <i class="octicon octicon-organization"></i>
+                  <strong>{{.Name}}</strong>
+                  <span class="ui right text light grey">
+                    <i class="octicon octicon-repo"></i>{{.NumRepos}}
+                  </span>
+                </a>
+              </li>
+              {{end}}
+            </ul>
+          </div>
+        </div>
+        {{end}}
+
+        <div class="ui tab list" data-tab="mirrors">
+          <h4 class="ui top attached header">
+            {{.i18n.Tr "home.my_mirrors"}} <span class="ui grey label">{{.MirrorCount}}</span>
+          </h4>
+          <div class="ui attached table segment">
+            <ul>
+              {{range .Mirrors}}
+              <li {{if .IsPrivate}}class="private"{{end}}>
+                <a href="{{AppSubUrl}}/{{$.ContextUser.Name}}/{{.Name}}">
+                  <i class="octicon octicon-repo-clone"></i>
+                  <strong>{{.Name}}</strong>
+                  <span class="ui right text light grey">
+                    <i class="octicon octicon-sync"></i>{{.Interval}}H
+                  </span>
+                </a>
+              </li>
+              {{end}}
+              </ul>
+          </div>
+        </div>
+      </div>
     </div>
+  </div>
 </div>
-{{template "ng/base/footer" .}}
+{{template "base/footer" .}}
