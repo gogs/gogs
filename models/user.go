@@ -14,6 +14,7 @@ import (
 	"image"
 	"image/jpeg"
 	_ "image/jpeg"
+	"image/png"
 	"os"
 	"path"
 	"path/filepath"
@@ -253,11 +254,9 @@ func (u *User) ValidatePassword(passwd string) bool {
 // UploadAvatar saves custom avatar for user.
 // FIXME: split uploads to different subdirs in case we have massive users.
 func (u *User) UploadAvatar(data []byte) error {
-	u.UseCustomAvatar = true
-
 	img, _, err := image.Decode(bytes.NewReader(data))
 	if err != nil {
-		return err
+		return fmt.Errorf("Decode: %v", err)
 	}
 
 	m := resize.Resize(234, 234, img, resize.NearestNeighbor)
@@ -268,19 +267,20 @@ func (u *User) UploadAvatar(data []byte) error {
 		return err
 	}
 
-	if _, err = sess.Id(u.Id).AllCols().Update(u); err != nil {
-		return err
+	u.UseCustomAvatar = true
+	if err = updateUser(sess, u); err != nil {
+		return fmt.Errorf("updateUser: %v", err)
 	}
 
 	os.MkdirAll(setting.AvatarUploadPath, os.ModePerm)
 	fw, err := os.Create(u.CustomAvatarPath())
 	if err != nil {
-		return err
+		return fmt.Errorf("Create: %v", err)
 	}
 	defer fw.Close()
 
-	if err = jpeg.Encode(fw, m, nil); err != nil {
-		return err
+	if err = png.Encode(fw, m); err != nil {
+		return fmt.Errorf("Encode: %v", err)
 	}
 
 	return sess.Commit()
