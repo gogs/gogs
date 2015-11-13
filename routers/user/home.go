@@ -111,6 +111,7 @@ func Dashboard(ctx *middleware.Context) {
 
 	// Check access of private repositories.
 	feeds := make([]*models.Action, 0, len(actions))
+	unameAvatars := make(map[string]string)
 	for _, act := range actions {
 		if act.IsPrivate {
 			// This prevents having to retrieve the repository for each action
@@ -122,16 +123,22 @@ func Dashboard(ctx *middleware.Context) {
 			}
 
 		}
-		// FIXME: cache results?
-		u, err := models.GetUserByName(act.ActUserName)
-		if err != nil {
-			if models.IsErrUserNotExist(err) {
-				continue
+
+		// Cache results to reduce queries.
+		_, ok := unameAvatars[act.ActUserName]
+		if !ok {
+			u, err := models.GetUserByName(act.ActUserName)
+			if err != nil {
+				if models.IsErrUserNotExist(err) {
+					continue
+				}
+				ctx.Handle(500, "GetUserByName", err)
+				return
 			}
-			ctx.Handle(500, "GetUserByName", err)
-			return
+			unameAvatars[act.ActUserName] = u.AvatarLink()
 		}
-		act.ActAvatar = u.AvatarLink()
+
+		act.ActAvatar = unameAvatars[act.ActUserName]
 		feeds = append(feeds, act)
 	}
 	ctx.Data["Feeds"] = feeds
