@@ -14,8 +14,8 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/go-xorm/xorm"
 	"github.com/Unknwon/com"
+	"github.com/go-xorm/xorm"
 
 	api "github.com/gogits/go-gogs-client"
 
@@ -138,10 +138,10 @@ func (a Action) GetIssueInfos() []string {
 }
 
 func (a Action) GetIssueTitle() string {
-	issueIndex := com.StrTo(a.GetIssueInfos()[0]).MustInt64()
-	issue, err := GetIssueByIndex(a.RepoID, issueIndex)
+	index := com.StrTo(a.GetIssueInfos()[0]).MustInt64()
+	issue, err := GetIssueByIndex(a.RepoID, index)
 	if err != nil {
-		log.Error(4, "GetIssueByID: %v", err)
+		log.Error(4, "GetIssueByIndex: %v", err)
 		return "500 when get title"
 	}
 	return issue.Name
