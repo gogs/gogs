@@ -39,6 +39,8 @@ import (
 	"github.com/gogits/gogs/modules/setting"
 )
 
+//FIXME: remove cache module
+
 var gravatarSource string
 
 func UpdateGravatarSource() {
@@ -153,7 +155,7 @@ func (this *Avatar) Encode(wr io.Writer, size int) (err error) {
 	if img, err = decodeImageFile(imgPath); err != nil {
 		return
 	}
-	m := resize.Resize(uint(size), 0, img, resize.NearestNeighbor)
+	m := resize.Resize(uint(size), 0, img, resize.Lanczos3)
 	return jpeg.Encode(wr, m, nil)
 }
 
