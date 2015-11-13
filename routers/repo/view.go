@@ -16,6 +16,7 @@ import (
 	"github.com/gogits/gogs/modules/git"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/middleware"
+	"github.com/gogits/gogs/modules/template"
 )
 
 const (
@@ -105,7 +106,7 @@ func Home(ctx *middleware.Context) {
 				if readmeExist {
 					ctx.Data["FileContent"] = string(base.RenderMarkdown(buf, path.Dir(treeLink)))
 				} else {
-					if err, content := base.ToUtf8WithErr(buf); err != nil {
+					if err, content := template.ToUtf8WithErr(buf); err != nil {
 						if err != nil {
 							log.Error(4, "Convert content encoding: %s", err)
 						}

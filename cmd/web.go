@@ -7,7 +7,7 @@ package cmd
 import (
 	"crypto/tls"
 	"fmt"
-	"html/template"
+	gotmpl "html/template"
 	"io/ioutil"
 	"net/http"
 	"net/http/fcgi"
@@ -35,11 +35,11 @@ import (
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/auth/apiv1"
 	"github.com/gogits/gogs/modules/avatar"
-	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/bindata"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/middleware"
 	"github.com/gogits/gogs/modules/setting"
+	"github.com/gogits/gogs/modules/template"
 	"github.com/gogits/gogs/routers"
 	"github.com/gogits/gogs/routers/admin"
 	"github.com/gogits/gogs/routers/api/v1"
@@ -124,7 +124,7 @@ func newMacaron() *macaron.Macaron {
 	))
 	m.Use(macaron.Renderer(macaron.RenderOptions{
 		Directory:  path.Join(setting.StaticRootPath, "templates"),
-		Funcs:      []template.FuncMap{base.TemplateFuncs},
+		Funcs:      []gotmpl.FuncMap{template.Funcs},
 		IndentJSON: macaron.Env != macaron.PROD,
 	}))
 

@@ -26,7 +26,7 @@
               {{range .Repos}}
               <li {{if .IsPrivate}}class="private"{{end}}>
                 <a href="{{AppSubUrl}}/{{$.ContextUser.Name}}/{{.Name}}">
-                  <i class="octicon octicon-{{if .IsPrivate}}lock{{else if .IsFork}}repo-forked{{else if .IsMirror}}repo-clone{{else}}repo{{end}}"></i>
+                  <i class="icon octicon octicon-{{if .IsPrivate}}lock{{else if .IsFork}}repo-forked{{else if .IsMirror}}repo-clone{{else}}repo{{end}}"></i>
                   <strong>{{.Name}}</strong>
                   <span class="ui right text light grey">
                     <i class="octicon octicon-star"></i>{{.NumStars}}
@@ -46,7 +46,7 @@
               {{range .CollaborativeRepos}}
               <li {{if .IsPrivate}}class="private"{{end}}>
                 <a href="{{AppSubUrl}}/{{.Owner.Name}}/{{.Name}}">
-                  <i class="octicon octicon-{{if .IsPrivate}}lock{{else if .IsFork}}repo-forked{{else if .IsMirror}}repo-clone{{else}}repo{{end}}"></i>
+                  <i class="icon octicon octicon-{{if .IsPrivate}}lock{{else if .IsFork}}repo-forked{{else if .IsMirror}}repo-clone{{else}}repo{{end}}"></i>
                   {{.Owner.Name}} / <strong>{{.Name}}</strong>
                   <span class="ui right text light grey">
                     <i class="octicon octicon-star"></i>{{.NumStars}}
@@ -72,7 +72,7 @@
               {{range .ContextUser.Orgs}}
               <li>
                 <a href="{{AppSubUrl}}/{{.Name}}">
-                  <i class="octicon octicon-organization"></i>
+                  <i class="icon octicon octicon-organization"></i>
                   <strong>{{.Name}}</strong>
                   <span class="ui right text light grey">
                     <i class="octicon octicon-repo"></i>{{.NumRepos}}
@@ -94,7 +94,7 @@
               {{range .Mirrors}}
               <li {{if .IsPrivate}}class="private"{{end}}>
                 <a href="{{AppSubUrl}}/{{$.ContextUser.Name}}/{{.Name}}">
-                  <i class="octicon octicon-repo-clone"></i>
+                  <i class="icon octicon octicon-repo-clone"></i>
                   <strong>{{.Name}}</strong>
                   <span class="ui right text light grey">
                     <i class="octicon octicon-sync"></i>{{.Interval}}H

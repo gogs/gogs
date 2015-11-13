@@ -208,8 +208,48 @@ func issueIndexTrimRight(c rune) bool {
 	return !unicode.IsDigit(c)
 }
 
+type PushCommit struct {
+	Sha1        string
+	Message     string
+	AuthorEmail string
+	AuthorName  string
+}
+
+type PushCommits struct {
+	Len        int
+	Commits    []*PushCommit
+	CompareUrl string
+
+	avatars map[string]string
+}
+
+func NewPushCommits() *PushCommits {
+	return &PushCommits{
+		avatars: make(map[string]string),
+	}
+}
+
+// AvatarLink tries to match user in database with e-mail
+// in order to show custom avatar, and falls back to general avatar link.
+func (push *PushCommits) AvatarLink(email string) string {
+	_, ok := push.avatars[email]
+	if !ok {
+		u, err := GetUserByEmail(email)
+		if err != nil {
+			push.avatars[email] = base.AvatarLink(email)
+			if !IsErrUserNotExist(err) {
+				log.Error(4, "GetUserByEmail: %v", err)
+			}
+		} else {
+			push.avatars[email] = u.AvatarLink()
+		}
+	}
+
+	return push.avatars[email]
+}
+
 // updateIssuesCommit checks if issues are manipulated by commit message.
-func updateIssuesCommit(u *User, repo *Repository, repoUserName, repoName string, commits []*base.PushCommit) error {
+func updateIssuesCommit(u *User, repo *Repository, repoUserName, repoName string, commits []*PushCommit) error {
 	// Commits are appended in the reverse order.
 	for i := len(commits) - 1; i >= 0; i-- {
 		c := commits[i]
@@ -343,7 +383,7 @@ func CommitRepoAction(
 	repoID int64,
 	repoUserName, repoName string,
 	refFullName string,
-	commit *base.PushCommits,
+	commit *PushCommits,
 	oldCommitID string, newCommitID string) error {
 
 	u, err := GetUserByID(userID)
@@ -369,7 +409,7 @@ func CommitRepoAction(
 	// Check it's tag push or branch.
 	if strings.HasPrefix(refFullName, "refs/tags/") {
 		opType = PUSH_TAG
-		commit = &base.PushCommits{}
+		commit = &PushCommits{}
 	} else {
 		// if not the first commit, set the compareUrl
 		if !strings.HasPrefix(oldCommitID, "0000000") {
