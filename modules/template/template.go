@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-package base
+package template
 
 import (
 	"container/list"
@@ -16,7 +16,8 @@ import (
 	"golang.org/x/net/html/charset"
 	"golang.org/x/text/transform"
 
-	"github.com/gogits/chardet"
+	"github.com/gogits/gogs/models"
+	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/setting"
 )
 
@@ -25,7 +26,7 @@ func Safe(raw string) template.HTML {
 }
 
 func Str2html(raw string) template.HTML {
-	return template.HTML(Sanitizer.Sanitize(raw))
+	return template.HTML(base.Sanitizer.Sanitize(raw))
 }
 
 func Range(l int) []int {
@@ -46,27 +47,11 @@ func List(l *list.List) chan interface{} {
 }
 
 func Sha1(str string) string {
-	return EncodeSha1(str)
-}
-
-func ShortSha(sha1 string) string {
-	if len(sha1) == 40 {
-		return sha1[:10]
-	}
-	return sha1
-}
-
-func DetectEncoding(content []byte) (string, error) {
-	detector := chardet.NewTextDetector()
-	result, err := detector.DetectBest(content)
-	if result.Charset != "UTF-8" && len(setting.Repository.AnsiCharset) > 0 {
-		return setting.Repository.AnsiCharset, err
-	}
-	return result.Charset, err
+	return base.EncodeSha1(str)
 }
 
 func ToUtf8WithErr(content []byte) (error, string) {
-	charsetLabel, err := DetectEncoding(content)
+	charsetLabel, err := base.DetectEncoding(content)
 	if err != nil {
 		return err, ""
 	}
@@ -124,7 +109,7 @@ func ReplaceLeft(s, old, new string) string {
 // RenderCommitMessage renders commit message with XSS-safe and special links.
 func RenderCommitMessage(msg, urlPrefix string) template.HTML {
 	cleanMsg := template.HTMLEscapeString(msg)
-	fullMessage := string(RenderIssueIndexPattern([]byte(cleanMsg), urlPrefix))
+	fullMessage := string(base.RenderIssueIndexPattern([]byte(cleanMsg), urlPrefix))
 	msgLines := strings.Split(strings.TrimSpace(fullMessage), "\n")
 	for i := range msgLines {
 		msgLines[i] = ReplaceLeft(msgLines[i], " ", "&nbsp;")
@@ -134,7 +119,7 @@ func RenderCommitMessage(msg, urlPrefix string) template.HTML {
 	return template.HTML(fullMessage)
 }
 
-var TemplateFuncs template.FuncMap = map[string]interface{}{
+var Funcs template.FuncMap = map[string]interface{}{
 	"GoVer": func() string {
 		return strings.Title(runtime.Version())
 	},
@@ -156,13 +141,13 @@ var TemplateFuncs template.FuncMap = map[string]interface{}{
 	"LoadTimes": func(startTime time.Time) string {
 		return fmt.Sprint(time.Since(startTime).Nanoseconds()/1e6) + "ms"
 	},
-	"AvatarLink":   AvatarLink,
+	"AvatarLink":   base.AvatarLink,
 	"Safe":         Safe,
 	"Str2html":     Str2html,
-	"TimeSince":    TimeSince,
-	"RawTimeSince": RawTimeSince,
-	"FileSize":     FileSize,
-	"Subtract":     Subtract,
+	"TimeSince":    base.TimeSince,
+	"RawTimeSince": base.RawTimeSince,
+	"FileSize":     base.FileSize,
+	"Subtract":     base.Subtract,
 	"Add": func(a, b int) int {
 		return a + b
 	},
@@ -197,8 +182,8 @@ var TemplateFuncs template.FuncMap = map[string]interface{}{
 	"DiffTypeToStr":     DiffTypeToStr,
 	"DiffLineTypeToStr": DiffLineTypeToStr,
 	"Sha1":              Sha1,
-	"ShortSha":          ShortSha,
-	"Md5":               EncodeMd5,
+	"ShortSha":          base.ShortSha,
+	"Md5":               base.EncodeMd5,
 	"ActionContent2Commits": ActionContent2Commits,
 	"Oauth2Icon":            Oauth2Icon,
 	"Oauth2Name":            Oauth2Name,
@@ -240,22 +225,9 @@ func ActionIcon(opType int) string {
 	}
 }
 
-type PushCommit struct {
-	Sha1        string
-	Message     string
-	AuthorEmail string
-	AuthorName  string
-}
-
-type PushCommits struct {
-	Len        int
-	Commits    []*PushCommit
-	CompareUrl string
-}
-
-func ActionContent2Commits(act Actioner) *PushCommits {
-	var push *PushCommits
-	if err := json.Unmarshal([]byte(act.GetContent()), &push); err != nil {
+func ActionContent2Commits(act Actioner) *models.PushCommits {
+	push := models.NewPushCommits()
+	if err := json.Unmarshal([]byte(act.GetContent()), push); err != nil {
 		return nil
 	}
 	return push

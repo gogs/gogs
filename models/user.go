@@ -991,7 +991,7 @@ func GetUserByEmail(email string) (*User, error) {
 		return GetUserByID(emailAddress.UID)
 	}
 
-	return nil, ErrUserNotExist{0, "email"}
+	return nil, ErrUserNotExist{0, email}
 }
 
 // SearchUserByName returns given number of users whose name contains keyword.
