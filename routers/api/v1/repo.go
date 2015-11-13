@@ -106,9 +106,9 @@ func ListMyRepos(ctx *middleware.Context) {
 	}
 	numOwnRepos := len(ownRepos)
 
-	accessibleRepos, err := ctx.User.GetAccessibleRepositories()
+	accessibleRepos, err := ctx.User.GetRepositoryAccesses()
 	if err != nil {
-		ctx.APIError(500, "GetAccessibleRepositories", err)
+		ctx.APIError(500, "GetRepositoryAccesses", err)
 		return
 	}
 

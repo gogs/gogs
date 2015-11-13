@@ -67,9 +67,8 @@ func HasAccess(u *User, repo *Repository, testMode AccessMode) (bool, error) {
 	return hasAccess(x, u, repo, testMode)
 }
 
-// GetAccessibleRepositories finds all repositories where a user has access to,
-// besides he/she owns.
-func (u *User) GetAccessibleRepositories() (map[*Repository]AccessMode, error) {
+// GetRepositoryAccesses finds all repositories with their access mode where a user has access but does not own.
+func (u *User) GetRepositoryAccesses() (map[*Repository]AccessMode, error) {
 	accesses := make([]*Access, 0, 10)
 	if err := x.Find(&accesses, &Access{UserID: u.Id}); err != nil {
 		return nil, err
@@ -80,7 +79,7 @@ func (u *User) GetAccessibleRepositories() (map[*Repository]AccessMode, error) {
 		repo, err := GetRepositoryByID(access.RepoID)
 		if err != nil {
 			if IsErrRepoNotExist(err) {
-				log.Error(4, "%v", err)
+				log.Error(4, "GetRepositoryByID: %v", err)
 				continue
 			}
 			return nil, err
@@ -92,9 +91,22 @@ func (u *User) GetAccessibleRepositories() (map[*Repository]AccessMode, error) {
 		}
 		repos[repo] = access.Mode
 	}
-
-	// FIXME: should we generate an ordered list here? Random looks weird.
 	return repos, nil
+}
+
+// GetAccessibleRepositories finds all repositories where a user has access but does not own.
+func (u *User) GetAccessibleRepositories() ([]*Repository, error) {
+	accesses := make([]*Access, 0, 10)
+	if err := x.Find(&accesses, &Access{UserID: u.Id}); err != nil {
+		return nil, err
+	}
+
+	repoIDs := make([]int64, 0, len(accesses))
+	for _, access := range accesses {
+		repoIDs = append(repoIDs, access.RepoID)
+	}
+	repos := make([]*Repository, 0, len(repoIDs))
+	return repos, x.Where("owner_id != ?", u.Id).In("id", repoIDs).Desc("updated").Find(&repos)
 }
 
 func maxAccessMode(modes ...AccessMode) AccessMode {
