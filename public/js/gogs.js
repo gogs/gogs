@@ -630,9 +630,7 @@ $(document).ready(function () {
     emojify.setConfig({
         img_dir: suburl + '/img/emoji'
     });
-    $('.emojify').each(function () {
-        emojify.run($(this)[0]);
-    });
+    emojify.run();
 
     // Clipboard JS
     var clipboard = new Clipboard('.clipboard');

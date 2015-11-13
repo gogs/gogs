@@ -142,9 +142,19 @@ func (a Action) GetIssueTitle() string {
 	issue, err := GetIssueByIndex(a.RepoID, index)
 	if err != nil {
 		log.Error(4, "GetIssueByIndex: %v", err)
-		return "500 when get title"
+		return "500 when get issue"
 	}
 	return issue.Name
+}
+
+func (a Action) GetIssueContent() string {
+	index := com.StrTo(a.GetIssueInfos()[0]).MustInt64()
+	issue, err := GetIssueByIndex(a.RepoID, index)
+	if err != nil {
+		log.Error(4, "GetIssueByIndex: %v", err)
+		return "500 when get issue"
+	}
+	return issue.Content
 }
 
 func newRepoAction(e Engine, u *User, repo *Repository) (err error) {
