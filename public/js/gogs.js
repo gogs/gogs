@@ -583,6 +583,7 @@ $(document).ready(function () {
         }
     });
     $('.tabular.menu .item').tab();
+    $('.tabable.menu .item').tab();
 
     $('.toggle.button').click(function () {
         $($(this).data('target')).slideToggle(100);
