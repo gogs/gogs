@@ -26,7 +26,6 @@ github.com/lib/pq = commit:83c4f41
 github.com/mattn/go-sqlite3 = commit:5651a9d
 github.com/mcuadros/go-version = commit:d52711f
 github.com/microcosm-cc/bluemonday = commit:4ac6f27
-github.com/mssola/user_agent = commit:783ec61
 github.com/msteinert/pam = commit:6534f23b39
 github.com/nfnt/resize = commit:dc93e1b98c
 github.com/russross/blackfriday = commit:510be64
