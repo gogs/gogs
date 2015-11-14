@@ -17,6 +17,8 @@ import (
 	"github.com/gogits/gogs/modules/setting"
 )
 
+import "github.com/davecheney/profile"
+
 const (
 	COMMITS base.TplName = "repo/commits"
 	DIFF    base.TplName = "repo/diff"
@@ -43,6 +45,7 @@ func RenderIssueLinks(oldCommits *list.List, repoLink string) *list.List {
 }
 
 func Commits(ctx *middleware.Context) {
+	defer profile.Start(profile.CPUProfile).Stop()
 	ctx.Data["PageIsCommits"] = true
 
 	commitsCount, err := ctx.Repo.Commit.CommitsCount()

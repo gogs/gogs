@@ -87,6 +87,7 @@ func checkVersion() {
 		{"github.com/go-macaron/csrf", csrf.Version, "0.0.3"},
 		{"github.com/go-macaron/i18n", i18n.Version, "0.0.7"},
 		{"github.com/go-macaron/session", session.Version, "0.1.6"},
+		{"github.com/go-macaron/toolbox", toolbox.Version, "0.1.0"},
 		{"gopkg.in/ini.v1", ini.Version, "1.3.4"},
 	}
 	for _, c := range checkers {
@@ -463,7 +464,7 @@ func runWeb(ctx *cli.Context) {
 			})
 
 		})
-	}, reqSignIn, middleware.RepoAssignment(true), reqRepoAdmin)
+	}, reqSignIn, middleware.RepoAssignment(true), reqRepoAdmin, middleware.RepoRef())
 
 	m.Group("/:username/:reponame", func() {
 		m.Get("/action/:action", repo.Action)
