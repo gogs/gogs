@@ -10,19 +10,12 @@ import (
 	"path"
 	"strings"
 
-	"github.com/mcuadros/go-version"
-	"github.com/mssola/user_agent"
 	"gopkg.in/macaron.v1"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/git"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/setting"
-)
-
-const (
-	FIREFOX_COPY_SUPPORT = "41.0"
-	CHROME_COPY_SUPPORT  = "43.0.2356"
 )
 
 func ApiRepoAssignment() macaron.Handler {
@@ -393,13 +386,6 @@ func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 			ctx.Data["GoDocDirectory"] = prefix + "{/dir}"
 			ctx.Data["GoDocFile"] = prefix + "{/dir}/{file}#L{line}"
 		}
-
-		userAgent := ctx.Req.Header.Get("User-Agent")
-		ua := user_agent.New(userAgent)
-		browserName, browserVer := ua.Browser()
-
-		ctx.Data["BrowserSupportsCopy"] = (browserName == "Chrome" && version.Compare(browserVer, CHROME_COPY_SUPPORT, ">=")) ||
-			(browserName == "Firefox" && version.Compare(browserVer, FIREFOX_COPY_SUPPORT, ">="))
 	}
 }
 
