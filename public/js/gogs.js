@@ -206,6 +206,31 @@ function initRepository() {
         return;
     }
 
+    function initFilterSearchDropdown(selector) {
+        var $dropdown = $(selector);
+        $dropdown.dropdown({
+            fullTextSearch: true,
+            onChange: function (text, value, $choice) {
+                window.location.href = $choice.data('url');
+                console.log($choice.data('url'))
+            },
+            message: {noResults: $dropdown.data('no-results')}
+        });
+    }
+
+    // File list
+    if ($('.repository.file.list').length > 0) {
+        initFilterSearchDropdown('.choose.reference .dropdown');
+
+        $('.reference.column').click(function () {
+            $('.choose.reference .scrolling.menu').css('display', 'none');
+            $('.choose.reference .text').removeClass('black');
+            $($(this).data('target')).css('display', 'block');
+            $(this).find('.text').addClass('black');
+            return false;
+        });
+    }
+
     // Options
     if ($('.repository.settings.options').length > 0) {
         $('#repo_name').keyup(function () {
@@ -289,23 +314,23 @@ function initRepository() {
         $('#edit-title').click(editTitleToggle);
         $('#cancel-edit-title').click(editTitleToggle);
         $('#save-edit-title').click(editTitleToggle).
-            click(function () {
-                if ($edit_input.val().length == 0 ||
-                    $edit_input.val() == $issue_title.text()) {
-                    $edit_input.val($issue_title.text());
-                    return false;
-                }
-
-                $.post($(this).data('update-url'), {
-                        "_csrf": csrf,
-                        "title": $edit_input.val()
-                    },
-                    function (data) {
-                        $edit_input.val(data.title);
-                        $issue_title.text(data.title);
-                    });
+        click(function () {
+            if ($edit_input.val().length == 0 ||
+                $edit_input.val() == $issue_title.text()) {
+                $edit_input.val($issue_title.text());
                 return false;
-            });
+            }
+
+            $.post($(this).data('update-url'), {
+                    "_csrf": csrf,
+                    "title": $edit_input.val()
+                },
+                function (data) {
+                    $edit_input.val(data.title);
+                    $issue_title.text(data.title);
+                });
+            return false;
+        });
 
         // Edit issue or comment content
         $('.edit-content').click(function () {
@@ -397,33 +422,26 @@ function initRepository() {
         }
     }
 
-    // Quick start
-    if ($('.repository.quickstart').length > 0) {
-        $('#repo-clone-ssh').click(function () {
-            $('.clone-url').text($(this).data('link'));
-            $('#repo-clone-url').val($(this).data('link'));
-            $(this).addClass('blue');
-            $('#repo-clone-https').removeClass('blue');
-        });
-        $('#repo-clone-https').click(function () {
-            $('.clone-url').text($(this).data('link'));
-            $('#repo-clone-url').val($(this).data('link'));
-            $(this).addClass('blue');
-            $('#repo-clone-ssh').removeClass('blue');
-        });
-    }
+    // Quick start and repository home
+    $('#repo-clone-ssh').click(function () {
+        $('.clone-url').text($(this).data('link'));
+        $('#repo-clone-url').val($(this).data('link'));
+        $(this).addClass('blue');
+        $('#repo-clone-https').removeClass('blue');
+    });
+    $('#repo-clone-https').click(function () {
+        $('.clone-url').text($(this).data('link'));
+        $('#repo-clone-url').val($(this).data('link'));
+        $(this).addClass('blue');
+        $('#repo-clone-ssh').removeClass('blue');
+    });
+    $('#repo-clone-url').click(function () {
+        $(this).select();
+    });
 
     // Pull request
     if ($('.repository.compare.pull').length > 0) {
-        var $branch_dropdown = $('.choose.branch .dropdown');
-        $branch_dropdown.dropdown({
-            fullTextSearch: true,
-            onChange: function (text, value, $choice) {
-                window.location.href = $choice.data('url');
-                console.log($choice.data('url'))
-            },
-            message: {noResults: $branch_dropdown.data('no-results')}
-        });
+        initFilterSearchDropdown('.choose.branch .dropdown');
     }
 }
 
@@ -540,7 +558,7 @@ function initAdmin() {
 }
 
 function buttonsClickOnEnter() {
-    $('.ui.button').keypress(function(e){
+    $('.ui.button').keypress(function (e) {
         if (e.keyCode == 13 || e.keyCode == 32) // enter key or space bar
             $(this).click();
     });
@@ -553,9 +571,9 @@ $(document).ready(function () {
     // Show exact time
     $('.time-since').each(function () {
         $(this).addClass('poping up').
-            attr('data-content', $(this).attr('title')).
-            attr('data-variation', 'inverted tiny').
-            attr('title', '');
+        attr('data-content', $(this).attr('title')).
+        attr('data-variation', 'inverted tiny').
+        attr('title', '');
     });
 
     // Semantic UI modules.
@@ -678,6 +696,26 @@ $(document).ready(function () {
         $($(this).data('modal')).modal('show');
     });
 
+    // Set anchor.
+    $('.markdown').each(function () {
+        var headers = {};
+        $(this).find('h1, h2, h3, h4, h5, h6').each(function () {
+            var node = $(this);
+            var val = encodeURIComponent(node.text().toLowerCase().replace(/[^\w\- ]/g, '').replace(/[ ]/g, '-'));
+            var name = val;
+            if (headers[val] > 0) {
+                name = val + '-' + headers[val];
+            }
+            if (headers[val] == undefined) {
+                headers[val] = 1;
+            } else {
+                headers[val] += 1;
+            }
+            node = node.wrap('<div id="' + name + '" class="anchor-wrap" ></div>');
+            node.append('<a class="anchor" href="#' + name + '"><span class="octicon octicon-link"></span></a>');
+        });
+    });
+
     buttonsClickOnEnter();
 
     initCommentForm();
@@ -687,4 +725,88 @@ $(document).ready(function () {
     initUser();
     initWebhook();
     initAdmin();
+});
+
+$(window).load(function () {
+    function changeHash(hash) {
+        if (history.pushState) {
+            history.pushState(null, null, hash);
+        }
+        else {
+            location.hash = hash;
+        }
+    }
+
+    function deSelect() {
+        if (window.getSelection) {
+            window.getSelection().removeAllRanges();
+        } else {
+            document.selection.empty();
+        }
+    }
+
+    function selectRange($list, $select, $from) {
+        $list.removeClass('active');
+        if ($from) {
+            var a = parseInt($select.attr('rel').substr(1));
+            var b = parseInt($from.attr('rel').substr(1));
+            var c;
+            if (a != b) {
+                if (a > b) {
+                    c = a;
+                    a = b;
+                    b = c;
+                }
+                var classes = [];
+                for (i = a; i <= b; i++) {
+                    classes.push('.L' + i);
+                }
+                $list.filter(classes.join(',')).addClass('active');
+                changeHash('#L' + a + '-' + 'L' + b);
+                return
+            }
+        }
+        $select.addClass('active');
+        changeHash('#' + $select.attr('rel'));
+    }
+
+    // Code view.
+    if ($('.code-view').length > 0) {
+        var $block = $('.code-view .linenums');
+        var lines = $block.html().split("\n");
+        $block.html('');
+
+        var $num_list = $('.code-view .lines-num');
+
+        // Building blocks.
+        for (var i = 0; i < lines.length; i++) {
+            $block.append('<li class="L' + (i + 1) + '" rel="L' + (i + 1) + '">' + lines[i] + '</li>');
+            $num_list.append('<span id="L' + (i + 1) + '">' + (i + 1) + '</span>');
+        }
+
+        $(document).on('click', '.lines-num span', function (e) {
+            var $select = $(this);
+            var $list = $select.parent().siblings('.lines-code').find('ol.linenums > li');
+            selectRange($list, $list.filter('[rel=' + $select.attr('id') + ']'), (e.shiftKey ? $list.filter('.active').eq(0) : null));
+            deSelect();
+        });
+
+        $(window).on('hashchange', function (e) {
+            var m = window.location.hash.match(/^#(L\d+)\-(L\d+)$/);
+            var $list = $('.code-view ol.linenums > li');
+            var $first;
+            if (m) {
+                $first = $list.filter('.' + m[1]);
+                selectRange($list, $first, $list.filter('.' + m[2]));
+                $("html, body").scrollTop($first.offset().top - 200);
+                return;
+            }
+            m = window.location.hash.match(/^#(L\d+)$/);
+            if (m) {
+                $first = $list.filter('.' + m[1]);
+                selectRange($list, $first);
+                $("html, body").scrollTop($first.offset().top - 200);
+            }
+        }).trigger('hashchange');
+    }
 });

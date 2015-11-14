@@ -78,6 +78,181 @@
 	 		padding-right: 0;
 	 	}
 	}
+
+	&.file.list {
+		#repo-desc {
+			font-size: 1.2em;
+		}
+		.choose.reference {
+			.header .icon {
+				font-size: 1.4em;
+			}
+		}
+		.head.meta {
+			padding: 0;
+			li {
+				list-style: none;
+				display: inline-block;
+
+				.ui.breadcrumb {
+					margin-top: -5px;
+
+					span,
+					a {
+						font-size: 16px;
+					}
+				}
+			}
+		}
+
+		.clone.input {
+			margin-top: -8px;
+			width: 100%;
+
+			input {
+		    border-radius: 0;
+		    padding: 5px 10px;
+			}
+
+			.clone.button {
+				font-size: 13px;
+				padding: 0 5px;
+				&:first-child {
+			    border-radius: .28571429rem 0 0 .28571429rem;
+				}
+			}
+			.icon.button {
+				padding: 0 10px;
+			}
+			.dropdown .menu {
+				right: 0!important;
+				left: auto!important;
+			}
+		}
+
+		#repo-files-table {
+			.table.list {
+				width: 80% !important;
+			}
+
+			thead {
+				th {
+					padding-top: 8px;
+					padding-bottom: 5px;
+					font-weight: normal;
+
+					#last-commit-message {
+						margin-left: 5px;
+						margin-bottom: -4px;
+						width: 400px;
+					}
+					.age {
+						margin-top: 2px;
+					}
+				}
+				.ui.avatar {
+					margin-bottom: 5px;
+				}
+			}
+			tbody {
+				.icon {
+					margin-left: 5px;
+				}
+				.name {
+					max-width: 120px;
+				}
+				.message {
+			    max-width: 300px;
+				}
+				.age {
+					min-width: 150px;
+				}
+
+				.text.truncate {
+					margin-bottom: -5px;
+					max-width: 100%;
+				}
+			}
+			td {
+				padding-top: 8px;
+				padding-bottom: 8px;
+			}
+			tr:hover {
+		    background-color: #ffffEE;
+			}
+		}
+
+		#file-content {
+			.header {
+				.icon {
+					font-size: 1em;
+			    margin-top: -2px;
+				}
+			}
+			.view-raw {
+				* {
+					width: 100%;
+				}
+				img {
+					padding: 5px 5px 0 5px;
+				}
+			}
+
+			.code-view {
+				* {
+					font-size: 13px;
+					font-family: monospace;
+					line-height: 20px;
+				}
+
+				table {
+					width: 100%;
+				}
+				.lines-num {
+			    vertical-align: top;
+			    text-align: right;
+			    color: #999;
+			    background: #f5f5f5;
+			    width: 1%;
+
+			    span {
+		        font-family: Monaco, Menlo, Consolas, "Courier New", monospace;
+		        line-height: 20px;
+		        padding: 0 10px;
+		        cursor: pointer;
+		        display: block;
+			    }
+				}
+				.lines-num,
+				.lines-code {
+					padding: 0;
+
+
+					pre, 
+					ol,
+					.hljs {
+						background-color: white;
+						margin: 0;
+						padding: 0 !important;
+						li {
+							padding-left: 5px;
+							&.active {
+						    background: #ffffdd;
+							}
+						}
+					}
+				}
+			}
+		}
+
+		.sidebar {
+			padding-left: 0;
+
+			.octicon {
+				width: 16px;
+			}
+		}
+	}
 	
 	&.options {
 		#interval {

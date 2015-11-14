@@ -1,39 +1,40 @@
 .markdown {
-  overflow:hidden;
-  font-family:"Helvetica Neue", Helvetica, "Segoe UI", Arial, freesans, sans-serif;
-  font-size:16px;
-  line-height:1.6;
-  word-wrap:break-word;
+  overflow: hidden;
+  font-family: "Helvetica Neue", Helvetica, "Segoe UI", Arial, freesans, sans-serif;
+  font-size: 16px;
+  line-height: 1.6 !important;
+  word-wrap: break-word;
+  padding: 5px 2em 2em !important;
 
   >*:first-child {
-    margin-top:0 !important;
+    margin-top: 0 !important;
   }
 
   >*:last-child {
-    margin-bottom:0 !important;
+    margin-bottom: 0 !important;
   }
 
   a:not([href]) {
-    color:inherit;
-    text-decoration:none;
+    color: inherit;
+    text-decoration: none;
   }
 
   .absent {
-    color:#c00;
+    color: #c00;
   }
 
   .anchor {
-    position:absolute;
-    top:0;
-    left:0;
-    display:block;
-    padding-right:6px;
-    padding-left:30px;
-    margin-left:-30px;
+    position: absolute;
+    top: 0;
+    left: 0;
+    display: block;
+    padding-right: 6px;
+    padding-left: 30px;
+    margin-left: -30px;
   }
 
   .anchor:focus {
-    outline:none;
+    outline: none;
   }
 
   h1,
@@ -42,11 +43,11 @@
   h4,
   h5,
   h6 {
-    position:relative;
-    margin-top:1em;
-    margin-bottom:16px;
-    font-weight:bold;
-    line-height:1.4;
+    position: relative;
+    margin-top: 1em;
+    margin-bottom: 16px;
+    font-weight: bold;
+    line-height: 1.4;
   }
 
   h1 .octicon-link,
@@ -157,8 +158,11 @@
   dl,
   table,
   pre {
-    margin-top:0;
-    margin-bottom:16px;
+    margin-top: 0;
+    margin-bottom: 16px;
+  }
+  blockquote {
+    margin-left: 0;
   }
 
   hr {
@@ -471,124 +475,4 @@
     font-weight:bold;
     background:#f8f8f8;border-top:0;
   }
-
-}
-
-/* Author: jmblog */
-
-/* Project: https://github.com/jmblog/color-themes-for-google-code-prettify */
-
-/* GitHub Theme */
-
-/* Pretty printing styles. Used with prettify.js. */
-
-/* SPAN elements with the classes below are added by prettyprint. */
-
-/* plain text */
-
-.pln {
-    color: #333333;
-}
-@media screen {
-    /* string content */
-    .str {
-        color: #dd1144;
-    }
-    /* a keyword */
-    .kwd {
-        color: #333333;
-    }
-    /* a comment */
-    .com {
-        color: #999988;
-        font-style: italic;
-    }
-    /* a type name */
-    .typ {
-        color: #445588;
-    }
-    /* a literal value */
-    .lit {
-        color: #445588;
-    }
-    /* punctuation */
-    .pun {
-        color: #333333;
-    }
-    /* lisp open bracket */
-    .opn {
-        color: #333333;
-    }
-    /* lisp close bracket */
-    .clo {
-        color: #333333;
-    }
-    /* a markup tag name */
-    .tag {
-        color: navy;
-    }
-    /* a markup attribute name */
-    .atn {
-        color: teal;
-    }
-    /* a markup attribute value */
-    .atv {
-        color: #dd1144;
-    }
-    /* a declaration */
-    .dec {
-        color: #333333;
-    }
-    /* a variable name */
-    .var {
-        color: teal;
-    }
-    /* a function name */
-    .fun {
-        color: #990000;
-    }
-}
-/* Use higher contrast and text-weight for printable form. */
-
-@media print,
-projection {
-    .str {
-        color: #006600;
-    }
-    .kwd {
-        color: #006;
-        font-weight: bold;
-    }
-    .com {
-        color: #600;
-        font-style: italic;
-    }
-    .typ {
-        color: #404;
-        font-weight: bold;
-    }
-    .lit {
-        color: #004444;
-    }
-    .pun,
-    .opn,
-    .clo {
-        color: #444400;
-    }
-    .tag {
-        color: #006;
-        font-weight: bold;
-    }
-    .atn {
-        color: #440044;
-    }
-    .atv {
-        color: #006600;
-    }
-}
-/* Specify class=linenums on a pre to get line numbering */
-
-ol.linenums {
-    margin-top: 0;
-    margin-bottom: 0;
 }
