@@ -7,6 +7,7 @@
 package ssh
 
 import (
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net"
@@ -82,14 +83,16 @@ func handleServerConn(keyID string, chans <-chan ssh.NewChannel) {
 						return
 					}
 
-					go io.Copy(ch, stdout)
-					go io.Copy(ch.Stderr(), stderr)
-					go io.Copy(input, ch)
-
 					if err = cmd.Start(); err != nil {
 						log.Error(3, "Start: %v", err)
 						return
-					} else if err = cmd.Wait(); err != nil {
+					}
+
+					go io.Copy(input, ch)
+					io.Copy(ch, stdout)
+					io.Copy(ch.Stderr(), stderr)
+
+					if err = cmd.Wait(); err != nil {
 						log.Error(3, "Wait: %v", err)
 						return
 					}
@@ -142,7 +145,16 @@ func Listen(port int) {
 		},
 	}
 
-	privateBytes, err := ioutil.ReadFile(filepath.Join(models.SSHPath, "id_rsa"))
+	keyPath := filepath.Join(setting.AppDataPath, "ssh/gogs.rsa")
+	if !com.IsExist(keyPath) {
+		os.MkdirAll(filepath.Dir(keyPath), os.ModePerm)
+		_, stderr, err := com.ExecCmd("ssh-keygen", "-f", keyPath, "-t", "rsa", "-N", "")
+		if err != nil {
+			panic(fmt.Sprintf("Fail to generate private key: %v - %s", err, stderr))
+		}
+	}
+
+	privateBytes, err := ioutil.ReadFile(keyPath)
 	if err != nil {
 		panic("Fail to load private key")
 	}
