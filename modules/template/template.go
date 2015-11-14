@@ -21,6 +21,79 @@ import (
 	"github.com/gogits/gogs/modules/setting"
 )
 
+var Funcs template.FuncMap = map[string]interface{}{
+	"GoVer": func() string {
+		return strings.Title(runtime.Version())
+	},
+	"AppName": func() string {
+		return setting.AppName
+	},
+	"AppSubUrl": func() string {
+		return setting.AppSubUrl
+	},
+	"AppVer": func() string {
+		return setting.AppVer
+	},
+	"AppDomain": func() string {
+		return setting.Domain
+	},
+	"DisableGravatar": func() bool {
+		return setting.DisableGravatar
+	},
+	"LoadTimes": func(startTime time.Time) string {
+		return fmt.Sprint(time.Since(startTime).Nanoseconds()/1e6) + "ms"
+	},
+	"AvatarLink":   base.AvatarLink,
+	"Safe":         Safe,
+	"Str2html":     Str2html,
+	"TimeSince":    base.TimeSince,
+	"RawTimeSince": base.RawTimeSince,
+	"FileSize":     base.FileSize,
+	"Subtract":     base.Subtract,
+	"Add": func(a, b int) int {
+		return a + b
+	},
+	"ActionIcon": ActionIcon,
+	"DateFmtLong": func(t time.Time) string {
+		return t.Format(time.RFC1123Z)
+	},
+	"DateFmtShort": func(t time.Time) string {
+		return t.Format("Jan 02, 2006")
+	},
+	"List": List,
+	"Mail2Domain": func(mail string) string {
+		if !strings.Contains(mail, "@") {
+			return "try.gogs.io"
+		}
+
+		return strings.SplitN(mail, "@", 2)[1]
+	},
+	"SubStr": func(str string, start, length int) string {
+		if len(str) == 0 {
+			return ""
+		}
+		end := start + length
+		if length == -1 {
+			end = len(str)
+		}
+		if len(str) < end {
+			return str
+		}
+		return str[start:end]
+	},
+	"DiffTypeToStr":     DiffTypeToStr,
+	"DiffLineTypeToStr": DiffLineTypeToStr,
+	"Sha1":              Sha1,
+	"ShortSha":          base.ShortSha,
+	"Md5":               base.EncodeMd5,
+	"ActionContent2Commits": ActionContent2Commits,
+	"ToUtf8":                ToUtf8,
+	"EscapePound": func(str string) string {
+		return strings.Replace(strings.Replace(str, "%", "%25", -1), "#", "%23", -1)
+	},
+	"RenderCommitMessage": RenderCommitMessage,
+}
+
 func Safe(raw string) template.HTML {
 	return template.HTML(raw)
 }
@@ -119,81 +192,6 @@ func RenderCommitMessage(msg, urlPrefix string) template.HTML {
 	return template.HTML(fullMessage)
 }
 
-var Funcs template.FuncMap = map[string]interface{}{
-	"GoVer": func() string {
-		return strings.Title(runtime.Version())
-	},
-	"AppName": func() string {
-		return setting.AppName
-	},
-	"AppSubUrl": func() string {
-		return setting.AppSubUrl
-	},
-	"AppVer": func() string {
-		return setting.AppVer
-	},
-	"AppDomain": func() string {
-		return setting.Domain
-	},
-	"DisableGravatar": func() bool {
-		return setting.DisableGravatar
-	},
-	"LoadTimes": func(startTime time.Time) string {
-		return fmt.Sprint(time.Since(startTime).Nanoseconds()/1e6) + "ms"
-	},
-	"AvatarLink":   base.AvatarLink,
-	"Safe":         Safe,
-	"Str2html":     Str2html,
-	"TimeSince":    base.TimeSince,
-	"RawTimeSince": base.RawTimeSince,
-	"FileSize":     base.FileSize,
-	"Subtract":     base.Subtract,
-	"Add": func(a, b int) int {
-		return a + b
-	},
-	"ActionIcon": ActionIcon,
-	"DateFmtLong": func(t time.Time) string {
-		return t.Format(time.RFC1123Z)
-	},
-	"DateFmtShort": func(t time.Time) string {
-		return t.Format("Jan 02, 2006")
-	},
-	"List": List,
-	"Mail2Domain": func(mail string) string {
-		if !strings.Contains(mail, "@") {
-			return "try.gogs.io"
-		}
-
-		return strings.SplitN(mail, "@", 2)[1]
-	},
-	"SubStr": func(str string, start, length int) string {
-		if len(str) == 0 {
-			return ""
-		}
-		end := start + length
-		if length == -1 {
-			end = len(str)
-		}
-		if len(str) < end {
-			return str
-		}
-		return str[start:end]
-	},
-	"DiffTypeToStr":     DiffTypeToStr,
-	"DiffLineTypeToStr": DiffLineTypeToStr,
-	"Sha1":              Sha1,
-	"ShortSha":          base.ShortSha,
-	"Md5":               base.EncodeMd5,
-	"ActionContent2Commits": ActionContent2Commits,
-	"Oauth2Icon":            Oauth2Icon,
-	"Oauth2Name":            Oauth2Name,
-	"ToUtf8":                ToUtf8,
-	"EscapePound": func(str string) string {
-		return strings.Replace(strings.Replace(str, "%", "%25", -1), "#", "%23", -1)
-	},
-	"RenderCommitMessage": RenderCommitMessage,
-}
-
 type Actioner interface {
 	GetOpType() int
 	GetActUserName() string
@@ -250,36 +248,4 @@ func DiffLineTypeToStr(diffType int) string {
 		return "tag"
 	}
 	return "same"
-}
-
-func Oauth2Icon(t int) string {
-	switch t {
-	case 1:
-		return "fa-github-square"
-	case 2:
-		return "fa-google-plus-square"
-	case 3:
-		return "fa-twitter-square"
-	case 4:
-		return "fa-qq"
-	case 5:
-		return "fa-weibo"
-	}
-	return ""
-}
-
-func Oauth2Name(t int) string {
-	switch t {
-	case 1:
-		return "GitHub"
-	case 2:
-		return "Google+"
-	case 3:
-		return "Twitter"
-	case 4:
-		return "腾讯 QQ"
-	case 5:
-		return "Weibo"
-	}
-	return ""
 }
