@@ -1,6 +1,6 @@
 @font-face {
   font-family: 'octicons';
-  src: url('../fonts/octicons.eot?#iefix&v=396334ee3da78f4302d25c758ae3e3ce5dc3c97d') format('embedded-opentype'), url('../fonts/octicons.woff?v=396334ee3da78f4302d25c758ae3e3ce5dc3c97d') format('woff'), url('../fonts/octicons.ttf?v=396334ee3da78f4302d25c758ae3e3ce5dc3c97d') format('truetype'), url('../fonts/octicons.svg?v=396334ee3da78f4302d25c758ae3e3ce5dc3c97d#octicons') format('svg');
+  src: url('../fonts/octicons.eot?#iefix&v=30e752e9a0821a0a098947055eeece0b0f46bc34') format('embedded-opentype'), url('../fonts/octicons.woff?v=30e752e9a0821a0a098947055eeece0b0f46bc34') format('woff'), url('../fonts/octicons.ttf?v=30e752e9a0821a0a098947055eeece0b0f46bc34') format('truetype'), url('../fonts/octicons.svg?v=30e752e9a0821a0a098947055eeece0b0f46bc34#octicons') format('svg');
   font-weight: normal;
   font-style: normal;
 }
@@ -65,6 +65,10 @@
   content: '\f0de';
 }
 /*  */
+.octicon-bold:before {
+  content: '\f0e2';
+}
+/*  */
 .octicon-book:before {
   content: '\f007';
 }
@@ -364,6 +368,10 @@
   content: '\f027';
 }
 /*  */
+.octicon-italic:before {
+  content: '\f0e4';
+}
+/*  */
 .octicon-jersey:before {
   content: '\f019';
 }
@@ -411,6 +419,10 @@
   content: '\f06a';
 }
 /*  */
+.octicon-logo-gist:before {
+  content: '\f0ad';
+}
+/*  */
 .octicon-logo-github:before {
   content: '\f092';
 }
@@ -568,14 +580,6 @@
   content: '\f047';
 }
 /*  */
-.octicon-screen-full:before {
-  content: '\f066';
-}
-/*  */
-.octicon-screen-normal:before {
-  content: '\f067';
-}
-/*  */
 .octicon-search-save:before,
 .octicon-search:before {
   content: '\f02e';
@@ -628,6 +632,10 @@
   content: '\f015';
 }
 /*  */
+.octicon-tasklist:before {
+  content: '\f0e5';
+}
+/*  */
 .octicon-telescope:before {
   content: '\f088';
 }
@@ -636,6 +644,10 @@
   content: '\f0c8';
 }
 /*  */
+.octicon-text-size:before {
+  content: '\f0e3';
+}
+/*  */
 .octicon-three-bars:before {
   content: '\f05e';
 }
@@ -809,6 +821,12 @@ pre.raw {
 .ui .text.blue a:hover {
   color: #428bca !important;
 }
+.ui .text.black {
+  color: #444;
+}
+.ui .text.black:hover {
+  color: #000;
+}
 .ui .text.grey {
   color: #767676 !important;
 }
@@ -838,6 +856,9 @@ pre.raw {
 }
 .ui .text.small {
   font-size: 0.75em;
+}
+.ui .text.normal {
+  font-weight: normal;
 }
 .ui .text.bold {
   font-weight: bold;
@@ -1049,8 +1070,9 @@ footer .container .links > *:first-child {
   overflow: hidden;
   font-family: "Helvetica Neue", Helvetica, "Segoe UI", Arial, freesans, sans-serif;
   font-size: 16px;
-  line-height: 1.6;
+  line-height: 1.6 !important;
   word-wrap: break-word;
+  padding: 5px 2em 2em !important;
 }
 .markdown > *:first-child {
   margin-top: 0 !important;
@@ -1184,6 +1206,9 @@ footer .container .links > *:first-child {
 .markdown pre {
   margin-top: 0;
   margin-bottom: 16px;
+}
+.markdown blockquote {
+  margin-left: 0;
 }
 .markdown hr {
   height: 4px;
@@ -1448,115 +1473,6 @@ footer .container .links > *:first-child {
   font-weight: bold;
   background: #f8f8f8;
   border-top: 0;
-}
-/* Author: jmblog */
-/* Project: https://github.com/jmblog/color-themes-for-google-code-prettify */
-/* GitHub Theme */
-/* Pretty printing styles. Used with prettify.js. */
-/* SPAN elements with the classes below are added by prettyprint. */
-/* plain text */
-.pln {
-  color: #333333;
-}
-@media screen {
-  /* string content */
-  .str {
-    color: #dd1144;
-  }
-  /* a keyword */
-  .kwd {
-    color: #333333;
-  }
-  /* a comment */
-  .com {
-    color: #999988;
-    font-style: italic;
-  }
-  /* a type name */
-  .typ {
-    color: #445588;
-  }
-  /* a literal value */
-  .lit {
-    color: #445588;
-  }
-  /* punctuation */
-  .pun {
-    color: #333333;
-  }
-  /* lisp open bracket */
-  .opn {
-    color: #333333;
-  }
-  /* lisp close bracket */
-  .clo {
-    color: #333333;
-  }
-  /* a markup tag name */
-  .tag {
-    color: navy;
-  }
-  /* a markup attribute name */
-  .atn {
-    color: teal;
-  }
-  /* a markup attribute value */
-  .atv {
-    color: #dd1144;
-  }
-  /* a declaration */
-  .dec {
-    color: #333333;
-  }
-  /* a variable name */
-  .var {
-    color: teal;
-  }
-  /* a function name */
-  .fun {
-    color: #990000;
-  }
-}
-/* Use higher contrast and text-weight for printable form. */
-@media print, projection {
-  .str {
-    color: #006600;
-  }
-  .kwd {
-    color: #006;
-    font-weight: bold;
-  }
-  .com {
-    color: #600;
-    font-style: italic;
-  }
-  .typ {
-    color: #404;
-    font-weight: bold;
-  }
-  .lit {
-    color: #004444;
-  }
-  .pun,
-  .opn,
-  .clo {
-    color: #444400;
-  }
-  .tag {
-    color: #006;
-    font-weight: bold;
-  }
-  .atn {
-    color: #440044;
-  }
-  .atv {
-    color: #006600;
-  }
-}
-/* Specify class=linenums on a pre to get line numbering */
-ol.linenums {
-  margin-top: 0;
-  margin-bottom: 0;
 }
 .home {
   padding-bottom: 80px;
@@ -1876,6 +1792,158 @@ ol.linenums {
 .repository .filter.menu .dropdown.item {
   margin: 1px;
   padding-right: 0;
+}
+.repository.file.list #repo-desc {
+  font-size: 1.2em;
+}
+.repository.file.list .choose.reference .header .icon {
+  font-size: 1.4em;
+}
+.repository.file.list .head.meta {
+  padding: 0;
+}
+.repository.file.list .head.meta li {
+  list-style: none;
+  display: inline-block;
+}
+.repository.file.list .head.meta li .ui.breadcrumb {
+  margin-top: -5px;
+}
+.repository.file.list .head.meta li .ui.breadcrumb span,
+.repository.file.list .head.meta li .ui.breadcrumb a {
+  font-size: 16px;
+}
+.repository.file.list .clone.input {
+  margin-top: -8px;
+  width: 100%;
+}
+.repository.file.list .clone.input input {
+  border-radius: 0;
+  padding: 5px 10px;
+}
+.repository.file.list .clone.input .clone.button {
+  font-size: 13px;
+  padding: 0 5px;
+}
+.repository.file.list .clone.input .clone.button:first-child {
+  border-radius: .28571429rem 0 0 .28571429rem;
+}
+.repository.file.list .clone.input .icon.button {
+  padding: 0 10px;
+}
+.repository.file.list .clone.input .dropdown .menu {
+  right: 0!important;
+  left: auto!important;
+}
+.repository.file.list #repo-files-table .table.list {
+  width: 80% !important;
+}
+.repository.file.list #repo-files-table thead th {
+  padding-top: 8px;
+  padding-bottom: 5px;
+  font-weight: normal;
+}
+.repository.file.list #repo-files-table thead th #last-commit-message {
+  margin-left: 5px;
+  margin-bottom: -4px;
+  width: 400px;
+}
+.repository.file.list #repo-files-table thead th .age {
+  margin-top: 2px;
+}
+.repository.file.list #repo-files-table thead .ui.avatar {
+  margin-bottom: 5px;
+}
+.repository.file.list #repo-files-table tbody .icon {
+  margin-left: 5px;
+}
+.repository.file.list #repo-files-table tbody .name {
+  max-width: 120px;
+}
+.repository.file.list #repo-files-table tbody .message {
+  max-width: 300px;
+}
+.repository.file.list #repo-files-table tbody .age {
+  min-width: 150px;
+}
+.repository.file.list #repo-files-table tbody .text.truncate {
+  margin-bottom: -5px;
+  max-width: 100%;
+}
+.repository.file.list #repo-files-table td {
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+.repository.file.list #repo-files-table tr:hover {
+  background-color: #ffffEE;
+}
+.repository.file.list #file-content .header .icon {
+  font-size: 1em;
+  margin-top: -2px;
+}
+.repository.file.list #file-content .view-raw * {
+  width: 100%;
+}
+.repository.file.list #file-content .view-raw img {
+  padding: 5px 5px 0 5px;
+}
+.repository.file.list #file-content .code-view * {
+  font-size: 13px;
+  font-family: monospace;
+  line-height: 20px;
+}
+.repository.file.list #file-content .code-view table {
+  width: 100%;
+}
+.repository.file.list #file-content .code-view .lines-num {
+  vertical-align: top;
+  text-align: right;
+  color: #999;
+  background: #f5f5f5;
+  width: 1%;
+}
+.repository.file.list #file-content .code-view .lines-num span {
+  font-family: Monaco, Menlo, Consolas, "Courier New", monospace;
+  line-height: 20px;
+  padding: 0 10px;
+  cursor: pointer;
+  display: block;
+}
+.repository.file.list #file-content .code-view .lines-num,
+.repository.file.list #file-content .code-view .lines-code {
+  padding: 0;
+}
+.repository.file.list #file-content .code-view .lines-num pre,
+.repository.file.list #file-content .code-view .lines-code pre,
+.repository.file.list #file-content .code-view .lines-num ol,
+.repository.file.list #file-content .code-view .lines-code ol,
+.repository.file.list #file-content .code-view .lines-num .hljs,
+.repository.file.list #file-content .code-view .lines-code .hljs {
+  background-color: white;
+  margin: 0;
+  padding: 0 !important;
+}
+.repository.file.list #file-content .code-view .lines-num pre li,
+.repository.file.list #file-content .code-view .lines-code pre li,
+.repository.file.list #file-content .code-view .lines-num ol li,
+.repository.file.list #file-content .code-view .lines-code ol li,
+.repository.file.list #file-content .code-view .lines-num .hljs li,
+.repository.file.list #file-content .code-view .lines-code .hljs li {
+  padding-left: 5px;
+}
+.repository.file.list #file-content .code-view .lines-num pre li.active,
+.repository.file.list #file-content .code-view .lines-code pre li.active,
+.repository.file.list #file-content .code-view .lines-num ol li.active,
+.repository.file.list #file-content .code-view .lines-code ol li.active,
+.repository.file.list #file-content .code-view .lines-num .hljs li.active,
+.repository.file.list #file-content .code-view .lines-code .hljs li.active {
+  background: #ffffdd;
+}
+.repository.file.list .sidebar {
+  padding-left: 0;
+}
+.repository.file.list .sidebar .octicon {
+  width: 16px;
 }
 .repository.options #interval {
   width: 100px!important;
