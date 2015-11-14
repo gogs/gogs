@@ -25,6 +25,7 @@ const (
 
 func Home(ctx *middleware.Context) {
 	ctx.Data["Title"] = ctx.Repo.Repository.Name
+	ctx.Data["RequireHighlightJS"] = true
 
 	branchName := ctx.Repo.BranchName
 	userName := ctx.Repo.Owner.Name
