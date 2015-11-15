@@ -24,7 +24,7 @@
     {{end}}
   </h4>
   <div class="ui attached table segment">
-    <div class="{{if .ReadmeExist}}markdown{{else if .IsFileText}}code-view{{end}}">
+    <div class="file-view {{if .ReadmeExist}}markdown{{else if .IsFileText}}code-view{{end}}">
       {{if .ReadmeExist}}
       {{if .FileContent}}{{.FileContent | Str2html}}{{end}}
         {{else if not .IsFileText}}
