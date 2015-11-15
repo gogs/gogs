@@ -79,6 +79,12 @@ func ApiRepoAssignment() macaron.Handler {
 // RepoRef handles repository reference name including those contain `/`.
 func RepoRef() macaron.Handler {
 	return func(ctx *Context) {
+		// Empty repository does not have reference information.
+		if ctx.Repo.Repository.IsBare {
+			ctx.Data["CommitsCount"] = 0
+			return
+		}
+
 		var (
 			refName string
 			err     error
