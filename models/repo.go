@@ -320,7 +320,7 @@ func (repo *Repository) UpdateLocalCopy() error {
 		}
 	} else {
 		_, stderr, err := process.ExecDir(-1, localPath,
-			fmt.Sprintf("UpdateLocalCopy(git pull): %s", repoPath), "git", "pull")
+			fmt.Sprintf("UpdateLocalCopy(git pull --all): %s", repoPath), "git", "pull", "--all")
 		if err != nil {
 			return fmt.Errorf("git pull: %v - %s", err, stderr)
 		}

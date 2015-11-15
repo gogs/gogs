@@ -1,4 +1,5 @@
-<div class="ui five item menu">
+{{if not .IsBareRepo}}
+<div class="ui {{if .IsRepositoryAdmin}}five{{else}}four{{end}} item menu">
     <a class="item" href="{{.RepoLink}}/issues">
       <i class="icon octicon octicon-issue-opened"></i> {{.i18n.Tr "repo.issues"}} <span class="ui blue label">{{.Repository.NumOpenIssues}}</span>
     </a>
@@ -17,3 +18,4 @@
     </a>
     {{end}}
 </div>
+{{end}}
