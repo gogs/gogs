@@ -167,10 +167,21 @@ func RenderSha1CurrentPattern(rawBytes []byte, urlPrefix string) []byte {
 	return rawBytes
 }
 
-func RenderIssueIndexPattern(rawBytes []byte, urlPrefix string) []byte {
-	if i := strings.Index(urlPrefix, "/src"); i != -1 {
-		urlPrefix = urlPrefix[:i]
+func cutoutVerbosePrefix(prefix string) string {
+	count := 0
+	for i := 0; i < len(prefix); i++ {
+		if prefix[i] == '/' {
+			count++
+		}
+		if count >= 3 {
+			return prefix[:i]
+		}
 	}
+	return prefix
+}
+
+func RenderIssueIndexPattern(rawBytes []byte, urlPrefix string) []byte {
+	urlPrefix = cutoutVerbosePrefix(urlPrefix)
 	ms := issueIndexPattern.FindAll(rawBytes, -1)
 	for _, m := range ms {
 		var space string
