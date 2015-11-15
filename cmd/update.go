@@ -20,7 +20,7 @@ var CmdUpdate = cli.Command{
 	Description: `Update get pushed info and insert into database`,
 	Action:      runUpdate,
 	Flags: []cli.Flag{
-		cli.StringFlag{"config, c", "custom/conf/app.ini", "Custom configuration file path", ""},
+		stringFlag("config, c", "custom/conf/app.ini", "Custom configuration file path"),
 	},
 }
 

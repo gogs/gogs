@@ -83,6 +83,7 @@ func handleServerConn(keyID string, chans <-chan ssh.NewChannel) {
 						return
 					}
 
+					// FIXME: check timeout
 					if err = cmd.Start(); err != nil {
 						log.Error(3, "Start: %v", err)
 						return
