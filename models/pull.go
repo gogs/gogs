@@ -218,6 +218,7 @@ var patchConflicts = []string{
 }
 
 // testPatch checks if patch can be merged to base repository without conflit.
+// FIXME: make a mechanism to clean up stable local copies.
 func (pr *PullRequest) testPatch() (err error) {
 	if pr.BaseRepo == nil {
 		pr.BaseRepo, err = GetRepositoryByID(pr.BaseRepoID)
@@ -243,8 +244,16 @@ func (pr *PullRequest) testPatch() (err error) {
 		return fmt.Errorf("UpdateLocalCopy: %v", err)
 	}
 
-	pr.Status = PULL_REQUEST_STATUS_CHECKING
+	// Checkout base branch.
 	_, stderr, err := process.ExecDir(-1, pr.BaseRepo.LocalCopyPath(),
+		fmt.Sprintf("PullRequest.Merge(git checkout): %s", pr.BaseRepo.ID),
+		"git", "checkout", pr.BaseBranch)
+	if err != nil {
+		return fmt.Errorf("git checkout: %s", stderr)
+	}
+
+	pr.Status = PULL_REQUEST_STATUS_CHECKING
+	_, stderr, err = process.ExecDir(-1, pr.BaseRepo.LocalCopyPath(),
 		fmt.Sprintf("testPatch(git apply --check): %d", pr.BaseRepo.ID),
 		"git", "apply", "--check", patchPath)
 	if err != nil {
