@@ -101,6 +101,10 @@ func (u *User) GetAccessibleRepositories() ([]*Repository, error) {
 		return nil, err
 	}
 
+	if len(accesses) == 0 {
+		return []*Repository{}, nil
+	}
+
 	repoIDs := make([]int64, 0, len(accesses))
 	for _, access := range accesses {
 		repoIDs = append(repoIDs, access.RepoID)
