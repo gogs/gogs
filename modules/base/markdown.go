@@ -168,9 +168,9 @@ func RenderSha1CurrentPattern(rawBytes []byte, urlPrefix string) []byte {
 }
 
 func RenderIssueIndexPattern(rawBytes []byte, urlPrefix string) []byte {
-	// Remove unnecessary things after username and reponame in prefix
-	// (otherwise stuff like /:user/:repo/src/master/issues/1 would happen)
-	urlPrefix = strings.Join(strings.Split(urlPrefix, "/")[:3], "/")
+	if i := strings.Index(urlPrefix, "/src"); i != -1 {
+		urlPrefix = urlPrefix[:i]
+	}
 	ms := issueIndexPattern.FindAll(rawBytes, -1)
 	for _, m := range ms {
 		var space string
