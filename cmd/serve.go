@@ -33,7 +33,7 @@ var CmdServ = cli.Command{
 	Description: `Serv provide access auth for repositories`,
 	Action:      runServ,
 	Flags: []cli.Flag{
-		cli.StringFlag{"config, c", "custom/conf/app.ini", "Custom configuration file path", ""},
+		stringFlag("config, c", "custom/conf/app.ini", "Custom configuration file path"),
 	},
 }
 

@@ -56,8 +56,8 @@ var CmdWeb = cli.Command{
 and it takes care of all the other things for you`,
 	Action: runWeb,
 	Flags: []cli.Flag{
-		cli.StringFlag{"port, p", "3000", "Temporary port number to prevent conflict", ""},
-		cli.StringFlag{"config, c", "custom/conf/app.ini", "Custom configuration file path", ""},
+		stringFlag("port, p", "3000", "Temporary port number to prevent conflict"),
+		stringFlag("config, c", "custom/conf/app.ini", "Custom configuration file path"),
 	},
 }
 
