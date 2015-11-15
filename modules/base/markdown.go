@@ -168,6 +168,9 @@ func RenderSha1CurrentPattern(rawBytes []byte, urlPrefix string) []byte {
 }
 
 func RenderIssueIndexPattern(rawBytes []byte, urlPrefix string) []byte {
+	if i := strings.Index(urlPrefix, "/src"); i != -1 {
+		urlPrefix = urlPrefix[:i]
+	}
 	ms := issueIndexPattern.FindAll(rawBytes, -1)
 	for _, m := range ms {
 		var space string
