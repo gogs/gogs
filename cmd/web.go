@@ -536,7 +536,7 @@ func runWeb(ctx *cli.Context) {
 			m.Get("/forks", repo.Forks)
 		}, middleware.RepoRef())
 
-		m.Get("/compare/:before([a-z0-9]{40})...:after([a-z0-9]{40})", repo.CompareDiff)
+		m.Get("/compare/:before(.*[^.])...:after(.*[^.])", repo.CompareDiff)
 	}, ignSignIn, middleware.RepoAssignment(true))
 
 	m.Group("/:username", func() {
