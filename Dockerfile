@@ -19,4 +19,4 @@ RUN ./docker/build.sh
 VOLUME ["/data"]
 EXPOSE 22 3000
 ENTRYPOINT ["docker/start.sh"]
-CMD ["/usr/bin/s6-svscan", "/app/gogs/docker/s6/"]
+CMD ["/bin/s6-svscan", "/app/gogs/docker/s6/"]
