@@ -1,21 +1,21 @@
 {{if not .IsBareRepo}}
 <div class="ui {{if .IsRepositoryAdmin}}five{{else}}four{{end}} item menu">
-    <a class="item" href="{{.RepoLink}}/issues">
-      <i class="icon octicon octicon-issue-opened"></i> {{.i18n.Tr "repo.issues"}} <span class="ui blue label">{{.Repository.NumOpenIssues}}</span>
-    </a>
-    <a class="item" href="{{.RepoLink}}/pulls">
-      <i class="icon octicon octicon-git-pull-request"></i> {{.i18n.Tr "repo.pulls"}} <span class="ui blue label">{{.Repository.NumOpenPulls}}</span>
-    </a>
-    <a class="item" href="{{.RepoLink}}/commits/{{EscapePound .BranchName}}">
-      <i class="icon octicon octicon-history"></i> {{.i18n.Tr "repo.commits"}} <span class="ui blue label">{{.CommitsCount}}</span>
-    </a>
-    <a class="item" href="{{.RepoLink}}/releases">
-      <i class="icon octicon octicon-tag"></i> {{.i18n.Tr "repo.releases"}} <span class="ui blue label">{{.Repository.NumTags}}</span>
-    </a>
-    {{if .IsRepositoryAdmin}}
-    <a class="item" href="{{.RepoLink}}/settings">
-      <i class="icon octicon octicon-tools"></i> {{.i18n.Tr "repo.settings"}}
-    </a>
-    {{end}}
+  <a class="{{if .PageIsIssueList}}active{{end}} item" href="{{.RepoLink}}/issues">
+    <i class="icon octicon octicon-issue-opened"></i> {{.i18n.Tr "repo.issues"}} <span class="ui blue label">{{.Repository.NumOpenIssues}}</span>
+  </a>
+  <a class="{{if .PageIsPullList}}active{{end}} item" href="{{.RepoLink}}/pulls">
+    <i class="icon octicon octicon-git-pull-request"></i> {{.i18n.Tr "repo.pulls"}} <span class="ui blue label">{{.Repository.NumOpenPulls}}</span>
+  </a>
+  <a class="item" href="{{.RepoLink}}/commits/{{EscapePound .BranchName}}">
+    <i class="icon octicon octicon-history"></i> {{.i18n.Tr "repo.commits"}} <span class="ui blue label">{{.CommitsCount}}</span>
+  </a>
+  <a class="item" href="{{.RepoLink}}/releases">
+    <i class="icon octicon octicon-tag"></i> {{.i18n.Tr "repo.releases"}} <span class="ui blue label">{{.Repository.NumTags}}</span>
+  </a>
+  {{if .IsRepositoryAdmin}}
+  <a class="item" href="{{.RepoLink}}/settings">
+    <i class="icon octicon octicon-tools"></i> {{.i18n.Tr "repo.settings"}}
+  </a>
+  {{end}}
 </div>
 {{end}}
