@@ -109,6 +109,12 @@ func (u *User) AfterSet(colName string, _ xorm.Cell) {
 	}
 }
 
+// HasForkedRepo checks if user has already forked a repository with given ID.
+func (u *User) HasForkedRepo(repoID int64) bool {
+	_, has := HasForkedRepo(u.Id, repoID)
+	return has
+}
+
 // CanEditGitHook returns true if user can edit Git hooks.
 func (u *User) CanEditGitHook() bool {
 	return u.IsAdmin || u.AllowGitHook
