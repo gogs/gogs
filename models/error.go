@@ -288,6 +288,32 @@ func (err ErrUpdateTaskNotExist) Error() string {
 	return fmt.Sprintf("update task does not exist [uuid: %s]", err.UUID)
 }
 
+type ErrReleaseAlreadyExist struct {
+	TagName string
+}
+
+func IsErrReleaseAlreadyExist(err error) bool {
+	_, ok := err.(ErrReleaseAlreadyExist)
+	return ok
+}
+
+func (err ErrReleaseAlreadyExist) Error() string {
+	return fmt.Sprintf("Release tag already exist [tag_name: %s]", err.TagName)
+}
+
+type ErrReleaseNotExist struct {
+	TagName string
+}
+
+func IsErrReleaseNotExist(err error) bool {
+	_, ok := err.(ErrReleaseNotExist)
+	return ok
+}
+
+func (err ErrReleaseNotExist) Error() string {
+	return fmt.Sprintf("Release tag does not exist [tag_name: %s]", err.TagName)
+}
+
 //  __      __      ___.   .__                   __
 // /  \    /  \ ____\_ |__ |  |__   ____   ____ |  | __
 // \   \/\/   // __ \| __ \|  |  \ /  _ \ /  _ \|  |/ /

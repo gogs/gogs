@@ -1116,7 +1116,7 @@ func DeleteRepository(uid, repoID int64) error {
 		return err
 	} else if _, err = sess.Delete(&Milestone{RepoID: repoID}); err != nil {
 		return err
-	} else if _, err = sess.Delete(&Release{RepoId: repoID}); err != nil {
+	} else if _, err = sess.Delete(&Release{RepoID: repoID}); err != nil {
 		return err
 	} else if _, err = sess.Delete(&Collaboration{RepoID: repoID}); err != nil {
 		return err

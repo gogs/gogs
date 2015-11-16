@@ -2393,6 +2393,85 @@ footer .container .links > *:first-child {
   padding: 5px 10px;
   font-size: 1.2em;
 }
+.repository.release #release-list {
+  border-top: 1px solid #DDD;
+  margin-top: 20px;
+  padding-top: 15px;
+}
+.repository.release #release-list > li {
+  list-style: none;
+}
+.repository.release #release-list > li .meta,
+.repository.release #release-list > li .detail {
+  padding-top: 30px;
+  padding-bottom: 40px;
+}
+.repository.release #release-list > li .meta {
+  text-align: right;
+  position: relative;
+}
+.repository.release #release-list > li .meta .tag:not(.icon) {
+  display: block;
+  margin-top: 15px;
+}
+.repository.release #release-list > li .meta .commit {
+  display: block;
+  margin-top: 10px;
+}
+.repository.release #release-list > li .detail {
+  border-left: 1px solid #DDD;
+}
+.repository.release #release-list > li .detail .author img {
+  margin-bottom: -3px;
+}
+.repository.release #release-list > li .detail .download {
+  margin-top: 20px;
+}
+.repository.release #release-list > li .detail .download > a .octicon {
+  margin-left: 5px;
+  margin-right: 5px;
+}
+.repository.release #release-list > li .detail .download .list {
+  padding-left: 0;
+  border-top: 1px solid #eee;
+}
+.repository.release #release-list > li .detail .download .list li {
+  list-style: none;
+  display: block;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #eee;
+}
+.repository.release #release-list > li .detail .dot {
+  width: 9px;
+  height: 9px;
+  background-color: #ccc;
+  z-index: 999;
+  position: absolute;
+  display: block;
+  left: -5px;
+  top: 40px;
+  border-radius: 6px;
+  border: 1px solid #FFF;
+}
+.repository.new.release .target {
+  min-width: 500px;
+}
+.repository.new.release .target .at {
+  margin-left: -5px;
+  margin-right: 5px;
+}
+.repository.new.release .target .dropdown.icon {
+  margin: 0;
+  padding-top: 3px;
+}
+.repository.new.release .target .selection.dropdown {
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+.repository.new.release .prerelease.field {
+  margin-bottom: 0;
+}
 .issue.list {
   list-style: none;
   padding-top: 15px;
