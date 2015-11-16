@@ -37,7 +37,7 @@
           {{if .PublisherID}}
             <h3>
               <a href="{{$.RepoLink}}/src/{{.TagName}}">{{.Title}}</a> 
-              <small>(<a href="{{$.RepoLink}}/releases/edit/{{.TagName}}" rel="nofollow">{{$.i18n.Tr "repo.release.edit"}}</a>)</small>
+              {{if .IsRepositoryAdmin}}<small>(<a href="{{$.RepoLink}}/releases/edit/{{.TagName}}" rel="nofollow">{{$.i18n.Tr "repo.release.edit"}}</a>)</small>{{end}}
             </h3>
             <p class="text grey">
               <span class="author">
