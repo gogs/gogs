@@ -5,7 +5,7 @@
 			{{template "explore/navbar" .}}
 			<div class="twelve wide column content">
 				<div class="ui repository list">
-					{{range $i, $v := .Repos}}
+					{{range .Repos}}
 					<div class="item">
 						<div class="ui header">
 							<a href="{{AppSubUrl}}/{{.Owner.Name}}/{{.Name}}">{{.Owner.Name}} / {{.Name}}</a>
