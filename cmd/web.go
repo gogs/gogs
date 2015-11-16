@@ -463,6 +463,8 @@ func runWeb(ctx *cli.Context) {
 				m.Post("/delete", repo.DeleteDeployKey)
 			})
 
+		}, func(ctx *middleware.Context) {
+			ctx.Data["PageIsSettings"] = true
 		})
 	}, reqSignIn, middleware.RepoAssignment(true), reqRepoAdmin, middleware.RepoRef())
 
