@@ -494,6 +494,7 @@ func ViewIssue(ctx *middleware.Context) {
 
 		ctx.Data["PageIsPullList"] = true
 		ctx.Data["PageIsPullConversation"] = true
+		ctx.Data["HasForkedRepo"] = ctx.IsSigned && ctx.User.HasForkedRepo(ctx.Repo.Repository.ID)
 	} else {
 		ctx.Data["PageIsIssueList"] = true
 	}
