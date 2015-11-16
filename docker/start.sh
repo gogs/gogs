@@ -52,5 +52,5 @@ fi
 if [ $# -gt 0 ];then
     exec "$@"
 else
-    exec /usr/bin/s6-svscan /app/gogs/docker/s6/
+    exec /bin/s6-svscan /app/gogs/docker/s6/
 fi
