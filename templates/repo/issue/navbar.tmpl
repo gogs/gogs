@@ -1,5 +1,5 @@
 <div class="ui compact small menu">
-	{{if not .CommitsCount}}
+	{{if not .PageIsList}}
   <a class="{{if .PageIsIssueList}}active{{end}} item" href="{{.RepoLink}}/issues">{{.i18n.Tr "repo.issues"}}</a>
   <a class="{{if .PageIsPullList}}active{{end}} item" href="{{.RepoLink}}/pulls">{{.i18n.Tr "repo.pulls"}}</a>
   {{end}}
