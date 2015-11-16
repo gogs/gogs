@@ -14,7 +14,7 @@
 
                 <div class="ui right">
                     <div class="ui labeled button" tabindex="0">
-                        <a class="ui grey button" href="{{$.RepoLink}}/action/{{if $.IsWatchingRepo}}un{{end}}watch?redirect_to={{$.Link}}">
+                        <a class="ui button" href="{{$.RepoLink}}/action/{{if $.IsWatchingRepo}}un{{end}}watch?redirect_to={{$.Link}}">
                             <i class="icon fa fa-eye{{if not $.IsWatchingRepo}}-slash{{end}}"></i>{{if $.IsWatchingRepo}}{{$.i18n.Tr "repo.unwatch"}}{{else}}{{$.i18n.Tr "repo.watch"}}{{end}}
                         </a>
                         <a class="ui basic label" href="{{.RepoLink}}/watchers">
@@ -22,7 +22,7 @@
                         </a>
                     </div>
                     <div class="ui labeled button" tabindex="0">
-                        <a class="ui grey button" href="{{$.RepoLink}}/action/{{if $.IsStaringRepo}}un{{end}}star?redirect_to={{$.Link}}">
+                        <a class="ui button" href="{{$.RepoLink}}/action/{{if $.IsStaringRepo}}un{{end}}star?redirect_to={{$.Link}}">
                             <i class="icon fa-star{{if not $.IsStaringRepo}}-o{{end}}"></i>{{if $.IsStaringRepo}}{{$.i18n.Tr "repo.unstar"}}{{else}}{{$.i18n.Tr "repo.star"}}{{end}}
                         </a>
                         <a class="ui basic label" href="{{.RepoLink}}/stars">
@@ -31,7 +31,7 @@
                     </div>
                     {{if .CanBeForked}}
                     <div class="ui labeled button" tabindex="0">
-                        <a class="ui grey button {{if eq .OwnerID $.SignedUserID}}poping up{{end}}" {{if not (eq .OwnerID $.SignedUserID)}}href="{{AppSubUrl}}/repo/fork/{{.ID}}"{{else}} data-content="{{$.i18n.Tr "repo.fork_from_self"}}" data-position="top center" data-variation="tiny"{{end}}>
+                        <a class="ui button {{if eq .OwnerID $.SignedUserID}}poping up{{end}}" {{if not (eq .OwnerID $.SignedUserID)}}href="{{AppSubUrl}}/repo/fork/{{.ID}}"{{else}} data-content="{{$.i18n.Tr "repo.fork_from_self"}}" data-position="top center" data-variation="tiny"{{end}}>
                             <i class="icon octicon octicon-repo-forked"></i>{{$.i18n.Tr "repo.fork"}}
                         </a>
                         <a class="ui basic label" href="{{.RepoLink}}/forks">
