@@ -353,7 +353,7 @@ func Profile(ctx *middleware.Context) {
 	ctx.Data["TabName"] = tab
 	switch tab {
 	case "activity":
-		actions, err := models.GetFeeds(u.Id, 0, false)
+		actions, err := models.GetFeeds(u.Id, 0, true)
 		if err != nil {
 			ctx.Handle(500, "GetFeeds", err)
 			return
