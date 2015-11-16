@@ -215,12 +215,12 @@ func (f *CreateLabelForm) Validate(ctx *macaron.Context, errs binding.Errors) bi
 //         \/     \/          \/     \/     \/     \/
 
 type NewReleaseForm struct {
-	TagName    string `form:"tag_name" binding:"Required"`
+	TagName    string `binding:"Required"`
 	Target     string `form:"tag_target" binding:"Required"`
-	Title      string `form:"title" binding:"Required"`
-	Content    string `form:"content" binding:"Required"`
-	Draft      string `form:"draft"`
-	Prerelease bool   `form:"prerelease"`
+	Title      string `binding:"Required"`
+	Content    string
+	Draft      string
+	Prerelease bool
 }
 
 func (f *NewReleaseForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {

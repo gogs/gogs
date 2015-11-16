@@ -794,6 +794,102 @@
 			}
 		}
 	}
+
+	&.release {
+		#release-list {
+			border-top: 1px solid #DDD;
+			margin-top: 20px;
+			padding-top: 15px;
+
+			>li {
+				list-style: none;
+
+				.meta,
+				.detail {
+					padding-top: 30px;
+					padding-bottom: 40px;
+				}
+				.meta {
+					text-align: right;
+					position: relative;
+
+					.tag:not(.icon) {
+						display: block;
+						margin-top: 15px;
+					}
+					.commit {
+						display: block;
+						margin-top: 10px;
+					}
+				}
+				.detail {
+					border-left: 1px solid #DDD;
+
+					.author {
+						img {
+							margin-bottom: -3px;
+						}
+					}
+					.download {
+						margin-top: 20px;
+
+						>a {
+							.octicon {
+								margin-left: 5px;
+								margin-right: 5px;
+							}
+						}
+
+						.list {
+							padding-left: 0;
+							border-top: 1px solid #eee;
+
+							li {
+								list-style: none;
+								display: block;
+						    padding-top: 8px;
+						    padding-bottom: 8px;
+								border-bottom: 1px solid #eee;
+							}
+						}
+					}
+					.dot {
+				    width: 9px;
+				    height: 9px;
+				    background-color: #ccc;
+				    z-index: 999;
+				    position: absolute;
+				    display: block;
+				    left: -5px;
+				    top: 40px;
+				    border-radius: 6px;
+				    border: 1px solid #FFF;
+					}
+				}
+			}
+		}
+	}
+	&.new.release {
+		.target {
+			min-width: 500px;
+			
+			.at {
+				margin-left: -5px;
+				margin-right: 5px;
+			}
+			.dropdown.icon {
+				margin: 0;
+				padding-top: 3px;
+			}
+			.selection.dropdown {
+				padding-top: 10px;
+		    padding-bottom: 10px;
+			}
+		}
+		.prerelease.field {
+			margin-bottom: 0;
+		}
+	}
 }
 // End of .repository
 
