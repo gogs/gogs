@@ -2235,11 +2235,6 @@ footer .container .links > *:first-child {
   font-weight: normal;
   padding: 5px 10px;
 }
-.repository.commits .header .ui.right .button {
-  float: right;
-  margin-left: 5px;
-  margin-top: 1px;
-}
 .repository .commits.table {
   font-size: 13px;
 }
