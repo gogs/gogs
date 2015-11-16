@@ -78,7 +78,9 @@
         </div>
         {{else}}
         <br>
-        {{template "user/dashboard/feeds" .}}
+        <div class="feeds">
+          {{template "user/dashboard/feeds" .}}
+        </div>
         {{end}}
     </div>
   </div>
