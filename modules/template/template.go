@@ -210,14 +210,18 @@ type Actioner interface {
 // and returns a icon class name.
 func ActionIcon(opType int) string {
 	switch opType {
-	case 1, 8: // Create, transfer repository.
+	case 1, 8: // Create, transfer repository
 		return "repo"
-	case 5, 9: // Commit repository.
+	case 5, 9: // Commit repository
 		return "git-commit"
-	case 6: // Create issue.
+	case 6: // Create issue
 		return "issue-opened"
-	case 10: // Comment issue.
+	case 7: // New pull request
+		return "git-pull-request"
+	case 10: // Comment issue
 		return "comment"
+	case 11: // Merge pull request
+		return "git-merge"
 	default:
 		return "invalid type"
 	}
