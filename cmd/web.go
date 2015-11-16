@@ -515,10 +515,13 @@ func runWeb(ctx *cli.Context) {
 		m.Group("", func() {
 			m.Get("/releases", repo.Releases)
 			m.Get("/^:type(issues|pulls)$", repo.RetrieveLabels, repo.Issues)
-			m.Get("/^:type(issues|pulls)$/:index", repo.ViewIssue)
 			m.Get("/labels/", repo.RetrieveLabels, repo.Labels)
 			m.Get("/milestones", repo.Milestones)
-		}, middleware.RepoRef())
+		}, middleware.RepoRef(),
+			func(ctx *middleware.Context) {
+				ctx.Data["PageIsList"] = true
+			})
+		m.Get("/^:type(issues|pulls)$/:index", repo.ViewIssue)
 
 		m.Get("/branches", repo.Branches)
 		m.Get("/archive/*", repo.Download)

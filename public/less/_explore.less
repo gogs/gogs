@@ -1,30 +1,32 @@
 .explore {
 	padding-top: 15px;
 	padding-bottom: @footer-margin * 2;
+}
 
-	&.repositories {
-		.ui.repository.list {
-			.item {
-				border-top: 1px solid #eee;
-				padding-top: 25px;
-				padding-bottom: 25px;
-				.ui.header {
-					font-size: 1.5rem;
-					padding-bottom: 10px;
-					.metas {
-						color: #888;
-						font-size: 13px;
-						font-weight: normal;
-						span:not(:last-child) {
-							margin-right: 5px;
-						}
-					}
-				}
-				.time {
-			    font-size: 12px;
-			    color: #808080;
+.ui.repository.list {
+	.item {
+		padding-bottom: 25px;
+
+		&:not(:first-child) {
+			border-top: 1px solid #eee;
+			padding-top: 25px;
+		}
+
+		.ui.header {
+			font-size: 1.5rem;
+			padding-bottom: 10px;
+			.metas {
+				color: #888;
+				font-size: 13px;
+				font-weight: normal;
+				span:not(:last-child) {
+					margin-right: 5px;
 				}
 			}
+		}
+		.time {
+	    font-size: 12px;
+	    color: #808080;
 		}
 	}
 }

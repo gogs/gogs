@@ -848,6 +848,9 @@ pre.raw {
 .ui .text.yellow {
   color: #FBBD08 !important;
 }
+.ui .text.gold {
+  color: #a1882b !important;
+}
 .ui .text.left {
   text-align: left !important;
 }
@@ -2688,6 +2691,23 @@ footer .container .links > *:first-child {
 .user.settings .email.list .item:not(:first-child) .button {
   margin-top: -10px;
 }
+.user.profile .ui.card .username {
+  display: block;
+}
+.user.profile .ui.card .extra.content {
+  padding: 0;
+}
+.user.profile .ui.card .extra.content ul {
+  margin: 0;
+  padding: 0;
+}
+.user.profile .ui.card .extra.content ul li {
+  padding: 10px;
+  list-style: none;
+}
+.user.profile .ui.card .extra.content ul li:not(:last-child) {
+  border-bottom: 1px solid #eaeaea;
+}
 .dashboard {
   padding-top: 15px;
   padding-bottom: 80px;
@@ -2820,24 +2840,26 @@ footer .container .links > *:first-child {
   padding-top: 15px;
   padding-bottom: 80px;
 }
-.explore.repositories .ui.repository.list .item {
-  border-top: 1px solid #eee;
-  padding-top: 25px;
+.ui.repository.list .item {
   padding-bottom: 25px;
 }
-.explore.repositories .ui.repository.list .item .ui.header {
+.ui.repository.list .item:not(:first-child) {
+  border-top: 1px solid #eee;
+  padding-top: 25px;
+}
+.ui.repository.list .item .ui.header {
   font-size: 1.5rem;
   padding-bottom: 10px;
 }
-.explore.repositories .ui.repository.list .item .ui.header .metas {
+.ui.repository.list .item .ui.header .metas {
   color: #888;
   font-size: 13px;
   font-weight: normal;
 }
-.explore.repositories .ui.repository.list .item .ui.header .metas span:not(:last-child) {
+.ui.repository.list .item .ui.header .metas span:not(:last-child) {
   margin-right: 5px;
 }
-.explore.repositories .ui.repository.list .item .time {
+.ui.repository.list .item .time {
   font-size: 12px;
   color: #808080;
 }
