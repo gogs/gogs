@@ -19,6 +19,7 @@ const (
 
 func Releases(ctx *middleware.Context) {
 	ctx.Data["Title"] = ctx.Tr("repo.release.releases")
+	ctx.Data["PageIsReleaseList"] = true
 
 	rawTags, err := ctx.Repo.GitRepo.GetTags()
 	if err != nil {
@@ -138,12 +139,14 @@ func Releases(ctx *middleware.Context) {
 
 func NewRelease(ctx *middleware.Context) {
 	ctx.Data["Title"] = ctx.Tr("repo.release.new_release")
+	ctx.Data["PageIsReleaseList"] = true
 	ctx.Data["tag_target"] = ctx.Repo.Repository.DefaultBranch
 	ctx.HTML(200, RELEASE_NEW)
 }
 
 func NewReleasePost(ctx *middleware.Context, form auth.NewReleaseForm) {
 	ctx.Data["Title"] = ctx.Tr("repo.release.new_release")
+	ctx.Data["PageIsReleaseList"] = true
 
 	if ctx.HasError() {
 		ctx.HTML(200, RELEASE_NEW)
@@ -196,6 +199,7 @@ func NewReleasePost(ctx *middleware.Context, form auth.NewReleaseForm) {
 
 func EditRelease(ctx *middleware.Context) {
 	ctx.Data["Title"] = ctx.Tr("repo.release.edit_release")
+	ctx.Data["PageIsReleaseList"] = true
 	ctx.Data["PageIsEditRelease"] = true
 
 	tagName := ctx.Params(":tagname")
@@ -219,6 +223,7 @@ func EditRelease(ctx *middleware.Context) {
 
 func EditReleasePost(ctx *middleware.Context, form auth.EditReleaseForm) {
 	ctx.Data["Title"] = ctx.Tr("repo.release.edit_release")
+	ctx.Data["PageIsReleaseList"] = true
 	ctx.Data["PageIsEditRelease"] = true
 
 	tagName := ctx.Params(":tagname")
