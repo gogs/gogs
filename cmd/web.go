@@ -512,11 +512,14 @@ func runWeb(ctx *cli.Context) {
 	}, reqSignIn, middleware.RepoAssignment(true))
 
 	m.Group("/:username/:reponame", func() {
-		m.Get("/releases", middleware.RepoRef(), repo.Releases)
-		m.Get("/^:type(issues|pulls)$", repo.RetrieveLabels, repo.Issues)
-		m.Get("/^:type(issues|pulls)$/:index", repo.ViewIssue)
-		m.Get("/labels/", repo.RetrieveLabels, repo.Labels)
-		m.Get("/milestones", repo.Milestones)
+		m.Group("", func() {
+			m.Get("/releases", repo.Releases)
+			m.Get("/^:type(issues|pulls)$", repo.RetrieveLabels, repo.Issues)
+			m.Get("/^:type(issues|pulls)$/:index", repo.ViewIssue)
+			m.Get("/labels/", repo.RetrieveLabels, repo.Labels)
+			m.Get("/milestones", repo.Milestones)
+		}, middleware.RepoRef())
+
 		m.Get("/branches", repo.Branches)
 		m.Get("/archive/*", repo.Download)
 
