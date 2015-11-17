@@ -2539,6 +2539,9 @@ footer .container .links > *:first-child {
   background: rgba(0, 0, 0, 0.05) !important;
   color: rgba(0, 0, 0, 0.95) !important;
 }
+#search-user-box .results .item img {
+  margin-right: 8px;
+}
 .issue.list {
   list-style: none;
   padding-top: 15px;
