@@ -89,7 +89,7 @@ func (repo *Repository) GetPullRequestInfo(basePath, baseBranch, headBranch stri
 
 // GetPatch generates and returns patch data between given branches.
 func (repo *Repository) GetPatch(mergeBase, headBranch string) ([]byte, error) {
-	stdout, stderr, err := com.ExecCmdDirBytes(repo.Path, "git", "diff", "-p", mergeBase, headBranch)
+	stdout, stderr, err := com.ExecCmdDirBytes(repo.Path, "git", "diff", "-p", "--binary", mergeBase, headBranch)
 	if err != nil {
 		return nil, concatenateError(err, string(stderr))
 	}
