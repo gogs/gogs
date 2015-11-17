@@ -1865,9 +1865,6 @@ func ForkRepository(u *User, oldRepo *Repository, name, desc string) (_ *Reposit
 }
 
 func (repo *Repository) GetForks() ([]*Repository, error) {
-	forks := make([]*Repository, 0, 10)
-
-	err := x.Find(&forks, &Repository{ForkID: repo.ID})
-
-	return forks, err
+	forks := make([]*Repository, 0, repo.NumForks)
+	return forks, x.Find(&forks, &Repository{ForkID: repo.ID})
 }
