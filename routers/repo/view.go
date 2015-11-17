@@ -24,6 +24,7 @@ import (
 const (
 	HOME     base.TplName = "repo/home"
 	WATCHERS base.TplName = "repo/watchers"
+	FORKS    base.TplName = "repo/forks"
 )
 
 func Home(ctx *middleware.Context) {
@@ -277,4 +278,24 @@ func Stars(ctx *middleware.Context) {
 	ctx.Data["Title"] = ctx.Tr("repo.stargazers")
 	ctx.Data["PageIsStargazers"] = true
 	renderItems(ctx, ctx.Repo.Repository.NumStars, ctx.Repo.Repository.GetStargazers)
+}
+
+func Forks(ctx *middleware.Context) {
+	ctx.Data["Title"] = ctx.Tr("repos.forks")
+
+	forks, err := ctx.Repo.Repository.GetForks()
+	if err != nil {
+		ctx.Handle(500, "GetForks", err)
+		return
+	}
+
+	for _, fork := range forks {
+		if err = fork.GetOwner(); err != nil {
+			ctx.Handle(500, "GetOwner", err)
+			return
+		}
+	}
+	ctx.Data["Forks"] = forks
+
+	ctx.HTML(200, FORKS)
 }
