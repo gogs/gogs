@@ -260,6 +260,7 @@ func (pr *PullRequest) testPatch() (err error) {
 		for i := range patchConflicts {
 			if strings.Contains(stderr, patchConflicts[i]) {
 				log.Trace("PullRequest[%d].testPatch(apply): has conflit", pr.ID)
+				fmt.Println(stderr)
 				pr.Status = PULL_REQUEST_STATUS_CONFLICT
 				return nil
 			}
