@@ -934,8 +934,54 @@
 			}
 		}
 	}
+
+	&.settings {
+		&.collaboration {
+			.collaborator.list {
+				padding: 0;
+
+				.item {
+					padding: 10px 20px;
+
+					&:not(:last-child) {
+						border-bottom: 1px solid #DDD;
+					}
+				}
+			}
+
+			#repo-collab-form {
+				#search-user-box {
+					.results {
+						left: 7px;
+					}
+				}
+				.ui.button {
+					margin-left: 5px;
+			    margin-top: -3px;
+				}
+			}
+		}
+	}
 }
 // End of .repository
+
+#search-user-box {
+	.results {
+		padding: 0;
+		position: absolute;
+
+		.item {
+			padding: 10px 15px;
+			border-bottom: 1px solid #DDD;
+			cursor: pointer;
+
+			&:hover {
+				background: rgba(0,0,0,.05)!important;
+		    color: rgba(0,0,0,.95)!important;
+			}
+		}
+	}
+}
 
 .issue.list {
 	list-style: none;
@@ -994,7 +1040,7 @@
 .settings {
 	.content {
 		margin-top: 2px;
-		.header,
+		>.header,
 		.segment {
 			box-shadow: 0 1px 2px 0 rgba(34,36,38,.15);
 		}
