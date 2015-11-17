@@ -2470,6 +2470,46 @@ footer .container .links > *:first-child {
 .repository.new.release .prerelease.field {
   margin-bottom: 0;
 }
+.repository.watchers .list {
+  padding: 0;
+}
+.repository.watchers .list .item {
+  list-style: none;
+  width: 25%;
+  margin: 10px 10px 10px 0;
+  padding-bottom: 14px;
+  float: left;
+}
+.repository.watchers .list .item .avatar {
+  width: 48px;
+  height: 48px;
+  float: left;
+  display: block;
+  margin-right: 10px;
+}
+.repository.watchers .list .item .name {
+  margin-top: 0;
+  margin-bottom: 0;
+  font-weight: normal;
+}
+.repository.watchers .list .item .meta {
+  margin-top: 5px;
+}
+.repository.forks .list {
+  margin-top: 0;
+}
+.repository.forks .list .item {
+  padding-top: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #DDD;
+}
+.repository.forks .list .item .ui.avatar {
+  float: left;
+  margin-right: 5px;
+}
+.repository.forks .list .item .link {
+  padding-top: 5px;
+}
 .issue.list {
   list-style: none;
   padding-top: 15px;
