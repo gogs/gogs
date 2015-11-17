@@ -2475,7 +2475,7 @@ footer .container .links > *:first-child {
 }
 .repository.watchers .list .item {
   list-style: none;
-  width: 25%;
+  width: 33%;
   margin: 10px 10px 10px 0;
   padding-bottom: 14px;
   float: left;
