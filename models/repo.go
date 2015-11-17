@@ -49,7 +49,7 @@ var (
 	Gitignores, Licenses, Readmes []string
 
 	// Maximum items per page in forks, watchers and stars of a repo
-	ItemsPerPage = 54
+	ItemsPerPage = 40
 )
 
 func LoadRepoConfig() {
@@ -1696,25 +1696,21 @@ func WatchRepo(uid, repoId int64, watch bool) (err error) {
 	return watchRepo(x, uid, repoId, watch)
 }
 
-func getWatchers(e Engine, rid int64) ([]*Watch, error) {
+func getWatchers(e Engine, repoID int64) ([]*Watch, error) {
 	watches := make([]*Watch, 0, 10)
-	err := e.Find(&watches, &Watch{RepoID: rid})
-	return watches, err
+	return watches, e.Find(&watches, &Watch{RepoID: repoID})
 }
 
 // GetWatchers returns all watchers of given repository.
-func GetWatchers(rid int64) ([]*Watch, error) {
-	return getWatchers(x, rid)
+func GetWatchers(repoID int64) ([]*Watch, error) {
+	return getWatchers(x, repoID)
 }
 
-// Repository.GetWatchers returns all users watching given repository.
-func (repo *Repository) GetWatchers(offset int) ([]*User, error) {
-	users := make([]*User, 0, 10)
-	offset = (offset - 1) * ItemsPerPage
-
-	err := x.Limit(ItemsPerPage, offset).Where("repo_id=?", repo.ID).Join("LEFT", "watch", "user.id=watch.user_id").Find(&users)
-
-	return users, err
+// Repository.GetWatchers returns range of users watching given repository.
+func (repo *Repository) GetWatchers(page int) ([]*User, error) {
+	users := make([]*User, 0, ItemsPerPage)
+	return users, x.Limit(ItemsPerPage, (page-1)*ItemsPerPage).
+		Where("repo_id=?", repo.ID).Join("LEFT", "watch", "user.id=watch.user_id").Find(&users)
 }
 
 func notifyWatchers(e Engine, act *Action) error {
@@ -1794,13 +1790,10 @@ func IsStaring(uid, repoId int64) bool {
 	return has
 }
 
-func (repo *Repository) GetStars(offset int) ([]*User, error) {
-	users := make([]*User, 0, 10)
-	offset = (offset - 1) * ItemsPerPage
-
-	err := x.Limit(ItemsPerPage, offset).Where("repo_id=?", repo.ID).Join("LEFT", "star", "user.id=star.uid").Find(&users)
-
-	return users, err
+func (repo *Repository) GetStargazers(page int) ([]*User, error) {
+	users := make([]*User, 0, ItemsPerPage)
+	return users, x.Limit(ItemsPerPage, (page-1)*ItemsPerPage).
+		Where("repo_id=?", repo.ID).Join("LEFT", "star", "user.id=star.uid").Find(&users)
 }
 
 // ___________           __
