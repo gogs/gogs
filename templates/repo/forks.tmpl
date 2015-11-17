@@ -1,27 +1,23 @@
-{{template "ng/base/head" .}}
-{{template "ng/base/header" .}}
-<div id="repo-wrapper">
-    {{template "repo/header_old" .}}
-    <div id="repo-content" class="clear container">
-        <div id="repo-main" class="left grid-5-6">
-            <div id="forks">
-                <h4>
-                    <strong>{{.i18n.Tr "repos.forks"}}</strong>
-                </h4>
-
-                <ol>
-                {{range .Forks}}
-                    <p>
-                    <img class="avatar-small" src="{{.Owner.AvatarLink}}">
-                    <a href="{{AppSubUrl}}/{{.Owner.Name}}">{{.Owner.Name}}</a>
-                    /
-                    <a href="{{AppSubUrl}}/{{.Owner.Name}}/{{.Name}}">{{.Name}}</a>
-                    </p>
-                {{end}}
-            </div>
+{{template "base/head" .}}
+<div class="repository forks">
+  {{template "repo/header" .}}
+  <div class="ui container">
+    {{template "repo/sidebar" .}}
+    <h2 class="ui dividing header">
+      {{.i18n.Tr "repo.forks"}}
+    </h2>
+    <div class="ui list">
+      {{range .Forks}}
+        <div class="item">
+          <img class="ui avatar image" src="{{.Owner.AvatarLink}}">
+          <div class="link">
+            <a href="{{AppSubUrl}}/{{.Owner.Name}}">{{.Owner.Name}}</a>
+            /
+            <a href="{{AppSubUrl}}/{{.Owner.Name}}/{{.Name}}">{{.Name}}</a>
+          </div>
         </div>
-
-        {{template "repo/sidebar" .}}
+      {{end}}
     </div>
+  </div>
 </div>
-{{template "ng/base/footer" .}}
+{{template "base/footer" .}}

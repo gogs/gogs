@@ -885,6 +885,55 @@
 			margin-bottom: 0;
 		}
 	}
+
+	&.watchers {
+		.list {
+			padding: 0;
+
+			.item {
+				list-style: none;
+				width: 25%;
+				margin: 10px 10px 10px 0;
+		    padding-bottom: 14px;
+		    float: left;
+
+				.avatar {
+					width: 48px;
+					height: 48px;
+					float: left;
+			    display: block;
+			    margin-right: 10px;
+				}
+				.name {
+					margin-top: 0;
+					margin-bottom: 0;
+					font-weight: normal;
+				}
+				.meta {
+					margin-top: 5px;
+				}
+			}
+		}
+	}
+	&.forks {
+		.list {
+			margin-top: 0;
+
+			.item {
+				padding-top: 10px;
+				padding-bottom: 10px;
+				border-bottom: 1px solid #DDD;
+
+				.ui.avatar {
+					float: left;
+					margin-right: 5px;
+				}
+				.link {
+					padding-top: 5px;
+				}
+			}
+		}
+	}
 }
 // End of .repository
 
