@@ -2510,6 +2510,35 @@ footer .container .links > *:first-child {
 .repository.forks .list .item .link {
   padding-top: 5px;
 }
+.repository.settings.collaboration .collaborator.list {
+  padding: 0;
+}
+.repository.settings.collaboration .collaborator.list .item {
+  padding: 10px 20px;
+}
+.repository.settings.collaboration .collaborator.list .item:not(:last-child) {
+  border-bottom: 1px solid #DDD;
+}
+.repository.settings.collaboration #repo-collab-form #search-user-box .results {
+  left: 7px;
+}
+.repository.settings.collaboration #repo-collab-form .ui.button {
+  margin-left: 5px;
+  margin-top: -3px;
+}
+#search-user-box .results {
+  padding: 0;
+  position: absolute;
+}
+#search-user-box .results .item {
+  padding: 10px 15px;
+  border-bottom: 1px solid #DDD;
+  cursor: pointer;
+}
+#search-user-box .results .item:hover {
+  background: rgba(0, 0, 0, 0.05) !important;
+  color: rgba(0, 0, 0, 0.95) !important;
+}
 .issue.list {
   list-style: none;
   padding-top: 15px;
@@ -2562,7 +2591,7 @@ footer .container .links > *:first-child {
 .settings .content {
   margin-top: 2px;
 }
-.settings .content .header,
+.settings .content > .header,
 .settings .content .segment {
   box-shadow: 0 1px 2px 0 rgba(34, 36, 38, 0.15);
 }
@@ -2747,6 +2776,9 @@ footer .container .links > *:first-child {
 }
 .user.profile .ui.card .extra.content ul li:not(:last-child) {
   border-bottom: 1px solid #eaeaea;
+}
+.user.profile .ui.repository.list {
+  margin-top: 25px;
 }
 .dashboard {
   padding-top: 15px;

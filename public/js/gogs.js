@@ -564,6 +564,64 @@ function buttonsClickOnEnter() {
     });
 }
 
+function searchUsers() {
+    if (!$('#search-user-box .results').length) {
+        return;
+    }
+
+    var $search_user_box = $('#search-user-box');
+    var $result_list = $search_user_box.find('.results');
+    $search_user_box.keyup(function () {
+        var $this = $(this);
+        var keyword = $this.find('input').val();
+        if (keyword.length < 2) {
+            $result_list.hide();
+            return;
+        }
+
+        $.ajax({
+            url: suburl + '/api/v1/users/search?q=' + keyword,
+            dataType: "json",
+            success: function (response) {
+                var notEmpty = function (str) {
+                    return str && str.length > 0;
+                };
+
+                $result_list.html('');
+
+                if (response.ok && response.data.length) {
+                    var html = '';
+                    $.each(response.data, function (i, item) {
+                        html += '<div class="item"><img class="ui avatar image" src="' + item.avatar_url + '"><span class="username">' + item.username + '</span>';
+                        if (notEmpty(item.full_name)) {
+                            html += ' (' + item.full_name + ')';
+                        }
+                        html += '</div>';
+                    });
+                    $result_list.html(html);
+                    $this.find('.results .item').click(function () {
+                        $this.find('input').val($(this).find('.username').text());
+                        $result_list.hide();
+                    });
+                    $result_list.show();
+                } else {
+                    $result_list.hide();
+                }
+            }
+        });
+    });
+    $search_user_box.find('input').focus(function () {
+        $search_user_box.keyup();
+    });
+    $(document).click(function (e) {
+        var target = e.target;
+
+        if (!$(target).is('#search-user-box .results') && !$(target).parents().is('#search-user-box')) {
+            $('#search-user-box .results').hide();
+        }
+    });
+}
+
 $(document).ready(function () {
     csrf = $('meta[name=_csrf]').attr("content");
     suburl = $('meta[name=_suburl]').attr("content");
@@ -717,6 +775,8 @@ $(document).ready(function () {
     });
 
     buttonsClickOnEnter();
+    searchUsers();
+
 
     initCommentForm();
     initInstall();
