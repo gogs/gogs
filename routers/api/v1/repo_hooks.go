@@ -10,7 +10,7 @@ import (
 
 	"github.com/Unknwon/com"
 
-	api "github.com/gogits/go-gogs-client"
+	api "github.com/kiliit/go-gogs-client"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/middleware"
@@ -42,7 +42,7 @@ func ToApiHook(repoLink string, w *models.Webhook) *api.Hook {
 	}
 }
 
-// https://github.com/gogits/go-gogs-client/wiki/Repositories#list-hooks
+// https://github.com/kiliit/go-gogs-client/wiki/Repositories#list-hooks
 func ListRepoHooks(ctx *middleware.Context) {
 	hooks, err := models.GetWebhooksByRepoId(ctx.Repo.Repository.ID)
 	if err != nil {
@@ -58,7 +58,7 @@ func ListRepoHooks(ctx *middleware.Context) {
 	ctx.JSON(200, &apiHooks)
 }
 
-// https://github.com/gogits/go-gogs-client/wiki/Repositories#create-a-hook
+// https://github.com/kiliit/go-gogs-client/wiki/Repositories#create-a-hook
 func CreateRepoHook(ctx *middleware.Context, form api.CreateHookOption) {
 	if !models.IsValidHookTaskType(form.Type) {
 		ctx.APIError(422, "", "Invalid hook type")
@@ -123,7 +123,7 @@ func CreateRepoHook(ctx *middleware.Context, form api.CreateHookOption) {
 	ctx.JSON(201, ToApiHook(ctx.Repo.RepoLink, w))
 }
 
-// https://github.com/gogits/go-gogs-client/wiki/Repositories#edit-a-hook
+// https://github.com/kiliit/go-gogs-client/wiki/Repositories#edit-a-hook
 func EditRepoHook(ctx *middleware.Context, form api.EditHookOption) {
 	w, err := models.GetWebhookByID(ctx.ParamsInt64(":id"))
 	if err != nil {

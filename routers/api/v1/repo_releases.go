@@ -7,7 +7,7 @@ package v1
 import (
 	"errors"
 
-	api "github.com/gogits/go-gogs-client"
+	api "github.com/kiliit/go-gogs-client"
 
 	base "github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"

@@ -4,7 +4,7 @@
 
 package base
 
-const DOC_URL = "https://github.com/gogits/go-gogs-client/wiki"
+const DOC_URL = "https://github.com/kiliit/go-gogs-client/wiki"
 
 type (
 	TplName string

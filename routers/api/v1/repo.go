@@ -11,7 +11,7 @@ import (
 
 	"github.com/Unknwon/com"
 
-	api "github.com/gogits/go-gogs-client"
+	api "github.com/kiliit/go-gogs-client"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
@@ -99,7 +99,7 @@ func SearchRepos(ctx *middleware.Context) {
 	})
 }
 
-// https://github.com/gogits/go-gogs-client/wiki/Repositories#list-your-repositories
+// https://github.com/kiliit/go-gogs-client/wiki/Repositories#list-your-repositories
 func ListMyRepos(ctx *middleware.Context) {
 	ownRepos, err := models.GetRepositories(ctx.User.Id, true)
 	if err != nil {
@@ -165,7 +165,7 @@ func GetRepo(ctx *middleware.Context) {
 	ctx.JSON(200, ToApiRepository(ctx.Repo.Repository.Owner, ctx.Repo.Repository, api.Permission{}))
 }
 
-// https://github.com/gogits/go-gogs-client/wiki/Repositories#create
+// https://github.com/kiliit/go-gogs-client/wiki/Repositories#create
 func CreateRepo(ctx *middleware.Context, opt api.CreateRepoOption) {
 	// Shouldn't reach this condition, but just in case.
 	if ctx.User.IsOrganization() {
