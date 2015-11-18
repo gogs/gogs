@@ -303,7 +303,7 @@ func timeSince(then time.Time, lang string) string {
 
 	switch {
 	case diff <= 0:
-		langTr = "tool.now"
+		langTr, lbl = "tool.now", ""
 	case diff <= 2:
 		langTr = "tool.1s"
 	case diff < 1*Minute:
@@ -340,6 +340,9 @@ func timeSince(then time.Time, lang string) string {
 		langTr, diffNum = "tool.years", diff/Year
 	}
 
+	if lbl == "" {
+		return i18n.Tr(lang, langTr)
+	}
 	if diffNum == 0 {
 		return i18n.Tr(lang, langTr, lbl)
 	}
