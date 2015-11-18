@@ -426,7 +426,7 @@ func NewContext() {
 	dateLangs = Cfg.Section("i18n.datelang").KeysHash()
 
 	ShowFooterBranding = Cfg.Section("other").Key("SHOW_FOOTER_BRANDING").MustBool()
-	EnableShowVersion = Cfg.Section("other").Key("ENABLE_SHOW_VERSION").MustBool()
+	ShowFooterVersion = Cfg.Section("other").Key("SHOW_FOOTER_VERSION").MustBool()
 
 	HasRobotsTxt = com.IsFile(path.Join(CustomPath, "robots.txt"))
 }
