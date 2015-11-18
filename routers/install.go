@@ -25,6 +25,7 @@ import (
 	"github.com/gogits/gogs/modules/mailer"
 	"github.com/gogits/gogs/modules/middleware"
 	"github.com/gogits/gogs/modules/setting"
+	"github.com/gogits/gogs/modules/ssh"
 	"github.com/gogits/gogs/modules/user"
 )
 
@@ -66,6 +67,7 @@ func GlobalInit() {
 		models.HasEngine = true
 		cron.NewContext()
 		models.InitDeliverHooks()
+		models.InitTestPullRequests()
 		log.NewGitLogger(path.Join(setting.LogRootPath, "http.log"))
 	}
 	if models.EnableSQLite3 {
@@ -75,6 +77,11 @@ func GlobalInit() {
 		log.Info("TiDB Supported")
 	}
 	checkRunMode()
+
+	if setting.StartSSHServer {
+		ssh.Listen(setting.SSHPort)
+		log.Info("SSH server started on :%v", setting.SSHPort)
+	}
 }
 
 func InstallInit(ctx *middleware.Context) {

@@ -41,8 +41,13 @@
           <div class="inline field">
             <label>{{.i18n.Tr "repo.visibility"}}</label>
             <div class="ui checkbox">
+              {{if .IsForcedPrivate}}
+              <input name="private" type="checkbox" checked readonly>
+              <label>{{.i18n.Tr "repo.visiblity_helper_forced" | Safe}}</label>
+              {{else}}
               <input name="private" type="checkbox" {{if .private}}checked{{end}}>
               <label>{{.i18n.Tr "repo.visiblity_helper" | Safe}}</label>
+              {{end}}
             </div>
           </div>
           <div class="inline field {{if .Err_Description}}error{{end}}">

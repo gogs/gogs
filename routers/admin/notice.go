@@ -49,5 +49,5 @@ func DeleteNotice(ctx *middleware.Context) {
 	}
 	log.Trace("System notice deleted by admin(%s): %d", ctx.User.Name, id)
 	ctx.Flash.Success(ctx.Tr("admin.notices.delete_success"))
-	ctx.Redirect("/admin/notices")
+	ctx.Redirect(setting.AppSubUrl + "/admin/notices")
 }

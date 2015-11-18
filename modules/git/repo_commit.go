@@ -70,7 +70,7 @@ l:
 				if err != nil {
 					return nil, err
 				}
-				commit.Tree.Id = id
+				commit.Tree.ID = id
 			case "parent":
 				// A commit can have one or more parents
 				oid, err := NewIdFromString(string(line[spacepos+1:]))
@@ -111,9 +111,9 @@ func (repo *Repository) getCommit(id sha1) (*Commit, error) {
 		repo.commitCache = make(map[sha1]*Commit, 10)
 	}
 
-	data, bytErr, err := com.ExecCmdDirBytes(repo.Path, "git", "cat-file", "-p", id.String())
+	data, stderr, err := com.ExecCmdDirBytes(repo.Path, "git", "cat-file", "-p", id.String())
 	if err != nil {
-		return nil, errors.New(err.Error() + ": " + string(bytErr))
+		return nil, concatenateError(err, string(stderr))
 	}
 
 	commit, err := parseCommitData(data)
@@ -121,7 +121,7 @@ func (repo *Repository) getCommit(id sha1) (*Commit, error) {
 		return nil, err
 	}
 	commit.repo = repo
-	commit.Id = id
+	commit.ID = id
 
 	repo.commitCache[id] = commit
 	return commit, nil
@@ -211,7 +211,7 @@ func (repo *Repository) CommitsBetween(last *Commit, before *Commit) (*list.List
 	var err error
 	cur := last
 	for {
-		if cur.Id.Equal(before.Id) {
+		if cur.ID.Equal(before.ID) {
 			break
 		}
 		l.PushBack(cur)
@@ -229,7 +229,7 @@ func (repo *Repository) CommitsBetween(last *Commit, before *Commit) (*list.List
 func (repo *Repository) commitsBefore(lock *sync.Mutex, l *list.List, parent *list.Element, id sha1, limit int) error {
 	commit, err := repo.getCommit(id)
 	if err != nil {
-		return err
+		return fmt.Errorf("getCommit: %v", err)
 	}
 
 	var e *list.Element
@@ -240,7 +240,7 @@ func (repo *Repository) commitsBefore(lock *sync.Mutex, l *list.List, parent *li
 		for {
 			if in == nil {
 				break
-			} else if in.Value.(*Commit).Id.Equal(commit.Id) {
+			} else if in.Value.(*Commit).ID.Equal(commit.ID) {
 				return nil
 			} else {
 				if in.Next() == nil {
@@ -301,8 +301,7 @@ func (repo *Repository) CommitsByFileAndRange(branch, file string, page int) (*l
 func (repo *Repository) getCommitsBefore(id sha1) (*list.List, error) {
 	l := list.New()
 	lock := new(sync.Mutex)
-	err := repo.commitsBefore(lock, l, nil, id, 0)
-	return l, err
+	return l, repo.commitsBefore(lock, l, nil, id, 0)
 }
 
 func (repo *Repository) searchCommits(id sha1, keyword string) (*list.List, error) {

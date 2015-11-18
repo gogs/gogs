@@ -59,6 +59,7 @@ func Issues(ctx *middleware.Context) {
 	if isPullList {
 		ctx.Data["Title"] = ctx.Tr("repo.pulls")
 		ctx.Data["PageIsPullList"] = true
+		ctx.Data["HasForkedRepo"] = ctx.IsSigned && ctx.User.HasForkedRepo(ctx.Repo.Repository.ID)
 	} else {
 		ctx.Data["Title"] = ctx.Tr("repo.issues")
 		ctx.Data["PageIsIssueList"] = true
@@ -124,7 +125,8 @@ func Issues(ctx *middleware.Context) {
 	} else {
 		total = int(issueStats.ClosedCount)
 	}
-	ctx.Data["Page"] = paginater.New(total, setting.IssuePagingNum, page, 5)
+	pager := paginater.New(total, setting.IssuePagingNum, page, 5)
+	ctx.Data["Page"] = pager
 
 	// Get issues.
 	issues, err := models.Issues(&models.IssuesOptions{
@@ -133,7 +135,7 @@ func Issues(ctx *middleware.Context) {
 		RepoID:      repo.ID,
 		PosterID:    posterID,
 		MilestoneID: milestoneID,
-		Page:        page,
+		Page:        pager.Current(),
 		IsClosed:    isShowClosed,
 		IsMention:   filterMode == models.FM_MENTION,
 		IsPull:      isPullList,
@@ -324,6 +326,47 @@ func ValidateRepoMetas(ctx *middleware.Context, form auth.CreateIssueForm) ([]in
 	return labelIDs, milestoneID, assigneeID
 }
 
+func checkMentions(ctx *middleware.Context, issue *models.Issue) {
+	// Update mentions.
+	mentions := base.MentionPattern.FindAllString(issue.Content, -1)
+	if len(mentions) > 0 {
+		for i := range mentions {
+			mentions[i] = strings.TrimSpace(mentions[i])[1:]
+		}
+
+		if err := models.UpdateMentions(mentions, issue.ID); err != nil {
+			ctx.Handle(500, "UpdateMentions", err)
+			return
+		}
+	}
+
+	repo := ctx.Repo.Repository
+
+	// Mail watchers and mentions.
+	if setting.Service.EnableNotifyMail {
+		tos, err := mailer.SendIssueNotifyMail(ctx.User, ctx.Repo.Owner, repo, issue)
+		if err != nil {
+			ctx.Handle(500, "SendIssueNotifyMail", err)
+			return
+		}
+
+		tos = append(tos, ctx.User.LowerName)
+		newTos := make([]string, 0, len(mentions))
+		for _, m := range mentions {
+			if com.IsSliceContainsStr(tos, m) {
+				continue
+			}
+
+			newTos = append(newTos, m)
+		}
+		if err = mailer.SendIssueMentionMail(ctx.Render, ctx.User, ctx.Repo.Owner,
+			repo, issue, models.GetUserEmailsByNames(newTos)); err != nil {
+			ctx.Handle(500, "SendIssueMentionMail", err)
+			return
+		}
+	}
+}
+
 func NewIssuePost(ctx *middleware.Context, form auth.CreateIssueForm) {
 	ctx.Data["Title"] = ctx.Tr("repo.issues.new")
 	ctx.Data["PageIsIssueList"] = true
@@ -351,7 +394,7 @@ func NewIssuePost(ctx *middleware.Context, form auth.CreateIssueForm) {
 	issue := &models.Issue{
 		RepoID:      ctx.Repo.Repository.ID,
 		Index:       repo.NextIssueIndex(),
-		Name:        form.Title,
+		Name:        strings.TrimSpace(form.Title),
 		PosterID:    ctx.User.Id,
 		Poster:      ctx.User,
 		MilestoneID: milestoneID,
@@ -363,41 +406,9 @@ func NewIssuePost(ctx *middleware.Context, form auth.CreateIssueForm) {
 		return
 	}
 
-	// Update mentions.
-	mentions := base.MentionPattern.FindAllString(issue.Content, -1)
-	if len(mentions) > 0 {
-		for i := range mentions {
-			mentions[i] = strings.TrimSpace(mentions[i])[1:]
-		}
-
-		if err := models.UpdateMentions(mentions, issue.ID); err != nil {
-			ctx.Handle(500, "UpdateMentions", err)
-			return
-		}
-	}
-
-	// Mail watchers and mentions.
-	if setting.Service.EnableNotifyMail {
-		tos, err := mailer.SendIssueNotifyMail(ctx.User, ctx.Repo.Owner, repo, issue)
-		if err != nil {
-			ctx.Handle(500, "SendIssueNotifyMail", err)
-			return
-		}
-
-		tos = append(tos, ctx.User.LowerName)
-		newTos := make([]string, 0, len(mentions))
-		for _, m := range mentions {
-			if com.IsSliceContainsStr(tos, m) {
-				continue
-			}
-
-			newTos = append(newTos, m)
-		}
-		if err = mailer.SendIssueMentionMail(ctx.Render, ctx.User, ctx.Repo.Owner,
-			repo, issue, models.GetUserEmailsByNames(newTos)); err != nil {
-			ctx.Handle(500, "SendIssueMentionMail", err)
-			return
-		}
+	checkMentions(ctx, issue)
+	if ctx.Written() {
+		return
 	}
 
 	log.Trace("Issue created: %d/%d", repo.ID, issue.ID)
@@ -476,8 +487,14 @@ func ViewIssue(ctx *middleware.Context) {
 	}
 
 	if issue.IsPull {
+		if err = issue.GetPullRequest(); err != nil {
+			ctx.Handle(500, "GetPullRequest", err)
+			return
+		}
+
 		ctx.Data["PageIsPullList"] = true
 		ctx.Data["PageIsPullConversation"] = true
+		ctx.Data["HasForkedRepo"] = ctx.IsSigned && ctx.User.HasForkedRepo(ctx.Repo.Repository.ID)
 	} else {
 		ctx.Data["PageIsIssueList"] = true
 	}
@@ -605,7 +622,7 @@ func UpdateIssueTitle(ctx *middleware.Context) {
 		return
 	}
 
-	issue.Name = ctx.Query("title")
+	issue.Name = ctx.QueryTrim("title")
 	if len(issue.Name) == 0 {
 		ctx.Error(204)
 		return
@@ -747,6 +764,12 @@ func NewComment(ctx *middleware.Context, form auth.CreateCommentForm) {
 		}
 		return
 	}
+	if issue.IsPull {
+		if err = issue.GetPullRequest(); err != nil {
+			ctx.Handle(500, "GetPullRequest", err)
+			return
+		}
+	}
 
 	var attachments []string
 	if setting.AttachmentEnabled {
@@ -761,14 +784,15 @@ func NewComment(ctx *middleware.Context, form auth.CreateCommentForm) {
 
 	var comment *models.Comment
 	defer func() {
-		// Check if issue owner/poster changes the status of issue.
-		if (ctx.Repo.IsOwner() || (ctx.IsSigned && issue.IsPoster(ctx.User.Id))) &&
+		// Check if issue admin/poster changes the status of issue.
+		if (ctx.Repo.IsAdmin() || (ctx.IsSigned && issue.IsPoster(ctx.User.Id))) &&
 			(form.Status == "reopen" || form.Status == "close") &&
 			!(issue.IsPull && issue.HasMerged) {
 
+			// Duplication and conflict check should apply to reopen pull request.
 			var pr *models.PullRequest
 
-			if form.Status == "reopen" {
+			if form.Status == "reopen" && issue.IsPull {
 				pull := issue.PullRequest
 				pr, err = models.GetUnmergedPullRequest(pull.HeadRepoID, pull.BaseRepoID, pull.HeadBranch, pull.BaseBranch)
 				if err != nil {
@@ -776,6 +800,16 @@ func NewComment(ctx *middleware.Context, form auth.CreateCommentForm) {
 						ctx.Handle(500, "GetUnmergedPullRequest", err)
 						return
 					}
+				}
+
+				// Regenerate patch and test conflict.
+				if pr == nil {
+					if err = issue.UpdatePatch(); err != nil {
+						ctx.Handle(500, "UpdatePatch", err)
+						return
+					}
+
+					issue.AddToTaskQueue()
 				}
 			}
 
@@ -786,7 +820,7 @@ func NewComment(ctx *middleware.Context, form auth.CreateCommentForm) {
 				if err = issue.ChangeStatus(ctx.User, form.Status == "close"); err != nil {
 					log.Error(4, "ChangeStatus: %v", err)
 				} else {
-					log.Trace("Issue[%d] status changed: %v", issue.ID, !issue.IsClosed)
+					log.Trace("Issue[%d] status changed to closed: %v", issue.ID, issue.IsClosed)
 				}
 			}
 		}
@@ -814,43 +848,16 @@ func NewComment(ctx *middleware.Context, form auth.CreateCommentForm) {
 		return
 	}
 
-	// Update mentions.
-	mentions := base.MentionPattern.FindAllString(comment.Content, -1)
-	if len(mentions) > 0 {
-		for i := range mentions {
-			mentions[i] = mentions[i][1:]
-		}
-
-		if err := models.UpdateMentions(mentions, issue.ID); err != nil {
-			ctx.Handle(500, "UpdateMentions", err)
-			return
-		}
+	checkMentions(ctx, &models.Issue{
+		ID:      issue.ID,
+		Index:   issue.Index,
+		Name:    issue.Name,
+		Content: form.Content,
+	})
+	if ctx.Written() {
+		return
 	}
 
-	// Mail watchers and mentions.
-	if setting.Service.EnableNotifyMail {
-		issue.Content = form.Content
-		tos, err := mailer.SendIssueNotifyMail(ctx.User, ctx.Repo.Owner, ctx.Repo.Repository, issue)
-		if err != nil {
-			ctx.Handle(500, "SendIssueNotifyMail", err)
-			return
-		}
-
-		tos = append(tos, ctx.User.LowerName)
-		newTos := make([]string, 0, len(mentions))
-		for _, m := range mentions {
-			if com.IsSliceContainsStr(tos, m) {
-				continue
-			}
-
-			newTos = append(newTos, m)
-		}
-		if err = mailer.SendIssueMentionMail(ctx.Render, ctx.User, ctx.Repo.Owner,
-			ctx.Repo.Repository, issue, models.GetUserEmailsByNames(newTos)); err != nil {
-			ctx.Handle(500, "SendIssueMentionMail", err)
-			return
-		}
-	}
 	log.Trace("Comment created: %d/%d/%d", ctx.Repo.Repository.ID, issue.ID, comment.ID)
 }
 

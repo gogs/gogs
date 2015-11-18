@@ -2,6 +2,7 @@
 <div class="repository labels">
 	{{template "repo/header" .}}
 	<div class="ui container">
+    {{template "repo/sidebar" .}}
 		<div class="navbar">
 			{{template "repo/issue/navbar" .}}
 			{{if .IsRepositoryAdmin}}

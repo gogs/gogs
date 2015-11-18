@@ -22,7 +22,6 @@ import (
 
 	"github.com/gogits/gogs/modules/bindata"
 	"github.com/gogits/gogs/modules/log"
-	// "github.com/gogits/gogs/modules/ssh"
 	"github.com/gogits/gogs/modules/user"
 )
 
@@ -42,19 +41,26 @@ const (
 )
 
 var (
+	// Build information.
+	BuildTime    string
+	BuildGitHash string
+
 	// App settings.
-	AppVer    string
-	AppName   string
-	AppUrl    string
-	AppSubUrl string
+	AppVer      string
+	AppName     string
+	AppUrl      string
+	AppSubUrl   string
+	AppPath     string
+	AppDataPath = "data"
 
 	// Server settings.
 	Protocol           Scheme
 	Domain             string
 	HttpAddr, HttpPort string
 	DisableSSH         bool
-	SSHPort            int
+	StartSSHServer     bool
 	SSHDomain          string
+	SSHPort            int
 	OfflineMode        bool
 	DisableRouterLog   bool
 	CertFile, KeyFile  string
@@ -86,9 +92,13 @@ var (
 	}
 
 	// Repository settings.
+	Repository struct {
+		AnsiCharset            string
+		ForcePrivate           bool
+		PullRequestQueueLength int
+	}
 	RepoRootPath string
 	ScriptType   string
-	AnsiCharset  string
 
 	// UI settings.
 	ExplorePagingNum     int
@@ -187,21 +197,27 @@ func DateLang(lang string) string {
 	return "en"
 }
 
-func init() {
-	IsWindows = runtime.GOOS == "windows"
-	log.NewLogger(0, "console", `{"level": 0}`)
-}
-
-func ExecPath() (string, error) {
+// execPath returns the executable path.
+func execPath() (string, error) {
 	file, err := exec.LookPath(os.Args[0])
 	if err != nil {
 		return "", err
 	}
-	p, err := filepath.Abs(file)
-	if err != nil {
-		return "", err
+	return filepath.Abs(file)
+}
+
+func init() {
+	IsWindows = runtime.GOOS == "windows"
+	log.NewLogger(0, "console", `{"level": 0}`)
+
+	var err error
+	if AppPath, err = execPath(); err != nil {
+		log.Fatal(4, "fail to get app path: %v\n", err)
 	}
-	return p, nil
+
+	// Note: we don't use path.Dir here because it does not handle case
+	//	which path starts with two "/" in Windows: "//psf/Home/..."
+	AppPath = strings.Replace(AppPath, "\\", "/", -1)
 }
 
 // WorkDir returns absolute path of work directory.
@@ -211,19 +227,11 @@ func WorkDir() (string, error) {
 		return wd, nil
 	}
 
-	execPath, err := ExecPath()
-	if err != nil {
-		return execPath, err
-	}
-
-	// Note: we don't use path.Dir here because it does not handle case
-	//	which path starts with two "/" in Windows: "//psf/Home/..."
-	execPath = strings.Replace(execPath, "\\", "/", -1)
-	i := strings.LastIndex(execPath, "/")
+	i := strings.LastIndex(AppPath, "/")
 	if i == -1 {
-		return execPath, nil
+		return AppPath, nil
 	}
-	return execPath[:i], nil
+	return AppPath[:i], nil
 }
 
 func forcePathSeparator(path string) {
@@ -292,6 +300,9 @@ func NewContext() {
 	HttpAddr = sec.Key("HTTP_ADDR").MustString("0.0.0.0")
 	HttpPort = sec.Key("HTTP_PORT").MustString("3000")
 	DisableSSH = sec.Key("DISABLE_SSH").MustBool()
+	if !DisableSSH {
+		StartSSHServer = sec.Key("START_SSH_SERVER").MustBool()
+	}
 	SSHDomain = sec.Key("SSH_DOMAIN").MustString(Domain)
 	SSHPort = sec.Key("SSH_PORT").MustInt(22)
 	OfflineMode = sec.Key("OFFLINE_MODE").MustBool()
@@ -315,7 +326,7 @@ func NewContext() {
 	ReverseProxyAuthUser = sec.Key("REVERSE_PROXY_AUTHENTICATION_USER").MustString("X-WEBAUTH-USER")
 
 	sec = Cfg.Section("attachment")
-	AttachmentPath = sec.Key("PATH").MustString("data/attachments")
+	AttachmentPath = sec.Key("PATH").MustString(path.Join(AppDataPath, "attachments"))
 	if !filepath.IsAbs(AttachmentPath) {
 		AttachmentPath = path.Join(workDir, AttachmentPath)
 	}
@@ -365,7 +376,9 @@ func NewContext() {
 		RepoRootPath = path.Clean(RepoRootPath)
 	}
 	ScriptType = sec.Key("SCRIPT_TYPE").MustString("bash")
-	AnsiCharset = sec.Key("ANSI_CHARSET").MustString("")
+	Repository.AnsiCharset = sec.Key("ANSI_CHARSET").String()
+	Repository.ForcePrivate = sec.Key("FORCE_PRIVATE").MustBool()
+	Repository.PullRequestQueueLength = sec.Key("PULL_REQUEST_QUEUE_LENGTH").MustInt(10000)
 
 	// UI settings.
 	sec = Cfg.Section("ui")
@@ -381,7 +394,7 @@ func NewContext() {
 
 	sec = Cfg.Section("picture")
 	PictureService = sec.Key("SERVICE").In("server", []string{"server"})
-	AvatarUploadPath = sec.Key("AVATAR_UPLOAD_PATH").MustString("data/avatars")
+	AvatarUploadPath = sec.Key("AVATAR_UPLOAD_PATH").MustString(path.Join(AppDataPath, "avatars"))
 	forcePathSeparator(AvatarUploadPath)
 	if !filepath.IsAbs(AvatarUploadPath) {
 		AvatarUploadPath = path.Join(workDir, AvatarUploadPath)
@@ -428,6 +441,7 @@ var Service struct {
 	EnableReverseProxyAuth         bool
 	EnableReverseProxyAutoRegister bool
 	DisableMinimumKeySizeCheck     bool
+	MinimumKeySizes                map[string]int
 	EnableCaptcha                  bool
 }
 
@@ -443,6 +457,12 @@ func newService() {
 	Service.EnableReverseProxyAutoRegister = sec.Key("ENABLE_REVERSE_PROXY_AUTO_REGISTRATION").MustBool()
 	Service.DisableMinimumKeySizeCheck = sec.Key("DISABLE_MINIMUM_KEY_SIZE_CHECK").MustBool()
 	Service.EnableCaptcha = sec.Key("ENABLE_CAPTCHA").MustBool()
+
+	minimumKeySizes := Cfg.Section("service.minimum_key_sizes").Keys()
+	Service.MinimumKeySizes = make(map[string]int)
+	for _, key := range minimumKeySizes {
+		Service.MinimumKeySizes[key.Name()] = key.MustInt()
+	}
 }
 
 var logLevels = map[string]string{
@@ -456,6 +476,11 @@ var logLevels = map[string]string{
 
 func newLogService() {
 	log.Info("%s %s", AppName, AppVer)
+
+	if len(BuildTime) > 0 {
+		log.Info("Build Time: %s", BuildTime)
+		log.Info("Build Git Hash: %s", BuildGitHash)
+	}
 
 	// Get and check log mode.
 	LogModes = strings.Split(Cfg.Section("log").Key("MODE").MustString("console"), ",")
@@ -632,5 +657,4 @@ func NewServices() {
 	newRegisterMailService()
 	newNotifyMailService()
 	newWebhookService()
-	// ssh.Listen("2222")
 }

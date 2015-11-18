@@ -92,15 +92,6 @@ func (i *Issue) AfterSet(colName string, _ xorm.Cell) {
 		if err != nil {
 			log.Error(3, "GetUserByID[%d]: %v", i.ID, err)
 		}
-	case "is_pull":
-		if !i.IsPull {
-			return
-		}
-
-		i.PullRequest, err = GetPullRequestByIssueID(i.ID)
-		if err != nil {
-			log.Error(3, "GetPullRequestByIssueID[%d]: %v", i.ID, err)
-		}
 	case "created":
 		i.Created = regulateTimeZone(i.Created)
 	}
@@ -233,7 +224,7 @@ func (i *Issue) changeStatus(e *xorm.Session, doer *User, isClosed bool) (err er
 	}
 	i.IsClosed = isClosed
 
-	if err = updateIssue(e, i); err != nil {
+	if err = updateIssueCols(e, i, "is_closed"); err != nil {
 		return err
 	} else if err = updateIssueUsersByStatus(e, i.ID, isClosed); err != nil {
 		return err
@@ -280,6 +271,15 @@ func (i *Issue) ChangeStatus(doer *User, isClosed bool) (err error) {
 	}
 
 	return sess.Commit()
+}
+
+func (i *Issue) GetPullRequest() (err error) {
+	if i.PullRequest != nil {
+		return nil
+	}
+
+	i.PullRequest, err = GetPullRequestByIssueID(i.ID)
+	return err
 }
 
 // It's caller's responsibility to create action.
@@ -818,9 +818,15 @@ func updateIssue(e Engine, issue *Issue) error {
 	return err
 }
 
-// UpdateIssue updates information of issue.
+// UpdateIssue updates all fields of given issue.
 func UpdateIssue(issue *Issue) error {
 	return updateIssue(x, issue)
+}
+
+// updateIssueCols updates specific fields of given issue.
+func updateIssueCols(e Engine, issue *Issue, cols ...string) error {
+	_, err := e.Id(issue.ID).Cols(cols...).Update(issue)
+	return err
 }
 
 func updateIssueUsersByStatus(e Engine, issueID int64, isClosed bool) error {

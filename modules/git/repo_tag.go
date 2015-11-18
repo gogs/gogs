@@ -69,7 +69,7 @@ func (repo *Repository) getTag(id sha1) (*Tag, error) {
 	// Tag is a commit.
 	if ObjectType(tp) == COMMIT {
 		tag := &Tag{
-			Id:     id,
+			ID:     id,
 			Object: id,
 			Type:   string(COMMIT),
 			repo:   repo,
@@ -89,7 +89,7 @@ func (repo *Repository) getTag(id sha1) (*Tag, error) {
 		return nil, err
 	}
 
-	tag.Id = id
+	tag.ID = id
 	tag.repo = repo
 
 	repo.tagCache[id] = tag

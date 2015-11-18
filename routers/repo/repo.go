@@ -6,7 +6,6 @@ package repo
 
 import (
 	"fmt"
-	"net/url"
 	"os"
 	"path"
 	"strings"
@@ -46,7 +45,7 @@ func checkContextUser(ctx *middleware.Context, uid int64) *models.User {
 	}
 
 	if err != nil {
-		ctx.Handle(500, "checkContextUser", fmt.Errorf("GetUserById(%d): %v", uid, err))
+		ctx.Handle(500, "GetUserByID", fmt.Errorf("[%d]: %v", uid, err))
 		return nil
 	}
 
@@ -67,6 +66,7 @@ func Create(ctx *middleware.Context) {
 	ctx.Data["Readmes"] = models.Readmes
 	ctx.Data["readme"] = "Default"
 	ctx.Data["private"] = ctx.User.LastRepoVisibility
+	ctx.Data["IsForcedPrivate"] = setting.Repository.ForcePrivate
 
 	ctxUser := checkContextUser(ctx, ctx.QueryInt64("org"))
 	if ctx.Written() {
@@ -117,11 +117,11 @@ func CreatePost(ctx *middleware.Context, form auth.CreateRepoForm) {
 		Gitignores:  form.Gitignores,
 		License:     form.License,
 		Readme:      form.Readme,
-		IsPrivate:   form.Private,
+		IsPrivate:   form.Private || setting.Repository.ForcePrivate,
 		AutoInit:    form.AutoInit,
 	})
 	if err == nil {
-		log.Trace("Repository created: %s/%s", ctxUser.Name, repo.Name)
+		log.Trace("Repository created[%d]: %s/%s", repo.ID, ctxUser.Name, repo.Name)
 		ctx.Redirect(setting.AppSubUrl + "/" + ctxUser.Name + "/" + repo.Name)
 		return
 	}
@@ -138,6 +138,7 @@ func CreatePost(ctx *middleware.Context, form auth.CreateRepoForm) {
 func Migrate(ctx *middleware.Context) {
 	ctx.Data["Title"] = ctx.Tr("new_migrate")
 	ctx.Data["private"] = ctx.User.LastRepoVisibility
+	ctx.Data["IsForcedPrivate"] = setting.Repository.ForcePrivate
 
 	ctxUser := checkContextUser(ctx, ctx.QueryInt64("org"))
 	if ctx.Written() {
@@ -162,32 +163,36 @@ func MigratePost(ctx *middleware.Context, form auth.MigrateRepoForm) {
 		return
 	}
 
-	// Remote address can be HTTP/HTTPS/Git URL or local path.
-	// Note: remember to change api/v1/repo.go: MigrateRepo
-	// FIXME: merge these two functions with better error handling
-	remoteAddr := form.CloneAddr
-	if strings.HasPrefix(form.CloneAddr, "http://") ||
-		strings.HasPrefix(form.CloneAddr, "https://") ||
-		strings.HasPrefix(form.CloneAddr, "git://") {
-		u, err := url.Parse(form.CloneAddr)
-		if err != nil {
+	remoteAddr, err := form.ParseRemoteAddr(ctx.User)
+	if err != nil {
+		if models.IsErrInvalidCloneAddr(err) {
 			ctx.Data["Err_CloneAddr"] = true
-			ctx.RenderWithErr(ctx.Tr("form.url_error"), MIGRATE, &form)
-			return
+			addrErr := err.(models.ErrInvalidCloneAddr)
+			switch {
+			case addrErr.IsURLError:
+				ctx.RenderWithErr(ctx.Tr("form.url_error"), MIGRATE, &form)
+			case addrErr.IsPermissionDenied:
+				ctx.RenderWithErr(ctx.Tr("repo.migrate.permission_denied"), MIGRATE, &form)
+			case addrErr.IsInvalidPath:
+				ctx.RenderWithErr(ctx.Tr("repo.migrate.invalid_local_path"), MIGRATE, &form)
+			default:
+				ctx.Handle(500, "Unknown error", err)
+			}
+		} else {
+			ctx.Handle(500, "ParseRemoteAddr", err)
 		}
-		if len(form.AuthUsername) > 0 || len(form.AuthPassword) > 0 {
-			u.User = url.UserPassword(form.AuthUsername, form.AuthPassword)
-		}
-		remoteAddr = u.String()
-	} else if !com.IsDir(remoteAddr) {
-		ctx.Data["Err_CloneAddr"] = true
-		ctx.RenderWithErr(ctx.Tr("repo.migrate.invalid_local_path"), MIGRATE, &form)
 		return
 	}
 
-	repo, err := models.MigrateRepository(ctxUser, form.RepoName, form.Description, form.Private, form.Mirror, remoteAddr)
+	repo, err := models.MigrateRepository(ctxUser, models.MigrateRepoOptions{
+		Name:        form.RepoName,
+		Description: form.Description,
+		IsPrivate:   form.Private || setting.Repository.ForcePrivate,
+		IsMirror:    form.Mirror,
+		RemoteAddr:  remoteAddr,
+	})
 	if err == nil {
-		log.Trace("Repository migrated: %s/%s", ctxUser.Name, form.RepoName)
+		log.Trace("Repository migrated[%d]: %s/%s", repo.ID, ctxUser.Name, form.RepoName)
 		ctx.Redirect(setting.AppSubUrl + "/" + ctxUser.Name + "/" + form.RepoName)
 		return
 	}
@@ -245,11 +250,6 @@ func Action(ctx *middleware.Context) {
 		redirectTo = ctx.Repo.RepoLink
 	}
 	ctx.Redirect(redirectTo)
-
-	return
-	ctx.JSON(200, map[string]interface{}{
-		"ok": true,
-	})
 }
 
 func Download(ctx *middleware.Context) {
@@ -312,7 +312,7 @@ func Download(ctx *middleware.Context) {
 		return
 	}
 
-	archivePath = path.Join(archivePath, base.ShortSha(commit.Id.String())+ext)
+	archivePath = path.Join(archivePath, base.ShortSha(commit.ID.String())+ext)
 	if !com.IsFile(archivePath) {
 		if err := commit.CreateArchive(archivePath, archiveType); err != nil {
 			ctx.Handle(500, "Download -> CreateArchive "+archivePath, err)
@@ -320,5 +320,5 @@ func Download(ctx *middleware.Context) {
 		}
 	}
 
-	ctx.ServeFile(archivePath, ctx.Repo.Repository.Name+"-"+base.ShortSha(commit.Id.String())+ext)
+	ctx.ServeFile(archivePath, ctx.Repo.Repository.Name+"-"+base.ShortSha(commit.ID.String())+ext)
 }

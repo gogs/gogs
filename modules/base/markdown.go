@@ -100,11 +100,19 @@ func (options *CustomRender) Link(out *bytes.Buffer, link []byte, title []byte, 
 }
 
 func (options *CustomRender) Image(out *bytes.Buffer, link []byte, title []byte, alt []byte) {
+	prefix := strings.Replace(options.urlPrefix, "/src/", "/raw/", 1)
 	if len(link) > 0 && !isLink(link) {
-		link = []byte(path.Join(strings.Replace(options.urlPrefix, "/src/", "/raw/", 1), string(link)))
+		if link[0] != '/' {
+			prefix += "/"
+		}
+		link = []byte(prefix + string(link))
 	}
 
+	out.WriteString(`<a href="`)
+	out.Write(link)
+	out.WriteString(`">`)
 	options.Renderer.Image(out, link, title, alt)
+	out.WriteString("</a>")
 }
 
 var (
@@ -159,7 +167,21 @@ func RenderSha1CurrentPattern(rawBytes []byte, urlPrefix string) []byte {
 	return rawBytes
 }
 
+func cutoutVerbosePrefix(prefix string) string {
+	count := 0
+	for i := 0; i < len(prefix); i++ {
+		if prefix[i] == '/' {
+			count++
+		}
+		if count >= 3 {
+			return prefix[:i]
+		}
+	}
+	return prefix
+}
+
 func RenderIssueIndexPattern(rawBytes []byte, urlPrefix string) []byte {
+	urlPrefix = cutoutVerbosePrefix(urlPrefix)
 	ms := issueIndexPattern.FindAll(rawBytes, -1)
 	for _, m := range ms {
 		var space string

@@ -5,7 +5,7 @@ Gogs - Go Git Service [![Build Status](https://travis-ci.org/gogits/gogs.svg?bra
 
 ![](public/img/gogs-large-resize.png)
 
-##### Current version: 0.6.16 Beta
+##### Current version: 0.7.16 Beta
 
 <table>
     <tr>
@@ -29,20 +29,20 @@ Gogs - Go Git Service [![Build Status](https://travis-ci.org/gogits/gogs.svg?bra
 
 - Due to testing purpose, data of [try.gogs.io](https://try.gogs.io) has been reset in **Jan 28, 2015** and will reset multiple times after. Please do **NOT** put your important data on the site.
 - The demo site [try.gogs.io](https://try.gogs.io) is running under `develop` branch.
-- :exclamation::exclamation::exclamation:<span style="color: red">You **MUST** read [CONTRIBUTING.md](CONTRIBUTING.md) before you start filing an issue or making a Pull Request, and **MUST** discuss with us on [Gitter](https://gitter.im/gogits/gogs) for UI changes and feature Pull Requests, otherwise it's high possibilities that we are not going to merge it.</span>:exclamation::exclamation::exclamation:
+- :bangbang:<span style="color: red">You **MUST** read [CONTRIBUTING.md](CONTRIBUTING.md) before you start filing an issue or making a Pull Request, and **MUST** discuss with us on [Gitter](https://gitter.im/gogits/gogs) for UI changes and feature Pull Requests, otherwise it's high possibilities that we are not going to merge it.</span>:bangbang:
 - If you think there are vulnerabilities in the project, please talk privately to **u@gogs.io**. Thanks!
+- If you're interested in using APIs, we have experimental support with [documentation](https://github.com/gogits/go-gogs-client/wiki).
+- If your team/company is using Gogs and would like to put your logo on [our website](http://gogs.io), contact us by any means.
 
-#### Other language version
-
-- [简体中文](README_ZH.md)
+[简体中文](README_ZH.md)
 
 ## Purpose
 
-The goal of this project is to make the easiest, fastest, and most painless way of setting up a self-hosted Git service. With Go, this can be done with an independent binary distribution across **ALL platforms** that Go supports, including Linux, Mac OS X, and Windows.
+The goal of this project is to make the easiest, fastest, and most painless way of setting up a self-hosted Git service. With Go, this can be done with an independent binary distribution across **ALL platforms** that Go supports, including Linux, Mac OS X, Windows and ARM.
 
 ## Overview
 
-- Please see the [Documentation](http://gogs.io/docs/intro/) for project design, known issues, and change log.
+- Please see the [Documentation](http://gogs.io/docs/intro) for common usages and change log.
 - See the [Trello Board](https://trello.com/b/uxAoeLUl/gogs-go-git-service) to follow the develop team.
 - Want to try it before doing anything else? Do it [online](https://try.gogs.io/gogs/gogs) or go down to the **Installation -> Install from binary** section!
 - Having trouble? Get help with [Troubleshooting](http://gogs.io/docs/intro/troubleshooting.html).
@@ -51,24 +51,25 @@ The goal of this project is to make the easiest, fastest, and most painless way 
 ## Features
 
 - Activity timeline
-- SSH/HTTP(S) protocol support
-- SMTP/LDAP/reverse proxy authentication support
-- Reverse proxy suburl support
-- Account/Organization(with team)/Repository management
-- Repository/Organization webhooks(including Slack)
+- SSH and HTTP/HTTPS protocols
+- SMTP/LDAP/Reverse proxy authentication
+- Reverse proxy with sub-path
+- Account/Organization/Repository management
+- Repository/Organization webhooks (including Slack)
 - Repository Git hooks/deploy keys
-- Add/remove repository collaborators
-- Gravatar and custom source support
+- Repository issues and pull requests
+- Add/Remove repository collaborators
+- Gravatar and custom source
 - Mail service
 - Administration panel
 - CI integration: [Drone](https://github.com/drone/drone)
-- Supports MySQL, PostgreSQL, SQLite3 and [TiDB](https://github.com/pingcap/tidb)
+- Supports MySQL, PostgreSQL, SQLite3 and [TiDB](https://github.com/pingcap/tidb) (experimental)
 - Multi-language support ([14 languages](https://crowdin.com/project/gogs))
 
 ## System Requirements
 
 - A cheap Raspberry Pi is powerful enough for basic functionality.
-- At least 2 CPU cores and 1GB RAM would be the baseline for teamwork.
+- 2 CPU cores and 1GB RAM would be the baseline for teamwork.
 
 ## Browser Support
 
@@ -77,7 +78,7 @@ The goal of this project is to make the easiest, fastest, and most painless way 
 
 ## Installation
 
-Make sure you install the [prerequisites](http://gogs.io/docs/installation/) first.
+Make sure you install the [prerequisites](http://gogs.io/docs/installation) first.
 
 There are 5 ways to install Gogs:
 
@@ -91,6 +92,7 @@ There are 5 ways to install Gogs:
 
 - [How To Set Up Gogs on Ubuntu 14.04](https://www.digitalocean.com/community/tutorials/how-to-set-up-gogs-on-ubuntu-14-04)
 - [Run your own GitHub-like service with the help of Docker](http://blog.hypriot.com/post/run-your-own-github-like-service-with-docker/)
+- [使用 Gogs 搭建自己的 Git 服务器](https://mynook.info/blog/post/host-your-own-git-server-using-gogs) (Chinese)
 - [阿里云上 Ubuntu 14.04 64 位安装 Gogs](http://my.oschina.net/luyao/blog/375654) (Chinese)
 - [Installing Gogs on FreeBSD](https://www.codejam.info/2015/03/installing-gogs-on-freebsd.html)
 - [Gogs on Raspberry Pi](http://blog.meinside.pe.kr/Gogs-on-Raspberry-Pi/)
@@ -105,18 +107,25 @@ There are 5 ways to install Gogs:
 - [Cloudron](https://cloudron.io/appstore.html#io.gogs.cloudronapp)
 - [Scaleway](https://www.scaleway.com/imagehub/gogs/)
 - [Portal](https://portaldemo.xyz/cloud/)
+- [Sandstorm](https://github.com/cem/gogs-sandstorm)
+
+### Product Support
+
+- [Synology](https://www.synology.com) (Docker)
+- [One Space](http://www.onespace.cc) (App Store)
 
 ## Acknowledgments
 
-- Router and middleware mechanism of [Macaron](https://github.com/Unknwon/macaron).
-- Mail Service, modules design is inspired by [WeTalk](https://github.com/beego/wetalk).
+- Router and middleware mechanism of [Macaron](https://github.com/go-macaron/macaron).
+- Modules design is inspired by [WeTalk](https://github.com/beego/wetalk).
 - System Monitor Status is inspired by [GoBlog](https://github.com/fuxiaohei/goblog).
 - Thanks [lavachen](http://www.lavachen.cn/) and [Rocker](http://weibo.com/rocker1989) for designing Logo.
 - Thanks [Crowdin](https://crowdin.com/project/gogs) for providing open source translation plan.
+- Thanks [DigitalOcean](https://www.digitalocean.com) for hosting home and demo sites.
 
 ## Contributors
 
-- Ex-team members [@lunny](https://github.com/lunny) and [@fuxiaohei](https://github.com/fuxiaohei).
+- Ex-team members [@lunny](https://github.com/lunny), [@fuxiaohei](https://github.com/fuxiaohei) and [@slene](https://github.com/slene).
 - See [contributors page](https://github.com/gogits/gogs/graphs/contributors) for full list of contributors.
 - See [TRANSLATORS](conf/locale/TRANSLATORS) for public list of translators.
 

@@ -1,11 +1,11 @@
 {
 "CodeKitInfo": "This is a CodeKit 2.x project configuration file. It is designed to sync project settings across multiple machines. MODIFYING THE CONTENTS OF THIS FILE IS A POOR LIFE DECISION. If you do so, you will likely cause CodeKit to crash. This file is not useful unless accompanied by the project that created it in CodeKit 2. This file is not backwards-compatible with CodeKit 1.x. For more information, see: http:\/\/incident57.com\/codekit",
-"creatorBuild": "19051",
+"creatorBuild": "19076",
 "files": {
 	"\/css\/dropzone-4.0.1.css": {
 		"fileType": 16,
 		"ignore": 0,
-		"ignoreWasSetByUser": 0,
+		"ignoreWasSetByUser": 1,
 		"inputAbbreviatedPath": "\/css\/dropzone-4.0.1.css",
 		"outputAbbreviatedPath": "No Output Path",
 		"outputPathIsOutsideProject": 0,
@@ -56,6 +56,15 @@
 		"outputPathIsOutsideProject": 0,
 		"outputPathIsSetByUser": 0
 		},
+	"\/css\/highlight-8.7\/github.css": {
+		"fileType": 16,
+		"ignore": 0,
+		"ignoreWasSetByUser": 0,
+		"inputAbbreviatedPath": "\/css\/highlight-8.7\/github.css",
+		"outputAbbreviatedPath": "No Output Path",
+		"outputPathIsOutsideProject": 0,
+		"outputPathIsSetByUser": 0
+		},
 	"\/css\/jquery.datetimepicker-2.4.5.css": {
 		"fileType": 16,
 		"ignore": 0,
@@ -74,11 +83,11 @@
 		"outputPathIsOutsideProject": 0,
 		"outputPathIsSetByUser": 0
 		},
-	"\/css\/semantic-2.1.3.min.css": {
+	"\/css\/semantic-2.1.5.min.css": {
 		"fileType": 16,
 		"ignore": 0,
 		"ignoreWasSetByUser": 0,
-		"inputAbbreviatedPath": "\/css\/semantic-2.1.3.min.css",
+		"inputAbbreviatedPath": "\/css\/semantic-2.1.5.min.css",
 		"outputAbbreviatedPath": "No Output Path",
 		"outputPathIsOutsideProject": 0,
 		"outputPathIsSetByUser": 0
@@ -204,12 +213,12 @@
 		"outputStyle": 1,
 		"syntaxCheckerStyle": 1
 		},
-	"\/js\/libs\/clipboard-1.3.1.min.js": {
+	"\/js\/libs\/clipboard-1.5.3.min.js": {
 		"fileType": 64,
 		"ignore": 0,
 		"ignoreWasSetByUser": 0,
-		"inputAbbreviatedPath": "\/js\/libs\/clipboard-1.3.1.min.js",
-		"outputAbbreviatedPath": "\/js\/libs\/min\/clipboard-1.3.1.min-min.js",
+		"inputAbbreviatedPath": "\/js\/libs\/clipboard-1.5.3.min.js",
+		"outputAbbreviatedPath": "\/js\/libs\/min\/clipboard-1.5.3.min-min.js",
 		"outputPathIsOutsideProject": 0,
 		"outputPathIsSetByUser": 0,
 		"outputStyle": 1,
@@ -281,12 +290,23 @@
 		"outputPathIsSetByUser": 0,
 		"processed": 0
 		},
-	"\/js\/semantic-2.1.3.min.js": {
+	"\/js\/min\/gogs-min.js": {
+		"fileType": 64,
+		"ignore": 1,
+		"ignoreWasSetByUser": 0,
+		"inputAbbreviatedPath": "\/js\/min\/gogs-min.js",
+		"outputAbbreviatedPath": "\/js\/min\/min\/gogs-min-min.js",
+		"outputPathIsOutsideProject": 0,
+		"outputPathIsSetByUser": 0,
+		"outputStyle": 1,
+		"syntaxCheckerStyle": 1
+		},
+	"\/js\/semantic-2.1.5.min.js": {
 		"fileType": 64,
 		"ignore": 0,
 		"ignoreWasSetByUser": 0,
-		"inputAbbreviatedPath": "\/js\/semantic-2.1.3.min.js",
-		"outputAbbreviatedPath": "\/js\/min\/semantic-2.1.3.min-min.js",
+		"inputAbbreviatedPath": "\/js\/semantic-2.1.5.min.js",
+		"outputAbbreviatedPath": "\/js\/min\/semantic-2.1.5.min-min.js",
 		"outputPathIsOutsideProject": 0,
 		"outputPathIsSetByUser": 0,
 		"outputStyle": 1,
@@ -1834,7 +1854,9 @@
 	"typescriptAutoOutputPathStyle": 2,
 	"typescriptCreateDeclarationFile": 0,
 	"typescriptCreateSourceMap": 0,
+	"typescriptJSXMode": 0,
 	"typescriptMinifyOutput": 0,
+	"typescriptModuleResolutionType": 0,
 	"typescriptModuleType": 0,
 	"typescriptNoImplicitAny": 0,
 	"typescriptPreserveConstEnums": 0,

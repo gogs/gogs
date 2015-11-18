@@ -20,7 +20,7 @@ var CmdUpdate = cli.Command{
 	Description: `Update get pushed info and insert into database`,
 	Action:      runUpdate,
 	Flags: []cli.Flag{
-		cli.StringFlag{"config, c", "custom/conf/app.ini", "Custom configuration file path", ""},
+		stringFlag("config, c", "custom/conf/app.ini", "Custom configuration file path"),
 	},
 }
 
@@ -42,16 +42,14 @@ func runUpdate(c *cli.Context) {
 		log.GitLogger.Fatal(2, "refName is empty, shouldn't use")
 	}
 
-	uuid := os.Getenv("uuid")
-
 	task := models.UpdateTask{
-		Uuid:        uuid,
+		UUID:        os.Getenv("uuid"),
 		RefName:     args[0],
-		OldCommitId: args[1],
-		NewCommitId: args[2],
+		OldCommitID: args[1],
+		NewCommitID: args[2],
 	}
 
 	if err := models.AddUpdateTask(&task); err != nil {
-		log.GitLogger.Fatal(2, err.Error())
+		log.GitLogger.Fatal(2, "AddUpdateTask: %v", err)
 	}
 }

@@ -13,7 +13,6 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"path"
 	"path/filepath"
 	"strings"
@@ -38,20 +37,7 @@ var (
 )
 
 var sshOpLocker = sync.Mutex{}
-
-var (
-	SSHPath string // SSH directory.
-	appPath string // Execution(binary) path.
-)
-
-// exePath returns the executable path.
-func exePath() (string, error) {
-	file, err := exec.LookPath(os.Args[0])
-	if err != nil {
-		return "", err
-	}
-	return filepath.Abs(file)
-}
+var SSHPath string // SSH directory.
 
 // homeDir returns the home directory of current user.
 func homeDir() string {
@@ -63,16 +49,9 @@ func homeDir() string {
 }
 
 func init() {
-	var err error
-
-	if appPath, err = exePath(); err != nil {
-		log.Fatal(4, "fail to get app path: %v\n", err)
-	}
-	appPath = strings.Replace(appPath, "\\", "/", -1)
-
 	// Determine and create .ssh path.
 	SSHPath = filepath.Join(homeDir(), ".ssh")
-	if err = os.MkdirAll(SSHPath, 0700); err != nil {
+	if err := os.MkdirAll(SSHPath, 0700); err != nil {
 		log.Fatal(4, "fail to create '%s': %v", SSHPath, err)
 	}
 }
@@ -114,17 +93,7 @@ func (k *PublicKey) OmitEmail() string {
 
 // GetAuthorizedString generates and returns formatted public key string for authorized_keys file.
 func (key *PublicKey) GetAuthorizedString() string {
-	return fmt.Sprintf(_TPL_PUBLICK_KEY, appPath, key.ID, setting.CustomConf, key.Content)
-}
-
-var minimumKeySizes = map[string]int{
-	"(ED25519)": 256,
-	"(ECDSA)":   256,
-	"(NTRU)":    1087,
-	"(MCE)":     1702,
-	"(McE)":     1702,
-	"(RSA)":     1024,
-	"(DSA)":     1024,
+	return fmt.Sprintf(_TPL_PUBLICK_KEY, setting.AppPath, key.ID, setting.CustomConf, key.Content)
 }
 
 func extractTypeFromBase64Key(key string) (string, error) {
@@ -228,9 +197,9 @@ func CheckPublicKeyString(content string) (_ string, err error) {
 	tmpFile.Close()
 
 	// Check if ssh-keygen recognizes its contents.
-	stdout, stderr, err := process.Exec("CheckPublicKeyString", "ssh-keygen", "-l", "-f", tmpPath)
+	stdout, stderr, err := process.Exec("CheckPublicKeyString", "ssh-keygen", "-lf", tmpPath)
 	if err != nil {
-		return "", errors.New("ssh-keygen -l -f: " + stderr)
+		return "", errors.New("ssh-keygen -lf: " + stderr)
 	} else if len(stdout) < 2 {
 		return "", errors.New("ssh-keygen returned not enough output to evaluate the key: " + stdout)
 	}
@@ -251,9 +220,10 @@ func CheckPublicKeyString(content string) (_ string, err error) {
 		if keySize == 0 {
 			return "", errors.New("cannot get key size of the given key")
 		}
-		keyType := strings.TrimSpace(sshKeygenOutput[len(sshKeygenOutput)-1])
-		if minimumKeySize := minimumKeySizes[keyType]; minimumKeySize == 0 {
-			return "", errors.New("sorry, unrecognized public key type")
+
+		keyType := strings.Trim(sshKeygenOutput[len(sshKeygenOutput)-1], " ()\n")
+		if minimumKeySize := setting.Service.MinimumKeySizes[keyType]; minimumKeySize == 0 {
+			return "", fmt.Errorf("unrecognized public key type: %s", keyType)
 		} else if keySize < minimumKeySize {
 			return "", fmt.Errorf("the minimum accepted size of a public key %s is %d", keyType, minimumKeySize)
 		}
@@ -321,9 +291,9 @@ func addKey(e Engine, key *PublicKey) (err error) {
 	if err = ioutil.WriteFile(tmpPath, []byte(key.Content), 0644); err != nil {
 		return err
 	}
-	stdout, stderr, err := process.Exec("AddPublicKey", "ssh-keygen", "-l", "-f", tmpPath)
+	stdout, stderr, err := process.Exec("AddPublicKey", "ssh-keygen", "-lf", tmpPath)
 	if err != nil {
-		return errors.New("ssh-keygen -l -f: " + stderr)
+		return errors.New("ssh-keygen -lf: " + stderr)
 	} else if len(stdout) < 2 {
 		return errors.New("not enough output for calculating fingerprint: " + stdout)
 	}
@@ -378,6 +348,19 @@ func GetPublicKeyByID(keyID int64) (*PublicKey, error) {
 		return nil, err
 	} else if !has {
 		return nil, ErrKeyNotExist{keyID}
+	}
+	return key, nil
+}
+
+// SearchPublicKeyByContent searches content as prefix (leak e-mail part)
+// and returns public key found.
+func SearchPublicKeyByContent(content string) (*PublicKey, error) {
+	key := new(PublicKey)
+	has, err := x.Where("content like ?", content+"%").Get(key)
+	if err != nil {
+		return nil, err
+	} else if !has {
+		return nil, ErrKeyNotExist{}
 	}
 	return key, nil
 }

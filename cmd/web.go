@@ -7,7 +7,7 @@ package cmd
 import (
 	"crypto/tls"
 	"fmt"
-	"html/template"
+	gotmpl "html/template"
 	"io/ioutil"
 	"net/http"
 	"net/http/fcgi"
@@ -35,11 +35,11 @@ import (
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/auth/apiv1"
 	"github.com/gogits/gogs/modules/avatar"
-	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/bindata"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/middleware"
 	"github.com/gogits/gogs/modules/setting"
+	"github.com/gogits/gogs/modules/template"
 	"github.com/gogits/gogs/routers"
 	"github.com/gogits/gogs/routers/admin"
 	"github.com/gogits/gogs/routers/api/v1"
@@ -56,8 +56,8 @@ var CmdWeb = cli.Command{
 and it takes care of all the other things for you`,
 	Action: runWeb,
 	Flags: []cli.Flag{
-		cli.StringFlag{"port, p", "3000", "Temporary port number to prevent conflict", ""},
-		cli.StringFlag{"config, c", "custom/conf/app.ini", "Custom configuration file path", ""},
+		stringFlag("port, p", "3000", "Temporary port number to prevent conflict"),
+		stringFlag("config, c", "custom/conf/app.ini", "Custom configuration file path"),
 	},
 }
 
@@ -80,13 +80,14 @@ func checkVersion() {
 
 	// Check dependency version.
 	checkers := []VerChecker{
-		{"github.com/go-xorm/xorm", func() string { return xorm.Version }, "0.4.3.0806"},
+		{"github.com/go-xorm/xorm", func() string { return xorm.Version }, "0.4.4.1029"},
 		{"github.com/Unknwon/macaron", macaron.Version, "0.5.4"},
-		{"github.com/macaron-contrib/binding", binding.Version, "0.1.0"},
-		{"github.com/macaron-contrib/cache", cache.Version, "0.1.2"},
-		{"github.com/macaron-contrib/csrf", csrf.Version, "0.0.3"},
-		{"github.com/macaron-contrib/i18n", i18n.Version, "0.0.7"},
-		{"github.com/macaron-contrib/session", session.Version, "0.1.6"},
+		{"github.com/go-macaron/binding", binding.Version, "0.1.0"},
+		{"github.com/go-macaron/cache", cache.Version, "0.1.2"},
+		{"github.com/go-macaron/csrf", csrf.Version, "0.0.3"},
+		{"github.com/go-macaron/i18n", i18n.Version, "0.0.7"},
+		{"github.com/go-macaron/session", session.Version, "0.1.6"},
+		{"github.com/go-macaron/toolbox", toolbox.Version, "0.1.0"},
 		{"gopkg.in/ini.v1", ini.Version, "1.3.4"},
 	}
 	for _, c := range checkers {
@@ -124,7 +125,7 @@ func newMacaron() *macaron.Macaron {
 	))
 	m.Use(macaron.Renderer(macaron.RenderOptions{
 		Directory:  path.Join(setting.StaticRootPath, "templates"),
-		Funcs:      []template.FuncMap{base.TemplateFuncs},
+		Funcs:      []gotmpl.FuncMap{template.Funcs},
 		IndentJSON: macaron.Env != macaron.PROD,
 	}))
 
@@ -226,14 +227,14 @@ func runWeb(ctx *cli.Context) {
 
 			m.Group("/repos", func() {
 				m.Get("/search", v1.SearchRepos)
+			})
 
-				m.Group("", func() {
-					m.Post("/migrate", bindIgnErr(auth.MigrateRepoForm{}), v1.MigrateRepo)
-					m.Delete("/:username/:reponame", v1.DeleteRepo)
-				}, middleware.ApiReqToken())
+			m.Group("/repos", func() {
+				m.Post("/migrate", bindIgnErr(auth.MigrateRepoForm{}), v1.MigrateRepo)
+				m.Combo("/:username/:reponame").Get(v1.GetRepo).
+					Delete(v1.DeleteRepo)
 
 				m.Group("/:username/:reponame", func() {
-					m.Get("", v1.GetRepo)
 
 					m.Combo("/hooks").Get(v1.ListRepoHooks).
 						Post(bind(api.CreateHookOption{}), v1.CreateRepoHook)
@@ -253,8 +254,8 @@ func runWeb(ctx *cli.Context) {
 							Post(bindIgnErr(api.CreateReleaseOption{}), v1.CreateRelease)
 						m.Get("/:release", v1.ReleaseByName)
 					}, middleware.RepoRef())
-				}, middleware.ApiRepoAssignment(), middleware.ApiReqToken())
-			})
+				}, middleware.ApiRepoAssignment())
+			}, middleware.ApiReqToken())
 
 			m.Any("/*", func(ctx *middleware.Context) {
 				ctx.Error(404)
@@ -478,8 +479,10 @@ func runWeb(ctx *cli.Context) {
 				m.Post("/delete", repo.DeleteDeployKey)
 			})
 
+		}, func(ctx *middleware.Context) {
+			ctx.Data["PageIsSettings"] = true
 		})
-	}, reqSignIn, middleware.RepoAssignment(true), reqRepoAdmin)
+	}, reqSignIn, middleware.RepoAssignment(true), reqRepoAdmin, middleware.RepoRef())
 
 	m.Group("/:username/:reponame", func() {
 		m.Get("/action/:action", repo.Action)
@@ -527,11 +530,17 @@ func runWeb(ctx *cli.Context) {
 	}, reqSignIn, middleware.RepoAssignment(true))
 
 	m.Group("/:username/:reponame", func() {
-		m.Get("/releases", middleware.RepoRef(), repo.Releases)
-		m.Get("/^:type(issues|pulls)$", repo.RetrieveLabels, repo.Issues)
+		m.Group("", func() {
+			m.Get("/releases", repo.Releases)
+			m.Get("/^:type(issues|pulls)$", repo.RetrieveLabels, repo.Issues)
+			m.Get("/labels/", repo.RetrieveLabels, repo.Labels)
+			m.Get("/milestones", repo.Milestones)
+		}, middleware.RepoRef(),
+			func(ctx *middleware.Context) {
+				ctx.Data["PageIsList"] = true
+			})
 		m.Get("/^:type(issues|pulls)$/:index", repo.ViewIssue)
-		m.Get("/labels/", repo.RetrieveLabels, repo.Labels)
-		m.Get("/milestones", repo.Milestones)
+
 		m.Get("/branches", repo.Branches)
 		m.Get("/archive/*", repo.Download)
 
@@ -561,8 +570,8 @@ func runWeb(ctx *cli.Context) {
 		}, ignSignIn, middleware.RepoAssignment(true, true), middleware.RepoRef())
 
 		m.Group("/:reponame", func() {
-			m.Any("/*", ignSignInAndCsrf, repo.Http)
-			m.Head("/hooks/trigger", repo.TriggerHook)
+			m.Any("/*", ignSignInAndCsrf, repo.HTTP)
+			m.Head("/tasks/trigger", repo.TriggerTask)
 		})
 	})
 	// ***** END: Repository *****

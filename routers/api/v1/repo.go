@@ -5,9 +5,7 @@
 package v1
 
 import (
-	"net/url"
 	"path"
-	"strings"
 
 	"github.com/Unknwon/com"
 
@@ -108,9 +106,9 @@ func ListMyRepos(ctx *middleware.Context) {
 	}
 	numOwnRepos := len(ownRepos)
 
-	accessibleRepos, err := ctx.User.GetAccessibleRepositories()
+	accessibleRepos, err := ctx.User.GetRepositoryAccesses()
 	if err != nil {
-		ctx.APIError(500, "GetAccessibleRepositories", err)
+		ctx.APIError(500, "GetRepositoryAccesses", err)
 		return
 	}
 
@@ -244,26 +242,33 @@ func MigrateRepo(ctx *middleware.Context, form auth.MigrateRepoForm) {
 		}
 	}
 
-	// Remote address can be HTTP/HTTPS/Git URL or local path.
-	remoteAddr := form.CloneAddr
-	if strings.HasPrefix(form.CloneAddr, "http://") ||
-		strings.HasPrefix(form.CloneAddr, "https://") ||
-		strings.HasPrefix(form.CloneAddr, "git://") {
-		u, err := url.Parse(form.CloneAddr)
-		if err != nil {
-			ctx.APIError(422, "", err)
-			return
+	remoteAddr, err := form.ParseRemoteAddr(ctx.User)
+	if err != nil {
+		if models.IsErrInvalidCloneAddr(err) {
+			addrErr := err.(models.ErrInvalidCloneAddr)
+			switch {
+			case addrErr.IsURLError:
+				ctx.APIError(422, "", err)
+			case addrErr.IsPermissionDenied:
+				ctx.APIError(422, "", "You are not allowed to import local repositories.")
+			case addrErr.IsInvalidPath:
+				ctx.APIError(422, "", "Invalid local path, it does not exist or not a directory.")
+			default:
+				ctx.APIError(500, "ParseRemoteAddr", "Unknown error type (ErrInvalidCloneAddr): "+err.Error())
+			}
+		} else {
+			ctx.APIError(500, "ParseRemoteAddr", err)
 		}
-		if len(form.AuthUsername) > 0 || len(form.AuthPassword) > 0 {
-			u.User = url.UserPassword(form.AuthUsername, form.AuthPassword)
-		}
-		remoteAddr = u.String()
-	} else if !com.IsDir(remoteAddr) {
-		ctx.APIError(422, "", "Invalid local path, it does not exist or not a directory.")
 		return
 	}
 
-	repo, err := models.MigrateRepository(ctxUser, form.RepoName, form.Description, form.Private, form.Mirror, remoteAddr)
+	repo, err := models.MigrateRepository(ctxUser, models.MigrateRepoOptions{
+		Name:        form.RepoName,
+		Description: form.Description,
+		IsPrivate:   form.Private || setting.Repository.ForcePrivate,
+		IsMirror:    form.Mirror,
+		RemoteAddr:  remoteAddr,
+	})
 	if err != nil {
 		if repo != nil {
 			if errDelete := models.DeleteRepository(ctxUser.Id, repo.ID); errDelete != nil {
@@ -278,37 +283,55 @@ func MigrateRepo(ctx *middleware.Context, form auth.MigrateRepoForm) {
 	ctx.JSON(201, ToApiRepository(ctxUser, repo, api.Permission{true, true, true}))
 }
 
-func DeleteRepo(ctx *middleware.Context) {
-	user, err := models.GetUserByName(ctx.Params(":username"))
+func parseOwnerAndRepo(ctx *middleware.Context) (*models.User, *models.Repository) {
+	owner, err := models.GetUserByName(ctx.Params(":username"))
 	if err != nil {
 		if models.IsErrUserNotExist(err) {
 			ctx.APIError(422, "", err)
 		} else {
 			ctx.APIError(500, "GetUserByName", err)
 		}
-		return
+		return nil, nil
 	}
 
-	repo, err := models.GetRepositoryByName(user.Id, ctx.Params(":reponame"))
+	repo, err := models.GetRepositoryByName(owner.Id, ctx.Params(":reponame"))
 	if err != nil {
 		if models.IsErrRepoNotExist(err) {
 			ctx.Error(404)
 		} else {
 			ctx.APIError(500, "GetRepositoryByName", err)
 		}
+		return nil, nil
+	}
+
+	return owner, repo
+}
+
+func GetRepo(ctx *middleware.Context) {
+	owner, repo := parseOwnerAndRepo(ctx)
+	if ctx.Written() {
 		return
 	}
 
-	if user.IsOrganization() && !user.IsOwnedBy(ctx.User.Id) {
+	ctx.JSON(200, ToApiRepository(owner, repo, api.Permission{true, true, true}))
+}
+
+func DeleteRepo(ctx *middleware.Context) {
+	owner, repo := parseOwnerAndRepo(ctx)
+	if ctx.Written() {
+		return
+	}
+
+	if owner.IsOrganization() && !owner.IsOwnedBy(ctx.User.Id) {
 		ctx.APIError(403, "", "Given user is not owner of organization.")
 		return
 	}
 
-	if err := models.DeleteRepository(user.Id, repo.ID); err != nil {
+	if err := models.DeleteRepository(owner.Id, repo.ID); err != nil {
 		ctx.APIError(500, "DeleteRepository", err)
 		return
 	}
 
-	log.Trace("Repository deleted: %s/%s", user.Name, repo.Name)
+	log.Trace("Repository deleted: %s/%s", owner.Name, repo.Name)
 	ctx.Status(204)
 }

@@ -55,7 +55,7 @@ func SearchUsers(ctx *middleware.Context) {
 		}
 	}
 
-	ctx.Render.JSON(200, map[string]interface{}{
+	ctx.JSON(200, map[string]interface{}{
 		"ok":   true,
 		"data": results,
 	})

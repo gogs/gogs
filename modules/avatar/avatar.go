@@ -39,6 +39,8 @@ import (
 	"github.com/gogits/gogs/modules/setting"
 )
 
+//FIXME: remove cache module
+
 var gravatarSource string
 
 func UpdateGravatarSource() {
@@ -102,7 +104,7 @@ func New(hash string, cacheDir string) *Avatar {
 		expireDuration: time.Minute * 10,
 		reqParams: url.Values{
 			"d":    {"retro"},
-			"size": {"200"},
+			"size": {"290"},
 			"r":    {"pg"}}.Encode(),
 		imagePath: filepath.Join(cacheDir, hash+".image"), //maybe png or jpeg
 	}
@@ -153,7 +155,7 @@ func (this *Avatar) Encode(wr io.Writer, size int) (err error) {
 	if img, err = decodeImageFile(imgPath); err != nil {
 		return
 	}
-	m := resize.Resize(uint(size), 0, img, resize.NearestNeighbor)
+	m := resize.Resize(uint(size), 0, img, resize.Lanczos3)
 	return jpeg.Encode(wr, m, nil)
 }
 
@@ -192,7 +194,7 @@ func (this *service) mustInt(r *http.Request, defaultValue int, keys ...string) 
 func (this *service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	urlPath := r.URL.Path
 	hash := urlPath[strings.LastIndex(urlPath, "/")+1:]
-	size := this.mustInt(r, 80, "s", "size") // default size = 80*80
+	size := this.mustInt(r, 290, "s", "size") // default size = 290*290
 
 	avatar := New(hash, this.cacheDir)
 	avatar.AlterImage = this.altImage
