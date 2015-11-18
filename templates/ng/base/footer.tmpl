@@ -1,7 +1,7 @@
 		</div>
 		<footer id="footer">
 		    <div class="container clear">
-		        <p class="left" id="footer-rights">© 2015 Gogs · {{.i18n.Tr "version"}}: {{AppVer}} · {{.i18n.Tr "page"}}: <strong>{{LoadTimes .PageStartTime}}</strong> ·
+		        <p class="left" id="footer-rights">© 2015 Gogs · {{ if .ShowFooterVersion }}{{.i18n.Tr "version"}}: {{AppVer}}{{ end }} · {{.i18n.Tr "page"}}: <strong>{{LoadTimes .PageStartTime}}</strong> ·
 		            {{.i18n.Tr "template"}}: <strong>{{call .TmplLoadTimes}}</strong></p>
 
 		        <div class="right" id="footer-links">
@@ -21,7 +21,7 @@
 		                </div>
 		            </div>
 		            <a target="_blank" href="http://gogs.io">{{.i18n.Tr "website"}}</a>
-		            <span class="version">{{GoVer}}</span>
+		            {{ if .ShowVersionFooter }}<span class="version">{{GoVer}}</span>{{ end }}
 		        </div>
 		    </div>
 		</footer>
