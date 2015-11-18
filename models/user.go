@@ -373,6 +373,15 @@ func (u *User) DisplayName() string {
 	return u.Name
 }
 
+// ShortName returns shorted user name with given maximum length,
+// it adds "..." at the end if user name has more length than maximum.
+func (u *User) ShortName(length int) string {
+	if len(u.Name) < length {
+		return u.Name
+	}
+	return u.Name[:length] + "..."
+}
+
 // IsUserExist checks if given user name exist,
 // the user name should be noncased unique.
 // If uid is presented, then check will rule out that one,
