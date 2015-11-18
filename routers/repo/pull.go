@@ -45,7 +45,7 @@ func getForkRepository(ctx *middleware.Context) *models.Repository {
 	}
 
 	ctx.Data["repo_name"] = forkRepo.Name
-	ctx.Data["desc"] = forkRepo.Description
+	ctx.Data["description"] = forkRepo.Description
 	ctx.Data["IsPrivate"] = forkRepo.IsPrivate
 
 	if err = forkRepo.GetOwner(); err != nil {
