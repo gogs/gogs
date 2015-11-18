@@ -178,6 +178,7 @@ var (
 
 	// Other settings.
 	ShowFooterBranding bool
+	ShowFooterVersion  bool
 
 	// Global setting objects.
 	Cfg          *ini.File
@@ -425,6 +426,7 @@ func NewContext() {
 	dateLangs = Cfg.Section("i18n.datelang").KeysHash()
 
 	ShowFooterBranding = Cfg.Section("other").Key("SHOW_FOOTER_BRANDING").MustBool()
+	ShowFooterVersion = Cfg.Section("other").Key("SHOW_FOOTER_VERSION").MustBool()
 
 	HasRobotsTxt = com.IsFile(path.Join(CustomPath, "robots.txt"))
 }
