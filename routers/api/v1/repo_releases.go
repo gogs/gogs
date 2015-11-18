@@ -18,7 +18,7 @@ import (
 func ToApiRelease(release *models.Release) *api.Release {
 
 	return &api.Release{
-		ID:                		release.Id,
+		ID:                		release.ID,
 		Publisher:            	*ToApiUser(release.Publisher),
 		TagName:            	release.TagName,
 		LowerTagName:        	release.LowerTagName,
@@ -56,7 +56,7 @@ func ListReleases(ctx *middleware.Context) {
 				continue
 			}
 			if rel.TagName == rawTag {
-				rel.Publisher, err = models.GetUserByID(rel.PublisherId)
+				rel.Publisher, err = models.GetUserByID(rel.PublisherID)
 				if err != nil {
 					ctx.Handle(500, "GetUserById", err)
 					return
@@ -99,10 +99,10 @@ func ListReleases(ctx *middleware.Context) {
 			tags[i] = &api.Release{
 				Title:   rawTag,
 				TagName: rawTag,
-				Sha1:    commit.Id.String(),
+				Sha1:    commit.ID.String(),
 			}
 
-			tags[i].NumCommits, err = ctx.Repo.GitRepo.CommitsCount(commit.Id.String())
+			tags[i].NumCommits, err = ctx.Repo.GitRepo.CommitsCount(commit.ID.String())
 			if err != nil {
 				ctx.Handle(500, "CommitsCount", err)
 				return
@@ -116,7 +116,7 @@ func ListReleases(ctx *middleware.Context) {
 			continue
 		}
 
-		rel.Publisher, err = models.GetUserByID(rel.PublisherId)
+		rel.Publisher, err = models.GetUserByID(rel.PublisherID)
 		if err != nil {
 			ctx.Handle(500, "GetUserById", err)
 			return
@@ -157,7 +157,7 @@ func ReleaseByName(ctx *middleware.Context) {
 		return
 	}
 
-	publisher, err := models.GetUserByID(rel.PublisherId)
+	publisher, err := models.GetUserByID(rel.PublisherID)
 	if err != nil {
 		if models.IsErrUserNotExist(err) {
 			publisher = models.NewFakeUser()
@@ -191,13 +191,13 @@ func CreateRelease(ctx *middleware.Context, form api.CreateReleaseOption) {
 	}
 
 	rel := &models.Release{
-		RepoId:       ctx.Repo.Repository.ID,
+		RepoID:       ctx.Repo.Repository.ID,
 		Publisher:    ctx.User,
-		PublisherId:  ctx.User.Id,
+		PublisherID:  ctx.User.Id,
 		Title:        form.Title,
 		TagName:      form.TagName,
 		Target:       form.Target,
-		Sha1:         commit.Id.String(),
+		Sha1:         commit.ID.String(),
 		NumCommits:   commitsCount,
 		Note:         form.Note,
 		IsDraft:      form.IsDraft,

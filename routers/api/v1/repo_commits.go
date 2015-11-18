@@ -11,7 +11,7 @@ import (
 	"github.com/gogits/gogs/modules/git"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/middleware"
-	"github.com/gogits/gogs/modules/base"
+	"github.com/gogits/gogs/modules/template"
 )
 
 func ToApiSignature(signature *git.Signature) *api.Signature {
@@ -24,7 +24,7 @@ func ToApiSignature(signature *git.Signature) *api.Signature {
 
 func ToApiCommit(commit *git.Commit) *api.Commit {
 	return &api.Commit{
-		ID:                commit.Id.String(),
+		ID:                commit.ID.String(),
 		Author:            *ToApiSignature(commit.Author),
 		Committer:         *ToApiSignature(commit.Committer),
 		CommitMessage:     commit.CommitMessage,
@@ -33,7 +33,7 @@ func ToApiCommit(commit *git.Commit) *api.Commit {
 
 func HEADCommit(ctx *middleware.Context) {
 	ctx.JSON(200, &api.Sha1{
-		Sha1: ctx.Repo.Commit.Id.String(),
+		Sha1: ctx.Repo.Commit.ID.String(),
 	})
 }
 
@@ -95,7 +95,7 @@ func ToApiDiffFile(diffFile *models.DiffFile) *api.DiffFile {
 		Index:              diffFile.Index,
 		Addition:           diffFile.Addition,
 		Deletion:           diffFile.Deletion,
-		Type:               base.DiffTypeToStr(diffFile.Type),
+		Type:               template.DiffTypeToStr(diffFile.Type),
 		IsCreated:          diffFile.IsCreated,
 		IsDeleted:          diffFile.IsDeleted,
 		IsBin:              diffFile.IsBin,
@@ -130,7 +130,7 @@ func ToApiDiffLine(diffLine *models.DiffLine) *api.DiffLine {
 	return &api.DiffLine{
 		LeftIdx:  diffLine.LeftIdx,
 		RightIdx: diffLine.RightIdx,
-		Type:     base.DiffLineTypeToStr(diffLine.Type),
+		Type:     template.DiffLineTypeToStr(diffLine.Type),
 		Content:  diffLine.Content,
 	}
 }
