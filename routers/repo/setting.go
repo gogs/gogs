@@ -85,6 +85,12 @@ func SettingsPost(ctx *middleware.Context, form auth.RepoSettingForm) {
 		}
 		repo.Description = form.Description
 		repo.Website = form.Website
+
+		// Visibility of forked repository is forced sync with base repository.
+		if repo.IsFork {
+			form.Private = repo.BaseRepo.IsPrivate
+		}
+
 		visibilityChanged := repo.IsPrivate != form.Private
 		repo.IsPrivate = form.Private
 		if err := models.UpdateRepository(repo, visibilityChanged); err != nil {
