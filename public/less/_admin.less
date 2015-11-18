@@ -10,8 +10,8 @@
 			padding-bottom: 5px;
 		}
 		th, td {
-			&:first-child {
-				padding-left: 15px;
+			&:first-of-type {
+				padding-left: 15px !important;
 			}
 		}
 	}
@@ -26,17 +26,10 @@
 		}
 	}
     
-    .admin-desc {
-    	padding: 20px;
-    }
-    .admin-table{
-        .table{
-		width: 100%;
-        }
-    }
-    dl.admin-dl-horizontal {
-    	padding: 20px;
-	margin: 0;
+  dl.admin-dl-horizontal {
+  	padding: 20px;
+		margin: 0;
+
 		dd{
 			margin-left: 240px;
 		}
