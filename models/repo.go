@@ -1325,6 +1325,42 @@ func DeleteRepositoryArchives() error {
 		})
 }
 
+// DeleteMissingRepositories deletes all repository records that lost Git files.
+func DeleteMissingRepositories() error {
+	repos := make([]*Repository, 0, 5)
+	if err := x.Where("id > 0").Iterate(new(Repository),
+		func(idx int, bean interface{}) error {
+			repo := bean.(*Repository)
+			repoPath, err := repo.RepoPath()
+			if err != nil {
+				return fmt.Errorf("RepoPath [%d]: %v", repo.ID, err)
+			}
+
+			if !com.IsDir(repoPath) {
+				repos = append(repos, repo)
+			}
+			return nil
+		}); err != nil {
+		if err2 := CreateRepositoryNotice(fmt.Sprintf("DeleteMissingRepositories: %v", err)); err2 != nil {
+			log.Error(4, "CreateRepositoryNotice: %v", err2)
+		}
+		return nil
+	}
+
+	if len(repos) == 0 {
+		return nil
+	}
+
+	for _, repo := range repos {
+		if err := DeleteRepository(repo.OwnerID, repo.ID); err != nil {
+			if err2 := CreateRepositoryNotice(fmt.Sprintf("DeleteRepository [%d]: %v", repo.ID, err)); err2 != nil {
+				log.Error(4, "CreateRepositoryNotice: %v", err2)
+			}
+		}
+	}
+	return nil
+}
+
 // RewriteRepositoryUpdateHook rewrites all repositories' update hook.
 func RewriteRepositoryUpdateHook() error {
 	return x.Where("id > 0").Iterate(new(Repository),

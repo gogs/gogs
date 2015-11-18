@@ -116,6 +116,7 @@ type AdminOperation int
 const (
 	CLEAN_INACTIVATE_USER AdminOperation = iota + 1
 	CLEAN_REPO_ARCHIVES
+	CLEAN_MISSING_REPOS
 	GIT_GC_REPOS
 	SYNC_SSH_AUTHORIZED_KEY
 	SYNC_REPOSITORY_UPDATE_HOOK
@@ -139,6 +140,9 @@ func Dashboard(ctx *middleware.Context) {
 		case CLEAN_REPO_ARCHIVES:
 			success = ctx.Tr("admin.dashboard.delete_repo_archives_success")
 			err = models.DeleteRepositoryArchives()
+		case CLEAN_MISSING_REPOS:
+			success = ctx.Tr("admin.dashboard.delete_missing_repos_success")
+			err = models.DeleteMissingRepositories()
 		case GIT_GC_REPOS:
 			success = ctx.Tr("admin.dashboard.git_gc_repos_success")
 			err = models.GitGcRepos()
