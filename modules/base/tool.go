@@ -299,45 +299,59 @@ func timeSince(then time.Time, lang string) string {
 		lbl = i18n.Tr(lang, "tool.from_now")
 		diff = then.Unix() - now.Unix()
 	}
+	langTr, diffNum := "", int64(0)
 
 	switch {
 	case diff <= 0:
-		return i18n.Tr(lang, "tool.now")
+		langTr = "tool.now"
 	case diff <= 2:
-		return i18n.Tr(lang, "tool.1s", lbl)
+		langTr = "tool.1s"
 	case diff < 1*Minute:
-		return i18n.Tr(lang, "tool.seconds", diff, lbl)
+		langTr, diffNum = "tool.seconds", diff
 
 	case diff < 2*Minute:
-		return i18n.Tr(lang, "tool.1m", lbl)
+		langTr = "tool.1m"
 	case diff < 1*Hour:
-		return i18n.Tr(lang, "tool.minutes", diff/Minute, lbl)
+		langTr, diffNum = "tool.minutes", diff/Minute
 
 	case diff < 2*Hour:
-		return i18n.Tr(lang, "tool.1h", lbl)
+		langTr = "tool.1h"
 	case diff < 1*Day:
-		return i18n.Tr(lang, "tool.hours", diff/Hour, lbl)
+		langTr, diffNum = "tool.hours", diff/Hour
 
 	case diff < 2*Day:
-		return i18n.Tr(lang, "tool.1d", lbl)
+		langTr = "tool.1d"
 	case diff < 1*Week:
-		return i18n.Tr(lang, "tool.days", diff/Day, lbl)
+		langTr, diffNum = "tool.days", diff/Day
 
 	case diff < 2*Week:
-		return i18n.Tr(lang, "tool.1w", lbl)
+		langTr = "tool.1w"
 	case diff < 1*Month:
-		return i18n.Tr(lang, "tool.weeks", diff/Week, lbl)
+		langTr, diffNum = "tool.weeks", diff/Week
 
 	case diff < 2*Month:
-		return i18n.Tr(lang, "tool.1mon", lbl)
+		langTr = "tool.1mon"
 	case diff < 1*Year:
-		return i18n.Tr(lang, "tool.months", diff/Month, lbl)
+		langTr, diffNum = "tool.months", diff/Month
 
 	case diff < 2*Year:
-		return i18n.Tr(lang, "tool.1y", lbl)
+		langTr = "tool.1y"
 	default:
-		return i18n.Tr(lang, "tool.years", diff/Year, lbl)
+		langTr, diffNum = "tool.years", diff/Year
 	}
+
+	if diffNum == 0 {
+		return i18n.Tr(lang, langTr, lbl)
+	}
+
+	// check for formatting error as in "%!s(int64=5) %!d(string=hace) segundos"
+	retval := i18n.Tr(lang, langTr, diffNum, lbl)
+	if strings.Index(retval, "%!s") < 0 {
+		return retval
+	}
+
+	// on error swap params diffNum <-> lbl
+	return i18n.Tr(lang, langTr, lbl, diffNum)
 }
 
 func RawTimeSince(t time.Time, lang string) string {
