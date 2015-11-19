@@ -254,7 +254,7 @@ func ActivateEmail(ctx *middleware.Context) {
 		}
 
 		log.Trace("Email activated: %s", email.Email)
-		ctx.Flash.Success(ctx.Tr("settings.add_email_successs"))
+		ctx.Flash.Success(ctx.Tr("settings.add_email_success"))
 	}
 
 	ctx.Redirect(setting.AppSubUrl + "/user/settings/email")
