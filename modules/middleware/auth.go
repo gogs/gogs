@@ -110,13 +110,13 @@ func Toggle(options *ToggleOptions) macaron.Handler {
 		}
 
 		// Try auto-signin when not signed in.
-		if !ctx.IsSigned {
+		if !options.SignOutRequire && !ctx.IsSigned && !auth.IsAPIPath(ctx.Req.URL.Path) {
 			succeed, err := AutoSignIn(ctx)
 			if err != nil {
 				ctx.Handle(500, "AutoSignIn", err)
 				return
 			} else if succeed {
-				ctx.Redirect(ctx.Req.URL.Path)
+				ctx.Redirect(setting.AppSubUrl + ctx.Req.RequestURI)
 				return
 			}
 		}
