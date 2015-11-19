@@ -109,6 +109,18 @@ func Toggle(options *ToggleOptions) macaron.Handler {
 			}
 		}
 
+		// Try auto-signin when not signed in.
+		if !ctx.IsSigned {
+			succeed, err := AutoSignIn(ctx)
+			if err != nil {
+				ctx.Handle(500, "AutoSignIn", err)
+				return
+			} else if succeed {
+				ctx.Redirect(ctx.Req.URL.Path)
+				return
+			}
+		}
+
 		if options.AdminRequire {
 			if !ctx.User.IsAdmin {
 				ctx.Error(403)
