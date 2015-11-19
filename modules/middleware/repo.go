@@ -274,19 +274,23 @@ func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 			return
 		}
 
-		mode, err := models.AccessLevel(ctx.User, repo)
-		if err != nil {
-			ctx.Handle(500, "AccessLevel", err)
-			return
+		// Admin has super access.
+		if ctx.User.IsAdmin {
+			ctx.Repo.AccessMode = models.ACCESS_MODE_OWNER
+		} else {
+			mode, err := models.AccessLevel(ctx.User, repo)
+			if err != nil {
+				ctx.Handle(500, "AccessLevel", err)
+				return
+			}
+			ctx.Repo.AccessMode = mode
 		}
-		ctx.Repo.AccessMode = mode
 
 		// Check access.
 		if ctx.Repo.AccessMode == models.ACCESS_MODE_NONE {
 			ctx.Handle(404, "no access right", err)
 			return
 		}
-
 		ctx.Data["HasAccess"] = true
 
 		if repo.IsMirror {
