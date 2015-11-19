@@ -37,7 +37,7 @@ func parsePrettyFormatLog(repo *Repository, logByts []byte) (*list.List, error) 
 func RefEndName(refStr string) string {
 	if strings.HasPrefix(refStr, "refs/heads/") {
 		// trim the "refs/heads/"
-		return return refStr[11:]
+		return refStr[len("refs/heads/"):]
 	}
 
 	index := strings.LastIndex(refStr, "/")
