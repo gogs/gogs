@@ -114,6 +114,19 @@ func (err ErrUserHasOrgs) Error() string {
 //  |____|   |____/|___  /____/__|\___  > |____|__ \___  > ____|
 //                     \/             \/          \/   \/\/
 
+type ErrKeyUnableVerify struct {
+	Result string
+}
+
+func IsErrKeyUnableVerify(err error) bool {
+	_, ok := err.(ErrKeyUnableVerify)
+	return ok
+}
+
+func (err ErrKeyUnableVerify) Error() string {
+	return fmt.Sprintf("Unable to verify key content [result: %s]", err.Result)
+}
+
 type ErrKeyNotExist struct {
 	ID int64
 }
@@ -153,6 +166,21 @@ func IsErrKeyNameAlreadyUsed(err error) bool {
 
 func (err ErrKeyNameAlreadyUsed) Error() string {
 	return fmt.Sprintf("public key already exists [owner_id: %d, name: %s]", err.OwnerID, err.Name)
+}
+
+type ErrDeployKeyNotExist struct {
+	ID     int64
+	KeyID  int64
+	RepoID int64
+}
+
+func IsErrDeployKeyNotExist(err error) bool {
+	_, ok := err.(ErrDeployKeyNotExist)
+	return ok
+}
+
+func (err ErrDeployKeyNotExist) Error() string {
+	return fmt.Sprintf("Deploy key does not exist [id: %d, key_id: %d, repo_id: %d]", err.ID, err.KeyID, err.RepoID)
 }
 
 type ErrDeployKeyAlreadyExist struct {

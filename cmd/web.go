@@ -238,6 +238,13 @@ func runWeb(ctx *cli.Context) {
 					m.Patch("/hooks/:id:int", bind(api.EditHookOption{}), v1.EditRepoHook)
 					m.Get("/raw/*", middleware.RepoRef(), v1.GetRepoRawFile)
 					m.Get("/archive/*", v1.GetRepoArchive)
+
+					m.Group("/keys", func() {
+						m.Combo("").Get(v1.ListRepoDeployKeys).
+							Post(bind(api.CreateDeployKeyOption{}), v1.CreateRepoDeployKey)
+						m.Combo("/:id").Get(v1.GetRepoDeployKey).
+							Delete(v1.DeleteRepoDeploykey)
+					})
 				}, middleware.ApiRepoAssignment())
 			}, middleware.ApiReqToken())
 

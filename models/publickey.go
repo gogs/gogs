@@ -32,10 +32,6 @@ const (
 	_TPL_PUBLICK_KEY = `command="%s serv key-%d --config='%s'",no-port-forwarding,no-X11-forwarding,no-agent-forwarding,no-pty %s` + "\n"
 )
 
-var (
-	ErrKeyUnableVerify = errors.New("Unable to verify public key")
-)
-
 var sshOpLocker = sync.Mutex{}
 var SSHPath string // SSH directory.
 
@@ -211,7 +207,7 @@ func CheckPublicKeyString(content string) (_ string, err error) {
 
 	sshKeygenOutput := strings.Split(stdout, " ")
 	if len(sshKeygenOutput) < 4 {
-		return content, ErrKeyUnableVerify
+		return content, ErrKeyUnableVerify{stdout}
 	}
 
 	// Check if key type and key size match.
@@ -523,6 +519,7 @@ type DeployKey struct {
 	RepoID            int64 `xorm:"UNIQUE(s) INDEX"`
 	Name              string
 	Fingerprint       string
+	Content           string    `xorm:"-"`
 	Created           time.Time `xorm:"CREATED"`
 	Updated           time.Time // Note: Updated must below Created for AfterSet.
 	HasRecentActivity bool      `xorm:"-"`
@@ -535,6 +532,16 @@ func (k *DeployKey) AfterSet(colName string, _ xorm.Cell) {
 		k.HasUsed = k.Updated.After(k.Created)
 		k.HasRecentActivity = k.Updated.Add(7 * 24 * time.Hour).After(time.Now())
 	}
+}
+
+// GetContent gets associated public key content.
+func (k *DeployKey) GetContent() error {
+	pkey, err := GetPublicKeyByID(k.KeyID)
+	if err != nil {
+		return err
+	}
+	k.Content = pkey.Content
+	return nil
 }
 
 func checkDeployKey(e Engine, keyID, repoID int64, name string) error {
@@ -557,18 +564,19 @@ func checkDeployKey(e Engine, keyID, repoID int64, name string) error {
 }
 
 // addDeployKey adds new key-repo relation.
-func addDeployKey(e *xorm.Session, keyID, repoID int64, name, fingerprint string) (err error) {
-	if err = checkDeployKey(e, keyID, repoID, name); err != nil {
-		return err
+func addDeployKey(e *xorm.Session, keyID, repoID int64, name, fingerprint string) (*DeployKey, error) {
+	if err := checkDeployKey(e, keyID, repoID, name); err != nil {
+		return nil, err
 	}
 
-	_, err = e.Insert(&DeployKey{
+	key := &DeployKey{
 		KeyID:       keyID,
 		RepoID:      repoID,
 		Name:        name,
 		Fingerprint: fingerprint,
-	})
-	return err
+	}
+	_, err := e.Insert(key)
+	return key, err
 }
 
 // HasDeployKey returns true if public key is a deploy key of given repository.
@@ -578,39 +586,52 @@ func HasDeployKey(keyID, repoID int64) bool {
 }
 
 // AddDeployKey add new deploy key to database and authorized_keys file.
-func AddDeployKey(repoID int64, name, content string) (err error) {
-	if err = checkKeyContent(content); err != nil {
-		return err
+func AddDeployKey(repoID int64, name, content string) (*DeployKey, error) {
+	if err := checkKeyContent(content); err != nil {
+		return nil, err
 	}
 
-	key := &PublicKey{
+	pkey := &PublicKey{
 		Content: content,
 		Mode:    ACCESS_MODE_READ,
 		Type:    KEY_TYPE_DEPLOY,
 	}
-	has, err := x.Get(key)
+	has, err := x.Get(pkey)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	sess := x.NewSession()
 	defer sessionRelease(sess)
 	if err = sess.Begin(); err != nil {
-		return err
+		return nil, err
 	}
 
 	// First time use this deploy key.
 	if !has {
-		if err = addKey(sess, key); err != nil {
-			return nil
+		if err = addKey(sess, pkey); err != nil {
+			return nil, fmt.Errorf("addKey: %v", err)
 		}
 	}
 
-	if err = addDeployKey(sess, key.ID, repoID, name, key.Fingerprint); err != nil {
-		return err
+	key, err := addDeployKey(sess, pkey.ID, repoID, name, pkey.Fingerprint)
+	if err != nil {
+		return nil, fmt.Errorf("addDeployKey: %v", err)
 	}
 
-	return sess.Commit()
+	return key, sess.Commit()
+}
+
+// GetDeployKeyByID returns deploy key by given ID.
+func GetDeployKeyByID(id int64) (*DeployKey, error) {
+	key := new(DeployKey)
+	has, err := x.Id(id).Get(key)
+	if err != nil {
+		return nil, err
+	} else if !has {
+		return nil, ErrDeployKeyNotExist{id, 0, 0}
+	}
+	return key, nil
 }
 
 // GetDeployKeyByRepo returns deploy key by given public key ID and repository ID.
@@ -619,8 +640,13 @@ func GetDeployKeyByRepo(keyID, repoID int64) (*DeployKey, error) {
 		KeyID:  keyID,
 		RepoID: repoID,
 	}
-	_, err := x.Get(key)
-	return key, err
+	has, err := x.Get(key)
+	if err != nil {
+		return nil, err
+	} else if !has {
+		return nil, ErrDeployKeyNotExist{0, keyID, repoID}
+	}
+	return key, nil
 }
 
 // UpdateDeployKey updates deploy key information.
