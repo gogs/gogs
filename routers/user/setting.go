@@ -286,7 +286,7 @@ func SettingsSSHKeysPost(ctx *middleware.Context, form auth.AddSSHKeyForm) {
 
 	content, err := models.CheckPublicKeyString(form.Content)
 	if err != nil {
-		if err == models.ErrKeyUnableVerify {
+		if models.IsErrKeyUnableVerify(err) {
 			ctx.Flash.Info(ctx.Tr("form.unable_verify_ssh_key"))
 		} else {
 			ctx.Flash.Error(ctx.Tr("form.invalid_ssh_key", err.Error()))
