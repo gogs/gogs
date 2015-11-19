@@ -40,8 +40,9 @@ func SignIn(ctx *middleware.Context) {
 		if redirectTo, _ := url.QueryUnescape(ctx.GetCookie("redirect_to")); len(redirectTo) > 0 {
 			ctx.SetCookie("redirect_to", "", -1, setting.AppSubUrl)
 			ctx.Redirect(redirectTo)
+		} else {
+			ctx.Redirect(setting.AppSubUrl + "/")
 		}
-		ctx.Redirect(setting.AppSubUrl + "/")
 		return
 	}
 
