@@ -80,8 +80,15 @@ func SettingsPost(ctx *middleware.Context, form auth.RepoSettingForm) {
 		repo.Name = newRepoName
 		repo.LowerName = strings.ToLower(newRepoName)
 
-		if ctx.Repo.GitRepo.IsBranchExist(form.Branch) {
+		if ctx.Repo.GitRepo.IsBranchExist(form.Branch) &&
+			repo.DefaultBranch != form.Branch {
 			repo.DefaultBranch = form.Branch
+			if err := ctx.Repo.GitRepo.SetDefaultBranch(form.Branch); err != nil {
+				if !git.IsErrUnsupportedVersion(err) {
+					ctx.Handle(500, "SetDefaultBranch", err)
+					return
+				}
+			}
 		}
 		repo.Description = form.Description
 		repo.Website = form.Website
