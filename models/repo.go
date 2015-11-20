@@ -17,6 +17,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 	"unicode/utf8"
 
@@ -1377,20 +1378,54 @@ func RewriteRepositoryUpdateHook() error {
 		})
 }
 
-var (
-	// Prevent duplicate running tasks.
-	isMirrorUpdating = false
-	isGitFscking     = false
-	isCheckingRepos  = false
+// statusPool represents a pool of status with true/false.
+type statusPool struct {
+	lock sync.RWMutex
+	pool map[string]bool
+}
+
+// Start sets value of given name to true in the pool.
+func (p *statusPool) Start(name string) {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+
+	p.pool[name] = true
+}
+
+// Stop sets value of given name to false in the pool.
+func (p *statusPool) Stop(name string) {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+
+	p.pool[name] = false
+}
+
+// IsRunning checks if value of given name is set to true in the pool.
+func (p *statusPool) IsRunning(name string) bool {
+	p.lock.RLock()
+	defer p.lock.RUnlock()
+
+	return p.pool[name]
+}
+
+// Prevent duplicate running tasks.
+var taskStatusPool = &statusPool{
+	pool: make(map[string]bool),
+}
+
+const (
+	_MIRROR_UPDATE = "mirror_update"
+	_GIT_FSCK      = "git_fsck"
+	_CHECK_REPOs   = "check_repos"
 )
 
 // MirrorUpdate checks and updates mirror repositories.
 func MirrorUpdate() {
-	if isMirrorUpdating {
+	if taskStatusPool.IsRunning(_MIRROR_UPDATE) {
 		return
 	}
-	isMirrorUpdating = true
-	defer func() { isMirrorUpdating = false }()
+	taskStatusPool.Start(_MIRROR_UPDATE)
+	defer taskStatusPool.Stop(_MIRROR_UPDATE)
 
 	log.Trace("Doing: MirrorUpdate")
 
@@ -1438,11 +1473,11 @@ func MirrorUpdate() {
 
 // GitFsck calls 'git fsck' to check repository health.
 func GitFsck() {
-	if isGitFscking {
+	if taskStatusPool.IsRunning(_GIT_FSCK) {
 		return
 	}
-	isGitFscking = true
-	defer func() { isGitFscking = false }()
+	taskStatusPool.Start(_GIT_FSCK)
+	defer taskStatusPool.Stop(_GIT_FSCK)
 
 	log.Trace("Doing: GitFsck")
 
@@ -1507,11 +1542,11 @@ func repoStatsCheck(checker *repoChecker) {
 }
 
 func CheckRepoStats() {
-	if isCheckingRepos {
+	if taskStatusPool.IsRunning(_CHECK_REPOs) {
 		return
 	}
-	isCheckingRepos = true
-	defer func() { isCheckingRepos = false }()
+	taskStatusPool.Start(_CHECK_REPOs)
+	defer taskStatusPool.Stop(_CHECK_REPOs)
 
 	log.Trace("Doing: CheckRepoStats")
 

@@ -28,6 +28,28 @@ type Tree struct {
 	entriesParsed bool
 }
 
+var escapeChar = []byte("\\")
+
+func unescapeChars(in []byte) []byte {
+	if bytes.Index(in, escapeChar) == -1 {
+		return in
+	}
+
+	endIdx := len(in) - 1
+	isEscape := false
+	out := make([]byte, 0, endIdx+1)
+	for i := range in {
+		if in[i] == '\\' && i != endIdx {
+			isEscape = !isEscape
+			if isEscape {
+				continue
+			}
+		}
+		out = append(out, in[i])
+	}
+	return out
+}
+
 // Parse tree information from the (uncompressed) raw
 // data from the tree object.
 func parseTreeData(tree *Tree, data []byte) ([]*TreeEntry, error) {
@@ -74,8 +96,7 @@ func parseTreeData(tree *Tree, data []byte) ([]*TreeEntry, error) {
 
 		// In case entry name is surrounded by double quotes(it happens only in git-shell).
 		if entry.name[0] == '"' {
-			entry.name = string(data[pos+1 : pos+step-1])
-			entry.name = strings.Replace(entry.name, `\"`, `"`, -1)
+			entry.name = string(unescapeChars(data[pos+1 : pos+step-1]))
 		}
 
 		pos += step + 1
