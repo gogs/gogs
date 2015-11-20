@@ -29,7 +29,8 @@ Gogs - Go Git Service [![Build Status](https://travis-ci.org/gogits/gogs.svg?bra
 
 - Due to testing purpose, data of [try.gogs.io](https://try.gogs.io) has been reset in **Jan 28, 2015** and will reset multiple times after. Please do **NOT** put your important data on the site.
 - The demo site [try.gogs.io](https://try.gogs.io) is running under `develop` branch.
-- :bangbang:<span style="color: red">You **MUST** read [CONTRIBUTING.md](CONTRIBUTING.md) before you start filing an issue or making a Pull Request, and **MUST** discuss with us on [Gitter](https://gitter.im/gogits/gogs) for UI changes and feature Pull Requests, otherwise it's high possibilities that we are not going to merge it.</span>:bangbang:
+- :bangbang:<span style="color: red">You **MUST** read [CONTRIBUTING.md](CONTRIBUTING.md) before you start filing an issue or making a Pull Request, and **MUST** discuss with us on [Gitter](https://gitter.im/gogits/gogs) for UI changes, otherwise it's high possibilities that we are not going to merge it.</span>:bangbang:
+- Please [start discussion](http://forum.gogs.io/category/2/general-discussion) or [ask a question](http://forum.gogs.io/category/4/getting-help) on [the forum](http://forum.gogs.io/). GitHub issue tracker only keeps **bugs** and **feature requests**, all other topics will be closed without reason.
 - If you think there are vulnerabilities in the project, please talk privately to **u@gogs.io**. Thanks!
 - If you're interested in using APIs, we have experimental support with [documentation](https://github.com/gogits/go-gogs-client/wiki).
 - If your team/company is using Gogs and would like to put your logo on [our website](http://gogs.io), contact us by any means.
