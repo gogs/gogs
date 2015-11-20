@@ -514,6 +514,7 @@ func runWeb(ctx *cli.Context) {
 			m.Post("/new", bindIgnErr(auth.NewReleaseForm{}), repo.NewReleasePost)
 			m.Get("/edit/:tagname", repo.EditRelease)
 			m.Post("/edit/:tagname", bindIgnErr(auth.EditReleaseForm{}), repo.EditReleasePost)
+			m.Post("/delete", repo.DeleteRelease)
 		}, reqRepoAdmin, middleware.RepoRef())
 
 		m.Combo("/compare/*").Get(repo.CompareAndPullRequest).

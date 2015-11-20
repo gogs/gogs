@@ -27,9 +27,9 @@ func Releases(ctx *middleware.Context) {
 		return
 	}
 
-	rels, err := models.GetReleasesByRepoId(ctx.Repo.Repository.ID)
+	rels, err := models.GetReleasesByRepoID(ctx.Repo.Repository.ID)
 	if err != nil {
-		ctx.Handle(500, "GetReleasesByRepoId", err)
+		ctx.Handle(500, "GetReleasesByRepoID", err)
 		return
 	}
 
@@ -212,6 +212,7 @@ func EditRelease(ctx *middleware.Context) {
 		}
 		return
 	}
+	ctx.Data["ID"] = rel.ID
 	ctx.Data["tag_name"] = rel.TagName
 	ctx.Data["tag_target"] = rel.Target
 	ctx.Data["title"] = rel.Title
@@ -256,4 +257,16 @@ func EditReleasePost(ctx *middleware.Context, form auth.EditReleaseForm) {
 		return
 	}
 	ctx.Redirect(ctx.Repo.RepoLink + "/releases")
+}
+
+func DeleteRelease(ctx *middleware.Context) {
+	if err := models.DeleteReleaseByID(ctx.QueryInt64("id")); err != nil {
+		ctx.Flash.Error("DeleteReleaseByID: " + err.Error())
+	} else {
+		ctx.Flash.Success(ctx.Tr("repo.release.deletion_success"))
+	}
+
+	ctx.JSON(200, map[string]interface{}{
+		"redirect": ctx.Repo.RepoLink + "/releases",
+	})
 }
