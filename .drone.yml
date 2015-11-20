@@ -1,0 +1,73 @@
+cache:
+  mounts:
+    - /drone/.gopm
+
+build:
+  general:
+    image: golang:1.5
+    environment:
+      - TAGS=pam sqlite cert
+      - HOME=/drone
+    commands:
+      - apt-get update -qq && apt-get install -y libpam-dev zip
+      - make deps
+      - make test
+      - make build
+
+  release:
+    image: golang:1.5
+    environment:
+      - TAGS=pam sqlite cert
+    commands:
+      - apt-get update -qq && apt-get install -y libpam-dev zip
+      - make release
+    when:
+      repo: gogits/gogs
+      branch: master
+
+publish:
+  github_release:
+    api_key: $$GITHUB_TOKEN
+    files:
+      - dist/*.tgz
+      - dist/*.zip
+    when:
+      repo: gogits/gogs
+      event: tag
+
+  docker:
+    username: $$DOCKER_USERNAME
+    password: $$DOCKER_PASSWORD
+    email: $$DOCKER_EMAIL
+    repo: gogs/gogs
+    tag: $${TAG##v}
+    when:
+      repo: gogits/gogs
+      event: tag
+
+  docker:
+    username: $$DOCKER_USERNAME
+    password: $$DOCKER_PASSWORD
+    email: $$DOCKER_EMAIL
+    repo: gogs/gogs
+    tag: $${BRANCH/master/latest}
+    when:
+      repo: gogits/gogs
+      branch: [develop, master]
+
+notify:
+  gitter:
+    webhook: https://webhooks.gitter.im/e/c52d2013f36e28b35f71
+    when:
+      repo: gogits/gogs
+
+  email:
+    host: $$EMAIL_HOST
+    port: $$EMAIL_PORT
+    username: $$EMAIL_USERNAME
+    password: $$EMAIL_PASSWORD
+    from: drone@gogs.io
+    recipients:
+      - u@gogs.io
+    when:
+      repo: gogits/gogs

@@ -1,39 +1,63 @@
 LDFLAGS += -X "github.com/gogits/gogs/modules/setting.BuildTime=$(shell date -u '+%Y-%m-%d %I:%M:%S %Z')"
 LDFLAGS += -X "github.com/gogits/gogs/modules/setting.BuildGitHash=$(shell git rev-parse HEAD)"
 
-DATA_FILES := $(shell find conf | sed 's/ /\\ /g')
-LESS_FILES := $(wildcard public/less/gogs.less public/less/_*.less)
-GENERATED  := modules/bindata/bindata.go public/css/gogs.css
+DATA_FILES ?= $(shell find conf | sed 's/ /\\ /g')
+LESS_FILES ?= $(wildcard public/less/gogs.less public/less/_*.less)
 
-TAGS = ""
+GENERATED ?= modules/bindata/bindata.go public/css/gogs.css
 
-RELEASE_ROOT = "release"
-RELEASE_GOGS = "release/gogs"
-NOW = $(shell date -u '+%Y%m%d%I%M%S')
+TAGS ?=
 
-.PHONY: build pack release bindata clean
+DIST := dist
+BIN := bin
+FILES := templates public scripts LICENSE README.md README_ZH.md
 
+RELEASES ?= $(DIST)/gogs-linux-amd64.tgz \
+	$(DIST)/gogs-linux-386.tgz \
+	$(DIST)/gogs-linux-arm.tgz \
+	$(DIST)/gogs-darwin-amd64.tgz \
+	$(DIST)/gogs-darwin-386.tgz \
+	$(DIST)/gogs-darwin-arm.tgz \
+	$(DIST)/gogs-freebsd-amd64.tgz \
+	$(DIST)/gogs-freebsd-386.tgz \
+	$(DIST)/gogs-freebsd-arm.tgz \
+	$(DIST)/gogs-openbsd-amd64.tgz \
+	$(DIST)/gogs-openbsd-386.tgz \
+	$(DIST)/gogs-openbsd-arm.tgz \
+	$(DIST)/gogs-windows-amd64.zip \
+	$(DIST)/gogs-windows-386.zip
+
+.PHONY: clean test deps gofmt govet build install
 .IGNORE: public/css/gogs.css
 
-build: $(GENERATED)
-	go install -v -ldflags '$(LDFLAGS)' -tags '$(TAGS)'
-	cp '$(GOPATH)/bin/gogs' .
+clean:
+	go clean -i ./...
+	rm -rf $(BIN) $(DIST)
+
+test:
+	go test -tags '$(TAGS)' -cover -race ./...
+
+deps:
+	go get -u github.com/gpmgo/gopm
+	gopm get --tags '$(TAGS)' -g -v # go get -tags '$(TAGS)' -d -t ./...
+
+gofmt:
+	go fmt ./...
 
 govet:
 	go tool vet -composites=false -methods=false -structtags=false .
 
-build-dev: $(GENERATED) govet
-	go install -v -race -tags '$(TAGS)'
-	cp '$(GOPATH)/bin/gogs' .
+build: install
+	cp $(GOPATH)/bin/gogs .
 
-pack:
-	rm -rf $(RELEASE_GOGS)
-	mkdir -p $(RELEASE_GOGS)
-	cp -r gogs LICENSE README.md README_ZH.md templates public scripts $(RELEASE_GOGS)
-	rm -rf $(RELEASE_GOGS)/public/config.codekit $(RELEASE_GOGS)/public/less
-	cd $(RELEASE_ROOT) && zip -r gogs.$(NOW).zip "gogs"
+build-dev: install-dev
+	cp $(GOPATH)/bin/gogs .
 
-release: build pack
+install:
+	go install -ldflags '$(LDFLAGS)' -tags '$(TAGS)'
+
+install-dev:
+	go install -v -race -ldflags '$(LDFLAGS)' -tags '$(TAGS)'
 
 bindata: modules/bindata/bindata.go
 
@@ -45,11 +69,23 @@ less: public/css/gogs.css
 public/css/gogs.css: $(LESS_FILES)
 	lessc $< $@
 
-clean:
-	go clean -i ./...
+release: $(RELEASES)
 
-clean-mac: clean
-	find . -name ".DS_Store" -print0 | xargs -0 rm
+$(BIN)/%/gogs/gogs: GOOS=$(firstword $(subst -, ,$*))
+$(BIN)/%/gogs/gogs: GOARCH=$(subst .exe,,$(word 2,$(subst -, ,$*)))
+$(BIN)/%/gogs/gogs:
+	GOOS=$(GOOS) GOARCH=$(GOARCH) go build -ldflags '$(LDFLAGS)' -tags '$(TAGS)' -o $@
+	cp -r $(FILES) $(BIN)/$*/gogs
+	rm -rf $(BIN)/$*/gogs/public/config.codekit $(BIN)/$*/gogs/public/less
 
-test:
-	go test -cover -race ./...
+$(DIST)/gogs-%.tgz: GOOS=$(firstword $(subst -, ,$*))
+$(DIST)/gogs-%.tgz: GOARCH=$(subst .exe,,$(word 2,$(subst -, ,$*)))
+$(DIST)/gogs-%.tgz: $(BIN)/%/gogs/gogs
+	mkdir -p $(DIST)
+	tar -czf $@ --directory=$(BIN)/$* gogs
+
+$(DIST)/gogs-%.zip: GOOS=$(firstword $(subst -, ,$*))
+$(DIST)/gogs-%.zip: GOARCH=$(subst .exe,,$(word 2,$(subst -, ,$*)))
+$(DIST)/gogs-%.zip: $(BIN)/%/gogs/gogs
+	@mkdir -p $(DIST)
+	(cd $(BIN)/$* && zip -r - gogs) > $@
