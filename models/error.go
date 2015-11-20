@@ -330,6 +330,7 @@ func (err ErrReleaseAlreadyExist) Error() string {
 }
 
 type ErrReleaseNotExist struct {
+	ID      int64
 	TagName string
 }
 
@@ -339,7 +340,7 @@ func IsErrReleaseNotExist(err error) bool {
 }
 
 func (err ErrReleaseNotExist) Error() string {
-	return fmt.Sprintf("Release tag does not exist [tag_name: %s]", err.TagName)
+	return fmt.Sprintf("Release tag does not exist [id: %d, tag_name: %s]", err.ID, err.TagName)
 }
 
 //  __      __      ___.   .__                   __

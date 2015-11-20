@@ -1375,8 +1375,8 @@ func ChangeMilestoneAssign(oldMid int64, issue *Issue) (err error) {
 }
 
 // DeleteMilestoneByID deletes a milestone by given ID.
-func DeleteMilestoneByID(mid int64) error {
-	m, err := GetMilestoneByID(mid)
+func DeleteMilestoneByID(id int64) error {
+	m, err := GetMilestoneByID(id)
 	if err != nil {
 		if IsErrMilestoneNotExist(err) {
 			return nil
