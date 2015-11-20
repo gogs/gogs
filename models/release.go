@@ -180,7 +180,7 @@ func DeleteReleaseByID(id int64) error {
 		return fmt.Errorf("RepoPath: %v", err)
 	}
 
-	_, stderr, err := process.ExecDir(-1, repoPath, fmt.Sprintf("Delete release [%d]", rel.ID),
+	_, stderr, err := process.ExecDir(-1, repoPath, fmt.Sprintf("DeleteReleaseByID (git tag -d): %d", rel.ID),
 		"git", "tag", "-d", rel.TagName)
 	if err != nil && !strings.Contains(stderr, "not found") {
 		return fmt.Errorf("git tag -d: %v - %s", err, stderr)
