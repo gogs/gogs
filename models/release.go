@@ -5,6 +5,7 @@
 package models
 
 import (
+	"fmt"
 	"sort"
 	"strings"
 	"time"
@@ -12,6 +13,7 @@ import (
 	"github.com/go-xorm/xorm"
 
 	"github.com/gogits/gogs/modules/git"
+	"github.com/gogits/gogs/modules/process"
 )
 
 // Release represents a release of repository.
@@ -99,7 +101,7 @@ func GetRelease(repoID int64, tagName string) (*Release, error) {
 	if err != nil {
 		return nil, err
 	} else if !isExist {
-		return nil, ErrReleaseNotExist{tagName}
+		return nil, ErrReleaseNotExist{0, tagName}
 	}
 
 	rel := &Release{RepoID: repoID, LowerTagName: strings.ToLower(tagName)}
@@ -107,8 +109,21 @@ func GetRelease(repoID int64, tagName string) (*Release, error) {
 	return rel, err
 }
 
-// GetReleasesByRepoId returns a list of releases of repository.
-func GetReleasesByRepoId(repoID int64) (rels []*Release, err error) {
+// GetReleaseByID returns release with given ID.
+func GetReleaseByID(id int64) (*Release, error) {
+	rel := new(Release)
+	has, err := x.Id(id).Get(rel)
+	if err != nil {
+		return nil, err
+	} else if !has {
+		return nil, ErrReleaseNotExist{id, ""}
+	}
+
+	return rel, nil
+}
+
+// GetReleasesByRepoID returns a list of releases of repository.
+func GetReleasesByRepoID(repoID int64) (rels []*Release, err error) {
 	err = x.Desc("created").Find(&rels, Release{RepoID: repoID})
 	return rels, err
 }
@@ -146,4 +161,34 @@ func UpdateRelease(gitRepo *git.Repository, rel *Release) (err error) {
 	}
 	_, err = x.Id(rel.ID).AllCols().Update(rel)
 	return err
+}
+
+// DeleteReleaseByID deletes a release and corresponding Git tag by given ID.
+func DeleteReleaseByID(id int64) error {
+	rel, err := GetReleaseByID(id)
+	if err != nil {
+		return fmt.Errorf("GetReleaseByID: %v", err)
+	}
+
+	repo, err := GetRepositoryByID(rel.RepoID)
+	if err != nil {
+		return fmt.Errorf("GetRepositoryByID: %v", err)
+	}
+
+	repoPath, err := repo.RepoPath()
+	if err != nil {
+		return fmt.Errorf("RepoPath: %v", err)
+	}
+
+	_, stderr, err := process.ExecDir(-1, repoPath, fmt.Sprintf("Delete release [%d]", rel.ID),
+		"git", "tag", "-d", rel.TagName)
+	if err != nil && !strings.Contains(stderr, "not found") {
+		return fmt.Errorf("git tag -d: %v - %s", err, stderr)
+	}
+
+	if _, err = x.Id(rel.ID).Delete(new(Release)); err != nil {
+		return fmt.Errorf("Delete: %v", err)
+	}
+
+	return nil
 }
