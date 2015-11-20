@@ -231,9 +231,15 @@ func RenderRawMarkdown(body []byte, urlPrefix string) []byte {
 	return body
 }
 
+var (
+	leftAngleBracket  = []byte("</")
+	rightAngleBracket = []byte(">")
+)
+
 // PostProcessMarkdown treats different types of HTML differently,
 // and only renders special links for plain text blocks.
 func PostProcessMarkdown(rawHtml []byte, urlPrefix string) []byte {
+	var startTag string
 	var buf bytes.Buffer
 	tokenizer := html.NewTokenizer(bytes.NewReader(rawHtml))
 	for html.ErrorToken != tokenizer.Next() {
@@ -243,6 +249,7 @@ func PostProcessMarkdown(rawHtml []byte, urlPrefix string) []byte {
 			buf.Write(RenderSpecialLink([]byte(token.String()), urlPrefix))
 
 		case html.StartTagToken:
+			startTag = token.Data
 			buf.WriteString(token.String())
 			tagName := token.Data
 			// If this is an excluded tag, we skip processing all output until a close tag is encountered.
@@ -258,6 +265,10 @@ func PostProcessMarkdown(rawHtml []byte, urlPrefix string) []byte {
 				}
 			}
 
+		case html.EndTagToken:
+			buf.Write(leftAngleBracket)
+			buf.WriteString(startTag)
+			buf.Write(rightAngleBracket)
 		default:
 			buf.WriteString(token.String())
 		}
