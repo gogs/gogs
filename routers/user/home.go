@@ -319,6 +319,9 @@ func Profile(ctx *middleware.Context) {
 	if uname == "favicon.ico" {
 		ctx.Redirect(setting.AppSubUrl + "/img/favicon.png")
 		return
+	} else if strings.HasSuffix(uname, ".png") {
+		ctx.Error(404)
+		return
 	}
 
 	isShowKeys := false
