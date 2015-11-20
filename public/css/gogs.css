@@ -2853,7 +2853,7 @@ footer .container .links > *:first-child {
   font-size: 13px;
 }
 .feeds .news .issue.title {
-  line-height: 1em;
+  line-height: 1.1em;
   width: 80%;
 }
 .feeds .news .push.news .content ul {
