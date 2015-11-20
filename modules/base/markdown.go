@@ -14,6 +14,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/Unknwon/com"
 	"github.com/russross/blackfriday"
 	"golang.org/x/net/html"
 
@@ -99,13 +100,26 @@ func (options *CustomRender) Link(out *bytes.Buffer, link []byte, title []byte, 
 	options.Renderer.Link(out, link, title, content)
 }
 
+var (
+	svgSuffix         = []byte(".svg")
+	svgSuffixWithMark = []byte(".svg?")
+)
+
 func (options *CustomRender) Image(out *bytes.Buffer, link []byte, title []byte, alt []byte) {
 	prefix := strings.Replace(options.urlPrefix, "/src/", "/raw/", 1)
-	if len(link) > 0 && !isLink(link) {
-		if link[0] != '/' {
-			prefix += "/"
+	if len(link) > 0 {
+		if isLink(link) {
+			// External link with .svg suffix usually means CI status.
+			if bytes.HasSuffix(link, svgSuffix) || bytes.Contains(link, svgSuffixWithMark) {
+				options.Renderer.Image(out, link, title, alt)
+				return
+			}
+		} else {
+			if link[0] != '/' {
+				prefix += "/"
+			}
+			link = []byte(prefix + string(link))
 		}
-		link = []byte(prefix + string(link))
 	}
 
 	out.WriteString(`<a href="`)
@@ -236,12 +250,16 @@ var (
 	rightAngleBracket = []byte(">")
 )
 
+var noEndTags = []string{"img", "input", "br", "hr"}
+
 // PostProcessMarkdown treats different types of HTML differently,
 // and only renders special links for plain text blocks.
 func PostProcessMarkdown(rawHtml []byte, urlPrefix string) []byte {
-	var startTag string
+	startTags := make([]string, 0, 5)
 	var buf bytes.Buffer
 	tokenizer := html.NewTokenizer(bytes.NewReader(rawHtml))
+
+OUTER_LOOP:
 	for html.ErrorToken != tokenizer.Next() {
 		token := tokenizer.Token()
 		switch token.Type {
@@ -249,26 +267,32 @@ func PostProcessMarkdown(rawHtml []byte, urlPrefix string) []byte {
 			buf.Write(RenderSpecialLink([]byte(token.String()), urlPrefix))
 
 		case html.StartTagToken:
-			startTag = token.Data
 			buf.WriteString(token.String())
 			tagName := token.Data
 			// If this is an excluded tag, we skip processing all output until a close tag is encountered.
 			if strings.EqualFold("a", tagName) || strings.EqualFold("code", tagName) || strings.EqualFold("pre", tagName) {
 				for html.ErrorToken != tokenizer.Next() {
 					token = tokenizer.Token()
+
 					// Copy the token to the output verbatim
 					buf.WriteString(token.String())
 					// If this is the close tag, we are done
-					if html.EndTagToken == token.Type && strings.EqualFold(tagName, token.Data) {
+					if token.Type == html.EndTagToken && strings.EqualFold(tagName, token.Data) {
 						break
 					}
 				}
+				continue OUTER_LOOP
+			}
+
+			if !com.IsSliceContainsStr(noEndTags, token.Data) {
+				startTags = append(startTags, token.Data)
 			}
 
 		case html.EndTagToken:
 			buf.Write(leftAngleBracket)
-			buf.WriteString(startTag)
+			buf.WriteString(startTags[len(startTags)-1])
 			buf.Write(rightAngleBracket)
+			startTags = startTags[:len(startTags)-1]
 		default:
 			buf.WriteString(token.String())
 		}
