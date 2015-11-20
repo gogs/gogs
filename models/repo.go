@@ -576,20 +576,20 @@ func MigrateRepository(u *User, opts MigrateRepoOptions) (*Repository, error) {
 func initRepoCommit(tmpPath string, sig *git.Signature) (err error) {
 	var stderr string
 	if _, stderr, err = process.ExecDir(-1,
-		tmpPath, fmt.Sprintf("initRepoCommit(git add): %s", tmpPath),
+		tmpPath, fmt.Sprintf("initRepoCommit (git add): %s", tmpPath),
 		"git", "add", "--all"); err != nil {
 		return fmt.Errorf("git add: %s", stderr)
 	}
 
 	if _, stderr, err = process.ExecDir(-1,
-		tmpPath, fmt.Sprintf("initRepoCommit(git commit): %s", tmpPath),
+		tmpPath, fmt.Sprintf("initRepoCommit (git commit): %s", tmpPath),
 		"git", "commit", fmt.Sprintf("--author='%s <%s>'", sig.Name, sig.Email),
 		"-m", "initial commit"); err != nil {
 		return fmt.Errorf("git commit: %s", stderr)
 	}
 
 	if _, stderr, err = process.ExecDir(-1,
-		tmpPath, fmt.Sprintf("initRepoCommit(git push): %s", tmpPath),
+		tmpPath, fmt.Sprintf("initRepoCommit (git push): %s", tmpPath),
 		"git", "push", "origin", "master"); err != nil {
 		return fmt.Errorf("git push: %s", stderr)
 	}
@@ -700,7 +700,7 @@ func initRepository(e Engine, repoPath string, u *User, repo *Repository, opts C
 	// Init bare new repository.
 	os.MkdirAll(repoPath, os.ModePerm)
 	_, stderr, err := process.ExecDir(-1, repoPath,
-		fmt.Sprintf("initRepository(git init --bare): %s", repoPath), "git", "init", "--bare")
+		fmt.Sprintf("initRepository (git init --bare): %s", repoPath), "git", "init", "--bare")
 	if err != nil {
 		return fmt.Errorf("git init --bare: %v - %s", err, stderr)
 	}

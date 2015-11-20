@@ -166,43 +166,49 @@ func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository) (err error
 
 	var stderr string
 	if _, stderr, err = process.ExecTimeout(5*time.Minute,
-		fmt.Sprintf("PullRequest.Merge(git clone): %s", tmpBasePath),
+		fmt.Sprintf("PullRequest.Merge (git clone): %s", tmpBasePath),
 		"git", "clone", baseGitRepo.Path, tmpBasePath); err != nil {
 		return fmt.Errorf("git clone: %s", stderr)
 	}
 
 	// Check out base branch.
 	if _, stderr, err = process.ExecDir(-1, tmpBasePath,
-		fmt.Sprintf("PullRequest.Merge(git checkout): %s", tmpBasePath),
+		fmt.Sprintf("PullRequest.Merge (git checkout): %s", tmpBasePath),
 		"git", "checkout", pr.BaseBranch); err != nil {
 		return fmt.Errorf("git checkout: %s", stderr)
 	}
 
 	// Add head repo remote.
 	if _, stderr, err = process.ExecDir(-1, tmpBasePath,
-		fmt.Sprintf("PullRequest.Merge(git remote add): %s", tmpBasePath),
+		fmt.Sprintf("PullRequest.Merge (git remote add): %s", tmpBasePath),
 		"git", "remote", "add", "head_repo", headRepoPath); err != nil {
-		return fmt.Errorf("git remote add[%s -> %s]: %s", headRepoPath, tmpBasePath, stderr)
+		return fmt.Errorf("git remote add [%s -> %s]: %s", headRepoPath, tmpBasePath, stderr)
 	}
 
 	// Merge commits.
 	if _, stderr, err = process.ExecDir(-1, tmpBasePath,
-		fmt.Sprintf("PullRequest.Merge(git fetch): %s", tmpBasePath),
+		fmt.Sprintf("PullRequest.Merge (git fetch): %s", tmpBasePath),
 		"git", "fetch", "head_repo"); err != nil {
-		return fmt.Errorf("git fetch[%s -> %s]: %s", headRepoPath, tmpBasePath, stderr)
+		return fmt.Errorf("git fetch [%s -> %s]: %s", headRepoPath, tmpBasePath, stderr)
 	}
 
 	if _, stderr, err = process.ExecDir(-1, tmpBasePath,
-		fmt.Sprintf("PullRequest.Merge(git merge): %s", tmpBasePath),
-		"git", "merge", "--no-ff", "-m",
-		fmt.Sprintf("Merge branch '%s' of %s/%s into %s", pr.HeadBranch, pr.HeadUserName, pr.HeadRepo.Name, pr.BaseBranch),
-		"head_repo/"+pr.HeadBranch); err != nil {
-		return fmt.Errorf("git merge[%s]: %s", tmpBasePath, stderr)
+		fmt.Sprintf("PullRequest.Merge (git merge --no-commit): %s", tmpBasePath),
+		"git", "merge", "--no-commit", "head_repo/"+pr.HeadBranch); err != nil {
+		return fmt.Errorf("git merge --no-commit [%s]: %s", tmpBasePath, stderr)
+	}
+
+	sig := doer.NewGitSig()
+	if _, stderr, err = process.ExecDir(-1, tmpBasePath,
+		fmt.Sprintf("PullRequest.Merge (git merge): %s", tmpBasePath),
+		"git", "commit", fmt.Sprintf("--author='%s <%s>'", sig.Name, sig.Email),
+		"-m", fmt.Sprintf("Merge branch '%s' of %s/%s into %s", pr.HeadBranch, pr.HeadUserName, pr.HeadRepo.Name, pr.BaseBranch)); err != nil {
+		return fmt.Errorf("git commit [%s]: %s", tmpBasePath, stderr)
 	}
 
 	// Push back to upstream.
 	if _, stderr, err = process.ExecDir(-1, tmpBasePath,
-		fmt.Sprintf("PullRequest.Merge(git push): %s", tmpBasePath),
+		fmt.Sprintf("PullRequest.Merge (git push): %s", tmpBasePath),
 		"git", "push", baseGitRepo.Path, pr.BaseBranch); err != nil {
 		return fmt.Errorf("git push: %s", stderr)
 	}
