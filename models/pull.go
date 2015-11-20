@@ -194,8 +194,8 @@ func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository) (err error
 
 	if _, stderr, err = process.ExecDir(-1, tmpBasePath,
 		fmt.Sprintf("PullRequest.Merge (git merge --no-commit): %s", tmpBasePath),
-		"git", "merge", "--no-commit", "head_repo/"+pr.HeadBranch); err != nil {
-		return fmt.Errorf("git merge --no-commit [%s]: %s", tmpBasePath, stderr)
+		"git", "merge", "--no-ff", "--no-commit", "head_repo/"+pr.HeadBranch); err != nil {
+		return fmt.Errorf("git merge --no-ff --no-commit [%s]: %s", tmpBasePath, stderr)
 	}
 
 	sig := doer.NewGitSig()
@@ -203,7 +203,7 @@ func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository) (err error
 		fmt.Sprintf("PullRequest.Merge (git merge): %s", tmpBasePath),
 		"git", "commit", fmt.Sprintf("--author='%s <%s>'", sig.Name, sig.Email),
 		"-m", fmt.Sprintf("Merge branch '%s' of %s/%s into %s", pr.HeadBranch, pr.HeadUserName, pr.HeadRepo.Name, pr.BaseBranch)); err != nil {
-		return fmt.Errorf("git commit [%s]: %s", tmpBasePath, stderr)
+		return fmt.Errorf("git commit [%s]: %v - %s", tmpBasePath, err, stderr)
 	}
 
 	// Push back to upstream.
