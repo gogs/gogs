@@ -15,10 +15,12 @@ import (
 	"strings"
 	"time"
 
-	"gopkg.in/ini.v1"
-
 	"github.com/Unknwon/com"
+	_ "github.com/go-macaron/cache/memcache"
+	_ "github.com/go-macaron/cache/redis"
 	"github.com/go-macaron/session"
+	_ "github.com/go-macaron/session/redis"
+	"gopkg.in/ini.v1"
 
 	"github.com/gogits/gogs/modules/bindata"
 	"github.com/gogits/gogs/modules/log"
@@ -139,9 +141,6 @@ var (
 	CacheAdapter  string
 	CacheInternal int
 	CacheConn     string
-
-	EnableRedis    bool
-	EnableMemcache bool
 
 	// Session settings.
 	SessionConfig session.Options
@@ -545,13 +544,6 @@ func newLogService() {
 
 func newCacheService() {
 	CacheAdapter = Cfg.Section("cache").Key("ADAPTER").In("memory", []string{"memory", "redis", "memcache"})
-	if EnableRedis {
-		log.Info("Redis Supported")
-	}
-	if EnableMemcache {
-		log.Info("Memcache Supported")
-	}
-
 	switch CacheAdapter {
 	case "memory":
 		CacheInternal = Cfg.Section("cache").Key("INTERVAL").MustInt(60)
