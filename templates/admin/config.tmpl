@@ -9,7 +9,7 @@
           {{.i18n.Tr "admin.config.server_config"}}
         </h4>
         <div class="ui attached table segment">
-		  <dl class="dl-horizontal admin-dl-horizontal">
+		      <dl class="dl-horizontal admin-dl-horizontal">
             <dt>{{.i18n.Tr "admin.config.app_name"}}</dt>
             <dd>{{AppName}}</dd>
             <dt>{{.i18n.Tr "admin.config.app_ver"}}</dt>
@@ -22,12 +22,12 @@
             <dd><i class="fa fa{{if .OfflineMode}}-check{{end}}-square-o"></i></dd>
             <dt>{{.i18n.Tr "admin.config.disable_router_log"}}</dt>
             <dd><i class="fa fa{{if .DisableRouterLog}}-check{{end}}-square-o"></i></dd>
-            <hr/>
+            <div class="ui divider"></div>
             <dt>{{.i18n.Tr "admin.config.run_user"}}</dt>
             <dd>{{.RunUser}}</dd>
             <dt>{{.i18n.Tr "admin.config.run_mode"}}</dt>
             <dd>{{.RunMode}}</dd>
-            <hr/>
+            <div class="ui divider"></div>
             <dt>{{.i18n.Tr "admin.config.repo_root_path"}}</dt>
             <dd>{{.RepoRootPath}}</dd>
             <dt>{{.i18n.Tr "admin.config.static_file_root_path"}}</dt>
@@ -39,7 +39,7 @@
             <dt>{{.i18n.Tr "admin.config.reverse_auth_user"}}</dt>
             <dd>{{.ReverseProxyAuthUser}}</dd>
           </dl>
-		</div>
+		    </div>
 		
         <h4 class="ui top attached header">
           {{.i18n.Tr "admin.config.db_config"}}
@@ -59,13 +59,13 @@
             <dt>{{.i18n.Tr "admin.config.db_path"}}</dt>
             <dd>{{.DbCfg.Path}} {{.i18n.Tr "admin.config.db_path_helper"}}</dd>
           </dl>
-		</div>
+		    </div>
 		
         <h4 class="ui top attached header">
           {{.i18n.Tr "admin.config.service_config"}}
         </h4>
         <div class="ui attached table segment">                      
-		  <dl class="dl-horizontal admin-dl-horizontal">
+		      <dl class="dl-horizontal admin-dl-horizontal">
             <dt>{{.i18n.Tr "admin.config.register_email_confirm"}}</dt>
             <dd><i class="fa fa{{if .Service.RegisterEmailConfirm}}-check{{end}}-square-o"></i></dd>
             <dt>{{.i18n.Tr "admin.config.disable_register"}}</dt>
@@ -82,19 +82,19 @@
             <dd><i class="fa fa{{if .Service.DisableMinimumKeySizeCheck}}-check{{end}}-square-o"></i></dd>
             <dt>{{.i18n.Tr "admin.config.enable_captcha"}}</dt>
             <dd><i class="fa fa{{if .Service.EnableCaptcha}}-check{{end}}-square-o"></i></dd>
-            <hr/>
+            <div class="ui divider"></div>
             <dt>{{.i18n.Tr "admin.config.active_code_lives"}}</dt>
             <dd>{{.Service.ActiveCodeLives}} {{.i18n.Tr "tool.raw_minutes"}}</dd>
             <dt>{{.i18n.Tr "admin.config.reset_password_code_lives"}}</dt>
             <dd>{{.Service.ResetPwdCodeLives}} {{.i18n.Tr "tool.raw_minutes"}}</dd>
           </dl>
-		</div>
+		    </div>
 		
         <h4 class="ui top attached header">
           {{.i18n.Tr "admin.config.webhook_config"}}
         </h4>
         <div class="ui attached table segment">                  
-		  <dl class="dl-horizontal admin-dl-horizontal">
+		      <dl class="dl-horizontal admin-dl-horizontal">
             <dt>{{.i18n.Tr "admin.config.queue_length"}}</dt>
             <dd>{{.Webhook.QueueLength}}</dd>
             <dt>{{.i18n.Tr "admin.config.deliver_timeout"}}</dt>
@@ -102,7 +102,7 @@
             <dt>{{.i18n.Tr "admin.config.skip_tls_verify"}}</dt>
             <dd><i class="fa fa{{if .Webhook.SkipTLSVerify}}-check{{end}}-square-o"></i></dd>
           </dl>
-		</div>
+		    </div>
 		
         <h4 class="ui top attached header">
           {{.i18n.Tr "admin.config.mailer_config"}}
@@ -120,7 +120,7 @@
             <dt>{{.i18n.Tr "admin.config.mailer_user"}}</dt>
             <dd>{{.Mailer.User}}</dd>{{end}}
           </dl>
-		</div>
+		    </div>
 		
         <h4 class="ui top attached header">
           {{.i18n.Tr "admin.config.cache_config"}}
@@ -134,7 +134,7 @@
             <dt>{{.i18n.Tr "admin.config.cache_conn"}}</dt>
             <dd><pre>{{.CacheConn}}</pre></dd>
           </dl>
-		</div>
+		    </div>
 		
         <h4 class="ui top attached header">
            {{.i18n.Tr "admin.config.session_config"}}
@@ -156,7 +156,7 @@
             <dt>{{.i18n.Tr "admin.config.cookie_life_time"}}</dt>
             <dd>{{.SessionConfig.CookieLifeTime}} {{.i18n.Tr "tool.raw_seconds"}}</dd>
           </dl>
-		</div>
+		    </div>
 		
         <h4 class="ui top attached header">
           {{.i18n.Tr "admin.config.picture_config"}}
@@ -168,7 +168,7 @@
             <dt>{{.i18n.Tr "admin.config.disable_gravatar"}}</dt>
             <dd><i class="fa fa{{if .DisableGravatar}}-check{{end}}-square-o"></i></dd>
           </dl>
-		</div>
+		    </div>
 		
         <h4 class="ui top attached header">
           {{.i18n.Tr "admin.config.log_config"}}
@@ -182,7 +182,7 @@
 	          <dd><pre>{{.Config}}</pre></dd>
 	        {{end}}
           </dl>
-		</div>
+		    </div>
       </div>
     </div>
   </div>
