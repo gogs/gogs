@@ -702,6 +702,12 @@ type IssueStatsOptions struct {
 	IsPull      bool
 }
 
+func checkErr(err error) {
+	if err != nil {
+		panic(err)
+	}
+}
+
 // GetIssueStats returns issue statistic information by given conditions.
 func GetIssueStats(opts *IssueStatsOptions) *IssueStats {
 	stats := &IssueStats{}
@@ -726,9 +732,11 @@ func GetIssueStats(opts *IssueStatsOptions) *IssueStats {
 
 	switch opts.FilterMode {
 	case FM_ALL, FM_ASSIGN:
-		results, _ := x.Query(queryStr+baseCond, false)
+		results, err := x.Query(queryStr+baseCond, false)
+		checkErr(err)
 		stats.OpenCount = parseCountResult(results)
-		results, _ = x.Query(queryStr+baseCond, true)
+		results, err = x.Query(queryStr+baseCond, true)
+		checkErr(err)
 		stats.ClosedCount = parseCountResult(results)
 
 	case FM_CREATE:
