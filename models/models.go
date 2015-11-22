@@ -90,7 +90,7 @@ func init() {
 		new(Team), new(OrgUser), new(TeamUser), new(TeamRepo),
 		new(Notice), new(EmailAddress))
 
-	gonicNames := []string{"UID", "SSL"}
+	gonicNames := []string{"SSL"}
 	for _, name := range gonicNames {
 		core.LintGonicMapper[name] = true
 	}

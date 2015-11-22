@@ -1,6 +1,6 @@
 @font-face {
   font-family: 'octicons';
-  src: url('../fonts/octicons.eot?#iefix&v=396334ee3da78f4302d25c758ae3e3ce5dc3c97d') format('embedded-opentype'), url('../fonts/octicons.woff?v=396334ee3da78f4302d25c758ae3e3ce5dc3c97d') format('woff'), url('../fonts/octicons.ttf?v=396334ee3da78f4302d25c758ae3e3ce5dc3c97d') format('truetype'), url('../fonts/octicons.svg?v=396334ee3da78f4302d25c758ae3e3ce5dc3c97d#octicons') format('svg');
+  src: url('../fonts/octicons.eot?#iefix&v=30e752e9a0821a0a098947055eeece0b0f46bc34') format('embedded-opentype'), url('../fonts/octicons.woff?v=30e752e9a0821a0a098947055eeece0b0f46bc34') format('woff'), url('../fonts/octicons.ttf?v=30e752e9a0821a0a098947055eeece0b0f46bc34') format('truetype'), url('../fonts/octicons.svg?v=30e752e9a0821a0a098947055eeece0b0f46bc34#octicons') format('svg');
   font-weight: normal;
   font-style: normal;
 }
@@ -65,6 +65,10 @@
   content: '\f0de';
 }
 /*  */
+.octicon-bold:before {
+  content: '\f0e2';
+}
+/*  */
 .octicon-book:before {
   content: '\f007';
 }
@@ -364,6 +368,10 @@
   content: '\f027';
 }
 /*  */
+.octicon-italic:before {
+  content: '\f0e4';
+}
+/*  */
 .octicon-jersey:before {
   content: '\f019';
 }
@@ -411,6 +419,10 @@
   content: '\f06a';
 }
 /*  */
+.octicon-logo-gist:before {
+  content: '\f0ad';
+}
+/*  */
 .octicon-logo-github:before {
   content: '\f092';
 }
@@ -568,14 +580,6 @@
   content: '\f047';
 }
 /*  */
-.octicon-screen-full:before {
-  content: '\f066';
-}
-/*  */
-.octicon-screen-normal:before {
-  content: '\f067';
-}
-/*  */
 .octicon-search-save:before,
 .octicon-search:before {
   content: '\f02e';
@@ -628,6 +632,10 @@
   content: '\f015';
 }
 /*  */
+.octicon-tasklist:before {
+  content: '\f0e5';
+}
+/*  */
 .octicon-telescope:before {
   content: '\f088';
 }
@@ -636,6 +644,10 @@
   content: '\f0c8';
 }
 /*  */
+.octicon-text-size:before {
+  content: '\f0e3';
+}
+/*  */
 .octicon-three-bars:before {
   content: '\f05e';
 }
@@ -759,7 +771,7 @@ pre.raw {
   z-index: 900;
 }
 .following.bar .head.link.item {
-  padding-right: 0!important;
+  padding-right: 0 !important;
 }
 .following.bar .head.link.item .dropdown.icon,
 .following.bar .head.link.item .menu .octicon {
@@ -792,49 +804,70 @@ pre.raw {
   float: right;
 }
 .ui .text.red {
-  color: #d95c5c!important;
+  color: #d95c5c !important;
 }
 .ui .text.red a {
-  color: #d95c5c!important;
+  color: #d95c5c !important;
 }
 .ui .text.red a:hover {
-  color: #E67777!important;
+  color: #E67777 !important;
 }
 .ui .text.blue {
-  color: #428bca!important;
+  color: #428bca !important;
 }
 .ui .text.blue a {
-  color: #15c!important;
+  color: #15c !important;
 }
 .ui .text.blue a:hover {
-  color: #428bca!important;
+  color: #428bca !important;
+}
+.ui .text.black {
+  color: #444;
+}
+.ui .text.black:hover {
+  color: #000;
 }
 .ui .text.grey {
-  color: #767676!important;
+  color: #767676 !important;
 }
 .ui .text.grey a {
-  color: #444!important;
+  color: #444 !important;
 }
 .ui .text.grey a:hover {
-  color: #000!important;
+  color: #000 !important;
+}
+.ui .text.light.grey {
+  color: #888 !important;
 }
 .ui .text.green {
-  color: #6cc644!important;
+  color: #6cc644 !important;
 }
 .ui .text.purple {
-  color: #6e5494!important;
+  color: #6e5494 !important;
 }
 .ui .text.yellow {
-  color: #FBBD08!important;
+  color: #FBBD08 !important;
+}
+.ui .text.gold {
+  color: #a1882b !important;
 }
 .ui .text.left {
-  text-align: left!important;
+  text-align: left !important;
 }
 .ui .text.right {
-  text-align: right!important;
+  text-align: right !important;
 }
 .ui .text.small {
   font-size: 0.75em;
+}
+.ui .text.normal {
+  font-weight: normal;
+}
+.ui .text.bold {
+  font-weight: bold;
+}
+.ui .text.italic {
+  font-style: italic;
 }
 .ui .text.truncate {
   overflow: hidden;
@@ -856,14 +889,14 @@ pre.raw {
   vertical-align: middle;
 }
 .ui .warning.header {
-  background-color: #F9EDBE!important;
+  background-color: #F9EDBE !important;
   border-color: #F0C36D;
 }
 .ui .warning.segment {
   border-color: #F0C36D;
 }
 .ui .info.header {
-  background-color: #d9edf7!important;
+  background-color: #d9edf7 !important;
   border-color: #85c5e5;
 }
 .ui .info.segment {
@@ -876,7 +909,7 @@ pre.raw {
   border-radius: 3px;
 }
 .ui .form .fake {
-  display: none!important;
+  display: none !important;
 }
 .ui.status.buttons .octicon {
   margin-right: 4px;
@@ -894,7 +927,7 @@ pre.raw {
   border-top: none;
   line-height: 1em;
   color: rgba(0, 0, 0, 0.8);
-  padding: .71428571em 1.14285714em!important;
+  padding: .71428571em 1.14285714em !important;
   font-size: 1rem;
   text-transform: none;
   font-weight: 400;
@@ -910,7 +943,7 @@ pre.raw {
   z-index: 13;
 }
 .scrolling.menu .item.selected {
-  font-weight: 700!important;
+  font-weight: 700 !important;
 }
 footer {
   margin-top: 54px !important;
@@ -1010,7 +1043,7 @@ footer .container .links > *:first-child {
 .octicon.icon,
 .mega-octicon.icon {
   font-family: octicons;
-  opacity: 1!important;
+  opacity: 1 !important;
 }
 .sr-only {
   position: absolute;
@@ -1040,8 +1073,11 @@ footer .container .links > *:first-child {
   overflow: hidden;
   font-family: "Helvetica Neue", Helvetica, "Segoe UI", Arial, freesans, sans-serif;
   font-size: 16px;
-  line-height: 1.6;
+  line-height: 1.6 !important;
   word-wrap: break-word;
+}
+.markdown.file-view {
+  padding: 5px 2em 2em !important;
 }
 .markdown > *:first-child {
   margin-top: 0 !important;
@@ -1175,6 +1211,9 @@ footer .container .links > *:first-child {
 .markdown pre {
   margin-top: 0;
   margin-bottom: 16px;
+}
+.markdown blockquote {
+  margin-left: 0;
 }
 .markdown hr {
   height: 4px;
@@ -1439,115 +1478,6 @@ footer .container .links > *:first-child {
   font-weight: bold;
   background: #f8f8f8;
   border-top: 0;
-}
-/* Author: jmblog */
-/* Project: https://github.com/jmblog/color-themes-for-google-code-prettify */
-/* GitHub Theme */
-/* Pretty printing styles. Used with prettify.js. */
-/* SPAN elements with the classes below are added by prettyprint. */
-/* plain text */
-.pln {
-  color: #333333;
-}
-@media screen {
-  /* string content */
-  .str {
-    color: #dd1144;
-  }
-  /* a keyword */
-  .kwd {
-    color: #333333;
-  }
-  /* a comment */
-  .com {
-    color: #999988;
-    font-style: italic;
-  }
-  /* a type name */
-  .typ {
-    color: #445588;
-  }
-  /* a literal value */
-  .lit {
-    color: #445588;
-  }
-  /* punctuation */
-  .pun {
-    color: #333333;
-  }
-  /* lisp open bracket */
-  .opn {
-    color: #333333;
-  }
-  /* lisp close bracket */
-  .clo {
-    color: #333333;
-  }
-  /* a markup tag name */
-  .tag {
-    color: navy;
-  }
-  /* a markup attribute name */
-  .atn {
-    color: teal;
-  }
-  /* a markup attribute value */
-  .atv {
-    color: #dd1144;
-  }
-  /* a declaration */
-  .dec {
-    color: #333333;
-  }
-  /* a variable name */
-  .var {
-    color: teal;
-  }
-  /* a function name */
-  .fun {
-    color: #990000;
-  }
-}
-/* Use higher contrast and text-weight for printable form. */
-@media print, projection {
-  .str {
-    color: #006600;
-  }
-  .kwd {
-    color: #006;
-    font-weight: bold;
-  }
-  .com {
-    color: #600;
-    font-style: italic;
-  }
-  .typ {
-    color: #404;
-    font-weight: bold;
-  }
-  .lit {
-    color: #004444;
-  }
-  .pun,
-  .opn,
-  .clo {
-    color: #444400;
-  }
-  .tag {
-    color: #006;
-    font-weight: bold;
-  }
-  .atn {
-    color: #440044;
-  }
-  .atv {
-    color: #006600;
-  }
-}
-/* Specify class=linenums on a pre to get line numbering */
-ol.linenums {
-  margin-top: 0;
-  margin-bottom: 0;
 }
 .home {
   padding-bottom: 80px;
@@ -1828,6 +1758,9 @@ ol.linenums {
   line-height: 10px;
   white-space: nowrap;
 }
+.repository .owner.dropdown {
+  min-width: 40% !important;
+}
 .repository .metas .menu {
   max-height: 300px;
   overflow-x: auto;
@@ -1867,6 +1800,158 @@ ol.linenums {
 .repository .filter.menu .dropdown.item {
   margin: 1px;
   padding-right: 0;
+}
+.repository.file.list #repo-desc {
+  font-size: 1.2em;
+}
+.repository.file.list .choose.reference .header .icon {
+  font-size: 1.4em;
+}
+.repository.file.list .head.meta {
+  padding: 0;
+}
+.repository.file.list .head.meta li {
+  list-style: none;
+  display: inline-block;
+}
+.repository.file.list .head.meta li .ui.breadcrumb {
+  margin-top: -5px;
+}
+.repository.file.list .head.meta li .ui.breadcrumb span,
+.repository.file.list .head.meta li .ui.breadcrumb a {
+  font-size: 16px;
+}
+.repository.file.list .clone.input {
+  margin-top: -8px;
+  width: 100%;
+}
+.repository.file.list .clone.input input {
+  border-radius: 0;
+  padding: 5px 10px;
+}
+.repository.file.list .clone.input .clone.button {
+  font-size: 13px;
+  padding: 0 5px;
+}
+.repository.file.list .clone.input .clone.button:first-child {
+  border-radius: .28571429rem 0 0 .28571429rem;
+}
+.repository.file.list .clone.input .icon.button {
+  padding: 0 10px;
+}
+.repository.file.list .clone.input .dropdown .menu {
+  right: 0!important;
+  left: auto!important;
+}
+.repository.file.list #repo-files-table .table.list {
+  width: 80% !important;
+}
+.repository.file.list #repo-files-table thead th {
+  padding-top: 8px;
+  padding-bottom: 5px;
+  font-weight: normal;
+}
+.repository.file.list #repo-files-table thead th #last-commit-message {
+  margin-left: 5px;
+  margin-bottom: -4px;
+  width: 400px;
+}
+.repository.file.list #repo-files-table thead th .age {
+  margin-top: 2px;
+}
+.repository.file.list #repo-files-table thead .ui.avatar {
+  margin-bottom: 5px;
+}
+.repository.file.list #repo-files-table tbody .icon {
+  margin-left: 5px;
+}
+.repository.file.list #repo-files-table tbody .name {
+  max-width: 120px;
+}
+.repository.file.list #repo-files-table tbody .message {
+  max-width: 300px;
+}
+.repository.file.list #repo-files-table tbody .age {
+  min-width: 150px;
+}
+.repository.file.list #repo-files-table tbody .text.truncate {
+  margin-bottom: -5px;
+  max-width: 100%;
+}
+.repository.file.list #repo-files-table td {
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+.repository.file.list #repo-files-table tr:hover {
+  background-color: #ffffEE;
+}
+.repository.file.list #file-content .header .icon {
+  font-size: 1em;
+  margin-top: -2px;
+}
+.repository.file.list #file-content .view-raw * {
+  width: 100%;
+}
+.repository.file.list #file-content .view-raw img {
+  padding: 5px 5px 0 5px;
+}
+.repository.file.list #file-content .code-view * {
+  font-size: 13px;
+  font-family: monospace;
+  line-height: 20px;
+}
+.repository.file.list #file-content .code-view table {
+  width: 100%;
+}
+.repository.file.list #file-content .code-view .lines-num {
+  vertical-align: top;
+  text-align: right;
+  color: #999;
+  background: #f5f5f5;
+  width: 1%;
+}
+.repository.file.list #file-content .code-view .lines-num span {
+  font-family: Monaco, Menlo, Consolas, "Courier New", monospace;
+  line-height: 20px;
+  padding: 0 10px;
+  cursor: pointer;
+  display: block;
+}
+.repository.file.list #file-content .code-view .lines-num,
+.repository.file.list #file-content .code-view .lines-code {
+  padding: 0;
+}
+.repository.file.list #file-content .code-view .lines-num pre,
+.repository.file.list #file-content .code-view .lines-code pre,
+.repository.file.list #file-content .code-view .lines-num ol,
+.repository.file.list #file-content .code-view .lines-code ol,
+.repository.file.list #file-content .code-view .lines-num .hljs,
+.repository.file.list #file-content .code-view .lines-code .hljs {
+  background-color: white;
+  margin: 0;
+  padding: 0 !important;
+}
+.repository.file.list #file-content .code-view .lines-num pre li,
+.repository.file.list #file-content .code-view .lines-code pre li,
+.repository.file.list #file-content .code-view .lines-num ol li,
+.repository.file.list #file-content .code-view .lines-code ol li,
+.repository.file.list #file-content .code-view .lines-num .hljs li,
+.repository.file.list #file-content .code-view .lines-code .hljs li {
+  padding-left: 5px;
+}
+.repository.file.list #file-content .code-view .lines-num pre li.active,
+.repository.file.list #file-content .code-view .lines-code pre li.active,
+.repository.file.list #file-content .code-view .lines-num ol li.active,
+.repository.file.list #file-content .code-view .lines-code ol li.active,
+.repository.file.list #file-content .code-view .lines-num .hljs li.active,
+.repository.file.list #file-content .code-view .lines-code .hljs li.active {
+  background: #ffffdd;
+}
+.repository.file.list .sidebar {
+  padding-left: 0;
+}
+.repository.file.list .sidebar .octicon {
+  width: 16px;
 }
 .repository.options #interval {
   width: 100px!important;
@@ -2156,11 +2241,6 @@ ol.linenums {
   font-weight: normal;
   padding: 5px 10px;
 }
-.repository.commits .header .ui.right .button {
-  float: right;
-  margin-left: 5px;
-  margin-top: 1px;
-}
 .repository .commits.table {
   font-size: 13px;
 }
@@ -2288,6 +2368,10 @@ ol.linenums {
 .repository .diff-file-box .code-diff tbody tr:hover pre {
   background-color: transparent !important;
 }
+.repository .diff-file-box.file-content img {
+  max-width: 100%;
+  padding: 5px 5px 0 5px;
+}
 .repository .code-view {
   overflow: auto;
   overflow-x: auto;
@@ -2309,6 +2393,161 @@ ol.linenums {
   border-radius: 0;
   padding: 5px 10px;
   font-size: 1.2em;
+}
+.repository.release #release-list {
+  border-top: 1px solid #DDD;
+  margin-top: 20px;
+  padding-top: 15px;
+}
+.repository.release #release-list > li {
+  list-style: none;
+}
+.repository.release #release-list > li .meta,
+.repository.release #release-list > li .detail {
+  padding-top: 30px;
+  padding-bottom: 40px;
+}
+.repository.release #release-list > li .meta {
+  text-align: right;
+  position: relative;
+}
+.repository.release #release-list > li .meta .tag:not(.icon) {
+  display: block;
+  margin-top: 15px;
+}
+.repository.release #release-list > li .meta .commit {
+  display: block;
+  margin-top: 10px;
+}
+.repository.release #release-list > li .detail {
+  border-left: 1px solid #DDD;
+}
+.repository.release #release-list > li .detail .author img {
+  margin-bottom: -3px;
+}
+.repository.release #release-list > li .detail .download {
+  margin-top: 20px;
+}
+.repository.release #release-list > li .detail .download > a .octicon {
+  margin-left: 5px;
+  margin-right: 5px;
+}
+.repository.release #release-list > li .detail .download .list {
+  padding-left: 0;
+  border-top: 1px solid #eee;
+}
+.repository.release #release-list > li .detail .download .list li {
+  list-style: none;
+  display: block;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #eee;
+}
+.repository.release #release-list > li .detail .dot {
+  width: 9px;
+  height: 9px;
+  background-color: #ccc;
+  z-index: 999;
+  position: absolute;
+  display: block;
+  left: -5px;
+  top: 40px;
+  border-radius: 6px;
+  border: 1px solid #FFF;
+}
+.repository.new.release .target {
+  min-width: 500px;
+}
+.repository.new.release .target .at {
+  margin-left: -5px;
+  margin-right: 5px;
+}
+.repository.new.release .target .dropdown.icon {
+  margin: 0;
+  padding-top: 3px;
+}
+.repository.new.release .target .selection.dropdown {
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+.repository.new.release .prerelease.field {
+  margin-bottom: 0;
+}
+.repository.watchers .list {
+  padding: 0;
+}
+.repository.watchers .list .item {
+  list-style: none;
+  width: 32%;
+  margin: 10px 10px 10px 0;
+  padding-bottom: 14px;
+  float: left;
+}
+.repository.watchers .list .item .avatar {
+  width: 48px;
+  height: 48px;
+  float: left;
+  display: block;
+  margin-right: 10px;
+}
+.repository.watchers .list .item .name {
+  margin-top: 0;
+  margin-bottom: 0;
+  font-weight: normal;
+}
+.repository.watchers .list .item .meta {
+  margin-top: 5px;
+}
+.repository.forks .list {
+  margin-top: 0;
+}
+.repository.forks .list .item {
+  padding-top: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #DDD;
+}
+.repository.forks .list .item .ui.avatar {
+  float: left;
+  margin-right: 5px;
+}
+.repository.forks .list .item .link {
+  padding-top: 5px;
+}
+.repository.settings.collaboration .collaborator.list {
+  padding: 0;
+}
+.repository.settings.collaboration .collaborator.list .item {
+  padding: 10px 20px;
+}
+.repository.settings.collaboration .collaborator.list .item:not(:last-child) {
+  border-bottom: 1px solid #DDD;
+}
+.repository.settings.collaboration #repo-collab-form #search-user-box .results {
+  left: 7px;
+}
+.repository.settings.collaboration #repo-collab-form .ui.button {
+  margin-left: 5px;
+  margin-top: -3px;
+}
+#search-repo-box .results,
+#search-user-box .results {
+  padding: 0;
+  position: absolute;
+}
+#search-repo-box .results .item,
+#search-user-box .results .item {
+  padding: 10px 15px;
+  border-bottom: 1px solid #DDD;
+  cursor: pointer;
+}
+#search-repo-box .results .item:hover,
+#search-user-box .results .item:hover {
+  background: rgba(0, 0, 0, 0.05) !important;
+  color: rgba(0, 0, 0, 0.95) !important;
+}
+#search-repo-box .results .item img,
+#search-user-box .results .item img {
+  margin-right: 8px;
 }
 .issue.list {
   list-style: none;
@@ -2362,7 +2601,7 @@ ol.linenums {
 .settings .content {
   margin-top: 2px;
 }
-.settings .content .header,
+.settings .content > .header,
 .settings .content .segment {
   box-shadow: 0 1px 2px 0 rgba(34, 36, 38, 0.15);
 }
@@ -2517,6 +2756,91 @@ ol.linenums {
   width: 50%!important;
   min-width: 300px;
 }
+.organization.profile #org-avatar {
+  width: 100px;
+  height: 100px;
+  margin-right: 15px;
+}
+.organization.profile #org-info .ui.header {
+  font-size: 36px;
+  margin-bottom: 0;
+}
+.organization.profile #org-info .desc {
+  font-size: 16px;
+  margin-bottom: 10px;
+}
+.organization.profile #org-info .meta .item {
+  display: inline-block;
+  margin-right: 10px;
+}
+.organization.profile #org-info .meta .item .icon {
+  margin-right: 5px;
+}
+.organization.profile .ui.top.header .ui.right {
+  margin-top: 0;
+}
+.organization.profile .teams .item {
+  padding: 10px 15px;
+}
+.organization.teams .members .ui.avatar,
+.organization.profile .members .ui.avatar {
+  width: 48px;
+  height: 48px;
+  margin-right: 5px;
+}
+.organization.invite #invite-box {
+  margin: auto;
+  margin-top: 50px;
+  width: 500px !important;
+}
+.organization.invite #invite-box #search-user-box input {
+  margin-left: 0;
+  width: 300px;
+}
+.organization.invite #invite-box .ui.button {
+  margin-left: 5px;
+  margin-top: -3px;
+}
+.organization.members .list .item {
+  margin-left: 0;
+  margin-right: 0;
+  border-bottom: 1px solid #eee;
+}
+.organization.members .list .item .ui.avatar {
+  width: 48px;
+  height: 48px;
+}
+.organization.members .list .item .meta {
+  line-height: 24px;
+}
+.organization.teams .detail .item {
+  padding: 10px 15px;
+}
+.organization.teams .detail .item:not(:last-child) {
+  border-bottom: 1px solid #eee;
+}
+.organization.teams .repositories .item,
+.organization.teams .members .item {
+  padding: 10px 20px;
+  line-height: 32px;
+}
+.organization.teams .repositories .item:not(:last-child),
+.organization.teams .members .item:not(:last-child) {
+  border-bottom: 1px solid #DDD;
+}
+.organization.teams .repositories .item .button,
+.organization.teams .members .item .button {
+  padding: 9px 10px;
+}
+.organization.teams #add-repo-form input,
+.organization.teams #add-member-form input {
+  margin-left: 0;
+}
+.organization.teams #add-repo-form .ui.button,
+.organization.teams #add-member-form .ui.button {
+  margin-left: 5px;
+  margin-top: -3px;
+}
 .user {
   padding-top: 15px;
   padding-bottom: 80px;
@@ -2531,45 +2855,130 @@ ol.linenums {
 .user.settings .email.list .item:not(:first-child) .button {
   margin-top: -10px;
 }
+.user.profile .ui.card .username {
+  display: block;
+}
+.user.profile .ui.card .extra.content {
+  padding: 0;
+}
+.user.profile .ui.card .extra.content ul {
+  margin: 0;
+  padding: 0;
+}
+.user.profile .ui.card .extra.content ul li {
+  padding: 10px;
+  list-style: none;
+}
+.user.profile .ui.card .extra.content ul li:not(:last-child) {
+  border-bottom: 1px solid #eaeaea;
+}
+.user.profile .ui.repository.list {
+  margin-top: 25px;
+}
 .dashboard {
   padding-top: 15px;
   padding-bottom: 80px;
 }
+.dashboard.feeds .context.user.menu,
 .dashboard.issues .context.user.menu {
   z-index: 101;
   min-width: 200px;
 }
+.dashboard.feeds .context.user.menu .ui.header,
 .dashboard.issues .context.user.menu .ui.header {
   font-size: 1rem;
   text-transform: none;
 }
+.dashboard.feeds .filter.menu .item,
 .dashboard.issues .filter.menu .item {
   text-align: left;
 }
+.dashboard.feeds .filter.menu .item .text,
 .dashboard.issues .filter.menu .item .text {
   height: 16px;
   vertical-align: middle;
 }
+.dashboard.feeds .filter.menu .item .text.truncate,
+.dashboard.issues .filter.menu .item .text.truncate {
+  width: 85%;
+}
+.dashboard.feeds .filter.menu .item .floating.label,
 .dashboard.issues .filter.menu .item .floating.label {
   top: 7px;
   left: 90%;
   width: 15%;
 }
-.dashboard.issues .filter.menu .item.active {
-  background-color: #4183c4;
-  color: #FFF;
+.dashboard.feeds .filter.menu .jump.item,
+.dashboard.issues .filter.menu .jump.item {
+  margin: 1px;
+  padding-right: 0;
 }
-.dashboard.issues .filter.menu .item .text {
-  width: 85%;
+.dashboard.feeds .filter.menu .menu,
+.dashboard.issues .filter.menu .menu {
+  max-height: 300px;
+  overflow-x: auto;
+  right: 0!important;
+  left: auto!important;
 }
+.dashboard.feeds .ui.right .head.menu,
 .dashboard.issues .ui.right .head.menu {
   margin-top: -5px;
 }
+.dashboard.feeds .ui.right .head.menu .item.active,
 .dashboard.issues .ui.right .head.menu .item.active {
   color: #d9453d;
 }
+.dashboard.feeds .head.menu .octicon,
 .dashboard.issues .head.menu .octicon {
   margin-right: 5px;
+}
+.feeds .news .ui.avatar {
+  margin-top: 13px;
+}
+.feeds .news p {
+  line-height: 1em;
+}
+.feeds .news .time-since {
+  font-size: 13px;
+}
+.feeds .news .issue.title {
+  line-height: 1.1em;
+  width: 80%;
+}
+.feeds .news .push.news .content ul {
+  font-size: 13px;
+  list-style: none;
+  padding-left: 10px;
+}
+.feeds .news .push.news .content ul img {
+  margin-bottom: -2px;
+}
+.feeds .news .push.news .content ul .text.truncate {
+  width: 80%;
+  margin-bottom: -5px;
+}
+.feeds .list .header {
+  padding-top: 10px;
+  padding-bottom: 5px;
+}
+.feeds .list ul {
+  list-style: none;
+  margin: 0;
+  padding-left: 0;
+}
+.feeds .list ul li:not(:last-child) {
+  border-bottom: 1px solid #EAEAEA;
+}
+.feeds .list ul li.private {
+  background-color: #fcf8e9;
+}
+.feeds .list ul li a {
+  padding: 6px 1.2em;
+  display: block;
+}
+.feeds .list ul li a .octicon {
+  margin-right: 6px;
+  color: #888;
 }
 .admin {
   padding-top: 15px;
@@ -2583,9 +2992,9 @@ ol.linenums {
   padding-top: 5px;
   padding-bottom: 5px;
 }
-.admin .table.segment th:first-child,
-.admin .table.segment td:first-child {
-  padding-left: 15px;
+.admin .table.segment th:first-of-type,
+.admin .table.segment td:first-of-type {
+  padding-left: 15px !important;
 }
 .admin .ui.header,
 .admin .ui.segment {
@@ -2594,28 +3003,46 @@ ol.linenums {
 .admin.user .email {
   max-width: 200px;
 }
+.admin dl.admin-dl-horizontal {
+  padding: 20px;
+  margin: 0;
+}
+.admin dl.admin-dl-horizontal dd {
+  margin-left: 240px;
+}
+.admin dl.admin-dl-horizontal dt {
+  font-weight: bolder;
+  float: left;
+  width: 250px;
+  clear: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .explore {
   padding-top: 15px;
   padding-bottom: 80px;
 }
-.explore.repositories .ui.repository.list .item {
-  border-top: 1px solid #eee;
-  padding-top: 25px;
+.ui.repository.list .item {
   padding-bottom: 25px;
 }
-.explore.repositories .ui.repository.list .item .ui.header {
+.ui.repository.list .item:not(:first-child) {
+  border-top: 1px solid #eee;
+  padding-top: 25px;
+}
+.ui.repository.list .item .ui.header {
   font-size: 1.5rem;
   padding-bottom: 10px;
 }
-.explore.repositories .ui.repository.list .item .ui.header .metas {
+.ui.repository.list .item .ui.header .metas {
   color: #888;
   font-size: 13px;
   font-weight: normal;
 }
-.explore.repositories .ui.repository.list .item .ui.header .metas span:not(:last-child) {
+.ui.repository.list .item .ui.header .metas span:not(:last-child) {
   margin-right: 5px;
 }
-.explore.repositories .ui.repository.list .item .time {
+.ui.repository.list .item .time {
   font-size: 12px;
   color: #808080;
 }

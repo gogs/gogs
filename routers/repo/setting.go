@@ -80,11 +80,24 @@ func SettingsPost(ctx *middleware.Context, form auth.RepoSettingForm) {
 		repo.Name = newRepoName
 		repo.LowerName = strings.ToLower(newRepoName)
 
-		if ctx.Repo.GitRepo.IsBranchExist(form.Branch) {
+		if ctx.Repo.GitRepo.IsBranchExist(form.Branch) &&
+			repo.DefaultBranch != form.Branch {
 			repo.DefaultBranch = form.Branch
+			if err := ctx.Repo.GitRepo.SetDefaultBranch(form.Branch); err != nil {
+				if !git.IsErrUnsupportedVersion(err) {
+					ctx.Handle(500, "SetDefaultBranch", err)
+					return
+				}
+			}
 		}
 		repo.Description = form.Description
 		repo.Website = form.Website
+
+		// Visibility of forked repository is forced sync with base repository.
+		if repo.IsFork {
+			form.Private = repo.BaseRepo.IsPrivate
+		}
+
 		visibilityChanged := repo.IsPrivate != form.Private
 		repo.IsPrivate = form.Private
 		if err := models.UpdateRepository(repo, visibilityChanged); err != nil {
@@ -246,9 +259,9 @@ func Webhooks(ctx *middleware.Context) {
 	ctx.Data["BaseLink"] = ctx.Repo.RepoLink
 	ctx.Data["Description"] = ctx.Tr("repo.settings.hooks_desc", "https://github.com/gogits/go-gogs-client/wiki/Repositories---Webhooks")
 
-	ws, err := models.GetWebhooksByRepoId(ctx.Repo.Repository.ID)
+	ws, err := models.GetWebhooksByRepoID(ctx.Repo.Repository.ID)
 	if err != nil {
-		ctx.Handle(500, "GetWebhooksByRepoId", err)
+		ctx.Handle(500, "GetWebhooksByRepoID", err)
 		return
 	}
 	ctx.Data["Webhooks"] = ws
@@ -671,7 +684,7 @@ func DeployKeysPost(ctx *middleware.Context, form auth.AddSSHKeyForm) {
 
 	content, err := models.CheckPublicKeyString(form.Content)
 	if err != nil {
-		if err == models.ErrKeyUnableVerify {
+		if models.IsErrKeyUnableVerify(err) {
 			ctx.Flash.Info(ctx.Tr("form.unable_verify_ssh_key"))
 		} else {
 			ctx.Data["HasError"] = true
@@ -682,7 +695,8 @@ func DeployKeysPost(ctx *middleware.Context, form auth.AddSSHKeyForm) {
 		}
 	}
 
-	if err = models.AddDeployKey(ctx.Repo.Repository.ID, form.Title, content); err != nil {
+	key, err := models.AddDeployKey(ctx.Repo.Repository.ID, form.Title, content)
+	if err != nil {
 		ctx.Data["HasError"] = true
 		switch {
 		case models.IsErrKeyAlreadyExist(err):
@@ -698,7 +712,7 @@ func DeployKeysPost(ctx *middleware.Context, form auth.AddSSHKeyForm) {
 	}
 
 	log.Trace("Deploy key added: %d", ctx.Repo.Repository.ID)
-	ctx.Flash.Success(ctx.Tr("repo.settings.add_key_success", form.Title))
+	ctx.Flash.Success(ctx.Tr("repo.settings.add_key_success", key.Name))
 	ctx.Redirect(ctx.Repo.RepoLink + "/settings/keys")
 }
 

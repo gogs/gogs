@@ -70,7 +70,7 @@ l:
 				if err != nil {
 					return nil, err
 				}
-				commit.Tree.Id = id
+				commit.Tree.ID = id
 			case "parent":
 				// A commit can have one or more parents
 				oid, err := NewIdFromString(string(line[spacepos+1:]))
@@ -121,7 +121,7 @@ func (repo *Repository) getCommit(id sha1) (*Commit, error) {
 		return nil, err
 	}
 	commit.repo = repo
-	commit.Id = id
+	commit.ID = id
 
 	repo.commitCache[id] = commit
 	return commit, nil
@@ -211,7 +211,7 @@ func (repo *Repository) CommitsBetween(last *Commit, before *Commit) (*list.List
 	var err error
 	cur := last
 	for {
-		if cur.Id.Equal(before.Id) {
+		if cur.ID.Equal(before.ID) {
 			break
 		}
 		l.PushBack(cur)
@@ -240,7 +240,7 @@ func (repo *Repository) commitsBefore(lock *sync.Mutex, l *list.List, parent *li
 		for {
 			if in == nil {
 				break
-			} else if in.Value.(*Commit).Id.Equal(commit.Id) {
+			} else if in.Value.(*Commit).ID.Equal(commit.ID) {
 				return nil
 			} else {
 				if in.Next() == nil {

@@ -6,7 +6,6 @@ package repo
 
 import (
 	"fmt"
-	"net/url"
 	"os"
 	"path"
 	"strings"
@@ -164,26 +163,24 @@ func MigratePost(ctx *middleware.Context, form auth.MigrateRepoForm) {
 		return
 	}
 
-	// Remote address can be HTTP/HTTPS/Git URL or local path.
-	// Note: remember to change api/v1/repo.go: MigrateRepo
-	// FIXME: merge these two functions with better error handling
-	remoteAddr := form.CloneAddr
-	if strings.HasPrefix(form.CloneAddr, "http://") ||
-		strings.HasPrefix(form.CloneAddr, "https://") ||
-		strings.HasPrefix(form.CloneAddr, "git://") {
-		u, err := url.Parse(form.CloneAddr)
-		if err != nil {
+	remoteAddr, err := form.ParseRemoteAddr(ctx.User)
+	if err != nil {
+		if models.IsErrInvalidCloneAddr(err) {
 			ctx.Data["Err_CloneAddr"] = true
-			ctx.RenderWithErr(ctx.Tr("form.url_error"), MIGRATE, &form)
-			return
+			addrErr := err.(models.ErrInvalidCloneAddr)
+			switch {
+			case addrErr.IsURLError:
+				ctx.RenderWithErr(ctx.Tr("form.url_error"), MIGRATE, &form)
+			case addrErr.IsPermissionDenied:
+				ctx.RenderWithErr(ctx.Tr("repo.migrate.permission_denied"), MIGRATE, &form)
+			case addrErr.IsInvalidPath:
+				ctx.RenderWithErr(ctx.Tr("repo.migrate.invalid_local_path"), MIGRATE, &form)
+			default:
+				ctx.Handle(500, "Unknown error", err)
+			}
+		} else {
+			ctx.Handle(500, "ParseRemoteAddr", err)
 		}
-		if len(form.AuthUsername) > 0 || len(form.AuthPassword) > 0 {
-			u.User = url.UserPassword(form.AuthUsername, form.AuthPassword)
-		}
-		remoteAddr = u.String()
-	} else if !com.IsDir(remoteAddr) {
-		ctx.Data["Err_CloneAddr"] = true
-		ctx.RenderWithErr(ctx.Tr("repo.migrate.invalid_local_path"), MIGRATE, &form)
 		return
 	}
 
@@ -207,10 +204,13 @@ func MigratePost(ctx *middleware.Context, form auth.MigrateRepoForm) {
 	}
 
 	if strings.Contains(err.Error(), "Authentication failed") ||
-		strings.Contains(err.Error(), " not found") ||
 		strings.Contains(err.Error(), "could not read Username") {
 		ctx.Data["Err_Auth"] = true
 		ctx.RenderWithErr(ctx.Tr("form.auth_failed", strings.Replace(err.Error(), ":"+form.AuthPassword+"@", ":<password>@", 1)), MIGRATE, &form)
+		return
+	} else if strings.Contains(err.Error(), "fatal:") {
+		ctx.Data["Err_CloneAddr"] = true
+		ctx.RenderWithErr(ctx.Tr("repo.migrate.failed", strings.Replace(err.Error(), ":"+form.AuthPassword+"@", ":<password>@", 1)), MIGRATE, &form)
 		return
 	}
 
@@ -253,11 +253,6 @@ func Action(ctx *middleware.Context) {
 		redirectTo = ctx.Repo.RepoLink
 	}
 	ctx.Redirect(redirectTo)
-
-	return
-	ctx.JSON(200, map[string]interface{}{
-		"ok": true,
-	})
 }
 
 func Download(ctx *middleware.Context) {
@@ -320,7 +315,7 @@ func Download(ctx *middleware.Context) {
 		return
 	}
 
-	archivePath = path.Join(archivePath, base.ShortSha(commit.Id.String())+ext)
+	archivePath = path.Join(archivePath, base.ShortSha(commit.ID.String())+ext)
 	if !com.IsFile(archivePath) {
 		if err := commit.CreateArchive(archivePath, archiveType); err != nil {
 			ctx.Handle(500, "Download -> CreateArchive "+archivePath, err)
@@ -328,5 +323,5 @@ func Download(ctx *middleware.Context) {
 		}
 	}
 
-	ctx.ServeFile(archivePath, ctx.Repo.Repository.Name+"-"+base.ShortSha(commit.Id.String())+ext)
+	ctx.ServeFile(archivePath, ctx.Repo.Repository.Name+"-"+base.ShortSha(commit.ID.String())+ext)
 }

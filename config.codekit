@@ -464,7 +464,7 @@
 		"ignore": 0,
 		"ignoreWasSetByUser": 0,
 		"inputAbbreviatedPath": "\/public\/less\/gogs.less",
-		"outputAbbreviatedPath": "\/public\/css\/gogs.min.css",
+		"outputAbbreviatedPath": "\/public\/css\/gogs.css",
 		"outputPathIsOutsideProject": 0,
 		"outputPathIsSetByUser": 1,
 		"outputStyle": 1,

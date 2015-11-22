@@ -1,47 +1,44 @@
-{{template "ng/base/head" .}}
-{{template "ng/base/header" .}}
-<div id="repo-wrapper">
-    {{template "repo/header_old" .}}
-	<div id="setting-wrapper" class="main-wrapper">
-	    <div id="repo-setting" class="container clear">
-	        {{template "repo/settings/nav" .}}
-	        <div class="grid-4-5 left">
-	            <div class="setting-content">
-	                {{template "ng/base/alert" .}}
-	                <div id="setting-content">
-	                    <div id="user-profile-setting-content" class="panel panel-radius">
-	                        <div class="panel-header">
-	                        	<strong>{{.i18n.Tr "repo.settings.collaboration"}}</strong>
-	                        </div>
-	                        <div class="panel-body">
-	                        	<ul id="repo-collab-list">
-	                        		{{range .Collaborators}}
-	                        		<li class="collab">
-	                        			{{if not (eq .Id $.Owner.Id)}}<a href="{{$.RepoLink}}/settings/collaboration?remove={{.Name}}" class="remove-collab right"><i class="fa fa-times"></i></a>{{end}}
-										<a class="member" href="{{AppSubUrl}}/{{.Name}}">
-										    <img alt="{{.Name}}" class="pull-left avatar" src="{{.AvatarLink}}">
-										    <strong>{{.FullName}}</strong> ({{.Name}})
-										</a>
-	                        		</li>
-	                        		<hr>
-	                        		{{end}}
-	                        	</ul>
-							</div>
-				            <div class="panel-footer">
-				                <form class="form form-align" action="{{.RepoLink}}/settings/collaboration" method="post" id="repo-collab-form">
-				                    {{.CsrfTokenHtml}}
-	                                <input class="ipt ipt-large ipt-radius" id="repo-collaborator" name="collaborator" autocomplete="off" required />
-	                                <button class="btn btn-blue btn-large btn-radius">{{.i18n.Tr "repo.settings.add_collaborator"}}</button>
-									<div class="repo-user-list-block">
-										<ul class="menu-down-show menu-vertical menu-radius switching-list user-list" id="repo-collaborator-list"></ul>
-									</div>
-				                </form>
-				            </div>
-	                    </div>
-	                </div>
-	            </div>
-	        </div>
-	    </div>
+{{template "base/head" .}}
+<div class="repository settings collaboration">
+	{{template "repo/header" .}}
+	<div class="ui container">
+    {{template "repo/sidebar" .}}
+		<div class="ui grid">
+			{{template "repo/settings/navbar" .}}
+			<div class="twelve wide column content">
+				{{template "base/alert" .}}
+				<h4 class="ui top attached header">
+				  {{.i18n.Tr "repo.settings.collaboration"}}
+				</h4>
+				<div class="ui attached segment collaborator list">
+	        {{range .Collaborators}}
+					<div class="item">
+	          {{if not (eq .Id $.Owner.Id)}}
+	          <a href="{{$.RepoLink}}/settings/collaboration?remove={{.Name}}" class="ui right text red"><i class="fa fa-times"></i></a>
+	          {{end}}
+						<a href="{{AppSubUrl}}/{{.Name}}">
+					    <img class="ui avatar image" src="{{.AvatarLink}}">
+					    {{.DisplayName}}
+						</a>
+					</div>
+	        {{end}}
+        </div>
+        <div class="ui bottom attached segment">
+				  <form class="ui form" id="repo-collab-form" action="{{.Link}}" method="post">
+				    {{.CsrfTokenHtml}}
+				    <div class="inline field ui left">
+				    	<div id="search-user-box">
+				    	  <div class="ui input">
+				    	    <input class="prompt" name="collaborator" placeholder="{{.i18n.Tr "repo.settings.search_user_placeholder"}}" autocomplete="off" required>
+				    	  </div>
+				    	  <div class="ui segment results hide"></div>
+				    	</div>
+				    </div>
+	          <button class="ui green button">{{.i18n.Tr "repo.settings.add_collaborator"}}</button>
+          </form>
+        </div>
+      </div>
+    </div>
 	</div>
 </div>
-{{template "ng/base/footer" .}}
+{{template "base/footer" .}}

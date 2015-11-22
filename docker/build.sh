@@ -1,4 +1,6 @@
 #!/bin/sh
+set -x
+set -e
 
 # Set temp environment vars
 export GOPATH=/tmp/go

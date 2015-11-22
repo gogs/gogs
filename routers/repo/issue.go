@@ -59,6 +59,7 @@ func Issues(ctx *middleware.Context) {
 	if isPullList {
 		ctx.Data["Title"] = ctx.Tr("repo.pulls")
 		ctx.Data["PageIsPullList"] = true
+		ctx.Data["HasForkedRepo"] = ctx.IsSigned && ctx.User.HasForkedRepo(ctx.Repo.Repository.ID)
 	} else {
 		ctx.Data["Title"] = ctx.Tr("repo.issues")
 		ctx.Data["PageIsIssueList"] = true
@@ -124,7 +125,8 @@ func Issues(ctx *middleware.Context) {
 	} else {
 		total = int(issueStats.ClosedCount)
 	}
-	ctx.Data["Page"] = paginater.New(total, setting.IssuePagingNum, page, 5)
+	pager := paginater.New(total, setting.IssuePagingNum, page, 5)
+	ctx.Data["Page"] = pager
 
 	// Get issues.
 	issues, err := models.Issues(&models.IssuesOptions{
@@ -133,7 +135,7 @@ func Issues(ctx *middleware.Context) {
 		RepoID:      repo.ID,
 		PosterID:    posterID,
 		MilestoneID: milestoneID,
-		Page:        page,
+		Page:        pager.Current(),
 		IsClosed:    isShowClosed,
 		IsMention:   filterMode == models.FM_MENTION,
 		IsPull:      isPullList,
@@ -392,7 +394,7 @@ func NewIssuePost(ctx *middleware.Context, form auth.CreateIssueForm) {
 	issue := &models.Issue{
 		RepoID:      ctx.Repo.Repository.ID,
 		Index:       repo.NextIssueIndex(),
-		Name:        form.Title,
+		Name:        strings.TrimSpace(form.Title),
 		PosterID:    ctx.User.Id,
 		Poster:      ctx.User,
 		MilestoneID: milestoneID,
@@ -492,6 +494,7 @@ func ViewIssue(ctx *middleware.Context) {
 
 		ctx.Data["PageIsPullList"] = true
 		ctx.Data["PageIsPullConversation"] = true
+		ctx.Data["HasForkedRepo"] = ctx.IsSigned && ctx.User.HasForkedRepo(ctx.Repo.Repository.ID)
 	} else {
 		ctx.Data["PageIsIssueList"] = true
 	}
@@ -619,7 +622,7 @@ func UpdateIssueTitle(ctx *middleware.Context) {
 		return
 	}
 
-	issue.Name = ctx.Query("title")
+	issue.Name = ctx.QueryTrim("title")
 	if len(issue.Name) == 0 {
 		ctx.Error(204)
 		return
@@ -781,8 +784,8 @@ func NewComment(ctx *middleware.Context, form auth.CreateCommentForm) {
 
 	var comment *models.Comment
 	defer func() {
-		// Check if issue owner/poster changes the status of issue.
-		if (ctx.Repo.IsOwner() || (ctx.IsSigned && issue.IsPoster(ctx.User.Id))) &&
+		// Check if issue admin/poster changes the status of issue.
+		if (ctx.Repo.IsAdmin() || (ctx.IsSigned && issue.IsPoster(ctx.User.Id))) &&
 			(form.Status == "reopen" || form.Status == "close") &&
 			!(issue.IsPull && issue.HasMerged) {
 

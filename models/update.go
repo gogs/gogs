@@ -10,7 +10,6 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/git"
 	"github.com/gogits/gogs/modules/log"
 )
@@ -28,6 +27,7 @@ func AddUpdateTask(task *UpdateTask) error {
 	return err
 }
 
+// GetUpdateTaskByUUID returns update task by given UUID.
 func GetUpdateTaskByUUID(uuid string) (*UpdateTask, error) {
 	task := &UpdateTask{
 		UUID: uuid,
@@ -36,7 +36,7 @@ func GetUpdateTaskByUUID(uuid string) (*UpdateTask, error) {
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, fmt.Errorf("task does not exist: %s", uuid)
+		return nil, ErrUpdateTaskNotExist{uuid}
 	}
 	return task, nil
 }
@@ -46,10 +46,10 @@ func DeleteUpdateTaskByUUID(uuid string) error {
 	return err
 }
 
-func Update(refName, oldCommitId, newCommitId, userName, repoUserName, repoName string, userId int64) error {
-	isNew := strings.HasPrefix(oldCommitId, "0000000")
+func Update(refName, oldCommitID, newCommitID, userName, repoUserName, repoName string, userID int64) error {
+	isNew := strings.HasPrefix(oldCommitID, "0000000")
 	if isNew &&
-		strings.HasPrefix(newCommitId, "0000000") {
+		strings.HasPrefix(newCommitID, "0000000") {
 		return fmt.Errorf("old rev and new rev both 000000")
 	}
 
@@ -59,23 +59,23 @@ func Update(refName, oldCommitId, newCommitId, userName, repoUserName, repoName 
 	gitUpdate.Dir = f
 	gitUpdate.Run()
 
-	isDel := strings.HasPrefix(newCommitId, "0000000")
+	isDel := strings.HasPrefix(newCommitID, "0000000")
 	if isDel {
-		log.GitLogger.Info("del rev", refName, "from", userName+"/"+repoName+".git", "by", userId)
+		log.GitLogger.Info("del rev", refName, "from", userName+"/"+repoName+".git", "by", userID)
 		return nil
 	}
 
-	repo, err := git.OpenRepository(f)
+	gitRepo, err := git.OpenRepository(f)
 	if err != nil {
 		return fmt.Errorf("runUpdate.Open repoId: %v", err)
 	}
 
-	ru, err := GetUserByName(repoUserName)
+	user, err := GetUserByName(repoUserName)
 	if err != nil {
 		return fmt.Errorf("runUpdate.GetUserByName: %v", err)
 	}
 
-	repos, err := GetRepositoryByName(ru.Id, repoName)
+	repo, err := GetRepositoryByName(user.Id, repoName)
 	if err != nil {
 		return fmt.Errorf("runUpdate.GetRepositoryByName userId: %v", err)
 	}
@@ -83,7 +83,7 @@ func Update(refName, oldCommitId, newCommitId, userName, repoUserName, repoName 
 	// Push tags.
 	if strings.HasPrefix(refName, "refs/tags/") {
 		tagName := git.RefEndName(refName)
-		tag, err := repo.GetTag(tagName)
+		tag, err := gitRepo.GetTag(tagName)
 		if err != nil {
 			log.GitLogger.Fatal(4, "runUpdate.GetTag: %v", err)
 		}
@@ -99,16 +99,16 @@ func Update(refName, oldCommitId, newCommitId, userName, repoUserName, repoName 
 			actEmail = cmt.Committer.Email
 		}
 
-		commit := &base.PushCommits{}
+		commit := &PushCommits{}
 
-		if err = CommitRepoAction(userId, ru.Id, userName, actEmail,
-			repos.ID, repoUserName, repoName, refName, commit, oldCommitId, newCommitId); err != nil {
+		if err = CommitRepoAction(userID, user.Id, userName, actEmail,
+			repo.ID, repoUserName, repoName, refName, commit, oldCommitID, newCommitID); err != nil {
 			log.GitLogger.Fatal(4, "CommitRepoAction: %s/%s:%v", repoUserName, repoName, err)
 		}
 		return err
 	}
 
-	newCommit, err := repo.GetCommit(newCommitId)
+	newCommit, err := gitRepo.GetCommit(newCommitID)
 	if err != nil {
 		return fmt.Errorf("runUpdate GetCommit of newCommitId: %v", err)
 	}
@@ -121,7 +121,7 @@ func Update(refName, oldCommitId, newCommitId, userName, repoUserName, repoName 
 			return fmt.Errorf("CommitsBefore: %v", err)
 		}
 	} else {
-		l, err = newCommit.CommitsBeforeUntil(oldCommitId)
+		l, err = newCommit.CommitsBeforeUntil(oldCommitID)
 		if err != nil {
 			return fmt.Errorf("CommitsBeforeUntil: %v", err)
 		}
@@ -132,7 +132,7 @@ func Update(refName, oldCommitId, newCommitId, userName, repoUserName, repoName 
 	}
 
 	// Push commits.
-	commits := make([]*base.PushCommit, 0)
+	commits := make([]*PushCommit, 0)
 	var actEmail string
 	for e := l.Front(); e != nil; e = e.Next() {
 		commit := e.Value.(*git.Commit)
@@ -140,15 +140,15 @@ func Update(refName, oldCommitId, newCommitId, userName, repoUserName, repoName 
 			actEmail = commit.Committer.Email
 		}
 		commits = append(commits,
-			&base.PushCommit{commit.Id.String(),
+			&PushCommit{commit.ID.String(),
 				commit.Message(),
 				commit.Author.Email,
 				commit.Author.Name,
 			})
 	}
 
-	if err = CommitRepoAction(userId, ru.Id, userName, actEmail,
-		repos.ID, repoUserName, repoName, refName, &base.PushCommits{l.Len(), commits, ""}, oldCommitId, newCommitId); err != nil {
+	if err = CommitRepoAction(userID, user.Id, userName, actEmail,
+		repo.ID, repoUserName, repoName, refName, &PushCommits{l.Len(), commits, "", nil}, oldCommitID, newCommitID); err != nil {
 		return fmt.Errorf("runUpdate.models.CommitRepoAction: %s/%s:%v", repoUserName, repoName, err)
 	}
 	return nil

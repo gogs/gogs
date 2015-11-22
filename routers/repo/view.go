@@ -11,19 +11,25 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/Unknwon/paginater"
+
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/git"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/middleware"
+	"github.com/gogits/gogs/modules/template"
 )
 
 const (
-	HOME base.TplName = "repo/home"
+	HOME     base.TplName = "repo/home"
+	WATCHERS base.TplName = "repo/watchers"
+	FORKS    base.TplName = "repo/forks"
 )
 
 func Home(ctx *middleware.Context) {
 	ctx.Data["Title"] = ctx.Repo.Repository.Name
+	ctx.Data["RequireHighlightJS"] = true
 
 	branchName := ctx.Repo.BranchName
 	userName := ctx.Repo.Owner.Name
@@ -31,14 +37,19 @@ func Home(ctx *middleware.Context) {
 
 	repoLink := ctx.Repo.RepoLink
 	branchLink := ctx.Repo.RepoLink + "/src/" + branchName
+	treeLink := branchLink
 	rawLink := ctx.Repo.RepoLink + "/raw/" + branchName
 
 	// Get tree path
 	treename := ctx.Repo.TreeName
 
-	if len(treename) > 0 && treename[len(treename)-1] == '/' {
-		ctx.Redirect(repoLink + "/src/" + branchName + "/" + treename[:len(treename)-1])
-		return
+	if len(treename) > 0 {
+		if treename[len(treename)-1] == '/' {
+			ctx.Redirect(repoLink + "/src/" + branchName + "/" + treename[:len(treename)-1])
+			return
+		}
+
+		treeLink += "/" + treename
 	}
 
 	ctx.Data["IsRepoToolbarSource"] = true
@@ -98,9 +109,9 @@ func Home(ctx *middleware.Context) {
 				readmeExist := base.IsMarkdownFile(blob.Name()) || base.IsReadmeFile(blob.Name())
 				ctx.Data["ReadmeExist"] = readmeExist
 				if readmeExist {
-					ctx.Data["FileContent"] = string(base.RenderMarkdown(buf, branchLink))
+					ctx.Data["FileContent"] = string(base.RenderMarkdown(buf, path.Dir(treeLink)))
 				} else {
-					if err, content := base.ToUtf8WithErr(buf); err != nil {
+					if err, content := template.ToUtf8WithErr(buf); err != nil {
 						if err != nil {
 							log.Error(4, "Convert content encoding: %s", err)
 						}
@@ -151,7 +162,7 @@ func Home(ctx *middleware.Context) {
 					ctx.Handle(500, "GetCommitOfRelPath", err)
 					return
 				}
-				files = append(files, []interface{}{te, git.NewSubModuleFile(c, smUrl, te.Id.String())})
+				files = append(files, []interface{}{te, git.NewSubModuleFile(c, smUrl, te.ID.String())})
 			}
 		}
 		ctx.Data["Files"] = files
@@ -171,7 +182,7 @@ func Home(ctx *middleware.Context) {
 			ctx.Data["ReadmeInList"] = true
 			ctx.Data["ReadmeExist"] = true
 			if dataRc, err := readmeFile.Data(); err != nil {
-				ctx.Handle(404, "repo.SinglereadmeFile.LookupBlob", err)
+				ctx.Handle(404, "repo.SinglereadmeFile.Data", err)
 				return
 			} else {
 
@@ -191,7 +202,7 @@ func Home(ctx *middleware.Context) {
 					buf = append(buf, d...)
 					switch {
 					case base.IsMarkdownFile(readmeFile.Name()):
-						buf = base.RenderMarkdown(buf, branchLink)
+						buf = base.RenderMarkdown(buf, treeLink)
 					default:
 						buf = bytes.Replace(buf, []byte("\n"), []byte(`<br>`), -1)
 					}
@@ -237,4 +248,54 @@ func Home(ctx *middleware.Context) {
 	ctx.Data["TreePath"] = treePath
 	ctx.Data["BranchLink"] = branchLink
 	ctx.HTML(200, HOME)
+}
+
+func renderItems(ctx *middleware.Context, total int, getter func(page int) ([]*models.User, error)) {
+	page := ctx.QueryInt("page")
+	if page <= 0 {
+		page = 1
+	}
+	pager := paginater.New(total, models.ItemsPerPage, page, 5)
+	ctx.Data["Page"] = pager
+
+	items, err := getter(pager.Current())
+	if err != nil {
+		ctx.Handle(500, "getter", err)
+		return
+	}
+	ctx.Data["Watchers"] = items
+
+	ctx.HTML(200, WATCHERS)
+}
+
+func Watchers(ctx *middleware.Context) {
+	ctx.Data["Title"] = ctx.Tr("repo.watchers")
+	ctx.Data["PageIsWatchers"] = true
+	renderItems(ctx, ctx.Repo.Repository.NumWatches, ctx.Repo.Repository.GetWatchers)
+}
+
+func Stars(ctx *middleware.Context) {
+	ctx.Data["Title"] = ctx.Tr("repo.stargazers")
+	ctx.Data["PageIsStargazers"] = true
+	renderItems(ctx, ctx.Repo.Repository.NumStars, ctx.Repo.Repository.GetStargazers)
+}
+
+func Forks(ctx *middleware.Context) {
+	ctx.Data["Title"] = ctx.Tr("repos.forks")
+
+	forks, err := ctx.Repo.Repository.GetForks()
+	if err != nil {
+		ctx.Handle(500, "GetForks", err)
+		return
+	}
+
+	for _, fork := range forks {
+		if err = fork.GetOwner(); err != nil {
+			ctx.Handle(500, "GetOwner", err)
+			return
+		}
+	}
+	ctx.Data["Forks"] = forks
+
+	ctx.HTML(200, FORKS)
 }

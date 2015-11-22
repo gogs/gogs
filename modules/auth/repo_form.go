@@ -5,8 +5,14 @@
 package auth
 
 import (
+	"net/url"
+	"strings"
+
+	"github.com/Unknwon/com"
 	"github.com/go-macaron/binding"
 	"gopkg.in/macaron.v1"
+
+	"github.com/gogits/gogs/models"
 )
 
 // _______________________________________    _________.______________________ _______________.___.
@@ -37,13 +43,41 @@ type MigrateRepoForm struct {
 	AuthPassword string `json:"auth_password"`
 	Uid          int64  `json:"uid" binding:"Required"`
 	RepoName     string `json:"repo_name" binding:"Required;AlphaDashDot;MaxSize(100)"`
-	Private      bool   `json:"mirror"`
-	Mirror       bool   `json:"private"`
+	Mirror       bool   `json:"mirror"`
+	Private      bool   `json:"private"`
 	Description  string `json:"description" binding:"MaxSize(255)"`
 }
 
 func (f *MigrateRepoForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
 	return validate(errs, ctx.Data, f, ctx.Locale)
+}
+
+// ParseRemoteAddr checks if given remote address is valid,
+// and returns composed URL with needed username and passowrd.
+// It also checks if given user has permission when remote address
+// is actually a local path.
+func (f MigrateRepoForm) ParseRemoteAddr(user *models.User) (string, error) {
+	remoteAddr := f.CloneAddr
+
+	// Remote address can be HTTP/HTTPS/Git URL or local path.
+	if strings.HasPrefix(remoteAddr, "http://") ||
+		strings.HasPrefix(remoteAddr, "https://") ||
+		strings.HasPrefix(remoteAddr, "git://") {
+		u, err := url.Parse(remoteAddr)
+		if err != nil {
+			return "", models.ErrInvalidCloneAddr{IsURLError: true}
+		}
+		if len(f.AuthUsername)+len(f.AuthPassword) > 0 {
+			u.User = url.UserPassword(f.AuthUsername, f.AuthPassword)
+		}
+		remoteAddr = u.String()
+	} else if !user.CanImportLocal() {
+		return "", models.ErrInvalidCloneAddr{IsPermissionDenied: true}
+	} else if !com.IsDir(remoteAddr) {
+		return "", models.ErrInvalidCloneAddr{IsInvalidPath: true}
+	}
+
+	return remoteAddr, nil
 }
 
 type RepoSettingForm struct {
@@ -181,12 +215,12 @@ func (f *CreateLabelForm) Validate(ctx *macaron.Context, errs binding.Errors) bi
 //         \/     \/          \/     \/     \/     \/
 
 type NewReleaseForm struct {
-	TagName    string `form:"tag_name" binding:"Required"`
+	TagName    string `binding:"Required"`
 	Target     string `form:"tag_target" binding:"Required"`
-	Title      string `form:"title" binding:"Required"`
-	Content    string `form:"content" binding:"Required"`
-	Draft      string `form:"draft"`
-	Prerelease bool   `form:"prerelease"`
+	Title      string `binding:"Required"`
+	Content    string
+	Draft      string
+	Prerelease bool
 }
 
 func (f *NewReleaseForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {

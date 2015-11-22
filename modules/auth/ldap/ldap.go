@@ -130,7 +130,7 @@ func (ls *Source) SearchEntry(name, passwd string, directBind bool) (string, str
 
 	l, err := ldapDial(ls)
 	if err != nil {
-		log.Error(4, "LDAP Connect error, %s:%v", ls.Host, err)
+		log.Error(4, "LDAP Connect error (%s): %v", ls.Host, err)
 		ls.Enabled = false
 		return "", "", "", false, false
 	}

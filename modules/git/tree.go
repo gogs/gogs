@@ -18,7 +18,7 @@ var (
 
 // A tree is a flat directory listing.
 type Tree struct {
-	Id   sha1
+	ID   sha1
 	repo *Repository
 
 	// parent tree
@@ -26,6 +26,27 @@ type Tree struct {
 
 	entries       Entries
 	entriesParsed bool
+}
+
+var escapeChar = []byte("\\")
+
+func UnescapeChars(in []byte) []byte {
+	if bytes.Index(in, escapeChar) == -1 {
+		return in
+	}
+
+	endIdx := len(in) - 1
+	isEscape := false
+	out := make([]byte, 0, endIdx+1)
+	for i := range in {
+		if in[i] == '\\' && !isEscape {
+			isEscape = true
+			continue
+		}
+		isEscape = false
+		out = append(out, in[i])
+	}
+	return out
 }
 
 // Parse tree information from the (uncompressed) raw
@@ -66,16 +87,16 @@ func parseTreeData(tree *Tree, data []byte) ([]*TreeEntry, error) {
 		if err != nil {
 			return nil, err
 		}
-		entry.Id = id
+		entry.ID = id
 		pos += step + 1 // Skip half of sha1.
 
 		step = bytes.IndexByte(data[pos:], '\n')
-		entry.name = string(data[pos : pos+step])
 
 		// In case entry name is surrounded by double quotes(it happens only in git-shell).
-		if entry.name[0] == '"' {
-			entry.name = string(data[pos+1 : pos+step-1])
-			entry.name = strings.Replace(entry.name, `\"`, `"`, -1)
+		if data[pos] == '"' {
+			entry.name = string(UnescapeChars(data[pos+1 : pos+step-1]))
+		} else {
+			entry.name = string(data[pos : pos+step])
 		}
 
 		pos += step + 1
@@ -100,7 +121,7 @@ func (t *Tree) SubTree(rpath string) (*Tree, error) {
 			return nil, err
 		}
 
-		g, err = t.repo.getTree(te.Id)
+		g, err = t.repo.getTree(te.ID)
 		if err != nil {
 			return nil, err
 		}
@@ -117,7 +138,7 @@ func (t *Tree) ListEntries(relpath string) (Entries, error) {
 	t.entriesParsed = true
 
 	stdout, stderr, err := com.ExecCmdDirBytes(t.repo.Path,
-		"git", "ls-tree", t.Id.String())
+		"git", "ls-tree", t.ID.String())
 	if err != nil {
 		if strings.Contains(err.Error(), "exit status 128") {
 			return nil, errors.New(strings.TrimSpace(string(stderr)))
@@ -130,7 +151,7 @@ func (t *Tree) ListEntries(relpath string) (Entries, error) {
 
 func NewTree(repo *Repository, id sha1) *Tree {
 	tree := new(Tree)
-	tree.Id = id
+	tree.ID = id
 	tree.repo = repo
 	return tree
 }

@@ -2,7 +2,7 @@
 	<footer>
 		<div class="ui container">
 			<div class="ui left">
-				© 2015 Gogs {{.i18n.Tr "version"}}: {{AppVer}} {{.i18n.Tr "page"}}: <strong>{{LoadTimes .PageStartTime}}</strong> {{.i18n.Tr "template"}}: <strong>{{call .TmplLoadTimes}}</strong>
+				© 2015 Gogs {{if (or .ShowFooterVersion .PageIsAdmin)}}{{.i18n.Tr "version"}}: {{AppVer}}{{end}} {{.i18n.Tr "page"}}: <strong>{{LoadTimes .PageStartTime}}</strong> {{.i18n.Tr "template"}}: <strong>{{call .TmplLoadTimes}}</strong>
 			</div>
 			<div class="ui right links">
 				{{if .ShowFooterBranding}}
@@ -20,7 +20,7 @@
 						</div>
         </div>
 				<a target="_blank" href="http://gogs.io">{{.i18n.Tr "website"}}</a>
-				<span class="version">{{GoVer}}</span>
+				{{if (or .ShowFooterVersion .PageIsAdmin)}}<span class="version">{{GoVer}}</span>{{end}}
 			</div>
 		</div>
 	</footer>
@@ -28,8 +28,8 @@
 
 	<!-- Third-party libraries -->
 	{{if .RequireHighlightJS}}
-	<link rel="stylesheet" href="{{AppSubUrl}}/css/highlight-8.7/default.css">
-	<script src="{{AppSubUrl}}/js/libs/highlight-8.7.pack.js"></script>
+	<link rel="stylesheet" href="{{AppSubUrl}}/css/highlight-8.9.1/github.css">
+	<script src="{{AppSubUrl}}/js/libs/highlight-8.9.1.pack.js"></script>
 	{{end}}
 	{{if .RequireMinicolors}}
 	<link rel="stylesheet" href="{{AppSubUrl}}/css/jquery.minicolors-2.1.12.css">
@@ -40,10 +40,10 @@
 	<script src="{{AppSubUrl}}/js/libs/jquery.datetimepicker-2.4.5.js"></script>
 	{{end}}
 	{{if .RequireDropzone}}
-	<link rel="stylesheet" href="{{AppSubUrl}}/css/dropzone-4.0.1.css">
-	<script src="{{AppSubUrl}}/js/libs/dropzone-4.0.1.js"></script>
+	<link rel="stylesheet" href="{{AppSubUrl}}/css/dropzone-4.2.0.css">
+	<script src="{{AppSubUrl}}/js/libs/dropzone-4.2.0.js"></script>
 	{{end}}
 	<script src="{{AppSubUrl}}/js/libs/emojify-1.1.0.min.js"></script>
-	<script src="{{AppSubUrl}}/js/libs/clipboard-1.3.1.min.js"></script>
+	<script src="{{AppSubUrl}}/js/libs/clipboard-1.5.5.min.js"></script>
 	
 </html>

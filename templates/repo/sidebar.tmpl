@@ -1,30 +1,21 @@
-<div id="repo-sidebar" class="right grid-1-6">
-    <ul class="menu menu-vertical" id="repo-sidebar-nav">
-        <li>
-            <a class="radius" href="{{.RepoLink}}/issues"><i class="octicon octicon-issue-opened"></i>{{.i18n.Tr "repo.issues"}}<span class="num right label label-blue label-radius">{{.Repository.NumOpenIssues}}</span></a>
-        </li>
-        <li>
-            <a class="radius" href="{{.RepoLink}}/pulls"><i class="octicon octicon-git-pull-request"></i>{{.i18n.Tr "repo.pulls"}}<span class="num right label label-blue label-radius">{{.Repository.NumOpenPulls}}</span></a>
-        </li>
-        <li class="border-bottom"></li>
-        <li class="head">{{if .IsViewBranch}}{{.BranchName}}{{else}}{{ShortSha .BranchName}}{{end}}</li>
-        <li>
-            <a class="radius" href="{{.RepoLink}}/commits/{{EscapePound .BranchName}}"><i class="octicon octicon-history"></i>{{.i18n.Tr "repo.commits"}} <span class="num right label label-gray label-radius">{{.CommitsCount}}</span></a>
-        </li>
-        <!-- <li>
-            <a class="radius" href="{{.RepoLink}}/branches"><i class="octicon octicon-git-branch"></i>Branches<span class="num right label label-gray label-radius">{{.BrancheCount}}</span></a>
-        </li> -->
-        <li>
-            <a class="radius" href="{{.RepoLink}}/releases"><i class="octicon octicon-tag"></i>{{.i18n.Tr "repo.releases"}} <span class="num right label label-gray label-radius">{{.Repository.NumTags}}</span></a>
-        </li>
-        <!-- <li>
-            <a class="radius" href="#"><i class="octicon octicon-organization"></i>contributors <span class="num right label label-gray label-radius">43</span></a>
-        </li> -->
-        {{if .IsRepositoryAdmin}}
-        <li class="border-bottom"></li>
-        <li>
-            <a class="radius" href="{{.RepoLink}}/settings"><i class="octicon octicon-tools"></i>{{.i18n.Tr "repo.settings"}}</a>
-        </li>
-        {{end}}
-    </ul>
+{{if not .IsBareRepo}}
+<div class="ui {{if .IsRepositoryAdmin}}five{{else}}four{{end}} item menu">
+  <a class="{{if .PageIsIssueList}}active{{end}} item" href="{{.RepoLink}}/issues">
+    <i class="icon octicon octicon-issue-opened"></i> {{.i18n.Tr "repo.issues"}} <span class="ui blue label">{{.Repository.NumOpenIssues}}</span>
+  </a>
+  <a class="{{if .PageIsPullList}}active{{end}} item" href="{{.RepoLink}}/pulls">
+    <i class="icon octicon octicon-git-pull-request"></i> {{.i18n.Tr "repo.pulls"}} <span class="ui blue label">{{.Repository.NumOpenPulls}}</span>
+  </a>
+  <a class="{{if .PageIsCommits}}active{{end}} item" href="{{.RepoLink}}/commits/{{EscapePound .BranchName}}">
+    <i class="icon octicon octicon-history"></i> {{.i18n.Tr "repo.commits"}} <span class="ui blue label">{{.CommitsCount}}</span>
+  </a>
+  <a class="{{if .PageIsReleaseList}}active{{end}} item" href="{{.RepoLink}}/releases">
+    <i class="icon octicon octicon-tag"></i> {{.i18n.Tr "repo.releases"}} <span class="ui blue label">{{.Repository.NumTags}}</span>
+  </a>
+  {{if .IsRepositoryAdmin}}
+  <a class="{{if .PageIsSettings}}active{{end}} item" href="{{.RepoLink}}/settings">
+    <i class="icon octicon octicon-tools"></i> {{.i18n.Tr "repo.settings"}}
+  </a>
+  {{end}}
 </div>
+{{end}}

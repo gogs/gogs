@@ -166,43 +166,49 @@ func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository) (err error
 
 	var stderr string
 	if _, stderr, err = process.ExecTimeout(5*time.Minute,
-		fmt.Sprintf("PullRequest.Merge(git clone): %s", tmpBasePath),
+		fmt.Sprintf("PullRequest.Merge (git clone): %s", tmpBasePath),
 		"git", "clone", baseGitRepo.Path, tmpBasePath); err != nil {
 		return fmt.Errorf("git clone: %s", stderr)
 	}
 
 	// Check out base branch.
 	if _, stderr, err = process.ExecDir(-1, tmpBasePath,
-		fmt.Sprintf("PullRequest.Merge(git checkout): %s", tmpBasePath),
+		fmt.Sprintf("PullRequest.Merge (git checkout): %s", tmpBasePath),
 		"git", "checkout", pr.BaseBranch); err != nil {
 		return fmt.Errorf("git checkout: %s", stderr)
 	}
 
 	// Add head repo remote.
 	if _, stderr, err = process.ExecDir(-1, tmpBasePath,
-		fmt.Sprintf("PullRequest.Merge(git remote add): %s", tmpBasePath),
+		fmt.Sprintf("PullRequest.Merge (git remote add): %s", tmpBasePath),
 		"git", "remote", "add", "head_repo", headRepoPath); err != nil {
-		return fmt.Errorf("git remote add[%s -> %s]: %s", headRepoPath, tmpBasePath, stderr)
+		return fmt.Errorf("git remote add [%s -> %s]: %s", headRepoPath, tmpBasePath, stderr)
 	}
 
 	// Merge commits.
 	if _, stderr, err = process.ExecDir(-1, tmpBasePath,
-		fmt.Sprintf("PullRequest.Merge(git fetch): %s", tmpBasePath),
+		fmt.Sprintf("PullRequest.Merge (git fetch): %s", tmpBasePath),
 		"git", "fetch", "head_repo"); err != nil {
-		return fmt.Errorf("git fetch[%s -> %s]: %s", headRepoPath, tmpBasePath, stderr)
+		return fmt.Errorf("git fetch [%s -> %s]: %s", headRepoPath, tmpBasePath, stderr)
 	}
 
 	if _, stderr, err = process.ExecDir(-1, tmpBasePath,
-		fmt.Sprintf("PullRequest.Merge(git merge): %s", tmpBasePath),
-		"git", "merge", "--no-ff", "-m",
-		fmt.Sprintf("Merge branch '%s' of %s/%s into %s", pr.HeadBranch, pr.HeadUserName, pr.HeadRepo.Name, pr.BaseBranch),
-		"head_repo/"+pr.HeadBranch); err != nil {
-		return fmt.Errorf("git merge[%s]: %s", tmpBasePath, stderr)
+		fmt.Sprintf("PullRequest.Merge (git merge --no-ff --no-commit): %s", tmpBasePath),
+		"git", "merge", "--no-ff", "--no-commit", "head_repo/"+pr.HeadBranch); err != nil {
+		return fmt.Errorf("git merge --no-ff --no-commit [%s]: %v - %s", tmpBasePath, err, stderr)
+	}
+
+	sig := doer.NewGitSig()
+	if _, stderr, err = process.ExecDir(-1, tmpBasePath,
+		fmt.Sprintf("PullRequest.Merge (git merge): %s", tmpBasePath),
+		"git", "commit", fmt.Sprintf("--author='%s <%s>'", sig.Name, sig.Email),
+		"-m", fmt.Sprintf("Merge branch '%s' of %s/%s into %s", pr.HeadBranch, pr.HeadUserName, pr.HeadRepo.Name, pr.BaseBranch)); err != nil {
+		return fmt.Errorf("git commit [%s]: %v - %s", tmpBasePath, err, stderr)
 	}
 
 	// Push back to upstream.
 	if _, stderr, err = process.ExecDir(-1, tmpBasePath,
-		fmt.Sprintf("PullRequest.Merge(git push): %s", tmpBasePath),
+		fmt.Sprintf("PullRequest.Merge (git push): %s", tmpBasePath),
 		"git", "push", baseGitRepo.Path, pr.BaseBranch); err != nil {
 		return fmt.Errorf("git push: %s", stderr)
 	}
@@ -218,6 +224,7 @@ var patchConflicts = []string{
 }
 
 // testPatch checks if patch can be merged to base repository without conflit.
+// FIXME: make a mechanism to clean up stable local copies.
 func (pr *PullRequest) testPatch() (err error) {
 	if pr.BaseRepo == nil {
 		pr.BaseRepo, err = GetRepositoryByID(pr.BaseRepoID)
@@ -243,14 +250,23 @@ func (pr *PullRequest) testPatch() (err error) {
 		return fmt.Errorf("UpdateLocalCopy: %v", err)
 	}
 
-	pr.Status = PULL_REQUEST_STATUS_CHECKING
+	// Checkout base branch.
 	_, stderr, err := process.ExecDir(-1, pr.BaseRepo.LocalCopyPath(),
+		fmt.Sprintf("PullRequest.Merge(git checkout): %s", pr.BaseRepo.ID),
+		"git", "checkout", pr.BaseBranch)
+	if err != nil {
+		return fmt.Errorf("git checkout: %s", stderr)
+	}
+
+	pr.Status = PULL_REQUEST_STATUS_CHECKING
+	_, stderr, err = process.ExecDir(-1, pr.BaseRepo.LocalCopyPath(),
 		fmt.Sprintf("testPatch(git apply --check): %d", pr.BaseRepo.ID),
 		"git", "apply", "--check", patchPath)
 	if err != nil {
 		for i := range patchConflicts {
 			if strings.Contains(stderr, patchConflicts[i]) {
 				log.Trace("PullRequest[%d].testPatch(apply): has conflit", pr.ID)
+				fmt.Println(stderr)
 				pr.Status = PULL_REQUEST_STATUS_CONFLICT
 				return nil
 			}
@@ -385,16 +401,18 @@ func (pr *PullRequest) UpdateCols(cols ...string) error {
 var PullRequestQueue = NewUniqueQueue(setting.Repository.PullRequestQueueLength)
 
 // UpdatePatch generates and saves a new patch.
-func (pr *PullRequest) UpdatePatch() error {
-	if err := pr.GetHeadRepo(); err != nil {
+func (pr *PullRequest) UpdatePatch() (err error) {
+	if err = pr.GetHeadRepo(); err != nil {
 		return fmt.Errorf("GetHeadRepo: %v", err)
 	} else if pr.HeadRepo == nil {
 		log.Trace("PullRequest[%d].UpdatePatch: ignored cruppted data", pr.ID)
 		return nil
 	}
 
-	if err := pr.GetBaseRepo(); err != nil {
+	if err = pr.GetBaseRepo(); err != nil {
 		return fmt.Errorf("GetBaseRepo: %v", err)
+	} else if err = pr.BaseRepo.GetOwner(); err != nil {
+		return fmt.Errorf("GetOwner: %v", err)
 	}
 
 	headRepoPath, err := pr.HeadRepo.RepoPath()
@@ -405,6 +423,22 @@ func (pr *PullRequest) UpdatePatch() error {
 	headGitRepo, err := git.OpenRepository(headRepoPath)
 	if err != nil {
 		return fmt.Errorf("OpenRepository: %v", err)
+	}
+
+	// Add a temporary remote.
+	tmpRemote := com.ToStr(time.Now().UnixNano())
+	if err = headGitRepo.AddRemote(tmpRemote, RepoPath(pr.BaseRepo.Owner.Name, pr.BaseRepo.Name)); err != nil {
+		return fmt.Errorf("AddRemote: %v", err)
+	}
+	defer func() {
+		headGitRepo.RemoveRemote(tmpRemote)
+	}()
+	remoteBranch := "remotes/" + tmpRemote + "/" + pr.BaseBranch
+	pr.MergeBase, err = headGitRepo.GetMergeBase(remoteBranch, pr.HeadBranch)
+	if err != nil {
+		return fmt.Errorf("GetMergeBase: %v", err)
+	} else if err = pr.Update(); err != nil {
+		return fmt.Errorf("Update: %v", err)
 	}
 
 	patch, err := headGitRepo.GetPatch(pr.MergeBase, pr.HeadBranch)

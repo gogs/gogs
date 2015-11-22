@@ -35,3 +35,16 @@ func (repo *Repository) GetBranches() ([]string, error) {
 	}
 	return branches, nil
 }
+
+// SetDefaultBranch sets default branch of repository.
+func (repo *Repository) SetDefaultBranch(branchName string) error {
+	if gitVer.LessThan(MustParseVersion("1.7.10")) {
+		return ErrUnsupportedVersion{"1.7.10"}
+	}
+
+	_, stderr, err := com.ExecCmdDir(repo.Path, "git", "symbolic-ref", "HEAD", "refs/heads/"+branchName)
+	if err != nil {
+		return concatenateError(err, stderr)
+	}
+	return nil
+}
