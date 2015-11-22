@@ -1,49 +1,60 @@
-{{template "ng/base/head" .}}
-{{template "ng/base/header" .}}
-{{template "org/base/header" .}}
-<div class="container">
-	<div class="org-header-alert">
-		{{template "ng/base/alert" .}}
-	</div>
-	<div class="org-toolbar clear">
+{{template "base/head" .}}
+<div class="organization members">
+	{{template "org/header" .}}
+  <div class="ui container">
+  	{{template "base/alert" .}}
 		{{if .IsOrganizationOwner}}
-        <a class="btn btn-green btn-large btn-link btn-radius right" href="{{.OrgLink}}/invitations/new"><i class="octicon octicon-repo-create"></i> {{.i18n.Tr "org.invite_someone"}}</a>
+    <div class="text right">
+      <a class="ui blue button" href="{{.OrgLink}}/invitations/new"><i class="octicon octicon-repo-create"></i> {{.i18n.Tr "org.invite_someone"}}</a>
+    </div>
+    <div class="ui divider"></div>
 		{{end}}
-	</div>
-	<div id="org-member-list">
-		{{range .Members}}
-		<div class="org-member-item">
-			<img class="avatar-48 left" src="{{.AvatarLink}}?s=100">
-			<a class="text-black" href="{{AppSubUrl}}/{{.Name}}"><span class="member-name"><strong>{{.FullName}}</strong>({{.Name}})</span></a>
-			<ul class="grid-6-12 right">
-				<li class="grid-1-3">
-				{{ $isPublic := .IsPublicMember $.Org.Id}}
-				{{if $isPublic}}
-					{{$.i18n.Tr "org.members.public"}}
-					{{if eq $.SignedUser.Id .Id}}(<a href="{{$.OrgLink}}/members/action/private?uid={{.Id}}">{{$.i18n.Tr "org.members.public_helper"}}</a>){{end}}
-				{{else}}
-					{{$.i18n.Tr "org.members.private"}}
-					{{if eq $.SignedUser.Id .Id}}(<a href="{{$.OrgLink}}/members/action/public?uid={{.Id}}">{{$.i18n.Tr "org.members.private_helper"}}</a>){{end}}
-				{{end}}
-				</li>
-				<li class="grid-1-4">{{if .IsUserOrgOwner $.Org.Id}}<strong>{{$.i18n.Tr "org.members.owner"}}</strong>{{else}}{{$.i18n.Tr "org.members.member"}}{{end}}</li>
-				{{if eq $.SignedUser.Id .Id}}
-					<li class="grid-1-6 right">
-						<a class="btn btn-red btn-link btn-radius" href="{{$.OrgLink}}/members/action/leave?uid={{.Id}}">{{$.i18n.Tr "org.members.leave"}}</a>
-					</li>
-				{{else if $.IsOrganizationOwner}}
-					<li class="grid-1-6 right">
-						<a class="btn btn-red btn-link btn-radius" href="{{$.OrgLink}}/members/action/remove?uid={{.Id}}">{{$.i18n.Tr "org.members.remove"}}</a>
-					</li>
-					{{if $isPublic}}
-						<li class="grid-1-6 right">
-							<a class="btn btn-blue btn-link btn-radius" href="{{$.OrgLink}}/members/action/private?uid={{.Id}}">{{$.i18n.Tr "org.members.conceal"}}</a>
-						</li>
+		
+		<div class="list">
+			{{range .Members}}
+			<div class="item ui grid">
+				<div class="ui one wide column">
+					<img class="ui avatar" src="{{.AvatarLink}}?s=48">
+				</div>
+				<div class="ui three wide column">
+					<div class="meta"><a href="{{.HomeLink}}">{{.Name}}</a></div>
+					<div class="meta">{{.FullName}}</div>
+				</div>
+				<div class="ui five wide column center">
+					<div class="meta">
+						{{$.i18n.Tr "org.members.membership_visibility"}}
+					</div>
+					<div class="meta">
+						{{ $isPublic := .IsPublicMember $.Org.Id}}
+						{{if $isPublic}}
+							<strong>{{$.i18n.Tr "org.members.public"}}</strong>
+							{{if or (eq $.SignedUser.Id .Id) $.IsOrganizationOwner}}(<a href="{{$.OrgLink}}/members/action/private?uid={{.Id}}">{{$.i18n.Tr "org.members.public_helper"}}</a>){{end}}
+						{{else}}
+							<strong>{{$.i18n.Tr "org.members.private"}}</strong>
+							{{if or (eq $.SignedUser.Id .Id) $.IsOrganizationOwner}}(<a href="{{$.OrgLink}}/members/action/public?uid={{.Id}}">{{$.i18n.Tr "org.members.private_helper"}}</a>){{end}}
+						{{end}}
+					</div>
+				</div>
+				<div class="ui three wide column center">
+					<div class="meta">
+						{{$.i18n.Tr "org.members.member_role"}}
+					</div>
+					<div class="meta">
+						<strong>{{if .IsUserOrgOwner $.Org.Id}}<span class="octicon octicon-shield"></span> {{$.i18n.Tr "org.members.owner"}}{{else}}{{$.i18n.Tr "org.members.member"}}{{end}}</strong>
+					</div>
+				</div>
+				<div class="ui four wide column">
+					<div class="text right">
+					{{if eq $.SignedUser.Id .Id}}
+						<a class="ui red small button" href="{{$.OrgLink}}/members/action/leave?uid={{.Id}}">{{$.i18n.Tr "org.members.leave"}}</a>
+					{{else if $.IsOrganizationOwner}}
+						<a class="ui red small button" href="{{$.OrgLink}}/members/action/remove?uid={{.Id}}">{{$.i18n.Tr "org.members.remove"}}</a>
 					{{end}}
-				{{end}}
-			</ul>
+					</div>
+				</div>
+			</div>
+			{{end}}
 		</div>
-		{{end}}
 	</div>
 </div>
-{{template "ng/base/footer" .}}
+{{template "base/footer" .}}

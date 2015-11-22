@@ -1,34 +1,41 @@
-<div class="grid-1-3 panel panel-radius left" id="org-team-card">
-    <div class="panel-header">
-		{{if .Team.IsMember $.SignedUser.Id}}
-        <a class="btn btn-small btn-red btn-header btn-radius right" href="{{.OrgLink}}/teams/{{.Team.LowerName}}/action/leave?uid={{$.SignedUser.Id}}&page=team">{{$.i18n.Tr "org.teams.leave"}}</a>
-        {{else if .IsOrganizationOwner}}
-        <a class="btn btn-small btn-blue btn-header btn-radius right" href="{{.OrgLink}}/teams/{{.Team.LowerName}}/action/join?uid={{$.SignedUser.Id}}&page=team">{{$.i18n.Tr "org.teams.join"}}</a>
-        {{end}}
-    	<strong>{{.Team.Name}}</strong>
+<div class="ui six wide column">
+  <h4 class="ui top attached header">
+    <strong>{{.Team.Name}}</strong>
+    <div class="ui right">
+      {{if .Team.IsMember $.SignedUser.Id}}
+      <a class="ui red tiny button" href="{{.OrgLink}}/teams/{{.Team.LowerName}}/action/leave?uid={{$.SignedUser.Id}}&page=team">{{$.i18n.Tr "org.teams.leave"}}</a>
+      {{else if .IsOrganizationOwner}}
+      <a class="ui blue tiny button" href="{{.OrgLink}}/teams/{{.Team.LowerName}}/action/join?uid={{$.SignedUser.Id}}&page=team">{{$.i18n.Tr "org.teams.join"}}</a>
+      {{end}}
     </div>
-    <div class="panel-body">
-    	<p class="desc">{{if .Team.Description}}{{.Team.Description}}{{else}}{{.i18n.Tr "org.teams.no_desc"}}{{end}}</p>
-    	<hr>
-    	<div class="team-stats">
-    		<a href="{{.OrgLink}}/teams/{{.Team.LowerName}}"><span class="octicon octicon-person"></span> <strong>{{.Team.NumMembers}}</strong> {{$.i18n.Tr "org.lower_members"}}</a> ·
-    		<a href="{{.OrgLink}}/teams/{{.Team.LowerName}}/repositories"><span class="octicon octicon-repo"></span> <strong>{{.Team.NumRepos}}</strong> {{$.i18n.Tr "org.lower_repositories"}}</a>
-    	</div>
-    	<p class="desc">
-    		{{if eq .Team.LowerName "owners"}}
-    		{{.i18n.Tr "org.teams.owners_permission_desc" | Str2html}}
-            {{else if (eq .Team.Authorize 1)}}
-            {{.i18n.Tr "org.teams.read_permission_desc" | Str2html}}
-            {{else if (eq .Team.Authorize 2)}}
-            {{.i18n.Tr "org.teams.write_permission_desc" | Str2html}}
-            {{else if (eq .Team.Authorize 3)}}
-            {{.i18n.Tr "org.teams.admin_permission_desc" | Str2html}}
-    		{{end}}
-      	</p>
+  </h4>
+  <div class="ui attached table segment detail">
+    <div class="item">
+      {{if .Team.Description}}
+      {{.Team.Description}}
+      {{else}}
+      <span class="text grey italic">{{.i18n.Tr "org.teams.no_desc"}}</span>
+      {{end}}
     </div>
-    {{if .IsOrganizationOwner}}
-    <div class="panel-footer">
-    	<a class="btn btn-medium btn-green btn-link btn-radius" href="{{.OrgLink}}/teams/{{.Team.LowerName}}/edit"><span class="octicon octicon-gear"></span> {{$.i18n.Tr "org.teams.settings"}}</a>
+    <div class="item">
+      <a href="{{.OrgLink}}/teams/{{.Team.LowerName}}"><span class="octicon octicon-person"></span> <strong>{{.Team.NumMembers}}</strong> {{$.i18n.Tr "org.lower_members"}}</a> ·
+      <a href="{{.OrgLink}}/teams/{{.Team.LowerName}}/repositories"><span class="octicon octicon-repo"></span> <strong>{{.Team.NumRepos}}</strong> {{$.i18n.Tr "org.lower_repositories"}}</a>
     </div>
-    {{end}}
+    <div class="item">
+      {{if eq .Team.LowerName "owners"}}
+        {{.i18n.Tr "org.teams.owners_permission_desc" | Str2html}}
+      {{else if (eq .Team.Authorize 1)}}
+        {{.i18n.Tr "org.teams.read_permission_desc" | Str2html}}
+      {{else if (eq .Team.Authorize 2)}}
+        {{.i18n.Tr "org.teams.write_permission_desc" | Str2html}}
+      {{else if (eq .Team.Authorize 3)}}
+        {{.i18n.Tr "org.teams.admin_permission_desc" | Str2html}}
+      {{end}}
+    </div>
+  </div>
+  {{if .IsOrganizationOwner}}
+  <div class="ui bottom attached segment">
+    <a class="ui teal small button" href="{{.OrgLink}}/teams/{{.Team.LowerName}}/edit"><span class="octicon octicon-gear"></span> {{$.i18n.Tr "org.teams.settings"}}</a>
+  </div>
+  {{end}}
 </div>

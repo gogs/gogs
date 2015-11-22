@@ -2,7 +2,7 @@
   <div class="ui floating dropdown link jump">
     <span class="text">
     	<img class="ui avatar image" src="{{.ContextUser.AvatarLink}}">
-  		{{.ContextUser.Name}}
+  		{{.ContextUser.ShortName 20}}
     	<i class="dropdown icon"></i>
   	</span>
     <div class="context user overflow menu" tabindex="-1">
@@ -17,7 +17,7 @@
         {{range .Orgs}}
         <a class="{{if eq $.ContextUser.Id .Id}}active selected{{end}} item" href="{{AppSubUrl}}/org/{{.Name}}/{{if $.PageIsIssues}}issues{{else if $.PageIsPulls}}pulls{{else}}dashboard{{end}}">
           <img class="ui avatar image" src="{{.AvatarLink}}">
-          {{.Name}}
+          {{.ShortName 20}}
         </a>
         {{end}}
       </div>
@@ -42,7 +42,7 @@
       <div class="right menu">
         <div class="item">
           <a class="ui blue basic button" href="{{AppSubUrl}}/org/{{.ContextUser.Name}}">
-            {{.i18n.Tr "home.view_home" .ContextUser.Name}}
+            {{.i18n.Tr "home.view_home" (.ContextUser.ShortName 10)}}
           </a>
         </div>
       </div>

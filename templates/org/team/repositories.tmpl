@@ -1,45 +1,46 @@
-{{template "ng/base/head" .}}
-{{template "ng/base/header" .}}
-{{template "org/base/header" .}}
-<div id="setting-wrapper" class="main-wrapper">
-    <div id="team-members-list" class="container clear">
-		{{template "ng/base/alert" .}}
-		{{template "org/team/sidebar" .}}
-		<div class="grid-2-3 left">
-			<div class="setting-content">
-				<div class="panel panel-radius">
-					<div class="panel-header">
-						{{.i18n.Tr "org.teams.repositories"}}
-					</div>
-					{{$canAddRemove := and $.IsOrganizationOwner (not (eq $.Team.LowerName "owners"))}}
-                    <ul class="panel-body setting-list" id="team-repositories-list">
-                    	{{if $canAddRemove}}
-						<li class="search">
-			                <form class="form form-align" action="{{$.OrgLink}}/teams/{{$.Team.LowerName}}/action/repo/add" id="repo-collab-form">
-			                    {{.CsrfTokenHtml}}
-                                <input class="ipt ipt-large ipt-radius" id="org-team-repositories-add" name="repo-name" autocomplete="off" data-uid="{{.Org.Id}}" required />
-                                <button class="btn btn-blue btn-large btn-radius">{{.i18n.Tr "org.teams.add_team_repository"}}</button>
-								<div class="repo-user-list-block">
-									<ul class="menu-down-show menu-vertical menu-radius switching-list user-list" id="org-team-repositories-list"></ul>
-								</div>
-			                </form>
-						</li>
-						{{end}}
-                		{{range .Team.Repos}}
-                		<li class="collab">
-                			{{if $canAddRemove}}
-							<a class="btn btn-small btn-red btn-radius right" href="{{$.OrgLink}}/teams/{{$.Team.LowerName}}/action/repo/remove?repoid={{.ID}}">{{$.i18n.Tr "org.teams.remove_repo"}}</a>
-							{{end}}
-							<a class="member" href="{{AppSubUrl}}/{{$.Org.Name}}/{{.Name}}">
-                                <i class="octicon octicon-{{if .IsPrivate}}lock{{else if .IsFork}}repo-forked{{else if .IsMirror}}repo-clone{{else}}repo{{end}}"></i>
-							    <strong>{{$.Org.Name}}/{{.Name}}</strong>
-							</a>
-                		</li>
-                		{{end}}
-                    </ul>
+{{template "base/head" .}}
+<div class="organization teams">
+	{{template "org/header" .}}
+  <div class="ui container">
+  	{{template "base/alert" .}}
+  	<div class="ui grid">
+			{{template "org/team/sidebar" .}}
+			<div class="ui ten wide column">
+				<div class="ui top attached header">
+					{{.i18n.Tr "org.teams.repositories"}}
 				</div>
+				<div class="ui attached table segment repositories">
+					{{$canAddRemove := and $.IsOrganizationOwner (not (eq $.Team.LowerName "owners"))}}
+        	{{range .Team.Repos}}
+          <div class="item">
+            {{if $canAddRemove}}
+						<a class="ui red small button right" href="{{$.OrgLink}}/teams/{{$.Team.LowerName}}/action/repo/remove?repoid={{.ID}}">{{$.i18n.Tr "org.teams.remove_repo"}}</a>
+						{{end}}
+						<a class="member" href="{{AppSubUrl}}/{{$.Org.Name}}/{{.Name}}">
+              <i class="icon octicon octicon-{{if .IsPrivate}}lock{{else if .IsFork}}repo-forked{{else if .IsMirror}}repo-clone{{else}}repo{{end}}"></i>
+					    <strong>{{$.Org.Name}}/{{.Name}}</strong>
+						</a>
+          </div>
+      		{{end}}
+        </div>
+        {{if $canAddRemove}}
+        <div class="ui bottom attached segment">
+			    <form class="ui form" id="add-repo-form" action="{{$.OrgLink}}/teams/{{$.Team.LowerName}}/action/repo/add" method="post">
+			    	{{.CsrfTokenHtml}}
+				    <div class="inline field ui left">
+				    	<div id="search-repo-box" data-uid="{{.Org.Id}}">
+				    	  <div class="ui input">
+				    	    <input class="prompt" name="repo_name" placeholder="{{.i18n.Tr "org.teams.search_repo_placeholder"}}" autocomplete="off" required>
+				    	  </div>
+				    	  <div class="ui segment results hide"></div>
+				    	</div>
+				    </div>
+	          <button class="ui green button">{{.i18n.Tr "org.teams.add_team_repository"}}</button>
+			    </form>
+        </div>
+				{{end}}
 			</div>
 		</div>
 	</div>
 </div>
-{{template "ng/base/footer" .}}
+{{template "base/footer" .}}
