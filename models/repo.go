@@ -1353,6 +1353,7 @@ func DeleteMissingRepositories() error {
 	}
 
 	for _, repo := range repos {
+		log.Trace("Deleting %d/%d...", repo.OwnerID, repo.ID)
 		if err := DeleteRepository(repo.OwnerID, repo.ID); err != nil {
 			if err2 := CreateRepositoryNotice(fmt.Sprintf("DeleteRepository [%d]: %v", repo.ID, err)); err2 != nil {
 				log.Error(4, "CreateRepositoryNotice: %v", err2)
