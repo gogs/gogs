@@ -18,4 +18,33 @@
 			}
 		}
 	}
+
+	&.profile {
+		.ui.card {
+			.username {
+				display: block;
+			}
+			.extra.content {
+				padding: 0;
+
+				ul {
+					margin: 0;
+					padding: 0;
+
+					li {
+						padding: 10px;
+						list-style: none;
+
+						&:not(:last-child) {
+							border-bottom: 1px solid #eaeaea;
+						}
+					}
+				}
+			}
+		}
+
+		.ui.repository.list {
+			margin-top: 25px;
+		}
+	}
 }

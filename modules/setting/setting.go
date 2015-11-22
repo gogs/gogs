@@ -15,14 +15,15 @@ import (
 	"strings"
 	"time"
 
-	"gopkg.in/ini.v1"
-
 	"github.com/Unknwon/com"
+	_ "github.com/go-macaron/cache/memcache"
+	_ "github.com/go-macaron/cache/redis"
 	"github.com/go-macaron/session"
+	_ "github.com/go-macaron/session/redis"
+	"gopkg.in/ini.v1"
 
 	"github.com/gogits/gogs/modules/bindata"
 	"github.com/gogits/gogs/modules/log"
-	// "github.com/gogits/gogs/modules/ssh"
 	"github.com/gogits/gogs/modules/user"
 )
 
@@ -42,11 +43,16 @@ const (
 )
 
 var (
+	// Build information.
+	BuildTime    string
+	BuildGitHash string
+
 	// App settings.
 	AppVer      string
 	AppName     string
 	AppUrl      string
 	AppSubUrl   string
+	AppPath     string
 	AppDataPath = "data"
 
 	// Server settings.
@@ -54,8 +60,9 @@ var (
 	Domain             string
 	HttpAddr, HttpPort string
 	DisableSSH         bool
-	SSHPort            int
+	StartSSHServer     bool
 	SSHDomain          string
+	SSHPort            int
 	OfflineMode        bool
 	DisableRouterLog   bool
 	CertFile, KeyFile  string
@@ -135,9 +142,6 @@ var (
 	CacheInternal int
 	CacheConn     string
 
-	EnableRedis    bool
-	EnableMemcache bool
-
 	// Session settings.
 	SessionConfig session.Options
 
@@ -173,6 +177,7 @@ var (
 
 	// Other settings.
 	ShowFooterBranding bool
+	ShowFooterVersion  bool
 
 	// Global setting objects.
 	Cfg          *ini.File
@@ -192,21 +197,27 @@ func DateLang(lang string) string {
 	return "en"
 }
 
-func init() {
-	IsWindows = runtime.GOOS == "windows"
-	log.NewLogger(0, "console", `{"level": 0}`)
-}
-
-func ExecPath() (string, error) {
+// execPath returns the executable path.
+func execPath() (string, error) {
 	file, err := exec.LookPath(os.Args[0])
 	if err != nil {
 		return "", err
 	}
-	p, err := filepath.Abs(file)
-	if err != nil {
-		return "", err
+	return filepath.Abs(file)
+}
+
+func init() {
+	IsWindows = runtime.GOOS == "windows"
+	log.NewLogger(0, "console", `{"level": 0}`)
+
+	var err error
+	if AppPath, err = execPath(); err != nil {
+		log.Fatal(4, "fail to get app path: %v\n", err)
 	}
-	return p, nil
+
+	// Note: we don't use path.Dir here because it does not handle case
+	//	which path starts with two "/" in Windows: "//psf/Home/..."
+	AppPath = strings.Replace(AppPath, "\\", "/", -1)
 }
 
 // WorkDir returns absolute path of work directory.
@@ -216,19 +227,11 @@ func WorkDir() (string, error) {
 		return wd, nil
 	}
 
-	execPath, err := ExecPath()
-	if err != nil {
-		return execPath, err
-	}
-
-	// Note: we don't use path.Dir here because it does not handle case
-	//	which path starts with two "/" in Windows: "//psf/Home/..."
-	execPath = strings.Replace(execPath, "\\", "/", -1)
-	i := strings.LastIndex(execPath, "/")
+	i := strings.LastIndex(AppPath, "/")
 	if i == -1 {
-		return execPath, nil
+		return AppPath, nil
 	}
-	return execPath[:i], nil
+	return AppPath[:i], nil
 }
 
 func forcePathSeparator(path string) {
@@ -297,6 +300,9 @@ func NewContext() {
 	HttpAddr = sec.Key("HTTP_ADDR").MustString("0.0.0.0")
 	HttpPort = sec.Key("HTTP_PORT").MustString("3000")
 	DisableSSH = sec.Key("DISABLE_SSH").MustBool()
+	if !DisableSSH {
+		StartSSHServer = sec.Key("START_SSH_SERVER").MustBool()
+	}
 	SSHDomain = sec.Key("SSH_DOMAIN").MustString(Domain)
 	SSHPort = sec.Key("SSH_PORT").MustInt(22)
 	OfflineMode = sec.Key("OFFLINE_MODE").MustBool()
@@ -419,6 +425,7 @@ func NewContext() {
 	dateLangs = Cfg.Section("i18n.datelang").KeysHash()
 
 	ShowFooterBranding = Cfg.Section("other").Key("SHOW_FOOTER_BRANDING").MustBool()
+	ShowFooterVersion = Cfg.Section("other").Key("SHOW_FOOTER_VERSION").MustBool()
 
 	HasRobotsTxt = com.IsFile(path.Join(CustomPath, "robots.txt"))
 }
@@ -435,6 +442,7 @@ var Service struct {
 	EnableReverseProxyAuth         bool
 	EnableReverseProxyAutoRegister bool
 	DisableMinimumKeySizeCheck     bool
+	MinimumKeySizes                map[string]int
 	EnableCaptcha                  bool
 }
 
@@ -450,6 +458,12 @@ func newService() {
 	Service.EnableReverseProxyAutoRegister = sec.Key("ENABLE_REVERSE_PROXY_AUTO_REGISTRATION").MustBool()
 	Service.DisableMinimumKeySizeCheck = sec.Key("DISABLE_MINIMUM_KEY_SIZE_CHECK").MustBool()
 	Service.EnableCaptcha = sec.Key("ENABLE_CAPTCHA").MustBool()
+
+	minimumKeySizes := Cfg.Section("service.minimum_key_sizes").Keys()
+	Service.MinimumKeySizes = make(map[string]int)
+	for _, key := range minimumKeySizes {
+		Service.MinimumKeySizes[key.Name()] = key.MustInt()
+	}
 }
 
 var logLevels = map[string]string{
@@ -463,6 +477,11 @@ var logLevels = map[string]string{
 
 func newLogService() {
 	log.Info("%s %s", AppName, AppVer)
+
+	if len(BuildTime) > 0 {
+		log.Info("Build Time: %s", BuildTime)
+		log.Info("Build Git Hash: %s", BuildGitHash)
+	}
 
 	// Get and check log mode.
 	LogModes = strings.Split(Cfg.Section("log").Key("MODE").MustString("console"), ",")
@@ -525,13 +544,6 @@ func newLogService() {
 
 func newCacheService() {
 	CacheAdapter = Cfg.Section("cache").Key("ADAPTER").In("memory", []string{"memory", "redis", "memcache"})
-	if EnableRedis {
-		log.Info("Redis Supported")
-	}
-	if EnableMemcache {
-		log.Info("Memcache Supported")
-	}
-
 	switch CacheAdapter {
 	case "memory":
 		CacheInternal = Cfg.Section("cache").Key("INTERVAL").MustInt(60)
@@ -639,5 +651,4 @@ func NewServices() {
 	newRegisterMailService()
 	newNotifyMailService()
 	newWebhookService()
-	// ssh.Listen("2222")
 }

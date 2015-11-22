@@ -14,6 +14,7 @@ import (
 	"image"
 	"image/jpeg"
 	_ "image/jpeg"
+	"image/png"
 	"os"
 	"path"
 	"path/filepath"
@@ -75,9 +76,10 @@ type User struct {
 	LastRepoVisibility bool
 
 	// Permissions.
-	IsActive     bool
-	IsAdmin      bool
-	AllowGitHook bool
+	IsActive         bool
+	IsAdmin          bool
+	AllowGitHook     bool
+	AllowImportLocal bool // Allow migrate repository by local path
 
 	// Avatar.
 	Avatar          string `xorm:"VARCHAR(2048) NOT NULL"`
@@ -105,6 +107,22 @@ func (u *User) AfterSet(colName string, _ xorm.Cell) {
 	case "created":
 		u.Created = regulateTimeZone(u.Created)
 	}
+}
+
+// HasForkedRepo checks if user has already forked a repository with given ID.
+func (u *User) HasForkedRepo(repoID int64) bool {
+	_, has := HasForkedRepo(u.Id, repoID)
+	return has
+}
+
+// CanEditGitHook returns true if user can edit Git hooks.
+func (u *User) CanEditGitHook() bool {
+	return u.IsAdmin || u.AllowGitHook
+}
+
+// CanImportLocal returns true if user can migrate repository by local path.
+func (u *User) CanImportLocal() bool {
+	return u.IsAdmin || u.AllowImportLocal
 }
 
 // EmailAdresses is the list of all email addresses of a user. Can contain the
@@ -242,14 +260,12 @@ func (u *User) ValidatePassword(passwd string) bool {
 // UploadAvatar saves custom avatar for user.
 // FIXME: split uploads to different subdirs in case we have massive users.
 func (u *User) UploadAvatar(data []byte) error {
-	u.UseCustomAvatar = true
-
 	img, _, err := image.Decode(bytes.NewReader(data))
 	if err != nil {
-		return err
+		return fmt.Errorf("Decode: %v", err)
 	}
 
-	m := resize.Resize(234, 234, img, resize.NearestNeighbor)
+	m := resize.Resize(290, 290, img, resize.NearestNeighbor)
 
 	sess := x.NewSession()
 	defer sessionRelease(sess)
@@ -257,19 +273,20 @@ func (u *User) UploadAvatar(data []byte) error {
 		return err
 	}
 
-	if _, err = sess.Id(u.Id).AllCols().Update(u); err != nil {
-		return err
+	u.UseCustomAvatar = true
+	if err = updateUser(sess, u); err != nil {
+		return fmt.Errorf("updateUser: %v", err)
 	}
 
 	os.MkdirAll(setting.AvatarUploadPath, os.ModePerm)
 	fw, err := os.Create(u.CustomAvatarPath())
 	if err != nil {
-		return err
+		return fmt.Errorf("Create: %v", err)
 	}
 	defer fw.Close()
 
-	if err = jpeg.Encode(fw, m, nil); err != nil {
-		return err
+	if err = png.Encode(fw, m); err != nil {
+		return fmt.Errorf("Encode: %v", err)
 	}
 
 	return sess.Commit()
@@ -354,6 +371,15 @@ func (u *User) DisplayName() string {
 		return u.FullName
 	}
 	return u.Name
+}
+
+// ShortName returns shorted user name with given maximum length,
+// it adds "..." at the end if user name has more length than maximum.
+func (u *User) ShortName(length int) string {
+	if len(u.Name) < length {
+		return u.Name
+	}
+	return u.Name[:length] + "..."
 }
 
 // IsUserExist checks if given user name exist,
@@ -717,9 +743,9 @@ func UserPath(userName string) string {
 	return filepath.Join(setting.RepoRootPath, strings.ToLower(userName))
 }
 
-func GetUserByKeyId(keyId int64) (*User, error) {
+func GetUserByKeyID(keyID int64) (*User, error) {
 	user := new(User)
-	has, err := x.Sql("SELECT a.* FROM `user` AS a, public_key AS b WHERE a.id = b.owner_id AND b.id=?", keyId).Get(user)
+	has, err := x.Sql("SELECT a.* FROM `user` AS a, public_key AS b WHERE a.id = b.owner_id AND b.id=?", keyID).Get(user)
 	if err != nil {
 		return nil, err
 	} else if !has {
@@ -980,7 +1006,7 @@ func GetUserByEmail(email string) (*User, error) {
 		return GetUserByID(emailAddress.UID)
 	}
 
-	return nil, ErrUserNotExist{0, "email"}
+	return nil, ErrUserNotExist{0, email}
 }
 
 // SearchUserByName returns given number of users whose name contains keyword.

@@ -14,7 +14,7 @@ import (
 // Commit represents a git commit.
 type Commit struct {
 	Tree
-	Id            sha1 // The id of this commit object
+	ID            sha1 // The id of this commit object
 	Author        *Signature
 	Committer     *Signature
 	CommitMessage string
@@ -35,7 +35,7 @@ func (c *Commit) Summary() string {
 // Return oid of the parent number n (0-based index). Return nil if no such parent exists.
 func (c *Commit) ParentId(n int) (id sha1, err error) {
 	if n >= len(c.parents) {
-		err = IdNotExist
+		err = IDNotExist
 		return
 	}
 	return c.parents[n], nil
@@ -61,7 +61,7 @@ func (c *Commit) ParentCount() int {
 }
 
 func (c *Commit) CommitsBefore() (*list.List, error) {
-	return c.repo.getCommitsBefore(c.Id)
+	return c.repo.getCommitsBefore(c.ID)
 }
 
 func (c *Commit) CommitsBeforeUntil(commitId string) (*list.List, error) {
@@ -73,19 +73,19 @@ func (c *Commit) CommitsBeforeUntil(commitId string) (*list.List, error) {
 }
 
 func (c *Commit) CommitsCount() (int, error) {
-	return c.repo.commitsCount(c.Id)
+	return c.repo.commitsCount(c.ID)
 }
 
 func (c *Commit) SearchCommits(keyword string) (*list.List, error) {
-	return c.repo.searchCommits(c.Id, keyword)
+	return c.repo.searchCommits(c.ID, keyword)
 }
 
 func (c *Commit) CommitsByRange(page int) (*list.List, error) {
-	return c.repo.commitsByRange(c.Id, page)
+	return c.repo.commitsByRange(c.ID, page)
 }
 
 func (c *Commit) GetCommitOfRelPath(relPath string) (*Commit, error) {
-	return c.repo.getCommitOfRelPath(c.Id, relPath)
+	return c.repo.getCommitOfRelPath(c.ID, relPath)
 }
 
 func (c *Commit) GetSubModule(entryname string) (*SubModule, error) {

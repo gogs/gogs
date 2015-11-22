@@ -111,7 +111,7 @@ func TestSpecSchedule(t *testing.T) {
 			t.Error(err)
 		}
 		if !reflect.DeepEqual(actual, c.expected) {
-			t.Errorf("%s => (expected) %b != %b (actual)", c.expr, c.expected, actual)
+			t.Errorf("%s => (expected) %v != %v (actual)", c.expr, c.expected, actual)
 		}
 	}
 }

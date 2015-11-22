@@ -5,23 +5,23 @@ Gogs - Go Git Service [![Build Status](https://travis-ci.org/gogits/gogs.svg?bra
 
 ![](public/img/gogs-large-resize.png)
 
-##### Current version: 0.6.18 Beta
+##### Current version: 0.7.20 Beta
 
 <table>
     <tr>
-        <td width="33%"><img src="http://gogs.io/img/screenshots/1.png"></td>
-        <td width="33%"><img src="http://gogs.io/img/screenshots/2.png"></td>
-        <td width="33%"><img src="http://gogs.io/img/screenshots/3.png"></td>
+        <td width="33%"><img src="https://gogs.io/img/screenshots/1.png"></td>
+        <td width="33%"><img src="https://gogs.io/img/screenshots/2.png"></td>
+        <td width="33%"><img src="https://gogs.io/img/screenshots/3.png"></td>
     </tr>
     <tr>
-        <td><img src="http://gogs.io/img/screenshots/4.png"></td>
-        <td><img src="http://gogs.io/img/screenshots/5.png"></td>
-        <td><img src="http://gogs.io/img/screenshots/6.png"></td>
+        <td><img src="https://gogs.io/img/screenshots/4.png"></td>
+        <td><img src="https://gogs.io/img/screenshots/5.png"></td>
+        <td><img src="https://gogs.io/img/screenshots/6.png"></td>
     </tr>
     <tr>
-        <td><img src="http://gogs.io/img/screenshots/7.png"></td>
-        <td><img src="http://gogs.io/img/screenshots/8.png"></td>
-        <td><img src="http://gogs.io/img/screenshots/9.png"></td>
+        <td><img src="https://gogs.io/img/screenshots/7.png"></td>
+        <td><img src="https://gogs.io/img/screenshots/8.png"></td>
+        <td><img src="https://gogs.io/img/screenshots/9.png"></td>
     </tr>
 </table>
 
@@ -29,20 +29,21 @@ Gogs - Go Git Service [![Build Status](https://travis-ci.org/gogits/gogs.svg?bra
 
 - Due to testing purpose, data of [try.gogs.io](https://try.gogs.io) has been reset in **Jan 28, 2015** and will reset multiple times after. Please do **NOT** put your important data on the site.
 - The demo site [try.gogs.io](https://try.gogs.io) is running under `develop` branch.
-- :exclamation::exclamation::exclamation:<span style="color: red">You **MUST** read [CONTRIBUTING.md](CONTRIBUTING.md) before you start filing an issue or making a Pull Request, and **MUST** discuss with us on [Gitter](https://gitter.im/gogits/gogs) for UI changes and feature Pull Requests, otherwise it's high possibilities that we are not going to merge it.</span>:exclamation::exclamation::exclamation:
+- :bangbang:<span style="color: red">You **MUST** read [CONTRIBUTING.md](CONTRIBUTING.md) before you start filing an issue or making a Pull Request, and **MUST** discuss with us on [Gitter](https://gitter.im/gogits/gogs) for UI changes, otherwise it's high possibilities that we are not going to merge it.</span>:bangbang:
+- Please [start discussion](http://forum.gogs.io/category/2/general-discussion) or [ask a question](http://forum.gogs.io/category/4/getting-help) on [the forum](http://forum.gogs.io/). GitHub issue tracker only keeps **bugs** and **feature requests**, all other topics will be closed without reason.
 - If you think there are vulnerabilities in the project, please talk privately to **u@gogs.io**. Thanks!
+- If you're interested in using APIs, we have experimental support with [documentation](https://github.com/gogits/go-gogs-client/wiki).
+- If your team/company is using Gogs and would like to put your logo on [our website](http://gogs.io), contact us by any means.
 
-#### Other language version
-
-- [简体中文](README_ZH.md)
+[简体中文](README_ZH.md)
 
 ## Purpose
 
-The goal of this project is to make the easiest, fastest, and most painless way of setting up a self-hosted Git service. With Go, this can be done with an independent binary distribution across **ALL platforms** that Go supports, including Linux, Mac OS X, and Windows.
+The goal of this project is to make the easiest, fastest, and most painless way of setting up a self-hosted Git service. With Go, this can be done with an independent binary distribution across **ALL platforms** that Go supports, including Linux, Mac OS X, Windows and ARM.
 
 ## Overview
 
-- Please see the [Documentation](http://gogs.io/docs/intro) for project design, known issues, and change log.
+- Please see the [Documentation](http://gogs.io/docs/intro) for common usages and change log.
 - See the [Trello Board](https://trello.com/b/uxAoeLUl/gogs-go-git-service) to follow the develop team.
 - Want to try it before doing anything else? Do it [online](https://try.gogs.io/gogs/gogs) or go down to the **Installation -> Install from binary** section!
 - Having trouble? Get help with [Troubleshooting](http://gogs.io/docs/intro/troubleshooting.html).
@@ -63,13 +64,13 @@ The goal of this project is to make the easiest, fastest, and most painless way 
 - Mail service
 - Administration panel
 - CI integration: [Drone](https://github.com/drone/drone)
-- Supports MySQL, PostgreSQL, SQLite3 and [TiDB](https://github.com/pingcap/tidb)
+- Supports MySQL, PostgreSQL, SQLite3 and [TiDB](https://github.com/pingcap/tidb) (experimental)
 - Multi-language support ([14 languages](https://crowdin.com/project/gogs))
 
 ## System Requirements
 
 - A cheap Raspberry Pi is powerful enough for basic functionality.
-- At least 2 CPU cores and 1GB RAM would be the baseline for teamwork.
+- 2 CPU cores and 1GB RAM would be the baseline for teamwork.
 
 ## Browser Support
 
@@ -92,6 +93,7 @@ There are 5 ways to install Gogs:
 
 - [How To Set Up Gogs on Ubuntu 14.04](https://www.digitalocean.com/community/tutorials/how-to-set-up-gogs-on-ubuntu-14-04)
 - [Run your own GitHub-like service with the help of Docker](http://blog.hypriot.com/post/run-your-own-github-like-service-with-docker/)
+- [使用 Gogs 搭建自己的 Git 服务器](https://mynook.info/blog/post/host-your-own-git-server-using-gogs) (Chinese)
 - [阿里云上 Ubuntu 14.04 64 位安装 Gogs](http://my.oschina.net/luyao/blog/375654) (Chinese)
 - [Installing Gogs on FreeBSD](https://www.codejam.info/2015/03/installing-gogs-on-freebsd.html)
 - [Gogs on Raspberry Pi](http://blog.meinside.pe.kr/Gogs-on-Raspberry-Pi/)
@@ -120,6 +122,7 @@ There are 5 ways to install Gogs:
 - System Monitor Status is inspired by [GoBlog](https://github.com/fuxiaohei/goblog).
 - Thanks [lavachen](http://www.lavachen.cn/) and [Rocker](http://weibo.com/rocker1989) for designing Logo.
 - Thanks [Crowdin](https://crowdin.com/project/gogs) for providing open source translation plan.
+- Thanks [DigitalOcean](https://www.digitalocean.com) for hosting home and demo sites.
 
 ## Contributors
 

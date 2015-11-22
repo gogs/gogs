@@ -44,9 +44,9 @@ func ToApiHook(repoLink string, w *models.Webhook) *api.Hook {
 
 // https://github.com/gogits/go-gogs-client/wiki/Repositories#list-hooks
 func ListRepoHooks(ctx *middleware.Context) {
-	hooks, err := models.GetWebhooksByRepoId(ctx.Repo.Repository.ID)
+	hooks, err := models.GetWebhooksByRepoID(ctx.Repo.Repository.ID)
 	if err != nil {
-		ctx.APIError(500, "GetWebhooksByRepoId", err)
+		ctx.APIError(500, "GetWebhooksByRepoID", err)
 		return
 	}
 
@@ -127,7 +127,11 @@ func CreateRepoHook(ctx *middleware.Context, form api.CreateHookOption) {
 func EditRepoHook(ctx *middleware.Context, form api.EditHookOption) {
 	w, err := models.GetWebhookByID(ctx.ParamsInt64(":id"))
 	if err != nil {
-		ctx.APIError(500, "GetWebhookById", err)
+		if models.IsErrWebhookNotExist(err) {
+			ctx.Error(404)
+		} else {
+			ctx.APIError(500, "GetWebhookById", err)
+		}
 		return
 	}
 

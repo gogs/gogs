@@ -14,6 +14,7 @@ import (
 	"time"
 	"unicode"
 
+	"github.com/Unknwon/com"
 	"github.com/go-xorm/xorm"
 
 	api "github.com/gogits/go-gogs-client"
@@ -136,6 +137,26 @@ func (a Action) GetIssueInfos() []string {
 	return strings.SplitN(a.Content, "|", 2)
 }
 
+func (a Action) GetIssueTitle() string {
+	index := com.StrTo(a.GetIssueInfos()[0]).MustInt64()
+	issue, err := GetIssueByIndex(a.RepoID, index)
+	if err != nil {
+		log.Error(4, "GetIssueByIndex: %v", err)
+		return "500 when get issue"
+	}
+	return issue.Name
+}
+
+func (a Action) GetIssueContent() string {
+	index := com.StrTo(a.GetIssueInfos()[0]).MustInt64()
+	issue, err := GetIssueByIndex(a.RepoID, index)
+	if err != nil {
+		log.Error(4, "GetIssueByIndex: %v", err)
+		return "500 when get issue"
+	}
+	return issue.Content
+}
+
 func newRepoAction(e Engine, u *User, repo *Repository) (err error) {
 	if err = notifyWatchers(e, &Action{
 		ActUserID:    u.Id,
@@ -147,7 +168,7 @@ func newRepoAction(e Engine, u *User, repo *Repository) (err error) {
 		RepoName:     repo.Name,
 		IsPrivate:    repo.IsPrivate,
 	}); err != nil {
-		return fmt.Errorf("notify watchers '%d/%s': %v", u.Id, repo.ID, err)
+		return fmt.Errorf("notify watchers '%d/%d': %v", u.Id, repo.ID, err)
 	}
 
 	log.Trace("action.newRepoAction: %s/%s", u.Name, repo.Name)
@@ -187,8 +208,48 @@ func issueIndexTrimRight(c rune) bool {
 	return !unicode.IsDigit(c)
 }
 
+type PushCommit struct {
+	Sha1        string
+	Message     string
+	AuthorEmail string
+	AuthorName  string
+}
+
+type PushCommits struct {
+	Len        int
+	Commits    []*PushCommit
+	CompareUrl string
+
+	avatars map[string]string
+}
+
+func NewPushCommits() *PushCommits {
+	return &PushCommits{
+		avatars: make(map[string]string),
+	}
+}
+
+// AvatarLink tries to match user in database with e-mail
+// in order to show custom avatar, and falls back to general avatar link.
+func (push *PushCommits) AvatarLink(email string) string {
+	_, ok := push.avatars[email]
+	if !ok {
+		u, err := GetUserByEmail(email)
+		if err != nil {
+			push.avatars[email] = base.AvatarLink(email)
+			if !IsErrUserNotExist(err) {
+				log.Error(4, "GetUserByEmail: %v", err)
+			}
+		} else {
+			push.avatars[email] = u.AvatarLink()
+		}
+	}
+
+	return push.avatars[email]
+}
+
 // updateIssuesCommit checks if issues are manipulated by commit message.
-func updateIssuesCommit(u *User, repo *Repository, repoUserName, repoName string, commits []*base.PushCommit) error {
+func updateIssuesCommit(u *User, repo *Repository, repoUserName, repoName string, commits []*PushCommit) error {
 	// Commits are appended in the reverse order.
 	for i := len(commits) - 1; i >= 0; i-- {
 		c := commits[i]
@@ -322,7 +383,7 @@ func CommitRepoAction(
 	repoID int64,
 	repoUserName, repoName string,
 	refFullName string,
-	commit *base.PushCommits,
+	commit *PushCommits,
 	oldCommitID string, newCommitID string) error {
 
 	u, err := GetUserByID(userID)
@@ -337,12 +398,18 @@ func CommitRepoAction(
 		return fmt.Errorf("GetOwner: %v", err)
 	}
 
+	// Change repository bare status and update last updated time.
+	repo.IsBare = false
+	if err = UpdateRepository(repo, false); err != nil {
+		return fmt.Errorf("UpdateRepository: %v", err)
+	}
+
 	isNewBranch := false
 	opType := COMMIT_REPO
 	// Check it's tag push or branch.
 	if strings.HasPrefix(refFullName, "refs/tags/") {
 		opType = PUSH_TAG
-		commit = &base.PushCommits{}
+		commit = &PushCommits{}
 	} else {
 		// if not the first commit, set the compareUrl
 		if !strings.HasPrefix(oldCommitID, "0000000") {
@@ -351,12 +418,10 @@ func CommitRepoAction(
 			isNewBranch = true
 		}
 
-		// Change repository bare status and update last updated time.
-		repo.IsBare = false
-		if err = UpdateRepository(repo, false); err != nil {
-			return fmt.Errorf("UpdateRepository: %v", err)
+		// NOTE: limit to detect latest 100 commits.
+		if len(commit.Commits) > 100 {
+			commit.Commits = commit.Commits[len(commit.Commits)-100:]
 		}
-
 		if err = updateIssuesCommit(u, repo, repoUserName, repoName, commit.Commits); err != nil {
 			log.Error(4, "updateIssuesCommit: %v", err)
 		}
@@ -488,7 +553,7 @@ func transferRepoAction(e Engine, actUser, oldOwner, newOwner *User, repo *Repos
 		IsPrivate:    repo.IsPrivate,
 		Content:      path.Join(oldOwner.LowerName, repo.LowerName),
 	}); err != nil {
-		return fmt.Errorf("notify watchers '%d/%s': %v", actUser.Id, repo.ID, err)
+		return fmt.Errorf("notify watchers '%d/%d': %v", actUser.Id, repo.ID, err)
 	}
 
 	// Remove watch for organization.

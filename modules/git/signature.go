@@ -26,23 +26,23 @@ type Signature struct {
 // FIXME: include timezone for timestamp!
 func newSignatureFromCommitline(line []byte) (_ *Signature, err error) {
 	sig := new(Signature)
-	emailstart := bytes.IndexByte(line, '<')
-	sig.Name = string(line[:emailstart-1])
-	emailstop := bytes.IndexByte(line, '>')
-	sig.Email = string(line[emailstart+1 : emailstop])
+	emailStart := bytes.IndexByte(line, '<')
+	sig.Name = string(line[:emailStart-1])
+	emailEnd := bytes.IndexByte(line, '>')
+	sig.Email = string(line[emailStart+1 : emailEnd])
 
 	// Check date format.
-	firstChar := line[emailstop+2]
+	firstChar := line[emailEnd+2]
 	if firstChar >= 48 && firstChar <= 57 {
-		timestop := bytes.IndexByte(line[emailstop+2:], ' ')
-		timestring := string(line[emailstop+2 : emailstop+2+timestop])
+		timestop := bytes.IndexByte(line[emailEnd+2:], ' ')
+		timestring := string(line[emailEnd+2 : emailEnd+2+timestop])
 		seconds, err := strconv.ParseInt(timestring, 10, 64)
 		if err != nil {
 			return nil, err
 		}
 		sig.When = time.Unix(seconds, 0)
 	} else {
-		sig.When, err = time.Parse("Mon Jan _2 15:04:05 2006 -0700", string(line[emailstop+2:]))
+		sig.When, err = time.Parse("Mon Jan _2 15:04:05 2006 -0700", string(line[emailEnd+2:]))
 		if err != nil {
 			return nil, err
 		}

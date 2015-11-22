@@ -25,6 +25,7 @@ import (
 	"github.com/gogits/gogs/modules/mailer"
 	"github.com/gogits/gogs/modules/middleware"
 	"github.com/gogits/gogs/modules/setting"
+	"github.com/gogits/gogs/modules/ssh"
 	"github.com/gogits/gogs/modules/user"
 )
 
@@ -76,6 +77,11 @@ func GlobalInit() {
 		log.Info("TiDB Supported")
 	}
 	checkRunMode()
+
+	if setting.StartSSHServer {
+		ssh.Listen(setting.SSHPort)
+		log.Info("SSH server started on :%v", setting.SSHPort)
+	}
 }
 
 func InstallInit(ctx *middleware.Context) {

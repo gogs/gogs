@@ -18,7 +18,7 @@ type Blob struct {
 }
 
 func (b *Blob) Data() (io.Reader, error) {
-	stdout, stderr, err := com.ExecCmdDirBytes(b.repo.Path, "git", "show", b.Id.String())
+	stdout, stderr, err := com.ExecCmdDirBytes(b.repo.Path, "git", "show", b.ID.String())
 	if err != nil {
 		return nil, errors.New(string(stderr))
 	}
