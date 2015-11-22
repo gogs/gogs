@@ -7,10 +7,9 @@ package middleware
 import (
 	"fmt"
 	"net/url"
+	"path"
 	"strings"
 
-	"github.com/mcuadros/go-version"
-	"github.com/mssola/user_agent"
 	"gopkg.in/macaron.v1"
 
 	"github.com/gogits/gogs/models"
@@ -19,26 +18,21 @@ import (
 	"github.com/gogits/gogs/modules/setting"
 )
 
-const (
-	FIREFOX_COPY_SUPPORT = "41.0"
-	CHROME_COPY_SUPPORT  = "43.0.2356"
-)
-
 func ApiRepoAssignment() macaron.Handler {
 	return func(ctx *Context) {
 		userName := ctx.Params(":username")
 		repoName := ctx.Params(":reponame")
 
 		var (
-			u   *models.User
-			err error
+			owner *models.User
+			err   error
 		)
 
 		// Check if the user is the same as the repository owner.
 		if ctx.IsSigned && ctx.User.LowerName == strings.ToLower(userName) {
-			u = ctx.User
+			owner = ctx.User
 		} else {
-			u, err = models.GetUserByName(userName)
+			owner, err = models.GetUserByName(userName)
 			if err != nil {
 				if models.IsErrUserNotExist(err) {
 					ctx.Error(404)
@@ -48,10 +42,10 @@ func ApiRepoAssignment() macaron.Handler {
 				return
 			}
 		}
-		ctx.Repo.Owner = u
+		ctx.Repo.Owner = owner
 
 		// Get repository.
-		repo, err := models.GetRepositoryByName(u.Id, repoName)
+		repo, err := models.GetRepositoryByName(owner.Id, repoName)
 		if err != nil {
 			if models.IsErrRepoNotExist(err) {
 				ctx.Error(404)
@@ -85,6 +79,11 @@ func ApiRepoAssignment() macaron.Handler {
 // RepoRef handles repository reference name including those contain `/`.
 func RepoRef() macaron.Handler {
 	return func(ctx *Context) {
+		// Empty repository does not have reference information.
+		if ctx.Repo.Repository.IsBare {
+			return
+		}
+
 		var (
 			refName string
 			err     error
@@ -117,7 +116,7 @@ func RepoRef() macaron.Handler {
 				ctx.Handle(500, "GetCommitOfBranch", err)
 				return
 			}
-			ctx.Repo.CommitID = ctx.Repo.Commit.Id.String()
+			ctx.Repo.CommitID = ctx.Repo.Commit.ID.String()
 			ctx.Repo.IsBranch = true
 
 		} else {
@@ -148,7 +147,7 @@ func RepoRef() macaron.Handler {
 					ctx.Handle(500, "GetCommitOfBranch", err)
 					return
 				}
-				ctx.Repo.CommitID = ctx.Repo.Commit.Id.String()
+				ctx.Repo.CommitID = ctx.Repo.Commit.ID.String()
 
 			} else if ctx.Repo.GitRepo.IsTagExist(refName) {
 				ctx.Repo.IsTag = true
@@ -157,7 +156,7 @@ func RepoRef() macaron.Handler {
 					ctx.Handle(500, "GetCommitOfTag", err)
 					return
 				}
-				ctx.Repo.CommitID = ctx.Repo.Commit.Id.String()
+				ctx.Repo.CommitID = ctx.Repo.Commit.ID.String()
 			} else if len(refName) == 40 {
 				ctx.Repo.IsCommit = true
 				ctx.Repo.CommitID = refName
@@ -234,8 +233,8 @@ func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 		}
 
 		var (
-			u   *models.User
-			err error
+			owner *models.User
+			err   error
 		)
 
 		userName := ctx.Params(":username")
@@ -247,9 +246,9 @@ func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 
 		// Check if the user is the same as the repository owner
 		if ctx.IsSigned && ctx.User.LowerName == strings.ToLower(userName) {
-			u = ctx.User
+			owner = ctx.User
 		} else {
-			u, err = models.GetUserByName(userName)
+			owner, err = models.GetUserByName(userName)
 			if err != nil {
 				if models.IsErrUserNotExist(err) {
 					ctx.Handle(404, "GetUserByName", err)
@@ -259,10 +258,10 @@ func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 				return
 			}
 		}
-		ctx.Repo.Owner = u
+		ctx.Repo.Owner = owner
 
 		// Get repository.
-		repo, err := models.GetRepositoryByName(u.Id, repoName)
+		repo, err := models.GetRepositoryByName(owner.Id, repoName)
 		if err != nil {
 			if models.IsErrRepoNotExist(err) {
 				ctx.Handle(404, "GetRepositoryByName", err)
@@ -275,19 +274,23 @@ func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 			return
 		}
 
-		mode, err := models.AccessLevel(ctx.User, repo)
-		if err != nil {
-			ctx.Handle(500, "AccessLevel", err)
-			return
+		// Admin has super access.
+		if ctx.IsSigned && ctx.User.IsAdmin {
+			ctx.Repo.AccessMode = models.ACCESS_MODE_OWNER
+		} else {
+			mode, err := models.AccessLevel(ctx.User, repo)
+			if err != nil {
+				ctx.Handle(500, "AccessLevel", err)
+				return
+			}
+			ctx.Repo.AccessMode = mode
 		}
-		ctx.Repo.AccessMode = mode
 
 		// Check access.
 		if ctx.Repo.AccessMode == models.ACCESS_MODE_NONE {
 			ctx.Handle(404, "no access right", err)
 			return
 		}
-
 		ctx.Data["HasAccess"] = true
 
 		if repo.IsMirror {
@@ -331,7 +334,7 @@ func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 			}
 		}
 
-		ctx.Data["Title"] = u.Name + "/" + repo.Name
+		ctx.Data["Title"] = owner.Name + "/" + repo.Name
 		ctx.Data["Repository"] = repo
 		ctx.Data["Owner"] = ctx.Repo.Repository.Owner
 		ctx.Data["IsRepositoryOwner"] = ctx.Repo.IsOwner()
@@ -344,10 +347,6 @@ func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 			return
 		}
 		ctx.Data["CloneLink"] = ctx.Repo.CloneLink
-
-		if ctx.Query("go-get") == "1" {
-			ctx.Data["GoGetImport"] = fmt.Sprintf("%s/%s/%s", setting.Domain, u.Name, repo.Name)
-		}
 
 		if ctx.IsSigned {
 			ctx.Data["IsWatchingRepo"] = models.IsWatching(ctx.User.Id, repo.ID)
@@ -390,12 +389,12 @@ func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 		ctx.Data["BranchName"] = ctx.Repo.BranchName
 		ctx.Data["CommitID"] = ctx.Repo.CommitID
 
-		userAgent := ctx.Req.Header.Get("User-Agent")
-		ua := user_agent.New(userAgent)
-		browserName, browserVer := ua.Browser()
-
-		ctx.Data["BrowserSupportsCopy"] = (browserName == "Chrome" && version.Compare(browserVer, CHROME_COPY_SUPPORT, ">=")) ||
-			(browserName == "Firefox" && version.Compare(browserVer, FIREFOX_COPY_SUPPORT, ">="))
+		if ctx.Query("go-get") == "1" {
+			ctx.Data["GoGetImport"] = path.Join(setting.Domain, setting.AppSubUrl, owner.Name, repo.Name)
+			prefix := path.Join(setting.AppUrl, owner.Name, repo.Name, "src", ctx.Repo.BranchName)
+			ctx.Data["GoDocDirectory"] = prefix + "{/dir}"
+			ctx.Data["GoDocFile"] = prefix + "{/dir}/{file}#L{line}"
+		}
 	}
 }
 
@@ -416,7 +415,7 @@ func RequireRepoAdmin() macaron.Handler {
 // GitHookService checks if repository Git hooks service has been enabled.
 func GitHookService() macaron.Handler {
 	return func(ctx *Context) {
-		if !ctx.User.AllowGitHook && !ctx.User.IsAdmin {
+		if !ctx.User.CanEditGitHook() {
 			ctx.Handle(404, "GitHookService", nil)
 			return
 		}

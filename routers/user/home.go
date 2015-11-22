@@ -52,6 +52,37 @@ func getDashboardContextUser(ctx *middleware.Context) *models.User {
 	return ctxUser
 }
 
+func retrieveFeeds(ctx *middleware.Context, uid, offset int64, isProfile bool) {
+	actions, err := models.GetFeeds(uid, offset, isProfile)
+	if err != nil {
+		ctx.Handle(500, "GetFeeds", err)
+		return
+	}
+
+	// Check access of private repositories.
+	feeds := make([]*models.Action, 0, len(actions))
+	unameAvatars := make(map[string]string)
+	for _, act := range actions {
+		// Cache results to reduce queries.
+		_, ok := unameAvatars[act.ActUserName]
+		if !ok {
+			u, err := models.GetUserByName(act.ActUserName)
+			if err != nil {
+				if models.IsErrUserNotExist(err) {
+					continue
+				}
+				ctx.Handle(500, "GetUserByName", err)
+				return
+			}
+			unameAvatars[act.ActUserName] = u.AvatarLink()
+		}
+
+		act.ActAvatar = unameAvatars[act.ActUserName]
+		feeds = append(feeds, act)
+	}
+	ctx.Data["Feeds"] = feeds
+}
+
 func Dashboard(ctx *middleware.Context) {
 	ctx.Data["Title"] = ctx.Tr("dashboard")
 	ctx.Data["PageIsDashboard"] = true
@@ -62,23 +93,21 @@ func Dashboard(ctx *middleware.Context) {
 		return
 	}
 
-	// Check context type.
 	if !ctxUser.IsOrganization() {
-		// Normal user.
-		ctxUser = ctx.User
-		collaborates, err := ctx.User.GetAccessibleRepositories()
+		collaborateRepos, err := ctx.User.GetAccessibleRepositories()
 		if err != nil {
 			ctx.Handle(500, "GetAccessibleRepositories", err)
 			return
 		}
 
-		repositories := make([]*models.Repository, 0, len(collaborates))
-		for repo := range collaborates {
-			repositories = append(repositories, repo)
+		for i := range collaborateRepos {
+			if err = collaborateRepos[i].GetOwner(); err != nil {
+				ctx.Handle(500, "GetOwner: "+collaborateRepos[i].Name, err)
+				return
+			}
 		}
-
-		ctx.Data["CollaborateCount"] = len(repositories)
-		ctx.Data["CollaborativeRepos"] = repositories
+		ctx.Data["CollaborateCount"] = len(collaborateRepos)
+		ctx.Data["CollaborativeRepos"] = collaborateRepos
 	}
 
 	repos, err := models.GetRepositories(ctxUser.Id, true)
@@ -89,7 +118,7 @@ func Dashboard(ctx *middleware.Context) {
 	ctx.Data["Repos"] = repos
 
 	// Get mirror repositories.
-	mirrors := make([]*models.Repository, 0, len(repos)/2)
+	mirrors := make([]*models.Repository, 0, 5)
 	for _, repo := range repos {
 		if repo.IsMirror {
 			if err = repo.GetMirror(); err != nil {
@@ -102,39 +131,10 @@ func Dashboard(ctx *middleware.Context) {
 	ctx.Data["MirrorCount"] = len(mirrors)
 	ctx.Data["Mirrors"] = mirrors
 
-	// Get feeds.
-	actions, err := models.GetFeeds(ctxUser.Id, 0, false)
-	if err != nil {
-		ctx.Handle(500, "GetFeeds", err)
+	retrieveFeeds(ctx, ctx.User.Id, 0, false)
+	if ctx.Written() {
 		return
 	}
-
-	// Check access of private repositories.
-	feeds := make([]*models.Action, 0, len(actions))
-	for _, act := range actions {
-		if act.IsPrivate {
-			// This prevents having to retrieve the repository for each action
-			repo := &models.Repository{ID: act.RepoID, IsPrivate: true}
-			if act.RepoUserName != ctx.User.LowerName {
-				if has, _ := models.HasAccess(ctx.User, repo, models.ACCESS_MODE_READ); !has {
-					continue
-				}
-			}
-
-		}
-		// FIXME: cache results?
-		u, err := models.GetUserByName(act.ActUserName)
-		if err != nil {
-			if models.IsErrUserNotExist(err) {
-				continue
-			}
-			ctx.Handle(500, "GetUserByName", err)
-			return
-		}
-		act.ActAvatar = u.AvatarLink()
-		feeds = append(feeds, act)
-	}
-	ctx.Data["Feeds"] = feeds
 	ctx.HTML(200, DASHBOARD)
 }
 
@@ -156,6 +156,7 @@ func Issues(ctx *middleware.Context) {
 	// Organization does not have view type and filter mode.
 	var (
 		viewType   string
+		sortType   = ctx.Query("sort")
 		filterMode = models.FM_ALL
 		assigneeID int64
 		posterID   int64
@@ -248,6 +249,7 @@ func Issues(ctx *middleware.Context) {
 		Page:       page,
 		IsClosed:   isShowClosed,
 		IsPull:     isPullList,
+		SortType:   sortType,
 	})
 	if err != nil {
 		ctx.Handle(500, "Issues: %v", err)
@@ -276,6 +278,7 @@ func Issues(ctx *middleware.Context) {
 
 	ctx.Data["IssueStats"] = issueStats
 	ctx.Data["ViewType"] = viewType
+	ctx.Data["SortType"] = sortType
 	ctx.Data["RepoID"] = repoID
 	ctx.Data["IsShowClosed"] = isShowClosed
 	if isShowClosed {
@@ -311,6 +314,9 @@ func Profile(ctx *middleware.Context) {
 	if uname == "favicon.ico" {
 		ctx.Redirect(setting.AppSubUrl + "/img/favicon.png")
 		return
+	} else if strings.HasSuffix(uname, ".png") {
+		ctx.Error(404)
+		return
 	}
 
 	isShowKeys := false
@@ -345,39 +351,10 @@ func Profile(ctx *middleware.Context) {
 	ctx.Data["TabName"] = tab
 	switch tab {
 	case "activity":
-		actions, err := models.GetFeeds(u.Id, 0, false)
-		if err != nil {
-			ctx.Handle(500, "GetFeeds", err)
+		retrieveFeeds(ctx, u.Id, 0, true)
+		if ctx.Written() {
 			return
 		}
-		feeds := make([]*models.Action, 0, len(actions))
-		for _, act := range actions {
-			if act.IsPrivate {
-				if !ctx.IsSigned {
-					continue
-				}
-				// This prevents having to retrieve the repository for each action
-				repo := &models.Repository{ID: act.RepoID, IsPrivate: true}
-				if act.RepoUserName != ctx.User.LowerName {
-					if has, _ := models.HasAccess(ctx.User, repo, models.ACCESS_MODE_READ); !has {
-						continue
-					}
-				}
-
-			}
-			// FIXME: cache results?
-			u, err := models.GetUserByName(act.ActUserName)
-			if err != nil {
-				if models.IsErrUserNotExist(err) {
-					continue
-				}
-				ctx.Handle(500, "GetUserByName", err)
-				return
-			}
-			act.ActAvatar = u.AvatarLink()
-			feeds = append(feeds, act)
-		}
-		ctx.Data["Feeds"] = feeds
 	default:
 		ctx.Data["Repos"], err = models.GetRepositories(u.Id, ctx.IsSigned && ctx.User.Id == u.Id)
 		if err != nil {

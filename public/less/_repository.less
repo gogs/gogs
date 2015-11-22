@@ -32,6 +32,10 @@
 		}
 	}
 
+	.owner.dropdown {
+		min-width: 40% !important;
+	}
+
 	.metas {
 		.menu {
 			max-height: 300px;
@@ -77,6 +81,181 @@
 	 		margin: 1px;
 	 		padding-right: 0;
 	 	}
+	}
+
+	&.file.list {
+		#repo-desc {
+			font-size: 1.2em;
+		}
+		.choose.reference {
+			.header .icon {
+				font-size: 1.4em;
+			}
+		}
+		.head.meta {
+			padding: 0;
+			li {
+				list-style: none;
+				display: inline-block;
+
+				.ui.breadcrumb {
+					margin-top: -5px;
+
+					span,
+					a {
+						font-size: 16px;
+					}
+				}
+			}
+		}
+
+		.clone.input {
+			margin-top: -8px;
+			width: 100%;
+
+			input {
+		    border-radius: 0;
+		    padding: 5px 10px;
+			}
+
+			.clone.button {
+				font-size: 13px;
+				padding: 0 5px;
+				&:first-child {
+			    border-radius: .28571429rem 0 0 .28571429rem;
+				}
+			}
+			.icon.button {
+				padding: 0 10px;
+			}
+			.dropdown .menu {
+				right: 0!important;
+				left: auto!important;
+			}
+		}
+
+		#repo-files-table {
+			.table.list {
+				width: 80% !important;
+			}
+
+			thead {
+				th {
+					padding-top: 8px;
+					padding-bottom: 5px;
+					font-weight: normal;
+
+					#last-commit-message {
+						margin-left: 5px;
+						margin-bottom: -4px;
+						width: 400px;
+					}
+					.age {
+						margin-top: 2px;
+					}
+				}
+				.ui.avatar {
+					margin-bottom: 5px;
+				}
+			}
+			tbody {
+				.icon {
+					margin-left: 5px;
+				}
+				.name {
+					max-width: 120px;
+				}
+				.message {
+			    max-width: 300px;
+				}
+				.age {
+					min-width: 150px;
+				}
+
+				.text.truncate {
+					margin-bottom: -5px;
+					max-width: 100%;
+				}
+			}
+			td {
+				padding-top: 8px;
+				padding-bottom: 8px;
+			}
+			tr:hover {
+		    background-color: #ffffEE;
+			}
+		}
+
+		#file-content {
+			.header {
+				.icon {
+					font-size: 1em;
+			    margin-top: -2px;
+				}
+			}
+			.view-raw {
+				* {
+					width: 100%;
+				}
+				img {
+					padding: 5px 5px 0 5px;
+				}
+			}
+
+			.code-view {
+				* {
+					font-size: 13px;
+					font-family: monospace;
+					line-height: 20px;
+				}
+
+				table {
+					width: 100%;
+				}
+				.lines-num {
+			    vertical-align: top;
+			    text-align: right;
+			    color: #999;
+			    background: #f5f5f5;
+			    width: 1%;
+
+			    span {
+		        font-family: Monaco, Menlo, Consolas, "Courier New", monospace;
+		        line-height: 20px;
+		        padding: 0 10px;
+		        cursor: pointer;
+		        display: block;
+			    }
+				}
+				.lines-num,
+				.lines-code {
+					padding: 0;
+
+
+					pre, 
+					ol,
+					.hljs {
+						background-color: white;
+						margin: 0;
+						padding: 0 !important;
+						li {
+							padding-left: 5px;
+							&.active {
+						    background: #ffffdd;
+							}
+						}
+					}
+				}
+			}
+		}
+
+		.sidebar {
+			padding-left: 0;
+
+			.octicon {
+				width: 16px;
+			}
+		}
 	}
 	
 	&.options {
@@ -420,11 +599,6 @@
 						padding: 5px 10px;
 					}
 				}
-				.button {
-					float: right;
-					margin-left: 5px;
-					margin-top: 1px;
-				}
 			}
 		}
 	}
@@ -585,6 +759,12 @@
         }
       }
     }
+    &.file-content {
+    	img {
+    		max-width: 100%;
+    		padding: 5px 5px 0 5px;
+    	}
+    }
 	}
 	.code-view {
 		overflow: auto;
@@ -613,8 +793,203 @@
 			}
 		}
 	}
+
+	&.release {
+		#release-list {
+			border-top: 1px solid #DDD;
+			margin-top: 20px;
+			padding-top: 15px;
+
+			>li {
+				list-style: none;
+
+				.meta,
+				.detail {
+					padding-top: 30px;
+					padding-bottom: 40px;
+				}
+				.meta {
+					text-align: right;
+					position: relative;
+
+					.tag:not(.icon) {
+						display: block;
+						margin-top: 15px;
+					}
+					.commit {
+						display: block;
+						margin-top: 10px;
+					}
+				}
+				.detail {
+					border-left: 1px solid #DDD;
+
+					.author {
+						img {
+							margin-bottom: -3px;
+						}
+					}
+					.download {
+						margin-top: 20px;
+
+						>a {
+							.octicon {
+								margin-left: 5px;
+								margin-right: 5px;
+							}
+						}
+
+						.list {
+							padding-left: 0;
+							border-top: 1px solid #eee;
+
+							li {
+								list-style: none;
+								display: block;
+						    padding-top: 8px;
+						    padding-bottom: 8px;
+								border-bottom: 1px solid #eee;
+							}
+						}
+					}
+					.dot {
+				    width: 9px;
+				    height: 9px;
+				    background-color: #ccc;
+				    z-index: 999;
+				    position: absolute;
+				    display: block;
+				    left: -5px;
+				    top: 40px;
+				    border-radius: 6px;
+				    border: 1px solid #FFF;
+					}
+				}
+			}
+		}
+	}
+	&.new.release {
+		.target {
+			min-width: 500px;
+			
+			.at {
+				margin-left: -5px;
+				margin-right: 5px;
+			}
+			.dropdown.icon {
+				margin: 0;
+				padding-top: 3px;
+			}
+			.selection.dropdown {
+				padding-top: 10px;
+		    padding-bottom: 10px;
+			}
+		}
+		.prerelease.field {
+			margin-bottom: 0;
+		}
+	}
+
+	&.watchers {
+		.list {
+			padding: 0;
+
+			.item {
+				list-style: none;
+				width: 32%;
+				margin: 10px 10px 10px 0;
+		    padding-bottom: 14px;
+		    float: left;
+
+				.avatar {
+					width: 48px;
+					height: 48px;
+					float: left;
+			    display: block;
+			    margin-right: 10px;
+				}
+				.name {
+					margin-top: 0;
+					margin-bottom: 0;
+					font-weight: normal;
+				}
+				.meta {
+					margin-top: 5px;
+				}
+			}
+		}
+	}
+	&.forks {
+		.list {
+			margin-top: 0;
+
+			.item {
+				padding-top: 10px;
+				padding-bottom: 10px;
+				border-bottom: 1px solid #DDD;
+
+				.ui.avatar {
+					float: left;
+					margin-right: 5px;
+				}
+				.link {
+					padding-top: 5px;
+				}
+			}
+		}
+	}
+
+	&.settings {
+		&.collaboration {
+			.collaborator.list {
+				padding: 0;
+
+				.item {
+					padding: 10px 20px;
+
+					&:not(:last-child) {
+						border-bottom: 1px solid #DDD;
+					}
+				}
+			}
+
+			#repo-collab-form {
+				#search-user-box {
+					.results {
+						left: 7px;
+					}
+				}
+				.ui.button {
+					margin-left: 5px;
+			    margin-top: -3px;
+				}
+			}
+		}
+	}
 }
 // End of .repository
+
+#search-repo-box,
+#search-user-box {
+	.results {
+		padding: 0;
+		position: absolute;
+
+		.item {
+			padding: 10px 15px;
+			border-bottom: 1px solid #DDD;
+			cursor: pointer;
+
+			&:hover {
+				background: rgba(0,0,0,.05)!important;
+		    color: rgba(0,0,0,.95)!important;
+			}
+			img {
+				margin-right: 8px;
+			}
+		}
+	}
+}
 
 .issue.list {
 	list-style: none;
@@ -673,7 +1048,7 @@
 .settings {
 	.content {
 		margin-top: 2px;
-		.header,
+		>.header,
 		.segment {
 			box-shadow: 0 1px 2px 0 rgba(34,36,38,.15);
 		}

@@ -11,7 +11,7 @@ import (
 // Tag represents a Git tag.
 type Tag struct {
 	Name       string
-	Id         sha1
+	ID         sha1
 	repo       *Repository
 	Object     sha1 // The id of this commit object
 	Type       string

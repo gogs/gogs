@@ -1,42 +1,41 @@
-{{template "ng/base/head" .}}
-{{template "ng/base/header" .}}
-{{template "org/base/header" .}}
-<div class="container">
-	<div class="org-header-alert">
-		{{template "ng/base/alert" .}}
-	</div>
-	<div class="org-toolbar clear">
+{{template "base/head" .}}
+<div class="organization teams">
+	{{template "org/header" .}}
+  <div class="ui container">
+  	{{template "base/alert" .}}
 		{{if .IsOrganizationOwner}}
-        <a class="btn btn-green btn-large btn-link btn-radius right" href="{{.OrgLink}}/teams/new"><i class="octicon octicon-repo-create"></i> {{.i18n.Tr "org.create_new_team"}}</a>
+    <div class="text right">
+      <a class="ui green button" href="{{.OrgLink}}/teams/new"><i class="octicon octicon-repo-create"></i> {{.i18n.Tr "org.create_new_team"}}</a>
+    </div>
+    <div class="ui divider"></div>
 		{{end}}
-	</div>
-	<div class="org-team-list">
-		{{range .Teams}}
-		<div class="org-team-list-item">
-			<div class="panel panel-radius">
-				<div class="panel-header">
-					{{if .IsMember $.SignedUser.Id}}
-                    <a class="btn btn-small btn-red btn-header btn-radius right" href="{{$.OrgLink}}/teams/{{.LowerName}}/action/leave?uid={{$.SignedUser.Id}}">{{$.i18n.Tr "org.teams.leave"}}</a>
-                    {{else if $.IsOrganizationOwner}}
-                    <a class="btn btn-small btn-blue btn-header btn-radius right" href="{{$.OrgLink}}/teams/{{.LowerName}}/action/join?uid={{$.SignedUser.Id}}">{{$.i18n.Tr "org.teams.join"}}</a>
-                    {{end}}
-                    <a class="text-black" href="{{$.OrgLink}}/teams/{{.LowerName}}"><strong>{{.Name}}</strong></a>
+
+		<div class="ui two column grid">
+			{{range .Teams}}
+			<div class="column">
+				<div class="ui top attached header">
+	        <a class="text black" href="{{$.OrgLink}}/teams/{{.LowerName}}"><strong>{{.Name}}</strong></a>
+	        <div class="ui right">
+						{{if .IsMember $.SignedUser.Id}}
+	        	<a class="ui red small button" href="{{$.OrgLink}}/teams/{{.LowerName}}/action/leave?uid={{$.SignedUser.Id}}">{{$.i18n.Tr "org.teams.leave"}}</a>
+	          {{else if $.IsOrganizationOwner}}
+	          <a class="ui blue small button" href="{{$.OrgLink}}/teams/{{.LowerName}}/action/join?uid={{$.SignedUser.Id}}">{{$.i18n.Tr "org.teams.join"}}</a>
+	          {{end}}
+	        </div>
 				</div>
-				{{if .NumMembers}}
-				<div class="panel-body member-avatar-group">
+				<div class="ui attached segment members">
 					{{range .Members}}
-					<a href="{{AppSubUrl}}/{{.Name}}" title="{{.Name}}">
-						<img src="{{.AvatarLink}}">
+					<a href="{{.HomeLink}}" title="{{.Name}}">
+						<img class="ui avatar image" src="{{.AvatarLink}}">
 					</a>
 					{{end}}
 				</div>
-				{{end}}
-				<div class="panel-footer">
-	    			<p class="team-meta">{{.NumMembers}} {{$.i18n.Tr "org.lower_members"}} · {{.NumRepos}} {{$.i18n.Tr "org.lower_repositories"}}</p>
+				<div class="ui bottom attached header">
+	    		<p class="team-meta">{{.NumMembers}} {{$.i18n.Tr "org.lower_members"}} · {{.NumRepos}} {{$.i18n.Tr "org.lower_repositories"}}</p>
 				</div>
 			</div>
+			{{end}}
 		</div>
-		{{end}}
 	</div>
 </div>
-{{template "ng/base/footer" .}}
+{{template "base/footer" .}}

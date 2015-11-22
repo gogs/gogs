@@ -13,15 +13,13 @@ import (
 )
 
 const (
-	RELEASES     base.TplName = "repo/release/list"
-	RELEASE_NEW  base.TplName = "repo/release/new"
-	RELEASE_EDIT base.TplName = "repo/release/edit"
+	RELEASES    base.TplName = "repo/release/list"
+	RELEASE_NEW base.TplName = "repo/release/new"
 )
 
 func Releases(ctx *middleware.Context) {
 	ctx.Data["Title"] = ctx.Tr("repo.release.releases")
-	ctx.Data["IsRepoToolbarReleases"] = true
-	ctx.Data["IsRepoReleaseNew"] = false
+	ctx.Data["PageIsReleaseList"] = true
 
 	rawTags, err := ctx.Repo.GitRepo.GetTags()
 	if err != nil {
@@ -29,9 +27,9 @@ func Releases(ctx *middleware.Context) {
 		return
 	}
 
-	rels, err := models.GetReleasesByRepoId(ctx.Repo.Repository.ID)
+	rels, err := models.GetReleasesByRepoID(ctx.Repo.Repository.ID)
 	if err != nil {
-		ctx.Handle(500, "GetReleasesByRepoId", err)
+		ctx.Handle(500, "GetReleasesByRepoID", err)
 		return
 	}
 
@@ -45,7 +43,7 @@ func Releases(ctx *middleware.Context) {
 				continue
 			}
 			if rel.TagName == rawTag {
-				rel.Publisher, err = models.GetUserByID(rel.PublisherId)
+				rel.Publisher, err = models.GetUserByID(rel.PublisherID)
 				if err != nil {
 					ctx.Handle(500, "GetUserById", err)
 					return
@@ -88,10 +86,10 @@ func Releases(ctx *middleware.Context) {
 			tags[i] = &models.Release{
 				Title:   rawTag,
 				TagName: rawTag,
-				Sha1:    commit.Id.String(),
+				Sha1:    commit.ID.String(),
 			}
 
-			tags[i].NumCommits, err = ctx.Repo.GitRepo.CommitsCount(commit.Id.String())
+			tags[i].NumCommits, err = ctx.Repo.GitRepo.CommitsCount(commit.ID.String())
 			if err != nil {
 				ctx.Handle(500, "CommitsCount", err)
 				return
@@ -105,7 +103,7 @@ func Releases(ctx *middleware.Context) {
 			continue
 		}
 
-		rel.Publisher, err = models.GetUserByID(rel.PublisherId)
+		rel.Publisher, err = models.GetUserByID(rel.PublisherID)
 		if err != nil {
 			ctx.Handle(500, "GetUserById", err)
 			return
@@ -140,27 +138,15 @@ func Releases(ctx *middleware.Context) {
 }
 
 func NewRelease(ctx *middleware.Context) {
-	if !ctx.Repo.IsOwner() {
-		ctx.Handle(403, "release.ReleasesNew", nil)
-		return
-	}
-
 	ctx.Data["Title"] = ctx.Tr("repo.release.new_release")
+	ctx.Data["PageIsReleaseList"] = true
 	ctx.Data["tag_target"] = ctx.Repo.Repository.DefaultBranch
-	ctx.Data["IsRepoToolbarReleases"] = true
-	ctx.Data["IsRepoReleaseNew"] = true
 	ctx.HTML(200, RELEASE_NEW)
 }
 
 func NewReleasePost(ctx *middleware.Context, form auth.NewReleaseForm) {
-	if !ctx.Repo.IsOwner() {
-		ctx.Handle(403, "release.ReleasesNew", nil)
-		return
-	}
-
 	ctx.Data["Title"] = ctx.Tr("repo.release.new_release")
-	ctx.Data["IsRepoToolbarReleases"] = true
-	ctx.Data["IsRepoReleaseNew"] = true
+	ctx.Data["PageIsReleaseList"] = true
 
 	if ctx.HasError() {
 		ctx.HTML(200, RELEASE_NEW)
@@ -185,12 +171,12 @@ func NewReleasePost(ctx *middleware.Context, form auth.NewReleaseForm) {
 	}
 
 	rel := &models.Release{
-		RepoId:       ctx.Repo.Repository.ID,
-		PublisherId:  ctx.User.Id,
+		RepoID:       ctx.Repo.Repository.ID,
+		PublisherID:  ctx.User.Id,
 		Title:        form.Title,
 		TagName:      form.TagName,
 		Target:       form.Target,
-		Sha1:         commit.Id.String(),
+		Sha1:         commit.ID.String(),
 		NumCommits:   commitsCount,
 		Note:         form.Content,
 		IsDraft:      len(form.Draft) > 0,
@@ -198,66 +184,69 @@ func NewReleasePost(ctx *middleware.Context, form auth.NewReleaseForm) {
 	}
 
 	if err = models.CreateRelease(ctx.Repo.GitRepo, rel); err != nil {
-		if err == models.ErrReleaseAlreadyExist {
+		if models.IsErrReleaseAlreadyExist(err) {
+			ctx.Data["Err_TagName"] = true
 			ctx.RenderWithErr(ctx.Tr("repo.release.tag_name_already_exist"), RELEASE_NEW, &form)
 		} else {
 			ctx.Handle(500, "CreateRelease", err)
 		}
 		return
 	}
-	log.Trace("%s Release created: %s/%s:%s", ctx.Req.RequestURI, ctx.User.LowerName, ctx.Repo.Repository.Name, form.TagName)
+	log.Trace("Release created: %s/%s:%s", ctx.User.LowerName, ctx.Repo.Repository.Name, form.TagName)
 
 	ctx.Redirect(ctx.Repo.RepoLink + "/releases")
 }
 
 func EditRelease(ctx *middleware.Context) {
-	if !ctx.Repo.IsOwner() {
-		ctx.Handle(403, "release.ReleasesEdit", nil)
-		return
-	}
+	ctx.Data["Title"] = ctx.Tr("repo.release.edit_release")
+	ctx.Data["PageIsReleaseList"] = true
+	ctx.Data["PageIsEditRelease"] = true
 
 	tagName := ctx.Params(":tagname")
 	rel, err := models.GetRelease(ctx.Repo.Repository.ID, tagName)
 	if err != nil {
-		if err == models.ErrReleaseNotExist {
+		if models.IsErrReleaseNotExist(err) {
 			ctx.Handle(404, "GetRelease", err)
 		} else {
 			ctx.Handle(500, "GetRelease", err)
 		}
 		return
 	}
-	ctx.Data["Release"] = rel
+	ctx.Data["ID"] = rel.ID
+	ctx.Data["tag_name"] = rel.TagName
+	ctx.Data["tag_target"] = rel.Target
+	ctx.Data["title"] = rel.Title
+	ctx.Data["content"] = rel.Note
+	ctx.Data["prerelease"] = rel.IsPrerelease
 
-	ctx.Data["Title"] = ctx.Tr("repo.release.edit_release")
-	ctx.Data["IsRepoToolbarReleases"] = true
-	ctx.HTML(200, RELEASE_EDIT)
+	ctx.HTML(200, RELEASE_NEW)
 }
 
 func EditReleasePost(ctx *middleware.Context, form auth.EditReleaseForm) {
-	if !ctx.Repo.IsOwner() {
-		ctx.Handle(403, "release.EditReleasePost", nil)
-		return
-	}
+	ctx.Data["Title"] = ctx.Tr("repo.release.edit_release")
+	ctx.Data["PageIsReleaseList"] = true
+	ctx.Data["PageIsEditRelease"] = true
 
 	tagName := ctx.Params(":tagname")
 	rel, err := models.GetRelease(ctx.Repo.Repository.ID, tagName)
 	if err != nil {
-		if err == models.ErrReleaseNotExist {
+		if models.IsErrReleaseNotExist(err) {
 			ctx.Handle(404, "GetRelease", err)
 		} else {
 			ctx.Handle(500, "GetRelease", err)
 		}
 		return
 	}
-	ctx.Data["Release"] = rel
+	ctx.Data["tag_name"] = rel.TagName
+	ctx.Data["tag_target"] = rel.Target
+	ctx.Data["title"] = rel.Title
+	ctx.Data["content"] = rel.Note
+	ctx.Data["prerelease"] = rel.IsPrerelease
 
 	if ctx.HasError() {
-		ctx.HTML(200, RELEASE_EDIT)
+		ctx.HTML(200, RELEASE_NEW)
 		return
 	}
-
-	ctx.Data["Title"] = ctx.Tr("repo.release.edit_release")
-	ctx.Data["IsRepoToolbarReleases"] = true
 
 	rel.Title = form.Title
 	rel.Note = form.Content
@@ -268,4 +257,16 @@ func EditReleasePost(ctx *middleware.Context, form auth.EditReleaseForm) {
 		return
 	}
 	ctx.Redirect(ctx.Repo.RepoLink + "/releases")
+}
+
+func DeleteRelease(ctx *middleware.Context) {
+	if err := models.DeleteReleaseByID(ctx.QueryInt64("id")); err != nil {
+		ctx.Flash.Error("DeleteReleaseByID: " + err.Error())
+	} else {
+		ctx.Flash.Success(ctx.Tr("repo.release.deletion_success"))
+	}
+
+	ctx.JSON(200, map[string]interface{}{
+		"redirect": ctx.Repo.RepoLink + "/releases",
+	})
 }

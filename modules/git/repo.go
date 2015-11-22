@@ -5,6 +5,7 @@
 package git
 
 import (
+	"errors"
 	"path/filepath"
 )
 
@@ -21,6 +22,8 @@ func OpenRepository(repoPath string) (*Repository, error) {
 	repoPath, err := filepath.Abs(repoPath)
 	if err != nil {
 		return nil, err
+	} else if !isDir(repoPath) {
+		return nil, errors.New("no such file or directory")
 	}
 
 	return &Repository{Path: repoPath}, nil

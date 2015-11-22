@@ -37,6 +37,7 @@ const (
 	DIFF_FILE_ADD = iota + 1
 	DIFF_FILE_CHANGE
 	DIFF_FILE_DEL
+	DIFF_FILE_RENAME
 )
 
 type DiffLine struct {
@@ -57,12 +58,14 @@ type DiffSection struct {
 
 type DiffFile struct {
 	Name               string
+	OldName            string
 	Index              int
 	Addition, Deletion int
 	Type               int
 	IsCreated          bool
 	IsDeleted          bool
 	IsBin              bool
+	IsRenamed          bool
 	Sections           []*DiffSection
 }
 
@@ -94,7 +97,7 @@ func ParsePatch(pid int64, maxlines int, cmd *exec.Cmd, reader io.Reader) (*Diff
 	var i int
 	for scanner.Scan() {
 		line := scanner.Text()
-		// fmt.Println(i, line)
+
 		if strings.HasPrefix(line, "+++ ") || strings.HasPrefix(line, "--- ") {
 			continue
 		}
@@ -158,17 +161,27 @@ func ParsePatch(pid int64, maxlines int, cmd *exec.Cmd, reader io.Reader) (*Diff
 
 		// Get new file.
 		if strings.HasPrefix(line, DIFF_HEAD) {
-			beg := len(DIFF_HEAD)
-			a := line[beg : (len(line)-beg)/2+beg]
+			middle := -1
 
-			// In case file name is surrounded by double quotes(it happens only in git-shell).
-			if a[0] == '"' {
-				a = a[1 : len(a)-1]
-				a = strings.Replace(a, `\"`, `"`, -1)
+			// Note: In case file name is surrounded by double quotes (it happens only in git-shell).
+			// e.g. diff --git "a/xxx" "b/xxx"
+			hasQuote := line[len(DIFF_HEAD)] == '"'
+			if hasQuote {
+				middle = strings.Index(line, ` "b/`)
+			} else {
+				middle = strings.Index(line, " b/")
+			}
+
+			beg := len(DIFF_HEAD)
+			a := line[beg+2 : middle]
+			b := line[middle+3:]
+			if hasQuote {
+				a = string(git.UnescapeChars([]byte(a[1 : len(a)-1])))
+				b = string(git.UnescapeChars([]byte(b[1 : len(b)-1])))
 			}
 
 			curFile = &DiffFile{
-				Name:     a[strings.Index(a, "/")+1:],
+				Name:     a,
 				Index:    len(diff.Files) + 1,
 				Type:     DIFF_FILE_CHANGE,
 				Sections: make([]*DiffSection, 0, 10),
@@ -180,16 +193,17 @@ func ParsePatch(pid int64, maxlines int, cmd *exec.Cmd, reader io.Reader) (*Diff
 				switch {
 				case strings.HasPrefix(scanner.Text(), "new file"):
 					curFile.Type = DIFF_FILE_ADD
-					curFile.IsDeleted = false
 					curFile.IsCreated = true
 				case strings.HasPrefix(scanner.Text(), "deleted"):
 					curFile.Type = DIFF_FILE_DEL
-					curFile.IsCreated = false
 					curFile.IsDeleted = true
 				case strings.HasPrefix(scanner.Text(), "index"):
 					curFile.Type = DIFF_FILE_CHANGE
-					curFile.IsCreated = false
-					curFile.IsDeleted = false
+				case strings.HasPrefix(scanner.Text(), "similarity index 100%"):
+					curFile.Type = DIFF_FILE_RENAME
+					curFile.IsRenamed = true
+					curFile.OldName = curFile.Name
+					curFile.Name = b
 				}
 				if curFile.Type > 0 {
 					break
@@ -244,10 +258,10 @@ func GetDiffRange(repoPath, beforeCommitId string, afterCommitId string, maxline
 			cmd = exec.Command("git", "show", afterCommitId)
 		} else {
 			c, _ := commit.Parent(0)
-			cmd = exec.Command("git", "diff", c.Id.String(), afterCommitId)
+			cmd = exec.Command("git", "diff", "-M", c.ID.String(), afterCommitId)
 		}
 	} else {
-		cmd = exec.Command("git", "diff", beforeCommitId, afterCommitId)
+		cmd = exec.Command("git", "diff", "-M", beforeCommitId, afterCommitId)
 	}
 	cmd.Dir = repoPath
 	cmd.Stdout = wr

@@ -1,81 +1,117 @@
-{{template "ng/base/head" .}}
-{{template "ng/base/header" .}}
-<div id="repo-wrapper">
-    {{template "repo/header_old" .}}
-    <div id="repo-content" class="clear container">
-        <div id="repo-main" class="left grid-5-6">
-            <p id="repo-desc">
-                {{if .Repository.DescriptionHtml}}<span class="description">{{.Repository.DescriptionHtml}}</span>{{else}}<span class="no-description text-italic">{{.i18n.Tr "repo.no_desc"}}</span>{{end}}
-                <a class="link" href="{{.Repository.Website}}">{{.Repository.Website}}</a>
-            </p>
-            <ul id="repo-file-nav" class="clear menu menu-line">
-                {{if and .IsRepositoryAdmin .Repository.BaseRepo}}
-                {{ $baseRepo := .Repository.BaseRepo}}
-                <li>
-                    <a href="{{AppSubUrl}}/{{$baseRepo.Owner.Name}}/{{$baseRepo.Name}}/compare/{{$.BaseDefaultBranch}}...{{$.Owner.Name}}:{{$.BranchName}}">
-                        <button class="btn btn-green btn-small btn-radius" id="repo-compare-btn"><i class="octicon octicon-git-compare"></i></button>
-                    </a>
-                </li>
-                {{end}}
-                <li id="repo-branch-switch" class="down drop">
-                    <a>
-                        <button class="btn btn-gray btn-medium btn-radius">
-                            <i class="octicon octicon-git-branch"></i> {{if .IsViewBranch}}{{.i18n.Tr "repo.branch"}}{{else}}{{.i18n.Tr "repo.tree"}}{{end}}:
-                            <strong id="repo-branch-current">{{if .IsViewBranch}}{{.BranchName}}{{else}}{{ShortSha .BranchName}}{{end}}</strong>
-                        </button>
-                    </a>
-                    <div class="drop-down panel">
-                        <p class="panel-header text-bold">{{.i18n.Tr "repo.branch_and_tags"}}</p>
-                        <!-- <input id="repo-branch-filter-ipt" class="ipt ipt-large" type="text" placeholder="find branches / tags"/> -->
-                        <div id="repo-branch-tag">
-                            <ul class="menu menu-line tab-nav clear" id="repo-branch-tab-nav">
-                                <li class="js-tab-nav {{if not .IsTag}}js-tab-nav-show{{end}} left" data-tab-target="#repo-branch-list"><a>{{.i18n.Tr "repo.branches"}}</a></li>
-                                <li class="js-tab-nav {{if .IsTag}}js-tab-nav-show{{end}} left" data-tab-target="#repo-tag-list"><a>{{.i18n.Tr "repo.tags"}}</a></li>
-                            </ul>
-                            <ul class="menu menu-vertical switching-list {{if .IsTag}}hide{{end}}" id="repo-branch-list">
-                                {{range .Branches}}
-                                <li {{if eq . $.BranchName}}class="checked"{{end}}><a href="{{$.RepoLink}}/src/{{EscapePound .}}"><i class="octicon octicon-check"></i>{{.}}</a></li>
-                                {{end}}
-                            </ul>
-                            <ul class="menu menu-vertical switching-list {{if not .IsTag}}hide{{end}}" id="repo-tag-list">
-                                {{range .Tags}}
-                                <li {{if eq . $.BranchName}}class="checked"{{end}}><a href="{{$.RepoLink}}/src/{{EscapePound .}}"><i class="octicon octicon-check"></i>{{.}}</a></li>
-                                {{end}}
-                            </ul>
-                        </div>
-                    </div>
-                </li>
-                <li id="repo-bread" class="breads">
-                    <a class="title bread" href="{{.RepoLink}}/src/{{EscapePound .BranchName}}">{{.Repository.Name}}</a>
-                    {{ $n := len .Treenames}}
-                    {{ $l := Subtract $n 1}}
-                    {{range $i, $v := .Treenames}}
-                        {{if eq $i $l}}
-                        <span class="bread">{{$v}}</span>
-                        {{else}}
-                        {{ $p := index $.Paths $i}}
-                        <span class="bread"><a href="{{EscapePound $.BranchLink}}/{{EscapePound $p}}">{{$v}}</a></span>
-                        {{end}}
-                    {{end}}
-                </li>
-                <!-- <li id="repo-commits-jump" class="repo-jump right">
-                    <a href="#">
-                        <button class="btn btn-small btn-gray btn-right-radius"><i class="octicon octicon-git-commit"></i></button>
-                    </a>
-                </li>
-                <li id="repo-find-jump" class="repo-jump right">
-                    <a href="#">
-                        <button class="btn btn-small btn-gray btn-left-radius"><i class="octicon octicon-list-unordered"></i></button>
-                    </a>
-                </li> -->
-            </ul>
-            {{if .IsFile}}
-                {{template "repo/view_file" .}}
-            {{else}}
-                {{template "repo/view_list" .}}
-            {{end}}
+{{template "base/head" .}}
+<div class="repository file list">
+  {{template "repo/header" .}}
+  <div class="ui container">
+    {{template "repo/sidebar" .}}
+    <div class="ui grid">
+      <div class="ui ten wide column">
+        <p id="repo-desc">
+          {{if .Repository.DescriptionHtml}}<span class="description">{{.Repository.DescriptionHtml}}</span>{{else}}<span class="no-description text-italic">{{.i18n.Tr "repo.no_desc"}}</span>{{end}}
+          <a class="link" href="{{.Repository.Website}}">{{.Repository.Website}}</a>
+        </p>
+      </div>
+      <div class="ui six wide column">
+        <div class="ui action small clone input">
+          {{if not $.DisableSSH}}
+          <button class="ui blue basic clone button" id="repo-clone-ssh" data-link="{{.CloneLink.SSH}}">
+            SSH
+          </button>
+          {{end}}
+          <button class="ui {{if $.DisableSSH}}blue{{end}} basic clone button" id="repo-clone-https" data-link="{{.CloneLink.HTTPS}}">
+            {{if eq Protocol "http"}}HTTP{{else}}HTTPS{{end}}
+          </button>
+          <input id="repo-clone-url" value="{{if $.DisableSSH}}{{$.CloneLink.HTTPS}}{{else}}{{$.CloneLink.SSH}}{{end}}" readonly>
+          <button class="ui basic icon button poping up clipboard" id="clipboard-btn" data-original="{{.i18n.Tr "repo.copy_link"}}" data-success="{{.i18n.Tr "repo.copy_link_success"}}" data-error="{{.i18n.Tr "repo.copy_link_error"}}" data-content="{{.i18n.Tr "repo.copy_link"}}" data-variation="inverted tiny" data-clipboard-target="#repo-clone-url">
+            <i class="octicon octicon-clippy"></i>
+          </button>
+          <div class="ui basic jump dropdown icon button">
+            <i class="download icon"></i>
+            <div class="menu">
+              <a class="item" href="{{$.RepoLink}}/archive/{{EscapePound $.BranchName}}.zip"><i class="icon octicon octicon-file-zip"></i> ZIP</a>
+              <a class="item" href="{{$.RepoLink}}/archive/{{EscapePound $.BranchName}}.tar.gz"><i class="icon octicon octicon-file-zip"></i> TAR.GZ</a>
+            </div>
+          </div>
         </div>
-        {{template "repo/sidebar" .}}
+      </div>
     </div>
+
+    <ul class="head meta">
+      {{if and .IsRepositoryAdmin .Repository.BaseRepo}}
+      <li>
+        {{ $baseRepo := .Repository.BaseRepo}}
+        <a href="{{AppSubUrl}}/{{$baseRepo.Owner.Name}}/{{$baseRepo.Name}}/compare/{{$.BaseDefaultBranch}}...{{$.Owner.Name}}:{{$.BranchName}}">
+          <button class="ui green small button"><i class="octicon octicon-git-compare"></i></button>
+        </a>
+      </li>
+      {{end}}
+      <li>
+        <div class="choose reference">
+          <div class="ui floating filter dropdown" data-no-results="{{.i18n.Tr "repo.pulls.no_results"}}">
+            <div class="ui basic small button">
+              <span class="text">
+                <i class="octicon octicon-git-branch"></i> 
+                {{if .IsViewBranch}}{{.i18n.Tr "repo.branch"}}{{else}}{{.i18n.Tr "repo.tree"}}{{end}}:
+                <strong>{{if .IsViewBranch}}{{.BranchName}}{{else}}{{ShortSha .BranchName}}{{end}}</strong>
+              </span>
+              <i class="dropdown icon"></i>
+            </div>
+            <div class="menu">
+              <div class="ui icon search input">
+                <i class="filter icon"></i>
+                <input name="search" placeholder="{{.i18n.Tr "repo.filter_branch_and_tag"}}...">
+              </div>
+              <div class="header">
+                <div class="ui grid">
+                  <div class="two column row">
+                    <a class="reference column" href="#" data-target="#branch-list">
+                      <span class="text {{if .IsViewBranch}}black{{end}}">
+                        <i class="icon octicon octicon-git-branch"></i> {{.i18n.Tr "repo.branches"}}
+                      </span>
+                    </a>
+                    <a class="reference column" href="#" data-target="#tag-list">
+                      <span class="text {{if .IsTag}}black{{end}}">
+                        <i class="reference tags icon"></i> {{.i18n.Tr "repo.tags"}}
+                      </span>
+                    </a>
+                  </div>
+                </div>
+              </div>
+              <div id="branch-list" class="scrolling menu" {{if .IsTag}}style="display: none"{{end}}>
+                {{range .Branches}}
+                <div class="item {{if eq $.BranchName .}}selected{{end}}" data-url="{{$.RepoLink}}/src/{{EscapePound .}}">{{.}}</div>
+                {{end}}
+              </div>
+              <div id="tag-list" class="scrolling menu" {{if .IsViewBranch}}style="display: none"{{end}}>
+                {{range .Tags}}
+                <div class="item {{if eq $.BranchName .}}selected{{end}}" data-url="{{$.RepoLink}}/src/{{EscapePound .}}">{{.}}</div>
+                {{end}}
+              </div>
+            </div>
+          </div>
+        </div>
+      </li>
+      <li>
+        <div class="ui breadcrumb">
+          <a class="section" href="{{.RepoLink}}/src/{{EscapePound .BranchName}}">{{.Repository.Name}}</a>
+          {{ $n := len .Treenames}}
+          {{ $l := Subtract $n 1}}
+          {{range $i, $v := .Treenames}}
+            <div class="divider"> / </div>
+            {{if eq $i $l}}
+            <span class="active section">{{$v}}</span>
+            {{else}}
+            {{ $p := index $.Paths $i}}
+            <span class="section"><a href="{{EscapePound $.BranchLink}}/{{EscapePound $p}}">{{$v}}</a></span>
+            {{end}}
+          {{end}}
+        </div>
+      </li>
+    </ul>
+    {{if .IsFile}}
+      {{template "repo/view_file" .}}
+    {{else}}
+      {{template "repo/view_list" .}}
+    {{end}}
+  </div>
 </div>
-{{template "ng/base/footer" .}}
+{{template "base/footer" .}}

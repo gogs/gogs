@@ -158,7 +158,7 @@ func HTTP(ctx *middleware.Context) {
 			}
 
 			if !isPull && repo.IsMirror {
-				ctx.HandleText(401, "can't push to mirror")
+				ctx.HandleText(401, "mirror repository is read-only")
 				return
 			}
 		}

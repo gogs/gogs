@@ -23,6 +23,8 @@ import (
 	"github.com/Unknwon/i18n"
 	"github.com/microcosm-cc/bluemonday"
 
+	"github.com/gogits/chardet"
+
 	"github.com/gogits/gogs/modules/avatar"
 	"github.com/gogits/gogs/modules/setting"
 )
@@ -41,6 +43,22 @@ func EncodeSha1(str string) string {
 	h := sha1.New()
 	h.Write([]byte(str))
 	return hex.EncodeToString(h.Sum(nil))
+}
+
+func ShortSha(sha1 string) string {
+	if len(sha1) == 40 {
+		return sha1[:10]
+	}
+	return sha1
+}
+
+func DetectEncoding(content []byte) (string, error) {
+	detector := chardet.NewTextDetector()
+	result, err := detector.DetectBest(content)
+	if result.Charset != "UTF-8" && len(setting.Repository.AnsiCharset) > 0 {
+		return setting.Repository.AnsiCharset, err
+	}
+	return result.Charset, err
 }
 
 func BasicAuthDecode(encoded string) (string, string, error) {

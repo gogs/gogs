@@ -718,32 +718,28 @@ func GetIssueStats(opts *IssueStatsOptions) *IssueStats {
 	if opts.AssigneeID > 0 {
 		baseCond += " AND assignee_id=" + com.ToStr(opts.AssigneeID)
 	}
-	if opts.IsPull {
-		baseCond += " AND issue.is_pull=1"
-	} else {
-		baseCond += " AND issue.is_pull=0"
-	}
+	baseCond += " AND issue.is_pull=?"
 
 	switch opts.FilterMode {
 	case FM_ALL, FM_ASSIGN:
-		results, _ := x.Query(queryStr+baseCond, false)
+		results, _ := x.Query(queryStr+baseCond, false, opts.IsPull)
 		stats.OpenCount = parseCountResult(results)
-		results, _ = x.Query(queryStr+baseCond, true)
+		results, _ = x.Query(queryStr+baseCond, true, opts.IsPull)
 		stats.ClosedCount = parseCountResult(results)
 
 	case FM_CREATE:
 		baseCond += " AND poster_id=?"
-		results, _ := x.Query(queryStr+baseCond, false, opts.UserID)
+		results, _ := x.Query(queryStr+baseCond, false, opts.IsPull, opts.UserID)
 		stats.OpenCount = parseCountResult(results)
-		results, _ = x.Query(queryStr+baseCond, true, opts.UserID)
+		results, _ = x.Query(queryStr+baseCond, true, opts.IsPull, opts.UserID)
 		stats.ClosedCount = parseCountResult(results)
 
 	case FM_MENTION:
 		queryStr += " INNER JOIN `issue_user` ON `issue`.id=`issue_user`.issue_id"
 		baseCond += " AND `issue_user`.uid=? AND `issue_user`.is_mentioned=?"
-		results, _ := x.Query(queryStr+baseCond, false, opts.UserID, true)
+		results, _ := x.Query(queryStr+baseCond, false, opts.IsPull, opts.UserID, true)
 		stats.OpenCount = parseCountResult(results)
-		results, _ = x.Query(queryStr+baseCond, true, opts.UserID, true)
+		results, _ = x.Query(queryStr+baseCond, true, opts.IsPull, opts.UserID, true)
 		stats.ClosedCount = parseCountResult(results)
 	}
 	return stats
@@ -1375,8 +1371,8 @@ func ChangeMilestoneAssign(oldMid int64, issue *Issue) (err error) {
 }
 
 // DeleteMilestoneByID deletes a milestone by given ID.
-func DeleteMilestoneByID(mid int64) error {
-	m, err := GetMilestoneByID(mid)
+func DeleteMilestoneByID(id int64) error {
+	m, err := GetMilestoneByID(id)
 	if err != nil {
 		if IsErrMilestoneNotExist(err) {
 			return nil
