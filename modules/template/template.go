@@ -25,8 +25,8 @@ var Funcs template.FuncMap = map[string]interface{}{
 	"GoVer": func() string {
 		return strings.Title(runtime.Version())
 	},
-	"Protocol": func() string {
-		return string(setting.Protocol)
+	"UseHTTPS": func() bool {
+		return strings.HasPrefix(setting.AppUrl, "https")
 	},
 	"AppName": func() string {
 		return setting.AppName
