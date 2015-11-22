@@ -36,22 +36,22 @@
 
 			  	<div class="inline required field {{if .Err_Owner}}error{{end}}">
 	  	      <label>{{.i18n.Tr "repo.owner"}}</label>
-			      <div class="ui selection dropdown">
+			      <div class="ui selection owner dropdown">
 			        <input type="hidden" id="uid" name="uid" value="{{.ContextUser.Id}}" required>
 			        <span class="text">
 			        	<img class="ui mini image" src="{{.ContextUser.AvatarLink}}">
-            		{{.ContextUser.Name}}
+            		{{.ContextUser.ShortName 20}}
             	</span>
 			        <i class="dropdown icon"></i>
 			        <div class="menu">
 			        	<div class="item" data-value="{{.SignedUser.Id}}">
 				        	<img class="ui mini image" src="{{.SignedUser.AvatarLink}}">
-	            		{{.SignedUser.Name}}
+	            		{{.SignedUser.ShortName 20}}
 			        	</div>
 			        	{{range .Orgs}}
 			        	<div class="item" data-value="{{.Id}}">
 				        	<img class="ui mini image" src="{{.AvatarLink}}">
-	            		{{.Name}}
+	            		{{.ShortName 20}}
 			        	</div>
 			        	{{end}}
 			        </div>
