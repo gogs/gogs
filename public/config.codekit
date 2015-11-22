@@ -1,20 +1,20 @@
 {
 "CodeKitInfo": "This is a CodeKit 2.x project configuration file. It is designed to sync project settings across multiple machines. MODIFYING THE CONTENTS OF THIS FILE IS A POOR LIFE DECISION. If you do so, you will likely cause CodeKit to crash. This file is not useful unless accompanied by the project that created it in CodeKit 2. This file is not backwards-compatible with CodeKit 1.x. For more information, see: http:\/\/incident57.com\/codekit",
-"creatorBuild": "19076",
+"creatorBuild": "19102",
 "files": {
-	"\/css\/dropzone-4.0.1.css": {
+	"\/css\/dropzone-4.2.0.css": {
 		"fileType": 16,
 		"ignore": 0,
-		"ignoreWasSetByUser": 1,
-		"inputAbbreviatedPath": "\/css\/dropzone-4.0.1.css",
+		"ignoreWasSetByUser": 0,
+		"inputAbbreviatedPath": "\/css\/dropzone-4.2.0.css",
 		"outputAbbreviatedPath": "No Output Path",
 		"outputPathIsOutsideProject": 0,
 		"outputPathIsSetByUser": 0
 		},
 	"\/css\/font-awesome-4.4.0.min.css": {
 		"fileType": 16,
-		"ignore": 0,
-		"ignoreWasSetByUser": 0,
+		"ignore": 1,
+		"ignoreWasSetByUser": 1,
 		"inputAbbreviatedPath": "\/css\/font-awesome-4.4.0.min.css",
 		"outputAbbreviatedPath": "No Output Path",
 		"outputPathIsOutsideProject": 0,
@@ -22,8 +22,8 @@
 		},
 	"\/css\/github.min.css": {
 		"fileType": 16,
-		"ignore": 0,
-		"ignoreWasSetByUser": 0,
+		"ignore": 1,
+		"ignoreWasSetByUser": 1,
 		"inputAbbreviatedPath": "\/css\/github.min.css",
 		"outputAbbreviatedPath": "No Output Path",
 		"outputPathIsOutsideProject": 0,
@@ -47,28 +47,28 @@
 		"outputPathIsOutsideProject": 0,
 		"outputPathIsSetByUser": 0
 		},
-	"\/css\/highlight-8.7\/default.css": {
+	"\/css\/highlight-8.9.1\/default.css": {
 		"fileType": 16,
 		"ignore": 0,
 		"ignoreWasSetByUser": 0,
-		"inputAbbreviatedPath": "\/css\/highlight-8.7\/default.css",
+		"inputAbbreviatedPath": "\/css\/highlight-8.9.1\/default.css",
 		"outputAbbreviatedPath": "No Output Path",
 		"outputPathIsOutsideProject": 0,
 		"outputPathIsSetByUser": 0
 		},
-	"\/css\/highlight-8.7\/github.css": {
+	"\/css\/highlight-8.9.1\/github.css": {
 		"fileType": 16,
 		"ignore": 0,
 		"ignoreWasSetByUser": 0,
-		"inputAbbreviatedPath": "\/css\/highlight-8.7\/github.css",
+		"inputAbbreviatedPath": "\/css\/highlight-8.9.1\/github.css",
 		"outputAbbreviatedPath": "No Output Path",
 		"outputPathIsOutsideProject": 0,
 		"outputPathIsSetByUser": 0
 		},
 	"\/css\/jquery.datetimepicker-2.4.5.css": {
 		"fileType": 16,
-		"ignore": 0,
-		"ignoreWasSetByUser": 0,
+		"ignore": 1,
+		"ignoreWasSetByUser": 1,
 		"inputAbbreviatedPath": "\/css\/jquery.datetimepicker-2.4.5.css",
 		"outputAbbreviatedPath": "No Output Path",
 		"outputPathIsOutsideProject": 0,
@@ -76,18 +76,18 @@
 		},
 	"\/css\/jquery.minicolors-2.1.12.css": {
 		"fileType": 16,
-		"ignore": 0,
-		"ignoreWasSetByUser": 0,
+		"ignore": 1,
+		"ignoreWasSetByUser": 1,
 		"inputAbbreviatedPath": "\/css\/jquery.minicolors-2.1.12.css",
 		"outputAbbreviatedPath": "No Output Path",
 		"outputPathIsOutsideProject": 0,
 		"outputPathIsSetByUser": 0
 		},
-	"\/css\/semantic-2.1.5.min.css": {
+	"\/css\/semantic-2.1.6.min.css": {
 		"fileType": 16,
-		"ignore": 0,
-		"ignoreWasSetByUser": 0,
-		"inputAbbreviatedPath": "\/css\/semantic-2.1.5.min.css",
+		"ignore": 1,
+		"ignoreWasSetByUser": 1,
+		"inputAbbreviatedPath": "\/css\/semantic-2.1.6.min.css",
 		"outputAbbreviatedPath": "No Output Path",
 		"outputPathIsOutsideProject": 0,
 		"outputPathIsSetByUser": 0
@@ -189,7 +189,7 @@
 		"outputAbbreviatedPath": "\/img\/slack.png",
 		"outputPathIsOutsideProject": 0,
 		"outputPathIsSetByUser": 0,
-		"processed": 0
+		"processed": 1
 		},
 	"\/js\/gogs.js": {
 		"fileType": 64,
@@ -204,8 +204,8 @@
 		},
 	"\/js\/jquery-1.11.3.min.js": {
 		"fileType": 64,
-		"ignore": 0,
-		"ignoreWasSetByUser": 0,
+		"ignore": 1,
+		"ignoreWasSetByUser": 1,
 		"inputAbbreviatedPath": "\/js\/jquery-1.11.3.min.js",
 		"outputAbbreviatedPath": "\/js\/min\/jquery-1.11.3.min-min.js",
 		"outputPathIsOutsideProject": 0,
@@ -213,100 +213,12 @@
 		"outputStyle": 1,
 		"syntaxCheckerStyle": 1
 		},
-	"\/js\/libs\/clipboard-1.5.3.min.js": {
-		"fileType": 64,
-		"ignore": 0,
-		"ignoreWasSetByUser": 0,
-		"inputAbbreviatedPath": "\/js\/libs\/clipboard-1.5.3.min.js",
-		"outputAbbreviatedPath": "\/js\/libs\/min\/clipboard-1.5.3.min-min.js",
-		"outputPathIsOutsideProject": 0,
-		"outputPathIsSetByUser": 0,
-		"outputStyle": 1,
-		"syntaxCheckerStyle": 1
-		},
-	"\/js\/libs\/dropzone-4.0.1.js": {
-		"fileType": 64,
-		"ignore": 0,
-		"ignoreWasSetByUser": 0,
-		"inputAbbreviatedPath": "\/js\/libs\/dropzone-4.0.1.js",
-		"outputAbbreviatedPath": "\/js\/libs\/min\/dropzone-4.0.1-min.js",
-		"outputPathIsOutsideProject": 0,
-		"outputPathIsSetByUser": 0,
-		"outputStyle": 1,
-		"syntaxCheckerStyle": 1
-		},
-	"\/js\/libs\/emojify-1.1.0.min.js": {
-		"fileType": 64,
-		"ignore": 0,
-		"ignoreWasSetByUser": 0,
-		"inputAbbreviatedPath": "\/js\/libs\/emojify-1.1.0.min.js",
-		"outputAbbreviatedPath": "\/js\/libs\/min\/emojify-1.1.0.min-min.js",
-		"outputPathIsOutsideProject": 0,
-		"outputPathIsSetByUser": 0,
-		"outputStyle": 1,
-		"syntaxCheckerStyle": 1
-		},
-	"\/js\/libs\/highlight-8.7.pack.js": {
-		"fileType": 64,
-		"ignore": 0,
-		"ignoreWasSetByUser": 0,
-		"inputAbbreviatedPath": "\/js\/libs\/highlight-8.7.pack.js",
-		"outputAbbreviatedPath": "\/js\/libs\/min\/highlight-8.7.pack-min.js",
-		"outputPathIsOutsideProject": 0,
-		"outputPathIsSetByUser": 0,
-		"outputStyle": 1,
-		"syntaxCheckerStyle": 1
-		},
-	"\/js\/libs\/jquery.datetimepicker-2.4.5.js": {
-		"fileType": 64,
-		"ignore": 0,
-		"ignoreWasSetByUser": 0,
-		"inputAbbreviatedPath": "\/js\/libs\/jquery.datetimepicker-2.4.5.js",
-		"outputAbbreviatedPath": "\/js\/libs\/min\/jquery.datetimepicker-2.4.5-min.js",
-		"outputPathIsOutsideProject": 0,
-		"outputPathIsSetByUser": 0,
-		"outputStyle": 1,
-		"syntaxCheckerStyle": 1
-		},
-	"\/js\/libs\/jquery.minicolors-2.1.12.min.js": {
-		"fileType": 64,
-		"ignore": 0,
-		"ignoreWasSetByUser": 0,
-		"inputAbbreviatedPath": "\/js\/libs\/jquery.minicolors-2.1.12.min.js",
-		"outputAbbreviatedPath": "\/js\/libs\/min\/jquery.minicolors-2.1.12.min-min.js",
-		"outputPathIsOutsideProject": 0,
-		"outputPathIsSetByUser": 0,
-		"outputStyle": 1,
-		"syntaxCheckerStyle": 1
-		},
-	"\/js\/libs\/jquery.minicolors.png": {
-		"fileType": 32768,
-		"ignore": 0,
-		"ignoreWasSetByUser": 0,
-		"initialSize": 77459,
-		"inputAbbreviatedPath": "\/js\/libs\/jquery.minicolors.png",
-		"outputAbbreviatedPath": "\/js\/libs\/jquery.minicolors.png",
-		"outputPathIsOutsideProject": 0,
-		"outputPathIsSetByUser": 0,
-		"processed": 0
-		},
-	"\/js\/min\/gogs-min.js": {
+	"\/js\/semantic-2.1.6.min.js": {
 		"fileType": 64,
 		"ignore": 1,
-		"ignoreWasSetByUser": 0,
-		"inputAbbreviatedPath": "\/js\/min\/gogs-min.js",
-		"outputAbbreviatedPath": "\/js\/min\/min\/gogs-min-min.js",
-		"outputPathIsOutsideProject": 0,
-		"outputPathIsSetByUser": 0,
-		"outputStyle": 1,
-		"syntaxCheckerStyle": 1
-		},
-	"\/js\/semantic-2.1.5.min.js": {
-		"fileType": 64,
-		"ignore": 0,
-		"ignoreWasSetByUser": 0,
-		"inputAbbreviatedPath": "\/js\/semantic-2.1.5.min.js",
-		"outputAbbreviatedPath": "\/js\/min\/semantic-2.1.5.min-min.js",
+		"ignoreWasSetByUser": 1,
+		"inputAbbreviatedPath": "\/js\/semantic-2.1.6.min.js",
+		"outputAbbreviatedPath": "\/js\/min\/semantic-2.1.6.min-min.js",
 		"outputPathIsOutsideProject": 0,
 		"outputPathIsSetByUser": 0,
 		"outputStyle": 1,
@@ -1328,8 +1240,16 @@
 			"active": 0,
 			"flagValue": -1
 			},
+		"no_nested_string_interpolation": {
+			"active": 1,
+			"flagValue": -1
+			},
 		"no_plusplus": {
 			"active": 0,
+			"flagValue": -1
+			},
+		"no_private_function_fat_arrows": {
+			"active": 1,
 			"flagValue": -1
 			},
 		"no_stand_alone_at": {
@@ -1338,6 +1258,10 @@
 			},
 		"no_tabs": {
 			"active": 1,
+			"flagValue": -1
+			},
+		"no_this": {
+			"active": 0,
 			"flagValue": -1
 			},
 		"no_throwing_strings": {
@@ -1823,7 +1747,7 @@
 	"sassUseLibsass": 0,
 	"shouldRunAutoprefixer": 0,
 	"shouldRunBless": 0,
-	"skippedItemsString": "_cache, logs, _logs, cache, \/img\/emoji, .git, log, node_modules, .svn, .hg",
+	"skippedItemsString": "_cache, logs, _logs, cache, \/img\/emoji, .git, log, node_modules, \/js\/libs, .svn, .hg",
 	"slimAutoOutputPathEnabled": 1,
 	"slimAutoOutputPathFilenamePattern": "*.html",
 	"slimAutoOutputPathRelativePath": "",
