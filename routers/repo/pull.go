@@ -448,7 +448,7 @@ func ParseCompareInfo(ctx *middleware.Context) (*models.User, *models.Repository
 
 	// Check if current user has fork of repository.
 	headRepo, has := models.HasForkedRepo(headUser.Id, repo.ID)
-	if !has || !ctx.User.IsAdminOfRepo(headRepo) {
+	if !has || (!ctx.User.IsAdminOfRepo(headRepo) && !ctx.User.IsAdmin) {
 		ctx.Handle(404, "HasForkedRepo", nil)
 		return nil, nil, nil, nil, "", ""
 	}
