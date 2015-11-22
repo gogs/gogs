@@ -626,6 +626,7 @@ function searchUsers() {
     hideWhenLostFocus('#search-user-box .results', '#search-user-box');
 }
 
+// FIXME: merge common parts in two functions
 function searchRepositories() {
     if (!$('#search-repo-box .results').length) {
         return;
@@ -671,6 +672,7 @@ function searchRepositories() {
     $search_repo_box.find('input').focus(function () {
         $search_repo_box.keyup();
     });
+    hideWhenLostFocus('#search-repo-box .results', '#search-repo-box');
 }
 
 $(document).ready(function () {
