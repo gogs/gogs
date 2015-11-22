@@ -271,14 +271,24 @@ OUTER_LOOP:
 			tagName := token.Data
 			// If this is an excluded tag, we skip processing all output until a close tag is encountered.
 			if strings.EqualFold("a", tagName) || strings.EqualFold("code", tagName) || strings.EqualFold("pre", tagName) {
+				stackNum := 1
 				for html.ErrorToken != tokenizer.Next() {
 					token = tokenizer.Token()
 
 					// Copy the token to the output verbatim
 					buf.WriteString(token.String())
-					// If this is the close tag, we are done
+
+					if token.Type == html.StartTagToken {
+						stackNum++
+					}
+
+					// If this is the close tag to the outer-most, we are done
 					if token.Type == html.EndTagToken && strings.EqualFold(tagName, token.Data) {
-						break
+						stackNum--
+
+						if stackNum == 0 {
+							break
+						}
 					}
 				}
 				continue OUTER_LOOP
