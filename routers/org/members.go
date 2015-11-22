@@ -50,7 +50,7 @@ func MembersAction(ctx *middleware.Context) {
 		}
 		err = models.ChangeOrgUserStatus(org.Id, uid, false)
 	case "public":
-		if ctx.User.Id != uid {
+		if ctx.User.Id != uid && !ctx.Org.IsOwner {
 			ctx.Error(404)
 			return
 		}

@@ -1,93 +1,85 @@
-{{template "ng/base/head" .}}
-{{template "ng/base/header" .}}
-<div class="org-header" id="org-home-header">
-	<div class="container clear">
-		<img class="avatar-100 left" src="{{.Org.AvatarLink}}?s=140"/>
-		<div id="org-home-header-info">
-			<h2>
-				{{.Org.FullName}}
-				{{if .IsOrganizationOwner}}<a class="text-grey" href="{{.OrgLink}}/settings"><span class="octicon octicon-gear"></span></a>{{end}}
-			</h2>
-			{{if .Org.Description}}<p>{{.Org.Description}}</p>{{end}}
-      <ul class="text-grey">
-        {{if .Org.Location}}<li><span class="octicon octicon-location"></span> <span>{{.Org.Location}}</span></li>{{end}}
-        {{if .Org.Website}}<li><span class="octicon octicon-link"></span> <a target="_blank" href="{{.Org.Website}}">{{.Org.Website}}</a></li>{{end}}
-        {{if and .Org.Email .IsSigned}}<li><span class="octicon octicon-mail"></span> <a href="mailto:{{.Org.Email}}">{{.Org.Email}}</a></li>{{end}}
-      </ul>
-		</div>
-	</div>
-</div>
-<div class="container">
-	{{$isMember := .Org.IsOrgMember $.SignedUser.Id}}
-  <div id="org-home-repo-list" class="left grid-2-3">
-    <div class="clear">
-	  	{{if .IsOrganizationOwner}}
-	     <a class="btn btn-green btn-large btn-link btn-radius right" href="{{AppSubUrl}}/repo/create?org={{.Org.Id}}"><i class="octicon octicon-repo-create"></i> {{.i18n.Tr "new_repo"}}</a>
-	  	{{end}}
-    </div>
-    <div id="org-repo-list">
-		{{range .Repos}}
-			{{if or (not .IsPrivate) (.HasAccess $.SignedUser)}}
-			<div class="org-repo-item">
-        <ul class="org-repo-status right">
-          <li><i class="octicon octicon-star"></i> {{.NumStars}}</li>
-          <li><i class="octicon octicon-git-branch"></i> {{.NumForks}}</li>
-        </ul>
-				<h2><a href="{{AppSubUrl}}/{{$.Org.Name}}/{{.Name}}">{{.Name}}</a></h2>
-				<p class="org-repo-description">{{.Description}}</p>
-				<p class="org-repo-updated">{{$.i18n.Tr "org.repo_updated"}} {{TimeSince .Updated $.i18n.Lang}}</p>
-			</div>
-			{{end}}
-		{{end}}
+{{template "base/head" .}}
+<div class="organization profile">
+  <div class="ui container">
+    <div class="ui grid">
+      <div class="ui sixteen wide column">
+        <img class="ui left" id="org-avatar" src="{{.Org.AvatarLink}}?s=140"/>
+        <div id="org-info">
+          <div class="ui header">
+            {{.Org.FullName}}
+            {{if .IsOrganizationOwner}}<a class="text grey" href="{{.OrgLink}}/settings"><span class="icon octicon octicon-gear"></span></a>{{end}}
+          </div>
+          {{if .Org.Description}}<p class="desc">{{.Org.Description}}</p>{{end}}
+          <div class="text grey meta">
+            {{if .Org.Location}}<div class="item"><span class="icon octicon octicon-location"></span> <span>{{.Org.Location}}</span></div>{{end}}
+            {{if .Org.Website}}<div class="item"><span class="icon octicon octicon-link"></span> <a target="_blank" href="{{.Org.Website}}">{{.Org.Website}}</a></div>{{end}}
+          </div>
+        </div>
+
+      </div>
     </div>
   </div>
-  <div class="grid-1-3 right">
-  	<div class="org-sidebar">
-    	<div class="panel panel-radius">
-    		<div class="panel-header">
-    			{{if $isMember}}
-    			<a class="text-grey right" href="{{AppSubUrl}}/org/{{.Org.LowerName}}/members"><strong>{{.Org.NumMembers}}</strong><span class="octicon octicon-chevron-right"></span></a>
-    			{{end}}
-    			<strong>{{.i18n.Tr "org.people"}}</strong>
-    		</div>
-    		<div class="panel-body member-avatar-group">
-    			{{range .Members}}
-						{{if or $isMember (.IsPublicMember $.Org.Id)}}
-	    			<a href="{{AppSubUrl}}/{{.Name}}" title="{{.Name}}"><img src="{{.AvatarLink}}"></a>
-	    			{{end}}
-    			{{end}}
-    		</div>
-    		{{if .IsOrganizationOwner}}
-    		<div class="panel-footer">
-    			<a class="btn btn-medium btn-blue btn-link btn-radius" href="{{AppSubUrl}}/org/{{.Org.LowerName}}/invitations/new">{{.i18n.Tr "org.invite_someone"}}</a>
-    		</div>
-    		{{end}}
-    	</div>
-    	{{if $isMember}}
-    	<br>
-    	<div class="panel panel-radius">
-    		<div class="panel-header">
-    			<a class="text-grey right" href="{{AppSubUrl}}/org/{{.Org.LowerName}}/teams"><strong>{{.Org.NumTeams}}</strong><span class="octicon octicon-chevron-right"></span></a>
-    			<strong>{{.i18n.Tr "org.teams"}}</strong>
-    		</div>
-    		<div class="panel-body" id="org-home-team-list">
-    			<ul>
-	    			{{range .Teams}}
-    				<li>
-    					<a class="text-black" href="{{AppSubUrl}}/org/{{$.Org.LowerName}}/teams/{{.LowerName}}"><strong class="team-name">{{.Name}}</strong></a>
-    					<p class="team-meta">{{.NumMembers}} {{$.i18n.Tr "org.lower_members"}} · {{.NumRepos}} {{$.i18n.Tr "org.lower_repositories"}}</p>
-    				</li>
-	    			{{end}}
-    			</ul>
-    		</div>
-    		{{if .IsOrganizationOwner}}
-    		<div class="panel-footer">
-    			<a class="btn btn-medium btn-blue btn-link btn-radius" href="{{AppSubUrl}}/org/{{$.Org.LowerName}}/teams/new">{{.i18n.Tr "org.create_new_team"}}</a>
-    		</div>
-    		{{end}}
-    	</div>
-    	{{end}}
-  	</div>
+
+  <div class="ui divider"></div>
+
+  <div class="ui container">
+    <div class="ui grid">
+      {{$isMember := .Org.IsOrgMember $.SignedUser.Id}}
+      <div class="ui eleven wide column">
+        {{if .IsOrganizationOwner}}
+        <div class="text right">
+          <a class="ui green button" href="{{AppSubUrl}}/repo/create?org={{.Org.Id}}"><i class="octicon octicon-repo-create"></i> {{.i18n.Tr "new_repo"}}</a>
+        </div>
+        <div class="ui divider"></div>
+        {{end}}
+        {{template "explore/repo_list" .}}
+      </div>
+
+      <div class="ui five wide column">
+        <h4 class="ui top attached header">
+          <strong>{{.i18n.Tr "org.people"}}</strong>
+          {{if $isMember}}
+          <div class="ui right">
+            <a class="text grey" href="{{.Org.HomeLink}}/members"><strong>{{.Org.NumMembers}}</strong><span class="octicon octicon-chevron-right"></span></a>
+          </div>
+          {{end}}
+        </h4>
+        <div class="ui attached segment members">
+          {{range .Members}}
+            {{if or $isMember (.IsPublicMember $.Org.Id)}}
+            <a href="{{.HomeLink}}" title="{{.Name}}"><img class="ui avatar" src="{{.AvatarLink}}"></a>
+            {{end}}
+          {{end}}
+        </div>
+        {{if .IsOrganizationOwner}}
+        <div class="ui bottom attached segment">
+          <a class="ui blue small button" href="{{.Org.HomeLink}}/invitations/new">{{.i18n.Tr "org.invite_someone"}}</a>
+        </div>
+        {{end}}
+
+        {{if $isMember}}
+        <div class="ui top attached header">
+          <strong>{{.i18n.Tr "org.teams"}}</strong>
+          <div class="ui right">
+            <a class="text grey" href="{{.Org.HomeLink}}/teams"><strong>{{.Org.NumTeams}}</strong><span class="octicon octicon-chevron-right"></span></a>
+          </div>
+        </div>
+        <div class="ui attached table segment teams">
+          {{range .Teams}}
+          <div class="item">
+            <a href="{{$.Org.HomeLink}}/teams/{{.LowerName}}"><strong class="team-name">{{.Name}}</strong></a>
+            <p class="text grey">{{.NumMembers}} {{$.i18n.Tr "org.lower_members"}} · {{.NumRepos}} {{$.i18n.Tr "org.lower_repositories"}}</p>
+          </div>
+          {{end}}
+        </div>
+        {{if .IsOrganizationOwner}}
+        <div class="ui bottom attached segment">
+          <a class="ui blue small button" href="{{.Org.HomeLink}}/teams/new">{{.i18n.Tr "org.create_new_team"}}</a>
+        </div>
+        {{end}}
+        {{end}}
+      </div>
+    </div>
   </div>
 </div>
-{{template "ng/base/footer" .}}
+{{template "base/footer" .}}

@@ -1,18 +1,23 @@
-{{template "ng/base/head" .}}
-{{template "ng/base/header" .}}
-{{template "org/base/header" .}}
-<div class="container">
-	<div class="invite-box" id="invite-box">
-    	{{template "ng/base/alert" .}}
-		<h3>{{.i18n.Tr "org.members.invite_desc" .Org.FullName}}</h3>
-		<form id="invite-member-form" action="{{.OrgLink}}/invitations/new" method="post">
-			{{.CsrfTokenHtml}}
-			<input class="ipt ipt-large ipt-radius" id="org-member-invite" name="uname" autocomplete="off" required>
-			<button class="btn btn-blue btn-large btn-radius">{{.i18n.Tr "org.members.invite_now"}}</button>
-			<div id="org-member-list-block">
-				<ul class="menu-down-show menu-vertical menu-radius switching-list user-list" id="org-member-invite-list"></ul>
-			</div>
-		</form>
+{{template "base/head" .}}
+<div class="organization invite">
+	{{template "org/header" .}}
+  <div class="ui container">
+		<div id="invite-box">
+    	{{template "base/alert" .}}
+			<h2>{{.i18n.Tr "org.members.invite_desc" .Org.DisplayName}}</h2>
+		  <form class="ui form" action="{{.Link}}" method="post">
+		    {{.CsrfTokenHtml}}
+		    <div class="inline field ui left">
+		    	<div id="search-user-box">
+		    	  <div class="ui input">
+		    	    <input class="prompt" name="uname" placeholder="{{.i18n.Tr "repo.settings.search_user_placeholder"}}" autocomplete="off" autofocus required>
+		    	  </div>
+		    	  <div class="ui segment results hide"></div>
+		    	</div>
+		    </div>
+        <button class="ui blue button">{{.i18n.Tr "org.members.invite_now"}}</button>
+      </form>
+		</div>
 	</div>
 </div>
-{{template "ng/base/footer" .}}
+{{template "base/footer" .}}

@@ -4,22 +4,7 @@
 		<div class="ui grid">
 			{{template "explore/navbar" .}}
 			<div class="twelve wide column content">
-				<div class="ui repository list">
-					{{range .Repos}}
-					<div class="item">
-						<div class="ui header">
-							<a href="{{AppSubUrl}}/{{.Owner.Name}}/{{.Name}}">{{.Owner.Name}} / {{.Name}}</a>
-
-							<div class="ui right metas">
-								<span class="text grey"><i class="octicon octicon-star"></i> {{.NumStars}}</span>
-								<span class="text grey"><i class="octicon octicon-git-branch"></i> {{.NumForks}}</span>
-							</div>
-						</div>
-						{{if .Description}}<p>{{.Description}}</p>{{end}}
-						<p class="time">{{$.i18n.Tr "org.repo_updated"}} {{TimeSince .Updated $.i18n.Lang}}</p>
-					</div>
-					{{end}}
-				</div>
+        {{template "explore/repo_list" .}}
 
 				{{with .Page}}
 				{{if gt .TotalPages 1}}
