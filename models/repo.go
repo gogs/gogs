@@ -1317,7 +1317,7 @@ func DeleteRepositoryArchives() error {
 			repo := bean.(*Repository)
 			repoPath, err := repo.RepoPath()
 			if err != nil {
-				if err2 := CreateRepositoryNotice(fmt.Sprintf("DeleteRepositoryArchives[%d]: %v", repo.ID, err)); err2 != nil {
+				if err2 := CreateRepositoryNotice(fmt.Sprintf("DeleteRepositoryArchives.RepoPath [%d]: %v", repo.ID, err)); err2 != nil {
 					log.Error(4, "CreateRepositoryNotice: %v", err2)
 				}
 				return nil
@@ -1334,7 +1334,10 @@ func DeleteMissingRepositories() error {
 			repo := bean.(*Repository)
 			repoPath, err := repo.RepoPath()
 			if err != nil {
-				return fmt.Errorf("RepoPath [%d]: %v", repo.ID, err)
+				if err2 := CreateRepositoryNotice(fmt.Sprintf("DeleteRepositoryArchives.RepoPath [%d]: %v", repo.ID, err)); err2 != nil {
+					log.Error(4, "CreateRepositoryNotice: %v", err2)
+				}
+				return nil
 			}
 
 			if !com.IsDir(repoPath) {
