@@ -735,7 +735,7 @@ $(document).ready(function () {
             headers: {"X-Csrf-Token": csrf},
             maxFiles: $dropz.data('max-file'),
             maxFilesize: $dropz.data('max-size'),
-            acceptedFiles: $dropz.data('accepts'),
+            acceptedFiles: ($dropz.data('accepts') === '*/*') ? null : $dropz.data('accepts'),
             addRemoveLinks: true,
             dictDefaultMessage: $dropz.data('default-message'),
             dictInvalidFileType: $dropz.data('invalid-input-type'),
