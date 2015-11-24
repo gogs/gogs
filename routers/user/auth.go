@@ -70,7 +70,7 @@ func SignInPost(ctx *middleware.Context, form auth.SignInForm) {
 	if form.Remember {
 		days := 86400 * setting.LogInRememberDays
 		ctx.SetCookie(setting.CookieUserName, u.Name, days, setting.AppSubUrl)
-		ctx.SetSuperSecureCookie(base.EncodeMd5(u.Rands+u.Passwd),
+		ctx.SetSuperSecureCookie(base.EncodeMD5(u.Rands+u.Passwd),
 			setting.CookieRememberName, u.Name, days, setting.AppSubUrl)
 	}
 
