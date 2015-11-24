@@ -31,8 +31,8 @@ import (
 
 var Sanitizer = bluemonday.UGCPolicy().AllowAttrs("class").Matching(regexp.MustCompile(`[\p{L}\p{N}\s\-_',:\[\]!\./\\\(\)&]*`)).OnElements("code")
 
-// Encode string to md5 hex value.
-func EncodeMd5(str string) string {
+// EncodeMD5 encodes string to md5 hex value.
+func EncodeMD5(str string) string {
 	m := md5.New()
 	m.Write([]byte(str))
 	return hex.EncodeToString(m.Sum(nil))
