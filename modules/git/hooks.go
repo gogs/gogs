@@ -16,15 +16,23 @@ import (
 
 // hookNames is a list of Git hooks' name that are supported.
 var hookNames = []string{
-	"pre-applypatch",
 	"applypatch-msg",
+	"pre-applypatch",
+	"post-applypatch",
+	"pre-commit",
 	"prepare-commit-msg",
 	"commit-msg",
-	"pre-commit",
-	"pre-rebase",
 	"post-commit",
+	"pre-rebase",
+	"post-checkout",
+	"post-merge",
+	"pre-push",
+	// "update",
 	"post-receive",
 	"post-update",
+	"push-to-checkout",
+	"pre-auto-gc",
+	"post-rewrite",
 }
 
 var (
