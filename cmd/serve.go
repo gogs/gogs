@@ -76,6 +76,9 @@ func fail(userMessage, logMessage string, args ...interface{}) {
 	fmt.Fprintln(os.Stderr, "Gogs:", userMessage)
 
 	if len(logMessage) > 0 {
+		if !setting.ProdMode {
+			fmt.Fprintf(os.Stderr, logMessage, args...)
+		}
 		log.GitLogger.Fatal(3, logMessage, args...)
 		return
 	}
