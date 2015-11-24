@@ -65,7 +65,7 @@ func parseCmd(cmd string) (string, string) {
 }
 
 var (
-	COMMANDS = map[string]models.AccessMode{
+	allowedCommands = map[string]models.AccessMode{
 		"git-upload-pack":    models.ACCESS_MODE_READ,
 		"git-upload-archive": models.ACCESS_MODE_READ,
 		"git-receive-pack":   models.ACCESS_MODE_WRITE,
@@ -163,7 +163,7 @@ func runServ(c *cli.Context) {
 		fail("Internal error", "Failed to get repository: %v", err)
 	}
 
-	requestedMode, has := COMMANDS[verb]
+	requestedMode, has := allowedCommands[verb]
 	if !has {
 		fail("Unknown git command", "Unknown git command %s", verb)
 	}
@@ -233,6 +233,11 @@ func runServ(c *cli.Context) {
 
 	uuid := uuid.NewV4().String()
 	os.Setenv("uuid", uuid)
+
+	// Special handle for Windows.
+	if setting.IsWindows {
+		verb = strings.Replace(verb, "-", " ", 1)
+	}
 
 	var gitcmd *exec.Cmd
 	verbs := strings.Split(verb, " ")

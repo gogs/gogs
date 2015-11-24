@@ -84,13 +84,13 @@ func HTTP(ctx *middleware.Context) {
 
 	// check access
 	if askAuth {
-		baHead := ctx.Req.Header.Get("Authorization")
-		if baHead == "" {
+		authHead := ctx.Req.Header.Get("Authorization")
+		if len(authHead) == 0 {
 			authRequired(ctx)
 			return
 		}
 
-		auths := strings.Fields(baHead)
+		auths := strings.Fields(authHead)
 		// currently check basic auth
 		// TODO: support digit auth
 		// FIXME: middlewares/context.go did basic auth check already,
