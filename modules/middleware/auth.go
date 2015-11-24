@@ -54,7 +54,7 @@ func AutoSignIn(ctx *Context) (bool, error) {
 	}
 
 	if val, _ := ctx.GetSuperSecureCookie(
-		base.EncodeMd5(u.Rands+u.Passwd), setting.CookieRememberName); val != u.Name {
+		base.EncodeMD5(u.Rands+u.Passwd), setting.CookieRememberName); val != u.Name {
 		return false, nil
 	}
 

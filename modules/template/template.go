@@ -88,7 +88,7 @@ var Funcs template.FuncMap = map[string]interface{}{
 	"DiffLineTypeToStr": DiffLineTypeToStr,
 	"Sha1":              Sha1,
 	"ShortSha":          base.ShortSha,
-	"Md5":               base.EncodeMd5,
+	"MD5":               base.EncodeMD5,
 	"ActionContent2Commits": ActionContent2Commits,
 	"ToUtf8":                ToUtf8,
 	"EscapePound": func(str string) string {
