@@ -410,7 +410,7 @@ func LoginUserPAMSource(u *User, name, passwd string, sourceId int64, cfg *PAMCo
 	// fake a local user creation
 	u = &User{
 		LowerName:   strings.ToLower(name),
-		Name:        strings.ToLower(name),
+		Name:        name,
 		LoginType:   PAM,
 		LoginSource: sourceId,
 		LoginName:   name,
@@ -418,8 +418,7 @@ func LoginUserPAMSource(u *User, name, passwd string, sourceId int64, cfg *PAMCo
 		Passwd:      passwd,
 		Email:       name,
 	}
-	err := CreateUser(u)
-	return u, err
+	return u, CreateUser(u)
 }
 
 func ExternalUserLogin(u *User, name, passwd string, source *LoginSource, autoRegister bool) (*User, error) {
@@ -443,7 +442,7 @@ func ExternalUserLogin(u *User, name, passwd string, source *LoginSource, autoRe
 func UserSignIn(uname, passwd string) (*User, error) {
 	var u *User
 	if strings.Contains(uname, "@") {
-		u = &User{Email: uname}
+		u = &User{Email: strings.ToLower(uname)}
 	} else {
 		u = &User{LowerName: strings.ToLower(uname)}
 	}
