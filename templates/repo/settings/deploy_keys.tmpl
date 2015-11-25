@@ -53,6 +53,9 @@
 					<div class="ui attached segment">
 						<form class="ui form" action="{{.Link}}" method="post">
 							{{.CsrfTokenHtml}}
+							<div class="field">
+								{{.i18n.Tr "repo.settings.deploy_key_desc"}}
+							</div>
 							<div class="field {{if .Err_Title}}error{{end}}">
 								<label for="title">{{.i18n.Tr "repo.settings.title"}}</label>
 								<input id="title" name="title" value="{{.title}}" autofocus required>
