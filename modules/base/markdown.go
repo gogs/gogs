@@ -300,6 +300,7 @@ OUTER_LOOP:
 
 		case html.EndTagToken:
 			if len(startTags) == 0 {
+				buf.WriteString(token.String())
 				break
 			}
 
