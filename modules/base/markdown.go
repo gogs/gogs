@@ -299,6 +299,10 @@ OUTER_LOOP:
 			}
 
 		case html.EndTagToken:
+			if len(startTags) == 0 {
+				break
+			}
+
 			buf.Write(leftAngleBracket)
 			buf.WriteString(startTags[len(startTags)-1])
 			buf.Write(rightAngleBracket)
