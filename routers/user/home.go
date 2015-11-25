@@ -23,6 +23,7 @@ const (
 	ISSUES    base.TplName = "user/dashboard/issues"
 	STARS     base.TplName = "user/stars"
 	PROFILE   base.TplName = "user/profile"
+	ORG_HOME  base.TplName = "org/home"
 )
 
 func getDashboardContextUser(ctx *middleware.Context) *models.User {
@@ -305,6 +306,38 @@ func ShowSSHKeys(ctx *middleware.Context, uid int64) {
 	ctx.PlainText(200, buf.Bytes())
 }
 
+func showOrgProfile(ctx *middleware.Context) {
+	ctx.SetParams(":org", ctx.Params(":username"))
+	middleware.HandleOrgAssignment(ctx)
+	if ctx.Written() {
+		return
+	}
+
+	org := ctx.Org.Organization
+	ctx.Data["Title"] = org.FullName
+
+	repos, err := models.GetRepositories(org.Id, ctx.IsSigned && org.IsOrgMember(ctx.User.Id))
+	if err != nil {
+		ctx.Handle(500, "GetRepositories", err)
+		return
+	}
+	ctx.Data["Repos"] = repos
+
+	if err = org.GetMembers(); err != nil {
+		ctx.Handle(500, "GetMembers", err)
+		return
+	}
+	ctx.Data["Members"] = org.Members
+
+	if err = org.GetTeams(); err != nil {
+		ctx.Handle(500, "GetTeams", err)
+		return
+	}
+	ctx.Data["Teams"] = org.Teams
+
+	ctx.HTML(200, ORG_HOME)
+}
+
 func Profile(ctx *middleware.Context) {
 	ctx.Data["Title"] = "Profile"
 	ctx.Data["PageIsUserProfile"] = true
@@ -342,7 +375,7 @@ func Profile(ctx *middleware.Context) {
 	}
 
 	if u.IsOrganization() {
-		ctx.Redirect(setting.AppSubUrl + "/org/" + u.Name)
+		showOrgProfile(ctx)
 		return
 	}
 	ctx.Data["Owner"] = u

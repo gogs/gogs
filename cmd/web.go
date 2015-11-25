@@ -395,7 +395,7 @@ func runWeb(ctx *cli.Context) {
 			m.Get("/teams/:team/repositories", org.TeamRepositories)
 			m.Route("/teams/:team/action/:action", "GET,POST", org.TeamsAction)
 			m.Route("/teams/:team/action/repo/:action", "GET,POST", org.TeamsRepoAction)
-		}, middleware.OrgAssignment(true, true))
+		}, middleware.OrgAssignment(true))
 
 		m.Group("/:org", func() {
 			m.Get("/teams/new", org.NewTeam)
@@ -424,11 +424,8 @@ func runWeb(ctx *cli.Context) {
 			})
 
 			m.Route("/invitations/new", "GET,POST", org.Invitation)
-		}, middleware.OrgAssignment(true, true, true))
+		}, middleware.OrgAssignment(true, true))
 	}, reqSignIn)
-	m.Group("/org", func() {
-		m.Get("/:org", org.Home)
-	}, ignSignIn, middleware.OrgAssignment(true))
 	// ***** END: Organization *****
 
 	// ***** START: Repository *****
