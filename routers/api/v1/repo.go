@@ -189,7 +189,8 @@ func CreateOrgRepo(ctx *middleware.Context, opt api.CreateRepoOption) {
 
 func MigrateRepo(ctx *middleware.Context, form auth.MigrateRepoForm) {
 	ctxUser := ctx.User
-	// Not equal means current user is an organization.
+	// Not equal means context user is an organization,
+	// or is another user/organization if current user is admin.
 	if form.Uid != ctxUser.Id {
 		org, err := models.GetUserByID(form.Uid)
 		if err != nil {
@@ -208,7 +209,7 @@ func MigrateRepo(ctx *middleware.Context, form auth.MigrateRepoForm) {
 		return
 	}
 
-	if ctxUser.IsOrganization() {
+	if ctxUser.IsOrganization() && !ctx.User.IsAdmin {
 		// Check ownership of organization.
 		if !ctxUser.IsOwnedBy(ctx.User.Id) {
 			ctx.APIError(403, "", "Given user is not owner of organization.")
