@@ -41,7 +41,7 @@
       </a>
       <div class="right menu">
         <div class="item">
-          <a class="ui blue basic button" href="{{AppSubUrl}}/org/{{.ContextUser.Name}}">
+          <a class="ui blue basic button" href="{{.ContextUser.HomeLink}}">
             {{.i18n.Tr "home.view_home" (.ContextUser.ShortName 10)}}
           </a>
         </div>
