@@ -106,6 +106,11 @@ func Migrate(x *xorm.Engine) error {
 	}
 
 	v := currentVersion.Version
+	if _MIN_DB_VER > v {
+		log.Fatal(4, "Gogs no longer supports auto-migration from your previously installed version. Please try to upgrade to a lower version first, then upgrade to current version.")
+		return nil
+	}
+
 	if int(v-_MIN_DB_VER) > len(migrations) {
 		// User downgraded Gogs.
 		currentVersion.Version = int64(len(migrations) + _MIN_DB_VER)
