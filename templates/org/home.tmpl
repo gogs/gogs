@@ -40,7 +40,7 @@
           <strong>{{.i18n.Tr "org.people"}}</strong>
           {{if $isMember}}
           <div class="ui right">
-            <a class="text grey" href="{{.Org.HomeLink}}/members"><strong>{{.Org.NumMembers}}</strong><span class="octicon octicon-chevron-right"></span></a>
+            <a class="text grey" href="{{.OrgLink}}/members"><strong>{{.Org.NumMembers}}</strong><span class="octicon octicon-chevron-right"></span></a>
           </div>
           {{end}}
         </h4>
@@ -53,7 +53,7 @@
         </div>
         {{if .IsOrganizationOwner}}
         <div class="ui bottom attached segment">
-          <a class="ui blue small button" href="{{.Org.HomeLink}}/invitations/new">{{.i18n.Tr "org.invite_someone"}}</a>
+          <a class="ui blue small button" href="{{.OrgLink}}/invitations/new">{{.i18n.Tr "org.invite_someone"}}</a>
         </div>
         {{end}}
 
@@ -61,20 +61,20 @@
         <div class="ui top attached header">
           <strong>{{.i18n.Tr "org.teams"}}</strong>
           <div class="ui right">
-            <a class="text grey" href="{{.Org.HomeLink}}/teams"><strong>{{.Org.NumTeams}}</strong><span class="octicon octicon-chevron-right"></span></a>
+            <a class="text grey" href="{{.OrgLink}}/teams"><strong>{{.Org.NumTeams}}</strong><span class="octicon octicon-chevron-right"></span></a>
           </div>
         </div>
         <div class="ui attached table segment teams">
           {{range .Teams}}
           <div class="item">
-            <a href="{{$.Org.HomeLink}}/teams/{{.LowerName}}"><strong class="team-name">{{.Name}}</strong></a>
+            <a href="{{$.OrgLink}}/teams/{{.LowerName}}"><strong class="team-name">{{.Name}}</strong></a>
             <p class="text grey">{{.NumMembers}} {{$.i18n.Tr "org.lower_members"}} · {{.NumRepos}} {{$.i18n.Tr "org.lower_repositories"}}</p>
           </div>
           {{end}}
         </div>
         {{if .IsOrganizationOwner}}
         <div class="ui bottom attached segment">
-          <a class="ui blue small button" href="{{.Org.HomeLink}}/teams/new">{{.i18n.Tr "org.create_new_team"}}</a>
+          <a class="ui blue small button" href="{{.OrgLink}}/teams/new">{{.i18n.Tr "org.create_new_team"}}</a>
         </div>
         {{end}}
         {{end}}
