@@ -32,6 +32,14 @@
 		}
 	}
 
+	.navbar {
+		.ui.label {
+			margin-top: -2px;
+			margin-left: 7px;
+			padding: 3px 5px;
+		}
+	}
+
 	.owner.dropdown {
 		min-width: 40% !important;
 	}
@@ -935,6 +943,31 @@
 				.link {
 					padding-top: 5px;
 				}
+			}
+		}
+	}
+
+	&.wiki {
+		&.start {
+			.ui.segment {
+				padding-top: 70px;
+				padding-bottom: 100px;
+
+				.mega-octicon {
+					font-size: 48px;
+				}
+			}
+		}
+
+		&.new {
+			.CodeMirror {
+				.CodeMirror-code .cm-comment {
+					background: inherit;
+				}
+			}
+
+			.editor-preview {
+				background-color: white;
 			}
 		}
 	}
