@@ -11,7 +11,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/gogits/gogs/modules/ldap"
+	"gopkg.in/ldap.v2"
+
 	"github.com/gogits/gogs/modules/log"
 )
 

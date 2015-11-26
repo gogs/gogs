@@ -37,8 +37,10 @@ github.com/Unknwon/paginater = commit:7748a72
 golang.org/x/net = 
 golang.org/x/text =
 golang.org/x/crypto =
+gopkg.in/asn1-ber.v1 = 
 gopkg.in/gomail.v2 = commit:df6fc79
 gopkg.in/ini.v1 = commit:2e44421
+gopkg.in/ldap.v2 = 
 gopkg.in/macaron.v1 = commit:1c6dd87
 gopkg.in/redis.v2 = commit:e617904962
 
