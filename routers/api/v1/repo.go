@@ -187,8 +187,34 @@ func CreateOrgRepo(ctx *middleware.Context, opt api.CreateRepoOption) {
 	createRepo(ctx, org, opt)
 }
 
-func ForkRepo(ctx *middleware.Context) {
-	forkedRepo, err := models.ForkRepository(ctx.User, ctx.Repo.Repository, ctx.Repo.Repository.Name, ctx.Repo.Repository.Description)
+func ForkRepo(ctx *middleware.Context, opt api.ForkRepoOption) {
+	if opt.TargetUser != "" {
+		if ctx.User.Name == opt.TargetUser {
+			forkRepoTo(ctx, ctx.User, opt.Name, opt.Description)
+		} else {
+			if ctx.User.IsAdmin {
+				targetUser, err :=models.GetUserByName(opt.TargetUser)
+				if err != nil {
+					if models.IsErrUserNotExist(err) {
+						ctx.APIError(422, "", err)
+					} else {
+						ctx.APIError(500, "GetUserByName", err)
+					}
+					return
+				}
+				forkRepoTo(ctx, targetUser, opt.Name, opt.Description)
+			} else {
+				ctx.APIError(403, "", "You do not have access to " + opt.TargetUser + ".")
+				return
+			}
+		}
+	} else {
+		forkRepoTo(ctx, ctx.User, opt.Name, opt.Description)
+	}
+}
+
+func forkRepoTo(ctx *middleware.Context, targetUser *models.User, name string, description string) {
+	forkedRepo, err := models.ForkRepository(targetUser, ctx.Repo.Repository, name, description)
 	if err != nil {
 		if models.IsErrRepoAlreadyExist(err) ||
 		models.IsErrNameReserved(err) ||
@@ -208,6 +234,7 @@ func ForkRepo(ctx *middleware.Context) {
 
 	ctx.JSON(201, ToApiRepository(ctx.User, forkedRepo, api.Permission{true, true, true}))
 }
+
 
 func MigrateRepo(ctx *middleware.Context, form auth.MigrateRepoForm) {
 	ctxUser := ctx.User
