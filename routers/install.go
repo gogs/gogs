@@ -222,6 +222,7 @@ func InstallPost(ctx *middleware.Context, form auth.InstallForm) {
 	}
 
 	// Test repository root path.
+	form.RepoRootPath = strings.Replace(form.RepoRootPath, "\\", "/", -1)
 	if err := os.MkdirAll(form.RepoRootPath, os.ModePerm); err != nil {
 		ctx.Data["Err_RepoRootPath"] = true
 		ctx.RenderWithErr(ctx.Tr("install.invalid_repo_path", err), INSTALL, &form)

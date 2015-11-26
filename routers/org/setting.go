@@ -76,7 +76,7 @@ func SettingsPost(ctx *middleware.Context, form auth.UpdateOrgSettingForm) {
 	}
 	log.Trace("Organization setting updated: %s", org.Name)
 	ctx.Flash.Success(ctx.Tr("org.settings.update_setting_success"))
-	ctx.Redirect(org.HomeLink() + "/settings")
+	ctx.Redirect(ctx.Org.OrgLink + "/settings")
 }
 
 func SettingsAvatar(ctx *middleware.Context, form auth.UploadAvatarForm) {
@@ -108,7 +108,7 @@ func SettingsDelete(ctx *middleware.Context) {
 		if err := models.DeleteOrganization(org); err != nil {
 			if models.IsErrUserOwnRepos(err) {
 				ctx.Flash.Error(ctx.Tr("form.org_still_own_repo"))
-				ctx.Redirect(org.HomeLink() + "/settings/delete")
+				ctx.Redirect(ctx.Org.OrgLink + "/settings/delete")
 			} else {
 				ctx.Handle(500, "DeleteOrganization", err)
 			}

@@ -14,35 +14,8 @@ import (
 )
 
 const (
-	HOME   base.TplName = "org/home"
 	CREATE base.TplName = "org/create"
 )
-
-func Home(ctx *middleware.Context) {
-	org := ctx.Org.Organization
-	ctx.Data["Title"] = org.FullName
-
-	repos, err := models.GetRepositories(org.Id, ctx.IsSigned && org.IsOrgMember(ctx.User.Id))
-	if err != nil {
-		ctx.Handle(500, "GetRepositories", err)
-		return
-	}
-	ctx.Data["Repos"] = repos
-
-	if err = org.GetMembers(); err != nil {
-		ctx.Handle(500, "GetMembers", err)
-		return
-	}
-	ctx.Data["Members"] = org.Members
-
-	if err = org.GetTeams(); err != nil {
-		ctx.Handle(500, "GetTeams", err)
-		return
-	}
-	ctx.Data["Teams"] = org.Teams
-
-	ctx.HTML(200, HOME)
-}
 
 func Create(ctx *middleware.Context) {
 	ctx.Data["Title"] = ctx.Tr("new_org")

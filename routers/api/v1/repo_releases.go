@@ -40,7 +40,7 @@ func ListReleases(ctx *middleware.Context) {
 		return
 	}
 
-	rels, err := models.GetReleasesByRepoId(ctx.Repo.Repository.ID)
+	rels, err := models.GetReleasesByRepoID(ctx.Repo.Repository.ID)
 	if err != nil {
 		ctx.Handle(500, "GetReleasesByRepoId", err)
 		return

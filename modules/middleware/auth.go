@@ -54,7 +54,7 @@ func AutoSignIn(ctx *Context) (bool, error) {
 	}
 
 	if val, _ := ctx.GetSuperSecureCookie(
-		base.EncodeMd5(u.Rands+u.Passwd), setting.CookieRememberName); val != u.Name {
+		base.EncodeMD5(u.Rands+u.Passwd), setting.CookieRememberName); val != u.Name {
 		return false, nil
 	}
 
@@ -105,6 +105,18 @@ func Toggle(options *ToggleOptions) macaron.Handler {
 			} else if !ctx.User.IsActive && setting.Service.RegisterEmailConfirm {
 				ctx.Data["Title"] = ctx.Tr("auth.active_your_account")
 				ctx.HTML(200, "user/auth/activate")
+				return
+			}
+		}
+
+		// Try auto-signin when not signed in.
+		if !options.SignOutRequire && !ctx.IsSigned && !auth.IsAPIPath(ctx.Req.URL.Path) {
+			succeed, err := AutoSignIn(ctx)
+			if err != nil {
+				ctx.Handle(500, "AutoSignIn", err)
+				return
+			} else if succeed {
+				ctx.Redirect(setting.AppSubUrl + ctx.Req.RequestURI)
 				return
 			}
 		}

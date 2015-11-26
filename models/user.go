@@ -145,9 +145,6 @@ func (u *User) DashboardLink() string {
 
 // HomeLink returns the user or organization home page link.
 func (u *User) HomeLink() string {
-	if u.IsOrganization() {
-		return setting.AppSubUrl + "/org/" + u.Name
-	}
 	return setting.AppSubUrl + "/" + u.Name
 }
 
@@ -373,6 +370,15 @@ func (u *User) DisplayName() string {
 	return u.Name
 }
 
+// ShortName returns shorted user name with given maximum length,
+// it adds "..." at the end if user name has more length than maximum.
+func (u *User) ShortName(length int) string {
+	if len(u.Name) < length {
+		return u.Name
+	}
+	return u.Name[:length] + "..."
+}
+
 // IsUserExist checks if given user name exist,
 // the user name should be noncased unique.
 // If uid is presented, then check will rule out that one,
@@ -424,6 +430,7 @@ func CreateUser(u *User) (err error) {
 		return ErrUserAlreadyExist{u.Name}
 	}
 
+	u.Email = strings.ToLower(u.Email)
 	isExist, err = IsEmailUsed(u.Email)
 	if err != nil {
 		return err

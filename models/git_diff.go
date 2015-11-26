@@ -163,10 +163,10 @@ func ParsePatch(pid int64, maxlines int, cmd *exec.Cmd, reader io.Reader) (*Diff
 		if strings.HasPrefix(line, DIFF_HEAD) {
 			middle := -1
 
-			// Note: In case file name is surrounded by double quotes(it happens only in git-shell).
-			hasQuote := strings.Index(line, `\"`) > -1
+			// Note: In case file name is surrounded by double quotes (it happens only in git-shell).
+			// e.g. diff --git "a/xxx" "b/xxx"
+			hasQuote := line[len(DIFF_HEAD)] == '"'
 			if hasQuote {
-				line = strings.Replace(line, `\"`, `"`, -1)
 				middle = strings.Index(line, ` "b/`)
 			} else {
 				middle = strings.Index(line, " b/")
@@ -176,8 +176,8 @@ func ParsePatch(pid int64, maxlines int, cmd *exec.Cmd, reader io.Reader) (*Diff
 			a := line[beg+2 : middle]
 			b := line[middle+3:]
 			if hasQuote {
-				a = a[1 : len(a)-1]
-				b = b[1 : len(b)-1]
+				a = string(git.UnescapeChars([]byte(a[1 : len(a)-1])))
+				b = string(git.UnescapeChars([]byte(b[1 : len(b)-1])))
 			}
 
 			curFile = &DiffFile{

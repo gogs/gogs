@@ -178,8 +178,8 @@ func GetActiveWebhooksByRepoID(repoID int64) (ws []*Webhook, err error) {
 	return ws, err
 }
 
-// GetWebhooksByRepoId returns all webhooks of repository.
-func GetWebhooksByRepoId(repoID int64) (ws []*Webhook, err error) {
+// GetWebhooksByRepoID returns all webhooks of repository.
+func GetWebhooksByRepoID(repoID int64) (ws []*Webhook, err error) {
 	err = x.Find(&ws, &Webhook{RepoID: repoID})
 	return ws, err
 }

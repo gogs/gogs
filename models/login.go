@@ -225,10 +225,9 @@ func DeleteSource(source *LoginSource) error {
 // |_______ \/_______  /\____|__  /____|
 //         \/        \/         \/
 
-// Query if name/passwd can login against the LDAP directory pool
-// Create a local user if success
-// Return the same LoginUserPlain semantic
-// FIXME: https://github.com/gogits/gogs/issues/672
+// LoginUserLDAPSource queries if name/passwd can login against the LDAP directory pool,
+// and create a local user if success when enabled.
+// It returns the same LoginUserPlain semantic.
 func LoginUserLDAPSource(u *User, name, passwd string, source *LoginSource, autoRegister bool) (*User, error) {
 	cfg := source.Cfg.(*LDAPConfig)
 	directBind := (source.Type == DLDAP)
@@ -411,7 +410,7 @@ func LoginUserPAMSource(u *User, name, passwd string, sourceId int64, cfg *PAMCo
 	// fake a local user creation
 	u = &User{
 		LowerName:   strings.ToLower(name),
-		Name:        strings.ToLower(name),
+		Name:        name,
 		LoginType:   PAM,
 		LoginSource: sourceId,
 		LoginName:   name,
@@ -419,8 +418,7 @@ func LoginUserPAMSource(u *User, name, passwd string, sourceId int64, cfg *PAMCo
 		Passwd:      passwd,
 		Email:       name,
 	}
-	err := CreateUser(u)
-	return u, err
+	return u, CreateUser(u)
 }
 
 func ExternalUserLogin(u *User, name, passwd string, source *LoginSource, autoRegister bool) (*User, error) {
@@ -444,7 +442,7 @@ func ExternalUserLogin(u *User, name, passwd string, source *LoginSource, autoRe
 func UserSignIn(uname, passwd string) (*User, error) {
 	var u *User
 	if strings.Contains(uname, "@") {
-		u = &User{Email: uname}
+		u = &User{Email: strings.ToLower(uname)}
 	} else {
 		u = &User{LowerName: strings.ToLower(uname)}
 	}

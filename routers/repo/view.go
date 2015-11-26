@@ -182,7 +182,7 @@ func Home(ctx *middleware.Context) {
 			ctx.Data["ReadmeInList"] = true
 			ctx.Data["ReadmeExist"] = true
 			if dataRc, err := readmeFile.Data(); err != nil {
-				ctx.Handle(404, "repo.SinglereadmeFile.LookupBlob", err)
+				ctx.Handle(404, "repo.SinglereadmeFile.Data", err)
 				return
 			} else {
 

@@ -564,6 +564,16 @@ function buttonsClickOnEnter() {
     });
 }
 
+function hideWhenLostFocus(body, parent) {
+    $(document).click(function (e) {
+        var target = e.target;
+
+        if (!$(target).is(body) && !$(target).parents().is(parent)) {
+            $(body).hide();
+        }
+    });
+}
+
 function searchUsers() {
     if (!$('#search-user-box .results').length) {
         return;
@@ -613,13 +623,56 @@ function searchUsers() {
     $search_user_box.find('input').focus(function () {
         $search_user_box.keyup();
     });
-    $(document).click(function (e) {
-        var target = e.target;
+    hideWhenLostFocus('#search-user-box .results', '#search-user-box');
+}
 
-        if (!$(target).is('#search-user-box .results') && !$(target).parents().is('#search-user-box')) {
-            $('#search-user-box .results').hide();
+// FIXME: merge common parts in two functions
+function searchRepositories() {
+    if (!$('#search-repo-box .results').length) {
+        return;
+    }
+
+    var $search_repo_box = $('#search-repo-box');
+    var $result_list = $search_repo_box.find('.results');
+    $search_repo_box.keyup(function () {
+        var $this = $(this);
+        var keyword = $this.find('input').val();
+        if (keyword.length < 2) {
+            $result_list.hide();
+            return;
         }
+
+        $.ajax({
+            url: suburl + '/api/v1/repos/search?q=' + keyword + "&uid=" + $search_repo_box.data('uid'),
+            dataType: "json",
+            success: function (response) {
+                var notEmpty = function (str) {
+                    return str && str.length > 0;
+                };
+
+                $result_list.html('');
+
+                if (response.ok && response.data.length) {
+                    var html = '';
+                    $.each(response.data, function (i, item) {
+                        html += '<div class="item"><i class="icon octicon octicon-repo"></i> <span class="fullname">' + item.full_name + '</span></div>';
+                    });
+                    $result_list.html(html);
+                    $this.find('.results .item').click(function () {
+                        $this.find('input').val($(this).find('.fullname').text().split("/")[1]);
+                        $result_list.hide();
+                    });
+                    $result_list.show();
+                } else {
+                    $result_list.hide();
+                }
+            }
+        });
     });
+    $search_repo_box.find('input').focus(function () {
+        $search_repo_box.keyup();
+    });
+    hideWhenLostFocus('#search-repo-box .results', '#search-repo-box');
 }
 
 $(document).ready(function () {
@@ -682,7 +735,7 @@ $(document).ready(function () {
             headers: {"X-Csrf-Token": csrf},
             maxFiles: $dropz.data('max-file'),
             maxFilesize: $dropz.data('max-size'),
-            acceptedFiles: $dropz.data('accepts'),
+            acceptedFiles: ($dropz.data('accepts') === '*/*') ? null : $dropz.data('accepts'),
             addRemoveLinks: true,
             dictDefaultMessage: $dropz.data('default-message'),
             dictInvalidFileType: $dropz.data('invalid-input-type'),
@@ -776,6 +829,7 @@ $(document).ready(function () {
 
     buttonsClickOnEnter();
     searchUsers();
+    searchRepositories();
 
 
     initCommentForm();

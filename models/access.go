@@ -36,19 +36,19 @@ func accessLevel(e Engine, u *User, repo *Repository) (AccessMode, error) {
 		mode = ACCESS_MODE_READ
 	}
 
-	if u != nil {
-		if u.Id == repo.OwnerID {
-			return ACCESS_MODE_OWNER, nil
-		}
-
-		a := &Access{UserID: u.Id, RepoID: repo.ID}
-		if has, err := e.Get(a); !has || err != nil {
-			return mode, err
-		}
-		return a.Mode, nil
+	if u == nil {
+		return mode, nil
 	}
 
-	return mode, nil
+	if u.Id == repo.OwnerID {
+		return ACCESS_MODE_OWNER, nil
+	}
+
+	a := &Access{UserID: u.Id, RepoID: repo.ID}
+	if has, err := e.Get(a); !has || err != nil {
+		return mode, err
+	}
+	return a.Mode, nil
 }
 
 // AccessLevel returns the Access a user has to a repository. Will return NoneAccess if the

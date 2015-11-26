@@ -15,10 +15,12 @@ import (
 	"strings"
 	"time"
 
-	"gopkg.in/ini.v1"
-
 	"github.com/Unknwon/com"
+	_ "github.com/go-macaron/cache/memcache"
+	_ "github.com/go-macaron/cache/redis"
 	"github.com/go-macaron/session"
+	_ "github.com/go-macaron/session/redis"
+	"gopkg.in/ini.v1"
 
 	"github.com/gogits/gogs/modules/bindata"
 	"github.com/gogits/gogs/modules/log"
@@ -140,9 +142,6 @@ var (
 	CacheInternal int
 	CacheConn     string
 
-	EnableRedis    bool
-	EnableMemcache bool
-
 	// Session settings.
 	SessionConfig session.Options
 
@@ -178,6 +177,7 @@ var (
 
 	// Other settings.
 	ShowFooterBranding bool
+	ShowFooterVersion  bool
 
 	// Global setting objects.
 	Cfg          *ini.File
@@ -425,6 +425,7 @@ func NewContext() {
 	dateLangs = Cfg.Section("i18n.datelang").KeysHash()
 
 	ShowFooterBranding = Cfg.Section("other").Key("SHOW_FOOTER_BRANDING").MustBool()
+	ShowFooterVersion = Cfg.Section("other").Key("SHOW_FOOTER_VERSION").MustBool()
 
 	HasRobotsTxt = com.IsFile(path.Join(CustomPath, "robots.txt"))
 }
@@ -543,13 +544,6 @@ func newLogService() {
 
 func newCacheService() {
 	CacheAdapter = Cfg.Section("cache").Key("ADAPTER").In("memory", []string{"memory", "redis", "memcache"})
-	if EnableRedis {
-		log.Info("Redis Supported")
-	}
-	if EnableMemcache {
-		log.Info("Memcache Supported")
-	}
-
 	switch CacheAdapter {
 	case "memory":
 		CacheInternal = Cfg.Section("cache").Key("INTERVAL").MustInt(60)

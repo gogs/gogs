@@ -45,7 +45,7 @@ func getForkRepository(ctx *middleware.Context) *models.Repository {
 	}
 
 	ctx.Data["repo_name"] = forkRepo.Name
-	ctx.Data["desc"] = forkRepo.Description
+	ctx.Data["description"] = forkRepo.Description
 	ctx.Data["IsPrivate"] = forkRepo.IsPrivate
 
 	if err = forkRepo.GetOwner(); err != nil {
@@ -448,7 +448,7 @@ func ParseCompareInfo(ctx *middleware.Context) (*models.User, *models.Repository
 
 	// Check if current user has fork of repository.
 	headRepo, has := models.HasForkedRepo(headUser.Id, repo.ID)
-	if !has || !ctx.User.IsAdminOfRepo(headRepo) {
+	if !has || (!ctx.User.IsAdminOfRepo(headRepo) && !ctx.User.IsAdmin) {
 		ctx.Handle(404, "HasForkedRepo", nil)
 		return nil, nil, nil, nil, "", ""
 	}

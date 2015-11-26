@@ -79,7 +79,7 @@ func SettingsPost(ctx *middleware.Context, form auth.UpdateProfileForm) {
 	ctx.User.Email = form.Email
 	ctx.User.Website = form.Website
 	ctx.User.Location = form.Location
-	ctx.User.Avatar = base.EncodeMd5(form.Gravatar)
+	ctx.User.Avatar = base.EncodeMD5(form.Gravatar)
 	ctx.User.AvatarEmail = form.Gravatar
 	if err := models.UpdateUser(ctx.User); err != nil {
 		ctx.Handle(500, "UpdateUser", err)
@@ -286,7 +286,7 @@ func SettingsSSHKeysPost(ctx *middleware.Context, form auth.AddSSHKeyForm) {
 
 	content, err := models.CheckPublicKeyString(form.Content)
 	if err != nil {
-		if err == models.ErrKeyUnableVerify {
+		if models.IsErrKeyUnableVerify(err) {
 			ctx.Flash.Info(ctx.Tr("form.unable_verify_ssh_key"))
 		} else {
 			ctx.Flash.Error(ctx.Tr("form.invalid_ssh_key", err.Error()))

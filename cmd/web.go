@@ -242,6 +242,13 @@ func runWeb(ctx *cli.Context) {
 					m.Get("/raw/*", middleware.RepoRef(), v1.GetRepoRawFile)
 					m.Get("/archive/*", v1.GetRepoArchive)
 
+					m.Group("/keys", func() {
+						m.Combo("").Get(v1.ListRepoDeployKeys).
+							Post(bind(api.CreateDeployKeyOption{}), v1.CreateRepoDeployKey)
+						m.Combo("/:id").Get(v1.GetRepoDeployKey).
+							Delete(v1.DeleteRepoDeploykey)
+					})
+
 					m.Post("/forks",  bind(api.ForkRepoOption{}), v1.ForkRepo)
 
 					m.Combo("/collaboration").Post(bind(api.CollaboratorOption{}), v1.AddCollaborator)
@@ -405,9 +412,9 @@ func runWeb(ctx *cli.Context) {
 			m.Get("/teams", org.Teams)
 			m.Get("/teams/:team", org.TeamMembers)
 			m.Get("/teams/:team/repositories", org.TeamRepositories)
-			m.Get("/teams/:team/action/:action", org.TeamsAction)
-			m.Get("/teams/:team/action/repo/:action", org.TeamsRepoAction)
-		}, middleware.OrgAssignment(true, true))
+			m.Route("/teams/:team/action/:action", "GET,POST", org.TeamsAction)
+			m.Route("/teams/:team/action/repo/:action", "GET,POST", org.TeamsRepoAction)
+		}, middleware.OrgAssignment(true))
 
 		m.Group("/:org", func() {
 			m.Get("/teams/new", org.NewTeam)
@@ -436,11 +443,8 @@ func runWeb(ctx *cli.Context) {
 			})
 
 			m.Route("/invitations/new", "GET,POST", org.Invitation)
-		}, middleware.OrgAssignment(true, true, true))
+		}, middleware.OrgAssignment(true, true))
 	}, reqSignIn)
-	m.Group("/org", func() {
-		m.Get("/:org", org.Home)
-	}, ignSignIn, middleware.OrgAssignment(true))
 	// ***** END: Organization *****
 
 	// ***** START: Repository *****
@@ -526,6 +530,7 @@ func runWeb(ctx *cli.Context) {
 			m.Post("/new", bindIgnErr(auth.NewReleaseForm{}), repo.NewReleasePost)
 			m.Get("/edit/:tagname", repo.EditRelease)
 			m.Post("/edit/:tagname", bindIgnErr(auth.EditReleaseForm{}), repo.EditReleasePost)
+			m.Post("/delete", repo.DeleteRelease)
 		}, reqRepoAdmin, middleware.RepoRef())
 
 		m.Combo("/compare/*").Get(repo.CompareAndPullRequest).

@@ -120,7 +120,7 @@ func TeamsRepoAction(ctx *middleware.Context) {
 	var err error
 	switch ctx.Params(":action") {
 	case "add":
-		repoName := path.Base(ctx.Query("repo-name"))
+		repoName := path.Base(ctx.Query("repo_name"))
 		var repo *models.Repository
 		repo, err = models.GetRepositoryByName(ctx.Org.Organization.Id, repoName)
 		if err != nil {
@@ -280,9 +280,12 @@ func EditTeamPost(ctx *middleware.Context, form auth.CreateTeamForm) {
 
 func DeleteTeam(ctx *middleware.Context) {
 	if err := models.DeleteTeam(ctx.Org.Team); err != nil {
-		ctx.Handle(500, "DeleteTeam", err)
-		return
+		ctx.Flash.Error("DeleteTeam: " + err.Error())
+	} else {
+		ctx.Flash.Success(ctx.Tr("org.teams.delete_team_success"))
 	}
-	ctx.Flash.Success(ctx.Tr("org.teams.delete_team_success"))
-	ctx.Redirect(ctx.Org.OrgLink + "/teams")
+
+	ctx.JSON(200, map[string]interface{}{
+		"redirect": ctx.Org.OrgLink + "/teams",
+	})
 }

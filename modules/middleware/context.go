@@ -209,14 +209,6 @@ func Contexter() macaron.Handler {
 
 		ctx.Data["PageStartTime"] = time.Now()
 
-		// Check auto-signin.
-		if sess.Get("uid") == nil {
-			if _, err := AutoSignIn(ctx); err != nil {
-				ctx.Handle(500, "AutoSignIn", err)
-				return
-			}
-		}
-
 		// Get user from session if logined.
 		ctx.User, ctx.IsBasicAuth = auth.SignedInUser(ctx.Context, ctx.Session)
 
@@ -245,6 +237,7 @@ func Contexter() macaron.Handler {
 
 		ctx.Data["ShowRegistrationButton"] = setting.Service.ShowRegistrationButton
 		ctx.Data["ShowFooterBranding"] = setting.ShowFooterBranding
+		ctx.Data["ShowFooterVersion"] = setting.ShowFooterVersion
 
 		c.Map(ctx)
 	}
