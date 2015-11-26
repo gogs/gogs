@@ -19,6 +19,11 @@
 	<script src="{{AppSubUrl}}/js/jquery-1.11.3.min.js"></script>
 	<link rel="stylesheet" href="{{AppSubUrl}}/css/font-awesome-4.4.0.min.css">
 
+	{{if .RequireSimpleMDE}}
+	<link rel="stylesheet" href="{{AppSubUrl}}/css/simplemde-1.8.1.min.css">
+	<script src="{{AppSubUrl}}/js/libs/simplemde-1.8.1.min.js"></script>
+	{{end}}
+
 	<!-- Stylesheet -->
 	<link rel="stylesheet" href="{{AppSubUrl}}/css/semantic-2.1.6.min.css">
 	<link rel="stylesheet" href="{{AppSubUrl}}/css/gogs.css?v={{MD5 AppVer}}">

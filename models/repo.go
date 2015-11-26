@@ -264,6 +264,14 @@ func (repo *Repository) RepoPath() (string, error) {
 	return repo.repoPath(x)
 }
 
+func (repo *Repository) WikiPath() (string, error) {
+	if err := repo.GetOwner(); err != nil {
+		return "", err
+	}
+
+	return WikiPath(repo.Owner.Name, repo.Name), nil
+}
+
 func (repo *Repository) RepoLink() (string, error) {
 	if err := repo.GetOwner(); err != nil {
 		return "", err
@@ -875,6 +883,11 @@ func RepositoriesWithUsers(page, pageSize int) (_ []*Repository, err error) {
 // RepoPath returns repository path by given user and repository name.
 func RepoPath(userName, repoName string) string {
 	return filepath.Join(UserPath(userName), strings.ToLower(repoName)+".git")
+}
+
+// WikiPath returns wiki data path by given user and repository name.
+func WikiPath(userName, repoName string) string {
+	return filepath.Join(UserPath(userName), strings.ToLower(repoName)+".wiki.git")
 }
 
 // TransferOwnership transfers all corresponding setting from old user to new one.
