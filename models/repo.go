@@ -24,11 +24,14 @@ import (
 	"github.com/Unknwon/cae/zip"
 	"github.com/Unknwon/com"
 	"github.com/go-xorm/xorm"
+	"github.com/mcuadros/go-version"
 	"gopkg.in/ini.v1"
+
+	"github.com/gogits/git-shell"
 
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/bindata"
-	"github.com/gogits/gogs/modules/git"
+	oldgit "github.com/gogits/gogs/modules/git"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/process"
 	"github.com/gogits/gogs/modules/setting"
@@ -95,19 +98,15 @@ func NewRepoContext() {
 	}
 
 	// Check Git version.
-	ver, err := git.GetVersion()
+	gitVer, err := git.Version()
 	if err != nil {
 		log.Fatal(4, "Fail to get Git version: %v", err)
 	}
 
-	reqVer, err := git.ParseVersion("1.7.1")
-	if err != nil {
-		log.Fatal(4, "Fail to parse required Git version: %v", err)
-	}
-	if ver.LessThan(reqVer) {
+	log.Info("Git Version: %s", gitVer)
+	if version.Compare("1.7.1", gitVer, ">") {
 		log.Fatal(4, "Gogs requires Git version greater or equal to 1.7.1")
 	}
-	log.Info("Git Version: %s", ver.String())
 
 	// Git requires setting user.name and user.email in order to commit changes.
 	for configKey, defaultValue := range map[string]string{"user.name": "Gogs", "user.email": "gogs@fake.local"} {
@@ -197,6 +196,25 @@ func (repo *Repository) GetOwner() error {
 	return repo.getOwner(x)
 }
 
+func (repo *Repository) mustOwner(e Engine) *User {
+	if err := repo.getOwner(e); err != nil {
+		return &User{
+			Name:     "error",
+			FullName: err.Error(),
+		}
+	}
+
+	return repo.Owner
+}
+
+// MustOwner always returns a valid *User object to avoid
+// conceptually impossible error handling.
+// It creates a fake object that contains error deftail
+// when error occurs.
+func (repo *Repository) MustOwner() *User {
+	return repo.mustOwner(x)
+}
+
 // GetAssignees returns all users that have write access of repository.
 func (repo *Repository) GetAssignees() (_ []*User, err error) {
 	if err = repo.GetOwner(); err != nil {
@@ -253,30 +271,16 @@ func (repo *Repository) GetBaseRepo() (err error) {
 	return err
 }
 
-func (repo *Repository) repoPath(e Engine) (string, error) {
-	if err := repo.getOwner(e); err != nil {
-		return "", err
-	}
-	return RepoPath(repo.Owner.Name, repo.Name), nil
+func (repo *Repository) repoPath(e Engine) string {
+	return RepoPath(repo.mustOwner(e).Name, repo.Name)
 }
 
-func (repo *Repository) RepoPath() (string, error) {
+func (repo *Repository) RepoPath() string {
 	return repo.repoPath(x)
 }
 
-func (repo *Repository) WikiPath() (string, error) {
-	if err := repo.GetOwner(); err != nil {
-		return "", err
-	}
-
-	return WikiPath(repo.Owner.Name, repo.Name), nil
-}
-
-func (repo *Repository) RepoLink() (string, error) {
-	if err := repo.GetOwner(); err != nil {
-		return "", err
-	}
-	return setting.AppSubUrl + "/" + repo.Owner.Name + "/" + repo.Name, nil
+func (repo *Repository) RepoLink() string {
+	return setting.AppSubUrl + "/" + repo.MustOwner().Name + "/" + repo.Name
 }
 
 func (repo *Repository) HasAccess(u *User) bool {
@@ -315,11 +319,7 @@ func (repo *Repository) LocalCopyPath() string {
 
 // UpdateLocalCopy makes sure the local copy of repository is up-to-date.
 func (repo *Repository) UpdateLocalCopy() error {
-	repoPath, err := repo.RepoPath()
-	if err != nil {
-		return err
-	}
-
+	repoPath := repo.RepoPath()
 	localPath := repo.LocalCopyPath()
 	if !com.IsExist(localPath) {
 		_, stderr, err := process.Exec(
@@ -399,7 +399,7 @@ func (repo *Repository) CloneLink() (cl CloneLink, err error) {
 
 var (
 	reservedNames    = []string{"debug", "raw", "install", "api", "avatar", "user", "org", "help", "stars", "issues", "pulls", "commits", "repo", "template", "admin", "new"}
-	reservedPatterns = []string{"*.git", "*.keys"}
+	reservedPatterns = []string{"*.git", "*.keys", "*.wiki"}
 )
 
 // IsUsableName checks if name is reserved or pattern of name is not allowed.
@@ -569,7 +569,7 @@ func MigrateRepository(u *User, opts MigrateRepoOptions) (*Repository, error) {
 	}
 
 	// Check if repository has master branch, if so set it to default branch.
-	gitRepo, err := git.OpenRepository(repoPath)
+	gitRepo, err := oldgit.OpenRepository(repoPath)
 	if err != nil {
 		return repo, fmt.Errorf("open git repository: %v", err)
 	}
@@ -581,7 +581,7 @@ func MigrateRepository(u *User, opts MigrateRepoOptions) (*Repository, error) {
 }
 
 // initRepoCommit temporarily changes with work directory.
-func initRepoCommit(tmpPath string, sig *git.Signature) (err error) {
+func initRepoCommit(tmpPath string, sig *oldgit.Signature) (err error) {
 	var stderr string
 	if _, stderr, err = process.ExecDir(-1,
 		tmpPath, fmt.Sprintf("initRepoCommit (git add): %s", tmpPath),
@@ -885,11 +885,6 @@ func RepoPath(userName, repoName string) string {
 	return filepath.Join(UserPath(userName), strings.ToLower(repoName)+".git")
 }
 
-// WikiPath returns wiki data path by given user and repository name.
-func WikiPath(userName, repoName string) string {
-	return filepath.Join(UserPath(userName), strings.ToLower(repoName)+".wiki.git")
-}
-
 // TransferOwnership transfers all corresponding setting from old user to new one.
 func TransferOwnership(u *User, newOwnerName string, repo *Repository) error {
 	newOwner, err := GetUserByName(newOwnerName)
@@ -1177,10 +1172,7 @@ func DeleteRepository(uid, repoID int64) error {
 	}
 
 	// Remove repository files.
-	repoPath, err := repo.repoPath(sess)
-	if err != nil {
-		return fmt.Errorf("RepoPath: %v", err)
-	}
+	repoPath := repo.repoPath(sess)
 	if err = os.RemoveAll(repoPath); err != nil {
 		desc := fmt.Sprintf("delete repository files[%s]: %v", repoPath, err)
 		log.Warn(desc)
@@ -1328,14 +1320,7 @@ func DeleteRepositoryArchives() error {
 	return x.Where("id > 0").Iterate(new(Repository),
 		func(idx int, bean interface{}) error {
 			repo := bean.(*Repository)
-			repoPath, err := repo.RepoPath()
-			if err != nil {
-				if err2 := CreateRepositoryNotice(fmt.Sprintf("DeleteRepositoryArchives.RepoPath [%d]: %v", repo.ID, err)); err2 != nil {
-					log.Error(4, "CreateRepositoryNotice: %v", err2)
-				}
-				return nil
-			}
-			return os.RemoveAll(filepath.Join(repoPath, "archives"))
+			return os.RemoveAll(filepath.Join(repo.RepoPath(), "archives"))
 		})
 }
 
@@ -1345,15 +1330,7 @@ func DeleteMissingRepositories() error {
 	if err := x.Where("id > 0").Iterate(new(Repository),
 		func(idx int, bean interface{}) error {
 			repo := bean.(*Repository)
-			repoPath, err := repo.RepoPath()
-			if err != nil {
-				if err2 := CreateRepositoryNotice(fmt.Sprintf("DeleteRepositoryArchives.RepoPath [%d]: %v", repo.ID, err)); err2 != nil {
-					log.Error(4, "CreateRepositoryNotice: %v", err2)
-				}
-				return nil
-			}
-
-			if !com.IsDir(repoPath) {
+			if !com.IsDir(repo.RepoPath()) {
 				repos = append(repos, repo)
 			}
 			return nil
@@ -1384,14 +1361,7 @@ func RewriteRepositoryUpdateHook() error {
 	return x.Where("id > 0").Iterate(new(Repository),
 		func(idx int, bean interface{}) error {
 			repo := bean.(*Repository)
-			repoPath, err := repo.RepoPath()
-			if err != nil {
-				if err2 := CreateRepositoryNotice(fmt.Sprintf("RewriteRepositoryUpdateHook[%d]: %v", repo.ID, err)); err2 != nil {
-					log.Error(4, "CreateRepositoryNotice: %v", err2)
-				}
-				return nil
-			}
-			return createUpdateHook(repoPath)
+			return createUpdateHook(repo.RepoPath())
 		})
 }
 
@@ -1458,11 +1428,7 @@ func MirrorUpdate() {
 			return nil
 		}
 
-		repoPath, err := m.Repo.RepoPath()
-		if err != nil {
-			return fmt.Errorf("Repo.RepoPath: %v", err)
-		}
-
+		repoPath := m.Repo.RepoPath()
 		if _, stderr, err := process.ExecDir(10*time.Minute,
 			repoPath, fmt.Sprintf("MirrorUpdate: %s", repoPath),
 			"git", "remote", "update", "--prune"); err != nil {
@@ -1502,12 +1468,8 @@ func GitFsck() {
 	if err := x.Where("id>0").Iterate(new(Repository),
 		func(idx int, bean interface{}) error {
 			repo := bean.(*Repository)
-			repoPath, err := repo.RepoPath()
-			if err != nil {
-				return fmt.Errorf("RepoPath: %v", err)
-			}
-
-			_, _, err = process.ExecDir(-1, repoPath, "Repository health check", "git", args...)
+			repoPath := repo.RepoPath()
+			_, _, err := process.ExecDir(-1, repoPath, "Repository health check", "git", args...)
 			if err != nil {
 				desc := fmt.Sprintf("Fail to health check repository(%s)", repoPath)
 				log.Warn(desc)
@@ -1925,15 +1887,10 @@ func ForkRepository(u *User, oldRepo *Repository, name, desc string) (_ *Reposit
 		return nil, err
 	}
 
-	oldRepoPath, err := oldRepo.RepoPath()
-	if err != nil {
-		return nil, fmt.Errorf("get old repository path: %v", err)
-	}
-
 	repoPath := RepoPath(u.Name, repo.Name)
 	_, stderr, err := process.ExecTimeout(10*time.Minute,
 		fmt.Sprintf("ForkRepository(git clone): %s/%s", u.Name, repo.Name),
-		"git", "clone", "--bare", oldRepoPath, repoPath)
+		"git", "clone", "--bare", oldRepo.RepoPath(), repoPath)
 	if err != nil {
 		return nil, fmt.Errorf("git clone: %v", stderr)
 	}
