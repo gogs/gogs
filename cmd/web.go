@@ -244,6 +244,8 @@ func runWeb(ctx *cli.Context) {
 
 					m.Post("/forks",  bind(api.ForkRepoOption{}), v1.ForkRepo)
 
+					m.Combo("/collaboration").Post(bind(api.CollaboratorOption{}), v1.AddCollaborator)
+
 					m.Get("/commits/:commitid", middleware.RepoRef(), v1.CommitByID)
 					m.Get("/commits/head", middleware.RepoRef(), v1.HEADCommit)
 					m.Get("/commits/branch/*", middleware.RepoRef(), v1.ListCommits)

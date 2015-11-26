@@ -16,6 +16,7 @@ import (
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/middleware"
 	"github.com/gogits/gogs/modules/setting"
+	"github.com/gogits/gogs/modules/mailer"
 )
 
 // ToApiRepository converts repository to API format.
@@ -233,6 +234,38 @@ func forkRepoTo(ctx *middleware.Context, targetUser *models.User, name string, d
 	}
 
 	ctx.JSON(201, ToApiRepository(ctx.User, forkedRepo, api.Permission{true, true, true}))
+}
+
+func AddCollaborator(ctx *middleware.Context, opt api.CollaboratorOption) {
+	u, err := models.GetUserByName(opt.UserName)
+	if err != nil {
+		if models.IsErrUserNotExist(err) {
+			ctx.APIError(422, "", err)
+		} else {
+			ctx.Handle(500, "GetUserByName", err)
+		}
+		return
+	}
+
+	// Check if user is organization member.
+	if ctx.Repo.Owner.IsOrganization() && ctx.Repo.Owner.IsOrgMember(u.Id) {
+		ctx.APIError(422, "", "User is organization member")
+		return
+	}
+
+	if err = ctx.Repo.Repository.AddCollaborator(u); err != nil {
+		ctx.Handle(500, "AddCollaborator", err)
+		return
+	}
+
+	if setting.Service.EnableNotifyMail {
+		if err = mailer.SendCollaboratorMail(ctx.Render, u, ctx.User, ctx.Repo.Repository); err != nil {
+			ctx.Handle(500, "SendCollaboratorMail", err)
+			return
+		}
+	}
+
+	ctx.Status(201)
 }
 
 
