@@ -311,11 +311,7 @@ func RepoAssignment(args ...bool) macaron.Handler {
 			return
 		}
 		ctx.Repo.GitRepo = gitRepo
-		ctx.Repo.RepoLink, err = repo.RepoLink()
-		if err != nil {
-			ctx.Handle(500, "RepoLink", err)
-			return
-		}
+		ctx.Repo.RepoLink = repo.RepoLink()
 		ctx.Data["RepoLink"] = ctx.Repo.RepoLink
 		ctx.Data["RepoRelPath"] = ctx.Repo.Owner.Name + "/" + ctx.Repo.Repository.Name
 

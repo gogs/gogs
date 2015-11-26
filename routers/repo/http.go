@@ -31,7 +31,7 @@ import (
 func authRequired(ctx *middleware.Context) {
 	ctx.Resp.Header().Set("WWW-Authenticate", "Basic realm=\".\"")
 	ctx.Data["ErrorMsg"] = "no basic auth and digit auth"
-	ctx.HTML(401, base.TplName("status/401"))
+	ctx.Error(401)
 }
 
 func HTTP(ctx *middleware.Context) {
