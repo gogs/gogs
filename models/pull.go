@@ -415,12 +415,7 @@ func (pr *PullRequest) UpdatePatch() (err error) {
 		return fmt.Errorf("GetOwner: %v", err)
 	}
 
-	headRepoPath, err := pr.HeadRepo.RepoPath()
-	if err != nil {
-		return fmt.Errorf("HeadRepo.RepoPath: %v", err)
-	}
-
-	headGitRepo, err := git.OpenRepository(headRepoPath)
+	headGitRepo, err := git.OpenRepository(pr.HeadRepo.RepoPath())
 	if err != nil {
 		return fmt.Errorf("OpenRepository: %v", err)
 	}

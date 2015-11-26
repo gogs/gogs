@@ -237,3 +237,21 @@ type EditReleaseForm struct {
 func (f *EditReleaseForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
 	return validate(errs, ctx.Data, f, ctx.Locale)
 }
+
+//  __      __.__ __   .__
+// /  \    /  \__|  | _|__|
+// \   \/\/   /  |  |/ /  |
+//  \        /|  |    <|  |
+//   \__/\  / |__|__|_ \__|
+//        \/          \/
+
+type NewWikiForm struct {
+	Title   string `binding:"Required"`
+	Content string
+	Message string
+}
+
+// FIXME: use code generation to generate this method.
+func (f *NewWikiForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
+	return validate(errs, ctx.Data, f, ctx.Locale)
+}

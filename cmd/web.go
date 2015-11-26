@@ -536,7 +536,8 @@ func runWeb(ctx *cli.Context) {
 			m.Get("/?:page", repo.Wiki)
 
 			m.Group("", func() {
-				m.Get("/_new", repo.NewWiki)
+				m.Combo("/_new").Get(repo.NewWiki).
+					Post(bindIgnErr(auth.NewWikiForm{}), repo.NewWikiPost)
 				m.Get("/:page/_edit", repo.EditWiki)
 			}, reqSignIn)
 		}, middleware.RepoRef())
