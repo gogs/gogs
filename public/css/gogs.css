@@ -1758,6 +1758,11 @@ footer .container .links > *:first-child {
   line-height: 10px;
   white-space: nowrap;
 }
+.repository .navbar .ui.label {
+  margin-top: -2px;
+  margin-left: 7px;
+  padding: 3px 5px;
+}
 .repository .owner.dropdown {
   min-width: 40% !important;
 }
@@ -2512,6 +2517,19 @@ footer .container .links > *:first-child {
 }
 .repository.forks .list .item .link {
   padding-top: 5px;
+}
+.repository.wiki.start .ui.segment {
+  padding-top: 70px;
+  padding-bottom: 100px;
+}
+.repository.wiki.start .ui.segment .mega-octicon {
+  font-size: 48px;
+}
+.repository.wiki.new .CodeMirror .CodeMirror-code .cm-comment {
+  background: inherit;
+}
+.repository.wiki.new .editor-preview {
+  background-color: white;
 }
 .repository.settings.collaboration .collaborator.list {
   padding: 0;

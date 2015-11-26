@@ -470,7 +470,7 @@ func runWeb(ctx *cli.Context) {
 		}, func(ctx *middleware.Context) {
 			ctx.Data["PageIsSettings"] = true
 		})
-	}, reqSignIn, middleware.RepoAssignment(true), reqRepoAdmin, middleware.RepoRef())
+	}, reqSignIn, middleware.RepoAssignment(), reqRepoAdmin, middleware.RepoRef())
 
 	m.Group("/:username/:reponame", func() {
 		m.Get("/action/:action", repo.Action)
@@ -516,7 +516,7 @@ func runWeb(ctx *cli.Context) {
 
 		m.Combo("/compare/*").Get(repo.CompareAndPullRequest).
 			Post(bindIgnErr(auth.CreateIssueForm{}), repo.CompareAndPullRequestPost)
-	}, reqSignIn, middleware.RepoAssignment(true))
+	}, reqSignIn, middleware.RepoAssignment())
 
 	m.Group("/:username/:reponame", func() {
 		m.Group("", func() {
@@ -530,7 +530,17 @@ func runWeb(ctx *cli.Context) {
 			})
 		m.Get("/^:type(issues|pulls)$/:index", repo.ViewIssue)
 
-		m.Get("/branches", repo.Branches)
+		// m.Get("/branches", repo.Branches)
+
+		m.Group("/wiki", func() {
+			m.Get("/?:page", repo.Wiki)
+
+			m.Group("", func() {
+				m.Get("/_new", repo.NewWiki)
+				m.Get("/:page/_edit", repo.EditWiki)
+			}, reqSignIn)
+		}, middleware.RepoRef())
+
 		m.Get("/archive/*", repo.Download)
 
 		m.Group("/pulls/:index", func() {
@@ -550,13 +560,13 @@ func runWeb(ctx *cli.Context) {
 		}, middleware.RepoRef())
 
 		m.Get("/compare/:before([a-z0-9]{40})...:after([a-z0-9]{40})", repo.CompareDiff)
-	}, ignSignIn, middleware.RepoAssignment(true))
+	}, ignSignIn, middleware.RepoAssignment())
 
 	m.Group("/:username", func() {
 		m.Group("/:reponame", func() {
 			m.Get("", repo.Home)
 			m.Get("\\.git$", repo.Home)
-		}, ignSignIn, middleware.RepoAssignment(true, true), middleware.RepoRef())
+		}, ignSignIn, middleware.RepoAssignment(true), middleware.RepoRef())
 
 		m.Group("/:reponame", func() {
 			m.Any("/*", ignSignInAndCsrf, repo.HTTP)

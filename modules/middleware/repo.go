@@ -223,7 +223,7 @@ func RetrieveBaseRepo(ctx *Context, repo *models.Repository) {
 	}
 }
 
-func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
+func RepoAssignment(args ...bool) macaron.Handler {
 	return func(ctx *Context) {
 		var (
 			displayBare bool // To display bare page if it is a bare repo.

@@ -445,6 +445,53 @@ function initRepository() {
     }
 }
 
+function initWiki() {
+    if ($('.repository.wiki').length == 0) {
+        return;
+    }
+
+
+    if ($('.repository.wiki.new').length > 0) {
+        var $edit_area = $('#edit-area');
+        var simplemde = new SimpleMDE({
+            autoDownloadFontAwesome: false,
+            element: $edit_area[0],
+            previewRender: function (plainText, preview) { // Async method
+                setTimeout(function () {
+                    if ($('.editor-preview-active').length == 0) {
+                        return;
+                    }
+
+                    $.post($edit_area.data('url'), {
+                            "_csrf": csrf,
+                            "mode": "gfm",
+                            "context": $edit_area.data('context'),
+                            "text": plainText
+                        },
+                        function (data) {
+                            preview.innerHTML = '<div class="markdown">' + data + '</div>';
+                            emojify.run($('.editor-preview')[0]);
+                        }
+                    );
+                }, 0);
+
+                return "Loading...";
+            },
+            renderingConfig: {
+                singleLineBreaks: false
+            },
+            spellChecker: false,
+            tabSize: 4,
+            toolbar: ["bold", "italic", "strikethrough", "|",
+                "heading", "heading-1", "heading-2", "heading-3", "|",
+                "code", "quote", "|",
+                "unordered-list", "ordered-list", "|",
+                "link", "image", "horizontal-rule", "|",
+                "preview", "fullscreen"]
+        })
+    }
+}
+
 function initOrganization() {
     if ($('.organization').length == 0) {
         return;
@@ -835,6 +882,7 @@ $(document).ready(function () {
     initCommentForm();
     initInstall();
     initRepository();
+    initWiki();
     initOrganization();
     initUser();
     initWebhook();

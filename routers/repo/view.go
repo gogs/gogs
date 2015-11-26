@@ -29,6 +29,7 @@ const (
 
 func Home(ctx *middleware.Context) {
 	ctx.Data["Title"] = ctx.Repo.Repository.Name
+	ctx.Data["PageIsViewCode"] = true
 	ctx.Data["RequireHighlightJS"] = true
 
 	branchName := ctx.Repo.BranchName
@@ -51,8 +52,6 @@ func Home(ctx *middleware.Context) {
 
 		treeLink += "/" + treename
 	}
-
-	ctx.Data["IsRepoToolbarSource"] = true
 
 	isViewBranch := ctx.Repo.IsBranch
 	ctx.Data["IsViewBranch"] = isViewBranch
