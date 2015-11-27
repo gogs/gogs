@@ -6,17 +6,70 @@ package models
 
 import (
 	"fmt"
+	"io/ioutil"
+	"path"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/Unknwon/com"
 
 	"github.com/gogits/git-shell"
+
+	"github.com/gogits/gogs/modules/setting"
 )
 
-// ToWikiPageName formats a string to corresponding wiki URL name.
-func ToWikiPageName(name string) string {
+// workingPool represents a pool of working status which makes sure
+// that only one instance of same task is performing at a time.
+// However, different type of tasks can performing at the same time.
+type workingPool struct {
+	lock  sync.Mutex
+	pool  map[string]*sync.Mutex
+	count map[string]int
+}
+
+// CheckIn checks in a task and waits if others are running.
+func (p *workingPool) CheckIn(name string) {
+	p.lock.Lock()
+
+	lock, has := p.pool[name]
+	if !has {
+		lock = &sync.Mutex{}
+		p.pool[name] = lock
+	}
+	p.count[name]++
+
+	p.lock.Unlock()
+	lock.Lock()
+}
+
+// CheckOut checks out a task to let other tasks run.
+func (p *workingPool) CheckOut(name string) {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+
+	p.pool[name].Unlock()
+	if p.count[name] == 1 {
+		delete(p.pool, name)
+		delete(p.count, name)
+	} else {
+		p.count[name]--
+	}
+}
+
+var wikiWorkingPool = &workingPool{
+	pool:  make(map[string]*sync.Mutex),
+	count: make(map[string]int),
+}
+
+// ToWikiPageURL formats a string to corresponding wiki URL name.
+func ToWikiPageURL(name string) string {
 	return strings.Replace(name, " ", "-", -1)
+}
+
+// ToWikiPageName formats a URL back to corresponding wiki page name.
+func ToWikiPageName(name string) string {
+	return strings.Replace(name, "-", " ", -1)
 }
 
 // WikiPath returns wiki data path by given user and repository name.
@@ -46,10 +99,55 @@ func (repo *Repository) InitWiki() error {
 	return nil
 }
 
+func (repo *Repository) LocalWikiPath() string {
+	return path.Join(setting.AppDataPath, "tmp/local-wiki", com.ToStr(repo.ID))
+}
+
+// UpdateLocalWiki makes sure the local copy of repository wiki is up-to-date.
+func (repo *Repository) UpdateLocalWiki() error {
+	return updateLocalCopy(repo.WikiPath(), repo.LocalWikiPath())
+}
+
 // AddWikiPage adds new page to repository wiki.
-func (repo *Repository) AddWikiPage(title, content, message string) (err error) {
+func (repo *Repository) AddWikiPage(doer *User, title, content, message string) (err error) {
+	wikiWorkingPool.CheckIn(com.ToStr(repo.ID))
+	defer wikiWorkingPool.CheckOut(com.ToStr(repo.ID))
+
 	if err = repo.InitWiki(); err != nil {
 		return fmt.Errorf("InitWiki: %v", err)
+	}
+
+	localPath := repo.LocalWikiPath()
+
+	// Discard local commits make sure even to remote when local copy exists.
+	if com.IsExist(localPath) {
+		// No need to check if nothing in the repository.
+		if git.IsBranchExist(localPath, "master") {
+			if err = git.Reset(localPath, true, "origin/master"); err != nil {
+				return fmt.Errorf("Reset: %v", err)
+			}
+		}
+	}
+
+	if err = repo.UpdateLocalWiki(); err != nil {
+		return fmt.Errorf("UpdateLocalWiki: %v", err)
+	}
+
+	title = strings.Replace(title, "/", " ", -1)
+	filename := path.Join(localPath, title+".md")
+	if err = ioutil.WriteFile(filename, []byte(content), 0666); err != nil {
+		return fmt.Errorf("WriteFile: %v", err)
+	}
+
+	if len(message) == 0 {
+		message = "Update page '" + title + "'"
+	}
+	if err = git.AddChanges(localPath, true); err != nil {
+		return fmt.Errorf("AddChanges: %v", err)
+	} else if err = git.CommitChanges(localPath, message, doer.NewGitSig()); err != nil {
+		return fmt.Errorf("CommitChanges: %v", err)
+	} else if err = git.Push(localPath, "origin", "master"); err != nil {
+		return fmt.Errorf("Push: %v", err)
 	}
 
 	return nil

@@ -51,6 +51,10 @@ func IsReleaseExist(repoID int64, tagName string) (bool, error) {
 	return x.Get(&Release{RepoID: repoID, LowerTagName: strings.ToLower(tagName)})
 }
 
+func init() {
+	git.GetVersion()
+}
+
 func createTag(gitRepo *git.Repository, rel *Release) error {
 	// Only actual create when publish.
 	if !rel.IsDraft {

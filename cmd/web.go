@@ -534,6 +534,7 @@ func runWeb(ctx *cli.Context) {
 
 		m.Group("/wiki", func() {
 			m.Get("/?:page", repo.Wiki)
+			m.Get("/_list", repo.WikiList)
 
 			m.Group("", func() {
 				m.Combo("/_new").Get(repo.NewWiki).

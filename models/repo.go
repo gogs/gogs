@@ -31,7 +31,6 @@ import (
 
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/bindata"
-	oldgit "github.com/gogits/gogs/modules/git"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/process"
 	"github.com/gogits/gogs/modules/setting"
@@ -317,25 +316,22 @@ func (repo *Repository) LocalCopyPath() string {
 	return path.Join(setting.AppDataPath, "tmp/local", com.ToStr(repo.ID))
 }
 
-// UpdateLocalCopy makes sure the local copy of repository is up-to-date.
-func (repo *Repository) UpdateLocalCopy() error {
-	repoPath := repo.RepoPath()
-	localPath := repo.LocalCopyPath()
+func updateLocalCopy(repoPath, localPath string) error {
 	if !com.IsExist(localPath) {
-		_, stderr, err := process.Exec(
-			fmt.Sprintf("UpdateLocalCopy(git clone): %s", repoPath), "git", "clone", repoPath, localPath)
-		if err != nil {
-			return fmt.Errorf("git clone: %v - %s", err, stderr)
+		if err := git.Clone(repoPath, localPath); err != nil {
+			return fmt.Errorf("Clone: %v", err)
 		}
 	} else {
-		_, stderr, err := process.ExecDir(-1, localPath,
-			fmt.Sprintf("UpdateLocalCopy(git pull --all): %s", repoPath), "git", "pull", "--all")
-		if err != nil {
-			return fmt.Errorf("git pull: %v - %s", err, stderr)
+		if err := git.Pull(localPath, true); err != nil {
+			return fmt.Errorf("Pull: %v", err)
 		}
 	}
-
 	return nil
+}
+
+// UpdateLocalCopy makes sure the local copy of repository is up-to-date.
+func (repo *Repository) UpdateLocalCopy() error {
+	return updateLocalCopy(repo.RepoPath(), repo.LocalCopyPath())
 }
 
 // PatchPath returns corresponding patch file path of repository by given issue ID.
@@ -471,6 +467,11 @@ func UpdateMirror(m *Mirror) error {
 	return updateMirror(x, m)
 }
 
+func createUpdateHook(repoPath string) error {
+	return git.SetUpdateHook(repoPath,
+		fmt.Sprintf(_TPL_UPDATE_HOOK, setting.ScriptType, "\""+setting.AppPath+"\"", setting.CustomConf))
+}
+
 // MirrorRepository creates a mirror repository from source.
 func MirrorRepository(repoId int64, userName, repoName, repoPath, url string) error {
 	_, stderr, err := process.ExecTimeout(10*time.Minute,
@@ -568,20 +569,26 @@ func MigrateRepository(u *User, opts MigrateRepoOptions) (*Repository, error) {
 		}
 	}
 
-	// Check if repository has master branch, if so set it to default branch.
-	gitRepo, err := oldgit.OpenRepository(repoPath)
+	// Try to get HEAD branch and set it as default branch.
+	gitRepo, err := git.OpenRepository(repoPath)
 	if err != nil {
-		return repo, fmt.Errorf("open git repository: %v", err)
+		log.Error(4, "OpenRepository: %v", err)
+		return repo, nil
 	}
-	if gitRepo.IsBranchExist("master") {
-		repo.DefaultBranch = "master"
+	headBranch, err := gitRepo.GetHEADBranch()
+	if err != nil {
+		log.Error(4, "GetHEADBranch: %v", err)
+		return repo, nil
+	}
+	if headBranch != nil {
+		repo.DefaultBranch = headBranch.Name
 	}
 
 	return repo, UpdateRepository(repo, false)
 }
 
 // initRepoCommit temporarily changes with work directory.
-func initRepoCommit(tmpPath string, sig *oldgit.Signature) (err error) {
+func initRepoCommit(tmpPath string, sig *git.Signature) (err error) {
 	var stderr string
 	if _, stderr, err = process.ExecDir(-1,
 		tmpPath, fmt.Sprintf("initRepoCommit (git add): %s", tmpPath),
@@ -602,13 +609,6 @@ func initRepoCommit(tmpPath string, sig *oldgit.Signature) (err error) {
 		return fmt.Errorf("git push: %s", stderr)
 	}
 	return nil
-}
-
-func createUpdateHook(repoPath string) error {
-	hookPath := path.Join(repoPath, "hooks/update")
-	os.MkdirAll(path.Dir(hookPath), os.ModePerm)
-	return ioutil.WriteFile(hookPath,
-		[]byte(fmt.Sprintf(_TPL_UPDATE_HOOK, setting.ScriptType, "\""+setting.AppPath+"\"", setting.CustomConf)), 0777)
 }
 
 type CreateRepoOptions struct {
@@ -699,22 +699,17 @@ func prepareRepoCommit(repo *Repository, tmpDir, repoPath string, opts CreateRep
 }
 
 // InitRepository initializes README and .gitignore if needed.
-func initRepository(e Engine, repoPath string, u *User, repo *Repository, opts CreateRepoOptions) error {
+func initRepository(e Engine, repoPath string, u *User, repo *Repository, opts CreateRepoOptions) (err error) {
 	// Somehow the directory could exist.
 	if com.IsExist(repoPath) {
 		return fmt.Errorf("initRepository: path already exists: %s", repoPath)
 	}
 
 	// Init bare new repository.
-	os.MkdirAll(repoPath, os.ModePerm)
-	_, stderr, err := process.ExecDir(-1, repoPath,
-		fmt.Sprintf("initRepository (git init --bare): %s", repoPath), "git", "init", "--bare")
-	if err != nil {
-		return fmt.Errorf("git init --bare: %v - %s", err, stderr)
-	}
-
-	if err := createUpdateHook(repoPath); err != nil {
-		return err
+	if err = git.InitRepository(repoPath, true); err != nil {
+		return fmt.Errorf("InitRepository: %v", err)
+	} else if err = createUpdateHook(repoPath); err != nil {
+		return fmt.Errorf("createUpdateHook: %v", err)
 	}
 
 	tmpDir := filepath.Join(os.TempDir(), "gogs-"+repo.Name+"-"+com.ToStr(time.Now().Nanosecond()))
