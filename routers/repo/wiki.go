@@ -7,6 +7,7 @@ package repo
 import (
 	"io/ioutil"
 	"strings"
+	"time"
 
 	"github.com/gogits/git-shell"
 
@@ -20,11 +21,13 @@ const (
 	WIKI_START base.TplName = "repo/wiki/start"
 	WIKI_VIEW  base.TplName = "repo/wiki/view"
 	WIKI_NEW   base.TplName = "repo/wiki/new"
+	WIKI_PAGES base.TplName = "repo/wiki/pages"
 )
 
 type PageMeta struct {
-	Name string
-	URL  string
+	Name    string
+	URL     string
+	Updated time.Time
 }
 
 func renderWikiPage(ctx *middleware.Context, isViewPage bool) (*git.Repository, string) {
@@ -46,12 +49,14 @@ func renderWikiPage(ctx *middleware.Context, isViewPage bool) (*git.Repository, 
 			ctx.Handle(500, "ListEntries", err)
 			return nil, ""
 		}
-		pages := make([]PageMeta, len(entries))
+		pages := make([]PageMeta, 0, len(entries))
 		for i := range entries {
-			name := strings.TrimSuffix(entries[i].Name(), ".md")
-			pages[i] = PageMeta{
-				Name: name,
-				URL:  models.ToWikiPageURL(name),
+			if entries[i].Type == git.OBJECT_BLOB {
+				name := strings.TrimSuffix(entries[i].Name(), ".md")
+				pages = append(pages, PageMeta{
+					Name: name,
+					URL:  models.ToWikiPageURL(name),
+				})
 			}
 		}
 		ctx.Data["Pages"] = pages
@@ -123,7 +128,49 @@ func Wiki(ctx *middleware.Context) {
 }
 
 func WikiPages(ctx *middleware.Context) {
+	ctx.Data["Title"] = ctx.Tr("repo.wiki.pages")
+	ctx.Data["PageIsWiki"] = true
 
+	if !ctx.Repo.Repository.HasWiki() {
+		ctx.Redirect(ctx.Repo.RepoLink + "/wiki")
+		return
+	}
+
+	wikiRepo, err := git.OpenRepository(ctx.Repo.Repository.WikiPath())
+	if err != nil {
+		ctx.Handle(500, "OpenRepository", err)
+		return
+	}
+	commit, err := wikiRepo.GetCommitOfBranch("master")
+	if err != nil {
+		ctx.Handle(500, "GetCommitOfBranch", err)
+		return
+	}
+
+	entries, err := commit.ListEntries()
+	if err != nil {
+		ctx.Handle(500, "ListEntries", err)
+		return
+	}
+	pages := make([]PageMeta, 0, len(entries))
+	for i := range entries {
+		if entries[i].Type == git.OBJECT_BLOB {
+			c, err := wikiRepo.GetCommitByPath(entries[i].Name())
+			if err != nil {
+				ctx.Handle(500, "GetCommit", err)
+				return
+			}
+			name := strings.TrimSuffix(entries[i].Name(), ".md")
+			pages = append(pages, PageMeta{
+				Name:    name,
+				URL:     models.ToWikiPageURL(name),
+				Updated: c.Author.When,
+			})
+		}
+	}
+	ctx.Data["Pages"] = pages
+
+	ctx.HTML(200, WIKI_PAGES)
 }
 
 func NewWiki(ctx *middleware.Context) {
