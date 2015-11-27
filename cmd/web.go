@@ -378,6 +378,7 @@ func runWeb(ctx *cli.Context) {
 	}
 
 	reqRepoAdmin := middleware.RequireRepoAdmin()
+	reqRepoPusher := middleware.RequireRepoPusher()
 
 	// ***** START: Organization *****
 	m.Group("/org", func() {
@@ -534,13 +535,14 @@ func runWeb(ctx *cli.Context) {
 
 		m.Group("/wiki", func() {
 			m.Get("/?:page", repo.Wiki)
-			m.Get("/_list", repo.WikiList)
+			m.Get("/_pages", repo.WikiPages)
 
 			m.Group("", func() {
 				m.Combo("/_new").Get(repo.NewWiki).
 					Post(bindIgnErr(auth.NewWikiForm{}), repo.NewWikiPost)
-				m.Get("/:page/_edit", repo.EditWiki)
-			}, reqSignIn)
+				m.Combo("/:page/_edit").Get(repo.EditWiki).
+					Post(bindIgnErr(auth.NewWikiForm{}), repo.EditWikiPost)
+			}, reqSignIn, reqRepoPusher)
 		}, middleware.RepoRef())
 
 		m.Get("/archive/*", repo.Download)

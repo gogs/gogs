@@ -6,7 +6,6 @@ package middleware
 
 import (
 	"fmt"
-	"net/url"
 	"path"
 	"strings"
 
@@ -225,6 +224,8 @@ func RetrieveBaseRepo(ctx *Context, repo *models.Repository) {
 
 func RepoAssignment(args ...bool) macaron.Handler {
 	return func(ctx *Context) {
+		ctx.Repo = &RepoContext{}
+
 		var (
 			displayBare bool // To display bare page if it is a bare repo.
 		)
@@ -335,6 +336,7 @@ func RepoAssignment(args ...bool) macaron.Handler {
 		ctx.Data["Owner"] = ctx.Repo.Repository.Owner
 		ctx.Data["IsRepositoryOwner"] = ctx.Repo.IsOwner()
 		ctx.Data["IsRepositoryAdmin"] = ctx.Repo.IsAdmin()
+		ctx.Data["IsRepositoryPusher"] = ctx.Repo.IsPusher()
 
 		ctx.Data["DisableSSH"] = setting.DisableSSH
 		ctx.Repo.CloneLink, err = repo.CloneLink()
@@ -397,11 +399,15 @@ func RepoAssignment(args ...bool) macaron.Handler {
 func RequireRepoAdmin() macaron.Handler {
 	return func(ctx *Context) {
 		if !ctx.Repo.IsAdmin() {
-			if !ctx.IsSigned {
-				ctx.SetCookie("redirect_to", "/"+url.QueryEscape(setting.AppSubUrl+ctx.Req.RequestURI), 0, setting.AppSubUrl)
-				ctx.Redirect(setting.AppSubUrl + "/user/login")
-				return
-			}
+			ctx.Handle(404, ctx.Req.RequestURI, nil)
+			return
+		}
+	}
+}
+
+func RequireRepoPusher() macaron.Handler {
+	return func(ctx *Context) {
+		if !ctx.Repo.IsPusher() {
 			ctx.Handle(404, ctx.Req.RequestURI, nil)
 			return
 		}
