@@ -231,6 +231,11 @@ function initRepository() {
         });
     }
 
+    // Wiki
+    if ($('.repository.wiki.view').length > 0) {
+        initFilterSearchDropdown('.choose.page .dropdown');
+    }
+
     // Options
     if ($('.repository.settings.options').length > 0) {
         $('#repo_name').keyup(function () {
@@ -314,23 +319,23 @@ function initRepository() {
         $('#edit-title').click(editTitleToggle);
         $('#cancel-edit-title').click(editTitleToggle);
         $('#save-edit-title').click(editTitleToggle).
-        click(function () {
-            if ($edit_input.val().length == 0 ||
-                $edit_input.val() == $issue_title.text()) {
-                $edit_input.val($issue_title.text());
-                return false;
-            }
+            click(function () {
+                if ($edit_input.val().length == 0 ||
+                    $edit_input.val() == $issue_title.text()) {
+                    $edit_input.val($issue_title.text());
+                    return false;
+                }
 
-            $.post($(this).data('update-url'), {
-                    "_csrf": csrf,
-                    "title": $edit_input.val()
-                },
-                function (data) {
-                    $edit_input.val(data.title);
-                    $issue_title.text(data.title);
-                });
-            return false;
-        });
+                $.post($(this).data('update-url'), {
+                        "_csrf": csrf,
+                        "title": $edit_input.val()
+                    },
+                    function (data) {
+                        $edit_input.val(data.title);
+                        $issue_title.text(data.title);
+                    });
+                return false;
+            });
 
         // Edit issue or comment content
         $('.edit-content').click(function () {
@@ -729,9 +734,9 @@ $(document).ready(function () {
     // Show exact time
     $('.time-since').each(function () {
         $(this).addClass('poping up').
-        attr('data-content', $(this).attr('title')).
-        attr('data-variation', 'inverted tiny').
-        attr('title', '');
+            attr('data-content', $(this).attr('title')).
+            attr('data-variation', 'inverted tiny').
+            attr('title', '');
     });
 
     // Semantic UI modules.

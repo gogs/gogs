@@ -252,7 +252,7 @@ func (pr *PullRequest) testPatch() (err error) {
 
 	// Checkout base branch.
 	_, stderr, err := process.ExecDir(-1, pr.BaseRepo.LocalCopyPath(),
-		fmt.Sprintf("PullRequest.Merge(git checkout): %s", pr.BaseRepo.ID),
+		fmt.Sprintf("PullRequest.Merge(git checkout): %v", pr.BaseRepo.ID),
 		"git", "checkout", pr.BaseBranch)
 	if err != nil {
 		return fmt.Errorf("git checkout: %s", stderr)
