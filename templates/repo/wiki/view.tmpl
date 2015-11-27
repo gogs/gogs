@@ -1,0 +1,18 @@
+{{template "base/head" .}}
+<div class="repository wiki view">
+	{{template "repo/header" .}}
+  <div class="ui container">
+    {{template "repo/sidebar" .}}
+    <div class="ui dividing header">
+      {{.Title}}
+      <div class="ui sub header">
+      	{{$timeSince := TimeSince .Author.When $.Lang}}
+      	{{.i18n.Tr "repo.wiki.last_commit_info" .Author.Name $timeSince | Safe}}
+      </div>
+    </div>
+		<div class="ui segment markdown">
+			{{.Content | Str2html}}
+		</div>
+	</div>
+</div>
+{{template "base/footer" .}}

@@ -970,6 +970,24 @@
 				background-color: white;
 			}
 		}
+
+		&.view {
+			.header:not(.sub) {
+				// padding-left: 30px;
+			}
+			.ui.sub.header {
+				text-transform: none;
+			}
+			.markdown {
+		    padding: 15px 30px;
+
+		    h1, h2, h3, h4, h5, h6 {
+		    	&:first-of-type {
+		    		margin-top: 0;
+		    	}
+		    }
+			}
+		}
 	}
 
 	&.settings {

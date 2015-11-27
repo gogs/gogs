@@ -247,7 +247,7 @@ func (f *EditReleaseForm) Validate(ctx *macaron.Context, errs binding.Errors) bi
 
 type NewWikiForm struct {
 	Title   string `binding:"Required"`
-	Content string
+	Content string `binding:"Required"`
 	Message string
 }
 
