@@ -7,6 +7,7 @@ package models
 import (
 	"fmt"
 	"io/ioutil"
+	"os"
 	"path"
 	"path/filepath"
 	"strings"
@@ -108,8 +109,8 @@ func (repo *Repository) UpdateLocalWiki() error {
 	return updateLocalCopy(repo.WikiPath(), repo.LocalWikiPath())
 }
 
-// AddWikiPage adds new page to repository wiki.
-func (repo *Repository) AddWikiPage(doer *User, title, content, message string) (err error) {
+// updateWikiPage adds new page to repository wiki.
+func (repo *Repository) updateWikiPage(doer *User, oldTitle, title, content, message string, isNew bool) (err error) {
 	wikiWorkingPool.CheckIn(com.ToStr(repo.ID))
 	defer wikiWorkingPool.CheckOut(com.ToStr(repo.ID))
 
@@ -133,8 +134,18 @@ func (repo *Repository) AddWikiPage(doer *User, title, content, message string) 
 		return fmt.Errorf("UpdateLocalWiki: %v", err)
 	}
 
-	title = strings.Replace(title, "/", " ", -1)
+	title = ToWikiPageName(strings.Replace(title, "/", " ", -1))
 	filename := path.Join(localPath, title+".md")
+
+	// If not a new file, show perform update not create.
+	if isNew {
+		if com.IsExist(filename) {
+			return ErrWikiAlreadyExist{filename}
+		}
+	} else {
+		os.Remove(path.Join(localPath, oldTitle+".md"))
+	}
+
 	if err = ioutil.WriteFile(filename, []byte(content), 0666); err != nil {
 		return fmt.Errorf("WriteFile: %v", err)
 	}
@@ -151,4 +162,12 @@ func (repo *Repository) AddWikiPage(doer *User, title, content, message string) 
 	}
 
 	return nil
+}
+
+func (repo *Repository) AddWikiPage(doer *User, title, content, message string) error {
+	return repo.updateWikiPage(doer, "", title, content, message, true)
+}
+
+func (repo *Repository) EditWikiPage(doer *User, oldTitle, title, content, message string) error {
+	return repo.updateWikiPage(doer, oldTitle, title, content, message, false)
 }

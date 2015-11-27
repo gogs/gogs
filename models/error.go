@@ -107,6 +107,26 @@ func (err ErrUserHasOrgs) Error() string {
 	return fmt.Sprintf("user still has membership of organizations [uid: %d]", err.UID)
 }
 
+//  __      __.__ __   .__
+// /  \    /  \__|  | _|__|
+// \   \/\/   /  |  |/ /  |
+//  \        /|  |    <|  |
+//   \__/\  / |__|__|_ \__|
+//        \/          \/
+
+type ErrWikiAlreadyExist struct {
+	Title string
+}
+
+func IsErrWikiAlreadyExist(err error) bool {
+	_, ok := err.(ErrWikiAlreadyExist)
+	return ok
+}
+
+func (err ErrWikiAlreadyExist) Error() string {
+	return fmt.Sprintf("wiki page already exists [title: %s]", err.Title)
+}
+
 // __________     ___.   .__  .__          ____  __.
 // \______   \__ _\_ |__ |  | |__| ____   |    |/ _|____ ___.__.
 //  |     ___/  |  \ __ \|  | |  |/ ___\  |      <_/ __ <   |  |
