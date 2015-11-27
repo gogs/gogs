@@ -2531,6 +2531,20 @@ footer .container .links > *:first-child {
 .repository.wiki.new .editor-preview {
   background-color: white;
 }
+.repository.wiki.view .ui.sub.header {
+  text-transform: none;
+}
+.repository.wiki.view .markdown {
+  padding: 15px 30px;
+}
+.repository.wiki.view .markdown h1:first-of-type,
+.repository.wiki.view .markdown h2:first-of-type,
+.repository.wiki.view .markdown h3:first-of-type,
+.repository.wiki.view .markdown h4:first-of-type,
+.repository.wiki.view .markdown h5:first-of-type,
+.repository.wiki.view .markdown h6:first-of-type {
+  margin-top: 0;
+}
 .repository.settings.collaboration .collaborator.list {
   padding: 0;
 }
