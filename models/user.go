@@ -454,6 +454,9 @@ func CreateUser(u *User) (err error) {
 	u.EncodePasswd()
 
 	sess := x.NewSession()
+	if (u.Created != time.Time{}) {
+		sess.NoAutoTime()
+	}
 	defer sess.Close()
 	if err = sess.Begin(); err != nil {
 		return err
