@@ -60,10 +60,18 @@ func runDump(ctx *cli.Context) {
 	}
 
 	workDir, _ := setting.WorkDir()
-	z.AddFile("gogs-repo.zip", path.Join(workDir, "gogs-repo.zip"))
-	z.AddFile("gogs-db.sql", path.Join(workDir, "gogs-db.sql"))
-	z.AddDir("custom", path.Join(workDir, "custom"))
-	z.AddDir("log", path.Join(workDir, "log"))
+	if err := z.AddFile("gogs-repo.zip", path.Join(workDir, "gogs-repo.zip")); err !=nil {
+		log.Fatalf("Fail to include gogs-repo.zip: %v", err)
+	}
+	if err := z.AddFile("gogs-db.sql", path.Join(workDir, "gogs-db.sql")); err !=nil {
+		log.Fatalf("Fail to include gogs-db.sql: %v", err)
+	}
+	if err := z.AddDir("custom", path.Join(workDir, "custom")); err !=nil {
+		log.Fatalf("Fail to include custom: %v", err)
+	}
+	if err := z.AddDir("log", path.Join(workDir, "log")); err !=nil {
+		log.Fatalf("Fail to include log: %v", err)
+	}
 	// FIXME: SSH key file.
 	if err = z.Close(); err != nil {
 		os.Remove(fileName)
