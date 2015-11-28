@@ -316,7 +316,7 @@ func showOrgProfile(ctx *middleware.Context) {
 	org := ctx.Org.Organization
 	ctx.Data["Title"] = org.FullName
 
-	repos, err := models.GetRepositories(org.Id, ctx.IsSigned && org.IsOrgMember(ctx.User.Id))
+	repos, err := models.GetRepositories(org.Id, ctx.IsSigned && (ctx.User.IsAdmin || org.IsOrgMember(ctx.User.Id)))
 	if err != nil {
 		ctx.Handle(500, "GetRepositories", err)
 		return
