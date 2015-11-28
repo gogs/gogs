@@ -48,7 +48,12 @@ func HandleOrgAssignment(ctx *Context, args ...bool) {
 		return
 	}
 
-	if ctx.IsSigned {
+	// Admin has super access.
+	if ctx.IsSigned && ctx.User.IsAdmin {
+		ctx.Org.IsOwner = true
+		ctx.Org.IsMember = true
+		ctx.Org.IsAdminTeam = true
+	} else if ctx.IsSigned {
 		ctx.Org.IsOwner = org.IsOwnedBy(ctx.User.Id)
 		if ctx.Org.IsOwner {
 			ctx.Org.IsMember = true
@@ -68,6 +73,7 @@ func HandleOrgAssignment(ctx *Context, args ...bool) {
 		return
 	}
 	ctx.Data["IsOrganizationOwner"] = ctx.Org.IsOwner
+	ctx.Data["IsOrganizationMember"] = ctx.Org.IsMember
 
 	ctx.Org.OrgLink = setting.AppSubUrl + "/org/" + org.Name
 	ctx.Data["OrgLink"] = ctx.Org.OrgLink
