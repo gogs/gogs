@@ -93,5 +93,5 @@ func runDump(ctx *cli.Context) {
 
 	log.Printf("Removing tmp work dir: %s", TmpWorkDir)
 	os.RemoveAll(TmpWorkDir)
-	log.Println("Finish dumping!")
+	log.Printf("Finish dumping in file %s", fileName)
 }
