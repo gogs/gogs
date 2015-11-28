@@ -11,6 +11,8 @@ import (
 	"path"
 	"time"
 
+	"io/ioutil"
+
 	"github.com/Unknwon/cae/zip"
 	"github.com/codegangsta/cli"
 
@@ -38,16 +40,23 @@ func runDump(ctx *cli.Context) {
 	models.LoadConfigs()
 	models.SetEngine()
 
+	TmpWorkDir, err := ioutil.TempDir(os.TempDir(), "gogs-dump-")
+	if err != nil {
+		log.Fatalf("Fail to create tmp work directory: %v", err)
+	}
+	log.Printf("Creating tmp work dir: %s", TmpWorkDir)
+
+	reposDump := path.Join(TmpWorkDir, "gogs-repo.zip")
+	dbDump := path.Join(TmpWorkDir, "gogs-db.sql")
+
 	log.Printf("Dumping local repositories...%s", setting.RepoRootPath)
 	zip.Verbose = ctx.Bool("verbose")
-	defer os.Remove("gogs-repo.zip")
-	if err := zip.PackTo(setting.RepoRootPath, "gogs-repo.zip", true); err != nil {
+	if err := zip.PackTo(setting.RepoRootPath, reposDump, true); err != nil {
 		log.Fatalf("Fail to dump local repositories: %v", err)
 	}
 
 	log.Printf("Dumping database...")
-	defer os.Remove("gogs-db.sql")
-	if err := models.DumpDatabase("gogs-db.sql"); err != nil {
+	if err := models.DumpDatabase(dbDump); err != nil {
 		log.Fatalf("Fail to dump database: %v", err)
 	}
 
@@ -60,10 +69,10 @@ func runDump(ctx *cli.Context) {
 	}
 
 	workDir, _ := setting.WorkDir()
-	if err := z.AddFile("gogs-repo.zip", path.Join(workDir, "gogs-repo.zip")); err !=nil {
+	if err := z.AddFile("gogs-repo.zip", reposDump); err !=nil {
 		log.Fatalf("Fail to include gogs-repo.zip: %v", err)
 	}
-	if err := z.AddFile("gogs-db.sql", path.Join(workDir, "gogs-db.sql")); err !=nil {
+	if err := z.AddFile("gogs-db.sql", dbDump); err !=nil {
 		log.Fatalf("Fail to include gogs-db.sql: %v", err)
 	}
 	if err := z.AddDir("custom", path.Join(workDir, "custom")); err !=nil {
@@ -78,5 +87,7 @@ func runDump(ctx *cli.Context) {
 		log.Fatalf("Fail to save %s: %v", fileName, err)
 	}
 
+	log.Printf("Removing tmp work dir: %s", TmpWorkDir)
+	os.RemoveAll(TmpWorkDir)
 	log.Println("Finish dumping!")
 }
