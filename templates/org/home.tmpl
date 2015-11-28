@@ -24,7 +24,6 @@
 
   <div class="ui container">
     <div class="ui grid">
-      {{$isMember := .Org.IsOrgMember $.SignedUser.Id}}
       <div class="ui eleven wide column">
         {{if .IsOrganizationOwner}}
         <div class="text right">
@@ -38,13 +37,14 @@
       <div class="ui five wide column">
         <h4 class="ui top attached header">
           <strong>{{.i18n.Tr "org.people"}}</strong>
-          {{if $isMember}}
+          {{if .IsOrganizationMember}}
           <div class="ui right">
             <a class="text grey" href="{{.OrgLink}}/members"><strong>{{.Org.NumMembers}}</strong><span class="octicon octicon-chevron-right"></span></a>
           </div>
           {{end}}
         </h4>
         <div class="ui attached segment members">
+          {{$isMember := .IsOrganizationMember}}
           {{range .Members}}
             {{if or $isMember (.IsPublicMember $.Org.Id)}}
             <a href="{{.HomeLink}}" title="{{.Name}}"><img class="ui avatar" src="{{.AvatarLink}}"></a>
@@ -57,7 +57,7 @@
         </div>
         {{end}}
 
-        {{if $isMember}}
+        {{if .IsOrganizationMember}}
         <div class="ui top attached header">
           <strong>{{.i18n.Tr "org.teams"}}</strong>
           <div class="ui right">
