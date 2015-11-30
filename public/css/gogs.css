@@ -5,7 +5,9 @@
   font-style: normal;
 }
 .octicon,
-.mega-octicon {
+.mega-octicon,
+.icon.octicon,
+.icon.mega-octicon {
   font: normal normal normal 16px/1 octicons;
   display: inline-block;
   text-decoration: none;
