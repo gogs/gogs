@@ -1,28 +1,26 @@
 <table id="repo-files-table" class="ui table">
   <thead>
     <tr>
-      <th colspan="5" class="clear">
+      <th colspan="2">
         <span>
           {{if .LastCommitUser}}
           <img class="ui avatar image img-12" src="{{.LastCommitUser.AvatarLink}}" />
-          <a href="{{AppSubUrl}}/{{.LastCommitUser.Name}}"><strong>{{.LastCommit.Author.Name}}</strong></a>:
+          <a href="{{AppSubUrl}}/{{.LastCommitUser.Name}}"><strong>{{.LastCommit.Author.Name}}</strong></a>
           {{else}}
           <img class="ui avatar image img-12" src="{{AvatarLink .LastCommit.Author.Email}}" />
-          <strong>{{.LastCommit.Author.Name}}</strong>:
+          <strong>{{.LastCommit.Author.Name}}</strong>
           {{end}}
         </span>
-        <a class="text black" href="{{.RepoLink}}/commit/{{.LastCommit.ID}}" rel="nofollow">
-        <strong>{{ShortSha .LastCommit.ID.String}}</strong></a>
-        <span class="text truncate grey" id="last-commit-message">{{RenderCommitMessage .LastCommit.Summary .RepoLink}}</span>
-        <span class="ui right text grey age">{{TimeSince .LastCommit.Author.When $.Lang}}</span>
+        <a rel="nofollow" class="ui sha label" href="{{.RepoLink}}/commit/{{.LastCommit.ID}}" rel="nofollow">{{ShortSha .LastCommit.ID.String}}</a>
+        <span class="text truncate grey">{{RenderCommitMessage .LastCommit.Summary .RepoLink}}</span>
       </th>
+      <th class="text grey right age four wide">{{TimeSince .LastCommit.Author.When $.Lang}}</th>
     </tr>
   </thead>
   <tbody>
     {{if .HasParentPath}}
     <tr class="has-parent">
-      <td><span class="octicon octicon-mail-reply"></span></td>
-      <td><a href="{{EscapePound .BranchLink}}{{.ParentPath}}">..</a></td>
+      <td colspan="3"><i class="icon octicon octicon-mail-reply"></i><a href="{{EscapePound .BranchLink}}{{.ParentPath}}">..</a></td>
     </tr>
     {{end}}
     {{range $item := .Files}}
@@ -30,10 +28,8 @@
       {{$commit := index $item 1}}
       <tr>
         {{if $entry.IsSubModule}}
-        <td>
+        <td class="four wide">
           <span class="icon octicon octicon-file-submodule"></span>
-        </td>
-        <td>
           {{if $commit.RefUrl}}
           <a href="{{$commit.RefUrl}}" class="text truncate">{{$entry.Name}}</a> @ <a href="{{$commit.RefUrl}}/commit/{{$commit.RefId}}">{{ShortSha $commit.RefId}}</a>
           {{else}}
@@ -41,20 +37,16 @@
           {{end}}
         </td>
         {{else}}
-        <td>
+        <td class="name four wide">
           <span class="icon octicon octicon-file-{{if or $entry.IsDir}}directory{{else}}text{{end}}"></span>
-        </td>
-        <td class="name">
           <a href="{{EscapePound $.BranchLink}}/{{EscapePound $.TreePath}}{{EscapePound $entry.Name}}" class="text truncate">{{$entry.Name}}</a>
         </td>
         {{end}}
-        <td class="sha">
-          <a rel="nofollow" class="ui green sha label" href="{{AppSubUrl}}/{{$.Username}}/{{$.Reponame}}/commit/{{$commit.ID}} ">{{SubStr $commit.ID.String 0 10}} </a>
-        </td>
-        <td class="message">
+        <td class="message collapsing eight wide">
+          <a rel="nofollow" class="ui sha label" href="{{AppSubUrl}}/{{$.Username}}/{{$.Reponame}}/commit/{{$commit.ID}}">{{ShortSha $commit.ID.String}}</a>
           <span class="text truncate">{{RenderCommitMessage $commit.Summary $.RepoLink}}</span>
         </td>
-        <td class="text grey right age">{{TimeSince $commit.Committer.When $.Lang}}</td>
+        <td class="text grey right age four wide">{{TimeSince $commit.Committer.When $.Lang}}</td>
       </tr>
     {{end}}
   </tbody>

@@ -916,6 +916,16 @@ pre.raw {
 .ui.status.buttons .octicon {
   margin-right: 4px;
 }
+.ui .sha.label {
+  font-family: Consolas, Menlo, Monaco, "Lucida Console", monospace;
+  font-size: 13px;
+  padding: 6px 10px 4px 10px;
+  font-weight: normal;
+  margin: 0 6px;
+}
+.ui .white.label {
+  background-color: white;
+}
 .overflow.menu .items {
   max-height: 300px;
   overflow-y: auto;
@@ -1865,20 +1875,10 @@ footer .container .links > *:first-child {
   margin-bottom: 5px;
 }
 .repository.file.list #repo-files-table tbody .icon {
-  margin-left: 5px;
-}
-.repository.file.list #repo-files-table tbody .name {
-  max-width: 120px;
-}
-.repository.file.list #repo-files-table tbody .message {
-  max-width: 300px;
-}
-.repository.file.list #repo-files-table tbody .age {
-  min-width: 150px;
+  margin-right: 5px;
 }
 .repository.file.list #repo-files-table tbody .text.truncate {
-  margin-bottom: -5px;
-  max-width: 100%;
+  max-width: 88%;
 }
 .repository.file.list #repo-files-table td {
   padding-top: 8px;
@@ -2261,12 +2261,6 @@ footer .container .links > *:first-child {
 }
 .repository .commits.table .date {
   width: 120px;
-}
-.repository .sha.label {
-  font-family: Consolas, Menlo, Monaco, "Lucida Console", monospace;
-  font-size: 14px;
-  padding: 6px 10px 4px 10px;
-  font-weight: normal;
 }
 .repository .diff-detail-box {
   margin: 15px 0;
