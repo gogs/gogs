@@ -65,7 +65,10 @@ func handleServerConn(keyID string, chans <-chan ssh.NewChannel) {
 					cmdName := strings.TrimLeft(payload, "'()")
 					os.Setenv("SSH_ORIGINAL_COMMAND", cmdName)
 					log.Trace("Payload: %v", cmdName)
-					cmd := exec.Command(setting.AppPath, "serv", "key-"+keyID)
+
+					args := []string{"serv", "key-" + keyID, "--config=" + setting.CustomConf}
+					log.Trace("Arguments: %v", args)
+					cmd := exec.Command(setting.AppPath, args...)
 
 					stdout, err := cmd.StdoutPipe()
 					if err != nil {
@@ -153,6 +156,7 @@ func Listen(port int) {
 		if err != nil {
 			panic(fmt.Sprintf("Fail to generate private key: %v - %s", err, stderr))
 		}
+		log.Trace("New private key is generateed: %s", keyPath)
 	}
 
 	privateBytes, err := ioutil.ReadFile(keyPath)

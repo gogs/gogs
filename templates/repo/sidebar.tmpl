@@ -1,16 +1,16 @@
 {{if not .IsBareRepo}}
 <div class="ui {{if .IsRepositoryAdmin}}five{{else}}four{{end}} item menu">
   <a class="{{if .PageIsIssueList}}active{{end}} item" href="{{.RepoLink}}/issues">
-    <i class="icon octicon octicon-issue-opened"></i> {{.i18n.Tr "repo.issues"}} <span class="ui blue label">{{.Repository.NumOpenIssues}}</span>
+    <i class="icon octicon octicon-issue-opened"></i> {{.i18n.Tr "repo.issues"}} <span class="ui {{if eq 0 .Repository.NumOpenIssues}}gray{{else}}blue{{end}} label">{{.Repository.NumOpenIssues}}</span>
   </a>
   <a class="{{if .PageIsPullList}}active{{end}} item" href="{{.RepoLink}}/pulls">
-    <i class="icon octicon octicon-git-pull-request"></i> {{.i18n.Tr "repo.pulls"}} <span class="ui blue label">{{.Repository.NumOpenPulls}}</span>
+    <i class="icon octicon octicon-git-pull-request"></i> {{.i18n.Tr "repo.pulls"}} <span class="ui {{if eq 0 .Repository.NumOpenPulls}}gray{{else}}blue{{end}} label">{{.Repository.NumOpenPulls}}</span>
   </a>
   <a class="{{if .PageIsCommits}}active{{end}} item" href="{{.RepoLink}}/commits/{{EscapePound .BranchName}}">
-    <i class="icon octicon octicon-history"></i> {{.i18n.Tr "repo.commits"}} <span class="ui blue label">{{.CommitsCount}}</span>
+    <i class="icon octicon octicon-history"></i> {{.i18n.Tr "repo.commits"}} <span class="ui {{if eq 0 .CommitsCount}}gray{{else}}blue{{end}} label">{{.CommitsCount}}</span>
   </a>
   <a class="{{if .PageIsReleaseList}}active{{end}} item" href="{{.RepoLink}}/releases">
-    <i class="icon octicon octicon-tag"></i> {{.i18n.Tr "repo.releases"}} <span class="ui blue label">{{.Repository.NumTags}}</span>
+    <i class="icon octicon octicon-tag"></i> {{.i18n.Tr "repo.releases"}} <span class="ui {{if eq 0 .Repository.NumTags}}gray{{else}}blue{{end}} label">{{.Repository.NumTags}}</span>
   </a>
   {{if .IsRepositoryAdmin}}
   <a class="{{if .PageIsSettings}}active{{end}} item" href="{{.RepoLink}}/settings">
