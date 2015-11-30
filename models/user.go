@@ -21,6 +21,8 @@ import (
 	"strings"
 	"time"
 
+	"golang.org/x/crypto/bcrypt"
+
 	"github.com/Unknwon/com"
 	"github.com/go-xorm/xorm"
 	"github.com/nfnt/resize"
@@ -251,7 +253,13 @@ func (u *User) EncodePasswd() {
 func (u *User) ValidatePassword(passwd string) bool {
 	newUser := &User{Passwd: passwd, Salt: u.Salt}
 	newUser.EncodePasswd()
-	return u.Passwd == newUser.Passwd
+	if u.Passwd == newUser.Passwd {
+		return true
+	}
+	if setting.BCryptAuthFallback && bcrypt.CompareHashAndPassword([]byte(u.Passwd), []byte(passwd)) == nil {
+		return true
+	}
+	return false
 }
 
 // UploadAvatar saves custom avatar for user.
@@ -446,6 +454,9 @@ func CreateUser(u *User) (err error) {
 	u.EncodePasswd()
 
 	sess := x.NewSession()
+	if (u.Created != time.Time{}) {
+		sess.NoAutoTime()
+	}
 	defer sess.Close()
 	if err = sess.Begin(); err != nil {
 		return err
