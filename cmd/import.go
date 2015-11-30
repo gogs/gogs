@@ -30,6 +30,15 @@ This can be used to migrate from other service to Gogs.`,
 				stringFlag("token", "", "private authentication token"),
 			},
 		},
+		{
+			Name:   "redmine",
+			Usage:  "import from Redmine",
+			Action: importGitLab,
+			Flags: []cli.Flag{
+				stringFlag("url", "", "Redmine service base URL"),
+				stringFlag("token", "", "private authentication token"),
+			},
+		},
 	},
 	Flags: []cli.Flag{
 		stringFlag("config, c", "custom/conf/app.ini", "Custom configuration file path"),
@@ -58,6 +67,33 @@ func importGitLab(ctx *cli.Context) {
 	models.SetEngine()
 
 	if importer.ImportGitLab(baseUrl, token) == nil {
+		log.Println("Finished importing!")
+	} else {
+		log.Println("Import failed!")
+	}
+}
+
+func importRedmine(ctx *cli.Context) {
+	baseUrl, err := url.Parse(ctx.String("url"))
+	if err != nil {
+		log.Fatal("Required --url parameter is missing or not valid URL")
+	}
+	if len(baseUrl.Path) > 0 {
+		log.Fatal("Provided --url parameter must not contain path")
+	}
+	token := ctx.String("token")
+	if len(token) == 0 {
+		log.Fatal("Missing required --token parameter")
+	}
+
+	if ctx.IsSet("config") {
+		setting.CustomConf = ctx.String("config")
+	}
+	setting.NewContext()
+	models.LoadConfigs()
+	models.SetEngine()
+
+	if importer.ImportRedmine(baseUrl, token) == nil {
 		log.Println("Finished importing!")
 	} else {
 		log.Println("Import failed!")
