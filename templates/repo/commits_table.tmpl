@@ -19,9 +19,9 @@
   <table class="ui very basic striped commits table">
     <thead>
       <tr>
-        <th>{{.i18n.Tr "repo.commits.author"}}</th>
-        <th class="message"><span class="ui sha white label">&nbsp;&nbsp;&nbsp;SHA1&nbsp;&nbsp;&nbsp;</span> {{.i18n.Tr "repo.commits.message"}}</th>
-        <th>{{.i18n.Tr "repo.commits.date"}}</th>
+        <th class="four wide">{{.i18n.Tr "repo.commits.author"}}</th>
+        <th class="eight wide message"><span class="ui sha white label">&nbsp;&nbsp;&nbsp;SHA1&nbsp;&nbsp;&nbsp;</span> {{.i18n.Tr "repo.commits.message"}}</th>
+        <th class="four wide right aligned">{{.i18n.Tr "repo.commits.date"}}</th>
       </tr>
     </thead>
     <tbody>
@@ -39,7 +39,7 @@
           <a rel="nofollow" class="ui sha label" href="{{AppSubUrl}}/{{$.Username}}/{{$.Reponame}}/commit/{{.ID}}">{{ShortSha .ID.String}}</a>
           <span class="text truncate">{{RenderCommitMessage .Summary $.RepoLink}}</span>
         </td>
-        <td class="date">{{TimeSince .Author.When $.Lang}}</td>
+        <td class="grey text right aligned">{{TimeSince .Author.When $.Lang}}</td>
       </tr>
     {{end}}
     </tbody>

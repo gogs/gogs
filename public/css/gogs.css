@@ -1868,9 +1868,6 @@ footer .container .links > *:first-child {
   margin-bottom: -4px;
   width: 400px;
 }
-.repository.file.list #repo-files-table thead th .age {
-  margin-top: 2px;
-}
 .repository.file.list #repo-files-table thead .ui.avatar {
   margin-bottom: 5px;
 }
@@ -2242,25 +2239,6 @@ footer .container .links > *:first-child {
 .repository.commits .header .ui.right .search input {
   font-weight: normal;
   padding: 5px 10px;
-}
-.repository .commits.table {
-  font-size: 13px;
-}
-.repository .commits.table th:first-child,
-.repository .commits.table td:first-child {
-  padding-left: 15px;
-}
-.repository .commits.table td {
-  line-height: 15px;
-}
-.repository .commits.table .author {
-  min-width: 180px;
-}
-.repository .commits.table .message span {
-  max-width: 500px;
-}
-.repository .commits.table .date {
-  width: 120px;
 }
 .repository .diff-detail-box {
   margin: 15px 0;
