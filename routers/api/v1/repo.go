@@ -9,13 +9,14 @@ import (
 
 	"github.com/Unknwon/com"
 
-	api "github.com/gogits/go-gogs-client"
+	api "github.com/kiliit/go-gogs-client"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/middleware"
 	"github.com/gogits/gogs/modules/setting"
+	"github.com/gogits/gogs/modules/mailer"
 )
 
 // ToApiRepository converts repository to API format.
@@ -97,7 +98,7 @@ func SearchRepos(ctx *middleware.Context) {
 	})
 }
 
-// https://github.com/gogits/go-gogs-client/wiki/Repositories#list-your-repositories
+// https://github.com/kiliit/go-gogs-client/wiki/Repositories#list-your-repositories
 func ListMyRepos(ctx *middleware.Context) {
 	ownRepos, err := models.GetRepositories(ctx.User.Id, true)
 	if err != nil {
@@ -159,7 +160,7 @@ func createRepo(ctx *middleware.Context, owner *models.User, opt api.CreateRepoO
 	ctx.JSON(201, ToApiRepository(owner, repo, api.Permission{true, true, true}))
 }
 
-// https://github.com/gogits/go-gogs-client/wiki/Repositories#create
+// https://github.com/kiliit/go-gogs-client/wiki/Repositories#create
 func CreateRepo(ctx *middleware.Context, opt api.CreateRepoOption) {
 	// Shouldn't reach this condition, but just in case.
 	if ctx.User.IsOrganization() {
@@ -186,6 +187,87 @@ func CreateOrgRepo(ctx *middleware.Context, opt api.CreateRepoOption) {
 	}
 	createRepo(ctx, org, opt)
 }
+
+func ForkRepo(ctx *middleware.Context, opt api.ForkRepoOption) {
+	if opt.TargetUser != "" {
+		if ctx.User.Name == opt.TargetUser {
+			forkRepoTo(ctx, ctx.User, opt.Name, opt.Description)
+		} else {
+			if ctx.User.IsAdmin {
+				targetUser, err :=models.GetUserByName(opt.TargetUser)
+				if err != nil {
+					if models.IsErrUserNotExist(err) {
+						ctx.APIError(422, "", err)
+					} else {
+						ctx.APIError(500, "GetUserByName", err)
+					}
+					return
+				}
+				forkRepoTo(ctx, targetUser, opt.Name, opt.Description)
+			} else {
+				ctx.APIError(403, "", "You do not have access to " + opt.TargetUser + ".")
+				return
+			}
+		}
+	} else {
+		forkRepoTo(ctx, ctx.User, opt.Name, opt.Description)
+	}
+}
+
+func forkRepoTo(ctx *middleware.Context, targetUser *models.User, name string, description string) {
+	forkedRepo, err := models.ForkRepository(targetUser, ctx.Repo.Repository, name, description)
+	if err != nil {
+		if models.IsErrRepoAlreadyExist(err) ||
+		models.IsErrNameReserved(err) ||
+		models.IsErrNamePatternNotAllowed(err) {
+			ctx.APIError(422, "ForkRepository", err)
+		} else {
+			log.Error(4, "ForkRepository: %v", err)
+			if forkedRepo != nil {
+				if err = models.DeleteRepository(ctx.User.Id, forkedRepo.ID); err != nil {
+					log.Error(4, "DeleteRepository: %v", err)
+				}
+			}
+			ctx.Error(500)
+		}
+		return
+	}
+
+	ctx.JSON(201, ToApiRepository(ctx.User, forkedRepo, api.Permission{true, true, true}))
+}
+
+func AddCollaborator(ctx *middleware.Context, opt api.CollaboratorOption) {
+	u, err := models.GetUserByName(opt.UserName)
+	if err != nil {
+		if models.IsErrUserNotExist(err) {
+			ctx.APIError(422, "", err)
+		} else {
+			ctx.Handle(500, "GetUserByName", err)
+		}
+		return
+	}
+
+	// Check if user is organization member.
+	if ctx.Repo.Owner.IsOrganization() && ctx.Repo.Owner.IsOrgMember(u.Id) {
+		ctx.APIError(422, "", "User is organization member")
+		return
+	}
+
+	if err = ctx.Repo.Repository.AddCollaborator(u); err != nil {
+		ctx.Handle(500, "AddCollaborator", err)
+		return
+	}
+
+	if setting.Service.EnableNotifyMail {
+		if err = mailer.SendCollaboratorMail(ctx.Render, u, ctx.User, ctx.Repo.Repository); err != nil {
+			ctx.Handle(500, "SendCollaboratorMail", err)
+			return
+		}
+	}
+
+	ctx.Status(201)
+}
+
 
 func MigrateRepo(ctx *middleware.Context, form auth.MigrateRepoForm) {
 	ctxUser := ctx.User

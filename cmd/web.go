@@ -29,7 +29,7 @@ import (
 	"gopkg.in/ini.v1"
 	"gopkg.in/macaron.v1"
 
-	api "github.com/gogits/go-gogs-client"
+	api "github.com/kiliit/go-gogs-client"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
@@ -206,6 +206,8 @@ func runWeb(ctx *cli.Context) {
 
 			// Users.
 			m.Group("/users", func() {
+				m.Post("", bind(api.CreateUserOption{}), v1.CreateUser)
+
 				m.Get("/search", v1.SearchUsers)
 
 				m.Group("/:username", func() {
@@ -233,6 +235,7 @@ func runWeb(ctx *cli.Context) {
 					Delete(v1.DeleteRepo)
 
 				m.Group("/:username/:reponame", func() {
+
 					m.Combo("/hooks").Get(v1.ListRepoHooks).
 						Post(bind(api.CreateHookOption{}), v1.CreateRepoHook)
 					m.Patch("/hooks/:id:int", bind(api.EditHookOption{}), v1.EditRepoHook)
@@ -245,6 +248,22 @@ func runWeb(ctx *cli.Context) {
 						m.Combo("/:id").Get(v1.GetRepoDeployKey).
 							Delete(v1.DeleteRepoDeploykey)
 					})
+
+					m.Post("/forks",  bind(api.ForkRepoOption{}), v1.ForkRepo)
+
+					m.Combo("/collaboration").Post(bind(api.CollaboratorOption{}), v1.AddCollaborator)
+
+					m.Get("/commits/:commitid", middleware.RepoRef(), v1.CommitByID)
+					m.Get("/commits/head", middleware.RepoRef(), v1.HEADCommit)
+					m.Get("/commits/branch/*", middleware.RepoRef(), v1.ListCommits)
+
+					m.Get("/compare/:before([a-z0-9]{40})...:after([a-z0-9]{40})", middleware.RepoRef(), v1.DiffRange)
+
+					m.Group("/releases", func() {
+						m.Combo("").Get(v1.ListReleases).
+							Post(bindIgnErr(api.CreateReleaseOption{}), v1.CreateRelease)
+						m.Get("/:release", v1.ReleaseByName)
+					}, middleware.RepoRef())
 				}, middleware.ApiRepoAssignment())
 			}, middleware.ApiReqToken())
 

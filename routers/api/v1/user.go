@@ -7,7 +7,7 @@ package v1
 import (
 	"github.com/Unknwon/com"
 
-	api "github.com/gogits/go-gogs-client"
+	api "github.com/kiliit/go-gogs-client"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/middleware"
@@ -78,4 +78,38 @@ func GetUserInfo(ctx *middleware.Context) {
 		u.Email = ""
 	}
 	ctx.JSON(200, &api.User{u.Id, u.Name, u.FullName, u.Email, u.AvatarLink()})
+}
+
+// POST /users
+func CreateUser(ctx *middleware.Context, opt api.CreateUserOption) {
+	if !ctx.User.IsAdmin {
+		ctx.Error(403)
+		return
+	}
+
+	u := &models.User{
+		Name:      opt.Name,
+		Email:     opt.Email,
+		Passwd:    opt.Password,
+		IsActive:  true,
+		LoginType: models.PLAIN,
+	}
+
+	if err := models.CreateUser(u); err != nil {
+		switch {
+		case models.IsErrUserAlreadyExist(err):
+			ctx.APIError(409, "CreateUser", err)
+		case models.IsErrEmailAlreadyUsed(err):
+			ctx.APIError(409, "CreateUser", err)
+		case models.IsErrNameReserved(err):
+			ctx.APIError(409, "CreateUser", err)
+		case models.IsErrNamePatternNotAllowed(err):
+			ctx.APIError(409, "CreateUser", err)
+		default:
+			ctx.APIError(500, "CreateUser", err)
+		}
+		return
+	}
+
+	ctx.JSON(201, &api.User{u.Id, u.Name, u.FullName, u.Email, u.AvatarLink()})
 }
