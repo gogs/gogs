@@ -1857,40 +1857,16 @@ footer .container .links > *:first-child {
 .repository.file.list .head.meta li .ui.breadcrumb a {
   font-size: 16px;
 }
-.repository.file.list #repo-files-table .table.list {
-  width: 80% !important;
-}
 .repository.file.list #repo-files-table thead th {
   padding-top: 8px;
   padding-bottom: 5px;
   font-weight: normal;
 }
-.repository.file.list #repo-files-table thead th #last-commit-message {
-  margin-left: 5px;
-  margin-bottom: -4px;
-  width: 400px;
-}
-.repository.file.list #repo-files-table thead th .age {
-  margin-top: 2px;
-}
 .repository.file.list #repo-files-table thead .ui.avatar {
   margin-bottom: 5px;
 }
 .repository.file.list #repo-files-table tbody .icon {
-  margin-left: 5px;
-}
-.repository.file.list #repo-files-table tbody .name {
-  max-width: 120px;
-}
-.repository.file.list #repo-files-table tbody .message {
-  max-width: 300px;
-}
-.repository.file.list #repo-files-table tbody .age {
-  min-width: 150px;
-}
-.repository.file.list #repo-files-table tbody .text.truncate {
-  margin-bottom: -5px;
-  max-width: 100%;
+  margin-right: 5px;
 }
 .repository.file.list #repo-files-table td {
   padding-top: 8px;
@@ -2254,25 +2230,6 @@ footer .container .links > *:first-child {
 .repository.commits .header .ui.right .search input {
   font-weight: normal;
   padding: 5px 10px;
-}
-.repository .commits.table {
-  font-size: 13px;
-}
-.repository .commits.table th:first-child,
-.repository .commits.table td:first-child {
-  padding-left: 15px;
-}
-.repository .commits.table td {
-  line-height: 15px;
-}
-.repository .commits.table .author {
-  min-width: 180px;
-}
-.repository .commits.table .message span {
-  max-width: 500px;
-}
-.repository .commits.table .date {
-  width: 120px;
 }
 .repository .diff-detail-box {
   margin: 15px 0;
