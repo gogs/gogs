@@ -16,13 +16,12 @@
 
 {{if .Commits}}
 <div class="ui attached table segment">
-  <table class="ui very basic striped commits table">
+  <table class="ui very basic striped fixed single line">
     <thead>
       <tr>
-        <th>{{.i18n.Tr "repo.commits.author"}}</th>
-        <th>SHA1</th>
-        <th>{{.i18n.Tr "repo.commits.message"}}</th>
-        <th>{{.i18n.Tr "repo.commits.date"}}</th>
+        <th class="four wide">{{.i18n.Tr "repo.commits.author"}}</th>
+        <th class="nine wide message"><span class="ui sha label">&nbsp;&nbsp;&nbsp;SHA1&nbsp;&nbsp;&nbsp;</span> {{.i18n.Tr "repo.commits.message"}}</th>
+        <th class="three wide right aligned">{{.i18n.Tr "repo.commits.date"}}</th>
       </tr>
     </thead>
     <tbody>
@@ -36,9 +35,11 @@
           <img class="ui avatar image" src="{{AvatarLink .Author.Email}}" alt=""/>&nbsp;&nbsp;{{.Author.Name}}
           {{end}}
         </td>
-        <td class="sha"><a rel="nofollow" class="ui green sha label" href="{{AppSubUrl}}/{{$.Username}}/{{$.Reponame}}/commit/{{.ID}} ">{{SubStr .ID.String 0 10}} </a></td>
-        <td class="message"><span class="text truncate">{{RenderCommitMessage .Summary $.RepoLink}}</span></td>
-        <td class="date">{{TimeSince .Author.When $.Lang}}</td>
+        <td class="message">
+          <a rel="nofollow" class="ui green sha label" href="{{AppSubUrl}}/{{$.Username}}/{{$.Reponame}}/commit/{{.ID}}">{{ShortSha .ID.String}}</a>
+          {{RenderCommitMessage .Summary $.RepoLink}}
+        </td>
+        <td class="grey text right aligned">{{TimeSince .Author.When $.Lang}}</td>
       </tr>
     {{end}}
     </tbody>
