@@ -913,6 +913,13 @@ pre.raw {
 .ui .form .fake {
   display: none !important;
 }
+.ui .sha.label {
+  font-family: Consolas, Menlo, Monaco, "Lucida Console", monospace;
+  font-size: 14px;
+  padding: 6px 10px 4px 10px;
+  font-weight: normal;
+  margin: 0 6px;
+}
 .ui.status.buttons .octicon {
   margin-right: 4px;
 }
@@ -2266,12 +2273,6 @@ footer .container .links > *:first-child {
 }
 .repository .commits.table .date {
   width: 120px;
-}
-.repository .sha.label {
-  font-family: Consolas, Menlo, Monaco, "Lucida Console", monospace;
-  font-size: 14px;
-  padding: 6px 10px 4px 10px;
-  font-weight: normal;
 }
 .repository .diff-detail-box {
   margin: 15px 0;
