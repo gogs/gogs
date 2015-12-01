@@ -252,7 +252,7 @@ func (pr *PullRequest) testPatch() (err error) {
 
 	// Checkout base branch.
 	_, stderr, err := process.ExecDir(-1, pr.BaseRepo.LocalCopyPath(),
-		fmt.Sprintf("PullRequest.Merge(git checkout): %s", pr.BaseRepo.ID),
+		fmt.Sprintf("PullRequest.Merge(git checkout): %v", pr.BaseRepo.ID),
 		"git", "checkout", pr.BaseBranch)
 	if err != nil {
 		return fmt.Errorf("git checkout: %s", stderr)
@@ -415,12 +415,7 @@ func (pr *PullRequest) UpdatePatch() (err error) {
 		return fmt.Errorf("GetOwner: %v", err)
 	}
 
-	headRepoPath, err := pr.HeadRepo.RepoPath()
-	if err != nil {
-		return fmt.Errorf("HeadRepo.RepoPath: %v", err)
-	}
-
-	headGitRepo, err := git.OpenRepository(headRepoPath)
+	headGitRepo, err := git.OpenRepository(pr.HeadRepo.RepoPath())
 	if err != nil {
 		return fmt.Errorf("OpenRepository: %v", err)
 	}

@@ -17,6 +17,8 @@ import (
 	"gopkg.in/ini.v1"
 	"gopkg.in/macaron.v1"
 
+	"github.com/gogits/git-shell"
+
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/models/cron"
 	"github.com/gogits/gogs/modules/auth"
@@ -39,6 +41,7 @@ func checkRunMode() {
 		macaron.Env = macaron.PROD
 		macaron.ColorLog = false
 		setting.ProdMode = true
+		git.Debug = false
 	}
 	log.Info("Run Mode: %s", strings.Title(macaron.Env))
 }

@@ -31,15 +31,12 @@ import (
 func authRequired(ctx *middleware.Context) {
 	ctx.Resp.Header().Set("WWW-Authenticate", "Basic realm=\".\"")
 	ctx.Data["ErrorMsg"] = "no basic auth and digit auth"
-	ctx.HTML(401, base.TplName("status/401"))
+	ctx.Error(401)
 }
 
 func HTTP(ctx *middleware.Context) {
 	username := ctx.Params(":username")
-	reponame := ctx.Params(":reponame")
-	if strings.HasSuffix(reponame, ".git") {
-		reponame = reponame[:len(reponame)-4]
-	}
+	reponame := strings.TrimSuffix(ctx.Params(":reponame"), ".git")
 
 	var isPull bool
 	service := ctx.Query("service")
@@ -51,6 +48,12 @@ func HTTP(ctx *middleware.Context) {
 		isPull = true
 	} else {
 		isPull = (ctx.Req.Method == "GET")
+	}
+
+	isWiki := false
+	if strings.HasSuffix(reponame, ".wiki") {
+		isWiki = true
+		reponame = reponame[:len(reponame)-5]
 	}
 
 	repoUser, err := models.GetUserByName(username)
@@ -165,45 +168,46 @@ func HTTP(ctx *middleware.Context) {
 	}
 
 	callback := func(rpc string, input []byte) {
-		if rpc == "receive-pack" {
-			var lastLine int64 = 0
+		if rpc != "receive-pack" || isWiki {
+			return
+		}
 
-			for {
-				head := input[lastLine : lastLine+2]
-				if head[0] == '0' && head[1] == '0' {
-					size, err := strconv.ParseInt(string(input[lastLine+2:lastLine+4]), 16, 32)
-					if err != nil {
-						log.Error(4, "%v", err)
-						return
-					}
+		var lastLine int64 = 0
+		for {
+			head := input[lastLine : lastLine+2]
+			if head[0] == '0' && head[1] == '0' {
+				size, err := strconv.ParseInt(string(input[lastLine+2:lastLine+4]), 16, 32)
+				if err != nil {
+					log.Error(4, "%v", err)
+					return
+				}
 
-					if size == 0 {
-						//fmt.Println(string(input[lastLine:]))
-						break
-					}
-
-					line := input[lastLine : lastLine+size]
-					idx := bytes.IndexRune(line, '\000')
-					if idx > -1 {
-						line = line[:idx]
-					}
-					fields := strings.Fields(string(line))
-					if len(fields) >= 3 {
-						oldCommitId := fields[0][4:]
-						newCommitId := fields[1]
-						refName := fields[2]
-
-						// FIXME: handle error.
-						if err = models.Update(refName, oldCommitId, newCommitId, authUsername, username, reponame, authUser.Id); err == nil {
-							go models.HookQueue.Add(repo.ID)
-							go models.AddTestPullRequestTask(repo.ID, strings.TrimPrefix(refName, "refs/heads/"))
-						}
-
-					}
-					lastLine = lastLine + size
-				} else {
+				if size == 0 {
+					//fmt.Println(string(input[lastLine:]))
 					break
 				}
+
+				line := input[lastLine : lastLine+size]
+				idx := bytes.IndexRune(line, '\000')
+				if idx > -1 {
+					line = line[:idx]
+				}
+				fields := strings.Fields(string(line))
+				if len(fields) >= 3 {
+					oldCommitId := fields[0][4:]
+					newCommitId := fields[1]
+					refName := fields[2]
+
+					// FIXME: handle error.
+					if err = models.Update(refName, oldCommitId, newCommitId, authUsername, username, reponame, authUser.Id); err == nil {
+						go models.HookQueue.Add(repo.ID)
+						go models.AddTestPullRequestTask(repo.ID, strings.TrimPrefix(refName, "refs/heads/"))
+					}
+
+				}
+				lastLine = lastLine + size
+			} else {
+				break
 			}
 		}
 	}
@@ -255,6 +259,29 @@ var routes = []route{
 	{regexp.MustCompile("(.*?)/objects/pack/pack-[0-9a-f]{40}\\.idx$"), "GET", getIdxFile},
 }
 
+func getGitDir(config *Config, fPath string) (string, error) {
+	root := config.RepoRootPath
+	if len(root) == 0 {
+		cwd, err := os.Getwd()
+		if err != nil {
+			log.GitLogger.Error(4, err.Error())
+			return "", err
+		}
+		root = cwd
+	}
+
+	if !strings.HasSuffix(fPath, ".git") {
+		fPath = fPath + ".git"
+	}
+
+	f := filepath.Join(root, fPath)
+	if _, err := os.Stat(f); os.IsNotExist(err) {
+		return "", err
+	}
+
+	return f, nil
+}
+
 // Request handling function
 func HTTPBackend(config *Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -268,15 +295,13 @@ func HTTPBackend(config *Config) http.HandlerFunc {
 
 				file := strings.Replace(r.URL.Path, m[1]+"/", "", 1)
 				dir, err := getGitDir(config, m[1])
-
 				if err != nil {
 					log.GitLogger.Error(4, err.Error())
 					renderNotFound(w)
 					return
 				}
 
-				hr := handler{config, w, r, dir, file}
-				route.handler(hr)
+				route.handler(handler{config, w, r, dir, file})
 				return
 			}
 		}
@@ -417,32 +442,6 @@ func sendFile(contentType string, hr handler) {
 	w.Header().Set("Content-Length", fmt.Sprintf("%d", f.Size()))
 	w.Header().Set("Last-Modified", f.ModTime().Format(http.TimeFormat))
 	http.ServeFile(w, r, reqFile)
-}
-
-func getGitDir(config *Config, fPath string) (string, error) {
-	root := config.RepoRootPath
-
-	if root == "" {
-		cwd, err := os.Getwd()
-
-		if err != nil {
-			log.GitLogger.Error(4, err.Error())
-			return "", err
-		}
-
-		root = cwd
-	}
-
-	if !strings.HasSuffix(fPath, ".git") {
-		fPath = fPath + ".git"
-	}
-
-	f := filepath.Join(root, fPath)
-	if _, err := os.Stat(f); os.IsNotExist(err) {
-		return "", err
-	}
-
-	return f, nil
 }
 
 func getServiceType(r *http.Request) string {

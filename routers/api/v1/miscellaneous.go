@@ -5,12 +5,9 @@
 package v1
 
 import (
-	"strings"
-
 	"github.com/gogits/gogs/modules/auth/apiv1"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/middleware"
-	"github.com/gogits/gogs/modules/setting"
 )
 
 // Render an arbitrary Markdown document.
@@ -27,8 +24,7 @@ func Markdown(ctx *middleware.Context, form apiv1.MarkdownForm) {
 
 	switch form.Mode {
 	case "gfm":
-		ctx.Write(base.RenderMarkdown([]byte(form.Text),
-			setting.AppUrl+strings.TrimPrefix(form.Context, "/")))
+		ctx.Write(base.RenderMarkdown([]byte(form.Text), form.Context))
 	default:
 		ctx.Write(base.RenderRawMarkdown([]byte(form.Text), ""))
 	}
