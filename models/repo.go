@@ -378,19 +378,26 @@ type CloneLink struct {
 	Git   string
 }
 
-// CloneLink returns clone URLs of repository.
-func (repo *Repository) CloneLink() (cl CloneLink, err error) {
-	if err = repo.GetOwner(); err != nil {
-		return cl, err
+func (repo *Repository) cloneLink(isWiki bool) *CloneLink {
+	repoName := repo.Name
+	if isWiki {
+		repoName += ".wiki"
 	}
 
+	repo.Owner = repo.MustOwner()
+	cl := new(CloneLink)
 	if setting.SSHPort != 22 {
-		cl.SSH = fmt.Sprintf("ssh://%s@%s:%d/%s/%s.git", setting.RunUser, setting.SSHDomain, setting.SSHPort, repo.Owner.Name, repo.Name)
+		cl.SSH = fmt.Sprintf("ssh://%s@%s:%d/%s/%s.git", setting.RunUser, setting.SSHDomain, setting.SSHPort, repo.Owner.Name, repoName)
 	} else {
-		cl.SSH = fmt.Sprintf("%s@%s:%s/%s.git", setting.RunUser, setting.SSHDomain, repo.Owner.Name, repo.Name)
+		cl.SSH = fmt.Sprintf("%s@%s:%s/%s.git", setting.RunUser, setting.SSHDomain, repo.Owner.Name, repoName)
 	}
-	cl.HTTPS = fmt.Sprintf("%s%s/%s.git", setting.AppUrl, repo.Owner.Name, repo.Name)
-	return cl, nil
+	cl.HTTPS = fmt.Sprintf("%s%s/%s.git", setting.AppUrl, repo.Owner.Name, repoName)
+	return cl
+}
+
+// CloneLink returns clone URLs of repository.
+func (repo *Repository) CloneLink() (cl *CloneLink) {
+	return repo.cloneLink(false)
 }
 
 var (
@@ -647,10 +654,7 @@ func prepareRepoCommit(repo *Repository, tmpDir, repoPath string, opts CreateRep
 		return fmt.Errorf("getRepoInitFile[%s]: %v", opts.Readme, err)
 	}
 
-	cloneLink, err := repo.CloneLink()
-	if err != nil {
-		return fmt.Errorf("CloneLink: %v", err)
-	}
+	cloneLink := repo.CloneLink()
 	match := map[string]string{
 		"Name":           repo.Name,
 		"Description":    repo.Description,
@@ -980,7 +984,9 @@ func TransferOwnership(u *User, newOwnerName string, repo *Repository) error {
 
 	// Change repository directory name.
 	if err = os.Rename(RepoPath(owner.Name, repo.Name), RepoPath(newOwner.Name, repo.Name)); err != nil {
-		return fmt.Errorf("rename directory: %v", err)
+		return fmt.Errorf("rename repository directory: %v", err)
+	} else if err = os.Rename(WikiPath(owner.Name, repo.Name), WikiPath(newOwner.Name, repo.Name)); err != nil {
+		return fmt.Errorf("rename repository wiki: %v", err)
 	}
 
 	return sess.Commit()
@@ -1002,7 +1008,10 @@ func ChangeRepositoryName(u *User, oldRepoName, newRepoName string) (err error) 
 	}
 
 	// Change repository directory name.
-	return os.Rename(RepoPath(u.LowerName, oldRepoName), RepoPath(u.LowerName, newRepoName))
+	if err = os.Rename(RepoPath(u.Name, oldRepoName), RepoPath(u.Name, newRepoName)); err != nil {
+		return fmt.Errorf("rename repository directory: %v", err)
+	}
+	return os.Rename(WikiPath(u.Name, oldRepoName), WikiPath(u.Name, newRepoName))
 }
 
 func getRepositoriesByForkID(e Engine, forkID int64) ([]*Repository, error) {
@@ -1106,26 +1115,19 @@ func DeleteRepository(uid, repoID int64) error {
 		}
 	}
 
-	if _, err = sess.Delete(&Repository{ID: repoID}); err != nil {
-		return err
-	} else if _, err = sess.Delete(&Access{RepoID: repo.ID}); err != nil {
-		return err
-	} else if _, err = sess.Delete(&Action{RepoID: repo.ID}); err != nil {
-		return err
-	} else if _, err = sess.Delete(&Watch{RepoID: repoID}); err != nil {
-		return err
-	} else if _, err = sess.Delete(&Mirror{RepoID: repoID}); err != nil {
-		return err
-	} else if _, err = sess.Delete(&IssueUser{RepoID: repoID}); err != nil {
-		return err
-	} else if _, err = sess.Delete(&Milestone{RepoID: repoID}); err != nil {
-		return err
-	} else if _, err = sess.Delete(&Release{RepoID: repoID}); err != nil {
-		return err
-	} else if _, err = sess.Delete(&Collaboration{RepoID: repoID}); err != nil {
-		return err
-	} else if _, err = sess.Delete(&PullRequest{BaseRepoID: repoID}); err != nil {
-		return err
+	if err = deleteBeans(sess,
+		&Repository{ID: repoID},
+		&Access{RepoID: repo.ID},
+		&Action{RepoID: repo.ID},
+		&Watch{RepoID: repoID},
+		&Mirror{RepoID: repoID},
+		&IssueUser{RepoID: repoID},
+		&Milestone{RepoID: repoID},
+		&Release{RepoID: repoID},
+		&Collaboration{RepoID: repoID},
+		&PullRequest{BaseRepoID: repoID},
+	); err != nil {
+		return fmt.Errorf("deleteBeans: %v", err)
 	}
 
 	// Delete comments and attachments.
@@ -1169,7 +1171,16 @@ func DeleteRepository(uid, repoID int64) error {
 	// Remove repository files.
 	repoPath := repo.repoPath(sess)
 	if err = os.RemoveAll(repoPath); err != nil {
-		desc := fmt.Sprintf("delete repository files[%s]: %v", repoPath, err)
+		desc := fmt.Sprintf("delete repository files [%s]: %v", repoPath, err)
+		log.Warn(desc)
+		if err = CreateRepositoryNotice(desc); err != nil {
+			log.Error(4, "CreateRepositoryNotice: %v", err)
+		}
+	}
+
+	wikiPath := repo.WikiPath()
+	if err = os.RemoveAll(wikiPath); err != nil {
+		desc := fmt.Sprintf("delete repository wiki [%s]: %v", wikiPath, err)
 		log.Warn(desc)
 		if err = CreateRepositoryNotice(desc); err != nil {
 			log.Error(4, "CreateRepositoryNotice: %v", err)

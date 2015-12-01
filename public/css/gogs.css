@@ -1806,6 +1806,28 @@ footer .container .links > *:first-child {
   margin: 1px;
   padding-right: 0;
 }
+.repository #clone-panel {
+  margin-top: -8px;
+  width: 100%;
+}
+.repository #clone-panel input {
+  border-radius: 0;
+  padding: 5px 10px;
+}
+.repository #clone-panel .clone.button {
+  font-size: 13px;
+  padding: 0 5px;
+}
+.repository #clone-panel .clone.button:first-child {
+  border-radius: .28571429rem 0 0 .28571429rem;
+}
+.repository #clone-panel .icon.button {
+  padding: 0 10px;
+}
+.repository #clone-panel .dropdown .menu {
+  right: 0!important;
+  left: auto!important;
+}
 .repository.file.list #repo-desc {
   font-size: 1.2em;
 }
@@ -1825,28 +1847,6 @@ footer .container .links > *:first-child {
 .repository.file.list .head.meta li .ui.breadcrumb span,
 .repository.file.list .head.meta li .ui.breadcrumb a {
   font-size: 16px;
-}
-.repository.file.list .clone.input {
-  margin-top: -8px;
-  width: 100%;
-}
-.repository.file.list .clone.input input {
-  border-radius: 0;
-  padding: 5px 10px;
-}
-.repository.file.list .clone.input .clone.button {
-  font-size: 13px;
-  padding: 0 5px;
-}
-.repository.file.list .clone.input .clone.button:first-child {
-  border-radius: .28571429rem 0 0 .28571429rem;
-}
-.repository.file.list .clone.input .icon.button {
-  padding: 0 10px;
-}
-.repository.file.list .clone.input .dropdown .menu {
-  right: 0!important;
-  left: auto!important;
 }
 .repository.file.list #repo-files-table .table.list {
   width: 80% !important;
@@ -2530,6 +2530,9 @@ footer .container .links > *:first-child {
 }
 .repository.wiki.new .editor-preview {
   background-color: white;
+}
+.repository.wiki.view .choose.page {
+  margin-top: -5px;
 }
 .repository.wiki.view .ui.sub.header {
   text-transform: none;

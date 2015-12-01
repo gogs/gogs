@@ -73,6 +73,11 @@ func ToWikiPageName(name string) string {
 	return strings.Replace(name, "-", " ", -1)
 }
 
+// WikiCloneLink returns clone URLs of repository wiki.
+func (repo *Repository) WikiCloneLink() (cl *CloneLink) {
+	return repo.cloneLink(true)
+}
+
 // WikiPath returns wiki data path by given user and repository name.
 func WikiPath(userName, repoName string) string {
 	return filepath.Join(UserPath(userName), strings.ToLower(repoName)+".wiki.git")

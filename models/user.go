@@ -666,7 +666,7 @@ func deleteUser(e *xorm.Session, u *User) error {
 		&IssueUser{UID: u.Id},
 		&EmailAddress{UID: u.Id},
 	); err != nil {
-		return fmt.Errorf("deleteUser: %v", err)
+		return fmt.Errorf("deleteBeans: %v", err)
 	}
 
 	// ***** START: PublicKey *****
