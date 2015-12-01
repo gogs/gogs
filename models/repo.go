@@ -1120,6 +1120,7 @@ func DeleteRepository(uid, repoID int64) error {
 		&Access{RepoID: repo.ID},
 		&Action{RepoID: repo.ID},
 		&Watch{RepoID: repoID},
+		&Star{RepoID: repoID},
 		&Mirror{RepoID: repoID},
 		&IssueUser{RepoID: repoID},
 		&Milestone{RepoID: repoID},
@@ -1571,7 +1572,7 @@ func CheckRepoStats() {
 		repoStatsCheck(checkers[i])
 	}
 
-	// FIXME: use checker when v0.8, stop supporting old fork repo format.
+	// FIXME: use checker when v0.9, stop supporting old fork repo format.
 	// ***** START: Repository.NumForks *****
 	results, err := x.Query("SELECT repo.id FROM `repository` repo WHERE repo.num_forks!=(SELECT COUNT(*) FROM `repository` WHERE fork_id=repo.id)")
 	if err != nil {
