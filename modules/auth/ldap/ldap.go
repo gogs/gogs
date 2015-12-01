@@ -18,21 +18,22 @@ import (
 
 // Basic LDAP authentication service
 type Source struct {
-	Name             string // canonical name (ie. corporate.ad)
-	Host             string // LDAP host
-	Port             int    // port number
-	UseSSL           bool   // Use SSL
-	SkipVerify       bool
-	BindDN           string // DN to bind with
-	BindPassword     string // Bind DN password
-	UserBase         string // Base search path for users
-	UserDN           string // Template for the DN of the user for simple auth
-	AttributeName    string // First name attribute
-	AttributeSurname string // Surname attribute
-	AttributeMail    string // E-mail attribute
-	Filter           string // Query filter to validate entry
-	AdminFilter      string // Query filter to check if user is admin
-	Enabled          bool   // if this source is disabled
+	Name              string // canonical name (ie. corporate.ad)
+	Host              string // LDAP host
+	Port              int    // port number
+	UseSSL            bool   // Use SSL
+	SkipVerify        bool
+	BindDN            string // DN to bind with
+	BindPassword      string // Bind DN password
+	UserBase          string // Base search path for users
+	UserDN            string // Template for the DN of the user for simple auth
+	AttributeUsername string // Username attribute
+	AttributeName     string // First name attribute
+	AttributeSurname  string // Surname attribute
+	AttributeMail     string // E-mail attribute
+	Filter            string // Query filter to validate entry
+	AdminFilter       string // Query filter to check if user is admin
+	Enabled           bool   // if this source is disabled
 }
 
 func (ls *Source) sanitizedUserQuery(username string) (string, bool) {
@@ -109,7 +110,7 @@ func (ls *Source) FindUserDN(name string) (string, bool) {
 }
 
 // searchEntry : search an LDAP source if an entry (name, passwd) is valid and in the specific filter
-func (ls *Source) SearchEntry(name, passwd string, directBind bool) (string, string, string, bool, bool) {
+func (ls *Source) SearchEntry(name, passwd string, directBind bool) (string, string, string, string, bool, bool) {
 	var userDN string
 	if directBind {
 		log.Trace("LDAP will bind directly via UserDN template: %s", ls.UserDN)
@@ -117,7 +118,7 @@ func (ls *Source) SearchEntry(name, passwd string, directBind bool) (string, str
 		var ok bool
 		userDN, ok = ls.sanitizedUserDN(name)
 		if !ok {
-			return "", "", "", false, false
+			return "", "", "", "", false, false
 		}
 	} else {
 		log.Trace("LDAP will use BindDN.")
@@ -125,7 +126,7 @@ func (ls *Source) SearchEntry(name, passwd string, directBind bool) (string, str
 		var found bool
 		userDN, found = ls.FindUserDN(name)
 		if !found {
-			return "", "", "", false, false
+			return "", "", "", "", false, false
 		}
 	}
 
@@ -133,7 +134,7 @@ func (ls *Source) SearchEntry(name, passwd string, directBind bool) (string, str
 	if err != nil {
 		log.Error(4, "LDAP Connect error (%s): %v", ls.Host, err)
 		ls.Enabled = false
-		return "", "", "", false, false
+		return "", "", "", "", false, false
 	}
 	defer l.Close()
 
@@ -141,13 +142,13 @@ func (ls *Source) SearchEntry(name, passwd string, directBind bool) (string, str
 	err = l.Bind(userDN, passwd)
 	if err != nil {
 		log.Debug("LDAP auth. failed for %s, reason: %v", userDN, err)
-		return "", "", "", false, false
+		return "", "", "", "", false, false
 	}
 
 	log.Trace("Bound successfully with userDN: %s", userDN)
 	userFilter, ok := ls.sanitizedUserQuery(name)
 	if !ok {
-		return "", "", "", false, false
+		return "", "", "", "", false, false
 	}
 
 	search := ldap.NewSearchRequest(
@@ -158,7 +159,7 @@ func (ls *Source) SearchEntry(name, passwd string, directBind bool) (string, str
 	sr, err := l.Search(search)
 	if err != nil {
 		log.Error(4, "LDAP Search failed unexpectedly! (%v)", err)
-		return "", "", "", false, false
+		return "", "", "", "", false, false
 	} else if len(sr.Entries) < 1 {
 		if directBind {
 			log.Error(4, "User filter inhibited user login.")
@@ -166,9 +167,10 @@ func (ls *Source) SearchEntry(name, passwd string, directBind bool) (string, str
 			log.Error(4, "LDAP Search failed unexpectedly! (0 entries)")
 		}
 
-		return "", "", "", false, false
+		return "", "", "", "", false, false
 	}
 
+	username_attr := sr.Entries[0].GetAttributeValue(ls.AttributeUsername)
 	name_attr := sr.Entries[0].GetAttributeValue(ls.AttributeName)
 	sn_attr := sr.Entries[0].GetAttributeValue(ls.AttributeSurname)
 	mail_attr := sr.Entries[0].GetAttributeValue(ls.AttributeMail)
@@ -190,7 +192,7 @@ func (ls *Source) SearchEntry(name, passwd string, directBind bool) (string, str
 		}
 	}
 
-	return name_attr, sn_attr, mail_attr, admin_attr, true
+	return username_attr, name_attr, sn_attr, mail_attr, admin_attr, true
 }
 
 func ldapDial(ls *Source) (*ldap.Conn, error) {
