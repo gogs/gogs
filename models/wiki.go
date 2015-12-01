@@ -129,7 +129,7 @@ func (repo *Repository) updateWikiPage(doer *User, oldTitle, title, content, mes
 	if com.IsExist(localPath) {
 		// No need to check if nothing in the repository.
 		if git.IsBranchExist(localPath, "master") {
-			if err = git.Reset(localPath, true, "origin/master"); err != nil {
+			if err = git.ResetHEAD(localPath, true, "origin/master"); err != nil {
 				return fmt.Errorf("Reset: %v", err)
 			}
 		}
