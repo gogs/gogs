@@ -13,19 +13,20 @@ import (
 	"strings"
 
 	"github.com/Unknwon/com"
-	"github.com/Unknwon/macaron"
 	"github.com/go-xorm/xorm"
 	"gopkg.in/ini.v1"
+	"gopkg.in/macaron.v1"
 
 	"github.com/gogits/gogs/models"
+	"github.com/gogits/gogs/models/cron"
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/modules/cron"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/mailer"
 	"github.com/gogits/gogs/modules/middleware"
 	"github.com/gogits/gogs/modules/setting"
-	"github.com/gogits/gogs/modules/social"
+	"github.com/gogits/gogs/modules/ssh"
+	"github.com/gogits/gogs/modules/user"
 )
 
 const (
@@ -36,25 +37,23 @@ func checkRunMode() {
 	switch setting.Cfg.Section("").Key("RUN_MODE").String() {
 	case "prod":
 		macaron.Env = macaron.PROD
+		macaron.ColorLog = false
 		setting.ProdMode = true
-	case "test":
-		macaron.Env = macaron.TEST
 	}
 	log.Info("Run Mode: %s", strings.Title(macaron.Env))
 }
 
 func NewServices() {
 	setting.NewServices()
-	social.NewOauthService()
+	mailer.NewContext()
 }
 
 // GlobalInit is for global configuration reload-able.
 func GlobalInit() {
-	setting.NewConfigContext()
+	setting.NewContext()
 	log.Trace("Custom path: %s", setting.CustomPath)
 	log.Trace("Log path: %s", setting.LogRootPath)
-	mailer.NewMailerContext()
-	models.LoadModelsConfig()
+	models.LoadConfigs()
 	NewServices()
 
 	if setting.InstallLock {
@@ -66,13 +65,23 @@ func GlobalInit() {
 		}
 
 		models.HasEngine = true
-		cron.NewCronContext()
+		cron.NewContext()
+		models.InitDeliverHooks()
+		models.InitTestPullRequests()
 		log.NewGitLogger(path.Join(setting.LogRootPath, "http.log"))
 	}
 	if models.EnableSQLite3 {
-		log.Info("SQLite3 Enabled")
+		log.Info("SQLite3 Supported")
+	}
+	if models.EnableTidb {
+		log.Info("TiDB Supported")
 	}
 	checkRunMode()
+
+	if setting.StartSSHServer {
+		ssh.Listen(setting.SSHPort)
+		log.Info("SSH server started on :%v", setting.SSHPort)
+	}
 }
 
 func InstallInit(ctx *middleware.Context) {
@@ -84,39 +93,71 @@ func InstallInit(ctx *middleware.Context) {
 	ctx.Data["Title"] = ctx.Tr("install.install")
 	ctx.Data["PageIsInstall"] = true
 
-	ctx.Data["DbOptions"] = []string{"MySQL", "PostgreSQL", "SQLite3"}
+	dbOpts := []string{"MySQL", "PostgreSQL"}
+	if models.EnableSQLite3 {
+		dbOpts = append(dbOpts, "SQLite3")
+	}
+	if models.EnableTidb {
+		dbOpts = append(dbOpts, "TiDB")
+	}
+	ctx.Data["DbOptions"] = dbOpts
 }
 
 func Install(ctx *middleware.Context) {
 	form := auth.InstallForm{}
 
+	// Database settings
 	form.DbHost = models.DbCfg.Host
 	form.DbUser = models.DbCfg.User
 	form.DbName = models.DbCfg.Name
 	form.DbPath = models.DbCfg.Path
 
+	ctx.Data["CurDbOption"] = "MySQL"
+	switch models.DbCfg.Type {
+	case "postgres":
+		ctx.Data["CurDbOption"] = "PostgreSQL"
+	case "sqlite3":
+		if models.EnableSQLite3 {
+			ctx.Data["CurDbOption"] = "SQLite3"
+		}
+	case "tidb":
+		if models.EnableTidb {
+			ctx.Data["CurDbOption"] = "TiDB"
+		}
+	}
+
+	// Application general settings
+	form.AppName = setting.AppName
 	form.RepoRootPath = setting.RepoRootPath
 
 	// Note(unknwon): it's hard for Windows users change a running user,
 	// 	so just use current one if config says default.
 	if setting.IsWindows && setting.RunUser == "git" {
-		form.RunUser = os.Getenv("USER")
-		if len(form.RunUser) == 0 {
-			form.RunUser = os.Getenv("USERNAME")
-		}
+		form.RunUser = user.CurrentUsername()
 	} else {
 		form.RunUser = setting.RunUser
 	}
 
 	form.Domain = setting.Domain
+	form.SSHPort = setting.SSHPort
 	form.HTTPPort = setting.HttpPort
 	form.AppUrl = setting.AppUrl
 
-	curDbOp := ""
-	if models.EnableSQLite3 {
-		curDbOp = "SQLite3" // Default when enabled.
+	// E-mail service settings
+	if setting.MailService != nil {
+		form.SMTPHost = setting.MailService.Host
+		form.SMTPFrom = setting.MailService.From
+		form.SMTPEmail = setting.MailService.User
 	}
-	ctx.Data["CurDbOption"] = curDbOp
+	form.RegisterConfirm = setting.Service.RegisterEmailConfirm
+	form.MailNotify = setting.Service.EnableNotifyMail
+
+	// Server and other services settings
+	form.OfflineMode = setting.OfflineMode
+	form.DisableGravatar = setting.DisableGravatar
+	form.DisableRegistration = setting.Service.DisableRegistration
+	form.EnableCaptcha = setting.Service.EnableCaptcha
+	form.RequireSignInView = setting.Service.RequireSignInView
 
 	auth.AssignForm(form, ctx.Data)
 	ctx.HTML(200, INSTALL)
@@ -126,6 +167,15 @@ func InstallPost(ctx *middleware.Context, form auth.InstallForm) {
 	ctx.Data["CurDbOption"] = form.DbType
 
 	if ctx.HasError() {
+		if ctx.HasValue("Err_SMTPEmail") {
+			ctx.Data["Err_SMTP"] = true
+		}
+		if ctx.HasValue("Err_AdminName") ||
+			ctx.HasValue("Err_AdminPasswd") ||
+			ctx.HasValue("Err_AdminEmail") {
+			ctx.Data["Err_Admin"] = true
+		}
+
 		ctx.HTML(200, INSTALL)
 		return
 	}
@@ -137,7 +187,7 @@ func InstallPost(ctx *middleware.Context, form auth.InstallForm) {
 
 	// Pass basic check, now test configuration.
 	// Test database setting.
-	dbTypes := map[string]string{"MySQL": "mysql", "PostgreSQL": "postgres", "SQLite3": "sqlite3"}
+	dbTypes := map[string]string{"MySQL": "mysql", "PostgreSQL": "postgres", "SQLite3": "sqlite3", "TiDB": "tidb"}
 	models.DbCfg.Type = dbTypes[form.DbType]
 	models.DbCfg.Host = form.DbHost
 	models.DbCfg.User = form.DbUser
@@ -146,18 +196,33 @@ func InstallPost(ctx *middleware.Context, form auth.InstallForm) {
 	models.DbCfg.SSLMode = form.SSLMode
 	models.DbCfg.Path = form.DbPath
 
+	if (models.DbCfg.Type == "sqlite3" || models.DbCfg.Type == "tidb") &&
+		len(models.DbCfg.Path) == 0 {
+		ctx.Data["Err_DbPath"] = true
+		ctx.RenderWithErr(ctx.Tr("install.err_empty_db_path"), INSTALL, &form)
+		return
+	} else if models.DbCfg.Type == "tidb" &&
+		strings.ContainsAny(path.Base(models.DbCfg.Path), ".-") {
+		ctx.Data["Err_DbPath"] = true
+		ctx.RenderWithErr(ctx.Tr("install.err_invalid_tidb_name"), INSTALL, &form)
+		return
+	}
+
 	// Set test engine.
 	var x *xorm.Engine
 	if err := models.NewTestEngine(x); err != nil {
 		if strings.Contains(err.Error(), `Unknown database type: sqlite3`) {
+			ctx.Data["Err_DbType"] = true
 			ctx.RenderWithErr(ctx.Tr("install.sqlite3_not_available", "http://gogs.io/docs/installation/install_from_binary.html"), INSTALL, &form)
 		} else {
+			ctx.Data["Err_DbSetting"] = true
 			ctx.RenderWithErr(ctx.Tr("install.invalid_db_setting", err), INSTALL, &form)
 		}
 		return
 	}
 
 	// Test repository root path.
+	form.RepoRootPath = strings.Replace(form.RepoRootPath, "\\", "/", -1)
 	if err := os.MkdirAll(form.RepoRootPath, os.ModePerm); err != nil {
 		ctx.Data["Err_RepoRootPath"] = true
 		ctx.RenderWithErr(ctx.Tr("install.invalid_repo_path", err), INSTALL, &form)
@@ -165,18 +230,30 @@ func InstallPost(ctx *middleware.Context, form auth.InstallForm) {
 	}
 
 	// Check run user.
-	curUser := os.Getenv("USER")
-	if len(curUser) == 0 {
-		curUser = os.Getenv("USERNAME")
-	}
+	curUser := user.CurrentUsername()
 	if form.RunUser != curUser {
 		ctx.Data["Err_RunUser"] = true
 		ctx.RenderWithErr(ctx.Tr("install.run_user_not_match", form.RunUser, curUser), INSTALL, &form)
 		return
 	}
 
+	// Check logic loophole between disable self-registration and no admin account.
+	if form.DisableRegistration && len(form.AdminName) == 0 {
+		ctx.Data["Err_Services"] = true
+		ctx.Data["Err_Admin"] = true
+		ctx.RenderWithErr(ctx.Tr("install.no_admin_and_disable_registration"), INSTALL, form)
+		return
+	}
+
 	// Check admin password.
+	if len(form.AdminName) > 0 && len(form.AdminPasswd) == 0 {
+		ctx.Data["Err_Admin"] = true
+		ctx.Data["Err_AdminPasswd"] = true
+		ctx.RenderWithErr(ctx.Tr("install.err_empty_admin_password"), INSTALL, form)
+		return
+	}
 	if form.AdminPasswd != form.AdminConfirmPasswd {
+		ctx.Data["Err_Admin"] = true
 		ctx.Data["Err_AdminPasswd"] = true
 		ctx.RenderWithErr(ctx.Tr("form.password_not_match"), INSTALL, form)
 		return
@@ -202,21 +279,37 @@ func InstallPost(ctx *middleware.Context, form auth.InstallForm) {
 	cfg.Section("database").Key("SSL_MODE").SetValue(models.DbCfg.SSLMode)
 	cfg.Section("database").Key("PATH").SetValue(models.DbCfg.Path)
 
+	cfg.Section("").Key("APP_NAME").SetValue(form.AppName)
 	cfg.Section("repository").Key("ROOT").SetValue(form.RepoRootPath)
 	cfg.Section("").Key("RUN_USER").SetValue(form.RunUser)
 	cfg.Section("server").Key("DOMAIN").SetValue(form.Domain)
 	cfg.Section("server").Key("HTTP_PORT").SetValue(form.HTTPPort)
 	cfg.Section("server").Key("ROOT_URL").SetValue(form.AppUrl)
 
+	if form.SSHPort == 0 {
+		cfg.Section("server").Key("DISABLE_SSH").SetValue("true")
+	} else {
+		cfg.Section("server").Key("DISABLE_SSH").SetValue("false")
+		cfg.Section("server").Key("SSH_PORT").SetValue(com.ToStr(form.SSHPort))
+	}
+
 	if len(strings.TrimSpace(form.SMTPHost)) > 0 {
 		cfg.Section("mailer").Key("ENABLED").SetValue("true")
 		cfg.Section("mailer").Key("HOST").SetValue(form.SMTPHost)
+		cfg.Section("mailer").Key("FROM").SetValue(form.SMTPFrom)
 		cfg.Section("mailer").Key("USER").SetValue(form.SMTPEmail)
 		cfg.Section("mailer").Key("PASSWD").SetValue(form.SMTPPasswd)
-
-		cfg.Section("service").Key("REGISTER_EMAIL_CONFIRM").SetValue(com.ToStr(form.RegisterConfirm == "on"))
-		cfg.Section("service").Key("ENABLE_NOTIFY_MAIL").SetValue(com.ToStr(form.MailNotify == "on"))
+	} else {
+		cfg.Section("mailer").Key("ENABLED").SetValue("false")
 	}
+	cfg.Section("service").Key("REGISTER_EMAIL_CONFIRM").SetValue(com.ToStr(form.RegisterConfirm))
+	cfg.Section("service").Key("ENABLE_NOTIFY_MAIL").SetValue(com.ToStr(form.MailNotify))
+
+	cfg.Section("server").Key("OFFLINE_MODE").SetValue(com.ToStr(form.OfflineMode))
+	cfg.Section("picture").Key("DISABLE_GRAVATAR").SetValue(com.ToStr(form.DisableGravatar))
+	cfg.Section("service").Key("DISABLE_REGISTRATION").SetValue(com.ToStr(form.DisableRegistration))
+	cfg.Section("service").Key("ENABLE_CAPTCHA").SetValue(com.ToStr(form.EnableCaptcha))
+	cfg.Section("service").Key("REQUIRE_SIGNIN_VIEW").SetValue(com.ToStr(form.RequireSignInView))
 
 	cfg.Section("").Key("RUN_MODE").SetValue("prod")
 
@@ -237,16 +330,23 @@ func InstallPost(ctx *middleware.Context, form auth.InstallForm) {
 	GlobalInit()
 
 	// Create admin account.
-	if err := models.CreateUser(&models.User{Name: form.AdminName, Email: form.AdminEmail, Passwd: form.AdminPasswd,
-		IsAdmin: true, IsActive: true}); err != nil {
-		if err != models.ErrUserAlreadyExist {
-			setting.InstallLock = false
-			ctx.Data["Err_AdminName"] = true
-			ctx.Data["Err_AdminEmail"] = true
-			ctx.RenderWithErr(ctx.Tr("install.invalid_admin_setting", err), INSTALL, &form)
-			return
+	if len(form.AdminName) > 0 {
+		if err := models.CreateUser(&models.User{
+			Name:     form.AdminName,
+			Email:    form.AdminEmail,
+			Passwd:   form.AdminPasswd,
+			IsAdmin:  true,
+			IsActive: true,
+		}); err != nil {
+			if !models.IsErrUserAlreadyExist(err) {
+				setting.InstallLock = false
+				ctx.Data["Err_AdminName"] = true
+				ctx.Data["Err_AdminEmail"] = true
+				ctx.RenderWithErr(ctx.Tr("install.invalid_admin_setting", err), INSTALL, &form)
+				return
+			}
+			log.Info("Admin account already exist")
 		}
-		log.Info("Admin account already exist")
 	}
 
 	log.Info("First-time run install finished!")

@@ -1,2 +1,15 @@
-{{if .Flash.ErrorMsg}}<div class="alert alert-danger form-error">{{.Flash.ErrorMsg}}</div>{{end}}
-{{if .Flash.SuccessMsg}}<div class="alert alert-success">{{.Flash.SuccessMsg}}</div>{{end}}
+{{if .Flash.ErrorMsg}}
+<div class="ui negative message">
+  <p>{{.Flash.ErrorMsg}}</p>
+</div>
+{{end}}
+{{if .Flash.SuccessMsg}}
+<div class="ui positive message">
+  <p>{{.Flash.SuccessMsg}}</p>
+</div>
+{{end}}
+{{if .Flash.InfoMsg}}
+<div class="ui info message">
+  <p>{{.Flash.InfoMsg}}</p>
+</div>
+{{end}}

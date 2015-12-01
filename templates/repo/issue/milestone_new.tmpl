@@ -1,62 +1,68 @@
-{{template "base/head_old" .}}
-{{template "base/navbar" .}}
-{{template "repo/nav" .}}
-{{template "repo/toolbar" .}}
-<div id="body" class="container">
-    <div id="issue">
-        <form class="form" action="{{.RepoLink}}/issues/milestones/new" method="post" id="issue-create-form">
-            {{.CsrfTokenHtml}}
-            {{template "base/alert" .}}
-            <div class="col-md-1">
-                <img class="avatar" src="{{.SignedUser.AvatarLink}}" alt=""/>
-            </div>
-            <div class="col-md-8 panel panel-default">
-                <div class="form-group panel-body">
-                    <input class="form-control input-lg" type="text" name="title" required="required" placeholder="Title" value="{{.title}}" />
-                </div>
-                <div class="form-group panel-body">
-                    <div class="md-help pull-right"><!-- todo help link -->
-                        Content with <a href="https://help.github.com/articles/markdown-basics">Markdown</a>
-                    </div>
-                    <ul class="nav nav-tabs" data-init="tabs">
-                        <li class="active issue-write"><a href="#issue-textarea" data-toggle="tab">Write</a></li>
-                        <li class="issue-preview"><a href="#issue-preview" data-toggle="tab" data-ajax="/api/v1/markdown" data-ajax-name="issue-preview" data-ajax-context="{{.RepoLink}}" data-ajax-method="post" data-preview="#issue-preview">Preview</a></li>
-                    </ul>
-                    <div class="tab-content">
-                        <div class="tab-pane" id="issue-textarea">
-                            <div class="form-group">
-                                <textarea class="form-control" name="content" id="issue-content" rows="10" placeholder="Write some content" data-ajax-rel="issue-preview" data-ajax-val="val" data-ajax-field="text">{{.content}}</textarea>
-                            </div>
-                        </div>
-                        <div class="tab-pane issue-preview-content" id="issue-preview">loading...</div>
-                    </div>
-                </div>
-                <div class="text-right panel-body">
-                    <div class="form-group">
-                        <input type="hidden" value="id" name="repo-id"/>
-                        <button class="btn-success btn">Create new milestone</button>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <h4>Milestone Due Date</h4>
-
-                <div class="form-group">
-                    <input name="due_date" type="text" class="form-control" id="milestone-due-date">
-                </div>
-            </div>
-        </form>
-    </div>
+{{template "base/head" .}}
+<div class="repository new milestone">
+	{{template "repo/header" .}}
+	<div class="ui container">
+		<div class="navbar">
+			{{template "repo/issue/navbar" .}}
+			{{if and .IsRepositoryAdmin .PageIsEditMilestone}}
+			<div class="ui right floated secondary menu">
+				<a class="ui green button" href="{{$.RepoLink}}/milestones/new">{{.i18n.Tr "repo.milestones.new"}}</a>
+			</div>
+			{{end}}
+		</div>
+		<div class="ui divider"></div>
+			<h2 class="ui dividing header">
+				{{if .PageIsEditMilestone}}
+			  {{.i18n.Tr "repo.milestones.edit"}}
+			  <div class="sub header">{{.i18n.Tr "repo.milestones.edit_subheader"}}</div>
+				{{else}}
+			  {{.i18n.Tr "repo.milestones.new"}}
+			  <div class="sub header">{{.i18n.Tr "repo.milestones.new_subheader"}}</div>
+			  {{end}}
+			</h2>
+      {{template "base/alert" .}}
+			<form class="ui form grid" action="{{.Link}}" method="post">
+        {{.CsrfTokenHtml}}
+				<div class="eleven wide column">
+					<div class="field {{if .Err_Title}}error{{end}}">
+						<label>{{.i18n.Tr "repo.milestones.title"}}</label>
+						<input name="title" placeholder="{{.i18n.Tr "repo.milestones.title"}}" value="{{.title}}" autofocus required>
+					</div>
+					<div class="field">
+						<label>{{.i18n.Tr "repo.milestones.desc"}}</label>
+						<textarea name="content">{{.content}}</textarea>
+					</div>
+				</div>
+				<div class="four wide column">
+					<div class="field {{if .Err_Deadline}}error{{end}}">
+						<label>
+							{{.i18n.Tr "repo.milestones.due_date"}}
+							<a id="clear-date" href="#">{{.i18n.Tr "repo.milestones.clear"}}</a>
+						</label>
+						<input id="deadline" name="deadline" value="{{.deadline}}">
+					</div>
+					<div class="field">
+						<input class="milestone datepicker" data-lang="{{.DateLang}}" data-start-date="{{.deadline}}">
+					</div>
+				</div>
+				<div class="ui container">
+					<div class="ui divider"></div>
+					<div class="ui right">
+						{{if .PageIsEditMilestone}}
+						<a class="ui blue basic button" href="{{.RepoLink}}/milestones">
+							{{.i18n.Tr "repo.milestones.cancel"}}
+						</a>
+						<button class="ui green button">
+							{{.i18n.Tr "repo.milestones.modify"}}
+						</button>
+						{{else}}
+						<button class="ui green button">
+							{{.i18n.Tr "repo.milestones.create"}}
+						</button>
+						{{end}}
+					</div>
+				</div>
+			</form>
+	</div>
 </div>
-<script src="/js/bootstrap-datepicker.js"></script>
-<script>
-    $(function(){
-        $('#milestone-due-date').datepicker({
-            weekStart: 1,
-            todayBtn: "linked",
-            calendarWeeks: true,
-            todayHighlight: true
-        });
-    });
-</script>
-{{template "base/footer_old" .}}
+{{template "base/footer" .}}

@@ -1,16 +1,28 @@
-<div id="slack" class="{{if or .PageIsSettingsHooksNew (and .PageIsSettingsHooksEdit (not (eq .HookType "Slack")))}}hidden{{end}}">
-  <form class="form form-align panel-body repo-setting-form" id="repo-setting-form-slack" action="{{if .RepoLink}}{{.RepoLink}}{{else if .OrgLink}}{{.OrgLink}}{{end}}/settings/hooks/slack/{{if .PageIsSettingsHooksNew}}new{{else}}{{.Webhook.Id}}{{end}}" method="post">
-    {{.CsrfTokenHtml}}
-    <input type="hidden" name="hook_type" value="slack">
-    <div class="text-center panel-desc">{{.i18n.Tr "repo.settings.add_slack_hook_desc" "http://slack.com" | Str2html}}</div>
-    <div class="field">
-        <label class="req" for="payload-url">{{.i18n.Tr "repo.settings.payload_url"}}</label>
-        <input class="ipt ipt-large ipt-radius {{if .Err_UserName}}ipt-error{{end}}" id="payload-url" name="payload_url" type="url" value="{{.Webhook.Url}}" required />
-    </div>
-    <div class="field">
-        <label class="req" for="channel">{{.i18n.Tr "repo.settings.slack_channel"}}</label>
-        <input class="ipt ipt-large ipt-radius {{if .Err_UserName}}ipt-error{{end}}" id="channel" name="channel" type="text" value="{{.SlackHook.Channel}}" placeholder="#general" required />
-    </div>
-    {{template "repo/settings/hook_settings" .}}
-  </form>
-</div>
+{{if eq .HookType "slack"}}
+<p>{{.i18n.Tr "repo.settings.add_slack_hook_desc" "http://slack.com" | Str2html}}</p>
+<form class="ui form" action="{{.BaseLink}}/settings/hooks/slack/{{if .PageIsSettingsHooksNew}}new{{else}}{{.Webhook.ID}}{{end}}" method="post">
+	{{.CsrfTokenHtml}}
+  <div class="required field {{if .Err_PayloadURL}}error{{end}}">
+    <label for="payload_url">{{.i18n.Tr "repo.settings.payload_url"}}</label>
+    <input id="payload_url" name="payload_url" type="url" value="{{.Webhook.URL}}" autofocus required>
+  </div>
+  <div class="required field {{if .Err_Channel}}error{{end}}">
+    <label for="channel">{{.i18n.Tr "repo.settings.slack_channel"}}</label>
+    <input id="channel" name="channel" value="{{.SlackHook.Channel}}" placeholder="e.g. #general" required>
+  </div>
+
+  <div class="field">
+    <label for="username">{{.i18n.Tr "repo.settings.slack_username"}}</label>
+    <input id="username" name="username" value="{{.SlackHook.Username}}" placeholder="e.g. Gogs">
+  </div>
+  <div class="field">
+    <label for="icon_url">{{.i18n.Tr "repo.settings.slack_icon_url"}}</label>
+    <input id="icon_url" name="icon_url" value="{{.SlackHook.IconURL}}" placeholder="e.g. https://example.com/img/favicon.png">
+  </div>
+  <div class="field">
+    <label for="color">{{.i18n.Tr "repo.settings.slack_color"}}</label>
+    <input id="color" name="color" value="{{.SlackHook.Color}}" placeholder="e.g. #dd4b39, good, warning, danger">
+  </div>
+	{{template "repo/settings/hook_settings" .}}
+</form>
+{{end}}

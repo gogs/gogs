@@ -50,7 +50,7 @@ func MembersAction(ctx *middleware.Context) {
 		}
 		err = models.ChangeOrgUserStatus(org.Id, uid, false)
 	case "public":
-		if ctx.User.Id != uid {
+		if ctx.User.Id != uid && !ctx.Org.IsOwner {
 			ctx.Error(404)
 			return
 		}
@@ -100,7 +100,7 @@ func Invitation(ctx *middleware.Context) {
 		uname := ctx.Query("uname")
 		u, err := models.GetUserByName(uname)
 		if err != nil {
-			if err == models.ErrUserNotExist {
+			if models.IsErrUserNotExist(err) {
 				ctx.Flash.Error(ctx.Tr("form.user_not_exist"))
 				ctx.Redirect(ctx.Org.OrgLink + "/invitations/new")
 			} else {

@@ -5,21 +5,36 @@
 package auth
 
 import (
-	"github.com/Unknwon/macaron"
+	"gopkg.in/macaron.v1"
 
-	"github.com/macaron-contrib/binding"
+	"github.com/go-macaron/binding"
 )
 
+type AdminCrateUserForm struct {
+	LoginType  string `binding:"Required"`
+	LoginName  string
+	UserName   string `binding:"Required;AlphaDashDot;MaxSize(35)"`
+	Email      string `binding:"Required;Email;MaxSize(254)"`
+	Password   string `binding:"MaxSize(255)"`
+	SendNotify bool
+}
+
+func (f *AdminCrateUserForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
+	return validate(errs, ctx.Data, f, ctx.Locale)
+}
+
 type AdminEditUserForm struct {
-	Email        string `binding:"Required;Email;MaxSize(50)"`
-	Password     string `binding:"OmitEmpty;MinSize(6);MaxSize(255)"`
-	Website      string `binding:"MaxSize(50)"`
-	Location     string `binding:"MaxSize(50)"`
-	Avatar       string `binding:"Required;Email;MaxSize(50)"`
-	Active       bool
-	Admin        bool
-	AllowGitHook bool
-	LoginType    int
+	LoginType        string `binding:"Required"`
+	LoginName        string
+	FullName         string `binding:"MaxSize(100)"`
+	Email            string `binding:"Required;Email;MaxSize(254)"`
+	Password         string `binding:"MaxSize(255)"`
+	Website          string `binding:"MaxSize(50)"`
+	Location         string `binding:"MaxSize(50)"`
+	Active           bool
+	Admin            bool
+	AllowGitHook     bool
+	AllowImportLocal bool
 }
 
 func (f *AdminEditUserForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {

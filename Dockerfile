@@ -1,17 +1,22 @@
-FROM google/golang:latest
+FROM alpine:3.2
+MAINTAINER roemer.jp@gmail.com
 
-ENV TAGS="sqlite redis memcache cert" USER="git" HOME="/home/git"
+# Install system utils & Gogs runtime dependencies
+ADD https://github.com/tianon/gosu/releases/download/1.6/gosu-amd64 /usr/sbin/gosu
+RUN echo "@edge http://dl-4.alpinelinux.org/alpine/edge/main" | tee -a /etc/apk/repositories \
+ && echo "@community http://dl-4.alpinelinux.org/alpine/edge/community" | tee -a /etc/apk/repositories \
+ && apk -U --no-progress upgrade \
+ && apk -U --no-progress add ca-certificates bash git linux-pam s6@edge curl openssh socat \
+ && chmod +x /usr/sbin/gosu
 
-COPY  . /gopath/src/github.com/gogits/gogs/
-WORKDIR /gopath/src/github.com/gogits/gogs/
+ENV GOGS_CUSTOM /data/gogs
 
-RUN  go get -v -tags="$TAGS" github.com/gogits/gogs \
-  && go build -tags="$TAGS" \
-  && useradd -d $HOME -m $USER \
-  && chown -R $USER .
+COPY . /app/gogs/
+WORKDIR /app/gogs/
+RUN ./docker/build.sh
 
-USER $USER
-
-ENTRYPOINT [ "./gogs" ]
-
-CMD [ "web" ]
+# Configure Docker Container
+VOLUME ["/data"]
+EXPOSE 22 3000
+ENTRYPOINT ["docker/start.sh"]
+CMD ["/bin/s6-svscan", "/app/gogs/docker/s6/"]

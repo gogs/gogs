@@ -15,6 +15,7 @@ import (
 	"hash"
 	"html/template"
 	"math"
+	"regexp"
 	"strings"
 	"time"
 
@@ -22,14 +23,16 @@ import (
 	"github.com/Unknwon/i18n"
 	"github.com/microcosm-cc/bluemonday"
 
+	"github.com/gogits/chardet"
+
 	"github.com/gogits/gogs/modules/avatar"
 	"github.com/gogits/gogs/modules/setting"
 )
 
-var Sanitizer = bluemonday.UGCPolicy()
+var Sanitizer = bluemonday.UGCPolicy().AllowAttrs("class").Matching(regexp.MustCompile(`[\p{L}\p{N}\s\-_',:\[\]!\./\\\(\)&]*`)).OnElements("code")
 
-// Encode string to md5 hex value.
-func EncodeMd5(str string) string {
+// EncodeMD5 encodes string to md5 hex value.
+func EncodeMD5(str string) string {
 	m := md5.New()
 	m.Write([]byte(str))
 	return hex.EncodeToString(m.Sum(nil))
@@ -40,6 +43,22 @@ func EncodeSha1(str string) string {
 	h := sha1.New()
 	h.Write([]byte(str))
 	return hex.EncodeToString(h.Sum(nil))
+}
+
+func ShortSha(sha1 string) string {
+	if len(sha1) == 40 {
+		return sha1[:10]
+	}
+	return sha1
+}
+
+func DetectEncoding(content []byte) (string, error) {
+	detector := chardet.NewTextDetector()
+	result, err := detector.DetectBest(content)
+	if result.Charset != "UTF-8" && len(setting.Repository.AnsiCharset) > 0 {
+		return setting.Repository.AnsiCharset, err
+	}
+	return result.Charset, err
 }
 
 func BasicAuthDecode(encoded string) (string, string, error) {
@@ -321,6 +340,10 @@ func timeSince(then time.Time, lang string) string {
 	}
 }
 
+func RawTimeSince(t time.Time, lang string) string {
+	return timeSince(t, lang)
+}
+
 // TimeSince calculates the time interval and generate user-friendly string.
 func TimeSince(t time.Time, lang string) template.HTML {
 	return template.HTML(fmt.Sprintf(`<span class="time-since" title="%s">%s</span>`, t.Format(setting.TimeFormat), timeSince(t, lang)))
@@ -419,4 +442,31 @@ func Subtract(left interface{}, right interface{}) interface{} {
 	} else {
 		return fleft + float64(rleft) - (fright + float64(rright))
 	}
+}
+
+// StringsToInt64s converts a slice of string to a slice of int64.
+func StringsToInt64s(strs []string) []int64 {
+	ints := make([]int64, len(strs))
+	for i := range strs {
+		ints[i] = com.StrTo(strs[i]).MustInt64()
+	}
+	return ints
+}
+
+// Int64sToStrings converts a slice of int64 to a slice of string.
+func Int64sToStrings(ints []int64) []string {
+	strs := make([]string, len(ints))
+	for i := range ints {
+		strs[i] = com.ToStr(ints[i])
+	}
+	return strs
+}
+
+// Int64sToMap converts a slice of int64 to a int64 map.
+func Int64sToMap(ints []int64) map[int64]bool {
+	m := make(map[int64]bool)
+	for _, i := range ints {
+		m[i] = true
+	}
+	return m
 }

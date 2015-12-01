@@ -19,9 +19,11 @@ import (
 	"errors"
 	"fmt"
 	"image"
+	"image/color/palette"
 	"image/jpeg"
 	"image/png"
 	"io"
+	"math/rand"
 	"net/http"
 	"net/url"
 	"os"
@@ -30,21 +32,26 @@ import (
 	"sync"
 	"time"
 
+	"github.com/issue9/identicon"
 	"github.com/nfnt/resize"
 
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/setting"
 )
 
+//FIXME: remove cache module
+
 var gravatarSource string
 
 func UpdateGravatarSource() {
 	gravatarSource = setting.GravatarSource
-	log.Debug("avatar.UpdateGravatarSource(gavatar source): %s", gravatarSource)
-	if !strings.HasPrefix(gravatarSource, "http:") {
+	if strings.HasPrefix(gravatarSource, "//") {
 		gravatarSource = "http:" + gravatarSource
-		log.Debug("avatar.UpdateGravatarSource(update gavatar source): %s", gravatarSource)
+	} else if !strings.HasPrefix(gravatarSource, "http://") &&
+		!strings.HasPrefix(gravatarSource, "https://") {
+		gravatarSource = "http://" + gravatarSource
 	}
+	log.Debug("avatar.UpdateGravatarSource(update gavatar source): %s", gravatarSource)
 }
 
 // hash email to md5 string
@@ -57,6 +64,27 @@ func HashEmail(email string) string {
 	h := md5.New()
 	h.Write([]byte(email))
 	return hex.EncodeToString(h.Sum(nil))
+}
+
+const _RANDOM_AVATAR_SIZE = 200
+
+// RandomImage generates and returns a random avatar image.
+func RandomImage(data []byte) (image.Image, error) {
+	randExtent := len(palette.WebSafe) - 32
+	rand.Seed(time.Now().UnixNano())
+	colorIndex := rand.Intn(randExtent)
+	backColorIndex := colorIndex - 1
+	if backColorIndex < 0 {
+		backColorIndex = randExtent - 1
+	}
+
+	// Size, background, forecolor
+	imgMaker, err := identicon.New(_RANDOM_AVATAR_SIZE,
+		palette.WebSafe[backColorIndex], palette.WebSafe[colorIndex:colorIndex+32]...)
+	if err != nil {
+		return nil, err
+	}
+	return imgMaker.Make(data), nil
 }
 
 // Avatar represents the avatar object.
@@ -76,7 +104,7 @@ func New(hash string, cacheDir string) *Avatar {
 		expireDuration: time.Minute * 10,
 		reqParams: url.Values{
 			"d":    {"retro"},
-			"size": {"200"},
+			"size": {"290"},
 			"r":    {"pg"}}.Encode(),
 		imagePath: filepath.Join(cacheDir, hash+".image"), //maybe png or jpeg
 	}
@@ -127,7 +155,7 @@ func (this *Avatar) Encode(wr io.Writer, size int) (err error) {
 	if img, err = decodeImageFile(imgPath); err != nil {
 		return
 	}
-	m := resize.Resize(uint(size), 0, img, resize.NearestNeighbor)
+	m := resize.Resize(uint(size), 0, img, resize.Lanczos3)
 	return jpeg.Encode(wr, m, nil)
 }
 
@@ -166,7 +194,7 @@ func (this *service) mustInt(r *http.Request, defaultValue int, keys ...string) 
 func (this *service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	urlPath := r.URL.Path
 	hash := urlPath[strings.LastIndex(urlPath, "/")+1:]
-	size := this.mustInt(r, 80, "s", "size") // default size = 80*80
+	size := this.mustInt(r, 290, "s", "size") // default size = 290*290
 
 	avatar := New(hash, this.cacheDir)
 	avatar.AlterImage = this.altImage

@@ -25,8 +25,8 @@ var CmdDump = cli.Command{
 It can be used for backup and capture Gogs server image to send to maintainer`,
 	Action: runDump,
 	Flags: []cli.Flag{
-		cli.StringFlag{"config, c", "custom/conf/app.ini", "Custom configuration file path", ""},
-		cli.BoolFlag{"verbose, v", "show process details", ""},
+		stringFlag("config, c", "custom/conf/app.ini", "Custom configuration file path"),
+		boolFlag("verbose, v", "show process details"),
 	},
 }
 
@@ -34,8 +34,8 @@ func runDump(ctx *cli.Context) {
 	if ctx.IsSet("config") {
 		setting.CustomConf = ctx.String("config")
 	}
-	setting.NewConfigContext()
-	models.LoadModelsConfig()
+	setting.NewContext()
+	models.LoadConfigs()
 	models.SetEngine()
 
 	log.Printf("Dumping local repositories...%s", setting.RepoRootPath)

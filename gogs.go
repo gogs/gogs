@@ -1,10 +1,10 @@
-// +build go1.2
+// +build go1.3
 
 // Copyright 2014 The Gogs Authors. All rights reserved.
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-// Gogs(Go Git Service) is a painless self-hosted Git Service written in Go.
+// Gogs (Go Git Service) is a painless self-hosted Git Service.
 package main
 
 import (
@@ -17,7 +17,7 @@ import (
 	"github.com/gogits/gogs/modules/setting"
 )
 
-const APP_VER = "0.6.1.0325 Beta"
+const APP_VER = "0.7.22.1125 Beta"
 
 func init() {
 	runtime.GOMAXPROCS(runtime.NumCPU())

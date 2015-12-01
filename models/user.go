@@ -13,12 +13,16 @@ import (
 	"fmt"
 	"image"
 	"image/jpeg"
+	_ "image/jpeg"
+	"image/png"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/Unknwon/com"
+	"github.com/go-xorm/xorm"
 	"github.com/nfnt/resize"
 
 	"github.com/gogits/gogs/modules/avatar"
@@ -36,10 +40,7 @@ const (
 )
 
 var (
-	ErrUserAlreadyExist      = errors.New("User already exist")
-	ErrUserNotExist          = errors.New("User does not exist")
 	ErrUserNotKeyOwner       = errors.New("User does not the owner of public key")
-	ErrEmailAlreadyUsed      = errors.New("E-mail already used")
 	ErrEmailNotExist         = errors.New("E-mail does not exist")
 	ErrEmailNotActivated     = errors.New("E-mail address has not been activated")
 	ErrUserNameIllegal       = errors.New("User name contains illegal characters")
@@ -55,12 +56,13 @@ type User struct {
 	Name      string `xorm:"UNIQUE NOT NULL"`
 	FullName  string
 	// Email is the primary email address (to be used for communication).
-	Email       string `xorm:"UNIQUE(s) NOT NULL"`
+	Email       string `xorm:"NOT NULL"`
 	Passwd      string `xorm:"NOT NULL"`
 	LoginType   LoginType
 	LoginSource int64 `xorm:"NOT NULL DEFAULT 0"`
 	LoginName   string
-	Type        UserType      `xorm:"UNIQUE(s)"`
+	Type        UserType
+	OwnedOrgs   []*User       `xorm:"-"`
 	Orgs        []*User       `xorm:"-"`
 	Repos       []*Repository `xorm:"-"`
 	Location    string
@@ -70,10 +72,14 @@ type User struct {
 	Created     time.Time `xorm:"CREATED"`
 	Updated     time.Time `xorm:"UPDATED"`
 
+	// Remember visibility choice for convenience, true for private
+	LastRepoVisibility bool
+
 	// Permissions.
-	IsActive     bool
-	IsAdmin      bool
-	AllowGitHook bool
+	IsActive         bool
+	IsAdmin          bool
+	AllowGitHook     bool
+	AllowImportLocal bool // Allow migrate repository by local path
 
 	// Avatar.
 	Avatar          string `xorm:"VARCHAR(2048) NOT NULL"`
@@ -94,11 +100,36 @@ type User struct {
 	Members     []*User `xorm:"-"`
 }
 
+func (u *User) AfterSet(colName string, _ xorm.Cell) {
+	switch colName {
+	case "full_name":
+		u.FullName = base.Sanitizer.Sanitize(u.FullName)
+	case "created":
+		u.Created = regulateTimeZone(u.Created)
+	}
+}
+
+// HasForkedRepo checks if user has already forked a repository with given ID.
+func (u *User) HasForkedRepo(repoID int64) bool {
+	_, has := HasForkedRepo(u.Id, repoID)
+	return has
+}
+
+// CanEditGitHook returns true if user can edit Git hooks.
+func (u *User) CanEditGitHook() bool {
+	return u.IsAdmin || u.AllowGitHook
+}
+
+// CanImportLocal returns true if user can migrate repository by local path.
+func (u *User) CanImportLocal() bool {
+	return u.IsAdmin || u.AllowImportLocal
+}
+
 // EmailAdresses is the list of all email addresses of a user. Can contain the
 // primary email address, but is not obligatory
 type EmailAddress struct {
-	Id          int64
-	Uid         int64  `xorm:"INDEX NOT NULL"`
+	ID          int64  `xorm:"pk autoincr"`
+	UID         int64  `xorm:"INDEX NOT NULL"`
 	Email       string `xorm:"UNIQUE NOT NULL"`
 	IsActivated bool
 	IsPrimary   bool `xorm:"-"`
@@ -112,22 +143,93 @@ func (u *User) DashboardLink() string {
 	return setting.AppSubUrl + "/"
 }
 
-// HomeLink returns the user home page link.
+// HomeLink returns the user or organization home page link.
 func (u *User) HomeLink() string {
 	return setting.AppSubUrl + "/" + u.Name
 }
 
-// AvatarLink returns user gravatar link.
-func (u *User) AvatarLink() string {
+// GenerateEmailActivateCode generates an activate code based on user information and given e-mail.
+func (u *User) GenerateEmailActivateCode(email string) string {
+	code := base.CreateTimeLimitCode(
+		com.ToStr(u.Id)+email+u.LowerName+u.Passwd+u.Rands,
+		setting.Service.ActiveCodeLives, nil)
+
+	// Add tail hex username
+	code += hex.EncodeToString([]byte(u.LowerName))
+	return code
+}
+
+// GenerateActivateCode generates an activate code based on user information.
+func (u *User) GenerateActivateCode() string {
+	return u.GenerateEmailActivateCode(u.Email)
+}
+
+// CustomAvatarPath returns user custom avatar file path.
+func (u *User) CustomAvatarPath() string {
+	return filepath.Join(setting.AvatarUploadPath, com.ToStr(u.Id))
+}
+
+// GenerateRandomAvatar generates a random avatar for user.
+func (u *User) GenerateRandomAvatar() error {
+	seed := u.Email
+	if len(seed) == 0 {
+		seed = u.Name
+	}
+
+	img, err := avatar.RandomImage([]byte(seed))
+	if err != nil {
+		return fmt.Errorf("RandomImage: %v", err)
+	}
+	if err = os.MkdirAll(path.Dir(u.CustomAvatarPath()), os.ModePerm); err != nil {
+		return fmt.Errorf("MkdirAll: %v", err)
+	}
+	fw, err := os.Create(u.CustomAvatarPath())
+	if err != nil {
+		return fmt.Errorf("Create: %v", err)
+	}
+	defer fw.Close()
+
+	if err = jpeg.Encode(fw, img, nil); err != nil {
+		return fmt.Errorf("Encode: %v", err)
+	}
+
+	log.Info("New random avatar created: %d", u.Id)
+	return nil
+}
+
+func (u *User) RelAvatarLink() string {
+	defaultImgUrl := "/img/avatar_default.jpg"
+	if u.Id == -1 {
+		return defaultImgUrl
+	}
+
 	switch {
 	case u.UseCustomAvatar:
-		return setting.AppSubUrl + "/avatars/" + com.ToStr(u.Id)
+		if !com.IsExist(u.CustomAvatarPath()) {
+			return defaultImgUrl
+		}
+		return "/avatars/" + com.ToStr(u.Id)
 	case setting.DisableGravatar, setting.OfflineMode:
-		return setting.AppSubUrl + "/img/avatar_default.jpg"
+		if !com.IsExist(u.CustomAvatarPath()) {
+			if err := u.GenerateRandomAvatar(); err != nil {
+				log.Error(3, "GenerateRandomAvatar: %v", err)
+			}
+		}
+
+		return "/avatars/" + com.ToStr(u.Id)
 	case setting.Service.EnableCacheAvatar:
-		return setting.AppSubUrl + "/avatar/" + u.Avatar
+		return "/avatar/" + u.Avatar
 	}
 	return setting.GravatarSource + u.Avatar
+}
+
+// AvatarLink returns user gravatar link.
+func (u *User) AvatarLink() string {
+	link := u.RelAvatarLink()
+	if link[0] == '/' && link[1] != '/' {
+		return setting.AppSubUrl + link
+	}
+	return link
 }
 
 // NewGitSig generates and returns the signature of given user.
@@ -145,53 +247,65 @@ func (u *User) EncodePasswd() {
 	u.Passwd = fmt.Sprintf("%x", newPasswd)
 }
 
-// ValidtePassword checks if given password matches the one belongs to the user.
-func (u *User) ValidtePassword(passwd string) bool {
+// ValidatePassword checks if given password matches the one belongs to the user.
+func (u *User) ValidatePassword(passwd string) bool {
 	newUser := &User{Passwd: passwd, Salt: u.Salt}
 	newUser.EncodePasswd()
 	return u.Passwd == newUser.Passwd
 }
 
-// CustomAvatarPath returns user custom avatar file path.
-func (u *User) CustomAvatarPath() string {
-	return filepath.Join(setting.AvatarUploadPath, com.ToStr(u.Id))
-}
-
 // UploadAvatar saves custom avatar for user.
 // FIXME: split uploads to different subdirs in case we have massive users.
 func (u *User) UploadAvatar(data []byte) error {
-	u.UseCustomAvatar = true
-
 	img, _, err := image.Decode(bytes.NewReader(data))
 	if err != nil {
-		return err
+		return fmt.Errorf("Decode: %v", err)
 	}
-	m := resize.Resize(200, 200, img, resize.NearestNeighbor)
+
+	m := resize.Resize(290, 290, img, resize.NearestNeighbor)
 
 	sess := x.NewSession()
-	defer sess.Close()
+	defer sessionRelease(sess)
 	if err = sess.Begin(); err != nil {
 		return err
 	}
 
-	if _, err = sess.Id(u.Id).AllCols().Update(u); err != nil {
-		sess.Rollback()
-		return err
+	u.UseCustomAvatar = true
+	if err = updateUser(sess, u); err != nil {
+		return fmt.Errorf("updateUser: %v", err)
 	}
 
 	os.MkdirAll(setting.AvatarUploadPath, os.ModePerm)
 	fw, err := os.Create(u.CustomAvatarPath())
 	if err != nil {
-		sess.Rollback()
-		return err
+		return fmt.Errorf("Create: %v", err)
 	}
 	defer fw.Close()
-	if err = jpeg.Encode(fw, m, nil); err != nil {
-		sess.Rollback()
-		return err
+
+	if err = png.Encode(fw, m); err != nil {
+		return fmt.Errorf("Encode: %v", err)
 	}
 
 	return sess.Commit()
+}
+
+// IsAdminOfRepo returns true if user has admin or higher access of repository.
+func (u *User) IsAdminOfRepo(repo *Repository) bool {
+	if err := repo.GetOwner(); err != nil {
+		log.Error(3, "GetOwner: %v", err)
+		return false
+	}
+
+	if repo.Owner.IsOrganization() {
+		has, err := HasAccess(u, repo, ACCESS_MODE_ADMIN)
+		if err != nil {
+			log.Error(3, "HasAccess: %v", err)
+			return false
+		}
+		return has
+	}
+
+	return repo.IsOwnedBy(u.Id)
 }
 
 // IsOrganization returns true if user is actually a organization.
@@ -209,14 +323,24 @@ func (u *User) IsPublicMember(orgId int64) bool {
 	return IsPublicMembership(orgId, u.Id)
 }
 
+func (u *User) getOrganizationCount(e Engine) (int64, error) {
+	return e.Where("uid=?", u.Id).Count(new(OrgUser))
+}
+
 // GetOrganizationCount returns count of membership of organization of user.
 func (u *User) GetOrganizationCount() (int64, error) {
-	return x.Where("uid=?", u.Id).Count(new(OrgUser))
+	return u.getOrganizationCount(x)
 }
 
 // GetRepositories returns all repositories that user owns, including private repositories.
 func (u *User) GetRepositories() (err error) {
 	u.Repos, err = GetRepositories(u.Id, true)
+	return err
+}
+
+// GetOwnedOrganizations returns all organizations that user owns.
+func (u *User) GetOwnedOrganizations() (err error) {
+	u.OwnedOrgs, err = GetOwnedOrgsByUserID(u.Id)
 	return err
 }
 
@@ -229,7 +353,7 @@ func (u *User) GetOrganizations() error {
 
 	u.Orgs = make([]*User, len(ous))
 	for i, ou := range ous {
-		u.Orgs[i], err = GetUserById(ou.OrgID)
+		u.Orgs[i], err = GetUserByID(ou.OrgID)
 		if err != nil {
 			return err
 		}
@@ -237,12 +361,22 @@ func (u *User) GetOrganizations() error {
 	return nil
 }
 
-// GetFullNameFallback returns Full Name if set, otherwise username
-func (u *User) GetFullNameFallback() string {
-	if u.FullName == "" {
+// DisplayName returns full name if it's not empty,
+// returns username otherwise.
+func (u *User) DisplayName() string {
+	if len(u.FullName) > 0 {
+		return u.FullName
+	}
+	return u.Name
+}
+
+// ShortName returns shorted user name with given maximum length,
+// it adds "..." at the end if user name has more length than maximum.
+func (u *User) ShortName(length int) string {
+	if len(u.Name) < length {
 		return u.Name
 	}
-	return u.FullName
+	return u.Name[:length] + "..."
 }
 
 // IsUserExist checks if given user name exist,
@@ -261,6 +395,8 @@ func IsEmailUsed(email string) (bool, error) {
 	if len(email) == 0 {
 		return false, nil
 	}
+
+	email = strings.ToLower(email)
 	if has, err := x.Get(&EmailAddress{Email: email}); has || err != nil {
 		return has, err
 	}
@@ -272,24 +408,34 @@ func GetUserSalt() string {
 	return base.GetRandomString(10)
 }
 
+// NewFakeUser creates and returns a fake user for someone has deleted his/her account.
+func NewFakeUser() *User {
+	return &User{
+		Id:        -1,
+		Name:      "Someone",
+		LowerName: "someone",
+	}
+}
+
 // CreateUser creates record of a new user.
-func CreateUser(u *User) error {
-	if !IsLegalName(u.Name) {
-		return ErrUserNameIllegal
+func CreateUser(u *User) (err error) {
+	if err = IsUsableName(u.Name); err != nil {
+		return err
 	}
 
 	isExist, err := IsUserExist(0, u.Name)
 	if err != nil {
 		return err
 	} else if isExist {
-		return ErrUserAlreadyExist
+		return ErrUserAlreadyExist{u.Name}
 	}
 
+	u.Email = strings.ToLower(u.Email)
 	isExist, err = IsEmailUsed(u.Email)
 	if err != nil {
 		return err
 	} else if isExist {
-		return ErrEmailAlreadyUsed
+		return ErrEmailAlreadyUsed{u.Email}
 	}
 
 	u.LowerName = strings.ToLower(u.Name)
@@ -311,30 +457,25 @@ func CreateUser(u *User) error {
 	} else if err = os.MkdirAll(UserPath(u.Name), os.ModePerm); err != nil {
 		sess.Rollback()
 		return err
-	} else if err = sess.Commit(); err != nil {
-		return err
 	}
 
-	// Auto-set admin for user whose ID is 1.
-	if u.Id == 1 {
-		u.IsAdmin = true
-		u.IsActive = true
-		_, err = x.Id(u.Id).UseBool().Update(u)
-	}
-	return err
+	return sess.Commit()
+}
+
+func countUsers(e Engine) int64 {
+	count, _ := e.Where("type=0").Count(new(User))
+	return count
 }
 
 // CountUsers returns number of users.
 func CountUsers() int64 {
-	count, _ := x.Where("type=0").Count(new(User))
-	return count
+	return countUsers(x)
 }
 
-// GetUsers returns given number of user objects with offset.
-func GetUsers(num, offset int) ([]*User, error) {
-	users := make([]*User, 0, num)
-	err := x.Limit(num, offset).Where("type=0").Asc("id").Find(&users)
-	return users, err
+// Users returns number of users in given page.
+func Users(page, pageSize int) ([]*User, error) {
+	users := make([]*User, 0, pageSize)
+	return users, x.Limit(pageSize, (page-1)*pageSize).Where("type=0").Asc("id").Find(&users)
 }
 
 // get user by erify code
@@ -392,20 +533,35 @@ func VerifyActiveEmailCode(code, email string) *EmailAddress {
 
 // ChangeUserName changes all corresponding setting from old user name to new one.
 func ChangeUserName(u *User, newUserName string) (err error) {
-	if !IsLegalName(newUserName) {
-		return ErrUserNameIllegal
+	if err = IsUsableName(newUserName); err != nil {
+		return err
+	}
+
+	isExist, err := IsUserExist(0, newUserName)
+	if err != nil {
+		return err
+	} else if isExist {
+		return ErrUserAlreadyExist{newUserName}
 	}
 
 	return os.Rename(UserPath(u.LowerName), UserPath(newUserName))
 }
 
-// UpdateUser updates user's information.
-func UpdateUser(u *User) error {
-	has, err := x.Where("id!=?", u.Id).And("type=?", u.Type).And("email=?", u.Email).Get(new(User))
-	if err != nil {
-		return err
-	} else if has {
-		return ErrEmailAlreadyUsed
+func updateUser(e Engine, u *User) error {
+	// Organization does not need e-mail.
+	if !u.IsOrganization() {
+		u.Email = strings.ToLower(u.Email)
+		has, err := e.Where("id!=?", u.Id).And("type=?", u.Type).And("email=?", u.Email).Get(new(User))
+		if err != nil {
+			return err
+		} else if has {
+			return ErrEmailAlreadyUsed{u.Email}
+		}
+
+		if len(u.AvatarEmail) == 0 {
+			u.AvatarEmail = u.Email
+		}
+		u.Avatar = avatar.HashEmail(u.AvatarEmail)
 	}
 
 	u.LowerName = strings.ToLower(u.Name)
@@ -420,18 +576,18 @@ func UpdateUser(u *User) error {
 		u.Description = u.Description[:255]
 	}
 
-	if u.AvatarEmail == "" {
-		u.AvatarEmail = u.Email
-	}
-	u.Avatar = avatar.HashEmail(u.AvatarEmail)
-
 	u.FullName = base.Sanitizer.Sanitize(u.FullName)
-	_, err = x.Id(u.Id).AllCols().Update(u)
+	_, err := e.Id(u.Id).AllCols().Update(u)
 	return err
 }
 
-// DeleteBeans deletes all given beans, beans should contain delete conditions.
-func DeleteBeans(e Engine, beans ...interface{}) (err error) {
+// UpdateUser updates user's information.
+func UpdateUser(u *User) error {
+	return updateUser(x, u)
+}
+
+// deleteBeans deletes all given beans, beans should contain delete conditions.
+func deleteBeans(e Engine, beans ...interface{}) (err error) {
 	for i := range beans {
 		if _, err = e.Delete(beans[i]); err != nil {
 			return err
@@ -441,10 +597,12 @@ func DeleteBeans(e Engine, beans ...interface{}) (err error) {
 }
 
 // FIXME: need some kind of mechanism to record failure. HINT: system notice
-// DeleteUser completely and permanently deletes everything of user.
-func DeleteUser(u *User) error {
+func deleteUser(e *xorm.Session, u *User) error {
+	// Note: A user owns any repository or belongs to any organization
+	//	cannot perform delete operation.
+
 	// Check ownership of repository.
-	count, err := GetRepositoryCount(u)
+	count, err := getRepositoryCount(e, u)
 	if err != nil {
 		return fmt.Errorf("GetRepositoryCount: %v", err)
 	} else if count > 0 {
@@ -452,67 +610,106 @@ func DeleteUser(u *User) error {
 	}
 
 	// Check membership of organization.
-	count, err = u.GetOrganizationCount()
+	count, err = u.getOrganizationCount(e)
 	if err != nil {
 		return fmt.Errorf("GetOrganizationCount: %v", err)
 	} else if count > 0 {
 		return ErrUserHasOrgs{UID: u.Id}
 	}
 
-	// Get watches before session.
+	// ***** START: Watch *****
 	watches := make([]*Watch, 0, 10)
-	if err = x.Where("user_id=?", u.Id).Find(&watches); err != nil {
+	if err = e.Find(&watches, &Watch{UserID: u.Id}); err != nil {
 		return fmt.Errorf("get all watches: %v", err)
 	}
-	repoIDs := make([]int64, 0, len(watches))
 	for i := range watches {
-		repoIDs = append(repoIDs, watches[i].RepoID)
+		if _, err = e.Exec("UPDATE `repository` SET num_watches=num_watches-1 WHERE id=?", watches[i].RepoID); err != nil {
+			return fmt.Errorf("decrease repository watch number[%d]: %v", watches[i].RepoID, err)
+		}
+	}
+	// ***** END: Watch *****
+
+	// ***** START: Star *****
+	stars := make([]*Star, 0, 10)
+	if err = e.Find(&stars, &Star{UID: u.Id}); err != nil {
+		return fmt.Errorf("get all stars: %v", err)
+	}
+	for i := range stars {
+		if _, err = e.Exec("UPDATE `repository` SET num_stars=num_stars-1 WHERE id=?", stars[i].RepoID); err != nil {
+			return fmt.Errorf("decrease repository star number[%d]: %v", stars[i].RepoID, err)
+		}
+	}
+	// ***** END: Star *****
+
+	// ***** START: Follow *****
+	followers := make([]*Follow, 0, 10)
+	if err = e.Find(&followers, &Follow{UserID: u.Id}); err != nil {
+		return fmt.Errorf("get all followers: %v", err)
+	}
+	for i := range followers {
+		if _, err = e.Exec("UPDATE `user` SET num_followers=num_followers-1 WHERE id=?", followers[i].UserID); err != nil {
+			return fmt.Errorf("decrease user follower number[%d]: %v", followers[i].UserID, err)
+		}
+	}
+	// ***** END: Follow *****
+
+	if err = deleteBeans(e,
+		&AccessToken{UID: u.Id},
+		&Collaboration{UserID: u.Id},
+		&Access{UserID: u.Id},
+		&Watch{UserID: u.Id},
+		&Star{UID: u.Id},
+		&Follow{FollowID: u.Id},
+		&Action{UserID: u.Id},
+		&IssueUser{UID: u.Id},
+		&EmailAddress{UID: u.Id},
+	); err != nil {
+		return fmt.Errorf("deleteUser: %v", err)
 	}
 
-	// FIXME: check issues, other repos' commits
+	// ***** START: PublicKey *****
+	keys := make([]*PublicKey, 0, 10)
+	if err = e.Find(&keys, &PublicKey{OwnerID: u.Id}); err != nil {
+		return fmt.Errorf("get all public keys: %v", err)
+	}
+	for _, key := range keys {
+		if err = deletePublicKey(e, key.ID); err != nil {
+			return fmt.Errorf("deletePublicKey: %v", err)
+		}
+	}
+	// ***** END: PublicKey *****
 
+	// Clear assignee.
+	if _, err = e.Exec("UPDATE `issue` SET assignee_id=0 WHERE assignee_id=?", u.Id); err != nil {
+		return fmt.Errorf("clear assignee: %v", err)
+	}
+
+	if _, err = e.Id(u.Id).Delete(new(User)); err != nil {
+		return fmt.Errorf("Delete: %v", err)
+	}
+
+	// FIXME: system notice
+	// Note: There are something just cannot be roll back,
+	//	so just keep error logs of those operations.
+
+	RewriteAllPublicKeys()
+	os.RemoveAll(UserPath(u.Name))
+	os.Remove(u.CustomAvatarPath())
+
+	return nil
+}
+
+// DeleteUser completely and permanently deletes everything of a user,
+// but issues/comments/pulls will be kept and shown as someone has been deleted.
+func DeleteUser(u *User) (err error) {
 	sess := x.NewSession()
 	defer sessionRelease(sess)
 	if err = sess.Begin(); err != nil {
 		return err
 	}
 
-	if err = DeleteBeans(sess,
-		&Follow{FollowID: u.Id},
-		&Oauth2{Uid: u.Id},
-		&Action{UserID: u.Id},
-		&Access{UserID: u.Id},
-		&Collaboration{UserID: u.Id},
-		&EmailAddress{Uid: u.Id},
-		&Watch{UserID: u.Id},
-	); err != nil {
-		return err
-	}
-
-	// Decrease all watch numbers.
-	for i := range repoIDs {
-		if _, err = sess.Exec("UPDATE `repository` SET num_watches=num_watches-1 WHERE id=?", repoIDs[i]); err != nil {
-			return err
-		}
-	}
-
-	// Delete all SSH keys.
-	keys := make([]*PublicKey, 0, 10)
-	if err = sess.Find(&keys, &PublicKey{OwnerId: u.Id}); err != nil {
-		return err
-	}
-	for _, key := range keys {
-		if err = DeletePublicKey(key); err != nil {
-			return err
-		}
-	}
-
-	if _, err = sess.Delete(u); err != nil {
-		return err
-	}
-
-	// Delete user directory.
-	if err = os.RemoveAll(UserPath(u.Name)); err != nil {
+	if err = deleteUser(sess, u); err != nil {
+		// Note: don't wrapper error here.
 		return err
 	}
 
@@ -520,11 +717,22 @@ func DeleteUser(u *User) error {
 }
 
 // DeleteInactivateUsers deletes all inactivate users and email addresses.
-func DeleteInactivateUsers() error {
-	_, err := x.Where("is_active=?", false).Delete(new(User))
-	if err == nil {
-		_, err = x.Where("is_activated=?", false).Delete(new(EmailAddress))
+func DeleteInactivateUsers() (err error) {
+	users := make([]*User, 0, 10)
+	if err = x.Where("is_active=?", false).Find(&users); err != nil {
+		return fmt.Errorf("get all inactive users: %v", err)
 	}
+	for _, u := range users {
+		if err = DeleteUser(u); err != nil {
+			// Ignore users that were set inactive by admin.
+			if IsErrUserOwnRepos(err) || IsErrUserHasOrgs(err) {
+				continue
+			}
+			return err
+		}
+	}
+
+	_, err = x.Where("is_activated=?", false).Delete(new(EmailAddress))
 	return err
 }
 
@@ -533,9 +741,9 @@ func UserPath(userName string) string {
 	return filepath.Join(setting.RepoRootPath, strings.ToLower(userName))
 }
 
-func GetUserByKeyId(keyId int64) (*User, error) {
+func GetUserByKeyID(keyID int64) (*User, error) {
 	user := new(User)
-	has, err := x.Sql("SELECT a.* FROM `user` AS a, public_key AS b WHERE a.id = b.owner_id AND b.id=?", keyId).Get(user)
+	has, err := x.Sql("SELECT a.* FROM `user` AS a, public_key AS b WHERE a.id = b.owner_id AND b.id=?", keyID).Get(user)
 	if err != nil {
 		return nil, err
 	} else if !has {
@@ -544,33 +752,44 @@ func GetUserByKeyId(keyId int64) (*User, error) {
 	return user, nil
 }
 
-func getUserById(e Engine, id int64) (*User, error) {
+func getUserByID(e Engine, id int64) (*User, error) {
 	u := new(User)
 	has, err := e.Id(id).Get(u)
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, ErrUserNotExist
+		return nil, ErrUserNotExist{id, ""}
 	}
 	return u, nil
 }
 
-// GetUserById returns the user object by given ID if exists.
-func GetUserById(id int64) (*User, error) {
-	return getUserById(x, id)
+// GetUserByID returns the user object by given ID if exists.
+func GetUserByID(id int64) (*User, error) {
+	return getUserByID(x, id)
+}
+
+// GetAssigneeByID returns the user with write access of repository by given ID.
+func GetAssigneeByID(repo *Repository, userID int64) (*User, error) {
+	has, err := HasAccess(&User{Id: userID}, repo, ACCESS_MODE_WRITE)
+	if err != nil {
+		return nil, err
+	} else if !has {
+		return nil, ErrUserNotExist{userID, ""}
+	}
+	return GetUserByID(userID)
 }
 
 // GetUserByName returns user by given name.
 func GetUserByName(name string) (*User, error) {
 	if len(name) == 0 {
-		return nil, ErrUserNotExist
+		return nil, ErrUserNotExist{0, name}
 	}
 	u := &User{LowerName: strings.ToLower(name)}
 	has, err := x.Get(u)
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, ErrUserNotExist
+		return nil, ErrUserNotExist{0, name}
 	}
 	return u, nil
 }
@@ -609,7 +828,7 @@ func GetEmailAddresses(uid int64) ([]*EmailAddress, error) {
 		return nil, err
 	}
 
-	u, err := GetUserById(uid)
+	u, err := GetUserByID(uid)
 	if err != nil {
 		return nil, err
 	}
@@ -637,11 +856,12 @@ func GetEmailAddresses(uid int64) ([]*EmailAddress, error) {
 }
 
 func AddEmailAddress(email *EmailAddress) error {
+	email.Email = strings.ToLower(email.Email)
 	used, err := IsEmailUsed(email.Email)
 	if err != nil {
 		return err
 	} else if used {
-		return ErrEmailAlreadyUsed
+		return ErrEmailAlreadyUsed{email.Email}
 	}
 
 	_, err = x.Insert(email)
@@ -650,11 +870,11 @@ func AddEmailAddress(email *EmailAddress) error {
 
 func (email *EmailAddress) Activate() error {
 	email.IsActivated = true
-	if _, err := x.Id(email.Id).AllCols().Update(email); err != nil {
+	if _, err := x.Id(email.ID).AllCols().Update(email); err != nil {
 		return err
 	}
 
-	if user, err := GetUserById(email.Uid); err != nil {
+	if user, err := GetUserByID(email.UID); err != nil {
 		return err
 	} else {
 		user.Rands = GetUserSalt()
@@ -670,7 +890,7 @@ func DeleteEmailAddress(email *EmailAddress) error {
 		return ErrEmailNotExist
 	}
 
-	if _, err = x.Delete(email); err != nil {
+	if _, err = x.Id(email.ID).Delete(email); err != nil {
 		return err
 	}
 
@@ -690,12 +910,12 @@ func MakeEmailPrimary(email *EmailAddress) error {
 		return ErrEmailNotActivated
 	}
 
-	user := &User{Id: email.Uid}
+	user := &User{Id: email.UID}
 	has, err = x.Get(user)
 	if err != nil {
 		return err
 	} else if !has {
-		return ErrUserNotExist
+		return ErrUserNotExist{email.UID, ""}
 	}
 
 	// Make sure the former primary email doesn't disappear
@@ -704,7 +924,7 @@ func MakeEmailPrimary(email *EmailAddress) error {
 	if err != nil {
 		return err
 	} else if !has {
-		former_primary_email.Uid = user.Id
+		former_primary_email.UID = user.Id
 		former_primary_email.IsActivated = user.IsActive
 		x.Insert(former_primary_email)
 	}
@@ -732,13 +952,15 @@ func ValidateCommitWithEmail(c *git.Commit) *User {
 
 // ValidateCommitsWithEmails checks if authors' e-mails of commits are corresponding to users.
 func ValidateCommitsWithEmails(oldCommits *list.List) *list.List {
-	emails := map[string]*User{}
-	newCommits := list.New()
-	e := oldCommits.Front()
+	var (
+		u          *User
+		emails     = map[string]*User{}
+		newCommits = list.New()
+		e          = oldCommits.Front()
+	)
 	for e != nil {
 		c := e.Value.(*git.Commit)
 
-		var u *User
 		if v, ok := emails[c.Author.Email]; !ok {
 			u, _ = GetUserByEmail(c.Author.Email)
 			emails[c.Author.Email] = u
@@ -758,10 +980,12 @@ func ValidateCommitsWithEmails(oldCommits *list.List) *list.List {
 // GetUserByEmail returns the user object by given e-mail if exists.
 func GetUserByEmail(email string) (*User, error) {
 	if len(email) == 0 {
-		return nil, ErrUserNotExist
+		return nil, ErrUserNotExist{0, "email"}
 	}
+
+	email = strings.ToLower(email)
 	// First try to find the user by primary email
-	user := &User{Email: strings.ToLower(email)}
+	user := &User{Email: email}
 	has, err := x.Get(user)
 	if err != nil {
 		return nil, err
@@ -771,16 +995,16 @@ func GetUserByEmail(email string) (*User, error) {
 	}
 
 	// Otherwise, check in alternative list for activated email addresses
-	emailAddress := &EmailAddress{Email: strings.ToLower(email), IsActivated: true}
+	emailAddress := &EmailAddress{Email: email, IsActivated: true}
 	has, err = x.Get(emailAddress)
 	if err != nil {
 		return nil, err
 	}
 	if has {
-		return GetUserById(emailAddress.Uid)
+		return GetUserByID(emailAddress.UID)
 	}
 
-	return nil, ErrUserNotExist
+	return nil, ErrUserNotExist{0, email}
 }
 
 // SearchUserByName returns given number of users whose name contains keyword.
@@ -797,9 +1021,9 @@ func SearchUserByName(opt SearchOption) (us []*User, err error) {
 
 // Follow is connection request for receiving user notification.
 type Follow struct {
-	Id       int64
-	UserID   int64 `xorm:"unique(follow)"`
-	FollowID int64 `xorm:"unique(follow)"`
+	ID       int64 `xorm:"pk autoincr"`
+	UserID   int64 `xorm:"UNIQUE(follow)"`
+	FollowID int64 `xorm:"UNIQUE(follow)"`
 }
 
 // FollowUser marks someone be another's follower.
@@ -853,18 +1077,19 @@ func UnFollowUser(userId int64, unFollowId int64) (err error) {
 }
 
 func UpdateMentions(userNames []string, issueId int64) error {
+	for i := range userNames {
+		userNames[i] = strings.ToLower(userNames[i])
+	}
 	users := make([]*User, 0, len(userNames))
 
-	if err := x.Where("name IN (?)", strings.Join(userNames, "\",\"")).OrderBy("name ASC").Find(&users); err != nil {
+	if err := x.Where("lower_name IN (?)", strings.Join(userNames, "\",\"")).OrderBy("lower_name ASC").Find(&users); err != nil {
 		return err
 	}
 
 	ids := make([]int64, 0, len(userNames))
-
 	for _, user := range users {
 		ids = append(ids, user.Id)
-
-		if user.Type == INDIVIDUAL {
+		if !user.IsOrganization() {
 			continue
 		}
 
@@ -873,9 +1098,7 @@ func UpdateMentions(userNames []string, issueId int64) error {
 		}
 
 		tempIds := make([]int64, 0, user.NumMembers)
-
 		orgUsers, err := GetOrgUsersByOrgId(user.Id)
-
 		if err != nil {
 			return err
 		}
@@ -887,7 +1110,7 @@ func UpdateMentions(userNames []string, issueId int64) error {
 		ids = append(ids, tempIds...)
 	}
 
-	if err := UpdateIssueUserPairsByMentions(ids, issueId); err != nil {
+	if err := UpdateIssueUsersByMentions(ids, issueId); err != nil {
 		return err
 	}
 

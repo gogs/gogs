@@ -1,89 +1,75 @@
-Docker
-======
+# Docker for Gogs
 
-TOOLS ARE WRITTEN FOR TESTING AND TO SEE WHAT IT IS!
+Visit [Docker Hub](https://hub.docker.com/r/gogs/gogs/) see all available tags.
 
-For this to work you will need the nifty docker tool [fig].
+## Usage
 
-The most simple setup will look like this:
-
-```sh
-./assemble_blocks.sh docker_gogs w_db option_db_mysql
-fig up
+To keep your data out of Docker container, we do a volume(`/var/gogs` -> `/data`) here, and you can change it based on your situation.
 
 ```
+# Pull image from Docker Hub.
+$ docker pull gogs/gogs
 
-That's it. You have GoGS running in docker linked to a MySQL docker container.
+# Create local directory for volume.
+$ mkdir -p /var/gogs
 
-Now visit http://localhost:3000/ and give details for the admin account an you're up and running.
+# Use `docker run` for the first time.
+$ docker run --name=gogs -p 10022:22 -p 10080:3000 -v /var/gogs:/data gogs/gogs
 
-
-How does it work
-----------------
-
-`./assemble_blocks.sh` will look in `blocks` for subdirectories.
-In the subdirectories there are three relevant files: `Dockerfile`, `config` and `fig`.
-
-`Dockerfile` will be copied to `docker/` (also means last `Dockerfile` wins).
-
-The `config` file contains lines which will in the gogs docker container end up in `$GOGS_PATH/custom/config/app.ini` and by this gogs will be configured.
-Here you can define things like the MySQL server for your database block.
-
-The `fig` file will just be added to `fig.yml`, which is used by fig to manage your containers.
-This includes container linking!
-
-Just have a look at them and it will be clear how to write your own blocks.
-
-Just some things
-
-    - all files (`Dockerfile`, `fig` and `config`) are optional
-    - the gogs block should always be the first block
-
-Currently the blocks are designed that, the blocks that start with `docker` pull in the base docker image.
-Then one block starting with `w` defines, what containers should be linked to the gogs container.
-For every option in the `w` block you need to add an `option` container.
-
-Example:
-
-```sh
-./assemble_blocks.sh docker_gogs w_db_cache option_db_mysql option_cache_redis
+# Use `docker start` if you have stopped it.
+$ docker start gogs
 ```
 
+Files will be store in local path `/var/gogs` in my case.
 
-More sophisticated Example
---------------------------
+Directory `/var/gogs` keeps Git repositories and Gogs data:
 
-Here is a more elaborated example
+    /var/gogs
+    |-- git
+    |   |-- gogs-repositories
+    |-- ssh
+    |   |-- # ssh public/private keys for Gogs
+    |-- gogs
+        |-- conf
+        |-- data
+        |-- log
+        |-- templates
 
-```sh
-./assemble_blocks.sh docker_gogs w_db_cache_session option_db_postgresql option_cache_redis option_session_mysql
-fig up
+### Volume with data container
+
+If you're more comfortable with mounting data to a data container, the commands you execute at the first time will look like as follows:
+
+```
+# Create data container
+docker run --name=gogs-data --entrypoint /bin/true gogs/gogs
+# Use `docker run` for the first time.
+docker run --name=gogs --volumes-from gogs-data -p 10022:22 -p 10080:3000 gogs/gogs
 ```
 
-This will set up four containters and link them proberly. One for each of
+## Settings
 
-    - gogs
-    - database (postgresql)
-    - cache (redis)
-    - session (mysql)
+Most of settings are obvious and easy to understand, but there are some settings can be confusing by running Gogs inside Docker:
 
-WARNING: This will not work at the Moment! MySQL session is broken!
+- **Repository Root Path**: keep it as default value `/home/git/gogs-repositories` because `start.sh` already made a symbolic link for you.
+- **Run User**: keep it as default value `git` because `start.sh` already setup a user with name `git`.
+- **Domain**: fill in with Docker container IP(e.g. `192.168.99.100`). But if you want to access your Gogs instance from a different physical machine, please fill in with the hostname or IP address of the Docker host machine.
+- **SSH Port**: Use the exposed port from Docker container. For example, your SSH server listens on `22` inside Docker, but you expose it by `10022:22`, then use `10022` for this value.
+- **HTTP Port**: Use port you want Gogs to listen on inside Docker container. For example, your Gogs listens on `3000` inside Docker, and you expose it by `10080:3000`, but you still use `3000` for this value.
+- **Application URL**: Use combination of **Domain** and **exposed HTTP Port** values(e.g. `http://192.168.99.100:10080/`).
 
+Full documentation of settings can be found [here](http://gogs.io/docs/advanced/configuration_cheat_sheet.html).
 
-Remark
-------
+## Upgrade
 
-After you execute `assemble_blocks.sh` you should always trigger `fig build` to inculde the the new init script `init_gogs.sh` in the docker image.
+:exclamation::exclamation::exclamation:<span style="color: red">**Make sure you have volumed data to somewhere outside Docker container**</span>:exclamation::exclamation::exclamation:
 
-If you want to use another GoGS docker file, but keep everything else the same, you can create a block, e.g. `docker_gogs_custom`, with only a `Dockerfile` and call
+Steps to upgrade Gogs with Docker:
 
-```sh
-./assemble_blocks.sh docker_gogs_custom w_db option_database_mysql
-```
+- `docker pull gogs/gogs`
+- `docker stop gogs`
+- `docker rm gogs`
+- Finally, create container as the first time and don't forget to do same volume and port mapping.
 
-This will pull in the `Dockerfile` from `docker_gogs` instead of the one from `docker_gogs`.
+## Known Issues
 
-`Dockerfile`s for the `master` and `dev` branch are provided as `docker_gogs` and `docker_gogs_dev`
-
-
-[fig]:http://www.fig.sh/
+- `.dockerignore` seems to be ignored during Docker Hub Automated build

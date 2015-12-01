@@ -10,19 +10,29 @@ import (
 	"os"
 	"path"
 	"strings"
+
+	"github.com/Unknwon/com"
 )
 
 // hookNames is a list of Git hooks' name that are supported.
 var hookNames = []string{
-	"pre-applypatch",
 	"applypatch-msg",
+	"pre-applypatch",
+	"post-applypatch",
+	"pre-commit",
 	"prepare-commit-msg",
 	"commit-msg",
-	"pre-commit",
-	"pre-rebase",
 	"post-commit",
+	"pre-rebase",
+	"post-checkout",
+	"post-merge",
+	"pre-push",
+	// "update",
 	"post-receive",
 	"post-update",
+	"push-to-checkout",
+	"pre-auto-gc",
+	"post-rewrite",
 }
 
 var (
@@ -81,7 +91,10 @@ func (h *Hook) Name() string {
 // Update updates hook settings.
 func (h *Hook) Update() error {
 	if len(strings.TrimSpace(h.Content)) == 0 {
-		return os.Remove(h.path)
+		if com.IsExist(h.path) {
+			return os.Remove(h.path)
+		}
+		return nil
 	}
 	return ioutil.WriteFile(h.path, []byte(strings.Replace(h.Content, "\r", "", -1)), os.ModePerm)
 }

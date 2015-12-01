@@ -36,19 +36,19 @@ func accessLevel(e Engine, u *User, repo *Repository) (AccessMode, error) {
 		mode = ACCESS_MODE_READ
 	}
 
-	if u != nil {
-		if u.Id == repo.OwnerId {
-			return ACCESS_MODE_OWNER, nil
-		}
-
-		a := &Access{UserID: u.Id, RepoID: repo.Id}
-		if has, err := e.Get(a); !has || err != nil {
-			return mode, err
-		}
-		return a.Mode, nil
+	if u == nil {
+		return mode, nil
 	}
 
-	return mode, nil
+	if u.Id == repo.OwnerID {
+		return ACCESS_MODE_OWNER, nil
+	}
+
+	a := &Access{UserID: u.Id, RepoID: repo.ID}
+	if has, err := e.Get(a); !has || err != nil {
+		return mode, err
+	}
+	return a.Mode, nil
 }
 
 // AccessLevel returns the Access a user has to a repository. Will return NoneAccess if the
@@ -67,9 +67,8 @@ func HasAccess(u *User, repo *Repository, testMode AccessMode) (bool, error) {
 	return hasAccess(x, u, repo, testMode)
 }
 
-// GetAccessibleRepositories finds all repositories where a user has access to,
-// besides his own.
-func (u *User) GetAccessibleRepositories() (map[*Repository]AccessMode, error) {
+// GetRepositoryAccesses finds all repositories with their access mode where a user has access but does not own.
+func (u *User) GetRepositoryAccesses() (map[*Repository]AccessMode, error) {
 	accesses := make([]*Access, 0, 10)
 	if err := x.Find(&accesses, &Access{UserID: u.Id}); err != nil {
 		return nil, err
@@ -77,24 +76,41 @@ func (u *User) GetAccessibleRepositories() (map[*Repository]AccessMode, error) {
 
 	repos := make(map[*Repository]AccessMode, len(accesses))
 	for _, access := range accesses {
-		repo, err := GetRepositoryById(access.RepoID)
+		repo, err := GetRepositoryByID(access.RepoID)
 		if err != nil {
 			if IsErrRepoNotExist(err) {
-				log.Error(4, "%v", err)
+				log.Error(4, "GetRepositoryByID: %v", err)
 				continue
 			}
 			return nil, err
 		}
 		if err = repo.GetOwner(); err != nil {
 			return nil, err
-		} else if repo.OwnerId == u.Id {
+		} else if repo.OwnerID == u.Id {
 			continue
 		}
 		repos[repo] = access.Mode
 	}
-
-	// FIXME: should we generate an ordered list here? Random looks weird.
 	return repos, nil
+}
+
+// GetAccessibleRepositories finds all repositories where a user has access but does not own.
+func (u *User) GetAccessibleRepositories() ([]*Repository, error) {
+	accesses := make([]*Access, 0, 10)
+	if err := x.Find(&accesses, &Access{UserID: u.Id}); err != nil {
+		return nil, err
+	}
+
+	if len(accesses) == 0 {
+		return []*Repository{}, nil
+	}
+
+	repoIDs := make([]int64, 0, len(accesses))
+	for _, access := range accesses {
+		repoIDs = append(repoIDs, access.RepoID)
+	}
+	repos := make([]*Repository, 0, len(repoIDs))
+	return repos, x.Where("owner_id != ?", u.Id).In("id", repoIDs).Desc("updated").Find(&repos)
 }
 
 func maxAccessMode(modes ...AccessMode) AccessMode {
@@ -121,13 +137,13 @@ func (repo *Repository) refreshAccesses(e Engine, accessMap map[int64]AccessMode
 		}
 		newAccesses = append(newAccesses, Access{
 			UserID: userID,
-			RepoID: repo.Id,
+			RepoID: repo.ID,
 			Mode:   mode,
 		})
 	}
 
 	// Delete old accesses and insert new ones for repository.
-	if _, err = e.Delete(&Access{RepoID: repo.Id}); err != nil {
+	if _, err = e.Delete(&Access{RepoID: repo.ID}); err != nil {
 		return fmt.Errorf("delete old accesses: %v", err)
 	} else if _, err = e.Insert(newAccesses); err != nil {
 		return fmt.Errorf("insert new accesses: %v", err)
@@ -154,37 +170,38 @@ func (repo *Repository) refreshCollaboratorAccesses(e Engine, accessMap map[int6
 func (repo *Repository) recalculateTeamAccesses(e Engine, ignTeamID int64) (err error) {
 	accessMap := make(map[int64]AccessMode, 20)
 
+	if err = repo.getOwner(e); err != nil {
+		return err
+	} else if !repo.Owner.IsOrganization() {
+		return fmt.Errorf("owner is not an organization: %d", repo.OwnerID)
+	}
+
 	if err = repo.refreshCollaboratorAccesses(e, accessMap); err != nil {
 		return fmt.Errorf("refreshCollaboratorAccesses: %v", err)
 	}
 
-	if err = repo.getOwner(e); err != nil {
+	if err = repo.Owner.getTeams(e); err != nil {
 		return err
 	}
-	if repo.Owner.IsOrganization() {
-		if err = repo.Owner.getTeams(e); err != nil {
-			return err
+
+	for _, t := range repo.Owner.Teams {
+		if t.ID == ignTeamID {
+			continue
 		}
 
-		for _, t := range repo.Owner.Teams {
-			if t.ID == ignTeamID {
-				continue
-			}
+		// Owner team gets owner access, and skip for teams that do not
+		// have relations with repository.
+		if t.IsOwnerTeam() {
+			t.Authorize = ACCESS_MODE_OWNER
+		} else if !t.hasRepository(e, repo.ID) {
+			continue
+		}
 
-			// Owner team gets owner access, and skip for teams that do not
-			// have relations with repository.
-			if t.IsOwnerTeam() {
-				t.Authorize = ACCESS_MODE_OWNER
-			} else if !t.hasRepository(e, repo.Id) {
-				continue
-			}
-
-			if err = t.getMembers(e); err != nil {
-				return fmt.Errorf("getMembers '%d': %v", t.ID, err)
-			}
-			for _, m := range t.Members {
-				accessMap[m.Id] = maxAccessMode(accessMap[m.Id], t.Authorize)
-			}
+		if err = t.getMembers(e); err != nil {
+			return fmt.Errorf("getMembers '%d': %v", t.ID, err)
+		}
+		for _, m := range t.Members {
+			accessMap[m.Id] = maxAccessMode(accessMap[m.Id], t.Authorize)
 		}
 	}
 
@@ -192,6 +209,10 @@ func (repo *Repository) recalculateTeamAccesses(e Engine, ignTeamID int64) (err 
 }
 
 func (repo *Repository) recalculateAccesses(e Engine) error {
+	if repo.Owner.IsOrganization() {
+		return repo.recalculateTeamAccesses(e, 0)
+	}
+
 	accessMap := make(map[int64]AccessMode, 20)
 	if err := repo.refreshCollaboratorAccesses(e, accessMap); err != nil {
 		return fmt.Errorf("refreshCollaboratorAccesses: %v", err)

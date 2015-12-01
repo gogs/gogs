@@ -27,10 +27,11 @@ const (
 	SETTINGS_OPTIONS base.TplName = "repo/settings/options"
 	COLLABORATION    base.TplName = "repo/settings/collaboration"
 	HOOKS            base.TplName = "repo/settings/hooks"
-	GITHOOKS         base.TplName = "repo/settings/githooks"
-	GITHOOK_EDIT     base.TplName = "repo/settings/githook_edit"
 	HOOK_NEW         base.TplName = "repo/settings/hook_new"
 	ORG_HOOK_NEW     base.TplName = "org/settings/hook_new"
+	GITHOOKS         base.TplName = "repo/settings/githooks"
+	GITHOOK_EDIT     base.TplName = "repo/settings/githook_edit"
+	DEPLOY_KEYS      base.TplName = "repo/settings/deploy_keys"
 )
 
 func Settings(ctx *middleware.Context) {
@@ -43,6 +44,8 @@ func SettingsPost(ctx *middleware.Context, form auth.RepoSettingForm) {
 	ctx.Data["Title"] = ctx.Tr("repo.settings")
 	ctx.Data["PageIsSettingsOptions"] = true
 
+	repo := ctx.Repo.Repository
+
 	switch ctx.Query("action") {
 	case "update":
 		if ctx.HasError() {
@@ -50,43 +53,66 @@ func SettingsPost(ctx *middleware.Context, form auth.RepoSettingForm) {
 			return
 		}
 
+		isNameChanged := false
+		oldRepoName := repo.Name
 		newRepoName := form.RepoName
 		// Check if repository name has been changed.
-		if ctx.Repo.Repository.Name != newRepoName {
-			if models.IsRepositoryExist(ctx.Repo.Owner, newRepoName) {
+		if repo.LowerName != strings.ToLower(newRepoName) {
+			isNameChanged = true
+			if err := models.ChangeRepositoryName(ctx.Repo.Owner, repo.Name, newRepoName); err != nil {
 				ctx.Data["Err_RepoName"] = true
-				ctx.RenderWithErr(ctx.Tr("form.repo_name_been_taken"), SETTINGS_OPTIONS, nil)
-				return
-			} else if err := models.ChangeRepositoryName(ctx.Repo.Owner.Name, ctx.Repo.Repository.Name, newRepoName); err != nil {
-				if err == models.ErrRepoNameIllegal {
-					ctx.Data["Err_RepoName"] = true
-					ctx.RenderWithErr(ctx.Tr("form.illegal_repo_name"), SETTINGS_OPTIONS, nil)
-				} else {
+				switch {
+				case models.IsErrRepoAlreadyExist(err):
+					ctx.RenderWithErr(ctx.Tr("form.repo_name_been_taken"), SETTINGS_OPTIONS, &form)
+				case models.IsErrNameReserved(err):
+					ctx.RenderWithErr(ctx.Tr("repo.form.name_reserved", err.(models.ErrNameReserved).Name), SETTINGS_OPTIONS, &form)
+				case models.IsErrNamePatternNotAllowed(err):
+					ctx.RenderWithErr(ctx.Tr("repo.form.name_pattern_not_allowed", err.(models.ErrNamePatternNotAllowed).Pattern), SETTINGS_OPTIONS, &form)
+				default:
 					ctx.Handle(500, "ChangeRepositoryName", err)
 				}
 				return
 			}
-			log.Trace("Repository name changed: %s/%s -> %s", ctx.Repo.Owner.Name, ctx.Repo.Repository.Name, newRepoName)
-			ctx.Repo.Repository.Name = newRepoName
-			ctx.Repo.Repository.LowerName = strings.ToLower(newRepoName)
+
+			log.Trace("Repository name changed: %s/%s -> %s", ctx.Repo.Owner.Name, repo.Name, newRepoName)
+		}
+		// In case it's just a case change.
+		repo.Name = newRepoName
+		repo.LowerName = strings.ToLower(newRepoName)
+
+		if ctx.Repo.GitRepo.IsBranchExist(form.Branch) &&
+			repo.DefaultBranch != form.Branch {
+			repo.DefaultBranch = form.Branch
+			if err := ctx.Repo.GitRepo.SetDefaultBranch(form.Branch); err != nil {
+				if !git.IsErrUnsupportedVersion(err) {
+					ctx.Handle(500, "SetDefaultBranch", err)
+					return
+				}
+			}
+		}
+		repo.Description = form.Description
+		repo.Website = form.Website
+
+		// Visibility of forked repository is forced sync with base repository.
+		if repo.IsFork {
+			form.Private = repo.BaseRepo.IsPrivate
 		}
 
-		br := form.Branch
-
-		if ctx.Repo.GitRepo.IsBranchExist(br) {
-			ctx.Repo.Repository.DefaultBranch = br
-		}
-		ctx.Repo.Repository.Description = form.Description
-		ctx.Repo.Repository.Website = form.Website
-		visibilityChanged := ctx.Repo.Repository.IsPrivate != form.Private
-		ctx.Repo.Repository.IsPrivate = form.Private
-		if err := models.UpdateRepository(ctx.Repo.Repository, visibilityChanged); err != nil {
-			ctx.Handle(404, "UpdateRepository", err)
+		visibilityChanged := repo.IsPrivate != form.Private
+		repo.IsPrivate = form.Private
+		if err := models.UpdateRepository(repo, visibilityChanged); err != nil {
+			ctx.Handle(500, "UpdateRepository", err)
 			return
 		}
-		log.Trace("Repository updated: %s/%s", ctx.Repo.Owner.Name, ctx.Repo.Repository.Name)
+		log.Trace("Repository updated: %s/%s", ctx.Repo.Owner.Name, repo.Name)
 
-		if ctx.Repo.Repository.IsMirror {
+		if isNameChanged {
+			if err := models.RenameRepoAction(ctx.User, oldRepoName, repo); err != nil {
+				log.Error(4, "RenameRepoAction: %v", err)
+			}
+		}
+
+		if repo.IsMirror {
 			if form.Interval > 0 {
 				ctx.Repo.Mirror.Interval = form.Interval
 				ctx.Repo.Mirror.NextUpdate = time.Now().Add(time.Duration(form.Interval) * time.Hour)
@@ -97,11 +123,18 @@ func SettingsPost(ctx *middleware.Context, form auth.RepoSettingForm) {
 		}
 
 		ctx.Flash.Success(ctx.Tr("repo.settings.update_settings_success"))
-		ctx.Redirect(fmt.Sprintf("%s/%s/%s/settings", setting.AppSubUrl, ctx.Repo.Owner.Name, ctx.Repo.Repository.Name))
+		ctx.Redirect(fmt.Sprintf("%s/%s/%s/settings", setting.AppSubUrl, ctx.Repo.Owner.Name, repo.Name))
 	case "transfer":
-		if ctx.Repo.Repository.Name != form.RepoName {
+		if repo.Name != form.RepoName {
 			ctx.RenderWithErr(ctx.Tr("form.enterred_invalid_repo_name"), SETTINGS_OPTIONS, nil)
 			return
+		}
+
+		if ctx.Repo.Owner.IsOrganization() {
+			if !ctx.Repo.Owner.IsOwnedBy(ctx.User.Id) {
+				ctx.Error(404)
+				return
+			}
 		}
 
 		newOwner := ctx.Query("new_owner_name")
@@ -114,28 +147,19 @@ func SettingsPost(ctx *middleware.Context, form auth.RepoSettingForm) {
 			return
 		}
 
-		if _, err = models.UserSignIn(ctx.User.Name, ctx.Query("password")); err != nil {
-			if err == models.ErrUserNotExist {
-				ctx.RenderWithErr(ctx.Tr("form.enterred_invalid_password"), SETTINGS_OPTIONS, nil)
-			} else {
-				ctx.Handle(500, "UserSignIn", err)
-			}
-			return
-		}
-
-		if err = models.TransferOwnership(ctx.User, newOwner, ctx.Repo.Repository); err != nil {
-			if err == models.ErrRepoAlreadyExist {
+		if err = models.TransferOwnership(ctx.User, newOwner, repo); err != nil {
+			if models.IsErrRepoAlreadyExist(err) {
 				ctx.RenderWithErr(ctx.Tr("repo.settings.new_owner_has_same_repo"), SETTINGS_OPTIONS, nil)
 			} else {
 				ctx.Handle(500, "TransferOwnership", err)
 			}
 			return
 		}
-		log.Trace("Repository transfered: %s/%s -> %s", ctx.Repo.Owner.Name, ctx.Repo.Repository.Name, newOwner)
+		log.Trace("Repository transfered: %s/%s -> %s", ctx.Repo.Owner.Name, repo.Name, newOwner)
 		ctx.Flash.Success(ctx.Tr("repo.settings.transfer_succeed"))
-		ctx.Redirect(setting.AppSubUrl + "/")
+		ctx.Redirect(setting.AppSubUrl + "/" + newOwner + "/" + repo.Name)
 	case "delete":
-		if ctx.Repo.Repository.Name != form.RepoName {
+		if repo.Name != form.RepoName {
 			ctx.RenderWithErr(ctx.Tr("form.enterred_invalid_repo_name"), SETTINGS_OPTIONS, nil)
 			return
 		}
@@ -147,29 +171,16 @@ func SettingsPost(ctx *middleware.Context, form auth.RepoSettingForm) {
 			}
 		}
 
-		if _, err := models.UserSignIn(ctx.User.Name, ctx.Query("password")); err != nil {
-			if err == models.ErrUserNotExist {
-				ctx.RenderWithErr(ctx.Tr("form.enterred_invalid_password"), SETTINGS_OPTIONS, nil)
-			} else {
-				ctx.Handle(500, "UserSignIn", err)
-			}
-			return
-		}
-
-		if err := models.DeleteRepository(ctx.Repo.Owner.Id, ctx.Repo.Repository.Id, ctx.Repo.Owner.Name); err != nil {
+		if err := models.DeleteRepository(ctx.Repo.Owner.Id, repo.ID); err != nil {
 			ctx.Handle(500, "DeleteRepository", err)
 			return
 		}
-		log.Trace("Repository deleted: %s/%s", ctx.Repo.Owner.Name, ctx.Repo.Repository.Name)
-		if ctx.Repo.Owner.IsOrganization() {
-			ctx.Redirect(setting.AppSubUrl + "/org/" + ctx.Repo.Owner.Name + "/dashboard")
-		} else {
-			ctx.Redirect(setting.AppSubUrl + "/")
-		}
+		log.Trace("Repository deleted: %s/%s", ctx.Repo.Owner.Name, repo.Name)
+		ctx.Redirect(ctx.Repo.Owner.DashboardLink())
 	}
 }
 
-func SettingsCollaboration(ctx *middleware.Context) {
+func Collaboration(ctx *middleware.Context) {
 	ctx.Data["Title"] = ctx.Tr("repo.settings")
 	ctx.Data["PageIsSettingsCollaboration"] = true
 
@@ -182,7 +193,7 @@ func SettingsCollaboration(ctx *middleware.Context) {
 
 		u, err := models.GetUserByName(name)
 		if err != nil {
-			if err == models.ErrUserNotExist {
+			if models.IsErrUserNotExist(err) {
 				ctx.Flash.Error(ctx.Tr("form.user_not_exist"))
 				ctx.Redirect(setting.AppSubUrl + ctx.Req.URL.Path)
 			} else {
@@ -243,88 +254,125 @@ func SettingsCollaboration(ctx *middleware.Context) {
 }
 
 func Webhooks(ctx *middleware.Context) {
-	ctx.Data["Title"] = ctx.Tr("repo.settings")
+	ctx.Data["Title"] = ctx.Tr("repo.settings.hooks")
 	ctx.Data["PageIsSettingsHooks"] = true
+	ctx.Data["BaseLink"] = ctx.Repo.RepoLink
+	ctx.Data["Description"] = ctx.Tr("repo.settings.hooks_desc", "https://github.com/gogits/go-gogs-client/wiki/Repositories---Webhooks")
 
-	// Delete web hook.
-	remove := com.StrTo(ctx.Query("remove")).MustInt64()
-	if remove > 0 {
-		if err := models.DeleteWebhook(remove); err != nil {
-			ctx.Handle(500, "DeleteWebhook", err)
-			return
-		}
-		ctx.Flash.Success(ctx.Tr("repo.settings.remove_hook_success"))
-		ctx.Redirect(ctx.Repo.RepoLink + "/settings/hooks")
-		return
-	}
-
-	ws, err := models.GetWebhooksByRepoId(ctx.Repo.Repository.Id)
+	ws, err := models.GetWebhooksByRepoID(ctx.Repo.Repository.ID)
 	if err != nil {
-		ctx.Handle(500, "GetWebhooksByRepoId", err)
+		ctx.Handle(500, "GetWebhooksByRepoID", err)
 		return
 	}
-
 	ctx.Data["Webhooks"] = ws
+
 	ctx.HTML(200, HOOKS)
 }
 
-func renderHookTypes(ctx *middleware.Context) {
-	ctx.Data["HookTypes"] = []string{"Gogs", "Slack"}
-	ctx.Data["HookType"] = "Gogs"
+type OrgRepoCtx struct {
+	OrgID       int64
+	RepoID      int64
+	Link        string
+	NewTemplate base.TplName
 }
 
-func WebHooksNew(ctx *middleware.Context) {
-	ctx.Data["Title"] = ctx.Tr("repo.settings")
+// getOrgRepoCtx determines whether this is a repo context or organization context.
+func getOrgRepoCtx(ctx *middleware.Context) (*OrgRepoCtx, error) {
+	if len(ctx.Repo.RepoLink) > 0 {
+		return &OrgRepoCtx{
+			RepoID:      ctx.Repo.Repository.ID,
+			Link:        ctx.Repo.RepoLink,
+			NewTemplate: HOOK_NEW,
+		}, nil
+	}
+
+	if len(ctx.Org.OrgLink) > 0 {
+		return &OrgRepoCtx{
+			OrgID:       ctx.Org.Organization.Id,
+			Link:        ctx.Org.OrgLink,
+			NewTemplate: ORG_HOOK_NEW,
+		}, nil
+	}
+
+	return nil, errors.New("Unable to set OrgRepo context")
+}
+
+func checkHookType(ctx *middleware.Context) string {
+	hookType := strings.ToLower(ctx.Params(":type"))
+	if !com.IsSliceContainsStr(setting.Webhook.Types, hookType) {
+		ctx.Handle(404, "checkHookType", nil)
+		return ""
+	}
+	return hookType
+}
+
+func WebhooksNew(ctx *middleware.Context) {
+	ctx.Data["Title"] = ctx.Tr("repo.settings.add_webhook")
 	ctx.Data["PageIsSettingsHooks"] = true
 	ctx.Data["PageIsSettingsHooksNew"] = true
 	ctx.Data["Webhook"] = models.Webhook{HookEvent: &models.HookEvent{}}
-	renderHookTypes(ctx)
+
 	orCtx, err := getOrgRepoCtx(ctx)
 	if err != nil {
-		ctx.Handle(500, "WebHooksNew(getOrgRepoCtx)", err)
+		ctx.Handle(500, "getOrgRepoCtx", err)
 		return
 	}
+
+	ctx.Data["HookType"] = checkHookType(ctx)
+	if ctx.Written() {
+		return
+	}
+	ctx.Data["BaseLink"] = orCtx.Link
 
 	ctx.HTML(200, orCtx.NewTemplate)
 }
 
+func ParseHookEvent(form auth.WebhookForm) *models.HookEvent {
+	return &models.HookEvent{
+		PushOnly:       form.PushOnly(),
+		SendEverything: form.SendEverything(),
+		ChooseEvents:   form.ChooseEvents(),
+		HookEvents: models.HookEvents{
+			Create: form.Create,
+			Push:   form.Push,
+		},
+	}
+}
+
 func WebHooksNewPost(ctx *middleware.Context, form auth.NewWebhookForm) {
-	ctx.Data["Title"] = ctx.Tr("repo.settings")
+	ctx.Data["Title"] = ctx.Tr("repo.settings.add_webhook")
 	ctx.Data["PageIsSettingsHooks"] = true
 	ctx.Data["PageIsSettingsHooksNew"] = true
 	ctx.Data["Webhook"] = models.Webhook{HookEvent: &models.HookEvent{}}
+	ctx.Data["HookType"] = "gogs"
 
 	orCtx, err := getOrgRepoCtx(ctx)
 	if err != nil {
-		ctx.Handle(500, "WebHooksNewPost(getOrgRepoCtx)", err)
+		ctx.Handle(500, "getOrgRepoCtx", err)
 		return
 	}
+	ctx.Data["BaseLink"] = orCtx.Link
 
 	if ctx.HasError() {
 		ctx.HTML(200, orCtx.NewTemplate)
 		return
 	}
 
-	// FIXME: code too old here, sync with APIs
-	ct := models.JSON
-	if form.ContentType == "2" {
-		ct = models.FORM
+	contentType := models.JSON
+	if models.HookContentType(form.ContentType) == models.FORM {
+		contentType = models.FORM
 	}
 
 	w := &models.Webhook{
-		RepoId:      orCtx.RepoId,
-		Url:         form.PayloadUrl,
-		ContentType: ct,
-		Secret:      form.Secret,
-		HookEvent: &models.HookEvent{
-			PushOnly: form.PushOnly,
-		},
+		RepoID:       orCtx.RepoID,
+		URL:          form.PayloadURL,
+		ContentType:  contentType,
+		Secret:       form.Secret,
+		HookEvent:    ParseHookEvent(form.WebhookForm),
 		IsActive:     form.Active,
 		HookTaskType: models.GOGS,
-		Meta:         "",
-		OrgId:        orCtx.OrgId,
+		OrgID:        orCtx.OrgID,
 	}
-
 	if err := w.UpdateEvent(); err != nil {
 		ctx.Handle(500, "UpdateEvent", err)
 		return
@@ -335,106 +383,6 @@ func WebHooksNewPost(ctx *middleware.Context, form auth.NewWebhookForm) {
 
 	ctx.Flash.Success(ctx.Tr("repo.settings.add_hook_success"))
 	ctx.Redirect(orCtx.Link + "/settings/hooks")
-}
-
-func WebHooksEdit(ctx *middleware.Context) {
-	ctx.Data["Title"] = ctx.Tr("repo.settings")
-	ctx.Data["PageIsSettingsHooks"] = true
-	ctx.Data["PageIsSettingsHooksEdit"] = true
-
-	hookId := com.StrTo(ctx.Params(":id")).MustInt64()
-	if hookId == 0 {
-		ctx.Handle(404, "setting.WebHooksEdit", nil)
-		return
-	}
-
-	w, err := models.GetWebhookById(hookId)
-	if err != nil {
-		if err == models.ErrWebhookNotExist {
-			ctx.Handle(404, "GetWebhookById", nil)
-		} else {
-			ctx.Handle(500, "GetWebhookById", err)
-		}
-		return
-	}
-
-	// set data per HookTaskType
-	switch w.HookTaskType {
-	case models.SLACK:
-		{
-			ctx.Data["SlackHook"] = w.GetSlackHook()
-			ctx.Data["HookType"] = "Slack"
-		}
-	default:
-		{
-			ctx.Data["HookType"] = "Gogs"
-		}
-	}
-	w.GetEvent()
-	ctx.Data["Webhook"] = w
-	orCtx, err := getOrgRepoCtx(ctx)
-	if err != nil {
-		ctx.Handle(500, "WebHooksEdit(getOrgRepoCtx)", err)
-		return
-	}
-	ctx.HTML(200, orCtx.NewTemplate)
-}
-
-func WebHooksEditPost(ctx *middleware.Context, form auth.NewWebhookForm) {
-	ctx.Data["Title"] = ctx.Tr("repo.settings")
-	ctx.Data["PageIsSettingsHooks"] = true
-	ctx.Data["PageIsSettingsHooksEdit"] = true
-
-	hookId := com.StrTo(ctx.Params(":id")).MustInt64()
-	if hookId == 0 {
-		ctx.Handle(404, "setting.WebHooksEditPost", nil)
-		return
-	}
-
-	w, err := models.GetWebhookById(hookId)
-	if err != nil {
-		if err == models.ErrWebhookNotExist {
-			ctx.Handle(404, "GetWebhookById", nil)
-		} else {
-			ctx.Handle(500, "GetWebhookById", err)
-		}
-		return
-	}
-	w.GetEvent()
-	ctx.Data["Webhook"] = w
-
-	orCtx, err := getOrgRepoCtx(ctx)
-	if err != nil {
-		ctx.Handle(500, "WebHooksEditPost(getOrgRepoCtx)", err)
-		return
-	}
-	if ctx.HasError() {
-		ctx.HTML(200, orCtx.NewTemplate)
-		return
-	}
-
-	ct := models.JSON
-	if form.ContentType == "2" {
-		ct = models.FORM
-	}
-
-	w.Url = form.PayloadUrl
-	w.ContentType = ct
-	w.Secret = form.Secret
-	w.HookEvent = &models.HookEvent{
-		PushOnly: form.PushOnly,
-	}
-	w.IsActive = form.Active
-	if err := w.UpdateEvent(); err != nil {
-		ctx.Handle(500, "UpdateEvent", err)
-		return
-	} else if err := models.UpdateWebhook(w); err != nil {
-		ctx.Handle(500, "WebHooksEditPost", err)
-		return
-	}
-
-	ctx.Flash.Success(ctx.Tr("repo.settings.update_hook_success"))
-	ctx.Redirect(fmt.Sprintf("%s/settings/hooks/%d", orCtx.Link, hookId))
 }
 
 func SlackHooksNewPost(ctx *middleware.Context, form auth.NewSlackHookForm) {
@@ -445,7 +393,7 @@ func SlackHooksNewPost(ctx *middleware.Context, form auth.NewSlackHookForm) {
 
 	orCtx, err := getOrgRepoCtx(ctx)
 	if err != nil {
-		ctx.Handle(500, "SlackHooksNewPost(getOrgRepoCtx)", err)
+		ctx.Handle(500, "getOrgRepoCtx", err)
 		return
 	}
 
@@ -454,26 +402,26 @@ func SlackHooksNewPost(ctx *middleware.Context, form auth.NewSlackHookForm) {
 		return
 	}
 
-	meta, err := json.Marshal(&models.Slack{
-		Channel: form.Channel,
+	meta, err := json.Marshal(&models.SlackMeta{
+		Channel:  form.Channel,
+		Username: form.Username,
+		IconURL:  form.IconURL,
+		Color:    form.Color,
 	})
 	if err != nil {
-		ctx.Handle(500, "SlackHooksNewPost: JSON marshal failed: ", err)
+		ctx.Handle(500, "Marshal", err)
 		return
 	}
 
 	w := &models.Webhook{
-		RepoId:      orCtx.RepoId,
-		Url:         form.PayloadUrl,
-		ContentType: models.JSON,
-		Secret:      "",
-		HookEvent: &models.HookEvent{
-			PushOnly: form.PushOnly,
-		},
+		RepoID:       orCtx.RepoID,
+		URL:          form.PayloadURL,
+		ContentType:  models.JSON,
+		HookEvent:    ParseHookEvent(form.WebhookForm),
 		IsActive:     form.Active,
 		HookTaskType: models.SLACK,
 		Meta:         string(meta),
-		OrgId:        orCtx.OrgId,
+		OrgID:        orCtx.OrgID,
 	}
 	if err := w.UpdateEvent(); err != nil {
 		ctx.Handle(500, "UpdateEvent", err)
@@ -487,95 +435,174 @@ func SlackHooksNewPost(ctx *middleware.Context, form auth.NewSlackHookForm) {
 	ctx.Redirect(orCtx.Link + "/settings/hooks")
 }
 
-func SlackHooksEditPost(ctx *middleware.Context, form auth.NewSlackHookForm) {
-	ctx.Data["Title"] = ctx.Tr("repo.settings")
-	ctx.Data["PageIsSettingsHooks"] = true
-	ctx.Data["PageIsSettingsHooksEdit"] = true
-
-	hookId := com.StrTo(ctx.Params(":id")).MustInt64()
-	if hookId == 0 {
-		ctx.Handle(404, "SlackHooksEditPost(hookId)", nil)
-		return
-	}
+func checkWebhook(ctx *middleware.Context) (*OrgRepoCtx, *models.Webhook) {
+	ctx.Data["RequireHighlightJS"] = true
 
 	orCtx, err := getOrgRepoCtx(ctx)
 	if err != nil {
-		ctx.Handle(500, "SlackHooksEditPost(getOrgRepoCtx)", err)
-		return
+		ctx.Handle(500, "getOrgRepoCtx", err)
+		return nil, nil
+	}
+	ctx.Data["BaseLink"] = orCtx.Link
+
+	w, err := models.GetWebhookByID(ctx.ParamsInt64(":id"))
+	if err != nil {
+		if models.IsErrWebhookNotExist(err) {
+			ctx.Handle(404, "GetWebhookByID", nil)
+		} else {
+			ctx.Handle(500, "GetWebhookByID", err)
+		}
+		return nil, nil
 	}
 
-	w, err := models.GetWebhookById(hookId)
+	switch w.HookTaskType {
+	case models.SLACK:
+		ctx.Data["SlackHook"] = w.GetSlackHook()
+		ctx.Data["HookType"] = "slack"
+	default:
+		ctx.Data["HookType"] = "gogs"
+	}
+
+	ctx.Data["History"], err = w.History(1)
 	if err != nil {
-		if err == models.ErrWebhookNotExist {
-			ctx.Handle(404, "GetWebhookById", nil)
-		} else {
-			ctx.Handle(500, "GetWebhookById", err)
-		}
+		ctx.Handle(500, "History", err)
+	}
+	return orCtx, w
+}
+
+func WebHooksEdit(ctx *middleware.Context) {
+	ctx.Data["Title"] = ctx.Tr("repo.settings.update_webhook")
+	ctx.Data["PageIsSettingsHooks"] = true
+	ctx.Data["PageIsSettingsHooksEdit"] = true
+
+	orCtx, w := checkWebhook(ctx)
+	if ctx.Written() {
 		return
 	}
-	w.GetEvent()
+	ctx.Data["Webhook"] = w
+
+	ctx.HTML(200, orCtx.NewTemplate)
+}
+
+func WebHooksEditPost(ctx *middleware.Context, form auth.NewWebhookForm) {
+	ctx.Data["Title"] = ctx.Tr("repo.settings.update_webhook")
+	ctx.Data["PageIsSettingsHooks"] = true
+	ctx.Data["PageIsSettingsHooksEdit"] = true
+
+	orCtx, w := checkWebhook(ctx)
+	if ctx.Written() {
+		return
+	}
 	ctx.Data["Webhook"] = w
 
 	if ctx.HasError() {
 		ctx.HTML(200, orCtx.NewTemplate)
 		return
 	}
-	meta, err := json.Marshal(&models.Slack{
-		Channel: form.Channel,
-	})
-	if err != nil {
-		ctx.Handle(500, "SlackHooksNewPost: JSON marshal failed: ", err)
-		return
+
+	contentType := models.JSON
+	if models.HookContentType(form.ContentType) == models.FORM {
+		contentType = models.FORM
 	}
 
-	w.Url = form.PayloadUrl
-	w.Meta = string(meta)
-	w.HookEvent = &models.HookEvent{
-		PushOnly: form.PushOnly,
-	}
+	w.URL = form.PayloadURL
+	w.ContentType = contentType
+	w.Secret = form.Secret
+	w.HookEvent = ParseHookEvent(form.WebhookForm)
 	w.IsActive = form.Active
 	if err := w.UpdateEvent(); err != nil {
 		ctx.Handle(500, "UpdateEvent", err)
 		return
 	} else if err := models.UpdateWebhook(w); err != nil {
-		ctx.Handle(500, "SlackHooksEditPost", err)
+		ctx.Handle(500, "WebHooksEditPost", err)
 		return
 	}
 
 	ctx.Flash.Success(ctx.Tr("repo.settings.update_hook_success"))
-	ctx.Redirect(fmt.Sprintf("%s/settings/hooks/%d", orCtx.Link, hookId))
+	ctx.Redirect(fmt.Sprintf("%s/settings/hooks/%d", orCtx.Link, w.ID))
 }
 
-type OrgRepoCtx struct {
-	OrgId       int64
-	RepoId      int64
-	Link        string
-	NewTemplate base.TplName
-}
+func SlackHooksEditPost(ctx *middleware.Context, form auth.NewSlackHookForm) {
+	ctx.Data["Title"] = ctx.Tr("repo.settings")
+	ctx.Data["PageIsSettingsHooks"] = true
+	ctx.Data["PageIsSettingsHooksEdit"] = true
 
-// determines whether this is a repo context or organization context
-func getOrgRepoCtx(ctx *middleware.Context) (*OrgRepoCtx, error) {
-	if _, ok := ctx.Data["RepoLink"]; ok {
-		return &OrgRepoCtx{
-			OrgId:       int64(0),
-			RepoId:      ctx.Repo.Repository.Id,
-			Link:        ctx.Repo.RepoLink,
-			NewTemplate: HOOK_NEW,
-		}, nil
-	} else if _, ok := ctx.Data["OrgLink"]; ok {
-		return &OrgRepoCtx{
-			OrgId:       ctx.Org.Organization.Id,
-			RepoId:      int64(0),
-			Link:        ctx.Org.OrgLink,
-			NewTemplate: ORG_HOOK_NEW,
-		}, nil
-	} else {
-		return &OrgRepoCtx{}, errors.New("Unable to set OrgRepo context")
+	orCtx, w := checkWebhook(ctx)
+	if ctx.Written() {
+		return
 	}
+	ctx.Data["Webhook"] = w
+
+	if ctx.HasError() {
+		ctx.HTML(200, orCtx.NewTemplate)
+		return
+	}
+
+	meta, err := json.Marshal(&models.SlackMeta{
+		Channel:  form.Channel,
+		Username: form.Username,
+		IconURL:  form.IconURL,
+		Color:    form.Color,
+	})
+	if err != nil {
+		ctx.Handle(500, "Marshal", err)
+		return
+	}
+
+	w.URL = form.PayloadURL
+	w.Meta = string(meta)
+	w.HookEvent = ParseHookEvent(form.WebhookForm)
+	w.IsActive = form.Active
+	if err := w.UpdateEvent(); err != nil {
+		ctx.Handle(500, "UpdateEvent", err)
+		return
+	} else if err := models.UpdateWebhook(w); err != nil {
+		ctx.Handle(500, "UpdateWebhook", err)
+		return
+	}
+
+	ctx.Flash.Success(ctx.Tr("repo.settings.update_hook_success"))
+	ctx.Redirect(fmt.Sprintf("%s/settings/hooks/%d", orCtx.Link, w.ID))
+}
+
+func DeleteWebhook(ctx *middleware.Context) {
+	if err := models.DeleteWebhook(ctx.QueryInt64("id")); err != nil {
+		ctx.Flash.Error("DeleteWebhook: " + err.Error())
+	} else {
+		ctx.Flash.Success(ctx.Tr("repo.settings.webhook_deletion_success"))
+	}
+
+	ctx.JSON(200, map[string]interface{}{
+		"redirect": ctx.Repo.RepoLink + "/settings/hooks",
+	})
+}
+
+func parseOwnerAndRepo(ctx *middleware.Context) (*models.User, *models.Repository) {
+	owner, err := models.GetUserByName(ctx.Params(":username"))
+	if err != nil {
+		if models.IsErrUserNotExist(err) {
+			ctx.Handle(404, "GetUserByName", err)
+		} else {
+			ctx.Handle(500, "GetUserByName", err)
+		}
+		return nil, nil
+	}
+
+	repo, err := models.GetRepositoryByName(owner.Id, ctx.Params(":reponame"))
+	if err != nil {
+		if models.IsErrRepoNotExist(err) {
+			ctx.Handle(404, "GetRepositoryByName", err)
+		} else {
+			ctx.Handle(500, "GetRepositoryByName", err)
+		}
+		return nil, nil
+	}
+
+	return owner, repo
 }
 
 func GitHooks(ctx *middleware.Context) {
-	ctx.Data["Title"] = ctx.Tr("repo.settings")
+	ctx.Data["Title"] = ctx.Tr("repo.settings.githooks")
 	ctx.Data["PageIsSettingsGitHooks"] = true
 
 	hooks, err := ctx.Repo.GitRepo.Hooks()
@@ -589,7 +616,7 @@ func GitHooks(ctx *middleware.Context) {
 }
 
 func GitHooksEdit(ctx *middleware.Context) {
-	ctx.Data["Title"] = ctx.Tr("repo.settings")
+	ctx.Data["Title"] = ctx.Tr("repo.settings.githooks")
 	ctx.Data["PageIsSettingsGitHooks"] = true
 
 	name := ctx.Params(":name")
@@ -623,4 +650,80 @@ func GitHooksEditPost(ctx *middleware.Context) {
 		return
 	}
 	ctx.Redirect(ctx.Repo.RepoLink + "/settings/hooks/git")
+}
+
+func DeployKeys(ctx *middleware.Context) {
+	ctx.Data["Title"] = ctx.Tr("repo.settings.deploy_keys")
+	ctx.Data["PageIsSettingsKeys"] = true
+
+	keys, err := models.ListDeployKeys(ctx.Repo.Repository.ID)
+	if err != nil {
+		ctx.Handle(500, "ListDeployKeys", err)
+		return
+	}
+	ctx.Data["Deploykeys"] = keys
+
+	ctx.HTML(200, DEPLOY_KEYS)
+}
+
+func DeployKeysPost(ctx *middleware.Context, form auth.AddSSHKeyForm) {
+	ctx.Data["Title"] = ctx.Tr("repo.settings.deploy_keys")
+	ctx.Data["PageIsSettingsKeys"] = true
+
+	keys, err := models.ListDeployKeys(ctx.Repo.Repository.ID)
+	if err != nil {
+		ctx.Handle(500, "ListDeployKeys", err)
+		return
+	}
+	ctx.Data["Deploykeys"] = keys
+
+	if ctx.HasError() {
+		ctx.HTML(200, DEPLOY_KEYS)
+		return
+	}
+
+	content, err := models.CheckPublicKeyString(form.Content)
+	if err != nil {
+		if models.IsErrKeyUnableVerify(err) {
+			ctx.Flash.Info(ctx.Tr("form.unable_verify_ssh_key"))
+		} else {
+			ctx.Data["HasError"] = true
+			ctx.Data["Err_Content"] = true
+			ctx.Flash.Error(ctx.Tr("form.invalid_ssh_key", err.Error()))
+			ctx.Redirect(ctx.Repo.RepoLink + "/settings/keys")
+			return
+		}
+	}
+
+	key, err := models.AddDeployKey(ctx.Repo.Repository.ID, form.Title, content)
+	if err != nil {
+		ctx.Data["HasError"] = true
+		switch {
+		case models.IsErrKeyAlreadyExist(err):
+			ctx.Data["Err_Content"] = true
+			ctx.RenderWithErr(ctx.Tr("repo.settings.key_been_used"), DEPLOY_KEYS, &form)
+		case models.IsErrKeyNameAlreadyUsed(err):
+			ctx.Data["Err_Title"] = true
+			ctx.RenderWithErr(ctx.Tr("repo.settings.key_name_used"), DEPLOY_KEYS, &form)
+		default:
+			ctx.Handle(500, "AddDeployKey", err)
+		}
+		return
+	}
+
+	log.Trace("Deploy key added: %d", ctx.Repo.Repository.ID)
+	ctx.Flash.Success(ctx.Tr("repo.settings.add_key_success", key.Name))
+	ctx.Redirect(ctx.Repo.RepoLink + "/settings/keys")
+}
+
+func DeleteDeployKey(ctx *middleware.Context) {
+	if err := models.DeleteDeployKey(ctx.QueryInt64("id")); err != nil {
+		ctx.Flash.Error("DeleteDeployKey: " + err.Error())
+	} else {
+		ctx.Flash.Success(ctx.Tr("repo.settings.deploy_key_deletion_success"))
+	}
+
+	ctx.JSON(200, map[string]interface{}{
+		"redirect": ctx.Repo.RepoLink + "/settings/keys",
+	})
 }

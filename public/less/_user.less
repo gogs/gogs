@@ -1,0 +1,50 @@
+.user {
+	padding-top: 15px;
+	padding-bottom: @footer-margin * 2;
+
+	&.settings {
+		.list {
+			.item.ui.grid {
+				margin-top: 15px;
+			}
+		}
+		.email.list {
+			.item:not(:first-child) {
+				border-top: 1px solid #eaeaea;
+				height: 50px;
+				.button {
+					margin-top: -10px;
+				}
+			}
+		}
+	}
+
+	&.profile {
+		.ui.card {
+			.username {
+				display: block;
+			}
+			.extra.content {
+				padding: 0;
+
+				ul {
+					margin: 0;
+					padding: 0;
+
+					li {
+						padding: 10px;
+						list-style: none;
+
+						&:not(:last-child) {
+							border-bottom: 1px solid #eaeaea;
+						}
+					}
+				}
+			}
+		}
+
+		.ui.repository.list {
+			margin-top: 25px;
+		}
+	}
+}

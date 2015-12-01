@@ -5,21 +5,16 @@
 package models
 
 import (
-	"errors"
 	"time"
 
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/uuid"
 )
 
-var (
-	ErrAccessTokenNotExist = errors.New("Access token does not exist")
-)
-
 // AccessToken represents a personal access token.
 type AccessToken struct {
-	Id                int64
-	Uid               int64
+	ID                int64 `xorm:"pk autoincr"`
+	UID               int64 `xorm:"INDEX"`
 	Name              string
 	Sha1              string    `xorm:"UNIQUE VARCHAR(40)"`
 	Created           time.Time `xorm:"CREATED"`
@@ -35,14 +30,14 @@ func NewAccessToken(t *AccessToken) error {
 	return err
 }
 
-// GetAccessTokenBySha returns access token by given sha1.
-func GetAccessTokenBySha(sha string) (*AccessToken, error) {
+// GetAccessTokenBySHA returns access token by given sha1.
+func GetAccessTokenBySHA(sha string) (*AccessToken, error) {
 	t := &AccessToken{Sha1: sha}
 	has, err := x.Get(t)
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, ErrAccessTokenNotExist
+		return nil, ErrAccessTokenNotExist{sha}
 	}
 	return t, nil
 }
@@ -62,8 +57,14 @@ func ListAccessTokens(uid int64) ([]*AccessToken, error) {
 	return tokens, nil
 }
 
-// DeleteAccessTokenById deletes access token by given ID.
-func DeleteAccessTokenById(id int64) error {
+// UpdateAccessToekn updates information of access token.
+func UpdateAccessToekn(t *AccessToken) error {
+	_, err := x.Id(t.ID).AllCols().Update(t)
+	return err
+}
+
+// DeleteAccessTokenByID deletes access token by given ID.
+func DeleteAccessTokenByID(id int64) error {
 	_, err := x.Id(id).Delete(new(AccessToken))
 	return err
 }

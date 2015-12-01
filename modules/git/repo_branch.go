@@ -5,7 +5,6 @@
 package git
 
 import (
-	"errors"
 	"strings"
 
 	"github.com/Unknwon/com"
@@ -23,7 +22,7 @@ func (repo *Repository) IsBranchExist(branchName string) bool {
 func (repo *Repository) GetBranches() ([]string, error) {
 	stdout, stderr, err := com.ExecCmdDir(repo.Path, "git", "show-ref", "--heads")
 	if err != nil {
-		return nil, errors.New(stderr)
+		return nil, concatenateError(err, stderr)
 	}
 	infos := strings.Split(stdout, "\n")
 	branches := make([]string, len(infos)-1)
@@ -35,4 +34,17 @@ func (repo *Repository) GetBranches() ([]string, error) {
 		branches[i] = strings.TrimPrefix(parts[1], "refs/heads/")
 	}
 	return branches, nil
+}
+
+// SetDefaultBranch sets default branch of repository.
+func (repo *Repository) SetDefaultBranch(branchName string) error {
+	if gitVer.LessThan(MustParseVersion("1.7.10")) {
+		return ErrUnsupportedVersion{"1.7.10"}
+	}
+
+	_, stderr, err := com.ExecCmdDir(repo.Path, "git", "symbolic-ref", "HEAD", "refs/heads/"+branchName)
+	if err != nil {
+		return concatenateError(err, stderr)
+	}
+	return nil
 }

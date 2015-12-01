@@ -8,7 +8,6 @@ import (
 	api "github.com/gogits/go-gogs-client"
 
 	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/middleware"
 )
 
@@ -16,7 +15,7 @@ import (
 func ListAccessTokens(ctx *middleware.Context) {
 	tokens, err := models.ListAccessTokens(ctx.User.Id)
 	if err != nil {
-		ctx.JSON(500, &base.ApiJsonErr{"ListAccessTokens: " + err.Error(), base.DOC_URL})
+		ctx.APIError(500, "ListAccessTokens", err)
 		return
 	}
 
@@ -34,11 +33,11 @@ type CreateAccessTokenForm struct {
 // POST /users/:username/tokens
 func CreateAccessToken(ctx *middleware.Context, form CreateAccessTokenForm) {
 	t := &models.AccessToken{
-		Uid:  ctx.User.Id,
+		UID:  ctx.User.Id,
 		Name: form.Name,
 	}
 	if err := models.NewAccessToken(t); err != nil {
-		ctx.JSON(500, &base.ApiJsonErr{"NewAccessToken: " + err.Error(), base.DOC_URL})
+		ctx.APIError(500, "NewAccessToken", err)
 		return
 	}
 	ctx.JSON(201, &api.AccessToken{t.Name, t.Sha1})

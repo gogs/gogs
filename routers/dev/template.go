@@ -20,5 +20,6 @@ func TemplatePreview(ctx *middleware.Context) {
 	ctx.Data["ActiveCodeLives"] = setting.Service.ActiveCodeLives / 60
 	ctx.Data["ResetPwdCodeLives"] = setting.Service.ResetPwdCodeLives / 60
 	ctx.Data["CurDbValue"] = ""
+
 	ctx.HTML(200, base.TplName(ctx.Params("*")))
 }

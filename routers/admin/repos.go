@@ -5,9 +5,12 @@
 package admin
 
 import (
+	"github.com/Unknwon/paginater"
+
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/middleware"
+	"github.com/gogits/gogs/modules/setting"
 )
 
 const (
@@ -19,14 +22,20 @@ func Repositories(ctx *middleware.Context) {
 	ctx.Data["PageIsAdmin"] = true
 	ctx.Data["PageIsAdminRepositories"] = true
 
-	pageNum := 50
-	p := pagination(ctx, models.CountRepositories(), pageNum)
+	total := models.CountRepositories()
+	page := ctx.QueryInt("page")
+	if page <= 1 {
+		page = 1
+	}
+	ctx.Data["Page"] = paginater.New(int(total), setting.AdminRepoPagingNum, page, 5)
 
-	var err error
-	ctx.Data["Repos"], err = models.GetRepositoriesWithUsers(pageNum, (p-1)*pageNum)
+	repos, err := models.RepositoriesWithUsers(page, setting.AdminRepoPagingNum)
 	if err != nil {
-		ctx.Handle(500, "GetRepositoriesWithUsers", err)
+		ctx.Handle(500, "RepositoriesWithUsers", err)
 		return
 	}
+	ctx.Data["Repos"] = repos
+
+	ctx.Data["Total"] = total
 	ctx.HTML(200, REPOS)
 }

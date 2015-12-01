@@ -7,16 +7,16 @@ package apiv1
 import (
 	"reflect"
 
-	"github.com/Unknwon/macaron"
-	"github.com/macaron-contrib/binding"
+	"github.com/go-macaron/binding"
+	"gopkg.in/macaron.v1"
 
 	"github.com/gogits/gogs/modules/auth"
 )
 
 type MarkdownForm struct {
-	Text    string `form:"text"`
-	Mode    string `form:"mode"`
-	Context string `form:"context"`
+	Text    string
+	Mode    string
+	Context string
 }
 
 func (f *MarkdownForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {

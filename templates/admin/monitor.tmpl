@@ -1,74 +1,65 @@
-{{template "ng/base/head" .}}
-{{template "ng/base/header" .}}
-<div id="admin-wrapper">
-    <div id="setting-wrapper" class="main-wrapper">
-        <div id="admin-setting" class="container clear">
-            {{template "admin/nav" .}}
-            <div class="grid-4-5 left">
-                <div class="setting-content">
-                    {{template "ng/base/alert" .}}
-                    <div id="setting-content">
-                        <div class="panel panel-radius">
-                            <div class="panel-header">
-                                <strong>{{.i18n.Tr "admin.monitor.cron"}}</strong>
-                            </div>
-                            <div class="panel-body admin-panel">
-                                <table class="table table-striped">
-                                    <thead>
-                                        <tr>
-                                            <th>{{.i18n.Tr "admin.monitor.name"}}</th>
-                                            <th>{{.i18n.Tr "admin.monitor.schedule"}}</th>
-                                            <th>{{.i18n.Tr "admin.monitor.next"}}</th>
-                                            <th>{{.i18n.Tr "admin.monitor.previous"}}</th>
-                                            <th>{{.i18n.Tr "admin.monitor.execute_times"}}</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {{range .Entries}}
-                                        <tr>
-                                            <td>{{.Description}}</td>
-                                            <td>{{.Spec}}</td>
-                                            <td>{{.Next}}</td>
-                                            <td>{{.Prev}}</td>
-                                            <td>{{.ExecTimes}}</td>
-                                        </tr>
-                                        {{end}}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                        <br>
-                        <div class="panel panel-radius">
-                            <div class="panel-header">
-                                <strong>{{.i18n.Tr "admin.monitor.process"}}</strong>
-                            </div>
-                            <div class="panel-body admin-panel">
-                                <table class="table table-striped">
-                                    <thead>
-                                        <tr>
-                                            <th>Pid</th>
-                                            <th>{{.i18n.Tr "admin.monitor.desc"}}</th>
-                                            <th>{{.i18n.Tr "admin.monitor.start"}}</th>
-                                            <th>{{.i18n.Tr "admin.monitor.execute_time"}}</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {{range .Processes}}
-                                        <tr>
-                                            <td>{{.Pid}}</td>
-                                            <td>{{.Description}}</td>
-                                            <td>{{.Start}}</td>
-                                            <td>{{TimeSince .Start $.Lang}}</td>
-                                        </tr>
-                                        {{end}}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+{{template "base/head" .}}
+<div class="admin monitor">
+  <div class="ui container">
+    <div class="ui grid">
+      {{template "admin/navbar" .}}
+      <div class="twelve wide column content">
+        {{template "base/alert" .}}
+        <h4 class="ui top attached header">
+          {{.i18n.Tr "admin.monitor.cron"}}
+        </h4>
+        <div class="ui attached table segment">
+          <table class="ui very basic striped table">
+            <thead>
+              <tr>
+                <th>{{.i18n.Tr "admin.monitor.name"}}</th>
+                <th>{{.i18n.Tr "admin.monitor.schedule"}}</th>
+                <th>{{.i18n.Tr "admin.monitor.next"}}</th>
+                <th>{{.i18n.Tr "admin.monitor.previous"}}</th>
+                <th>{{.i18n.Tr "admin.monitor.execute_times"}}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {{range .Entries}}
+              <tr>
+                <td>{{.Description}}</td>
+                <td>{{.Spec}}</td>
+                <td>{{DateFmtLong .Next}}</td>
+                <td>{{if gt .Prev.Year 1 }}{{DateFmtLong .Prev}}{{else}}N/A{{end}}</td>
+                <td>{{.ExecTimes}}</td>
+              </tr>
+              {{end}}
+            </tbody>
+          </table>
         </div>
+
+        <h4 class="ui top attached header">
+          {{.i18n.Tr "admin.monitor.process"}}
+        </h4>
+        <div class="ui attached table segment">
+          <table class="ui very basic striped table">
+            <thead>
+              <tr>
+                <th>Pid</th>
+                <th>{{.i18n.Tr "admin.monitor.desc"}}</th>
+                <th>{{.i18n.Tr "admin.monitor.start"}}</th>
+                <th>{{.i18n.Tr "admin.monitor.execute_time"}}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {{range .Processes}}
+              <tr>
+                <td>{{.Pid}}</td>
+                <td>{{.Description}}</td>
+                <td>{{DateFmtLong .Start}}</td>
+                <td>{{TimeSince .Start $.Lang}}</td>
+              </tr>
+              {{end}}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
+  </div>
 </div>
-{{template "ng/base/footer" .}}
+{{template "base/footer" .}}

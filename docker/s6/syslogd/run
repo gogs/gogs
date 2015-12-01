@@ -1,0 +1,7 @@
+#!/bin/sh
+
+if test -f ./setup; then
+    source ./setup
+fi
+
+exec gosu root /sbin/syslogd -nS -O-

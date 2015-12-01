@@ -29,10 +29,11 @@ profile/
 __pycache__
 *.pem
 output*
-config.codekit
 .brackets.json
 docker/fig.yml
 docker/docker/Dockerfile
 docker/docker/init_gogs.sh
 gogs.sublime-project
 gogs.sublime-workspace
+.tags*
+release

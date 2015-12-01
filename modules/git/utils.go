@@ -7,6 +7,7 @@ package git
 import (
 	"bytes"
 	"container/list"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -34,6 +35,11 @@ func parsePrettyFormatLog(repo *Repository, logByts []byte) (*list.List, error) 
 }
 
 func RefEndName(refStr string) string {
+	if strings.HasPrefix(refStr, "refs/heads/") {
+		// trim the "refs/heads/"
+		return refStr[len("refs/heads/"):]
+	}
+
 	index := strings.LastIndex(refStr, "/")
 	if index != -1 {
 		return refStr[index+1:]
@@ -66,4 +72,11 @@ func isFile(filePath string) bool {
 		return false
 	}
 	return !f.IsDir()
+}
+
+func concatenateError(err error, stderr string) error {
+	if len(stderr) == 0 {
+		return err
+	}
+	return fmt.Errorf("%v: %s", err, stderr)
 }

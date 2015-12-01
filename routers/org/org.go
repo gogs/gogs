@@ -14,35 +14,8 @@ import (
 )
 
 const (
-	HOME   base.TplName = "org/home"
 	CREATE base.TplName = "org/create"
 )
-
-func Home(ctx *middleware.Context) {
-	org := ctx.Org.Organization
-	ctx.Data["Title"] = org.FullName
-
-	repos, err := models.GetRepositories(org.Id, ctx.IsSigned && org.IsOrgMember(ctx.User.Id))
-	if err != nil {
-		ctx.Handle(500, "GetRepositories", err)
-		return
-	}
-	ctx.Data["Repos"] = repos
-
-	if err = org.GetMembers(); err != nil {
-		ctx.Handle(500, "GetMembers", err)
-		return
-	}
-	ctx.Data["Members"] = org.Members
-
-	if err = org.GetTeams(); err != nil {
-		ctx.Handle(500, "GetTeams", err)
-		return
-	}
-	ctx.Data["Teams"] = org.Teams
-
-	ctx.HTML(200, HOME)
-}
 
 func Create(ctx *middleware.Context) {
 	ctx.Data["Title"] = ctx.Tr("new_org")
@@ -59,25 +32,21 @@ func CreatePost(ctx *middleware.Context, form auth.CreateOrgForm) {
 
 	org := &models.User{
 		Name:     form.OrgName,
-		Email:    form.Email,
 		IsActive: true,
 		Type:     models.ORGANIZATION,
 	}
 
-	var err error
-	if org, err = models.CreateOrganization(org, ctx.User); err != nil {
-		switch err {
-		case models.ErrUserAlreadyExist:
-			ctx.Data["Err_OrgName"] = true
+	if err := models.CreateOrganization(org, ctx.User); err != nil {
+		ctx.Data["Err_OrgName"] = true
+		switch {
+		case models.IsErrUserAlreadyExist(err):
 			ctx.RenderWithErr(ctx.Tr("form.org_name_been_taken"), CREATE, &form)
-		case models.ErrEmailAlreadyUsed:
-			ctx.Data["Err_Email"] = true
-			ctx.RenderWithErr(ctx.Tr("form.email_been_used"), CREATE, &form)
-		case models.ErrUserNameIllegal:
-			ctx.Data["Err_OrgName"] = true
-			ctx.RenderWithErr(ctx.Tr("form.illegal_org_name"), CREATE, &form)
+		case models.IsErrNameReserved(err):
+			ctx.RenderWithErr(ctx.Tr("org.form.name_reserved", err.(models.ErrNameReserved).Name), CREATE, &form)
+		case models.IsErrNamePatternNotAllowed(err):
+			ctx.RenderWithErr(ctx.Tr("org.form.name_pattern_not_allowed", err.(models.ErrNamePatternNotAllowed).Pattern), CREATE, &form)
 		default:
-			ctx.Handle(500, "CreateUser", err)
+			ctx.Handle(500, "CreateOrganization", err)
 		}
 		return
 	}

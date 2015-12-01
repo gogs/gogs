@@ -13,28 +13,33 @@ import (
 	"github.com/gogits/gogs/modules/middleware"
 )
 
+func ServeData(ctx *middleware.Context, name string, reader io.Reader) error {
+	buf := make([]byte, 1024)
+	n, _ := reader.Read(buf)
+	if n > 0 {
+		buf = buf[:n]
+	}
+
+	_, isTextFile := base.IsTextFile(buf)
+	if ! isTextFile {
+		_, isImageFile := base.IsImageFile(buf)
+		if !isImageFile {
+			ctx.Resp.Header().Set("Content-Disposition", "attachment; filename="+path.Base(ctx.Repo.TreeName))
+			ctx.Resp.Header().Set("Content-Transfer-Encoding", "binary")
+		}
+	}
+	ctx.Resp.Write(buf)
+	_, err := io.Copy(ctx.Resp, reader)
+	return err
+}
+
 func ServeBlob(ctx *middleware.Context, blob *git.Blob) error {
 	dataRc, err := blob.Data()
 	if err != nil {
 		return err
 	}
 
-	buf := make([]byte, 1024)
-	n, _ := dataRc.Read(buf)
-	if n > 0 {
-		buf = buf[:n]
-	}
-
-	_, isTextFile := base.IsTextFile(buf)
-	_, isImageFile := base.IsImageFile(buf)
-	ctx.Resp.Header().Set("Content-Type", "text/plain")
-	if !isTextFile && !isImageFile {
-		ctx.Resp.Header().Set("Content-Disposition", "attachment; filename="+path.Base(ctx.Repo.TreeName))
-		ctx.Resp.Header().Set("Content-Transfer-Encoding", "binary")
-	}
-	ctx.Resp.Write(buf)
-	_, err = io.Copy(ctx.Resp, dataRc)
-	return err
+	return ServeData(ctx, ctx.Repo.TreeName, dataRc)
 }
 
 func SingleDownload(ctx *middleware.Context) {
