@@ -88,6 +88,9 @@
         <div class="ui tab list" data-tab="mirrors">
           <h4 class="ui top attached header">
             {{.i18n.Tr "home.my_mirrors"}} <span class="ui grey label">{{.MirrorCount}}</span>
+            <div class="ui right">
+              <a class="ui blue tiny show-panel button" href="{{AppSubUrl}}/repo/migrate">{{.i18n.Tr "new_migrate"}}</a>
+            </div>
           </h4>
           <div class="ui attached table segment">
             <ul>
