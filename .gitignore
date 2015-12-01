@@ -37,3 +37,4 @@ gogs.sublime-project
 gogs.sublime-workspace
 .tags*
 release
+modules/bindata/bindata.go

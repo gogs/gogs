@@ -31,8 +31,11 @@ release: build pack
 
 bindata: modules/bindata/bindata.go
 
-modules/bindata/bindata.go: $(DATA_FILES)
+modules/bindata/bindata.go: modules/bindata $(DATA_FILES)
 	go-bindata -o=$@ -ignore="\\.DS_Store|README.md" -pkg=bindata conf/...
+
+modules/bindata:
+	mkdir -p modules/bindata
 
 less: public/css/gogs.css
 
