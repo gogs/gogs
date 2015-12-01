@@ -91,6 +91,31 @@
 	 	}
 	}
 
+	#clone-panel {
+		margin-top: -8px;
+		width: 100%;
+
+		input {
+	    border-radius: 0;
+	    padding: 5px 10px;
+		}
+
+		.clone.button {
+			font-size: 13px;
+			padding: 0 5px;
+			&:first-child {
+		    border-radius: .28571429rem 0 0 .28571429rem;
+			}
+		}
+		.icon.button {
+			padding: 0 10px;
+		}
+		.dropdown .menu {
+			right: 0!important;
+			left: auto!important;
+		}
+	}
+
 	&.file.list {
 		#repo-desc {
 			font-size: 1.2em;
@@ -114,31 +139,6 @@
 						font-size: 16px;
 					}
 				}
-			}
-		}
-
-		.clone.input {
-			margin-top: -8px;
-			width: 100%;
-
-			input {
-		    border-radius: 0;
-		    padding: 5px 10px;
-			}
-
-			.clone.button {
-				font-size: 13px;
-				padding: 0 5px;
-				&:first-child {
-			    border-radius: .28571429rem 0 0 .28571429rem;
-				}
-			}
-			.icon.button {
-				padding: 0 10px;
-			}
-			.dropdown .menu {
-				right: 0!important;
-				left: auto!important;
 			}
 		}
 
@@ -972,9 +972,10 @@
 		}
 
 		&.view {
-			.header:not(.sub) {
-				// padding-left: 30px;
+			.choose.page {
+				margin-top: -5px;
 			}
+
 			.ui.sub.header {
 				text-transform: none;
 			}
