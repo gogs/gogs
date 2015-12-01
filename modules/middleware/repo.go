@@ -339,12 +339,8 @@ func RepoAssignment(args ...bool) macaron.Handler {
 		ctx.Data["IsRepositoryPusher"] = ctx.Repo.IsPusher()
 
 		ctx.Data["DisableSSH"] = setting.DisableSSH
-		ctx.Repo.CloneLink, err = repo.CloneLink()
-		if err != nil {
-			ctx.Handle(500, "CloneLink", err)
-			return
-		}
-		ctx.Data["CloneLink"] = ctx.Repo.CloneLink
+		ctx.Data["CloneLink"] = repo.CloneLink()
+		ctx.Data["WikiCloneLink"] = repo.WikiCloneLink()
 
 		if ctx.IsSigned {
 			ctx.Data["IsWatchingRepo"] = models.IsWatching(ctx.User.Id, repo.ID)
