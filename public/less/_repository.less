@@ -32,6 +32,14 @@
 		}
 	}
 
+	.navbar {
+		.ui.label {
+			margin-top: -2px;
+			margin-left: 7px;
+			padding: 3px 5px;
+		}
+	}
+
 	.owner.dropdown {
 		min-width: 40% !important;
 	}
@@ -83,6 +91,31 @@
 	 	}
 	}
 
+	#clone-panel {
+		margin-top: -8px;
+		width: 100%;
+
+		input {
+	    border-radius: 0;
+	    padding: 5px 10px;
+		}
+
+		.clone.button {
+			font-size: 13px;
+			padding: 0 5px;
+			&:first-child {
+		    border-radius: .28571429rem 0 0 .28571429rem;
+			}
+		}
+		.icon.button {
+			padding: 0 10px;
+		}
+		.dropdown .menu {
+			right: 0!important;
+			left: auto!important;
+		}
+	}
+
 	&.file.list {
 		#repo-desc {
 			font-size: 1.2em;
@@ -106,31 +139,6 @@
 						font-size: 16px;
 					}
 				}
-			}
-		}
-
-		.clone.input {
-			margin-top: -8px;
-			width: 100%;
-
-			input {
-		    border-radius: 0;
-		    padding: 5px 10px;
-			}
-
-			.clone.button {
-				font-size: 13px;
-				padding: 0 5px;
-				&:first-child {
-			    border-radius: .28571429rem 0 0 .28571429rem;
-				}
-			}
-			.icon.button {
-				padding: 0 10px;
-			}
-			.dropdown .menu {
-				right: 0!important;
-				left: auto!important;
 			}
 		}
 
@@ -935,6 +943,50 @@
 				.link {
 					padding-top: 5px;
 				}
+			}
+		}
+	}
+
+	&.wiki {
+		&.start {
+			.ui.segment {
+				padding-top: 70px;
+				padding-bottom: 100px;
+
+				.mega-octicon {
+					font-size: 48px;
+				}
+			}
+		}
+
+		&.new {
+			.CodeMirror {
+				.CodeMirror-code .cm-comment {
+					background: inherit;
+				}
+			}
+
+			.editor-preview {
+				background-color: white;
+			}
+		}
+
+		&.view {
+			.choose.page {
+				margin-top: -5px;
+			}
+
+			.ui.sub.header {
+				text-transform: none;
+			}
+			.markdown {
+		    padding: 15px 30px;
+
+		    h1, h2, h3, h4, h5, h6 {
+		    	&:first-of-type {
+		    		margin-top: 0;
+		    	}
+		    }
 			}
 		}
 	}

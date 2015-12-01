@@ -210,13 +210,7 @@ func PrepareViewPullInfo(ctx *middleware.Context, pull *models.Issue) *git.PullR
 	}
 
 	if pull.HeadRepo != nil {
-		headRepoPath, err := pull.HeadRepo.RepoPath()
-		if err != nil {
-			ctx.Handle(500, "HeadRepo.RepoPath", err)
-			return nil
-		}
-
-		headGitRepo, err = git.OpenRepository(headRepoPath)
+		headGitRepo, err = git.OpenRepository(pull.HeadRepo.RepoPath())
 		if err != nil {
 			ctx.Handle(500, "OpenRepository", err)
 			return nil
@@ -496,11 +490,7 @@ func PrepareCompareDiff(
 	)
 
 	// Get diff information.
-	ctx.Data["CommitRepoLink"], err = headRepo.RepoLink()
-	if err != nil {
-		ctx.Handle(500, "RepoLink", err)
-		return false
-	}
+	ctx.Data["CommitRepoLink"] = headRepo.RepoLink()
 
 	headCommitID, err := headGitRepo.GetCommitIdOfBranch(headBranch)
 	if err != nil {
