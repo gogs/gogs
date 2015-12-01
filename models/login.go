@@ -225,16 +225,16 @@ func DeleteSource(source *LoginSource) error {
 // |_______ \/_______  /\____|__  /____|
 //         \/        \/         \/
 
-// LoginUserLDAPSource queries if name/passwd can login against the LDAP directory pool,
+// LoginUserLDAPSource queries if loginName/passwd can login against the LDAP directory pool,
 // and create a local user if success when enabled.
 // It returns the same LoginUserPlain semantic.
-func LoginUserLDAPSource(u *User, name, passwd string, source *LoginSource, autoRegister bool) (*User, error) {
+func LoginUserLDAPSource(u *User, loginName, passwd string, source *LoginSource, autoRegister bool) (*User, error) {
 	cfg := source.Cfg.(*LDAPConfig)
 	directBind := (source.Type == DLDAP)
-	fn, sn, mail, admin, logged := cfg.SearchEntry(name, passwd, directBind)
+	name, fn, sn, mail, admin, logged := cfg.SearchEntry(loginName, passwd, directBind)
 	if !logged {
 		// User not in LDAP, do nothing
-		return nil, ErrUserNotExist{0, name}
+		return nil, ErrUserNotExist{0, loginName}
 	}
 
 	if !autoRegister {
@@ -242,6 +242,9 @@ func LoginUserLDAPSource(u *User, name, passwd string, source *LoginSource, auto
 	}
 
 	// Fallback.
+	if len(name) == 0 {
+		name = loginName
+	}
 	if len(mail) == 0 {
 		mail = fmt.Sprintf("%s@localhost", name)
 	}
@@ -249,15 +252,28 @@ func LoginUserLDAPSource(u *User, name, passwd string, source *LoginSource, auto
 	u = &User{
 		LowerName:   strings.ToLower(name),
 		Name:        name,
-		FullName:    strings.TrimSpace(fn + " " + sn),
+		FullName:    composeFullName(fn, sn, name),
 		LoginType:   source.Type,
 		LoginSource: source.ID,
-		LoginName:   name,
+		LoginName:   loginName,
 		Email:       mail,
 		IsAdmin:     admin,
 		IsActive:    true,
 	}
 	return u, CreateUser(u)
+}
+
+func composeFullName(firstName, surename, userName string) string {
+	switch {
+	case len(firstName) == 0 && len(surename) == 0:
+		return userName
+	case len(firstName) == 0:
+		return surename
+	case len(surename) == 0:
+		return firstName
+	default:
+		return firstName + " " + surename
+	}
 }
 
 //   _________   __________________________
