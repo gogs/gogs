@@ -25,9 +25,11 @@ import (
 	"github.com/go-xorm/xorm"
 	"github.com/nfnt/resize"
 
+	"github.com/gogits/git-shell"
+
 	"github.com/gogits/gogs/modules/avatar"
 	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/modules/git"
+	oldgit "github.com/gogits/gogs/modules/git"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/setting"
 )
@@ -664,7 +666,7 @@ func deleteUser(e *xorm.Session, u *User) error {
 		&IssueUser{UID: u.Id},
 		&EmailAddress{UID: u.Id},
 	); err != nil {
-		return fmt.Errorf("deleteUser: %v", err)
+		return fmt.Errorf("deleteBeans: %v", err)
 	}
 
 	// ***** START: PublicKey *****
@@ -938,11 +940,11 @@ func MakeEmailPrimary(email *EmailAddress) error {
 // UserCommit represents a commit with validation of user.
 type UserCommit struct {
 	User *User
-	*git.Commit
+	*oldgit.Commit
 }
 
 // ValidateCommitWithEmail chceck if author's e-mail of commit is corresponsind to a user.
-func ValidateCommitWithEmail(c *git.Commit) *User {
+func ValidateCommitWithEmail(c *oldgit.Commit) *User {
 	u, err := GetUserByEmail(c.Author.Email)
 	if err != nil {
 		return nil
@@ -959,7 +961,7 @@ func ValidateCommitsWithEmails(oldCommits *list.List) *list.List {
 		e          = oldCommits.Front()
 	)
 	for e != nil {
-		c := e.Value.(*git.Commit)
+		c := e.Value.(*oldgit.Commit)
 
 		if v, ok := emails[c.Author.Email]; !ok {
 			u, _ = GetUserByEmail(c.Author.Email)

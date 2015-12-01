@@ -20,10 +20,7 @@ import (
 
 // ToApiRepository converts repository to API format.
 func ToApiRepository(owner *models.User, repo *models.Repository, permission api.Permission) *api.Repository {
-	cl, err := repo.CloneLink()
-	if err != nil {
-		log.Error(4, "CloneLink: %v", err)
-	}
+	cl := repo.CloneLink()
 	return &api.Repository{
 		Id:          repo.ID,
 		Owner:       *ToApiUser(owner),

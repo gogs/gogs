@@ -87,7 +87,7 @@ func fail(userMessage, logMessage string, args ...interface{}) {
 	os.Exit(1)
 }
 
-func handleUpdateTask(uuid string, user *models.User, repoUserName, repoName string) {
+func handleUpdateTask(uuid string, user *models.User, username, reponame string, isWiki bool) {
 	task, err := models.GetUpdateTaskByUUID(uuid)
 	if err != nil {
 		if models.IsErrUpdateTaskNotExist(err) {
@@ -95,19 +95,21 @@ func handleUpdateTask(uuid string, user *models.User, repoUserName, repoName str
 			return
 		}
 		log.GitLogger.Fatal(2, "GetUpdateTaskByUUID: %v", err)
-	}
-
-	if err = models.Update(task.RefName, task.OldCommitID, task.NewCommitID,
-		user.Name, repoUserName, repoName, user.Id); err != nil {
-		log.GitLogger.Error(2, "Update: %v", err)
-	}
-
-	if err = models.DeleteUpdateTaskByUUID(uuid); err != nil {
+	} else if err = models.DeleteUpdateTaskByUUID(uuid); err != nil {
 		log.GitLogger.Fatal(2, "DeleteUpdateTaskByUUID: %v", err)
 	}
 
+	if isWiki {
+		return
+	}
+
+	if err = models.Update(task.RefName, task.OldCommitID, task.NewCommitID,
+		user.Name, username, reponame, user.Id); err != nil {
+		log.GitLogger.Error(2, "Update: %v", err)
+	}
+
 	// Ask for running deliver hook and test pull request tasks.
-	reqURL := setting.AppUrl + repoUserName + "/" + repoName + "/tasks/trigger?branch=" +
+	reqURL := setting.AppUrl + username + "/" + reponame + "/tasks/trigger?branch=" +
 		strings.TrimPrefix(task.RefName, "refs/heads/")
 	log.GitLogger.Trace("Trigger task: %s", reqURL)
 
@@ -147,21 +149,27 @@ func runServ(c *cli.Context) {
 	if len(rr) != 2 {
 		fail("Invalid repository path", "Invalid repository path: %v", args)
 	}
-	repoUserName := strings.ToLower(rr[0])
-	repoName := strings.ToLower(strings.TrimSuffix(rr[1], ".git"))
+	username := strings.ToLower(rr[0])
+	reponame := strings.ToLower(strings.TrimSuffix(rr[1], ".git"))
 
-	repoUser, err := models.GetUserByName(repoUserName)
-	if err != nil {
-		if models.IsErrUserNotExist(err) {
-			fail("Repository owner does not exist", "Unregistered owner: %s", repoUserName)
-		}
-		fail("Internal error", "Failed to get repository owner(%s): %v", repoUserName, err)
+	isWiki := false
+	if strings.HasSuffix(reponame, ".wiki") {
+		isWiki = true
+		reponame = reponame[:len(reponame)-5]
 	}
 
-	repo, err := models.GetRepositoryByName(repoUser.Id, repoName)
+	repoUser, err := models.GetUserByName(username)
+	if err != nil {
+		if models.IsErrUserNotExist(err) {
+			fail("Repository owner does not exist", "Unregistered owner: %s", username)
+		}
+		fail("Internal error", "Failed to get repository owner(%s): %v", username, err)
+	}
+
+	repo, err := models.GetRepositoryByName(repoUser.Id, reponame)
 	if err != nil {
 		if models.IsErrRepoNotExist(err) {
-			fail(_ACCESS_DENIED_MESSAGE, "Repository does not exist: %s/%s", repoUser.Name, repoName)
+			fail(_ACCESS_DENIED_MESSAGE, "Repository does not exist: %s/%s", repoUser.Name, reponame)
 		}
 		fail("Internal error", "Failed to get repository: %v", err)
 	}
@@ -258,7 +266,7 @@ func runServ(c *cli.Context) {
 	}
 
 	if requestedMode == models.ACCESS_MODE_WRITE {
-		handleUpdateTask(uuid, user, repoUserName, repoName)
+		handleUpdateTask(uuid, user, username, reponame, isWiki)
 	}
 
 	// Update user key activity.

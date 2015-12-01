@@ -1758,6 +1758,11 @@ footer .container .links > *:first-child {
   line-height: 10px;
   white-space: nowrap;
 }
+.repository .navbar .ui.label {
+  margin-top: -2px;
+  margin-left: 7px;
+  padding: 3px 5px;
+}
 .repository .owner.dropdown {
   min-width: 40% !important;
 }
@@ -1801,6 +1806,28 @@ footer .container .links > *:first-child {
   margin: 1px;
   padding-right: 0;
 }
+.repository #clone-panel {
+  margin-top: -8px;
+  width: 100%;
+}
+.repository #clone-panel input {
+  border-radius: 0;
+  padding: 5px 10px;
+}
+.repository #clone-panel .clone.button {
+  font-size: 13px;
+  padding: 0 5px;
+}
+.repository #clone-panel .clone.button:first-child {
+  border-radius: .28571429rem 0 0 .28571429rem;
+}
+.repository #clone-panel .icon.button {
+  padding: 0 10px;
+}
+.repository #clone-panel .dropdown .menu {
+  right: 0!important;
+  left: auto!important;
+}
 .repository.file.list #repo-desc {
   font-size: 1.2em;
 }
@@ -1820,28 +1847,6 @@ footer .container .links > *:first-child {
 .repository.file.list .head.meta li .ui.breadcrumb span,
 .repository.file.list .head.meta li .ui.breadcrumb a {
   font-size: 16px;
-}
-.repository.file.list .clone.input {
-  margin-top: -8px;
-  width: 100%;
-}
-.repository.file.list .clone.input input {
-  border-radius: 0;
-  padding: 5px 10px;
-}
-.repository.file.list .clone.input .clone.button {
-  font-size: 13px;
-  padding: 0 5px;
-}
-.repository.file.list .clone.input .clone.button:first-child {
-  border-radius: .28571429rem 0 0 .28571429rem;
-}
-.repository.file.list .clone.input .icon.button {
-  padding: 0 10px;
-}
-.repository.file.list .clone.input .dropdown .menu {
-  right: 0!important;
-  left: auto!important;
 }
 .repository.file.list #repo-files-table .table.list {
   width: 80% !important;
@@ -2512,6 +2517,36 @@ footer .container .links > *:first-child {
 }
 .repository.forks .list .item .link {
   padding-top: 5px;
+}
+.repository.wiki.start .ui.segment {
+  padding-top: 70px;
+  padding-bottom: 100px;
+}
+.repository.wiki.start .ui.segment .mega-octicon {
+  font-size: 48px;
+}
+.repository.wiki.new .CodeMirror .CodeMirror-code .cm-comment {
+  background: inherit;
+}
+.repository.wiki.new .editor-preview {
+  background-color: white;
+}
+.repository.wiki.view .choose.page {
+  margin-top: -5px;
+}
+.repository.wiki.view .ui.sub.header {
+  text-transform: none;
+}
+.repository.wiki.view .markdown {
+  padding: 15px 30px;
+}
+.repository.wiki.view .markdown h1:first-of-type,
+.repository.wiki.view .markdown h2:first-of-type,
+.repository.wiki.view .markdown h3:first-of-type,
+.repository.wiki.view .markdown h4:first-of-type,
+.repository.wiki.view .markdown h5:first-of-type,
+.repository.wiki.view .markdown h6:first-of-type {
+  margin-top: 0;
 }
 .repository.settings.collaboration .collaborator.list {
   padding: 0;

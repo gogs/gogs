@@ -59,7 +59,7 @@ type Context struct {
 	IsSigned    bool
 	IsBasicAuth bool
 
-	Repo RepoContext
+	Repo *RepoContext
 
 	Org struct {
 		IsOwner      bool
@@ -73,17 +73,22 @@ type Context struct {
 }
 
 // IsOwner returns true if current user is the owner of repository.
-func (r RepoContext) IsOwner() bool {
+func (r *RepoContext) IsOwner() bool {
 	return r.AccessMode >= models.ACCESS_MODE_OWNER
 }
 
 // IsAdmin returns true if current user has admin or higher access of repository.
-func (r RepoContext) IsAdmin() bool {
+func (r *RepoContext) IsAdmin() bool {
 	return r.AccessMode >= models.ACCESS_MODE_ADMIN
 }
 
+// IsPusher returns true if current user has write or higher access of repository.
+func (r *RepoContext) IsPusher() bool {
+	return r.AccessMode >= models.ACCESS_MODE_WRITE
+}
+
 // Return if the current user has read access for this repository
-func (r RepoContext) HasAccess() bool {
+func (r *RepoContext) HasAccess() bool {
 	return r.AccessMode >= models.ACCESS_MODE_READ
 }
 
