@@ -113,7 +113,8 @@ func Remove(pid int64) {
 func Kill(pid int64) error {
 	for i, proc := range Processes {
 		if proc.Pid == pid {
-			if proc.Cmd.Process != nil && proc.Cmd.ProcessState != nil && !proc.Cmd.ProcessState.Exited() {
+			if proc.Cmd != nil && proc.Cmd.Process != nil &&
+				proc.Cmd.ProcessState != nil && !proc.Cmd.ProcessState.Exited() {
 				if err := proc.Cmd.Process.Kill(); err != nil {
 					return fmt.Errorf("fail to kill process(%d/%s): %v", proc.Pid, proc.Description, err)
 				}

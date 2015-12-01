@@ -6,7 +6,6 @@ package middleware
 
 import (
 	"fmt"
-	"net/url"
 	"path"
 	"strings"
 
@@ -223,8 +222,10 @@ func RetrieveBaseRepo(ctx *Context, repo *models.Repository) {
 	}
 }
 
-func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
+func RepoAssignment(args ...bool) macaron.Handler {
 	return func(ctx *Context) {
+		ctx.Repo = &RepoContext{}
+
 		var (
 			displayBare bool // To display bare page if it is a bare repo.
 		)
@@ -311,11 +312,7 @@ func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 			return
 		}
 		ctx.Repo.GitRepo = gitRepo
-		ctx.Repo.RepoLink, err = repo.RepoLink()
-		if err != nil {
-			ctx.Handle(500, "RepoLink", err)
-			return
-		}
+		ctx.Repo.RepoLink = repo.RepoLink()
 		ctx.Data["RepoLink"] = ctx.Repo.RepoLink
 		ctx.Data["RepoRelPath"] = ctx.Repo.Owner.Name + "/" + ctx.Repo.Repository.Name
 
@@ -339,14 +336,11 @@ func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 		ctx.Data["Owner"] = ctx.Repo.Repository.Owner
 		ctx.Data["IsRepositoryOwner"] = ctx.Repo.IsOwner()
 		ctx.Data["IsRepositoryAdmin"] = ctx.Repo.IsAdmin()
+		ctx.Data["IsRepositoryPusher"] = ctx.Repo.IsPusher()
 
 		ctx.Data["DisableSSH"] = setting.DisableSSH
-		ctx.Repo.CloneLink, err = repo.CloneLink()
-		if err != nil {
-			ctx.Handle(500, "CloneLink", err)
-			return
-		}
-		ctx.Data["CloneLink"] = ctx.Repo.CloneLink
+		ctx.Data["CloneLink"] = repo.CloneLink()
+		ctx.Data["WikiCloneLink"] = repo.WikiCloneLink()
 
 		if ctx.IsSigned {
 			ctx.Data["IsWatchingRepo"] = models.IsWatching(ctx.User.Id, repo.ID)
@@ -401,11 +395,15 @@ func RepoAssignment(redirect bool, args ...bool) macaron.Handler {
 func RequireRepoAdmin() macaron.Handler {
 	return func(ctx *Context) {
 		if !ctx.Repo.IsAdmin() {
-			if !ctx.IsSigned {
-				ctx.SetCookie("redirect_to", "/"+url.QueryEscape(setting.AppSubUrl+ctx.Req.RequestURI), 0, setting.AppSubUrl)
-				ctx.Redirect(setting.AppSubUrl + "/user/login")
-				return
-			}
+			ctx.Handle(404, ctx.Req.RequestURI, nil)
+			return
+		}
+	}
+}
+
+func RequireRepoPusher() macaron.Handler {
+	return func(ctx *Context) {
+		if !ctx.Repo.IsPusher() {
 			ctx.Handle(404, ctx.Req.RequestURI, nil)
 			return
 		}
