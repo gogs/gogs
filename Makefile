@@ -11,7 +11,7 @@ RELEASE_ROOT = "release"
 RELEASE_GOGS = "release/gogs"
 NOW = $(shell date -u '+%Y%m%d%I%M%S')
 
-.PHONY: build pack release bindata clean 
+.PHONY: build pack release bindata clean
 
 build: $(GENERATED)
 	go install -ldflags '$(LDFLAGS)' -tags '$(TAGS)'
