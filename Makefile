@@ -11,7 +11,7 @@ NOW = $(shell date -u '+%Y%m%d%I%M%S')
 
 build:
 	go install -ldflags '$(LDFLAGS)' -tags '$(TAGS)'
-	go build -ldflags '$(LDFLAGS)' -tags '$(TAGS)'
+	cp '$(GOPATH)/bin/gogs' .
 
 govet:
 	go tool vet -composites=false -methods=false -structtags=false .
