@@ -1,17 +1,21 @@
 LDFLAGS += -X "github.com/gogits/gogs/modules/setting.BuildTime=$(shell date -u '+%Y-%m-%d %I:%M:%S %Z')"
 LDFLAGS += -X "github.com/gogits/gogs/modules/setting.BuildGitHash=$(shell git rev-parse HEAD)"
 
+DATA_FILES := $(shell find conf | sed 's/ /\\ /g')
+LESS_FILES := $(wildcard public/less/gogs.less public/less/_*.less)
+GENERATED  := modules/bindata/bindata.go public/css/gogs.css
+
 TAGS = ""
 
 RELEASE_ROOT = "release"
 RELEASE_GOGS = "release/gogs"
 NOW = $(shell date -u '+%Y%m%d%I%M%S')
 
-.PHONY: build pack release bindata clean 
+.PHONY: build pack release bindata clean
 
-build:
+build: $(GENERATED)
 	go install -ldflags '$(LDFLAGS)' -tags '$(TAGS)'
-	go build -ldflags '$(LDFLAGS)' -tags '$(TAGS)'
+	cp '$(GOPATH)/bin/gogs' .
 
 govet:
 	go tool vet -composites=false -methods=false -structtags=false .
@@ -25,8 +29,15 @@ pack:
 
 release: build pack
 
-bindata: 
-	go-bindata -o=modules/bindata/bindata.go -ignore="\\.DS_Store|README.md" -pkg=bindata conf/...
+bindata: modules/bindata/bindata.go
+
+modules/bindata/bindata.go: $(DATA_FILES)
+	go-bindata -o=$@ -ignore="\\.DS_Store|README.md" -pkg=bindata conf/...
+
+less: public/css/gogs.css
+
+public/css/gogs.css: $(LESS_FILES)
+	lessc $< $@
 
 clean:
 	go clean -i ./...
