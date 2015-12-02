@@ -67,6 +67,7 @@ Gogs 的目标是打造一个最简单、最快速和最轻松的方式搭建自
 - [Scaleway](https://www.scaleway.com/imagehub/gogs/)
 - [Portal](https://portaldemo.xyz/cloud/)
 - [Sandstorm](https://github.com/cem/gogs-sandstorm)
+- [sloppy.io](https://github.com/sloppyio/quickstarters/tree/master/gogs)
 
 ### 产品支持
 
