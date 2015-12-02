@@ -47,7 +47,18 @@ func DeleteNotice(ctx *middleware.Context) {
 		ctx.Handle(500, "DeleteNotice", err)
 		return
 	}
-	log.Trace("System notice deleted by admin(%s): %d", ctx.User.Name, id)
+	log.Trace("System notice deleted by admin (%s): %d", ctx.User.Name, id)
+	ctx.Flash.Success(ctx.Tr("admin.notices.delete_success"))
+	ctx.Redirect(setting.AppSubUrl + "/admin/notices")
+}
+
+func EmptyNotices(ctx *middleware.Context) {
+	if err := models.DeleteNotices(0, 0); err != nil {
+		ctx.Handle(500, "DeleteNotices", err)
+		return
+	}
+
+	log.Trace("System notices deleted by admin (%s): [start: %d]", ctx.User.Name, 0)
 	ctx.Flash.Success(ctx.Tr("admin.notices.delete_success"))
 	ctx.Redirect(setting.AppSubUrl + "/admin/notices")
 }
