@@ -19,6 +19,8 @@ import (
 
 func ApiRepoAssignment() macaron.Handler {
 	return func(ctx *Context) {
+		ctx.Repo = &RepoContext{}
+
 		userName := ctx.Params(":username")
 		repoName := ctx.Params(":reponame")
 
