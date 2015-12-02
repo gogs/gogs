@@ -61,3 +61,13 @@ func DeleteNotice(id int64) error {
 	_, err := x.Id(id).Delete(new(Notice))
 	return err
 }
+
+// DeleteNotices deletes all notices with ID from start to end (inclusive).
+func DeleteNotices(start, end int64) error {
+	sess := x.Where("id >= ?", start)
+	if end > 0 {
+		sess.And("id <= ?", end)
+	}
+	_, err := sess.Delete(new(Notice))
+	return err
+}

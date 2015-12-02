@@ -338,6 +338,7 @@ func runWeb(ctx *cli.Context) {
 		m.Group("/notices", func() {
 			m.Get("", admin.Notices)
 			m.Get("/:id:int/delete", admin.DeleteNotice)
+			m.Get("/empty", admin.EmptyNotices)
 		})
 	}, adminReq)
 	// ***** END: Admin *****
