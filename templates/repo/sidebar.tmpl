@@ -19,9 +19,11 @@
     <i class="icon octicon octicon-book"></i> {{.i18n.Tr "repo.wiki"}}
   </a>
   {{if .IsRepositoryAdmin}}
-  <a class="{{if .PageIsSettings}}active{{end}} item" href="{{.RepoLink}}/settings">
-    <i class="icon octicon octicon-tools"></i> {{.i18n.Tr "repo.settings"}}
-  </a>
+  <div class="right menu">
+    <a class="{{if .PageIsSettings}}active{{end}} item" href="{{.RepoLink}}/settings">
+      <i class="icon octicon octicon-tools"></i> {{.i18n.Tr "repo.settings"}}
+    </a>
+  </div>
   {{end}}
 </div>
 {{end}}
