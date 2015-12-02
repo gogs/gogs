@@ -109,6 +109,7 @@ There are 5 ways to install Gogs:
 - [Scaleway](https://www.scaleway.com/imagehub/gogs/)
 - [Portal](https://portaldemo.xyz/cloud/)
 - [Sandstorm](https://github.com/cem/gogs-sandstorm)
+- [sloppy.io](https://github.com/sloppyio/quickstarters/tree/master/gogs)
 
 ### Product Support
 
