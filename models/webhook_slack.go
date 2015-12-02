@@ -33,8 +33,9 @@ type SlackPayload struct {
 }
 
 type SlackAttachment struct {
-	Color string `json:"color"`
-	Text  string `json:"text"`
+	Fallback string `json:"fallback"`
+	Color    string `json:"color"`
+	Text     string `json:"text"`
 }
 
 func (p *SlackPayload) SetSecret(_ string) {}
@@ -111,7 +112,12 @@ func getSlackPushPayload(p *api.PushPayload, slack *SlackMeta) (*SlackPayload, e
 		}
 	}
 
-	slackAttachments := []SlackAttachment{{Color: slack.Color, Text: attachmentText}}
+	slackAttachments := []SlackAttachment{{
+		Fallback: fmt.Sprintf("%s pushed %s to %s/%s: %s",
+			p.Pusher, commitString, p.Repo.Name, branchName, p.CompareUrl),
+		Color: slack.Color,
+		Text:  attachmentText,
+	}}
 
 	return &SlackPayload{
 		Channel:     slack.Channel,
