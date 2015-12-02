@@ -1,9 +1,9 @@
 {{template "base/head" .}}
 <div class="repository commits">
-	{{template "repo/header" .}}
+  {{template "repo/header" .}}
+  {{template "repo/sidebar" .}}
   <div class="ui container">
-    {{template "repo/sidebar" .}}
-		{{template "repo/commits_table" .}}
-	</div>
+    {{template "repo/commits_table" .}}
+  </div>
 </div>
 {{template "base/footer" .}}

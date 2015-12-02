@@ -1,8 +1,8 @@
 {{template "base/head" .}}
 <div class="repository release">
   {{template "repo/header" .}}
+  {{template "repo/sidebar" .}}
   <div class="ui container">
-    {{template "repo/sidebar" .}}
     {{template "base/alert" .}}
     <h2 class="ui header">
       {{.i18n.Tr "repo.release.releases"}}
