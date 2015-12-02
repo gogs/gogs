@@ -1854,20 +1854,6 @@ footer .container .links > *:first-child {
 .repository.file.list .choose.reference .header .icon {
   font-size: 1.4em;
 }
-.repository.file.list .head.meta {
-  padding: 0;
-}
-.repository.file.list .head.meta li {
-  list-style: none;
-  display: inline-block;
-}
-.repository.file.list .head.meta li .ui.breadcrumb {
-  margin-top: -5px;
-}
-.repository.file.list .head.meta li .ui.breadcrumb span,
-.repository.file.list .head.meta li .ui.breadcrumb a {
-  font-size: 16px;
-}
 .repository.file.list #repo-files-table thead th {
   padding-top: 8px;
   padding-bottom: 5px;
