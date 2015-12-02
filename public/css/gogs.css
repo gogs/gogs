@@ -1815,6 +1815,17 @@ footer .container .links > *:first-child {
   margin: 1px;
   padding-right: 0;
 }
+.repository .ui.tabs.container {
+  margin-top: 14px;
+  margin-bottom: 0px;
+}
+.repository .ui.tabs.container .ui.menu {
+  border-bottom: none;
+}
+.repository .ui.tabs.divider {
+  margin-top: 0;
+  margin-bottom: 20px;
+}
 .repository #clone-panel {
   margin-top: -8px;
   width: 100%;
