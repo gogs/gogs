@@ -985,8 +985,13 @@ func TransferOwnership(u *User, newOwnerName string, repo *Repository) error {
 	// Change repository directory name.
 	if err = os.Rename(RepoPath(owner.Name, repo.Name), RepoPath(newOwner.Name, repo.Name)); err != nil {
 		return fmt.Errorf("rename repository directory: %v", err)
-	} else if err = os.Rename(WikiPath(owner.Name, repo.Name), WikiPath(newOwner.Name, repo.Name)); err != nil {
-		return fmt.Errorf("rename repository wiki: %v", err)
+	}
+
+	wikiPath := WikiPath(owner.Name, repo.Name)
+	if com.IsExist(wikiPath) {
+		if err = os.Rename(wikiPath, WikiPath(newOwner.Name, repo.Name)); err != nil {
+			return fmt.Errorf("rename repository wiki: %v", err)
+		}
 	}
 
 	return sess.Commit()
@@ -1014,9 +1019,12 @@ func ChangeRepositoryName(u *User, oldRepoName, newRepoName string) (err error) 
 
 	wikiPath := WikiPath(u.Name, oldRepoName)
 	if com.IsExist(wikiPath) {
-		err = os.Rename(WikiPath(u.Name, oldRepoName), WikiPath(u.Name, newRepoName))
+		if err = os.Rename(wikiPath, WikiPath(u.Name, newRepoName)); err != nil {
+			return fmt.Errorf("rename repository wiki: %v", err)
+		}
 	}
-	return err
+
+	return nil
 }
 
 func getRepositoriesByForkID(e Engine, forkID int64) ([]*Repository, error) {
