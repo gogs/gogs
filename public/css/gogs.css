@@ -1859,6 +1859,11 @@ footer .container .links > *:first-child {
   padding-bottom: 5px;
   font-weight: normal;
 }
+.repository.file.list #repo-files-table thead th:first-child {
+  display: block;
+  position: relative;
+  width: 325%;
+}
 .repository.file.list #repo-files-table thead .ui.avatar {
   margin-bottom: 5px;
 }
