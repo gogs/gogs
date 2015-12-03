@@ -350,7 +350,7 @@ func (repo *Repository) SavePatch(index int64, patch []byte) error {
 		return fmt.Errorf("PatchPath: %v", err)
 	}
 
-	os.MkdirAll(path.Dir(patchPath), os.ModePerm)
+	os.MkdirAll(filepath.Dir(patchPath), os.ModePerm)
 	if err = ioutil.WriteFile(patchPath, patch, 0644); err != nil {
 		return fmt.Errorf("WriteFile: %v", err)
 	}
