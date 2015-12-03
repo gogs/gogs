@@ -43,7 +43,7 @@
         </td>
         {{end}}
         <td class="message collapsing">
-          <a rel="nofollow" class="ui green sha label" href="{{AppSubUrl}}/{{$.Username}}/{{$.Reponame}}/commit/{{$commit.ID}}">{{ShortSha $commit.ID.String}}</a>
+          <a rel="nofollow" class="ui sha label" href="{{AppSubUrl}}/{{$.Username}}/{{$.Reponame}}/commit/{{$commit.ID}}">{{ShortSha $commit.ID.String}}</a>
           {{RenderCommitMessage $commit.Summary $.RepoLink}}
         </td>
         <td class="text grey right age">{{TimeSince $commit.Committer.When $.Lang}}</td>

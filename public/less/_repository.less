@@ -152,10 +152,6 @@
 						position: relative;
 						width: 325%;
 					}
-
-					.ui.sha.label {
-					  font-weight: bold;
-					}
 				}
 				.ui.avatar {
 					margin-bottom: 5px;
@@ -602,6 +598,9 @@
 		    padding: 6px 40px 4px 35px;
 			}
 		}
+		&.ui.basic.striped.table tbody tr:nth-child(2n) {
+			background-color: rgba(0, 0, 0, .02)!important;
+		}
 	}
 
 	.diff-detail-box {
@@ -677,12 +676,14 @@
     }
     .code-diff {
     	font-size: 13px;
+    	
     	td {
     		padding: 0;
     		border-top: none;
     	}
     	pre {
     		margin: 0;
+	    	font-size: 13px;
     	}
     	.lines-num {
     		border-right: 1px solid #d4d4d5;
