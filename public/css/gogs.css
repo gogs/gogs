@@ -2318,6 +2318,7 @@ footer .container .links > *:first-child {
 }
 .repository .diff-file-box .code-diff pre {
   margin: 0;
+  font-size: 13px;
 }
 .repository .diff-file-box .code-diff .lines-num {
   border-right: 1px solid #d4d4d5;

@@ -938,7 +938,7 @@ $(window).load(function () {
     }
 
     // Code view.
-    if ($('.code-view').length > 0) {
+    if ($('.code-view .linenums').length > 0) {
         var $block = $('.code-view .linenums');
         var lines = $block.html().split("\n");
         $block.html('');
