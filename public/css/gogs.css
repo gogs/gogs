@@ -1868,6 +1868,7 @@ footer .container .links > *:first-child {
   margin-bottom: 5px;
 }
 .repository.file.list #repo-files-table tbody .icon {
+  margin-left: 3px;
   margin-right: 5px;
 }
 .repository.file.list #repo-files-table td {
