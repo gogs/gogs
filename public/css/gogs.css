@@ -2243,6 +2243,9 @@ footer .container .links > *:first-child {
   font-size: 13px;
   padding: 6px 40px 4px 35px;
 }
+.repository #commits-table.ui.basic.striped.table tbody tr:nth-child(2n) {
+  background-color: rgba(0, 0, 0, 0.02) !important;
+}
 .repository .diff-detail-box {
   margin: 15px 0;
   line-height: 30px;
