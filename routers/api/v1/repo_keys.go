@@ -31,7 +31,7 @@ func composeDeployKeysAPILink(repoPath string) string {
 	return setting.AppUrl + "api/v1/repos/" + repoPath + "/keys/"
 }
 
-// https://github.com/gogits/go-gogs-client/wiki/Repositories---Deploy-Keys#list-deploy-keys
+// https://github.com/gogits/go-gogs-client/wiki/Repositories-Deploy-Keys#list-deploy-keys
 func ListRepoDeployKeys(ctx *middleware.Context) {
 	keys, err := models.ListDeployKeys(ctx.Repo.Repository.ID)
 	if err != nil {
@@ -52,7 +52,7 @@ func ListRepoDeployKeys(ctx *middleware.Context) {
 	ctx.JSON(200, &apiKeys)
 }
 
-// https://github.com/gogits/go-gogs-client/wiki/Repositories---Deploy-Keys#get-a-deploy-key
+// https://github.com/gogits/go-gogs-client/wiki/Repositories-Deploy-Keys#get-a-deploy-key
 func GetRepoDeployKey(ctx *middleware.Context) {
 	key, err := models.GetDeployKeyByID(ctx.ParamsInt64(":id"))
 	if err != nil {
@@ -73,29 +73,36 @@ func GetRepoDeployKey(ctx *middleware.Context) {
 	ctx.JSON(200, ToApiDeployKey(apiLink, key))
 }
 
-// https://github.com/gogits/go-gogs-client/wiki/Repositories---Deploy-Keys#add-a-new-deploy-key
-func CreateRepoDeployKey(ctx *middleware.Context, form api.CreateDeployKeyOption) {
+func handleCheckKeyStringError(ctx *middleware.Context, err error) {
+	if models.IsErrKeyUnableVerify(err) {
+		ctx.APIError(422, "", "Unable to verify key content")
+	} else {
+		ctx.APIError(422, "", fmt.Errorf("Invalid key content: %v", err))
+	}
+}
+
+func handleAddKeyError(ctx *middleware.Context, err error) {
+	switch {
+	case models.IsErrKeyAlreadyExist(err):
+		ctx.APIError(422, "", "Key content has been used as non-deploy key")
+	case models.IsErrKeyNameAlreadyUsed(err):
+		ctx.APIError(422, "", "Key title has been used")
+	default:
+		ctx.APIError(500, "AddKey", err)
+	}
+}
+
+// https://github.com/gogits/go-gogs-client/wiki/Repositories-Deploy-Keys#add-a-new-deploy-key
+func CreateRepoDeployKey(ctx *middleware.Context, form api.CreateKeyOption) {
 	content, err := models.CheckPublicKeyString(form.Key)
 	if err != nil {
-		if models.IsErrKeyUnableVerify(err) {
-			ctx.APIError(422, "", "Unable to verify key content")
-		} else {
-			ctx.APIError(422, "", fmt.Errorf("Invalid key content: %v", err))
-		}
+		handleCheckKeyStringError(ctx, err)
 		return
 	}
 
 	key, err := models.AddDeployKey(ctx.Repo.Repository.ID, form.Title, content)
 	if err != nil {
-		ctx.Data["HasError"] = true
-		switch {
-		case models.IsErrKeyAlreadyExist(err):
-			ctx.APIError(422, "", "Key content has been used as non-deploy key")
-		case models.IsErrKeyNameAlreadyUsed(err):
-			ctx.APIError(422, "", "Key title has been used")
-		default:
-			ctx.APIError(500, "AddDeployKey", err)
-		}
+		handleAddKeyError(ctx, err)
 		return
 	}
 
@@ -104,10 +111,14 @@ func CreateRepoDeployKey(ctx *middleware.Context, form api.CreateDeployKeyOption
 	ctx.JSON(201, ToApiDeployKey(apiLink, key))
 }
 
-// https://github.com/gogits/go-gogs-client/wiki/Repositories---Deploy-Keys#remove-a-deploy-key
+// https://github.com/gogits/go-gogs-client/wiki/Repositories-Deploy-Keys#remove-a-deploy-key
 func DeleteRepoDeploykey(ctx *middleware.Context) {
-	if err := models.DeleteDeployKey(ctx.ParamsInt64(":id")); err != nil {
-		ctx.APIError(500, "DeleteDeployKey", err)
+	if err := models.DeleteDeployKey(ctx.User, ctx.ParamsInt64(":id")); err != nil {
+		if models.IsErrKeyAccessDenied(err) {
+			ctx.APIError(403, "", "You do not have access to this key")
+		} else {
+			ctx.APIError(500, "DeleteDeployKey", err)
+		}
 		return
 	}
 

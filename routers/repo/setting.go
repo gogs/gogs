@@ -717,7 +717,7 @@ func DeployKeysPost(ctx *middleware.Context, form auth.AddSSHKeyForm) {
 }
 
 func DeleteDeployKey(ctx *middleware.Context) {
-	if err := models.DeleteDeployKey(ctx.QueryInt64("id")); err != nil {
+	if err := models.DeleteDeployKey(ctx.User, ctx.QueryInt64("id")); err != nil {
 		ctx.Flash.Error("DeleteDeployKey: " + err.Error())
 	} else {
 		ctx.Flash.Success(ctx.Tr("repo.settings.deploy_key_deletion_success"))

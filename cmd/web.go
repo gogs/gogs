@@ -197,14 +197,14 @@ func runWeb(ctx *cli.Context) {
 	m.Get("/^:type(issues|pulls)$", reqSignIn, user.Issues)
 
 	// ***** START: API *****
-	// FIXME: custom form error response.
+	// FIXME: custom form error response
 	m.Group("/api", func() {
 		m.Group("/v1", func() {
-			// Miscellaneous.
+			// Miscellaneous
 			m.Post("/markdown", bindIgnErr(apiv1.MarkdownForm{}), v1.Markdown)
 			m.Post("/markdown/raw", v1.MarkdownRaw)
 
-			// Users.
+			// Users
 			m.Group("/users", func() {
 				m.Get("/search", v1.SearchUsers)
 
@@ -218,7 +218,22 @@ func runWeb(ctx *cli.Context) {
 				})
 			})
 
-			// Repositories.
+			m.Group("/users", func() {
+				m.Group("/:username", func() {
+					m.Get("/keys", v1.ListUserPublicKeys)
+				})
+			}, middleware.ApiReqToken())
+
+			m.Group("/user", func() {
+				m.Group("/keys", func() {
+					m.Combo("").Get(v1.ListMyPublicKeys).
+						Post(bind(api.CreateKeyOption{}), v1.CreateUserPublicKey)
+					m.Combo("/:id").Get(v1.GetUserPublicKey).
+						Delete(v1.DeleteUserPublicKey)
+				})
+			}, middleware.ApiReqToken())
+
+			// Repositories
 			m.Combo("/user/repos", middleware.ApiReqToken()).Get(v1.ListMyRepos).
 				Post(bind(api.CreateRepoOption{}), v1.CreateRepo)
 			m.Post("/org/:org/repos", middleware.ApiReqToken(), bind(api.CreateRepoOption{}), v1.CreateOrgRepo)
@@ -241,7 +256,7 @@ func runWeb(ctx *cli.Context) {
 
 					m.Group("/keys", func() {
 						m.Combo("").Get(v1.ListRepoDeployKeys).
-							Post(bind(api.CreateDeployKeyOption{}), v1.CreateRepoDeployKey)
+							Post(bind(api.CreateKeyOption{}), v1.CreateRepoDeployKey)
 						m.Combo("/:id").Get(v1.GetRepoDeployKey).
 							Delete(v1.DeleteRepoDeploykey)
 					})
