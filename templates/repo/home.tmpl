@@ -1,7 +1,6 @@
 {{template "base/head" .}}
 <div class="repository file list">
   {{template "repo/header" .}}
-  {{template "repo/sidebar" .}}
   <div class="ui container">
     <p id="repo-desc">
       {{if .Repository.DescriptionHtml}}<span class="description">{{.Repository.DescriptionHtml}}</span>{{else}}<span class="no-description text-italic">{{.i18n.Tr "repo.no_desc"}}</span>{{end}}
