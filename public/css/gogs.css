@@ -5,9 +5,7 @@
   font-style: normal;
 }
 .octicon,
-.mega-octicon,
-.icon.octicon,
-.icon.mega-octicon {
+.mega-octicon {
   font: normal normal normal 16px/1 octicons;
   display: inline-block;
   text-decoration: none;
@@ -1052,6 +1050,7 @@ footer .container .links > *:first-child {
 .octicon.icon,
 .mega-octicon.icon {
   font-family: octicons;
+  font-size: 16px;
   opacity: 1 !important;
 }
 .sr-only {
