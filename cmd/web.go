@@ -514,11 +514,11 @@ func runWeb(ctx *cli.Context) {
 			m.Get("/edit/:tagname", repo.EditRelease)
 			m.Post("/edit/:tagname", bindIgnErr(auth.EditReleaseForm{}), repo.EditReleasePost)
 			m.Post("/delete", repo.DeleteRelease)
-		}, reqRepoAdmin, middleware.RepoRef())
+		}, reqRepoAdmin)
 
 		m.Combo("/compare/*").Get(repo.CompareAndPullRequest).
 			Post(bindIgnErr(auth.CreateIssueForm{}), repo.CompareAndPullRequestPost)
-	}, reqSignIn, middleware.RepoAssignment())
+	}, reqSignIn, middleware.RepoAssignment(), middleware.RepoRef())
 
 	m.Group("/:username/:reponame", func() {
 		m.Group("", func() {
