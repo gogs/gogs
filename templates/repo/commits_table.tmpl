@@ -16,7 +16,7 @@
 
 {{if .Commits}}
 <div class="ui attached table segment">
-  <table class="ui very basic striped fixed single line">
+  <table class="ui very basic striped fixed single line" id="commits-table">
     <thead>
       <tr>
         <th class="four wide">{{.i18n.Tr "repo.commits.author"}}</th>
@@ -35,9 +35,11 @@
           <img class="ui avatar image" src="{{AvatarLink .Author.Email}}" alt=""/>&nbsp;&nbsp;{{.Author.Name}}
           {{end}}
         </td>
-        <td class="message">
+        <td class="message collapsing">
           <a rel="nofollow" class="ui green sha label" href="{{AppSubUrl}}/{{$.Username}}/{{$.Reponame}}/commit/{{.ID}}">{{ShortSha .ID.String}}</a>
           {{RenderCommitMessage .Summary $.RepoLink}}
+          Initial commit
+fjdksfjklsdjfklsjfklsdjfkljsklfjsdklfjklsjfksdjlfkjdsklfjklsjfkldsjfkljsaklfjaklsjfklsdjfkljakldjfklsjafkljaslfjlsakjflkasjfklasjdflkjsklfjsklfjklsjfklsjfkljs        
         </td>
         <td class="grey text right aligned">{{TimeSince .Author.When $.Lang}}</td>
       </tr>

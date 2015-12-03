@@ -146,10 +146,15 @@
 					padding-top: 8px;
 					padding-bottom: 5px;
 					font-weight: normal;
+
 					&:first-child {
 						display: block;
 						position: relative;
 						width: 325%;
+					}
+
+					.ui.sha.label {
+					  font-weight: bold;
 					}
 				}
 				.ui.avatar {
@@ -587,6 +592,9 @@
 			}
 		}
 	}
+	#commits-table {
+		width: 100%;
+	}
 
 	.diff-detail-box {
     margin: 15px 0;
@@ -732,6 +740,10 @@
 	}
 
 	&.quickstart {
+		.ui.grid {
+			margin-top: 0;
+		}
+
 		.guide {
 			.item {
 				padding: 1em;
