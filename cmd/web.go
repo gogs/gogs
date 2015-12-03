@@ -478,7 +478,7 @@ func runWeb(ctx *cli.Context) {
 		m.Get("/action/:action", repo.Action)
 
 		m.Group("/issues", func() {
-			m.Combo("/new").Get(repo.NewIssue).
+			m.Combo("/new").Get(middleware.RepoRef(), repo.NewIssue).
 				Post(bindIgnErr(auth.CreateIssueForm{}), repo.NewIssuePost)
 
 			m.Combo("/:index/comments").Post(bindIgnErr(auth.CreateCommentForm{}), repo.NewComment)
@@ -498,15 +498,15 @@ func runWeb(ctx *cli.Context) {
 			m.Post("/new", bindIgnErr(auth.CreateLabelForm{}), repo.NewLabel)
 			m.Post("/edit", bindIgnErr(auth.CreateLabelForm{}), repo.UpdateLabel)
 			m.Post("/delete", repo.DeleteLabel)
-		}, reqRepoAdmin)
+		}, reqRepoAdmin, middleware.RepoRef())
 		m.Group("/milestones", func() {
-			m.Get("/new", repo.NewMilestone)
-			m.Post("/new", bindIgnErr(auth.CreateMilestoneForm{}), repo.NewMilestonePost)
+			m.Combo("/new").Get(repo.NewMilestone).
+				Post(bindIgnErr(auth.CreateMilestoneForm{}), repo.NewMilestonePost)
 			m.Get("/:id/edit", repo.EditMilestone)
 			m.Post("/:id/edit", bindIgnErr(auth.CreateMilestoneForm{}), repo.EditMilestonePost)
 			m.Get("/:id/:action", repo.ChangeMilestonStatus)
 			m.Post("/delete", repo.DeleteMilestone)
-		}, reqRepoAdmin)
+		}, reqRepoAdmin, middleware.RepoRef())
 
 		m.Group("/releases", func() {
 			m.Get("/new", repo.NewRelease)
@@ -514,11 +514,11 @@ func runWeb(ctx *cli.Context) {
 			m.Get("/edit/:tagname", repo.EditRelease)
 			m.Post("/edit/:tagname", bindIgnErr(auth.EditReleaseForm{}), repo.EditReleasePost)
 			m.Post("/delete", repo.DeleteRelease)
-		}, reqRepoAdmin)
+		}, reqRepoAdmin, middleware.RepoRef())
 
 		m.Combo("/compare/*").Get(repo.CompareAndPullRequest).
 			Post(bindIgnErr(auth.CreateIssueForm{}), repo.CompareAndPullRequestPost)
-	}, reqSignIn, middleware.RepoAssignment(), middleware.RepoRef())
+	}, reqSignIn, middleware.RepoAssignment())
 
 	m.Group("/:username/:reponame", func() {
 		m.Group("", func() {
@@ -526,10 +526,7 @@ func runWeb(ctx *cli.Context) {
 			m.Get("/^:type(issues|pulls)$", repo.RetrieveLabels, repo.Issues)
 			m.Get("/labels/", repo.RetrieveLabels, repo.Labels)
 			m.Get("/milestones", repo.Milestones)
-		}, middleware.RepoRef(),
-			func(ctx *middleware.Context) {
-				ctx.Data["PageIsList"] = true
-			})
+		}, middleware.RepoRef())
 		m.Get("/^:type(issues|pulls)$/:index", repo.ViewIssue)
 
 		// m.Get("/branches", repo.Branches)

@@ -899,6 +899,7 @@ func UpdateCommentContent(ctx *middleware.Context) {
 
 func Labels(ctx *middleware.Context) {
 	ctx.Data["Title"] = ctx.Tr("repo.labels")
+	ctx.Data["PageIsIssueList"] = true
 	ctx.Data["PageIsLabels"] = true
 	ctx.Data["RequireMinicolors"] = true
 	ctx.HTML(200, LABELS)
@@ -963,6 +964,7 @@ func DeleteLabel(ctx *middleware.Context) {
 
 func Milestones(ctx *middleware.Context) {
 	ctx.Data["Title"] = ctx.Tr("repo.milestones")
+	ctx.Data["PageIsIssueList"] = true
 	ctx.Data["PageIsMilestones"] = true
 
 	isShowClosed := ctx.Query("state") == "closed"
@@ -1006,6 +1008,7 @@ func Milestones(ctx *middleware.Context) {
 
 func NewMilestone(ctx *middleware.Context) {
 	ctx.Data["Title"] = ctx.Tr("repo.milestones.new")
+	ctx.Data["PageIsIssueList"] = true
 	ctx.Data["PageIsMilestones"] = true
 	ctx.Data["RequireDatetimepicker"] = true
 	ctx.Data["DateLang"] = setting.DateLang(ctx.Locale.Language())
@@ -1014,6 +1017,7 @@ func NewMilestone(ctx *middleware.Context) {
 
 func NewMilestonePost(ctx *middleware.Context, form auth.CreateMilestoneForm) {
 	ctx.Data["Title"] = ctx.Tr("repo.milestones.new")
+	ctx.Data["PageIsIssueList"] = true
 	ctx.Data["PageIsMilestones"] = true
 	ctx.Data["RequireDatetimepicker"] = true
 	ctx.Data["DateLang"] = setting.DateLang(ctx.Locale.Language())
