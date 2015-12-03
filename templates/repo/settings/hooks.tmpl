@@ -1,8 +1,8 @@
 {{template "base/head" .}}
 <div class="repository settings webhooks">
 	{{template "repo/header" .}}
+	{{template "repo/sidebar" .}}
 	<div class="ui container">
-    {{template "repo/sidebar" .}}
 		<div class="ui grid">
 			{{template "repo/settings/navbar" .}}
 			{{template "repo/settings/hook_list" .}}

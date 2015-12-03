@@ -1,8 +1,8 @@
 {{template "base/head" .}}
 <div class="repository watchers">
   {{template "repo/header" .}}
+  {{template "repo/sidebar" .}}
   <div class="ui container">
-    {{template "repo/sidebar" .}}
     <h2 class="ui dividing header">
       {{if .PageIsWatchers}}
       {{.i18n.Tr "repo.watchers"}}
