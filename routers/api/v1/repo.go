@@ -34,6 +34,7 @@ func ToApiRepository(owner *models.User, repo *models.Repository, permission api
 	}
 }
 
+// https://github.com/gogits/go-gogs-client/wiki/Repositories#search-repositories
 func SearchRepos(ctx *middleware.Context) {
 	opt := models.SearchOption{
 		Keyword: path.Base(ctx.Query("q")),
@@ -184,6 +185,7 @@ func CreateOrgRepo(ctx *middleware.Context, opt api.CreateRepoOption) {
 	createRepo(ctx, org, opt)
 }
 
+// https://github.com/gogits/go-gogs-client/wiki/Repositories#migrate
 func MigrateRepo(ctx *middleware.Context, form auth.MigrateRepoForm) {
 	ctxUser := ctx.User
 	// Not equal means context user is an organization,
@@ -279,6 +281,7 @@ func parseOwnerAndRepo(ctx *middleware.Context) (*models.User, *models.Repositor
 	return owner, repo
 }
 
+// https://github.com/gogits/go-gogs-client/wiki/Repositories#get
 func GetRepo(ctx *middleware.Context) {
 	owner, repo := parseOwnerAndRepo(ctx)
 	if ctx.Written() {
@@ -288,6 +291,7 @@ func GetRepo(ctx *middleware.Context) {
 	ctx.JSON(200, ToApiRepository(owner, repo, api.Permission{true, true, true}))
 }
 
+// https://github.com/gogits/go-gogs-client/wiki/Repositories#delete
 func DeleteRepo(ctx *middleware.Context) {
 	owner, repo := parseOwnerAndRepo(ctx)
 	if ctx.Written() {

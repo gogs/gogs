@@ -295,7 +295,7 @@ func SettingsSSHKeysPost(ctx *middleware.Context, form auth.AddSSHKeyForm) {
 		}
 	}
 
-	if err = models.AddPublicKey(ctx.User.Id, form.Title, content); err != nil {
+	if _, err = models.AddPublicKey(ctx.User.Id, form.Title, content); err != nil {
 		ctx.Data["HasError"] = true
 		switch {
 		case models.IsErrKeyAlreadyExist(err):
@@ -315,7 +315,7 @@ func SettingsSSHKeysPost(ctx *middleware.Context, form auth.AddSSHKeyForm) {
 }
 
 func DeleteSSHKey(ctx *middleware.Context) {
-	if err := models.DeletePublicKey(ctx.QueryInt64("id")); err != nil {
+	if err := models.DeletePublicKey(ctx.User, ctx.QueryInt64("id")); err != nil {
 		ctx.Flash.Error("DeletePublicKey: " + err.Error())
 	} else {
 		ctx.Flash.Success(ctx.Tr("settings.ssh_key_deletion_success"))
