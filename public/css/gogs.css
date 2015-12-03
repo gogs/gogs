@@ -1863,9 +1863,6 @@ footer .container .links > *:first-child {
   position: relative;
   width: 325%;
 }
-.repository.file.list #repo-files-table thead th .ui.sha.label {
-  font-weight: bold;
-}
 .repository.file.list #repo-files-table thead .ui.avatar {
   margin-bottom: 5px;
 }
@@ -2243,6 +2240,9 @@ footer .container .links > *:first-child {
   font-size: 13px;
   padding: 6px 40px 4px 35px;
 }
+.repository #commits-table.ui.basic.striped.table tbody tr:nth-child(2n) {
+  background-color: rgba(0, 0, 0, 0.02) !important;
+}
 .repository .diff-detail-box {
   margin: 15px 0;
   line-height: 30px;
@@ -2318,6 +2318,7 @@ footer .container .links > *:first-child {
 }
 .repository .diff-file-box .code-diff pre {
   margin: 0;
+  font-size: 13px;
 }
 .repository .diff-file-box .code-diff .lines-num {
   border-right: 1px solid #d4d4d5;
