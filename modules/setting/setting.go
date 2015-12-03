@@ -77,6 +77,7 @@ var (
 	CookieUserName       string
 	CookieRememberName   string
 	ReverseProxyAuthUser string
+	BCryptAuthFallback   bool
 
 	// Database settings.
 	UseSQLite3    bool
@@ -324,6 +325,7 @@ func NewContext() {
 	CookieUserName = sec.Key("COOKIE_USERNAME").String()
 	CookieRememberName = sec.Key("COOKIE_REMEMBER_NAME").String()
 	ReverseProxyAuthUser = sec.Key("REVERSE_PROXY_AUTHENTICATION_USER").MustString("X-WEBAUTH-USER")
+	BCryptAuthFallback = sec.Key("BCRYPT_AUTH_FALLBACK").MustBool()
 
 	sec = Cfg.Section("attachment")
 	AttachmentPath = sec.Key("PATH").MustString(path.Join(AppDataPath, "attachments"))

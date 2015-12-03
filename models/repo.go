@@ -627,6 +627,7 @@ type CreateRepoOptions struct {
 	IsPrivate   bool
 	IsMirror    bool
 	AutoInit    bool
+	Created     time.Time
 }
 
 func getRepoInitFile(tp, name string) ([]byte, error) {
@@ -763,9 +764,14 @@ func createRepository(e *xorm.Session, u *User, repo *Repository) (err error) {
 		return ErrRepoAlreadyExist{u.Name, repo.Name}
 	}
 
+	prevUseAutoTime := e.Statement.UseAutoTime
+	if (repo.Created != time.Time{}) {
+		e.NoAutoTime()
+	}
 	if _, err = e.Insert(repo); err != nil {
 		return err
 	}
+	e.Statement.UseAutoTime = prevUseAutoTime
 
 	u.NumRepos++
 	// Remember visibility preference.
@@ -807,6 +813,7 @@ func CreateRepository(u *User, opts CreateRepoOptions) (_ *Repository, err error
 		LowerName:   strings.ToLower(opts.Name),
 		Description: opts.Description,
 		IsPrivate:   opts.IsPrivate,
+		Created:     opts.Created,
 	}
 
 	sess := x.NewSession()

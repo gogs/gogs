@@ -303,7 +303,7 @@ func addKey(e Engine, key *PublicKey) (err error) {
 }
 
 // AddPublicKey adds new public key to database and authorized_keys file.
-func AddPublicKey(ownerID int64, name, content string) (err error) {
+func AddPublicKeyCreated(ownerID int64, name, content string, created time.Time) (err error) {
 	if err = checkKeyContent(content); err != nil {
 		return err
 	}
@@ -318,6 +318,9 @@ func AddPublicKey(ownerID int64, name, content string) (err error) {
 
 	sess := x.NewSession()
 	defer sessionRelease(sess)
+	if (created != time.Time{}) {
+		sess.NoAutoTime()
+	}
 	if err = sess.Begin(); err != nil {
 		return err
 	}
@@ -328,12 +331,18 @@ func AddPublicKey(ownerID int64, name, content string) (err error) {
 		Content: content,
 		Mode:    ACCESS_MODE_WRITE,
 		Type:    KEY_TYPE_USER,
+		Created: created,
 	}
 	if err = addKey(sess, key); err != nil {
 		return fmt.Errorf("addKey: %v", err)
 	}
 
 	return sess.Commit()
+}
+
+// AddPublicKey adds new public key to database and authorized_keys file.
+func AddPublicKey(ownerID int64, name, content string) (err error) {
+	return AddPublicKeyCreated(ownerID, name, content, time.Time{})
 }
 
 // GetPublicKeyByID returns public key by given ID.

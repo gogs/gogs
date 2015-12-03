@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/go-xorm/xorm"
 )
@@ -113,6 +114,9 @@ func CreateOrganization(org, owner *User) (err error) {
 	org.NumMembers = 1
 
 	sess := x.NewSession()
+	if (org.Created != time.Time{}) {
+		sess.NoAutoTime()
+	}
 	defer sessionRelease(sess)
 	if err = sess.Begin(); err != nil {
 		return err
