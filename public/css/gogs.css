@@ -2236,8 +2236,12 @@ footer .container .links > *:first-child {
   font-weight: normal;
   padding: 5px 10px;
 }
-.repository #commits-table {
-  width: 100%;
+.repository #commits-table thead th:first-of-type {
+  padding-left: 15px;
+}
+.repository #commits-table thead .sha {
+  font-size: 13px;
+  padding: 6px 40px 4px 35px;
 }
 .repository .diff-detail-box {
   margin: 15px 0;
@@ -2349,9 +2353,6 @@ footer .container .links > *:first-child {
   overflow: auto;
   overflow-x: auto;
   overflow-y: hidden;
-}
-.repository.quickstart .ui.grid {
-  margin-top: 0;
 }
 .repository.quickstart .guide .item {
   padding: 1em;

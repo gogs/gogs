@@ -16,11 +16,11 @@
 
 {{if .Commits}}
 <div class="ui attached table segment">
-  <table class="ui very basic striped fixed single line" id="commits-table">
+  <table class="ui very basic striped fixed table single line" id="commits-table">
     <thead>
       <tr>
         <th class="four wide">{{.i18n.Tr "repo.commits.author"}}</th>
-        <th class="nine wide message"><span class="ui sha label">&nbsp;&nbsp;&nbsp;SHA1&nbsp;&nbsp;&nbsp;</span> {{.i18n.Tr "repo.commits.message"}}</th>
+        <th class="nine wide message"><span class="sha">SHA1</span> {{.i18n.Tr "repo.commits.message"}}</th>
         <th class="three wide right aligned">{{.i18n.Tr "repo.commits.date"}}</th>
       </tr>
     </thead>

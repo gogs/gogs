@@ -593,7 +593,15 @@
 		}
 	}
 	#commits-table {
-		width: 100%;
+		thead {
+			th:first-of-type {
+				padding-left: 15px;
+			}
+			.sha {
+				font-size: 13px;
+		    padding: 6px 40px 4px 35px;
+			}
+		}
 	}
 
 	.diff-detail-box {
@@ -740,10 +748,6 @@
 	}
 
 	&.quickstart {
-		.ui.grid {
-			margin-top: 0;
-		}
-
 		.guide {
 			.item {
 				padding: 1em;
