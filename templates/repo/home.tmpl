@@ -1,16 +1,83 @@
 {{template "base/head" .}}
 <div class="repository file list">
   {{template "repo/header" .}}
+  {{template "repo/sidebar" .}}
   <div class="ui container">
-    {{template "repo/sidebar" .}}
-    <div class="ui grid">
-      <div class="ui ten wide column">
-        <p id="repo-desc">
-          {{if .Repository.DescriptionHtml}}<span class="description">{{.Repository.DescriptionHtml}}</span>{{else}}<span class="no-description text-italic">{{.i18n.Tr "repo.no_desc"}}</span>{{end}}
-          <a class="link" href="{{.Repository.Website}}">{{.Repository.Website}}</a>
-        </p>
+    <p id="repo-desc">
+      {{if .Repository.DescriptionHtml}}<span class="description">{{.Repository.DescriptionHtml}}</span>{{else}}<span class="no-description text-italic">{{.i18n.Tr "repo.no_desc"}}</span>{{end}}
+      <a class="link" href="{{.Repository.Website}}">{{.Repository.Website}}</a>
+    </p>
+    <div class="ui secondary menu">
+      {{if and .IsRepositoryAdmin .Repository.BaseRepo}}
+      <div class="fitted item">
+        {{ $baseRepo := .Repository.BaseRepo}}
+        <a href="{{AppSubUrl}}/{{$baseRepo.Owner.Name}}/{{$baseRepo.Name}}/compare/{{$.BaseDefaultBranch}}...{{$.Owner.Name}}:{{$.BranchName}}">
+          <button class="ui green small button"><i class="octicon octicon-git-compare"></i></button>
+        </a>
       </div>
-      <div class="ui six wide column">
+      {{end}}
+      <div class="fitted item choose reference">
+        <div class="ui floating filter dropdown" data-no-results="{{.i18n.Tr "repo.pulls.no_results"}}">
+          <div class="ui basic small button">
+            <span class="text">
+              <i class="octicon octicon-git-branch"></i>
+              {{if .IsViewBranch}}{{.i18n.Tr "repo.branch"}}{{else}}{{.i18n.Tr "repo.tree"}}{{end}}:
+              <strong>{{if .IsViewBranch}}{{.BranchName}}{{else}}{{ShortSha .BranchName}}{{end}}</strong>
+            </span>
+            <i class="dropdown icon"></i>
+          </div>
+          <div class="menu">
+            <div class="ui icon search input">
+              <i class="filter icon"></i>
+              <input name="search" placeholder="{{.i18n.Tr "repo.filter_branch_and_tag"}}...">
+            </div>
+            <div class="header">
+              <div class="ui grid">
+                <div class="two column row">
+                  <a class="reference column" href="#" data-target="#branch-list">
+                    <span class="text {{if .IsViewBranch}}black{{end}}">
+                      <i class="icon octicon octicon-git-branch"></i> {{.i18n.Tr "repo.branches"}}
+                    </span>
+                  </a>
+                  <a class="reference column" href="#" data-target="#tag-list">
+                    <span class="text {{if .IsTag}}black{{end}}">
+                      <i class="reference tags icon"></i> {{.i18n.Tr "repo.tags"}}
+                    </span>
+                  </a>
+                </div>
+              </div>
+            </div>
+            <div id="branch-list" class="scrolling menu" {{if .IsTag}}style="display: none"{{end}}>
+              {{range .Branches}}
+              <div class="item {{if eq $.BranchName .}}selected{{end}}" data-url="{{$.RepoLink}}/src/{{EscapePound .}}">{{.}}</div>
+              {{end}}
+            </div>
+            <div id="tag-list" class="scrolling menu" {{if .IsViewBranch}}style="display: none"{{end}}>
+              {{range .Tags}}
+              <div class="item {{if eq $.BranchName .}}selected{{end}}" data-url="{{$.RepoLink}}/src/{{EscapePound .}}">{{.}}</div>
+              {{end}}
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="item fitted">
+        <div class="ui breadcrumb">
+          <a class="section" href="{{.RepoLink}}/src/{{EscapePound .BranchName}}">{{.Repository.Name}}</a>
+          {{ $n := len .Treenames}}
+          {{ $l := Subtract $n 1}}
+          {{range $i, $v := .Treenames}}
+            <div class="divider"> / </div>
+            {{if eq $i $l}}
+            <span class="active section">{{$v}}</span>
+            {{else}}
+            {{ $p := index $.Paths $i}}
+            <span class="section"><a href="{{EscapePound $.BranchLink}}/{{EscapePound $p}}">{{$v}}</a></span>
+            {{end}}
+          {{end}}
+        </div>
+      </div>
+      {{if eq $n 0}}
+      <div class="right fitted item">
         <div class="ui action small input" id="clone-panel">
           {{if not $.DisableSSH}}
           <button class="ui blue basic clone button" id="repo-clone-ssh" data-link="{{.CloneLink.SSH}}">
@@ -33,80 +100,8 @@
           </div>
         </div>
       </div>
-    </div>
-
-    <ul class="head meta">
-      {{if and .IsRepositoryAdmin .Repository.BaseRepo}}
-      <li>
-        {{ $baseRepo := .Repository.BaseRepo}}
-        <a href="{{AppSubUrl}}/{{$baseRepo.Owner.Name}}/{{$baseRepo.Name}}/compare/{{$.BaseDefaultBranch}}...{{$.Owner.Name}}:{{$.BranchName}}">
-          <button class="ui green small button"><i class="octicon octicon-git-compare"></i></button>
-        </a>
-      </li>
       {{end}}
-      <li>
-        <div class="choose reference">
-          <div class="ui floating filter dropdown" data-no-results="{{.i18n.Tr "repo.pulls.no_results"}}">
-            <div class="ui basic small button">
-              <span class="text">
-                <i class="octicon octicon-git-branch"></i> 
-                {{if .IsViewBranch}}{{.i18n.Tr "repo.branch"}}{{else}}{{.i18n.Tr "repo.tree"}}{{end}}:
-                <strong>{{if .IsViewBranch}}{{.BranchName}}{{else}}{{ShortSha .BranchName}}{{end}}</strong>
-              </span>
-              <i class="dropdown icon"></i>
-            </div>
-            <div class="menu">
-              <div class="ui icon search input">
-                <i class="filter icon"></i>
-                <input name="search" placeholder="{{.i18n.Tr "repo.filter_branch_and_tag"}}...">
-              </div>
-              <div class="header">
-                <div class="ui grid">
-                  <div class="two column row">
-                    <a class="reference column" href="#" data-target="#branch-list">
-                      <span class="text {{if .IsViewBranch}}black{{end}}">
-                        <i class="icon octicon octicon-git-branch"></i> {{.i18n.Tr "repo.branches"}}
-                      </span>
-                    </a>
-                    <a class="reference column" href="#" data-target="#tag-list">
-                      <span class="text {{if .IsTag}}black{{end}}">
-                        <i class="reference tags icon"></i> {{.i18n.Tr "repo.tags"}}
-                      </span>
-                    </a>
-                  </div>
-                </div>
-              </div>
-              <div id="branch-list" class="scrolling menu" {{if .IsTag}}style="display: none"{{end}}>
-                {{range .Branches}}
-                <div class="item {{if eq $.BranchName .}}selected{{end}}" data-url="{{$.RepoLink}}/src/{{EscapePound .}}">{{.}}</div>
-                {{end}}
-              </div>
-              <div id="tag-list" class="scrolling menu" {{if .IsViewBranch}}style="display: none"{{end}}>
-                {{range .Tags}}
-                <div class="item {{if eq $.BranchName .}}selected{{end}}" data-url="{{$.RepoLink}}/src/{{EscapePound .}}">{{.}}</div>
-                {{end}}
-              </div>
-            </div>
-          </div>
-        </div>
-      </li>
-      <li>
-        <div class="ui breadcrumb">
-          <a class="section" href="{{.RepoLink}}/src/{{EscapePound .BranchName}}">{{.Repository.Name}}</a>
-          {{ $n := len .Treenames}}
-          {{ $l := Subtract $n 1}}
-          {{range $i, $v := .Treenames}}
-            <div class="divider"> / </div>
-            {{if eq $i $l}}
-            <span class="active section">{{$v}}</span>
-            {{else}}
-            {{ $p := index $.Paths $i}}
-            <span class="section"><a href="{{EscapePound $.BranchLink}}/{{EscapePound $p}}">{{$v}}</a></span>
-            {{end}}
-          {{end}}
-        </div>
-      </li>
-    </ul>
+    </div>
     {{if .IsFile}}
       {{template "repo/view_file" .}}
     {{else}}

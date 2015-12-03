@@ -1,8 +1,8 @@
 {{template "base/head" .}}
 <div class="repository wiki new">
-	{{template "repo/header" .}}
+  {{template "repo/header" .}}
+  {{template "repo/sidebar" .}}
   <div class="ui container">
-    {{template "repo/sidebar" .}}
     {{template "base/alert" .}}
     <div class="ui header">
       {{.i18n.Tr "repo.wiki.new_page"}}

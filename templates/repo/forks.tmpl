@@ -1,8 +1,8 @@
 {{template "base/head" .}}
 <div class="repository forks">
   {{template "repo/header" .}}
+  {{template "repo/sidebar" .}}
   <div class="ui container">
-    {{template "repo/sidebar" .}}
     <h2 class="ui dividing header">
       {{.i18n.Tr "repo.forks"}}
     </h2>
