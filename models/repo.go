@@ -1011,7 +1011,12 @@ func ChangeRepositoryName(u *User, oldRepoName, newRepoName string) (err error) 
 	if err = os.Rename(RepoPath(u.Name, oldRepoName), RepoPath(u.Name, newRepoName)); err != nil {
 		return fmt.Errorf("rename repository directory: %v", err)
 	}
-	return os.Rename(WikiPath(u.Name, oldRepoName), WikiPath(u.Name, newRepoName))
+
+	wikiPath := WikiPath(u.Name, oldRepoName)
+	if com.IsExist(wikiPath) {
+		err = os.Rename(WikiPath(u.Name, oldRepoName), WikiPath(u.Name, newRepoName))
+	}
+	return err
 }
 
 func getRepositoriesByForkID(e Engine, forkID int64) ([]*Repository, error) {
