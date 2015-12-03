@@ -11,7 +11,7 @@ import (
 	"github.com/gogits/gogs/modules/middleware"
 )
 
-// GET /users/:username/tokens
+// https://github.com/gogits/go-gogs-client/wiki/Users#list-access-tokens-for-a-user
 func ListAccessTokens(ctx *middleware.Context) {
 	tokens, err := models.ListAccessTokens(ctx.User.Id)
 	if err != nil {
@@ -30,7 +30,7 @@ type CreateAccessTokenForm struct {
 	Name string `json:"name" binding:"Required"`
 }
 
-// POST /users/:username/tokens
+// https://github.com/gogits/go-gogs-client/wiki/Users#create-a-access-token
 func CreateAccessToken(ctx *middleware.Context, form CreateAccessTokenForm) {
 	t := &models.AccessToken{
 		UID:  ctx.User.Id,

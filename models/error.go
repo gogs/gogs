@@ -188,6 +188,22 @@ func (err ErrKeyNameAlreadyUsed) Error() string {
 	return fmt.Sprintf("public key already exists [owner_id: %d, name: %s]", err.OwnerID, err.Name)
 }
 
+type ErrKeyAccessDenied struct {
+	UserID int64
+	KeyID  int64
+	Note   string
+}
+
+func IsErrKeyAccessDenied(err error) bool {
+	_, ok := err.(ErrKeyAccessDenied)
+	return ok
+}
+
+func (err ErrKeyAccessDenied) Error() string {
+	return fmt.Sprintf("user does not have access to the key [user_id: %d, key_id: %d, note: %s]",
+		err.UserID, err.KeyID, err.Note)
+}
+
 type ErrDeployKeyNotExist struct {
 	ID     int64
 	KeyID  int64

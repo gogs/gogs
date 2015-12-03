@@ -303,23 +303,23 @@ func addKey(e Engine, key *PublicKey) (err error) {
 }
 
 // AddPublicKey adds new public key to database and authorized_keys file.
-func AddPublicKey(ownerID int64, name, content string) (err error) {
-	if err = checkKeyContent(content); err != nil {
-		return err
+func AddPublicKey(ownerID int64, name, content string) (*PublicKey, error) {
+	if err := checkKeyContent(content); err != nil {
+		return nil, err
 	}
 
 	// Key name of same user cannot be duplicated.
 	has, err := x.Where("owner_id=? AND name=?", ownerID, name).Get(new(PublicKey))
 	if err != nil {
-		return err
+		return nil, err
 	} else if has {
-		return ErrKeyNameAlreadyUsed{ownerID, name}
+		return nil, ErrKeyNameAlreadyUsed{ownerID, name}
 	}
 
 	sess := x.NewSession()
 	defer sessionRelease(sess)
 	if err = sess.Begin(); err != nil {
-		return err
+		return nil, err
 	}
 
 	key := &PublicKey{
@@ -330,10 +330,10 @@ func AddPublicKey(ownerID int64, name, content string) (err error) {
 		Type:    KEY_TYPE_USER,
 	}
 	if err = addKey(sess, key); err != nil {
-		return fmt.Errorf("addKey: %v", err)
+		return nil, fmt.Errorf("addKey: %v", err)
 	}
 
-	return sess.Commit()
+	return key, sess.Commit()
 }
 
 // GetPublicKeyByID returns public key by given ID.
@@ -450,12 +450,18 @@ func deletePublicKey(e *xorm.Session, keyID int64) error {
 }
 
 // DeletePublicKey deletes SSH key information both in database and authorized_keys file.
-func DeletePublicKey(id int64) (err error) {
-	has, err := x.Id(id).Get(new(PublicKey))
+func DeletePublicKey(doer *User, id int64) (err error) {
+	key, err := GetPublicKeyByID(id)
 	if err != nil {
-		return err
-	} else if !has {
-		return nil
+		if IsErrKeyNotExist(err) {
+			return nil
+		}
+		return fmt.Errorf("GetPublicKeyByID: %v", err)
+	}
+
+	// Check if user has access to delete this key.
+	if doer.Id != key.OwnerID {
+		return ErrKeyAccessDenied{doer.Id, key.ID, "public"}
 	}
 
 	sess := x.NewSession()
@@ -656,13 +662,25 @@ func UpdateDeployKey(key *DeployKey) error {
 }
 
 // DeleteDeployKey deletes deploy key from its repository authorized_keys file if needed.
-func DeleteDeployKey(id int64) error {
-	key := &DeployKey{ID: id}
-	has, err := x.Id(key.ID).Get(key)
+func DeleteDeployKey(doer *User, id int64) error {
+	key, err := GetDeployKeyByID(id)
 	if err != nil {
-		return err
-	} else if !has {
-		return nil
+		if IsErrDeployKeyNotExist(err) {
+			return nil
+		}
+		return fmt.Errorf("GetDeployKeyByID: %v", err)
+	}
+
+	// Check if user has access to delete this key.
+	repo, err := GetRepositoryByID(key.RepoID)
+	if err != nil {
+		return fmt.Errorf("GetRepositoryByID: %v", err)
+	}
+	yes, err := HasAccess(doer, repo, ACCESS_MODE_ADMIN)
+	if err != nil {
+		return fmt.Errorf("HasAccess: %v", err)
+	} else if !yes {
+		return ErrKeyAccessDenied{doer.Id, key.ID, "deploy"}
 	}
 
 	sess := x.NewSession()
@@ -676,7 +694,7 @@ func DeleteDeployKey(id int64) error {
 	}
 
 	// Check if this is the last reference to same key content.
-	has, err = sess.Where("key_id=?", key.KeyID).Get(new(DeployKey))
+	has, err := sess.Where("key_id=?", key.KeyID).Get(new(DeployKey))
 	if err != nil {
 		return err
 	} else if !has {

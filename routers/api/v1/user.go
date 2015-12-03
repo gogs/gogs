@@ -24,6 +24,7 @@ func ToApiUser(u *models.User) *api.User {
 	}
 }
 
+// https://github.com/gogits/go-gogs-client/wiki/Users#search-users
 func SearchUsers(ctx *middleware.Context) {
 	opt := models.SearchOption{
 		Keyword: ctx.Query("q"),
@@ -61,7 +62,7 @@ func SearchUsers(ctx *middleware.Context) {
 	})
 }
 
-// GET /users/:username
+// https://github.com/gogits/go-gogs-client/wiki/Users#get-a-single-user
 func GetUserInfo(ctx *middleware.Context) {
 	u, err := models.GetUserByName(ctx.Params(":username"))
 	if err != nil {
