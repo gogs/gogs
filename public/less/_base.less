@@ -313,9 +313,11 @@ footer {
   .generate-img(@n, (@i + 1));
 }
 
+// ensure Semantic UI .icon font family and 14px size does not apply to .icon.octicon
 .octicon.icon,
 .mega-octicon.icon {
 	font-family: octicons;
+	font-size: 16px;
 	opacity: 1 !important;
 }
 
