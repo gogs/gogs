@@ -1756,7 +1756,7 @@ footer .container .links > *:first-child {
   font-size: 30px;
 }
 .repository .head .ui.huge.breadcrumb {
-  font-weight: 300;
+  font-weight: 400;
   font-size: 1.7rem;
 }
 .repository .head .fork-flag {
