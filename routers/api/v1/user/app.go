@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-package v1
+package user
 
 import (
 	api "github.com/gogits/go-gogs-client"
@@ -26,12 +26,8 @@ func ListAccessTokens(ctx *middleware.Context) {
 	ctx.JSON(200, &apiTokens)
 }
 
-type CreateAccessTokenForm struct {
-	Name string `json:"name" binding:"Required"`
-}
-
 // https://github.com/gogits/go-gogs-client/wiki/Users#create-a-access-token
-func CreateAccessToken(ctx *middleware.Context, form CreateAccessTokenForm) {
+func CreateAccessToken(ctx *middleware.Context, form api.CreateAccessTokenOption) {
 	t := &models.AccessToken{
 		UID:  ctx.User.Id,
 		Name: form.Name,
