@@ -208,6 +208,7 @@ func Contexter() macaron.Handler {
 			csrf:    x,
 			Flash:   f,
 			Session: sess,
+			Repo:    &RepoContext{},
 		}
 		// Compute current URL for real-time change language.
 		ctx.Data["Link"] = setting.AppSubUrl + strings.TrimSuffix(ctx.Req.URL.Path, "/")
