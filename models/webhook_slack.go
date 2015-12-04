@@ -113,10 +113,11 @@ func getSlackPushPayload(p *api.PushPayload, slack *SlackMeta) (*SlackPayload, e
 	}
 
 	slackAttachments := []SlackAttachment{{
-		Fallback: fmt.Sprintf("%s pushed %s to %s/%s: %s",
-			p.Pusher, commitDesc, p.Repo.Name, branchName, p.CompareUrl),
 		Color: slack.Color,
 		Text:  attachmentText,
+	}, {
+		Fallback: fmt.Sprintf("%s pushed %s to %s/%s: %s",
+			p.Pusher, commitDesc, p.Repo.Name, branchName, p.CompareUrl),
 	}}
 
 	return &SlackPayload{
