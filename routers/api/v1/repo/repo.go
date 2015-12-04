@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-package v1
+package repo
 
 import (
 	"path"
@@ -16,26 +16,11 @@ import (
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/middleware"
 	"github.com/gogits/gogs/modules/setting"
+	to "github.com/gogits/gogs/routers/api/v1/utils"
 )
 
-// ToApiRepository converts repository to API format.
-func ToApiRepository(owner *models.User, repo *models.Repository, permission api.Permission) *api.Repository {
-	cl := repo.CloneLink()
-	return &api.Repository{
-		Id:          repo.ID,
-		Owner:       *ToApiUser(owner),
-		FullName:    owner.Name + "/" + repo.Name,
-		Private:     repo.IsPrivate,
-		Fork:        repo.IsFork,
-		HtmlUrl:     setting.AppUrl + owner.Name + "/" + repo.Name,
-		CloneUrl:    cl.HTTPS,
-		SshUrl:      cl.SSH,
-		Permissions: permission,
-	}
-}
-
 // https://github.com/gogits/go-gogs-client/wiki/Repositories#search-repositories
-func SearchRepos(ctx *middleware.Context) {
+func Search(ctx *middleware.Context) {
 	opt := models.SearchOption{
 		Keyword: path.Base(ctx.Query("q")),
 		Uid:     com.StrTo(ctx.Query("uid")).MustInt64(),
@@ -112,12 +97,12 @@ func ListMyRepos(ctx *middleware.Context) {
 
 	repos := make([]*api.Repository, numOwnRepos+len(accessibleRepos))
 	for i := range ownRepos {
-		repos[i] = ToApiRepository(ctx.User, ownRepos[i], api.Permission{true, true, true})
+		repos[i] = to.ApiRepository(ctx.User, ownRepos[i], api.Permission{true, true, true})
 	}
 	i := numOwnRepos
 
 	for repo, access := range accessibleRepos {
-		repos[i] = ToApiRepository(repo.Owner, repo, api.Permission{
+		repos[i] = to.ApiRepository(repo.Owner, repo, api.Permission{
 			Admin: access >= models.ACCESS_MODE_ADMIN,
 			Push:  access >= models.ACCESS_MODE_WRITE,
 			Pull:  true,
@@ -154,11 +139,11 @@ func createRepo(ctx *middleware.Context, owner *models.User, opt api.CreateRepoO
 		return
 	}
 
-	ctx.JSON(201, ToApiRepository(owner, repo, api.Permission{true, true, true}))
+	ctx.JSON(201, to.ApiRepository(owner, repo, api.Permission{true, true, true}))
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Repositories#create
-func CreateRepo(ctx *middleware.Context, opt api.CreateRepoOption) {
+func Create(ctx *middleware.Context, opt api.CreateRepoOption) {
 	// Shouldn't reach this condition, but just in case.
 	if ctx.User.IsOrganization() {
 		ctx.APIError(422, "", "not allowed creating repository for organization")
@@ -186,7 +171,7 @@ func CreateOrgRepo(ctx *middleware.Context, opt api.CreateRepoOption) {
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Repositories#migrate
-func MigrateRepo(ctx *middleware.Context, form auth.MigrateRepoForm) {
+func Migrate(ctx *middleware.Context, form auth.MigrateRepoForm) {
 	ctxUser := ctx.User
 	// Not equal means context user is an organization,
 	// or is another user/organization if current user is admin.
@@ -254,7 +239,7 @@ func MigrateRepo(ctx *middleware.Context, form auth.MigrateRepoForm) {
 	}
 
 	log.Trace("Repository migrated: %s/%s", ctxUser.Name, form.RepoName)
-	ctx.JSON(201, ToApiRepository(ctxUser, repo, api.Permission{true, true, true}))
+	ctx.JSON(201, to.ApiRepository(ctxUser, repo, api.Permission{true, true, true}))
 }
 
 func parseOwnerAndRepo(ctx *middleware.Context) (*models.User, *models.Repository) {
@@ -282,17 +267,17 @@ func parseOwnerAndRepo(ctx *middleware.Context) (*models.User, *models.Repositor
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Repositories#get
-func GetRepo(ctx *middleware.Context) {
+func Get(ctx *middleware.Context) {
 	owner, repo := parseOwnerAndRepo(ctx)
 	if ctx.Written() {
 		return
 	}
 
-	ctx.JSON(200, ToApiRepository(owner, repo, api.Permission{true, true, true}))
+	ctx.JSON(200, to.ApiRepository(owner, repo, api.Permission{true, true, true}))
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Repositories#delete
-func DeleteRepo(ctx *middleware.Context) {
+func Delete(ctx *middleware.Context) {
 	owner, repo := parseOwnerAndRepo(ctx)
 	if ctx.Written() {
 		return

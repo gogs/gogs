@@ -2,11 +2,10 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-package v1
+package repo
 
 import (
 	"encoding/json"
-	"fmt"
 
 	"github.com/Unknwon/com"
 
@@ -14,36 +13,11 @@ import (
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/middleware"
+	to "github.com/gogits/gogs/routers/api/v1/utils"
 )
 
-// ToApiHook converts webhook to API format.
-func ToApiHook(repoLink string, w *models.Webhook) *api.Hook {
-	config := map[string]string{
-		"url":          w.URL,
-		"content_type": w.ContentType.Name(),
-	}
-	if w.HookTaskType == models.SLACK {
-		s := w.GetSlackHook()
-		config["channel"] = s.Channel
-		config["username"] = s.Username
-		config["icon_url"] = s.IconURL
-		config["color"] = s.Color
-	}
-
-	return &api.Hook{
-		ID:      w.ID,
-		Type:    w.HookTaskType.Name(),
-		URL:     fmt.Sprintf("%s/settings/hooks/%d", repoLink, w.ID),
-		Active:  w.IsActive,
-		Config:  config,
-		Events:  w.EventsArray(),
-		Updated: w.Updated,
-		Created: w.Created,
-	}
-}
-
 // https://github.com/gogits/go-gogs-client/wiki/Repositories#list-hooks
-func ListRepoHooks(ctx *middleware.Context) {
+func ListHooks(ctx *middleware.Context) {
 	hooks, err := models.GetWebhooksByRepoID(ctx.Repo.Repository.ID)
 	if err != nil {
 		ctx.APIError(500, "GetWebhooksByRepoID", err)
@@ -52,14 +26,14 @@ func ListRepoHooks(ctx *middleware.Context) {
 
 	apiHooks := make([]*api.Hook, len(hooks))
 	for i := range hooks {
-		apiHooks[i] = ToApiHook(ctx.Repo.RepoLink, hooks[i])
+		apiHooks[i] = to.ApiHook(ctx.Repo.RepoLink, hooks[i])
 	}
 
 	ctx.JSON(200, &apiHooks)
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Repositories#create-a-hook
-func CreateRepoHook(ctx *middleware.Context, form api.CreateHookOption) {
+func CreateHook(ctx *middleware.Context, form api.CreateHookOption) {
 	if !models.IsValidHookTaskType(form.Type) {
 		ctx.APIError(422, "", "Invalid hook type")
 		return
@@ -120,11 +94,11 @@ func CreateRepoHook(ctx *middleware.Context, form api.CreateHookOption) {
 		return
 	}
 
-	ctx.JSON(201, ToApiHook(ctx.Repo.RepoLink, w))
+	ctx.JSON(201, to.ApiHook(ctx.Repo.RepoLink, w))
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Repositories#edit-a-hook
-func EditRepoHook(ctx *middleware.Context, form api.EditHookOption) {
+func EditHook(ctx *middleware.Context, form api.EditHookOption) {
 	w, err := models.GetWebhookByID(ctx.ParamsInt64(":id"))
 	if err != nil {
 		if models.IsErrWebhookNotExist(err) {
@@ -187,5 +161,5 @@ func EditRepoHook(ctx *middleware.Context, form api.EditHookOption) {
 		return
 	}
 
-	ctx.JSON(200, ToApiHook(ctx.Repo.RepoLink, w))
+	ctx.JSON(200, to.ApiHook(ctx.Repo.RepoLink, w))
 }

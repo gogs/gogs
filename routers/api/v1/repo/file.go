@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-package v1
+package repo
 
 import (
 	"github.com/gogits/gogs/models"
@@ -12,7 +12,7 @@ import (
 )
 
 // https://github.com/gogits/go-gogs-client/wiki/Repositories-Contents#download-raw-content
-func GetRepoRawFile(ctx *middleware.Context) {
+func GetRawFile(ctx *middleware.Context) {
 	if !ctx.Repo.HasAccess() {
 		ctx.Error(404)
 		return
@@ -33,7 +33,7 @@ func GetRepoRawFile(ctx *middleware.Context) {
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Repositories-Contents#download-archive
-func GetRepoArchive(ctx *middleware.Context) {
+func GetArchive(ctx *middleware.Context) {
 	repoPath := models.RepoPath(ctx.Params(":username"), ctx.Params(":reponame"))
 	gitRepo, err := git.OpenRepository(repoPath)
 	if err != nil {

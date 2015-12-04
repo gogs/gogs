@@ -2,16 +2,17 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-package v1
+package misc
 
 import (
-	"github.com/gogits/gogs/modules/auth/apiv1"
+	api "github.com/gogits/go-gogs-client"
+
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/middleware"
 )
 
 // https://github.com/gogits/go-gogs-client/wiki/Miscellaneous#render-an-arbitrary-markdown-document
-func Markdown(ctx *middleware.Context, form apiv1.MarkdownForm) {
+func Markdown(ctx *middleware.Context, form api.MarkdownOption) {
 	if ctx.HasApiError() {
 		ctx.APIError(422, "", ctx.GetErrMsg())
 		return
