@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-package v1
+package user
 
 import (
 	"github.com/Unknwon/com"
@@ -13,19 +13,8 @@ import (
 	"github.com/gogits/gogs/modules/middleware"
 )
 
-// ToApiUser converts user to API format.
-func ToApiUser(u *models.User) *api.User {
-	return &api.User{
-		ID:        u.Id,
-		UserName:  u.Name,
-		FullName:  u.FullName,
-		Email:     u.Email,
-		AvatarUrl: u.AvatarLink(),
-	}
-}
-
 // https://github.com/gogits/go-gogs-client/wiki/Users#search-users
-func SearchUsers(ctx *middleware.Context) {
+func Search(ctx *middleware.Context) {
 	opt := models.SearchOption{
 		Keyword: ctx.Query("q"),
 		Limit:   com.StrTo(ctx.Query("limit")).MustInt(),
@@ -63,7 +52,7 @@ func SearchUsers(ctx *middleware.Context) {
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Users#get-a-single-user
-func GetUserInfo(ctx *middleware.Context) {
+func GetInfo(ctx *middleware.Context) {
 	u, err := models.GetUserByName(ctx.Params(":username"))
 	if err != nil {
 		if models.IsErrUserNotExist(err) {

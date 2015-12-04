@@ -130,22 +130,3 @@ func Toggle(options *ToggleOptions) macaron.Handler {
 		}
 	}
 }
-
-// Contexter middleware already checks token for user sign in process.
-func ApiReqToken() macaron.Handler {
-	return func(ctx *Context) {
-		if !ctx.IsSigned {
-			ctx.Error(401)
-			return
-		}
-	}
-}
-
-func ApiReqBasicAuth() macaron.Handler {
-	return func(ctx *Context) {
-		if !ctx.IsBasicAuth {
-			ctx.Error(401)
-			return
-		}
-	}
-}

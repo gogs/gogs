@@ -29,11 +29,8 @@ import (
 	"gopkg.in/ini.v1"
 	"gopkg.in/macaron.v1"
 
-	api "github.com/gogits/go-gogs-client"
-
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
-	"github.com/gogits/gogs/modules/auth/apiv1"
 	"github.com/gogits/gogs/modules/avatar"
 	"github.com/gogits/gogs/modules/bindata"
 	"github.com/gogits/gogs/modules/log"
@@ -42,7 +39,7 @@ import (
 	"github.com/gogits/gogs/modules/template"
 	"github.com/gogits/gogs/routers"
 	"github.com/gogits/gogs/routers/admin"
-	"github.com/gogits/gogs/routers/api/v1"
+	apiv1 "github.com/gogits/gogs/routers/api/v1"
 	"github.com/gogits/gogs/routers/dev"
 	"github.com/gogits/gogs/routers/org"
 	"github.com/gogits/gogs/routers/repo"
@@ -186,7 +183,6 @@ func runWeb(ctx *cli.Context) {
 	ignSignInAndCsrf := middleware.Toggle(&middleware.ToggleOptions{DisableCsrf: true})
 	reqSignOut := middleware.Toggle(&middleware.ToggleOptions{SignOutRequire: true})
 
-	bind := binding.Bind
 	bindIgnErr := binding.BindIgnErr
 
 	// Routers.
@@ -197,76 +193,8 @@ func runWeb(ctx *cli.Context) {
 	m.Get("/^:type(issues|pulls)$", reqSignIn, user.Issues)
 
 	// ***** START: API *****
-	// FIXME: custom form error response
 	m.Group("/api", func() {
-		m.Group("/v1", func() {
-			// Miscellaneous
-			m.Post("/markdown", bindIgnErr(apiv1.MarkdownForm{}), v1.Markdown)
-			m.Post("/markdown/raw", v1.MarkdownRaw)
-
-			// Users
-			m.Group("/users", func() {
-				m.Get("/search", v1.SearchUsers)
-
-				m.Group("/:username", func() {
-					m.Get("", v1.GetUserInfo)
-
-					m.Group("/tokens", func() {
-						m.Combo("").Get(v1.ListAccessTokens).
-							Post(bind(v1.CreateAccessTokenForm{}), v1.CreateAccessToken)
-					}, middleware.ApiReqBasicAuth())
-				})
-			})
-
-			m.Group("/users", func() {
-				m.Group("/:username", func() {
-					m.Get("/keys", v1.ListUserPublicKeys)
-				})
-			}, middleware.ApiReqToken())
-
-			m.Group("/user", func() {
-				m.Group("/keys", func() {
-					m.Combo("").Get(v1.ListMyPublicKeys).
-						Post(bind(api.CreateKeyOption{}), v1.CreateUserPublicKey)
-					m.Combo("/:id").Get(v1.GetUserPublicKey).
-						Delete(v1.DeleteUserPublicKey)
-				})
-			}, middleware.ApiReqToken())
-
-			// Repositories
-			m.Combo("/user/repos", middleware.ApiReqToken()).Get(v1.ListMyRepos).
-				Post(bind(api.CreateRepoOption{}), v1.CreateRepo)
-			m.Post("/org/:org/repos", middleware.ApiReqToken(), bind(api.CreateRepoOption{}), v1.CreateOrgRepo)
-
-			m.Group("/repos", func() {
-				m.Get("/search", v1.SearchRepos)
-			})
-
-			m.Group("/repos", func() {
-				m.Post("/migrate", bindIgnErr(auth.MigrateRepoForm{}), v1.MigrateRepo)
-				m.Combo("/:username/:reponame").Get(v1.GetRepo).
-					Delete(v1.DeleteRepo)
-
-				m.Group("/:username/:reponame", func() {
-					m.Combo("/hooks").Get(v1.ListRepoHooks).
-						Post(bind(api.CreateHookOption{}), v1.CreateRepoHook)
-					m.Patch("/hooks/:id:int", bind(api.EditHookOption{}), v1.EditRepoHook)
-					m.Get("/raw/*", middleware.RepoRef(), v1.GetRepoRawFile)
-					m.Get("/archive/*", v1.GetRepoArchive)
-
-					m.Group("/keys", func() {
-						m.Combo("").Get(v1.ListRepoDeployKeys).
-							Post(bind(api.CreateKeyOption{}), v1.CreateRepoDeployKey)
-						m.Combo("/:id").Get(v1.GetRepoDeployKey).
-							Delete(v1.DeleteRepoDeploykey)
-					})
-				}, middleware.ApiRepoAssignment())
-			}, middleware.ApiReqToken())
-
-			m.Any("/*", func(ctx *middleware.Context) {
-				ctx.Error(404)
-			})
-		})
+		apiv1.RegisterRoutes(m)
 	}, ignSignIn)
 	// ***** END: API *****
 

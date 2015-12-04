@@ -17,66 +17,6 @@ import (
 	"github.com/gogits/gogs/modules/setting"
 )
 
-func ApiRepoAssignment() macaron.Handler {
-	return func(ctx *Context) {
-		ctx.Repo = &RepoContext{}
-
-		userName := ctx.Params(":username")
-		repoName := ctx.Params(":reponame")
-
-		var (
-			owner *models.User
-			err   error
-		)
-
-		// Check if the user is the same as the repository owner.
-		if ctx.IsSigned && ctx.User.LowerName == strings.ToLower(userName) {
-			owner = ctx.User
-		} else {
-			owner, err = models.GetUserByName(userName)
-			if err != nil {
-				if models.IsErrUserNotExist(err) {
-					ctx.Error(404)
-				} else {
-					ctx.APIError(500, "GetUserByName", err)
-				}
-				return
-			}
-		}
-		ctx.Repo.Owner = owner
-
-		// Get repository.
-		repo, err := models.GetRepositoryByName(owner.Id, repoName)
-		if err != nil {
-			if models.IsErrRepoNotExist(err) {
-				ctx.Error(404)
-			} else {
-				ctx.APIError(500, "GetRepositoryByName", err)
-			}
-			return
-		} else if err = repo.GetOwner(); err != nil {
-			ctx.APIError(500, "GetOwner", err)
-			return
-		}
-
-		mode, err := models.AccessLevel(ctx.User, repo)
-		if err != nil {
-			ctx.APIError(500, "AccessLevel", err)
-			return
-		}
-
-		ctx.Repo.AccessMode = mode
-
-		// Check access.
-		if ctx.Repo.AccessMode == models.ACCESS_MODE_NONE {
-			ctx.Error(404)
-			return
-		}
-
-		ctx.Repo.Repository = repo
-	}
-}
-
 // RepoRef handles repository reference name including those contain `/`.
 func RepoRef() macaron.Handler {
 	return func(ctx *Context) {
