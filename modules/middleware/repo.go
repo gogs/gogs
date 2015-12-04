@@ -17,118 +17,6 @@ import (
 	"github.com/gogits/gogs/modules/setting"
 )
 
-// RepoRef handles repository reference name including those contain `/`.
-func RepoRef() macaron.Handler {
-	return func(ctx *Context) {
-		// Empty repository does not have reference information.
-		if ctx.Repo.Repository.IsBare {
-			return
-		}
-
-		var (
-			refName string
-			err     error
-		)
-
-		// For API calls.
-		if ctx.Repo.GitRepo == nil {
-			repoPath := models.RepoPath(ctx.Repo.Owner.Name, ctx.Repo.Repository.Name)
-			gitRepo, err := git.OpenRepository(repoPath)
-			if err != nil {
-				ctx.Handle(500, "RepoRef Invalid repo "+repoPath, err)
-				return
-			}
-			ctx.Repo.GitRepo = gitRepo
-		}
-
-		// Get default branch.
-		if len(ctx.Params("*")) == 0 {
-			refName = ctx.Repo.Repository.DefaultBranch
-			if !ctx.Repo.GitRepo.IsBranchExist(refName) {
-				brs, err := ctx.Repo.GitRepo.GetBranches()
-				if err != nil {
-					ctx.Handle(500, "GetBranches", err)
-					return
-				}
-				refName = brs[0]
-			}
-			ctx.Repo.Commit, err = ctx.Repo.GitRepo.GetCommitOfBranch(refName)
-			if err != nil {
-				ctx.Handle(500, "GetCommitOfBranch", err)
-				return
-			}
-			ctx.Repo.CommitID = ctx.Repo.Commit.ID.String()
-			ctx.Repo.IsBranch = true
-
-		} else {
-			hasMatched := false
-			parts := strings.Split(ctx.Params("*"), "/")
-			for i, part := range parts {
-				refName = strings.TrimPrefix(refName+"/"+part, "/")
-
-				if ctx.Repo.GitRepo.IsBranchExist(refName) ||
-					ctx.Repo.GitRepo.IsTagExist(refName) {
-					if i < len(parts)-1 {
-						ctx.Repo.TreeName = strings.Join(parts[i+1:], "/")
-					}
-					hasMatched = true
-					break
-				}
-			}
-			if !hasMatched && len(parts[0]) == 40 {
-				refName = parts[0]
-				ctx.Repo.TreeName = strings.Join(parts[1:], "/")
-			}
-
-			if ctx.Repo.GitRepo.IsBranchExist(refName) {
-				ctx.Repo.IsBranch = true
-
-				ctx.Repo.Commit, err = ctx.Repo.GitRepo.GetCommitOfBranch(refName)
-				if err != nil {
-					ctx.Handle(500, "GetCommitOfBranch", err)
-					return
-				}
-				ctx.Repo.CommitID = ctx.Repo.Commit.ID.String()
-
-			} else if ctx.Repo.GitRepo.IsTagExist(refName) {
-				ctx.Repo.IsTag = true
-				ctx.Repo.Commit, err = ctx.Repo.GitRepo.GetCommitOfTag(refName)
-				if err != nil {
-					ctx.Handle(500, "GetCommitOfTag", err)
-					return
-				}
-				ctx.Repo.CommitID = ctx.Repo.Commit.ID.String()
-			} else if len(refName) == 40 {
-				ctx.Repo.IsCommit = true
-				ctx.Repo.CommitID = refName
-
-				ctx.Repo.Commit, err = ctx.Repo.GitRepo.GetCommit(refName)
-				if err != nil {
-					ctx.Handle(404, "GetCommit", nil)
-					return
-				}
-			} else {
-				ctx.Handle(404, "RepoRef invalid repo", fmt.Errorf("branch or tag not exist: %s", refName))
-				return
-			}
-		}
-
-		ctx.Repo.BranchName = refName
-		ctx.Data["BranchName"] = ctx.Repo.BranchName
-		ctx.Data["CommitID"] = ctx.Repo.CommitID
-		ctx.Data["IsBranch"] = ctx.Repo.IsBranch
-		ctx.Data["IsTag"] = ctx.Repo.IsTag
-		ctx.Data["IsCommit"] = ctx.Repo.IsCommit
-
-		ctx.Repo.CommitsCount, err = ctx.Repo.Commit.CommitsCount()
-		if err != nil {
-			ctx.Handle(500, "CommitsCount", err)
-			return
-		}
-		ctx.Data["CommitsCount"] = ctx.Repo.CommitsCount
-	}
-}
-
 func RetrieveBaseRepo(ctx *Context, repo *models.Repository) {
 	// Non-fork repository will not return error in this method.
 	if err := repo.GetBaseRepo(); err != nil {
@@ -166,8 +54,6 @@ func RetrieveBaseRepo(ctx *Context, repo *models.Repository) {
 
 func RepoAssignment(args ...bool) macaron.Handler {
 	return func(ctx *Context) {
-		ctx.Repo = &RepoContext{}
-
 		var (
 			displayBare bool // To display bare page if it is a bare repo.
 		)
@@ -331,6 +217,118 @@ func RepoAssignment(args ...bool) macaron.Handler {
 			ctx.Data["GoDocDirectory"] = prefix + "{/dir}"
 			ctx.Data["GoDocFile"] = prefix + "{/dir}/{file}#L{line}"
 		}
+	}
+}
+
+// RepoRef handles repository reference name including those contain `/`.
+func RepoRef() macaron.Handler {
+	return func(ctx *Context) {
+		// Empty repository does not have reference information.
+		if ctx.Repo.Repository.IsBare {
+			return
+		}
+
+		var (
+			refName string
+			err     error
+		)
+
+		// For API calls.
+		if ctx.Repo.GitRepo == nil {
+			repoPath := models.RepoPath(ctx.Repo.Owner.Name, ctx.Repo.Repository.Name)
+			gitRepo, err := git.OpenRepository(repoPath)
+			if err != nil {
+				ctx.Handle(500, "RepoRef Invalid repo "+repoPath, err)
+				return
+			}
+			ctx.Repo.GitRepo = gitRepo
+		}
+
+		// Get default branch.
+		if len(ctx.Params("*")) == 0 {
+			refName = ctx.Repo.Repository.DefaultBranch
+			if !ctx.Repo.GitRepo.IsBranchExist(refName) {
+				brs, err := ctx.Repo.GitRepo.GetBranches()
+				if err != nil {
+					ctx.Handle(500, "GetBranches", err)
+					return
+				}
+				refName = brs[0]
+			}
+			ctx.Repo.Commit, err = ctx.Repo.GitRepo.GetCommitOfBranch(refName)
+			if err != nil {
+				ctx.Handle(500, "GetCommitOfBranch", err)
+				return
+			}
+			ctx.Repo.CommitID = ctx.Repo.Commit.ID.String()
+			ctx.Repo.IsBranch = true
+
+		} else {
+			hasMatched := false
+			parts := strings.Split(ctx.Params("*"), "/")
+			for i, part := range parts {
+				refName = strings.TrimPrefix(refName+"/"+part, "/")
+
+				if ctx.Repo.GitRepo.IsBranchExist(refName) ||
+					ctx.Repo.GitRepo.IsTagExist(refName) {
+					if i < len(parts)-1 {
+						ctx.Repo.TreeName = strings.Join(parts[i+1:], "/")
+					}
+					hasMatched = true
+					break
+				}
+			}
+			if !hasMatched && len(parts[0]) == 40 {
+				refName = parts[0]
+				ctx.Repo.TreeName = strings.Join(parts[1:], "/")
+			}
+
+			if ctx.Repo.GitRepo.IsBranchExist(refName) {
+				ctx.Repo.IsBranch = true
+
+				ctx.Repo.Commit, err = ctx.Repo.GitRepo.GetCommitOfBranch(refName)
+				if err != nil {
+					ctx.Handle(500, "GetCommitOfBranch", err)
+					return
+				}
+				ctx.Repo.CommitID = ctx.Repo.Commit.ID.String()
+
+			} else if ctx.Repo.GitRepo.IsTagExist(refName) {
+				ctx.Repo.IsTag = true
+				ctx.Repo.Commit, err = ctx.Repo.GitRepo.GetCommitOfTag(refName)
+				if err != nil {
+					ctx.Handle(500, "GetCommitOfTag", err)
+					return
+				}
+				ctx.Repo.CommitID = ctx.Repo.Commit.ID.String()
+			} else if len(refName) == 40 {
+				ctx.Repo.IsCommit = true
+				ctx.Repo.CommitID = refName
+
+				ctx.Repo.Commit, err = ctx.Repo.GitRepo.GetCommit(refName)
+				if err != nil {
+					ctx.Handle(404, "GetCommit", nil)
+					return
+				}
+			} else {
+				ctx.Handle(404, "RepoRef invalid repo", fmt.Errorf("branch or tag not exist: %s", refName))
+				return
+			}
+		}
+
+		ctx.Repo.BranchName = refName
+		ctx.Data["BranchName"] = ctx.Repo.BranchName
+		ctx.Data["CommitID"] = ctx.Repo.CommitID
+		ctx.Data["IsBranch"] = ctx.Repo.IsBranch
+		ctx.Data["IsTag"] = ctx.Repo.IsTag
+		ctx.Data["IsCommit"] = ctx.Repo.IsCommit
+
+		ctx.Repo.CommitsCount, err = ctx.Repo.Commit.CommitsCount()
+		if err != nil {
+			ctx.Handle(500, "CommitsCount", err)
+			return
+		}
+		ctx.Data["CommitsCount"] = ctx.Repo.CommitsCount
 	}
 }
 

@@ -22,8 +22,6 @@ import (
 
 func RepoAssignment() macaron.Handler {
 	return func(ctx *middleware.Context) {
-		ctx.Repo = &middleware.RepoContext{}
-
 		userName := ctx.Params(":username")
 		repoName := ctx.Params(":reponame")
 
