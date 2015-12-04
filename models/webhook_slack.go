@@ -83,19 +83,19 @@ func getSlackPushPayload(p *api.PushPayload, slack *SlackMeta) (*SlackPayload, e
 	// n new commits
 	var (
 		branchName   = git.RefEndName(p.Ref)
+		commitDesc   string
 		commitString string
 	)
 
 	if len(p.Commits) == 1 {
-		commitString = "1 new commit"
-		if len(p.CompareUrl) > 0 {
-			commitString = SlackLinkFormatter(p.CompareUrl, commitString)
-		}
+		commitDesc = "1 new commit"
 	} else {
-		commitString = fmt.Sprintf("%d new commits", len(p.Commits))
-		if p.CompareUrl != "" {
-			commitString = SlackLinkFormatter(p.CompareUrl, commitString)
-		}
+		commitDesc = fmt.Sprintf("%d new commits", len(p.Commits))
+	}
+	if len(p.CompareUrl) > 0 {
+		commitString = SlackLinkFormatter(p.CompareUrl, commitDesc)
+	} else {
+		commitString = commitDesc
 	}
 
 	repoLink := SlackLinkFormatter(p.Repo.URL, p.Repo.Name)
@@ -114,7 +114,7 @@ func getSlackPushPayload(p *api.PushPayload, slack *SlackMeta) (*SlackPayload, e
 
 	slackAttachments := []SlackAttachment{{
 		Fallback: fmt.Sprintf("%s pushed %s to %s/%s: %s",
-			p.Pusher, commitString, p.Repo.Name, branchName, p.CompareUrl),
+			p.Pusher, commitDesc, p.Repo.Name, branchName, p.CompareUrl),
 		Color: slack.Color,
 		Text:  attachmentText,
 	}}
