@@ -56,6 +56,6 @@ func DeleteRepo(ctx *middleware.Context) {
 
 	ctx.Flash.Success(ctx.Tr("repo.settings.deletion_success"))
 	ctx.JSON(200, map[string]interface{}{
-		"redirect": setting.AppSubUrl + "/admin/repos",
+		"redirect": setting.AppSubUrl + "/admin/repos?page=" + ctx.Query("page"),
 	})
 }
