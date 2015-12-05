@@ -137,50 +137,6 @@ var (
 	sha1CurrentPattern = regexp.MustCompile(`\b[0-9a-f]{40}\b`)
 )
 
-func RenderSpecialLink(rawBytes []byte, urlPrefix string) []byte {
-	ms := MentionPattern.FindAll(rawBytes, -1)
-	for _, m := range ms {
-		m = bytes.TrimSpace(m)
-		rawBytes = bytes.Replace(rawBytes, m,
-			[]byte(fmt.Sprintf(`<a href="%s/%s">%s</a>`, setting.AppSubUrl, m[1:], m)), -1)
-	}
-
-	ms = commitPattern.FindAll(rawBytes, -1)
-	for _, m := range ms {
-		m = bytes.TrimSpace(m)
-		i := strings.Index(string(m), "commit/")
-		j := strings.Index(string(m), "#")
-		if j == -1 {
-			j = len(m)
-		}
-		rawBytes = bytes.Replace(rawBytes, m, []byte(fmt.Sprintf(
-			` <code><a href="%s">%s</a></code>`, m, ShortSha(string(m[i+7:j])))), -1)
-	}
-	ms = issueFullPattern.FindAll(rawBytes, -1)
-	for _, m := range ms {
-		m = bytes.TrimSpace(m)
-		i := strings.Index(string(m), "issues/")
-		j := strings.Index(string(m), "#")
-		if j == -1 {
-			j = len(m)
-		}
-		rawBytes = bytes.Replace(rawBytes, m, []byte(fmt.Sprintf(
-			` <a href="%s">#%s</a>`, m, ShortSha(string(m[i+7:j])))), -1)
-	}
-	rawBytes = RenderIssueIndexPattern(rawBytes, urlPrefix)
-	rawBytes = RenderSha1CurrentPattern(rawBytes, urlPrefix)
-	return rawBytes
-}
-
-func RenderSha1CurrentPattern(rawBytes []byte, urlPrefix string) []byte {
-	ms := sha1CurrentPattern.FindAll(rawBytes, -1)
-	for _, m := range ms {
-		rawBytes = bytes.Replace(rawBytes, m, []byte(fmt.Sprintf(
-			`<a href="%s/commit/%s"><code>%s</code></a>`, urlPrefix, m, ShortSha(string(m)))), -1)
-	}
-	return rawBytes
-}
-
 func cutoutVerbosePrefix(prefix string) string {
 	count := 0
 	for i := 0; i < len(prefix); i++ {
@@ -194,7 +150,7 @@ func cutoutVerbosePrefix(prefix string) string {
 	return prefix
 }
 
-func RenderIssueIndexPattern(rawBytes []byte, urlPrefix string) []byte {
+func RenderIssueIndexPattern(rawBytes []byte, urlPrefix string, metas map[string]string) []byte {
 	urlPrefix = cutoutVerbosePrefix(urlPrefix)
 	ms := issueIndexPattern.FindAll(rawBytes, -1)
 	for _, m := range ms {
@@ -204,24 +160,45 @@ func RenderIssueIndexPattern(rawBytes []byte, urlPrefix string) []byte {
 			space = " "
 			m2 = m2[1:]
 		}
-		rawBytes = bytes.Replace(rawBytes, m, []byte(fmt.Sprintf(`%s<a href="%s/issues/%s">%s</a>`,
-			space, urlPrefix, m2[1:], m2)), 1)
+		if metas == nil {
+			rawBytes = bytes.Replace(rawBytes, m, []byte(fmt.Sprintf(`%s<a href="%s/issues/%s">%s</a>`,
+				space, urlPrefix, m2[1:], m2)), 1)
+		} else {
+			// Support for external issue tracker
+			metas["index"] = string(m2[1:])
+			rawBytes = bytes.Replace(rawBytes, m, []byte(fmt.Sprintf(`%s<a href="%s">%s</a>`,
+				space, com.Expand(metas["format"], metas), m2)), 1)
+		}
+	}
+	return rawBytes
+}
+
+func RenderSpecialLink(rawBytes []byte, urlPrefix string, metas map[string]string) []byte {
+	ms := MentionPattern.FindAll(rawBytes, -1)
+	for _, m := range ms {
+		m = bytes.TrimSpace(m)
+		rawBytes = bytes.Replace(rawBytes, m,
+			[]byte(fmt.Sprintf(`<a href="%s/%s">%s</a>`, setting.AppSubUrl, m[1:], m)), -1)
+	}
+
+	rawBytes = RenderIssueIndexPattern(rawBytes, urlPrefix, metas)
+	rawBytes = RenderSha1CurrentPattern(rawBytes, urlPrefix)
+	return rawBytes
+}
+
+func RenderSha1CurrentPattern(rawBytes []byte, urlPrefix string) []byte {
+	ms := sha1CurrentPattern.FindAll(rawBytes, -1)
+	for _, m := range ms {
+		rawBytes = bytes.Replace(rawBytes, m, []byte(fmt.Sprintf(
+			`<a href="%s/commit/%s"><code>%s</code></a>`, urlPrefix, m, ShortSha(string(m)))), -1)
 	}
 	return rawBytes
 }
 
 func RenderRawMarkdown(body []byte, urlPrefix string) []byte {
 	htmlFlags := 0
-	// htmlFlags |= blackfriday.HTML_USE_XHTML
-	// htmlFlags |= blackfriday.HTML_USE_SMARTYPANTS
-	// htmlFlags |= blackfriday.HTML_SMARTYPANTS_FRACTIONS
-	// htmlFlags |= blackfriday.HTML_SMARTYPANTS_LATEX_DASHES
-	// htmlFlags |= blackfriday.HTML_SKIP_HTML
 	htmlFlags |= blackfriday.HTML_SKIP_STYLE
-	// htmlFlags |= blackfriday.HTML_SKIP_SCRIPT
-	// htmlFlags |= blackfriday.HTML_GITHUB_BLOCKCODE
 	htmlFlags |= blackfriday.HTML_OMIT_CONTENTS
-	// htmlFlags |= blackfriday.HTML_COMPLETE_PAGE
 	renderer := &CustomRender{
 		Renderer:  blackfriday.HtmlRenderer(htmlFlags, "", ""),
 		urlPrefix: urlPrefix,
@@ -252,9 +229,36 @@ var (
 
 var noEndTags = []string{"img", "input", "br", "hr"}
 
+// PreProcessMarkdown renders full links of commits, issues and pulls to shorter version.
+func PreProcessMarkdown(rawHTML []byte, urlPrefix string) []byte {
+	ms := commitPattern.FindAll(rawHTML, -1)
+	for _, m := range ms {
+		m = bytes.TrimSpace(m)
+		i := strings.Index(string(m), "commit/")
+		j := strings.Index(string(m), "#")
+		if j == -1 {
+			j = len(m)
+		}
+		rawHTML = bytes.Replace(rawHTML, m, []byte(fmt.Sprintf(
+			` <code><a href="%s">%s</a></code>`, m, ShortSha(string(m[i+7:j])))), -1)
+	}
+	ms = issueFullPattern.FindAll(rawHTML, -1)
+	for _, m := range ms {
+		m = bytes.TrimSpace(m)
+		i := strings.Index(string(m), "issues/")
+		j := strings.Index(string(m), "#")
+		if j == -1 {
+			j = len(m)
+		}
+		rawHTML = bytes.Replace(rawHTML, m, []byte(fmt.Sprintf(
+			` <a href="%s">#%s</a>`, m, ShortSha(string(m[i+7:j])))), -1)
+	}
+	return rawHTML
+}
+
 // PostProcessMarkdown treats different types of HTML differently,
 // and only renders special links for plain text blocks.
-func PostProcessMarkdown(rawHtml []byte, urlPrefix string) []byte {
+func PostProcessMarkdown(rawHtml []byte, urlPrefix string, metas map[string]string) []byte {
 	startTags := make([]string, 0, 5)
 	var buf bytes.Buffer
 	tokenizer := html.NewTokenizer(bytes.NewReader(rawHtml))
@@ -264,7 +268,7 @@ OUTER_LOOP:
 		token := tokenizer.Token()
 		switch token.Type {
 		case html.TextToken:
-			buf.Write(RenderSpecialLink([]byte(token.String()), urlPrefix))
+			buf.Write(RenderSpecialLink([]byte(token.String()), urlPrefix, metas))
 
 		case html.StartTagToken:
 			buf.WriteString(token.String())
@@ -322,13 +326,14 @@ OUTER_LOOP:
 	return rawHtml
 }
 
-func RenderMarkdown(rawBytes []byte, urlPrefix string) []byte {
-	result := RenderRawMarkdown(rawBytes, urlPrefix)
-	result = PostProcessMarkdown(result, urlPrefix)
+func RenderMarkdown(rawBytes []byte, urlPrefix string, metas map[string]string) []byte {
+	result := PreProcessMarkdown(rawBytes, urlPrefix)
+	result = RenderRawMarkdown(result, urlPrefix)
+	result = PostProcessMarkdown(result, urlPrefix, metas)
 	result = Sanitizer.SanitizeBytes(result)
 	return result
 }
 
-func RenderMarkdownString(raw, urlPrefix string) string {
-	return string(RenderMarkdown([]byte(raw), urlPrefix))
+func RenderMarkdownString(raw, urlPrefix string, metas map[string]string) string {
+	return string(RenderMarkdown([]byte(raw), urlPrefix, metas))
 }

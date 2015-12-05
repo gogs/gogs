@@ -24,6 +24,12 @@ const (
 	WIKI_PAGES base.TplName = "repo/wiki/pages"
 )
 
+func MustEnableWiki(ctx *middleware.Context) {
+	if !ctx.Repo.Repository.EnableWiki {
+		ctx.Handle(404, "MustEnableWiki", nil)
+	}
+}
+
 type PageMeta struct {
 	Name    string
 	URL     string
@@ -94,7 +100,7 @@ func renderWikiPage(ctx *middleware.Context, isViewPage bool) (*git.Repository, 
 		return nil, ""
 	}
 	if isViewPage {
-		ctx.Data["content"] = string(base.RenderMarkdown(data, ctx.Repo.RepoLink))
+		ctx.Data["content"] = string(base.RenderMarkdown(data, ctx.Repo.RepoLink, ctx.Repo.Repository.ComposeMetas()))
 	} else {
 		ctx.Data["content"] = string(data)
 	}

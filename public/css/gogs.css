@@ -911,6 +911,9 @@ pre.raw {
 .ui .form .fake {
   display: none !important;
 }
+.ui .form .sub.field {
+  margin-left: 25px;
+}
 .ui .sha.label {
   font-family: Consolas, Menlo, Monaco, "Lucida Console", monospace;
   font-size: 13px;

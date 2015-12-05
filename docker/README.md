@@ -33,7 +33,6 @@ Directory `/var/gogs` keeps Git repositories and Gogs data:
         |-- conf
         |-- data
         |-- log
-        |-- templates
 
 ### Volume with data container
 

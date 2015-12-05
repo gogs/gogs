@@ -183,9 +183,9 @@ func ReplaceLeft(s, old, new string) string {
 }
 
 // RenderCommitMessage renders commit message with XSS-safe and special links.
-func RenderCommitMessage(msg, urlPrefix string) template.HTML {
+func RenderCommitMessage(msg, urlPrefix string, metas map[string]string) template.HTML {
 	cleanMsg := template.HTMLEscapeString(msg)
-	fullMessage := string(base.RenderIssueIndexPattern([]byte(cleanMsg), urlPrefix))
+	fullMessage := string(base.RenderIssueIndexPattern([]byte(cleanMsg), urlPrefix, metas))
 	msgLines := strings.Split(strings.TrimSpace(fullMessage), "\n")
 	for i := range msgLines {
 		msgLines[i] = ReplaceLeft(msgLines[i], " ", "&nbsp;")
