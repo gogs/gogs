@@ -82,7 +82,7 @@ func checkVersion() {
 		{"github.com/go-macaron/binding", binding.Version, "0.1.0"},
 		{"github.com/go-macaron/cache", cache.Version, "0.1.2"},
 		{"github.com/go-macaron/csrf", csrf.Version, "0.0.3"},
-		{"github.com/go-macaron/i18n", i18n.Version, "0.0.7"},
+		{"github.com/go-macaron/i18n", i18n.Version, "0.2.0"},
 		{"github.com/go-macaron/session", session.Version, "0.1.6"},
 		{"github.com/go-macaron/toolbox", toolbox.Version, "0.1.0"},
 		{"gopkg.in/ini.v1", ini.Version, "1.3.4"},
@@ -140,6 +140,7 @@ func newMacaron() *macaron.Macaron {
 		CustomDirectory: path.Join(setting.CustomPath, "conf/locale"),
 		Langs:           setting.Langs,
 		Names:           setting.Names,
+		DefaultLang:     "en-US",
 		Redirect:        true,
 	}))
 	m.Use(cache.Cacher(cache.Options{
