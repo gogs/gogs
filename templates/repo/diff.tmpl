@@ -11,7 +11,7 @@
           {{.i18n.Tr "repo.diff.browse_source"}}
         </a>
       </div>
-      {{RenderCommitMessage .Commit.Message $.RepoLink}}
+      {{RenderCommitMessage .Commit.Message $.RepoLink $.Repository.ComposeMetas}}
     </h4>
     <div class="ui attached info segment">
       {{if .Author}}
