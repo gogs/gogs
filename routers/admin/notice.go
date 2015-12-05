@@ -5,6 +5,7 @@
 package admin
 
 import (
+	"github.com/Unknwon/com"
 	"github.com/Unknwon/paginater"
 
 	"github.com/gogits/gogs/models"
@@ -41,15 +42,23 @@ func Notices(ctx *middleware.Context) {
 	ctx.HTML(200, NOTICES)
 }
 
-func DeleteNotice(ctx *middleware.Context) {
-	id := ctx.ParamsInt64(":id")
-	if err := models.DeleteNotice(id); err != nil {
-		ctx.Handle(500, "DeleteNotice", err)
-		return
+func DeleteNotices(ctx *middleware.Context) {
+	strs := ctx.QueryStrings("ids[]")
+	ids := make([]int64, 0, len(strs))
+	for i := range strs {
+		id := com.StrTo(strs[i]).MustInt64()
+		if id > 0 {
+			ids = append(ids, id)
+		}
 	}
-	log.Trace("System notice deleted by admin (%s): %d", ctx.User.Name, id)
-	ctx.Flash.Success(ctx.Tr("admin.notices.delete_success"))
-	ctx.Redirect(setting.AppSubUrl + "/admin/notices")
+
+	if err := models.DeleteNoticesByIDs(ids); err != nil {
+		ctx.Flash.Error("DeleteNoticesByIDs: " + err.Error())
+		ctx.Status(500)
+	} else {
+		ctx.Flash.Success(ctx.Tr("admin.notices.delete_success"))
+		ctx.Status(200)
+	}
 }
 
 func EmptyNotices(ctx *middleware.Context) {

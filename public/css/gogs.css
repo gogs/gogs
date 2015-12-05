@@ -2999,12 +2999,18 @@ footer .container .links > *:first-child {
   padding: 0;
   font-size: 13px;
 }
+.admin .table.segment:not(.striped) {
+  padding-top: 5px;
+}
+.admin .table.segment:not(.striped) thead th:last-child {
+  padding-right: 5px !important;
+}
 .admin .table.segment th {
   padding-top: 5px;
   padding-bottom: 5px;
 }
-.admin .table.segment th:first-of-type,
-.admin .table.segment td:first-of-type {
+.admin .table.segment:not(.select) th:first-of-type,
+.admin .table.segment:not(.select) td:first-of-type {
   padding-left: 15px !important;
 }
 .admin .ui.header,

@@ -5,9 +5,12 @@
 package models
 
 import (
+	"strings"
 	"time"
 
 	"github.com/Unknwon/com"
+
+	"github.com/gogits/gogs/modules/base"
 )
 
 type NoticeType int
@@ -18,7 +21,7 @@ const (
 
 // Notice represents a system notice for admin.
 type Notice struct {
-	Id          int64
+	ID          int64 `xorm:"pk autoincr"`
 	Type        NoticeType
 	Description string    `xorm:"TEXT"`
 	Created     time.Time `xorm:"CREATED"`
@@ -69,5 +72,14 @@ func DeleteNotices(start, end int64) error {
 		sess.And("id <= ?", end)
 	}
 	_, err := sess.Delete(new(Notice))
+	return err
+}
+
+// DeleteNoticesByIDs deletes notices by given IDs.
+func DeleteNoticesByIDs(ids []int64) error {
+	if len(ids) == 0 {
+		return nil
+	}
+	_, err := x.Where("id IN (" + strings.Join(base.Int64sToStrings(ids), ",") + ")").Delete(new(Notice))
 	return err
 }

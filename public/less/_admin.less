@@ -5,13 +5,27 @@
 	.table.segment {
 		padding: 0;
 		font-size: 13px;
+
+		&:not(.striped) {
+			padding-top: 5px;
+
+			thead {
+				th:last-child {
+					padding-right: 5px !important; 
+				}
+			}
+		}
+
 		th {
 			padding-top: 5px;
 			padding-bottom: 5px;
 		}
-		th, td {
-			&:first-of-type {
-				padding-left: 15px !important;
+
+		&:not(.select) {
+			th, td {
+				&:first-of-type {
+					padding-left: 15px !important;
+				}
 			}
 		}
 	}

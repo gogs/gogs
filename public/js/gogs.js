@@ -319,23 +319,23 @@ function initRepository() {
         $('#edit-title').click(editTitleToggle);
         $('#cancel-edit-title').click(editTitleToggle);
         $('#save-edit-title').click(editTitleToggle).
-            click(function () {
-                if ($edit_input.val().length == 0 ||
-                    $edit_input.val() == $issue_title.text()) {
-                    $edit_input.val($issue_title.text());
-                    return false;
-                }
-
-                $.post($(this).data('update-url'), {
-                        "_csrf": csrf,
-                        "title": $edit_input.val()
-                    },
-                    function (data) {
-                        $edit_input.val(data.title);
-                        $issue_title.text(data.title);
-                    });
+        click(function () {
+            if ($edit_input.val().length == 0 ||
+                $edit_input.val() == $issue_title.text()) {
+                $edit_input.val($issue_title.text());
                 return false;
-            });
+            }
+
+            $.post($(this).data('update-url'), {
+                    "_csrf": csrf,
+                    "title": $edit_input.val()
+                },
+                function (data) {
+                    $edit_input.val(data.title);
+                    $issue_title.text(data.title);
+                });
+            return false;
+        });
 
         // Edit issue or comment content
         $('.edit-content').click(function () {
@@ -607,6 +607,50 @@ function initAdmin() {
             }
         });
     }
+
+    // Notice
+    if ($('.admin.notice')) {
+        var $detail_modal = $('#detail-modal');
+
+        // Attach view detail modals
+        $('.view-detail').click(function () {
+            $detail_modal.find('.content p').text($(this).data('content'));
+            $detail_modal.modal('show');
+            return false;
+        });
+
+        // Select actions
+        var $checkboxes = $('.select.table .ui.checkbox');
+        $('.select.action').click(function () {
+            switch ($(this).data('action')) {
+                case 'select-all':
+                    $checkboxes.checkbox('check');
+                    break;
+                case 'deselect-all':
+                    $checkboxes.checkbox('uncheck');
+                    break;
+                case 'inverse':
+                    $checkboxes.checkbox('toggle');
+                    break;
+            }
+        });
+        $('#delete-selection').click(function () {
+            var $this = $(this);
+            $this.addClass("loading disabled");
+            var ids = [];
+            $checkboxes.each(function () {
+                if ($(this).checkbox('is checked')) {
+                    ids.push($(this).data('id'));
+                }
+            });
+            $.post($this.data('link'), {
+                "_csrf": csrf,
+                "ids": ids
+            }).done(function () {
+                window.location.href = $this.data('redirect');
+            });
+        });
+    }
 }
 
 function buttonsClickOnEnter() {
@@ -734,9 +778,9 @@ $(document).ready(function () {
     // Show exact time
     $('.time-since').each(function () {
         $(this).addClass('poping up').
-            attr('data-content', $(this).attr('title')).
-            attr('data-variation', 'inverted tiny').
-            attr('title', '');
+        attr('data-content', $(this).attr('title')).
+        attr('data-variation', 'inverted tiny').
+        attr('title', '');
     });
 
     // Semantic UI modules.
@@ -749,6 +793,9 @@ $(document).ready(function () {
     });
     $('.slide.up.dropdown').dropdown({
         transition: 'slide up'
+    });
+    $('.upward.dropdown').dropdown({
+        direction: 'upward'
     });
     $('.ui.accordion').accordion();
     $('.ui.checkbox').checkbox();
