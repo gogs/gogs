@@ -7,23 +7,11 @@ Gogs - Go Git Service [![Build Status](https://travis-ci.org/gogits/gogs.svg?bra
 
 ##### Current version: 0.7.32 Beta
 
-<table>
-    <tr>
-        <td width="33%"><img src="https://gogs.io/img/screenshots/1.png"></td>
-        <td width="33%"><img src="https://gogs.io/img/screenshots/2.png"></td>
-        <td width="33%"><img src="https://gogs.io/img/screenshots/3.png"></td>
-    </tr>
-    <tr>
-        <td><img src="https://gogs.io/img/screenshots/4.png"></td>
-        <td><img src="https://gogs.io/img/screenshots/5.png"></td>
-        <td><img src="https://gogs.io/img/screenshots/6.png"></td>
-    </tr>
-    <tr>
-        <td><img src="https://gogs.io/img/screenshots/7.png"></td>
-        <td><img src="https://gogs.io/img/screenshots/8.png"></td>
-        <td><img src="https://gogs.io/img/screenshots/9.png"></td>
-    </tr>
-</table>
+| Web | UI  | Preview  |
+|:-------------:|:-------:|:-------:|
+|![Dashboard](https://gogs.io/img/screenshots/1.png)|![Repository](https://gogs.io/img/screenshots/2.png)|![Commits History](https://gogs.io/img/screenshots/3.png)|
+|![Profile](https://gogs.io/img/screenshots/4.png)|![Admin Dashboard](https://gogs.io/img/screenshots/5.png)|![Diff](https://gogs.io/img/screenshots/6.png)|
+|![Issues](https://gogs.io/img/screenshots/7.png)|![Releases](https://gogs.io/img/screenshots/8.png)|![Organization](https://gogs.io/img/screenshots/9.png)|
 
 ### NOTICES
 
@@ -63,7 +51,6 @@ The goal of this project is to make the easiest, fastest, and most painless way 
 - Gravatar and custom source
 - Mail service
 - Administration panel
-- CI integration: [Drone](https://github.com/drone/drone)
 - Supports MySQL, PostgreSQL, SQLite3 and [TiDB](https://github.com/pingcap/tidb) (experimental)
 - Multi-language support ([14 languages](https://crowdin.com/project/gogs))
 
@@ -110,6 +97,12 @@ There are 5 ways to install Gogs:
 - [Portal](https://portaldemo.xyz/cloud/)
 - [Sandstorm](https://github.com/cem/gogs-sandstorm)
 - [sloppy.io](https://github.com/sloppyio/quickstarters/tree/master/gogs)
+
+## Software and Service Support
+
+- [Drone](https://github.com/drone/drone) (CI)
+- [Fabric8](http://fabric8.io/) (DevOps)
+- [Taiga](https://taiga.io/) (Project Management)
 
 ### Product Support
 
