@@ -36,7 +36,6 @@ const (
 
 var (
 	ErrAuthenticationAlreadyExist = errors.New("Authentication already exist")
-	ErrAuthenticationNotExist     = errors.New("Authentication does not exist")
 	ErrAuthenticationUserUsed     = errors.New("Authentication has been used by some users")
 )
 
@@ -191,13 +190,14 @@ func LoginSources() ([]*LoginSource, error) {
 	return auths, x.Find(&auths)
 }
 
+// GetLoginSourceByID returns login source by given ID.
 func GetLoginSourceByID(id int64) (*LoginSource, error) {
 	source := new(LoginSource)
 	has, err := x.Id(id).Get(source)
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, ErrAuthenticationNotExist
+		return nil, ErrAuthenticationNotExist{id}
 	}
 	return source, nil
 }

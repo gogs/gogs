@@ -15,6 +15,7 @@ import (
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/middleware"
+	"github.com/gogits/gogs/routers/api/v1/admin"
 	"github.com/gogits/gogs/routers/api/v1/misc"
 	"github.com/gogits/gogs/routers/api/v1/repo"
 	"github.com/gogits/gogs/routers/api/v1/user"
@@ -132,8 +133,7 @@ func RegisterRoutes(m *macaron.Macaron) {
 
 		m.Group("/users", func() {
 			m.Group("/:username", func() {
-				m.Combo("/keys").Get(user.ListPublicKeys).
-					Post(ReqAdmin(), user.CreateUserPublicKey)
+				m.Get("/keys", user.ListPublicKeys)
 			})
 		}, ReqToken())
 
@@ -179,5 +179,17 @@ func RegisterRoutes(m *macaron.Macaron) {
 		m.Any("/*", func(ctx *middleware.Context) {
 			ctx.Error(404)
 		})
+
+		m.Group("/admin", func() {
+			m.Group("/users", func() {
+				m.Post("", bind(api.CreateUserOption{}), admin.CreateUser)
+
+				m.Group("/:username", func() {
+					m.Combo("").Patch(bind(api.EditUserOption{}), admin.EditUser).
+						Delete(admin.DeleteUser)
+					m.Post("/keys", admin.CreatePublicKey)
+				})
+			})
+		}, ReqAdmin())
 	})
 }

@@ -14,7 +14,8 @@ import (
 	to "github.com/gogits/gogs/routers/api/v1/utils"
 )
 
-func getUserByParams(ctx *middleware.Context) *models.User {
+// GetUserByParams returns user whose name is presented in URL paramenter.
+func GetUserByParams(ctx *middleware.Context) *models.User {
 	user, err := models.GetUserByName(ctx.Params(":username"))
 	if err != nil {
 		if models.IsErrUserNotExist(err) {
@@ -54,7 +55,7 @@ func ListMyPublicKeys(ctx *middleware.Context) {
 
 // https://github.com/gogits/go-gogs-client/wiki/Users-Public-Keys#list-public-keys-for-a-user
 func ListPublicKeys(ctx *middleware.Context) {
-	user := getUserByParams(ctx)
+	user := GetUserByParams(ctx)
 	if ctx.Written() {
 		return
 	}
@@ -77,7 +78,8 @@ func GetPublicKey(ctx *middleware.Context) {
 	ctx.JSON(200, to.ApiPublicKey(apiLink, key))
 }
 
-func createUserPublicKey(ctx *middleware.Context, form api.CreateKeyOption, uid int64) {
+// CreateUserPublicKey creates new public key to given user by ID.
+func CreateUserPublicKey(ctx *middleware.Context, form api.CreateKeyOption, uid int64) {
 	content, err := models.CheckPublicKeyString(form.Key)
 	if err != nil {
 		repo.HandleCheckKeyStringError(ctx, err)
@@ -93,18 +95,9 @@ func createUserPublicKey(ctx *middleware.Context, form api.CreateKeyOption, uid 
 	ctx.JSON(201, to.ApiPublicKey(apiLink, key))
 }
 
-// https://github.com/gogits/go-gogs-client/wiki/Users-Public-Keys#create-a-public-key-for-user
-func CreateUserPublicKey(ctx *middleware.Context, form api.CreateKeyOption) {
-	user := getUserByParams(ctx)
-	if ctx.Written() {
-		return
-	}
-	createUserPublicKey(ctx, form, user.Id)
-}
-
 // https://github.com/gogits/go-gogs-client/wiki/Users-Public-Keys#create-a-public-key
 func CreatePublicKey(ctx *middleware.Context, form api.CreateKeyOption) {
-	createUserPublicKey(ctx, form, ctx.User.Id)
+	CreateUserPublicKey(ctx, form, ctx.User.Id)
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Users-Public-Keys#delete-a-public-key

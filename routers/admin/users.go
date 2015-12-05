@@ -121,7 +121,7 @@ func NewUserPost(ctx *middleware.Context, form auth.AdminCrateUserForm) {
 		}
 		return
 	}
-	log.Trace("Account created by admin(%s): %s", ctx.User.Name, u.Name)
+	log.Trace("Account created by admin (%s): %s", ctx.User.Name, u.Name)
 
 	// Send e-mail notification.
 	if form.SendNotify && setting.MailService != nil {
@@ -224,7 +224,7 @@ func EditUserPost(ctx *middleware.Context, form auth.AdminEditUserForm) {
 		}
 		return
 	}
-	log.Trace("Account profile updated by admin(%s): %s", ctx.User.Name, u.Name)
+	log.Trace("Account profile updated by admin (%s): %s", ctx.User.Name, u.Name)
 
 	ctx.Flash.Success(ctx.Tr("admin.users.update_profile_success"))
 	ctx.Redirect(setting.AppSubUrl + "/admin/users/" + ctx.Params(":userid"))
@@ -254,7 +254,7 @@ func DeleteUser(ctx *middleware.Context) {
 		}
 		return
 	}
-	log.Trace("Account deleted by admin(%s): %s", ctx.User.Name, u.Name)
+	log.Trace("Account deleted by admin (%s): %s", ctx.User.Name, u.Name)
 
 	ctx.Flash.Success(ctx.Tr("admin.users.deletion_success"))
 	ctx.JSON(200, map[string]interface{}{
