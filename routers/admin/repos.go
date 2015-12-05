@@ -9,6 +9,7 @@ import (
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"
+	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/middleware"
 	"github.com/gogits/gogs/modules/setting"
 )
@@ -17,7 +18,7 @@ const (
 	REPOS base.TplName = "admin/repo/list"
 )
 
-func Repositories(ctx *middleware.Context) {
+func Repos(ctx *middleware.Context) {
 	ctx.Data["Title"] = ctx.Tr("admin.repositories")
 	ctx.Data["PageIsAdmin"] = true
 	ctx.Data["PageIsAdminRepositories"] = true
@@ -38,4 +39,23 @@ func Repositories(ctx *middleware.Context) {
 
 	ctx.Data["Total"] = total
 	ctx.HTML(200, REPOS)
+}
+
+func DeleteRepo(ctx *middleware.Context) {
+	repo, err := models.GetRepositoryByID(ctx.QueryInt64("id"))
+	if err != nil {
+		ctx.Handle(500, "GetRepositoryByID", err)
+		return
+	}
+
+	if err := models.DeleteRepository(repo.MustOwner().Id, repo.ID); err != nil {
+		ctx.Handle(500, "DeleteRepository", err)
+		return
+	}
+	log.Trace("Repository deleted: %s/%s", repo.MustOwner().Name, repo.Name)
+
+	ctx.Flash.Success(ctx.Tr("repo.settings.deletion_success"))
+	ctx.JSON(200, map[string]interface{}{
+		"redirect": setting.AppSubUrl + "/admin/repos",
+	})
 }

@@ -36,6 +36,7 @@ func parseLoginSource(ctx *middleware.Context, u *models.User, sourceID int64, l
 	u.LoginName = loginName
 }
 
+// https://github.com/gogits/go-gogs-client/wiki/Administration-Users#create-a-new-user
 func CreateUser(ctx *middleware.Context, form api.CreateUserOption) {
 	u := &models.User{
 		Name:      form.Username,
@@ -71,6 +72,7 @@ func CreateUser(ctx *middleware.Context, form api.CreateUserOption) {
 	ctx.JSON(201, to.ApiUser(u))
 }
 
+// https://github.com/gogits/go-gogs-client/wiki/Administration-Users#edit-an-existing-user
 func EditUser(ctx *middleware.Context, form api.EditUserOption) {
 	u := user.GetUserByParams(ctx)
 	if ctx.Written() {
@@ -119,6 +121,7 @@ func EditUser(ctx *middleware.Context, form api.EditUserOption) {
 	ctx.JSON(200, to.ApiUser(u))
 }
 
+// https://github.com/gogits/go-gogs-client/wiki/Administration-Users#delete-a-user
 func DeleteUser(ctx *middleware.Context) {
 	u := user.GetUserByParams(ctx)
 	if ctx.Written() {
@@ -139,6 +142,7 @@ func DeleteUser(ctx *middleware.Context) {
 	ctx.Status(204)
 }
 
+// https://github.com/gogits/go-gogs-client/wiki/Administration-Users#create-a-public-key-for-user
 func CreatePublicKey(ctx *middleware.Context, form api.CreateKeyOption) {
 	u := user.GetUserByParams(ctx)
 	if ctx.Written() {
