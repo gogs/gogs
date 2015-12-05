@@ -267,7 +267,8 @@ func runWeb(ctx *cli.Context) {
 		})
 
 		m.Group("/repos", func() {
-			m.Get("", admin.Repositories)
+			m.Get("", admin.Repos)
+			m.Post("/delete", admin.DeleteRepo)
 		})
 
 		m.Group("/auths", func() {

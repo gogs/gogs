@@ -185,6 +185,8 @@ func SettingsPost(ctx *middleware.Context, form auth.RepoSettingForm) {
 			return
 		}
 		log.Trace("Repository deleted: %s/%s", ctx.Repo.Owner.Name, repo.Name)
+
+		ctx.Flash.Success(ctx.Tr("repo.settings.deletion_success"))
 		ctx.Redirect(ctx.Repo.Owner.DashboardLink())
 	}
 }
