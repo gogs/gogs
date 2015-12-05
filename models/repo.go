@@ -28,6 +28,7 @@ import (
 	"gopkg.in/ini.v1"
 
 	"github.com/gogits/git-shell"
+	api "github.com/gogits/go-gogs-client"
 
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/bindata"
@@ -378,6 +379,27 @@ func (repo *Repository) SavePatch(index int64, patch []byte) error {
 	}
 
 	return nil
+}
+
+// ComposePayload composes and returns *api.PayloadRepo corresponding to the repository.
+func (repo *Repository) ComposePayload() *api.PayloadRepo {
+	cl := repo.CloneLink()
+	return &api.PayloadRepo{
+		ID:          repo.ID,
+		Name:        repo.LowerName,
+		URL:         repo.RepoLink(),
+		SSHURL:      cl.SSH,
+		CloneURL:    cl.HTTPS,
+		Description: repo.Description,
+		Website:     repo.Website,
+		Watchers:    repo.NumWatches,
+		Owner: &api.PayloadAuthor{
+			Name:     repo.MustOwner().DisplayName(),
+			Email:    repo.MustOwner().Email,
+			UserName: repo.MustOwner().Name,
+		},
+		Private: repo.IsPrivate,
+	}
 }
 
 func isRepositoryExist(e Engine, u *User, repoName string) (bool, error) {

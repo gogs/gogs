@@ -451,24 +451,9 @@ func CommitRepoAction(
 		IsPrivate:    repo.IsPrivate,
 	}); err != nil {
 		return fmt.Errorf("NotifyWatchers: %v", err)
-
 	}
 
-	repoLink := fmt.Sprintf("%s%s/%s", setting.AppUrl, repoUserName, repoName)
-	payloadRepo := &api.PayloadRepo{
-		ID:          repo.ID,
-		Name:        repo.LowerName,
-		URL:         repoLink,
-		Description: repo.Description,
-		Website:     repo.Website,
-		Watchers:    repo.NumWatches,
-		Owner: &api.PayloadAuthor{
-			Name:     repo.Owner.DisplayName(),
-			Email:    repo.Owner.Email,
-			UserName: repo.Owner.Name,
-		},
-		Private: repo.IsPrivate,
-	}
+	payloadRepo := repo.ComposePayload()
 
 	pusher_email, pusher_name := "", ""
 	pusher, err := GetUserByName(userName)
@@ -494,7 +479,7 @@ func CommitRepoAction(
 			commits[i] = &api.PayloadCommit{
 				ID:      cmt.Sha1,
 				Message: cmt.Message,
-				URL:     fmt.Sprintf("%s/commit/%s", repoLink, cmt.Sha1),
+				URL:     fmt.Sprintf("%s/commit/%s", repo.RepoLink(), cmt.Sha1),
 				Author: &api.PayloadAuthor{
 					Name:     cmt.AuthorName,
 					Email:    cmt.AuthorEmail,

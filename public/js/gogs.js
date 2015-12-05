@@ -548,6 +548,19 @@ function initWebhook() {
             $('.events.fields').hide();
         }
     });
+
+    // Test delivery
+    $('#test-delivery').click(function () {
+        var $this = $(this);
+        $this.addClass('loading disabled');
+        $.post($this.data('link'), {
+            "_csrf": csrf
+        }).done(
+            setTimeout(function () {
+                window.location.href = $this.data('redirect');
+            }, 5000)
+        )
+    });
 }
 
 

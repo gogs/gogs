@@ -335,7 +335,7 @@ func (t *HookTask) AfterSet(colName string, _ xorm.Cell) {
 
 		t.ResponseInfo = &HookResponse{}
 		if err = json.Unmarshal([]byte(t.ResponseContent), t.ResponseInfo); err != nil {
-			log.Error(3, "Unmarshal[%d]: %v", t.ID, err)
+			log.Error(3, "Unmarshal [%d]: %v", t.ID, err)
 		}
 	}
 }
@@ -343,7 +343,7 @@ func (t *HookTask) AfterSet(colName string, _ xorm.Cell) {
 func (t *HookTask) MarshalJSON(v interface{}) string {
 	p, err := json.Marshal(v)
 	if err != nil {
-		log.Error(3, "Marshal[%d]: %v", t.ID, err)
+		log.Error(3, "Marshal [%d]: %v", t.ID, err)
 	}
 	return string(p)
 }
@@ -590,24 +590,24 @@ func DeliverHooks() {
 	// Update hook task status.
 	for _, t := range tasks {
 		if err := UpdateHookTask(t); err != nil {
-			log.Error(4, "UpdateHookTask(%d): %v", t.ID, err)
+			log.Error(4, "UpdateHookTask [%d]: %v", t.ID, err)
 		}
 	}
 
 	// Start listening on new hook requests.
 	for repoID := range HookQueue.Queue() {
-		log.Trace("DeliverHooks[%v]: processing delivery hooks", repoID)
+		log.Trace("DeliverHooks [%v]: processing delivery hooks", repoID)
 		HookQueue.Remove(repoID)
 
 		tasks = make([]*HookTask, 0, 5)
 		if err := x.Where("repo_id=? AND is_delivered=?", repoID, false).Find(&tasks); err != nil {
-			log.Error(4, "Get repository(%d) hook tasks: %v", repoID, err)
+			log.Error(4, "Get repository [%d] hook tasks: %v", repoID, err)
 			continue
 		}
 		for _, t := range tasks {
 			t.deliver()
 			if err := UpdateHookTask(t); err != nil {
-				log.Error(4, "UpdateHookTask[%d]: %v", t.ID, err)
+				log.Error(4, "UpdateHookTask [%d]: %v", t.ID, err)
 				continue
 			}
 		}
