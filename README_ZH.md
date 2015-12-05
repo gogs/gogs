@@ -29,7 +29,6 @@ Gogs 的目标是打造一个最简单、最快速和最轻松的方式搭建自
 - 支持 Gravatar 以及自定义源
 - 支持邮件服务
 - 支持后台管理面板
-- 支持 CI 集成：[Drone](https://github.com/drone/drone)
 - 支持 MySQL、PostgreSQL、SQLite3 和 [TiDB](https://github.com/pingcap/tidb)（实验性支持） 数据库
 - 支持多语言本地化（[14 种语言]([more](https://crowdin.com/project/gogs))）
 
@@ -68,6 +67,12 @@ Gogs 的目标是打造一个最简单、最快速和最轻松的方式搭建自
 - [Portal](https://portaldemo.xyz/cloud/)
 - [Sandstorm](https://github.com/cem/gogs-sandstorm)
 - [sloppy.io](https://github.com/sloppyio/quickstarters/tree/master/gogs)
+
+## 软件及服务支持
+
+- [Drone](https://github.com/drone/drone)（CI）
+- [Fabric8](http://fabric8.io/)（DevOps）
+- [Taiga](https://taiga.io/)（项目管理）
 
 ### 产品支持
 

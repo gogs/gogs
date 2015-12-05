@@ -526,6 +526,8 @@ func (t *HookTask) deliver() {
 		t.Delivered = time.Now().UTC().UnixNano()
 		if t.IsSucceed {
 			log.Trace("Hook delivered: %s", t.UUID)
+		} else {
+			log.Trace("Hook delivery failed: %s", t.UUID)
 		}
 
 		// Update webhook last delivery status.
