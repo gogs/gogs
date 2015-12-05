@@ -108,7 +108,7 @@ func Home(ctx *middleware.Context) {
 				readmeExist := base.IsMarkdownFile(blob.Name()) || base.IsReadmeFile(blob.Name())
 				ctx.Data["ReadmeExist"] = readmeExist
 				if readmeExist {
-					ctx.Data["FileContent"] = string(base.RenderMarkdown(buf, path.Dir(treeLink)))
+					ctx.Data["FileContent"] = string(base.RenderMarkdown(buf, path.Dir(treeLink), ctx.Repo.Repository.ComposeMetas()))
 				} else {
 					if err, content := template.ToUtf8WithErr(buf); err != nil {
 						if err != nil {
@@ -201,7 +201,7 @@ func Home(ctx *middleware.Context) {
 					buf = append(buf, d...)
 					switch {
 					case base.IsMarkdownFile(readmeFile.Name()):
-						buf = base.RenderMarkdown(buf, treeLink)
+						buf = base.RenderMarkdown(buf, treeLink, ctx.Repo.Repository.ComposeMetas())
 					default:
 						buf = bytes.Replace(buf, []byte("\n"), []byte(`<br>`), -1)
 					}

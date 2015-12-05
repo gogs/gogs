@@ -421,7 +421,7 @@ func runWeb(ctx *cli.Context) {
 		m.Get("/action/:action", repo.Action)
 
 		m.Group("/issues", func() {
-			m.Combo("/new").Get(middleware.RepoRef(), repo.NewIssue).
+			m.Combo("/new", repo.MustEnableIssues).Get(middleware.RepoRef(), repo.NewIssue).
 				Post(bindIgnErr(auth.CreateIssueForm{}), repo.NewIssuePost)
 
 			m.Combo("/:index/comments").Post(bindIgnErr(auth.CreateCommentForm{}), repo.NewComment)
@@ -459,7 +459,7 @@ func runWeb(ctx *cli.Context) {
 			m.Post("/delete", repo.DeleteRelease)
 		}, reqRepoAdmin, middleware.RepoRef())
 
-		m.Combo("/compare/*").Get(repo.CompareAndPullRequest).
+		m.Combo("/compare/*", repo.MustEnablePulls).Get(repo.CompareAndPullRequest).
 			Post(bindIgnErr(auth.CreateIssueForm{}), repo.CompareAndPullRequestPost)
 	}, reqSignIn, middleware.RepoAssignment())
 
@@ -484,7 +484,7 @@ func runWeb(ctx *cli.Context) {
 				m.Combo("/:page/_edit").Get(repo.EditWiki).
 					Post(bindIgnErr(auth.NewWikiForm{}), repo.EditWikiPost)
 			}, reqSignIn, reqRepoPusher)
-		}, middleware.RepoRef())
+		}, repo.MustEnableWiki, middleware.RepoRef())
 
 		m.Get("/archive/*", repo.Download)
 
@@ -492,7 +492,7 @@ func runWeb(ctx *cli.Context) {
 			m.Get("/commits", repo.ViewPullCommits)
 			m.Get("/files", repo.ViewPullFiles)
 			m.Post("/merge", reqRepoAdmin, repo.MergePullRequest)
-		})
+		}, repo.MustEnablePulls)
 
 		m.Group("", func() {
 			m.Get("/src/*", repo.Home)

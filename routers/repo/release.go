@@ -69,7 +69,7 @@ func Releases(ctx *middleware.Context) {
 					rel.NumCommitsBehind = ctx.Repo.CommitsCount - rel.NumCommits
 				}
 
-				rel.Note = base.RenderMarkdownString(rel.Note, ctx.Repo.RepoLink)
+				rel.Note = base.RenderMarkdownString(rel.Note, ctx.Repo.RepoLink, ctx.Repo.Repository.ComposeMetas())
 				tags[i] = rel
 				rels[j] = nil // Mark as used.
 				break
@@ -129,7 +129,7 @@ func Releases(ctx *middleware.Context) {
 			rel.NumCommitsBehind = ctx.Repo.CommitsCount - rel.NumCommits
 		}
 
-		rel.Note = base.RenderMarkdownString(rel.Note, ctx.Repo.RepoLink)
+		rel.Note = base.RenderMarkdownString(rel.Note, ctx.Repo.RepoLink, ctx.Repo.Repository.ComposeMetas())
 		tags = append(tags, rel)
 	}
 	models.SortReleases(tags)

@@ -41,6 +41,18 @@ var (
 	ErrTooManyFiles      = errors.New("Maximum number of files to upload exceeded")
 )
 
+func MustEnableIssues(ctx *middleware.Context) {
+	if !ctx.Repo.Repository.EnableIssues {
+		ctx.Handle(404, "MustEnableIssues", nil)
+	}
+}
+
+func MustEnablePulls(ctx *middleware.Context) {
+	if !ctx.Repo.Repository.EnablePulls {
+		ctx.Handle(404, "MustEnablePulls", nil)
+	}
+}
+
 func RetrieveLabels(ctx *middleware.Context) {
 	labels, err := models.GetLabelsByRepoID(ctx.Repo.Repository.ID)
 	if err != nil {
@@ -60,7 +72,12 @@ func Issues(ctx *middleware.Context) {
 		ctx.Data["Title"] = ctx.Tr("repo.pulls")
 		ctx.Data["PageIsPullList"] = true
 		ctx.Data["HasForkedRepo"] = ctx.IsSigned && ctx.User.HasForkedRepo(ctx.Repo.Repository.ID)
+
 	} else {
+		MustEnableIssues(ctx)
+		if ctx.Written() {
+			return
+		}
 		ctx.Data["Title"] = ctx.Tr("repo.issues")
 		ctx.Data["PageIsIssueList"] = true
 	}
@@ -496,6 +513,10 @@ func ViewIssue(ctx *middleware.Context) {
 		ctx.Data["PageIsPullConversation"] = true
 		ctx.Data["HasForkedRepo"] = ctx.IsSigned && ctx.User.HasForkedRepo(ctx.Repo.Repository.ID)
 	} else {
+		MustEnableIssues(ctx)
+		if ctx.Written() {
+			return
+		}
 		ctx.Data["PageIsIssueList"] = true
 	}
 
@@ -503,7 +524,8 @@ func ViewIssue(ctx *middleware.Context) {
 		ctx.Handle(500, "GetPoster", err)
 		return
 	}
-	issue.RenderedContent = string(base.RenderMarkdown([]byte(issue.Content), ctx.Repo.RepoLink))
+	issue.RenderedContent = string(base.RenderMarkdown([]byte(issue.Content), ctx.Repo.RepoLink,
+		ctx.Repo.Repository.ComposeMetas()))
 
 	repo := ctx.Repo.Repository
 
@@ -570,7 +592,8 @@ func ViewIssue(ctx *middleware.Context) {
 	// Render comments.
 	for _, comment = range issue.Comments {
 		if comment.Type == models.COMMENT_TYPE_COMMENT {
-			comment.RenderedContent = string(base.RenderMarkdown([]byte(comment.Content), ctx.Repo.RepoLink))
+			comment.RenderedContent = string(base.RenderMarkdown([]byte(comment.Content), ctx.Repo.RepoLink,
+				ctx.Repo.Repository.ComposeMetas()))
 
 			// Check tag.
 			tag, ok = marked[comment.PosterID]
@@ -656,7 +679,7 @@ func UpdateIssueContent(ctx *middleware.Context) {
 	}
 
 	ctx.JSON(200, map[string]interface{}{
-		"content": string(base.RenderMarkdown([]byte(issue.Content), ctx.Query("context"))),
+		"content": string(base.RenderMarkdown([]byte(issue.Content), ctx.Query("context"), ctx.Repo.Repository.ComposeMetas())),
 	})
 }
 
@@ -893,7 +916,7 @@ func UpdateCommentContent(ctx *middleware.Context) {
 	}
 
 	ctx.JSON(200, map[string]interface{}{
-		"content": string(base.RenderMarkdown([]byte(comment.Content), ctx.Query("context"))),
+		"content": string(base.RenderMarkdown([]byte(comment.Content), ctx.Query("context"), ctx.Repo.Repository.ComposeMetas())),
 	})
 }
 
@@ -991,7 +1014,7 @@ func Milestones(ctx *middleware.Context) {
 		return
 	}
 	for _, m := range miles {
-		m.RenderedContent = string(base.RenderMarkdown([]byte(m.Content), ctx.Repo.RepoLink))
+		m.RenderedContent = string(base.RenderMarkdown([]byte(m.Content), ctx.Repo.RepoLink, ctx.Repo.Repository.ComposeMetas()))
 		m.CalOpenIssues()
 	}
 	ctx.Data["Milestones"] = miles

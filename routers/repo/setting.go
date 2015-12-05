@@ -104,7 +104,7 @@ func SettingsPost(ctx *middleware.Context, form auth.RepoSettingForm) {
 			ctx.Handle(500, "UpdateRepository", err)
 			return
 		}
-		log.Trace("Repository updated: %s/%s", ctx.Repo.Owner.Name, repo.Name)
+		log.Trace("Repository basic settings updated: %s/%s", ctx.Repo.Owner.Name, repo.Name)
 
 		if isNameChanged {
 			if err := models.RenameRepoAction(ctx.User, oldRepoName, repo); err != nil {
@@ -123,7 +123,24 @@ func SettingsPost(ctx *middleware.Context, form auth.RepoSettingForm) {
 		}
 
 		ctx.Flash.Success(ctx.Tr("repo.settings.update_settings_success"))
-		ctx.Redirect(fmt.Sprintf("%s/%s/%s/settings", setting.AppSubUrl, ctx.Repo.Owner.Name, repo.Name))
+		ctx.Redirect(ctx.Repo.RepoLink + "/settings")
+
+	case "advanced":
+		repo.EnableWiki = form.EnableWiki
+		repo.EnableIssues = form.EnableIssues
+		repo.EnableExternalTracker = form.EnableExternalTracker
+		repo.ExternalTrackerFormat = form.TrackerURLFormat
+		repo.EnablePulls = form.EnablePulls
+
+		if err := models.UpdateRepository(repo, false); err != nil {
+			ctx.Handle(500, "UpdateRepository", err)
+			return
+		}
+		log.Trace("Repository advanced settings updated: %s/%s", ctx.Repo.Owner.Name, repo.Name)
+
+		ctx.Flash.Success(ctx.Tr("repo.settings.update_settings_success"))
+		ctx.Redirect(ctx.Repo.RepoLink + "/settings")
+
 	case "transfer":
 		if repo.Name != form.RepoName {
 			ctx.RenderWithErr(ctx.Tr("form.enterred_invalid_repo_name"), SETTINGS_OPTIONS, nil)
