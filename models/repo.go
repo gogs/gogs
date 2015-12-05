@@ -823,12 +823,15 @@ func createRepository(e *xorm.Session, u *User, repo *Repository) (err error) {
 // CreateRepository creates a repository for given user or organization.
 func CreateRepository(u *User, opts CreateRepoOptions) (_ *Repository, err error) {
 	repo := &Repository{
-		OwnerID:     u.Id,
-		Owner:       u,
-		Name:        opts.Name,
-		LowerName:   strings.ToLower(opts.Name),
-		Description: opts.Description,
-		IsPrivate:   opts.IsPrivate,
+		OwnerID:      u.Id,
+		Owner:        u,
+		Name:         opts.Name,
+		LowerName:    strings.ToLower(opts.Name),
+		Description:  opts.Description,
+		IsPrivate:    opts.IsPrivate,
+		EnableWiki:   true,
+		EnableIssues: true,
+		EnablePulls:  true,
 	}
 
 	sess := x.NewSession()
