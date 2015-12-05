@@ -18,7 +18,7 @@ type AuthenticationForm struct {
 	BindDN            string
 	BindPassword      string
 	UserBase          string
-	UserDN            string `form:"user_dn"`
+	UserDN            string
 	AttributeUsername string
 	AttributeName     string
 	AttributeSurname  string
@@ -32,7 +32,7 @@ type AuthenticationForm struct {
 	AllowedDomains    string
 	TLS               bool
 	SkipVerify        bool
-	PAMServiceName    string `form:"pam_service_name"`
+	PAMServiceName    string
 }
 
 func (f *AuthenticationForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {

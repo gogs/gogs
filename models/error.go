@@ -528,3 +528,23 @@ func IsErrAttachmentNotExist(err error) bool {
 func (err ErrAttachmentNotExist) Error() string {
 	return fmt.Sprintf("attachment does not exist [id: %d, uuid: %s]", err.ID, err.UUID)
 }
+
+//    _____          __  .__                   __  .__               __  .__
+//   /  _  \  __ ___/  |_|  |__   ____   _____/  |_|__| ____ _____ _/  |_|__| ____   ____
+//  /  /_\  \|  |  \   __\  |  \_/ __ \ /    \   __\  |/ ___\\__  \\   __\  |/  _ \ /    \
+// /    |    \  |  /|  | |   Y  \  ___/|   |  \  | |  \  \___ / __ \|  | |  (  <_> )   |  \
+// \____|__  /____/ |__| |___|  /\___  >___|  /__| |__|\___  >____  /__| |__|\____/|___|  /
+//         \/                 \/     \/     \/             \/     \/                    \/
+
+type ErrAuthenticationNotExist struct {
+	ID int64
+}
+
+func IsErrAuthenticationNotExist(err error) bool {
+	_, ok := err.(ErrAuthenticationNotExist)
+	return ok
+}
+
+func (err ErrAuthenticationNotExist) Error() string {
+	return fmt.Sprintf("Authentication does not exist [id: %d]", err.ID)
+}
