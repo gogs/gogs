@@ -161,6 +161,14 @@ type Repository struct {
 	IsMirror bool
 	*Mirror  `xorm:"-"`
 
+	// Advanced settings
+	EnableWiki            bool `xorm:"NOT NULL DEFAULT true"`
+	EnableIssues          bool `xorm:"NOT NULL DEFAULT true"`
+	EnableExternalTracker bool
+	ExternalTrackerFormat string
+	ExternalMetas         map[string]string `xorm:"-"`
+	EnablePulls           bool              `xorm:"NOT NULL DEFAULT true"`
+
 	IsFork   bool `xorm:"NOT NULL DEFAULT false"`
 	ForkID   int64
 	BaseRepo *Repository `xorm:"-"`
@@ -212,6 +220,20 @@ func (repo *Repository) mustOwner(e Engine) *User {
 // when error occurs.
 func (repo *Repository) MustOwner() *User {
 	return repo.mustOwner(x)
+}
+
+// ComposeMetas composes a map of metas for rendering external issue tracker URL.
+func (repo *Repository) ComposeMetas() map[string]string {
+	if !repo.EnableExternalTracker {
+		return nil
+	} else if repo.ExternalMetas == nil {
+		repo.ExternalMetas = map[string]string{
+			"format": repo.ExternalTrackerFormat,
+			"user":   repo.MustOwner().Name,
+			"repo":   repo.Name,
+		}
+	}
+	return repo.ExternalMetas
 }
 
 // GetAssignees returns all users that have write access of repository.

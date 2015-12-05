@@ -7,7 +7,7 @@
       <a class="link" href="{{.Repository.Website}}">{{.Repository.Website}}</a>
     </p>
     <div class="ui secondary menu">
-      {{if and .IsRepositoryAdmin .Repository.BaseRepo}}
+      {{if .CanPullRequest}}
       <div class="fitted item">
         {{ $baseRepo := .Repository.BaseRepo}}
         <a href="{{AppSubUrl}}/{{$baseRepo.Owner.Name}}/{{$baseRepo.Name}}/compare/{{$.BaseDefaultBranch}}...{{$.Owner.Name}}:{{$.BranchName}}">

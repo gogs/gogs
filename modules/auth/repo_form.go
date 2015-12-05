@@ -87,6 +87,13 @@ type RepoSettingForm struct {
 	Branch      string
 	Interval    int
 	Private     bool
+
+	// Advanced settings
+	EnableWiki            bool
+	EnableIssues          bool
+	EnableExternalTracker bool
+	TrackerURLFormat      string
+	EnablePulls           bool
 }
 
 func (f *RepoSettingForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
