@@ -196,12 +196,20 @@ pre {
 		}
 	}
 	.info {
-		&.header {
-			background-color: #d9edf7 !important;
-    	border-color: #85c5e5;
-		}
 		&.segment {
-    	border-color: #85c5e5;
+			border-color: #85c5e5;
+			&.top {
+				background-color: #d9edf7 !important;
+				h3, h4 {
+					margin-top: 0;
+				}
+				h3:last-child {
+					margin-top: 4px;
+				}
+				> :last-child {
+					margin-bottom: 0;
+				}
+			}
 		}
 	}
 
