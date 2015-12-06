@@ -102,7 +102,7 @@ func (ls *Source) FindUserDN(name string) (string, bool) {
 
 	userDN := sr.Entries[0].DN
 	if userDN == "" {
-		log.Error(4, "LDAP search was succesful, but found no DN!")
+		log.Error(4, "LDAP search was successful, but found no DN!")
 		return "", false
 	}
 
