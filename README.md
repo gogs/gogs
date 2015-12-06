@@ -33,7 +33,7 @@ The goal of this project is to make the easiest, fastest, and most painless way 
 
 - Please see the [Documentation](http://gogs.io/docs/intro) for common usages and change log.
 - See the [Trello Board](https://trello.com/b/uxAoeLUl/gogs-go-git-service) to follow the develop team.
-- Want to try it before doing anything else? Do it [online](https://try.gogs.io/gogs/gogs) or go down to the **Installation -> Install from binary** section!
+- Want to try it before doing anything else? Do it [online](https://try.gogs.io/gogs/gogs)!
 - Having trouble? Get help with [Troubleshooting](http://gogs.io/docs/intro/troubleshooting.html).
 - Want to help with localization? Check out the [guide](http://gogs.io/docs/features/i18n.html)!
 
