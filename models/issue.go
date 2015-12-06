@@ -1297,7 +1297,7 @@ func changeMilestoneIssueStats(e *xorm.Session, issue *Issue) error {
 }
 
 // ChangeMilestoneIssueStats updates the open/closed issues counter and progress
-// for the milestone associated witht the given issue.
+// for the milestone associated with the given issue.
 func ChangeMilestoneIssueStats(issue *Issue) (err error) {
 	sess := x.NewSession()
 	defer sessionRelease(sess)
