@@ -5,14 +5,12 @@
     {{if .IsDiffCompare }}
     {{template "repo/commits_table" .}}
     {{else}}
-    <h4 class="ui top attached info header">
-      <div class="ui right">
-        <a class="ui blue tiny button" href="{{EscapePound .SourcePath}}">
-          {{.i18n.Tr "repo.diff.browse_source"}}
-        </a>
-      </div>
-      {{RenderCommitMessage .Commit.Message $.RepoLink $.Repository.ComposeMetas}}
-    </h4>
+    <div class="ui top attached info clearing segment">
+      <a class="ui floated right blue tiny button" href="{{EscapePound .SourcePath}}">
+        {{.i18n.Tr "repo.diff.browse_source"}}
+      </a>
+      {{RenderCommitMessage true .Commit.Message $.RepoLink $.Repository.ComposeMetas}}
+    </div>
     <div class="ui attached info segment">
       {{if .Author}}
       <img class="ui avatar image" src="{{.Author.AvatarLink}}" />
