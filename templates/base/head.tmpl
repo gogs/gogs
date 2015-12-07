@@ -10,8 +10,8 @@
 	<meta name="_csrf" content="{{.CsrfToken}}" />
 	<meta name="_suburl" content="{{AppSubUrl}}" />
 	{{if .GoGetImport}}
-	<meta name="go-import" content="{{.GoGetImport}} git {{.CloneLink.HTTPS}}">
-	<meta name="go-source" content="{{.GoGetImport}} _ {{.GoDocDirectory}} {{.GoDocFile}}">
+		<meta name="go-import" content="{{.GoGetImport}} git {{.CloneLink.HTTPS}}">
+		<meta name="go-source" content="{{.GoGetImport}} _ {{.GoDocDirectory}} {{.GoDocFile}}">
 	{{end}}
 
 	<link rel="shortcut icon" href="{{AppSubUrl}}/img/favicon.png" />
@@ -20,8 +20,8 @@
 	<link rel="stylesheet" href="{{AppSubUrl}}/css/font-awesome-4.4.0.min.css">
 
 	{{if .RequireSimpleMDE}}
-	<link rel="stylesheet" href="{{AppSubUrl}}/css/simplemde-1.8.1.min.css">
-	<script src="{{AppSubUrl}}/js/libs/simplemde-1.8.1.min.js"></script>
+		<link rel="stylesheet" href="{{AppSubUrl}}/css/simplemde-1.8.1.min.css">
+		<script src="{{AppSubUrl}}/js/libs/simplemde-1.8.1.min.js"></script>
 	{{end}}
 
 	<!-- Stylesheet -->
@@ -39,110 +39,115 @@
 		<noscript>Please enable JavaScript in your browser!</noscript>
 
 		{{if not .PageIsInstall}}
-		<div class="following bar light">
-			<div class="ui container">
-				<div class="ui grid">
-					<div class="column">
-						<div class="ui top secondary menu">
-							<a class="item brand" href="{{AppSubUrl}}/">
-								<img class="ui mini image" src="{{AppSubUrl}}/img/favicon.png">
-							</a>
+			<div class="following bar light">
+				<div class="ui container">
+					<div class="ui grid">
+						<div class="column">
+							<div class="ui top secondary menu">
+								<a class="item brand" href="{{AppSubUrl}}/">
+									<img class="ui mini image" src="{{AppSubUrl}}/img/favicon.png">
+								</a>
 
-							{{if .IsSigned}}
-							<a class="item{{if .PageIsDashboard}} active{{end}}" href="{{AppSubUrl}}/">{{.i18n.Tr "dashboard"}}</a>
-							<a class="item{{if .PageIsIssues}} active{{end}}" href="{{AppSubUrl}}/issues">{{.i18n.Tr "issues"}}</a>
-							<a class="item{{if .PageIsPulls}} active{{end}}" href="{{AppSubUrl}}/pulls">{{.i18n.Tr "pull_requests"}}</a>
-							{{else}}
-							<a class="item{{if .PageIsHome}} active{{end}}" href="{{AppSubUrl}}/">{{.i18n.Tr "home"}}</a>
-							{{end}}
+								{{if .IsSigned}}
+									<a class="item{{if .PageIsDashboard}} active{{end}}" href="{{AppSubUrl}}/">{{.i18n.Tr "dashboard"}}</a>
+									<a class="item{{if .PageIsIssues}} active{{end}}" href="{{AppSubUrl}}/issues">{{.i18n.Tr "issues"}}</a>
+									<a class="item{{if .PageIsPulls}} active{{end}}" href="{{AppSubUrl}}/pulls">{{.i18n.Tr "pull_requests"}}</a>
+								{{else}}
+									<a class="item{{if .PageIsHome}} active{{end}}" href="{{AppSubUrl}}/">{{.i18n.Tr "home"}}</a>
+								{{end}}
 
-							<a class="item{{if .PageIsExplore}} active{{end}}" href="{{AppSubUrl}}/explore">{{.i18n.Tr "explore"}}</a>
-							<!-- <div class="item">
-								<div class="ui icon input">
+								<a class="item{{if .PageIsExplore}} active{{end}}" href="{{AppSubUrl}}/explore">{{.i18n.Tr "explore"}}</a>
+								{{/*<div class="item">
+									<div class="ui icon input">
 									<input class="searchbox" type="text" placeholder="{{.i18n.Tr "search_project"}}">
 									<i class="search icon"></i>
-								</div>
-							</div> -->
+									</div>
+									</div>*/}}
 
-							{{if .IsSigned}}
-							<div class="right menu">
-								<div class="ui dropdown head link jump item poping up" data-content="{{.i18n.Tr "create_new"}}" data-variation="tiny inverted">
-									<span class="text">
-										<i class="octicon octicon-plus"></i>
-										<i class="octicon octicon-triangle-down"></i>
-									</span>
-									<div class="menu">
-										<a class="item" href="{{AppSubUrl}}/repo/create">
-											<i class="icon octicon octicon-repo-create"></i> {{.i18n.Tr "new_repo"}}
-										</a>
-										<a class="item" href="{{AppSubUrl}}/repo/migrate">
-											<i class="icon octicon octicon-repo-clone"></i> {{.i18n.Tr "new_migrate"}}
-										</a>
-										<a class="item" href="{{AppSubUrl}}/org/create">
-											<i class="icon octicon octicon-organization"></i> {{.i18n.Tr "new_org"}}
-										</a>
-									</div><!-- end content create new menu -->
-								</div><!-- end dropdown menu create new -->
+								{{if .IsSigned}}
+									<div class="right menu">
+										<div class="ui dropdown head link jump item poping up" data-content="{{.i18n.Tr "create_new"}}" data-variation="tiny inverted">
+											<span class="text">
+												<i class="octicon octicon-plus"></i>
+												<i class="octicon octicon-triangle-down"></i>
+											</span>
+											<div class="menu">
+												<a class="item" href="{{AppSubUrl}}/repo/create">
+													<i class="icon octicon octicon-repo-create"></i> {{.i18n.Tr "new_repo"}}
+												</a>
+												<a class="item" href="{{AppSubUrl}}/repo/migrate">
+													<i class="icon octicon octicon-repo-clone"></i> {{.i18n.Tr "new_migrate"}}
+												</a>
+												<a class="item" href="{{AppSubUrl}}/org/create">
+													<i class="icon octicon octicon-organization"></i> {{.i18n.Tr "new_org"}}
+												</a>
+											</div><!-- end content create new menu -->
+										</div><!-- end dropdown menu create new -->
 
-								<div class="ui dropdown head link jump item poping up" tabindex="-1" data-content="{{.i18n.Tr "user_profile_and_more"}}" data-variation="tiny inverted">
-									<span class="text avatar">
-										<img class="ui small rounded image" src="{{.SignedUser.AvatarLink}}">
-										<i class="octicon octicon-triangle-down" tabindex="-1"></i>
-									</span>
-									<div class="menu" tabindex="-1">
-										<div class="ui header">
-										{{.i18n.Tr "signed_in_as"}} <strong>{{.SignedUser.Name}}</strong>
-										</div>
+										<div class="ui dropdown head link jump item poping up" tabindex="-1" data-content="{{.i18n.Tr "user_profile_and_more"}}" data-variation="tiny inverted">
+											<span class="text avatar">
+												<img class="ui small rounded image" src="{{.SignedUser.AvatarLink}}">
+												<i class="octicon octicon-triangle-down" tabindex="-1"></i>
+											</span>
+											<div class="menu" tabindex="-1">
+												<div class="ui header">
+													{{.i18n.Tr "signed_in_as"}} <strong>{{.SignedUser.Name}}</strong>
+												</div>
 
-										<div class="divider"></div>
-										<a class="item" href="{{AppSubUrl}}/{{.SignedUser.Name}}">
-											<i class="icon octicon octicon-person"></i>
-											{{.i18n.Tr "your_profile"}}<!-- Your profile -->
-										</a>
-										<a class="{{if .PageIsUserSettings}}active{{end}} item" href="{{AppSubUrl}}/user/settings">
-											<i class="icon octicon octicon-settings"></i>
-											{{.i18n.Tr "your_settings"}}<!-- Your settings -->
-										</a>
-										<a class="item" target="_blank" href="http://gogs.io/docs" rel="noreferrer">
-											<i class="icon octicon octicon-question"></i>
-											{{.i18n.Tr "help"}}<!-- Help -->
-										</a>
-										{{if .IsAdmin}}
-										<div class="divider"></div>
+												<div class="divider"></div>
+												<a class="item" href="{{AppSubUrl}}/{{.SignedUser.Name}}">
+													<i class="icon octicon octicon-person"></i>
+													{{.i18n.Tr "your_profile"}}<!-- Your profile -->
+												</a>
+												<a class="{{if .PageIsUserSettings}}active{{end}} item" href="{{AppSubUrl}}/user/settings">
+													<i class="icon octicon octicon-settings"></i>
+													{{.i18n.Tr "your_settings"}}<!-- Your settings -->
+												</a>
+												<a class="item" target="_blank" href="http://gogs.io/docs" rel="noreferrer">
+													<i class="icon octicon octicon-question"></i>
+													{{.i18n.Tr "help"}}<!-- Help -->
+												</a>
+												{{if .IsAdmin}}
+													<div class="divider"></div>
 
-										<a class="{{if .PageIsAdmin}}active{{end}} item" href="{{AppSubUrl}}/admin">
-											<i class="icon settings"></i>
-											{{.i18n.Tr "admin_panel"}}<!-- Admin Panel -->
-										</a>
+													<a class="{{if .PageIsAdmin}}active{{end}} item" href="{{AppSubUrl}}/admin">
+														<i class="icon settings"></i>
+														{{.i18n.Tr "admin_panel"}}<!-- Admin Panel -->
+													</a>
+												{{end}}
+
+												<div class="divider"></div>
+												<a class="item" href="{{AppSubUrl}}/user/logout">
+													<i class="icon octicon octicon-sign-out"></i>
+													{{.i18n.Tr "sign_out"}}<!-- Sign Out -->
+												</a>
+											</div><!-- end content avatar menu -->
+										</div><!-- end dropdown avatar menu -->
+									</div><!-- end signed user right menu -->
+
+								{{else}}
+
+									<a class="item" target="_blank" href="http://gogs.io/docs" rel="noreferrer">{{.i18n.Tr "help"}}</a>
+									<div class="right menu">
+										{{if .ShowRegistrationButton}}
+											<a class="item{{if .PageIsSignUp}} active{{end}}" href="{{AppSubUrl}}/user/sign_up">
+												<i class="icon octicon octicon-person-add"></i> {{.i18n.Tr "register"}}
+											</a>
 										{{end}}
-
-										<div class="divider"></div>
-										<a class="item" href="{{AppSubUrl}}/user/logout">
-											<i class="icon octicon octicon-sign-out"></i>
-											{{.i18n.Tr "sign_out"}}<!-- Sign Out -->
+										<a class="item{{if .PageIsSignIn}} active{{end}}" href="{{AppSubUrl}}/user/login">
+											<i class="icon octicon octicon-sign-in"></i> {{.i18n.Tr "sign_in"}}
 										</a>
-									</div><!-- end content avatar menu -->
-								</div><!-- end dropdown avatar menu -->
-							</div><!-- end signed user right menu -->
+									</div><!-- end anonymous right menu -->
 
-							{{else}}
-
-							<a class="item" target="_blank" href="http://gogs.io/docs" rel="noreferrer">{{.i18n.Tr "help"}}</a>
-							<div class="right menu">
-								{{if .ShowRegistrationButton}}
-								<a class="item{{if .PageIsSignUp}} active{{end}}" href="{{AppSubUrl}}/user/sign_up">
-									<i class="icon octicon octicon-person-add"></i> {{.i18n.Tr "register"}}
-								</a>
 								{{end}}
-								<a class="item{{if .PageIsSignIn}} active{{end}}" href="{{AppSubUrl}}/user/login">
-									<i class="icon octicon octicon-sign-in"></i> {{.i18n.Tr "sign_in"}}
-								</a>
-							</div><!-- end anonymous right menu -->
-
-							{{end}}
-						</div><!-- end top menu -->
-					</div><!-- end column -->
-				</div><!-- end grid -->
-			</div><!-- end container -->
-		</div><!-- end bar -->
+							</div><!-- end top menu -->
+						</div><!-- end column -->
+					</div><!-- end grid -->
+				</div><!-- end container -->
+			</div><!-- end bar -->
 		{{end}}
+{{/*
+	</div>
+</body>
+</html>
+*/}}

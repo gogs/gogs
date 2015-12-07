@@ -1,80 +1,80 @@
 {{template "base/head" .}}
 <div class="repository release">
-  {{template "repo/header" .}}
-  <div class="ui container">
-    {{template "base/alert" .}}
-    <h2 class="ui header">
-      {{.i18n.Tr "repo.release.releases"}}
-      {{if .IsRepositoryAdmin}}
-      <div class="ui right">
-        <a class="ui small green button" href="{{$.RepoLink}}/releases/new">
-          {{.i18n.Tr "repo.release.new_release"}}
-        </a>
-      </div>
-      {{end}}
-    </h2>
-    <ul id="release-list">
-      {{range .Releases}}
-      <li class="ui grid">
-        <div class="ui four wide column meta">
-          {{if .PublisherID}}
-            {{if .IsDraft}}
-            <span class="ui yellow label">{{$.i18n.Tr "repo.release.draft"}}</span>
-            {{else if .IsPrerelease}}
-            <span class="ui orange label">{{$.i18n.Tr "repo.release.prerelease"}}</span>
-            {{else}}
-            <span class="ui green label">{{$.i18n.Tr "repo.release.stable"}}</span>
-            {{end}}
-            <span class="tag text blue">
-              <a href="{{$.RepoLink}}/src/{{.TagName}}" rel="nofollow"><i class="tag icon"></i> {{.TagName}}</a>
-            </span>
-          {{end}}
-          <span class="commit">
-            <a href="{{$.RepoLink}}/src/{{.Sha1}}" rel="nofollow"><i class="code icon"></i> {{ShortSha .Sha1}}</a>
-          </span>
-        </div>
-        <div class="ui twelve wide column detail">
-          {{if .PublisherID}}
-            <h3>
-              <a href="{{$.RepoLink}}/src/{{.TagName}}">{{.Title}}</a> 
-              {{if $.IsRepositoryAdmin}}<small>(<a href="{{$.RepoLink}}/releases/edit/{{.TagName}}" rel="nofollow">{{$.i18n.Tr "repo.release.edit"}}</a>)</small>{{end}}
-            </h3>
-            <p class="text grey">
-              <span class="author">
-                <img class="img-10" src="{{.Publisher.AvatarLink}}">
-                <a href="{{AppSubUrl}}/{{.Publisher.Name}}">{{.Publisher.Name}}</a>
-              </span>
-              {{if .Created}}<span class="time">{{TimeSince .Created $.Lang}}</span>{{end}}
-              <span class="ahead">{{$.i18n.Tr "repo.release.ahead" .NumCommitsBehind .Target | Str2html}}</span>
-            </p>
-            <div class="markdown desc">
-              {{Str2html .Note}}
-            </div>
-            <div class="download">
-              <h2>{{$.i18n.Tr "repo.release.downloads"}}</h2>
-              <ul class="list">
-                <li>
-                  <a href="{{$.RepoLink}}/archive/{{.TagName}}.zip" rel="nofollow"><i class="icon octicon octicon-file-zip"></i> {{$.i18n.Tr "repo.release.source_code"}} (ZIP)</a>
-                </li>
-                <li>
-                  <a href="{{$.RepoLink}}/archive/{{.TagName}}.tar.gz"><i class="icon octicon octicon-file-zip"></i> {{$.i18n.Tr "repo.release.source_code"}} (TAR.GZ)</a>
-                </li>
-              </ul>
-            </div>
-          {{else}}
-            <h4>
-              <a href="{{$.RepoLink}}/src/{{.TagName}}" rel="nofollow"><i class="tag icon"></i> {{.TagName}}</a>
-            </h4>
-            <div class="download">
-              <a href="{{$.RepoLink}}/archive/{{.TagName}}.zip" rel="nofollow"><i class="octicon octicon-file-zip"></i> ZIP</a>
-              <a href="{{$.RepoLink}}/archive/{{.TagName}}.tar.gz"><i class="octicon octicon-file-zip"></i> TAR.GZ</a>
-            </div>
-          {{end}}
-          <span class="dot">&nbsp;</span>
-        </div>
-      </li>
-      {{end}}
-    </ul>
-  </div>
+	{{template "repo/header" .}}
+	<div class="ui container">
+		{{template "base/alert" .}}
+		<h2 class="ui header">
+			{{.i18n.Tr "repo.release.releases"}}
+			{{if .IsRepositoryAdmin}}
+				<div class="ui right">
+					<a class="ui small green button" href="{{$.RepoLink}}/releases/new">
+						{{.i18n.Tr "repo.release.new_release"}}
+					</a>
+				</div>
+			{{end}}
+		</h2>
+		<ul id="release-list">
+			{{range .Releases}}
+				<li class="ui grid">
+					<div class="ui four wide column meta">
+						{{if .PublisherID}}
+							{{if .IsDraft}}
+								<span class="ui yellow label">{{$.i18n.Tr "repo.release.draft"}}</span>
+							{{else if .IsPrerelease}}
+								<span class="ui orange label">{{$.i18n.Tr "repo.release.prerelease"}}</span>
+							{{else}}
+								<span class="ui green label">{{$.i18n.Tr "repo.release.stable"}}</span>
+							{{end}}
+							<span class="tag text blue">
+								<a href="{{$.RepoLink}}/src/{{.TagName}}" rel="nofollow"><i class="tag icon"></i> {{.TagName}}</a>
+							</span>
+						{{end}}
+						<span class="commit">
+							<a href="{{$.RepoLink}}/src/{{.Sha1}}" rel="nofollow"><i class="code icon"></i> {{ShortSha .Sha1}}</a>
+						</span>
+					</div>
+					<div class="ui twelve wide column detail">
+						{{if .PublisherID}}
+							<h3>
+								<a href="{{$.RepoLink}}/src/{{.TagName}}">{{.Title}}</a>
+								{{if $.IsRepositoryAdmin}}<small>(<a href="{{$.RepoLink}}/releases/edit/{{.TagName}}" rel="nofollow">{{$.i18n.Tr "repo.release.edit"}}</a>)</small>{{end}}
+							</h3>
+							<p class="text grey">
+								<span class="author">
+									<img class="img-10" src="{{.Publisher.AvatarLink}}">
+									<a href="{{AppSubUrl}}/{{.Publisher.Name}}">{{.Publisher.Name}}</a>
+								</span>
+								{{if .Created}}<span class="time">{{TimeSince .Created $.Lang}}</span>{{end}}
+								<span class="ahead">{{$.i18n.Tr "repo.release.ahead" .NumCommitsBehind .Target | Str2html}}</span>
+							</p>
+							<div class="markdown desc">
+								{{Str2html .Note}}
+							</div>
+							<div class="download">
+								<h2>{{$.i18n.Tr "repo.release.downloads"}}</h2>
+								<ul class="list">
+									<li>
+										<a href="{{$.RepoLink}}/archive/{{.TagName}}.zip" rel="nofollow"><i class="icon octicon octicon-file-zip"></i> {{$.i18n.Tr "repo.release.source_code"}} (ZIP)</a>
+									</li>
+									<li>
+										<a href="{{$.RepoLink}}/archive/{{.TagName}}.tar.gz"><i class="icon octicon octicon-file-zip"></i> {{$.i18n.Tr "repo.release.source_code"}} (TAR.GZ)</a>
+									</li>
+								</ul>
+							</div>
+						{{else}}
+							<h4>
+								<a href="{{$.RepoLink}}/src/{{.TagName}}" rel="nofollow"><i class="tag icon"></i> {{.TagName}}</a>
+							</h4>
+							<div class="download">
+								<a href="{{$.RepoLink}}/archive/{{.TagName}}.zip" rel="nofollow"><i class="octicon octicon-file-zip"></i> ZIP</a>
+								<a href="{{$.RepoLink}}/archive/{{.TagName}}.tar.gz"><i class="octicon octicon-file-zip"></i> TAR.GZ</a>
+							</div>
+						{{end}}
+						<span class="dot">&nbsp;</span>
+					</div>
+				</li>
+			{{end}}
+		</ul>
+	</div>
 </div>
 {{template "base/footer" .}}

@@ -1,69 +1,69 @@
 {{template "base/head" .}}
 <div class="repository wiki view">
 	{{template "repo/header" .}}
-  <div class="ui container">
-    <div class="ui grid">
-      <div class="ui ten wide column">
-        <div class="choose page">
-          <div class="ui floating filter dropdown" data-no-results="{{.i18n.Tr "repo.pulls.no_results"}}">
-            <div class="ui basic small button">
-              <span class="text">
-                {{.i18n.Tr "repo.wiki.page"}}:
-                <strong>{{.title}}</strong>
-              </span>
-              <i class="dropdown icon"></i>
-            </div>
-            <div class="menu">
-              <div class="ui icon search input">
-                <i class="filter icon"></i>
-                <input name="search" placeholder="{{.i18n.Tr "repo.wiki.filter_page"}}...">
-              </div>
-              <div class="scrolling menu" {{if .IsTag}}style="display: none"{{end}}>
-                {{range .Pages}}
-                <div class="item {{if eq $.Title .Name}}selected{{end}}" data-url="{{$.RepoLink}}/wiki/{{.URL}}">{{.Name}}</div>
-                {{end}}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="ui six wide column">
-        <div class="ui action small input" id="clone-panel">
-          {{if not $.DisableSSH}}
-          <button class="ui blue basic clone button" id="repo-clone-ssh" data-link="{{.WikiCloneLink.SSH}}">
-            SSH
-          </button>
-          {{end}}
-          <button class="ui {{if $.DisableSSH}}blue{{end}} basic clone button" id="repo-clone-https" data-link="{{.WikiCloneLink.HTTPS}}">
-            {{if UseHTTPS}}HTTPS{{else}}HTTP{{end}}
-          </button>
-          <input id="repo-clone-url" value="{{if $.DisableSSH}}{{$.WikiCloneLink.HTTPS}}{{else}}{{$.WikiCloneLink.SSH}}{{end}}" readonly>
-          <button class="ui basic icon button poping up clipboard" id="clipboard-btn" data-original="{{.i18n.Tr "repo.copy_link"}}" data-success="{{.i18n.Tr "repo.copy_link_success"}}" data-error="{{.i18n.Tr "repo.copy_link_error"}}" data-content="{{.i18n.Tr "repo.copy_link"}}" data-variation="inverted tiny" data-clipboard-target="#repo-clone-url">
-            <i class="octicon octicon-clippy"></i>
-          </button>
-          <div class="ui basic jump dropdown icon button">
-            <i class="download icon"></i>
-            <div class="menu">
-              <a class="item" href="{{$.RepoLink}}/archive/{{EscapePound $.BranchName}}.zip"><i class="icon octicon octicon-file-zip"></i> ZIP</a>
-              <a class="item" href="{{$.RepoLink}}/archive/{{EscapePound $.BranchName}}.tar.gz"><i class="icon octicon octicon-file-zip"></i> TAR.GZ</a>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div class="ui dividing header">
-      {{.title}}
-      {{if .IsRepositoryPusher}}
-      <div class="ui right">
-      	<a class="ui small button" href="{{.RepoLink}}/wiki/{{.PageURL}}/_edit">{{.i18n.Tr "repo.wiki.edit_page_button"}}</a>
-      	<a class="ui green small button" href="{{.RepoLink}}/wiki/_new">{{.i18n.Tr "repo.wiki.new_page_button"}}</a>
-      </div>
-      {{end}}
-      <div class="ui sub header">
-      	{{$timeSince := TimeSince .Author.When $.Lang}}
-      	{{.i18n.Tr "repo.wiki.last_commit_info" .Author.Name $timeSince | Safe}}
-      </div>
-    </div>
+	<div class="ui container">
+		<div class="ui grid">
+			<div class="ui ten wide column">
+				<div class="choose page">
+					<div class="ui floating filter dropdown" data-no-results="{{.i18n.Tr "repo.pulls.no_results"}}">
+						<div class="ui basic small button">
+							<span class="text">
+								{{.i18n.Tr "repo.wiki.page"}}:
+								<strong>{{.title}}</strong>
+							</span>
+							<i class="dropdown icon"></i>
+						</div>
+						<div class="menu">
+							<div class="ui icon search input">
+								<i class="filter icon"></i>
+								<input name="search" placeholder="{{.i18n.Tr "repo.wiki.filter_page"}}...">
+							</div>
+							<div class="scrolling menu" {{if .IsTag}}style="display: none"{{end}}>
+								{{range .Pages}}
+									<div class="item {{if eq $.Title .Name}}selected{{end}}" data-url="{{$.RepoLink}}/wiki/{{.URL}}">{{.Name}}</div>
+								{{end}}
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+			<div class="ui six wide column">
+				<div class="ui action small input" id="clone-panel">
+					{{if not $.DisableSSH}}
+						<button class="ui blue basic clone button" id="repo-clone-ssh" data-link="{{.WikiCloneLink.SSH}}">
+							SSH
+						</button>
+					{{end}}
+					<button class="ui {{if $.DisableSSH}}blue{{end}} basic clone button" id="repo-clone-https" data-link="{{.WikiCloneLink.HTTPS}}">
+						{{if UseHTTPS}}HTTPS{{else}}HTTP{{end}}
+					</button>
+					<input id="repo-clone-url" value="{{if $.DisableSSH}}{{$.WikiCloneLink.HTTPS}}{{else}}{{$.WikiCloneLink.SSH}}{{end}}" readonly>
+					<button class="ui basic icon button poping up clipboard" id="clipboard-btn" data-original="{{.i18n.Tr "repo.copy_link"}}" data-success="{{.i18n.Tr "repo.copy_link_success"}}" data-error="{{.i18n.Tr "repo.copy_link_error"}}" data-content="{{.i18n.Tr "repo.copy_link"}}" data-variation="inverted tiny" data-clipboard-target="#repo-clone-url">
+						<i class="octicon octicon-clippy"></i>
+					</button>
+					<div class="ui basic jump dropdown icon button">
+						<i class="download icon"></i>
+						<div class="menu">
+							<a class="item" href="{{$.RepoLink}}/archive/{{EscapePound $.BranchName}}.zip"><i class="icon octicon octicon-file-zip"></i> ZIP</a>
+							<a class="item" href="{{$.RepoLink}}/archive/{{EscapePound $.BranchName}}.tar.gz"><i class="icon octicon octicon-file-zip"></i> TAR.GZ</a>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+		<div class="ui dividing header">
+			{{.title}}
+			{{if .IsRepositoryPusher}}
+				<div class="ui right">
+					<a class="ui small button" href="{{.RepoLink}}/wiki/{{.PageURL}}/_edit">{{.i18n.Tr "repo.wiki.edit_page_button"}}</a>
+					<a class="ui green small button" href="{{.RepoLink}}/wiki/_new">{{.i18n.Tr "repo.wiki.new_page_button"}}</a>
+				</div>
+			{{end}}
+			<div class="ui sub header">
+				{{$timeSince := TimeSince .Author.When $.Lang}}
+				{{.i18n.Tr "repo.wiki.last_commit_info" .Author.Name $timeSince | Safe}}
+			</div>
+		</div>
 		<div class="ui segment markdown">
 			{{.content | Str2html}}
 		</div>
