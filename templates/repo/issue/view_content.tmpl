@@ -1,234 +1,232 @@
 <div class="ui grid">
 	{{if .Flash}}
-	<div class="sixteen wide column">
-  	{{template "base/alert" .}}
-  </div>
-  {{end}}
-  {{if not .Issue.IsPull}}
-  {{template "repo/issue/view_title" .}}
-  {{end}}
-  
-  {{ $createdStr:= TimeSince .Issue.Created $.Lang }}
+		<div class="sixteen wide column">
+			{{template "base/alert" .}}
+		</div>
+	{{end}}
+	{{if not .Issue.IsPull}}
+		{{template "repo/issue/view_title" .}}
+	{{end}}
+
+	{{ $createdStr:= TimeSince .Issue.Created $.Lang }}
 	<div class="twelve wide column comment-list">
-  	<ui class="ui comments">
-  		<div class="comment">
-		    <a class="avatar" {{if gt .Issue.Poster.Id 0}}href="{{.Issue.Poster.HomeLink}}"{{end}}>
-		      <img src="{{.Issue.Poster.AvatarLink}}">
-		    </a>
-		    <div class="content">
+		<ui class="ui comments">
+			<div class="comment">
+				<a class="avatar" {{if gt .Issue.Poster.Id 0}}href="{{.Issue.Poster.HomeLink}}"{{end}}>
+					<img src="{{.Issue.Poster.AvatarLink}}">
+				</a>
+				<div class="content">
 					<div class="ui top attached header">
 						<span class="text grey"><a {{if gt .Issue.Poster.Id 0}}href="{{.Issue.Poster.HomeLink}}"{{end}}>{{.Issue.Poster.Name}}</a> {{.i18n.Tr "repo.issues.commented_at" .Issue.HashTag $createdStr | Safe}}</span>
-					  <div class="ui right actions">
-					  	{{if .IsIssueOwner}}
-							<a class="edit-content item" href="#"><i class="octicon octicon-pencil"></i></a>
-					  	{{end}}
-					  </div>
-					</div>
-			    <div class="ui attached segment">
-			    	<div class="render-content markdown emojify">
-				    	{{if .Issue.RenderedContent}}
-							{{.Issue.RenderedContent|Str2html}}
-				    	{{else}}
-							<span class="no-content">{{.i18n.Tr "repo.issues.no_content"}}</span>
-				    	{{end}}
-			    	</div>
-			    	<div class="raw-content hide">{{.Issue.Content}}</div>
-			    	<div class="edit-content-zone hide" data-write="issue-{{.Issue.ID}}-write" data-preview="issue-{{.Issue.ID}}-preview" data-update-url="{{$.RepoLink}}/issues/{{.Issue.Index}}/content" data-context="{{.RepoLink}}"></div>
-	  			</div>
-	  			{{if .Issue.Attachments}}
-					<div class="ui bottom attached segment">
-						<div class="ui small images">
-							{{range .Issue.Attachments}}
-						  <a target="_blank" href="{{AppSubUrl}}/attachments/{{.UUID}}"><img class="ui image" src="{{AppSubUrl}}/attachments/{{.UUID}}"></a>
-						  {{end}}
+						<div class="ui right actions">
+							{{if .IsIssueOwner}}
+								<a class="edit-content item" href="#"><i class="octicon octicon-pencil"></i></a>
+							{{end}}
 						</div>
 					</div>
-	  			{{end}}
-		    </div>
-  		</div>
-
-  		{{range .Issue.Comments}}
-  		{{ $createdStr:= TimeSince .Created $.Lang }}
-
-			<!-- 0 = COMMENT, 1 = REOPEN, 2 = CLOSE, 3 = ISSUE_REF, 4 = COMMIT_REF, 5 = COMMENT_REF, 6 = PULL_REF -->
-			{{if eq .Type 0}}
-  		<div class="comment">
-		    <a class="avatar" {{if gt .Poster.Id 0}}href="{{.Poster.HomeLink}}"{{end}}>
-		      <img src="{{.Poster.AvatarLink}}">
-		    </a>
-		    <div class="content">
-					<div class="ui top attached header">
-						<span class="text grey"><a {{if gt .Poster.Id 0}}href="{{.Poster.HomeLink}}"{{end}}>{{.Poster.Name}}</a> {{$.i18n.Tr "repo.issues.commented_at" .HashTag $createdStr | Safe}}</span>
-					  <div class="ui right actions">
-					  	{{if gt .ShowTag 0}}
-					  	<div class="item tag">
-					  	{{if eq .ShowTag 1}}
-							{{$.i18n.Tr "repo.issues.poster"}}
-					  	{{else if eq .ShowTag 2}}
-							{{$.i18n.Tr "repo.issues.admin"}}
-					  	{{else if eq .ShowTag 3}}
-							{{$.i18n.Tr "repo.issues.owner"}}
-					  	{{end}}
-					  	</div>
-					  	{{end}}
-					  	{{if or $.IsRepositoryAdmin (eq .Poster.Id $.SignedUserID)}}
-							<a class="edit-content item" href="#"><i class="octicon octicon-pencil"></i></a>
-					  	{{end}}
-					  </div>
+					<div class="ui attached segment">
+						<div class="render-content markdown emojify">
+							{{if .Issue.RenderedContent}}
+								{{.Issue.RenderedContent|Str2html}}
+							{{else}}
+								<span class="no-content">{{.i18n.Tr "repo.issues.no_content"}}</span>
+							{{end}}
+						</div>
+						<div class="raw-content hide">{{.Issue.Content}}</div>
+						<div class="edit-content-zone hide" data-write="issue-{{.Issue.ID}}-write" data-preview="issue-{{.Issue.ID}}-preview" data-update-url="{{$.RepoLink}}/issues/{{.Issue.Index}}/content" data-context="{{.RepoLink}}"></div>
 					</div>
-			    <div class="ui attached segment">
-			    	<div class="render-content markdown emojify">
-				    	{{if .RenderedContent}}
-							{{.RenderedContent|Str2html}}
-				    	{{else}}
-							<span class="no-content">{{$.i18n.Tr "repo.issues.no_content"}}</span>
-				    	{{end}}
-			    	</div>
-			    	<div class="raw-content hide">{{.Content}}</div>
-			    	<div class="edit-content-zone hide" data-write="issuecomment-{{.ID}}-write" data-preview="issuecomment-{{.ID}}-preview" data-update-url="{{$.RepoLink}}/comments/{{.ID}}" data-context="{{$.RepoLink}}"></div>
-	  			</div>
-	  			{{if .Attachments}}
-					<div class="ui bottom attached segment">
-						<div class="ui small images">
-							{{range .Attachments}}
-						  <a target="_blank" href="{{AppSubUrl}}/attachments/{{.UUID}}"><img class="ui image" src="{{AppSubUrl}}/attachments/{{.UUID}}"></a>
-						  {{end}}
+					{{if .Issue.Attachments}}
+						<div class="ui bottom attached segment">
+							<div class="ui small images">
+								{{range .Issue.Attachments}}
+									<a target="_blank" href="{{AppSubUrl}}/attachments/{{.UUID}}"><img class="ui image" src="{{AppSubUrl}}/attachments/{{.UUID}}"></a>
+								{{end}}
+							</div>
+						</div>
+					{{end}}
+				</div>
+			</div>
+
+			{{range .Issue.Comments}}
+				{{ $createdStr:= TimeSince .Created $.Lang }}
+
+				<!-- 0 = COMMENT, 1 = REOPEN, 2 = CLOSE, 3 = ISSUE_REF, 4 = COMMIT_REF, 5 = COMMENT_REF, 6 = PULL_REF -->
+				{{if eq .Type 0}}
+					<div class="comment">
+						<a class="avatar" {{if gt .Poster.Id 0}}href="{{.Poster.HomeLink}}"{{end}}>
+							<img src="{{.Poster.AvatarLink}}">
+						</a>
+						<div class="content">
+							<div class="ui top attached header">
+								<span class="text grey"><a {{if gt .Poster.Id 0}}href="{{.Poster.HomeLink}}"{{end}}>{{.Poster.Name}}</a> {{$.i18n.Tr "repo.issues.commented_at" .HashTag $createdStr | Safe}}</span>
+								<div class="ui right actions">
+									{{if gt .ShowTag 0}}
+										<div class="item tag">
+											{{if eq .ShowTag 1}}
+												{{$.i18n.Tr "repo.issues.poster"}}
+											{{else if eq .ShowTag 2}}
+												{{$.i18n.Tr "repo.issues.admin"}}
+											{{else if eq .ShowTag 3}}
+												{{$.i18n.Tr "repo.issues.owner"}}
+											{{end}}
+										</div>
+									{{end}}
+									{{if or $.IsRepositoryAdmin (eq .Poster.Id $.SignedUserID)}}
+										<a class="edit-content item" href="#"><i class="octicon octicon-pencil"></i></a>
+									{{end}}
+								</div>
+							</div>
+							<div class="ui attached segment">
+								<div class="render-content markdown emojify">
+									{{if .RenderedContent}}
+										{{.RenderedContent|Str2html}}
+									{{else}}
+										<span class="no-content">{{$.i18n.Tr "repo.issues.no_content"}}</span>
+									{{end}}
+								</div>
+								<div class="raw-content hide">{{.Content}}</div>
+								<div class="edit-content-zone hide" data-write="issuecomment-{{.ID}}-write" data-preview="issuecomment-{{.ID}}-preview" data-update-url="{{$.RepoLink}}/comments/{{.ID}}" data-context="{{$.RepoLink}}"></div>
+							</div>
+							{{if .Attachments}}
+								<div class="ui bottom attached segment">
+									<div class="ui small images">
+										{{range .Attachments}}
+											<a target="_blank" href="{{AppSubUrl}}/attachments/{{.UUID}}"><img class="ui image" src="{{AppSubUrl}}/attachments/{{.UUID}}"></a>
+										{{end}}
+									</div>
+								</div>
+							{{end}}
 						</div>
 					</div>
-	  			{{end}}
-		    </div>
-  		</div>
-  		{{else if eq .Type 1}}
-  		<div class="event">
-  			<span class="octicon octicon-primitive-dot"></span>
-  			<a class="ui avatar image" href="{{.Poster.HomeLink}}">
-  			  <img src="{{.Poster.AvatarLink}}">
-  			</a>
-  			<span class="text grey"><a href="{{.Poster.HomeLink}}">{{.Poster.Name}}</a> {{$.i18n.Tr "repo.issues.reopened_at" .EventTag $createdStr | Safe}}</span>
-  		</div>
-  		{{else if eq .Type 2}}
-  		<div class="event">
-  			<span class="octicon octicon-circle-slash"></span>
-  			<a class="ui avatar image" href="{{.Poster.HomeLink}}">
-  			  <img src="{{.Poster.AvatarLink}}">
-  			</a>
-  			<span class="text grey"><a href="{{.Poster.HomeLink}}">{{.Poster.Name}}</a> {{$.i18n.Tr "repo.issues.closed_at" .EventTag $createdStr | Safe}}</span>
-  		</div>
-  		{{else if eq .Type 4}}
-  		<div class="event">
-  			<span class="octicon octicon-bookmark"></span>
-  			<a class="ui avatar image" href="{{.Poster.HomeLink}}">
-  			  <img src="{{.Poster.AvatarLink}}">
-  			</a>
-  			<span class="text grey"><a href="{{.Poster.HomeLink}}">{{.Poster.Name}}</a> {{$.i18n.Tr "repo.issues.commit_ref_at" .EventTag $createdStr | Safe}}</span>
+				{{else if eq .Type 1}}
+					<div class="event">
+						<span class="octicon octicon-primitive-dot"></span>
+						<a class="ui avatar image" href="{{.Poster.HomeLink}}">
+							<img src="{{.Poster.AvatarLink}}">
+						</a>
+						<span class="text grey"><a href="{{.Poster.HomeLink}}">{{.Poster.Name}}</a> {{$.i18n.Tr "repo.issues.reopened_at" .EventTag $createdStr | Safe}}</span>
+					</div>
+				{{else if eq .Type 2}}
+					<div class="event">
+						<span class="octicon octicon-circle-slash"></span>
+						<a class="ui avatar image" href="{{.Poster.HomeLink}}">
+							<img src="{{.Poster.AvatarLink}}">
+						</a>
+						<span class="text grey"><a href="{{.Poster.HomeLink}}">{{.Poster.Name}}</a> {{$.i18n.Tr "repo.issues.closed_at" .EventTag $createdStr | Safe}}</span>
+					</div>
+				{{else if eq .Type 4}}
+					<div class="event">
+						<span class="octicon octicon-bookmark"></span>
+						<a class="ui avatar image" href="{{.Poster.HomeLink}}">
+							<img src="{{.Poster.AvatarLink}}">
+						</a>
+						<span class="text grey"><a href="{{.Poster.HomeLink}}">{{.Poster.Name}}</a> {{$.i18n.Tr "repo.issues.commit_ref_at" .EventTag $createdStr | Safe}}</span>
 
-	  		<div class="detail">
-	  			<span class="octicon octicon-git-commit"></span>
-	  			<span class="text grey">{{.Content | Str2html}}</span>
-	  		</div>
-  		</div>
+						<div class="detail">
+							<span class="octicon octicon-git-commit"></span>
+							<span class="text grey">{{.Content | Str2html}}</span>
+						</div>
+					</div>
+				{{end}}
+
 			{{end}}
 
-  		{{end}}
-
-  		{{if .Issue.IsPull}}
-  		<div class="comment merge box">
-		    <a class="avatar text 
-		    {{if .Issue.HasMerged}}purple
-		    {{else if .Issue.IsClosed}}grey
-		    {{else if .IsPullReuqestBroken}}red
-		    {{else if .Issue.IsChecking}}yellow
-		    {{else if .Issue.CanAutoMerge}}green
-		    {{else}}red{{end}}">
-		      <span class="mega-octicon octicon-git-merge"></span>
-		    </a>
-		    <div class="content">
-		    	<div class="ui merge segment">
-		    		{{if .Issue.HasMerged}}
-		    		<div class="item text purple">
-		    			{{$.i18n.Tr "repo.pulls.has_merged"}}
-		    		</div>
-		    		{{else if .Issue.IsClosed}}
-		    		<div class="item text grey">
-		    			{{$.i18n.Tr "repo.pulls.reopen_to_merge"}}
-		    		</div>
-		    		{{else if .IsPullReuqestBroken}}
-		    		<div class="item text red">
-		    			<span class="octicon octicon-x"></span>
-		    			{{$.i18n.Tr "repo.pulls.data_broken"}}
-		    		</div>
-		    		{{else if .Issue.IsChecking}}
-		    		<div class="item text yellow">
-		    			<span class="octicon octicon-sync"></span>
-		    			{{$.i18n.Tr "repo.pulls.is_checking"}}
-		    		</div>
-		    		{{else if .Issue.CanAutoMerge}}
-			    		<div class="item text green">
-			    			<span class="octicon octicon-check"></span>
-			    			{{$.i18n.Tr "repo.pulls.can_auto_merge_desc"}}
-			    		</div>
-			    		{{if .IsRepositoryAdmin}}
-			    		<div class="ui divider"></div>
-			    		<div>
-			    			<form class="ui form" action="{{.Link}}/merge" method="post">
-				    			{{.CsrfTokenHtml}}
-				    			<button class="ui green button">
-				    				<span class="octicon octicon-git-merge"></span> {{$.i18n.Tr "repo.pulls.merge_pull_request"}}
-				    			</button>
-			    			</form>
-			    		</div>
-			    		{{end}}
-		    		{{else}}
-		    		<div class="item text red">
-		    			<span class="octicon octicon-x"></span>
-		    			{{$.i18n.Tr "repo.pulls.cannot_auto_merge_desc"}}
-		    		</div>
-		    		<div class="item text grey">
-		    			<span class="octicon octicon-info"></span>
-		    			{{$.i18n.Tr "repo.pulls.cannot_auto_merge_helper"}}
-		    		</div>
-		    		{{end}}
-		    	</div>
-		    </div>
-  		</div>
-  		{{end}}
+			{{if .Issue.IsPull}}
+				<div class="comment merge box">
+					<a class="avatar text
+					{{if .Issue.HasMerged}}purple
+					{{else if .Issue.IsClosed}}grey
+					{{else if .IsPullReuqestBroken}}red
+					{{else if .Issue.IsChecking}}yellow
+					{{else if .Issue.CanAutoMerge}}green
+					{{else}}red{{end}}"><span class="mega-octicon octicon-git-merge"></span></a>
+					<div class="content">
+						<div class="ui merge segment">
+							{{if .Issue.HasMerged}}
+								<div class="item text purple">
+									{{$.i18n.Tr "repo.pulls.has_merged"}}
+								</div>
+							{{else if .Issue.IsClosed}}
+								<div class="item text grey">
+									{{$.i18n.Tr "repo.pulls.reopen_to_merge"}}
+								</div>
+							{{else if .IsPullReuqestBroken}}
+								<div class="item text red">
+									<span class="octicon octicon-x"></span>
+									{{$.i18n.Tr "repo.pulls.data_broken"}}
+								</div>
+							{{else if .Issue.IsChecking}}
+								<div class="item text yellow">
+									<span class="octicon octicon-sync"></span>
+									{{$.i18n.Tr "repo.pulls.is_checking"}}
+								</div>
+							{{else if .Issue.CanAutoMerge}}
+								<div class="item text green">
+									<span class="octicon octicon-check"></span>
+									{{$.i18n.Tr "repo.pulls.can_auto_merge_desc"}}
+								</div>
+								{{if .IsRepositoryAdmin}}
+									<div class="ui divider"></div>
+									<div>
+										<form class="ui form" action="{{.Link}}/merge" method="post">
+											{{.CsrfTokenHtml}}
+											<button class="ui green button">
+												<span class="octicon octicon-git-merge"></span> {{$.i18n.Tr "repo.pulls.merge_pull_request"}}
+											</button>
+										</form>
+									</div>
+								{{end}}
+							{{else}}
+								<div class="item text red">
+									<span class="octicon octicon-x"></span>
+									{{$.i18n.Tr "repo.pulls.cannot_auto_merge_desc"}}
+								</div>
+								<div class="item text grey">
+									<span class="octicon octicon-info"></span>
+									{{$.i18n.Tr "repo.pulls.cannot_auto_merge_helper"}}
+								</div>
+							{{end}}
+						</div>
+					</div>
+				</div>
+			{{end}}
 
 			{{if .IsSigned}}
-		  <div class="comment form">
-		    <a class="avatar" href="{{.SignedUser.HomeLink}}">
-		      <img src="{{.SignedUser.AvatarLink}}">
-		    </a>
-		    <div class="content">
-			    <form class="ui segment form" id="comment-form" action="{{$.RepoLink}}/issues/{{.Issue.Index}}/comments" method="post">
-						{{template "repo/issue/comment_tab" .}}
-						{{.CsrfTokenHtml}}
-						<input id="status" name="status" type="hidden">
-			      <div class="text right">
-			      	{{if and .IsIssueOwner (not .DisableStatusChange)}}
-				      	{{if .Issue.IsClosed}}
-								<div id="status-button" class="ui green basic button" tabindex="6" data-status="{{.i18n.Tr "repo.issues.reopen_issue"}}" data-status-and-comment="{{.i18n.Tr "repo.issues.reopen_comment_issue"}}" data-status-val="reopen">
-									{{.i18n.Tr "repo.issues.reopen_issue"}}
-								</div>
-				      	{{else}}
-								<div id="status-button" class="ui red basic button" tabindex="6" data-status="{{.i18n.Tr "repo.issues.close_issue"}}" data-status-and-comment="{{.i18n.Tr "repo.issues.close_comment_issue"}}" data-status-val="close">
-									{{.i18n.Tr "repo.issues.close_issue"}}
-								</div>
+				<div class="comment form">
+					<a class="avatar" href="{{.SignedUser.HomeLink}}">
+						<img src="{{.SignedUser.AvatarLink}}">
+					</a>
+					<div class="content">
+						<form class="ui segment form" id="comment-form" action="{{$.RepoLink}}/issues/{{.Issue.Index}}/comments" method="post">
+							{{template "repo/issue/comment_tab" .}}
+							{{.CsrfTokenHtml}}
+							<input id="status" name="status" type="hidden">
+							<div class="text right">
+								{{if and .IsIssueOwner (not .DisableStatusChange)}}
+									{{if .Issue.IsClosed}}
+										<div id="status-button" class="ui green basic button" tabindex="6" data-status="{{.i18n.Tr "repo.issues.reopen_issue"}}" data-status-and-comment="{{.i18n.Tr "repo.issues.reopen_comment_issue"}}" data-status-val="reopen">
+											{{.i18n.Tr "repo.issues.reopen_issue"}}
+										</div>
+									{{else}}
+										<div id="status-button" class="ui red basic button" tabindex="6" data-status="{{.i18n.Tr "repo.issues.close_issue"}}" data-status-and-comment="{{.i18n.Tr "repo.issues.close_comment_issue"}}" data-status-val="close">
+											{{.i18n.Tr "repo.issues.close_issue"}}
+										</div>
+									{{end}}
 								{{end}}
-							{{end}}
-							<button class="ui green button" tabindex="5">
-								{{.i18n.Tr "repo.issues.create_comment"}}
-							</button>
-			      </div>
-			    </form>
-		    </div>
-		  </div>
-		  {{else}}
-		  <div class="ui warning message">
-		    <a href="{{AppSubUrl}}/user/sign_up" class="ui green button">{{.i18n.Tr "repo.issues.sign_up_for_free"}}</a>
-		    {{.i18n.Tr "repo.issues.sign_in_require_desc" .SignInLink | Safe}}
-		  </div>
-		  {{end}}
-  	</ui>
+								<button class="ui green button" tabindex="5">
+									{{.i18n.Tr "repo.issues.create_comment"}}
+								</button>
+							</div>
+						</form>
+					</div>
+				</div>
+			{{else}}
+				<div class="ui warning message">
+					<a href="{{AppSubUrl}}/user/sign_up" class="ui green button">{{.i18n.Tr "repo.issues.sign_up_for_free"}}</a>
+					{{.i18n.Tr "repo.issues.sign_in_require_desc" .SignInLink | Safe}}
+				</div>
+			{{end}}
+		</ui>
 	</div>
 
 	<div class="four wide column">
@@ -238,18 +236,18 @@
 					<strong>{{.i18n.Tr "repo.issues.new.labels"}}</strong>
 					<span class="octicon octicon-gear"></span>
 				</span>
-        <div class="filter menu" data-action="update" data-update-url="{{$.RepoLink}}/issues/{{$.Issue.Index}}/label">
-        	<div class="no-select item">{{.i18n.Tr "repo.issues.new.clear_labels"}}</div>
-        	{{range .Labels}}
-        	<a class="{{if .IsChecked}}checked{{end}} item" href="#" data-id="{{.ID}}" data-id-selector="#label_{{.ID}}"><span class="octicon {{if .IsChecked}}octicon-check{{end}}"></span><span class="label color" style="background-color: {{.Color}}"></span> {{.Name}}</a>
-          {{end}}
+				<div class="filter menu" data-action="update" data-update-url="{{$.RepoLink}}/issues/{{$.Issue.Index}}/label">
+					<div class="no-select item">{{.i18n.Tr "repo.issues.new.clear_labels"}}</div>
+					{{range .Labels}}
+						<a class="{{if .IsChecked}}checked{{end}} item" href="#" data-id="{{.ID}}" data-id-selector="#label_{{.ID}}"><span class="octicon {{if .IsChecked}}octicon-check{{end}}"></span><span class="label color" style="background-color: {{.Color}}"></span> {{.Name}}</a>
+					{{end}}
 				</div>
 			</div>
 			<div class="ui labels list">
 				<span class="no-select item {{if .HasSelectedLabel}}hide{{end}}">{{.i18n.Tr "repo.issues.new.no_label"}}</span>
-      	{{range .Labels}}
-      	<a class="{{if not .IsChecked}}hide{{end}} item" id="label_{{.ID}}" href="{{$.RepoLink}}/issues?labels={{.ID}}"><span class="label color" style="background-color: {{.Color}}"></span> <span class="text">{{.Name}}</span></a>
-        {{end}}
+				{{range .Labels}}
+					<a class="{{if not .IsChecked}}hide{{end}} item" id="label_{{.ID}}" href="{{$.RepoLink}}/issues?labels={{.ID}}"><span class="label color" style="background-color: {{.Color}}"></span> <span class="text">{{.Name}}</span></a>
+				{{end}}
 			</div>
 
 			<div class="ui divider"></div>
@@ -259,35 +257,35 @@
 					<strong>{{.i18n.Tr "repo.issues.new.milestone"}}</strong>
 					<span class="octicon octicon-gear"></span>
 				</span>
-        <div class="menu" data-action="update" data-update-url="{{$.RepoLink}}/issues/{{$.Issue.Index}}/milestone">
-        	<div class="no-select item">{{.i18n.Tr "repo.issues.new.clear_milestone"}}</div>
-        	{{if .OpenMilestones}}
-        	<div class="divider"></div>
-        	<div class="header">
-    	      <i class="octicon octicon-milestone"></i>
-    	      {{.i18n.Tr "repo.issues.new.open_milestone"}}
-    	    </div>
-        	{{range .OpenMilestones}}
-        	<div class="item" data-id="{{.ID}}" data-href="{{$.RepoLink}}/issues?milestone={{.ID}}"> {{.Name}}</div>
-          {{end}}
-    	    {{end}}
-    	    {{if .ClosedMilestones}}
-        	<div class="divider"></div>
-        	<div class="header">
-    	      <i class="octicon octicon-milestone"></i>
-    	      {{.i18n.Tr "repo.issues.new.closed_milestone"}}
-    	    </div>
-        	{{range .ClosedMilestones}}
-        	<a class="item" data-id="{{.ID}}" data-href="{{$.RepoLink}}/issues?milestone={{.ID}}"> {{.Name}}</a>
-          {{end}}
-        	{{end}}
+				<div class="menu" data-action="update" data-update-url="{{$.RepoLink}}/issues/{{$.Issue.Index}}/milestone">
+					<div class="no-select item">{{.i18n.Tr "repo.issues.new.clear_milestone"}}</div>
+					{{if .OpenMilestones}}
+						<div class="divider"></div>
+						<div class="header">
+							<i class="octicon octicon-milestone"></i>
+							{{.i18n.Tr "repo.issues.new.open_milestone"}}
+						</div>
+						{{range .OpenMilestones}}
+							<div class="item" data-id="{{.ID}}" data-href="{{$.RepoLink}}/issues?milestone={{.ID}}"> {{.Name}}</div>
+						{{end}}
+					{{end}}
+					{{if .ClosedMilestones}}
+						<div class="divider"></div>
+						<div class="header">
+							<i class="octicon octicon-milestone"></i>
+							{{.i18n.Tr "repo.issues.new.closed_milestone"}}
+						</div>
+						{{range .ClosedMilestones}}
+							<a class="item" data-id="{{.ID}}" data-href="{{$.RepoLink}}/issues?milestone={{.ID}}"> {{.Name}}</a>
+						{{end}}
+					{{end}}
 				</div>
 			</div>
 			<div class="ui select-milestone list">
 				<span class="no-select item {{if .Issue.Milestone}}hide{{end}}">{{.i18n.Tr "repo.issues.new.no_milestone"}}</span>
 				<div class="selected">
 					{{if .Issue.Milestone}}
-					<a class="item" href="{{.RepoLink}}/issues?milestone={{.Issue.Milestone.ID}}"> {{.Issue.Milestone.Name}}</a>
+						<a class="item" href="{{.RepoLink}}/issues?milestone={{.Issue.Milestone.ID}}"> {{.Issue.Milestone.Name}}</a>
 					{{end}}
 				</div>
 			</div>
@@ -300,18 +298,18 @@
 					<strong>{{.i18n.Tr "repo.issues.new.assignee"}}</strong>
 					<span class="octicon octicon-gear"></span>
 				</span>
-        <div class="menu" data-action="update" data-update-url="{{$.RepoLink}}/issues/{{$.Issue.Index}}/assignee">
-        	<div class="no-select item">{{.i18n.Tr "repo.issues.new.clear_assignee"}}</div>
-        	{{range .Assignees}}
-        	<div class="item" data-id="{{.Id}}" data-href="{{$.RepoLink}}/issues?assignee={{.Id}}" data-avatar="{{.AvatarLink}}"><img src="{{.AvatarLink}}"> {{.Name}}</div>
-          {{end}}
+				<div class="menu" data-action="update" data-update-url="{{$.RepoLink}}/issues/{{$.Issue.Index}}/assignee">
+					<div class="no-select item">{{.i18n.Tr "repo.issues.new.clear_assignee"}}</div>
+					{{range .Assignees}}
+						<div class="item" data-id="{{.Id}}" data-href="{{$.RepoLink}}/issues?assignee={{.Id}}" data-avatar="{{.AvatarLink}}"><img src="{{.AvatarLink}}"> {{.Name}}</div>
+					{{end}}
 				</div>
 			</div>
 			<div class="ui select-assignee list">
 				<span class="no-select item {{if .Issue.Assignee}}hide{{end}}">{{.i18n.Tr "repo.issues.new.no_assignee"}}</span>
 				<div class="selected">
 					{{if .Issue.Assignee}}
-					<a class="item" href="{{$.RepoLink}}/issues?assignee={{.Issue.Assignee.Id}}"><img class="ui avatar image" src="{{.Issue.Assignee.AvatarLink}}"> {{.Issue.Assignee.Name}}</a>
+						<a class="item" href="{{$.RepoLink}}/issues?assignee={{.Issue.Assignee.Id}}"><img class="ui avatar image" src="{{.Issue.Assignee.AvatarLink}}"> {{.Issue.Assignee.Name}}</a>
 					{{end}}
 				</div>
 			</div>
@@ -322,19 +320,19 @@
 <div class="hide" id="edit-content-form">
 	<div class="ui comment form">
 		<div class="ui top attached tabular menu">
-		  <a class="active write item">{{$.i18n.Tr "repo.release.write"}}</a>
-		  <a class="preview item" data-url="{{AppSubUrl}}/api/v1/markdown" data-context="{{$.RepoLink}}">{{$.i18n.Tr "repo.release.preview"}}</a>
+			<a class="active write item">{{$.i18n.Tr "repo.release.write"}}</a>
+			<a class="preview item" data-url="{{AppSubUrl}}/api/v1/markdown" data-context="{{$.RepoLink}}">{{$.i18n.Tr "repo.release.preview"}}</a>
 		</div>
 		<div class="ui bottom attached active write tab segment">
-		  <textarea tabindex="1" id="content" name="content"></textarea>
+			<textarea tabindex="1" id="content" name="content"></textarea>
 		</div>
 		<div class="ui bottom attached tab preview segment markdown emojify">
-		  {{$.i18n.Tr "repo.release.loading"}}
+			{{$.i18n.Tr "repo.release.loading"}}
 		</div>
-    <div class="text right edit buttons">
+		<div class="text right edit buttons">
 			<div class="ui basic blue cancel button" tabindex="3">{{.i18n.Tr "repo.issues.cancel"}}</div>
 			<div class="ui green save button" tabindex="2">{{.i18n.Tr "repo.issues.save"}}</div>
-    </div>
+		</div>
 	</div>
 </div>
 
