@@ -895,12 +895,21 @@ pre.raw {
 .ui .warning.segment {
   border-color: #F0C36D;
 }
-.ui .info.header {
-  background-color: #d9edf7 !important;
-  border-color: #85c5e5;
-}
 .ui .info.segment {
   border-color: #85c5e5;
+}
+.ui .info.segment.top {
+  background-color: #d9edf7 !important;
+}
+.ui .info.segment.top h3,
+.ui .info.segment.top h4 {
+  margin-top: 0;
+}
+.ui .info.segment.top h3:last-child {
+  margin-top: 4px;
+}
+.ui .info.segment.top > :last-child {
+  margin-bottom: 0;
 }
 .ui .normal.header {
   font-weight: normal;
