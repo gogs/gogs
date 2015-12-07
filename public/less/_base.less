@@ -1,5 +1,5 @@
 @footer-margin: 40px;
- 
+
 body {
 	font-family: 'Helvetica Neue',Arial,Helvetica,sans-serif,'微软雅黑';
 	background-color: #FAFAFA;
@@ -10,20 +10,20 @@ img {
 pre {
 	font: 12px Consolas, "Liberation Mono", Menlo, Courier, monospace;
 	&.raw {
-  	padding: 7px 12px;
-    margin: 10px 0;
-    background-color: #f8f8f8;
-    border: 1px solid #ddd;
-    border-radius: 3px;
-    font-size: 13px;
-    line-height: 1.5;
-    overflow: auto;
+		padding: 7px 12px;
+		margin: 10px 0;
+		background-color: #f8f8f8;
+		border: 1px solid #ddd;
+		border-radius: 3px;
+		font-size: 13px;
+		line-height: 1.5;
+		overflow: auto;
 	}
 }
 .full.height {
 	padding: 0;
-  margin: 0 0 -@footer-margin*2 0;
-  min-height: 100%;
+	margin: 0 0 -@footer-margin*2 0;
+	min-height: 100%;
 }
 .following.bar {
 	z-index: 900;
@@ -65,24 +65,24 @@ pre {
 		margin-right: 0;
 	}
 	.searchbox {
-  	background-color: rgb(244, 244, 244) !important;
-  	&:focus {
-  		background-color: rgb(233, 233, 233) !important;
-  	}
+		background-color: rgb(244, 244, 244) !important;
+		&:focus {
+			background-color: rgb(233, 233, 233) !important;
+		}
 	}
 	.text .octicon {
-    width: 16px;
-    text-align: center;
-  }
-  .right.menu {
-  	.menu {
-  		left: auto;
-  		right: 0;
-  	}
+		width: 16px;
+		text-align: center;
+	}
+	.right.menu {
+		.menu {
+			left: auto;
+			right: 0;
+		}
 		.dropdown .menu {
 			margin-top: 0;
 		}
-  }
+	}
 }
 
 .ui {
@@ -96,21 +96,21 @@ pre {
 	.text {
 		&.red {
 			color: #d95c5c !important;
-	    a {
-	    	color: #d95c5c !important;
-	    	&:hover {
-	    		color: #E67777 !important;
-	    	}
-	    }
+			a {
+				color: #d95c5c !important;
+				&:hover {
+					color: #E67777 !important;
+				}
+			}
 		}
 		&.blue {
 			color: #428bca !important;
-	    a {
-	    	color: #15c !important;
-	    	&:hover {
-	    		color: #428bca !important;
-	    	}
-	    }
+			a {
+				color: #15c !important;
+				&:hover {
+					color: #428bca !important;
+				}
+			}
 		}
 		&.black {
 			color: #444;
@@ -119,13 +119,13 @@ pre {
 			}
 		}
 		&.grey {
-	    color: #767676 !important;
-	    a {
-	    	color: #444 !important;
-	    	&:hover {
-	    		color: #000 !important;
-	    	}
-	    }
+			color: #767676 !important;
+			a {
+				color: #444 !important;
+				&:hover {
+					color: #000 !important;
+				}
+			}
 		}
 		&.light.grey {
 			color: #888 !important;
@@ -189,10 +189,10 @@ pre {
 	.warning {
 		&.header {
 			background-color: #F9EDBE !important;
-	    border-color: #F0C36D;
+			border-color: #F0C36D;
 		}
 		&.segment {
-	    border-color: #F0C36D;
+			border-color: #F0C36D;
 		}
 	}
 	.info {
@@ -269,9 +269,9 @@ pre {
 				font-weight: 700;
 			}
 			&:hover {
-		    background: rgba(0,0,0,.05);
-		    color: rgba(0,0,0,.8);
-		    z-index: 13;
+				background: rgba(0,0,0,.05);
+				color: rgba(0,0,0,.8);
+				z-index: 13;
 			}
 		}
 	}
@@ -279,7 +279,7 @@ pre {
 
 .scrolling.menu {
 	.item.selected {
-	  font-weight: 700 !important;
+		font-weight: 700 !important;
 	}
 }
 
@@ -295,8 +295,8 @@ footer {
 		padding-top: 10px;
 		.fa {
 			width: 16px;
-	  	text-align: center;
-	  	color: #428bca;
+			text-align: center;
+			color: #428bca;
 		}
 		.links >* {
 			border-left: 1px solid #d6d6d6;
@@ -318,11 +318,11 @@ footer {
 
 .generate-img(16);
 .generate-img(@n, @i: 1) when (@i =< @n) {
-  .img-@{i} {
-    width: (2px * @i) !important;
-    height: (2px * @i) !important;
-  }
-  .generate-img(@n, (@i + 1));
+	.img-@{i} {
+		width: (2px * @i) !important;
+		height: (2px * @i) !important;
+	}
+	.generate-img(@n, (@i + 1));
 }
 
 // ensure Semantic UI .icon font family and 14px size does not apply to .icon.octicon
@@ -335,23 +335,23 @@ footer {
 
 // Accessibility
 .sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  border: 0;
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	padding: 0;
+	margin: -1px;
+	overflow: hidden;
+	clip: rect(0, 0, 0, 0);
+	border: 0;
 }
 .sr-only-focusable:active,
 .sr-only-focusable:focus {
-  position: static;
-  width: auto;
-  height: auto;
-  margin: 0;
-  overflow: visible;
-  clip: auto;
+	position: static;
+	width: auto;
+	height: auto;
+	margin: 0;
+	overflow: visible;
+	clip: auto;
 }
 
 @media only screen and (max-width: 991px) and (min-width: 768px) {
