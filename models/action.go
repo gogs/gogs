@@ -479,7 +479,7 @@ func CommitRepoAction(
 			commits[i] = &api.PayloadCommit{
 				ID:      cmt.Sha1,
 				Message: cmt.Message,
-				URL:     fmt.Sprintf("%s/commit/%s", repo.RepoLink(), cmt.Sha1),
+				URL:     fmt.Sprintf("%s/commit/%s", repo.FullRepoLink(), cmt.Sha1),
 				Author: &api.PayloadAuthor{
 					Name:     cmt.AuthorName,
 					Email:    cmt.AuthorEmail,

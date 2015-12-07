@@ -46,7 +46,7 @@ The goal of this project is to make the easiest, fastest, and most painless way 
 - Account/Organization/Repository management
 - Repository/Organization webhooks (including Slack)
 - Repository Git hooks/deploy keys
-- Repository issues and pull requests
+- Repository issues, pull requests and wiki
 - Add/Remove repository collaborators
 - Gravatar and custom source
 - Mail service

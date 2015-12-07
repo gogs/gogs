@@ -305,6 +305,10 @@ func (repo *Repository) RepoLink() string {
 	return setting.AppSubUrl + "/" + repo.MustOwner().Name + "/" + repo.Name
 }
 
+func (repo *Repository) FullRepoLink() string {
+	return setting.AppUrl + repo.MustOwner().Name + "/" + repo.Name
+}
+
 func (repo *Repository) HasAccess(u *User) bool {
 	has, _ := HasAccess(u, repo, ACCESS_MODE_READ)
 	return has
@@ -387,7 +391,7 @@ func (repo *Repository) ComposePayload() *api.PayloadRepo {
 	return &api.PayloadRepo{
 		ID:          repo.ID,
 		Name:        repo.LowerName,
-		URL:         repo.RepoLink(),
+		URL:         repo.FullRepoLink(),
 		SSHURL:      cl.SSH,
 		CloneURL:    cl.HTTPS,
 		Description: repo.Description,
