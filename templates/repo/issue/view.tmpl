@@ -6,21 +6,21 @@
 			{{template "repo/issue/navbar" .}}
 			<div class="ui right">
 				{{if .PageIsIssueList}}
-				<a class="ui green button" href="{{.RepoLink}}/issues/new">{{.i18n.Tr "repo.issues.new"}}</a>
+					<a class="ui green button" href="{{.RepoLink}}/issues/new">{{.i18n.Tr "repo.issues.new"}}</a>
 				{{else}}
-				<a class="ui green button {{if not .HasForkedRepo}}disabled{{end}}" href="{{.RepoLink}}/compare/{{.BranchName}}...{{.SignedUserName}}:{{.BranchName}}">{{.i18n.Tr "repo.pulls.new"}}</a>
+					<a class="ui green button {{if not .HasForkedRepo}}disabled{{end}}" href="{{.RepoLink}}/compare/{{.BranchName}}...{{.SignedUserName}}:{{.BranchName}}">{{.i18n.Tr "repo.pulls.new"}}</a>
 				{{end}}
 			</div>
 		</div>
 		<div class="ui divider"></div>
 		{{if .Issue.IsPull}}
-		{{template "repo/issue/view_title" .}}
-		{{template "repo/pulls/tab_menu" .}}
-	  <div class="ui bottom attached tab pull segment active" data-tab="request-{{.ID}}">
-	  	{{template "repo/issue/view_content" .}}
-	  </div>
+			{{template "repo/issue/view_title" .}}
+			{{template "repo/pulls/tab_menu" .}}
+			<div class="ui bottom attached tab pull segment active" data-tab="request-{{.ID}}">
+				{{template "repo/issue/view_content" .}}
+			</div>
 		{{else}}
-		{{template "repo/issue/view_content" .}}
+			{{template "repo/issue/view_content" .}}
 		{{end}}
 	</div>
 </div>
