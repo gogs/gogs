@@ -17,6 +17,9 @@ build: $(GENERATED)
 	go install -ldflags '$(LDFLAGS)' -tags '$(TAGS)'
 	cp '$(GOPATH)/bin/gogs' .
 
+run: build
+	./gogs web
+
 govet:
 	go tool vet -composites=false -methods=false -structtags=false .
 
