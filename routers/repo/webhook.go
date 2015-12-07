@@ -348,7 +348,7 @@ func TestWebhook(ctx *middleware.Context) {
 			{
 				ID:      ctx.Repo.CommitID,
 				Message: ctx.Repo.Commit.Message(),
-				URL:     ctx.Repo.RepoLink + "/commit/" + ctx.Repo.CommitID,
+				URL:     ctx.Repo.Repository.FullRepoLink() + "/commit/" + ctx.Repo.CommitID,
 				Author: &api.PayloadAuthor{
 					Name:  ctx.Repo.Commit.Author.Name,
 					Email: ctx.Repo.Commit.Author.Email,
@@ -356,6 +356,11 @@ func TestWebhook(ctx *middleware.Context) {
 			},
 		},
 		Repo: ctx.Repo.Repository.ComposePayload(),
+		Pusher: &api.PayloadAuthor{
+			Name:     ctx.User.Name,
+			Email:    ctx.User.Email,
+			UserName: ctx.User.Name,
+		},
 		Sender: &api.PayloadUser{
 			UserName:  ctx.User.Name,
 			ID:        ctx.User.Id,
