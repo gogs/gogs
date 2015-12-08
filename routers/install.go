@@ -332,15 +332,16 @@ func InstallPost(ctx *middleware.Context, form auth.InstallForm) {
 
 	GlobalInit()
 
-	// Create admin account.
+	// Create admin account
 	if len(form.AdminName) > 0 {
-		if err := models.CreateUser(&models.User{
+		u := &models.User{
 			Name:     form.AdminName,
 			Email:    form.AdminEmail,
 			Passwd:   form.AdminPasswd,
 			IsAdmin:  true,
 			IsActive: true,
-		}); err != nil {
+		}
+		if err := models.CreateUser(u); err != nil {
 			if !models.IsErrUserAlreadyExist(err) {
 				setting.InstallLock = false
 				ctx.Data["Err_AdminName"] = true
@@ -349,7 +350,12 @@ func InstallPost(ctx *middleware.Context, form auth.InstallForm) {
 				return
 			}
 			log.Info("Admin account already exist")
+			u, _ = models.GetUserByName(u.Name)
 		}
+
+		// Auto-login for admin
+		ctx.Session.Set("uid", u.Id)
+		ctx.Session.Set("uname", u.Name)
 	}
 
 	log.Info("First-time run install finished!")
