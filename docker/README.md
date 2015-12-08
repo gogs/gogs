@@ -1,6 +1,6 @@
 # Docker for Gogs
 
-Visit [Docker Hub](https://hub.docker.com/r/gogs/gogs/) see all available tags.
+Visit [Docker Hub](https://hub.docker.com/r/gogs/gogs/) or [QUAY](https://quay.io/repository/gogs/gogs) see all available tags.
 
 ## Usage
 
