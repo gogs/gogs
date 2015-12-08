@@ -3,67 +3,67 @@
 	<div class="ui middle very relaxed page grid">
 		<div class="column">
 			<form class="ui form" action="{{.Link}}" method="post">
-		  	{{.CsrfTokenHtml}}
+				{{.CsrfTokenHtml}}
 				<h3 class="ui top attached header">
-				  {{.i18n.Tr "new_fork"}}
+					{{.i18n.Tr "new_fork"}}
 				</h3>
 				<div class="ui attached segment">
 					{{template "base/alert" .}}
-			  	<div class="inline required field {{if .Err_Owner}}error{{end}}">
-	  	      <label>{{.i18n.Tr "repo.owner"}}</label>
-			      <div class="ui selection owner dropdown">
-			        <input type="hidden" id="uid" name="uid" value="{{.ContextUser.Id}}" required>
-			        <span class="text">
-			        	<img class="ui mini image" src="{{.ContextUser.AvatarLink}}">
-            		{{.ContextUser.ShortName 20}}
-            	</span>
-			        <i class="dropdown icon"></i>
-			        <div class="menu">
-			        	<div class="item" data-value="{{.SignedUser.Id}}">
-				        	<img class="ui mini image" src="{{.SignedUser.AvatarLink}}">
-	            		{{.SignedUser.ShortName 20}}
-			        	</div>
-			        	{{range .Orgs}}
-			        	{{if .IsOwnedBy $.SignedUser.Id}}
-			        	<div class="item" data-value="{{.Id}}">
-				        	<img class="ui mini image" src="{{.AvatarLink}}">
-	            		{{.ShortName 20}}
-			        	</div>
-			        	{{end}}
-			        	{{end}}
-			        </div>
-			      </div>
-		      </div>
+					<div class="inline required field {{if .Err_Owner}}error{{end}}">
+						<label>{{.i18n.Tr "repo.owner"}}</label>
+						<div class="ui selection owner dropdown">
+							<input type="hidden" id="uid" name="uid" value="{{.ContextUser.Id}}" required>
+							<span class="text">
+								<img class="ui mini image" src="{{.ContextUser.AvatarLink}}">
+								{{.ContextUser.ShortName 20}}
+							</span>
+							<i class="dropdown icon"></i>
+							<div class="menu">
+								<div class="item" data-value="{{.SignedUser.Id}}">
+									<img class="ui mini image" src="{{.SignedUser.AvatarLink}}">
+									{{.SignedUser.ShortName 20}}
+								</div>
+								{{range .Orgs}}
+									{{if .IsOwnedBy $.SignedUser.Id}}
+										<div class="item" data-value="{{.Id}}">
+											<img class="ui mini image" src="{{.AvatarLink}}">
+											{{.ShortName 20}}
+										</div>
+									{{end}}
+								{{end}}
+							</div>
+						</div>
+					</div>
 
-			  	<div class="inline field">
-	  	      <label>{{.i18n.Tr "repo.fork_from"}}</label>
+					<div class="inline field">
+						<label>{{.i18n.Tr "repo.fork_from"}}</label>
 						<a href="{{AppSubUrl}}/{{.ForkFrom}}">{{.ForkFrom}}</a>
-			  	</div>
-			  	<div class="inline required field {{if .Err_RepoName}}error{{end}}">
-			  		<label for="repo_name">{{.i18n.Tr "repo.repo_name"}}</label>
-			  		<input id="repo_name" name="repo_name" value="{{.repo_name}}" required>
-			  	</div>
-			  	<div class="inline field">
-			  		<label>{{.i18n.Tr "repo.visibility"}}</label>
-			  		<div class="ui read-only checkbox">
-		  		    <input type="checkbox" {{if .IsPrivate}}checked{{end}}>
-		  		    <label>{{.i18n.Tr "repo.visiblity_helper" | Safe}}</label>
-		  		  </div>
-            <span class="help">{{.i18n.Tr "repo.fork_visiblity_helper"}}</span>
-			  	</div>
-			  	<div class="inline field {{if .Err_Description}}error{{end}}">
-			  		<label for="description">{{.i18n.Tr "repo.repo_desc"}}</label>
-			  		<textarea id="description" name="description">{{.description}}</textarea>
-			  	</div>
+					</div>
+					<div class="inline required field {{if .Err_RepoName}}error{{end}}">
+						<label for="repo_name">{{.i18n.Tr "repo.repo_name"}}</label>
+						<input id="repo_name" name="repo_name" value="{{.repo_name}}" required>
+					</div>
+					<div class="inline field">
+						<label>{{.i18n.Tr "repo.visibility"}}</label>
+						<div class="ui read-only checkbox">
+							<input type="checkbox" {{if .IsPrivate}}checked{{end}}>
+							<label>{{.i18n.Tr "repo.visiblity_helper" | Safe}}</label>
+						</div>
+						<span class="help">{{.i18n.Tr "repo.fork_visiblity_helper"}}</span>
+					</div>
+					<div class="inline field {{if .Err_Description}}error{{end}}">
+						<label for="description">{{.i18n.Tr "repo.repo_desc"}}</label>
+						<textarea id="description" name="description">{{.description}}</textarea>
+					</div>
 
-			  	<div class="inline field">
-			  		<label></label>
-				  	<button class="ui green button">
-				  		{{.i18n.Tr "repo.fork_repo"}}
-				  	</button>
-				  	<a class="ui button" href="{{AppSubUrl}}/{{.ForkFrom}}">{{.i18n.Tr "cancel"}}</a>
-			  	</div>
-  	    </div>
+					<div class="inline field">
+						<label></label>
+						<button class="ui green button">
+							{{.i18n.Tr "repo.fork_repo"}}
+						</button>
+						<a class="ui button" href="{{AppSubUrl}}/{{.ForkFrom}}">{{.i18n.Tr "cancel"}}</a>
+					</div>
+				</div>
 			</form>
 		</div>
 	</div>
