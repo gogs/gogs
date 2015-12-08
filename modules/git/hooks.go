@@ -27,6 +27,7 @@ var hookNames = []string{
 	"post-checkout",
 	"post-merge",
 	"pre-push",
+	"pre-receive",
 	// "update",
 	"post-receive",
 	"post-update",
