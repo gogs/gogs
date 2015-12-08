@@ -509,7 +509,10 @@ func newLogService() {
 			LogConfigs[i] = fmt.Sprintf(`{"level":%s}`, level)
 		case "file":
 			logPath := sec.Key("FILE_NAME").MustString(path.Join(LogRootPath, "gogs.log"))
-			os.MkdirAll(path.Dir(logPath), os.ModePerm)
+			if err = os.MkdirAll(path.Dir(logPath), os.ModePerm); err != nil {
+				panic(err.Error())
+			}
+
 			LogConfigs[i] = fmt.Sprintf(
 				`{"level":%s,"filename":"%s","rotate":%v,"maxlines":%d,"maxsize":%d,"daily":%v,"maxdays":%d}`, level,
 				logPath,
