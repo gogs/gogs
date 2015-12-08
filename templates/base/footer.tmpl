@@ -1,3 +1,8 @@
+{{/*
+<html>
+<body>
+	<div>
+*/}}
 	</div>
 	<footer>
 		<div class="ui container">
@@ -6,19 +11,19 @@
 			</div>
 			<div class="ui right links">
 				{{if .ShowFooterBranding}}
-				<a target="_blank" href="https://github.com/gogits/gogs"><i class="fa fa-github-square"></i><span class="sr-only">GitHub</span></a>
-				<a target="_blank" href="https://twitter.com/gogitservice"><i class="fa fa-twitter"></i><span class="sr-only">Twitter</span></a>
-				<a target="_blank" href="http://weibo.com/gogschina"><i class="fa fa-weibo"></i><span class="sr-only">Sina Weibo</span></a>
+					<a target="_blank" href="https://github.com/gogits/gogs"><i class="fa fa-github-square"></i><span class="sr-only">GitHub</span></a>
+					<a target="_blank" href="https://twitter.com/gogitservice"><i class="fa fa-twitter"></i><span class="sr-only">Twitter</span></a>
+					<a target="_blank" href="http://weibo.com/gogschina"><i class="fa fa-weibo"></i><span class="sr-only">Sina Weibo</span></a>
 				{{end}}
 				<div class="ui language bottom pointing slide up dropdown link item">
-          <i class="world icon"></i>
-          <div class="text">{{.LangName}}</div>
-          	<div class="menu">
-          		{{range .AllLangs}}
-  						<a class="item {{if eq $.Lang .Lang}}active selected{{end}}" href="{{if eq $.Lang .Lang}}#{{else}}{{$.Link}}?lang={{.Lang}}{{end}}">{{.Name}}</a>
-  						{{end}}
-						</div>
-        </div>
+					<i class="world icon"></i>
+					<div class="text">{{.LangName}}</div>
+					<div class="menu">
+						{{range .AllLangs}}
+							<a class="item {{if eq $.Lang .Lang}}active selected{{end}}" href="{{if eq $.Lang .Lang}}#{{else}}{{$.Link}}?lang={{.Lang}}{{end}}">{{.Name}}</a>
+						{{end}}
+					</div>
+				</div>
 				<a target="_blank" href="http://gogs.io">{{.i18n.Tr "website"}}</a>
 				{{if (or .ShowFooterVersion .PageIsAdmin)}}<span class="version">{{GoVer}}</span>{{end}}
 			</div>
@@ -26,24 +31,24 @@
 	</footer>
 </body>
 
-	<!-- Third-party libraries -->
-	{{if .RequireHighlightJS}}
+<!-- Third-party libraries -->
+{{if .RequireHighlightJS}}
 	<link rel="stylesheet" href="{{AppSubUrl}}/css/highlight-8.9.1/github.css">
 	<script src="{{AppSubUrl}}/js/libs/highlight-8.9.1.pack.js"></script>
-	{{end}}
-	{{if .RequireMinicolors}}
+{{end}}
+{{if .RequireMinicolors}}
 	<link rel="stylesheet" href="{{AppSubUrl}}/css/jquery.minicolors-2.1.12.css">
 	<script src="{{AppSubUrl}}/js/libs/jquery.minicolors-2.1.12.min.js"></script>
-	{{end}}
-	{{if .RequireDatetimepicker}}
+{{end}}
+{{if .RequireDatetimepicker}}
 	<link rel="stylesheet" href="{{AppSubUrl}}/css/jquery.datetimepicker-2.4.5.css">
 	<script src="{{AppSubUrl}}/js/libs/jquery.datetimepicker-2.4.5.js"></script>
-	{{end}}
-	{{if .RequireDropzone}}
+{{end}}
+{{if .RequireDropzone}}
 	<link rel="stylesheet" href="{{AppSubUrl}}/css/dropzone-4.2.0.css">
 	<script src="{{AppSubUrl}}/js/libs/dropzone-4.2.0.js"></script>
-	{{end}}
-	<script src="{{AppSubUrl}}/js/libs/emojify-1.1.0.min.js"></script>
-	<script src="{{AppSubUrl}}/js/libs/clipboard-1.5.5.min.js"></script>
+{{end}}
+<script src="{{AppSubUrl}}/js/libs/emojify-1.1.0.min.js"></script>
+<script src="{{AppSubUrl}}/js/libs/clipboard-1.5.5.min.js"></script>
 	
 </html>

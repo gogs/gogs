@@ -4,61 +4,61 @@
 	<div class="ui container">
 		<div class="sixteen wide column page grid">
 			<h2 class="ui header">
-			  {{.i18n.Tr "repo.pulls.compare_changes"}}
-			  <div class="sub header">{{.i18n.Tr "repo.pulls.compare_changes_desc"}}</div>
+				{{.i18n.Tr "repo.pulls.compare_changes"}}
+				<div class="sub header">{{.i18n.Tr "repo.pulls.compare_changes_desc"}}</div>
 			</h2>
 			<div class="ui segment choose branch">
 				<span class="octicon octicon-git-compare"></span>
 				<div class="ui floating filter dropdown" data-no-results="{{.i18n.Tr "repo.pulls.no_results"}}">
 					<div class="ui basic small button">
-				    <span class="text">{{.i18n.Tr "repo.pulls.compare_base"}}: {{$.BaseBranch}}</span>
-					  <i class="dropdown icon"></i>
+						<span class="text">{{.i18n.Tr "repo.pulls.compare_base"}}: {{$.BaseBranch}}</span>
+						<i class="dropdown icon"></i>
 					</div>
-	        <div class="menu">
-		        <div class="ui icon search input">
-	            <i class="filter icon"></i>
-	            <input name="search" placeholder="{{.i18n.Tr "repo.pulls.filter_branch"}}...">
-	          </div>
-	          <div class="scrolling menu">
-		        	{{range .Branches}}
-		          <div class="item {{if eq $.BaseBranch .}}selected{{end}}" data-url="{{$.RepoLink}}/compare/{{.}}...{{$.SignedUser.Name}}:{{$.HeadBranch}}">{{.}}</div>
-		        	{{end}}
-	          </div>
+					<div class="menu">
+						<div class="ui icon search input">
+							<i class="filter icon"></i>
+							<input name="search" placeholder="{{.i18n.Tr "repo.pulls.filter_branch"}}...">
+						</div>
+						<div class="scrolling menu">
+							{{range .Branches}}
+								<div class="item {{if eq $.BaseBranch .}}selected{{end}}" data-url="{{$.RepoLink}}/compare/{{.}}...{{$.SignedUser.Name}}:{{$.HeadBranch}}">{{.}}</div>
+							{{end}}
+						</div>
 					</div>
-			 	</div>
-			 	...
+				</div>
+				...
 				<div class="ui floating filter dropdown">
 					<div class="ui basic small button">
-				    <span class="text">{{.i18n.Tr "repo.pulls.compare_compare"}}: {{$.HeadBranch}}</span>
-					  <i class="dropdown icon"></i>
+						<span class="text">{{.i18n.Tr "repo.pulls.compare_compare"}}: {{$.HeadBranch}}</span>
+						<i class="dropdown icon"></i>
 					</div>
-	        <div class="menu">
-		        <div class="ui icon search input">
-	            <i class="filter icon"></i>
-	            <input name="search" placeholder="{{.i18n.Tr "repo.pulls.filter_branch"}}...">
-	          </div>
-	          <div class="scrolling menu">
-		        	{{range .HeadBranches}}
-		          <div class="{{if eq $.HeadBranch .}}selected{{end}} item" data-url="{{$.RepoLink}}/compare/{{$.BaseBranch}}...{{$.SignedUser.Name}}:{{.}}">{{.}}</div>
-		        	{{end}}
-	        	</div>
+					<div class="menu">
+						<div class="ui icon search input">
+							<i class="filter icon"></i>
+							<input name="search" placeholder="{{.i18n.Tr "repo.pulls.filter_branch"}}...">
+						</div>
+						<div class="scrolling menu">
+							{{range .HeadBranches}}
+								<div class="{{if eq $.HeadBranch .}}selected{{end}} item" data-url="{{$.RepoLink}}/compare/{{$.BaseBranch}}...{{$.SignedUser.Name}}:{{.}}">{{.}}</div>
+							{{end}}
+						</div>
 					</div>
-			 	</div>
+				</div>
 			</div>
 
 			{{if .IsNothingToCompare}}
-			<div class="ui segment">
-				{{.i18n.Tr "repo.pulls.nothing_to_compare"}}
-			</div>
+				<div class="ui segment">
+					{{.i18n.Tr "repo.pulls.nothing_to_compare"}}
+				</div>
 			{{else if .HasPullRequest}}
-			<div class="ui segment">
-				{{.i18n.Tr "repo.pulls.has_pull_request" $.RepoLink $.RepoRelPath .PullRequest.Index | Safe}}
-			</div>
+				<div class="ui segment">
+					{{.i18n.Tr "repo.pulls.has_pull_request" $.RepoLink $.RepoRelPath .PullRequest.Index | Safe}}
+				</div>
 			{{else}}
-			{{template "repo/issue/new_form" .}}
-	    {{template "repo/commits_table" .}}
-	    {{template "repo/diff_box" .}}
-	    {{end}}
+				{{template "repo/issue/new_form" .}}
+				{{template "repo/commits_table" .}}
+				{{template "repo/diff_box" .}}
+			{{end}}
 		</div>
 
 	</div>
