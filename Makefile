@@ -13,6 +13,8 @@ NOW = $(shell date -u '+%Y%m%d%I%M%S')
 
 .PHONY: build pack release bindata clean
 
+.IGNORE: public/css/gogs.css
+
 build: $(GENERATED)
 	go install -ldflags '$(LDFLAGS)' -tags '$(TAGS)'
 	cp '$(GOPATH)/bin/gogs' .
