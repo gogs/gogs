@@ -6,6 +6,9 @@
 			{{if .Repository.DescriptionHtml}}<span class="description">{{.Repository.DescriptionHtml}}</span>{{else}}<span class="no-description text-italic">{{.i18n.Tr "repo.no_desc"}}</span>{{end}}
 			<a class="link" href="{{.Repository.Website}}">{{.Repository.Website}}</a>
 		</p>
+        {{if .LanguageStats}}
+            {{template "repo/language_statistics" .}}
+        {{end}}
 		<div class="ui secondary menu">
 			{{if .CanPullRequest}}
 				<div class="fitted item">
