@@ -12,6 +12,7 @@ import (
 	"runtime"
 
 	"github.com/codegangsta/cli"
+	_ "github.com/kardianos/minwinsvc"
 
 	"github.com/gogits/gogs/cmd"
 	"github.com/gogits/gogs/modules/setting"
