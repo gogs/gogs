@@ -39,14 +39,14 @@
 										</span>
 									</a>
 									<a class="reference column" href="#" data-target="#tag-list">
-										<span class="text {{if .IsTag}}black{{end}}">
+										<span class="text {{if .IsViewTag}}black{{end}}">
 											<i class="reference tags icon"></i> {{.i18n.Tr "repo.tags"}}
 										</span>
 									</a>
 								</div>
 							</div>
 						</div>
-						<div id="branch-list" class="scrolling menu" {{if .IsTag}}style="display: none"{{end}}>
+						<div id="branch-list" class="scrolling menu" {{if .IsViewTag}}style="display: none"{{end}}>
 							{{range .Branches}}
 								<div class="item {{if eq $.BranchName .}}selected{{end}}" data-url="{{$.RepoLink}}/src/{{EscapePound .}}">{{.}}</div>
 							{{end}}
