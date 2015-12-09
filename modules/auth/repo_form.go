@@ -69,9 +69,6 @@ func (f MigrateRepoForm) ParseRemoteAddr(user *models.User) (string, error) {
 		}
 		if len(f.AuthUsername)+len(f.AuthPassword) > 0 {
 			u.User = url.UserPassword(f.AuthUsername, f.AuthPassword)
-		} else {
-			// Fake user name and password to prevent prompt and fail quick.
-			u.User = url.UserPassword("fake_user", "")
 		}
 		remoteAddr = u.String()
 	} else if !user.CanImportLocal() {
