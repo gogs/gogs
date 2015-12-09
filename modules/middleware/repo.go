@@ -129,6 +129,7 @@ func RepoAssignment(args ...bool) macaron.Handler {
 				return
 			}
 			ctx.Data["MirrorInterval"] = ctx.Repo.Mirror.Interval
+			ctx.Data["Mirror"] = ctx.Repo.Mirror
 		}
 
 		ctx.Repo.Repository = repo

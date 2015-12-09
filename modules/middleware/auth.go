@@ -116,6 +116,7 @@ func Toggle(options *ToggleOptions) macaron.Handler {
 				ctx.Handle(500, "AutoSignIn", err)
 				return
 			} else if succeed {
+				log.Trace("Auto-login succeed: %s", ctx.Session.Get("uname"))
 				ctx.Redirect(setting.AppSubUrl + ctx.Req.RequestURI)
 				return
 			}
