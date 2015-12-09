@@ -109,8 +109,13 @@ func SettingsPost(ctx *middleware.Context, form auth.RepoSettingForm) {
 				ctx.Repo.Mirror.Interval = form.Interval
 				ctx.Repo.Mirror.NextUpdate = time.Now().Add(time.Duration(form.Interval) * time.Hour)
 				if err := models.UpdateMirror(ctx.Repo.Mirror); err != nil {
-					log.Error(4, "UpdateMirror: %v", err)
+					ctx.Handle(500, "UpdateMirror", err)
+					return
 				}
+			}
+			if err := ctx.Repo.Mirror.SaveAddress(form.MirrorAddress); err != nil {
+				ctx.Handle(500, "SaveAddress", err)
+				return
 			}
 		}
 

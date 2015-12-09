@@ -234,7 +234,7 @@ func Migrate(ctx *middleware.Context, form auth.MigrateRepoForm) {
 				log.Error(4, "DeleteRepository: %v", errDelete)
 			}
 		}
-		ctx.APIError(500, "MigrateRepository", err)
+		ctx.APIError(500, "MigrateRepository", models.HandleCloneUserCredentials(err.Error(), true))
 		return
 	}
 

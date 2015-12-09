@@ -192,7 +192,7 @@ func MigratePost(ctx *middleware.Context, form auth.MigrateRepoForm) {
 		RemoteAddr:  remoteAddr,
 	})
 	if err == nil {
-		log.Trace("Repository migrated[%d]: %s/%s", repo.ID, ctxUser.Name, form.RepoName)
+		log.Trace("Repository migrated [%d]: %s/%s", repo.ID, ctxUser.Name, form.RepoName)
 		ctx.Redirect(setting.AppSubUrl + "/" + ctxUser.Name + "/" + form.RepoName)
 		return
 	}
@@ -206,11 +206,11 @@ func MigratePost(ctx *middleware.Context, form auth.MigrateRepoForm) {
 	if strings.Contains(err.Error(), "Authentication failed") ||
 		strings.Contains(err.Error(), "could not read Username") {
 		ctx.Data["Err_Auth"] = true
-		ctx.RenderWithErr(ctx.Tr("form.auth_failed", strings.Replace(err.Error(), ":"+form.AuthPassword+"@", ":<password>@", 1)), MIGRATE, &form)
+		ctx.RenderWithErr(ctx.Tr("form.auth_failed", models.HandleCloneUserCredentials(err.Error(), true)), MIGRATE, &form)
 		return
 	} else if strings.Contains(err.Error(), "fatal:") {
 		ctx.Data["Err_CloneAddr"] = true
-		ctx.RenderWithErr(ctx.Tr("repo.migrate.failed", strings.Replace(err.Error(), ":"+form.AuthPassword+"@", ":<password>@", 1)), MIGRATE, &form)
+		ctx.RenderWithErr(ctx.Tr("repo.migrate.failed", models.HandleCloneUserCredentials(err.Error(), true)), MIGRATE, &form)
 		return
 	}
 
