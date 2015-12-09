@@ -301,6 +301,10 @@ func (repo *Repository) RepoPath() string {
 	return repo.repoPath(x)
 }
 
+func (repo *Repository) GitConfigPath() string {
+	return filepath.Join(repo.RepoPath(), "config")
+}
+
 func (repo *Repository) RepoLink() string {
 	return setting.AppSubUrl + "/" + repo.MustOwner().Name + "/" + repo.Name
 }
@@ -345,7 +349,7 @@ func (repo *Repository) LocalCopyPath() string {
 
 func updateLocalCopy(repoPath, localPath string) error {
 	if !com.IsExist(localPath) {
-		if err := git.Clone(repoPath, localPath); err != nil {
+		if err := git.Clone(repoPath, localPath, git.CloneRepoOptions{}); err != nil {
 			return fmt.Errorf("Clone: %v", err)
 		}
 	} else {
@@ -484,6 +488,8 @@ type Mirror struct {
 	Interval   int         // Hour.
 	Updated    time.Time   `xorm:"UPDATED"`
 	NextUpdate time.Time
+
+	address string `xorm:"-"`
 }
 
 func (m *Mirror) AfterSet(colName string, _ xorm.Cell) {
@@ -495,6 +501,61 @@ func (m *Mirror) AfterSet(colName string, _ xorm.Cell) {
 			log.Error(3, "GetRepositoryByID[%d]: %v", m.ID, err)
 		}
 	}
+}
+
+func (m *Mirror) readAddress() {
+	if len(m.address) > 0 {
+		return
+	}
+
+	cfg, err := ini.Load(m.Repo.GitConfigPath())
+	if err != nil {
+		log.Error(4, "Load: %v", err)
+		return
+	}
+	m.address = cfg.Section("remote \"origin\"").Key("url").Value()
+}
+
+// HandleCloneUserCredentials replaces user credentials from HTTP/HTTPS URL
+// with placeholder <credentials>.
+// It will fail for any other forms of clone addresses.
+func HandleCloneUserCredentials(url string, mosaics bool) string {
+	i := strings.Index(url, "@")
+	if i == -1 {
+		return url
+	}
+	start := strings.Index(url, "://")
+	if start == -1 {
+		return url
+	}
+	if mosaics {
+		return url[:start+3] + "<credentials>" + url[i:]
+	}
+	return url[:start+3] + url[i+1:]
+}
+
+// Address returns mirror address from Git repository config without credentials.
+func (m *Mirror) Address() string {
+	m.readAddress()
+	return HandleCloneUserCredentials(m.address, false)
+}
+
+// FullAddress returns mirror address from Git repository config.
+func (m *Mirror) FullAddress() string {
+	m.readAddress()
+	return m.address
+}
+
+// SaveAddress writes new address to Git repository config.
+func (m *Mirror) SaveAddress(addr string) error {
+	configPath := m.Repo.GitConfigPath()
+	cfg, err := ini.Load(configPath)
+	if err != nil {
+		return fmt.Errorf("Load: %v", err)
+	}
+
+	cfg.Section("remote \"origin\"").Key("url").SetValue(addr)
+	return cfg.SaveToIndent(configPath, "\t")
 }
 
 func getMirror(e Engine, repoId int64) (*Mirror, error) {
@@ -525,25 +586,6 @@ func UpdateMirror(m *Mirror) error {
 func createUpdateHook(repoPath string) error {
 	return git.SetUpdateHook(repoPath,
 		fmt.Sprintf(_TPL_UPDATE_HOOK, setting.ScriptType, "\""+setting.AppPath+"\"", setting.CustomConf))
-}
-
-// MirrorRepository creates a mirror repository from source.
-func MirrorRepository(repoId int64, userName, repoName, repoPath, url string) error {
-	_, stderr, err := process.ExecTimeout(10*time.Minute,
-		fmt.Sprintf("MirrorRepository: %s/%s", userName, repoName),
-		"git", "clone", "--mirror", url, repoPath)
-	if err != nil {
-		return errors.New("git clone --mirror: " + stderr)
-	}
-
-	if _, err = x.InsertOne(&Mirror{
-		RepoID:     repoId,
-		Interval:   24,
-		NextUpdate: time.Now().Add(24 * time.Hour),
-	}); err != nil {
-		return err
-	}
-	return nil
 }
 
 type MigrateRepoOptions struct {
@@ -582,29 +624,35 @@ func MigrateRepository(u *User, opts MigrateRepoOptions) (*Repository, error) {
 		repo.NumWatches = 1
 	}
 
-	repo.IsBare = false
-	if opts.IsMirror {
-		if err = MirrorRepository(repo.ID, u.Name, repo.Name, repoPath, opts.RemoteAddr); err != nil {
-			return repo, err
-		}
-		repo.IsMirror = true
-		return repo, UpdateRepository(repo, false)
-	} else {
-		os.RemoveAll(repoPath)
+	os.RemoveAll(repoPath)
+	if err = git.Clone(opts.RemoteAddr, repoPath, git.CloneRepoOptions{
+		Mirror:  true,
+		Quiet:   true,
+		Timeout: 10 * time.Minute,
+	}); err != nil {
+		return repo, fmt.Errorf("Clone: %v", err)
 	}
 
-	// FIXME: this command could for both migrate and mirror
-	_, stderr, err := process.ExecTimeout(10*time.Minute,
-		fmt.Sprintf("MigrateRepository: %s", repoPath),
-		"git", "clone", "--mirror", "--bare", "--quiet", opts.RemoteAddr, repoPath)
-	if err != nil {
-		return repo, fmt.Errorf("git clone --mirror --bare --quiet: %v", stderr)
-	} else if err = createUpdateHook(repoPath); err != nil {
-		return repo, fmt.Errorf("create update hook: %v", err)
+	if opts.IsMirror {
+		if _, err = x.InsertOne(&Mirror{
+			RepoID:     repo.ID,
+			Interval:   24,
+			NextUpdate: time.Now().Add(24 * time.Hour),
+		}); err != nil {
+			return repo, fmt.Errorf("InsertOne: %v", err)
+		}
+
+		repo.IsMirror = true
+		return repo, UpdateRepository(repo, false)
+	}
+
+	if err = createUpdateHook(repoPath); err != nil {
+		return repo, fmt.Errorf("createUpdateHook: %v", err)
 	}
 
 	// Clean up mirror info which prevents "push --all".
-	configPath := filepath.Join(repoPath, "/config")
+	// This also removes possible user credentials.
+	configPath := repo.GitConfigPath()
 	cfg, err := ini.Load(configPath)
 	if err != nil {
 		return repo, fmt.Errorf("open config file: %v", err)
@@ -615,7 +663,7 @@ func MigrateRepository(u *User, opts MigrateRepoOptions) (*Repository, error) {
 	}
 
 	// Check if repository is empty.
-	_, stderr, err = com.ExecCmdDir(repoPath, "git", "log", "-1")
+	_, stderr, err := com.ExecCmdDir(repoPath, "git", "log", "-1")
 	if err != nil {
 		if strings.Contains(stderr, "fatal: bad default revision 'HEAD'") {
 			repo.IsBare = true

@@ -69,6 +69,9 @@ func (f MigrateRepoForm) ParseRemoteAddr(user *models.User) (string, error) {
 		}
 		if len(f.AuthUsername)+len(f.AuthPassword) > 0 {
 			u.User = url.UserPassword(f.AuthUsername, f.AuthPassword)
+		} else {
+			// Fake user name and password to prevent prompt and fail quick.
+			u.User = url.UserPassword("fake_user", "")
 		}
 		remoteAddr = u.String()
 	} else if !user.CanImportLocal() {
@@ -81,12 +84,13 @@ func (f MigrateRepoForm) ParseRemoteAddr(user *models.User) (string, error) {
 }
 
 type RepoSettingForm struct {
-	RepoName    string `binding:"Required;AlphaDashDot;MaxSize(100)"`
-	Description string `binding:"MaxSize(255)"`
-	Website     string `binding:"Url;MaxSize(100)"`
-	Branch      string
-	Interval    int
-	Private     bool
+	RepoName      string `binding:"Required;AlphaDashDot;MaxSize(100)"`
+	Description   string `binding:"MaxSize(255)"`
+	Website       string `binding:"Url;MaxSize(100)"`
+	Branch        string
+	Interval      int
+	MirrorAddress string
+	Private       bool
 
 	// Advanced settings
 	EnableWiki            bool
