@@ -1583,13 +1583,11 @@ func GitFsck() {
 
 	log.Trace("Doing: GitFsck")
 
-	args := append([]string{"fsck"}, setting.Cron.RepoHealthCheck.Args...)
 	if err := x.Where("id>0").Iterate(new(Repository),
 		func(idx int, bean interface{}) error {
 			repo := bean.(*Repository)
 			repoPath := repo.RepoPath()
-			_, _, err := process.ExecDir(-1, repoPath, "Repository health check", "git", args...)
-			if err != nil {
+			if err := git.Fsck(repoPath, setting.Cron.RepoHealthCheck.Timeout, setting.Cron.RepoHealthCheck.Args...); err != nil {
 				desc := fmt.Sprintf("Fail to health check repository(%s)", repoPath)
 				log.Warn(desc)
 				if err = CreateRepositoryNotice(desc); err != nil {
