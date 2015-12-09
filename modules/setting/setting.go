@@ -59,6 +59,7 @@ var (
 	Protocol           Scheme
 	Domain             string
 	HttpAddr, HttpPort string
+	LocalUrl           string
 	DisableSSH         bool
 	StartSSHServer     bool
 	SSHDomain          string
@@ -300,6 +301,7 @@ func NewContext() {
 	Domain = sec.Key("DOMAIN").MustString("localhost")
 	HttpAddr = sec.Key("HTTP_ADDR").MustString("0.0.0.0")
 	HttpPort = sec.Key("HTTP_PORT").MustString("3000")
+	LocalUrl = sec.Key("LOCAL_ROOT_URL").MustString("http://localhost:" + HttpPort + "/")
 	DisableSSH = sec.Key("DISABLE_SSH").MustBool()
 	if !DisableSSH {
 		StartSSHServer = sec.Key("START_SSH_SERVER").MustBool()
