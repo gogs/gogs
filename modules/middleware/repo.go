@@ -263,7 +263,7 @@ func RepoRef() macaron.Handler {
 				return
 			}
 			ctx.Repo.CommitID = ctx.Repo.Commit.ID.String()
-			ctx.Repo.IsBranch = true
+			ctx.Repo.IsViewBranch = true
 
 		} else {
 			hasMatched := false
@@ -286,7 +286,7 @@ func RepoRef() macaron.Handler {
 			}
 
 			if ctx.Repo.GitRepo.IsBranchExist(refName) {
-				ctx.Repo.IsBranch = true
+				ctx.Repo.IsViewBranch = true
 
 				ctx.Repo.Commit, err = ctx.Repo.GitRepo.GetCommitOfBranch(refName)
 				if err != nil {
@@ -296,7 +296,7 @@ func RepoRef() macaron.Handler {
 				ctx.Repo.CommitID = ctx.Repo.Commit.ID.String()
 
 			} else if ctx.Repo.GitRepo.IsTagExist(refName) {
-				ctx.Repo.IsTag = true
+				ctx.Repo.IsViewTag = true
 				ctx.Repo.Commit, err = ctx.Repo.GitRepo.GetCommitOfTag(refName)
 				if err != nil {
 					ctx.Handle(500, "GetCommitOfTag", err)
@@ -304,7 +304,7 @@ func RepoRef() macaron.Handler {
 				}
 				ctx.Repo.CommitID = ctx.Repo.Commit.ID.String()
 			} else if len(refName) == 40 {
-				ctx.Repo.IsCommit = true
+				ctx.Repo.IsViewCommit = true
 				ctx.Repo.CommitID = refName
 
 				ctx.Repo.Commit, err = ctx.Repo.GitRepo.GetCommit(refName)
@@ -321,9 +321,9 @@ func RepoRef() macaron.Handler {
 		ctx.Repo.BranchName = refName
 		ctx.Data["BranchName"] = ctx.Repo.BranchName
 		ctx.Data["CommitID"] = ctx.Repo.CommitID
-		ctx.Data["IsBranch"] = ctx.Repo.IsBranch
-		ctx.Data["IsTag"] = ctx.Repo.IsTag
-		ctx.Data["IsCommit"] = ctx.Repo.IsCommit
+		ctx.Data["IsViewBranch"] = ctx.Repo.IsViewBranch
+		ctx.Data["IsViewTag"] = ctx.Repo.IsViewTag
+		ctx.Data["IsViewCommit"] = ctx.Repo.IsViewCommit
 
 		ctx.Repo.CommitsCount, err = ctx.Repo.Commit.CommitsCount()
 		if err != nil {
