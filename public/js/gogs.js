@@ -218,8 +218,9 @@ function initRepository() {
         });
     }
 
-    // File list
-    if ($('.repository.file.list').length > 0) {
+    // File list and commits
+    if ($('.repository.file.list').length > 0 ||
+         ('.repository.commits').length > 0) {
         initFilterSearchDropdown('.choose.reference .dropdown');
 
         $('.reference.column').click(function () {
