@@ -162,6 +162,7 @@ var (
 			Enabled    bool
 			RunAtStart bool
 			Schedule   string
+			Timeout    time.Duration
 			Args       []string `delim:" "`
 		} `ini:"cron.repo_health_check"`
 		CheckRepoStats struct {
