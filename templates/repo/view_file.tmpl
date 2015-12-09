@@ -14,7 +14,7 @@
 		{{if not .ReadmeInList}}
 			<div class="ui right">
 				<div class="ui small grey basic buttons">
-					{{if not .IsCommit}}
+					{{if not .IsViewCommit}}
 						<a class="ui button" href="{{.RepoLink}}/src/{{.CommitID}}/{{EscapePound .TreeName}}">{{.i18n.Tr "repo.file_permalink"}}</a>
 					{{end}}
 					<a class="ui button" href="{{.RepoLink}}/commits/{{EscapePound .BranchName}}/{{EscapePound .TreeName}}">{{.i18n.Tr "repo.file_history"}}</a>

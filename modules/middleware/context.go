@@ -29,9 +29,9 @@ import (
 type RepoContext struct {
 	AccessMode   models.AccessMode
 	IsWatching   bool
-	IsBranch     bool
-	IsTag        bool
-	IsCommit     bool
+	IsViewBranch bool
+	IsViewTag    bool
+	IsViewCommit bool
 	Repository   *models.Repository
 	Owner        *models.User
 	Commit       *git.Commit

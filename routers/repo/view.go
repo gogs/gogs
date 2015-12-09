@@ -53,9 +53,6 @@ func Home(ctx *middleware.Context) {
 		treeLink += "/" + treename
 	}
 
-	isViewBranch := ctx.Repo.IsBranch
-	ctx.Data["IsViewBranch"] = isViewBranch
-
 	treePath := treename
 	if len(treePath) != 0 {
 		treePath = treePath + "/"
