@@ -139,6 +139,7 @@ func Migrate(ctx *middleware.Context) {
 	ctx.Data["Title"] = ctx.Tr("new_migrate")
 	ctx.Data["private"] = ctx.User.LastRepoVisibility
 	ctx.Data["IsForcedPrivate"] = setting.Repository.ForcePrivate
+	ctx.Data["mirror"] = ctx.Query("mirror") == "1"
 
 	ctxUser := checkContextUser(ctx, ctx.QueryInt64("org"))
 	if ctx.Written() {
