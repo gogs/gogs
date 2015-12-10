@@ -11,8 +11,9 @@ import (
 
 	"gopkg.in/macaron.v1"
 
+	"github.com/gogits/git-shell"
+
 	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/modules/git"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/setting"
 )
@@ -257,9 +258,9 @@ func RepoRef() macaron.Handler {
 				}
 				refName = brs[0]
 			}
-			ctx.Repo.Commit, err = ctx.Repo.GitRepo.GetCommitOfBranch(refName)
+			ctx.Repo.Commit, err = ctx.Repo.GitRepo.GetBranchCommit(refName)
 			if err != nil {
-				ctx.Handle(500, "GetCommitOfBranch", err)
+				ctx.Handle(500, "GetBranchCommit", err)
 				return
 			}
 			ctx.Repo.CommitID = ctx.Repo.Commit.ID.String()
@@ -288,18 +289,18 @@ func RepoRef() macaron.Handler {
 			if ctx.Repo.GitRepo.IsBranchExist(refName) {
 				ctx.Repo.IsViewBranch = true
 
-				ctx.Repo.Commit, err = ctx.Repo.GitRepo.GetCommitOfBranch(refName)
+				ctx.Repo.Commit, err = ctx.Repo.GitRepo.GetBranchCommit(refName)
 				if err != nil {
-					ctx.Handle(500, "GetCommitOfBranch", err)
+					ctx.Handle(500, "GetBranchCommit", err)
 					return
 				}
 				ctx.Repo.CommitID = ctx.Repo.Commit.ID.String()
 
 			} else if ctx.Repo.GitRepo.IsTagExist(refName) {
 				ctx.Repo.IsViewTag = true
-				ctx.Repo.Commit, err = ctx.Repo.GitRepo.GetCommitOfTag(refName)
+				ctx.Repo.Commit, err = ctx.Repo.GitRepo.GetTagCommit(refName)
 				if err != nil {
-					ctx.Handle(500, "GetCommitOfTag", err)
+					ctx.Handle(500, "GetTagCommit", err)
 					return
 				}
 				ctx.Repo.CommitID = ctx.Repo.Commit.ID.String()

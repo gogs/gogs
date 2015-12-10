@@ -18,10 +18,11 @@ import (
 	"github.com/go-macaron/session"
 	"gopkg.in/macaron.v1"
 
+	"github.com/gogits/git-shell"
+
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/modules/git"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/setting"
 )
@@ -43,7 +44,7 @@ type RepoContext struct {
 	CommitID     string
 	RepoLink     string
 	CloneLink    models.CloneLink
-	CommitsCount int
+	CommitsCount int64
 	Mirror       *models.Mirror
 }
 

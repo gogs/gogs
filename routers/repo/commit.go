@@ -10,9 +10,10 @@ import (
 
 	"github.com/Unknwon/paginater"
 
+	"github.com/gogits/git-shell"
+
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/modules/git"
 	"github.com/gogits/gogs/modules/middleware"
 	"github.com/gogits/gogs/modules/setting"
 )
@@ -55,7 +56,7 @@ func Commits(ctx *middleware.Context) {
 	if page <= 1 {
 		page = 1
 	}
-	ctx.Data["Page"] = paginater.New(commitsCount, git.CommitsRangeSize, page, 5)
+	ctx.Data["Page"] = paginater.New(int(commitsCount), git.CommitsRangeSize, page, 5)
 
 	// Both `git log branchName` and `git log commitId` work.
 	commits, err := ctx.Repo.Commit.CommitsByRange(page)
@@ -123,7 +124,7 @@ func FileHistory(ctx *middleware.Context) {
 	if page <= 1 {
 		page = 1
 	}
-	ctx.Data["Page"] = paginater.New(commitsCount, git.CommitsRangeSize, page, 5)
+	ctx.Data["Page"] = paginater.New(int(commitsCount), git.CommitsRangeSize, page, 5)
 
 	commits, err := ctx.Repo.GitRepo.CommitsByFileAndRange(branchName, fileName, page)
 	if err != nil {
@@ -159,7 +160,7 @@ func Diff(ctx *middleware.Context) {
 
 	parents := make([]string, commit.ParentCount())
 	for i := 0; i < commit.ParentCount(); i++ {
-		sha, err := commit.ParentId(i)
+		sha, err := commit.ParentID(i)
 		parents[i] = sha.String()
 		if err != nil {
 			ctx.Handle(404, "repo.Diff", err)
