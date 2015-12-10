@@ -75,6 +75,8 @@ type User struct {
 
 	// Remember visibility choice for convenience, true for private
 	LastRepoVisibility bool
+	// Maximum repository creation limit, 0 means use gloabl default
+	MaxRepoCreation int `xorm:"NOT NULL"`
 
 	// Permissions.
 	IsActive         bool
@@ -101,6 +103,12 @@ type User struct {
 	Members     []*User `xorm:"-"`
 }
 
+func (u *User) BeforeUpdate() {
+	if u.MaxRepoCreation < 0 {
+		u.MaxRepoCreation = 0
+	}
+}
+
 func (u *User) AfterSet(colName string, _ xorm.Cell) {
 	switch colName {
 	case "full_name":
@@ -114,6 +122,20 @@ func (u *User) AfterSet(colName string, _ xorm.Cell) {
 func (u *User) HasForkedRepo(repoID int64) bool {
 	_, has := HasForkedRepo(u.Id, repoID)
 	return has
+}
+
+func (u *User) RepoCreationNum() int {
+	if u.MaxRepoCreation == 0 {
+		return setting.Repository.MaxCreationLimit
+	}
+	return u.MaxRepoCreation
+}
+
+func (u *User) CanCreateRepo() bool {
+	if u.MaxRepoCreation == 0 {
+		return u.NumRepos < setting.Repository.MaxCreationLimit
+	}
+	return u.NumRepos < u.MaxRepoCreation
 }
 
 // CanEditGitHook returns true if user can edit Git hooks.
