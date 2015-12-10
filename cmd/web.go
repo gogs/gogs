@@ -86,7 +86,7 @@ func checkVersion() {
 		{"github.com/go-macaron/i18n", i18n.Version, "0.2.0"},
 		{"github.com/go-macaron/session", session.Version, "0.1.6"},
 		{"github.com/go-macaron/toolbox", toolbox.Version, "0.1.0"},
-		{"gopkg.in/ini.v1", ini.Version, "1.8.1"},
+		{"gopkg.in/ini.v1", ini.Version, "1.8.3"},
 		{"gopkg.in/macaron.v1", macaron.Version, "0.8.0"},
 		{"github.com/gogits/git-shell", git.Version, "0.1.0"},
 	}

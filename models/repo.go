@@ -900,6 +900,10 @@ func createRepository(e *xorm.Session, u *User, repo *Repository) (err error) {
 
 // CreateRepository creates a repository for given user or organization.
 func CreateRepository(u *User, opts CreateRepoOptions) (_ *Repository, err error) {
+	if !u.CanCreateRepo() {
+		return nil, ErrReachLimitOfRepo{u.MaxRepoCreation}
+	}
+
 	repo := &Repository{
 		OwnerID:      u.Id,
 		Owner:        u,

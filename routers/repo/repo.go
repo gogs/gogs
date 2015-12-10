@@ -78,8 +78,10 @@ func Create(ctx *middleware.Context) {
 	ctx.HTML(200, CREATE)
 }
 
-func handleCreateError(ctx *middleware.Context, err error, name string, tpl base.TplName, form interface{}) {
+func handleCreateError(ctx *middleware.Context, owner *models.User, err error, name string, tpl base.TplName, form interface{}) {
 	switch {
+	case models.IsErrReachLimitOfRepo(err):
+		ctx.RenderWithErr(ctx.Tr("repo.form.reach_limit_of_creation", owner.RepoCreationNum()), tpl, form)
 	case models.IsErrRepoAlreadyExist(err):
 		ctx.Data["Err_RepoName"] = true
 		ctx.RenderWithErr(ctx.Tr("form.repo_name_been_taken"), tpl, form)
@@ -133,7 +135,7 @@ func CreatePost(ctx *middleware.Context, form auth.CreateRepoForm) {
 		}
 	}
 
-	handleCreateError(ctx, err, "CreatePost", CREATE, &form)
+	handleCreateError(ctx, ctxUser, err, "CreatePost", CREATE, &form)
 }
 
 func Migrate(ctx *middleware.Context) {
@@ -216,7 +218,7 @@ func MigratePost(ctx *middleware.Context, form auth.MigrateRepoForm) {
 		return
 	}
 
-	handleCreateError(ctx, err, "MigratePost", MIGRATE, &form)
+	handleCreateError(ctx, ctxUser, err, "MigratePost", MIGRATE, &form)
 }
 
 func Action(ctx *middleware.Context) {
