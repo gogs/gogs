@@ -98,7 +98,7 @@ func NewRepoContext() {
 	}
 
 	// Check Git version.
-	gitVer, err := git.Version()
+	gitVer, err := git.BinVersion()
 	if err != nil {
 		log.Fatal(4, "Fail to get Git version: %v", err)
 	}
@@ -307,6 +307,10 @@ func (repo *Repository) GitConfigPath() string {
 
 func (repo *Repository) RepoLink() string {
 	return setting.AppSubUrl + "/" + repo.MustOwner().Name + "/" + repo.Name
+}
+
+func (repo *Repository) ComposeCompareURL(oldCommitID, newCommitID string) string {
+	return fmt.Sprintf("%s/%s/compare/%s...%s", repo.MustOwner().Name, repo.Name, oldCommitID, newCommitID)
 }
 
 func (repo *Repository) FullRepoLink() string {

@@ -12,7 +12,8 @@ import (
 
 	"github.com/go-xorm/xorm"
 
-	"github.com/gogits/gogs/modules/git"
+	"github.com/gogits/git-shell"
+
 	"github.com/gogits/gogs/modules/process"
 )
 
@@ -27,8 +28,8 @@ type Release struct {
 	Target           string
 	Title            string
 	Sha1             string `xorm:"VARCHAR(40)"`
-	NumCommits       int
-	NumCommitsBehind int    `xorm:"-"`
+	NumCommits       int64
+	NumCommitsBehind int64  `xorm:"-"`
 	Note             string `xorm:"TEXT"`
 	IsDraft          bool   `xorm:"NOT NULL DEFAULT false"`
 	IsPrerelease     bool
@@ -51,31 +52,27 @@ func IsReleaseExist(repoID int64, tagName string) (bool, error) {
 	return x.Get(&Release{RepoID: repoID, LowerTagName: strings.ToLower(tagName)})
 }
 
-func init() {
-	git.GetVersion()
-}
-
 func createTag(gitRepo *git.Repository, rel *Release) error {
 	// Only actual create when publish.
 	if !rel.IsDraft {
 		if !gitRepo.IsTagExist(rel.TagName) {
-			commit, err := gitRepo.GetCommitOfBranch(rel.Target)
+			commit, err := gitRepo.GetBranchCommit(rel.Target)
 			if err != nil {
-				return err
+				return fmt.Errorf("GetBranchCommit: %v", err)
 			}
 
 			if err = gitRepo.CreateTag(rel.TagName, commit.ID.String()); err != nil {
 				return err
 			}
 		} else {
-			commit, err := gitRepo.GetCommitOfTag(rel.TagName)
+			commit, err := gitRepo.GetTagCommit(rel.TagName)
 			if err != nil {
-				return err
+				return fmt.Errorf("GetTagCommit: %v", err)
 			}
 
 			rel.NumCommits, err = commit.CommitsCount()
 			if err != nil {
-				return err
+				return fmt.Errorf("CommitsCount: %v", err)
 			}
 		}
 	}

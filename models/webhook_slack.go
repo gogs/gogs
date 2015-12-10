@@ -10,9 +10,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/gogits/git-shell"
 	api "github.com/gogits/go-gogs-client"
-
-	"github.com/gogits/gogs/modules/git"
 )
 
 type SlackMeta struct {

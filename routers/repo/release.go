@@ -34,7 +34,7 @@ func Releases(ctx *middleware.Context) {
 	}
 
 	// Temproray cache commits count of used branches to speed up.
-	countCache := make(map[string]int)
+	countCache := make(map[string]int64)
 
 	tags := make([]*models.Release, len(rawTags))
 	for i, rawTag := range rawTags {
@@ -45,7 +45,7 @@ func Releases(ctx *middleware.Context) {
 			if rel.TagName == rawTag {
 				rel.Publisher, err = models.GetUserByID(rel.PublisherID)
 				if err != nil {
-					ctx.Handle(500, "GetUserById", err)
+					ctx.Handle(500, "GetUserByID", err)
 					return
 				}
 				// FIXME: duplicated code.
@@ -53,14 +53,14 @@ func Releases(ctx *middleware.Context) {
 				if ctx.Repo.BranchName != rel.Target {
 					// Get count if not exists.
 					if _, ok := countCache[rel.Target]; !ok {
-						commit, err := ctx.Repo.GitRepo.GetCommitOfBranch(ctx.Repo.BranchName)
+						commit, err := ctx.Repo.GitRepo.GetBranchCommit(ctx.Repo.BranchName)
 						if err != nil {
-							ctx.Handle(500, "GetCommitOfBranch", err)
+							ctx.Handle(500, "GetBranchCommit", err)
 							return
 						}
 						countCache[ctx.Repo.BranchName], err = commit.CommitsCount()
 						if err != nil {
-							ctx.Handle(500, "CommitsCount2", err)
+							ctx.Handle(500, "CommitsCount", err)
 							return
 						}
 					}
@@ -77,9 +77,9 @@ func Releases(ctx *middleware.Context) {
 		}
 
 		if tags[i] == nil {
-			commit, err := ctx.Repo.GitRepo.GetCommitOfTag(rawTag)
+			commit, err := ctx.Repo.GitRepo.GetTagCommit(rawTag)
 			if err != nil {
-				ctx.Handle(500, "GetCommitOfTag2", err)
+				ctx.Handle(500, "GetTagCommit", err)
 				return
 			}
 
@@ -89,7 +89,7 @@ func Releases(ctx *middleware.Context) {
 				Sha1:    commit.ID.String(),
 			}
 
-			tags[i].NumCommits, err = ctx.Repo.GitRepo.CommitsCount(commit.ID.String())
+			tags[i].NumCommits, err = commit.CommitsCount()
 			if err != nil {
 				ctx.Handle(500, "CommitsCount", err)
 				return
@@ -105,7 +105,7 @@ func Releases(ctx *middleware.Context) {
 
 		rel.Publisher, err = models.GetUserByID(rel.PublisherID)
 		if err != nil {
-			ctx.Handle(500, "GetUserById", err)
+			ctx.Handle(500, "GetUserByID", err)
 			return
 		}
 		// FIXME: duplicated code.
@@ -113,14 +113,14 @@ func Releases(ctx *middleware.Context) {
 		if ctx.Repo.BranchName != rel.Target {
 			// Get count if not exists.
 			if _, ok := countCache[rel.Target]; !ok {
-				commit, err := ctx.Repo.GitRepo.GetCommitOfBranch(ctx.Repo.BranchName)
+				commit, err := ctx.Repo.GitRepo.GetBranchCommit(ctx.Repo.BranchName)
 				if err != nil {
-					ctx.Handle(500, "GetCommitOfBranch", err)
+					ctx.Handle(500, "GetBranchCommit", err)
 					return
 				}
 				countCache[ctx.Repo.BranchName], err = commit.CommitsCount()
 				if err != nil {
-					ctx.Handle(500, "CommitsCount2", err)
+					ctx.Handle(500, "CommitsCount", err)
 					return
 				}
 			}
@@ -158,9 +158,9 @@ func NewReleasePost(ctx *middleware.Context, form auth.NewReleaseForm) {
 		return
 	}
 
-	commit, err := ctx.Repo.GitRepo.GetCommitOfBranch(form.Target)
+	commit, err := ctx.Repo.GitRepo.GetBranchCommit(form.Target)
 	if err != nil {
-		ctx.Handle(500, "GetCommitOfBranch", err)
+		ctx.Handle(500, "GetBranchCommit", err)
 		return
 	}
 

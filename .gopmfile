@@ -20,6 +20,7 @@ github.com/gogits/chardet = commit:2404f77725
 github.com/gogits/git-shell = 
 github.com/gogits/go-gogs-client = commit:4b541fa
 github.com/issue9/identicon = commit:f8c0d2c
+github.com/kardianos/minwinsvc = 
 github.com/klauspost/compress = commit:bcd0709
 github.com/klauspost/cpuid = commit:8d9fe96
 github.com/klauspost/crc32 = commit:0aff1ea

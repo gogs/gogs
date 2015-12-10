@@ -10,7 +10,8 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/gogits/gogs/modules/git"
+	"github.com/gogits/git-shell"
+
 	"github.com/gogits/gogs/modules/log"
 )
 
@@ -44,6 +45,24 @@ func GetUpdateTaskByUUID(uuid string) (*UpdateTask, error) {
 func DeleteUpdateTaskByUUID(uuid string) error {
 	_, err := x.Delete(&UpdateTask{UUID: uuid})
 	return err
+}
+
+func ListToPushCommits(l *list.List) *PushCommits {
+	commits := make([]*PushCommit, 0)
+	var actEmail string
+	for e := l.Front(); e != nil; e = e.Next() {
+		commit := e.Value.(*git.Commit)
+		if actEmail == "" {
+			actEmail = commit.Committer.Email
+		}
+		commits = append(commits,
+			&PushCommit{commit.ID.String(),
+				commit.Message(),
+				commit.Author.Email,
+				commit.Author.Name,
+			})
+	}
+	return &PushCommits{l.Len(), commits, "", nil}
 }
 
 func Update(refName, oldCommitID, newCommitID, userName, repoUserName, repoName string, userID int64) error {
@@ -131,24 +150,8 @@ func Update(refName, oldCommitID, newCommitID, userName, repoUserName, repoName 
 		return fmt.Errorf("runUpdate.Commit repoId: %v", err)
 	}
 
-	// Push commits.
-	commits := make([]*PushCommit, 0)
-	var actEmail string
-	for e := l.Front(); e != nil; e = e.Next() {
-		commit := e.Value.(*git.Commit)
-		if actEmail == "" {
-			actEmail = commit.Committer.Email
-		}
-		commits = append(commits,
-			&PushCommit{commit.ID.String(),
-				commit.Message(),
-				commit.Author.Email,
-				commit.Author.Name,
-			})
-	}
-
-	if err = CommitRepoAction(userID, user.Id, userName, actEmail,
-		repo.ID, repoUserName, repoName, refName, &PushCommits{l.Len(), commits, "", nil}, oldCommitID, newCommitID); err != nil {
+	if err = CommitRepoAction(userID, user.Id, userName, user.Email,
+		repo.ID, repoUserName, repoName, refName, ListToPushCommits(l), oldCommitID, newCommitID); err != nil {
 		return fmt.Errorf("runUpdate.models.CommitRepoAction: %s/%s:%v", repoUserName, repoName, err)
 	}
 	return nil

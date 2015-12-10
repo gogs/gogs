@@ -14,7 +14,9 @@ import (
 	"github.com/Unknwon/com"
 	"github.com/go-xorm/xorm"
 
-	"github.com/gogits/gogs/modules/git"
+	"github.com/gogits/git-shell"
+	api "github.com/gogits/go-gogs-client"
+
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/process"
 	"github.com/gogits/gogs/modules/setting"
@@ -124,6 +126,12 @@ func (pr *PullRequest) CanAutoMerge() bool {
 
 // Merge merges pull request to base repository.
 func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository) (err error) {
+	if err = pr.GetHeadRepo(); err != nil {
+		return fmt.Errorf("GetHeadRepo: %v", err)
+	} else if err = pr.GetBaseRepo(); err != nil {
+		return fmt.Errorf("GetBaseRepo: %v", err)
+	}
+
 	sess := x.NewSession()
 	defer sessionRelease(sess)
 	if err = sess.Begin(); err != nil {
@@ -134,18 +142,14 @@ func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository) (err error
 		return fmt.Errorf("Issue.changeStatus: %v", err)
 	}
 
-	if err = pr.getHeadRepo(sess); err != nil {
-		return fmt.Errorf("getHeadRepo: %v", err)
-	}
-
 	headRepoPath := RepoPath(pr.HeadUserName, pr.HeadRepo.Name)
 	headGitRepo, err := git.OpenRepository(headRepoPath)
 	if err != nil {
 		return fmt.Errorf("OpenRepository: %v", err)
 	}
-	pr.MergedCommitID, err = headGitRepo.GetCommitIdOfBranch(pr.HeadBranch)
+	pr.MergedCommitID, err = headGitRepo.GetBranchCommitID(pr.HeadBranch)
 	if err != nil {
-		return fmt.Errorf("GetCommitIdOfBranch: %v", err)
+		return fmt.Errorf("GetBranchCommitID: %v", err)
 	}
 
 	if err = mergePullRequestAction(sess, doer, pr.Issue.Repo, pr.Issue); err != nil {
@@ -213,7 +217,38 @@ func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository) (err error
 		return fmt.Errorf("git push: %s", stderr)
 	}
 
-	return sess.Commit()
+	if err = sess.Commit(); err != nil {
+		return fmt.Errorf("Commit: %v", err)
+	}
+
+	// Compose commit repository action
+	l, err := headGitRepo.CommitsBetweenIDs(pr.MergedCommitID, pr.MergeBase)
+	if err != nil {
+		return fmt.Errorf("CommitsBetween: %v", err)
+	}
+	p := &api.PushPayload{
+		Ref:        "refs/heads/" + pr.BaseBranch,
+		Before:     pr.MergeBase,
+		After:      pr.MergedCommitID,
+		CompareUrl: setting.AppUrl + pr.BaseRepo.ComposeCompareURL(pr.MergeBase, pr.MergedCommitID),
+		Commits:    ListToPushCommits(l).ToApiPayloadCommits(pr.BaseRepo.FullRepoLink()),
+		Repo:       pr.BaseRepo.ComposePayload(),
+		Pusher: &api.PayloadAuthor{
+			Name:     pr.HeadRepo.MustOwner().DisplayName(),
+			Email:    pr.HeadRepo.MustOwner().Email,
+			UserName: pr.HeadRepo.MustOwner().Name,
+		},
+		Sender: &api.PayloadUser{
+			UserName:  doer.Name,
+			ID:        doer.Id,
+			AvatarUrl: setting.AppUrl + doer.RelAvatarLink(),
+		},
+	}
+	if err = PrepareWebhooks(pr.BaseRepo, HOOK_EVENT_PUSH, p); err != nil {
+		return fmt.Errorf("PrepareWebhooks: %v", err)
+	}
+	go HookQueue.Add(pr.BaseRepo.ID)
+	return nil
 }
 
 // patchConflicts is a list of conflit description from Git.
@@ -411,8 +446,6 @@ func (pr *PullRequest) UpdatePatch() (err error) {
 
 	if err = pr.GetBaseRepo(); err != nil {
 		return fmt.Errorf("GetBaseRepo: %v", err)
-	} else if err = pr.BaseRepo.GetOwner(); err != nil {
-		return fmt.Errorf("GetOwner: %v", err)
 	}
 
 	headGitRepo, err := git.OpenRepository(pr.HeadRepo.RepoPath())
@@ -422,7 +455,7 @@ func (pr *PullRequest) UpdatePatch() (err error) {
 
 	// Add a temporary remote.
 	tmpRemote := com.ToStr(time.Now().UnixNano())
-	if err = headGitRepo.AddRemote(tmpRemote, RepoPath(pr.BaseRepo.Owner.Name, pr.BaseRepo.Name)); err != nil {
+	if err = headGitRepo.AddRemote(tmpRemote, RepoPath(pr.BaseRepo.MustOwner().Name, pr.BaseRepo.Name), true); err != nil {
 		return fmt.Errorf("AddRemote: %v", err)
 	}
 	defer func() {

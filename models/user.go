@@ -29,7 +29,6 @@ import (
 
 	"github.com/gogits/gogs/modules/avatar"
 	"github.com/gogits/gogs/modules/base"
-	oldgit "github.com/gogits/gogs/modules/git"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/setting"
 )
@@ -940,11 +939,11 @@ func MakeEmailPrimary(email *EmailAddress) error {
 // UserCommit represents a commit with validation of user.
 type UserCommit struct {
 	User *User
-	*oldgit.Commit
+	*git.Commit
 }
 
 // ValidateCommitWithEmail chceck if author's e-mail of commit is corresponsind to a user.
-func ValidateCommitWithEmail(c *oldgit.Commit) *User {
+func ValidateCommitWithEmail(c *git.Commit) *User {
 	u, err := GetUserByEmail(c.Author.Email)
 	if err != nil {
 		return nil
@@ -961,7 +960,7 @@ func ValidateCommitsWithEmails(oldCommits *list.List) *list.List {
 		e          = oldCommits.Front()
 	)
 	for e != nil {
-		c := e.Value.(*oldgit.Commit)
+		c := e.Value.(*git.Commit)
 
 		if v, ok := emails[c.Author.Email]; !ok {
 			u, _ = GetUserByEmail(c.Author.Email)

@@ -42,9 +42,9 @@ func renderWikiPage(ctx *middleware.Context, isViewPage bool) (*git.Repository, 
 		ctx.Handle(500, "OpenRepository", err)
 		return nil, ""
 	}
-	commit, err := wikiRepo.GetCommitOfBranch("master")
+	commit, err := wikiRepo.GetBranchCommit("master")
 	if err != nil {
-		ctx.Handle(500, "GetCommitOfBranch", err)
+		ctx.Handle(500, "GetBranchCommit", err)
 		return nil, ""
 	}
 
@@ -147,9 +147,9 @@ func WikiPages(ctx *middleware.Context) {
 		ctx.Handle(500, "OpenRepository", err)
 		return
 	}
-	commit, err := wikiRepo.GetCommitOfBranch("master")
+	commit, err := wikiRepo.GetBranchCommit("master")
 	if err != nil {
-		ctx.Handle(500, "GetCommitOfBranch", err)
+		ctx.Handle(500, "GetBranchCommit", err)
 		return
 	}
 

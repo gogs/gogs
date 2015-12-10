@@ -17,10 +17,10 @@ import (
 	"github.com/Unknwon/com"
 	"github.com/go-xorm/xorm"
 
+	"github.com/gogits/git-shell"
 	api "github.com/gogits/go-gogs-client"
 
 	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/modules/git"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/setting"
 )
@@ -229,6 +229,28 @@ func NewPushCommits() *PushCommits {
 	}
 }
 
+func (pc *PushCommits) ToApiPayloadCommits(repoLink string) []*api.PayloadCommit {
+	commits := make([]*api.PayloadCommit, len(pc.Commits))
+	for i, cmt := range pc.Commits {
+		author_username := ""
+		author, err := GetUserByEmail(cmt.AuthorEmail)
+		if err == nil {
+			author_username = author.Name
+		}
+		commits[i] = &api.PayloadCommit{
+			ID:      cmt.Sha1,
+			Message: cmt.Message,
+			URL:     fmt.Sprintf("%s/commit/%s", repoLink, cmt.Sha1),
+			Author: &api.PayloadAuthor{
+				Name:     cmt.AuthorName,
+				Email:    cmt.AuthorEmail,
+				UserName: author_username,
+			},
+		}
+	}
+	return commits
+}
+
 // AvatarLink tries to match user in database with e-mail
 // in order to show custom avatar, and falls back to general avatar link.
 func (push *PushCommits) AvatarLink(email string) string {
@@ -413,7 +435,7 @@ func CommitRepoAction(
 	} else {
 		// if not the first commit, set the compareUrl
 		if !strings.HasPrefix(oldCommitID, "0000000") {
-			commit.CompareUrl = fmt.Sprintf("%s/%s/compare/%s...%s", repoUserName, repoName, oldCommitID, newCommitID)
+			commit.CompareUrl = repo.ComposeCompareURL(oldCommitID, newCommitID)
 		} else {
 			isNewBranch = true
 		}
@@ -469,30 +491,12 @@ func CommitRepoAction(
 
 	switch opType {
 	case COMMIT_REPO: // Push
-		commits := make([]*api.PayloadCommit, len(commit.Commits))
-		for i, cmt := range commit.Commits {
-			author_username := ""
-			author, err := GetUserByEmail(cmt.AuthorEmail)
-			if err == nil {
-				author_username = author.Name
-			}
-			commits[i] = &api.PayloadCommit{
-				ID:      cmt.Sha1,
-				Message: cmt.Message,
-				URL:     fmt.Sprintf("%s/commit/%s", repo.FullRepoLink(), cmt.Sha1),
-				Author: &api.PayloadAuthor{
-					Name:     cmt.AuthorName,
-					Email:    cmt.AuthorEmail,
-					UserName: author_username,
-				},
-			}
-		}
 		p := &api.PushPayload{
 			Ref:        refFullName,
 			Before:     oldCommitID,
 			After:      newCommitID,
 			CompareUrl: setting.AppUrl + commit.CompareUrl,
-			Commits:    commits,
+			Commits:    commit.ToApiPayloadCommits(repo.FullRepoLink()),
 			Repo:       payloadRepo,
 			Pusher: &api.PayloadAuthor{
 				Name:     pusher_name,
