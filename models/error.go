@@ -107,6 +107,19 @@ func (err ErrUserHasOrgs) Error() string {
 	return fmt.Sprintf("user still has membership of organizations [uid: %d]", err.UID)
 }
 
+type ErrReachLimitOfRepo struct {
+	Limit int
+}
+
+func IsErrReachLimitOfRepo(err error) bool {
+	_, ok := err.(ErrReachLimitOfRepo)
+	return ok
+}
+
+func (err ErrReachLimitOfRepo) Error() string {
+	return fmt.Sprintf("user has reached maximum limit of repositories [limit: %d]", err.Limit)
+}
+
 //  __      __.__ __   .__
 // /  \    /  \__|  | _|__|
 // \   \/\/   /  |  |/ /  |

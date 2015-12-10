@@ -98,6 +98,7 @@ var (
 	Repository struct {
 		AnsiCharset            string
 		ForcePrivate           bool
+		MaxCreationLimit       int
 		PullRequestQueueLength int
 	}
 	RepoRootPath string
@@ -379,9 +380,9 @@ func NewContext() {
 		RepoRootPath = path.Clean(RepoRootPath)
 	}
 	ScriptType = sec.Key("SCRIPT_TYPE").MustString("bash")
-	Repository.AnsiCharset = sec.Key("ANSI_CHARSET").String()
-	Repository.ForcePrivate = sec.Key("FORCE_PRIVATE").MustBool()
-	Repository.PullRequestQueueLength = sec.Key("PULL_REQUEST_QUEUE_LENGTH").MustInt(10000)
+	if err = Cfg.Section("repository").MapTo(&Repository); err != nil {
+		log.Fatal(4, "Fail to map Repository settings: %v", err)
+	}
 
 	// UI settings.
 	sec = Cfg.Section("ui")
