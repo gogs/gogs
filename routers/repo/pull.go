@@ -634,6 +634,11 @@ func CompareAndPullRequestPost(ctx *middleware.Context, form auth.CreateIssueFor
 		return
 	}
 
+	notifyWatchersAndMentions(ctx, pull)
+	if ctx.Written() {
+		return
+	}
+
 	log.Trace("Pull request created: %d/%d", repo.ID, pull.ID)
 	ctx.Redirect(ctx.Repo.RepoLink + "/pulls/" + com.ToStr(pull.Index))
 }
