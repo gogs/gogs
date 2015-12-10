@@ -343,8 +343,8 @@ func ValidateRepoMetas(ctx *middleware.Context, form auth.CreateIssueForm) ([]in
 	return labelIDs, milestoneID, assigneeID
 }
 
-func checkMentions(ctx *middleware.Context, issue *models.Issue) {
-	// Update mentions.
+func notifyWatchersAndMentions(ctx *middleware.Context, issue *models.Issue) {
+	// Update mentions
 	mentions := base.MentionPattern.FindAllString(issue.Content, -1)
 	if len(mentions) > 0 {
 		for i := range mentions {
@@ -423,7 +423,7 @@ func NewIssuePost(ctx *middleware.Context, form auth.CreateIssueForm) {
 		return
 	}
 
-	checkMentions(ctx, issue)
+	notifyWatchersAndMentions(ctx, issue)
 	if ctx.Written() {
 		return
 	}
@@ -871,7 +871,7 @@ func NewComment(ctx *middleware.Context, form auth.CreateCommentForm) {
 		return
 	}
 
-	checkMentions(ctx, &models.Issue{
+	notifyWatchersAndMentions(ctx, &models.Issue{
 		ID:      issue.ID,
 		Index:   issue.Index,
 		Name:    issue.Name,
