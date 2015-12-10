@@ -24,4 +24,4 @@ before:
   - mv packager/.godir .
 after:
   - mv bin/main gogs
-after_install: ./packager/debian/postinst
+after_install: ./packager/hooks/postinst
