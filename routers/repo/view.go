@@ -13,9 +13,10 @@ import (
 
 	"github.com/Unknwon/paginater"
 
+	"github.com/gogits/git-shell"
+
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/modules/git"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/middleware"
 	"github.com/gogits/gogs/modules/template"
@@ -59,7 +60,7 @@ func Home(ctx *middleware.Context) {
 	}
 
 	entry, err := ctx.Repo.Commit.GetTreeEntryByPath(treename)
-	if err != nil && err != git.ErrNotExist {
+	if err != nil && git.IsErrNotExist(err) {
 		ctx.Handle(404, "GetTreeEntryByPath", err)
 		return
 	}
@@ -126,7 +127,7 @@ func Home(ctx *middleware.Context) {
 			return
 		}
 
-		entries, err := tree.ListEntries(treename)
+		entries, err := tree.ListEntries()
 		if err != nil {
 			ctx.Handle(500, "ListEntries", err)
 			return
@@ -135,10 +136,10 @@ func Home(ctx *middleware.Context) {
 
 		files := make([][]interface{}, 0, len(entries))
 		for _, te := range entries {
-			if te.Type != git.COMMIT {
-				c, err := ctx.Repo.Commit.GetCommitOfRelPath(filepath.Join(treePath, te.Name()))
+			if te.Type != git.OBJECT_COMMIT {
+				c, err := ctx.Repo.Commit.GetCommitByPath(filepath.Join(treePath, te.Name()))
 				if err != nil {
-					ctx.Handle(500, "GetCommitOfRelPath", err)
+					ctx.Handle(500, "GetCommitByPath", err)
 					return
 				}
 				files = append(files, []interface{}{te, c})
@@ -153,9 +154,9 @@ func Home(ctx *middleware.Context) {
 					smUrl = sm.Url
 				}
 
-				c, err := ctx.Repo.Commit.GetCommitOfRelPath(filepath.Join(treePath, te.Name()))
+				c, err := ctx.Repo.Commit.GetCommitByPath(filepath.Join(treePath, te.Name()))
 				if err != nil {
-					ctx.Handle(500, "GetCommitOfRelPath", err)
+					ctx.Handle(500, "GetCommitByPath", err)
 					return
 				}
 				files = append(files, []interface{}{te, git.NewSubModuleFile(c, smUrl, te.ID.String())})
@@ -209,9 +210,9 @@ func Home(ctx *middleware.Context) {
 
 		lastCommit := ctx.Repo.Commit
 		if len(treePath) > 0 {
-			c, err := ctx.Repo.Commit.GetCommitOfRelPath(treePath)
+			c, err := ctx.Repo.Commit.GetCommitByPath(treePath)
 			if err != nil {
-				ctx.Handle(500, "GetCommitOfRelPath", err)
+				ctx.Handle(500, "GetCommitByPath", err)
 				return
 			}
 			lastCommit = c

@@ -12,10 +12,11 @@ import (
 
 	"github.com/Unknwon/com"
 
+	"github.com/gogits/git-shell"
+
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/modules/git"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/middleware"
 	"github.com/gogits/gogs/modules/setting"
@@ -294,21 +295,21 @@ func Download(ctx *middleware.Context) {
 	)
 	gitRepo := ctx.Repo.GitRepo
 	if gitRepo.IsBranchExist(refName) {
-		commit, err = gitRepo.GetCommitOfBranch(refName)
+		commit, err = gitRepo.GetBranchCommit(refName)
 		if err != nil {
-			ctx.Handle(500, "Download", err)
+			ctx.Handle(500, "GetBranchCommit", err)
 			return
 		}
 	} else if gitRepo.IsTagExist(refName) {
-		commit, err = gitRepo.GetCommitOfTag(refName)
+		commit, err = gitRepo.GetTagCommit(refName)
 		if err != nil {
-			ctx.Handle(500, "Download", err)
+			ctx.Handle(500, "GetTagCommit", err)
 			return
 		}
 	} else if len(refName) == 40 {
 		commit, err = gitRepo.GetCommit(refName)
 		if err != nil {
-			ctx.Handle(404, "Download", nil)
+			ctx.Handle(404, "GetCommit", nil)
 			return
 		}
 	} else {

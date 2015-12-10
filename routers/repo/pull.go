@@ -12,10 +12,11 @@ import (
 
 	"github.com/Unknwon/com"
 
+	"github.com/gogits/git-shell"
+
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/modules/git"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/middleware"
 	"github.com/gogits/gogs/modules/setting"
@@ -328,9 +329,9 @@ func ViewPullFiles(ctx *middleware.Context) {
 			return
 		}
 
-		headCommitID, err := headGitRepo.GetCommitIdOfBranch(pull.HeadBranch)
+		headCommitID, err := headGitRepo.GetBranchCommitID(pull.HeadBranch)
 		if err != nil {
-			ctx.Handle(500, "GetCommitIdOfBranch", err)
+			ctx.Handle(500, "GetBranchCommitID", err)
 			return
 		}
 
@@ -492,9 +493,9 @@ func PrepareCompareDiff(
 	// Get diff information.
 	ctx.Data["CommitRepoLink"] = headRepo.RepoLink()
 
-	headCommitID, err := headGitRepo.GetCommitIdOfBranch(headBranch)
+	headCommitID, err := headGitRepo.GetBranchCommitID(headBranch)
 	if err != nil {
-		ctx.Handle(500, "GetCommitIdOfBranch", err)
+		ctx.Handle(500, "GetBranchCommitID", err)
 		return false
 	}
 	ctx.Data["AfterCommitID"] = headCommitID

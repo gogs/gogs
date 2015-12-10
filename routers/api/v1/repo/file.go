@@ -5,8 +5,9 @@
 package repo
 
 import (
+	"github.com/gogits/git-shell"
+
 	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/modules/git"
 	"github.com/gogits/gogs/modules/middleware"
 	"github.com/gogits/gogs/routers/repo"
 )
@@ -20,7 +21,7 @@ func GetRawFile(ctx *middleware.Context) {
 
 	blob, err := ctx.Repo.Commit.GetBlobByPath(ctx.Repo.TreeName)
 	if err != nil {
-		if err == git.ErrNotExist {
+		if git.IsErrNotExist(err) {
 			ctx.Error(404)
 		} else {
 			ctx.APIError(500, "GetBlobByPath", err)
