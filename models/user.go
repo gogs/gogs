@@ -104,8 +104,8 @@ type User struct {
 }
 
 func (u *User) BeforeUpdate() {
-	if u.MaxRepoCreation < 0 {
-		u.MaxRepoCreation = 0
+	if u.MaxRepoCreation < -1 {
+		u.MaxRepoCreation = -1
 	}
 }
 
@@ -125,14 +125,14 @@ func (u *User) HasForkedRepo(repoID int64) bool {
 }
 
 func (u *User) RepoCreationNum() int {
-	if u.MaxRepoCreation == 0 {
+	if u.MaxRepoCreation <= -1 {
 		return setting.Repository.MaxCreationLimit
 	}
 	return u.MaxRepoCreation
 }
 
 func (u *User) CanCreateRepo() bool {
-	if u.MaxRepoCreation == 0 {
+	if u.MaxRepoCreation <= -1 {
 		return u.NumRepos < setting.Repository.MaxCreationLimit
 	}
 	return u.NumRepos < u.MaxRepoCreation
