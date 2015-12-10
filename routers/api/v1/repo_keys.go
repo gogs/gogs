@@ -74,7 +74,7 @@ func GetRepoDeployKey(ctx *middleware.Context) {
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Repositories---Deploy-Keys#add-a-new-deploy-key
-func CreateRepoDeployKey(ctx *middleware.Context, form api.CreateDeployKeyOption) {
+func CreateRepoDeployKey(ctx *middleware.Context, form api.CreateKeyOption) {
 	content, err := models.CheckPublicKeyString(form.Key)
 	if err != nil {
 		if models.IsErrKeyUnableVerify(err) {
