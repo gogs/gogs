@@ -10,7 +10,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/gogits/git-shell"
+	git "github.com/gogits/git-shell"
 
 	"github.com/gogits/gogs/modules/log"
 )
@@ -135,7 +135,7 @@ func Update(refName, oldCommitID, newCommitID, userName, repoUserName, repoName 
 	// Push new branch.
 	var l *list.List
 	if isNew {
-		l, err = newCommit.CommitsBefore()
+		l, err = newCommit.CommitsBeforeLimit(10)
 		if err != nil {
 			return fmt.Errorf("CommitsBefore: %v", err)
 		}

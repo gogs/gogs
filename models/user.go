@@ -133,6 +133,9 @@ func (u *User) RepoCreationNum() int {
 
 func (u *User) CanCreateRepo() bool {
 	if u.MaxRepoCreation <= -1 {
+		if setting.Repository.MaxCreationLimit == -1 {
+			return true
+		}
 		return u.NumRepos < setting.Repository.MaxCreationLimit
 	}
 	return u.NumRepos < u.MaxRepoCreation
