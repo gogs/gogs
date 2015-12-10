@@ -440,10 +440,6 @@ func CommitRepoAction(
 			isNewBranch = true
 		}
 
-		// NOTE: limit to detect latest 100 commits.
-		if len(commit.Commits) > 100 {
-			commit.Commits = commit.Commits[len(commit.Commits)-100:]
-		}
 		if err = updateIssuesCommit(u, repo, repoUserName, repoName, commit.Commits); err != nil {
 			log.Error(4, "updateIssuesCommit: %v", err)
 		}
