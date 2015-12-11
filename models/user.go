@@ -75,7 +75,7 @@ type User struct {
 
 	// Remember visibility choice for convenience, true for private
 	LastRepoVisibility bool
-	// Maximum repository creation limit, 0 means use gloabl default
+	// Maximum repository creation limit, -1 means use gloabl default
 	MaxRepoCreation int `xorm:"NOT NULL DEFAULT -1"`
 
 	// Permissions.
@@ -138,7 +138,7 @@ func (u *User) RepoCreationNum() int {
 
 func (u *User) CanCreateRepo() bool {
 	if u.MaxRepoCreation <= -1 {
-		if setting.Repository.MaxCreationLimit == -1 {
+		if setting.Repository.MaxCreationLimit <= -1 {
 			return true
 		}
 		return u.NumRepos < setting.Repository.MaxCreationLimit
@@ -475,6 +475,7 @@ func CreateUser(u *User) (err error) {
 	u.Rands = GetUserSalt()
 	u.Salt = GetUserSalt()
 	u.EncodePasswd()
+	u.MaxRepoCreation = -1
 
 	sess := x.NewSession()
 	defer sess.Close()
