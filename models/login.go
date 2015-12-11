@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"net/smtp"
+	"net/textproto"
 	"strings"
 	"time"
 
@@ -371,7 +372,11 @@ func LoginUserSMTPSource(u *User, name, passwd string, sourceID int64, cfg *SMTP
 	}
 
 	if err := SMTPAuth(auth, cfg); err != nil {
-		if strings.Contains(err.Error(), "Username and Password not accepted") {
+		// Check standard error format first,
+		// then fallback to worse case.
+		tperr, ok := err.(*textproto.Error)
+		if (ok && tperr.Code == 535) ||
+			strings.Contains(err.Error(), "Username and Password not accepted") {
 			return nil, ErrUserNotExist{0, name}
 		}
 		return nil, err
