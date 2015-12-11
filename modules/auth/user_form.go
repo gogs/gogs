@@ -92,7 +92,7 @@ type UpdateProfileForm struct {
 	Email    string `binding:"Required;Email;MaxSize(254)"`
 	Website  string `binding:"Url;MaxSize(100)"`
 	Location string `binding:"MaxSize(50)"`
-	Gravatar string `binding:"Required;Email;MaxSize(254)"`
+	Gravatar string `binding:"OmitEmpty;Email;MaxSize(254)"`
 }
 
 func (f *UpdateProfileForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {

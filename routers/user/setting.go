@@ -79,8 +79,10 @@ func SettingsPost(ctx *middleware.Context, form auth.UpdateProfileForm) {
 	ctx.User.Email = form.Email
 	ctx.User.Website = form.Website
 	ctx.User.Location = form.Location
-	ctx.User.Avatar = base.EncodeMD5(form.Gravatar)
-	ctx.User.AvatarEmail = form.Gravatar
+	if len(form.Gravatar) > 0 {
+		ctx.User.Avatar = base.EncodeMD5(form.Gravatar)
+		ctx.User.AvatarEmail = form.Gravatar
+	}
 	if err := models.UpdateUser(ctx.User); err != nil {
 		ctx.Handle(500, "UpdateUser", err)
 		return
