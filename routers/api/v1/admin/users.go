@@ -43,7 +43,7 @@ func CreateUser(ctx *middleware.Context, form api.CreateUserOption) {
 		Email:     form.Email,
 		Passwd:    form.Password,
 		IsActive:  true,
-		LoginType: models.PLAIN,
+		LoginType: models.LOGIN_PLAIN,
 	}
 
 	parseLoginSource(ctx, u, form.SourceID, form.LoginName)

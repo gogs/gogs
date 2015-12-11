@@ -118,6 +118,11 @@ func (u *User) AfterSet(colName string, _ xorm.Cell) {
 	}
 }
 
+// returns true if user login type is LOGIN_PLAIN.
+func (u *User) IsLocal() bool {
+	return u.LoginType <= LOGIN_PLAIN
+}
+
 // HasForkedRepo checks if user has already forked a repository with given ID.
 func (u *User) HasForkedRepo(repoID int64) bool {
 	_, has := HasForkedRepo(u.Id, repoID)
