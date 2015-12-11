@@ -27,6 +27,12 @@ const (
 func MustEnableWiki(ctx *middleware.Context) {
 	if !ctx.Repo.Repository.EnableWiki {
 		ctx.Handle(404, "MustEnableWiki", nil)
+		return
+	}
+
+	if ctx.Repo.Repository.EnableExternalWiki {
+		ctx.Redirect(ctx.Repo.Repository.ExternalWikiURL)
+		return
 	}
 }
 

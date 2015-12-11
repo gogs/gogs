@@ -91,6 +91,8 @@ type RepoSettingForm struct {
 
 	// Advanced settings
 	EnableWiki            bool
+	EnableExternalWiki    bool
+	ExternalWikiURL       string
 	EnableIssues          bool
 	EnableExternalTracker bool
 	TrackerURLFormat      string

@@ -496,6 +496,7 @@ func updateServerInfo(gitBinPath, dir string) []byte {
 	return gitCommand(gitBinPath, dir, args...)
 }
 
+// FIXME: use process module
 func gitCommand(gitBinPath, dir string, args ...string) []byte {
 	command := exec.Command(gitBinPath, args...)
 	command.Dir = dir
