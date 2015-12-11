@@ -14,7 +14,10 @@
 						{{.CsrfTokenHtml}}
 						<div class="required field {{if .Err_Name}}error{{end}}">
 							<label for="username">{{.i18n.Tr "username"}}<span class="text red hide" id="name-change-prompt"> {{.i18n.Tr "settings.change_username_prompt"}}</span></label>
-							<input id="username" name="name" value="{{.SignedUser.Name}}" data-name="{{.SignedUser.Name}}" autofocus required>
+							<input id="username" name="name" value="{{.SignedUser.Name}}" data-name="{{.SignedUser.Name}}" autofocus required {{if not .SignedUser.IsLocal}}disabled{{end}}>
+							{{if not .SignedUser.IsLocal}}
+							<p class="help text blue">{{$.i18n.Tr "settings.password_username_disabled"}}</p>
+							{{end}}
 						</div>
 						<div class="field {{if .Err_FullName}}error{{end}}">
 							<label for="full_name">{{.i18n.Tr "settings.full_name"}}</label>
@@ -32,10 +35,12 @@
 							<label for="location">{{.i18n.Tr "settings.location"}}</label>
 							<input id="location" name="location"  value="{{.SignedUser.Location}}">
 						</div>
-						<div class="required field {{if or DisableGravatar .SignedUser.UseCustomAvatar}}hide{{end}} {{if .Err_Gravatar}}error{{end}}">
+						{{if not DisableGravatar}}
+						<div class="field {{if .Err_Gravatar}}error{{end}}">
 							<label for="gravatar">Gravatar {{.i18n.Tr "email"}}</label>
 							<input id="gravatar" name="gravatar" value="{{.SignedUser.AvatarEmail}}" />
 						</div>
+						{{end}}
 
 						<div class="field">
 							<button class="ui green button">{{$.i18n.Tr "settings.update_profile"}}</button>
