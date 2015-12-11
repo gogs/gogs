@@ -45,10 +45,10 @@ type AuthSource struct {
 }
 
 var authSources = []AuthSource{
-	{models.LoginNames[models.LDAP], models.LDAP},
-	{models.LoginNames[models.DLDAP], models.DLDAP},
-	{models.LoginNames[models.SMTP], models.SMTP},
-	{models.LoginNames[models.PAM], models.PAM},
+	{models.LoginNames[models.LOGIN_LDAP], models.LOGIN_LDAP},
+	{models.LoginNames[models.LOGIN_DLDAP], models.LOGIN_DLDAP},
+	{models.LoginNames[models.LOGIN_SMTP], models.LOGIN_SMTP},
+	{models.LoginNames[models.LOGIN_PAM], models.LOGIN_PAM},
 }
 
 func NewAuthSource(ctx *middleware.Context) {
@@ -56,8 +56,8 @@ func NewAuthSource(ctx *middleware.Context) {
 	ctx.Data["PageIsAdmin"] = true
 	ctx.Data["PageIsAdminAuthentications"] = true
 
-	ctx.Data["type"] = models.LDAP
-	ctx.Data["CurTypeName"] = models.LoginNames[models.LDAP]
+	ctx.Data["type"] = models.LOGIN_LDAP
+	ctx.Data["CurTypeName"] = models.LoginNames[models.LOGIN_LDAP]
 	ctx.Data["smtp_auth"] = "PLAIN"
 	ctx.Data["is_active"] = true
 	ctx.Data["AuthSources"] = authSources
@@ -115,11 +115,11 @@ func NewAuthSourcePost(ctx *middleware.Context, form auth.AuthenticationForm) {
 
 	var config core.Conversion
 	switch models.LoginType(form.Type) {
-	case models.LDAP, models.DLDAP:
+	case models.LOGIN_LDAP, models.LOGIN_DLDAP:
 		config = parseLDAPConfig(form)
-	case models.SMTP:
+	case models.LOGIN_SMTP:
 		config = parseSMTPConfig(form)
-	case models.PAM:
+	case models.LOGIN_PAM:
 		config = &models.PAMConfig{
 			ServiceName: form.PAMServiceName,
 		}
@@ -181,11 +181,11 @@ func EditAuthSourcePost(ctx *middleware.Context, form auth.AuthenticationForm) {
 
 	var config core.Conversion
 	switch models.LoginType(form.Type) {
-	case models.LDAP, models.DLDAP:
+	case models.LOGIN_LDAP, models.LOGIN_DLDAP:
 		config = parseLDAPConfig(form)
-	case models.SMTP:
+	case models.LOGIN_SMTP:
 		config = parseSMTPConfig(form)
-	case models.PAM:
+	case models.LOGIN_PAM:
 		config = &models.PAMConfig{
 			ServiceName: form.PAMServiceName,
 		}
