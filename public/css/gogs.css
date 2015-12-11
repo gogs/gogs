@@ -1773,9 +1773,9 @@ footer .container .links > *:first-child {
 }
 .repository .head .fork-flag {
   margin-left: 38px;
+  margin-top: 3px;
   display: block;
   font-size: 12px;
-  line-height: 10px;
   white-space: nowrap;
 }
 .repository .navbar .ui.label {
