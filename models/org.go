@@ -109,6 +109,7 @@ func CreateOrganization(org, owner *User) (err error) {
 	org.LowerName = strings.ToLower(org.Name)
 	org.FullName = org.Name
 	org.UseCustomAvatar = true
+	org.MaxRepoCreation = -1
 	org.NumTeams = 1
 	org.NumMembers = 1
 
