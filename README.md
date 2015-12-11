@@ -3,7 +3,7 @@ Gogs - Go Git Service [![Build Status](https://travis-ci.org/gogits/gogs.svg?bra
 
 [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/gogits/gogs?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
-![](public/img/gogs-large-resize.png)
+![](https://github.com/gogits/gogs/blob/master/public/img/gogs-large-resize.png?raw=true)
 
 ##### Current version: 0.7.42 Beta
 
