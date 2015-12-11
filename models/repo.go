@@ -164,6 +164,8 @@ type Repository struct {
 
 	// Advanced settings
 	EnableWiki            bool `xorm:"NOT NULL DEFAULT true"`
+	EnableExternalWiki    bool
+	ExternalWikiURL       string
 	EnableIssues          bool `xorm:"NOT NULL DEFAULT true"`
 	EnableExternalTracker bool
 	ExternalTrackerFormat string
