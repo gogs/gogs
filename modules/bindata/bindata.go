@@ -4379,7 +4379,7 @@ func confLocaleLocale_enUsIni() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "conf/locale/locale_en-US.ini", size: 48293, mode: os.FileMode(420), modTime: time.Unix(1449865728, 0)}
+	info := bindataFileInfo{name: "conf/locale/locale_en-US.ini", size: 48293, mode: os.FileMode(420), modTime: time.Unix(1449879514, 0)}
 	a := &asset{bytes: bytes, info:  info}
 	return a, nil
 }

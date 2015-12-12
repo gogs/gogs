@@ -25,11 +25,12 @@ func (f *CreateOrgForm) Validate(ctx *macaron.Context, errs binding.Errors) bind
 }
 
 type UpdateOrgSettingForm struct {
-	Name        string `binding:"Required;AlphaDashDot;MaxSize(35)" locale:"org.org_name_holder"`
-	FullName    string `binding:"MaxSize(100)"`
-	Description string `binding:"MaxSize(255)"`
-	Website     string `binding:"Url;MaxSize(100)"`
-	Location    string `binding:"MaxSize(50)"`
+	Name            string `binding:"Required;AlphaDashDot;MaxSize(35)" locale:"org.org_name_holder"`
+	FullName        string `binding:"MaxSize(100)"`
+	Description     string `binding:"MaxSize(255)"`
+	Website         string `binding:"Url;MaxSize(100)"`
+	Location        string `binding:"MaxSize(50)"`
+	MaxRepoCreation int
 }
 
 func (f *UpdateOrgSettingForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {

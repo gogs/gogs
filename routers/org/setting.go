@@ -66,6 +66,10 @@ func SettingsPost(ctx *middleware.Context, form auth.UpdateOrgSettingForm) {
 	org.Name = form.Name
 	org.LowerName = strings.ToLower(form.Name)
 
+	if ctx.User.IsAdmin {
+		org.MaxRepoCreation = form.MaxRepoCreation
+	}
+
 	org.FullName = form.FullName
 	org.Description = form.Description
 	org.Website = form.Website

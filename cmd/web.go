@@ -258,10 +258,8 @@ func runWeb(ctx *cli.Context) {
 
 		m.Group("/users", func() {
 			m.Get("", admin.Users)
-			m.Get("/new", admin.NewUser)
-			m.Post("/new", bindIgnErr(auth.AdminCrateUserForm{}), admin.NewUserPost)
-			m.Get("/:userid", admin.EditUser)
-			m.Post("/:userid", bindIgnErr(auth.AdminEditUserForm{}), admin.EditUserPost)
+			m.Combo("/new").Get(admin.NewUser).Post(bindIgnErr(auth.AdminCrateUserForm{}), admin.NewUserPost)
+			m.Combo("/:userid").Get(admin.EditUser).Post(bindIgnErr(auth.AdminEditUserForm{}), admin.EditUserPost)
 			m.Post("/:userid/delete", admin.DeleteUser)
 		})
 
@@ -276,8 +274,7 @@ func runWeb(ctx *cli.Context) {
 
 		m.Group("/auths", func() {
 			m.Get("", admin.Authentications)
-			m.Get("/new", admin.NewAuthSource)
-			m.Post("/new", bindIgnErr(auth.AuthenticationForm{}), admin.NewAuthSourcePost)
+			m.Combo("/new").Get(admin.NewAuthSource).Post(bindIgnErr(auth.AuthenticationForm{}), admin.NewAuthSourcePost)
 			m.Combo("/:authid").Get(admin.EditAuthSource).
 				Post(bindIgnErr(auth.AuthenticationForm{}), admin.EditAuthSourcePost)
 			m.Post("/:authid/delete", admin.DeleteAuthSource)
