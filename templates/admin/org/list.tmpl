@@ -18,6 +18,7 @@
 								<th>{{.i18n.Tr "admin.orgs.members"}}</th>
 								<th>{{.i18n.Tr "admin.users.repos"}}</th>
 								<th>{{.i18n.Tr "admin.users.created"}}</th>
+								<th>{{.i18n.Tr "admin.users.edit"}}</th>
 							</tr>
 						</thead>
 						<tbody>
@@ -29,6 +30,7 @@
 									<td>{{.NumMembers}}</td>
 									<td>{{.NumRepos}}</td>
 									<td><span title="{{DateFmtLong .Created}}">{{DateFmtShort .Created}}</span></td>
+									<td><a href="{{AppSubUrl}}/org/{{.Name}}/settings"><i class="fa fa-pencil-square-o"></i></a></td>
 								</tr>
 							{{end}}
 						</tbody>
