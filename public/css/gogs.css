@@ -2773,7 +2773,6 @@ footer .container .links > *:first-child {
   width: 50%!important;
 }
 .organization.options input {
-  width: 50%!important;
   min-width: 300px;
 }
 .organization.profile #org-avatar {
