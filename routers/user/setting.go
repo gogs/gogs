@@ -40,7 +40,7 @@ func Settings(ctx *middleware.Context) {
 }
 
 func handlerUsernameChange(ctx *middleware.Context, newName string) {
-	if len(newName) == 0 {
+	if len(newName) == 0 || !ctx.User.IsLocal() {
 		return
 	}
 
