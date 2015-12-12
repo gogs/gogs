@@ -2980,6 +2980,10 @@ footer .container .links > *:first-child {
   padding-top: 10px;
   padding-bottom: 5px;
 }
+.feeds .list .header .plus.icon {
+  margin-top: 5px;
+  margin-right: 0;
+}
 .feeds .list ul {
   list-style: none;
   margin: 0;
