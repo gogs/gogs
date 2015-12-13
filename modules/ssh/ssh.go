@@ -53,7 +53,8 @@ func handleServerConn(keyID string, chans <-chan ssh.NewChannel) {
 				case "env":
 					args := strings.Split(strings.Replace(payload, "\x00", "", -1), "\v")
 					if len(args) != 2 {
-						return
+						log.Warn("Invalid env arguments: '%#v'", args)
+						continue
 					}
 					args[0] = strings.TrimLeft(args[0], "\x04")
 					_, _, err := com.ExecCmdBytes("env", args[0]+"="+args[1])
