@@ -190,8 +190,8 @@
 
 			.code-view {
 				* {
-					font-size: 13px;
-					font-family: monospace;
+					font-size: 12px;
+					font-family: Consolas, "Liberation Mono", Menlo, Courier, monospace;
 					line-height: 20px;
 				}
 
@@ -206,7 +206,6 @@
 					width: 1%;
 
 					span {
-						font-family: Monaco, Menlo, Consolas, "Courier New", monospace;
 						line-height: 20px;
 						padding: 0 10px;
 						cursor: pointer;
@@ -666,7 +665,7 @@
 		.file-body.file-code {
 			.lines-num {
 				text-align: right;
-				color: #999;
+				color: #A7A7A7;
 				background: #fafafa;
 				width: 1%;
 			}
@@ -675,15 +674,15 @@
 			}
 		}
 		.code-diff {
-			font-size: 13px;
+			font-size: 12px;
 
 			td {
 				padding: 0;
+				padding-left: 10px;
 				border-top: none;
 			}
 			pre {
 				margin: 0;
-				font-size: 13px;
 			}
 			.lines-num {
 				border-right: 1px solid #d4d4d5;
@@ -691,10 +690,13 @@
 			}
 			tbody {
 				tr {
+
 					&.tag-code {
 						td, pre {
-							background-color: #E0E0E0 !important;
-							border-color: #ADADAD!important;
+							background-color: #F0F0F0 !important;
+							border-color: #D2CECE!important;
+							padding-top: 4px;
+							padding-bottom: 4px;
 						}
 						// td.selected-line, td.selected-line pre {
 						// 	background-color: #ffffdd !important;
@@ -707,8 +709,8 @@
 					// }
 					&.del-code {
 						td, pre {
-							background-color: #ffe2dd !important;
-							border-color: #e9aeae !important;
+							background-color: #ffecec !important;
+					    border-color: #f1c0c0 !important;
 						}
 						// td.selected-line, td.selected-line pre {
 						// 	background-color: #ffffdd !important;
@@ -716,21 +718,12 @@
 					}
 					&.add-code {
 						td, pre {
-							background-color: #d1ffd6 !important;
-							border-color: #b4e2b4 !important;
+							background-color: #eaffea !important;
+							border-color: #c1e9c1 !important;
 						}
 						// td.selected-line, td.selected-line pre {
 						// 	background-color: #ffffdd !important;
 						// }
-					}
-					&:hover {
-						td {
-							background-color: #FFF8D2 !important;
-							border-color: #F0DB88 !important;
-						}
-						pre {
-							background-color: transparent !important;
-						}
 					}
 				}
 			}
