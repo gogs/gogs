@@ -464,10 +464,7 @@ function initWiki() {
             element: $edit_area[0],
             previewRender: function (plainText, preview) { // Async method
                 setTimeout(function () {
-                    if ($('.editor-preview-active').length == 0) {
-                        return;
-                    }
-
+                    // FIXME: still send render request when return back to edit mode
                     $.post($edit_area.data('url'), {
                             "_csrf": csrf,
                             "mode": "gfm",
