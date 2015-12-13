@@ -52,14 +52,15 @@ func handleServerConn(keyID string, chans <-chan ssh.NewChannel) {
 				switch req.Type {
 				case "env":
 					args := strings.Split(strings.Replace(payload, "\x00", "", -1), "\v")
-					if len(args) != 2 {
-						return
-					}
-					args[0] = strings.TrimLeft(args[0], "\x04")
-					_, _, err := com.ExecCmdBytes("env", args[0]+"="+args[1])
-					if err != nil {
-						log.Error(3, "env: %v", err)
-						return
+					if len(args) == 2 {
+						args[0] = strings.TrimLeft(args[0], "\x04")
+						_, _, err := com.ExecCmdBytes("env", args[0]+"="+args[1])
+						if err != nil {
+							log.Error(3, "env: %v", err)
+							return
+						}
+					} else {
+						log.Warn("Invalid env arguments: '%#v'", args)
 					}
 				case "exec":
 					cmdName := strings.TrimLeft(payload, "'()")
