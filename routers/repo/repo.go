@@ -278,6 +278,7 @@ func Download(ctx *middleware.Context) {
 		archivePath = path.Join(ctx.Repo.GitRepo.Path, "archives/targz")
 		archiveType = git.TARGZ
 	default:
+		log.Trace("Unknown format: %s", uri)
 		ctx.Error(404)
 		return
 	}
@@ -315,7 +316,7 @@ func Download(ctx *middleware.Context) {
 			return
 		}
 	} else {
-		ctx.Error(404)
+		ctx.Handle(404, "Download", nil)
 		return
 	}
 
