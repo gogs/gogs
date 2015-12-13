@@ -27,7 +27,7 @@ import (
 	"github.com/mcuadros/go-version"
 	"gopkg.in/ini.v1"
 
-	"github.com/gogits/git-shell"
+	git "github.com/gogits/git-shell"
 	api "github.com/gogits/go-gogs-client"
 
 	"github.com/gogits/gogs/modules/base"
