@@ -13,8 +13,8 @@ apk -U --no-progress add linux-pam-dev go@community gcc musl-dev
 mkdir -p ${GOPATH}/src/github.com/gogits/
 ln -s /app/gogs/ ${GOPATH}/src/github.com/gogits/gogs
 cd ${GOPATH}/src/github.com/gogits/gogs
-go get -v -tags "sqlite redis memcache cert pam"
-go build -tags "sqlite redis memcache cert pam"
+go get -v -tags "sqlite cert pam"
+go build -tags "sqlite cert pam"
 
 # Cleanup GOPATH
 rm -r $GOPATH

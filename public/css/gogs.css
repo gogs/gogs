@@ -896,10 +896,10 @@ pre.raw {
   border-color: #F0C36D;
 }
 .ui .info.segment {
-  border-color: #85c5e5;
+  border: 1px solid #c5d5dd;
 }
 .ui .info.segment.top {
-  background-color: #d9edf7 !important;
+  background-color: #e6f1f6 !important;
 }
 .ui .info.segment.top h3,
 .ui .info.segment.top h4 {
@@ -2310,7 +2310,8 @@ footer .container .links > *:first-child {
   color: #888;
 }
 .repository .diff-file-box .header {
-  border-bottom: 1px solid #d4d4d5!important;
+  border-bottom: 1px solid #d8d8d8;
+  background-color: #f7f7f7;
 }
 .repository .diff-file-box .file-body.file-code .lines-num {
   text-align: right;
