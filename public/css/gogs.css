@@ -1097,7 +1097,7 @@ footer .container .links > *:first-child {
   word-wrap: break-word;
 }
 .markdown.file-view {
-  padding: 5px 2em 2em !important;
+  padding: 2em 2em 2em !important;
 }
 .markdown > *:first-child {
   margin-top: 0 !important;
@@ -1135,6 +1135,14 @@ footer .container .links > *:first-child {
   margin-bottom: 16px;
   font-weight: bold;
   line-height: 1.4;
+}
+.markdown h1:first-of-type,
+.markdown h2:first-of-type,
+.markdown h3:first-of-type,
+.markdown h4:first-of-type,
+.markdown h5:first-of-type,
+.markdown h6:first-of-type {
+  margin-top: 0 !important;
 }
 .markdown h1 .octicon-link,
 .markdown h2 .octicon-link,
@@ -2310,7 +2318,6 @@ footer .container .links > *:first-child {
   color: #888;
 }
 .repository .diff-file-box .header {
-  border-bottom: 1px solid #d8d8d8;
   background-color: #f7f7f7;
 }
 .repository .diff-file-box .file-body.file-code .lines-num {
