@@ -22,8 +22,7 @@ import (
 	"github.com/Unknwon/com"
 	"github.com/Unknwon/i18n"
 	"github.com/microcosm-cc/bluemonday"
-
-	"github.com/gogits/chardet"
+	"golang.org/x/net/html/charset"
 
 	"github.com/gogits/gogs/modules/avatar"
 	"github.com/gogits/gogs/modules/setting"
@@ -52,13 +51,9 @@ func ShortSha(sha1 string) string {
 	return sha1
 }
 
-func DetectEncoding(content []byte) (string, error) {
-	detector := chardet.NewTextDetector()
-	result, err := detector.DetectBest(content)
-	if result.Charset != "UTF-8" && len(setting.Repository.AnsiCharset) > 0 {
-		return setting.Repository.AnsiCharset, err
-	}
-	return result.Charset, err
+func DetectEncoding(content []byte) string {
+	_, name, _ := charset.DetermineEncoding(content, setting.Repository.AnsiCharset)
+	return name
 }
 
 func BasicAuthDecode(encoded string) (string, string, error) {
