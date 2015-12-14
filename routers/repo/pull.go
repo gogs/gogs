@@ -6,7 +6,6 @@ package repo
 
 import (
 	"container/list"
-	"errors"
 	"path"
 	"strings"
 
@@ -644,17 +643,24 @@ func CompareAndPullRequestPost(ctx *middleware.Context, form auth.CreateIssueFor
 }
 
 func TriggerTask(ctx *middleware.Context) {
-	_, repo := parseOwnerAndRepo(ctx)
+	branch := ctx.Query("branch")
+	secret := ctx.Query("secret")
+	if len(branch) == 0 || len(secret) == 0 {
+		ctx.Error(404)
+		log.Trace("TriggerTask: branch or secret is empty")
+		return
+	}
+	owner, repo := parseOwnerAndRepo(ctx)
 	if ctx.Written() {
 		return
 	}
-	branch := ctx.Query("branch")
-	if len(branch) == 0 {
-		ctx.Handle(422, "TriggerTask", errors.New("branch is empty"))
+	if secret != base.EncodeMD5(owner.Salt) {
+		ctx.Error(404)
+		log.Trace("TriggerTask [%s/%s]: invalid secret", owner.Name, repo.Name)
 		return
 	}
 
-	log.Trace("TriggerTask[%d].(new request): %s", repo.ID, branch)
+	log.Trace("TriggerTask [%d].(new request): %s", repo.ID, branch)
 
 	go models.HookQueue.Add(repo.ID)
 	go models.AddTestPullRequestTask(repo.ID, branch)

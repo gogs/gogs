@@ -18,6 +18,7 @@ import (
 	"github.com/go-xorm/xorm"
 	"gopkg.in/ini.v1"
 
+	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/setting"
 	gouuid "github.com/gogits/gogs/modules/uuid"
@@ -57,12 +58,13 @@ type Version struct {
 // If you want to "retire" a migration, remove it from the top of the list and
 // update _MIN_VER_DB accordingly
 var migrations = []Migration{
-	NewMigration("fix locale file load panic", fixLocaleFileLoadPanic),           // V4 -> V5:v0.6.0
-	NewMigration("trim action compare URL prefix", trimCommitActionAppUrlPrefix), // V5 -> V6:v0.6.3
-	NewMigration("generate issue-label from issue", issueToIssueLabel),           // V6 -> V7:v0.6.4
-	NewMigration("refactor attachment table", attachmentRefactor),                // V7 -> V8:v0.6.4
-	NewMigration("rename pull request fields", renamePullRequestFields),          // V8 -> V9:v0.6.16
-	NewMigration("clean up migrate repo info", cleanUpMigrateRepoInfo),           // V9 -> V10:v0.6.20
+	NewMigration("fix locale file load panic", fixLocaleFileLoadPanic),                 // V4 -> V5:v0.6.0
+	NewMigration("trim action compare URL prefix", trimCommitActionAppUrlPrefix),       // V5 -> V6:v0.6.3
+	NewMigration("generate issue-label from issue", issueToIssueLabel),                 // V6 -> V7:v0.6.4
+	NewMigration("refactor attachment table", attachmentRefactor),                      // V7 -> V8:v0.6.4
+	NewMigration("rename pull request fields", renamePullRequestFields),                // V8 -> V9:v0.6.16
+	NewMigration("clean up migrate repo info", cleanUpMigrateRepoInfo),                 // V9 -> V10:v0.6.20
+	NewMigration("generate rands and salt for organizations", generateOrgRandsAndSalt), // V10 -> V11:v0.8.5
 }
 
 // Migrate database to current version
@@ -421,4 +423,33 @@ func cleanUpMigrateRepoInfo(x *xorm.Engine) (err error) {
 	}
 
 	return nil
+}
+
+func generateOrgRandsAndSalt(x *xorm.Engine) (err error) {
+	type User struct {
+		ID    int64  `xorm:"pk autoincr"`
+		Rands string `xorm:"VARCHAR(10)"`
+		Salt  string `xorm:"VARCHAR(10)"`
+	}
+
+	orgs := make([]*User, 0, 10)
+	if err = x.Where("type=1").And("rands=''").Find(&orgs); err != nil {
+		return fmt.Errorf("select all organizations: %v", err)
+	}
+
+	sess := x.NewSession()
+	defer sessionRelease(sess)
+	if err = sess.Begin(); err != nil {
+		return err
+	}
+
+	for _, org := range orgs {
+		org.Rands = base.GetRandomString(10)
+		org.Salt = base.GetRandomString(10)
+		if _, err = sess.Id(org.ID).Update(org); err != nil {
+			return err
+		}
+	}
+
+	return sess.Commit()
 }
