@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"strings"
@@ -124,6 +125,7 @@ func ParsePatch(maxlines int, reader io.Reader) (*Diff, error) {
 		// Diff data too large, we only show the first about maxlines lines
 		if lineCount >= maxlines {
 			log.Warn("Diff data too large")
+			io.Copy(ioutil.Discard, reader)
 			diff.Files = nil
 			return diff, nil
 		}
