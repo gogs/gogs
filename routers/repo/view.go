@@ -8,12 +8,11 @@ import (
 	"bytes"
 	"io/ioutil"
 	"path"
-	"path/filepath"
 	"strings"
 
 	"github.com/Unknwon/paginater"
 
-	"github.com/gogits/git-shell"
+	git "github.com/gogits/git-shell"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"
@@ -134,38 +133,13 @@ func Home(ctx *middleware.Context) {
 		}
 		entries.Sort()
 
-		files := make([][]interface{}, 0, len(entries))
-		for _, te := range entries {
-			if te.Type != git.OBJECT_COMMIT {
-				c, err := ctx.Repo.Commit.GetCommitByPath(filepath.Join(treePath, te.Name()))
-				if err != nil {
-					ctx.Handle(500, "GetCommitByPath", err)
-					return
-				}
-				files = append(files, []interface{}{te, c})
-			} else {
-				sm, err := ctx.Repo.Commit.GetSubModule(path.Join(treename, te.Name()))
-				if err != nil {
-					ctx.Handle(500, "GetSubModule", err)
-					return
-				}
-				smUrl := ""
-				if sm != nil {
-					smUrl = sm.Url
-				}
-
-				c, err := ctx.Repo.Commit.GetCommitByPath(filepath.Join(treePath, te.Name()))
-				if err != nil {
-					ctx.Handle(500, "GetCommitByPath", err)
-					return
-				}
-				files = append(files, []interface{}{te, git.NewSubModuleFile(c, smUrl, te.ID.String())})
-			}
+		ctx.Data["Files"], err = entries.GetCommitsInfo(ctx.Repo.Commit, treePath)
+		if err != nil {
+			ctx.Handle(500, "GetCommitsInfo", err)
+			return
 		}
-		ctx.Data["Files"] = files
 
 		var readmeFile *git.Blob
-
 		for _, f := range entries {
 			if f.IsDir() || !base.IsReadmeFile(f.Name()) {
 				continue
