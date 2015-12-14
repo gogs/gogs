@@ -867,7 +867,8 @@ $(document).ready(function () {
 
     // Emojify
     emojify.setConfig({
-        img_dir: suburl + '/img/emoji'
+        img_dir: suburl + '/img/emoji',
+        ignore_emoticons: true
     });
     emojify.run();
 
