@@ -17,6 +17,7 @@ import (
 	"github.com/codegangsta/cli"
 
 	"github.com/gogits/gogs/models"
+	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/httplib"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/setting"
@@ -87,7 +88,7 @@ func fail(userMessage, logMessage string, args ...interface{}) {
 	os.Exit(1)
 }
 
-func handleUpdateTask(uuid string, user *models.User, username, reponame string, isWiki bool) {
+func handleUpdateTask(uuid string, user, repoUser *models.User, reponame string, isWiki bool) {
 	task, err := models.GetUpdateTaskByUUID(uuid)
 	if err != nil {
 		if models.IsErrUpdateTaskNotExist(err) {
@@ -104,13 +105,13 @@ func handleUpdateTask(uuid string, user *models.User, username, reponame string,
 	}
 
 	if err = models.Update(task.RefName, task.OldCommitID, task.NewCommitID,
-		user.Name, username, reponame, user.Id); err != nil {
+		user.Name, repoUser.Name, reponame, user.Id); err != nil {
 		log.GitLogger.Error(2, "Update: %v", err)
 	}
 
 	// Ask for running deliver hook and test pull request tasks.
-	reqURL := setting.LocalUrl + username + "/" + reponame + "/tasks/trigger?branch=" +
-		strings.TrimPrefix(task.RefName, "refs/heads/")
+	reqURL := setting.LocalUrl + repoUser.Name + "/" + reponame + "/tasks/trigger?branch=" +
+		strings.TrimPrefix(task.RefName, "refs/heads/") + "&secret=" + base.EncodeMD5(repoUser.Salt)
 	log.GitLogger.Trace("Trigger task: %s", reqURL)
 
 	resp, err := httplib.Head(reqURL).SetTLSClientConfig(&tls.Config{
@@ -163,7 +164,7 @@ func runServ(c *cli.Context) {
 		if models.IsErrUserNotExist(err) {
 			fail("Repository owner does not exist", "Unregistered owner: %s", username)
 		}
-		fail("Internal error", "Failed to get repository owner(%s): %v", username, err)
+		fail("Internal error", "Failed to get repository owner (%s): %v", username, err)
 	}
 
 	repo, err := models.GetRepositoryByName(repoUser.Id, reponame)
@@ -266,7 +267,7 @@ func runServ(c *cli.Context) {
 	}
 
 	if requestedMode == models.ACCESS_MODE_WRITE {
-		handleUpdateTask(uuid, user, username, reponame, isWiki)
+		handleUpdateTask(uuid, user, repoUser, reponame, isWiki)
 	}
 
 	// Update user key activity.
