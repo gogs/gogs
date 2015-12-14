@@ -3,7 +3,7 @@ Gogs - Go Git Service [![Build Status](https://travis-ci.org/gogits/gogs.svg?bra
 
 ![](https://github.com/gogits/gogs/blob/master/public/img/gogs-large-resize.png?raw=true)
 
-##### Current version: 0.8.1
+##### Current version: 0.8.2
 
 | Web | UI  | Preview  |
 |:-------------:|:-------:|:-------:|
@@ -85,7 +85,7 @@ There are 5 ways to install Gogs:
 
 ### Screencasts
 
-- [Instalando Gogs no Ubuntu](http://blog.linuxpro.com.br/2015/08/14/instalando-gogs-no-ubuntu/) (Português)
+- [Instalando Gogs no Ubuntu](https://www.youtube.com/watch?v=4UkHAR1F7ZA) (Português)
 
 ### Deploy to Cloud
 
