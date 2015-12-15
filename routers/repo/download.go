@@ -8,7 +8,7 @@ import (
 	"io"
 	"path"
 
-	"github.com/gogits/git-shell"
+	"github.com/gogits/git-module"
 
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/middleware"
