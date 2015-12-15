@@ -14,7 +14,7 @@ import (
 	"github.com/Unknwon/com"
 	"github.com/go-xorm/xorm"
 
-	"github.com/gogits/git-shell"
+	"github.com/gogits/git-module"
 	api "github.com/gogits/go-gogs-client"
 
 	"github.com/gogits/gogs/modules/log"
