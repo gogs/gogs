@@ -16,7 +16,7 @@ import (
 	"github.com/Unknwon/com"
 	"github.com/Unknwon/paginater"
 
-	"github.com/gogits/git-shell"
+	"github.com/gogits/git-module"
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
@@ -199,7 +199,7 @@ func Home(ctx *middleware.Context) {
 		ctx.Data["LastCommit"] = lastCommit
 		ctx.Data["LastCommitUser"] = models.ValidateCommitWithEmail(lastCommit)
 
-		branchId, err := ctx.Repo.GitRepo.GetCommitIdOfBranch(branchName)
+		branchId, err := ctx.Repo.GitRepo.GetBranchCommitID(branchName)
 		if err != nil || branchId != lastCommit.ID.String() {
 			branchId = lastCommit.ID.String()
 		}
@@ -313,7 +313,7 @@ func getLanguageStats(ctx *middleware.Context, branchId string) interface{} {
 			break
 		}
 		lang := results[p]
-		color := linguist.GetColor(lang)
+		color := linguist.LanguageColor(lang)
 		if color == "" {
 			color = "#ccc" //grey
 		}
@@ -374,17 +374,10 @@ func linguistlstree(ctx *middleware.Context, treeish string) (files []*file) {
 		fname := fields[1]
 
 		switch ftype {
-		// broken, don't know why
-		//		case "tree":
-		//			subdir := linguistlstree(ctx, fhash)
-		//			files = append(files, subdir...)
+		case "tree":
+			subdir := linguistlstree(ctx, fhash)
+			files = append(files, subdir...)
 		case "blob":
-			// if it's vendored, don't even look at it
-			// (vendored means files like README.md, .gitignore, etc...)
-			if linguist.IsVendored(fname) {
-				continue
-			}
-
 			ssize := gitcmd(ctx, "cat-file", "-s", fhash)
 			fsize, err := strconv.ParseFloat(strings.TrimSpace(ssize), 64)
 			tsoErr(ctx, err)
@@ -394,48 +387,37 @@ func linguistlstree(ctx *middleware.Context, treeish string) (files []*file) {
 				continue
 			}
 
+			//
+			// language detection
+			// see github.com/generaltso/linguist
+			//
+			if linguist.ShouldIgnoreFilename(fname) {
+				continue
+			}
+
 			f := &file{}
 			f.Name = fname
 			f.Size = fsize
 
-			//
-			// language detection
-			//
-
-			// by file extension
-			by_ext := linguist.DetectFromFilename(fname)
-			if by_ext != "" {
-				f.Language = by_ext
-				files = append(files, f)
-				continue
-			}
-			// by mimetype
-			// if we can't guess type by extension, then before jumping into
-			// lexing and parsing things like image files or cat videos
-			// ...or other binary formats which will give erroneous results...
-			// ...or other binary formats which will give erroneous results...
-			// with the linguist.DetectFromContents method, I posit looking
-			// at mimetype with linguist.DetectMimeFromFilename
-			//
-			// ...however, this is not what github does at all, instead ignoring
-			// binary files altogether. However, there is no law that states
-			// git must be used for code only.
-			by_mime, shouldIgnore, _ := linguist.DetectMimeFromFilename(fname)
-			if by_mime != "" && shouldIgnore {
-				f.Language = by_mime
+			by_name := linguist.LanguageByFilename(fname)
+			if by_name != "" {
+				f.Language = by_name
 				files = append(files, f)
 				continue
 			}
 
-			// by contents
-			// see also: github.com/github/linguist
-			// see also: github.com/generaltso/linguist
+			hints := linguist.LanguageHints(fname)
 			contents := gitcmdbytes(ctx, "cat-file", "blob", fhash)
-			by_contents := linguist.DetectFromContents(contents)
+
+			if linguist.ShouldIgnoreContents(contents) {
+				continue
+			}
+
+			by_contents := linguist.LanguageByContents(contents, hints)
 			if by_contents != "" {
 				f.Language = by_contents
 			} else {
-				f.Language = "(undetermined)"
+				f.Language = "(unknown)"
 			}
 			files = append(files, f)
 		}
