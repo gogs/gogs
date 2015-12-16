@@ -1,30 +1,29 @@
+<style>@import "/css/language_statistics.css";</style>
 <div class="statistics">
-	<div class="statistics-box">
-		<div class="statistics-box__toppanel statistics-box__repo">
-			<ul class="statistics-nav">
-				<li class="statistics-nav__item">
+	<div class="box3d">
+		<div class="toppanel repo">
+			<ul class="navbar">
+				<li class="navitem">
 					<i class="octicon octicon-history"></i>
 					<a href="{{.RepoLink}}/commits/{{EscapePound .BranchName}}">{{.CommitsCount}} Commit(s)</a>
 				</li>
-				<li class="statistics-nav__item">
+				<li class="navitem">
 					<i class="octicon octicon-git-branch"></i>
 					{{len .Branches}} Branch(es)
 				</li>
-				<li class="statistics-nav__item">
+				<li class="navitem">
 					<i class="octicon octicon-tag"></i>
 					<a href="{{.RepoLink}}/releases">{{.Repository.NumTags}} Release(s)</a>
 				</li>
-				<li class="statistics-nav__item">
+				<li class="navitem">
 					<i class="octicon octicon-organization"></i>
 					1337 Contributors
 				</li>
 			</ul>
-			<div class="statistics-box__bottompanel statistics-box__lang">
-				<ul class="statistics-nav">
+			<div class="bottompanel lang">
+				<ul class="navbar">
 				{{range $Lang := .LanguageStats}}
-					<li class="statistics-nav__item"
-						style="color:{{$Lang.Color}}"
-						data-percent="{{$Lang.Percent}}">
+					<li class="navitem" style="color:{{$Lang.Color}}" data-percent="{{$Lang.Percent}}">
 						<a href="#">{{$Lang.Name}}</a>
 					</li>
 				{{end}}
@@ -39,130 +38,9 @@
 		however browsers do not support this yet
 		and JavaScript cannot target ::before, ::after
 	-->
-	<div class="statistics-underbar"
-		title="Language Statistics"
-		onclick="document.querySelector('.statistics-box').classList.toggle('statistics-box__focusstate')">
+	<div class="underbar" title="Language Statistics" onclick="document.querySelector('.box3d').classList.toggle('focusstate')">
 		{{range $Lang := .LanguageStats}}
 			<span style="color:{{$Lang.Color}};flex-basis:{{$Lang.Percent}}">{{$Lang.Name}}</span>
 		{{end}}
 	</div>
 </div>
-
-<style>
-.statistics {
-	position: relative;
-	height: 2.6667em;
-	border: 1px solid #dedede;
-	border-radius: 5px;
-	background: #fff;
-}
-
-/**
- * 3D box effect technique
- *
- * http://codepen.io/rachsmith/pen/cojza
- */
-.statistics-box {
-	perspective: 1000px;
-	overflow: hidden;
-	border-radius: 5px 5px 0 0;
-	padding: 0 1.5em;
-}
-.statistics-box__toppanel, .statistics-box__bottompanel {
-	transform-origin: 50% 0;
-	transition-delay: 125ms;
-
-	/**
-	 * this timing function from
-	 * http://codepen.io/sbchewitt/pen/KpPZMx
-	 */
-	transition: all 0.5s cubic-bezier(.57,-0.42,.46,1.4);
-}
-.statistics-box__toppanel {
-	position: relative;
-	transform-style: preserve-3d;
-	background: #fff;
-}
-.statistics-box__bottompanel {
-	transform: rotateX(-90deg) translateZ(0);
-	position: absolute;
-	width: 100%;
-	height: 100%;
-	left: 0;
-	top: 100%;
-	background: #999;
-}
-
-.statistics-box__focusstate .statistics-box__toppanel {
-	transform: rotateX(90deg) translateY(-22px);
-	transition-delay: 0s;
-}
-.statistics-box__focusstate .statistics-box__bottompanel {
-	background: #fff;
-	transition-delay: 0s;
-}
-
-/*ul*/.statistics-nav {
-	list-style: none;
-	margin: 0;
-	padding: 0;
-	display: flex;
-	justify-content: space-around;
-	padding: 0.5em;
-}
-/*li*/.statistics-nav__item {
-	flex: 0 1 auto;
-}
-/*li*/.statistics-nav__item a {
-	color: #222;
-	text-decoration: none;
-}
-.statistics-box__repo /*li*/.statistics-nav__item:hover a {
-	color: #4183c4;
-}
-.statistics-box__lang /*li*/.statistics-nav__item::before {
-	background-color: currentColor;
-	content: '';
-	display: inline-block;
-	width: 0.75em;
-	height: 0.75em;
-	border-radius: 50%;
-	vertical-align: middle;
-	margin: 0 0.25em 2px 0;
-	cursor: pointer;
-}
-/*li*/.statistics-nav__item::after {
-	content: attr(data-percent);
-	margin-left: 0.5em;
-	color: #555;
-}
-
-.statistics-underbar {
-	position: absolute;
-	left: 0;
-	bottom: 0;
-	padding-top: 5px;
-	height: 8px;
-	width: 100%;
-	bottom: 0;
-	display: flex;
-	cursor: pointer;
-	border-radius: 0 0 5px 5px;
-	overflow: hidden;
-	opacity: 0.6;
-	transition: all 0.5s cubic-bezier(.57,-0.42,.46,1.4);
-}
-.statistics-box__focusstate ~ .statistics-underbar,
-.statistics-underbar:hover {
-	opacity: 1;
-	padding: 0;
-	padding-top: 3px;
-}
-.statistics-underbar:hover {
-	opacity: 0.8;
-}
-.statistics-underbar span {
-	font-size: 0;
-	background-color: currentColor;
-}
-</style>

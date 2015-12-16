@@ -1,0 +1,125 @@
+.statistics {
+	position: relative;
+	height: 2.6667em;
+	border: 1px solid #dedede;
+	border-radius: 5px;
+	background: #fff;
+
+	/**
+	 * 3D box effect technique
+	 *
+	 * http://codepen.io/rachsmith/pen/cojza
+	 */
+	.box3d {
+		perspective: 1000px;
+		overflow: hidden;
+		border-radius: 5px 5px 0 0;
+		padding: 0 1.5em;
+	
+		.toppanel, .bottompanel {
+			transform-origin: 50% 0;
+			transition-delay: 125ms;
+			
+			/**
+			 * this timing function from
+			 * http://codepen.io/sbchewitt/pen/KpPZMx
+			 */
+			transition: all 0.5s cubic-bezier(.57,-0.42,.46,1.4);
+		}
+		.toppanel {
+			position: relative;
+			transform-style: preserve-3d;
+			background: #fff;
+		}
+		.bottompanel {
+			transform: rotateX(-90deg) translateZ(0);
+			position: absolute;
+			width: 100%;
+			height: 100%;
+			left: 0;
+			top: 100%;
+			background: #999;
+		}
+
+		&.focusstate {
+			.toppanel {
+				transform: rotateX(90deg) translateY(-22px);
+				transition-delay: 0s;
+			}
+			.bottompanel {
+				background: #fff;
+				transition-delay: 0s;
+			}
+		}
+
+		.navbar {
+			list-style: none;
+			margin: 0;
+			padding: 0;
+			display: flex;
+			justify-content: space-around;
+			padding: 0.5em;
+
+			.navitem {
+				flex: 0 1 auto;
+			}
+			.navitem a {
+				color: #222;
+				text-decoration: none;
+			}
+		}
+		.repo .navitem:hover a {
+			color: #4183c4;
+		}
+	
+		.lang {
+			.navitem {
+				&::before {
+					background-color: currentColor;
+					content: '';
+					display: inline-block;
+					width: 0.75em;
+					height: 0.75em;
+					border-radius: 50%;
+					vertical-align: middle;
+					margin: 0 0.25em 2px 0;
+					cursor: pointer;
+				}
+				&::after {
+					content: attr(data-percent);
+					margin-left: 0.5em;
+					color: #555;
+				}
+			}
+		}
+	}
+
+	.underbar {
+		position: absolute;
+		left: 0;
+		bottom: 0;
+		padding-top: 5px;
+		height: 8px;
+		width: 100%;
+		bottom: 0;
+		display: flex;
+		cursor: pointer;
+		border-radius: 0 0 5px 5px;
+		overflow: hidden;
+		opacity: 0.6;
+		transition: all 0.5s cubic-bezier(.57,-0.42,.46,1.4);
+		&:hover {
+			opacity: 0.8;
+		}
+		span {
+			font-size: 0;
+			background-color: currentColor;
+		}
+	 }
+
+	.box3d.focusstate ~ .underbar, .underbar:hover {
+		opacity: 1;
+		padding: 0;
+		padding-top: 3px;
+	}
+}
