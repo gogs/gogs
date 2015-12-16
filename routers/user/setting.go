@@ -226,7 +226,7 @@ func SettingsEmailPost(ctx *middleware.Context, form auth.AddEmailForm) {
 
 	e := &models.EmailAddress{
 		UID:         ctx.User.Id,
-		Email:       strings.TrimSpace(form.Email),
+		Email:       form.Email,
 		IsActivated: !setting.Service.RegisterEmailConfirm,
 	}
 	if err := models.AddEmailAddress(e); err != nil {

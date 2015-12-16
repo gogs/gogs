@@ -888,7 +888,7 @@ func GetEmailAddresses(uid int64) ([]*EmailAddress, error) {
 }
 
 func AddEmailAddress(email *EmailAddress) error {
-	email.Email = strings.ToLower(email.Email)
+	email.Email = strings.ToLower(strings.TrimSpace(email.Email))
 	used, err := IsEmailUsed(email.Email)
 	if err != nil {
 		return err
@@ -898,6 +898,29 @@ func AddEmailAddress(email *EmailAddress) error {
 
 	_, err = x.Insert(email)
 	return err
+}
+
+func AddEmailAddresses(emails []*EmailAddress) error {
+	if len(emails) == 0 {
+		return nil
+	}
+
+	// Check if any of them has been used
+	for i := range emails {
+		emails[i].Email = strings.ToLower(strings.TrimSpace(emails[i].Email))
+		used, err := IsEmailUsed(emails[i].Email)
+		if err != nil {
+			return err
+		} else if used {
+			return ErrEmailAlreadyUsed{emails[i].Email}
+		}
+	}
+
+	if _, err := x.Insert(emails); err != nil {
+		return fmt.Errorf("Insert: %v", err)
+	}
+
+	return nil
 }
 
 func (email *EmailAddress) Activate() error {
@@ -914,20 +937,23 @@ func (email *EmailAddress) Activate() error {
 	}
 }
 
-func DeleteEmailAddress(email *EmailAddress) error {
-	has, err := x.Get(email)
-	if err != nil {
-		return err
-	} else if !has {
-		return ErrEmailNotExist
+func DeleteEmailAddress(email *EmailAddress) (err error) {
+	if email.ID > 0 {
+		_, err = x.Id(email.ID).Delete(new(EmailAddress))
+	} else {
+		_, err = x.Where("email=?", email.Email).Delete(new(EmailAddress))
 	}
+	return err
+}
 
-	if _, err = x.Id(email.ID).Delete(email); err != nil {
-		return err
+func DeleteEmailAddresses(emails []*EmailAddress) (err error) {
+	for i := range emails {
+		if err = DeleteEmailAddress(emails[i]); err != nil {
+			return err
+		}
 	}
 
 	return nil
-
 }
 
 func MakeEmailPrimary(email *EmailAddress) error {
