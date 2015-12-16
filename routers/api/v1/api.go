@@ -144,6 +144,9 @@ func RegisterRoutes(m *macaron.Macaron) {
 				m.Combo("/:id").Get(user.GetPublicKey).
 					Delete(user.DeletePublicKey)
 			})
+			m.Combo("/emails").Get(user.ListEmails).
+				Post(bind(api.CreateEmailOption{}), user.AddEmail).
+				Delete(bind(api.CreateEmailOption{}), user.DeleteEmail)
 		}, ReqToken())
 
 		// Repositories

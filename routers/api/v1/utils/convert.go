@@ -26,6 +26,14 @@ func ApiUser(u *models.User) *api.User {
 	}
 }
 
+func ApiEmail(email *models.EmailAddress) *api.Email {
+	return &api.Email{
+		Email:    email.Email,
+		Verified: email.IsActivated,
+		Primary:  email.IsPrimary,
+	}
+}
+
 // ApiRepository converts repository to API format.
 func ApiRepository(owner *models.User, repo *models.Repository, permission api.Permission) *api.Repository {
 	cl := repo.CloneLink()
