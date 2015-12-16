@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"net/smtp"
+	"net/textproto"
 	"strings"
 	"time"
 
@@ -26,12 +27,12 @@ type LoginType int
 
 // Note: new type must be added at the end of list to maintain compatibility.
 const (
-	NOTYPE LoginType = iota
-	PLAIN
-	LDAP
-	SMTP
-	PAM
-	DLDAP
+	LOGIN_NOTYPE LoginType = iota
+	LOGIN_PLAIN
+	LOGIN_LDAP
+	LOGIN_SMTP
+	LOGIN_PAM
+	LOGIN_DLDAP
 )
 
 var (
@@ -40,10 +41,10 @@ var (
 )
 
 var LoginNames = map[LoginType]string{
-	LDAP:  "LDAP (via BindDN)",
-	DLDAP: "LDAP (simple auth)",
-	SMTP:  "SMTP",
-	PAM:   "PAM",
+	LOGIN_LDAP:  "LDAP (via BindDN)",
+	LOGIN_DLDAP: "LDAP (simple auth)",
+	LOGIN_SMTP:  "SMTP",
+	LOGIN_PAM:   "PAM",
 }
 
 // Ensure structs implemented interface.
@@ -108,11 +109,11 @@ func (source *LoginSource) BeforeSet(colName string, val xorm.Cell) {
 	switch colName {
 	case "type":
 		switch LoginType((*val).(int64)) {
-		case LDAP, DLDAP:
+		case LOGIN_LDAP, LOGIN_DLDAP:
 			source.Cfg = new(LDAPConfig)
-		case SMTP:
+		case LOGIN_SMTP:
 			source.Cfg = new(SMTPConfig)
-		case PAM:
+		case LOGIN_PAM:
 			source.Cfg = new(PAMConfig)
 		default:
 			panic("unrecognized login source type: " + com.ToStr(*val))
@@ -125,26 +126,26 @@ func (source *LoginSource) TypeName() string {
 }
 
 func (source *LoginSource) IsLDAP() bool {
-	return source.Type == LDAP
+	return source.Type == LOGIN_LDAP
 }
 
 func (source *LoginSource) IsDLDAP() bool {
-	return source.Type == DLDAP
+	return source.Type == LOGIN_DLDAP
 }
 
 func (source *LoginSource) IsSMTP() bool {
-	return source.Type == SMTP
+	return source.Type == LOGIN_SMTP
 }
 
 func (source *LoginSource) IsPAM() bool {
-	return source.Type == PAM
+	return source.Type == LOGIN_PAM
 }
 
 func (source *LoginSource) UseTLS() bool {
 	switch source.Type {
-	case LDAP, DLDAP:
+	case LOGIN_LDAP, LOGIN_DLDAP:
 		return source.LDAP().UseSSL
-	case SMTP:
+	case LOGIN_SMTP:
 		return source.SMTP().TLS
 	}
 
@@ -153,9 +154,9 @@ func (source *LoginSource) UseTLS() bool {
 
 func (source *LoginSource) SkipVerify() bool {
 	switch source.Type {
-	case LDAP, DLDAP:
+	case LOGIN_LDAP, LOGIN_DLDAP:
 		return source.LDAP().SkipVerify
-	case SMTP:
+	case LOGIN_SMTP:
 		return source.SMTP().SkipVerify
 	}
 
@@ -230,7 +231,7 @@ func DeleteSource(source *LoginSource) error {
 // It returns the same LoginUserPlain semantic.
 func LoginUserLDAPSource(u *User, loginName, passwd string, source *LoginSource, autoRegister bool) (*User, error) {
 	cfg := source.Cfg.(*LDAPConfig)
-	directBind := (source.Type == DLDAP)
+	directBind := (source.Type == LOGIN_DLDAP)
 	name, fn, sn, mail, admin, logged := cfg.SearchEntry(loginName, passwd, directBind)
 	if !logged {
 		// User not in LDAP, do nothing
@@ -350,7 +351,7 @@ func SMTPAuth(a smtp.Auth, cfg *SMTPConfig) error {
 // Query if name/passwd can login against the LDAP directory pool
 // Create a local user if success
 // Return the same LoginUserPlain semantic
-func LoginUserSMTPSource(u *User, name, passwd string, sourceId int64, cfg *SMTPConfig, autoRegister bool) (*User, error) {
+func LoginUserSMTPSource(u *User, name, passwd string, sourceID int64, cfg *SMTPConfig, autoRegister bool) (*User, error) {
 	// Verify allowed domains.
 	if len(cfg.AllowedDomains) > 0 {
 		idx := strings.Index(name, "@")
@@ -371,7 +372,11 @@ func LoginUserSMTPSource(u *User, name, passwd string, sourceId int64, cfg *SMTP
 	}
 
 	if err := SMTPAuth(auth, cfg); err != nil {
-		if strings.Contains(err.Error(), "Username and Password not accepted") {
+		// Check standard error format first,
+		// then fallback to worse case.
+		tperr, ok := err.(*textproto.Error)
+		if (ok && tperr.Code == 535) ||
+			strings.Contains(err.Error(), "Username and Password not accepted") {
 			return nil, ErrUserNotExist{0, name}
 		}
 		return nil, err
@@ -390,8 +395,8 @@ func LoginUserSMTPSource(u *User, name, passwd string, sourceId int64, cfg *SMTP
 	u = &User{
 		LowerName:   strings.ToLower(loginName),
 		Name:        strings.ToLower(loginName),
-		LoginType:   SMTP,
-		LoginSource: sourceId,
+		LoginType:   LOGIN_SMTP,
+		LoginSource: sourceID,
 		LoginName:   name,
 		IsActive:    true,
 		Passwd:      passwd,
@@ -411,7 +416,7 @@ func LoginUserSMTPSource(u *User, name, passwd string, sourceId int64, cfg *SMTP
 // Query if name/passwd can login against PAM
 // Create a local user if success
 // Return the same LoginUserPlain semantic
-func LoginUserPAMSource(u *User, name, passwd string, sourceId int64, cfg *PAMConfig, autoRegister bool) (*User, error) {
+func LoginUserPAMSource(u *User, name, passwd string, sourceID int64, cfg *PAMConfig, autoRegister bool) (*User, error) {
 	if err := pam.PAMAuth(cfg.ServiceName, name, passwd); err != nil {
 		if strings.Contains(err.Error(), "Authentication failure") {
 			return nil, ErrUserNotExist{0, name}
@@ -427,8 +432,8 @@ func LoginUserPAMSource(u *User, name, passwd string, sourceId int64, cfg *PAMCo
 	u = &User{
 		LowerName:   strings.ToLower(name),
 		Name:        name,
-		LoginType:   PAM,
-		LoginSource: sourceId,
+		LoginType:   LOGIN_PAM,
+		LoginSource: sourceID,
 		LoginName:   name,
 		IsActive:    true,
 		Passwd:      passwd,
@@ -443,11 +448,11 @@ func ExternalUserLogin(u *User, name, passwd string, source *LoginSource, autoRe
 	}
 
 	switch source.Type {
-	case LDAP, DLDAP:
+	case LOGIN_LDAP, LOGIN_DLDAP:
 		return LoginUserLDAPSource(u, name, passwd, source, autoRegister)
-	case SMTP:
+	case LOGIN_SMTP:
 		return LoginUserSMTPSource(u, name, passwd, source.ID, source.Cfg.(*SMTPConfig), autoRegister)
-	case PAM:
+	case LOGIN_PAM:
 		return LoginUserPAMSource(u, name, passwd, source.ID, source.Cfg.(*PAMConfig), autoRegister)
 	}
 
@@ -470,7 +475,7 @@ func UserSignIn(uname, passwd string) (*User, error) {
 
 	if userExists {
 		switch u.LoginType {
-		case NOTYPE, PLAIN:
+		case LOGIN_NOTYPE, LOGIN_PLAIN:
 			if u.ValidatePassword(passwd) {
 				return u, nil
 			}

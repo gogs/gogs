@@ -42,13 +42,7 @@ There is no standard form of making a feature request. Just try to describe the 
 
 ### Pull Request
 
-Pull requests are always welcome, but note that **ALL PULL REQUESTS MUST APPLY TO THE `develop` BRANCH**.
-
-We are always thrilled to receive pull requests, and do our best to process them as fast as possible. Not sure if that typo is worth a pull request? Do it! We will appreciate it.
-
-If your pull request is not accepted on the first try, don't be discouraged! If there's a problem with the implementation, hopefully you received feedback on what to improve.
-
-We're trying very hard to keep Gogs lean and focused. We don't want it to do everything for everybody. This means that we might decide against incorporating a new feature. We believe you do like to discuss with us first in [Gitter](https://gitter.im/gogits/gogs).
+Please read detailed information on [Wiki](https://github.com/gogits/gogs/wiki/Contributing-Code).
 
 ### Ask For Help
 

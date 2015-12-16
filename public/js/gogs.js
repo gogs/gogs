@@ -220,7 +220,7 @@ function initRepository() {
 
     // File list and commits
     if ($('.repository.file.list').length > 0 ||
-         ('.repository.commits').length > 0) {
+        ('.repository.commits').length > 0) {
         initFilterSearchDropdown('.choose.reference .dropdown');
 
         $('.reference.column').click(function () {
@@ -411,7 +411,7 @@ function initRepository() {
         $status_btn.click(function () {
             $('#status').val($status_btn.data('status-val'));
             $('#comment-form').submit();
-        })
+        });
     }
 
     // Diff
@@ -464,10 +464,7 @@ function initWiki() {
             element: $edit_area[0],
             previewRender: function (plainText, preview) { // Async method
                 setTimeout(function () {
-                    if ($('.editor-preview-active').length == 0) {
-                        return;
-                    }
-
+                    // FIXME: still send render request when return back to edit mode
                     $.post($edit_area.data('url'), {
                             "_csrf": csrf,
                             "mode": "gfm",
@@ -870,7 +867,8 @@ $(document).ready(function () {
 
     // Emojify
     emojify.setConfig({
-        img_dir: suburl + '/img/emoji'
+        img_dir: suburl + '/img/emoji',
+        ignore_emoticons: true
     });
     emojify.run();
 

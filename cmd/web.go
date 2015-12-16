@@ -29,6 +29,8 @@ import (
 	"gopkg.in/ini.v1"
 	"gopkg.in/macaron.v1"
 
+	"github.com/gogits/git-module"
+
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/avatar"
@@ -78,18 +80,19 @@ func checkVersion() {
 	// Check dependency version.
 	checkers := []VerChecker{
 		{"github.com/go-xorm/xorm", func() string { return xorm.Version }, "0.4.4.1029"},
-		{"github.com/Unknwon/macaron", macaron.Version, "0.5.4"},
 		{"github.com/go-macaron/binding", binding.Version, "0.1.0"},
 		{"github.com/go-macaron/cache", cache.Version, "0.1.2"},
 		{"github.com/go-macaron/csrf", csrf.Version, "0.0.3"},
 		{"github.com/go-macaron/i18n", i18n.Version, "0.2.0"},
 		{"github.com/go-macaron/session", session.Version, "0.1.6"},
 		{"github.com/go-macaron/toolbox", toolbox.Version, "0.1.0"},
-		{"gopkg.in/ini.v1", ini.Version, "1.8.1"},
+		{"gopkg.in/ini.v1", ini.Version, "1.8.4"},
+		{"gopkg.in/macaron.v1", macaron.Version, "0.8.0"},
+		{"github.com/gogits/git-shell", git.Version, "0.2.1"},
 	}
 	for _, c := range checkers {
 		if !version.Compare(c.Version(), c.Expected, ">=") {
-			log.Fatal(4, "Package '%s' version is too old(%s -> %s), did you forget to update?", c.ImportPath, c.Version(), c.Expected)
+			log.Fatal(4, "Package '%s' version is too old (%s -> %s), did you forget to update?", c.ImportPath, c.Version(), c.Expected)
 		}
 	}
 }
@@ -255,10 +258,8 @@ func runWeb(ctx *cli.Context) {
 
 		m.Group("/users", func() {
 			m.Get("", admin.Users)
-			m.Get("/new", admin.NewUser)
-			m.Post("/new", bindIgnErr(auth.AdminCrateUserForm{}), admin.NewUserPost)
-			m.Get("/:userid", admin.EditUser)
-			m.Post("/:userid", bindIgnErr(auth.AdminEditUserForm{}), admin.EditUserPost)
+			m.Combo("/new").Get(admin.NewUser).Post(bindIgnErr(auth.AdminCrateUserForm{}), admin.NewUserPost)
+			m.Combo("/:userid").Get(admin.EditUser).Post(bindIgnErr(auth.AdminEditUserForm{}), admin.EditUserPost)
 			m.Post("/:userid/delete", admin.DeleteUser)
 		})
 
@@ -273,8 +274,7 @@ func runWeb(ctx *cli.Context) {
 
 		m.Group("/auths", func() {
 			m.Get("", admin.Authentications)
-			m.Get("/new", admin.NewAuthSource)
-			m.Post("/new", bindIgnErr(auth.AuthenticationForm{}), admin.NewAuthSourcePost)
+			m.Combo("/new").Get(admin.NewAuthSource).Post(bindIgnErr(auth.AuthenticationForm{}), admin.NewAuthSourcePost)
 			m.Combo("/:authid").Get(admin.EditAuthSource).
 				Post(bindIgnErr(auth.AuthenticationForm{}), admin.EditAuthSourcePost)
 			m.Post("/:authid/delete", admin.DeleteAuthSource)

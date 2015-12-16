@@ -39,6 +39,39 @@ func Settings(ctx *middleware.Context) {
 	ctx.HTML(200, SETTINGS_PROFILE)
 }
 
+func handlerUsernameChange(ctx *middleware.Context, newName string) {
+	if len(newName) == 0 || !ctx.User.IsLocal() {
+		return
+	}
+
+	// Check if user name has been changed.
+	if ctx.User.LowerName != strings.ToLower(newName) {
+		if err := models.ChangeUserName(ctx.User, newName); err != nil {
+			switch {
+			case models.IsErrUserAlreadyExist(err):
+				ctx.Flash.Error(ctx.Tr("newName_been_taken"))
+				ctx.Redirect(setting.AppSubUrl + "/user/settings")
+			case models.IsErrEmailAlreadyUsed(err):
+				ctx.Flash.Error(ctx.Tr("form.email_been_used"))
+				ctx.Redirect(setting.AppSubUrl + "/user/settings")
+			case models.IsErrNameReserved(err):
+				ctx.Flash.Error(ctx.Tr("user.newName_reserved"))
+				ctx.Redirect(setting.AppSubUrl + "/user/settings")
+			case models.IsErrNamePatternNotAllowed(err):
+				ctx.Flash.Error(ctx.Tr("user.newName_pattern_not_allowed"))
+				ctx.Redirect(setting.AppSubUrl + "/user/settings")
+			default:
+				ctx.Handle(500, "ChangeUserName", err)
+			}
+			return
+		}
+		log.Trace("User name changed: %s -> %s", ctx.User.Name, newName)
+	}
+	// In case it's just a case change.
+	ctx.User.Name = newName
+	ctx.User.LowerName = strings.ToLower(newName)
+}
+
 func SettingsPost(ctx *middleware.Context, form auth.UpdateProfileForm) {
 	ctx.Data["Title"] = ctx.Tr("settings")
 	ctx.Data["PageIsSettingsProfile"] = true
@@ -48,39 +81,19 @@ func SettingsPost(ctx *middleware.Context, form auth.UpdateProfileForm) {
 		return
 	}
 
-	// Check if user name has been changed.
-	if ctx.User.LowerName != strings.ToLower(form.Name) {
-		if err := models.ChangeUserName(ctx.User, form.Name); err != nil {
-			switch {
-			case models.IsErrUserAlreadyExist(err):
-				ctx.Flash.Error(ctx.Tr("form.name_been_taken"))
-				ctx.Redirect(setting.AppSubUrl + "/user/settings")
-			case models.IsErrEmailAlreadyUsed(err):
-				ctx.Flash.Error(ctx.Tr("form.email_been_used"))
-				ctx.Redirect(setting.AppSubUrl + "/user/settings")
-			case models.IsErrNameReserved(err):
-				ctx.Flash.Error(ctx.Tr("user.form.name_reserved"))
-				ctx.Redirect(setting.AppSubUrl + "/user/settings")
-			case models.IsErrNamePatternNotAllowed(err):
-				ctx.Flash.Error(ctx.Tr("user.form.name_pattern_not_allowed"))
-				ctx.Redirect(setting.AppSubUrl + "/user/settings")
-			default:
-				ctx.Handle(500, "ChangeUserName", err)
-			}
-			return
-		}
-		log.Trace("User name changed: %s -> %s", ctx.User.Name, form.Name)
+	handlerUsernameChange(ctx, form.Name)
+	if ctx.Written() {
+		return
 	}
-	// In case it's just a case change.
-	ctx.User.Name = form.Name
-	ctx.User.LowerName = strings.ToLower(form.Name)
 
 	ctx.User.FullName = form.FullName
 	ctx.User.Email = form.Email
 	ctx.User.Website = form.Website
 	ctx.User.Location = form.Location
-	ctx.User.Avatar = base.EncodeMD5(form.Gravatar)
-	ctx.User.AvatarEmail = form.Gravatar
+	if len(form.Gravatar) > 0 {
+		ctx.User.Avatar = base.EncodeMD5(form.Gravatar)
+		ctx.User.AvatarEmail = form.Gravatar
+	}
 	if err := models.UpdateUser(ctx.User); err != nil {
 		ctx.Handle(500, "UpdateUser", err)
 		return
@@ -213,7 +226,7 @@ func SettingsEmailPost(ctx *middleware.Context, form auth.AddEmailForm) {
 
 	e := &models.EmailAddress{
 		UID:         ctx.User.Id,
-		Email:       strings.TrimSpace(form.Email),
+		Email:       form.Email,
 		IsActivated: !setting.Service.RegisterEmailConfirm,
 	}
 	if err := models.AddEmailAddress(e); err != nil {

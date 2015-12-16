@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gogits/git-shell"
+	"github.com/gogits/git-module"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
@@ -27,6 +27,12 @@ const (
 func MustEnableWiki(ctx *middleware.Context) {
 	if !ctx.Repo.Repository.EnableWiki {
 		ctx.Handle(404, "MustEnableWiki", nil)
+		return
+	}
+
+	if ctx.Repo.Repository.EnableExternalWiki {
+		ctx.Redirect(ctx.Repo.Repository.ExternalWikiURL)
+		return
 	}
 }
 
@@ -42,9 +48,9 @@ func renderWikiPage(ctx *middleware.Context, isViewPage bool) (*git.Repository, 
 		ctx.Handle(500, "OpenRepository", err)
 		return nil, ""
 	}
-	commit, err := wikiRepo.GetCommitOfBranch("master")
+	commit, err := wikiRepo.GetBranchCommit("master")
 	if err != nil {
-		ctx.Handle(500, "GetCommitOfBranch", err)
+		ctx.Handle(500, "GetBranchCommit", err)
 		return nil, ""
 	}
 
@@ -147,9 +153,9 @@ func WikiPages(ctx *middleware.Context) {
 		ctx.Handle(500, "OpenRepository", err)
 		return
 	}
-	commit, err := wikiRepo.GetCommitOfBranch("master")
+	commit, err := wikiRepo.GetBranchCommit("master")
 	if err != nil {
-		ctx.Handle(500, "GetCommitOfBranch", err)
+		ctx.Handle(500, "GetBranchCommit", err)
 		return
 	}
 

@@ -90,7 +90,7 @@ func NewUserPost(ctx *middleware.Context, form auth.AdminCrateUserForm) {
 		Email:     form.Email,
 		Passwd:    form.Password,
 		IsActive:  true,
-		LoginType: models.PLAIN,
+		LoginType: models.LOGIN_PLAIN,
 	}
 
 	if len(form.LoginType) > 0 {
@@ -210,6 +210,7 @@ func EditUserPost(ctx *middleware.Context, form auth.AdminEditUserForm) {
 	u.Email = form.Email
 	u.Website = form.Website
 	u.Location = form.Location
+	u.MaxRepoCreation = form.MaxRepoCreation
 	u.IsActive = form.Active
 	u.IsAdmin = form.Admin
 	u.AllowGitHook = form.AllowGitHook

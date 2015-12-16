@@ -34,6 +34,9 @@ var Funcs template.FuncMap = map[string]interface{}{
 	"AppSubUrl": func() string {
 		return setting.AppSubUrl
 	},
+	"AppUrl": func() string {
+		return setting.AppUrl
+	},
 	"AppVer": func() string {
 		return setting.AppVer
 	},
@@ -127,11 +130,7 @@ func Sha1(str string) string {
 }
 
 func ToUtf8WithErr(content []byte) (error, string) {
-	charsetLabel, err := base.DetectEncoding(content)
-	if err != nil {
-		return err, ""
-	}
-
+	charsetLabel := base.DetectEncoding(content)
 	if charsetLabel == "UTF-8" {
 		return nil, string(content)
 	}

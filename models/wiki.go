@@ -15,7 +15,7 @@ import (
 
 	"github.com/Unknwon/com"
 
-	"github.com/gogits/git-shell"
+	"github.com/gogits/git-module"
 
 	"github.com/gogits/gogs/modules/setting"
 )

@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"strings"
@@ -17,7 +18,7 @@ import (
 	"golang.org/x/net/html/charset"
 	"golang.org/x/text/transform"
 
-	"github.com/gogits/git-shell"
+	"github.com/gogits/git-module"
 
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
@@ -124,6 +125,7 @@ func ParsePatch(maxlines int, reader io.Reader) (*Diff, error) {
 		// Diff data too large, we only show the first about maxlines lines
 		if lineCount >= maxlines {
 			log.Warn("Diff data too large")
+			io.Copy(ioutil.Discard, reader)
 			diff.Files = nil
 			return diff, nil
 		}
@@ -244,8 +246,8 @@ func ParsePatch(maxlines int, reader io.Reader) (*Diff, error) {
 				buf.WriteString("\n")
 			}
 		}
-		charsetLabel, err := base.DetectEncoding(buf.Bytes())
-		if charsetLabel != "UTF-8" && err == nil {
+		charsetLabel := base.DetectEncoding(buf.Bytes())
+		if charsetLabel != "UTF-8" {
 			encoding, _ := charset.Lookup(charsetLabel)
 			if encoding != nil {
 				d := encoding.NewDecoder()

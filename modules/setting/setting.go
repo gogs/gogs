@@ -59,6 +59,7 @@ var (
 	Protocol           Scheme
 	Domain             string
 	HttpAddr, HttpPort string
+	LocalUrl           string
 	DisableSSH         bool
 	StartSSHServer     bool
 	SSHDomain          string
@@ -97,6 +98,7 @@ var (
 	Repository struct {
 		AnsiCharset            string
 		ForcePrivate           bool
+		MaxCreationLimit       int
 		PullRequestQueueLength int
 	}
 	RepoRootPath string
@@ -162,6 +164,7 @@ var (
 			Enabled    bool
 			RunAtStart bool
 			Schedule   string
+			Timeout    time.Duration
 			Args       []string `delim:" "`
 		} `ini:"cron.repo_health_check"`
 		CheckRepoStats struct {
@@ -299,6 +302,7 @@ func NewContext() {
 	Domain = sec.Key("DOMAIN").MustString("localhost")
 	HttpAddr = sec.Key("HTTP_ADDR").MustString("0.0.0.0")
 	HttpPort = sec.Key("HTTP_PORT").MustString("3000")
+	LocalUrl = sec.Key("LOCAL_ROOT_URL").MustString("http://localhost:" + HttpPort + "/")
 	DisableSSH = sec.Key("DISABLE_SSH").MustBool()
 	if !DisableSSH {
 		StartSSHServer = sec.Key("START_SSH_SERVER").MustBool()
@@ -376,9 +380,9 @@ func NewContext() {
 		RepoRootPath = path.Clean(RepoRootPath)
 	}
 	ScriptType = sec.Key("SCRIPT_TYPE").MustString("bash")
-	Repository.AnsiCharset = sec.Key("ANSI_CHARSET").String()
-	Repository.ForcePrivate = sec.Key("FORCE_PRIVATE").MustBool()
-	Repository.PullRequestQueueLength = sec.Key("PULL_REQUEST_QUEUE_LENGTH").MustInt(10000)
+	if err = Cfg.Section("repository").MapTo(&Repository); err != nil {
+		log.Fatal(4, "Fail to map Repository settings: %v", err)
+	}
 
 	// UI settings.
 	sec = Cfg.Section("ui")

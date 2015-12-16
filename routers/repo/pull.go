@@ -6,16 +6,16 @@ package repo
 
 import (
 	"container/list"
-	"errors"
 	"path"
 	"strings"
 
 	"github.com/Unknwon/com"
 
+	"github.com/gogits/git-module"
+
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/modules/git"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/middleware"
 	"github.com/gogits/gogs/modules/setting"
@@ -328,9 +328,9 @@ func ViewPullFiles(ctx *middleware.Context) {
 			return
 		}
 
-		headCommitID, err := headGitRepo.GetCommitIdOfBranch(pull.HeadBranch)
+		headCommitID, err := headGitRepo.GetBranchCommitID(pull.HeadBranch)
 		if err != nil {
-			ctx.Handle(500, "GetCommitIdOfBranch", err)
+			ctx.Handle(500, "GetBranchCommitID", err)
 			return
 		}
 
@@ -492,9 +492,9 @@ func PrepareCompareDiff(
 	// Get diff information.
 	ctx.Data["CommitRepoLink"] = headRepo.RepoLink()
 
-	headCommitID, err := headGitRepo.GetCommitIdOfBranch(headBranch)
+	headCommitID, err := headGitRepo.GetBranchCommitID(headBranch)
 	if err != nil {
-		ctx.Handle(500, "GetCommitIdOfBranch", err)
+		ctx.Handle(500, "GetBranchCommitID", err)
 		return false
 	}
 	ctx.Data["AfterCommitID"] = headCommitID
@@ -633,22 +633,34 @@ func CompareAndPullRequestPost(ctx *middleware.Context, form auth.CreateIssueFor
 		return
 	}
 
+	notifyWatchersAndMentions(ctx, pull)
+	if ctx.Written() {
+		return
+	}
+
 	log.Trace("Pull request created: %d/%d", repo.ID, pull.ID)
 	ctx.Redirect(ctx.Repo.RepoLink + "/pulls/" + com.ToStr(pull.Index))
 }
 
 func TriggerTask(ctx *middleware.Context) {
-	_, repo := parseOwnerAndRepo(ctx)
+	branch := ctx.Query("branch")
+	secret := ctx.Query("secret")
+	if len(branch) == 0 || len(secret) == 0 {
+		ctx.Error(404)
+		log.Trace("TriggerTask: branch or secret is empty")
+		return
+	}
+	owner, repo := parseOwnerAndRepo(ctx)
 	if ctx.Written() {
 		return
 	}
-	branch := ctx.Query("branch")
-	if len(branch) == 0 {
-		ctx.Handle(422, "TriggerTask", errors.New("branch is empty"))
+	if secret != base.EncodeMD5(owner.Salt) {
+		ctx.Error(404)
+		log.Trace("TriggerTask [%s/%s]: invalid secret", owner.Name, repo.Name)
 		return
 	}
 
-	log.Trace("TriggerTask[%d].(new request): %s", repo.ID, branch)
+	log.Trace("TriggerTask [%d].(new request): %s", repo.ID, branch)
 
 	go models.HookQueue.Add(repo.ID)
 	go models.AddTestPullRequestTask(repo.ID, branch)

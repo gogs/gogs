@@ -84,6 +84,17 @@
 								<label>{{.i18n.Tr "repo.settings.wiki_desc"}}</label>
 							</div>
 						</div>
+						<div class="inline field">
+							<div class="ui checkbox">
+								<input name="enable_external_wiki" type="checkbox" {{if .Repository.EnableExternalWiki}}checked{{end}}>
+								<label>{{.i18n.Tr "repo.settings.use_external_wiki"}}</label>
+							</div>
+						</div>
+						<div class="field">
+							<label for="external_wiki_url">{{.i18n.Tr "repo.settings.external_wiki_url"}}</label>
+							<input id="external_wiki_url" name="external_wiki_url" type="url" value="{{.Repository.ExternalWikiURL}}">
+							<p class="help">{{.i18n.Tr "repo.settings.external_wiki_url_desc"}}</p>
+						</div>
 
 						<div class="ui divider"></div>
 
@@ -102,7 +113,7 @@
 						</div>
 						<div class="field">
 							<label for="tracker_url_format">{{.i18n.Tr "repo.settings.tracker_url_format"}}</label>
-							<input id="tracker_url_format" name="tracker_url_format" value="{{.Repository.ExternalTrackerFormat}}" placeholder="e.g. https://github.com/{user}/{repo}/issues/{index}">
+							<input id="tracker_url_format" name="tracker_url_format" type="url" value="{{.Repository.ExternalTrackerFormat}}" placeholder="e.g. https://github.com/{user}/{repo}/issues/{index}">
 							<p class="help">{{.i18n.Tr "repo.settings.tracker_url_format_desc" | Str2html}}</p>
 						</div>
 

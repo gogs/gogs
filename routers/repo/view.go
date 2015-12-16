@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"path"
-	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -17,9 +16,9 @@ import (
 	"github.com/Unknwon/com"
 	"github.com/Unknwon/paginater"
 
+	"github.com/gogits/git-shell"
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/modules/git"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/middleware"
 	"github.com/gogits/gogs/modules/template"
@@ -65,7 +64,7 @@ func Home(ctx *middleware.Context) {
 	}
 
 	entry, err := ctx.Repo.Commit.GetTreeEntryByPath(treename)
-	if err != nil && err != git.ErrNotExist {
+	if err != nil && git.IsErrNotExist(err) {
 		ctx.Handle(404, "GetTreeEntryByPath", err)
 		return
 	}
@@ -132,45 +131,20 @@ func Home(ctx *middleware.Context) {
 			return
 		}
 
-		entries, err := tree.ListEntries(treename)
+		entries, err := tree.ListEntries()
 		if err != nil {
 			ctx.Handle(500, "ListEntries", err)
 			return
 		}
 		entries.Sort()
 
-		files := make([][]interface{}, 0, len(entries))
-		for _, te := range entries {
-			if te.Type != git.COMMIT {
-				c, err := ctx.Repo.Commit.GetCommitOfRelPath(filepath.Join(treePath, te.Name()))
-				if err != nil {
-					ctx.Handle(500, "GetCommitOfRelPath", err)
-					return
-				}
-				files = append(files, []interface{}{te, c})
-			} else {
-				sm, err := ctx.Repo.Commit.GetSubModule(path.Join(treename, te.Name()))
-				if err != nil {
-					ctx.Handle(500, "GetSubModule", err)
-					return
-				}
-				smUrl := ""
-				if sm != nil {
-					smUrl = sm.Url
-				}
-
-				c, err := ctx.Repo.Commit.GetCommitOfRelPath(filepath.Join(treePath, te.Name()))
-				if err != nil {
-					ctx.Handle(500, "GetCommitOfRelPath", err)
-					return
-				}
-				files = append(files, []interface{}{te, git.NewSubModuleFile(c, smUrl, te.ID.String())})
-			}
+		ctx.Data["Files"], err = entries.GetCommitsInfo(ctx.Repo.Commit, treePath)
+		if err != nil {
+			ctx.Handle(500, "GetCommitsInfo", err)
+			return
 		}
-		ctx.Data["Files"] = files
 
 		var readmeFile *git.Blob
-
 		for _, f := range entries {
 			if f.IsDir() || !base.IsReadmeFile(f.Name()) {
 				continue
@@ -215,9 +189,9 @@ func Home(ctx *middleware.Context) {
 
 		lastCommit := ctx.Repo.Commit
 		if len(treePath) > 0 {
-			c, err := ctx.Repo.Commit.GetCommitOfRelPath(treePath)
+			c, err := ctx.Repo.Commit.GetCommitByPath(treePath)
 			if err != nil {
-				ctx.Handle(500, "GetCommitOfRelPath", err)
+				ctx.Handle(500, "GetCommitByPath", err)
 				return
 			}
 			lastCommit = c

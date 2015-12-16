@@ -1,4 +1,4 @@
-// +build go1.3
+// +build go1.4
 
 // Copyright 2014 The Gogs Authors. All rights reserved.
 // Use of this source code is governed by a MIT-style
@@ -12,12 +12,13 @@ import (
 	"runtime"
 
 	"github.com/codegangsta/cli"
+	_ "github.com/kardianos/minwinsvc"
 
 	"github.com/gogits/gogs/cmd"
 	"github.com/gogits/gogs/modules/setting"
 )
 
-const APP_VER = "0.7.35.1209 Beta"
+const APP_VER = "0.8.7.1215"
 
 func init() {
 	runtime.GOMAXPROCS(runtime.NumCPU())

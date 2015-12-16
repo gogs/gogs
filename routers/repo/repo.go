@@ -12,10 +12,11 @@ import (
 
 	"github.com/Unknwon/com"
 
+	"github.com/gogits/git-module"
+
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/modules/git"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/middleware"
 	"github.com/gogits/gogs/modules/setting"
@@ -77,8 +78,10 @@ func Create(ctx *middleware.Context) {
 	ctx.HTML(200, CREATE)
 }
 
-func handleCreateError(ctx *middleware.Context, err error, name string, tpl base.TplName, form interface{}) {
+func handleCreateError(ctx *middleware.Context, owner *models.User, err error, name string, tpl base.TplName, form interface{}) {
 	switch {
+	case models.IsErrReachLimitOfRepo(err):
+		ctx.RenderWithErr(ctx.Tr("repo.form.reach_limit_of_creation", owner.RepoCreationNum()), tpl, form)
 	case models.IsErrRepoAlreadyExist(err):
 		ctx.Data["Err_RepoName"] = true
 		ctx.RenderWithErr(ctx.Tr("form.repo_name_been_taken"), tpl, form)
@@ -132,13 +135,14 @@ func CreatePost(ctx *middleware.Context, form auth.CreateRepoForm) {
 		}
 	}
 
-	handleCreateError(ctx, err, "CreatePost", CREATE, &form)
+	handleCreateError(ctx, ctxUser, err, "CreatePost", CREATE, &form)
 }
 
 func Migrate(ctx *middleware.Context) {
 	ctx.Data["Title"] = ctx.Tr("new_migrate")
 	ctx.Data["private"] = ctx.User.LastRepoVisibility
 	ctx.Data["IsForcedPrivate"] = setting.Repository.ForcePrivate
+	ctx.Data["mirror"] = ctx.Query("mirror") == "1"
 
 	ctxUser := checkContextUser(ctx, ctx.QueryInt64("org"))
 	if ctx.Written() {
@@ -214,7 +218,7 @@ func MigratePost(ctx *middleware.Context, form auth.MigrateRepoForm) {
 		return
 	}
 
-	handleCreateError(ctx, err, "MigratePost", MIGRATE, &form)
+	handleCreateError(ctx, ctxUser, err, "MigratePost", MIGRATE, &form)
 }
 
 func Action(ctx *middleware.Context) {
@@ -274,6 +278,7 @@ func Download(ctx *middleware.Context) {
 		archivePath = path.Join(ctx.Repo.GitRepo.Path, "archives/targz")
 		archiveType = git.TARGZ
 	default:
+		log.Trace("Unknown format: %s", uri)
 		ctx.Error(404)
 		return
 	}
@@ -293,25 +298,25 @@ func Download(ctx *middleware.Context) {
 	)
 	gitRepo := ctx.Repo.GitRepo
 	if gitRepo.IsBranchExist(refName) {
-		commit, err = gitRepo.GetCommitOfBranch(refName)
+		commit, err = gitRepo.GetBranchCommit(refName)
 		if err != nil {
-			ctx.Handle(500, "Download", err)
+			ctx.Handle(500, "GetBranchCommit", err)
 			return
 		}
 	} else if gitRepo.IsTagExist(refName) {
-		commit, err = gitRepo.GetCommitOfTag(refName)
+		commit, err = gitRepo.GetTagCommit(refName)
 		if err != nil {
-			ctx.Handle(500, "Download", err)
+			ctx.Handle(500, "GetTagCommit", err)
 			return
 		}
 	} else if len(refName) == 40 {
 		commit, err = gitRepo.GetCommit(refName)
 		if err != nil {
-			ctx.Handle(404, "Download", nil)
+			ctx.Handle(404, "GetCommit", nil)
 			return
 		}
 	} else {
-		ctx.Error(404)
+		ctx.Handle(404, "Download", nil)
 		return
 	}
 

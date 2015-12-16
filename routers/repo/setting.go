@@ -8,10 +8,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gogits/git-module"
+
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/modules/git"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/mailer"
 	"github.com/gogits/gogs/modules/middleware"
@@ -124,6 +125,8 @@ func SettingsPost(ctx *middleware.Context, form auth.RepoSettingForm) {
 
 	case "advanced":
 		repo.EnableWiki = form.EnableWiki
+		repo.EnableExternalWiki = form.EnableExternalWiki
+		repo.ExternalWikiURL = form.ExternalWikiURL
 		repo.EnableIssues = form.EnableIssues
 		repo.EnableExternalTracker = form.EnableExternalTracker
 		repo.ExternalTrackerFormat = form.TrackerURLFormat

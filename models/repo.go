@@ -27,7 +27,7 @@ import (
 	"github.com/mcuadros/go-version"
 	"gopkg.in/ini.v1"
 
-	"github.com/gogits/git-shell"
+	"github.com/gogits/git-module"
 	api "github.com/gogits/go-gogs-client"
 
 	"github.com/gogits/gogs/modules/base"
@@ -98,7 +98,7 @@ func NewRepoContext() {
 	}
 
 	// Check Git version.
-	gitVer, err := git.Version()
+	gitVer, err := git.BinVersion()
 	if err != nil {
 		log.Fatal(4, "Fail to get Git version: %v", err)
 	}
@@ -129,6 +129,8 @@ func NewRepoContext() {
 		log.Fatal(4, "Fail to execute 'git config --global core.quotepath false': %s", stderr)
 	}
 
+	// Clean up temporary data.
+	os.RemoveAll(filepath.Join(setting.AppDataPath, "tmp"))
 }
 
 // Repository represents a git repository.
@@ -164,6 +166,8 @@ type Repository struct {
 
 	// Advanced settings
 	EnableWiki            bool `xorm:"NOT NULL DEFAULT true"`
+	EnableExternalWiki    bool
+	ExternalWikiURL       string
 	EnableIssues          bool `xorm:"NOT NULL DEFAULT true"`
 	EnableExternalTracker bool
 	ExternalTrackerFormat string
@@ -307,6 +311,10 @@ func (repo *Repository) GitConfigPath() string {
 
 func (repo *Repository) RepoLink() string {
 	return setting.AppSubUrl + "/" + repo.MustOwner().Name + "/" + repo.Name
+}
+
+func (repo *Repository) ComposeCompareURL(oldCommitID, newCommitID string) string {
+	return fmt.Sprintf("%s/%s/compare/%s...%s", repo.MustOwner().Name, repo.Name, oldCommitID, newCommitID)
 }
 
 func (repo *Repository) FullRepoLink() string {
@@ -896,6 +904,10 @@ func createRepository(e *xorm.Session, u *User, repo *Repository) (err error) {
 
 // CreateRepository creates a repository for given user or organization.
 func CreateRepository(u *User, opts CreateRepoOptions) (_ *Repository, err error) {
+	if !u.CanCreateRepo() {
+		return nil, ErrReachLimitOfRepo{u.MaxRepoCreation}
+	}
+
 	repo := &Repository{
 		OwnerID:      u.Id,
 		Owner:        u,
@@ -1291,12 +1303,14 @@ func DeleteRepository(uid, repoID int64) error {
 		}
 	}
 
-	wikiPath := repo.WikiPath()
-	if err = os.RemoveAll(wikiPath); err != nil {
-		desc := fmt.Sprintf("delete repository wiki [%s]: %v", wikiPath, err)
-		log.Warn(desc)
-		if err = CreateRepositoryNotice(desc); err != nil {
-			log.Error(4, "CreateRepositoryNotice: %v", err)
+	wikiPaths := []string{repo.WikiPath(), repo.LocalWikiPath()}
+	for _, wikiPath := range wikiPaths {
+		if err = os.RemoveAll(wikiPath); err != nil {
+			desc := fmt.Sprintf("delete repository wiki [%s]: %v", wikiPath, err)
+			log.Warn(desc)
+			if err = CreateRepositoryNotice(desc); err != nil {
+				log.Error(4, "CreateRepositoryNotice: %v", err)
+			}
 		}
 	}
 
@@ -1583,13 +1597,11 @@ func GitFsck() {
 
 	log.Trace("Doing: GitFsck")
 
-	args := append([]string{"fsck"}, setting.Cron.RepoHealthCheck.Args...)
 	if err := x.Where("id>0").Iterate(new(Repository),
 		func(idx int, bean interface{}) error {
 			repo := bean.(*Repository)
 			repoPath := repo.RepoPath()
-			_, _, err := process.ExecDir(-1, repoPath, "Repository health check", "git", args...)
-			if err != nil {
+			if err := git.Fsck(repoPath, setting.Cron.RepoHealthCheck.Timeout, setting.Cron.RepoHealthCheck.Args...); err != nil {
 				desc := fmt.Sprintf("Fail to health check repository(%s)", repoPath)
 				log.Warn(desc)
 				if err = CreateRepositoryNotice(desc); err != nil {
@@ -1878,8 +1890,13 @@ func GetWatchers(repoID int64) ([]*Watch, error) {
 // Repository.GetWatchers returns range of users watching given repository.
 func (repo *Repository) GetWatchers(page int) ([]*User, error) {
 	users := make([]*User, 0, ItemsPerPage)
-	return users, x.Limit(ItemsPerPage, (page-1)*ItemsPerPage).
-		Where("repo_id=?", repo.ID).Join("LEFT", "watch", "user.id=watch.user_id").Find(&users)
+	sess := x.Limit(ItemsPerPage, (page-1)*ItemsPerPage).Where("watch.repo_id=?", repo.ID)
+	if setting.UsePostgreSQL {
+		sess = sess.Join("LEFT", "watch", `"user".id=watch.user_id`)
+	} else {
+		sess = sess.Join("LEFT", "watch", "user.id=watch.user_id")
+	}
+	return users, sess.Find(&users)
 }
 
 func notifyWatchers(e Engine, act *Action) error {
@@ -1961,8 +1978,13 @@ func IsStaring(uid, repoId int64) bool {
 
 func (repo *Repository) GetStargazers(page int) ([]*User, error) {
 	users := make([]*User, 0, ItemsPerPage)
-	return users, x.Limit(ItemsPerPage, (page-1)*ItemsPerPage).
-		Where("repo_id=?", repo.ID).Join("LEFT", "star", "user.id=star.uid").Find(&users)
+	sess := x.Limit(ItemsPerPage, (page-1)*ItemsPerPage).Where("star.repo_id=?", repo.ID)
+	if setting.UsePostgreSQL {
+		sess = sess.Join("LEFT", "star", `"user".id=star.uid`)
+	} else {
+		sess = sess.Join("LEFT", "star", "user.id=star.uid")
+	}
+	return users, sess.Find(&users)
 }
 
 // ___________           __

@@ -25,11 +25,10 @@ import (
 	"github.com/go-xorm/xorm"
 	"github.com/nfnt/resize"
 
-	"github.com/gogits/git-shell"
+	"github.com/gogits/git-module"
 
 	"github.com/gogits/gogs/modules/avatar"
 	"github.com/gogits/gogs/modules/base"
-	oldgit "github.com/gogits/gogs/modules/git"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/setting"
 )
@@ -76,6 +75,8 @@ type User struct {
 
 	// Remember visibility choice for convenience, true for private
 	LastRepoVisibility bool
+	// Maximum repository creation limit, -1 means use gloabl default
+	MaxRepoCreation int `xorm:"NOT NULL DEFAULT -1"`
 
 	// Permissions.
 	IsActive         bool
@@ -102,6 +103,12 @@ type User struct {
 	Members     []*User `xorm:"-"`
 }
 
+func (u *User) BeforeUpdate() {
+	if u.MaxRepoCreation < -1 {
+		u.MaxRepoCreation = -1
+	}
+}
+
 func (u *User) AfterSet(colName string, _ xorm.Cell) {
 	switch colName {
 	case "full_name":
@@ -111,10 +118,32 @@ func (u *User) AfterSet(colName string, _ xorm.Cell) {
 	}
 }
 
+// returns true if user login type is LOGIN_PLAIN.
+func (u *User) IsLocal() bool {
+	return u.LoginType <= LOGIN_PLAIN
+}
+
 // HasForkedRepo checks if user has already forked a repository with given ID.
 func (u *User) HasForkedRepo(repoID int64) bool {
 	_, has := HasForkedRepo(u.Id, repoID)
 	return has
+}
+
+func (u *User) RepoCreationNum() int {
+	if u.MaxRepoCreation <= -1 {
+		return setting.Repository.MaxCreationLimit
+	}
+	return u.MaxRepoCreation
+}
+
+func (u *User) CanCreateRepo() bool {
+	if u.MaxRepoCreation <= -1 {
+		if setting.Repository.MaxCreationLimit <= -1 {
+			return true
+		}
+		return u.NumRepos < setting.Repository.MaxCreationLimit
+	}
+	return u.NumRepos < u.MaxRepoCreation
 }
 
 // CanEditGitHook returns true if user can edit Git hooks.
@@ -446,6 +475,7 @@ func CreateUser(u *User) (err error) {
 	u.Rands = GetUserSalt()
 	u.Salt = GetUserSalt()
 	u.EncodePasswd()
+	u.MaxRepoCreation = -1
 
 	sess := x.NewSession()
 	defer sess.Close()
@@ -858,7 +888,7 @@ func GetEmailAddresses(uid int64) ([]*EmailAddress, error) {
 }
 
 func AddEmailAddress(email *EmailAddress) error {
-	email.Email = strings.ToLower(email.Email)
+	email.Email = strings.ToLower(strings.TrimSpace(email.Email))
 	used, err := IsEmailUsed(email.Email)
 	if err != nil {
 		return err
@@ -868,6 +898,29 @@ func AddEmailAddress(email *EmailAddress) error {
 
 	_, err = x.Insert(email)
 	return err
+}
+
+func AddEmailAddresses(emails []*EmailAddress) error {
+	if len(emails) == 0 {
+		return nil
+	}
+
+	// Check if any of them has been used
+	for i := range emails {
+		emails[i].Email = strings.ToLower(strings.TrimSpace(emails[i].Email))
+		used, err := IsEmailUsed(emails[i].Email)
+		if err != nil {
+			return err
+		} else if used {
+			return ErrEmailAlreadyUsed{emails[i].Email}
+		}
+	}
+
+	if _, err := x.Insert(emails); err != nil {
+		return fmt.Errorf("Insert: %v", err)
+	}
+
+	return nil
 }
 
 func (email *EmailAddress) Activate() error {
@@ -884,20 +937,23 @@ func (email *EmailAddress) Activate() error {
 	}
 }
 
-func DeleteEmailAddress(email *EmailAddress) error {
-	has, err := x.Get(email)
-	if err != nil {
-		return err
-	} else if !has {
-		return ErrEmailNotExist
+func DeleteEmailAddress(email *EmailAddress) (err error) {
+	if email.ID > 0 {
+		_, err = x.Id(email.ID).Delete(new(EmailAddress))
+	} else {
+		_, err = x.Where("email=?", email.Email).Delete(new(EmailAddress))
 	}
+	return err
+}
 
-	if _, err = x.Id(email.ID).Delete(email); err != nil {
-		return err
+func DeleteEmailAddresses(emails []*EmailAddress) (err error) {
+	for i := range emails {
+		if err = DeleteEmailAddress(emails[i]); err != nil {
+			return err
+		}
 	}
 
 	return nil
-
 }
 
 func MakeEmailPrimary(email *EmailAddress) error {
@@ -940,11 +996,11 @@ func MakeEmailPrimary(email *EmailAddress) error {
 // UserCommit represents a commit with validation of user.
 type UserCommit struct {
 	User *User
-	*oldgit.Commit
+	*git.Commit
 }
 
 // ValidateCommitWithEmail chceck if author's e-mail of commit is corresponsind to a user.
-func ValidateCommitWithEmail(c *oldgit.Commit) *User {
+func ValidateCommitWithEmail(c *git.Commit) *User {
 	u, err := GetUserByEmail(c.Author.Email)
 	if err != nil {
 		return nil
@@ -961,7 +1017,7 @@ func ValidateCommitsWithEmails(oldCommits *list.List) *list.List {
 		e          = oldCommits.Front()
 	)
 	for e != nil {
-		c := e.Value.(*oldgit.Commit)
+		c := e.Value.(*git.Commit)
 
 		if v, ok := emails[c.Author.Email]; !ok {
 			u, _ = GetUserByEmail(c.Author.Email)

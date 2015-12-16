@@ -299,6 +299,11 @@ func addKey(e Engine, key *PublicKey) (err error) {
 	if _, err = e.Insert(key); err != nil {
 		return err
 	}
+
+	// Don't need to rewrite this file if builtin SSH server is enabled.
+	if setting.StartSSHServer {
+		return nil
+	}
 	return saveAuthorizedKeyFile(key)
 }
 
@@ -437,6 +442,11 @@ func deletePublicKey(e *xorm.Session, keyID int64) error {
 
 	if _, err = e.Id(key.ID).Delete(new(PublicKey)); err != nil {
 		return err
+	}
+
+	// Don't need to rewrite this file if builtin SSH server is enabled.
+	if setting.StartSSHServer {
+		return nil
 	}
 
 	fpath := filepath.Join(SSHPath, "authorized_keys")
