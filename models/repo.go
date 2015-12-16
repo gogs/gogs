@@ -129,6 +129,8 @@ func NewRepoContext() {
 		log.Fatal(4, "Fail to execute 'git config --global core.quotepath false': %s", stderr)
 	}
 
+	// Clean up temporary data.
+	os.RemoveAll(filepath.Join(setting.AppDataPath, "tmp"))
 }
 
 // Repository represents a git repository.
@@ -1301,12 +1303,14 @@ func DeleteRepository(uid, repoID int64) error {
 		}
 	}
 
-	wikiPath := repo.WikiPath()
-	if err = os.RemoveAll(wikiPath); err != nil {
-		desc := fmt.Sprintf("delete repository wiki [%s]: %v", wikiPath, err)
-		log.Warn(desc)
-		if err = CreateRepositoryNotice(desc); err != nil {
-			log.Error(4, "CreateRepositoryNotice: %v", err)
+	wikiPaths := []string{repo.WikiPath(), repo.LocalWikiPath()}
+	for _, wikiPath := range wikiPaths {
+		if err = os.RemoveAll(wikiPath); err != nil {
+			desc := fmt.Sprintf("delete repository wiki [%s]: %v", wikiPath, err)
+			log.Warn(desc)
+			if err = CreateRepositoryNotice(desc); err != nil {
+				log.Error(4, "CreateRepositoryNotice: %v", err)
+			}
 		}
 	}
 
