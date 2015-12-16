@@ -7,7 +7,9 @@ package repo
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"io/ioutil"
+	"os/exec"
 	"path"
 	"sort"
 	"strconv"
@@ -203,7 +205,11 @@ func Home(ctx *middleware.Context) {
 		if err != nil || branchId != lastCommit.ID.String() {
 			branchId = lastCommit.ID.String()
 		}
-		Langs := getLanguageStats(ctx, branchId)
+		Langs, tsoErr := getLanguageStats(ctx, branchId)
+		if tsoErr != nil {
+			ctx.Handle(500, "*blames tso*", err)
+			return
+		}
 		ctx.Data["LanguageStats"] = Langs
 
 	}
@@ -284,9 +290,12 @@ func Forks(ctx *middleware.Context) {
 	ctx.HTML(200, FORKS)
 }
 
-func getLanguageStats(ctx *middleware.Context, branchId string) interface{} {
+func getLanguageStats(ctx *middleware.Context, branchId string) (interface{}, error) {
 
-	all_files := linguistlstree(ctx, branchId)
+	all_files, err := linguistlstree(ctx, branchId)
+	if err != nil {
+		return nil, err
+	}
 	languages := map[string]float64{}
 
 	var total_size float64
@@ -307,21 +316,29 @@ func getLanguageStats(ctx *middleware.Context, branchId string) interface{} {
 	sort.Sort(sort.Reverse(sort.Float64Slice(percent)))
 
 	ret := []*LanguageStat{}
+	other := 0.0
+	default_color := "#ccc" // grey
 	for i, p := range percent {
-		// limit result set
-		if i > 10 {
+		// limit result set, doesn't look nice when list is huge
+		if i >= 8 {
+			other += p
 			break
 		}
 		lang := results[p]
 		color := linguist.LanguageColor(lang)
 		if color == "" {
-			color = "#ccc" //grey
+			color = default_color
 		}
 		ret = append(ret, &LanguageStat{Name: lang,
 			Percent: fmt.Sprintf("%.2f%%", p),
 			Color:   color})
 	}
-	return ret
+	if other > 0.0 {
+		ret = append(ret, &LanguageStat{Name: "Other",
+			Percent: fmt.Sprintf("%.2f%%", other),
+			Color:   default_color})
+	}
+	return ret, nil
 }
 
 type LanguageStat struct {
@@ -338,27 +355,54 @@ type file struct {
 }
 
 // just some utilities...
-func gitcmd(ctx *middleware.Context, args ...string) string {
+func gitcmd(ctx *middleware.Context, args ...string) (string, error) {
 	stdout, _, err := com.ExecCmdDir(ctx.Repo.GitRepo.Path, "git", args...)
-	tsoErr(ctx, err)
-	return stdout
-}
-func gitcmdbytes(ctx *middleware.Context, args ...string) []byte {
-	stdout, _, err := com.ExecCmdDirBytes(ctx.Repo.GitRepo.Path, "git", args...)
-	tsoErr(ctx, err)
-	return stdout
-}
-func tsoErr(ctx *middleware.Context, err error) {
 	if err != nil {
-		ctx.Handle(500, "*blames tso*", err)
+		return "", err
 	}
+	return stdout, nil
+}
+func gitcatfile(ctx *middleware.Context, hash string) ([]byte, error) {
+	git := exec.Command("git", "cat-file blob"+hash)
+	git.Dir = ctx.Repo.GitRepo.Path
+	stdout, err := git.StdoutPipe()
+	if err != nil {
+		return nil, err
+	}
+	// please be aware of weirdness, i.e. this error message:
+	// "read |0: bad file descriptor"
+	// https://code.google.com/p/go/issues/detail?id=2266
+	c := make(chan error)
+	r := make(chan struct{})
+	blob := make([]byte, 512)
+	go func() {
+		git.Start()
+		r <- struct{}{}
+		git.Wait()
+		c <- nil
+	}()
+	go func() {
+		<-r
+		_, err := stdout.Read(blob)
+		if err != io.EOF && err != nil {
+			c <- err
+			return
+		}
+		git.Process.Kill()
+		c <- nil
+	}()
+	err = <-c
+	return blob, err
 }
 
 // returns every file in a tree
 // additionally detecting programming language
-func linguistlstree(ctx *middleware.Context, treeish string) (files []*file) {
+func linguistlstree(ctx *middleware.Context, treeish string) (files []*file, e error) {
 	files = []*file{}
-	lstext := gitcmd(ctx, "ls-tree", treeish)
+	lstext, err := gitcmd(ctx, "ls-tree", treeish)
+	if err != nil {
+		return nil, err
+	}
 	for _, ln := range strings.Split(lstext, "\n") {
 		fields := strings.Split(ln, " ")
 		if len(fields) != 3 {
@@ -375,12 +419,20 @@ func linguistlstree(ctx *middleware.Context, treeish string) (files []*file) {
 
 		switch ftype {
 		case "tree":
-			subdir := linguistlstree(ctx, fhash)
+			subdir, err := linguistlstree(ctx, fhash)
+			if err != nil {
+				return nil, err
+			}
 			files = append(files, subdir...)
 		case "blob":
-			ssize := gitcmd(ctx, "cat-file", "-s", fhash)
+			ssize, err := gitcmd(ctx, "cat-file", "-s", fhash)
+			if err != nil {
+				return nil, err
+			}
 			fsize, err := strconv.ParseFloat(strings.TrimSpace(ssize), 64)
-			tsoErr(ctx, err)
+			if err != nil {
+				return nil, err
+			}
 
 			// if it's an empty file don't even waste time
 			if fsize == 0 {
@@ -407,7 +459,10 @@ func linguistlstree(ctx *middleware.Context, treeish string) (files []*file) {
 			}
 
 			hints := linguist.LanguageHints(fname)
-			contents := gitcmdbytes(ctx, "cat-file", "blob", fhash)
+			contents, err := gitcatfile(ctx, fhash)
+			if err != nil {
+				return nil, err
+			}
 
 			if linguist.ShouldIgnoreContents(contents) {
 				continue
@@ -422,5 +477,5 @@ func linguistlstree(ctx *middleware.Context, treeish string) (files []*file) {
 			files = append(files, f)
 		}
 	}
-	return files
+	return files, nil
 }
