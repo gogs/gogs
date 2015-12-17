@@ -363,7 +363,7 @@ func gitcmd(ctx *middleware.Context, args ...string) (string, error) {
 	return stdout, nil
 }
 func gitcatfile(ctx *middleware.Context, hash string) ([]byte, error) {
-	git := exec.Command("git", "cat-file blob"+hash)
+	git := exec.Command("git", "cat-file", "blob", hash)
 	git.Dir = ctx.Repo.GitRepo.Path
 	stdout, err := git.StdoutPipe()
 	if err != nil {
