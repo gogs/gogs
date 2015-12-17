@@ -44,7 +44,7 @@ func getDashboardContextUser(ctx *middleware.Context) *models.User {
 	}
 	ctx.Data["ContextUser"] = ctxUser
 
-	if err := ctx.User.GetOrganizations(); err != nil {
+	if err := ctx.User.GetOrganizations(true); err != nil {
 		ctx.Handle(500, "GetOrganizations", err)
 		return nil
 	}

@@ -376,8 +376,8 @@ func (u *User) GetOwnedOrganizations() (err error) {
 }
 
 // GetOrganizations returns all organizations that user belongs to.
-func (u *User) GetOrganizations() error {
-	ous, err := GetOrgUsersByUserId(u.Id)
+func (u *User) GetOrganizations(all bool) error {
+	ous, err := GetOrgUsersByUserID(u.Id, all)
 	if err != nil {
 		return err
 	}

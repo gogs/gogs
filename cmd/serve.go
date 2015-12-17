@@ -110,7 +110,7 @@ func handleUpdateTask(uuid string, user, repoUser *models.User, reponame string,
 	}
 
 	// Ask for running deliver hook and test pull request tasks.
-	reqURL := setting.LocalUrl + repoUser.Name + "/" + reponame + "/tasks/trigger?branch=" +
+	reqURL := setting.LocalURL + repoUser.Name + "/" + reponame + "/tasks/trigger?branch=" +
 		strings.TrimPrefix(task.RefName, "refs/heads/") + "&secret=" + base.EncodeMD5(repoUser.Salt)
 	log.GitLogger.Trace("Trigger task: %s", reqURL)
 

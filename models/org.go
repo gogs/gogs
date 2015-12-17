@@ -274,10 +274,15 @@ func GetOwnedOrgsByUserIDDesc(userID int64, desc string) ([]*User, error) {
 	return getOwnedOrgsByUserID(sess.Desc(desc), userID)
 }
 
-// GetOrgUsersByUserId returns all organization-user relations by user ID.
-func GetOrgUsersByUserId(uid int64) ([]*OrgUser, error) {
+// GetOrgUsersByUserID returns all organization-user relations by user ID.
+func GetOrgUsersByUserID(uid int64, all bool) ([]*OrgUser, error) {
 	ous := make([]*OrgUser, 0, 10)
-	err := x.Where("uid=?", uid).Find(&ous)
+	sess := x.Where("uid=?", uid)
+	if !all {
+		// Only show public organizations
+		sess.And("is_public=?", true)
+	}
+	err := sess.Find(&ous)
 	return ous, err
 }
 

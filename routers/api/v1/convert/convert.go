@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-package utils
+package convert
 
 import (
 	"fmt"
@@ -15,8 +15,8 @@ import (
 	"github.com/gogits/gogs/modules/setting"
 )
 
-// ApiUser converts user to its API format.
-func ApiUser(u *models.User) *api.User {
+// ToApiUser converts user to its API format.
+func ToApiUser(u *models.User) *api.User {
 	return &api.User{
 		ID:        u.Id,
 		UserName:  u.Name,
@@ -26,7 +26,7 @@ func ApiUser(u *models.User) *api.User {
 	}
 }
 
-func ApiEmail(email *models.EmailAddress) *api.Email {
+func ToApiEmail(email *models.EmailAddress) *api.Email {
 	return &api.Email{
 		Email:    email.Email,
 		Verified: email.IsActivated,
@@ -34,12 +34,12 @@ func ApiEmail(email *models.EmailAddress) *api.Email {
 	}
 }
 
-// ApiRepository converts repository to API format.
-func ApiRepository(owner *models.User, repo *models.Repository, permission api.Permission) *api.Repository {
+// ToApiRepository converts repository to API format.
+func ToApiRepository(owner *models.User, repo *models.Repository, permission api.Permission) *api.Repository {
 	cl := repo.CloneLink()
 	return &api.Repository{
 		Id:          repo.ID,
-		Owner:       *ApiUser(owner),
+		Owner:       *ToApiUser(owner),
 		FullName:    owner.Name + "/" + repo.Name,
 		Private:     repo.IsPrivate,
 		Fork:        repo.IsFork,
@@ -50,8 +50,8 @@ func ApiRepository(owner *models.User, repo *models.Repository, permission api.P
 	}
 }
 
-// ApiPublicKey converts public key to its API format.
-func ApiPublicKey(apiLink string, key *models.PublicKey) *api.PublicKey {
+// ToApiPublicKey converts public key to its API format.
+func ToApiPublicKey(apiLink string, key *models.PublicKey) *api.PublicKey {
 	return &api.PublicKey{
 		ID:      key.ID,
 		Key:     key.Content,
@@ -61,8 +61,8 @@ func ApiPublicKey(apiLink string, key *models.PublicKey) *api.PublicKey {
 	}
 }
 
-// ApiHook converts webhook to its API format.
-func ApiHook(repoLink string, w *models.Webhook) *api.Hook {
+// ToApiHook converts webhook to its API format.
+func ToApiHook(repoLink string, w *models.Webhook) *api.Hook {
 	config := map[string]string{
 		"url":          w.URL,
 		"content_type": w.ContentType.Name(),
@@ -87,8 +87,8 @@ func ApiHook(repoLink string, w *models.Webhook) *api.Hook {
 	}
 }
 
-// ApiDeployKey converts deploy key to its API format.
-func ApiDeployKey(apiLink string, key *models.DeployKey) *api.DeployKey {
+// ToApiDeployKey converts deploy key to its API format.
+func ToApiDeployKey(apiLink string, key *models.DeployKey) *api.DeployKey {
 	return &api.DeployKey{
 		ID:       key.ID,
 		Key:      key.Content,
@@ -96,5 +96,17 @@ func ApiDeployKey(apiLink string, key *models.DeployKey) *api.DeployKey {
 		Title:    key.Name,
 		Created:  key.Created,
 		ReadOnly: true, // All deploy keys are read-only.
+	}
+}
+
+func ToApiOrganization(org *models.User) *api.Organization {
+	return &api.Organization{
+		ID:          org.Id,
+		AvatarUrl:   org.AvatarLink(),
+		UserName:    org.Name,
+		FullName:    org.FullName,
+		Description: org.Description,
+		Website:     org.Website,
+		Location:    org.Location,
 	}
 }
