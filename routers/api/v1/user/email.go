@@ -10,9 +10,10 @@ import (
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/middleware"
 	"github.com/gogits/gogs/modules/setting"
-	to "github.com/gogits/gogs/routers/api/v1/utils"
+	"github.com/gogits/gogs/routers/api/v1/convert"
 )
 
+// https://github.com/gogits/go-gogs-client/wiki/Users-Emails#list-email-addresses-for-a-user
 func ListEmails(ctx *middleware.Context) {
 	emails, err := models.GetEmailAddresses(ctx.User.Id)
 	if err != nil {
@@ -21,11 +22,12 @@ func ListEmails(ctx *middleware.Context) {
 	}
 	apiEmails := make([]*api.Email, len(emails))
 	for i := range emails {
-		apiEmails[i] = to.ApiEmail(emails[i])
+		apiEmails[i] = convert.ToApiEmail(emails[i])
 	}
 	ctx.JSON(200, &apiEmails)
 }
 
+// https://github.com/gogits/go-gogs-client/wiki/Users-Emails#add-email-addresses
 func AddEmail(ctx *middleware.Context, form api.CreateEmailOption) {
 	if len(form.Emails) == 0 {
 		ctx.Status(422)
@@ -52,11 +54,12 @@ func AddEmail(ctx *middleware.Context, form api.CreateEmailOption) {
 
 	apiEmails := make([]*api.Email, len(emails))
 	for i := range emails {
-		apiEmails[i] = to.ApiEmail(emails[i])
+		apiEmails[i] = convert.ToApiEmail(emails[i])
 	}
 	ctx.JSON(201, &apiEmails)
 }
 
+// https://github.com/gogits/go-gogs-client/wiki/Users-Emails#delete-email-addresses
 func DeleteEmail(ctx *middleware.Context, form api.CreateEmailOption) {
 	if len(form.Emails) == 0 {
 		ctx.Status(204)

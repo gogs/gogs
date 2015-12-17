@@ -10,13 +10,12 @@ import (
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/middleware"
 	"github.com/gogits/gogs/modules/setting"
+	"github.com/gogits/gogs/routers/api/v1/convert"
 	"github.com/gogits/gogs/routers/api/v1/repo"
-	to "github.com/gogits/gogs/routers/api/v1/utils"
 )
 
-// GetUserByParams returns user whose name is presented in URL paramenter.
-func GetUserByParams(ctx *middleware.Context) *models.User {
-	user, err := models.GetUserByName(ctx.Params(":username"))
+func GetUserByParamsName(ctx *middleware.Context, name string) *models.User {
+	user, err := models.GetUserByName(ctx.Params(name))
 	if err != nil {
 		if models.IsErrUserNotExist(err) {
 			ctx.Error(404)
@@ -26,6 +25,11 @@ func GetUserByParams(ctx *middleware.Context) *models.User {
 		return nil
 	}
 	return user
+}
+
+// GetUserByParams returns user whose name is presented in URL paramenter.
+func GetUserByParams(ctx *middleware.Context) *models.User {
+	return GetUserByParamsName(ctx, ":username")
 }
 
 func composePublicKeysAPILink() string {
@@ -42,7 +46,7 @@ func listPublicKeys(ctx *middleware.Context, uid int64) {
 	apiLink := composePublicKeysAPILink()
 	apiKeys := make([]*api.PublicKey, len(keys))
 	for i := range keys {
-		apiKeys[i] = to.ApiPublicKey(apiLink, keys[i])
+		apiKeys[i] = convert.ToApiPublicKey(apiLink, keys[i])
 	}
 
 	ctx.JSON(200, &apiKeys)
@@ -75,7 +79,7 @@ func GetPublicKey(ctx *middleware.Context) {
 	}
 
 	apiLink := composePublicKeysAPILink()
-	ctx.JSON(200, to.ApiPublicKey(apiLink, key))
+	ctx.JSON(200, convert.ToApiPublicKey(apiLink, key))
 }
 
 // CreateUserPublicKey creates new public key to given user by ID.
@@ -92,7 +96,7 @@ func CreateUserPublicKey(ctx *middleware.Context, form api.CreateKeyOption, uid 
 		return
 	}
 	apiLink := composePublicKeysAPILink()
-	ctx.JSON(201, to.ApiPublicKey(apiLink, key))
+	ctx.JSON(201, convert.ToApiPublicKey(apiLink, key))
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Users-Public-Keys#create-a-public-key

@@ -12,7 +12,7 @@ import (
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/middleware"
 	"github.com/gogits/gogs/modules/setting"
-	to "github.com/gogits/gogs/routers/api/v1/utils"
+	"github.com/gogits/gogs/routers/api/v1/convert"
 )
 
 func composeDeployKeysAPILink(repoPath string) string {
@@ -34,7 +34,7 @@ func ListDeployKeys(ctx *middleware.Context) {
 			ctx.APIError(500, "GetContent", err)
 			return
 		}
-		apiKeys[i] = to.ApiDeployKey(apiLink, keys[i])
+		apiKeys[i] = convert.ToApiDeployKey(apiLink, keys[i])
 	}
 
 	ctx.JSON(200, &apiKeys)
@@ -58,7 +58,7 @@ func GetDeployKey(ctx *middleware.Context) {
 	}
 
 	apiLink := composeDeployKeysAPILink(ctx.Repo.Owner.Name + "/" + ctx.Repo.Repository.Name)
-	ctx.JSON(200, to.ApiDeployKey(apiLink, key))
+	ctx.JSON(200, convert.ToApiDeployKey(apiLink, key))
 }
 
 func HandleCheckKeyStringError(ctx *middleware.Context, err error) {
@@ -96,7 +96,7 @@ func CreateDeployKey(ctx *middleware.Context, form api.CreateKeyOption) {
 
 	key.Content = content
 	apiLink := composeDeployKeysAPILink(ctx.Repo.Owner.Name + "/" + ctx.Repo.Repository.Name)
-	ctx.JSON(201, to.ApiDeployKey(apiLink, key))
+	ctx.JSON(201, convert.ToApiDeployKey(apiLink, key))
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Repositories-Deploy-Keys#remove-a-deploy-key

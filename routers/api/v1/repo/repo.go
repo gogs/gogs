@@ -16,7 +16,7 @@ import (
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/middleware"
 	"github.com/gogits/gogs/modules/setting"
-	to "github.com/gogits/gogs/routers/api/v1/utils"
+	"github.com/gogits/gogs/routers/api/v1/convert"
 )
 
 // https://github.com/gogits/go-gogs-client/wiki/Repositories#search-repositories
@@ -97,12 +97,12 @@ func ListMyRepos(ctx *middleware.Context) {
 
 	repos := make([]*api.Repository, numOwnRepos+len(accessibleRepos))
 	for i := range ownRepos {
-		repos[i] = to.ApiRepository(ctx.User, ownRepos[i], api.Permission{true, true, true})
+		repos[i] = convert.ToApiRepository(ctx.User, ownRepos[i], api.Permission{true, true, true})
 	}
 	i := numOwnRepos
 
 	for repo, access := range accessibleRepos {
-		repos[i] = to.ApiRepository(repo.Owner, repo, api.Permission{
+		repos[i] = convert.ToApiRepository(repo.Owner, repo, api.Permission{
 			Admin: access >= models.ACCESS_MODE_ADMIN,
 			Push:  access >= models.ACCESS_MODE_WRITE,
 			Pull:  true,
@@ -139,7 +139,7 @@ func createRepo(ctx *middleware.Context, owner *models.User, opt api.CreateRepoO
 		return
 	}
 
-	ctx.JSON(201, to.ApiRepository(owner, repo, api.Permission{true, true, true}))
+	ctx.JSON(201, convert.ToApiRepository(owner, repo, api.Permission{true, true, true}))
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Repositories#create
@@ -239,7 +239,7 @@ func Migrate(ctx *middleware.Context, form auth.MigrateRepoForm) {
 	}
 
 	log.Trace("Repository migrated: %s/%s", ctxUser.Name, form.RepoName)
-	ctx.JSON(201, to.ApiRepository(ctxUser, repo, api.Permission{true, true, true}))
+	ctx.JSON(201, convert.ToApiRepository(ctxUser, repo, api.Permission{true, true, true}))
 }
 
 func parseOwnerAndRepo(ctx *middleware.Context) (*models.User, *models.Repository) {
@@ -273,7 +273,7 @@ func Get(ctx *middleware.Context) {
 		return
 	}
 
-	ctx.JSON(200, to.ApiRepository(owner, repo, api.Permission{true, true, true}))
+	ctx.JSON(200, convert.ToApiRepository(owner, repo, api.Permission{true, true, true}))
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Repositories#delete
