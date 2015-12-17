@@ -79,11 +79,7 @@ func Home(ctx *middleware.Context) {
 			ctx.Data["FileSize"] = blob.Size()
 			ctx.Data["IsFile"] = true
 			ctx.Data["FileName"] = blob.Name()
-			ext := path.Ext(blob.Name())
-			if len(ext) > 0 {
-				ext = ext[1:]
-			}
-			ctx.Data["FileExt"] = ext
+			ctx.Data["HighlightClass"] = template.FileNameToHighlightClass(blob.Name())
 			ctx.Data["FileLink"] = rawLink + "/" + treename
 
 			buf := make([]byte, 1024)
