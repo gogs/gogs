@@ -17,6 +17,7 @@ import (
 	"github.com/gogits/gogs/modules/middleware"
 	"github.com/gogits/gogs/routers/api/v1/admin"
 	"github.com/gogits/gogs/routers/api/v1/misc"
+	"github.com/gogits/gogs/routers/api/v1/org"
 	"github.com/gogits/gogs/routers/api/v1/repo"
 	"github.com/gogits/gogs/routers/api/v1/user"
 )
@@ -179,6 +180,11 @@ func RegisterRoutes(m *macaron.Macaron) {
 			}, RepoAssignment())
 		}, ReqToken())
 
+		// Organizations
+		m.Get("/user/orgs", org.ListMyOrgs)
+		m.Get("/users/:username/orgs", org.ListUserOrgs)
+		m.Combo("/orgs/:orgname").Get(org.Get).Patch(bind(api.EditOrgOption{}), org.Edit)
+
 		m.Any("/*", func(ctx *middleware.Context) {
 			ctx.Error(404)
 		})
@@ -191,6 +197,7 @@ func RegisterRoutes(m *macaron.Macaron) {
 					m.Combo("").Patch(bind(api.EditUserOption{}), admin.EditUser).
 						Delete(admin.DeleteUser)
 					m.Post("/keys", admin.CreatePublicKey)
+					m.Post("/orgs", bind(api.CreateOrgOption{}), admin.CreateOrg)
 				})
 			})
 		}, ReqAdmin())

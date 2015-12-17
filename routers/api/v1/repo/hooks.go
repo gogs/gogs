@@ -13,7 +13,7 @@ import (
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/middleware"
-	to "github.com/gogits/gogs/routers/api/v1/utils"
+	"github.com/gogits/gogs/routers/api/v1/convert"
 )
 
 // https://github.com/gogits/go-gogs-client/wiki/Repositories#list-hooks
@@ -26,7 +26,7 @@ func ListHooks(ctx *middleware.Context) {
 
 	apiHooks := make([]*api.Hook, len(hooks))
 	for i := range hooks {
-		apiHooks[i] = to.ApiHook(ctx.Repo.RepoLink, hooks[i])
+		apiHooks[i] = convert.ToApiHook(ctx.Repo.RepoLink, hooks[i])
 	}
 
 	ctx.JSON(200, &apiHooks)
@@ -94,7 +94,7 @@ func CreateHook(ctx *middleware.Context, form api.CreateHookOption) {
 		return
 	}
 
-	ctx.JSON(201, to.ApiHook(ctx.Repo.RepoLink, w))
+	ctx.JSON(201, convert.ToApiHook(ctx.Repo.RepoLink, w))
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Repositories#edit-a-hook
@@ -104,7 +104,7 @@ func EditHook(ctx *middleware.Context, form api.EditHookOption) {
 		if models.IsErrWebhookNotExist(err) {
 			ctx.Error(404)
 		} else {
-			ctx.APIError(500, "GetWebhookById", err)
+			ctx.APIError(500, "GetWebhookByID", err)
 		}
 		return
 	}
@@ -161,5 +161,5 @@ func EditHook(ctx *middleware.Context, form api.EditHookOption) {
 		return
 	}
 
-	ctx.JSON(200, to.ApiHook(ctx.Repo.RepoLink, w))
+	ctx.JSON(200, convert.ToApiHook(ctx.Repo.RepoLink, w))
 }

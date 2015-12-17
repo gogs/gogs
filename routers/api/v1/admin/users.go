@@ -12,8 +12,8 @@ import (
 	"github.com/gogits/gogs/modules/mailer"
 	"github.com/gogits/gogs/modules/middleware"
 	"github.com/gogits/gogs/modules/setting"
+	"github.com/gogits/gogs/routers/api/v1/convert"
 	"github.com/gogits/gogs/routers/api/v1/user"
-	to "github.com/gogits/gogs/routers/api/v1/utils"
 )
 
 func parseLoginSource(ctx *middleware.Context, u *models.User, sourceID int64, loginName string) {
@@ -69,7 +69,7 @@ func CreateUser(ctx *middleware.Context, form api.CreateUserOption) {
 		mailer.SendRegisterNotifyMail(ctx.Context, u)
 	}
 
-	ctx.JSON(201, to.ApiUser(u))
+	ctx.JSON(201, convert.ToApiUser(u))
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Administration-Users#edit-an-existing-user
@@ -118,7 +118,7 @@ func EditUser(ctx *middleware.Context, form api.EditUserOption) {
 	}
 	log.Trace("Account profile updated by admin (%s): %s", ctx.User.Name, u.Name)
 
-	ctx.JSON(200, to.ApiUser(u))
+	ctx.JSON(200, convert.ToApiUser(u))
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Administration-Users#delete-a-user
