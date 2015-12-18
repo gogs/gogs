@@ -113,7 +113,7 @@ func ListMyRepos(ctx *middleware.Context) {
 	ctx.JSON(200, &repos)
 }
 
-func createRepo(ctx *middleware.Context, owner *models.User, opt api.CreateRepoOption) {
+func CreateUserRepo(ctx *middleware.Context, owner *models.User, opt api.CreateRepoOption) {
 	repo, err := models.CreateRepository(owner, models.CreateRepoOptions{
 		Name:        opt.Name,
 		Description: opt.Description,
@@ -149,7 +149,7 @@ func Create(ctx *middleware.Context, opt api.CreateRepoOption) {
 		ctx.APIError(422, "", "not allowed creating repository for organization")
 		return
 	}
-	createRepo(ctx, ctx.User, opt)
+	CreateUserRepo(ctx, ctx.User, opt)
 }
 
 func CreateOrgRepo(ctx *middleware.Context, opt api.CreateRepoOption) {
@@ -167,7 +167,7 @@ func CreateOrgRepo(ctx *middleware.Context, opt api.CreateRepoOption) {
 		ctx.APIError(403, "", "Given user is not owner of organization.")
 		return
 	}
-	createRepo(ctx, org, opt)
+	CreateUserRepo(ctx, org, opt)
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Repositories#migrate
