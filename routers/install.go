@@ -82,6 +82,9 @@ func GlobalInit() {
 	if models.EnableTidb {
 		log.Info("TiDB Supported")
 	}
+	if setting.SupportMiniWinService {
+		log.Info("Builtin Windows Service Supported")
+	}
 	checkRunMode()
 
 	if setting.StartSSHServer {
