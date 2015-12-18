@@ -43,11 +43,11 @@ const (
 )
 
 var (
-	// Build information.
+	// Build information
 	BuildTime    string
 	BuildGitHash string
 
-	// App settings.
+	// App settings
 	AppVer      string
 	AppName     string
 	AppUrl      string
@@ -55,7 +55,7 @@ var (
 	AppPath     string
 	AppDataPath = "data"
 
-	// Server settings.
+	// Server settings
 	Protocol           Scheme
 	Domain             string
 	HttpAddr, HttpPort string
@@ -71,7 +71,7 @@ var (
 	EnableGzip         bool
 	LandingPageUrl     LandingPage
 
-	// Security settings.
+	// Security settings
 	InstallLock          bool
 	SecretKey            string
 	LogInRememberDays    int
@@ -79,13 +79,13 @@ var (
 	CookieRememberName   string
 	ReverseProxyAuthUser string
 
-	// Database settings.
+	// Database settings
 	UseSQLite3    bool
 	UseMySQL      bool
 	UsePostgreSQL bool
 	UseTiDB       bool
 
-	// Webhook settings.
+	// Webhook settings
 	Webhook struct {
 		QueueLength    int
 		DeliverTimeout int
@@ -94,7 +94,7 @@ var (
 		PagingNum      int
 	}
 
-	// Repository settings.
+	// Repository settings
 	Repository struct {
 		AnsiCharset            string
 		ForcePrivate           bool
@@ -104,7 +104,7 @@ var (
 	RepoRootPath string
 	ScriptType   string
 
-	// UI settings.
+	// UI settings
 	ExplorePagingNum     int
 	IssuePagingNum       int
 	FeedMaxCommitNum     int
@@ -113,47 +113,47 @@ var (
 	AdminNoticePagingNum int
 	AdminOrgPagingNum    int
 
-	// Markdown sttings.
+	// Markdown sttings
 	Markdown struct {
 		EnableHardLineBreak bool
 	}
 
-	// Picture settings.
+	// Picture settings
 	PictureService   string
 	AvatarUploadPath string
 	GravatarSource   string
 	DisableGravatar  bool
 
-	// Log settings.
+	// Log settings
 	LogRootPath string
 	LogModes    []string
 	LogConfigs  []string
 
-	// Attachment settings.
+	// Attachment settings
 	AttachmentPath         string
 	AttachmentAllowedTypes string
 	AttachmentMaxSize      int64
 	AttachmentMaxFiles     int
 	AttachmentEnabled      bool
 
-	// Time settings.
+	// Time settings
 	TimeFormat string
 
-	// Cache settings.
+	// Cache settings
 	CacheAdapter  string
 	CacheInternal int
 	CacheConn     string
 
-	// Session settings.
+	// Session settings
 	SessionConfig session.Options
 
-	// Git settings.
+	// Git settings
 	Git struct {
 		MaxGitDiffLines int
 		GcArgs          []string `delim:" "`
 	}
 
-	// Cron tasks.
+	// Cron tasks
 	Cron struct {
 		UpdateMirror struct {
 			Enabled    bool
@@ -174,17 +174,19 @@ var (
 		} `ini:"cron.check_repo_stats"`
 	}
 
-	// I18n settings.
+	// I18n settings
 	Langs, Names []string
 	dateLangs    map[string]string
 
-	// Other settings.
+	// Highlight settings are loaded in modules/template/hightlight.go
+
+	// Other settings
 	ShowFooterBranding bool
 	ShowFooterVersion  bool
 
-	// Global setting objects.
+	// Global setting objects
 	Cfg          *ini.File
-	CustomPath   string // Custom directory path.
+	CustomPath   string // Custom directory path
 	CustomConf   string
 	ProdMode     bool
 	RunUser      string
