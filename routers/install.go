@@ -28,6 +28,7 @@ import (
 	"github.com/gogits/gogs/modules/middleware"
 	"github.com/gogits/gogs/modules/setting"
 	"github.com/gogits/gogs/modules/ssh"
+	"github.com/gogits/gogs/modules/template"
 	"github.com/gogits/gogs/modules/user"
 )
 
@@ -55,6 +56,7 @@ func NewServices() {
 // GlobalInit is for global configuration reload-able.
 func GlobalInit() {
 	setting.NewContext()
+	template.NewContext()
 	log.Trace("Custom path: %s", setting.CustomPath)
 	log.Trace("Log path: %s", setting.LogRootPath)
 	models.LoadConfigs()
