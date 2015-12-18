@@ -198,6 +198,7 @@ func RegisterRoutes(m *macaron.Macaron) {
 						Delete(admin.DeleteUser)
 					m.Post("/keys", admin.CreatePublicKey)
 					m.Post("/orgs", bind(api.CreateOrgOption{}), admin.CreateOrg)
+					m.Post("/repos", bind(api.CreateRepoOption{}), admin.CreateRepo)
 				})
 			})
 		}, ReqAdmin())
