@@ -181,8 +181,9 @@ var (
 	// Highlight settings are loaded in modules/template/hightlight.go
 
 	// Other settings
-	ShowFooterBranding bool
-	ShowFooterVersion  bool
+	ShowFooterBranding    bool
+	ShowFooterVersion     bool
+	SupportMiniWinService bool
 
 	// Global setting objects
 	Cfg          *ini.File
