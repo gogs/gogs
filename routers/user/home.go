@@ -132,7 +132,7 @@ func Dashboard(ctx *middleware.Context) {
 	ctx.Data["MirrorCount"] = len(mirrors)
 	ctx.Data["Mirrors"] = mirrors
 
-	retrieveFeeds(ctx, ctx.User.Id, 0, false)
+	retrieveFeeds(ctx, ctxUser.Id, 0, false)
 	if ctx.Written() {
 		return
 	}
