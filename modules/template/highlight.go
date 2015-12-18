@@ -7,6 +7,8 @@ package template
 import (
 	"path"
 	"strings"
+
+	"github.com/gogits/gogs/modules/setting"
 )
 
 var (
@@ -16,13 +18,13 @@ var (
 		"copying": true,
 	}
 
-	// File names that are representing highlight class.
+	// File names that are representing highlight classes.
 	highlightFileNames = map[string]bool{
 		"dockerfile": true,
 		"makefile":   true,
 	}
 
-	// Extensions that are same as highlight class.
+	// Extensions that are same as highlight classes.
 	highlightExts = map[string]bool{
 		".arm":    true,
 		".as":     true,
@@ -57,7 +59,17 @@ var (
 		".ts":     true,
 		".vb":     true,
 	}
+
+	// Extensions that are not same as highlight classes.
+	highlightMapping = map[string]string{}
 )
+
+func NewContext() {
+	keys := setting.Cfg.Section("highlight.mapping").Keys()
+	for i := range keys {
+		highlightMapping[keys[i].Name()] = keys[i].Value()
+	}
+}
 
 // FileNameToHighlightClass returns the best match for highlight class name
 // based on the rule of highlight.js.
@@ -74,6 +86,11 @@ func FileNameToHighlightClass(fname string) string {
 	ext := path.Ext(fname)
 	if highlightExts[ext] {
 		return ext[1:]
+	}
+
+	name, ok := highlightMapping[ext]
+	if ok {
+		return name
 	}
 
 	return ""
