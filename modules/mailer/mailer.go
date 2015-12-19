@@ -111,7 +111,7 @@ func (s *Sender) Send(from string, to []string, msg io.WriterTo) error {
 
 	client, err := smtp.NewClient(conn, host)
 	if err != nil {
-		return err
+		return fmt.Errorf("NewClient: %v", err)
 	}
 
 	if !setting.MailService.DisableHelo {
@@ -124,7 +124,7 @@ func (s *Sender) Send(from string, to []string, msg io.WriterTo) error {
 		}
 
 		if err = client.Hello(hostname); err != nil {
-			return err
+			return fmt.Errorf("Hello: %v", err)
 		}
 	}
 
@@ -132,7 +132,7 @@ func (s *Sender) Send(from string, to []string, msg io.WriterTo) error {
 	hasStartTLS, _ := client.Extension("STARTTLS")
 	if !isSecureConn && hasStartTLS {
 		if err = client.StartTLS(tlsconfig); err != nil {
-			return err
+			return fmt.Errorf("StartTLS: %v", err)
 		}
 	}
 
@@ -151,28 +151,28 @@ func (s *Sender) Send(from string, to []string, msg io.WriterTo) error {
 
 		if auth != nil {
 			if err = client.Auth(auth); err != nil {
-				return err
+				return fmt.Errorf("Auth: %v", err)
 			}
 		}
 	}
 
 	if err = client.Mail(from); err != nil {
-		return err
+		return fmt.Errorf("Mail: %v", err)
 	}
 
 	for _, rec := range to {
 		if err = client.Rcpt(rec); err != nil {
-			return err
+			return fmt.Errorf("Rcpt: %v", err)
 		}
 	}
 
 	w, err := client.Data()
 	if err != nil {
-		return err
+		return fmt.Errorf("Data: %v", err)
 	} else if _, err = msg.WriteTo(w); err != nil {
-		return err
+		return fmt.Errorf("WriteTo: %v", err)
 	} else if err = w.Close(); err != nil {
-		return err
+		return fmt.Errorf("Close: %v", err)
 	}
 
 	return client.Quit()
