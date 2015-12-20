@@ -51,6 +51,8 @@ func MustEnablePulls(ctx *middleware.Context) {
 	if !ctx.Repo.Repository.EnablePulls {
 		ctx.Handle(404, "MustEnablePulls", nil)
 	}
+
+	ctx.Data["HasForkedRepo"] = ctx.IsSigned && ctx.User.HasForkedRepo(ctx.Repo.Repository.ID)
 }
 
 func RetrieveLabels(ctx *middleware.Context) {
@@ -69,9 +71,12 @@ func RetrieveLabels(ctx *middleware.Context) {
 func Issues(ctx *middleware.Context) {
 	isPullList := ctx.Params(":type") == "pulls"
 	if isPullList {
+		MustEnablePulls(ctx)
+		if ctx.Written() {
+			return
+		}
 		ctx.Data["Title"] = ctx.Tr("repo.pulls")
 		ctx.Data["PageIsPullList"] = true
-		ctx.Data["HasForkedRepo"] = ctx.IsSigned && ctx.User.HasForkedRepo(ctx.Repo.Repository.ID)
 
 	} else {
 		MustEnableIssues(ctx)
