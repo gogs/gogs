@@ -33,24 +33,6 @@ const (
 )
 
 var sshOpLocker = sync.Mutex{}
-var SSHPath string // SSH directory.
-
-// homeDir returns the home directory of current user.
-func homeDir() string {
-	home, err := com.HomeDir()
-	if err != nil {
-		log.Fatal(4, "Fail to get home directory: %v", err)
-	}
-	return home
-}
-
-func init() {
-	// Determine and create .ssh path.
-	SSHPath = filepath.Join(homeDir(), ".ssh")
-	if err := os.MkdirAll(SSHPath, 0700); err != nil {
-		log.Fatal(4, "fail to create '%s': %v", SSHPath, err)
-	}
-}
 
 type KeyType int
 
@@ -233,7 +215,7 @@ func saveAuthorizedKeyFile(keys ...*PublicKey) error {
 	sshOpLocker.Lock()
 	defer sshOpLocker.Unlock()
 
-	fpath := filepath.Join(SSHPath, "authorized_keys")
+	fpath := filepath.Join(setting.SSHRootPath, "authorized_keys")
 	f, err := os.OpenFile(fpath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0600)
 	if err != nil {
 		return err
@@ -449,8 +431,8 @@ func deletePublicKey(e *xorm.Session, keyID int64) error {
 		return nil
 	}
 
-	fpath := filepath.Join(SSHPath, "authorized_keys")
-	tmpPath := filepath.Join(SSHPath, "authorized_keys.tmp")
+	fpath := filepath.Join(setting.SSHRootPath, "authorized_keys")
+	tmpPath := filepath.Join(setting.SSHRootPath, "authorized_keys.tmp")
 	if err = rewriteAuthorizedKeys(key, fpath, tmpPath); err != nil {
 		return err
 	} else if err = os.Remove(fpath); err != nil {
@@ -492,7 +474,7 @@ func RewriteAllPublicKeys() error {
 	sshOpLocker.Lock()
 	defer sshOpLocker.Unlock()
 
-	tmpPath := filepath.Join(SSHPath, "authorized_keys.tmp")
+	tmpPath := filepath.Join(setting.SSHRootPath, "authorized_keys.tmp")
 	f, err := os.OpenFile(tmpPath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
 		return err
@@ -508,7 +490,7 @@ func RewriteAllPublicKeys() error {
 		return err
 	}
 
-	fpath := filepath.Join(SSHPath, "authorized_keys")
+	fpath := filepath.Join(setting.SSHRootPath, "authorized_keys")
 	if com.IsExist(fpath) {
 		if err = os.Remove(fpath); err != nil {
 			return err
