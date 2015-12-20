@@ -21,7 +21,7 @@
 						</div>
 						<div class="scrolling menu">
 							{{range .Branches}}
-								<div class="item {{if eq $.BaseBranch .}}selected{{end}}" data-url="{{$.RepoLink}}/compare/{{.}}...{{$.SignedUser.Name}}:{{$.HeadBranch}}">{{.}}</div>
+								<div class="item {{if eq $.BaseBranch .}}selected{{end}}" data-url="{{$.RepoLink}}/compare/{{.}}...{{$.HeadUser.Name}}:{{$.HeadBranch}}">{{.}}</div>
 							{{end}}
 						</div>
 					</div>
@@ -39,7 +39,7 @@
 						</div>
 						<div class="scrolling menu">
 							{{range .HeadBranches}}
-								<div class="{{if eq $.HeadBranch .}}selected{{end}} item" data-url="{{$.RepoLink}}/compare/{{$.BaseBranch}}...{{$.SignedUser.Name}}:{{.}}">{{.}}</div>
+								<div class="{{if eq $.HeadBranch .}}selected{{end}} item" data-url="{{$.RepoLink}}/compare/{{$.BaseBranch}}...{{$.HeadUser.Name}}:{{.}}">{{.}}</div>
 							{{end}}
 						</div>
 					</div>
