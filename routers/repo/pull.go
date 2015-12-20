@@ -431,6 +431,7 @@ func ParseCompareInfo(ctx *middleware.Context) (*models.User, *models.Repository
 		}
 		return nil, nil, nil, nil, "", ""
 	}
+	ctx.Data["HeadUser"] = headUser
 
 	repo := ctx.Repo.Repository
 

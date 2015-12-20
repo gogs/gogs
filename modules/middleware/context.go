@@ -125,6 +125,7 @@ func (ctx *Context) HasValue(name string) bool {
 
 // HTML calls Context.HTML and converts template name to string.
 func (ctx *Context) HTML(status int, name base.TplName) {
+	log.Debug("Template: %s", name)
 	ctx.Context.HTML(status, string(name))
 }
 
@@ -241,6 +242,7 @@ func Contexter() macaron.Handler {
 
 		ctx.Data["CsrfToken"] = x.GetToken()
 		ctx.Data["CsrfTokenHtml"] = template.HTML(`<input type="hidden" name="_csrf" value="` + x.GetToken() + `">`)
+		log.Debug("CSRF Token: %v | %v", ctx.Data["CsrfToken"], ctx.GetCookie("_csrf"))
 
 		ctx.Data["ShowRegistrationButton"] = setting.Service.ShowRegistrationButton
 		ctx.Data["ShowFooterBranding"] = setting.ShowFooterBranding
