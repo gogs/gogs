@@ -492,8 +492,8 @@ func runWeb(ctx *cli.Context) {
 		m.Get("/archive/*", repo.Download)
 
 		m.Group("/pulls/:index", func() {
-			m.Get("/commits", repo.ViewPullCommits)
-			m.Get("/files", repo.ViewPullFiles)
+			m.Get("/commits", middleware.RepoRef(), repo.ViewPullCommits)
+			m.Get("/files", middleware.RepoRef(), repo.ViewPullFiles)
 			m.Post("/merge", reqRepoAdmin, repo.MergePullRequest)
 		}, repo.MustEnablePulls)
 
