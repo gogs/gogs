@@ -13,6 +13,8 @@ import (
 	"strings"
 	"sync"
 
+	"net/url"
+
 	"github.com/Unknwon/com"
 
 	"github.com/gogits/git-module"
@@ -65,12 +67,12 @@ var wikiWorkingPool = &workingPool{
 
 // ToWikiPageURL formats a string to corresponding wiki URL name.
 func ToWikiPageURL(name string) string {
-	return strings.Replace(name, " ", "-", -1)
+	return url.QueryEscape(strings.Replace(name, " ", "-", -1))
 }
 
 // ToWikiPageName formats a URL back to corresponding wiki page name.
 func ToWikiPageName(name string) string {
-	return strings.Replace(name, "-", " ", -1)
+	return url.QueryUnescape(strings.Replace(name, "-", " ", -1))
 }
 
 // WikiCloneLink returns clone URLs of repository wiki.
