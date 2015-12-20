@@ -12,7 +12,6 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
-
 	"net/url"
 
 	"github.com/Unknwon/com"
@@ -71,8 +70,9 @@ func ToWikiPageURL(name string) string {
 }
 
 // ToWikiPageName formats a URL back to corresponding wiki page name.
-func ToWikiPageName(name string) string {
-	return url.QueryUnescape(strings.Replace(name, "-", " ", -1))
+func ToWikiPageName(urlString string) string {
+	name, _ := url.QueryUnescape(strings.Replace(urlString, "-", " ", -1))
+	return name
 }
 
 // WikiCloneLink returns clone URLs of repository wiki.
