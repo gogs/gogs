@@ -64,6 +64,7 @@ var (
 	StartSSHServer     bool
 	SSHDomain          string
 	SSHPort            int
+	SSHRootPath        string
 	OfflineMode        bool
 	DisableRouterLog   bool
 	CertFile, KeyFile  string
@@ -273,9 +274,15 @@ func NewContext() {
 			log.Fatal(4, "Fail to load custom conf '%s': %v", CustomConf, err)
 		}
 	} else {
-		log.Warn("Custom config (%s) not found, ignore this if you're running first time", CustomConf)
+		log.Warn("Custom config '%s' not found, ignore this if you're running first time", CustomConf)
 	}
 	Cfg.NameMapper = ini.AllCapsUnderscore
+
+	homeDir, err := com.HomeDir()
+	if err != nil {
+		log.Fatal(4, "Fail to get home directory: %v", err)
+	}
+	homeDir = strings.Replace(homeDir, "\\", "/", -1)
 
 	LogRootPath = Cfg.Section("log").Key("ROOT_PATH").MustString(path.Join(workDir, "log"))
 	forcePathSeparator(LogRootPath)
@@ -290,7 +297,7 @@ func NewContext() {
 	// Check if has app suburl.
 	url, err := url.Parse(AppUrl)
 	if err != nil {
-		log.Fatal(4, "Invalid ROOT_URL(%s): %s", AppUrl, err)
+		log.Fatal(4, "Invalid ROOT_URL '%s': %s", AppUrl, err)
 	}
 	AppSubUrl = strings.TrimSuffix(url.Path, "/")
 
@@ -312,6 +319,10 @@ func NewContext() {
 	}
 	SSHDomain = sec.Key("SSH_DOMAIN").MustString(Domain)
 	SSHPort = sec.Key("SSH_PORT").MustInt(22)
+	SSHRootPath = sec.Key("SSH_ROOT_PATH").MustString(path.Join(homeDir, ".ssh"))
+	if err := os.MkdirAll(SSHRootPath, 0700); err != nil {
+		log.Fatal(4, "Fail to create '%s': %v", SSHRootPath, err)
+	}
 	OfflineMode = sec.Key("OFFLINE_MODE").MustBool()
 	DisableRouterLog = sec.Key("DISABLE_ROUTER_LOG").MustBool()
 	StaticRootPath = sec.Key("STATIC_ROOT_PATH").MustString(workDir)
@@ -368,12 +379,6 @@ func NewContext() {
 	}
 
 	// Determine and create root git repository path.
-	homeDir, err := com.HomeDir()
-	if err != nil {
-		log.Fatal(4, "Fail to get home directory: %v", err)
-	}
-	homeDir = strings.Replace(homeDir, "\\", "/", -1)
-
 	sec = Cfg.Section("repository")
 	RepoRootPath = sec.Key("ROOT").MustString(path.Join(homeDir, "gogs-repositories"))
 	forcePathSeparator(RepoRootPath)
