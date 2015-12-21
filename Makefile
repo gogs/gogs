@@ -16,7 +16,7 @@ NOW = $(shell date -u '+%Y%m%d%I%M%S')
 .IGNORE: public/css/gogs.css
 
 build: $(GENERATED)
-	go install -ldflags '$(LDFLAGS)' -tags '$(TAGS)'
+	go install -v -ldflags '$(LDFLAGS)' -tags '$(TAGS)'
 	cp '$(GOPATH)/bin/gogs' .
 
 govet:

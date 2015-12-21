@@ -39,6 +39,33 @@
 								</li>
 							{{end}}
 							<li><i class="icon octicon octicon-clock"></i> {{.i18n.Tr "user.join_on"}} {{DateFmtShort .Owner.Created}}</li>
+							<li>
+								<i class="user icon"></i>
+								<a href="{{.Owner.HomeLink}}/followers">
+									{{.Owner.NumFollowers}} {{.i18n.Tr "user.followers"}}
+								</a>
+								-
+								<a href="{{.Owner.HomeLink}}/following">
+									{{.Owner.NumFollowing}} {{.i18n.Tr "user.following"}}
+								</a>
+							</li>
+							{{/*
+							<li>
+								<i class="octicon octicon-star"></i>
+								<a href="{{.Owner.HomeLink}}/stars">
+									{{.Owner.NumStars}} {{.i18n.Tr "user.starred"}}
+								</a>
+							</li>
+							*/}}
+							{{if and .IsSigned (ne .SignedUserName .Owner.Name)}}
+							<li class="follow">
+								{{if .SignedUser.IsFollowing .Owner.Id}}
+								<a class="ui basic red button" href="{{.Link}}/action/unfollow?redirect_to={{$.Link}}"><i class="octicon octicon-person"></i> {{.i18n.Tr "user.unfollow"}}</a>
+								{{else}}
+								<a class="ui basic green button" href="{{.Link}}/action/follow?redirect_to={{$.Link}}"><i class="octicon octicon-person"></i> {{.i18n.Tr "user.follow"}}</a>
+								{{end}}
+							</li>
+							{{end}}
 						</ul>
 					</div>
 				</div>

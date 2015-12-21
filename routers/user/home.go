@@ -7,7 +7,6 @@ package user
 import (
 	"bytes"
 	"fmt"
-	"strings"
 
 	"github.com/Unknwon/com"
 	"github.com/Unknwon/paginater"
@@ -21,7 +20,6 @@ import (
 const (
 	DASHBOARD base.TplName = "user/dashboard/dashboard"
 	ISSUES    base.TplName = "user/dashboard/issues"
-	STARS     base.TplName = "user/stars"
 	PROFILE   base.TplName = "user/profile"
 	ORG_HOME  base.TplName = "org/home"
 )
@@ -336,67 +334,6 @@ func showOrgProfile(ctx *middleware.Context) {
 	ctx.Data["Teams"] = org.Teams
 
 	ctx.HTML(200, ORG_HOME)
-}
-
-func Profile(ctx *middleware.Context) {
-	ctx.Data["Title"] = "Profile"
-	ctx.Data["PageIsUserProfile"] = true
-
-	uname := ctx.Params(":username")
-	// Special handle for FireFox requests favicon.ico.
-	if uname == "favicon.ico" {
-		ctx.Redirect(setting.AppSubUrl + "/img/favicon.png")
-		return
-	} else if strings.HasSuffix(uname, ".png") {
-		ctx.Error(404)
-		return
-	}
-
-	isShowKeys := false
-	if strings.HasSuffix(uname, ".keys") {
-		isShowKeys = true
-		uname = strings.TrimSuffix(uname, ".keys")
-	}
-
-	u, err := models.GetUserByName(uname)
-	if err != nil {
-		if models.IsErrUserNotExist(err) {
-			ctx.Handle(404, "GetUserByName", err)
-		} else {
-			ctx.Handle(500, "GetUserByName", err)
-		}
-		return
-	}
-
-	// Show SSH keys.
-	if isShowKeys {
-		ShowSSHKeys(ctx, u.Id)
-		return
-	}
-
-	if u.IsOrganization() {
-		showOrgProfile(ctx)
-		return
-	}
-	ctx.Data["Owner"] = u
-
-	tab := ctx.Query("tab")
-	ctx.Data["TabName"] = tab
-	switch tab {
-	case "activity":
-		retrieveFeeds(ctx, u.Id, 0, true)
-		if ctx.Written() {
-			return
-		}
-	default:
-		ctx.Data["Repos"], err = models.GetRepositories(u.Id, ctx.IsSigned && ctx.User.Id == u.Id)
-		if err != nil {
-			ctx.Handle(500, "GetRepositories", err)
-			return
-		}
-	}
-
-	ctx.HTML(200, PROFILE)
 }
 
 func Email2User(ctx *middleware.Context) {

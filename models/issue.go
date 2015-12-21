@@ -665,6 +665,47 @@ func GetIssueUserPairsByMode(uid, rid int64, isClosed bool, page, filterMode int
 	return ius, err
 }
 
+func UpdateMentions(userNames []string, issueId int64) error {
+	for i := range userNames {
+		userNames[i] = strings.ToLower(userNames[i])
+	}
+	users := make([]*User, 0, len(userNames))
+
+	if err := x.Where("lower_name IN (?)", strings.Join(userNames, "\",\"")).OrderBy("lower_name ASC").Find(&users); err != nil {
+		return err
+	}
+
+	ids := make([]int64, 0, len(userNames))
+	for _, user := range users {
+		ids = append(ids, user.Id)
+		if !user.IsOrganization() {
+			continue
+		}
+
+		if user.NumMembers == 0 {
+			continue
+		}
+
+		tempIds := make([]int64, 0, user.NumMembers)
+		orgUsers, err := GetOrgUsersByOrgId(user.Id)
+		if err != nil {
+			return err
+		}
+
+		for _, orgUser := range orgUsers {
+			tempIds = append(tempIds, orgUser.ID)
+		}
+
+		ids = append(ids, tempIds...)
+	}
+
+	if err := UpdateIssueUsersByMentions(ids, issueId); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // IssueStats represents issue statistic information.
 type IssueStats struct {
 	OpenCount, ClosedCount int64
