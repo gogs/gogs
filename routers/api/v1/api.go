@@ -135,19 +135,32 @@ func RegisterRoutes(m *macaron.Macaron) {
 		m.Group("/users", func() {
 			m.Group("/:username", func() {
 				m.Get("/keys", user.ListPublicKeys)
+
+				m.Get("/followers", user.ListFollowers)
+				m.Group("/following", func() {
+					m.Get("", user.ListFollowing)
+					m.Get("/:target", user.CheckFollowing)
+				})
 			})
 		}, ReqToken())
 
 		m.Group("/user", func() {
+			m.Combo("/emails").Get(user.ListEmails).
+				Post(bind(api.CreateEmailOption{}), user.AddEmail).
+				Delete(bind(api.CreateEmailOption{}), user.DeleteEmail)
+
+			m.Get("/followers", user.ListMyFollowers)
+			m.Group("/following", func() {
+				m.Get("", user.ListMyFollowing)
+				m.Combo("/:username").Get(user.CheckMyFollowing).Put(user.Follow).Delete(user.Unfollow)
+			})
+
 			m.Group("/keys", func() {
 				m.Combo("").Get(user.ListMyPublicKeys).
 					Post(bind(api.CreateKeyOption{}), user.CreatePublicKey)
 				m.Combo("/:id").Get(user.GetPublicKey).
 					Delete(user.DeletePublicKey)
 			})
-			m.Combo("/emails").Get(user.ListEmails).
-				Post(bind(api.CreateEmailOption{}), user.AddEmail).
-				Delete(bind(api.CreateEmailOption{}), user.DeleteEmail)
 		}, ReqToken())
 
 		// Repositories

@@ -1,6 +1,8 @@
 .user {
-	padding-top: 15px;
-	padding-bottom: @footer-margin * 2;
+	&:not(.icon) {
+		padding-top: 15px;
+		padding-bottom: @footer-margin * 2;
+	}
 
 	&.settings {
 		.list {
@@ -38,6 +40,17 @@
 						&:not(:last-child) {
 							border-bottom: 1px solid #eaeaea;
 						}
+
+						.octicon {
+							margin-left: 1px;
+							margin-right: 5px;
+						}
+
+						&.follow {
+							.ui.button {
+								width: 100%;
+							}
+						}
 					}
 				}
 			}
@@ -45,6 +58,20 @@
 
 		.ui.repository.list {
 			margin-top: 25px;
+		}
+	}
+
+	&.followers {
+		.header.name {
+			font-size: 20px;
+			line-height: 24px;
+			vertical-align: middle;
+		}
+
+		.follow {
+			.ui.button {
+				padding: 8px 15px;
+			}
 		}
 	}
 }

@@ -2465,31 +2465,6 @@ footer .container .links > *:first-child {
 .repository.new.release .prerelease.field {
   margin-bottom: 0;
 }
-.repository.watchers .list {
-  padding: 0;
-}
-.repository.watchers .list .item {
-  list-style: none;
-  width: 32%;
-  margin: 10px 10px 10px 0;
-  padding-bottom: 14px;
-  float: left;
-}
-.repository.watchers .list .item .avatar {
-  width: 48px;
-  height: 48px;
-  float: left;
-  display: block;
-  margin-right: 10px;
-}
-.repository.watchers .list .item .name {
-  margin-top: 0;
-  margin-bottom: 0;
-  font-weight: normal;
-}
-.repository.watchers .list .item .meta {
-  margin-top: 5px;
-}
 .repository.forks .list {
   margin-top: 0;
 }
@@ -2550,6 +2525,31 @@ footer .container .links > *:first-child {
 .repository.settings.collaboration #repo-collab-form .ui.button {
   margin-left: 5px;
   margin-top: -3px;
+}
+.user-cards .list {
+  padding: 0;
+}
+.user-cards .list .item {
+  list-style: none;
+  width: 32%;
+  margin: 10px 10px 10px 0;
+  padding-bottom: 14px;
+  float: left;
+}
+.user-cards .list .item .avatar {
+  width: 48px;
+  height: 48px;
+  float: left;
+  display: block;
+  margin-right: 10px;
+}
+.user-cards .list .item .name {
+  margin-top: 0;
+  margin-bottom: 0;
+  font-weight: normal;
+}
+.user-cards .list .item .meta {
+  margin-top: 5px;
 }
 #search-repo-box .results,
 #search-user-box .results {
@@ -2862,7 +2862,7 @@ footer .container .links > *:first-child {
   margin-left: 5px;
   margin-top: -3px;
 }
-.user {
+.user:not(.icon) {
   padding-top: 15px;
   padding-bottom: 80px;
 }
@@ -2893,8 +2893,23 @@ footer .container .links > *:first-child {
 .user.profile .ui.card .extra.content ul li:not(:last-child) {
   border-bottom: 1px solid #eaeaea;
 }
+.user.profile .ui.card .extra.content ul li .octicon {
+  margin-left: 1px;
+  margin-right: 5px;
+}
+.user.profile .ui.card .extra.content ul li.follow .ui.button {
+  width: 100%;
+}
 .user.profile .ui.repository.list {
   margin-top: 25px;
+}
+.user.followers .header.name {
+  font-size: 20px;
+  line-height: 24px;
+  vertical-align: middle;
+}
+.user.followers .follow .ui.button {
+  padding: 8px 15px;
 }
 .dashboard {
   padding-top: 15px;
