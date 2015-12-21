@@ -289,7 +289,13 @@ func runWeb(ctx *cli.Context) {
 	// ***** END: Admin *****
 
 	m.Group("", func() {
-		m.Get("/:username", user.Profile)
+		m.Group("/:username", func() {
+			m.Get("", user.Profile)
+			m.Get("/followers", user.Followers)
+			m.Get("/following", user.Following)
+			m.Get("/stars", user.Stars)
+		})
+
 		m.Get("/attachments/:uuid", func(ctx *middleware.Context) {
 			attach, err := models.GetAttachmentByUUID(ctx.Params(":uuid"))
 			if err != nil {
@@ -318,6 +324,10 @@ func runWeb(ctx *cli.Context) {
 		})
 		m.Post("/issues/attachments", repo.UploadIssueAttachment)
 	}, ignSignIn)
+
+	m.Group("/:username", func() {
+		m.Get("/action/:action", user.Action)
+	}, reqSignIn)
 
 	if macaron.Env == macaron.DEV {
 		m.Get("/template/*", dev.TemplatePreview)

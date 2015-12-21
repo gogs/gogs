@@ -217,7 +217,7 @@ func Home(ctx *middleware.Context) {
 	ctx.HTML(200, HOME)
 }
 
-func renderItems(ctx *middleware.Context, total int, getter func(page int) ([]*models.User, error)) {
+func RenderUserCards(ctx *middleware.Context, total int, getter func(page int) ([]*models.User, error), tpl base.TplName) {
 	page := ctx.QueryInt("page")
 	if page <= 0 {
 		page = 1
@@ -230,21 +230,23 @@ func renderItems(ctx *middleware.Context, total int, getter func(page int) ([]*m
 		ctx.Handle(500, "getter", err)
 		return
 	}
-	ctx.Data["Watchers"] = items
+	ctx.Data["Cards"] = items
 
-	ctx.HTML(200, WATCHERS)
+	ctx.HTML(200, tpl)
 }
 
 func Watchers(ctx *middleware.Context) {
 	ctx.Data["Title"] = ctx.Tr("repo.watchers")
+	ctx.Data["CardsTitle"] = ctx.Tr("repo.watchers")
 	ctx.Data["PageIsWatchers"] = true
-	renderItems(ctx, ctx.Repo.Repository.NumWatches, ctx.Repo.Repository.GetWatchers)
+	RenderUserCards(ctx, ctx.Repo.Repository.NumWatches, ctx.Repo.Repository.GetWatchers, WATCHERS)
 }
 
 func Stars(ctx *middleware.Context) {
 	ctx.Data["Title"] = ctx.Tr("repo.stargazers")
+	ctx.Data["CardsTitle"] = ctx.Tr("repo.stargazers")
 	ctx.Data["PageIsStargazers"] = true
-	renderItems(ctx, ctx.Repo.Repository.NumStars, ctx.Repo.Repository.GetStargazers)
+	RenderUserCards(ctx, ctx.Repo.Repository.NumStars, ctx.Repo.Repository.GetStargazers, WATCHERS)
 }
 
 func Forks(ctx *middleware.Context) {

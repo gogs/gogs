@@ -3,7 +3,7 @@ Gogs - Go Git Service [![Build Status](https://travis-ci.org/gogits/gogs.svg?bra
 
 ![](https://github.com/gogits/gogs/blob/master/public/img/gogs-large-resize.png?raw=true)
 
-##### Current version: 0.8.12
+##### Current version: 0.8.13
 
 | Web | UI  | Preview  |
 |:-------------:|:-------:|:-------:|
@@ -82,6 +82,7 @@ There are 5 ways to install Gogs:
 - [阿里云上 Ubuntu 14.04 64 位安装 Gogs](http://my.oschina.net/luyao/blog/375654) (Chinese)
 - [Installing Gogs on FreeBSD](https://www.codejam.info/2015/03/installing-gogs-on-freebsd.html)
 - [Gogs on Raspberry Pi](http://blog.meinside.pe.kr/Gogs-on-Raspberry-Pi/)
+- [Cloudflare Full SSL with GOGS (Go Git Service) using NGINX](http://www.listekconsulting.com/articles/cloudflare-full-ssl-with-gogs-go-git-service-using-nginx/)
 
 ### Screencasts
 
@@ -101,6 +102,7 @@ There are 5 ways to install Gogs:
 - [Drone](https://github.com/drone/drone) (CI)
 - [Fabric8](http://fabric8.io/) (DevOps)
 - [Taiga](https://taiga.io/) (Project Management)
+- [Puppet](https://forge.puppetlabs.com/Siteminds/gogs) (IT)
 
 ### Product Support
 

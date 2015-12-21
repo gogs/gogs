@@ -56,7 +56,7 @@ type User struct {
 	LowerName string `xorm:"UNIQUE NOT NULL"`
 	Name      string `xorm:"UNIQUE NOT NULL"`
 	FullName  string
-	// Email is the primary email address (to be used for communication).
+	// Email is the primary email address (to be used for communication)
 	Email       string `xorm:"NOT NULL"`
 	Passwd      string `xorm:"NOT NULL"`
 	LoginType   LoginType
@@ -78,24 +78,24 @@ type User struct {
 	// Maximum repository creation limit, -1 means use gloabl default
 	MaxRepoCreation int `xorm:"NOT NULL DEFAULT -1"`
 
-	// Permissions.
+	// Permissions
 	IsActive         bool
 	IsAdmin          bool
 	AllowGitHook     bool
 	AllowImportLocal bool // Allow migrate repository by local path
 
-	// Avatar.
+	// Avatar
 	Avatar          string `xorm:"VARCHAR(2048) NOT NULL"`
 	AvatarEmail     string `xorm:"NOT NULL"`
 	UseCustomAvatar bool
 
-	// Counters.
-	NumFollowers  int
-	NumFollowings int
-	NumStars      int
-	NumRepos      int
+	// Counters
+	NumFollowers int
+	NumFollowing int `xorm:"NOT NULL"`
+	NumStars     int
+	NumRepos     int
 
-	// For organization.
+	// For organization
 	Description string
 	NumTeams    int
 	NumMembers  int
@@ -261,6 +261,34 @@ func (u *User) AvatarLink() string {
 		return setting.AppSubUrl + link
 	}
 	return link
+}
+
+// User.GetFollwoers returns range of user's followers.
+func (u *User) GetFollowers(page int) ([]*User, error) {
+	users := make([]*User, 0, ItemsPerPage)
+	sess := x.Limit(ItemsPerPage, (page-1)*ItemsPerPage).Where("follow.follow_id=?", u.Id)
+	if setting.UsePostgreSQL {
+		sess = sess.Join("LEFT", "follow", `"user".id=follow.user_id`)
+	} else {
+		sess = sess.Join("LEFT", "follow", "user.id=follow.user_id")
+	}
+	return users, sess.Find(&users)
+}
+
+func (u *User) IsFollowing(followID int64) bool {
+	return IsFollowing(u.Id, followID)
+}
+
+// GetFollowing returns range of user's following.
+func (u *User) GetFollowing(page int) ([]*User, error) {
+	users := make([]*User, 0, ItemsPerPage)
+	sess := x.Limit(ItemsPerPage, (page-1)*ItemsPerPage).Where("follow.user_id=?", u.Id)
+	if setting.UsePostgreSQL {
+		sess = sess.Join("LEFT", "follow", `"user".id=follow.follow_id`)
+	} else {
+		sess = sess.Join("LEFT", "follow", "user.id=follow.follow_id")
+	}
+	return users, sess.Find(&users)
 }
 
 // NewGitSig generates and returns the signature of given user.
@@ -1077,100 +1105,73 @@ func SearchUserByName(opt SearchOption) (us []*User, err error) {
 	return us, err
 }
 
-// Follow is connection request for receiving user notification.
+// ___________    .__  .__
+// \_   _____/___ |  | |  |   ______  _  __
+//  |    __)/  _ \|  | |  |  /  _ \ \/ \/ /
+//  |     \(  <_> )  |_|  |_(  <_> )     /
+//  \___  / \____/|____/____/\____/ \/\_/
+//      \/
+
+// Follow represents relations of user and his/her followers.
 type Follow struct {
 	ID       int64 `xorm:"pk autoincr"`
 	UserID   int64 `xorm:"UNIQUE(follow)"`
 	FollowID int64 `xorm:"UNIQUE(follow)"`
 }
 
+func IsFollowing(userID, followID int64) bool {
+	has, _ := x.Get(&Follow{UserID: userID, FollowID: followID})
+	return has
+}
+
 // FollowUser marks someone be another's follower.
-func FollowUser(userId int64, followId int64) (err error) {
+func FollowUser(userID, followID int64) (err error) {
+	if userID == followID || IsFollowing(userID, followID) {
+		return nil
+	}
+
 	sess := x.NewSession()
-	defer sess.Close()
-	sess.Begin()
-
-	if _, err = sess.Insert(&Follow{UserID: userId, FollowID: followId}); err != nil {
-		sess.Rollback()
+	defer sessionRelease(sess)
+	if err = sess.Begin(); err != nil {
 		return err
 	}
 
-	rawSql := "UPDATE `user` SET num_followers = num_followers + 1 WHERE id = ?"
-	if _, err = sess.Exec(rawSql, followId); err != nil {
-		sess.Rollback()
+	if _, err = sess.Insert(&Follow{UserID: userID, FollowID: followID}); err != nil {
 		return err
 	}
 
-	rawSql = "UPDATE `user` SET num_followings = num_followings + 1 WHERE id = ?"
-	if _, err = sess.Exec(rawSql, userId); err != nil {
-		sess.Rollback()
+	if _, err = sess.Exec("UPDATE `user` SET num_followers = num_followers + 1 WHERE id = ?", followID); err != nil {
+		return err
+	}
+
+	if _, err = sess.Exec("UPDATE `user` SET num_following = num_following + 1 WHERE id = ?", userID); err != nil {
 		return err
 	}
 	return sess.Commit()
 }
 
-// UnFollowUser unmarks someone be another's follower.
-func UnFollowUser(userId int64, unFollowId int64) (err error) {
-	session := x.NewSession()
-	defer session.Close()
-	session.Begin()
+// UnfollowUser unmarks someone be another's follower.
+func UnfollowUser(userID, followID int64) (err error) {
+	if userID == followID || !IsFollowing(userID, followID) {
+		return nil
+	}
 
-	if _, err = session.Delete(&Follow{UserID: userId, FollowID: unFollowId}); err != nil {
-		session.Rollback()
+	sess := x.NewSession()
+	defer sessionRelease(sess)
+	if err = sess.Begin(); err != nil {
 		return err
 	}
 
-	rawSql := "UPDATE `user` SET num_followers = num_followers - 1 WHERE id = ?"
-	if _, err = session.Exec(rawSql, unFollowId); err != nil {
-		session.Rollback()
+	if _, err = sess.Delete(&Follow{UserID: userID, FollowID: followID}); err != nil {
 		return err
 	}
 
-	rawSql = "UPDATE `user` SET num_followings = num_followings - 1 WHERE id = ?"
-	if _, err = session.Exec(rawSql, userId); err != nil {
-		session.Rollback()
-		return err
-	}
-	return session.Commit()
-}
-
-func UpdateMentions(userNames []string, issueId int64) error {
-	for i := range userNames {
-		userNames[i] = strings.ToLower(userNames[i])
-	}
-	users := make([]*User, 0, len(userNames))
-
-	if err := x.Where("lower_name IN (?)", strings.Join(userNames, "\",\"")).OrderBy("lower_name ASC").Find(&users); err != nil {
+	if _, err = sess.Exec("UPDATE `user` SET num_followers = num_followers - 1 WHERE id = ?", followID); err != nil {
 		return err
 	}
 
-	ids := make([]int64, 0, len(userNames))
-	for _, user := range users {
-		ids = append(ids, user.Id)
-		if !user.IsOrganization() {
-			continue
-		}
-
-		if user.NumMembers == 0 {
-			continue
-		}
-
-		tempIds := make([]int64, 0, user.NumMembers)
-		orgUsers, err := GetOrgUsersByOrgId(user.Id)
-		if err != nil {
-			return err
-		}
-
-		for _, orgUser := range orgUsers {
-			tempIds = append(tempIds, orgUser.ID)
-		}
-
-		ids = append(ids, tempIds...)
-	}
-
-	if err := UpdateIssueUsersByMentions(ids, issueId); err != nil {
+	if _, err = sess.Exec("UPDATE `user` SET num_following = num_following - 1 WHERE id = ?", userID); err != nil {
 		return err
 	}
-
-	return nil
+	return sess.Commit()
 }

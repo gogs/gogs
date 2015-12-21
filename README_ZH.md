@@ -73,6 +73,7 @@ Gogs 的目标是打造一个最简单、最快速和最轻松的方式搭建自
 - [Drone](https://github.com/drone/drone)（CI）
 - [Fabric8](http://fabric8.io/)（DevOps）
 - [Taiga](https://taiga.io/)（项目管理）
+- [Puppet](https://forge.puppetlabs.com/Siteminds/gogs)（IT）
 
 ### 产品支持
 
