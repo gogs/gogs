@@ -91,7 +91,7 @@ type User struct {
 
 	// Counters
 	NumFollowers int
-	NumFollowing int `xorm:"NOT NULL"`
+	NumFollowing int `xorm:"NOT NULL DEFAULT 0"`
 	NumStars     int
 	NumRepos     int
 
