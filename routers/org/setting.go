@@ -60,6 +60,8 @@ func SettingsPost(ctx *middleware.Context, form auth.UpdateOrgSettingForm) {
 			}
 			return
 		}
+		// reset ctx.org.OrgLink with new name
+		ctx.Org.OrgLink = setting.AppSubUrl + "/org/" + form.Name
 		log.Trace("Organization name changed: %s -> %s", org.Name, form.Name)
 	}
 	// In case it's just a case change.
