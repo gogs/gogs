@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"net/url"
 
 	"github.com/Unknwon/com"
 
@@ -65,12 +66,13 @@ var wikiWorkingPool = &workingPool{
 
 // ToWikiPageURL formats a string to corresponding wiki URL name.
 func ToWikiPageURL(name string) string {
-	return strings.Replace(name, " ", "-", -1)
+	return url.QueryEscape(strings.Replace(name, " ", "-", -1))
 }
 
 // ToWikiPageName formats a URL back to corresponding wiki page name.
-func ToWikiPageName(name string) string {
-	return strings.Replace(name, "-", " ", -1)
+func ToWikiPageName(urlString string) string {
+	name, _ := url.QueryUnescape(strings.Replace(urlString, "-", " ", -1))
+	return name
 }
 
 // WikiCloneLink returns clone URLs of repository wiki.
