@@ -402,7 +402,7 @@ func (repo *Repository) ComposePayload() *api.PayloadRepo {
 	cl := repo.CloneLink()
 	return &api.PayloadRepo{
 		ID:          repo.ID,
-		Name:        repo.LowerName,
+		Name:        repo.Name,
 		URL:         repo.FullRepoLink(),
 		SSHURL:      cl.SSH,
 		CloneURL:    cl.HTTPS,
