@@ -25,6 +25,7 @@ import (
 	"golang.org/x/net/html/charset"
 
 	"github.com/gogits/gogs/modules/avatar"
+	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/setting"
 )
 
@@ -52,7 +53,8 @@ func ShortSha(sha1 string) string {
 }
 
 func DetectEncoding(content []byte) string {
-	_, name, _ := charset.DetermineEncoding(content, setting.Repository.AnsiCharset)
+	_, name, certain := charset.DetermineEncoding(content, setting.Repository.AnsiCharset)
+	log.Debug("Detected encoding: %s (%v)", name, certain)
 	return name
 }
 
