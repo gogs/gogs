@@ -1902,7 +1902,7 @@ footer .container .links > *:first-child {
   margin-top: -2px;
 }
 .repository.file.list #file-content .view-raw * {
-  width: 100%;
+  max-width: 100%;
 }
 .repository.file.list #file-content .view-raw img {
   padding: 5px 5px 0 5px;
