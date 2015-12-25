@@ -28,6 +28,8 @@ func ServeData(ctx *middleware.Context, name string, reader io.Reader) error {
 			ctx.Resp.Header().Set("Content-Disposition", "attachment; filename="+path.Base(ctx.Repo.TreeName))
 			ctx.Resp.Header().Set("Content-Transfer-Encoding", "binary")
 		}
+	} else {
+		ctx.Resp.Header().Set("Content-Type", "text/plain")
 	}
 	ctx.Resp.Write(buf)
 	_, err := io.Copy(ctx.Resp, reader)
