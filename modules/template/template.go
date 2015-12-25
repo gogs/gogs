@@ -12,6 +12,7 @@ import (
 	"runtime"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"golang.org/x/net/html/charset"
 	"golang.org/x/text/transform"
@@ -130,20 +131,19 @@ func Sha1(str string) string {
 }
 
 func ToUtf8WithErr(content []byte) (error, string) {
-	charsetLabel := base.DetectEncoding(content)
-	if charsetLabel == "UTF-8" {
+	if utf8.Valid(content[:1024]) {
 		return nil, string(content)
 	}
 
+	charsetLabel := base.DetectEncoding(content)
 	encoding, _ := charset.Lookup(charsetLabel)
 	if encoding == nil {
-		return fmt.Errorf("unknown char decoder %s", charsetLabel), string(content)
+		return fmt.Errorf("Unknown encoding: %s", charsetLabel), string(content)
 	}
-
-	result, n, err := transform.String(encoding.NewDecoder(), string(content))
 
 	// If there is an error, we concatenate the nicely decoded part and the
 	// original left over. This way we won't loose data.
+	result, n, err := transform.String(encoding.NewDecoder(), string(content))
 	if err != nil {
 		result = result + string(content[n:])
 	}
