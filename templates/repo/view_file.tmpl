@@ -28,7 +28,7 @@
 			{{if .ReadmeExist}}
 				{{if .FileContent}}{{.FileContent | Str2html}}{{end}}
 			{{else if not .IsFileText}}
-				<div class="view-raw">
+				<div class="view-raw ui center">
 					{{if .IsImageFile}}
 						<img src="{{EscapePound .FileLink}}">
 					{{else}}

@@ -53,7 +53,11 @@ func ShortSha(sha1 string) string {
 }
 
 func DetectEncoding(content []byte) string {
-	_, name, certain := charset.DetermineEncoding(content, setting.Repository.AnsiCharset)
+	_, name, certain := charset.DetermineEncoding(content, "")
+	if name != "utf-8" && len(setting.Repository.AnsiCharset) > 0 {
+		log.Debug("Using default AnsiCharset: %s", setting.Repository.AnsiCharset)
+		return setting.Repository.AnsiCharset
+	}
 	log.Debug("Detected encoding: %s (%v)", name, certain)
 	return name
 }
