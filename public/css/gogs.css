@@ -2993,6 +2993,9 @@ footer .container .links > *:first-child {
   width: 80%;
   margin-bottom: -5px;
 }
+.feeds .news .commit-id {
+  font-family: Consolas, monospace;
+}
 .feeds .list .header {
   padding-top: 10px;
   padding-bottom: 5px;
