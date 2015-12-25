@@ -6,6 +6,7 @@ package user
 
 import (
 	"fmt"
+	"path"
 	"strings"
 
 	"github.com/gogits/gogs/models"
@@ -38,7 +39,7 @@ func Profile(ctx *middleware.Context) {
 	uname := ctx.Params(":username")
 	// Special handle for FireFox requests favicon.ico.
 	if uname == "favicon.ico" {
-		ctx.Redirect(setting.AppSubUrl + "/img/favicon.png")
+		ctx.ServeFile(path.Join(setting.StaticRootPath, "public/img/favicon.png"))
 		return
 	} else if strings.HasSuffix(uname, ".png") {
 		ctx.Error(404)
