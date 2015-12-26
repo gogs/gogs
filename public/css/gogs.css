@@ -735,6 +735,18 @@ pre.raw {
   line-height: 1.5;
   overflow: auto;
 }
+pre.wrap {
+  white-space: pre-wrap;
+  /* CSS 3 */
+  white-space: -moz-pre-wrap;
+  /* Mozilla, since 1999 */
+  white-space: -pre-wrap;
+  /* Opera 4-6 */
+  white-space: -o-pre-wrap;
+  /* Opera 7 */
+  word-wrap: break-word;
+  /* Internet Explorer 5.5+ */
+}
 .full.height {
   padding: 0;
   margin: 0 0 -80px 0;
@@ -2325,6 +2337,10 @@ footer .container .links > *:first-child {
   background: #fafafa;
   width: 1%;
 }
+.repository .diff-file-box .file-body.file-code .lines-num span.fold {
+  display: block;
+  text-align: center;
+}
 .repository .diff-file-box .file-body.file-code .lines-num-old {
   border-right: 1px solid #DDD;
 }
@@ -2350,15 +2366,32 @@ footer .container .links > *:first-child {
   padding-top: 4px;
   padding-bottom: 4px;
 }
+.repository .diff-file-box .code-diff tbody tr.tag-code td.halfwidth {
+  width: 50%;
+}
+.repository .diff-file-box .code-diff tbody tr.del-code td.add-code {
+  background-color: #eaffea !important;
+  border-color: #c1e9c1 !important;
+}
+.repository .diff-file-box .code-diff tbody tr.del-code td.add-code pre {
+  background-color: #eaffea !important;
+  border-color: #c1e9c1 !important;
+}
 .repository .diff-file-box .code-diff tbody tr.del-code td,
 .repository .diff-file-box .code-diff tbody tr.del-code pre {
   background-color: #ffecec !important;
   border-color: #f1c0c0 !important;
 }
+.repository .diff-file-box .code-diff tbody tr.del-code td.halfwidth {
+  width: 50%;
+}
 .repository .diff-file-box .code-diff tbody tr.add-code td,
 .repository .diff-file-box .code-diff tbody tr.add-code pre {
   background-color: #eaffea !important;
   border-color: #c1e9c1 !important;
+}
+.repository .diff-file-box .code-diff tbody tr.add-code td.halfwidth {
+  width: 50%;
 }
 .repository .diff-file-box.file-content img {
   max-width: 100%;
