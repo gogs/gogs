@@ -6,7 +6,6 @@
 			<i class="fa fa-retweet"></i>
 			{{.i18n.Tr "repo.diff.stats_desc" .Diff.NumFiles .Diff.TotalAddition .Diff.TotalDeletion | Str2html}}
 			<div class="ui right">
-				<button class="ui tiny basic toggle button">{{ .Style }}</button>
 				<a class="ui tiny basic toggle button" href="?style={{if .Style}}inline{{else}}unified{{end}}">{{ if .Style }}Inline{{else}}Unified{{end}}</a>
 				<button class="ui tiny basic toggle button" data-target="#diff-files">{{.i18n.Tr "repo.diff.show_diff_stats"}}</button>
 			</div>
