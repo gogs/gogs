@@ -724,6 +724,11 @@ img {
 }
 pre {
   font: 12px Consolas, "Liberation Mono", Menlo, Courier, monospace;
+	white-space: pre-wrap;       /* CSS 3 */
+	white-space: -moz-pre-wrap;  /* Mozilla, since 1999 */
+	white-space: -pre-wrap;      /* Opera 4-6 */
+	white-space: -o-pre-wrap;    /* Opera 7 */
+	word-wrap: break-word;       /* Internet Explorer 5.5+ */
 }
 pre.raw {
   padding: 7px 12px;
@@ -2343,6 +2348,13 @@ footer .container .links > *:first-child {
   border-right: 1px solid #d4d4d5;
   padding: 0 5px;
 }
+.repository .diff-file-box .code-diff tbody tr.tag-code td {
+	width: 50%;
+}
+.repository .diff-file-box .code-diff tbody tr.tag-code td.lines-num span.fold {
+	display: block;
+	text-align: center;
+}
 .repository .diff-file-box .code-diff tbody tr.tag-code td,
 .repository .diff-file-box .code-diff tbody tr.tag-code pre {
   background-color: #F0F0F0 !important;
@@ -2350,10 +2362,16 @@ footer .container .links > *:first-child {
   padding-top: 4px;
   padding-bottom: 4px;
 }
+.repository .diff-file-box .code-diff tbody tr.del-code td {
+	width: 50%;
+}
 .repository .diff-file-box .code-diff tbody tr.del-code td,
 .repository .diff-file-box .code-diff tbody tr.del-code pre {
   background-color: #ffecec !important;
   border-color: #f1c0c0 !important;
+}
+.repository .diff-file-box .code-diff tbody tr.add-code td {
+	width: 50%;
 }
 .repository .diff-file-box .code-diff tbody tr.add-code td,
 .repository .diff-file-box .code-diff tbody tr.add-code pre {
