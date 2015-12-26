@@ -73,11 +73,10 @@
 					(function() {
 						$('.add-code').each(function() {
 							var prev = $(this).prev();
-							if(prev.is('.del-code')) {
-								while(prev.prev().is('.del-code') && prev.prev().text().trim() !== '') {
+							if(prev.is('.del-code') && prev.children().eq(3).text().trim() === '') {
+								while(prev.prev().is('.del-code') && prev.prev().children().eq(3).text().trim() === '') {
 									prev = prev.prev();
 								}
-								console.log("done");
 								prev.children().eq(3).html($(this).children().eq(3).html());
 								prev.children().eq(2).html($(this).children().eq(2).html());
 								prev.children().eq(2).attr('style', 'background-color: #eaffea !important');
