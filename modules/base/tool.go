@@ -18,6 +18,7 @@ import (
 	"regexp"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/Unknwon/com"
 	"github.com/Unknwon/i18n"
@@ -53,6 +54,11 @@ func ShortSha(sha1 string) string {
 }
 
 func DetectEncoding(content []byte) string {
+	if utf8.Valid(content[:1024]) {
+		log.Debug("Detected encoding: utf-8 (fast)")
+		return "utf-8"
+	}
+
 	_, name, certain := charset.DetermineEncoding(content, "")
 	if name != "utf-8" && len(setting.Repository.AnsiCharset) > 0 {
 		log.Debug("Using default AnsiCharset: %s", setting.Repository.AnsiCharset)

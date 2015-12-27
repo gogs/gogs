@@ -12,7 +12,6 @@ import (
 	"runtime"
 	"strings"
 	"time"
-	"unicode/utf8"
 
 	"golang.org/x/net/html/charset"
 	"golang.org/x/text/transform"
@@ -131,11 +130,11 @@ func Sha1(str string) string {
 }
 
 func ToUtf8WithErr(content []byte) (error, string) {
-	if utf8.Valid(content[:1024]) {
+	charsetLabel := base.DetectEncoding(content)
+	if charsetLabel == "utf-8" {
 		return nil, string(content)
 	}
 
-	charsetLabel := base.DetectEncoding(content)
 	encoding, _ := charset.Lookup(charsetLabel)
 	if encoding == nil {
 		return fmt.Errorf("Unknown encoding: %s", charsetLabel), string(content)
