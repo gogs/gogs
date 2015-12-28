@@ -86,7 +86,7 @@ There are 5 ways to install Gogs:
 
 ### Screencasts
 
-- [Instalando Gogs no Ubuntu](https://www.youtube.com/watch?v=4UkHAR1F7ZA) (Português)
+- [Instalando Gogs on Ubuntu](https://www.youtube.com/watch?v=4UkHAR1F7ZA) (Português)
 
 ### Deploy to Cloud
 
