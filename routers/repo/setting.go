@@ -121,7 +121,7 @@ func SettingsPost(ctx *middleware.Context, form auth.RepoSettingForm) {
 		}
 
 		ctx.Flash.Success(ctx.Tr("repo.settings.update_settings_success"))
-		ctx.Redirect(ctx.Repo.RepoLink + "/settings")
+		ctx.Redirect(repo.RepoLink() + "/settings")
 
 	case "advanced":
 		repo.EnableWiki = form.EnableWiki
