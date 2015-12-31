@@ -209,7 +209,7 @@ func runServ(c *cli.Context) {
 			}
 			// Check if this deploy key belongs to current repository.
 			if !models.HasDeployKey(key.ID, repo.ID) {
-				fail("Key access denied", "Key access denied: [key_id: %d, repo_id: %d]", key.ID, repo.ID)
+				fail("Key access denied", "Deploy key access denied: [key_id: %d, repo_id: %d]", key.ID, repo.ID)
 			}
 
 			// Update deploy key activity.

@@ -131,7 +131,7 @@ func HTTP(ctx *middleware.Context) {
 			}
 			authUser, err = models.GetUserByID(token.UID)
 			if err != nil {
-				ctx.Handle(500, "GetUserById", err)
+				ctx.Handle(500, "GetUserByID", err)
 				return
 			}
 			authUsername = authUser.Name
@@ -145,23 +145,26 @@ func HTTP(ctx *middleware.Context) {
 
 			has, err := models.HasAccess(authUser, repo, tp)
 			if err != nil {
-				ctx.HandleText(401, "no basic auth and digit auth")
+				ctx.Handle(500, "HasAccess", err)
 				return
 			} else if !has {
 				if tp == models.ACCESS_MODE_READ {
 					has, err = models.HasAccess(authUser, repo, models.ACCESS_MODE_WRITE)
-					if err != nil || !has {
-						ctx.HandleText(401, "no basic auth and digit auth")
+					if err != nil {
+						ctx.Handle(500, "HasAccess2", err)
+						return
+					} else if !has {
+						ctx.HandleText(403, "User permission denied")
 						return
 					}
 				} else {
-					ctx.HandleText(401, "no basic auth and digit auth")
+					ctx.HandleText(403, "User permission denied")
 					return
 				}
 			}
 
 			if !isPull && repo.IsMirror {
-				ctx.HandleText(401, "mirror repository is read-only")
+				ctx.HandleText(403, "mirror repository is read-only")
 				return
 			}
 		}
