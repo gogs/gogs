@@ -23,7 +23,8 @@ import (
 	"github.com/Unknwon/com"
 	"github.com/Unknwon/i18n"
 	"github.com/microcosm-cc/bluemonday"
-	"golang.org/x/net/html/charset"
+
+	"github.com/gogits/chardet"
 
 	"github.com/gogits/gogs/modules/avatar"
 	"github.com/gogits/gogs/modules/log"
@@ -53,19 +54,20 @@ func ShortSha(sha1 string) string {
 	return sha1
 }
 
-func DetectEncoding(content []byte) string {
-	if utf8.Valid(content[:1024]) {
+func DetectEncoding(content []byte) (string, error) {
+	if utf8.Valid(content) {
 		log.Debug("Detected encoding: utf-8 (fast)")
-		return "utf-8"
+		return "UTF-8", nil
 	}
 
-	_, name, certain := charset.DetermineEncoding(content, "")
-	if name != "utf-8" && len(setting.Repository.AnsiCharset) > 0 {
+	result, err := chardet.NewTextDetector().DetectBest(content)
+	if result.Charset != "UTF-8" && len(setting.Repository.AnsiCharset) > 0 {
 		log.Debug("Using default AnsiCharset: %s", setting.Repository.AnsiCharset)
-		return setting.Repository.AnsiCharset
+		return setting.Repository.AnsiCharset, err
 	}
-	log.Debug("Detected encoding: %s (%v)", name, certain)
-	return name
+
+	log.Debug("Detected encoding: %s", result.Charset)
+	return result.Charset, err
 }
 
 func BasicAuthDecode(encoded string) (string, string, error) {
