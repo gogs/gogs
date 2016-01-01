@@ -246,8 +246,8 @@ func ParsePatch(maxlines int, reader io.Reader) (*Diff, error) {
 				buf.WriteString("\n")
 			}
 		}
-		charsetLabel := base.DetectEncoding(buf.Bytes())
-		if charsetLabel != "UTF-8" {
+		charsetLabel, err := base.DetectEncoding(buf.Bytes())
+		if charsetLabel != "UTF-8" && err == nil {
 			encoding, _ := charset.Lookup(charsetLabel)
 			if encoding != nil {
 				d := encoding.NewDecoder()

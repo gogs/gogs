@@ -130,8 +130,10 @@ func Sha1(str string) string {
 }
 
 func ToUtf8WithErr(content []byte) (error, string) {
-	charsetLabel := base.DetectEncoding(content)
-	if charsetLabel == "utf-8" {
+	charsetLabel, err := base.DetectEncoding(content)
+	if err != nil {
+		return err, ""
+	} else if charsetLabel == "UTF-8" {
 		return nil, string(content)
 	}
 
