@@ -168,7 +168,7 @@ func Diff(ctx *middleware.Context) {
 		}
 	}
 
-	ctx.Data["Style"] = ctx.Query("style") == "split"
+	ctx.Data["IsSplitStyle"] = ctx.Query("style") == "split"
 	ctx.Data["Username"] = userName
 	ctx.Data["Reponame"] = repoName
 	ctx.Data["IsImageFile"] = commit.IsImageFile
@@ -214,7 +214,7 @@ func CompareDiff(ctx *middleware.Context) {
 	}
 	commits = models.ValidateCommitsWithEmails(commits)
 
-	ctx.Data["Style"] = ctx.Query("style") == "split"
+	ctx.Data["IsSplitStyle"] = ctx.Query("style") == "split"
 	ctx.Data["CommitRepoLink"] = ctx.Repo.RepoLink
 	ctx.Data["Commits"] = commits
 	ctx.Data["CommitCount"] = commits.Len()
