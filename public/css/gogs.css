@@ -2252,6 +2252,9 @@ footer .container .links > *:first-child {
   font-weight: normal;
   padding: 5px 10px;
 }
+.repository .issue-closed {
+  text-decoration: line-through;
+}
 .repository #commits-table thead th:first-of-type {
   padding-left: 15px;
 }

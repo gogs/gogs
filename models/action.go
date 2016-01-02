@@ -46,10 +46,6 @@ var (
 )
 
 var (
-	// Same as Github. See https://help.github.com/articles/closing-issues-via-commit-messages
-	IssueCloseKeywords  = []string{"close", "closes", "closed", "fix", "fixes", "fixed", "resolve", "resolves", "resolved"}
-	IssueReopenKeywords = []string{"reopen", "reopens", "reopened"}
-
 	IssueCloseKeywordsPat, IssueReopenKeywordsPat *regexp.Regexp
 	IssueReferenceKeywordsPat                     *regexp.Regexp
 )
@@ -59,8 +55,8 @@ func assembleKeywordsPattern(words []string) string {
 }
 
 func init() {
-	IssueCloseKeywordsPat = regexp.MustCompile(assembleKeywordsPattern(IssueCloseKeywords))
-	IssueReopenKeywordsPat = regexp.MustCompile(assembleKeywordsPattern(IssueReopenKeywords))
+	IssueCloseKeywordsPat = regexp.MustCompile(assembleKeywordsPattern(base.IssueCloseKeywords))
+	IssueReopenKeywordsPat = regexp.MustCompile(assembleKeywordsPattern(base.IssueReopenKeywords))
 	IssueReferenceKeywordsPat = regexp.MustCompile(`(?i)(?:)(^| )\S+`)
 }
 

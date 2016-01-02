@@ -130,11 +130,16 @@ func (options *CustomRender) Image(out *bytes.Buffer, link []byte, title []byte,
 }
 
 var (
-	MentionPattern     = regexp.MustCompile(`(\s|^)@[0-9a-zA-Z_\.]+`)
-	commitPattern      = regexp.MustCompile(`(\s|^)https?.*commit/[0-9a-zA-Z]+(#+[0-9a-zA-Z-]*)?`)
-	issueFullPattern   = regexp.MustCompile(`(\s|^)https?.*issues/[0-9]+(#+[0-9a-zA-Z-]*)?`)
-	issueIndexPattern  = regexp.MustCompile(`( |^|\()#[0-9]+\b`)
-	sha1CurrentPattern = regexp.MustCompile(`\b[0-9a-f]{40}\b`)
+	// Same as Github. See https://help.github.com/articles/closing-issues-via-commit-messages
+	IssueCloseKeywords  = []string{"close", "closes", "closed", "fix", "fixes", "fixed", "resolve", "resolves", "resolved"}
+	IssueReopenKeywords = []string{"reopen", "reopens", "reopened"}
+
+	MentionPattern        = regexp.MustCompile(`(\s|^)@[0-9a-zA-Z_\.]+`)
+	commitPattern         = regexp.MustCompile(`(\s|^)https?.*commit/[0-9a-zA-Z]+(#+[0-9a-zA-Z-]*)?`)
+	issueFullPattern      = regexp.MustCompile(`(\s|^)https?.*issues/[0-9]+(#+[0-9a-zA-Z-]*)?`)
+	issueClosePattern     = regexp.MustCompile(fmt.Sprintf(`(?i)([%s]\s)#(\S+)`, strings.Join(IssueCloseKeywords, "|")))
+	issueReferencePattern = regexp.MustCompile(`(^|\s)#(\S+)`)
+	sha1CurrentPattern    = regexp.MustCompile(`\b[0-9a-f]{40}\b`)
 )
 
 func cutoutVerbosePrefix(prefix string) string {
@@ -151,25 +156,30 @@ func cutoutVerbosePrefix(prefix string) string {
 }
 
 func RenderIssueIndexPattern(rawBytes []byte, urlPrefix string, metas map[string]string) []byte {
-	urlPrefix = cutoutVerbosePrefix(urlPrefix)
-	ms := issueIndexPattern.FindAll(rawBytes, -1)
-	for _, m := range ms {
-		var space string
-		m2 := m
-		if m2[0] != '#' {
-			space = string(m2[0])
-			m2 = m2[1:]
-		}
-		if metas == nil {
-			rawBytes = bytes.Replace(rawBytes, m, []byte(fmt.Sprintf(`%s<a href="%s/issues/%s">%s</a>`,
-				space, urlPrefix, m2[1:], m2)), 1)
-		} else {
-			// Support for external issue tracker
-			metas["index"] = string(m2[1:])
-			rawBytes = bytes.Replace(rawBytes, m, []byte(fmt.Sprintf(`%s<a href="%s">%s</a>`,
-				space, com.Expand(metas["format"], metas), m2)), 1)
-		}
+	var link string
+
+	if metas == nil { // Internal issue tracker
+		link = fmt.Sprintf(
+			`$1<a href="%s/issues/$2" class="%%s">&#35;$2</a>`,
+			cutoutVerbosePrefix(urlPrefix),
+		)
+	} else { // External issue tracker
+		metas["index"] = "$2"
+
+		link = fmt.Sprintf(
+			`$1<a href="%s" class="%%s">&#35;$2</a>`,
+			com.Expand(metas["format"], metas),
+		)
 	}
+
+	rawBytes = issueClosePattern.ReplaceAll(rawBytes, []byte(
+		fmt.Sprintf(link, `issue-closed`),
+	))
+
+	rawBytes = issueReferencePattern.ReplaceAll(rawBytes, []byte(
+		fmt.Sprintf(link, `issue-open`),
+	))
+
 	return rawBytes
 }
 
