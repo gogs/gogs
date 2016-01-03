@@ -13,6 +13,8 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"html/template"
+	"html"
 
 	"github.com/Unknwon/com"
 	"golang.org/x/net/html/charset"
@@ -23,6 +25,7 @@ import (
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/process"
+	"github.com/sergi/go-diff/diffmatchpatch"
 )
 
 // Diff line types.
@@ -45,6 +48,7 @@ type DiffLine struct {
 	RightIdx int
 	Type     int
 	Content  string
+	ParsedContent template.HTML
 }
 
 func (d DiffLine) GetType() int {
@@ -54,6 +58,87 @@ func (d DiffLine) GetType() int {
 type DiffSection struct {
 	Name  string
 	Lines []*DiffLine
+}
+
+func diffToHtml(diffRecord []diffmatchpatch.Diff, lineType int) template.HTML {
+	result := ""
+	for _, s := range diffRecord {
+		if s.Type == diffmatchpatch.DiffInsert && lineType == DIFF_LINE_ADD {
+			result = result + "<span class=\"added-code\">"+html.EscapeString(s.Text)+"</span>"
+		} else if s.Type == diffmatchpatch.DiffDelete && lineType == DIFF_LINE_DEL {
+			result = result + "<span class=\"removed-code\">"+html.EscapeString(s.Text)+"</span>"
+		} else if s.Type == diffmatchpatch.DiffEqual {
+			result = result + html.EscapeString(s.Text)
+		}
+	}
+	return template.HTML(result)
+}
+
+func (diffSection *DiffSection) GetLeftLine(idx int, sliceIdx int) *DiffLine {
+	for i, diffLine := range diffSection.Lines {
+		if diffLine.LeftIdx == idx && diffLine.RightIdx == 0 {
+			// ignore the the lines are too far from each other
+			if i > sliceIdx-5 && i < sliceIdx+5 {
+				return diffLine
+			} else {
+				return nil
+			}
+		}
+	}
+	return nil
+}
+
+func (diffSection *DiffSection) GetRightLine(idx int, sliceIdx int) *DiffLine {
+	for i, diffLine := range diffSection.Lines {
+		if diffLine.RightIdx == idx && diffLine.LeftIdx == 0 {
+			// ignore the the lines are too far from each other
+			if i > sliceIdx-5 && i < sliceIdx+5 {
+				return diffLine
+			} else {
+				return nil
+			}
+		}
+	}
+	return nil
+}
+
+// computes diff of each diff line and set the HTML on diffLine.ParsedContent
+func (diffSection *DiffSection) ComputeLinesDiff() {
+	for i, diffLine := range diffSection.Lines {
+		var compareDiffLine *DiffLine
+		var diff1, diff2 string
+
+		// default content: as is
+		diffLine.ParsedContent = template.HTML(html.EscapeString(diffLine.Content[1:]))
+
+		// just compute diff for adds and removes
+		if diffLine.Type != DIFF_LINE_ADD && diffLine.Type != DIFF_LINE_DEL {
+			continue
+		}
+
+		// try to find equivalent diff line. ignore, otherwise
+		if diffLine.Type == DIFF_LINE_ADD {
+			compareDiffLine = diffSection.GetLeftLine(diffLine.RightIdx, i)
+			if compareDiffLine == nil {
+				continue
+			}
+			diff1 = compareDiffLine.Content
+			diff2 = diffLine.Content
+		} else {
+			compareDiffLine = diffSection.GetRightLine(diffLine.LeftIdx, i)
+			if compareDiffLine == nil {
+				continue
+			}
+			diff1 = diffLine.Content
+			diff2 = compareDiffLine.Content
+		}
+
+		dmp := diffmatchpatch.New()
+		diffRecord := dmp.DiffMain(diff1[1:], diff2[1:], true)
+		diffRecord = dmp.DiffCleanupSemantic(diffRecord)
+
+		diffLine.ParsedContent = diffToHtml(diffRecord, diffLine.Type)
+	}
 }
 
 type DiffFile struct {

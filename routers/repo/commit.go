@@ -168,6 +168,12 @@ func Diff(ctx *middleware.Context) {
 		}
 	}
 
+	for _, diffFile := range diff.Files {
+		for _, diffSection := range diffFile.Sections {
+			diffSection.ComputeLinesDiff()
+		}
+	}
+
 	ctx.Data["IsSplitStyle"] = ctx.Query("style") == "split"
 	ctx.Data["Username"] = userName
 	ctx.Data["Reponame"] = repoName
