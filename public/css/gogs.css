@@ -2764,6 +2764,12 @@ footer .container .links > *:first-child {
 #delete-repo-modal .ui.message {
   width: 100%!important;
 }
+.removed-code {
+  background-color: #ff9999;
+}
+.added-code {
+  background-color: #99ff99;
+}
 .organization {
   padding-top: 15px;
   padding-bottom: 80px;
