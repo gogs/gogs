@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"mime/multipart"
 	"os"
 	"path"
 	"strings"
@@ -126,7 +125,7 @@ func (i *Issue) HasLabel(labelID int64) bool {
 	return i.hasLabel(x, labelID)
 }
 
-func (i *Issue) addLabel(e *xorm.Session, label *Label) error {
+func (i *Issue) addLabel(e Engine, label *Label) error {
 	return newIssueLabel(e, i, label)
 }
 
@@ -162,7 +161,7 @@ func (i *Issue) GetLabels() error {
 	return i.getLabels(x)
 }
 
-func (i *Issue) removeLabel(e *xorm.Session, label *Label) error {
+func (i *Issue) removeLabel(e Engine, label *Label) error {
 	return deleteIssueLabel(e, i, label)
 }
 
@@ -218,7 +217,7 @@ func (i *Issue) ReadBy(uid int64) error {
 	return UpdateIssueUserByRead(uid, i.ID)
 }
 
-func (i *Issue) changeStatus(e *xorm.Session, doer *User, isClosed bool) (err error) {
+func (i *Issue) changeStatus(e Engine, doer *User, isClosed bool) (err error) {
 	if i.IsClosed == isClosed {
 		return nil
 	}
@@ -283,7 +282,7 @@ func (i *Issue) GetPullRequest() (err error) {
 }
 
 // It's caller's responsibility to create action.
-func newIssue(e *xorm.Session, repo *Repository, issue *Issue, labelIDs []int64, uuids []string, isPull bool) (err error) {
+func newIssue(e Engine, repo *Repository, issue *Issue, labelIDs []int64, uuids []string, isPull bool) (err error) {
 	if _, err = e.Insert(issue); err != nil {
 		return err
 	}
@@ -554,7 +553,7 @@ type IssueUser struct {
 	IsClosed    bool
 }
 
-func newIssueUsers(e *xorm.Session, repo *Repository, issue *Issue) error {
+func newIssueUsers(e Engine, repo *Repository, issue *Issue) error {
 	users, err := repo.GetAssignees()
 	if err != nil {
 		return err
@@ -876,7 +875,7 @@ func UpdateIssueUsersByStatus(issueID int64, isClosed bool) error {
 	return updateIssueUsersByStatus(x, issueID, isClosed)
 }
 
-func updateIssueUserByAssignee(e *xorm.Session, issue *Issue) (err error) {
+func updateIssueUserByAssignee(e Engine, issue *Issue) (err error) {
 	if _, err = e.Exec("UPDATE `issue_user` SET is_assigned=? WHERE issue_id=?", false, issue.ID); err != nil {
 		return err
 	}
@@ -1071,7 +1070,7 @@ func HasIssueLabel(issueID, labelID int64) bool {
 	return hasIssueLabel(x, issueID, labelID)
 }
 
-func newIssueLabel(e *xorm.Session, issue *Issue, label *Label) (err error) {
+func newIssueLabel(e Engine, issue *Issue, label *Label) (err error) {
 	if _, err = e.Insert(&IssueLabel{
 		IssueID: issue.ID,
 		LabelID: label.ID,
@@ -1111,7 +1110,7 @@ func GetIssueLabels(issueID int64) ([]*IssueLabel, error) {
 	return getIssueLabels(x, issueID)
 }
 
-func deleteIssueLabel(e *xorm.Session, issue *Issue, label *Label) (err error) {
+func deleteIssueLabel(e Engine, issue *Issue, label *Label) (err error) {
 	if _, err = e.Delete(&IssueLabel{
 		IssueID: issue.ID,
 		LabelID: label.ID,
@@ -1316,7 +1315,7 @@ func ChangeMilestoneStatus(m *Milestone, isClosed bool) (err error) {
 	return sess.Commit()
 }
 
-func changeMilestoneIssueStats(e *xorm.Session, issue *Issue) error {
+func changeMilestoneIssueStats(e Engine, issue *Issue) error {
 	if issue.MilestoneID == 0 {
 		return nil
 	}
@@ -1353,7 +1352,7 @@ func ChangeMilestoneIssueStats(issue *Issue) (err error) {
 	return sess.Commit()
 }
 
-func changeMilestoneAssign(e *xorm.Session, oldMid int64, issue *Issue) error {
+func changeMilestoneAssign(e Engine, oldMid int64, issue *Issue) error {
 	if oldMid > 0 {
 		m, err := getMilestoneByID(e, oldMid)
 		if err != nil {
@@ -1549,7 +1548,7 @@ func (c *Comment) EventTag() string {
 	return "event-" + com.ToStr(c.ID)
 }
 
-func createComment(e *xorm.Session, u *User, repo *Repository, issue *Issue, commitID, line int64, cmtType CommentType, content, commitSHA string, uuids []string) (_ *Comment, err error) {
+func createComment(e Engine, u *User, repo *Repository, issue *Issue, commitID, line int64, cmtType CommentType, content, commitSHA string, uuids []string) (_ *Comment, err error) {
 	comment := &Comment{
 		PosterID:  u.Id,
 		Type:      cmtType,
@@ -1631,7 +1630,7 @@ func createComment(e *xorm.Session, u *User, repo *Repository, issue *Issue, com
 	return comment, nil
 }
 
-func createStatusComment(e *xorm.Session, doer *User, repo *Repository, issue *Issue) (*Comment, error) {
+func createStatusComment(e Engine, doer *User, repo *Repository, issue *Issue) (*Comment, error) {
 	cmtType := COMMENT_TYPE_CLOSE
 	if !issue.IsClosed {
 		cmtType = COMMENT_TYPE_REOPEN
@@ -1728,7 +1727,7 @@ func (attach *Attachment) LocalPath() string {
 }
 
 // NewAttachment creates a new attachment object.
-func NewAttachment(name string, buf []byte, file multipart.File) (_ *Attachment, err error) {
+func NewAttachment(name string, buf []byte, file io.Reader) (_ *Attachment, err error) {
 	attach := &Attachment{
 		UUID: gouuid.NewV4().String(),
 		Name: name,

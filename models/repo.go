@@ -855,7 +855,7 @@ func initRepository(e Engine, repoPath string, u *User, repo *Repository, opts C
 	return nil
 }
 
-func createRepository(e *xorm.Session, u *User, repo *Repository) (err error) {
+func createRepository(e Engine, u *User, repo *Repository) (err error) {
 	if err = IsUsableName(repo.Name); err != nil {
 		return err
 	}
