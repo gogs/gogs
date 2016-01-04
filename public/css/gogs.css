@@ -718,6 +718,7 @@
 body {
   font-family: 'Helvetica Neue', Arial, Helvetica, sans-serif, '微软雅黑';
   background-color: #FAFAFA;
+  overflow-y: scroll;
 }
 img {
   border-radius: 3px;
