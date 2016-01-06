@@ -6,6 +6,7 @@
 			<i class="fa fa-retweet"></i>
 			{{.i18n.Tr "repo.diff.stats_desc" .Diff.NumFiles .Diff.TotalAddition .Diff.TotalDeletion | Str2html}}
 			<div class="ui right">
+				<a class="ui tiny basic toggle button" href="?style={{if .IsSplitStyle}}unified{{else}}split{{end}}">{{ if .IsSplitStyle }}{{.i18n.Tr "repo.diff.show_unified_view"}}{{else}}{{.i18n.Tr "repo.diff.show_split_view"}}{{end}}</a>
 				<a class="ui tiny basic toggle button" data-target="#diff-files">{{.i18n.Tr "repo.diff.show_diff_stats"}}</a>
 			</div>
 		</div>
@@ -67,19 +68,46 @@
 						<div class="file-body file-code code-view code-diff">
 							<table>
 								<tbody>
-									{{range .Sections}}
-										{{range $k, $line := .Lines}}
-											<tr class="{{DiffLineTypeToStr .Type}}-code nl-{{$k}} ol-{{$k}}">
-												<td class="lines-num lines-num-old">
-													<span rel="{{if $line.LeftIdx}}diff-{{Sha1 $file.Name}}L{{$line.LeftIdx}}{{end}}">{{if $line.LeftIdx}}{{$line.LeftIdx}}{{end}}</span>
-												</td>
-												<td class="lines-num lines-num-new">
-													<span rel="{{if $line.RightIdx}}diff-{{Sha1 $file.Name}}R{{$line.RightIdx}}{{end}}">{{if $line.RightIdx}}{{$line.RightIdx}}{{end}}</span>
-												</td>
-												<td class="lines-code">
-													<pre>{{$line.Content}}</pre>
-												</td>
-											</tr>
+									{{if $.IsSplitStyle}}
+										{{range $j, $section := .Sections}}
+											{{range $k, $line := .Lines}}
+												<tr class="{{DiffLineTypeToStr .Type}}-code nl-{{$k}} ol-{{$k}}">
+													<td class="lines-num lines-num-old">
+														<span rel="{{if $line.LeftIdx}}diff-{{Sha1 $file.Name}}L{{$line.LeftIdx}}{{end}}">{{if $line.LeftIdx}}{{$line.LeftIdx}}{{end}}</span>
+													</td>
+													<td class="lines-code halfwidth">
+														<pre class="wrap">{{if $line.LeftIdx}}{{$line.Content}}{{end}}</pre>
+													</td>
+													<td class="lines-num lines-num-new">
+														<span rel="{{if $line.RightIdx}}diff-{{Sha1 $file.Name}}R{{$line.RightIdx}}{{end}}">{{if $line.RightIdx}}{{$line.RightIdx}}{{end}}</span>
+													</td>
+													<td class="lines-code halfwidth">
+														<pre class="wrap">{{if $line.RightIdx}}{{$line.Content}}{{end}}</pre>
+													</td>
+												</tr>
+											{{end}}
+										{{end}}
+									{{else}}
+										{{range $j, $section := .Sections}}
+											{{range $k, $line := .Lines}}
+												<tr class="{{DiffLineTypeToStr .Type}}-code nl-{{$k}} ol-{{$k}}">
+													{{if eq .Type 4}}
+													<td colspan="2" class="lines-num">
+														{{if gt $j 0}}<span class="fold octicon octicon-fold"></span>{{end}}
+													</td>
+													{{else}}
+													<td class="lines-num lines-num-old">
+														<span rel="{{if $line.LeftIdx}}diff-{{Sha1 $file.Name}}L{{$line.LeftIdx}}{{end}}">{{if $line.LeftIdx}}{{$line.LeftIdx}}{{end}}</span>
+													</td>
+													<td class="lines-num lines-num-new">
+														<span rel="{{if $line.RightIdx}}diff-{{Sha1 $file.Name}}R{{$line.RightIdx}}{{end}}">{{if $line.RightIdx}}{{$line.RightIdx}}{{end}}</span>
+													</td>
+													{{end}}
+													<td class="lines-code">
+														<pre>{{$line.Content}}</pre>
+													</td>
+												</tr>
+											{{end}}
 										{{end}}
 									{{end}}
 								</tbody>
@@ -89,6 +117,25 @@
 				{{end}}
 			</div>
 		</div>
-		<br>
+	<br>
+	{{end}}
+	{{if .IsSplitStyle}}
+		<script>
+		(function() {
+			$('.add-code').each(function() {
+				var prev = $(this).prev();
+				if(prev.is('.del-code') && prev.children().eq(3).text().trim() === '') {
+					while(prev.prev().is('.del-code') && prev.prev().children().eq(3).text().trim() === '') {
+						prev = prev.prev();
+					}
+					prev.children().eq(3).html($(this).children().eq(3).html());
+					prev.children().eq(2).html($(this).children().eq(2).html());
+					prev.children().eq(3).addClass('add-code');
+					prev.children().eq(2).addClass('add-code');
+					$(this).remove();
+				}
+			});
+		}());
+		</script>
 	{{end}}
 {{end}}
