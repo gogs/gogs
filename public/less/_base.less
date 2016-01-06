@@ -20,6 +20,13 @@ pre {
 		line-height: 1.5;
 		overflow: auto;
 	}
+	&.wrap {
+		white-space: pre-wrap;       /* CSS 3 */
+//		white-space: -moz-normal;  /* Mozilla, since 1999 */
+//		white-space: -normal;      /* Opera 4-6 */
+//		white-space: -o-normal;    /* Opera 7 */
+		word-break: break-word;
+	}
 }
 .full.height {
 	padding: 0;
