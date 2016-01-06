@@ -72,20 +72,6 @@
 										{{range $j, $section := .Sections}}
 											{{range $k, $line := .Lines}}
 												<tr class="{{DiffLineTypeToStr .Type}}-code nl-{{$k}} ol-{{$k}}">
-												{{if eq .Type 4}}
-													<td class="lines-num lines-num-old">
-														<span class="{{if gt $j 0}}fold octicon octicon-fold{{end}}"></span>
-													</td>
-													<td class="lines-code halfwidth">
-														<pre class="wrap">{{$line.Content}}</pre>
-													</td>
-													<td class="lines-num lines-num-old">
-														<span class="{{if gt $j 0}}fold octicon octicon-fold{{end}}"></span>
-													</td>
-													<td class="lines-code halfwidth">
-														<pre class="wrap">{{$line.Content}}</pre>
-													</td>
-												{{else}}
 													<td class="lines-num lines-num-old">
 														<span rel="{{if $line.LeftIdx}}diff-{{Sha1 $file.Name}}L{{$line.LeftIdx}}{{end}}">{{if $line.LeftIdx}}{{$line.LeftIdx}}{{end}}</span>
 													</td>
@@ -98,7 +84,6 @@
 													<td class="lines-code halfwidth">
 														<pre class="wrap">{{if $line.RightIdx}}{{$line.Content}}{{end}}</pre>
 													</td>
-												{{end}}
 												</tr>
 											{{end}}
 										{{end}}
