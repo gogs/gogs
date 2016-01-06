@@ -178,15 +178,14 @@ func RegisterRoutes(m *macaron.Macaron) {
 				Delete(repo.Delete)
 
 			m.Group("/:username/:reponame", func() {
+				m.Combo("/access").Get(repo.ListUserAccess).
+					Post(bind(api.CreateAccessOption{}), repo.GiveUserAccess)
 				m.Combo("/hooks").Get(repo.ListHooks).
 					Post(bind(api.CreateHookOption{}), repo.CreateHook)
 				m.Patch("/hooks/:id:int", bind(api.EditHookOption{}), repo.EditHook)
 				m.Get("/raw/*", middleware.RepoRef(), repo.GetRawFile)
 				m.Get("/archive/*", repo.GetArchive)
-				m.Group("/branches", func() {
-					m.Get("",repo.ListBranches)
-					m.Get("/:branchname",repo.GetBranch)
-				})
+
 				m.Group("/keys", func() {
 					m.Combo("").Get(repo.ListDeployKeys).
 						Post(bind(api.CreateKeyOption{}), repo.CreateDeployKey)
@@ -197,7 +196,7 @@ func RegisterRoutes(m *macaron.Macaron) {
 		}, ReqToken())
 
 		// Organizations
-		m.Get("/user/orgs", ReqToken(), org.ListMyOrgs)
+		m.Get("/user/orgs", org.ListMyOrgs)
 		m.Get("/users/:username/orgs", org.ListUserOrgs)
 		m.Combo("/orgs/:orgname").Get(org.Get).Patch(bind(api.EditOrgOption{}), org.Edit)
 
@@ -207,13 +206,17 @@ func RegisterRoutes(m *macaron.Macaron) {
 
 		m.Group("/admin", func() {
 			m.Group("/users", func() {
-				m.Post("", bind(api.CreateUserOption{}), admin.CreateUser)
+				m.Combo("").Post(bind(api.CreateUserOption{}), admin.CreateUser).
+					Get(admin.ListUsers)
 
 				m.Group("/:username", func() {
 					m.Combo("").Patch(bind(api.EditUserOption{}), admin.EditUser).
 						Delete(admin.DeleteUser)
-					m.Post("/keys", bind(api.CreateKeyOption{}), admin.CreatePublicKey)
-					m.Post("/orgs", bind(api.CreateOrgOption{}), admin.CreateOrg)
+					m.Post("/keys", admin.CreatePublicKey)
+					m.Group("/orgs", func() {
+						m.Post("", bind(api.CreateOrgOption{}), admin.CreateOrg)
+						m.Delete("/:orgname", admin.DeleteOrg)
+					})
 					m.Post("/repos", bind(api.CreateRepoOption{}), admin.CreateRepo)
 				})
 			})

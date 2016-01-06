@@ -296,3 +296,48 @@ func Delete(ctx *middleware.Context) {
 	log.Trace("Repository deleted: %s/%s", owner.Name, repo.Name)
 	ctx.Status(204)
 }
+
+func GiveUserAccess(ctx *middleware.Context, form api.CreateAccessOption) {
+	owner, repo := parseOwnerAndRepo(ctx)
+	u, err := models.GetUserByName(form.Username)
+
+	if err != nil {
+		ctx.APIError(404, "user does not exist"+err.Error(), err)
+		return
+	}
+	err = repo.AddCollaborator(u)
+
+	if owner.IsOrganization() && !owner.IsOwnedBy(ctx.User.Id) {
+		ctx.APIError(403, "", "current user is not owner of organization.")
+		return
+	}
+
+	if ctx.Written() {
+		return
+	}
+
+	ListUserAccess(ctx)
+
+}
+
+func ListUserAccess(ctx *middleware.Context) {
+	_, repo := parseOwnerAndRepo(ctx)
+	if ctx.Written() {
+		return
+	}
+
+	users, err := repo.GetCollaborators()
+
+	if err != nil {
+		ctx.APIError(500, "internal server error", err)
+		return
+	}
+
+	apiUsers := make([]*api.User, 0)
+
+	for _, u := range users {
+		apiUsers = append(apiUsers, convert.ToApiUser(u))
+	}
+
+	ctx.JSON(200, apiUsers)
+}

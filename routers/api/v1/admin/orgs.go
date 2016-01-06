@@ -42,3 +42,15 @@ func CreateOrg(ctx *middleware.Context, form api.CreateOrgOption) {
 
 	ctx.JSON(201, convert.ToApiOrganization(org))
 }
+func DeleteOrg(ctx *middleware.Context) {
+	if ctx.Written() {
+		return
+	}
+	org := user.GetUserByParamsName(ctx, ":orgname")
+	err := models.DeleteOrganization(org)
+
+	if err != nil {
+		ctx.APIError(500, "", err)
+	}
+	ctx.Status(204)
+}
