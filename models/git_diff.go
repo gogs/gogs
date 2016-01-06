@@ -28,31 +28,34 @@ import (
 	"github.com/sergi/go-diff/diffmatchpatch"
 )
 
-// Diff line types.
-const (
-	DIFF_LINE_PLAIN = iota + 1
-	DIFF_LINE_ADD
-	DIFF_LINE_DEL
-	DIFF_LINE_SECTION
-)
+type DiffLineType uint8
 
 const (
-	DIFF_FILE_ADD = iota + 1
-	DIFF_FILE_CHANGE
-	DIFF_FILE_DEL
-	DIFF_FILE_RENAME
+	DIFF_LINE_PLAIN   DiffLineType = iota + 1
+	DIFF_LINE_ADD     DiffLineType = iota + 1
+	DIFF_LINE_DEL     DiffLineType = iota + 1
+	DIFF_LINE_SECTION DiffLineType = iota + 1
+)
+
+type DiffFileType uint8
+
+const (
+	DIFF_FILE_ADD    DiffFileType = iota + 1
+	DIFF_FILE_CHANGE DiffFileType = iota + 1
+	DIFF_FILE_DEL    DiffFileType = iota + 1
+	DIFF_FILE_RENAME DiffFileType = iota + 1
 )
 
 type DiffLine struct {
 	LeftIdx  int
 	RightIdx int
-	Type     int
+	Type     DiffLineType
 	Content  string
 	ParsedContent template.HTML
 }
 
-func (d DiffLine) GetType() int {
-	return d.Type
+func (d *DiffLine) GetType() int {
+	return int(d.Type)
 }
 
 type DiffSection struct {
@@ -60,7 +63,7 @@ type DiffSection struct {
 	Lines []*DiffLine
 }
 
-func diffToHtml(diffRecord []diffmatchpatch.Diff, lineType int) template.HTML {
+func diffToHtml(diffRecord []diffmatchpatch.Diff, lineType DiffLineType) template.HTML {
 	result := ""
 	for _, s := range diffRecord {
 		if s.Type == diffmatchpatch.DiffInsert && lineType == DIFF_LINE_ADD {
@@ -146,12 +149,16 @@ type DiffFile struct {
 	OldName            string
 	Index              int
 	Addition, Deletion int
-	Type               int
+	Type               DiffFileType
 	IsCreated          bool
 	IsDeleted          bool
 	IsBin              bool
 	IsRenamed          bool
 	Sections           []*DiffSection
+}
+
+func (diffFile *DiffFile) GetType() int {
+	return int(diffFile.Type)
 }
 
 type Diff struct {
