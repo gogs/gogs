@@ -126,8 +126,8 @@ func HTTP(ctx *middleware.Context) {
 				return
 			}
 			token.Updated = time.Now()
-			if err = models.UpdateAccessToekn(token); err != nil {
-				ctx.Handle(500, "UpdateAccessToekn", err)
+			if err = models.UpdateAccessToken(token); err != nil {
+				ctx.Handle(500, "UpdateAccessToken", err)
 			}
 			authUser, err = models.GetUserByID(token.UID)
 			if err != nil {
