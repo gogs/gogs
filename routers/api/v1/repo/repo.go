@@ -298,7 +298,7 @@ func Delete(ctx *middleware.Context) {
 }
 
 func GiveUserAccess(ctx *middleware.Context, form api.CreateAccessOption) {
-	owner, repo := parseOwnerAndRepo(ctx)
+	_, repo := parseOwnerAndRepo(ctx)
 	u, err := models.GetUserByName(form.Username)
 
 	if err != nil {
@@ -307,16 +307,29 @@ func GiveUserAccess(ctx *middleware.Context, form api.CreateAccessOption) {
 	}
 	err = repo.AddCollaborator(u)
 
-	if owner.IsOrganization() && !owner.IsOwnedBy(ctx.User.Id) {
-		ctx.APIError(403, "", "current user is not owner of organization.")
-		return
-	}
-
 	if ctx.Written() {
 		return
 	}
 
 	ListUserAccess(ctx)
+
+}
+
+func RemoveUserAccess(ctx *middleware.Context) {
+	_, repo := parseOwnerAndRepo(ctx)
+	u, err := models.GetUserByName(ctx.Params(":user"))
+
+	if err != nil {
+		ctx.APIError(404, "user does not exist", err)
+		return
+	}
+	err = repo.DeleteCollaborator(u)
+
+	if ctx.Written() {
+		return
+	}
+
+	ctx.Status(204)
 
 }
 
