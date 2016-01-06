@@ -302,7 +302,7 @@ func GiveUserAccess(ctx *middleware.Context, form api.CreateAccessOption) {
 	u, err := models.GetUserByName(form.Username)
 
 	if err != nil {
-		ctx.APIError(404, "user does not exist"+err.Error(), err)
+		ctx.APIError(404, "user does not exist", err)
 		return
 	}
 	err = repo.AddCollaborator(u)
