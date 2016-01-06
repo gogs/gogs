@@ -7,6 +7,8 @@ package admin
 import (
 	api "github.com/gogits/go-gogs-client"
 
+	"github.com/Unknwon/com"
+
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/mailer"
@@ -149,4 +151,27 @@ func CreatePublicKey(ctx *middleware.Context, form api.CreateKeyOption) {
 		return
 	}
 	user.CreateUserPublicKey(ctx, form, u.Id)
+}
+
+func ListUsers(ctx *middleware.Context) {
+	page := com.StrTo(ctx.Query("page")).MustInt()
+	limit := com.StrTo(ctx.Query("limit")).MustInt()
+
+	if limit <= 0 {
+		limit = 10
+	} else if limit > 100 {
+		limit = 100
+	}
+
+	users, err := models.Users(page, limit)
+	if err != nil {
+		ctx.APIError(500, "", err)
+	}
+
+	apiUsers := make([]*api.User, 0)
+	for _, u := range users {
+		apiUsers = append(apiUsers, convert.ToApiUser(u))
+	}
+
+	ctx.JSON(200, apiUsers)
 }
