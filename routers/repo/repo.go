@@ -27,6 +27,12 @@ const (
 	MIGRATE base.TplName = "repo/migrate"
 )
 
+func MustBeNotBare(ctx *middleware.Context) {
+	if ctx.Repo.Repository.IsBare {
+		ctx.Handle(404, "MustBeNotBare", nil)
+	}
+}
+
 func checkContextUser(ctx *middleware.Context, uid int64) *models.User {
 	orgs, err := models.GetOwnedOrgsByUserIDDesc(ctx.User.Id, "updated")
 	if err != nil {
@@ -232,7 +238,7 @@ func Action(ctx *middleware.Context) {
 		err = models.StarRepo(ctx.User.Id, ctx.Repo.Repository.ID, true)
 	case "unstar":
 		err = models.StarRepo(ctx.User.Id, ctx.Repo.Repository.ID, false)
-	case "desc":
+	case "desc": // FIXME: this is not used
 		if !ctx.Repo.IsOwner() {
 			ctx.Error(404)
 			return
