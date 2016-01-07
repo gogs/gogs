@@ -57,8 +57,8 @@ func ListAccessTokens(uid int64) ([]*AccessToken, error) {
 	return tokens, nil
 }
 
-// UpdateAccessToekn updates information of access token.
-func UpdateAccessToekn(t *AccessToken) error {
+// UpdateAccessToken updates information of access token.
+func UpdateAccessToken(t *AccessToken) error {
 	_, err := x.Id(t.ID).AllCols().Update(t)
 	return err
 }
