@@ -19,31 +19,31 @@ import (
 	"github.com/Unknwon/com"
 	"golang.org/x/net/html/charset"
 	"golang.org/x/text/transform"
+	"github.com/sergi/go-diff/diffmatchpatch"
 
 	"github.com/gogits/git-module"
 
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/process"
-	"github.com/sergi/go-diff/diffmatchpatch"
 )
 
 type DiffLineType uint8
 
 const (
-	DIFF_LINE_PLAIN   DiffLineType = iota + 1
-	DIFF_LINE_ADD     DiffLineType = iota + 1
-	DIFF_LINE_DEL     DiffLineType = iota + 1
-	DIFF_LINE_SECTION DiffLineType = iota + 1
+	DIFF_LINE_PLAIN DiffLineType = iota + 1
+	DIFF_LINE_ADD
+	DIFF_LINE_DEL
+	DIFF_LINE_SECTION
 )
 
 type DiffFileType uint8
 
 const (
-	DIFF_FILE_ADD    DiffFileType = iota + 1
-	DIFF_FILE_CHANGE DiffFileType = iota + 1
-	DIFF_FILE_DEL    DiffFileType = iota + 1
-	DIFF_FILE_RENAME DiffFileType = iota + 1
+	DIFF_FILE_ADD DiffFileType = iota + 1
+	DIFF_FILE_CHANGE
+	DIFF_FILE_DEL
+	DIFF_FILE_RENAME
 )
 
 type DiffLine struct {
@@ -80,7 +80,7 @@ func diffToHtml(diffRecord []diffmatchpatch.Diff, lineType DiffLineType) templat
 func (diffSection *DiffSection) GetLeftLine(idx int, sliceIdx int) *DiffLine {
 	for i, diffLine := range diffSection.Lines {
 		if diffLine.LeftIdx == idx && diffLine.RightIdx == 0 {
-			// ignore the the lines are too far from each other
+			// ignore if the lines are too far from each other
 			if i > sliceIdx-5 && i < sliceIdx+5 {
 				return diffLine
 			} else {
@@ -94,7 +94,7 @@ func (diffSection *DiffSection) GetLeftLine(idx int, sliceIdx int) *DiffLine {
 func (diffSection *DiffSection) GetRightLine(idx int, sliceIdx int) *DiffLine {
 	for i, diffLine := range diffSection.Lines {
 		if diffLine.RightIdx == idx && diffLine.LeftIdx == 0 {
-			// ignore the the lines are too far from each other
+			// ignore if the lines are too far from each other
 			if i > sliceIdx-5 && i < sliceIdx+5 {
 				return diffLine
 			} else {
