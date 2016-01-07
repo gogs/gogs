@@ -432,9 +432,8 @@ func runWeb(ctx *cli.Context) {
 		})
 	}, reqSignIn, middleware.RepoAssignment(), reqRepoAdmin, middleware.RepoRef())
 
+	m.Get("/:username/:reponame/action/:action", reqSignIn, middleware.RepoAssignment(), repo.Action)
 	m.Group("/:username/:reponame", func() {
-		m.Get("/action/:action", repo.Action)
-
 		m.Group("/issues", func() {
 			m.Combo("/new", repo.MustEnableIssues).Get(middleware.RepoRef(), repo.NewIssue).
 				Post(bindIgnErr(auth.CreateIssueForm{}), repo.NewIssuePost)
@@ -476,7 +475,7 @@ func runWeb(ctx *cli.Context) {
 
 		m.Combo("/compare/*", repo.MustEnablePulls).Get(repo.CompareAndPullRequest).
 			Post(bindIgnErr(auth.CreateIssueForm{}), repo.CompareAndPullRequestPost)
-	}, reqSignIn, middleware.RepoAssignment())
+	}, reqSignIn, middleware.RepoAssignment(), repo.MustBeNotBare)
 
 	m.Group("/:username/:reponame", func() {
 		m.Group("", func() {
@@ -514,13 +513,15 @@ func runWeb(ctx *cli.Context) {
 			m.Get("/raw/*", repo.SingleDownload)
 			m.Get("/commits/*", repo.RefCommits)
 			m.Get("/commit/*", repo.Diff)
-			m.Get("/stars", repo.Stars)
-			m.Get("/watchers", repo.Watchers)
 			m.Get("/forks", repo.Forks)
 		}, middleware.RepoRef())
 
 		m.Get("/compare/:before([a-z0-9]{40})...:after([a-z0-9]{40})", repo.CompareDiff)
-	}, ignSignIn, middleware.RepoAssignment())
+	}, ignSignIn, middleware.RepoAssignment(), repo.MustBeNotBare)
+	m.Group("/:username/:reponame", func() {
+		m.Get("/stars", repo.Stars)
+		m.Get("/watchers", repo.Watchers)
+	}, ignSignIn, middleware.RepoAssignment(), middleware.RepoRef())
 
 	m.Group("/:username", func() {
 		m.Group("/:reponame", func() {
