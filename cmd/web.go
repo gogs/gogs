@@ -175,10 +175,7 @@ func newMacaron() *macaron.Macaron {
 	return m
 }
 
-func runWeb(ctx *cli.Context) {
-	if ctx.IsSet("config") {
-		setting.CustomConf = ctx.String("config")
-	}
+func Macaron() *macaron.Macaron {
 	routers.GlobalInit()
 	checkVersion()
 
@@ -548,6 +545,14 @@ func runWeb(ctx *cli.Context) {
 	// Not found handler.
 	m.NotFound(routers.NotFound)
 
+	return m
+}
+
+func runWeb(ctx *cli.Context) {
+	if ctx.IsSet("config") {
+		setting.CustomConf = ctx.String("config")
+	}
+	m := Macaron()
 	// Flag for port number in case first time run conflict.
 	if ctx.IsSet("port") {
 		setting.AppUrl = strings.Replace(setting.AppUrl, setting.HttpPort, ctx.String("port"), 1)
