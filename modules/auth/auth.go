@@ -55,8 +55,8 @@ func SignedInID(ctx *macaron.Context, sess session.Store) int64 {
 				return 0
 			}
 			t.Updated = time.Now()
-			if err = models.UpdateAccessToekn(t); err != nil {
-				log.Error(4, "UpdateAccessToekn: %v", err)
+			if err = models.UpdateAccessToken(t); err != nil {
+				log.Error(4, "UpdateAccessToken: %v", err)
 			}
 			return t.UID
 		}
