@@ -330,5 +330,5 @@ func Download(ctx *middleware.Context) {
 		}
 	}
 
-	ctx.ServeFile(archivePath, ctx.Repo.Repository.Name+"-"+base.ShortSha(commit.ID.String())+ext)
+	ctx.ServeFile(archivePath, ctx.Repo.Repository.Name+"-"+refName+ext)
 }
