@@ -77,28 +77,24 @@ func diffToHtml(diffRecord []diffmatchpatch.Diff, lineType DiffLineType) templat
 	return template.HTML(result)
 }
 
-func (diffSection *DiffSection) GetLeftLine(idx int, sliceIdx int) *DiffLine {
-	for i, diffLine := range diffSection.Lines {
-		if diffLine.LeftIdx == idx && diffLine.RightIdx == 0 {
-			// ignore if the lines are too far from each other
-			if i > sliceIdx-5 && i < sliceIdx+5 {
-				return diffLine
-			} else {
-				return nil
-			}
-		}
-	}
-	return nil
-}
+// get an specific line by type (add or del) and file line number
+func (diffSection *DiffSection) GetLine(lineType DiffLineType, idx int) *DiffLine {
+	difference := 0
 
-func (diffSection *DiffSection) GetRightLine(idx int, sliceIdx int) *DiffLine {
-	for i, diffLine := range diffSection.Lines {
-		if diffLine.RightIdx == idx && diffLine.LeftIdx == 0 {
-			// ignore if the lines are too far from each other
-			if i > sliceIdx-5 && i < sliceIdx+5 {
+	for _, diffLine := range diffSection.Lines {
+		if diffLine.Type == DIFF_LINE_PLAIN {
+			// get the difference of line numbers between ADD and DEL versions
+			difference = diffLine.RightIdx - diffLine.LeftIdx
+			continue
+		}
+
+		if lineType == DIFF_LINE_DEL {
+			if diffLine.RightIdx == 0 && diffLine.LeftIdx == idx - difference {
 				return diffLine
-			} else {
-				return nil
+			}
+		} else if lineType == DIFF_LINE_ADD {
+			if diffLine.LeftIdx == 0 && diffLine.RightIdx == idx + difference {
+				return diffLine
 			}
 		}
 	}
@@ -107,7 +103,7 @@ func (diffSection *DiffSection) GetRightLine(idx int, sliceIdx int) *DiffLine {
 
 // computes diff of each diff line and set the HTML on diffLine.ParsedContent
 func (diffSection *DiffSection) ComputeLinesDiff() {
-	for i, diffLine := range diffSection.Lines {
+	for _, diffLine := range diffSection.Lines {
 		var compareDiffLine *DiffLine
 		var diff1, diff2 string
 
@@ -121,14 +117,14 @@ func (diffSection *DiffSection) ComputeLinesDiff() {
 
 		// try to find equivalent diff line. ignore, otherwise
 		if diffLine.Type == DIFF_LINE_ADD {
-			compareDiffLine = diffSection.GetLeftLine(diffLine.RightIdx, i)
+			compareDiffLine = diffSection.GetLine(DIFF_LINE_DEL, diffLine.RightIdx)
 			if compareDiffLine == nil {
 				continue
 			}
 			diff1 = compareDiffLine.Content
 			diff2 = diffLine.Content
 		} else {
-			compareDiffLine = diffSection.GetRightLine(diffLine.LeftIdx, i)
+			compareDiffLine = diffSection.GetLine(DIFF_LINE_ADD, diffLine.LeftIdx)
 			if compareDiffLine == nil {
 				continue
 			}
