@@ -21,9 +21,8 @@ const (
 	STARS     base.TplName = "user/meta/stars"
 )
 
-// GetUserByParams returns user whose name is presented in URL paramenter.
-func GetUserByParams(ctx *middleware.Context) *models.User {
-	user, err := models.GetUserByName(ctx.Params(":username"))
+func GetUserByName(ctx *middleware.Context, name string) *models.User {
+	user, err := models.GetUserByName(name)
 	if err != nil {
 		if models.IsErrUserNotExist(err) {
 			ctx.Error(404)
@@ -33,6 +32,11 @@ func GetUserByParams(ctx *middleware.Context) *models.User {
 		return nil
 	}
 	return user
+}
+
+// GetUserByParams returns user whose name is presented in URL paramenter.
+func GetUserByParams(ctx *middleware.Context) *models.User {
+	return GetUserByName(ctx, ctx.Params(":username"))
 }
 
 func Profile(ctx *middleware.Context) {
@@ -51,7 +55,7 @@ func Profile(ctx *middleware.Context) {
 		isShowKeys = true
 	}
 
-	u := GetUserByParams(ctx)
+	u := GetUserByName(ctx, strings.TrimSuffix(uname, ".keys"))
 	if ctx.Written() {
 		return
 	}
