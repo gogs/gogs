@@ -118,9 +118,10 @@ func (diffSection *DiffSection) ComputeLinesDiff() {
 		var compareDiffLine *DiffLine
 		var diff1, diff2 string
 
+		diffLine.ParsedContent = template.HTML(html.EscapeString(diffLine.Content[1:]))
+
 		// just compute diff for adds and removes
 		if diffLine.Type != DIFF_LINE_ADD && diffLine.Type != DIFF_LINE_DEL {
-			diffLine.ParsedContent = template.HTML(html.EscapeString(diffLine.Content[1:]))
 			continue
 		}
 
