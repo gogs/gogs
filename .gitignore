@@ -36,4 +36,5 @@ docker/docker/init_gogs.sh
 gogs.sublime-project
 gogs.sublime-workspace
 .tags*
-release
+dist/
+bin/
