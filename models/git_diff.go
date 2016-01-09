@@ -8,18 +8,18 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"html"
+	"html/template"
 	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"strings"
-	"html/template"
-	"html"
 
 	"github.com/Unknwon/com"
+	"github.com/sergi/go-diff/diffmatchpatch"
 	"golang.org/x/net/html/charset"
 	"golang.org/x/text/transform"
-	"github.com/sergi/go-diff/diffmatchpatch"
 
 	"github.com/gogits/git-module"
 
@@ -47,10 +47,10 @@ const (
 )
 
 type DiffLine struct {
-	LeftIdx  int
-	RightIdx int
-	Type     DiffLineType
-	Content  string
+	LeftIdx       int
+	RightIdx      int
+	Type          DiffLineType
+	Content       string
 	ParsedContent template.HTML
 }
 
@@ -63,18 +63,29 @@ type DiffSection struct {
 	Lines []*DiffLine
 }
 
-func diffToHtml(diffRecord []diffmatchpatch.Diff, lineType DiffLineType) template.HTML {
-	result := ""
-	for _, s := range diffRecord {
-		if s.Type == diffmatchpatch.DiffInsert && lineType == DIFF_LINE_ADD {
-			result = result + "<span class=\"added-code\">"+html.EscapeString(s.Text)+"</span>"
-		} else if s.Type == diffmatchpatch.DiffDelete && lineType == DIFF_LINE_DEL {
-			result = result + "<span class=\"removed-code\">"+html.EscapeString(s.Text)+"</span>"
-		} else if s.Type == diffmatchpatch.DiffEqual {
-			result = result + html.EscapeString(s.Text)
+var (
+	addedCodePrefix   = []byte("<span class=\"added-code\">")
+	removedCodePrefix = []byte("<span class=\"removed-code\">")
+	codeTagSuffix     = []byte("</span>")
+)
+
+func diffToHTML(diffs []diffmatchpatch.Diff, lineType DiffLineType) template.HTML {
+	var buf bytes.Buffer
+	for i := range diffs {
+		if diffs[i].Type == diffmatchpatch.DiffInsert && lineType == DIFF_LINE_ADD {
+			buf.Write(addedCodePrefix)
+			buf.WriteString(html.EscapeString(diffs[i].Text))
+			buf.Write(codeTagSuffix)
+		} else if diffs[i].Type == diffmatchpatch.DiffDelete && lineType == DIFF_LINE_DEL {
+			buf.Write(removedCodePrefix)
+			buf.WriteString(html.EscapeString(diffs[i].Text))
+			buf.Write(codeTagSuffix)
+		} else if diffs[i].Type == diffmatchpatch.DiffEqual {
+			buf.WriteString(html.EscapeString(diffs[i].Text))
 		}
 	}
-	return template.HTML(result)
+
+	return template.HTML(buf.Bytes())
 }
 
 // get an specific line by type (add or del) and file line number
@@ -89,11 +100,11 @@ func (diffSection *DiffSection) GetLine(lineType DiffLineType, idx int) *DiffLin
 		}
 
 		if lineType == DIFF_LINE_DEL {
-			if diffLine.RightIdx == 0 && diffLine.LeftIdx == idx - difference {
+			if diffLine.RightIdx == 0 && diffLine.LeftIdx == idx-difference {
 				return diffLine
 			}
 		} else if lineType == DIFF_LINE_ADD {
-			if diffLine.LeftIdx == 0 && diffLine.RightIdx == idx + difference {
+			if diffLine.LeftIdx == 0 && diffLine.RightIdx == idx+difference {
 				return diffLine
 			}
 		}
@@ -107,11 +118,9 @@ func (diffSection *DiffSection) ComputeLinesDiff() {
 		var compareDiffLine *DiffLine
 		var diff1, diff2 string
 
-		// default content: as is
-		diffLine.ParsedContent = template.HTML(html.EscapeString(diffLine.Content[1:]))
-
 		// just compute diff for adds and removes
 		if diffLine.Type != DIFF_LINE_ADD && diffLine.Type != DIFF_LINE_DEL {
+			diffLine.ParsedContent = template.HTML(html.EscapeString(diffLine.Content[1:]))
 			continue
 		}
 
@@ -136,7 +145,7 @@ func (diffSection *DiffSection) ComputeLinesDiff() {
 		diffRecord := dmp.DiffMain(diff1[1:], diff2[1:], true)
 		diffRecord = dmp.DiffCleanupSemantic(diffRecord)
 
-		diffLine.ParsedContent = diffToHtml(diffRecord, diffLine.Type)
+		diffLine.ParsedContent = diffToHTML(diffRecord, diffLine.Type)
 	}
 }
 
