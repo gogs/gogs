@@ -83,21 +83,63 @@ func IsReadmeFile(name string) bool {
 	return false
 }
 
+var (
+	MentionPattern     = regexp.MustCompile(`(\s|^)@[0-9a-zA-Z_\.]+`)
+	commitPattern      = regexp.MustCompile(`(\s|^)https?.*commit/[0-9a-zA-Z]+(#+[0-9a-zA-Z-]*)?`)
+	issueFullPattern   = regexp.MustCompile(`(\s|^)https?.*issues/[0-9]+(#+[0-9a-zA-Z-]*)?`)
+	issueIndexPattern  = regexp.MustCompile(`( |^|\()#[0-9]+\b`)
+	sha1CurrentPattern = regexp.MustCompile(`\b[0-9a-f]{40}\b`)
+)
+
 type CustomRender struct {
 	blackfriday.Renderer
 	urlPrefix string
 }
 
-func (options *CustomRender) Link(out *bytes.Buffer, link []byte, title []byte, content []byte) {
+func (r *CustomRender) Link(out *bytes.Buffer, link []byte, title []byte, content []byte) {
 	if len(link) > 0 && !isLink(link) {
 		if link[0] == '#' {
 			// link = append([]byte(options.urlPrefix), link...)
 		} else {
-			link = []byte(path.Join(options.urlPrefix, string(link)))
+			link = []byte(path.Join(r.urlPrefix, string(link)))
 		}
 	}
 
-	options.Renderer.Link(out, link, title, content)
+	r.Renderer.Link(out, link, title, content)
+}
+
+func (r *CustomRender) AutoLink(out *bytes.Buffer, link []byte, kind int) {
+	if kind != 1 {
+		r.Renderer.AutoLink(out, link, kind)
+		return
+	}
+
+	// This method could only possibly serve one link at a time, no need to find all.
+	m := commitPattern.Find(link)
+	if m != nil {
+		m = bytes.TrimSpace(m)
+		i := strings.Index(string(m), "commit/")
+		j := strings.Index(string(m), "#")
+		if j == -1 {
+			j = len(m)
+		}
+		out.WriteString(fmt.Sprintf(` <code><a href="%s">%s</a></code>`, m, ShortSha(string(m[i+7:j]))))
+		return
+	}
+
+	m = issueFullPattern.Find(link)
+	if m != nil {
+		m = bytes.TrimSpace(m)
+		i := strings.Index(string(m), "issues/")
+		j := strings.Index(string(m), "#")
+		if j == -1 {
+			j = len(m)
+		}
+		out.WriteString(fmt.Sprintf(` <a href="%s">#%s</a>`, m, ShortSha(string(m[i+7:j]))))
+		return
+	}
+
+	r.Renderer.AutoLink(out, link, kind)
 }
 
 var (
@@ -105,13 +147,13 @@ var (
 	svgSuffixWithMark = []byte(".svg?")
 )
 
-func (options *CustomRender) Image(out *bytes.Buffer, link []byte, title []byte, alt []byte) {
-	prefix := strings.Replace(options.urlPrefix, "/src/", "/raw/", 1)
+func (r *CustomRender) Image(out *bytes.Buffer, link []byte, title []byte, alt []byte) {
+	prefix := strings.Replace(r.urlPrefix, "/src/", "/raw/", 1)
 	if len(link) > 0 {
 		if isLink(link) {
 			// External link with .svg suffix usually means CI status.
 			if bytes.HasSuffix(link, svgSuffix) || bytes.Contains(link, svgSuffixWithMark) {
-				options.Renderer.Image(out, link, title, alt)
+				r.Renderer.Image(out, link, title, alt)
 				return
 			}
 		} else {
@@ -125,17 +167,9 @@ func (options *CustomRender) Image(out *bytes.Buffer, link []byte, title []byte,
 	out.WriteString(`<a href="`)
 	out.Write(link)
 	out.WriteString(`">`)
-	options.Renderer.Image(out, link, title, alt)
+	r.Renderer.Image(out, link, title, alt)
 	out.WriteString("</a>")
 }
-
-var (
-	MentionPattern     = regexp.MustCompile(`(\s|^)@[0-9a-zA-Z_\.]+`)
-	commitPattern      = regexp.MustCompile(`(\s|^)https?.*commit/[0-9a-zA-Z]+(#+[0-9a-zA-Z-]*)?`)
-	issueFullPattern   = regexp.MustCompile(`(\s|^)https?.*issues/[0-9]+(#+[0-9a-zA-Z-]*)?`)
-	issueIndexPattern  = regexp.MustCompile(`( |^|\()#[0-9]+\b`)
-	sha1CurrentPattern = regexp.MustCompile(`\b[0-9a-f]{40}\b`)
-)
 
 func cutoutVerbosePrefix(prefix string) string {
 	count := 0
@@ -229,33 +263,6 @@ var (
 
 var noEndTags = []string{"img", "input", "br", "hr"}
 
-// PreProcessMarkdown renders full links of commits, issues and pulls to shorter version.
-func PreProcessMarkdown(rawHTML []byte, urlPrefix string) []byte {
-	ms := commitPattern.FindAll(rawHTML, -1)
-	for _, m := range ms {
-		m = bytes.TrimSpace(m)
-		i := strings.Index(string(m), "commit/")
-		j := strings.Index(string(m), "#")
-		if j == -1 {
-			j = len(m)
-		}
-		rawHTML = bytes.Replace(rawHTML, m, []byte(fmt.Sprintf(
-			` <code><a href="%s">%s</a></code>`, m, ShortSha(string(m[i+7:j])))), -1)
-	}
-	ms = issueFullPattern.FindAll(rawHTML, -1)
-	for _, m := range ms {
-		m = bytes.TrimSpace(m)
-		i := strings.Index(string(m), "issues/")
-		j := strings.Index(string(m), "#")
-		if j == -1 {
-			j = len(m)
-		}
-		rawHTML = bytes.Replace(rawHTML, m, []byte(fmt.Sprintf(
-			` <a href="%s">#%s</a>`, m, ShortSha(string(m[i+7:j])))), -1)
-	}
-	return rawHTML
-}
-
 // PostProcessMarkdown treats different types of HTML differently,
 // and only renders special links for plain text blocks.
 func PostProcessMarkdown(rawHtml []byte, urlPrefix string, metas map[string]string) []byte {
@@ -327,8 +334,7 @@ OUTER_LOOP:
 }
 
 func RenderMarkdown(rawBytes []byte, urlPrefix string, metas map[string]string) []byte {
-	result := PreProcessMarkdown(rawBytes, urlPrefix)
-	result = RenderRawMarkdown(result, urlPrefix)
+	result := RenderRawMarkdown(rawBytes, urlPrefix)
 	result = PostProcessMarkdown(result, urlPrefix, metas)
 	result = Sanitizer.SanitizeBytes(result)
 	return result
