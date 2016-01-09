@@ -2306,9 +2306,10 @@ footer .container .links > *:first-child {
 }
 .repository .diff-box .count {
   margin-right: 12px;
+  font-size: 13px;
 }
 .repository .diff-box .count .bar {
-  background-color: #e75316;
+  background-color: #bd2c00 ;
   height: 12px;
   width: 40px;
   display: inline-block;
@@ -2316,7 +2317,7 @@ footer .container .links > *:first-child {
   vertical-align: text-top;
 }
 .repository .diff-box .count .bar .add {
-  background-color: #77c64a;
+  background-color: #55a532;
   height: 12px;
 }
 .repository .diff-box .file {
@@ -2386,6 +2387,12 @@ footer .container .links > *:first-child {
 }
 .repository .diff-file-box .code-diff tbody tr.add-code td.halfwidth {
   width: 50%;
+}
+.repository .diff-file-box .code-diff tbody tr .removed-code {
+  background-color: #ff9999;
+}
+.repository .diff-file-box .code-diff tbody tr .added-code {
+  background-color: #99ff99;
 }
 .repository .diff-file-box.file-content img {
   max-width: 100%;
@@ -2763,12 +2770,6 @@ footer .container .links > *:first-child {
 #transfer-repo-modal .ui.message,
 #delete-repo-modal .ui.message {
   width: 100%!important;
-}
-.removed-code {
-  background-color: #ff9999;
-}
-.added-code {
-  background-color: #99ff99;
 }
 .organization {
   padding-top: 15px;

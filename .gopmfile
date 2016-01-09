@@ -31,6 +31,7 @@ github.com/microcosm-cc/bluemonday = commit:4ac6f27
 github.com/msteinert/pam = commit:02ccfbf
 github.com/nfnt/resize = commit:dc93e1b98c
 github.com/russross/blackfriday = commit:d18b67a
+github.com/sergi/go-diff = 
 github.com/shurcooL/sanitized_anchor_name = commit:10ef21a
 github.com/Unknwon/cae = commit:7f5e046
 github.com/Unknwon/com = commit:28b053d
