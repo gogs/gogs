@@ -202,6 +202,22 @@ func ldapDial(ls *Source) (*ldap.Conn, error) {
 			InsecureSkipVerify: ls.SkipVerify,
 		})
 	} else {
-		return ldap.Dial("tcp", fmt.Sprintf("%s:%d", ls.Host, ls.Port))
+		conn, err := ldap.Dial("tcp", fmt.Sprintf("%s:%d", ls.Host, ls.Port))
+		if err != nil {
+			return nil, err
+		}
+
+		if ls.SkipVerify {
+			return conn, nil
+		}
+
+		if err := conn.StartTLS(&tls.Config{
+			InsecureSkipVerify: false,
+		}); err != nil {
+			conn.Close()
+			return nil, err
+		}
+
+		return conn, nil
 	}
 }
