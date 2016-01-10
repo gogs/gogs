@@ -2309,7 +2309,7 @@ footer .container .links > *:first-child {
   font-size: 13px;
 }
 .repository .diff-box .count .bar {
-  background-color: #bd2c00 ;
+  background-color: #bd2c00;
   height: 12px;
   width: 40px;
   display: inline-block;
