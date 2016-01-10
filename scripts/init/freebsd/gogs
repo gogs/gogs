@@ -22,6 +22,7 @@ load_rc_config $name
 : ${gogs_directory:="/home/git"}
 
 command="${gogs_directory}/gogs web"
+procname="$(echo $command |cut -d' ' -f1)"
 
 pidfile="${gogs_directory}/${name}.pid"
 
