@@ -90,54 +90,66 @@ func (a *Action) AfterSet(colName string, _ xorm.Cell) {
 	}
 }
 
-func (a Action) GetOpType() int {
+func (a *Action) GetOpType() int {
 	return int(a.OpType)
 }
 
-func (a Action) GetActUserName() string {
+func (a *Action) GetActUserName() string {
 	return a.ActUserName
 }
 
-func (a Action) GetActEmail() string {
+func (a *Action) ShortActUserName() string {
+	return base.EllipsisString(a.ActUserName, 20)
+}
+
+func (a *Action) GetActEmail() string {
 	return a.ActEmail
 }
 
-func (a Action) GetRepoUserName() string {
+func (a *Action) GetRepoUserName() string {
 	return a.RepoUserName
 }
 
-func (a Action) GetRepoName() string {
+func (a *Action) ShortRepoUserName() string {
+	return base.EllipsisString(a.RepoUserName, 20)
+}
+
+func (a *Action) GetRepoName() string {
 	return a.RepoName
 }
 
-func (a Action) GetRepoPath() string {
-	return path.Join(a.RepoUserName, a.RepoName)
+func (a *Action) ShortRepoName() string {
+	return base.EllipsisString(a.RepoName, 33)
 }
 
-func (a Action) GetRepoLink() string {
+func (a *Action) GetRepoPath() string {
+	return path.Join(a.ShortRepoUserName(), a.ShortRepoName())
+}
+
+func (a *Action) GetRepoLink() string {
 	if len(setting.AppSubUrl) > 0 {
 		return path.Join(setting.AppSubUrl, a.GetRepoPath())
 	}
 	return "/" + a.GetRepoPath()
 }
 
-func (a Action) GetBranch() string {
+func (a *Action) GetBranch() string {
 	return a.RefName
 }
 
-func (a Action) GetContent() string {
+func (a *Action) GetContent() string {
 	return a.Content
 }
 
-func (a Action) GetCreate() time.Time {
+func (a *Action) GetCreate() time.Time {
 	return a.Created
 }
 
-func (a Action) GetIssueInfos() []string {
+func (a *Action) GetIssueInfos() []string {
 	return strings.SplitN(a.Content, "|", 2)
 }
 
-func (a Action) GetIssueTitle() string {
+func (a *Action) GetIssueTitle() string {
 	index := com.StrTo(a.GetIssueInfos()[0]).MustInt64()
 	issue, err := GetIssueByIndex(a.RepoID, index)
 	if err != nil {
@@ -147,7 +159,7 @@ func (a Action) GetIssueTitle() string {
 	return issue.Name
 }
 
-func (a Action) GetIssueContent() string {
+func (a *Action) GetIssueContent() string {
 	index := com.StrTo(a.GetIssueInfos()[0]).MustInt64()
 	issue, err := GetIssueByIndex(a.RepoID, index)
 	if err != nil {
