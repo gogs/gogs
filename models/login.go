@@ -105,10 +105,21 @@ type LoginSource struct {
 	Updated   time.Time       `xorm:"UPDATED"`
 }
 
+// Cell2Int64 converts a xorm.Cell type to int64,
+// and handles possible irregular cases.
+func Cell2Int64(val xorm.Cell) int64 {
+	switch (*val).(type) {
+	case []int8:
+		log.Trace("Cell2Int64 ([]int8): %v", *val)
+		return int64((*val).([]int8)[0])
+	}
+	return (*val).(int64)
+}
+
 func (source *LoginSource) BeforeSet(colName string, val xorm.Cell) {
 	switch colName {
 	case "type":
-		switch LoginType((*val).(int64)) {
+		switch LoginType(Cell2Int64(val)) {
 		case LOGIN_LDAP, LOGIN_DLDAP:
 			source.Cfg = new(LDAPConfig)
 		case LOGIN_SMTP:
