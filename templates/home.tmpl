@@ -87,6 +87,46 @@
 				</p>
 			</div>
 		</div>
+	{{else if eq .Lang "fr-FR"}}
+		<div class="ui stackable middle very relaxed page grid">
+			<div class="eight wide center column">
+				<h1 class="hero ui icon header">
+					<i class="octicon octicon-flame"></i> Facile à installer
+				</h1>
+				<p class="large">
+				    Il suffit de <a target="_blank" href="http://gogs.io/docs/installation/install_from_binary.html">lancer l'exécutable</a> correspondant à votre système. 
+                    Ou d'utiliser Gogs avec <a target="_blank" href="https://github.com/gogits/gogs/tree/master/docker">Docker</a> ou 
+                    <a target="_blank" href="https://github.com/geerlingguy/ansible-vagrant-examples/tree/master/gogs">Vagrant</a>
+                    ou en l'installant depuis un <a target="_blank" href="http://gogs.io/docs/installation/install_from_packages.html">package</a>.
+				</p>
+			</div>
+			<div class="eight wide center column">
+				<h1 class="hero ui icon header">
+					<i class="octicon octicon-device-desktop"></i> Multi-plateforme
+				</h1>
+				<p class="large">
+					Gogs tourne partout où <a target="_blank" href="http://golang.org/">Go</a> peut être compilé : Windows, Mac OS X, Linux, ARM, etc. Choisissez votre préféré !
+				</p>
+			</div>
+		</div>
+		<div class="ui stackable middle very relaxed page grid">
+			<div class="eight wide center column">
+				<h1 class="hero ui icon header">
+					<i class="octicon octicon-rocket"></i> Léger
+				</h1>
+				<p class="large">
+					Gogs utilise peu de ressources. Il peut même tourner sur un Raspberry Pi très bon marché. Économisez l'énergie de vos serveurs !
+				</p>
+			</div>
+			<div class="eight wide center column">
+				<h1 class="hero ui icon header">
+					<i class="octicon octicon-code"></i> Open Source
+				</h1>
+				<p class="large">
+					Toutes les sources sont sur <a target="_blank" href="https://github.com/gogits/gogs/">GitHub</a> ! Rejoignez-nous et contribuez à rendre ce projet encore meilleur.
+				</p>
+			</div>
+		</div>
 	{{else}}
 		<div class="ui stackable middle very relaxed page grid">
 			<div class="eight wide center column">
