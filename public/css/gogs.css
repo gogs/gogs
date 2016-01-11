@@ -3057,6 +3057,18 @@ footer .container .links > *:first-child {
   margin-right: 6px;
   color: #888;
 }
+.feeds .list .repo-owner-name-list .item-name {
+  max-width: 70%;
+  margin-bottom: -4px;
+}
+.feeds .list #collaborative-repo-list .owner-and-repo {
+  max-width: 80%;
+  margin-bottom: -5px;
+}
+.feeds .list #collaborative-repo-list .owner-name {
+  max-width: 120px;
+  margin-bottom: -5px;
+}
 .admin {
   padding-top: 15px;
   padding-bottom: 80px;
@@ -3116,6 +3128,9 @@ footer .container .links > *:first-child {
 .ui.repository.list .item .ui.header {
   font-size: 1.5rem;
   padding-bottom: 10px;
+}
+.ui.repository.list .item .ui.header .name {
+  word-break: break-all;
 }
 .ui.repository.list .item .ui.header .metas {
   color: #888;

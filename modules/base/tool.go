@@ -453,6 +453,15 @@ func Subtract(left interface{}, right interface{}) interface{} {
 	}
 }
 
+// EllipsisString returns a truncated short string,
+// it appends '...' in the end of the length of string is too large.
+func EllipsisString(str string, length int) string {
+	if len(str) < length {
+		return str
+	}
+	return str[:length-3] + "..."
+}
+
 // StringsToInt64s converts a slice of string to a slice of int64.
 func StringsToInt64s(strs []string) []int64 {
 	ints := make([]int64, len(strs))
