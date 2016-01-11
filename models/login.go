@@ -109,9 +109,9 @@ type LoginSource struct {
 // and handles possible irregular cases.
 func Cell2Int64(val xorm.Cell) int64 {
 	switch (*val).(type) {
-	case []int8:
-		log.Trace("Cell2Int64 ([]int8): %v", *val)
-		return int64((*val).([]int8)[0])
+	case []uint8:
+		log.Trace("Cell2Int64 ([]uint8): %v", *val)
+		return com.StrTo(string((*val).([]uint8))).MustInt64()
 	}
 	return (*val).(int64)
 }
