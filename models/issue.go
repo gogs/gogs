@@ -1595,13 +1595,13 @@ func createComment(e *xorm.Session, u *User, repo *Repository, issue *Issue, com
 		// Notify watchers.
 		act := &Action{
 			ActUserID:    u.Id,
-			ActUserName:  u.LowerName,
+			ActUserName:  u.Name,
 			ActEmail:     u.Email,
 			OpType:       COMMENT_ISSUE,
 			Content:      fmt.Sprintf("%d|%s", issue.Index, strings.Split(content, "\n")[0]),
 			RepoID:       repo.ID,
-			RepoUserName: repo.Owner.LowerName,
-			RepoName:     repo.LowerName,
+			RepoUserName: repo.Owner.Name,
+			RepoName:     repo.Name,
 			IsPrivate:    repo.IsPrivate,
 		}
 		if err = notifyWatchers(e, act); err != nil {
