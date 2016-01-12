@@ -59,7 +59,7 @@
 							*/}}
 							<li>
 								{{range .Orgs}}
-									<img class="ui mini image" src="{{.AvatarLink}}">
+									<a href="{{AppSubUrl}}/{{.Name}}"><img class="ui mini image" src="{{.AvatarLink}}"></a>
 								{{end}}
 							</li>
 							{{if and .IsSigned (ne .SignedUserName .Owner.Name)}}
