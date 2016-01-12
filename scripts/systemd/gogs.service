@@ -8,6 +8,8 @@ After=network.target
 #After=redis.service
 
 [Service]
+LimitMEMLOCK=infinity
+LimitNOFILE=65535
 Type=simple
 User=git
 Group=git
