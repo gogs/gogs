@@ -29,7 +29,7 @@ func isalnum(c byte) bool {
 	return (c >= '0' && c <= '9') || isletter(c)
 }
 
-var validLinks = [][]byte{[]byte("http://"), []byte("https://"), []byte("ftp://"), []byte("mailto://")}
+var validLinks = [][]byte{[]byte("http://"), []byte("https://"), []byte("ftp://"), []byte("mailto://"), []byte("ssh://"), []byte("ts3server://"), []byte("git://"), []byte("irc://"), []byte("ircs://")}
 
 func isLink(link []byte) bool {
 	for _, prefix := range validLinks {
