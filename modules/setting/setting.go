@@ -117,6 +117,7 @@ var (
 	// Markdown sttings
 	Markdown struct {
 		EnableHardLineBreak bool
+		CustomURLSchemes    []string `ini:"CUSTOM_URL_SCHEMES"`
 	}
 
 	// Picture settings

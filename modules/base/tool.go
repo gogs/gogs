@@ -37,6 +37,7 @@ func BuildSanitizer() (p *bluemonday.Policy) {
 
 	p.AllowAttrs("type").Matching(regexp.MustCompile(`^checkbox$`)).OnElements("input")
 	p.AllowAttrs("checked", "disabled").OnElements("input")
+	p.AllowURLSchemes(setting.Markdown.CustomURLSchemes...)
 	return p
 }
 
