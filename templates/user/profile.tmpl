@@ -59,7 +59,7 @@
 							*/}}
 							<li>
 								{{range .Orgs}}
-									<a href="{{.HomeLink}}"><img class="ui mini image" src="{{.AvatarLink}}"></a>
+									<a href="{{.HomeLink}}"><img class="ui mini image poping up" src="{{.AvatarLink}}" data-content="{{.Name}}" data-position="top center" data-variation="mini inverted"></a>
 								{{end}}
 							</li>
 							{{if and .IsSigned (ne .SignedUserName .Owner.Name)}}
