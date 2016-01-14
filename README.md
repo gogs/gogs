@@ -103,6 +103,8 @@ There are 5 ways to install Gogs:
 - [Fabric8](http://fabric8.io/) (DevOps)
 - [Taiga](https://taiga.io/) (Project Management)
 - [Puppet](https://forge.puppetlabs.com/Siteminds/gogs) (IT)
+- [Kanboard](http://kanboard.net/plugin/gogs-webhook) (Project Management)
+- [BearyChat](https://bearychat.com/) (Team Communication)
 
 ### Product Support
 
