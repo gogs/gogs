@@ -206,7 +206,7 @@ func RegisterRoutes(m *macaron.Macaron) {
 		m.Any("/*", func(ctx *middleware.Context) {
 			ctx.Error(404)
 		})
-
+		//admin
 		m.Group("/admin", func() {
 			m.Group("/users", func() {
 				m.Combo("").Post(bind(api.CreateUserOption{}), admin.CreateUser).
@@ -216,11 +216,15 @@ func RegisterRoutes(m *macaron.Macaron) {
 					m.Combo("").Patch(bind(api.EditUserOption{}), admin.EditUser).
 						Delete(admin.DeleteUser)
 					m.Post("/keys", admin.CreatePublicKey)
-					m.Group("/orgs", func() {
-						m.Post("", bind(api.CreateOrgOption{}), admin.CreateOrg)
-						m.Delete("/:orgname", admin.DeleteOrg)
-					})
+					m.Post("/orgs", bind(api.CreateOrgOption{}), admin.CreateOrg)
 					m.Post("/repos", bind(api.CreateRepoOption{}), admin.CreateRepo)
+				})
+			})
+			m.Group("/orgs/:orgname", func() {
+				m.Delete("", admin.DeleteOrg)
+				m.Group("/users", func() {
+					m.Post("", bind(api.AddUserOption{}), admin.AddOrganizationUser)
+					m.Delete("/:user", admin.RemoveOrganizationUser)
 				})
 			})
 		}, ReqAdmin())

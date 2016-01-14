@@ -316,7 +316,9 @@ func GiveUserAccess(ctx *middleware.Context, form api.CreateAccessOption) {
 }
 
 func RemoveUserAccess(ctx *middleware.Context) {
-	_, repo := parseOwnerAndRepo(ctx)
+	owner, repo := parseOwnerAndRepo(ctx)
+	repo.Owner = owner
+
 	u, err := models.GetUserByName(ctx.Params(":user"))
 
 	if err != nil {
