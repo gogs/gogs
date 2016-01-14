@@ -74,6 +74,8 @@ Gogs 的目标是打造一个最简单、最快速和最轻松的方式搭建自
 - [Fabric8](http://fabric8.io/)（DevOps）
 - [Taiga](https://taiga.io/)（项目管理）
 - [Puppet](https://forge.puppetlabs.com/Siteminds/gogs)（IT）
+- [Kanboard](http://kanboard.net/plugin/gogs-webhook)（项目管理）
+- [BearyChat](https://bearychat.com/)（团队交流）
 
 ### 产品支持
 
