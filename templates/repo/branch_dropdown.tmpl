@@ -17,7 +17,7 @@
 				<div class="ui grid">
 					<div class="two column row">
 						<a class="reference column" href="#" data-target="#branch-list">
-							<span class="text {{if .IsViewBranch}}black{{end}}">
+							<span class="text {{if not .IsViewTag}}black{{end}}">
 								<i class="icon octicon octicon-git-branch"></i> {{.i18n.Tr "repo.branches"}}
 							</span>
 						</a>
@@ -34,7 +34,7 @@
 					<div class="item {{if eq $.BranchName .}}selected{{end}}" data-url="{{$.RepoLink}}/{{if $.PageIsCommits}}commits{{else}}src{{end}}/{{EscapePound .}}">{{.}}</div>
 				{{end}}
 			</div>
-			<div id="tag-list" class="scrolling menu" {{if .IsViewBranch}}style="display: none"{{end}}>
+			<div id="tag-list" class="scrolling menu" {{if not .IsViewTag}}style="display: none"{{end}}>
 				{{range .Tags}}
 					<div class="item {{if eq $.BranchName .}}selected{{end}}" data-url="{{$.RepoLink}}/{{if $.PageIsCommits}}commits{{else}}src{{end}}/{{EscapePound .}}">{{.}}</div>
 				{{end}}
