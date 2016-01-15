@@ -288,6 +288,20 @@ func (repo *Repository) GetMirror() (err error) {
 	return err
 }
 
+func (repo *Repository) GetBranch(br string) (_ *Branch, err error) {
+	if(!git.IsBranchExist(repo.RepoPath(), br)){
+		return nil, errors.New("Branch do not exist");
+	}
+	return &Branch{
+			Path: repo.RepoPath(),
+			Name: br,
+	},nil
+}
+
+func (repo *Repository) GetBranches() (_ []*Branch, err error) {
+	return GetBranchesByPath(repo.RepoPath())
+}
+
 func (repo *Repository) GetBaseRepo() (err error) {
 	if !repo.IsFork {
 		return nil
