@@ -9,28 +9,28 @@
 					<p>
 						<a href="{{AppSubUrl}}/{{.GetActUserName}}">{{.ShortActUserName}}</a>
 						{{if eq .GetOpType 1}}
-							{{$.i18n.Tr "action.create_repo" .GetRepoLink .GetRepoPath | Str2html}}
+							{{$.i18n.Tr "action.create_repo" .GetRepoLink .ShortRepoPath | Str2html}}
 						{{else if eq .GetOpType 2}}
-							{{$.i18n.Tr "action.rename_repo" .GetContent .GetRepoLink .GetRepoPath | Str2html}}
+							{{$.i18n.Tr "action.rename_repo" .GetContent .GetRepoLink .ShortRepoPath | Str2html}}
 						{{else if eq .GetOpType 5}}
 							{{ $branchLink := .GetBranch | EscapePound}}
-							{{$.i18n.Tr "action.commit_repo" .GetRepoLink $branchLink .GetBranch .GetRepoPath | Str2html}}
+							{{$.i18n.Tr "action.commit_repo" .GetRepoLink $branchLink .GetBranch .ShortRepoPath | Str2html}}
 						{{else if eq .GetOpType 6}}
 							{{ $index := index .GetIssueInfos 0}}
-							{{$.i18n.Tr "action.create_issue" .GetRepoLink $index .GetRepoPath | Str2html}}
+							{{$.i18n.Tr "action.create_issue" .GetRepoLink $index .ShortRepoPath | Str2html}}
 						{{else if eq .GetOpType 7}}
 							{{ $index := index .GetIssueInfos 0}}
-							{{$.i18n.Tr "action.create_pull_request" .GetRepoLink $index .GetRepoPath | Str2html}}
+							{{$.i18n.Tr "action.create_pull_request" .GetRepoLink $index .ShortRepoPath | Str2html}}
 						{{else if eq .GetOpType 8}}
-							{{$.i18n.Tr "action.transfer_repo" .GetContent .GetRepoLink .GetRepoPath | Str2html}}
+							{{$.i18n.Tr "action.transfer_repo" .GetContent .GetRepoLink .ShortRepoPath | Str2html}}
 						{{else if eq .GetOpType 9}}
-							{{$.i18n.Tr "action.push_tag" .GetRepoLink .GetBranch .GetRepoPath | Str2html}}
+							{{$.i18n.Tr "action.push_tag" .GetRepoLink .GetBranch .ShortRepoPath | Str2html}}
 						{{else if eq .GetOpType 10}}
 							{{ $index := index .GetIssueInfos 0}}
-							{{$.i18n.Tr "action.comment_issue" .GetRepoLink $index .GetRepoPath | Str2html}}
+							{{$.i18n.Tr "action.comment_issue" .GetRepoLink $index .ShortRepoPath | Str2html}}
 						{{else if eq .GetOpType 11}}
 							{{ $index := index .GetIssueInfos 0}}
-							{{$.i18n.Tr "action.merge_pull_request" .GetRepoLink $index .GetRepoPath | Str2html}}
+							{{$.i18n.Tr "action.merge_pull_request" .GetRepoLink $index .ShortRepoPath | Str2html}}
 						{{end}}
 					</p>
 					{{if eq .GetOpType 5}}

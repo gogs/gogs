@@ -123,6 +123,10 @@ func (a *Action) ShortRepoName() string {
 }
 
 func (a *Action) GetRepoPath() string {
+	return path.Join(a.RepoUserName, a.RepoName)
+}
+
+func (a *Action) ShortRepoPath() string {
 	return path.Join(a.ShortRepoUserName(), a.ShortRepoName())
 }
 
