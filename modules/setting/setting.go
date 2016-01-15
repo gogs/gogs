@@ -453,8 +453,6 @@ var Service struct {
 	EnableNotifyMail               bool
 	EnableReverseProxyAuth         bool
 	EnableReverseProxyAutoRegister bool
-	DisableMinimumKeySizeCheck     bool
-	MinimumKeySizes                map[string]int
 	EnableCaptcha                  bool
 }
 
@@ -468,14 +466,7 @@ func newService() {
 	Service.EnableCacheAvatar = sec.Key("ENABLE_CACHE_AVATAR").MustBool()
 	Service.EnableReverseProxyAuth = sec.Key("ENABLE_REVERSE_PROXY_AUTHENTICATION").MustBool()
 	Service.EnableReverseProxyAutoRegister = sec.Key("ENABLE_REVERSE_PROXY_AUTO_REGISTRATION").MustBool()
-	Service.DisableMinimumKeySizeCheck = sec.Key("DISABLE_MINIMUM_KEY_SIZE_CHECK").MustBool()
 	Service.EnableCaptcha = sec.Key("ENABLE_CAPTCHA").MustBool()
-
-	minimumKeySizes := Cfg.Section("service.minimum_key_sizes").Keys()
-	Service.MinimumKeySizes = make(map[string]int)
-	for _, key := range minimumKeySizes {
-		Service.MinimumKeySizes[key.Name()] = key.MustInt()
-	}
 }
 
 var logLevels = map[string]string{
