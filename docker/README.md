@@ -20,6 +20,21 @@ $ docker run --name=gogs -p 10022:22 -p 10080:3000 -v /var/gogs:/data gogs/gogs
 $ docker start gogs
 ```
 
+### Using Docker 1.9 Volume
+```
+# Pull image from Docker Hub.
+$ docker pull gogs/gogs
+
+# Create docker volume.
+$ docker volume create --name gogs-data
+
+# Use `docker run` for the first time.
+$ docker run --name=gogs -p 10022:22 -p 10080:3000 -v gogs-data:/data gogs/gogs
+
+# Use `docker start` if you have stopped it.
+$ docker start gogs
+```
+
 Files will be store in local path `/var/gogs` in my case.
 
 Directory `/var/gogs` keeps Git repositories and Gogs data:
