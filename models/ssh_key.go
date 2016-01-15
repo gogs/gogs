@@ -21,6 +21,7 @@ import (
 
 	"github.com/Unknwon/com"
 	"github.com/go-xorm/xorm"
+	"golang.org/x/crypto/ssh"
 
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/process"
@@ -164,48 +165,20 @@ func CheckPublicKeyString(content string) (_ string, err error) {
 		return "", errors.New("only a single line with a single key please")
 	}
 
-	// write the key to a file…
-	tmpFile, err := ioutil.TempFile(os.TempDir(), "keytest")
+	fields := strings.Fields(content)
+	if len(fields) < 2 {
+		return "", errors.New("too less fields")
+	}
+
+	key, err := base64.StdEncoding.DecodeString(fields[1])
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("StdEncoding.DecodeString: %v", err)
 	}
-	tmpPath := tmpFile.Name()
-	defer os.Remove(tmpPath)
-	tmpFile.WriteString(content)
-	tmpFile.Close()
-
-	// Check if ssh-keygen recognizes its contents.
-	stdout, stderr, err := process.Exec("CheckPublicKeyString", "ssh-keygen", "-lf", tmpPath)
+	pkey, err := ssh.ParsePublicKey([]byte(key))
 	if err != nil {
-		return "", errors.New("ssh-keygen -lf: " + stderr)
-	} else if len(stdout) < 2 {
-		return "", errors.New("ssh-keygen returned not enough output to evaluate the key: " + stdout)
+		return "", fmt.Errorf("ParsePublicKey: %v", err)
 	}
-
-	// The ssh-keygen in Windows does not print key type, so no need go further.
-	if setting.IsWindows {
-		return content, nil
-	}
-
-	sshKeygenOutput := strings.Split(stdout, " ")
-	if len(sshKeygenOutput) < 4 {
-		return content, ErrKeyUnableVerify{stdout}
-	}
-
-	// Check if key type and key size match.
-	if !setting.Service.DisableMinimumKeySizeCheck {
-		keySize := com.StrTo(sshKeygenOutput[0]).MustInt()
-		if keySize == 0 {
-			return "", errors.New("cannot get key size of the given key")
-		}
-
-		keyType := strings.Trim(sshKeygenOutput[len(sshKeygenOutput)-1], " ()\n")
-		if minimumKeySize := setting.Service.MinimumKeySizes[keyType]; minimumKeySize == 0 {
-			return "", fmt.Errorf("unrecognized public key type: %s", keyType)
-		} else if keySize < minimumKeySize {
-			return "", fmt.Errorf("the minimum accepted size of a public key %s is %d", keyType, minimumKeySize)
-		}
-	}
+	log.Trace("Key type: %s", pkey.Type())
 
 	return content, nil
 }
