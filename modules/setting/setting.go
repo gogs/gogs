@@ -454,6 +454,7 @@ var Service struct {
 	EnableReverseProxyAuth         bool
 	EnableReverseProxyAutoRegister bool
 	EnableCaptcha                  bool
+	DisableMinimumKeySizeCheck     bool
 }
 
 func newService() {
