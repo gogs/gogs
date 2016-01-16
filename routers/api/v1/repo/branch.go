@@ -5,15 +5,14 @@
 package repo
 
 import (
-	//TODO change for merge
 	api "github.com/gogits/go-gogs-client"
 
 	"github.com/gogits/gogs/modules/middleware"
 	"github.com/gogits/gogs/routers/api/v1/convert"
 )
 
-//TODO add to github.com/gogits/go-gogs-client
-// https://github.com/gogits/go-gogs-client/wiki/Repositories#get-branch
+// Temporary: https://gist.github.com/sapk/df64347ff218baf4a277#get-a-branch
+// https://github.com/gogits/go-gogs-client/wiki/Repositories-Branches#get-a-branch
 func GetBranch(ctx *middleware.Context) {
 	branch, err := ctx.Repo.Repository.GetBranch(ctx.Params(":id"))
 	if err != nil {
@@ -28,11 +27,9 @@ func GetBranch(ctx *middleware.Context) {
 	ctx.JSON(200, convert.ToApiBranch(branch,c))
 }
 
-//TODO add to github.com/gogits/go-gogs-client
-// https://github.com/gogits/go-gogs-client/wiki/Repositories#list-branches
+// Temporary: https://gist.github.com/sapk/df64347ff218baf4a277#list-branches
+// https://github.com/gogits/go-gogs-client/wiki/Repositories-Branches#list-branches
 func ListBranches(ctx *middleware.Context) {
-
-
 	Branches, err := ctx.Repo.Repository.GetBranches()
 	if err != nil {
 		//TODO handle error
