@@ -46,3 +46,6 @@ clean:
 
 clean-mac: clean
 	find . -name ".DS_Store" -print0 | xargs -0 rm
+
+test:
+	go test ./...
