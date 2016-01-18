@@ -91,6 +91,7 @@ func handleServerConn(keyID string, chans <-chan ssh.NewChannel) {
 						return
 					}
 
+					req.Reply(true, nil);
 					go io.Copy(input, ch)
 					io.Copy(ch, stdout)
 					io.Copy(ch.Stderr(), stderr)
