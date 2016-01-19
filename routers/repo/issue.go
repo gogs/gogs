@@ -589,12 +589,13 @@ func ViewIssue(ctx *middleware.Context) {
 	}
 
 	var (
-		tag     models.CommentTag
-		ok      bool
-		marked  = make(map[int64]models.CommentTag)
-		comment *models.Comment
+		tag          models.CommentTag
+		ok           bool
+		marked       = make(map[int64]models.CommentTag)
+		comment      *models.Comment
+		participants []*models.User
 	)
-	// Render comments.
+	// Render comments. (and fetch participants)
 	for _, comment = range issue.Comments {
 		if comment.Type == models.COMMENT_TYPE_COMMENT {
 			comment.RenderedContent = string(base.RenderMarkdown([]byte(comment.Content), ctx.Repo.RepoLink,
@@ -617,8 +618,21 @@ func ViewIssue(ctx *middleware.Context) {
 			}
 
 			marked[comment.PosterID] = comment.ShowTag
+
+			already_added := false
+			for j := range participants {
+				if comment.Poster == participants[j] {
+					already_added = true
+				}
+			}
+			if !already_added {
+				participants = append(participants, comment.Poster)
+			}
 		}
 	}
+
+	ctx.Data["Participants"] = participants
+
 
 	ctx.Data["Issue"] = issue
 	ctx.Data["IsIssueOwner"] = ctx.Repo.IsAdmin() || (ctx.IsSigned && issue.IsPoster(ctx.User.Id))
