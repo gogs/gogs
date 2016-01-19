@@ -321,10 +321,13 @@
 				<div class="ui floating jump">
 					{{range .Participants}}
 						<a href="{{.HomeLink}}">
-							<img class="ui avatar image" src="{{.AvatarLink}}" data-title={{.FullName}}>
+							<img class="ui avatar image" src="{{.AvatarLink}}" data-content={{.FullName}}>
 						</a>
 					{{end}}
 				</div>
+				<script>
+					$('.participants .ui.avatar.image').popup();
+				</script>
 			</div>
 		</div>
 	</div>
