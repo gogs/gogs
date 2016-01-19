@@ -1,4 +1,4 @@
-// Copyright 2015 The Gogs Authors. All rights reserved.
+// Copyright 2016 The Gogs Authors. All rights reserved.
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
@@ -74,7 +74,7 @@ func Profile(ctx *middleware.Context) {
 	ctx.Data["Title"] = u.DisplayName()
 	ctx.Data["PageIsUserProfile"] = true
 	ctx.Data["Owner"] = u
-	
+
 	orgs, err := models.GetOwnedOrgsByUserIDDesc(u.Id, "updated")
 	if err != nil {
 		ctx.Handle(500, "GetOwnedOrgsByUserIDDesc", err)

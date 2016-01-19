@@ -1,4 +1,4 @@
-// Copyright 2014 The Gogs Authors. All rights reserved.
+// Copyright 2016 The Gogs Authors. All rights reserved.
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
@@ -68,21 +68,21 @@ func runDump(ctx *cli.Context) {
 		log.Fatalf("Fail to create %s: %v", fileName, err)
 	}
 
-	if err := z.AddFile("gogs-repo.zip", reposDump); err !=nil {
+	if err := z.AddFile("gogs-repo.zip", reposDump); err != nil {
 		log.Fatalf("Fail to include gogs-repo.zip: %v", err)
 	}
-	if err := z.AddFile("gogs-db.sql", dbDump); err !=nil {
+	if err := z.AddFile("gogs-db.sql", dbDump); err != nil {
 		log.Fatalf("Fail to include gogs-db.sql: %v", err)
 	}
 	customDir, err := os.Stat(setting.CustomPath)
 	if err == nil && customDir.IsDir() {
-		if err := z.AddDir("custom", setting.CustomPath); err !=nil {
+		if err := z.AddDir("custom", setting.CustomPath); err != nil {
 			log.Fatalf("Fail to include custom: %v", err)
-	    }
+		}
 	} else {
 		log.Printf("Custom dir %s doesn't exist, skipped", setting.CustomPath)
 	}
-	if err := z.AddDir("log", setting.LogRootPath); err !=nil {
+	if err := z.AddDir("log", setting.LogRootPath); err != nil {
 		log.Fatalf("Fail to include log: %v", err)
 	}
 	// FIXME: SSH key file.
