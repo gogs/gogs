@@ -199,7 +199,7 @@ func Home(ctx *middleware.Context) {
 
 	if len(treename) > 0 {
 		treenames = strings.Split(treename, "/")
-		for i, _ := range treenames {
+		for i := range treenames {
 			Paths = append(Paths, strings.Join(treenames[0:i+1], "/"))
 		}
 

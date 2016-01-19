@@ -5,7 +5,7 @@
 package user
 
 import (
-       "os"
+	"os"
 )
 
 func CurrentUsername() string {

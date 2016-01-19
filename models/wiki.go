@@ -7,12 +7,12 @@ package models
 import (
 	"fmt"
 	"io/ioutil"
+	"net/url"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
 	"sync"
-	"net/url"
 
 	"github.com/Unknwon/com"
 

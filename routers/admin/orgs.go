@@ -28,15 +28,15 @@ func Organizations(ctx *middleware.Context) {
 		page = 1
 	}
 	ctx.Data["Page"] = paginater.New(int(total), setting.AdminOrgPagingNum, page, 5)
- 
-    orgs, err := models.Organizations(page, setting.AdminOrgPagingNum)
-	
+
+	orgs, err := models.Organizations(page, setting.AdminOrgPagingNum)
+
 	if err != nil {
 		ctx.Handle(500, "Organizations", err)
 		return
 	}
-	
- 	ctx.Data["Orgs"] = orgs
+
+	ctx.Data["Orgs"] = orgs
 	ctx.Data["Total"] = total
 
 	ctx.HTML(200, ORGS)
