@@ -20,6 +20,8 @@ $ docker run --name=gogs -p 10022:22 -p 10080:3000 -v /var/gogs:/data gogs/gogs
 $ docker start gogs
 ```
 
+Note: It is important to map the Gogs ssh service from the container to the host and set the appropriate SSH Port and URI settings when setting up Gogs for the first time. To access and clone Gogs Git repositories with the above configuration you would use: `git clone ssh://git@hostname:10022/username/myrepo.git` for example.
+
 Files will be store in local path `/var/gogs` in my case.
 
 Directory `/var/gogs` keeps Git repositories and Gogs data:
