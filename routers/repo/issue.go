@@ -623,6 +623,7 @@ func ViewIssue(ctx *middleware.Context) {
 			for j := range participants {
 				if comment.Poster == participants[j] {
 					already_added = true
+					break
 				}
 			}
 			if !already_added {
