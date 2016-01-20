@@ -57,7 +57,7 @@ func checkContextUser(ctx *middleware.Context, uid int64) *models.User {
 	}
 
 	// Check ownership of organization.
-	if !org.IsOrganization() || !org.IsOwnedBy(ctx.User.Id) {
+	if !org.IsOrganization() || !(ctx.User.IsAdmin || org.IsOwnedBy(ctx.User.Id)) {
 		ctx.Error(403)
 		return nil
 	}
