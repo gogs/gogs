@@ -595,6 +595,7 @@ func ViewIssue(ctx *middleware.Context) {
 		comment      *models.Comment
 		participants []*models.User
 	)
+	participants = append(participants, issue.Poster)
 	// Render comments. (and fetch participants)
 	for _, comment = range issue.Comments {
 		if comment.Type == models.COMMENT_TYPE_COMMENT {
