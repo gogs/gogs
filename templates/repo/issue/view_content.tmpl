@@ -313,6 +313,17 @@
 					{{end}}
 				</div>
 			</div>
+ 			<div class="ui divider"></div> 
+ 			<div class="ui participants floating jump">
+ 				<span class="text"><strong>{{len .Participants }} Participants</strong></span>
+ 				<div class="ui floating jump">
+ 					{{range .Participants}}
+ 						<a href="{{.HomeLink}}">
+ 							<img class="ui avatar image" width="20" height="20" src="{{.AvatarLink}}" data-content={{.FullName}}>
+ 						</a>
+ 					{{end}}
+ 				</div>
+ 			</div>            
 		</div>
 	</div>
 </div>

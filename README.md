@@ -1,7 +1,7 @@
-Gogs - Go Git Service [![Build Status](https://travis-ci.org/gogits/gogs.svg?branch=master)](https://travis-ci.org/gogits/gogs) [![Docker Repository on Quay](https://quay.io/repository/gogs/gogs/status "Docker Repository on Quay")](https://quay.io/repository/gogs/gogs) [![Crowdin](https://d322cqt584bo4o.cloudfront.net/gogs/localized.svg)](https://crowdin.com/project/gogs) [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/gogits/gogs?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+Gogs (FP Edition) - Go Git Service [![Build Status](http://teamcity.server/app/rest/builds/buildType:(id:Gog_Build)/statusIcon)]
 =====================
 
-![](https://github.com/gogits/gogs/blob/master/public/img/gogs-large-resize.png?raw=true)
+![](http://git.server/Dominic/gog/raw/master/public/img/gogs-large-resize.png)
 
 ##### Current version: 0.8.22
 
@@ -20,8 +20,6 @@ Gogs - Go Git Service [![Build Status](https://travis-ci.org/gogits/gogs.svg?bra
 - If you think there are vulnerabilities in the project, please talk privately to **u@gogs.io**. Thanks!
 - If you're interested in using APIs, we have experimental support with [documentation](https://github.com/gogits/go-gogs-client/wiki).
 - If your team/company is using Gogs and would like to put your logo on [our website](http://gogs.io), contact us by any means.
-
-[简体中文](README_ZH.md)
 
 ## Purpose
 
