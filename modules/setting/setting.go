@@ -451,7 +451,6 @@ var Service struct {
 	RequireSignInView              bool
 	EnableCacheAvatar              bool
 	EnableNotifyMail               bool
-	DisableMinimumKeySizeCheck     bool
 	EnableReverseProxyAuth         bool
 	EnableReverseProxyAutoRegister bool
 	EnableCaptcha                  bool
