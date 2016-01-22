@@ -3,7 +3,7 @@ outPath=./output
 rm -rf $outPath
 mkdir $outPath
 
-go build ../gogs.go -tags "sqlite tidb miniwinsvc cert"
+go build -tags "sqlite miniwinsvc cert" ../gogs.go
 PLATFORM=`uname | cut -d _ -f 1`
 if [ $PLATFORM = "MINGW32" ] || [ $PLATFORM = "MINGW64" ] || [ $PLATFORM = "CYGWIN" ]; then
 	GOGS_EXE=gogs.exe
