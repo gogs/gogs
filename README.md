@@ -1,7 +1,5 @@
-Gogs (FP Edition) - Go Git Service [![Build Status](http://teamcity.server/app/rest/builds/buildType:(id:Gog_Build)/statusIcon)]
+Gogs (FP Edition) - Go Git Service
 =====================
-
-![](http://git.server/Dominic/gog/raw/master/public/img/gogs-large-resize.png)
 
 ##### Current version: 0.8.22
 
