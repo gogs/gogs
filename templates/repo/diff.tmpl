@@ -1,7 +1,7 @@
 {{template "base/head" .}}
 <div class="repository diff">
 	{{template "repo/header" .}}
-	<div class="ui container">
+	<div class="{{if $.IsSplitStyle}}ui{{else}}ui container{{end}}">
 		{{if .IsDiffCompare }}
 			{{template "repo/commits_table" .}}
 		{{else}}
