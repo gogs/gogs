@@ -428,7 +428,7 @@ func NewContext() {
 		log.Fatal(4, "Fail to map Markdown settings: %v", err)
 	} else if err = Cfg.Section("git").MapTo(&Git); err != nil {
 		log.Fatal(4, "Fail to map Git settings: %v", err)
-	} else if Cfg.Section("cron").MapTo(&Cron); err != nil {
+	} else if err = Cfg.Section("cron").MapTo(&Cron); err != nil {
 		log.Fatal(4, "Fail to map Cron settings: %v", err)
 	}
 
