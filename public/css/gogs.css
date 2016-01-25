@@ -1490,6 +1490,9 @@ footer .container .links > *:first-child {
   border-radius: 3px;
   box-shadow: inset 0 -1px 0 #bbb;
 }
+.markdown input[type="checkbox"] {
+  vertical-align: middle !important;
+}
 .markdown .csv-data td,
 .markdown .csv-data th {
   padding: 5px;
