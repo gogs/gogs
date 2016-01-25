@@ -349,6 +349,12 @@ func ViewPullFiles(ctx *middleware.Context) {
 	ctx.Data["Diff"] = diff
 	ctx.Data["DiffNotAvailable"] = diff.NumFiles() == 0
 
+	for _, diffFile := range diff.Files {
+		for _, diffSection := range diffFile.Sections {
+			diffSection.ComputeLinesDiff()
+		}
+	}
+
 	commit, err := gitRepo.GetCommit(endCommitID)
 	if err != nil {
 		ctx.Handle(500, "GetCommit", err)
