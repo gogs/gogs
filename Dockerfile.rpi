@@ -1,5 +1,5 @@
 FROM sander85/rpi-alpine:latest
-MAINTAINER roemer.jp@gmail.com, raxetul@gmail.com
+MAINTAINER jp@roemer.im, raxetul@gmail.com
 
 # Install system utils & Gogs runtime dependencies
 ADD https://github.com/tianon/gosu/releases/download/1.6/gosu-armhf /usr/sbin/gosu
@@ -14,6 +14,9 @@ ENV GOGS_CUSTOM /data/gogs
 COPY . /app/gogs/
 WORKDIR /app/gogs/
 RUN ./docker/build.sh
+
+# Configure LibC Name Service
+COPY docker/nsswitch.conf /etc/nsswitch.conf
 
 # Configure Docker Container
 VOLUME ["/data"]
