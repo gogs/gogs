@@ -627,15 +627,13 @@ func ViewIssue(ctx *middleware.Context) {
 					break
 				}
 			}
-			if !already_added {
+			if !already_added && !issue.IsPoster(comment.Poster.Id) {
 				participants = append(participants, comment.Poster)
 			}
 		}
 	}
 
 	ctx.Data["Participants"] = participants
-
-
 	ctx.Data["Issue"] = issue
 	ctx.Data["IsIssueOwner"] = ctx.Repo.IsAdmin() || (ctx.IsSigned && issue.IsPoster(ctx.User.Id))
 	ctx.Data["SignInLink"] = setting.AppSubUrl + "/user/login"
