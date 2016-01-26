@@ -1,5 +1,5 @@
 FROM alpine:3.2
-MAINTAINER roemer.jp@gmail.com
+MAINTAINER jp@roemer.im
 
 # Install system utils & Gogs runtime dependencies
 ADD https://github.com/tianon/gosu/releases/download/1.6/gosu-amd64 /usr/sbin/gosu
@@ -14,6 +14,9 @@ ENV GOGS_CUSTOM /data/gogs
 COPY . /app/gogs/
 WORKDIR /app/gogs/
 RUN ./docker/build.sh
+
+# Configure LibC Name Service
+COPY docker/nsswitch.conf /etc/nsswitch.conf
 
 # Configure Docker Container
 VOLUME ["/data"]
