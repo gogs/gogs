@@ -285,7 +285,7 @@ type HookTask struct {
 	HookID          int64
 	UUID            string
 	Type            HookTaskType
-	URL             string
+	URL             string `xorm:"TEXT"`
 	api.Payloader   `xorm:"-"`
 	PayloadContent  string `xorm:"TEXT"`
 	ContentType     HookContentType
