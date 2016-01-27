@@ -91,6 +91,9 @@ func GlobalInit() {
 		ssh.Listen(setting.SSHPort)
 		log.Info("SSH server started on :%v", setting.SSHPort)
 	}
+
+	// Build Sanitizer
+	base.BuildSanitizer()
 }
 
 func InstallInit(ctx *middleware.Context) {
