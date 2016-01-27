@@ -51,7 +51,6 @@ type DiffLine struct {
 	RightIdx      int
 	Type          DiffLineType
 	Content       string
-	ParsedContent template.HTML
 }
 
 func (d *DiffLine) GetType() int {
@@ -112,42 +111,42 @@ func (diffSection *DiffSection) GetLine(lineType DiffLineType, idx int) *DiffLin
 	return nil
 }
 
-// computes diff of each diff line and set the HTML on diffLine.ParsedContent
-func (diffSection *DiffSection) ComputeLinesDiff() {
-	for _, diffLine := range diffSection.Lines {
-		var compareDiffLine *DiffLine
-		var diff1, diff2 string
+// computes inline diff for the given line
+func (diffSection *DiffSection) GetComputedInlineDiffFor(diffLine *DiffLine) template.HTML {
+	var compareDiffLine *DiffLine
+	var diff1, diff2 string
 
-		diffLine.ParsedContent = template.HTML(html.EscapeString(diffLine.Content[1:]))
-
-		// just compute diff for adds and removes
-		if diffLine.Type != DIFF_LINE_ADD && diffLine.Type != DIFF_LINE_DEL {
-			continue
-		}
-
-		// try to find equivalent diff line. ignore, otherwise
-		if diffLine.Type == DIFF_LINE_ADD {
-			compareDiffLine = diffSection.GetLine(DIFF_LINE_DEL, diffLine.RightIdx)
-			if compareDiffLine == nil {
-				continue
-			}
-			diff1 = compareDiffLine.Content
-			diff2 = diffLine.Content
-		} else {
-			compareDiffLine = diffSection.GetLine(DIFF_LINE_ADD, diffLine.LeftIdx)
-			if compareDiffLine == nil {
-				continue
-			}
-			diff1 = diffLine.Content
-			diff2 = compareDiffLine.Content
-		}
-
-		dmp := diffmatchpatch.New()
-		diffRecord := dmp.DiffMain(diff1[1:], diff2[1:], true)
-		diffRecord = dmp.DiffCleanupSemantic(diffRecord)
-
-		diffLine.ParsedContent = diffToHTML(diffRecord, diffLine.Type)
+	getDefaultReturn := func() template.HTML {
+		return template.HTML(html.EscapeString(diffLine.Content[1:]))
 	}
+
+	// just compute diff for adds and removes
+	if diffLine.Type != DIFF_LINE_ADD && diffLine.Type != DIFF_LINE_DEL {
+		return getDefaultReturn()
+	}
+
+	// try to find equivalent diff line. ignore, otherwise
+	if diffLine.Type == DIFF_LINE_ADD {
+		compareDiffLine = diffSection.GetLine(DIFF_LINE_DEL, diffLine.RightIdx)
+		if compareDiffLine == nil {
+			return getDefaultReturn()
+		}
+		diff1 = compareDiffLine.Content
+		diff2 = diffLine.Content
+	} else {
+		compareDiffLine = diffSection.GetLine(DIFF_LINE_ADD, diffLine.LeftIdx)
+		if compareDiffLine == nil {
+			return getDefaultReturn()
+		}
+		diff1 = diffLine.Content
+		diff2 = compareDiffLine.Content
+	}
+
+	dmp := diffmatchpatch.New()
+	diffRecord := dmp.DiffMain(diff1[1:], diff2[1:], true)
+	diffRecord = dmp.DiffCleanupSemantic(diffRecord)
+
+	return diffToHTML(diffRecord, diffLine.Type)
 }
 
 type DiffFile struct {
