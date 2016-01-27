@@ -809,6 +809,9 @@ pre.wrap {
 .ui.right {
   float: right;
 }
+.ui.container.fluid.padded {
+  padding: 0 10px 0 10px;
+}
 .ui .text.red {
   color: #d95c5c !important;
 }
