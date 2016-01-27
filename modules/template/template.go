@@ -105,7 +105,7 @@ func Safe(raw string) template.HTML {
 }
 
 func Str2html(raw string) template.HTML {
-	return template.HTML(base.BuildSanitizer().Sanitize(raw))
+	return template.HTML(base.Sanitizer.Sanitize(raw))
 }
 
 func Range(l int) []int {

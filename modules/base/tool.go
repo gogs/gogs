@@ -31,17 +31,19 @@ import (
 	"github.com/gogits/gogs/modules/setting"
 )
 
-func BuildSanitizer() (p *bluemonday.Policy) {
-	p = bluemonday.UGCPolicy()
-	p.AllowAttrs("class").Matching(regexp.MustCompile(`[\p{L}\p{N}\s\-_',:\[\]!\./\\\(\)&]*`)).OnElements("code")
+var Sanitizer = bluemonday.UGCPolicy()
 
-	p.AllowAttrs("type").Matching(regexp.MustCompile(`^checkbox$`)).OnElements("input")
-	p.AllowAttrs("checked", "disabled").OnElements("input")
-	p.AllowURLSchemes(setting.Markdown.CustomURLSchemes...)
-	return p
+func BuildSanitizer() {
+	// Normal markdown-stuff
+	Sanitizer.AllowAttrs("class").Matching(regexp.MustCompile(`[\p{L}\p{N}\s\-_',:\[\]!\./\\\(\)&]*`)).OnElements("code")
+
+	// Checkboxes
+	Sanitizer.AllowAttrs("type").Matching(regexp.MustCompile(`^checkbox$`)).OnElements("input")
+	Sanitizer.AllowAttrs("checked", "disabled").OnElements("input")
+
+	// Custom URL-Schemes
+	Sanitizer.AllowURLSchemes(setting.Markdown.CustomURLSchemes...)
 }
-
-var Sanitizer = BuildSanitizer()
 
 // EncodeMD5 encodes string to md5 hex value.
 func EncodeMD5(str string) string {
