@@ -620,14 +620,14 @@ func ViewIssue(ctx *middleware.Context) {
 
 			marked[comment.PosterID] = comment.ShowTag
 
-			already_added := false
+			isAdded := false
 			for j := range participants {
 				if comment.Poster == participants[j] {
-					already_added = true
+					isAdded = true
 					break
 				}
 			}
-			if !already_added && !issue.IsPoster(comment.Poster.Id) {
+			if !isAdded && !issue.IsPoster(comment.Poster.Id) {
 				participants = append(participants, comment.Poster)
 			}
 		}
