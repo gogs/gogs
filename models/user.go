@@ -599,6 +599,11 @@ func ChangeUserName(u *User, newUserName string) (err error) {
 		return ErrUserAlreadyExist{newUserName}
 	}
 
+	err = ChangeUsernameInPullRequests(u.LowerName, newUserName)
+	if err != nil {
+		return err
+	}
+
 	return os.Rename(UserPath(u.LowerName), UserPath(newUserName))
 }
 
