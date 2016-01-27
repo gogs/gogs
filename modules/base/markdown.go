@@ -340,7 +340,7 @@ OUTER_LOOP:
 func RenderMarkdown(rawBytes []byte, urlPrefix string, metas map[string]string) []byte {
 	result := RenderRawMarkdown(rawBytes, urlPrefix)
 	result = PostProcessMarkdown(result, urlPrefix, metas)
-	result = BuildSanitizer().SanitizeBytes(result)
+	result = Sanitizer.SanitizeBytes(result)
 	return result
 }
 
