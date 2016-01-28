@@ -288,9 +288,9 @@ func (repo *Repository) GetMirror() (err error) {
 	return err
 }
 
-func (repo *Repository) GetBranch(br string) (_ *Branch, err error) {
+func (repo *Repository) GetBranch(br string) (*Branch, error) {
 	if(!git.IsBranchExist(repo.RepoPath(), br)){
-		return nil, errors.New("Branch do not exist");
+		return nil, fmt.Errorf("Branch does not exist: %s", br);
 	}
 	return &Branch{
 			Path: repo.RepoPath(),
@@ -298,7 +298,7 @@ func (repo *Repository) GetBranch(br string) (_ *Branch, err error) {
 	},nil
 }
 
-func (repo *Repository) GetBranches() (_ []*Branch, err error) {
+func (repo *Repository) GetBranches() ([]*Branch, error) {
 	return GetBranchesByPath(repo.RepoPath())
 }
 

@@ -185,7 +185,7 @@ func RegisterRoutes(m *macaron.Macaron) {
 				m.Get("/archive/*", repo.GetArchive)
 				m.Group("/branches", func() {
 					m.Get("",repo.ListBranches)
-					m.Get("/:id",repo.GetBranch)
+					m.Get("/:branchname",repo.GetBranch)
 				})
 				m.Group("/keys", func() {
 					m.Combo("").Get(repo.ListDeployKeys).

@@ -1,3 +1,7 @@
+// Copyright 2016 The Gogs Authors. All rights reserved.
+// Use of this source code is governed by a MIT-style
+// license that can be found in the LICENSE file.
+
 package models
 
 import (
@@ -28,10 +32,6 @@ func GetBranchesByPath(path string) ([]*Branch, error) {
 		}
 	}
 	return Branches, nil
-}
-
-func GetBranchesByRepo(user,repo string) ([]*Branch, error) {
-	return GetBranchesByPath(RepoPath(user, repo))
 }
 
 func (br *Branch) GetCommit() (*git.Commit, error) {
