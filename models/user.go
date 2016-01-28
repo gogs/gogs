@@ -599,12 +599,12 @@ func ChangeUserName(u *User, newUserName string) (err error) {
 		return ErrUserAlreadyExist{newUserName}
 	}
 
-	err = ChangeUsernameInPullRequests(u.LowerName, newUserName)
+	err = ChangeUsernameInPullRequests(u.Name, newUserName)
 	if err != nil {
-		return err
+		return fmt.Errorf("ChangeUsernameInPullRequests: %v", err)
 	}
 
-	return os.Rename(UserPath(u.LowerName), UserPath(newUserName))
+	return os.Rename(UserPath(u.Name), UserPath(newUserName))
 }
 
 func updateUser(e Engine, u *User) error {
