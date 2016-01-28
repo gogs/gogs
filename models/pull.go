@@ -525,6 +525,14 @@ func AddTestPullRequestTask(repoID int64, branch string) {
 	}
 }
 
+func ChangeUsernameInPullRequests(oldUserName, newUserName string) (error) {
+	pr := PullRequest{
+		HeadUserName : newUserName,
+	}
+	_, err := x.Cols("head_user_name").Where("head_user_name = ?", oldUserName).Update(pr)
+	return err
+}
+
 // checkAndUpdateStatus checks if pull request is possible to levaing checking status,
 // and set to be either conflict or mergeable.
 func (pr *PullRequest) checkAndUpdateStatus() {
