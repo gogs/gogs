@@ -16,26 +16,6 @@ import (
 	"github.com/gogits/gogs/modules/setting"
 )
 
-// ToApiBranch converts user to its API format.
-func ToApiBranch(b *models.Branch,c *git.Commit) *api.Branch {
-	return &api.Branch{
-			Name: b.Name,
-			Commit: ToApiCommit(c),
-		}
-}
-// ToApiCommit converts user to its API format.
-func ToApiCommit(c *git.Commit) *api.PayloadCommit {
-	return &api.PayloadCommit{
-		ID: c.ID.String(),
-		Message: c.Message(),
-		URL: "Not implemented",
-		Author: &api.PayloadAuthor{
-			Name: c.Committer.Name,
-			Email: c.Committer.Email,
-			/* UserName: c.Committer.UserName, */
-		},
-	}
-}
 // ToApiUser converts user to its API format.
 func ToApiUser(u *models.User) *api.User {
 	return &api.User{
@@ -68,6 +48,28 @@ func ToApiRepository(owner *models.User, repo *models.Repository, permission api
 		CloneUrl:    cl.HTTPS,
 		SshUrl:      cl.SSH,
 		Permissions: permission,
+	}
+}
+
+// ToApiBranch converts user to its API format.
+func ToApiBranch(b *models.Branch,c *git.Commit) *api.Branch {
+	return &api.Branch{
+			Name: b.Name,
+			Commit: ToApiCommit(c),
+		}
+}
+
+// ToApiCommit converts user to its API format.
+func ToApiCommit(c *git.Commit) *api.PayloadCommit {
+	return &api.PayloadCommit{
+		ID: c.ID.String(),
+		Message: c.Message(),
+		URL: "Not implemented",
+		Author: &api.PayloadAuthor{
+			Name: c.Committer.Name,
+			Email: c.Committer.Email,
+			/* UserName: c.Committer.UserName, */
+		},
 	}
 }
 
