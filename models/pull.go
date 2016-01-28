@@ -525,11 +525,11 @@ func AddTestPullRequestTask(repoID int64, branch string) {
 	}
 }
 
-func ChangeUsernameInPullRequests(oldUserName, newUserName string) (error) {
+func ChangeUsernameInPullRequests(oldUserName, newUserName string) error {
 	pr := PullRequest{
-		HeadUserName : newUserName,
+		HeadUserName: strings.ToLower(newUserName),
 	}
-	_, err := x.Cols("head_user_name").Where("head_user_name = ?", oldUserName).Update(pr)
+	_, err := x.Cols("head_user_name").Where("head_user_name = ?", strings.ToLower(oldUserName)).Update(pr)
 	return err
 }
 
