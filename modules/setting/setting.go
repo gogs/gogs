@@ -415,7 +415,7 @@ func NewContext() {
 	case "duoshuo":
 		GravatarSource = "http://gravatar.duoshuo.com/avatar/"
 	case "gravatar":
-		GravatarSource = "//1.gravatar.com/avatar/"
+		GravatarSource = "https://secure.gravatar.com/avatar/"
 	default:
 		GravatarSource = source
 	}
