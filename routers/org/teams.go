@@ -157,12 +157,6 @@ func NewTeamPost(ctx *middleware.Context, form auth.CreateTeamForm) {
 	ctx.Data["Title"] = ctx.Org.Organization.FullName
 	ctx.Data["PageIsOrgTeams"] = true
 	ctx.Data["PageIsOrgTeamsNew"] = true
-	ctx.Data["Team"] = &models.Team{}
-
-	if ctx.HasError() {
-		ctx.HTML(200, TEAM_NEW)
-		return
-	}
 
 	// Validate permission level.
 	var auth models.AccessMode
@@ -178,28 +172,30 @@ func NewTeamPost(ctx *middleware.Context, form auth.CreateTeamForm) {
 		return
 	}
 
-	org := ctx.Org.Organization
-
 	t := &models.Team{
-		OrgID:       org.Id,
+		OrgID:       ctx.Org.Organization.Id,
 		Name:        form.TeamName,
 		Description: form.Description,
 		Authorize:   auth,
 	}
+	ctx.Data["Team"] = t
+
+	if ctx.HasError() {
+		ctx.HTML(200, TEAM_NEW)
+		return
+	}
+
 	if err := models.NewTeam(t); err != nil {
-		switch err {
-		case models.ErrTeamNameIllegal:
-			ctx.Data["Err_TeamName"] = true
-			ctx.RenderWithErr(ctx.Tr("form.illegal_team_name"), TEAM_NEW, &form)
-		case models.ErrTeamAlreadyExist:
-			ctx.Data["Err_TeamName"] = true
+		ctx.Data["Err_TeamName"] = true
+		switch {
+		case models.IsErrTeamAlreadyExist(err):
 			ctx.RenderWithErr(ctx.Tr("form.team_name_been_taken"), TEAM_NEW, &form)
 		default:
 			ctx.Handle(500, "NewTeam", err)
 		}
 		return
 	}
-	log.Trace("Team created: %s/%s", org.Name, t.Name)
+	log.Trace("Team created: %s/%s", ctx.Org.Organization.Name, t.Name)
 	ctx.Redirect(ctx.Org.OrgLink + "/teams/" + t.LowerName)
 }
 
@@ -235,8 +231,7 @@ func EditTeamPost(ctx *middleware.Context, form auth.CreateTeamForm) {
 	t := ctx.Org.Team
 	ctx.Data["Title"] = ctx.Org.Organization.FullName
 	ctx.Data["PageIsOrgTeams"] = true
-	ctx.Data["team_name"] = t.Name
-	ctx.Data["desc"] = t.Description
+	ctx.Data["Team"] = t
 
 	if ctx.HasError() {
 		ctx.HTML(200, TEAM_NEW)
@@ -267,10 +262,11 @@ func EditTeamPost(ctx *middleware.Context, form auth.CreateTeamForm) {
 	}
 	t.Description = form.Description
 	if err := models.UpdateTeam(t, isAuthChanged); err != nil {
-		if err == models.ErrTeamNameIllegal {
-			ctx.Data["Err_TeamName"] = true
-			ctx.RenderWithErr(ctx.Tr("form.illegal_team_name"), TEAM_NEW, &form)
-		} else {
+		ctx.Data["Err_TeamName"] = true
+		switch {
+		case models.IsErrTeamAlreadyExist(err):
+			ctx.RenderWithErr(ctx.Tr("form.team_name_been_taken"), TEAM_NEW, &form)
+		default:
 			ctx.Handle(500, "UpdateTeam", err)
 		}
 		return

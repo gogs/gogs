@@ -14,10 +14,8 @@ import (
 )
 
 var (
-	ErrOrgNotExist      = errors.New("Organization does not exist")
-	ErrTeamAlreadyExist = errors.New("Team already exist")
-	ErrTeamNotExist     = errors.New("Team does not exist")
-	ErrTeamNameIllegal  = errors.New("Team name contains illegal characters")
+	ErrOrgNotExist  = errors.New("Organization does not exist")
+	ErrTeamNotExist = errors.New("Team does not exist")
 )
 
 // IsOwnedBy returns true if given user is in the owner team.
@@ -598,9 +596,9 @@ func (t *Team) RemoveRepository(repoID int64) error {
 
 // NewTeam creates a record of new team.
 // It's caller's responsibility to assign organization ID.
-func NewTeam(t *Team) (err error) {
-	if err = IsUsableName(t.Name); err != nil {
-		return err
+func NewTeam(t *Team) error {
+	if len(t.Name) == 0 {
+		return errors.New("empty team name")
 	}
 
 	has, err := x.Id(t.OrgID).Get(new(User))
@@ -615,7 +613,7 @@ func NewTeam(t *Team) (err error) {
 	if err != nil {
 		return err
 	} else if has {
-		return ErrTeamAlreadyExist
+		return ErrTeamAlreadyExist{t.OrgID, t.LowerName}
 	}
 
 	sess := x.NewSession()
@@ -674,8 +672,8 @@ func GetTeamById(teamId int64) (*Team, error) {
 
 // UpdateTeam updates information of team.
 func UpdateTeam(t *Team, authChanged bool) (err error) {
-	if err = IsUsableName(t.Name); err != nil {
-		return err
+	if len(t.Name) == 0 {
+		return errors.New("empty team name")
 	}
 
 	if len(t.Description) > 255 {
@@ -689,6 +687,13 @@ func UpdateTeam(t *Team, authChanged bool) (err error) {
 	}
 
 	t.LowerName = strings.ToLower(t.Name)
+	has, err := x.Where("org_id=?", t.OrgID).And("lower_name=?", t.LowerName).And("id!=?", t.ID).Get(new(Team))
+	if err != nil {
+		return err
+	} else if has {
+		return ErrTeamAlreadyExist{t.OrgID, t.LowerName}
+	}
+
 	if _, err = sess.Id(t.ID).AllCols().Update(t); err != nil {
 		return fmt.Errorf("update: %v", err)
 	}
