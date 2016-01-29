@@ -559,5 +559,26 @@ func IsErrAuthenticationNotExist(err error) bool {
 }
 
 func (err ErrAuthenticationNotExist) Error() string {
-	return fmt.Sprintf("Authentication does not exist [id: %d]", err.ID)
+	return fmt.Sprintf("authentication does not exist [id: %d]", err.ID)
+}
+
+// ___________
+// \__    ___/___ _____    _____
+//   |    |_/ __ \\__  \  /     \
+//   |    |\  ___/ / __ \|  Y Y  \
+//   |____| \___  >____  /__|_|  /
+//              \/     \/      \/
+
+type ErrTeamAlreadyExist struct {
+	OrgID int64
+	Name  string
+}
+
+func IsErrTeamAlreadyExist(err error) bool {
+	_, ok := err.(ErrTeamAlreadyExist)
+	return ok
+}
+
+func (err ErrTeamAlreadyExist) Error() string {
+	return fmt.Sprintf("team already exists [org_id: %d, name: %s]", err.OrgID, err.Name)
 }
