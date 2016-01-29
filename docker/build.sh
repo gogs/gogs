@@ -7,7 +7,7 @@ export GOPATH=/tmp/go
 export PATH=${PATH}:${GOPATH}/bin
 
 # Install build deps
-apk -U --no-progress add --virtual build-deps linux-pam-dev go@community gcc musl-dev
+apk -U --no-progress add --virtual build-deps linux-pam-dev go gcc musl-dev
 
 # Init go environment to build Gogs
 mkdir -p ${GOPATH}/src/github.com/gogits/
