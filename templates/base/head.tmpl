@@ -68,7 +68,7 @@
 									<div class="right menu">
 										<div class="ui dropdown head link jump item poping up" data-content="{{.i18n.Tr "create_new"}}" data-variation="tiny inverted">
 											<span class="text">
-												<i class="octicon octicon-plus"></i>
+												<i class="octicon octicon-plus"><span class="sr-only">{{.i18n.Tr "create_new"}}</span></i>
 												<i class="octicon octicon-triangle-down"></i>
 											</span>
 											<div class="menu">
@@ -87,6 +87,7 @@
 										<div class="ui dropdown head link jump item poping up" tabindex="-1" data-content="{{.i18n.Tr "user_profile_and_more"}}" data-variation="tiny inverted">
 											<span class="text avatar">
 												<img class="ui small rounded image" src="{{.SignedUser.AvatarLink}}">
+												<span class="sr-only">{{.i18n.Tr "user_profile_and_more"}}</span>
 												<i class="octicon octicon-triangle-down" tabindex="-1"></i>
 											</span>
 											<div class="menu" tabindex="-1">
