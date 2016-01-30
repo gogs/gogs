@@ -74,10 +74,10 @@ func Profile(ctx *middleware.Context) {
 	ctx.Data["Title"] = u.DisplayName()
 	ctx.Data["PageIsUserProfile"] = true
 	ctx.Data["Owner"] = u
-	
-	orgs, err := models.GetOwnedOrgsByUserIDDesc(u.Id, "updated")
+
+	orgs, err := models.GetPublicOrgsByUserIDDesc(u.Id, "updated")
 	if err != nil {
-		ctx.Handle(500, "GetOwnedOrgsByUserIDDesc", err)
+		ctx.Handle(500, "GetPublicOrgsByUserIDDesc", err)
 		return
 	}
 	ctx.Data["Orgs"] = orgs
