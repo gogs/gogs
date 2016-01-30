@@ -39,6 +39,7 @@ import (
 
 const (
 	_TPL_UPDATE_HOOK = "#!/usr/bin/env %s\n%s update $1 $2 $3 --config='%s'\n"
+	_TPL_POST_RECEIVE_HOOK = "#!/usr/bin/env %s\n%s pull --path \"$(pwd)\"\n"
 )
 
 var (
@@ -596,6 +597,11 @@ func createUpdateHook(repoPath string) error {
 		fmt.Sprintf(_TPL_UPDATE_HOOK, setting.ScriptType, "\""+setting.AppPath+"\"", setting.CustomConf))
 }
 
+func createPostReceiveHook(repoPath string) error {
+	return git.SetPostReceiveHook(repoPath,
+		fmt.Sprintf(_TPL_POST_RECEIVE_HOOK, setting.ScriptType, "\""+setting.AppPath+"\""))
+}
+
 type MigrateRepoOptions struct {
 	Name        string
 	Description string
@@ -818,6 +824,8 @@ func initRepository(e Engine, repoPath string, u *User, repo *Repository, opts C
 		return fmt.Errorf("InitRepository: %v", err)
 	} else if err = createUpdateHook(repoPath); err != nil {
 		return fmt.Errorf("createUpdateHook: %v", err)
+	} else if err = createPostReceiveHook(repoPath); err != nil {
+		return fmt.Errorf("createPostReceiveHook: %v", err)
 	}
 
 	tmpDir := filepath.Join(os.TempDir(), "gogs-"+repo.Name+"-"+com.ToStr(time.Now().Nanosecond()))
@@ -1498,6 +1506,15 @@ func RewriteRepositoryUpdateHook() error {
 		})
 }
 
+// RewriteRepositoryPostReceiveHook rewrites all repositories' update hook.
+func RewriteRepositoryPostReceiveHook() error {
+	return x.Where("id > 0").Iterate(new(Repository),
+		func(idx int, bean interface{}) error {
+			repo := bean.(*Repository)
+			return createPostReceiveHook(repo.RepoPath())
+		})
+}
+
 // statusPool represents a pool of status with true/false.
 type statusPool struct {
 	lock sync.RWMutex
@@ -2045,6 +2062,8 @@ func ForkRepository(u *User, oldRepo *Repository, name, desc string) (_ *Reposit
 
 	if err = createUpdateHook(repoPath); err != nil {
 		return nil, fmt.Errorf("createUpdateHook: %v", err)
+	} else if err = createPostReceiveHook(repoPath); err != nil {
+		return nil, fmt.Errorf("createPostReceiveHook: %v", err)
 	}
 
 	return repo, sess.Commit()
