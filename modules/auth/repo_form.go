@@ -239,7 +239,7 @@ func (f *NewReleaseForm) Validate(ctx *macaron.Context, errs binding.Errors) bin
 
 type EditReleaseForm struct {
 	Title      string `form:"title" binding:"Required"`
-	Content    string `form:"content" binding:"Required"`
+	Content    string `form:"content"`
 	Draft      string `form:"draft"`
 	Prerelease bool   `form:"prerelease"`
 }
