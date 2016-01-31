@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"strconv"
 
 	"github.com/go-xorm/xorm"
 )
@@ -1027,4 +1028,40 @@ func removeOrgRepo(e Engine, orgID, repoID int64) error {
 // RemoveOrgRepo removes all team-repository relations of given organization.
 func RemoveOrgRepo(orgID, repoID int64) error {
 	return removeOrgRepo(x, orgID, repoID)
+}
+
+func (org *User) getUserRepositories(userID int64) (err error) {
+	teams := make([]*Team, 0, 10)
+	if err := x.Cols("`team`.id").
+				Where("`team_user`.org_id=?", org.Id).
+				And("`team_user`.uid=?", userID).
+				Join("INNER", "`team_user`", "`team_user`.team_id=`team`.id").
+				Find(&teams); err != nil {
+		return fmt.Errorf("get team: %v", err)
+	}
+
+	var teamIDs []string
+	for _, team := range teams {
+		s := strconv.FormatInt(team.ID, 32)
+		teamIDs = append(teamIDs, s)
+	}
+
+	// The "in" clause it not vulnerable to SQL injection because we
+	// convert it from int64 a few lines above. Sadly, xorm does not support
+	// "in" clauses as a function, so we have to build our own (for now).
+	if err := x.Cols("`repository`.*").
+				Where("`team_repo`.team_id in (" + strings.Join(teamIDs, ",") + ")").
+				Join("INNER", "`team_repo`", "`team_repo`.repo_id=`repository`.id").
+				GroupBy("`repository`.id").
+				Find(&org.Repos); err != nil {
+		return fmt.Errorf("get repositories: %v", err)
+	}
+
+	return
+}
+
+// GetUserRepositories gets all repositories of an organization,
+// that the user with the given userID has access to.
+func (org *User) GetUserRepositories(userID int64) (err error) {
+	return org.getUserRepositories(userID)
 }
