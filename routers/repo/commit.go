@@ -183,6 +183,7 @@ func Diff(ctx *middleware.Context) {
 		ctx.Data["BeforeSourcePath"] = setting.AppSubUrl + "/" + path.Join(userName, repoName, "src", parents[0])
 	}
 	ctx.Data["RawPath"] = setting.AppSubUrl + "/" + path.Join(userName, repoName, "raw", commitID)
+	ctx.Data["RequireHighlightJS"] = true
 	ctx.HTML(200, DIFF)
 }
 

@@ -19,6 +19,7 @@ import (
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/middleware"
 	"github.com/gogits/gogs/modules/template"
+	"github.com/gogits/gogs/modules/template/highlight"
 )
 
 const (
@@ -79,7 +80,7 @@ func Home(ctx *middleware.Context) {
 			ctx.Data["FileSize"] = blob.Size()
 			ctx.Data["IsFile"] = true
 			ctx.Data["FileName"] = blob.Name()
-			ctx.Data["HighlightClass"] = template.FileNameToHighlightClass(blob.Name())
+			ctx.Data["HighlightClass"] = highlight.FileNameToHighlightClass(blob.Name())
 			ctx.Data["FileLink"] = rawLink + "/" + treename
 
 			buf := make([]byte, 1024)
