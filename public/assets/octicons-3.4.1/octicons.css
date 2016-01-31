@@ -1,19 +1,19 @@
-// v3.3.0
-@octicons-font-path: "../fonts";
-@octicons-version:   "30e752e9a0821a0a098947055eeece0b0f46bc34";
-
 @font-face {
   font-family: 'octicons';
-  src: ~"url('@{octicons-font-path}/octicons.eot?#iefix&v=@{octicons-version}') format('embedded-opentype')",
-       ~"url('@{octicons-font-path}/octicons.woff?v=@{octicons-version}') format('woff')",
-       ~"url('@{octicons-font-path}/octicons.ttf?v=@{octicons-version}') format('truetype')",
-       ~"url('@{octicons-font-path}/octicons.svg?v=@{octicons-version}#octicons') format('svg')";
+  src: url('octicons.eot?#iefix') format('embedded-opentype'),
+       url('octicons.woff') format('woff'),
+       url('octicons.ttf') format('truetype'),
+       url('octicons.svg#octicons') format('svg');
   font-weight: normal;
   font-style: normal;
 }
 
-// .octicon is optimized for 16px.
-// .mega-octicon is optimized for 32px but can be used larger.
+/*
+
+.octicon is optimized for 16px.
+.mega-octicon is optimized for 32px but can be used larger.
+
+*/
 .octicon, .mega-octicon {
   font: normal normal normal 16px/1 octicons;
   display: inline-block;
@@ -61,7 +61,6 @@
 .octicon-cloud-download:before { content: '\f00b'} /*  */
 .octicon-cloud-upload:before { content: '\f00c'} /*  */
 .octicon-code:before { content: '\f05f'} /*  */
-.octicon-color-mode:before { content: '\f065'} /*  */
 .octicon-comment-add:before,
 .octicon-comment:before { content: '\f02b'} /*  */
 .octicon-comment-discussion:before { content: '\f04f'} /*  */
@@ -192,6 +191,7 @@
 .octicon-sign-in:before { content: '\f036'} /*  */
 .octicon-log-out:before,
 .octicon-sign-out:before { content: '\f032'} /*  */
+.octicon-smiley:before { content: '\f0e7'} /*  */
 .octicon-squirrel:before { content: '\f0b2'} /*  */
 .octicon-star-add:before,
 .octicon-star-delete:before,
@@ -217,6 +217,7 @@
 .octicon-triangle-up:before { content: '\f0aa'} /*  */
 .octicon-unfold:before { content: '\f039'} /*  */
 .octicon-unmute:before { content: '\f0ba'} /*  */
+.octicon-verified:before { content: '\f0e6'} /*  */
 .octicon-versions:before { content: '\f064'} /*  */
 .octicon-watch:before { content: '\f0e0'} /*  */
 .octicon-remove-close:before,
