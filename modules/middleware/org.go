@@ -88,9 +88,16 @@ func HandleOrgAssignment(ctx *Context, args ...bool) {
 
 	// Team.
 	if ctx.Org.IsMember {
-		if err := org.GetUserTeams(ctx.User.Id); err != nil {
-			ctx.Handle(500, "GetUserTeams", err)
-			return
+		if ctx.Org.IsOwner {
+			if err := org.GetTeams(); err != nil {
+				ctx.Handle(500, "GetUserTeams", err)
+				return
+			}
+		} else {
+			if err := org.GetUserTeams(ctx.User.Id); err != nil {
+				ctx.Handle(500, "GetUserTeams", err)
+				return
+			}
 		}
 	}
 
@@ -98,6 +105,7 @@ func HandleOrgAssignment(ctx *Context, args ...bool) {
 	if len(teamName) > 0 {
 		teamExists := false
 		for _, team := range org.Teams {
+
 			if strings.ToLower(team.Name) == strings.ToLower(teamName) {
 				teamExists = true
 				ctx.Org.Team = team
@@ -125,7 +133,6 @@ func HandleOrgAssignment(ctx *Context, args ...bool) {
 			return
 		}
 	}
-
 }
 
 func OrgAssignment(args ...bool) macaron.Handler {
