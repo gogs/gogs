@@ -25,7 +25,7 @@ func GetUserByName(ctx *middleware.Context, name string) *models.User {
 	user, err := models.GetUserByName(name)
 	if err != nil {
 		if models.IsErrUserNotExist(err) {
-			ctx.Error(404)
+			ctx.Handle(404, "GetUserByName", nil)
 		} else {
 			ctx.Handle(500, "GetUserByName", err)
 		}
