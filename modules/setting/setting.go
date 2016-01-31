@@ -48,12 +48,13 @@ var (
 	BuildGitHash string
 
 	// App settings
-	AppVer      string
-	AppName     string
-	AppUrl      string
-	AppSubUrl   string
-	AppPath     string
-	AppDataPath = "data"
+	AppVer         string
+	AppName        string
+	AppUrl         string
+	AppSubUrl      string
+	AppSubUrlDepth int // Number of slashes
+	AppPath        string
+	AppDataPath    = "data"
 
 	// Server settings
 	Protocol           Scheme
@@ -299,7 +300,9 @@ func NewContext() {
 	if err != nil {
 		log.Fatal(4, "Invalid ROOT_URL '%s': %s", AppUrl, err)
 	}
+	// Suburl should start with '/' and end without '/', such as '/{subpath}'.
 	AppSubUrl = strings.TrimSuffix(url.Path, "/")
+	AppSubUrlDepth = strings.Count(AppSubUrl, "/")
 
 	Protocol = HTTP
 	if sec.Key("PROTOCOL").String() == "https" {

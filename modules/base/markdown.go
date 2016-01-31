@@ -21,6 +21,8 @@ import (
 	"github.com/gogits/gogs/modules/setting"
 )
 
+// TODO: put this into 'markdown' module.
+
 func isletter(c byte) bool {
 	return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')
 }
@@ -187,7 +189,7 @@ func cutoutVerbosePrefix(prefix string) string {
 		if prefix[i] == '/' {
 			count++
 		}
-		if count >= 3 {
+		if count >= 3+setting.AppSubUrlDepth {
 			return prefix[:i]
 		}
 	}
