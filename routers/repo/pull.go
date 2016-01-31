@@ -362,6 +362,7 @@ func ViewPullFiles(ctx *middleware.Context) {
 	ctx.Data["SourcePath"] = setting.AppSubUrl + "/" + path.Join(headTarget, "src", endCommitID)
 	ctx.Data["BeforeSourcePath"] = setting.AppSubUrl + "/" + path.Join(headTarget, "src", startCommitID)
 	ctx.Data["RawPath"] = setting.AppSubUrl + "/" + path.Join(headTarget, "raw", endCommitID)
+	ctx.Data["RequireHighlightJS"] = true
 
 	ctx.HTML(200, PULL_FILES)
 }
@@ -538,6 +539,7 @@ func CompareAndPullRequest(ctx *middleware.Context) {
 	ctx.Data["Title"] = ctx.Tr("repo.pulls.compare_changes")
 	ctx.Data["PageIsComparePull"] = true
 	ctx.Data["IsDiffCompare"] = true
+	ctx.Data["RequireHighlightJS"] = true
 	renderAttachmentSettings(ctx)
 
 	headUser, headRepo, headGitRepo, prInfo, baseBranch, headBranch := ParseCompareInfo(ctx)
