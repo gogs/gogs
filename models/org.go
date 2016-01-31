@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"strconv"
 
 	"github.com/go-xorm/xorm"
 )
@@ -1039,14 +1040,24 @@ func (org *User) getUserRepositories(userID int64) (err error) {
 		return fmt.Errorf("getUserRepositories: get teams: %v", err)
 	}
 
-	var teamIDs []int64
+	var teamIDs []string
 	for _, team := range teams {
-		teamIDs = append(teamIDs, team.ID)
+		teamIDs = append(teamIDs, strconv.FormatInt(team.ID, 10))
+	}
+	if len(teamIDs) == 0 {
+		// user has no team but "IN ()" is invalid SQL
+		teamIDs = append(teamIDs, "0")  // there is no repo with id=0
 	}
 
+	// Due to a bug in xorm using IN() together with OR() is impossible.
+	// As a workaround, we have to build the IN statement on our own, until this is fixed.
+	// https://github.com/go-xorm/xorm/issues/342
+
 	if err := x.Cols("`repository`.*").
-				In("`team_repo`.team_id", teamIDs).
 				Join("INNER", "`team_repo`", "`team_repo`.repo_id=`repository`.id").
+				Where("`repository`.owner_id=?", org.Id).
+				And("`repository`.is_private=?", false).
+				Or("`team_repo`.team_id=(?)", strings.Join(teamIDs, ",")).
 				GroupBy("`repository`.id").
 				Find(&org.Repos); err != nil {
 		return fmt.Errorf("getUserRepositories: get repositories: %v", err)
