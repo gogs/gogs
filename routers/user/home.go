@@ -335,7 +335,7 @@ func showOrgProfile(ctx *middleware.Context) {
 	}
 	ctx.Data["Members"] = org.Members
 
-	ctx.Data["Teams"] = org.Teams // already loaded by middleware
+	ctx.Data["Teams"] = org.Teams
 
 	ctx.HTML(200, ORG_HOME)
 }
