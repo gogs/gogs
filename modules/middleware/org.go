@@ -18,7 +18,7 @@ func HandleOrgAssignment(ctx *Context, args ...bool) {
 		requireMember     bool
 		requireOwner      bool
 		requireTeamMember bool
-		requireAdminTeam  bool
+		requireTeamAdmin  bool
 	)
 	if len(args) >= 1 {
 		requireMember = args[0]
@@ -30,7 +30,7 @@ func HandleOrgAssignment(ctx *Context, args ...bool) {
 		requireTeamMember = args[2]
 	}
 	if len(args) >= 4 {
-		requireAdminTeam = args[3]
+		requireTeamAdmin = args[3]
 	}
 
 	orgName := ctx.Params(":org")
@@ -59,13 +59,13 @@ func HandleOrgAssignment(ctx *Context, args ...bool) {
 		ctx.Org.IsOwner = true
 		ctx.Org.IsMember = true
 		ctx.Org.IsTeamMember = true
-		ctx.Org.IsAdminTeam = true
+		ctx.Org.IsTeamAdmin = true
 	} else if ctx.IsSigned {
 		ctx.Org.IsOwner = org.IsOwnedBy(ctx.User.Id)
 		if ctx.Org.IsOwner {
 			ctx.Org.IsMember = true
 			ctx.Org.IsTeamMember = true
-			ctx.Org.IsAdminTeam = true
+			ctx.Org.IsTeamAdmin = true
 		} else {
 			if org.IsOrgMember(ctx.User.Id) {
 				ctx.Org.IsMember = true
@@ -118,9 +118,9 @@ func HandleOrgAssignment(ctx *Context, args ...bool) {
 			return
 		}
 
-		ctx.Org.IsAdminTeam = ctx.Org.Team.IsOwnerTeam() || ctx.Org.Team.Authorize >= models.ACCESS_MODE_ADMIN
-		ctx.Data["IsAdminTeam"] = ctx.Org.IsAdminTeam
-		if requireAdminTeam && !ctx.Org.IsAdminTeam {
+		ctx.Org.IsTeamAdmin = ctx.Org.Team.IsOwnerTeam() || ctx.Org.Team.Authorize >= models.ACCESS_MODE_ADMIN
+		ctx.Data["IsTeamAdmin"] = ctx.Org.IsTeamAdmin
+		if requireTeamAdmin && !ctx.Org.IsTeamAdmin {
 			ctx.Handle(404, "OrgAssignment", err)
 			return
 		}
