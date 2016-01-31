@@ -312,9 +312,10 @@ func showOrgProfile(ctx *middleware.Context) {
 	}
 
 	org := ctx.Org.Organization
+	userId := ctx.User.Id
 	ctx.Data["Title"] = org.FullName
 
-	if err := org.GetUserRepositories(ctx.User.Id); err != nil {
+	if err := org.GetUserRepositories(userId); err != nil {
 		ctx.Handle(500, "GetUserRepositories", err)
 		return
 	}
@@ -326,11 +327,7 @@ func showOrgProfile(ctx *middleware.Context) {
 	}
 	ctx.Data["Members"] = org.Members
 
-	if err := org.GetTeams(); err != nil {
-		ctx.Handle(500, "GetTeams", err)
-		return
-	}
-	ctx.Data["Teams"] = org.Teams
+	ctx.Data["Teams"] = org.Teams // already loaded by middleware
 
 	ctx.HTML(200, ORG_HOME)
 }

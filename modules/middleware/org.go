@@ -5,6 +5,8 @@
 package middleware
 
 import (
+	"strings"
+
 	"gopkg.in/macaron.v1"
 
 	"github.com/gogits/gogs/models"
@@ -13,9 +15,10 @@ import (
 
 func HandleOrgAssignment(ctx *Context, args ...bool) {
 	var (
-		requireMember    bool
-		requireOwner     bool
-		requireAdminTeam bool
+		requireMember     bool
+		requireOwner      bool
+		requireTeamMember bool
+		requireAdminTeam  bool
 	)
 	if len(args) >= 1 {
 		requireMember = args[0]
@@ -24,7 +27,10 @@ func HandleOrgAssignment(ctx *Context, args ...bool) {
 		requireOwner = args[1]
 	}
 	if len(args) >= 3 {
-		requireAdminTeam = args[2]
+		requireTeamMember = args[2]
+	}
+	if len(args) >= 4 {
+		requireAdminTeam = args[3]
 	}
 
 	orgName := ctx.Params(":org")
@@ -52,11 +58,13 @@ func HandleOrgAssignment(ctx *Context, args ...bool) {
 	if ctx.IsSigned && ctx.User.IsAdmin {
 		ctx.Org.IsOwner = true
 		ctx.Org.IsMember = true
+		ctx.Org.IsTeamMember = true
 		ctx.Org.IsAdminTeam = true
 	} else if ctx.IsSigned {
 		ctx.Org.IsOwner = org.IsOwnedBy(ctx.User.Id)
 		if ctx.Org.IsOwner {
 			ctx.Org.IsMember = true
+			ctx.Org.IsTeamMember = true
 			ctx.Org.IsAdminTeam = true
 		} else {
 			if org.IsOrgMember(ctx.User.Id) {
@@ -79,25 +87,45 @@ func HandleOrgAssignment(ctx *Context, args ...bool) {
 	ctx.Data["OrgLink"] = ctx.Org.OrgLink
 
 	// Team.
-	teamName := ctx.Params(":team")
-	if len(teamName) > 0 {
-		ctx.Org.Team, err = org.GetTeam(teamName)
-		if err != nil {
-			if err == models.ErrTeamNotExist {
-				ctx.Handle(404, "GetTeam", err)
-			} else {
-				ctx.Handle(500, "GetTeam", err)
-			}
+	if ctx.Org.IsMember {
+		if err := org.GetUserTeams(ctx.User.Id); err != nil {
+			ctx.Handle(500, "GetUserTeams", err)
 			return
 		}
-		ctx.Data["Team"] = ctx.Org.Team
+	}
+
+	teamName := ctx.Params(":team")
+	if len(teamName) > 0 {
+		teamExists := false
+		for _, team := range org.Teams {
+			if strings.ToLower(team.Name) == strings.ToLower(teamName) {
+				teamExists = true
+				ctx.Org.Team = team
+				ctx.Org.IsTeamMember = true
+				ctx.Data["Team"] = ctx.Org.Team
+				break
+			}
+		}
+
+		if !teamExists {
+			ctx.Handle(404, "OrgAssignment", err)
+			return
+		}
+
+		ctx.Data["IsTeamMember"] = ctx.Org.IsTeamMember
+		if requireTeamMember && !ctx.Org.IsTeamMember {
+			ctx.Handle(404, "OrgAssignment", err)
+			return
+		}
+
 		ctx.Org.IsAdminTeam = ctx.Org.Team.IsOwnerTeam() || ctx.Org.Team.Authorize >= models.ACCESS_MODE_ADMIN
+		ctx.Data["IsAdminTeam"] = ctx.Org.IsAdminTeam
+		if requireAdminTeam && !ctx.Org.IsAdminTeam {
+			ctx.Handle(404, "OrgAssignment", err)
+			return
+		}
 	}
-	ctx.Data["IsAdminTeam"] = ctx.Org.IsAdminTeam
-	if requireAdminTeam && !ctx.Org.IsAdminTeam {
-		ctx.Handle(404, "OrgAssignment", err)
-		return
-	}
+
 }
 
 func OrgAssignment(args ...bool) macaron.Handler {
