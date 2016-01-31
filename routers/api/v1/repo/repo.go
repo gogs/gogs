@@ -299,6 +299,11 @@ func Delete(ctx *middleware.Context) {
 
 func GiveUserAccess(ctx *middleware.Context, form api.CreateAccessOption) {
 	_, repo := parseOwnerAndRepo(ctx)
+
+	if ctx.Written() {
+		return
+	}
+
 	u, err := models.GetUserByName(form.Username)
 
 	if err != nil {
@@ -307,7 +312,8 @@ func GiveUserAccess(ctx *middleware.Context, form api.CreateAccessOption) {
 	}
 	err = repo.AddCollaborator(u)
 
-	if ctx.Written() {
+	if err != nil {
+		ctx.APIError(500, "Add Collaberator", err)
 		return
 	}
 
@@ -317,6 +323,11 @@ func GiveUserAccess(ctx *middleware.Context, form api.CreateAccessOption) {
 
 func RemoveUserAccess(ctx *middleware.Context) {
 	owner, repo := parseOwnerAndRepo(ctx)
+
+	if ctx.Written() {
+		return
+	}
+
 	repo.Owner = owner
 
 	u, err := models.GetUserByName(ctx.Params(":user"))
@@ -325,9 +336,11 @@ func RemoveUserAccess(ctx *middleware.Context) {
 		ctx.APIError(404, "user does not exist", err)
 		return
 	}
+
 	err = repo.DeleteCollaborator(u)
 
-	if ctx.Written() {
+	if err != nil {
+		ctx.APIError(500, "delete collab", err)
 		return
 	}
 
