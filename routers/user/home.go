@@ -183,11 +183,18 @@ func Issues(ctx *middleware.Context) {
 	isShowClosed := ctx.Query("state") == "closed"
 
 	// Get repositories.
-	repos, err := models.GetRepositories(ctxUser.Id, true)
-	if err != nil {
-		ctx.Handle(500, "GetRepositories", err)
-		return
+	if ctxUser.IsOrganization() {
+		if err := ctxUser.GetUserRepositories(ctx.User.Id); err != nil {
+			ctx.Handle(500, "GetRepositories", err)
+			return
+		}
+	} else {
+		if err := ctxUser.GetRepositories(); err != nil {
+			ctx.Handle(500, "GetRepositories", err)
+			return
+		}
 	}
+	repos := ctxUser.Repos
 
 	allCount := 0
 	repoIDs := make([]int64, 0, len(repos))
