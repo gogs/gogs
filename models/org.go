@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"strconv"
 
 	"github.com/go-xorm/xorm"
 )
@@ -1037,31 +1036,49 @@ func (org *User) getUserRepositories(userID int64) (err error) {
 				And("`team_user`.uid=?", userID).
 				Join("INNER", "`team_user`", "`team_user`.team_id=`team`.id").
 				Find(&teams); err != nil {
-		return fmt.Errorf("get team: %v", err)
+		return fmt.Errorf("getUserRepositories: get teams: %v", err)
 	}
 
-	var teamIDs []string
+	var teamIDs []int64
 	for _, team := range teams {
-		s := strconv.FormatInt(team.ID, 32)
-		teamIDs = append(teamIDs, s)
+		teamIDs = append(teamIDs, team.ID)
 	}
 
-	// The "in" clause it not vulnerable to SQL injection because we
-	// convert it from int64 a few lines above. Sadly, xorm does not support
-	// "in" clauses as a function, so we have to build our own (for now).
 	if err := x.Cols("`repository`.*").
-				Where("`team_repo`.team_id in (" + strings.Join(teamIDs, ",") + ")").
+				In("`team_repo`.team_id", teamIDs).
 				Join("INNER", "`team_repo`", "`team_repo`.repo_id=`repository`.id").
 				GroupBy("`repository`.id").
 				Find(&org.Repos); err != nil {
-		return fmt.Errorf("get repositories: %v", err)
+		return fmt.Errorf("getUserRepositories: get repositories: %v", err)
 	}
+
+	org.NumRepos = len(org.Repos)
 
 	return
 }
 
 // GetUserRepositories gets all repositories of an organization,
 // that the user with the given userID has access to.
-func (org *User) GetUserRepositories(userID int64) (err error) {
+func (org *User) GetUserRepositories(userID int64) error {
 	return org.getUserRepositories(userID)
+}
+
+func (org *User) getUserTeams(userID int64) (err error) {
+	if err := x.Cols("`team`.*").
+				Where("`team_user`.org_id=?", org.Id).
+				And("`team_user`.uid=?", userID).
+				Join("INNER", "`team_user`", "`team_user`.team_id=`team`.id").
+				Find(&org.Teams); err != nil {
+		return fmt.Errorf("getUserTeams: %v", err)
+	}
+
+	org.NumTeams = len(org.Teams)
+
+	return
+}
+
+// GetTeams returns all teams that belong to organization,
+// and that the user has joined.
+func (org *User) GetUserTeams(userID int64) error {
+	return org.getUserTeams(userID)
 }
