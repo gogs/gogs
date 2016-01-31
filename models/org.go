@@ -1046,7 +1046,7 @@ func (org *User) getUserRepositories(userID int64) (err error) {
 	}
 	if len(teamIDs) == 0 {
 		// user has no team but "IN ()" is invalid SQL
-		teamIDs = append(teamIDs, "0")  // there is no repo with id=0
+		teamIDs = append(teamIDs, "-1")  // there is no repo with id=-1
 	}
 
 	// Due to a bug in xorm using IN() together with OR() is impossible.
