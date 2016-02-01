@@ -18,6 +18,9 @@ function initCommentPreviewTab($form) {
                 var $preview_tab = $form.find('.tab.segment[data-tab="' + $tab_menu.data('preview') + '"]');
                 $preview_tab.html(data);
                 emojify.run($preview_tab[0]);
+                $('pre code', $preview_tab[0]).each(function(i, block) {
+                    hljs.highlightBlock(block);
+                });
             }
         );
     });
