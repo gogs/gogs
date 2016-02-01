@@ -374,6 +374,11 @@ func rewriteAuthorizedKeys(key *PublicKey, p, tmpP string) error {
 			break
 		}
 	}
+
+	if !isFound {
+		log.Warn("SSH key %d not found in authorized_keys file for deletion", key.ID)
+	}
+
 	return nil
 }
 
