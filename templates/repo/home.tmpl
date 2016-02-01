@@ -35,7 +35,7 @@
 			{{if eq $n 0}}
 				<div class="right fitted item">
 					<div class="ui action small input" id="clone-panel">
-						<button class="ui blue basic clone button" id="repo-clone-https" data-link="{{.CloneLink.HTTPS}}">
+						<button class="ui basic clone button" id="repo-clone-https" data-link="{{.CloneLink.HTTPS}}">
 							{{if UseHTTPS}}HTTPS{{else}}HTTP{{end}}
 						</button>
 						{{if not $.DisableSSH}}
