@@ -29,7 +29,7 @@
 							{{range .Repos}}
 								<li {{if .IsPrivate}}class="private"{{end}}>
 									<a href="{{AppSubUrl}}/{{$.ContextUser.Name}}/{{.Name}}">
-										<i class="icon octicon octicon-{{if .IsPrivate}}lock{{else if .IsFork}}repo-forked{{else if .IsMirror}}repo-clone{{else}}repo{{end}}"></i>
+										<i class="icon octicon octicon-{{if .IsFork}}repo-forked{{else if .IsPrivate}}lock{{else if .IsMirror}}repo-clone{{else}}repo{{end}}"></i>
 										<strong class="text truncate item-name">{{.Name}}</strong>
 										<span class="ui right text light grey">
 											<i class="octicon octicon-star"></i>{{.NumStars}}
