@@ -51,7 +51,7 @@ func handleServerConn(keyID string, chans <-chan ssh.NewChannel) {
 				case "env":
 					args := strings.Split(strings.Replace(payload, "\x00", "", -1), "\v")
 					if len(args) != 2 {
-						log.Warn("Invalid env arguments: '%#v'", args)
+						log.Warn("SSH: Invalid env arguments: '%#v'", args)
 						continue
 					}
 					args[0] = strings.TrimLeft(args[0], "\x04")
@@ -63,31 +63,31 @@ func handleServerConn(keyID string, chans <-chan ssh.NewChannel) {
 				case "exec":
 					cmdName := strings.TrimLeft(payload, "'()")
 					os.Setenv("SSH_ORIGINAL_COMMAND", cmdName)
-					log.Trace("Payload: %v", cmdName)
+					log.Trace("SSH: Payload: %v", cmdName)
 
 					args := []string{"serv", "key-" + keyID, "--config=" + setting.CustomConf}
-					log.Trace("Arguments: %v", args)
+					log.Trace("SSH: Arguments: %v", args)
 					cmd := exec.Command(setting.AppPath, args...)
 
 					stdout, err := cmd.StdoutPipe()
 					if err != nil {
-						log.Error(3, "StdoutPipe: %v", err)
+						log.Error(3, "SSH: StdoutPipe: %v", err)
 						return
 					}
 					stderr, err := cmd.StderrPipe()
 					if err != nil {
-						log.Error(3, "StderrPipe: %v", err)
+						log.Error(3, "SSH: StderrPipe: %v", err)
 						return
 					}
 					input, err := cmd.StdinPipe()
 					if err != nil {
-						log.Error(3, "StdinPipe: %v", err)
+						log.Error(3, "SSH: StdinPipe: %v", err)
 						return
 					}
 
 					// FIXME: check timeout
 					if err = cmd.Start(); err != nil {
-						log.Error(3, "Start: %v", err)
+						log.Error(3, "SSH: Start: %v", err)
 						return
 					}
 
@@ -97,7 +97,7 @@ func handleServerConn(keyID string, chans <-chan ssh.NewChannel) {
 					io.Copy(ch.Stderr(), stderr)
 
 					if err = cmd.Wait(); err != nil {
-						log.Error(3, "Wait: %v", err)
+						log.Error(3, "SSH: Wait: %v", err)
 						return
 					}
 
@@ -119,21 +119,34 @@ func listen(config *ssh.ServerConfig, port int) {
 		// Once a ServerConfig has been configured, connections can be accepted.
 		conn, err := listener.Accept()
 		if err != nil {
-			log.Error(3, "Error accepting incoming connection: %v", err)
-			continue
-		}
-		// Before use, a handshake must be performed on the incoming net.Conn.
-		sConn, chans, reqs, err := ssh.NewServerConn(conn, config)
-		if err != nil {
-			log.Error(3, "Error on handshaking: %v", err)
+			log.Error(3, "SSH: Error accepting incoming connection: %v", err)
 			continue
 		}
 
-		log.Trace("Connection from %s (%s)", sConn.RemoteAddr(), sConn.ClientVersion())
-		// The incoming Request channel must be serviced.
-		go ssh.DiscardRequests(reqs)
-		go handleServerConn(sConn.Permissions.Extensions["key-id"], chans)
+		// Before use, a handshake must be performed on the incoming net.Conn.
+		// It must be handled in a separate goroutine,
+		// otherwise one user could easily block entire loop.
+		// For example, user could be asked to trust server key fingerprint and hangs.
+		go func() {
+			log.Trace("SSH: Handshaking for %s", conn.RemoteAddr())
+			sConn, chans, reqs, err := ssh.NewServerConn(conn, config)
+			if err != nil {
+				if err == io.EOF {
+					log.Warn("SSH: Handshaking was terminated: %v", err)
+				} else {
+					log.Error(3, "SSH: Error on handshaking: %v", err)
+				}
+				return
+			}
+
+			log.Trace("SSH: Connection from %s (%s)", sConn.RemoteAddr(), sConn.ClientVersion())
+			// The incoming Request channel must be serviced.
+			go ssh.DiscardRequests(reqs)
+			go handleServerConn(sConn.Permissions.Extensions["key-id"], chans)
+		}()
 	}
+
+	panic("SSH: Unexpected exit of listen loop")
 }
 
 // Listen starts a SSH server listens on given port.
@@ -156,16 +169,16 @@ func Listen(port int) {
 		if err != nil {
 			panic(fmt.Sprintf("Fail to generate private key: %v - %s", err, stderr))
 		}
-		log.Trace("New private key is generateed: %s", keyPath)
+		log.Trace("SSH: New private key is generateed: %s", keyPath)
 	}
 
 	privateBytes, err := ioutil.ReadFile(keyPath)
 	if err != nil {
-		panic("Fail to load private key")
+		panic("SSH: Fail to load private key")
 	}
 	private, err := ssh.ParsePrivateKey(privateBytes)
 	if err != nil {
-		panic("Fail to parse private key")
+		panic("SSH: Fail to parse private key")
 	}
 	config.AddHostKey(private)
 
