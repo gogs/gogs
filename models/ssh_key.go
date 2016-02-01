@@ -165,6 +165,9 @@ func CheckPublicKeyString(content string) (_ string, err error) {
 		return "", errors.New("only a single line with a single key please")
 	}
 
+	// remove any unnecessary whitespace now
+	content = strings.TrimSpace(content)
+
 	fields := strings.Fields(content)
 	if len(fields) < 2 {
 		return "", errors.New("too less fields")
