@@ -385,6 +385,9 @@ function initRepository() {
                             } else {
                                 $render_content.html(data.content);
                                 emojify.run($render_content[0]);
+                                $('pre code', $render_content[0]).each(function(i, block) {
+                                    hljs.highlightBlock(block);
+                                });
                             }
                         });
                 });
