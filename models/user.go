@@ -16,7 +16,6 @@ import (
 	_ "image/jpeg"
 	"image/png"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -211,7 +210,7 @@ func (u *User) GenerateRandomAvatar() error {
 	if err != nil {
 		return fmt.Errorf("RandomImage: %v", err)
 	}
-	if err = os.MkdirAll(path.Dir(u.CustomAvatarPath()), os.ModePerm); err != nil {
+	if err = os.MkdirAll(filepath.Dir(u.CustomAvatarPath()), os.ModePerm); err != nil {
 		return fmt.Errorf("MkdirAll: %v", err)
 	}
 	fw, err := os.Create(u.CustomAvatarPath())
