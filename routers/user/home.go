@@ -109,10 +109,20 @@ func Dashboard(ctx *middleware.Context) {
 		ctx.Data["CollaborativeRepos"] = collaborateRepos
 	}
 
-	repos, err := models.GetRepositories(ctxUser.Id, true)
-	if err != nil {
-		ctx.Handle(500, "GetRepositories", err)
-		return
+	var repos []*models.Repository
+	if ctxUser.IsOrganization() {
+		if err := ctxUser.GetUserRepositories(ctx.User.Id); err != nil {
+			ctx.Handle(500, "GetUserRepositories", err)
+			return
+		}
+		repos = ctxUser.Repos
+	} else {
+		var err error
+		repos, err = models.GetRepositories(ctxUser.Id, true)
+		if err != nil {
+			ctx.Handle(500, "GetRepositories", err)
+			return
+		}
 	}
 	ctx.Data["Repos"] = repos
 
@@ -120,7 +130,7 @@ func Dashboard(ctx *middleware.Context) {
 	mirrors := make([]*models.Repository, 0, 5)
 	for _, repo := range repos {
 		if repo.IsMirror {
-			if err = repo.GetMirror(); err != nil {
+			if err := repo.GetMirror(); err != nil {
 				ctx.Handle(500, "GetMirror: "+repo.Name, err)
 				return
 			}
