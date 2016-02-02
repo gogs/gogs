@@ -591,12 +591,14 @@ func ViewIssue(ctx *middleware.Context) {
 	}
 
 	var (
-		tag     models.CommentTag
-		ok      bool
-		marked  = make(map[int64]models.CommentTag)
-		comment *models.Comment
+		tag          models.CommentTag
+		ok           bool
+		marked       = make(map[int64]models.CommentTag)
+		comment      *models.Comment
+		participants []*models.User
 	)
-	// Render comments.
+	participants = append(participants, issue.Poster)
+	// Render comments. (and fetch participants)
 	for _, comment = range issue.Comments {
 		if comment.Type == models.COMMENT_TYPE_COMMENT {
 			comment.RenderedContent = string(base.RenderMarkdown([]byte(comment.Content), ctx.Repo.RepoLink,
@@ -619,9 +621,21 @@ func ViewIssue(ctx *middleware.Context) {
 			}
 
 			marked[comment.PosterID] = comment.ShowTag
+
+			isAdded := false
+			for j := range participants {
+				if comment.Poster == participants[j] {
+					isAdded = true
+					break
+				}
+			}
+			if !isAdded && !issue.IsPoster(comment.Poster.Id) {
+				participants = append(participants, comment.Poster)
+			}
 		}
 	}
 
+	ctx.Data["Participants"] = participants
 	ctx.Data["Issue"] = issue
 	ctx.Data["IsIssueOwner"] = ctx.Repo.IsAdmin() || (ctx.IsSigned && issue.IsPoster(ctx.User.Id))
 	ctx.Data["SignInLink"] = setting.AppSubUrl + "/user/login"
