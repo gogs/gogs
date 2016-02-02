@@ -183,7 +183,10 @@ func RegisterRoutes(m *macaron.Macaron) {
 				m.Patch("/hooks/:id:int", bind(api.EditHookOption{}), repo.EditHook)
 				m.Get("/raw/*", middleware.RepoRef(), repo.GetRawFile)
 				m.Get("/archive/*", repo.GetArchive)
-
+				m.Group("/branches", func() {
+					m.Get("",repo.ListBranches)
+					m.Get("/:branchname",repo.GetBranch)
+				})
 				m.Group("/keys", func() {
 					m.Combo("").Get(repo.ListDeployKeys).
 						Post(bind(api.CreateKeyOption{}), repo.CreateDeployKey)
