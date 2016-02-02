@@ -1450,6 +1450,10 @@ footer .container .links > *:first-child {
 .repository.view.issue .ui.segment.metas {
   margin-top: -3px;
 }
+.repository.view.issue .ui.participants img {
+  margin-top: 5px;
+  margin-right: 5px;
+}
 .repository .comment.form .ui.comments {
   margin-top: -12px;
   max-width: 100%;

@@ -595,10 +595,11 @@ func ViewIssue(ctx *middleware.Context) {
 		ok           bool
 		marked       = make(map[int64]models.CommentTag)
 		comment      *models.Comment
-		participants []*models.User
+		participants = make([]*models.User, 1, 10)
 	)
-	participants = append(participants, issue.Poster)
-	// Render comments. (and fetch participants)
+
+	// Render comments and and fetch participants.
+	participants[0] = issue.Poster
 	for _, comment = range issue.Comments {
 		if comment.Type == models.COMMENT_TYPE_COMMENT {
 			comment.RenderedContent = string(base.RenderMarkdown([]byte(comment.Content), ctx.Repo.RepoLink,
@@ -636,6 +637,7 @@ func ViewIssue(ctx *middleware.Context) {
 	}
 
 	ctx.Data["Participants"] = participants
+	ctx.Data["NumParticipants"] = len(participants)
 	ctx.Data["Issue"] = issue
 	ctx.Data["IsIssueOwner"] = ctx.Repo.IsAdmin() || (ctx.IsSigned && issue.IsPoster(ctx.User.Id))
 	ctx.Data["SignInLink"] = setting.AppSubUrl + "/user/login"
