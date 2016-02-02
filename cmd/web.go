@@ -516,7 +516,7 @@ func runWeb(ctx *cli.Context) {
 			m.Get("/forks", repo.Forks)
 		}, middleware.RepoRef())
 
-		m.Get("/compare/:before([a-z0-9]{40})...:after([a-z0-9]{40})", repo.CompareDiff)
+		m.Get("/compare/:before([a-z0-9]{40})\\.\\.\\.:after([a-z0-9]{40})", repo.CompareDiff)
 	}, ignSignIn, middleware.RepoAssignment(), repo.MustBeNotBare)
 	m.Group("/:username/:reponame", func() {
 		m.Get("/stars", repo.Stars)
