@@ -9,8 +9,8 @@ import (
 )
 
 type Branch struct {
-	Path		string
-	Name      	string
+	Path string
+	Name string
 }
 
 func GetBranchesByPath(path string) ([]*Branch, error) {
@@ -24,14 +24,28 @@ func GetBranchesByPath(path string) ([]*Branch, error) {
 		return nil, err
 	}
 
-	Branches := make([]*Branch, len(brs))
+	branches := make([]*Branch, len(brs))
 	for i := range brs {
-		Branches[i] = &Branch{
+		branches[i] = &Branch{
 			Path: path,
 			Name: brs[i],
 		}
 	}
-	return Branches, nil
+	return branches, nil
+}
+
+func (repo *Repository) GetBranch(br string) (*Branch, error) {
+	if !git.IsBranchExist(repo.RepoPath(), br) {
+		return nil, &ErrBranchNotExist{br}
+	}
+	return &Branch{
+		Path: repo.RepoPath(),
+		Name: br,
+	}, nil
+}
+
+func (repo *Repository) GetBranches() ([]*Branch, error) {
+	return GetBranchesByPath(repo.RepoPath())
 }
 
 func (br *Branch) GetCommit() (*git.Commit, error) {

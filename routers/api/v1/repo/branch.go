@@ -11,45 +11,40 @@ import (
 	"github.com/gogits/gogs/routers/api/v1/convert"
 )
 
-// Temporary: https://gist.github.com/sapk/df64347ff218baf4a277#get-a-branch
-// https://github.com/gogits/go-gogs-client/wiki/Repositories-Branches#get-a-branch
+// https://github.com/gogits/go-gogs-client/wiki/Repositories#get-branch
 func GetBranch(ctx *middleware.Context) {
-	// Getting the branch requested
 	branch, err := ctx.Repo.Repository.GetBranch(ctx.Params(":branchname"))
 	if err != nil {
-		ctx.APIError(500, "Repository.GetBranch", err)
+		ctx.APIError(500, "GetBranch", err)
 		return
 	}
-	// Getting the last commit of the branch
+
 	c, err := branch.GetCommit()
 	if err != nil {
-		ctx.APIError(500, "Branch.GetCommit", err)
+		ctx.APIError(500, "GetCommit", err)
 		return
 	}
-	// Converting to API format and send payload
-	ctx.JSON(200, convert.ToApiBranch(branch,c))
+
+	ctx.JSON(200, convert.ToApiBranch(branch, c))
 }
 
-// Temporary: https://gist.github.com/sapk/df64347ff218baf4a277#list-branches
-// https://github.com/gogits/go-gogs-client/wiki/Repositories-Branches#list-branches
+// https://github.com/gogits/go-gogs-client/wiki/Repositories#list-branches
 func ListBranches(ctx *middleware.Context) {
-	// Listing of branches
-	Branches, err := ctx.Repo.Repository.GetBranches()
+	branches, err := ctx.Repo.Repository.GetBranches()
 	if err != nil {
-		ctx.APIError(500, "Repository.GetBranches", err)
+		ctx.APIError(500, "GetBranches", err)
 		return
 	}
-	// Getting the last commit of each branch
-	apiBranches := make([]*api.Branch, len(Branches))
-	for i := range Branches {
-		c, err := Branches[i].GetCommit()
+
+	apiBranches := make([]*api.Branch, len(branches))
+	for i := range branches {
+		c, err := branches[i].GetCommit()
 		if err != nil {
-			ctx.APIError(500, "Branch.GetCommit", err)
+			ctx.APIError(500, "GetCommit", err)
 			return
 		}
-		// Converting to API format
-		apiBranches[i] = convert.ToApiBranch(Branches[i],c)
+		apiBranches[i] = convert.ToApiBranch(branches[i], c)
 	}
-	// Sending the payload
+
 	ctx.JSON(200, &apiBranches)
 }
