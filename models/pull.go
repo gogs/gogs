@@ -256,6 +256,7 @@ var patchConflicts = []string{
 	"patch does not apply",
 	"already exists in working directory",
 	"unrecognized input",
+	"error:",
 }
 
 // testPatch checks if patch can be merged to base repository without conflit.
@@ -279,7 +280,7 @@ func (pr *PullRequest) testPatch() (err error) {
 		return nil
 	}
 
-	log.Trace("PullRequest[%d].testPatch(patchPath): %s", pr.ID, patchPath)
+	log.Trace("PullRequest[%d].testPatch (patchPath): %s", pr.ID, patchPath)
 
 	if err := pr.BaseRepo.UpdateLocalCopy(); err != nil {
 		return fmt.Errorf("UpdateLocalCopy: %v", err)
@@ -287,7 +288,7 @@ func (pr *PullRequest) testPatch() (err error) {
 
 	// Checkout base branch.
 	_, stderr, err := process.ExecDir(-1, pr.BaseRepo.LocalCopyPath(),
-		fmt.Sprintf("PullRequest.Merge(git checkout): %v", pr.BaseRepo.ID),
+		fmt.Sprintf("PullRequest.Merge (git checkout): %v", pr.BaseRepo.ID),
 		"git", "checkout", pr.BaseBranch)
 	if err != nil {
 		return fmt.Errorf("git checkout: %s", stderr)
@@ -295,12 +296,12 @@ func (pr *PullRequest) testPatch() (err error) {
 
 	pr.Status = PULL_REQUEST_STATUS_CHECKING
 	_, stderr, err = process.ExecDir(-1, pr.BaseRepo.LocalCopyPath(),
-		fmt.Sprintf("testPatch(git apply --check): %d", pr.BaseRepo.ID),
+		fmt.Sprintf("testPatch (git apply --check): %d", pr.BaseRepo.ID),
 		"git", "apply", "--check", patchPath)
 	if err != nil {
 		for i := range patchConflicts {
 			if strings.Contains(stderr, patchConflicts[i]) {
-				log.Trace("PullRequest[%d].testPatch(apply): has conflit", pr.ID)
+				log.Trace("PullRequest[%d].testPatch (apply): has conflit", pr.ID)
 				fmt.Println(stderr)
 				pr.Status = PULL_REQUEST_STATUS_CONFLICT
 				return nil
