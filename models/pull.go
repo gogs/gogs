@@ -5,7 +5,6 @@
 package models
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"path"
@@ -395,44 +394,6 @@ func GetUnmergedPullRequestsByBaseInfo(repoID int64, branch string) ([]*PullRequ
 	return prs, x.Where("base_repo_id=? AND base_branch=? AND has_merged=? AND issue.is_closed=?",
 		repoID, branch, false, false).
 		Join("INNER", "issue", "issue.id=pull_request.issue_id").Find(&prs)
-}
-
-// Gets a Pull Request by the path of the forked repo and the branch from where the PR
-// got submitted.
-func GetUnmergedPullRequestByRepoPathAndHeadBranch(user, repo, branch string) (*PullRequest, error) {
-	userLower := strings.ToLower(user)
-	repoLower := strings.ToLower(repo)
-
-	pr := new(PullRequest)
-	if x == nil {
-		return nil, errors.New("Fail")
-	}
-	has, err := x.
-		Where("head_user_name=? AND head_branch=? AND has_merged=? AND issue.is_closed=? AND repository.lower_name=?", userLower, branch, 0, 0, repoLower).
-		Join("INNER", "repository", "repository.id=pull_request.head_repo_id").
-		Join("INNER", "issue", "issue.id=pull_request.issue_id").
-		Get(pr)
-
-	if err != nil {
-		return nil, err
-	} else if !has {
-		return nil, ErrPullRequestNotExist{0, 0, 0, 0, branch, ""}
-	}
-
-	baseRepo := new(Repository)
-	has, err = x.Where("repository.id=?", pr.BaseRepoID).
-		Join("LEFT", "user", "user.id=repository.owner_id").
-		Get(baseRepo)
-
-	if err != nil {
-		return nil, err
-	} else if !has {
-		return nil, ErrRepoNotExist{pr.BaseRepoID, 0, ""}
-	}
-
-	pr.BaseRepo = baseRepo
-
-	return pr, nil
 }
 
 // GetPullRequestByID returns a pull request by given ID.
