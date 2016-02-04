@@ -28,10 +28,6 @@ func Teams(ctx *middleware.Context) {
 	ctx.Data["Title"] = org.FullName
 	ctx.Data["PageIsOrgTeams"] = true
 
-	if err := org.GetTeams(); err != nil {
-		ctx.Handle(500, "GetTeams", err)
-		return
-	}
 	for _, t := range org.Teams {
 		if err := t.GetMembers(); err != nil {
 			ctx.Handle(500, "GetMembers", err)
