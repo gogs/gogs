@@ -350,11 +350,14 @@ func runWeb(ctx *cli.Context) {
 			m.Get("/members/action/:action", org.MembersAction)
 
 			m.Get("/teams", org.Teams)
+		}, middleware.OrgAssignment(true))
+
+		m.Group("/:org", func() {
 			m.Get("/teams/:team", org.TeamMembers)
 			m.Get("/teams/:team/repositories", org.TeamRepositories)
 			m.Route("/teams/:team/action/:action", "GET,POST", org.TeamsAction)
 			m.Route("/teams/:team/action/repo/:action", "GET,POST", org.TeamsRepoAction)
-		}, middleware.OrgAssignment(true))
+		}, middleware.OrgAssignment(true, false, true))
 
 		m.Group("/:org", func() {
 			m.Get("/teams/new", org.NewTeam)

@@ -183,11 +183,18 @@ func Issues(ctx *middleware.Context) {
 	isShowClosed := ctx.Query("state") == "closed"
 
 	// Get repositories.
-	repos, err := models.GetRepositories(ctxUser.Id, true)
-	if err != nil {
-		ctx.Handle(500, "GetRepositories", err)
-		return
+	if ctxUser.IsOrganization() {
+		if err := ctxUser.GetUserRepositories(ctx.User.Id); err != nil {
+			ctx.Handle(500, "GetRepositories", err)
+			return
+		}
+	} else {
+		if err := ctxUser.GetRepositories(); err != nil {
+			ctx.Handle(500, "GetRepositories", err)
+			return
+		}
 	}
+	repos := ctxUser.Repos
 
 	allCount := 0
 	repoIDs := make([]int64, 0, len(repos))
@@ -314,23 +321,27 @@ func showOrgProfile(ctx *middleware.Context) {
 	org := ctx.Org.Organization
 	ctx.Data["Title"] = org.FullName
 
-	repos, err := models.GetRepositories(org.Id, ctx.IsSigned && (ctx.User.IsAdmin || org.IsOrgMember(ctx.User.Id)))
-	if err != nil {
-		ctx.Handle(500, "GetRepositories", err)
-		return
+	if ctx.IsSigned {
+		if err := org.GetUserRepositories(ctx.User.Id); err != nil {
+			ctx.Handle(500, "GetUserRepositories", err)
+			return
+		}
+		ctx.Data["Repos"] = org.Repos
+	} else {
+		repos, err := models.GetRepositories(org.Id, false)
+		if err != nil {
+			ctx.Handle(500, "GetRepositories", err)
+			return
+		}
+		ctx.Data["Repos"] = repos
 	}
-	ctx.Data["Repos"] = repos
 
-	if err = org.GetMembers(); err != nil {
+	if err := org.GetMembers(); err != nil {
 		ctx.Handle(500, "GetMembers", err)
 		return
 	}
 	ctx.Data["Members"] = org.Members
 
-	if err = org.GetTeams(); err != nil {
-		ctx.Handle(500, "GetTeams", err)
-		return
-	}
 	ctx.Data["Teams"] = org.Teams
 
 	ctx.HTML(200, ORG_HOME)
