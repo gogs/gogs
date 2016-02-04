@@ -328,12 +328,12 @@ func showOrgProfile(ctx *middleware.Context) {
 		}
 		ctx.Data["Repos"] = org.Repos
 	} else {
-		if repos, err := models.GetRepositories(org.Id, false); err != nil {
+		repos, err := models.GetRepositories(org.Id, false)
+		if err != nil {
 			ctx.Handle(500, "GetRepositories", err)
 			return
-		} else {
-			ctx.Data["Repos"] = repos
 		}
+		ctx.Data["Repos"] = repos
 	}
 
 	if err := org.GetMembers(); err != nil {
