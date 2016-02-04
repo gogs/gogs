@@ -1030,7 +1030,9 @@ func RemoveOrgRepo(orgID, repoID int64) error {
 	return removeOrgRepo(x, orgID, repoID)
 }
 
-func (org *User) getUserRepositories(userID int64) (err error) {
+// GetUserRepositories gets all repositories of an organization,
+// that the user with the given userID has access to.
+func (org *User) GetUserRepositories(userID int64) (err error) {
 	teams := make([]*Team, 0, 10)
 	if err := x.Cols("`team`.id").
 				Where("`team_user`.org_id=?", org.Id).
@@ -1068,13 +1070,9 @@ func (org *User) getUserRepositories(userID int64) (err error) {
 	return
 }
 
-// GetUserRepositories gets all repositories of an organization,
-// that the user with the given userID has access to.
-func (org *User) GetUserRepositories(userID int64) error {
-	return org.getUserRepositories(userID)
-}
-
-func (org *User) getUserTeams(userID int64) (err error) {
+// GetTeams returns all teams that belong to organization,
+// and that the user has joined.
+func (org *User) GetUserTeams(userID int64) (err error) {
 	if err := x.Cols("`team`.*").
 				Where("`team_user`.org_id=?", org.Id).
 				And("`team_user`.uid=?", userID).
@@ -1086,10 +1084,4 @@ func (org *User) getUserTeams(userID int64) (err error) {
 	org.NumTeams = len(org.Teams)
 
 	return
-}
-
-// GetTeams returns all teams that belong to organization,
-// and that the user has joined.
-func (org *User) GetUserTeams(userID int64) error {
-	return org.getUserTeams(userID)
 }
