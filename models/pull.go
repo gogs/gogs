@@ -21,6 +21,7 @@ import (
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/process"
 	"github.com/gogits/gogs/modules/setting"
+	"strconv"
 )
 
 type PullRequestType int
@@ -520,6 +521,40 @@ func (pr *PullRequest) UpdatePatch() (err error) {
 	return nil
 }
 
+func (pr *PullRequest) PushToBaseRepo() (err error) {
+	log.Trace("PushToBase[%d]: pushing commits to base repo refs/pull/%d/head", pr.ID, pr.ID)
+
+	branch := pr.HeadBranch
+
+	if err = pr.BaseRepo.GetOwner(); err != nil {
+		return fmt.Errorf("Could not get base repo owner data: %v", err)
+	} else if err = pr.HeadRepo.GetOwner(); err != nil {
+		return fmt.Errorf("Could not get head repo owner data: %v", err)
+	}
+
+	headRepoPath := RepoPath(pr.HeadRepo.Owner.Name, pr.HeadRepo.Name)
+
+	prIdStr := strconv.FormatInt(pr.ID, 10)
+	tmpRemoteName := "tmp-pull-" + branch + "-" + prIdStr
+	repo, err := git.OpenRepository(headRepoPath)
+	if err != nil {
+		return fmt.Errorf("Unable to open head repository: %v", err)
+	}
+
+	if err = repo.AddRemote(tmpRemoteName, RepoPath(pr.BaseRepo.Owner.Name, pr.BaseRepo.Name), false); err != nil {
+		return fmt.Errorf("Unable to add remote to head repository: %v", err)
+	}
+	// Make sure to remove the remote even if the push fails
+	defer repo.RemoveRemote(tmpRemoteName)
+
+	pushRef := branch+":"+"refs/pull/"+prIdStr+"/head"
+	if err = git.Push(headRepoPath, tmpRemoteName, pushRef); err != nil {
+		return fmt.Errorf("Error pushing: %v", err)
+	}
+
+	return nil
+}
+
 // AddToTaskQueue adds itself to pull request test task queue.
 func (pr *PullRequest) AddToTaskQueue() {
 	go PullRequestQueue.AddFunc(pr.ID, func() {
@@ -535,6 +570,9 @@ func addHeadRepoTasks(prs []*PullRequest) {
 		log.Trace("addHeadRepoTasks[%d]: composing new test task", pr.ID)
 		if err := pr.UpdatePatch(); err != nil {
 			log.Error(4, "UpdatePatch: %v", err)
+			continue
+		} else if err := pr.PushToBaseRepo(); err != nil {
+			log.Error(4, "PushToBaseRepo: %v", err)
 			continue
 		}
 
