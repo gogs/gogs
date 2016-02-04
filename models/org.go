@@ -9,8 +9,8 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"strconv"
 
+	"github.com/Unknwon/com"
 	"github.com/go-xorm/xorm"
 )
 
@@ -1054,54 +1054,56 @@ func RemoveOrgRepo(orgID, repoID int64) error {
 // that the user with the given userID has access to.
 func (org *User) GetUserRepositories(userID int64) (err error) {
 	teams := make([]*Team, 0, 10)
-	if err := x.Cols("`team`.id").
-				Where("`team_user`.org_id=?", org.Id).
-				And("`team_user`.uid=?", userID).
-				Join("INNER", "`team_user`", "`team_user`.team_id=`team`.id").
-				Find(&teams); err != nil {
-		return fmt.Errorf("getUserRepositories: get teams: %v", err)
+	if err = x.Cols("`team`.id").
+		Where("`team_user`.org_id=?", org.Id).
+		And("`team_user`.uid=?", userID).
+		Join("INNER", "`team_user`", "`team_user`.team_id=`team`.id").
+		Find(&teams); err != nil {
+		return fmt.Errorf("GetUserRepositories: get teams: %v", err)
 	}
 
-	var teamIDs []string
-	for _, team := range teams {
-		teamIDs = append(teamIDs, strconv.FormatInt(team.ID, 10))
+	teamIDs := make([]string, len(teams))
+	for i := range teams {
+		teamIDs[i] = com.ToStr(teams[i].ID)
 	}
 	if len(teamIDs) == 0 {
 		// user has no team but "IN ()" is invalid SQL
-		teamIDs = append(teamIDs, "-1")  // there is no repo with id=-1
+		teamIDs = append(teamIDs, "-1") // there is no repo with id=-1
 	}
 
 	// Due to a bug in xorm using IN() together with OR() is impossible.
 	// As a workaround, we have to build the IN statement on our own, until this is fixed.
 	// https://github.com/go-xorm/xorm/issues/342
 
-	if err := x.Cols("`repository`.*").
-				Join("INNER", "`team_repo`", "`team_repo`.repo_id=`repository`.id").
-				Where("`repository`.owner_id=?", org.Id).
-				And("`repository`.is_private=?", false).
-				Or("`team_repo`.team_id=(?)", strings.Join(teamIDs, ",")).
-				GroupBy("`repository`.id").
-				Find(&org.Repos); err != nil {
-		return fmt.Errorf("getUserRepositories: get repositories: %v", err)
+	if err = x.Cols("`repository`.*").
+		Join("INNER", "`team_repo`", "`team_repo`.repo_id=`repository`.id").
+		Where("`repository`.owner_id=?", org.Id).
+		And("`repository`.is_private=?", false).
+		Or("`team_repo`.team_id=(?)", strings.Join(teamIDs, ",")).
+		GroupBy("`repository`.id").
+		Find(&org.Repos); err != nil {
+		return fmt.Errorf("GetUserRepositories: get repositories: %v", err)
 	}
 
+	// FIXME: should I change this value inside method,
+	// or only in location of caller where it's really needed?
 	org.NumRepos = len(org.Repos)
-
-	return
+	return nil
 }
 
 // GetTeams returns all teams that belong to organization,
 // and that the user has joined.
-func (org *User) GetUserTeams(userID int64) (err error) {
+func (org *User) GetUserTeams(userID int64) error {
 	if err := x.Cols("`team`.*").
-				Where("`team_user`.org_id=?", org.Id).
-				And("`team_user`.uid=?", userID).
-				Join("INNER", "`team_user`", "`team_user`.team_id=`team`.id").
-				Find(&org.Teams); err != nil {
-		return fmt.Errorf("getUserTeams: %v", err)
+		Where("`team_user`.org_id=?", org.Id).
+		And("`team_user`.uid=?", userID).
+		Join("INNER", "`team_user`", "`team_user`.team_id=`team`.id").
+		Find(&org.Teams); err != nil {
+		return fmt.Errorf("GetUserTeams: %v", err)
 	}
 
+	// FIXME: should I change this value inside method,
+	// or only in location of caller where it's really needed?
 	org.NumTeams = len(org.Teams)
-
-	return
+	return nil
 }
