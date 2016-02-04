@@ -120,6 +120,7 @@ const (
 	GIT_GC_REPOS
 	SYNC_SSH_AUTHORIZED_KEY
 	SYNC_REPOSITORY_UPDATE_HOOK
+	REINIT_MISSING_REPOSITORY
 )
 
 func Dashboard(ctx *middleware.Context) {
@@ -152,6 +153,9 @@ func Dashboard(ctx *middleware.Context) {
 		case SYNC_REPOSITORY_UPDATE_HOOK:
 			success = ctx.Tr("admin.dashboard.resync_all_update_hooks_success")
 			err = models.RewriteRepositoryUpdateHook()
+		case REINIT_MISSING_REPOSITORY:
+			success = ctx.Tr("admin.dashboard.reinit_missing_repos_success")
+			err = models.ReinitMissingRepositories()
 		}
 
 		if err != nil {
