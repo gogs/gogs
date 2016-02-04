@@ -1457,9 +1457,8 @@ func DeleteRepositoryArchives() error {
 		})
 }
 
-// DeleteMissingRepositories deletes all repository records that lost Git files.
-func DeleteMissingRepositories() error {
-	repos := make([]*Repository, 0, 5)
+func gatherMissingRepoRecords() ([]*Repository, error) {
+	repos := make([]*Repository, 0, 10)
 	if err := x.Where("id > 0").Iterate(new(Repository),
 		func(idx int, bean interface{}) error {
 			repo := bean.(*Repository)
@@ -1468,10 +1467,18 @@ func DeleteMissingRepositories() error {
 			}
 			return nil
 		}); err != nil {
-		if err2 := CreateRepositoryNotice(fmt.Sprintf("DeleteMissingRepositories: %v", err)); err2 != nil {
-			log.Error(4, "CreateRepositoryNotice: %v", err2)
+		if err2 := CreateRepositoryNotice(fmt.Sprintf("gatherMissingRepoRecords: %v", err)); err2 != nil {
+			return nil, fmt.Errorf("CreateRepositoryNotice: %v", err)
 		}
-		return nil
+	}
+	return repos, nil
+}
+
+// DeleteMissingRepositories deletes all repository records that lost Git files.
+func DeleteMissingRepositories() error {
+	repos, err := gatherMissingRepoRecords()
+	if err != nil {
+		return fmt.Errorf("gatherMissingRepoRecords: %v", err)
 	}
 
 	if len(repos) == 0 {
@@ -1482,7 +1489,29 @@ func DeleteMissingRepositories() error {
 		log.Trace("Deleting %d/%d...", repo.OwnerID, repo.ID)
 		if err := DeleteRepository(repo.OwnerID, repo.ID); err != nil {
 			if err2 := CreateRepositoryNotice(fmt.Sprintf("DeleteRepository [%d]: %v", repo.ID, err)); err2 != nil {
-				log.Error(4, "CreateRepositoryNotice: %v", err2)
+				return fmt.Errorf("CreateRepositoryNotice: %v", err)
+			}
+		}
+	}
+	return nil
+}
+
+// ReinitMissingRepositories reinitializes all repository records that lost Git files.
+func ReinitMissingRepositories() error {
+	repos, err := gatherMissingRepoRecords()
+	if err != nil {
+		return fmt.Errorf("gatherMissingRepoRecords: %v", err)
+	}
+
+	if len(repos) == 0 {
+		return nil
+	}
+
+	for _, repo := range repos {
+		log.Trace("Initializing %d/%d...", repo.OwnerID, repo.ID)
+		if err := git.InitRepository(repo.RepoPath(), true); err != nil {
+			if err2 := CreateRepositoryNotice(fmt.Sprintf("InitRepository [%d]: %v", repo.ID, err)); err2 != nil {
+				return fmt.Errorf("CreateRepositoryNotice: %v", err)
 			}
 		}
 	}
