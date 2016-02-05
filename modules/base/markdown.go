@@ -31,16 +31,10 @@ func isalnum(c byte) bool {
 	return (c >= '0' && c <= '9') || isletter(c)
 }
 
-var validLinks = [][]byte{[]byte("http://"), []byte("https://"), []byte("ftp://"), []byte("mailto://")}
+var validLinksPattern = regexp.MustCompile(`^[a-z][\w-]+://`)
 
 func isLink(link []byte) bool {
-	for _, prefix := range validLinks {
-		if len(link) > len(prefix) && bytes.Equal(bytes.ToLower(link[:len(prefix)]), prefix) && isalnum(link[len(prefix)]) {
-			return true
-		}
-	}
-
-	return false
+	return validLinksPattern.Match(link)
 }
 
 func IsMarkdownFile(name string) bool {
