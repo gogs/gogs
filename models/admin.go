@@ -5,12 +5,15 @@
 package models
 
 import (
+	"fmt"
+	"os"
 	"strings"
 	"time"
 
 	"github.com/Unknwon/com"
 
 	"github.com/gogits/gogs/modules/base"
+	"github.com/gogits/gogs/modules/log"
 )
 
 type NoticeType int
@@ -45,6 +48,18 @@ func CreateNotice(tp NoticeType, desc string) error {
 // CreateRepositoryNotice creates new system notice with type NOTICE_REPOSITORY.
 func CreateRepositoryNotice(desc string) error {
 	return CreateNotice(NOTICE_REPOSITORY, desc)
+}
+
+// RemoveAllWithNotice removes all directories in given path and
+// creates a system notice when error occurs.
+func RemoveAllWithNotice(title, path string) {
+	if err := os.RemoveAll(path); err != nil {
+		desc := fmt.Sprintf("%s [%s]: %v", title, path, err)
+		log.Warn(desc)
+		if err = CreateRepositoryNotice(desc); err != nil {
+			log.Error(4, "CreateRepositoryNotice: %v", err)
+		}
+	}
 }
 
 // CountNotices returns number of notices.
