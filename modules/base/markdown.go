@@ -157,6 +157,8 @@ func (options *CustomRender) ListItem(out *bytes.Buffer, text []byte, flags int)
 var (
 	svgSuffix         = []byte(".svg")
 	svgSuffixWithMark = []byte(".svg?")
+	spaceBytes        = []byte(" ")
+	spaceEncodedBytes = []byte("%20")
 )
 
 func (r *CustomRender) Image(out *bytes.Buffer, link []byte, title []byte, alt []byte) {
@@ -172,7 +174,8 @@ func (r *CustomRender) Image(out *bytes.Buffer, link []byte, title []byte, alt [
 			if link[0] != '/' {
 				prefix += "/"
 			}
-			link = []byte(prefix + string(link))
+			link = bytes.Replace([]byte((prefix + string(link))), spaceBytes, spaceEncodedBytes, -1)
+			fmt.Println(333, string(link))
 		}
 	}
 
