@@ -598,9 +598,17 @@ func ChangeUserName(u *User, newUserName string) (err error) {
 		return ErrUserAlreadyExist{newUserName}
 	}
 
-	err = ChangeUsernameInPullRequests(u.Name, newUserName)
-	if err != nil {
+	if err = ChangeUsernameInPullRequests(u.Name, newUserName); err != nil {
 		return fmt.Errorf("ChangeUsernameInPullRequests: %v", err)
+	}
+
+	// Delete all local copies of repository wiki that user owns.
+	if err = x.Where("owner_id=?", u.Id).Iterate(new(Repository), func(idx int, bean interface{}) error {
+		repo := bean.(*Repository)
+		RemoveAllWithNotice("Delete repository wiki local copy", repo.LocalWikiPath())
+		return nil
+	}); err != nil {
+		return fmt.Errorf("Delete repository wiki local copy: %v", err)
 	}
 
 	return os.Rename(UserPath(u.Name), UserPath(newUserName))
