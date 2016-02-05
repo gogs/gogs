@@ -14,7 +14,6 @@ files/
 *.so
 _obj
 _test
-*.[568vq]
 [568vq].out
 *.cgo1.go
 *.cgo2.c
