@@ -376,8 +376,29 @@
 				.content {
 					margin-left: 4em;
 					.header {
+						&:before, &:after {
+							right: 100%;
+							top: 50%;
+							border: solid transparent;
+							content: " ";
+							height: 0;
+							width: 0;
+							position: absolute;
+							pointer-events: none;
+						}
+						&:before {
+							border-right-color: #D4D4D5;
+							border-width: 9px;
+							margin-top: -9px;
+						}	
+						&:after {
+							border-right-color: #f7f7f7;
+							border-width: 8px;
+							margin-top: -8px;
+						}					
 						font-weight: normal;
 						padding: auto 15px;
+						position: relative;
 						color: #767676;
 						background-color: #f7f7f7;
 						border-bottom: 1px solid #eee;
