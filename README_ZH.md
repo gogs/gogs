@@ -67,6 +67,7 @@ Gogs 的目标是打造一个最简单、最快速和最轻松的方式搭建自
 - [Portal](https://portaldemo.xyz/cloud/)
 - [Sandstorm](https://github.com/cem/gogs-sandstorm)
 - [sloppy.io](https://github.com/sloppyio/quickstarters/tree/master/gogs)
+- [YunoHost](https://github.com/mbugeia/gogs_ynh)
 
 ## 软件及服务支持
 
