@@ -7,6 +7,7 @@ package models
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"strings"
 	"time"
 
@@ -14,6 +15,7 @@ import (
 
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
+	"github.com/gogits/gogs/modules/setting"
 )
 
 type NoticeType int
@@ -53,7 +55,14 @@ func CreateRepositoryNotice(desc string) error {
 // RemoveAllWithNotice removes all directories in given path and
 // creates a system notice when error occurs.
 func RemoveAllWithNotice(title, path string) {
-	if err := os.RemoveAll(path); err != nil {
+	var err error
+	if setting.IsWindows {
+		err = exec.Command("cmd", "/C", "rmdir", "/S", "/Q", path).Run()
+	} else {
+		err = os.RemoveAll(path)
+	}
+
+	if err != nil {
 		desc := fmt.Sprintf("%s [%s]: %v", title, path, err)
 		log.Warn(desc)
 		if err = CreateRepositoryNotice(desc); err != nil {
