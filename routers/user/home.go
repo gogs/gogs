@@ -51,8 +51,8 @@ func getDashboardContextUser(ctx *middleware.Context) *models.User {
 	return ctxUser
 }
 
-func retrieveFeeds(ctx *middleware.Context, uid, offset int64, isProfile bool) {
-	actions, err := models.GetFeeds(uid, offset, isProfile)
+func retrieveFeeds(ctx *middleware.Context, ctxUserID, userID, offset int64, isProfile bool) {
+	actions, err := models.GetFeeds(ctxUserID, userID, offset, isProfile)
 	if err != nil {
 		ctx.Handle(500, "GetFeeds", err)
 		return
@@ -140,7 +140,7 @@ func Dashboard(ctx *middleware.Context) {
 	ctx.Data["MirrorCount"] = len(mirrors)
 	ctx.Data["Mirrors"] = mirrors
 
-	retrieveFeeds(ctx, ctxUser.Id, 0, false)
+	retrieveFeeds(ctx, ctx.User.Id, ctxUser.Id, 0, false)
 	if ctx.Written() {
 		return
 	}
