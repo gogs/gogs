@@ -1179,6 +1179,7 @@ func (m *Milestone) AfterSet(colName string, _ xorm.Cell) {
 		if m.Deadline.Year() == 9999 {
 			return
 		}
+		m.Deadline = regulateTimeZone(m.Deadline)
 
 		m.DeadlineString = m.Deadline.Format("2006-01-02")
 		if time.Now().After(m.Deadline) {
