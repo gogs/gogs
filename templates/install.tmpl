@@ -68,7 +68,7 @@
 						<div class="inline required field {{if or .Err_DbPath .Err_DbSetting}}error{{end}}">
 							<label for="db_path">{{.i18n.Tr "install.path"}}</label>
 							<input id="db_path" name="db_path" value="{{.db_path}}">
-							<span class="help">{{.i18n.Tr "install.sqlite_helper"}}</span>
+							<span class="help">{{.i18n.Tr "install.sqlite_helper" | Safe}}</span>
 						</div>
 					</div>
 
