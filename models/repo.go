@@ -1123,16 +1123,22 @@ func ChangeRepositoryName(u *User, oldRepoName, newRepoName string) (err error) 
 		return ErrRepoAlreadyExist{u.Name, newRepoName}
 	}
 
+	repo, err := GetRepositoryByName(u.Id, oldRepoName)
+	if err != nil {
+		return fmt.Errorf("GetRepositoryByName: %v", err)
+	}
+
 	// Change repository directory name.
-	if err = os.Rename(RepoPath(u.Name, oldRepoName), RepoPath(u.Name, newRepoName)); err != nil {
+	if err = os.Rename(repo.RepoPath(), RepoPath(u.Name, newRepoName)); err != nil {
 		return fmt.Errorf("rename repository directory: %v", err)
 	}
 
-	wikiPath := WikiPath(u.Name, oldRepoName)
+	wikiPath := repo.WikiPath()
 	if com.IsExist(wikiPath) {
 		if err = os.Rename(wikiPath, WikiPath(u.Name, newRepoName)); err != nil {
 			return fmt.Errorf("rename repository wiki: %v", err)
 		}
+		RemoveAllWithNotice("Delete repository wiki local copy", repo.LocalWikiPath())
 	}
 
 	return nil
@@ -1295,30 +1301,16 @@ func DeleteRepository(uid, repoID int64) error {
 
 	// Remove repository files.
 	repoPath := repo.repoPath(sess)
-	if err = os.RemoveAll(repoPath); err != nil {
-		desc := fmt.Sprintf("delete repository files [%s]: %v", repoPath, err)
-		log.Warn(desc)
-		if err = CreateRepositoryNotice(desc); err != nil {
-			log.Error(4, "CreateRepositoryNotice: %v", err)
-		}
-	}
+	RemoveAllWithNotice("Delete repository files", repoPath)
 
 	wikiPaths := []string{repo.WikiPath(), repo.LocalWikiPath()}
 	for _, wikiPath := range wikiPaths {
-		if err = os.RemoveAll(wikiPath); err != nil {
-			desc := fmt.Sprintf("delete repository wiki [%s]: %v", wikiPath, err)
-			log.Warn(desc)
-			if err = CreateRepositoryNotice(desc); err != nil {
-				log.Error(4, "CreateRepositoryNotice: %v", err)
-			}
-		}
+		RemoveAllWithNotice("Delete repository wiki", wikiPath)
 	}
 
 	// Remove attachment files.
 	for i := range attachmentPaths {
-		if err = os.Remove(attachmentPaths[i]); err != nil {
-			log.Warn("delete attachment: %v", err)
-		}
+		RemoveAllWithNotice("Delete attachment", attachmentPaths[i])
 	}
 
 	if err = sess.Commit(); err != nil {
@@ -1333,7 +1325,7 @@ func DeleteRepository(uid, repoID int64) error {
 			}
 			for i := range forkRepos {
 				if err = DeleteRepository(forkRepos[i].OwnerID, forkRepos[i].ID); err != nil {
-					log.Error(4, "updateRepository[%d]: %v", forkRepos[i].ID, err)
+					log.Error(4, "DeleteRepository [%d]: %v", forkRepos[i].ID, err)
 				}
 			}
 		} else {
@@ -1457,9 +1449,8 @@ func DeleteRepositoryArchives() error {
 		})
 }
 
-// DeleteMissingRepositories deletes all repository records that lost Git files.
-func DeleteMissingRepositories() error {
-	repos := make([]*Repository, 0, 5)
+func gatherMissingRepoRecords() ([]*Repository, error) {
+	repos := make([]*Repository, 0, 10)
 	if err := x.Where("id > 0").Iterate(new(Repository),
 		func(idx int, bean interface{}) error {
 			repo := bean.(*Repository)
@@ -1468,10 +1459,18 @@ func DeleteMissingRepositories() error {
 			}
 			return nil
 		}); err != nil {
-		if err2 := CreateRepositoryNotice(fmt.Sprintf("DeleteMissingRepositories: %v", err)); err2 != nil {
-			log.Error(4, "CreateRepositoryNotice: %v", err2)
+		if err2 := CreateRepositoryNotice(fmt.Sprintf("gatherMissingRepoRecords: %v", err)); err2 != nil {
+			return nil, fmt.Errorf("CreateRepositoryNotice: %v", err)
 		}
-		return nil
+	}
+	return repos, nil
+}
+
+// DeleteMissingRepositories deletes all repository records that lost Git files.
+func DeleteMissingRepositories() error {
+	repos, err := gatherMissingRepoRecords()
+	if err != nil {
+		return fmt.Errorf("gatherMissingRepoRecords: %v", err)
 	}
 
 	if len(repos) == 0 {
@@ -1482,7 +1481,29 @@ func DeleteMissingRepositories() error {
 		log.Trace("Deleting %d/%d...", repo.OwnerID, repo.ID)
 		if err := DeleteRepository(repo.OwnerID, repo.ID); err != nil {
 			if err2 := CreateRepositoryNotice(fmt.Sprintf("DeleteRepository [%d]: %v", repo.ID, err)); err2 != nil {
-				log.Error(4, "CreateRepositoryNotice: %v", err2)
+				return fmt.Errorf("CreateRepositoryNotice: %v", err)
+			}
+		}
+	}
+	return nil
+}
+
+// ReinitMissingRepositories reinitializes all repository records that lost Git files.
+func ReinitMissingRepositories() error {
+	repos, err := gatherMissingRepoRecords()
+	if err != nil {
+		return fmt.Errorf("gatherMissingRepoRecords: %v", err)
+	}
+
+	if len(repos) == 0 {
+		return nil
+	}
+
+	for _, repo := range repos {
+		log.Trace("Initializing %d/%d...", repo.OwnerID, repo.ID)
+		if err := git.InitRepository(repo.RepoPath(), true); err != nil {
+			if err2 := CreateRepositoryNotice(fmt.Sprintf("InitRepository [%d]: %v", repo.ID, err)); err2 != nil {
+				return fmt.Errorf("CreateRepositoryNotice: %v", err)
 			}
 		}
 	}
@@ -1602,7 +1623,7 @@ func GitFsck() {
 			repo := bean.(*Repository)
 			repoPath := repo.RepoPath()
 			if err := git.Fsck(repoPath, setting.Cron.RepoHealthCheck.Timeout, setting.Cron.RepoHealthCheck.Args...); err != nil {
-				desc := fmt.Sprintf("Fail to health check repository(%s)", repoPath)
+				desc := fmt.Sprintf("Fail to health check repository (%s): %v", repoPath, err)
 				log.Warn(desc)
 				if err = CreateRepositoryNotice(desc); err != nil {
 					log.Error(4, "CreateRepositoryNotice: %v", err)

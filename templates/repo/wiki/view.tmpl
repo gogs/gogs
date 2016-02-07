@@ -29,15 +29,15 @@
 			</div>
 			<div class="ui six wide column">
 				<div class="ui action small input" id="clone-panel">
+					<button class="ui basic clone button" id="repo-clone-https" data-link="{{.WikiCloneLink.HTTPS}}">
+						{{if UseHTTPS}}HTTPS{{else}}HTTP{{end}}
+					</button>
 					{{if not $.DisableSSH}}
-						<button class="ui blue basic clone button" id="repo-clone-ssh" data-link="{{.WikiCloneLink.SSH}}">
+						<button class="ui basic clone button" id="repo-clone-ssh" data-link="{{.WikiCloneLink.SSH}}">
 							SSH
 						</button>
 					{{end}}
-					<button class="ui {{if $.DisableSSH}}blue{{end}} basic clone button" id="repo-clone-https" data-link="{{.WikiCloneLink.HTTPS}}">
-						{{if UseHTTPS}}HTTPS{{else}}HTTP{{end}}
-					</button>
-					<input id="repo-clone-url" value="{{if $.DisableSSH}}{{$.WikiCloneLink.HTTPS}}{{else}}{{$.WikiCloneLink.SSH}}{{end}}" readonly>
+					<input id="repo-clone-url" value="{{$.WikiCloneLink.HTTPS}}" readonly>
 					<button class="ui basic icon button poping up clipboard" id="clipboard-btn" data-original="{{.i18n.Tr "repo.copy_link"}}" data-success="{{.i18n.Tr "repo.copy_link_success"}}" data-error="{{.i18n.Tr "repo.copy_link_error"}}" data-content="{{.i18n.Tr "repo.copy_link"}}" data-variation="inverted tiny" data-clipboard-target="#repo-clone-url">
 						<i class="octicon octicon-clippy"></i>
 					</button>

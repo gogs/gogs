@@ -313,6 +313,19 @@
 					{{end}}
 				</div>
 			</div>
+
+			<div class="ui divider"></div>
+
+			<div class="ui participants">
+				<span class="text"><strong>{{.i18n.Tr "repo.issues.num_participants" .NumParticipants}}</strong></span>
+				<div>
+					{{range .Participants}}
+						<a href="{{.HomeLink}}">
+							<img class="ui avatar image poping up" src="{{.AvatarLink}}" data-content="{{.DisplayName}}" data-position="top center" data-variation="small inverted">
+						</a>
+					{{end}}
+				</div>
+			</div>
 		</div>
 	</div>
 </div>

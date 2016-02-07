@@ -17,19 +17,20 @@
 	<link rel="shortcut icon" href="{{AppSubUrl}}/img/favicon.png" />
 
 	<script src="{{AppSubUrl}}/js/jquery-1.11.3.min.js"></script>
-	<link rel="stylesheet" href="{{AppSubUrl}}/css/font-awesome-4.4.0.min.css">
+	<link rel="stylesheet" href="{{AppSubUrl}}/assets/font-awesome-4.5.0/css/font-awesome.min.css">
+	<link rel="stylesheet" href="{{AppSubUrl}}/assets/octicons-3.4.1/octicons.css">
 
 	{{if .RequireSimpleMDE}}
-		<link rel="stylesheet" href="{{AppSubUrl}}/css/simplemde-1.8.1.min.css">
-		<script src="{{AppSubUrl}}/js/libs/simplemde-1.8.1.min.js"></script>
+		<link rel="stylesheet" href="{{AppSubUrl}}/plugins/simplemde-1.10.0/simplemde.min.css">
+		<script src="{{AppSubUrl}}/plugins/simplemde-1.10.0/simplemde.min.js"></script>
 	{{end}}
 
 	<!-- Stylesheet -->
-	<link rel="stylesheet" href="{{AppSubUrl}}/css/semantic-2.1.6.min.css">
+	<link rel="stylesheet" href="{{AppSubUrl}}/css/semantic-2.1.8.min.css">
 	<link rel="stylesheet" href="{{AppSubUrl}}/css/gogs.css?v={{MD5 AppVer}}">
 
 	<!-- JavaScript -->
-	<script src="{{AppSubUrl}}/js/semantic-2.1.6.min.js"></script>
+	<script src="{{AppSubUrl}}/js/semantic-2.1.8.min.js"></script>
 	<script src="{{AppSubUrl}}/js/gogs.js?v={{MD5 AppVer}}"></script>
 
 	<title>{{if .Title}}{{.Title}} - {{end}}{{AppName}}</title>
@@ -68,7 +69,7 @@
 									<div class="right menu">
 										<div class="ui dropdown head link jump item poping up" data-content="{{.i18n.Tr "create_new"}}" data-variation="tiny inverted">
 											<span class="text">
-												<i class="octicon octicon-plus"></i>
+												<i class="octicon octicon-plus"><span class="sr-only">{{.i18n.Tr "create_new"}}</span></i>
 												<i class="octicon octicon-triangle-down"></i>
 											</span>
 											<div class="menu">
@@ -87,6 +88,7 @@
 										<div class="ui dropdown head link jump item poping up" tabindex="-1" data-content="{{.i18n.Tr "user_profile_and_more"}}" data-variation="tiny inverted">
 											<span class="text avatar">
 												<img class="ui small rounded image" src="{{.SignedUser.AvatarLink}}">
+												<span class="sr-only">{{.i18n.Tr "user_profile_and_more"}}</span>
 												<i class="octicon octicon-triangle-down" tabindex="-1"></i>
 											</span>
 											<div class="menu" tabindex="-1">

@@ -16,7 +16,6 @@ import (
 	_ "image/jpeg"
 	"image/png"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -211,7 +210,7 @@ func (u *User) GenerateRandomAvatar() error {
 	if err != nil {
 		return fmt.Errorf("RandomImage: %v", err)
 	}
-	if err = os.MkdirAll(path.Dir(u.CustomAvatarPath()), os.ModePerm); err != nil {
+	if err = os.MkdirAll(filepath.Dir(u.CustomAvatarPath()), os.ModePerm); err != nil {
 		return fmt.Errorf("MkdirAll: %v", err)
 	}
 	fw, err := os.Create(u.CustomAvatarPath())
@@ -429,13 +428,8 @@ func (u *User) DisplayName() string {
 	return u.Name
 }
 
-// ShortName returns shorted user name with given maximum length,
-// it adds "..." at the end if user name has more length than maximum.
 func (u *User) ShortName(length int) string {
-	if len(u.Name) < length {
-		return u.Name
-	}
-	return u.Name[:length] + "..."
+	return base.EllipsisString(u.Name, length)
 }
 
 // IsUserExist checks if given user name exist,
@@ -604,7 +598,20 @@ func ChangeUserName(u *User, newUserName string) (err error) {
 		return ErrUserAlreadyExist{newUserName}
 	}
 
-	return os.Rename(UserPath(u.LowerName), UserPath(newUserName))
+	if err = ChangeUsernameInPullRequests(u.Name, newUserName); err != nil {
+		return fmt.Errorf("ChangeUsernameInPullRequests: %v", err)
+	}
+
+	// Delete all local copies of repository wiki that user owns.
+	if err = x.Where("owner_id=?", u.Id).Iterate(new(Repository), func(idx int, bean interface{}) error {
+		repo := bean.(*Repository)
+		RemoveAllWithNotice("Delete repository wiki local copy", repo.LocalWikiPath())
+		return nil
+	}); err != nil {
+		return fmt.Errorf("Delete repository wiki local copy: %v", err)
+	}
+
+	return os.Rename(UserPath(u.Name), UserPath(newUserName))
 }
 
 func updateUser(e Engine, u *User) error {

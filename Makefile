@@ -34,7 +34,7 @@ release: build pack
 bindata: modules/bindata/bindata.go
 
 modules/bindata/bindata.go: $(DATA_FILES)
-	go-bindata -o=$@ -ignore="\\.DS_Store|README.md" -pkg=bindata conf/...
+	go-bindata -o=$@ -ignore="\\.DS_Store|README.md|TRANSLATORS" -pkg=bindata conf/...
 
 less: public/css/gogs.css
 
@@ -46,3 +46,6 @@ clean:
 
 clean-mac: clean
 	find . -name ".DS_Store" -print0 | xargs -0 rm
+
+test:
+	go test ./...

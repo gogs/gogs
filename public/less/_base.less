@@ -3,6 +3,7 @@
 body {
 	font-family: 'Helvetica Neue',Arial,Helvetica,sans-serif,'微软雅黑';
 	background-color: #FAFAFA;
+	overflow-y: scroll;
 }
 img {
 	border-radius: 3px;
@@ -18,6 +19,13 @@ pre {
 		font-size: 13px;
 		line-height: 1.5;
 		overflow: auto;
+	}
+	&.wrap {
+		white-space: pre-wrap;       /* CSS 3 */
+//		white-space: -moz-normal;  /* Mozilla, since 1999 */
+//		white-space: -normal;      /* Opera 4-6 */
+//		white-space: -o-normal;    /* Opera 7 */
+		word-break: break-word;
 	}
 }
 .full.height {
@@ -91,6 +99,14 @@ pre {
 	}
 	&.right {
 		float: right;
+	}
+
+	&.container {
+		&.fluid {
+			&.padded {
+				padding: 0 10px 0 10px;
+			}
+		}
 	}
 
 	.text {

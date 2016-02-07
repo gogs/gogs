@@ -18,6 +18,9 @@ function initCommentPreviewTab($form) {
                 var $preview_tab = $form.find('.tab.segment[data-tab="' + $tab_menu.data('preview') + '"]');
                 $preview_tab.html(data);
                 emojify.run($preview_tab[0]);
+                $('pre code', $preview_tab[0]).each(function(i, block) {
+                    hljs.highlightBlock(block);
+                });
             }
         );
     });
@@ -382,6 +385,9 @@ function initRepository() {
                             } else {
                                 $render_content.html(data.content);
                                 emojify.run($render_content[0]);
+                                $('pre code', $render_content[0]).each(function(i, block) {
+                                    hljs.highlightBlock(block);
+                                });
                             }
                         });
                 });
@@ -434,12 +440,14 @@ function initRepository() {
         $('#repo-clone-url').val($(this).data('link'));
         $(this).addClass('blue');
         $('#repo-clone-https').removeClass('blue');
+        localStorage.setItem('repo-clone-protocol', 'ssh');
     });
     $('#repo-clone-https').click(function () {
         $('.clone-url').text($(this).data('link'));
         $('#repo-clone-url').val($(this).data('link'));
         $(this).addClass('blue');
         $('#repo-clone-ssh').removeClass('blue');
+        localStorage.setItem('repo-clone-protocol', 'https');
     });
     $('#repo-clone-url').click(function () {
         $(this).select();
@@ -1034,5 +1042,19 @@ $(window).load(function () {
                 $("html, body").scrollTop($first.offset().top - 200);
             }
         }).trigger('hashchange');
+    }
+
+    // Repo clone url.
+    if ($('#repo-clone-url').length > 0) {
+        switch (localStorage.getItem('repo-clone-protocol')) {
+            case 'ssh':
+                if ($('#repo-clone-ssh').click().length === 0) {
+                    $('#repo-clone-https').click();
+                };
+                break;
+            default:
+                $('#repo-clone-https').click();
+                break;
+        }
     }
 });

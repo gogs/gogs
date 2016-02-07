@@ -291,6 +291,8 @@ func NewIssue(ctx *middleware.Context) {
 		return
 	}
 
+	ctx.Data["RequireHighlightJS"] = true
+
 	ctx.HTML(200, ISSUE_NEW)
 }
 
@@ -589,12 +591,15 @@ func ViewIssue(ctx *middleware.Context) {
 	}
 
 	var (
-		tag     models.CommentTag
-		ok      bool
-		marked  = make(map[int64]models.CommentTag)
-		comment *models.Comment
+		tag          models.CommentTag
+		ok           bool
+		marked       = make(map[int64]models.CommentTag)
+		comment      *models.Comment
+		participants = make([]*models.User, 1, 10)
 	)
-	// Render comments.
+
+	// Render comments and and fetch participants.
+	participants[0] = issue.Poster
 	for _, comment = range issue.Comments {
 		if comment.Type == models.COMMENT_TYPE_COMMENT {
 			comment.RenderedContent = string(base.RenderMarkdown([]byte(comment.Content), ctx.Repo.RepoLink,
@@ -617,12 +622,28 @@ func ViewIssue(ctx *middleware.Context) {
 			}
 
 			marked[comment.PosterID] = comment.ShowTag
+
+			isAdded := false
+			for j := range participants {
+				if comment.Poster == participants[j] {
+					isAdded = true
+					break
+				}
+			}
+			if !isAdded && !issue.IsPoster(comment.Poster.Id) {
+				participants = append(participants, comment.Poster)
+			}
 		}
 	}
 
+	ctx.Data["Participants"] = participants
+	ctx.Data["NumParticipants"] = len(participants)
 	ctx.Data["Issue"] = issue
 	ctx.Data["IsIssueOwner"] = ctx.Repo.IsAdmin() || (ctx.IsSigned && issue.IsPoster(ctx.User.Id))
 	ctx.Data["SignInLink"] = setting.AppSubUrl + "/user/login"
+
+	ctx.Data["RequireHighlightJS"] = true
+
 	ctx.HTML(200, ISSUE_VIEW)
 }
 

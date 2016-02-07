@@ -48,12 +48,13 @@ var (
 	BuildGitHash string
 
 	// App settings
-	AppVer      string
-	AppName     string
-	AppUrl      string
-	AppSubUrl   string
-	AppPath     string
-	AppDataPath = "data"
+	AppVer         string
+	AppName        string
+	AppUrl         string
+	AppSubUrl      string
+	AppSubUrlDepth int // Number of slashes
+	AppPath        string
+	AppDataPath    = "data"
 
 	// Server settings
 	Protocol           Scheme
@@ -117,6 +118,7 @@ var (
 	// Markdown sttings
 	Markdown struct {
 		EnableHardLineBreak bool
+		CustomURLSchemes    []string `ini:"CUSTOM_URL_SCHEMES"`
 	}
 
 	// Picture settings
@@ -299,7 +301,9 @@ func NewContext() {
 	if err != nil {
 		log.Fatal(4, "Invalid ROOT_URL '%s': %s", AppUrl, err)
 	}
+	// Suburl should start with '/' and end without '/', such as '/{subpath}'.
 	AppSubUrl = strings.TrimSuffix(url.Path, "/")
+	AppSubUrlDepth = strings.Count(AppSubUrl, "/")
 
 	Protocol = HTTP
 	if sec.Key("PROTOCOL").String() == "https" {
@@ -415,7 +419,7 @@ func NewContext() {
 	case "duoshuo":
 		GravatarSource = "http://gravatar.duoshuo.com/avatar/"
 	case "gravatar":
-		GravatarSource = "//1.gravatar.com/avatar/"
+		GravatarSource = "https://secure.gravatar.com/avatar/"
 	default:
 		GravatarSource = source
 	}
@@ -428,7 +432,7 @@ func NewContext() {
 		log.Fatal(4, "Fail to map Markdown settings: %v", err)
 	} else if err = Cfg.Section("git").MapTo(&Git); err != nil {
 		log.Fatal(4, "Fail to map Git settings: %v", err)
-	} else if Cfg.Section("cron").MapTo(&Cron); err != nil {
+	} else if err = Cfg.Section("cron").MapTo(&Cron); err != nil {
 		log.Fatal(4, "Fail to map Cron settings: %v", err)
 	}
 
@@ -453,8 +457,6 @@ var Service struct {
 	EnableNotifyMail               bool
 	EnableReverseProxyAuth         bool
 	EnableReverseProxyAutoRegister bool
-	DisableMinimumKeySizeCheck     bool
-	MinimumKeySizes                map[string]int
 	EnableCaptcha                  bool
 }
 
@@ -468,14 +470,7 @@ func newService() {
 	Service.EnableCacheAvatar = sec.Key("ENABLE_CACHE_AVATAR").MustBool()
 	Service.EnableReverseProxyAuth = sec.Key("ENABLE_REVERSE_PROXY_AUTHENTICATION").MustBool()
 	Service.EnableReverseProxyAutoRegister = sec.Key("ENABLE_REVERSE_PROXY_AUTO_REGISTRATION").MustBool()
-	Service.DisableMinimumKeySizeCheck = sec.Key("DISABLE_MINIMUM_KEY_SIZE_CHECK").MustBool()
 	Service.EnableCaptcha = sec.Key("ENABLE_CAPTCHA").MustBool()
-
-	minimumKeySizes := Cfg.Section("service.minimum_key_sizes").Keys()
-	Service.MinimumKeySizes = make(map[string]int)
-	for _, key := range minimumKeySizes {
-		Service.MinimumKeySizes[key.Name()] = key.MustInt()
-	}
 }
 
 var logLevels = map[string]string{

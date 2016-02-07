@@ -31,7 +31,19 @@ import (
 	"github.com/gogits/gogs/modules/setting"
 )
 
-var Sanitizer = bluemonday.UGCPolicy().AllowAttrs("class").Matching(regexp.MustCompile(`[\p{L}\p{N}\s\-_',:\[\]!\./\\\(\)&]*`)).OnElements("code")
+var Sanitizer = bluemonday.UGCPolicy()
+
+func BuildSanitizer() {
+	// Normal markdown-stuff
+	Sanitizer.AllowAttrs("class").Matching(regexp.MustCompile(`[\p{L}\p{N}\s\-_',:\[\]!\./\\\(\)&]*`)).OnElements("code")
+
+	// Checkboxes
+	Sanitizer.AllowAttrs("type").Matching(regexp.MustCompile(`^checkbox$`)).OnElements("input")
+	Sanitizer.AllowAttrs("checked", "disabled").OnElements("input")
+
+	// Custom URL-Schemes
+	Sanitizer.AllowURLSchemes(setting.Markdown.CustomURLSchemes...)
+}
 
 // EncodeMD5 encodes string to md5 hex value.
 func EncodeMD5(str string) string {
@@ -451,6 +463,15 @@ func Subtract(left interface{}, right interface{}) interface{} {
 	} else {
 		return fleft + float64(rleft) - (fright + float64(rright))
 	}
+}
+
+// EllipsisString returns a truncated short string,
+// it appends '...' in the end of the length of string is too large.
+func EllipsisString(str string, length int) string {
+	if len(str) < length {
+		return str
+	}
+	return str[:length-3] + "..."
 }
 
 // StringsToInt64s converts a slice of string to a slice of int64.

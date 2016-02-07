@@ -65,7 +65,8 @@ type Context struct {
 	Org struct {
 		IsOwner      bool
 		IsMember     bool
-		IsAdminTeam  bool // In owner team or team that has admin permission level.
+		IsTeamMember bool // Is member of team.
+		IsTeamAdmin  bool // In owner team or team that has admin permission level.
 		Organization *models.User
 		OrgLink      string
 
