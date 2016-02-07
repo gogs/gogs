@@ -26,6 +26,7 @@ import (
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/process"
+	"github.com/gogits/gogs/modules/template/highlight"
 )
 
 type DiffLineType uint8
@@ -160,10 +161,18 @@ type DiffFile struct {
 	IsBin              bool
 	IsRenamed          bool
 	Sections           []*DiffSection
+	HighlightClass     string
 }
 
 func (diffFile *DiffFile) GetType() int {
 	return int(diffFile.Type)
+}
+
+func (diffFile *DiffFile) GetHighlightClass() string {
+	if diffFile.HighlightClass == "" {
+		diffFile.HighlightClass = highlight.FileNameToHighlightClass(diffFile.Name)
+	}
+	return diffFile.HighlightClass
 }
 
 type Diff struct {

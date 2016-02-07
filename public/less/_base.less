@@ -8,7 +8,7 @@ body {
 img {
 	border-radius: 3px;
 }
-pre {
+pre, code {
 	font: 12px Consolas, "Liberation Mono", Menlo, Courier, monospace;
 	&.raw {
 		padding: 7px 12px;
@@ -374,4 +374,10 @@ footer {
 	.ui.container {
 		width: 95%;
 	}
+}
+
+/* Overrides some styles of the Highlight.js plugin */
+.hljs {
+	background: inherit !important;
+	padding: 0 !important;
 }
