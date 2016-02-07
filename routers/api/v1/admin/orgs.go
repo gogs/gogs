@@ -42,3 +42,59 @@ func CreateOrg(ctx *middleware.Context, form api.CreateOrgOption) {
 
 	ctx.JSON(201, convert.ToApiOrganization(org))
 }
+func DeleteOrg(ctx *middleware.Context) {
+	org := user.GetUserByParamsName(ctx, ":orgname")
+
+	if ctx.Written() {
+		return
+	}
+
+	err := models.DeleteOrganization(org)
+
+	if err != nil {
+		ctx.APIError(500, "", err)
+	}
+	ctx.Status(204)
+}
+
+func AddOrganizationUser(ctx *middleware.Context, form api.AddUserOption) {
+	u, err := models.GetUserByName(form.UserName)
+
+	if err != nil {
+		ctx.APIError(404, "user does not exist", err)
+		return
+	}
+
+	org := user.GetUserByParamsName(ctx, ":orgname")
+	err = models.AddOrgUser(org.Id, u.Id)
+
+	if ctx.Written() {
+		return
+	}
+	if err != nil {
+		ctx.APIError(500, "", err)
+	}
+	ctx.Status(201)
+}
+
+func RemoveOrganizationUser(ctx *middleware.Context) {
+
+	u := user.GetUserByParamsName(ctx, ":user")
+
+	if ctx.Written() {
+		return
+	}
+
+	org := user.GetUserByParamsName(ctx, ":orgname")
+
+	if ctx.Written() {
+		return
+	}
+
+	err := models.RemoveOrgUser(org.Id, u.Id)
+
+	if err != nil {
+		ctx.APIError(500, "", err)
+	}
+	ctx.Status(204)
+}
