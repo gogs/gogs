@@ -61,7 +61,7 @@
 					<i class="icon octicon octicon-git-pull-request"></i> {{.i18n.Tr "repo.pulls"}} <span class="ui {{if not .Repository.NumOpenPulls}}gray{{else}}blue{{end}} small label">{{.Repository.NumOpenPulls}}</span>
 				</a>
 			{{end}}
-			<a class="{{if .PageIsCommits}}active{{end}} item" href="{{.RepoLink}}/commits/{{EscapePound .BranchName}}">
+			<a class="{{if (or (.PageIsCommits) (.PageIsDiff))}}active{{end}} item" href="{{.RepoLink}}/commits/{{EscapePound .BranchName}}">
 				<i class="icon octicon octicon-history"></i> {{.i18n.Tr "repo.commits"}} <span class="ui {{if not .CommitsCount}}gray{{else}}blue{{end}} small label">{{.CommitsCount}}</span>
 			</a>
 			<a class="{{if .PageIsReleaseList}}active{{end}} item" href="{{.RepoLink}}/releases">
