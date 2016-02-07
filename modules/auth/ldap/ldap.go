@@ -153,7 +153,7 @@ func (ls *Source) SearchEntry(name, passwd string, directBind bool) (string, str
 
 	search := ldap.NewSearchRequest(
 		userDN, ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false, userFilter,
-		[]string{ls.AttributeName, ls.AttributeSurname, ls.AttributeMail},
+		[]string{ls.AttributeUsername, ls.AttributeName, ls.AttributeSurname, ls.AttributeMail},
 		nil)
 
 	sr, err := l.Search(search)
