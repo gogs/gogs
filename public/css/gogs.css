@@ -12,10 +12,12 @@ body {
 img {
   border-radius: 3px;
 }
-pre {
+pre,
+code {
   font: 12px Consolas, "Liberation Mono", Menlo, Courier, monospace;
 }
-pre.raw {
+pre.raw,
+code.raw {
   padding: 7px 12px;
   margin: 10px 0;
   background-color: #f8f8f8;
@@ -25,7 +27,8 @@ pre.raw {
   line-height: 1.5;
   overflow: auto;
 }
-pre.wrap {
+pre.wrap,
+code.wrap {
   white-space: pre-wrap;
   /* CSS 3 */
   word-break: break-word;
@@ -386,6 +389,11 @@ footer .container .links > *:first-child {
   .ui.container {
     width: 95%;
   }
+}
+/* Overrides some styles of the Highlight.js plugin */
+.hljs {
+  background: inherit !important;
+  padding: 0 !important;
 }
 .markdown {
   overflow: hidden;
