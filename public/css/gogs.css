@@ -1304,7 +1304,7 @@ footer .container .links > *:first-child {
 }
 .repository.view.issue .title h1 {
   font-weight: 300;
-  font-size: 3rem;
+  font-size: 2.3rem;
   margin-bottom: 5px;
 }
 .repository.view.issue .title h1 .ui.input {
