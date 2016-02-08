@@ -114,6 +114,7 @@ var (
 	AdminRepoPagingNum   int
 	AdminNoticePagingNum int
 	AdminOrgPagingNum    int
+	ThemeColorMetaTag    string
 
 	// Markdown sttings
 	Markdown struct {
@@ -407,6 +408,7 @@ func NewContext() {
 	AdminRepoPagingNum = sec.Key("REPO_PAGING_NUM").MustInt(50)
 	AdminNoticePagingNum = sec.Key("NOTICE_PAGING_NUM").MustInt(50)
 	AdminOrgPagingNum = sec.Key("ORG_PAGING_NUM").MustInt(50)
+	ThemeColorMetaTag = sec.Key("THEME_COLOR_META_TAG").MustString("#ff5343")
 
 	sec = Cfg.Section("picture")
 	PictureService = sec.Key("SERVICE").In("server", []string{"server"})
