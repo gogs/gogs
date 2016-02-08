@@ -98,6 +98,9 @@ var Funcs template.FuncMap = map[string]interface{}{
 		return strings.Replace(strings.Replace(str, "%", "%25", -1), "#", "%23", -1)
 	},
 	"RenderCommitMessage": RenderCommitMessage,
+	"ThemeColorMetaTag": func() string {
+		return setting.ThemeColorMetaTag
+	},
 }
 
 func Safe(raw string) template.HTML {
