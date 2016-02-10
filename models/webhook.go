@@ -398,6 +398,7 @@ func PrepareWebhooks(repo *Repository, event HookEventType, p api.Payloader) err
 		return nil
 	}
 
+	var payloader api.Payloader
 	for _, w := range ws {
 		switch event {
 		case HOOK_EVENT_CREATE:
@@ -410,14 +411,16 @@ func PrepareWebhooks(repo *Repository, event HookEventType, p api.Payloader) err
 			}
 		}
 
+		// Use separate objects so modifcations won't be made on payload on non-Gogs type hooks.
 		switch w.HookTaskType {
 		case SLACK:
-			p, err = GetSlackPayload(p, event, w.Meta)
+			payloader, err = GetSlackPayload(p, event, w.Meta)
 			if err != nil {
 				return fmt.Errorf("GetSlackPayload: %v", err)
 			}
 		default:
 			p.SetSecret(w.Secret)
+			payloader = p
 		}
 
 		if err = CreateHookTask(&HookTask{
@@ -425,7 +428,7 @@ func PrepareWebhooks(repo *Repository, event HookEventType, p api.Payloader) err
 			HookID:      w.ID,
 			Type:        w.HookTaskType,
 			URL:         w.URL,
-			Payloader:   p,
+			Payloader:   payloader,
 			ContentType: w.ContentType,
 			EventType:   HOOK_EVENT_PUSH,
 			IsSSL:       w.IsSSL,
