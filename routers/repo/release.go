@@ -45,8 +45,12 @@ func Releases(ctx *middleware.Context) {
 			if rel.TagName == rawTag {
 				rel.Publisher, err = models.GetUserByID(rel.PublisherID)
 				if err != nil {
-					ctx.Handle(500, "GetUserByID", err)
-					return
+					if models.IsErrUserNotExist(err) {
+						rel.Publisher = models.NewFakeUser()
+					} else {
+						ctx.Handle(500, "GetUserByID", err)
+						return
+					}
 				}
 				// FIXME: duplicated code.
 				// Get corresponding target if it's not the current branch.
@@ -105,8 +109,12 @@ func Releases(ctx *middleware.Context) {
 
 		rel.Publisher, err = models.GetUserByID(rel.PublisherID)
 		if err != nil {
-			ctx.Handle(500, "GetUserByID", err)
-			return
+			if models.IsErrUserNotExist(err) {
+				rel.Publisher = models.NewFakeUser()
+			} else {
+				ctx.Handle(500, "GetUserByID", err)
+				return
+			}
 		}
 		// FIXME: duplicated code.
 		// Get corresponding target if it's not the current branch.
