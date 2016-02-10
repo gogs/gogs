@@ -957,10 +957,13 @@ func countRepositories(showPrivate bool) int64 {
 	sess := x.NewSession()
 
 	if !showPrivate {
-		sess.Where("is_private=", false)
+		sess.Where("is_private=?", false)
 	}
 
-	count, _ := sess.Count(new(Repository))
+	count, err := sess.Count(new(Repository))
+	if err != nil {
+		log.Error(4, "countRepositories: %v", err)
+	}
 	return count
 }
 
