@@ -90,7 +90,7 @@ func checkVersion() {
 		{"gopkg.in/ini.v1", ini.Version, "1.8.4"},
 		{"gopkg.in/macaron.v1", macaron.Version, "0.8.0"},
 		{"github.com/gogits/git-module", git.Version, "0.2.5"},
-		{"github.com/gogits/go-gogs-client", gogs.Version, "0.7.2"},
+		{"github.com/gogits/go-gogs-client", gogs.Version, "0.7.3"},
 	}
 	for _, c := range checkers {
 		if !version.Compare(c.Version(), c.Expected, ">=") {
