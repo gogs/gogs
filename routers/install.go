@@ -154,6 +154,7 @@ func Install(ctx *middleware.Context) {
 	form.SSHPort = setting.SSHPort
 	form.HTTPPort = setting.HttpPort
 	form.AppUrl = setting.AppUrl
+	form.LogRootPath = setting.LogRootPath
 
 	// E-mail service settings
 	if setting.MailService != nil {
@@ -238,6 +239,14 @@ func InstallPost(ctx *middleware.Context, form auth.InstallForm) {
 	if err := os.MkdirAll(form.RepoRootPath, os.ModePerm); err != nil {
 		ctx.Data["Err_RepoRootPath"] = true
 		ctx.RenderWithErr(ctx.Tr("install.invalid_repo_path", err), INSTALL, &form)
+		return
+	}
+
+	// Test log root path.
+	form.LogRootPath = strings.Replace(form.LogRootPath, "\\", "/", -1)
+	if err := os.MkdirAll(form.LogRootPath, os.ModePerm); err != nil {
+		ctx.Data["Err_LogRootPath"] = true
+		ctx.RenderWithErr(ctx.Tr("install.invalid_log_root_path", err), INSTALL, &form)
 		return
 	}
 
@@ -329,6 +338,7 @@ func InstallPost(ctx *middleware.Context, form auth.InstallForm) {
 
 	cfg.Section("log").Key("MODE").SetValue("file")
 	cfg.Section("log").Key("LEVEL").SetValue("Info")
+	cfg.Section("log").Key("ROOT_PATH").SetValue(form.LogRootPath)
 
 	cfg.Section("security").Key("INSTALL_LOCK").SetValue("true")
 	cfg.Section("security").Key("SECRET_KEY").SetValue(base.GetRandomString(15))
