@@ -242,16 +242,6 @@ func InstallPost(ctx *middleware.Context, form auth.InstallForm) {
 		return
 	}
 
-	// Set default log path if empty.
-	workDir, err := setting.WorkDir()
-	if err != nil {
-		log.Fatal(4, "Fail to get work directory: %v", err)
-	}
-
-	if len(form.LogRootPath) == 0 {
-		form.LogRootPath = path.Join(workDir, "log")
-	}
-
 	// Test log root path.
 	form.LogRootPath = strings.Replace(form.LogRootPath, "\\", "/", -1)
 	if err := os.MkdirAll(form.LogRootPath, os.ModePerm); err != nil {
