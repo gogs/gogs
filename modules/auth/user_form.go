@@ -27,7 +27,7 @@ type InstallForm struct {
 	SSHPort      int
 	HTTPPort     string `binding:"Required"`
 	AppUrl       string `binding:"Required"`
-	LogRootPath  string
+	LogRootPath  string `binding:"Required"`
 
 	SMTPHost        string
 	SMTPFrom        string
