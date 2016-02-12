@@ -415,6 +415,7 @@ func (repo *Repository) ComposePayload() *api.PayloadRepo {
 			UserName: repo.MustOwner().Name,
 		},
 		Private: repo.IsPrivate,
+		DefaultBranch: repo.DefaultBranch,
 	}
 }
 
