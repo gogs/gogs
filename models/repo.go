@@ -1103,6 +1103,7 @@ func TransferOwnership(u *User, newOwnerName string, repo *Repository) error {
 
 	wikiPath := WikiPath(owner.Name, repo.Name)
 	if com.IsExist(wikiPath) {
+		RemoveAllWithNotice("Delete repository wiki local copy", repo.LocalWikiPath())
 		if err = os.Rename(wikiPath, WikiPath(newOwner.Name, repo.Name)); err != nil {
 			return fmt.Errorf("rename repository wiki: %v", err)
 		}
