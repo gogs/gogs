@@ -86,7 +86,6 @@ Gogs 的目标是打造一个最简单、最快速和最轻松的方式搭建自
 ## 特别鸣谢
 
 - 基于 [Macaron](https://github.com/go-macaron/macaron) 的路由与中间件机制。
-- 基于 [WeTalk](https://github.com/beego/wetalk) 修改的模块设计。
 - 基于 [GoBlog](https://github.com/fuxiaohei/goblog) 修改的系统监视状态。
 - 感谢 [lavachen](http://www.lavachen.cn/) 和 [Rocker](http://weibo.com/rocker1989) 设计的 Logo。
 - 感谢 [Crowdin](https://crowdin.com/project/gogs) 提供免费的开源项目本地化支持。
