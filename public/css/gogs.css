@@ -6,7 +6,7 @@
 }
 body {
   font-family: 'Helvetica Neue', Arial, Helvetica, sans-serif, '微软雅黑';
-  background-color: #FAFAFA;
+  background-color: #fff;
   overflow-y: scroll;
 }
 img {
@@ -1124,6 +1124,11 @@ footer .container .links > *:first-child {
 .repository .metas .ui.list a .text:hover {
   color: #000;
 }
+.repository .header-wrapper {
+  background-color: #FAFAFA;
+  margin-top: -15px;
+  padding-top: 15px;
+}
 .repository .filter.menu .label.color {
   margin-left: 15px;
   padding: 0 8px;
@@ -1289,6 +1294,30 @@ footer .container .links > *:first-child {
 .repository.new.issue .comment.form .content {
   margin-left: 4em;
 }
+.repository.new.issue .comment.form .content:before,
+.repository.new.issue .comment.form .content:after {
+  right: 100%;
+  top: 20px;
+  border: solid transparent;
+  content: " ";
+  height: 0;
+  width: 0;
+  position: absolute;
+  pointer-events: none;
+}
+.repository.new.issue .comment.form .content:before {
+  border-right-color: #D4D4D5;
+  border-width: 9px;
+  margin-top: -9px;
+}
+.repository.new.issue .comment.form .content:after {
+  border-right-color: #f7f7f7;
+  border-width: 8px;
+  margin-top: -8px;
+}
+.repository.new.issue .comment.form .content:after {
+  border-right-color: #fff;
+}
 .repository.new.issue .comment.form .content .markdown {
   font-size: 14px;
 }
@@ -1395,7 +1424,7 @@ footer .container .links > *:first-child {
 .repository.view.issue .comment-list .comment .content .header:before,
 .repository.view.issue .comment-list .comment .content .header:after {
   right: 100%;
-  top: 50%;
+  top: 20px;
   border: solid transparent;
   content: " ";
   height: 0;
@@ -1491,6 +1520,30 @@ footer .container .links > *:first-child {
 .repository .comment.form .content .field:first-child {
   clear: none;
 }
+.repository .comment.form .content .form:before,
+.repository .comment.form .content .form:after {
+  right: 100%;
+  top: 20px;
+  border: solid transparent;
+  content: " ";
+  height: 0;
+  width: 0;
+  position: absolute;
+  pointer-events: none;
+}
+.repository .comment.form .content .form:before {
+  border-right-color: #D4D4D5;
+  border-width: 9px;
+  margin-top: -9px;
+}
+.repository .comment.form .content .form:after {
+  border-right-color: #f7f7f7;
+  border-width: 8px;
+  margin-top: -8px;
+}
+.repository .comment.form .content .form:after {
+  border-right-color: #fff;
+}
 .repository .comment.form .content .tab.segment {
   border: none;
   padding: 0;
@@ -1579,6 +1632,30 @@ footer .container .links > *:first-child {
 }
 .repository.compare.pull .choose.branch .octicon {
   padding-right: 10px;
+}
+.repository.compare.pull .comment.form .content:before,
+.repository.compare.pull .comment.form .content:after {
+  right: 100%;
+  top: 20px;
+  border: solid transparent;
+  content: " ";
+  height: 0;
+  width: 0;
+  position: absolute;
+  pointer-events: none;
+}
+.repository.compare.pull .comment.form .content:before {
+  border-right-color: #D4D4D5;
+  border-width: 9px;
+  margin-top: -9px;
+}
+.repository.compare.pull .comment.form .content:after {
+  border-right-color: #f7f7f7;
+  border-width: 8px;
+  margin-top: -8px;
+}
+.repository.compare.pull .comment.form .content:after {
+  border-right-color: #fff;
 }
 .repository .filter.dropdown .menu {
   margin-top: 1px!important;
@@ -2095,6 +2172,27 @@ footer .container .links > *:first-child {
   float: left;
   width: 15px;
   height: 15px;
+}
+#avatar-arrow:before,
+#avatar-arrow:after {
+  right: 100%;
+  top: 20px;
+  border: solid transparent;
+  content: " ";
+  height: 0;
+  width: 0;
+  position: absolute;
+  pointer-events: none;
+}
+#avatar-arrow:before {
+  border-right-color: #D4D4D5;
+  border-width: 9px;
+  margin-top: -9px;
+}
+#avatar-arrow:after {
+  border-right-color: #f7f7f7;
+  border-width: 8px;
+  margin-top: -8px;
 }
 #transfer-repo-modal .ui.message,
 #delete-repo-modal .ui.message {
