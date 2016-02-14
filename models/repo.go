@@ -654,7 +654,7 @@ func MigrateRepository(u *User, opts MigrateRepoOptions) (*Repository, error) {
 		return repo, UpdateRepository(repo, false)
 	}
 
-	repo, err = FinishMigrateRepository(repo, repoPath)
+	repo, err = CleanUpMigrateInfo(repo, repoPath)
 	if err != nil {
 		return repo, err
 	}
@@ -663,7 +663,7 @@ func MigrateRepository(u *User, opts MigrateRepoOptions) (*Repository, error) {
 }
 
 // Finish migrating repository with things that don't need to be done for mirrors.
-func FinishMigrateRepository(repo *Repository, repoPath string) (*Repository, error) {
+func CleanUpMigrateInfo(repo *Repository, repoPath string) (*Repository, error) {
 	if err := createUpdateHook(repoPath); err != nil {
 		return repo, fmt.Errorf("createUpdateHook: %v", err)
 	}
