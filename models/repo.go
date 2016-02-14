@@ -654,7 +654,17 @@ func MigrateRepository(u *User, opts MigrateRepoOptions) (*Repository, error) {
 		return repo, UpdateRepository(repo, false)
 	}
 
-	if err = createUpdateHook(repoPath); err != nil {
+	repo, err = FinishMigrateRepository(repo, repoPath)
+	if err != nil {
+		return repo, err
+	}
+
+	return repo, UpdateRepository(repo, false)
+}
+
+// Finish migrating repository with things that don't need to be done for mirrors.
+func FinishMigrateRepository(repo *Repository, repoPath string) (*Repository, error) {
+	if err := createUpdateHook(repoPath); err != nil {
 		return repo, fmt.Errorf("createUpdateHook: %v", err)
 	}
 
@@ -695,7 +705,7 @@ func MigrateRepository(u *User, opts MigrateRepoOptions) (*Repository, error) {
 		repo.DefaultBranch = headBranch.Name
 	}
 
-	return repo, UpdateRepository(repo, false)
+	return repo, nil
 }
 
 // initRepoCommit temporarily changes with work directory.
