@@ -1,84 +1,88 @@
 {{with .Repository}}
-	<div class="ui container"><!-- start container -->
-		<div class="ui vertically padded grid head"><!-- start grid -->
-			<div class="column"><!-- start column -->
-				<div class="ui header">
-					<div class="ui huge breadcrumb">
-						<i class="mega-octicon octicon-{{if .IsPrivate}}lock{{else if .IsMirror}}repo-clone{{else if .IsFork}}repo-forked{{else}}repo{{end}}"></i>
-						<a href="{{AppSubUrl}}/{{.Owner.Name}}">{{.Owner.Name}}</a>
-						<div class="divider"> / </div>
-						<a href="{{$.RepoLink}}">{{.Name}}</a>
-						{{if .IsMirror}}<div class="fork-flag">{{$.i18n.Tr "repo.mirror_from"}} <a target="_blank" href="{{$.Mirror.Address}}">{{$.Mirror.Address}}</a></div>{{end}}
-						{{if .IsFork}}<div class="fork-flag">{{$.i18n.Tr "repo.forked_from"}} <a href="{{.BaseRepo.RepoLink}}">{{SubStr .BaseRepo.RepoLink 1 -1}}</a></div>{{end}}
-					</div>
+	<div class="header-wrapper">
+		<div class="ui container"><!-- start container -->
+			<div class="ui vertically padded grid head"><!-- start grid -->
+				<div class="column"><!-- start column -->
+					<div class="ui header">
+						<div class="ui huge breadcrumb">
+							<i class="mega-octicon octicon-{{if .IsPrivate}}lock{{else if .IsMirror}}repo-clone{{else if .IsFork}}repo-forked{{else}}repo{{end}}"></i>
+							<a href="{{AppSubUrl}}/{{.Owner.Name}}">{{.Owner.Name}}</a>
+							<div class="divider"> / </div>
+							<a href="{{$.RepoLink}}">{{.Name}}</a>
+							{{if .IsMirror}}<div class="fork-flag">{{$.i18n.Tr "repo.mirror_from"}} <a target="_blank" href="{{$.Mirror.Address}}">{{$.Mirror.Address}}</a></div>{{end}}
+							{{if .IsFork}}<div class="fork-flag">{{$.i18n.Tr "repo.forked_from"}} <a href="{{.BaseRepo.RepoLink}}">{{SubStr .BaseRepo.RepoLink 1 -1}}</a></div>{{end}}
+						</div>
 
-					<div class="ui right">
-						<div class="ui labeled button" tabindex="0">
-							<a class="ui button" href="{{$.RepoLink}}/action/{{if $.IsWatchingRepo}}un{{end}}watch?redirect_to={{$.Link}}">
-								<i class="icon fa fa-eye{{if not $.IsWatchingRepo}}-slash{{end}}"></i>{{if $.IsWatchingRepo}}{{$.i18n.Tr "repo.unwatch"}}{{else}}{{$.i18n.Tr "repo.watch"}}{{end}}
-							</a>
-							<a class="ui basic label" href="{{.RepoLink}}/watchers">
-								{{.NumWatches}}
-							</a>
-						</div>
-						<div class="ui labeled button" tabindex="0">
-							<a class="ui button" href="{{$.RepoLink}}/action/{{if $.IsStaringRepo}}un{{end}}star?redirect_to={{$.Link}}">
-								<i class="icon fa-star{{if not $.IsStaringRepo}}-o{{end}}"></i>{{if $.IsStaringRepo}}{{$.i18n.Tr "repo.unstar"}}{{else}}{{$.i18n.Tr "repo.star"}}{{end}}
-							</a>
-							<a class="ui basic label" href="{{.RepoLink}}/stars">
-								{{.NumStars}}
-							</a>
-						</div>
-						{{if .CanBeForked}}
+						<div class="ui right">
 							<div class="ui labeled button" tabindex="0">
-								<a class="ui button {{if eq .OwnerID $.SignedUserID}}poping up{{end}}" {{if not (eq .OwnerID $.SignedUserID)}}href="{{AppSubUrl}}/repo/fork/{{.ID}}"{{else}} data-content="{{$.i18n.Tr "repo.fork_from_self"}}" data-position="top center" data-variation="tiny"{{end}}>
-									<i class="icon octicon octicon-repo-forked"></i>{{$.i18n.Tr "repo.fork"}}
+								<a class="ui button" href="{{$.RepoLink}}/action/{{if $.IsWatchingRepo}}un{{end}}watch?redirect_to={{$.Link}}">
+									<i class="icon fa fa-eye{{if not $.IsWatchingRepo}}-slash{{end}}"></i>{{if $.IsWatchingRepo}}{{$.i18n.Tr "repo.unwatch"}}{{else}}{{$.i18n.Tr "repo.watch"}}{{end}}
 								</a>
-								<a class="ui basic label" href="{{.RepoLink}}/forks">
-									{{.NumForks}}
+								<a class="ui basic label" href="{{.RepoLink}}/watchers">
+									{{.NumWatches}}
 								</a>
 							</div>
-						{{end}}
+							<div class="ui labeled button" tabindex="0">
+								<a class="ui button" href="{{$.RepoLink}}/action/{{if $.IsStaringRepo}}un{{end}}star?redirect_to={{$.Link}}">
+									<i class="icon fa-star{{if not $.IsStaringRepo}}-o{{end}}"></i>{{if $.IsStaringRepo}}{{$.i18n.Tr "repo.unstar"}}{{else}}{{$.i18n.Tr "repo.star"}}{{end}}
+								</a>
+								<a class="ui basic label" href="{{.RepoLink}}/stars">
+									{{.NumStars}}
+								</a>
+							</div>
+							{{if .CanBeForked}}
+								<div class="ui labeled button" tabindex="0">
+									<a class="ui button {{if eq .OwnerID $.SignedUserID}}poping up{{end}}" {{if not (eq .OwnerID $.SignedUserID)}}href="{{AppSubUrl}}/repo/fork/{{.ID}}"{{else}} data-content="{{$.i18n.Tr "repo.fork_from_self"}}" data-position="top center" data-variation="tiny"{{end}}>
+										<i class="icon octicon octicon-repo-forked"></i>{{$.i18n.Tr "repo.fork"}}
+									</a>
+									<a class="ui basic label" href="{{.RepoLink}}/forks">
+										{{.NumForks}}
+									</a>
+								</div>
+							{{end}}
+						</div>
 					</div>
-				</div>
-			</div><!-- end column -->
-		</div><!-- end grid -->
-	</div><!-- end container -->
+				</div><!-- end column -->
+			</div><!-- end grid -->
+		</div><!-- end container -->
+	</div>
 {{end}}
 {{if not (or .IsBareRepo .IsDiffCompare)}}
-	<div class="ui tabs container">
-		<div class="ui tabular menu navbar">
-			<a class="{{if .PageIsViewCode}}active{{end}} item" href="{{.RepoLink}}">
-				<i class="icon octicon octicon-code"></i> {{.i18n.Tr "repo.code"}}
-			</a>
-			{{if .Repository.EnableIssues}}
-				<a class="{{if .PageIsIssueList}}active{{end}} item" href="{{.RepoLink}}/issues">
-					<i class="icon octicon octicon-issue-opened"></i> {{.i18n.Tr "repo.issues"}} <span class="ui {{if not .Repository.NumOpenIssues}}gray{{else}}blue{{end}} small label">{{.Repository.NumOpenIssues}}</span>
+	<div class="header-wrapper">
+		<div class="ui tabs container">
+			<div class="ui tabular menu navbar">
+				<a class="{{if .PageIsViewCode}}active{{end}} item" href="{{.RepoLink}}">
+					<i class="icon octicon octicon-code"></i> {{.i18n.Tr "repo.code"}}
 				</a>
-			{{end}}
-			{{if .Repository.EnablePulls}}
-				<a class="{{if .PageIsPullList}}active{{end}} item" href="{{.RepoLink}}/pulls">
-					<i class="icon octicon octicon-git-pull-request"></i> {{.i18n.Tr "repo.pulls"}} <span class="ui {{if not .Repository.NumOpenPulls}}gray{{else}}blue{{end}} small label">{{.Repository.NumOpenPulls}}</span>
-				</a>
-			{{end}}
-			<a class="{{if (or (.PageIsCommits) (.PageIsDiff))}}active{{end}} item" href="{{.RepoLink}}/commits/{{EscapePound .BranchName}}">
-				<i class="icon octicon octicon-history"></i> {{.i18n.Tr "repo.commits"}} <span class="ui {{if not .CommitsCount}}gray{{else}}blue{{end}} small label">{{.CommitsCount}}</span>
-			</a>
-			<a class="{{if .PageIsReleaseList}}active{{end}} item" href="{{.RepoLink}}/releases">
-				<i class="icon octicon octicon-tag"></i> {{.i18n.Tr "repo.releases"}} <span class="ui {{if not .Repository.NumTags}}gray{{else}}blue{{end}} small label">{{.Repository.NumTags}}</span>
-			</a>
-			{{if .Repository.EnableWiki}}
-				<a class="{{if .PageIsWiki}}active{{end}} item" href="{{.RepoLink}}/wiki">
-					<i class="icon octicon octicon-book"></i> {{.i18n.Tr "repo.wiki"}}
-				</a>
-			{{end}}
-			{{if .IsRepositoryAdmin}}
-				<div class="right menu">
-					<a class="{{if .PageIsSettings}}active{{end}} item" href="{{.RepoLink}}/settings">
-						<i class="icon octicon octicon-tools"></i> {{.i18n.Tr "repo.settings"}}
+				{{if .Repository.EnableIssues}}
+					<a class="{{if .PageIsIssueList}}active{{end}} item" href="{{.RepoLink}}/issues">
+						<i class="icon octicon octicon-issue-opened"></i> {{.i18n.Tr "repo.issues"}} <span class="ui {{if not .Repository.NumOpenIssues}}gray{{else}}blue{{end}} small label">{{.Repository.NumOpenIssues}}</span>
 					</a>
-				</div>
-			{{end}}
+				{{end}}
+				{{if .Repository.EnablePulls}}
+					<a class="{{if .PageIsPullList}}active{{end}} item" href="{{.RepoLink}}/pulls">
+						<i class="icon octicon octicon-git-pull-request"></i> {{.i18n.Tr "repo.pulls"}} <span class="ui {{if not .Repository.NumOpenPulls}}gray{{else}}blue{{end}} small label">{{.Repository.NumOpenPulls}}</span>
+					</a>
+				{{end}}
+				<a class="{{if (or (.PageIsCommits) (.PageIsDiff))}}active{{end}} item" href="{{.RepoLink}}/commits/{{EscapePound .BranchName}}">
+					<i class="icon octicon octicon-history"></i> {{.i18n.Tr "repo.commits"}} <span class="ui {{if not .CommitsCount}}gray{{else}}blue{{end}} small label">{{.CommitsCount}}</span>
+				</a>
+				<a class="{{if .PageIsReleaseList}}active{{end}} item" href="{{.RepoLink}}/releases">
+					<i class="icon octicon octicon-tag"></i> {{.i18n.Tr "repo.releases"}} <span class="ui {{if not .Repository.NumTags}}gray{{else}}blue{{end}} small label">{{.Repository.NumTags}}</span>
+				</a>
+				{{if .Repository.EnableWiki}}
+					<a class="{{if .PageIsWiki}}active{{end}} item" href="{{.RepoLink}}/wiki">
+						<i class="icon octicon octicon-book"></i> {{.i18n.Tr "repo.wiki"}}
+					</a>
+				{{end}}
+				{{if .IsRepositoryAdmin}}
+					<div class="right menu">
+						<a class="{{if .PageIsSettings}}active{{end}} item" href="{{.RepoLink}}/settings">
+							<i class="icon octicon octicon-tools"></i> {{.i18n.Tr "repo.settings"}}
+						</a>
+					</div>
+				{{end}}
+			</div>
 		</div>
 	</div>
 	<div class="ui tabs divider"></div>
