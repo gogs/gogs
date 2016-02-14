@@ -178,6 +178,7 @@
 	</div>
 </div>
 
+{{if .Repository.IsMirror}}
 <div class="ui small modal" id="convert-repo-modal">
 	<div class="header">
 		{{.i18n.Tr "repo.settings.convert"}}
@@ -207,6 +208,7 @@
 		</form>
 	</div>
 </div>
+{{end}}
 
 <div class="ui small modal" id="transfer-repo-modal">
 	<div class="header">
