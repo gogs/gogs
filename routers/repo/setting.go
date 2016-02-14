@@ -158,19 +158,18 @@ func SettingsPost(ctx *middleware.Context, form auth.RepoSettingForm) {
 			ctx.Error(404)
 			return
 		}
-
 		repo.IsMirror = false
 
-		if _, err := models.FinishMigrateRepository(repo, models.RepoPath(ctx.Repo.Owner.Name, repo.Name)); err != nil {
+		if _, err := models.CleanUpMigrateInfo(repo, models.RepoPath(ctx.Repo.Owner.Name, repo.Name)); err != nil {
 			ctx.RenderWithErr(ctx.Tr("settings.convert.failed"), SETTINGS_OPTIONS, &form)
 			return
 		}
 
-		if 	err := models.UpdateRepository(repo, false); err != nil {
+		if err := models.UpdateRepository(repo, false); err != nil {
 			ctx.RenderWithErr(ctx.Tr("settings.convert.failed"), SETTINGS_OPTIONS, &form)
 			return
 		}
-		log.Trace("Repository converted: %s/%s", ctx.Repo.Owner.Name, repo.Name)
+		log.Trace("Repository converted from mirror to regular: %s/%s", ctx.Repo.Owner.Name, repo.Name)
 		ctx.Flash.Success(ctx.Tr("repo.settings.convert_succeed"))
 		ctx.Redirect(setting.AppSubUrl + "/" + ctx.Repo.Owner.Name + "/" + repo.Name)
 
