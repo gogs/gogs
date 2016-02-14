@@ -154,6 +154,11 @@ func SettingsPost(ctx *middleware.Context, form auth.RepoSettingForm) {
 			}
 		}
 
+		if !repo.IsMirror {
+			ctx.Error(404)
+			return
+		}
+
 		repo.IsMirror = false
 
 		if _, err := models.FinishMigrateRepository(repo, models.RepoPath(ctx.Repo.Owner.Name, repo.Name)); err != nil {
