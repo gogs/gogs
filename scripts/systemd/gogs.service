@@ -8,6 +8,12 @@ After=network.target
 #After=redis.service
 
 [Service]
+# Modify these two values and uncomment them if you have
+# repos with lots of files and get an HTTP error 500 because
+# of that
+###
+#LimitMEMLOCK=infinity
+#LimitNOFILE=65535
 Type=simple
 User=git
 Group=git
