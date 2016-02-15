@@ -593,12 +593,29 @@ func MergePullRequestAction(actUser *User, repo *Repository, pull *Issue) error 
 }
 
 // GetFeeds returns action list of given user in given context.
-func GetFeeds(uid, offset int64, isProfile bool) ([]*Action, error) {
+// ctxUserID is the user who's requesting, userID is the user/org that is requested.
+// ctxUserID can be -1, if isProfile is true or in order to skip the permission check.
+func GetFeeds(ctxUserID, userID, offset int64, isProfile bool) ([]*Action, error) {
 	actions := make([]*Action, 0, 20)
-	sess := x.Limit(20, int(offset)).Desc("id").Where("user_id=?", uid)
+	sess := x.Limit(20, int(offset)).Desc("id").Where("user_id=?", userID)
 	if isProfile {
-		sess.And("is_private=?", false).And("act_user_id=?", uid)
+		sess.And("is_private=?", false).And("act_user_id=?", userID)
+	} else if ctxUserID != -1 {
+		ctxUser := &User{Id: userID}
+		if err := ctxUser.GetUserRepositories(ctxUserID); err != nil {
+			return nil, err
+		}
+
+		var repoIDs []int64
+		for	_, repo := range ctxUser.Repos {
+			repoIDs = append(repoIDs, repo.ID)
+		}
+
+		if len(repoIDs) > 0 {
+			sess.In("repo_id", repoIDs)
+		}
 	}
+
 	err := sess.Find(&actions)
 	return actions, err
 }
