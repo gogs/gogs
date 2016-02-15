@@ -364,7 +364,7 @@ func TestWebhook(ctx *middleware.Context) {
 		Sender: &api.PayloadUser{
 			UserName:  ctx.User.Name,
 			ID:        ctx.User.Id,
-			AvatarUrl: setting.AppUrl + ctx.User.RelAvatarLink(),
+			AvatarUrl: ctx.User.AvatarLink(),
 		},
 	}
 	if err := models.PrepareWebhooks(ctx.Repo.Repository, models.HOOK_EVENT_PUSH, p); err != nil {
