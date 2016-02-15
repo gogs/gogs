@@ -260,15 +260,15 @@ func getOrgsByUserID(sess *xorm.Session, userID int64) ([]*User, error) {
 		Join("INNER", "`org_user`", "`org_user`.org_id=`user`.id").Find(&orgs)
 }
 
-// GetPublicOrgsByUserID returns a list of organizations that the given user ID
-// has joined publicly.
+// GetOrgsByUserID returns a list of organizations that the given user ID
+// has joined.
 func GetOrgsByUserID(userID int64) ([]*User, error) {
 	sess := x.NewSession()
 	return getOrgsByUserID(sess, userID)
 }
 
-// GetPublicOrgsByUserID returns a list of organizations that the given user ID
-// has joined publicly, ordered descending by the given condition.
+// GetOrgsByUserIDDesc returns a list of organizations that the given user ID
+// has joined, ordered descending by the given condition.
 func GetOrgsByUserIDDesc(userID int64, desc string, all bool) ([]*User, error) {
 	sess := x.NewSession()
 	if !all {
