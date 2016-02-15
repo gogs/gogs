@@ -141,6 +141,38 @@ func SettingsPost(ctx *middleware.Context, form auth.RepoSettingForm) {
 		ctx.Flash.Success(ctx.Tr("repo.settings.update_settings_success"))
 		ctx.Redirect(ctx.Repo.RepoLink + "/settings")
 
+	case "convert":
+		if repo.Name != form.RepoName {
+			ctx.RenderWithErr(ctx.Tr("form.enterred_invalid_repo_name"), SETTINGS_OPTIONS, nil)
+			return
+		}
+
+		if ctx.Repo.Owner.IsOrganization() {
+			if !ctx.Repo.Owner.IsOwnedBy(ctx.User.Id) {
+				ctx.Error(404)
+				return
+			}
+		}
+
+		if !repo.IsMirror {
+			ctx.Error(404)
+			return
+		}
+		repo.IsMirror = false
+
+		if _, err := models.CleanUpMigrateInfo(repo, models.RepoPath(ctx.Repo.Owner.Name, repo.Name)); err != nil {
+			ctx.RenderWithErr(ctx.Tr("settings.convert.failed"), SETTINGS_OPTIONS, &form)
+			return
+		}
+
+		if err := models.DeleteMirrorByRepoID(ctx.Repo.Repository.ID); err != nil {
+			ctx.RenderWithErr(ctx.Tr("settings.convert.failed"), SETTINGS_OPTIONS, &form)
+			return
+		}
+		log.Trace("Repository converted from mirror to regular: %s/%s", ctx.Repo.Owner.Name, repo.Name)
+		ctx.Flash.Success(ctx.Tr("repo.settings.convert_succeed"))
+		ctx.Redirect(setting.AppSubUrl + "/" + ctx.Repo.Owner.Name + "/" + repo.Name)
+
 	case "transfer":
 		if repo.Name != form.RepoName {
 			ctx.RenderWithErr(ctx.Tr("form.enterred_invalid_repo_name"), SETTINGS_OPTIONS, nil)
