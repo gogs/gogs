@@ -165,7 +165,7 @@ func SettingsPost(ctx *middleware.Context, form auth.RepoSettingForm) {
 			return
 		}
 
-		if err := models.UpdateRepository(repo, false); err != nil {
+		if err := models.DeleteMirrorByRepoID(ctx.Repo.Repository.ID); err != nil {
 			ctx.RenderWithErr(ctx.Tr("settings.convert.failed"), SETTINGS_OPTIONS, &form)
 			return
 		}
