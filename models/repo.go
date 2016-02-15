@@ -655,7 +655,12 @@ func MigrateRepository(u *User, opts MigrateRepoOptions) (*Repository, error) {
 		return repo, UpdateRepository(repo, false)
 	}
 
-	if err = createUpdateHook(repoPath); err != nil {
+	return CleanUpMigrateInfo(repo, repoPath)
+}
+
+// Finish migrating repository with things that don't need to be done for mirrors.
+func CleanUpMigrateInfo(repo *Repository, repoPath string) (*Repository, error) {
+	if err := createUpdateHook(repoPath); err != nil {
 		return repo, fmt.Errorf("createUpdateHook: %v", err)
 	}
 
@@ -1613,6 +1618,11 @@ func MirrorUpdate() {
 			log.Error(4, "UpdateMirror[%d]: %v", mirrors[i].ID, err)
 		}
 	}
+}
+
+func DeleteMirrorByRepoID(repoId int64) error {
+	_, err := x.Delete(&Mirror{RepoID: repoId})
+	return err
 }
 
 // GitFsck calls 'git fsck' to check repository health.
