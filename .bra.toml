@@ -13,7 +13,6 @@ watch_dirs = [
 watch_exts = [".go"]
 build_delay = 1500
 cmds = [
-	["go", "install", "-v", "-race"], # sqlite cert pam tidb
-	["go", "build", "-race"],
+	["make", "build-dev"], # sqlite cert pam tidb
 	["./gogs", "web"]
 ]
