@@ -7,12 +7,12 @@ package models
 import (
 	"fmt"
 	"io/ioutil"
+	"net/url"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
 	"sync"
-	"net/url"
 
 	"github.com/Unknwon/com"
 
@@ -77,7 +77,7 @@ func ToWikiPageName(urlString string) string {
 
 // WikiCloneLink returns clone URLs of repository wiki.
 func (repo *Repository) WikiCloneLink() (cl *CloneLink) {
-	return repo.cloneLink(true,"")
+	return repo.cloneLink(true, "")
 }
 
 // WikiPath returns wiki data path by given user and repository name.
