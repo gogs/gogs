@@ -247,8 +247,6 @@ func (u *User) RelAvatarLink() string {
 		}
 
 		return "/avatars/" + com.ToStr(u.Id)
-	case setting.Service.EnableCacheAvatar:
-		return "/avatar/" + u.Avatar
 	}
 	return setting.GravatarSource + u.Avatar
 }
@@ -493,7 +491,7 @@ func CreateUser(u *User) (err error) {
 
 	u.LowerName = strings.ToLower(u.Name)
 	u.AvatarEmail = u.Email
-	u.Avatar = avatar.HashEmail(u.AvatarEmail)
+	u.Avatar = base.HashEmail(u.AvatarEmail)
 	u.Rands = GetUserSalt()
 	u.Salt = GetUserSalt()
 	u.EncodePasswd()
@@ -628,7 +626,7 @@ func updateUser(e Engine, u *User) error {
 		if len(u.AvatarEmail) == 0 {
 			u.AvatarEmail = u.Email
 		}
-		u.Avatar = avatar.HashEmail(u.AvatarEmail)
+		u.Avatar = base.HashEmail(u.AvatarEmail)
 	}
 
 	u.LowerName = strings.ToLower(u.Name)
