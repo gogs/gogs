@@ -161,12 +161,10 @@ func SettingsPost(ctx *middleware.Context, form auth.RepoSettingForm) {
 		repo.IsMirror = false
 
 		if _, err := models.CleanUpMigrateInfo(repo, models.RepoPath(ctx.Repo.Owner.Name, repo.Name)); err != nil {
-			ctx.RenderWithErr(ctx.Tr("settings.convert.failed"), SETTINGS_OPTIONS, &form)
+			ctx.Handle(500, "CleanUpMigrateInfo", err)
 			return
-		}
-
-		if err := models.DeleteMirrorByRepoID(ctx.Repo.Repository.ID); err != nil {
-			ctx.RenderWithErr(ctx.Tr("settings.convert.failed"), SETTINGS_OPTIONS, &form)
+		} else if err = models.DeleteMirrorByRepoID(ctx.Repo.Repository.ID); err != nil {
+			ctx.Handle(500, "DeleteMirrorByRepoID", err)
 			return
 		}
 		log.Trace("Repository converted from mirror to regular: %s/%s", ctx.Repo.Owner.Name, repo.Name)
