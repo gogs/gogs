@@ -414,7 +414,7 @@ func (repo *Repository) ComposePayload() *api.PayloadRepo {
 			Email:    repo.MustOwner().Email,
 			UserName: repo.MustOwner().Name,
 		},
-		Private: repo.IsPrivate,
+		Private:       repo.IsPrivate,
 		DefaultBranch: repo.DefaultBranch,
 	}
 }
@@ -1097,11 +1097,13 @@ func TransferOwnership(u *User, newOwnerName string, repo *Repository) error {
 		return fmt.Errorf("transferRepoAction: %v", err)
 	}
 
-	// Change repository directory name.
+	// Rename remote repository to new path and delete local copy.
 	if err = os.Rename(RepoPath(owner.Name, repo.Name), RepoPath(newOwner.Name, repo.Name)); err != nil {
 		return fmt.Errorf("rename repository directory: %v", err)
 	}
+	RemoveAllWithNotice("Delete repository local copy", repo.LocalCopyPath())
 
+	// Rename remote wiki repository to new path and delete local copy.
 	wikiPath := WikiPath(owner.Name, repo.Name)
 	if com.IsExist(wikiPath) {
 		RemoveAllWithNotice("Delete repository wiki local copy", repo.LocalWikiPath())

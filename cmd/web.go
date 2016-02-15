@@ -81,7 +81,7 @@ func checkVersion() {
 	// Check dependency version.
 	checkers := []VerChecker{
 		{"github.com/go-xorm/xorm", func() string { return xorm.Version }, "0.4.4.1029"},
-		{"github.com/go-macaron/binding", binding.Version, "0.1.0"},
+		{"github.com/go-macaron/binding", binding.Version, "0.2.1"},
 		{"github.com/go-macaron/cache", cache.Version, "0.1.2"},
 		{"github.com/go-macaron/csrf", csrf.Version, "0.0.3"},
 		{"github.com/go-macaron/i18n", i18n.Version, "0.2.0"},
