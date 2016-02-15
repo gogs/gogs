@@ -145,8 +145,6 @@ func listen(config *ssh.ServerConfig, port int) {
 			go handleServerConn(sConn.Permissions.Extensions["key-id"], chans)
 		}()
 	}
-
-	panic("SSH: Unexpected exit of listen loop")
 }
 
 // Listen starts a SSH server listens on given port.
