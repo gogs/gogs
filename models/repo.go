@@ -592,6 +592,11 @@ func UpdateMirror(m *Mirror) error {
 	return updateMirror(x, m)
 }
 
+func DeleteMirrorByRepoID(repoID int64) error {
+	_, err := x.Delete(&Mirror{RepoID: repoID})
+	return err
+}
+
 func createUpdateHook(repoPath string) error {
 	return git.SetUpdateHook(repoPath,
 		fmt.Sprintf(_TPL_UPDATE_HOOK, setting.ScriptType, "\""+setting.AppPath+"\"", setting.CustomConf))
@@ -1618,11 +1623,6 @@ func MirrorUpdate() {
 			log.Error(4, "UpdateMirror[%d]: %v", mirrors[i].ID, err)
 		}
 	}
-}
-
-func DeleteMirrorByRepoID(repoId int64) error {
-	_, err := x.Delete(&Mirror{RepoID: repoId})
-	return err
 }
 
 // GitFsck calls 'git fsck' to check repository health.
