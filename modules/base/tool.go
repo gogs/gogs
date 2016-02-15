@@ -26,7 +26,6 @@ import (
 
 	"github.com/gogits/chardet"
 
-	"github.com/gogits/gogs/modules/avatar"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/setting"
 )
@@ -209,17 +208,22 @@ func CreateTimeLimitCode(data string, minutes int, startInf interface{}) string 
 	return code
 }
 
-// AvatarLink returns avatar link by given e-mail.
+// HashEmail hashes email address to MD5 string.
+// https://en.gravatar.com/site/implement/hash/
+func HashEmail(email string) string {
+	email = strings.ToLower(strings.TrimSpace(email))
+	h := md5.New()
+	h.Write([]byte(email))
+	return hex.EncodeToString(h.Sum(nil))
+}
+
+// AvatarLink returns avatar link by given email.
 func AvatarLink(email string) string {
 	if setting.DisableGravatar || setting.OfflineMode {
 		return setting.AppSubUrl + "/img/avatar_default.jpg"
 	}
 
-	gravatarHash := avatar.HashEmail(email)
-	if setting.Service.EnableCacheAvatar {
-		return setting.AppSubUrl + "/avatar/" + gravatarHash
-	}
-	return setting.GravatarSource + gravatarHash
+	return setting.GravatarSource + HashEmail(email)
 }
 
 // Seconds-based time units

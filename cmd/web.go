@@ -34,7 +34,6 @@ import (
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
-	"github.com/gogits/gogs/modules/avatar"
 	"github.com/gogits/gogs/modules/bindata"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/middleware"
@@ -244,11 +243,6 @@ func runWeb(ctx *cli.Context) {
 		m.Get("/logout", user.SignOut)
 	})
 	// ***** END: User *****
-
-	// Gravatar service.
-	avt := avatar.CacheServer("public/img/avatar/", "public/img/avatar_default.jpg")
-	os.MkdirAll("public/img/avatar/", os.ModePerm)
-	m.Get("/avatar/:hash", avt.ServeHTTP)
 
 	adminReq := middleware.Toggle(&middleware.ToggleOptions{SignInRequire: true, AdminRequire: true})
 
