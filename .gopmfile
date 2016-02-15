@@ -4,7 +4,7 @@ path = github.com/gogits/gogs
 [deps]
 github.com/bradfitz/gomemcache = commit:fb1f79c
 github.com/codegangsta/cli = commit:cf1f63a
-github.com/go-macaron/binding = commit:2502aaf
+github.com/go-macaron/binding = 
 github.com/go-macaron/cache = commit:5617353
 github.com/go-macaron/captcha = commit:8aa5919
 github.com/go-macaron/csrf = commit:715bca0
