@@ -86,7 +86,7 @@ func Profile(ctx *middleware.Context) {
 	ctx.Data["TabName"] = tab
 	switch tab {
 	case "activity":
-		retrieveFeeds(ctx, -1, u.Id, 0, true)
+		retrieveFeeds(ctx, u.Id, -1, 0, true)
 		if ctx.Written() {
 			return
 		}
