@@ -58,18 +58,10 @@ func (ls *Source) sanitizedUserDN(username string) (string, bool) {
 	return fmt.Sprintf(ls.UserDN, username), true
 }
 
-func (ls *Source) FindUserDN(name string) (string, bool) {
-	l, err := ldapDial(ls)
-	if err != nil {
-		log.Error(4, "LDAP Connect error, %s:%v", ls.Host, err)
-		ls.Enabled = false
-		return "", false
-	}
-	defer l.Close()
-
+func (ls *Source) findUserDN(l *ldap.Conn, name string) (string, bool) {
 	log.Trace("Search for LDAP user: %s", name)
 	if ls.BindDN != "" && ls.BindPassword != "" {
-		err = l.Bind(ls.BindDN, ls.BindPassword)
+		err := l.Bind(ls.BindDN, ls.BindPassword)
 		if err != nil {
 			log.Debug("Failed to bind as BindDN[%s]: %v", ls.BindDN, err)
 			return "", false
@@ -111,6 +103,14 @@ func (ls *Source) FindUserDN(name string) (string, bool) {
 
 // searchEntry : search an LDAP source if an entry (name, passwd) is valid and in the specific filter
 func (ls *Source) SearchEntry(name, passwd string, directBind bool) (string, string, string, string, bool, bool) {
+	l, err := ldapDial(ls)
+	if err != nil {
+		log.Error(4, "LDAP Connect error, %s:%v", ls.Host, err)
+		ls.Enabled = false
+		return "", "", "", "", false, false
+	}
+	defer l.Close()
+
 	var userDN string
 	if directBind {
 		log.Trace("LDAP will bind directly via UserDN template: %s", ls.UserDN)
@@ -124,19 +124,11 @@ func (ls *Source) SearchEntry(name, passwd string, directBind bool) (string, str
 		log.Trace("LDAP will use BindDN.")
 
 		var found bool
-		userDN, found = ls.FindUserDN(name)
+		userDN, found = ls.findUserDN(l, name)
 		if !found {
 			return "", "", "", "", false, false
 		}
 	}
-
-	l, err := ldapDial(ls)
-	if err != nil {
-		log.Error(4, "LDAP Connect error (%s): %v", ls.Host, err)
-		ls.Enabled = false
-		return "", "", "", "", false, false
-	}
-	defer l.Close()
 
 	log.Trace("Binding with userDN: %s", userDN)
 	err = l.Bind(userDN, passwd)
