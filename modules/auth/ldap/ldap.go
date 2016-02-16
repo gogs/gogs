@@ -31,6 +31,7 @@ type Source struct {
 	AttributeName     string // First name attribute
 	AttributeSurname  string // Surname attribute
 	AttributeMail     string // E-mail attribute
+	AttributesInBind  bool   // fetch attributes in bind context (not user)
 	Filter            string // Query filter to validate entry
 	AdminFilter       string // Query filter to check if user is admin
 	Enabled           bool   // if this source is disabled
@@ -130,14 +131,14 @@ func (ls *Source) SearchEntry(name, passwd string, directBind bool) (string, str
 		}
 	}
 
-	log.Trace("Binding with userDN: %s", userDN)
-	err = l.Bind(userDN, passwd)
-	if err != nil {
-		log.Debug("LDAP auth. failed for %s, reason: %v", userDN, err)
-		return "", "", "", "", false, false
+	if directBind || !ls.AttributesInBind {
+		// binds user (checking password) before looking-up attributes in user context
+		err = bindUser(l, userDN, passwd)
+		if err != nil {
+			return "", "", "", "", false, false
+		}
 	}
 
-	log.Trace("Bound successfully with userDN: %s", userDN)
 	userFilter, ok := ls.sanitizedUserQuery(name)
 	if !ok {
 		return "", "", "", "", false, false
@@ -184,7 +185,26 @@ func (ls *Source) SearchEntry(name, passwd string, directBind bool) (string, str
 		}
 	}
 
+	if !directBind && ls.AttributesInBind {
+		// binds user (checking password) after looking-up attributes in BindDN context
+		err = bindUser(l, userDN, passwd)
+		if err != nil {
+			return "", "", "", "", false, false
+		}
+	}
+
 	return username_attr, name_attr, sn_attr, mail_attr, admin_attr, true
+}
+
+func bindUser(l *ldap.Conn, userDN, passwd string) error {
+	log.Trace("Binding with userDN: %s", userDN)
+	err := l.Bind(userDN, passwd)
+	if err != nil {
+		log.Debug("LDAP auth. failed for %s, reason: %v", userDN, err)
+		return err
+	}
+	log.Trace("Bound successfully with userDN: %s", userDN)
+	return err
 }
 
 func ldapDial(ls *Source) (*ldap.Conn, error) {

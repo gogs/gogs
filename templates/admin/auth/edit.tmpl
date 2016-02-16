@@ -79,6 +79,14 @@
 								<label for="attribute_mail">{{.i18n.Tr "admin.auths.attribute_mail"}}</label>
 								<input id="attribute_mail" name="attribute_mail" value="{{$cfg.AttributeMail}}" placeholder="e.g. mail" required>
 							</div>
+							{{if .Source.IsLDAP}}
+								<div class="inline field">
+									<div class="ui checkbox">
+										<label><strong>{{.i18n.Tr "admin.auths.attributes_in_bind"}}</strong></label>
+										<input name="attributes_in_bind" type="checkbox" {{if $cfg.AttributesInBind}}checked{{end}}>
+									</div>
+								</div>
+							{{end}}
 						{{end}}
 
 						<!-- SMTP -->
