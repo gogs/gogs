@@ -46,6 +46,7 @@ gopkg.in/ini.v1 = commit:afbd495
 gopkg.in/ldap.v2 = commit:e9a325d
 gopkg.in/macaron.v1 = commit:564f398
 gopkg.in/redis.v2 = commit:e617904962
+github.com/bradfitz/gomemcache = 
 
 [res]
 include = public|scripts|templates
