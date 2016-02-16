@@ -28,8 +28,9 @@ func runUpdate(c *cli.Context) {
 	if c.IsSet("config") {
 		setting.CustomConf = c.String("config")
 	}
-	cmd := os.Getenv("SSH_ORIGINAL_COMMAND")
-	if cmd == "" {
+
+	if len(os.Getenv("SSH_ORIGINAL_COMMAND")) == 0 {
+		log.GitLogger.Trace("SSH_ORIGINAL_COMMAND is empty")
 		return
 	}
 
@@ -37,9 +38,9 @@ func runUpdate(c *cli.Context) {
 
 	args := c.Args()
 	if len(args) != 3 {
-		log.GitLogger.Fatal(2, "received less 3 parameters")
-	} else if args[0] == "" {
-		log.GitLogger.Fatal(2, "refName is empty, shouldn't use")
+		log.GitLogger.Fatal(2, "Arguments received are not equal to three")
+	} else if len(args[0]) == 0 {
+		log.GitLogger.Fatal(2, "First argument 'refName' is empty, shouldn't use")
 	}
 
 	task := models.UpdateTask{
