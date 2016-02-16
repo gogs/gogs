@@ -30,9 +30,11 @@ import (
 type Scheme string
 
 const (
-	HTTP  Scheme = "http"
-	HTTPS Scheme = "https"
-	FCGI  Scheme = "fcgi"
+	HTTP                       Scheme = "http"
+	HTTPS                      Scheme = "https"
+	FCGI                       Scheme = "fcgi"
+	SSH_PUBLICKEY_CHECK_NATIVE        = "native"
+	SSH_PUBLICKEY_CHECK_KEYGEN        = "ssh-keygen"
 )
 
 type LandingPage string
@@ -66,6 +68,9 @@ var (
 	SSHDomain          string
 	SSHPort            int
 	SSHRootPath        string
+	SSHPublicKeyCheck  string
+	SSHWorkPath        string
+	SSHKeyGenPath      string
 	OfflineMode        bool
 	DisableRouterLog   bool
 	CertFile, KeyFile  string
@@ -328,6 +333,29 @@ func NewContext() {
 	if err := os.MkdirAll(SSHRootPath, 0700); err != nil {
 		log.Fatal(4, "Fail to create '%s': %v", SSHRootPath, err)
 	}
+	checkDefault := SSH_PUBLICKEY_CHECK_KEYGEN
+	if DisableSSH {
+		checkDefault = SSH_PUBLICKEY_CHECK_NATIVE
+	}
+	SSHPublicKeyCheck = sec.Key("SSH_PUBLICKEY_CHECK").MustString(checkDefault)
+	if SSHPublicKeyCheck != SSH_PUBLICKEY_CHECK_NATIVE &&
+		SSHPublicKeyCheck != SSH_PUBLICKEY_CHECK_KEYGEN {
+		log.Fatal(4, "SSH_PUBLICKEY_CHECK must be ssh-keygen or native")
+	}
+	SSHWorkPath = sec.Key("SSH_WORK_PATH").MustString(os.TempDir())
+	if !DisableSSH && (!StartSSHServer || SSHPublicKeyCheck == SSH_PUBLICKEY_CHECK_KEYGEN) {
+		if tmpDirStat, err := os.Stat(SSHWorkPath); err != nil || !tmpDirStat.IsDir() {
+			log.Fatal(4, "directory '%s' set in SSHWorkPath is not a directory: %s", SSHWorkPath, err)
+		}
+	}
+	SSHKeyGenPath = sec.Key("SSH_KEYGEN_PATH").MustString("")
+	if !DisableSSH && !StartSSHServer &&
+		SSHKeyGenPath == "" && SSHPublicKeyCheck == SSH_PUBLICKEY_CHECK_KEYGEN {
+		SSHKeyGenPath, err = exec.LookPath("ssh-keygen")
+		if err != nil {
+			log.Fatal(4, "could not find ssh-keygen, maybe set DISABLE_SSH to use the internal ssh server")
+		}
+	}
 	OfflineMode = sec.Key("OFFLINE_MODE").MustBool()
 	DisableRouterLog = sec.Key("DISABLE_ROUTER_LOG").MustBool()
 	StaticRootPath = sec.Key("STATIC_ROOT_PATH").MustString(workDir)
@@ -459,6 +487,8 @@ var Service struct {
 	EnableReverseProxyAuth         bool
 	EnableReverseProxyAutoRegister bool
 	EnableCaptcha                  bool
+	EnableMinimumKeySizeCheck      bool
+	MinimumKeySizes                map[string]int
 }
 
 func newService() {
@@ -471,6 +501,15 @@ func newService() {
 	Service.EnableReverseProxyAuth = sec.Key("ENABLE_REVERSE_PROXY_AUTHENTICATION").MustBool()
 	Service.EnableReverseProxyAutoRegister = sec.Key("ENABLE_REVERSE_PROXY_AUTO_REGISTRATION").MustBool()
 	Service.EnableCaptcha = sec.Key("ENABLE_CAPTCHA").MustBool()
+	Service.EnableMinimumKeySizeCheck = sec.Key("ENABLE_MINIMUM_KEY_SIZE_CHECK").MustBool()
+	Service.MinimumKeySizes = map[string]int{}
+
+	minimumKeySizes := Cfg.Section("service.minimum_key_sizes").Keys()
+	for _, key := range minimumKeySizes {
+		if key.MustInt() != -1 {
+			Service.MinimumKeySizes[strings.ToLower(key.Name())] = key.MustInt()
+		}
+	}
 }
 
 var logLevels = map[string]string{
