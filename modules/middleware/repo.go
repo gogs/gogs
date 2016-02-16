@@ -186,7 +186,8 @@ func RepoAssignment(args ...bool) macaron.Handler {
 			if displayBare {
 				if !ctx.Repo.IsAdmin() {
 					ctx.Flash.Info(ctx.Tr("repo.repo_is_empty"), true)
-				} else { //Has write access and repo is empty
+				} else { 
+					// Has write access and repo is empty
 					ctx.Data["CloneLink"] = repo.CloneLinkWithUserName(ctx.User.LowerName)
 				}
 				ctx.HTML(200, "repo/bare")
