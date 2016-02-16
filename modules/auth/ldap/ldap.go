@@ -78,7 +78,7 @@ func (ls *Source) findUserDN(l *ldap.Conn, name string) (string, bool) {
 		return "", false
 	}
 
-	log.Trace("Searching using filter %s", userFilter)
+	log.Trace("Searching for DN using filter %s and base %s", userFilter, ls.UserBase)
 	search := ldap.NewSearchRequest(
 		ls.UserBase, ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0,
 		false, userFilter, []string{}, nil)
@@ -144,6 +144,7 @@ func (ls *Source) SearchEntry(name, passwd string, directBind bool) (string, str
 		return "", "", "", "", false, false
 	}
 
+	log.Trace("Fetching attributes '%v', '%v', '%v', '%v' with filter %s and base %s", ls.AttributeUsername, ls.AttributeName, ls.AttributeSurname, ls.AttributeMail, userFilter, userDN)
 	search := ldap.NewSearchRequest(
 		userDN, ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false, userFilter,
 		[]string{ls.AttributeUsername, ls.AttributeName, ls.AttributeSurname, ls.AttributeMail},
@@ -170,6 +171,7 @@ func (ls *Source) SearchEntry(name, passwd string, directBind bool) (string, str
 
 	admin_attr := false
 	if len(ls.AdminFilter) > 0 {
+		log.Trace("Checking admin with filter %s and base %s", ls.AdminFilter, userDN)
 		search = ldap.NewSearchRequest(
 			userDN, ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false, ls.AdminFilter,
 			[]string{ls.AttributeName},
