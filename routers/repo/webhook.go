@@ -12,6 +12,7 @@ import (
 
 	"github.com/Unknwon/com"
 
+	git "github.com/gogits/git-module"
 	api "github.com/gogits/go-gogs-client"
 
 	"github.com/gogits/gogs/models"
@@ -341,7 +342,7 @@ func SlackHooksEditPost(ctx *middleware.Context, form auth.NewSlackHookForm) {
 
 func TestWebhook(ctx *middleware.Context) {
 	p := &api.PushPayload{
-		Ref:    ctx.Repo.Repository.DefaultBranch,
+		Ref:    git.BRANCH_PREFIX + ctx.Repo.Repository.DefaultBranch,
 		Before: ctx.Repo.CommitID,
 		After:  ctx.Repo.CommitID,
 		Commits: []*api.PayloadCommit{
