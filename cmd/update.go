@@ -29,12 +29,12 @@ func runUpdate(c *cli.Context) {
 		setting.CustomConf = c.String("config")
 	}
 
+	setup("update.log")
+
 	if len(os.Getenv("SSH_ORIGINAL_COMMAND")) == 0 {
 		log.GitLogger.Trace("SSH_ORIGINAL_COMMAND is empty")
 		return
 	}
-
-	setup("update.log")
 
 	args := c.Args()
 	if len(args) != 3 {
