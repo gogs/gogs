@@ -7,6 +7,7 @@ package mailer
 import (
 	"fmt"
 	"path"
+	"strings"
 
 	"gopkg.in/macaron.v1"
 
@@ -125,7 +126,7 @@ func SendIssueNotifyMail(u, owner *models.User, repo *models.Repository, issue *
 
 	subject := fmt.Sprintf("[%s] %s (#%d)", repo.Name, issue.Name, issue.Index)
 	content := fmt.Sprintf("%s<br>-<br> <a href=\"%s%s/%s/issues/%d\">View it on Gogs</a>.",
-		base.RenderSpecialLink([]byte(issue.Content), owner.Name+"/"+repo.Name, repo.ComposeMetas()),
+		base.RenderSpecialLink([]byte(strings.Replace(issue.Content, "\n", "<br>", -1)), owner.Name+"/"+repo.Name, repo.ComposeMetas()),
 		setting.AppUrl, owner.Name, repo.Name, issue.Index)
 	msg := NewMessage(tos, subject, content)
 	msg.Info = fmt.Sprintf("Subject: %s, issue notify", subject)
