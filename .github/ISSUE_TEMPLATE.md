@@ -1,3 +1,5 @@
+Please take a moment to search that an issue doesn't already exist.
+
 For bug reports, please give the relevant info:
 
 - Gogs version (or commit ref):
