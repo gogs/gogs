@@ -134,7 +134,6 @@ func HTTP(ctx *middleware.Context) {
 				ctx.Handle(500, "GetUserByID", err)
 				return
 			}
-			authUsername = authUser.Name
 		}
 
 		if !isPublicPull {
@@ -202,7 +201,15 @@ func HTTP(ctx *middleware.Context) {
 					refName := fields[2]
 
 					// FIXME: handle error.
-					if err = models.Update(refName, oldCommitId, newCommitId, authUsername, username, reponame, authUser.Id); err == nil {
+					if err = models.PushUpdate(models.PushUpdateOptions{
+						RefName:      refName,
+						OldCommitID:  oldCommitId,
+						NewCommitID:  newCommitId,
+						PusherID:     authUser.Id,
+						PusherName:   authUser.Name,
+						RepoUserName: username,
+						RepoName:     reponame,
+					}); err == nil {
 						go models.HookQueue.Add(repo.ID)
 						go models.AddTestPullRequestTask(repo.ID, strings.TrimPrefix(refName, "refs/heads/"))
 					}
