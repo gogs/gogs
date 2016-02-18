@@ -104,8 +104,15 @@ func handleUpdateTask(uuid string, user, repoUser *models.User, reponame string,
 		return
 	}
 
-	if err = models.Update(task.RefName, task.OldCommitID, task.NewCommitID,
-		user.Name, repoUser.Name, reponame, user.Id); err != nil {
+	if err = models.PushUpdate(models.PushUpdateOptions{
+		RefName:      task.RefName,
+		OldCommitID:  task.OldCommitID,
+		NewCommitID:  task.NewCommitID,
+		PusherID:     user.Id,
+		PusherName:   user.Name,
+		RepoUserName: repoUser.Name,
+		RepoName:     reponame,
+	}); err != nil {
 		log.GitLogger.Error(2, "Update: %v", err)
 	}
 
