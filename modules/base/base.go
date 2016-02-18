@@ -16,8 +16,6 @@ type (
 	TplName string
 )
 
-var GoGetMetas = make(map[string]bool)
-
 // ExecPath returns the executable path.
 func ExecPath() (string, error) {
 	file, err := exec.LookPath(os.Args[0])
