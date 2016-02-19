@@ -13,7 +13,7 @@ Gogs - Go Git Service [![Build Status](https://travis-ci.org/gogits/gogs.svg?bra
 
 ### NOTICES
 
-- :bangbang: You **MUST** read [CONTRIBUTING.md](CONTRIBUTING.md) for bug report and contributing code. :bangbang:
+- :bangbang: You **MUST** read the [contributing guidelines](https://github.com/gogits/gogs/wiki/Contributing-Code) for bug report and contributing code. :bangbang:
 - Please [start discussion](http://forum.gogs.io/category/2/general-discussion) or [ask a question](http://forum.gogs.io/category/4/getting-help) on [the forum](http://forum.gogs.io/). GitHub issue tracker only keeps **bugs** and **feature requests**, all other topics will be closed without reason.
 - Due to testing purpose, data of [try.gogs.io](https://try.gogs.io) was reset in **Jan 28, 2015** and will reset multiple times after. Please do **NOT** put your important data on the site.
 - The demo site [try.gogs.io](https://try.gogs.io) is running under `develop` branch.
