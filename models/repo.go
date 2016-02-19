@@ -332,7 +332,17 @@ func (repo *Repository) IsOwnedBy(userID int64) bool {
 
 // CanBeForked returns true if repository meets the requirements of being forked.
 func (repo *Repository) CanBeForked() bool {
-	return !repo.IsBare && !repo.IsMirror
+	return !repo.IsBare
+}
+
+// CanEnablePulls returns true if repository meets the requirements of accepting pulls.
+func (repo *Repository) CanEnablePulls() bool {
+	return !repo.IsMirror
+}
+
+// AllowPulls returns true if repository meets the requirements of accepting pulls and has them enabled.
+func (repo *Repository) AllowsPulls() bool {
+	return repo.CanEnablePulls() && repo.EnablePulls;
 }
 
 func (repo *Repository) NextIssueIndex() int64 {
