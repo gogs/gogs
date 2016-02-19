@@ -470,7 +470,7 @@ func runWeb(ctx *cli.Context) {
 			m.Post("/delete", repo.DeleteRelease)
 		}, reqRepoAdmin, middleware.RepoRef())
 
-		m.Combo("/compare/*", repo.MustEnablePulls).Get(repo.CompareAndPullRequest).
+		m.Combo("/compare/*", repo.MustAllowPulls).Get(repo.CompareAndPullRequest).
 			Post(bindIgnErr(auth.CreateIssueForm{}), repo.CompareAndPullRequestPost)
 	}, reqSignIn, middleware.RepoAssignment(), repo.MustBeNotBare)
 
@@ -503,7 +503,7 @@ func runWeb(ctx *cli.Context) {
 			m.Get("/commits", middleware.RepoRef(), repo.ViewPullCommits)
 			m.Get("/files", middleware.RepoRef(), repo.ViewPullFiles)
 			m.Post("/merge", reqRepoAdmin, repo.MergePullRequest)
-		}, repo.MustEnablePulls)
+		}, repo.MustAllowPulls)
 
 		m.Group("", func() {
 			m.Get("/src/*", repo.Home)
