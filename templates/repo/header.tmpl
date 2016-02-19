@@ -57,7 +57,7 @@
 					<i class="icon octicon octicon-issue-opened"></i> {{.i18n.Tr "repo.issues"}} <span class="ui {{if not .Repository.NumOpenIssues}}gray{{else}}blue{{end}} small label">{{.Repository.NumOpenIssues}}</span>
 				</a>
 			{{end}}
-			{{if .Repository.EnablePulls}}
+			{{if .Repository.AllowsPulls}}
 				<a class="{{if .PageIsPullList}}active{{end}} item" href="{{.RepoLink}}/pulls">
 					<i class="icon octicon octicon-git-pull-request"></i> {{.i18n.Tr "repo.pulls"}} <span class="ui {{if not .Repository.NumOpenPulls}}gray{{else}}blue{{end}} small label">{{.Repository.NumOpenPulls}}</span>
 				</a>
