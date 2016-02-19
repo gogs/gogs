@@ -167,7 +167,7 @@ func RepoAssignment(args ...bool) macaron.Handler {
 		ctx.Data["IsRepositoryOwner"] = ctx.Repo.IsOwner()
 		ctx.Data["IsRepositoryAdmin"] = ctx.Repo.IsAdmin()
 		ctx.Data["IsRepositoryPusher"] = ctx.Repo.IsPusher()
-		ctx.Data["CanPullRequest"] = ctx.Repo.IsAdmin() && repo.BaseRepo != nil && repo.BaseRepo.EnablePulls
+		ctx.Data["CanPullRequest"] = ctx.Repo.IsAdmin() && repo.BaseRepo != nil && repo.BaseRepo.AllowsPulls()
 
 		ctx.Data["DisableSSH"] = setting.DisableSSH
 		ctx.Data["CloneLink"] = repo.CloneLink()

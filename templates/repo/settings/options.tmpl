@@ -117,15 +117,17 @@
 							<p class="help">{{.i18n.Tr "repo.settings.tracker_url_format_desc" | Str2html}}</p>
 						</div>
 
-						<div class="ui divider"></div>
+						{{if .Repository.CanEnablePulls}}
+							<div class="ui divider"></div>
 
-						<div class="inline field">
-							<label>{{.i18n.Tr "repo.pulls"}}</label>
-							<div class="ui checkbox">
-								<input name="enable_pulls" type="checkbox" {{if .Repository.EnablePulls}}checked{{end}}>
-								<label>{{.i18n.Tr "repo.settings.pulls_desc"}}</label>
+							<div class="inline field">
+								<label>{{.i18n.Tr "repo.pulls"}}</label>
+								<div class="ui checkbox">
+									<input name="enable_pulls" type="checkbox" {{if .Repository.EnablePulls}}checked{{end}}>
+									<label>{{.i18n.Tr "repo.settings.pulls_desc"}}</label>
+								</div>
 							</div>
-						</div>
+						{{end}}
 
 						<div class="ui divider"></div>
 						<div class="field">
