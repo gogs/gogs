@@ -48,7 +48,9 @@ func MustEnableIssues(ctx *middleware.Context) {
 }
 
 func MustEnablePulls(ctx *middleware.Context) {
-	if !ctx.Repo.Repository.EnablePulls {
+	if !ctx.Repo.Repository.CanEnablePulls() {
+		ctx.Handle(404, "Unsupported", nil)
+	} else if !ctx.Repo.Repository.EnablePulls {
 		ctx.Handle(404, "MustEnablePulls", nil)
 	}
 
