@@ -303,10 +303,10 @@ OUTER_LOOP:
 					}
 
 					// If this is the close tag to the outer-most, we are done
-					if token.Type == html.EndTagToken && strings.EqualFold(tagName, token.Data) {
+					if token.Type == html.EndTagToken {
 						stackNum--
 
-						if stackNum == 0 {
+						if stackNum <= 0 && strings.EqualFold(tagName, token.Data) {
 							break
 						}
 					}
