@@ -7,7 +7,7 @@ package misc
 import (
 	api "github.com/gogits/go-gogs-client"
 
-	"github.com/gogits/gogs/modules/base"
+	"github.com/gogits/gogs/modules/markdown"
 	"github.com/gogits/gogs/modules/middleware"
 )
 
@@ -25,9 +25,9 @@ func Markdown(ctx *middleware.Context, form api.MarkdownOption) {
 
 	switch form.Mode {
 	case "gfm":
-		ctx.Write(base.RenderMarkdown([]byte(form.Text), form.Context, nil))
+		ctx.Write(markdown.Render([]byte(form.Text), form.Context, nil))
 	default:
-		ctx.Write(base.RenderRawMarkdown([]byte(form.Text), ""))
+		ctx.Write(markdown.RenderRaw([]byte(form.Text), ""))
 	}
 }
 
@@ -38,5 +38,5 @@ func MarkdownRaw(ctx *middleware.Context) {
 		ctx.APIError(422, "", err)
 		return
 	}
-	ctx.Write(base.RenderRawMarkdown(body, ""))
+	ctx.Write(markdown.RenderRaw(body, ""))
 }

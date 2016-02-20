@@ -9,6 +9,7 @@ import (
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
+	"github.com/gogits/gogs/modules/markdown"
 	"github.com/gogits/gogs/modules/middleware"
 )
 
@@ -73,7 +74,7 @@ func Releases(ctx *middleware.Context) {
 					rel.NumCommitsBehind = ctx.Repo.CommitsCount - rel.NumCommits
 				}
 
-				rel.Note = base.RenderMarkdownString(rel.Note, ctx.Repo.RepoLink, ctx.Repo.Repository.ComposeMetas())
+				rel.Note = markdown.RenderString(rel.Note, ctx.Repo.RepoLink, ctx.Repo.Repository.ComposeMetas())
 				tags[i] = rel
 				rels[j] = nil // Mark as used.
 				break
@@ -137,7 +138,7 @@ func Releases(ctx *middleware.Context) {
 			rel.NumCommitsBehind = ctx.Repo.CommitsCount - rel.NumCommits
 		}
 
-		rel.Note = base.RenderMarkdownString(rel.Note, ctx.Repo.RepoLink, ctx.Repo.Repository.ComposeMetas())
+		rel.Note = markdown.RenderString(rel.Note, ctx.Repo.RepoLink, ctx.Repo.Repository.ComposeMetas())
 		tags = append(tags, rel)
 	}
 	models.SortReleases(tags)

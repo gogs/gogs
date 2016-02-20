@@ -29,6 +29,7 @@ import (
 	"github.com/gogits/gogs/modules/avatar"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
+	"github.com/gogits/gogs/modules/markdown"
 	"github.com/gogits/gogs/modules/setting"
 )
 
@@ -111,7 +112,7 @@ func (u *User) BeforeUpdate() {
 func (u *User) AfterSet(colName string, _ xorm.Cell) {
 	switch colName {
 	case "full_name":
-		u.FullName = base.Sanitizer.Sanitize(u.FullName)
+		u.FullName = markdown.Sanitizer.Sanitize(u.FullName)
 	case "created":
 		u.Created = regulateTimeZone(u.Created)
 	}
@@ -641,7 +642,7 @@ func updateUser(e Engine, u *User) error {
 		u.Description = u.Description[:255]
 	}
 
-	u.FullName = base.Sanitizer.Sanitize(u.FullName)
+	u.FullName = markdown.Sanitizer.Sanitize(u.FullName)
 	_, err := e.Id(u.Id).AllCols().Update(u)
 	return err
 }
