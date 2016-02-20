@@ -15,13 +15,13 @@ import (
 
 	"github.com/Unknwon/com"
 	"github.com/codegangsta/cli"
+	gouuid "github.com/satori/go.uuid"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/httplib"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/setting"
-	"github.com/gogits/gogs/modules/uuid"
 )
 
 const (
@@ -250,7 +250,7 @@ func runServ(c *cli.Context) {
 		}
 	}
 
-	uuid := uuid.NewV4().String()
+	uuid := gouuid.NewV4().String()
 	os.Setenv("uuid", uuid)
 
 	// Special handle for Windows.
