@@ -23,6 +23,7 @@ type AuthenticationForm struct {
 	AttributeName     string
 	AttributeSurname  string
 	AttributeMail     string
+	AttributesInBind  bool
 	Filter            string
 	AdminFilter       string
 	IsActive          bool
