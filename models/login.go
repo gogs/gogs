@@ -28,11 +28,11 @@ type LoginType int
 // Note: new type must be added at the end of list to maintain compatibility.
 const (
 	LOGIN_NOTYPE LoginType = iota
-	LOGIN_PLAIN
-	LOGIN_LDAP
-	LOGIN_SMTP
-	LOGIN_PAM
-	LOGIN_DLDAP
+	LOGIN_PLAIN            // 1
+	LOGIN_LDAP             // 2
+	LOGIN_SMTP             // 3
+	LOGIN_PAM              // 4
+	LOGIN_DLDAP            // 5
 )
 
 var (
@@ -42,7 +42,7 @@ var (
 
 var LoginNames = map[LoginType]string{
 	LOGIN_LDAP:  "LDAP (via BindDN)",
-	LOGIN_DLDAP: "LDAP (simple auth)",
+	LOGIN_DLDAP: "LDAP (simple auth)", // Via direct bind
 	LOGIN_SMTP:  "SMTP",
 	LOGIN_PAM:   "PAM",
 }

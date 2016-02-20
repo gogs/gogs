@@ -120,6 +120,12 @@
 							<input id="pam_service_name" name="pam_service_name" value="{{.pam_service_name}}" />
 						</div>
 
+						<div class="ldap field">
+							<div class="ui checkbox">
+								<label><strong>{{.i18n.Tr "admin.auths.attributes_in_bind"}}</strong></label>
+								<input name="attributes_in_bind" type="checkbox" {{if .attributes_in_bind}}checked{{end}}>
+							</div>
+						</div>
 						<div class="ldap dldap smtp inline field {{if not (or (or (eq .type 2) (eq .type 5)) (eq .type 3))}}hide{{end}}">
 							<div class="ui checkbox">
 								<label><strong>{{.i18n.Tr "admin.auths.enable_tls"}}</strong></label>
