@@ -7,6 +7,8 @@ package repo
 import (
 	"errors"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strings"
@@ -34,11 +36,19 @@ const (
 	MILESTONE      base.TplName = "repo/issue/milestones"
 	MILESTONE_NEW  base.TplName = "repo/issue/milestone_new"
 	MILESTONE_EDIT base.TplName = "repo/issue/milestone_edit"
+
+	ISSUE_TEMPLATE_KEY = "IssueTemplate"
 )
 
 var (
 	ErrFileTypeForbidden = errors.New("File type is not allowed")
 	ErrTooManyFiles      = errors.New("Maximum number of files to upload exceeded")
+
+	IssueTemplateCandidates = []string{
+		"ISSUE_TEMPLATE.md",
+		".gogs/ISSUE_TEMPLATE.md",
+		".github/ISSUE_TEMPLATE.md",
+	}
 )
 
 func MustEnableIssues(ctx *middleware.Context) {
@@ -281,9 +291,47 @@ func RetrieveRepoMetas(ctx *middleware.Context, repo *models.Repository) []*mode
 	return labels
 }
 
+func getFileContentFromDefaultBranch(ctx *middleware.Context, filename string) (string, bool) {
+	var r io.Reader
+	var bytes []byte
+
+	if ctx.Repo.Commit == nil {
+		var err error
+		ctx.Repo.Commit, err = ctx.Repo.GitRepo.GetBranchCommit(ctx.Repo.Repository.DefaultBranch)
+		if err != nil {
+			return "", false
+		}
+	}
+
+	entry, err := ctx.Repo.Commit.GetTreeEntryByPath(filename)
+	if err != nil {
+		return "", false
+	}
+	r, err = entry.Blob().Data()
+	if err != nil {
+		return "", false
+	}
+	bytes, err = ioutil.ReadAll(r)
+	if err != nil {
+		return "", false
+	}
+	return string(bytes), true
+}
+
+func setTemplateIfExists(ctx *middleware.Context, ctxDataKey string, possibleFiles []string) {
+	for _, filename := range possibleFiles {
+		content, found := getFileContentFromDefaultBranch(ctx, filename)
+		if found {
+			ctx.Data[ctxDataKey] = content
+			return
+		}
+	}
+}
+
 func NewIssue(ctx *middleware.Context) {
 	ctx.Data["Title"] = ctx.Tr("repo.issues.new")
 	ctx.Data["PageIsIssueList"] = true
+	setTemplateIfExists(ctx, ISSUE_TEMPLATE_KEY, IssueTemplateCandidates)
 	renderAttachmentSettings(ctx)
 
 	RetrieveRepoMetas(ctx, ctx.Repo.Repository)
