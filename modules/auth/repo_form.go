@@ -57,7 +57,7 @@ func (f *MigrateRepoForm) Validate(ctx *macaron.Context, errs binding.Errors) bi
 // It also checks if given user has permission when remote address
 // is actually a local path.
 func (f MigrateRepoForm) ParseRemoteAddr(user *models.User) (string, error) {
-	remoteAddr := f.CloneAddr
+	remoteAddr := strings.TrimSpace(f.CloneAddr)
 
 	// Remote address can be HTTP/HTTPS/Git URL or local path.
 	if strings.HasPrefix(remoteAddr, "http://") ||
