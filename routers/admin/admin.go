@@ -14,8 +14,8 @@ import (
 	"gopkg.in/macaron.v1"
 
 	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/models/cron"
 	"github.com/gogits/gogs/modules/base"
+	"github.com/gogits/gogs/modules/cron"
 	"github.com/gogits/gogs/modules/middleware"
 	"github.com/gogits/gogs/modules/process"
 	"github.com/gogits/gogs/modules/setting"
