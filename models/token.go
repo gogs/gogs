@@ -7,8 +7,9 @@ package models
 import (
 	"time"
 
+	gouuid "github.com/satori/go.uuid"
+
 	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/modules/uuid"
 )
 
 // AccessToken represents a personal access token.
@@ -25,7 +26,7 @@ type AccessToken struct {
 
 // NewAccessToken creates new access token.
 func NewAccessToken(t *AccessToken) error {
-	t.Sha1 = base.EncodeSha1(uuid.NewV4().String())
+	t.Sha1 = base.EncodeSha1(gouuid.NewV4().String())
 	_, err := x.Insert(t)
 	return err
 }

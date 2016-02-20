@@ -16,12 +16,12 @@ import (
 
 	"github.com/Unknwon/com"
 	"github.com/go-xorm/xorm"
+	gouuid "github.com/satori/go.uuid"
 	"gopkg.in/ini.v1"
 
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/setting"
-	gouuid "github.com/gogits/gogs/modules/uuid"
 )
 
 const _MIN_DB_VER = 4
