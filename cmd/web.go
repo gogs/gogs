@@ -398,7 +398,7 @@ func runWeb(ctx *cli.Context) {
 		m.Group("/settings", func() {
 			m.Combo("").Get(repo.Settings).
 				Post(bindIgnErr(auth.RepoSettingForm{}), repo.SettingsPost)
-			m.Route("/collaboration", "GET,POST", repo.Collaboration)
+			m.Combo("/collaboration").Get(repo.Collaboration).Post(repo.CollaborationPost)
 
 			m.Group("/hooks", func() {
 				m.Get("", repo.Webhooks)
