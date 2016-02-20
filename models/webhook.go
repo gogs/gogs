@@ -15,13 +15,13 @@ import (
 
 	"github.com/Unknwon/com"
 	"github.com/go-xorm/xorm"
+	gouuid "github.com/satori/go.uuid"
 
 	api "github.com/gogits/go-gogs-client"
 
 	"github.com/gogits/gogs/modules/httplib"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/setting"
-	"github.com/gogits/gogs/modules/uuid"
 )
 
 type HookContentType int
@@ -361,7 +361,7 @@ func CreateHookTask(t *HookTask) error {
 	if err != nil {
 		return err
 	}
-	t.UUID = uuid.NewV4().String()
+	t.UUID = gouuid.NewV4().String()
 	t.PayloadContent = string(data)
 	_, err = x.Insert(t)
 	return err
