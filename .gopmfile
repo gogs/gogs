@@ -17,6 +17,7 @@ github.com/go-sql-driver/mysql = commit:b4db83c
 github.com/go-xorm/core = commit:1e2868c
 github.com/go-xorm/xorm = 
 github.com/gogits/chardet = commit:2404f77725
+github.com/gogits/cron = 
 github.com/gogits/git-module = commit:3b40eae
 github.com/gogits/go-gogs-client = 
 github.com/issue9/identicon = commit:f8c0d2c
