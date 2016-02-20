@@ -81,6 +81,7 @@ func parseLDAPConfig(form auth.AuthenticationForm) *models.LDAPConfig {
 			AttributeName:     form.AttributeName,
 			AttributeSurname:  form.AttributeSurname,
 			AttributeMail:     form.AttributeMail,
+			AttributesInBind:  form.AttributesInBind,
 			Filter:            form.Filter,
 			AdminFilter:       form.AdminFilter,
 			Enabled:           true,
