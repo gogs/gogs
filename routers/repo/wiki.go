@@ -14,6 +14,7 @@ import (
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/base"
+	"github.com/gogits/gogs/modules/markdown"
 	"github.com/gogits/gogs/modules/middleware"
 )
 
@@ -106,7 +107,7 @@ func renderWikiPage(ctx *middleware.Context, isViewPage bool) (*git.Repository, 
 		return nil, ""
 	}
 	if isViewPage {
-		ctx.Data["content"] = string(base.RenderMarkdown(data, ctx.Repo.RepoLink, ctx.Repo.Repository.ComposeMetas()))
+		ctx.Data["content"] = string(markdown.Render(data, ctx.Repo.RepoLink, ctx.Repo.Repository.ComposeMetas()))
 	} else {
 		ctx.Data["content"] = string(data)
 	}

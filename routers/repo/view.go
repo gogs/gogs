@@ -17,6 +17,7 @@ import (
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
+	"github.com/gogits/gogs/modules/markdown"
 	"github.com/gogits/gogs/modules/middleware"
 	"github.com/gogits/gogs/modules/template"
 	"github.com/gogits/gogs/modules/template/highlight"
@@ -99,10 +100,10 @@ func Home(ctx *middleware.Context) {
 			case isTextFile:
 				d, _ := ioutil.ReadAll(dataRc)
 				buf = append(buf, d...)
-				readmeExist := base.IsMarkdownFile(blob.Name()) || base.IsReadmeFile(blob.Name())
+				readmeExist := markdown.IsMarkdownFile(blob.Name()) || markdown.IsReadmeFile(blob.Name())
 				ctx.Data["ReadmeExist"] = readmeExist
 				if readmeExist {
-					ctx.Data["FileContent"] = string(base.RenderMarkdown(buf, path.Dir(treeLink), ctx.Repo.Repository.ComposeMetas()))
+					ctx.Data["FileContent"] = string(markdown.Render(buf, path.Dir(treeLink), ctx.Repo.Repository.ComposeMetas()))
 				} else {
 					if err, content := template.ToUtf8WithErr(buf); err != nil {
 						if err != nil {
@@ -138,7 +139,7 @@ func Home(ctx *middleware.Context) {
 
 		var readmeFile *git.Blob
 		for _, f := range entries {
-			if f.IsDir() || !base.IsReadmeFile(f.Name()) {
+			if f.IsDir() || !markdown.IsReadmeFile(f.Name()) {
 				continue
 			} else {
 				readmeFile = f.Blob()
@@ -169,8 +170,8 @@ func Home(ctx *middleware.Context) {
 					d, _ := ioutil.ReadAll(dataRc)
 					buf = append(buf, d...)
 					switch {
-					case base.IsMarkdownFile(readmeFile.Name()):
-						buf = base.RenderMarkdown(buf, treeLink, ctx.Repo.Repository.ComposeMetas())
+					case markdown.IsMarkdownFile(readmeFile.Name()):
+						buf = markdown.Render(buf, treeLink, ctx.Repo.Repository.ComposeMetas())
 					default:
 						buf = bytes.Replace(buf, []byte("\n"), []byte(`<br>`), -1)
 					}

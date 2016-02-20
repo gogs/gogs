@@ -15,34 +15,20 @@ import (
 	"hash"
 	"html/template"
 	"math"
-	"regexp"
+	"net/http"
 	"strings"
 	"time"
+	"unicode"
 	"unicode/utf8"
 
 	"github.com/Unknwon/com"
 	"github.com/Unknwon/i18n"
-	"github.com/microcosm-cc/bluemonday"
 
 	"github.com/gogits/chardet"
 
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/setting"
 )
-
-var Sanitizer = bluemonday.UGCPolicy()
-
-func BuildSanitizer() {
-	// Normal markdown-stuff
-	Sanitizer.AllowAttrs("class").Matching(regexp.MustCompile(`[\p{L}\p{N}\s\-_',:\[\]!\./\\\(\)&]*`)).OnElements("code")
-
-	// Checkboxes
-	Sanitizer.AllowAttrs("type").Matching(regexp.MustCompile(`^checkbox$`)).OnElements("input")
-	Sanitizer.AllowAttrs("checked", "disabled").OnElements("input")
-
-	// Custom URL-Schemes
-	Sanitizer.AllowURLSchemes(setting.Markdown.CustomURLSchemes...)
-}
 
 // EncodeMD5 encodes string to md5 hex value.
 func EncodeMD5(str string) string {
@@ -503,4 +489,26 @@ func Int64sToMap(ints []int64) map[int64]bool {
 		m[i] = true
 	}
 	return m
+}
+
+// IsLetter reports whether the rune is a letter (category L).
+// https://github.com/golang/go/blob/master/src/go/scanner/scanner.go#L257
+func IsLetter(ch rune) bool {
+	return 'a' <= ch && ch <= 'z' || 'A' <= ch && ch <= 'Z' || ch == '_' || ch >= 0x80 && unicode.IsLetter(ch)
+}
+
+func IsTextFile(data []byte) (string, bool) {
+	contentType := http.DetectContentType(data)
+	if strings.Index(contentType, "text/") != -1 {
+		return contentType, true
+	}
+	return contentType, false
+}
+
+func IsImageFile(data []byte) (string, bool) {
+	contentType := http.DetectContentType(data)
+	if strings.Index(contentType, "image/") != -1 {
+		return contentType, true
+	}
+	return contentType, false
 }

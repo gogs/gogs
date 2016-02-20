@@ -22,6 +22,7 @@ import (
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/mailer"
+	"github.com/gogits/gogs/modules/markdown"
 	"github.com/gogits/gogs/modules/middleware"
 	"github.com/gogits/gogs/modules/setting"
 )
@@ -400,7 +401,7 @@ func ValidateRepoMetas(ctx *middleware.Context, form auth.CreateIssueForm) ([]in
 
 func notifyWatchersAndMentions(ctx *middleware.Context, issue *models.Issue) {
 	// Update mentions
-	mentions := base.MentionPattern.FindAllString(issue.Content, -1)
+	mentions := markdown.MentionPattern.FindAllString(issue.Content, -1)
 	if len(mentions) > 0 {
 		for i := range mentions {
 			mentions[i] = strings.TrimSpace(mentions[i])[1:]
@@ -579,7 +580,7 @@ func ViewIssue(ctx *middleware.Context) {
 		ctx.Handle(500, "GetPoster", err)
 		return
 	}
-	issue.RenderedContent = string(base.RenderMarkdown([]byte(issue.Content), ctx.Repo.RepoLink,
+	issue.RenderedContent = string(markdown.Render([]byte(issue.Content), ctx.Repo.RepoLink,
 		ctx.Repo.Repository.ComposeMetas()))
 
 	repo := ctx.Repo.Repository
@@ -650,7 +651,7 @@ func ViewIssue(ctx *middleware.Context) {
 	participants[0] = issue.Poster
 	for _, comment = range issue.Comments {
 		if comment.Type == models.COMMENT_TYPE_COMMENT {
-			comment.RenderedContent = string(base.RenderMarkdown([]byte(comment.Content), ctx.Repo.RepoLink,
+			comment.RenderedContent = string(markdown.Render([]byte(comment.Content), ctx.Repo.RepoLink,
 				ctx.Repo.Repository.ComposeMetas()))
 
 			// Check tag.
@@ -753,7 +754,7 @@ func UpdateIssueContent(ctx *middleware.Context) {
 	}
 
 	ctx.JSON(200, map[string]interface{}{
-		"content": string(base.RenderMarkdown([]byte(issue.Content), ctx.Query("context"), ctx.Repo.Repository.ComposeMetas())),
+		"content": string(markdown.Render([]byte(issue.Content), ctx.Query("context"), ctx.Repo.Repository.ComposeMetas())),
 	})
 }
 
@@ -990,7 +991,7 @@ func UpdateCommentContent(ctx *middleware.Context) {
 	}
 
 	ctx.JSON(200, map[string]interface{}{
-		"content": string(base.RenderMarkdown([]byte(comment.Content), ctx.Query("context"), ctx.Repo.Repository.ComposeMetas())),
+		"content": string(markdown.Render([]byte(comment.Content), ctx.Query("context"), ctx.Repo.Repository.ComposeMetas())),
 	})
 }
 
@@ -1088,7 +1089,7 @@ func Milestones(ctx *middleware.Context) {
 		return
 	}
 	for _, m := range miles {
-		m.RenderedContent = string(base.RenderMarkdown([]byte(m.Content), ctx.Repo.RepoLink, ctx.Repo.Repository.ComposeMetas()))
+		m.RenderedContent = string(markdown.Render([]byte(m.Content), ctx.Repo.RepoLink, ctx.Repo.Repository.ComposeMetas()))
 		m.CalOpenIssues()
 	}
 	ctx.Data["Milestones"] = miles

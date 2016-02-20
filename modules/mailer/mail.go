@@ -14,6 +14,7 @@ import (
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
+	"github.com/gogits/gogs/modules/markdown"
 	"github.com/gogits/gogs/modules/setting"
 )
 
@@ -126,7 +127,7 @@ func SendIssueNotifyMail(u, owner *models.User, repo *models.Repository, issue *
 
 	subject := fmt.Sprintf("[%s] %s (#%d)", repo.Name, issue.Name, issue.Index)
 	content := fmt.Sprintf("%s<br>-<br> <a href=\"%s%s/%s/issues/%d\">View it on Gogs</a>.",
-		base.RenderSpecialLink([]byte(strings.Replace(issue.Content, "\n", "<br>", -1)), owner.Name+"/"+repo.Name, repo.ComposeMetas()),
+		markdown.RenderSpecialLink([]byte(strings.Replace(issue.Content, "\n", "<br>", -1)), owner.Name+"/"+repo.Name, repo.ComposeMetas()),
 		setting.AppUrl, owner.Name, repo.Name, issue.Index)
 	msg := NewMessage(tos, subject, content)
 	msg.Info = fmt.Sprintf("Subject: %s, issue notify", subject)
@@ -149,7 +150,7 @@ func SendIssueMentionMail(r macaron.Render, u, owner *models.User,
 	data["IssueLink"] = fmt.Sprintf("%s/%s/issues/%d", owner.Name, repo.Name, issue.Index)
 	data["Subject"] = subject
 	data["ActUserName"] = u.DisplayName()
-	data["Content"] = string(base.RenderSpecialLink([]byte(issue.Content), owner.Name+"/"+repo.Name, repo.ComposeMetas()))
+	data["Content"] = string(markdown.RenderSpecialLink([]byte(issue.Content), owner.Name+"/"+repo.Name, repo.ComposeMetas()))
 
 	body, err := r.HTMLString(string(NOTIFY_MENTION), data)
 	if err != nil {

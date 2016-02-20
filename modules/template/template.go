@@ -18,6 +18,7 @@ import (
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"
+	"github.com/gogits/gogs/modules/markdown"
 	"github.com/gogits/gogs/modules/setting"
 )
 
@@ -108,7 +109,7 @@ func Safe(raw string) template.HTML {
 }
 
 func Str2html(raw string) template.HTML {
-	return template.HTML(base.Sanitizer.Sanitize(raw))
+	return template.HTML(markdown.Sanitizer.Sanitize(raw))
 }
 
 func Range(l int) []int {
@@ -188,7 +189,7 @@ func ReplaceLeft(s, old, new string) string {
 // RenderCommitMessage renders commit message with XSS-safe and special links.
 func RenderCommitMessage(full bool, msg, urlPrefix string, metas map[string]string) template.HTML {
 	cleanMsg := template.HTMLEscapeString(msg)
-	fullMessage := string(base.RenderIssueIndexPattern([]byte(cleanMsg), urlPrefix, metas))
+	fullMessage := string(markdown.RenderIssueIndexPattern([]byte(cleanMsg), urlPrefix, metas))
 	msgLines := strings.Split(strings.TrimSpace(fullMessage), "\n")
 	numLines := len(msgLines)
 	if numLines == 0 {
