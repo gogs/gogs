@@ -30,9 +30,9 @@ import (
 	"github.com/gogits/git-module"
 	api "github.com/gogits/go-gogs-client"
 
-	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/bindata"
 	"github.com/gogits/gogs/modules/log"
+	"github.com/gogits/gogs/modules/markdown"
 	"github.com/gogits/gogs/modules/process"
 	"github.com/gogits/gogs/modules/setting"
 )
@@ -342,7 +342,7 @@ func (repo *Repository) CanEnablePulls() bool {
 
 // AllowPulls returns true if repository meets the requirements of accepting pulls and has them enabled.
 func (repo *Repository) AllowsPulls() bool {
-	return repo.CanEnablePulls() && repo.EnablePulls;
+	return repo.CanEnablePulls() && repo.EnablePulls
 }
 
 func (repo *Repository) NextIssueIndex() int64 {
@@ -358,7 +358,7 @@ func (repo *Repository) DescriptionHtml() template.HTML {
 	sanitize := func(s string) string {
 		return fmt.Sprintf(`<a href="%[1]s" target="_blank">%[1]s</a>`, s)
 	}
-	return template.HTML(DescPattern.ReplaceAllStringFunc(base.Sanitizer.Sanitize(repo.Description), sanitize))
+	return template.HTML(DescPattern.ReplaceAllStringFunc(markdown.Sanitizer.Sanitize(repo.Description), sanitize))
 }
 
 func (repo *Repository) LocalCopyPath() string {

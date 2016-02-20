@@ -16,6 +16,8 @@ import (
 
 const _RANDOM_AVATAR_SIZE = 200
 
+// RandomImage generates and returns a random avatar image unique to input data
+// in custom size (height and width).
 func RandomImageSize(size int, data []byte) (image.Image, error) {
 	randExtent := len(palette.WebSafe) - 32
 	rand.Seed(time.Now().UnixNano())
@@ -34,8 +36,8 @@ func RandomImageSize(size int, data []byte) (image.Image, error) {
 	return imgMaker.Make(data), nil
 }
 
-// RandomImage generates and returns a random avatar image.
-// The data should normally be the []byte type of email address.
+// RandomImage generates and returns a random avatar image unique to input data
+// in default size (height and width).
 func RandomImage(data []byte) (image.Image, error) {
 	return RandomImageSize(_RANDOM_AVATAR_SIZE, data)
 }
