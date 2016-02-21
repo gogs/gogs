@@ -48,10 +48,6 @@ Please read detailed information on [Wiki](https://github.com/gogits/gogs/wiki/C
 
 Before opening an issue, please make sure your problem isn't already addressed on the [Troubleshooting](http://gogs.io/docs/intro/troubleshooting.html) and [FAQs](http://gogs.io/docs/intro/faqs.html) pages.
 
-## Things To Notice
-
-Please take a moment to check that an issue on [GitHub](https://github.com/gogits/gogs/issues) doesn't already exist documenting your bug report or improvement proposal. If it does, it never hurts to add a quick "+1" or "I have this problem too". This will help prioritize the most common problems and requests.
-
 ## Code of conduct
 
 As contributors and maintainers of this project, we pledge to respect all people who contribute through reporting issues, posting feature requests, updating documentation, submitting pull requests or patches, and other activities.
