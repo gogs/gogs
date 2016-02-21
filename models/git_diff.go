@@ -161,7 +161,6 @@ type DiffFile struct {
 	IsBin              bool
 	IsRenamed          bool
 	Sections           []*DiffSection
-	HighlightClass     string
 }
 
 func (diffFile *DiffFile) GetType() int {
@@ -169,10 +168,7 @@ func (diffFile *DiffFile) GetType() int {
 }
 
 func (diffFile *DiffFile) GetHighlightClass() string {
-	if diffFile.HighlightClass == "" {
-		diffFile.HighlightClass = highlight.FileNameToHighlightClass(diffFile.Name)
-	}
-	return diffFile.HighlightClass
+	return highlight.FileNameToHighlightClass(diffFile.Name)
 }
 
 type Diff struct {
