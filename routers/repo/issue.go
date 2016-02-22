@@ -918,7 +918,7 @@ func NewComment(ctx *middleware.Context, form auth.CreateCommentForm) {
 				if err = issue.ChangeStatus(ctx.User, form.Status == "close"); err != nil {
 					log.Error(4, "ChangeStatus: %v", err)
 				} else {
-					log.Trace("Issue[%d] status changed to closed: %v", issue.ID, issue.IsClosed)
+					log.Trace("Issue [%d] status changed to closed: %v", issue.ID, issue.IsClosed)
 				}
 			}
 		}

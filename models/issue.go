@@ -364,7 +364,7 @@ func NewIssue(repo *Repository, issue *Issue, labelIDs []int64, uuids []string) 
 		ActUserID:    issue.Poster.Id,
 		ActUserName:  issue.Poster.Name,
 		ActEmail:     issue.Poster.Email,
-		OpType:       CREATE_ISSUE,
+		OpType:       ACTION_CREATE_ISSUE,
 		Content:      fmt.Sprintf("%d|%s", issue.Index, issue.Name),
 		RepoID:       repo.ID,
 		RepoUserName: repo.Owner.Name,
@@ -1564,9 +1564,24 @@ func createComment(e *xorm.Session, u *User, repo *Repository, issue *Issue, com
 		return nil, err
 	}
 
+	// Compose comment action, could be plain comment, close or reopen issue.
+	// This object will be used to notify watchers in the end of function.
+	act := &Action{
+		ActUserID:    u.Id,
+		ActUserName:  u.Name,
+		ActEmail:     u.Email,
+		Content:      fmt.Sprintf("%d|%s", issue.Index, strings.Split(content, "\n")[0]),
+		RepoID:       repo.ID,
+		RepoUserName: repo.Owner.Name,
+		RepoName:     repo.Name,
+		IsPrivate:    repo.IsPrivate,
+	}
+
 	// Check comment type.
 	switch cmtType {
 	case COMMENT_TYPE_COMMENT:
+		act.OpType = ACTION_COMMENT_ISSUE
+
 		if _, err = e.Exec("UPDATE `issue` SET num_comments=num_comments+1 WHERE id=?", issue.ID); err != nil {
 			return nil, err
 		}
@@ -1593,23 +1608,9 @@ func createComment(e *xorm.Session, u *User, repo *Repository, issue *Issue, com
 			}
 		}
 
-		// Notify watchers.
-		act := &Action{
-			ActUserID:    u.Id,
-			ActUserName:  u.Name,
-			ActEmail:     u.Email,
-			OpType:       COMMENT_ISSUE,
-			Content:      fmt.Sprintf("%d|%s", issue.Index, strings.Split(content, "\n")[0]),
-			RepoID:       repo.ID,
-			RepoUserName: repo.Owner.Name,
-			RepoName:     repo.Name,
-			IsPrivate:    repo.IsPrivate,
-		}
-		if err = notifyWatchers(e, act); err != nil {
-			return nil, err
-		}
-
 	case COMMENT_TYPE_REOPEN:
+		act.OpType = ACTION_REOPEN_ISSUE
+
 		if issue.IsPull {
 			_, err = e.Exec("UPDATE `repository` SET num_closed_pulls=num_closed_pulls-1 WHERE id=?", repo.ID)
 		} else {
@@ -1619,6 +1620,8 @@ func createComment(e *xorm.Session, u *User, repo *Repository, issue *Issue, com
 			return nil, err
 		}
 	case COMMENT_TYPE_CLOSE:
+		act.OpType = ACTION_CLOSE_ISSUE
+
 		if issue.IsPull {
 			_, err = e.Exec("UPDATE `repository` SET num_closed_pulls=num_closed_pulls+1 WHERE id=?", repo.ID)
 		} else {
@@ -1627,6 +1630,11 @@ func createComment(e *xorm.Session, u *User, repo *Repository, issue *Issue, com
 		if err != nil {
 			return nil, err
 		}
+	}
+
+	// Notify watchers for whatever action comes in.
+	if err = notifyWatchers(e, act); err != nil {
+		return nil, fmt.Errorf("notifyWatchers: %v", err)
 	}
 
 	return comment, nil
