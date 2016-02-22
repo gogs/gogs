@@ -75,12 +75,14 @@ func (a *loginAuth) Next(fromServer []byte, more bool) ([]byte, error) {
 type Sender struct {
 }
 
-func (s *Sender) Send(from string, to []string, msg io.WriterTo) error {
-	opts := setting.MailService
+func (s *Sender) Open(opts *setting.Mailer) (net.Conn, *smtp.Client, error) {
+	if opts == nil {
+		opts = setting.MailService
+	}
 
 	host, port, err := net.SplitHostPort(opts.Host)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 
 	tlsconfig := &tls.Config{
@@ -91,16 +93,15 @@ func (s *Sender) Send(from string, to []string, msg io.WriterTo) error {
 	if opts.UseCertificate {
 		cert, err := tls.LoadX509KeyPair(opts.CertFile, opts.KeyFile)
 		if err != nil {
-			return err
+			return nil, nil, err
 		}
 		tlsconfig.Certificates = []tls.Certificate{cert}
 	}
 
 	conn, err := net.Dial("tcp", net.JoinHostPort(host, port))
 	if err != nil {
-		return err
+		return conn, nil, err
 	}
-	defer conn.Close()
 
 	isSecureConn := false
 	// Start TLS directly if the port ends with 465 (SMTPS protocol)
@@ -111,7 +112,7 @@ func (s *Sender) Send(from string, to []string, msg io.WriterTo) error {
 
 	client, err := smtp.NewClient(conn, host)
 	if err != nil {
-		return fmt.Errorf("NewClient: %v", err)
+		return conn, client, fmt.Errorf("NewClient: %v", err)
 	}
 
 	if !setting.MailService.DisableHelo {
@@ -119,12 +120,12 @@ func (s *Sender) Send(from string, to []string, msg io.WriterTo) error {
 		if len(hostname) == 0 {
 			hostname, err = os.Hostname()
 			if err != nil {
-				return err
+				return conn, client, err
 			}
 		}
 
 		if err = client.Hello(hostname); err != nil {
-			return fmt.Errorf("Hello: %v", err)
+			return conn, client, fmt.Errorf("Hello: %v", err)
 		}
 	}
 
@@ -132,7 +133,7 @@ func (s *Sender) Send(from string, to []string, msg io.WriterTo) error {
 	hasStartTLS, _ := client.Extension("STARTTLS")
 	if !isSecureConn && hasStartTLS {
 		if err = client.StartTLS(tlsconfig); err != nil {
-			return fmt.Errorf("StartTLS: %v", err)
+			return conn, client, fmt.Errorf("StartTLS: %v", err)
 		}
 	}
 
@@ -151,9 +152,28 @@ func (s *Sender) Send(from string, to []string, msg io.WriterTo) error {
 
 		if auth != nil {
 			if err = client.Auth(auth); err != nil {
-				return fmt.Errorf("Auth: %v", err)
+				return conn, client, fmt.Errorf("Auth: %v", err)
 			}
 		}
+	}
+
+	return conn, client, nil;
+}
+func (s *Sender) Close(conn net.Conn, client *smtp.Client) {
+	if (client != nil) {
+		client.Quit();
+	}
+	if (conn != nil) {
+		conn.Close()
+	}
+}
+
+func (s *Sender) Send(from string, to []string, msg io.WriterTo) error {
+	conn, client, err := s.Open(nil)
+	defer s.Close(conn, client);
+
+	if err != nil {
+		return err
 	}
 
 	if err = client.Mail(from); err != nil {
@@ -175,7 +195,17 @@ func (s *Sender) Send(from string, to []string, msg io.WriterTo) error {
 		return fmt.Errorf("Close: %v", err)
 	}
 
-	return client.Quit()
+	return nil
+}
+func Test(opts *setting.Mailer) error {
+	if opts == nil {
+		return fmt.Errorf("Cannot test without mailer options");
+	}
+	var s Sender;
+
+	conn, client, err := s.Open(nil)
+	defer s.Close(conn, client);
+	return err;
 }
 
 func processMailQueue() {

@@ -259,6 +259,23 @@ func InstallPost(ctx *middleware.Context, form auth.InstallForm) {
 		return
 	}
 
+	// Check mail server
+	if len(strings.TrimSpace(form.SMTPHost)) > 0 {
+		opts := setting.MailService
+		opts.Host = form.SMTPHost
+		opts.User = form.SMTPEmail
+		if len(form.SMTPPasswd) > 0 {
+			opts.Passwd = form.SMTPPasswd
+		}
+		if err := mailer.Test(opts); err != nil {
+			ctx.Data["Err_SMTP"] = true
+			ctx.Data["Err_SMTP_Text"] = err
+			ctx.RenderWithErr(ctx.Tr("install.wrong_smtp_creds"), INSTALL, form)
+			return
+		}
+	}
+	return
+
 	// Check logic loophole between disable self-registration and no admin account.
 	if form.DisableRegistration && len(form.AdminName) == 0 {
 		ctx.Data["Err_Services"] = true

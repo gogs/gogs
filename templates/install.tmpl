@@ -122,6 +122,7 @@
 					<!-- Email -->
 					<div class="ui accordion optional field">
 						<div class="title {{if .Err_SMTP}}text red{{end}}">
+							{{if .Err_SMTP}}<div>{{.Err_SMTP_Text}}</div>{{end}}
 							<i class="icon dropdown"></i>
 							{{.i18n.Tr "install.email_title"}}
 						</div>
