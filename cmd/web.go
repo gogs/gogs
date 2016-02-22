@@ -130,6 +130,8 @@ func newMacaron() *macaron.Macaron {
 		IndentJSON: macaron.Env != macaron.PROD,
 	}))
 
+	m.SetAutoHead(true)
+
 	localeNames, err := bindata.AssetDir("conf/locale")
 	if err != nil {
 		log.Fatal(4, "Fail to list locale files: %v", err)
