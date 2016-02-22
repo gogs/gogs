@@ -330,7 +330,7 @@ func NewPullRequest(repo *Repository, pull *Issue, labelIDs []int64, uuids []str
 		ActUserID:    pull.Poster.Id,
 		ActUserName:  pull.Poster.Name,
 		ActEmail:     pull.Poster.Email,
-		OpType:       CREATE_PULL_REQUEST,
+		OpType:       ACTION_CREATE_PULL_REQUEST,
 		Content:      fmt.Sprintf("%d|%s", pull.Index, pull.Name),
 		RepoID:       repo.ID,
 		RepoUserName: repo.Owner.Name,
