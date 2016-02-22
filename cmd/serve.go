@@ -42,11 +42,6 @@ func setup(logPath string) {
 	setting.NewContext()
 	log.NewGitLogger(filepath.Join(setting.LogRootPath, logPath))
 
-	if setting.DisableSSH {
-		println("Gogs: SSH has been disabled")
-		os.Exit(1)
-	}
-
 	models.LoadConfigs()
 
 	if setting.UseSQLite3 || setting.UseTiDB {
@@ -138,7 +133,13 @@ func runServ(c *cli.Context) {
 	if c.IsSet("config") {
 		setting.CustomConf = c.String("config")
 	}
+
 	setup("serv.log")
+
+	if setting.DisableSSH {
+		println("Gogs: SSH has been disabled")
+		return
+	}
 
 	if len(c.Args()) < 1 {
 		fail("Not enough arguments", "Not enough arguments")

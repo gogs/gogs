@@ -1,6 +1,7 @@
 [run]
 init_cmds = [
 	#["grep", "-rn", "FIXME", "."],
+	["make", "build-dev"],
 	["./gogs", "web"]
 ]
 watch_all = true
