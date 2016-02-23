@@ -21,7 +21,7 @@ func TestSSHKeyVerification(t *testing.T) {
 	for name, pubkey := range keys {
 		keyTypeN, lengthN, errN := SSHNativeParsePublicKey(pubkey)
 		if errN != nil {
-			if errN != SSH_UNKNOWN_KEY_TYPE {
+			if errN != SSHUnknownKeyType {
 				t.Errorf("error parsing public key '%s': %s", name, errN)
 				continue
 			}
@@ -31,8 +31,8 @@ func TestSSHKeyVerification(t *testing.T) {
 			t.Errorf("error parsing public key '%s': %s", name, errK)
 			continue
 		}
-		// we know that ed25519 is currently not supported by native and returns SSH_UNKNOWN_KEY_TYPE
-		if (keyTypeN != keyTypeK || lengthN != lengthK) && errN != SSH_UNKNOWN_KEY_TYPE {
+		// we know that ed25519 is currently not supported by native and returns SSHUnknownKeyType
+		if (keyTypeN != keyTypeK || lengthN != lengthK) && errN != SSHUnknownKeyType {
 			t.Errorf("key mismatch for '%s': native: %s(%d), ssh-keygen: %s(%d)", name, keyTypeN, lengthN, keyTypeK, lengthK)
 		}
 	}

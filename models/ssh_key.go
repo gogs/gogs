@@ -36,8 +36,8 @@ const (
 )
 
 var (
-	sshOpLocker          = sync.Mutex{}
-	SSH_UNKNOWN_KEY_TYPE = fmt.Errorf("unknown key type")
+	sshOpLocker       = sync.Mutex{}
+	SSHUnknownKeyType = fmt.Errorf("unknown key type")
 )
 
 type KeyType int
@@ -186,7 +186,7 @@ func SSHKeyGenParsePublicKey(key string) (string, int, error) {
 		return "", 0, fmt.Errorf("public key check failed with error '%s': %s", err, stderr)
 	}
 	if strings.HasSuffix(stdout, "is not a public key file.") {
-		return "", 0, SSH_UNKNOWN_KEY_TYPE
+		return "", 0, SSHUnknownKeyType
 	}
 	fields := strings.Split(stdout, " ")
 	if len(fields) < 4 {
@@ -216,7 +216,7 @@ func SSHNativeParsePublicKey(keyLine string) (string, int, error) {
 	pkey, err := ssh.ParsePublicKey(raw)
 	if err != nil {
 		if strings.HasPrefix(err.Error(), "ssh: unknown key algorithm") {
-			return "", 0, SSH_UNKNOWN_KEY_TYPE
+			return "", 0, SSHUnknownKeyType
 		}
 		return "", 0, err
 	}
