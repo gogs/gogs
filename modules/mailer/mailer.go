@@ -74,13 +74,13 @@ func (a *loginAuth) Next(fromServer []byte, more bool) ([]byte, error) {
 func newDialer(opts *setting.Mailer) (*gomail.Dialer, error) {
 	host, port, err := net.SplitHostPort(opts.Host)
 	if err != nil {
-		log.Error(4, "Mailer: Failed convert hostname %s: %v", opts.Host, err)
+		log.Error(3, "Mailer: Failed convert hostname %s: %v", opts.Host, err)
 		return nil, err
 	}
 
 	portI, err := strconv.Atoi(port)
 	if err != nil {
-		log.Error(4, "Mailer: Failed convert port %s: %v", port, err)
+		log.Error(3, "Mailer: Failed convert port %s: %v", port, err)
 		return nil, fmt.Errorf("Cannot convert '%s' to a port number", port)
 	}
 
@@ -133,7 +133,7 @@ func Test(opts *setting.Mailer) error {
 	log.Debug("Mailer: Dialing %s", opts.Host)
 	conn, err := dialer.Dial()
 	if err != nil {
-		log.Error(4, "Mailer: Failed to connect: %v", err)
+		log.Error(3, "Mailer: Failed to connect: %v", err)
 	} else {
 		conn.Close()
 	}
