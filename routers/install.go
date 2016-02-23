@@ -262,6 +262,15 @@ func InstallPost(ctx *middleware.Context, form auth.InstallForm) {
 
 	// Check mail server
 	if len(strings.TrimSpace(form.SMTPHost)) > 0 {
+		if len(form.SMTPFrom) == 0 {
+			ctx.Data["Err_SMTP"] = true
+			ctx.Data["Err_SMTPFrom"] = true
+
+			ctx.RenderWithErr(ctx.Tr("install.wrong_smtp_settings"), INSTALL, form)
+			return
+		}
+		// implement further SMTPFrom checking
+
 		opts := setting.MailService
 		if opts == nil {
 			opts = &setting.Mailer{}
