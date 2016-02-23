@@ -337,7 +337,7 @@ func NewContext() {
 		log.Fatal(4, "Fail to create '%s': %v", SSHRootPath, err)
 	}
 	checkDefault := SSH_PUBLICKEY_CHECK_KEYGEN
-	if DisableSSH {
+	if StartSSHServer {
 		checkDefault = SSH_PUBLICKEY_CHECK_NATIVE
 	}
 	SSHPublicKeyCheck = sec.Key("SSH_PUBLICKEY_CHECK").MustString(checkDefault)
