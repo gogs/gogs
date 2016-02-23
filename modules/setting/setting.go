@@ -27,14 +27,17 @@ import (
 	"github.com/gogits/gogs/modules/user"
 )
 
+const (
+	SSH_PUBLICKEY_CHECK_NATIVE = "native"
+	SSH_PUBLICKEY_CHECK_KEYGEN = "ssh-keygen"
+)
+
 type Scheme string
 
 const (
-	HTTP                       Scheme = "http"
-	HTTPS                      Scheme = "https"
-	FCGI                       Scheme = "fcgi"
-	SSH_PUBLICKEY_CHECK_NATIVE        = "native"
-	SSH_PUBLICKEY_CHECK_KEYGEN        = "ssh-keygen"
+	HTTP  Scheme = "http"
+	HTTPS Scheme = "https"
+	FCGI  Scheme = "fcgi"
 )
 
 type LandingPage string
