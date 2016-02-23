@@ -122,12 +122,12 @@
 					<!-- Email -->
 					<div class="ui accordion optional field">
 						<div class="title {{if .Err_SMTP}}text red{{end}}">
-							{{if .Err_SMTP}}<div>{{.Err_SMTP_Text}}</div>{{end}}
 							<i class="icon dropdown"></i>
 							{{.i18n.Tr "install.email_title"}}
 						</div>
 						<div class="content">
-							<div class="inline field">
+							{{if .Err_SMTP}}<div class="center text red">{{.Err_SMTPMessage}}</div>{{end}}
+							<div class="inline field {{if .Err_SMTPHost}}error{{end}}">
 								<label for="smtp_host">{{.i18n.Tr "install.smtp_host"}}</label>
 								<input id="smtp_host" name="smtp_host" value="{{.smtp_host}}">
 							</div>
@@ -136,11 +136,11 @@
 								<input id="smtp_from" name="smtp_from" value="{{.smtp_from}}">
 								<span class="help">{{.i18n.Tr "install.smtp_from_helper"}}</span>
 							</div>
-							<div class="inline field {{if .Err_SMTPEmail}}error{{end}}">
+							<div class="inline field {{if or (.Err_SMTPEmail) (.Err_SMTPAuth)}}error{{end}}">
 								<label for="smtp_email">{{.i18n.Tr "install.mailer_user"}}</label>
 								<input id="smtp_email" name="smtp_email" value="{{.smtp_email}}">
 							</div>
-							<div class="inline field">
+							<div class="inline field {{if .Err_SMTPAuth}}error{{end}}">
 								<label for="smtp_passwd">{{.i18n.Tr "install.mailer_password"}}</label>
 								<input id="smtp_passwd" name="smtp_passwd" type="password" value="{{.smtp_passwd}}">
 							</div>
