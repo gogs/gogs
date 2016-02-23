@@ -100,8 +100,8 @@ func newDialer(opts *setting.Mailer) (*gomail.Dialer, error) {
 		dialer.SSL = false
 	}
 
-	if !setting.MailService.DisableHelo {
-		hostname := setting.MailService.HeloHostname
+	if !opts.DisableHelo {
+		hostname := opts.HeloHostname
 	        if len(hostname) == 0 {
 			hostname, err = os.Hostname()
 			if err != nil {
