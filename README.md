@@ -13,13 +13,13 @@ Gogs - Go Git Service [![Build Status](https://travis-ci.org/gogits/gogs.svg?bra
 
 ### NOTICES
 
-- :bangbang: You **MUST** read [CONTRIBUTING.md](https://github.com/gogits/gogs/blob/master/.github/CONTRIBUTING.md) for bug report and contributing code. :bangbang:
-- Please [start discussion](http://forum.gogs.io/category/2/general-discussion) or [ask a question](http://forum.gogs.io/category/4/getting-help) on [the forum](http://forum.gogs.io/). GitHub issue tracker only keeps **bugs** and **feature requests**, all other topics will be closed without reason.
-- Due to testing purpose, data of [try.gogs.io](https://try.gogs.io) was reset in **Jan 28, 2015** and will reset multiple times after. Please do **NOT** put your important data on the site.
-- The demo site [try.gogs.io](https://try.gogs.io) is running under `develop` branch.
-- If you think there are vulnerabilities in the project, please talk privately to **u@gogs.io**. Thanks!
-- If you're interested in using APIs, we have experimental support with [documentation](https://github.com/gogits/go-gogs-client/wiki).
-- If your team/company is using Gogs and would like to put your logo on [our website](http://gogs.io), contact us by any means.
+1. :bangbang: You **MUST** **MUST** **MUST** read [CONTRIBUTING.md](https://github.com/gogits/gogs/blob/master/.github/CONTRIBUTING.md) for bug report and contributing code. :bangbang:
+2. **PLEASE** **PLEASE** **PLEASE** [ask questions](https://discuss.gogs.io/c/getting-help) on [the forum](https://discuss.gogs.io/). GitHub issue tracker only keeps **bugs** and **feature requests**, all other topics will be closed without reason.
+3. Due to testing purpose, data of [try.gogs.io](https://try.gogs.io) was reset in **Jan 28, 2015** and will reset multiple times after. Please do **NOT** put your important data on the site.
+4. The demo site [try.gogs.io](https://try.gogs.io) is running under `develop` branch.
+5. If you think there are vulnerabilities in the project, please talk privately to **u@gogs.io**. Thanks!
+6. If you're interested in using APIs, we have experimental support with [documentation](https://github.com/gogits/go-gogs-client/wiki).
+7. If your team/company is using Gogs and would like to put your logo on [our website](http://gogs.io), contact us by any means.
 
 [简体中文](README_ZH.md)
 
