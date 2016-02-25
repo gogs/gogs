@@ -250,6 +250,7 @@ func runWeb(ctx *cli.Context) {
 	m.Group("/admin", func() {
 		m.Get("", adminReq, admin.Dashboard)
 		m.Get("/config", admin.Config)
+		m.Get("/config/testmailer", admin.TestMailer)
 		m.Get("/monitor", admin.Monitor)
 
 		m.Group("/users", func() {

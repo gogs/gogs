@@ -16,6 +16,7 @@ import (
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/cron"
+	"github.com/gogits/gogs/modules/mailer"
 	"github.com/gogits/gogs/modules/middleware"
 	"github.com/gogits/gogs/modules/process"
 	"github.com/gogits/gogs/modules/setting"
@@ -172,6 +173,13 @@ func Dashboard(ctx *middleware.Context) {
 	updateSystemStatus()
 	ctx.Data["SysStatus"] = sysStatus
 	ctx.HTML(200, DASHBOARD)
+}
+
+func TestMailer(ctx *middleware.Context) {
+	// send a test email to the user's email address and redirect back to Config
+	mailer.SendTestMail(ctx.User)
+
+	ctx.Redirect(setting.AppSubUrl + "/admin/config")
 }
 
 func Config(ctx *middleware.Context) {
