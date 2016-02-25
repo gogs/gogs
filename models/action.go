@@ -368,7 +368,7 @@ func updateIssuesCommit(u *User, repo *Repository, repoUserName, repoName string
 				continue
 			}
 
-			if err = issue.ChangeStatus(u, true); err != nil {
+			if err = issue.ChangeStatus(u, repo, true); err != nil {
 				return err
 			}
 		}
@@ -408,7 +408,7 @@ func updateIssuesCommit(u *User, repo *Repository, repoUserName, repoName string
 				continue
 			}
 
-			if err = issue.ChangeStatus(u, false); err != nil {
+			if err = issue.ChangeStatus(u, repo, false); err != nil {
 				return err
 			}
 		}

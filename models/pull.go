@@ -138,7 +138,7 @@ func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository) (err error
 		return err
 	}
 
-	if err = pr.Issue.changeStatus(sess, doer, true); err != nil {
+	if err = pr.Issue.changeStatus(sess, doer, pr.Issue.Repo, true); err != nil {
 		return fmt.Errorf("Issue.changeStatus: %v", err)
 	}
 
