@@ -9,6 +9,7 @@ import (
 	"path"
 	"strings"
 
+	"gopkg.in/gomail.v2"
 	"gopkg.in/macaron.v1"
 
 	"github.com/gogits/gogs/models"
@@ -184,8 +185,6 @@ func SendCollaboratorMail(r macaron.Render, u, doer *models.User, repo *models.R
 	return nil
 }
 
-func SendTestMail(u *models.User) {
-	msg := NewMessage([]string{u.Email}, "Gogs Test Email!", "Gogs Test Email!")
-
-	SendAsync(msg)
+func SendTestMail(email string) error {
+	return gomail.Send(&Sender{}, NewMessage([]string{email}, "Gogs Test Email!", "Gogs Test Email!").Message)
 }

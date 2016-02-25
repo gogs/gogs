@@ -2551,6 +2551,9 @@ footer .container .links > *:first-child {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.admin.config #test-mail-btn {
+  margin-left: 5px;
+}
 .explore {
   padding-top: 15px;
   padding-bottom: 80px;
