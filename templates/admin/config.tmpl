@@ -116,7 +116,8 @@
 						<dt>{{.i18n.Tr "admin.config.mailer_host"}}</dt>
 						<dd>{{.Mailer.Host}}</dd>
 						<dt>{{.i18n.Tr "admin.config.mailer_user"}}</dt>
-						<dd>{{.Mailer.User}}</dd>{{end}}
+						<dd>{{.Mailer.User}}</dd><br>
+						<a class="ui green button" tabindex="5" href="/admin/config/testmailer">{{.i18n.Tr "admin.config.mailer_test_email"}}</a>{{end}}
 					</dl>
 				</div>
 
