@@ -89,8 +89,8 @@ func GlobalInit() {
 	checkRunMode()
 
 	if setting.StartSSHServer {
-		ssh.Listen(setting.SSHPort)
-		log.Info("SSH server started on :%v", setting.SSHPort)
+		ssh.Listen(setting.SSHListenPort)
+		log.Info("SSH server started on :%v", setting.SSHListenPort)
 	}
 
 	// Build Sanitizer
