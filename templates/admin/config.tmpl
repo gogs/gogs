@@ -1,5 +1,5 @@
 {{template "base/head" .}}
-<div class="admin monitor">
+<div class="admin config">
 	<div class="ui container">
 		<div class="ui grid">
 			{{template "admin/navbar" .}}
@@ -110,14 +110,23 @@
 						<dt>{{.i18n.Tr "admin.config.mailer_enabled"}}</dt>
 						<dd><i class="fa fa{{if .MailerEnabled}}-check{{end}}-square-o"></i></dd>
 						{{if .MailerEnabled}}<dt>{{.i18n.Tr "admin.config.mailer_name"}}</dt>
-						<dd>{{.Mailer.Name}}</dd>
-						<dt>{{.i18n.Tr "admin.config.mailer_disable_helo"}}</dt>
-						<dd><i class="fa fa{{if .Mailer.DisableHelo}}-check{{end}}-square-o"></i></dd>
-						<dt>{{.i18n.Tr "admin.config.mailer_host"}}</dt>
-						<dd>{{.Mailer.Host}}</dd>
-						<dt>{{.i18n.Tr "admin.config.mailer_user"}}</dt>
-						<dd>{{.Mailer.User}}</dd><br>
-						<a class="ui green button" tabindex="5" href="/admin/config/testmailer">{{.i18n.Tr "admin.config.mailer_test_email"}}</a>{{end}}
+							<dd>{{.Mailer.Name}}</dd>
+							<dt>{{.i18n.Tr "admin.config.mailer_disable_helo"}}</dt>
+							<dd><i class="fa fa{{if .Mailer.DisableHelo}}-check{{end}}-square-o"></i></dd>
+							<dt>{{.i18n.Tr "admin.config.mailer_host"}}</dt>
+							<dd>{{.Mailer.Host}}</dd>
+							<dt>{{.i18n.Tr "admin.config.mailer_user"}}</dt>
+							<dd>{{.Mailer.User}}</dd><br>
+							<form class="ui form" action="{{AppSubUrl}}/admin/config/test_mail" method="post">
+								{{.CsrfTokenHtml}}
+								<div class="inline field ui left">
+									<div class="ui input">
+										<input type="email" name="email" required>
+									</div>
+								</div>
+								<button class="ui green button" id="test-mail-btn">{{.i18n.Tr "admin.config.send_test_mail"}}</button>
+							</form>
+						{{end}}
 					</dl>
 				</div>
 

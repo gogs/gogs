@@ -175,9 +175,14 @@ func Dashboard(ctx *middleware.Context) {
 	ctx.HTML(200, DASHBOARD)
 }
 
-func TestMailer(ctx *middleware.Context) {
-	// send a test email to the user's email address and redirect back to Config
-	mailer.SendTestMail(ctx.User)
+func SendTestMail(ctx *middleware.Context) {
+	email := ctx.Query("email")
+	// Send a test email to the user's email address and redirect back to Config
+	if err := mailer.SendTestMail(email); err != nil {
+		ctx.Flash.Error(ctx.Tr("admin.config.test_mail_failed", email, err))
+	} else {
+		ctx.Flash.Info(ctx.Tr("admin.config.test_mail_sent", email))
+	}
 
 	ctx.Redirect(setting.AppSubUrl + "/admin/config")
 }
