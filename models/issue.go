@@ -218,7 +218,7 @@ func (i *Issue) ReadBy(uid int64) error {
 	return UpdateIssueUserByRead(uid, i.ID)
 }
 
-func (i *Issue) changeStatus(e *xorm.Session, doer *User, isClosed bool) (err error) {
+func (i *Issue) changeStatus(e *xorm.Session, doer *User, repo *Repository, isClosed bool) (err error) {
 	if i.IsClosed == isClosed {
 		return nil
 	}
@@ -251,7 +251,7 @@ func (i *Issue) changeStatus(e *xorm.Session, doer *User, isClosed bool) (err er
 	}
 
 	// New action comment.
-	if _, err = createStatusComment(e, doer, i.Repo, i); err != nil {
+	if _, err = createStatusComment(e, doer, repo, i); err != nil {
 		return err
 	}
 
@@ -259,14 +259,14 @@ func (i *Issue) changeStatus(e *xorm.Session, doer *User, isClosed bool) (err er
 }
 
 // ChangeStatus changes issue status to open/closed.
-func (i *Issue) ChangeStatus(doer *User, isClosed bool) (err error) {
+func (i *Issue) ChangeStatus(doer *User, repo *Repository, isClosed bool) (err error) {
 	sess := x.NewSession()
 	defer sessionRelease(sess)
 	if err = sess.Begin(); err != nil {
 		return err
 	}
 
-	if err = i.changeStatus(sess, doer, isClosed); err != nil {
+	if err = i.changeStatus(sess, doer, repo, isClosed); err != nil {
 		return err
 	}
 
