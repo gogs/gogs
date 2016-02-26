@@ -88,4 +88,4 @@ Steps to upgrade Gogs with Docker:
 
 ## Known Issues
 
-- `.dockerignore` seems to be ignored during Docker Hub Automated build
+- The docker container can not currently be build on Raspberry 1 (armv6l) as our base image `alpine` does not have a `go` package available for this platform.
