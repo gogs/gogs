@@ -1460,8 +1460,33 @@ footer .container .links > *:first-child {
 .repository.view.issue .comment-list .comment .content > .bottom.segment {
   background: #f3f4f5;
 }
+.repository.view.issue .comment-list .comment .content > .bottom.segment .ui.images::after {
+  clear: both;
+  content: ' ';
+  display: block;
+}
+.repository.view.issue .comment-list .comment .content > .bottom.segment a {
+  display: block;
+  float: left;
+  margin: 5px;
+  padding: 5px;
+  height: 150px;
+  border: solid 1px #eee;
+  border-radius: 3px;
+  max-width: 150px;
+  background-color: #fff;
+}
+.repository.view.issue .comment-list .comment .content > .bottom.segment a:before {
+  content: "";
+  display: inline-block;
+  height: 100%;
+  vertical-align: middle;
+}
 .repository.view.issue .comment-list .comment .content > .bottom.segment .ui.image {
-  max-height: 150px;
+  max-height: 100%;
+  width: auto;
+  margin: 0;
+  vertical-align: middle;
 }
 .repository.view.issue .comment-list .comment .ui.form .field:first-child {
   clear: none;
