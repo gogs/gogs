@@ -623,7 +623,7 @@ func CompareAndPullRequestPost(ctx *middleware.Context, form auth.CreateIssueFor
 		return
 	}
 
-	pull := &models.Issue{
+	pullIssue := &models.Issue{
 		RepoID:      repo.ID,
 		Index:       repo.NextIssueIndex(),
 		Name:        form.Title,
@@ -634,26 +634,33 @@ func CompareAndPullRequestPost(ctx *middleware.Context, form auth.CreateIssueFor
 		IsPull:      true,
 		Content:     form.Content,
 	}
-	if err := models.NewPullRequest(repo, pull, labelIDs, attachments, &models.PullRequest{
+	pullRequest := &models.PullRequest{
 		HeadRepoID:   headRepo.ID,
 		BaseRepoID:   repo.ID,
 		HeadUserName: headUser.Name,
 		HeadBranch:   headBranch,
 		BaseBranch:   baseBranch,
+		HeadRepo:     headRepo,
+		BaseRepo:     repo,
 		MergeBase:    prInfo.MergeBase,
 		Type:         models.PULL_REQUEST_GOGS,
-	}, patch); err != nil {
+	}
+	if err := models.NewPullRequest(repo, pullIssue, labelIDs, attachments, pullRequest, patch); err != nil {
 		ctx.Handle(500, "NewPullRequest", err)
 		return
 	}
+	if err := pullRequest.PushToBaseRepo(); err != nil {
+		ctx.Handle(500, "PushToBaseRepo", err)
+		return
+	}
 
-	notifyWatchersAndMentions(ctx, pull)
+	notifyWatchersAndMentions(ctx, pullIssue)
 	if ctx.Written() {
 		return
 	}
 
-	log.Trace("Pull request created: %d/%d", repo.ID, pull.ID)
-	ctx.Redirect(ctx.Repo.RepoLink + "/pulls/" + com.ToStr(pull.Index))
+	log.Trace("Pull request created: %d/%d", repo.ID, pullIssue.ID)
+	ctx.Redirect(ctx.Repo.RepoLink + "/pulls/" + com.ToStr(pullIssue.Index))
 }
 
 func TriggerTask(ctx *middleware.Context) {
