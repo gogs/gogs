@@ -77,6 +77,7 @@ var (
 		RootPath            string         `ini:"SSH_ROOT_PATH"`
 		KeyTestPath         string         `ini:"SSH_KEY_TEST_PATH"`
 		KeygenPath          string         `ini:"SSH_KEYGEN_PATH"`
+		User                int            `ini:"SSH_TEMPLATE_USER"`
 		MinimumKeySizeCheck bool           `ini:"-"`
 		MinimumKeySizes     map[string]int `ini:"-"`
 	}
@@ -360,6 +361,9 @@ func NewContext() {
 				log.Fatal(4, "Fail to test '%s' command: %v (forgotten install?)", SSH.KeygenPath, err)
 			}
 		}
+		SSH.User = sec.Key("SSH_TEMPLATE_USER").MustString(RunUser)
+	} else {
+		SSH.User = RunUser
 	}
 
 	SSH.MinimumKeySizeCheck = sec.Key("MINIMUM_KEY_SIZE_CHECK").MustBool()
