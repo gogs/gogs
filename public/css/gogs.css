@@ -1477,7 +1477,7 @@ footer .container .links > *:first-child {
   background-color: #fff;
 }
 .repository.view.issue .comment-list .comment .content > .bottom.segment a:before {
-  content: "";
+  content: ' ';
   display: inline-block;
   height: 100%;
   vertical-align: middle;
@@ -1600,6 +1600,9 @@ footer .container .links > *:first-child {
 }
 .repository .label.list .item a.open-issues {
   margin-right: 30px;
+}
+.repository .label.list .item .ui.label {
+  font-size: 1em;
 }
 .repository .milestone.list {
   list-style: none;
