@@ -8,10 +8,12 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"html/template"
 	"io"
 	"mime/multipart"
 	"os"
 	"path"
+	"strconv"
 	"strings"
 	"time"
 
@@ -956,6 +958,26 @@ type Label struct {
 // CalOpenIssues calculates the open issues of label.
 func (m *Label) CalOpenIssues() {
 	m.NumOpenIssues = m.NumIssues - m.NumClosedIssues
+}
+
+// ForegroundColor calculates the text color for labels based
+// on their background color
+func (l *Label) ForegroundColor() template.CSS {
+	if strings.HasPrefix(l.Color, "#") {
+		if color, err := strconv.ParseUint(l.Color[1:], 16, 64); err == nil {
+			r := float32(0xFF & (color >> 16))
+			g := float32(0xFF & (color >> 8))
+			b := float32(0xFF & color)
+			luminance := (0.2126*r + 0.7152*g + 0.0722*b) / 255
+
+			if luminance < 0.5 {
+				return template.CSS("rgba(255,255,255,.8)")
+			}
+		}
+	}
+
+	// default to black
+	return template.CSS("rgba(0,0,0,.8)")
 }
 
 // NewLabel creates new label of repository.
