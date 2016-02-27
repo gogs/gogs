@@ -1,9 +1,9 @@
-Gogs - Go Git Service [![Build Status](https://travis-ci.org/gogits/gogs.svg?branch=master)](https://travis-ci.org/gogits/gogs) [![Docker Repository on Quay](https://quay.io/repository/gogs/gogs/status "Docker Repository on Quay")](https://quay.io/repository/gogs/gogs) [![Crowdin](https://d322cqt584bo4o.cloudfront.net/gogs/localized.svg)](https://crowdin.com/project/gogs) [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/gogits/gogs?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+Gogs - Go Git Service [![Build Status](https://travis-ci.org/gogits/gogs.svg?branch=master)](https://travis-ci.org/gogits/gogs) [![Crowdin](https://d322cqt584bo4o.cloudfront.net/gogs/localized.svg)](https://crowdin.com/project/gogs) [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/gogits/gogs?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 =====================
 
 ![](https://github.com/gogits/gogs/blob/master/public/img/gogs-large-resize.png?raw=true)
 
-##### Current version: 0.8.45
+##### Current version: 0.8.46
 
 | Web | UI  | Preview  |
 |:-------------:|:-------:|:-------:|
@@ -11,15 +11,13 @@ Gogs - Go Git Service [![Build Status](https://travis-ci.org/gogits/gogs.svg?bra
 |![Profile](https://gogs.io/img/screenshots/4.png)|![Admin Dashboard](https://gogs.io/img/screenshots/5.png)|![Diff](https://gogs.io/img/screenshots/6.png)|
 |![Issues](https://gogs.io/img/screenshots/7.png)|![Releases](https://gogs.io/img/screenshots/8.png)|![Organization](https://gogs.io/img/screenshots/9.png)|
 
-### NOTICES
+### Important Notes
 
-1. :bangbang: You **MUST** **MUST** **MUST** read [CONTRIBUTING.md](https://github.com/gogits/gogs/blob/master/.github/CONTRIBUTING.md) for bug report and contributing code. :bangbang:
-2. **PLEASE** **PLEASE** **PLEASE** [ask questions](https://discuss.gogs.io/c/getting-help) on [the forum](https://discuss.gogs.io/). GitHub issue tracker only keeps **bugs** and **feature requests**, all other topics will be closed without reason.
-3. Due to testing purpose, data of [try.gogs.io](https://try.gogs.io) was reset in **Jan 28, 2015** and will reset multiple times after. Please do **NOT** put your important data on the site.
-4. The demo site [try.gogs.io](https://try.gogs.io) is running under `develop` branch.
-5. If you think there are vulnerabilities in the project, please talk privately to **u@gogs.io**. Thanks!
-6. If you're interested in using APIs, we have experimental support with [documentation](https://github.com/gogits/go-gogs-client/wiki).
-7. If your team/company is using Gogs and would like to put your logo on [our website](http://gogs.io), contact us by any means.
+1. Due to testing purpose, data of [try.gogs.io](https://try.gogs.io) was reset in **Jan 28, 2015** and will reset multiple times after. Please do **NOT** put your important data on the site.
+2. The demo site [try.gogs.io](https://try.gogs.io) is running under `develop` branch.
+3. If you think there are vulnerabilities in the project, please talk privately to **u@gogs.io**. Thanks!
+4. If you're interested in using APIs, we have experimental support with [documentation](https://github.com/gogits/go-gogs-client/wiki).
+5. If your team/company is using Gogs and would like to put your logo on [our website](http://gogs.io), contact us by any means.
 
 [简体中文](README_ZH.md)
 
@@ -32,7 +30,7 @@ The goal of this project is to make the easiest, fastest, and most painless way 
 - Please see the [Documentation](http://gogs.io/docs/intro) for common usages and change log.
 - See the [Trello Board](https://trello.com/b/uxAoeLUl/gogs-go-git-service) to follow the develop team.
 - Want to try it before doing anything else? Do it [online](https://try.gogs.io/gogs/gogs)!
-- Having trouble? Get help with [Troubleshooting](http://gogs.io/docs/intro/troubleshooting.html).
+- Having trouble? Get help with [Troubleshooting](http://gogs.io/docs/intro/troubleshooting.html) or [User Forum](https://discuss.gogs.io/).
 - Want to help with localization? Check out the [guide](http://gogs.io/docs/features/i18n.html)!
 
 ## Features
