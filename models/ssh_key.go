@@ -12,9 +12,11 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"math/big"
 	"os"
 	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -33,7 +35,10 @@ const (
 	_TPL_PUBLICK_KEY = `command="%s serv key-%d --config='%s'",no-port-forwarding,no-X11-forwarding,no-agent-forwarding,no-pty %s` + "\n"
 )
 
-var sshOpLocker = sync.Mutex{}
+var (
+	sshOpLocker       = sync.Mutex{}
+	SSHUnknownKeyType = fmt.Errorf("unknown key type")
+)
 
 type KeyType int
 
@@ -153,7 +158,110 @@ func parseKeyString(content string) (string, error) {
 	return keyType + " " + keyContent + " " + keyComment, nil
 }
 
+// extract key type and length using ssh-keygen
+func SSHKeyGenParsePublicKey(key string) (string, int, error) {
+	// The ssh-keygen in Windows does not print key type, so no need go further.
+	if setting.IsWindows {
+		return "", 0, nil
+	}
+
+	tmpFile, err := ioutil.TempFile(setting.SSHWorkPath, "gogs_keytest")
+	if err != nil {
+		return "", 0, err
+	}
+	tmpName := tmpFile.Name()
+	defer os.Remove(tmpName)
+
+	if ln, err := tmpFile.WriteString(key); err != nil {
+		tmpFile.Close()
+		return "", 0, err
+	} else if ln != len(key) {
+		tmpFile.Close()
+		return "", 0, fmt.Errorf("could not write complete public key (written: %d, should be: %d): %s", ln, len(key), key)
+	}
+	tmpFile.Close()
+
+	stdout, stderr, err := process.Exec("CheckPublicKeyString", setting.SSHKeyGenPath, "-lf", tmpName)
+	if err != nil {
+		return "", 0, fmt.Errorf("public key check failed with error '%s': %s", err, stderr)
+	}
+	if strings.HasSuffix(stdout, "is not a public key file.") {
+		return "", 0, SSHUnknownKeyType
+	}
+	fields := strings.Split(stdout, " ")
+	if len(fields) < 4 {
+		return "", 0, fmt.Errorf("invalid public key line: %s", stdout)
+	}
+
+	length, err := strconv.Atoi(fields[0])
+	if err != nil {
+		return "", 0, err
+	}
+	keyType := strings.Trim(fields[len(fields)-1], "()\r\n")
+	return strings.ToLower(keyType), length, nil
+}
+
+// extract the key type and length using the golang ssh library
+func SSHNativeParsePublicKey(keyLine string) (string, int, error) {
+	fields := strings.Fields(keyLine)
+	if len(fields) < 2 {
+		return "", 0, fmt.Errorf("not enough fields in public key line: %s", string(keyLine))
+	}
+
+	raw, err := base64.StdEncoding.DecodeString(fields[1])
+	if err != nil {
+		return "", 0, err
+	}
+
+	pkey, err := ssh.ParsePublicKey(raw)
+	if err != nil {
+		if strings.HasPrefix(err.Error(), "ssh: unknown key algorithm") {
+			return "", 0, SSHUnknownKeyType
+		}
+		return "", 0, err
+	}
+
+	// The ssh library can parse the key, so next we find out what key exactly we
+	// have.
+	switch pkey.Type() {
+	case ssh.KeyAlgoDSA:
+		rawPub := struct {
+			Name       string
+			P, Q, G, Y *big.Int
+		}{}
+		if err := ssh.Unmarshal(pkey.Marshal(), &rawPub); err != nil {
+			return "", 0, err
+		}
+		// as per https://bugzilla.mindrot.org/show_bug.cgi?id=1647 we should never
+		// see dsa keys != 1024 bit, but as it seems to work, we will not check here
+		return "dsa", rawPub.P.BitLen(), nil // use P as per crypto/dsa/dsa.go (is L)
+	case ssh.KeyAlgoRSA:
+		rawPub := struct {
+			Name string
+			E    *big.Int
+			N    *big.Int
+		}{}
+		if err := ssh.Unmarshal(pkey.Marshal(), &rawPub); err != nil {
+			return "", 0, err
+		}
+		return "rsa", rawPub.N.BitLen(), nil // use N as per crypto/rsa/rsa.go (is bits)
+	case ssh.KeyAlgoECDSA256:
+		return "ecdsa", 256, nil
+	case ssh.KeyAlgoECDSA384:
+		return "ecdsa", 384, nil
+	case ssh.KeyAlgoECDSA521:
+		return "ecdsa", 521, nil
+	case "ssh-ed25519": // TODO replace with ssh constant when available
+		return "ed25519", 256, nil
+	default:
+		return "", 0, fmt.Errorf("no support for key length detection for type %s", pkey.Type())
+	}
+	return "", 0, fmt.Errorf("SSHNativeParsePublicKey failed horribly, please investigate why")
+}
+
 // CheckPublicKeyString checks if the given public key string is recognized by SSH.
+//
+// The function returns the actual public key line on success.
 func CheckPublicKeyString(content string) (_ string, err error) {
 	content, err = parseKeyString(content)
 	if err != nil {
@@ -168,22 +276,34 @@ func CheckPublicKeyString(content string) (_ string, err error) {
 	// remove any unnecessary whitespace now
 	content = strings.TrimSpace(content)
 
-	fields := strings.Fields(content)
-	if len(fields) < 2 {
-		return "", errors.New("too less fields")
+	var (
+		keyType string
+		length  int
+	)
+	if setting.SSHPublicKeyCheck == setting.SSH_PUBLICKEY_CHECK_NATIVE {
+		keyType, length, err = SSHNativeParsePublicKey(content)
+	} else if setting.SSHPublicKeyCheck == setting.SSH_PUBLICKEY_CHECK_KEYGEN {
+		keyType, length, err = SSHKeyGenParsePublicKey(content)
+	} else {
+		log.Error(4, "invalid public key check type: %s", setting.SSHPublicKeyCheck)
+		return "", fmt.Errorf("invalid public key check type")
 	}
 
-	key, err := base64.StdEncoding.DecodeString(fields[1])
 	if err != nil {
-		return "", fmt.Errorf("StdEncoding.DecodeString: %v", err)
-	}
-	pkey, err := ssh.ParsePublicKey([]byte(key))
-	if err != nil {
+		log.Trace("invalid public key of type '%s' with length %d: %s", keyType, length, err)
 		return "", fmt.Errorf("ParsePublicKey: %v", err)
 	}
-	log.Trace("Key type: %s", pkey.Type())
+	log.Trace("Key type: %s", keyType)
 
-	return content, nil
+	if !setting.Service.EnableMinimumKeySizeCheck {
+		return content, nil
+	}
+	if minLen, found := setting.Service.MinimumKeySizes[keyType]; found && length >= minLen {
+		return content, nil
+	} else if found && length < minLen {
+		return "", fmt.Errorf("key not large enough - got %d, needs %d", length, minLen)
+	}
+	return "", fmt.Errorf("key type '%s' is not allowed", keyType)
 }
 
 // saveAuthorizedKeyFile writes SSH key content to authorized_keys file.
@@ -247,7 +367,7 @@ func addKey(e Engine, key *PublicKey) (err error) {
 	}
 	stdout, stderr, err := process.Exec("AddPublicKey", "ssh-keygen", "-lf", tmpPath)
 	if err != nil {
-		return errors.New("ssh-keygen -lf: " + stderr)
+		return fmt.Errorf("'ssh-keygen -lf %s' failed with error '%s': %s", tmpPath, err, stderr)
 	} else if len(stdout) < 2 {
 		return errors.New("not enough output for calculating fingerprint: " + stdout)
 	}
@@ -267,6 +387,7 @@ func addKey(e Engine, key *PublicKey) (err error) {
 
 // AddPublicKey adds new public key to database and authorized_keys file.
 func AddPublicKey(ownerID int64, name, content string) (*PublicKey, error) {
+	log.Trace(content)
 	if err := checkKeyContent(content); err != nil {
 		return nil, err
 	}
