@@ -105,7 +105,7 @@
 					<a class="title" href="{{$.Link}}/{{.Index}}">{{.Name}}</a>
 
 					{{range .Labels}}
-						<a class="ui label" href="{{$.Link}}?type={{$.ViewType}}&state={{$.State}}&labels={{.ID}}&milestone={{$.MilestoneID}}&assignee={{$.AssigneeID}}" style="background-color: {{.Color}}">{{.Name}}</a>
+						<a class="ui label" href="{{$.Link}}?type={{$.ViewType}}&state={{$.State}}&labels={{.ID}}&milestone={{$.MilestoneID}}&assignee={{$.AssigneeID}}" style="color: {{.ForegroundColor}}; background-color: {{.Color}}">{{.Name}}</a>
 					{{end}}
 
 					{{if .NumComments}}

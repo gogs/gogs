@@ -39,7 +39,7 @@
 		<div class="label list">
 			{{range .Labels}}
 				<li class="item">
-					<div class="ui label" style="background-color: {{.Color}}"><i class="octicon octicon-tag"></i> {{.Name}}</div>
+					<div class="ui label" style="color: {{.ForegroundColor}}; background-color: {{.Color}}"><i class="octicon octicon-tag"></i> {{.Name}}</div>
 					{{if $.IsRepositoryAdmin}}
 						<a class="ui right delete-button" href="#" data-url="{{$.RepoLink}}/labels/delete" data-id="{{.ID}}"><i class="octicon octicon-trashcan"></i> {{$.i18n.Tr "repo.issues.label_delete"}}</a>
 						<a class="ui right edit-label-button" href="#" data-id={{.ID}} data-title={{.Name}} data-color={{.Color}}><i class="octicon octicon-pencil"></i> {{$.i18n.Tr "repo.issues.label_edit"}}</a>
