@@ -22,12 +22,16 @@
 						<dd><i class="fa fa{{if .OfflineMode}}-check{{end}}-square-o"></i></dd>
 						<dt>{{.i18n.Tr "admin.config.disable_router_log"}}</dt>
 						<dd><i class="fa fa{{if .DisableRouterLog}}-check{{end}}-square-o"></i></dd>
+
 						<div class="ui divider"></div>
+
 						<dt>{{.i18n.Tr "admin.config.run_user"}}</dt>
 						<dd>{{.RunUser}}</dd>
 						<dt>{{.i18n.Tr "admin.config.run_mode"}}</dt>
 						<dd>{{.RunMode}}</dd>
+
 						<div class="ui divider"></div>
+
 						<dt>{{.i18n.Tr "admin.config.repo_root_path"}}</dt>
 						<dd>{{.RepoRootPath}}</dd>
 						<dt>{{.i18n.Tr "admin.config.static_file_root_path"}}</dt>
@@ -38,6 +42,41 @@
 						<dd>{{.ScriptType}}</dd>
 						<dt>{{.i18n.Tr "admin.config.reverse_auth_user"}}</dt>
 						<dd>{{.ReverseProxyAuthUser}}</dd>
+					</dl>
+				</div>
+
+				<h4 class="ui top attached header">
+					{{.i18n.Tr "admin.config.ssh_config"}}
+				</h4>
+				<div class="ui attached table segment">
+					<dl class="dl-horizontal admin-dl-horizontal">
+						<dt>{{.i18n.Tr "admin.config.ssh_enabled"}}</dt>
+						<dd><i class="fa fa{{if not .SSH.Disabled}}-check{{end}}-square-o"></i></dd>
+						{{if not .SSH.Disabled}}
+							<dt>{{.i18n.Tr "admin.config.ssh_start_builtin_server"}}</dt>
+							<dd><i class="fa fa{{if .SSH.StartBuiltinServer}}-check{{end}}-square-o"></i></dd>
+							<dt>{{.i18n.Tr "admin.config.ssh_domain"}}</dt>
+							<dd>{{.SSH.Domain}}</dd>
+							<dt>{{.i18n.Tr "admin.config.ssh_port"}}</dt>
+							<dd>{{.SSH.Port}}</dd>
+							<dt>{{.i18n.Tr "admin.config.ssh_listen_port"}}</dt>
+							<dd>{{.SSH.ListenPort}}</dd>
+
+							{{if not .SSH.StartBuiltinServer}}
+								<dt>{{.i18n.Tr "admin.config.ssh_root_path"}}</dt>
+								<dd>{{.SSH.RootPath}}</dd>
+								<dt>{{.i18n.Tr "admin.config.ssh_key_test_path"}}</dt>
+								<dd>{{.SSH.KeyTestPath}}</dd>
+								<dt>{{.i18n.Tr "admin.config.ssh_keygen_path"}}</dt>
+								<dd>{{.SSH.KeygenPath}}</dd>
+								<dt>{{.i18n.Tr "admin.config.ssh_minimum_key_size_check"}}</dt>
+								<dd><i class="fa fa{{if .SSH.MinimumKeySizeCheck}}-check{{end}}-square-o"></i></dd>
+								{{if .SSH.MinimumKeySizeCheck}}
+								<dt>{{.i18n.Tr "admin.config.ssh_minimum_key_sizes"}}</dt>
+								<dd>{{.SSH.MinimumKeySizes}}</dd>
+								{{end}}
+							{{end}}
+						{{end}}
 					</dl>
 				</div>
 
@@ -109,7 +148,8 @@
 					<dl class="dl-horizontal admin-dl-horizontal">
 						<dt>{{.i18n.Tr "admin.config.mailer_enabled"}}</dt>
 						<dd><i class="fa fa{{if .MailerEnabled}}-check{{end}}-square-o"></i></dd>
-						{{if .MailerEnabled}}<dt>{{.i18n.Tr "admin.config.mailer_name"}}</dt>
+						{{if .MailerEnabled}}
+							<dt>{{.i18n.Tr "admin.config.mailer_name"}}</dt>
 							<dd>{{.Mailer.Name}}</dd>
 							<dt>{{.i18n.Tr "admin.config.mailer_disable_helo"}}</dt>
 							<dd><i class="fa fa{{if .Mailer.DisableHelo}}-check{{end}}-square-o"></i></dd>

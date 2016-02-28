@@ -27,11 +27,6 @@ import (
 	"github.com/gogits/gogs/modules/user"
 )
 
-const (
-	SSH_PUBLICKEY_CHECK_NATIVE = "native"
-	SSH_PUBLICKEY_CHECK_KEYGEN = "ssh-keygen"
-)
-
 type Scheme string
 
 const (
@@ -66,21 +61,25 @@ var (
 	Domain             string
 	HttpAddr, HttpPort string
 	LocalURL           string
-	DisableSSH         bool
-	StartSSHServer     bool
-	SSHDomain          string
-	SSHPort            int
-	SSHListenPort      int
-	SSHRootPath        string
-	SSHPublicKeyCheck  string
-	SSHWorkPath        string
-	SSHKeyGenPath      string
 	OfflineMode        bool
 	DisableRouterLog   bool
 	CertFile, KeyFile  string
 	StaticRootPath     string
 	EnableGzip         bool
 	LandingPageUrl     LandingPage
+
+	SSH struct {
+		Disabled            bool           `ini:"DISABLE_SSH"`
+		StartBuiltinServer  bool           `ini:"START_SSH_SERVER"`
+		Domain              string         `ini:"SSH_DOMAIN"`
+		Port                int            `ini:"SSH_PORT"`
+		ListenPort          int            `ini:"SSH_LISTEN_PORT"`
+		RootPath            string         `ini:"SSH_ROOT_PATH"`
+		KeyTestPath         string         `ini:"SSH_KEY_TEST_PATH"`
+		KeygenPath          string         `ini:"SSH_KEYGEN_PATH"`
+		MinimumKeySizeCheck bool           `ini:"-"`
+		MinimumKeySizes     map[string]int `ini:"-"`
+	}
 
 	// Security settings
 	InstallLock          bool
@@ -327,40 +326,6 @@ func NewContext() {
 	HttpAddr = sec.Key("HTTP_ADDR").MustString("0.0.0.0")
 	HttpPort = sec.Key("HTTP_PORT").MustString("3000")
 	LocalURL = sec.Key("LOCAL_ROOT_URL").MustString("http://localhost:" + HttpPort + "/")
-	DisableSSH = sec.Key("DISABLE_SSH").MustBool()
-	if !DisableSSH {
-		StartSSHServer = sec.Key("START_SSH_SERVER").MustBool()
-	}
-	SSHDomain = sec.Key("SSH_DOMAIN").MustString(Domain)
-	SSHPort = sec.Key("SSH_PORT").MustInt(22)
-	SSHListenPort = sec.Key("SSH_LISTEN_PORT").MustInt(SSHPort)
-	SSHRootPath = sec.Key("SSH_ROOT_PATH").MustString(path.Join(homeDir, ".ssh"))
-	if err := os.MkdirAll(SSHRootPath, 0700); err != nil {
-		log.Fatal(4, "Fail to create '%s': %v", SSHRootPath, err)
-	}
-	checkDefault := SSH_PUBLICKEY_CHECK_KEYGEN
-	if StartSSHServer {
-		checkDefault = SSH_PUBLICKEY_CHECK_NATIVE
-	}
-	SSHPublicKeyCheck = sec.Key("SSH_PUBLICKEY_CHECK").MustString(checkDefault)
-	if SSHPublicKeyCheck != SSH_PUBLICKEY_CHECK_NATIVE &&
-		SSHPublicKeyCheck != SSH_PUBLICKEY_CHECK_KEYGEN {
-		log.Fatal(4, "SSH_PUBLICKEY_CHECK must be ssh-keygen or native")
-	}
-	SSHWorkPath = sec.Key("SSH_WORK_PATH").MustString(os.TempDir())
-	if !DisableSSH && (!StartSSHServer || SSHPublicKeyCheck == SSH_PUBLICKEY_CHECK_KEYGEN) {
-		if tmpDirStat, err := os.Stat(SSHWorkPath); err != nil || !tmpDirStat.IsDir() {
-			log.Fatal(4, "directory '%s' set in SSHWorkPath is not a directory: %s", SSHWorkPath, err)
-		}
-	}
-	SSHKeyGenPath = sec.Key("SSH_KEYGEN_PATH").MustString("")
-	if !DisableSSH && !StartSSHServer &&
-		SSHKeyGenPath == "" && SSHPublicKeyCheck == SSH_PUBLICKEY_CHECK_KEYGEN {
-		SSHKeyGenPath, err = exec.LookPath("ssh-keygen")
-		if err != nil {
-			log.Fatal(4, "could not find ssh-keygen, maybe set DISABLE_SSH to use the internal ssh server")
-		}
-	}
 	OfflineMode = sec.Key("OFFLINE_MODE").MustBool()
 	DisableRouterLog = sec.Key("DISABLE_ROUTER_LOG").MustBool()
 	StaticRootPath = sec.Key("STATIC_ROOT_PATH").MustString(workDir)
@@ -371,6 +336,39 @@ func NewContext() {
 		LandingPageUrl = LANDING_PAGE_EXPLORE
 	default:
 		LandingPageUrl = LANDING_PAGE_HOME
+	}
+
+	SSH.RootPath = path.Join(homeDir, ".ssh")
+	SSH.KeyTestPath = os.TempDir()
+	if err = Cfg.Section("server").MapTo(&SSH); err != nil {
+		log.Fatal(4, "Fail to map SSH settings: %v", err)
+	}
+	// When disable SSH, start builtin server value is ignored.
+	if SSH.Disabled {
+		SSH.StartBuiltinServer = false
+	}
+
+	if !SSH.Disabled && !SSH.StartBuiltinServer {
+		if err := os.MkdirAll(SSH.RootPath, 0700); err != nil {
+			log.Fatal(4, "Fail to create '%s': %v", SSH.RootPath, err)
+		} else if err = os.MkdirAll(SSH.KeyTestPath, 0644); err != nil {
+			log.Fatal(4, "Fail to create '%s': %v", SSH.KeyTestPath, err)
+		}
+
+		if !filepath.IsAbs(SSH.KeygenPath) {
+			if _, err := exec.LookPath(SSH.KeygenPath); err != nil {
+				log.Fatal(4, "Fail to test '%s' command: %v (forgotten install?)", SSH.KeygenPath, err)
+			}
+		}
+	}
+
+	SSH.MinimumKeySizeCheck = sec.Key("MINIMUM_KEY_SIZE_CHECK").MustBool()
+	SSH.MinimumKeySizes = map[string]int{}
+	minimumKeySizes := Cfg.Section("ssh.minimum_key_sizes").Keys()
+	for _, key := range minimumKeySizes {
+		if key.MustInt() != -1 {
+			SSH.MinimumKeySizes[strings.ToLower(key.Name())] = key.MustInt()
+		}
 	}
 
 	sec = Cfg.Section("security")
@@ -492,8 +490,6 @@ var Service struct {
 	EnableReverseProxyAuth         bool
 	EnableReverseProxyAutoRegister bool
 	EnableCaptcha                  bool
-	EnableMinimumKeySizeCheck      bool
-	MinimumKeySizes                map[string]int
 }
 
 func newService() {
@@ -506,15 +502,6 @@ func newService() {
 	Service.EnableReverseProxyAuth = sec.Key("ENABLE_REVERSE_PROXY_AUTHENTICATION").MustBool()
 	Service.EnableReverseProxyAutoRegister = sec.Key("ENABLE_REVERSE_PROXY_AUTO_REGISTRATION").MustBool()
 	Service.EnableCaptcha = sec.Key("ENABLE_CAPTCHA").MustBool()
-	Service.EnableMinimumKeySizeCheck = sec.Key("ENABLE_MINIMUM_KEY_SIZE_CHECK").MustBool()
-	Service.MinimumKeySizes = map[string]int{}
-
-	minimumKeySizes := Cfg.Section("service.minimum_key_sizes").Keys()
-	for _, key := range minimumKeySizes {
-		if key.MustInt() != -1 {
-			Service.MinimumKeySizes[strings.ToLower(key.Name())] = key.MustInt()
-		}
-	}
 }
 
 var logLevels = map[string]string{
