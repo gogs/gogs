@@ -88,9 +88,9 @@ func GlobalInit() {
 	}
 	checkRunMode()
 
-	if setting.StartSSHServer {
-		ssh.Listen(setting.SSHListenPort)
-		log.Info("SSH server started on :%v", setting.SSHListenPort)
+	if setting.SSH.StartBuiltinServer {
+		ssh.Listen(setting.SSH.ListenPort)
+		log.Info("SSH server started on :%v", setting.SSH.ListenPort)
 	}
 
 	// Build Sanitizer
@@ -152,7 +152,7 @@ func Install(ctx *middleware.Context) {
 	}
 
 	form.Domain = setting.Domain
-	form.SSHPort = setting.SSHPort
+	form.SSHPort = setting.SSH.Port
 	form.HTTPPort = setting.HttpPort
 	form.AppUrl = setting.AppUrl
 	form.LogRootPath = setting.LogRootPath
