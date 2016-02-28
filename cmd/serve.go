@@ -136,7 +136,7 @@ func runServ(c *cli.Context) {
 
 	setup("serv.log")
 
-	if setting.DisableSSH {
+	if setting.SSH.Disabled {
 		println("Gogs: SSH has been disabled")
 		return
 	}
