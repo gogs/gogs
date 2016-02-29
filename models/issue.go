@@ -297,20 +297,17 @@ func newIssue(e *xorm.Session, repo *Repository, issue *Issue, labelIDs []int64,
 		return err
 	}
 
-	var label *Label
-	for _, id := range labelIDs {
-		if id == 0 {
-			continue
-		}
+	// During the session, SQLite3 dirver cannot handle retrieve objects after update something.
+	// So we have to get all needed labels first.
+	labels := make([]*Label, 0, len(labelIDs))
+	if err = e.In("id", labelIDs).Find(&labels); err != nil {
+		return fmt.Errorf("Find all labels: %v", err)
+	}
 
-		label, err = getLabelByID(e, id)
-		if err != nil {
-			return err
-		}
+	for _, label := range labels {
 		if err = issue.addLabel(e, label); err != nil {
 			return fmt.Errorf("addLabel: %v", err)
 		}
-
 	}
 
 	if issue.MilestoneID > 0 {
