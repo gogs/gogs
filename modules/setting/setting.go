@@ -327,7 +327,11 @@ func NewContext() {
 	SSHDomain = sec.Key("SSH_DOMAIN").MustString(Domain)
 	SSHPort = sec.Key("SSH_PORT").MustInt(22)
 	SSHListenPort = sec.Key("SSH_LISTEN_PORT").MustInt(SSHPort)
-	SSHUser = sec.Key("SSH_USER").MustString(RunUser)
+	if StartSSHServer {
+		SSHUser = sec.Key("SSH_TEMPLATE_USER").MustString(RunUser)
+	} else {
+		SSHUser = RunUser
+	}
 	SSHRootPath = sec.Key("SSH_ROOT_PATH").MustString(path.Join(homeDir, ".ssh"))
 	if err := os.MkdirAll(SSHRootPath, 0700); err != nil {
 		log.Fatal(4, "Fail to create '%s': %v", SSHRootPath, err)
