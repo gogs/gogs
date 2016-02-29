@@ -77,7 +77,7 @@ var (
 		RootPath            string         `ini:"SSH_ROOT_PATH"`
 		KeyTestPath         string         `ini:"SSH_KEY_TEST_PATH"`
 		KeygenPath          string         `ini:"SSH_KEYGEN_PATH"`
-		User                int            `ini:"SSH_TEMPLATE_USER"`
+		User                string         `ini:"SSH_TEMPLATE_USER"`
 		MinimumKeySizeCheck bool           `ini:"-"`
 		MinimumKeySizes     map[string]int `ini:"-"`
 	}
