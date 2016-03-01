@@ -1060,7 +1060,7 @@ func (org *User) GetUserRepositories(userID int64) (err error) {
 		And("`team_user`.uid=?", userID).
 		Join("INNER", "`team_user`", "`team_user`.team_id=`team`.id").
 		Find(&teams); err != nil {
-		return fmt.Errorf("GetUserRepositories: get teams: %v", err)
+		return fmt.Errorf("get teams: %v", err)
 	}
 
 	teamIDs := make([]string, len(teams))
@@ -1080,10 +1080,10 @@ func (org *User) GetUserRepositories(userID int64) (err error) {
 		Join("INNER", "`team_repo`", "`team_repo`.repo_id=`repository`.id").
 		Where("`repository`.owner_id=?", org.Id).
 		And("`repository`.is_private=?", false).
-		Or("`team_repo`.team_id=(?)", strings.Join(teamIDs, ",")).
+		Or("`team_repo`.team_id IN (?)", strings.Join(teamIDs, ",")).
 		GroupBy("`repository`.id").
 		Find(&org.Repos); err != nil {
-		return fmt.Errorf("GetUserRepositories: get repositories: %v", err)
+		return fmt.Errorf("get repositories: %v", err)
 	}
 
 	// FIXME: should I change this value inside method,
