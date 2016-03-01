@@ -367,11 +367,16 @@ func (repo *Repository) LocalCopyPath() string {
 
 func updateLocalCopy(repoPath, localPath string) error {
 	if !com.IsExist(localPath) {
-		if err := git.Clone(repoPath, localPath, git.CloneRepoOptions{}); err != nil {
+		if err := git.Clone(repoPath, localPath, git.CloneRepoOptions{
+			Timeout: time.Duration(setting.Git.Timeout.Clone) * time.Second,
+		}); err != nil {
 			return fmt.Errorf("Clone: %v", err)
 		}
 	} else {
-		if err := git.Pull(localPath, true); err != nil {
+		if err := git.Pull(localPath, git.PullRemoteOptions{
+			All:     true,
+			Timeout: time.Duration(setting.Git.Timeout.Pull) * time.Second,
+		}); err != nil {
 			return fmt.Errorf("Pull: %v", err)
 		}
 	}
@@ -652,7 +657,7 @@ func MigrateRepository(u *User, opts MigrateRepoOptions) (*Repository, error) {
 	if err = git.Clone(opts.RemoteAddr, repoPath, git.CloneRepoOptions{
 		Mirror:  true,
 		Quiet:   true,
-		Timeout: 10 * time.Minute,
+		Timeout: time.Duration(setting.Git.Timeout.Migrate) * time.Second,
 	}); err != nil {
 		return repo, fmt.Errorf("Clone: %v", err)
 	}
@@ -1610,7 +1615,8 @@ func MirrorUpdate() {
 		}
 
 		repoPath := m.Repo.RepoPath()
-		if _, stderr, err := process.ExecDir(10*time.Minute,
+		if _, stderr, err := process.ExecDir(
+			time.Duration(setting.Git.Timeout.Mirror)*time.Second,
 			repoPath, fmt.Sprintf("MirrorUpdate: %s", repoPath),
 			"git", "remote", "update", "--prune"); err != nil {
 			desc := fmt.Sprintf("Fail to update mirror repository(%s): %s", repoPath, stderr)

@@ -163,6 +163,12 @@ var (
 	Git struct {
 		MaxGitDiffLines int
 		GcArgs          []string `delim:" "`
+		Timeout         struct {
+			Migrate int
+			Mirror  int
+			Clone   int
+			Pull    int
+		} `ini:"git.timeout"`
 	}
 
 	// Cron tasks
