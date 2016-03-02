@@ -11,6 +11,10 @@ For bug reports, please give the relevant info:
   - [ ] PostgreSQL
   - [ ] MySQL
   - [ ] SQLite
+- Can you reproduce the bug at http://try.gogs.io:
+  - [ ] Yes
+  - [ ] No
+  - [ ] Not relevant
 - Log gist:
 
 ## Description
