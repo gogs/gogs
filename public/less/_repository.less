@@ -208,12 +208,18 @@
 					width: 100%;
 				}
 				.lines-num {
+					padding: 0 10px 0 0 !important;
 					vertical-align: top;
 					text-align: right;
 					color: #999;
 					background: #f5f5f5;
+					border: solid #eee;
+					border-width: 0 1px 0 0;
 					width: 1%;
-
+					min-width: 50px;
+					>*:hover {
+						color: #0a0a0a;
+					}
 					span {
 						line-height: 20px;
 						padding: 0 10px;
@@ -221,11 +227,11 @@
 						display: block;
 					}
 				}
+				.lines-code {
+					padding: 0 0 0 10px !important;
+				}
 				.lines-num,
 				.lines-code {
-					padding: 0;
-
-
 					pre,
 					ol,
 					.hljs {
