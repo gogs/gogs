@@ -14,7 +14,6 @@ For bug reports, please give the relevant info:
 - Can you reproduce the bug at http://try.gogs.io:
   - [ ] Yes
   - [ ] No
-  - [ ] Haven't tried
   - [ ] Not relevant
 - Log gist:
 
