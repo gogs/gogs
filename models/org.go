@@ -1055,8 +1055,7 @@ func RemoveOrgRepo(orgID, repoID int64) error {
 // that the user with the given userID has access to.
 func (org *User) GetUserRepositories(userID int64) (err error) {
 	teams := make([]*Team, 0, 10)
-	if err = x.Cols("`team`.id").
-		Where("`team_user`.org_id=?", org.Id).
+	if err = x.Where("`team_user`.org_id=?", org.Id).
 		And("`team_user`.uid=?", userID).
 		Join("INNER", "`team_user`", "`team_user`.team_id=`team`.id").
 		Find(&teams); err != nil {
@@ -1076,8 +1075,7 @@ func (org *User) GetUserRepositories(userID int64) (err error) {
 	// As a workaround, we have to build the IN statement on our own, until this is fixed.
 	// https://github.com/go-xorm/xorm/issues/342
 
-	if err = x.Cols("`repository`.*").
-		Join("INNER", "`team_repo`", "`team_repo`.repo_id=`repository`.id").
+	if err = x.Join("INNER", "`team_repo`", "`team_repo`.repo_id=`repository`.id").
 		Where("`repository`.owner_id=?", org.Id).
 		And("`repository`.is_private=?", false).
 		Or("`team_repo`.team_id IN (?)", strings.Join(teamIDs, ",")).
