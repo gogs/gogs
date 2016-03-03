@@ -109,17 +109,11 @@ func Toggle(options *ToggleOptions) macaron.Handler {
 			}
 		}
 
-		// Try auto-signin when not signed in.
-		if !options.SignOutRequire && !ctx.IsSigned && !auth.IsAPIPath(ctx.Req.URL.Path) {
-			succeed, err := AutoSignIn(ctx)
-			if err != nil {
-				ctx.Handle(500, "AutoSignIn", err)
-				return
-			} else if succeed {
-				log.Trace("Auto-login succeed: %s", ctx.Session.Get("uname"))
-				ctx.Redirect(setting.AppSubUrl + ctx.Req.RequestURI)
-				return
-			}
+		// Auto-signin info is provided and has not signed in.
+		if !options.SignOutRequire && !ctx.IsSigned && !auth.IsAPIPath(ctx.Req.URL.Path) &&
+			len(ctx.GetCookie(setting.CookieUserName)) > 0 {
+			ctx.SetCookie("redirect_to", url.QueryEscape(setting.AppSubUrl+ctx.Req.RequestURI), 0, setting.AppSubUrl)
+			ctx.Redirect(setting.AppSubUrl + ctx.Req.RequestURI)
 		}
 
 		if options.AdminRequire {

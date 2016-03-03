@@ -131,7 +131,6 @@ var (
 	}
 
 	// Picture settings
-	PictureService   string
 	AvatarUploadPath string
 	GravatarSource   string
 	DisableGravatar  bool
@@ -448,7 +447,6 @@ func NewContext() {
 	ThemeColorMetaTag = sec.Key("THEME_COLOR_META_TAG").MustString("#ff5343")
 
 	sec = Cfg.Section("picture")
-	PictureService = sec.Key("SERVICE").In("server", []string{"server"})
 	AvatarUploadPath = sec.Key("AVATAR_UPLOAD_PATH").MustString(path.Join(AppDataPath, "avatars"))
 	forcePathSeparator(AvatarUploadPath)
 	if !filepath.IsAbs(AvatarUploadPath) {
