@@ -662,6 +662,33 @@ func MigrateRepository(u *User, opts MigrateRepoOptions) (*Repository, error) {
 		return repo, fmt.Errorf("Clone: %v", err)
 	}
 
+	// Check if repository is empty.
+	_, stderr, err := com.ExecCmdDir(repoPath, "git", "log", "-1")
+	if err != nil {
+		if strings.Contains(stderr, "fatal: bad default revision 'HEAD'") {
+			repo.IsBare = true
+		} else {
+			return repo, fmt.Errorf("check bare: %v - %s", err, stderr)
+		}
+	}
+
+	if !repo.IsBare {
+		// Try to get HEAD branch and set it as default branch.
+		gitRepo, err := git.OpenRepository(repoPath)
+		if err != nil {
+			log.Error(4, "OpenRepository: %v", err)
+			return repo, nil
+		}
+		headBranch, err := gitRepo.GetHEADBranch()
+		if err != nil {
+			log.Error(4, "GetHEADBranch: %v", err)
+			return repo, nil
+		}
+		if headBranch != nil {
+			repo.DefaultBranch = headBranch.Name
+		}
+	}
+
 	if opts.IsMirror {
 		if _, err = x.InsertOne(&Mirror{
 			RepoID:     repo.ID,
@@ -694,31 +721,6 @@ func CleanUpMigrateInfo(repo *Repository, repoPath string) (*Repository, error) 
 	cfg.DeleteSection("remote \"origin\"")
 	if err = cfg.SaveToIndent(configPath, "\t"); err != nil {
 		return repo, fmt.Errorf("save config file: %v", err)
-	}
-
-	// Check if repository is empty.
-	_, stderr, err := com.ExecCmdDir(repoPath, "git", "log", "-1")
-	if err != nil {
-		if strings.Contains(stderr, "fatal: bad default revision 'HEAD'") {
-			repo.IsBare = true
-		} else {
-			return repo, fmt.Errorf("check bare: %v - %s", err, stderr)
-		}
-	}
-
-	// Try to get HEAD branch and set it as default branch.
-	gitRepo, err := git.OpenRepository(repoPath)
-	if err != nil {
-		log.Error(4, "OpenRepository: %v", err)
-		return repo, nil
-	}
-	headBranch, err := gitRepo.GetHEADBranch()
-	if err != nil {
-		log.Error(4, "GetHEADBranch: %v", err)
-		return repo, nil
-	}
-	if headBranch != nil {
-		repo.DefaultBranch = headBranch.Name
 	}
 
 	return repo, UpdateRepository(repo, false)
