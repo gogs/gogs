@@ -163,6 +163,20 @@
 						</div>
 					</div>
 
+					{{if .Repository.EnableWiki}}
+						<div class="ui divider"></div>
+
+						<div class="item">
+							<div class="ui right">
+								<button class="ui basic red show-modal button" data-modal="#delete-wiki-modal">{{.i18n.Tr "repo.settings.wiki-delete"}}</button>
+							</div>
+							<div>
+								<h5>{{.i18n.Tr "repo.settings.wiki-delete"}}</h5>
+								<p>{{.i18n.Tr "repo.settings.wiki-delete_desc"}}</p>
+							</div>
+						</div>
+					{{end}}
+
 					<div class="ui divider"></div>
 
 					<div class="item">
@@ -282,4 +296,36 @@
 		</form>
 	</div>
 </div>
+
+<div class="ui small modal" id="delete-wiki-modal">
+	<div class="header">
+		{{.i18n.Tr "repo.settings.wiki-delete"}}
+	</div>
+	<div class="content">
+		<div class="ui warning message text left">
+			{{.i18n.Tr "repo.settings.delete_notices_1" | Safe}}<br>
+			{{.i18n.Tr "repo.settings.wiki-delete_notices_1" .Repository.Name | Safe}}
+		</div>
+		<form class="ui form" action="{{.Link}}" method="post">
+			{{.CsrfTokenHtml}}
+			<input type="hidden" name="action" value="delete-wiki">
+			<div class="field">
+				<label>
+					{{.i18n.Tr "repo.settings.transfer_form_title"}}
+					<span class="text red">{{.Repository.Name}}</span>
+				</label>
+			</div>
+			<div class="required field">
+				<label for="repo_name">{{.i18n.Tr "repo.repo_name"}}</label>
+				<input id="repo_name" name="repo_name" required>
+			</div>
+
+			<div class="text right actions">
+				<div class="ui cancel button">{{.i18n.Tr "settings.cancel"}}</div>
+				<button class="ui red button">{{.i18n.Tr "repo.settings.confirm_delete"}}</button>
+			</div>
+		</form>
+	</div>
+</div>
+
 {{template "base/footer" .}}
