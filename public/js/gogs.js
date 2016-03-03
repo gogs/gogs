@@ -878,7 +878,10 @@ $(document).ready(function () {
         img_dir: suburl + '/img/emoji',
         ignore_emoticons: true
     });
-    emojify.run();
+    var hasEmoji = document.getElementsByClassName('has-emoji');
+    for (var i  = 0; i < hasEmoji.length; i++) {
+      emojify.run(hasEmoji[i]);
+    }
 
     // Clipboard JS
     var clipboard = new Clipboard('.clipboard');
