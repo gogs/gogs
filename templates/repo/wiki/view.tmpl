@@ -50,6 +50,7 @@
 				<div class="ui right">
 					<a class="ui small button" href="{{.RepoLink}}/wiki/{{.PageURL}}/_edit">{{.i18n.Tr "repo.wiki.edit_page_button"}}</a>
 					<a class="ui green small button" href="{{.RepoLink}}/wiki/_new">{{.i18n.Tr "repo.wiki.new_page_button"}}</a>
+					<a class="ui red small button delete-button" href="" data-url="{{.RepoLink}}/wiki/{{.PageURL}}/" data-id="{{.PageURL}}">{{.i18n.Tr "repo.wiki.delete_page_button"}}</a>
 				</div>
 			{{end}}
 			<div class="ui sub header">
@@ -62,4 +63,16 @@
 		</div>
 	</div>
 </div>
+
+<div class="ui small basic delete modal">
+	<div class="ui icon header">
+		<i class="trash icon"></i>
+		{{.i18n.Tr "repo.wiki.delete_page_button"}}
+	</div>
+	<div class="content">
+		<p>{{.i18n.Tr "repo.wiki.delete_page_notice_1" .title | Safe}}</p>
+	</div>
+	{{template "base/delete_modal_actions" .}}
+</div>
+
 {{template "base/footer" .}}

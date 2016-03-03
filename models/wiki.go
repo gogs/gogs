@@ -178,3 +178,40 @@ func (repo *Repository) AddWikiPage(doer *User, title, content, message string) 
 func (repo *Repository) EditWikiPage(doer *User, oldTitle, title, content, message string) error {
 	return repo.updateWikiPage(doer, oldTitle, title, content, message, false)
 }
+
+func (repo *Repository) DeleteWikiPage(doer *User, title string) (err error) {
+	wikiWorkingPool.CheckIn(com.ToStr(repo.ID))
+	defer wikiWorkingPool.CheckOut(com.ToStr(repo.ID))
+
+	localPath := repo.LocalWikiPath()
+
+	// Discard local commits make sure even to remote when local copy exists.
+	if com.IsExist(localPath) {
+		// No need to check if nothing in the repository.
+		if git.IsBranchExist(localPath, "master") {
+			if err = git.ResetHEAD(localPath, true, "origin/master"); err != nil {
+				return fmt.Errorf("Reset: %v", err)
+			}
+		}
+	}
+
+	if err = repo.UpdateLocalWiki(); err != nil {
+		return fmt.Errorf("UpdateLocalWiki: %v", err)
+	}
+
+	filename := path.Join(localPath, title+".md")
+
+	os.Remove(filename)
+
+	message := "Delete page '" + title + "'"
+
+	if err = git.AddChanges(localPath, true); err != nil {
+		return fmt.Errorf("AddChanges: %v", err)
+	} else if err = git.CommitChanges(localPath, message, doer.NewGitSig()); err != nil {
+		return fmt.Errorf("CommitChanges: %v", err)
+	} else if err = git.Push(localPath, "origin", "master"); err != nil {
+		return fmt.Errorf("Push: %v", err)
+	}
+
+	return nil
+}
