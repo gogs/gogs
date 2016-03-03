@@ -222,7 +222,6 @@ func Config(ctx *middleware.Context) {
 
 	ctx.Data["SessionConfig"] = setting.SessionConfig
 
-	ctx.Data["PictureService"] = setting.PictureService
 	ctx.Data["DisableGravatar"] = setting.DisableGravatar
 
 	type logger struct {
