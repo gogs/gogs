@@ -676,13 +676,11 @@ func MigrateRepository(u *User, opts MigrateRepoOptions) (*Repository, error) {
 		// Try to get HEAD branch and set it as default branch.
 		gitRepo, err := git.OpenRepository(repoPath)
 		if err != nil {
-			log.Error(4, "OpenRepository: %v", err)
-			return repo, nil
+			return repo, fmt.Errorf("OpenRepository: %v", err)
 		}
 		headBranch, err := gitRepo.GetHEADBranch()
 		if err != nil {
-			log.Error(4, "GetHEADBranch: %v", err)
-			return repo, nil
+			return repo, fmt.Errorf("GetHEADBranch: %v", err)
 		}
 		if headBranch != nil {
 			repo.DefaultBranch = headBranch.Name
