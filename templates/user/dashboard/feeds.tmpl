@@ -46,23 +46,23 @@
 								{{ $repoLink := .GetRepoLink}}
 								{{if $push.Commits}}
 									{{range $push.Commits}}
-										<li><img class="img-8" src="{{$push.AvatarLink .AuthorEmail}}"> <a class="commit-id" href="{{$repoLink}}/commit/{{.Sha1}}">{{ShortSha .Sha1}}</a> <span class="text truncate light grey">{{.Message}}</span></li>
+										<li><img class="img-8" src="{{$push.AvatarLink .AuthorEmail}}"> <a class="commit-id" href="{{$repoLink}}/commit/{{.Sha1}}">{{ShortSha .Sha1}}</a> <span class="text truncate light grey has-emoji">{{.Message}}</span></li>
 									{{end}}
 								{{end}}
 								{{if and (gt $push.Len 1) $push.CompareUrl}}<li><a href="{{AppSubUrl}}/{{$push.CompareUrl}}">{{$.i18n.Tr "action.compare_commits" $push.Len}} »</a></li>{{end}}
 							</ul>
 						</div>
 					{{else if eq .GetOpType 6}}
-						<span class="text truncate issue title">{{index .GetIssueInfos 1}}</span>
+						<span class="text truncate issue title has-emoji">{{index .GetIssueInfos 1}}</span>
 					{{else if eq .GetOpType 7}}
-						<p class="text light grey">{{index .GetIssueInfos 1}}</p>
+						<p class="text light grey has-emoji">{{index .GetIssueInfos 1}}</p>
 					{{else if eq .GetOpType 10}}
-						<span class="text truncate issue title">{{.GetIssueTitle}}</span>
-						<p class="text light grey">{{index .GetIssueInfos 1}}</p>
+						<span class="text truncate issue title has-emoji">{{.GetIssueTitle}}</span>
+						<p class="text light grey has-emoji">{{index .GetIssueInfos 1}}</p>
 					{{else if eq .GetOpType 11}}
-						<p class="text light grey">{{index .GetIssueInfos 1}}</p>
+						<p class="text light grey has-emoji">{{index .GetIssueInfos 1}}</p>
 					{{else if (or (eq .GetOpType 12) (eq .GetOpType 13))}}
-						<span class="text truncate issue title">{{.GetIssueTitle}}</span>
+						<span class="text truncate issue title has-emoji">{{.GetIssueTitle}}</span>
 					{{end}}
 					<p class="text italic light grey">{{TimeSince .GetCreate $.i18n.Lang}}</p>
 				</div>

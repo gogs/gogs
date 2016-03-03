@@ -102,7 +102,7 @@
 				{{ $timeStr:= TimeSince .Created $.Lang }}
 				<li class="item">
 					<div class="ui {{if .IsRead}}black{{else}}green{{end}} label">#{{.Index}}</div>
-					<a class="title" href="{{$.Link}}/{{.Index}}">{{.Name}}</a>
+					<a class="title has-emoji" href="{{$.Link}}/{{.Index}}">{{.Name}}</a>
 
 					{{range .Labels}}
 						<a class="ui label" href="{{$.Link}}?type={{$.ViewType}}&state={{$.State}}&labels={{.ID}}&milestone={{$.MilestoneID}}&assignee={{$.AssigneeID}}" style="color: {{.ForegroundColor}}; background-color: {{.Color}}">{{.Name}}</a>
