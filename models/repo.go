@@ -241,10 +241,7 @@ func (repo *Repository) ComposeMetas() map[string]string {
 	return repo.ExternalMetas
 }
 
-func DeleteWiki(repo *Repository) {
-	repo.DeleteWiki()
-}
-
+// DeleteWiki removes the actual and local copy of repository wiki.
 func (repo *Repository) DeleteWiki() {
 	wikiPaths := []string{repo.WikiPath(), repo.LocalWikiPath()}
 	for _, wikiPath := range wikiPaths {
