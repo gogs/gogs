@@ -301,7 +301,7 @@ func newIssue(e *xorm.Session, repo *Repository, issue *Issue, labelIDs []int64,
 	// So we have to get all needed labels first.
 	labels := make([]*Label, 0, len(labelIDs))
 	if err = e.In("id", labelIDs).Find(&labels); err != nil {
-		return fmt.Errorf("Find all labels: %v", err)
+		return fmt.Errorf("find all labels: %v", err)
 	}
 
 	for _, label := range labels {
