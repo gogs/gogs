@@ -32,25 +32,6 @@ func RetrieveBaseRepo(ctx *Context, repo *models.Repository) {
 		ctx.Handle(500, "BaseRepo.GetOwner", err)
 		return
 	}
-
-	bsaeRepo := repo.BaseRepo
-	baseGitRepo, err := git.OpenRepository(models.RepoPath(bsaeRepo.Owner.Name, bsaeRepo.Name))
-	if err != nil {
-		ctx.Handle(500, "OpenRepository", err)
-		return
-	}
-	if len(bsaeRepo.DefaultBranch) > 0 && baseGitRepo.IsBranchExist(bsaeRepo.DefaultBranch) {
-		ctx.Data["BaseDefaultBranch"] = bsaeRepo.DefaultBranch
-	} else {
-		baseBranches, err := baseGitRepo.GetBranches()
-		if err != nil {
-			ctx.Handle(500, "GetBranches", err)
-			return
-		}
-		if len(baseBranches) > 0 {
-			ctx.Data["BaseDefaultBranch"] = baseBranches[0]
-		}
-	}
 }
 
 func RepoAssignment(args ...bool) macaron.Handler {
@@ -154,6 +135,13 @@ func RepoAssignment(args ...bool) macaron.Handler {
 		ctx.Data["Tags"] = tags
 		ctx.Repo.Repository.NumTags = len(tags)
 
+		ctx.Data["Title"] = owner.Name + "/" + repo.Name
+		ctx.Data["Repository"] = repo
+		ctx.Data["Owner"] = ctx.Repo.Repository.Owner
+		ctx.Data["IsRepositoryOwner"] = ctx.Repo.IsOwner()
+		ctx.Data["IsRepositoryAdmin"] = ctx.Repo.IsAdmin()
+		ctx.Data["IsRepositoryPusher"] = ctx.Repo.IsPusher()
+
 		if repo.IsFork {
 			RetrieveBaseRepo(ctx, repo)
 			if ctx.Written() {
@@ -161,13 +149,24 @@ func RepoAssignment(args ...bool) macaron.Handler {
 			}
 		}
 
-		ctx.Data["Title"] = owner.Name + "/" + repo.Name
-		ctx.Data["Repository"] = repo
-		ctx.Data["Owner"] = ctx.Repo.Repository.Owner
-		ctx.Data["IsRepositoryOwner"] = ctx.Repo.IsOwner()
-		ctx.Data["IsRepositoryAdmin"] = ctx.Repo.IsAdmin()
-		ctx.Data["IsRepositoryPusher"] = ctx.Repo.IsPusher()
-		ctx.Data["CanPullRequest"] = ctx.Repo.IsAdmin() && repo.BaseRepo != nil && repo.BaseRepo.AllowsPulls()
+		// People who have push access and propose a new pull request.
+		if ctx.Repo.IsPusher() {
+			// Pull request is allowed if this is a fork repository
+			// and base repository accepts pull requests.
+			if repo.BaseRepo != nil {
+				if repo.BaseRepo.AllowsPulls() {
+					ctx.Data["CanPullRequest"] = true
+					ctx.Data["BaseRepo"] = repo.BaseRepo
+				}
+			} else {
+				// Or, this is repository accepts pull requests between branches.
+				if repo.AllowsPulls() {
+					ctx.Data["CanPullRequest"] = true
+					ctx.Data["BaseRepo"] = repo
+					ctx.Data["IsBetweenBranches"] = true
+				}
+			}
+		}
 
 		ctx.Data["DisableSSH"] = setting.SSH.Disabled
 		ctx.Data["CloneLink"] = repo.CloneLink()
