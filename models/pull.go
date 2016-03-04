@@ -487,7 +487,7 @@ func (pr *PullRequest) UpdatePatch() (err error) {
 // FIXME: could fail after user force push head repo, should we always force push here?
 // FIXME: Only push branches that are actually updates?
 func (pr *PullRequest) PushToBaseRepo() (err error) {
-	log.Trace("PushToBaseRepo[%[1]d]: pushing commits to base repo 'refs/pull/%[1]d/head'", pr.ID)
+	log.Trace("PushToBaseRepo[%d]: pushing commits to base repo 'refs/pull/%d/head'", pr.BaseRepoID, pr.Index)
 
 	headRepoPath := pr.HeadRepo.RepoPath()
 	headGitRepo, err := git.OpenRepository(headRepoPath)

@@ -9,8 +9,7 @@
 		<div class="ui secondary menu">
 			{{if .CanPullRequest}}
 				<div class="fitted item">
-					{{ $baseRepo := .Repository.BaseRepo}}
-					<a href="{{AppSubUrl}}/{{$baseRepo.Owner.Name}}/{{$baseRepo.Name}}/compare/{{$.BaseDefaultBranch}}...{{$.Owner.Name}}:{{$.BranchName}}">
+					<a href="{{.BaseRepo.RepoLink}}/compare/{{.BaseRepo.DefaultBranch}}...{{if not .IsBetweenBranches}}{{$.Owner.Name}}:{{end}}{{$.BranchName}}">
 						<button class="ui green small button"><i class="octicon octicon-git-compare"></i></button>
 					</a>
 				</div>
