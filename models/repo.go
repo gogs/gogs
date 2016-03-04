@@ -241,6 +241,17 @@ func (repo *Repository) ComposeMetas() map[string]string {
 	return repo.ExternalMetas
 }
 
+func DeleteWiki(repo *Repository) {
+	repo.DeleteWiki()
+}
+
+func (repo *Repository) DeleteWiki() {
+	wikiPaths := []string{repo.WikiPath(), repo.LocalWikiPath()}
+	for _, wikiPath := range wikiPaths {
+		RemoveAllWithNotice("Delete repository wiki", wikiPath)
+	}
+}
+
 // GetAssignees returns all users that have write access of repository.
 func (repo *Repository) GetAssignees() (_ []*User, err error) {
 	if err = repo.GetOwner(); err != nil {
@@ -1335,10 +1346,7 @@ func DeleteRepository(uid, repoID int64) error {
 	repoPath := repo.repoPath(sess)
 	RemoveAllWithNotice("Delete repository files", repoPath)
 
-	wikiPaths := []string{repo.WikiPath(), repo.LocalWikiPath()}
-	for _, wikiPath := range wikiPaths {
-		RemoveAllWithNotice("Delete repository wiki", wikiPath)
-	}
+	repo.DeleteWiki()
 
 	// Remove attachment files.
 	for i := range attachmentPaths {

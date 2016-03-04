@@ -226,6 +226,32 @@ func SettingsPost(ctx *middleware.Context, form auth.RepoSettingForm) {
 
 		ctx.Flash.Success(ctx.Tr("repo.settings.deletion_success"))
 		ctx.Redirect(ctx.Repo.Owner.DashboardLink())
+	case "delete-wiki":
+		if repo.Name != form.RepoName {
+			ctx.RenderWithErr(ctx.Tr("form.enterred_invalid_repo_name"), SETTINGS_OPTIONS, nil)
+			return
+		}
+
+		if ctx.Repo.Owner.IsOrganization() {
+			if !ctx.Repo.Owner.IsOwnedBy(ctx.User.Id) {
+				ctx.Error(404)
+				return
+			}
+		}
+
+		models.DeleteWiki(repo)
+		log.Trace("Repository wiki deleted: %s/%s", ctx.Repo.Owner.Name, repo.Name)
+
+		repo.EnableWiki = false
+
+		if err := models.UpdateRepository(repo, false); err != nil {
+			ctx.Handle(500, "UpdateRepository", err)
+			return
+		}
+		log.Trace("Repository advanced settings updated: %s/%s", ctx.Repo.Owner.Name, repo.Name)
+
+		ctx.Flash.Success(ctx.Tr("repo.settings.update_settings_success"))
+		ctx.Redirect(ctx.Repo.RepoLink + "/settings")
 	}
 }
 
