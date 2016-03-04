@@ -502,7 +502,12 @@ func (pr *PullRequest) PushToBaseRepo() (err error) {
 	// Make sure to remove the remote even if the push fails
 	defer headGitRepo.RemoveRemote(tmpRemoteName)
 
-	if err = git.Push(headRepoPath, tmpRemoteName, fmt.Sprintf("%s:refs/pull/%d/head", pr.HeadBranch, pr.Index)); err != nil {
+	headFile := fmt.Sprintf("refs/pull/%d/head", pr.Index)
+
+	// Remove head in case there is a conflict.
+	os.Remove(path.Join(pr.BaseRepo.RepoPath(), headFile))
+
+	if err = git.Push(headRepoPath, tmpRemoteName, fmt.Sprintf("%s:%s", pr.HeadBranch, headFile)); err != nil {
 		return fmt.Errorf("Push: %v", err)
 	}
 
