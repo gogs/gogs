@@ -414,13 +414,15 @@ func MergePullRequest(ctx *middleware.Context) {
 }
 
 func ParseCompareInfo(ctx *middleware.Context) (*models.User, *models.Repository, *git.Repository, *git.PullRequestInfo, string, string) {
+	baseRepo := ctx.Repo.Repository
+
 	// Get compared branches information
 	// format: <base branch>...[<head repo>:]<head branch>
 	// base<-head: master...head:feature
 	// same repo: master...feature
 	infos := strings.Split(ctx.Params("*"), "...")
 	if len(infos) != 2 {
-		log.Trace("Not enough compared branches information: %s", infos)
+		log.Trace("ParseCompareInfo[%d]: not enough compared branches information %s", baseRepo.ID, infos)
 		ctx.Handle(404, "CompareAndPullRequest", nil)
 		return nil, nil, nil, nil, "", ""
 	}
@@ -462,8 +464,6 @@ func ParseCompareInfo(ctx *middleware.Context) (*models.User, *models.Repository
 	ctx.Data["HeadBranch"] = headBranch
 	ctx.Data["IsBetweenBranches"] = isSameRepo
 
-	repo := ctx.Repo.Repository
-
 	// Check if base branch is valid.
 	if !ctx.Repo.GitRepo.IsBranchExist(baseBranch) {
 		ctx.Handle(404, "IsBranchExist", nil)
@@ -471,9 +471,10 @@ func ParseCompareInfo(ctx *middleware.Context) (*models.User, *models.Repository
 	}
 
 	// Check if current user has fork of repository or in the same repository.
-	headRepo, has := models.HasForkedRepo(headUser.Id, repo.ID)
-	if (!has && !isSameRepo) || (!ctx.User.CanWriteTo(headRepo) && !ctx.User.IsAdmin) {
-		ctx.Handle(404, "HasForkedRepo", nil)
+	headRepo, has := models.HasForkedRepo(headUser.Id, baseRepo.ID)
+	if !has && !isSameRepo {
+		log.Trace("ParseCompareInfo[%d]: does not have fork or in same repository", baseRepo.ID)
+		ctx.Handle(404, "ParseCompareInfo", nil)
 		return nil, nil, nil, nil, "", ""
 	}
 
@@ -489,6 +490,12 @@ func ParseCompareInfo(ctx *middleware.Context) (*models.User, *models.Repository
 		}
 	}
 
+	if !ctx.User.CanWriteTo(headRepo) && !ctx.User.IsAdmin {
+		log.Trace("ParseCompareInfo[%d]: does not have write access or site admin", baseRepo.ID)
+		ctx.Handle(404, "ParseCompareInfo", nil)
+		return nil, nil, nil, nil, "", ""
+	}
+
 	// Check if head branch is valid.
 	if !headGitRepo.IsBranchExist(headBranch) {
 		ctx.Handle(404, "IsBranchExist", nil)
@@ -502,7 +509,7 @@ func ParseCompareInfo(ctx *middleware.Context) (*models.User, *models.Repository
 	}
 	ctx.Data["HeadBranches"] = headBranches
 
-	prInfo, err := headGitRepo.GetPullRequestInfo(models.RepoPath(repo.Owner.Name, repo.Name), baseBranch, headBranch)
+	prInfo, err := headGitRepo.GetPullRequestInfo(models.RepoPath(baseRepo.Owner.Name, baseRepo.Name), baseBranch, headBranch)
 	if err != nil {
 		ctx.Handle(500, "GetPullRequestInfo", err)
 		return nil, nil, nil, nil, "", ""
