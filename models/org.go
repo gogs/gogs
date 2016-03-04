@@ -1089,12 +1089,12 @@ GROUP BY repository.id`,
 // GetTeams returns all teams that belong to organization,
 // and that the user has joined.
 func (org *User) GetUserTeams(userID int64) error {
-	if err := x.Cols("`team`.*").
-		Where("`team_user`.org_id=?", org.Id).
-		And("`team_user`.uid=?", userID).
-		Join("INNER", "`team_user`", "`team_user`.team_id=`team`.id").
-		Find(&org.Teams); err != nil {
-		return fmt.Errorf("GetUserTeams: %v", err)
+	teams := make([]*Team, 0, 5)
+	if err := x.Sql(`SELECT team.* FROM team
+INNER JOIN team_user ON team_user.team_id = team.id
+WHERE team_user.org_id = ? AND team_user.uid = ?`,
+		org.Id, userID).Find(&teams); err != nil {
+		return fmt.Errorf("get teams: %v", err)
 	}
 
 	// FIXME: should I change this value inside method,
