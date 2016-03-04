@@ -113,7 +113,8 @@ func Toggle(options *ToggleOptions) macaron.Handler {
 		if !options.SignOutRequire && !ctx.IsSigned && !auth.IsAPIPath(ctx.Req.URL.Path) &&
 			len(ctx.GetCookie(setting.CookieUserName)) > 0 {
 			ctx.SetCookie("redirect_to", url.QueryEscape(setting.AppSubUrl+ctx.Req.RequestURI), 0, setting.AppSubUrl)
-			ctx.Redirect(setting.AppSubUrl + ctx.Req.RequestURI)
+			ctx.Redirect(setting.AppSubUrl + "/user/login")
+			return
 		}
 
 		if options.AdminRequire {
