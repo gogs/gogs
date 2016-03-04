@@ -257,14 +257,13 @@ func EditWikiPost(ctx *middleware.Context, form auth.NewWikiForm) {
 	ctx.Redirect(ctx.Repo.RepoLink + "/wiki/" + models.ToWikiPageURL(form.Title))
 }
 
-func DeleteWikiPagePost(ctx *middleware.Context, form auth.NewWikiForm) {
+func DeleteWikiPagePost(ctx *middleware.Context) {
 	pageURL := ctx.Params(":page")
 	if len(pageURL) == 0 {
 		pageURL = "Home"
 	}
 
 	pageName := models.ToWikiPageName(pageURL)
-
 	if err := ctx.Repo.Repository.DeleteWikiPage(ctx.User, pageName); err != nil {
 		ctx.Handle(500, "DeleteWikiPage", err)
 		return
