@@ -1054,11 +1054,10 @@ func RemoveOrgRepo(orgID, repoID int64) error {
 // GetUserRepositories gets all repositories of an organization,
 // that the user with the given userID has access to.
 func (org *User) GetUserRepositories(userID int64) (err error) {
-	teams := make([]*Team, 0, 10)
-	if err = x.Where("`team_user`.org_id=?", org.Id).
-		And("`team_user`.uid=?", userID).
-		Join("INNER", "`team_user`", "`team_user`.team_id=`team`.id").
-		Find(&teams); err != nil {
+	teams := make([]*Team, 0, org.NumTeams)
+	if err = x.Sql(`SELECT team.id FROM team 
+INNER JOIN team_user ON team_user.team_id = team.id
+WHERE team_user.org_id = ? AND team_user.uid = ?`, org.Id, userID).Find(&teams); err != nil {
 		return fmt.Errorf("get teams: %v", err)
 	}
 
@@ -1071,18 +1070,15 @@ func (org *User) GetUserRepositories(userID int64) (err error) {
 		teamIDs = append(teamIDs, "-1") // there is no repo with id=-1
 	}
 
-	// Due to a bug in xorm using IN() together with OR() is impossible.
-	// As a workaround, we have to build the IN statement on our own, until this is fixed.
-	// https://github.com/go-xorm/xorm/issues/342
-
-	if err = x.Join("INNER", "`team_repo`", "`team_repo`.repo_id=`repository`.id").
-		Where("`repository`.owner_id=?", org.Id).
-		And("`repository`.is_private=?", false).
-		Or("`team_repo`.team_id IN (?)", strings.Join(teamIDs, ",")).
-		GroupBy("`repository`.id").
-		Find(&org.Repos); err != nil {
+	repos := make([]*Repository, 0, 5)
+	if err = x.Sql(`SELECT repository.* FROM repository
+INNER JOIN team_repo ON team_repo.repo_id = repository.id
+WHERE (repository.owner_id = ? AND repository.is_private = ?) OR team_repo.team_id IN (?)
+GROUP BY repository.id`,
+		org.Id, false, strings.Join(teamIDs, ",")).Find(&repos); err != nil {
 		return fmt.Errorf("get repositories: %v", err)
 	}
+	org.Repos = repos
 
 	// FIXME: should I change this value inside method,
 	// or only in location of caller where it's really needed?

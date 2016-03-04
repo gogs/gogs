@@ -3,7 +3,7 @@ Gogs - Go Git Service [![Build Status](https://travis-ci.org/gogits/gogs.svg?bra
 
 ![](https://github.com/gogits/gogs/blob/master/public/img/gogs-large-resize.png?raw=true)
 
-##### Current version: 0.8.54
+##### Current version: 0.8.55
 
 | Web | UI  | Preview  |
 |:-------------:|:-------:|:-------:|
