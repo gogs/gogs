@@ -495,7 +495,7 @@ func runWeb(ctx *cli.Context) {
 					Post(bindIgnErr(auth.NewWikiForm{}), repo.NewWikiPost)
 				m.Combo("/:page/_edit").Get(repo.EditWiki).
 					Post(bindIgnErr(auth.NewWikiForm{}), repo.EditWikiPost)
-				m.Post("/:page/delete", bindIgnErr(auth.NewWikiForm{}), repo.DeleteWikiPagePost)
+				m.Post("/:page/delete", repo.DeleteWikiPagePost)
 			}, reqSignIn, reqRepoPusher)
 		}, repo.MustEnableWiki, middleware.RepoRef())
 
