@@ -10,7 +10,7 @@
 					<strong>{{.LastCommit.Author.Name}}</strong>
 				{{end}}
 				<a rel="nofollow" class="ui sha label" href="{{.RepoLink}}/commit/{{.LastCommit.ID}}" rel="nofollow">{{ShortSha .LastCommit.ID.String}}</a>
-				<span class="grey">{{RenderCommitMessage false .LastCommit.Summary .RepoLink $.Repository.ComposeMetas}}</span>
+				<span class="grey has-emoji">{{RenderCommitMessage false .LastCommit.Summary .RepoLink $.Repository.ComposeMetas}}</span>
 			</th>
 			<th class="nine wide">
 			</th>
@@ -42,7 +42,7 @@
 						<a href="{{EscapePound $.BranchLink}}/{{EscapePound $.TreePath}}{{EscapePound $entry.Name}}">{{$entry.Name}}</a>
 					</td>
 				{{end}}
-				<td class="message collapsing">
+				<td class="message collapsing has-emoji">
 					<a rel="nofollow" class="ui sha label" href="{{AppSubUrl}}/{{$.Username}}/{{$.Reponame}}/commit/{{$commit.ID}}">{{ShortSha $commit.ID.String}}</a>
 					{{RenderCommitMessage false $commit.Summary $.RepoLink $.Repository.ComposeMetas}}
 				</td>
