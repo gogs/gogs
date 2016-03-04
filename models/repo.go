@@ -184,6 +184,11 @@ type Repository struct {
 
 func (repo *Repository) AfterSet(colName string, _ xorm.Cell) {
 	switch colName {
+	case "default_branch":
+		// FIXME: use models migration to solve all at once.
+		if len(repo.DefaultBranch) == 0 {
+			repo.DefaultBranch = "master"
+		}
 	case "num_closed_issues":
 		repo.NumOpenIssues = repo.NumIssues - repo.NumClosedIssues
 	case "num_closed_pulls":

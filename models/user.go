@@ -348,21 +348,24 @@ func (u *User) UploadAvatar(data []byte) error {
 
 // IsAdminOfRepo returns true if user has admin or higher access of repository.
 func (u *User) IsAdminOfRepo(repo *Repository) bool {
-	if err := repo.GetOwner(); err != nil {
-		log.Error(3, "GetOwner: %v", err)
-		return false
-	}
-
-	if repo.Owner.IsOrganization() {
+	if repo.MustOwner().IsOrganization() {
 		has, err := HasAccess(u, repo, ACCESS_MODE_ADMIN)
 		if err != nil {
 			log.Error(3, "HasAccess: %v", err)
-			return false
 		}
 		return has
 	}
 
 	return repo.IsOwnedBy(u.Id)
+}
+
+// CanWriteTo returns true if user has write access to given repository.
+func (u *User) CanWriteTo(repo *Repository) bool {
+	has, err := HasAccess(u, repo, ACCESS_MODE_WRITE)
+	if err != nil {
+		log.Error(3, "HasAccess: %v", err)
+	}
+	return has
 }
 
 // IsOrganization returns true if user is actually a organization.
