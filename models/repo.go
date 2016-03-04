@@ -321,6 +321,11 @@ func (repo *Repository) RepoLink() string {
 	return setting.AppSubUrl + "/" + repo.MustOwner().Name + "/" + repo.Name
 }
 
+func (repo *Repository) RepoRelLink() string {
+	return "/" + repo.MustOwner().Name + "/" + repo.Name
+}
+
+
 func (repo *Repository) ComposeCompareURL(oldCommitID, newCommitID string) string {
 	return fmt.Sprintf("%s/%s/compare/%s...%s", repo.MustOwner().Name, repo.Name, oldCommitID, newCommitID)
 }
