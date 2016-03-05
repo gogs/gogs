@@ -36,11 +36,8 @@
 							{{end}}
 						</td>
 
-						{{if gt .ParentCount 1}}
-						<td class="message collapsing has-emoji grey text">
-						{{else}}
-						<td class="message collapsing has-emoji">
-						{{end}}
+
+						<td class="message collapsing has-emoji {{if gt .ParentCount 1}} grey text {{end}}">
 							<a rel="nofollow" class="ui sha label" href="{{AppSubUrl}}/{{$.Username}}/{{$.Reponame}}/commit/{{.ID}}">{{ShortSha .ID.String}}</a>
 							{{RenderCommitMessage false .Summary $.RepoLink $.Repository.ComposeMetas}}
 						</td>
