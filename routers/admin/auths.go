@@ -5,6 +5,8 @@
 package admin
 
 import (
+	"fmt"
+
 	"github.com/Unknwon/com"
 	"github.com/go-xorm/core"
 
@@ -218,11 +220,13 @@ func DeleteAuthSource(ctx *middleware.Context) {
 	if err = models.DeleteSource(source); err != nil {
 		switch err {
 		case models.ErrAuthenticationUserUsed:
-			ctx.Flash.Error("form.still_own_user")
-			ctx.Redirect(setting.AppSubUrl + "/admin/auths/" + ctx.Params(":authid"))
+			ctx.Flash.Error(ctx.Tr("admin.auths.still_in_used"))
 		default:
-			ctx.Handle(500, "DeleteSource", err)
+			ctx.Flash.Error(fmt.Sprintf("DeleteSource: %v", err))
 		}
+		ctx.JSON(200, map[string]interface{}{
+			"redirect": setting.AppSubUrl + "/admin/auths/" + ctx.Params(":authid"),
+		})
 		return
 	}
 	log.Trace("Authentication deleted by admin(%s): %d", ctx.User.Name, source.ID)
