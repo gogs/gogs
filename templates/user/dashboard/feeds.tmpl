@@ -37,6 +37,12 @@
 						{{else if eq .GetOpType 13}}
 							{{ $index := index .GetIssueInfos 0}}
 							{{$.i18n.Tr "action.reopen_issue" .GetRepoLink $index .ShortRepoPath | Str2html}}
+						{{else if eq .GetOpType 14}}
+							{{ $index := index .GetIssueInfos 0}}
+							{{$.i18n.Tr "action.close_pull_request" .GetRepoLink $index .ShortRepoPath | Str2html}}
+						{{else if eq .GetOpType 15}}
+							{{ $index := index .GetIssueInfos 0}}
+							{{$.i18n.Tr "action.reopen_pull_request" .GetRepoLink $index .ShortRepoPath | Str2html}}
 						{{end}}
 					</p>
 					{{if eq .GetOpType 5}}
@@ -55,13 +61,13 @@
 					{{else if eq .GetOpType 6}}
 						<span class="text truncate issue title has-emoji">{{index .GetIssueInfos 1}}</span>
 					{{else if eq .GetOpType 7}}
-						<p class="text light grey has-emoji">{{index .GetIssueInfos 1}}</p>
+						<span class="text truncate issue title has-emoji">{{index .GetIssueInfos 1}}</span>
 					{{else if eq .GetOpType 10}}
 						<span class="text truncate issue title has-emoji">{{.GetIssueTitle}}</span>
 						<p class="text light grey has-emoji">{{index .GetIssueInfos 1}}</p>
 					{{else if eq .GetOpType 11}}
 						<p class="text light grey has-emoji">{{index .GetIssueInfos 1}}</p>
-					{{else if (or (eq .GetOpType 12) (eq .GetOpType 13))}}
+					{{else if (or (or (eq .GetOpType 12) (eq .GetOpType 13)) (or (eq .GetOpType 14) (eq .GetOpType 15)))}}
 						<span class="text truncate issue title has-emoji">{{.GetIssueTitle}}</span>
 					{{end}}
 					<p class="text italic light grey">{{TimeSince .GetCreate $.i18n.Lang}}</p>
