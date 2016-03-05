@@ -217,6 +217,7 @@ func runWeb(ctx *cli.Context) {
 		m.Get("", user.Settings)
 		m.Post("", bindIgnErr(auth.UpdateProfileForm{}), user.SettingsPost)
 		m.Post("/avatar", binding.MultipartForm(auth.UploadAvatarForm{}), user.SettingsAvatar)
+		m.Post("/avatar/delete", user.SettingsDeleteAvatar)
 		m.Combo("/email").Get(user.SettingsEmails).
 			Post(bindIgnErr(auth.AddEmailForm{}), user.SettingsEmailPost)
 		m.Post("/email/delete", user.DeleteEmail)

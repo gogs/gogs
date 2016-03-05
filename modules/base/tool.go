@@ -464,6 +464,15 @@ func EllipsisString(str string, length int) string {
 	return str[:length-3] + "..."
 }
 
+// TruncateString returns a truncated string with given limit,
+// it returns input string if length is not reached limit.
+func TruncateString(str string, limit int) string {
+	if len(str) < limit {
+		return str
+	}
+	return str[:limit]
+}
+
 // StringsToInt64s converts a slice of string to a slice of int64.
 func StringsToInt64s(strs []string) []int64 {
 	ints := make([]int64, len(strs))
