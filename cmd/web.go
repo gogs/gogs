@@ -190,6 +190,8 @@ func runWeb(ctx *cli.Context) {
 
 	bindIgnErr := binding.BindIgnErr
 
+	// FIXME: not all routes need go through same middlewares.
+	// Especially some AJAX requests, we can reduce middleware number to improve performance.
 	// Routers.
 	m.Get("/", ignSignIn, routers.Home)
 	m.Get("/explore", ignSignIn, routers.Explore)
@@ -400,7 +402,11 @@ func runWeb(ctx *cli.Context) {
 		m.Group("/settings", func() {
 			m.Combo("").Get(repo.Settings).
 				Post(bindIgnErr(auth.RepoSettingForm{}), repo.SettingsPost)
-			m.Combo("/collaboration").Get(repo.Collaboration).Post(repo.CollaborationPost)
+			m.Group("/collaboration", func() {
+				m.Combo("").Get(repo.Collaboration).Post(repo.CollaborationPost)
+				m.Post("/access_mode", repo.ChangeCollaborationAccessMode)
+				m.Post("/delete", repo.DeleteCollaboration)
+			})
 
 			m.Group("/hooks", func() {
 				m.Get("", repo.Webhooks)

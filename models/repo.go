@@ -330,7 +330,6 @@ func (repo *Repository) RepoRelLink() string {
 	return "/" + repo.MustOwner().Name + "/" + repo.Name
 }
 
-
 func (repo *Repository) ComposeCompareURL(oldCommitID, newCommitID string) string {
 	return fmt.Sprintf("%s/%s/compare/%s...%s", repo.MustOwner().Name, repo.Name, oldCommitID, newCommitID)
 }
@@ -1795,105 +1794,6 @@ func CheckRepoStats() {
 		}
 	}
 	// ***** END: Repository.NumForks *****
-}
-
-// _________        .__  .__        ___.                        __  .__
-// \_   ___ \  ____ |  | |  | _____ \_ |__   ________________ _/  |_|__| ____   ____
-// /    \  \/ /  _ \|  | |  | \__  \ | __ \ /  _ \_  __ \__  \\   __\  |/  _ \ /    \
-// \     \___(  <_> )  |_|  |__/ __ \| \_\ (  <_> )  | \// __ \|  | |  (  <_> )   |  \
-//  \______  /\____/|____/____(____  /___  /\____/|__|  (____  /__| |__|\____/|___|  /
-//         \/                      \/    \/                  \/                    \/
-
-// A Collaboration is a relation between an individual and a repository
-type Collaboration struct {
-	ID      int64     `xorm:"pk autoincr"`
-	RepoID  int64     `xorm:"UNIQUE(s) INDEX NOT NULL"`
-	UserID  int64     `xorm:"UNIQUE(s) INDEX NOT NULL"`
-	Created time.Time `xorm:"CREATED"`
-}
-
-// Add collaborator and accompanying access
-func (repo *Repository) AddCollaborator(u *User) error {
-	collaboration := &Collaboration{
-		RepoID: repo.ID,
-		UserID: u.Id,
-	}
-
-	has, err := x.Get(collaboration)
-	if err != nil {
-		return err
-	} else if has {
-		return nil
-	}
-
-	if err = repo.GetOwner(); err != nil {
-		return fmt.Errorf("GetOwner: %v", err)
-	}
-
-	sess := x.NewSession()
-	defer sessionRelease(sess)
-	if err = sess.Begin(); err != nil {
-		return err
-	}
-
-	if _, err = sess.InsertOne(collaboration); err != nil {
-		return err
-	}
-
-	if repo.Owner.IsOrganization() {
-		err = repo.recalculateTeamAccesses(sess, 0)
-	} else {
-		err = repo.recalculateAccesses(sess)
-	}
-	if err != nil {
-		return fmt.Errorf("recalculateAccesses 'team=%v': %v", repo.Owner.IsOrganization(), err)
-	}
-
-	return sess.Commit()
-}
-
-func (repo *Repository) getCollaborators(e Engine) ([]*User, error) {
-	collaborations := make([]*Collaboration, 0)
-	if err := e.Find(&collaborations, &Collaboration{RepoID: repo.ID}); err != nil {
-		return nil, err
-	}
-
-	users := make([]*User, len(collaborations))
-	for i, c := range collaborations {
-		user, err := getUserByID(e, c.UserID)
-		if err != nil {
-			return nil, err
-		}
-		users[i] = user
-	}
-	return users, nil
-}
-
-// GetCollaborators returns the collaborators for a repository
-func (repo *Repository) GetCollaborators() ([]*User, error) {
-	return repo.getCollaborators(x)
-}
-
-// Delete collaborator and accompanying access
-func (repo *Repository) DeleteCollaborator(u *User) (err error) {
-	collaboration := &Collaboration{
-		RepoID: repo.ID,
-		UserID: u.Id,
-	}
-
-	sess := x.NewSession()
-	defer sessionRelease(sess)
-	if err = sess.Begin(); err != nil {
-		return err
-	}
-
-	if has, err := sess.Delete(collaboration); err != nil || has == 0 {
-		return err
-	} else if err = repo.recalculateAccesses(sess); err != nil {
-		return err
-	}
-
-	return sess.Commit()
 }
 
 //  __      __         __         .__
