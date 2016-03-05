@@ -617,7 +617,7 @@ func ChangeUserName(u *User, newUserName string) (err error) {
 }
 
 func updateUser(e Engine, u *User) error {
-	// Organization does not need e-mail.
+	// Organization does not need email
 	if !u.IsOrganization() {
 		u.Email = strings.ToLower(u.Email)
 		has, err := e.Where("id!=?", u.Id).And("type=?", u.Type).And("email=?", u.Email).Get(new(User))
@@ -634,16 +634,9 @@ func updateUser(e Engine, u *User) error {
 	}
 
 	u.LowerName = strings.ToLower(u.Name)
-
-	if len(u.Location) > 255 {
-		u.Location = u.Location[:255]
-	}
-	if len(u.Website) > 255 {
-		u.Website = u.Website[:255]
-	}
-	if len(u.Description) > 255 {
-		u.Description = u.Description[:255]
-	}
+	u.Location = base.TruncateString(u.Location, 255)
+	u.Website = base.TruncateString(u.Website, 255)
+	u.Description = base.TruncateString(u.Description, 255)
 
 	u.FullName = markdown.Sanitizer.Sanitize(u.FullName)
 	_, err := e.Id(u.Id).AllCols().Update(u)
