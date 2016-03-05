@@ -35,7 +35,12 @@
 								<img class="ui avatar image" src="{{AvatarLink .Author.Email}}" alt=""/>&nbsp;&nbsp;{{.Author.Name}}
 							{{end}}
 						</td>
+
+						{{if gt .ParentCount 1}}
+						<td class="message collapsing has-emoji grey text">
+						{{else}}
 						<td class="message collapsing has-emoji">
+						{{end}}
 							<a rel="nofollow" class="ui sha label" href="{{AppSubUrl}}/{{$.Username}}/{{$.Reponame}}/commit/{{.ID}}">{{ShortSha .ID.String}}</a>
 							{{RenderCommitMessage false .Summary $.RepoLink $.Repository.ComposeMetas}}
 						</td>
