@@ -121,7 +121,7 @@ func createComment(e *xorm.Session, opts *CreateCommentOptions) (_ *Comment, err
 		return nil, err
 	}
 
-	// Compose comment action, could be plain comment, close or reopen issue.
+	// Compose comment action, could be plain comment, close or reopen issue/pull request.
 	// This object will be used to notify watchers in the end of function.
 	act := &Action{
 		ActUserID:    opts.Doer.Id,
@@ -179,6 +179,7 @@ func createComment(e *xorm.Session, opts *CreateCommentOptions) (_ *Comment, err
 		if err != nil {
 			return nil, err
 		}
+
 	case COMMENT_TYPE_CLOSE:
 		act.OpType = ACTION_CLOSE_ISSUE
 		if opts.Issue.IsPull {

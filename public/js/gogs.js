@@ -458,6 +458,20 @@ function initRepository() {
     }
 }
 
+function initRepositoryCollaboration(){
+    console.log('initRepositoryCollaboration');
+
+// Change collaborator access mode
+    $('.access-mode.menu .item').click(function(){
+        var $menu = $(this).parent();
+        $.post($menu.data('url'), {
+            "_csrf": csrf,
+            "uid": $menu.data('uid'),
+            "mode": $(this).data('value')
+        })
+    });
+}
+
 function initWiki() {
     if ($('.repository.wiki').length == 0) {
         return;
@@ -964,7 +978,8 @@ $(document).ready(function () {
     initAdmin();
 
     var routes = {
-        'div.user.settings': initUserSettings
+        'div.user.settings': initUserSettings,
+        'div.repository.settings.collaboration': initRepositoryCollaboration
     };
 
     var selector;

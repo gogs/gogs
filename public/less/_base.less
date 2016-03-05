@@ -1,7 +1,7 @@
 @footer-margin: 40px;
 
 body {
-	font-family: 'Helvetica Neue',Arial,Helvetica,sans-serif,'微软雅黑';
+	font-family: "Helvetica Neue", "Microsoft YaHei", Arial, Helvetica, sans-serif !important;
 	background-color: #fff;
 	overflow-y: scroll;
 }
@@ -106,6 +106,12 @@ pre, code {
 			&.padded {
 				padding: 0 10px 0 10px;
 			}
+		}
+	}
+
+	&.form {
+		.ui.button {
+			font-weight: normal;
 		}
 	}
 
@@ -259,6 +265,11 @@ pre, code {
 		.octicon {
 			margin-right: 4px;
 		}
+	}
+
+	&.inline.delete-button {
+		padding: 8px 15px;
+		font-weight: normal;
 	}
 }
 

@@ -13,11 +13,11 @@ import (
 type AccessMode int
 
 const (
-	ACCESS_MODE_NONE AccessMode = iota
-	ACCESS_MODE_READ
-	ACCESS_MODE_WRITE
-	ACCESS_MODE_ADMIN
-	ACCESS_MODE_OWNER
+	ACCESS_MODE_NONE  AccessMode = iota // 0
+	ACCESS_MODE_READ                    // 1
+	ACCESS_MODE_WRITE                   // 2
+	ACCESS_MODE_ADMIN                   // 3
+	ACCESS_MODE_OWNER                   // 4
 )
 
 // Access represents the highest access level of a user to the repository. The only access type
@@ -151,15 +151,14 @@ func (repo *Repository) refreshAccesses(e Engine, accessMap map[int64]AccessMode
 	return nil
 }
 
-// FIXME: should be able to have read-only access.
-// Give all collaborators write access.
+// refreshCollaboratorAccesses retrieves repository collaborations with their access modes.
 func (repo *Repository) refreshCollaboratorAccesses(e Engine, accessMap map[int64]AccessMode) error {
-	collaborators, err := repo.getCollaborators(e)
+	collaborations, err := repo.getCollaborations(e)
 	if err != nil {
-		return fmt.Errorf("getCollaborators: %v", err)
+		return fmt.Errorf("getCollaborations: %v", err)
 	}
-	for _, c := range collaborators {
-		accessMap[c.Id] = ACCESS_MODE_WRITE
+	for _, c := range collaborations {
+		accessMap[c.UserID] = c.Mode
 	}
 	return nil
 }

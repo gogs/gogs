@@ -5,7 +5,7 @@
   background-size: contain;
 }
 body {
-  font-family: 'Helvetica Neue', Arial, Helvetica, sans-serif, '微软雅黑';
+  font-family: "Helvetica Neue", "Microsoft YaHei", Arial, Helvetica, sans-serif !important;
   background-color: #fff;
   overflow-y: scroll;
 }
@@ -103,6 +103,9 @@ code.wrap {
 }
 .ui.container.fluid.padded {
   padding: 0 10px 0 10px;
+}
+.ui.form .ui.button {
+  font-weight: normal;
 }
 .ui .text.red {
   color: #d95c5c !important;
@@ -233,6 +236,10 @@ code.wrap {
 }
 .ui.status.buttons .octicon {
   margin-right: 4px;
+}
+.ui.inline.delete-button {
+  padding: 8px 15px;
+  font-weight: normal;
 }
 .overflow.menu .items {
   max-height: 300px;
@@ -1984,10 +1991,11 @@ footer .container .links > *:first-child {
 .repository.settings.collaboration .collaborator.list {
   padding: 0;
 }
-.repository.settings.collaboration .collaborator.list .item {
-  padding: 10px 20px;
+.repository.settings.collaboration .collaborator.list > .item {
+  margin: 0;
+  line-height: 2em;
 }
-.repository.settings.collaboration .collaborator.list .item:not(:last-child) {
+.repository.settings.collaboration .collaborator.list > .item:not(:last-child) {
   border-bottom: 1px solid #DDD;
 }
 .repository.settings.collaboration #repo-collab-form #search-user-box .results {
