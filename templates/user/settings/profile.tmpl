@@ -52,10 +52,9 @@
 					<form class="ui form" action="{{.Link}}/avatar" method="post" enctype="multipart/form-data">
 						{{.CsrfTokenHtml}}
 						<div class="inline field">
-							<label>{{.i18n.Tr "settings.enable_custom_avatar"}}</label>
 							<div class="ui checkbox">
 								<input name="enable" type="checkbox" {{if .SignedUser.UseCustomAvatar}}checked{{end}}>
-								<label>{{.i18n.Tr "settings.enable_custom_avatar_helper"}}</label>
+								<label>{{.i18n.Tr "settings.enable_custom_avatar"}}</label>
 							</div>
 						</div>
 						<div class="inline field">
@@ -65,6 +64,7 @@
 
 						<div class="field">
 							<button class="ui green button">{{$.i18n.Tr "settings.update_avatar"}}</button>
+							<a class="ui red button delete-post" data-request-url="{{.Link}}/avatar/delete" data-done-url="{{.Link}}">{{$.i18n.Tr "settings.delete_current_avatar"}}</a>
 						</div>
 					</form>
 				</div>
