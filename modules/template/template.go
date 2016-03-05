@@ -233,7 +233,7 @@ func ActionIcon(opType int) string {
 		return "repo"
 	case 5, 9: // Commit repository
 		return "git-commit"
-	case 6, 13: // Create and reopen issue
+	case 6: // Create issue
 		return "issue-opened"
 	case 7: // New pull request
 		return "git-pull-request"
@@ -241,8 +241,10 @@ func ActionIcon(opType int) string {
 		return "comment"
 	case 11: // Merge pull request
 		return "git-merge"
-	case 12: // Close issue
+	case 12, 14: // Close issue or pull request
 		return "issue-closed"
+	case 13, 15: // Reopen issue or pull request
+		return "issue-reopened"
 	default:
 		return "invalid type"
 	}

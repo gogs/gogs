@@ -41,6 +41,8 @@ const (
 	ACTION_MERGE_PULL_REQUEST                        // 11
 	ACTION_CLOSE_ISSUE                               // 12
 	ACTION_REOPEN_ISSUE                              // 13
+	ACTION_CLOSE_PULL_REQUEST                        // 14
+	ACTION_REOPEN_PULL_REQUEST                       // 15
 )
 
 var (
