@@ -21,11 +21,19 @@ func SecureHeaders(ctx *Context) {
 	// Only allow loading of resources of these domains
 	ctx.Resp.Header().Set("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; img-src 'self' '*.gravatar.com'; style-src 'self' 'unsafe-inline'; font-src 'self'; frame-src 'none'; object-src 'none'")
 
+
+	// frameOptions := get value from setting. default: "SAMEORIGIN"
+	// possible values: DENY, SAMEORIGIN, ALLOW-FROM https://example.com
+	frameOptions := "SAMEORIGIN"
+	if frameOptions == "" {
+		frameOptions := "SAMEORIGIN"
+	}
 	// Allow framing only for own domain
-	ctx.Resp.Header().Set("X-Frame-Options", "SAMEORIGIN")
+	ctx.Resp.Header().Set("X-Frame-Options", frameOptions)
+
 
 	// if (we are delivering https) {
-		// maxAge := get value from setting, unit: seconds, default: "31536000" (1 year)
+		// maxAge := get value from setting. unit: seconds, default: "31536000" (1 year)
 		maxAge := "31536000"
 		maxSeconds, err := strconv.Atoi(maxAge)
 		if err != null {
