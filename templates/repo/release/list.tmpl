@@ -5,7 +5,7 @@
 		{{template "base/alert" .}}
 		<h2 class="ui header">
 			{{.i18n.Tr "repo.release.releases"}}
-			{{if .IsRepositoryAdmin}}
+			{{if .IsRepositoryWriter}}
 				<div class="ui right">
 					<a class="ui small green button" href="{{$.RepoLink}}/releases/new">
 						{{.i18n.Tr "repo.release.new_release"}}
@@ -37,7 +37,7 @@
 						{{if .PublisherID}}
 							<h3>
 								<a href="{{$.RepoLink}}/src/{{.TagName}}">{{.Title}}</a>
-								{{if $.IsRepositoryAdmin}}<small>(<a href="{{$.RepoLink}}/releases/edit/{{.TagName}}" rel="nofollow">{{$.i18n.Tr "repo.release.edit"}}</a>)</small>{{end}}
+								{{if $.IsRepositoryWriter}}<small>(<a href="{{$.RepoLink}}/releases/edit/{{.TagName}}" rel="nofollow">{{$.i18n.Tr "repo.release.edit"}}</a>)</small>{{end}}
 							</h3>
 							<p class="text grey">
 								<span class="author">

@@ -140,7 +140,7 @@ func RepoAssignment(args ...bool) macaron.Handler {
 		ctx.Data["Owner"] = ctx.Repo.Repository.Owner
 		ctx.Data["IsRepositoryOwner"] = ctx.Repo.IsOwner()
 		ctx.Data["IsRepositoryAdmin"] = ctx.Repo.IsAdmin()
-		ctx.Data["IsRepositoryPusher"] = ctx.Repo.IsPusher()
+		ctx.Data["IsRepositoryWriter"] = ctx.Repo.IsWriter()
 
 		if repo.IsFork {
 			RetrieveBaseRepo(ctx, repo)
@@ -150,7 +150,7 @@ func RepoAssignment(args ...bool) macaron.Handler {
 		}
 
 		// People who have push access and propose a new pull request.
-		if ctx.Repo.IsPusher() {
+		if ctx.Repo.IsWriter() {
 			// Pull request is allowed if this is a fork repository
 			// and base repository accepts pull requests.
 			if repo.BaseRepo != nil {
@@ -336,16 +336,16 @@ func RepoRef() macaron.Handler {
 
 func RequireRepoAdmin() macaron.Handler {
 	return func(ctx *Context) {
-		if !ctx.Repo.IsAdmin() {
+		if !ctx.IsSigned || (!ctx.Repo.IsAdmin() && !ctx.User.IsAdmin) {
 			ctx.Handle(404, ctx.Req.RequestURI, nil)
 			return
 		}
 	}
 }
 
-func RequireRepoPusher() macaron.Handler {
+func RequireRepoWriter() macaron.Handler {
 	return func(ctx *Context) {
-		if !ctx.Repo.IsPusher() {
+		if !ctx.IsSigned || (!ctx.Repo.IsWriter() && !ctx.User.IsAdmin) {
 			ctx.Handle(404, ctx.Req.RequestURI, nil)
 			return
 		}

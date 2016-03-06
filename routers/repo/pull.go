@@ -490,7 +490,7 @@ func ParseCompareInfo(ctx *middleware.Context) (*models.User, *models.Repository
 		}
 	}
 
-	if !ctx.User.CanWriteTo(headRepo) && !ctx.User.IsAdmin {
+	if !ctx.User.IsWriterOfRepo(headRepo) && !ctx.User.IsAdmin {
 		log.Trace("ParseCompareInfo[%d]: does not have write access or site admin", baseRepo.ID)
 		ctx.Handle(404, "ParseCompareInfo", nil)
 		return nil, nil, nil, nil, "", ""

@@ -334,7 +334,7 @@ func runWeb(ctx *cli.Context) {
 	}
 
 	reqRepoAdmin := middleware.RequireRepoAdmin()
-	reqRepoPusher := middleware.RequireRepoPusher()
+	reqRepoWriter := middleware.RequireRepoWriter()
 
 	// ***** START: Organization *****
 	m.Group("/org", func() {
@@ -448,7 +448,7 @@ func runWeb(ctx *cli.Context) {
 				m.Post("/label", repo.UpdateIssueLabel)
 				m.Post("/milestone", repo.UpdateIssueMilestone)
 				m.Post("/assignee", repo.UpdateIssueAssignee)
-			}, reqRepoAdmin)
+			}, reqRepoWriter)
 
 			m.Group("/:index", func() {
 				m.Post("/title", repo.UpdateIssueTitle)
@@ -460,7 +460,7 @@ func runWeb(ctx *cli.Context) {
 			m.Post("/new", bindIgnErr(auth.CreateLabelForm{}), repo.NewLabel)
 			m.Post("/edit", bindIgnErr(auth.CreateLabelForm{}), repo.UpdateLabel)
 			m.Post("/delete", repo.DeleteLabel)
-		}, reqRepoAdmin, middleware.RepoRef())
+		}, reqRepoWriter, middleware.RepoRef())
 		m.Group("/milestones", func() {
 			m.Combo("/new").Get(repo.NewMilestone).
 				Post(bindIgnErr(auth.CreateMilestoneForm{}), repo.NewMilestonePost)
@@ -468,7 +468,7 @@ func runWeb(ctx *cli.Context) {
 			m.Post("/:id/edit", bindIgnErr(auth.CreateMilestoneForm{}), repo.EditMilestonePost)
 			m.Get("/:id/:action", repo.ChangeMilestonStatus)
 			m.Post("/delete", repo.DeleteMilestone)
-		}, reqRepoAdmin, middleware.RepoRef())
+		}, reqRepoWriter, middleware.RepoRef())
 
 		m.Group("/releases", func() {
 			m.Get("/new", repo.NewRelease)
@@ -476,7 +476,7 @@ func runWeb(ctx *cli.Context) {
 			m.Get("/edit/:tagname", repo.EditRelease)
 			m.Post("/edit/:tagname", bindIgnErr(auth.EditReleaseForm{}), repo.EditReleasePost)
 			m.Post("/delete", repo.DeleteRelease)
-		}, reqRepoAdmin, middleware.RepoRef())
+		}, reqRepoWriter, middleware.RepoRef())
 
 		m.Combo("/compare/*", repo.MustAllowPulls).Get(repo.CompareAndPullRequest).
 			Post(bindIgnErr(auth.CreateIssueForm{}), repo.CompareAndPullRequestPost)
@@ -503,7 +503,7 @@ func runWeb(ctx *cli.Context) {
 				m.Combo("/:page/_edit").Get(repo.EditWiki).
 					Post(bindIgnErr(auth.NewWikiForm{}), repo.EditWikiPost)
 				m.Post("/:page/delete", repo.DeleteWikiPagePost)
-			}, reqSignIn, reqRepoPusher)
+			}, reqSignIn, reqRepoWriter)
 		}, repo.MustEnableWiki, middleware.RepoRef())
 
 		m.Get("/archive/*", repo.Download)
@@ -511,7 +511,7 @@ func runWeb(ctx *cli.Context) {
 		m.Group("/pulls/:index", func() {
 			m.Get("/commits", middleware.RepoRef(), repo.ViewPullCommits)
 			m.Get("/files", middleware.RepoRef(), repo.ViewPullFiles)
-			m.Post("/merge", reqRepoAdmin, repo.MergePullRequest)
+			m.Post("/merge", reqRepoWriter, repo.MergePullRequest)
 		}, repo.MustAllowPulls)
 
 		m.Group("", func() {
