@@ -53,3 +53,9 @@ clean-mac: clean
 
 test:
 	go test -cover -race ./...
+
+fixme:
+	grep -rnw "FIXME" routers models modules
+
+todo:
+	grep -rnw "TODO" routers models modules
