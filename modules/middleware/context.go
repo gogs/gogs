@@ -84,12 +84,12 @@ func (r *RepoContext) IsAdmin() bool {
 	return r.AccessMode >= models.ACCESS_MODE_ADMIN
 }
 
-// IsPusher returns true if current user has write or higher access of repository.
-func (r *RepoContext) IsPusher() bool {
+// IsWriter returns true if current user has write or higher access of repository.
+func (r *RepoContext) IsWriter() bool {
 	return r.AccessMode >= models.ACCESS_MODE_WRITE
 }
 
-// Return if the current user has read access for this repository
+// HasAccess returns true if the current user has at least read access for this repository
 func (r *RepoContext) HasAccess() bool {
 	return r.AccessMode >= models.ACCESS_MODE_READ
 }
