@@ -346,6 +346,19 @@ func (u *User) UploadAvatar(data []byte) error {
 	return sess.Commit()
 }
 
+// DeleteAvatar deletes the user's custom avatar.
+func (u *User) DeleteAvatar() error {
+	log.Info("Deleting user avatar: %s", u.CustomAvatarPath())
+	os.Remove(u.CustomAvatarPath())
+
+	u.UseCustomAvatar = false
+	if err := UpdateUser(u); err != nil {
+		return fmt.Errorf("updateUser: %v", err)
+	}
+
+	return nil
+}
+
 // IsAdminOfRepo returns true if user has admin or higher access of repository.
 func (u *User) IsAdminOfRepo(repo *Repository) bool {
 	has, err := HasAccess(u, repo, ACCESS_MODE_ADMIN)
