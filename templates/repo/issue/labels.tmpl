@@ -4,7 +4,7 @@
 	<div class="ui container">
 		<div class="navbar">
 			{{template "repo/issue/navbar" .}}
-			{{if .IsRepositoryAdmin}}
+			{{if .IsRepositoryWriter}}
 				<div class="ui right">
 					<div class="ui green new-label button">{{.i18n.Tr "repo.issues.new_label"}}</div>
 				</div>
@@ -40,7 +40,7 @@
 			{{range .Labels}}
 				<li class="item">
 					<div class="ui label" style="color: {{.ForegroundColor}}; background-color: {{.Color}}"><i class="octicon octicon-tag"></i> {{.Name}}</div>
-					{{if $.IsRepositoryAdmin}}
+					{{if $.IsRepositoryWriter}}
 						<a class="ui right delete-button" href="#" data-url="{{$.RepoLink}}/labels/delete" data-id="{{.ID}}"><i class="octicon octicon-trashcan"></i> {{$.i18n.Tr "repo.issues.label_delete"}}</a>
 						<a class="ui right edit-label-button" href="#" data-id={{.ID}} data-title={{.Name}} data-color={{.Color}}><i class="octicon octicon-pencil"></i> {{$.i18n.Tr "repo.issues.label_edit"}}</a>
 					{{end}}
@@ -51,7 +51,7 @@
 	</div>
 </div>
 
-{{if .IsRepositoryAdmin}}
+{{if .IsRepositoryWriter}}
 	<div class="ui small basic delete modal">
 		<div class="ui icon header">
 			<i class="trash icon"></i>
