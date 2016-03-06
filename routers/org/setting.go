@@ -96,6 +96,14 @@ func SettingsAvatar(ctx *middleware.Context, form auth.UploadAvatarForm) {
 	ctx.Redirect(ctx.Org.OrgLink + "/settings")
 }
 
+func SettingsDeleteAvatar(ctx *middleware.Context) {
+	if err := ctx.Org.Organization.DeleteAvatar(); err != nil {
+		ctx.Flash.Error(err.Error())
+	}
+
+	ctx.Redirect(ctx.Org.OrgLink + "/settings")
+}
+
 func SettingsDelete(ctx *middleware.Context) {
 	ctx.Data["Title"] = ctx.Tr("org.settings")
 	ctx.Data["PageIsSettingsDelete"] = true
