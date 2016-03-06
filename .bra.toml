@@ -1,6 +1,5 @@
 [run]
 init_cmds = [
-	#["grep", "-rn", "FIXME", "."],
 	["make", "build-dev", "TAGS=sqlite"],
 	["./gogs", "web"]
 ]
