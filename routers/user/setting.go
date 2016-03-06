@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"os"
 	"strings"
 
 	"github.com/Unknwon/com"
@@ -156,12 +155,10 @@ func SettingsAvatar(ctx *middleware.Context, form auth.UploadAvatarForm) {
 }
 
 func SettingsDeleteAvatar(ctx *middleware.Context) {
-	os.Remove(ctx.User.CustomAvatarPath())
-
-	ctx.User.UseCustomAvatar = false
-	if err := models.UpdateUser(ctx.User); err != nil {
-		ctx.Flash.Error(fmt.Sprintf("UpdateUser: %v", err))
+	if err := ctx.User.DeleteAvatar(); err != nil {
+		ctx.Flash.Error(err.Error())
 	}
+
 	ctx.Redirect(setting.AppSubUrl + "/user/settings")
 }
 
