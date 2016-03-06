@@ -171,6 +171,7 @@ func newMacaron() *macaron.Macaron {
 		},
 	}))
 	m.Use(middleware.Contexter())
+	m.Use(middleware.SecureHeaders)
 	return m
 }
 
