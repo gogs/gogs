@@ -5,6 +5,8 @@
 package repo
 
 import (
+	"fmt"
+
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/base"
@@ -18,6 +20,29 @@ const (
 	RELEASE_NEW base.TplName = "repo/release/new"
 )
 
+// calReleaseNumCommitsBehind calculates given release has how many commits behind default branch.
+func calReleaseNumCommitsBehind(repoCtx *middleware.RepoContext, release *models.Release, countCache map[string]int64) error {
+	// Fast return if release target is same as default branch.
+	if repoCtx.BranchName == release.Target {
+		release.NumCommitsBehind = repoCtx.CommitsCount - release.NumCommits
+		return nil
+	}
+
+	// Get count if not exists
+	if _, ok := countCache[release.Target]; !ok {
+		commit, err := repoCtx.GitRepo.GetBranchCommit(repoCtx.BranchName)
+		if err != nil {
+			return fmt.Errorf("GetBranchCommit: %v", err)
+		}
+		countCache[repoCtx.BranchName], err = commit.CommitsCount()
+		if err != nil {
+			return fmt.Errorf("CommitsCount: %v", err)
+		}
+	}
+	release.NumCommitsBehind = countCache[repoCtx.BranchName] - release.NumCommits
+	return nil
+}
+
 func Releases(ctx *middleware.Context) {
 	ctx.Data["Title"] = ctx.Tr("repo.release.releases")
 	ctx.Data["PageIsReleaseList"] = true
@@ -28,7 +53,7 @@ func Releases(ctx *middleware.Context) {
 		return
 	}
 
-	rels, err := models.GetReleasesByRepoID(ctx.Repo.Repository.ID)
+	releases, err := models.GetReleasesByRepoID(ctx.Repo.Repository.ID)
 	if err != nil {
 		ctx.Handle(500, "GetReleasesByRepoID", err)
 		return
@@ -39,44 +64,29 @@ func Releases(ctx *middleware.Context) {
 
 	tags := make([]*models.Release, len(rawTags))
 	for i, rawTag := range rawTags {
-		for j, rel := range rels {
-			if rel == nil || (rel.IsDraft && !ctx.Repo.IsOwner()) {
+		for j, r := range releases {
+			if r == nil || (r.IsDraft && !ctx.Repo.IsOwner()) {
 				continue
 			}
-			if rel.TagName == rawTag {
-				rel.Publisher, err = models.GetUserByID(rel.PublisherID)
+			if r.TagName == rawTag {
+				r.Publisher, err = models.GetUserByID(r.PublisherID)
 				if err != nil {
 					if models.IsErrUserNotExist(err) {
-						rel.Publisher = models.NewFakeUser()
+						r.Publisher = models.NewFakeUser()
 					} else {
 						ctx.Handle(500, "GetUserByID", err)
 						return
 					}
 				}
-				// FIXME: duplicated code.
-				// Get corresponding target if it's not the current branch.
-				if ctx.Repo.BranchName != rel.Target {
-					// Get count if not exists.
-					if _, ok := countCache[rel.Target]; !ok {
-						commit, err := ctx.Repo.GitRepo.GetBranchCommit(ctx.Repo.BranchName)
-						if err != nil {
-							ctx.Handle(500, "GetBranchCommit", err)
-							return
-						}
-						countCache[ctx.Repo.BranchName], err = commit.CommitsCount()
-						if err != nil {
-							ctx.Handle(500, "CommitsCount", err)
-							return
-						}
-					}
-					rel.NumCommitsBehind = countCache[ctx.Repo.BranchName] - rel.NumCommits
-				} else {
-					rel.NumCommitsBehind = ctx.Repo.CommitsCount - rel.NumCommits
+
+				if err := calReleaseNumCommitsBehind(ctx.Repo, r, countCache); err != nil {
+					ctx.Handle(500, "calReleaseNumCommitsBehind", err)
+					return
 				}
 
-				rel.Note = markdown.RenderString(rel.Note, ctx.Repo.RepoLink, ctx.Repo.Repository.ComposeMetas())
-				tags[i] = rel
-				rels[j] = nil // Mark as used.
+				r.Note = markdown.RenderString(r.Note, ctx.Repo.RepoLink, ctx.Repo.Repository.ComposeMetas())
+				tags[i] = r
+				releases[j] = nil // Mark as used.
 				break
 			}
 		}
@@ -103,43 +113,28 @@ func Releases(ctx *middleware.Context) {
 		}
 	}
 
-	for _, rel := range rels {
-		if rel == nil {
+	for _, r := range releases {
+		if r == nil {
 			continue
 		}
 
-		rel.Publisher, err = models.GetUserByID(rel.PublisherID)
+		r.Publisher, err = models.GetUserByID(r.PublisherID)
 		if err != nil {
 			if models.IsErrUserNotExist(err) {
-				rel.Publisher = models.NewFakeUser()
+				r.Publisher = models.NewFakeUser()
 			} else {
 				ctx.Handle(500, "GetUserByID", err)
 				return
 			}
 		}
-		// FIXME: duplicated code.
-		// Get corresponding target if it's not the current branch.
-		if ctx.Repo.BranchName != rel.Target {
-			// Get count if not exists.
-			if _, ok := countCache[rel.Target]; !ok {
-				commit, err := ctx.Repo.GitRepo.GetBranchCommit(ctx.Repo.BranchName)
-				if err != nil {
-					ctx.Handle(500, "GetBranchCommit", err)
-					return
-				}
-				countCache[ctx.Repo.BranchName], err = commit.CommitsCount()
-				if err != nil {
-					ctx.Handle(500, "CommitsCount", err)
-					return
-				}
-			}
-			rel.NumCommitsBehind = countCache[ctx.Repo.BranchName] - rel.NumCommits
-		} else {
-			rel.NumCommitsBehind = ctx.Repo.CommitsCount - rel.NumCommits
+
+		if err := calReleaseNumCommitsBehind(ctx.Repo, r, countCache); err != nil {
+			ctx.Handle(500, "calReleaseNumCommitsBehind", err)
+			return
 		}
 
-		rel.Note = markdown.RenderString(rel.Note, ctx.Repo.RepoLink, ctx.Repo.Repository.ComposeMetas())
-		tags = append(tags, rel)
+		r.Note = markdown.RenderString(r.Note, ctx.Repo.RepoLink, ctx.Repo.Repository.ComposeMetas())
+		tags = append(tags, r)
 	}
 	models.SortReleases(tags)
 	ctx.Data["Releases"] = tags
