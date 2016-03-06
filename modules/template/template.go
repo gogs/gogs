@@ -22,86 +22,88 @@ import (
 	"github.com/gogits/gogs/modules/setting"
 )
 
-var Funcs template.FuncMap = map[string]interface{}{
-	"GoVer": func() string {
-		return strings.Title(runtime.Version())
-	},
-	"UseHTTPS": func() bool {
-		return strings.HasPrefix(setting.AppUrl, "https")
-	},
-	"AppName": func() string {
-		return setting.AppName
-	},
-	"AppSubUrl": func() string {
-		return setting.AppSubUrl
-	},
-	"AppUrl": func() string {
-		return setting.AppUrl
-	},
-	"AppVer": func() string {
-		return setting.AppVer
-	},
-	"AppDomain": func() string {
-		return setting.Domain
-	},
-	"DisableGravatar": func() bool {
-		return setting.DisableGravatar
-	},
-	"LoadTimes": func(startTime time.Time) string {
-		return fmt.Sprint(time.Since(startTime).Nanoseconds()/1e6) + "ms"
-	},
-	"AvatarLink":   base.AvatarLink,
-	"Safe":         Safe,
-	"Str2html":     Str2html,
-	"TimeSince":    base.TimeSince,
-	"RawTimeSince": base.RawTimeSince,
-	"FileSize":     base.FileSize,
-	"Subtract":     base.Subtract,
-	"Add": func(a, b int) int {
-		return a + b
-	},
-	"ActionIcon": ActionIcon,
-	"DateFmtLong": func(t time.Time) string {
-		return t.Format(time.RFC1123Z)
-	},
-	"DateFmtShort": func(t time.Time) string {
-		return t.Format("Jan 02, 2006")
-	},
-	"List": List,
-	"Mail2Domain": func(mail string) string {
-		if !strings.Contains(mail, "@") {
-			return "try.gogs.io"
-		}
+func NewFuncMap() []template.FuncMap {
+	return []template.FuncMap{map[string]interface{}{
+		"GoVer": func() string {
+			return strings.Title(runtime.Version())
+		},
+		"UseHTTPS": func() bool {
+			return strings.HasPrefix(setting.AppUrl, "https")
+		},
+		"AppName": func() string {
+			return setting.AppName
+		},
+		"AppSubUrl": func() string {
+			return setting.AppSubUrl
+		},
+		"AppUrl": func() string {
+			return setting.AppUrl
+		},
+		"AppVer": func() string {
+			return setting.AppVer
+		},
+		"AppDomain": func() string {
+			return setting.Domain
+		},
+		"DisableGravatar": func() bool {
+			return setting.DisableGravatar
+		},
+		"LoadTimes": func(startTime time.Time) string {
+			return fmt.Sprint(time.Since(startTime).Nanoseconds()/1e6) + "ms"
+		},
+		"AvatarLink":   base.AvatarLink,
+		"Safe":         Safe,
+		"Str2html":     Str2html,
+		"TimeSince":    base.TimeSince,
+		"RawTimeSince": base.RawTimeSince,
+		"FileSize":     base.FileSize,
+		"Subtract":     base.Subtract,
+		"Add": func(a, b int) int {
+			return a + b
+		},
+		"ActionIcon": ActionIcon,
+		"DateFmtLong": func(t time.Time) string {
+			return t.Format(time.RFC1123Z)
+		},
+		"DateFmtShort": func(t time.Time) string {
+			return t.Format("Jan 02, 2006")
+		},
+		"List": List,
+		"Mail2Domain": func(mail string) string {
+			if !strings.Contains(mail, "@") {
+				return "try.gogs.io"
+			}
 
-		return strings.SplitN(mail, "@", 2)[1]
-	},
-	"SubStr": func(str string, start, length int) string {
-		if len(str) == 0 {
-			return ""
-		}
-		end := start + length
-		if length == -1 {
-			end = len(str)
-		}
-		if len(str) < end {
-			return str
-		}
-		return str[start:end]
-	},
-	"DiffTypeToStr":     DiffTypeToStr,
-	"DiffLineTypeToStr": DiffLineTypeToStr,
-	"Sha1":              Sha1,
-	"ShortSha":          base.ShortSha,
-	"MD5":               base.EncodeMD5,
-	"ActionContent2Commits": ActionContent2Commits,
-	"ToUtf8":                ToUtf8,
-	"EscapePound": func(str string) string {
-		return strings.Replace(strings.Replace(str, "%", "%25", -1), "#", "%23", -1)
-	},
-	"RenderCommitMessage": RenderCommitMessage,
-	"ThemeColorMetaTag": func() string {
-		return setting.ThemeColorMetaTag
-	},
+			return strings.SplitN(mail, "@", 2)[1]
+		},
+		"SubStr": func(str string, start, length int) string {
+			if len(str) == 0 {
+				return ""
+			}
+			end := start + length
+			if length == -1 {
+				end = len(str)
+			}
+			if len(str) < end {
+				return str
+			}
+			return str[start:end]
+		},
+		"DiffTypeToStr":     DiffTypeToStr,
+		"DiffLineTypeToStr": DiffLineTypeToStr,
+		"Sha1":              Sha1,
+		"ShortSha":          base.ShortSha,
+		"MD5":               base.EncodeMD5,
+		"ActionContent2Commits": ActionContent2Commits,
+		"ToUtf8":                ToUtf8,
+		"EscapePound": func(str string) string {
+			return strings.Replace(strings.Replace(str, "%", "%25", -1), "#", "%23", -1)
+		},
+		"RenderCommitMessage": RenderCommitMessage,
+		"ThemeColorMetaTag": func() string {
+			return setting.ThemeColorMetaTag
+		},
+	}}
 }
 
 func Safe(raw string) template.HTML {

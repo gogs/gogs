@@ -7,7 +7,6 @@ package cmd
 import (
 	"crypto/tls"
 	"fmt"
-	gotmpl "html/template"
 	"io/ioutil"
 	"net/http"
 	"net/http/fcgi"
@@ -126,7 +125,7 @@ func newMacaron() *macaron.Macaron {
 	))
 	m.Use(macaron.Renderer(macaron.RenderOptions{
 		Directory:  path.Join(setting.StaticRootPath, "templates"),
-		Funcs:      []gotmpl.FuncMap{template.Funcs},
+		Funcs:      template.NewFuncMap(),
 		IndentJSON: macaron.Env != macaron.PROD,
 	}))
 
