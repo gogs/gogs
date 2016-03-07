@@ -124,6 +124,22 @@ func newDialer(opts *setting.Mailer) (*gomail.Dialer, error) {
 	return dialer, nil;
 }
 
+func Test(opts *setting.Mailer) error {
+	dialer, err := newDialer(opts)
+	if err != nil {
+		return err
+	}
+
+	log.Debug("Mailer: Dialing %s", opts.Host)
+	conn, err := dialer.Dial()
+	if err != nil {
+		log.Error(3, "Mailer: Failed to connect: %v", err)
+	} else {
+		conn.Close()
+	}
+	return err
+}
+
 func processMailQueue() {
 	opts := setting.MailService
 
@@ -171,3 +187,4 @@ func SendAsync(msg *Message) {
 		mailQueue <- msg
 	}()
 }
+

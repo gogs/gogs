@@ -259,6 +259,60 @@ func InstallPost(ctx *middleware.Context, form auth.InstallForm) {
 		return
 	}
 
+	// Check mail server
+	if len(strings.TrimSpace(form.SMTPHost)) > 0 {
+		if len(form.SMTPFrom) == 0 {
+			ctx.Data["Err_SMTP"] = true
+			ctx.Data["Err_SMTPFrom"] = true
+
+			ctx.RenderWithErr(ctx.Tr("install.wrong_smtp_settings"), INSTALL, form)
+			return
+		}
+		// implement further SMTPFrom checking
+
+		opts := setting.MailService
+		if opts == nil {
+			opts = &setting.Mailer{}
+		}
+		opts.Host = form.SMTPHost
+		opts.User = form.SMTPEmail
+		if len(form.SMTPPasswd) > 0 {
+			opts.Passwd = form.SMTPPasswd
+		}
+
+		if err := mailer.Test(opts); err != nil {
+			ctx.Data["Err_SMTP"] = true
+			ctx.Data["Err_SMTPMessage"] = err
+
+			if te, ok := err.(*textproto.Error); ok {
+				switch (te.Code) {
+					// Add more codes here
+					case 450: // mailbox unavailable
+						ctx.Data["Err_SMTPEmail"] = true
+					case 530, // access denied
+					     535, // authentication unsuccessful
+					     553: // mailbox name not allowed
+						ctx.Data["Err_SMTPAuth"] = true
+						log.Error(4, "%d: %v", te.Code, err)
+				}
+			} else {
+				switch true {
+					case strings.HasPrefix(err.Error(), "missing port"), strings.HasPrefix(err.Error(), "dial tcp"), strings.HasPrefix(err.Error(), "Cannot convert"):
+						ctx.Data["Err_SMTPHost"] = true
+					case err.Error() == "EOF":
+						ctx.Data["Err_SMTPHost"] = true
+						ctx.Data["Err_SMTPMessage"] = "No mail service running at this point"
+					// Add more errors here
+					default:
+						ctx.Data["Err_SMTPHost"] = true
+				}
+			}
+
+			ctx.RenderWithErr(ctx.Tr("install.wrong_smtp_settings"), INSTALL, form)
+			return
+		}
+	}
+
 	// Check logic loophole between disable self-registration and no admin account.
 	if form.DisableRegistration && len(form.AdminName) == 0 {
 		ctx.Data["Err_Services"] = true
