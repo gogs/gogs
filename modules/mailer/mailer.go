@@ -7,12 +7,11 @@ package mailer
 import (
 	"crypto/tls"
 	"fmt"
-	"io"
 	"net"
 	"net/smtp"
 	"os"
-	"strings"
 	"time"
+	"strconv"
 
 	"gopkg.in/gomail.v2"
 
@@ -72,14 +71,79 @@ func (a *loginAuth) Next(fromServer []byte, more bool) ([]byte, error) {
 	return nil, nil
 }
 
+func newDialer(opts *setting.Mailer) (*gomail.Dialer, error) {
+	host, port, err := net.SplitHostPort(opts.Host)
+	if err != nil {
+		log.Error(3, "Mailer: Failed convert hostname %s: %v", opts.Host, err)
+		return nil, err
+	}
+
+	portI, err := strconv.Atoi(port)
+	if err != nil {
+		log.Error(3, "Mailer: Failed convert port %s: %v", port, err)
+		return nil, fmt.Errorf("Cannot convert '%s' to a port number", port)
+	}
+
+	dialer := &gomail.Dialer {
+		Host: host,
+		Port: portI,
+		Auth: LoginAuth(opts.User, opts.Passwd),
+		TLSConfig: &tls.Config {
+			InsecureSkipVerify: opts.SkipVerify,
+			ServerName:         host,
+		},
+	}
+
+	if portI == 465 {
+		dialer.SSL = true
+	} else {
+		dialer.SSL = false
+	}
+
+	if !opts.DisableHelo {
+		hostname := opts.HeloHostname
+	        if len(hostname) == 0 {
+			hostname, err = os.Hostname()
+			if err != nil {
+				return nil, err
+			}
+		}
+		dialer.LocalName = hostname
+	} else {
+		dialer.LocalName = ""
+	}
+
+	if opts.UseCertificate {
+		cert, err := tls.LoadX509KeyPair(opts.CertFile, opts.KeyFile)
+		if err != nil {
+			return nil, err
+		}
+		dialer.TLSConfig.Certificates = []tls.Certificate{cert}
+	}
+
+	return dialer, nil;
+}
+
 func processMailQueue() {
-	sender := &Sender{}
+	opts := setting.MailService
+
+	dialer, err := newDialer(opts)
+	if err != nil {
+		return
+	}
+
+	log.Debug("Mailer: Dialing %s", opts.Host)
+	conn, err := dialer.Dial()
+	if err != nil {
+		log.Error(4, "Mailer: Failed to connect: %v", err)
+		return
+	}
 
 	for {
 		select {
 		case msg := <-mailQueue:
 			log.Trace("New e-mail sending request %s: %s", msg.GetHeader("To"), msg.Info)
-			if err := gomail.Send(sender, msg.Message); err != nil {
+			if err := conn.Send(opts.From, msg.GetHeader("To"), msg.Message); err != nil {
 				log.Error(4, "Fail to send e-mails %s: %s - %v", msg.GetHeader("To"), msg.Info, err)
 			} else {
 				log.Trace("E-mails sent %s: %s", msg.GetHeader("To"), msg.Info)
