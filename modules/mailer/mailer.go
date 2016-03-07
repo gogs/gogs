@@ -140,6 +140,31 @@ func Test(opts *setting.Mailer) error {
 	return err
 }
 
+func Send(msg *Message) error {
+	opts := setting.MailService
+
+	dialer, err := newDialer(opts)
+	if err != nil {
+		return err
+	}
+
+	log.Debug("Mailer: Dialing %s", opts.Host)
+	conn, err := dialer.Dial()
+	if err != nil {
+		log.Error(4, "Mailer: Failed to connect: %v", err)
+		return err
+	}
+	defer conn.Close()
+
+	if err := conn.Send(opts.From, msg.GetHeader("To"), msg.Message); err != nil {
+		log.Error(4, "Fail to send e-mails %s: %s - %v", msg.GetHeader("To"), msg.Info, err)
+		return err
+	} else {
+		log.Trace("E-mails sent %s: %s", msg.GetHeader("To"), msg.Info)
+	}
+	return nil
+}
+
 func processMailQueue() {
 	opts := setting.MailService
 
@@ -154,6 +179,7 @@ func processMailQueue() {
 		log.Error(4, "Mailer: Failed to connect: %v", err)
 		return
 	}
+	defer conn.Close()
 
 	for {
 		select {

@@ -11,6 +11,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"net/textproto"
 
 	"github.com/Unknwon/com"
 	"github.com/go-xorm/xorm"
@@ -374,7 +375,9 @@ func InstallPost(ctx *middleware.Context, form auth.InstallForm) {
 		cfg.Section("mailer").Key("HOST").SetValue(form.SMTPHost)
 		cfg.Section("mailer").Key("FROM").SetValue(form.SMTPFrom)
 		cfg.Section("mailer").Key("USER").SetValue(form.SMTPEmail)
-		cfg.Section("mailer").Key("PASSWD").SetValue(form.SMTPPasswd)
+		if len(form.SMTPPasswd) > 0 {
+			cfg.Section("mailer").Key("PASSWD").SetValue(form.SMTPPasswd)
+		}
 	} else {
 		cfg.Section("mailer").Key("ENABLED").SetValue("false")
 	}
