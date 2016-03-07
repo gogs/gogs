@@ -142,32 +142,6 @@ func RepoAssignment(args ...bool) macaron.Handler {
 		ctx.Data["IsRepositoryAdmin"] = ctx.Repo.IsAdmin()
 		ctx.Data["IsRepositoryWriter"] = ctx.Repo.IsWriter()
 
-		if repo.IsFork {
-			RetrieveBaseRepo(ctx, repo)
-			if ctx.Written() {
-				return
-			}
-		}
-
-		// People who have push access and propose a new pull request.
-		if ctx.Repo.IsWriter() {
-			// Pull request is allowed if this is a fork repository
-			// and base repository accepts pull requests.
-			if repo.BaseRepo != nil {
-				if repo.BaseRepo.AllowsPulls() {
-					ctx.Data["CanPullRequest"] = true
-					ctx.Data["BaseRepo"] = repo.BaseRepo
-				}
-			} else {
-				// Or, this is repository accepts pull requests between branches.
-				if repo.AllowsPulls() {
-					ctx.Data["CanPullRequest"] = true
-					ctx.Data["BaseRepo"] = repo
-					ctx.Data["IsBetweenBranches"] = true
-				}
-			}
-		}
-
 		ctx.Data["DisableSSH"] = setting.SSH.Disabled
 		ctx.Data["CloneLink"] = repo.CloneLink()
 		ctx.Data["WikiCloneLink"] = repo.WikiCloneLink()
@@ -209,9 +183,40 @@ func RepoAssignment(args ...bool) macaron.Handler {
 				ctx.Repo.BranchName = brs[0]
 			}
 		}
-
 		ctx.Data["BranchName"] = ctx.Repo.BranchName
 		ctx.Data["CommitID"] = ctx.Repo.CommitID
+
+		if repo.IsFork {
+			RetrieveBaseRepo(ctx, repo)
+			if ctx.Written() {
+				return
+			}
+		}
+
+		// People who have push access and propose a new pull request.
+		if ctx.Repo.IsWriter() {
+			// Pull request is allowed if this is a fork repository
+			// and base repository accepts pull requests.
+			if repo.BaseRepo != nil {
+				if repo.BaseRepo.AllowsPulls() {
+					ctx.Data["BaseRepo"] = repo.BaseRepo
+					ctx.Repo.PullRequest.BaseRepo = repo.BaseRepo
+					ctx.Repo.PullRequest.Allowed = true
+					ctx.Repo.PullRequest.HeadInfo = ctx.Repo.Owner.Name + ":" + ctx.Repo.BranchName
+				}
+			} else {
+				// Or, this is repository accepts pull requests between branches.
+				if repo.AllowsPulls() {
+					ctx.Data["BaseRepo"] = repo
+					ctx.Repo.PullRequest.BaseRepo = repo
+					ctx.Repo.PullRequest.Allowed = true
+					ctx.Repo.PullRequest.SameRepo = true
+					ctx.Repo.PullRequest.HeadInfo = ctx.Repo.BranchName
+				}
+			}
+		}
+		fmt.Println(222222, ctx.Repo.PullRequest)
+		ctx.Data["PullRequestCtx"] = ctx.Repo.PullRequest
 
 		if ctx.Query("go-get") == "1" {
 			ctx.Data["GoGetImport"] = path.Join(setting.Domain, setting.AppSubUrl, owner.Name, repo.Name)
