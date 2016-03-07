@@ -8,7 +8,7 @@
 				{{if .PageIsIssueList}}
 					<a class="ui green button" href="{{.RepoLink}}/issues/new">{{.i18n.Tr "repo.issues.new"}}</a>
 				{{else}}
-					<a class="ui green button {{if not (or .CanPullRequest .HasForkedRepo)}}disabled{{end}}" href="{{.RepoLink}}/compare/{{.Repository.DefaultBranch}}...{{if not (eq .Owner.Name .SignedUserName)}}{{.SignedUserName}}:{{end}}{{.BranchName}}">{{.i18n.Tr "repo.pulls.new"}}</a>
+					<a class="ui green button {{if not .PullRequestCtx.Allowed}}disabled{{end}}" href="{{.RepoLink}}/compare/{{.Repository.DefaultBranch}}...{{.PullRequestCtx.HeadInfo}}">{{.i18n.Tr "repo.pulls.new"}}</a>
 				{{end}}
 			</div>
 		</div>
