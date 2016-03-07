@@ -178,6 +178,7 @@ func RegisterRoutes(m *macaron.Macaron) {
 				Delete(repo.Delete)
 
 			m.Group("/:username/:reponame", func() {
+				m.Put("/collaborators/:collaborator", repo.AddCollaborator)
 				m.Combo("/hooks").Get(repo.ListHooks).
 					Post(bind(api.CreateHookOption{}), repo.CreateHook)
 				m.Patch("/hooks/:id:int", bind(api.EditHookOption{}), repo.EditHook)
