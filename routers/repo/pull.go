@@ -462,7 +462,7 @@ func ParseCompareInfo(ctx *middleware.Context) (*models.User, *models.Repository
 	}
 	ctx.Data["HeadUser"] = headUser
 	ctx.Data["HeadBranch"] = headBranch
-	ctx.Data["IsBetweenBranches"] = isSameRepo
+	ctx.Repo.PullRequest.SameRepo = isSameRepo
 
 	// Check if base branch is valid.
 	if !ctx.Repo.GitRepo.IsBranchExist(baseBranch) {

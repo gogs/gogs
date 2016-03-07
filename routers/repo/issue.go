@@ -55,15 +55,21 @@ var (
 func MustEnableIssues(ctx *middleware.Context) {
 	if !ctx.Repo.Repository.EnableIssues {
 		ctx.Handle(404, "MustEnableIssues", nil)
+		return
 	}
 }
 
 func MustAllowPulls(ctx *middleware.Context) {
 	if !ctx.Repo.Repository.AllowsPulls() {
 		ctx.Handle(404, "MustAllowPulls", nil)
+		return
 	}
 
-	ctx.Data["HasForkedRepo"] = ctx.IsSigned && ctx.User.HasForkedRepo(ctx.Repo.Repository.ID)
+	// User can send pull request if owns a forked repository.
+	if ctx.IsSigned && ctx.User.HasForkedRepo(ctx.Repo.Repository.ID) {
+		ctx.Repo.PullRequest.Allowed = true
+		ctx.Repo.PullRequest.HeadInfo = ctx.User.Name + ":" + ctx.Repo.BranchName
+	}
 }
 
 func RetrieveLabels(ctx *middleware.Context) {
@@ -560,14 +566,18 @@ func ViewIssue(ctx *middleware.Context) {
 	}
 
 	if issue.IsPull {
+		MustAllowPulls(ctx)
+		if ctx.Written() {
+			return
+		}
+		ctx.Data["PageIsPullList"] = true
+
 		if err = issue.GetPullRequest(); err != nil {
 			ctx.Handle(500, "GetPullRequest", err)
 			return
 		}
 
-		ctx.Data["PageIsPullList"] = true
 		ctx.Data["PageIsPullConversation"] = true
-		ctx.Data["HasForkedRepo"] = ctx.IsSigned && ctx.User.HasForkedRepo(ctx.Repo.Repository.ID)
 	} else {
 		MustEnableIssues(ctx)
 		if ctx.Written() {
