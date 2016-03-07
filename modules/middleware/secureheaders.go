@@ -26,7 +26,7 @@ func SecureHeaders(ctx *Context) {
 	// possible values: DENY, SAMEORIGIN, ALLOW-FROM https://example.com
 	frameOptions := "SAMEORIGIN"
 	if frameOptions == "" {
-		frameOptions := "SAMEORIGIN"
+		frameOptions = "SAMEORIGIN"
 	}
 	// Allow framing only for own domain
 	ctx.Resp.Header().Set("X-Frame-Options", frameOptions)
@@ -36,11 +36,11 @@ func SecureHeaders(ctx *Context) {
 		// maxAge := get value from setting. unit: seconds, default: "31536000" (1 year)
 		maxAge := "31536000"
 		maxSeconds, err := strconv.Atoi(maxAge)
-		if err != null {
+		if err != nil {
 			// check skip value
 			// insert name of setting here
 			log.Error(4, "Invalid value for HSTS setting: %v", err)
-			maxSeconds := 31536000
+			maxSeconds = 31536000
 		}
 		ctx.Resp.Header().Set("Strict-Transport-Security", "max-age=" + strconv.Itoa(maxSeconds))
 	// }
