@@ -300,6 +300,7 @@ func InstallPost(ctx *middleware.Context, form auth.InstallForm) {
 				switch true {
 					case strings.HasPrefix(err.Error(), "missing port"), strings.HasPrefix(err.Error(), "dial tcp"), strings.HasPrefix(err.Error(), "Cannot convert"):
 						ctx.Data["Err_SMTPHost"] = true
+						ctx.Data["Err_SMTPMessage"] = err.Error() + ". Typical setting: hostname:25"
 					case err.Error() == "EOF":
 						ctx.Data["Err_SMTPHost"] = true
 						ctx.Data["Err_SMTPMessage"] = "No mail service running at this point"
