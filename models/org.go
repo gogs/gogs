@@ -1054,10 +1054,20 @@ func RemoveOrgRepo(orgID, repoID int64) error {
 // GetUserRepositories gets all repositories of an organization,
 // that the user with the given userID has access to.
 func (org *User) GetUserRepositories(userID int64) (err error) {
+	user, err := GetUserByID(userID)
 	teams := make([]*Team, 0, org.NumTeams)
-	if err = x.Sql(`SELECT team.id FROM team 
-INNER JOIN team_user ON team_user.team_id = team.id
-WHERE team_user.org_id = ? AND team_user.uid = ?`, org.Id, userID).Find(&teams); err != nil {
+
+	if err != nil || !user.IsAdmin {
+		err = x.Sql(`SELECT team.id FROM team 
+	INNER JOIN team_user ON team_user.team_id = team.id
+	WHERE team_user.org_id = ? AND team_user.uid = ?`, org.Id, userID).Find(&teams)
+	} else {
+		err = x.Sql(`SELECT team.id FROM team 
+	INNER JOIN team_user ON team_user.team_id = team.id
+	WHERE team_user.org_id = ?`, org.Id).Find(&teams)
+	}
+
+	if err != nil {
 		return fmt.Errorf("get teams: %v", err)
 	}
 
