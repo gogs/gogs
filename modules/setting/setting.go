@@ -135,6 +135,9 @@ var (
 	GravatarSource   string
 	DisableGravatar  bool
 
+	// Wiki settings
+	LocalWikiPath string
+
 	// Log settings
 	LogRootPath string
 	LogModes    []string
@@ -464,6 +467,9 @@ func NewContext() {
 	if OfflineMode {
 		DisableGravatar = true
 	}
+
+	sec = Cfg.Section("wiki")
+	LocalWikiPath = sec.Key("LOCAL_WIKI_PATH").MustString(AppDataPath)
 
 	if err = Cfg.Section("markdown").MapTo(&Markdown); err != nil {
 		log.Fatal(4, "Fail to map Markdown settings: %v", err)
