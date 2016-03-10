@@ -28,14 +28,7 @@ const (
 	PULL_FILES   base.TplName = "repo/pulls/files"
 
 	PULL_REQUEST_TEMPLATE_KEY = "PullRequestTemplate"
-)
-
-var (
-	PullRequestTemplateCandidates = []string{
-		"PULL_REQUEST.md",
-		".gogs/PULL_REQUEST.md",
-		".github/PULL_REQUEST.md",
-	}
+	PULL_REQUEST_TEMPLATE_FILE = "PULL_REQUEST_TEMPLATE"
 )
 
 func getForkRepository(ctx *context.Context) *models.Repository {
@@ -578,7 +571,7 @@ func CompareAndPullRequest(ctx *context.Context) {
 	ctx.Data["PageIsComparePull"] = true
 	ctx.Data["IsDiffCompare"] = true
 	ctx.Data["RequireHighlightJS"] = true
-	setTemplateIfExists(ctx, PULL_REQUEST_TEMPLATE_KEY, PullRequestTemplateCandidates)
+	setTemplateIfExists(ctx, PULL_REQUEST_TEMPLATE_KEY, IssueFolderCandidates, PULL_REQUEST_TEMPLATE_FILE)
 	renderAttachmentSettings(ctx)
 
 	headUser, headRepo, headGitRepo, prInfo, baseBranch, headBranch := ParseCompareInfo(ctx)
