@@ -1071,11 +1071,10 @@ WHERE team_user.org_id = ? AND team_user.uid = ?`, org.Id, userID).Find(&teams);
 	}
 
 	repos := make([]*Repository, 0, 5)
-	if err = x.Sql(`SELECT repository.* FROM repository
+	if err = x.Sql(fmt.Sprintf(`SELECT repository.* FROM repository
 INNER JOIN team_repo ON team_repo.repo_id = repository.id
-WHERE (repository.owner_id = ? AND repository.is_private = ?) OR team_repo.team_id IN (?)
-GROUP BY repository.id`,
-		org.Id, false, strings.Join(teamIDs, ",")).Find(&repos); err != nil {
+WHERE (repository.owner_id = ? AND repository.is_private = ?) OR team_repo.team_id IN (%s)
+GROUP BY repository.id`, strings.Join(teamIDs, ",")), org.Id, false).Find(&repos); err != nil {
 		return fmt.Errorf("get repositories: %v", err)
 	}
 	org.Repos = repos
