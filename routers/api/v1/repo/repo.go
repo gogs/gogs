@@ -296,3 +296,76 @@ func Delete(ctx *middleware.Context) {
 	log.Trace("Repository deleted: %s/%s", owner.Name, repo.Name)
 	ctx.Status(204)
 }
+
+func GiveUserAccess(ctx *middleware.Context, form api.CreateAccessOption) {
+	_, repo := parseOwnerAndRepo(ctx)
+
+	if ctx.Written() {
+		return
+	}
+
+	u, err := models.GetUserByName(form.Username)
+
+	if err != nil {
+		ctx.APIError(404, "user does not exist", err)
+		return
+	}
+	err = repo.AddCollaborator(u)
+
+	if err != nil {
+		ctx.APIError(500, "Add Collaberator", err)
+		return
+	}
+
+	ListUserAccess(ctx)
+
+}
+
+func RemoveUserAccess(ctx *middleware.Context) {
+	owner, repo := parseOwnerAndRepo(ctx)
+
+	if ctx.Written() {
+		return
+	}
+
+	repo.Owner = owner
+
+	u, err := models.GetUserByName(ctx.Params(":user"))
+
+	if err != nil {
+		ctx.APIError(404, "user does not exist", err)
+		return
+	}
+
+	err = repo.DeleteCollaborator(u)
+
+	if err != nil {
+		ctx.APIError(500, "delete collab", err)
+		return
+	}
+
+	ctx.Status(204)
+
+}
+
+func ListUserAccess(ctx *middleware.Context) {
+	_, repo := parseOwnerAndRepo(ctx)
+	if ctx.Written() {
+		return
+	}
+
+	users, err := repo.GetCollaborators()
+
+	if err != nil {
+		ctx.APIError(500, "internal server error", err)
+		return
+	}
+
+	apiUsers := make([]*api.User, 0)
+
+	for _, u := range users {
+		apiUsers = append(apiUsers, convert.ToApiUser(u))
+	}
+
+	ctx.JSON(200, apiUsers)
+}
