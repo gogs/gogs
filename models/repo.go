@@ -484,7 +484,7 @@ type CloneLink struct {
 	Git   string
 }
 
-func (repo *Repository) cloneLink(isWiki bool) *CloneLink {
+func (repo *Repository) cloneLink(isWiki bool, userName string) *CloneLink {
 	repoName := repo.Name
 	if isWiki {
 		repoName += ".wiki"
@@ -497,13 +497,26 @@ func (repo *Repository) cloneLink(isWiki bool) *CloneLink {
 	} else {
 		cl.SSH = fmt.Sprintf("%s@%s:%s/%s.git", setting.RunUser, setting.SSH.Domain, repo.Owner.Name, repoName)
 	}
-	cl.HTTPS = fmt.Sprintf("%s%s/%s.git", setting.AppUrl, repo.Owner.Name, repoName)
+
+	cl.HTTPS = fmt.Sprintf("%s:%s/%s/%s/%s.git", setting.Domain, setting.HttpPort, setting.AppSubUrl, repo.Owner.Name, repoName)
+
+	if len(userName) > 0 {
+		cl.HTTPS = fmt.Sprintf("%s@%s", userName, cl.HTTPS)
+	}
+	
+	cl.HTTPS = fmt.Sprintf("%s://%s", setting.Protocol, path.Clean(cl.HTTPS))
+
 	return cl
+}
+
+// CloneLinkWithUserName returns clone URLs of repository with the signed username in it.
+func (repo *Repository) CloneLinkWithUserName(userName string) (cl *CloneLink) {
+	return repo.cloneLink(false, userName)
 }
 
 // CloneLink returns clone URLs of repository.
 func (repo *Repository) CloneLink() (cl *CloneLink) {
-	return repo.cloneLink(false)
+	return repo.cloneLink(false, "")
 }
 
 var (
