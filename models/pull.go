@@ -58,20 +58,25 @@ type PullRequest struct {
 
 	HasMerged      bool
 	MergedCommitID string `xorm:"VARCHAR(40)"`
-	Merged         time.Time
 	MergerID       int64
-	Merger         *User `xorm:"-"`
+	Merger         *User     `xorm:"-"`
+	Merged         time.Time `xorm:"-"`
+	MergedUnix     int64
+}
+
+func (pr *PullRequest) BeforeUpdate() {
+	pr.MergedUnix = pr.Merged.UTC().Unix()
 }
 
 // Note: don't try to get Pull because will end up recursive querying.
 func (pr *PullRequest) AfterSet(colName string, _ xorm.Cell) {
 	switch colName {
-	case "merged":
+	case "merged_unix":
 		if !pr.HasMerged {
 			return
 		}
 
-		pr.Merged = regulateTimeZone(pr.Merged)
+		pr.Merged = time.Unix(pr.MergedUnix, 0).Local()
 	}
 }
 

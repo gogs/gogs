@@ -45,22 +45,36 @@ const (
 
 // PublicKey represents a SSH or deploy key.
 type PublicKey struct {
-	ID                int64      `xorm:"pk autoincr"`
-	OwnerID           int64      `xorm:"INDEX NOT NULL"`
-	Name              string     `xorm:"NOT NULL"`
-	Fingerprint       string     `xorm:"NOT NULL"`
-	Content           string     `xorm:"TEXT NOT NULL"`
-	Mode              AccessMode `xorm:"NOT NULL DEFAULT 2"`
-	Type              KeyType    `xorm:"NOT NULL DEFAULT 1"`
-	Created           time.Time  `xorm:"CREATED"`
-	Updated           time.Time  // Note: Updated must below Created for AfterSet.
-	HasRecentActivity bool       `xorm:"-"`
-	HasUsed           bool       `xorm:"-"`
+	ID          int64      `xorm:"pk autoincr"`
+	OwnerID     int64      `xorm:"INDEX NOT NULL"`
+	Name        string     `xorm:"NOT NULL"`
+	Fingerprint string     `xorm:"NOT NULL"`
+	Content     string     `xorm:"TEXT NOT NULL"`
+	Mode        AccessMode `xorm:"NOT NULL DEFAULT 2"`
+	Type        KeyType    `xorm:"NOT NULL DEFAULT 1"`
+
+	Created           time.Time `xorm:"-"`
+	CreatedUnix       int64
+	Updated           time.Time `xorm:"-"` // Note: Updated must below Created for AfterSet.
+	UpdatedUnix       int64
+	HasRecentActivity bool `xorm:"-"`
+	HasUsed           bool `xorm:"-"`
+}
+
+func (k *PublicKey) BeforeInsert() {
+	k.CreatedUnix = time.Now().UTC().Unix()
+}
+
+func (k *PublicKey) BeforeUpdate() {
+	k.UpdatedUnix = time.Now().UTC().Unix()
 }
 
 func (k *PublicKey) AfterSet(colName string, _ xorm.Cell) {
 	switch colName {
-	case "created":
+	case "created_unix":
+		k.Created = time.Unix(k.CreatedUnix, 0).Local()
+	case "updated_unix":
+		k.Updated = time.Unix(k.UpdatedUnix, 0).Local()
 		k.HasUsed = k.Updated.After(k.Created)
 		k.HasRecentActivity = k.Updated.Add(7 * 24 * time.Hour).After(time.Now())
 	}
@@ -608,21 +622,35 @@ func RewriteAllPublicKeys() error {
 
 // DeployKey represents deploy key information and its relation with repository.
 type DeployKey struct {
-	ID                int64 `xorm:"pk autoincr"`
-	KeyID             int64 `xorm:"UNIQUE(s) INDEX"`
-	RepoID            int64 `xorm:"UNIQUE(s) INDEX"`
-	Name              string
-	Fingerprint       string
-	Content           string    `xorm:"-"`
-	Created           time.Time `xorm:"CREATED"`
-	Updated           time.Time // Note: Updated must below Created for AfterSet.
-	HasRecentActivity bool      `xorm:"-"`
-	HasUsed           bool      `xorm:"-"`
+	ID          int64 `xorm:"pk autoincr"`
+	KeyID       int64 `xorm:"UNIQUE(s) INDEX"`
+	RepoID      int64 `xorm:"UNIQUE(s) INDEX"`
+	Name        string
+	Fingerprint string
+	Content     string `xorm:"-"`
+
+	Created           time.Time `xorm:"-"`
+	CreatedUnix       int64
+	Updated           time.Time `xorm:"-"` // Note: Updated must below Created for AfterSet.
+	UpdatedUnix       int64
+	HasRecentActivity bool `xorm:"-"`
+	HasUsed           bool `xorm:"-"`
+}
+
+func (k *DeployKey) BeforeInsert() {
+	k.CreatedUnix = time.Now().UTC().Unix()
+}
+
+func (k *DeployKey) BeforeUpdate() {
+	k.UpdatedUnix = time.Now().UTC().Unix()
 }
 
 func (k *DeployKey) AfterSet(colName string, _ xorm.Cell) {
 	switch colName {
-	case "created":
+	case "created_unix":
+		k.Created = time.Unix(k.CreatedUnix, 0).Local()
+	case "updated_unix":
+		k.Updated = time.Unix(k.UpdatedUnix, 0).Local()
 		k.HasUsed = k.Updated.After(k.Created)
 		k.HasRecentActivity = k.Updated.Add(7 * 24 * time.Hour).After(time.Now())
 	}

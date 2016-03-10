@@ -33,13 +33,19 @@ type Release struct {
 	Note             string `xorm:"TEXT"`
 	IsDraft          bool   `xorm:"NOT NULL DEFAULT false"`
 	IsPrerelease     bool
-	Created          time.Time `xorm:"CREATED"`
+
+	Created     time.Time `xorm:"-"`
+	CreatedUnix int64
+}
+
+func (r *Release) BeforeInsert() {
+	r.CreatedUnix = r.Created.UTC().Unix()
 }
 
 func (r *Release) AfterSet(colName string, _ xorm.Cell) {
 	switch colName {
-	case "created":
-		r.Created = regulateTimeZone(r.Created)
+	case "created_unix":
+		r.Created = time.Unix(r.CreatedUnix, 0).Local()
 	}
 }
 

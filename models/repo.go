@@ -178,8 +178,19 @@ type Repository struct {
 	ForkID   int64
 	BaseRepo *Repository `xorm:"-"`
 
-	Created time.Time `xorm:"CREATED"`
-	Updated time.Time `xorm:"UPDATED"`
+	Created     time.Time `xorm:"-"`
+	CreatedUnix int64
+	Updated     time.Time `xorm:"-"`
+	UpdatedUnix int64
+}
+
+func (repo *Repository) BeforeInsert() {
+	repo.CreatedUnix = time.Now().UTC().Unix()
+	repo.UpdatedUnix = repo.CreatedUnix
+}
+
+func (repo *Repository) BeforeUpdate() {
+	repo.UpdatedUnix = time.Now().UTC().Unix()
 }
 
 func (repo *Repository) AfterSet(colName string, _ xorm.Cell) {
@@ -195,8 +206,10 @@ func (repo *Repository) AfterSet(colName string, _ xorm.Cell) {
 		repo.NumOpenPulls = repo.NumPulls - repo.NumClosedPulls
 	case "num_closed_milestones":
 		repo.NumOpenMilestones = repo.NumMilestones - repo.NumClosedMilestones
-	case "updated":
-		repo.Updated = regulateTimeZone(repo.Updated)
+	case "created_unix":
+		repo.Created = time.Unix(repo.CreatedUnix, 0).Local()
+	case "updated_unix":
+		repo.Updated = time.Unix(repo.UpdatedUnix, 0)
 	}
 }
 
@@ -523,14 +536,26 @@ func IsUsableName(name string) error {
 
 // Mirror represents a mirror information of repository.
 type Mirror struct {
-	ID         int64 `xorm:"pk autoincr"`
-	RepoID     int64
-	Repo       *Repository `xorm:"-"`
-	Interval   int         // Hour.
-	Updated    time.Time   `xorm:"UPDATED"`
-	NextUpdate time.Time
+	ID       int64 `xorm:"pk autoincr"`
+	RepoID   int64
+	Repo     *Repository `xorm:"-"`
+	Interval int         // Hour.
+
+	Updated        time.Time `xorm:"-"`
+	UpdatedUnix    int64
+	NextUpdate     time.Time `xorm:"-"`
+	NextUpdateUnix int64
 
 	address string `xorm:"-"`
+}
+
+func (m *Mirror) BeforeInsert() {
+	m.NextUpdateUnix = m.NextUpdate.UTC().Unix()
+}
+
+func (m *Mirror) BeforeUpdate() {
+	m.UpdatedUnix = time.Now().UTC().Unix()
+	m.NextUpdateUnix = m.NextUpdate.UTC().Unix()
 }
 
 func (m *Mirror) AfterSet(colName string, _ xorm.Cell) {
@@ -541,6 +566,10 @@ func (m *Mirror) AfterSet(colName string, _ xorm.Cell) {
 		if err != nil {
 			log.Error(3, "GetRepositoryByID[%d]: %v", m.ID, err)
 		}
+	case "updated_unix":
+		m.Updated = time.Unix(m.UpdatedUnix, 0).Local()
+	case "next_updated_unix":
+		m.NextUpdate = time.Unix(m.NextUpdateUnix, 0).Local()
 	}
 }
 

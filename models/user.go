@@ -68,10 +68,13 @@ type User struct {
 	Repos       []*Repository `xorm:"-"`
 	Location    string
 	Website     string
-	Rands       string    `xorm:"VARCHAR(10)"`
-	Salt        string    `xorm:"VARCHAR(10)"`
-	Created     time.Time `xorm:"CREATED"`
-	Updated     time.Time `xorm:"UPDATED"`
+	Rands       string `xorm:"VARCHAR(10)"`
+	Salt        string `xorm:"VARCHAR(10)"`
+
+	Created     time.Time `xorm:"-"`
+	CreatedUnix int64
+	Updated     time.Time `xorm:"-"`
+	UpdatedUnix int64
 
 	// Remember visibility choice for convenience, true for private
 	LastRepoVisibility bool
@@ -103,18 +106,26 @@ type User struct {
 	Members     []*User `xorm:"-"`
 }
 
+func (u *User) BeforeInsert() {
+	u.CreatedUnix = time.Now().UTC().Unix()
+	u.UpdatedUnix = u.CreatedUnix
+}
+
 func (u *User) BeforeUpdate() {
 	if u.MaxRepoCreation < -1 {
 		u.MaxRepoCreation = -1
 	}
+	u.UpdatedUnix = time.Now().UTC().Unix()
 }
 
 func (u *User) AfterSet(colName string, _ xorm.Cell) {
 	switch colName {
 	case "full_name":
 		u.FullName = markdown.Sanitizer.Sanitize(u.FullName)
-	case "created":
-		u.Created = regulateTimeZone(u.Created)
+	case "created_unix":
+		u.Created = time.Unix(u.CreatedUnix, 0).Local()
+	case "updated_unix":
+		u.Updated = time.Unix(u.UpdatedUnix, 0).Local()
 	}
 }
 
